@@ -29,11 +29,18 @@
 #define DEBUG(args)
 #endif
 
-#define MIN(x, x1, x2) x = (x1) < (x2) ? (x1) : (x2)
-#define MAX(x, x1, x2) x = (x1) > (x2) ? (x1) : (x2)
-#define HIWORD(out, in) out = ((in) & 0xffff0000) >> 16
-#define LOWORD(out, in) out = (in) & 0x0000ffff
-#define MAKELONG(out, hi, lo) out = (((hi) << 16) || (lo))
+#undef MIN
+#define MIN(x1, x2) ((x1) < (x2) ? (x1) : (x2))
+#undef MAX
+#define MAX(x1, x2) ((x1) > (x2) ? (x1) : (x2))
+#undef HIWORD
+#define HIWORD(in) (((in) & 0xffff0000) >> 16)
+#undef LOWORD
+#define LOWORD(in) ((in) & 0x0000ffff)
+#undef MAKELONG
+#define MAKELONG(hi, lo) ((((hi) & 0xffff) << 16) | ((lo) & 0xffff))
+
+#define FONT_DATASIZE(f) ((((f)->height * (((f)->width + 7) / 8)) + 3) & ~3);
 
 /* os_calls.c */
 int g_init_system(void);
@@ -85,6 +92,8 @@ int g_file_read(int fd, char* ptr, int len);
 int g_file_write(int fd, char* ptr, int len);
 int g_file_seek(int fd, int offset);
 int g_file_lock(int fd, int start, int len);
+int g_strlen(char* text);
+char* g_strcpy(char* dest, char* src);
 
 /* xrdp_tcp.c */
 struct xrdp_tcp* xrdp_tcp_create(struct xrdp_iso* owner);
@@ -160,11 +169,23 @@ int xrdp_orders_mem_blt(struct xrdp_orders* self, int cache_id,
                         int color_table, int x, int y, int cx, int cy,
                         int rop, int srcx, int srcy,
                         int cache_idx, struct xrdp_rect* rect);
+int xrdp_orders_text(struct xrdp_orders* self,
+                     int font, int flags, int mixmode,
+                     int fg_color, int bg_color,
+                     int clip_left, int clip_top,
+                     int clip_right, int clip_bottom,
+                     int box_left, int box_top,
+                     int box_right, int box_bottom,
+                     int x, int y, char* data, int data_len,
+                     struct xrdp_rect* rect);
 int xrdp_orders_send_palette(struct xrdp_orders* self, int* palette,
                              int cache_id);
 int xrdp_orders_send_raw_bitmap(struct xrdp_orders* self,
                                 struct xrdp_bitmap* bitmap,
                                 int cache_id, int cache_idx);
+int xrdp_orders_send_font(struct xrdp_orders* self,
+                          struct xrdp_font_item* font_item,
+                          int font_index, int char_index);
 
 /* xrdp_cache.c */
 struct xrdp_cache* xrdp_cache_create(struct xrdp_wm* owner,
@@ -172,6 +193,8 @@ struct xrdp_cache* xrdp_cache_create(struct xrdp_wm* owner,
 void xrdp_cache_delete(struct xrdp_cache* self);
 int xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap);
 int xrdp_cache_add_palette(struct xrdp_cache* self, int* palette);
+int xrdp_cache_add_char(struct xrdp_cache* self,
+                        struct xrdp_font_item* font_item);
 
 /* xrdp_wm.c */
 struct xrdp_wm* xrdp_wm_create(struct xrdp_process* owner);
@@ -248,6 +271,11 @@ int xrdp_painter_draw_bitmap(struct xrdp_painter* self,
                              struct xrdp_bitmap* bitmap,
                              struct xrdp_bitmap* to_draw,
                              int x, int y, int cx, int cy);
+int xrdp_painter_text_width(struct xrdp_painter* self, char* text);
+int xrdp_painter_text_height(struct xrdp_painter* self, char* text);
+int xrdp_painter_draw_text(struct xrdp_painter* self,
+                           struct xrdp_bitmap* bitmap,
+                           int x, int y, char* text);
 
 /* xrdp_list.c */
 struct xrdp_list* xrdp_list_create(void);
@@ -258,3 +286,9 @@ void xrdp_list_clear(struct xrdp_list* self);
 int xrdp_list_index_of(struct xrdp_list* self, int item);
 void xrdp_list_remove_item(struct xrdp_list* self, int index);
 void xrdp_list_insert_item(struct xrdp_list* self, int index, int item);
+
+/* xrdp_font.c */
+struct xrdp_font* xrdp_font_create(struct xrdp_wm* wm);
+void xrdp_font_delete(struct xrdp_font* self);
+int xrdp_font_item_compare(struct xrdp_font_item* font1,
+                           struct xrdp_font_item* font2);

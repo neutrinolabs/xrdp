@@ -14,6 +14,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
+   xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2004
 
    cache
@@ -46,6 +47,10 @@ void xrdp_cache_delete(struct xrdp_cache* self)
   for (i = 0; i < 3; i++)
     for (j = 0; j < 600; j++)
       xrdp_bitmap_delete(self->bitmap_items[i][j].bitmap);
+  /* free all the cached font items */
+  for (i = 0; i < 12; i++)
+    for (j = 0; j < 256; j++)
+      g_free(self->char_items[i][j].font_item.data);
   g_free(self);
 }
 
@@ -56,8 +61,8 @@ int xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
   int i;
   int j;
   int min_use;
-  int min_use_index1;
-  int min_use_index2;
+  int cache_id;
+  int cache_idx;
   struct xrdp_bitmap* b;
 
   /* look for match */
@@ -69,13 +74,13 @@ int xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
       {
         self->bitmap_items[i][j].use_count++;
         DEBUG(("found bitmap at %d %d\n", i, j));
-        return (i << 16) | j;
+        return MAKELONG(i, j);
       }
     }
   }
   /* look for least used */
-  min_use_index1 = 0;
-  min_use_index2 = 0;
+  cache_id = 0;
+  cache_idx = 0;
   min_use = 999999;
   for (i = 0; i < 3; i++)
   {
@@ -84,22 +89,20 @@ int xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
       if (self->bitmap_items[i][j].use_count < min_use)
       {
         min_use = self->bitmap_items[i][j].use_count;
-        min_use_index1 = i;
-        min_use_index2 = j;
+        cache_id = i;
+        cache_idx = j;
       }
     }
   }
-  DEBUG(("adding bitmap at %d %d\n", min_use_index1, min_use_index2));
+  DEBUG(("adding bitmap at %d %d\n", cache_id, cache_idx));
   /* set, send bitmap and return */
-  xrdp_bitmap_delete(self->bitmap_items[min_use_index1]
-                                       [min_use_index2].bitmap);
+  xrdp_bitmap_delete(self->bitmap_items[cache_id][cache_idx].bitmap);
   b = xrdp_bitmap_create(bitmap->width, bitmap->height, bitmap->bpp, 0);
   xrdp_bitmap_copy_box(bitmap, b, 0, 0, bitmap->width, bitmap->height);
-  self->bitmap_items[min_use_index1][min_use_index2].bitmap = b;
-  self->bitmap_items[min_use_index1][min_use_index2].use_count++;
-  xrdp_orders_send_raw_bitmap(self->orders, b, min_use_index1,
-                              min_use_index2);
-  return (min_use_index1 << 16) | min_use_index2;
+  self->bitmap_items[cache_id][cache_idx].bitmap = b;
+  self->bitmap_items[cache_id][cache_idx].use_count++;
+  xrdp_orders_send_raw_bitmap(self->orders, b, cache_id, cache_idx);
+  return MAKELONG(cache_id, cache_idx);
 }
 
 /*****************************************************************************/
@@ -142,4 +145,61 @@ int xrdp_cache_add_palette(struct xrdp_cache* self, int* palette)
   self->palette_items[min_use_index].use_count++;
   xrdp_orders_send_palette(self->orders, palette, min_use_index);
   return min_use_index;
+}
+
+/*****************************************************************************/
+int xrdp_cache_add_char(struct xrdp_cache* self,
+                        struct xrdp_font_item* font_item)
+{
+  int i;
+  int j;
+  int min_use;
+  int f;
+  int c;
+  int datasize;
+  struct xrdp_font_item* fi;
+
+  /* look for match */
+  for (i = 7; i < 12; i++)
+  {
+    for (j = 0; j < 250; j++)
+    {
+      if (xrdp_font_item_compare(&self->char_items[i][j].font_item, font_item))
+      {
+        self->char_items[i][j].use_count++;
+        DEBUG(("found font at %d %d\n\r", i, j));
+        return MAKELONG(i, j);
+      }
+    }
+  }
+  /* look for least used */
+  f = 0;
+  c = 0;
+  min_use = 999999;
+  for (i = 7; i < 12; i++)
+  {
+    for (j = 0; j < 250; j++)
+    {
+      if (self->char_items[i][j].use_count < min_use)
+      {
+        min_use = self->char_items[i][j].use_count;
+        f = i;
+        c = j;
+      }
+    }
+  }
+  DEBUG(("adding char at %d %d\n\r", f, c));
+  /* set, send char and return */
+  fi = &self->char_items[f][c].font_item;
+  g_free(fi->data);
+  datasize = FONT_DATASIZE(font_item);
+  fi->data = (char*)g_malloc(datasize, 1);
+  g_memcpy(fi->data, font_item->data, datasize);
+  fi->offset = font_item->offset;
+  fi->baseline = font_item->baseline;
+  fi->width = font_item->width;
+  fi->height = font_item->height;
+  self->char_items[f][c].use_count++;
+  xrdp_orders_send_font(self->orders, fi, f, c);
+  return MAKELONG(f, c);
 }

@@ -13,6 +13,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
+   xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2004
 
    types
@@ -202,6 +203,7 @@ struct xrdp_orders
   int line_endy;
   int line_bg_color;
   int line_rop;
+  struct xrdp_pen line_pen;
 
   int mem_blt_color_table; /* RDP_ORDER_MEMBLT */
   int mem_blt_cache_id;
@@ -214,7 +216,24 @@ struct xrdp_orders
   int mem_blt_srcy;
   int mem_blt_cache_idx;
 
-  struct xrdp_pen line_pen;
+  int text_font; /* RDP_ORDER_TEXT2 */
+  int text_flags;
+  int text_unknown;
+  int text_mixmode;
+  int text_fg_color;
+  int text_bg_color;
+  int text_clip_left;
+  int text_clip_top;
+  int text_clip_right;
+  int text_clip_bottom;
+  int text_box_left;
+  int text_box_top;
+  int text_box_right;
+  int text_box_bottom;
+  int text_x;
+  int text_y;
+  int text_len;
+  char* text_data;
 
 };
 
@@ -230,6 +249,22 @@ struct xrdp_bitmap_item
   struct xrdp_bitmap* bitmap;
 };
 
+struct xrdp_font_item
+{
+  int offset;
+  int baseline;
+  int width;
+  int height;
+  int incby;
+  char* data;
+};
+
+struct xrdp_char_item
+{
+  int use_count;
+  struct xrdp_font_item font_item;
+};
+
 /* differnce caches */
 struct xrdp_cache
 {
@@ -237,6 +272,7 @@ struct xrdp_cache
   struct xrdp_orders* orders;
   struct xrdp_palette_item palette_items[6];
   struct xrdp_bitmap_item bitmap_items[3][600];
+  struct xrdp_char_item char_items[12][256];
 };
 
 /* the window manager */
@@ -320,12 +356,13 @@ struct xrdp_painter
   struct xrdp_brush brush;
   struct xrdp_orders* orders;
   struct xrdp_wm* wm; /* owner */
+  struct xrdp_font* font;
 };
 
 /* window or bitmap */
 struct xrdp_bitmap
 {
-  int type; /* 0 = bitmap 1 = window 2 = screen 3 = button 4 = image 5 = edit */
+  int type; /* 0 = bitmap 1 = window 2 = screen 3 = button 4 = image 5 = edit 6 = label */
   int state; /* for button 0 = normal 1 = down */
   int id;
   char* data;
@@ -337,12 +374,25 @@ struct xrdp_bitmap
   int bg_color;
   int line_size; /* in bytes */
   int focused;
+  char title[256];
   struct xrdp_bitmap* modal_dialog;
   struct xrdp_bitmap* owner; /* window that created us */
   struct xrdp_bitmap* parent; /* window contained in */
   struct xrdp_list* child_list;
   struct xrdp_wm* wm;
   int cursor;
+  /* msg 1 = click 2 = mouse move 3 = paint 100 = modal result */
   int (*notify)(struct xrdp_bitmap* wnd, struct xrdp_bitmap* sender,
                 int msg, int param1, int param2);
+};
+
+/* font */
+struct xrdp_font
+{
+  struct xrdp_wm* wm;
+  struct xrdp_font_item font_items[256];
+  int color;
+  char name[32];
+  int size;
+  int style;
 };

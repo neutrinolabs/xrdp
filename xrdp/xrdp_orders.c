@@ -14,6 +14,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
+   xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2004
 
    orders
@@ -895,6 +896,153 @@ int xrdp_orders_mem_blt(struct xrdp_orders* self, int cache_id,
 
 /*****************************************************************************/
 /* returns error */
+int xrdp_orders_text(struct xrdp_orders* self,
+                     int font, int flags, int mixmode,
+                     int fg_color, int bg_color,
+                     int clip_left, int clip_top,
+                     int clip_right, int clip_bottom,
+                     int box_left, int box_top,
+                     int box_right, int box_bottom,
+                     int x, int y, char* data, int data_len,
+                     struct xrdp_rect* rect)
+{
+  int order_flags;
+  int present;
+  char* present_ptr;
+
+  xrdp_orders_check(self, 100);
+  self->order_count++;
+  order_flags = RDP_ORDER_STANDARD;
+  if (self->last_order != RDP_ORDER_TEXT2)
+    order_flags |= RDP_ORDER_CHANGE;
+  self->last_order = RDP_ORDER_TEXT2;
+  if (rect != 0)
+  {
+    order_flags |= RDP_ORDER_BOUNDS;
+    if (xrdp_orders_last_bounds(self, rect))
+      order_flags |= RDP_ORDER_LASTBOUNDS;
+  }
+  out_uint8(self->out_s, order_flags);
+  if (order_flags & RDP_ORDER_CHANGE)
+    out_uint8(self->out_s, self->last_order)
+  present = 0;
+  present_ptr = self->out_s->p; /* hold 3 byte present pointer, todo */
+  out_uint8s(self->out_s, 3)    /* this can be smaller, */
+                                /* see RDP_ORDER_SMALL and RDP_ORDER_TINY */
+  if ((order_flags & RDP_ORDER_BOUNDS) &&
+      !(order_flags & RDP_ORDER_LASTBOUNDS))
+    xrdp_orders_out_bounds(self, rect);
+
+  if (font != self->text_font)
+  {
+    present |= 0x000001;
+    out_uint8(self->out_s, font);
+    self->text_font = font;
+  }
+  if (flags != self->text_flags)
+  {
+    present |= 0x000002;
+    out_uint8(self->out_s, flags);
+    self->text_flags = flags;
+  }
+  /* unknown */
+  if (mixmode != self->text_mixmode)
+  {
+    present |= 0x000008;
+    out_uint8(self->out_s, mixmode);
+    self->text_mixmode = mixmode;
+  }
+  if (fg_color != self->text_fg_color)
+  {
+    present |= 0x000010;
+    out_uint8(self->out_s, fg_color)
+    out_uint8(self->out_s, fg_color >> 8)
+    out_uint8(self->out_s, fg_color >> 16)
+    self->text_fg_color = fg_color;
+  }
+  if (bg_color != self->text_bg_color)
+  {
+    present |= 0x000020;
+    out_uint8(self->out_s, bg_color)
+    out_uint8(self->out_s, bg_color >> 8)
+    out_uint8(self->out_s, bg_color >> 16)
+    self->text_bg_color = bg_color;
+  }
+  if (clip_left != self->text_clip_left)
+  {
+    present |= 0x000040;
+    out_uint16_le(self->out_s, clip_left);
+    self->text_clip_left = clip_left;
+  }
+  if (clip_top != self->text_clip_top)
+  {
+    present |= 0x000080;
+    out_uint16_le(self->out_s, clip_top);
+    self->text_clip_top = clip_top;
+  }
+  if (clip_right != self->text_clip_right)
+  {
+    present |= 0x000100;
+    out_uint16_le(self->out_s, clip_right);
+    self->text_clip_right = clip_right;
+  }
+  if (clip_bottom != self->text_clip_bottom)
+  {
+    present |= 0x000200;
+    out_uint16_le(self->out_s, clip_bottom);
+    self->text_clip_bottom = clip_bottom;
+  }
+  if (box_left != self->text_box_left)
+  {
+    present |= 0x000400;
+    out_uint16_le(self->out_s, box_left);
+    self->text_box_left = box_left;
+  }
+  if (box_top != self->text_box_top)
+  {
+    present |= 0x000800;
+    out_uint16_le(self->out_s, box_top);
+    self->text_box_top = box_top;
+  }
+  if (box_right != self->text_box_right)
+  {
+    present |= 0x001000;
+    out_uint16_le(self->out_s, box_right);
+    self->text_box_right = box_right;
+  }
+  if (box_bottom != self->text_box_bottom)
+  {
+    present |= 0x002000;
+    out_uint16_le(self->out_s, box_bottom);
+    self->text_box_bottom = box_bottom;
+  }
+  if (x != self->text_x)
+  {
+    present |= 0x080000;
+    out_uint16_le(self->out_s, x);
+    self->text_x = x;
+  }
+  if (y != self->text_y)
+  {
+    present |= 0x100000;
+    out_uint16_le(self->out_s, y);
+    self->text_y = y;
+  }
+  /* always send text */
+  present |= 0x200000;
+  out_uint8(self->out_s, data_len);
+  out_uint8a(self->out_s, data, data_len);
+  /* send 3 byte present */
+  *present_ptr = present;
+  present_ptr++;
+  *present_ptr = present >> 8;
+  present_ptr++;
+  *present_ptr = present >> 16;
+  return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
 /* when a palette gets sent, send the main palette too */
 int xrdp_orders_send_palette(struct xrdp_orders* self, int* palette,
                              int cache_id)
@@ -945,7 +1093,7 @@ int xrdp_orders_send_raw_bitmap(struct xrdp_orders* self,
   self->order_count++;
   order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
   out_uint8(self->out_s, order_flags);
-  len = (bufsize + 9) - 7;
+  len = (bufsize + 9) - 7; /* length after type minus 7 */
   out_uint16_le(self->out_s, len);
   out_uint16_le(self->out_s, 8); /* flags */
   out_uint8(self->out_s, RDP_ORDER_RAW_BMPCACHE); /* type */
@@ -957,6 +1105,7 @@ int xrdp_orders_send_raw_bitmap(struct xrdp_orders* self,
   out_uint16_le(self->out_s, bufsize);
   out_uint16_le(self->out_s, cache_idx);
   for (i = bitmap->height - 1; i >= 0; i--)
+  {
     for (j = 0; j < bitmap->width; j++)
     {
       pixel = xrdp_bitmap_get_pixel(bitmap, j, i);
@@ -974,5 +1123,38 @@ int xrdp_orders_send_raw_bitmap(struct xrdp_orders* self,
       else if (Bpp == 1)
         out_uint8(self->out_s, pixel);
     }
+  }
+  return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+/* max size datasize + 18*/
+/* todo, only sends one for now */
+int xrdp_orders_send_font(struct xrdp_orders* self,
+                          struct xrdp_font_item* font_item,
+                          int font_index, int char_index)
+{
+  int order_flags;
+  int datasize;
+  int len;
+
+  datasize = FONT_DATASIZE(font_item);
+  xrdp_orders_check(self, datasize + 18);
+  self->order_count++;
+  order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
+  out_uint8(self->out_s, order_flags);
+  len = (datasize + 12) - 7; /* length after type minus 7 */
+  out_uint16_le(self->out_s, len);
+  out_uint16_le(self->out_s, 8); /* flags */
+  out_uint8(self->out_s, RDP_ORDER_FONTCACHE); /* type */
+  out_uint8(self->out_s, font_index);
+  out_uint8(self->out_s, 1); /* num of chars */
+  out_uint16_le(self->out_s, char_index);
+  out_uint16_le(self->out_s, font_item->offset);
+  out_uint16_le(self->out_s, font_item->baseline);
+  out_uint16_le(self->out_s, font_item->width);
+  out_uint16_le(self->out_s, font_item->height);
+  out_uint8a(self->out_s, font_item->data, datasize);
   return 0;
 }

@@ -13,6 +13,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
+   xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2004
 
    generic operating system calls
@@ -521,4 +522,16 @@ int g_file_lock(int fd, int start, int len)
   if (fcntl(fd, F_SETLK, &lock) == -1)
     return 0;
   return 1;
+}
+
+/*****************************************************************************/
+int g_strlen(char* text)
+{
+  return strlen(text);
+}
+
+/*****************************************************************************/
+char* g_strcpy(char* dest, char* src)
+{
+  return strcpy(dest, src);
 }

@@ -14,6 +14,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
+   xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2004
 
    painter, gc
@@ -31,6 +32,7 @@ struct xrdp_painter* xrdp_painter_create(struct xrdp_wm* wm)
   self->wm = wm;
   self->orders = wm->orders;
   self->rop = 0xcc; /* copy */
+  self->font = xrdp_font_create(wm);
   return self;
 }
 
@@ -39,6 +41,7 @@ void xrdp_painter_delete(struct xrdp_painter* self)
 {
   if (self == 0)
     return;
+  xrdp_font_delete(self->font);
   g_free(self);
 }
 
@@ -259,21 +262,21 @@ int xrdp_painter_draw_bitmap(struct xrdp_painter* self,
     b = b->parent;
   }
   palette_id = xrdp_cache_add_palette(self->wm->cache, self->wm->palette);
-  i = 0;
-  while (i < to_draw->width)
+  j = 0;
+  while (j < to_draw->height)
   {
-    j = 0;
-    while (j < to_draw->height)
+    i = 0;
+    while (i < to_draw->width)
     {
       x1 = x + i;
       y1 = y + j;
-      MIN(w, SS, to_draw->width - i);
-      MIN(h, SS, to_draw->height - j);
+      w = MIN(SS, to_draw->width - i);
+      h = MIN(SS, to_draw->height - j);
       b = xrdp_bitmap_create(w, h, self->wm->screen->bpp, 0);
       xrdp_bitmap_copy_box(to_draw, b, i, j, w, h);
       bitmap_id = xrdp_cache_add_bitmap(self->wm->cache, b);
-      HIWORD(cache_id, bitmap_id);
-      LOWORD(cache_idx, bitmap_id);
+      cache_id = HIWORD(bitmap_id);
+      cache_idx = LOWORD(bitmap_id);
       k = 0;
       while (xrdp_region_get_rect(region, k, &rect) == 0)
       {
@@ -324,10 +327,125 @@ int xrdp_painter_draw_bitmap(struct xrdp_painter* self,
         k++;
       }
       xrdp_bitmap_delete(b);
-      j += SS;
+      i += SS;
     }
-    i += SS;
+    j += SS;
   }
   xrdp_region_delete(region);
+  return 0;
+}
+
+/*****************************************************************************/
+int xrdp_painter_text_width(struct xrdp_painter* self, char* text)
+{
+  int index;
+  int rv;
+  int len;
+  struct xrdp_font_item* font_item;
+
+  rv = 0;
+  len = g_strlen(text);
+  for (index = 0; index < len; index++)
+  {
+    font_item = self->font->font_items + text[index];
+    rv = rv + font_item->incby;
+  }
+  return rv;
+}
+
+/*****************************************************************************/
+int xrdp_painter_text_height(struct xrdp_painter* self, char* text)
+{
+  int index;
+  int rv;
+  int len;
+  struct xrdp_font_item* font_item;
+
+  rv = 0;
+  len = g_strlen(text);
+  for (index = 0; index < len; index++)
+  {
+    font_item = self->font->font_items + text[index];
+    rv = MAX(rv, font_item->height);
+  }
+  return rv;
+}
+
+/*****************************************************************************/
+int xrdp_painter_draw_text(struct xrdp_painter* self,
+                           struct xrdp_bitmap* bitmap,
+                           int x, int y, char* text)
+{
+  int i;
+  int f;
+  int c;
+  int k;
+  int x1;
+  int y1;
+  int flags;
+  int len;
+  int index;
+  int total_width;
+  int total_height;
+  char* data;
+  struct xrdp_region* region;
+  struct xrdp_rect rect;
+  struct xrdp_bitmap* b;
+  struct xrdp_font* font;
+  struct xrdp_font_item* font_item;
+
+  len = g_strlen(text);
+  if (len < 1)
+    return 0;
+
+  /* todo data */
+
+  if (bitmap->type == 0)
+    return 0;
+  font = self->font;
+  f = 0;
+  k = 0;
+  total_width = 0;
+  total_height = 0;
+  data = (char*)g_malloc(len * 4, 1);
+  for (index = 0; index < len; index++)
+  {
+    font_item = font->font_items + text[index];
+    i = xrdp_cache_add_char(self->wm->cache, font_item);
+    f = HIWORD(i);
+    c = LOWORD(i);
+    data[index * 2] = c;
+    data[index * 2 + 1] = k;
+    k = font_item->incby;
+    total_width += k;
+    total_height = MAX(total_height, font_item->height);
+  }
+  region = xrdp_region_create(self->wm);
+  xrdp_wm_get_vis_region(self->wm, bitmap, x, y, total_width, total_height,
+                         region);
+  b = bitmap;
+  while (b != 0)
+  {
+    x = x + b->left;
+    y = y + b->top;
+    b = b->parent;
+  }
+  k = 0;
+  while (xrdp_region_get_rect(region, k, &rect) == 0)
+  {
+    x1 = x;
+    y1 = y;
+    rect.right--;
+    rect.bottom--;
+    flags = 0x03; /* 0x73; TEXT2_IMPLICIT_X and something else */
+    xrdp_orders_text(self->orders, f, flags, 0,
+                     font->color, 0,
+                     x1, y1, x1 + total_width, y1 + total_height,
+                     0, 0, 0, 0,
+                     x1, y1 + total_height, data, len * 2, &rect);
+    k++;
+  }
+  xrdp_region_delete(region);
+  g_free(data);
   return 0;
 }

@@ -14,8 +14,10 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
+   xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2004
 
+   xrdp: A Remote Desktop Protocol server.
    simple window manager
 
 */
@@ -159,6 +161,8 @@ int xrdp_wm_login_help_notify(struct xrdp_bitmap* wnd,
                               struct xrdp_bitmap* sender,
                               int msg, int param1, int param2)
 {
+  struct xrdp_painter* p;
+
   if (wnd == 0)
     return 0;
   if (sender == 0)
@@ -173,6 +177,23 @@ int xrdp_wm_login_help_notify(struct xrdp_bitmap* wnd,
       {
         wnd->owner->notify(wnd->owner, wnd, 100, 1, 0); /* ok */
       }
+    }
+  }
+  else if (msg == 3) /* paint */
+  {
+    p = (struct xrdp_painter*)param1;
+    if (p != 0)
+    {
+      xrdp_painter_draw_text(p, wnd, 10, 30, "You must be authenticated \
+before using this");
+      xrdp_painter_draw_text(p, wnd, 10, 46, "session.");
+      xrdp_painter_draw_text(p, wnd, 10, 78, "Enter a valid username in \
+the username edit box.");
+      xrdp_painter_draw_text(p, wnd, 10, 94, "Enter the password in \
+the password edit box.");
+      xrdp_painter_draw_text(p, wnd, 10, 110, "Both the username and \
+password are case");
+      xrdp_painter_draw_text(p, wnd, 10, 126, "sensitive.");
     }
   }
   return 0;
@@ -224,6 +245,7 @@ int xrdp_wm_login_notify(struct xrdp_bitmap* wnd,
       help->left = wnd->wm->screen->width / 2 - help->width / 2;
       help->top = wnd->wm->screen->height / 2 - help->height / 2;
       help->notify = xrdp_wm_login_help_notify;
+      g_strcpy(help->title, "Logon help");
       /* ok button */
       but = xrdp_bitmap_create(60, 25, wnd->wm->screen->bpp, 3);
       xrdp_list_insert_item(help->child_list, 0, (int)but);
@@ -233,6 +255,7 @@ int xrdp_wm_login_notify(struct xrdp_bitmap* wnd,
       but->left = 120;
       but->top = 260;
       but->id = 1;
+      g_strcpy(but->title, "OK");
       /* draw it */
       xrdp_bitmap_invalidate(help, 0);
       xrdp_wm_set_focused(wnd->wm, help);
@@ -463,6 +486,7 @@ int xrdp_wm_init(struct xrdp_wm* self)
   self->login_window->top = self->screen->height / 2 -
                             self->login_window->height / 2;
   self->login_window->notify = xrdp_wm_login_notify;
+  strcpy(self->login_window->title, "Logon to xrdp");
 
   /* image */
   but = xrdp_bitmap_create(4, 4, self->screen->bpp, 4);
@@ -492,6 +516,7 @@ int xrdp_wm_init(struct xrdp_wm* self)
   but->left = 320;
   but->top = 160;
   but->id = 1;
+  g_strcpy(but->title, "Help");
 
   but = xrdp_bitmap_create(60, 25, self->screen->bpp, 3);
   xrdp_list_add_item(self->login_window->child_list, (int)but);
@@ -501,6 +526,7 @@ int xrdp_wm_init(struct xrdp_wm* self)
   but->left = 250;
   but->top = 160;
   but->id = 2;
+  g_strcpy(but->title, "Cancel");
 
   but = xrdp_bitmap_create(60, 25, self->screen->bpp, 3);
   xrdp_list_add_item(self->login_window->child_list, (int)but);
@@ -510,6 +536,16 @@ int xrdp_wm_init(struct xrdp_wm* self)
   but->left = 180;
   but->top = 160;
   but->id = 3;
+  g_strcpy(but->title, "OK");
+
+  but = xrdp_bitmap_create(50, 20, self->screen->bpp, 6); /* label */
+  xrdp_list_add_item(self->login_window->child_list, (int)but);
+  but->parent = self->login_window;
+  but->owner = self->login_window;
+  but->wm = self;
+  but->left = 155;
+  but->top = 50;
+  g_strcpy(but->title, "Username");
 
   but = xrdp_bitmap_create(140, 20, self->screen->bpp, 5);
   xrdp_list_add_item(self->login_window->child_list, (int)but);
@@ -520,6 +556,15 @@ int xrdp_wm_init(struct xrdp_wm* self)
   but->top = 50;
   but->id = 4;
   but->cursor = 1;
+
+  but = xrdp_bitmap_create(50, 20, self->screen->bpp, 6); /* label */
+  xrdp_list_add_item(self->login_window->child_list, (int)but);
+  but->parent = self->login_window;
+  but->owner = self->login_window;
+  but->wm = self;
+  but->left = 155;
+  but->top = 80;
+  g_strcpy(but->title, "Password");
 
   but = xrdp_bitmap_create(140, 20, self->screen->bpp, 5);
   xrdp_list_add_item(self->login_window->child_list, (int)but);

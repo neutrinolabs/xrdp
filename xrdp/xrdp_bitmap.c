@@ -14,6 +14,7 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
+   xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2004
 
    bitmap, drawable
@@ -87,18 +88,18 @@ int xrdp_bitmap_set_focus(struct xrdp_bitmap* self, int focused)
     /* active title bar */
     painter->fg_color = self->wm->blue;
     xrdp_painter_fill_rect(painter, self, 3, 3, self->width - 5, 18);
+    painter->font->color = self->wm->white;
   }
   else
   {
     /* inactive title bar */
     painter->fg_color = self->wm->dark_grey;
     xrdp_painter_fill_rect(painter, self, 3, 3, self->width - 5, 18);
+    painter->font->color = self->wm->black;
   }
-  DEBUG(("1\n\r"));
+  xrdp_painter_draw_text(painter, self, 4, 4, self->title);
   xrdp_painter_end_update(painter);
-  DEBUG(("2\n\r"));
   xrdp_painter_delete(painter);
-  DEBUG(("3\n\r"));
   return 0;
 }
 
@@ -289,6 +290,7 @@ int xrdp_bitmap_copy_box(struct xrdp_bitmap* self, struct xrdp_bitmap* dest,
 }
 
 /*****************************************************************************/
+/* returns true if they are the same, else returns false */
 int xrdp_bitmap_compare(struct xrdp_bitmap* self, struct xrdp_bitmap* b)
 {
   if (self == 0)
@@ -311,6 +313,8 @@ int xrdp_bitmap_compare(struct xrdp_bitmap* self, struct xrdp_bitmap* b)
 int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
 {
   int i;
+  int w;
+  int h;
   struct xrdp_bitmap* b;
   struct xrdp_rect r1;
   struct xrdp_rect r2;
@@ -367,13 +371,16 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
       /* active title bar */
       painter->fg_color = self->wm->blue;
       xrdp_painter_fill_rect(painter, self, 3, 3, self->width - 5, 18);
+      painter->font->color = self->wm->white;
     }
     else
     {
       /* inactive title bar */
       painter->fg_color = self->wm->dark_grey;
       xrdp_painter_fill_rect(painter, self, 3, 3, self->width - 5, 18);
+      painter->font->color = self->wm->black;
     }
+    xrdp_painter_draw_text(painter, self, 4, 4, self->title);
   }
   else if (self->type == 2) /* screen */
   {
@@ -407,9 +414,17 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
       /* black right line */
       painter->fg_color = self->wm->black;
       xrdp_painter_fill_rect(painter, self, self->width - 1, 0, 1, self->height);
+      w = xrdp_painter_text_width(painter, self->title);
+      h = xrdp_painter_text_height(painter, self->title);
+      painter->font->color = self->wm->black;
+      xrdp_painter_draw_text(painter, self, self->width / 2 - w / 2,
+                             self->height / 2 - h / 2, self->title);
     }
     else if (self->state == 1) /* button down */
     {
+      /* gray box */
+      painter->fg_color = self->wm->grey;
+      xrdp_painter_fill_rect(painter, self, 0, 0, self->width, self->height);
       /* black top line */
       painter->fg_color = self->wm->black;
       xrdp_painter_fill_rect(painter, self, 0, 0, self->width, 1);
@@ -422,6 +437,25 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
       /* dark grey left line */
       painter->fg_color = self->wm->dark_grey;
       xrdp_painter_fill_rect(painter, self, 1, 1, 1, self->height - 2);
+      /* dark grey bottom line */
+      painter->fg_color = self->wm->dark_grey;
+      xrdp_painter_fill_rect(painter, self, 1, self->height - 2,
+                             self->width - 1, 1);
+      /* dark grey right line */
+      painter->fg_color = self->wm->dark_grey;
+      xrdp_painter_fill_rect(painter, self, self->width - 2, 1,
+                             1, self->height - 1);
+      /* black bottom line */
+      painter->fg_color = self->wm->black;
+      xrdp_painter_fill_rect(painter, self, 0, self->height - 1, self->width, 1);
+      /* black right line */
+      painter->fg_color = self->wm->black;
+      xrdp_painter_fill_rect(painter, self, self->width - 1, 0, 1, self->height);
+      w = xrdp_painter_text_width(painter, self->title);
+      h = xrdp_painter_text_height(painter, self->title);
+      painter->font->color = self->wm->black;
+      xrdp_painter_draw_text(painter, self, (self->width / 2 - w / 2) + 1,
+                             (self->height / 2 - h / 2) + 1, self->title);
     }
   }
   else if (self->type == 4) /* image */
@@ -457,6 +491,14 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
     painter->fg_color = self->wm->black;
     xrdp_painter_fill_rect(painter, self, 1, 1, self->width - 2, 1);
   }
+  else if (self->type == 6) /* label */
+  {
+    painter->font->color = self->wm->black;
+    xrdp_painter_draw_text(painter, self, 0, 0, self->title);
+  }
+  /* notify */
+  if (self->notify != 0)
+    self->notify(self, self, 3, (int)painter, 0);
   /* draw any child windows in the area */
   for (i = 0; i < self->child_list->count; i++)
   {
