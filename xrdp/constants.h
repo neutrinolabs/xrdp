@@ -406,6 +406,7 @@
 #define WND_TYPE_IMAGE  4
 #define WND_TYPE_EDIT   5
 #define WND_TYPE_LABEL  6
+#define WND_TYPE_COMBO  7
 
 /* button states */
 #define BUTTON_STATE_UP   0

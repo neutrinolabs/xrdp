@@ -422,6 +422,7 @@ int xrdp_wm_init(struct xrdp_wm* self)
   if (self->screen->bpp == 8)
   {
     /* rgb */
+    self->palette[249] = 0x0000007f;
     self->palette[250] = 0x00ff0000;
     self->palette[251] = 0x0000ff00;
     self->palette[252] = 0x00c0c0c0;
@@ -432,6 +433,7 @@ int xrdp_wm_init(struct xrdp_wm* self)
     self->grey = 252;
     self->dark_grey = 253;
     self->blue = 254;
+    self->dark_blue = 249;
     self->white = 255;
     self->red = 250;
     self->green = 251;
@@ -444,6 +446,7 @@ int xrdp_wm_init(struct xrdp_wm* self)
     self->grey      = COLOR15(0xc0, 0xc0, 0xc0);
     self->dark_grey = COLOR15(0x80, 0x80, 0x80);
     self->blue      = COLOR15(0x00, 0x00, 0xff);
+    self->dark_blue = COLOR15(0x00, 0x00, 0x7f);
     self->white     = COLOR15(0xff, 0xff, 0xff);
     self->red       = COLOR15(0xff, 0x00, 0x00);
     self->green     = COLOR15(0x00, 0xff, 0x00);
@@ -454,6 +457,7 @@ int xrdp_wm_init(struct xrdp_wm* self)
     self->grey      = COLOR16(0xc0, 0xc0, 0xc0);
     self->dark_grey = COLOR16(0x80, 0x80, 0x80);
     self->blue      = COLOR16(0x00, 0x00, 0xff);
+    self->dark_blue = COLOR16(0x00, 0x00, 0x7f);
     self->white     = COLOR16(0xff, 0xff, 0xff);
     self->red       = COLOR16(0xff, 0x00, 0x00);
     self->green     = COLOR16(0x00, 0xff, 0x00);
@@ -464,6 +468,7 @@ int xrdp_wm_init(struct xrdp_wm* self)
     self->grey      = COLOR24(0xc0, 0xc0, 0xc0);
     self->dark_grey = COLOR24(0x80, 0x80, 0x80);
     self->blue      = COLOR24(0x00, 0x00, 0xff);
+    self->dark_blue = COLOR24(0x00, 0x00, 0x7f);
     self->white     = COLOR24(0xff, 0xff, 0xff);
     self->red       = COLOR24(0xff, 0x00, 0x00);
     self->green     = COLOR24(0x00, 0xff, 0x00);
@@ -548,6 +553,31 @@ int xrdp_wm_init(struct xrdp_wm* self)
   but->cursor = 1;
   but->tab_stop = 1;
   but->password_char = '*';
+
+  /* label */
+  but = xrdp_bitmap_create(60, 20, self->screen->bpp, WND_TYPE_LABEL);
+  xrdp_list_add_item(self->login_window->child_list, (int)but);
+  but->parent = self->login_window;
+  but->owner = self->login_window;
+  but->wm = self;
+  but->left = 155;
+  but->top = 110;
+  g_strcpy(but->caption, "Module");
+
+  /* combo */
+  but = xrdp_bitmap_create(140, 20, self->screen->bpp, WND_TYPE_COMBO);
+  xrdp_list_add_item(self->login_window->child_list, (int)but);
+  but->parent = self->login_window;
+  but->owner = self->login_window;
+  but->wm = self;
+  but->left = 220;
+  but->top = 110;
+  but->id = 6;
+  but->tab_stop = 1;
+  xrdp_list_add_item(but->string_list, (int)g_strdup("X11 Session"));
+  xrdp_list_add_item(but->string_list, (int)g_strdup("VNC"));
+  xrdp_list_add_item(but->string_list, (int)g_strdup("Desktop"));
+  xrdp_list_add_item(but->string_list, (int)g_strdup("Test"));
 
   /* button */
   but = xrdp_bitmap_create(60, 25, self->screen->bpp, WND_TYPE_BUTTON);
@@ -927,8 +957,9 @@ int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
         xrdp_bitmap_invalidate(control, 0);
       }
     }
-    if (control->type == WND_TYPE_BUTTON && but == 1 &&
-        !down && self->button_down == control)
+    if ((control->type == WND_TYPE_BUTTON ||
+         control->type == WND_TYPE_COMBO) &&
+        but == 1 && !down && self->button_down == control)
     { /* if clicking up on a button that was clicked down */
       self->button_down = 0;
       control->state = 0;
@@ -938,8 +969,10 @@ int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
           /* control can be invalid after this */
           control->parent->notify(control->owner, control, 1, x, y);
     }
-    else if (control->type == WND_TYPE_BUTTON && but == 1 && down)
-    { /* if clicking down on a button */
+    else if ((control->type == WND_TYPE_BUTTON ||
+              control->type == WND_TYPE_COMBO) &&
+             but == 1 && down)
+    { /* if clicking down on a button or combo */
       self->button_down = control;
       control->state = 1;
       xrdp_bitmap_invalidate(control, 0);

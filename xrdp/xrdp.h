@@ -92,6 +92,7 @@ int g_strlen(char* text);
 char* g_strcpy(char* dest, char* src);
 char* g_strncpy(char* dest, char* src, int len);
 char* g_strcat(char* dest, char* src);
+char* g_strdup(char* in);
 
 /* xrdp_tcp.c */
 struct xrdp_tcp* xrdp_tcp_create(struct xrdp_iso* owner);

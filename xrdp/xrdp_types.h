@@ -294,6 +294,7 @@ struct xrdp_wm
   int grey;
   int dark_grey;
   int blue;
+  int dark_blue;
   int white;
   int red;
   int green;
@@ -315,6 +316,7 @@ struct xrdp_wm
   struct xrdp_bitmap* focused_window;
   /* cursor */
   int current_cursor;
+  /* keyboard info */
   int keys[256]; /* key states 0 up 1 down*/
   int caps_lock;
   int scroll_lock;
@@ -370,7 +372,7 @@ struct xrdp_painter
 struct xrdp_bitmap
 {
   /* 0 = bitmap 1 = window 2 = screen 3 = button 4 = image 5 = edit
-     6 = label */
+     6 = label 7 = combo */
   int type;
   int width;
   int height;
@@ -400,8 +402,11 @@ struct xrdp_bitmap
   /* for edit */
   int edit_pos;
   int password_char;
-  /* for button */
+  /* for button or combo */
   int state; /* for button 0 = normal 1 = down */
+  /* for combo */
+  struct xrdp_list* string_list;
+  int item_index;
 };
 
 /* font */

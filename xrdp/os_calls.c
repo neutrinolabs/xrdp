@@ -53,6 +53,10 @@ static pthread_mutex_t g_term_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int g_term = 0;
 
 #ifdef MEMLEAK
+#include "xrdp.h"
+#endif
+
+#ifdef MEMLEAK
 static int g_memsize = 0;
 static int g_memid = 0;
 static struct xrdp_list* g_memlist = 0;
@@ -647,4 +651,18 @@ char* g_strncpy(char* dest, char* src, int len)
 char* g_strcat(char* dest, char* src)
 {
   return strcat(dest, src);
+}
+
+/*****************************************************************************/
+char* g_strdup(char* in)
+{
+  int len;
+  char* p;
+
+  if (in == 0)
+    return 0;
+  len = g_strlen(in);
+  p = (char*)g_malloc(len + 1, 0);
+  g_strcpy(p, in);
+  return p;
 }
