@@ -4,12 +4,13 @@ XRDPOBJ = xrdp.o os_calls.o xrdp_tcp.o xrdp_iso.o xrdp_mcs.o xrdp_sec.o xrdp_rdp
           xrdp_painter.o xrdp_list.o xrdp_region.o xrdp_cache.o xrdp_font.o
 #CFLAGS = -Wall -O2 -DXRDP_DEBUG
 CFLAGS = -Wall -O2
+LDFLAGS = -L /usr/gnu/lib -lpthread -lcrypto
 CC = gcc
 
 all: xrdp
 
 xrdp: $(XRDPOBJ)
-	$(CC) -o xrdp $(XRDPOBJ) -lpthread -lcrypto
+	$(CC) $(LDFLAGS) -o xrdp $(XRDPOBJ)
 
 clean:
 	rm -f *.o xrdp

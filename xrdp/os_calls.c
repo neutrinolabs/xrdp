@@ -32,6 +32,7 @@
 #include <netinet/tcp.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <openssl/rc4.h>
 #include <openssl/md5.h>
 #include <openssl/sha.h>
@@ -258,11 +259,11 @@ int g_tcp_listen(int sck)
 int g_tcp_accept(int sck)
 {
   struct sockaddr_in s;
-  int i;
+  unsigned int i;
 
   i = sizeof(struct sockaddr_in);
   memset(&s, 0, i);
-  return accept(sck, (struct sockaddr*)&s, (socklen_t*)&i);
+  return accept(sck, (struct sockaddr*)&s, &i);
 }
 
 /*****************************************************************************/
