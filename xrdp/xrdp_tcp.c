@@ -96,7 +96,7 @@ int xrdp_tcp_send(struct xrdp_tcp* self)
   int sent;
 
   len = self->out_s->end - self->out_s->data;
-  DEBUG(("    in xrdp_tcp_send, gota send %d bytes\n", len))
+  DEBUG(("    in xrdp_tcp_send, gota send %d bytes\n\r", len))
   total = 0;
   while (total < len)
   {
@@ -109,17 +109,18 @@ int xrdp_tcp_send(struct xrdp_tcp* self)
         g_sleep(1);
       else
       {
-        DEBUG(("    error = -1 in xrdp_tcp_send socket %d\n", self->sck))
+        DEBUG(("    error = -1 in xrdp_tcp_send socket %d\n\r", self->sck))
         return 1;
       }
     }
     else if (sent == 0)
     {
-      DEBUG(("    error = 0 in xrdp_tcp_send socket %d\n", self->sck))
+      DEBUG(("    error = 0 in xrdp_tcp_send socket %d\n\r", self->sck))
       return 1;
     }
     else
       total = total + sent;
   }
+  DEBUG(("    out xrdp_tcp_send, sent %d bytes ok\n\r", len))
   return 0;
 }

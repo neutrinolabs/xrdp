@@ -76,6 +76,7 @@ int xrdp_listen_add_pro(struct xrdp_listen* self)
       return 0;
     }
     /* add process in unused slot */
+    /* this shouldn't happen */
     if (self->process_list[i]->status <= 0)
     {
       xrdp_process_delete(self->process_list[i]);
@@ -84,6 +85,24 @@ int xrdp_listen_add_pro(struct xrdp_listen* self)
     }
   }
   return 1;
+}
+
+/*****************************************************************************/
+int xrdp_listen_delete_pro(struct xrdp_listen* self, struct xrdp_process* pro)
+{
+  int i;
+
+  for (i = 0; i < self->process_list_max; i++)
+  {
+    if (self->process_list[i] == pro)
+    {
+      DEBUG(("process deleted\n\r"));
+      xrdp_process_delete(pro);
+      self->process_list[i] = 0;
+      return 0;
+    }
+  }
+  return 0;
 }
 
 /*****************************************************************************/
@@ -130,6 +149,10 @@ int xrdp_listen_main_loop(struct xrdp_listen* self)
           xrdp_process_delete(g_process);
       }
     }
+  }
+  else
+  {
+    DEBUG(("error, listener done\n\r"));
   }
   xrdp_listen_term_processes(self);
   g_tcp_close(self->sck);

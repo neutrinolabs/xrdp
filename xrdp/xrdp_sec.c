@@ -131,6 +131,8 @@ struct xrdp_sec* xrdp_sec_create(struct xrdp_rdp* owner)
 /*****************************************************************************/
 void xrdp_sec_delete(struct xrdp_sec* self)
 {
+  if (self == 0)
+    return;
   xrdp_mcs_delete(self->mcs_layer);
   g_rc4_info_delete(self->decrypt_rc4_info);
   g_rc4_info_delete(self->encrypt_rc4_info);
@@ -386,48 +388,48 @@ void xrdp_sec_establish_keys(struct xrdp_sec* self)
 
 /*****************************************************************************/
 /* returns error */
-int xrdp_sec_recv(struct xrdp_sec* self)
+int xrdp_sec_recv(struct xrdp_sec* self, int* chan)
 {
   int flags;
   int len;
 
   DEBUG((" in xrdp_sec_recv\n\r"));
-  while (xrdp_mcs_recv(self->mcs_layer) == 0)
+  if (xrdp_mcs_recv(self->mcs_layer, chan) != 0)
+    return 1;
+  in_uint32_le(self->in_s, flags);
+  DEBUG((" in xrdp_sec_recv flags $%x\n\r", flags));
+  if (flags & SEC_ENCRYPT) /* 0x08 */
   {
-    in_uint32_le(self->in_s, flags);
-    DEBUG((" in xrdp_sec_recv flags $%x\n\r", flags));
-    if (flags & SEC_ENCRYPT) /* 0x08 */
-    {
-      in_uint8s(self->in_s, 8); /* signature */
-      xrdp_sec_decrypt(self, self->in_s->p, self->in_s->end - self->in_s->p);
-    }
-    if (flags & SEC_CLIENT_RANDOM) /* 0x01 */
-    {
-      in_uint32_le(self->in_s, len);
-      in_uint8a(self->in_s, self->client_crypt_random, 64);
-      xrdp_sec_rsa_op(self->client_random, self->client_crypt_random,
-                      pub_mod, pri_exp);
-      xrdp_sec_establish_keys(self);
-      continue;
-    }
-    if (flags & SEC_LOGON_INFO) /* 0x40 */
-    {
-      if (xrdp_sec_process_logon_info(self) != 0)
-        return 1;
-      if (xrdp_sec_send_lic_initial(self) != 0)
-        return 1;
-      continue;
-    }
-    if (flags & SEC_LICENCE_NEG) /* 0x80 */
-    {
-      if (xrdp_sec_send_lic_response(self) != 0)
-        return 1;
-      return -1; /* special error that means send demand active */
-    }
+    in_uint8s(self->in_s, 8); /* signature */
+    xrdp_sec_decrypt(self, self->in_s->p, self->in_s->end - self->in_s->p);
+  }
+  if (flags & SEC_CLIENT_RANDOM) /* 0x01 */
+  {
+    in_uint32_le(self->in_s, len);
+    in_uint8a(self->in_s, self->client_crypt_random, 64);
+    xrdp_sec_rsa_op(self->client_random, self->client_crypt_random,
+                    pub_mod, pri_exp);
+    xrdp_sec_establish_keys(self);
+    *chan = 1; /* just set a non existing channel and exit */
     return 0;
   }
+  if (flags & SEC_LOGON_INFO) /* 0x40 */
+  {
+    if (xrdp_sec_process_logon_info(self) != 0)
+      return 1;
+    if (xrdp_sec_send_lic_initial(self) != 0)
+      return 1;
+    *chan = 1; /* just set a non existing channel and exit */
+    return 0;
+  }
+  if (flags & SEC_LICENCE_NEG) /* 0x80 */
+  {
+    if (xrdp_sec_send_lic_response(self) != 0)
+      return 1;
+    return -1; /* special error that means send demand active */
+  }
   DEBUG((" out xrdp_sec_recv error\n\r"));
-  return 1;
+  return 0;
 }
 
 /*****************************************************************************/
@@ -435,10 +437,12 @@ int xrdp_sec_recv(struct xrdp_sec* self)
 /* TODO needs outgoing encryption */
 int xrdp_sec_send(struct xrdp_sec* self, int flags)
 {
+  DEBUG((" in xrdp_sec_send\n\r"));
   s_pop_layer(self->out_s, sec_hdr);
   out_uint32_le(self->out_s, flags);
   if (xrdp_mcs_send(self->mcs_layer) != 0)
     return 1;
+  DEBUG((" out xrdp_sec_send\n\r"));
   return 0;
 }
 
@@ -527,4 +531,10 @@ int xrdp_sec_incoming(struct xrdp_sec* self)
 #endif
   DEBUG(("out xrdp_sec_incoming\n\r"));
   return 0;
+}
+
+/*****************************************************************************/
+int xrdp_sec_disconnect(struct xrdp_sec* self)
+{
+  return xrdp_mcs_disconnect(self->mcs_layer);
 }

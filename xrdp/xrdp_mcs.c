@@ -41,6 +41,8 @@ struct xrdp_mcs* xrdp_mcs_create(struct xrdp_sec* owner)
 /*****************************************************************************/
 void xrdp_mcs_delete(struct xrdp_mcs* self)
 {
+  if (self == 0)
+    return;
   xrdp_iso_delete(self->iso_layer);
   g_free(self);
 }
@@ -64,7 +66,7 @@ int xrdp_mcs_send_cjcf(struct xrdp_mcs* self, int chanid)
 
 /*****************************************************************************/
 /* returns error */
-int xrdp_mcs_recv(struct xrdp_mcs* self)
+int xrdp_mcs_recv(struct xrdp_mcs* self, int* chan)
 {
   int appid;
   int opcode;
@@ -91,7 +93,9 @@ int xrdp_mcs_recv(struct xrdp_mcs* self)
     DEBUG(("  out xrdp_mcs_recv err got 0x%x need MCS_SDRQ\n\r", appid));
     return 1;
   }
-  in_uint8s(self->in_s, 5);
+  in_uint8s(self->in_s, 2);
+  in_uint16_be(self->in_s, *chan);
+  in_uint8s(self->in_s, 1);
   in_uint8(self->in_s, len);
   if (len & 0x80)
     in_uint8s(self->in_s, 1);
@@ -407,10 +411,33 @@ int xrdp_mcs_send(struct xrdp_mcs* self)
 {
   int len;
 
+  DEBUG(("  in xrdp_mcs_send\n\r"));
   s_pop_layer(self->out_s, mcs_hdr);
   len = (self->out_s->end - self->out_s->p) - 8;
   len = len | 0x8000;
   out_uint8(self->out_s, MCS_SDIN << 2);
+  out_uint16_be(self->out_s, self->userid);
+  out_uint16_be(self->out_s, MCS_GLOBAL_CHANNEL);
+  out_uint8(self->out_s, 0x70);
+  out_uint16_be(self->out_s, len);
+  if (xrdp_iso_send(self->iso_layer) != 0)
+    return 1;
+  DEBUG(("  out xrdp_mcs_send\n\r"));
+  return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+int xrdp_mcs_disconnect(struct xrdp_mcs* self)
+{
+  int len;
+
+  xrdp_mcs_init(self, 100);
+  s_mark_end(self->out_s);
+  s_pop_layer(self->out_s, mcs_hdr);
+  len = (self->out_s->end - self->out_s->p) - 8;
+  len = len | 0x8000;
+  out_uint8(self->out_s, MCS_DPUM << 2);
   out_uint16_be(self->out_s, self->userid);
   out_uint16_be(self->out_s, MCS_GLOBAL_CHANNEL);
   out_uint8(self->out_s, 0x70);

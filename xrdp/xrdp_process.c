@@ -28,14 +28,17 @@ struct xrdp_process* xrdp_process_create(struct xrdp_listen* owner)
 
   self = (struct xrdp_process*)g_malloc(sizeof(struct xrdp_process), 1);
   self->lis_layer = owner;
-  self->rdp_layer = xrdp_rdp_create(self);
   return self;
 }
 
 /*****************************************************************************/
 void xrdp_process_delete(struct xrdp_process* self)
 {
+  if (self == 0)
+    return;
   xrdp_rdp_delete(self->rdp_layer);
+  xrdp_orders_delete(self->orders);
+  xrdp_wm_delete(self->wm);
   g_free(self->in_s.data);
   g_free(self->out_s.data);
   g_free(self);
@@ -63,7 +66,7 @@ int xrdp_process_main_loop(struct xrdp_process* self)
         {
           if (xrdp_rdp_recv(self->rdp_layer, &code) != 0)
             break;
-          DEBUG(("xrdp_process_main_loop code %d\n", code));
+          DEBUG(("xrdp_process_main_loop code %d\n\r", code));
           switch (code)
           {
             case -1:
@@ -75,23 +78,42 @@ int xrdp_process_main_loop(struct xrdp_process* self)
               xrdp_rdp_process_confirm_active(self->rdp_layer); /* 3 */
               break;
             case RDP_PDU_DATA:
-              xrdp_rdp_process_data(self->rdp_layer); /* 7 */
+              if (xrdp_rdp_process_data(self->rdp_layer) != 0) /* 7 */
+              {
+                DEBUG(("xrdp_rdp_process_data returned non zero\n\r"));
+                cont = 0;
+                self->term = 1;
+              }
               break;
             default:
-              g_printf("unknown in xrdp_process_main_loop\n");
+              g_printf("unknown in xrdp_process_main_loop\n\r");
               break;
           }
-          cont = self->rdp_layer->next_packet < self->rdp_layer->in_s->end;
+          if (cont)
+            cont = self->rdp_layer->next_packet < self->rdp_layer->in_s->end;
         }
         if (cont) /* we must have errored out */
           break;
+        if (self->rdp_layer->up_and_running && self->wm == 0)
+        {
+          /* only do this once */
+          DEBUG(("xrdp_process_main_loop up and running\n\r"));
+          self->orders = xrdp_orders_create(self);
+          self->wm = xrdp_wm_create(self);
+          xrdp_wm_init(self->wm);
+        }
       }
+      else if (i == 0)
+        g_sleep(10);
       else
         break;
     }
   }
+  xrdp_rdp_disconnect(self->rdp_layer);
   xrdp_rdp_delete(self->rdp_layer);
+  self->rdp_layer = 0;
   g_tcp_close(self->sck);
   self->status = -1;
+  xrdp_listen_delete_pro(self->lis_layer, self);
   return 0;
 }

@@ -370,3 +370,30 @@
 #define exDiscReasonLicenseErrClientEncryption        0x0108
 #define exDiscReasonLicenseCantUpgradeLicense         0x0109
 #define exDiscReasonLicenseNoRemoteConnections        0x010a
+
+#define RDP_ORDER_STANDARD   0x01
+#define RDP_ORDER_SECONDARY  0x02
+#define RDP_ORDER_BOUNDS     0x04
+#define RDP_ORDER_CHANGE     0x08
+#define RDP_ORDER_DELTA      0x10
+#define RDP_ORDER_LASTBOUNDS 0x20
+#define RDP_ORDER_SMALL      0x40
+#define RDP_ORDER_TINY       0x80
+
+#define RDP_ORDER_DESTBLT   0
+#define RDP_ORDER_PATBLT    1
+#define RDP_ORDER_SCREENBLT 2
+#define RDP_ORDER_LINE      9
+#define RDP_ORDER_RECT      10
+#define RDP_ORDER_DESKSAVE  11
+#define RDP_ORDER_MEMBLT    13
+#define RDP_ORDER_TRIBLT    14
+#define RDP_ORDER_POLYLINE  22
+#define RDP_ORDER_TEXT2     27
+
+#define RDP_ORDER_RAW_BMPCACHE  0
+#define RDP_ORDER_COLCACHE      1
+#define RDP_ORDER_BMPCACHE      2
+#define RDP_ORDER_FONTCACHE     3
+#define RDP_ORDER_RAW_BMPCACHE2 4
+#define RDP_ORDER_BMPCACHE2     5

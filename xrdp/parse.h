@@ -77,6 +77,12 @@ struct stream
   s->p++; \
 }
 
+#define in_sint16_le(s, v) \
+{ \
+  v = *((signed short*)(s->p)); \
+  s->p += 2; \
+}
+
 #define in_uint16_le(s, v) \
 { \
   v = *((unsigned short*)(s->p)); \

@@ -39,6 +39,7 @@ int main(int argc, char** argv)
 {
   int rv;
 
+  g_init_system();
   rv = 0;
   g_listen = xrdp_listen_create();
   if (g_thread_create(xrdp_listen_run, 0) == 0)
@@ -51,5 +52,6 @@ int main(int argc, char** argv)
   else
     rv = 1;
   xrdp_listen_delete(g_listen);
+  g_exit_system();
   return rv;
 }

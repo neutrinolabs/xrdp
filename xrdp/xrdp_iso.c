@@ -37,6 +37,8 @@ struct xrdp_iso* xrdp_iso_create(struct xrdp_mcs* owner)
 /*****************************************************************************/
 void xrdp_iso_delete(struct xrdp_iso* self)
 {
+  if (self == 0)
+    return;
   xrdp_tcp_delete(self->tcp_layer);
   g_free(self);
 }
@@ -137,6 +139,7 @@ int xrdp_iso_send(struct xrdp_iso* self)
 {
   int len;
 
+  DEBUG(("   in xrdp_iso_send\n\r"));
   s_pop_layer(self->out_s, iso_hdr);
   len = self->out_s->end - self->out_s->p;
   out_uint8(self->out_s, 3);
@@ -147,5 +150,6 @@ int xrdp_iso_send(struct xrdp_iso* self)
   out_uint8(self->out_s, 0x80);
   if (xrdp_tcp_send(self->tcp_layer) != 0)
     return 1;
+  DEBUG(("   out xrdp_iso_send\n\r"));
   return 0;
 }

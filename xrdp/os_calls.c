@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <openssl/rc4.h>
@@ -35,11 +36,121 @@
 #include <openssl/sha.h>
 #include <openssl/bn.h>
 
+#include "xrdp.h"
+
+//#define MEMLEAK
+
 static pthread_mutex_t g_term_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int g_term = 0;
 
+#ifdef MEMLEAK
+int g_memsize = 0;
+int g_memid = 0;
+struct xrdp_list* g_memlist = 0;
+#endif
+
 /*****************************************************************************/
-void g_printf(char *format, ...)
+int g_init_system(void)
+{
+#ifdef MEMLEAK
+  g_memlist = xrdp_list_create();
+#endif
+  return 0;
+}
+
+/*****************************************************************************/
+int g_exit_system(void)
+{
+#ifdef MEMLEAK
+  int i;
+  struct xrdp_mem* p;
+
+  for (i = 0; i < g_memlist->count; i++)
+  {
+    p = (struct xrdp_mem*)xrdp_list_get_item(g_memlist, i);
+    g_printf("leak size %d id %d\n\r", p->size, p->id);
+  }
+  g_printf("mem %d\n\r", g_memsize);
+  xrdp_list_delete(g_memlist);
+  g_memlist = 0;
+#endif
+  return 0;
+}
+
+/*****************************************************************************/
+void* g_malloc(int size, int zero)
+{
+#ifdef MEMLEAK
+  char* rv;
+  struct xrdp_mem* p;
+
+  rv = (char*)malloc(size + sizeof(struct xrdp_mem));
+  if (zero)
+    memset(rv, 0, size + sizeof(struct xrdp_mem));
+  g_memsize += size;
+  p = (struct xrdp_mem*)rv;
+  p->size = size;
+  p->id = g_memid;
+  if (g_memlist != 0)
+    xrdp_list_add_item(g_memlist, (int)p);
+  g_memid++;
+  return rv + sizeof(struct xrdp_mem);
+#else
+  char* rv;
+
+  rv = (char*)malloc(size);
+  if (zero)
+    memset(rv, 0, size);
+  return rv;
+#endif
+}
+
+/*****************************************************************************/
+void* g_malloc1(int size, int zero)
+{
+  char* rv;
+
+  rv = (char*)malloc(size);
+  if (zero)
+    memset(rv, 0, size);
+  return rv;
+}
+
+/*****************************************************************************/
+void g_free(void* ptr)
+{
+#ifdef MEMLEAK
+  struct xrdp_mem* p;
+  int i;
+
+  if (ptr != 0)
+  {
+    p = (struct xrdp_mem*)(((char*)ptr) - sizeof(struct xrdp_mem));
+    g_memsize -= p->size;
+    i = xrdp_list_index_of(g_memlist, (int)p);
+    if (i >= 0)
+      xrdp_list_remove_item(g_memlist, i);
+    free(p);
+  }
+#else
+  if (ptr != 0)
+  {
+    free(ptr);
+  }
+#endif
+}
+
+/*****************************************************************************/
+void g_free1(void* ptr)
+{
+  if (ptr != 0)
+  {
+    free(ptr);
+  }
+}
+
+/*****************************************************************************/
+void g_printf(char* format, ...)
 {
   va_list ap;
 
@@ -78,24 +189,6 @@ void g_hexdump(char* p, int len)
 }
 
 /*****************************************************************************/
-void* g_malloc(int size, int zero)
-{
-  void* rv;
-
-  rv = malloc(size);
-  if (zero)
-    memset(rv, 0, size);
-  return rv;
-}
-
-/*****************************************************************************/
-void g_free(void* ptr)
-{
-  if (ptr != 0)
-    free(ptr);
-}
-
-/*****************************************************************************/
 void g_memset(void* ptr, int val, int size)
 {
   memset(ptr, val, size);
@@ -116,7 +209,13 @@ int g_getchar(void)
 /*****************************************************************************/
 int g_tcp_socket(void)
 {
-  return socket(PF_INET, SOCK_STREAM, 0);
+  int rv;
+  int i;
+
+  i = 1;
+  rv = socket(PF_INET, SOCK_STREAM, 0);
+  setsockopt(rv, IPPROTO_TCP, TCP_NODELAY, (void*)&i, sizeof(i));
+  return rv;
 }
 
 /*****************************************************************************/
@@ -187,10 +286,13 @@ int g_tcp_last_error_would_block(int sck)
 int g_tcp_select(int sck)
 {
   fd_set rfds;
+  struct timeval time;
 
+  time.tv_sec = 0;
+  time.tv_usec = 0;
   FD_ZERO(&rfds);
   FD_SET(sck, &rfds);
-  return select(sck + 1, &rfds, 0, 0, 0);
+  return select(sck + 1, &rfds, 0, 0, &time);
 }
 
 /*****************************************************************************/
@@ -358,4 +460,65 @@ void g_random(char* data, int len)
     read(fd, data, len);
     close(fd);
   }
+}
+
+/*****************************************************************************/
+int g_abs(int i)
+{
+  return abs(i);
+}
+
+/*****************************************************************************/
+int g_memcmp(void* s1, void* s2, int len)
+{
+  return memcmp(s1, s2, len);
+}
+
+/*****************************************************************************/
+int g_file_open(char* file_name)
+{
+  return open(file_name, O_RDWR | O_CREAT);
+}
+
+/*****************************************************************************/
+int g_file_close(int fd)
+{
+  close(fd);
+  return 0;
+}
+
+/*****************************************************************************/
+/* read from file*/
+int g_file_read(int fd, char* ptr, int len)
+{
+  return read(fd, ptr, len);
+}
+
+/*****************************************************************************/
+/* write to file */
+int g_file_write(int fd, char* ptr, int len)
+{
+  return write(fd, ptr, len);
+}
+
+/*****************************************************************************/
+/* move file pointer */
+int g_file_seek(int fd, int offset)
+{
+  return lseek(fd, offset, SEEK_SET);
+}
+
+/*****************************************************************************/
+/* do a write lock on a file */
+int g_file_lock(int fd, int start, int len)
+{
+  struct flock lock;
+
+  lock.l_type = F_WRLCK;
+  lock.l_whence = SEEK_SET;
+  lock.l_start = start;
+  lock.l_len = len;
+  if (fcntl(fd, F_SETLK, &lock) == -1)
+    return 0;
+  return 1;
 }
