@@ -280,6 +280,7 @@ struct xrdp_wm
   int draggingdy;
   int draggingorgx;
   int draggingorgy;
+  int draggingxorstate;
   struct xrdp_bitmap* dragging_window;
   /* the down(clicked) button */
   struct xrdp_bitmap* button_down;

@@ -819,12 +819,14 @@ int xrdp_wm_mouse_move(struct xrdp_wm* self, int x, int y)
     xrdp_painter_begin_update(self->painter);
     boxx = self->draggingx - self->draggingdx;
     boxy = self->draggingy - self->draggingdy;
-    xrdp_wm_xor_pat(self, boxx, boxy, self->draggingcx, self->draggingcy);
+    if (self->draggingxorstate)
+      xrdp_wm_xor_pat(self, boxx, boxy, self->draggingcx, self->draggingcy);
     self->draggingx = x;
     self->draggingy = y;
     boxx = self->draggingx - self->draggingdx;
     boxy = self->draggingy - self->draggingdy;
     xrdp_wm_xor_pat(self, boxx, boxy, self->draggingcx, self->draggingcy);
+    self->draggingxorstate = 1;
     xrdp_painter_end_update(self->painter);
   }
   b = xrdp_wm_at_pos(self->screen, x, y, 0);
@@ -888,7 +890,9 @@ int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
     oldx = self->dragging_window->left;
     oldy = self->dragging_window->top;
     /* draw xor box one more time */
-    xrdp_wm_xor_pat(self, newx, newy, self->draggingcx, self->draggingcy);
+    if (self->draggingxorstate)
+      xrdp_wm_xor_pat(self, newx, newy, self->draggingcx, self->draggingcy);
+    self->draggingxorstate = 0;
     /* move screen to new location */
     xrdp_wm_move_window(self, self->dragging_window, newx - oldx, newy - oldy);
     self->dragging_window = 0;
@@ -922,8 +926,10 @@ int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
         {
           newx = self->draggingx - self->draggingdx;
           newy = self->draggingy - self->draggingdy;
-          xrdp_wm_xor_pat(self, newx, newy, self->draggingcx,
-                          self->draggingcy);
+          if (self->draggingxorstate)
+            xrdp_wm_xor_pat(self, newx, newy,
+                            self->draggingcx, self->draggingcy);
+          self->draggingxorstate = 0;
         }
         self->dragging = 1;
         self->dragging_window = b;
@@ -935,9 +941,6 @@ int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
         self->draggingdy = y - b->top;
         self->draggingcx = b->width;
         self->draggingcy = b->height;
-        newx = self->draggingx - self->draggingdx;
-        newy = self->draggingy - self->draggingdy;
-        xrdp_wm_xor_pat(self, newx, newy, self->draggingcx, self->draggingcy);
       }
     }
   }
