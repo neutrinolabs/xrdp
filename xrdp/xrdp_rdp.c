@@ -53,8 +53,6 @@ struct xrdp_rdp* xrdp_rdp_create(struct xrdp_process* owner)
 
   self = (struct xrdp_rdp*)g_malloc(sizeof(struct xrdp_rdp), 1);
   self->pro_layer = owner;
-  self->in_s = &owner->in_s;
-  self->out_s = &owner->out_s;
   self->share_id = 66538;
   self->sec_layer = xrdp_sec_create(self);
   return self;
@@ -70,103 +68,104 @@ void xrdp_rdp_delete(struct xrdp_rdp* self)
 }
 
 /*****************************************************************************/
-int xrdp_rdp_init(struct xrdp_rdp* self, int len)
+int xrdp_rdp_init(struct xrdp_rdp* self, struct stream* s)
 {
-  if (xrdp_sec_init(self->sec_layer, len + 6) != 0)
+  if (xrdp_sec_init(self->sec_layer, s) != 0)
     return 1;
-  s_push_layer(self->out_s, rdp_hdr, 6);
+  s_push_layer(s, rdp_hdr, 6);
   return 0;
 }
 
 /*****************************************************************************/
-int xrdp_rdp_init_data(struct xrdp_rdp* self, int len)
+int xrdp_rdp_init_data(struct xrdp_rdp* self, struct stream* s)
 {
-  if (xrdp_sec_init(self->sec_layer, len + 18) != 0)
+  if (xrdp_sec_init(self->sec_layer, s) != 0)
     return 1;
-  s_push_layer(self->out_s, rdp_hdr, 18);
+  s_push_layer(s, rdp_hdr, 18);
   return 0;
 }
 
 /*****************************************************************************/
-int xrdp_rdp_recv(struct xrdp_rdp* self, int* code)
+int xrdp_rdp_recv(struct xrdp_rdp* self, struct stream* s, int* code)
 {
   int error;
   int len;
   int pdu_code;
   int chan;
 
-  if (self->next_packet == 0 || self->next_packet >= self->in_s->end)
+  if (s->next_packet == 0 || s->next_packet >= s->end)
   {
     chan = 0;
-    error = xrdp_sec_recv(self->sec_layer, &chan);
+    error = xrdp_sec_recv(self->sec_layer, s, &chan);
     if (error == -1) /* special code for send demand active */
     {
-      self->next_packet = 0;
+      s->next_packet = 0;
       *code = -1;
       return 0;
     }
     if (chan != MCS_GLOBAL_CHANNEL && chan > 0)
     {
-      self->next_packet = 0;
+      s->next_packet = 0;
       *code = 0;
       return 0;
     }
     if (error != 0)
       return 1;
-    self->next_packet = self->in_s->p;
+    s->next_packet = s->p;
   }
   else
-    self->in_s->p = self->next_packet;
-  in_uint16_le(self->in_s, len);
+    s->p = s->next_packet;
+  in_uint16_le(s, len);
   if (len == 0x8000)
   {
-    self->next_packet += 8;
+    s->next_packet += 8;
     *code = 0;
     return 0;
   }
-  in_uint16_le(self->in_s, pdu_code);
+  in_uint16_le(s, pdu_code);
   *code = pdu_code & 0xf;
-  in_uint8s(self->in_s, 2); /* mcs user id */
-  self->next_packet += len;
+  in_uint8s(s, 2); /* mcs user id */
+  s->next_packet += len;
   return 0;
 }
 
 /*****************************************************************************/
-int xrdp_rdp_send(struct xrdp_rdp* self, int pdu_type)
+int xrdp_rdp_send(struct xrdp_rdp* self, struct stream* s, int pdu_type)
 {
   int len;
 
   DEBUG(("in xrdp_rdp_send\n\r"));
-  s_pop_layer(self->out_s, rdp_hdr);
-  len = self->out_s->end - self->out_s->p;
-  out_uint16_le(self->out_s, len);
-  out_uint16_le(self->out_s, 0x10 | pdu_type);
-  out_uint16_le(self->out_s, self->mcs_channel);
-  if (xrdp_sec_send(self->sec_layer, 0) != 0)
+  s_pop_layer(s, rdp_hdr);
+  len = s->end - s->p;
+  out_uint16_le(s, len);
+  out_uint16_le(s, 0x10 | pdu_type);
+  out_uint16_le(s, self->mcs_channel);
+  if (xrdp_sec_send(self->sec_layer, s, 0) != 0)
     return 1;
   DEBUG(("out xrdp_rdp_send\n\r"));
   return 0;
 }
 
 /*****************************************************************************/
-int xrdp_rdp_send_data(struct xrdp_rdp* self, int data_pdu_type)
+int xrdp_rdp_send_data(struct xrdp_rdp* self, struct stream* s,
+                       int data_pdu_type)
 {
   int len;
 
   DEBUG(("in xrdp_rdp_send_data\n\r"));
-  s_pop_layer(self->out_s, rdp_hdr);
-  len = self->out_s->end - self->out_s->p;
-  out_uint16_le(self->out_s, len);
-  out_uint16_le(self->out_s, 0x10 | RDP_PDU_DATA);
-  out_uint16_le(self->out_s, self->mcs_channel);
-  out_uint32_le(self->out_s, self->share_id);
-  out_uint8(self->out_s, 0);
-  out_uint8(self->out_s, 1);
-  out_uint16_le(self->out_s, len - 14);
-  out_uint8(self->out_s, data_pdu_type);
-  out_uint8(self->out_s, 0);
-  out_uint16_le(self->out_s, 0);
-  if (xrdp_sec_send(self->sec_layer, 0) != 0)
+  s_pop_layer(s, rdp_hdr);
+  len = s->end - s->p;
+  out_uint16_le(s, len);
+  out_uint16_le(s, 0x10 | RDP_PDU_DATA);
+  out_uint16_le(s, self->mcs_channel);
+  out_uint32_le(s, self->share_id);
+  out_uint8(s, 0);
+  out_uint8(s, 1);
+  out_uint16_le(s, len - 14);
+  out_uint8(s, data_pdu_type);
+  out_uint8(s, 0);
+  out_uint16_le(s, 0);
+  if (xrdp_sec_send(self->sec_layer, s, 0) != 0)
     return 1;
   DEBUG(("out xrdp_rdp_send_data\n\r"));
   return 0;
@@ -226,135 +225,146 @@ int xrdp_rdp_incoming(struct xrdp_rdp* self)
 /*****************************************************************************/
 int xrdp_rdp_send_demand_active(struct xrdp_rdp* self)
 {
-  if (xrdp_rdp_init(self, 512) != 0)
-    return 1;
+  struct stream* s;
 
-  out_uint32_le(self->out_s, self->share_id);
-  out_uint32_be(self->out_s, 0x04000401);
-  out_uint32_be(self->out_s, 0x524e5300);
-  out_uint32_be(self->out_s, 0x08000000);
-  out_uint32_be(self->out_s, 0x09000800);
-  out_uint16_le(self->out_s, self->mcs_channel);
-  out_uint16_be(self->out_s, 0xb5e2);
+  make_stream(s);
+  init_stream(s, 8192);
+  if (xrdp_rdp_init(self, s) != 0)
+  {
+    free_stream(s);
+    return 1;
+  }
+
+  out_uint32_le(s, self->share_id);
+  out_uint32_be(s, 0x04000401);
+  out_uint32_be(s, 0x524e5300);
+  out_uint32_be(s, 0x08000000);
+  out_uint32_be(s, 0x09000800);
+  out_uint16_le(s, self->mcs_channel);
+  out_uint16_be(s, 0xb5e2);
 
   /* Output general capability set */
-  out_uint16_le(self->out_s, RDP_CAPSET_GENERAL); /* 1 */
-  out_uint16_le(self->out_s, RDP_CAPLEN_GENERAL); /* 24(0x18) */
-  out_uint16_le(self->out_s, 1); /* OS major type */
-  out_uint16_le(self->out_s, 3); /* OS minor type */
-  out_uint16_le(self->out_s, 0x200); /* Protocol version */
-  out_uint16_le(self->out_s, 0); /* pad */
-  out_uint16_le(self->out_s, 0); /* Compression types */
-  out_uint16_le(self->out_s, 0); /* pad */
-  out_uint16_le(self->out_s, 0); /* Update capability */
-  out_uint16_le(self->out_s, 0); /* Remote unshare capability */
-  out_uint16_le(self->out_s, 0); /* Compression level */
-  out_uint16_le(self->out_s, 0); /* Pad */
+  out_uint16_le(s, RDP_CAPSET_GENERAL); /* 1 */
+  out_uint16_le(s, RDP_CAPLEN_GENERAL); /* 24(0x18) */
+  out_uint16_le(s, 1); /* OS major type */
+  out_uint16_le(s, 3); /* OS minor type */
+  out_uint16_le(s, 0x200); /* Protocol version */
+  out_uint16_le(s, 0); /* pad */
+  out_uint16_le(s, 0); /* Compression types */
+  out_uint16_le(s, 0); /* pad */
+  out_uint16_le(s, 0); /* Update capability */
+  out_uint16_le(s, 0); /* Remote unshare capability */
+  out_uint16_le(s, 0); /* Compression level */
+  out_uint16_le(s, 0); /* Pad */
 
   /* Output bitmap capability set */
-  out_uint16_le(self->out_s, RDP_CAPSET_BITMAP); /* 2 */
-  out_uint16_le(self->out_s, RDP_CAPLEN_BITMAP); /* 28(0x1c) */
-  out_uint16_le(self->out_s, self->bpp); /* Preferred BPP */
-  out_uint16_le(self->out_s, 1); /* Receive 1 BPP */
-  out_uint16_le(self->out_s, 1); /* Receive 4 BPP */
-  out_uint16_le(self->out_s, 1); /* Receive 8 BPP */
-  out_uint16_le(self->out_s, self->width); /* width */
-  out_uint16_le(self->out_s, self->height); /* height */
-  out_uint16_le(self->out_s, 0); /* Pad */
-  out_uint16_le(self->out_s, 1); /* Allow resize */
-  out_uint16_le(self->out_s, 1); /* bitmap compression */
-  out_uint16_le(self->out_s, 0); /* unknown */
-  out_uint16_le(self->out_s, 0); /* unknown */
-  out_uint16_le(self->out_s, 0); /* pad */
+  out_uint16_le(s, RDP_CAPSET_BITMAP); /* 2 */
+  out_uint16_le(s, RDP_CAPLEN_BITMAP); /* 28(0x1c) */
+  out_uint16_le(s, self->bpp); /* Preferred BPP */
+  out_uint16_le(s, 1); /* Receive 1 BPP */
+  out_uint16_le(s, 1); /* Receive 4 BPP */
+  out_uint16_le(s, 1); /* Receive 8 BPP */
+  out_uint16_le(s, self->width); /* width */
+  out_uint16_le(s, self->height); /* height */
+  out_uint16_le(s, 0); /* Pad */
+  out_uint16_le(s, 1); /* Allow resize */
+  out_uint16_le(s, 1); /* bitmap compression */
+  out_uint16_le(s, 0); /* unknown */
+  out_uint16_le(s, 0); /* unknown */
+  out_uint16_le(s, 0); /* pad */
 
   /* Output ? */
-  out_uint16_le(self->out_s, 14);
-  out_uint16_le(self->out_s, 4);
+  out_uint16_le(s, 14);
+  out_uint16_le(s, 4);
 
   /* Output order capability set */
-  out_uint16_le(self->out_s, RDP_CAPSET_ORDER); /* 3 */
-  out_uint16_le(self->out_s, RDP_CAPLEN_ORDER); /* 88(0x58) */
-  out_uint8s(self->out_s, 16);
-  out_uint32_be(self->out_s, 0x40420f00);
-  out_uint16_le(self->out_s, 1); /* Cache X granularity */
-  out_uint16_le(self->out_s, 20); /* Cache Y granularity */
-  out_uint16_le(self->out_s, 0); /* Pad */
-  out_uint16_le(self->out_s, 1); /* Max order level */
-  out_uint16_le(self->out_s, 0x2f); /* Number of fonts */
-  out_uint16_le(self->out_s, 0x22); /* Capability flags */
+  out_uint16_le(s, RDP_CAPSET_ORDER); /* 3 */
+  out_uint16_le(s, RDP_CAPLEN_ORDER); /* 88(0x58) */
+  out_uint8s(s, 16);
+  out_uint32_be(s, 0x40420f00);
+  out_uint16_le(s, 1); /* Cache X granularity */
+  out_uint16_le(s, 20); /* Cache Y granularity */
+  out_uint16_le(s, 0); /* Pad */
+  out_uint16_le(s, 1); /* Max order level */
+  out_uint16_le(s, 0x2f); /* Number of fonts */
+  out_uint16_le(s, 0x22); /* Capability flags */
   /* caps */
-  out_uint8(self->out_s, 1); /* dest blt */
-  out_uint8(self->out_s, 1); /* pat blt */
-  out_uint8(self->out_s, 1); /* screen blt */
-  out_uint8(self->out_s, 1); /* memblt */
-  out_uint8(self->out_s, 1);
-  out_uint8(self->out_s, 1);
-  out_uint8(self->out_s, 1);
-  out_uint8(self->out_s, 1);
-  out_uint8(self->out_s, 1);
-  out_uint8(self->out_s, 1);
-  out_uint8(self->out_s, 1);
-  out_uint8(self->out_s, 1);
-  out_uint8(self->out_s, 1);
-  out_uint8(self->out_s, 0);
-  out_uint8(self->out_s, 0);
-  out_uint8(self->out_s, 1);
-  out_uint8(self->out_s, 1);
-  out_uint8(self->out_s, 1);
-  out_uint8(self->out_s, 1);
-  out_uint8(self->out_s, 1);
-  out_uint8(self->out_s, 1);
-  out_uint8(self->out_s, 1);
-  out_uint8(self->out_s, 1);
-  out_uint8(self->out_s, 1);
-  out_uint8(self->out_s, 1);
-  out_uint8(self->out_s, 1);
-  out_uint8(self->out_s, 1);
-  out_uint8(self->out_s, 1);
-  out_uint8(self->out_s, 1);
-  out_uint8(self->out_s, 0);
-  out_uint8(self->out_s, 0);
-  out_uint8(self->out_s, 0);
-  out_uint16_le(self->out_s, 0x6a1);
-  out_uint8s(self->out_s, 6); /* ? */
-  out_uint32_le(self->out_s, 0x0f4240); /* desk save */
-  out_uint32_le(self->out_s, 0); /* ? */
-  out_uint32_le(self->out_s, 0); /* ? */
+  out_uint8(s, 1); /* dest blt */
+  out_uint8(s, 1); /* pat blt */
+  out_uint8(s, 1); /* screen blt */
+  out_uint8(s, 1); /* memblt */
+  out_uint8(s, 1);
+  out_uint8(s, 1);
+  out_uint8(s, 1);
+  out_uint8(s, 1);
+  out_uint8(s, 1);
+  out_uint8(s, 1);
+  out_uint8(s, 1);
+  out_uint8(s, 1);
+  out_uint8(s, 1);
+  out_uint8(s, 0);
+  out_uint8(s, 0);
+  out_uint8(s, 1);
+  out_uint8(s, 1);
+  out_uint8(s, 1);
+  out_uint8(s, 1);
+  out_uint8(s, 1);
+  out_uint8(s, 1);
+  out_uint8(s, 1);
+  out_uint8(s, 1);
+  out_uint8(s, 1);
+  out_uint8(s, 1);
+  out_uint8(s, 1);
+  out_uint8(s, 1);
+  out_uint8(s, 1);
+  out_uint8(s, 1);
+  out_uint8(s, 0);
+  out_uint8(s, 0);
+  out_uint8(s, 0);
+  out_uint16_le(s, 0x6a1);
+  out_uint8s(s, 6); /* ? */
+  out_uint32_le(s, 0x0f4240); /* desk save */
+  out_uint32_le(s, 0); /* ? */
+  out_uint32_le(s, 0); /* ? */
 
   /* Output color cache capability set */
-  out_uint16_le(self->out_s, RDP_CAPSET_COLCACHE);
-  out_uint16_le(self->out_s, RDP_CAPLEN_COLCACHE);
-  out_uint16_le(self->out_s, 6); /* cache size */
-  out_uint16_le(self->out_s, 0); /* pad */
+  out_uint16_le(s, RDP_CAPSET_COLCACHE);
+  out_uint16_le(s, RDP_CAPLEN_COLCACHE);
+  out_uint16_le(s, 6); /* cache size */
+  out_uint16_le(s, 0); /* pad */
 
   /* Output pointer capability set */
-  out_uint16_le(self->out_s, RDP_CAPSET_POINTER);
-  out_uint16_le(self->out_s, RDP_CAPLEN_POINTER);
-  out_uint16_le(self->out_s, 1); /* Colour pointer */
-  out_uint16_le(self->out_s, 0x19); /* Cache size */
+  out_uint16_le(s, RDP_CAPSET_POINTER);
+  out_uint16_le(s, RDP_CAPLEN_POINTER);
+  out_uint16_le(s, 1); /* Colour pointer */
+  out_uint16_le(s, 0x19); /* Cache size */
 
   /* Output ? */
-  out_uint16_le(self->out_s, 0xd);
-  out_uint16_le(self->out_s, 0x58); /* 88 */
-  out_uint8(self->out_s, 1);
-  out_uint8s(self->out_s, 83);
+  out_uint16_le(s, 0xd);
+  out_uint16_le(s, 0x58); /* 88 */
+  out_uint8(s, 1);
+  out_uint8s(s, 83);
 
-  s_mark_end(self->out_s);
+  s_mark_end(s);
 
-  if (xrdp_rdp_send(self, RDP_PDU_DEMAND_ACTIVE) != 0)
+  if (xrdp_rdp_send(self, s, RDP_PDU_DEMAND_ACTIVE) != 0)
+  {
+    free_stream(s);
     return 1;
+  }
 
+  free_stream(s);
   return 0;
 }
 
 /*****************************************************************************/
-int xrdp_rdp_process_confirm_active(struct xrdp_rdp* self)
+int xrdp_rdp_process_confirm_active(struct xrdp_rdp* self, struct stream* s)
 {
   return 0;
 }
 
 /*****************************************************************************/
-int xrdp_rdp_process_data_pointer(struct xrdp_rdp* self)
+int xrdp_rdp_process_data_pointer(struct xrdp_rdp* self, struct stream* s)
 {
   return 0;
 }
@@ -410,7 +420,7 @@ int xrdp_rdp_process_input_mouse(struct xrdp_rdp* self, int device_flags,
 
 /*****************************************************************************/
 /* RDP_DATA_PDU_INPUT */
-int xrdp_rdp_process_data_input(struct xrdp_rdp* self)
+int xrdp_rdp_process_data_input(struct xrdp_rdp* self, struct stream* s)
 {
   int num_events;
   int index;
@@ -419,16 +429,16 @@ int xrdp_rdp_process_data_input(struct xrdp_rdp* self)
   int param1;
   int param2;
 
-  in_uint16_le(self->in_s, num_events);
-  in_uint8s(self->in_s, 2); /* pad */
+  in_uint16_le(s, num_events);
+  in_uint8s(s, 2); /* pad */
   DEBUG(("xrdp_rdp_process_data_input %d events\n\r", num_events))
   for (index = 0; index < num_events; index++)
   {
-    in_uint8s(self->in_s, 4); /* time */
-    in_uint16_le(self->in_s, msg_type);
-    in_uint16_le(self->in_s, device_flags);
-    in_sint16_le(self->in_s, param1);
-    in_sint16_le(self->in_s, param2);
+    in_uint8s(s, 4); /* time */
+    in_uint16_le(s, msg_type);
+    in_uint16_le(s, device_flags);
+    in_sint16_le(s, param1);
+    in_sint16_le(s, param2);
     switch (msg_type)
     {
       case RDP_INPUT_SYNCHRONIZE: /* 0 */
@@ -451,38 +461,60 @@ int xrdp_rdp_process_data_input(struct xrdp_rdp* self)
 /*****************************************************************************/
 int xrdp_rdp_send_synchronise(struct xrdp_rdp* self)
 {
-  if (xrdp_rdp_init_data(self, 4) != 0)
+  struct stream* s;
+
+  make_stream(s);
+  init_stream(s, 8192);
+  if (xrdp_rdp_init_data(self, s) != 0)
+  {
+    free_stream(s);
     return 1;
-  out_uint16_le(self->out_s, 1);
-  out_uint16_le(self->out_s, 1002);
-  s_mark_end(self->out_s);
-  if (xrdp_rdp_send_data(self, RDP_DATA_PDU_SYNCHRONISE) != 0)
+  }
+  out_uint16_le(s, 1);
+  out_uint16_le(s, 1002);
+  s_mark_end(s);
+  if (xrdp_rdp_send_data(self, s, RDP_DATA_PDU_SYNCHRONISE) != 0)
+  {
+    free_stream(s);
     return 1;
+  }
+  free_stream(s);
   return 0;
 }
 
 /*****************************************************************************/
 int xrdp_rdp_send_control(struct xrdp_rdp* self, int action)
 {
-  if (xrdp_rdp_init_data(self, 8) != 0)
+  struct stream* s;
+
+  make_stream(s);
+  init_stream(s, 8192);
+  if (xrdp_rdp_init_data(self, s) != 0)
+  {
+    free_stream(s);
     return 1;
-  out_uint16_le(self->out_s, action);
-  out_uint16_le(self->out_s, 0); /* userid */
-  out_uint32_le(self->out_s, 1002); /* control id */
-  s_mark_end(self->out_s);
-  if (xrdp_rdp_send_data(self, RDP_DATA_PDU_CONTROL) != 0)
+  }
+  out_uint16_le(s, action);
+  out_uint16_le(s, 0); /* userid */
+  out_uint32_le(s, 1002); /* control id */
+  s_mark_end(s);
+  if (xrdp_rdp_send_data(self, s, RDP_DATA_PDU_CONTROL) != 0)
+  {
+    free_stream(s);
     return 1;
+  }
+  free_stream(s);
   return 0;
 }
 
 /*****************************************************************************/
-int xrdp_rdp_process_data_control(struct xrdp_rdp* self)
+int xrdp_rdp_process_data_control(struct xrdp_rdp* self, struct stream* s)
 {
   int action;
 
-  in_uint16_le(self->in_s, action);
-  in_uint8s(self->in_s, 2); /* user id */
-  in_uint8s(self->in_s, 4); /* control id */
+  in_uint16_le(s, action);
+  in_uint8s(s, 2); /* user id */
+  in_uint8s(s, 4); /* control id */
   if (action == RDP_CTL_REQUEST_CONTROL)
   {
     xrdp_rdp_send_synchronise(self);
@@ -499,7 +531,7 @@ int xrdp_rdp_process_data_sync(struct xrdp_rdp* self)
 }
 
 /*****************************************************************************/
-int xrdp_rdp_process_screen_update(struct xrdp_rdp* self)
+int xrdp_rdp_process_screen_update(struct xrdp_rdp* self, struct stream* s)
 {
   int op;
   int left;
@@ -508,11 +540,11 @@ int xrdp_rdp_process_screen_update(struct xrdp_rdp* self)
   int bottom;
   struct xrdp_rect rect;
 
-  in_uint32_le(self->in_s, op);
-  in_uint16_le(self->in_s, left);
-  in_uint16_le(self->in_s, top);
-  in_uint16_le(self->in_s, right);
-  in_uint16_le(self->in_s, bottom);
+  in_uint32_le(s, op);
+  in_uint16_le(s, left);
+  in_uint16_le(s, top);
+  in_uint16_le(s, right);
+  in_uint16_le(s, bottom);
   xrdp_wm_rect(&rect, left, top, (right - left) + 1, (bottom - top) + 1);
   if (self->up_and_running && self->pro_layer->wm != 0)
     xrdp_bitmap_invalidate(self->pro_layer->wm->screen, &rect);
@@ -522,23 +554,34 @@ int xrdp_rdp_process_screen_update(struct xrdp_rdp* self)
 /*****************************************************************************/
 int xrdp_rdp_send_unknown1(struct xrdp_rdp* self)
 {
-  if (xrdp_rdp_init_data(self, 300) != 0)
+  struct stream* s;
+
+  make_stream(s);
+  init_stream(s, 8192);
+  if (xrdp_rdp_init_data(self, s) != 0)
+  {
+    free_stream(s);
     return 1;
-  out_uint8a(self->out_s, unknown1, 172);
-  s_mark_end(self->out_s);
-  if (xrdp_rdp_send_data(self, 0x28) != 0)
+  }
+  out_uint8a(s, unknown1, 172);
+  s_mark_end(s);
+  if (xrdp_rdp_send_data(self, s, 0x28) != 0)
+  {
+    free_stream(s);
     return 1;
+  }
+  free_stream(s);
   return 0;
 }
 
 /*****************************************************************************/
-int xrdp_rdp_process_data_font(struct xrdp_rdp* self)
+int xrdp_rdp_process_data_font(struct xrdp_rdp* self, struct stream* s)
 {
   int seq;
 
-  in_uint8s(self->in_s, 2); /* num of fonts */
-  in_uint8s(self->in_s, 2); // unknown
-  in_uint16_le(self->in_s, seq);
+  in_uint8s(s, 2); /* num of fonts */
+  in_uint8s(s, 2); // unknown
+  in_uint16_le(s, seq);
   /* 419 client sends Seq 1, then 2 */
   /* 2600 clients sends only Seq 3 */
   if (seq == 2 || seq == 3) /* after second font message, we are up and */
@@ -551,35 +594,35 @@ int xrdp_rdp_process_data_font(struct xrdp_rdp* self)
 
 /*****************************************************************************/
 /* RDP_PDU_DATA */
-int xrdp_rdp_process_data(struct xrdp_rdp* self)
+int xrdp_rdp_process_data(struct xrdp_rdp* self, struct stream* s)
 {
   int len;
   int data_type;
   int ctype;
   int clen;
 
-  in_uint8s(self->in_s, 6);
-  in_uint16_le(self->in_s, len);
-  in_uint8(self->in_s, data_type);
-  in_uint8(self->in_s, ctype);
-  in_uint16_le(self->in_s, clen);
+  in_uint8s(s, 6);
+  in_uint16_le(s, len);
+  in_uint8(s, data_type);
+  in_uint8(s, ctype);
+  in_uint16_le(s, clen);
   DEBUG(("xrdp_rdp_process_data code %d\n\r", data_type));
   switch (data_type)
   {
     case RDP_DATA_PDU_POINTER: /* 27 */
-      xrdp_rdp_process_data_pointer(self);
+      xrdp_rdp_process_data_pointer(self, s);
       break;
     case RDP_DATA_PDU_INPUT: /* 28 */
-      xrdp_rdp_process_data_input(self);
+      xrdp_rdp_process_data_input(self, s);
       break;
     case RDP_DATA_PDU_CONTROL: /* 20 */
-      xrdp_rdp_process_data_control(self);
+      xrdp_rdp_process_data_control(self, s);
       break;
     case RDP_DATA_PDU_SYNCHRONISE: /* 31 */
       xrdp_rdp_process_data_sync(self);
       break;
     case 33: /* 33 ?? */
-      xrdp_rdp_process_screen_update(self);
+      xrdp_rdp_process_screen_update(self, s);
       break;
 
     //case 35: /* 35 ?? this comes when minimuzing a full screen mstsc.exe 2600 */
@@ -588,7 +631,7 @@ int xrdp_rdp_process_data(struct xrdp_rdp* self)
       return 1;
       break;
     case RDP_DATA_PDU_FONT2: /* 39 */
-      xrdp_rdp_process_data_font(self);
+      xrdp_rdp_process_data_font(self, s);
       break;
     default:
       g_printf("unknown in xrdp_rdp_process_data %d\n\r", data_type);

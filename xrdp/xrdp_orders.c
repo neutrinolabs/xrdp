@@ -30,13 +30,15 @@ struct xrdp_orders* xrdp_orders_create(struct xrdp_process* owner)
   self = (struct xrdp_orders*)g_malloc(sizeof(struct xrdp_orders), 1);
   self->pro_layer = owner;
   self->rdp_layer = owner->rdp_layer;
-  self->out_s = &owner->out_s;
+  make_stream(self->out_s);
+  init_stream(self->out_s, 8192);
   return self;
 }
 
 /*****************************************************************************/
 void xrdp_orders_delete(struct xrdp_orders* self)
 {
+  free_stream(self->out_s);
   g_free(self);
 }
 
@@ -48,7 +50,8 @@ int xrdp_orders_init(struct xrdp_orders* self)
   if (self->order_level == 1)
   {
     self->order_count = 0;
-    if (xrdp_rdp_init_data(self->rdp_layer, 8192) != 0) /* is this big enough */
+    /* is this big enough */
+    if (xrdp_rdp_init_data(self->rdp_layer, self->out_s) != 0)
       return 1;
     out_uint16_le(self->out_s, RDP_UPDATE_ORDERS);
     out_uint8s(self->out_s, 2); /* pad */
@@ -73,7 +76,8 @@ int xrdp_orders_send(struct xrdp_orders* self)
     {
       s_mark_end(self->out_s);
       *((short*)self->order_count_ptr) = self->order_count;
-      if (xrdp_rdp_send_data(self->rdp_layer, RDP_DATA_PDU_UPDATE) != 0)
+      if (xrdp_rdp_send_data(self->rdp_layer, self->out_s,
+                             RDP_DATA_PDU_UPDATE) != 0)
         rv = 1;
     }
   }
@@ -88,7 +92,8 @@ int xrdp_orders_force_send(struct xrdp_orders* self)
   {
     s_mark_end(self->out_s);
     *((short*)self->order_count_ptr) = self->order_count;
-    if (xrdp_rdp_send_data(self->rdp_layer, RDP_DATA_PDU_UPDATE) != 0)
+    if (xrdp_rdp_send_data(self->rdp_layer, self->out_s,
+                           RDP_DATA_PDU_UPDATE) != 0)
       return 1;
   }
   self->order_count = 0;
@@ -891,7 +896,6 @@ int xrdp_orders_mem_blt(struct xrdp_orders* self, int cache_id,
 /*****************************************************************************/
 /* returns error */
 /* when a palette gets sent, send the main palette too */
-/* don't need max size here */
 int xrdp_orders_send_palette(struct xrdp_orders* self, int* palette,
                              int cache_id)
 {
@@ -899,10 +903,8 @@ int xrdp_orders_send_palette(struct xrdp_orders* self, int* palette,
   int len;
   int i;
 
-  /* gota clear any build up orders and send the main palette */
-  xrdp_orders_force_send(self);
   xrdp_wm_send_palette(self->pro_layer->wm);
-  xrdp_orders_init(self);
+  xrdp_orders_check(self, 2000);
   self->order_count++;
   order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
   out_uint8(self->out_s, order_flags);

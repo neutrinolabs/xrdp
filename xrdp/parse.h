@@ -35,6 +35,7 @@ struct stream
   char* sec_hdr;
   char* rdp_hdr;
   char* channel_hdr;
+  char* next_packet;
 };
 
 #define s_check(s) (s->p <= s->end)
@@ -42,6 +43,11 @@ struct stream
 #define s_check_rem(s, n) (s->p + n <= s->end)
 
 #define s_check_end(s) (s->p == s->end)
+
+#define make_stream(s) \
+{ \
+  s = (struct stream*)g_malloc(sizeof(struct stream), 1); \
+} \
 
 #define init_stream(s, v) \
 { \
@@ -53,7 +59,15 @@ struct stream
   s->p = s->data; \
   s->end = s->data; \
   s->size = v; \
+  s->next_packet = 0; \
 }
+
+#define free_stream(s) \
+{ \
+  if (s != 0) \
+    g_free(s->data); \
+  g_free(s); \
+} \
 
 #define s_push_layer(s, h, n) \
 { \

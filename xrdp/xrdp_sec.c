@@ -118,8 +118,6 @@ struct xrdp_sec* xrdp_sec_create(struct xrdp_rdp* owner)
 
   self = (struct xrdp_sec*)g_malloc(sizeof(struct xrdp_sec), 1);
   self->rdp_layer = owner;
-  self->in_s = owner->in_s;
-  self->out_s = owner->out_s;
   self->rc4_key_size = 1;
   self->decrypt_rc4_info = g_rc4_info_create();
   self->encrypt_rc4_info = g_rc4_info_create();
@@ -143,11 +141,11 @@ void xrdp_sec_delete(struct xrdp_sec* self)
 
 /*****************************************************************************/
 /* returns error */
-int xrdp_sec_init(struct xrdp_sec* self, int len)
+int xrdp_sec_init(struct xrdp_sec* self, struct stream* s)
 {
-  if (xrdp_mcs_init(self->mcs_layer, len + 4) != 0)
+  if (xrdp_mcs_init(self->mcs_layer, s) != 0)
     return 1;
-  s_push_layer(self->out_s, sec_hdr, 4);
+  s_push_layer(s, sec_hdr, 4);
   return 0;
 }
 
@@ -210,7 +208,7 @@ void xrdp_sec_decrypt(struct xrdp_sec* self, char* data, int len)
 
 /*****************************************************************************/
 /* returns error */
-int xrdp_sec_process_logon_info(struct xrdp_sec* self)
+int xrdp_sec_process_logon_info(struct xrdp_sec* self, struct stream* s)
 {
   int flags;
   int len_domain;
@@ -219,8 +217,8 @@ int xrdp_sec_process_logon_info(struct xrdp_sec* self)
   int len_program;
   int len_directory;
 
-  in_uint8s(self->in_s, 4);
-  in_uint32_le(self->in_s, flags);
+  in_uint8s(s, 4);
+  in_uint32_le(s, flags);
   DEBUG(("in xrdp_sec_process_logon_info flags $%x\n", flags));
   /* this is the first test that the decrypt is working */
   if ((flags & RDP_LOGON_NORMAL) != RDP_LOGON_NORMAL) /* 0x33 */
@@ -229,16 +227,16 @@ int xrdp_sec_process_logon_info(struct xrdp_sec* self)
     ;
   if (flags & RDP_COMPRESSION)
     ;
-  in_uint16_le(self->in_s, len_domain);
-  in_uint16_le(self->in_s, len_user);
-  in_uint16_le(self->in_s, len_password);
-  in_uint16_le(self->in_s, len_program);
-  in_uint16_le(self->in_s, len_directory);
-  in_uint8s(self->in_s, len_domain + 2);
-  in_uint8s(self->in_s, len_user + 2);
-  in_uint8s(self->in_s, len_password + 2);
-  in_uint8s(self->in_s, len_program + 2);
-  in_uint8s(self->in_s, len_directory + 2);
+  in_uint16_le(s, len_domain);
+  in_uint16_le(s, len_user);
+  in_uint16_le(s, len_password);
+  in_uint16_le(s, len_program);
+  in_uint16_le(s, len_directory);
+  in_uint8s(s, len_domain + 2);
+  in_uint8s(s, len_user + 2);
+  in_uint8s(s, len_password + 2);
+  in_uint8s(s, len_program + 2);
+  in_uint8s(s, len_directory + 2);
   return 0;
 }
 
@@ -246,12 +244,23 @@ int xrdp_sec_process_logon_info(struct xrdp_sec* self)
 /* returns error */
 int xrdp_sec_send_lic_initial(struct xrdp_sec* self)
 {
-  if (xrdp_mcs_init(self->mcs_layer, 322) != 0)
+  struct stream* s;
+
+  make_stream(s);
+  init_stream(s, 8192);
+  if (xrdp_mcs_init(self->mcs_layer, s) != 0)
+  {
+    free_stream(s);
     return 1;
-  out_uint8a(self->out_s, lic1, 322);
-  s_mark_end(self->out_s);
-  if (xrdp_mcs_send(self->mcs_layer) != 0)
+  }
+  out_uint8a(s, lic1, 322);
+  s_mark_end(s);
+  if (xrdp_mcs_send(self->mcs_layer, s) != 0)
+  {
+    free_stream(s);
     return 1;
+  }
+  free_stream(s);
   return 0;
 }
 
@@ -259,12 +268,23 @@ int xrdp_sec_send_lic_initial(struct xrdp_sec* self)
 /* returns error */
 int xrdp_sec_send_lic_response(struct xrdp_sec* self)
 {
-  if (xrdp_mcs_init(self->mcs_layer, 20) != 0)
+  struct stream* s;
+
+  make_stream(s);
+  init_stream(s, 8192);
+  if (xrdp_mcs_init(self->mcs_layer, s) != 0)
+  {
+    free_stream(s);
     return 1;
-  out_uint8a(self->out_s, lic2, 20);
-  s_mark_end(self->out_s);
-  if (xrdp_mcs_send(self->mcs_layer) != 0)
+  }
+  out_uint8a(s, lic2, 20);
+  s_mark_end(s);
+  if (xrdp_mcs_send(self->mcs_layer, s) != 0)
+  {
+    free_stream(s);
     return 1;
+  }
+  free_stream(s);
   return 0;
 }
 
@@ -388,25 +408,25 @@ void xrdp_sec_establish_keys(struct xrdp_sec* self)
 
 /*****************************************************************************/
 /* returns error */
-int xrdp_sec_recv(struct xrdp_sec* self, int* chan)
+int xrdp_sec_recv(struct xrdp_sec* self, struct stream* s, int* chan)
 {
   int flags;
   int len;
 
   DEBUG((" in xrdp_sec_recv\n\r"));
-  if (xrdp_mcs_recv(self->mcs_layer, chan) != 0)
+  if (xrdp_mcs_recv(self->mcs_layer, s, chan) != 0)
     return 1;
-  in_uint32_le(self->in_s, flags);
+  in_uint32_le(s, flags);
   DEBUG((" in xrdp_sec_recv flags $%x\n\r", flags));
   if (flags & SEC_ENCRYPT) /* 0x08 */
   {
-    in_uint8s(self->in_s, 8); /* signature */
-    xrdp_sec_decrypt(self, self->in_s->p, self->in_s->end - self->in_s->p);
+    in_uint8s(s, 8); /* signature */
+    xrdp_sec_decrypt(self, s->p, s->end - s->p);
   }
   if (flags & SEC_CLIENT_RANDOM) /* 0x01 */
   {
-    in_uint32_le(self->in_s, len);
-    in_uint8a(self->in_s, self->client_crypt_random, 64);
+    in_uint32_le(s, len);
+    in_uint8a(s, self->client_crypt_random, 64);
     xrdp_sec_rsa_op(self->client_random, self->client_crypt_random,
                     pub_mod, pri_exp);
     xrdp_sec_establish_keys(self);
@@ -415,7 +435,7 @@ int xrdp_sec_recv(struct xrdp_sec* self, int* chan)
   }
   if (flags & SEC_LOGON_INFO) /* 0x40 */
   {
-    if (xrdp_sec_process_logon_info(self) != 0)
+    if (xrdp_sec_process_logon_info(self, s) != 0)
       return 1;
     if (xrdp_sec_send_lic_initial(self) != 0)
       return 1;
@@ -435,12 +455,12 @@ int xrdp_sec_recv(struct xrdp_sec* self, int* chan)
 /*****************************************************************************/
 /* returns error */
 /* TODO needs outgoing encryption */
-int xrdp_sec_send(struct xrdp_sec* self, int flags)
+int xrdp_sec_send(struct xrdp_sec* self, struct stream* s, int flags)
 {
   DEBUG((" in xrdp_sec_send\n\r"));
-  s_pop_layer(self->out_s, sec_hdr);
-  out_uint32_le(self->out_s, flags);
-  if (xrdp_mcs_send(self->mcs_layer) != 0)
+  s_pop_layer(s, sec_hdr);
+  out_uint32_le(s, flags);
+  if (xrdp_mcs_send(self->mcs_layer, s) != 0)
     return 1;
   DEBUG((" out xrdp_sec_send\n\r"));
   return 0;

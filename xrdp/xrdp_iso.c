@@ -28,8 +28,6 @@ struct xrdp_iso* xrdp_iso_create(struct xrdp_mcs* owner)
 
   self = (struct xrdp_iso*)g_malloc(sizeof(struct xrdp_iso), 1);
   self->mcs_layer = owner;
-  self->in_s = owner->in_s;
-  self->out_s = owner->out_s;
   self->tcp_layer = xrdp_tcp_create(self);
   return self;
 }
@@ -45,42 +43,38 @@ void xrdp_iso_delete(struct xrdp_iso* self)
 
 /*****************************************************************************/
 /* returns error */
-int xrdp_iso_recv_msg(struct xrdp_iso* self, int* code)
+int xrdp_iso_recv_msg(struct xrdp_iso* self, struct stream* s, int* code)
 {
   int ver;
   int len;
 
   *code = 0;
-  if (xrdp_tcp_recv(self->tcp_layer, 4) != 0)
+  if (xrdp_tcp_recv(self->tcp_layer, s, 4) != 0)
     return 1;
-  in_uint8(self->in_s, ver);
+  in_uint8(s, ver);
   if (ver != 3)
     return 1;
-  in_uint8s(self->in_s, 1);
-  in_uint16_be(self->in_s, len);
-  if (xrdp_tcp_recv(self->tcp_layer, len - 4) != 0)
+  in_uint8s(s, 1);
+  in_uint16_be(s, len);
+  if (xrdp_tcp_recv(self->tcp_layer, s, len - 4) != 0)
     return 1;
-  in_uint8s(self->in_s, 1);
-  in_uint8(self->in_s, *code);
+  in_uint8s(s, 1);
+  in_uint8(s, *code);
   if (*code == ISO_PDU_DT)
-  {
-    in_uint8s(self->in_s, 1);
-  }
+    in_uint8s(s, 1)
   else
-  {
-    in_uint8s(self->in_s, 5);
-  }
+    in_uint8s(s, 5);
   return 0;
 }
 
 /*****************************************************************************/
 /* returns error */
-int xrdp_iso_recv(struct xrdp_iso* self)
+int xrdp_iso_recv(struct xrdp_iso* self, struct stream* s)
 {
   int code;
 
   DEBUG(("   in xrdp_iso_recv\n\r"));
-  if (xrdp_iso_recv_msg(self, &code) != 0)
+  if (xrdp_iso_recv_msg(self, s, &code) != 0)
     return 1;
   if (code != ISO_PDU_DT)
     return 1;
@@ -89,20 +83,20 @@ int xrdp_iso_recv(struct xrdp_iso* self)
 }
 
 /*****************************************************************************/
-int xrdp_iso_send_msg(struct xrdp_iso* self, int code)
+int xrdp_iso_send_msg(struct xrdp_iso* self, struct stream* s, int code)
 {
-  if (xrdp_tcp_init(self->tcp_layer, 11) != 0)
+  if (xrdp_tcp_init(self->tcp_layer, s) != 0)
     return 1;
-  out_uint8(self->out_s, 3);
-  out_uint8(self->out_s, 0);
-  out_uint16_be(self->out_s, 11); /* length */
-  out_uint8(self->out_s, 8);
-  out_uint8(self->out_s, code);
-  out_uint16_le(self->out_s, 0);
-  out_uint16_le(self->out_s, 0);
-  out_uint8(self->out_s, 0);
-  s_mark_end(self->out_s);
-  if (xrdp_tcp_send(self->tcp_layer) != 0)
+  out_uint8(s, 3);
+  out_uint8(s, 0);
+  out_uint16_be(s, 11); /* length */
+  out_uint8(s, 8);
+  out_uint8(s, code);
+  out_uint16_le(s, 0);
+  out_uint16_le(s, 0);
+  out_uint8(s, 0);
+  s_mark_end(s);
+  if (xrdp_tcp_send(self->tcp_layer, s) != 0)
     return 1;
   return 0;
 }
@@ -112,43 +106,56 @@ int xrdp_iso_send_msg(struct xrdp_iso* self, int code)
 int xrdp_iso_incoming(struct xrdp_iso* self)
 {
   int code;
+  struct stream* s;
 
+  make_stream(s);
+  init_stream(s, 8192);
   DEBUG(("   in xrdp_iso_incoming\n\r"));
-  if (xrdp_iso_recv_msg(self, &code) != 0)
+  if (xrdp_iso_recv_msg(self, s, &code) != 0)
+  {
+    free_stream(s);
     return 1;
+  }
   if (code != ISO_PDU_CR)
+  {
+    free_stream(s);
     return 1;
-  if (xrdp_iso_send_msg(self, ISO_PDU_CC) != 0)
+  }
+  if (xrdp_iso_send_msg(self, s, ISO_PDU_CC) != 0)
+  {
+    free_stream(s);
     return 1;
+  }
   DEBUG(("   out xrdp_iso_incoming\n\r"));
+  free_stream(s);
   return 0;
 }
 
 /*****************************************************************************/
 /* returns error */
-int xrdp_iso_init(struct xrdp_iso* self, int len)
+int xrdp_iso_init(struct xrdp_iso* self, struct stream* s)
 {
-  xrdp_tcp_init(self->tcp_layer, len + 7);
-  s_push_layer(self->out_s, iso_hdr, 7);
+  xrdp_tcp_init(self->tcp_layer, s);
+  s_push_layer(s, iso_hdr, 7);
   return 0;
 }
 
 /*****************************************************************************/
 /* returns error */
-int xrdp_iso_send(struct xrdp_iso* self)
+int xrdp_iso_send(struct xrdp_iso* self, struct stream* s)
 {
   int len;
 
   DEBUG(("   in xrdp_iso_send\n\r"));
-  s_pop_layer(self->out_s, iso_hdr);
-  len = self->out_s->end - self->out_s->p;
-  out_uint8(self->out_s, 3);
-  out_uint8(self->out_s, 0);
-  out_uint16_be(self->out_s, len);
-  out_uint8(self->out_s, 2);
-  out_uint8(self->out_s, ISO_PDU_DT);
-  out_uint8(self->out_s, 0x80);
-  if (xrdp_tcp_send(self->tcp_layer) != 0)
+  s_pop_layer(s, iso_hdr);
+  len = s->end - s->p;
+  out_uint8(s, 3);
+  out_uint8(s, 0);
+  out_uint16_be(s, len);
+  out_uint8(s, 2);
+  out_uint8(s, ISO_PDU_DT);
+  out_uint8(s, 0x80);
+  if (xrdp_tcp_send(self->tcp_layer, s) != 0)
     return 1;
   DEBUG(("   out xrdp_iso_send\n\r"));
   return 0;

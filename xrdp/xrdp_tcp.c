@@ -28,8 +28,6 @@ struct xrdp_tcp* xrdp_tcp_create(struct xrdp_iso* owner)
 
   self = (struct xrdp_tcp*)g_malloc(sizeof(struct xrdp_tcp), 1);
   self->iso_layer = owner;
-  self->in_s = owner->in_s;
-  self->out_s = owner->out_s;
   /* get sck from xrdp_process */
   self->sck = owner->mcs_layer->sec_layer->rdp_layer->pro_layer->sck;
   return self;
@@ -44,25 +42,25 @@ void xrdp_tcp_delete(struct xrdp_tcp* self)
 /*****************************************************************************/
 /* get out stream ready for data */
 /* returns error */
-int xrdp_tcp_init(struct xrdp_tcp* self, int len)
+int xrdp_tcp_init(struct xrdp_tcp* self, struct stream* s)
 {
-  init_stream(self->out_s, len);
+  init_stream(s, 8192);
   return 0;
 }
 
 /*****************************************************************************/
 /* returns error */
-int xrdp_tcp_recv(struct xrdp_tcp* self, int len)
+int xrdp_tcp_recv(struct xrdp_tcp* self, struct stream* s, int len)
 {
   int rcvd;
 
   DEBUG(("    in xrdp_tcp_recv, gota get %d bytes\n", len))
-  init_stream(self->in_s, len);
+  init_stream(s, len);
   while (len > 0)
   {
     if (g_is_term())
       return 1;
-    rcvd = g_tcp_recv(self->sck, self->in_s->end, len, 0);
+    rcvd = g_tcp_recv(self->sck, s->end, len, 0);
     if (rcvd == -1)
     {
       if (g_tcp_last_error_would_block(self->sck))
@@ -80,7 +78,7 @@ int xrdp_tcp_recv(struct xrdp_tcp* self, int len)
     }
     else
     {
-      self->in_s->end += rcvd;
+      s->end += rcvd;
       len -= rcvd;
     }
   }
@@ -89,20 +87,20 @@ int xrdp_tcp_recv(struct xrdp_tcp* self, int len)
 
 /*****************************************************************************/
 /* returns error */
-int xrdp_tcp_send(struct xrdp_tcp* self)
+int xrdp_tcp_send(struct xrdp_tcp* self, struct stream* s)
 {
   int len;
   int total;
   int sent;
 
-  len = self->out_s->end - self->out_s->data;
+  len = s->end - s->data;
   DEBUG(("    in xrdp_tcp_send, gota send %d bytes\n\r", len))
   total = 0;
   while (total < len)
   {
     if (g_is_term())
       return 1;
-    sent = g_tcp_send(self->sck, self->out_s->data + total, len - total, 0);
+    sent = g_tcp_send(self->sck, s->data + total, len - total, 0);
     if (sent == -1)
     {
       if (g_tcp_last_error_would_block(self->sck))

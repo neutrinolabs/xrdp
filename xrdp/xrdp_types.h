@@ -91,16 +91,12 @@ struct xrdp_pen
 struct xrdp_tcp
 {
   int sck;
-  struct stream* in_s;
-  struct stream* out_s;
   struct xrdp_iso* iso_layer; /* owner */
 };
 
 /* iso */
 struct xrdp_iso
 {
-  struct stream* in_s;
-  struct stream* out_s;
   struct xrdp_mcs* mcs_layer; /* owner */
   struct xrdp_tcp* tcp_layer;
 };
@@ -108,8 +104,6 @@ struct xrdp_iso
 /* mcs */
 struct xrdp_mcs
 {
-  struct stream* in_s;
-  struct stream* out_s;
   struct xrdp_sec* sec_layer; /* owner */
   struct xrdp_iso* iso_layer;
   int userid;
@@ -121,8 +115,6 @@ struct xrdp_mcs
 /* sec */
 struct xrdp_sec
 {
-  struct stream* in_s;
-  struct stream* out_s;
   struct xrdp_rdp* rdp_layer; /* owner */
   struct xrdp_mcs* mcs_layer;
   char server_random[32];
@@ -146,11 +138,8 @@ struct xrdp_sec
 /* rdp */
 struct xrdp_rdp
 {
-  struct stream* in_s;
-  struct stream* out_s;
   struct xrdp_process* pro_layer; /* owner */
   struct xrdp_sec* sec_layer;
-  char* next_packet;
   int share_id;
   int mcs_channel;
   int bpp;
@@ -257,7 +246,6 @@ struct xrdp_wm
   struct xrdp_bitmap* screen;
   struct xrdp_orders* orders;
   struct xrdp_painter* painter;
-  struct stream* out_s;
   struct xrdp_rdp* rdp_layer;
   struct xrdp_cache* cache;
   int palette[256];
@@ -296,8 +284,6 @@ struct xrdp_process
   int status;
   int sck;
   int term;
-  struct stream in_s;
-  struct stream out_s;
   struct xrdp_listen* lis_layer; /* owner */
   struct xrdp_rdp* rdp_layer;
   /* create these when up and running */

@@ -39,8 +39,6 @@ void xrdp_process_delete(struct xrdp_process* self)
   xrdp_rdp_delete(self->rdp_layer);
   xrdp_orders_delete(self->orders);
   xrdp_wm_delete(self->wm);
-  g_free(self->in_s.data);
-  g_free(self->out_s.data);
   g_free(self);
 }
 
@@ -50,7 +48,9 @@ int xrdp_process_main_loop(struct xrdp_process* self)
   int code;
   int i;
   int cont;
+  struct stream* s;
 
+  make_stream(s);
   self->status = 1;
   self->rdp_layer = xrdp_rdp_create(self);
   g_tcp_set_non_blocking(self->sck);
@@ -61,10 +61,11 @@ int xrdp_process_main_loop(struct xrdp_process* self)
       i = g_tcp_select(self->sck);
       if (i == 1)
       {
+        init_stream(s, 8192);
         cont = 1;
         while (cont)
         {
-          if (xrdp_rdp_recv(self->rdp_layer, &code) != 0)
+          if (xrdp_rdp_recv(self->rdp_layer, s, &code) != 0)
             break;
           DEBUG(("xrdp_process_main_loop code %d\n\r", code));
           switch (code)
@@ -75,10 +76,10 @@ int xrdp_process_main_loop(struct xrdp_process* self)
             case 0:
               break;
             case RDP_PDU_CONFIRM_ACTIVE:
-              xrdp_rdp_process_confirm_active(self->rdp_layer); /* 3 */
+              xrdp_rdp_process_confirm_active(self->rdp_layer, s); /* 3 */
               break;
             case RDP_PDU_DATA:
-              if (xrdp_rdp_process_data(self->rdp_layer) != 0) /* 7 */
+              if (xrdp_rdp_process_data(self->rdp_layer, s) != 0) /* 7 */
               {
                 DEBUG(("xrdp_rdp_process_data returned non zero\n\r"));
                 cont = 0;
@@ -90,7 +91,7 @@ int xrdp_process_main_loop(struct xrdp_process* self)
               break;
           }
           if (cont)
-            cont = self->rdp_layer->next_packet < self->rdp_layer->in_s->end;
+            cont = s->next_packet < s->end;
         }
         if (cont) /* we must have errored out */
           break;
@@ -115,5 +116,6 @@ int xrdp_process_main_loop(struct xrdp_process* self)
   g_tcp_close(self->sck);
   self->status = -1;
   xrdp_listen_delete_pro(self->lis_layer, self);
+  free_stream(s);
   return 0;
 }

@@ -89,48 +89,49 @@ int g_file_lock(int fd, int start, int len);
 /* xrdp_tcp.c */
 struct xrdp_tcp* xrdp_tcp_create(struct xrdp_iso* owner);
 void xrdp_tcp_delete(struct xrdp_tcp* self);
-int xrdp_tcp_init(struct xrdp_tcp* self, int len);
-int xrdp_tcp_recv(struct xrdp_tcp* self, int len);
-int xrdp_tcp_send(struct xrdp_tcp* self);
+int xrdp_tcp_init(struct xrdp_tcp* self, struct stream* s);
+int xrdp_tcp_recv(struct xrdp_tcp* self, struct stream* s, int len);
+int xrdp_tcp_send(struct xrdp_tcp* self, struct stream* s);
 
 /* xrdp_iso.c */
 struct xrdp_iso* xrdp_iso_create(struct xrdp_mcs* owner);
 void xrdp_iso_delete(struct xrdp_iso* self);
-int xrdp_iso_init(struct xrdp_iso* self, int len);
-int xrdp_iso_recv(struct xrdp_iso* self);
-int xrdp_iso_send(struct xrdp_iso* self);
+int xrdp_iso_init(struct xrdp_iso* self, struct stream* s);
+int xrdp_iso_recv(struct xrdp_iso* self, struct stream* s);
+int xrdp_iso_send(struct xrdp_iso* self, struct stream* s);
 int xrdp_iso_incoming(struct xrdp_iso* self);
 
 /* xrdp_mcs.c */
 struct xrdp_mcs* xrdp_mcs_create(struct xrdp_sec* owner);
 void xrdp_mcs_delete(struct xrdp_mcs* self);
-int xrdp_mcs_init(struct xrdp_mcs* self, int len);
-int xrdp_mcs_recv(struct xrdp_mcs* self, int* chan);
-int xrdp_mcs_send(struct xrdp_mcs* self);
+int xrdp_mcs_init(struct xrdp_mcs* self, struct stream* s);
+int xrdp_mcs_recv(struct xrdp_mcs* self, struct stream* s, int* chan);
+int xrdp_mcs_send(struct xrdp_mcs* self, struct stream* s);
 int xrdp_mcs_incoming(struct xrdp_mcs* self);
 int xrdp_mcs_disconnect(struct xrdp_mcs* self);
 
 /* xrdp_sec.c */
 struct xrdp_sec* xrdp_sec_create(struct xrdp_rdp* owner);
 void xrdp_sec_delete(struct xrdp_sec* self);
-int xrdp_sec_init(struct xrdp_sec* self, int len);
-int xrdp_sec_recv(struct xrdp_sec* self, int* chan);
-int xrdp_sec_send(struct xrdp_sec* self, int flags);
-int xrdp_rdp_send_data(struct xrdp_rdp* self, int data_pdu_type);
+int xrdp_sec_init(struct xrdp_sec* self, struct stream* s);
+int xrdp_sec_recv(struct xrdp_sec* self, struct stream* s, int* chan);
+int xrdp_sec_send(struct xrdp_sec* self, struct stream* s, int flags);
 int xrdp_sec_incoming(struct xrdp_sec* self);
 int xrdp_sec_disconnect(struct xrdp_sec* self);
 
 /* xrdp_rdp.c */
 struct xrdp_rdp* xrdp_rdp_create(struct xrdp_process* owner);
 void xrdp_rdp_delete(struct xrdp_rdp* self);
-int xrdp_rdp_init(struct xrdp_rdp* self, int len);
-int xrdp_rdp_init_data(struct xrdp_rdp* self, int len);
-int xrdp_rdp_recv(struct xrdp_rdp* self, int* code);
-int xrdp_rdp_send(struct xrdp_rdp* self, int pdu_type);
+int xrdp_rdp_init(struct xrdp_rdp* self, struct stream* s);
+int xrdp_rdp_init_data(struct xrdp_rdp* self, struct stream* s);
+int xrdp_rdp_recv(struct xrdp_rdp* self, struct stream* s, int* code);
+int xrdp_rdp_send(struct xrdp_rdp* self, struct stream* s, int pdu_type);
+int xrdp_rdp_send_data(struct xrdp_rdp* self, struct stream* s,
+                       int data_pdu_type);
 int xrdp_rdp_incoming(struct xrdp_rdp* self);
 int xrdp_rdp_send_demand_active(struct xrdp_rdp* self);
-int xrdp_rdp_process_confirm_active(struct xrdp_rdp* self);
-int xrdp_rdp_process_data(struct xrdp_rdp* self);
+int xrdp_rdp_process_confirm_active(struct xrdp_rdp* self, struct stream* s);
+int xrdp_rdp_process_data(struct xrdp_rdp* self, struct stream* s);
 int xrdp_rdp_disconnect(struct xrdp_rdp* self);
 
 /* xrdp_orders.c */
