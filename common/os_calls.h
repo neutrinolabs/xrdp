@@ -83,6 +83,7 @@ char* g_strncpy(char* dest, char* src, int len);
 char* g_strcat(char* dest, char* src);
 char* g_strdup(char* in);
 int g_strcmp(char* c1, char* c2);
+int g_strncmp(char* c1, char* c2, int len);
 long g_load_library(char* in);
 int g_free_library(long lib);
 void* g_get_proc_address(long lib, char* name);

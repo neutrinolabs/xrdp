@@ -60,7 +60,7 @@
 #include <pthread.h>
 #endif
 
-//#define MEMLEAK
+/*#define MEMLEAK*/
 
 #if defined(_WIN32)
 static CRITICAL_SECTION g_term_mutex;
@@ -973,6 +973,12 @@ char* g_strdup(char* in)
 int g_strcmp(char* c1, char* c2)
 {
   return strcmp(c1, c2);
+}
+
+/*****************************************************************************/
+int g_strncmp(char* c1, char* c2, int len)
+{
+  return strncmp(c1, c2, len);
 }
 
 /*****************************************************************************/
