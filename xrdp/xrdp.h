@@ -20,86 +20,13 @@
 
 */
 
-/* check endianess */
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-#define L_ENDIAN
-#elif __BYTE_ORDER == __BIG_ENDIAN
-#define B_ENDIAN
-#endif
-/* check if we need to align data */
-#if defined(__sparc__) || defined(__alpha__) || defined(__hppa__) || \
-    defined(__AIX__) || defined(__PPC__) || defined(__mips__) || \
-    defined(__ia64__)
-#define NEED_ALIGN
-#endif
 /* include other h files */
+#include "arch.h"
 #include "parse.h"
 #include "xrdp_types.h"
 #include "constants.h"
 #include "xrdp_defines.h"
-
-/* os_calls.c */
-int g_init_system(void);
-int g_exit_system(void);
-void g_printf(char *format, ...);
-void g_hexdump(char* p, int len);
-void* g_malloc(int size, int zero);
-void* g_malloc1(int size, int zero);
-void g_free(void* ptr);
-void g_free1(void* ptr);
-void g_memset(void* ptr, int val, int size);
-void g_memcpy(void* d_ptr, const void* s_ptr, int size);
-int g_getchar(void);
-int g_tcp_socket(void);
-int g_tcp_local_socket(void);
-void g_tcp_close(int sck);
-int g_tcp_connect(int sck, char* address, char* port);
-int g_tcp_set_non_blocking(int sck);
-int g_tcp_bind(int sck, char* port);
-int g_tcp_local_bind(int sck, char* port);
-int g_tcp_listen(int sck);
-int g_tcp_accept(int sck);
-int g_tcp_recv(int sck, void* ptr, int len, int flags);
-int g_tcp_send(int sck, void* ptr, int len, int flags);
-int g_tcp_last_error_would_block(int sck);
-int g_tcp_select(int sck1, int sck2);
-int g_is_term(void);
-void g_set_term(int in_val);
-void g_sleep(int msecs);
-int g_thread_create(THREAD_RV (THREAD_CC * start_routine)(void*), void* arg);
-void* g_rc4_info_create(void);
-void g_rc4_info_delete(void* rc4_info);
-void g_rc4_set_key(void* rc4_info, char* key, int len);
-void g_rc4_crypt(void* rc4_info, char* data, int len);
-void* g_sha1_info_create(void);
-void g_sha1_info_delete(void* sha1_info);
-void g_sha1_clear(void* sha1_info);
-void g_sha1_transform(void* sha1_info, char* data, int len);
-void g_sha1_complete(void* sha1_info, char* data);
-void* g_md5_info_create(void);
-void g_md5_info_delete(void* md5_info);
-void g_md5_clear(void* md5_info);
-void g_md5_transform(void* md5_info, char* data, int len);
-void g_md5_complete(void* md5_info, char* data);
-int g_mod_exp(char* out, char* in, char* mod, char* exp);
-void g_random(char* data, int len);
-int g_abs(int i);
-int g_memcmp(void* s1, void* s2, int len);
-int g_file_open(char* file_name);
-int g_file_close(int fd);
-int g_file_read(int fd, char* ptr, int len);
-int g_file_write(int fd, char* ptr, int len);
-int g_file_seek(int fd, int offset);
-int g_file_lock(int fd, int start, int len);
-int g_strlen(char* text);
-char* g_strcpy(char* dest, char* src);
-char* g_strncpy(char* dest, char* src, int len);
-char* g_strcat(char* dest, char* src);
-char* g_strdup(char* in);
-int g_strcmp(char* c1, char* c2);
-int g_load_library(char* in);
-int g_free_library(int lib);
-void* g_get_proc_address(int lib, char* name);
+#include "os_calls.h"
 
 /* xrdp_tcp.c */
 struct xrdp_tcp* xrdp_tcp_create(struct xrdp_iso* owner);
@@ -322,3 +249,8 @@ int xrdp_login_wnd_create(struct xrdp_wm* self);
 int xrdp_file_read_sections(int fd, struct xrdp_list* names);
 int xrdp_file_read_section(int fd, char* section, struct xrdp_list* names,
                            struct xrdp_list* values);
+
+/* xrdp_bitmap_compress.c */
+int xrdp_bitmap_compress(char* in_data, int width, int height,
+                         struct stream* s, int bpp, int byte_limit,
+                         int start_line, struct stream* temp);

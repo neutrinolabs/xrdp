@@ -51,11 +51,3 @@
 #define COLOR24(r, g, b) ((r) | ((g) << 8) | ((b) << 16))
 /* font macros */
 #define FONT_DATASIZE(f) ((((f)->height * (((f)->width + 7) / 8)) + 3) & ~3);
-/* defines for thread creation factor function */
-#ifdef _WIN32
-#define THREAD_RV unsigned long
-#define THREAD_CC __stdcall
-#else
-#define THREAD_RV void*
-#define THREAD_CC
-#endif

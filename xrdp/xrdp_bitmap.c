@@ -130,7 +130,9 @@ struct xrdp_bitmap* xrdp_bitmap_get_child_by_id(struct xrdp_bitmap* self,
   {
     b = (struct xrdp_bitmap*)xrdp_list_get_item(self->child_list, i);
     if (b->id == id)
+    {
       return b;
+    }
   }
   return 0;
 }
@@ -591,7 +593,7 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
       {
         if (rect != 0)
         {
-          self->wm->mod->mod_invalidate((int)self->wm->mod,
+          self->wm->mod->mod_invalidate(self->wm->mod,
                                         rect->left, rect->top,
                                         rect->right - rect->left,
                                         rect->bottom - rect->top);

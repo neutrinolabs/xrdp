@@ -37,6 +37,8 @@ struct xrdp_wm* xrdp_wm_create(struct xrdp_process* owner)
   self->painter = xrdp_painter_create(self);
   self->rdp_layer = owner->rdp_layer;
   self->cache = xrdp_cache_create(self, self->orders);
+  self->use_comp = 1;
+  self->op1 = 0;
   return self;
 }
 
@@ -44,15 +46,24 @@ struct xrdp_wm* xrdp_wm_create(struct xrdp_process* owner)
 void xrdp_wm_delete(struct xrdp_wm* self)
 {
   if (self == 0)
+  {
     return;
+  }
   xrdp_cache_delete(self->cache);
   xrdp_painter_delete(self->painter);
   xrdp_bitmap_delete(self->screen);
   /* free any modual stuff */
-  if (self->mod != 0 && self->mod_exit != 0)
-    self->mod_exit((int)self->mod);
+  if (self->mod != 0)
+  {
+    if (self->mod_exit != 0)
+    {
+      self->mod_exit((int)self->mod);
+    }
+  }
   if (self->mod_handle != 0)
+  {
     g_free_library(self->mod_handle);
+  }
   /* free self */
   g_free(self);
 }
@@ -96,52 +107,140 @@ int xrdp_wm_send_bitmap(struct xrdp_wm* self, struct xrdp_bitmap* bitmap,
   int lines_sending;
   int Bpp;
   int e;
+  int bufsize;
+  int total_bufsize;
+  int num_updates;
+  char* p_num_updates;
   char* p;
   char* q;
   struct stream* s;
+  struct stream* temp_s;
 
-  lines_sending = 0;
-  make_stream(s);
-  init_stream(s, 8192);
   Bpp = (bitmap->bpp + 7) / 8;
-  data_size = bitmap->width * bitmap->height * Bpp;
-  line_size = bitmap->width * Bpp;
-  total_lines = bitmap->height;
   e = bitmap->width % 4;
   if (e != 0)
     e = 4 - e;
-  i = 0;
-  p = bitmap->data;
-  if (line_size > 0 && total_lines > 0)
+  line_size = bitmap->width * Bpp;
+  make_stream(s);
+  init_stream(s, 8192);
+  if (self->use_comp)
   {
-    while (i < total_lines)
+    make_stream(temp_s);
+    init_stream(temp_s, 65536);
+    i = 0;
+    if (cy <= bitmap->height)
+      i = cy;
+    while (i > 0)
     {
-      lines_sending = 4096 / (line_size + e * Bpp);
-      if (i + lines_sending > total_lines)
-        lines_sending = total_lines - i;
-      p = p + line_size * lines_sending;
+      total_bufsize = 0;
+      num_updates = 0;
       xrdp_rdp_init_data(self->rdp_layer, s);
       out_uint16_le(s, RDP_UPDATE_BITMAP);
-      out_uint16_le(s, 1); /* num updates */
-      out_uint16_le(s, x);
-      out_uint16_le(s, y + i);
-      out_uint16_le(s, (x + cx) - 1);
-      out_uint16_le(s, (y + i + lines_sending) - 1);
-      out_uint16_le(s, bitmap->width + e);
-      out_uint16_le(s, lines_sending);
-      out_uint16_le(s, bitmap->bpp); /* bpp */
-      out_uint16_le(s, 0); /* compress */
-      out_uint16_le(s, (line_size + e * Bpp) * lines_sending); /* bufsize */
-      q = p;
-      for (j = 0; j < lines_sending; j++)
+      p_num_updates = s->p;
+      out_uint8s(s, 2); /* num_updates set later */
+      do
       {
-        q = q - line_size;
-        out_uint8a(s, q, line_size)
-        out_uint8s(s, e * Bpp);
-      }
-      s_mark_end(s);
+        if (self->op1)
+        {
+          s_push_layer(s, channel_hdr, 18);
+        }
+        else
+        {
+          s_push_layer(s, channel_hdr, 26);
+        }
+        p = s->p;
+        lines_sending = xrdp_bitmap_compress(bitmap->data, bitmap->width,
+                                             bitmap->height,
+                                             s, bitmap->bpp,
+                                             4096 - total_bufsize,
+                                             i - 1, temp_s);
+        if (lines_sending == 0)
+          break;
+        num_updates++;
+        bufsize = s->p - p;
+        total_bufsize += bufsize;
+        i = i - lines_sending;
+        s_mark_end(s);
+        s_pop_layer(s, channel_hdr);
+        out_uint16_le(s, x); /* left */
+        out_uint16_le(s, y + i); /* top */
+        out_uint16_le(s, (x + cx) - 1); /* right */
+        out_uint16_le(s, (y + i + lines_sending) - 1); /* bottom */
+        out_uint16_le(s, bitmap->width + e); /* width */
+        out_uint16_le(s, lines_sending); /* height */
+        out_uint16_le(s, bitmap->bpp); /* bpp */
+        if (self->op1)
+        {
+          out_uint16_le(s, 0x401); /* compress */
+          out_uint16_le(s, bufsize); /* compressed size */
+          j = (bitmap->width + e) * Bpp;
+          j = j * lines_sending;
+        }
+        else
+        {
+          out_uint16_le(s, 0x1); /* compress */
+          j = bufsize + 8;
+          out_uint16_le(s, j);
+          out_uint8s(s, 2); /* pad */
+          out_uint16_le(s, bufsize); /* compressed size */
+          j = (bitmap->width + e) * Bpp;
+          out_uint16_le(s, j); /* line size */
+          j = j * lines_sending;
+          out_uint16_le(s, j); /* final size */
+        }
+        if (j > 32768)
+          g_printf("error, decompressed size too big, its %d\n\r", j);
+        if (bufsize > 8192)
+          g_printf("error, compressed size too big, its %d\n\r", bufsize);
+        s->p = s->end;
+      } while (total_bufsize < 4096 && i > 0);
+      p_num_updates[0] = num_updates;
+      p_num_updates[1] = num_updates >> 8;
       xrdp_rdp_send_data(self->rdp_layer, s, RDP_DATA_PDU_UPDATE);
-      i = i + lines_sending;
+      if (total_bufsize > 8192)
+        g_printf("error, total compressed size too big, its %d\n\r",
+                 total_bufsize);
+    }
+    free_stream(temp_s);
+  }
+  else
+  {
+    lines_sending = 0;
+    data_size = bitmap->width * bitmap->height * Bpp;
+    total_lines = bitmap->height;
+    i = 0;
+    p = bitmap->data;
+    if (line_size > 0 && total_lines > 0)
+    {
+      while (i < total_lines)
+      {
+        lines_sending = 4096 / (line_size + e * Bpp);
+        if (i + lines_sending > total_lines)
+          lines_sending = total_lines - i;
+        p = p + line_size * lines_sending;
+        xrdp_rdp_init_data(self->rdp_layer, s);
+        out_uint16_le(s, RDP_UPDATE_BITMAP);
+        out_uint16_le(s, 1); /* num updates */
+        out_uint16_le(s, x);
+        out_uint16_le(s, y + i);
+        out_uint16_le(s, (x + cx) - 1);
+        out_uint16_le(s, (y + i + lines_sending) - 1);
+        out_uint16_le(s, bitmap->width + e);
+        out_uint16_le(s, lines_sending);
+        out_uint16_le(s, bitmap->bpp); /* bpp */
+        out_uint16_le(s, 0); /* compress */
+        out_uint16_le(s, (line_size + e * Bpp) * lines_sending); /* bufsize */
+        q = p;
+        for (j = 0; j < lines_sending; j++)
+        {
+          q = q - line_size;
+          out_uint8a(s, q, line_size)
+          out_uint8s(s, e * Bpp);
+        }
+        s_mark_end(s);
+        xrdp_rdp_send_data(self->rdp_layer, s, RDP_DATA_PDU_UPDATE);
+        i = i + lines_sending;
+      }
     }
   }
   free_stream(s);
@@ -664,7 +763,9 @@ int xrdp_wm_mouse_move(struct xrdp_wm* self, int x, int y)
     if (self->mod != 0) /* if screen is mod controled */
     {
       if (self->mod->mod_event != 0)
-        self->mod->mod_event((int)self->mod, WM_MOUSEMOVE, x, y);
+      {
+        self->mod->mod_event(self->mod, WM_MOUSEMOVE, x, y);
+      }
     }
   }
   if (self->button_down != 0)
@@ -769,29 +870,29 @@ int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
       if (self->mod->mod_event != 0)
       {
         if (but == 1 && down)
-          self->mod->mod_event((int)self->mod, WM_LBUTTONDOWN, x, y);
+          self->mod->mod_event(self->mod, WM_LBUTTONDOWN, x, y);
         else if (but == 1 && !down)
-          self->mod->mod_event((int)self->mod, WM_LBUTTONUP, x, y);
+          self->mod->mod_event(self->mod, WM_LBUTTONUP, x, y);
         if (but == 2 && down)
-          self->mod->mod_event((int)self->mod, WM_RBUTTONDOWN, x, y);
+          self->mod->mod_event(self->mod, WM_RBUTTONDOWN, x, y);
         else if (but == 2 && !down)
-          self->mod->mod_event((int)self->mod, WM_RBUTTONUP, x, y);
+          self->mod->mod_event(self->mod, WM_RBUTTONUP, x, y);
         if (but == 3 && down)
-          self->mod->mod_event((int)self->mod, WM_BUTTON3DOWN, x, y);
+          self->mod->mod_event(self->mod, WM_BUTTON3DOWN, x, y);
         else if (but == 3 && !down)
-          self->mod->mod_event((int)self->mod, WM_BUTTON3UP, x, y);
+          self->mod->mod_event(self->mod, WM_BUTTON3UP, x, y);
         if (but == 4)
         {
-          self->mod->mod_event((int)self->mod, WM_BUTTON4DOWN,
+          self->mod->mod_event(self->mod, WM_BUTTON4DOWN,
                                self->mouse_x, self->mouse_y);
-          self->mod->mod_event((int)self->mod, WM_BUTTON4UP,
+          self->mod->mod_event(self->mod, WM_BUTTON4UP,
                                self->mouse_x, self->mouse_y);
         }
         if (but == 5)
         {
-          self->mod->mod_event((int)self->mod, WM_BUTTON5DOWN,
+          self->mod->mod_event(self->mod, WM_BUTTON5DOWN,
                                self->mouse_x, self->mouse_y);
-          self->mod->mod_event((int)self->mod, WM_BUTTON5UP,
+          self->mod->mod_event(self->mod, WM_BUTTON5UP,
                                self->mouse_x, self->mouse_y);
         }
       }
@@ -928,9 +1029,9 @@ int xrdp_wm_key(struct xrdp_wm* self, int device_flags, int scan_code)
                                   self->num_lock,
                                   self->scroll_lock);
       if (c != 0)
-        self->mod->mod_event((int)self->mod, msg, c, 0xffff);
+        self->mod->mod_event(self->mod, msg, c, 0xffff);
       else
-        self->mod->mod_event((int)self->mod, msg, scan_code, device_flags);
+        self->mod->mod_event(self->mod, msg, scan_code, device_flags);
     }
   }
   else if (self->focused_window != 0)

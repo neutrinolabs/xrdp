@@ -25,25 +25,26 @@ struct xrdp_mod
 {
   int size; /* size of this struct */
   /* client functions */
-  int (*mod_start)(int handle, int w, int h, int bpp);
-  int (*mod_connect)(int handle, char* ip, char* port,
-                     char* username, char* password);
-  int (*mod_event)(int handle, int msg, int param1, int param2);
-  int (*mod_signal)(int handle);
-  int (*mod_invalidate)(int handle, int x, int y, int cx, int cy);
-  int d1[95];
+  int (*mod_start)(struct xrdp_mod* v, int w, int h, int bpp);
+  int (*mod_connect)(struct xrdp_mod* v);
+  int (*mod_event)(struct xrdp_mod* v, int msg, int param1, int param2);
+  int (*mod_signal)(struct xrdp_mod* v);
+  int (*mod_invalidate)(struct xrdp_mod* v, int x, int y, int cx, int cy);
+  int (*mod_end)(struct xrdp_mod* v);
+  int (*mod_set_param)(struct xrdp_mod* v, char* name, char* value);
+  int d1[93];
   /* server functions */
-  int (*server_begin_update)(int handle);
-  int (*server_end_update)(int handle);
-  int (*server_fill_rect)(int handle, int x, int y, int cx, int cy,
+  int (*server_begin_update)(struct xrdp_mod* v);
+  int (*server_end_update)(struct xrdp_mod* v);
+  int (*server_fill_rect)(struct xrdp_mod* v, int x, int y, int cx, int cy,
                           int color);
-  int (*server_screen_blt)(int handle, int x, int y, int cx, int cy,
+  int (*server_screen_blt)(struct xrdp_mod* v, int x, int y, int cx, int cy,
                            int srcx, int srcy);
-  int (*server_paint_rect)(int handle, int x, int y, int cx, int cy,
+  int (*server_paint_rect)(struct xrdp_mod* v, int x, int y, int cx, int cy,
                            char* data);
-  int (*server_set_cursor)(int handle, int x, int y, char* data, char* mask);
-  int (*server_palette)(int handle, int* palette);
-  int (*server_error_popup)(int handle, char* error, char* caption);
+  int (*server_set_cursor)(struct xrdp_mod* v, int x, int y, char* data, char* mask);
+  int (*server_palette)(struct xrdp_mod* v, int* palette);
+  int (*server_error_popup)(struct xrdp_mod* v, char* error, char* caption);
   int d2[92];
   /* common */
   int handle; /* pointer to self as int */
@@ -362,6 +363,10 @@ struct xrdp_wm
   int (*mod_init)();
   int (*mod_exit)(int);
   struct xrdp_mod* mod;
+  /* */
+  int use_comp;
+  /*  */
+  int op1;
 };
 
 /* rdp process */
@@ -476,6 +481,6 @@ struct xrdp_mod_data
   char lib[256];
   char ip[256];
   char port[256];
-  char user[256];
+  char username[256];
   char password[256];
 };

@@ -66,7 +66,7 @@ int xrdp_process_main_loop(struct xrdp_process* self)
       {
         init_stream(s, 8192);
         cont = 1;
-        while (cont)
+        while (cont && !self->term)
         {
           if (xrdp_rdp_recv(self->rdp_layer, s, &code) != 0)
           {
@@ -123,7 +123,7 @@ int xrdp_process_main_loop(struct xrdp_process* self)
         {
           break;
         }
-        if (self->wm->mod->mod_signal((int)self->wm->mod) != 0)
+        if (self->wm->mod->mod_signal(self->wm->mod) != 0)
         {
           break;
         }
@@ -136,6 +136,13 @@ int xrdp_process_main_loop(struct xrdp_process* self)
       {
         break;
       }
+    }
+  }
+  if (self->wm->mod != 0)
+  {
+    if (self->wm->mod->mod_end != 0)
+    {
+      self->wm->mod->mod_end(self->wm->mod);
     }
   }
   xrdp_rdp_disconnect(self->rdp_layer);

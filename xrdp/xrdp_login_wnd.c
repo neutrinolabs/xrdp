@@ -72,13 +72,11 @@ logging on.");
 }
 
 /*****************************************************************************/
-int server_begin_update(int handle)
+int server_begin_update(struct xrdp_mod* mod)
 {
-  struct xrdp_mod* mod;
   struct xrdp_wm* wm;
   struct xrdp_painter* p;
 
-  mod = (struct xrdp_mod*)handle;
   wm = (struct xrdp_wm*)mod->wm;
   p = xrdp_painter_create(wm);
   xrdp_painter_begin_update(p);
@@ -87,12 +85,10 @@ int server_begin_update(int handle)
 }
 
 /*****************************************************************************/
-int server_end_update(int handle)
+int server_end_update(struct xrdp_mod* mod)
 {
-  struct xrdp_mod* mod;
   struct xrdp_painter* p;
 
-  mod = (struct xrdp_mod*)handle;
   p = (struct xrdp_painter*)mod->painter;
   xrdp_painter_end_update(p);
   xrdp_painter_delete(p);
@@ -101,14 +97,12 @@ int server_end_update(int handle)
 }
 
 /*****************************************************************************/
-int server_fill_rect(int handle, int x, int y, int cx, int cy,
+int server_fill_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy,
                      int color)
 {
-  struct xrdp_mod* mod;
   struct xrdp_wm* wm;
   struct xrdp_painter* p;
 
-  mod = (struct xrdp_mod*)handle;
   wm = (struct xrdp_wm*)mod->wm;
   p = (struct xrdp_painter*)mod->painter;
   p->fg_color = color;
@@ -117,13 +111,11 @@ int server_fill_rect(int handle, int x, int y, int cx, int cy,
 }
 
 /*****************************************************************************/
-int server_screen_blt(int handle, int x, int y, int cx, int cy,
+int server_screen_blt(struct xrdp_mod* mod, int x, int y, int cx, int cy,
                       int srcx, int srcy)
 {
-  struct xrdp_mod* mod;
   struct xrdp_wm* wm;
 
-  mod = (struct xrdp_mod*)handle;
   wm = (struct xrdp_wm*)mod->wm;
   xrdp_orders_init(wm->orders);
   xrdp_orders_screen_blt(wm->orders, x, y, cx, cy, srcx, srcy, 0xcc, 0);
@@ -132,14 +124,12 @@ int server_screen_blt(int handle, int x, int y, int cx, int cy,
 }
 
 /*****************************************************************************/
-int server_paint_rect(int handle, int x, int y, int cx, int cy,
+int server_paint_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy,
                       char* data)
 {
-  struct xrdp_mod* mod;
   struct xrdp_wm* wm;
   struct xrdp_bitmap* b;
 
-  mod = (struct xrdp_mod*)handle;
   wm = (struct xrdp_wm*)mod->wm;
   b = xrdp_bitmap_create_with_data(cx, cy, wm->screen->bpp, data);
   xrdp_wm_send_bitmap(wm, b, x, y, cx, cy);
@@ -150,24 +140,21 @@ int server_paint_rect(int handle, int x, int y, int cx, int cy,
 }
 
 /*****************************************************************************/
-int server_set_cursor(int handle, int x, int y, char* data, char* mask)
+int server_set_cursor(struct xrdp_mod* mod, int x, int y,
+                      char* data, char* mask)
 {
-  struct xrdp_mod* mod;
   struct xrdp_wm* wm;
 
-  mod = (struct xrdp_mod*)handle;
   wm = (struct xrdp_wm*)mod->wm;
   xrdp_wm_send_cursor(wm, 2, data, mask, x, y);
   return 0;
 }
 
 /*****************************************************************************/
-int server_palette(int handle, int* palette)
+int server_palette(struct xrdp_mod* mod, int* palette)
 {
-  struct xrdp_mod* mod;
   struct xrdp_wm* wm;
 
-  mod = (struct xrdp_mod*)handle;
   wm = (struct xrdp_wm*)mod->wm;
   g_memcpy(wm->palette, palette, 256 * sizeof(int));
   xrdp_cache_add_palette(wm->cache, palette);
@@ -183,15 +170,13 @@ int xrdp_wm_popup_notify(struct xrdp_bitmap* wnd,
 }
 
 /*****************************************************************************/
-int server_error_popup(int handle, char* error, char* caption)
+int server_error_popup(struct xrdp_mod* mod, char* error, char* caption)
 {
 #ifdef aa0
-  struct xrdp_mod* mod;
   struct xrdp_wm* wm;
   struct xrdp_bitmap* wnd;
   struct xrdp_bitmap* but;
 
-  mod = (struct xrdp_mod*)handle;
   wm = (struct xrdp_wm*)mod->wm;
   wnd = xrdp_bitmap_create(400, 200, wm->screen->bpp, WND_TYPE_WND);
   xrdp_list_add_item(wm->screen->child_list, (int)wnd);
@@ -234,9 +219,9 @@ int xrdp_wm_setup_mod(struct xrdp_wm* self,
       self->mod_handle = g_load_library(mod_data->lib);
       if (self->mod_handle != 0)
       {
-        (void*)self->mod_init =
+        self->mod_init = (int(*)())
                   g_get_proc_address(self->mod_handle, "mod_init");
-        (void*)self->mod_exit =
+        self->mod_exit = (int(*)(int))
                   g_get_proc_address(self->mod_handle, "mod_exit");
         if (self->mod_init != 0 && self->mod_exit != 0)
         {
@@ -285,6 +270,7 @@ int xrdp_wm_login_notify(struct xrdp_bitmap* wnd,
   struct xrdp_bitmap* but;
   struct xrdp_bitmap* b;
   struct xrdp_bitmap* combo;
+  struct xrdp_bitmap* edit;
   struct xrdp_wm* wm;
   struct xrdp_rect rect;
   struct xrdp_mod_data con_mod;
@@ -339,7 +325,7 @@ int xrdp_wm_login_notify(struct xrdp_bitmap* wnd,
     }
     else if (sender->id == 3) /* ok button */
     {
-      combo = (struct xrdp_bitmap*)xrdp_bitmap_get_child_by_id(wnd, 6);
+      combo = xrdp_bitmap_get_child_by_id(wnd, 6);
       if (combo != 0)
       {
         mod = (struct xrdp_mod_data*)xrdp_list_get_item(combo->data_list,
@@ -347,25 +333,50 @@ int xrdp_wm_login_notify(struct xrdp_bitmap* wnd,
         if (mod != 0)
         {
           con_mod = *mod;
+          if (g_strcmp(con_mod.username, "ask") == 0)
+          {
+            edit = xrdp_bitmap_get_child_by_id(wnd, 4);
+            if (edit != 0)
+            {
+              g_strcpy(con_mod.username, edit->caption);
+            }
+          }
+          if (g_strcmp(con_mod.password, "ask") == 0)
+          {
+            edit = xrdp_bitmap_get_child_by_id(wnd, 5);
+            if (edit != 0)
+            {
+              g_strcpy(con_mod.password, edit->caption);
+            }
+          }
           if (xrdp_wm_setup_mod(wm, mod) == 0)
           {
             xrdp_wm_delete_all_childs(wm);
             if (!wm->pro_layer->term)
             {
-              if (wm->mod->mod_start((int)wm->mod, wm->screen->width,
+              if (wm->mod->mod_start(wm->mod, wm->screen->width,
                                      wm->screen->height, wm->screen->bpp) != 0)
+              {
                 wm->pro_layer->term = 1; /* kill session */
+              }
             }
             if (!wm->pro_layer->term)
             {
-              if (wm->mod->mod_connect((int)wm->mod, con_mod.ip, con_mod.port,
-                                       con_mod.user, con_mod.password) != 0)
+              wm->mod->mod_set_param(wm->mod, "ip", con_mod.ip);
+              wm->mod->mod_set_param(wm->mod, "port", con_mod.port);
+              wm->mod->mod_set_param(wm->mod, "username", con_mod.username);
+              wm->mod->mod_set_param(wm->mod, "password", con_mod.password);
+              if (wm->mod->mod_connect(wm->mod) != 0)
+              {
                 wm->pro_layer->term = 1; /* kill session */
+              }
             }
             if (!wm->pro_layer->term)
             {
               if (wm->mod->sck != 0)
+              {
                 wm->pro_layer->app_sck = wm->mod->sck;
+              }
             }
           }
         }
@@ -424,7 +435,8 @@ int xrdp_wm_login_fill_in_combo(struct xrdp_wm* self, struct xrdp_bitmap* b)
     }
     else
     {
-      mod_data = g_malloc(sizeof(struct xrdp_mod_data), 1);
+      mod_data = (struct xrdp_mod_data*)
+                     g_malloc(sizeof(struct xrdp_mod_data), 1);
       g_strcpy(mod_data->name, p);
       for (j = 0; j < section_names->count; j++)
       {
@@ -446,9 +458,9 @@ int xrdp_wm_login_fill_in_combo(struct xrdp_wm* self, struct xrdp_bitmap* b)
         {
           g_strcpy(mod_data->port, r);
         }
-        else if (g_strcmp("user", q) == 0)
+        else if (g_strcmp("username", q) == 0)
         {
-          g_strcpy(mod_data->user, r);
+          g_strcpy(mod_data->username, r);
         }
         else if (g_strcmp("password", q) == 0)
         {
