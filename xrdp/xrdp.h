@@ -160,6 +160,7 @@ int xrdp_wm_send_cursor(struct xrdp_wm* self, int cache_idx,
 /* xrdp_process.c */
 struct xrdp_process* xrdp_process_create(struct xrdp_listen* owner);
 void xrdp_process_delete(struct xrdp_process* self);
+int xrdp_process_loop(struct xrdp_process* self, struct stream* s);
 int xrdp_process_main_loop(struct xrdp_process* self);
 
 /* xrdp_listen.c */
@@ -272,3 +273,19 @@ int xrdp_bitmap_compress(char* in_data, int width, int height,
                          struct stream* s, int bpp, int byte_limit,
                          int start_line, struct stream* temp,
                          int e);
+
+#ifndef XRDP_LIB
+/* xrdp_interface.c */
+int server_begin_update(struct xrdp_mod* mod);
+int server_end_update(struct xrdp_mod* mod);
+int server_fill_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy,
+                     int color);
+int server_screen_blt(struct xrdp_mod* mod, int x, int y, int cx, int cy,
+                      int srcx, int srcy);
+int server_paint_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy,
+                      char* data);
+int server_set_cursor(struct xrdp_mod* mod, int x, int y,
+                      char* data, char* mask);
+int server_palette(struct xrdp_mod* mod, int* palette);
+int server_error_popup(struct xrdp_mod* mod, char* error, char* caption);
+#endif

@@ -506,7 +506,9 @@ void g_set_term(int in_val)
 }
 
 /*****************************************************************************/
-#ifdef _WIN32
+#ifdef XRDP_LIB
+/* this is so libxrdp don't require libpthread */
+#elif defined(_WIN32)
 int g_thread_create(unsigned long (__stdcall * start_routine)(void*), void* arg)
 {
   DWORD thread;

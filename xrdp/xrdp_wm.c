@@ -462,6 +462,7 @@ int xrdp_wm_send_cursor(struct xrdp_wm* self, int cache_idx,
 /*****************************************************************************/
 int xrdp_wm_init(struct xrdp_wm* self)
 {
+#ifndef XRDP_LIB /* if lib, dodn't create login screen */
   char data[32 * (32 * 3)];
   char mask[32 * (32 / 8)];
   int x;
@@ -529,9 +530,7 @@ int xrdp_wm_init(struct xrdp_wm* self)
     self->red       = COLOR24(0xff, 0x00, 0x00);
     self->green     = COLOR24(0x00, 0xff, 0x00);
   }
-
   xrdp_login_wnd_create(self);
-
   /* clear screen */
   self->screen->bg_color = self->black;
   xrdp_bitmap_invalidate(self->screen, 0);
@@ -542,7 +541,7 @@ int xrdp_wm_init(struct xrdp_wm* self)
   xrdp_wm_send_cursor(self, 1, data, mask, x, y);
   xrdp_wm_load_cursor(self, "cursor0.cur", data, mask, &x, &y);
   xrdp_wm_send_cursor(self, 0, data, mask, x, y);
-
+#endif
   return 0;
 }
 

@@ -46,11 +46,66 @@ void xrdp_process_delete(struct xrdp_process* self)
 }
 
 /*****************************************************************************/
+int xrdp_process_loop(struct xrdp_process* self, struct stream* s)
+{
+  int cont;
+  int rv;
+  int code;
+
+  code = 0;
+  rv = 0;
+  cont = 1;
+  while (cont && !self->term)
+  {
+    if (xrdp_rdp_recv(self->rdp_layer, s, &code) != 0)
+    {
+      rv = 1;
+      break;
+    }
+    DEBUG(("xrdp_process_main_loop code %d\n\r", code));
+    switch (code)
+    {
+      case -1:
+        xrdp_rdp_send_demand_active(self->rdp_layer);
+        break;
+      case 0:
+        break;
+      case RDP_PDU_CONFIRM_ACTIVE: /* 3 */
+        xrdp_rdp_process_confirm_active(self->rdp_layer, s);
+        break;
+      case RDP_PDU_DATA: /* 7 */
+        if (xrdp_rdp_process_data(self->rdp_layer, s) != 0)
+        {
+          DEBUG(("xrdp_rdp_process_data returned non zero\n\r"));
+          cont = 0;
+          self->term = 1;
+        }
+        break;
+      default:
+        g_printf("unknown in xrdp_process_main_loop\n\r");
+        break;
+    }
+    if (cont)
+    {
+      cont = s->next_packet < s->end;
+    }
+  }
+  if (self->rdp_layer->up_and_running && self->wm == 0 && rv == 0)
+  {
+    /* only do this once */
+    DEBUG(("xrdp_process_main_loop up and running\n\r"));
+    self->orders = xrdp_orders_create(self, self->rdp_layer);
+    self->wm = xrdp_wm_create(self, &self->rdp_layer->client_info);
+    xrdp_wm_init(self->wm);
+  }
+  return rv;
+}
+
+/*****************************************************************************/
 int xrdp_process_main_loop(struct xrdp_process* self)
 {
-  int code;
+#ifndef XRDP_LIB
   int i;
-  int cont;
   struct stream* s;
 
   make_stream(s);
@@ -65,53 +120,7 @@ int xrdp_process_main_loop(struct xrdp_process* self)
       if (i & 1)
       {
         init_stream(s, 8192);
-        cont = 1;
-        while (cont && !self->term)
-        {
-          if (xrdp_rdp_recv(self->rdp_layer, s, &code) != 0)
-          {
-            break;
-          }
-          DEBUG(("xrdp_process_main_loop code %d\n\r", code));
-          switch (code)
-          {
-            case -1:
-              xrdp_rdp_send_demand_active(self->rdp_layer);
-              break;
-            case 0:
-              break;
-            case RDP_PDU_CONFIRM_ACTIVE: /* 3 */
-              xrdp_rdp_process_confirm_active(self->rdp_layer, s);
-              break;
-            case RDP_PDU_DATA: /* 7 */
-              if (xrdp_rdp_process_data(self->rdp_layer, s) != 0)
-              {
-                DEBUG(("xrdp_rdp_process_data returned non zero\n\r"));
-                cont = 0;
-                self->term = 1;
-              }
-              break;
-            default:
-              g_printf("unknown in xrdp_process_main_loop\n\r");
-              break;
-          }
-          if (cont)
-          {
-            cont = s->next_packet < s->end;
-          }
-        }
-        if (cont) /* we must have errored out */
-        {
-          break;
-        }
-        if (self->rdp_layer->up_and_running && self->wm == 0)
-        {
-          /* only do this once */
-          DEBUG(("xrdp_process_main_loop up and running\n\r"));
-          self->orders = xrdp_orders_create(self, self->rdp_layer);
-          self->wm = xrdp_wm_create(self, &self->rdp_layer->client_info);
-          xrdp_wm_init(self->wm);
-        }
+        xrdp_process_loop(self, s);
       }
       if (i & 2) /* mod socket fired */
       {
@@ -152,5 +161,6 @@ int xrdp_process_main_loop(struct xrdp_process* self)
   self->status = -1;
   xrdp_listen_delete_pro(self->lis_layer, self);
   free_stream(s);
+#endif
   return 0;
 }
