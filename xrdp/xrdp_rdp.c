@@ -359,8 +359,56 @@ int xrdp_rdp_send_demand_active(struct xrdp_rdp* self)
 }
 
 /*****************************************************************************/
+int xrdp_process_capset_bmpcache(struct xrdp_rdp* self, struct stream* s,
+                                 int len)
+{
+  //g_hexdump(s->p, len);
+  in_uint8s(s, 24);
+  in_uint16_le(s, self->cache1_entries);
+  in_uint16_le(s, self->cache1_size);
+  in_uint16_le(s, self->cache2_entries);
+  in_uint16_le(s, self->cache2_size);
+  in_uint16_le(s, self->cache3_entries);
+  in_uint16_le(s, self->cache3_size);
+  //g_printf("%d %d %d %d %d %d\n", self->cache1_entries, self->cache1_size,
+  //         self->cache2_entries, self->cache2_size,
+  //         self->cache3_entries, self->cache3_size);
+  return 0;
+}
+
+/*****************************************************************************/
 int xrdp_rdp_process_confirm_active(struct xrdp_rdp* self, struct stream* s)
 {
+  int cap_len;
+  int source_len;
+  int num_caps;
+  int index;
+  int type;
+  int len;
+  char* p;
+
+  in_uint8s(s, 4); /* rdp_shareid */
+  in_uint8s(s, 2); /* userid */
+  in_uint16_le(s, source_len); /* sizeof RDP_SOURCE */
+  in_uint16_le(s, cap_len);
+  in_uint8s(s, source_len);
+  in_uint16_le(s, num_caps);
+  in_uint8s(s, 2); /* pad */
+  for (index = 0; index < num_caps; index++)
+  {
+    p = s->p;
+    in_uint16_le(s, type);
+    in_uint16_le(s, len);
+    //g_printf("%d %d\n", type, len);
+    switch (type)
+    {
+      case RDP_CAPSET_BMPCACHE:
+        xrdp_process_capset_bmpcache(self, s, len);
+        break;
+    }
+    s->p = p + len;
+  }
+  //g_hexdump(s->p, s->end - s->p);
   return 0;
 }
 

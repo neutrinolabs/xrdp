@@ -434,14 +434,14 @@
 /*****************************************************************************/
 int xrdp_bitmap_compress(char* in_data, int width, int height,
                          struct stream* s, int bpp, int byte_limit,
-                         int start_line, struct stream* temp_s)
+                         int start_line, struct stream* temp_s,
+                         int e)
 {
   char* line;
   char* last_line;
   char fom_mask[8192];
   int lines_sent;
   int pixel;
-  int e;
   int count;
   int color_count;
   int last_pixel;
@@ -462,11 +462,6 @@ int xrdp_bitmap_compress(char* in_data, int width, int height,
   int temp; /* used in macros */
 
   init_stream(temp_s, 0);
-  e = width % 4;
-  if (e != 0)
-  {
-    e = 4 - e;
-  }
   fom_mask_len = 0;
   last_line = 0;
   lines_sent = 0;

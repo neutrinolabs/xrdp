@@ -81,6 +81,7 @@ struct xrdp_orders* xrdp_orders_create(struct xrdp_process* owner);
 void xrdp_orders_delete(struct xrdp_orders* self);
 int xrdp_orders_init(struct xrdp_orders* self);
 int xrdp_orders_send(struct xrdp_orders* self);
+int xrdp_orders_force_send(struct xrdp_orders* self);
 int xrdp_orders_rect(struct xrdp_orders* self, int x, int y, int cx, int cy,
                      int color, struct xrdp_rect* rect);
 int xrdp_orders_screen_blt(struct xrdp_orders* self, int x, int y,
@@ -116,6 +117,9 @@ int xrdp_orders_send_palette(struct xrdp_orders* self, int* palette,
 int xrdp_orders_send_raw_bitmap(struct xrdp_orders* self,
                                 struct xrdp_bitmap* bitmap,
                                 int cache_id, int cache_idx);
+int xrdp_orders_send_bitmap(struct xrdp_orders* self,
+                            struct xrdp_bitmap* bitmap,
+                            int cache_id, int cache_idx);
 int xrdp_orders_send_font(struct xrdp_orders* self,
                           struct xrdp_font_item* font_item,
                           int font_index, int char_index);
@@ -182,9 +186,16 @@ int xrdp_bitmap_set_focus(struct xrdp_bitmap* self, int focused);
 int xrdp_bitmap_load(struct xrdp_bitmap* self, char* filename, int* palette);
 int xrdp_bitmap_get_pixel(struct xrdp_bitmap* self, int x, int y);
 int xrdp_bitmap_set_pixel(struct xrdp_bitmap* self, int x, int y, int pixel);
-int xrdp_bitmap_copy_box(struct xrdp_bitmap* self, struct xrdp_bitmap* dest,
+int xrdp_bitmap_copy_box(struct xrdp_bitmap* self,
+                         struct xrdp_bitmap* dest,
                          int x, int y, int cx, int cy);
-int xrdp_bitmap_compare(struct xrdp_bitmap* self, struct xrdp_bitmap* b);
+int xrdp_bitmap_copy_box_with_crc(struct xrdp_bitmap* self,
+                                  struct xrdp_bitmap* dest,
+                                  int x, int y, int cx, int cy);
+int xrdp_bitmap_compare(struct xrdp_bitmap* self,
+                        struct xrdp_bitmap* b);
+int xrdp_bitmap_compare_with_crc(struct xrdp_bitmap* self,
+                                 struct xrdp_bitmap* b);
 int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect);
 int xrdp_bitmap_def_proc(struct xrdp_bitmap* self, int msg,
                          int param1, int param2);
@@ -253,4 +264,5 @@ int xrdp_file_read_section(int fd, char* section, struct xrdp_list* names,
 /* xrdp_bitmap_compress.c */
 int xrdp_bitmap_compress(char* in_data, int width, int height,
                          struct stream* s, int bpp, int byte_limit,
-                         int start_line, struct stream* temp);
+                         int start_line, struct stream* temp,
+                         int e);

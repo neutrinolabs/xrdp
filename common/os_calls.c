@@ -14,7 +14,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
    xrdp: A Remote Desktop Protocol server.
-   Copyright (C) Jay Sorg 2004
+   Copyright (C) Jay Sorg 2004-2005
 
    generic operating system calls
 
@@ -57,7 +57,7 @@ static pthread_mutex_t g_term_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int g_term = 0;
 
 #ifdef MEMLEAK
-#include "xrdp.h"
+#include "/home/j/cvs/xrdp/xrdp/xrdp.h"
 #endif
 
 #ifdef MEMLEAK
@@ -181,7 +181,7 @@ void g_free1(void* ptr)
 }
 
 /*****************************************************************************/
-void g_printf(char* format, ...)
+void g_printf(const char* format, ...)
 {
   va_list ap;
 

@@ -62,19 +62,60 @@ int xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
   int oldest;
   int cache_id;
   int cache_idx;
-  struct xrdp_bitmap* b;
+  int bmp_size;
+  int e;
+  int Bpp;
 
+  e = bitmap->width % 4;
+  if (e != 0)
+  {
+    e = 4 - e;
+  }
+  Bpp = (bitmap->bpp + 7) / 8;
+  bmp_size = (bitmap->width + e) * bitmap->height * Bpp;
   self->bitmap_stamp++;
   /* look for match */
-  for (i = 0; i < 3; i++)
+  if (bmp_size < self->cache1_size)
   {
-    for (j = 0; j < 600; j++)
-    //for (j = 0; (i == 0 && j < 600) || (i == 1 && j < 300); j++)
+    i = 0;
+    for (j = 0; j < self->cache1_entries; j++)
     {
-      if (xrdp_bitmap_compare(self->bitmap_items[i][j].bitmap, bitmap))
+      if (xrdp_bitmap_compare_with_crc(self->bitmap_items[i][j].bitmap, bitmap))
       {
         self->bitmap_items[i][j].stamp = self->bitmap_stamp;
         DEBUG(("found bitmap at %d %d\n\r", i, j));
+        //g_printf("found bitmap at %d %d\n\r", i, j);
+        xrdp_bitmap_delete(bitmap);
+        return MAKELONG(i, j);
+      }
+    }
+  }
+  else if (bmp_size < self->cache2_size)
+  {
+    i = 1;
+    for (j = 0; j < self->cache2_entries; j++)
+    {
+      if (xrdp_bitmap_compare_with_crc(self->bitmap_items[i][j].bitmap, bitmap))
+      {
+        self->bitmap_items[i][j].stamp = self->bitmap_stamp;
+        DEBUG(("found bitmap at %d %d\n\r", i, j));
+        //g_printf("found bitmap at %d %d\n\r", i, j);
+        xrdp_bitmap_delete(bitmap);
+        return MAKELONG(i, j);
+      }
+    }
+  }
+  else if (bmp_size < self->cache3_size)
+  {
+    i = 2;
+    for (j = 0; j < self->cache3_entries; j++)
+    {
+      if (xrdp_bitmap_compare_with_crc(self->bitmap_items[i][j].bitmap, bitmap))
+      {
+        self->bitmap_items[i][j].stamp = self->bitmap_stamp;
+        DEBUG(("found bitmap at %d %d\n\r", i, j));
+        //g_printf("found bitmap at %d %d\n\r", i, j);
+        xrdp_bitmap_delete(bitmap);
         return MAKELONG(i, j);
       }
     }
@@ -83,10 +124,36 @@ int xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
   cache_id = 0;
   cache_idx = 0;
   oldest = 0x7fffffff;
-  for (i = 0; i < 3; i++)
+  if (bmp_size < self->cache1_size)
   {
-    for (j = 0; j < 600; j++)
-    //for (j = 0; (i == 0 && j < 600) || (i == 1 && j < 300); j++)
+    i = 0;
+    for (j = 0; j < self->cache1_entries; j++)
+    {
+      if (self->bitmap_items[i][j].stamp < oldest)
+      {
+        oldest = self->bitmap_items[i][j].stamp;
+        cache_id = i;
+        cache_idx = j;
+      }
+    }
+  }
+  else if (bmp_size < self->cache2_size)
+  {
+    i = 1;
+    for (j = 0; j < self->cache2_entries; j++)
+    {
+      if (self->bitmap_items[i][j].stamp < oldest)
+      {
+        oldest = self->bitmap_items[i][j].stamp;
+        cache_id = i;
+        cache_idx = j;
+      }
+    }
+  }
+  else if (bmp_size < self->cache3_size)
+  {
+    i = 2;
+    for (j = 0; j < self->cache3_entries; j++)
     {
       if (self->bitmap_items[i][j].stamp < oldest)
       {
@@ -99,11 +166,16 @@ int xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
   DEBUG(("adding bitmap at %d %d\n\r", cache_id, cache_idx));
   /* set, send bitmap and return */
   xrdp_bitmap_delete(self->bitmap_items[cache_id][cache_idx].bitmap);
-  b = xrdp_bitmap_create(bitmap->width, bitmap->height, bitmap->bpp, 0);
-  xrdp_bitmap_copy_box(bitmap, b, 0, 0, bitmap->width, bitmap->height);
-  self->bitmap_items[cache_id][cache_idx].bitmap = b;
+  self->bitmap_items[cache_id][cache_idx].bitmap = bitmap;
   self->bitmap_items[cache_id][cache_idx].stamp = self->bitmap_stamp;
-  xrdp_orders_send_raw_bitmap(self->orders, b, cache_id, cache_idx);
+  if (self->use_bitmap_comp)
+  {
+    xrdp_orders_send_bitmap(self->orders, bitmap, cache_id, cache_idx);
+  }
+  else
+  {
+    xrdp_orders_send_raw_bitmap(self->orders, bitmap, cache_id, cache_idx);
+  }
   return MAKELONG(cache_id, cache_idx);
 }
 

@@ -132,9 +132,9 @@ int server_paint_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy,
 
   wm = (struct xrdp_wm*)mod->wm;
   b = xrdp_bitmap_create_with_data(cx, cy, wm->screen->bpp, data);
-  xrdp_wm_send_bitmap(wm, b, x, y, cx, cy);
-  /*xrdp_painter_draw_bitmap((struct xrdp_painter*)mod->painter,
-                           wm->screen, b, x, y, cx, cy);*/
+  //xrdp_wm_send_bitmap(wm, b, x, y, cx, cy);
+  xrdp_painter_draw_bitmap((struct xrdp_painter*)mod->painter,
+                           wm->screen, b, x, y, cx, cy);
   xrdp_bitmap_delete(b);
   return 0;
 }

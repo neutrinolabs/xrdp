@@ -220,7 +220,8 @@ int xrdp_painter_fill_rect2(struct xrdp_painter* self,
   return 0;
 }
 
-#define SS 16
+#define SSW 64
+#define SSH 63
 
 /*****************************************************************************/
 int xrdp_painter_draw_bitmap(struct xrdp_painter* self,
@@ -251,7 +252,9 @@ int xrdp_painter_draw_bitmap(struct xrdp_painter* self,
   /* todo data */
 
   if (bitmap->type == WND_TYPE_BITMAP)
+  {
     return 0;
+  }
   region = xrdp_region_create(self->wm);
   xrdp_wm_get_vis_region(self->wm, bitmap, x, y, cx, cy, region,
                          self->clip_children);
@@ -262,78 +265,103 @@ int xrdp_painter_draw_bitmap(struct xrdp_painter* self,
     y = y + b->top;
     b = b->parent;
   }
-  palette_id = xrdp_cache_add_palette(self->wm->cache, self->wm->palette);
-  j = 0;
-  while (j < to_draw->height)
+  if (self->wm->use_bitmap_cache)
   {
-    i = 0;
-    while (i < to_draw->width)
+    palette_id = xrdp_cache_add_palette(self->wm->cache, self->wm->palette);
+    j = 0;
+    while (j < to_draw->height)
     {
-      x1 = x + i;
-      y1 = y + j;
-      w = MIN(SS, to_draw->width - i);
-      h = MIN(SS, to_draw->height - j);
-      b = xrdp_bitmap_create(w, h, self->wm->screen->bpp, 0);
-      xrdp_bitmap_copy_box(to_draw, b, i, j, w, h);
-      bitmap_id = xrdp_cache_add_bitmap(self->wm->cache, b);
-      cache_id = HIWORD(bitmap_id);
-      cache_idx = LOWORD(bitmap_id);
-      k = 0;
-      while (xrdp_region_get_rect(region, k, &rect) == 0)
+      i = 0;
+      while (i < to_draw->width)
       {
-        if (!ISRECTEMPTY(rect))
+        x1 = x + i;
+        y1 = y + j;
+        w = MIN(SSW, to_draw->width - i);
+        h = MIN(SSH, to_draw->height - j);
+        b = xrdp_bitmap_create(w, h, self->wm->screen->bpp, 0);
+        xrdp_bitmap_copy_box_with_crc(to_draw, b, i, j, w, h);
+        bitmap_id = xrdp_cache_add_bitmap(self->wm->cache, b);
+        cache_id = HIWORD(bitmap_id);
+        cache_idx = LOWORD(bitmap_id);
+        k = 0;
+        while (xrdp_region_get_rect(region, k, &rect) == 0)
         {
-          MAKERECT(rect1, x1, y1, w, h);
-          if (rect_intersect(&rect, &rect1, &rect2))
+          if (!ISRECTEMPTY(rect))
           {
-            ok = 1;
-            if (self->use_clip)
+            MAKERECT(rect1, x1, y1, w, h);
+            if (rect_intersect(&rect, &rect1, &rect2))
             {
-              rect = self->clip;
-              RECTOFFSET(rect, x, y);
-              if (!rect_intersect(&rect2, &rect, &rect1))
-                ok = 0;
-            }
-            else
-              rect1 = rect2;
-            if (ok)
-            {
-              rect1.right--;
-              rect1.bottom--;
-              /* check these so ms client don't crash */
-              if (x1 + w >= self->wm->screen->width)
-                w = self->wm->screen->width - x1;
-              if (y1 + h >= self->wm->screen->height)
-                h = self->wm->screen->height - y1;
-              if (w > 0 && h > 0 && x1 + w > 0 && y1 + h > 0)
+              ok = 1;
+              if (self->use_clip)
               {
-                srcx = 0;
-                srcy = 0;
-                if (x1 < 0)
+                rect = self->clip;
+                RECTOFFSET(rect, x, y);
+                if (!rect_intersect(&rect2, &rect, &rect1))
+                  ok = 0;
+              }
+              else
+              {
+                rect1 = rect2;
+              }
+              if (ok)
+              {
+                rect1.right--;
+                rect1.bottom--;
+                /* check these so ms client don't crash */
+                if (x1 + w >= self->wm->screen->width)
                 {
-                  w = w + x1;
-                  srcx = srcx - x1;
-                  x1 = 0;
+                  w = self->wm->screen->width - x1;
                 }
-                if (y1 < 0)
+                if (y1 + h >= self->wm->screen->height)
                 {
-                  h = h + y1;
-                  srcy = srcy - y1;
-                  y1 = 0;
+                  h = self->wm->screen->height - y1;
                 }
-                xrdp_orders_mem_blt(self->orders, cache_id, palette_id,
-                                    x1, y1, w, h, self->rop, srcx, srcy,
-                                    cache_idx, &rect1);
+                if (w > 0 && h > 0 && x1 + w > 0 && y1 + h > 0)
+                {
+                  srcx = 0;
+                  srcy = 0;
+                  if (x1 < 0)
+                  {
+                    w = w + x1;
+                    srcx = srcx - x1;
+                    x1 = 0;
+                  }
+                  if (y1 < 0)
+                  {
+                    h = h + y1;
+                    srcy = srcy - y1;
+                    y1 = 0;
+                  }
+                  xrdp_orders_mem_blt(self->orders, cache_id, palette_id,
+                                      x1, y1, w, h, self->rop, srcx, srcy,
+                                      cache_idx, &rect1);
+                }
               }
             }
           }
+          k++;
         }
-        k++;
+        i += SSW;
       }
-      xrdp_bitmap_delete(b);
-      i += SS;
+      j += SSH;
     }
-    j += SS;
+  }
+  else /* no bitmap cache */
+  {
+    xrdp_orders_force_send(self->orders);
+    k = 0;
+    while (xrdp_region_get_rect(region, k, &rect) == 0)
+    {
+      x1 = rect.left;
+      y1 = rect.top;
+      w = rect.right - rect.left;
+      h = rect.bottom - rect.top;
+      b = xrdp_bitmap_create(w, h, self->wm->screen->bpp, 0);
+      xrdp_bitmap_copy_box(to_draw, b, x1 - x, y1 - y, w, h);
+      xrdp_wm_send_bitmap(self->wm, b, x1, y1, w, h);
+      xrdp_bitmap_delete(b);
+      k++;
+    }
   }
   xrdp_region_delete(region);
   return 0;

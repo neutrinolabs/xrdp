@@ -35,10 +35,18 @@ struct xrdp_wm* xrdp_wm_create(struct xrdp_process* owner)
   self->pro_layer = owner;
   self->orders = owner->orders;
   self->painter = xrdp_painter_create(self);
+  self->use_bitmap_comp = 1;
+  self->use_bitmap_cache = 1;
+  self->op1 = 0;
   self->rdp_layer = owner->rdp_layer;
   self->cache = xrdp_cache_create(self, self->orders);
-  self->use_comp = 1;
-  self->op1 = 0;
+  self->cache->use_bitmap_comp = self->use_bitmap_comp;
+  self->cache->cache1_entries = owner->rdp_layer->cache1_entries;
+  self->cache->cache1_size = owner->rdp_layer->cache1_size;
+  self->cache->cache2_entries = owner->rdp_layer->cache2_entries;
+  self->cache->cache2_size = owner->rdp_layer->cache2_size;
+  self->cache->cache3_entries = owner->rdp_layer->cache3_entries;
+  self->cache->cache3_size = owner->rdp_layer->cache3_size;
   return self;
 }
 
@@ -123,7 +131,7 @@ int xrdp_wm_send_bitmap(struct xrdp_wm* self, struct xrdp_bitmap* bitmap,
   line_size = bitmap->width * Bpp;
   make_stream(s);
   init_stream(s, 8192);
-  if (self->use_comp)
+  if (self->use_bitmap_comp)
   {
     make_stream(temp_s);
     init_stream(temp_s, 65536);
@@ -153,7 +161,7 @@ int xrdp_wm_send_bitmap(struct xrdp_wm* self, struct xrdp_bitmap* bitmap,
                                              bitmap->height,
                                              s, bitmap->bpp,
                                              4096 - total_bufsize,
-                                             i - 1, temp_s);
+                                             i - 1, temp_s, e);
         if (lines_sending == 0)
           break;
         num_updates++;

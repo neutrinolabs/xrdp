@@ -180,6 +180,12 @@ struct xrdp_rdp
   int width;
   int height;
   int up_and_running;
+  int cache1_entries;
+  int cache1_size;
+  int cache2_entries;
+  int cache2_size;
+  int cache3_entries;
+  int cache3_size;
 };
 
 /* orders */
@@ -309,6 +315,13 @@ struct xrdp_cache
   struct xrdp_bitmap_item bitmap_items[3][600];
   int char_stamp;
   struct xrdp_char_item char_items[12][256];
+  int use_bitmap_comp;
+  int cache1_entries;
+  int cache1_size;
+  int cache2_entries;
+  int cache2_size;
+  int cache3_entries;
+  int cache3_size;
 };
 
 /* the window manager */
@@ -364,9 +377,10 @@ struct xrdp_wm
   int (*mod_exit)(int);
   struct xrdp_mod* mod;
   /* */
-  int use_comp;
+  int use_bitmap_comp;
+  int use_bitmap_cache;
   /*  */
-  int op1;
+  int op1; /* use smaller bitmap header, todo */
 };
 
 /* rdp process */
@@ -461,6 +475,8 @@ struct xrdp_bitmap
   /* for popup */
   struct xrdp_bitmap* popped_from;
   int item_height;
+  /* crc */
+  int crc;
 };
 
 /* font */

@@ -22,9 +22,9 @@
 
 #include "vnc.h"
 
-const char* vnc_start_command =
+char* vnc_start_command =
 "su %s -c \"sh ../vnc/startvnc.sh :%d %d %d %d\"";
-const char* vnc_stop_command =
+char* vnc_stop_command =
 "";
 
 /******************************************************************************/
@@ -270,6 +270,8 @@ int lib_framebuffer_update(struct vnc* v)
   }
   in_uint8s(s, 1);
   in_uint16_be(s, num_recs);
+
+  v->server_begin_update(v);
   for (i = 0; i < num_recs; i++)
   {
     init_stream(s, 8192);
@@ -292,9 +294,7 @@ int lib_framebuffer_update(struct vnc* v)
         free_stream(s);
         return 1;
       }
-      v->server_begin_update(v);
       v->server_paint_rect(v, x, y, cx, cy, data);
-      v->server_end_update(v);
       g_free(data);
     }
     else if (encoding == 1) /* copy rect */
@@ -307,9 +307,7 @@ int lib_framebuffer_update(struct vnc* v)
       }
       in_uint16_be(s, srcx);
       in_uint16_be(s, srcy);
-      v->server_begin_update(v);
       v->server_screen_blt(v, x, y, cx, cy, srcx, srcy);
-      v->server_end_update(v);
     }
     else if (encoding == 0xffffff11) /* cursor */
     {
@@ -342,6 +340,8 @@ int lib_framebuffer_update(struct vnc* v)
       v->server_set_cursor(v, x, y, cursor_data, cursor_mask);
     }
   }
+  v->server_end_update(v);
+
   /* FrambufferUpdateRequest */
   init_stream(s, 8192);
   out_uint8(s, 3);
