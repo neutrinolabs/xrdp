@@ -45,6 +45,9 @@
 
 #define SERVICE "xrdp"
 
+int g_sck;
+int g_pid;
+
 struct session_item
 {
   char name[256];
@@ -403,6 +406,19 @@ int start_session(int width, int height, int bpp, char* username,
 }
 
 /******************************************************************************/
+void sesman_shutdown(int sig)
+{
+  if (getpid() != g_pid)
+  {
+    return;
+  }
+  g_printf("shutting down\n\r");
+  g_printf("signal %d pid %d\n\r", sig, getpid());
+  g_tcp_close(g_sck);
+}
+
+
+/******************************************************************************/
 int main(int argc, char** argv)
 {
   int sck;
@@ -425,7 +441,11 @@ int main(int argc, char** argv)
   char pass[256];
   struct session_item* s_item;
 
+  signal(2, sesman_shutdown);
+  signal(9, sesman_shutdown);
+  signal(15, sesman_shutdown);
   g_memset(&session_items, 0, sizeof(session_items));
+  g_pid = getpid();
   if (argc == 1)
   {
     g_printf("xrdp session manager v0.1\n");
@@ -441,19 +461,19 @@ start session\n");
     make_stream(out_s);
     init_stream(out_s, 8192);
     g_printf("listening\n");
-    sck = g_tcp_socket();
-    g_tcp_set_non_blocking(sck);
-    error = g_tcp_bind(sck, "3350");
+    g_sck = g_tcp_socket();
+    g_tcp_set_non_blocking(g_sck);
+    error = g_tcp_bind(g_sck, "3350");
     if (error == 0)
     {
-      error = g_tcp_listen(sck);
+      error = g_tcp_listen(g_sck);
       if (error == 0)
       {
-        in_sck = g_tcp_accept(sck);
-        while (in_sck == -1 && g_tcp_last_error_would_block(sck))
+        in_sck = g_tcp_accept(g_sck);
+        while (in_sck == -1 && g_tcp_last_error_would_block(g_sck))
         {
           g_sleep(1000);
-          in_sck = g_tcp_accept(sck);
+          in_sck = g_tcp_accept(g_sck);
         }
         while (in_sck > 0)
         {
@@ -513,12 +533,12 @@ start session\n");
               }
             }
           }
-          close(in_sck);
-          in_sck = g_tcp_accept(sck);
-          while (in_sck == -1 && g_tcp_last_error_would_block(sck))
+          g_tcp_close(in_sck);
+          in_sck = g_tcp_accept(g_sck);
+          while (in_sck == -1 && g_tcp_last_error_would_block(g_sck))
           {
             g_sleep(1000);
-            in_sck = g_tcp_accept(sck);
+            in_sck = g_tcp_accept(g_sck);
           }
         }
       }
@@ -531,7 +551,7 @@ start session\n");
     {
       g_printf("bind error\n");
     }
-    g_tcp_close(sck);
+    g_tcp_close(g_sck);
     free_stream(in_s);
     free_stream(out_s);
   }
