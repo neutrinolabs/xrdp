@@ -55,7 +55,7 @@ static int g_term = 0;
 #ifdef MEMLEAK
 static int g_memsize = 0;
 static int g_memid = 0;
-struct xrdp_list* g_memlist = 0;
+static struct xrdp_list* g_memlist = 0;
 #endif
 
 /*****************************************************************************/
@@ -631,6 +631,16 @@ int g_strlen(char* text)
 char* g_strcpy(char* dest, char* src)
 {
   return strcpy(dest, src);
+}
+
+/*****************************************************************************/
+char* g_strncpy(char* dest, char* src, int len)
+{
+  char* rv;
+
+  rv = strncpy(dest, src, len);
+  dest[len] = 0;
+  return rv;
 }
 
 /*****************************************************************************/

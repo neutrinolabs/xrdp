@@ -359,6 +359,7 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
   struct xrdp_rect r1;
   struct xrdp_rect r2;
   struct xrdp_painter* painter;
+  char text[256];
 
   if (self == 0) /* if no bitmap */
     return 0;
@@ -533,6 +534,20 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
     /* draw text */
     painter->fg_color = self->wm->black;
     xrdp_painter_draw_text(painter, self, 4, 2, self->caption);
+    /* draw xor box */
+    if (self->parent != 0)
+    {
+      if (self->parent->focused_control == self)
+      {
+        g_strncpy(text, self->caption, self->edit_pos);
+        w = xrdp_painter_text_width(painter, text);
+        painter->fg_color = self->wm->black;
+        painter->rop = 0x5a;
+        xrdp_painter_fill_rect(painter, self, 4 + w, 3, 2, self->height - 6);
+      }
+    }
+    /* reset rop back */
+    painter->rop = 0xcc;
   }
   else if (self->type == WND_TYPE_LABEL) /* 6 */
   {
@@ -569,11 +584,13 @@ int xrdp_bitmap_def_proc(struct xrdp_bitmap* self, int msg,
                          int param1, int param2)
 {
   char c;
-  char a[2];
   int n;
   int i;
   int shift;
+  int ext;
+  int scan_code;
   struct xrdp_bitmap* b;
+  struct xrdp_bitmap* focus_out_control;
 
   if (self == 0)
     return 0;
@@ -583,7 +600,8 @@ int xrdp_bitmap_def_proc(struct xrdp_bitmap* self, int msg,
   {
     if (msg == WM_KEYDOWN)
     {
-      if (param1 == 15) /* tab */
+      scan_code = param1 % 128;
+      if (scan_code == 15) /* tab */
       {
         /* move to next tab stop */
         shift = self->wm->keys[42] || self->wm->keys[54];
@@ -609,7 +627,10 @@ int xrdp_bitmap_def_proc(struct xrdp_bitmap* self, int msg,
           n--;
           if (b->tab_stop)
           {
+            focus_out_control = self->focused_control;
             self->focused_control = b;
+            xrdp_bitmap_invalidate(focus_out_control, 0);
+            xrdp_bitmap_invalidate(b, 0);
             break;
           }
           if (shift)
@@ -637,26 +658,87 @@ int xrdp_bitmap_def_proc(struct xrdp_bitmap* self, int msg,
   {
     if (msg == WM_KEYDOWN)
     {
-      if (param1 == 14) /* backspace */
+      scan_code = param1 % 128;
+      ext = param2 & 0x0100;
+      /* left or up arrow */
+      if ((scan_code == 75 || scan_code == 72) &&
+          (ext || self->wm->num_lock == 0))
+      {
+        if (self->edit_pos > 0)
+        {
+          self->edit_pos--;
+          xrdp_bitmap_invalidate(self, 0);
+        }
+      }
+      /* right or down arrow */
+      else if ((scan_code == 77 || scan_code == 80) &&
+               (ext || self->wm->num_lock == 0))
+      {
+        if (self->edit_pos < g_strlen(self->caption))
+        {
+          self->edit_pos++;
+          xrdp_bitmap_invalidate(self, 0);
+        }
+      }
+      /* backspace */
+      else if (scan_code == 14)
       {
         n = g_strlen(self->caption);
         if (n > 0)
         {
-          self->caption[n - 1] = 0;
+          if (self->edit_pos > 0)
+          {
+            self->edit_pos--;
+            remove_char_at(self->caption, self->edit_pos);
+            xrdp_bitmap_invalidate(self, 0);
+          }
+        }
+      }
+      /* delete */
+      else if (scan_code == 83  &&
+              (ext || self->wm->num_lock == 0))
+      {
+        n = g_strlen(self->caption);
+        if (n > 0)
+        {
+          if (self->edit_pos < n)
+          {
+            remove_char_at(self->caption, self->edit_pos);
+            xrdp_bitmap_invalidate(self, 0);
+          }
+        }
+      }
+      /* end */
+      else if (scan_code == 79  &&
+              (ext || self->wm->num_lock == 0))
+      {
+        n = g_strlen(self->caption);
+        if (self->edit_pos < n)
+        {
+          self->edit_pos = n;
+          xrdp_bitmap_invalidate(self, 0);
+        }
+      }
+      /* home */
+      else if (scan_code == 71  &&
+              (ext || self->wm->num_lock == 0))
+      {
+        if (self->edit_pos > 0)
+        {
+          self->edit_pos = 0;
           xrdp_bitmap_invalidate(self, 0);
         }
       }
       else
       {
-        c = get_char_from_scan_code(param2, param1, self->wm->keys,
+        c = get_char_from_scan_code(param2, scan_code, self->wm->keys,
                                     self->wm->caps_lock,
                                     self->wm->num_lock,
                                     self->wm->scroll_lock);
         if (c != 0)
         {
-          a[0] = c;
-          a[1] = 0;
-          g_strcat(self->caption, a);
+          add_char_at(self->caption, c, self->edit_pos);
+          self->edit_pos++;
           xrdp_bitmap_invalidate(self, 0);
         }
       }

@@ -16,7 +16,6 @@
    xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2004
 
-   xrdp: A Remote Desktop Protocol server.
    simple window manager
 
 */
@@ -469,7 +468,7 @@ int xrdp_wm_init(struct xrdp_wm* self)
   self->login_window->top = self->screen->height / 2 -
                             self->login_window->height / 2;
   self->login_window->notify = xrdp_wm_login_notify;
-  strcpy(self->login_window->caption, "Logon to xrdp");
+  g_strcpy(self->login_window->caption, "Logon to xrdp");
 
   /* image */
   but = xrdp_bitmap_create(4, 4, self->screen->bpp, WND_TYPE_IMAGE);
@@ -861,6 +860,7 @@ int xrdp_wm_mouse_move(struct xrdp_wm* self, int x, int y)
 int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
 {
   struct xrdp_bitmap* control;
+  struct xrdp_bitmap* focus_out_control;
   struct xrdp_bitmap* wnd;
   int newx;
   int newy;
@@ -903,7 +903,12 @@ int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
       if (control == wnd)
         wnd->focused_control = 0;
       else
+      {
+        focus_out_control = wnd->focused_control;
         wnd->focused_control = control;
+        xrdp_bitmap_invalidate(focus_out_control, 0);
+      }
+      xrdp_bitmap_invalidate(control, 0);
       if (wnd->modal_dialog != 0) /* if window has a modal dialog */
         return 0;
     }

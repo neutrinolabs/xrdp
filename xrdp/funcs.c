@@ -268,3 +268,47 @@ char get_char_from_scan_code(int device_flags, int scan_code, int* keys,
   }
   return rv;
 }
+
+/*****************************************************************************/
+/* add a ch at index position in text, index starts at 0 */
+/* if index = -1 add it to the end */
+int add_char_at(char* text, char ch, int index)
+{
+  int len;
+  int i;
+
+  len = g_strlen(text);
+  if (index >= len || index < 0)
+  {
+    text[len] = ch;
+    text[len + 1] = 0;
+    return 0;
+  }
+  for (i = len - 1; i >= index; i--)
+    text[i + 1] = text[i];
+  text[i + 1] = ch;
+  text[len + 1] = 0;
+  return 0;
+}
+
+/*****************************************************************************/
+/* remove a ch at index position in text, index starts at 0 */
+/* if index = -1 remove it from the end */
+int remove_char_at(char* text, int index)
+{
+  int len;
+  int i;
+
+  len = g_strlen(text);
+  if (len <= 0)
+    return 0;
+  if (index >= len - 1 || index < 0)
+  {
+    text[len - 1] = 0;
+    return 0;
+  }
+  for (i = index; i < len - 1; i++)
+    text[i] = text[i + 1];
+  text[len - 1] = 0;
+  return 0;
+}

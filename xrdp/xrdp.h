@@ -36,45 +36,7 @@
 #include "parse.h"
 #include "xrdp_types.h"
 #include "constants.h"
-/* check for debug */
-#ifdef XRDP_DEBUG
-#define DEBUG(args) g_printf args;
-#else
-#define DEBUG(args)
-#endif
-/* other macros */
-#define MIN(x1, x2) ((x1) < (x2) ? (x1) : (x2))
-#define MAX(x1, x2) ((x1) > (x2) ? (x1) : (x2))
-#define HIWORD(in) (((in) & 0xffff0000) >> 16)
-#define LOWORD(in) ((in) & 0x0000ffff)
-#define MAKELONG(hi, lo) ((((hi) & 0xffff) << 16) | ((lo) & 0xffff))
-#define MAKERECT(r, x, y, cx, cy) \
-{ (r).left = x; (r).top = y; (r).right = (x) + (cx); (r).bottom = (y) + (cy); }
-#define ISRECTEMPTY(r) (((r).right <= (r).left) || ((r).bottom <= (r).top))
-#define RECTOFFSET(r, dx, dy) \
-{ (r).left += dx; (r).top += dy; (r).right += dx; (r).bottom += dy; }
-#define GETPIXEL8(d, x, y, w) (*(((unsigned char*)d) + ((y) * (w) + (x))))
-#define GETPIXEL16(d, x, y, w) (*(((unsigned short*)d) + ((y) * (w) + (x))))
-#define GETPIXEL32(d, x, y, w) (*(((unsigned long*)d) + ((y) * (w) + (x))))
-#define SETPIXEL8(d, x, y, w, v) \
-(*(((unsigned char*)d) + ((y) * (w) + (x))) = (v))
-#define SETPIXEL16(d, x, y, w, v) \
-(*(((unsigned short*)d) + ((y) * (w) + (x))) = (v))
-#define SETPIXEL32(d, x, y, w, v) \
-(*(((unsigned long*)d) + ((y) * (w) + (x))) = (v))
-#define COLOR15(r, g, b) ((((r) >> 3) << 10) | (((g) >> 3) << 5) | ((b) >> 3))
-#define COLOR16(r, g, b) ((((r) >> 3) << 11) | (((g) >> 2) << 5) | ((b) >> 3))
-#define COLOR24(r, g, b) ((r) | ((g) << 8) | ((b) << 16))
-/* font macros */
-#define FONT_DATASIZE(f) ((((f)->height * (((f)->width + 7) / 8)) + 3) & ~3);
-
-#ifdef _WIN32
-#define THREAD_RV unsigned long
-#define THREAD_CC __stdcall
-#else
-#define THREAD_RV void*
-#define THREAD_CC
-#endif
+#include "xrdp_defines.h"
 
 /* os_calls.c */
 int g_init_system(void);
@@ -128,6 +90,7 @@ int g_file_seek(int fd, int offset);
 int g_file_lock(int fd, int start, int len);
 int g_strlen(char* text);
 char* g_strcpy(char* dest, char* src);
+char* g_strncpy(char* dest, char* src, int len);
 char* g_strcat(char* dest, char* src);
 
 /* xrdp_tcp.c */
@@ -330,3 +293,6 @@ int rect_intersect(struct xrdp_rect* in1, struct xrdp_rect* in2,
 int check_bounds(struct xrdp_bitmap* b, int* x, int* y, int* cx, int* cy);
 char get_char_from_scan_code(int device_flags, int scan_code, int* keys,
                              int caps_lock, int num_lock, int scroll_lock);
+int add_char_at(char* text, char ch, int index);
+int remove_char_at(char* text, int index);
+

@@ -369,31 +369,39 @@ struct xrdp_painter
 /* window or bitmap */
 struct xrdp_bitmap
 {
-  int type; /* 0 = bitmap 1 = window 2 = screen 3 = button 4 = image 5 = edit 6 = label */
-  int state; /* for button 0 = normal 1 = down */
-  int id;
-  char* data;
+  /* 0 = bitmap 1 = window 2 = screen 3 = button 4 = image 5 = edit
+     6 = label */
+  int type;
   int width;
   int height;
+  struct xrdp_wm* wm;
+  /* msg 1 = click 2 = mouse move 3 = paint 100 = modal result */
+  /* see messages in constants.h */
+  int (*notify)(struct xrdp_bitmap* wnd, struct xrdp_bitmap* sender,
+                int msg, int param1, int param2);
+  /* for bitmap */
   int bpp;
+  int line_size; /* in bytes */
+  char* data;
+  /* for all but bitmap */
   int left;
   int top;
+  int cursor;
   int bg_color;
-  int line_size; /* in bytes */
-  int focused;
   int tab_stop;
+  int focused;
+  int id;
   char caption[256];
+  /* for window or screen */
   struct xrdp_bitmap* modal_dialog;
   struct xrdp_bitmap* focused_control;
   struct xrdp_bitmap* owner; /* window that created us */
   struct xrdp_bitmap* parent; /* window contained in */
   struct xrdp_list* child_list;
-  struct xrdp_wm* wm;
-  int cursor;
+  /* for edit */
   int edit_pos;
-  /* msg 1 = click 2 = mouse move 3 = paint 100 = modal result */
-  int (*notify)(struct xrdp_bitmap* wnd, struct xrdp_bitmap* sender,
-                int msg, int param1, int param2);
+  /* for button */
+  int state; /* for button 0 = normal 1 = down */
 };
 
 /* font */
