@@ -870,17 +870,17 @@ int g_strcmp(char* c1, char* c2)
 }
 
 /*****************************************************************************/
-int g_load_library(char* in)
+long g_load_library(char* in)
 {
 #if defined(_WIN32)
   return 0;
 #else
-  return (int)dlopen(in, RTLD_LOCAL | RTLD_LAZY);
+  return (long)dlopen(in, RTLD_LOCAL | RTLD_LAZY);
 #endif
 }
 
 /*****************************************************************************/
-int g_free_library(int lib)
+int g_free_library(long lib)
 {
   if (lib == 0)
   {
@@ -895,7 +895,7 @@ int g_free_library(int lib)
 
 /*****************************************************************************/
 /* returns NULL if not found */
-void* g_get_proc_address(int lib, char* name)
+void* g_get_proc_address(long lib, char* name)
 {
   if (lib == 0)
   {

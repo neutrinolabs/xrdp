@@ -160,7 +160,7 @@ struct stream
 #if defined(B_ENDIAN) || defined(NEED_ALIGN)
 #define in_uint32_le(s, v) \
 { \
-  v = (unsigned long) \
+  v = (unsigned int) \
     ( \
       (*((unsigned char*)(s->p + 0)) << 0) | \
       (*((unsigned char*)(s->p + 1)) << 8) | \
@@ -172,7 +172,7 @@ struct stream
 #else
 #define in_uint32_le(s, v) \
 { \
-  v = *((unsigned long*)(s->p)); \
+  v = *((unsigned int*)(s->p)); \
   s->p += 4; \
 }
 #endif
@@ -242,7 +242,7 @@ struct stream
 #else
 #define out_uint32_le(s, v) \
 { \
-  *((unsigned long*)(s->p)) = (v); \
+  *((unsigned int*)(s->p)) = (v); \
   s->p += 4; \
 }
 #endif

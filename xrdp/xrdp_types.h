@@ -398,7 +398,7 @@ struct xrdp_wm
   int scroll_lock;
   int num_lock;
   /* mod vars */
-  int mod_handle; /* returned from g_load_library */
+  long mod_handle; /* returned from g_load_library */
   struct xrdp_mod* (*mod_init)(void);
   int (*mod_exit)(struct xrdp_mod*);
   struct xrdp_mod* mod;

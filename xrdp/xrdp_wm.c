@@ -67,6 +67,8 @@ void xrdp_wm_delete(struct xrdp_wm* self)
   {
     g_free_library(self->mod_handle);
   }
+  /* free the log */
+  xrdp_list_delete(self->log);
   /* free self */
   g_free(self);
 }
