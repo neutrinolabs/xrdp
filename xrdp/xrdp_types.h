@@ -336,6 +336,7 @@ struct xrdp_process
   /* create these when up and running */
   struct xrdp_orders* orders;
   struct xrdp_wm* wm;
+  int app_sck;
 };
 
 /* rdp listener */

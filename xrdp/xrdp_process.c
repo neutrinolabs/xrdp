@@ -59,7 +59,7 @@ int xrdp_process_main_loop(struct xrdp_process* self)
   {
     while (!g_is_term() && !self->term)
     {
-      i = g_tcp_select(self->sck);
+      i = g_tcp_select(self->sck, self->app_sck);
       if (i == 1)
       {
         init_stream(s, 8192);
@@ -104,6 +104,9 @@ int xrdp_process_main_loop(struct xrdp_process* self)
           self->wm = xrdp_wm_create(self);
           xrdp_wm_init(self->wm);
         }
+      }
+      else if (i == 2)
+      {
       }
       else if (i == 0)
         g_sleep(10);

@@ -6,6 +6,10 @@ Credits
   Mark from up 19.9 was the first to work with rdp server code.
 
 To use this run make the ./xrdp, then connect with rdesktop or mstsc.
-Only tested with linux and i386.
+Tested with linux and i386.
+I've got it compiling in windows with borland free tools.
+
+xrdp directory is the main server code
+design.txt is an attempt to expain the project design
 
 Jay

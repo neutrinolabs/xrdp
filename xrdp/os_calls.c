@@ -30,6 +30,7 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #endif
@@ -242,6 +243,15 @@ int g_tcp_socket(void)
 }
 
 /*****************************************************************************/
+int g_tcp_local_socket(void)
+{
+  int rv;
+
+  rv = socket(PF_LOCAL, SOCK_STREAM, 0);
+  return rv;
+}
+
+/*****************************************************************************/
 void g_tcp_close(int sck)
 {
 #ifdef _WIN32
@@ -277,6 +287,17 @@ int g_tcp_bind(int sck, char* port)
   s.sin_port = htons(atoi(port));
   s.sin_addr.s_addr = INADDR_ANY;
   return bind(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
+}
+
+/*****************************************************************************/
+int g_tcp_local_bind(int sck, char* port)
+{
+  struct sockaddr_un s;
+
+  memset(&s, 0, sizeof(struct sockaddr_un));
+  s.sun_family = AF_UNIX;
+  strcpy(s.sun_path, port);
+  return bind(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_un));
 }
 
 /*****************************************************************************/
@@ -323,16 +344,21 @@ int g_tcp_last_error_would_block(int sck)
 }
 
 /*****************************************************************************/
-int g_tcp_select(int sck)
+int g_tcp_select(int sck1, int sck2)
 {
   fd_set rfds;
   struct timeval time;
+  int max;
 
   time.tv_sec = 0;
   time.tv_usec = 0;
   FD_ZERO(&rfds);
-  FD_SET(((unsigned int)sck), &rfds);
-  return select(sck + 1, &rfds, 0, 0, &time);
+  FD_SET(((unsigned int)sck1), &rfds);
+  FD_SET(((unsigned int)sck2), &rfds);
+  max = sck1;
+  if (sck2 > max)
+    max = sck2;
+  return select(max + 1, &rfds, 0, 0, &time);
 }
 
 /*****************************************************************************/
