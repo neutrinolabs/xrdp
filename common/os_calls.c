@@ -590,8 +590,11 @@ int g_thread_create(unsigned long (__stdcall * start_routine)(void*), void* arg)
 int g_thread_create(void* (* start_routine)(void*), void* arg)
 {
   pthread_t thread;
+  int rv;
 
-  return pthread_create(&thread, 0, start_routine, arg);
+  rv = pthread_create(&thread, 0, start_routine, arg);
+  pthread_detach(thread);
+  return rv;
 }
 #endif
 

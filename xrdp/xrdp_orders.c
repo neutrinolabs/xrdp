@@ -39,6 +39,10 @@ struct xrdp_orders* xrdp_orders_create(struct xrdp_process* owner,
 /*****************************************************************************/
 void xrdp_orders_delete(struct xrdp_orders* self)
 {
+  if (self == 0)
+  {
+    return;
+  }
   free_stream(self->out_s);
   g_free(self);
 }
