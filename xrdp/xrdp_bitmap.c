@@ -1140,9 +1140,13 @@ int xrdp_bitmap_def_proc(struct xrdp_bitmap* self, int msg,
   struct xrdp_bitmap* focus_out_control;
 
   if (self == 0)
+  {
     return 0;
+  }
   if (self->wm == 0)
+  {
     return 0;
+  }
   if (self->type == WND_TYPE_WND)
   {
     if (msg == WM_KEYDOWN)
@@ -1154,18 +1158,24 @@ int xrdp_bitmap_def_proc(struct xrdp_bitmap* self, int msg,
         shift = self->wm->keys[42] || self->wm->keys[54];
         i = -1;
         if (self->child_list != 0)
+        {
           i = xrdp_list_index_of(self->child_list, (long)self->focused_control);
+        }
         if (shift)
         {
           i--;
           if (i < 0)
+          {
             i = self->child_list->count - 1;
+          }
         }
         else
         {
           i++;
           if (i >= self->child_list->count)
+          {
             i = 0;
+          }
         }
         n = self->child_list->count;
         b = (struct xrdp_bitmap*)xrdp_list_get_item(self->child_list, i);
@@ -1184,15 +1194,43 @@ int xrdp_bitmap_def_proc(struct xrdp_bitmap* self, int msg,
           {
             i--;
             if (i < 0)
+            {
               i = self->child_list->count - 1;
+            }
           }
           else
           {
             i++;
             if (i >= self->child_list->count)
+            {
               i = 0;
+            }
           }
           b = (struct xrdp_bitmap*)xrdp_list_get_item(self->child_list, i);
+        }
+      }
+      else if (scan_code == 28) /* enter */
+      {
+        if (self->default_button != 0)
+        {
+          if (self->notify != 0)
+          {
+            /* I think this should use def_proc */
+            self->notify(self, self->default_button, 1, 0, 0);
+            return 0;
+          }
+        }
+      }
+      else if (scan_code == 1) /* esc */
+      {
+        if (self->esc_button != 0)
+        {
+          if (self->notify != 0)
+          {
+            /* I think this should use def_proc */
+            self->notify(self, self->esc_button, 1, 0, 0);
+            return 0;
+          }
         }
       }
     }

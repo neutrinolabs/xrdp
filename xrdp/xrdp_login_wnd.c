@@ -124,7 +124,7 @@ int xrdp_wm_setup_mod(struct xrdp_wm* self,
   /* id self->mod is null, there must be a problem */
   if (self->mod == 0)
   {
-    DEBUG(("problem loading lib in xrdp_wm_setup_mod"));
+    DEBUG(("problem loading lib in xrdp_wm_setup_mod\n\r"));
     return 1;
   }
   return 0;
@@ -196,6 +196,8 @@ int xrdp_wm_login_notify(struct xrdp_bitmap* wnd,
       set_string(&but->caption1, "OK");
       /* draw it */
       help->focused_control = but;
+      help->default_button = but;
+      help->esc_button = but;
       xrdp_bitmap_invalidate(help, 0);
       xrdp_wm_set_focused(wnd->wm, help);
     }
@@ -494,6 +496,7 @@ int xrdp_login_wnd_create(struct xrdp_wm* self)
   but->id = 3;
   set_string(&but->caption1, "OK");
   but->tab_stop = 1;
+  self->login_window->default_button = but;
 
   /* button */
   but = xrdp_bitmap_create(60, 25, self->screen->bpp, WND_TYPE_BUTTON, self);
@@ -505,6 +508,7 @@ int xrdp_login_wnd_create(struct xrdp_wm* self)
   but->id = 2;
   set_string(&but->caption1, "Cancel");
   but->tab_stop = 1;
+  self->login_window->esc_button = but;
 
   /* button */
   but = xrdp_bitmap_create(60, 25, self->screen->bpp, WND_TYPE_BUTTON, self);

@@ -487,6 +487,10 @@ struct xrdp_bitmap
   struct xrdp_bitmap* focused_control;
   struct xrdp_bitmap* owner; /* window that created us */
   struct xrdp_bitmap* parent; /* window contained in */
+  /* for modal dialog */
+  struct xrdp_bitmap* default_button; /* button when enter is pressed */
+  struct xrdp_bitmap* esc_button; /* button when esc is pressed */
+  /* list of child windows */
   struct xrdp_list* child_list;
   /* for edit */
   int edit_pos;
