@@ -125,6 +125,7 @@ struct xrdp_pen
 struct xrdp_tcp
 {
   int sck;
+  int sck_closed;
   struct xrdp_iso* iso_layer; /* owner */
 };
 

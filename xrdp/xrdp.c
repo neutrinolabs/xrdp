@@ -34,6 +34,8 @@ THREAD_RV THREAD_CC xrdp_listen_run(void* in_val)
   return 0;
 }
 
+//#define CLEAN_CLOSE
+
 /*****************************************************************************/
 int main(int argc, char** argv)
 {
@@ -42,15 +44,23 @@ int main(int argc, char** argv)
   g_init_system();
   rv = 0;
   g_listen = xrdp_listen_create();
+#ifdef CLEAN_CLOSE
   if (g_thread_create(xrdp_listen_run, 0) == 0)
   {
     g_getchar();
     g_set_term(1);
     while (g_listen->status > 0)
+    {
       g_sleep(100);
+    }
   }
   else
+  {
     rv = 1;
+  }
+#else
+  xrdp_listen_main_loop(g_listen);
+#endif
   xrdp_listen_delete(g_listen);
   g_exit_system();
   return rv;

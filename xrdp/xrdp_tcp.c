@@ -54,6 +54,11 @@ int xrdp_tcp_recv(struct xrdp_tcp* self, struct stream* s, int len)
 {
   int rcvd;
 
+  if (self->sck_closed)
+  {
+    DEBUG(("    in xrdp_tcp_recv, sck closed\n\r"));
+    return 1;
+  }
   DEBUG(("    in xrdp_tcp_recv, gota get %d bytes\n\r", len));
   init_stream(s, len);
   while (len > 0)
@@ -78,6 +83,7 @@ int xrdp_tcp_recv(struct xrdp_tcp* self, struct stream* s, int len)
     }
     else if (rcvd == 0)
     {
+      self->sck_closed = 1;
       DEBUG(("    error = 0 in xrdp_tcp_recv socket %d\n\r", self->sck));
       return 1;
     }
@@ -99,6 +105,11 @@ int xrdp_tcp_send(struct xrdp_tcp* self, struct stream* s)
   int total;
   int sent;
 
+  if (self->sck_closed)
+  {
+    DEBUG(("    in xrdp_tcp_send, sck closed\n\r"));
+    return 1;
+  }
   len = s->end - s->data;
   DEBUG(("    in xrdp_tcp_send, gota send %d bytes\n\r", len));
   total = 0;
@@ -123,6 +134,7 @@ int xrdp_tcp_send(struct xrdp_tcp* self, struct stream* s)
     }
     else if (sent == 0)
     {
+      self->sck_closed = 1;
       DEBUG(("    error = 0 in xrdp_tcp_send socket %d\n\r", self->sck));
       return 1;
     }
