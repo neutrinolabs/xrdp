@@ -972,7 +972,7 @@ int lib_mod_connect(struct vnc* v)
     g_memset(cursor_data + (32 * (32 * 3) - 2 * 32 * 3), 0xff, 9);
     g_memset(cursor_data + (32 * (32 * 3) - 3 * 32 * 3), 0xff, 9);
     g_memset(cursor_mask, 0xff, 32 * (32 / 8));
-    error = v->server_set_cursor(v, 0, 0, cursor_data, cursor_mask);
+    error = v->server_set_cursor(v, 3, 3, cursor_data, cursor_mask);
   }
   free_stream(s);
   free_stream(pixel_format);
