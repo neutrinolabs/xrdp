@@ -18,6 +18,8 @@
 
    generic operating system calls
 
+   put all the os / arch define in here you want
+
 */
 
 #ifdef _WIN32
@@ -117,13 +119,17 @@ void* g_malloc(int size, int zero)
 
   rv = (char*)malloc(size + sizeof(struct xrdp_mem));
   if (zero)
+  {
     memset(rv, 0, size + sizeof(struct xrdp_mem));
+  }
   g_memsize += size;
   p = (struct xrdp_mem*)rv;
   p->size = size;
   p->id = g_memid;
   if (g_memlist != 0)
+  {
     xrdp_list_add_item(g_memlist, (int)p);
+  }
   g_memid++;
   return rv + sizeof(struct xrdp_mem);
 #else
@@ -131,7 +137,9 @@ void* g_malloc(int size, int zero)
 
   rv = (char*)malloc(size);
   if (zero)
+  {
     memset(rv, 0, size);
+  }
   return rv;
 #endif
 }
@@ -143,7 +151,9 @@ void* g_malloc1(int size, int zero)
 
   rv = (char*)malloc(size);
   if (zero)
+  {
     memset(rv, 0, size);
+  }
   return rv;
 }
 
@@ -160,7 +170,9 @@ void g_free(void* ptr)
     g_memsize -= p->size;
     i = xrdp_list_index_of(g_memlist, (int)p);
     if (i >= 0)
+    {
       xrdp_list_remove_item(g_memlist, i);
+    }
     free(p);
   }
 #else
@@ -216,14 +228,22 @@ void g_hexdump(char* p, int len)
     printf("%04x ", offset);
     thisline = len - offset;
     if (thisline > 16)
+    {
       thisline = 16;
+    }
     for (i = 0; i < thisline; i++)
+    {
       printf("%02x ", line[i]);
+    }
     for (; i < 16; i++)
+    {
       printf("   ");
+    }
     for (i = 0; i < thisline; i++)
+    {
       printf("%c", (line[i] >= 0x20 && line[i] < 0x7f) ? line[i] : '.');
-    printf("\n");
+    }
+    printf("\n\r");
     offset += thisline;
     line += thisline;
   }
@@ -245,6 +265,16 @@ void g_memcpy(void* d_ptr, const void* s_ptr, int size)
 int g_getchar(void)
 {
   return getchar();
+}
+
+/*****************************************************************************/
+int g_tcp_set_no_delay(int sck)
+{
+  int i;
+
+  i = 1;
+  setsockopt(sck, IPPROTO_TCP, TCP_NODELAY, (void*)&i, sizeof(i));
+  return 0;
 }
 
 /*****************************************************************************/
@@ -272,7 +302,9 @@ int g_tcp_local_socket(void)
 void g_tcp_close(int sck)
 {
   if (sck == 0)
+  {
     return;
+  }
 #ifdef _WIN32
   closesocket(sck);
 #else
@@ -294,10 +326,18 @@ int g_tcp_connect(int sck, char* address, char* port)
   {
     h = gethostbyname(address);
     if (h != 0)
+    {
       if (h->h_name != 0)
+      {
         if (h->h_addr_list != 0)
+        {
           if ((*(h->h_addr_list)) != 0)
+          {
             s.sin_addr.s_addr = *((int*)(*(h->h_addr_list)));
+          }
+        }
+      }
+    }
   }
   return connect(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
 }
@@ -399,12 +439,18 @@ int g_tcp_force_recv(int sck, char* data, int len)
     if (rcvd == -1)
     {
       if (g_tcp_last_error_would_block(sck))
+      {
         g_sleep(1);
+      }
       else
+      {
         return 1;
+      }
     }
     else if (rcvd == 0)
+    {
       return 1;
+    }
     else
     {
       data += rcvd;
@@ -431,12 +477,18 @@ int g_tcp_force_send(int sck, char* data, int len)
     if (sent == -1)
     {
       if (g_tcp_last_error_would_block(sck))
+      {
         g_sleep(1);
+      }
       else
+      {
         return 1;
+      }
     }
     else if (sent == 0)
+    {
       return 1;
+    }
     else
     {
       data += sent;
@@ -461,15 +513,21 @@ int g_tcp_select(int sck1, int sck2)
   FD_SET(((unsigned int)sck2), &rfds);
   max = sck1;
   if (sck2 > max)
+  {
     max = sck2;
+  }
   rv = select(max + 1, &rfds, 0, 0, &time);
   if (rv > 0)
   {
     rv = 0;
     if (FD_ISSET(((unsigned int)sck1), &rfds))
+    {
       rv = rv | 1;
+    }
     if (FD_ISSET(((unsigned int)sck2), &rfds))
+    {
       rv = rv | 2;
+    }
   }
   return rv;
 }
@@ -653,7 +711,9 @@ void g_random(char* data, int len)
   memset(data, 0x44, len);
   fd = open("/dev/urandom", O_RDONLY);
   if (fd == -1)
+  {
     fd = open("/dev/random", O_RDONLY);
+  }
   if (fd != -1)
   {
     read(fd, data, len);
@@ -703,9 +763,13 @@ int g_file_read(int fd, char* ptr, int len)
 {
 #ifdef _WIN32
   if (ReadFile((HANDLE)fd, (LPVOID)ptr, (DWORD)len, (LPDWORD)&len, 0))
+  {
     return len;
+  }
   else
+  {
     return -1;
+  }
 #else
   return read(fd, ptr, len);
 #endif
@@ -717,9 +781,13 @@ int g_file_write(int fd, char* ptr, int len)
 {
 #ifdef _WIN32
   if (WriteFile((HANDLE)fd, (LPVOID)ptr, (DWORD)len, (LPDWORD)&len, 0))
+  {
     return len;
+  }
   else
+  {
     return -1;
+  }
 #else
   return write(fd, ptr, len);
 #endif

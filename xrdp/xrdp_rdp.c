@@ -778,6 +778,53 @@ int xrdp_rdp_process_data_font(struct xrdp_rdp* self, struct stream* s)
 }
 
 /*****************************************************************************/
+/* sent 37 pdu */
+int xrdp_rdp_send_disconnect_query_response(struct xrdp_rdp* self)
+{
+  struct stream* s;
+
+  make_stream(s);
+  init_stream(s, 8192);
+  if (xrdp_rdp_init_data(self, s) != 0)
+  {
+    free_stream(s);
+    return 1;
+  }
+  s_mark_end(s);
+  if (xrdp_rdp_send_data(self, s, 37) != 0)
+  {
+    free_stream(s);
+    return 1;
+  }
+  free_stream(s);
+  return 0;
+}
+
+/*****************************************************************************/
+/* sent RDP_DATA_PDU_DISCONNECT 47 pdu */
+int xrdp_rdp_send_disconnect_reason(struct xrdp_rdp* self, int reason)
+{
+  struct stream* s;
+
+  make_stream(s);
+  init_stream(s, 8192);
+  if (xrdp_rdp_init_data(self, s) != 0)
+  {
+    free_stream(s);
+    return 1;
+  }
+  out_uint32_le(s, reason);
+  s_mark_end(s);
+  if (xrdp_rdp_send_data(self, s, RDP_DATA_PDU_DISCONNECT) != 0)
+  {
+    free_stream(s);
+    return 1;
+  }
+  free_stream(s);
+  return 0;
+}
+
+/*****************************************************************************/
 /* RDP_PDU_DATA */
 int xrdp_rdp_process_data(struct xrdp_rdp* self, struct stream* s)
 {
@@ -806,18 +853,20 @@ int xrdp_rdp_process_data(struct xrdp_rdp* self, struct stream* s)
     case RDP_DATA_PDU_SYNCHRONISE: /* 31 */
       xrdp_rdp_process_data_sync(self);
       break;
-    case 33: /* 33 ?? */
+    case 33: /* 33 ?? Invalidate an area I think */
       xrdp_rdp_process_screen_update(self, s);
       break;
-
-    /*case 35:*/
+    case 35:
       /* 35 ?? this comes when minimuzing a full screen mstsc.exe 2600 */
       /* I think this is saying the client no longer wants screen */
       /* updates and it will issue a 33 above to catch up */
-      /* so minumized apps don't take bandwidth */
-
-    case 36: /* 36 ?? disconnect? */
-      return 1;
+      /* so minimized apps don't take bandwidth */
+      break;
+    case 36: /* 36 ?? disconnect query? */
+      /* when this message comes, send a 37 back so the client */
+      /* is sure the connection is alive and it can ask if user */
+      /* really wants to disconnect */
+      xrdp_rdp_send_disconnect_query_response(self); /* send a 37 back */
       break;
     case RDP_DATA_PDU_FONT2: /* 39 */
       xrdp_rdp_process_data_font(self, s);

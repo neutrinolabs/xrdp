@@ -112,6 +112,7 @@ int xrdp_process_main_loop(struct xrdp_process* self)
   self->status = 1;
   self->rdp_layer = xrdp_rdp_create(self, self->sck);
   g_tcp_set_non_blocking(self->sck);
+  g_tcp_set_no_delay(self->sck);
   if (xrdp_rdp_incoming(self->rdp_layer) == 0)
   {
     while (!g_is_term() && !self->term)
@@ -158,6 +159,7 @@ int xrdp_process_main_loop(struct xrdp_process* self)
     }
   }
   xrdp_rdp_disconnect(self->rdp_layer);
+  g_sleep(500);
   xrdp_rdp_delete(self->rdp_layer);
   self->rdp_layer = 0;
   g_tcp_close(self->sck);

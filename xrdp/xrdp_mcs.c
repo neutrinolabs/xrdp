@@ -584,25 +584,18 @@ int xrdp_mcs_send(struct xrdp_mcs* self, struct stream* s)
 /* returns error */
 int xrdp_mcs_disconnect(struct xrdp_mcs* self)
 {
-  int len;
   struct stream* s;
 
   make_stream(s);
   init_stream(s, 8192);
-  if (xrdp_mcs_init(self, s) != 0)
+  if (xrdp_iso_init(self->iso_layer, s) != 0)
   {
     free_stream(s);
     return 1;
   }
+  out_uint8(s, (MCS_DPUM << 2) | 1);
+  out_uint8(s, 0x80);
   s_mark_end(s);
-  s_pop_layer(s, mcs_hdr);
-  len = (s->end - s->p) - 8;
-  len = len | 0x8000;
-  out_uint8(s, MCS_DPUM << 2);
-  out_uint16_be(s, self->userid);
-  out_uint16_be(s, MCS_GLOBAL_CHANNEL);
-  out_uint8(s, 0x70);
-  out_uint16_be(s, len);
   if (xrdp_iso_send(self->iso_layer, s) != 0)
   {
     free_stream(s);

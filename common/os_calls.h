@@ -32,6 +32,7 @@ void g_free1(void* ptr);
 void g_memset(void* ptr, int val, int size);
 void g_memcpy(void* d_ptr, const void* s_ptr, int size);
 int g_getchar(void);
+int g_tcp_set_no_delay(int sck);
 int g_tcp_socket(void);
 int g_tcp_local_socket(void);
 void g_tcp_close(int sck);

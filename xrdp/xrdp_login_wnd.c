@@ -187,10 +187,10 @@ int xrdp_wm_login_notify(struct xrdp_bitmap* wnd,
     }
     else if (sender->id == 2) /* cancel button */
     {
-      /*if (wnd != 0)
+      if (wnd != 0)
         if (wnd->wm != 0)
           if (wnd->wm->pro_layer != 0)
-            wnd->wm->pro_layer->term = 1;*/
+            wnd->wm->pro_layer->term = 1;
     }
     else if (sender->id == 3) /* ok button */
     {

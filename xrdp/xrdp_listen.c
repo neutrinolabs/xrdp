@@ -47,17 +47,31 @@ int xrdp_listen_term_processes(struct xrdp_listen* self)
 
   /* tell all xrdp processes to end */
   for (i = 0; i < self->process_list_count; i++)
+  {
     if (self->process_list[i] != 0)
+    {
       self->process_list[i]->term = 1;
+    }
+  }
   /* make sure they are done */
   for (i = 0; i < self->process_list_count; i++)
+  {
     if (self->process_list[i] != 0)
+    {
       while (self->process_list[i]->status > 0)
+      {
         g_sleep(10);
+      }
+    }
+  }
   /* free them all */
   for (i = 0; i < self->process_list_count; i++)
+  {
     if (self->process_list[i] != 0)
+    {
       xrdp_process_delete(self->process_list[i]);
+    }
+  }
   return 0;
 }
 
@@ -133,9 +147,13 @@ int xrdp_listen_main_loop(struct xrdp_listen* self)
     {
       error = g_tcp_accept(self->sck);
       if (error == -1 && g_tcp_last_error_would_block(self->sck))
+      {
         g_sleep(100);
+      }
       else if (error == -1)
+      {
         break;
+      }
       else
       {
         g_process = xrdp_process_create(self);
@@ -147,7 +165,9 @@ int xrdp_listen_main_loop(struct xrdp_listen* self)
           g_sleep(100);
         }
         else
+        {
           xrdp_process_delete(g_process);
+        }
       }
     }
   }
