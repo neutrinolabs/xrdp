@@ -1467,7 +1467,8 @@ int xrdp_orders_send_bitmap(struct xrdp_orders* self,
   {
     free_stream(s);
     free_stream(temp_s);
-    g_printf("error lines_sending != bitmap->height\n\r");
+    g_printf("error in xrdp_orders_send_bitmap, lines_sending(%d) != \
+bitmap->height(%d)\n\r", lines_sending, bitmap->height);
     return 1;
   }
   bufsize = s->p - p;
