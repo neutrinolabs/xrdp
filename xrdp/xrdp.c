@@ -23,45 +23,39 @@
 #include "xrdp.h"
 
 static struct xrdp_listen* g_listen = 0;
+static int g_threadid = 0; /* main threadid */
 
 /*****************************************************************************/
-/* i can't get stupid in_val to work, hum using global var for now */
-THREAD_RV THREAD_CC xrdp_listen_run(void* in_val)
+void shutdown(int sig)
 {
-  DEBUG(("listener started\n\r"));
-  xrdp_listen_main_loop(g_listen);
-  DEBUG(("listener done\n\r"));
-  return 0;
-}
+  struct xrdp_listen* listen;
 
-#define CLEAN_CLOSE
+  if (g_get_threadid() != g_threadid)
+  {
+    return;
+  }
+  g_printf("shutting down\n\r");
+  g_printf("signal %d threadid %d\n\r", sig, g_get_threadid());
+  listen = g_listen;
+  g_listen = 0;
+  if (listen != 0)
+  {
+    g_set_term(1);
+    g_sleep(1000);
+    xrdp_listen_delete(listen);
+    g_exit_system();
+  }
+}
 
 /*****************************************************************************/
 int main(int argc, char** argv)
 {
-  int rv;
-
   g_init_system();
-  rv = 0;
+  g_threadid = g_get_threadid();
   g_listen = xrdp_listen_create();
-#ifdef CLEAN_CLOSE
-  if (g_thread_create(xrdp_listen_run, 0) == 0)
-  {
-    g_getchar();
-    g_set_term(1);
-    while (g_listen->status > 0)
-    {
-      g_sleep(100);
-    }
-  }
-  else
-  {
-    rv = 1;
-  }
-#else
+  g_signal(2, shutdown);
+  g_signal(9, shutdown);
+  g_signal(15, shutdown);
   xrdp_listen_main_loop(g_listen);
-#endif
-  xrdp_listen_delete(g_listen);
-  g_exit_system();
-  return rv;
+  return 0;
 }
