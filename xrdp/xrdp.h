@@ -13,22 +13,36 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
+   xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2004
 
    main include file
 
 */
 
+/* check endianess */
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define L_ENDIAN
+#elif __BYTE_ORDER == __BIG_ENDIAN
+#define B_ENDIAN
+#endif
+/* check if we need to align data */
+#if defined(__sparc__) || defined(__alpha__) || defined(__hppa__) || \
+    defined(__AIX__) || defined(__PPC__) || defined(__mips__) || \
+    defined(__ia64__)
+#define NEED_ALIGN
+#endif
+/* include other h files */
 #include "parse.h"
 #include "xrdp_types.h"
 #include "constants.h"
-
+/* check for debug */
 #ifdef XRDP_DEBUG
 #define DEBUG(args) g_printf args;
 #else
 #define DEBUG(args)
 #endif
-
+/* other macros */
 #undef MIN
 #define MIN(x1, x2) ((x1) < (x2) ? (x1) : (x2))
 #undef MAX
@@ -39,7 +53,7 @@
 #define LOWORD(in) ((in) & 0x0000ffff)
 #undef MAKELONG
 #define MAKELONG(hi, lo) ((((hi) & 0xffff) << 16) | ((lo) & 0xffff))
-
+/* font macros */
 #define FONT_DATASIZE(f) ((((f)->height * (((f)->width + 7) / 8)) + 3) & ~3);
 
 /* os_calls.c */

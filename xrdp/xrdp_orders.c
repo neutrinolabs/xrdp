@@ -76,7 +76,8 @@ int xrdp_orders_send(struct xrdp_orders* self)
     if (self->order_level == 0)
     {
       s_mark_end(self->out_s);
-      *((short*)self->order_count_ptr) = self->order_count;
+      self->order_count_ptr[0] = self->order_count;
+      self->order_count_ptr[1] = self->order_count >> 8;
       if (xrdp_rdp_send_data(self->rdp_layer, self->out_s,
                              RDP_DATA_PDU_UPDATE) != 0)
         rv = 1;
@@ -92,7 +93,8 @@ int xrdp_orders_force_send(struct xrdp_orders* self)
   if (self->order_count > 0)
   {
     s_mark_end(self->out_s);
-    *((short*)self->order_count_ptr) = self->order_count;
+    self->order_count_ptr[0] = self->order_count;
+    self->order_count_ptr[1] = self->order_count >> 8;
     if (xrdp_rdp_send_data(self->rdp_layer, self->out_s,
                            RDP_DATA_PDU_UPDATE) != 0)
       return 1;
@@ -306,7 +308,7 @@ int xrdp_orders_rect(struct xrdp_orders* self, int x, int y, int cx, int cy,
     self->rect_color = (self->rect_color & 0x00ffff) | (color & 0xff0000);
     out_uint8(self->out_s, color >> 16);
   }
-  *present_ptr = present;
+  present_ptr[0] = present;
   return 0;
 }
 
@@ -412,7 +414,7 @@ int xrdp_orders_screen_blt(struct xrdp_orders* self, int x, int y,
       out_uint16_le(self->out_s, srcy)
     self->scr_blt_srcy = srcy;
   }
-  *present_ptr = present;
+  present_ptr[0] = present;
   return 0;
 }
 
@@ -553,7 +555,8 @@ int xrdp_orders_pat_blt(struct xrdp_orders* self, int x, int y,
     out_uint8a(self->out_s, brush->pattern + 1, 7);
     g_memcpy(self->pat_blt_brush.pattern + 1, brush->pattern + 1, 7);
   }
-  *((short*)present_ptr) = present;
+  present_ptr[0] = present;
+  present_ptr[1] = present >> 8;
   return 0;
 }
 
@@ -639,7 +642,7 @@ int xrdp_orders_dest_blt(struct xrdp_orders* self, int x, int y,
     out_uint8(self->out_s, rop);
     self->dest_blt_rop = rop;
   }
-  *present_ptr = present;
+  present_ptr[0] = present;
   return 0;
 }
 
@@ -767,7 +770,8 @@ int xrdp_orders_line(struct xrdp_orders* self, int mix_mode,
     out_uint8(self->out_s, pen->color >> 16)
     self->line_pen.color = pen->color;
   }
-  *((short*)present_ptr) = present;
+  present_ptr[0] = present;
+  present_ptr[1] = present >> 8;
   return 0;
 }
 
@@ -890,7 +894,8 @@ int xrdp_orders_mem_blt(struct xrdp_orders* self, int cache_id,
     out_uint16_le(self->out_s, cache_idx);
     self->mem_blt_cache_idx = cache_idx;
   }
-  *((short*)present_ptr) = present;
+  present_ptr[0] = present;
+  present_ptr[1] = present >> 8;
   return 0;
 }
 
@@ -1028,16 +1033,16 @@ int xrdp_orders_text(struct xrdp_orders* self,
     out_uint16_le(self->out_s, y);
     self->text_y = y;
   }
-  /* always send text */
-  present |= 0x200000;
-  out_uint8(self->out_s, data_len);
-  out_uint8a(self->out_s, data, data_len);
+  {
+    /* always send text */
+    present |= 0x200000;
+    out_uint8(self->out_s, data_len);
+    out_uint8a(self->out_s, data, data_len);
+  }
   /* send 3 byte present */
-  *present_ptr = present;
-  present_ptr++;
-  *present_ptr = present >> 8;
-  present_ptr++;
-  *present_ptr = present >> 16;
+  present_ptr[0] = present;
+  present_ptr[1] = present >> 8;
+  present_ptr[2] = present >> 16;
   return 0;
 }
 
