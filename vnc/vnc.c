@@ -513,7 +513,6 @@ int lib_framebuffer_update(struct vnc* v)
           data_size = need_size;
         }
         error = lib_recv(v, data, need_size);
-        /*g_printf("%d %d\n", i, need_size);*/
         if (error == 0)
         {
           error = v->server_paint_rect(v, x, y, cx, cy, data);
@@ -534,12 +533,14 @@ int lib_framebuffer_update(struct vnc* v)
       {
         g_memset(cursor_data, 0, 32 * (32 * 3));
         g_memset(cursor_mask, 0, 32 * (32 / 8));
-        init_stream(s, 8192);
-        error = lib_recv(v, s->data, cx * cy * Bpp + ((cx + 7) / 8) * cy);
+        j = cx * cy * Bpp;
+        k = ((cx + 7) / 8) * cy;
+        init_stream(s, j + k);
+        error = lib_recv(v, s->data, j + k);
         if (error == 0)
         {
-          in_uint8p(s, d1, cx * cy * Bpp);
-          in_uint8p(s, d2, ((cx + 7) / 8) * cy);
+          in_uint8p(s, d1, j);
+          in_uint8p(s, d2, k);
           for (j = 0; j < 32; j++)
           {
             for (k = 0; k < 32; k++)
