@@ -550,6 +550,16 @@ int g_thread_create(void* (* start_routine)(void*), void* arg)
 }
 #endif
 
+/*****************************************************************************/
+int g_get_threadid(void)
+{
+#if defined(_WIN32)
+  return 0;
+#elif defined(USE_PTHREAD)
+  return pthread_self();
+#endif
+}
+
 #if defined(USE_OPENSSL)
 
 /* rc4 stuff */

@@ -52,6 +52,7 @@ int g_is_term(void);
 void g_set_term(int in_val);
 void g_sleep(int msecs);
 int g_thread_create(THREAD_RV (THREAD_CC * start_routine)(void*), void* arg);
+int g_get_threadid(void);
 void* g_rc4_info_create(void);
 void g_rc4_info_delete(void* rc4_info);
 void g_rc4_set_key(void* rc4_info, char* key, int len);
