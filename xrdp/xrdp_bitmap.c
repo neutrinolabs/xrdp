@@ -86,7 +86,6 @@ int xrdp_bitmap_set_focus(struct xrdp_bitmap* self, int focused)
     return 0;
   if (self->type != WND_TYPE_WND) /* 1 */
     return 0;
-  self->focused = focused;
   painter = xrdp_painter_create(self->wm);
   xrdp_painter_begin_update(painter);
   if (focused)
@@ -348,6 +347,40 @@ int xrdp_bitmap_compare(struct xrdp_bitmap* self, struct xrdp_bitmap* b)
 }
 
 /*****************************************************************************/
+int xrdp_bitmap_draw_focus_box(struct xrdp_bitmap* self,
+                               struct xrdp_painter* painter,
+                               int x, int y, int cx, int cy)
+{
+  painter->rop = 0xf0;
+  xrdp_painter_begin_update(painter);
+  painter->use_clip = 0;
+  painter->brush.pattern[0] = 0xaa;
+  painter->brush.pattern[1] = 0x55;
+  painter->brush.pattern[2] = 0xaa;
+  painter->brush.pattern[3] = 0x55;
+  painter->brush.pattern[4] = 0xaa;
+  painter->brush.pattern[5] = 0x55;
+  painter->brush.pattern[6] = 0xaa;
+  painter->brush.pattern[7] = 0x55;
+  painter->brush.x_orgin = x;
+  painter->brush.x_orgin = x;
+  painter->brush.style = 3;
+  painter->bg_color = self->wm->black;
+  painter->fg_color = self->wm->white;
+  /* top */
+  xrdp_painter_fill_rect2(painter, self, x, y, cx, 1);
+  /* bottom */
+  xrdp_painter_fill_rect2(painter, self, x, y + (cy - 1), cx, 1);
+  /* left */
+  xrdp_painter_fill_rect2(painter, self, x, y + 1, 1, cy - 2);
+  /* right */
+  xrdp_painter_fill_rect2(painter, self, x + (cx - 1), y + 1, 1, cy - 2);
+  xrdp_painter_end_update(painter);
+  painter->rop = 0xcc;
+  return 0;
+}
+
+/*****************************************************************************/
 /* nil for rect means the whole thing */
 /* returns error */
 int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
@@ -407,7 +440,7 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
     painter->fg_color = self->wm->black;
     xrdp_painter_fill_rect(painter, self, self->width - 1, 0,
                            1, self->height);
-    if (self->focused)
+    if (self->wm->focused_window == self)
     {
       /* active title bar */
       painter->fg_color = self->wm->blue;
@@ -460,6 +493,11 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
       painter->font->color = self->wm->black;
       xrdp_painter_draw_text(painter, self, self->width / 2 - w / 2,
                              self->height / 2 - h / 2, self->caption);
+      if (self->parent != 0)
+        if (self->wm->focused_window == self->parent)
+          if (self->parent->focused_control == self)
+            xrdp_bitmap_draw_focus_box(self, painter, 4, 4, self->width - 8,
+                                       self->height - 8);
     }
     else if (self->state == BUTTON_STATE_DOWN) /* 1 */
     {
@@ -497,6 +535,11 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
       painter->font->color = self->wm->black;
       xrdp_painter_draw_text(painter, self, (self->width / 2 - w / 2) + 1,
                              (self->height / 2 - h / 2) + 1, self->caption);
+      if (self->parent != 0)
+        if (self->wm->focused_window == self->parent)
+          if (self->parent->focused_control == self)
+            xrdp_bitmap_draw_focus_box(self, painter, 4, 4, self->width - 8,
+                                       self->height - 8);
     }
   }
   else if (self->type == WND_TYPE_IMAGE) /* 4 */

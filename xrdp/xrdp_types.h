@@ -389,7 +389,6 @@ struct xrdp_bitmap
   int cursor;
   int bg_color;
   int tab_stop;
-  int focused;
   int id;
   char caption[256];
   /* for window or screen */
