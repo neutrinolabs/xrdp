@@ -24,8 +24,7 @@
 #include "arch.h"
 #include "parse.h"
 #include "os_calls.h"
-
-void rfbEncryptBytes(unsigned char *bytes, char *passwd);
+#include "d3des.h"
 
 struct vnc
 {

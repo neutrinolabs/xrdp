@@ -23,6 +23,20 @@
 #include "vnc.h"
 
 /******************************************************************************/
+/* taken from vncauth.c */
+void rfbEncryptBytes(char* bytes, char* passwd)
+{
+  char key[12];
+
+  /* key is simply password padded with nulls */
+  g_memset(key, 0, sizeof(key));
+  g_strncpy(key, passwd, 8);
+  rfbDesKey((unsigned char*)key, EN0); /* 0, encrypt */
+  rfbDes((unsigned char*)bytes, (unsigned char*)bytes);
+  rfbDes((unsigned char*)(bytes + 8), (unsigned char*)(bytes + 8));
+}
+
+/******************************************************************************/
 /* returns error */
 int lib_recv(struct vnc* v, char* data, int len)
 {
@@ -849,7 +863,7 @@ int lib_mod_connect(struct vnc* v)
         error = lib_recv(v, s->data, 16);
         if (error == 0)
         {
-          rfbEncryptBytes((unsigned char*)s->data, v->password);
+          rfbEncryptBytes(s->data, v->password);
           error = lib_send(v, s->data, 16);
         }
       }
