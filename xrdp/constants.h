@@ -399,20 +399,23 @@
 #define RDP_ORDER_BMPCACHE2     5
 
 /* drawable types */
-#define WND_TYPE_BITMAP 0
-#define WND_TYPE_WND    1
-#define WND_TYPE_SCREEN 2
-#define WND_TYPE_BUTTON 3
-#define WND_TYPE_IMAGE  4
-#define WND_TYPE_EDIT   5
-#define WND_TYPE_LABEL  6
-#define WND_TYPE_COMBO  7
+#define WND_TYPE_BITMAP  0
+#define WND_TYPE_WND     1
+#define WND_TYPE_SCREEN  2
+#define WND_TYPE_BUTTON  3
+#define WND_TYPE_IMAGE   4
+#define WND_TYPE_EDIT    5
+#define WND_TYPE_LABEL   6
+#define WND_TYPE_COMBO   7
+#define WND_TYPE_SPECIAL 8
 
 /* button states */
 #define BUTTON_STATE_UP   0
 #define BUTTON_STATE_DOWN 1
 
 /* messages */
-#define WM_PAINT   3
-#define WM_KEYDOWN 15
-#define WM_KEYUP   16
+#define WM_PAINT      3
+#define WM_KEYDOWN    15
+#define WM_KEYUP      16
+#define WM_MOUSEMOVE 100
+#define WM_LBUTTONUP  101

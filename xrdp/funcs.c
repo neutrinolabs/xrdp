@@ -312,3 +312,13 @@ int remove_char_at(char* text, int index)
   text[len - 1] = 0;
   return 0;
 }
+
+/*****************************************************************************/
+int set_string(char** in_str, char* in)
+{
+  if (in_str == 0)
+    return 0;
+  g_free(*in_str);
+  *in_str = g_strdup(in);
+  return 0;
+}

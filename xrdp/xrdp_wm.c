@@ -574,10 +574,10 @@ int xrdp_wm_init(struct xrdp_wm* self)
   but->top = 110;
   but->id = 6;
   but->tab_stop = 1;
-  xrdp_list_add_item(but->string_list, (int)g_strdup("X11 Session"));
-  xrdp_list_add_item(but->string_list, (int)g_strdup("VNC"));
-  xrdp_list_add_item(but->string_list, (int)g_strdup("Desktop"));
   xrdp_list_add_item(but->string_list, (int)g_strdup("Test"));
+  xrdp_list_add_item(but->string_list, (int)g_strdup("VNC"));
+  xrdp_list_add_item(but->string_list, (int)g_strdup("X11"));
+  xrdp_list_add_item(but->string_list, (int)g_strdup("Console"));
 
   /* button */
   but = xrdp_bitmap_create(60, 25, self->screen->bpp, WND_TYPE_BUTTON);
@@ -892,12 +892,37 @@ int xrdp_wm_mouse_move(struct xrdp_wm* self, int x, int y)
         xrdp_set_cursor(self, b->cursor);
         self->current_cursor = b->cursor;
       }
+      xrdp_bitmap_def_proc(b, WM_MOUSEMOVE,
+                           xrdp_bitmap_from_screenx(b, x),
+                           xrdp_bitmap_from_screeny(b, y));
       if (self->button_down == 0)
         if (b->notify != 0)
           b->notify(b->owner, b, 2, x, y);
     }
   }
   DEBUG(("out mouse move\n\r"));
+  return 0;
+}
+
+/*****************************************************************************/
+int xrdp_wm_clear_popup(struct xrdp_wm* self)
+{
+  int i;
+  struct xrdp_rect rect;
+  //struct xrdp_bitmap* b;
+
+  //b = 0;
+  if (self->popup_wnd != 0)
+  {
+    //b = self->popup_wnd->popped_from;
+    i = xrdp_list_index_of(self->screen->child_list, (int)self->popup_wnd);
+    xrdp_list_remove_item(self->screen->child_list, i);
+    MAKERECT(rect, self->popup_wnd->left, self->popup_wnd->top,
+             self->popup_wnd->width, self->popup_wnd->height);
+    xrdp_bitmap_invalidate(self->screen, &rect);
+    xrdp_bitmap_delete(self->popup_wnd);
+  }
+  //xrdp_wm_set_focused(self, b->parent);
   return 0;
 }
 
@@ -941,6 +966,22 @@ int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
   }
   wnd = 0;
   control = xrdp_wm_at_pos(self->screen, x, y, &wnd);
+  if (self->popup_wnd != 0)
+  {
+    if (self->popup_wnd == control && !down)
+    {
+      xrdp_bitmap_def_proc(self->popup_wnd, WM_LBUTTONUP, x, y);
+      xrdp_wm_clear_popup(self);
+      self->button_down = 0;
+      return 0;
+    }
+    else if (self->popup_wnd != control && down)
+    {
+      xrdp_wm_clear_popup(self);
+      self->button_down = 0;
+      return 0;
+    }
+  }
   if (control != 0)
   {
     if (wnd != 0)
@@ -976,31 +1017,36 @@ int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
       self->button_down = control;
       control->state = 1;
       xrdp_bitmap_invalidate(control, 0);
+      if (control->type == WND_TYPE_COMBO)
+        xrdp_wm_pu(self, control);
     }
     else if (but == 1 && down)
     {
-      xrdp_wm_set_focused(self, wnd);
-      if (control->type == WND_TYPE_WND && y < (control->top + 21))
-      { /* if dragging */
-        if (self->dragging) /* rarely happens */
-        {
-          newx = self->draggingx - self->draggingdx;
-          newy = self->draggingy - self->draggingdy;
-          if (self->draggingxorstate)
-            xrdp_wm_xor_pat(self, newx, newy,
-                            self->draggingcx, self->draggingcy);
-          self->draggingxorstate = 0;
+      if (self->popup_wnd == 0)
+      {
+        xrdp_wm_set_focused(self, wnd);
+        if (control->type == WND_TYPE_WND && y < (control->top + 21))
+        { /* if dragging */
+          if (self->dragging) /* rarely happens */
+          {
+            newx = self->draggingx - self->draggingdx;
+            newy = self->draggingy - self->draggingdy;
+            if (self->draggingxorstate)
+              xrdp_wm_xor_pat(self, newx, newy,
+                              self->draggingcx, self->draggingcy);
+            self->draggingxorstate = 0;
+          }
+          self->dragging = 1;
+          self->dragging_window = control;
+          self->draggingorgx = control->left;
+          self->draggingorgy = control->top;
+          self->draggingx = x;
+          self->draggingy = y;
+          self->draggingdx = x - control->left;
+          self->draggingdy = y - control->top;
+          self->draggingcx = control->width;
+          self->draggingcy = control->height;
         }
-        self->dragging = 1;
-        self->dragging_window = control;
-        self->draggingorgx = control->left;
-        self->draggingorgy = control->top;
-        self->draggingx = x;
-        self->draggingy = y;
-        self->draggingdx = x - control->left;
-        self->draggingdy = y - control->top;
-        self->draggingcx = control->width;
-        self->draggingcy = control->height;
       }
     }
   }
@@ -1018,6 +1064,11 @@ int xrdp_wm_key(struct xrdp_wm* self, int device_flags, int scan_code)
 {
   int msg;
 
+  if (self->popup_wnd != 0)
+  {
+    xrdp_wm_clear_popup(self);
+    return 0;
+  }
   if (device_flags & 0x8000) /* key up */
   {
     self->keys[scan_code % 128] = 0;
@@ -1055,5 +1106,32 @@ int xrdp_wm_key_sync(struct xrdp_wm* self, int device_flags, int key_flags)
     self->num_lock = 1;
   if (key_flags & 4)
     self->caps_lock = 1;
+  return 0;
+}
+
+/*****************************************************************************/
+int xrdp_wm_pu(struct xrdp_wm* self, struct xrdp_bitmap* control)
+{
+  int x;
+  int y;
+
+  if (self == 0)
+    return 0;
+  if (control == 0)
+    return 0;
+  self->popup_wnd = xrdp_bitmap_create(control->width, 100,
+                                       self->screen->bpp,
+                                       WND_TYPE_SPECIAL);
+  self->popup_wnd->popped_from = control;
+  self->popup_wnd->parent = self->screen;
+  self->popup_wnd->owner = self->screen;
+  self->popup_wnd->wm = self;
+  x = xrdp_bitmap_to_screenx(control, 0);
+  y = xrdp_bitmap_to_screeny(control, 0);
+  self->popup_wnd->left = x;
+  self->popup_wnd->top = y + control->height;
+  self->popup_wnd->item_index = control->item_index;
+  xrdp_list_insert_item(self->screen->child_list, 0, (int)self->popup_wnd);
+  xrdp_bitmap_invalidate(self->popup_wnd, 0);
   return 0;
 }

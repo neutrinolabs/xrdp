@@ -77,6 +77,8 @@ void xrdp_bitmap_delete(struct xrdp_bitmap* self)
       self->wm->dragging_window = 0;
     if (self->wm->button_down == self)
       self->wm->button_down = 0;
+    if (self->wm->popup_wnd == self)
+      self->wm->popup_wnd = 0;
   }
   if (self->child_list != 0)
   {
@@ -473,6 +475,7 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
   struct xrdp_rect r2;
   struct xrdp_painter* painter;
   char text[256];
+  char* p;
 
   if (self == 0) /* if no bitmap */
     return 0;
@@ -693,6 +696,32 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
     else
       xrdp_bitmap_draw_button(self, painter, x, y, w, h, 1);
   }
+  else if (self->type == WND_TYPE_SPECIAL) /* 8 special */
+  {
+    painter->fg_color = self->wm->white;
+    xrdp_painter_fill_rect(painter, self, 0, 0, self->width, self->height);
+    /* draw the list items */
+    if (self->popped_from != 0)
+    {
+      y = 0;
+      for (i = 0; i < self->popped_from->string_list->count; i++)
+      {
+        p = (char*)xrdp_list_get_item(self->popped_from->string_list, i);
+        h = xrdp_painter_text_height(painter, p);
+        self->item_height = h;
+        if (i == self->item_index)
+        {
+          painter->fg_color = self->wm->blue;
+          xrdp_painter_fill_rect(painter, self, 0, y, self->width, h);
+          painter->font->color = self->wm->white;
+        }
+        else
+          painter->font->color = self->wm->black;
+        xrdp_painter_draw_text(painter, self, 2, y, p);
+        y = y + h;
+      }
+    }
+  }
   /* notify */
   if (self->notify != 0)
     self->notify(self, self, WM_PAINT, (int)painter, 0); /* 3 */
@@ -911,5 +940,90 @@ int xrdp_bitmap_def_proc(struct xrdp_bitmap* self, int msg,
       }
     }
   }
+  else if (self->type == WND_TYPE_SPECIAL)
+  {
+    if (msg == WM_MOUSEMOVE)
+    {
+      if (self->item_height > 0 && self->popped_from != 0)
+      {
+        i = param2;
+        i = i / self->item_height;
+        if (i != self->item_index &&
+            i < self->popped_from->string_list->count)
+        {
+          self->item_index = i;
+          xrdp_bitmap_invalidate(self, 0);
+        }
+      }
+    }
+    else if (msg == WM_LBUTTONUP)
+    {
+      if (self->popped_from != 0)
+      {
+        self->popped_from->item_index = self->item_index;
+        xrdp_bitmap_invalidate(self->popped_from, 0);
+      }
+    }
+  }
   return 0;
+}
+
+/*****************************************************************************/
+/* convert the controls coords to screen coords */
+int xrdp_bitmap_to_screenx(struct xrdp_bitmap* self, int x)
+{
+  int i;
+
+  i = x;
+  while (self != 0)
+  {
+    i = i + self->left;
+    self = self->parent;
+  }
+  return i;
+}
+
+/*****************************************************************************/
+/* convert the controls coords to screen coords */
+int xrdp_bitmap_to_screeny(struct xrdp_bitmap* self, int y)
+{
+  int i;
+
+  i = y;
+  while (self != 0)
+  {
+    i = i + self->top;
+    self = self->parent;
+  }
+  return i;
+}
+
+/*****************************************************************************/
+/* convert the screen coords to controls coords */
+int xrdp_bitmap_from_screenx(struct xrdp_bitmap* self, int x)
+{
+  int i;
+
+  i = x;
+  while (self != 0)
+  {
+    i = i - self->left;
+    self = self->parent;
+  }
+  return i;
+}
+
+/*****************************************************************************/
+/* convert the screen coords to controls coords */
+int xrdp_bitmap_from_screeny(struct xrdp_bitmap* self, int y)
+{
+  int i;
+
+  i = y;
+  while (self != 0)
+  {
+    i = i - self->top;
+    self = self->parent;
+  }
+  return i;
 }

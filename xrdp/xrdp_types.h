@@ -312,6 +312,8 @@ struct xrdp_wm
   struct xrdp_bitmap* dragging_window;
   /* the down(clicked) button */
   struct xrdp_bitmap* button_down;
+  /* popup for combo box */
+  struct xrdp_bitmap* popup_wnd;
   /* focused window */
   struct xrdp_bitmap* focused_window;
   /* cursor */
@@ -372,7 +374,7 @@ struct xrdp_painter
 struct xrdp_bitmap
 {
   /* 0 = bitmap 1 = window 2 = screen 3 = button 4 = image 5 = edit
-     6 = label 7 = combo */
+     6 = label 7 = combo 8 = special */
   int type;
   int width;
   int height;
@@ -406,7 +408,11 @@ struct xrdp_bitmap
   int state; /* for button 0 = normal 1 = down */
   /* for combo */
   struct xrdp_list* string_list;
+  /* for combo or popup */
   int item_index;
+  /* for popup */
+  struct xrdp_bitmap* popped_from;
+  int item_height;
 };
 
 /* font */

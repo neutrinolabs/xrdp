@@ -209,6 +209,7 @@ int xrdp_wm_mouse_move(struct xrdp_wm* self, int x, int y);
 int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down);
 int xrdp_wm_key(struct xrdp_wm* self, int device_flags, int scan_code);
 int xrdp_wm_key_sync(struct xrdp_wm* self, int device_flags, int key_flags);
+int xrdp_wm_pu(struct xrdp_wm* self, struct xrdp_bitmap* control);
 
 /* xrdp_process.c */
 struct xrdp_process* xrdp_process_create(struct xrdp_listen* owner);
@@ -246,6 +247,10 @@ int xrdp_bitmap_compare(struct xrdp_bitmap* self, struct xrdp_bitmap* b);
 int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect);
 int xrdp_bitmap_def_proc(struct xrdp_bitmap* self, int msg,
                          int param1, int param2);
+int xrdp_bitmap_to_screenx(struct xrdp_bitmap* self, int x);
+int xrdp_bitmap_to_screeny(struct xrdp_bitmap* self, int y);
+int xrdp_bitmap_from_screenx(struct xrdp_bitmap* self, int x);
+int xrdp_bitmap_from_screeny(struct xrdp_bitmap* self, int y);
 
 /* xrdp_painter.c */
 struct xrdp_painter* xrdp_painter_create(struct xrdp_wm* wn);
@@ -296,4 +301,5 @@ char get_char_from_scan_code(int device_flags, int scan_code, int* keys,
                              int caps_lock, int num_lock, int scroll_lock);
 int add_char_at(char* text, char ch, int index);
 int remove_char_at(char* text, int index);
+int set_string(char** in_str, char* in);
 
