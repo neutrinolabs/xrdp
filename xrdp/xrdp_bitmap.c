@@ -139,6 +139,7 @@ struct xrdp_bitmap* xrdp_bitmap_create_with_data(int width, int height,
 void xrdp_bitmap_delete(struct xrdp_bitmap* self)
 {
   int i;
+  struct xrdp_mod_data* mod_data;
 
   if (self == 0)
   {
@@ -194,8 +195,23 @@ void xrdp_bitmap_delete(struct xrdp_bitmap* self)
       xrdp_list_remove_item(self->parent->child_list, i);
     }
   }
-  xrdp_list_delete(self->string_list);
-  xrdp_list_delete(self->data_list);
+  if (self->string_list != 0) /* for combo */
+  {
+    xrdp_list_delete(self->string_list);
+  }
+  if (self->data_list != 0) /* for combo */
+  {
+    for (i = 0; i < self->data_list->count; i++)
+    {
+      mod_data = (struct xrdp_mod_data*)xrdp_list_get_item(self->data_list, i);
+      if (mod_data != 0)
+      {
+        xrdp_list_delete(mod_data->names);
+        xrdp_list_delete(mod_data->values);
+      }
+    }
+    xrdp_list_delete(self->data_list);
+  }
   if (!self->do_not_free_data)
   {
     g_free(self->data);
@@ -1343,6 +1359,10 @@ int xrdp_bitmap_def_proc(struct xrdp_bitmap* self, int msg,
         {
           self->item_index--;
           xrdp_bitmap_invalidate(self, 0);
+          if (self->parent->notify != 0)
+          {
+            self->parent->notify(self->parent, self, CB_ITEMCHANGE, 0, 0);
+          }
         }
       }
       /* right or down arrow */
@@ -1353,6 +1373,10 @@ int xrdp_bitmap_def_proc(struct xrdp_bitmap* self, int msg,
         {
           self->item_index++;
           xrdp_bitmap_invalidate(self, 0);
+          if (self->parent->notify != 0)
+          {
+            self->parent->notify(self->parent, self, CB_ITEMCHANGE, 0, 0);
+          }
         }
       }
     }
@@ -1379,6 +1403,12 @@ int xrdp_bitmap_def_proc(struct xrdp_bitmap* self, int msg,
       {
         self->popped_from->item_index = self->item_index;
         xrdp_bitmap_invalidate(self->popped_from, 0);
+        if (self->popped_from->parent->notify != 0)
+        {
+          self->popped_from->parent->notify(self->popped_from->parent,
+                                            self->popped_from,
+                                            CB_ITEMCHANGE, 0, 0);
+        }
       }
     }
   }

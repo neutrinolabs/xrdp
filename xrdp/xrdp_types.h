@@ -525,8 +525,6 @@ struct xrdp_mod_data
 {
   char name[256];
   char lib[256];
-  char ip[256];
-  char port[256];
-  char username[256];
-  char password[256];
+  struct xrdp_list* names;
+  struct xrdp_list* values;
 };
