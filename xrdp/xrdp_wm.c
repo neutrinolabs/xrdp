@@ -271,44 +271,111 @@ int xrdp_set_cursor(struct xrdp_wm* self, int cache_idx)
   return 0;
 }
 
+//******************************************************************************
+int xrdp_wm_get_pixel(char* data, int x, int y, int width, int bpp)
+{
+  int start;
+  int shift;
+
+  if (bpp == 1)
+  {
+    width = (width + 7) / 8;
+    start = (y * width) + x / 8;
+    shift = x % 8;
+    return (data[start] & (0x80 >> shift)) != 0;
+  }
+  else if (bpp == 4)
+  {
+    width = (width + 1) / 2;
+    start = y * width + x / 2;
+    shift = x % 2;
+    if (shift == 0)
+      return (data[start] & 0xf0) >> 4;
+    else
+      return data[start] & 0x0f;
+  }
+  return 0;
+}
+
+
 /*****************************************************************************/
 /* send a cursor from a file */
 int xrdp_send_cursor(struct xrdp_wm* self, char* file_name, int cache_idx)
 {
-  int v;
   int fd;
   int w;
   int h;
+  int x;
+  int y;
+  int bpp;
+  int i;
+  int j;
+  int rv;
+  int pixel;
+  int palette[16];
   struct stream* s;
 
+  rv = 1;
   s = (struct stream*)g_malloc(sizeof(struct stream), 1);
   init_stream(s, 8001);
   fd = g_file_open(file_name);
   g_file_read(fd, s->data, 8000);
   g_file_close(fd);
-  xrdp_rdp_init_data(self->rdp_layer, 8000);
-  out_uint16_le(self->out_s, RDP_POINTER_COLOR);
-  out_uint16_le(self->out_s, 0); /* pad */
-  out_uint16_le(self->out_s, cache_idx); /* cache_idx */
-  in_uint32_le(s, v);
-  out_uint16_le(self->out_s, v); /* x */
-  in_uint32_le(s, v);
-  out_uint16_le(self->out_s, v); /* y */
-  in_uint32_le(s, w);
-  out_uint16_le(self->out_s, w); /* width */
-  in_uint32_le(s, h);
-  out_uint16_le(self->out_s, h); /* height */
-  v = (w * h) / 8;
-  out_uint16_le(self->out_s, v); /* mask len */
-  v = (w * h) * 3;
-  out_uint16_le(self->out_s, v); /* data len */
-  v = ((w * h) / 8) + ((w * h) * 3);
-  out_uint8a(self->out_s, s->p, v);
-  s_mark_end(self->out_s);
-  xrdp_rdp_send_data(self->rdp_layer, RDP_DATA_PDU_POINTER);
+  in_uint8s(s, 6);
+  in_uint8(s, w);
+  in_uint8(s, h);
+  in_uint8s(s, 2);
+  in_uint16_le(s, x);
+  in_uint16_le(s, y);
+  in_uint8s(s, 22);
+  in_uint8(s, bpp);
+  in_uint8s(s, 25);
+  if (w == 32 && h == 32)
+  {
+    xrdp_rdp_init_data(self->rdp_layer, 8000);
+    out_uint16_le(self->out_s, RDP_POINTER_COLOR);
+    out_uint16_le(self->out_s, 0); /* pad */
+    out_uint16_le(self->out_s, cache_idx); /* cache_idx */
+    out_uint16_le(self->out_s, x);
+    out_uint16_le(self->out_s, y);
+    out_uint16_le(self->out_s, w);
+    out_uint16_le(self->out_s, h);
+    out_uint16_le(self->out_s, 128);
+    out_uint16_le(self->out_s, 3072);
+    if (bpp == 1)
+    {
+      in_uint8a(s, palette, 8);
+      for (i = 0; i < 32; i++)
+        for (j = 0; j < 32; j++)
+        {
+          pixel = palette[xrdp_wm_get_pixel(s->p, j, i, 32, 1)];
+          out_uint8(self->out_s, pixel);
+          out_uint8(self->out_s, pixel >> 8);
+          out_uint8(self->out_s, pixel >> 16);
+        }
+      in_uint8s(s, 128);
+    }
+    else if (bpp == 4)
+    {
+      in_uint8a(s, palette, 64);
+      for (i = 0; i < 32; i++)
+        for (j = 0; j < 32; j++)
+        {
+          pixel = palette[xrdp_wm_get_pixel(s->p, j, i, 32, 4)];
+          out_uint8(self->out_s, pixel);
+          out_uint8(self->out_s, pixel >> 8);
+          out_uint8(self->out_s, pixel >> 16);
+        }
+      in_uint8s(s, 512);
+    }
+    out_uint8a(self->out_s, s->p, 128); /* mask */
+    s_mark_end(self->out_s);
+    xrdp_rdp_send_data(self->rdp_layer, RDP_DATA_PDU_POINTER);
+    rv = 0;
+  }
   g_free(s->data);
   g_free(s);
-  return 0;
+  return rv;
 }
 
 /*****************************************************************************/
@@ -453,8 +520,6 @@ int xrdp_wm_init(struct xrdp_wm* self)
 
   xrdp_send_cursor(self, "cursor1.cur", 1);
   xrdp_send_cursor(self, "cursor0.cur", 0);
-
-  //xrdp_set_cursor(self, 1);
 
   return 0;
 }
