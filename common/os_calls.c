@@ -310,10 +310,11 @@ int g_tcp_socket(void)
 /*****************************************************************************/
 int g_tcp_local_socket(void)
 {
-  int rv;
-
-  rv = socket(PF_LOCAL, SOCK_STREAM, 0);
-  return rv;
+#if defined(_WIN32)
+  return 0;
+#else
+  return socket(PF_LOCAL, SOCK_STREAM, 0);
+#endif
 }
 
 /*****************************************************************************/
@@ -391,12 +392,16 @@ int g_tcp_bind(int sck, char* port)
 /*****************************************************************************/
 int g_tcp_local_bind(int sck, char* port)
 {
+#if defined(_WIN32)
+  return -1;
+#else
   struct sockaddr_un s;
 
   memset(&s, 0, sizeof(struct sockaddr_un));
   s.sun_family = AF_UNIX;
   strcpy(s.sun_path, port);
   return bind(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_un));
+#endif
 }
 
 /*****************************************************************************/
