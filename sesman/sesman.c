@@ -21,18 +21,19 @@
 
 */
 
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <pwd.h>
 #include <signal.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
+#include <grp.h>
 
 #include "d3des.h"
 
@@ -223,13 +224,16 @@ int start_session(int width, int height, int bpp, char* username,
   int uid;
   int wmpid;
   int xpid;
+  int error;
   struct passwd* pwd_1;
   char text[256];
   char passwd_file[256];
   char geometry[32];
   char depth[32];
   char screen[32];
+  char cur_dir[256];
 
+  getcwd(cur_dir, 255);
   display = 10;
   while (x_server_running(display) && display < 50)
   {
@@ -249,26 +253,33 @@ int start_session(int width, int height, int bpp, char* username,
     pwd_1 = getpwnam(username);
     if (pwd_1 != 0)
     {
-      setgid(pwd_1->pw_gid);
-      uid = pwd_1->pw_uid;
-      if (setuid(uid) == 0)
+      /* set uid and groups */
+      error = initgroups(pwd_1->pw_name, pwd_1->pw_gid);
+      if (error == 0)
       {
+        error = setgid(pwd_1->pw_gid);
+      }
+      if (error == 0)
+      {
+        uid = pwd_1->pw_uid;
+        error = setuid(uid);
+      }
+      if (error == 0)
+      {
+        clearenv();
+        setenv("PATH", "/bin:/usr/bin:/usr/X11R6/bin:/usr/local/bin", 1);
         setenv("USER", username, 1);
         g_sprintf(text, "%d", uid);
         setenv("UID", text, 1);
         setenv("HOME", pwd_1->pw_dir, 1);
         chdir(pwd_1->pw_dir);
-        if (access(".bash_profile", F_OK) == 0)
-        {
-          system("sh .bash_profile");
-        }
         g_sprintf(text, ":%d.0", display);
         setenv("DISPLAY", text, 1);
         g_sprintf(geometry, "%dx%d", width, height);
         g_sprintf(depth, "%d", bpp);
         g_sprintf(screen, ":%d", display);
         mkdir(".vnc", S_IRWXU);
-        g_sprintf(passwd_file, "%s/.vnc/.sesman_passwd", pwd_1->pw_dir);
+        g_sprintf(passwd_file, "%s/.vnc/sesman_passwd", pwd_1->pw_dir);
         check_password_file(passwd_file, password);
         wmpid = fork();
         if (wmpid == -1)
@@ -280,8 +291,8 @@ int start_session(int width, int height, int bpp, char* username,
           g_sleep(500);
           if (x_server_running(display))
           {
-            execlp("startkde", NULL);
-            //execlp("blackbox", NULL);
+            g_sprintf(text, "%s/startwm.sh", cur_dir);
+            execlp(text, "startwm.sh", NULL);
             // should not get here
           }
           g_printf("error\n");
@@ -340,6 +351,7 @@ int main(int argc, char** argv)
   int height;
   int bpp;
   int display;
+  int error;
   struct stream* in_s;
   struct stream* out_s;
   char* username;
@@ -365,11 +377,19 @@ start session\n");
     init_stream(out_s, 8192);
     g_printf("listening\n");
     sck = g_tcp_socket();
-    if (g_tcp_bind(sck, "3350") == 0)
+    g_tcp_set_non_blocking(sck);
+    error = g_tcp_bind(sck, "3350");
+    if (error == 0)
     {
-      if (g_tcp_listen(sck) == 0)
+      error = g_tcp_listen(sck);
+      if (error == 0)
       {
         in_sck = g_tcp_accept(sck);
+        while (in_sck == -1 && g_tcp_last_error_would_block(sck))
+        {
+          g_sleep(1000);
+          in_sck = g_tcp_accept(sck);
+        }
         while (in_sck > 0)
         {
           init_stream(in_s, 8192);
@@ -430,6 +450,11 @@ start session\n");
           }
           close(in_sck);
           in_sck = g_tcp_accept(sck);
+          while (in_sck == -1 && g_tcp_last_error_would_block(sck))
+          {
+            g_sleep(1000);
+            in_sck = g_tcp_accept(sck);
+          }
         }
       }
       else
