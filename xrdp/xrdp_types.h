@@ -239,13 +239,13 @@ struct xrdp_orders
 
 struct xrdp_palette_item
 {
-  int use_count;
+  int stamp;
   int palette[256];
 };
 
 struct xrdp_bitmap_item
 {
-  int use_count;
+  int stamp;
   struct xrdp_bitmap* bitmap;
 };
 
@@ -261,7 +261,7 @@ struct xrdp_font_item
 
 struct xrdp_char_item
 {
-  int use_count;
+  int stamp;
   struct xrdp_font_item font_item;
 };
 
@@ -270,8 +270,11 @@ struct xrdp_cache
 {
   struct xrdp_wm* wm; /* owner */
   struct xrdp_orders* orders;
+  int palette_stamp;
   struct xrdp_palette_item palette_items[6];
+  int bitmap_stamp;
   struct xrdp_bitmap_item bitmap_items[3][600];
+  int char_stamp;
   struct xrdp_char_item char_items[12][256];
 };
 

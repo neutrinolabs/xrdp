@@ -397,3 +397,16 @@
 #define RDP_ORDER_FONTCACHE     3
 #define RDP_ORDER_RAW_BMPCACHE2 4
 #define RDP_ORDER_BMPCACHE2     5
+
+/* drawable types */
+#define WND_TYPE_BITMAP 0
+#define WND_TYPE_WND    1
+#define WND_TYPE_SCREEN 2
+#define WND_TYPE_BUTTON 3
+#define WND_TYPE_IMAGE  4
+#define WND_TYPE_EDIT   5
+#define WND_TYPE_LABEL  6
+
+/* button states */
+#define BUTTON_STATE_UP   0
+#define BUTTON_STATE_DOWN 1

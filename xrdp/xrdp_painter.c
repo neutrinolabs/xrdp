@@ -1,4 +1,3 @@
-
 /*
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -60,6 +59,7 @@ int xrdp_painter_end_update(struct xrdp_painter* self)
 }
 
 /*****************************************************************************/
+/* returns boolean, true if there is something to draw */
 int xrdp_painter_clip_adj(struct xrdp_painter* self, int* x, int* y,
                           int* cx, int* cy)
 {
@@ -145,19 +145,14 @@ int xrdp_painter_fill_rect(struct xrdp_painter* self,
   struct xrdp_region* region;
   struct xrdp_rect rect;
 
-  if (x >= bitmap->width) return 0;
-  if (y >= bitmap->height) return 0;
-  if (x < 0) { cx += x; x = 0; }
-  if (y < 0) { cy += y; y = 0; }
-  if (cx <= 0) return 0;
-  if (cy <= 0) return 0;
-  if (x + cx > bitmap->width) cx = bitmap->width - x;
-  if (y + cy > bitmap->height) cy = bitmap->height - y;
-
+  if (!check_bounds(bitmap, &x, &y, &cx, &cy))
+    return 0;
   if (!xrdp_painter_clip_adj(self, &x, &y, &cx, &cy))
     return 0;
 
-  if (bitmap->type == 0)
+  /* todo data */
+
+  if (bitmap->type == WND_TYPE_BITMAP) /* 0 */
     return 0;
   region = xrdp_region_create(self->wm);
   xrdp_wm_get_vis_region(self->wm, bitmap, x, y, cx, cy, region);
@@ -187,26 +182,21 @@ int xrdp_painter_fill_rect2(struct xrdp_painter* self,
   struct xrdp_region* region;
   struct xrdp_rect rect;
 
-  if (x >= bitmap->width) return 0;
-  if (y >= bitmap->height) return 0;
-  if (x < 0) { cx += x; x = 0; }
-  if (y < 0) { cy += y; y = 0; }
-  if (cx <= 0) return 0;
-  if (cy <= 0) return 0;
-  if (x + cx > bitmap->width) cx = bitmap->width - x;
-  if (y + cy > bitmap->height) cy = bitmap->height - y;
-
+  if (!check_bounds(bitmap, &x, &y, &cx, &cy))
+    return 0;
   if (!xrdp_painter_clip_adj(self, &x, &y, &cx, &cy))
     return 0;
 
-  if (bitmap->type == 0) /* bitmap */
+  /* todo data */
+  
+  if (bitmap->type == WND_TYPE_BITMAP) /* 0 */
     return 0;
   region = xrdp_region_create(self->wm);
   xrdp_wm_get_vis_region(self->wm, bitmap, x, y, cx, cy, region);
   i = 0;
   while (xrdp_region_get_rect(region, i, &rect) == 0)
   {
-    DEBUG(("sending rect order %d %d %d %d\n\r", rect.left, rect.top,
+    DEBUG(("sending rect2 order %d %d %d %d\n\r", rect.left, rect.top,
            rect.right, rect.bottom));
     xrdp_orders_pat_blt(self->orders, rect.left, rect.top,
                         rect.right - rect.left,
@@ -216,7 +206,6 @@ int xrdp_painter_fill_rect2(struct xrdp_painter* self,
     i++;
   }
   xrdp_region_delete(region);
-
   return 0;
 }
 
@@ -250,7 +239,7 @@ int xrdp_painter_draw_bitmap(struct xrdp_painter* self,
 
   /* todo data */
 
-  if (bitmap->type == 0)
+  if (bitmap->type == WND_TYPE_BITMAP)
     return 0;
   region = xrdp_region_create(self->wm);
   xrdp_wm_get_vis_region(self->wm, bitmap, x, y, cx, cy, region);
@@ -435,7 +424,9 @@ int xrdp_painter_draw_text(struct xrdp_painter* self,
   if (self->use_clip)
     clip_rect = self->clip;
   else
+  {
     MAKERECT(clip_rect, 0, 0, bitmap->width, bitmap->height);
+  }
   b = bitmap;
   while (b != 0)
   {

@@ -1,4 +1,3 @@
-
 /*
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -72,13 +71,15 @@ void xrdp_bitmap_delete(struct xrdp_bitmap* self)
 }
 
 /*****************************************************************************/
+/* if focused is true focus this window else unfocus it */
+/* returns error */
 int xrdp_bitmap_set_focus(struct xrdp_bitmap* self, int focused)
 {
   struct xrdp_painter* painter;
 
   if (self == 0)
     return 0;
-  if (self->type != 1)
+  if (self->type != WND_TYPE_WND) /* 1 */
     return 0;
   self->focused = focused;
   painter = xrdp_painter_create(self->wm);
@@ -210,15 +211,15 @@ int xrdp_bitmap_load(struct xrdp_bitmap* self, char* filename, int* palette)
           if (self->bpp == 8)
             color = xrdp_bitmap_get_index(self, palette, color);
           else if (self->bpp == 15)
-            color = color15((color & 0xff0000) >> 16,
+            color = COLOR15((color & 0xff0000) >> 16,
                             (color & 0x00ff00) >> 8,
                             (color & 0x0000ff) >> 0);
           else if (self->bpp == 16)
-            color = color16((color & 0xff0000) >> 16,
+            color = COLOR16((color & 0xff0000) >> 16,
                             (color & 0x00ff00) >> 8,
                             (color & 0x0000ff) >> 0);
           else if (self->bpp == 24)
-            color = color24((color & 0xff0000) >> 16,
+            color = COLOR24((color & 0xff0000) >> 16,
                             (color & 0x00ff00) >> 8,
                             (color & 0x0000ff) >> 0);
           xrdp_bitmap_set_pixel(self, j, i, color);
@@ -270,37 +271,55 @@ int xrdp_bitmap_set_pixel(struct xrdp_bitmap* self, int x, int y, int pixel)
 }
 
 /*****************************************************************************/
+/* copy part of self at x, y to 0, o in dest */
+/* returns error */
 int xrdp_bitmap_copy_box(struct xrdp_bitmap* self, struct xrdp_bitmap* dest,
                          int x, int y, int cx, int cy)
 {
   int i;
   int j;
+  int destx;
+  int desty;
 
   if (self == 0)
-    return 0;
+    return 1;
   if (dest == 0)
-    return 0;
+    return 1;
+  if (self->type != WND_TYPE_BITMAP && self->type != WND_TYPE_IMAGE)
+    return 1;
+  if (dest->type != WND_TYPE_BITMAP && dest->type != WND_TYPE_IMAGE)
+    return 1;
   if (self->bpp != dest->bpp)
-    return 0;
-
+    return 1;
+  destx = 0;
+  desty = 0;
+  if (!check_bounds(self, &x, &y, &cx, &cy))
+    return 1;
+  if (!check_bounds(dest, &destx, &desty, &cx, &cy))
+    return 1;
   if (self->bpp == 24)
   {
     for (i = 0; i < cy; i++)
       for (j = 0; j < cx; j++)
-        SETPIXEL32(dest->data, j, i, dest->width,
+        SETPIXEL32(dest->data, j + destx, i + desty, dest->width,
                    GETPIXEL32(self->data, j + x, i + y, self->width));
   }
-  else
+  else if (self->bpp == 15 || self->bpp == 16)
   {
     for (i = 0; i < cy; i++)
-    {
       for (j = 0; j < cx; j++)
-      {
-        xrdp_bitmap_set_pixel(dest, j, i,
-                              xrdp_bitmap_get_pixel(self, j + x, i + y));
-      }
-    }
+        SETPIXEL16(dest->data, j + destx, i + desty, dest->width,
+                   GETPIXEL16(self->data, j + x, i + y, self->width));
   }
+  else if (self->bpp == 8)
+  {
+    for (i = 0; i < cy; i++)
+      for (j = 0; j < cx; j++)
+        SETPIXEL8(dest->data, j + destx, i + desty, dest->width,
+                  GETPIXEL8(self->data, j + x, i + y, self->width));
+  }
+  else
+    return 1;
   return 0;
 }
 
@@ -325,6 +344,7 @@ int xrdp_bitmap_compare(struct xrdp_bitmap* self, struct xrdp_bitmap* b)
 
 /*****************************************************************************/
 /* nil for rect means the whole thing */
+/* returns error */
 int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
 {
   int i;
@@ -337,7 +357,7 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
 
   if (self == 0) /* if no bitmap */
     return 0;
-  if (self->type == 0) /* if bitmap, leave */
+  if (self->type == WND_TYPE_BITMAP) /* if 0, bitmap, leave */
     return 0;
   painter = xrdp_painter_create(self->wm);
   painter->rop = 0xcc; /* copy */
@@ -354,7 +374,7 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
     painter->use_clip = 1;
   }
   xrdp_painter_begin_update(painter);
-  if (self->type == 1) /* normal window */
+  if (self->type == WND_TYPE_WND) /* 1 */
   {
     /* draw grey background */
     painter->fg_color = self->bg_color;
@@ -397,14 +417,14 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
     }
     xrdp_painter_draw_text(painter, self, 4, 4, self->title);
   }
-  else if (self->type == 2) /* screen */
+  else if (self->type == WND_TYPE_SCREEN) /* 2 */
   {
     painter->fg_color = self->bg_color;
     xrdp_painter_fill_rect(painter, self, 0, 0, self->width, self->height);
   }
-  else if (self->type == 3) /* button */
+  else if (self->type == WND_TYPE_BUTTON) /* 3 */
   {
-    if (self->state == 0) /* button up */
+    if (self->state == BUTTON_STATE_UP) /* 0 */
     {
       /* gray box */
       painter->fg_color = self->wm->grey;
@@ -435,7 +455,7 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
       xrdp_painter_draw_text(painter, self, self->width / 2 - w / 2,
                              self->height / 2 - h / 2, self->title);
     }
-    else if (self->state == 1) /* button down */
+    else if (self->state == BUTTON_STATE_DOWN) /* 1 */
     {
       /* gray box */
       painter->fg_color = self->wm->grey;
@@ -473,12 +493,12 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
                              (self->height / 2 - h / 2) + 1, self->title);
     }
   }
-  else if (self->type == 4) /* image */
+  else if (self->type == WND_TYPE_IMAGE) /* 4 */
   {
     xrdp_painter_draw_bitmap(painter, self, self, 0, 0, self->width,
                              self->height);
   }
-  else if (self->type == 5) /* edit */
+  else if (self->type == WND_TYPE_EDIT) /* 5 */
   {
     /* draw gray box */
     painter->fg_color = self->wm->grey;
@@ -506,7 +526,7 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
     painter->fg_color = self->wm->black;
     xrdp_painter_fill_rect(painter, self, 1, 1, self->width - 2, 1);
   }
-  else if (self->type == 6) /* label */
+  else if (self->type == WND_TYPE_LABEL) /* 6 */
   {
     painter->font->color = self->wm->black;
     xrdp_painter_draw_text(painter, self, 0, 0, self->title);

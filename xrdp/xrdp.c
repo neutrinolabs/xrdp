@@ -29,9 +29,9 @@ static struct xrdp_listen* g_listen = 0;
 void* xrdp_listen_run(void* in_val)
 {
 
-  DEBUG(("listener started\n"))
+  DEBUG(("listener started\n\r"));
   xrdp_listen_main_loop(g_listen);
-  DEBUG(("listener done\n"))
+  DEBUG(("listener done\n\r"));
   return 0;
 }
 

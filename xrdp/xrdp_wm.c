@@ -1,4 +1,3 @@
-
 /*
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -211,6 +210,8 @@ int xrdp_wm_login_notify(struct xrdp_bitmap* wnd,
   struct xrdp_rect rect;
   int i;
 
+  if (wnd->modal_dialog != 0 && msg != 100)
+    return 0;
   if (msg == 1) /* click */
   {
     if (sender->id == 1) /* help button */
@@ -427,33 +428,33 @@ int xrdp_wm_init(struct xrdp_wm* self)
   }
   else if (self->screen->bpp == 15)
   {
-    self->black     = color15(0, 0, 0);
-    self->grey      = color15(0xc0, 0xc0, 0xc0);
-    self->dark_grey = color15(0x80, 0x80, 0x80);
-    self->blue      = color15(0x00, 0x00, 0xff);
-    self->white     = color15(0xff, 0xff, 0xff);
-    self->red       = color15(0xff, 0x00, 0x00);
-    self->green     = color15(0x00, 0xff, 0x00);
+    self->black     = COLOR15(0, 0, 0);
+    self->grey      = COLOR15(0xc0, 0xc0, 0xc0);
+    self->dark_grey = COLOR15(0x80, 0x80, 0x80);
+    self->blue      = COLOR15(0x00, 0x00, 0xff);
+    self->white     = COLOR15(0xff, 0xff, 0xff);
+    self->red       = COLOR15(0xff, 0x00, 0x00);
+    self->green     = COLOR15(0x00, 0xff, 0x00);
   }
   else if (self->screen->bpp == 16)
   {
-    self->black     = color16(0, 0, 0);
-    self->grey      = color16(0xc0, 0xc0, 0xc0);
-    self->dark_grey = color16(0x80, 0x80, 0x80);
-    self->blue      = color16(0x00, 0x00, 0xff);
-    self->white     = color16(0xff, 0xff, 0xff);
-    self->red       = color16(0xff, 0x00, 0x00);
-    self->green     = color16(0x00, 0xff, 0x00);
+    self->black     = COLOR16(0, 0, 0);
+    self->grey      = COLOR16(0xc0, 0xc0, 0xc0);
+    self->dark_grey = COLOR16(0x80, 0x80, 0x80);
+    self->blue      = COLOR16(0x00, 0x00, 0xff);
+    self->white     = COLOR16(0xff, 0xff, 0xff);
+    self->red       = COLOR16(0xff, 0x00, 0x00);
+    self->green     = COLOR16(0x00, 0xff, 0x00);
   }
   else if (self->screen->bpp == 24)
   {
-    self->black     = color24(0, 0, 0);
-    self->grey      = color24(0xc0, 0xc0, 0xc0);
-    self->dark_grey = color24(0x80, 0x80, 0x80);
-    self->blue      = color24(0x00, 0x00, 0xff);
-    self->white     = color24(0xff, 0xff, 0xff);
-    self->red       = color24(0xff, 0x00, 0x00);
-    self->green     = color24(0x00, 0xff, 0x00);
+    self->black     = COLOR24(0, 0, 0);
+    self->grey      = COLOR24(0xc0, 0xc0, 0xc0);
+    self->dark_grey = COLOR24(0x80, 0x80, 0x80);
+    self->blue      = COLOR24(0x00, 0x00, 0xff);
+    self->white     = COLOR24(0xff, 0xff, 0xff);
+    self->red       = COLOR24(0xff, 0x00, 0x00);
+    self->green     = COLOR24(0x00, 0xff, 0x00);
   }
   /* draw login window */
   self->login_window = xrdp_bitmap_create(400, 200, self->screen->bpp, 1);
@@ -489,6 +490,7 @@ int xrdp_wm_init(struct xrdp_wm* self)
   but->top = 30;
   xrdp_list_add_item(self->login_window->child_list, (int)but);
 
+  /* button */
   but = xrdp_bitmap_create(60, 25, self->screen->bpp, 3);
   xrdp_list_add_item(self->login_window->child_list, (int)but);
   but->parent = self->login_window;
@@ -499,6 +501,7 @@ int xrdp_wm_init(struct xrdp_wm* self)
   but->id = 1;
   g_strcpy(but->title, "Help");
 
+  /* button */
   but = xrdp_bitmap_create(60, 25, self->screen->bpp, 3);
   xrdp_list_add_item(self->login_window->child_list, (int)but);
   but->parent = self->login_window;
@@ -509,6 +512,7 @@ int xrdp_wm_init(struct xrdp_wm* self)
   but->id = 2;
   g_strcpy(but->title, "Cancel");
 
+  /* button */
   but = xrdp_bitmap_create(60, 25, self->screen->bpp, 3);
   xrdp_list_add_item(self->login_window->child_list, (int)but);
   but->parent = self->login_window;
@@ -519,7 +523,8 @@ int xrdp_wm_init(struct xrdp_wm* self)
   but->id = 3;
   g_strcpy(but->title, "OK");
 
-  but = xrdp_bitmap_create(50, 20, self->screen->bpp, 6); /* label */
+  /* label */
+  but = xrdp_bitmap_create(60, 20, self->screen->bpp, 6); /* label */
   xrdp_list_add_item(self->login_window->child_list, (int)but);
   but->parent = self->login_window;
   but->owner = self->login_window;
@@ -528,6 +533,7 @@ int xrdp_wm_init(struct xrdp_wm* self)
   but->top = 50;
   g_strcpy(but->title, "Username");
 
+  /* edit */
   but = xrdp_bitmap_create(140, 20, self->screen->bpp, 5);
   xrdp_list_add_item(self->login_window->child_list, (int)but);
   but->parent = self->login_window;
@@ -538,7 +544,8 @@ int xrdp_wm_init(struct xrdp_wm* self)
   but->id = 4;
   but->cursor = 1;
 
-  but = xrdp_bitmap_create(50, 20, self->screen->bpp, 6); /* label */
+  /* label */
+  but = xrdp_bitmap_create(60, 20, self->screen->bpp, 6); /* label */
   xrdp_list_add_item(self->login_window->child_list, (int)but);
   but->parent = self->login_window;
   but->owner = self->login_window;
@@ -547,6 +554,7 @@ int xrdp_wm_init(struct xrdp_wm* self)
   but->top = 80;
   g_strcpy(but->title, "Password");
 
+  /* edit */
   but = xrdp_bitmap_create(140, 20, self->screen->bpp, 5);
   xrdp_list_add_item(self->login_window->child_list, (int)but);
   but->parent = self->login_window;
@@ -846,8 +854,8 @@ int xrdp_wm_mouse_move(struct xrdp_wm* self, int x, int y)
 /*****************************************************************************/
 int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
 {
-  struct xrdp_bitmap* b;
-  struct xrdp_bitmap* b1;
+  struct xrdp_bitmap* control;
+  struct xrdp_bitmap* wnd;
   int newx;
   int newy;
   int oldx;
@@ -880,29 +888,34 @@ int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
     self->dragging_window = 0;
     self->dragging = 0;
   }
-  b = xrdp_wm_at_pos(self->screen, x, y, &b1);
-  if (b != 0)
+  wnd = 0;
+  control = xrdp_wm_at_pos(self->screen, x, y, &wnd);
+  if (control != 0)
   {
-    if (b->type == 3 && but == 1 && !down && self->button_down == b)
+    if (wnd != 0)
+      if (wnd->modal_dialog != 0) /* if window has a modal dialog */
+        return 0;
+    if (control->type == 3 && but == 1 &&
+        !down && self->button_down == control)
     { /* if clicking up on a button that was clicked down */
       self->button_down = 0;
-      b->state = 0;
-      xrdp_bitmap_invalidate(b, 0);
-      if (b->parent != 0)
-        if (b->parent->notify != 0)
-          /* b can be invalid after this */
-          b->parent->notify(b->owner, b, 1, x, y);
+      control->state = 0;
+      xrdp_bitmap_invalidate(control, 0);
+      if (control->parent != 0)
+        if (control->parent->notify != 0)
+          /* control can be invalid after this */
+          control->parent->notify(control->owner, control, 1, x, y);
     }
-    else if (b->type == 3 && but == 1 && down)
+    else if (control->type == 3 && but == 1 && down)
     { /* if clicking down on a button */
-      self->button_down = b;
-      b->state = 1;
-      xrdp_bitmap_invalidate(b, 0);
+      self->button_down = control;
+      control->state = 1;
+      xrdp_bitmap_invalidate(control, 0);
     }
     else if (but == 1 && down)
     {
-      xrdp_wm_set_focused(self, b1);
-      if (b->type == 1 && y < (b->top + 21))
+      xrdp_wm_set_focused(self, wnd);
+      if (control->type == 1 && y < (control->top + 21))
       { /* if dragging */
         if (self->dragging) /* rarely happens */
         {
@@ -914,15 +927,15 @@ int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
           self->draggingxorstate = 0;
         }
         self->dragging = 1;
-        self->dragging_window = b;
-        self->draggingorgx = b->left;
-        self->draggingorgy = b->top;
+        self->dragging_window = control;
+        self->draggingorgx = control->left;
+        self->draggingorgy = control->top;
         self->draggingx = x;
         self->draggingy = y;
-        self->draggingdx = x - b->left;
-        self->draggingdy = y - b->top;
-        self->draggingcx = b->width;
-        self->draggingcy = b->height;
+        self->draggingdx = x - control->left;
+        self->draggingdy = y - control->top;
+        self->draggingcx = control->width;
+        self->draggingcy = control->height;
       }
     }
   }

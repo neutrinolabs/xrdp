@@ -62,15 +62,6 @@ int rect_intersect(struct xrdp_rect* in1, struct xrdp_rect* in2,
 }
 
 /*****************************************************************************/
-int color15(int r, int g, int b)
-{
-  r = r >> 3;
-  g = g >> 3;
-  b = b >> 3;
-  return (r << 10) | (g << 5) | b;
-}
-
-/*****************************************************************************/
 int color16(int r, int g, int b)
 {
   r = r >> 3;
@@ -83,4 +74,34 @@ int color16(int r, int g, int b)
 int color24(int r, int g, int b)
 {
   return r | (g << 8) | (b << 16);
+}
+
+/*****************************************************************************/
+/* adjust the bounds to fit in the bitmap */
+/* return false if there is nothing to draw else return true */
+int check_bounds(struct xrdp_bitmap* b, int* x, int* y, int* cx, int* cy)
+{
+  if (*x >= b->width)
+    return 0;
+  if (*y >= b->height)
+    return 0;
+  if (*x < 0)
+  {
+    *cx += *x;
+    *x = 0;
+  }
+  if (*y < 0)
+  {
+    *cy += *y;
+    *y = 0;
+  }
+  if (*cx <= 0)
+    return 0;
+  if (*cy <= 0)
+    return 0;
+  if (*x + *cx > b->width)
+    *cx = b->width - *x;
+  if (*y + *cy > b->height)
+    *cy = b->height - *y;
+  return 1;
 }

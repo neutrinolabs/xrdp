@@ -56,7 +56,7 @@ struct stream
 #define make_stream(s) \
 { \
   s = (struct stream*)g_malloc(sizeof(struct stream), 1); \
-} \
+}
 
 /******************************************************************************/
 #define init_stream(s, v) \
