@@ -264,7 +264,13 @@ int xrdp_wm_login_notify(struct xrdp_bitmap* wnd,
                 wm->mod_handle = 0;
                 wm->mod_init = 0;
                 wm->mod_exit = 0;
-                //wm->pro_layer->app_sck = 0;
+              }
+              else /* close connection log window if connection is ok */
+              {
+                if (wm->log_wnd != 0)
+                {
+                  xrdp_bitmap_delete(wm->log_wnd);
+                }
               }
             }
             if (!wm->pro_layer->term)
