@@ -262,7 +262,7 @@ int xrdp_painter_fill_rect2(struct xrdp_painter* self,
 }
 
 #define SSW 64
-#define SSH 63
+#define SSH 60
 
 /*****************************************************************************/
 int xrdp_painter_draw_bitmap(struct xrdp_painter* self,

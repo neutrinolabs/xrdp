@@ -94,7 +94,7 @@ int xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
   bmp_size = (bitmap->width + e) * bitmap->height * Bpp;
   self->bitmap_stamp++;
   /* look for match */
-  if (bmp_size < self->cache1_size)
+  if (bmp_size <= self->cache1_size)
   {
     i = 0;
     for (j = 0; j < self->cache1_entries; j++)
@@ -113,7 +113,7 @@ int xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
       }
     }
   }
-  else if (bmp_size < self->cache2_size)
+  else if (bmp_size <= self->cache2_size)
   {
     i = 1;
     for (j = 0; j < self->cache2_entries; j++)
@@ -132,7 +132,7 @@ int xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
       }
     }
   }
-  else if (bmp_size < self->cache3_size)
+  else if (bmp_size <= self->cache3_size)
   {
     i = 2;
     for (j = 0; j < self->cache3_entries; j++)
@@ -153,13 +153,13 @@ int xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
   }
   else
   {
-    g_printf("error in xrdp_cache_add_bitmap, too big\n\r");
+    g_printf("error in xrdp_cache_add_bitmap, too big(%d)\n\r", bmp_size);
   }
   /* look for oldest */
   cache_id = 0;
   cache_idx = 0;
   oldest = 0x7fffffff;
-  if (bmp_size < self->cache1_size)
+  if (bmp_size <= self->cache1_size)
   {
     i = 0;
     for (j = 0; j < self->cache1_entries; j++)
@@ -172,7 +172,7 @@ int xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
       }
     }
   }
-  else if (bmp_size < self->cache2_size)
+  else if (bmp_size <= self->cache2_size)
   {
     i = 1;
     for (j = 0; j < self->cache2_entries; j++)
@@ -185,7 +185,7 @@ int xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
       }
     }
   }
-  else if (bmp_size < self->cache3_size)
+  else if (bmp_size <= self->cache3_size)
   {
     i = 2;
     for (j = 0; j < self->cache3_entries; j++)
