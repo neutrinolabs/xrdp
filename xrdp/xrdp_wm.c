@@ -184,6 +184,7 @@ int xrdp_wm_login_help_notify(struct xrdp_bitmap* wnd,
     p = (struct xrdp_painter*)param1;
     if (p != 0)
     {
+      p->font->color = wnd->wm->black;
       xrdp_painter_draw_text(p, wnd, 10, 30, "You must be authenticated \
 before using this");
       xrdp_painter_draw_text(p, wnd, 10, 46, "session.");
@@ -194,6 +195,10 @@ the password edit box.");
       xrdp_painter_draw_text(p, wnd, 10, 110, "Both the username and \
 password are case");
       xrdp_painter_draw_text(p, wnd, 10, 126, "sensitive.");
+      xrdp_painter_draw_text(p, wnd, 10, 158, "Contact your system \
+administrator if you are");
+      xrdp_painter_draw_text(p, wnd, 10, 174, "having problems \
+logging on.");
     }
   }
   return 0;
