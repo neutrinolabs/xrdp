@@ -14,7 +14,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
    xrdp: A Remote Desktop Protocol server.
-   Copyright (C) Jay Sorg 2004
+   Copyright (C) Jay Sorg 2004-2005
 
    libvnc
 
@@ -83,6 +83,8 @@ int lib_mod_event(struct vnc* v, int msg, int param1, int param2)
       out_uint32_be(s, key);
       if (g_tcp_force_send(v->sck, s->data, 8) != 0)
       {
+        g_tcp_close(v->sck);
+        v->sck = 0;
         free_stream(s);
         return 1;
       }
@@ -111,6 +113,8 @@ int lib_mod_event(struct vnc* v, int msg, int param1, int param2)
     out_uint16_be(s, param2);
     if (g_tcp_force_send(v->sck, s->data, 6) != 0)
     {
+      g_tcp_close(v->sck);
+      v->sck = 0;
       free_stream(s);
       return 1;
     }
@@ -299,7 +303,12 @@ int lib_framebuffer_update(struct vnc* v)
         free_stream(s);
         return 1;
       }
-      v->server_paint_rect(v, x, y, cx, cy, data);
+      if (v->server_paint_rect(v, x, y, cx, cy, data) != 0)
+      {
+        g_free(data);
+        free_stream(s);
+        return 1;
+      }
     }
     else if (encoding == 1) /* copy rect */
     {
@@ -312,7 +321,12 @@ int lib_framebuffer_update(struct vnc* v)
       }
       in_uint16_be(s, srcx);
       in_uint16_be(s, srcy);
-      v->server_screen_blt(v, x, y, cx, cy, srcx, srcy);
+      if (v->server_screen_blt(v, x, y, cx, cy, srcx, srcy) != 0)
+      {
+        g_free(data);
+        free_stream(s);
+        return 1;
+      }
     }
     else if (encoding == 0xffffff11) /* cursor */
     {
@@ -343,7 +357,12 @@ int lib_framebuffer_update(struct vnc* v)
           }
         }
       }
-      v->server_set_cursor(v, x, y, cursor_data, cursor_mask);
+      if (v->server_set_cursor(v, x, y, cursor_data, cursor_mask) != 0)
+      {
+        g_free(data);
+        free_stream(s);
+        return 1;
+      }
     }
     else
     {
@@ -446,12 +465,16 @@ int lib_mod_signal(struct vnc* v)
 
   if (g_tcp_force_recv(v->sck, &type, 1) != 0)
   {
+    g_tcp_close(v->sck);
+    v->sck = 0;
     return 1;
   }
   if (type == 0) /* framebuffer update */
   {
     if (lib_framebuffer_update(v) != 0)
     {
+      g_tcp_close(v->sck);
+      v->sck = 0;
       return 1;
     }
   }
@@ -459,6 +482,8 @@ int lib_mod_signal(struct vnc* v)
   {
     if (lib_palette_update(v) != 0)
     {
+      g_tcp_close(v->sck);
+      v->sck = 0;
       return 1;
     }
   }
@@ -466,6 +491,8 @@ int lib_mod_signal(struct vnc* v)
   {
     if (lib_clip_data(v) != 0)
     {
+      g_tcp_close(v->sck);
+      v->sck = 0;
       return 1;
     }
   }
@@ -497,6 +524,7 @@ int lib_mod_start(struct vnc* v, int w, int h, int bpp)
   4 - server and client bpp do not match
   5 - no more available X desktops when spawning a new session
   6 - no ip
+  7 - sck closed
 */
 int lib_mod_connect(struct vnc* v)
 {
@@ -544,7 +572,12 @@ int lib_mod_connect(struct vnc* v)
       s_pop_layer(s, channel_hdr);
       out_uint32_be(s, 0); // version
       out_uint32_be(s, s->end - s->data); // size
-      g_tcp_force_send(sck, s->data, s->end - s->data);
+      if (g_tcp_force_send(sck, s->data, s->end - s->data) != 0)
+      {
+        g_tcp_close(sck);
+        free_stream(s);
+        return 7;
+      }
       init_stream(s, 8192);
       if (g_tcp_force_recv(sck, s->data, 8) == 0)
       {
@@ -567,6 +600,18 @@ int lib_mod_connect(struct vnc* v)
             }
           }
         }
+        else
+        {
+          g_tcp_close(sck);
+          free_stream(s);
+          return 7;
+        }
+      }
+      else
+      {
+        g_tcp_close(sck);
+        free_stream(s);
+        return 7;
       }
     }
     g_tcp_close(sck);
@@ -590,11 +635,32 @@ int lib_mod_connect(struct vnc* v)
     g_tcp_set_non_blocking(v->sck);
     /* protocal version */
     init_stream(s, 8192);
-    g_tcp_force_recv(v->sck, s->data, 12);
-    g_tcp_force_send(v->sck, "RFB 003.003\n", 12);
+    if (g_tcp_force_recv(v->sck, s->data, 12) != 0)
+    {
+      g_tcp_close(v->sck);
+      v->sck = 0;
+      free_stream(s);
+      free_stream(pixel_format);
+      return 7;
+    }
+    if (g_tcp_force_send(v->sck, "RFB 003.003\n", 12) != 0)
+    {
+      g_tcp_close(v->sck);
+      v->sck = 0;
+      free_stream(s);
+      free_stream(pixel_format);
+      return 7;
+    }
     /* sec type */
     init_stream(s, 8192);
-    g_tcp_force_recv(v->sck, s->data, 4);
+    if (g_tcp_force_recv(v->sck, s->data, 4) != 0)
+    {
+      g_tcp_close(v->sck);
+      v->sck = 0;
+      free_stream(s);
+      free_stream(pixel_format);
+      return 7;
+    }
     in_uint32_be(s, i);
     if (i == 1) /* none */
     {
@@ -603,9 +669,23 @@ int lib_mod_connect(struct vnc* v)
     else if (i == 2) /* dec the password and the server random */
     {
       init_stream(s, 8192);
-      g_tcp_force_recv(v->sck, s->data, 16);
+      if (g_tcp_force_recv(v->sck, s->data, 16) != 0)
+      {
+        g_tcp_close(v->sck);
+        v->sck = 0;
+        free_stream(s);
+        free_stream(pixel_format);
+        return 7;
+      }
       rfbEncryptBytes((unsigned char*)s->data, v->password);
-      g_tcp_force_send(v->sck, s->data, 16);
+      if (g_tcp_force_send(v->sck, s->data, 16) != 0)
+      {
+        g_tcp_close(v->sck);
+        v->sck = 0;
+        free_stream(s);
+        free_stream(pixel_format);
+        return 7;
+      }
     }
     else
     {
@@ -616,7 +696,14 @@ int lib_mod_connect(struct vnc* v)
   {
     /* sec result */
     init_stream(s, 8192);
-    g_tcp_force_recv(v->sck, s->data, 4);
+    if (g_tcp_force_recv(v->sck, s->data, 4) != 0)
+    {
+      g_tcp_close(v->sck);
+      v->sck = 0;
+      free_stream(s);
+      free_stream(pixel_format);
+      return 7;
+    }
     in_uint32_be(s, i);
     if (i != 0)
     {
@@ -627,15 +714,43 @@ int lib_mod_connect(struct vnc* v)
   {
     init_stream(s, 8192);
     s->data[0] = 1;
-    g_tcp_force_send(v->sck, s->data, 1); /* share flag */
-    g_tcp_force_recv(v->sck, s->data, 4); /* server init */
+    if (g_tcp_force_send(v->sck, s->data, 1) != 0) /* share flag */
+    {
+      g_tcp_close(v->sck);
+      v->sck = 0;
+      free_stream(s);
+      free_stream(pixel_format);
+      return 7;
+    }
+    if (g_tcp_force_recv(v->sck, s->data, 4) != 0) /* server init */
+    {
+      g_tcp_close(v->sck);
+      v->sck = 0;
+      free_stream(s);
+      free_stream(pixel_format);
+      return 7;
+    }
     in_uint16_be(s, v->mod_width);
     in_uint16_be(s, v->mod_height);
     init_stream(pixel_format, 8192);
-    g_tcp_force_recv(v->sck, pixel_format->data, 16);
+    if (g_tcp_force_recv(v->sck, pixel_format->data, 16) != 0)
+    {
+      g_tcp_close(v->sck);
+      v->sck = 0;
+      free_stream(s);
+      free_stream(pixel_format);
+      return 7;
+    }
     in_uint8(pixel_format, v->mod_bpp);
     init_stream(s, 8192);
-    g_tcp_force_recv(v->sck, s->data, 4); /* name len */
+    if (g_tcp_force_recv(v->sck, s->data, 4) != 0) /* name len */
+    {
+      g_tcp_close(v->sck);
+      v->sck = 0;
+      free_stream(s);
+      free_stream(pixel_format);
+      return 7;
+    }
     in_uint32_be(s, i);
     if (i > 255 || i < 0)
     {
@@ -643,7 +758,14 @@ int lib_mod_connect(struct vnc* v)
     }
     else
     {
-      g_tcp_force_recv(v->sck, v->mod_name, i);
+      if (g_tcp_force_recv(v->sck, v->mod_name, i) != 0)
+      {
+        g_tcp_close(v->sck);
+        v->sck = 0;
+        free_stream(s);
+        free_stream(pixel_format);
+        return 7;
+      }
       v->mod_name[i] = 0;
     }
     /* should be connected */
@@ -672,7 +794,14 @@ int lib_mod_connect(struct vnc* v)
       out_uint8s(pixel_format, 3); /* pad */
     }
     out_uint8a(s, pixel_format->data, 16);
-    g_tcp_force_send(v->sck, s->data, 20);
+    if (g_tcp_force_send(v->sck, s->data, 20) != 0)
+    {
+      g_tcp_close(v->sck);
+      v->sck = 0;
+      free_stream(s);
+      free_stream(pixel_format);
+      return 7;
+    }
     /* SetEncodings */
     init_stream(s, 8192);
     out_uint8(s, 2);
@@ -681,7 +810,14 @@ int lib_mod_connect(struct vnc* v)
     out_uint32_be(s, 0); /* raw */
     out_uint32_be(s, 1); /* copy rect */
     out_uint32_be(s, 0xffffff11); /* cursor */
-    g_tcp_force_send(v->sck, s->data, 4 + 3 * 4);
+    if (g_tcp_force_send(v->sck, s->data, 4 + 3 * 4) != 0)
+    {
+      g_tcp_close(v->sck);
+      v->sck = 0;
+      free_stream(s);
+      free_stream(pixel_format);
+      return 7;
+    }
     /* FrambufferUpdateRequest */
     init_stream(s, 8192);
     out_uint8(s, 3);
@@ -690,7 +826,14 @@ int lib_mod_connect(struct vnc* v)
     out_uint16_be(s, 0);
     out_uint16_be(s, v->mod_width);
     out_uint16_be(s, v->mod_height);
-    g_tcp_force_send(v->sck, s->data, 10);
+    if (g_tcp_force_send(v->sck, s->data, 10) != 0)
+    {
+      g_tcp_close(v->sck);
+      v->sck = 0;
+      free_stream(s);
+      free_stream(pixel_format);
+      return 7;
+    }
   }
   if (error == 0)
   {
@@ -709,6 +852,11 @@ int lib_mod_connect(struct vnc* v)
   v->server_set_cursor(v, 0, 0, cursor_data, cursor_mask);
   free_stream(s);
   free_stream(pixel_format);
+  if (error != 0)
+  {
+    g_tcp_close(v->sck);
+    v->sck = 0;
+  }
   return error;
 }
 
@@ -726,7 +874,13 @@ int lib_mod_invalidate(struct vnc* v, int x, int y, int cx, int cy)
   out_uint16_be(s, y);
   out_uint16_be(s, cx);
   out_uint16_be(s, cy);
-  g_tcp_force_send(v->sck, s->data, 10);
+  if (g_tcp_force_send(v->sck, s->data, 10) != 0)
+  {
+    free_stream(s);
+    g_tcp_close(v->sck);
+    v->sck = 0;
+    return 1;
+  }
   free_stream(s);
   return 0;
 }

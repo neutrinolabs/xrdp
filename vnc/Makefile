@@ -1,5 +1,5 @@
 
-VNCOBJ = ../common/os_calls.o vnc.o d3des.o vncauth.o
+VNCOBJ = ../common/os_calls.o vnc.o ../common/d3des.o vncauth.o
 CFLAGS = -Wall -O2 -I../common
 LDFLAGS = -shared
 LIBS = -ldl
