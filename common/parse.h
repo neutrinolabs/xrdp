@@ -76,7 +76,9 @@ struct stream
 #define free_stream(s) \
 { \
   if (s != 0) \
+  { \
     g_free(s->data); \
+  } \
   g_free(s); \
 } \
 

@@ -344,4 +344,10 @@ int server_error_popup(struct xrdp_mod* mod, char* error, char* caption)
   return 0;
 }
 
+/*****************************************************************************/
+int server_is_term(struct xrdp_mod* mod)
+{
+  return g_is_term();
+}
+
 #endif /* XRDP_LIB */

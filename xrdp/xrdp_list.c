@@ -34,7 +34,7 @@ struct xrdp_list* xrdp_list_create(void)
   self = (struct xrdp_list*)g_malloc1(sizeof(struct xrdp_list), 1);
   self->grow_by = 10;
   self->alloc_size = 10;
-  self->items = (int*)g_malloc1(sizeof(int) * 10, 1);
+  self->items = (long*)g_malloc1(sizeof(long) * 10, 1);
   return self;
 }
 
@@ -44,26 +44,33 @@ void xrdp_list_delete(struct xrdp_list* self)
   int i;
 
   if (self == 0)
+  {
     return;
+  }
   if (self->auto_free)
+  {
     for (i = 0; i < self->count; i++)
+    {
       g_free((void*)self->items[i]);
+      self->items[i] = 0;
+    }
+  }
   g_free1(self->items);
   g_free1(self);
 }
 
 /*****************************************************************************/
-void xrdp_list_add_item(struct xrdp_list* self, int item)
+void xrdp_list_add_item(struct xrdp_list* self, long item)
 {
-  int* p;
+  long* p;
   int i;
 
   if (self->count >= self->alloc_size)
   {
     i = self->alloc_size;
     self->alloc_size += self->grow_by;
-    p = (int*)g_malloc1(sizeof(int) * self->alloc_size, 1);
-    g_memcpy(p, self->items, sizeof(int) * i);
+    p = (long*)g_malloc1(sizeof(long) * self->alloc_size, 1);
+    g_memcpy(p, self->items, sizeof(long) * i);
     g_free1(self->items);
     self->items = p;
   }
@@ -72,10 +79,12 @@ void xrdp_list_add_item(struct xrdp_list* self, int item)
 }
 
 /*****************************************************************************/
-int xrdp_list_get_item(struct xrdp_list* self, int index)
+long xrdp_list_get_item(struct xrdp_list* self, int index)
 {
   if (index < 0 || index >= self->count)
+  {
     return 0;
+  }
   return self->items[index];
 }
 
@@ -85,23 +94,32 @@ void xrdp_list_clear(struct xrdp_list* self)
   int i;
 
   if (self->auto_free)
+  {
     for (i = 0; i < self->count; i++)
+    {
       g_free((void*)self->items[i]);
+      self->items[i] = 0;
+    }
+  }
   g_free1(self->items);
   self->count = 0;
   self->grow_by = 10;
   self->alloc_size = 10;
-  self->items = (int*)g_malloc1(sizeof(int) * 10, 1);
+  self->items = (long*)g_malloc1(sizeof(long) * 10, 1);
 }
 
 /*****************************************************************************/
-int xrdp_list_index_of(struct xrdp_list* self, int item)
+int xrdp_list_index_of(struct xrdp_list* self, long item)
 {
   int i;
 
   for (i = 0; i < self->count; i++)
+  {
     if (self->items[i] == item)
+    {
       return i;
+    }
+  }
   return -1;
 }
 
@@ -113,17 +131,22 @@ void xrdp_list_remove_item(struct xrdp_list* self, int index)
   if (index >= 0 && index < self->count)
   {
     if (self->auto_free)
+    {
       g_free((void*)self->items[index]);
+      self->items[index] = 0;
+    }
     for (i = index; i < (self->count - 1); i++)
+    {
       self->items[i] = self->items[i + 1];
+    }
     self->count--;
   }
 }
 
 /*****************************************************************************/
-void xrdp_list_insert_item(struct xrdp_list* self, int index, int item)
+void xrdp_list_insert_item(struct xrdp_list* self, int index, long item)
 {
-  int* p;
+  long* p;
   int i;
 
   if (index == self->count)
@@ -138,13 +161,15 @@ void xrdp_list_insert_item(struct xrdp_list* self, int index, int item)
     {
       i = self->alloc_size;
       self->alloc_size += self->grow_by;
-      p = (int*)g_malloc1(sizeof(int) * self->alloc_size, 1);
-      g_memcpy(p, self->items, sizeof(int) * i);
+      p = (long*)g_malloc1(sizeof(long) * self->alloc_size, 1);
+      g_memcpy(p, self->items, sizeof(long) * i);
       g_free1(self->items);
       self->items = p;
     }
     for (i = (self->count - 2); i >= index; i--)
+    {
       self->items[i + 1] = self->items[i];
+    }
     self->items[index] = item;
   }
 }

@@ -49,6 +49,7 @@ struct vnc
   int (*server_set_cursor)(struct vnc* v, int x, int y, char* data, char* mask);
   int (*server_palette)(struct vnc* v, int* palette);
   int (*server_error_popup)(struct vnc* v, char* error, char* caption);
+  int (*server_is_term)(struct vnc* v);
   /* common */
   long handle; /* pointer to self as int */
   long wm;

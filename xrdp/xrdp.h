@@ -243,12 +243,12 @@ int xrdp_painter_draw_text(struct xrdp_painter* self,
 /* xrdp_list.c */
 struct xrdp_list* xrdp_list_create(void);
 void xrdp_list_delete(struct xrdp_list* self);
-void xrdp_list_add_item(struct xrdp_list* self, int item);
-int xrdp_list_get_item(struct xrdp_list* self, int index);
+void xrdp_list_add_item(struct xrdp_list* self, long item);
+long xrdp_list_get_item(struct xrdp_list* self, int index);
 void xrdp_list_clear(struct xrdp_list* self);
-int xrdp_list_index_of(struct xrdp_list* self, int item);
+int xrdp_list_index_of(struct xrdp_list* self, long item);
 void xrdp_list_remove_item(struct xrdp_list* self, int index);
-void xrdp_list_insert_item(struct xrdp_list* self, int index, int item);
+void xrdp_list_insert_item(struct xrdp_list* self, int index, long item);
 
 /* xrdp_font.c */
 struct xrdp_font* xrdp_font_create(struct xrdp_wm* wm);
@@ -293,4 +293,5 @@ int server_set_pointer(struct xrdp_mod* mod, int x, int y,
                        char* data, char* mask);
 int server_palette(struct xrdp_mod* mod, int* palette);
 int server_error_popup(struct xrdp_mod* mod, char* error, char* caption);
+int server_is_term(struct xrdp_mod* mod);
 #endif

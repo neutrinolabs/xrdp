@@ -43,6 +43,7 @@ struct xrdp_mod
   int (*server_set_pointer)(struct xrdp_mod* v, int x, int y, char* data, char* mask);
   int (*server_palette)(struct xrdp_mod* v, int* palette);
   int (*server_error_popup)(struct xrdp_mod* v, char* error, char* caption);
+  int (*server_is_term)(struct xrdp_mod* v);
   /* common */
   long handle; /* pointer to self as int */
   long wm; /* struct xrdp_wm* */
@@ -76,7 +77,7 @@ struct xrdp_bmp_header
 /* list */
 struct xrdp_list
 {
-  int* items;
+  long* items;
   int count;
   int alloc_size;
   int grow_by;

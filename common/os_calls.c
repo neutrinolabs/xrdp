@@ -948,13 +948,20 @@ void* g_get_proc_address(int lib, char* name)
 /*****************************************************************************/
 int g_system(char* aexec)
 {
+#ifdef _WIN32
+  return 0;
+#else
   return system(aexec);
+#endif
 }
 
 /*****************************************************************************/
 void g_signal(int sig_num, void (*func)(int))
 {
+#ifdef _WIN32
+#else
   signal(sig_num, func);
+#endif
 }
 
 /*****************************************************************************/

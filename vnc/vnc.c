@@ -452,6 +452,15 @@ int lib_framebuffer_update(struct vnc* v)
               }
             }
           }
+          /* keep these in 32x32, vnc cursor can be alot bigger */
+          if (x > 31)
+          {
+            x = 31;
+          }
+          if (y > 31)
+          {
+            y = 31;
+          }
           error = v->server_set_cursor(v, x, y, cursor_data, cursor_mask);
         }
       }

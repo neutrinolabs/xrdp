@@ -110,6 +110,7 @@ int xrdp_wm_setup_mod(struct xrdp_wm* self,
         self->mod->server_set_pointer = server_set_pointer;
         self->mod->server_palette = server_palette;
         self->mod->server_error_popup= server_error_popup;
+        self->mod->server_is_term = server_is_term;
       }
     }
   }

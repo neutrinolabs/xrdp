@@ -3,8 +3,8 @@ SESMANOBJ = sesman.o ../common/os_calls.o ../common/d3des.o
 
 CFLAGS = -Wall -O2 -I../common
 LDFLAGS = -L /usr/gnu/lib
-LIBS = -lpam_userpass -lcrypto -lpthread
-PAMLIB = /lib/libpam.so.0
+LIBS = -lpam_userpass -lcrypto -lpthread -lpam
+PAMLIB =
 CC = gcc
 
 all: sesman

@@ -307,7 +307,8 @@ int start_session(int width, int height, int bpp, char* username,
           else if (xpid == 0) // child
           {
             execlp("Xvnc", "Xvnc", screen, "-geometry", geometry,
-                   "-depth", depth, "-bs", "-rfbauth", passwd_file, NULL);
+                   "-depth", depth, "-bs", "-rfbauth", passwd_file,
+                   NULL);
             // should not get here
             g_printf("error\n");
             _exit(0);
