@@ -332,7 +332,7 @@ int start_session(int width, int height, int bpp, char* username,
     session_items[display].width = width;
     session_items[display].height = height;
     session_items[display].bpp = bpp;
-    g_sleep(1000);
+    g_sleep(5000);
   }
   return display;
 }
