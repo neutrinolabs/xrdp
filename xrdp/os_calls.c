@@ -20,40 +20,53 @@
 
 */
 
+#ifdef _WIN32
+#include <windows.h>
+#include <winsock.h>
+#else
+#include <unistd.h>
+#include <pthread.h>
+#include <errno.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <errno.h>
-#include <pthread.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <fcntl.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/time.h>
 #include <openssl/rc4.h>
 #include <openssl/md5.h>
 #include <openssl/sha.h>
 #include <openssl/bn.h>
 
-#include "xrdp.h"
-
 //#define MEMLEAK
 
+#ifdef _WIN32
+static CRITICAL_SECTION g_term_mutex;
+#else
 static pthread_mutex_t g_term_mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
 static int g_term = 0;
 
 #ifdef MEMLEAK
-int g_memsize = 0;
-int g_memid = 0;
+static int g_memsize = 0;
+static int g_memid = 0;
 struct xrdp_list* g_memlist = 0;
 #endif
 
 /*****************************************************************************/
 int g_init_system(void)
 {
+#ifdef _WIN32
+  WSADATA w;
+
+  WSAStartup(2, &w);
+  InitializeCriticalSection(&g_term_mutex);
+#endif
 #ifdef MEMLEAK
   g_memlist = xrdp_list_create();
 #endif
@@ -63,6 +76,10 @@ int g_init_system(void)
 /*****************************************************************************/
 int g_exit_system(void)
 {
+#ifdef _WIN32
+  WSACleanup();
+  DeleteCriticalSection(&g_term_mutex);
+#endif
 #ifdef MEMLEAK
   int i;
   struct xrdp_mem* p;
@@ -223,17 +240,26 @@ int g_tcp_socket(void)
 /*****************************************************************************/
 void g_tcp_close(int sck)
 {
+#ifdef _WIN32
+  closesocket(sck);
+#else
   close(sck);
+#endif
 }
 
 /*****************************************************************************/
 int g_tcp_set_non_blocking(int sck)
 {
-  int i;
+  unsigned long i;
 
+#ifdef _WIN32
+  i = 1;
+  ioctlsocket(sck, FIONBIO, &i);
+#else
   i = fcntl(sck, F_GETFL);
   i = i | O_NONBLOCK;
   fcntl(sck, F_SETFL, i);
+#endif
   return 0;
 }
 
@@ -259,7 +285,11 @@ int g_tcp_listen(int sck)
 int g_tcp_accept(int sck)
 {
   struct sockaddr_in s;
+#ifdef _WIN32
+  signed int i;
+#else
   unsigned int i;
+#endif
 
   i = sizeof(struct sockaddr_in);
   memset(&s, 0, i);
@@ -281,7 +311,11 @@ int g_tcp_send(int sck, void* ptr, int len, int flags)
 /*****************************************************************************/
 int g_tcp_last_error_would_block(int sck)
 {
+#ifdef _WIN32
+  return WSAGetLastError() == WSAEWOULDBLOCK;
+#else
   return errno == EWOULDBLOCK;
+#endif
 }
 
 /*****************************************************************************/
@@ -293,7 +327,7 @@ int g_tcp_select(int sck)
   time.tv_sec = 0;
   time.tv_usec = 0;
   FD_ZERO(&rfds);
-  FD_SET(sck, &rfds);
+  FD_SET(((unsigned int)sck), &rfds);
   return select(sck + 1, &rfds, 0, 0, &time);
 }
 
@@ -302,33 +336,58 @@ int g_is_term(void)
 {
   int rv;
 
+#ifdef _WIN32
+  EnterCriticalSection(&g_term_mutex);
+  rv = g_term;
+  LeaveCriticalSection(&g_term_mutex);
+#else
   pthread_mutex_lock(&g_term_mutex);
   rv = g_term;
   pthread_mutex_unlock(&g_term_mutex);
+#endif
   return rv;
 }
 
 /*****************************************************************************/
 void g_set_term(int in_val)
 {
+#ifdef _WIN32
+  EnterCriticalSection(&g_term_mutex);
+  g_term = in_val;
+  LeaveCriticalSection(&g_term_mutex);
+#else
   pthread_mutex_lock(&g_term_mutex);
   g_term = in_val;
   pthread_mutex_unlock(&g_term_mutex);
+#endif
 }
 
 /*****************************************************************************/
 void g_sleep(int msecs)
 {
+#ifdef _WIN32
+  Sleep(msecs);
+#else
   usleep(msecs * 1000);
+#endif
 }
 
 /*****************************************************************************/
-int g_thread_create(void* (*start_routine)(void*), void* arg)
+#ifdef _WIN32
+int g_thread_create(unsigned long (__stdcall * start_routine)(void*), void* arg)
+{
+  DWORD thread;
+
+  return !CreateThread(0, 0, start_routine, arg, 0, &thread);
+}
+#else
+int g_thread_create(void* (* start_routine)(void*), void* arg)
 {
   pthread_t thread;
 
   return pthread_create(&thread, 0, start_routine, arg);
 }
+#endif
 
 /* rc4 stuff */
 
@@ -451,6 +510,9 @@ int g_mod_exp(char* out, char* in, char* mod, char* exp)
 /*****************************************************************************/
 void g_random(char* data, int len)
 {
+#ifdef _WIN32
+  memset(data, 0x44, len);
+#else
   int fd;
 
   memset(data, 0x44, len);
@@ -462,6 +524,7 @@ void g_random(char* data, int len)
     read(fd, data, len);
     close(fd);
   }
+#endif
 }
 
 /*****************************************************************************/
@@ -479,13 +542,23 @@ int g_memcmp(void* s1, void* s2, int len)
 /*****************************************************************************/
 int g_file_open(char* file_name)
 {
+#ifdef _WIN32
+  return (int)CreateFile(file_name, GENERIC_READ | GENERIC_WRITE,
+                         FILE_SHARE_READ | FILE_SHARE_WRITE,
+                         0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+#else
   return open(file_name, O_RDWR | O_CREAT);
+#endif
 }
 
 /*****************************************************************************/
 int g_file_close(int fd)
 {
+#ifdef _WIN32
+  CloseHandle((HANDLE)fd);
+#else
   close(fd);
+#endif
   return 0;
 }
 
@@ -493,27 +566,49 @@ int g_file_close(int fd)
 /* read from file*/
 int g_file_read(int fd, char* ptr, int len)
 {
+#ifdef _WIN32
+  if (ReadFile((HANDLE)fd, (LPVOID)ptr, (DWORD)len, (LPDWORD)&len, 0))
+    return len;
+  else
+    return -1;
+#else
   return read(fd, ptr, len);
+#endif
 }
 
 /*****************************************************************************/
 /* write to file */
 int g_file_write(int fd, char* ptr, int len)
 {
+#ifdef _WIN32
+  if (WriteFile((HANDLE)fd, (LPVOID)ptr, (DWORD)len, (LPDWORD)&len, 0))
+    return len;
+  else
+    return -1;
+#else
   return write(fd, ptr, len);
+#endif
 }
 
 /*****************************************************************************/
 /* move file pointer */
 int g_file_seek(int fd, int offset)
 {
+#ifdef _WIN32
+  return SetFilePointer((HANDLE)fd, offset, 0, FILE_BEGIN);
+#else
   return lseek(fd, offset, SEEK_SET);
+#endif
 }
 
 /*****************************************************************************/
 /* do a write lock on a file */
+/* return boolean */
 int g_file_lock(int fd, int start, int len)
 {
+#ifdef _WIN32
+  return LockFile((HANDLE)fd, start, 0, len, 0);
+#else
   struct flock lock;
 
   lock.l_type = F_WRLCK;
@@ -523,6 +618,7 @@ int g_file_lock(int fd, int start, int len)
   if (fcntl(fd, F_SETLK, &lock) == -1)
     return 0;
   return 1;
+#endif
 }
 
 /*****************************************************************************/

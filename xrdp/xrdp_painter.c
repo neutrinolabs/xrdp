@@ -159,12 +159,16 @@ int xrdp_painter_fill_rect(struct xrdp_painter* self,
   i = 0;
   while (xrdp_region_get_rect(region, i, &rect) == 0)
   {
-    DEBUG(("sending rect order %d %d %d %d\n\r", rect.left, rect.top,
-           rect.right, rect.bottom));
-    xrdp_orders_rect(self->orders, rect.left, rect.top,
-                     rect.right - rect.left,
-                     rect.bottom - rect.top,
-                     self->fg_color, 0);
+    if (!ISRECTEMPTY(rect))
+    {
+      DEBUG(("sending rect order %d %d %d %d\n\r",
+             rect.left, rect.top,
+             rect.right, rect.bottom));
+      xrdp_orders_rect(self->orders, rect.left, rect.top,
+                       rect.right - rect.left,
+                       rect.bottom - rect.top,
+                       self->fg_color, 0);
+    }
     i++;
   }
   xrdp_region_delete(region);
@@ -196,13 +200,17 @@ int xrdp_painter_fill_rect2(struct xrdp_painter* self,
   i = 0;
   while (xrdp_region_get_rect(region, i, &rect) == 0)
   {
-    DEBUG(("sending rect2 order %d %d %d %d\n\r", rect.left, rect.top,
-           rect.right, rect.bottom));
-    xrdp_orders_pat_blt(self->orders, rect.left, rect.top,
-                        rect.right - rect.left,
-                        rect.bottom - rect.top,
-                        self->rop, self->bg_color, self->fg_color,
-                        &self->brush, 0);
+    if (!ISRECTEMPTY(rect))
+    {
+      DEBUG(("sending rect2 order %d %d %d %d\n\r",
+             rect.left, rect.top,
+             rect.right, rect.bottom));
+      xrdp_orders_pat_blt(self->orders, rect.left, rect.top,
+                          rect.right - rect.left,
+                          rect.bottom - rect.top,
+                          self->rop, self->bg_color, self->fg_color,
+                          &self->brush, 0);
+    }
     i++;
   }
   xrdp_region_delete(region);
@@ -269,47 +277,50 @@ int xrdp_painter_draw_bitmap(struct xrdp_painter* self,
       k = 0;
       while (xrdp_region_get_rect(region, k, &rect) == 0)
       {
-        MAKERECT(rect1, x1, y1, w, h);
-        if (rect_intersect(&rect, &rect1, &rect2))
+        if (!ISRECTEMPTY(rect))
         {
-          ok = 1;
-          if (self->use_clip)
+          MAKERECT(rect1, x1, y1, w, h);
+          if (rect_intersect(&rect, &rect1, &rect2))
           {
-            rect = self->clip;
-            RECTOFFSET(rect, x, y);
-            if (!rect_intersect(&rect2, &rect, &rect1))
-              ok = 0;
-          }
-          else
-            rect1 = rect2;
-          if (ok)
-          {
-            rect1.right--;
-            rect1.bottom--;
-            /* check these so ms client don't crash */
-            if (x1 + w >= self->wm->screen->width)
-              w = self->wm->screen->width - x1;
-            if (y1 + h >= self->wm->screen->height)
-              h = self->wm->screen->height - y1;
-            if (w > 0 && h > 0 && x1 + w > 0 && y1 + h > 0)
+            ok = 1;
+            if (self->use_clip)
             {
-              srcx = 0;
-              srcy = 0;
-              if (x1 < 0)
+              rect = self->clip;
+              RECTOFFSET(rect, x, y);
+              if (!rect_intersect(&rect2, &rect, &rect1))
+                ok = 0;
+            }
+            else
+              rect1 = rect2;
+            if (ok)
+            {
+              rect1.right--;
+              rect1.bottom--;
+              /* check these so ms client don't crash */
+              if (x1 + w >= self->wm->screen->width)
+                w = self->wm->screen->width - x1;
+              if (y1 + h >= self->wm->screen->height)
+                h = self->wm->screen->height - y1;
+              if (w > 0 && h > 0 && x1 + w > 0 && y1 + h > 0)
               {
-                w = w + x1;
-                srcx = srcx - x1;
-                x1 = 0;
+                srcx = 0;
+                srcy = 0;
+                if (x1 < 0)
+                {
+                  w = w + x1;
+                  srcx = srcx - x1;
+                  x1 = 0;
+                }
+                if (y1 < 0)
+                {
+                  h = h + y1;
+                  srcy = srcy - y1;
+                  y1 = 0;
+                }
+                xrdp_orders_mem_blt(self->orders, cache_id, palette_id,
+                                    x1, y1, w, h, self->rop, srcx, srcy,
+                                    cache_idx, &rect1);
               }
-              if (y1 < 0)
-              {
-                h = h + y1;
-                srcy = srcy - y1;
-                y1 = 0;
-              }
-              xrdp_orders_mem_blt(self->orders, cache_id, palette_id,
-                                  x1, y1, w, h, self->rop, srcx, srcy,
-                                  cache_idx, &rect1);
             }
           }
         }
@@ -436,17 +447,20 @@ int xrdp_painter_draw_text(struct xrdp_painter* self,
   k = 0;
   while (xrdp_region_get_rect(region, k, &rect) == 0)
   {
-    if (rect_intersect(&rect, &clip_rect, &draw_rect))
+    if (!ISRECTEMPTY(rect))
     {
-      x1 = x;
-      y1 = y + total_height;
-      draw_rect.right--;
-      draw_rect.bottom--;
-      flags = 0x03; /* 0x73; TEXT2_IMPLICIT_X and something else */
-      xrdp_orders_text(self->orders, f, flags, 0,
-                       font->color, 0,
-                       x, y, x + total_width, y + total_height,
-                       0, 0, 0, 0, x1, y1, data, len * 2, &draw_rect);
+      if (rect_intersect(&rect, &clip_rect, &draw_rect))
+      {
+        x1 = x;
+        y1 = y + total_height;
+        draw_rect.right--;
+        draw_rect.bottom--;
+        flags = 0x03; /* 0x73; TEXT2_IMPLICIT_X and something else */
+        xrdp_orders_text(self->orders, f, flags, 0,
+                         font->color, 0,
+                         x, y, x + total_width, y + total_height,
+                         0, 0, 0, 0, x1, y1, data, len * 2, &draw_rect);
+      }
     }
     k++;
   }

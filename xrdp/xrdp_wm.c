@@ -31,7 +31,7 @@ struct xrdp_wm* xrdp_wm_create(struct xrdp_process* owner)
   self = (struct xrdp_wm*)g_malloc(sizeof(struct xrdp_wm), 1);
   self->screen = xrdp_bitmap_create(owner->rdp_layer->width,
                                     owner->rdp_layer->height,
-                                    owner->rdp_layer->bpp, 2);
+                                    owner->rdp_layer->bpp, WND_TYPE_SCREEN);
   self->screen->wm = self;
   self->pro_layer = owner;
   self->orders = owner->orders;

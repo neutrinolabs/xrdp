@@ -390,6 +390,7 @@ struct xrdp_bitmap
   struct xrdp_list* child_list;
   struct xrdp_wm* wm;
   int cursor;
+  int edit_pos;
   /* msg 1 = click 2 = mouse move 3 = paint 100 = modal result */
   int (*notify)(struct xrdp_bitmap* wnd, struct xrdp_bitmap* sender,
                 int msg, int param1, int param2);

@@ -532,8 +532,7 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
     xrdp_painter_fill_rect(painter, self, 1, 1, self->width - 2, 1);
     /* draw text */
     painter->fg_color = self->wm->black;
-    xrdp_painter_draw_text(painter, self, 2, 2, self->caption);
-//    xrdp_painter_draw_text(painter, self, 2, 2, "hi");
+    xrdp_painter_draw_text(painter, self, 4, 2, self->caption);
   }
   else if (self->type == WND_TYPE_LABEL) /* 6 */
   {

@@ -26,9 +26,8 @@ static struct xrdp_listen* g_listen = 0;
 
 /*****************************************************************************/
 /* i can't get stupid in_val to work, hum using global var for now */
-void* xrdp_listen_run(void* in_val)
+THREAD_RV THREAD_CC xrdp_listen_run(void* in_val)
 {
-
   DEBUG(("listener started\n\r"));
   xrdp_listen_main_loop(g_listen);
   DEBUG(("listener done\n\r"));

@@ -642,7 +642,7 @@ int xrdp_orders_dest_blt(struct xrdp_orders* self, int x, int y,
   }
   if (rop != self->dest_blt_rop)
   {
-    present |= 0x0010;
+    present |= 0x10;
     out_uint8(self->out_s, rop);
     self->dest_blt_rop = rop;
   }

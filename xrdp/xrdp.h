@@ -68,6 +68,14 @@
 /* font macros */
 #define FONT_DATASIZE(f) ((((f)->height * (((f)->width + 7) / 8)) + 3) & ~3);
 
+#ifdef _WIN32
+#define THREAD_RV unsigned long
+#define THREAD_CC __stdcall
+#else
+#define THREAD_RV void*
+#define THREAD_CC
+#endif
+
 /* os_calls.c */
 int g_init_system(void);
 int g_exit_system(void);
@@ -93,7 +101,7 @@ int g_tcp_select(int sck);
 int g_is_term(void);
 void g_set_term(int in_val);
 void g_sleep(int msecs);
-int g_thread_create(void* (*start_routine)(void*), void* arg);
+int g_thread_create(THREAD_RV (THREAD_CC * start_routine)(void*), void* arg);
 void* g_rc4_info_create(void);
 void g_rc4_info_delete(void* rc4_info);
 void g_rc4_set_key(void* rc4_info, char* key, int len);

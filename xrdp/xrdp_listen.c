@@ -108,7 +108,7 @@ int xrdp_listen_delete_pro(struct xrdp_listen* self, struct xrdp_process* pro)
 
 /*****************************************************************************/
 /* i can't get stupid in_val to work, hum using global var for now */
-void* xrdp_process_run(void* in_val)
+THREAD_RV THREAD_CC xrdp_process_run(void* in_val)
 {
   DEBUG(("process started\n\r"));
   xrdp_process_main_loop(g_process);
