@@ -20,14 +20,16 @@
 
    put all the os / arch define in here you want
 
+   if you want pthread calls define USE_PTHREAD in makefile
+   if you want openssl calls define USE_OPENSSL in makefile
+
 */
 
-#ifdef _WIN32
+#if defined(_WIN32)
 #include <windows.h>
 #include <winsock.h>
 #else
 #include <unistd.h>
-#include <pthread.h>
 #include <errno.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -39,31 +41,40 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <signal.h>
+#include <fcntl.h>
 #endif
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <fcntl.h>
+
+#if defined(USE_OPENSSL)
 #include <openssl/rc4.h>
 #include <openssl/md5.h>
 #include <openssl/sha.h>
 #include <openssl/bn.h>
+#endif
+
+#if defined(USE_PTHREAD)
+#include <pthread.h>
+#endif
 
 //#define MEMLEAK
 
-#ifdef _WIN32
+#if defined(_WIN32)
 static CRITICAL_SECTION g_term_mutex;
-#else
-static pthread_mutex_t g_term_mutex = PTHREAD_MUTEX_INITIALIZER;
-#endif
 static int g_term = 0;
+#elif defined(USE_PTHREAD)
+static pthread_mutex_t g_term_mutex = PTHREAD_MUTEX_INITIALIZER;
+static int g_term = 0;
+#endif
 
-#ifdef MEMLEAK
+#if defined(MEMLEAK)
 #include "/home/j/cvs/xrdp/xrdp/xrdp.h"
 #endif
 
-#ifdef MEMLEAK
+#if defined(MEMLEAK)
 static int g_memsize = 0;
 static int g_memid = 0;
 static struct xrdp_list* g_memlist = 0;
@@ -71,20 +82,20 @@ static struct xrdp_list* g_memlist = 0;
 
 /* forward declarations */
 void g_printf(char* format, ...);
-void pipe_sig(int sig_num);
+void g_pipe_sig(int sig_num);
 
 /*****************************************************************************/
 int g_init_system(void)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
   WSADATA w;
 
   WSAStartup(2, &w);
   InitializeCriticalSection(&g_term_mutex);
 #else
-  signal(SIGPIPE, pipe_sig);
+  signal(SIGPIPE, g_pipe_sig);
 #endif
-#ifdef MEMLEAK
+#if defined(MEMLEAK)
   g_memlist = xrdp_list_create();
   g_printf("some info\n\r");
   g_printf("sizeof xrdp_bitmap is %d\n\r", sizeof(struct xrdp_bitmap));
@@ -97,11 +108,11 @@ int g_init_system(void)
 /*****************************************************************************/
 int g_exit_system(void)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
   WSACleanup();
   DeleteCriticalSection(&g_term_mutex);
 #endif
-#ifdef MEMLEAK
+#if defined(MEMLEAK)
   int i;
   struct xrdp_mem* p;
 
@@ -120,7 +131,7 @@ int g_exit_system(void)
 /*****************************************************************************/
 void* g_malloc(int size, int zero)
 {
-#ifdef MEMLEAK
+#if defined(MEMLEAK)
   char* rv;
   struct xrdp_mem* p;
 
@@ -167,7 +178,7 @@ void* g_malloc1(int size, int zero)
 /*****************************************************************************/
 void g_free(void* ptr)
 {
-#ifdef MEMLEAK
+#if defined(MEMLEAK)
   struct xrdp_mem* p;
   int i;
 
@@ -312,7 +323,7 @@ void g_tcp_close(int sck)
   {
     return;
   }
-#ifdef _WIN32
+#if defined(_WIN32)
   closesocket(sck);
 #else
   close(sck);
@@ -354,7 +365,7 @@ int g_tcp_set_non_blocking(int sck)
 {
   unsigned long i;
 
-#ifdef _WIN32
+#if defined(_WIN32)
   i = 1;
   ioctlsocket(sck, FIONBIO, &i);
 #else
@@ -398,7 +409,7 @@ int g_tcp_listen(int sck)
 int g_tcp_accept(int sck)
 {
   struct sockaddr_in s;
-#ifdef _WIN32
+#if defined(_WIN32)
   signed int i;
 #else
   unsigned int i;
@@ -412,7 +423,7 @@ int g_tcp_accept(int sck)
 /*****************************************************************************/
 void g_sleep(int msecs)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
   Sleep(msecs);
 #else
   usleep(msecs * 1000);
@@ -422,7 +433,7 @@ void g_sleep(int msecs)
 /*****************************************************************************/
 int g_tcp_last_error_would_block(int sck)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
   return WSAGetLastError() == WSAEWOULDBLOCK;
 #else
   return errno == EWOULDBLOCK;
@@ -436,73 +447,9 @@ int g_tcp_recv(int sck, void* ptr, int len, int flags)
 }
 
 /*****************************************************************************/
-int g_tcp_force_recv(int sck, char* data, int len)
-{
-  int rcvd;
-
-  while (len > 0)
-  {
-    rcvd = g_tcp_recv(sck, data, len, 0);
-    if (rcvd == -1)
-    {
-      if (g_tcp_last_error_would_block(sck))
-      {
-        g_sleep(1);
-      }
-      else
-      {
-        return 1;
-      }
-    }
-    else if (rcvd == 0)
-    {
-      return 1;
-    }
-    else
-    {
-      data += rcvd;
-      len -= rcvd;
-    }
-  }
-  return 0;
-}
-
-/*****************************************************************************/
 int g_tcp_send(int sck, void* ptr, int len, int flags)
 {
   return send(sck, ptr, len, flags);
-}
-
-/*****************************************************************************/
-int g_tcp_force_send(int sck, char* data, int len)
-{
-  int sent;
-
-  while (len > 0)
-  {
-    sent = g_tcp_send(sck, data, len, 0);
-    if (sent == -1)
-    {
-      if (g_tcp_last_error_would_block(sck))
-      {
-        g_sleep(1);
-      }
-      else
-      {
-        return 1;
-      }
-    }
-    else if (sent == 0)
-    {
-      return 1;
-    }
-    else
-    {
-      data += sent;
-      len -= sent;
-    }
-  }
-  return 0;
 }
 
 /*****************************************************************************/
@@ -550,14 +497,16 @@ int g_is_term(void)
 {
   int rv;
 
-#ifdef _WIN32
+#if defined(_WIN32)
   EnterCriticalSection(&g_term_mutex);
   rv = g_term;
   LeaveCriticalSection(&g_term_mutex);
-#else
+#elif defined (USE_PTHREAD)
   pthread_mutex_lock(&g_term_mutex);
   rv = g_term;
   pthread_mutex_unlock(&g_term_mutex);
+#else
+  rv = 1;
 #endif
   return rv;
 }
@@ -565,11 +514,11 @@ int g_is_term(void)
 /*****************************************************************************/
 void g_set_term(int in_val)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
   EnterCriticalSection(&g_term_mutex);
   g_term = in_val;
   LeaveCriticalSection(&g_term_mutex);
-#else
+#elif defined(USE_PTHREAD)
   pthread_mutex_lock(&g_term_mutex);
   g_term = in_val;
   pthread_mutex_unlock(&g_term_mutex);
@@ -577,16 +526,14 @@ void g_set_term(int in_val)
 }
 
 /*****************************************************************************/
-#ifdef XRDP_LIB
-/* this is so libxrdp don't require libpthread */
-#elif defined(_WIN32)
+#if defined(_WIN32)
 int g_thread_create(unsigned long (__stdcall * start_routine)(void*), void* arg)
 {
   DWORD thread;
 
   return !CreateThread(0, 0, start_routine, arg, 0, &thread);
 }
-#else
+#elif defined(USE_PTHREAD)
 int g_thread_create(void* (* start_routine)(void*), void* arg)
 {
   pthread_t thread;
@@ -597,6 +544,8 @@ int g_thread_create(void* (* start_routine)(void*), void* arg)
   return rv;
 }
 #endif
+
+#if defined(USE_OPENSSL)
 
 /* rc4 stuff */
 
@@ -716,10 +665,12 @@ int g_mod_exp(char* out, char* in, char* mod, char* exp)
   return rv;
 }
 
+#endif
+
 /*****************************************************************************/
 void g_random(char* data, int len)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
   memset(data, 0x44, len);
 #else
   int fd;
@@ -753,7 +704,7 @@ int g_memcmp(void* s1, void* s2, int len)
 /*****************************************************************************/
 int g_file_open(char* file_name)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
   return (int)CreateFile(file_name, GENERIC_READ | GENERIC_WRITE,
                          FILE_SHARE_READ | FILE_SHARE_WRITE,
                          0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
@@ -765,7 +716,7 @@ int g_file_open(char* file_name)
 /*****************************************************************************/
 int g_file_close(int fd)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
   CloseHandle((HANDLE)fd);
 #else
   close(fd);
@@ -777,7 +728,7 @@ int g_file_close(int fd)
 /* read from file*/
 int g_file_read(int fd, char* ptr, int len)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
   if (ReadFile((HANDLE)fd, (LPVOID)ptr, (DWORD)len, (LPDWORD)&len, 0))
   {
     return len;
@@ -795,7 +746,7 @@ int g_file_read(int fd, char* ptr, int len)
 /* write to file */
 int g_file_write(int fd, char* ptr, int len)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
   if (WriteFile((HANDLE)fd, (LPVOID)ptr, (DWORD)len, (LPDWORD)&len, 0))
   {
     return len;
@@ -813,7 +764,7 @@ int g_file_write(int fd, char* ptr, int len)
 /* move file pointer */
 int g_file_seek(int fd, int offset)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
   return SetFilePointer((HANDLE)fd, offset, 0, FILE_BEGIN);
 #else
   return lseek(fd, offset, SEEK_SET);
@@ -825,7 +776,7 @@ int g_file_seek(int fd, int offset)
 /* return boolean */
 int g_file_lock(int fd, int start, int len)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
   return LockFile((HANDLE)fd, start, 0, len, 0);
 #else
   struct flock lock;
@@ -891,7 +842,7 @@ char* g_strcat(char* dest, char* src)
 {
   if (dest == 0 || src == 0)
   {
-    return 0;
+    return dest;
   }
   return strcat(dest, src);
 }
@@ -921,7 +872,11 @@ int g_strcmp(char* c1, char* c2)
 /*****************************************************************************/
 int g_load_library(char* in)
 {
+#if defined(_WIN32)
+  return 0;
+#else
   return (int)dlopen(in, RTLD_LOCAL | RTLD_LAZY);
+#endif
 }
 
 /*****************************************************************************/
@@ -931,7 +886,11 @@ int g_free_library(int lib)
   {
     return 0;
   }
+#if defined(_WIN32)
+  return 0;
+#else
   return dlclose((void*)lib);
+#endif
 }
 
 /*****************************************************************************/
@@ -942,13 +901,17 @@ void* g_get_proc_address(int lib, char* name)
   {
     return 0;
   }
+#if defined(_WIN32)
+  return 0;
+#else
   return dlsym((void*)lib, name);
+#endif
 }
 
 /*****************************************************************************/
 int g_system(char* aexec)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
   return 0;
 #else
   return system(aexec);
@@ -958,14 +921,14 @@ int g_system(char* aexec)
 /*****************************************************************************/
 void g_signal(int sig_num, void (*func)(int))
 {
-#ifdef _WIN32
+#if defined(_WIN32)
 #else
   signal(sig_num, func);
 #endif
 }
 
 /*****************************************************************************/
-void pipe_sig(int sig_num)
+void g_pipe_sig(int sig_num)
 {
   /* do nothing */
   g_printf("got SIGPIPE(%d)\n\r", sig_num);

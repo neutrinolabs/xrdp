@@ -7,8 +7,8 @@ XRDPOBJ = ../common/os_calls.o \
           xrdp_login_wnd.o xrdp_file.o xrdp_bitmap_compress.o \
           xrdp_interface.o
 
-#CFLAGS = -Wall -O2 -I../common -DXRDP_DEBUG
-CFLAGS = -Wall -O2 -I../common
+#CFLAGS = -Wall -O2 -I../common -DXRDP_DEBUG -DUSE_OPENSSL -DUSE_PTHREAD
+CFLAGS = -Wall -O2 -I../common -DUSE_OPENSSL -DUSE_PTHREAD
 LDFLAGS = -L /usr/gnu/lib
 LIBS = -lpthread -lcrypto
 #CC = g++

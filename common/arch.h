@@ -14,7 +14,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
    xrdp: A Remote Desktop Protocol server.
-   Copyright (C) Jay Sorg 2004
+   Copyright (C) Jay Sorg 2004-2005
 
 */
 
@@ -31,12 +31,11 @@
 #define NEED_ALIGN
 #endif
 
-/* defines for thread creation factor function */
-#ifdef _WIN32
+/* defines for thread creation factory functions */
+#if defined(_WIN32)
 #define THREAD_RV unsigned long
 #define THREAD_CC __stdcall
 #else
 #define THREAD_RV void*
 #define THREAD_CC
 #endif
-

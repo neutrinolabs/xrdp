@@ -21,8 +21,8 @@
 /* modified for xrdp */
 /* this is a super fast stream method, you bet */
 
-#if defined L_ENDIAN
-#elif defined B_ENDIAN
+#if defined(L_ENDIAN)
+#elif defined(B_ENDIAN)
 #else
 #error Unknown endianness.
 #endif
@@ -109,7 +109,7 @@ struct stream
 }
 
 /******************************************************************************/
-#if defined B_ENDIAN || defined NEED_ALIGN
+#if defined(B_ENDIAN) || defined(NEED_ALIGN)
 #define in_sint16_le(s, v) \
 { \
   v = (signed short) \
@@ -128,7 +128,7 @@ struct stream
 #endif
 
 /******************************************************************************/
-#if defined B_ENDIAN || defined NEED_ALIGN
+#if defined(B_ENDIAN) || defined(NEED_ALIGN)
 #define in_uint16_le(s, v) \
 { \
   v = (unsigned short) \
@@ -157,7 +157,7 @@ struct stream
 }
 
 /******************************************************************************/
-#if defined B_ENDIAN || defined NEED_ALIGN
+#if defined(B_ENDIAN) || defined(NEED_ALIGN)
 #define in_uint32_le(s, v) \
 { \
   v = (unsigned long) \
@@ -201,7 +201,7 @@ struct stream
 }
 
 /******************************************************************************/
-#if defined B_ENDIAN || defined NEED_ALIGN
+#if defined(B_ENDIAN) || defined(NEED_ALIGN)
 #define out_uint16_le(s, v) \
 { \
   *(s->p) = (unsigned char)(v); \
@@ -227,7 +227,7 @@ struct stream
 }
 
 /******************************************************************************/
-#if defined B_ENDIAN || defined NEED_ALIGN
+#if defined(B_ENDIAN) || defined(NEED_ALIGN)
 #define out_uint32_le(s, v) \
 { \
   *(s->p) = (unsigned char)(v); \

@@ -59,6 +59,70 @@ static unsigned char s_fixedkey[8] = {23, 82, 107, 6, 35, 78, 88, 7};
 
 struct session_item session_items[100];
 
+/*****************************************************************************/
+int tcp_force_recv(int sck, char* data, int len)
+{
+  int rcvd;
+
+  while (len > 0)
+  {
+    rcvd = g_tcp_recv(sck, data, len, 0);
+    if (rcvd == -1)
+    {
+      if (g_tcp_last_error_would_block(sck))
+      {
+        g_sleep(1);
+      }
+      else
+      {
+        return 1;
+      }
+    }
+    else if (rcvd == 0)
+    {
+      return 1;
+    }
+    else
+    {
+      data += rcvd;
+      len -= rcvd;
+    }
+  }
+  return 0;
+}
+
+/*****************************************************************************/
+int tcp_force_send(int sck, char* data, int len)
+{
+  int sent;
+
+  while (len > 0)
+  {
+    sent = g_tcp_send(sck, data, len, 0);
+    if (sent == -1)
+    {
+      if (g_tcp_last_error_would_block(sck))
+      {
+        g_sleep(1);
+      }
+      else
+      {
+        return 1;
+      }
+    }
+    else if (sent == 0)
+    {
+      return 1;
+    }
+    else
+    {
+      data += sent;
+      len -= sent;
+    }
+  }
+  return 0;
+}
+
 /******************************************************************************/
 struct session_item* find_session_item(char* name, int width,
                                        int height, int bpp)
@@ -394,12 +458,12 @@ start session\n");
         while (in_sck > 0)
         {
           init_stream(in_s, 8192);
-          if (g_tcp_force_recv(in_sck, in_s->data, 8) == 0)
+          if (tcp_force_recv(in_sck, in_s->data, 8) == 0)
           {
             in_uint32_be(in_s, version);
             in_uint32_be(in_s, size);
             init_stream(in_s, 8192);
-            if (g_tcp_force_recv(in_sck, in_s->data, size - 8) == 0)
+            if (tcp_force_recv(in_sck, in_s->data, size - 8) == 0)
             {
               if (version == 0)
               {
@@ -443,8 +507,8 @@ start session\n");
                   out_uint16_be(out_s, ok); // data
                   out_uint16_be(out_s, display); // data
                   s_mark_end(out_s);
-                  g_tcp_force_send(in_sck, out_s->data,
-                                    out_s->end - out_s->data);
+                  tcp_force_send(in_sck, out_s->data,
+                                 out_s->end - out_s->data);
                 }
               }
             }
@@ -501,13 +565,13 @@ start session\n");
       s_pop_layer(out_s, channel_hdr);
       out_uint32_be(out_s, 0); // version
       out_uint32_be(out_s, out_s->end - out_s->data); // size
-      g_tcp_force_send(sck, out_s->data, out_s->end - out_s->data);
-      if (g_tcp_force_recv(sck, in_s->data, 8) == 0)
+      tcp_force_send(sck, out_s->data, out_s->end - out_s->data);
+      if (tcp_force_recv(sck, in_s->data, 8) == 0)
       {
         in_uint32_be(in_s, version);
         in_uint32_be(in_s, size);
         init_stream(in_s, 8192);
-        if (g_tcp_force_recv(sck, in_s->data, size - 8) == 0)
+        if (tcp_force_recv(sck, in_s->data, size - 8) == 0)
         {
           if (version == 0)
           {
