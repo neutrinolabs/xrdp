@@ -131,7 +131,9 @@ struct xrdp_sec* xrdp_sec_create(struct xrdp_rdp* owner)
 void xrdp_sec_delete(struct xrdp_sec* self)
 {
   if (self == 0)
+  {
     return;
+  }
   xrdp_mcs_delete(self->mcs_layer);
   g_rc4_info_delete(self->decrypt_rc4_info);
   g_rc4_info_delete(self->encrypt_rc4_info);
@@ -145,7 +147,9 @@ void xrdp_sec_delete(struct xrdp_sec* self)
 int xrdp_sec_init(struct xrdp_sec* self, struct stream* s)
 {
   if (xrdp_mcs_init(self->mcs_layer, s) != 0)
+  {
     return 1;
+  }
   s_push_layer(s, sec_hdr, 4);
   return 0;
 }
@@ -185,7 +189,9 @@ int xrdp_sec_update(char* key, char* update_key, int key_len)
   g_rc4_set_key(rc4_info, key, key_len);
   g_rc4_crypt(rc4_info, key, key_len);
   if (key_len == 8)
+  {
     xrdp_sec_make_40bit(key);
+  }
   g_sha1_info_delete(sha1_info);
   g_md5_info_delete(md5_info);
   g_rc4_info_delete(rc4_info);
@@ -220,14 +226,18 @@ int xrdp_sec_process_logon_info(struct xrdp_sec* self, struct stream* s)
 
   in_uint8s(s, 4);
   in_uint32_le(s, flags);
-  DEBUG(("in xrdp_sec_process_logon_info flags $%x\n", flags));
+  DEBUG(("in xrdp_sec_process_logon_info flags $%x\n\r", flags));
   /* this is the first test that the decrypt is working */
   if ((flags & RDP_LOGON_NORMAL) != RDP_LOGON_NORMAL) /* 0x33 */
-    return 1;                                         /* must be or error */
+  {                                                   /* must be or error */
+    return 1;
+  }
   if (flags & RDP_LOGON_AUTO)
-    ;
+  {
+  }
   if (flags & RDP_COMPRESSION)
-    ;
+  {
+  }
   in_uint16_le(s, len_domain);
   in_uint16_le(s, len_user);
   in_uint16_le(s, len_password);
@@ -400,7 +410,9 @@ void xrdp_sec_establish_keys(struct xrdp_sec* self)
     self->rc4_key_len = 8;
   }
   else
+  {
     self->rc4_key_len = 16;
+  }
   g_memcpy(self->decrypt_update_key, self->decrypt_key, 16);
   g_memcpy(self->encrypt_update_key, self->encrypt_key, 16);
   g_rc4_set_key(self->decrypt_rc4_info, self->decrypt_key, self->rc4_key_len);
@@ -416,7 +428,9 @@ int xrdp_sec_recv(struct xrdp_sec* self, struct stream* s, int* chan)
 
   DEBUG((" in xrdp_sec_recv\n\r"));
   if (xrdp_mcs_recv(self->mcs_layer, s, chan) != 0)
+  {
     return 1;
+  }
   in_uint32_le(s, flags);
   DEBUG((" in xrdp_sec_recv flags $%x\n\r", flags));
   if (flags & SEC_ENCRYPT) /* 0x08 */
@@ -437,16 +451,22 @@ int xrdp_sec_recv(struct xrdp_sec* self, struct stream* s, int* chan)
   if (flags & SEC_LOGON_INFO) /* 0x40 */
   {
     if (xrdp_sec_process_logon_info(self, s) != 0)
+    {
       return 1;
+    }
     if (xrdp_sec_send_lic_initial(self) != 0)
+    {
       return 1;
+    }
     *chan = 1; /* just set a non existing channel and exit */
     return 0;
   }
   if (flags & SEC_LICENCE_NEG) /* 0x80 */
   {
     if (xrdp_sec_send_lic_response(self) != 0)
+    {
       return 1;
+    }
     return -1; /* special error that means send demand active */
   }
   DEBUG((" out xrdp_sec_recv error\n\r"));
@@ -462,7 +482,9 @@ int xrdp_sec_send(struct xrdp_sec* self, struct stream* s, int flags)
   s_pop_layer(s, sec_hdr);
   out_uint32_le(s, flags);
   if (xrdp_mcs_send(self->mcs_layer, s) != 0)
+  {
     return 1;
+  }
   DEBUG((" out xrdp_sec_send\n\r"));
   return 0;
 }
@@ -541,7 +563,9 @@ int xrdp_sec_incoming(struct xrdp_sec* self)
   DEBUG(("in xrdp_sec_incoming\n\r"));
   xrdp_sec_out_mcs_data(self);
   if (xrdp_mcs_incoming(self->mcs_layer) != 0)
+  {
     return 1;
+  }
 #ifdef XRDP_DEBUG
   g_printf("client mcs data received\n\r");
   g_hexdump(self->client_mcs_data.data,

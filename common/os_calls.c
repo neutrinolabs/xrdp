@@ -181,7 +181,7 @@ void g_free1(void* ptr)
 }
 
 /*****************************************************************************/
-void g_printf(const char* format, ...)
+void g_printf(char* format, ...)
 {
   va_list ap;
 

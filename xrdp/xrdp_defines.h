@@ -51,3 +51,5 @@
 #define COLOR24(r, g, b) ((r) | ((g) << 8) | ((b) << 16))
 /* font macros */
 #define FONT_DATASIZE(f) ((((f)->height * (((f)->width + 7) / 8)) + 3) & ~3);
+/* use crc for bitmap cache lookups */
+#define USE_CRC

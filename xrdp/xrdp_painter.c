@@ -40,7 +40,9 @@ struct xrdp_painter* xrdp_painter_create(struct xrdp_wm* wm)
 void xrdp_painter_delete(struct xrdp_painter* self)
 {
   if (self == 0)
+  {
     return;
+  }
   xrdp_font_delete(self->font);
   g_free(self);
 }
@@ -68,25 +70,43 @@ int xrdp_painter_clip_adj(struct xrdp_painter* self, int* x, int* y,
   int dy;
 
   if (!self->use_clip)
+  {
     return 1;
+  }
   if (self->clip.left > *x)
+  {
     dx = self->clip.left - *x;
+  }
   else
+  {
     dx = 0;
+  }
   if (self->clip.top > *y)
+  {
     dy = self->clip.top - *y;
+  }
   else
+  {
     dy = 0;
+  }
   if (*x + *cx > self->clip.right)
+  {
     *cx = *cx - ((*x + *cx) - self->clip.right);
+  }
   if (*y + *cy > self->clip.bottom)
+  {
     *cy = *cy - ((*y + *cy) - self->clip.bottom);
+  }
   *cx = *cx - dx;
   *cy = *cy - dy;
   if (*cx <= 0)
+  {
     return 0;
+  }
   if (*cy <= 0)
+  {
     return 0;
+  }
   *x = *x + dx;
   *y = *y + dy;
   return 1;
@@ -147,14 +167,20 @@ int xrdp_painter_fill_rect(struct xrdp_painter* self,
   struct xrdp_rect rect;
 
   if (!check_bounds(bitmap, &x, &y, &cx, &cy))
+  {
     return 0;
+  }
   if (!xrdp_painter_clip_adj(self, &x, &y, &cx, &cy))
+  {
     return 0;
+  }
 
   /* todo data */
 
   if (bitmap->type == WND_TYPE_BITMAP) /* 0 */
+  {
     return 0;
+  }
   region = xrdp_region_create(self->wm);
   xrdp_wm_get_vis_region(self->wm, bitmap, x, y, cx, cy, region,
                          self->clip_children);
@@ -189,14 +215,20 @@ int xrdp_painter_fill_rect2(struct xrdp_painter* self,
   struct xrdp_rect rect;
 
   if (!check_bounds(bitmap, &x, &y, &cx, &cy))
+  {
     return 0;
+  }
   if (!xrdp_painter_clip_adj(self, &x, &y, &cx, &cy))
+  {
     return 0;
+  }
 
   /* todo data */
 
   if (bitmap->type == WND_TYPE_BITMAP) /* 0 */
+  {
     return 0;
+  }
   region = xrdp_region_create(self->wm);
   xrdp_wm_get_vis_region(self->wm, bitmap, x, y, cx, cy, region,
                          self->clip_children);
@@ -265,7 +297,7 @@ int xrdp_painter_draw_bitmap(struct xrdp_painter* self,
     y = y + b->top;
     b = b->parent;
   }
-  if (self->wm->use_bitmap_cache)
+  if (self->wm->client_info->use_bitmap_cache)
   {
     palette_id = xrdp_cache_add_palette(self->wm->cache, self->wm->palette);
     j = 0;
@@ -279,7 +311,11 @@ int xrdp_painter_draw_bitmap(struct xrdp_painter* self,
         w = MIN(SSW, to_draw->width - i);
         h = MIN(SSH, to_draw->height - j);
         b = xrdp_bitmap_create(w, h, self->wm->screen->bpp, 0);
+#ifdef USE_CRC
         xrdp_bitmap_copy_box_with_crc(to_draw, b, i, j, w, h);
+#else
+        xrdp_bitmap_copy_box(to_draw, b, i, j, w, h);
+#endif
         bitmap_id = xrdp_cache_add_bitmap(self->wm->cache, b);
         cache_id = HIWORD(bitmap_id);
         cache_idx = LOWORD(bitmap_id);
@@ -297,7 +333,9 @@ int xrdp_painter_draw_bitmap(struct xrdp_painter* self,
                 rect = self->clip;
                 RECTOFFSET(rect, x, y);
                 if (!rect_intersect(&rect2, &rect, &rect1))
+                {
                   ok = 0;
+                }
               }
               else
               {
@@ -430,12 +468,16 @@ int xrdp_painter_draw_text(struct xrdp_painter* self,
 
   len = g_strlen(text);
   if (len < 1)
+  {
     return 0;
+  }
 
   /* todo data */
 
   if (bitmap->type == 0)
+  {
     return 0;
+  }
   font = self->font;
   f = 0;
   k = 0;
@@ -465,7 +507,9 @@ int xrdp_painter_draw_text(struct xrdp_painter* self,
     b = b->parent;
   }
   if (self->use_clip)
+  {
     clip_rect = self->clip;
+  }
   else
   {
     MAKERECT(clip_rect, 0, 0, bitmap->width, bitmap->height);

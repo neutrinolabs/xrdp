@@ -28,25 +28,17 @@ struct xrdp_wm* xrdp_wm_create(struct xrdp_process* owner)
   struct xrdp_wm* self;
 
   self = (struct xrdp_wm*)g_malloc(sizeof(struct xrdp_wm), 1);
-  self->screen = xrdp_bitmap_create(owner->rdp_layer->width,
-                                    owner->rdp_layer->height,
-                                    owner->rdp_layer->bpp, WND_TYPE_SCREEN);
+  self->client_info = &owner->rdp_layer->client_info;
+  self->screen = xrdp_bitmap_create(self->client_info->width,
+                                    self->client_info->height,
+                                    self->client_info->bpp,
+                                    WND_TYPE_SCREEN);
   self->screen->wm = self;
   self->pro_layer = owner;
   self->orders = owner->orders;
   self->painter = xrdp_painter_create(self);
-  self->use_bitmap_comp = 1;
-  self->use_bitmap_cache = 1;
-  self->op1 = 0;
   self->rdp_layer = owner->rdp_layer;
-  self->cache = xrdp_cache_create(self, self->orders);
-  self->cache->use_bitmap_comp = self->use_bitmap_comp;
-  self->cache->cache1_entries = owner->rdp_layer->cache1_entries;
-  self->cache->cache1_size = owner->rdp_layer->cache1_size;
-  self->cache->cache2_entries = owner->rdp_layer->cache2_entries;
-  self->cache->cache2_size = owner->rdp_layer->cache2_size;
-  self->cache->cache3_entries = owner->rdp_layer->cache3_entries;
-  self->cache->cache3_size = owner->rdp_layer->cache3_size;
+  self->cache = xrdp_cache_create(self, self->orders, self->client_info);
   return self;
 }
 
@@ -127,11 +119,13 @@ int xrdp_wm_send_bitmap(struct xrdp_wm* self, struct xrdp_bitmap* bitmap,
   Bpp = (bitmap->bpp + 7) / 8;
   e = bitmap->width % 4;
   if (e != 0)
+  {
     e = 4 - e;
+  }
   line_size = bitmap->width * Bpp;
   make_stream(s);
   init_stream(s, 8192);
-  if (self->use_bitmap_comp)
+  if (self->client_info->use_bitmap_comp)
   {
     make_stream(temp_s);
     init_stream(temp_s, 65536);
@@ -148,7 +142,7 @@ int xrdp_wm_send_bitmap(struct xrdp_wm* self, struct xrdp_bitmap* bitmap,
       out_uint8s(s, 2); /* num_updates set later */
       do
       {
-        if (self->op1)
+        if (self->client_info->op1)
         {
           s_push_layer(s, channel_hdr, 18);
         }
@@ -163,7 +157,9 @@ int xrdp_wm_send_bitmap(struct xrdp_wm* self, struct xrdp_bitmap* bitmap,
                                              4096 - total_bufsize,
                                              i - 1, temp_s, e);
         if (lines_sending == 0)
+        {
           break;
+        }
         num_updates++;
         bufsize = s->p - p;
         total_bufsize += bufsize;
@@ -177,7 +173,7 @@ int xrdp_wm_send_bitmap(struct xrdp_wm* self, struct xrdp_bitmap* bitmap,
         out_uint16_le(s, bitmap->width + e); /* width */
         out_uint16_le(s, lines_sending); /* height */
         out_uint16_le(s, bitmap->bpp); /* bpp */
-        if (self->op1)
+        if (self->client_info->op1)
         {
           out_uint16_le(s, 0x401); /* compress */
           out_uint16_le(s, bufsize); /* compressed size */
@@ -187,8 +183,7 @@ int xrdp_wm_send_bitmap(struct xrdp_wm* self, struct xrdp_bitmap* bitmap,
         else
         {
           out_uint16_le(s, 0x1); /* compress */
-          j = bufsize + 8;
-          out_uint16_le(s, j);
+          out_uint16_le(s, bufsize + 8);
           out_uint8s(s, 2); /* pad */
           out_uint16_le(s, bufsize); /* compressed size */
           j = (bitmap->width + e) * Bpp;
@@ -197,17 +192,23 @@ int xrdp_wm_send_bitmap(struct xrdp_wm* self, struct xrdp_bitmap* bitmap,
           out_uint16_le(s, j); /* final size */
         }
         if (j > 32768)
+        {
           g_printf("error, decompressed size too big, its %d\n\r", j);
+        }
         if (bufsize > 8192)
+        {
           g_printf("error, compressed size too big, its %d\n\r", bufsize);
+        }
         s->p = s->end;
       } while (total_bufsize < 4096 && i > 0);
       p_num_updates[0] = num_updates;
       p_num_updates[1] = num_updates >> 8;
       xrdp_rdp_send_data(self->rdp_layer, s, RDP_DATA_PDU_UPDATE);
       if (total_bufsize > 8192)
+      {
         g_printf("error, total compressed size too big, its %d\n\r",
                  total_bufsize);
+      }
     }
     free_stream(temp_s);
   }

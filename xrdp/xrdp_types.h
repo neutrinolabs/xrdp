@@ -169,6 +169,23 @@ struct xrdp_sec
   void* encrypt_rc4_info;
 };
 
+/* client info */
+struct xrdp_client_info
+{
+  int bpp;
+  int width;
+  int height;
+  int cache1_entries;
+  int cache1_size;
+  int cache2_entries;
+  int cache2_size;
+  int cache3_entries;
+  int cache3_size;
+  int use_bitmap_comp;
+  int use_bitmap_cache;
+  int op1; /* use smaller bitmap header, todo */
+};
+
 /* rdp */
 struct xrdp_rdp
 {
@@ -176,16 +193,8 @@ struct xrdp_rdp
   struct xrdp_sec* sec_layer;
   int share_id;
   int mcs_channel;
-  int bpp;
-  int width;
-  int height;
   int up_and_running;
-  int cache1_entries;
-  int cache1_size;
-  int cache2_entries;
-  int cache2_size;
-  int cache3_entries;
-  int cache3_size;
+  struct xrdp_client_info client_info;
 };
 
 /* orders */
@@ -376,11 +385,8 @@ struct xrdp_wm
   int (*mod_init)();
   int (*mod_exit)(int);
   struct xrdp_mod* mod;
-  /* */
-  int use_bitmap_comp;
-  int use_bitmap_cache;
-  /*  */
-  int op1; /* use smaller bitmap header, todo */
+  /* client info */
+  struct xrdp_client_info* client_info;
 };
 
 /* rdp process */
@@ -490,7 +496,7 @@ struct xrdp_font
   int style;
 };
 
-/* modual */
+/* module */
 struct xrdp_mod_data
 {
   char name[256];

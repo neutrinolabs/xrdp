@@ -24,13 +24,21 @@
 
 /*****************************************************************************/
 struct xrdp_cache* xrdp_cache_create(struct xrdp_wm* owner,
-                                     struct xrdp_orders* orders)
+                                     struct xrdp_orders* orders,
+                                     struct xrdp_client_info* client_info)
 {
   struct xrdp_cache* self;
 
   self = (struct xrdp_cache*)g_malloc(sizeof(struct xrdp_cache), 1);
   self->wm = owner;
   self->orders = orders;
+  self->use_bitmap_comp = client_info->use_bitmap_comp;
+  self->cache1_entries = client_info->cache1_entries;
+  self->cache1_size = client_info->cache1_size;
+  self->cache2_entries = client_info->cache2_entries;
+  self->cache2_size = client_info->cache2_size;
+  self->cache3_entries = client_info->cache3_entries;
+  self->cache3_size = client_info->cache3_size;
   return self;
 }
 
@@ -41,15 +49,25 @@ void xrdp_cache_delete(struct xrdp_cache* self)
   int j;
 
   if (self == 0)
+  {
     return;
+  }
   /* free all the cached bitmaps */
   for (i = 0; i < 3; i++)
+  {
     for (j = 0; j < 600; j++)
+    {
       xrdp_bitmap_delete(self->bitmap_items[i][j].bitmap);
+    }
+  }
   /* free all the cached font items */
   for (i = 0; i < 12; i++)
+  {
     for (j = 0; j < 256; j++)
+    {
       g_free(self->char_items[i][j].font_item.data);
+    }
+  }
   g_free(self);
 }
 
@@ -80,7 +98,11 @@ int xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
     i = 0;
     for (j = 0; j < self->cache1_entries; j++)
     {
+#ifdef USE_CRC
       if (xrdp_bitmap_compare_with_crc(self->bitmap_items[i][j].bitmap, bitmap))
+#else
+      if (xrdp_bitmap_compare(self->bitmap_items[i][j].bitmap, bitmap))
+#endif
       {
         self->bitmap_items[i][j].stamp = self->bitmap_stamp;
         DEBUG(("found bitmap at %d %d\n\r", i, j));
@@ -95,7 +117,11 @@ int xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
     i = 1;
     for (j = 0; j < self->cache2_entries; j++)
     {
+#ifdef USE_CRC
       if (xrdp_bitmap_compare_with_crc(self->bitmap_items[i][j].bitmap, bitmap))
+#else
+      if (xrdp_bitmap_compare(self->bitmap_items[i][j].bitmap, bitmap))
+#endif
       {
         self->bitmap_items[i][j].stamp = self->bitmap_stamp;
         DEBUG(("found bitmap at %d %d\n\r", i, j));
@@ -110,7 +136,11 @@ int xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
     i = 2;
     for (j = 0; j < self->cache3_entries; j++)
     {
+#ifdef USE_CRC
       if (xrdp_bitmap_compare_with_crc(self->bitmap_items[i][j].bitmap, bitmap))
+#else
+      if (xrdp_bitmap_compare(self->bitmap_items[i][j].bitmap, bitmap))
+#endif
       {
         self->bitmap_items[i][j].stamp = self->bitmap_stamp;
         DEBUG(("found bitmap at %d %d\n\r", i, j));
@@ -119,6 +149,10 @@ int xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
         return MAKELONG(i, j);
       }
     }
+  }
+  else
+  {
+    g_printf("error in xrdp_cache_add_bitmap, too big\n\r");
   }
   /* look for oldest */
   cache_id = 0;

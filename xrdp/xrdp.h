@@ -126,7 +126,8 @@ int xrdp_orders_send_font(struct xrdp_orders* self,
 
 /* xrdp_cache.c */
 struct xrdp_cache* xrdp_cache_create(struct xrdp_wm* owner,
-                                     struct xrdp_orders* orders);
+                                     struct xrdp_orders* orders,
+                                     struct xrdp_client_info* client_info);
 void xrdp_cache_delete(struct xrdp_cache* self);
 int xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap);
 int xrdp_cache_add_palette(struct xrdp_cache* self, int* palette);

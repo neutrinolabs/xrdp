@@ -73,10 +73,10 @@ int g_crc_table[256] =
   0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d
 };
 
-#define CRC_START(in_crc) in_crc = g_crc_seed
+#define CRC_START(in_crc) (in_crc) = g_crc_seed
 #define CRC_PASS(in_pixel, in_crc) \
-in_crc = g_crc_table[(in_crc ^ (in_pixel)) & 0xff] ^ (in_crc >> 8)
-#define CRC_END(in_crc) in_crc = (in_crc ^ g_crc_seed)
+  (in_crc) = g_crc_table[((in_crc) ^ (in_pixel)) & 0xff] ^ ((in_crc) >> 8)
+#define CRC_END(in_crc) (in_crc) = ((in_crc) ^ g_crc_seed)
 
 /*****************************************************************************/
 struct xrdp_bitmap* xrdp_bitmap_create(int width, int height, int bpp,
@@ -98,9 +98,13 @@ struct xrdp_bitmap* xrdp_bitmap_create(int width, int height, int bpp,
     case 16: Bpp = 2; break;
   }
   if (self->type == WND_TYPE_SCREEN || self->type == WND_TYPE_BITMAP)
+  {
     self->data = (char*)g_malloc(width * height * Bpp, 1);
+  }
   if (self->type != WND_TYPE_BITMAP)
+  {
     self->child_list = xrdp_list_create();
+  }
   self->line_size = width * Bpp;
   if (self->type == WND_TYPE_COMBO)
   {
@@ -134,41 +138,61 @@ void xrdp_bitmap_delete(struct xrdp_bitmap* self)
   int i;
 
   if (self == 0)
+  {
     return;
+  }
   if (self->wm != 0)
   {
     if (self->wm->focused_window != 0)
     {
       if (self->wm->focused_window->focused_control == self)
+      {
         self->wm->focused_window->focused_control = 0;
+      }
     }
     if (self->wm->focused_window == self)
+    {
       self->wm->focused_window = 0;
+    }
     if (self->wm->dragging_window == self)
+    {
       self->wm->dragging_window = 0;
+    }
     if (self->wm->button_down == self)
+    {
       self->wm->button_down = 0;
+    }
     if (self->wm->popup_wnd == self)
+    {
       self->wm->popup_wnd = 0;
+    }
     if (self->wm->login_window == self)
+    {
       self->wm->login_window = 0;
+    }
   }
   if (self->child_list != 0)
   {
     for (i = self->child_list->count - 1; i >= 0; i--)
+    {
       xrdp_bitmap_delete((struct xrdp_bitmap*)self->child_list->items[i]);
+    }
     xrdp_list_delete(self->child_list);
   }
   if (self->parent != 0)
   {
     i = xrdp_list_index_of(self->parent->child_list, (int)self);
     if (i >= 0)
+    {
       xrdp_list_remove_item(self->parent->child_list, i);
+    }
   }
   xrdp_list_delete(self->string_list);
   xrdp_list_delete(self->data_list);
   if (!self->do_not_free_data)
+  {
     g_free(self->data);
+  }
   g_free(self);
 }
 
@@ -198,9 +222,13 @@ int xrdp_bitmap_set_focus(struct xrdp_bitmap* self, int focused)
   struct xrdp_painter* painter;
 
   if (self == 0)
+  {
     return 0;
+  }
   if (self->type != WND_TYPE_WND) /* 1 */
+  {
     return 0;
+  }
   painter = xrdp_painter_create(self->wm);
   xrdp_painter_begin_update(painter);
   if (focused)
@@ -231,7 +259,9 @@ int xrdp_bitmap_get_index(struct xrdp_bitmap* self, int* palette, int color)
   for (i = 0; i < 256; i++)
   {
     if (color == palette[i])
+    {
       return i;
+    }
   }
   for (i = 1; i < 256; i++)
   {
@@ -241,7 +271,7 @@ int xrdp_bitmap_get_index(struct xrdp_bitmap* self, int* palette, int color)
       return i;
     }
   }
-  g_printf("color %8.8x not found\n", color);
+  g_printf("color %8.8x not found\n\r", color);
   return 255;
 }
 
@@ -320,7 +350,9 @@ int xrdp_bitmap_load(struct xrdp_bitmap* self, char* filename, int* palette)
       xrdp_bitmap_resize(self, header.image_width, header.image_height);
       data = (char*)g_malloc(header.image_width * header.image_height, 1);
       for (i = header.image_height - 1; i >= 0; i--)
+      {
         g_file_read(fd, data + i * header.image_width, header.image_width);
+      }
       for (i = 0; i < self->height; i++)
       {
         for (j = 0; j < self->width; j++)
@@ -328,19 +360,27 @@ int xrdp_bitmap_load(struct xrdp_bitmap* self, char* filename, int* palette)
           k = (unsigned char)data[i * header.image_width + j];
           color = palette1[k];
           if (self->bpp == 8)
+          {
             color = xrdp_bitmap_get_index(self, palette, color);
+          }
           else if (self->bpp == 15)
+          {
             color = COLOR15((color & 0xff0000) >> 16,
                             (color & 0x00ff00) >> 8,
                             (color & 0x0000ff) >> 0);
+          }
           else if (self->bpp == 16)
+          {
             color = COLOR16((color & 0xff0000) >> 16,
                             (color & 0x00ff00) >> 8,
                             (color & 0x0000ff) >> 0);
+          }
           else if (self->bpp == 24)
+          {
             color = COLOR24((color & 0xff0000) >> 16,
                             (color & 0x00ff00) >> 8,
                             (color & 0x0000ff) >> 0);
+          }
           xrdp_bitmap_set_pixel(self, j, i, color);
         }
       }
@@ -355,17 +395,27 @@ int xrdp_bitmap_load(struct xrdp_bitmap* self, char* filename, int* palette)
 int xrdp_bitmap_get_pixel(struct xrdp_bitmap* self, int x, int y)
 {
   if (self == 0)
+  {
     return 0;
+  }
   if (self->data == 0)
+  {
     return 0;
+  }
   if (x >= 0 && x < self->width && y >= 0 && y < self->height)
   {
     if (self->bpp == 8)
+    {
       return GETPIXEL8(self->data, x, y, self->width);
+    }
     else if (self->bpp == 15 || self->bpp == 16)
+    {
       return GETPIXEL16(self->data, x, y, self->width);
+    }
     else if (self->bpp == 24)
+    {
       return GETPIXEL32(self->data, x, y, self->width);
+    }
   }
   return 0;
 }
@@ -374,17 +424,27 @@ int xrdp_bitmap_get_pixel(struct xrdp_bitmap* self, int x, int y)
 int xrdp_bitmap_set_pixel(struct xrdp_bitmap* self, int x, int y, int pixel)
 {
   if (self == 0)
+  {
     return 0;
+  }
   if (self->data == 0)
+  {
     return 0;
+  }
   if (x >= 0 && x < self->width && y >= 0 && y < self->height)
   {
     if (self->bpp == 8)
+    {
       SETPIXEL8(self->data, x, y, self->width, pixel);
+    }
     else if (self->bpp == 15 || self->bpp == 16)
+    {
       SETPIXEL16(self->data, x, y, self->width, pixel);
+    }
     else if (self->bpp == 24)
+    {
       SETPIXEL32(self->data, x, y, self->width, pixel);
+    }
   }
   return 0;
 }
@@ -484,6 +544,13 @@ int xrdp_bitmap_copy_box_with_crc(struct xrdp_bitmap* self,
   int destx;
   int desty;
   int pixel;
+  int crc;
+  int incs;
+  int incd;
+  unsigned char* s8;
+  unsigned char* d8;
+  unsigned short* s16;
+  unsigned short* d16;
 
   if (self == 0)
   {
@@ -515,7 +582,8 @@ int xrdp_bitmap_copy_box_with_crc(struct xrdp_bitmap* self,
   {
     return 1;
   }
-  CRC_START(dest->crc);
+  crc = dest->crc;
+  CRC_START(crc);
   if (self->bpp == 24)
   {
     for (i = 0; i < cy; i++)
@@ -523,43 +591,60 @@ int xrdp_bitmap_copy_box_with_crc(struct xrdp_bitmap* self,
       for (j = 0; j < cx; j++)
       {
         pixel = GETPIXEL32(self->data, j + x, i + y, self->width);
-        CRC_PASS(pixel, dest->crc);
-        CRC_PASS(pixel >> 8, dest->crc);
-        CRC_PASS(pixel >> 16, dest->crc);
+        CRC_PASS(pixel, crc);
+        CRC_PASS(pixel >> 8, crc);
+        CRC_PASS(pixel >> 16, crc);
         SETPIXEL32(dest->data, j + destx, i + desty, dest->width, pixel);
       }
     }
   }
   else if (self->bpp == 15 || self->bpp == 16)
   {
+    s16 = ((unsigned short*)(self->data)) + (self->width * y + x);
+    d16 = ((unsigned short*)(dest->data)) + (dest->width * desty + destx);
+    incs = self->width - cx;
+    incd = dest->width - cx;
     for (i = 0; i < cy; i++)
     {
       for (j = 0; j < cx; j++)
       {
-        pixel = GETPIXEL16(self->data, j + x, i + y, self->width);
-        CRC_PASS(pixel, dest->crc);
-        CRC_PASS(pixel >> 8, dest->crc);
-        SETPIXEL16(dest->data, j + destx, i + desty, dest->width, pixel);
+        pixel = *s16;
+        CRC_PASS(pixel, crc);
+        CRC_PASS(pixel >> 8, crc);
+        *d16 = pixel;
+        s16++;
+        d16++;
       }
+      s16 += incs;
+      d16 += incd;
     }
   }
   else if (self->bpp == 8)
   {
+    s8 = ((unsigned char*)(self->data)) + (self->width * y + x);
+    d8 = ((unsigned char*)(dest->data)) + (dest->width * desty + destx);
+    incs = self->width - cx;
+    incd = dest->width - cx;
     for (i = 0; i < cy; i++)
     {
       for (j = 0; j < cx; j++)
       {
-        pixel = GETPIXEL8(self->data, j + x, i + y, self->width);
-        CRC_PASS(pixel, dest->crc);
-        SETPIXEL8(dest->data, j + destx, i + desty, dest->width, pixel);
+        pixel = *s8;
+        CRC_PASS(pixel, crc);
+        *d8 = pixel;
+        s8++;
+        d8++;
       }
+      s8 += incs;
+      d8 += incd;
     }
   }
   else
   {
     return 1;
   }
-  CRC_END(dest->crc);
+  CRC_END(crc);
+  dest->crc = crc;
   return 0;
 }
 

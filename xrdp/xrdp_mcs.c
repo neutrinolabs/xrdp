@@ -41,7 +41,9 @@ struct xrdp_mcs* xrdp_mcs_create(struct xrdp_sec* owner)
 void xrdp_mcs_delete(struct xrdp_mcs* self)
 {
   if (self == 0)
+  {
     return;
+  }
   xrdp_iso_delete(self->iso_layer);
   g_free(self);
 }
@@ -86,11 +88,15 @@ int xrdp_mcs_recv(struct xrdp_mcs* self, struct stream* s, int* chan)
   while (1)
   {
     if (xrdp_iso_recv(self->iso_layer, s) != 0)
+    {
       return 1;
+    }
     in_uint8(s, opcode);
     appid = opcode >> 2;
     if (appid == MCS_DPUM)
+    {
       return 1;
+    }
     if (appid == MCS_CJRQ)
     {
       xrdp_mcs_send_cjcf(self, self->userid + MCS_USERCHANNEL_BASE);
@@ -108,7 +114,9 @@ int xrdp_mcs_recv(struct xrdp_mcs* self, struct stream* s, int* chan)
   in_uint8s(s, 1);
   in_uint8(s, len);
   if (len & 0x80)
+  {
     in_uint8s(s, 1);
+  }
   DEBUG(("  out xrdp_mcs_recv\n\r"));
   return 0;
 }
@@ -145,11 +153,17 @@ int xrdp_mcs_ber_parse_header(struct xrdp_mcs* self, struct stream* s,
     }
   }
   else
+  {
     *len = l;
+  }
   if (s_check(s))
+  {
     return 0;
+  }
   else
+  {
     return 1;
+  }
 }
 
 /*****************************************************************************/
@@ -159,12 +173,18 @@ int xrdp_mcs_parse_domain_params(struct xrdp_mcs* self, struct stream* s)
   int len;
 
   if (xrdp_mcs_ber_parse_header(self, s, MCS_TAG_DOMAIN_PARAMS, &len) != 0)
+  {
     return 1;
+  }
   in_uint8s(s, len);
   if (s_check(s))
+  {
     return 0;
+  }
   else
+  {
     return 1;
+  }
 }
 
 /*****************************************************************************/
@@ -479,25 +499,45 @@ int xrdp_mcs_incoming(struct xrdp_mcs* self)
 {
   DEBUG(("  in xrdp_mcs_incoming\n\r"));
   if (xrdp_iso_incoming(self->iso_layer) != 0)
+  {
     return 1;
+  }
   if (xrdp_mcs_recv_connect_initial(self) != 0)
+  {
     return 1;
+  }
   if (xrdp_mcs_send_connect_response(self) != 0)
+  {
     return 1;
+  }
   if (xrdp_mcs_recv_edrq(self) != 0)
+  {
     return 1;
+  }
   if (xrdp_mcs_recv_aurq(self) != 0)
+  {
     return 1;
+  }
   if (xrdp_mcs_send_aucf(self) != 0)
+  {
     return 1;
+  }
   if (xrdp_mcs_recv_cjrq(self) != 0)
+  {
     return 1;
+  }
   if (xrdp_mcs_send_cjcf(self, self->userid + MCS_USERCHANNEL_BASE) != 0)
+  {
     return 1;
+  }
   if (xrdp_mcs_recv_cjrq(self) != 0)
+  {
     return 1;
+  }
   if (xrdp_mcs_send_cjcf(self, MCS_GLOBAL_CHANNEL) != 0)
+  {
     return 1;
+  }
   DEBUG(("  out xrdp_mcs_incoming\n\r"));
   return 0;
 }
@@ -527,7 +567,9 @@ int xrdp_mcs_send(struct xrdp_mcs* self, struct stream* s)
   out_uint8(s, 0x70);
   out_uint16_be(s, len);
   if (xrdp_iso_send(self->iso_layer, s) != 0)
+  {
     return 1;
+  }
   DEBUG(("  out xrdp_mcs_send\n\r"));
   return 0;
 }
