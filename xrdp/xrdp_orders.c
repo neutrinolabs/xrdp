@@ -23,13 +23,14 @@
 #include "xrdp.h"
 
 /*****************************************************************************/
-struct xrdp_orders* xrdp_orders_create(struct xrdp_process* owner)
+struct xrdp_orders* xrdp_orders_create(struct xrdp_process* owner,
+                                       struct xrdp_rdp* rdp_layer)
 {
   struct xrdp_orders* self;
 
   self = (struct xrdp_orders*)g_malloc(sizeof(struct xrdp_orders), 1);
   self->pro_layer = owner;
-  self->rdp_layer = owner->rdp_layer;
+  self->rdp_layer = rdp_layer;
   make_stream(self->out_s);
   init_stream(self->out_s, 8192);
   return self;
@@ -1329,7 +1330,6 @@ int xrdp_orders_send_palette(struct xrdp_orders* self, int* palette,
   int len;
   int i;
 
-  xrdp_wm_send_palette(self->pro_layer->wm);
   xrdp_orders_check(self, 2000);
   self->order_count++;
   order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;

@@ -113,7 +113,7 @@ char lic2[20] =
   0x28, 0x14, 0x00, 0x00 };
 
 /*****************************************************************************/
-struct xrdp_sec* xrdp_sec_create(struct xrdp_rdp* owner)
+struct xrdp_sec* xrdp_sec_create(struct xrdp_rdp* owner, int sck)
 {
   struct xrdp_sec* self;
 
@@ -123,7 +123,8 @@ struct xrdp_sec* xrdp_sec_create(struct xrdp_rdp* owner)
   self->decrypt_rc4_info = g_rc4_info_create();
   self->encrypt_rc4_info = g_rc4_info_create();
   g_random(self->server_random, 32);
-  self->mcs_layer = xrdp_mcs_create(self);
+  self->mcs_layer = xrdp_mcs_create(self, sck, &self->client_mcs_data,
+                                    &self->server_mcs_data);
   return self;
 }
 

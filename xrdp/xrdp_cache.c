@@ -214,6 +214,8 @@ int xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
 }
 
 /*****************************************************************************/
+/* not used */
+/* not sure how to use a palette in rdp */
 int xrdp_cache_add_palette(struct xrdp_cache* self, int* palette)
 {
   int i;
@@ -221,11 +223,17 @@ int xrdp_cache_add_palette(struct xrdp_cache* self, int* palette)
   int index;
 
   if (self == 0)
+  {
     return 0;
+  }
   if (palette == 0)
+  {
     return 0;
+  }
   if (self->wm->screen->bpp > 8)
+  {
     return 0;
+  }
   self->palette_stamp++;
   /* look for match */
   for (i = 0; i < 6; i++)

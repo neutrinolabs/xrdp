@@ -29,14 +29,14 @@
 #include "os_calls.h"
 
 /* xrdp_tcp.c */
-struct xrdp_tcp* xrdp_tcp_create(struct xrdp_iso* owner);
+struct xrdp_tcp* xrdp_tcp_create(struct xrdp_iso* owner, int sck);
 void xrdp_tcp_delete(struct xrdp_tcp* self);
 int xrdp_tcp_init(struct xrdp_tcp* self, struct stream* s);
 int xrdp_tcp_recv(struct xrdp_tcp* self, struct stream* s, int len);
 int xrdp_tcp_send(struct xrdp_tcp* self, struct stream* s);
 
 /* xrdp_iso.c */
-struct xrdp_iso* xrdp_iso_create(struct xrdp_mcs* owner);
+struct xrdp_iso* xrdp_iso_create(struct xrdp_mcs* owner, int sck);
 void xrdp_iso_delete(struct xrdp_iso* self);
 int xrdp_iso_init(struct xrdp_iso* self, struct stream* s);
 int xrdp_iso_recv(struct xrdp_iso* self, struct stream* s);
@@ -44,7 +44,9 @@ int xrdp_iso_send(struct xrdp_iso* self, struct stream* s);
 int xrdp_iso_incoming(struct xrdp_iso* self);
 
 /* xrdp_mcs.c */
-struct xrdp_mcs* xrdp_mcs_create(struct xrdp_sec* owner);
+struct xrdp_mcs* xrdp_mcs_create(struct xrdp_sec* owner, int sck,
+                                 struct stream* client_mcs_data,
+                                 struct stream* server_mcs_data);
 void xrdp_mcs_delete(struct xrdp_mcs* self);
 int xrdp_mcs_init(struct xrdp_mcs* self, struct stream* s);
 int xrdp_mcs_recv(struct xrdp_mcs* self, struct stream* s, int* chan);
@@ -53,7 +55,7 @@ int xrdp_mcs_incoming(struct xrdp_mcs* self);
 int xrdp_mcs_disconnect(struct xrdp_mcs* self);
 
 /* xrdp_sec.c */
-struct xrdp_sec* xrdp_sec_create(struct xrdp_rdp* owner);
+struct xrdp_sec* xrdp_sec_create(struct xrdp_rdp* owner, int sck);
 void xrdp_sec_delete(struct xrdp_sec* self);
 int xrdp_sec_init(struct xrdp_sec* self, struct stream* s);
 int xrdp_sec_recv(struct xrdp_sec* self, struct stream* s, int* chan);
@@ -62,7 +64,7 @@ int xrdp_sec_incoming(struct xrdp_sec* self);
 int xrdp_sec_disconnect(struct xrdp_sec* self);
 
 /* xrdp_rdp.c */
-struct xrdp_rdp* xrdp_rdp_create(struct xrdp_process* owner);
+struct xrdp_rdp* xrdp_rdp_create(struct xrdp_process* owner, int sck);
 void xrdp_rdp_delete(struct xrdp_rdp* self);
 int xrdp_rdp_init(struct xrdp_rdp* self, struct stream* s);
 int xrdp_rdp_init_data(struct xrdp_rdp* self, struct stream* s);
@@ -77,7 +79,8 @@ int xrdp_rdp_process_data(struct xrdp_rdp* self, struct stream* s);
 int xrdp_rdp_disconnect(struct xrdp_rdp* self);
 
 /* xrdp_orders.c */
-struct xrdp_orders* xrdp_orders_create(struct xrdp_process* owner);
+struct xrdp_orders* xrdp_orders_create(struct xrdp_process* owner,
+                                       struct xrdp_rdp* rdp_layer);
 void xrdp_orders_delete(struct xrdp_orders* self);
 int xrdp_orders_init(struct xrdp_orders* self);
 int xrdp_orders_send(struct xrdp_orders* self);
@@ -135,7 +138,8 @@ int xrdp_cache_add_char(struct xrdp_cache* self,
                         struct xrdp_font_item* font_item);
 
 /* xrdp_wm.c */
-struct xrdp_wm* xrdp_wm_create(struct xrdp_process* owner);
+struct xrdp_wm* xrdp_wm_create(struct xrdp_process* owner,
+                               struct xrdp_client_info* client_info);
 void xrdp_wm_delete(struct xrdp_wm* self);
 int xrdp_wm_send_palette(struct xrdp_wm* self);
 int xrdp_wm_init(struct xrdp_wm* self);
@@ -177,9 +181,10 @@ int xrdp_region_get_rect(struct xrdp_region* self, int index,
 
 /* xrdp_bitmap.c */
 struct xrdp_bitmap* xrdp_bitmap_create(int width, int height, int bpp,
-                                       int type);
+                                       int type, struct xrdp_wm* wm);
 struct xrdp_bitmap* xrdp_bitmap_create_with_data(int width, int height,
-                                                 int bpp, char* data);
+                                                 int bpp, char* data,
+                                                 struct xrdp_wm* wm);
 void xrdp_bitmap_delete(struct xrdp_bitmap* self);
 struct xrdp_bitmap* xrdp_bitmap_get_child_by_id(struct xrdp_bitmap* self,
                                                 int id);

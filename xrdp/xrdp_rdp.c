@@ -91,14 +91,14 @@ int xrdp_rdp_read_config(struct xrdp_client_info* client_info)
 }
 
 /*****************************************************************************/
-struct xrdp_rdp* xrdp_rdp_create(struct xrdp_process* owner)
+struct xrdp_rdp* xrdp_rdp_create(struct xrdp_process* owner, int sck)
 {
   struct xrdp_rdp* self;
 
   self = (struct xrdp_rdp*)g_malloc(sizeof(struct xrdp_rdp), 1);
   self->pro_layer = owner;
   self->share_id = 66538;
-  self->sec_layer = xrdp_sec_create(self);
+  self->sec_layer = xrdp_sec_create(self, sck);
   /* read ini settings */
   xrdp_rdp_read_config(&self->client_info);
   return self;

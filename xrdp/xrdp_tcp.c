@@ -23,14 +23,13 @@
 #include "xrdp.h"
 
 /*****************************************************************************/
-struct xrdp_tcp* xrdp_tcp_create(struct xrdp_iso* owner)
+struct xrdp_tcp* xrdp_tcp_create(struct xrdp_iso* owner, int sck)
 {
   struct xrdp_tcp* self;
 
   self = (struct xrdp_tcp*)g_malloc(sizeof(struct xrdp_tcp), 1);
   self->iso_layer = owner;
-  /* get sck from xrdp_process */
-  self->sck = owner->mcs_layer->sec_layer->rdp_layer->pro_layer->sck;
+  self->sck = sck;
   return self;
 }
 
@@ -99,31 +98,37 @@ int xrdp_tcp_send(struct xrdp_tcp* self, struct stream* s)
   int sent;
 
   len = s->end - s->data;
-  DEBUG(("    in xrdp_tcp_send, gota send %d bytes\n\r", len))
+  DEBUG(("    in xrdp_tcp_send, gota send %d bytes\n\r", len));
   total = 0;
   while (total < len)
   {
     if (g_is_term())
+    {
       return 1;
+    }
     sent = g_tcp_send(self->sck, s->data + total, len - total, 0);
     if (sent == -1)
     {
       if (g_tcp_last_error_would_block(self->sck))
+      {
         g_sleep(1);
+      }
       else
       {
-        DEBUG(("    error = -1 in xrdp_tcp_send socket %d\n\r", self->sck))
+        DEBUG(("    error = -1 in xrdp_tcp_send socket %d\n\r", self->sck));
         return 1;
       }
     }
     else if (sent == 0)
     {
-      DEBUG(("    error = 0 in xrdp_tcp_send socket %d\n\r", self->sck))
+      DEBUG(("    error = 0 in xrdp_tcp_send socket %d\n\r", self->sck));
       return 1;
     }
     else
+    {
       total = total + sent;
+    }
   }
-  DEBUG(("    out xrdp_tcp_send, sent %d bytes ok\n\r", len))
+  DEBUG(("    out xrdp_tcp_send, sent %d bytes ok\n\r", len));
   return 0;
 }

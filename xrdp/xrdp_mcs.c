@@ -23,7 +23,9 @@
 #include "xrdp.h"
 
 /*****************************************************************************/
-struct xrdp_mcs* xrdp_mcs_create(struct xrdp_sec* owner)
+struct xrdp_mcs* xrdp_mcs_create(struct xrdp_sec* owner, int sck,
+                                 struct stream* client_mcs_data,
+                                 struct stream* server_mcs_data)
 {
   struct xrdp_mcs* self;
 
@@ -31,9 +33,9 @@ struct xrdp_mcs* xrdp_mcs_create(struct xrdp_sec* owner)
   self->sec_layer = owner;
   self->userid = 1;
   self->chanid = 1001;
-  self->client_mcs_data = &owner->client_mcs_data;
-  self->server_mcs_data = &owner->server_mcs_data;
-  self->iso_layer = xrdp_iso_create(self);
+  self->client_mcs_data = client_mcs_data;
+  self->server_mcs_data = server_mcs_data;
+  self->iso_layer = xrdp_iso_create(self, sck);
   return self;
 }
 

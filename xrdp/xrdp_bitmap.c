@@ -80,7 +80,7 @@ int g_crc_table[256] =
 
 /*****************************************************************************/
 struct xrdp_bitmap* xrdp_bitmap_create(int width, int height, int bpp,
-                                       int type)
+                                       int type, struct xrdp_wm* wm)
 {
   struct xrdp_bitmap* self;
   int Bpp;
@@ -113,12 +113,14 @@ struct xrdp_bitmap* xrdp_bitmap_create(int width, int height, int bpp,
     self->data_list = xrdp_list_create();
     self->data_list->auto_free = 1;
   }
+  self->wm = wm;
   return self;
 }
 
 /*****************************************************************************/
 struct xrdp_bitmap* xrdp_bitmap_create_with_data(int width, int height,
-                                                 int bpp, char* data)
+                                                 int bpp, char* data,
+                                                 struct xrdp_wm* wm)
 {
   struct xrdp_bitmap* self;
 
@@ -129,6 +131,7 @@ struct xrdp_bitmap* xrdp_bitmap_create_with_data(int width, int height,
   self->bpp = bpp;
   self->data = data;
   self->do_not_free_data = 1;
+  self->wm = wm;
   return self;
 }
 
@@ -254,25 +257,17 @@ int xrdp_bitmap_set_focus(struct xrdp_bitmap* self, int focused)
 /*****************************************************************************/
 int xrdp_bitmap_get_index(struct xrdp_bitmap* self, int* palette, int color)
 {
-  int i;
+  int r;
+  int g;
+  int b;
 
-  for (i = 0; i < 256; i++)
-  {
-    if (color == palette[i])
-    {
-      return i;
-    }
-  }
-  for (i = 1; i < 256; i++)
-  {
-    if (palette[i] == 0)
-    {
-      palette[i] = color;
-      return i;
-    }
-  }
-  g_printf("color %8.8x not found\n\r", color);
-  return 255;
+  r = (color & 0xff0000) >> 16;
+  g = (color & 0x00ff00) >> 8;
+  b = (color & 0x0000ff) >> 0;
+  r = (r >> 5) << 0;
+  g = (g >> 5) << 3;
+  b = (b >> 6) << 6;
+  return (b | g | r);
 }
 
 /*****************************************************************************/

@@ -203,6 +203,7 @@ struct xrdp_orders
   struct stream* out_s;
   struct xrdp_rdp* rdp_layer;
   struct xrdp_process* pro_layer; /* owner */
+  struct xrdp_wm* wm;
 
   char* order_count_ptr; /* pointer to count, set when sending */
   int order_count;

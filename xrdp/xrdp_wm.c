@@ -23,16 +23,17 @@
 #include "xrdp.h"
 
 /*****************************************************************************/
-struct xrdp_wm* xrdp_wm_create(struct xrdp_process* owner)
+struct xrdp_wm* xrdp_wm_create(struct xrdp_process* owner,
+                               struct xrdp_client_info* client_info)
 {
   struct xrdp_wm* self;
 
   self = (struct xrdp_wm*)g_malloc(sizeof(struct xrdp_wm), 1);
-  self->client_info = &owner->rdp_layer->client_info;
-  self->screen = xrdp_bitmap_create(self->client_info->width,
-                                    self->client_info->height,
-                                    self->client_info->bpp,
-                                    WND_TYPE_SCREEN);
+  self->client_info = client_info;
+  self->screen = xrdp_bitmap_create(client_info->width,
+                                    client_info->height,
+                                    client_info->bpp,
+                                    WND_TYPE_SCREEN, self);
   self->screen->wm = self;
   self->pro_layer = owner;
   self->orders = owner->orders;
@@ -75,6 +76,11 @@ int xrdp_wm_send_palette(struct xrdp_wm* self)
   int color;
   struct stream* s;
 
+  if (self->client_info->bpp > 8)
+  {
+    return 0;
+  }
+  xrdp_orders_force_send(self->orders);
   make_stream(s);
   init_stream(s, 8192);
   xrdp_rdp_init_data(self->rdp_layer, s);
@@ -92,6 +98,9 @@ int xrdp_wm_send_palette(struct xrdp_wm* self)
   s_mark_end(s);
   xrdp_rdp_send_data(self->rdp_layer, s, RDP_DATA_PDU_UPDATE);
   free_stream(s);
+  xrdp_orders_init(self->orders);
+  xrdp_orders_send_palette(self->orders, self->palette, 0);
+  xrdp_orders_send(self->orders);
   return 0;
 }
 
@@ -131,7 +140,9 @@ int xrdp_wm_send_bitmap(struct xrdp_wm* self, struct xrdp_bitmap* bitmap,
     init_stream(temp_s, 65536);
     i = 0;
     if (cy <= bitmap->height)
+    {
       i = cy;
+    }
     while (i > 0)
     {
       total_bufsize = 0;
@@ -263,9 +274,13 @@ int xrdp_wm_set_focused(struct xrdp_wm* self, struct xrdp_bitmap* wnd)
   struct xrdp_bitmap* focus_in_control;
 
   if (self == 0)
+  {
     return 0;
+  }
   if (self->focused_window == wnd)
+  {
     return 0;
+  }
   focus_out_control = 0;
   focus_in_control = 0;
   if (self->focused_window != 0)
@@ -320,9 +335,13 @@ int xrdp_wm_get_pixel(char* data, int x, int y, int width, int bpp)
     start = y * width + x / 2;
     shift = x % 2;
     if (shift == 0)
+    {
       return (data[start] & 0xf0) >> 4;
+    }
     else
+    {
       return data[start] & 0x0f;
+    }
   }
   return 0;
 }
@@ -447,27 +466,35 @@ int xrdp_wm_init(struct xrdp_wm* self)
   char mask[32 * (32 / 8)];
   int x;
   int y;
+  int bindex;
+  int gindex;
+  int rindex;
 
   if (self->screen->bpp == 8)
   {
-    /* rgb */
-    self->palette[249] = 0x0000007f;
-    self->palette[250] = 0x00ff0000;
-    self->palette[251] = 0x0000ff00;
-    self->palette[252] = 0x00c0c0c0;
-    self->palette[253] = 0x00808080;
-    self->palette[254] = 0x000000ff;
-    self->palette[255] = 0x00ffffff;
-    self->black = 0;
-    self->grey = 252;
-    self->dark_grey = 253;
-    self->blue = 254;
-    self->dark_blue = 249;
-    self->white = 255;
-    self->red = 250;
-    self->green = 251;
+    /* rgb332 */
+    for (bindex = 0; bindex < 4; bindex++)
+    {
+      for (gindex = 0; gindex < 8; gindex++)
+      {
+        for (rindex = 0; rindex < 8; rindex++)
+        {
+          self->palette[(bindex << 6) | (gindex << 3) | rindex] =
+                (((rindex << 5) | (rindex << 2) | (rindex >> 1)) << 16) |
+                (((gindex << 5) | (gindex << 2) | (gindex >> 1)) << 8) |
+                ((bindex << 6) | (bindex << 4) | (bindex << 2) | (bindex));
+        }
+      }
+    }
+    self->black     = COLOR8(0, 0, 0);
+    self->grey      = COLOR8(0xc0, 0xc0, 0xc0);
+    self->dark_grey = COLOR8(0x80, 0x80, 0x80);
+    self->blue      = COLOR8(0x00, 0x00, 0xff);
+    self->dark_blue = COLOR8(0x00, 0x00, 0x7f);
+    self->white     = COLOR8(0xff, 0xff, 0xff);
+    self->red       = COLOR8(0xff, 0x00, 0x00);
+    self->green     = COLOR8(0x00, 0xff, 0x00);
     xrdp_wm_send_palette(self);
-
   }
   else if (self->screen->bpp == 15)
   {
@@ -551,7 +578,9 @@ int xrdp_wm_get_vis_region(struct xrdp_wm* self, struct xrdp_bitmap* bitmap,
     {
       p = (struct xrdp_bitmap*)xrdp_list_get_item(self->screen->child_list, i);
       if (p == bitmap || p == bitmap->parent)
+      {
         return 0;
+      }
       MAKERECT(b, p->left, p->top, p->width, p->height);
       xrdp_region_subtract_rect(region, &b);
     }
@@ -576,12 +605,18 @@ struct xrdp_bitmap* xrdp_wm_at_pos(struct xrdp_bitmap* wnd, int x, int y,
         y < p->top + p->height)
     {
       if (wnd1 != 0)
+      {
         *wnd1 = p;
+      }
       q = xrdp_wm_at_pos(p, x - p->left, y - p->top, 0);
       if (q == 0)
+      {
         return p;
+      }
       else
+      {
         return q;
+      }
     }
   }
   return 0;
@@ -669,13 +704,21 @@ int xrdp_wm_is_rect_vis(struct xrdp_wm* self, struct xrdp_bitmap* wnd,
 
   /* if rect is part off screen */
   if (rect->left < 0)
+  {
     return 0;
+  }
   if (rect->top < 0)
+  {
     return 0;
+  }
   if (rect->right >= self->screen->width)
+  {
     return 0;
+  }
   if (rect->bottom >= self->screen->height)
+  {
     return 0;
+  }
 
   i = xrdp_list_index_of(self->screen->child_list, (int)wnd);
   i--;
@@ -684,7 +727,9 @@ int xrdp_wm_is_rect_vis(struct xrdp_wm* self, struct xrdp_bitmap* wnd,
     b = (struct xrdp_bitmap*)xrdp_list_get_item(self->screen->child_list, i);
     MAKERECT(wnd_rect, b->left, b->top, b->width, b->height);
     if (rect_intersect(rect, &wnd_rect, 0))
+    {
       return 0;
+    }
     i--;
   }
   return 1;
@@ -739,15 +784,25 @@ int xrdp_wm_mouse_move(struct xrdp_wm* self, int x, int y)
   int boxy;
 
   if (self == 0)
+  {
     return 0;
+  }
   if (x < 0)
+  {
     x = 0;
+  }
   if (y < 0)
+  {
     y = 0;
+  }
   if (x >= self->screen->width)
+  {
     x = self->screen->width;
+  }
   if (y >= self->screen->height)
+  {
     y = self->screen->height;
+  }
   self->mouse_x = x;
   self->mouse_y = y;
   if (self->dragging)
@@ -756,7 +811,9 @@ int xrdp_wm_mouse_move(struct xrdp_wm* self, int x, int y)
     boxx = self->draggingx - self->draggingdx;
     boxy = self->draggingy - self->draggingdy;
     if (self->draggingxorstate)
+    {
       xrdp_wm_xor_pat(self, boxx, boxy, self->draggingcx, self->draggingcy);
+    }
     self->draggingx = x;
     self->draggingy = y;
     boxx = self->draggingx - self->draggingdx;
@@ -803,8 +860,12 @@ int xrdp_wm_mouse_move(struct xrdp_wm* self, int x, int y)
                            xrdp_bitmap_from_screenx(b, x),
                            xrdp_bitmap_from_screeny(b, y));
       if (self->button_down == 0)
+      {
         if (b->notify != 0)
+        {
           b->notify(b->owner, b, 2, x, y);
+        }
+      }
     }
   }
   return 0;
@@ -844,15 +905,25 @@ int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
   int oldy;
 
   if (self == 0)
+  {
     return 0;
+  }
   if (x < 0)
+  {
     x = 0;
+  }
   if (y < 0)
+  {
     y = 0;
+  }
   if (x >= self->screen->width)
+  {
     x = self->screen->width;
+  }
   if (y >= self->screen->height)
+  {
     y = self->screen->height;
+  }
   if (self->dragging && but == 1 && !down && self->dragging_window != 0)
   { /* if done dragging */
     self->draggingx = x;
@@ -863,7 +934,9 @@ int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
     oldy = self->dragging_window->top;
     /* draw xor box one more time */
     if (self->draggingxorstate)
+    {
       xrdp_wm_xor_pat(self, newx, newy, self->draggingcx, self->draggingcy);
+    }
     self->draggingxorstate = 0;
     /* move screen to new location */
     xrdp_wm_move_window(self, self->dragging_window, newx - oldx, newy - oldy);
@@ -879,17 +952,29 @@ int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
       if (self->mod->mod_event != 0)
       {
         if (but == 1 && down)
+        {
           self->mod->mod_event(self->mod, WM_LBUTTONDOWN, x, y);
+        }
         else if (but == 1 && !down)
+        {
           self->mod->mod_event(self->mod, WM_LBUTTONUP, x, y);
+        }
         if (but == 2 && down)
+        {
           self->mod->mod_event(self->mod, WM_RBUTTONDOWN, x, y);
+        }
         else if (but == 2 && !down)
+        {
           self->mod->mod_event(self->mod, WM_RBUTTONUP, x, y);
+        }
         if (but == 3 && down)
+        {
           self->mod->mod_event(self->mod, WM_BUTTON3DOWN, x, y);
+        }
         else if (but == 3 && !down)
+        {
           self->mod->mod_event(self->mod, WM_BUTTON3UP, x, y);
+        }
         if (but == 4)
         {
           self->mod->mod_event(self->mod, WM_BUTTON4DOWN,
@@ -928,9 +1013,12 @@ int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
     if (wnd != 0)
     {
       if (wnd->modal_dialog != 0) /* if window has a modal dialog */
+      {
         return 0;
+      }
       if (control == wnd)
-        ;
+      {
+      }
       else if (control->tab_stop)
       {
         focus_out_control = wnd->focused_control;
@@ -947,9 +1035,13 @@ int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
       control->state = 0;
       xrdp_bitmap_invalidate(control, 0);
       if (control->parent != 0)
+      {
         if (control->parent->notify != 0)
+        {
           /* control can be invalid after this */
           control->parent->notify(control->owner, control, 1, x, y);
+        }
+      }
     }
     else if ((control->type == WND_TYPE_BUTTON ||
               control->type == WND_TYPE_COMBO) &&
@@ -959,7 +1051,9 @@ int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
       control->state = 1;
       xrdp_bitmap_invalidate(control, 0);
       if (control->type == WND_TYPE_COMBO)
+      {
         xrdp_wm_pu(self, control);
+      }
     }
     else if (but == 1 && down)
     {
@@ -973,8 +1067,10 @@ int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
             newx = self->draggingx - self->draggingdx;
             newy = self->draggingy - self->draggingdy;
             if (self->draggingxorstate)
+            {
               xrdp_wm_xor_pat(self, newx, newy,
                               self->draggingcx, self->draggingcy);
+            }
             self->draggingxorstate = 0;
           }
           self->dragging = 1;
@@ -992,12 +1088,14 @@ int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
     }
   }
   else
+  {
     xrdp_wm_set_focused(self, 0);
-
+  }
   /* no matter what, mouse is up, reset button_down */
   if (but == 1 && !down && self->button_down != 0)
+  {
     self->button_down = 0;
-
+  }
   return 0;
 }
 
@@ -1038,9 +1136,13 @@ int xrdp_wm_key(struct xrdp_wm* self, int device_flags, int scan_code)
                                   self->num_lock,
                                   self->scroll_lock);
       if (c != 0)
+      {
         self->mod->mod_event(self->mod, msg, c, 0xffff);
+      }
       else
+      {
         self->mod->mod_event(self->mod, msg, scan_code, device_flags);
+      }
     }
   }
   else if (self->focused_window != 0)
@@ -1059,11 +1161,17 @@ int xrdp_wm_key_sync(struct xrdp_wm* self, int device_flags, int key_flags)
   self->scroll_lock = 0;
   self->caps_lock = 0;
   if (key_flags & 1)
+  {
     self->scroll_lock = 1;
+  }
   if (key_flags & 2)
+  {
     self->num_lock = 1;
+  }
   if (key_flags & 4)
+  {
     self->caps_lock = 1;
+  }
   return 0;
 }
 
@@ -1074,16 +1182,19 @@ int xrdp_wm_pu(struct xrdp_wm* self, struct xrdp_bitmap* control)
   int y;
 
   if (self == 0)
+  {
     return 0;
+  }
   if (control == 0)
+  {
     return 0;
+  }
   self->popup_wnd = xrdp_bitmap_create(control->width, 100,
                                        self->screen->bpp,
-                                       WND_TYPE_SPECIAL);
+                                       WND_TYPE_SPECIAL, self);
   self->popup_wnd->popped_from = control;
   self->popup_wnd->parent = self->screen;
   self->popup_wnd->owner = self->screen;
-  self->popup_wnd->wm = self;
   x = xrdp_bitmap_to_screenx(control, 0);
   y = xrdp_bitmap_to_screeny(control, 0);
   self->popup_wnd->left = x;

@@ -55,7 +55,7 @@ int xrdp_process_main_loop(struct xrdp_process* self)
 
   make_stream(s);
   self->status = 1;
-  self->rdp_layer = xrdp_rdp_create(self);
+  self->rdp_layer = xrdp_rdp_create(self, self->sck);
   g_tcp_set_non_blocking(self->sck);
   if (xrdp_rdp_incoming(self->rdp_layer) == 0)
   {
@@ -108,8 +108,8 @@ int xrdp_process_main_loop(struct xrdp_process* self)
         {
           /* only do this once */
           DEBUG(("xrdp_process_main_loop up and running\n\r"));
-          self->orders = xrdp_orders_create(self);
-          self->wm = xrdp_wm_create(self);
+          self->orders = xrdp_orders_create(self, self->rdp_layer);
+          self->wm = xrdp_wm_create(self, &self->rdp_layer->client_info);
           xrdp_wm_init(self->wm);
         }
       }

@@ -299,7 +299,8 @@ int xrdp_painter_draw_bitmap(struct xrdp_painter* self,
   }
   if (self->wm->client_info->use_bitmap_cache)
   {
-    palette_id = xrdp_cache_add_palette(self->wm->cache, self->wm->palette);
+    /*palette_id = xrdp_cache_add_palette(self->wm->cache, self->wm->palette);*/
+    palette_id = 0;
     j = 0;
     while (j < to_draw->height)
     {
@@ -310,7 +311,7 @@ int xrdp_painter_draw_bitmap(struct xrdp_painter* self,
         y1 = y + j;
         w = MIN(SSW, to_draw->width - i);
         h = MIN(SSH, to_draw->height - j);
-        b = xrdp_bitmap_create(w, h, self->wm->screen->bpp, 0);
+        b = xrdp_bitmap_create(w, h, self->wm->screen->bpp, 0, self->wm);
 #ifdef USE_CRC
         xrdp_bitmap_copy_box_with_crc(to_draw, b, i, j, w, h);
 #else
@@ -386,6 +387,7 @@ int xrdp_painter_draw_bitmap(struct xrdp_painter* self,
   }
   else /* no bitmap cache */
   {
+    /* make sure there is no waiting orders */
     xrdp_orders_force_send(self->orders);
     k = 0;
     while (xrdp_region_get_rect(region, k, &rect) == 0)
@@ -394,7 +396,7 @@ int xrdp_painter_draw_bitmap(struct xrdp_painter* self,
       y1 = rect.top;
       w = rect.right - rect.left;
       h = rect.bottom - rect.top;
-      b = xrdp_bitmap_create(w, h, self->wm->screen->bpp, 0);
+      b = xrdp_bitmap_create(w, h, self->wm->screen->bpp, 0, self->wm);
       xrdp_bitmap_copy_box(to_draw, b, x1 - x, y1 - y, w, h);
       xrdp_wm_send_bitmap(self->wm, b, x1, y1, w, h);
       xrdp_bitmap_delete(b);

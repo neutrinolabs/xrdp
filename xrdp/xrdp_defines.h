@@ -46,6 +46,12 @@
 (*(((unsigned short*)d) + ((y) * (w) + (x))) = (v))
 #define SETPIXEL32(d, x, y, w, v) \
 (*(((unsigned long*)d) + ((y) * (w) + (x))) = (v))
+#define COLOR8(r, g, b) \
+( \
+  (((r) >> 5) << 0) | \
+  (((g) >> 5) << 3) | \
+  (((b) >> 6) << 6) \
+)
 #define COLOR15(r, g, b) ((((r) >> 3) << 10) | (((g) >> 3) << 5) | ((b) >> 3))
 #define COLOR16(r, g, b) ((((r) >> 3) << 11) | (((g) >> 2) << 5) | ((b) >> 3))
 #define COLOR24(r, g, b) ((r) | ((g) << 8) | ((b) << 16))
