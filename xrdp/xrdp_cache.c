@@ -39,6 +39,7 @@ struct xrdp_cache* xrdp_cache_create(struct xrdp_wm* owner,
   self->cache2_size = client_info->cache2_size;
   self->cache3_entries = client_info->cache3_entries;
   self->cache3_size = client_info->cache3_size;
+  self->pointer_cache_entries = client_info->pointer_cache_entries;
   return self;
 }
 
@@ -319,4 +320,64 @@ int xrdp_cache_add_char(struct xrdp_cache* self,
   self->char_items[f][c].stamp = self->char_stamp;
   xrdp_orders_send_font(self->orders, fi, f, c);
   return MAKELONG(f, c);
+}
+
+/*****************************************************************************/
+/* added the pointer to the cache and send it to client, it also sets the
+   client if it finds it
+   returns the index in the cache
+   does not take ownership of pointer_item */
+int xrdp_cache_add_pointer(struct xrdp_cache* self,
+                           struct xrdp_pointer_item* pointer_item)
+{
+  int i;
+  int oldest;
+  int index;
+
+  if (self == 0)
+  {
+    return 0;
+  }
+  self->pointer_stamp++;
+  /* look for match */
+  for (i = 0; i < self->pointer_cache_entries; i++)
+  {
+    if (self->pointer_items[i].x == pointer_item->x &&
+        self->pointer_items[i].y == pointer_item->y &&
+        g_memcmp(self->pointer_items[i].data,
+                 pointer_item->data, 32 * 32 * 3) == 0 &&
+        g_memcmp(self->pointer_items[i].mask,
+                 pointer_item->mask, 32 * 32 / 8) == 0)
+    {
+      self->pointer_items[i].stamp = self->pointer_stamp;
+      xrdp_wm_set_pointer(self->wm, i);
+      DEBUG(("found pointer at %d\n\r", i));
+      return i;
+    }
+  }
+  /* look for oldest */
+  index = 0;
+  oldest = 0x7fffffff;
+  for (i = 0; i < self->pointer_cache_entries; i++)
+  {
+    if (self->pointer_items[i].stamp < oldest)
+    {
+      oldest = self->pointer_items[i].stamp;
+      index = i;
+    }
+  }
+  self->pointer_items[index].x = pointer_item->x;
+  self->pointer_items[index].y = pointer_item->y;
+  g_memcpy(self->pointer_items[index].data,
+           pointer_item->data, 32 * 32 * 3);
+  g_memcpy(self->pointer_items[index].mask,
+           pointer_item->mask, 32 * 32 / 8);
+  self->pointer_items[index].stamp = self->pointer_stamp;
+  xrdp_wm_send_pointer(self->wm, index,
+                       self->pointer_items[index].data,
+                       self->pointer_items[index].mask,
+                       self->pointer_items[index].x,
+                       self->pointer_items[index].y);
+  DEBUG(("adding pointer at %d\n\r", index));
+  return index;
 }

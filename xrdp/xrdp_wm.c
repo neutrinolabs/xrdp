@@ -299,23 +299,6 @@ int xrdp_wm_set_focused(struct xrdp_wm* self, struct xrdp_bitmap* wnd)
   return 0;
 }
 
-/*****************************************************************************/
-int xrdp_set_cursor(struct xrdp_wm* self, int cache_idx)
-{
-  struct stream* s;
-
-  make_stream(s);
-  init_stream(s, 8192);
-  xrdp_rdp_init_data(self->rdp_layer, s);
-  out_uint16_le(s, RDP_POINTER_CACHED);
-  out_uint16_le(s, 0); /* pad */
-  out_uint16_le(s, cache_idx); /* cache_idx */
-  s_mark_end(s);
-  xrdp_rdp_send_data(self->rdp_layer, s, RDP_DATA_PDU_POINTER);
-  free_stream(s);
-  return 0;
-}
-
 //******************************************************************************
 int xrdp_wm_get_pixel(char* data, int x, int y, int width, int bpp)
 {
@@ -347,7 +330,22 @@ int xrdp_wm_get_pixel(char* data, int x, int y, int width, int bpp)
 }
 
 /*****************************************************************************/
-int xrdp_wm_load_cursor(struct xrdp_wm* self, char* file_name, char* data,
+int xrdp_wm_pointer(struct xrdp_wm* self, char* data, char* mask, int x, int y)
+{
+
+  struct xrdp_pointer_item pointer_item;
+
+  g_memset(&pointer_item, 0, sizeof(struct xrdp_pointer_item));
+  pointer_item.x = x;
+  pointer_item.y = y;
+  g_memcpy(pointer_item.data, data, 32 * 32 * 3);
+  g_memcpy(pointer_item.mask, mask, 32 * 32 / 8);
+  xrdp_cache_add_pointer(self->cache, &pointer_item);
+  return 0;
+}
+
+/*****************************************************************************/
+int xrdp_wm_load_pointer(struct xrdp_wm* self, char* file_name, char* data,
                         char* mask, int* x, int* y)
 {
   int fd;
@@ -419,7 +417,7 @@ int xrdp_wm_load_cursor(struct xrdp_wm* self, char* file_name, char* data,
 }
 
 /*****************************************************************************/
-int xrdp_wm_send_cursor(struct xrdp_wm* self, int cache_idx,
+int xrdp_wm_send_pointer(struct xrdp_wm* self, int cache_idx,
                         char* data, char* mask, int x, int y)
 {
   struct stream* s;
@@ -453,6 +451,24 @@ int xrdp_wm_send_cursor(struct xrdp_wm* self, int cache_idx,
     }
   }
   out_uint8a(s, mask, 128); /* mask */
+  s_mark_end(s);
+  xrdp_rdp_send_data(self->rdp_layer, s, RDP_DATA_PDU_POINTER);
+  free_stream(s);
+  return 0;
+}
+
+/*****************************************************************************/
+int xrdp_wm_set_pointer(struct xrdp_wm* self, int cache_idx)
+{
+  struct stream* s;
+
+  make_stream(s);
+  init_stream(s, 8192);
+  xrdp_rdp_init_data(self->rdp_layer, s);
+  out_uint16_le(s, RDP_POINTER_CACHED);
+  out_uint16_le(s, 0); /* pad */
+  out_uint16_le(s, cache_idx); /* cache_idx */
+  //g_printf("%d\n", cache_idx);
   s_mark_end(s);
   xrdp_rdp_send_data(self->rdp_layer, s, RDP_DATA_PDU_POINTER);
   free_stream(s);
@@ -537,10 +553,10 @@ int xrdp_wm_init(struct xrdp_wm* self)
 
   xrdp_wm_set_focused(self, self->login_window);
 
-  xrdp_wm_load_cursor(self, "cursor1.cur", data, mask, &x, &y);
-  xrdp_wm_send_cursor(self, 1, data, mask, x, y);
-  xrdp_wm_load_cursor(self, "cursor0.cur", data, mask, &x, &y);
-  xrdp_wm_send_cursor(self, 0, data, mask, x, y);
+  xrdp_wm_load_pointer(self, "cursor1.cur", data, mask, &x, &y);
+  xrdp_wm_send_pointer(self, 1, data, mask, x, y);
+  xrdp_wm_load_pointer(self, "cursor0.cur", data, mask, &x, &y);
+  xrdp_wm_send_pointer(self, 0, data, mask, x, y);
 #endif
   return 0;
 }
@@ -850,10 +866,10 @@ int xrdp_wm_mouse_move(struct xrdp_wm* self, int x, int y)
   {
     if (!self->dragging)
     {
-      if (b->cursor != self->current_cursor)
+      if (b->pointer != self->current_pointer)
       {
-        xrdp_set_cursor(self, b->cursor);
-        self->current_cursor = b->cursor;
+        xrdp_wm_set_pointer(self, b->pointer);
+        self->current_pointer = b->pointer;
       }
       xrdp_bitmap_def_proc(b, WM_MOUSEMOVE,
                            xrdp_bitmap_from_screenx(b, x),

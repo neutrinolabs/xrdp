@@ -430,6 +430,7 @@ int xrdp_sec_recv(struct xrdp_sec* self, struct stream* s, int* chan)
   DEBUG((" in xrdp_sec_recv\n\r"));
   if (xrdp_mcs_recv(self->mcs_layer, s, chan) != 0)
   {
+    DEBUG((" out xrdp_sec_recv error\n\r"));
     return 1;
   }
   in_uint32_le(s, flags);

@@ -42,7 +42,7 @@ struct xrdp_mod
                            int srcx, int srcy);
   int (*server_paint_rect)(struct xrdp_mod* v, int x, int y, int cx, int cy,
                            char* data);
-  int (*server_set_cursor)(struct xrdp_mod* v, int x, int y, char* data, char* mask);
+  int (*server_set_pointer)(struct xrdp_mod* v, int x, int y, char* data, char* mask);
   int (*server_palette)(struct xrdp_mod* v, int* palette);
   int (*server_error_popup)(struct xrdp_mod* v, char* error, char* caption);
   int d2[92];
@@ -181,6 +181,7 @@ struct xrdp_client_info
   int cache2_size;
   int cache3_entries;
   int cache3_size;
+  int pointer_cache_entries;
   int use_bitmap_comp;
   int use_bitmap_cache;
   int op1; /* use smaller bitmap header, todo */
@@ -314,17 +315,26 @@ struct xrdp_char_item
   struct xrdp_font_item font_item;
 };
 
+struct xrdp_pointer_item
+{
+  int stamp;
+  int x; /* hotspot */
+  int y;
+  char data[32 * 32 * 3];
+  char mask[32 * 32 / 8];
+};
+
 /* differnce caches */
 struct xrdp_cache
 {
   struct xrdp_wm* wm; /* owner */
   struct xrdp_orders* orders;
+  /* palette */
   int palette_stamp;
   struct xrdp_palette_item palette_items[6];
+  /* bitmap */
   int bitmap_stamp;
   struct xrdp_bitmap_item bitmap_items[3][600];
-  int char_stamp;
-  struct xrdp_char_item char_items[12][256];
   int use_bitmap_comp;
   int cache1_entries;
   int cache1_size;
@@ -332,6 +342,13 @@ struct xrdp_cache
   int cache2_size;
   int cache3_entries;
   int cache3_size;
+  /* font */
+  int char_stamp;
+  struct xrdp_char_item char_items[12][256];
+  /* pointer */
+  int pointer_stamp;
+  struct xrdp_pointer_item pointer_items[32];
+  int pointer_cache_entries;
 };
 
 /* the window manager */
@@ -372,8 +389,8 @@ struct xrdp_wm
   struct xrdp_bitmap* popup_wnd;
   /* focused window */
   struct xrdp_bitmap* focused_window;
-  /* cursor */
-  int current_cursor;
+  /* pointer */
+  int current_pointer;
   int mouse_x;
   int mouse_y;
   /* keyboard info */
@@ -458,11 +475,11 @@ struct xrdp_bitmap
   /* for all but bitmap */
   int left;
   int top;
-  int cursor;
+  int pointer;
   int bg_color;
   int tab_stop;
   int id;
-  char caption[256];
+  char* caption1;
   /* for window or screen */
   struct xrdp_bitmap* modal_dialog;
   struct xrdp_bitmap* focused_control;

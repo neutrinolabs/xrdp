@@ -91,12 +91,14 @@ int xrdp_mcs_recv(struct xrdp_mcs* self, struct stream* s, int* chan)
   {
     if (xrdp_iso_recv(self->iso_layer, s) != 0)
     {
+      DEBUG(("  out xrdp_mcs_recv xrdp_iso_recv returned non zero\n\r"));
       return 1;
     }
     in_uint8(s, opcode);
     appid = opcode >> 2;
     if (appid == MCS_DPUM)
     {
+      DEBUG(("  out xrdp_mcs_recv appid != MCS_DPUM\n\r"));
       return 1;
     }
     if (appid == MCS_CJRQ)
@@ -141,7 +143,9 @@ int xrdp_mcs_ber_parse_header(struct xrdp_mcs* self, struct stream* s,
     in_uint8(s, tag);
   }
   if (tag != tag_val)
+  {
     return 1;
+  }
   in_uint8(s, l);
   if (l & 0x80)
   {

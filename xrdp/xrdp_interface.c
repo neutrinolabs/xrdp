@@ -190,12 +190,12 @@ int server_paint_rect(int x, int y, int cx, int cy, char* data)
 }
 
 /*****************************************************************************/
-int server_set_cursor(int x, int y, char* data, char* mask)
+int server_set_pointer(int x, int y, char* data, char* mask)
 {
   struct xrdp_wm* wm;
 
   wm = (struct xrdp_wm*)g_mod.wm;
-  xrdp_wm_send_cursor(wm, 2, data, mask, x, y);
+  xrdp_wm_pointer(wm, data, mask, x, y);
   return 0;
 }
 
@@ -283,13 +283,13 @@ int server_paint_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy,
 }
 
 /*****************************************************************************/
-int server_set_cursor(struct xrdp_mod* mod, int x, int y,
-                      char* data, char* mask)
+int server_set_pointer(struct xrdp_mod* mod, int x, int y,
+                       char* data, char* mask)
 {
   struct xrdp_wm* wm;
 
   wm = (struct xrdp_wm*)mod->wm;
-  xrdp_wm_send_cursor(wm, 2, data, mask, x, y);
+  xrdp_wm_pointer(wm, data, mask, x, y);
   return 0;
 }
 

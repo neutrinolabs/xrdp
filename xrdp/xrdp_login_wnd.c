@@ -107,7 +107,7 @@ int xrdp_wm_setup_mod(struct xrdp_wm* self,
         self->mod->server_fill_rect = server_fill_rect;
         self->mod->server_screen_blt = server_screen_blt;
         self->mod->server_paint_rect = server_paint_rect;
-        self->mod->server_set_cursor = server_set_cursor;
+        self->mod->server_set_pointer = server_set_pointer;
         self->mod->server_palette = server_palette;
         self->mod->server_error_popup= server_error_popup;
       }
@@ -167,7 +167,7 @@ int xrdp_wm_login_notify(struct xrdp_bitmap* wnd,
       help->left = wnd->wm->screen->width / 2 - help->width / 2;
       help->top = wnd->wm->screen->height / 2 - help->height / 2;
       help->notify = xrdp_wm_login_help_notify;
-      g_strcpy(help->caption, "Login help");
+      set_string(&help->caption1, "Login help");
       /* ok button */
       but = xrdp_bitmap_create(60, 25, wnd->wm->screen->bpp, 3, wnd->wm);
       xrdp_list_insert_item(help->child_list, 0, (int)but);
@@ -177,7 +177,7 @@ int xrdp_wm_login_notify(struct xrdp_bitmap* wnd,
       but->top = 260;
       but->id = 1;
       but->tab_stop = 1;
-      g_strcpy(but->caption, "OK");
+      set_string(&but->caption1, "OK");
       /* draw it */
       help->focused_control = but;
       //wnd->wm->focused_window = help;
@@ -207,7 +207,7 @@ int xrdp_wm_login_notify(struct xrdp_bitmap* wnd,
             edit = xrdp_bitmap_get_child_by_id(wnd, 4);
             if (edit != 0)
             {
-              g_strcpy(con_mod.username, edit->caption);
+              g_strcpy(con_mod.username, edit->caption1);
             }
           }
           if (g_strcmp(con_mod.password, "ask") == 0)
@@ -215,7 +215,7 @@ int xrdp_wm_login_notify(struct xrdp_bitmap* wnd,
             edit = xrdp_bitmap_get_child_by_id(wnd, 5);
             if (edit != 0)
             {
-              g_strcpy(con_mod.password, edit->caption);
+              g_strcpy(con_mod.password, edit->caption1);
             }
           }
           if (xrdp_wm_setup_mod(wm, mod) == 0)
@@ -364,7 +364,7 @@ int xrdp_login_wnd_create(struct xrdp_wm* self)
   self->login_window->top = self->screen->height / 2 -
                             self->login_window->height / 2;
   self->login_window->notify = xrdp_wm_login_notify;
-  g_strcpy(self->login_window->caption, "Login to xrdp");
+  set_string(&self->login_window->caption1, "Login to xrdp");
 
   /* image */
   but = xrdp_bitmap_create(4, 4, self->screen->bpp, WND_TYPE_IMAGE, self);
@@ -391,7 +391,7 @@ int xrdp_login_wnd_create(struct xrdp_wm* self)
   but->owner = self->login_window;
   but->left = 155;
   but->top = 50;
-  g_strcpy(but->caption, "Username");
+  set_string(&but->caption1, "Username");
 
   /* edit */
   but = xrdp_bitmap_create(140, 20, self->screen->bpp, WND_TYPE_EDIT, self);
@@ -401,8 +401,9 @@ int xrdp_login_wnd_create(struct xrdp_wm* self)
   but->left = 220;
   but->top = 50;
   but->id = 4;
-  but->cursor = 1;
+  but->pointer = 1;
   but->tab_stop = 1;
+  but->caption1 = g_malloc(256, 1);
   self->login_window->focused_control = but;
 
   /* label */
@@ -412,7 +413,7 @@ int xrdp_login_wnd_create(struct xrdp_wm* self)
   but->owner = self->login_window;
   but->left = 155;
   but->top = 80;
-  g_strcpy(but->caption, "Password");
+  set_string(&but->caption1, "Password");
 
   /* edit */
   but = xrdp_bitmap_create(140, 20, self->screen->bpp, WND_TYPE_EDIT, self);
@@ -422,8 +423,9 @@ int xrdp_login_wnd_create(struct xrdp_wm* self)
   but->left = 220;
   but->top = 80;
   but->id = 5;
-  but->cursor = 1;
+  but->pointer = 1;
   but->tab_stop = 1;
+  but->caption1 = g_malloc(256, 1);
   but->password_char = '*';
 
   /* label */
@@ -433,7 +435,7 @@ int xrdp_login_wnd_create(struct xrdp_wm* self)
   but->owner = self->login_window;
   but->left = 155;
   but->top = 110;
-  g_strcpy(but->caption, "Module");
+  set_string(&but->caption1, "Module");
 
   /* combo */
   but = xrdp_bitmap_create(140, 20, self->screen->bpp, WND_TYPE_COMBO, self);
@@ -454,7 +456,7 @@ int xrdp_login_wnd_create(struct xrdp_wm* self)
   but->left = 180;
   but->top = 160;
   but->id = 3;
-  g_strcpy(but->caption, "OK");
+  set_string(&but->caption1, "OK");
   but->tab_stop = 1;
 
   /* button */
@@ -465,7 +467,7 @@ int xrdp_login_wnd_create(struct xrdp_wm* self)
   but->left = 250;
   but->top = 160;
   but->id = 2;
-  g_strcpy(but->caption, "Cancel");
+  set_string(&but->caption1, "Cancel");
   but->tab_stop = 1;
 
   /* button */
@@ -476,7 +478,7 @@ int xrdp_login_wnd_create(struct xrdp_wm* self)
   but->left = 320;
   but->top = 160;
   but->id = 1;
-  g_strcpy(but->caption, "Help");
+  set_string(&but->caption1, "Help");
   but->tab_stop = 1;
 
   return 0;

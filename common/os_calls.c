@@ -751,7 +751,9 @@ int g_file_lock(int fd, int start, int len)
   lock.l_start = start;
   lock.l_len = len;
   if (fcntl(fd, F_SETLK, &lock) == -1)
+  {
     return 0;
+  }
   return 1;
 #endif
 }
@@ -759,12 +761,25 @@ int g_file_lock(int fd, int start, int len)
 /*****************************************************************************/
 int g_strlen(char* text)
 {
+  if (text == 0)
+  {
+    return 0;
+  }
   return strlen(text);
 }
 
 /*****************************************************************************/
 char* g_strcpy(char* dest, char* src)
 {
+  if (src == 0 && dest != 0)
+  {
+    dest[0] = 0;
+    return dest;
+  }
+  if (dest == 0 || src == 0)
+  {
+    return 0;
+  }
   return strcpy(dest, src);
 }
 
@@ -773,6 +788,15 @@ char* g_strncpy(char* dest, char* src, int len)
 {
   char* rv;
 
+  if (src == 0 && dest != 0)
+  {
+    dest[0] = 0;
+    return dest;
+  }
+  if (dest == 0 || src == 0)
+  {
+    return 0;
+  }
   rv = strncpy(dest, src, len);
   dest[len] = 0;
   return rv;
@@ -781,6 +805,10 @@ char* g_strncpy(char* dest, char* src, int len)
 /*****************************************************************************/
 char* g_strcat(char* dest, char* src)
 {
+  if (dest == 0 || src == 0)
+  {
+    return 0;
+  }
   return strcat(dest, src);
 }
 
@@ -791,7 +819,9 @@ char* g_strdup(char* in)
   char* p;
 
   if (in == 0)
+  {
     return 0;
+  }
   len = g_strlen(in);
   p = (char*)g_malloc(len + 1, 0);
   g_strcpy(p, in);
@@ -814,7 +844,9 @@ int g_load_library(char* in)
 int g_free_library(int lib)
 {
   if (lib == 0)
+  {
     return 0;
+  }
   return dlclose((void*)lib);
 }
 
@@ -823,7 +855,9 @@ int g_free_library(int lib)
 void* g_get_proc_address(int lib, char* name)
 {
   if (lib == 0)
+  {
     return 0;
+  }
   return dlsym((void*)lib, name);
 }
 

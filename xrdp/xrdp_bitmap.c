@@ -99,7 +99,7 @@ struct xrdp_bitmap* xrdp_bitmap_create(int width, int height, int bpp,
   }
   if (self->type == WND_TYPE_SCREEN || self->type == WND_TYPE_BITMAP)
   {
-    self->data = (char*)g_malloc(width * height * Bpp, 1);
+    self->data = (char*)g_malloc(width * height * Bpp, 0);
   }
   if (self->type != WND_TYPE_BITMAP)
   {
@@ -196,6 +196,7 @@ void xrdp_bitmap_delete(struct xrdp_bitmap* self)
   {
     g_free(self->data);
   }
+  g_free(self->caption1);
   g_free(self);
 }
 
@@ -249,7 +250,7 @@ int xrdp_bitmap_set_focus(struct xrdp_bitmap* self, int focused)
     xrdp_painter_fill_rect(painter, self, 3, 3, self->width - 5, 18);
     painter->font->color = self->wm->black;
   }
-  xrdp_painter_draw_text(painter, self, 4, 4, self->caption);
+  xrdp_painter_draw_text(painter, self, 4, 4, self->caption1);
   xrdp_painter_end_update(painter);
   xrdp_painter_delete(painter);
   return 0;
@@ -884,7 +885,7 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
       xrdp_painter_fill_rect(painter, self, 3, 3, self->width - 5, 18);
       painter->font->color = self->wm->black;
     }
-    xrdp_painter_draw_text(painter, self, 4, 4, self->caption);
+    xrdp_painter_draw_text(painter, self, 4, 4, self->caption1);
   }
   else if (self->type == WND_TYPE_SCREEN) /* 2 */
   {
@@ -913,11 +914,11 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
     {
       xrdp_bitmap_draw_button(self, painter, 0, 0,
                               self->width, self->height, 0);
-      w = xrdp_painter_text_width(painter, self->caption);
-      h = xrdp_painter_text_height(painter, self->caption);
+      w = xrdp_painter_text_width(painter, self->caption1);
+      h = xrdp_painter_text_height(painter, self->caption1);
       painter->font->color = self->wm->black;
       xrdp_painter_draw_text(painter, self, self->width / 2 - w / 2,
-                             self->height / 2 - h / 2, self->caption);
+                             self->height / 2 - h / 2, self->caption1);
       if (self->parent != 0)
         if (self->wm->focused_window == self->parent)
           if (self->parent->focused_control == self)
@@ -928,11 +929,11 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
     {
       xrdp_bitmap_draw_button(self, painter, 0, 0,
                               self->width, self->height, 1);
-      w = xrdp_painter_text_width(painter, self->caption);
-      h = xrdp_painter_text_height(painter, self->caption);
+      w = xrdp_painter_text_width(painter, self->caption1);
+      h = xrdp_painter_text_height(painter, self->caption1);
       painter->font->color = self->wm->black;
       xrdp_painter_draw_text(painter, self, (self->width / 2 - w / 2) + 1,
-                             (self->height / 2 - h / 2) + 1, self->caption);
+                             (self->height / 2 - h / 2) + 1, self->caption1);
       if (self->parent != 0)
         if (self->wm->focused_window == self->parent)
           if (self->parent->focused_control == self)
@@ -976,13 +977,13 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
     painter->fg_color = self->wm->black;
     if (self->password_char != 0)
     {
-      i = g_strlen(self->caption);
+      i = g_strlen(self->caption1);
       g_memset(text, self->password_char, i);
       text[i] = 0;
       xrdp_painter_draw_text(painter, self, 4, 2, text);
     }
     else
-      xrdp_painter_draw_text(painter, self, 4, 2, self->caption);
+      xrdp_painter_draw_text(painter, self, 4, 2, self->caption1);
     /* draw xor box(cursor) */
     if (self->parent != 0)
     {
@@ -994,7 +995,7 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
           text[self->edit_pos] = 0;
         }
         else
-          g_strncpy(text, self->caption, self->edit_pos);
+          g_strncpy(text, self->caption1, self->edit_pos);
         w = xrdp_painter_text_width(painter, text);
         painter->fg_color = self->wm->black;
         painter->rop = 0x5a;
@@ -1007,7 +1008,7 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
   else if (self->type == WND_TYPE_LABEL) /* 6 */
   {
     painter->font->color = self->wm->black;
-    xrdp_painter_draw_text(painter, self, 0, 0, self->caption);
+    xrdp_painter_draw_text(painter, self, 0, 0, self->caption1);
   }
   else if (self->type == WND_TYPE_COMBO) /* 7 combo box */
   {
@@ -1205,7 +1206,7 @@ int xrdp_bitmap_def_proc(struct xrdp_bitmap* self, int msg,
       else if ((scan_code == 77 || scan_code == 80) &&
                (ext || self->wm->num_lock == 0))
       {
-        if (self->edit_pos < g_strlen(self->caption))
+        if (self->edit_pos < g_strlen(self->caption1))
         {
           self->edit_pos++;
           xrdp_bitmap_invalidate(self, 0);
@@ -1214,13 +1215,13 @@ int xrdp_bitmap_def_proc(struct xrdp_bitmap* self, int msg,
       /* backspace */
       else if (scan_code == 14)
       {
-        n = g_strlen(self->caption);
+        n = g_strlen(self->caption1);
         if (n > 0)
         {
           if (self->edit_pos > 0)
           {
             self->edit_pos--;
-            remove_char_at(self->caption, self->edit_pos);
+            remove_char_at(self->caption1, self->edit_pos);
             xrdp_bitmap_invalidate(self, 0);
           }
         }
@@ -1229,12 +1230,12 @@ int xrdp_bitmap_def_proc(struct xrdp_bitmap* self, int msg,
       else if (scan_code == 83  &&
               (ext || self->wm->num_lock == 0))
       {
-        n = g_strlen(self->caption);
+        n = g_strlen(self->caption1);
         if (n > 0)
         {
           if (self->edit_pos < n)
           {
-            remove_char_at(self->caption, self->edit_pos);
+            remove_char_at(self->caption1, self->edit_pos);
             xrdp_bitmap_invalidate(self, 0);
           }
         }
@@ -1243,7 +1244,7 @@ int xrdp_bitmap_def_proc(struct xrdp_bitmap* self, int msg,
       else if (scan_code == 79  &&
               (ext || self->wm->num_lock == 0))
       {
-        n = g_strlen(self->caption);
+        n = g_strlen(self->caption1);
         if (self->edit_pos < n)
         {
           self->edit_pos = n;
@@ -1268,7 +1269,7 @@ int xrdp_bitmap_def_proc(struct xrdp_bitmap* self, int msg,
                                     self->wm->scroll_lock);
         if (c != 0)
         {
-          add_char_at(self->caption, c, self->edit_pos);
+          add_char_at(self->caption1, c, self->edit_pos);
           self->edit_pos++;
           xrdp_bitmap_invalidate(self, 0);
         }

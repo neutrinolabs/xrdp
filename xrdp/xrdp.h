@@ -136,6 +136,8 @@ int xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap);
 int xrdp_cache_add_palette(struct xrdp_cache* self, int* palette);
 int xrdp_cache_add_char(struct xrdp_cache* self,
                         struct xrdp_font_item* font_item);
+int xrdp_cache_add_pointer(struct xrdp_cache* self,
+                           struct xrdp_pointer_item* pointer_item);
 
 /* xrdp_wm.c */
 struct xrdp_wm* xrdp_wm_create(struct xrdp_process* owner,
@@ -145,6 +147,7 @@ int xrdp_wm_send_palette(struct xrdp_wm* self);
 int xrdp_wm_init(struct xrdp_wm* self);
 int xrdp_wm_send_bitmap(struct xrdp_wm* self, struct xrdp_bitmap* bitmap,
                         int x, int y, int cx, int cy);
+int xrdp_wm_set_pointer(struct xrdp_wm* self, int cache_idx);
 int xrdp_wm_set_focused(struct xrdp_wm* self, struct xrdp_bitmap* wnd);
 int xrdp_wm_get_vis_region(struct xrdp_wm* self, struct xrdp_bitmap* bitmap,
                            int x, int y, int cx, int cy,
@@ -154,8 +157,9 @@ int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down);
 int xrdp_wm_key(struct xrdp_wm* self, int device_flags, int scan_code);
 int xrdp_wm_key_sync(struct xrdp_wm* self, int device_flags, int key_flags);
 int xrdp_wm_pu(struct xrdp_wm* self, struct xrdp_bitmap* control);
-int xrdp_wm_send_cursor(struct xrdp_wm* self, int cache_idx,
+int xrdp_wm_send_pointer(struct xrdp_wm* self, int cache_idx,
                         char* data, char* mask, int x, int y);
+int xrdp_wm_pointer(struct xrdp_wm* self, char* data, char* mask, int x, int y);
 
 /* xrdp_process.c */
 struct xrdp_process* xrdp_process_create(struct xrdp_listen* owner);
@@ -285,8 +289,8 @@ int server_screen_blt(struct xrdp_mod* mod, int x, int y, int cx, int cy,
                       int srcx, int srcy);
 int server_paint_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy,
                       char* data);
-int server_set_cursor(struct xrdp_mod* mod, int x, int y,
-                      char* data, char* mask);
+int server_set_pointer(struct xrdp_mod* mod, int x, int y,
+                       char* data, char* mask);
 int server_palette(struct xrdp_mod* mod, int* palette);
 int server_error_popup(struct xrdp_mod* mod, char* error, char* caption);
 #endif

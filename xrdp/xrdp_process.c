@@ -120,7 +120,10 @@ int xrdp_process_main_loop(struct xrdp_process* self)
       if (i & 1)
       {
         init_stream(s, 8192);
-        xrdp_process_loop(self, s);
+        if (xrdp_process_loop(self, s) != 0)
+        {
+          break;
+        }
       }
       if (i & 2) /* mod socket fired */
       {

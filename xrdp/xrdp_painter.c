@@ -380,6 +380,7 @@ int xrdp_painter_draw_bitmap(struct xrdp_painter* self,
                     srcy = srcy - y1;
                     y1 = 0;
                   }
+                  //g_printf("%d %d %d %d %d %d\n", x1, y1, w, h, srcx, srcy);
                   xrdp_orders_mem_blt(self->orders, cache_id, palette_id,
                                       x1, y1, w, h, self->rop, srcx, srcy,
                                       cache_idx, &rect1);
@@ -425,6 +426,10 @@ int xrdp_painter_text_width(struct xrdp_painter* self, char* text)
   struct xrdp_font_item* font_item;
 
   xrdp_painter_font_needed(self);
+  if (text == 0)
+  {
+    return 0;
+  }
   rv = 0;
   len = g_strlen(text);
   for (index = 0; index < len; index++)
@@ -444,6 +449,10 @@ int xrdp_painter_text_height(struct xrdp_painter* self, char* text)
   struct xrdp_font_item* font_item;
 
   xrdp_painter_font_needed(self);
+  if (text == 0)
+  {
+    return 0;
+  }
   rv = 0;
   len = g_strlen(text);
   for (index = 0; index < len; index++)

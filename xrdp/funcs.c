@@ -285,7 +285,9 @@ int add_char_at(char* text, char ch, int index)
     return 0;
   }
   for (i = len - 1; i >= index; i--)
+  {
     text[i + 1] = text[i];
+  }
   text[i + 1] = ch;
   text[len + 1] = 0;
   return 0;
@@ -301,14 +303,18 @@ int remove_char_at(char* text, int index)
 
   len = g_strlen(text);
   if (len <= 0)
+  {
     return 0;
+  }
   if (index >= len - 1 || index < 0)
   {
     text[len - 1] = 0;
     return 0;
   }
   for (i = index; i < len - 1; i++)
+  {
     text[i] = text[i + 1];
+  }
   text[len - 1] = 0;
   return 0;
 }
@@ -317,7 +323,9 @@ int remove_char_at(char* text, int index)
 int set_string(char** in_str, char* in)
 {
   if (in_str == 0)
+  {
     return 0;
+  }
   g_free(*in_str);
   *in_str = g_strdup(in);
   return 0;

@@ -14,6 +14,6 @@ int server_end_update(void);
 int server_fill_rect(int x, int y, int cx, int cy, int color);
 int server_screen_blt(int x, int y, int cx, int cy, int srcx, int srcy);
 int server_paint_rect(int x, int y, int cx, int cy, char* data);
-int server_set_cursor(int x, int y, char* data, char* mask);
+int server_set_pointer(int x, int y, char* data, char* mask);
 int server_palette(int* palette);
 

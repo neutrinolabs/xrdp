@@ -89,10 +89,12 @@ int xrdp_iso_recv(struct xrdp_iso* self, struct stream* s)
   DEBUG(("   in xrdp_iso_recv\n\r"));
   if (xrdp_iso_recv_msg(self, s, &code) != 0)
   {
+    DEBUG(("   out xrdp_iso_recv xrdp_iso_recv_msg return non zero\n\r"));
     return 1;
   }
   if (code != ISO_PDU_DT)
   {
+    DEBUG(("   out xrdp_iso_recv code != ISO_PDU_DT\n\r"));
     return 1;
   }
   DEBUG(("   out xrdp_iso_recv\n\r"));

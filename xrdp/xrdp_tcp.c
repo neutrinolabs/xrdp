@@ -54,12 +54,13 @@ int xrdp_tcp_recv(struct xrdp_tcp* self, struct stream* s, int len)
 {
   int rcvd;
 
-  DEBUG(("    in xrdp_tcp_recv, gota get %d bytes\n", len))
+  DEBUG(("    in xrdp_tcp_recv, gota get %d bytes\n\r", len));
   init_stream(s, len);
   while (len > 0)
   {
     if (g_is_term())
     {
+      DEBUG(("    out xrdp_tcp_recv, g_is_term is true\n\r"));
       return 1;
     }
     rcvd = g_tcp_recv(self->sck, s->end, len, 0);
@@ -71,13 +72,13 @@ int xrdp_tcp_recv(struct xrdp_tcp* self, struct stream* s, int len)
       }
       else
       {
-        DEBUG(("    error = -1 in xrdp_tcp_recv socket %d\n", self->sck))
+        DEBUG(("    error = -1 in xrdp_tcp_recv socket %d\n\r", self->sck));
         return 1;
       }
     }
     else if (rcvd == 0)
     {
-      DEBUG(("    error = 0 in xrdp_tcp_recv socket %d\n", self->sck))
+      DEBUG(("    error = 0 in xrdp_tcp_recv socket %d\n\r", self->sck));
       return 1;
     }
     else
@@ -86,6 +87,7 @@ int xrdp_tcp_recv(struct xrdp_tcp* self, struct stream* s, int len)
       len -= rcvd;
     }
   }
+  DEBUG(("    out xrdp_tcp_recv\n\r"));
   return 0;
 }
 

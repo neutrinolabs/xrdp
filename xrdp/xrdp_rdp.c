@@ -138,6 +138,7 @@ int xrdp_rdp_init_data(struct xrdp_rdp* self, struct stream* s)
 }
 
 /*****************************************************************************/
+/* returns erros */
 int xrdp_rdp_recv(struct xrdp_rdp* self, struct stream* s, int* code)
 {
   int error;
@@ -145,6 +146,7 @@ int xrdp_rdp_recv(struct xrdp_rdp* self, struct stream* s, int* code)
   int pdu_code;
   int chan;
 
+  DEBUG(("in xrdp_rdp_recv\n\r"));
   if (s->next_packet == 0 || s->next_packet >= s->end)
   {
     chan = 0;
@@ -153,17 +155,20 @@ int xrdp_rdp_recv(struct xrdp_rdp* self, struct stream* s, int* code)
     {
       s->next_packet = 0;
       *code = -1;
+      DEBUG(("out xrdp_rdp_recv\n\r"));
       return 0;
+    }
+    if (error != 0)
+    {
+      DEBUG(("out xrdp_rdp_recv error\n\r"));
+      return 1;
     }
     if (chan != MCS_GLOBAL_CHANNEL && chan > 0)
     {
       s->next_packet = 0;
       *code = 0;
+      DEBUG(("out xrdp_rdp_recv\n\r"));
       return 0;
-    }
-    if (error != 0)
-    {
-      return 1;
     }
     s->next_packet = s->p;
   }
@@ -176,12 +181,14 @@ int xrdp_rdp_recv(struct xrdp_rdp* self, struct stream* s, int* code)
   {
     s->next_packet += 8;
     *code = 0;
+    DEBUG(("out xrdp_rdp_recv\n\r"));
     return 0;
   }
   in_uint16_le(s, pdu_code);
   *code = pdu_code & 0xf;
   in_uint8s(s, 2); /* mcs user id */
   s->next_packet += len;
+  DEBUG(("out xrdp_rdp_recv\n\r"));
   return 0;
 }
 
@@ -198,6 +205,7 @@ int xrdp_rdp_send(struct xrdp_rdp* self, struct stream* s, int pdu_type)
   out_uint16_le(s, self->mcs_channel);
   if (xrdp_sec_send(self->sec_layer, s, 0) != 0)
   {
+    DEBUG(("out xrdp_rdp_send error\n\r"));
     return 1;
   }
   DEBUG(("out xrdp_rdp_send\n\r"));
@@ -225,6 +233,7 @@ int xrdp_rdp_send_data(struct xrdp_rdp* self, struct stream* s,
   out_uint16_le(s, 0);
   if (xrdp_sec_send(self->sec_layer, s, 0) != 0)
   {
+    DEBUG(("out xrdp_rdp_send_data error\n\r"));
     return 1;
   }
   DEBUG(("out xrdp_rdp_send_data\n\r"));
@@ -441,6 +450,21 @@ int xrdp_process_capset_bmpcache(struct xrdp_rdp* self, struct stream* s,
 }
 
 /*****************************************************************************/
+int xrdp_process_capset_pointercache(struct xrdp_rdp* self, struct stream* s,
+                                     int len)
+{
+  int i;
+
+  //g_hexdump(s->p, len);
+  in_uint8s(s, 2); /* color pointer */
+  in_uint16_le(s, i);
+  i = MIN(i, 32);
+  self->client_info.pointer_cache_entries = i;
+  //g_printf("%d\n", self->client_info.pointer_cache_entries);
+  return 0;
+}
+
+/*****************************************************************************/
 int xrdp_rdp_process_confirm_active(struct xrdp_rdp* self, struct stream* s)
 {
   int cap_len;
@@ -468,6 +492,9 @@ int xrdp_rdp_process_confirm_active(struct xrdp_rdp* self, struct stream* s)
     {
       case RDP_CAPSET_BMPCACHE:
         xrdp_process_capset_bmpcache(self, s, len);
+        break;
+      case RDP_CAPSET_POINTER:
+        xrdp_process_capset_pointercache(self, s, len);
         break;
     }
     s->p = p + len;
