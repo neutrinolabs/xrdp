@@ -73,6 +73,7 @@ struct xrdp_font* xrdp_font_create(struct xrdp_wm* wm)
   int datasize;
   struct xrdp_font_item* f;
 
+  //g_printf("loading font\n");
   self = (struct xrdp_font*)g_malloc(sizeof(struct xrdp_font), 1);
   self->wm = wm;
   make_stream(s);

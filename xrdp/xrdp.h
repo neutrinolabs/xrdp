@@ -216,6 +216,7 @@ struct xrdp_painter* xrdp_painter_create(struct xrdp_wm* wn);
 void xrdp_painter_delete(struct xrdp_painter* self);
 int xrdp_painter_begin_update(struct xrdp_painter* self);
 int xrdp_painter_end_update(struct xrdp_painter* self);
+int xrdp_painter_font_needed(struct xrdp_painter* self);
 int xrdp_painter_set_clip(struct xrdp_painter* self,
                           int x, int y, int cx, int cy);
 int xrdp_painter_clr_clip(struct xrdp_painter* self);

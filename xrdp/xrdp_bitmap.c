@@ -233,6 +233,7 @@ int xrdp_bitmap_set_focus(struct xrdp_bitmap* self, int focused)
     return 0;
   }
   painter = xrdp_painter_create(self->wm);
+  xrdp_painter_font_needed(painter);
   xrdp_painter_begin_update(painter);
   if (focused)
   {
@@ -827,6 +828,7 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
   if (self->type == WND_TYPE_BITMAP) /* if 0, bitmap, leave */
     return 0;
   painter = xrdp_painter_create(self->wm);
+  xrdp_painter_font_needed(painter);
   painter->rop = 0xcc; /* copy */
   if (rect == 0)
     painter->use_clip = 0;

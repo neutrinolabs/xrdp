@@ -31,7 +31,6 @@ struct xrdp_painter* xrdp_painter_create(struct xrdp_wm* wm)
   self->wm = wm;
   self->orders = wm->orders;
   self->rop = 0xcc; /* copy */
-  self->font = xrdp_font_create(wm);
   self->clip_children = 1;
   return self;
 }
@@ -58,6 +57,16 @@ int xrdp_painter_begin_update(struct xrdp_painter* self)
 int xrdp_painter_end_update(struct xrdp_painter* self)
 {
   xrdp_orders_send(self->orders);
+  return 0;
+}
+
+/*****************************************************************************/
+int xrdp_painter_font_needed(struct xrdp_painter* self)
+{
+  if (self->font == 0)
+  {
+    self->font = xrdp_font_create(self->wm);
+  }
   return 0;
 }
 
@@ -415,6 +424,7 @@ int xrdp_painter_text_width(struct xrdp_painter* self, char* text)
   int len;
   struct xrdp_font_item* font_item;
 
+  xrdp_painter_font_needed(self);
   rv = 0;
   len = g_strlen(text);
   for (index = 0; index < len; index++)
@@ -433,6 +443,7 @@ int xrdp_painter_text_height(struct xrdp_painter* self, char* text)
   int len;
   struct xrdp_font_item* font_item;
 
+  xrdp_painter_font_needed(self);
   rv = 0;
   len = g_strlen(text);
   for (index = 0; index < len; index++)
@@ -480,6 +491,7 @@ int xrdp_painter_draw_text(struct xrdp_painter* self,
   {
     return 0;
   }
+  xrdp_painter_font_needed(self);
   font = self->font;
   f = 0;
   k = 0;
