@@ -71,4 +71,5 @@ struct vnc
   char ip[256];
   char port[256];
   int sck_closed;
+  int shift_state; /* 0 up, 1 down */
 };

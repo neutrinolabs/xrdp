@@ -39,6 +39,10 @@ int lib_recv(struct vnc* v, char* data, int len)
     {
       if (g_tcp_last_error_would_block(v->sck))
       {
+        if (v->server_is_term(v))
+        {
+          return 1;
+        }
         g_sleep(1);
       }
       else
@@ -77,6 +81,10 @@ int lib_send(struct vnc* v, char* data, int len)
     {
       if (g_tcp_last_error_would_block(v->sck))
       {
+        if (v->server_is_term(v))
+        {
+          return 1;
+        }
         g_sleep(1);
       }
       else
@@ -122,38 +130,117 @@ int lib_mod_event(struct vnc* v, int msg, int param1, int param2)
     {
       switch (param1)
       {
-        case 0x0001: key = 0xff1b; break; /* ecs */
-        case 0x000e: key = 0xff08; break; /* backspace */
-        case 0x000f: key = 0xff09; break; /* tab */
-        case 0x001c: key = 0xff0d; break; /* enter */
-        /* left-right control */
-        case 0x001d: key = (param2 & 0x0100) ? 0xffe3 : 0xffe4; break;
-        case 0x002a: key = 0xffe1; break; /* left shift */
-        case 0x0036: key = 0xffe2; break; /* right shift */
-        /* left-right alt */
-        case 0x0038: key = (param2 & 0x0100) ? 0xffe9 : 0xffea; break;
-        case 0x003b: key = 0xffbe; break; /* F1 */
-        case 0x003c: key = 0xffbf; break; /* F2 */
-        case 0x003d: key = 0xffc0; break; /* F3 */
-        case 0x003e: key = 0xffc1; break; /* F4 */
-        case 0x003f: key = 0xffc2; break; /* F5 */
-        case 0x0040: key = 0xffc3; break; /* F6 */
-        case 0x0041: key = 0xffc4; break; /* F7 */
-        case 0x0042: key = 0xffc5; break; /* F8 */
-        case 0x0043: key = 0xffc6; break; /* F9 */
-        case 0x0044: key = 0xffc7; break; /* F10 */
-        case 0x0047: key = 0xff50; break; /* home */
-        case 0x0048: key = 0xff52; break; /* up arrow */
-        case 0x0049: key = 0xff55; break; /* page up */
-        case 0x004b: key = 0xff51; break; /* left arrow */
-        case 0x004d: key = 0xff53; break; /* right arrow */
-        case 0x004f: key = 0xff57; break; /* end */
-        case 0x0050: key = 0xff54; break; /* down arrow */
-        case 0x0051: key = 0xff56; break; /* page down */
-        case 0x0052: key = 0xff63; break; /* insert */
-        case 0x0053: key = 0xffff; break; /* delete */
-        case 0x0057: key = 0xffc8; break; /* F11 */
-        case 0x0058: key = 0xffc9; break; /* F12 */
+        case 0x0001: /* ecs */
+          key = 0xff1b;
+          break;
+        case 0x000e: /* backspace */
+          key = 0xff08;
+          break;
+        case 0x000f: /* tab(0xff09) or left tab(0xfe20) */
+          /* some documentation says don't send left tab */
+          /* just send tab and if the shift modifier is down */
+          /* the server will know */
+          /* for now, sending left tab, I don't know which is best */
+          key = (v->shift_state) ? 0xfe20 : 0xff09;
+          break;
+        case 0x001c: /* enter */
+          key = 0xff0d;
+          break;
+        case 0x001d: /* left-right control */
+          key = (param2 & 0x0100) ? 0xffe4 : 0xffe3;
+          break;
+        case 0x002a: /* left shift */
+          key = 0xffe1;
+          v->shift_state = (msg == 15);
+          break;
+        case 0x0036: /* right shift */
+          key = 0xffe2;
+          v->shift_state = (msg == 15);
+          break;
+        case 0x0038: /* left-right alt */
+          key = (param2 & 0x0100) ? 0xffea : 0xffe9;
+          break;
+        case 0x003b: /* F1 */
+          key = 0xffbe;
+          break;
+        case 0x003c: /* F2 */
+          key = 0xffbf;
+          break;
+        case 0x003d: /* F3 */
+          key = 0xffc0;
+          break;
+        case 0x003e: /* F4 */
+          key = 0xffc1;
+          break;
+        case 0x003f: /* F5 */
+          key = 0xffc2;
+          break;
+        case 0x0040: /* F6 */
+          key = 0xffc3;
+          break;
+        case 0x0041: /* F7 */
+          key = 0xffc4;
+          break;
+        case 0x0042: /* F8 */
+          key = 0xffc5;
+          break;
+        case 0x0043: /* F9 */
+          key = 0xffc6;
+          break;
+        case 0x0044: /* F10 */
+          key = 0xffc7;
+          break;
+        case 0x0047: /* home */
+          key = 0xff50;
+          break;
+        case 0x0048: /* up arrow */
+          key = 0xff52;
+          break;
+        case 0x0049: /* page up */
+          key = 0xff55;
+          break;
+        case 0x004b: /* left arrow */
+          key = 0xff51;
+          break;
+        case 0x004d: /* right arrow */
+          key = 0xff53;
+          break;
+        case 0x004f: /* end */
+          key = 0xff57;
+          break;
+        case 0x0050: /* down arrow */
+          key = 0xff54;
+          break;
+        case 0x0051: /* page down */
+          key = 0xff56;
+          break;
+        case 0x0052: /* insert */
+          key = 0xff63;
+          break;
+        case 0x0053: /* delete */
+          key = 0xffff;
+          break;
+        case 0x0057: /* F11 */
+          key = 0xffc8;
+          break;
+        case 0x0058: /* F12 */
+          key = 0xffc9;
+          break;
+        /* not sure about the next three, I don't think rdesktop */
+        /* sends them right */
+        case 0x0037: /* Print Screen */
+          key = 0xff61;
+          break;
+        case 0x0046: /* Scroll Lock */
+          key = 0xff14;
+          break;
+        case 0x0045: /* Pause */
+          key = 0xff13;
+          break;
+        default:
+          g_printf("unkown key lib_mod_event msg %d \
+param1 0x%4.4x param2 0x%4.4x\n\r", msg, param1, param2);
+          break;
       }
     }
     if (key > 0)
@@ -605,6 +692,7 @@ int lib_mod_start(struct vnc* v, int w, int h, int bpp)
 /******************************************************************************/
 /*
   return error
+  these are wrong.....
   1 - authentation failed
   2 - authentation failed
   3 - server name length received from server too long
@@ -630,6 +718,11 @@ int lib_mod_connect(struct vnc* v)
   int display;
 
   check_sec_result = 1;
+  /* only support 8 and 16 bpp connections from rdp client */
+  if (v->server_bpp != 8 && v->server_bpp != 16)
+  {
+    return 1;
+  }
   if (g_strcmp(v->ip, "") == 0)
   {
     return 6;
@@ -644,6 +737,8 @@ int lib_mod_connect(struct vnc* v)
     v->sck_closed = 0;
     if (g_tcp_connect(v->sck, v->ip, "3350") == 0)
     {
+      g_tcp_set_non_blocking(v->sck);
+      g_tcp_set_no_delay(v->sck);
       s_push_layer(s, channel_hdr, 8);
       out_uint16_be(s, 0); // code
       i = g_strlen(v->username);
@@ -779,7 +874,7 @@ int lib_mod_connect(struct vnc* v)
   }
   if (error == 0)
   {
-    in_uint8(pixel_format, v->mod_bpp);
+    v->mod_bpp = v->server_bpp;
     init_stream(s, 8192);
     error = lib_recv(v, s->data, 4); /* name len */
   }
@@ -817,6 +912,20 @@ int lib_mod_connect(struct vnc* v)
       out_uint16_be(pixel_format, 0); /* blue max */
       out_uint8(pixel_format, 0); /* red shift */
       out_uint8(pixel_format, 0); /* green shift */
+      out_uint8(pixel_format, 0); /* blue shift */
+      out_uint8s(pixel_format, 3); /* pad */
+    }
+    else if (v->mod_bpp == 16)
+    {
+      out_uint8(pixel_format, 16); /* bits per pixel */
+      out_uint8(pixel_format, 16); /* depth */
+      out_uint8(pixel_format, 0); /* big endian */
+      out_uint8(pixel_format, 1); /* true color flag */
+      out_uint16_be(pixel_format, 31); /* red max */
+      out_uint16_be(pixel_format, 63); /* green max */
+      out_uint16_be(pixel_format, 31); /* blue max */
+      out_uint8(pixel_format, 11); /* red shift */
+      out_uint8(pixel_format, 5); /* green shift */
       out_uint8(pixel_format, 0); /* blue shift */
       out_uint8s(pixel_format, 3); /* pad */
     }
