@@ -32,6 +32,9 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
+
+#include "d3des.h"
 
 #include <security/pam_userpass.h>
 
@@ -50,6 +53,8 @@ struct session_item
   int height;
   int bpp;
 };
+
+static unsigned char s_fixedkey[8] = {23, 82, 107, 6, 35, 78, 88, 7};
 
 struct session_item session_items[100];
 
@@ -189,7 +194,29 @@ int get_next_display(void)
 }
 
 /******************************************************************************/
-int start_session(int width, int height, int bpp, char* username)
+int check_password_file(char* filename, char* password)
+{
+  char encryptedPasswd[16];
+  int fd;
+
+  g_memset(encryptedPasswd, 0, 16);
+  g_strncpy(encryptedPasswd, password, 8);
+  rfbDesKey(s_fixedkey, 0);
+  rfbDes(encryptedPasswd, encryptedPasswd);
+  fd = g_file_open(filename);
+  if (fd == 0)
+  {
+    return 1;
+  }
+  g_file_write(fd, encryptedPasswd, 8);
+  g_file_close(fd);
+  chmod(filename, S_IRUSR | S_IWUSR);
+  return 0;
+}
+
+/******************************************************************************/
+int start_session(int width, int height, int bpp, char* username,
+                  char* password)
 {
   int display;
   int pid;
@@ -198,6 +225,7 @@ int start_session(int width, int height, int bpp, char* username)
   int xpid;
   struct passwd* pwd_1;
   char text[256];
+  char passwd_file[256];
   char geometry[32];
   char depth[32];
   char screen[32];
@@ -221,6 +249,7 @@ int start_session(int width, int height, int bpp, char* username)
     pwd_1 = getpwnam(username);
     if (pwd_1 != 0)
     {
+      setgid(pwd_1->pw_gid);
       uid = pwd_1->pw_uid;
       if (setuid(uid) == 0)
       {
@@ -238,6 +267,9 @@ int start_session(int width, int height, int bpp, char* username)
         g_sprintf(geometry, "%dx%d", width, height);
         g_sprintf(depth, "%d", bpp);
         g_sprintf(screen, ":%d", display);
+        mkdir(".vnc", S_IRWXU);
+        g_sprintf(passwd_file, "%s/.vnc/.sesman_passwd", pwd_1->pw_dir);
+        check_password_file(passwd_file, password);
         wmpid = fork();
         if (wmpid == -1)
         {
@@ -249,6 +281,7 @@ int start_session(int width, int height, int bpp, char* username)
           if (x_server_running(display))
           {
             execlp("startkde", NULL);
+            //execlp("blackbox", NULL);
             // should not get here
           }
           g_printf("error\n");
@@ -262,17 +295,8 @@ int start_session(int width, int height, int bpp, char* username)
           }
           else if (xpid == 0) // child
           {
-            g_sprintf(text, "%s/.vnc/passwd", pwd_1->pw_dir);
-            if (access(text, F_OK) == 0)
-            {
-              execlp("Xvnc", "Xvnc", screen, "-geometry", geometry,
-                     "-depth", depth, "-bs", "-rfbauth", text, NULL);
-            }
-            else
-            {
-              execlp("Xvnc", "Xvnc", screen, "-geometry", geometry,
-                     "-depth", depth, "-bs", NULL);
-            }
+            execlp("Xvnc", "Xvnc", screen, "-geometry", geometry,
+                   "-depth", depth, "-bs", "-rfbauth", passwd_file, NULL);
             // should not get here
             g_printf("error\n");
             _exit(0);
@@ -384,7 +408,7 @@ start session\n");
                     }
                     else
                     {
-                      display = start_session(width, height, bpp, user);
+                      display = start_session(width, height, bpp, user, pass);
                     }
                     if (display == 0)
                     {

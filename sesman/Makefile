@@ -1,5 +1,5 @@
 
-SESMANOBJ = sesman.o ../common/os_calls.o
+SESMANOBJ = sesman.o ../common/os_calls.o ../common/d3des.o
 
 CFLAGS = -Wall -O2 -I../common
 LDFLAGS = -L /usr/gnu/lib
