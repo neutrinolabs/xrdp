@@ -213,13 +213,13 @@ int xrdp_rdp_parse_client_mcs_data(struct xrdp_rdp* self)
 /*****************************************************************************/
 int xrdp_rdp_incoming(struct xrdp_rdp* self)
 {
-  DEBUG(("in xrdp_rdp_incoming\n"));
+  DEBUG(("in xrdp_rdp_incoming\n\r"));
   if (xrdp_sec_incoming(self->sec_layer) != 0)
     return 1;
   self->mcs_channel = self->sec_layer->mcs_layer->userid +
                       MCS_USERCHANNEL_BASE;
   xrdp_rdp_parse_client_mcs_data(self);
-  DEBUG(("out xrdp_rdp_incoming mcs channel %d\n", self->mcs_channel));
+  DEBUG(("out xrdp_rdp_incoming mcs channel %d\n\r", self->mcs_channel));
   return 0;
 }
 
@@ -375,9 +375,10 @@ int xrdp_rdp_process_data_pointer(struct xrdp_rdp* self, struct stream* s)
 int xrdp_rdp_process_input_sync(struct xrdp_rdp* self, int device_flags,
                                 int key_flags)
 {
-  DEBUG(("sync event flags %d key %d\n\r", device_flags, key_flags))
+  DEBUG(("sync event flags %d key %d\n\r", device_flags, key_flags));
   if (!self->up_and_running)
     return 0;
+  xrdp_wm_key_sync(self->pro_layer->wm, device_flags, key_flags);
   return 0;
 }
 
@@ -386,9 +387,10 @@ int xrdp_rdp_process_input_sync(struct xrdp_rdp* self, int device_flags,
 int xrdp_rdp_process_input_scancode(struct xrdp_rdp* self, int device_flags,
                                     int scan_code)
 {
-  DEBUG(("key event flags %d scan_code %d\n\r", device_flags, scan_code))
+  DEBUG(("key event flags %4.4x scan_code %d\n\r", device_flags, scan_code));
   if (!self->up_and_running)
     return 0;
+  xrdp_wm_key(self->pro_layer->wm, device_flags, scan_code);
   return 0;
 }
 
@@ -397,7 +399,7 @@ int xrdp_rdp_process_input_scancode(struct xrdp_rdp* self, int device_flags,
 int xrdp_rdp_process_input_mouse(struct xrdp_rdp* self, int device_flags,
                                  int x, int y)
 {
-  DEBUG(("mouse event flags %4.4x x - %d y - %d\n\r", device_flags, x, y));
+  DEBUG(("mouse event flags %4.4x x %d y %d\n\r", device_flags, x, y));
   if (!self->up_and_running)
     return 0;
   if (device_flags & MOUSE_FLAG_MOVE) /* 0x0800 */
@@ -432,7 +434,7 @@ int xrdp_rdp_process_data_input(struct xrdp_rdp* self, struct stream* s)
 
   in_uint16_le(s, num_events);
   in_uint8s(s, 2); /* pad */
-  DEBUG(("xrdp_rdp_process_data_input %d events\n\r", num_events))
+  DEBUG(("xrdp_rdp_process_data_input %d events\n\r", num_events));
   for (index = 0; index < num_events; index++)
   {
     in_uint8s(s, 4); /* time */

@@ -154,7 +154,7 @@ int xrdp_wm_login_help_notify(struct xrdp_bitmap* wnd,
       }
     }
   }
-  else if (msg == 3) /* paint */
+  else if (msg == WM_PAINT) /* 3 */
   {
     p = (struct xrdp_painter*)param1;
     if (p != 0)
@@ -227,7 +227,7 @@ int xrdp_wm_login_notify(struct xrdp_bitmap* wnd,
       help->left = wnd->wm->screen->width / 2 - help->width / 2;
       help->top = wnd->wm->screen->height / 2 - help->height / 2;
       help->notify = xrdp_wm_login_help_notify;
-      g_strcpy(help->title, "Logon help");
+      g_strcpy(help->caption, "Logon help");
       /* ok button */
       but = xrdp_bitmap_create(60, 25, wnd->wm->screen->bpp, 3);
       xrdp_list_insert_item(help->child_list, 0, (int)but);
@@ -237,7 +237,7 @@ int xrdp_wm_login_notify(struct xrdp_bitmap* wnd,
       but->left = 120;
       but->top = 260;
       but->id = 1;
-      g_strcpy(but->title, "OK");
+      g_strcpy(but->caption, "OK");
       /* draw it */
       xrdp_bitmap_invalidate(help, 0);
       xrdp_wm_set_focused(wnd->wm, help);
@@ -457,7 +457,8 @@ int xrdp_wm_init(struct xrdp_wm* self)
     self->green     = COLOR24(0x00, 0xff, 0x00);
   }
   /* draw login window */
-  self->login_window = xrdp_bitmap_create(400, 200, self->screen->bpp, 1);
+  self->login_window = xrdp_bitmap_create(400, 200, self->screen->bpp,
+                                          WND_TYPE_WND);
   xrdp_list_add_item(self->screen->child_list, (int)self->login_window);
   self->login_window->parent = self->screen;
   self->login_window->owner = self->screen;
@@ -468,10 +469,10 @@ int xrdp_wm_init(struct xrdp_wm* self)
   self->login_window->top = self->screen->height / 2 -
                             self->login_window->height / 2;
   self->login_window->notify = xrdp_wm_login_notify;
-  strcpy(self->login_window->title, "Logon to xrdp");
+  strcpy(self->login_window->caption, "Logon to xrdp");
 
   /* image */
-  but = xrdp_bitmap_create(4, 4, self->screen->bpp, 4);
+  but = xrdp_bitmap_create(4, 4, self->screen->bpp, WND_TYPE_IMAGE);
   xrdp_bitmap_load(but, "xrdp256.bmp", self->palette);
   but->parent = self->screen;
   but->owner = self->screen;
@@ -481,7 +482,7 @@ int xrdp_wm_init(struct xrdp_wm* self)
   xrdp_list_add_item(self->screen->child_list, (int)but);
 
   /* image */
-  but = xrdp_bitmap_create(4, 4, self->screen->bpp, 4);
+  but = xrdp_bitmap_create(4, 4, self->screen->bpp, WND_TYPE_IMAGE);
   xrdp_bitmap_load(but, "ad256.bmp", self->palette);
   but->parent = self->login_window;
   but->owner = self->login_window;
@@ -491,7 +492,7 @@ int xrdp_wm_init(struct xrdp_wm* self)
   xrdp_list_add_item(self->login_window->child_list, (int)but);
 
   /* button */
-  but = xrdp_bitmap_create(60, 25, self->screen->bpp, 3);
+  but = xrdp_bitmap_create(60, 25, self->screen->bpp, WND_TYPE_BUTTON);
   xrdp_list_add_item(self->login_window->child_list, (int)but);
   but->parent = self->login_window;
   but->owner = self->login_window;
@@ -499,10 +500,11 @@ int xrdp_wm_init(struct xrdp_wm* self)
   but->left = 320;
   but->top = 160;
   but->id = 1;
-  g_strcpy(but->title, "Help");
+  g_strcpy(but->caption, "Help");
+  but->tab_stop = 1;
 
   /* button */
-  but = xrdp_bitmap_create(60, 25, self->screen->bpp, 3);
+  but = xrdp_bitmap_create(60, 25, self->screen->bpp, WND_TYPE_BUTTON);
   xrdp_list_add_item(self->login_window->child_list, (int)but);
   but->parent = self->login_window;
   but->owner = self->login_window;
@@ -510,10 +512,11 @@ int xrdp_wm_init(struct xrdp_wm* self)
   but->left = 250;
   but->top = 160;
   but->id = 2;
-  g_strcpy(but->title, "Cancel");
+  g_strcpy(but->caption, "Cancel");
+  but->tab_stop = 1;
 
   /* button */
-  but = xrdp_bitmap_create(60, 25, self->screen->bpp, 3);
+  but = xrdp_bitmap_create(60, 25, self->screen->bpp, WND_TYPE_BUTTON);
   xrdp_list_add_item(self->login_window->child_list, (int)but);
   but->parent = self->login_window;
   but->owner = self->login_window;
@@ -521,20 +524,21 @@ int xrdp_wm_init(struct xrdp_wm* self)
   but->left = 180;
   but->top = 160;
   but->id = 3;
-  g_strcpy(but->title, "OK");
+  g_strcpy(but->caption, "OK");
+  but->tab_stop = 1;
 
   /* label */
-  but = xrdp_bitmap_create(60, 20, self->screen->bpp, 6); /* label */
+  but = xrdp_bitmap_create(60, 20, self->screen->bpp, WND_TYPE_LABEL);
   xrdp_list_add_item(self->login_window->child_list, (int)but);
   but->parent = self->login_window;
   but->owner = self->login_window;
   but->wm = self;
   but->left = 155;
   but->top = 50;
-  g_strcpy(but->title, "Username");
+  g_strcpy(but->caption, "Username");
 
   /* edit */
-  but = xrdp_bitmap_create(140, 20, self->screen->bpp, 5);
+  but = xrdp_bitmap_create(140, 20, self->screen->bpp, WND_TYPE_EDIT);
   xrdp_list_add_item(self->login_window->child_list, (int)but);
   but->parent = self->login_window;
   but->owner = self->login_window;
@@ -543,19 +547,20 @@ int xrdp_wm_init(struct xrdp_wm* self)
   but->top = 50;
   but->id = 4;
   but->cursor = 1;
+  but->tab_stop = 1;
 
   /* label */
-  but = xrdp_bitmap_create(60, 20, self->screen->bpp, 6); /* label */
+  but = xrdp_bitmap_create(60, 20, self->screen->bpp, WND_TYPE_LABEL);
   xrdp_list_add_item(self->login_window->child_list, (int)but);
   but->parent = self->login_window;
   but->owner = self->login_window;
   but->wm = self;
   but->left = 155;
   but->top = 80;
-  g_strcpy(but->title, "Password");
+  g_strcpy(but->caption, "Password");
 
   /* edit */
-  but = xrdp_bitmap_create(140, 20, self->screen->bpp, 5);
+  but = xrdp_bitmap_create(140, 20, self->screen->bpp, WND_TYPE_EDIT);
   xrdp_list_add_item(self->login_window->child_list, (int)but);
   but->parent = self->login_window;
   but->owner = self->login_window;
@@ -564,6 +569,7 @@ int xrdp_wm_init(struct xrdp_wm* self)
   but->top = 80;
   but->id = 5;
   but->cursor = 1;
+  but->tab_stop = 1;
 
   /* clear screen */
   self->screen->bg_color = self->black;
@@ -893,9 +899,15 @@ int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
   if (control != 0)
   {
     if (wnd != 0)
+    {
+      if (control == wnd)
+        wnd->focused_control = 0;
+      else
+        wnd->focused_control = control;
       if (wnd->modal_dialog != 0) /* if window has a modal dialog */
         return 0;
-    if (control->type == 3 && but == 1 &&
+    }
+    if (control->type == WND_TYPE_BUTTON && but == 1 &&
         !down && self->button_down == control)
     { /* if clicking up on a button that was clicked down */
       self->button_down = 0;
@@ -906,7 +918,7 @@ int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
           /* control can be invalid after this */
           control->parent->notify(control->owner, control, 1, x, y);
     }
-    else if (control->type == 3 && but == 1 && down)
+    else if (control->type == WND_TYPE_BUTTON && but == 1 && down)
     { /* if clicking down on a button */
       self->button_down = control;
       control->state = 1;
@@ -915,7 +927,7 @@ int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
     else if (but == 1 && down)
     {
       xrdp_wm_set_focused(self, wnd);
-      if (control->type == 1 && y < (control->top + 21))
+      if (control->type == WND_TYPE_WND && y < (control->top + 21))
       { /* if dragging */
         if (self->dragging) /* rarely happens */
         {
@@ -945,5 +957,50 @@ int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
   /* no matter what, mouse is up, reset button_down */
   if (but == 1 && !down && self->button_down != 0)
     self->button_down = 0;
+  return 0;
+}
+
+/*****************************************************************************/
+int xrdp_wm_key(struct xrdp_wm* self, int device_flags, int scan_code)
+{
+  int msg;
+
+  if (device_flags & 0x8000) /* key up */
+  {
+    self->keys[scan_code % 128] = 0;
+    msg = WM_KEYUP;
+  }
+  else /* key down */
+  {
+    self->keys[scan_code % 128] = 1;
+    msg = WM_KEYDOWN;
+    switch (scan_code)
+    {
+      case 58: self->caps_lock = !self->caps_lock; break; /* caps lock */
+      case 69: self->num_lock = !self->num_lock; break; /* num lock */
+      case 70: self->scroll_lock = !self->scroll_lock; break; /* scroll lock */
+    }
+  }
+  if (self->focused_window != 0)
+  {
+    xrdp_bitmap_def_proc(self->focused_window,
+                         msg, scan_code, device_flags);
+  }
+  return 0;
+}
+
+/*****************************************************************************/
+/* happens when client gets focus and sends key modifier info */
+int xrdp_wm_key_sync(struct xrdp_wm* self, int device_flags, int key_flags)
+{
+  self->num_lock = 0;
+  self->scroll_lock = 0;
+  self->caps_lock = 0;
+  if (key_flags & 1)
+    self->scroll_lock = 1;
+  if (key_flags & 2)
+    self->num_lock = 1;
+  if (key_flags & 4)
+    self->caps_lock = 1;
   return 0;
 }

@@ -536,3 +536,9 @@ char* g_strcpy(char* dest, char* src)
 {
   return strcpy(dest, src);
 }
+
+/*****************************************************************************/
+char* g_strcat(char* dest, char* src)
+{
+  return strcat(dest, src);
+}

@@ -315,6 +315,10 @@ struct xrdp_wm
   struct xrdp_bitmap* focused_window;
   /* cursor */
   int current_cursor;
+  int keys[256]; /* key states 0 up 1 down*/
+  int caps_lock;
+  int scroll_lock;
+  int num_lock;
 };
 
 /* rdp process */
@@ -377,8 +381,10 @@ struct xrdp_bitmap
   int bg_color;
   int line_size; /* in bytes */
   int focused;
-  char title[256];
+  int tab_stop;
+  char caption[256];
   struct xrdp_bitmap* modal_dialog;
+  struct xrdp_bitmap* focused_control;
   struct xrdp_bitmap* owner; /* window that created us */
   struct xrdp_bitmap* parent; /* window contained in */
   struct xrdp_list* child_list;

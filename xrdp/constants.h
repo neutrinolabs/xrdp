@@ -410,3 +410,8 @@
 /* button states */
 #define BUTTON_STATE_UP   0
 #define BUTTON_STATE_DOWN 1
+
+/* messages */
+#define WM_PAINT   3
+#define WM_KEYDOWN 15
+#define WM_KEYUP   16

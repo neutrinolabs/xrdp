@@ -104,6 +104,9 @@ int xrdp_orders_force_send(struct xrdp_orders* self)
 }
 
 /*****************************************************************************/
+/* check if the current order will fix in packet size of 8192, if not */
+/* send what we got and init a new one */
+/* returns error */
 int xrdp_orders_check(struct xrdp_orders* self, int max_size)
 {
   int size;
@@ -127,6 +130,7 @@ int xrdp_orders_check(struct xrdp_orders* self, int max_size)
 }
 
 /*****************************************************************************/
+/* check if rect is the same as the last one sent */
 /* returns boolean */
 int xrdp_orders_last_bounds(struct xrdp_orders* self,
                             struct xrdp_rect* rect)
@@ -140,6 +144,7 @@ int xrdp_orders_last_bounds(struct xrdp_orders* self,
 }
 
 /*****************************************************************************/
+/* check if all coords are withing 256 bytes */
 /* returns boolean */
 int xrdp_orders_send_delta(struct xrdp_orders* self, int* vals, int count)
 {
