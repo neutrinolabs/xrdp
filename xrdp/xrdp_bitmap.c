@@ -188,7 +188,7 @@ void xrdp_bitmap_delete(struct xrdp_bitmap* self)
   }
   if (self->parent != 0)
   {
-    i = xrdp_list_index_of(self->parent->child_list, (int)self);
+    i = xrdp_list_index_of(self->parent->child_list, (long)self);
     if (i >= 0)
     {
       xrdp_list_remove_item(self->parent->child_list, i);
@@ -1103,7 +1103,7 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
   }
   /* notify */
   if (self->notify != 0)
-    self->notify(self, self, WM_PAINT, (int)painter, 0); /* 3 */
+    self->notify(self, self, WM_PAINT, (long)painter, 0); /* 3 */
   /* draw any child windows in the area */
   for (i = 0; i < self->child_list->count; i++)
   {
@@ -1154,7 +1154,7 @@ int xrdp_bitmap_def_proc(struct xrdp_bitmap* self, int msg,
         shift = self->wm->keys[42] || self->wm->keys[54];
         i = -1;
         if (self->child_list != 0)
-          i = xrdp_list_index_of(self->child_list, (int)self->focused_control);
+          i = xrdp_list_index_of(self->child_list, (long)self->focused_control);
         if (shift)
         {
           i--;

@@ -468,7 +468,7 @@ struct xrdp_bitmap
   /* msg 1 = click 2 = mouse move 3 = paint 100 = modal result */
   /* see messages in constants.h */
   int (*notify)(struct xrdp_bitmap* wnd, struct xrdp_bitmap* sender,
-                int msg, int param1, int param2);
+                int msg, long param1, long param2);
   /* for bitmap */
   int bpp;
   int line_size; /* in bytes */

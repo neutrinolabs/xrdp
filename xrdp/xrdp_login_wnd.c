@@ -26,7 +26,7 @@
 /* all login help screen events go here */
 int xrdp_wm_login_help_notify(struct xrdp_bitmap* wnd,
                               struct xrdp_bitmap* sender,
-                              int msg, int param1, int param2)
+                              int msg, long param1, long param2)
 {
   struct xrdp_painter* p;
 
@@ -142,7 +142,7 @@ int xrdp_wm_delete_all_childs(struct xrdp_wm* self)
 /* all login screen events go here */
 int xrdp_wm_login_notify(struct xrdp_bitmap* wnd,
                          struct xrdp_bitmap* sender,
-                         int msg, int param1, int param2)
+                         int msg, long param1, long param2)
 {
   struct xrdp_bitmap* help;
   struct xrdp_bitmap* but;

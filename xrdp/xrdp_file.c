@@ -51,7 +51,7 @@ int xrdp_file_read_sections(int fd, struct xrdp_list* names)
         in_it = 1;
       else if (c == ']')
       {
-        xrdp_list_add_item(names, (int)g_strdup(text));
+        xrdp_list_add_item(names, (long)g_strdup(text));
         in_it = 0;
         in_it_index = 0;
         g_memset(text, 0, 256);
@@ -179,8 +179,8 @@ int xrdp_file_read_section(int fd, char* section, struct xrdp_list* names,
           while (xrdp_file_read_line(s, text) == 0)
           {
             xrdp_file_split_name_value(text, name, value);
-            xrdp_list_add_item(names, (int)g_strdup(name));
-            xrdp_list_add_item(values, (int)g_strdup(value));
+            xrdp_list_add_item(names, (long)g_strdup(name));
+            xrdp_list_add_item(values, (long)g_strdup(value));
           }
           free_stream(s);
           return 0;

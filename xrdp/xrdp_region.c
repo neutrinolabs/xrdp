@@ -51,7 +51,7 @@ int xrdp_region_add_rect(struct xrdp_region* self, struct xrdp_rect* rect)
 
   r = (struct xrdp_rect*)g_malloc(sizeof(struct xrdp_rect), 1);
   *r = *rect;
-  xrdp_list_add_item(self->rects, (int)r);
+  xrdp_list_add_item(self->rects, (long)r);
   return 0;
 }
 
@@ -66,7 +66,7 @@ int xrdp_region_insert_rect(struct xrdp_region* self, int i, int left,
   r->top = top;
   r->right = right;
   r->bottom = bottom;
-  xrdp_list_insert_item(self->rects, i, (int)r);
+  xrdp_list_insert_item(self->rects, i, (long)r);
   return 0;
 }
 

@@ -219,7 +219,7 @@ int server_palette(int* palette)
 /* this is the log windows nofity function */
 int xrdp_wm_log_wnd_notify(struct xrdp_bitmap* wnd,
                            struct xrdp_bitmap* sender,
-                           int msg, int param1, int param2)
+                           int msg, long param1, long param2)
 {
   struct xrdp_painter* painter;
   struct xrdp_wm* wm;
