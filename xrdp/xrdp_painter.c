@@ -280,15 +280,15 @@ int xrdp_painter_draw_bitmap(struct xrdp_painter* self,
       k = 0;
       while (xrdp_region_get_rect(region, k, &rect) == 0)
       {
-        xrdp_wm_rect(&rect1, x1, y1, w, h);
-        if (xrdp_wm_rect_intersect(&rect, &rect1, &rect2))
+        MAKERECT(rect1, x1, y1, w, h);
+        if (rect_intersect(&rect, &rect1, &rect2))
         {
           ok = 1;
           if (self->use_clip)
           {
             rect = self->clip;
-            xrdp_wm_rect_offset(&rect, x, y);
-            if (!xrdp_wm_rect_intersect(&rect2, &rect, &rect1))
+            RECTOFFSET(rect, x, y);
+            if (!rect_intersect(&rect2, &rect, &rect1))
               ok = 0;
           }
           else
@@ -390,6 +390,8 @@ int xrdp_painter_draw_text(struct xrdp_painter* self,
   char* data;
   struct xrdp_region* region;
   struct xrdp_rect rect;
+  struct xrdp_rect clip_rect;
+  struct xrdp_rect draw_rect;
   struct xrdp_bitmap* b;
   struct xrdp_font* font;
   struct xrdp_font_item* font_item;
@@ -430,19 +432,31 @@ int xrdp_painter_draw_text(struct xrdp_painter* self,
     y = y + b->top;
     b = b->parent;
   }
+  if (self->use_clip)
+    clip_rect = self->clip;
+  else
+    MAKERECT(clip_rect, 0, 0, bitmap->width, bitmap->height);
+  b = bitmap;
+  while (b != 0)
+  {
+    RECTOFFSET(clip_rect, b->left, b->top);
+    b = b->parent;
+  }
   k = 0;
   while (xrdp_region_get_rect(region, k, &rect) == 0)
   {
-    x1 = x;
-    y1 = y;
-    rect.right--;
-    rect.bottom--;
-    flags = 0x03; /* 0x73; TEXT2_IMPLICIT_X and something else */
-    xrdp_orders_text(self->orders, f, flags, 0,
-                     font->color, 0,
-                     x1, y1, x1 + total_width, y1 + total_height,
-                     0, 0, 0, 0,
-                     x1, y1 + total_height, data, len * 2, &rect);
+    if (rect_intersect(&rect, &clip_rect, &draw_rect))
+    {
+      x1 = x;
+      y1 = y + total_height;
+      draw_rect.right--;
+      draw_rect.bottom--;
+      flags = 0x03; /* 0x73; TEXT2_IMPLICIT_X and something else */
+      xrdp_orders_text(self->orders, f, flags, 0,
+                       font->color, 0,
+                       x, y, x + total_width, y + total_height,
+                       0, 0, 0, 0, x1, y1, data, len * 2, &draw_rect);
+    }
     k++;
   }
   xrdp_region_delete(region);

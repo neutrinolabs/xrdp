@@ -210,17 +210,17 @@ int xrdp_bitmap_load(struct xrdp_bitmap* self, char* filename, int* palette)
           if (self->bpp == 8)
             color = xrdp_bitmap_get_index(self, palette, color);
           else if (self->bpp == 15)
-            color = xrdp_wm_color15((color & 0xff0000) >> 16,
-                                    (color & 0x00ff00) >> 8,
-                                    (color & 0x0000ff) >> 0);
+            color = color15((color & 0xff0000) >> 16,
+                            (color & 0x00ff00) >> 8,
+                            (color & 0x0000ff) >> 0);
           else if (self->bpp == 16)
-            color = xrdp_wm_color16((color & 0xff0000) >> 16,
-                                    (color & 0x00ff00) >> 8,
-                                    (color & 0x0000ff) >> 0);
+            color = color16((color & 0xff0000) >> 16,
+                            (color & 0x00ff00) >> 8,
+                            (color & 0x0000ff) >> 0);
           else if (self->bpp == 24)
-            color = xrdp_wm_color24((color & 0xff0000) >> 16,
-                                    (color & 0x00ff00) >> 8,
-                                    (color & 0x0000ff) >> 0);
+            color = color24((color & 0xff0000) >> 16,
+                            (color & 0x00ff00) >> 8,
+                            (color & 0x0000ff) >> 0);
           xrdp_bitmap_set_pixel(self, j, i, color);
         }
       }
@@ -241,11 +241,11 @@ int xrdp_bitmap_get_pixel(struct xrdp_bitmap* self, int x, int y)
   if (x >= 0 && x < self->width && y >= 0 && y < self->height)
   {
     if (self->bpp == 8)
-      return self->data[y * self->width + x];
+      return GETPIXEL8(self->data, x, y, self->width);
     else if (self->bpp == 15 || self->bpp == 16)
-      return ((short*)self->data)[y * self->width + x];
+      return GETPIXEL16(self->data, x, y, self->width);
     else if (self->bpp == 24)
-      return ((int*)self->data)[y * self->width + x];
+      return GETPIXEL32(self->data, x, y, self->width);
   }
   return 0;
 }
@@ -253,14 +253,18 @@ int xrdp_bitmap_get_pixel(struct xrdp_bitmap* self, int x, int y)
 /*****************************************************************************/
 int xrdp_bitmap_set_pixel(struct xrdp_bitmap* self, int x, int y, int pixel)
 {
+  if (self == 0)
+    return 0;
+  if (self->data == 0)
+    return 0;
   if (x >= 0 && x < self->width && y >= 0 && y < self->height)
   {
     if (self->bpp == 8)
-      self->data[y * self->width + x] = pixel;
+      SETPIXEL8(self->data, x, y, self->width, pixel);
     else if (self->bpp == 15 || self->bpp == 16)
-      ((short*)(self->data))[y * self->width + x] = pixel;
+      SETPIXEL16(self->data, x, y, self->width, pixel);
     else if (self->bpp == 24)
-      ((int*)(self->data))[y * self->width + x] = pixel;
+      SETPIXEL32(self->data, x, y, self->width, pixel);
   }
   return 0;
 }
@@ -278,12 +282,23 @@ int xrdp_bitmap_copy_box(struct xrdp_bitmap* self, struct xrdp_bitmap* dest,
     return 0;
   if (self->bpp != dest->bpp)
     return 0;
-  for (i = 0; i < cy; i++)
+
+  if (self->bpp == 24)
   {
-    for (j = 0; j < cx; j++)
+    for (i = 0; i < cy; i++)
+      for (j = 0; j < cx; j++)
+        SETPIXEL32(dest->data, j, i, dest->width,
+                   GETPIXEL32(self->data, j + x, i + y, self->width));
+  }
+  else
+  {
+    for (i = 0; i < cy; i++)
     {
-      xrdp_bitmap_set_pixel(dest, j, i,
-                            xrdp_bitmap_get_pixel(self, j + x, i + y));
+      for (j = 0; j < cx; j++)
+      {
+        xrdp_bitmap_set_pixel(dest, j, i,
+                              xrdp_bitmap_get_pixel(self, j + x, i + y));
+      }
     }
   }
   return 0;
@@ -330,7 +345,7 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
     painter->use_clip = 0;
   else
   {
-    if (xrdp_wm_rect_is_empty(rect))
+    if (ISRECTEMPTY(*rect))
     {
       xrdp_painter_delete(painter);
       return 0;
@@ -507,10 +522,10 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
       xrdp_bitmap_invalidate(b, 0);
     else
     {
-      xrdp_wm_rect(&r1, b->left, b->top, b->width, b->height);
-      if (xrdp_wm_rect_intersect(rect, &r1, &r2))
+      MAKERECT(r1, b->left, b->top, b->width, b->height);
+      if (rect_intersect(rect, &r1, &r2))
       {
-        xrdp_wm_rect_offset(&r2, -(b->left), -(b->top));
+        RECTOFFSET(r2, -(b->left), -(b->top));
         xrdp_bitmap_invalidate(b, &r2);
       }
     }

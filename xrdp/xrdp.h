@@ -53,6 +53,26 @@
 #define LOWORD(in) ((in) & 0x0000ffff)
 #undef MAKELONG
 #define MAKELONG(hi, lo) ((((hi) & 0xffff) << 16) | ((lo) & 0xffff))
+#undef MAKERECT
+#define MAKERECT(r, x, y, cx, cy) \
+{ (r).left = x; (r).top = y; (r).right = (x) + (cx); (r).bottom = (y) + (cy); }
+#undef ISRECTEMPTY
+#define ISRECTEMPTY(r) (((r).right <= (r).left) || ((r).bottom <= (r).top))
+#undef RECTOFFSET
+#define RECTOFFSET(r, dx, dy) \
+{ (r).left += dx; (r).top += dy; (r).right += dx; (r).bottom += dy; }
+#undef GETPIXEL8
+#define GETPIXEL8(d, x, y, w) (*(((unsigned char*)d) + ((y) * (w) + (x))))
+#undef GETPIXEL16
+#define GETPIXEL16(d, x, y, w) (*(((unsigned short*)d) + ((y) * (w) + (x))))
+#undef GETPIXEL32
+#define GETPIXEL32(d, x, y, w) (*(((unsigned long*)d) + ((y) * (w) + (x))))
+#undef SETPIXEL8
+#define SETPIXEL8(d, x, y, w, v) (*(((unsigned char*)d) + ((y) * (w) + (x))) = (v))
+#undef SETPIXEL16
+#define SETPIXEL16(d, x, y, w, v) (*(((unsigned short*)d) + ((y) * (w) + (x))) = (v))
+#undef SETPIXEL32
+#define SETPIXEL32(d, x, y, w, v) (*(((unsigned long*)d) + ((y) * (w) + (x))) = (v))
 /* font macros */
 #define FONT_DATASIZE(f) ((((f)->height * (((f)->width + 7) / 8)) + 3) & ~3);
 
@@ -222,15 +242,6 @@ int xrdp_wm_get_vis_region(struct xrdp_wm* self, struct xrdp_bitmap* bitmap,
                            struct xrdp_region* region);
 int xrdp_wm_mouse_move(struct xrdp_wm* self, int x, int y);
 int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down);
-int xrdp_wm_rect(struct xrdp_rect* r, int x, int y, int cx, int cy);
-int xrdp_wm_rect_is_empty(struct xrdp_rect* in);
-int xrdp_wm_rect_contains_pt(struct xrdp_rect* in, int x, int y);
-int xrdp_wm_rect_intersect(struct xrdp_rect* in1, struct xrdp_rect* in2,
-                           struct xrdp_rect* out);
-int xrdp_wm_rect_offset(struct xrdp_rect* in, int dx, int dy);
-int xrdp_wm_color15(int r, int g, int b);
-int xrdp_wm_color16(int r, int g, int b);
-int xrdp_wm_color24(int r, int g, int b);
 
 /* xrdp_process.c */
 struct xrdp_process* xrdp_process_create(struct xrdp_listen* owner);
@@ -306,3 +317,11 @@ struct xrdp_font* xrdp_font_create(struct xrdp_wm* wm);
 void xrdp_font_delete(struct xrdp_font* self);
 int xrdp_font_item_compare(struct xrdp_font_item* font1,
                            struct xrdp_font_item* font2);
+
+/* funcs.c */
+int rect_contains_pt(struct xrdp_rect* in, int x, int y);
+int rect_intersect(struct xrdp_rect* in1, struct xrdp_rect* in2,
+                   struct xrdp_rect* out);
+int color15(int r, int g, int b);
+int color16(int r, int g, int b);
+int color24(int r, int g, int b);

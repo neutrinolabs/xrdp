@@ -132,30 +132,6 @@ int xrdp_wm_send_bitmap(struct xrdp_wm* self, struct xrdp_bitmap* bitmap,
 }
 
 /*****************************************************************************/
-int xrdp_wm_color15(int r, int g, int b)
-{
-  r = r >> 3;
-  g = g >> 3;
-  b = b >> 3;
-  return (r << 10) | (g << 5) | b;
-}
-
-/*****************************************************************************/
-int xrdp_wm_color16(int r, int g, int b)
-{
-  r = r >> 3;
-  g = g >> 2;
-  b = b >> 3;
-  return (r << 11) | (g << 5) | b;
-}
-
-/*****************************************************************************/
-int xrdp_wm_color24(int r, int g, int b)
-{
-  return r | (g << 8) | (b << 16);
-}
-
-/*****************************************************************************/
 /* all login help screen events go here */
 int xrdp_wm_login_help_notify(struct xrdp_bitmap* wnd,
                               struct xrdp_bitmap* sender,
@@ -284,7 +260,7 @@ int xrdp_wm_login_notify(struct xrdp_bitmap* wnd,
       b = (struct xrdp_bitmap*)
               xrdp_list_get_item(wnd->wm->screen->child_list, i);
       xrdp_list_remove_item(sender->wm->screen->child_list, i);
-      xrdp_wm_rect(&rect, b->left, b->top, b->width, b->height);
+      MAKERECT(rect, b->left, b->top, b->width, b->height);
       xrdp_bitmap_invalidate(wnd->wm->screen, &rect);
       xrdp_bitmap_delete(sender);
       wnd->modal_dialog = 0;
@@ -451,33 +427,33 @@ int xrdp_wm_init(struct xrdp_wm* self)
   }
   else if (self->screen->bpp == 15)
   {
-    self->black     = xrdp_wm_color15(0, 0, 0);
-    self->grey      = xrdp_wm_color15(0xc0, 0xc0, 0xc0);
-    self->dark_grey = xrdp_wm_color15(0x80, 0x80, 0x80);
-    self->blue      = xrdp_wm_color15(0x00, 0x00, 0xff);
-    self->white     = xrdp_wm_color15(0xff, 0xff, 0xff);
-    self->red       = xrdp_wm_color15(0xff, 0x00, 0x00);
-    self->green     = xrdp_wm_color15(0x00, 0xff, 0x00);
+    self->black     = color15(0, 0, 0);
+    self->grey      = color15(0xc0, 0xc0, 0xc0);
+    self->dark_grey = color15(0x80, 0x80, 0x80);
+    self->blue      = color15(0x00, 0x00, 0xff);
+    self->white     = color15(0xff, 0xff, 0xff);
+    self->red       = color15(0xff, 0x00, 0x00);
+    self->green     = color15(0x00, 0xff, 0x00);
   }
   else if (self->screen->bpp == 16)
   {
-    self->black     = xrdp_wm_color16(0, 0, 0);
-    self->grey      = xrdp_wm_color16(0xc0, 0xc0, 0xc0);
-    self->dark_grey = xrdp_wm_color16(0x80, 0x80, 0x80);
-    self->blue      = xrdp_wm_color16(0x00, 0x00, 0xff);
-    self->white     = xrdp_wm_color16(0xff, 0xff, 0xff);
-    self->red       = xrdp_wm_color16(0xff, 0x00, 0x00);
-    self->green     = xrdp_wm_color16(0x00, 0xff, 0x00);
+    self->black     = color16(0, 0, 0);
+    self->grey      = color16(0xc0, 0xc0, 0xc0);
+    self->dark_grey = color16(0x80, 0x80, 0x80);
+    self->blue      = color16(0x00, 0x00, 0xff);
+    self->white     = color16(0xff, 0xff, 0xff);
+    self->red       = color16(0xff, 0x00, 0x00);
+    self->green     = color16(0x00, 0xff, 0x00);
   }
   else if (self->screen->bpp == 24)
   {
-    self->black     = xrdp_wm_color24(0, 0, 0);
-    self->grey      = xrdp_wm_color24(0xc0, 0xc0, 0xc0);
-    self->dark_grey = xrdp_wm_color24(0x80, 0x80, 0x80);
-    self->blue      = xrdp_wm_color24(0x00, 0x00, 0xff);
-    self->white     = xrdp_wm_color24(0xff, 0xff, 0xff);
-    self->red       = xrdp_wm_color24(0xff, 0x00, 0x00);
-    self->green     = xrdp_wm_color24(0x00, 0xff, 0x00);
+    self->black     = color24(0, 0, 0);
+    self->grey      = color24(0xc0, 0xc0, 0xc0);
+    self->dark_grey = color24(0x80, 0x80, 0x80);
+    self->blue      = color24(0x00, 0x00, 0xff);
+    self->white     = color24(0xff, 0xff, 0xff);
+    self->red       = color24(0xff, 0x00, 0x00);
+    self->green     = color24(0x00, 0xff, 0x00);
   }
   /* draw login window */
   self->login_window = xrdp_bitmap_create(400, 200, self->screen->bpp, 1);
@@ -606,30 +582,29 @@ int xrdp_wm_get_vis_region(struct xrdp_wm* self, struct xrdp_bitmap* bitmap,
   struct xrdp_rect b;
 
   /* area we are drawing */
-  xrdp_wm_rect(&a, bitmap->left + x, bitmap->top + y, cx, cy);
-
+  MAKERECT(a, bitmap->left + x, bitmap->top + y, cx, cy);
   p = bitmap->parent;
   while (p != 0)
   {
-    xrdp_wm_rect_offset(&a, p->left, p->top);
+    RECTOFFSET(a, p->left, p->top);
     p = p->parent;
   }
-
+  a.left = MAX(self->screen->left, a.left);
+  a.top = MAX(self->screen->top, a.top);
+  a.right = MIN(self->screen->left + self->screen->width, a.right);
+  a.bottom = MIN(self->screen->top + self->screen->height, a.bottom);
   xrdp_region_add_rect(region, &a);
-
   if (bitmap == self->screen)
     return 0;
-
   /* loop through all windows in z order */
   for (i = 0; i < self->screen->child_list->count; i++)
   {
     p = (struct xrdp_bitmap*)xrdp_list_get_item(self->screen->child_list, i);
     if (p == bitmap || p == bitmap->parent)
       return 0;
-    xrdp_wm_rect(&b, p->left, p->top, p->width, p->height);
+    MAKERECT(b, p->left, p->top, p->width, p->height);
     xrdp_region_subtract_rect(region, &b);
   }
-
   return 0;
 }
 
@@ -735,8 +710,7 @@ int xrdp_wm_bitblt(struct xrdp_wm* self,
 int xrdp_wm_is_rect_vis(struct xrdp_wm* self, struct xrdp_bitmap* wnd,
                         struct xrdp_rect* rect)
 {
-  struct xrdp_rect rect1;
-  struct xrdp_rect rect2;
+  struct xrdp_rect wnd_rect;
   struct xrdp_bitmap* b;
   int i;;
 
@@ -755,8 +729,8 @@ int xrdp_wm_is_rect_vis(struct xrdp_wm* self, struct xrdp_bitmap* wnd,
   while (i >= 0)
   {
     b = (struct xrdp_bitmap*)xrdp_list_get_item(self->screen->child_list, i);
-    xrdp_wm_rect(&rect1, b->left, b->top, b->width, b->height);
-    if (xrdp_wm_rect_intersect(rect, &rect1, &rect2))
+    MAKERECT(wnd_rect, b->left, b->top, b->width, b->height);
+    if (rect_intersect(rect, &wnd_rect, 0))
       return 0;
     i--;
   }
@@ -772,11 +746,11 @@ int xrdp_wm_move_window(struct xrdp_wm* self, struct xrdp_bitmap* wnd,
   struct xrdp_region* r;
   int i;
 
-  xrdp_wm_rect(&rect1, wnd->left, wnd->top, wnd->width, wnd->height);
+  MAKERECT(rect1, wnd->left, wnd->top, wnd->width, wnd->height);
   if (xrdp_wm_is_rect_vis(self, wnd, &rect1))
   {
     rect2 = rect1;
-    xrdp_wm_rect_offset(&rect2, dx, dy);
+    RECTOFFSET(rect2, dx, dy);
     if (xrdp_wm_is_rect_vis(self, wnd, &rect2))
     { /* if both src and dst are unobscured, we can do a bitblt move */
       xrdp_wm_bitblt(self, self->screen, wnd->left + dx, wnd->top + dy,
@@ -801,67 +775,6 @@ int xrdp_wm_move_window(struct xrdp_wm* self, struct xrdp_bitmap* wnd,
   wnd->top += dy;
   xrdp_bitmap_invalidate(self->screen, &rect1);
   xrdp_bitmap_invalidate(wnd, 0);
-  return 0;
-}
-
-/*****************************************************************************/
-int xrdp_wm_rect(struct xrdp_rect* r, int x, int y, int cx, int cy)
-{
-  r->left = x;
-  r->top = y;
-  r->right = x + cx;
-  r->bottom = y + cy;
-  return 0;
-}
-
-/*****************************************************************************/
-int xrdp_wm_rect_is_empty(struct xrdp_rect* in)
-{
-  return (in->right <= in->left) || (in->bottom <= in->top);
-}
-
-/*****************************************************************************/
-int xrdp_wm_rect_contains_pt(struct xrdp_rect* in, int x, int y)
-{
-  if (x < in->left)
-    return 0;
-  if (y < in->top)
-    return 0;
-  if (x >= in->right)
-    return 0;
-  if (y >= in->bottom)
-    return 0;
-  return 1;
-}
-
-/*****************************************************************************/
-int xrdp_wm_rect_intersect(struct xrdp_rect* in1, struct xrdp_rect* in2,
-                           struct xrdp_rect* out)
-{
-  int rv;
-
-  *out = *in1;
-  if (in2->left > in1->left)
-    out->left = in2->left;
-  if (in2->top > in1->top)
-    out->top = in2->top;
-  if (in2->right < in1->right)
-    out->right = in2->right;
-  if (in2->bottom < in1->bottom)
-    out->bottom = in2->bottom;
-  rv = !xrdp_wm_rect_is_empty(out);
-  if (!rv)
-    g_memset(out, 0, sizeof(struct xrdp_rect));
-  return rv;
-}
-
-/*****************************************************************************/
-int xrdp_wm_rect_offset(struct xrdp_rect* in, int dx, int dy)
-{
-  in->left += dx;
-  in->right += dx;
-  in->top += dy;
-  in->bottom += dy;
   return 0;
 }
 

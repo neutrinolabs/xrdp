@@ -546,7 +546,7 @@ int xrdp_rdp_process_screen_update(struct xrdp_rdp* self, struct stream* s)
   in_uint16_le(s, top);
   in_uint16_le(s, right);
   in_uint16_le(s, bottom);
-  xrdp_wm_rect(&rect, left, top, (right - left) + 1, (bottom - top) + 1);
+  MAKERECT(rect, left, top, (right - left) + 1, (bottom - top) + 1);
   if (self->up_and_running && self->pro_layer->wm != 0)
     xrdp_bitmap_invalidate(self->pro_layer->wm->screen, &rect);
   return 0;
