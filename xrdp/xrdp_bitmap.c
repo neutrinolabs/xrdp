@@ -173,6 +173,10 @@ void xrdp_bitmap_delete(struct xrdp_bitmap* self)
     {
       self->wm->login_window = 0;
     }
+    if (self->wm->log_wnd == self)
+    {
+      self->wm->log_wnd = 0;
+    }
   }
   if (self->child_list != 0)
   {
@@ -825,14 +829,20 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
   char* p;
 
   if (self == 0) /* if no bitmap */
+  {
     return 0;
+  }
   if (self->type == WND_TYPE_BITMAP) /* if 0, bitmap, leave */
+  {
     return 0;
+  }
   painter = xrdp_painter_create(self->wm);
   xrdp_painter_font_needed(painter);
   painter->rop = 0xcc; /* copy */
   if (rect == 0)
+  {
     painter->use_clip = 0;
+  }
   else
   {
     if (ISRECTEMPTY(*rect))
@@ -899,8 +909,11 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
           y = rect->top;
           w = rect->right - rect->left;
           h = rect->bottom - rect->top;
-          self->wm->mod->mod_event(self->wm->mod, WM_INVALIDATE, /* 200 */
-                                   MAKELONG(x, y), MAKELONG(w, h));
+          if (check_bounds(self->wm->screen, &x, &y, &w, &h))
+          {
+            self->wm->mod->mod_event(self->wm->mod, WM_INVALIDATE,
+                                     MAKELONG(x, y), MAKELONG(w, h));
+          }
         }
       }
     }

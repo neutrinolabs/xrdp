@@ -216,6 +216,61 @@ int server_palette(int* palette)
 #else
 
 /*****************************************************************************/
+/* this is the log windows nofity function */
+int xrdp_wm_log_wnd_notify(struct xrdp_bitmap* wnd,
+                           struct xrdp_bitmap* sender,
+                           int msg, int param1, int param2)
+{
+  struct xrdp_painter* painter;
+  struct xrdp_wm* wm;
+  struct xrdp_rect rect;
+  int index;
+  char* text;
+
+  if (wnd == 0)
+  {
+    return 0;
+  }
+  if (sender == 0)
+  {
+    return 0;
+  }
+  if (wnd->owner == 0)
+  {
+    return 0;
+  }
+  wm = wnd->wm;
+  if (msg == 1) /* click */
+  {
+    if (sender->id == 1) /* ok button */
+    {
+      /* close the log window */
+      MAKERECT(rect, wnd->left, wnd->top, wnd->width, wnd->height);
+      xrdp_bitmap_delete(wnd);
+      xrdp_bitmap_invalidate(wm->screen, &rect);
+      if (wm->mod_handle == 0)
+      {
+        wm->pro_layer->term = 1; /* kill session */
+      }
+    }
+  }
+  else if (msg == WM_PAINT) /* 3 */
+  {
+    painter = (struct xrdp_painter*)param1;
+    if (painter != 0)
+    {
+      painter->font->color = wnd->wm->black;
+      for (index = 0; index < wnd->wm->log->count; index++)
+      {
+        text = (char*)xrdp_list_get_item(wnd->wm->log, index);
+        xrdp_painter_draw_text(painter, wnd, 10, 30 + index * 15, text);
+      }
+    }
+  }
+  return 0;
+}
+
+/*****************************************************************************/
 int server_begin_update(struct xrdp_mod* mod)
 {
   struct xrdp_wm* wm;
@@ -308,39 +363,40 @@ int server_palette(struct xrdp_mod* mod, int* palette)
 }
 
 /*****************************************************************************/
-int server_error_popup(struct xrdp_mod* mod, char* error, char* caption)
+int server_msg(struct xrdp_mod* mod, char* msg)
 {
-#if 0
   struct xrdp_wm* wm;
-  struct xrdp_bitmap* wnd;
   struct xrdp_bitmap* but;
 
   wm = (struct xrdp_wm*)mod->wm;
-  wnd = xrdp_bitmap_create(400, 200, wm->screen->bpp, WND_TYPE_WND, wm);
-  xrdp_list_add_item(wm->screen->child_list, (int)wnd);
-  wnd->parent = wm->screen;
-  wnd->owner = wm->screen;
-  wnd->bg_color = wm->grey;
-  wnd->left = wm->screen->width / 2 - wnd->width / 2;
-  wnd->top = wm->screen->height / 2 - wnd->height / 2;
-  wnd->notify = xrdp_wm_popup_notify;
-  g_strcpy(wnd->caption, caption);
-
-  /* button */
-  but = xrdp_bitmap_create(60, 25, wm->screen->bpp, WND_TYPE_BUTTON, wm);
-  xrdp_list_add_item(wnd->child_list, (int)but);
-  but->parent = wnd;
-  but->owner = wnd;
-  but->left = 180;
-  but->top = 160;
-  but->id = 1;
-  g_strcpy(but->caption, "OK");
-  but->tab_stop = 1;
-
-  xrdp_bitmap_invalidate(wm->screen, 0);
-  //xrdp_bitmap_invalidate(wnd, 0);
-  g_sleep(2000);
-#endif
+  xrdp_list_add_item(wm->log, (long)g_strdup(msg));
+  if (wm->log_wnd == 0)
+  {
+    /* log window */
+    wm->log_wnd = xrdp_bitmap_create(400, 400, wm->screen->bpp,
+                                     WND_TYPE_WND, wm);
+    xrdp_list_add_item(wm->screen->child_list, (long)wm->log_wnd);
+    wm->log_wnd->parent = wm->screen;
+    wm->log_wnd->owner = wm->screen;
+    wm->log_wnd->bg_color = wm->grey;
+    wm->log_wnd->left = 10;
+    wm->log_wnd->top = 10;
+    set_string(&wm->log_wnd->caption1, "Connection Log");
+    /* ok button */
+    but = xrdp_bitmap_create(60, 25, wm->screen->bpp, WND_TYPE_BUTTON, wm);
+    xrdp_list_insert_item(wm->log_wnd->child_list, 0, (long)but);
+    but->parent = wm->log_wnd;
+    but->owner = wm->log_wnd;
+    but->left = (400 - 60) - 10;
+    but->top = (400 - 25) - 10;
+    but->id = 1;
+    but->tab_stop = 1;
+    set_string(&but->caption1, "OK");
+    wm->log_wnd->focused_control = but;
+    /* set notify function */
+    wm->log_wnd->notify = xrdp_wm_log_wnd_notify;
+  }
+  xrdp_bitmap_invalidate(wm->log_wnd, 0);
   return 0;
 }
 

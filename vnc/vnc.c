@@ -141,7 +141,9 @@ int lib_mod_event(struct vnc* v, int msg, int param1, int param2)
           /* just send tab and if the shift modifier is down */
           /* the server will know */
           /* for now, sending left tab, I don't know which is best */
-          key = (v->shift_state) ? 0xfe20 : 0xff09;
+          /* nope, sending tab always */
+          /* key = (v->shift_state) ? 0xfe20 : 0xff09; */
+          key = 0xff09;
           break;
         case 0x001c: /* enter */
           key = 0xff0d;
@@ -692,20 +694,13 @@ int lib_mod_start(struct vnc* v, int w, int h, int bpp)
 /******************************************************************************/
 /*
   return error
-  these are wrong.....
-  1 - authentation failed
-  2 - authentation failed
-  3 - server name length received from server too long
-  4 - server and client bpp do not match
-  5 - no more available X desktops when spawning a new session
-  6 - no ip
-  7 - sck closed
 */
 int lib_mod_connect(struct vnc* v)
 {
   char cursor_data[32 * (32 * 3)];
   char cursor_mask[32 * (32 / 8)];
   char con_port[256];
+  char text[256];
   struct stream* s;
   struct stream* pixel_format;
   int error;
@@ -717,24 +712,29 @@ int lib_mod_connect(struct vnc* v)
   int ok;
   int display;
 
+  v->server_msg(v, "started connecting");
   check_sec_result = 1;
   /* only support 8 and 16 bpp connections from rdp client */
   if (v->server_bpp != 8 && v->server_bpp != 16)
   {
+    v->server_msg(v, "error - only supporting 8 and 16 bpp rdp connections");
     return 1;
   }
   if (g_strcmp(v->ip, "") == 0)
   {
-    return 6;
+    v->server_msg(v, "error - no ip set");
+    return 1;
   }
   make_stream(s);
+  /* if port = -1, use sesman to get port / desktop */
   if (g_strcmp(v->port, "-1") == 0)
   {
-    i = 0;
+    display = 0;
     error = 0;
     init_stream(s, 8192);
     v->sck = g_tcp_socket();
     v->sck_closed = 0;
+    v->server_msg(v, "connecting to sesman");
     if (g_tcp_connect(v->sck, v->ip, "3350") == 0)
     {
       g_tcp_set_non_blocking(v->sck);
@@ -754,10 +754,12 @@ int lib_mod_connect(struct vnc* v)
       s_pop_layer(s, channel_hdr);
       out_uint32_be(s, 0); // version
       out_uint32_be(s, s->end - s->data); // size
+      v->server_msg(v, "sending login info to sesman");
       error = lib_send(v, s->data, s->end - s->data);
       if (error == 0)
       {
         init_stream(s, 8192);
+        v->server_msg(v, "receiving sesman header");
         error = lib_recv(v, s->data, 8);
       }
       if (error == 0)
@@ -765,6 +767,7 @@ int lib_mod_connect(struct vnc* v)
         in_uint32_be(s, version);
         in_uint32_be(s, size);
         init_stream(s, 8192);
+        v->server_msg(v, "receiving sesman data");
         error = lib_recv(v, s->data, size - 8);
       }
       if (error == 0)
@@ -775,23 +778,33 @@ int lib_mod_connect(struct vnc* v)
           if (code == 3)
           {
             in_uint16_be(s, ok);
-            in_uint16_be(s, display);
             if (ok)
             {
-              i = display;
+              in_uint16_be(s, display);
+            }
+            else
+            {
+              in_uint8s(s, 2);
+              v->server_msg(v, "error - sesman returned no");
             }
           }
         }
       }
     }
-    g_tcp_close(v->sck);
-    if (error != 0 || i == 0)
+    else
     {
-      free_stream(s);
-      return 5;
+      v->server_msg(v, "error - connecting to sesman");
     }
-    g_sprintf(con_port, "%d", 5900 + i);
-    v->vnc_desktop = i;
+    g_tcp_close(v->sck);
+    if (error != 0 || display == 0)
+    {
+      v->server_msg(v, "error - connection failed");
+      free_stream(s);
+      return 1;
+    }
+    v->server_msg(v, "sesman started a session");
+    g_sprintf(con_port, "%d", 5900 + display);
+    v->vnc_desktop = display;
   }
   else
   {
@@ -800,9 +813,12 @@ int lib_mod_connect(struct vnc* v)
   make_stream(pixel_format);
   v->sck = g_tcp_socket();
   v->sck_closed = 0;
+  g_sprintf(text, "connecting to %s %s", v->ip, con_port);
+  v->server_msg(v, text);
   error = g_tcp_connect(v->sck, v->ip, con_port);
   if (error == 0)
   {
+    v->server_msg(v, "tcp connected");
     g_tcp_set_non_blocking(v->sck);
     g_tcp_set_no_delay(v->sck);
     /* protocal version */
@@ -821,6 +837,8 @@ int lib_mod_connect(struct vnc* v)
     if (error == 0)
     {
       in_uint32_be(s, i);
+      g_sprintf(text, "security level is %d (1 = none, 2 = standard)", i);
+      v->server_msg(v, text);
       if (i == 1) /* none */
       {
         check_sec_result = 0;
@@ -851,18 +869,25 @@ int lib_mod_connect(struct vnc* v)
       in_uint32_be(s, i);
       if (i != 0)
       {
+        v->server_msg(v, "password failed");
         error = 2;
+      }
+      else
+      {
+        v->server_msg(v, "password ok");
       }
     }
   }
   if (error == 0)
   {
+    v->server_msg(v, "sending share flag");
     init_stream(s, 8192);
     s->data[0] = 1;
     error = lib_send(v, s->data, 1); /* share flag */
   }
   if (error == 0)
   {
+    v->server_msg(v, "receiving server init");
     error = lib_recv(v, s->data, 4); /* server init */
   }
   if (error == 0)
@@ -870,12 +895,14 @@ int lib_mod_connect(struct vnc* v)
     in_uint16_be(s, v->mod_width);
     in_uint16_be(s, v->mod_height);
     init_stream(pixel_format, 8192);
+    v->server_msg(v, "receiving pixel format");
     error = lib_recv(v, pixel_format->data, 16);
   }
   if (error == 0)
   {
     v->mod_bpp = v->server_bpp;
     init_stream(s, 8192);
+    v->server_msg(v, "receiving name length");
     error = lib_recv(v, s->data, 4); /* name len */
   }
   if (error == 0)
@@ -887,6 +914,7 @@ int lib_mod_connect(struct vnc* v)
     }
     else
     {
+      v->server_msg(v, "receiving name");
       error = lib_recv(v, v->mod_name, i);
       v->mod_name[i] = 0;
     }
@@ -930,6 +958,7 @@ int lib_mod_connect(struct vnc* v)
       out_uint8s(pixel_format, 3); /* pad */
     }
     out_uint8a(s, pixel_format->data, 16);
+    v->server_msg(v, "sending pixel format");
     error = lib_send(v, s->data, 20);
   }
   if (error == 0)
@@ -942,6 +971,7 @@ int lib_mod_connect(struct vnc* v)
     out_uint32_be(s, 0); /* raw */
     out_uint32_be(s, 1); /* copy rect */
     out_uint32_be(s, 0xffffff11); /* cursor */
+    v->server_msg(v, "sending encodings");
     error = lib_send(v, s->data, 4 + 3 * 4);
   }
   if (error == 0)
@@ -954,28 +984,38 @@ int lib_mod_connect(struct vnc* v)
     out_uint16_be(s, 0);
     out_uint16_be(s, v->mod_width);
     out_uint16_be(s, v->mod_height);
+    v->server_msg(v, "sending framebuffer update request");
     error = lib_send(v, s->data, 10);
   }
   if (error == 0)
   {
-    v->server_error_popup(v, "hi", "Hi");
     if (v->server_bpp != v->mod_bpp)
     {
-      error = 4;
+      v->server_msg(v, "error - server and client bpp don't match");
+      error = 1;
     }
   }
   if (error == 0)
   {
-    /* set almost null cursor */
+    /* set almost null cursor, this is the little dot cursor */
     g_memset(cursor_data, 0, 32 * (32 * 3));
     g_memset(cursor_data + (32 * (32 * 3) - 1 * 32 * 3), 0xff, 9);
     g_memset(cursor_data + (32 * (32 * 3) - 2 * 32 * 3), 0xff, 9);
     g_memset(cursor_data + (32 * (32 * 3) - 3 * 32 * 3), 0xff, 9);
     g_memset(cursor_mask, 0xff, 32 * (32 / 8));
+    v->server_msg(v, "sending cursor");
     error = v->server_set_cursor(v, 3, 3, cursor_data, cursor_mask);
   }
   free_stream(s);
   free_stream(pixel_format);
+  if (error == 0)
+  {
+    v->server_msg(v, "connection complete, connected ok");
+  }
+  else
+  {
+    v->server_msg(v, "error - problem connecting");
+  }
   return error;
 }
 
@@ -1011,7 +1051,7 @@ int lib_mod_set_param(struct vnc* v, char* name, char* value)
 }
 
 /******************************************************************************/
-int mod_init()
+struct vnc* mod_init(void)
 {
   struct vnc* v;
 
@@ -1025,7 +1065,7 @@ int mod_init()
   v->mod_signal = lib_mod_signal;
   v->mod_end = lib_mod_end;
   v->mod_set_param = lib_mod_set_param;
-  return (int)v;
+  return v;
 }
 
 /******************************************************************************/

@@ -23,16 +23,25 @@
 #include "xrdp.h"
 
 /*****************************************************************************/
+/* returns boolean */
 int rect_contains_pt(struct xrdp_rect* in, int x, int y)
 {
   if (x < in->left)
+  {
     return 0;
+  }
   if (y < in->top)
+  {
     return 0;
+  }
   if (x >= in->right)
+  {
     return 0;
+  }
   if (y >= in->bottom)
+  {
     return 0;
+  }
   return 1;
 }
 
@@ -44,19 +53,31 @@ int rect_intersect(struct xrdp_rect* in1, struct xrdp_rect* in2,
   struct xrdp_rect dumby;
 
   if (out == 0)
+  {
     out = &dumby;
+  }
   *out = *in1;
   if (in2->left > in1->left)
+  {
     out->left = in2->left;
+  }
   if (in2->top > in1->top)
+  {
     out->top = in2->top;
+  }
   if (in2->right < in1->right)
+  {
     out->right = in2->right;
+  }
   if (in2->bottom < in1->bottom)
+  {
     out->bottom = in2->bottom;
+  }
   rv = !ISRECTEMPTY(*out);
   if (!rv)
+  {
     g_memset(out, 0, sizeof(struct xrdp_rect));
+  }
   return rv;
 }
 
@@ -66,9 +87,13 @@ int rect_intersect(struct xrdp_rect* in1, struct xrdp_rect* in2,
 int check_bounds(struct xrdp_bitmap* b, int* x, int* y, int* cx, int* cy)
 {
   if (*x >= b->width)
+  {
     return 0;
+  }
   if (*y >= b->height)
+  {
     return 0;
+  }
   if (*x < 0)
   {
     *cx += *x;
@@ -80,16 +105,25 @@ int check_bounds(struct xrdp_bitmap* b, int* x, int* y, int* cx, int* cy)
     *y = 0;
   }
   if (*cx <= 0)
+  {
     return 0;
+  }
   if (*cy <= 0)
+  {
     return 0;
+  }
   if (*x + *cx > b->width)
+  {
     *cx = b->width - *x;
+  }
   if (*y + *cy > b->height)
+  {
     *cy = b->height - *y;
+  }
   return 1;
 }
 
+/*****************************************************************************/
 /*  scan codes
     1   esc
     2   1 or ?
@@ -253,18 +287,28 @@ char get_char_from_scan_code(int device_flags, int scan_code, int* keys,
   if (ext)
   {
     if (scan_code == 53)
+    {
       rv = '/';
+    }
   }
   else
   {
     if (shift)
+    {
       rv = chars2[scan_code];
+    }
     else
+    {
       rv = chars1[scan_code];
+    }
     if (rv >= 'a' && rv <= 'z' && caps_lock)
+    {
       rv = rv - ('a' - 'A');
+    }
     else if (rv >= 'A' && rv <= 'Z' && caps_lock)
+    {
       rv = rv + ('a' - 'A');
+    }
   }
   return rv;
 }

@@ -340,7 +340,7 @@ int xrdp_cache_add_pointer(struct xrdp_cache* self,
   }
   self->pointer_stamp++;
   /* look for match */
-  for (i = 0; i < self->pointer_cache_entries; i++)
+  for (i = 2; i < self->pointer_cache_entries; i++)
   {
     if (self->pointer_items[i].x == pointer_item->x &&
         self->pointer_items[i].y == pointer_item->y &&
@@ -351,14 +351,15 @@ int xrdp_cache_add_pointer(struct xrdp_cache* self,
     {
       self->pointer_items[i].stamp = self->pointer_stamp;
       xrdp_wm_set_pointer(self->wm, i);
+      self->wm->current_pointer = i;
       DEBUG(("found pointer at %d\n\r", i));
       return i;
     }
   }
   /* look for oldest */
-  index = 0;
+  index = 2;
   oldest = 0x7fffffff;
-  for (i = 0; i < self->pointer_cache_entries; i++)
+  for (i = 2; i < self->pointer_cache_entries; i++)
   {
     if (self->pointer_items[i].stamp < oldest)
     {
@@ -378,6 +379,34 @@ int xrdp_cache_add_pointer(struct xrdp_cache* self,
                        self->pointer_items[index].mask,
                        self->pointer_items[index].x,
                        self->pointer_items[index].y);
+  self->wm->current_pointer = index;
+  DEBUG(("adding pointer at %d\n\r", index));
+  return index;
+}
+
+/*****************************************************************************/
+int xrdp_cache_add_pointer_static(struct xrdp_cache* self,
+                                  struct xrdp_pointer_item* pointer_item,
+                                  int index)
+{
+
+  if (self == 0)
+  {
+    return 0;
+  }
+  self->pointer_items[index].x = pointer_item->x;
+  self->pointer_items[index].y = pointer_item->y;
+  g_memcpy(self->pointer_items[index].data,
+           pointer_item->data, 32 * 32 * 3);
+  g_memcpy(self->pointer_items[index].mask,
+           pointer_item->mask, 32 * 32 / 8);
+  self->pointer_items[index].stamp = self->pointer_stamp;
+  xrdp_wm_send_pointer(self->wm, index,
+                       self->pointer_items[index].data,
+                       self->pointer_items[index].mask,
+                       self->pointer_items[index].x,
+                       self->pointer_items[index].y);
+  self->wm->current_pointer = index;
   DEBUG(("adding pointer at %d\n\r", index));
   return index;
 }

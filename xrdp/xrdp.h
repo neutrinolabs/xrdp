@@ -138,6 +138,9 @@ int xrdp_cache_add_char(struct xrdp_cache* self,
                         struct xrdp_font_item* font_item);
 int xrdp_cache_add_pointer(struct xrdp_cache* self,
                            struct xrdp_pointer_item* pointer_item);
+int xrdp_cache_add_pointer_static(struct xrdp_cache* self,
+                                  struct xrdp_pointer_item* pointer_item,
+                                  int index);
 
 /* xrdp_wm.c */
 struct xrdp_wm* xrdp_wm_create(struct xrdp_process* owner,
@@ -292,6 +295,6 @@ int server_paint_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy,
 int server_set_pointer(struct xrdp_mod* mod, int x, int y,
                        char* data, char* mask);
 int server_palette(struct xrdp_mod* mod, int* palette);
-int server_error_popup(struct xrdp_mod* mod, char* error, char* caption);
+int server_msg(struct xrdp_mod* mod, char* msg);
 int server_is_term(struct xrdp_mod* mod);
 #endif

@@ -40,6 +40,8 @@ struct xrdp_wm* xrdp_wm_create(struct xrdp_process* owner,
   self->painter = xrdp_painter_create(self);
   self->rdp_layer = owner->rdp_layer;
   self->cache = xrdp_cache_create(self, self->orders, self->client_info);
+  self->log = xrdp_list_create();
+  self->log->auto_free = 1;
   return self;
 }
 
@@ -58,7 +60,7 @@ void xrdp_wm_delete(struct xrdp_wm* self)
   {
     if (self->mod_exit != 0)
     {
-      self->mod_exit((int)self->mod);
+      self->mod_exit(self->mod);
     }
   }
   if (self->mod_handle != 0)
@@ -236,7 +238,9 @@ int xrdp_wm_send_bitmap(struct xrdp_wm* self, struct xrdp_bitmap* bitmap,
       {
         lines_sending = 4096 / (line_size + e * Bpp);
         if (i + lines_sending > total_lines)
+        {
           lines_sending = total_lines - i;
+        }
         p = p + line_size * lines_sending;
         xrdp_rdp_init_data(self->rdp_layer, s);
         out_uint16_le(s, RDP_UPDATE_BITMAP);
@@ -340,7 +344,7 @@ int xrdp_wm_pointer(struct xrdp_wm* self, char* data, char* mask, int x, int y)
   pointer_item.y = y;
   g_memcpy(pointer_item.data, data, 32 * 32 * 3);
   g_memcpy(pointer_item.mask, mask, 32 * 32 / 8);
-  xrdp_cache_add_pointer(self->cache, &pointer_item);
+  self->screen->pointer = xrdp_cache_add_pointer(self->cache, &pointer_item);
   return 0;
 }
 
@@ -468,7 +472,6 @@ int xrdp_wm_set_pointer(struct xrdp_wm* self, int cache_idx)
   out_uint16_le(s, RDP_POINTER_CACHED);
   out_uint16_le(s, 0); /* pad */
   out_uint16_le(s, cache_idx); /* cache_idx */
-  //g_printf("%d\n", cache_idx);
   s_mark_end(s);
   xrdp_rdp_send_data(self->rdp_layer, s, RDP_DATA_PDU_POINTER);
   free_stream(s);
@@ -479,13 +482,10 @@ int xrdp_wm_set_pointer(struct xrdp_wm* self, int cache_idx)
 int xrdp_wm_init(struct xrdp_wm* self)
 {
 #ifndef XRDP_LIB /* if lib, dodn't create login screen */
-  char data[32 * (32 * 3)];
-  char mask[32 * (32 / 8)];
-  int x;
-  int y;
   int bindex;
   int gindex;
   int rindex;
+  struct xrdp_pointer_item pointer_item;
 
   if (self->screen->bpp == 8)
   {
@@ -547,12 +547,13 @@ int xrdp_wm_init(struct xrdp_wm* self)
     self->green     = COLOR24(0x00, 0xff, 0x00);
   }
   DEBUG(("sending cursor\n\r"));
-  xrdp_wm_load_pointer(self, "cursor1.cur", data, mask, &x, &y);
-  xrdp_wm_send_pointer(self, 1, data, mask, x, y);
+  xrdp_wm_load_pointer(self, "cursor1.cur", pointer_item.data,
+                       pointer_item.mask, &pointer_item.x, &pointer_item.y);
+  xrdp_cache_add_pointer_static(self->cache, &pointer_item, 1);
   DEBUG(("sending cursor\n\r"));
-  xrdp_wm_load_pointer(self, "cursor0.cur", data, mask, &x, &y);
-  xrdp_wm_send_pointer(self, 0, data, mask, x, y);
-
+  xrdp_wm_load_pointer(self, "cursor0.cur", pointer_item.data,
+                       pointer_item.mask, &pointer_item.x, &pointer_item.y);
+  xrdp_cache_add_pointer_static(self->cache, &pointer_item, 0);
   xrdp_login_wnd_create(self);
   /* clear screen */
   self->screen->bg_color = self->black;
@@ -738,7 +739,7 @@ int xrdp_wm_is_rect_vis(struct xrdp_wm* self, struct xrdp_bitmap* wnd,
     return 0;
   }
 
-  i = xrdp_list_index_of(self->screen->child_list, (int)wnd);
+  i = xrdp_list_index_of(self->screen->child_list, (long)wnd);
   i--;
   while (i >= 0)
   {
@@ -842,8 +843,13 @@ int xrdp_wm_mouse_move(struct xrdp_wm* self, int x, int y)
     return 0;
   }
   b = xrdp_wm_at_pos(self->screen, x, y, 0);
-  if (b == 0)
+  if (b == 0) /* if b is null, the movment must be over the screen */
   {
+    if (self->screen->pointer != self->current_pointer)
+    {
+      xrdp_wm_set_pointer(self, self->screen->pointer);
+      self->current_pointer = self->screen->pointer;
+    }
     if (self->mod != 0) /* if screen is mod controled */
     {
       if (self->mod->mod_event != 0)
@@ -900,7 +906,7 @@ int xrdp_wm_clear_popup(struct xrdp_wm* self)
   if (self->popup_wnd != 0)
   {
     //b = self->popup_wnd->popped_from;
-    i = xrdp_list_index_of(self->screen->child_list, (int)self->popup_wnd);
+    i = xrdp_list_index_of(self->screen->child_list, (long)self->popup_wnd);
     xrdp_list_remove_item(self->screen->child_list, i);
     MAKERECT(rect, self->popup_wnd->left, self->popup_wnd->top,
              self->popup_wnd->width, self->popup_wnd->height);
@@ -1218,7 +1224,7 @@ int xrdp_wm_pu(struct xrdp_wm* self, struct xrdp_bitmap* control)
   self->popup_wnd->left = x;
   self->popup_wnd->top = y + control->height;
   self->popup_wnd->item_index = control->item_index;
-  xrdp_list_insert_item(self->screen->child_list, 0, (int)self->popup_wnd);
+  xrdp_list_insert_item(self->screen->child_list, 0, (long)self->popup_wnd);
   xrdp_bitmap_invalidate(self->popup_wnd, 0);
   return 0;
 }

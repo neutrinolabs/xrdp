@@ -31,11 +31,17 @@ int xrdp_wm_login_help_notify(struct xrdp_bitmap* wnd,
   struct xrdp_painter* p;
 
   if (wnd == 0)
+  {
     return 0;
+  }
   if (sender == 0)
+  {
     return 0;
+  }
   if (wnd->owner == 0)
+  {
     return 0;
+  }
   if (msg == 1) /* click */
   {
     if (sender->id == 1) /* ok button */
@@ -90,13 +96,13 @@ int xrdp_wm_setup_mod(struct xrdp_wm* self,
       self->mod_handle = g_load_library(mod_data->lib);
       if (self->mod_handle != 0)
       {
-        self->mod_init = (int(*)())
+        self->mod_init = (struct xrdp_mod* (*)(void))
                   g_get_proc_address(self->mod_handle, "mod_init");
-        self->mod_exit = (int(*)(int))
+        self->mod_exit = (int (*)(struct xrdp_mod*))
                   g_get_proc_address(self->mod_handle, "mod_exit");
         if (self->mod_init != 0 && self->mod_exit != 0)
         {
-          self->mod = (struct xrdp_mod*)self->mod_init();
+          self->mod = self->mod_init();
         }
       }
       if (self->mod != 0)
@@ -109,7 +115,7 @@ int xrdp_wm_setup_mod(struct xrdp_wm* self,
         self->mod->server_paint_rect = server_paint_rect;
         self->mod->server_set_pointer = server_set_pointer;
         self->mod->server_palette = server_palette;
-        self->mod->server_error_popup= server_error_popup;
+        self->mod->server_msg = server_msg;
         self->mod->server_is_term = server_is_term;
       }
     }
@@ -159,8 +165,9 @@ int xrdp_wm_login_notify(struct xrdp_bitmap* wnd,
     if (sender->id == 1) /* help button */
     {
       /* create help screen */
-      help = xrdp_bitmap_create(300, 300, wnd->wm->screen->bpp, 1, wnd->wm);
-      xrdp_list_insert_item(wnd->wm->screen->child_list, 0, (int)help);
+      help = xrdp_bitmap_create(300, 300, wnd->wm->screen->bpp,
+                                WND_TYPE_WND, wnd->wm);
+      xrdp_list_insert_item(wnd->wm->screen->child_list, 0, (long)help);
       help->parent = wnd->wm->screen;
       help->owner = wnd;
       wnd->modal_dialog = help;
@@ -170,8 +177,9 @@ int xrdp_wm_login_notify(struct xrdp_bitmap* wnd,
       help->notify = xrdp_wm_login_help_notify;
       set_string(&help->caption1, "Login help");
       /* ok button */
-      but = xrdp_bitmap_create(60, 25, wnd->wm->screen->bpp, 3, wnd->wm);
-      xrdp_list_insert_item(help->child_list, 0, (int)but);
+      but = xrdp_bitmap_create(60, 25, wnd->wm->screen->bpp,
+                               WND_TYPE_BUTTON, wnd->wm);
+      xrdp_list_insert_item(help->child_list, 0, (long)but);
       but->parent = help;
       but->owner = help;
       but->left = 120;
@@ -181,25 +189,29 @@ int xrdp_wm_login_notify(struct xrdp_bitmap* wnd,
       set_string(&but->caption1, "OK");
       /* draw it */
       help->focused_control = but;
-      //wnd->wm->focused_window = help;
       xrdp_bitmap_invalidate(help, 0);
       xrdp_wm_set_focused(wnd->wm, help);
-      //xrdp_bitmap_invalidate(wnd->focused_control, 0);
     }
     else if (sender->id == 2) /* cancel button */
     {
       if (wnd != 0)
+      {
         if (wnd->wm != 0)
+        {
           if (wnd->wm->pro_layer != 0)
+          {
             wnd->wm->pro_layer->term = 1;
+          }
+        }
+      }
     }
     else if (sender->id == 3) /* ok button */
     {
       combo = xrdp_bitmap_get_child_by_id(wnd, 6);
       if (combo != 0)
       {
-        mod = (struct xrdp_mod_data*)xrdp_list_get_item(combo->data_list,
-                                                        combo->item_index);
+        mod = (struct xrdp_mod_data*)
+                 xrdp_list_get_item(combo->data_list, combo->item_index);
         if (mod != 0)
         {
           con_mod = *mod;
@@ -238,14 +250,24 @@ int xrdp_wm_login_notify(struct xrdp_bitmap* wnd,
               wm->mod->mod_set_param(wm->mod, "password", con_mod.password);
               if (wm->mod->mod_connect(wm->mod) != 0)
               {
-                wm->pro_layer->term = 1; /* kill session */
+                /* totaly free mod */
+                wm->mod_exit(wm->mod);
+                g_free_library(wm->mod_handle);
+                wm->mod = 0;
+                wm->mod_handle = 0;
+                wm->mod_init = 0;
+                wm->mod_exit = 0;
+                //wm->pro_layer->app_sck = 0;
               }
             }
             if (!wm->pro_layer->term)
             {
-              if (wm->mod->sck != 0)
+              if (wm->mod != 0)
               {
-                wm->pro_layer->app_sck = wm->mod->sck;
+                if (wm->mod->sck != 0)
+                {
+                  wm->pro_layer->app_sck = wm->mod->sck;
+                }
               }
             }
           }
@@ -258,7 +280,7 @@ int xrdp_wm_login_notify(struct xrdp_bitmap* wnd,
   }
   else if (msg == 100) /* modal result is done */
   {
-    i = xrdp_list_index_of(wnd->wm->screen->child_list, (int)sender);
+    i = xrdp_list_index_of(wnd->wm->screen->child_list, (long)sender);
     if (i >= 0)
     {
       b = (struct xrdp_bitmap*)
@@ -337,8 +359,8 @@ int xrdp_wm_login_fill_in_combo(struct xrdp_wm* self, struct xrdp_bitmap* b)
           g_strcpy(mod_data->password, r);
         }
       }
-      xrdp_list_add_item(b->string_list, (int)g_strdup(mod_data->name));
-      xrdp_list_add_item(b->data_list, (int)mod_data);
+      xrdp_list_add_item(b->string_list, (long)g_strdup(mod_data->name));
+      xrdp_list_add_item(b->data_list, (long)mod_data);
     }
   }
   g_file_close(fd);
@@ -356,7 +378,7 @@ int xrdp_login_wnd_create(struct xrdp_wm* self)
   /* draw login window */
   self->login_window = xrdp_bitmap_create(400, 200, self->screen->bpp,
                                           WND_TYPE_WND, self);
-  xrdp_list_add_item(self->screen->child_list, (int)self->login_window);
+  xrdp_list_add_item(self->screen->child_list, (long)self->login_window);
   self->login_window->parent = self->screen;
   self->login_window->owner = self->screen;
   self->login_window->bg_color = self->grey;
@@ -374,7 +396,7 @@ int xrdp_login_wnd_create(struct xrdp_wm* self)
   but->owner = self->screen;
   but->left = self->screen->width - but->width;
   but->top = self->screen->height - but->height;
-  xrdp_list_add_item(self->screen->child_list, (int)but);
+  xrdp_list_add_item(self->screen->child_list, (long)but);
 
   /* image */
   but = xrdp_bitmap_create(4, 4, self->screen->bpp, WND_TYPE_IMAGE, self);
@@ -383,11 +405,11 @@ int xrdp_login_wnd_create(struct xrdp_wm* self)
   but->owner = self->login_window;
   but->left = 10;
   but->top = 30;
-  xrdp_list_add_item(self->login_window->child_list, (int)but);
+  xrdp_list_add_item(self->login_window->child_list, (long)but);
 
   /* label */
   but = xrdp_bitmap_create(60, 20, self->screen->bpp, WND_TYPE_LABEL, self);
-  xrdp_list_add_item(self->login_window->child_list, (int)but);
+  xrdp_list_add_item(self->login_window->child_list, (long)but);
   but->parent = self->login_window;
   but->owner = self->login_window;
   but->left = 155;
@@ -396,7 +418,7 @@ int xrdp_login_wnd_create(struct xrdp_wm* self)
 
   /* edit */
   but = xrdp_bitmap_create(140, 20, self->screen->bpp, WND_TYPE_EDIT, self);
-  xrdp_list_add_item(self->login_window->child_list, (int)but);
+  xrdp_list_add_item(self->login_window->child_list, (long)but);
   but->parent = self->login_window;
   but->owner = self->login_window;
   but->left = 220;
@@ -409,7 +431,7 @@ int xrdp_login_wnd_create(struct xrdp_wm* self)
 
   /* label */
   but = xrdp_bitmap_create(60, 20, self->screen->bpp, WND_TYPE_LABEL, self);
-  xrdp_list_add_item(self->login_window->child_list, (int)but);
+  xrdp_list_add_item(self->login_window->child_list, (long)but);
   but->parent = self->login_window;
   but->owner = self->login_window;
   but->left = 155;
@@ -418,7 +440,7 @@ int xrdp_login_wnd_create(struct xrdp_wm* self)
 
   /* edit */
   but = xrdp_bitmap_create(140, 20, self->screen->bpp, WND_TYPE_EDIT, self);
-  xrdp_list_add_item(self->login_window->child_list, (int)but);
+  xrdp_list_add_item(self->login_window->child_list, (long)but);
   but->parent = self->login_window;
   but->owner = self->login_window;
   but->left = 220;
@@ -431,7 +453,7 @@ int xrdp_login_wnd_create(struct xrdp_wm* self)
 
   /* label */
   but = xrdp_bitmap_create(60, 20, self->screen->bpp, WND_TYPE_LABEL, self);
-  xrdp_list_add_item(self->login_window->child_list, (int)but);
+  xrdp_list_add_item(self->login_window->child_list, (long)but);
   but->parent = self->login_window;
   but->owner = self->login_window;
   but->left = 155;
@@ -440,7 +462,7 @@ int xrdp_login_wnd_create(struct xrdp_wm* self)
 
   /* combo */
   but = xrdp_bitmap_create(140, 20, self->screen->bpp, WND_TYPE_COMBO, self);
-  xrdp_list_add_item(self->login_window->child_list, (int)but);
+  xrdp_list_add_item(self->login_window->child_list, (long)but);
   but->parent = self->login_window;
   but->owner = self->login_window;
   but->left = 220;
@@ -451,7 +473,7 @@ int xrdp_login_wnd_create(struct xrdp_wm* self)
 
   /* button */
   but = xrdp_bitmap_create(60, 25, self->screen->bpp, WND_TYPE_BUTTON, self);
-  xrdp_list_add_item(self->login_window->child_list, (int)but);
+  xrdp_list_add_item(self->login_window->child_list, (long)but);
   but->parent = self->login_window;
   but->owner = self->login_window;
   but->left = 180;
@@ -462,7 +484,7 @@ int xrdp_login_wnd_create(struct xrdp_wm* self)
 
   /* button */
   but = xrdp_bitmap_create(60, 25, self->screen->bpp, WND_TYPE_BUTTON, self);
-  xrdp_list_add_item(self->login_window->child_list, (int)but);
+  xrdp_list_add_item(self->login_window->child_list, (long)but);
   but->parent = self->login_window;
   but->owner = self->login_window;
   but->left = 250;
@@ -473,7 +495,7 @@ int xrdp_login_wnd_create(struct xrdp_wm* self)
 
   /* button */
   but = xrdp_bitmap_create(60, 25, self->screen->bpp, WND_TYPE_BUTTON, self);
-  xrdp_list_add_item(self->login_window->child_list, (int)but);
+  xrdp_list_add_item(self->login_window->child_list, (long)but);
   but->parent = self->login_window;
   but->owner = self->login_window;
   but->left = 320;

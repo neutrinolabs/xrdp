@@ -42,7 +42,7 @@ struct xrdp_mod
                            char* data);
   int (*server_set_pointer)(struct xrdp_mod* v, int x, int y, char* data, char* mask);
   int (*server_palette)(struct xrdp_mod* v, int* palette);
-  int (*server_error_popup)(struct xrdp_mod* v, char* error, char* caption);
+  int (*server_msg)(struct xrdp_mod* v, char* msg);
   int (*server_is_term)(struct xrdp_mod* v);
   /* common */
   long handle; /* pointer to self as int */
@@ -398,12 +398,15 @@ struct xrdp_wm
   int scroll_lock;
   int num_lock;
   /* mod vars */
-  int mod_handle;
-  int (*mod_init)();
-  int (*mod_exit)(int);
+  int mod_handle; /* returned from g_load_library */
+  struct xrdp_mod* (*mod_init)(void);
+  int (*mod_exit)(struct xrdp_mod*);
   struct xrdp_mod* mod;
   /* client info */
   struct xrdp_client_info* client_info;
+  /* session log */
+  struct xrdp_list* log;
+  struct xrdp_bitmap* log_wnd;
 };
 
 /* rdp process */
