@@ -267,7 +267,8 @@ int xrdp_rdp_parse_client_mcs_data(struct xrdp_rdp* self)
   }
   p->p = p->data;
   DEBUG(("client width %d, client height %d bpp %d\n\r",
-         self->width, self->height, self->bpp));
+         self->client_info.width, self->client_info.height,
+         self->client_info.bpp));
   return 0;
 }
 
