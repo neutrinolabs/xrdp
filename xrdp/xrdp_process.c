@@ -36,7 +36,9 @@ struct xrdp_process* xrdp_process_create(struct xrdp_listen* owner)
 void xrdp_process_delete(struct xrdp_process* self)
 {
   if (self == 0)
+  {
     return;
+  }
   xrdp_rdp_delete(self->rdp_layer);
   xrdp_orders_delete(self->orders);
   xrdp_wm_delete(self->wm);
@@ -60,14 +62,16 @@ int xrdp_process_main_loop(struct xrdp_process* self)
     while (!g_is_term() && !self->term)
     {
       i = g_tcp_select(self->sck, self->app_sck);
-      if (i == 1)
+      if (i & 1)
       {
         init_stream(s, 8192);
         cont = 1;
         while (cont)
         {
           if (xrdp_rdp_recv(self->rdp_layer, s, &code) != 0)
+          {
             break;
+          }
           DEBUG(("xrdp_process_main_loop code %d\n\r", code));
           switch (code)
           {
@@ -76,11 +80,11 @@ int xrdp_process_main_loop(struct xrdp_process* self)
               break;
             case 0:
               break;
-            case RDP_PDU_CONFIRM_ACTIVE:
-              xrdp_rdp_process_confirm_active(self->rdp_layer, s); /* 3 */
+            case RDP_PDU_CONFIRM_ACTIVE: /* 3 */
+              xrdp_rdp_process_confirm_active(self->rdp_layer, s);
               break;
-            case RDP_PDU_DATA:
-              if (xrdp_rdp_process_data(self->rdp_layer, s) != 0) /* 7 */
+            case RDP_PDU_DATA: /* 7 */
+              if (xrdp_rdp_process_data(self->rdp_layer, s) != 0)
               {
                 DEBUG(("xrdp_rdp_process_data returned non zero\n\r"));
                 cont = 0;
@@ -92,10 +96,14 @@ int xrdp_process_main_loop(struct xrdp_process* self)
               break;
           }
           if (cont)
+          {
             cont = s->next_packet < s->end;
+          }
         }
         if (cont) /* we must have errored out */
+        {
           break;
+        }
         if (self->rdp_layer->up_and_running && self->wm == 0)
         {
           /* only do this once */
@@ -105,13 +113,29 @@ int xrdp_process_main_loop(struct xrdp_process* self)
           xrdp_wm_init(self->wm);
         }
       }
-      else if (i == 2)
+      if (i & 2) /* mod socket fired */
       {
+        if (self->wm->mod == 0)
+        {
+          break;
+        }
+        if (self->wm->mod->mod_signal == 0)
+        {
+          break;
+        }
+        if (self->wm->mod->mod_signal((int)self->wm->mod) != 0)
+        {
+          break;
+        }
       }
-      else if (i == 0)
+      if (i == 0) /* no data on any stream */
+      {
         g_sleep(10);
-      else
+      }
+      else if (i < 0)
+      {
         break;
+      }
     }
   }
   xrdp_rdp_disconnect(self->rdp_layer);

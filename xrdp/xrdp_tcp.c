@@ -60,12 +60,16 @@ int xrdp_tcp_recv(struct xrdp_tcp* self, struct stream* s, int len)
   while (len > 0)
   {
     if (g_is_term())
+    {
       return 1;
+    }
     rcvd = g_tcp_recv(self->sck, s->end, len, 0);
     if (rcvd == -1)
     {
       if (g_tcp_last_error_would_block(self->sck))
+      {
         g_sleep(1);
+      }
       else
       {
         DEBUG(("    error = -1 in xrdp_tcp_recv socket %d\n", self->sck))

@@ -403,7 +403,9 @@ int xrdp_rdp_process_input_mouse(struct xrdp_rdp* self, int device_flags,
   if (!self->up_and_running)
     return 0;
   if (device_flags & MOUSE_FLAG_MOVE) /* 0x0800 */
+  {
     xrdp_wm_mouse_move(self->pro_layer->wm, x, y);
+  }
   if (device_flags & MOUSE_FLAG_BUTTON1) /* 0x1000 */
   {
     if (device_flags & MOUSE_FLAG_DOWN) /* 0x8000 */
@@ -417,6 +419,23 @@ int xrdp_rdp_process_input_mouse(struct xrdp_rdp* self, int device_flags,
       xrdp_wm_mouse_click(self->pro_layer->wm, x, y, 2, 1);
     else
       xrdp_wm_mouse_click(self->pro_layer->wm, x, y, 2, 0);
+  }
+  if (device_flags & MOUSE_FLAG_BUTTON3) /* 0x4000 */
+  {
+    if (device_flags & MOUSE_FLAG_DOWN) /* 0x8000 */
+      xrdp_wm_mouse_click(self->pro_layer->wm, x, y, 3, 1);
+    else
+      xrdp_wm_mouse_click(self->pro_layer->wm, x, y, 3, 0);
+  }
+  if (device_flags == MOUSE_FLAG_BUTTON4 || /* 0x0280 */
+      device_flags == 0x0278)
+  {
+    xrdp_wm_mouse_click(self->pro_layer->wm, 0, 0, 4, 0);
+  }
+  if (device_flags == MOUSE_FLAG_BUTTON5 || /* 0x0380 */
+      device_flags == 0x0388)
+  {
+    xrdp_wm_mouse_click(self->pro_layer->wm, 0, 0, 5, 0);
   }
   return 0;
 }
@@ -541,6 +560,8 @@ int xrdp_rdp_process_screen_update(struct xrdp_rdp* self, struct stream* s)
   int top;
   int right;
   int bottom;
+  int cx;
+  int cy;
   struct xrdp_rect rect;
 
   in_uint32_le(s, op);
@@ -548,9 +569,13 @@ int xrdp_rdp_process_screen_update(struct xrdp_rdp* self, struct stream* s)
   in_uint16_le(s, top);
   in_uint16_le(s, right);
   in_uint16_le(s, bottom);
-  MAKERECT(rect, left, top, (right - left) + 1, (bottom - top) + 1);
+  cx = (right - left) + 1;
+  cy = (bottom - top) + 1;
   if (self->up_and_running && self->pro_layer->wm != 0)
+  {
+    MAKERECT(rect, left, top, cx, cy);
     xrdp_bitmap_invalidate(self->pro_layer->wm->screen, &rect);
+  }
   return 0;
 }
 

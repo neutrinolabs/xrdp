@@ -20,6 +20,38 @@
 
 */
 
+/* lib */
+struct xrdp_mod
+{
+  int size; /* size of this struct */
+  /* client functions */
+  int (*mod_start)(int handle, int w, int h, int bpp);
+  int (*mod_connect)(int handle, char* ip, char* port,
+                     char* username, char* password);
+  int (*mod_event)(int handle, int msg, int param1, int param2);
+  int (*mod_signal)(int handle);
+  int (*mod_invalidate)(int handle, int x, int y, int cx, int cy);
+  int d1[95];
+  /* server functions */
+  int (*server_begin_update)(int handle);
+  int (*server_end_update)(int handle);
+  int (*server_fill_rect)(int handle, int x, int y, int cx, int cy,
+                          int color);
+  int (*server_screen_blt)(int handle, int x, int y, int cx, int cy,
+                           int srcx, int srcy);
+  int (*server_paint_rect)(int handle, int x, int y, int cx, int cy,
+                           char* data);
+  int (*server_set_cursor)(int handle, int x, int y, char* data, char* mask);
+  int (*server_palette)(int handle, int* palette);
+  int (*server_error_popup)(int handle, char* error, char* caption);
+  int d2[92];
+  /* common */
+  int handle; /* pointer to self as int */
+  int wm; /* struct xrdp_wm* */
+  int painter;
+  int sck;
+};
+
 /* for memory debugging */
 struct xrdp_mem
 {
@@ -318,11 +350,18 @@ struct xrdp_wm
   struct xrdp_bitmap* focused_window;
   /* cursor */
   int current_cursor;
+  int mouse_x;
+  int mouse_y;
   /* keyboard info */
   int keys[256]; /* key states 0 up 1 down*/
   int caps_lock;
   int scroll_lock;
   int num_lock;
+  /* mod vars */
+  int mod_handle;
+  int (*mod_init)();
+  int (*mod_exit)(int);
+  struct xrdp_mod* mod;
 };
 
 /* rdp process */
@@ -363,6 +402,7 @@ struct xrdp_painter
   int rop;
   int use_clip;
   struct xrdp_rect clip;
+  int clip_children;
   int bg_color;
   int fg_color;
   struct xrdp_brush brush;
@@ -387,6 +427,7 @@ struct xrdp_bitmap
   /* for bitmap */
   int bpp;
   int line_size; /* in bytes */
+  int do_not_free_data;
   char* data;
   /* for all but bitmap */
   int left;
@@ -409,6 +450,7 @@ struct xrdp_bitmap
   int state; /* for button 0 = normal 1 = down */
   /* for combo */
   struct xrdp_list* string_list;
+  struct xrdp_list* data_list;
   /* for combo or popup */
   int item_index;
   /* for popup */
@@ -425,4 +467,15 @@ struct xrdp_font
   char name[32];
   int size;
   int style;
+};
+
+/* modual */
+struct xrdp_mod_data
+{
+  char name[256];
+  char lib[256];
+  char ip[256];
+  char port[256];
+  char user[256];
+  char password[256];
 };

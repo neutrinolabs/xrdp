@@ -414,8 +414,17 @@
 #define BUTTON_STATE_DOWN 1
 
 /* messages */
-#define WM_PAINT      3
-#define WM_KEYDOWN    15
-#define WM_KEYUP      16
-#define WM_MOUSEMOVE 100
-#define WM_LBUTTONUP  101
+#define WM_PAINT       3
+#define WM_KEYDOWN     15
+#define WM_KEYUP       16
+#define WM_MOUSEMOVE   100
+#define WM_LBUTTONUP   101
+#define WM_LBUTTONDOWN 102
+#define WM_RBUTTONUP   103
+#define WM_RBUTTONDOWN 104
+#define WM_BUTTON3UP   105
+#define WM_BUTTON3DOWN 106
+#define WM_BUTTON4UP   107
+#define WM_BUTTON4DOWN 108
+#define WM_BUTTON5UP   109
+#define WM_BUTTON5DOWN 110

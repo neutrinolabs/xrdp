@@ -53,6 +53,7 @@ int g_getchar(void);
 int g_tcp_socket(void);
 int g_tcp_local_socket(void);
 void g_tcp_close(int sck);
+int g_tcp_connect(int sck, char* address, char* port);
 int g_tcp_set_non_blocking(int sck);
 int g_tcp_bind(int sck, char* port);
 int g_tcp_local_bind(int sck, char* port);
@@ -95,6 +96,10 @@ char* g_strcpy(char* dest, char* src);
 char* g_strncpy(char* dest, char* src, int len);
 char* g_strcat(char* dest, char* src);
 char* g_strdup(char* in);
+int g_strcmp(char* c1, char* c2);
+int g_load_library(char* in);
+int g_free_library(int lib);
+void* g_get_proc_address(int lib, char* name);
 
 /* xrdp_tcp.c */
 struct xrdp_tcp* xrdp_tcp_create(struct xrdp_iso* owner);
@@ -204,14 +209,17 @@ int xrdp_wm_send_palette(struct xrdp_wm* self);
 int xrdp_wm_init(struct xrdp_wm* self);
 int xrdp_wm_send_bitmap(struct xrdp_wm* self, struct xrdp_bitmap* bitmap,
                         int x, int y, int cx, int cy);
+int xrdp_wm_set_focused(struct xrdp_wm* self, struct xrdp_bitmap* wnd);
 int xrdp_wm_get_vis_region(struct xrdp_wm* self, struct xrdp_bitmap* bitmap,
                            int x, int y, int cx, int cy,
-                           struct xrdp_region* region);
+                           struct xrdp_region* region, int clip_children);
 int xrdp_wm_mouse_move(struct xrdp_wm* self, int x, int y);
 int xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down);
 int xrdp_wm_key(struct xrdp_wm* self, int device_flags, int scan_code);
 int xrdp_wm_key_sync(struct xrdp_wm* self, int device_flags, int key_flags);
 int xrdp_wm_pu(struct xrdp_wm* self, struct xrdp_bitmap* control);
+int xrdp_wm_send_cursor(struct xrdp_wm* self, int cache_idx,
+                        char* data, char* mask, int x, int y);
 
 /* xrdp_process.c */
 struct xrdp_process* xrdp_process_create(struct xrdp_listen* owner);
@@ -238,7 +246,11 @@ int xrdp_region_get_rect(struct xrdp_region* self, int index,
 /* xrdp_bitmap.c */
 struct xrdp_bitmap* xrdp_bitmap_create(int width, int height, int bpp,
                                        int type);
+struct xrdp_bitmap* xrdp_bitmap_create_with_data(int width, int height,
+                                                 int bpp, char* data);
 void xrdp_bitmap_delete(struct xrdp_bitmap* self);
+struct xrdp_bitmap* xrdp_bitmap_get_child_by_id(struct xrdp_bitmap* self,
+                                                int id);
 int xrdp_bitmap_set_focus(struct xrdp_bitmap* self, int focused);
 int xrdp_bitmap_load(struct xrdp_bitmap* self, char* filename, int* palette);
 int xrdp_bitmap_get_pixel(struct xrdp_bitmap* self, int x, int y);
@@ -305,3 +317,8 @@ int add_char_at(char* text, char ch, int index);
 int remove_char_at(char* text, int index);
 int set_string(char** in_str, char* in);
 
+int xrdp_login_wnd_create(struct xrdp_wm* self);
+
+int xrdp_file_read_sections(int fd, struct xrdp_list* names);
+int xrdp_file_read_section(int fd, char* section, struct xrdp_list* names,
+                           struct xrdp_list* values);

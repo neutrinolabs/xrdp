@@ -48,12 +48,30 @@ struct xrdp_bitmap* xrdp_bitmap_create(int width, int height, int bpp,
     self->data = (char*)g_malloc(width * height * Bpp, 1);
   if (self->type != WND_TYPE_BITMAP)
     self->child_list = xrdp_list_create();
-  self->line_size = ((width + 3) & ~3) * Bpp;
+  self->line_size = width * Bpp;
   if (self->type == WND_TYPE_COMBO)
   {
     self->string_list = xrdp_list_create();
     self->string_list->auto_free = 1;
+    self->data_list = xrdp_list_create();
+    self->data_list->auto_free = 1;
   }
+  return self;
+}
+
+/*****************************************************************************/
+struct xrdp_bitmap* xrdp_bitmap_create_with_data(int width, int height,
+                                                 int bpp, char* data)
+{
+  struct xrdp_bitmap* self;
+
+  self = (struct xrdp_bitmap*)g_malloc(sizeof(struct xrdp_bitmap), 1);
+  self->type = WND_TYPE_BITMAP;
+  self->width = width;
+  self->height = height;
+  self->bpp = bpp;
+  self->data = data;
+  self->do_not_free_data = 1;
   return self;
 }
 
@@ -79,16 +97,42 @@ void xrdp_bitmap_delete(struct xrdp_bitmap* self)
       self->wm->button_down = 0;
     if (self->wm->popup_wnd == self)
       self->wm->popup_wnd = 0;
+    if (self->wm->login_window == self)
+      self->wm->login_window = 0;
   }
   if (self->child_list != 0)
   {
-    for (i = 0; i < self->child_list->count; i++)
+    for (i = self->child_list->count - 1; i >= 0; i--)
       xrdp_bitmap_delete((struct xrdp_bitmap*)self->child_list->items[i]);
     xrdp_list_delete(self->child_list);
   }
+  if (self->parent != 0)
+  {
+    i = xrdp_list_index_of(self->parent->child_list, (int)self);
+    if (i >= 0)
+      xrdp_list_remove_item(self->parent->child_list, i);
+  }
   xrdp_list_delete(self->string_list);
-  g_free(self->data);
+  xrdp_list_delete(self->data_list);
+  if (!self->do_not_free_data)
+    g_free(self->data);
   g_free(self);
+}
+
+/*****************************************************************************/
+struct xrdp_bitmap* xrdp_bitmap_get_child_by_id(struct xrdp_bitmap* self,
+                                                int id)
+{
+  int i;
+  struct xrdp_bitmap* b;
+
+  for (i = 0; i < self->child_list->count; i++)
+  {
+    b = (struct xrdp_bitmap*)xrdp_list_get_item(self->child_list, i);
+    if (b->id == id)
+      return b;
+  }
+  return 0;
 }
 
 /*****************************************************************************/
@@ -162,7 +206,7 @@ int xrdp_bitmap_resize(struct xrdp_bitmap* self, int width, int height)
     case 16: Bpp = 2; break;
   }
   self->data = (char*)g_malloc(width * height * Bpp, 1);
-  self->line_size = ((width + 3) & ~3) * Bpp;
+  self->line_size = width * Bpp;
   return 0;
 }
 
@@ -541,8 +585,24 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
   }
   else if (self->type == WND_TYPE_SCREEN) /* 2 */
   {
-    painter->fg_color = self->bg_color;
-    xrdp_painter_fill_rect(painter, self, 0, 0, self->width, self->height);
+    if (self->wm->mod != 0)
+    {
+      if (self->wm->mod->mod_invalidate != 0)
+      {
+        if (rect != 0)
+        {
+          self->wm->mod->mod_invalidate((int)self->wm->mod,
+                                        rect->left, rect->top,
+                                        rect->right - rect->left,
+                                        rect->bottom - rect->top);
+        }
+      }
+    }
+    else
+    {
+      painter->fg_color = self->bg_color;
+      xrdp_painter_fill_rect(painter, self, 0, 0, self->width, self->height);
+    }
   }
   else if (self->type == WND_TYPE_BUTTON) /* 3 */
   {

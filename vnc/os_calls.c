@@ -77,10 +77,6 @@ int g_init_system(void)
 #endif
 #ifdef MEMLEAK
   g_memlist = xrdp_list_create();
-  printf("some info\n\r");
-  printf("sizeof xrdp_bitmap is %d\n\r", sizeof(struct xrdp_bitmap));
-  printf("sizeof xrdp_wm is %d\n\r", sizeof(struct xrdp_wm));
-  printf("sizeof stream is %d\n\r", sizeof(struct stream));
 #endif
   return 0;
 }
@@ -178,6 +174,16 @@ void g_free1(void* ptr)
   {
     free(ptr);
   }
+}
+
+/*****************************************************************************/
+void g_sleep(int msecs)
+{
+#ifdef _WIN32
+  Sleep(msecs);
+#else
+  usleep(msecs * 1000);
+#endif
 }
 
 /*****************************************************************************/
@@ -351,18 +357,6 @@ int g_tcp_accept(int sck)
 }
 
 /*****************************************************************************/
-int g_tcp_recv(int sck, void* ptr, int len, int flags)
-{
-  return recv(sck, ptr, len, flags);
-}
-
-/*****************************************************************************/
-int g_tcp_send(int sck, void* ptr, int len, int flags)
-{
-  return send(sck, ptr, len, flags);
-}
-
-/*****************************************************************************/
 int g_tcp_last_error_would_block(int sck)
 {
 #ifdef _WIN32
@@ -373,12 +367,75 @@ int g_tcp_last_error_would_block(int sck)
 }
 
 /*****************************************************************************/
+int g_tcp_recv(int sck, void* ptr, int len, int flags)
+{
+  return recv(sck, ptr, len, flags);
+}
+
+/*****************************************************************************/
+int g_tcp_force_recv(int sck, char* data, int len)
+{
+  int rcvd;
+
+  while (len > 0)
+  {
+    rcvd = g_tcp_recv(sck, data, len, 0);
+    if (rcvd == -1)
+    {
+      if (g_tcp_last_error_would_block(sck))
+        g_sleep(1);
+      else
+        return 1;
+    }
+    else if (rcvd == 0)
+      return 1;
+    else
+    {
+      data += rcvd;
+      len -= rcvd;
+    }
+  }
+  return 0;
+}
+
+/*****************************************************************************/
+int g_tcp_send(int sck, void* ptr, int len, int flags)
+{
+  return send(sck, ptr, len, flags);
+}
+
+/*****************************************************************************/
+int g_tcp_force_send(int sck, char* data, int len)
+{
+  int sent;
+
+  while (len > 0)
+  {
+    sent = g_tcp_send(sck, data, len, 0);
+    if (sent == -1)
+    {
+      if (g_tcp_last_error_would_block(sck))
+        g_sleep(1);
+      else
+        return 1;
+    }
+    else if (sent == 0)
+      return 1;
+    else
+    {
+      data += sent;
+      len -= sent;
+    }
+  }
+  return 0;
+}
+
+/*****************************************************************************/
 int g_tcp_select(int sck1, int sck2)
 {
   fd_set rfds;
   struct timeval time;
   int max;
-  int rv;
 
   time.tv_sec = 0;
   time.tv_usec = 0;
@@ -388,16 +445,7 @@ int g_tcp_select(int sck1, int sck2)
   max = sck1;
   if (sck2 > max)
     max = sck2;
-  rv = select(max + 1, &rfds, 0, 0, &time);
-  if (rv > 0)
-  {
-    rv = 0;
-    if (FD_ISSET(((unsigned int)sck1), &rfds))
-      rv = rv | 1;
-    if (FD_ISSET(((unsigned int)sck2), &rfds))
-      rv = rv | 2;
-  }
-  return rv;
+  return select(max + 1, &rfds, 0, 0, &time);
 }
 
 /*****************************************************************************/
@@ -428,16 +476,6 @@ void g_set_term(int in_val)
   pthread_mutex_lock(&g_term_mutex);
   g_term = in_val;
   pthread_mutex_unlock(&g_term_mutex);
-#endif
-}
-
-/*****************************************************************************/
-void g_sleep(int msecs)
-{
-#ifdef _WIN32
-  Sleep(msecs);
-#else
-  usleep(msecs * 1000);
 #endif
 }
 
@@ -730,12 +768,6 @@ char* g_strdup(char* in)
   p = (char*)g_malloc(len + 1, 0);
   g_strcpy(p, in);
   return p;
-}
-
-/*****************************************************************************/
-int g_strcmp(char* c1, char* c2)
-{
-  return strcmp(c1, c2);
 }
 
 /*****************************************************************************/

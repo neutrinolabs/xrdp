@@ -32,6 +32,7 @@ struct xrdp_painter* xrdp_painter_create(struct xrdp_wm* wm)
   self->orders = wm->orders;
   self->rop = 0xcc; /* copy */
   self->font = xrdp_font_create(wm);
+  self->clip_children = 1;
   return self;
 }
 
@@ -155,7 +156,8 @@ int xrdp_painter_fill_rect(struct xrdp_painter* self,
   if (bitmap->type == WND_TYPE_BITMAP) /* 0 */
     return 0;
   region = xrdp_region_create(self->wm);
-  xrdp_wm_get_vis_region(self->wm, bitmap, x, y, cx, cy, region);
+  xrdp_wm_get_vis_region(self->wm, bitmap, x, y, cx, cy, region,
+                         self->clip_children);
   i = 0;
   while (xrdp_region_get_rect(region, i, &rect) == 0)
   {
@@ -192,11 +194,12 @@ int xrdp_painter_fill_rect2(struct xrdp_painter* self,
     return 0;
 
   /* todo data */
-  
+
   if (bitmap->type == WND_TYPE_BITMAP) /* 0 */
     return 0;
   region = xrdp_region_create(self->wm);
-  xrdp_wm_get_vis_region(self->wm, bitmap, x, y, cx, cy, region);
+  xrdp_wm_get_vis_region(self->wm, bitmap, x, y, cx, cy, region,
+                         self->clip_children);
   i = 0;
   while (xrdp_region_get_rect(region, i, &rect) == 0)
   {
@@ -250,7 +253,8 @@ int xrdp_painter_draw_bitmap(struct xrdp_painter* self,
   if (bitmap->type == WND_TYPE_BITMAP)
     return 0;
   region = xrdp_region_create(self->wm);
-  xrdp_wm_get_vis_region(self->wm, bitmap, x, y, cx, cy, region);
+  xrdp_wm_get_vis_region(self->wm, bitmap, x, y, cx, cy, region,
+                         self->clip_children);
   b = bitmap;
   while (b != 0)
   {
@@ -424,7 +428,7 @@ int xrdp_painter_draw_text(struct xrdp_painter* self,
   }
   region = xrdp_region_create(self->wm);
   xrdp_wm_get_vis_region(self->wm, bitmap, x, y, total_width, total_height,
-                         region);
+                         region, self->clip_children);
   b = bitmap;
   while (b != 0)
   {

@@ -69,6 +69,7 @@ int xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
   for (i = 0; i < 3; i++)
   {
     for (j = 0; j < 600; j++)
+    //for (j = 0; (i == 0 && j < 600) || (i == 1 && j < 300); j++)
     {
       if (xrdp_bitmap_compare(self->bitmap_items[i][j].bitmap, bitmap))
       {
@@ -85,6 +86,7 @@ int xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
   for (i = 0; i < 3; i++)
   {
     for (j = 0; j < 600; j++)
+    //for (j = 0; (i == 0 && j < 600) || (i == 1 && j < 300); j++)
     {
       if (self->bitmap_items[i][j].stamp < oldest)
       {
