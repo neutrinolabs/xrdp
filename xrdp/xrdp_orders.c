@@ -75,9 +75,10 @@ int xrdp_orders_send(struct xrdp_orders* self)
   if (self->order_level > 0)
   {
     self->order_level--;
-    if (self->order_level == 0)
+    if (self->order_level == 0 && self->order_count > 0)
     {
       s_mark_end(self->out_s);
+      DEBUG(("xrdp_orders_send sending %d orders\n\r", self->order_count));
       self->order_count_ptr[0] = self->order_count;
       self->order_count_ptr[1] = self->order_count >> 8;
       if (xrdp_rdp_send_data(self->rdp_layer, self->out_s,
@@ -97,6 +98,7 @@ int xrdp_orders_force_send(struct xrdp_orders* self)
   if (self->order_count > 0)
   {
     s_mark_end(self->out_s);
+    DEBUG(("xrdp_orders_force_send sending %d orders\n\r", self->order_count));
     self->order_count_ptr[0] = self->order_count;
     self->order_count_ptr[1] = self->order_count >> 8;
     if (xrdp_rdp_send_data(self->rdp_layer, self->out_s,
@@ -1469,7 +1471,6 @@ int xrdp_orders_send_bitmap(struct xrdp_orders* self,
     return 1;
   }
   bufsize = s->p - p;
-  //g_printf("bufsize %d\n", bufsize);
   Bpp = (bitmap->bpp + 7) / 8;
   xrdp_orders_check(self, bufsize + 16);
   self->order_count++;

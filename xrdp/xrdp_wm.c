@@ -546,6 +546,13 @@ int xrdp_wm_init(struct xrdp_wm* self)
     self->red       = COLOR24(0xff, 0x00, 0x00);
     self->green     = COLOR24(0x00, 0xff, 0x00);
   }
+  DEBUG(("sending cursor\n\r"));
+  xrdp_wm_load_pointer(self, "cursor1.cur", data, mask, &x, &y);
+  xrdp_wm_send_pointer(self, 1, data, mask, x, y);
+  DEBUG(("sending cursor\n\r"));
+  xrdp_wm_load_pointer(self, "cursor0.cur", data, mask, &x, &y);
+  xrdp_wm_send_pointer(self, 0, data, mask, x, y);
+
   xrdp_login_wnd_create(self);
   /* clear screen */
   self->screen->bg_color = self->black;
@@ -553,10 +560,6 @@ int xrdp_wm_init(struct xrdp_wm* self)
 
   xrdp_wm_set_focused(self, self->login_window);
 
-  xrdp_wm_load_pointer(self, "cursor1.cur", data, mask, &x, &y);
-  xrdp_wm_send_pointer(self, 1, data, mask, x, y);
-  xrdp_wm_load_pointer(self, "cursor0.cur", data, mask, &x, &y);
-  xrdp_wm_send_pointer(self, 0, data, mask, x, y);
 #endif
   return 0;
 }

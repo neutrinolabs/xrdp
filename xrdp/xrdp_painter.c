@@ -381,6 +381,20 @@ int xrdp_painter_draw_bitmap(struct xrdp_painter* self,
                     y1 = 0;
                   }
                   //g_printf("%d %d %d %d %d %d\n", x1, y1, w, h, srcx, srcy);
+                  DEBUG(("sending memblt order \n\r\
+  cache_id %d\n\r\
+  palette_id %d\n\r\
+  x %d\n\r\
+  y %d\n\r\
+  cx %d\n\r\
+  cy %d\n\r\
+  rop %d\n\r\
+  srcx %d\n\r\
+  srcy %d\n\r\
+  cache_idx %d\n\r",
+                         cache_id, palette_id,
+                         x1, y1, w, h, self->rop, srcx, srcy,
+                         cache_idx));
                   xrdp_orders_mem_blt(self->orders, cache_id, palette_id,
                                       x1, y1, w, h, self->rop, srcx, srcy,
                                       cache_idx, &rect1);
@@ -554,19 +568,27 @@ int xrdp_painter_draw_text(struct xrdp_painter* self,
         y1 = y + total_height;
         draw_rect.right--;
         draw_rect.bottom--;
-        flags = 0x03; /* 0x73; TEXT2_IMPLICIT_X and something else */
-        DEBUG(("sending text order \
-font %d flags %d mixmode %d color1 %d color2 %d \
-clip left %d clip top %d clip right %d clip bottom %d \
-box left %d box top %d box right %d box bottom %d \
-x %d y %d len %d rect %d %d %d %d\n\r",
-               f, flags, 0, font->color, 0, x, y, x + total_width,
-               y + total_height, 0, 0, 0, 0, x1, y1, len,
+        flags = 0x03; /* 0x03 0x73; TEXT2_IMPLICIT_X and something else */
+        DEBUG(("sending text order\n\r\
+  font %d\n\r\
+  flags %d\n\r\
+  mixmode %d\n\r\
+  color1 %d\n\r\
+  color2 %d\n\r\
+  clip box %d %d %d %d\n\r\
+  box box %d %d %d %d\n\r\
+  x %d\n\r\
+  y %d\n\r\
+  len %d\n\r\
+  rect %d %d %d %d\n\r",
+               f, flags, 0, font->color, 0, x, y,
+               x + total_width, y + total_height,
+               0, 0, 0, 0, x1, y1, len,
                draw_rect.left, draw_rect.top,
                draw_rect.right, draw_rect.bottom));
         xrdp_orders_text(self->orders, f, flags, 0,
                          font->color, 0,
-                         x, y, x + total_width, y + total_height,
+                         x - 1, y - 1, x + total_width, y + total_height,
                          0, 0, 0, 0,
                          x1, y1, data, len * 2, &draw_rect);
       }

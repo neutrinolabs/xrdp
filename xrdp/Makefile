@@ -11,6 +11,7 @@ XRDPOBJ = ../common/os_calls.o \
 CFLAGS = -Wall -O2 -I../common
 LDFLAGS = -L /usr/gnu/lib
 LIBS = -lpthread -lcrypto
+#CC = g++
 CC = gcc
 
 all: xrdp

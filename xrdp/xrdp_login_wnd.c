@@ -403,7 +403,7 @@ int xrdp_login_wnd_create(struct xrdp_wm* self)
   but->id = 4;
   but->pointer = 1;
   but->tab_stop = 1;
-  but->caption1 = g_malloc(256, 1);
+  but->caption1 = (char*)g_malloc(256, 1);
   self->login_window->focused_control = but;
 
   /* label */
@@ -425,7 +425,7 @@ int xrdp_login_wnd_create(struct xrdp_wm* self)
   but->id = 5;
   but->pointer = 1;
   but->tab_stop = 1;
-  but->caption1 = g_malloc(256, 1);
+  but->caption1 = (char*)g_malloc(256, 1);
   but->password_char = '*';
 
   /* label */
