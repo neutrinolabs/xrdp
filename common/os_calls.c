@@ -324,6 +324,7 @@ void g_tcp_close(int sck)
   {
     return;
   }
+  shutdown(sck, 2);
 #if defined(_WIN32)
   closesocket(sck);
 #else
@@ -557,6 +558,8 @@ int g_get_threadid(void)
   return 0;
 #elif defined(USE_PTHREAD)
   return pthread_self();
+#else
+  return 0;
 #endif
 }
 
