@@ -365,8 +365,8 @@ int xrdp_bitmap_draw_focus_box(struct xrdp_bitmap* self,
   painter->brush.x_orgin = x;
   painter->brush.x_orgin = x;
   painter->brush.style = 3;
-  painter->bg_color = self->wm->black;
-  painter->fg_color = self->wm->white;
+  painter->fg_color = self->wm->black;
+  painter->bg_color = self->parent->bg_color;
   /* top */
   xrdp_painter_fill_rect2(painter, self, x, y, cx, 1);
   /* bottom */
@@ -576,13 +576,27 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
     xrdp_painter_fill_rect(painter, self, 1, 1, self->width - 2, 1);
     /* draw text */
     painter->fg_color = self->wm->black;
-    xrdp_painter_draw_text(painter, self, 4, 2, self->caption);
-    /* draw xor box */
+    if (self->password_char != 0)
+    {
+      i = g_strlen(self->caption);
+      g_memset(text, self->password_char, i);
+      text[i] = 0;
+      xrdp_painter_draw_text(painter, self, 4, 2, text);
+    }
+    else
+      xrdp_painter_draw_text(painter, self, 4, 2, self->caption);
+    /* draw xor box(cursor) */
     if (self->parent != 0)
     {
       if (self->parent->focused_control == self)
       {
-        g_strncpy(text, self->caption, self->edit_pos);
+        if (self->password_char != 0)
+        {
+          g_memset(text, self->password_char, self->edit_pos);
+          text[self->edit_pos] = 0;
+        }
+        else
+          g_strncpy(text, self->caption, self->edit_pos);
         w = xrdp_painter_text_width(painter, text);
         painter->fg_color = self->wm->black;
         painter->rop = 0x5a;

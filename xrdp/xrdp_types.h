@@ -399,6 +399,7 @@ struct xrdp_bitmap
   struct xrdp_list* child_list;
   /* for edit */
   int edit_pos;
+  int password_char;
   /* for button */
   int state; /* for button 0 = normal 1 = down */
 };

@@ -547,6 +547,7 @@ int xrdp_wm_init(struct xrdp_wm* self)
   but->id = 5;
   but->cursor = 1;
   but->tab_stop = 1;
+  but->password_char = '*';
 
   /* button */
   but = xrdp_bitmap_create(60, 25, self->screen->bpp, WND_TYPE_BUTTON);
