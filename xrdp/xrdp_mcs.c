@@ -27,7 +27,7 @@ struct xrdp_mcs* xrdp_mcs_create(struct xrdp_sec* owner)
   struct xrdp_mcs* self;
 
   self = (struct xrdp_mcs*)g_malloc(sizeof(struct xrdp_mcs), 1);
-  self->owner = owner;
+  self->sec_layer = owner;
   self->in_s = owner->in_s;
   self->out_s = owner->out_s;
   self->userid = 1;
@@ -47,22 +47,55 @@ void xrdp_mcs_delete(struct xrdp_mcs* self)
 
 /*****************************************************************************/
 /* returns error */
+int xrdp_mcs_send_cjcf(struct xrdp_mcs* self, int chanid)
+{
+  if (xrdp_iso_init(self->iso_layer, 8) != 0)
+    return 1;
+  out_uint8(self->out_s, (MCS_CJCF << 2) | 2);
+  out_uint8(self->out_s, 0);
+  out_uint16_be(self->out_s, self->userid);
+  out_uint16_be(self->out_s, chanid);
+  out_uint16_be(self->out_s, chanid);
+  s_mark_end(self->out_s);
+  if (xrdp_iso_send(self->iso_layer) != 0)
+    return 1;
+  return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
 int xrdp_mcs_recv(struct xrdp_mcs* self)
 {
   int appid;
   int opcode;
   int len;
 
-  if (xrdp_iso_recv(self->iso_layer) != 0)
-    return 1;
-  in_uint8(self->in_s, opcode);
-  appid = opcode >> 2;
+  DEBUG(("  in xrdp_mcs_recv\n\r"));
+  while (1)
+  {
+    if (xrdp_iso_recv(self->iso_layer) != 0)
+      return 1;
+    in_uint8(self->in_s, opcode);
+    appid = opcode >> 2;
+    if (appid == MCS_DPUM)
+      return 1;
+    if (appid == MCS_CJRQ)
+    {
+      xrdp_mcs_send_cjcf(self, self->userid + MCS_USERCHANNEL_BASE);
+      continue;
+    }
+    break;
+  }
   if (appid != MCS_SDRQ)
+  {
+    DEBUG(("  out xrdp_mcs_recv err got 0x%x need MCS_SDRQ\n\r", appid));
     return 1;
+  }
   in_uint8s(self->in_s, 5);
   in_uint8(self->in_s, len);
   if (len & 0x80)
     in_uint8s(self->in_s, 1);
+  DEBUG(("  out xrdp_mcs_recv\n\r"));
   return 0;
 }
 
@@ -72,6 +105,7 @@ int xrdp_mcs_ber_parse_header(struct xrdp_mcs* self, int tag_val, int* len)
 {
   int tag;
   int l;
+  int i;
 
   if (tag_val > 0xff)
   {
@@ -90,7 +124,8 @@ int xrdp_mcs_ber_parse_header(struct xrdp_mcs* self, int tag_val, int* len)
     *len = 0;
     while (l > 0)
     {
-      next_be(self->in_s, *len);
+      in_uint8(self->in_s, i);
+      *len = (*len << 8) | i;
       l--;
     }
   }
@@ -203,7 +238,7 @@ int xrdp_mcs_send_aucf(struct xrdp_mcs* self)
 {
   if (xrdp_iso_init(self->iso_layer, 4) != 0)
     return 1;
-  out_uint8(self->out_s, (MCS_AUCF << 2) | 2);
+  out_uint8(self->out_s, ((MCS_AUCF << 2) | 2));
   out_uint8s(self->out_s, 1);
   out_uint16_be(self->out_s, self->userid);
   s_mark_end(self->out_s);
@@ -229,23 +264,6 @@ int xrdp_mcs_recv_cjrq(struct xrdp_mcs* self)
     in_uint8s(self->in_s, 2);
   }
   if (!(s_check_end(self->in_s)))
-    return 1;
-  return 0;
-}
-
-/*****************************************************************************/
-/* returns error */
-int xrdp_mcs_send_cjcf(struct xrdp_mcs* self, int chanid)
-{
-  if (xrdp_iso_init(self->iso_layer, 8) != 0)
-    return 1;
-  out_uint8(self->out_s, (MCS_CJCF << 2) | 2);
-  out_uint8(self->out_s, 0);
-  out_uint16_be(self->out_s, self->userid);
-  out_uint16_be(self->out_s, chanid);
-  out_uint16_be(self->out_s, chanid);
-  s_mark_end(self->out_s);
-  if (xrdp_iso_send(self->iso_layer) != 0)
     return 1;
   return 0;
 }
@@ -349,6 +367,7 @@ int xrdp_mcs_send_connect_response(struct xrdp_mcs* self)
 /* returns error */
 int xrdp_mcs_incoming(struct xrdp_mcs* self)
 {
+  DEBUG(("  in xrdp_mcs_incoming\n\r"));
   if (xrdp_iso_incoming(self->iso_layer) != 0)
     return 1;
   if (xrdp_mcs_recv_connect_initial(self) != 0)
@@ -369,6 +388,7 @@ int xrdp_mcs_incoming(struct xrdp_mcs* self)
     return 1;
   if (xrdp_mcs_send_cjcf(self, MCS_GLOBAL_CHANNEL) != 0)
     return 1;
+  DEBUG(("  out xrdp_mcs_incoming\n\r"));
   return 0;
 }
 

@@ -27,9 +27,11 @@ struct xrdp_tcp* xrdp_tcp_create(struct xrdp_iso* owner)
   struct xrdp_tcp* self;
 
   self = (struct xrdp_tcp*)g_malloc(sizeof(struct xrdp_tcp), 1);
-  self->owner = owner;
+  self->iso_layer = owner;
   self->in_s = owner->in_s;
   self->out_s = owner->out_s;
+  /* get sck from xrdp_process */
+  self->sck = owner->mcs_layer->sec_layer->rdp_layer->pro_layer->sck;
   return self;
 }
 
@@ -54,6 +56,7 @@ int xrdp_tcp_recv(struct xrdp_tcp* self, int len)
 {
   int rcvd;
 
+  DEBUG(("    in xrdp_tcp_recv, gota get %d bytes\n", len))
   init_stream(self->in_s, len);
   while (len > 0)
   {
@@ -65,10 +68,16 @@ int xrdp_tcp_recv(struct xrdp_tcp* self, int len)
       if (g_tcp_last_error_would_block(self->sck))
         g_sleep(1);
       else
+      {
+        DEBUG(("    error = -1 in xrdp_tcp_recv socket %d\n", self->sck))
         return 1;
+      }
     }
     else if (rcvd == 0)
+    {
+      DEBUG(("    error = 0 in xrdp_tcp_recv socket %d\n", self->sck))
       return 1;
+    }
     else
     {
       self->in_s->end += rcvd;
@@ -87,6 +96,7 @@ int xrdp_tcp_send(struct xrdp_tcp* self)
   int sent;
 
   len = self->out_s->end - self->out_s->data;
+  DEBUG(("    in xrdp_tcp_send, gota send %d bytes\n", len))
   total = 0;
   while (total < len)
   {
@@ -98,10 +108,16 @@ int xrdp_tcp_send(struct xrdp_tcp* self)
       if (g_tcp_last_error_would_block(self->sck))
         g_sleep(1);
       else
+      {
+        DEBUG(("    error = -1 in xrdp_tcp_send socket %d\n", self->sck))
         return 1;
+      }
     }
     else if (sent == 0)
+    {
+      DEBUG(("    error = 0 in xrdp_tcp_send socket %d\n", self->sck))
       return 1;
+    }
     else
       total = total + sent;
   }
