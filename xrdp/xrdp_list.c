@@ -18,10 +18,6 @@
 
    simple list
 
-   this list is used to track mem leaks so g_malloc1 and
-   g_free1 should be used for internal allocs but not
-   for auto_free items
-
 */
 
 #include "xrdp.h"
@@ -31,10 +27,10 @@ struct xrdp_list* xrdp_list_create(void)
 {
   struct xrdp_list* self;
 
-  self = (struct xrdp_list*)g_malloc1(sizeof(struct xrdp_list), 1);
+  self = (struct xrdp_list*)g_malloc(sizeof(struct xrdp_list), 1);
   self->grow_by = 10;
   self->alloc_size = 10;
-  self->items = (long*)g_malloc1(sizeof(long) * 10, 1);
+  self->items = (long*)g_malloc(sizeof(long) * 10, 1);
   return self;
 }
 
@@ -55,8 +51,8 @@ void xrdp_list_delete(struct xrdp_list* self)
       self->items[i] = 0;
     }
   }
-  g_free1(self->items);
-  g_free1(self);
+  g_free(self->items);
+  g_free(self);
 }
 
 /*****************************************************************************/
@@ -69,9 +65,9 @@ void xrdp_list_add_item(struct xrdp_list* self, long item)
   {
     i = self->alloc_size;
     self->alloc_size += self->grow_by;
-    p = (long*)g_malloc1(sizeof(long) * self->alloc_size, 1);
+    p = (long*)g_malloc(sizeof(long) * self->alloc_size, 1);
     g_memcpy(p, self->items, sizeof(long) * i);
-    g_free1(self->items);
+    g_free(self->items);
     self->items = p;
   }
   self->items[self->count] = item;
@@ -101,11 +97,11 @@ void xrdp_list_clear(struct xrdp_list* self)
       self->items[i] = 0;
     }
   }
-  g_free1(self->items);
+  g_free(self->items);
   self->count = 0;
   self->grow_by = 10;
   self->alloc_size = 10;
-  self->items = (long*)g_malloc1(sizeof(long) * 10, 1);
+  self->items = (long*)g_malloc(sizeof(long) * 10, 1);
 }
 
 /*****************************************************************************/
@@ -161,9 +157,9 @@ void xrdp_list_insert_item(struct xrdp_list* self, int index, long item)
     {
       i = self->alloc_size;
       self->alloc_size += self->grow_by;
-      p = (long*)g_malloc1(sizeof(long) * self->alloc_size, 1);
+      p = (long*)g_malloc(sizeof(long) * self->alloc_size, 1);
       g_memcpy(p, self->items, sizeof(long) * i);
-      g_free1(self->items);
+      g_free(self->items);
       self->items = p;
     }
     for (i = (self->count - 2); i >= index; i--)

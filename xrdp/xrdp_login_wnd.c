@@ -89,36 +89,43 @@ int xrdp_wm_popup_notify(struct xrdp_bitmap* wnd,
 int xrdp_wm_setup_mod(struct xrdp_wm* self,
                       struct xrdp_mod_data* mod_data)
 {
-  if (self != 0)
+  if (self == 0)
   {
-    if (self->mod_handle == 0)
+    return 1;
+  }
+  if (self->mod_handle == 0)
+  {
+    self->mod_handle = g_load_library(mod_data->lib);
+    if (self->mod_handle != 0)
     {
-      self->mod_handle = g_load_library(mod_data->lib);
-      if (self->mod_handle != 0)
+      self->mod_init = (struct xrdp_mod* (*)(void))
+                g_get_proc_address(self->mod_handle, "mod_init");
+      self->mod_exit = (int (*)(struct xrdp_mod*))
+                g_get_proc_address(self->mod_handle, "mod_exit");
+      if (self->mod_init != 0 && self->mod_exit != 0)
       {
-        self->mod_init = (struct xrdp_mod* (*)(void))
-                  g_get_proc_address(self->mod_handle, "mod_init");
-        self->mod_exit = (int (*)(struct xrdp_mod*))
-                  g_get_proc_address(self->mod_handle, "mod_exit");
-        if (self->mod_init != 0 && self->mod_exit != 0)
-        {
-          self->mod = self->mod_init();
-        }
-      }
-      if (self->mod != 0)
-      {
-        self->mod->wm = (long)self;
-        self->mod->server_begin_update = server_begin_update;
-        self->mod->server_end_update = server_end_update;
-        self->mod->server_fill_rect = server_fill_rect;
-        self->mod->server_screen_blt = server_screen_blt;
-        self->mod->server_paint_rect = server_paint_rect;
-        self->mod->server_set_pointer = server_set_pointer;
-        self->mod->server_palette = server_palette;
-        self->mod->server_msg = server_msg;
-        self->mod->server_is_term = server_is_term;
+        self->mod = self->mod_init();
       }
     }
+    if (self->mod != 0)
+    {
+      self->mod->wm = (long)self;
+      self->mod->server_begin_update = server_begin_update;
+      self->mod->server_end_update = server_end_update;
+      self->mod->server_fill_rect = server_fill_rect;
+      self->mod->server_screen_blt = server_screen_blt;
+      self->mod->server_paint_rect = server_paint_rect;
+      self->mod->server_set_pointer = server_set_pointer;
+      self->mod->server_palette = server_palette;
+      self->mod->server_msg = server_msg;
+      self->mod->server_is_term = server_is_term;
+    }
+  }
+  /* id self->mod is null, there must be a problem */
+  if (self->mod == 0)
+  {
+    DEBUG(("problem loading lib in xrdp_wm_setup_mod"));
+    return 1;
   }
   return 0;
 }

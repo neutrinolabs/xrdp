@@ -71,13 +71,127 @@ static int g_term = 0;
 #endif
 
 #if defined(MEMLEAK)
-#include "/home/j/cvs/xrdp/xrdp/xrdp.h"
-#endif
-
-#if defined(MEMLEAK)
 static int g_memsize = 0;
 static int g_memid = 0;
-static struct xrdp_list* g_memlist = 0;
+static struct list* g_memlist = 0;
+
+/* for memory debugging */
+struct mem
+{
+  int size;
+  int id;
+};
+
+/* list */
+struct list
+{
+  long* items;
+  int count;
+  int alloc_size;
+  int grow_by;
+  int auto_free;
+};
+
+/*****************************************************************************/
+struct list* list_create(void)
+{
+  struct list* self;
+
+  self = (struct list*)malloc(sizeof(struct list));
+  memset(self, 0, sizeof(struct list));
+  self->grow_by = 10;
+  self->alloc_size = 10;
+  self->items = (long*)malloc(sizeof(long) * 10);
+  memset(self->items, 0, sizeof(long) * 10);
+  return self;
+}
+
+/*****************************************************************************/
+void list_delete(struct list* self)
+{
+  int i;
+
+  if (self == 0)
+  {
+    return;
+  }
+  if (self->auto_free)
+  {
+    for (i = 0; i < self->count; i++)
+    {
+      free((void*)self->items[i]);
+      self->items[i] = 0;
+    }
+  }
+  free(self->items);
+  free(self);
+}
+
+/*****************************************************************************/
+void list_add_item(struct list* self, long item)
+{
+  long* p;
+  int i;
+
+  if (self->count >= self->alloc_size)
+  {
+    i = self->alloc_size;
+    self->alloc_size += self->grow_by;
+    p = (long*)malloc(sizeof(long) * self->alloc_size);
+    memset(p, 0, sizeof(long) * self->alloc_size);
+    memcpy(p, self->items, sizeof(long) * i);
+    free(self->items);
+    self->items = p;
+  }
+  self->items[self->count] = item;
+  self->count++;
+}
+
+/*****************************************************************************/
+int list_index_of(struct list* self, long item)
+{
+  int i;
+
+  for (i = 0; i < self->count; i++)
+  {
+    if (self->items[i] == item)
+    {
+      return i;
+    }
+  }
+  return -1;
+}
+
+/*****************************************************************************/
+void list_remove_item(struct list* self, int index)
+{
+  int i;
+
+  if (index >= 0 && index < self->count)
+  {
+    if (self->auto_free)
+    {
+      free((void*)self->items[index]);
+      self->items[index] = 0;
+    }
+    for (i = index; i < (self->count - 1); i++)
+    {
+      self->items[i] = self->items[i + 1];
+    }
+    self->count--;
+  }
+}
+
+/*****************************************************************************/
+long list_get_item(struct list* self, int index)
+{
+  if (index < 0 || index >= self->count)
+  {
+    return 0;
+  }
+  return self->items[index];
+}
+
 #endif
 
 /* forward declarations */
@@ -96,11 +210,7 @@ int g_init_system(void)
   signal(SIGPIPE, g_pipe_sig);
 #endif
 #if defined(MEMLEAK)
-  g_memlist = xrdp_list_create();
-  g_printf("some info\n\r");
-  g_printf("sizeof xrdp_bitmap is %d\n\r", sizeof(struct xrdp_bitmap));
-  g_printf("sizeof xrdp_wm is %d\n\r", sizeof(struct xrdp_wm));
-  g_printf("sizeof stream is %d\n\r", sizeof(struct stream));
+  g_memlist = list_create();
 #endif
   return 0;
 }
@@ -114,15 +224,15 @@ int g_exit_system(void)
 #endif
 #if defined(MEMLEAK)
   int i;
-  struct xrdp_mem* p;
+  struct mem* p;
 
   for (i = 0; i < g_memlist->count; i++)
   {
-    p = (struct xrdp_mem*)xrdp_list_get_item(g_memlist, i);
+    p = (struct mem*)list_get_item(g_memlist, i);
     g_printf("leak size %d id %d\n\r", p->size, p->id);
   }
   g_printf("mem %d\n\r", g_memsize);
-  xrdp_list_delete(g_memlist);
+  list_delete(g_memlist);
   g_memlist = 0;
 #endif
   return 0;
@@ -133,23 +243,23 @@ void* g_malloc(int size, int zero)
 {
 #if defined(MEMLEAK)
   char* rv;
-  struct xrdp_mem* p;
+  struct mem* p;
 
-  rv = (char*)malloc(size + sizeof(struct xrdp_mem));
+  rv = (char*)malloc(size + sizeof(struct mem));
   if (zero)
   {
-    memset(rv, 0, size + sizeof(struct xrdp_mem));
+    memset(rv, 0, size + sizeof(struct mem));
   }
   g_memsize += size;
-  p = (struct xrdp_mem*)rv;
+  p = (struct mem*)rv;
   p->size = size;
   p->id = g_memid;
   if (g_memlist != 0)
   {
-    xrdp_list_add_item(g_memlist, (int)p);
+    list_add_item(g_memlist, (long)p);
   }
   g_memid++;
-  return rv + sizeof(struct xrdp_mem);
+  return rv + sizeof(struct mem);
 #else
   char* rv;
 
@@ -163,33 +273,20 @@ void* g_malloc(int size, int zero)
 }
 
 /*****************************************************************************/
-void* g_malloc1(int size, int zero)
-{
-  char* rv;
-
-  rv = (char*)malloc(size);
-  if (zero)
-  {
-    memset(rv, 0, size);
-  }
-  return rv;
-}
-
-/*****************************************************************************/
 void g_free(void* ptr)
 {
 #if defined(MEMLEAK)
-  struct xrdp_mem* p;
+  struct mem* p;
   int i;
 
   if (ptr != 0)
   {
-    p = (struct xrdp_mem*)(((char*)ptr) - sizeof(struct xrdp_mem));
+    p = (struct mem*)(((char*)ptr) - sizeof(struct mem));
     g_memsize -= p->size;
-    i = xrdp_list_index_of(g_memlist, (int)p);
+    i = list_index_of(g_memlist, (long)p);
     if (i >= 0)
     {
-      xrdp_list_remove_item(g_memlist, i);
+      list_remove_item(g_memlist, i);
     }
     free(p);
   }
@@ -199,15 +296,6 @@ void g_free(void* ptr)
     free(ptr);
   }
 #endif
-}
-
-/*****************************************************************************/
-void g_free1(void* ptr)
-{
-  if (ptr != 0)
-  {
-    free(ptr);
-  }
 }
 
 /*****************************************************************************/
