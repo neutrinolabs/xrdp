@@ -492,7 +492,9 @@ int xrdp_bitmap_compress(char* in_data, int width, int height,
       i = (s->p - s->data) + count;
       if (i - color_count >= byte_limit &&
           i - bicolor_count >= byte_limit &&
-          i - fill_count >= byte_limit)
+          i - fill_count >= byte_limit &&
+          i - mix_count >= byte_limit &&
+          i - fom_count >= byte_limit)
       {
         break;
       }
@@ -504,8 +506,11 @@ int xrdp_bitmap_compress(char* in_data, int width, int height,
         IN_PIXEL8(last_line, i, 0, width, last_ypixel, ypixel);
         if (!TEST_FILL)
         {
-          if (fill_count > 3 && fill_count > color_count &&
-              fill_count > bicolor_count)
+          if (fill_count > 3 &&
+              fill_count >= color_count &&
+              fill_count >= bicolor_count &&
+              fill_count >= mix_count &&
+              fill_count >= fom_count)
           {
             count -= fill_count;
             OUT_COPY_COUNT1(count, s, temp_s);
@@ -514,10 +519,28 @@ int xrdp_bitmap_compress(char* in_data, int width, int height,
           }
           fill_count = 0;
         }
+        if (!TEST_MIX)
+        {
+          if (mix_count > 3 &&
+              mix_count >= fill_count &&
+              mix_count >= bicolor_count &&
+              mix_count >= color_count &&
+              mix_count >= fom_count)
+          {
+            count -= mix_count;
+            OUT_COPY_COUNT1(count, s, temp_s);
+            OUT_MIX_COUNT1(mix_count, s);
+            RESET_COUNTS;
+          }
+          mix_count = 0;
+        }
         if (!TEST_COLOR)
         {
-          if (color_count > 3 && color_count > fill_count &&
-              color_count > bicolor_count)
+          if (color_count > 3 &&
+              color_count >= fill_count &&
+              color_count >= bicolor_count &&
+              color_count >= mix_count &&
+              color_count >= fom_count)
           {
             count -= color_count;
             OUT_COPY_COUNT1(count, s, temp_s);
@@ -528,8 +551,11 @@ int xrdp_bitmap_compress(char* in_data, int width, int height,
         }
         if (!TEST_BICOLOR)
         {
-          if (bicolor_count > 3 && bicolor_count > fill_count &&
-              bicolor_count > color_count)
+          if (bicolor_count > 3 &&
+              bicolor_count >= fill_count &&
+              bicolor_count >= color_count &&
+              bicolor_count >= mix_count &&
+              bicolor_count >= fom_count)
           {
             if ((bicolor_count % 2) == 0)
             {
@@ -551,9 +577,29 @@ int xrdp_bitmap_compress(char* in_data, int width, int height,
           bicolor2 = pixel;
           bicolor_spin = 0;
         }
-        if (TEST_FILL && last_line != 0) /* ms client don't like fill on */
-        {                                /* 1st line */
+        if (!TEST_FOM)
+        {
+          if (fom_count > 3 &&
+              fom_count >= fill_count &&
+              fom_count >= color_count &&
+              fom_count >= mix_count &&
+              fom_count >= bicolor_count)
+          {
+            count -= fom_count;
+            OUT_COPY_COUNT1(count, s, temp_s);
+            OUT_FOM_COUNT1(fom_count, s, fom_mask, fom_mask_len);
+            RESET_COUNTS;
+          }
+          fom_count = 0;
+          fom_mask_len = 0;
+        }
+        if (TEST_FILL)
+        {
           fill_count++;
+        }
+        if (TEST_MIX)
+        {
+          mix_count++;
         }
         if (TEST_COLOR)
         {
@@ -561,40 +607,108 @@ int xrdp_bitmap_compress(char* in_data, int width, int height,
         }
         if (TEST_BICOLOR)
         {
-          if (bicolor_spin == 0 && pixel == bicolor1)
+          bicolor_spin = !bicolor_spin;
+          bicolor_count++;
+        }
+        if (TEST_FOM)
+        {
+          if ((fom_count % 8) == 0)
           {
-            bicolor_spin = 1;
-            bicolor_count++;
+            fom_mask[fom_mask_len] = 0;
+            fom_mask_len++;
           }
-          else if (bicolor_spin == 1 && pixel == bicolor2)
+          if (pixel == (ypixel ^ mix))
           {
-            bicolor_spin = 0;
-            bicolor_count++;
+            fom_mask[fom_mask_len - 1] |= (1 << (fom_count % 8));
           }
+          fom_count++;
         }
         out_uint8(temp_s, pixel);
         count++;
         last_pixel = pixel;
         last_ypixel = ypixel;
       }
+      /* can't take fix, mix, or fom past first line */
+      if (last_line == 0)
+      {
+        if (fill_count > 3 &&
+            fill_count >= color_count &&
+            fill_count >= bicolor_count &&
+            fill_count >= mix_count &&
+            fill_count >= fom_count)
+        {
+          count -= fill_count;
+          OUT_COPY_COUNT1(count, s, temp_s);
+          OUT_FILL_COUNT1(fill_count, s);
+          RESET_COUNTS;
+        }
+        fill_count = 0;
+        if (mix_count > 3 &&
+            mix_count >= fill_count &&
+            mix_count >= bicolor_count &&
+            mix_count >= color_count &&
+            mix_count >= fom_count)
+        {
+          count -= mix_count;
+          OUT_COPY_COUNT1(count, s, temp_s);
+          OUT_MIX_COUNT1(mix_count, s);
+          RESET_COUNTS;
+        }
+        mix_count = 0;
+        if (fom_count > 3 &&
+            fom_count >= fill_count &&
+            fom_count >= color_count &&
+            fom_count >= mix_count &&
+            fom_count >= bicolor_count)
+        {
+          count -= fom_count;
+          OUT_COPY_COUNT1(count, s, temp_s);
+          OUT_FOM_COUNT1(fom_count, s, fom_mask, fom_mask_len);
+          RESET_COUNTS;
+        }
+        fom_count = 0;
+        fom_mask_len = 0;
+      }
       last_line = line;
       line = line - width;
       start_line--;
       lines_sent++;
     }
-    if (fill_count > 3)
+    if (fill_count > 3 &&
+        fill_count >= color_count &&
+        fill_count >= bicolor_count &&
+        fill_count >= mix_count &&
+        fill_count >= fom_count)
     {
       count -= fill_count;
       OUT_COPY_COUNT1(count, s, temp_s);
       OUT_FILL_COUNT1(fill_count, s);
     }
-    else if (color_count > 3)
+    else if (mix_count > 3 &&
+             mix_count >= color_count &&
+             mix_count >= bicolor_count &&
+             mix_count >= fill_count &&
+             mix_count >= fom_count)
+    {
+      count -= mix_count;
+      OUT_COPY_COUNT1(count, s, temp_s);
+      OUT_MIX_COUNT1(mix_count, s);
+    }
+    else if (color_count > 3 &&
+             color_count >= mix_count &&
+             color_count >= bicolor_count &&
+             color_count >= fill_count &&
+             color_count >= fom_count)
     {
       count -= color_count;
       OUT_COPY_COUNT1(count, s, temp_s);
       OUT_COLOR_COUNT1(color_count, s, last_pixel);
     }
-    else if (bicolor_count > 3)
+    else if (bicolor_count > 3 &&
+             bicolor_count >= mix_count &&
+             bicolor_count >= color_count &&
+             bicolor_count >= fill_count &&
+             bicolor_count >= fom_count)
     {
       if ((bicolor_count % 2) == 0)
       {
@@ -609,6 +723,19 @@ int xrdp_bitmap_compress(char* in_data, int width, int height,
         OUT_COPY_COUNT1(count, s, temp_s);
         OUT_BICOLOR_COUNT1(bicolor_count, s, bicolor2, bicolor1);
       }
+      count -= bicolor_count;
+      OUT_COPY_COUNT1(count, s, temp_s);
+      OUT_BICOLOR_COUNT1(bicolor_count, s, bicolor1, bicolor2);
+    }
+    else if (fom_count > 3 &&
+             fom_count >= mix_count &&
+             fom_count >= color_count &&
+             fom_count >= fill_count &&
+             fom_count >= bicolor_count)
+    {
+      count -= fom_count;
+      OUT_COPY_COUNT1(count, s, temp_s);
+      OUT_FOM_COUNT1(fom_count, s, fom_mask, fom_mask_len);
     }
     else
     {
