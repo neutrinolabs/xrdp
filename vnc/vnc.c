@@ -22,23 +22,26 @@
 
 #include "vnc.h"
 
+const char* vnc_start_command =
+"su %s -c \"sh ../vnc/startvnc.sh :%d %d %d %d\"";
+const char* vnc_stop_command =
+"";
+
 /******************************************************************************/
-int lib_mod_event(int handle, int msg, int param1, int param2)
+int lib_mod_event(struct vnc* v, int msg, int param1, int param2)
 {
-  struct vnc* v;
   struct stream* s;
   int key;
 
   make_stream(s);
-  v = (struct vnc*)handle;
-  if (msg >= 15 && msg <= 16)
+  if (msg >= 15 && msg <= 16) /* key events */
   {
     key = 0;
-    if (param2 == 0xffff)
+    if (param2 == 0xffff) /* ascii char */
     {
       key = param1;
     }
-    else
+    else /* non ascii key event */
     {
       switch (param1)
       {
@@ -90,7 +93,7 @@ int lib_mod_event(int handle, int msg, int param1, int param2)
       }
     }
   }
-  else if (msg >= 100 && msg <= 110)
+  else if (msg >= 100 && msg <= 110) /* mouse events */
   {
     switch (msg)
     {
@@ -289,9 +292,9 @@ int lib_framebuffer_update(struct vnc* v)
         free_stream(s);
         return 1;
       }
-      v->server_begin_update((int)v);
-      v->server_paint_rect((int)v, x, y, cx, cy, data);
-      v->server_end_update((int)v);
+      v->server_begin_update(v);
+      v->server_paint_rect(v, x, y, cx, cy, data);
+      v->server_end_update(v);
       g_free(data);
     }
     else if (encoding == 1) /* copy rect */
@@ -304,9 +307,9 @@ int lib_framebuffer_update(struct vnc* v)
       }
       in_uint16_be(s, srcx);
       in_uint16_be(s, srcy);
-      v->server_begin_update((int)v);
-      v->server_screen_blt((int)v, x, y, cx, cy, srcx, srcy);
-      v->server_end_update((int)v);
+      v->server_begin_update(v);
+      v->server_screen_blt(v, x, y, cx, cy, srcx, srcy);
+      v->server_end_update(v);
     }
     else if (encoding == 0xffffff11) /* cursor */
     {
@@ -336,7 +339,7 @@ int lib_framebuffer_update(struct vnc* v)
           }
         }
       }
-      v->server_set_cursor((int)v, x, y, cursor_data, cursor_mask);
+      v->server_set_cursor(v, x, y, cursor_data, cursor_mask);
     }
   }
   /* FrambufferUpdateRequest */
@@ -418,20 +421,18 @@ int lib_palette_update(struct vnc* v)
     b = b >> 8;
     v->palette[first_color + i] = (r << 16) | (g << 8) | b;
   }
-  v->server_begin_update((int)v);
-  v->server_palette((int)v, v->palette);
-  v->server_end_update((int)v);
+  v->server_begin_update(v);
+  v->server_palette(v, v->palette);
+  v->server_end_update(v);
   free_stream(s);
   return 0;
 }
 
 /******************************************************************************/
-int lib_mod_signal(int handle)
+int lib_mod_signal(struct vnc* v)
 {
-  struct vnc* v;
   char type;
 
-  v = (struct vnc*)handle;
   if (g_tcp_force_recv(v->sck, &type, 1) != 0)
   {
     return 1;
@@ -465,14 +466,11 @@ int lib_mod_signal(int handle)
 }
 
 /******************************************************************************/
-int lib_mod_start(int handle, int w, int h, int bpp)
+int lib_mod_start(struct vnc* v, int w, int h, int bpp)
 {
-  struct vnc* v;
-
-  v = (struct vnc*)handle;
-  v->server_begin_update(handle);
-  v->server_fill_rect(handle, 0, 0, w, h, 0);
-  v->server_end_update(handle);
+  v->server_begin_update(v);
+  v->server_fill_rect(v, 0, 0, w, h, 0);
+  v->server_end_update(v);
   v->server_width = w;
   v->server_height = h;
   v->server_bpp = bpp;
@@ -480,22 +478,60 @@ int lib_mod_start(int handle, int w, int h, int bpp)
 }
 
 /******************************************************************************/
-int lib_mod_connect(int handle, char* ip, char* port,
-                    char* username, char* password)
+/*
+  return error
+  1 - authentation failed
+  2 - authentation failed
+  3 - server name length received from server too long
+  4 - server and client bpp do not match
+  5 - no more available X desktops when spawning a new session
+  6 - no ip
+*/
+int lib_mod_connect(struct vnc* v)
 {
   char cursor_data[32 * (32 * 3)];
   char cursor_mask[32 * (32 / 8)];
-  struct vnc* v;
+  char text[256];
+  char con_port[256];
   struct stream* s;
   struct stream* pixel_format;
   int error;
   int i;
+  int check_sec_result;
 
+  check_sec_result = 1;
+  if (g_strcmp(v->ip, "") == 0)
+  {
+    return 6;
+  }
+  if (g_strcmp(v->port, "-1") == 0)
+  {
+    i = 10;
+    g_sprintf(text, vnc_start_command, v->username, i, v->server_bpp,
+              v->server_width, v->server_height);
+    error = g_system(text);
+    while (error != 0 && i < 100)
+    {
+      i++;
+      g_sprintf(text, vnc_start_command, v->username, i, v->server_bpp,
+                v->server_width, v->server_height);
+      error = g_system(text);
+    }
+    if (error != 0)
+    {
+      return 5;
+    }
+    g_sprintf(con_port, "%d", 5900 + i);
+    v->vnc_desktop = i;
+  }
+  else
+  {
+    g_sprintf(con_port, "%s", v->port);
+  }
   make_stream(s);
   make_stream(pixel_format);
-  v = (struct vnc*)handle;
   v->sck = g_tcp_socket();
-  error = g_tcp_connect(v->sck, ip, port);
+  error = g_tcp_connect(v->sck, v->ip, con_port);
   if (error == 0)
   {
     g_tcp_set_non_blocking(v->sck);
@@ -507,24 +543,32 @@ int lib_mod_connect(int handle, char* ip, char* port,
     init_stream(s, 8192);
     g_tcp_force_recv(v->sck, s->data, 4);
     in_uint32_be(s, i);
-    if (i == 2) /* dec the password and the server random */
+    if (i == 1) /* none */
+    {
+      check_sec_result = 0;
+    }
+    else if (i == 2) /* dec the password and the server random */
     {
       init_stream(s, 8192);
       g_tcp_force_recv(v->sck, s->data, 16);
-      rfbEncryptBytes((unsigned char*)s->data, password);
+      rfbEncryptBytes((unsigned char*)s->data, v->password);
       g_tcp_force_send(v->sck, s->data, 16);
     }
     else
+    {
       error = 1;
+    }
   }
-  if (error == 0)
+  if (error == 0 && check_sec_result)
   {
     /* sec result */
     init_stream(s, 8192);
     g_tcp_force_recv(v->sck, s->data, 4);
     in_uint32_be(s, i);
     if (i != 0)
+    {
       error = 2;
+    }
   }
   if (error == 0)
   {
@@ -541,7 +585,9 @@ int lib_mod_connect(int handle, char* ip, char* port,
     g_tcp_force_recv(v->sck, s->data, 4); /* name len */
     in_uint32_be(s, i);
     if (i > 255 || i < 0)
+    {
       error = 3;
+    }
     else
     {
       g_tcp_force_recv(v->sck, v->mod_name, i);
@@ -595,9 +641,11 @@ int lib_mod_connect(int handle, char* ip, char* port,
   }
   if (error == 0)
   {
-    v->server_error_popup((int)v, "hi", "Hi");
+    v->server_error_popup(v, "hi", "Hi");
     if (v->server_bpp != v->mod_bpp)
+    {
       error = 4;
+    }
   }
   /* set almost null cursor */
   g_memset(cursor_data, 0, 32 * (32 * 3));
@@ -605,20 +653,18 @@ int lib_mod_connect(int handle, char* ip, char* port,
   g_memset(cursor_data + (32 * (32 * 3) - 2 * 32 * 3), 0xff, 9);
   g_memset(cursor_data + (32 * (32 * 3) - 3 * 32 * 3), 0xff, 9);
   g_memset(cursor_mask, 0xff, 32 * (32 / 8));
-  v->server_set_cursor((int)v, 0, 0, cursor_data, cursor_mask);
+  v->server_set_cursor(v, 0, 0, cursor_data, cursor_mask);
   free_stream(s);
   free_stream(pixel_format);
   return error;
 }
 
 /******************************************************************************/
-int lib_mod_invalidate(int handle, int x, int y, int cx, int cy)
+int lib_mod_invalidate(struct vnc* v, int x, int y, int cx, int cy)
 {
-  struct vnc* v;
   struct stream* s;
 
   make_stream(s);
-  v = (struct vnc*)handle;
   /* FrambufferUpdateRequest */
   init_stream(s, 8192);
   out_uint8(s, 3);
@@ -629,6 +675,33 @@ int lib_mod_invalidate(int handle, int x, int y, int cx, int cy)
   out_uint16_be(s, cy);
   g_tcp_force_send(v->sck, s->data, 10);
   free_stream(s);
+  return 0;
+}
+
+/******************************************************************************/
+int lib_mod_end(struct vnc* v)
+{
+  char text[256];
+
+  if (v->vnc_desktop != 0)
+  {
+    g_sprintf(text, vnc_stop_command, v->username, v->vnc_desktop);
+    g_system(text);
+  }
+  return 0;
+}
+
+/******************************************************************************/
+int lib_mod_set_param(struct vnc* v, char* name, char* value)
+{
+  if (g_strcmp(name, "username") == 0)
+    g_strncpy(v->username, value, 255);
+  else if (g_strcmp(name, "password") == 0)
+    g_strncpy(v->password, value, 255);
+  else if (g_strcmp(name, "ip") == 0)
+    g_strncpy(v->ip, value, 255);
+  else if (g_strcmp(name, "port") == 0)
+    g_strncpy(v->port, value, 255);
   return 0;
 }
 
@@ -646,17 +719,16 @@ int mod_init()
   v->mod_event = lib_mod_event;
   v->mod_signal = lib_mod_signal;
   v->mod_invalidate = lib_mod_invalidate;
+  v->mod_end = lib_mod_end;
+  v->mod_set_param = lib_mod_set_param;
   return (int)v;
 }
 
 /******************************************************************************/
-int mod_exit(int handle)
+int mod_exit(struct vnc* v)
 {
-  struct vnc* v;
-
-  if (handle == 0)
+  if (v == 0)
     return 0;
-  v = (struct vnc*)handle;
   g_tcp_close(v->sck);
   g_free(v);
   return 0;
