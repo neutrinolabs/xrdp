@@ -101,7 +101,7 @@ int xrdp_wm_setup_mod(struct xrdp_wm* self,
       }
       if (self->mod != 0)
       {
-        self->mod->wm = (int)self;
+        self->mod->wm = (long)self;
         self->mod->server_begin_update = server_begin_update;
         self->mod->server_end_update = server_end_update;
         self->mod->server_fill_rect = server_fill_rect;

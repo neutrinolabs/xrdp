@@ -38,6 +38,7 @@
 #include <dlfcn.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <signal.h>
 #endif
 #include <stdlib.h>
 #include <string.h>
@@ -68,6 +69,10 @@ static int g_memid = 0;
 static struct xrdp_list* g_memlist = 0;
 #endif
 
+/* forward declarations */
+void g_printf(char* format, ...);
+void pipe_sig(int sig_num);
+
 /*****************************************************************************/
 int g_init_system(void)
 {
@@ -76,13 +81,15 @@ int g_init_system(void)
 
   WSAStartup(2, &w);
   InitializeCriticalSection(&g_term_mutex);
+#else
+  signal(SIGPIPE, pipe_sig);
 #endif
 #ifdef MEMLEAK
   g_memlist = xrdp_list_create();
-  printf("some info\n\r");
-  printf("sizeof xrdp_bitmap is %d\n\r", sizeof(struct xrdp_bitmap));
-  printf("sizeof xrdp_wm is %d\n\r", sizeof(struct xrdp_wm));
-  printf("sizeof stream is %d\n\r", sizeof(struct stream));
+  g_printf("some info\n\r");
+  g_printf("sizeof xrdp_bitmap is %d\n\r", sizeof(struct xrdp_bitmap));
+  g_printf("sizeof xrdp_wm is %d\n\r", sizeof(struct xrdp_wm));
+  g_printf("sizeof stream is %d\n\r", sizeof(struct stream));
 #endif
   return 0;
 }
@@ -225,7 +232,7 @@ void g_hexdump(char* p, int len)
   offset = 0;
   while (offset < len)
   {
-    printf("%04x ", offset);
+    g_printf("%04x ", offset);
     thisline = len - offset;
     if (thisline > 16)
     {
@@ -233,17 +240,17 @@ void g_hexdump(char* p, int len)
     }
     for (i = 0; i < thisline; i++)
     {
-      printf("%02x ", line[i]);
+      g_printf("%02x ", line[i]);
     }
     for (; i < 16; i++)
     {
-      printf("   ");
+      g_printf("   ");
     }
     for (i = 0; i < thisline; i++)
     {
-      printf("%c", (line[i] >= 0x20 && line[i] < 0x7f) ? line[i] : '.');
+      g_printf("%c", (line[i] >= 0x20 && line[i] < 0x7f) ? line[i] : '.');
     }
-    printf("\n\r");
+    g_printf("\n\r");
     offset += thisline;
     line += thisline;
   }
@@ -509,8 +516,14 @@ int g_tcp_select(int sck1, int sck2)
   time.tv_sec = 0;
   time.tv_usec = 0;
   FD_ZERO(&rfds);
-  FD_SET(((unsigned int)sck1), &rfds);
-  FD_SET(((unsigned int)sck2), &rfds);
+  if (sck1 > 0)
+  {
+    FD_SET(((unsigned int)sck1), &rfds);
+  }
+  if (sck2 > 0)
+  {
+    FD_SET(((unsigned int)sck2), &rfds);
+  }
   max = sck1;
   if (sck2 > max)
   {
@@ -933,4 +946,17 @@ void* g_get_proc_address(int lib, char* name)
 int g_system(char* aexec)
 {
   return system(aexec);
+}
+
+/*****************************************************************************/
+void g_signal(int sig_num, void (*func)(int))
+{
+  signal(sig_num, func);
+}
+
+/*****************************************************************************/
+void pipe_sig(int sig_num)
+{
+  /* do nothing */
+  g_printf("got SIGPIPE(%d)\n\r", sig_num);
 }

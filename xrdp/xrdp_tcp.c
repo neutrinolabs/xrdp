@@ -77,6 +77,7 @@ int xrdp_tcp_recv(struct xrdp_tcp* self, struct stream* s, int len)
       }
       else
       {
+        self->sck_closed = 1;
         DEBUG(("    error = -1 in xrdp_tcp_recv socket %d\n\r", self->sck));
         return 1;
       }
@@ -128,6 +129,7 @@ int xrdp_tcp_send(struct xrdp_tcp* self, struct stream* s)
       }
       else
       {
+        self->sck_closed = 1;
         DEBUG(("    error = -1 in xrdp_tcp_send socket %d\n\r", self->sck));
         return 1;
       }

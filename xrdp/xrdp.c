@@ -34,7 +34,7 @@ THREAD_RV THREAD_CC xrdp_listen_run(void* in_val)
   return 0;
 }
 
-//#define CLEAN_CLOSE
+#define CLEAN_CLOSE
 
 /*****************************************************************************/
 int main(int argc, char** argv)

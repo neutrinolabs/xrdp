@@ -50,7 +50,7 @@ int server_init(void)
   g_rdp_process = 0;
   make_stream(g_s);
   init_stream(g_s, 8192);
-  g_mod.handle = (int)(&g_mod);
+  g_mod.handle = (long)(&g_mod);
   g_mod.mod_event = mod_event;
   return 0;
 }
@@ -107,7 +107,7 @@ int server_loop(int sck)
     }
     if (g_mod.wm == 0)
     {
-      g_mod.wm = (int)(g_rdp_process->wm);
+      g_mod.wm = (long)(g_rdp_process->wm);
     }
   }
   init_stream(g_s, 8192);
@@ -134,7 +134,7 @@ int server_begin_update(void)
   wm = (struct xrdp_wm*)g_mod.wm;
   p = xrdp_painter_create(wm);
   xrdp_painter_begin_update(p);
-  g_mod.painter = (int)p;
+  g_mod.painter = (long)p;
   return 0;
 }
 
@@ -224,7 +224,7 @@ int server_begin_update(struct xrdp_mod* mod)
   wm = (struct xrdp_wm*)mod->wm;
   p = xrdp_painter_create(wm);
   xrdp_painter_begin_update(p);
-  mod->painter = (int)p;
+  mod->painter = (long)p;
   return 0;
 }
 

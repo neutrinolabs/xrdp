@@ -86,3 +86,4 @@ int g_load_library(char* in);
 int g_free_library(int lib);
 void* g_get_proc_address(int lib, char* name);
 int g_system(char* aexec);
+void g_signal(int sig_num, void (*func)(int));

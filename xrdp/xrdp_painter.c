@@ -555,10 +555,20 @@ int xrdp_painter_draw_text(struct xrdp_painter* self,
         draw_rect.right--;
         draw_rect.bottom--;
         flags = 0x03; /* 0x73; TEXT2_IMPLICIT_X and something else */
+        DEBUG(("sending text order \
+font %d flags %d mixmode %d color1 %d color2 %d \
+clip left %d clip top %d clip right %d clip bottom %d \
+box left %d box top %d box right %d box bottom %d \
+x %d y %d len %d rect %d %d %d %d\n\r",
+               f, flags, 0, font->color, 0, x, y, x + total_width,
+               y + total_height, 0, 0, 0, 0, x1, y1, len,
+               draw_rect.left, draw_rect.top,
+               draw_rect.right, draw_rect.bottom));
         xrdp_orders_text(self->orders, f, flags, 0,
                          font->color, 0,
                          x, y, x + total_width, y + total_height,
-                         0, 0, 0, 0, x1, y1, data, len * 2, &draw_rect);
+                         0, 0, 0, 0,
+                         x1, y1, data, len * 2, &draw_rect);
       }
     }
     k++;

@@ -29,10 +29,8 @@ struct xrdp_mod
   int (*mod_connect)(struct xrdp_mod* v);
   int (*mod_event)(struct xrdp_mod* v, int msg, int param1, int param2);
   int (*mod_signal)(struct xrdp_mod* v);
-  int (*mod_invalidate)(struct xrdp_mod* v, int x, int y, int cx, int cy);
   int (*mod_end)(struct xrdp_mod* v);
   int (*mod_set_param)(struct xrdp_mod* v, char* name, char* value);
-  int d1[93];
   /* server functions */
   int (*server_begin_update)(struct xrdp_mod* v);
   int (*server_end_update)(struct xrdp_mod* v);
@@ -45,11 +43,10 @@ struct xrdp_mod
   int (*server_set_pointer)(struct xrdp_mod* v, int x, int y, char* data, char* mask);
   int (*server_palette)(struct xrdp_mod* v, int* palette);
   int (*server_error_popup)(struct xrdp_mod* v, char* error, char* caption);
-  int d2[92];
   /* common */
-  int handle; /* pointer to self as int */
-  int wm; /* struct xrdp_wm* */
-  int painter;
+  long handle; /* pointer to self as int */
+  long wm; /* struct xrdp_wm* */
+  long painter;
   int sck;
 };
 
@@ -63,17 +60,17 @@ struct xrdp_mem
 /* header for bmp file */
 struct xrdp_bmp_header
 {
-  long size;
-  long image_width;
-  long image_height;
+  int size;
+  int image_width;
+  int image_height;
   short planes;
   short bit_count;
-  long compression;
-  long image_size;
-  long x_pels_per_meter;
-  long y_pels_per_meter;
-  long clr_used;
-  long clr_important;
+  int compression;
+  int image_size;
+  int x_pels_per_meter;
+  int y_pels_per_meter;
+  int clr_used;
+  int clr_important;
 };
 
 /* list */

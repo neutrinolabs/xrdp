@@ -891,14 +891,16 @@ int xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
   {
     if (self->wm->mod != 0)
     {
-      if (self->wm->mod->mod_invalidate != 0)
+      if (self->wm->mod->mod_event != 0)
       {
         if (rect != 0)
         {
-          self->wm->mod->mod_invalidate(self->wm->mod,
-                                        rect->left, rect->top,
-                                        rect->right - rect->left,
-                                        rect->bottom - rect->top);
+          x = rect->left;
+          y = rect->top;
+          w = rect->right - rect->left;
+          h = rect->bottom - rect->top;
+          self->wm->mod->mod_event(self->wm->mod, WM_INVALIDATE, /* 200 */
+                                   MAKELONG(x, y), MAKELONG(w, h));
         }
       }
     }

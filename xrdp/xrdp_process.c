@@ -105,7 +105,7 @@ int xrdp_process_loop(struct xrdp_process* self, struct stream* s)
 int xrdp_process_main_loop(struct xrdp_process* self)
 {
 #ifndef XRDP_LIB
-  int i;
+  int sel_r;
   struct stream* s;
 
   make_stream(s);
@@ -117,8 +117,16 @@ int xrdp_process_main_loop(struct xrdp_process* self)
   {
     while (!g_is_term() && !self->term)
     {
-      i = g_tcp_select(self->sck, self->app_sck);
-      if (i & 1)
+      sel_r = g_tcp_select(self->sck, self->app_sck);
+      if (sel_r == 0) /* no data on any stream */
+      {
+        g_sleep(10);
+      }
+      else if (sel_r < 0)
+      {
+        break;
+      }
+      if (sel_r & 1)
       {
         init_stream(s, 8192);
         if (xrdp_process_loop(self, s) != 0)
@@ -126,7 +134,7 @@ int xrdp_process_main_loop(struct xrdp_process* self)
           break;
         }
       }
-      if (i & 2) /* mod socket fired */
+      if (sel_r & 2) /* mod socket fired */
       {
         if (self->wm->mod == 0)
         {
@@ -140,14 +148,6 @@ int xrdp_process_main_loop(struct xrdp_process* self)
         {
           break;
         }
-      }
-      if (i == 0) /* no data on any stream */
-      {
-        g_sleep(10);
-      }
-      else if (i < 0)
-      {
-        break;
       }
     }
   }
