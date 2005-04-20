@@ -1,6 +1,6 @@
 
 VNCOBJ = vnc.o os_calls.o d3des.o
-CFLAGS = -Wall -O2 -I../common
+CFLAGS = -Wall -O2 -I../common -fPIC
 C_OS_FLAGS = $(CFLAGS) -c
 LDFLAGS = -shared
 LIBS = -ldl

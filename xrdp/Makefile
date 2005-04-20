@@ -10,7 +10,7 @@ XRDPOBJ = xrdp.o xrdp_tcp.o xrdp_iso.o xrdp_mcs.o xrdp_sec.o \
 CFLAGS = -Wall -O2 -I../common
 C_OS_FLAGS = $(CFLAGS) -DUSE_OPENSSL -DUSE_PTHREAD -c
 LDFLAGS = -L /usr/gnu/lib
-LIBS = -lpthread -lcrypto
+LIBS = -lpthread -lcrypto -ldl
 #CC = g++
 CC = gcc
 
