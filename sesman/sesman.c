@@ -334,6 +334,7 @@ int start_session(int width, int height, int bpp, char* username,
       if (error == 0)
       {
         clearenv();
+        setenv("SHELL", pwd_1->pw_shell, 1);
         setenv("PATH", "/bin:/usr/bin:/usr/X11R6/bin:/usr/local/bin", 1);
         setenv("USER", username, 1);
         g_sprintf(text, "%d", uid);
