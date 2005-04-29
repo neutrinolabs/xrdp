@@ -7,9 +7,17 @@ Credits
 
 To use this run make the ./xrdp, then connect with rdesktop or mstsc.
 Tested with linux and i386.
-I've got it compiling in windows with borland free tools.
+I've got it compiling and working in windows with borland free tools.
+I've got it compiling and working with linux on x64 processor
 
 xrdp directory is the main server code
+vnc directory is a simple vnc client module for xrdp
+sesman directory is a session manager for xrdp that uses Xvnc for the Xserver
+COPYING is the licence file
 design.txt is an attempt to expain the project design
+prog_std.txt is an attemp to explain the programming standard used
+
+There is some installation notes on the web site under news.
+I'm working on an installation script.
 
 Jay

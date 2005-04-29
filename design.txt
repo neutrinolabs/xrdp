@@ -1,7 +1,7 @@
 
 This document is intended to explain xrdp server design.
 
-Many connections, all capable of running different moduals
+Many connections, all capable of running different modules
 one connection could be using a vnc connection
 one could be running a custom app made for xrdp
 one could be running a X11 session

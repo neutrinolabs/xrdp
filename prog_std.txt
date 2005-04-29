@@ -1,0 +1,40 @@
+
+This is an atempt to explain my odd programming standard used for this project.
+Not to defend any of these but its my default standard and make it easy
+for me to read.
+Some files break these rules, they will be updated eventually.
+
+try to make any file compile with c++ compilers
+
+always put one var on a line by itself
+  char* pvar;
+  char text[256];
+not
+  char *pvar, text[256];
+
+function calls look like this
+  foo(a, b, c);
+not
+  foo ( a, b, c );
+
+while, if, and case statements look like
+  while (i != 0)
+not
+  while(i != 0)
+
+for comments, always use /* */, not //
+
+defines should always be uppercase
+
+don't use tabs, use spaces
+
+no line should exceed 80 chars
+
+always use {} in if and while, even if its only one line
+  while (p != 0)
+  {
+    p = p->next;
+  }
+not
+  while (p != 0)
+    p = p->next;
