@@ -184,6 +184,8 @@ struct xrdp_client_info
   int use_bitmap_comp;
   int use_bitmap_cache;
   int op1; /* use smaller bitmap header, todo */
+  int desktop_cache;
+  int use_compact_packets; /* rdp5 smaller packets */
 };
 
 /* rdp */
@@ -283,7 +285,6 @@ struct xrdp_orders
   int text_y;
   int text_len;
   char* text_data;
-
 };
 
 struct xrdp_palette_item

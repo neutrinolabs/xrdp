@@ -432,10 +432,34 @@ int xrdp_rdp_send_demand_active(struct xrdp_rdp* self)
 }
 
 /*****************************************************************************/
+int xrdp_process_capset_general(struct xrdp_rdp* self, struct stream* s,
+                                int len)
+{
+  int i;
+
+  in_uint8s(s, 10);
+  in_uint16_le(s, i);
+  self->client_info.use_compact_packets = (i != 0);
+  return 0;
+}
+
+/*****************************************************************************/
+int xrdp_process_capset_order(struct xrdp_rdp* self, struct stream* s,
+                              int len)
+{
+  int i;
+
+  in_uint8s(s, 72);
+  in_uint32_le(s, i); /* desktop cache size, usually 0x38400 */
+  self->client_info.desktop_cache = i;
+  return 0;
+}
+
+/*****************************************************************************/
+/* get the bitmap cache size */
 int xrdp_process_capset_bmpcache(struct xrdp_rdp* self, struct stream* s,
                                  int len)
 {
-  //g_hexdump(s->p, len);
   in_uint8s(s, 24);
   in_uint16_le(s, self->client_info.cache1_entries);
   in_uint16_le(s, self->client_info.cache1_size);
@@ -443,24 +467,20 @@ int xrdp_process_capset_bmpcache(struct xrdp_rdp* self, struct stream* s,
   in_uint16_le(s, self->client_info.cache2_size);
   in_uint16_le(s, self->client_info.cache3_entries);
   in_uint16_le(s, self->client_info.cache3_size);
-  //g_printf("%d %d %d %d %d %d\n", self->cache1_entries, self->cache1_size,
-  //         self->cache2_entries, self->cache2_size,
-  //         self->cache3_entries, self->cache3_size);
   return 0;
 }
 
 /*****************************************************************************/
+/* get the number of client cursor cache */
 int xrdp_process_capset_pointercache(struct xrdp_rdp* self, struct stream* s,
                                      int len)
 {
   int i;
 
-  //g_hexdump(s->p, len);
   in_uint8s(s, 2); /* color pointer */
   in_uint16_le(s, i);
   i = MIN(i, 32);
   self->client_info.pointer_cache_entries = i;
-  //g_printf("%d\n", self->client_info.pointer_cache_entries);
   return 0;
 }
 
@@ -487,19 +507,23 @@ int xrdp_rdp_process_confirm_active(struct xrdp_rdp* self, struct stream* s)
     p = s->p;
     in_uint16_le(s, type);
     in_uint16_le(s, len);
-    //g_printf("%d %d\n", type, len);
     switch (type)
     {
-      case RDP_CAPSET_BMPCACHE:
+      case RDP_CAPSET_GENERAL: /* 1 */
+        xrdp_process_capset_general(self, s, len);
+        break;
+      case RDP_CAPSET_ORDER: /* 3 */
+        xrdp_process_capset_order(self, s, len);
+        break;
+      case RDP_CAPSET_BMPCACHE: /* 4 */
         xrdp_process_capset_bmpcache(self, s, len);
         break;
-      case RDP_CAPSET_POINTER:
+      case RDP_CAPSET_POINTER: /* 8 */
         xrdp_process_capset_pointercache(self, s, len);
         break;
     }
     s->p = p + len;
   }
-  //g_hexdump(s->p, s->end - s->p);
   return 0;
 }
 
@@ -765,7 +789,7 @@ int xrdp_rdp_process_data_font(struct xrdp_rdp* self, struct stream* s)
   int seq;
 
   in_uint8s(s, 2); /* num of fonts */
-  in_uint8s(s, 2); // unknown
+  in_uint8s(s, 2); /* unknown */
   in_uint16_le(s, seq);
   /* 419 client sends Seq 1, then 2 */
   /* 2600 clients sends only Seq 3 */
