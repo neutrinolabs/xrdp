@@ -1,0 +1,4 @@
+#%PAM-1.0
+auth       required	/lib/security/pam_userpass.so
+auth       required	/lib/security/pam_unix.so shadow use_first_pass
+account    required	/lib/security/pam_unix.so
