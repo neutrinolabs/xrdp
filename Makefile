@@ -1,0 +1,29 @@
+
+DESTDIR = /usr/local/xrdp
+
+all: world
+
+world:
+	make -C vnc
+	make -C xrdp
+	make -C sesman
+
+clean:
+	make -C vnc clean
+	make -C xrdp clean
+	make -C sesman clean
+
+install:
+	mkdir -p $(DESTDIR)
+	install xrdp/xrdp $(DESTDIR)/xrdp
+	install xrdp/ad256.bmp $(DESTDIR)/ad256.bmp
+	install xrdp/xrdp256.bmp $(DESTDIR)/xrdp256.bmp
+	install xrdp/cursor0.cur $(DESTDIR)/cursor0.cur
+	install xrdp/cursor1.cur $(DESTDIR)/cursor1.cur
+	install xrdp/Tahoma-10.fv1 $(DESTDIR)/Tahoma-10.fv1
+	install vnc/libvnc.so $(DESTDIR)/libvnc.so
+	install sesman/sesman $(DESTDIR)/sesman
+	install instfiles/sesman.ini $(DESTDIR)/sesman.ini
+	install instfiles/startwm.sh $(DESTDIR)/startwm.sh
+	install instfiles/xrdp.ini $(DESTDIR)/xrdp.ini
+	install instfiles/xrdpstart.sh $(DESTDIR)/xrdpstart.sh

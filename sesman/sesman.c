@@ -37,16 +37,14 @@
 
 #include "d3des.h"
 
-#include <security/pam_userpass.h>
-
 #include "arch.h"
 #include "parse.h"
 #include "os_calls.h"
 
-#define SERVICE "xrdp"
+int auth_userpass(char* user, char* pass);
 
-int g_sck;
-int g_pid;
+static int g_sck;
+static int g_pid;
 
 struct session_item
 {
@@ -60,7 +58,7 @@ struct session_item
 
 static unsigned char s_fixedkey[8] = {23, 82, 107, 6, 35, 78, 88, 7};
 
-struct session_item session_items[100];
+static struct session_item session_items[100];
 
 /*****************************************************************************/
 int tcp_force_recv(int sck, char* data, int len)
@@ -182,47 +180,6 @@ int x_server_running(int display)
 
   g_sprintf(text, "/tmp/.X11-unix/X%d", display);
   return access(text, F_OK) == 0;
-}
-
-/******************************************************************************/
-/* returns boolean */
-int auth_pam_userpass(const char* user, const char* pass)
-{
-  pam_handle_t* pamh;
-  pam_userpass_t userpass;
-  struct pam_conv conv = {pam_userpass_conv, &userpass};
-  const void* template1;
-  int status;
-
-  userpass.user = user;
-  userpass.pass = pass;
-  if (pam_start(SERVICE, user, &conv, &pamh) != PAM_SUCCESS)
-  {
-    return 0;
-  }
-  status = pam_authenticate(pamh, 0);
-  if (status != PAM_SUCCESS)
-  {
-    pam_end(pamh, status);
-    return 0;
-  }
-  status = pam_acct_mgmt(pamh, 0);
-  if (status != PAM_SUCCESS)
-  {
-    pam_end(pamh, status);
-    return 0;
-  }
-  status = pam_get_item(pamh, PAM_USER, &template1);
-  if (status != PAM_SUCCESS)
-  {
-    pam_end(pamh, status);
-    return 0;
-  }
-  if (pam_end(pamh, PAM_SUCCESS) != PAM_SUCCESS)
-  {
-    return 0;
-  }
-  return 1;
 }
 
 /******************************************************************************/
@@ -503,7 +460,7 @@ start session\n");
                   in_uint16_be(in_s, height);
                   in_uint16_be(in_s, bpp);
                   //g_printf("%d %d %d\n", width, height, bpp);
-                  ok = auth_pam_userpass(user, pass);
+                  ok = auth_userpass(user, pass);
                   display = 0;
                   if (ok)
                   {
