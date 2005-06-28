@@ -3,7 +3,7 @@
 # in verify_user.c
 #USE_PAM = ""
 
-SESMANOBJ = sesman.o verify_user.o os_calls.o d3des.o
+SESMANOBJ = sesman.o verify_user.o ../common/os_calls.o ../common/d3des.o
 
 ifdef USE_PAM
 CFLAGS = -Wall -O2 -I../common -DUSE_PAM
@@ -27,9 +27,3 @@ sesman: $(SESMANOBJ)
 
 clean:
 	rm -f $(SESMANOBJ) sesman
-
-os_calls.o:
-	$(CC) $(C_OS_FLAGS) ../common/os_calls.c
-
-d3des.o:
-	$(CC) $(C_OS_FLAGS) ../common/d3des.c

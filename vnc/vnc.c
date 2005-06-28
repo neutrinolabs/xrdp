@@ -121,7 +121,8 @@ int lib_send(struct vnc* v, char* data, int len)
 }
 
 /******************************************************************************/
-int lib_mod_event(struct vnc* v, int msg, int param1, int param2)
+int lib_mod_event(struct vnc* v, int msg, long param1, long param2,
+                  long param3, long param4)
 {
   struct stream* s;
   int key;

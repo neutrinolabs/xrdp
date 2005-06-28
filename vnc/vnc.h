@@ -32,7 +32,8 @@ struct vnc
   /* client functions */
   int (*mod_start)(struct vnc* v, int w, int h, int bpp);
   int (*mod_connect)(struct vnc* v);
-  int (*mod_event)(struct vnc* v, int msg, int param1, int param2);
+  int (*mod_event)(struct vnc* v, int msg, long param1, long param2,
+                   long param3, long param4);
   int (*mod_signal)(struct vnc* v);
   int (*mod_end)(struct vnc* v);
   int (*mod_set_param)(struct vnc* v, char* name, char* value);

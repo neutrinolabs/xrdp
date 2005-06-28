@@ -5,17 +5,20 @@ all: world
 
 world:
 	make -C vnc
+	make -C libxrdp
 	make -C xrdp
 	make -C sesman
 
 clean:
 	make -C vnc clean
+	make -C libxrdp clean
 	make -C xrdp clean
 	make -C sesman clean
 
 install:
 	mkdir -p $(DESTDIR)
 	install xrdp/xrdp $(DESTDIR)/xrdp
+	install libxrdp/libxrdp.so $(DESTDIR)/libxrdp.so
 	install xrdp/ad256.bmp $(DESTDIR)/ad256.bmp
 	install xrdp/xrdp256.bmp $(DESTDIR)/xrdp256.bmp
 	install xrdp/cursor0.cur $(DESTDIR)/cursor0.cur
