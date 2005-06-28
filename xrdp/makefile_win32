@@ -6,20 +6,20 @@
 # run 'set PATH=c:\borland\bcc55\bin' and run 'make -f makefile_win32 all'
 #
 
-XRDPOBJ = xrdp.obj xrdp_tcp.obj xrdp_iso.obj xrdp_mcs.obj \
-          xrdp_sec.obj xrdp_rdp.obj xrdp_process.obj xrdp_listen.obj \
-          xrdp_orders.obj xrdp_bitmap.obj xrdp_wm.obj xrdp_painter.obj \
-          xrdp_list.obj xrdp_region.obj xrdp_cache.obj xrdp_font.obj \
-          funcs.obj xrdp_login_wnd.obj xrdp_file.obj xrdp_interface.obj \
-          xrdp_bitmap_compress.obj \
-          os_calls.obj
+XRDPOBJ = xrdp.obj xrdp_process.obj xrdp_listen.obj \
+          xrdp_bitmap.obj xrdp_wm.obj xrdp_painter.obj \
+          xrdp_region.obj xrdp_cache.obj xrdp_font.obj funcs.obj \
+          xrdp_login_wnd.obj xrdp_interface.obj \
+          list.obj \
+          file.obj \
+          os_calls.obj \
+          thread_calls.obj
 
-CFLAGS = -w- -O2 -I../common
-C_OS_FLAGS = -w- -O2 -Ic:/borland/bcc55/include -Ic:/openssl/include -DUSE_OPENSSL -c
+CFLAGS = -w- -O2 -I../common -Ic:/borland/bcc55/include -Ic:/openssl/include -I../libxrdp
 LDFLAGS = -Lc:/borland/bcc55/lib
 
 xrdp: $(XRDPOBJ)
-	$(CC) $(LDFLAGS) libeay32.lib $(XRDPOBJ)
+	$(CC) $(LDFLAGS) libeay32.lib xrdp.lib $(XRDPOBJ)
 
 all: lib xrdp
 
@@ -28,6 +28,17 @@ clean:
 
 lib:
 	implib -a -w libeay32.lib c:/windows/system32/libeay32.dll
+	implib -w xrdp.lib ../libxrdp/xrdp.dll
+
+list.obj:
+	$(CC) $(CFLAGS) -c ../common/list.c
+
+file.obj:
+	$(CC) $(CFLAGS) -c ../common/file.c
 
 os_calls.obj:
-	$(CC) $(C_OS_FLAGS) ../common/os_calls.c
+	$(CC) $(CFLAGS) -c ../common/os_calls.c
+
+thread_calls.obj:
+	$(CC) $(CFLAGS) -c ../common/thread_calls.c
+

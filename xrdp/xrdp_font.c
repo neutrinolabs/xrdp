@@ -40,7 +40,8 @@
 
 #include "xrdp.h"
 
-char w_char[] =
+#if 0 /* not used */
+static char w_char[] =
 {
   0x00, 0x00, 0x00,
   0x00, 0x00, 0x00,
@@ -59,10 +60,11 @@ char w_char[] =
   0x00, 0x00, 0x00,
   0x00, 0x00, 0x00,
 };
-
+#endif
 
 /*****************************************************************************/
-struct xrdp_font* xrdp_font_create(struct xrdp_wm* wm)
+struct xrdp_font* APP_CC
+xrdp_font_create(struct xrdp_wm* wm)
 {
   struct xrdp_font* self;
   struct stream* s;
@@ -71,7 +73,7 @@ struct xrdp_font* xrdp_font_create(struct xrdp_wm* wm)
   int i;
   int index;
   int datasize;
-  struct xrdp_font_item* f;
+  struct xrdp_font_char* f;
 
   //g_printf("loading font\n");
   self = (struct xrdp_font*)g_malloc(sizeof(struct xrdp_font), 1);
@@ -131,38 +133,58 @@ struct xrdp_font* xrdp_font_create(struct xrdp_wm* wm)
 
 /*****************************************************************************/
 /* free the font and all the items */
-void xrdp_font_delete(struct xrdp_font* self)
+void APP_CC
+xrdp_font_delete(struct xrdp_font* self)
 {
   int i;
 
   if (self == 0)
+  {
     return;
+  }
   for (i = 0; i < 256; i++)
+  {
     g_free(self->font_items[i].data);
+  }
   g_free(self);
 }
 
 /*****************************************************************************/
 /* compare the two font items returns 1 if they match */
-int xrdp_font_item_compare(struct xrdp_font_item* font1,
-                           struct xrdp_font_item* font2)
+int APP_CC
+xrdp_font_item_compare(struct xrdp_font_char* font1,
+                       struct xrdp_font_char* font2)
 {
   int datasize;
 
   if (font1 == 0)
+  {
     return 0;
+  }
   if (font2 == 0)
+  {
     return 0;
+  }
   if (font1->offset != font2->offset)
+  {
     return 0;
+  }
   if (font1->baseline != font2->baseline)
+  {
     return 0;
+  }
   if (font1->width != font2->width)
+  {
     return 0;
+  }
   if (font1->height != font2->height)
+  {
     return 0;
+  }
   datasize = FONT_DATASIZE(font1);
   if (g_memcmp(font1->data, font2->data, datasize) == 0)
+  {
     return 1;
+  }
   return 0;
 }

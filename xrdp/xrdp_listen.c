@@ -25,7 +25,8 @@
 static struct xrdp_process* g_process = 0;
 
 /*****************************************************************************/
-struct xrdp_listen* xrdp_listen_create(void)
+struct xrdp_listen* APP_CC
+xrdp_listen_create(void)
 {
   struct xrdp_listen* self;
 
@@ -35,13 +36,15 @@ struct xrdp_listen* xrdp_listen_create(void)
 }
 
 /*****************************************************************************/
-void xrdp_listen_delete(struct xrdp_listen* self)
+void APP_CC
+xrdp_listen_delete(struct xrdp_listen* self)
 {
   g_free(self);
 }
 
 /*****************************************************************************/
-int xrdp_listen_term_processes(struct xrdp_listen* self)
+int APP_CC
+xrdp_listen_term_processes(struct xrdp_listen* self)
 {
   int i;
 
@@ -77,7 +80,8 @@ int xrdp_listen_term_processes(struct xrdp_listen* self)
 
 /*****************************************************************************/
 /* returns error */
-int xrdp_listen_add_pro(struct xrdp_listen* self)
+int APP_CC
+xrdp_listen_add_pro(struct xrdp_listen* self)
 {
   int i;
 
@@ -103,7 +107,8 @@ int xrdp_listen_add_pro(struct xrdp_listen* self)
 }
 
 /*****************************************************************************/
-int xrdp_listen_delete_pro(struct xrdp_listen* self, struct xrdp_process* pro)
+int APP_CC
+xrdp_listen_delete_pro(struct xrdp_listen* self, struct xrdp_process* pro)
 {
   int i;
 
@@ -122,7 +127,8 @@ int xrdp_listen_delete_pro(struct xrdp_listen* self, struct xrdp_process* pro)
 
 /*****************************************************************************/
 /* i can't get stupid in_val to work, hum using global var for now */
-THREAD_RV THREAD_CC xrdp_process_run(void* in_val)
+THREAD_RV THREAD_CC
+xrdp_process_run(void* in_val)
 {
   DEBUG(("process started\n\r"));
   xrdp_process_main_loop(g_process);
@@ -132,7 +138,8 @@ THREAD_RV THREAD_CC xrdp_process_run(void* in_val)
 
 /*****************************************************************************/
 /* wait for incoming connections */
-int xrdp_listen_main_loop(struct xrdp_listen* self)
+int APP_CC
+xrdp_listen_main_loop(struct xrdp_listen* self)
 {
   int error;
 

@@ -24,7 +24,8 @@
 
 /*****************************************************************************/
 /* returns boolean */
-int rect_contains_pt(struct xrdp_rect* in, int x, int y)
+int APP_CC
+rect_contains_pt(struct xrdp_rect* in, int x, int y)
 {
   if (x < in->left)
   {
@@ -46,8 +47,9 @@ int rect_contains_pt(struct xrdp_rect* in, int x, int y)
 }
 
 /*****************************************************************************/
-int rect_intersect(struct xrdp_rect* in1, struct xrdp_rect* in2,
-                   struct xrdp_rect* out)
+int APP_CC
+rect_intersect(struct xrdp_rect* in1, struct xrdp_rect* in2,
+               struct xrdp_rect* out)
 {
   int rv;
   struct xrdp_rect dumby;
@@ -84,7 +86,8 @@ int rect_intersect(struct xrdp_rect* in1, struct xrdp_rect* in2,
 /*****************************************************************************/
 /* adjust the bounds to fit in the bitmap */
 /* return false if there is nothing to draw else return true */
-int check_bounds(struct xrdp_bitmap* b, int* x, int* y, int* cx, int* cy)
+int APP_CC
+check_bounds(struct xrdp_bitmap* b, int* x, int* y, int* cx, int* cy)
 {
   if (*x >= b->width)
   {
@@ -221,43 +224,46 @@ int check_bounds(struct xrdp_bitmap* b, int* x, int* y, int* cx, int* cy)
 */
 
 /* non shift chars */
-char chars1[] = {'\0', '\0', '1',  '2',  '3',  '4',  '5',  '6',
-                 '7',  '8',  '9',  '0',  '-',  '=',  '\0', '\0',
-                 'q',  'w',  'e',  'r',  't',  'y',  'u',  'i',
-                 'o',  'p',  '[',  ']',  '\0', '\0', 'a',  's',
-                 'd',  'f',  'g',  'h',  'j',  'k',  'l',  ';',
-                 '\'', '`',  '\0', '\\', 'z',  'x',  'c',  'v',
-                 'b',  'n',  'm',  ',',  '.',  '/',  '\0', '*',
-                 '\0', ' ',  '\0', '\0', '\0', '\0', '\0', '\0',
-                 '\0', '\0', '\0', '\0', '\0', '\0', '\0', '7',
-                 '8',  '9',  '-',  '4',  '5',  '6',  '+',  '1',
-                 '2',  '3',  '0',  '.',  '\0', '\0', '\0', '\0',
-                 '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
-                 '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
-                 '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
-                 '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
-                 '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0'};
+static char chars1[] =
+{'\0', '\0', '1',  '2',  '3',  '4',  '5',  '6',
+  '7',  '8',  '9',  '0',  '-',  '=',  '\0', '\0',
+  'q',  'w',  'e',  'r',  't',  'y',  'u',  'i',
+  'o',  'p',  '[',  ']',  '\0', '\0', 'a',  's',
+  'd',  'f',  'g',  'h',  'j',  'k',  'l',  ';',
+  '\'', '`',  '\0', '\\', 'z',  'x',  'c',  'v',
+  'b',  'n',  'm',  ',',  '.',  '/',  '\0', '*',
+  '\0', ' ',  '\0', '\0', '\0', '\0', '\0', '\0',
+  '\0', '\0', '\0', '\0', '\0', '\0', '\0', '7',
+  '8',  '9',  '-',  '4',  '5',  '6',  '+',  '1',
+  '2',  '3',  '0',  '.',  '\0', '\0', '\0', '\0',
+  '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
+  '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
+  '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
+  '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
+  '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0'};
 /* shift chars */
-char chars2[] = {'\0', '\0', '!',  '@',  '#',  '$',  '%',  '^',
-                 '&',  '*',  '(',  ')',  '_',  '+',  '\0', '\0',
-                 'Q',  'W',  'E',  'R',  'T',  'Y',  'U',  'I',
-                 'O',  'P',  '{',  '}',  '\0', '\0', 'A',  'S',
-                 'D',  'F',  'G',  'H',  'J',  'K',  'L',  ':',
-                 '"',  '~', '\0', '|',  'Z',  'X',  'C',  'V',
-                 'B',  'N',  'M',  '<',  '>',  '?',  '\0', '*',
-                 '\0', ' ',  '\0', '\0', '\0', '\0', '\0', '\0',
-                 '\0', '\0', '\0', '\0', '\0', '\0', '\0', '7',
-                 '8',  '9',  '-',  '4',  '5',  '6',  '+',  '1',
-                 '2',  '3',  '0',  '.',  '\0', '\0', '\0', '\0',
-                 '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
-                 '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
-                 '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
-                 '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
-                 '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0'};
+static char chars2[] =
+{'\0', '\0', '!',  '@',  '#',  '$',  '%',  '^',
+  '&',  '*',  '(',  ')',  '_',  '+',  '\0', '\0',
+  'Q',  'W',  'E',  'R',  'T',  'Y',  'U',  'I',
+  'O',  'P',  '{',  '}',  '\0', '\0', 'A',  'S',
+  'D',  'F',  'G',  'H',  'J',  'K',  'L',  ':',
+  '"',  '~', '\0', '|',  'Z',  'X',  'C',  'V',
+  'B',  'N',  'M',  '<',  '>',  '?',  '\0', '*',
+ '\0', ' ',  '\0', '\0', '\0', '\0', '\0', '\0',
+ '\0', '\0', '\0', '\0', '\0', '\0', '\0', '7',
+  '8',  '9',  '-',  '4',  '5',  '6',  '+',  '1',
+  '2',  '3',  '0',  '.',  '\0', '\0', '\0', '\0',
+ '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
+ '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
+ '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
+ '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
+ '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0'};
 
 /*****************************************************************************/
-char get_char_from_scan_code(int device_flags, int scan_code, int* keys,
-                             int caps_lock, int num_lock, int scroll_lock)
+char APP_CC
+get_char_from_scan_code(int device_flags, int scan_code, int* keys,
+                        int caps_lock, int num_lock, int scroll_lock)
 {
   char rv;
   int shift;
@@ -321,7 +327,8 @@ char get_char_from_scan_code(int device_flags, int scan_code, int* keys,
 /*****************************************************************************/
 /* add a ch at index position in text, index starts at 0 */
 /* if index = -1 add it to the end */
-int add_char_at(char* text, char ch, int index)
+int APP_CC
+add_char_at(char* text, char ch, int index)
 {
   int len;
   int i;
@@ -345,7 +352,8 @@ int add_char_at(char* text, char ch, int index)
 /*****************************************************************************/
 /* remove a ch at index position in text, index starts at 0 */
 /* if index = -1 remove it from the end */
-int remove_char_at(char* text, int index)
+int APP_CC
+remove_char_at(char* text, int index)
 {
   int len;
   int i;
@@ -369,7 +377,8 @@ int remove_char_at(char* text, int index)
 }
 
 /*****************************************************************************/
-int set_string(char** in_str, char* in)
+int APP_CC
+set_string(char** in_str, char* in)
 {
   if (in_str == 0)
   {

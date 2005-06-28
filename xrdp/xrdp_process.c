@@ -23,7 +23,8 @@
 #include "xrdp.h"
 
 /*****************************************************************************/
-struct xrdp_process* xrdp_process_create(struct xrdp_listen* owner)
+struct xrdp_process* APP_CC
+xrdp_process_create(struct xrdp_listen* owner)
 {
   struct xrdp_process* self;
 
@@ -33,87 +34,50 @@ struct xrdp_process* xrdp_process_create(struct xrdp_listen* owner)
 }
 
 /*****************************************************************************/
-void xrdp_process_delete(struct xrdp_process* self)
+void APP_CC
+xrdp_process_delete(struct xrdp_process* self)
 {
   if (self == 0)
   {
     return;
   }
-  xrdp_rdp_delete(self->rdp_layer);
-  xrdp_orders_delete(self->orders);
+  libxrdp_exit(self->session);
   xrdp_wm_delete(self->wm);
   g_free(self);
 }
 
 /*****************************************************************************/
-int xrdp_process_loop(struct xrdp_process* self, struct stream* s)
+int APP_CC
+xrdp_process_loop(struct xrdp_process* self)
 {
-  int cont;
   int rv;
-  int code;
 
-  code = 0;
   rv = 0;
-  cont = 1;
-  while (cont && !self->term)
+  if (self->session != 0)
   {
-    if (xrdp_rdp_recv(self->rdp_layer, s, &code) != 0)
-    {
-      rv = 1;
-      break;
-    }
-    DEBUG(("xrdp_process_main_loop code %d\n\r", code));
-    switch (code)
-    {
-      case -1:
-        xrdp_rdp_send_demand_active(self->rdp_layer);
-        break;
-      case 0:
-        break;
-      case RDP_PDU_CONFIRM_ACTIVE: /* 3 */
-        xrdp_rdp_process_confirm_active(self->rdp_layer, s);
-        break;
-      case RDP_PDU_DATA: /* 7 */
-        if (xrdp_rdp_process_data(self->rdp_layer, s) != 0)
-        {
-          DEBUG(("xrdp_rdp_process_data returned non zero\n\r"));
-          cont = 0;
-          self->term = 1;
-        }
-        break;
-      default:
-        g_printf("unknown in xrdp_process_main_loop\n\r");
-        break;
-    }
-    if (cont)
-    {
-      cont = s->next_packet < s->end;
-    }
+    rv = libxrdp_process_data(self->session);
   }
-  if (self->rdp_layer->up_and_running && self->wm == 0 && rv == 0)
+  if (self->wm == 0 && self->session->up_and_running && rv == 0)
   {
-    /* only do this once */
-    DEBUG(("xrdp_process_main_loop up and running\n\r"));
-    self->orders = xrdp_orders_create(self, self->rdp_layer);
-    self->wm = xrdp_wm_create(self, &self->rdp_layer->client_info);
+    DEBUG(("calling xrdp_wm_init and creating wm"));
+    self->wm = xrdp_wm_create(self, self->session->client_info);
     xrdp_wm_init(self->wm);
   }
   return rv;
 }
 
 /*****************************************************************************/
-int xrdp_process_main_loop(struct xrdp_process* self)
+int APP_CC
+xrdp_process_main_loop(struct xrdp_process* self)
 {
-#ifndef XRDP_LIB
   int sel_r;
-  struct stream* s;
 
-  make_stream(s);
   self->status = 1;
-  self->rdp_layer = xrdp_rdp_create(self, self->sck);
+  self->session = libxrdp_init((long)self, self->sck);
+  self->session->callback = callback;
   g_tcp_set_non_blocking(self->sck);
   g_tcp_set_no_delay(self->sck);
-  if (xrdp_rdp_incoming(self->rdp_layer) == 0)
+  if (libxrdp_process_incomming(self->session) == 0)
   {
     while (!g_is_term() && !self->term)
     {
@@ -128,8 +92,7 @@ int xrdp_process_main_loop(struct xrdp_process* self)
       }
       if (sel_r & 1)
       {
-        init_stream(s, 8192);
-        if (xrdp_process_loop(self, s) != 0)
+        if (xrdp_process_loop(self) != 0)
         {
           break;
         }
@@ -150,22 +113,23 @@ int xrdp_process_main_loop(struct xrdp_process* self)
         }
       }
     }
+    libxrdp_disconnect(self->session);
+    g_sleep(500);
   }
-  if (self->wm->mod != 0)
+  if (self->wm != 0)
   {
-    if (self->wm->mod->mod_end != 0)
+    if (self->wm->mod != 0)
     {
-      self->wm->mod->mod_end(self->wm->mod);
+      if (self->wm->mod->mod_end != 0)
+      {
+        self->wm->mod->mod_end(self->wm->mod);
+      }
     }
   }
-  xrdp_rdp_disconnect(self->rdp_layer);
-  g_sleep(500);
-  xrdp_rdp_delete(self->rdp_layer);
-  self->rdp_layer = 0;
+  libxrdp_exit(self->session);
+  self->session = 0;
   g_tcp_close(self->sck);
   self->status = -1;
   xrdp_listen_delete_pro(self->lis_layer, self);
-  free_stream(s);
-#endif
   return 0;
 }

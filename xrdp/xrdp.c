@@ -20,13 +20,26 @@
 
 */
 
+#if defined(_WIN32)
+#include <windows.h>
+#else
+#include <pthread.h>
+#endif
 #include "xrdp.h"
 
 static struct xrdp_listen* g_listen = 0;
 static int g_threadid = 0; /* main threadid */
 
+#if defined(_WIN32)
+static CRITICAL_SECTION g_term_mutex;
+#else
+static pthread_mutex_t g_term_mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
+static int g_term = 0;
+
 /*****************************************************************************/
-void shutdown(int sig)
+void
+xrdp_shutdown(int sig)
 {
   struct xrdp_listen* listen;
 
@@ -43,19 +56,70 @@ void shutdown(int sig)
     g_set_term(1);
     g_sleep(1000);
     xrdp_listen_delete(listen);
-    g_exit_system();
+#if defined(_WIN32)
+    WSACleanup();
+    DeleteCriticalSection(&g_term_mutex);
+#endif
   }
 }
 
 /*****************************************************************************/
-int main(int argc, char** argv)
+int
+g_is_term(void)
 {
-  g_init_system();
+  int rv;
+
+#if defined(_WIN32)
+  EnterCriticalSection(&g_term_mutex);
+  rv = g_term;
+  LeaveCriticalSection(&g_term_mutex);
+#else
+  pthread_mutex_lock(&g_term_mutex);
+  rv = g_term;
+  pthread_mutex_unlock(&g_term_mutex);
+#endif
+  return rv;
+}
+
+/*****************************************************************************/
+void
+g_set_term(int in_val)
+{
+#if defined(_WIN32)
+  EnterCriticalSection(&g_term_mutex);
+  g_term = in_val;
+  LeaveCriticalSection(&g_term_mutex);
+#else
+  pthread_mutex_lock(&g_term_mutex);
+  g_term = in_val;
+  pthread_mutex_unlock(&g_term_mutex);
+#endif
+}
+
+/*****************************************************************************/
+void
+pipe_sig(int sig_num)
+{
+  /* do nothing */
+  g_printf("got SIGPIPE(%d)\n\r", sig_num);
+}
+
+/*****************************************************************************/
+int
+main(int argc, char** argv)
+{
+#if defined(_WIN32)
+  WSADATA w;
+
+  WSAStartup(2, &w);
+  InitializeCriticalSection(&g_term_mutex);
+#endif
   g_threadid = g_get_threadid();
   g_listen = xrdp_listen_create();
-  g_signal(2, shutdown);
-  g_signal(9, shutdown);
-  g_signal(15, shutdown);
+  g_signal(2, xrdp_shutdown);
+  g_signal(9, xrdp_shutdown);
+  g_signal(13, pipe_sig); /* sig pipe */
+  g_signal(15, xrdp_shutdown);
   xrdp_listen_main_loop(g_listen);
   return 0;
 }

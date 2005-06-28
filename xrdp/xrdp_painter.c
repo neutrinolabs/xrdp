@@ -23,20 +23,22 @@
 #include "xrdp.h"
 
 /*****************************************************************************/
-struct xrdp_painter* xrdp_painter_create(struct xrdp_wm* wm)
+struct xrdp_painter* APP_CC
+xrdp_painter_create(struct xrdp_wm* wm, struct xrdp_session* session)
 {
   struct xrdp_painter* self;
 
   self = (struct xrdp_painter*)g_malloc(sizeof(struct xrdp_painter), 1);
   self->wm = wm;
-  self->orders = wm->orders;
+  self->session = session;
   self->rop = 0xcc; /* copy */
   self->clip_children = 1;
   return self;
 }
 
 /*****************************************************************************/
-void xrdp_painter_delete(struct xrdp_painter* self)
+void APP_CC
+xrdp_painter_delete(struct xrdp_painter* self)
 {
   if (self == 0)
   {
@@ -47,21 +49,24 @@ void xrdp_painter_delete(struct xrdp_painter* self)
 }
 
 /*****************************************************************************/
-int xrdp_painter_begin_update(struct xrdp_painter* self)
+int APP_CC
+xrdp_painter_begin_update(struct xrdp_painter* self)
 {
-  xrdp_orders_init(self->orders);
+  libxrdp_orders_init(self->session);
   return 0;
 }
 
 /*****************************************************************************/
-int xrdp_painter_end_update(struct xrdp_painter* self)
+int APP_CC
+xrdp_painter_end_update(struct xrdp_painter* self)
 {
-  xrdp_orders_send(self->orders);
+  libxrdp_orders_send(self->session);
   return 0;
 }
 
 /*****************************************************************************/
-int xrdp_painter_font_needed(struct xrdp_painter* self)
+int APP_CC
+xrdp_painter_font_needed(struct xrdp_painter* self)
 {
   if (self->font == 0)
   {
@@ -72,8 +77,9 @@ int xrdp_painter_font_needed(struct xrdp_painter* self)
 
 /*****************************************************************************/
 /* returns boolean, true if there is something to draw */
-int xrdp_painter_clip_adj(struct xrdp_painter* self, int* x, int* y,
-                          int* cx, int* cy)
+int APP_CC
+xrdp_painter_clip_adj(struct xrdp_painter* self, int* x, int* y,
+                      int* cx, int* cy)
 {
   int dx;
   int dy;
@@ -122,8 +128,9 @@ int xrdp_painter_clip_adj(struct xrdp_painter* self, int* x, int* y,
 }
 
 /*****************************************************************************/
-int xrdp_painter_set_clip(struct xrdp_painter* self,
-                          int x, int y, int cx, int cy)
+int APP_CC
+xrdp_painter_set_clip(struct xrdp_painter* self,
+                      int x, int y, int cx, int cy)
 {
   self->use_clip = 1;
   self->clip.left = x;
@@ -134,14 +141,16 @@ int xrdp_painter_set_clip(struct xrdp_painter* self,
 }
 
 /*****************************************************************************/
-int xrdp_painter_clr_clip(struct xrdp_painter* self)
+int APP_CC
+xrdp_painter_clr_clip(struct xrdp_painter* self)
 {
   self->use_clip = 0;
   return 0;
 }
 
 /*****************************************************************************/
-int xrdp_painter_rop(int rop, int src, int dst)
+int APP_CC
+xrdp_painter_rop(int rop, int src, int dst)
 {
   switch (rop & 0x0f)
   {
@@ -167,9 +176,10 @@ int xrdp_painter_rop(int rop, int src, int dst)
 
 /*****************************************************************************/
 /* fill in an area of the screen with one color */
-int xrdp_painter_fill_rect(struct xrdp_painter* self,
-                           struct xrdp_bitmap* bitmap,
-                           int x, int y, int cx, int cy)
+int APP_CC
+xrdp_painter_fill_rect(struct xrdp_painter* self,
+                       struct xrdp_bitmap* bitmap,
+                       int x, int y, int cx, int cy)
 {
   int i;
   struct xrdp_region* region;
@@ -201,10 +211,10 @@ int xrdp_painter_fill_rect(struct xrdp_painter* self,
       DEBUG(("sending rect order %d %d %d %d\n\r",
              rect.left, rect.top,
              rect.right, rect.bottom));
-      xrdp_orders_rect(self->orders, rect.left, rect.top,
-                       rect.right - rect.left,
-                       rect.bottom - rect.top,
-                       self->fg_color, 0);
+      libxrdp_orders_rect(self->session, rect.left, rect.top,
+                          rect.right - rect.left,
+                          rect.bottom - rect.top,
+                          self->fg_color, 0);
     }
     i++;
   }
@@ -215,9 +225,10 @@ int xrdp_painter_fill_rect(struct xrdp_painter* self,
 /*****************************************************************************/
 /* fill in an area of the screen with opcodes and patterns */
 /* todo, this needs work */
-int xrdp_painter_fill_rect2(struct xrdp_painter* self,
-                            struct xrdp_bitmap* bitmap,
-                            int x, int y, int cx, int cy)
+int APP_CC
+xrdp_painter_fill_rect2(struct xrdp_painter* self,
+                        struct xrdp_bitmap* bitmap,
+                        int x, int y, int cx, int cy)
 {
   int i;
   struct xrdp_region* region;
@@ -249,11 +260,11 @@ int xrdp_painter_fill_rect2(struct xrdp_painter* self,
       DEBUG(("sending rect2 order %d %d %d %d\n\r",
              rect.left, rect.top,
              rect.right, rect.bottom));
-      xrdp_orders_pat_blt(self->orders, rect.left, rect.top,
-                          rect.right - rect.left,
-                          rect.bottom - rect.top,
-                          self->rop, self->bg_color, self->fg_color,
-                          &self->brush, 0);
+      libxrdp_orders_pat_blt(self->session, rect.left, rect.top,
+                             rect.right - rect.left,
+                             rect.bottom - rect.top,
+                             self->rop, self->bg_color, self->fg_color,
+                             &self->brush, 0);
     }
     i++;
   }
@@ -265,10 +276,11 @@ int xrdp_painter_fill_rect2(struct xrdp_painter* self,
 #define SSH 60
 
 /*****************************************************************************/
-int xrdp_painter_draw_bitmap(struct xrdp_painter* self,
-                             struct xrdp_bitmap* bitmap,
-                             struct xrdp_bitmap* to_draw,
-                             int x, int y, int cx, int cy)
+int APP_CC
+xrdp_painter_draw_bitmap(struct xrdp_painter* self,
+                         struct xrdp_bitmap* bitmap,
+                         struct xrdp_bitmap* to_draw,
+                         int x, int y, int cx, int cy)
 {
   int i;
   int j;
@@ -395,9 +407,9 @@ int xrdp_painter_draw_bitmap(struct xrdp_painter* self,
                          cache_id, palette_id,
                          x1, y1, w, h, self->rop, srcx, srcy,
                          cache_idx));
-                  xrdp_orders_mem_blt(self->orders, cache_id, palette_id,
-                                      x1, y1, w, h, self->rop, srcx, srcy,
-                                      cache_idx, &rect1);
+                  libxrdp_orders_mem_blt(self->session, cache_id, palette_id,
+                                         x1, y1, w, h, self->rop, srcx, srcy,
+                                         cache_idx, &rect1);
                 }
               }
             }
@@ -412,7 +424,7 @@ int xrdp_painter_draw_bitmap(struct xrdp_painter* self,
   else /* no bitmap cache */
   {
     /* make sure there is no waiting orders */
-    xrdp_orders_force_send(self->orders);
+    libxrdp_orders_force_send(self->session);
     k = 0;
     while (xrdp_region_get_rect(region, k, &rect) == 0)
     {
@@ -432,12 +444,13 @@ int xrdp_painter_draw_bitmap(struct xrdp_painter* self,
 }
 
 /*****************************************************************************/
-int xrdp_painter_text_width(struct xrdp_painter* self, char* text)
+int APP_CC
+xrdp_painter_text_width(struct xrdp_painter* self, char* text)
 {
   int index;
   int rv;
   int len;
-  struct xrdp_font_item* font_item;
+  struct xrdp_font_char* font_item;
 
   xrdp_painter_font_needed(self);
   if (text == 0)
@@ -455,12 +468,13 @@ int xrdp_painter_text_width(struct xrdp_painter* self, char* text)
 }
 
 /*****************************************************************************/
-int xrdp_painter_text_height(struct xrdp_painter* self, char* text)
+int APP_CC
+xrdp_painter_text_height(struct xrdp_painter* self, char* text)
 {
   int index;
   int rv;
   int len;
-  struct xrdp_font_item* font_item;
+  struct xrdp_font_char* font_item;
 
   xrdp_painter_font_needed(self);
   if (text == 0)
@@ -478,9 +492,10 @@ int xrdp_painter_text_height(struct xrdp_painter* self, char* text)
 }
 
 /*****************************************************************************/
-int xrdp_painter_draw_text(struct xrdp_painter* self,
-                           struct xrdp_bitmap* bitmap,
-                           int x, int y, char* text)
+int APP_CC
+xrdp_painter_draw_text(struct xrdp_painter* self,
+                       struct xrdp_bitmap* bitmap,
+                       int x, int y, char* text)
 {
   int i;
   int f;
@@ -500,7 +515,7 @@ int xrdp_painter_draw_text(struct xrdp_painter* self,
   struct xrdp_rect draw_rect;
   struct xrdp_bitmap* b;
   struct xrdp_font* font;
-  struct xrdp_font_item* font_item;
+  struct xrdp_font_char* font_item;
 
   len = g_strlen(text);
   if (len < 1)
@@ -586,11 +601,11 @@ int xrdp_painter_draw_text(struct xrdp_painter* self,
                0, 0, 0, 0, x1, y1, len,
                draw_rect.left, draw_rect.top,
                draw_rect.right, draw_rect.bottom));
-        xrdp_orders_text(self->orders, f, flags, 0,
-                         font->color, 0,
-                         x - 1, y - 1, x + total_width, y + total_height,
-                         0, 0, 0, 0,
-                         x1, y1, data, len * 2, &draw_rect);
+        libxrdp_orders_text(self->session, f, flags, 0,
+                            font->color, 0,
+                            x - 1, y - 1, x + total_width, y + total_height,
+                            0, 0, 0, 0,
+                            x1, y1, data, len * 2, &draw_rect);
       }
     }
     k++;

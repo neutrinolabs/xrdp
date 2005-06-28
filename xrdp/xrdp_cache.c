@@ -23,15 +23,16 @@
 #include "xrdp.h"
 
 /*****************************************************************************/
-struct xrdp_cache* xrdp_cache_create(struct xrdp_wm* owner,
-                                     struct xrdp_orders* orders,
-                                     struct xrdp_client_info* client_info)
+struct xrdp_cache* APP_CC
+xrdp_cache_create(struct xrdp_wm* owner,
+                  struct xrdp_session* session,
+                  struct xrdp_client_info* client_info)
 {
   struct xrdp_cache* self;
 
   self = (struct xrdp_cache*)g_malloc(sizeof(struct xrdp_cache), 1);
   self->wm = owner;
-  self->orders = orders;
+  self->session = session;
   self->use_bitmap_comp = client_info->use_bitmap_comp;
   self->cache1_entries = client_info->cache1_entries;
   self->cache1_size = client_info->cache1_size;
@@ -44,7 +45,8 @@ struct xrdp_cache* xrdp_cache_create(struct xrdp_wm* owner,
 }
 
 /*****************************************************************************/
-void xrdp_cache_delete(struct xrdp_cache* self)
+void APP_CC
+xrdp_cache_delete(struct xrdp_cache* self)
 {
   int i;
   int j;
@@ -74,7 +76,8 @@ void xrdp_cache_delete(struct xrdp_cache* self)
 
 /*****************************************************************************/
 /* returns cache id */
-int xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
+int APP_CC
+xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
 {
   int i;
   int j;
@@ -205,11 +208,15 @@ int xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
   self->bitmap_items[cache_id][cache_idx].stamp = self->bitmap_stamp;
   if (self->use_bitmap_comp)
   {
-    xrdp_orders_send_bitmap(self->orders, bitmap, cache_id, cache_idx);
+    libxrdp_orders_send_bitmap(self->session, bitmap->width,
+                               bitmap->height, bitmap->bpp,
+                               bitmap->data, cache_id, cache_idx);
   }
   else
   {
-    xrdp_orders_send_raw_bitmap(self->orders, bitmap, cache_id, cache_idx);
+    libxrdp_orders_send_raw_bitmap(self->session, bitmap->width,
+                                   bitmap->height, bitmap->bpp,
+                                   bitmap->data, cache_id, cache_idx);
   }
   return MAKELONG(cache_id, cache_idx);
 }
@@ -217,7 +224,8 @@ int xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
 /*****************************************************************************/
 /* not used */
 /* not sure how to use a palette in rdp */
-int xrdp_cache_add_palette(struct xrdp_cache* self, int* palette)
+int APP_CC
+xrdp_cache_add_palette(struct xrdp_cache* self, int* palette)
 {
   int i;
   int oldest;
@@ -260,13 +268,14 @@ int xrdp_cache_add_palette(struct xrdp_cache* self, int* palette)
   /* set, send palette and return */
   g_memcpy(self->palette_items[index].palette, palette, 256 * sizeof(int));
   self->palette_items[index].stamp = self->palette_stamp;
-  xrdp_orders_send_palette(self->orders, palette, index);
+  libxrdp_orders_send_palette(self->session, palette, index);
   return index;
 }
 
 /*****************************************************************************/
-int xrdp_cache_add_char(struct xrdp_cache* self,
-                        struct xrdp_font_item* font_item)
+int APP_CC
+xrdp_cache_add_char(struct xrdp_cache* self,
+                    struct xrdp_font_char* font_item)
 {
   int i;
   int j;
@@ -274,7 +283,7 @@ int xrdp_cache_add_char(struct xrdp_cache* self,
   int f;
   int c;
   int datasize;
-  struct xrdp_font_item* fi;
+  struct xrdp_font_char* fi;
 
   self->char_stamp++;
   /* look for match */
@@ -318,7 +327,7 @@ int xrdp_cache_add_char(struct xrdp_cache* self,
   fi->width = font_item->width;
   fi->height = font_item->height;
   self->char_items[f][c].stamp = self->char_stamp;
-  xrdp_orders_send_font(self->orders, fi, f, c);
+  libxrdp_orders_send_font(self->session, fi, f, c);
   return MAKELONG(f, c);
 }
 
@@ -327,8 +336,9 @@ int xrdp_cache_add_char(struct xrdp_cache* self,
    client if it finds it
    returns the index in the cache
    does not take ownership of pointer_item */
-int xrdp_cache_add_pointer(struct xrdp_cache* self,
-                           struct xrdp_pointer_item* pointer_item)
+int APP_CC
+xrdp_cache_add_pointer(struct xrdp_cache* self,
+                       struct xrdp_pointer_item* pointer_item)
 {
   int i;
   int oldest;
@@ -385,9 +395,10 @@ int xrdp_cache_add_pointer(struct xrdp_cache* self,
 }
 
 /*****************************************************************************/
-int xrdp_cache_add_pointer_static(struct xrdp_cache* self,
-                                  struct xrdp_pointer_item* pointer_item,
-                                  int index)
+int APP_CC
+xrdp_cache_add_pointer_static(struct xrdp_cache* self,
+                              struct xrdp_pointer_item* pointer_item,
+                              int index)
 {
 
   if (self == 0)
