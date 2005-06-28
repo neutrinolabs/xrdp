@@ -20,23 +20,37 @@
 
 */
 
+#if !defined(OS_CALLS_H)
+#define OS_CALLS_H
+
 int g_init_system(void);
 int g_exit_system(void);
-void g_printf(char *format, ...);
-void g_sprintf(char* dest, char* format, ...);
-void g_hexdump(char* p, int len);
-void* g_malloc(int size, int zero);
-void* g_malloc1(int size, int zero);
-void g_free(void* ptr);
-void g_free1(void* ptr);
-void g_memset(void* ptr, int val, int size);
-void g_memcpy(void* d_ptr, const void* s_ptr, int size);
-int g_getchar(void);
-int g_tcp_set_no_delay(int sck);
-int g_tcp_socket(void);
-int g_tcp_local_socket(void);
-void g_tcp_close(int sck);
-int g_tcp_connect(int sck, char* address, char* port);
+void
+g_printf(char *format, ...);
+void
+g_sprintf(char* dest, char* format, ...);
+void
+g_hexdump(char* p, int len);
+void*
+g_malloc(int size, int zero);
+void
+g_free(void* ptr);
+void
+g_memset(void* ptr, int val, int size);
+void
+g_memcpy(void* d_ptr, const void* s_ptr, int size);
+int
+g_getchar(void);
+int
+g_tcp_set_no_delay(int sck);
+int
+g_tcp_socket(void);
+int
+g_tcp_local_socket(void);
+void
+g_tcp_close(int sck);
+int
+g_tcp_connect(int sck, char* address, char* port);
 int g_tcp_force_send(int sck, char* data, int len);
 int g_tcp_force_recv(int sck, char* data, int len);
 int g_tcp_set_non_blocking(int sck);
@@ -48,26 +62,7 @@ int g_tcp_recv(int sck, void* ptr, int len, int flags);
 int g_tcp_send(int sck, void* ptr, int len, int flags);
 int g_tcp_last_error_would_block(int sck);
 int g_tcp_select(int sck1, int sck2);
-int g_is_term(void);
-void g_set_term(int in_val);
 void g_sleep(int msecs);
-int g_thread_create(THREAD_RV (THREAD_CC * start_routine)(void*), void* arg);
-int g_get_threadid(void);
-void* g_rc4_info_create(void);
-void g_rc4_info_delete(void* rc4_info);
-void g_rc4_set_key(void* rc4_info, char* key, int len);
-void g_rc4_crypt(void* rc4_info, char* data, int len);
-void* g_sha1_info_create(void);
-void g_sha1_info_delete(void* sha1_info);
-void g_sha1_clear(void* sha1_info);
-void g_sha1_transform(void* sha1_info, char* data, int len);
-void g_sha1_complete(void* sha1_info, char* data);
-void* g_md5_info_create(void);
-void g_md5_info_delete(void* md5_info);
-void g_md5_clear(void* md5_info);
-void g_md5_transform(void* md5_info, char* data, int len);
-void g_md5_complete(void* md5_info, char* data);
-int g_mod_exp(char* out, char* in, char* mod, char* exp);
 void g_random(char* data, int len);
 int g_abs(int i);
 int g_memcmp(void* s1, void* s2, int len);
@@ -89,3 +84,5 @@ int g_free_library(long lib);
 void* g_get_proc_address(long lib, char* name);
 int g_system(char* aexec);
 void g_signal(int sig_num, void (*func)(int));
+
+#endif

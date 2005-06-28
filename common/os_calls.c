@@ -20,9 +20,6 @@
 
    put all the os / arch define in here you want
 
-   if you want pthread calls define USE_PTHREAD in makefile
-   if you want openssl calls define USE_OPENSSL in makefile
-
 */
 
 #if defined(_WIN32)
@@ -49,218 +46,16 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#if defined(USE_OPENSSL)
-#include <openssl/rc4.h>
-#include <openssl/md5.h>
-#include <openssl/sha.h>
-#include <openssl/bn.h>
-#endif
-
-#if defined(USE_PTHREAD)
-#include <pthread.h>
-#endif
-
-/*#define MEMLEAK*/
-
-#if defined(_WIN32)
-static CRITICAL_SECTION g_term_mutex;
-static int g_term = 0;
-#elif defined(USE_PTHREAD)
-static pthread_mutex_t g_term_mutex = PTHREAD_MUTEX_INITIALIZER;
-static int g_term = 0;
-#endif
-
-#if defined(MEMLEAK)
-static int g_memsize = 0;
-static int g_memid = 0;
-static struct list* g_memlist = 0;
-
-/* for memory debugging */
-struct mem
-{
-  int size;
-  int id;
-};
-
-/* list */
-struct list
-{
-  long* items;
-  int count;
-  int alloc_size;
-  int grow_by;
-  int auto_free;
-};
-
-/*****************************************************************************/
-struct list* list_create(void)
-{
-  struct list* self;
-
-  self = (struct list*)malloc(sizeof(struct list));
-  memset(self, 0, sizeof(struct list));
-  self->grow_by = 10;
-  self->alloc_size = 10;
-  self->items = (long*)malloc(sizeof(long) * 10);
-  memset(self->items, 0, sizeof(long) * 10);
-  return self;
-}
-
-/*****************************************************************************/
-void list_delete(struct list* self)
-{
-  int i;
-
-  if (self == 0)
-  {
-    return;
-  }
-  if (self->auto_free)
-  {
-    for (i = 0; i < self->count; i++)
-    {
-      free((void*)self->items[i]);
-      self->items[i] = 0;
-    }
-  }
-  free(self->items);
-  free(self);
-}
-
-/*****************************************************************************/
-void list_add_item(struct list* self, long item)
-{
-  long* p;
-  int i;
-
-  if (self->count >= self->alloc_size)
-  {
-    i = self->alloc_size;
-    self->alloc_size += self->grow_by;
-    p = (long*)malloc(sizeof(long) * self->alloc_size);
-    memset(p, 0, sizeof(long) * self->alloc_size);
-    memcpy(p, self->items, sizeof(long) * i);
-    free(self->items);
-    self->items = p;
-  }
-  self->items[self->count] = item;
-  self->count++;
-}
-
-/*****************************************************************************/
-int list_index_of(struct list* self, long item)
-{
-  int i;
-
-  for (i = 0; i < self->count; i++)
-  {
-    if (self->items[i] == item)
-    {
-      return i;
-    }
-  }
-  return -1;
-}
-
-/*****************************************************************************/
-void list_remove_item(struct list* self, int index)
-{
-  int i;
-
-  if (index >= 0 && index < self->count)
-  {
-    if (self->auto_free)
-    {
-      free((void*)self->items[index]);
-      self->items[index] = 0;
-    }
-    for (i = index; i < (self->count - 1); i++)
-    {
-      self->items[i] = self->items[i + 1];
-    }
-    self->count--;
-  }
-}
-
-/*****************************************************************************/
-long list_get_item(struct list* self, int index)
-{
-  if (index < 0 || index >= self->count)
-  {
-    return 0;
-  }
-  return self->items[index];
-}
-
-#endif
-
 /* forward declarations */
-void g_printf(char* format, ...);
-void g_pipe_sig(int sig_num);
+void
+g_printf(char* format, ...);
+void
+g_pipe_sig(int sig_num);
 
 /*****************************************************************************/
-int g_init_system(void)
+void*
+g_malloc(int size, int zero)
 {
-#if defined(_WIN32)
-  WSADATA w;
-
-  WSAStartup(2, &w);
-  InitializeCriticalSection(&g_term_mutex);
-#else
-  signal(SIGPIPE, g_pipe_sig);
-#endif
-#if defined(MEMLEAK)
-  g_memlist = list_create();
-#endif
-  return 0;
-}
-
-/*****************************************************************************/
-int g_exit_system(void)
-{
-#if defined(_WIN32)
-  WSACleanup();
-  DeleteCriticalSection(&g_term_mutex);
-#endif
-#if defined(MEMLEAK)
-  int i;
-  struct mem* p;
-
-  for (i = 0; i < g_memlist->count; i++)
-  {
-    p = (struct mem*)list_get_item(g_memlist, i);
-    g_printf("leak size %d id %d\n\r", p->size, p->id);
-  }
-  g_printf("mem %d\n\r", g_memsize);
-  list_delete(g_memlist);
-  g_memlist = 0;
-#endif
-  return 0;
-}
-
-/*****************************************************************************/
-void* g_malloc(int size, int zero)
-{
-#if defined(MEMLEAK)
-  char* rv;
-  struct mem* p;
-
-  rv = (char*)malloc(size + sizeof(struct mem));
-  if (zero)
-  {
-    memset(rv, 0, size + sizeof(struct mem));
-  }
-  g_memsize += size;
-  p = (struct mem*)rv;
-  p->size = size;
-  p->id = g_memid;
-  if (g_memlist != 0)
-  {
-    list_add_item(g_memlist, (long)p);
-  }
-  g_memid++;
-  return rv + sizeof(struct mem);
-#else
   char* rv;
 
   rv = (char*)malloc(size);
@@ -269,37 +64,21 @@ void* g_malloc(int size, int zero)
     memset(rv, 0, size);
   }
   return rv;
-#endif
 }
 
 /*****************************************************************************/
-void g_free(void* ptr)
+void
+g_free(void* ptr)
 {
-#if defined(MEMLEAK)
-  struct mem* p;
-  int i;
-
-  if (ptr != 0)
-  {
-    p = (struct mem*)(((char*)ptr) - sizeof(struct mem));
-    g_memsize -= p->size;
-    i = list_index_of(g_memlist, (long)p);
-    if (i >= 0)
-    {
-      list_remove_item(g_memlist, i);
-    }
-    free(p);
-  }
-#else
   if (ptr != 0)
   {
     free(ptr);
   }
-#endif
 }
 
 /*****************************************************************************/
-void g_printf(char* format, ...)
+void
+g_printf(char* format, ...)
 {
   va_list ap;
 
@@ -309,7 +88,8 @@ void g_printf(char* format, ...)
 }
 
 /*****************************************************************************/
-void g_sprintf(char* dest, char* format, ...)
+void
+g_sprintf(char* dest, char* format, ...)
 {
   va_list ap;
 
@@ -320,7 +100,8 @@ void g_sprintf(char* dest, char* format, ...)
 
 /*****************************************************************************/
 /* produce a hex dump */
-void g_hexdump(char* p, int len)
+void
+g_hexdump(char* p, int len)
 {
   unsigned char* line;
   int i;
@@ -356,25 +137,29 @@ void g_hexdump(char* p, int len)
 }
 
 /*****************************************************************************/
-void g_memset(void* ptr, int val, int size)
+void
+g_memset(void* ptr, int val, int size)
 {
   memset(ptr, val, size);
 }
 
 /*****************************************************************************/
-void g_memcpy(void* d_ptr, const void* s_ptr, int size)
+void
+g_memcpy(void* d_ptr, const void* s_ptr, int size)
 {
   memcpy(d_ptr, s_ptr, size);
 }
 
 /*****************************************************************************/
-int g_getchar(void)
+int
+g_getchar(void)
 {
   return getchar();
 }
 
 /*****************************************************************************/
-int g_tcp_set_no_delay(int sck)
+int
+g_tcp_set_no_delay(int sck)
 {
   int i;
 
@@ -384,7 +169,8 @@ int g_tcp_set_no_delay(int sck)
 }
 
 /*****************************************************************************/
-int g_tcp_socket(void)
+int
+g_tcp_socket(void)
 {
   int rv;
   int i;
@@ -396,7 +182,8 @@ int g_tcp_socket(void)
 }
 
 /*****************************************************************************/
-int g_tcp_local_socket(void)
+int
+g_tcp_local_socket(void)
 {
 #if defined(_WIN32)
   return 0;
@@ -406,7 +193,8 @@ int g_tcp_local_socket(void)
 }
 
 /*****************************************************************************/
-void g_tcp_close(int sck)
+void
+g_tcp_close(int sck)
 {
   if (sck == 0)
   {
@@ -421,7 +209,8 @@ void g_tcp_close(int sck)
 }
 
 /*****************************************************************************/
-int g_tcp_connect(int sck, char* address, char* port)
+int
+g_tcp_connect(int sck, char* address, char* port)
 {
   struct sockaddr_in s;
   struct hostent* h;
@@ -451,7 +240,8 @@ int g_tcp_connect(int sck, char* address, char* port)
 }
 
 /*****************************************************************************/
-int g_tcp_set_non_blocking(int sck)
+int
+g_tcp_set_non_blocking(int sck)
 {
   unsigned long i;
 
@@ -467,7 +257,8 @@ int g_tcp_set_non_blocking(int sck)
 }
 
 /*****************************************************************************/
-int g_tcp_bind(int sck, char* port)
+int
+g_tcp_bind(int sck, char* port)
 {
   struct sockaddr_in s;
 
@@ -479,7 +270,8 @@ int g_tcp_bind(int sck, char* port)
 }
 
 /*****************************************************************************/
-int g_tcp_local_bind(int sck, char* port)
+int
+g_tcp_local_bind(int sck, char* port)
 {
 #if defined(_WIN32)
   return -1;
@@ -494,13 +286,15 @@ int g_tcp_local_bind(int sck, char* port)
 }
 
 /*****************************************************************************/
-int g_tcp_listen(int sck)
+int
+g_tcp_listen(int sck)
 {
   return listen(sck, 2);
 }
 
 /*****************************************************************************/
-int g_tcp_accept(int sck)
+int
+g_tcp_accept(int sck)
 {
   struct sockaddr_in s;
 #if defined(_WIN32)
@@ -515,7 +309,8 @@ int g_tcp_accept(int sck)
 }
 
 /*****************************************************************************/
-void g_sleep(int msecs)
+void
+g_sleep(int msecs)
 {
 #if defined(_WIN32)
   Sleep(msecs);
@@ -525,7 +320,8 @@ void g_sleep(int msecs)
 }
 
 /*****************************************************************************/
-int g_tcp_last_error_would_block(int sck)
+int
+g_tcp_last_error_would_block(int sck)
 {
 #if defined(_WIN32)
   return WSAGetLastError() == WSAEWOULDBLOCK;
@@ -535,19 +331,22 @@ int g_tcp_last_error_would_block(int sck)
 }
 
 /*****************************************************************************/
-int g_tcp_recv(int sck, void* ptr, int len, int flags)
+int
+g_tcp_recv(int sck, void* ptr, int len, int flags)
 {
   return recv(sck, ptr, len, flags);
 }
 
 /*****************************************************************************/
-int g_tcp_send(int sck, void* ptr, int len, int flags)
+int
+g_tcp_send(int sck, void* ptr, int len, int flags)
 {
   return send(sck, ptr, len, flags);
 }
 
 /*****************************************************************************/
-int g_tcp_select(int sck1, int sck2)
+int
+g_tcp_select(int sck1, int sck2)
 {
   fd_set rfds;
   struct timeval time;
@@ -587,194 +386,8 @@ int g_tcp_select(int sck1, int sck2)
 }
 
 /*****************************************************************************/
-int g_is_term(void)
-{
-  int rv;
-
-#if defined(_WIN32)
-  EnterCriticalSection(&g_term_mutex);
-  rv = g_term;
-  LeaveCriticalSection(&g_term_mutex);
-#elif defined (USE_PTHREAD)
-  pthread_mutex_lock(&g_term_mutex);
-  rv = g_term;
-  pthread_mutex_unlock(&g_term_mutex);
-#else
-  rv = 1;
-#endif
-  return rv;
-}
-
-/*****************************************************************************/
-void g_set_term(int in_val)
-{
-#if defined(_WIN32)
-  EnterCriticalSection(&g_term_mutex);
-  g_term = in_val;
-  LeaveCriticalSection(&g_term_mutex);
-#elif defined(USE_PTHREAD)
-  pthread_mutex_lock(&g_term_mutex);
-  g_term = in_val;
-  pthread_mutex_unlock(&g_term_mutex);
-#endif
-}
-
-/*****************************************************************************/
-#if defined(_WIN32)
-int g_thread_create(unsigned long (__stdcall * start_routine)(void*), void* arg)
-{
-  DWORD thread;
-
-  return !CreateThread(0, 0, start_routine, arg, 0, &thread);
-}
-#elif defined(USE_PTHREAD)
-int g_thread_create(void* (* start_routine)(void*), void* arg)
-{
-  pthread_t thread;
-  int rv;
-
-  rv = pthread_create(&thread, 0, start_routine, arg);
-  pthread_detach(thread);
-  return rv;
-}
-#endif
-
-/*****************************************************************************/
-int g_get_threadid(void)
-{
-#if defined(_WIN32)
-  return 0;
-#elif defined(USE_PTHREAD)
-  return pthread_self();
-#else
-  return 0;
-#endif
-}
-
-#if defined(USE_OPENSSL)
-
-/* rc4 stuff */
-
-/*****************************************************************************/
-void* g_rc4_info_create(void)
-{
-  return g_malloc(sizeof(RC4_KEY), 1);;
-}
-
-/*****************************************************************************/
-void g_rc4_info_delete(void* rc4_info)
-{
-  g_free(rc4_info);
-}
-
-/*****************************************************************************/
-void g_rc4_set_key(void* rc4_info, char* key, int len)
-{
-  RC4_set_key((RC4_KEY*)rc4_info, len, (unsigned char*)key);
-}
-
-/*****************************************************************************/
-void g_rc4_crypt(void* rc4_info, char* data, int len)
-{
-  RC4((RC4_KEY*)rc4_info, len, (unsigned char*)data, (unsigned char*)data);
-}
-
-/* sha1 stuff */
-
-/*****************************************************************************/
-void* g_sha1_info_create(void)
-{
-  return g_malloc(sizeof(SHA_CTX), 1);
-}
-
-/*****************************************************************************/
-void g_sha1_info_delete(void* sha1_info)
-{
-  g_free(sha1_info);
-}
-
-/*****************************************************************************/
-void g_sha1_clear(void* sha1_info)
-{
-  SHA1_Init((SHA_CTX*)sha1_info);
-}
-
-/*****************************************************************************/
-void g_sha1_transform(void* sha1_info, char* data, int len)
-{
-  SHA1_Update((SHA_CTX*)sha1_info, data, len);
-}
-
-/*****************************************************************************/
-void g_sha1_complete(void* sha1_info, char* data)
-{
-  SHA1_Final((unsigned char*)data, (SHA_CTX*)sha1_info);
-}
-
-/* md5 stuff */
-
-/*****************************************************************************/
-void* g_md5_info_create(void)
-{
-  return g_malloc(sizeof(MD5_CTX), 1);
-}
-
-/*****************************************************************************/
-void g_md5_info_delete(void* md5_info)
-{
-  g_free(md5_info);
-}
-
-/*****************************************************************************/
-void g_md5_clear(void* md5_info)
-{
-  MD5_Init((MD5_CTX*)md5_info);
-}
-
-/*****************************************************************************/
-void g_md5_transform(void* md5_info, char* data, int len)
-{
-  MD5_Update((MD5_CTX*)md5_info, data, len);
-}
-
-/*****************************************************************************/
-void g_md5_complete(void* md5_info, char* data)
-{
-  MD5_Final((unsigned char*)data, (MD5_CTX*)md5_info);
-}
-
-/*****************************************************************************/
-int g_mod_exp(char* out, char* in, char* mod, char* exp)
-{
-  BN_CTX* ctx;
-  BIGNUM lmod;
-  BIGNUM lexp;
-  BIGNUM lin;
-  BIGNUM lout;
-  int rv;
-
-  ctx = BN_CTX_new();
-  BN_init(&lmod);
-  BN_init(&lexp);
-  BN_init(&lin);
-  BN_init(&lout);
-  BN_bin2bn((unsigned char*)mod, 64, &lmod);
-  BN_bin2bn((unsigned char*)exp, 64, &lexp);
-  BN_bin2bn((unsigned char*)in, 64, &lin);
-  BN_mod_exp(&lout, &lin, &lexp, &lmod, ctx);
-  rv = BN_bn2bin(&lout, (unsigned char*)out);
-  BN_free(&lin);
-  BN_free(&lout);
-  BN_free(&lexp);
-  BN_free(&lmod);
-  BN_CTX_free(ctx);
-  return rv;
-}
-
-#endif
-
-/*****************************************************************************/
-void g_random(char* data, int len)
+void
+g_random(char* data, int len)
 {
 #if defined(_WIN32)
   memset(data, 0x44, len);
@@ -796,19 +409,22 @@ void g_random(char* data, int len)
 }
 
 /*****************************************************************************/
-int g_abs(int i)
+int
+g_abs(int i)
 {
   return abs(i);
 }
 
 /*****************************************************************************/
-int g_memcmp(void* s1, void* s2, int len)
+int
+g_memcmp(void* s1, void* s2, int len)
 {
   return memcmp(s1, s2, len);
 }
 
 /*****************************************************************************/
-int g_file_open(char* file_name)
+int
+g_file_open(char* file_name)
 {
 #if defined(_WIN32)
   return (int)CreateFile(file_name, GENERIC_READ | GENERIC_WRITE,
@@ -820,7 +436,8 @@ int g_file_open(char* file_name)
 }
 
 /*****************************************************************************/
-int g_file_close(int fd)
+int
+g_file_close(int fd)
 {
 #if defined(_WIN32)
   CloseHandle((HANDLE)fd);
@@ -832,7 +449,8 @@ int g_file_close(int fd)
 
 /*****************************************************************************/
 /* read from file*/
-int g_file_read(int fd, char* ptr, int len)
+int
+g_file_read(int fd, char* ptr, int len)
 {
 #if defined(_WIN32)
   if (ReadFile((HANDLE)fd, (LPVOID)ptr, (DWORD)len, (LPDWORD)&len, 0))
@@ -850,7 +468,8 @@ int g_file_read(int fd, char* ptr, int len)
 
 /*****************************************************************************/
 /* write to file */
-int g_file_write(int fd, char* ptr, int len)
+int
+g_file_write(int fd, char* ptr, int len)
 {
 #if defined(_WIN32)
   if (WriteFile((HANDLE)fd, (LPVOID)ptr, (DWORD)len, (LPDWORD)&len, 0))
@@ -868,7 +487,8 @@ int g_file_write(int fd, char* ptr, int len)
 
 /*****************************************************************************/
 /* move file pointer */
-int g_file_seek(int fd, int offset)
+int
+g_file_seek(int fd, int offset)
 {
 #if defined(_WIN32)
   return SetFilePointer((HANDLE)fd, offset, 0, FILE_BEGIN);
@@ -880,7 +500,8 @@ int g_file_seek(int fd, int offset)
 /*****************************************************************************/
 /* do a write lock on a file */
 /* return boolean */
-int g_file_lock(int fd, int start, int len)
+int
+g_file_lock(int fd, int start, int len)
 {
 #if defined(_WIN32)
   return LockFile((HANDLE)fd, start, 0, len, 0);
@@ -900,7 +521,8 @@ int g_file_lock(int fd, int start, int len)
 }
 
 /*****************************************************************************/
-int g_strlen(char* text)
+int
+g_strlen(char* text)
 {
   if (text == 0)
   {
@@ -910,7 +532,8 @@ int g_strlen(char* text)
 }
 
 /*****************************************************************************/
-char* g_strcpy(char* dest, char* src)
+char*
+g_strcpy(char* dest, char* src)
 {
   if (src == 0 && dest != 0)
   {
@@ -925,7 +548,8 @@ char* g_strcpy(char* dest, char* src)
 }
 
 /*****************************************************************************/
-char* g_strncpy(char* dest, char* src, int len)
+char*
+g_strncpy(char* dest, char* src, int len)
 {
   char* rv;
 
@@ -944,7 +568,8 @@ char* g_strncpy(char* dest, char* src, int len)
 }
 
 /*****************************************************************************/
-char* g_strcat(char* dest, char* src)
+char*
+g_strcat(char* dest, char* src)
 {
   if (dest == 0 || src == 0)
   {
@@ -954,7 +579,8 @@ char* g_strcat(char* dest, char* src)
 }
 
 /*****************************************************************************/
-char* g_strdup(char* in)
+char*
+g_strdup(char* in)
 {
   int len;
   char* p;
@@ -970,19 +596,22 @@ char* g_strdup(char* in)
 }
 
 /*****************************************************************************/
-int g_strcmp(char* c1, char* c2)
+int
+g_strcmp(char* c1, char* c2)
 {
   return strcmp(c1, c2);
 }
 
 /*****************************************************************************/
-int g_strncmp(char* c1, char* c2, int len)
+int
+g_strncmp(char* c1, char* c2, int len)
 {
   return strncmp(c1, c2, len);
 }
 
 /*****************************************************************************/
-long g_load_library(char* in)
+long
+g_load_library(char* in)
 {
 #if defined(_WIN32)
   return 0;
@@ -992,7 +621,8 @@ long g_load_library(char* in)
 }
 
 /*****************************************************************************/
-int g_free_library(long lib)
+int
+g_free_library(long lib)
 {
   if (lib == 0)
   {
@@ -1007,7 +637,8 @@ int g_free_library(long lib)
 
 /*****************************************************************************/
 /* returns NULL if not found */
-void* g_get_proc_address(long lib, char* name)
+void*
+g_get_proc_address(long lib, char* name)
 {
   if (lib == 0)
   {
@@ -1021,7 +652,8 @@ void* g_get_proc_address(long lib, char* name)
 }
 
 /*****************************************************************************/
-int g_system(char* aexec)
+int
+g_system(char* aexec)
 {
 #if defined(_WIN32)
   return 0;
@@ -1031,17 +663,11 @@ int g_system(char* aexec)
 }
 
 /*****************************************************************************/
-void g_signal(int sig_num, void (*func)(int))
+void
+g_signal(int sig_num, void (*func)(int))
 {
 #if defined(_WIN32)
 #else
   signal(sig_num, func);
 #endif
-}
-
-/*****************************************************************************/
-void g_pipe_sig(int sig_num)
-{
-  /* do nothing */
-  g_printf("got SIGPIPE(%d)\n\r", sig_num);
 }

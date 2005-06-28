@@ -21,6 +21,9 @@
 /* modified for xrdp */
 /* this is a super fast stream method, you bet */
 
+#if !defined(PARSE_H)
+#define PARSE_H
+
 #if defined(L_ENDIAN)
 #elif defined(B_ENDIAN)
 #else
@@ -299,3 +302,5 @@ struct stream
   g_memset((s)->p, 0, (n)); \
   (s)->p += (n); \
 }
+
+#endif

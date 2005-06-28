@@ -16,45 +16,45 @@
    xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2004-2005
 
+   thread calls
+
 */
 
-#if !defined(ARCH_H)
-#define ARCH_H
-
-/* check endianess */
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-#define L_ENDIAN
-#elif __BYTE_ORDER == __BIG_ENDIAN
-#define B_ENDIAN
-#endif
-/* check if we need to align data */
-#if defined(__sparc__) || defined(__alpha__) || defined(__hppa__) || \
-    defined(__AIX__) || defined(__PPC__) || defined(__mips__) || \
-    defined(__ia64__)
-#define NEED_ALIGN
-#endif
-
-/* defines for thread creation factory functions */
 #if defined(_WIN32)
-#define THREAD_RV unsigned long
-#define THREAD_CC __stdcall
+#include <windows.h>
 #else
-#define THREAD_RV void*
-#define THREAD_CC
+#include <pthread.h>
 #endif
 
-#if defined(__BORLANDC__)
-#define APP_CC __cdecl
-#define DEFAULT_CC __cdecl
-#else
-#define APP_CC
-#define DEFAULT_CC
-#endif
-
+/*****************************************************************************/
 #if defined(_WIN32)
-#define EXPORT_CC __declspec(dllexport)
+int
+g_thread_create(unsigned long (__stdcall * start_routine)(void*), void* arg)
+{
+  DWORD thread;
+
+  return !CreateThread(0, 0, start_routine, arg, 0, &thread);
+}
 #else
-#define EXPORT_CC
+int
+g_thread_create(void* (* start_routine)(void*), void* arg)
+{
+  pthread_t thread;
+  int rv;
+
+  rv = pthread_create(&thread, 0, start_routine, arg);
+  pthread_detach(thread);
+  return rv;
+}
 #endif
 
+/*****************************************************************************/
+int
+g_get_threadid(void)
+{
+#if defined(_WIN32)
+  return 0;
+#else
+  return pthread_self();
 #endif
+}
