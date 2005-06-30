@@ -31,13 +31,21 @@ struct list
   int auto_free;
 };
 
-struct list* list_create(void);
-void list_delete(struct list* self);
-void list_add_item(struct list* self, long item);
-long list_get_item(struct list* self, int index);
-void list_clear(struct list* self);
-int list_index_of(struct list* self, long item);
-void list_remove_item(struct list* self, int index);
-void list_insert_item(struct list* self, int index, long item);
+struct list*
+list_create(void);
+void
+list_delete(struct list* self);
+void
+list_add_item(struct list* self, long item);
+long
+list_get_item(struct list* self, int index);
+void
+list_clear(struct list* self);
+int
+list_index_of(struct list* self, long item);
+void
+list_remove_item(struct list* self, int index);
+void
+list_insert_item(struct list* self, int index, long item);
 
 #endif

@@ -24,6 +24,8 @@
 #if !defined(PARSE_H)
 #define PARSE_H
 
+#include "arch.h"
+
 #if defined(L_ENDIAN)
 #elif defined(B_ENDIAN)
 #else

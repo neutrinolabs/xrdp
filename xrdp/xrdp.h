@@ -221,6 +221,12 @@ int APP_CC
 xrdp_painter_draw_text(struct xrdp_painter* self,
                        struct xrdp_bitmap* bitmap,
                        int x, int y, char* text);
+int APP_CC
+xrdp_painter_copy(struct xrdp_painter* self,
+                  struct xrdp_bitmap* src,
+                  struct xrdp_bitmap* dst,
+                  int x, int y, int cx, int cy,
+                  int srcx, int srcy, int opcode);
 
 /* xrdp_font.c */
 struct xrdp_font* APP_CC

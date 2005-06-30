@@ -21,8 +21,10 @@
 #if !defined(FILE_H)
 #define FILE_H
 
-int file_read_sections(int fd, struct list* names);
-int file_read_section(int fd, char* section, struct list* names,
-                      struct list* values);
+int
+file_read_sections(int fd, struct list* names);
+int
+file_read_section(int fd, char* section, struct list* names,
+                  struct list* values);
 
 #endif

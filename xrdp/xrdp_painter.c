@@ -614,3 +614,30 @@ xrdp_painter_draw_text(struct xrdp_painter* self,
   g_free(data);
   return 0;
 }
+
+/*****************************************************************************/
+int APP_CC
+xrdp_painter_copy(struct xrdp_painter* self,
+                  struct xrdp_bitmap* src,
+                  struct xrdp_bitmap* dst,
+                  int x, int y, int cx, int cy,
+                  int srcx, int srcy, int opcode)
+{
+  if (self == 0 || src == 0 || dst == 0)
+  {
+    return 0;
+  }
+
+  /* todo data */
+
+  if (dst->type == WND_TYPE_BITMAP)
+  {
+    return 0;
+  }
+  if (src == dst && opcode == 12 && src->wm->screen == src)
+  {
+    libxrdp_orders_screen_blt(dst->wm->session, x, y, cx, cy,
+                              srcx, srcy, 12, 0);
+  }
+  return 0;
+}
