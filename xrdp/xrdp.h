@@ -266,25 +266,25 @@ xrdp_bitmap_compress(char* in_data, int width, int height,
                      int e);
 
 /* xrdp_interface.c */
-int
+int DEFAULT_CC
 server_begin_update(struct xrdp_mod* mod);
-int
+int DEFAULT_CC
 server_end_update(struct xrdp_mod* mod);
-int
+int DEFAULT_CC
 server_fill_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy,
                  int color);
-int
+int DEFAULT_CC
 server_screen_blt(struct xrdp_mod* mod, int x, int y, int cx, int cy,
                   int srcx, int srcy);
-int
+int DEFAULT_CC
 server_paint_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy,
                   char* data);
-int
+int DEFAULT_CC
 server_set_pointer(struct xrdp_mod* mod, int x, int y,
                    char* data, char* mask);
-int
+int DEFAULT_CC
 server_palette(struct xrdp_mod* mod, int* palette);
-int
+int DEFAULT_CC
 server_msg(struct xrdp_mod* mod, char* msg);
-int
+int DEFAULT_CC
 server_is_term(struct xrdp_mod* mod);

@@ -44,7 +44,7 @@
 #endif
 
 #if defined(__BORLANDC__)
-#define APP_CC __cdecl
+#define APP_CC __fastcall
 #define DEFAULT_CC __cdecl
 #else
 #define APP_CC
@@ -52,7 +52,7 @@
 #endif
 
 #if defined(_WIN32)
-#define EXPORT_CC __declspec(dllexport)
+#define EXPORT_CC _export __cdecl
 #else
 #define EXPORT_CC
 #endif

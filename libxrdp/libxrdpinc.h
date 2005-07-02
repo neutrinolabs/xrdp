@@ -88,60 +88,60 @@ struct xrdp_session
   int up_and_running;
 };
 
-struct xrdp_session*
+struct xrdp_session* DEFAULT_CC
 libxrdp_init(long id, int sck);
-int
+int DEFAULT_CC
 libxrdp_exit(struct xrdp_session* session);
-int
+int DEFAULT_CC
 libxrdp_disconnect(struct xrdp_session* session);
-int
+int DEFAULT_CC
 libxrdp_process_incomming(struct xrdp_session* session);
-int
+int DEFAULT_CC
 libxrdp_process_data(struct xrdp_session* session);
-int
+int DEFAULT_CC
 libxrdp_send_palette(struct xrdp_session* session, int* palette);
-int
+int DEFAULT_CC
 libxrdp_send_bitmap(struct xrdp_session* session, int width, int height,
                     int bpp, char* data, int x, int y, int cx, int cy);
-int
+int DEFAULT_CC
 libxrdp_send_pointer(struct xrdp_session* session, int cache_idx,
                      char* data, char* mask, int x, int y);
-int
+int DEFAULT_CC
 libxrdp_set_pointer(struct xrdp_session* session, int cache_idx);
-int
+int DEFAULT_CC
 libxrdp_orders_init(struct xrdp_session* session);
-int
+int DEFAULT_CC
 libxrdp_orders_send(struct xrdp_session* session);
-int
+int DEFAULT_CC
 libxrdp_orders_force_send(struct xrdp_session* session);
-int
+int DEFAULT_CC
 libxrdp_orders_rect(struct xrdp_session* session, int x, int y,
                     int cx, int cy, int color, struct xrdp_rect* rect);
-int
+int DEFAULT_CC
 libxrdp_orders_screen_blt(struct xrdp_session* session, int x, int y,
                           int cx, int cy, int srcx, int srcy,
                           int rop, struct xrdp_rect* rect);
-int
+int DEFAULT_CC
 libxrdp_orders_pat_blt(struct xrdp_session* session, int x, int y,
                        int cx, int cy, int rop, int bg_color,
                        int fg_color, struct xrdp_brush* brush,
                        struct xrdp_rect* rect);
-int
+int DEFAULT_CC
 libxrdp_orders_dest_blt(struct xrdp_session* session, int x, int y,
                         int cx, int cy, int rop,
                         struct xrdp_rect* rect);
-int
+int DEFAULT_CC
 libxrdp_orders_line(struct xrdp_session* session, int mix_mode,
                     int startx, int starty,
                     int endx, int endy, int rop, int bg_color,
                     struct xrdp_pen* pen,
                     struct xrdp_rect* rect);
-int
+int DEFAULT_CC
 libxrdp_orders_mem_blt(struct xrdp_session* session, int cache_id,
                        int color_table, int x, int y, int cx, int cy,
                        int rop, int srcx, int srcy,
                        int cache_idx, struct xrdp_rect* rect);
-int
+int DEFAULT_CC
 libxrdp_orders_text(struct xrdp_session* session,
                     int font, int flags, int mixmode,
                     int fg_color, int bg_color,
@@ -151,18 +151,18 @@ libxrdp_orders_text(struct xrdp_session* session,
                     int box_right, int box_bottom,
                     int x, int y, char* data, int data_len,
                     struct xrdp_rect* rect);
-int
+int DEFAULT_CC
 libxrdp_orders_send_palette(struct xrdp_session* session, int* palette,
                             int cache_id);
-int
+int DEFAULT_CC
 libxrdp_orders_send_raw_bitmap(struct xrdp_session* session,
                                int width, int height, int bpp, char* data,
                                int cache_id, int cache_idx);
-int
+int DEFAULT_CC
 libxrdp_orders_send_bitmap(struct xrdp_session* session,
                            int width, int height, int bpp, char* data,
                            int cache_id, int cache_idx);
-int
+int DEFAULT_CC
 libxrdp_orders_send_font(struct xrdp_session* session,
                          struct xrdp_font_char* font_char,
                          int font_index, int char_index);

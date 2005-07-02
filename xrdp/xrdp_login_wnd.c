@@ -24,7 +24,7 @@
 
 /*****************************************************************************/
 /* all login help screen events go here */
-int APP_CC
+static int DEFAULT_CC
 xrdp_wm_login_help_notify(struct xrdp_bitmap* wnd,
                           struct xrdp_bitmap* sender,
                           int msg, long param1, long param2)
@@ -78,17 +78,19 @@ logging on.");
   return 0;
 }
 
+#if 0
 /*****************************************************************************/
-int APP_CC
+static int DEFAULT_CC
 xrdp_wm_popup_notify(struct xrdp_bitmap* wnd,
                      struct xrdp_bitmap* sender,
                      int msg, int param1, int param2)
 {
   return 0;
 }
+#endif
 
 /*****************************************************************************/
-int
+static int APP_CC
 xrdp_wm_setup_mod(struct xrdp_wm* self,
                   struct xrdp_mod_data* mod_data)
 {
@@ -134,7 +136,7 @@ xrdp_wm_setup_mod(struct xrdp_wm* self,
 }
 
 /*****************************************************************************/
-int APP_CC
+static int APP_CC
 xrdp_wm_delete_all_childs(struct xrdp_wm* self)
 {
   int i;
@@ -150,7 +152,7 @@ xrdp_wm_delete_all_childs(struct xrdp_wm* self)
 }
 
 /*****************************************************************************/
-int APP_CC
+static int APP_CC
 set_mod_data_item(struct xrdp_mod_data* mod, char* name, char* value)
 {
   int index;
@@ -167,7 +169,7 @@ set_mod_data_item(struct xrdp_mod_data* mod, char* name, char* value)
 }
 
 /*****************************************************************************/
-int APP_CC
+static int APP_CC
 xrdp_wm_help_clicked(struct xrdp_bitmap* wnd)
 {
   struct xrdp_bitmap* help;
@@ -206,7 +208,7 @@ xrdp_wm_help_clicked(struct xrdp_bitmap* wnd)
 }
 
 /*****************************************************************************/
-int APP_CC
+static int APP_CC
 xrdp_wm_cancel_clicked(struct xrdp_bitmap* wnd)
 {
   if (wnd != 0)
@@ -223,7 +225,7 @@ xrdp_wm_cancel_clicked(struct xrdp_bitmap* wnd)
 }
 
 /*****************************************************************************/
-int APP_CC
+static int APP_CC
 xrdp_wm_ok_clicked(struct xrdp_bitmap* wnd)
 {
   struct xrdp_bitmap* combo;
@@ -325,7 +327,7 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap* wnd)
 }
 
 /******************************************************************************/
-int APP_CC
+static int APP_CC
 xrdp_wm_show_edits(struct xrdp_wm* self, struct xrdp_bitmap* combo)
 {
   int count;
@@ -403,7 +405,7 @@ xrdp_wm_show_edits(struct xrdp_wm* self, struct xrdp_bitmap* combo)
 
 /*****************************************************************************/
 /* all login screen events go here */
-int APP_CC
+static int DEFAULT_CC
 xrdp_wm_login_notify(struct xrdp_bitmap* wnd,
                      struct xrdp_bitmap* sender,
                      int msg, long param1, long param2)
@@ -458,7 +460,7 @@ xrdp_wm_login_notify(struct xrdp_bitmap* wnd,
 }
 
 /******************************************************************************/
-int APP_CC
+static int APP_CC
 xrdp_wm_login_fill_in_combo(struct xrdp_wm* self, struct xrdp_bitmap* b)
 {
   struct list* sections;
