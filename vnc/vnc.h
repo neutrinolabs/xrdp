@@ -50,6 +50,8 @@ struct vnc
   int (*server_palette)(struct vnc* v, int* palette);
   int (*server_msg)(struct vnc* v, char* msg);
   int (*server_is_term)(struct vnc* v);
+  int (*server_set_clip)(struct vnc* v, int x, int y, int cx, int cy);
+  int (*server_reset_clip)(struct vnc* v);
   /* common */
   long handle; /* pointer to self as long */
   long wm;

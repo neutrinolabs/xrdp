@@ -24,7 +24,7 @@
 
 /*****************************************************************************/
 /* this is the log windows nofity function */
-int
+int DEFAULT_CC
 xrdp_wm_log_wnd_notify(struct xrdp_bitmap* wnd,
                        struct xrdp_bitmap* sender,
                        int msg, long param1, long param2)
@@ -79,7 +79,7 @@ xrdp_wm_log_wnd_notify(struct xrdp_bitmap* wnd,
 }
 
 /*****************************************************************************/
-int
+int DEFAULT_CC
 server_begin_update(struct xrdp_mod* mod)
 {
   struct xrdp_wm* wm;
@@ -93,7 +93,7 @@ server_begin_update(struct xrdp_mod* mod)
 }
 
 /*****************************************************************************/
-int
+int DEFAULT_CC
 server_end_update(struct xrdp_mod* mod)
 {
   struct xrdp_painter* p;
@@ -106,7 +106,7 @@ server_end_update(struct xrdp_mod* mod)
 }
 
 /*****************************************************************************/
-int
+int DEFAULT_CC
 server_fill_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy,
                  int color)
 {
@@ -121,7 +121,7 @@ server_fill_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy,
 }
 
 /*****************************************************************************/
-int
+int DEFAULT_CC
 server_screen_blt(struct xrdp_mod* mod, int x, int y, int cx, int cy,
                   int srcx, int srcy)
 {
@@ -136,7 +136,7 @@ server_screen_blt(struct xrdp_mod* mod, int x, int y, int cx, int cy,
 }
 
 /*****************************************************************************/
-int
+int DEFAULT_CC
 server_paint_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy,
                   char* data)
 {
@@ -153,7 +153,7 @@ server_paint_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy,
 }
 
 /*****************************************************************************/
-int
+int DEFAULT_CC
 server_set_pointer(struct xrdp_mod* mod, int x, int y,
                    char* data, char* mask)
 {
@@ -165,7 +165,7 @@ server_set_pointer(struct xrdp_mod* mod, int x, int y,
 }
 
 /*****************************************************************************/
-int
+int DEFAULT_CC
 server_palette(struct xrdp_mod* mod, int* palette)
 {
   struct xrdp_wm* wm;
@@ -180,7 +180,7 @@ server_palette(struct xrdp_mod* mod, int* palette)
 }
 
 /*****************************************************************************/
-int
+int DEFAULT_CC
 server_msg(struct xrdp_mod* mod, char* msg)
 {
   struct xrdp_wm* wm;
@@ -219,8 +219,28 @@ server_msg(struct xrdp_mod* mod, char* msg)
 }
 
 /*****************************************************************************/
-int
+int DEFAULT_CC
 server_is_term(struct xrdp_mod* mod)
 {
   return g_is_term();
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_set_clip(struct xrdp_mod* mod, int x, int y, int cx, int cy)
+{
+  struct xrdp_painter* p;
+
+  p = (struct xrdp_painter*)mod->painter;
+  return xrdp_painter_set_clip(p, x, y, cx, cy);
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_reset_clip(struct xrdp_mod* mod)
+{
+  struct xrdp_painter* p;
+
+  p = (struct xrdp_painter*)mod->painter;
+  return xrdp_painter_clr_clip(p);
 }

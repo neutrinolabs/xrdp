@@ -45,6 +45,8 @@ struct xrdp_mod
   int (*server_palette)(struct xrdp_mod* v, int* palette);
   int (*server_msg)(struct xrdp_mod* v, char* msg);
   int (*server_is_term)(struct xrdp_mod* v);
+  int (*server_set_clip)(struct xrdp_mod* v, int x, int y, int cx, int cy);
+  int (*server_reset_clip)(struct xrdp_mod* v);
   /* common */
   long handle; /* pointer to self as int */
   long wm; /* struct xrdp_wm* */

@@ -149,6 +149,10 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
   error = g_tcp_bind(self->sck, "3389");
   if (error != 0)
   {
+    error = g_tcp_bind(self->sck, "3390");
+  }
+  if (error != 0)
+  {
     g_printf("bind error in xrdp_listen_main_loop\n\r");
     g_tcp_close(self->sck);
     self->status = -1;

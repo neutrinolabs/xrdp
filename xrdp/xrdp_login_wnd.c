@@ -124,6 +124,8 @@ xrdp_wm_setup_mod(struct xrdp_wm* self,
       self->mod->server_palette = server_palette;
       self->mod->server_msg = server_msg;
       self->mod->server_is_term = server_is_term;
+      self->mod->server_set_clip = server_set_clip;
+      self->mod->server_reset_clip = server_reset_clip;
     }
   }
   /* id self->mod is null, there must be a problem */

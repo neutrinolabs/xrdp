@@ -288,3 +288,7 @@ int DEFAULT_CC
 server_msg(struct xrdp_mod* mod, char* msg);
 int DEFAULT_CC
 server_is_term(struct xrdp_mod* mod);
+int DEFAULT_CC
+server_set_clip(struct xrdp_mod* mod, int x, int y, int cx, int cy);
+int DEFAULT_CC
+server_reset_clip(struct xrdp_mod* mod);
