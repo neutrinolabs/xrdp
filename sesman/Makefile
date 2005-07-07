@@ -1,29 +1,20 @@
 
-# uncomment the next line to use pam_userpass
-# in verify_user.c
-#USE_PAM = ""
+SESMANOBJ = sesman.o ../common/os_calls.o ../common/d3des.o
 
-SESMANOBJ = sesman.o verify_user.o ../common/os_calls.o ../common/d3des.o
-
-ifdef USE_PAM
-CFLAGS = -Wall -O2 -I../common -DUSE_PAM
-else
 CFLAGS = -Wall -O2 -I../common
-endif
-C_OS_FLAGS = $(CFLAGS) -c
 LDFLAGS = -L /usr/gnu/lib
-ifdef USE_PAM
-LIBS = -lpam -lpam_userpass
-else
-LIBS = -ldl -lcrypt
-endif
-PAMLIB =
 CC = gcc
 
 all: sesman
 
-sesman: $(SESMANOBJ)
-	$(CC) $(LDFLAGS) -o sesman $(PAMLIB) $(SESMANOBJ) $(LIBS)
+sesman: $(SESMANOBJ) verify_user.o
+	$(CC) $(LDFLAGS) -o sesman $(SESMANOBJ) verify_user.o -ldl -lcrypt
+
+pam: $(SESMANOBJ) verify_user_pam.o
+	$(CC) $(LDFLAGS) -o sesman $(SESMANOBJ) verify_user_pam.o -ldl -lpam
+
+pam_userpass: $(SESMANOBJ) verify_user_pam_userpass.o
+	$(CC) $(LDFLAGS) -o sesman $(SESMANOBJ) verify_user_pam_userpass.o -ldl -lpam -lpam_userpass
 
 clean:
-	rm -f $(SESMANOBJ) sesman
+	rm -f $(SESMANOBJ) verify_user.o verify_user_pam.o verify_user_pam_userpass.o sesman

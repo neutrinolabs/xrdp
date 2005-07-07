@@ -23,66 +23,46 @@
 #include "arch.h"
 #include "os_calls.h"
 
-#define _XOPEN_SOURCE
-#include <unistd.h>
-#include <string.h>
-#include <shadow.h>
-#include <pwd.h>
+#include <security/pam_userpass.h>
+
+#define SERVICE "xrdp"
 
 /******************************************************************************/
 /* returns boolean */
 int DEFAULT_CC
 auth_userpass(char* user, char* pass)
 {
-  char salt[13] = "$1$";
-  char hash[35] = "";
-  char* encr = 0;
-  struct passwd* spw;
-  struct spwd* stp;
-  int saltcnt = 0;
+  pam_handle_t* pamh;
+  pam_userpass_t userpass;
+  struct pam_conv conv = {pam_userpass_conv, &userpass};
+  const void* template1;
+  int status;
 
-  spw = getpwnam(user);
-  if (spw == 0)
+  userpass.user = user;
+  userpass.pass = pass;
+  if (pam_start(SERVICE, user, &conv, &pamh) != PAM_SUCCESS)
   {
     return 0;
   }
-  if (strncmp(spw->pw_passwd, "x", 3) == 0)
+  status = pam_authenticate(pamh, 0);
+  if (status != PAM_SUCCESS)
   {
-    /* the system is using shadow */
-    stp = getspnam(user);
-    if (stp == 0)
-    {
-      return 0;
-    }
-    strncpy(hash, stp->sp_pwdp, 34);
+    pam_end(pamh, status);
+    return 0;
   }
-  else
+  status = pam_acct_mgmt(pamh, 0);
+  if (status != PAM_SUCCESS)
   {
-    /* old system with only passwd */
-    strncpy(hash, spw->pw_passwd, 34);
+    pam_end(pamh, status);
+    return 0;
   }
-  hash[34] = '\0';
-  if (strncmp(hash, "$1$", 3) == 0)
+  status = pam_get_item(pamh, PAM_USER, &template1);
+  if (status != PAM_SUCCESS)
   {
-    /* gnu style crypt(); */
-    saltcnt = 3;
-    while ((hash[saltcnt] != '$') && (saltcnt < 11))
-    {
-      salt[saltcnt] = hash[saltcnt];
-      saltcnt++;
-    }
-    salt[saltcnt] = '$';
-    salt[saltcnt + 1] = '\0';
+    pam_end(pamh, status);
+    return 0;
   }
-  else
-  {
-    /* classic two char salt */
-    salt[0] = hash[0];
-    salt[1] = hash[1];
-    salt[2] = '\0';
-  }
-  encr = crypt(pass,salt);
-  if (strncmp(encr, hash, 34) != 0)
+  if (pam_end(pamh, PAM_SUCCESS) != PAM_SUCCESS)
   {
     return 0;
   }
