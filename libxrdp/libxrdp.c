@@ -308,7 +308,7 @@ libxrdp_send_bitmap(struct xrdp_session* session, int width, int height,
         for (j = 0; j < lines_sending; j++)
         {
           q = q - line_size;
-          out_uint8a(s, q, line_size)
+          out_uint8a(s, q, line_size) /* B_ENDIAN doesn't work here, todo */
           out_uint8s(s, e * Bpp);
         }
         s_mark_end(s);

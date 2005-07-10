@@ -949,7 +949,11 @@ int lib_mod_connect(struct vnc* v)
     {
       out_uint8(pixel_format, 8); /* bits per pixel */
       out_uint8(pixel_format, 8); /* depth */
+#if defined(B_ENDIAN)      
+      out_uint8(pixel_format, 1); /* big endian */
+#else
       out_uint8(pixel_format, 0); /* big endian */
+#endif
       out_uint8(pixel_format, 0); /* true color flag */
       out_uint16_be(pixel_format, 0); /* red max */
       out_uint16_be(pixel_format, 0); /* green max */
@@ -963,7 +967,11 @@ int lib_mod_connect(struct vnc* v)
     {
       out_uint8(pixel_format, 16); /* bits per pixel */
       out_uint8(pixel_format, 16); /* depth */
+#if defined(B_ENDIAN)      
+      out_uint8(pixel_format, 1); /* big endian */
+#else
       out_uint8(pixel_format, 0); /* big endian */
+#endif
       out_uint8(pixel_format, 1); /* true color flag */
       out_uint16_be(pixel_format, 31); /* red max */
       out_uint16_be(pixel_format, 63); /* green max */

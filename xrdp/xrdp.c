@@ -108,9 +108,37 @@ pipe_sig(int sig_num)
 int
 main(int argc, char** argv)
 {
+  int test;
+  int host_be;
 #if defined(_WIN32)
   WSADATA w;
-
+#endif
+  
+  /* check compiled endian with actual edian */
+  test = 1;
+  host_be = !((int)(*(unsigned char*)(&test)));
+#if defined(B_ENDIAN)
+  if (!host_be)
+#endif
+#if defined(L_ENDIAN)
+  if (host_be)
+#endif
+  {
+    g_printf("endian wrong, edit arch.h\n\r");
+    return 0;
+  }
+  /* check long, int and void* sizes */
+  if (sizeof(int) != 4)
+  {
+    g_printf("unusable int size, must be 4\n\r");
+    return 0;
+  }
+  if (sizeof(long) != sizeof(void*) || (sizeof(long) != 4 && sizeof(long) != 8))
+  {
+    g_printf("unusable long size, must be 4 or 8\n\r");
+    return 0;
+  }
+#if defined(_WIN32)
   WSAStartup(2, &w);
   InitializeCriticalSection(&g_term_mutex);
 #endif
