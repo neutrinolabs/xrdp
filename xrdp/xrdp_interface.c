@@ -130,8 +130,8 @@ server_screen_blt(struct xrdp_mod* mod, int x, int y, int cx, int cy,
 
   wm = (struct xrdp_wm*)mod->wm;
   p = (struct xrdp_painter*)mod->painter;
-  xrdp_painter_copy(p, wm->screen, wm->screen, x, y, cx, cy,
-                    srcx, srcy, 12);
+  p->rop = 0xcc;
+  xrdp_painter_copy(p, wm->screen, wm->screen, x, y, cx, cy, srcx, srcy);
   return 0;
 }
 

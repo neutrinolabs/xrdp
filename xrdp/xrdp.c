@@ -116,10 +116,10 @@ main(int argc, char** argv)
 #endif
   g_threadid = g_get_threadid();
   g_listen = xrdp_listen_create();
-  g_signal(2, xrdp_shutdown);
-  g_signal(9, xrdp_shutdown);
+  g_signal(2, xrdp_shutdown); /* SIGINT */
+  g_signal(9, xrdp_shutdown); /* SIGKILL */
   g_signal(13, pipe_sig); /* sig pipe */
-  g_signal(15, xrdp_shutdown);
+  g_signal(15, xrdp_shutdown); /* SIGTERM */
   xrdp_listen_main_loop(g_listen);
   return 0;
 }

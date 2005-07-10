@@ -31,7 +31,7 @@ xrdp_painter_create(struct xrdp_wm* wm, struct xrdp_session* session)
   self = (struct xrdp_painter*)g_malloc(sizeof(struct xrdp_painter), 1);
   self->wm = wm;
   self->session = session;
-  self->rop = 0xcc; /* copy */
+  self->rop = 0xcc; /* copy gota use 0xcc*/
   self->clip_children = 1;
   return self;
 }
@@ -621,7 +621,7 @@ xrdp_painter_copy(struct xrdp_painter* self,
                   struct xrdp_bitmap* src,
                   struct xrdp_bitmap* dst,
                   int x, int y, int cx, int cy,
-                  int srcx, int srcy, int opcode)
+                  int srcx, int srcy)
 {
   if (self == 0 || src == 0 || dst == 0)
   {
@@ -634,10 +634,10 @@ xrdp_painter_copy(struct xrdp_painter* self,
   {
     return 0;
   }
-  if (src == dst && opcode == 12 && src->wm->screen == src)
+  if (src == dst && src->wm->screen == src)
   {
     libxrdp_orders_screen_blt(dst->wm->session, x, y, cx, cy,
-                              srcx, srcy, 12, 0);
+                              srcx, srcy, self->rop, 0);
   }
   return 0;
 }
