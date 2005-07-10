@@ -21,27 +21,14 @@
 
 */
 
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <pwd.h>
-#include <signal.h>
-#include <grp.h>
-
 #include "d3des.h"
 
 #include "arch.h"
 #include "parse.h"
 #include "os_calls.h"
 
-int auth_userpass(char* user, char* pass);
+int DEFAULT_CC
+auth_userpass(char* user, char* pass);
 
 static int g_sck;
 static int g_pid;
@@ -49,19 +36,20 @@ static int g_pid;
 struct session_item
 {
   char name[256];
-  int pid; // pid of sesman waiting for wm to end
+  int pid; /* pid of sesman waiting for wm to end */
   int display;
   int width;
   int height;
   int bpp;
 };
 
-static unsigned char s_fixedkey[8] = {23, 82, 107, 6, 35, 78, 88, 7};
+static unsigned char s_fixedkey[8] = { 23, 82, 107, 6, 35, 78, 88, 7 };
 
 static struct session_item session_items[100];
 
 /*****************************************************************************/
-int tcp_force_recv(int sck, char* data, int len)
+static int DEFAULT_CC
+tcp_force_recv(int sck, char* data, int len)
 {
   int rcvd;
 
@@ -93,7 +81,8 @@ int tcp_force_recv(int sck, char* data, int len)
 }
 
 /*****************************************************************************/
-int tcp_force_send(int sck, char* data, int len)
+static int DEFAULT_CC
+tcp_force_send(int sck, char* data, int len)
 {
   int sent;
 
@@ -125,8 +114,8 @@ int tcp_force_send(int sck, char* data, int len)
 }
 
 /******************************************************************************/
-struct session_item* find_session_item(char* name, int width,
-                                       int height, int bpp)
+static struct session_item* DEFAULT_CC
+find_session_item(char* name, int width, int height, int bpp)
 {
   int i;
 
@@ -144,52 +133,24 @@ struct session_item* find_session_item(char* name, int width,
 }
 
 /******************************************************************************/
-struct session_item* find_session_item_by_name(char* name)
-{
-  int i;
-
-  for (i = 0; i < 100; i++)
-  {
-    if (g_strcmp(name, session_items[i].name) == 0)
-    {
-      return session_items + i;
-    }
-  }
-  return 0;
-}
-
-/******************************************************************************/
-struct session_item* find_session_item_by_display(int display)
-{
-  int i;
-
-  for (i = 0; i < 100; i++)
-  {
-    if (session_items[i].display == display)
-    {
-      return session_items + i;
-    }
-  }
-  return 0;
-}
-
-/******************************************************************************/
-int x_server_running(int display)
+/* returns non zero if there is an xserver running on this display */
+static int DEFAULT_CC
+x_server_running(int display)
 {
   char text[256];
 
   g_sprintf(text, "/tmp/.X11-unix/X%d", display);
-  return access(text, F_OK) == 0;
+  return g_file_exist(text);
 }
 
 /******************************************************************************/
-void cterm(int s)
+static void DEFAULT_CC
+cterm(int s)
 {
   int i;
   int pid;
-  int wstat;
 
-  pid = waitpid(0, &wstat, WNOHANG);
+  pid = g_waitchild();
   if (pid > 0)
   {
     for (i = 0; i < 100; i++)
@@ -203,23 +164,8 @@ void cterm(int s)
 }
 
 /******************************************************************************/
-/* ge the next available X display */
-int get_next_display(void)
-{
-  int i;
-
-  for (i = 10; i < 100; i++)
-  {
-    if (!x_server_running(i))
-    {
-      return i;
-    }
-  }
-  return -1;
-}
-
-/******************************************************************************/
-int check_password_file(char* filename, char* password)
+static int DEFAULT_CC
+check_password_file(char* filename, char* password)
 {
   char encryptedPasswd[16];
   int fd;
@@ -235,13 +181,13 @@ int check_password_file(char* filename, char* password)
   }
   g_file_write(fd, encryptedPasswd, 8);
   g_file_close(fd);
-  chmod(filename, S_IRUSR | S_IWUSR);
+  g_set_file_rights(filename, 1, 1); /* set read and write flags */
   return 0;
 }
 
 /******************************************************************************/
-int start_session(int width, int height, int bpp, char* username,
-                  char* password)
+static int DEFAULT_CC
+start_session(int width, int height, int bpp, char* username, char* password)
 {
   int display;
   int pid;
@@ -249,7 +195,11 @@ int start_session(int width, int height, int bpp, char* username,
   int wmpid;
   int xpid;
   int error;
-  struct passwd* pwd_1;
+  int pw_uid;
+  int pw_gid;
+  char pw_gecos[256];
+  char pw_dir[256];
+  char pw_shell[256];
   char text[256];
   char passwd_file[256];
   char geometry[32];
@@ -257,7 +207,7 @@ int start_session(int width, int height, int bpp, char* username,
   char screen[32];
   char cur_dir[256];
 
-  getcwd(cur_dir, 255);
+  g_get_current_dir(cur_dir, 255);
   display = 10;
   while (x_server_running(display) && display < 50)
   {
@@ -268,90 +218,85 @@ int start_session(int width, int height, int bpp, char* username,
     return 0;
   }
   wmpid = 0;
-  pid = fork();
+  pid = g_fork();
   if (pid == -1)
   {
   }
-  else if (pid == 0) // child
+  else if (pid == 0) /* child */
   {
-    pwd_1 = getpwnam(username);
-    if (pwd_1 != 0)
+    error = g_getuser_info(username, &pw_gid, &pw_uid, pw_shell, pw_dir,
+                           pw_gecos);
+    if (error == 0)
     {
-      /* set uid and groups */
-      error = initgroups(pwd_1->pw_name, pwd_1->pw_gid);
+      error = g_setgid(pw_gid);
       if (error == 0)
       {
-        error = setgid(pwd_1->pw_gid);
+        uid = pw_uid;
+        error = g_setuid(uid);
       }
       if (error == 0)
       {
-        uid = pwd_1->pw_uid;
-        error = setuid(uid);
-      }
-      if (error == 0)
-      {
-        clearenv();
-        setenv("SHELL", pwd_1->pw_shell, 1);
-        setenv("PATH", "/bin:/usr/bin:/usr/X11R6/bin:/usr/local/bin", 1);
-        setenv("USER", username, 1);
+        g_clearenv();
+        g_setenv("SHELL", pw_shell, 1);
+        g_setenv("PATH", "/bin:/usr/bin:/usr/X11R6/bin:/usr/local/bin", 1);
+        g_setenv("USER", username, 1);
         g_sprintf(text, "%d", uid);
-        setenv("UID", text, 1);
-        setenv("HOME", pwd_1->pw_dir, 1);
-        chdir(pwd_1->pw_dir);
+        g_setenv("UID", text, 1);
+        g_setenv("HOME", pw_dir, 1);
+        g_set_current_dir(pw_dir);
         g_sprintf(text, ":%d.0", display);
-        setenv("DISPLAY", text, 1);
+        g_setenv("DISPLAY", text, 1);
         g_sprintf(geometry, "%dx%d", width, height);
         g_sprintf(depth, "%d", bpp);
         g_sprintf(screen, ":%d", display);
-        mkdir(".vnc", S_IRWXU);
-        g_sprintf(passwd_file, "%s/.vnc/sesman_passwd", pwd_1->pw_dir);
+        g_mkdir(".vnc");
+        g_sprintf(passwd_file, "%s/.vnc/sesman_passwd", pw_dir);
         check_password_file(passwd_file, password);
-        wmpid = fork();
+        wmpid = g_fork();
         if (wmpid == -1)
         {
         }
-        else if (wmpid == 0) // child
+        else if (wmpid == 0) /* child */
         {
-          // give X a bit to start
+          /* give X a bit to start */
           g_sleep(500);
           if (x_server_running(display))
           {
             g_sprintf(text, "%s/startwm.sh", cur_dir);
-            execlp(text, "startwm.sh", NULL);
-            // should not get here
+            g_execlp3(text, "startwm.sh", 0);
+            /* should not get here */
           }
           g_printf("error\n");
-          _exit(0);
+          g_exit(0);
         }
-        else // parent
+        else /* parent */
         {
-          xpid = fork();
+          xpid = g_fork();
           if (xpid == -1)
           {
           }
-          else if (xpid == 0) // child
+          else if (xpid == 0) /* child */
           {
-            execlp("Xvnc", "Xvnc", screen, "-geometry", geometry,
-                   "-depth", depth, "-bs", "-rfbauth", passwd_file,
-                   NULL);
-            // should not get here
+            g_execlp11("Xvnc", "Xvnc", screen, "-geometry", geometry,
+                       "-depth", depth, "-bs", "-rfbauth", passwd_file, 0);
+            /* should not get here */
             g_printf("error\n");
-            _exit(0);
+            g_exit(0);
           }
-          else // parent
+          else /* parent */
           {
-            waitpid(wmpid, 0, 0);
-            kill(xpid, SIGTERM);
-            kill(wmpid, SIGTERM);
-            _exit(0);
+            g_waitpid(wmpid);
+            g_sigterm(xpid);
+            g_sigterm(wmpid);
+            g_exit(0);
           }
         }
       }
     }
   }
-  else // parent
+  else /* parent */
   {
-    signal(SIGCHLD, cterm);
+    g_signal(17, cterm); /* SIGCHLD */
     session_items[display].pid = pid;
     g_strcpy(session_items[display].name, username);
     session_items[display].display = display;
@@ -364,20 +309,21 @@ int start_session(int width, int height, int bpp, char* username,
 }
 
 /******************************************************************************/
-void sesman_shutdown(int sig)
+static void DEFAULT_CC
+sesman_shutdown(int sig)
 {
-  if (getpid() != g_pid)
+  if (g_getpid() != g_pid)
   {
     return;
   }
   g_printf("shutting down\n\r");
-  g_printf("signal %d pid %d\n\r", sig, getpid());
+  g_printf("signal %d pid %d\n\r", sig, g_getpid());
   g_tcp_close(g_sck);
 }
 
-
 /******************************************************************************/
-int main(int argc, char** argv)
+int DEFAULT_CC
+main(int argc, char** argv)
 {
   int sck;
   int in_sck;
@@ -399,11 +345,11 @@ int main(int argc, char** argv)
   char pass[256];
   struct session_item* s_item;
 
-  signal(2, sesman_shutdown);
-  signal(9, sesman_shutdown);
-  signal(15, sesman_shutdown);
+  g_signal(2, sesman_shutdown); /* SIGINT */
+  g_signal(9, sesman_shutdown); /* SIGKILL */
+  g_signal(15, sesman_shutdown); /* SIGTERM */
   g_memset(&session_items, 0, sizeof(session_items));
-  g_pid = getpid();
+  g_pid = g_getpid();
   if (argc == 1)
   {
     g_printf("xrdp session manager v0.1\n");
@@ -446,20 +392,17 @@ start session\n");
               if (version == 0)
               {
                 in_uint16_be(in_s, code);
-                if (code == 0) // check username - password, start session
+                if (code == 0) /* check username - password, start session */
                 {
                   in_uint16_be(in_s, i);
                   in_uint8a(in_s, user, i);
                   user[i] = 0;
-                  //g_printf("%s\n", user);
                   in_uint16_be(in_s, i);
                   in_uint8a(in_s, pass, i);
                   pass[i] = 0;
-                  //g_printf("%s\n", pass);
                   in_uint16_be(in_s, width);
                   in_uint16_be(in_s, height);
                   in_uint16_be(in_s, bpp);
-                  //g_printf("%d %d %d\n", width, height, bpp);
                   ok = auth_userpass(user, pass);
                   display = 0;
                   if (ok)
@@ -479,11 +422,11 @@ start session\n");
                     }
                   }
                   init_stream(out_s, 8192);
-                  out_uint32_be(out_s, 0); // version
-                  out_uint32_be(out_s, 14); // size
-                  out_uint16_be(out_s, 3); // cmd
-                  out_uint16_be(out_s, ok); // data
-                  out_uint16_be(out_s, display); // data
+                  out_uint32_be(out_s, 0); /* version */
+                  out_uint32_be(out_s, 14); /* size */
+                  out_uint16_be(out_s, 3); /* cmd */
+                  out_uint16_be(out_s, ok); /* data */
+                  out_uint16_be(out_s, display); /* data */
                   s_mark_end(out_s);
                   tcp_force_send(in_sck, out_s->data,
                                  out_s->end - out_s->data);
@@ -517,9 +460,9 @@ start session\n");
   {
     username = argv[2];
     password = argv[3];
-    width = atoi(argv[4]);
-    height = atoi(argv[5]);
-    bpp = atoi(argv[6]);
+    width = g_atoi(argv[4]);
+    height = g_atoi(argv[5]);
+    bpp = g_atoi(argv[6]);
     make_stream(in_s);
     init_stream(in_s, 8192);
     make_stream(out_s);
@@ -528,21 +471,20 @@ start session\n");
     if (g_tcp_connect(sck, argv[1], "3350") == 0)
     {
       s_push_layer(out_s, channel_hdr, 8);
-      out_uint16_be(out_s, 0); // code
+      out_uint16_be(out_s, 0); /* code */
       i = g_strlen(username);
       out_uint16_be(out_s, i);
       out_uint8a(out_s, username, i);
       i = g_strlen(password);
       out_uint16_be(out_s, i);
       out_uint8a(out_s, password, i);
-      //g_printf("%d\n", width);
       out_uint16_be(out_s, width);
       out_uint16_be(out_s, height);
       out_uint16_be(out_s, bpp);
       s_mark_end(out_s);
       s_pop_layer(out_s, channel_hdr);
-      out_uint32_be(out_s, 0); // version
-      out_uint32_be(out_s, out_s->end - out_s->data); // size
+      out_uint32_be(out_s, 0); /* version */
+      out_uint32_be(out_s, out_s->end - out_s->data); /* size */
       tcp_force_send(sck, out_s->data, out_s->end - out_s->data);
       if (tcp_force_recv(sck, in_s->data, 8) == 0)
       {

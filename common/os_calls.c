@@ -34,23 +34,20 @@
 #include <sys/un.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
 #include <dlfcn.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <signal.h>
 #include <fcntl.h>
+#include <pwd.h>
 #endif
 
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
-
-/* forward declarations */
-void
-g_printf(char* format, ...);
-void
-g_pipe_sig(int sig_num);
 
 /*****************************************************************************/
 void*
@@ -522,6 +519,66 @@ g_file_lock(int fd, int start, int len)
 
 /*****************************************************************************/
 int
+g_set_file_rights(char* filename, int read, int write)
+{
+#if defined(_WIN32)
+#else
+  int flags;
+
+  flags = read ? S_IRUSR : 0;
+  flags |= write ? S_IWUSR : 0;
+  chmod(filename, flags);
+#endif
+  return 0;
+}
+
+/*****************************************************************************/
+int
+g_mkdir(char* dirname)
+{
+#if defined(_WIN32)
+#else
+  mkdir(dirname, S_IRWXU);
+#endif
+  return 0;
+}
+
+/*****************************************************************************/
+char*
+g_get_current_dir(char* dirname, int maxlen)
+{
+#if defined(_WIN32)
+  return 0;
+#else
+  return getcwd(dirname, maxlen);
+#endif
+}
+
+/*****************************************************************************/
+int
+g_set_current_dir(char* dirname)
+{
+#if defined(_WIN32)
+  return 0;
+#else
+  return chdir(dirname);
+#endif
+}
+
+/*****************************************************************************/
+/* returns non zero if the file exists */
+int
+g_file_exist(char* filename)
+{
+#if defined(_WIN32)
+  return 0;
+#else
+  return access(filename, F_OK) == 0;
+#endif
+}
+
+/*****************************************************************************/
+int
 g_strlen(char* text)
 {
   if (text == 0)
@@ -610,6 +667,13 @@ g_strncmp(char* c1, char* c2, int len)
 }
 
 /*****************************************************************************/
+int
+g_atoi(char* str)
+{
+  return atoi(str);
+}
+
+/*****************************************************************************/
 long
 g_load_library(char* in)
 {
@@ -664,10 +728,191 @@ g_system(char* aexec)
 
 /*****************************************************************************/
 void
+g_execvp(char* p1, char* args[])
+{
+#if defined(_WIN32)
+#else
+  execvp(p1, args);
+#endif
+}
+
+/*****************************************************************************/
+int
+g_execlp3(char* a1, char* a2, char* a3)
+{
+#if defined(_WIN32)
+  return 0;
+#else
+  return execlp(a1, a2, a3);
+#endif
+}
+
+/*****************************************************************************/
+int
+g_execlp11(char* a1, char* a2, char* a3, char* a4, char* a5, char* a6,
+           char* a7, char* a8, char* a9, char* a10, char* a11)
+{
+#if defined(_WIN32)
+  return 0;
+#else
+  return execlp(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11);
+#endif
+}
+
+/*****************************************************************************/
+void
 g_signal(int sig_num, void (*func)(int))
 {
 #if defined(_WIN32)
 #else
   signal(sig_num, func);
 #endif
+}
+
+/*****************************************************************************/
+int
+g_fork(void)
+{
+#if defined(_WIN32)
+  return 0;
+#else
+  return fork();
+#endif
+}
+
+/*****************************************************************************/
+int
+g_setgid(int pid)
+{
+#if defined(_WIN32)
+  return 0;
+#else
+  return setgid(pid);
+#endif
+}
+
+/*****************************************************************************/
+int
+g_setuid(int pid)
+{
+#if defined(_WIN32)
+  return 0;
+#else
+  return setuid(pid);
+#endif
+}
+
+/*****************************************************************************/
+int
+g_waitchild(void)
+{
+#if defined(_WIN32)
+  return 0;
+#else
+  int wstat;
+
+  return waitpid(0, &wstat, WNOHANG);
+#endif
+}
+
+/*****************************************************************************/
+int
+g_waitpid(int pid)
+{
+#if defined(_WIN32)
+  return 0;
+#else
+  return waitpid(pid, 0, 0);
+#endif
+}
+
+/*****************************************************************************/
+void
+g_clearenv(void)
+{
+#if defined(_WIN32)
+#else
+  clearenv();
+#endif
+}
+
+/*****************************************************************************/
+int
+g_setenv(char* name, char* value, int rewrite)
+{
+#if defined(_WIN32)
+  return 0;
+#else
+  return setenv(name, value, rewrite);
+#endif
+}
+
+/*****************************************************************************/
+int
+g_exit(int exit_code)
+{
+#if defined(_WIN32)
+#else
+  _exit(exit_code);
+#endif
+  return 0;
+}
+
+/*****************************************************************************/
+int
+g_getpid(void)
+{
+#if defined(_WIN32)
+  return 0;
+#else
+  return getpid();
+#endif
+}
+
+/*****************************************************************************/
+int
+g_sigterm(int pid)
+{
+#if defined(_WIN32)
+  return 0;
+#else
+  return kill(pid, SIGTERM);
+#endif
+}
+
+/*****************************************************************************/
+int
+g_getuser_info(char* username, int* gid, int* uid, char* shell, char* dir,
+               char* gecos)
+{
+#if defined(_WIN32)
+#else
+  struct passwd* pwd_1;
+
+  pwd_1 = getpwnam(username);
+  if (pwd_1 != 0)
+  {
+    if (gid != 0)
+    {
+      *gid = pwd_1->pw_gid;
+    }
+    if (uid != 0)
+    {
+      *uid = pwd_1->pw_uid;
+    }
+    if (dir != 0)
+    {
+      g_strcpy(dir, pwd_1->pw_dir);
+    }
+    if (shell != 0)
+    {
+      g_strcpy(shell, pwd_1->pw_shell);
+    }
+    if (gecos != 0)
+    {
+      g_strcpy(gecos, pwd_1->pw_gecos);
+    }
+  }
+#endif
+  return 0;
 }
