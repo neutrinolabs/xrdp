@@ -335,7 +335,9 @@ xrdp_bitmap_load(struct xrdp_bitmap* self, char* filename, int* palette)
   char type1[3];
   char* data;
   struct xrdp_bmp_header header;
+  struct stream* s;
 
+  s = 0;
   fd = g_file_open(filename);
   if (fd != -1)
   {
@@ -355,9 +357,23 @@ xrdp_bitmap_load(struct xrdp_bitmap* self, char* filename, int* palette)
     g_file_read(fd, (char*)&size, 4);
     /* read bmp header */
     g_file_seek(fd, 14);
-    g_file_read(fd, (char*)&header, sizeof(header));
+    make_stream(s);
+    init_stream(s, 8192);
+    g_file_read(fd, s->data, 40); /* size better be 40 */
+    in_uint32_le(s, header.size);
+    in_uint32_le(s, header.image_width);
+    in_uint32_le(s, header.image_height);
+    in_uint16_le(s, header.planes);
+    in_uint16_le(s, header.bit_count);
+    in_uint32_le(s, header.compression);
+    in_uint32_le(s, header.image_size);
+    in_uint32_le(s, header.x_pels_per_meter);
+    in_uint32_le(s, header.y_pels_per_meter);
+    in_uint32_le(s, header.clr_used);
+    in_uint32_le(s, header.clr_important);
     if (header.bit_count != 8 && header.bit_count != 24)
     {
+      free_stream(s);
       g_file_close(fd);
       return 1;
     }
@@ -369,7 +385,12 @@ xrdp_bitmap_load(struct xrdp_bitmap* self, char* filename, int* palette)
     {
       /* read palette */
       g_file_seek(fd, 14 + header.size);
-      g_file_read(fd, (char*)palette1, 256 * sizeof(int));
+      init_stream(s, 8192);
+      g_file_read(fd, s->data, 256 * sizeof(int));
+      for (i = 0; i < 256; i++)
+      {
+        in_uint32_le(s, palette1[i]);
+      }
       /* read data */
       xrdp_bitmap_resize(self, header.image_width, header.image_height);
       data = (char*)g_malloc(header.image_width * header.image_height, 1);
@@ -412,6 +433,7 @@ xrdp_bitmap_load(struct xrdp_bitmap* self, char* filename, int* palette)
     }
     g_file_close(fd);
   }
+  free_stream(s);
   return 0;
 }
 
