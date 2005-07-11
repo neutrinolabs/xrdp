@@ -770,6 +770,16 @@ g_signal(int sig_num, void (*func)(int))
 }
 
 /*****************************************************************************/
+void
+g_signal_child_stop(void (*func)(int))
+{
+#if defined(_WIN32)
+#else
+  signal(SIGCHLD, func);
+#endif
+}
+
+/*****************************************************************************/
 int
 g_fork(void)
 {

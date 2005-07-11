@@ -296,7 +296,7 @@ start_session(int width, int height, int bpp, char* username, char* password)
   }
   else /* parent */
   {
-    g_signal(17, cterm); /* SIGCHLD */
+    g_signal_child_stop(cterm); /* SIGCHLD */
     session_items[display].pid = pid;
     g_strcpy(session_items[display].name, username);
     session_items[display].display = display;

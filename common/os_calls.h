@@ -134,6 +134,8 @@ g_execlp11(char* a1, char* a2, char* a3, char* a4, char* a5, char* a6,
            char* a7, char* a8, char* a9, char* a10, char* a11);
 void
 g_signal(int sig_num, void (*func)(int));
+void
+g_signal_child_stop(void (*func)(int));
 int
 g_fork(void);
 int
