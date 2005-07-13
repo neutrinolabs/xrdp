@@ -24,7 +24,8 @@
 
 /******************************************************************************/
 /* taken from vncauth.c */
-void rfbEncryptBytes(char* bytes, char* passwd)
+void DEFAULT_CC
+rfbEncryptBytes(char* bytes, char* passwd)
 {
   char key[12];
 
@@ -38,7 +39,8 @@ void rfbEncryptBytes(char* bytes, char* passwd)
 
 /******************************************************************************/
 /* returns error */
-int lib_recv(struct vnc* v, char* data, int len)
+int DEFAULT_CC
+lib_recv(struct vnc* v, char* data, int len)
 {
   int rcvd;
 
@@ -80,7 +82,8 @@ int lib_recv(struct vnc* v, char* data, int len)
 
 /*****************************************************************************/
 /* returns error */
-int lib_send(struct vnc* v, char* data, int len)
+int DEFAULT_CC
+lib_send(struct vnc* v, char* data, int len)
 {
   int sent;
 
@@ -121,8 +124,9 @@ int lib_send(struct vnc* v, char* data, int len)
 }
 
 /******************************************************************************/
-int lib_mod_event(struct vnc* v, int msg, long param1, long param2,
-                  long param3, long param4)
+int DEFAULT_CC
+lib_mod_event(struct vnc* v, int msg, long param1, long param2,
+              long param3, long param4)
 {
   struct stream* s;
   int key;
@@ -314,7 +318,8 @@ param1 0x%4.4x param2 0x%4.4x\n\r", msg, param1, param2);
 }
 
 //******************************************************************************
-int get_pixel_safe(char* data, int x, int y, int width, int height, int bpp)
+int DEFAULT_CC
+get_pixel_safe(char* data, int x, int y, int width, int height, int bpp)
 {
   int start;
   int shift;
@@ -368,8 +373,9 @@ int get_pixel_safe(char* data, int x, int y, int width, int height, int bpp)
 }
 
 /******************************************************************************/
-void set_pixel_safe(char* data, int x, int y, int width, int height, int bpp,
-                    int pixel)
+void DEFAULT_CC
+set_pixel_safe(char* data, int x, int y, int width, int height, int bpp,
+               int pixel)
 {
   int start;
   int shift;
@@ -417,7 +423,8 @@ void set_pixel_safe(char* data, int x, int y, int width, int height, int bpp,
 }
 
 /******************************************************************************/
-int split_color(int pixel, int* r, int* g, int* b, int bpp, int* palette)
+int DEFAULT_CC
+split_color(int pixel, int* r, int* g, int* b, int bpp, int* palette)
 {
   if (bpp == 8)
   {
@@ -438,7 +445,8 @@ int split_color(int pixel, int* r, int* g, int* b, int bpp, int* palette)
 }
 
 /******************************************************************************/
-int make_color(int r, int g, int b, int bpp)
+int DEFAULT_CC
+make_color(int r, int g, int b, int bpp)
 {
   if (bpp == 24)
   {
@@ -448,7 +456,8 @@ int make_color(int r, int g, int b, int bpp)
 }
 
 /******************************************************************************/
-int lib_framebuffer_update(struct vnc* v)
+int DEFAULT_CC
+lib_framebuffer_update(struct vnc* v)
 {
   char* data;
   char* d1;
@@ -597,7 +606,8 @@ int lib_framebuffer_update(struct vnc* v)
 }
 
 /******************************************************************************/
-int lib_clip_data(struct vnc* v)
+int DEFAULT_CC
+lib_clip_data(struct vnc* v)
 {
   struct stream* s;
   int size;
@@ -618,7 +628,8 @@ int lib_clip_data(struct vnc* v)
 }
 
 /******************************************************************************/
-int lib_palette_update(struct vnc* v)
+int DEFAULT_CC
+lib_palette_update(struct vnc* v)
 {
   struct stream* s;
   int first_color;
@@ -667,7 +678,8 @@ int lib_palette_update(struct vnc* v)
 }
 
 /******************************************************************************/
-int lib_mod_signal(struct vnc* v)
+int DEFAULT_CC
+lib_mod_signal(struct vnc* v)
 {
   char type;
   int error;
@@ -696,7 +708,8 @@ int lib_mod_signal(struct vnc* v)
 }
 
 /******************************************************************************/
-int lib_mod_start(struct vnc* v, int w, int h, int bpp)
+int DEFAULT_CC
+lib_mod_start(struct vnc* v, int w, int h, int bpp)
 {
   v->server_begin_update(v);
   v->server_fill_rect(v, 0, 0, w, h, 0);
@@ -711,7 +724,8 @@ int lib_mod_start(struct vnc* v, int w, int h, int bpp)
 /*
   return error
 */
-int lib_mod_connect(struct vnc* v)
+int DEFAULT_CC
+lib_mod_connect(struct vnc* v)
 {
   char cursor_data[32 * (32 * 3)];
   char cursor_mask[32 * (32 / 8)];
@@ -949,7 +963,7 @@ int lib_mod_connect(struct vnc* v)
     {
       out_uint8(pixel_format, 8); /* bits per pixel */
       out_uint8(pixel_format, 8); /* depth */
-#if defined(B_ENDIAN)      
+#if defined(B_ENDIAN)
       out_uint8(pixel_format, 1); /* big endian */
 #else
       out_uint8(pixel_format, 0); /* big endian */
@@ -967,7 +981,7 @@ int lib_mod_connect(struct vnc* v)
     {
       out_uint8(pixel_format, 16); /* bits per pixel */
       out_uint8(pixel_format, 16); /* depth */
-#if defined(B_ENDIAN)      
+#if defined(B_ENDIAN)
       out_uint8(pixel_format, 1); /* big endian */
 #else
       out_uint8(pixel_format, 0); /* big endian */
@@ -1044,7 +1058,8 @@ int lib_mod_connect(struct vnc* v)
 }
 
 /******************************************************************************/
-int lib_mod_end(struct vnc* v)
+int DEFAULT_CC
+lib_mod_end(struct vnc* v)
 {
   if (v->vnc_desktop != 0)
   {
@@ -1053,7 +1068,8 @@ int lib_mod_end(struct vnc* v)
 }
 
 /******************************************************************************/
-int lib_mod_set_param(struct vnc* v, char* name, char* value)
+int DEFAULT_CC
+lib_mod_set_param(struct vnc* v, char* name, char* value)
 {
   if (g_strcmp(name, "username") == 0)
   {
@@ -1075,7 +1091,8 @@ int lib_mod_set_param(struct vnc* v, char* name, char* value)
 }
 
 /******************************************************************************/
-struct vnc* mod_init(void)
+struct vnc* EXPORT_CC
+mod_init(void)
 {
   struct vnc* v;
 
@@ -1093,7 +1110,8 @@ struct vnc* mod_init(void)
 }
 
 /******************************************************************************/
-int mod_exit(struct vnc* v)
+int EXPORT_CC
+mod_exit(struct vnc* v)
 {
   if (v == 0)
   {

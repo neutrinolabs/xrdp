@@ -94,6 +94,8 @@ static int APP_CC
 xrdp_wm_setup_mod(struct xrdp_wm* self,
                   struct xrdp_mod_data* mod_data)
 {
+  void* func;
+
   if (self == 0)
   {
     return 1;
@@ -103,10 +105,18 @@ xrdp_wm_setup_mod(struct xrdp_wm* self,
     self->mod_handle = g_load_library(mod_data->lib);
     if (self->mod_handle != 0)
     {
-      self->mod_init = (struct xrdp_mod* (*)(void))
-                g_get_proc_address(self->mod_handle, "mod_init");
-      self->mod_exit = (int (*)(struct xrdp_mod*))
-                g_get_proc_address(self->mod_handle, "mod_exit");
+      func = g_get_proc_address(self->mod_handle, "mod_init");
+      if (func == 0)
+      {
+        func = g_get_proc_address(self->mod_handle, "_mod_init");
+      }
+      self->mod_init = (struct xrdp_mod* (*)(void))func;
+      func = g_get_proc_address(self->mod_handle, "mod_exit");
+      if (func == 0)
+      {
+        func = g_get_proc_address(self->mod_handle, "_mod_exit");
+      }
+      self->mod_exit = (int (*)(struct xrdp_mod*))func;
       if (self->mod_init != 0 && self->mod_exit != 0)
       {
         self->mod = self->mod_init();

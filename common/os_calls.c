@@ -678,7 +678,7 @@ long
 g_load_library(char* in)
 {
 #if defined(_WIN32)
-  return 0;
+  return (long)LoadLibrary(in);
 #else
   return (long)dlopen(in, RTLD_LOCAL | RTLD_LAZY);
 #endif
@@ -693,7 +693,7 @@ g_free_library(long lib)
     return 0;
   }
 #if defined(_WIN32)
-  return 0;
+  return FreeLibrary((HMODULE)lib);
 #else
   return dlclose((void*)lib);
 #endif
@@ -709,7 +709,7 @@ g_get_proc_address(long lib, char* name)
     return 0;
   }
 #if defined(_WIN32)
-  return 0;
+  return GetProcAddress((HMODULE)lib, name);
 #else
   return dlsym((void*)lib, name);
 #endif
