@@ -2,3 +2,4 @@
 startkde
 #blackbox
 #fvwm95
+#xterm

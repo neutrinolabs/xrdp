@@ -68,3 +68,18 @@ auth_userpass(char* user, char* pass)
   }
   return 1;
 }
+
+/******************************************************************************/
+/* returns error */
+int DEFAULT_CC
+auth_start_session(void)
+{
+  return 0;
+}
+
+/******************************************************************************/
+int DEFAULT_CC
+auth_end(void)
+{
+  return 0;
+}

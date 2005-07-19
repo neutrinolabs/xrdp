@@ -27,8 +27,12 @@
 #include "parse.h"
 #include "os_calls.h"
 
-int DEFAULT_CC
+long DEFAULT_CC
 auth_userpass(char* user, char* pass);
+int DEFAULT_CC
+auth_start_session(long in_val);
+int DEFAULT_CC
+auth_end(long in_val);
 
 static int g_sck;
 static int g_pid;
@@ -41,6 +45,7 @@ struct session_item
   int width;
   int height;
   int bpp;
+  long data;
 };
 
 static unsigned char s_fixedkey[8] = { 23, 82, 107, 6, 35, 78, 88, 7 };
@@ -150,6 +155,10 @@ cterm(int s)
   int i;
   int pid;
 
+  if (g_getpid() != g_pid)
+  {
+    return;
+  }
   pid = g_waitchild();
   if (pid > 0)
   {
@@ -157,6 +166,7 @@ cterm(int s)
     {
       if (session_items[i].pid == pid)
       {
+        auth_end(session_items[i].data);
         g_memset(session_items + i, 0, sizeof(struct session_item));
       }
     }
@@ -187,7 +197,8 @@ check_password_file(char* filename, char* password)
 
 /******************************************************************************/
 static int DEFAULT_CC
-start_session(int width, int height, int bpp, char* username, char* password)
+start_session(int width, int height, int bpp, char* username, char* password,
+              long data)
 {
   int display;
   int pid;
@@ -217,6 +228,7 @@ start_session(int width, int height, int bpp, char* username, char* password)
   {
     return 0;
   }
+  auth_start_session(data);
   wmpid = 0;
   pid = g_fork();
   if (pid == -1)
@@ -288,6 +300,7 @@ start_session(int width, int height, int bpp, char* username, char* password)
             g_waitpid(wmpid);
             g_sigterm(xpid);
             g_sigterm(wmpid);
+            g_sleep(1000);
             g_exit(0);
           }
         }
@@ -296,13 +309,13 @@ start_session(int width, int height, int bpp, char* username, char* password)
   }
   else /* parent */
   {
-    g_signal_child_stop(cterm); /* SIGCHLD */
     session_items[display].pid = pid;
     g_strcpy(session_items[display].name, username);
     session_items[display].display = display;
     session_items[display].width = width;
     session_items[display].height = height;
     session_items[display].bpp = bpp;
+    session_items[display].data = data;
     g_sleep(5000);
   }
   return display;
@@ -331,7 +344,6 @@ main(int argc, char** argv)
   int i;
   int size;
   int version;
-  int ok;
   int width;
   int height;
   int bpp;
@@ -344,12 +356,14 @@ main(int argc, char** argv)
   char user[256];
   char pass[256];
   struct session_item* s_item;
+  long data;
 
+  g_memset(&session_items, 0, sizeof(session_items));
+  g_pid = g_getpid();
   g_signal(2, sesman_shutdown); /* SIGINT */
   g_signal(9, sesman_shutdown); /* SIGKILL */
   g_signal(15, sesman_shutdown); /* SIGTERM */
-  g_memset(&session_items, 0, sizeof(session_items));
-  g_pid = g_getpid();
+  g_signal_child_stop(cterm); /* SIGCHLD */
   if (argc == 1)
   {
     g_printf("xrdp session manager v0.1\n");
@@ -403,29 +417,33 @@ start session\n");
                   in_uint16_be(in_s, width);
                   in_uint16_be(in_s, height);
                   in_uint16_be(in_s, bpp);
-                  ok = auth_userpass(user, pass);
+                  data = auth_userpass(user, pass);
                   display = 0;
-                  if (ok)
+                  if (data)
                   {
                     s_item = find_session_item(user, width, height, bpp);
                     if (s_item != 0)
                     {
                       display = s_item->display;
+                      auth_end(data);
+                      data = 0;
                     }
                     else
                     {
-                      display = start_session(width, height, bpp, user, pass);
+                      display = start_session(width, height, bpp, user, pass,
+                                              data);
                     }
                     if (display == 0)
                     {
-                      ok = 0;
+                      auth_end(data);
+                      data = 0;
                     }
                   }
                   init_stream(out_s, 8192);
                   out_uint32_be(out_s, 0); /* version */
                   out_uint32_be(out_s, 14); /* size */
                   out_uint16_be(out_s, 3); /* cmd */
-                  out_uint16_be(out_s, ok); /* data */
+                  out_uint16_be(out_s, data != 0); /* data */
                   out_uint16_be(out_s, display); /* data */
                   s_mark_end(out_s);
                   tcp_force_send(in_sck, out_s->data,
@@ -498,9 +516,9 @@ start session\n");
             in_uint16_be(in_s, code);
             if (code == 3)
             {
-              in_uint16_be(in_s, ok);
+              in_uint16_be(in_s, data);
               in_uint16_be(in_s, display);
-              g_printf("ok %d display %d\n", ok, display);
+              g_printf("ok %d display %d\n", data, display);
             }
           }
         }

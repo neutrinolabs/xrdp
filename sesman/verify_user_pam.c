@@ -27,8 +27,17 @@
 
 struct t_user_pass
 {
-  char* user;
-  char* pass;
+  char user[256];
+  char pass[256];
+};
+
+struct t_auth_info
+{
+  struct t_user_pass user_pass;
+  int session_opened;
+  int did_setcred;
+  struct pam_conv pamc;
+  pam_handle_t* ph;
 };
 
 /******************************************************************************/
@@ -66,33 +75,113 @@ verify_pam_conv(int num_msg, const struct pam_message** msg,
 }
 
 /******************************************************************************/
-/* returns boolean */
-int DEFAULT_CC
+static void DEFAULT_CC
+get_service_name(char* service_name)
+{
+  service_name[0] = 0;
+  if (g_file_exist("/etc/pam.d/sesman"))
+  {
+    g_strncpy(service_name, "sesman", 255);
+  }
+  else
+  {
+    g_strncpy(service_name, "gdm", 255);
+  }
+}
+
+/******************************************************************************/
+/* returns long, zero is no go */
+long DEFAULT_CC
 auth_userpass(char* user, char* pass)
 {
   int error;
-  int null_tok;
-  struct t_user_pass user_pass;
-  struct pam_conv pamc;
-  pam_handle_t* ph;
+  struct t_auth_info* auth_info;
+  char service_name[256];
 
-  user_pass.user = user;
-  user_pass.pass = pass;
-  pamc.conv = &verify_pam_conv;
-  pamc.appdata_ptr = &user_pass;
-  error = pam_start("gdm", 0, &pamc, &ph);
+  get_service_name(service_name);
+  auth_info = g_malloc(sizeof(struct t_auth_info), 1);
+  g_strncpy(auth_info->user_pass.user, user, 255);
+  g_strncpy(auth_info->user_pass.pass, pass, 255);
+  auth_info->pamc.conv = &verify_pam_conv;
+  auth_info->pamc.appdata_ptr = &(auth_info->user_pass);
+  error = pam_start(service_name, 0, &(auth_info->pamc), &(auth_info->ph));
   if (error != PAM_SUCCESS)
   {
-    g_printf("pam_start failed\n\r");
+    g_printf("pam_start failed: %s\n\r", pam_strerror(auth_info->ph, error));
+    g_free(auth_info);
     return 0;
   }
-  null_tok = 0;
-  error = pam_authenticate(ph, null_tok);
+  error = pam_authenticate(auth_info->ph, 0);
   if (error != PAM_SUCCESS)
   {
-    pam_end(ph, PAM_SUCCESS);
+    g_printf("pam_authenticate failed: %s\n\r",
+                         pam_strerror(auth_info->ph, error));
+    g_free(auth_info);
     return 0;
   }
-  pam_end(ph, PAM_SUCCESS);
-  return 1;
+  error = pam_acct_mgmt(auth_info->ph, 0);
+  if (error != PAM_SUCCESS)
+  {
+    g_printf("pam_acct_mgmt failed: %s\n\r",
+                         pam_strerror(auth_info->ph, error));
+    g_free(auth_info);
+    return 0;
+  }
+  return (long)auth_info;
+}
+
+/******************************************************************************/
+/* returns error */
+int DEFAULT_CC
+auth_start_session(long in_val)
+{
+  struct t_auth_info* auth_info;
+  int error;
+
+  auth_info = (struct t_auth_info*)in_val;
+  error = pam_setcred(auth_info->ph, PAM_ESTABLISH_CRED);
+  if (error != PAM_SUCCESS)
+  {
+    g_printf("pam_setcred failed: %s\n\r", pam_strerror(auth_info->ph, error));
+    return 1;
+  }
+  auth_info->did_setcred = 1;
+  error = pam_open_session(auth_info->ph, 0);
+  if (error != PAM_SUCCESS)
+  {
+    g_printf("pam_open_session failed: %s\n\r",
+                       pam_strerror(auth_info->ph, error));
+    return 1;
+  }
+  auth_info->session_opened = 1;
+  return 0;
+}
+
+/******************************************************************************/
+/* returns error */
+/* cleanup */
+int DEFAULT_CC
+auth_end(long in_val)
+{
+  struct t_auth_info* auth_info;
+
+  auth_info = (struct t_auth_info*)in_val;
+  if (auth_info != 0)
+  {
+    if (auth_info->ph != 0)
+    {
+      if (auth_info->session_opened)
+      {
+        pam_close_session(auth_info->ph, 0);
+      }
+      if (auth_info->did_setcred)
+      {
+        pam_setcred(auth_info->ph, PAM_DELETE_CRED);
+      }
+      pam_end(auth_info->ph, PAM_SUCCESS);
+      auth_info->ph = 0;
+    }
+  }
+  g_free(auth_info);
+  return 0;
 }
