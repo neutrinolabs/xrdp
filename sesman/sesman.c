@@ -426,7 +426,7 @@ start session\n");
                     {
                       display = s_item->display;
                       auth_end(data);
-                      data = 0;
+                      /* don't set data to null here */
                     }
                     else
                     {
