@@ -674,6 +674,20 @@ g_atoi(char* str)
 }
 
 /*****************************************************************************/
+int
+g_pos(char* str, char* to_find)
+{
+  char* pp;
+
+  pp = strstr(str, to_find);
+  if (pp == 0)
+  {
+    return -1;
+  }
+  return (pp - str);
+}
+
+/*****************************************************************************/
 long
 g_load_library(char* in)
 {
@@ -777,6 +791,16 @@ g_signal_child_stop(void (*func)(int))
 #else
   signal(SIGCHLD, func);
 #endif
+}
+
+/*****************************************************************************/
+void
+g_unset_signals(void)
+{
+  sigset_t mask;
+
+  sigemptyset(&mask);
+  sigprocmask(SIG_SETMASK, &mask, NULL);
 }
 
 /*****************************************************************************/

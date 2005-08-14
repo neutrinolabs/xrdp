@@ -117,6 +117,8 @@ int
 g_strncmp(char* c1, char* c2, int len);
 int
 g_atoi(char* str);
+int
+g_pos(char* str, char* to_find);
 long
 g_load_library(char* in);
 int
@@ -136,6 +138,8 @@ void
 g_signal(int sig_num, void (*func)(int));
 void
 g_signal_child_stop(void (*func)(int));
+void
+g_unset_signals(void);
 int
 g_fork(void);
 int
