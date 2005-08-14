@@ -30,9 +30,11 @@
 long DEFAULT_CC
 auth_userpass(char* user, char* pass);
 int DEFAULT_CC
-auth_start_session(long in_val);
+auth_start_session(long in_val, int in_display);
 int DEFAULT_CC
 auth_end(long in_val);
+int DEFAULT_CC
+auth_set_env(long in_val);
 
 static int g_sck;
 static int g_pid;
@@ -166,7 +168,6 @@ cterm(int s)
     {
       if (session_items[i].pid == pid)
       {
-        auth_end(session_items[i].data);
         g_memset(session_items + i, 0, sizeof(struct session_item));
       }
     }
@@ -197,26 +198,65 @@ check_password_file(char* filename, char* password)
 
 /******************************************************************************/
 static int DEFAULT_CC
+set_user(char* username, char* passwd_file, int display)
+{
+  int error;
+  int pw_uid;
+  int pw_gid;
+  int uid;
+  char pw_shell[256];
+  char pw_dir[256];
+  char pw_gecos[256];
+  char text[256];
+
+  error = g_getuser_info(username, &pw_gid, &pw_uid, pw_shell, pw_dir,
+                         pw_gecos);
+  if (error == 0)
+  {
+    error = g_setgid(pw_gid);
+    if (error == 0)
+    {
+      uid = pw_uid;
+      error = g_setuid(uid);
+    }
+    if (error == 0)
+    {
+      g_clearenv();
+      g_setenv("SHELL", pw_shell, 1);
+      g_setenv("PATH", "/bin:/usr/bin:/usr/X11R6/bin:/usr/local/bin", 1);
+      g_setenv("USER", username, 1);
+      g_sprintf(text, "%d", uid);
+      g_setenv("UID", text, 1);
+      g_setenv("HOME", pw_dir, 1);
+      g_set_current_dir(pw_dir);
+      g_sprintf(text, ":%d.0", display);
+      g_setenv("DISPLAY", text, 1);
+      if (passwd_file != 0)
+      {
+        g_mkdir(".vnc");
+        g_sprintf(passwd_file, "%s/.vnc/sesman_passwd", pw_dir);
+      }
+    }
+  }
+  return error;
+}
+
+/******************************************************************************/
+/* returns 0 if error else the display number the session was started on */
+static int DEFAULT_CC
 start_session(int width, int height, int bpp, char* username, char* password,
               long data)
 {
   int display;
   int pid;
-  int uid;
   int wmpid;
   int xpid;
-  int error;
-  int pw_uid;
-  int pw_gid;
-  char pw_gecos[256];
-  char pw_dir[256];
-  char pw_shell[256];
-  char text[256];
-  char passwd_file[256];
   char geometry[32];
   char depth[32];
   char screen[32];
   char cur_dir[256];
+  char text[256];
+  char passwd_file[256];
 
   g_get_current_dir(cur_dir, 255);
   display = 10;
@@ -228,7 +268,6 @@ start_session(int width, int height, int bpp, char* username, char* password,
   {
     return 0;
   }
-  auth_start_session(data);
   wmpid = 0;
   pid = g_fork();
   if (pid == -1)
@@ -236,74 +275,54 @@ start_session(int width, int height, int bpp, char* username, char* password,
   }
   else if (pid == 0) /* child */
   {
-    error = g_getuser_info(username, &pw_gid, &pw_uid, pw_shell, pw_dir,
-                           pw_gecos);
-    if (error == 0)
+    g_unset_signals();
+    auth_start_session(data, display);
+    g_sprintf(geometry, "%dx%d", width, height);
+    g_sprintf(depth, "%d", bpp);
+    g_sprintf(screen, ":%d", display);
+    wmpid = g_fork();
+    if (wmpid == -1)
     {
-      error = g_setgid(pw_gid);
-      if (error == 0)
+    }
+    else if (wmpid == 0) /* child */
+    {
+      /* give X a bit to start */
+      g_sleep(1000);
+      set_user(username, 0, display);
+      if (x_server_running(display))
       {
-        uid = pw_uid;
-        error = g_setuid(uid);
+        auth_set_env(data);
+        g_sprintf(text, "%s/startwm.sh", cur_dir);
+        g_execlp3(text, "startwm.sh", 0);
+        /* should not get here */
       }
-      if (error == 0)
+      g_printf("error\n");
+      g_exit(0);
+    }
+    else /* parent */
+    {
+      xpid = g_fork();
+      if (xpid == -1)
       {
-        g_clearenv();
-        g_setenv("SHELL", pw_shell, 1);
-        g_setenv("PATH", "/bin:/usr/bin:/usr/X11R6/bin:/usr/local/bin", 1);
-        g_setenv("USER", username, 1);
-        g_sprintf(text, "%d", uid);
-        g_setenv("UID", text, 1);
-        g_setenv("HOME", pw_dir, 1);
-        g_set_current_dir(pw_dir);
-        g_sprintf(text, ":%d.0", display);
-        g_setenv("DISPLAY", text, 1);
-        g_sprintf(geometry, "%dx%d", width, height);
-        g_sprintf(depth, "%d", bpp);
-        g_sprintf(screen, ":%d", display);
-        g_mkdir(".vnc");
-        g_sprintf(passwd_file, "%s/.vnc/sesman_passwd", pw_dir);
+      }
+      else if (xpid == 0) /* child */
+      {
+        set_user(username, passwd_file, display);
         check_password_file(passwd_file, password);
-        wmpid = g_fork();
-        if (wmpid == -1)
-        {
-        }
-        else if (wmpid == 0) /* child */
-        {
-          /* give X a bit to start */
-          g_sleep(500);
-          if (x_server_running(display))
-          {
-            g_sprintf(text, "%s/startwm.sh", cur_dir);
-            g_execlp3(text, "startwm.sh", 0);
-            /* should not get here */
-          }
-          g_printf("error\n");
-          g_exit(0);
-        }
-        else /* parent */
-        {
-          xpid = g_fork();
-          if (xpid == -1)
-          {
-          }
-          else if (xpid == 0) /* child */
-          {
-            g_execlp11("Xvnc", "Xvnc", screen, "-geometry", geometry,
-                       "-depth", depth, "-bs", "-rfbauth", passwd_file, 0);
-            /* should not get here */
-            g_printf("error\n");
-            g_exit(0);
-          }
-          else /* parent */
-          {
-            g_waitpid(wmpid);
-            g_sigterm(xpid);
-            g_sigterm(wmpid);
-            g_sleep(1000);
-            g_exit(0);
-          }
-        }
+        g_execlp11("Xvnc", "Xvnc", screen, "-geometry", geometry,
+                   "-depth", depth, "-bs", "-rfbauth", passwd_file, 0);
+        /* should not get here */
+        g_printf("error\n");
+        g_exit(0);
+      }
+      else /* parent */
+      {
+        g_waitpid(wmpid);
+        g_sigterm(xpid);
+        g_sigterm(wmpid);
+        g_sleep(1000);
+        auth_end(data);
+        g_exit(0);
       }
     }
   }

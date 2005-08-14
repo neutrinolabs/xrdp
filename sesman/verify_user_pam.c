@@ -133,12 +133,20 @@ auth_userpass(char* user, char* pass)
 /******************************************************************************/
 /* returns error */
 int DEFAULT_CC
-auth_start_session(long in_val)
+auth_start_session(long in_val, int in_display)
 {
   struct t_auth_info* auth_info;
   int error;
+  char display[256];
 
+  g_sprintf(display, ":%d", in_display);
   auth_info = (struct t_auth_info*)in_val;
+  error = pam_set_item(auth_info->ph, PAM_TTY, display);
+  if (error != PAM_SUCCESS)
+  {
+    g_printf("pam_set_item failed: %s\n\r", pam_strerror(auth_info->ph, error));
+    return 1;
+  }
   error = pam_setcred(auth_info->ph, PAM_ESTABLISH_CRED);
   if (error != PAM_SUCCESS)
   {
@@ -183,5 +191,42 @@ auth_end(long in_val)
     }
   }
   g_free(auth_info);
+  return 0;
+}
+
+/******************************************************************************/
+/* returns error */
+/* set any pam env vars */
+int DEFAULT_CC
+auth_set_env(long in_val)
+{
+  struct t_auth_info* auth_info;
+  char** pam_envlist;
+  char** pam_env;
+  char item[256];
+  char value[256];
+  int eq_pos;
+
+  auth_info = (struct t_auth_info*)in_val;
+  if (auth_info != 0)
+  {
+    /* export PAM environment */
+    pam_envlist = pam_getenvlist(auth_info->ph);
+    if (pam_envlist != NULL)
+    {
+      for (pam_env = pam_envlist; *pam_env != NULL; ++pam_env)
+      {
+        eq_pos = g_pos(*pam_env, "=");
+        if (eq_pos >= 0 && eq_pos < 250)
+        {
+          g_strncpy(item, *pam_env, eq_pos);
+          g_strncpy(value, (*pam_env) + eq_pos + 1, 255);
+          g_setenv(item, value, 1);
+        }
+        g_free(*pam_env);
+      }
+      g_free(pam_envlist);
+    }
+  }
   return 0;
 }
