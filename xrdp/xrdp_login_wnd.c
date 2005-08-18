@@ -90,6 +90,22 @@ xrdp_wm_popup_notify(struct xrdp_bitmap* wnd,
 #endif
 
 /*****************************************************************************/
+/* called from main thread */
+static long DEFAULT_CC
+sync_unload(long param1, long param2)
+{
+  return g_free_library(param1);
+}
+
+/*****************************************************************************/
+/* called from main thread */
+static long DEFAULT_CC
+sync_load(long param1, long param2)
+{
+  return g_load_library((char*)param1);
+}
+
+/*****************************************************************************/
 static int APP_CC
 xrdp_wm_setup_mod(struct xrdp_wm* self,
                   struct xrdp_mod_data* mod_data)
@@ -102,7 +118,7 @@ xrdp_wm_setup_mod(struct xrdp_wm* self,
   }
   if (self->mod_handle == 0)
   {
-    self->mod_handle = g_load_library(mod_data->lib);
+    self->mod_handle = g_xrdp_sync(sync_load, (long)mod_data->lib, 0);
     if (self->mod_handle != 0)
     {
       func = g_get_proc_address(self->mod_handle, "mod_init");
@@ -136,6 +152,15 @@ xrdp_wm_setup_mod(struct xrdp_wm* self,
       self->mod->server_is_term = server_is_term;
       self->mod->server_set_clip = server_set_clip;
       self->mod->server_reset_clip = server_reset_clip;
+      self->mod->server_set_fgcolor = server_set_fgcolor;
+      self->mod->server_set_bgcolor = server_set_bgcolor;
+      self->mod->server_set_opcode = server_set_opcode;
+      self->mod->server_set_mixmode = server_set_mixmode;
+      self->mod->server_set_brush = server_set_brush;
+      self->mod->server_set_pen = server_set_pen;
+      self->mod->server_draw_line = server_draw_line;
+      self->mod->server_add_char = server_add_char;
+      self->mod->server_draw_text = server_draw_text;
     }
   }
   /* id self->mod is null, there must be a problem */
@@ -306,7 +331,7 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap* wnd)
           {
             /* totaly free mod */
             wm->mod_exit(wm->mod);
-            g_free_library(wm->mod_handle);
+            g_xrdp_sync(sync_unload, wm->mod_handle, 0);
             wm->mod = 0;
             wm->mod_handle = 0;
             wm->mod_init = 0;

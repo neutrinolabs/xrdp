@@ -107,15 +107,13 @@ server_end_update(struct xrdp_mod* mod)
 
 /*****************************************************************************/
 int DEFAULT_CC
-server_fill_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy,
-                 int color)
+server_fill_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy)
 {
   struct xrdp_wm* wm;
   struct xrdp_painter* p;
 
   wm = (struct xrdp_wm*)mod->wm;
   p = (struct xrdp_painter*)mod->painter;
-  p->fg_color = color;
   xrdp_painter_fill_rect(p, wm->screen, x, y, cx, cy);
   return 0;
 }
@@ -147,7 +145,7 @@ server_paint_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy,
   wm = (struct xrdp_wm*)mod->wm;
   p = (struct xrdp_painter*)mod->painter;
   b = xrdp_bitmap_create_with_data(cx, cy, wm->screen->bpp, data, wm);
-  xrdp_painter_draw_bitmap(p, wm->screen, b, x, y, cx, cy);
+  xrdp_painter_copy(p, b, wm->screen, x, y, cx, cy, 0, 0);
   xrdp_bitmap_delete(b);
   return 0;
 }
@@ -181,11 +179,17 @@ server_palette(struct xrdp_mod* mod, int* palette)
 
 /*****************************************************************************/
 int DEFAULT_CC
-server_msg(struct xrdp_mod* mod, char* msg)
+server_msg(struct xrdp_mod* mod, char* msg, int code)
 {
   struct xrdp_wm* wm;
   struct xrdp_bitmap* but;
 
+  if (code == 1)
+  {
+    g_printf(msg);
+    g_printf("\n\r");
+    return 0;
+  }
   wm = (struct xrdp_wm*)mod->wm;
   list_add_item(wm->log, (long)g_strdup(msg));
   if (wm->log_wnd == 0)
@@ -243,4 +247,128 @@ server_reset_clip(struct xrdp_mod* mod)
 
   p = (struct xrdp_painter*)mod->painter;
   return xrdp_painter_clr_clip(p);
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_set_fgcolor(struct xrdp_mod* mod, int fgcolor)
+{
+  struct xrdp_painter* p;
+
+  p = (struct xrdp_painter*)mod->painter;
+  p->fg_color = fgcolor;
+  p->pen.color = p->fg_color;
+  return 0;
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_set_bgcolor(struct xrdp_mod* mod, int bgcolor)
+{
+  struct xrdp_painter* p;
+
+  p = (struct xrdp_painter*)mod->painter;
+  p->bg_color = bgcolor;
+  return 0;
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_set_opcode(struct xrdp_mod* mod, int opcode)
+{
+  struct xrdp_painter* p;
+
+  p = (struct xrdp_painter*)mod->painter;
+  p->rop = opcode;
+  return 0;
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_set_mixmode(struct xrdp_mod* mod, int mixmode)
+{
+  struct xrdp_painter* p;
+
+  p = (struct xrdp_painter*)mod->painter;
+  p->mix_mode = mixmode;
+  return 0;
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_set_brush(struct xrdp_mod* mod, int x_orgin, int y_orgin,
+                 int style, char* pattern)
+{
+  struct xrdp_painter* p;
+
+  p = (struct xrdp_painter*)mod->painter;
+  p->brush.x_orgin = x_orgin;
+  p->brush.y_orgin = y_orgin;
+  p->brush.style = style;
+  g_memcpy(p->brush.pattern, pattern, 8);
+  return 0;
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_set_pen(struct xrdp_mod* mod, int style, int width)
+{
+  struct xrdp_painter* p;
+
+  p = (struct xrdp_painter*)mod->painter;
+  p->pen.style = style;
+  p->pen.width = width;
+  return 0;
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_draw_line(struct xrdp_mod* mod, int x1, int y1, int x2, int y2)
+{
+  struct xrdp_wm* wm;
+  struct xrdp_painter* p;
+
+  wm = (struct xrdp_wm*)mod->wm;
+  p = (struct xrdp_painter*)mod->painter;
+  return xrdp_painter_line(p, wm->screen, x1, y1, x2, y2);
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_add_char(struct xrdp_mod* mod, int font, int charactor,
+                int offset, int baseline,
+                int width, int height, char* data)
+{
+  struct xrdp_font_char fi;
+
+  fi.offset = offset;
+  fi.baseline = baseline;
+  fi.width = width;
+  fi.height = height;
+  fi.incby = 0;
+  fi.data = data;
+  return libxrdp_orders_send_font(((struct xrdp_wm*)mod->wm)->session,
+                                  &fi, font, charactor);
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_draw_text(struct xrdp_mod* mod, int font,
+                 int flags, int mixmode, int clip_left, int clip_top,
+                 int clip_right, int clip_bottom,
+                 int box_left, int box_top,
+                 int box_right, int box_bottom,
+                 int x, int y, char* data, int data_len)
+{
+  struct xrdp_wm* wm;
+  struct xrdp_painter* p;
+
+  wm = (struct xrdp_wm*)mod->wm;
+  p = (struct xrdp_painter*)mod->painter;
+  return xrdp_painter_draw_text2(p, wm->screen, font, flags,
+                                 mixmode, clip_left, clip_top,
+                                 clip_right, clip_bottom,
+                                 box_left, box_top,
+                                 box_right, box_bottom,
+                                 x, y, data, data_len);
 }

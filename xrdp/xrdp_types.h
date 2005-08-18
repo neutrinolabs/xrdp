@@ -35,18 +35,35 @@ struct xrdp_mod
   /* server functions */
   int (*server_begin_update)(struct xrdp_mod* v);
   int (*server_end_update)(struct xrdp_mod* v);
-  int (*server_fill_rect)(struct xrdp_mod* v, int x, int y, int cx, int cy,
-                          int color);
+  int (*server_fill_rect)(struct xrdp_mod* v, int x, int y, int cx, int cy);
   int (*server_screen_blt)(struct xrdp_mod* v, int x, int y, int cx, int cy,
                            int srcx, int srcy);
   int (*server_paint_rect)(struct xrdp_mod* v, int x, int y, int cx, int cy,
                            char* data);
   int (*server_set_pointer)(struct xrdp_mod* v, int x, int y, char* data, char* mask);
   int (*server_palette)(struct xrdp_mod* v, int* palette);
-  int (*server_msg)(struct xrdp_mod* v, char* msg);
+  int (*server_msg)(struct xrdp_mod* v, char* msg, int code);
   int (*server_is_term)(struct xrdp_mod* v);
   int (*server_set_clip)(struct xrdp_mod* v, int x, int y, int cx, int cy);
   int (*server_reset_clip)(struct xrdp_mod* v);
+  int (*server_set_fgcolor)(struct xrdp_mod* v, int fgcolor);
+  int (*server_set_bgcolor)(struct xrdp_mod* v, int bgcolor);
+  int (*server_set_opcode)(struct xrdp_mod* v, int opcode);
+  int (*server_set_mixmode)(struct xrdp_mod* v, int mixmode);
+  int (*server_set_brush)(struct xrdp_mod* v, int x_orgin, int y_orgin,
+                          int style, char* pattern);
+  int (*server_set_pen)(struct xrdp_mod* v, int style,
+                        int width);
+  int (*server_draw_line)(struct xrdp_mod* v, int x1, int y1, int x2, int y2);
+  int (*server_add_char)(struct xrdp_mod* v, int font, int charactor,
+                         int offset, int baseline,
+                         int width, int height, char* data);
+  int (*server_draw_text)(struct xrdp_mod* v, int font,
+                          int flags, int mixmode, int clip_left, int clip_top,
+                          int clip_right, int clip_bottom,
+                          int box_left, int box_top,
+                          int box_right, int box_bottom,
+                          int x, int y, char* data, int data_len);
   /* common */
   long handle; /* pointer to self as int */
   long wm; /* struct xrdp_wm* */
@@ -217,12 +234,14 @@ struct xrdp_region
 struct xrdp_painter
 {
   int rop;
-  int use_clip;
+  struct xrdp_rect* use_clip; /* nil if not using clip */
   struct xrdp_rect clip;
   int clip_children;
   int bg_color;
   int fg_color;
+  int mix_mode;
   struct xrdp_brush brush;
+  struct xrdp_pen pen;
   struct xrdp_session* session;
   struct xrdp_wm* wm; /* owner */
   struct xrdp_font* font;

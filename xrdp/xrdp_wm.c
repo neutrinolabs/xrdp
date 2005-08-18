@@ -46,6 +46,15 @@ xrdp_wm_create(struct xrdp_process* owner,
 }
 
 /*****************************************************************************/
+/* called from main thread */
+static long DEFAULT_CC
+sync_unload(long param1, long param2)
+{
+  g_free_library(param1);
+  return 0;
+}
+
+/*****************************************************************************/
 void APP_CC
 xrdp_wm_delete(struct xrdp_wm* self)
 {
@@ -66,7 +75,7 @@ xrdp_wm_delete(struct xrdp_wm* self)
   }
   if (self->mod_handle != 0)
   {
-    g_free_library(self->mod_handle);
+    g_xrdp_sync(sync_unload, self->mod_handle, 0);
   }
   /* free the log */
   list_delete(self->log);
@@ -123,7 +132,7 @@ xrdp_wm_set_focused(struct xrdp_wm* self, struct xrdp_bitmap* wnd)
   return 0;
 }
 
-//******************************************************************************
+/******************************************************************************/
 int APP_CC
 xrdp_wm_get_pixel(char* data, int x, int y, int width, int bpp)
 {
@@ -429,6 +438,7 @@ xrdp_wm_xor_pat(struct xrdp_wm* self, int x, int y, int cx, int cy)
   self->painter->rop = 0x5a;
   xrdp_painter_begin_update(self->painter);
   self->painter->use_clip = 0;
+  self->painter->mix_mode = 1;
   self->painter->brush.pattern[0] = 0xaa;
   self->painter->brush.pattern[1] = 0x55;
   self->painter->brush.pattern[2] = 0xaa;
@@ -443,17 +453,18 @@ xrdp_wm_xor_pat(struct xrdp_wm* self, int x, int y, int cx, int cy)
   self->painter->bg_color = self->black;
   self->painter->fg_color = self->white;
   /* top */
-  xrdp_painter_fill_rect2(self->painter, self->screen, x, y, cx, 5);
+  xrdp_painter_fill_rect(self->painter, self->screen, x, y, cx, 5);
   /* bottom */
-  xrdp_painter_fill_rect2(self->painter, self->screen, x, y + (cy - 5), cx, 5);
+  xrdp_painter_fill_rect(self->painter, self->screen, x, y + (cy - 5), cx, 5);
   /* left */
-  xrdp_painter_fill_rect2(self->painter, self->screen, x, y + 5, 5, cy - 10);
+  xrdp_painter_fill_rect(self->painter, self->screen, x, y + 5, 5, cy - 10);
   /* right */
-  xrdp_painter_fill_rect2(self->painter, self->screen, x + (cx - 5), y + 5, 5,
+  xrdp_painter_fill_rect(self->painter, self->screen, x + (cx - 5), y + 5, 5,
                           cy - 10);
   xrdp_painter_end_update(self->painter);
   self->painter->rop = 0xcc;
   self->painter->clip_children = 1;
+  self->painter->mix_mode = 0;
   return 0;
 }
 
@@ -949,11 +960,13 @@ xrdp_wm_key(struct xrdp_wm* self, int device_flags, int scan_code)
                                   self->scroll_lock);
       if (c != 0)
       {
-        self->mod->mod_event(self->mod, msg, c, 0xffff, 0, 0);
+        self->mod->mod_event(self->mod, msg, c, 0xffff,
+                             scan_code, device_flags);
       }
       else
       {
-        self->mod->mod_event(self->mod, msg, scan_code, device_flags, 0, 0);
+        self->mod->mod_event(self->mod, msg, scan_code, device_flags,
+                             scan_code, device_flags);
       }
     }
   }
@@ -984,6 +997,14 @@ xrdp_wm_key_sync(struct xrdp_wm* self, int device_flags, int key_flags)
   if (key_flags & 4)
   {
     self->caps_lock = 1;
+  }
+  if (self->mod != 0)
+  {
+    if (self->mod->mod_event != 0)
+    {
+      self->mod->mod_event(self->mod, 17, key_flags, device_flags,
+                           key_flags, device_flags);
+    }
   }
   return 0;
 }

@@ -773,6 +773,7 @@ xrdp_bitmap_draw_focus_box(struct xrdp_bitmap* self,
   painter->rop = 0xf0;
   xrdp_painter_begin_update(painter);
   painter->use_clip = 0;
+  painter->mix_mode = 1;
   painter->brush.pattern[0] = 0xaa;
   painter->brush.pattern[1] = 0x55;
   painter->brush.pattern[2] = 0xaa;
@@ -787,15 +788,16 @@ xrdp_bitmap_draw_focus_box(struct xrdp_bitmap* self,
   painter->fg_color = self->wm->black;
   painter->bg_color = self->parent->bg_color;
   /* top */
-  xrdp_painter_fill_rect2(painter, self, x, y, cx, 1);
+  xrdp_painter_fill_rect(painter, self, x, y, cx, 1);
   /* bottom */
-  xrdp_painter_fill_rect2(painter, self, x, y + (cy - 1), cx, 1);
+  xrdp_painter_fill_rect(painter, self, x, y + (cy - 1), cx, 1);
   /* left */
-  xrdp_painter_fill_rect2(painter, self, x, y + 1, 1, cy - 2);
+  xrdp_painter_fill_rect(painter, self, x, y + 1, 1, cy - 2);
   /* right */
-  xrdp_painter_fill_rect2(painter, self, x + (cx - 1), y + 1, 1, cy - 2);
+  xrdp_painter_fill_rect(painter, self, x + (cx - 1), y + 1, 1, cy - 2);
   xrdp_painter_end_update(painter);
   painter->rop = 0xcc;
+  painter->mix_mode = 0;
   return 0;
 }
 
@@ -905,7 +907,7 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
       return 0;
     }
     painter->clip = *rect;
-    painter->use_clip = 1;
+    painter->use_clip = &painter->clip;
   }
   xrdp_painter_begin_update(painter);
   if (self->type == WND_TYPE_WND) /* 1 */
@@ -1012,8 +1014,8 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
   }
   else if (self->type == WND_TYPE_IMAGE) /* 4 */
   {
-    xrdp_painter_draw_bitmap(painter, self, self, 0, 0, self->width,
-                             self->height);
+    xrdp_painter_copy(painter, self, self, 0, 0, self->width,
+                      self->height, 0, 0);
   }
   else if (self->type == WND_TYPE_EDIT) /* 5 */
   {
@@ -1066,7 +1068,7 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
         else
           g_strncpy(text, self->caption1, self->edit_pos);
         w = xrdp_painter_text_width(painter, text);
-        painter->fg_color = self->wm->black;
+        painter->fg_color = self->wm->white;
         painter->rop = 0x5a;
         xrdp_painter_fill_rect(painter, self, 4 + w, 3, 2, self->height - 6);
       }
@@ -1516,4 +1518,42 @@ xrdp_bitmap_from_screeny(struct xrdp_bitmap* self, int y)
     self = self->parent;
   }
   return i;
+}
+
+/*****************************************************************************/
+int APP_CC
+xrdp_bitmap_get_screen_clip(struct xrdp_bitmap* self,
+                            struct xrdp_painter* painter,
+                            struct xrdp_rect* rect,
+                            int* dx, int* dy)
+{
+  int ldx;
+  int ldy;
+
+  if (painter->use_clip)
+  {
+    *rect = painter->clip;
+  }
+  else
+  {
+    rect->left = 0;
+    rect->top = 0;
+    rect->right = self->width;
+    rect->bottom = self->height;
+  }
+  ldx = xrdp_bitmap_to_screenx(self, 0);
+  ldy = xrdp_bitmap_to_screeny(self, 0);
+  rect->left += ldx;
+  rect->top += ldy;
+  rect->right += ldx;
+  rect->bottom += ldy;
+  if (dx != 0)
+  {
+    *dx = ldx;
+  }
+  if (dy != 0)
+  {
+    *dy = ldy;
+  }
+  return 0;
 }

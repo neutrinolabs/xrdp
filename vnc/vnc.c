@@ -712,7 +712,8 @@ int DEFAULT_CC
 lib_mod_start(struct vnc* v, int w, int h, int bpp)
 {
   v->server_begin_update(v);
-  v->server_fill_rect(v, 0, 0, w, h, 0);
+  v->server_set_fgcolor(v, 0);
+  v->server_fill_rect(v, 0, 0, w, h);
   v->server_end_update(v);
   v->server_width = w;
   v->server_height = h;
@@ -742,17 +743,17 @@ lib_mod_connect(struct vnc* v)
   int ok;
   int display;
 
-  v->server_msg(v, "started connecting");
+  v->server_msg(v, "started connecting", 0);
   check_sec_result = 1;
   /* only support 8 and 16 bpp connections from rdp client */
   if (v->server_bpp != 8 && v->server_bpp != 16)
   {
-    v->server_msg(v, "error - only supporting 8 and 16 bpp rdp connections");
+    v->server_msg(v, "error - only supporting 8 and 16 bpp rdp connections", 0);
     return 1;
   }
   if (g_strcmp(v->ip, "") == 0)
   {
-    v->server_msg(v, "error - no ip set");
+    v->server_msg(v, "error - no ip set", 0);
     return 1;
   }
   make_stream(s);
@@ -764,7 +765,7 @@ lib_mod_connect(struct vnc* v)
     init_stream(s, 8192);
     v->sck = g_tcp_socket();
     v->sck_closed = 0;
-    v->server_msg(v, "connecting to sesman");
+    v->server_msg(v, "connecting to sesman", 0);
     if (g_tcp_connect(v->sck, v->ip, "3350") == 0)
     {
       g_tcp_set_non_blocking(v->sck);
@@ -784,12 +785,12 @@ lib_mod_connect(struct vnc* v)
       s_pop_layer(s, channel_hdr);
       out_uint32_be(s, 0); // version
       out_uint32_be(s, s->end - s->data); // size
-      v->server_msg(v, "sending login info to sesman");
+      v->server_msg(v, "sending login info to sesman", 0);
       error = lib_send(v, s->data, s->end - s->data);
       if (error == 0)
       {
         init_stream(s, 8192);
-        v->server_msg(v, "receiving sesman header");
+        v->server_msg(v, "receiving sesman header", 0);
         error = lib_recv(v, s->data, 8);
       }
       if (error == 0)
@@ -797,7 +798,7 @@ lib_mod_connect(struct vnc* v)
         in_uint32_be(s, version);
         in_uint32_be(s, size);
         init_stream(s, 8192);
-        v->server_msg(v, "receiving sesman data");
+        v->server_msg(v, "receiving sesman data", 0);
         error = lib_recv(v, s->data, size - 8);
       }
       if (error == 0)
@@ -815,7 +816,7 @@ lib_mod_connect(struct vnc* v)
             else
             {
               in_uint8s(s, 2);
-              v->server_msg(v, "error - sesman returned no");
+              v->server_msg(v, "error - sesman returned no", 0);
             }
           }
         }
@@ -823,16 +824,16 @@ lib_mod_connect(struct vnc* v)
     }
     else
     {
-      v->server_msg(v, "error - connecting to sesman");
+      v->server_msg(v, "error - connecting to sesman", 0);
     }
     g_tcp_close(v->sck);
     if (error != 0 || display == 0)
     {
-      v->server_msg(v, "error - connection failed");
+      v->server_msg(v, "error - connection failed", 0);
       free_stream(s);
       return 1;
     }
-    v->server_msg(v, "sesman started a session");
+    v->server_msg(v, "sesman started a session", 0);
     g_sprintf(con_port, "%d", 5900 + display);
     v->vnc_desktop = display;
   }
@@ -844,11 +845,11 @@ lib_mod_connect(struct vnc* v)
   v->sck = g_tcp_socket();
   v->sck_closed = 0;
   g_sprintf(text, "connecting to %s %s", v->ip, con_port);
-  v->server_msg(v, text);
+  v->server_msg(v, text, 0);
   error = g_tcp_connect(v->sck, v->ip, con_port);
   if (error == 0)
   {
-    v->server_msg(v, "tcp connected");
+    v->server_msg(v, "tcp connected", 0);
     g_tcp_set_non_blocking(v->sck);
     g_tcp_set_no_delay(v->sck);
     /* protocal version */
@@ -868,7 +869,7 @@ lib_mod_connect(struct vnc* v)
     {
       in_uint32_be(s, i);
       g_sprintf(text, "security level is %d (1 = none, 2 = standard)", i);
-      v->server_msg(v, text);
+      v->server_msg(v, text, 0);
       if (i == 1) /* none */
       {
         check_sec_result = 0;
@@ -899,25 +900,25 @@ lib_mod_connect(struct vnc* v)
       in_uint32_be(s, i);
       if (i != 0)
       {
-        v->server_msg(v, "password failed");
+        v->server_msg(v, "password failed", 0);
         error = 2;
       }
       else
       {
-        v->server_msg(v, "password ok");
+        v->server_msg(v, "password ok", 0);
       }
     }
   }
   if (error == 0)
   {
-    v->server_msg(v, "sending share flag");
+    v->server_msg(v, "sending share flag", 0);
     init_stream(s, 8192);
     s->data[0] = 1;
     error = lib_send(v, s->data, 1); /* share flag */
   }
   if (error == 0)
   {
-    v->server_msg(v, "receiving server init");
+    v->server_msg(v, "receiving server init", 0);
     error = lib_recv(v, s->data, 4); /* server init */
   }
   if (error == 0)
@@ -925,14 +926,14 @@ lib_mod_connect(struct vnc* v)
     in_uint16_be(s, v->mod_width);
     in_uint16_be(s, v->mod_height);
     init_stream(pixel_format, 8192);
-    v->server_msg(v, "receiving pixel format");
+    v->server_msg(v, "receiving pixel format", 0);
     error = lib_recv(v, pixel_format->data, 16);
   }
   if (error == 0)
   {
     v->mod_bpp = v->server_bpp;
     init_stream(s, 8192);
-    v->server_msg(v, "receiving name length");
+    v->server_msg(v, "receiving name length", 0);
     error = lib_recv(v, s->data, 4); /* name len */
   }
   if (error == 0)
@@ -944,7 +945,7 @@ lib_mod_connect(struct vnc* v)
     }
     else
     {
-      v->server_msg(v, "receiving name");
+      v->server_msg(v, "receiving name", 0);
       error = lib_recv(v, v->mod_name, i);
       v->mod_name[i] = 0;
     }
@@ -996,7 +997,7 @@ lib_mod_connect(struct vnc* v)
       out_uint8s(pixel_format, 3); /* pad */
     }
     out_uint8a(s, pixel_format->data, 16);
-    v->server_msg(v, "sending pixel format");
+    v->server_msg(v, "sending pixel format", 0);
     error = lib_send(v, s->data, 20);
   }
   if (error == 0)
@@ -1009,7 +1010,7 @@ lib_mod_connect(struct vnc* v)
     out_uint32_be(s, 0); /* raw */
     out_uint32_be(s, 1); /* copy rect */
     out_uint32_be(s, 0xffffff11); /* cursor */
-    v->server_msg(v, "sending encodings");
+    v->server_msg(v, "sending encodings", 0);
     error = lib_send(v, s->data, 4 + 3 * 4);
   }
   if (error == 0)
@@ -1022,14 +1023,14 @@ lib_mod_connect(struct vnc* v)
     out_uint16_be(s, 0);
     out_uint16_be(s, v->mod_width);
     out_uint16_be(s, v->mod_height);
-    v->server_msg(v, "sending framebuffer update request");
+    v->server_msg(v, "sending framebuffer update request", 0);
     error = lib_send(v, s->data, 10);
   }
   if (error == 0)
   {
     if (v->server_bpp != v->mod_bpp)
     {
-      v->server_msg(v, "error - server and client bpp don't match");
+      v->server_msg(v, "error - server and client bpp don't match", 0);
       error = 1;
     }
   }
@@ -1041,18 +1042,18 @@ lib_mod_connect(struct vnc* v)
     g_memset(cursor_data + (32 * (32 * 3) - 2 * 32 * 3), 0xff, 9);
     g_memset(cursor_data + (32 * (32 * 3) - 3 * 32 * 3), 0xff, 9);
     g_memset(cursor_mask, 0xff, 32 * (32 / 8));
-    v->server_msg(v, "sending cursor");
+    v->server_msg(v, "sending cursor", 0);
     error = v->server_set_cursor(v, 3, 3, cursor_data, cursor_mask);
   }
   free_stream(s);
   free_stream(pixel_format);
   if (error == 0)
   {
-    v->server_msg(v, "connection complete, connected ok");
+    v->server_msg(v, "connection complete, connected ok", 0);
   }
   else
   {
-    v->server_msg(v, "error - problem connecting");
+    v->server_msg(v, "error - problem connecting", 0);
   }
   return error;
 }

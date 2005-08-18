@@ -132,7 +132,7 @@ int APP_CC
 xrdp_painter_set_clip(struct xrdp_painter* self,
                       int x, int y, int cx, int cy)
 {
-  self->use_clip = 1;
+  self->use_clip = &self->clip;
   self->clip.left = x;
   self->clip.top = y;
   self->clip.right = x + cx;
@@ -172,275 +172,6 @@ xrdp_painter_rop(int rop, int src, int dst)
     case 0xf: return ~0;
   }
   return dst;
-}
-
-/*****************************************************************************/
-/* fill in an area of the screen with one color */
-int APP_CC
-xrdp_painter_fill_rect(struct xrdp_painter* self,
-                       struct xrdp_bitmap* bitmap,
-                       int x, int y, int cx, int cy)
-{
-  int i;
-  struct xrdp_region* region;
-  struct xrdp_rect rect;
-
-  if (!check_bounds(bitmap, &x, &y, &cx, &cy))
-  {
-    return 0;
-  }
-  if (!xrdp_painter_clip_adj(self, &x, &y, &cx, &cy))
-  {
-    return 0;
-  }
-
-  /* todo data */
-
-  if (bitmap->type == WND_TYPE_BITMAP) /* 0 */
-  {
-    return 0;
-  }
-  region = xrdp_region_create(self->wm);
-  xrdp_wm_get_vis_region(self->wm, bitmap, x, y, cx, cy, region,
-                         self->clip_children);
-  i = 0;
-  while (xrdp_region_get_rect(region, i, &rect) == 0)
-  {
-    if (!ISRECTEMPTY(rect))
-    {
-      DEBUG(("sending rect order %d %d %d %d\n\r",
-             rect.left, rect.top,
-             rect.right, rect.bottom));
-      libxrdp_orders_rect(self->session, rect.left, rect.top,
-                          rect.right - rect.left,
-                          rect.bottom - rect.top,
-                          self->fg_color, 0);
-    }
-    i++;
-  }
-  xrdp_region_delete(region);
-  return 0;
-}
-
-/*****************************************************************************/
-/* fill in an area of the screen with opcodes and patterns */
-/* todo, this needs work */
-int APP_CC
-xrdp_painter_fill_rect2(struct xrdp_painter* self,
-                        struct xrdp_bitmap* bitmap,
-                        int x, int y, int cx, int cy)
-{
-  int i;
-  struct xrdp_region* region;
-  struct xrdp_rect rect;
-
-  if (!check_bounds(bitmap, &x, &y, &cx, &cy))
-  {
-    return 0;
-  }
-  if (!xrdp_painter_clip_adj(self, &x, &y, &cx, &cy))
-  {
-    return 0;
-  }
-
-  /* todo data */
-
-  if (bitmap->type == WND_TYPE_BITMAP) /* 0 */
-  {
-    return 0;
-  }
-  region = xrdp_region_create(self->wm);
-  xrdp_wm_get_vis_region(self->wm, bitmap, x, y, cx, cy, region,
-                         self->clip_children);
-  i = 0;
-  while (xrdp_region_get_rect(region, i, &rect) == 0)
-  {
-    if (!ISRECTEMPTY(rect))
-    {
-      DEBUG(("sending rect2 order %d %d %d %d\n\r",
-             rect.left, rect.top,
-             rect.right, rect.bottom));
-      libxrdp_orders_pat_blt(self->session, rect.left, rect.top,
-                             rect.right - rect.left,
-                             rect.bottom - rect.top,
-                             self->rop, self->bg_color, self->fg_color,
-                             &self->brush, 0);
-    }
-    i++;
-  }
-  xrdp_region_delete(region);
-  return 0;
-}
-
-#define SSW 64
-#define SSH 60
-
-/*****************************************************************************/
-int APP_CC
-xrdp_painter_draw_bitmap(struct xrdp_painter* self,
-                         struct xrdp_bitmap* bitmap,
-                         struct xrdp_bitmap* to_draw,
-                         int x, int y, int cx, int cy)
-{
-  int i;
-  int j;
-  int k;
-  int w;
-  int h;
-  int x1;
-  int y1;
-  int ok;
-  int srcx;
-  int srcy;
-  int bitmap_id;
-  int cache_id;
-  int cache_idx;
-  int palette_id;
-  struct xrdp_region* region;
-  struct xrdp_rect rect;
-  struct xrdp_rect rect1;
-  struct xrdp_rect rect2;
-  struct xrdp_bitmap* b;
-
-  /* todo data */
-
-  if (bitmap->type == WND_TYPE_BITMAP)
-  {
-    return 0;
-  }
-  region = xrdp_region_create(self->wm);
-  xrdp_wm_get_vis_region(self->wm, bitmap, x, y, cx, cy, region,
-                         self->clip_children);
-  b = bitmap;
-  while (b != 0)
-  {
-    x = x + b->left;
-    y = y + b->top;
-    b = b->parent;
-  }
-  if (self->wm->client_info->use_bitmap_cache)
-  {
-    /*palette_id = xrdp_cache_add_palette(self->wm->cache, self->wm->palette);*/
-    palette_id = 0;
-    j = 0;
-    while (j < to_draw->height)
-    {
-      i = 0;
-      while (i < to_draw->width)
-      {
-        x1 = x + i;
-        y1 = y + j;
-        w = MIN(SSW, to_draw->width - i);
-        h = MIN(SSH, to_draw->height - j);
-        b = xrdp_bitmap_create(w, h, self->wm->screen->bpp, 0, self->wm);
-#ifdef USE_CRC
-        xrdp_bitmap_copy_box_with_crc(to_draw, b, i, j, w, h);
-#else
-        xrdp_bitmap_copy_box(to_draw, b, i, j, w, h);
-#endif
-        bitmap_id = xrdp_cache_add_bitmap(self->wm->cache, b);
-        cache_id = HIWORD(bitmap_id);
-        cache_idx = LOWORD(bitmap_id);
-        k = 0;
-        while (xrdp_region_get_rect(region, k, &rect) == 0)
-        {
-          if (!ISRECTEMPTY(rect))
-          {
-            MAKERECT(rect1, x1, y1, w, h);
-            if (rect_intersect(&rect, &rect1, &rect2))
-            {
-              ok = 1;
-              if (self->use_clip)
-              {
-                rect = self->clip;
-                RECTOFFSET(rect, x, y);
-                if (!rect_intersect(&rect2, &rect, &rect1))
-                {
-                  ok = 0;
-                }
-              }
-              else
-              {
-                rect1 = rect2;
-              }
-              if (ok)
-              {
-                rect1.right--;
-                rect1.bottom--;
-                /* check these so ms client don't crash */
-                if (x1 + w >= self->wm->screen->width)
-                {
-                  w = self->wm->screen->width - x1;
-                }
-                if (y1 + h >= self->wm->screen->height)
-                {
-                  h = self->wm->screen->height - y1;
-                }
-                if (w > 0 && h > 0 && x1 + w > 0 && y1 + h > 0)
-                {
-                  srcx = 0;
-                  srcy = 0;
-                  if (x1 < 0)
-                  {
-                    w = w + x1;
-                    srcx = srcx - x1;
-                    x1 = 0;
-                  }
-                  if (y1 < 0)
-                  {
-                    h = h + y1;
-                    srcy = srcy - y1;
-                    y1 = 0;
-                  }
-                  //g_printf("%d %d %d %d %d %d\n", x1, y1, w, h, srcx, srcy);
-                  DEBUG(("sending memblt order \n\r\
-  cache_id %d\n\r\
-  palette_id %d\n\r\
-  x %d\n\r\
-  y %d\n\r\
-  cx %d\n\r\
-  cy %d\n\r\
-  rop %d\n\r\
-  srcx %d\n\r\
-  srcy %d\n\r\
-  cache_idx %d\n\r",
-                         cache_id, palette_id,
-                         x1, y1, w, h, self->rop, srcx, srcy,
-                         cache_idx));
-                  libxrdp_orders_mem_blt(self->session, cache_id, palette_id,
-                                         x1, y1, w, h, self->rop, srcx, srcy,
-                                         cache_idx, &rect1);
-                }
-              }
-            }
-          }
-          k++;
-        }
-        i += SSW;
-      }
-      j += SSH;
-    }
-  }
-  else /* no bitmap cache */
-  {
-    /* make sure there is no waiting orders */
-    libxrdp_orders_force_send(self->session);
-    k = 0;
-    while (xrdp_region_get_rect(region, k, &rect) == 0)
-    {
-      x1 = rect.left;
-      y1 = rect.top;
-      w = rect.right - rect.left;
-      h = rect.bottom - rect.top;
-      b = xrdp_bitmap_create(w, h, self->wm->screen->bpp, 0, self->wm);
-      xrdp_bitmap_copy_box(to_draw, b, x1 - x, y1 - y, w, h);
-      xrdp_wm_send_bitmap(self->wm, b, x1, y1, w, h);
-      xrdp_bitmap_delete(b);
-      k++;
-    }
-  }
-  xrdp_region_delete(region);
-  return 0;
 }
 
 /*****************************************************************************/
@@ -492,6 +223,85 @@ xrdp_painter_text_height(struct xrdp_painter* self, char* text)
 }
 
 /*****************************************************************************/
+/* fill in an area of the screen with one color */
+int APP_CC
+xrdp_painter_fill_rect(struct xrdp_painter* self,
+                       struct xrdp_bitmap* bitmap,
+                       int x, int y, int cx, int cy)
+{
+  struct xrdp_rect clip_rect;
+  struct xrdp_rect draw_rect;
+  struct xrdp_rect rect;
+  struct xrdp_region* region;
+  int k;
+  int dx;
+  int dy;
+
+  if (self == 0)
+  {
+    return 0;
+  }
+
+  /* todo data */
+
+  if (bitmap->type == WND_TYPE_BITMAP) /* 0 */
+  {
+    return 0;
+  }
+  xrdp_bitmap_get_screen_clip(bitmap, self, &clip_rect, &dx, &dy);
+  region = xrdp_region_create(self->wm);
+  xrdp_wm_get_vis_region(self->wm, bitmap, x, y, cx, cy, region,
+                         self->clip_children);
+  x += dx;
+  y += dy;
+  if (self->mix_mode == 0 && self->rop == 0xcc)
+  {
+    k = 0;
+    while (xrdp_region_get_rect(region, k, &rect) == 0)
+    {
+      if (rect_intersect(&rect, &clip_rect, &draw_rect))
+      {
+        libxrdp_orders_rect(self->session, x, y, cx, cy,
+                            self->fg_color, &draw_rect);
+      }
+      k++;
+    }
+  }
+  else if (self->mix_mode == 0 &&
+             ((self->rop & 0xf) == 0x0 || /* black */
+              (self->rop & 0xf) == 0xf || /* white */
+              (self->rop & 0xf) == 0x5))  /* DSTINVERT */
+  {
+    k = 0;
+    while (xrdp_region_get_rect(region, k, &rect) == 0)
+    {
+      if (rect_intersect(&rect, &clip_rect, &draw_rect))
+      {
+        libxrdp_orders_dest_blt(self->session, x, y, cx, cy,
+                                self->rop, &draw_rect);
+      }
+      k++;
+    }
+  }
+  else
+  {
+    k = 0;
+    while (xrdp_region_get_rect(region, k, &rect) == 0)
+    {
+      if (rect_intersect(&rect, &clip_rect, &draw_rect))
+      {
+        libxrdp_orders_pat_blt(self->session, x, y, cx, cy,
+                               self->rop, self->bg_color, self->fg_color,
+                               &self->brush, &draw_rect);
+      }
+      k++;
+    }
+  }
+  xrdp_region_delete(region);
+  return 0;
+}
+
+/*****************************************************************************/
 int APP_CC
 xrdp_painter_draw_text(struct xrdp_painter* self,
                        struct xrdp_bitmap* bitmap,
@@ -508,15 +318,20 @@ xrdp_painter_draw_text(struct xrdp_painter* self,
   int index;
   int total_width;
   int total_height;
+  int dx;
+  int dy;
   char* data;
   struct xrdp_region* region;
   struct xrdp_rect rect;
   struct xrdp_rect clip_rect;
   struct xrdp_rect draw_rect;
-  struct xrdp_bitmap* b;
   struct xrdp_font* font;
   struct xrdp_font_char* font_item;
 
+  if (self == 0)
+  {
+    return 0;
+  }
   len = g_strlen(text);
   if (len < 1)
   {
@@ -548,70 +363,103 @@ xrdp_painter_draw_text(struct xrdp_painter* self,
     total_width += k;
     total_height = MAX(total_height, font_item->height);
   }
+  xrdp_bitmap_get_screen_clip(bitmap, self, &clip_rect, &dx, &dy);
   region = xrdp_region_create(self->wm);
   xrdp_wm_get_vis_region(self->wm, bitmap, x, y, total_width, total_height,
                          region, self->clip_children);
-  b = bitmap;
-  while (b != 0)
-  {
-    x = x + b->left;
-    y = y + b->top;
-    b = b->parent;
-  }
-  if (self->use_clip)
-  {
-    clip_rect = self->clip;
-  }
-  else
-  {
-    MAKERECT(clip_rect, 0, 0, bitmap->width, bitmap->height);
-  }
-  b = bitmap;
-  while (b != 0)
-  {
-    RECTOFFSET(clip_rect, b->left, b->top);
-    b = b->parent;
-  }
+  x += dx;
+  y += dy;
   k = 0;
   while (xrdp_region_get_rect(region, k, &rect) == 0)
   {
-    if (!ISRECTEMPTY(rect))
+    if (rect_intersect(&rect, &clip_rect, &draw_rect))
     {
-      if (rect_intersect(&rect, &clip_rect, &draw_rect))
-      {
-        x1 = x;
-        y1 = y + total_height;
-        draw_rect.right--;
-        draw_rect.bottom--;
-        flags = 0x03; /* 0x03 0x73; TEXT2_IMPLICIT_X and something else */
-        DEBUG(("sending text order\n\r\
-  font %d\n\r\
-  flags %d\n\r\
-  mixmode %d\n\r\
-  color1 %d\n\r\
-  color2 %d\n\r\
-  clip box %d %d %d %d\n\r\
-  box box %d %d %d %d\n\r\
-  x %d\n\r\
-  y %d\n\r\
-  len %d\n\r\
-  rect %d %d %d %d\n\r",
-               f, flags, 0, font->color, 0, x, y,
-               x + total_width, y + total_height,
-               0, 0, 0, 0, x1, y1, len,
-               draw_rect.left, draw_rect.top,
-               draw_rect.right, draw_rect.bottom));
-        libxrdp_orders_text(self->session, f, flags, 0,
-                            font->color, 0,
-                            x - 1, y - 1, x + total_width, y + total_height,
-                            0, 0, 0, 0,
-                            x1, y1, data, len * 2, &draw_rect);
-      }
+      x1 = x;
+      y1 = y + total_height;
+      draw_rect.right--;
+      draw_rect.bottom--;
+      flags = 0x03; /* 0x03 0x73; TEXT2_IMPLICIT_X and something else */
+      libxrdp_orders_text(self->session, f, flags, 0,
+                          font->color, 0,
+                          x - 1, y - 1, x + total_width, y + total_height,
+                          0, 0, 0, 0,
+                          x1, y1, data, len * 2, &draw_rect);
     }
     k++;
   }
   xrdp_region_delete(region);
   g_free(data);
+  return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+xrdp_painter_draw_text2(struct xrdp_painter* self,
+                        struct xrdp_bitmap* bitmap,
+                        int font, int flags, int mixmode,
+                        int clip_left, int clip_top,
+                        int clip_right, int clip_bottom,
+                        int box_left, int box_top,
+                        int box_right, int box_bottom,
+                        int x, int y, char* data, int data_len)
+{
+  struct xrdp_rect clip_rect;
+  struct xrdp_rect draw_rect;
+  struct xrdp_rect rect;
+  struct xrdp_region* region;
+  int k;
+  int dx;
+  int dy;
+
+  if (self == 0)
+  {
+    return 0;
+  }
+
+  /* todo data */
+
+  if (bitmap->type == WND_TYPE_BITMAP)
+  {
+    return 0;
+  }
+  xrdp_bitmap_get_screen_clip(bitmap, self, &clip_rect, &dx, &dy);
+  region = xrdp_region_create(self->wm);
+  if (box_right - box_left > 1)
+  {
+    xrdp_wm_get_vis_region(self->wm, bitmap, box_left, box_top,
+                           box_right - box_left, box_bottom - box_top,
+                           region, self->clip_children);
+  }
+  else
+  {
+    xrdp_wm_get_vis_region(self->wm, bitmap, clip_left, clip_top,
+                           clip_right - clip_left, clip_bottom - clip_top,
+                           region, self->clip_children);
+  }
+  clip_left += dx;
+  clip_top += dy;
+  clip_right += dx;
+  clip_bottom += dy;
+  box_left += dx;
+  box_top += dy;
+  box_right += dx;
+  box_bottom += dy;
+  x += dx;
+  y += dy;
+  k = 0;
+  while (xrdp_region_get_rect(region, k, &rect) == 0)
+  {
+    if (rect_intersect(&rect, &clip_rect, &draw_rect))
+    {
+      libxrdp_orders_text(self->session, font, flags, mixmode,
+                          self->fg_color, self->bg_color,
+                          clip_left, clip_top, clip_right, clip_bottom,
+                          box_left, box_top, box_right, box_bottom,
+                          x, y, data, data_len, &draw_rect);
+    }
+    k++;
+  }
+  xrdp_region_delete(region);
   return 0;
 }
 
@@ -623,6 +471,26 @@ xrdp_painter_copy(struct xrdp_painter* self,
                   int x, int y, int cx, int cy,
                   int srcx, int srcy)
 {
+  struct xrdp_rect clip_rect;
+  struct xrdp_rect draw_rect;
+  struct xrdp_rect rect1;
+  struct xrdp_rect rect2;
+  struct xrdp_region* region;
+  struct xrdp_bitmap* b;
+  int i;
+  int j;
+  int k;
+  int dx;
+  int dy;
+  int palette_id;
+  int bitmap_id;
+  int cache_id;
+  int cache_idx;
+  int walkx;
+  int walky;
+  int w;
+  int h;
+
   if (self == 0 || src == 0 || dst == 0)
   {
     return 0;
@@ -636,8 +504,120 @@ xrdp_painter_copy(struct xrdp_painter* self,
   }
   if (src == dst && src->wm->screen == src)
   {
-    libxrdp_orders_screen_blt(dst->wm->session, x, y, cx, cy,
-                              srcx, srcy, self->rop, 0);
+    xrdp_bitmap_get_screen_clip(dst, self, &clip_rect, &dx, &dy);
+    region = xrdp_region_create(self->wm);
+    xrdp_wm_get_vis_region(self->wm, dst, x, y, cx, cy,
+                           region, self->clip_children);
+    x += dx;
+    y += dy;
+    srcx += dx;
+    srcy += dy;
+    k = 0;
+    while (xrdp_region_get_rect(region, k, &rect1) == 0)
+    {
+      if (rect_intersect(&rect1, &clip_rect, &draw_rect))
+      {
+        libxrdp_orders_screen_blt(self->session, x, y, cx, cy,
+                                  srcx, srcy, self->rop, &draw_rect);
+      }
+      k++;
+    }
+    xrdp_region_delete(region);
   }
+  else if (src->data != 0)
+  /* todo, the non bitmap cache part is gone, it should be put back */
+  {
+    xrdp_bitmap_get_screen_clip(dst, self, &clip_rect, &dx, &dy);
+    region = xrdp_region_create(self->wm);
+    xrdp_wm_get_vis_region(self->wm, dst, x, y, cx, cy,
+                           region, self->clip_children);
+    x += dx;
+    y += dy;
+    palette_id = 0;
+    j = srcy;
+    while (j < src->height)
+    {
+      i = srcx;
+      while (i < src->width)
+      {
+        walkx = x + i;
+        walky = y + j;
+        w = MIN(64, src->width - i);
+        h = MIN(64, src->height - j);
+        b = xrdp_bitmap_create(w, h, self->wm->screen->bpp, 0, self->wm);
+        xrdp_bitmap_copy_box_with_crc(src, b, i, j, w, h);
+        bitmap_id = xrdp_cache_add_bitmap(self->wm->cache, b);
+        cache_id = HIWORD(bitmap_id);
+        cache_idx = LOWORD(bitmap_id);
+        k = 0;
+        while (xrdp_region_get_rect(region, k, &rect1) == 0)
+        {
+          if (rect_intersect(&rect1, &clip_rect, &rect2))
+          {
+            MAKERECT(rect1, walkx, walky, w, h);
+            if (rect_intersect(&rect2, &rect1, &draw_rect))
+            {
+              libxrdp_orders_mem_blt(self->session, cache_id, palette_id,
+                                     walkx, walky, w, h, self->rop, 0, 0,
+                                     cache_idx, &draw_rect);
+            }
+          }
+          k++;
+        }
+        i += 64;
+      }
+      j += 64;
+    }
+    xrdp_region_delete(region);
+  }
+  return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+xrdp_painter_line(struct xrdp_painter* self,
+                  struct xrdp_bitmap* bitmap,
+                  int x1, int y1, int x2, int y2)
+{
+  struct xrdp_rect clip_rect;
+  struct xrdp_rect draw_rect;
+  struct xrdp_rect rect;
+  struct xrdp_region* region;
+  int k;
+  int dx;
+  int dy;
+
+  if (self == 0)
+  {
+    return 0;
+  }
+
+  /* todo data */
+
+  if (bitmap->type == WND_TYPE_BITMAP)
+  {
+    return 0;
+  }
+  xrdp_bitmap_get_screen_clip(bitmap, self, &clip_rect, &dx, &dy);
+  region = xrdp_region_create(self->wm);
+  xrdp_wm_get_vis_region(self->wm, bitmap, MIN(x1, x2), MIN(y1, y2),
+                         g_abs(x1 - x2) + 1, g_abs(y1 - y2) + 1,
+                         region, self->clip_children);
+  x1 += dx;
+  y1 += dy;
+  x2 += dx;
+  y2 += dy;
+  k = 0;
+  while (xrdp_region_get_rect(region, k, &rect) == 0)
+  {
+    if (rect_intersect(&rect, &clip_rect, &draw_rect))
+    {
+      libxrdp_orders_line(self->session, 0, x1, y1, x2, y2,
+                          self->rop, self->bg_color,
+                          &self->pen, &draw_rect);
+    }
+    k++;
+  }
+  xrdp_region_delete(region);
   return 0;
 }

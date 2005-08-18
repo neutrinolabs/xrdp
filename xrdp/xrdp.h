@@ -34,10 +34,19 @@
 #include "file.h"
 
 /* xrdp.c */
-int
+long APP_CC
+g_xrdp_sync(long (*sync_func)(long param1, long param2), long sync_param1,
+            long sync_param2);
+int APP_CC
 g_is_term(void);
-void
+void APP_CC
 g_set_term(int in_val);
+void APP_CC
+g_lock(void);
+void APP_CC
+g_unlock(void);
+void APP_CC
+g_loop(void);
 
 /* xrdp_cache.c */
 struct xrdp_cache* APP_CC
@@ -183,6 +192,11 @@ int APP_CC
 xrdp_bitmap_from_screenx(struct xrdp_bitmap* self, int x);
 int APP_CC
 xrdp_bitmap_from_screeny(struct xrdp_bitmap* self, int y);
+int APP_CC
+xrdp_bitmap_get_screen_clip(struct xrdp_bitmap* self,
+                            struct xrdp_painter* painter,
+                            struct xrdp_rect* rect,
+                            int* dx, int* dy);
 
 /* xrdp_painter.c */
 struct xrdp_painter* APP_CC
@@ -205,10 +219,6 @@ xrdp_painter_fill_rect(struct xrdp_painter* self,
                        struct xrdp_bitmap* bitmap,
                        int x, int y, int cx, int cy);
 int APP_CC
-xrdp_painter_fill_rect2(struct xrdp_painter* self,
-                        struct xrdp_bitmap* bitmap,
-                        int x, int y, int cx, int cy);
-int APP_CC
 xrdp_painter_draw_bitmap(struct xrdp_painter* self,
                          struct xrdp_bitmap* bitmap,
                          struct xrdp_bitmap* to_draw,
@@ -222,11 +232,24 @@ xrdp_painter_draw_text(struct xrdp_painter* self,
                        struct xrdp_bitmap* bitmap,
                        int x, int y, char* text);
 int APP_CC
+xrdp_painter_draw_text2(struct xrdp_painter* self,
+                        struct xrdp_bitmap* bitmap,
+                        int font, int flags, int mixmode,
+                        int clip_left, int clip_top,
+                        int clip_right, int clip_bottom,
+                        int box_left, int box_top,
+                        int box_right, int box_bottom,
+                        int x, int y, char* data, int data_len);
+int APP_CC
 xrdp_painter_copy(struct xrdp_painter* self,
                   struct xrdp_bitmap* src,
                   struct xrdp_bitmap* dst,
                   int x, int y, int cx, int cy,
                   int srcx, int srcy);
+int APP_CC
+xrdp_painter_line(struct xrdp_painter* self,
+                  struct xrdp_bitmap* bitmap,
+                  int x1, int y1, int x2, int y2);
 
 /* xrdp_font.c */
 struct xrdp_font* APP_CC
@@ -243,6 +266,9 @@ rect_contains_pt(struct xrdp_rect* in, int x, int y);
 int APP_CC
 rect_intersect(struct xrdp_rect* in1, struct xrdp_rect* in2,
                struct xrdp_rect* out);
+int APP_CC
+rect_contained_by(struct xrdp_rect* in1, int left, int top,
+                  int right, int bottom);
 int APP_CC
 check_bounds(struct xrdp_bitmap* b, int* x, int* y, int* cx, int* cy);
 char APP_CC
@@ -271,8 +297,7 @@ server_begin_update(struct xrdp_mod* mod);
 int DEFAULT_CC
 server_end_update(struct xrdp_mod* mod);
 int DEFAULT_CC
-server_fill_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy,
-                 int color);
+server_fill_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy);
 int DEFAULT_CC
 server_screen_blt(struct xrdp_mod* mod, int x, int y, int cx, int cy,
                   int srcx, int srcy);
@@ -285,10 +310,36 @@ server_set_pointer(struct xrdp_mod* mod, int x, int y,
 int DEFAULT_CC
 server_palette(struct xrdp_mod* mod, int* palette);
 int DEFAULT_CC
-server_msg(struct xrdp_mod* mod, char* msg);
+server_msg(struct xrdp_mod* mod, char* msg, int code);
 int DEFAULT_CC
 server_is_term(struct xrdp_mod* mod);
 int DEFAULT_CC
 server_set_clip(struct xrdp_mod* mod, int x, int y, int cx, int cy);
 int DEFAULT_CC
 server_reset_clip(struct xrdp_mod* mod);
+int DEFAULT_CC
+server_set_fgcolor(struct xrdp_mod* mod, int fgcolor);
+int DEFAULT_CC
+server_set_bgcolor(struct xrdp_mod* mod, int bgcolor);
+int DEFAULT_CC
+server_set_opcode(struct xrdp_mod* mod, int opcode);
+int DEFAULT_CC
+server_set_mixmode(struct xrdp_mod* mod, int mixmode);
+int DEFAULT_CC
+server_set_brush(struct xrdp_mod* mod, int x_orgin, int y_orgin,
+                 int style, char* pattern);
+int DEFAULT_CC
+server_set_pen(struct xrdp_mod* mod, int style, int width);
+int DEFAULT_CC
+server_draw_line(struct xrdp_mod* mod, int x1, int y1, int x2, int y2);
+int DEFAULT_CC
+server_add_char(struct xrdp_mod* mod, int font, int charactor,
+                int offset, int baseline,
+                int width, int height, char* data);
+int DEFAULT_CC
+server_draw_text(struct xrdp_mod* mod, int font,
+                 int flags, int mixmode, int clip_left, int clip_top,
+                 int clip_right, int clip_bottom,
+                 int box_left, int box_top,
+                 int box_right, int box_bottom,
+                 int x, int y, char* data, int data_len);

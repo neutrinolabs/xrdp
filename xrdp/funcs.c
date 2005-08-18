@@ -84,6 +84,23 @@ rect_intersect(struct xrdp_rect* in1, struct xrdp_rect* in2,
 }
 
 /*****************************************************************************/
+/* returns boolean */
+int APP_CC
+rect_contained_by(struct xrdp_rect* in1, int left, int top,
+                  int right, int bottom)
+{
+  if (left < in1->left || top < in1->top ||
+      right > in1->right || bottom > in1->bottom)
+  {
+    return 0;
+  }
+  else
+  {
+    return 1;
+  }
+}
+
+/*****************************************************************************/
 /* adjust the bounds to fit in the bitmap */
 /* return false if there is nothing to draw else return true */
 int APP_CC

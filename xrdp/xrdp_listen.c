@@ -149,6 +149,7 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
   error = g_tcp_bind(self->sck, "3389");
   if (error != 0)
   {
+    g_printf("listening on 3390\n\r");
     error = g_tcp_bind(self->sck, "3390");
   }
   if (error != 0)
@@ -167,6 +168,7 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
       if (error == -1 && g_tcp_last_error_would_block(self->sck))
       {
         g_sleep(100);
+        g_loop();
       }
       else if (error == -1)
       {

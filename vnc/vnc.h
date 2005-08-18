@@ -40,18 +40,35 @@ struct vnc
   /* server functions */
   int (*server_begin_update)(struct vnc* v);
   int (*server_end_update)(struct vnc* v);
-  int (*server_fill_rect)(struct vnc* v, int x, int y, int cx, int cy,
-                          int color);
+  int (*server_fill_rect)(struct vnc* v, int x, int y, int cx, int cy);
   int (*server_screen_blt)(struct vnc* v, int x, int y, int cx, int cy,
                            int srcx, int srcy);
   int (*server_paint_rect)(struct vnc* v, int x, int y, int cx, int cy,
                            char* data);
   int (*server_set_cursor)(struct vnc* v, int x, int y, char* data, char* mask);
   int (*server_palette)(struct vnc* v, int* palette);
-  int (*server_msg)(struct vnc* v, char* msg);
+  int (*server_msg)(struct vnc* v, char* msg, int code);
   int (*server_is_term)(struct vnc* v);
   int (*server_set_clip)(struct vnc* v, int x, int y, int cx, int cy);
   int (*server_reset_clip)(struct vnc* v);
+  int (*server_set_fgcolor)(struct vnc* v, int fgcolor);
+  int (*server_set_bgcolor)(struct vnc* v, int bgcolor);
+  int (*server_set_opcode)(struct vnc* v, int opcode);
+  int (*server_set_mixmode)(struct vnc* v, int mixmode);
+  int (*server_set_brush)(struct vnc* v, int x_orgin, int y_orgin,
+                          int style, char* pattern);
+  int (*server_set_pen)(struct vnc* v, int style,
+                        int width);
+  int (*server_draw_line)(struct vnc* v, int x1, int y1, int x2, int y2);
+  int (*server_add_char)(struct vnc* v, int font, int charactor,
+                         int offset, int baseline,
+                         int width, int height, char* data);
+  int (*server_draw_text)(struct vnc* v, int font,
+                          int flags, int mixmode, int clip_left, int clip_top,
+                          int clip_right, int clip_bottom,
+                          int box_left, int box_top,
+                          int box_right, int box_bottom,
+                          int x, int y, char* data, int data_len);
   /* common */
   long handle; /* pointer to self as long */
   long wm;
