@@ -577,6 +577,44 @@ xrdp_sec_out_mcs_data(struct xrdp_sec* self)
 }
 
 /*****************************************************************************/
+/* process the mcs client data we received from the mcs layer */
+static void APP_CC
+xrdp_sec_in_mcs_data(struct xrdp_sec* self)
+{
+  struct stream* s;
+  struct xrdp_client_info* client_info;
+  int index;
+  char c;
+
+  client_info = &self->rdp_layer->client_info;
+  s = &self->client_mcs_data;
+  /* get hostname, its unicode */
+  s->p = s->data;
+  in_uint8s(s, 47);
+  g_memset(client_info->hostname, 0, 32);
+  c = 1;
+  index = 0;
+  while (index < 16 && c != 0)
+  {
+    in_uint8(s, c);
+    in_uint8s(s, 1);
+    client_info->hostname[index] = c;
+    index++;
+  }
+  /* get build */
+  s->p = s->data;
+  in_uint8s(s, 43);
+  in_uint32_le(s, client_info->build);
+  /* get keylayout */
+  s->p = s->data;
+  in_uint8s(s, 39);
+  in_uint32_le(s, client_info->keylayout);
+//  g_printf("%s %d %x\n", client_info->hostname, client_info->build,
+//           client_info->keylayout);
+  s->p = s->data;
+}
+
+/*****************************************************************************/
 int APP_CC
 xrdp_sec_incoming(struct xrdp_sec* self)
 {
@@ -595,6 +633,7 @@ xrdp_sec_incoming(struct xrdp_sec* self)
             self->server_mcs_data.end - self->server_mcs_data.data);
 #endif
   DEBUG(("out xrdp_sec_incoming\n\r"));
+  xrdp_sec_in_mcs_data(self);
   return 0;
 }
 

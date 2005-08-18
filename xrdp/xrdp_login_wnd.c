@@ -273,6 +273,7 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap* wnd)
   struct list* values;
   struct xrdp_mod_data* mod_data;
   int i;
+  char text[256];
 
   wm = wnd->wm;
   combo = xrdp_bitmap_get_child_by_id(wnd, 6);
@@ -327,6 +328,12 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap* wnd)
                          (char*)list_get_item(names, i),
                          (char*)list_get_item(values, i));
           }
+          /* always set these */
+          wm->mod->mod_set_param(wm->mod, "hostname",
+                                 wm->session->client_info->hostname);
+          g_sprintf(text, "%d", wm->session->client_info->keylayout);
+          wm->mod->mod_set_param(wm->mod, "keylayout", text);
+          /* connect */
           if (wm->mod->mod_connect(wm->mod) != 0)
           {
             /* totaly free mod */
