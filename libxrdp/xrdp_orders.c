@@ -32,7 +32,9 @@ xrdp_orders_create(struct xrdp_session* session, struct xrdp_rdp* rdp_layer)
   self->session = session;
   self->rdp_layer = rdp_layer;
   make_stream(self->out_s);
-  init_stream(self->out_s, 8192);
+  init_stream(self->out_s, 16384);
+  self->clip_right = 1; /* silly rdp right clip */
+  self->clip_bottom = 1; /* silly rdp bottom clip */
   return self;
 }
 
@@ -121,7 +123,7 @@ xrdp_orders_force_send(struct xrdp_orders* self)
 }
 
 /*****************************************************************************/
-/* check if the current order will fix in packet size of 8192, if not */
+/* check if the current order will fix in packet size of 16384, if not */
 /* send what we got and init a new one */
 /* returns error */
 static int APP_CC
@@ -131,7 +133,7 @@ xrdp_orders_check(struct xrdp_orders* self, int max_size)
 
   if (self->order_level < 1)
   {
-    if (max_size > 8000)
+    if (max_size > 16000)
     {
       return 1;
     }
@@ -141,11 +143,11 @@ xrdp_orders_check(struct xrdp_orders* self, int max_size)
     }
   }
   size = self->out_s->p - self->order_count_ptr;
-  if (size < 0 || size > 8192)
+  if (size < 0 || size > 16384)
   {
     return 1;
   }
-  if (size + max_size + 100 > 8000)
+  if (size + max_size + 100 > 16000)
   {
     xrdp_orders_force_send(self);
     xrdp_orders_init(self);
@@ -273,7 +275,7 @@ xrdp_orders_out_bounds(struct xrdp_orders* self, struct xrdp_rect* rect)
   /* right */
   if (bounds_flags & 0x04)
   {
-    out_uint16_le(self->out_s, rect->right);
+    out_uint16_le(self->out_s, rect->right - 1); /* silly rdp right clip */
   }
   else if (bounds_flags & 0x40)
   {
@@ -283,7 +285,7 @@ xrdp_orders_out_bounds(struct xrdp_orders* self, struct xrdp_rect* rect)
   /* bottom */
   if (bounds_flags & 0x08)
   {
-    out_uint16_le(self->out_s, rect->bottom);
+    out_uint16_le(self->out_s, rect->bottom - 1); /* silly rdp bottom clip */
   }
   else if (bounds_flags & 0x80)
   {
@@ -318,10 +320,15 @@ xrdp_orders_rect(struct xrdp_orders* self, int x, int y, int cx, int cy,
   self->last_order = RDP_ORDER_RECT;
   if (rect != 0)
   {
-    order_flags |= RDP_ORDER_BOUNDS;
-    if (xrdp_orders_last_bounds(self, rect))
+    /* if clip is present, still check if its needed */
+    if (x < rect->left || y < rect->top ||
+        x + cx > rect->right || y + cy > rect->bottom)
     {
-      order_flags |= RDP_ORDER_LASTBOUNDS;
+      order_flags |= RDP_ORDER_BOUNDS;
+      if (xrdp_orders_last_bounds(self, rect))
+      {
+        order_flags |= RDP_ORDER_LASTBOUNDS;
+      }
     }
   }
   vals[0] = x;
@@ -447,10 +454,15 @@ xrdp_orders_screen_blt(struct xrdp_orders* self, int x, int y,
   self->last_order = RDP_ORDER_SCREENBLT;
   if (rect != 0)
   {
-    order_flags |= RDP_ORDER_BOUNDS;
-    if (xrdp_orders_last_bounds(self, rect))
+    /* if clip is present, still check if its needed */
+    if (x < rect->left || y < rect->top ||
+        x + cx > rect->right || y + cy > rect->bottom)
     {
-      order_flags |= RDP_ORDER_LASTBOUNDS;
+      order_flags |= RDP_ORDER_BOUNDS;
+      if (xrdp_orders_last_bounds(self, rect))
+      {
+        order_flags |= RDP_ORDER_LASTBOUNDS;
+      }
     }
   }
   vals[0] = x;
@@ -596,10 +608,15 @@ xrdp_orders_pat_blt(struct xrdp_orders* self, int x, int y,
   self->last_order = RDP_ORDER_PATBLT;
   if (rect != 0)
   {
-    order_flags |= RDP_ORDER_BOUNDS;
-    if (xrdp_orders_last_bounds(self, rect))
+    /* if clip is present, still check if its needed */
+    if (x < rect->left || y < rect->top ||
+        x + cx > rect->right || y + cy > rect->bottom)
     {
-      order_flags |= RDP_ORDER_LASTBOUNDS;
+      order_flags |= RDP_ORDER_BOUNDS;
+      if (xrdp_orders_last_bounds(self, rect))
+      {
+        order_flags |= RDP_ORDER_LASTBOUNDS;
+      }
     }
   }
   vals[0] = x;
@@ -767,10 +784,15 @@ xrdp_orders_dest_blt(struct xrdp_orders* self, int x, int y,
   self->last_order = RDP_ORDER_DESTBLT;
   if (rect != 0)
   {
-    order_flags |= RDP_ORDER_BOUNDS;
-    if (xrdp_orders_last_bounds(self, rect))
+    /* if clip is present, still check if its needed */
+    if (x < rect->left || y < rect->top ||
+        x + cx > rect->right || y + cy > rect->bottom)
     {
-      order_flags |= RDP_ORDER_LASTBOUNDS;
+      order_flags |= RDP_ORDER_BOUNDS;
+      if (xrdp_orders_last_bounds(self, rect))
+      {
+        order_flags |= RDP_ORDER_LASTBOUNDS;
+      }
     }
   }
   vals[0] = x;
@@ -887,10 +909,17 @@ xrdp_orders_line(struct xrdp_orders* self, int mix_mode,
   self->last_order = RDP_ORDER_LINE;
   if (rect != 0)
   {
-    order_flags |= RDP_ORDER_BOUNDS;
-    if (xrdp_orders_last_bounds(self, rect))
+    /* if clip is present, still check if its needed */
+    if (MIN(endx, startx) < rect->left ||
+        MIN(endy, starty) < rect->top ||
+        MAX(endx, startx) >= rect->right ||
+        MAX(endy, starty) >= rect->bottom)
     {
-      order_flags |= RDP_ORDER_LASTBOUNDS;
+      order_flags |= RDP_ORDER_BOUNDS;
+      if (xrdp_orders_last_bounds(self, rect))
+      {
+        order_flags |= RDP_ORDER_LASTBOUNDS;
+      }
     }
   }
   vals[0] = startx;
@@ -1045,10 +1074,15 @@ xrdp_orders_mem_blt(struct xrdp_orders* self, int cache_id,
   self->last_order = RDP_ORDER_MEMBLT;
   if (rect != 0)
   {
-    order_flags |= RDP_ORDER_BOUNDS;
-    if (xrdp_orders_last_bounds(self, rect))
+    /* if clip is present, still check if its needed */
+    if (x < rect->left || y < rect->top ||
+        x + cx > rect->right || y + cy > rect->bottom)
     {
-      order_flags |= RDP_ORDER_LASTBOUNDS;
+      order_flags |= RDP_ORDER_BOUNDS;
+      if (xrdp_orders_last_bounds(self, rect))
+      {
+        order_flags |= RDP_ORDER_LASTBOUNDS;
+      }
     }
   }
   vals[0] = x;
@@ -1212,10 +1246,22 @@ xrdp_orders_text(struct xrdp_orders* self,
   self->last_order = RDP_ORDER_TEXT2;
   if (rect != 0)
   {
-    order_flags |= RDP_ORDER_BOUNDS;
-    if (xrdp_orders_last_bounds(self, rect))
+    /* if clip is present, still check if its needed */
+    if ((box_right - box_left > 1 &&
+              (box_left < rect->left ||
+               box_top < rect->top ||
+               box_right > rect->right ||
+               box_bottom > rect->bottom)) ||
+        (clip_left < rect->left ||
+         clip_top < rect->top ||
+         clip_right > rect->right ||
+         clip_bottom > rect->bottom))
     {
-      order_flags |= RDP_ORDER_LASTBOUNDS;
+      order_flags |= RDP_ORDER_BOUNDS;
+      if (xrdp_orders_last_bounds(self, rect))
+      {
+        order_flags |= RDP_ORDER_LASTBOUNDS;
+      }
     }
   }
   out_uint8(self->out_s, order_flags);
@@ -1476,12 +1522,12 @@ xrdp_orders_send_bitmap(struct xrdp_orders* self,
     e = 4 - e;
   }
   make_stream(s);
-  init_stream(s, 8192);
+  init_stream(s, 16384);
   make_stream(temp_s);
-  init_stream(temp_s, 8192);
+  init_stream(temp_s, 16384);
   p = s->p;
   i = height;
-  lines_sending = xrdp_bitmap_compress(data, width, height, s, bpp, 8192,
+  lines_sending = xrdp_bitmap_compress(data, width, height, s, bpp, 16384,
                                        i - 1, temp_s, e);
   if (lines_sending != height)
   {
@@ -1497,22 +1543,34 @@ height(%d)\n\r", lines_sending, height);
   self->order_count++;
   order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
   out_uint8(self->out_s, order_flags);
-  len = (bufsize + 9 + 8) - 7; /* length after type minus 7 */
-  out_uint16_le(self->out_s, len);
-  out_uint16_le(self->out_s, 8); /* flags */
+  if (self->rdp_layer->client_info.op2)
+  {
+    len = (bufsize + 9) - 7; /* length after type minus 7 */
+    out_uint16_le(self->out_s, len);
+    out_uint16_le(self->out_s, 1024); /* flags */
+  }
+  else
+  {
+    len = (bufsize + 9 + 8) - 7; /* length after type minus 7 */
+    out_uint16_le(self->out_s, len);
+    out_uint16_le(self->out_s, 8); /* flags */
+  }
   out_uint8(self->out_s, RDP_ORDER_BMPCACHE); /* type */
   out_uint8(self->out_s, cache_id);
   out_uint8s(self->out_s, 1); /* pad */
   out_uint8(self->out_s, width + e);
   out_uint8(self->out_s, height);
   out_uint8(self->out_s, bpp);
-  out_uint16_le(self->out_s, bufsize + 8);
+  out_uint16_le(self->out_s, bufsize/* + 8*/);
   out_uint16_le(self->out_s, cache_idx);
-  out_uint8s(self->out_s, 2); /* pad */
-  out_uint16_le(self->out_s, bufsize);
-  out_uint16_le(self->out_s, (width + e) * Bpp); /* line size */
-  out_uint16_le(self->out_s, (width + e) *
-                              Bpp * height); /* final size */
+  if (!self->rdp_layer->client_info.op2)
+  {
+    out_uint8s(self->out_s, 2); /* pad */
+    out_uint16_le(self->out_s, bufsize);
+    out_uint16_le(self->out_s, (width + e) * Bpp); /* line size */
+    out_uint16_le(self->out_s, (width + e) *
+                                Bpp * height); /* final size */
+  }
   out_uint8a(self->out_s, s->data, bufsize);
   free_stream(s);
   free_stream(temp_s);

@@ -451,7 +451,11 @@ xrdp_process_capset_general(struct xrdp_rdp* self, struct stream* s,
 
   in_uint8s(s, 10);
   in_uint16_le(s, i);
+  /* use_compact_packets is pretty much 'use rdp5' */
   self->client_info.use_compact_packets = (i != 0);
+  /* op2 is a boolean to use compact bitmap headers in bitmap cache */
+  /* set it to same as 'use rdp5' boolean */
+  self->client_info.op2 = self->client_info.use_compact_packets;
   return 0;
 }
 

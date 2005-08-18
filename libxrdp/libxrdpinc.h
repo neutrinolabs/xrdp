@@ -37,7 +37,8 @@ struct xrdp_client_info
   int pointer_cache_entries;
   int use_bitmap_comp;
   int use_bitmap_cache;
-  int op1; /* use smaller bitmap header, todo */
+  int op1; /* use smaller bitmap header, non cache */
+  int op2; /* use smaller bitmap header in bitmap cache */
   int desktop_cache;
   int use_compact_packets; /* rdp5 smaller packets */
 };

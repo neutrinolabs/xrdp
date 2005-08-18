@@ -440,7 +440,7 @@ xrdp_bitmap_compress(char* in_data, int width, int height,
 {
   char* line;
   char* last_line;
-  char fom_mask[8192];
+  char fom_mask[8192]; /* good for up to 64K bitmap */
   int lines_sent;
   int pixel;
   int count;
