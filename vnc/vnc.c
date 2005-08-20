@@ -525,7 +525,7 @@ lib_framebuffer_update(struct vnc* v)
         error = lib_recv(v, data, need_size);
         if (error == 0)
         {
-          error = v->server_paint_rect(v, x, y, cx, cy, data);
+          error = v->server_paint_rect(v, x, y, cx, cy, data, cx, cy, 0, 0);
         }
       }
       else if (encoding == 1) /* copy rect */

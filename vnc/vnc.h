@@ -44,7 +44,7 @@ struct vnc
   int (*server_screen_blt)(struct vnc* v, int x, int y, int cx, int cy,
                            int srcx, int srcy);
   int (*server_paint_rect)(struct vnc* v, int x, int y, int cx, int cy,
-                           char* data);
+                           char* data, int width, int height, int srcx, int srcy);
   int (*server_set_cursor)(struct vnc* v, int x, int y, char* data, char* mask);
   int (*server_palette)(struct vnc* v, int* palette);
   int (*server_msg)(struct vnc* v, char* msg, int code);
