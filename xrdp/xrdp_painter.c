@@ -486,8 +486,8 @@ xrdp_painter_copy(struct xrdp_painter* self,
   int bitmap_id;
   int cache_id;
   int cache_idx;
-  int walkx;
-  int walky;
+  int dstx;
+  int dsty;
   int w;
   int h;
 
@@ -540,8 +540,6 @@ xrdp_painter_copy(struct xrdp_painter* self,
       i = srcx;
       while (i < src->width)
       {
-        walkx = x + i;
-        walky = y + j;
         w = MIN(64, src->width - i);
         h = MIN(64, src->height - j);
         b = xrdp_bitmap_create(w, h, self->wm->screen->bpp, 0, self->wm);
@@ -549,16 +547,18 @@ xrdp_painter_copy(struct xrdp_painter* self,
         bitmap_id = xrdp_cache_add_bitmap(self->wm->cache, b);
         cache_id = HIWORD(bitmap_id);
         cache_idx = LOWORD(bitmap_id);
+        dstx = (x + i) - srcx;
+        dsty = (y + j) - srcy;
         k = 0;
         while (xrdp_region_get_rect(region, k, &rect1) == 0)
         {
           if (rect_intersect(&rect1, &clip_rect, &rect2))
           {
-            MAKERECT(rect1, walkx, walky, w, h);
+            MAKERECT(rect1, dstx, dsty, w, h);
             if (rect_intersect(&rect2, &rect1, &draw_rect))
             {
               libxrdp_orders_mem_blt(self->session, cache_id, palette_id,
-                                     walkx, walky, w, h, self->rop, 0, 0,
+                                     dstx, dsty, w, h, self->rop, 0, 0,
                                      cache_idx, &draw_rect);
             }
           }

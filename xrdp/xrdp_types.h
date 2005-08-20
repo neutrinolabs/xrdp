@@ -39,7 +39,7 @@ struct xrdp_mod
   int (*server_screen_blt)(struct xrdp_mod* v, int x, int y, int cx, int cy,
                            int srcx, int srcy);
   int (*server_paint_rect)(struct xrdp_mod* v, int x, int y, int cx, int cy,
-                           char* data);
+                           char* data, int width, int height, int srcx, int srcy);
   int (*server_set_pointer)(struct xrdp_mod* v, int x, int y, char* data, char* mask);
   int (*server_palette)(struct xrdp_mod* v, int* palette);
   int (*server_msg)(struct xrdp_mod* v, char* msg, int code);

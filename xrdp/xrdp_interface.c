@@ -136,7 +136,7 @@ server_screen_blt(struct xrdp_mod* mod, int x, int y, int cx, int cy,
 /*****************************************************************************/
 int DEFAULT_CC
 server_paint_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy,
-                  char* data)
+                  char* data, int width, int height, int srcx, int srcy)
 {
   struct xrdp_wm* wm;
   struct xrdp_bitmap* b;
@@ -144,8 +144,8 @@ server_paint_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy,
 
   wm = (struct xrdp_wm*)mod->wm;
   p = (struct xrdp_painter*)mod->painter;
-  b = xrdp_bitmap_create_with_data(cx, cy, wm->screen->bpp, data, wm);
-  xrdp_painter_copy(p, b, wm->screen, x, y, cx, cy, 0, 0);
+  b = xrdp_bitmap_create_with_data(width, height, wm->screen->bpp, data, wm);
+  xrdp_painter_copy(p, b, wm->screen, x, y, cx, cy, srcx, srcy);
   xrdp_bitmap_delete(b);
   return 0;
 }

@@ -303,7 +303,7 @@ server_screen_blt(struct xrdp_mod* mod, int x, int y, int cx, int cy,
                   int srcx, int srcy);
 int DEFAULT_CC
 server_paint_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy,
-                  char* data);
+                  char* data, int width, int height, int srcx, int srcy);
 int DEFAULT_CC
 server_set_pointer(struct xrdp_mod* mod, int x, int y,
                    char* data, char* mask);
