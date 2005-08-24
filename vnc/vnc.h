@@ -69,6 +69,7 @@ struct vnc
                           int box_left, int box_top,
                           int box_right, int box_bottom,
                           int x, int y, char* data, int data_len);
+  int (*server_reset)(struct vnc* v, int width, int height, int bpp);
   /* common */
   long handle; /* pointer to self as long */
   long wm;

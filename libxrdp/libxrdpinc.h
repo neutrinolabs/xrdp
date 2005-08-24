@@ -90,6 +90,7 @@ struct xrdp_session
   void* orders;
   struct xrdp_client_info* client_info;
   int up_and_running;
+  struct stream* s;
 };
 
 struct xrdp_session* DEFAULT_CC
@@ -170,5 +171,8 @@ int DEFAULT_CC
 libxrdp_orders_send_font(struct xrdp_session* session,
                          struct xrdp_font_char* font_char,
                          int font_index, int char_index);
+int DEFAULT_CC
+libxrdp_reset(struct xrdp_session* session,
+              int width, int height, int bpp);
 
 #endif

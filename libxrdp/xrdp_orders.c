@@ -51,6 +51,38 @@ xrdp_orders_delete(struct xrdp_orders* self)
 }
 
 /*****************************************************************************/
+/* set all values to zero */
+/* returns error */
+int APP_CC
+xrdp_orders_reset(struct xrdp_orders* self)
+{
+  struct stream* out_s;
+  struct xrdp_rdp* rdp_layer;
+  struct xrdp_session* session;
+  struct xrdp_wm* wm;
+
+  if (xrdp_orders_force_send(self) != 0)
+  {
+    return 1;
+  }
+  /* save these */
+  out_s = self->out_s;
+  rdp_layer = self->rdp_layer;
+  session = self->session;
+  wm = self->wm;
+  /* set whole struct to zero */
+  g_memset(self, 0, sizeof(struct xrdp_orders));
+  /* set some stuff back */
+  self->out_s = out_s;
+  self->rdp_layer = rdp_layer;
+  self->session = session;
+  self->wm = wm;
+  self->clip_right = 1; /* silly rdp right clip */
+  self->clip_bottom = 1; /* silly rdp bottom clip */
+  return 0;
+}
+
+/*****************************************************************************/
 /* returns error */
 int APP_CC
 xrdp_orders_init(struct xrdp_orders* self)
@@ -90,6 +122,7 @@ xrdp_orders_send(struct xrdp_orders* self)
       DEBUG(("xrdp_orders_send sending %d orders\n\r", self->order_count));
       self->order_count_ptr[0] = self->order_count;
       self->order_count_ptr[1] = self->order_count >> 8;
+      self->order_count = 0;
       if (xrdp_rdp_send_data(self->rdp_layer, self->out_s,
                              RDP_DATA_PDU_UPDATE) != 0)
       {
@@ -105,7 +138,7 @@ xrdp_orders_send(struct xrdp_orders* self)
 int APP_CC
 xrdp_orders_force_send(struct xrdp_orders* self)
 {
-  if (self->order_count > 0)
+  if (self->order_count > 0 && self->order_count > 0)
   {
     s_mark_end(self->out_s);
     DEBUG(("xrdp_orders_force_send sending %d orders\n\r", self->order_count));

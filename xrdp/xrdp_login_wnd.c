@@ -161,6 +161,7 @@ xrdp_wm_setup_mod(struct xrdp_wm* self,
       self->mod->server_draw_line = server_draw_line;
       self->mod->server_add_char = server_add_char;
       self->mod->server_draw_text = server_draw_text;
+      self->mod->server_reset = server_reset;
     }
   }
   /* id self->mod is null, there must be a problem */

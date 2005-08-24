@@ -372,3 +372,42 @@ server_draw_text(struct xrdp_mod* mod, int font,
                                  box_right, box_bottom,
                                  x, y, data, data_len);
 }
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_reset(struct xrdp_mod* mod, int width, int height, int bpp)
+{
+  struct xrdp_wm* wm;
+
+  wm = (struct xrdp_wm*)mod->wm;
+  if (wm->client_info == 0)
+  {
+    return 1;
+  }
+  /* older client can't resize */
+  if (wm->client_info->build <= 419)
+  {
+    return 0;
+  }
+  /* if same, don't need to do anything */
+  if (wm->client_info->width == width &&
+      wm->client_info->height == height &&
+      wm->client_info->bpp == bpp)
+  {
+    return 0;
+  }
+  /* reset lib, client_info gets updated in libxrdp_reset */
+  if (libxrdp_reset(wm->session, width, height, bpp) != 0)
+  {
+    return 1;
+  }
+  /* reset cache */
+  xrdp_cache_reset(wm->cache, wm->client_info);
+  /* resize the main window */
+  xrdp_bitmap_resize(wm->screen, wm->client_info->width,
+                     wm->client_info->height);
+  /* load some stuff */
+  xrdp_wm_load_static_colors(wm);
+  xrdp_wm_load_static_pointers(wm);
+  return 0;
+}

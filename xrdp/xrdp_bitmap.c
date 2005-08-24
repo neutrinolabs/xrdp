@@ -98,7 +98,7 @@ xrdp_bitmap_create(int width, int height, int bpp,
     case 15: Bpp = 2; break;
     case 16: Bpp = 2; break;
   }
-  if (self->type == WND_TYPE_SCREEN || self->type == WND_TYPE_BITMAP)
+  if (self->type == WND_TYPE_BITMAP || self->type == WND_TYPE_IMAGE)
   {
     self->data = (char*)g_malloc(width * height * Bpp, 0);
   }
@@ -303,7 +303,10 @@ xrdp_bitmap_resize(struct xrdp_bitmap* self, int width, int height)
 {
   int Bpp;
 
-  g_free(self->data);
+  if (width == self->width && height == self->height)
+  {
+    return 0;
+  }
   self->width = width;
   self->height = height;
   Bpp = 4;
@@ -313,7 +316,11 @@ xrdp_bitmap_resize(struct xrdp_bitmap* self, int width, int height)
     case 15: Bpp = 2; break;
     case 16: Bpp = 2; break;
   }
-  self->data = (char*)g_malloc(width * height * Bpp, 1);
+  if (self->data != 0)
+  {
+    g_free(self->data);
+    self->data = (char*)g_malloc(width * height * Bpp, 1);
+  }
   self->line_size = width * Bpp;
   return 0;
 }

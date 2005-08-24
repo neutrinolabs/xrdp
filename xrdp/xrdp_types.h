@@ -64,6 +64,7 @@ struct xrdp_mod
                           int box_left, int box_top,
                           int box_right, int box_bottom,
                           int x, int y, char* data, int data_len);
+  int (*server_reset)(struct xrdp_mod* v, int width, int height, int bpp);
   /* common */
   long handle; /* pointer to self as int */
   long wm; /* struct xrdp_wm* */

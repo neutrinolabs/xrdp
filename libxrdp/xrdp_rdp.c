@@ -321,12 +321,17 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp* self)
   }
 
   out_uint32_le(s, self->share_id);
-  out_uint32_be(s, 0x04000401);
-  out_uint32_be(s, 0x524e5300);
-  out_uint32_be(s, 0x08000000);
-  out_uint32_be(s, 0x09000800);
+
+  out_uint16_le(s, 4); /* 4 chars for RDP\0 */
+  out_uint16_le(s, 0x0104); /* size after num caps */
+  out_uint8a(s, "RDP", 4);
+  out_uint32_le(s, 8); /* num caps 8 */
+
+  /* Output share capability set */
+  out_uint16_le(s, RDP_CAPSET_SHARE);
+  out_uint16_le(s, RDP_CAPLEN_SHARE);
   out_uint16_le(s, self->mcs_channel);
-  out_uint16_be(s, 0xb5e2);
+  out_uint16_be(s, 0xb5e2); /* 0x73e1 */
 
   /* Output general capability set */
   out_uint16_le(s, RDP_CAPSET_GENERAL); /* 1 */
@@ -336,7 +341,7 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp* self)
   out_uint16_le(s, 0x200); /* Protocol version */
   out_uint16_le(s, 0); /* pad */
   out_uint16_le(s, 0); /* Compression types */
-  out_uint16_le(s, 0); /* pad */
+  out_uint16_le(s, 0); /* pad use 0x40d for rdp packets */
   out_uint16_le(s, 0); /* Update capability */
   out_uint16_le(s, 0); /* Remote unshare capability */
   out_uint16_le(s, 0); /* Compression level */
@@ -407,9 +412,10 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp* self)
   out_uint8(s, 0);
   out_uint8(s, 0);
   out_uint16_le(s, 0x6a1);
-  out_uint8s(s, 6); /* ? */
+  out_uint8s(s, 2); /* ? */
   out_uint32_le(s, 0x0f4240); /* desk save */
-  out_uint32_le(s, 0); /* ? */
+  out_uint32_le(s, 0x0f4240); /* desk save */
+  out_uint32_le(s, 1); /* ? */
   out_uint32_le(s, 0); /* ? */
 
   /* Output color cache capability set */
@@ -848,4 +854,27 @@ int APP_CC
 xrdp_rdp_disconnect(struct xrdp_rdp* self)
 {
   return xrdp_sec_disconnect(self->sec_layer);
+}
+
+/*****************************************************************************/
+int APP_CC
+xrdp_rdp_send_deactive(struct xrdp_rdp* self)
+{
+  struct stream* s;
+
+  make_stream(s);
+  init_stream(s, 8192);
+  if (xrdp_rdp_init(self, s) != 0)
+  {
+    free_stream(s);
+    return 1;
+  }
+  s_mark_end(s);
+  if (xrdp_rdp_send(self, s, RDP_PDU_DEACTIVATE) != 0)
+  {
+    free_stream(s);
+    return 1;
+  }
+  free_stream(s);
+  return 0;
 }

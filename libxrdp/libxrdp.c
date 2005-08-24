@@ -33,6 +33,8 @@ libxrdp_init(long id, int sck)
   session->rdp = xrdp_rdp_create(session, sck);
   session->orders = xrdp_orders_create(session, (struct xrdp_rdp*)session->rdp);
   session->client_info = &(((struct xrdp_rdp*)session->rdp)->client_info);
+  make_stream(session->s);
+  init_stream(session->s, 8192 * 2);
   return session;
 }
 
@@ -46,6 +48,7 @@ libxrdp_exit(struct xrdp_session* session)
   }
   xrdp_orders_delete((struct xrdp_orders*)session->orders);
   xrdp_rdp_delete((struct xrdp_rdp*)session->rdp);
+  free_stream(session->s);
   g_free(session);
   return 0;
 }
@@ -68,19 +71,16 @@ libxrdp_process_incomming(struct xrdp_session* session)
 int EXPORT_CC
 libxrdp_process_data(struct xrdp_session* session)
 {
-  struct stream* s;
   int cont;
   int rv;
   int code;
 
   cont = 1;
   rv = 0;
-  make_stream(s);
-  init_stream(s, 8192);
-  while (cont && !session->term)
+  while ((cont || !session->up_and_running) && !session->term)
   {
     code = 0;
-    if (xrdp_rdp_recv((struct xrdp_rdp*)session->rdp, s, &code) != 0)
+    if (xrdp_rdp_recv((struct xrdp_rdp*)session->rdp, session->s, &code) != 0)
     {
       rv = 1;
       break;
@@ -90,14 +90,17 @@ libxrdp_process_data(struct xrdp_session* session)
     {
       case -1:
         xrdp_rdp_send_demand_active((struct xrdp_rdp*)session->rdp);
+        session->up_and_running = 0;
         break;
       case 0:
         break;
       case RDP_PDU_CONFIRM_ACTIVE: /* 3 */
-        xrdp_rdp_process_confirm_active((struct xrdp_rdp*)session->rdp, s);
+        xrdp_rdp_process_confirm_active((struct xrdp_rdp*)session->rdp,
+                                        session->s);
         break;
       case RDP_PDU_DATA: /* 7 */
-        if (xrdp_rdp_process_data((struct xrdp_rdp*)session->rdp, s) != 0)
+        if (xrdp_rdp_process_data((struct xrdp_rdp*)session->rdp,
+                                  session->s) != 0)
         {
           DEBUG(("libxrdp_process_data returned non zero\n\r"));
           cont = 0;
@@ -110,10 +113,9 @@ libxrdp_process_data(struct xrdp_session* session)
     }
     if (cont)
     {
-      cont = s->next_packet < s->end;
+      cont = session->s->next_packet < session->s->end;
     }
   }
-  free_stream(s);
   return rv;
 }
 
@@ -527,4 +529,52 @@ libxrdp_orders_send_font(struct xrdp_session* session,
 {
   return xrdp_orders_send_font((struct xrdp_orders*)session->orders,
                                font_char, font_index, char_index);
+}
+
+/*****************************************************************************/
+int EXPORT_CC
+libxrdp_reset(struct xrdp_session* session,
+              int width, int height, int bpp)
+{
+  if (session->client_info != 0)
+  {
+    /* older client can't resize */
+    if (session->client_info->build <= 419)
+    {
+      return 0;
+    }
+    /* if same, don't need to do anything */
+    if (session->client_info->width == width &&
+        session->client_info->height == height &&
+        session->client_info->bpp == bpp)
+    {
+      return 0;
+    }
+    session->client_info->width = width;
+    session->client_info->height = height;
+    session->client_info->bpp = bpp;
+  }
+  else
+  {
+    return 1;
+  }
+  /* this will send any lingering orders */
+  if (xrdp_orders_reset((struct xrdp_orders*)session->orders) != 0)
+  {
+    return 1;
+  }
+  /* shut down the rdp client */
+  if (xrdp_rdp_send_deactive((struct xrdp_rdp*)session->rdp) != 0)
+  {
+    return 1;
+  }
+  /* this should do the resizing */
+  if (xrdp_rdp_send_demand_active((struct xrdp_rdp*)session->rdp) != 0)
+  {
+    return 1;
+  }
+  /* process till up and running */
+  session->up_and_running = 0;
+  libxrdp_process_data(session);
+  return 0;
 }

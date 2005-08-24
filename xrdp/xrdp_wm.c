@@ -268,12 +268,11 @@ xrdp_wm_set_pointer(struct xrdp_wm* self, int cache_idx)
 
 /*****************************************************************************/
 int APP_CC
-xrdp_wm_init(struct xrdp_wm* self)
+xrdp_wm_load_static_colors(struct xrdp_wm* self)
 {
   int bindex;
   int gindex;
   int rindex;
-  struct xrdp_pointer_item pointer_item;
 
   if (self->screen->bpp == 8)
   {
@@ -334,6 +333,15 @@ xrdp_wm_init(struct xrdp_wm* self)
     self->red       = COLOR24(0xff, 0x00, 0x00);
     self->green     = COLOR24(0x00, 0xff, 0x00);
   }
+  return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+xrdp_wm_load_static_pointers(struct xrdp_wm* self)
+{
+  struct xrdp_pointer_item pointer_item;
+
   DEBUG(("sending cursor\n\r"));
   xrdp_wm_load_pointer(self, "cursor1.cur", pointer_item.data,
                        pointer_item.mask, &pointer_item.x, &pointer_item.y);
@@ -342,13 +350,20 @@ xrdp_wm_init(struct xrdp_wm* self)
   xrdp_wm_load_pointer(self, "cursor0.cur", pointer_item.data,
                        pointer_item.mask, &pointer_item.x, &pointer_item.y);
   xrdp_cache_add_pointer_static(self->cache, &pointer_item, 0);
+  return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+xrdp_wm_init(struct xrdp_wm* self)
+{
+  xrdp_wm_load_static_colors(self);
+  xrdp_wm_load_static_pointers(self);
   xrdp_login_wnd_create(self);
   /* clear screen */
   self->screen->bg_color = self->black;
   xrdp_bitmap_invalidate(self->screen, 0);
-
   xrdp_wm_set_focused(self, self->login_window);
-
   return 0;
 }
 

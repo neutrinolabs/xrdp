@@ -75,6 +75,51 @@ xrdp_cache_delete(struct xrdp_cache* self)
 }
 
 /*****************************************************************************/
+int APP_CC
+xrdp_cache_reset(struct xrdp_cache* self,
+                 struct xrdp_client_info* client_info)
+{
+  struct xrdp_wm* wm;
+  struct xrdp_session* session;
+  int i;
+  int j;
+
+  /* free all the cached bitmaps */
+  for (i = 0; i < 3; i++)
+  {
+    for (j = 0; j < 600; j++)
+    {
+      xrdp_bitmap_delete(self->bitmap_items[i][j].bitmap);
+    }
+  }
+  /* free all the cached font items */
+  for (i = 0; i < 12; i++)
+  {
+    for (j = 0; j < 256; j++)
+    {
+      g_free(self->char_items[i][j].font_item.data);
+    }
+  }
+  /* save these */
+  wm = self->wm;
+  session = self->session;
+  /* set whole struct to zero */
+  g_memset(self, 0, sizeof(struct xrdp_cache));
+  /* set some stuff back */
+  self->wm = wm;
+  self->session = session;
+  self->use_bitmap_comp = client_info->use_bitmap_comp;
+  self->cache1_entries = client_info->cache1_entries;
+  self->cache1_size = client_info->cache1_size;
+  self->cache2_entries = client_info->cache2_entries;
+  self->cache2_size = client_info->cache2_size;
+  self->cache3_entries = client_info->cache3_entries;
+  self->cache3_size = client_info->cache3_size;
+  self->pointer_cache_entries = client_info->pointer_cache_entries;
+  return 0;
+}
+
+/*****************************************************************************/
 /* returns cache id */
 int APP_CC
 xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
@@ -110,7 +155,6 @@ xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
       {
         self->bitmap_items[i][j].stamp = self->bitmap_stamp;
         DEBUG(("found bitmap at %d %d\n\r", i, j));
-        //g_printf("found bitmap at %d %d\n\r", i, j);
         xrdp_bitmap_delete(bitmap);
         return MAKELONG(i, j);
       }
@@ -129,7 +173,6 @@ xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
       {
         self->bitmap_items[i][j].stamp = self->bitmap_stamp;
         DEBUG(("found bitmap at %d %d\n\r", i, j));
-        //g_printf("found bitmap at %d %d\n\r", i, j);
         xrdp_bitmap_delete(bitmap);
         return MAKELONG(i, j);
       }
@@ -148,7 +191,6 @@ xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
       {
         self->bitmap_items[i][j].stamp = self->bitmap_stamp;
         DEBUG(("found bitmap at %d %d\n\r", i, j));
-        //g_printf("found bitmap at %d %d\n\r", i, j);
         xrdp_bitmap_delete(bitmap);
         return MAKELONG(i, j);
       }

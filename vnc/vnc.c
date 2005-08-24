@@ -1015,6 +1015,10 @@ lib_mod_connect(struct vnc* v)
   }
   if (error == 0)
   {
+    error = v->server_reset(v, v->mod_width, v->mod_height, v->mod_bpp);
+  }
+  if (error == 0)
+  {
     /* FrambufferUpdateRequest */
     init_stream(s, 8192);
     out_uint8(s, 3);

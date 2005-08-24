@@ -266,6 +266,8 @@ int APP_CC
 xrdp_rdp_process_data(struct xrdp_rdp* self, struct stream* s);
 int APP_CC
 xrdp_rdp_disconnect(struct xrdp_rdp* self);
+int APP_CC
+xrdp_rdp_send_deactive(struct xrdp_rdp* self);
 
 /* xrdp_orders.c */
 struct xrdp_orders* APP_CC
@@ -273,6 +275,8 @@ xrdp_orders_create(struct xrdp_session* session,
                    struct xrdp_rdp* rdp_layer);
 void APP_CC
 xrdp_orders_delete(struct xrdp_orders* self);
+int APP_CC
+xrdp_orders_reset(struct xrdp_orders* self);
 int APP_CC
 xrdp_orders_init(struct xrdp_orders* self);
 int APP_CC

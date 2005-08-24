@@ -55,6 +55,9 @@ xrdp_cache_create(struct xrdp_wm* owner, struct xrdp_session* session,
 void APP_CC
 xrdp_cache_delete(struct xrdp_cache* self);
 int APP_CC
+xrdp_cache_reset(struct xrdp_cache* self,
+                 struct xrdp_client_info* client_info);
+int APP_CC
 xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap);
 int APP_CC
 xrdp_cache_add_palette(struct xrdp_cache* self, int* palette);
@@ -77,6 +80,10 @@ void APP_CC
 xrdp_wm_delete(struct xrdp_wm* self);
 int APP_CC
 xrdp_wm_send_palette(struct xrdp_wm* self);
+int APP_CC
+xrdp_wm_load_static_colors(struct xrdp_wm* self);
+int APP_CC
+xrdp_wm_load_static_pointers(struct xrdp_wm* self);
 int APP_CC
 xrdp_wm_init(struct xrdp_wm* self);
 int APP_CC
@@ -159,6 +166,8 @@ struct xrdp_bitmap* APP_CC
 xrdp_bitmap_get_child_by_id(struct xrdp_bitmap* self, int id);
 int APP_CC
 xrdp_bitmap_set_focus(struct xrdp_bitmap* self, int focused);
+int APP_CC
+xrdp_bitmap_resize(struct xrdp_bitmap* self, int width, int height);
 int APP_CC
 xrdp_bitmap_load(struct xrdp_bitmap* self, char* filename, int* palette);
 int APP_CC
@@ -343,3 +352,5 @@ server_draw_text(struct xrdp_mod* mod, int font,
                  int box_left, int box_top,
                  int box_right, int box_bottom,
                  int x, int y, char* data, int data_len);
+int DEFAULT_CC
+server_reset(struct xrdp_mod* mod, int width, int height, int bpp);
