@@ -323,17 +323,17 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap* wnd)
         }
         if (!wm->pro_layer->term)
         {
+          /* always set these */
+          wm->mod->mod_set_param(wm->mod, "hostname",
+                                 wm->session->client_info->hostname);
+          g_sprintf(text, "%d", wm->session->client_info->keylayout);
+          wm->mod->mod_set_param(wm->mod, "keylayout", text);
           for (i = 0; i < names->count; i++)
           {
             wm->mod->mod_set_param(wm->mod,
                          (char*)list_get_item(names, i),
                          (char*)list_get_item(values, i));
           }
-          /* always set these */
-          wm->mod->mod_set_param(wm->mod, "hostname",
-                                 wm->session->client_info->hostname);
-          g_sprintf(text, "%d", wm->session->client_info->keylayout);
-          wm->mod->mod_set_param(wm->mod, "keylayout", text);
           /* connect */
           if (wm->mod->mod_connect(wm->mod) != 0)
           {
