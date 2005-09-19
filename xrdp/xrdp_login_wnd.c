@@ -126,17 +126,29 @@ xrdp_wm_setup_mod(struct xrdp_wm* self,
       {
         func = g_get_proc_address(self->mod_handle, "_mod_init");
       }
+      if (func == 0)
+      {
+        g_printf("error finding proc mod_init in %s\n\r", mod_data->lib);
+      }
       self->mod_init = (struct xrdp_mod* (*)(void))func;
       func = g_get_proc_address(self->mod_handle, "mod_exit");
       if (func == 0)
       {
         func = g_get_proc_address(self->mod_handle, "_mod_exit");
       }
+      if (func == 0)
+      {
+        g_printf("error finding proc mod_exit in %s\n\r", mod_data->lib);
+      }
       self->mod_exit = (int (*)(struct xrdp_mod*))func;
       if (self->mod_init != 0 && self->mod_exit != 0)
       {
         self->mod = self->mod_init();
       }
+    }
+    else
+    {
+      g_printf("error loading %s\n\r", mod_data->lib);
     }
     if (self->mod != 0)
     {
