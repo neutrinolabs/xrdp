@@ -5,9 +5,9 @@ CFLAGS = -Wall -O2 -I../common
 LDFLAGS = -L /usr/gnu/lib
 CC = gcc
 
-all: sesman
+all: pam
 
-sesman: $(SESMANOBJ) verify_user.o
+nopam: $(SESMANOBJ) verify_user.o
 	$(CC) $(LDFLAGS) -o sesman $(SESMANOBJ) verify_user.o -ldl -lcrypt
 
 pam: $(SESMANOBJ) verify_user_pam.o

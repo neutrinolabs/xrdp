@@ -30,3 +30,4 @@ install:
 	install instfiles/startwm.sh $(DESTDIR)/startwm.sh
 	install instfiles/xrdp.ini $(DESTDIR)/xrdp.ini
 	install instfiles/xrdpstart.sh $(DESTDIR)/xrdpstart.sh
+	install instfiles/pam.d/sesman /etc/pam.d/sesman
