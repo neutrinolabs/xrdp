@@ -13,11 +13,12 @@ I've got it compiling and working with linux on x64 processor
 xrdp directory is the main server code
 vnc directory is a simple vnc client module for xrdp
 sesman directory is a session manager for xrdp that uses Xvnc for the Xserver
+libxrdp directory is a static library needed by xrdp
 COPYING is the licence file
 design.txt is an attempt to expain the project design
 prog_std.txt is an attemp to explain the programming standard used
 
-There is some installation notes on the web site under news.
-I'm working on an installation script.
+run make in main xrdp directory to build
+run make install as root to install in /usr/local/xrdp
 
 Jay
