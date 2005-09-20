@@ -1,0 +1,3 @@
+#%PAM-1.0
+auth       required	pam_unix.so shadow use_first_pass nullok
+account    required	pam_unix.so
