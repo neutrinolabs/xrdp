@@ -27,7 +27,10 @@
 #include "parse.h"
 
 /*****************************************************************************/
-int
+/* returns error
+   returns 0 if everything is ok
+   returns 1 if problem reading file */
+int APP_CC
 file_read_sections(int fd, struct list* names)
 {
   struct stream* s;
@@ -37,7 +40,9 @@ file_read_sections(int fd, struct list* names)
   int in_it_index;
   int len;
   int index;
+  int rv;
 
+  rv = 0;
   g_file_seek(fd, 0);
   in_it_index = 0;
   in_it = 0;
@@ -70,12 +75,16 @@ file_read_sections(int fd, struct list* names)
       }
     }
   }
+  else if (len < 0)
+  {
+    rv = 1;
+  }
   free_stream(s);
-  return 0;
+  return rv;
 }
 
 /*****************************************************************************/
-int
+int APP_CC
 file_read_line(struct stream* s, char* text)
 {
   int i;
@@ -120,7 +129,7 @@ file_read_line(struct stream* s, char* text)
 }
 
 /*****************************************************************************/
-int
+int APP_CC
 file_split_name_value(char* text, char* name, char* value)
 {
   int len;
@@ -158,7 +167,7 @@ file_split_name_value(char* text, char* name, char* value)
 }
 
 /*****************************************************************************/
-int
+int APP_CC
 file_read_section(int fd, char* section, struct list* names,
                   struct list* values)
 {
@@ -193,7 +202,7 @@ file_read_section(int fd, char* section, struct list* names,
       }
       else if (c == ']')
       {
-        if (g_strcmp(section, text) == 0)
+        if (g_strncasecmp(section, text, 255) == 0)
         {
           file_read_line(s, text);
           while (file_read_line(s, text) == 0)

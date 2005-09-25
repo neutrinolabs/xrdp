@@ -420,6 +420,7 @@ g_memcmp(void* s1, void* s2, int len)
 }
 
 /*****************************************************************************/
+/* returns -1 on error, else return handle or file descriptor */
 int
 g_file_open(char* file_name)
 {
@@ -654,16 +655,16 @@ g_strdup(char* in)
 
 /*****************************************************************************/
 int
-g_strcmp(char* c1, char* c2)
+g_strncmp(char* c1, char* c2, int len)
 {
-  return strcmp(c1, c2);
+  return strncmp(c1, c2, len);
 }
 
 /*****************************************************************************/
 int
-g_strncmp(char* c1, char* c2, int len)
+g_strncasecmp(char* c1, char* c2, int len)
 {
-  return strncmp(c1, c2, len);
+  return strncasecmp(c1, c2, len);
 }
 
 /*****************************************************************************/
@@ -881,6 +882,17 @@ g_setenv(char* name, char* value, int rewrite)
   return 0;
 #else
   return setenv(name, value, rewrite);
+#endif
+}
+
+/*****************************************************************************/
+char*
+g_getenv(char* name)
+{
+#if defined(_WIN32)
+  return 0;
+#else
+  return getenv(name);
 #endif
 }
 
