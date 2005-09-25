@@ -69,16 +69,20 @@ xrdp_rdp_read_config(struct xrdp_client_info* client_info)
     {
       item = (char*)list_get_item(items, index);
       value = (char*)list_get_item(values, index);
-      if (g_strcmp(item, "bitmap_cache") == 0)
+      if (g_strncasecmp(item, "bitmap_cache", 255) == 0)
       {
-        if (g_strcmp(value, "yes") == 0)
+        if (g_strncasecmp(value, "yes", 255) == 0 ||
+            g_strncasecmp(value, "true", 255) == 0 ||
+            g_strncasecmp(value, "1", 255) == 0)
         {
           client_info->use_bitmap_cache = 1;
         }
       }
-      else if (g_strcmp(item, "bitmap_compression") == 0)
+      else if (g_strncasecmp(item, "bitmap_compression", 255) == 0)
       {
-        if (g_strcmp(value, "yes") == 0)
+        if (g_strncasecmp(value, "yes", 255) == 0 ||
+            g_strncasecmp(value, "true", 255) == 0 ||
+            g_strncasecmp(value, "1", 255) == 0)
         {
           client_info->use_bitmap_comp = 1;
         }

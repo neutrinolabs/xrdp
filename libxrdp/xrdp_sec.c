@@ -311,44 +311,9 @@ xrdp_sec_send_lic_response(struct xrdp_sec* self)
 
 /*****************************************************************************/
 static void APP_CC
-xrdp_sec_reverse(char* p, int len)
-{
-  int i;
-  int j;
-  char temp;
-
-  i = 0;
-  j = len - 1;
-  while (i < j)
-  {
-    temp = p[i];
-    p[i] = p[j];
-    p[j] = temp;
-    i++;
-    j--;
-  }
-}
-
-/*****************************************************************************/
-static void APP_CC
 xrdp_sec_rsa_op(char* out, char* in, char* mod, char* exp)
 {
-  char lexp[64];
-  char lmod[64];
-  char lin[64];
-  char lout[64];
-  int len;
-
-  g_memcpy(lexp, exp, 64);
-  g_memcpy(lmod, mod, 64);
-  g_memcpy(lin, in, 64);
-  xrdp_sec_reverse(lexp, 64);
-  xrdp_sec_reverse(lmod, 64);
-  xrdp_sec_reverse(lin, 64);
-  g_memset(lout, 0, 64);
-  len = g_mod_exp(lout, lin, lmod, lexp);
-  xrdp_sec_reverse(lout, len);
-  g_memcpy(out, lout, 64);
+  g_mod_exp(out, 64, in, 64, mod, 64, exp, 64);
 }
 
 /*****************************************************************************/
