@@ -132,8 +132,29 @@ g_md5_complete(void* md5_info, char* data)
 }
 
 /*****************************************************************************/
+static void
+reverse_it(char* p, int len)
+{
+  int i;
+  int j;
+  char temp;
+
+  i = 0;
+  j = len - 1;
+  while (i < j)
+  {
+    temp = p[i];
+    p[i] = p[j];
+    p[j] = temp;
+    i++;
+    j--;
+  }
+}
+
+/*****************************************************************************/
 int
-g_mod_exp(char* out, char* in, char* mod, char* exp)
+g_mod_exp(char* out, int out_len, char* in, int in_len,
+          char* mod, int mod_len, char* exp, int exp_len)
 {
   BN_CTX* ctx;
   BIGNUM lmod;
@@ -141,21 +162,48 @@ g_mod_exp(char* out, char* in, char* mod, char* exp)
   BIGNUM lin;
   BIGNUM lout;
   int rv;
+  char* l_out;
+  char* l_in;
+  char* l_mod;
+  char* l_exp;
 
+  l_out = (char*)g_malloc(out_len, 1);
+  l_in = (char*)g_malloc(in_len, 1);
+  l_mod = (char*)g_malloc(mod_len, 1);
+  l_exp = (char*)g_malloc(exp_len, 1);
+  g_memcpy(l_in, in, in_len);
+  g_memcpy(l_mod, mod, mod_len);
+  g_memcpy(l_exp, exp, exp_len);
+  reverse_it(l_in, in_len);
+  reverse_it(l_mod, mod_len);
+  reverse_it(l_exp, exp_len);
   ctx = BN_CTX_new();
   BN_init(&lmod);
   BN_init(&lexp);
   BN_init(&lin);
   BN_init(&lout);
-  BN_bin2bn((unsigned char*)mod, 64, &lmod);
-  BN_bin2bn((unsigned char*)exp, 64, &lexp);
-  BN_bin2bn((unsigned char*)in, 64, &lin);
+  BN_bin2bn((unsigned char*)l_mod, 64, &lmod);
+  BN_bin2bn((unsigned char*)l_exp, 64, &lexp);
+  BN_bin2bn((unsigned char*)l_in, 64, &lin);
   BN_mod_exp(&lout, &lin, &lexp, &lmod, ctx);
-  rv = BN_bn2bin(&lout, (unsigned char*)out);
+  rv = BN_bn2bin(&lout, (unsigned char*)l_out);
+  if (rv <= out_len)
+  {
+    reverse_it(l_out, rv);
+    g_memcpy(out, l_out, out_len);
+  }
+  else
+  {
+    rv = 0;
+  }
   BN_free(&lin);
   BN_free(&lout);
   BN_free(&lexp);
   BN_free(&lmod);
   BN_CTX_free(ctx);
+  g_free(l_out);
+  g_free(l_in);
+  g_free(l_mod);
+  g_free(l_exp);
   return rv;
 }

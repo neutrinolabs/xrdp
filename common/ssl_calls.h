@@ -50,6 +50,7 @@ g_md5_transform(void* md5_info, char* data, int len);
 void
 g_md5_complete(void* md5_info, char* data);
 int
-g_mod_exp(char* out, char* in, char* mod, char* exp);
+g_mod_exp(char* out, int out_len, char* in, int in_len,
+          char* mod, int mod_len, char* exp, int exp_len);
 
 #endif
