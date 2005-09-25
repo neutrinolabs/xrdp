@@ -751,14 +751,14 @@ lib_mod_connect(struct vnc* v)
     v->server_msg(v, "error - only supporting 8 and 16 bpp rdp connections", 0);
     return 1;
   }
-  if (g_strcmp(v->ip, "") == 0)
+  if (g_strncmp(v->ip, "", 1) == 0)
   {
     v->server_msg(v, "error - no ip set", 0);
     return 1;
   }
   make_stream(s);
   /* if port = -1, use sesman to get port / desktop */
-  if (g_strcmp(v->port, "-1") == 0)
+  if (g_strncmp(v->port, "-1", 2) == 0)
   {
     display = 0;
     error = 0;
@@ -1076,19 +1076,19 @@ lib_mod_end(struct vnc* v)
 int DEFAULT_CC
 lib_mod_set_param(struct vnc* v, char* name, char* value)
 {
-  if (g_strcmp(name, "username") == 0)
+  if (g_strncasecmp(name, "username", 8) == 0)
   {
     g_strncpy(v->username, value, 255);
   }
-  else if (g_strcmp(name, "password") == 0)
+  else if (g_strncasecmp(name, "password", 8) == 0)
   {
     g_strncpy(v->password, value, 255);
   }
-  else if (g_strcmp(name, "ip") == 0)
+  else if (g_strncasecmp(name, "ip", 2) == 0)
   {
     g_strncpy(v->ip, value, 255);
   }
-  else if (g_strcmp(name, "port") == 0)
+  else if (g_strncasecmp(name, "port", 4) == 0)
   {
     g_strncpy(v->port, value, 255);
   }
