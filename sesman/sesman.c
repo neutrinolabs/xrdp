@@ -22,37 +22,17 @@
 */
 
 #include "d3des.h"
-
 #include "arch.h"
 #include "parse.h"
 #include "os_calls.h"
-
-long DEFAULT_CC
-auth_userpass(char* user, char* pass);
-int DEFAULT_CC
-auth_start_session(long in_val, int in_display);
-int DEFAULT_CC
-auth_end(long in_val);
-int DEFAULT_CC
-auth_set_env(long in_val);
+#include "sesman.h"
+#include "config.h"
 
 static int g_sck;
 static int g_pid;
-
-struct session_item
-{
-  char name[256];
-  int pid; /* pid of sesman waiting for wm to end */
-  int display;
-  int width;
-  int height;
-  int bpp;
-  long data;
-};
-
-static unsigned char s_fixedkey[8] = { 23, 82, 107, 6, 35, 78, 88, 7 };
-
-static struct session_item session_items[100];
+static unsigned char g_fixedkey[8] = { 23, 82, 107, 6, 35, 78, 88, 7 };
+static struct session_item g_session_items[100]; /* sesman.h */
+static struct sesman_config g_cfg; /* config.h */
 
 /*****************************************************************************/
 static int DEFAULT_CC
@@ -128,12 +108,12 @@ find_session_item(char* name, int width, int height, int bpp)
 
   for (i = 0; i < 100; i++)
   {
-    if (g_strcmp(name, session_items[i].name) == 0 &&
-        session_items[i].width == width &&
-        session_items[i].height == height &&
-        session_items[i].bpp == bpp)
+    if (g_strncmp(name, g_session_items[i].name, 255) == 0 &&
+        g_session_items[i].width == width &&
+        g_session_items[i].height == height &&
+        g_session_items[i].bpp == bpp)
     {
-      return session_items + i;
+      return g_session_items + i;
     }
   }
   return 0;
@@ -166,9 +146,9 @@ cterm(int s)
   {
     for (i = 0; i < 100; i++)
     {
-      if (session_items[i].pid == pid)
+      if (g_session_items[i].pid == pid)
       {
-        g_memset(session_items + i, 0, sizeof(struct session_item));
+        g_memset(g_session_items + i, 0, sizeof(struct session_item));
       }
     }
   }
@@ -183,7 +163,7 @@ check_password_file(char* filename, char* password)
 
   g_memset(encryptedPasswd, 0, 16);
   g_strncpy(encryptedPasswd, password, 8);
-  rfbDesKey(s_fixedkey, 0);
+  rfbDesKey(g_fixedkey, 0);
   rfbDes(encryptedPasswd, encryptedPasswd);
   fd = g_file_open(filename);
   if (fd == 0)
@@ -292,11 +272,24 @@ start_session(int width, int height, int bpp, char* username, char* password,
       if (x_server_running(display))
       {
         auth_set_env(data);
-        g_sprintf(text, "%s/startwm.sh", cur_dir);
-        g_execlp3(text, "startwm.sh", 0);
+        /* try to execute user window manager if enabled */
+        if (g_cfg.enable_user_wm)
+        {
+          g_sprintf(text,"%s/%s", g_getenv("HOME"), g_cfg.user_wm);
+          if (g_file_exist(text))
+          {
+            g_execlp3(text, g_cfg.user_wm, 0);
+          }
+        }
+        /* if we're here something happened to g_execlp3
+           so we try running the default window manager */
+        g_sprintf(text, "%s/%s", cur_dir, g_cfg.default_wm);
+        g_execlp3(text, g_cfg.default_wm, 0);
+        /* still a problem starting window manager just start xterm */
+        g_execlp3("xterm", "xterm", 0);
         /* should not get here */
       }
-      g_printf("error\n");
+      g_printf("error starting window manager\n");
       g_exit(0);
     }
     else /* parent */
@@ -328,13 +321,13 @@ start_session(int width, int height, int bpp, char* username, char* password,
   }
   else /* parent */
   {
-    session_items[display].pid = pid;
-    g_strcpy(session_items[display].name, username);
-    session_items[display].display = display;
-    session_items[display].width = width;
-    session_items[display].height = height;
-    session_items[display].bpp = bpp;
-    session_items[display].data = data;
+    g_session_items[display].pid = pid;
+    g_strcpy(g_session_items[display].name, username);
+    g_session_items[display].display = display;
+    g_session_items[display].width = width;
+    g_session_items[display].height = height;
+    g_session_items[display].bpp = bpp;
+    g_session_items[display].data = data;
     g_sleep(5000);
   }
   return display;
@@ -351,6 +344,26 @@ sesman_shutdown(int sig)
   g_printf("shutting down\n\r");
   g_printf("signal %d pid %d\n\r", sig, g_getpid());
   g_tcp_close(g_sck);
+}
+
+/******************************************************************************/
+void DEFAULT_CC
+sesman_reload_cfg(int sig)
+{
+  struct sesman_config cfg;
+
+  if (g_getpid() != g_pid)
+  {
+    return;
+  }
+  g_printf("sesman: received SIGHUP\n\r");
+  if (config_read(&cfg) != 0)
+  {
+    g_printf("sesman: error reading config. keeping old cfg.\n\r");
+    return;
+  }
+  g_cfg = cfg;
+  g_printf("sesman: configuration reloaded\n\r");
 }
 
 /******************************************************************************/
@@ -377,8 +390,14 @@ main(int argc, char** argv)
   struct session_item* s_item;
   long data;
 
-  g_memset(&session_items, 0, sizeof(session_items));
+  if (0 != config_read(&g_cfg))
+  {
+    g_printf("sesman: error reading config. quitting.\n\r");
+    return 1;
+  }
+  g_memset(&g_session_items, 0, sizeof(g_session_items));
   g_pid = g_getpid();
+  g_signal(1, sesman_reload_cfg); /* SIGHUP */
   g_signal(2, sesman_shutdown); /* SIGINT */
   g_signal(9, sesman_shutdown); /* SIGKILL */
   g_signal(15, sesman_shutdown); /* SIGTERM */
@@ -391,7 +410,7 @@ main(int argc, char** argv)
     g_printf("sesman server username password width height bpp - \
 start session\n");
   }
-  else if (argc == 2 && g_strcmp(argv[1], "wait") == 0)
+  else if (argc == 2 && g_strncmp(argv[1], "wait", 255) == 0)
   {
     make_stream(in_s);
     init_stream(in_s, 8192);
@@ -400,7 +419,7 @@ start session\n");
     g_printf("listening\n");
     g_sck = g_tcp_socket();
     g_tcp_set_non_blocking(g_sck);
-    error = g_tcp_bind(g_sck, "3350");
+    error = g_tcp_bind(g_sck, g_cfg.listen_port);
     if (error == 0)
     {
       error = g_tcp_listen(g_sck);
