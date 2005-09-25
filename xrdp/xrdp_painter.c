@@ -376,8 +376,6 @@ xrdp_painter_draw_text(struct xrdp_painter* self,
     {
       x1 = x;
       y1 = y + total_height;
-      draw_rect.right--;
-      draw_rect.bottom--;
       flags = 0x03; /* 0x03 0x73; TEXT2_IMPLICIT_X and something else */
       libxrdp_orders_text(self->session, f, flags, 0,
                           font->color, 0,

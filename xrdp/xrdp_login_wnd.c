@@ -209,7 +209,7 @@ set_mod_data_item(struct xrdp_mod_data* mod, char* name, char* value)
 
   for (index = 0; index < mod->names->count; index++)
   {
-    if (g_strcmp(name, (char*)list_get_item(mod->names, index)) == 0)
+    if (g_strncmp(name, (char*)list_get_item(mod->names, index), 255) == 0)
     {
       list_remove_item(mod->values, index);
       list_insert_item(mod->values, index, (long)g_strdup(value));
@@ -449,7 +449,7 @@ xrdp_wm_show_edits(struct xrdp_wm* self, struct xrdp_bitmap* combo)
         {
           self->login_window->focused_control = b;
         }
-        if (g_strcmp(name, "password") == 0)
+        if (g_strncmp(name, "password", 255) == 0)
         {
           b->password_char = '*';
         }
@@ -543,7 +543,7 @@ xrdp_wm_login_fill_in_combo(struct xrdp_wm* self, struct xrdp_bitmap* b)
   {
     p = (char*)list_get_item(sections, i);
     file_read_section(fd, p, section_names, section_values);
-    if (g_strcmp(p, "globals") == 0)
+    if (g_strncmp(p, "globals", 255) == 0)
     {
     }
     else
@@ -559,11 +559,11 @@ xrdp_wm_login_fill_in_combo(struct xrdp_wm* self, struct xrdp_bitmap* b)
       {
         q = (char*)list_get_item(section_names, j);
         r = (char*)list_get_item(section_values, j);
-        if (g_strcmp("name", q) == 0)
+        if (g_strncmp("name", q, 255) == 0)
         {
           g_strcpy(mod_data->name, r);
         }
-        else if (g_strcmp("lib", q) == 0)
+        else if (g_strncmp("lib", q, 255) == 0)
         {
           g_strcpy(mod_data->lib, r);
         }
