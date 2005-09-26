@@ -80,6 +80,10 @@ struct xrdp_sec
   char sign_key[16];
   void* decrypt_rc4_info;
   void* encrypt_rc4_info;
+  char pub_exp[4];
+  char pub_mod[64];
+  char pub_sig[64];
+  char pri_exp[64];
 };
 
 /* rdp */

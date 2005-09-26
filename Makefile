@@ -31,3 +31,4 @@ install:
 	install instfiles/xrdp.ini $(DESTDIR)/xrdp.ini
 	install instfiles/xrdpstart.sh $(DESTDIR)/xrdpstart.sh
 	install instfiles/pam.d/sesman /etc/pam.d/sesman
+	install xrdp/rsakeys.ini $(DESTDIR)/rsakeys.ini

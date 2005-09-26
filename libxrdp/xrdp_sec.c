@@ -32,38 +32,6 @@ static char pad_92[48] =
   92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92,
   92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92 };
 
-static char pub_exp[4] = { 0x01, 0x00, 0x01, 0x00 };
-
-static char pub_mod[64] =
-{ 0x67, 0xab, 0x0e, 0x6a, 0x9f, 0xd6, 0x2b, 0xa3,
-  0x32, 0x2f, 0x41, 0xd1, 0xce, 0xee, 0x61, 0xc3,
-  0x76, 0x0b, 0x26, 0x11, 0x70, 0x48, 0x8a, 0x8d,
-  0x23, 0x81, 0x95, 0xa0, 0x39, 0xf7, 0x5b, 0xaa,
-  0x3e, 0xf1, 0xed, 0xb8, 0xc4, 0xee, 0xce, 0x5f,
-  0x6a, 0xf5, 0x43, 0xce, 0x5f, 0x60, 0xca, 0x6c,
-  0x06, 0x75, 0xae, 0xc0, 0xd6, 0xa4, 0x0c, 0x92,
-  0xa4, 0xc6, 0x75, 0xea, 0x64, 0xb2, 0x50, 0x5b };
-
-static char pub_sig[64] =
-{ 0x6a, 0x41, 0xb1, 0x43, 0xcf, 0x47, 0x6f, 0xf1,
-  0xe6, 0xcc, 0xa1, 0x72, 0x97, 0xd9, 0xe1, 0x85,
-  0x15, 0xb3, 0xc2, 0x39, 0xa0, 0xa6, 0x26, 0x1a,
-  0xb6, 0x49, 0x01, 0xfa, 0xa6, 0xda, 0x60, 0xd7,
-  0x45, 0xf7, 0x2c, 0xee, 0xe4, 0x8e, 0x64, 0x2e,
-  0x37, 0x49, 0xf0, 0x4c, 0x94, 0x6f, 0x08, 0xf5,
-  0x63, 0x4c, 0x56, 0x29, 0x55, 0x5a, 0x63, 0x41,
-  0x2c, 0x20, 0x65, 0x95, 0x99, 0xb1, 0x15, 0x7c };
-
-static char pri_exp[64] =
-{ 0x41, 0x93, 0x05, 0xB1, 0xF4, 0x38, 0xFC, 0x47,
-  0x88, 0xC4, 0x7F, 0x83, 0x8C, 0xEC, 0x90, 0xDA,
-  0x0C, 0x8A, 0xB5, 0xAE, 0x61, 0x32, 0x72, 0xF5,
-  0x2B, 0xD1, 0x7B, 0x5F, 0x44, 0xC0, 0x7C, 0xBD,
-  0x8A, 0x35, 0xFA, 0xAE, 0x30, 0xF6, 0xC4, 0x6B,
-  0x55, 0xA7, 0x65, 0xEF, 0xF4, 0xB2, 0xAB, 0x18,
-  0x4E, 0xAA, 0xE6, 0xDC, 0x71, 0x17, 0x3B, 0x4C,
-  0xC2, 0x15, 0x4C, 0xF7, 0x81, 0xBB, 0xF0, 0x03 };
-
 static char lic1[322] =
 { 0x80, 0x00, 0x3e, 0x01, 0x01, 0x02, 0x3e, 0x01,
   0x7b, 0x3c, 0x31, 0xa6, 0xae, 0xe8, 0x74, 0xf6,
@@ -113,10 +81,103 @@ static char lic2[20] =
   0x28, 0x14, 0x00, 0x00 };
 
 /*****************************************************************************/
+static void
+hex_to_bin(char* in, char* out)
+{
+  int val;
+
+  val = 0;
+  switch (in[0])
+  {
+    case '1': val = 16; break;
+    case '2': val = 16 * 2; break;
+    case '3': val = 16 * 3; break;
+    case '4': val = 16 * 4; break;
+    case '5': val = 16 * 5; break;
+    case '6': val = 16 * 6; break;
+    case '7': val = 16 * 7; break;
+    case '8': val = 16 * 8; break;
+    case '9': val = 16 * 9; break;
+    case 'a': val = 16 * 10; break;
+    case 'A': val = 16 * 10; break;
+    case 'b': val = 16 * 11; break;
+    case 'B': val = 16 * 11; break;
+    case 'c': val = 16 * 12; break;
+    case 'C': val = 16 * 12; break;
+    case 'd': val = 16 * 13; break;
+    case 'D': val = 16 * 13; break;
+    case 'e': val = 16 * 14; break;
+    case 'E': val = 16 * 14; break;
+    case 'f': val = 16 * 15; break;
+    case 'F': val = 16 * 15; break;
+  }
+  switch (in[1])
+  {
+    case '1': val += 1; break;
+    case '2': val += 2; break;
+    case '3': val += 3; break;
+    case '4': val += 4; break;
+    case '5': val += 5; break;
+    case '6': val += 6; break;
+    case '7': val += 7; break;
+    case '8': val += 8; break;
+    case '9': val += 9; break;
+    case 'a': val += 10; break;
+    case 'A': val += 10; break;
+    case 'b': val += 11; break;
+    case 'B': val += 11; break;
+    case 'c': val += 12; break;
+    case 'C': val += 12; break;
+    case 'd': val += 13; break;
+    case 'D': val += 13; break;
+    case 'e': val += 14; break;
+    case 'E': val += 14; break;
+    case 'f': val += 15; break;
+    case 'F': val += 15; break;
+  }
+  *out = val;
+}
+
+/*****************************************************************************/
+static void
+hex_str_to_bin(char* in, char* out, int out_len)
+{
+  int in_index;
+  int in_len;
+  int out_index;
+  char hex[16];
+
+  in_len = g_strlen(in);
+  out_index = 0;
+  in_index = 0;
+  while (in_index <= (in_len - 4))
+  {
+    if (in[in_index] == '0' && in[in_index + 1] == 'x')
+    {
+      hex[0] = in[in_index + 2];
+      hex[1] = in[in_index + 3];
+      hex[2] = 0;
+      if (out_index < out_len)
+      {
+        hex_to_bin(hex, out + out_index);
+      }
+      out_index++;
+    }
+    in_index++;
+  }
+}
+
+/*****************************************************************************/
 struct xrdp_sec* APP_CC
 xrdp_sec_create(struct xrdp_rdp* owner, int sck)
 {
   struct xrdp_sec* self;
+  struct list* items;
+  struct list* values;
+  int fd;
+  int index;
+  char* item;
+  char* value;
 
   self = (struct xrdp_sec*)g_malloc(sizeof(struct xrdp_sec), 1);
   self->rdp_layer = owner;
@@ -126,6 +187,39 @@ xrdp_sec_create(struct xrdp_rdp* owner, int sck)
   g_random(self->server_random, 32);
   self->mcs_layer = xrdp_mcs_create(self, sck, &self->client_mcs_data,
                                     &self->server_mcs_data);
+  fd = g_file_open("rsakeys.ini");
+  if (fd > 0)
+  {
+    items = list_create();
+    items->auto_free = 1;
+    values = list_create();
+    values->auto_free = 1;
+    file_read_section(fd, "keys", items, values);
+    for (index = 0; index < items->count; index++)
+    {
+      item = (char*)list_get_item(items, index);
+      value = (char*)list_get_item(values, index);
+      if (g_strncasecmp(item, "pub_exp", 255) == 0)
+      {
+        hex_str_to_bin(value, self->pub_exp, 4);
+      }
+      else if (g_strncasecmp(item, "pub_mod", 255) == 0)
+      {
+        hex_str_to_bin(value, self->pub_mod, 64);
+      }
+      else if (g_strncasecmp(item, "pub_sig", 255) == 0)
+      {
+        hex_str_to_bin(value, self->pub_sig, 64);
+      }
+      else if (g_strncasecmp(item, "pri_exp", 255) == 0)
+      {
+        hex_str_to_bin(value, self->pri_exp, 64);
+      }
+    }
+    list_delete(items);
+    list_delete(values);
+    g_file_close(fd);
+  }
   return self;
 }
 
@@ -425,7 +519,7 @@ xrdp_sec_recv(struct xrdp_sec* self, struct stream* s, int* chan)
     in_uint32_le(s, len);
     in_uint8a(s, self->client_crypt_random, 64);
     xrdp_sec_rsa_op(self->client_random, self->client_crypt_random,
-                    pub_mod, pri_exp);
+                    self->pub_mod, self->pri_exp);
     xrdp_sec_establish_keys(self);
     *chan = 1; /* just set a non existing channel and exit */
     return 0;
@@ -530,12 +624,12 @@ xrdp_sec_out_mcs_data(struct xrdp_sec* self)
   out_uint32_le(p, 0x48); /* 72 bytes modulus len */
   out_uint32_be(p, 0x00020000);
   out_uint32_be(p, 0x3f000000);
-  out_uint8a(p, pub_exp, 4); /* pub exp */
-  out_uint8a(p, pub_mod, 64); /* pub mod */
+  out_uint8a(p, self->pub_exp, 4); /* pub exp */
+  out_uint8a(p, self->pub_mod, 64); /* pub mod */
   out_uint8s(p, 8); /* pad */
   out_uint16_le(p, SEC_TAG_KEYSIG);
   out_uint16_le(p, 72); /* len */
-  out_uint8a(p, pub_sig, 64); /* pub sig */
+  out_uint8a(p, self->pub_sig, 64); /* pub sig */
   out_uint8s(p, 8); /* pad */
   /* end certificate */
   s_mark_end(p);

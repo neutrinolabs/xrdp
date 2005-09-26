@@ -172,9 +172,9 @@ file_read_section(int fd, char* section, struct list* names,
                   struct list* values)
 {
   struct stream* s;
-  char text[256];
-  char name[256];
-  char value[256];
+  char text[512];
+  char name[512];
+  char value[512];
   char c;
   int in_it;
   int in_it_index;
@@ -184,7 +184,7 @@ file_read_section(int fd, char* section, struct list* names,
   g_file_seek(fd, 0);
   in_it_index = 0;
   in_it = 0;
-  g_memset(text, 0, 256);
+  g_memset(text, 0, 512);
   list_clear(names);
   list_clear(values);
   make_stream(s);
@@ -216,7 +216,7 @@ file_read_section(int fd, char* section, struct list* names,
         }
         in_it = 0;
         in_it_index = 0;
-        g_memset(text, 0, 256);
+        g_memset(text, 0, 512);
       }
       else if (in_it)
       {
