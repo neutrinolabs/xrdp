@@ -163,10 +163,19 @@ static int APP_CC
 xrdp_orders_check(struct xrdp_orders* self, int max_size)
 {
   int size;
+  int max_packet_size;
 
+  if (self->rdp_layer->client_info.bpp == 8)
+  {
+    max_packet_size = 8000;
+  }
+  else
+  {
+    max_packet_size = 16000;
+  }
   if (self->order_level < 1)
   {
-    if (max_size > 16000)
+    if (max_size > max_packet_size)
     {
       return 1;
     }
@@ -176,11 +185,11 @@ xrdp_orders_check(struct xrdp_orders* self, int max_size)
     }
   }
   size = self->out_s->p - self->order_count_ptr;
-  if (size < 0 || size > 16384)
+  if (size < 0 || size > max_packet_size)
   {
     return 1;
   }
-  if (size + max_size + 100 > 16000)
+  if (size + max_size + 100 > max_packet_size)
   {
     xrdp_orders_force_send(self);
     xrdp_orders_init(self);
