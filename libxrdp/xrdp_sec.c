@@ -315,6 +315,30 @@ xrdp_sec_decrypt(struct xrdp_sec* self, char* data, int len)
 }
 
 /*****************************************************************************/
+static int APP_CC
+unicode_in(struct stream* s, int uni_len, char* dst, int dst_len)
+{
+  int dst_index;
+  int src_index;
+
+  dst_index = 0;
+  src_index = 0;
+  while (src_index < uni_len)
+  {
+    if (dst_index >= dst_len || src_index > 512)
+    {
+      break;
+    }
+    in_uint8(s, dst[dst_index]);
+    in_uint8s(s, 1);
+    dst_index++;
+    src_index += 2;
+  }
+  in_uint8s(s, 2);
+  return 0;
+}
+
+/*****************************************************************************/
 /* returns error */
 static int APP_CC
 xrdp_sec_process_logon_info(struct xrdp_sec* self, struct stream* s)
@@ -326,6 +350,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec* self, struct stream* s)
   int len_program;
   int len_directory;
 
+  //g_hexdump(s->p, 100);
   in_uint8s(s, 4);
   in_uint32_le(s, flags);
   DEBUG(("in xrdp_sec_process_logon_info flags $%x\n\r", flags));
@@ -336,20 +361,38 @@ xrdp_sec_process_logon_info(struct xrdp_sec* self, struct stream* s)
   }
   if (flags & RDP_LOGON_AUTO)
   {
+    self->rdp_layer->client_info.rdp_autologin = 1;
   }
   if (flags & RDP_COMPRESSION)
   {
+    self->rdp_layer->client_info.rdp_compression = 1;
   }
   in_uint16_le(s, len_domain);
   in_uint16_le(s, len_user);
   in_uint16_le(s, len_password);
   in_uint16_le(s, len_program);
   in_uint16_le(s, len_directory);
-  in_uint8s(s, len_domain + 2);
-  in_uint8s(s, len_user + 2);
-  in_uint8s(s, len_password + 2);
-  in_uint8s(s, len_program + 2);
-  in_uint8s(s, len_directory + 2);
+  /* todo, we should error out in any of the above lengths are > 512 */
+  /* to avoid buffer overruns */
+  unicode_in(s, len_domain, self->rdp_layer->client_info.domain, 255);
+  unicode_in(s, len_user, self->rdp_layer->client_info.username, 255);
+  if (flags & RDP_LOGON_AUTO)
+  {
+    unicode_in(s, len_password, self->rdp_layer->client_info.password, 255);
+  }
+  else
+  {
+    in_uint8s(s, len_password + 2);
+  }
+  unicode_in(s, len_program, self->rdp_layer->client_info.program, 255);
+  unicode_in(s, len_directory, self->rdp_layer->client_info.directory, 255);
+  /*
+  g_printf("%d %s\n", len_domain, self->rdp_layer->client_info.domain);
+  g_printf("%d %s\n", len_user, self->rdp_layer->client_info.username);
+  g_printf("%d %s\n", len_password, self->rdp_layer->client_info.password);
+  g_printf("%d %s\n", len_program, self->rdp_layer->client_info.program);
+  g_printf("%d %s\n", len_directory, self->rdp_layer->client_info.directory);
+  */
   return 0;
 }
 

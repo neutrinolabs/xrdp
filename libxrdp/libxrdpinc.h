@@ -44,6 +44,13 @@ struct xrdp_client_info
   char hostname[32];
   int build;
   int keylayout;
+  char username[256];
+  char password[256];
+  char domain[256];
+  char program[256];
+  char directory[256];
+  int rdp_compression;
+  int rdp_autologin;
 };
 
 struct xrdp_brush
