@@ -357,13 +357,128 @@ xrdp_wm_load_static_pointers(struct xrdp_wm* self)
 int APP_CC
 xrdp_wm_init(struct xrdp_wm* self)
 {
+  int fd;
+  int index;
+  struct xrdp_mod_data* mod_data;
+  struct list* names;
+  struct list* values;
+  char* q;
+  char* r;
+
   xrdp_wm_load_static_colors(self);
   xrdp_wm_load_static_pointers(self);
-  xrdp_login_wnd_create(self);
-  /* clear screen */
   self->screen->bg_color = self->black;
-  xrdp_bitmap_invalidate(self->screen, 0);
-  xrdp_wm_set_focused(self, self->login_window);
+  if (self->session->client_info->rdp_autologin)
+  {
+    fd = g_file_open("xrdp.ini");
+    if (fd > 0)
+    {
+      names = list_create();
+      names->auto_free = 1;
+      values = list_create();
+      values->auto_free = 1;
+      mod_data = (struct xrdp_mod_data*)
+                     g_malloc(sizeof(struct xrdp_mod_data), 1);
+      mod_data->names = list_create();
+      mod_data->names->auto_free = 1;
+      mod_data->values = list_create();
+      mod_data->values->auto_free = 1;
+      if (file_read_section(fd, self->session->client_info->domain,
+                            names, values) == 0)
+      {
+        for (index = 0; index < names->count; index++)
+        {
+          q = (char*)list_get_item(names, index);
+          r = (char*)list_get_item(values, index);
+          if (g_strncmp("name", q, 255) == 0)
+          {
+            g_strcpy(mod_data->name, r);
+          }
+          else if (g_strncmp("lib", q, 255) == 0)
+          {
+            g_strcpy(mod_data->lib, r);
+          }
+          else
+          {
+            if (g_strncmp("password", q, 255) == 0)
+            {
+              list_add_item(mod_data->names, (long)g_strdup("password"));
+              list_add_item(mod_data->values,
+                     (long)g_strdup(self->session->client_info->password));
+            }
+            else if (g_strncmp("username", q, 255) == 0)
+            {
+              list_add_item(mod_data->names, (long)g_strdup("username"));
+              list_add_item(mod_data->values,
+                     (long)g_strdup(self->session->client_info->username));
+            }
+            else
+            {
+              list_add_item(mod_data->names, (long)g_strdup(q));
+              list_add_item(mod_data->values, (long)g_strdup(r));
+            }
+          }
+        }
+        if (xrdp_wm_setup_mod1(self, mod_data) != 0)
+        {
+          /* totaly free mod */
+          if (self->mod_exit != 0)
+          {
+            self->mod_exit(self->mod);
+          }
+          g_xrdp_sync(sync_unload, self->mod_handle, 0);
+          self->mod = 0;
+          self->mod_handle = 0;
+          self->mod_init = 0;
+          self->mod_exit = 0;
+        }
+        else if (xrdp_wm_setup_mod2(self, mod_data->names, mod_data->values) != 0)
+        {
+          /* totaly free mod */
+          if (self->mod_exit != 0)
+          {
+            self->mod_exit(self->mod);
+          }
+          g_xrdp_sync(sync_unload, self->mod_handle, 0);
+          self->mod = 0;
+          self->mod_handle = 0;
+          self->mod_init = 0;
+          self->mod_exit = 0;
+          /* don't close here so user can see error */
+        }
+        else /* close connection log window if connection is ok */
+        {
+          if (self->log_wnd != 0)
+          {
+            xrdp_bitmap_delete(self->log_wnd);
+          }
+        }
+        if (!self->pro_layer->term)
+        {
+          if (self->mod != 0)
+          {
+            if (self->mod->sck != 0)
+            {
+              self->pro_layer->app_sck = self->mod->sck;
+            }
+          }
+        }
+      }
+      list_delete(mod_data->names);
+      list_delete(mod_data->values);
+      list_delete(names);
+      list_delete(values);
+      g_free(mod_data);
+      g_file_close(fd);
+    }
+  }
+  else
+  {
+    xrdp_login_wnd_create(self);
+    /* clear screen */
+    xrdp_bitmap_invalidate(self->screen, 0);
+    xrdp_wm_set_focused(self, self->login_window);
+  }
   return 0;
 }
 

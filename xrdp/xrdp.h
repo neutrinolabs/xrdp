@@ -290,6 +290,14 @@ remove_char_at(char* text, int index);
 int APP_CC
 set_string(char** in_str, char* in);
 
+/* xrdp_login_wnd.c */
+int APP_CC
+xrdp_wm_setup_mod1(struct xrdp_wm* self,
+                   struct xrdp_mod_data* mod_data);
+int APP_CC
+xrdp_wm_setup_mod2(struct xrdp_wm* self,
+                   struct list* names,
+                   struct list* values);
 int APP_CC
 xrdp_login_wnd_create(struct xrdp_wm* self);
 

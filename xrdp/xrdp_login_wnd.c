@@ -106,9 +106,9 @@ sync_load(long param1, long param2)
 }
 
 /*****************************************************************************/
-static int APP_CC
-xrdp_wm_setup_mod(struct xrdp_wm* self,
-                  struct xrdp_mod_data* mod_data)
+int APP_CC
+xrdp_wm_setup_mod1(struct xrdp_wm* self,
+                   struct xrdp_mod_data* mod_data)
 {
   void* func;
 
@@ -179,10 +179,51 @@ xrdp_wm_setup_mod(struct xrdp_wm* self,
   /* id self->mod is null, there must be a problem */
   if (self->mod == 0)
   {
-    DEBUG(("problem loading lib in xrdp_wm_setup_mod\n\r"));
+    DEBUG(("problem loading lib in xrdp_wm_setup_mod1\n\r"));
     return 1;
   }
   return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+xrdp_wm_setup_mod2(struct xrdp_wm* self,
+                   struct list* names,
+                   struct list* values)
+{
+  char text[256];
+  int i;
+  int rv;
+
+  rv = 1;
+  if (!self->pro_layer->term)
+  {
+    if (self->mod->mod_start(self->mod, self->screen->width,
+                             self->screen->height, self->screen->bpp) != 0)
+    {
+      self->pro_layer->term = 1; /* kill session */
+    }
+  }
+  if (!self->pro_layer->term)
+  {
+    /* always set these */
+    self->mod->mod_set_param(self->mod, "hostname",
+                             self->session->client_info->hostname);
+    g_sprintf(text, "%d", self->session->client_info->keylayout);
+    self->mod->mod_set_param(self->mod, "keylayout", text);
+    for (i = 0; i < names->count; i++)
+    {
+      self->mod->mod_set_param(self->mod,
+                   (char*)list_get_item(names, i),
+                   (char*)list_get_item(values, i));
+    }
+    /* connect */
+    if (self->mod->mod_connect(self->mod) == 0)
+    {
+      rv = 0;
+    }
+  }
+  return rv;
 }
 
 /*****************************************************************************/
@@ -286,7 +327,6 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap* wnd)
   struct list* values;
   struct xrdp_mod_data* mod_data;
   int i;
-  char text[256];
 
   wm = wnd->wm;
   combo = xrdp_bitmap_get_child_by_id(wnd, 6);
@@ -307,7 +347,7 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap* wnd)
         label = xrdp_bitmap_get_child_by_id(wnd, i);
         edit = xrdp_bitmap_get_child_by_id(wnd, i + 1);
       }
-      if (xrdp_wm_setup_mod(wm, mod_data) == 0)
+      if (xrdp_wm_setup_mod1(wm, mod_data) == 0)
       {
         /* gota copy these cause dialog gets freed */
         names = list_create();
@@ -325,44 +365,24 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap* wnd)
             (long)g_strdup((char*)list_get_item(mod_data->values, i)));
         }
         xrdp_wm_delete_all_childs(wm);
-        if (!wm->pro_layer->term)
+        if (xrdp_wm_setup_mod2(wm, names, values) != 0)
         {
-          if (wm->mod->mod_start(wm->mod, wm->screen->width,
-                                 wm->screen->height, wm->screen->bpp) != 0)
+          /* totaly free mod */
+          if (wm->mod_exit != 0)
           {
-            wm->pro_layer->term = 1; /* kill session */
-          }
-        }
-        if (!wm->pro_layer->term)
-        {
-          /* always set these */
-          wm->mod->mod_set_param(wm->mod, "hostname",
-                                 wm->session->client_info->hostname);
-          g_sprintf(text, "%d", wm->session->client_info->keylayout);
-          wm->mod->mod_set_param(wm->mod, "keylayout", text);
-          for (i = 0; i < names->count; i++)
-          {
-            wm->mod->mod_set_param(wm->mod,
-                         (char*)list_get_item(names, i),
-                         (char*)list_get_item(values, i));
-          }
-          /* connect */
-          if (wm->mod->mod_connect(wm->mod) != 0)
-          {
-            /* totaly free mod */
             wm->mod_exit(wm->mod);
-            g_xrdp_sync(sync_unload, wm->mod_handle, 0);
-            wm->mod = 0;
-            wm->mod_handle = 0;
-            wm->mod_init = 0;
-            wm->mod_exit = 0;
           }
-          else /* close connection log window if connection is ok */
+          g_xrdp_sync(sync_unload, wm->mod_handle, 0);
+          wm->mod = 0;
+          wm->mod_handle = 0;
+          wm->mod_init = 0;
+          wm->mod_exit = 0;
+        }
+        else /* close connection log window if connection is ok */
+        {
+          if (wm->log_wnd != 0)
           {
-            if (wm->log_wnd != 0)
-            {
-              xrdp_bitmap_delete(wm->log_wnd);
-            }
+            xrdp_bitmap_delete(wm->log_wnd);
           }
         }
         if (!wm->pro_layer->term)
@@ -390,11 +410,13 @@ xrdp_wm_show_edits(struct xrdp_wm* self, struct xrdp_bitmap* combo)
   int count;
   int index;
   int insert_index;
+  int username_set;
   char* name;
   char* value;
   struct xrdp_mod_data* mod;
   struct xrdp_bitmap* b;
 
+  username_set = 0;
   /* free labels and edits, cause we gota create them */
   /* creation or combo changed */
   for (index = 100; index < 200; index++)
@@ -449,9 +471,26 @@ xrdp_wm_show_edits(struct xrdp_wm* self, struct xrdp_bitmap* combo)
         {
           self->login_window->focused_control = b;
         }
+        if (g_strncmp(name, "username", 255) == 0)
+        {
+          g_free(b->caption1);
+          b->caption1 = g_strdup(self->session->client_info->username);
+          b->edit_pos = g_strlen(b->caption1);
+          if (g_strlen(b->caption1) > 0)
+          {
+            username_set = 1;
+          }
+        }
         if (g_strncmp(name, "password", 255) == 0)
         {
           b->password_char = '*';
+          if (username_set)
+          {
+            if (b->parent != 0)
+            {
+              b->parent->focused_control = b;
+            }
+          }
         }
         count++;
       }
