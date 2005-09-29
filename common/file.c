@@ -167,6 +167,7 @@ file_split_name_value(char* text, char* name, char* value)
 }
 
 /*****************************************************************************/
+/* return error */
 int APP_CC
 file_read_section(int fd, char* section, struct list* names,
                   struct list* values)
@@ -226,5 +227,5 @@ file_read_section(int fd, char* section, struct list* names,
     }
   }
   free_stream(s);
-  return 0;
+  return 1;
 }
