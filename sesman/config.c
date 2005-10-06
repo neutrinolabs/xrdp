@@ -19,11 +19,9 @@
    session manager - read config file
 */
 
-#include "os_calls.h"
 #include "list.h"
 #include "file.h"
-#include "arch.h"
-#include "config.h"
+#include "sesman.h"
 
 /******************************************************************************/
 /* returns error */

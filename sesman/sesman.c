@@ -21,114 +21,13 @@
 
 */
 
-#include "d3des.h"
-#include "arch.h"
-#include "parse.h"
-#include "os_calls.h"
 #include "sesman.h"
-#include "config.h"
 
-static int g_sck;
-static int g_pid;
-static unsigned char g_fixedkey[8] = { 23, 82, 107, 6, 35, 78, 88, 7 };
-static struct session_item g_session_items[100]; /* sesman.h */
-static struct sesman_config g_cfg; /* config.h */
-
-/*****************************************************************************/
-static int DEFAULT_CC
-tcp_force_recv(int sck, char* data, int len)
-{
-  int rcvd;
-
-  while (len > 0)
-  {
-    rcvd = g_tcp_recv(sck, data, len, 0);
-    if (rcvd == -1)
-    {
-      if (g_tcp_last_error_would_block(sck))
-      {
-        g_sleep(1);
-      }
-      else
-      {
-        return 1;
-      }
-    }
-    else if (rcvd == 0)
-    {
-      return 1;
-    }
-    else
-    {
-      data += rcvd;
-      len -= rcvd;
-    }
-  }
-  return 0;
-}
-
-/*****************************************************************************/
-static int DEFAULT_CC
-tcp_force_send(int sck, char* data, int len)
-{
-  int sent;
-
-  while (len > 0)
-  {
-    sent = g_tcp_send(sck, data, len, 0);
-    if (sent == -1)
-    {
-      if (g_tcp_last_error_would_block(sck))
-      {
-        g_sleep(1);
-      }
-      else
-      {
-        return 1;
-      }
-    }
-    else if (sent == 0)
-    {
-      return 1;
-    }
-    else
-    {
-      data += sent;
-      len -= sent;
-    }
-  }
-  return 0;
-}
-
-/******************************************************************************/
-static struct session_item* DEFAULT_CC
-find_session_item(char* name, int width, int height, int bpp)
-{
-  int i;
-
-  for (i = 0; i < 100; i++)
-  {
-    if (g_strncmp(name, g_session_items[i].name, 255) == 0 &&
-        g_session_items[i].width == width &&
-        g_session_items[i].height == height &&
-        g_session_items[i].bpp == bpp)
-    {
-      return g_session_items + i;
-    }
-  }
-  return 0;
-}
-
-/******************************************************************************/
-/* returns non zero if there is an xserver running on this display */
-static int DEFAULT_CC
-x_server_running(int display)
-{
-  char text[256];
-
-  g_sprintf(text, "/tmp/.X11-unix/X%d", display);
-  return g_file_exist(text);
-}
+int g_sck;
+int g_pid;
+unsigned char g_fixedkey[8] = { 23, 82, 107, 6, 35, 78, 88, 7 };
+struct session_item g_session_items[100]; /* sesman.h */
+struct sesman_config g_cfg; /* config.h */
 
 /******************************************************************************/
 static void DEFAULT_CC
@@ -152,218 +51,6 @@ cterm(int s)
       }
     }
   }
-}
-
-/******************************************************************************/
-static int DEFAULT_CC
-check_password_file(char* filename, char* password)
-{
-  char encryptedPasswd[16];
-  int fd;
-
-  g_memset(encryptedPasswd, 0, 16);
-  g_strncpy(encryptedPasswd, password, 8);
-  rfbDesKey(g_fixedkey, 0);
-  rfbDes(encryptedPasswd, encryptedPasswd);
-  fd = g_file_open(filename);
-  if (fd == 0)
-  {
-    return 1;
-  }
-  g_file_write(fd, encryptedPasswd, 8);
-  g_file_close(fd);
-  g_set_file_rights(filename, 1, 1); /* set read and write flags */
-  return 0;
-}
-
-/******************************************************************************/
-static int DEFAULT_CC
-set_user(char* username, char* passwd_file, int display)
-{
-  int error;
-  int pw_uid;
-  int pw_gid;
-  int uid;
-  char pw_shell[256];
-  char pw_dir[256];
-  char pw_gecos[256];
-  char text[256];
-
-  error = g_getuser_info(username, &pw_gid, &pw_uid, pw_shell, pw_dir,
-                         pw_gecos);
-  if (error == 0)
-  {
-    error = g_setgid(pw_gid);
-    if (error == 0)
-    {
-      uid = pw_uid;
-      error = g_setuid(uid);
-    }
-    if (error == 0)
-    {
-      g_clearenv();
-      g_setenv("SHELL", pw_shell, 1);
-      g_setenv("PATH", "/bin:/usr/bin:/usr/X11R6/bin:/usr/local/bin", 1);
-      g_setenv("USER", username, 1);
-      g_sprintf(text, "%d", uid);
-      g_setenv("UID", text, 1);
-      g_setenv("HOME", pw_dir, 1);
-      g_set_current_dir(pw_dir);
-      g_sprintf(text, ":%d.0", display);
-      g_setenv("DISPLAY", text, 1);
-      if (passwd_file != 0)
-      {
-        g_mkdir(".vnc");
-        g_sprintf(passwd_file, "%s/.vnc/sesman_passwd", pw_dir);
-      }
-    }
-  }
-  return error;
-}
-
-/******************************************************************************/
-/* returns 0 if error else the display number the session was started on */
-static int DEFAULT_CC
-start_session(int width, int height, int bpp, char* username, char* password,
-              long data)
-{
-  int display;
-  int pid;
-  int wmpid;
-  int xpid;
-  char geometry[32];
-  char depth[32];
-  char screen[32];
-  char cur_dir[256];
-  char text[256];
-  char passwd_file[256];
-
-  g_get_current_dir(cur_dir, 255);
-  display = 10;
-  while (x_server_running(display) && display < 50)
-  {
-    display++;
-  }
-  if (display >= 50)
-  {
-    return 0;
-  }
-  wmpid = 0;
-  pid = g_fork();
-  if (pid == -1)
-  {
-  }
-  else if (pid == 0) /* child */
-  {
-    g_unset_signals();
-    auth_start_session(data, display);
-    g_sprintf(geometry, "%dx%d", width, height);
-    g_sprintf(depth, "%d", bpp);
-    g_sprintf(screen, ":%d", display);
-    wmpid = g_fork();
-    if (wmpid == -1)
-    {
-    }
-    else if (wmpid == 0) /* child */
-    {
-      /* give X a bit to start */
-      g_sleep(1000);
-      set_user(username, 0, display);
-      if (x_server_running(display))
-      {
-        auth_set_env(data);
-        /* try to execute user window manager if enabled */
-        if (g_cfg.enable_user_wm)
-        {
-          g_sprintf(text,"%s/%s", g_getenv("HOME"), g_cfg.user_wm);
-          if (g_file_exist(text))
-          {
-            g_execlp3(text, g_cfg.user_wm, 0);
-          }
-        }
-        /* if we're here something happened to g_execlp3
-           so we try running the default window manager */
-        g_sprintf(text, "%s/%s", cur_dir, g_cfg.default_wm);
-        g_execlp3(text, g_cfg.default_wm, 0);
-        /* still a problem starting window manager just start xterm */
-        g_execlp3("xterm", "xterm", 0);
-        /* should not get here */
-      }
-      g_printf("error starting window manager\n");
-      g_exit(0);
-    }
-    else /* parent */
-    {
-      xpid = g_fork();
-      if (xpid == -1)
-      {
-      }
-      else if (xpid == 0) /* child */
-      {
-        set_user(username, passwd_file, display);
-        check_password_file(passwd_file, password);
-        g_execlp11("Xvnc", "Xvnc", screen, "-geometry", geometry,
-                   "-depth", depth, "-bs", "-rfbauth", passwd_file, 0);
-        /* should not get here */
-        g_printf("error\n");
-        g_exit(0);
-      }
-      else /* parent */
-      {
-        g_waitpid(wmpid);
-        g_sigterm(xpid);
-        g_sigterm(wmpid);
-        g_sleep(1000);
-        auth_end(data);
-        g_exit(0);
-      }
-    }
-  }
-  else /* parent */
-  {
-    g_session_items[display].pid = pid;
-    g_strcpy(g_session_items[display].name, username);
-    g_session_items[display].display = display;
-    g_session_items[display].width = width;
-    g_session_items[display].height = height;
-    g_session_items[display].bpp = bpp;
-    g_session_items[display].data = data;
-    g_sleep(5000);
-  }
-  return display;
-}
-
-/******************************************************************************/
-static void DEFAULT_CC
-sesman_shutdown(int sig)
-{
-  if (g_getpid() != g_pid)
-  {
-    return;
-  }
-  g_printf("shutting down\n\r");
-  g_printf("signal %d pid %d\n\r", sig, g_getpid());
-  g_tcp_close(g_sck);
-}
-
-/******************************************************************************/
-void DEFAULT_CC
-sesman_reload_cfg(int sig)
-{
-  struct sesman_config cfg;
-
-  if (g_getpid() != g_pid)
-  {
-    return;
-  }
-  g_printf("sesman: received SIGHUP\n\r");
-  if (config_read(&cfg) != 0)
-  {
-    g_printf("sesman: error reading config. keeping old cfg.\n\r");
-    return;
-  }
-  g_cfg = cfg;
-  g_printf("sesman: configuration reloaded\n\r");
 }
 
 /******************************************************************************/
@@ -397,10 +84,10 @@ main(int argc, char** argv)
   }
   g_memset(&g_session_items, 0, sizeof(g_session_items));
   g_pid = g_getpid();
-  g_signal(1, sesman_reload_cfg); /* SIGHUP */
-  g_signal(2, sesman_shutdown); /* SIGINT */
-  g_signal(9, sesman_shutdown); /* SIGKILL */
-  g_signal(15, sesman_shutdown); /* SIGTERM */
+  g_signal(1, sig_sesman_reload_cfg); /* SIGHUP */
+  g_signal(2, sig_sesman_shutdown); /* SIGINT */
+  g_signal(9, sig_sesman_shutdown); /* SIGKILL */
+  g_signal(15, sig_sesman_shutdown); /* SIGTERM */
   g_signal_child_stop(cterm); /* SIGCHLD */
   if (argc == 1)
   {
@@ -459,7 +146,7 @@ start session\n");
                   display = 0;
                   if (data)
                   {
-                    s_item = find_session_item(user, width, height, bpp);
+                    s_item = session_find_item(user, width, height, bpp);
                     if (s_item != 0)
                     {
                       display = s_item->display;
@@ -468,7 +155,7 @@ start session\n");
                     }
                     else
                     {
-                      display = start_session(width, height, bpp, user, pass,
+                      display = session_start(width, height, bpp, user, pass,
                                               data);
                     }
                     if (display == 0)

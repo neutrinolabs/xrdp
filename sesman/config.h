@@ -37,6 +37,15 @@ struct sesman_config
   char user_wm[32];
 };
 
+/**
+ *
+ * Reads sesman configuration
+ *
+ * @param cfg pointer to configuration object to be replaced
+ *
+ * @return 0 on success, 1 on failure
+ * 
+ */
 int DEFAULT_CC
 config_read(struct sesman_config* cfg);
 

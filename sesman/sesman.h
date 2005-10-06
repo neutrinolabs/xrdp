@@ -22,24 +22,15 @@
 #ifndef SESMAN_H
 #define SESMAN_H
 
-long DEFAULT_CC
-auth_userpass(char* user, char* pass);
-int DEFAULT_CC
-auth_start_session(long in_val, int in_display);
-int DEFAULT_CC
-auth_end(long in_val);
-int DEFAULT_CC
-auth_set_env(long in_val);
-
-struct session_item
-{
-  char name[256];
-  int pid; /* pid of sesman waiting for wm to end */
-  int display;
-  int width;
-  int height;
-  int bpp;
-  long data;
-};
+#include "d3des.h"
+#include "arch.h"
+#include "parse.h"
+#include "os_calls.h"
+#include "env.h"
+#include "auth.h"
+#include "config.h"
+#include "tcp.h"
+#include "sig.h"
+#include "session.h"
 
 #endif

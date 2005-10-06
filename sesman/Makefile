@@ -1,5 +1,5 @@
 
-SESMANOBJ = sesman.o config.o \
+SESMANOBJ = sesman.o config.o tcp.o sig.o session.o env.o \
             ../common/os_calls.o \
             ../common/d3des.o \
             ../common/list.o \
@@ -9,7 +9,7 @@ CFLAGS = -Wall -O2 -I../common
 LDFLAGS = -L /usr/gnu/lib
 CC = gcc
 
-all: pam
+all: nopam
 
 nopam: $(SESMANOBJ) verify_user.o
 	$(CC) $(LDFLAGS) -o sesman $(SESMANOBJ) verify_user.o -ldl -lcrypt
