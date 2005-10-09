@@ -26,6 +26,7 @@ install:
 	install xrdp/Tahoma-10.fv1 $(DESTDIR)/Tahoma-10.fv1
 	install vnc/libvnc.so $(DESTDIR)/libvnc.so
 	install sesman/sesman $(DESTDIR)/sesman
+	install sesman/sesrun $(DESTDIR)/sesrun
 	install instfiles/sesman.ini $(DESTDIR)/sesman.ini
 	install instfiles/startwm.sh $(DESTDIR)/startwm.sh
 	install instfiles/xrdp.ini $(DESTDIR)/xrdp.ini

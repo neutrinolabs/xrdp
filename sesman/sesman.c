@@ -78,11 +78,8 @@ main(int argc, char** argv)
   /* start of daemonizing code */
   g_pid = g_fork();
 
-  g_printf("forkando: %d\n",g_pid);
-  
   if (0!=g_pid)
   {
-    g_printf("il processo %d esce...\n",g_pid);
     g_exit(0);
   }
   
