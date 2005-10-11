@@ -26,7 +26,7 @@ pam: $(SESMANOBJ) verify_user_pam.o
 pam_userpass: $(SESMANOBJ) verify_user_pam_userpass.o
 	$(CC) $(LDFLAGS) -o sesman $(SESMANOBJ) verify_user_pam_userpass.o -ldl -lpam -lpam_userpass
 
-tools:
+tools: $(SESRUNOBJ)
 	$(CC) $(LDFLAGS) -o sesrun $(SESRUNOBJ) -ldl
 
 clean:
