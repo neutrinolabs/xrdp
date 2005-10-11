@@ -49,6 +49,12 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+/* for clearenv() */
+#if defined(_WIN32)
+#else
+extern char** environ;
+#endif
+
 /*****************************************************************************/
 void*
 g_malloc(int size, int zero)
@@ -870,7 +876,7 @@ g_clearenv(void)
 {
 #if defined(_WIN32)
 #else
-  clearenv();
+  environ = 0;
 #endif
 }
 
