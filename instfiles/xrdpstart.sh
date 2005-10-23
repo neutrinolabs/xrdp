@@ -1,4 +1,4 @@
 #!/bin/bash
 cd /usr/local/xrdp
 ./xrdp&
-./sesman wait&
+./sesman > /usr/local/xrdp/sesman.boot.log
