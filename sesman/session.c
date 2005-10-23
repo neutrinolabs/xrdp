@@ -21,16 +21,11 @@
 
 */
 
-//#include "d3des.h"
-//#include "arch.h"
-//#include "os_calls.h"
 #include "sesman.h"
-//#include "config.h"
-//#include "env.h"
 
 extern unsigned char g_fixedkey[8];
 extern struct session_item g_session_items[100]; /* sesman.h */
-extern struct sesman_config g_cfg; /* config.h */
+extern struct config_sesman g_cfg; /* config.h */
 
 /******************************************************************************/
 struct session_item* DEFAULT_CC
@@ -126,11 +121,12 @@ session_start(int width, int height, int bpp, char* username, char* password,
            so we try running the default window manager */
         g_sprintf(text, "%s/%s", cur_dir, g_cfg.default_wm);
         g_execlp3(text, g_cfg.default_wm, 0);
+	
         /* still a problem starting window manager just start xterm */
         g_execlp3("xterm", "xterm", 0);
         /* should not get here */
       }
-      g_printf("error starting window manager\n");
+      log_message(LOG_LEVEL_ALWAYS,"error starting window manager %s - pid %d", username, g_getpid());
       g_exit(0);
     }
     else /* parent */
@@ -145,8 +141,9 @@ session_start(int width, int height, int bpp, char* username, char* password,
         env_check_password_file(passwd_file, password);
         g_execlp11("Xvnc", "Xvnc", screen, "-geometry", geometry,
                    "-depth", depth, "-bs", "-rfbauth", passwd_file, 0);
+	
         /* should not get here */
-        g_printf("error\n");
+        log_message(LOG_LEVEL_ALWAYS,"error doing execve for user %s - pid %d",username,g_getpid());
         g_exit(0);
       }
       else /* parent */

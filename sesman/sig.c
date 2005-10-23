@@ -33,7 +33,7 @@
 
 extern int g_sck;
 extern int g_pid;
-extern struct sesman_config g_cfg;
+extern struct config_sesman g_cfg;
 
 /**
  * 
@@ -45,12 +45,16 @@ extern struct sesman_config g_cfg;
 void DEFAULT_CC
 sig_sesman_shutdown(int sig)
 {
+  log_message(LOG_LEVEL_INFO, "shutting down sesman %d",1);
+	  
   if (g_getpid() != g_pid)
   {
+    LOG_DBG("g_getpid() [%d] differs from g_pid [%d]", (g_getpid()), g_pid);
     return;
   }
-  g_printf("shutting down\n\r");
-  g_printf("signal %d pid %d\n\r", sig, g_getpid());
+  
+  LOG_DBG(" - getting signal %d pid %d", sig, g_getpid());
+
   g_tcp_close(g_sck);
 }
 
@@ -64,19 +68,23 @@ sig_sesman_shutdown(int sig)
 void DEFAULT_CC
 sig_sesman_reload_cfg(int sig)
 {
-  struct sesman_config cfg;
+  struct config_sesman cfg;
+  
+  log_message(LOG_LEVEL_WARNING, "receiving SIGHUP %d", 1);
 
   if (g_getpid() != g_pid)
   {
+    LOG_DBG("g_getpid() [%d] differs from g_pid [%d]", g_getpid(), g_pid);
     return;
   }
-  g_printf("sesman: received SIGHUP\n\r");
+  
   if (config_read(&cfg) != 0)
   {
-    g_printf("sesman: error reading config. keeping old cfg.\n\r");
+    log_message(LOG_LEVEL_ERROR, "error reading config - keeping old cfg");
     return;
   }
   g_cfg = cfg;
-  g_printf("sesman: configuration reloaded\n\r");
+  
+  log_message(LOG_LEVEL_INFO, "configuration reloaded");
 }
 

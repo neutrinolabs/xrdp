@@ -25,7 +25,7 @@
 
 int g_sck;
 int g_pid;
-struct sesman_config g_cfg; /* config.h */
+struct config_sesman g_cfg; /* config.h */
 
 /******************************************************************************/
 int DEFAULT_CC

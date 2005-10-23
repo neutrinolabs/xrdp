@@ -23,22 +23,9 @@
 
 */
 
-//#include "d3des.h"
-//#include "arch.h"
-//#include "parse.h"
-//#include "os_calls.h"
 #include "sesman.h"
-//#include "config.h"
-//#include "tcp.h"
-//#include "sig.h"
-//#include "session.h"
-//#include "env.h"
 
-//int g_sck;
-//extern int g_pid;
 extern unsigned char g_fixedkey[8];
-//struct session_item g_session_items[100]; /* sesman.h */
-//struct sesman_config g_cfg; /* config.h */
 
 /******************************************************************************/
 int DEFAULT_CC
@@ -54,6 +41,7 @@ env_check_password_file(char* filename, char* password)
   fd = g_file_open(filename);
   if (fd == 0)
   {
+    log_message(LOG_LEVEL_WARNING, "can't read vnc password file - %s", filename);
     return 1;
   }
   g_file_write(fd, encryptedPasswd, 8);
@@ -103,6 +91,10 @@ env_set_user(char* username, char* passwd_file, int display)
         g_sprintf(passwd_file, "%s/.vnc/sesman_passwd", pw_dir);
       }
     }
+  }
+  else
+  {
+    log_message(LOG_LEVEL_ERROR, "error getting user info for user %s", username);
   }
   return error;
 }

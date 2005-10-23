@@ -26,6 +26,7 @@
 #include "arch.h"
 #include "parse.h"
 #include "os_calls.h"
+#include "log.h"
 #include "env.h"
 #include "auth.h"
 #include "config.h"

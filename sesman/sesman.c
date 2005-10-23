@@ -28,7 +28,7 @@ int g_sck;
 int g_pid;
 unsigned char g_fixedkey[8] = { 23, 82, 107, 6, 35, 78, 88, 7 };
 struct session_item g_session_items[100]; /* sesman.h */
-struct sesman_config g_cfg; /* config.h */
+struct config_sesman g_cfg; /* config.h */
 
 /******************************************************************************/
 static void DEFAULT_CC
@@ -75,6 +75,27 @@ main(int argc, char** argv)
   struct session_item* s_item;
   long data;
 
+  if (0 != config_read(&g_cfg))
+  {
+    g_printf("error reading config. quitting.\n\r");
+    return 1;
+  }
+  
+  error = log_start(g_cfg.log.program_name, g_cfg.log.log_file, g_cfg.log.log_level, 
+                    g_cfg.log.enable_syslog, g_cfg.log.syslog_level);
+  
+  if (error != LOG_STARTUP_OK)
+  {
+    switch (error)
+    {
+      case LOG_ERROR_MALLOC:
+        g_printf("error on malloc. cannot start logging. quitting.\n\r");
+      case LOG_ERROR_FILE_OPEN:
+        g_printf("error opening log file. quitting.\n\r");
+    }
+    return 1;
+  }
+  
   /* start of daemonizing code */
   g_pid = g_fork();
 
@@ -92,12 +113,6 @@ main(int argc, char** argv)
   g_file_open("/dev/null");
   /* end of daemonizing code */
   
-  if (0 != config_read(&g_cfg))
-  {
-    g_printf("sesman: error reading config. quitting.\n\r");
-    return 1;
-  }
-  
   g_memset(&g_session_items, 0, sizeof(g_session_items));
   g_pid = g_getpid();
   g_signal(1, sig_sesman_reload_cfg); /* SIGHUP  */
@@ -111,7 +126,8 @@ main(int argc, char** argv)
   init_stream(in_s, 8192);
   make_stream(out_s);
   init_stream(out_s, 8192);
-  g_printf("listening\n");
+  
+  log_message(LOG_LEVEL_INFO, "listening...");
   g_sck = g_tcp_socket();
   g_tcp_set_non_blocking(g_sck);
   error = g_tcp_bind(g_sck, g_cfg.listen_port);
@@ -196,13 +212,12 @@ main(int argc, char** argv)
     }
     else
     {
-      g_printf("listen error\n");
+      log_message(LOG_LEVEL_ERROR, "listen error");
     }
   }
   else
   {
-    g_printf("bind error\n");
-    perror("ilbind ");
+    log_message(LOG_LEVEL_ERROR, "bind error");
   }
   g_tcp_close(g_sck);
   free_stream(in_s);
