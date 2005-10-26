@@ -119,14 +119,14 @@ log_message(const unsigned int lvl, const char* msg, ...)
   {
     return LOG_ERROR_FILE_NOT_OPEN;
   }
-
-  log_lvl2str(lvl, buff);
   
   now_t = time(&now_t);
   now = localtime(&now_t);
   
-  snprintf(buff+8, 21, "[%.4d%.2d%.2d-%.2d:%.2d:%.2d] ", (now->tm_year)+1900, (now->tm_mon)+1, 
+  snprintf(buff, 21, "[%.4d%.2d%.2d-%.2d:%.2d:%.2d] ", (now->tm_year)+1900, (now->tm_mon)+1, 
            now->tm_mday, now->tm_hour, now->tm_min, now->tm_sec);
+
+  log_lvl2str(lvl, buff+20);
 
   va_start(ap, msg);
   len = vsnprintf(buff+28, LOG_BUFFER_SIZE, msg, ap);
@@ -139,14 +139,24 @@ log_message(const unsigned int lvl, const char* msg, ...)
   }  
   
   /* forcing the end of message string */
-  buff[len+28] = '\r';
-  buff[len+29] = '\n';
-  buff[len+30] = '\0';
+  #ifdef _WIN32
+    buff[len+28] = '\r';
+    buff[len+29] = '\n';
+    buff[len+30] = '\0';
+  #else
+    #ifdef _MACOS
+      buff[len+28] = '\r';
+      buff[len+29] = '\0';
+    #else
+      buff[len+28] = '\n';
+      buff[len+29] = '\0';
+    #endif
+  #endif
   
   if ( l_cfg->enable_syslog  && (lvl <= l_cfg->log_level) )
   {
     /* log to syslog */
-    syslog(log_xrdp2syslog(lvl), msg);
+    syslog(log_xrdp2syslog(lvl), buff+20);
   }
   
   if (lvl <= l_cfg->log_level)

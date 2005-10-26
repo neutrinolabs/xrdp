@@ -49,7 +49,7 @@
 #ifdef DEBUG
   #define LOG_DBG(s,args...) log_message(LOG_LEVEL_DEBUG,s,args);
 #else
-  #define LOG_DBG  
+  #define LOG_DBG(s,args...)
 #endif
 
 struct log_config 
