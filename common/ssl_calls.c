@@ -182,9 +182,9 @@ g_mod_exp(char* out, int out_len, char* in, int in_len,
   BN_init(&lexp);
   BN_init(&lin);
   BN_init(&lout);
-  BN_bin2bn((unsigned char*)l_mod, 64, &lmod);
-  BN_bin2bn((unsigned char*)l_exp, 64, &lexp);
-  BN_bin2bn((unsigned char*)l_in, 64, &lin);
+  BN_bin2bn((unsigned char*)l_mod, mod_len, &lmod);
+  BN_bin2bn((unsigned char*)l_exp, exp_len, &lexp);
+  BN_bin2bn((unsigned char*)l_in, in_len, &lin);
   BN_mod_exp(&lout, &lin, &lexp, &lmod, ctx);
   rv = BN_bn2bin(&lout, (unsigned char*)l_out);
   if (rv <= out_len)
