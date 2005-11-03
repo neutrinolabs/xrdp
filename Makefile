@@ -7,12 +7,14 @@ world:
 	make -C vnc
 	make -C libxrdp
 	make -C xrdp
+	make -C rdp
 	make -C sesman
 
 clean:
 	make -C vnc clean
 	make -C libxrdp clean
 	make -C xrdp clean
+	make -C rdp clean
 	make -C sesman clean
 
 install:
@@ -33,3 +35,4 @@ install:
 	install instfiles/xrdpstart.sh $(DESTDIR)/xrdpstart.sh
 	install instfiles/pam.d/sesman /etc/pam.d/sesman
 	install xrdp/rsakeys.ini $(DESTDIR)/rsakeys.ini
+	install rdp/librdp.so $(DESTDIR)/librdp.so
