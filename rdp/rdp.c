@@ -33,6 +33,7 @@ lib_mod_start(struct mod* mod, int w, int h, int bpp)
   mod->rdp_bpp = bpp;
   mod->xrdp_bpp = bpp;
   mod->keylayout = 0x409;
+  g_strncpy(mod->port, "3389", 255); /* default */
   DEBUG(("out lib_mod_start\r\n"));
   return 0;
 }
