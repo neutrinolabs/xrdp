@@ -33,7 +33,6 @@ rdp_mcs_create(struct rdp_sec* owner,
   self = (struct rdp_mcs*)g_malloc(sizeof(struct rdp_mcs), 1);
   self->sec_layer = owner;
   self->userid = 1;
-  self->chanid = 1001;
   self->client_mcs_data = client_mcs_data;
   self->server_mcs_data = server_mcs_data;
   self->iso_layer = rdp_iso_create(self);
@@ -61,6 +60,7 @@ rdp_mcs_recv(struct rdp_mcs* self, struct stream* s, int* chan)
   int opcode;
   int len;
 
+  DEBUG(("  in rdp_mcs_recv\r\n"));
   if (rdp_iso_recv(self->iso_layer, s) != 0)
   {
     return 1;
@@ -69,14 +69,18 @@ rdp_mcs_recv(struct rdp_mcs* self, struct stream* s, int* chan)
   appid = opcode >> 2;
   if (appid != MCS_SDIN)
   {
+    DEBUG(("  out rdp_mcs_recv error\r\n"));
     return 1;
   }
-  in_uint8s(s, 5);
+  in_uint8s(s, 2);
+  in_uint16_be(s, *chan);
+  in_uint8s(s, 1);
   in_uint8(s, len);
   if (len & 0x80)
   {
     in_uint8s(s, 1);
   }
+  DEBUG(("  out rdp_mcs_recv\r\n"));
   return 0;
 }
 
@@ -106,6 +110,7 @@ rdp_mcs_ber_out_header(struct rdp_mcs* self, struct stream* s,
   return 0;
 }
 
+#if 0
 /*****************************************************************************/
 /* returns error */
 static int APP_CC
@@ -115,10 +120,10 @@ rdp_mcs_ber_out_int8(struct rdp_mcs* self, struct stream* s, int value)
   out_uint8(s, value);
   return 0;
 }
+#endif
 
 /*****************************************************************************/
 /* returns error */
-#if 0
 static int APP_CC
 rdp_mcs_ber_out_int16(struct rdp_mcs* self, struct stream* s, int value)
 {
@@ -127,8 +132,8 @@ rdp_mcs_ber_out_int16(struct rdp_mcs* self, struct stream* s, int value)
   out_uint8(s, value);
   return 0;
 }
-#endif
 
+#if 0
 /*****************************************************************************/
 /* returns error */
 static int APP_CC
@@ -140,6 +145,7 @@ rdp_mcs_ber_out_int24(struct rdp_mcs* self, struct stream* s, int value)
   out_uint8(s, value);
   return 0;
 }
+#endif
 
 /*****************************************************************************/
 /* returns error */
@@ -150,14 +156,14 @@ rdp_mcs_out_domain_params(struct rdp_mcs* self, struct stream* s,
                            int max_pdu_size)
 {
   rdp_mcs_ber_out_header(self, s, MCS_TAG_DOMAIN_PARAMS, 26);
-  rdp_mcs_ber_out_int8(self, s, max_channels);
-  rdp_mcs_ber_out_int8(self, s, max_users);
-  rdp_mcs_ber_out_int8(self, s, max_tokens);
-  rdp_mcs_ber_out_int8(self, s, 1);
-  rdp_mcs_ber_out_int8(self, s, 0);
-  rdp_mcs_ber_out_int8(self, s, 1);
-  rdp_mcs_ber_out_int24(self, s, max_pdu_size);
-  rdp_mcs_ber_out_int8(self, s, 2);
+  rdp_mcs_ber_out_int16(self, s, max_channels);
+  rdp_mcs_ber_out_int16(self, s, max_users);
+  rdp_mcs_ber_out_int16(self, s, max_tokens);
+  rdp_mcs_ber_out_int16(self, s, 1);
+  rdp_mcs_ber_out_int16(self, s, 0);
+  rdp_mcs_ber_out_int16(self, s, 1);
+  rdp_mcs_ber_out_int16(self, s, max_pdu_size);
+  rdp_mcs_ber_out_int16(self, s, 2);
   return 0;
 }
 
@@ -172,7 +178,7 @@ rdp_mcs_send_connection_initial(struct rdp_mcs* self)
 
   make_stream(s);
   init_stream(s, 8192);
-  data_len = self->server_mcs_data->end - self->server_mcs_data->data;
+  data_len = self->client_mcs_data->end - self->client_mcs_data->data;
   len = 7 + 3 * 34 + 4 + data_len;
   if (rdp_iso_init(self->iso_layer, s) != 0)
   {
@@ -188,7 +194,7 @@ rdp_mcs_send_connection_initial(struct rdp_mcs* self)
   rdp_mcs_out_domain_params(self, s, 1, 1, 1, 0x420); /* min params */
   rdp_mcs_out_domain_params(self, s, 0xffff, 0xfc17, 0xffff, 0xffff); /* max params */
   rdp_mcs_ber_out_header(self, s, BER_TAG_OCTET_STRING, data_len);
-  out_uint8p(s, self->server_mcs_data->data, data_len);
+  out_uint8p(s, self->client_mcs_data->data, data_len);
   s_mark_end(s);
   if (rdp_iso_send(self->iso_layer, s) != 0)
   {
@@ -297,13 +303,13 @@ rdp_mcs_recv_connection_response(struct rdp_mcs* self)
   in_uint8s(s, len); /* connect id */
   rdp_mcs_parse_domain_params(self, s);
   rdp_mcs_ber_parse_header(self, s, BER_TAG_OCTET_STRING, &len);
-  if (len > self->client_mcs_data->size)
+  if (len > self->server_mcs_data->size)
   {
-    len = self->client_mcs_data->size;
+    len = self->server_mcs_data->size;
   }
-  in_uint8a(s, self->client_mcs_data->data, len);
-  self->client_mcs_data->p = self->client_mcs_data->data;
-  self->client_mcs_data->end = self->client_mcs_data->data + len;
+  in_uint8a(s, self->server_mcs_data->data, len);
+  self->server_mcs_data->p = self->server_mcs_data->data;
+  self->server_mcs_data->end = self->server_mcs_data->data + len;
   if (s_check_end(s))
   {
     free_stream(s);
@@ -468,7 +474,6 @@ rdp_mcs_recv_cjcf(struct rdp_mcs* self)
   if (opcode & 2)
   {
     in_uint8s(s, 2); /* join_chanid */
-    in_uint8s(s, self->userid);
   }
   if (!(s_check_end(s)))
   {
@@ -484,14 +489,18 @@ rdp_mcs_recv_cjcf(struct rdp_mcs* self)
 int APP_CC
 rdp_mcs_connect(struct rdp_mcs* self, char* ip, char* port)
 {
+  DEBUG(("  in rdp_mcs_connect\r\n"));
   if (rdp_iso_connect(self->iso_layer, ip, port) != 0)
   {
+    DEBUG(("  out rdp_mcs_connect error rdp_iso_connect failed\r\n"));
     return 1;
   }
   rdp_mcs_send_connection_initial(self);
   if (rdp_mcs_recv_connection_response(self) != 0)
   {
     rdp_iso_disconnect(self->iso_layer);
+    DEBUG(("  out rdp_mcs_connect error rdp_mcs_recv_connection_response \
+failed\r\n"));
     return 1;
   }
   rdp_mcs_send_edrq(self);
@@ -499,20 +508,24 @@ rdp_mcs_connect(struct rdp_mcs* self, char* ip, char* port)
   if (rdp_mcs_recv_aucf(self) != 0)
   {
     rdp_iso_disconnect(self->iso_layer);
+    DEBUG(("  out rdp_mcs_connect error rdp_mcs_recv_aucf failed\r\n"));
     return 1;
   }
   rdp_mcs_send_cjrq(self, self->userid + 1001);
   if (rdp_mcs_recv_cjcf(self) != 0)
   {
     rdp_iso_disconnect(self->iso_layer);
+    DEBUG(("  out rdp_mcs_connect error rdp_mcs_recv_cjcf 1 failed\r\n"));
     return 1;
   }
   rdp_mcs_send_cjrq(self, MCS_GLOBAL_CHANNEL);
   if (rdp_mcs_recv_cjcf(self) != 0)
   {
     rdp_iso_disconnect(self->iso_layer);
+    DEBUG(("  out rdp_mcs_connect error rdp_mcs_recv_cjcf 2 failed\r\n"));
     return 1;
   }
+  DEBUG(("  out rdp_mcs_connect\r\n"));
   return 0;
 }
 

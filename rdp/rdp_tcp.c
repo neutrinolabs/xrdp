@@ -57,8 +57,11 @@ rdp_tcp_recv(struct rdp_tcp* self, struct stream* s, int len)
 {
   int rcvd;
 
+  DEBUG(("    in rdp_tcp_recv gota get %d bytes on sck %d\r\n",
+         len, self->sck));
   if (self->sck_closed)
   {
+    DEBUG(("    out rdp_tcp_recv error sck closed\r\n"));
     return 1;
   }
   init_stream(s, len);
@@ -74,12 +77,14 @@ rdp_tcp_recv(struct rdp_tcp* self, struct stream* s, int len)
       else
       {
         self->sck_closed = 1;
+        DEBUG(("    out rdp_tcp_recv error unknown\r\n"));
         return 1;
       }
     }
     else if (rcvd == 0)
     {
       self->sck_closed = 1;
+      DEBUG(("    out rdp_tcp_recv error connection dropped\r\n"));
       return 1;
     }
     else
@@ -102,9 +107,12 @@ rdp_tcp_send(struct rdp_tcp* self, struct stream* s)
 
   if (self->sck_closed)
   {
+    DEBUG(("    out rdp_tcp_send error sck closed\r\n"));
     return 1;
   }
   len = s->end - s->data;
+  DEBUG(("    in rdp_tcp_send gota send %d bytes on sck %d\r\n", len,
+         self->sck));
   total = 0;
   while (total < len)
   {
@@ -118,12 +126,14 @@ rdp_tcp_send(struct rdp_tcp* self, struct stream* s)
       else
       {
         self->sck_closed = 1;
+        DEBUG(("    out rdp_tcp_send error unknown\r\n"));
         return 1;
       }
     }
     else if (sent == 0)
     {
       self->sck_closed = 1;
+      DEBUG(("    out rdp_tcp_send error connection dropped\r\n"));
       return 1;
     }
     else
@@ -139,6 +149,7 @@ rdp_tcp_send(struct rdp_tcp* self, struct stream* s)
 int APP_CC
 rdp_tcp_connect(struct rdp_tcp* self, char* ip, char* port)
 {
+  DEBUG(("    in rdp_tcp_connect ip %s port %s\r\n", ip, port));
   self->sck = g_tcp_socket();
   if (g_tcp_connect(self->sck, ip, port) == 0)
   {
@@ -146,8 +157,10 @@ rdp_tcp_connect(struct rdp_tcp* self, char* ip, char* port)
   }
   else
   {
+    DEBUG(("    out rdp_tcp_connect error g_tcp_connect failed\r\n"));
     return 1;
   }
+  DEBUG(("    out rdp_tcp_connect\r\n"));
   return 0;
 }
 

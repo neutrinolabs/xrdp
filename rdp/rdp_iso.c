@@ -57,17 +57,20 @@ rdp_iso_recv_msg(struct rdp_iso* self, struct stream* s, int* code)
   *code = 0;
   if (rdp_tcp_recv(self->tcp_layer, s, 4) != 0)
   {
+    DEBUG(("   out rdp_iso_recv_msg error rdp_tcp_recv 1 failed\r\n"));
     return 1;
   }
   in_uint8(s, ver);
   if (ver != 3)
   {
+    DEBUG(("   out rdp_iso_recv_msg error ver != 3\r\n"));
     return 1;
   }
   in_uint8s(s, 1);
   in_uint16_be(s, len);
   if (rdp_tcp_recv(self->tcp_layer, s, len - 4) != 0)
   {
+    DEBUG(("   out rdp_iso_recv_msg error rdp_tcp_recv 2 failed\r\n"));
     return 1;
   }
   in_uint8s(s, 1);
@@ -94,7 +97,7 @@ rdp_iso_send_msg(struct rdp_iso* self, struct stream* s, int code)
   out_uint8(s, 3);
   out_uint8(s, 0);
   out_uint16_be(s, 11); /* length */
-  out_uint8(s, 8);
+  out_uint8(s, 6);
   out_uint8(s, code);
   out_uint16_le(s, 0);
   out_uint16_le(s, 0);
@@ -165,17 +168,20 @@ rdp_iso_connect(struct rdp_iso* self, char* ip, char* port)
   int code;
   struct stream* s;
 
+  DEBUG(("   in rdp_iso_connect\r\n"));
   make_stream(s);
   init_stream(s, 8192);
   if (rdp_tcp_connect(self->tcp_layer, ip, port) != 0)
   {
     free_stream(s);
+    DEBUG(("   out rdp_iso_connect error rdp_tcp_connect failed\r\n"));
     return 1;
   }
   if (rdp_iso_send_msg(self, s, ISO_PDU_CR) != 0)
   {
     free_stream(s);
     rdp_tcp_disconnect(self->tcp_layer);
+    DEBUG(("   out rdp_iso_connect error rdp_iso_send_msg failed\r\n"));
     return 1;
   }
   init_stream(s, 8192);
@@ -183,14 +189,31 @@ rdp_iso_connect(struct rdp_iso* self, char* ip, char* port)
   {
     free_stream(s);
     rdp_tcp_disconnect(self->tcp_layer);
+    DEBUG(("   out rdp_iso_connect error rdp_iso_recv_msg failed\r\n"));
     return 1;
   }
   if (code != ISO_PDU_CC)
   {
     free_stream(s);
     rdp_tcp_disconnect(self->tcp_layer);
+    DEBUG(("   out rdp_iso_connect error code != ISO_PDU_CC\r\n"));
     return 1;
   }
+  free_stream(s);
+  DEBUG(("   out rdp_iso_connect\r\n"));
+  return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+rdp_iso_disconnect(struct rdp_iso* self)
+{
+  struct stream* s;
+
+  make_stream(s);
+  init_stream(s, 8192);
+  rdp_iso_send_msg(self, s, ISO_PDU_DR);
+  rdp_tcp_disconnect(self->tcp_layer);
   free_stream(s);
   return 0;
 }
