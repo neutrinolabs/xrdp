@@ -99,6 +99,7 @@
 /* RDP PDU codes */
 #define RDP_PDU_DEMAND_ACTIVE          1
 #define RDP_PDU_CONFIRM_ACTIVE         3
+#define RDP_PDU_REDIRECT               4
 #define RDP_PDU_DEACTIVATE             6
 #define RDP_PDU_DATA                   7
 
