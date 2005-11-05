@@ -155,7 +155,7 @@ rdp_mcs_out_domain_params(struct rdp_mcs* self, struct stream* s,
                            int max_users, int max_tokens,
                            int max_pdu_size)
 {
-  rdp_mcs_ber_out_header(self, s, MCS_TAG_DOMAIN_PARAMS, 26);
+  rdp_mcs_ber_out_header(self, s, MCS_TAG_DOMAIN_PARAMS, 32);
   rdp_mcs_ber_out_int16(self, s, max_channels);
   rdp_mcs_ber_out_int16(self, s, max_users);
   rdp_mcs_ber_out_int16(self, s, max_tokens);

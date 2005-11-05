@@ -29,6 +29,7 @@ rdp_lic_create(struct rdp_sec* owner)
   struct rdp_lic* self;
 
   self = (struct rdp_lic*)g_malloc(sizeof(struct rdp_lic), 1);
+  self->sec_layer = owner;
   return self;
 }
 
@@ -126,8 +127,8 @@ rdp_lic_send_request(struct rdp_lic* self, char* client_random,
   struct stream* s;
 
   sec_flags = SEC_LICENCE_NEG;
-  userlen = g_strlen(self->sec_layer->rdp_layer->mod->username) + 1;
-  hostlen = g_strlen(self->sec_layer->rdp_layer->mod->hostname) + 1;
+  userlen = g_strlen(user) + 1;
+  hostlen = g_strlen(host) + 1;
   length = 128 + userlen + hostlen;
   make_stream(s);
   init_stream(s, 8192);
