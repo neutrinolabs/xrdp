@@ -32,7 +32,7 @@
 #define LOG_BUFFER_SIZE      8192
 
 /* logging levels */
-#define LOG_LEVEL_ALWAYS        0 
+#define LOG_LEVEL_ALWAYS        0
 #define LOG_LEVEL_ERROR         1
 #define LOG_LEVEL_WARNING       2
 #define LOG_LEVEL_INFO          3
@@ -52,7 +52,7 @@
   #define LOG_DBG(s,args...)
 #endif
 
-struct log_config 
+struct log_config
 {
   char* program_name;
   char* log_file;
@@ -70,14 +70,14 @@ struct log_config
  *
  * @param msg The message to be logged
  *
- * @return 
- * 
+ * @return
+ *
  */
 int DEFAULT_CC
 log_message(const unsigned int lvl, const char* msg, ...);
 
 /**
- * 
+ *
  * Starts the logging subsystem
  *
  * @param progname string to prepend to syslog messages
@@ -89,18 +89,18 @@ log_message(const unsigned int lvl, const char* msg, ...);
  * @param syslog if set to 0, disables the use of syslog
  *
  * @param syslvl level of messages to log to syslog
- * 
+ *
  * @return
- * 
+ *
  */
 int DEFAULT_CC
-log_start(const char* progname, const char* logfile, const unsigned int loglvl, 
+log_start(const char* progname, const char* logfile, const unsigned int loglvl,
           const int syslog, const unsigned int syslvl);
 
 /**
  *
  * Shuts down the logging subsystem
- * 
+ *
  */
 void DEFAULT_CC
 log_end();

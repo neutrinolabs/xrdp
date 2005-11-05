@@ -80,9 +80,9 @@
 #define SEC_RSA_MAGIC                  0x31415352 /* RSA1 */
 
 /* RDP licensing constants */
-#define LICENCE_TOKEN_SIZE	            10
-#define LICENCE_HWID_SIZE	            20
-#define LICENCE_SIGNATURE_SIZE	      16
+#define LICENCE_TOKEN_SIZE             10
+#define LICENCE_HWID_SIZE              20
+#define LICENCE_SIGNATURE_SIZE         16
 
 #define LICENCE_TAG_DEMAND             0x01
 #define LICENCE_TAG_AUTHREQ            0x02
