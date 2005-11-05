@@ -102,6 +102,8 @@ g_set_current_dir(char* dirname);
 int
 g_file_exist(char* filename);
 int
+g_file_delete(char* filename);
+int
 g_strlen(char* text);
 char*
 g_strcpy(char* dest, char* src);

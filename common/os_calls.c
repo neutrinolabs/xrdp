@@ -585,6 +585,18 @@ g_file_exist(char* filename)
 }
 
 /*****************************************************************************/
+/* returns non zero if the file was deleted */
+int
+g_file_delete(char* filename)
+{
+#if defined(_WIN32)
+  return DeleteFile(filename);
+#else
+  return unlink(filename) != -1;
+#endif
+}
+
+/*****************************************************************************/
 int
 g_strlen(char* text)
 {
