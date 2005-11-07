@@ -975,7 +975,7 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
           if (check_bounds(self->wm->screen, &x, &y, &w, &h))
           {
             self->wm->mod->mod_event(self->wm->mod, WM_INVALIDATE,
-                                     MAKELONG(x, y), MAKELONG(w, h), 0, 0);
+                                     MAKELONG(y, x), MAKELONG(h, w), 0, 0);
           }
         }
       }

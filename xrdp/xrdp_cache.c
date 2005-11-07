@@ -174,7 +174,7 @@ xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
         self->bitmap_items[i][j].stamp = self->bitmap_stamp;
         DEBUG(("found bitmap at %d %d\n\r", i, j));
         xrdp_bitmap_delete(bitmap);
-        return MAKELONG(i, j);
+        return MAKELONG(j, i);
       }
     }
   }
@@ -192,7 +192,7 @@ xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
         self->bitmap_items[i][j].stamp = self->bitmap_stamp;
         DEBUG(("found bitmap at %d %d\n\r", i, j));
         xrdp_bitmap_delete(bitmap);
-        return MAKELONG(i, j);
+        return MAKELONG(j, i);
       }
     }
   }
@@ -260,7 +260,7 @@ xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
                                    bitmap->height, bitmap->bpp,
                                    bitmap->data, cache_id, cache_idx);
   }
-  return MAKELONG(cache_id, cache_idx);
+  return MAKELONG(cache_idx, cache_id);
 }
 
 /*****************************************************************************/
@@ -337,7 +337,7 @@ xrdp_cache_add_char(struct xrdp_cache* self,
       {
         self->char_items[i][j].stamp = self->char_stamp;
         DEBUG(("found font at %d %d\n\r", i, j));
-        return MAKELONG(i, j);
+        return MAKELONG(j, i);
       }
     }
   }
@@ -370,7 +370,7 @@ xrdp_cache_add_char(struct xrdp_cache* self,
   fi->height = font_item->height;
   self->char_items[f][c].stamp = self->char_stamp;
   libxrdp_orders_send_font(self->session, fi, f, c);
-  return MAKELONG(f, c);
+  return MAKELONG(c, f);
 }
 
 /*****************************************************************************/

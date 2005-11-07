@@ -30,11 +30,16 @@
 #define DEBUG(args)
 #endif
 /* other macros */
+#undef MIN
 #define MIN(x1, x2) ((x1) < (x2) ? (x1) : (x2))
+#undef MAX
 #define MAX(x1, x2) ((x1) > (x2) ? (x1) : (x2))
+#undef HIWORD
 #define HIWORD(in) (((in) & 0xffff0000) >> 16)
+#undef LOWORD
 #define LOWORD(in) ((in) & 0x0000ffff)
-#define MAKELONG(hi, lo) ((((hi) & 0xffff) << 16) | ((lo) & 0xffff))
+#undef MAKELONG
+#define MAKELONG(lo, hi) ((((hi) & 0xffff) << 16) | ((lo) & 0xffff))
 #define MAKERECT(r, x, y, cx, cy) \
 { (r).left = x; (r).top = y; (r).right = (x) + (cx); (r).bottom = (y) + (cy); }
 #define ISRECTEMPTY(r) (((r).right <= (r).left) || ((r).bottom <= (r).top))
