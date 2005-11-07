@@ -167,7 +167,11 @@ g_tcp_set_no_delay(int sck)
   int i;
 
   i = 1;
+#if defined(_WIN32)
+  setsockopt(sck, IPPROTO_TCP, TCP_NODELAY, (char*)&i, sizeof(i));
+#else
   setsockopt(sck, IPPROTO_TCP, TCP_NODELAY, (void*)&i, sizeof(i));
+#endif
   return 0;
 }
 
@@ -180,7 +184,11 @@ g_tcp_socket(void)
 
   i = 1;
   rv = socket(PF_INET, SOCK_STREAM, 0);
+#if defined(_WIN32)
+  setsockopt(rv, IPPROTO_TCP, TCP_NODELAY, (char*)&i, sizeof(i));
+#else
   setsockopt(rv, IPPROTO_TCP, TCP_NODELAY, (void*)&i, sizeof(i));
+#endif
   return rv;
 }
 
@@ -337,14 +345,22 @@ g_tcp_last_error_would_block(int sck)
 int
 g_tcp_recv(int sck, void* ptr, int len, int flags)
 {
+#if defined(_WIN32)
+  return recv(sck, (char*)ptr, len, flags);
+#else
   return recv(sck, ptr, len, flags);
+#endif
 }
 
 /*****************************************************************************/
 int
 g_tcp_send(int sck, void* ptr, int len, int flags)
 {
+#if defined(_WIN32)
+  return send(sck, (char*)ptr, len, flags);
+#else
   return send(sck, ptr, len, flags);
+#endif
 }
 
 /*****************************************************************************/
@@ -682,7 +698,11 @@ g_strncmp(char* c1, char* c2, int len)
 int
 g_strncasecmp(char* c1, char* c2, int len)
 {
+#if defined(_WIN32)
+  return strnicmp(c1, c2, len);
+#else
   return strncasecmp(c1, c2, len);
+#endif
 }
 
 /*****************************************************************************/
