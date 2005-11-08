@@ -156,7 +156,7 @@ xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
         self->bitmap_items[i][j].stamp = self->bitmap_stamp;
         DEBUG(("found bitmap at %d %d\n\r", i, j));
         xrdp_bitmap_delete(bitmap);
-        return MAKELONG(i, j);
+        return MAKELONG(j, i);
       }
     }
   }
