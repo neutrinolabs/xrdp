@@ -209,6 +209,11 @@ lib_mod_end(struct mod* mod)
   mod->rdp_layer = 0;
   free_stream(mod->in_s);
   mod->in_s = 0;
+  if (mod->sck != 0)
+  {
+    g_tcp_close(mod->sck);
+    mod->sck = 0;
+  }
   return 0;
 }
 
