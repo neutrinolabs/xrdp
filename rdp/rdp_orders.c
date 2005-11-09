@@ -40,10 +40,16 @@ rdp_orders_delete(struct rdp_orders* self)
   int i;
   int j;
 
+  if (self == 0)
+  {
+    return;
+  }
+  /* free the colormap cache */
   for (i = 0; i < 6; i++)
   {
     g_free(self->cache_colormap[i]);
   }
+  /* free the bitmap cache */
   for (i = 0; i < 3; i++)
   {
     for (j = 0; j < 600; j++)
@@ -427,6 +433,9 @@ static void APP_CC
 rdp_orders_process_text2(struct rdp_orders* self, struct stream* s,
                          int present, int delta)
 {
+  int fgcolor;
+  int bgcolor;
+
   if (present & 0x000001)
   {
     in_uint8(s, self->state.text_font);
@@ -499,10 +508,16 @@ rdp_orders_process_text2(struct rdp_orders* self, struct stream* s,
   }
   self->rdp_layer->mod->server_set_opcode(self->rdp_layer->mod,
                                           self->state.text_opcode);
-  self->rdp_layer->mod->server_set_fgcolor(self->rdp_layer->mod,
-                                           self->state.text_fgcolor);
-  self->rdp_layer->mod->server_set_bgcolor(self->rdp_layer->mod,
-                                           self->state.text_bgcolor);
+  fgcolor = rdp_orders_convert_color(self->rdp_layer->mod->rdp_bpp,
+                                     self->rdp_layer->mod->xrdp_bpp,
+                                     self->state.text_fgcolor,
+                                     self->rdp_layer->colormap.colors);
+  self->rdp_layer->mod->server_set_fgcolor(self->rdp_layer->mod, fgcolor);
+  bgcolor = rdp_orders_convert_color(self->rdp_layer->mod->rdp_bpp,
+                                     self->rdp_layer->mod->xrdp_bpp,
+                                     self->state.text_bgcolor,
+                                     self->rdp_layer->colormap.colors);
+  self->rdp_layer->mod->server_set_bgcolor(self->rdp_layer->mod, bgcolor);
   self->rdp_layer->mod->server_draw_text(self->rdp_layer->mod,
                                          self->state.text_font,
                                          self->state.text_flags,
@@ -564,6 +579,9 @@ static void APP_CC
 rdp_orders_process_patblt(struct rdp_orders* self, struct stream* s,
                           int present, int delta)
 {
+  int fgcolor;
+  int bgcolor;
+
   if (present & 0x0001)
   {
     rdp_orders_in_coord(s, &self->state.pat_x, delta);
@@ -596,10 +614,16 @@ rdp_orders_process_patblt(struct rdp_orders* self, struct stream* s,
   self->rdp_layer->mod->server_set_opcode(self->rdp_layer->mod,
                                           self->state.pat_opcode);
   self->rdp_layer->mod->server_set_mixmode(self->rdp_layer->mod, 1);
-  self->rdp_layer->mod->server_set_fgcolor(self->rdp_layer->mod,
-                                           self->state.pat_fgcolor);
-  self->rdp_layer->mod->server_set_bgcolor(self->rdp_layer->mod,
-                                           self->state.pat_bgcolor);
+  fgcolor = rdp_orders_convert_color(self->rdp_layer->mod->rdp_bpp,
+                                     self->rdp_layer->mod->xrdp_bpp,
+                                     self->state.pat_fgcolor,
+                                     self->rdp_layer->colormap.colors);
+  self->rdp_layer->mod->server_set_fgcolor(self->rdp_layer->mod, fgcolor);
+  bgcolor = rdp_orders_convert_color(self->rdp_layer->mod->rdp_bpp,
+                                     self->rdp_layer->mod->xrdp_bpp,
+                                     self->state.pat_bgcolor,
+                                     self->rdp_layer->colormap.colors);
+  self->rdp_layer->mod->server_set_bgcolor(self->rdp_layer->mod, bgcolor);
   self->rdp_layer->mod->server_set_brush(self->rdp_layer->mod,
                                          self->state.pat_brush.xorigin,
                                          self->state.pat_brush.yorigin,
@@ -666,6 +690,8 @@ static void APP_CC
 rdp_orders_process_line(struct rdp_orders* self, struct stream* s,
                         int present, int delta)
 {
+  int fgcolor;
+
   if (present & 0x0001)
   {
     in_uint16_le(s, self->state.line_mixmode);
@@ -697,8 +723,11 @@ rdp_orders_process_line(struct rdp_orders* self, struct stream* s,
   rdp_orders_parse_pen(s, &self->state.line_pen, present >> 7);
   self->rdp_layer->mod->server_set_opcode(self->rdp_layer->mod,
                                           self->state.line_opcode);
-  self->rdp_layer->mod->server_set_fgcolor(self->rdp_layer->mod,
-                                           self->state.line_pen.color);
+  fgcolor = rdp_orders_convert_color(self->rdp_layer->mod->rdp_bpp,
+                                     self->rdp_layer->mod->xrdp_bpp,
+                                     self->state.line_pen.color,
+                                     self->rdp_layer->colormap.colors);
+  self->rdp_layer->mod->server_set_fgcolor(self->rdp_layer->mod, fgcolor);
   self->rdp_layer->mod->server_set_pen(self->rdp_layer->mod,
                                        self->state.line_pen.style,
                                        self->state.line_pen.width);
@@ -717,6 +746,7 @@ rdp_orders_process_rect(struct rdp_orders* self, struct stream* s,
                         int present, int delta)
 {
   int i;
+  int fgcolor;
 
   if (present & 0x01)
   {
@@ -749,8 +779,11 @@ rdp_orders_process_rect(struct rdp_orders* self, struct stream* s,
     in_uint8(s, i);
     self->state.rect_color = (self->state.rect_color & 0xff00ffff) | (i << 16);
   }
-  self->rdp_layer->mod->server_set_fgcolor(self->rdp_layer->mod,
-                                           self->state.rect_color);
+  fgcolor = rdp_orders_convert_color(self->rdp_layer->mod->rdp_bpp,
+                                     self->rdp_layer->mod->xrdp_bpp,
+                                     self->state.rect_color,
+                                     self->rdp_layer->colormap.colors);
+  self->rdp_layer->mod->server_set_fgcolor(self->rdp_layer->mod, fgcolor);
   self->rdp_layer->mod->server_fill_rect(self->rdp_layer->mod,
                                          self->state.rect_x,
                                          self->state.rect_y,
@@ -810,6 +843,7 @@ rdp_orders_process_memblt(struct rdp_orders* self, struct stream* s,
                           int present, int delta)
 {
   struct rdp_bitmap* bitmap;
+  char* bmpdata;
 
   if (present & 0x0001)
   {
@@ -854,17 +888,27 @@ rdp_orders_process_memblt(struct rdp_orders* self, struct stream* s,
   {
     self->rdp_layer->mod->server_set_opcode(self->rdp_layer->mod,
                                             self->state.memblt_opcode);
+    bmpdata = rdp_orders_convert_bitmap(self->rdp_layer->mod->xrdp_bpp,
+                                        self->rdp_layer->mod->rdp_bpp,
+                                        bitmap->data, bitmap->width,
+                                        bitmap->height,
+                                        self->cache_colormap
+                                   [self->state.memblt_color_table]->colors);
     self->rdp_layer->mod->server_paint_rect(self->rdp_layer->mod,
                                             self->state.memblt_x,
                                             self->state.memblt_y,
                                             self->state.memblt_cx,
                                             self->state.memblt_cy,
-                                            bitmap->data,
+                                            bmpdata,
                                             bitmap->width,
                                             bitmap->height,
                                             self->state.memblt_srcx,
                                             self->state.memblt_srcy);
     self->rdp_layer->mod->server_set_opcode(self->rdp_layer->mod, 0xcc);
+    if (bmpdata != bitmap->data)
+    {
+      g_free(bmpdata);
+    }
   }
 }
 
@@ -1012,6 +1056,75 @@ rdp_orders_process_orders(struct rdp_orders* self, struct stream* s,
       }
     }
     processed++;
+  }
+  return 0;
+}
+
+/*****************************************************************************/
+/* returns pointer, it might return bmpdata if the data dosen't need to
+   be converted, else it mallocs it.  The calling function must free
+   it if needed */
+char* APP_CC
+rdp_orders_convert_bitmap(int in_bpp, int out_bpp, char* bmpdata,
+                          int width, int height, int* palette)
+{
+  char* out;
+  char* src;
+  char* dst;
+  int i;
+  int j;
+  int red;
+  int green;
+  int blue;
+  int pixel;
+
+  if (in_bpp == out_bpp && in_bpp == 16)
+  {
+    return bmpdata;
+  }
+  if (in_bpp == 8 && out_bpp == 8)
+  {
+    out = g_malloc(width * height, 0);
+    src = bmpdata;
+    dst = out;
+    for (i = 0; i < height; i++)
+    {
+      for (j = 0; j < width; j++)
+      {
+        pixel = *((unsigned char*)src);
+        pixel = palette[pixel];
+        SPLITCOLOR32(red, green, blue, pixel);
+        pixel = COLOR8(red, green, blue);
+        *dst = pixel;
+        src++;
+        dst++;
+      }
+    }
+    return out;
+  }
+  return 0;
+}
+
+/*****************************************************************************/
+/* returns color or 0 */
+int APP_CC
+rdp_orders_convert_color(int in_bpp, int out_bpp, int in_color, int* palette)
+{
+  int pixel;
+  int red;
+  int green;
+  int blue;
+
+  if (in_bpp == out_bpp && in_bpp == 16)
+  {
+    return in_color;
+  }
+  if (in_bpp == 8 && out_bpp == 8)
+  {
+    pixel = palette[in_color];
+    SPLITCOLOR32(red, green, blue, pixel);
+    pixel = COLOR8(red, green, blue);
+    return pixel;
   }
   return 0;
 }

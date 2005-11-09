@@ -209,7 +209,7 @@ rdp_sec_out_mcs_data(struct rdp_sec* self)
   out_uint16_le(s, 0xca01); /* color depth? */
   out_uint16_le(s, 1);
   out_uint32_le(s, 0);
-  out_uint8(s, self->rdp_layer->mod->rdp_bpp);
+  out_uint8(s, self->rdp_layer->mod->xrdp_bpp);
   out_uint16_le(s, 0x0700);
   out_uint8(s, 0);
   out_uint32_le(s, 1);

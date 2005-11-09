@@ -426,6 +426,11 @@ rdp_orders_reset_state(struct rdp_orders* self);
 int APP_CC
 rdp_orders_process_orders(struct rdp_orders* self, struct stream* s,
                           int num_orders);
+char* APP_CC
+rdp_orders_convert_bitmap(int in_bpp, int out_bpp, char* bmpdata,
+                          int width, int height, int* palette);
+int APP_CC
+rdp_orders_convert_color(int in_bpp, int out_bpp, int in_color, int* palette);
 
 /* rdp_lic.c */
 struct rdp_lic* APP_CC

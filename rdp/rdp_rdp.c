@@ -153,7 +153,7 @@ rdp_rdp_out_bitmap_caps(struct rdp_rdp* self, struct stream* s)
 {
   out_uint16_le(s, RDP_CAPSET_BITMAP);
   out_uint16_le(s, RDP_CAPLEN_BITMAP);
-  out_uint16_le(s, self->mod->rdp_bpp); /* Preferred BPP */
+  out_uint16_le(s, self->mod->xrdp_bpp); /* Preferred BPP */
   out_uint16_le(s, 1); /* Receive 1 BPP */
   out_uint16_le(s, 1); /* Receive 4 BPP */
   out_uint16_le(s, 1); /* Receive 8 BPP */
@@ -220,7 +220,7 @@ rdp_rdp_out_bmpcache_caps(struct rdp_rdp* self, struct stream* s)
 
   out_uint16_le(s, RDP_CAPSET_BMPCACHE);
   out_uint16_le(s, RDP_CAPLEN_BMPCACHE);
-  Bpp = (self->mod->rdp_bpp + 7) / 8;
+  Bpp = (self->mod->xrdp_bpp + 7) / 8;
   out_uint8s(s, 24); /* unused */
   out_uint16_le(s, 0x258); /* entries */
   out_uint16_le(s, 0x100 * Bpp); /* max cell size */
@@ -501,7 +501,8 @@ rdp_rdp_process_bitmap_updates(struct rdp_rdp* self, struct stream* s)
   int i;
   int y;
   char* data;
-  char* bmpdata;
+  char* bmpdata0;
+  char* bmpdata1;
 
   in_uint16_le(s, num_updates);
   for (i = 0; i < num_updates; i++)
@@ -518,7 +519,7 @@ rdp_rdp_process_bitmap_updates(struct rdp_rdp* self, struct stream* s)
     in_uint16_le(s, bufsize);
     cx = (right - left) + 1;
     cy = (bottom - top) + 1;
-    bmpdata = (char*)g_malloc(width * height * Bpp, 0);
+    bmpdata0 = (char*)g_malloc(width * height * Bpp, 0);
     if (compress)
     {
       if (compress & 0x400)
@@ -532,21 +533,31 @@ rdp_rdp_process_bitmap_updates(struct rdp_rdp* self, struct stream* s)
         in_uint8s(s, 4); /* line_size, final_size */
       }
       in_uint8p(s, data, size);
-      rdp_bitmap_decompress(bmpdata, width, height, data, size, Bpp);
-      self->mod->server_paint_rect(self->mod, left, top, cx, cy, bmpdata,
+      rdp_bitmap_decompress(bmpdata0, width, height, data, size, Bpp);
+      bmpdata1 = rdp_orders_convert_bitmap(bpp, self->mod->rdp_bpp,
+                                           bmpdata0, width, height,
+                                           self->colormap.colors);
+      self->mod->server_paint_rect(self->mod, left, top, cx, cy, bmpdata1,
                                    width, height, 0, 0);
     }
     else
     {
       for (y = 0; y < height; y++)
       {
-        data = bmpdata + ((height - y) - 1) * (width * Bpp);
+        data = bmpdata0 + ((height - y) - 1) * (width * Bpp);
         in_uint8a(s, data, width * Bpp);
       }
-      self->mod->server_paint_rect(self->mod, left, top, cx, cy, bmpdata,
+      bmpdata1 = rdp_orders_convert_bitmap(bpp, self->mod->rdp_bpp,
+                                           bmpdata0, width, height,
+                                           self->colormap.colors);
+      self->mod->server_paint_rect(self->mod, left, top, cx, cy, bmpdata1,
                                    width, height, 0, 0);
     }
-    g_free(bmpdata);
+    if (bmpdata0 != bmpdata1)
+    {
+      g_free(bmpdata1);
+    }
+    g_free(bmpdata0);
   }
 }
 
@@ -845,7 +856,32 @@ rdp_rdp_process_data_pdu(struct rdp_rdp* self, struct stream* s)
 }
 
 /******************************************************************************/
+/* Process a bitmap capability set */
+static void APP_CC
+rdp_rdp_process_general_caps(struct rdp_rdp* self, struct stream* s)
+{
+}
+
+/******************************************************************************/
+/* Process a bitmap capability set */
+static void APP_CC
+rdp_rdp_process_bitmap_caps(struct rdp_rdp* self, struct stream* s)
+{
+  int width;
+  int height;
+  int bpp;
+
+  in_uint16_le(s, bpp);
+  in_uint8s(s, 6);
+  in_uint16_le(s, width);
+  in_uint16_le(s, height);
+  self->mod->rdp_bpp = bpp;
+  /* todo, call reset if needed and use width and height */
+}
+
+/******************************************************************************/
 /* Process server capabilities */
+/* returns error */
 static int APP_CC
 rdp_rdp_process_server_caps(struct rdp_rdp* self, struct stream* s, int len)
 {
@@ -871,10 +907,12 @@ rdp_rdp_process_server_caps(struct rdp_rdp* self, struct stream* s, int len)
     switch (capset_type)
     {
       case RDP_CAPSET_GENERAL:
-        //rdp_process_general_caps(s);
+        rdp_rdp_process_general_caps(self, s);
         break;
       case RDP_CAPSET_BITMAP:
-        //rdp_process_bitmap_caps(s);
+        rdp_rdp_process_bitmap_caps(self, s);
+        break;
+      default:
         break;
     }
     s->p = next;
