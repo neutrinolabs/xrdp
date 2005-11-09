@@ -63,6 +63,12 @@
 #define COLOR15(r, g, b) ((((r) >> 3) << 10) | (((g) >> 3) << 5) | ((b) >> 3))
 #define COLOR16(r, g, b) ((((r) >> 3) << 11) | (((g) >> 2) << 5) | ((b) >> 3))
 #define COLOR24(r, g, b) ((r) | ((g) << 8) | ((b) << 16))
+#define SPLITCOLOR32(r, g, b, c) \
+{ \
+  r = (c >> 16) & 0xff; \
+  g = (c >> 8) & 0xff; \
+  b = c & 0xff; \
+}
 /* font macros */
 #define FONT_DATASIZE(f) ((((f)->height * (((f)->width + 7) / 8)) + 3) & ~3);
 /* use crc for bitmap cache lookups */
