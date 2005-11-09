@@ -888,8 +888,8 @@ rdp_orders_process_memblt(struct rdp_orders* self, struct stream* s,
   {
     self->rdp_layer->mod->server_set_opcode(self->rdp_layer->mod,
                                             self->state.memblt_opcode);
-    bmpdata = rdp_orders_convert_bitmap(self->rdp_layer->mod->xrdp_bpp,
-                                        self->rdp_layer->mod->rdp_bpp,
+    bmpdata = rdp_orders_convert_bitmap(self->rdp_layer->mod->rdp_bpp,
+                                        self->rdp_layer->mod->xrdp_bpp,
                                         bitmap->data, bitmap->width,
                                         bitmap->height,
                                         self->cache_colormap

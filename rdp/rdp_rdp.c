@@ -534,7 +534,7 @@ rdp_rdp_process_bitmap_updates(struct rdp_rdp* self, struct stream* s)
       }
       in_uint8p(s, data, size);
       rdp_bitmap_decompress(bmpdata0, width, height, data, size, Bpp);
-      bmpdata1 = rdp_orders_convert_bitmap(bpp, self->mod->rdp_bpp,
+      bmpdata1 = rdp_orders_convert_bitmap(bpp, self->mod->xrdp_bpp,
                                            bmpdata0, width, height,
                                            self->colormap.colors);
       self->mod->server_paint_rect(self->mod, left, top, cx, cy, bmpdata1,
@@ -547,7 +547,7 @@ rdp_rdp_process_bitmap_updates(struct rdp_rdp* self, struct stream* s)
         data = bmpdata0 + ((height - y) - 1) * (width * Bpp);
         in_uint8a(s, data, width * Bpp);
       }
-      bmpdata1 = rdp_orders_convert_bitmap(bpp, self->mod->rdp_bpp,
+      bmpdata1 = rdp_orders_convert_bitmap(bpp, self->mod->xrdp_bpp,
                                            bmpdata0, width, height,
                                            self->colormap.colors);
       self->mod->server_paint_rect(self->mod, left, top, cx, cy, bmpdata1,
