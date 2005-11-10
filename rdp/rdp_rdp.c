@@ -153,7 +153,7 @@ rdp_rdp_out_bitmap_caps(struct rdp_rdp* self, struct stream* s)
 {
   out_uint16_le(s, RDP_CAPSET_BITMAP);
   out_uint16_le(s, RDP_CAPLEN_BITMAP);
-  out_uint16_le(s, self->mod->xrdp_bpp); /* Preferred BPP */
+  out_uint16_le(s, self->mod->rdp_bpp); /* Preferred BPP */
   out_uint16_le(s, 1); /* Receive 1 BPP */
   out_uint16_le(s, 1); /* Receive 4 BPP */
   out_uint16_le(s, 1); /* Receive 8 BPP */
@@ -220,7 +220,7 @@ rdp_rdp_out_bmpcache_caps(struct rdp_rdp* self, struct stream* s)
 
   out_uint16_le(s, RDP_CAPSET_BMPCACHE);
   out_uint16_le(s, RDP_CAPLEN_BMPCACHE);
-  Bpp = (self->mod->xrdp_bpp + 7) / 8;
+  Bpp = (self->mod->rdp_bpp + 7) / 8;
   out_uint8s(s, 24); /* unused */
   out_uint16_le(s, 0x258); /* entries */
   out_uint16_le(s, 0x100 * Bpp); /* max cell size */

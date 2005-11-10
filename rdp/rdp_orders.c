@@ -1084,7 +1084,7 @@ rdp_orders_convert_bitmap(int in_bpp, int out_bpp, char* bmpdata,
   }
   if (in_bpp == 8 && out_bpp == 8)
   {
-    out = g_malloc(width * height, 0);
+    out = (char*)g_malloc(width * height, 0);
     src = bmpdata;
     dst = out;
     for (i = 0; i < height; i++)
@@ -1098,6 +1098,26 @@ rdp_orders_convert_bitmap(int in_bpp, int out_bpp, char* bmpdata,
         *dst = pixel;
         src++;
         dst++;
+      }
+    }
+    return out;
+  }
+  if (in_bpp == 8 && out_bpp == 16)
+  {
+    out = (char*)g_malloc(width * height * 2, 0);
+    src = bmpdata;
+    dst = out;
+    for (i = 0; i < height; i++)
+    {
+      for (j = 0; j < width; j++)
+      {
+        pixel = *((unsigned char*)src);
+        pixel = palette[pixel];
+        SPLITCOLOR32(red, green, blue, pixel);
+        pixel = COLOR16(red, green, blue);
+        *((unsigned short*)dst) = pixel;
+        src++;
+        dst += 2;
       }
     }
     return out;
@@ -1124,6 +1144,13 @@ rdp_orders_convert_color(int in_bpp, int out_bpp, int in_color, int* palette)
     pixel = palette[in_color];
     SPLITCOLOR32(red, green, blue, pixel);
     pixel = COLOR8(red, green, blue);
+    return pixel;
+  }
+  if (in_bpp == 8 && out_bpp == 16)
+  {
+    pixel = palette[in_color];
+    SPLITCOLOR32(red, green, blue, pixel);
+    pixel = COLOR16(red, green, blue);
     return pixel;
   }
   return 0;
