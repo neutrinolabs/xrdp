@@ -18,10 +18,15 @@
 
    session manager
    linux only
-
-   enc.c: user environment handling code
-
 */
+
+/**
+ *
+ * @file env.c
+ * @brief User environment handling code
+ * @author Jay Sorg
+ * 
+ */
 
 #include "sesman.h"
 

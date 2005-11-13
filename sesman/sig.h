@@ -18,19 +18,36 @@
 
    session manager
    linux only
-
-   sig.h: signal handling code declarations
-
 */
+
+/**
+ *
+ * @file sig.h
+ * @brief Signal handling function declarations
+ * @author Jay Sorg, Simone Fedele
+ *
+ */
 
 #ifndef SIG_H
 #define SIG_H
 
-/******************************************************************************/
+/**
+ *
+ * @brief Shutdown signal code
+ *
+ * @param sig The received signal
+ *
+ */
 void DEFAULT_CC
 sig_sesman_shutdown(int sig);
 
-/******************************************************************************/
+/**
+ *
+ * @brief SIGHUP handling code
+ *
+ * @param sig The received signal
+ *
+ */
 void DEFAULT_CC
 sig_sesman_reload_cfg(int sig);
 

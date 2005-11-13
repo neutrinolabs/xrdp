@@ -18,10 +18,15 @@
 
    session manager
    linux only
-
-   tcp.c: tcp stream funcions
-
 */
+
+/**
+ *
+ * @file tcp.c
+ * @brief Tcp stream funcions
+ * @author Jay Sorg
+ * 
+ */
 
 #include "sesman.h"
 

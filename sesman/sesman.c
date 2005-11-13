@@ -22,7 +22,14 @@
 */
 
 #include "sesman.h"
+
 #include <stdio.h>
+#include <sys/types.h>
+#include <signal.h>
+#include <string.h>
+#include <errno.h>
+
+#define SESMAN_PID_FILE "/usr/local/xrdp/sesman.pid"
 
 int g_sck;
 int g_pid;
@@ -54,9 +61,14 @@ cterm(int s)
   }
 }
 
-/******************************************************************************/
-int DEFAULT_CC
-main(int argc, char** argv)
+/**
+ * 
+ *
+ * Starts sesman main loop
+ *
+ */
+static void DEFAULT_CC 
+sesman_main_loop()
 {
   int in_sck;
   int code;
@@ -75,52 +87,6 @@ main(int argc, char** argv)
   struct session_item* s_item;
   long data;
 
-  if (0 != config_read(&g_cfg))
-  {
-    g_printf("error reading config. quitting.\n\r");
-    return 1;
-  }
-  
-  error = log_start(g_cfg.log.program_name, g_cfg.log.log_file, g_cfg.log.log_level, 
-                    g_cfg.log.enable_syslog, g_cfg.log.syslog_level);
-  
-  if (error != LOG_STARTUP_OK)
-  {
-    switch (error)
-    {
-      case LOG_ERROR_MALLOC:
-        g_printf("error on malloc. cannot start logging. quitting.\n\r");
-      case LOG_ERROR_FILE_OPEN:
-        g_printf("error opening log file. quitting.\n\r");
-    }
-    return 1;
-  }
-  
-  /* start of daemonizing code */
-  g_pid = g_fork();
-
-  if (0!=g_pid)
-  {
-    g_exit(0);
-  }
-  
-  g_file_close(0);
-  g_file_close(1);
-  g_file_close(2);
-
-  g_file_open("/dev/null");
-  g_file_open("/dev/null");
-  g_file_open("/dev/null");
-  /* end of daemonizing code */
-  
-  g_memset(&g_session_items, 0, sizeof(g_session_items));
-  g_pid = g_getpid();
-  g_signal(1, sig_sesman_reload_cfg); /* SIGHUP  */
-  g_signal(2, sig_sesman_shutdown);   /* SIGINT  */
-  g_signal(9, sig_sesman_shutdown);   /* SIGKILL */
-  g_signal(15, sig_sesman_shutdown);  /* SIGTERM */
-  g_signal_child_stop(cterm);         /* SIGCHLD */
-  
   /*main program loop*/
   make_stream(in_s);
   init_stream(in_s, 8192);
@@ -222,6 +188,135 @@ main(int argc, char** argv)
   g_tcp_close(g_sck);
   free_stream(in_s);
   free_stream(out_s);
+}
+
+/******************************************************************************/
+int DEFAULT_CC
+main(int argc, char** argv)
+{
+  int fd;
+  int error;
+  int daemon=1;
+  int pid;
+  char pid_s[8];
+  
+  if (1==argc)
+  {
+    /* no options on command line. normal startup */
+    g_printf("starting sesman...\n");
+    daemon=1;
+  }
+  else if ( (2==argc) && ( (0 == g_strncasecmp(argv[1],"--nodaemon",11)) || (0 == g_strncasecmp(argv[1],"-n",11)) ) )
+  {
+    /* starts sesman not daemonized */
+    g_printf("starting sesman in foregroud...\n");
+    daemon=0;
+  }
+  else if ( (2==argc) && ( (0 == g_strncasecmp(argv[1],"--help",7)) || (0 == g_strncasecmp(argv[1],"-h",2)) ) )
+  {
+    /* help screen */
+    g_printf("...\n");
+  }
+  else if ( (2==argc) && ( (0 == g_strncasecmp(argv[1],"--kill",11)) || (0 == g_strncasecmp(argv[1],"-k",11)) ) )
+  {
+    /* killing running sesman */
+    fd = g_file_open(SESMAN_PID_FILE);
+
+    if (-1 == fd)
+    {
+      g_printf("error opening pid file: %s\n", strerror(errno));
+      return 1;
+    }
     
+    error = g_file_read(fd, pid_s, 7);
+    sscanf(pid_s, "%i", &pid);
+    
+    error = g_sigterm(pid);
+    if (0 != error)
+    {
+      g_printf("error killing sesman: %s\n", strerror(errno));
+    }
+
+    g_exit(error);
+  }
+  else
+  {
+    /* there's something strange on the command line */
+    g_printf("sesman - xrdp session manager\n");
+    g_printf("usage: sesman [ --nodaemon | --kill ]\n");
+    g_exit(1);
+  }
+
+  /* reading config */
+  if (0 != config_read(&g_cfg))
+  {
+    g_printf("error reading config: %s\nquitting.\n", strerror(errno));
+    g_exit(1);
+  }
+  
+  /* starting logging subsystem */
+  error = log_start(g_cfg.log.program_name, g_cfg.log.log_file, g_cfg.log.log_level, 
+                    g_cfg.log.enable_syslog, g_cfg.log.syslog_level);
+  
+  if (error != LOG_STARTUP_OK)
+  {
+    switch (error)
+    {
+      case LOG_ERROR_MALLOC:
+        g_printf("error on malloc. cannot start logging. quitting.\n");
+      case LOG_ERROR_FILE_OPEN:
+        g_printf("error opening log file. quitting.\n");
+    }
+    g_exit(1);
+  }
+  
+  if (daemon)
+  {
+    /* start of daemonizing code */
+    g_pid = g_fork();
+
+    if (0!=g_pid)
+    {
+      g_exit(0);
+    }
+  
+    g_file_close(0);
+    g_file_close(1);
+    g_file_close(2);
+
+    g_file_open("/dev/null");
+    g_file_open("/dev/null");
+    g_file_open("/dev/null");
+  }
+  
+  /* signal handling */
+  g_memset(&g_session_items, 0, sizeof(g_session_items));
+  g_pid = g_getpid();
+  g_signal(1, sig_sesman_reload_cfg); /* SIGHUP  */
+  g_signal(2, sig_sesman_shutdown);   /* SIGINT  */
+  g_signal(9, sig_sesman_shutdown);   /* SIGKILL */
+  g_signal(15, sig_sesman_shutdown);  /* SIGTERM */
+  g_signal_child_stop(cterm);         /* SIGCHLD */
+
+  /* writing pid file */
+  fd = g_file_open(SESMAN_PID_FILE);
+  if (-1 == fd)
+  {
+    log_message(LOG_LEVEL_ERROR, "error opening pid file: %s", strerror(errno));
+    log_end();
+    g_exit(1);
+  }
+  g_sprintf(pid_s, "%d", g_pid);
+  g_file_write(fd, pid_s, g_strlen(pid_s)+1);
+  g_file_close(fd);
+
+  /* start program main loop */
+  log_message(LOG_LEVEL_ALWAYS, "starting sesman with pid %d", g_pid);
+
+  sesman_main_loop();
+
+  log_end();
+
   return 0;
 }
+

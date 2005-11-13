@@ -18,14 +18,13 @@
 
    session manager
    linux only
-
-   tcp.h: tcp stream functions declarations
-   
 */
 
 /**
  * 
- * @file tcp stream functions
+ * @file tcp.h
+ * @brief Tcp stream functions declarations
+ * @author Jay Sorg
  *
  */
 
@@ -34,31 +33,29 @@
 
 /**
  *
- * force receiving data from tcp stream
+ * @brief Force receiving data from tcp stream
  *
- * @param sck the socket to read from
- * @param data buffer
- * @param len buffer size
+ * @param sck The socket to read from
+ * @param data Data buffer
+ * @param len Data buffer size
  *
- * @return 0: ok, 1: error
+ * @return 0 on success, 1 on error
  * 
  */
-
 int DEFAULT_CC
 tcp_force_recv(int sck, char* data, int len);
 
 /**
  *
- * force sending data to tcp stream
+ * @brief Force sending data to tcp stream
  *
  * @param sck the socket to write to
- * @param data buffer
- * @param len buffer size
+ * @param data Data buffer
+ * @param len Data buffer size
  *
- * @return 0: ok, 1: error
+ * @return 0 on success, 1 on error
  * 
  */
-
 int DEFAULT_CC
 tcp_force_send(int sck, char* data, int len);
 

@@ -26,6 +26,12 @@
 #include "list.h"
 #include "log.h"
 
+/**
+ *
+ * @def SESMAN_CFG_FILE
+ * @brief Configuration file path
+ * 
+ */
 #define SESMAN_CFG_FILE              "./sesman.ini"
 
 #define SESMAN_CFG_GLOBALS           "Globals"
@@ -40,18 +46,48 @@
 #define SESMAN_CFG_LOG_ENABLE_SYSLOG "EnableSyslog"
 #define SESMAN_CFG_LOG_SYSLOG_LEVEL  "SyslogLevel"
 
+/**
+ *
+ * @struct config_sesman
+ * @brief \t struct that contains \t sesman configuration
+ *
+ * This \t struct contains all of \t sesman configuration parameters\n
+ * Every parameter in \t [globals] is a member of this struct, other
+ * sections options are embedded in this \t struct as member structures
+ *
+ */
 struct config_sesman
 {
+  /**
+   * @var listen_port
+   * @brief Listening port
+   */
   char listen_port[16];
+  /**
+   * @var enable_user_wm
+   * @brief Flag that enables user specific wm
+   */
   int enable_user_wm;
+  /**
+   * @var default_wm
+   * @brief Default window manager
+   */
   char default_wm[32];
+  /**
+   * @var user_wm
+   * @brief Default window manager
+   */
   char user_wm[32];
+  /**
+   * @var log
+   * @brief Log configuration \t struct 
+   */
   struct log_config log;
 };
 
 /**
  *
- * Reads sesman configuration
+ * @brief Reads sesman configuration
  *
  * @param cfg pointer to configuration object to be replaced
  *
@@ -63,7 +99,7 @@ config_read(struct config_sesman* cfg);
 
 /**
  *
- * Reads sesman configuration
+ * @brief Reads sesman [global] configuration section
  *
  * @param cfg pointer to configuration object to be replaced
  *
@@ -75,7 +111,7 @@ config_read_globals(int file, struct config_sesman* cf, struct list* param_n, st
 
 /**
  *
- * Reads sesman configuration
+ * @brief Reads sesman [logging] configuration section
  *
  * @param cfg pointer to configuration object to be replaced
  *

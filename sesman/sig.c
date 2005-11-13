@@ -18,14 +18,13 @@
 
    session manager
    linux only
-
-   sig.c: signal handling code
-
 */
 
 /**
  *
- * @file: signal handling functions
+ * @file sig.c
+ * @brief signal handling functions
+ * @author Jay Sorg, Simone Fedele
  * 
  */
 
@@ -35,13 +34,7 @@ extern int g_sck;
 extern int g_pid;
 extern struct config_sesman g_cfg;
 
-/**
- * 
- * Shuts down sesman
- * 
- * @param sig The received signal
- * 
- */
+/******************************************************************************/
 void DEFAULT_CC
 sig_sesman_shutdown(int sig)
 {
@@ -58,13 +51,7 @@ sig_sesman_shutdown(int sig)
   g_tcp_close(g_sck);
 }
 
-/**
- * 
- * Reloads sesman config
- * 
- * @param sig The received signal
- * 
- */
+/******************************************************************************/
 void DEFAULT_CC
 sig_sesman_reload_cfg(int sig)
 {
