@@ -64,6 +64,8 @@ static int log_xrdp2syslog(const int lvl)
 {
   switch (lvl)
   {
+    case LOG_LEVEL_ALWAYS:
+	    return LOG_CRIT;
     case LOG_LEVEL_ERROR:
 	    return LOG_ERR;
     case LOG_LEVEL_WARNING:
@@ -89,6 +91,8 @@ void log_lvl2str(int lvl, char* str)
 {
   switch (lvl)
   {
+    case LOG_LEVEL_ALWAYS:
+	    snprintf(str, 9, "%s", "[CORE ] ");
     case LOG_LEVEL_ERROR:
 	    snprintf(str, 9, "%s", "[ERROR] ");
     case LOG_LEVEL_WARNING:
@@ -161,6 +165,8 @@ log_message(const unsigned int lvl, const char* msg, ...)
   
   if (lvl <= l_cfg->log_level)
   {
+    /* log to console */
+    g_printf((char*) buff);
     /* log to application logfile */
     return g_file_write(l_cfg->fd, (char*) buff, g_strlen((char*) buff));
   }
@@ -259,19 +265,24 @@ log_end()
 int DEFAULT_CC
 log_text2level(char* buf)
 {	
-  if (0 == g_strncasecmp(buf, "1", 1) ||
-      0 == g_strncasecmp(buf, "error", 4))
+  if (0 == g_strncasecmp(buf, "0", 2) ||
+      0 == g_strncasecmp(buf, "core", 5))
+  {
+    return LOG_LEVEL_ALWAYS;
+  } 
+  else if (0 == g_strncasecmp(buf, "1", 2) ||
+      0 == g_strncasecmp(buf, "error", 6))
   {
     return LOG_LEVEL_ERROR;
   } 
-  else if (0 == g_strncasecmp(buf, "2", 1) ||
-      0 == g_strncasecmp(buf, "warn", 4) ||
-      0 == g_strncasecmp(buf, "warning", 3))
+  else if (0 == g_strncasecmp(buf, "2", 2) ||
+      0 == g_strncasecmp(buf, "warn", 5) ||
+      0 == g_strncasecmp(buf, "warning", 8))
   {
     return LOG_LEVEL_WARNING;
   } 
-  else if (0 == g_strncasecmp(buf, "3", 1) ||
-      0 == g_strncasecmp(buf, "info", 4))
+  else if (0 == g_strncasecmp(buf, "3", 2) ||
+      0 == g_strncasecmp(buf, "info", 5))
   {
     return LOG_LEVEL_INFO;
   } 
