@@ -49,6 +49,8 @@ sig_sesman_shutdown(int sig)
   LOG_DBG(" - getting signal %d pid %d", sig, g_getpid());
 
   g_tcp_close(g_sck);
+
+  g_file_delete(SESMAN_PID_FILE);
 }
 
 /******************************************************************************/

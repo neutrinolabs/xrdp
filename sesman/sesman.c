@@ -29,8 +29,6 @@
 #include <string.h>
 #include <errno.h>
 
-#define SESMAN_PID_FILE "/usr/local/xrdp/sesman.pid"
-
 int g_sck;
 int g_pid;
 unsigned char g_fixedkey[8] = { 23, 82, 107, 6, 35, 78, 88, 7 };
@@ -62,7 +60,6 @@ cterm(int s)
 }
 
 /**
- * 
  *
  * Starts sesman main loop
  *
@@ -215,11 +212,25 @@ main(int argc, char** argv)
   else if ( (2==argc) && ( (0 == g_strncasecmp(argv[1],"--help",7)) || (0 == g_strncasecmp(argv[1],"-h",2)) ) )
   {
     /* help screen */
-    g_printf("...\n");
+    g_printf("sesman - xrdp session manager\n\n");
+    g_printf("usage: sesman [command]\n\n");
+    g_printf("command can be one of the following:\n");
+    g_printf("-n, --nodaemon  starts sesman in foregroun\n");
+    g_printf("-k, --kill      kills running sesman\n");
+    g_printf("-h, --help      shows this help\n");
+    g_printf("if no command is specified, sesman is started in background");
+    g_exit(0);
   }
   else if ( (2==argc) && ( (0 == g_strncasecmp(argv[1],"--kill",11)) || (0 == g_strncasecmp(argv[1],"-k",11)) ) )
   {
     /* killing running sesman */
+    /* check if sesman is running */
+    if (!g_file_exist(SESMAN_PID_FILE))
+    {
+      g_printf("sesman is not running (pid file not found)\n");
+      g_exit(1);
+    }
+	  
     fd = g_file_open(SESMAN_PID_FILE);
 
     if (-1 == fd)
@@ -242,11 +253,23 @@ main(int argc, char** argv)
   else
   {
     /* there's something strange on the command line */
-    g_printf("sesman - xrdp session manager\n");
-    g_printf("usage: sesman [ --nodaemon | --kill ]\n");
+    g_printf("sesman - xrdp session manager\n\n");
+    g_printf("error: invalid command line\n");
+    g_printf("usage: sesman [ --nodaemon | --kill | --help ]\n");
     g_exit(1);
   }
 
+  
+  
+  if (g_file_exist(SESMAN_PID_FILE))
+  {
+    g_printf("sesman is already running.\n");
+    g_printf("if it's not running, try removing ");
+    g_printf(SESMAN_PID_FILE);
+    g_printf("\n");
+    g_exit(1);
+  }
+  
   /* reading config */
   if (0 != config_read(&g_cfg))
   {
