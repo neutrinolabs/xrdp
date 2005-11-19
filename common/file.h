@@ -21,9 +21,9 @@
 #if !defined(FILE_H)
 #define FILE_H
 
-int
+int APP_CC
 file_read_sections(int fd, struct list* names);
-int
+int APP_CC
 file_read_section(int fd, char* section, struct list* names,
                   struct list* values);
 
