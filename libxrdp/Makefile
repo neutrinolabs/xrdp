@@ -2,13 +2,12 @@
 LIBXRDPOBJ = libxrdp.o xrdp_tcp.o xrdp_iso.o xrdp_mcs.o \
              xrdp_sec.o xrdp_rdp.o xrdp_orders.o \
              xrdp_bitmap_compress.o \
-             ../common/os_calls.o \
-             ../common/ssl_calls.o \
-             ../common/file.o
+             os_calls.o ssl_calls.o file.o
 
 CFLAGS = -Wall -O2 -I../common -fPIC
-LDFLAGS = -shared
-LIBS = -ldl -lcrypto
+C_OS_FLAGS = $(CFLAGS) -c
+LDFLAGS = -ldl -shared
+LIBS = -lcrypto
 CC = gcc
 
 all: libxrdp
@@ -23,4 +22,13 @@ libxrdp: $(LIBXRDPOBJ)
 
 clean:
 	rm -f $(LIBXRDPOBJ) libxrdp.a libxrdp.so
+
+file.o:
+	$(CC) $(C_OS_FLAGS) ../common/file.c
+
+os_calls.o:
+	$(CC) $(C_OS_FLAGS) ../common/os_calls.c
+
+ssl_calls.o:
+	$(CC) $(C_OS_FLAGS) ../common/ssl_calls.c
 
