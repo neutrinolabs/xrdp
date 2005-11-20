@@ -6,8 +6,8 @@ LIBXRDPOBJ = libxrdp.o xrdp_tcp.o xrdp_iso.o xrdp_mcs.o \
 
 CFLAGS = -Wall -O2 -I../common -fPIC
 C_OS_FLAGS = $(CFLAGS) -c
-LDFLAGS = -ldl -shared
-LIBS = -lcrypto
+LDFLAGS = -shared
+LIBS = -ldl -lcrypto
 CC = gcc
 
 all: libxrdp
