@@ -7,7 +7,8 @@ LIBXRDPOBJ = libxrdp.o xrdp_tcp.o xrdp_iso.o xrdp_mcs.o \
 CFLAGS = -Wall -O2 -I../common -fPIC
 C_OS_FLAGS = $(CFLAGS) -c
 LDFLAGS = -shared
-LIBS = -ldl -lcrypto
+LIBS = -ldl
+LIBS += -lcrypto
 CC = gcc
 
 all: libxrdp
@@ -29,6 +30,6 @@ file.o:
 os_calls.o:
 	$(CC) $(C_OS_FLAGS) ../common/os_calls.c
 
+
 ssl_calls.o:
 	$(CC) $(C_OS_FLAGS) ../common/ssl_calls.c
-

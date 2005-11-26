@@ -5,7 +5,8 @@ CFLAGS = -Wall -O2 -I../common -fPIC
 #CFLAGS += -DXRDP_DEBUG
 C_OS_FLAGS = $(CFLAGS) -c
 LDFLAGS = -shared
-LIBS = -ldl -lcrypto
+LIBS = -ldl
+LIBS += -lcrypto
 CC = gcc
 
 all: rdp

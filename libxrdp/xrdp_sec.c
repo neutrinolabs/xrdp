@@ -182,8 +182,8 @@ xrdp_sec_create(struct xrdp_rdp* owner, int sck)
   self = (struct xrdp_sec*)g_malloc(sizeof(struct xrdp_sec), 1);
   self->rdp_layer = owner;
   self->rc4_key_size = 1;
-  self->decrypt_rc4_info = g_rc4_info_create();
-  self->encrypt_rc4_info = g_rc4_info_create();
+  self->decrypt_rc4_info = ssl_rc4_info_create();
+  self->encrypt_rc4_info = ssl_rc4_info_create();
   g_random(self->server_random, 32);
   self->mcs_layer = xrdp_mcs_create(self, sck, &self->client_mcs_data,
                                     &self->server_mcs_data);
@@ -232,8 +232,8 @@ xrdp_sec_delete(struct xrdp_sec* self)
     return;
   }
   xrdp_mcs_delete(self->mcs_layer);
-  g_rc4_info_delete(self->decrypt_rc4_info);
-  g_rc4_info_delete(self->encrypt_rc4_info);
+  ssl_rc4_info_delete(self->decrypt_rc4_info);
+  ssl_rc4_info_delete(self->encrypt_rc4_info);
   g_free(self->client_mcs_data.data);
   g_free(self->server_mcs_data.data);
   g_free(self);
@@ -273,28 +273,28 @@ xrdp_sec_update(char* key, char* update_key, int key_len)
   void* md5_info;
   void* rc4_info;
 
-  sha1_info = g_sha1_info_create();
-  md5_info = g_md5_info_create();
-  rc4_info = g_rc4_info_create();
-  g_sha1_clear(sha1_info);
-  g_sha1_transform(sha1_info, update_key, key_len);
-  g_sha1_transform(sha1_info, pad_54, 40);
-  g_sha1_transform(sha1_info, key, key_len);
-  g_sha1_complete(sha1_info, shasig);
-  g_md5_clear(md5_info);
-  g_md5_transform(md5_info, update_key, key_len);
-  g_md5_transform(md5_info, pad_92, 48);
-  g_md5_transform(md5_info, shasig, 20);
-  g_md5_complete(md5_info, key);
-  g_rc4_set_key(rc4_info, key, key_len);
-  g_rc4_crypt(rc4_info, key, key_len);
+  sha1_info = ssl_sha1_info_create();
+  md5_info = ssl_md5_info_create();
+  rc4_info = ssl_rc4_info_create();
+  ssl_sha1_clear(sha1_info);
+  ssl_sha1_transform(sha1_info, update_key, key_len);
+  ssl_sha1_transform(sha1_info, pad_54, 40);
+  ssl_sha1_transform(sha1_info, key, key_len);
+  ssl_sha1_complete(sha1_info, shasig);
+  ssl_md5_clear(md5_info);
+  ssl_md5_transform(md5_info, update_key, key_len);
+  ssl_md5_transform(md5_info, pad_92, 48);
+  ssl_md5_transform(md5_info, shasig, 20);
+  ssl_md5_complete(md5_info, key);
+  ssl_rc4_set_key(rc4_info, key, key_len);
+  ssl_rc4_crypt(rc4_info, key, key_len);
   if (key_len == 8)
   {
     xrdp_sec_make_40bit(key);
   }
-  g_sha1_info_delete(sha1_info);
-  g_md5_info_delete(md5_info);
-  g_rc4_info_delete(rc4_info);
+  ssl_sha1_info_delete(sha1_info);
+  ssl_md5_info_delete(md5_info);
+  ssl_rc4_info_delete(rc4_info);
   return 0;
 }
 
@@ -306,11 +306,11 @@ xrdp_sec_decrypt(struct xrdp_sec* self, char* data, int len)
   {
     xrdp_sec_update(self->decrypt_key, self->decrypt_update_key,
                     self->rc4_key_len);
-    g_rc4_set_key(self->decrypt_rc4_info, self->decrypt_key,
-                  self->rc4_key_len);
+    ssl_rc4_set_key(self->decrypt_rc4_info, self->decrypt_key,
+                    self->rc4_key_len);
     self->decrypt_use_count = 0;
   }
-  g_rc4_crypt(self->decrypt_rc4_info, data, len);
+  ssl_rc4_crypt(self->decrypt_rc4_info, data, len);
   self->decrypt_use_count++;
 }
 
@@ -450,7 +450,7 @@ xrdp_sec_send_lic_response(struct xrdp_sec* self)
 static void APP_CC
 xrdp_sec_rsa_op(char* out, char* in, char* mod, char* exp)
 {
-  g_mod_exp(out, 64, in, 64, mod, 64, exp, 64);
+  ssl_mod_exp(out, 64, in, 64, mod, 64, exp, 64);
 }
 
 /*****************************************************************************/
@@ -464,25 +464,25 @@ xrdp_sec_hash_48(char* out, char* in, char* salt1, char* salt2, int salt)
   char sha1_sig[20];
   char md5_sig[16];
 
-  sha1_info = g_sha1_info_create();
-  md5_info = g_md5_info_create();
+  sha1_info = ssl_sha1_info_create();
+  md5_info = ssl_md5_info_create();
   for (i = 0; i < 3; i++)
   {
     g_memset(pad, salt + i, 4);
-    g_sha1_clear(sha1_info);
-    g_sha1_transform(sha1_info, pad, i + 1);
-    g_sha1_transform(sha1_info, in, 48);
-    g_sha1_transform(sha1_info, salt1, 32);
-    g_sha1_transform(sha1_info, salt2, 32);
-    g_sha1_complete(sha1_info, sha1_sig);
-    g_md5_clear(md5_info);
-    g_md5_transform(md5_info, in, 48);
-    g_md5_transform(md5_info, sha1_sig, 20);
-    g_md5_complete(md5_info, md5_sig);
+    ssl_sha1_clear(sha1_info);
+    ssl_sha1_transform(sha1_info, pad, i + 1);
+    ssl_sha1_transform(sha1_info, in, 48);
+    ssl_sha1_transform(sha1_info, salt1, 32);
+    ssl_sha1_transform(sha1_info, salt2, 32);
+    ssl_sha1_complete(sha1_info, sha1_sig);
+    ssl_md5_clear(md5_info);
+    ssl_md5_transform(md5_info, in, 48);
+    ssl_md5_transform(md5_info, sha1_sig, 20);
+    ssl_md5_complete(md5_info, md5_sig);
     g_memcpy(out + i * 16, md5_sig, 16);
   }
-  g_sha1_info_delete(sha1_info);
-  g_md5_info_delete(md5_info);
+  ssl_sha1_info_delete(sha1_info);
+  ssl_md5_info_delete(md5_info);
 }
 
 /*****************************************************************************/
@@ -491,13 +491,13 @@ xrdp_sec_hash_16(char* out, char* in, char* salt1, char* salt2)
 {
   void* md5_info;
 
-  md5_info = g_md5_info_create();
-  g_md5_clear(md5_info);
-  g_md5_transform(md5_info, in, 16);
-  g_md5_transform(md5_info, salt1, 32);
-  g_md5_transform(md5_info, salt2, 32);
-  g_md5_complete(md5_info, out);
-  g_md5_info_delete(md5_info);
+  md5_info = ssl_md5_info_create();
+  ssl_md5_clear(md5_info);
+  ssl_md5_transform(md5_info, in, 16);
+  ssl_md5_transform(md5_info, salt1, 32);
+  ssl_md5_transform(md5_info, salt2, 32);
+  ssl_md5_complete(md5_info, out);
+  ssl_md5_info_delete(md5_info);
 }
 
 /*****************************************************************************/
@@ -532,8 +532,8 @@ xrdp_sec_establish_keys(struct xrdp_sec* self)
   }
   g_memcpy(self->decrypt_update_key, self->decrypt_key, 16);
   g_memcpy(self->encrypt_update_key, self->encrypt_key, 16);
-  g_rc4_set_key(self->decrypt_rc4_info, self->decrypt_key, self->rc4_key_len);
-  g_rc4_set_key(self->encrypt_rc4_info, self->encrypt_key, self->rc4_key_len);
+  ssl_rc4_set_key(self->decrypt_rc4_info, self->decrypt_key, self->rc4_key_len);
+  ssl_rc4_set_key(self->encrypt_rc4_info, self->encrypt_key, self->rc4_key_len);
 }
 
 /*****************************************************************************/

@@ -182,10 +182,10 @@ rdp_lic_process_demand(struct rdp_lic* self, struct stream* s)
     rdp_sec_sign(signature, 16, self->licence_sign_key, 16,
                  hwid, sizeof(hwid));
     /* Now encrypt the HWID */
-    crypt_key = g_rc4_info_create();
-    g_rc4_set_key(crypt_key, self->licence_key, 16);
-    g_rc4_crypt(crypt_key, hwid, sizeof(hwid));
-    g_rc4_info_delete(crypt_key);
+    crypt_key = ssl_rc4_info_create();
+    ssl_rc4_set_key(crypt_key, self->licence_key, 16);
+    ssl_rc4_crypt(crypt_key, hwid, sizeof(hwid));
+    ssl_rc4_info_delete(crypt_key);
     rdp_lic_present(self, null_data, null_data, licence_data,
                     licence_size, hwid, signature);
     g_free(licence_data);
@@ -266,10 +266,10 @@ rdp_lic_process_authreq(struct rdp_lic* self, struct stream* s)
   rdp_lic_parse_authreq(self, s, &in_token, &in_sig);
   g_memcpy(out_token, in_token, LICENCE_TOKEN_SIZE);
   /* Decrypt the token. It should read TEST in Unicode. */
-  crypt_key = g_rc4_info_create();
-  g_rc4_set_key(crypt_key, self->licence_key, 16);
+  crypt_key = ssl_rc4_info_create();
+  ssl_rc4_set_key(crypt_key, self->licence_key, 16);
   g_memcpy(decrypt_token, in_token, LICENCE_TOKEN_SIZE);
-  g_rc4_crypt(crypt_key, decrypt_token, LICENCE_TOKEN_SIZE);
+  ssl_rc4_crypt(crypt_key, decrypt_token, LICENCE_TOKEN_SIZE);
   /* Generate a signature for a buffer of token and HWID */
   rdp_lic_generate_hwid(self, hwid);
   g_memcpy(sealed_buffer, decrypt_token, LICENCE_TOKEN_SIZE);
@@ -277,11 +277,11 @@ rdp_lic_process_authreq(struct rdp_lic* self, struct stream* s)
   rdp_sec_sign(out_sig, 16, self->licence_sign_key, 16, sealed_buffer,
                sizeof(sealed_buffer));
   /* Now encrypt the HWID */
-  g_rc4_set_key(crypt_key, self->licence_key, 16);
+  ssl_rc4_set_key(crypt_key, self->licence_key, 16);
   g_memcpy(crypt_hwid, hwid, LICENCE_HWID_SIZE);
-  g_rc4_crypt(crypt_key, crypt_hwid, LICENCE_HWID_SIZE);
+  ssl_rc4_crypt(crypt_key, crypt_hwid, LICENCE_HWID_SIZE);
   rdp_lic_send_authresp(self, out_token, crypt_hwid, out_sig);
-  g_rc4_info_delete(crypt_key);
+  ssl_rc4_info_delete(crypt_key);
 }
 
 /*****************************************************************************/
@@ -300,10 +300,10 @@ rdp_lic_process_issue(struct rdp_lic* self, struct stream* s)
   {
     return;
   }
-  crypt_key = g_rc4_info_create();
-  g_rc4_set_key(crypt_key, self->licence_key, 16);
-  g_rc4_crypt(crypt_key, s->p, length);
-  g_rc4_info_delete(crypt_key);
+  crypt_key = ssl_rc4_info_create();
+  ssl_rc4_set_key(crypt_key, self->licence_key, 16);
+  ssl_rc4_crypt(crypt_key, s->p, length);
+  ssl_rc4_info_delete(crypt_key);
   in_uint16_le(s, check);
   if (check != 0)
   {
