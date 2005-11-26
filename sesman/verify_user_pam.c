@@ -65,7 +65,7 @@ verify_pam_conv(int num_msg, const struct pam_message** msg,
         reply[i].resp_retcode = PAM_SUCCESS;
         break;
       default:
-        g_printf("unknown in verify_pam_conv\n\r");
+        g_printf("unknown in verify_pam_conv\r\n");
         g_free(reply);
         return PAM_CONV_ERR;
     }
@@ -107,14 +107,14 @@ auth_userpass(char* user, char* pass)
   error = pam_start(service_name, 0, &(auth_info->pamc), &(auth_info->ph));
   if (error != PAM_SUCCESS)
   {
-    g_printf("pam_start failed: %s\n\r", pam_strerror(auth_info->ph, error));
+    g_printf("pam_start failed: %s\r\n", pam_strerror(auth_info->ph, error));
     g_free(auth_info);
     return 0;
   }
   error = pam_authenticate(auth_info->ph, 0);
   if (error != PAM_SUCCESS)
   {
-    g_printf("pam_authenticate failed: %s\n\r",
+    g_printf("pam_authenticate failed: %s\r\n",
                          pam_strerror(auth_info->ph, error));
     g_free(auth_info);
     return 0;
@@ -122,7 +122,7 @@ auth_userpass(char* user, char* pass)
   error = pam_acct_mgmt(auth_info->ph, 0);
   if (error != PAM_SUCCESS)
   {
-    g_printf("pam_acct_mgmt failed: %s\n\r",
+    g_printf("pam_acct_mgmt failed: %s\r\n",
                          pam_strerror(auth_info->ph, error));
     g_free(auth_info);
     return 0;
@@ -144,20 +144,20 @@ auth_start_session(long in_val, int in_display)
   error = pam_set_item(auth_info->ph, PAM_TTY, display);
   if (error != PAM_SUCCESS)
   {
-    g_printf("pam_set_item failed: %s\n\r", pam_strerror(auth_info->ph, error));
+    g_printf("pam_set_item failed: %s\r\n", pam_strerror(auth_info->ph, error));
     return 1;
   }
   error = pam_setcred(auth_info->ph, PAM_ESTABLISH_CRED);
   if (error != PAM_SUCCESS)
   {
-    g_printf("pam_setcred failed: %s\n\r", pam_strerror(auth_info->ph, error));
+    g_printf("pam_setcred failed: %s\r\n", pam_strerror(auth_info->ph, error));
     return 1;
   }
   auth_info->did_setcred = 1;
   error = pam_open_session(auth_info->ph, 0);
   if (error != PAM_SUCCESS)
   {
-    g_printf("pam_open_session failed: %s\n\r",
+    g_printf("pam_open_session failed: %s\r\n",
                        pam_strerror(auth_info->ph, error));
     return 1;
   }

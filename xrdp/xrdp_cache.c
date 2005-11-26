@@ -154,7 +154,7 @@ xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
 #endif
       {
         self->bitmap_items[i][j].stamp = self->bitmap_stamp;
-        DEBUG(("found bitmap at %d %d\n\r", i, j));
+        DEBUG(("found bitmap at %d %d\r\n", i, j));
         xrdp_bitmap_delete(bitmap);
         return MAKELONG(j, i);
       }
@@ -172,7 +172,7 @@ xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
 #endif
       {
         self->bitmap_items[i][j].stamp = self->bitmap_stamp;
-        DEBUG(("found bitmap at %d %d\n\r", i, j));
+        DEBUG(("found bitmap at %d %d\r\n", i, j));
         xrdp_bitmap_delete(bitmap);
         return MAKELONG(j, i);
       }
@@ -190,7 +190,7 @@ xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
 #endif
       {
         self->bitmap_items[i][j].stamp = self->bitmap_stamp;
-        DEBUG(("found bitmap at %d %d\n\r", i, j));
+        DEBUG(("found bitmap at %d %d\r\n", i, j));
         xrdp_bitmap_delete(bitmap);
         return MAKELONG(j, i);
       }
@@ -198,7 +198,7 @@ xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
   }
   else
   {
-    g_printf("error in xrdp_cache_add_bitmap, too big(%d)\n\r", bmp_size);
+    g_printf("error in xrdp_cache_add_bitmap, too big(%d)\r\n", bmp_size);
   }
   /* look for oldest */
   cache_id = 0;
@@ -243,7 +243,7 @@ xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
       }
     }
   }
-  DEBUG(("adding bitmap at %d %d\n\r", cache_id, cache_idx));
+  DEBUG(("adding bitmap at %d %d\r\n", cache_id, cache_idx));
   /* set, send bitmap and return */
   xrdp_bitmap_delete(self->bitmap_items[cache_id][cache_idx].bitmap);
   self->bitmap_items[cache_id][cache_idx].bitmap = bitmap;
@@ -336,7 +336,7 @@ xrdp_cache_add_char(struct xrdp_cache* self,
       if (xrdp_font_item_compare(&self->char_items[i][j].font_item, font_item))
       {
         self->char_items[i][j].stamp = self->char_stamp;
-        DEBUG(("found font at %d %d\n\r", i, j));
+        DEBUG(("found font at %d %d\r\n", i, j));
         return MAKELONG(j, i);
       }
     }
@@ -357,7 +357,7 @@ xrdp_cache_add_char(struct xrdp_cache* self,
       }
     }
   }
-  DEBUG(("adding char at %d %d\n\r", f, c));
+  DEBUG(("adding char at %d %d\r\n", f, c));
   /* set, send char and return */
   fi = &self->char_items[f][c].font_item;
   g_free(fi->data);
@@ -404,7 +404,7 @@ xrdp_cache_add_pointer(struct xrdp_cache* self,
       self->pointer_items[i].stamp = self->pointer_stamp;
       xrdp_wm_set_pointer(self->wm, i);
       self->wm->current_pointer = i;
-      DEBUG(("found pointer at %d\n\r", i));
+      DEBUG(("found pointer at %d\r\n", i));
       return i;
     }
   }
@@ -432,7 +432,7 @@ xrdp_cache_add_pointer(struct xrdp_cache* self,
                        self->pointer_items[index].x,
                        self->pointer_items[index].y);
   self->wm->current_pointer = index;
-  DEBUG(("adding pointer at %d\n\r", index));
+  DEBUG(("adding pointer at %d\r\n", index));
   return index;
 }
 
@@ -460,6 +460,6 @@ xrdp_cache_add_pointer_static(struct xrdp_cache* self,
                        self->pointer_items[index].x,
                        self->pointer_items[index].y);
   self->wm->current_pointer = index;
-  DEBUG(("adding pointer at %d\n\r", index));
+  DEBUG(("adding pointer at %d\r\n", index));
   return index;
 }

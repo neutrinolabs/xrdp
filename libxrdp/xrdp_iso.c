@@ -90,18 +90,18 @@ xrdp_iso_recv(struct xrdp_iso* self, struct stream* s)
 {
   int code;
 
-  DEBUG(("   in xrdp_iso_recv\n\r"));
+  DEBUG(("   in xrdp_iso_recv\r\n"));
   if (xrdp_iso_recv_msg(self, s, &code) != 0)
   {
-    DEBUG(("   out xrdp_iso_recv xrdp_iso_recv_msg return non zero\n\r"));
+    DEBUG(("   out xrdp_iso_recv xrdp_iso_recv_msg return non zero\r\n"));
     return 1;
   }
   if (code != ISO_PDU_DT)
   {
-    DEBUG(("   out xrdp_iso_recv code != ISO_PDU_DT\n\r"));
+    DEBUG(("   out xrdp_iso_recv code != ISO_PDU_DT\r\n"));
     return 1;
   }
-  DEBUG(("   out xrdp_iso_recv\n\r"));
+  DEBUG(("   out xrdp_iso_recv\r\n"));
   return 0;
 }
 
@@ -139,7 +139,7 @@ xrdp_iso_incoming(struct xrdp_iso* self)
 
   make_stream(s);
   init_stream(s, 8192);
-  DEBUG(("   in xrdp_iso_incoming\n\r"));
+  DEBUG(("   in xrdp_iso_incoming\r\n"));
   if (xrdp_iso_recv_msg(self, s, &code) != 0)
   {
     free_stream(s);
@@ -155,7 +155,7 @@ xrdp_iso_incoming(struct xrdp_iso* self)
     free_stream(s);
     return 1;
   }
-  DEBUG(("   out xrdp_iso_incoming\n\r"));
+  DEBUG(("   out xrdp_iso_incoming\r\n"));
   free_stream(s);
   return 0;
 }
@@ -177,7 +177,7 @@ xrdp_iso_send(struct xrdp_iso* self, struct stream* s)
 {
   int len;
 
-  DEBUG(("   in xrdp_iso_send\n\r"));
+  DEBUG(("   in xrdp_iso_send\r\n"));
   s_pop_layer(s, iso_hdr);
   len = s->end - s->p;
   out_uint8(s, 3);
@@ -190,6 +190,6 @@ xrdp_iso_send(struct xrdp_iso* self, struct stream* s)
   {
     return 1;
   }
-  DEBUG(("   out xrdp_iso_send\n\r"));
+  DEBUG(("   out xrdp_iso_send\r\n"));
   return 0;
 }

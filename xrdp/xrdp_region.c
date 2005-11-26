@@ -275,7 +275,7 @@ xrdp_region_subtract_rect(struct xrdp_region* self,
     }
     else
     {
-      g_printf("error in xrdp_region_subtract_rect\n\r");
+      g_printf("error in xrdp_region_subtract_rect\r\n");
     }
   }
   return 0;

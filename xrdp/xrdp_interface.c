@@ -187,7 +187,7 @@ server_msg(struct xrdp_mod* mod, char* msg, int code)
   if (code == 1)
   {
     g_printf(msg);
-    g_printf("\n\r");
+    g_printf("\r\n");
     return 0;
   }
   wm = (struct xrdp_wm*)mod->wm;

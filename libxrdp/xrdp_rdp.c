@@ -156,7 +156,7 @@ xrdp_rdp_recv(struct xrdp_rdp* self, struct stream* s, int* code)
   int pdu_code;
   int chan;
 
-  DEBUG(("in xrdp_rdp_recv\n\r"));
+  DEBUG(("in xrdp_rdp_recv\r\n"));
   if (s->next_packet == 0 || s->next_packet >= s->end)
   {
     chan = 0;
@@ -165,19 +165,19 @@ xrdp_rdp_recv(struct xrdp_rdp* self, struct stream* s, int* code)
     {
       s->next_packet = 0;
       *code = -1;
-      DEBUG(("out xrdp_rdp_recv\n\r"));
+      DEBUG(("out xrdp_rdp_recv\r\n"));
       return 0;
     }
     if (error != 0)
     {
-      DEBUG(("out xrdp_rdp_recv error\n\r"));
+      DEBUG(("out xrdp_rdp_recv error\r\n"));
       return 1;
     }
     if (chan != MCS_GLOBAL_CHANNEL && chan > 0)
     {
       s->next_packet = 0;
       *code = 0;
-      DEBUG(("out xrdp_rdp_recv\n\r"));
+      DEBUG(("out xrdp_rdp_recv\r\n"));
       return 0;
     }
     s->next_packet = s->p;
@@ -191,14 +191,14 @@ xrdp_rdp_recv(struct xrdp_rdp* self, struct stream* s, int* code)
   {
     s->next_packet += 8;
     *code = 0;
-    DEBUG(("out xrdp_rdp_recv\n\r"));
+    DEBUG(("out xrdp_rdp_recv\r\n"));
     return 0;
   }
   in_uint16_le(s, pdu_code);
   *code = pdu_code & 0xf;
   in_uint8s(s, 2); /* mcs user id */
   s->next_packet += len;
-  DEBUG(("out xrdp_rdp_recv\n\r"));
+  DEBUG(("out xrdp_rdp_recv\r\n"));
   return 0;
 }
 
@@ -208,7 +208,7 @@ xrdp_rdp_send(struct xrdp_rdp* self, struct stream* s, int pdu_type)
 {
   int len;
 
-  DEBUG(("in xrdp_rdp_send\n\r"));
+  DEBUG(("in xrdp_rdp_send\r\n"));
   s_pop_layer(s, rdp_hdr);
   len = s->end - s->p;
   out_uint16_le(s, len);
@@ -216,10 +216,10 @@ xrdp_rdp_send(struct xrdp_rdp* self, struct stream* s, int pdu_type)
   out_uint16_le(s, self->mcs_channel);
   if (xrdp_sec_send(self->sec_layer, s, 0) != 0)
   {
-    DEBUG(("out xrdp_rdp_send error\n\r"));
+    DEBUG(("out xrdp_rdp_send error\r\n"));
     return 1;
   }
-  DEBUG(("out xrdp_rdp_send\n\r"));
+  DEBUG(("out xrdp_rdp_send\r\n"));
   return 0;
 }
 
@@ -230,7 +230,7 @@ xrdp_rdp_send_data(struct xrdp_rdp* self, struct stream* s,
 {
   int len;
 
-  DEBUG(("in xrdp_rdp_send_data\n\r"));
+  DEBUG(("in xrdp_rdp_send_data\r\n"));
   s_pop_layer(s, rdp_hdr);
   len = s->end - s->p;
   out_uint16_le(s, len);
@@ -245,10 +245,10 @@ xrdp_rdp_send_data(struct xrdp_rdp* self, struct stream* s,
   out_uint16_le(s, 0);
   if (xrdp_sec_send(self->sec_layer, s, 0) != 0)
   {
-    DEBUG(("out xrdp_rdp_send_data error\n\r"));
+    DEBUG(("out xrdp_rdp_send_data error\r\n"));
     return 1;
   }
-  DEBUG(("out xrdp_rdp_send_data\n\r"));
+  DEBUG(("out xrdp_rdp_send_data\r\n"));
   return 0;
 }
 
@@ -288,7 +288,7 @@ xrdp_rdp_parse_client_mcs_data(struct xrdp_rdp* self)
       break;
   }
   p->p = p->data;
-  DEBUG(("client width %d, client height %d bpp %d\n\r",
+  DEBUG(("client width %d, client height %d bpp %d\r\n",
          self->client_info.width, self->client_info.height,
          self->client_info.bpp));
   return 0;
@@ -298,7 +298,7 @@ xrdp_rdp_parse_client_mcs_data(struct xrdp_rdp* self)
 int APP_CC
 xrdp_rdp_incoming(struct xrdp_rdp* self)
 {
-  DEBUG(("in xrdp_rdp_incoming\n\r"));
+  DEBUG(("in xrdp_rdp_incoming\r\n"));
   if (xrdp_sec_incoming(self->sec_layer) != 0)
   {
     return 1;
@@ -306,7 +306,7 @@ xrdp_rdp_incoming(struct xrdp_rdp* self)
   self->mcs_channel = self->sec_layer->mcs_layer->userid +
                       MCS_USERCHANNEL_BASE;
   xrdp_rdp_parse_client_mcs_data(self);
-  DEBUG(("out xrdp_rdp_incoming mcs channel %d\n\r", self->mcs_channel));
+  DEBUG(("out xrdp_rdp_incoming mcs channel %d\r\n", self->mcs_channel));
   return 0;
 }
 
@@ -579,7 +579,7 @@ xrdp_rdp_process_data_input(struct xrdp_rdp* self, struct stream* s)
 
   in_uint16_le(s, num_events);
   in_uint8s(s, 2); /* pad */
-  DEBUG(("xrdp_rdp_process_data_input %d events\n\r", num_events));
+  DEBUG(("xrdp_rdp_process_data_input %d events\r\n", num_events));
   for (index = 0; index < num_events; index++)
   {
     in_uint32_le(s, time);
@@ -588,7 +588,7 @@ xrdp_rdp_process_data_input(struct xrdp_rdp* self, struct stream* s)
     in_sint16_le(s, param1);
     in_sint16_le(s, param2);
     DEBUG(("xrdp_rdp_process_data_input event %4.4x flags %4.4x param1 %d \
-param2 %d time %d\n\r", msg_type, device_flags, param1, param2, time));
+param2 %d time %d\r\n", msg_type, device_flags, param1, param2, time));
     if (self->session->callback != 0)
     {
       /* msg_type can be
@@ -813,7 +813,7 @@ xrdp_rdp_process_data(struct xrdp_rdp* self, struct stream* s)
   in_uint8(s, data_type);
   in_uint8(s, ctype);
   in_uint16_le(s, clen);
-  DEBUG(("xrdp_rdp_process_data code %d\n\r", data_type));
+  DEBUG(("xrdp_rdp_process_data code %d\r\n", data_type));
   switch (data_type)
   {
     case RDP_DATA_PDU_POINTER: /* 27 */
@@ -847,7 +847,7 @@ xrdp_rdp_process_data(struct xrdp_rdp* self, struct stream* s)
       xrdp_rdp_process_data_font(self, s);
       break;
     default:
-      g_printf("unknown in xrdp_rdp_process_data %d\n\r", data_type);
+      g_printf("unknown in xrdp_rdp_process_data %d\r\n", data_type);
       break;
   }
   return 0;

@@ -353,7 +353,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec* self, struct stream* s)
   //g_hexdump(s->p, 100);
   in_uint8s(s, 4);
   in_uint32_le(s, flags);
-  DEBUG(("in xrdp_sec_process_logon_info flags $%x\n\r", flags));
+  DEBUG(("in xrdp_sec_process_logon_info flags $%x\r\n", flags));
   /* this is the first test that the decrypt is working */
   if ((flags & RDP_LOGON_NORMAL) != RDP_LOGON_NORMAL) /* 0x33 */
   {                                                   /* must be or error */
@@ -544,14 +544,14 @@ xrdp_sec_recv(struct xrdp_sec* self, struct stream* s, int* chan)
   int flags;
   int len;
 
-  DEBUG((" in xrdp_sec_recv\n\r"));
+  DEBUG((" in xrdp_sec_recv\r\n"));
   if (xrdp_mcs_recv(self->mcs_layer, s, chan) != 0)
   {
-    DEBUG((" out xrdp_sec_recv error\n\r"));
+    DEBUG((" out xrdp_sec_recv error\r\n"));
     return 1;
   }
   in_uint32_le(s, flags);
-  DEBUG((" in xrdp_sec_recv flags $%x\n\r", flags));
+  DEBUG((" in xrdp_sec_recv flags $%x\r\n", flags));
   if (flags & SEC_ENCRYPT) /* 0x08 */
   {
     in_uint8s(s, 8); /* signature */
@@ -588,7 +588,7 @@ xrdp_sec_recv(struct xrdp_sec* self, struct stream* s, int* chan)
     }
     return -1; /* special error that means send demand active */
   }
-  DEBUG((" out xrdp_sec_recv error\n\r"));
+  DEBUG((" out xrdp_sec_recv error\r\n"));
   return 0;
 }
 
@@ -598,14 +598,14 @@ xrdp_sec_recv(struct xrdp_sec* self, struct stream* s, int* chan)
 int APP_CC
 xrdp_sec_send(struct xrdp_sec* self, struct stream* s, int flags)
 {
-  DEBUG((" in xrdp_sec_send\n\r"));
+  DEBUG((" in xrdp_sec_send\r\n"));
   s_pop_layer(s, sec_hdr);
   out_uint32_le(s, flags);
   if (xrdp_mcs_send(self->mcs_layer, s) != 0)
   {
     return 1;
   }
-  DEBUG((" out xrdp_sec_send\n\r"));
+  DEBUG((" out xrdp_sec_send\r\n"));
   return 0;
 }
 
@@ -711,8 +711,6 @@ xrdp_sec_in_mcs_data(struct xrdp_sec* self)
   s->p = s->data;
   in_uint8s(s, 39);
   in_uint32_le(s, client_info->keylayout);
-//  g_printf("%s %d %x\n", client_info->hostname, client_info->build,
-//           client_info->keylayout);
   s->p = s->data;
 }
 
@@ -720,21 +718,21 @@ xrdp_sec_in_mcs_data(struct xrdp_sec* self)
 int APP_CC
 xrdp_sec_incoming(struct xrdp_sec* self)
 {
-  DEBUG(("in xrdp_sec_incoming\n\r"));
+  DEBUG(("in xrdp_sec_incoming\r\n"));
   xrdp_sec_out_mcs_data(self);
   if (xrdp_mcs_incoming(self->mcs_layer) != 0)
   {
     return 1;
   }
 #ifdef XRDP_DEBUG
-  g_printf("client mcs data received\n\r");
+  g_printf("client mcs data received\r\n");
   g_hexdump(self->client_mcs_data.data,
             self->client_mcs_data.end - self->client_mcs_data.data);
-  g_printf("server mcs data sent\n\r");
+  g_printf("server mcs data sent\r\n");
   g_hexdump(self->server_mcs_data.data,
             self->server_mcs_data.end - self->server_mcs_data.data);
 #endif
-  DEBUG(("out xrdp_sec_incoming\n\r"));
+  DEBUG(("out xrdp_sec_incoming\r\n"));
   xrdp_sec_in_mcs_data(self);
   return 0;
 }

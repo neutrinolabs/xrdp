@@ -133,7 +133,7 @@ g_hexdump(char* p, int len)
     {
       g_printf("%c", (line[i] >= 0x20 && line[i] < 0x7f) ? line[i] : '.');
     }
-    g_printf("\n\r");
+    g_printf("\r\n");
     offset += thisline;
     line += thisline;
   }

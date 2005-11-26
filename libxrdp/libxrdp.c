@@ -85,7 +85,7 @@ libxrdp_process_data(struct xrdp_session* session)
       rv = 1;
       break;
     }
-    DEBUG(("libxrdp_process_data code %d\n\r", code));
+    DEBUG(("libxrdp_process_data code %d\r\n", code));
     switch (code)
     {
       case -1:
@@ -102,13 +102,13 @@ libxrdp_process_data(struct xrdp_session* session)
         if (xrdp_rdp_process_data((struct xrdp_rdp*)session->rdp,
                                   session->s) != 0)
         {
-          DEBUG(("libxrdp_process_data returned non zero\n\r"));
+          DEBUG(("libxrdp_process_data returned non zero\r\n"));
           cont = 0;
           session->term = 1;
         }
         break;
       default:
-        g_printf("unknown in libxrdp_process_data\n\r");
+        g_printf("unknown in libxrdp_process_data\r\n");
         break;
     }
     if (cont)
@@ -257,11 +257,11 @@ libxrdp_send_bitmap(struct xrdp_session* session, int width, int height,
         }
         if (j > 32768)
         {
-          g_printf("error, decompressed size too big, its %d\n\r", j);
+          g_printf("error, decompressed size too big, its %d\r\n", j);
         }
         if (bufsize > 8192)
         {
-          g_printf("error, compressed size too big, its %d\n\r", bufsize);
+          g_printf("error, compressed size too big, its %d\r\n", bufsize);
         }
         s->p = s->end;
       } while (total_bufsize < 4096 && i > 0);
@@ -271,7 +271,7 @@ libxrdp_send_bitmap(struct xrdp_session* session, int width, int height,
                          RDP_DATA_PDU_UPDATE);
       if (total_bufsize > 8192)
       {
-        g_printf("error, total compressed size too big, its %d\n\r",
+        g_printf("error, total compressed size too big, its %d\r\n",
                  total_bufsize);
       }
     }

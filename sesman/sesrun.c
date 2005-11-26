@@ -48,10 +48,10 @@ main(int argc, char** argv)
 
   if (0 != config_read(&g_cfg))
   {
-    g_printf("sesrun: error reading config. quitting.\n\r");
+    g_printf("sesrun: error reading config. quitting.\n");
     return 1;
   }
-  
+
   g_pid = g_getpid();
   if (argc == 1)
   {
