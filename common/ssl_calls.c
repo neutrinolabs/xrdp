@@ -21,6 +21,7 @@
 */
 
 #include "os_calls.h"
+#include "arch.h"
 
 #include <openssl/rc4.h>
 #include <openssl/md5.h>
@@ -30,29 +31,29 @@
 /* rc4 stuff */
 
 /*****************************************************************************/
-void*
-g_rc4_info_create(void)
+void* APP_CC
+ssl_rc4_info_create(void)
 {
   return g_malloc(sizeof(RC4_KEY), 1);;
 }
 
 /*****************************************************************************/
-void
-g_rc4_info_delete(void* rc4_info)
+void APP_CC
+ssl_rc4_info_delete(void* rc4_info)
 {
   g_free(rc4_info);
 }
 
 /*****************************************************************************/
-void
-g_rc4_set_key(void* rc4_info, char* key, int len)
+void APP_CC
+ssl_rc4_set_key(void* rc4_info, char* key, int len)
 {
   RC4_set_key((RC4_KEY*)rc4_info, len, (unsigned char*)key);
 }
 
 /*****************************************************************************/
-void
-g_rc4_crypt(void* rc4_info, char* data, int len)
+void APP_CC
+ssl_rc4_crypt(void* rc4_info, char* data, int len)
 {
   RC4((RC4_KEY*)rc4_info, len, (unsigned char*)data, (unsigned char*)data);
 }
@@ -60,36 +61,36 @@ g_rc4_crypt(void* rc4_info, char* data, int len)
 /* sha1 stuff */
 
 /*****************************************************************************/
-void*
-g_sha1_info_create(void)
+void* APP_CC
+ssl_sha1_info_create(void)
 {
   return g_malloc(sizeof(SHA_CTX), 1);
 }
 
 /*****************************************************************************/
-void
-g_sha1_info_delete(void* sha1_info)
+void APP_CC
+ssl_sha1_info_delete(void* sha1_info)
 {
   g_free(sha1_info);
 }
 
 /*****************************************************************************/
-void
-g_sha1_clear(void* sha1_info)
+void APP_CC
+ssl_sha1_clear(void* sha1_info)
 {
   SHA1_Init((SHA_CTX*)sha1_info);
 }
 
 /*****************************************************************************/
-void
-g_sha1_transform(void* sha1_info, char* data, int len)
+void APP_CC
+ssl_sha1_transform(void* sha1_info, char* data, int len)
 {
   SHA1_Update((SHA_CTX*)sha1_info, data, len);
 }
 
 /*****************************************************************************/
-void
-g_sha1_complete(void* sha1_info, char* data)
+void APP_CC
+ssl_sha1_complete(void* sha1_info, char* data)
 {
   SHA1_Final((unsigned char*)data, (SHA_CTX*)sha1_info);
 }
@@ -97,43 +98,43 @@ g_sha1_complete(void* sha1_info, char* data)
 /* md5 stuff */
 
 /*****************************************************************************/
-void*
-g_md5_info_create(void)
+void* APP_CC
+ssl_md5_info_create(void)
 {
   return g_malloc(sizeof(MD5_CTX), 1);
 }
 
 /*****************************************************************************/
-void
-g_md5_info_delete(void* md5_info)
+void APP_CC
+ssl_md5_info_delete(void* md5_info)
 {
   g_free(md5_info);
 }
 
 /*****************************************************************************/
-void
-g_md5_clear(void* md5_info)
+void APP_CC
+ssl_md5_clear(void* md5_info)
 {
   MD5_Init((MD5_CTX*)md5_info);
 }
 
 /*****************************************************************************/
-void
-g_md5_transform(void* md5_info, char* data, int len)
+void APP_CC
+ssl_md5_transform(void* md5_info, char* data, int len)
 {
   MD5_Update((MD5_CTX*)md5_info, data, len);
 }
 
 /*****************************************************************************/
-void
-g_md5_complete(void* md5_info, char* data)
+void APP_CC
+ssl_md5_complete(void* md5_info, char* data)
 {
   MD5_Final((unsigned char*)data, (MD5_CTX*)md5_info);
 }
 
 /*****************************************************************************/
-static void
-reverse_it(char* p, int len)
+static void APP_CC
+ssl_reverse_it(char* p, int len)
 {
   int i;
   int j;
@@ -152,8 +153,8 @@ reverse_it(char* p, int len)
 }
 
 /*****************************************************************************/
-int
-g_mod_exp(char* out, int out_len, char* in, int in_len,
+int APP_CC
+ssl_mod_exp(char* out, int out_len, char* in, int in_len,
           char* mod, int mod_len, char* exp, int exp_len)
 {
   BN_CTX* ctx;
@@ -174,9 +175,9 @@ g_mod_exp(char* out, int out_len, char* in, int in_len,
   g_memcpy(l_in, in, in_len);
   g_memcpy(l_mod, mod, mod_len);
   g_memcpy(l_exp, exp, exp_len);
-  reverse_it(l_in, in_len);
-  reverse_it(l_mod, mod_len);
-  reverse_it(l_exp, exp_len);
+  ssl_reverse_it(l_in, in_len);
+  ssl_reverse_it(l_mod, mod_len);
+  ssl_reverse_it(l_exp, exp_len);
   ctx = BN_CTX_new();
   BN_init(&lmod);
   BN_init(&lexp);
@@ -189,7 +190,7 @@ g_mod_exp(char* out, int out_len, char* in, int in_len,
   rv = BN_bn2bin(&lout, (unsigned char*)l_out);
   if (rv <= out_len)
   {
-    reverse_it(l_out, rv);
+    ssl_reverse_it(l_out, rv);
     g_memcpy(out, l_out, out_len);
   }
   else

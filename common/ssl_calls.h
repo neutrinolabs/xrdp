@@ -21,36 +21,36 @@
 #if !defined(SSL_CALLS_H)
 #define SSL_CALLS_H
 
-void*
-g_rc4_info_create(void);
-void
-g_rc4_info_delete(void* rc4_info);
-void
-g_rc4_set_key(void* rc4_info, char* key, int len);
-void
-g_rc4_crypt(void* rc4_info, char* data, int len);
-void*
-g_sha1_info_create(void);
-void
-g_sha1_info_delete(void* sha1_info);
-void
-g_sha1_clear(void* sha1_info);
-void
-g_sha1_transform(void* sha1_info, char* data, int len);
-void
-g_sha1_complete(void* sha1_info, char* data);
-void*
-g_md5_info_create(void);
-void
-g_md5_info_delete(void* md5_info);
-void
-g_md5_clear(void* md5_info);
-void
-g_md5_transform(void* md5_info, char* data, int len);
-void
-g_md5_complete(void* md5_info, char* data);
-int
-g_mod_exp(char* out, int out_len, char* in, int in_len,
-          char* mod, int mod_len, char* exp, int exp_len);
+void* APP_CC
+ssl_rc4_info_create(void);
+void APP_CC
+ssl_rc4_info_delete(void* rc4_info);
+void APP_CC
+ssl_rc4_set_key(void* rc4_info, char* key, int len);
+void APP_CC
+ssl_rc4_crypt(void* rc4_info, char* data, int len);
+void* APP_CC
+ssl_sha1_info_create(void);
+void APP_CC
+ssl_sha1_info_delete(void* sha1_info);
+void APP_CC
+ssl_sha1_clear(void* sha1_info);
+void APP_CC
+ssl_sha1_transform(void* sha1_info, char* data, int len);
+void APP_CC
+ssl_sha1_complete(void* sha1_info, char* data);
+void* APP_CC
+ssl_md5_info_create(void);
+void APP_CC
+ssl_md5_info_delete(void* md5_info);
+void APP_CC
+ssl_md5_clear(void* md5_info);
+void APP_CC
+ssl_md5_transform(void* md5_info, char* data, int len);
+void APP_CC
+ssl_md5_complete(void* md5_info, char* data);
+int APP_CC
+ssl_mod_exp(char* out, int out_len, char* in, int in_len,
+            char* mod, int mod_len, char* exp, int exp_len);
 
 #endif

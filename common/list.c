@@ -25,7 +25,7 @@
 #include "list.h"
 
 /*****************************************************************************/
-struct list*
+struct list* APP_CC
 list_create(void)
 {
   struct list* self;
@@ -38,7 +38,7 @@ list_create(void)
 }
 
 /*****************************************************************************/
-void
+void APP_CC
 list_delete(struct list* self)
 {
   int i;
@@ -60,7 +60,7 @@ list_delete(struct list* self)
 }
 
 /*****************************************************************************/
-void
+void APP_CC
 list_add_item(struct list* self, long item)
 {
   long* p;
@@ -80,7 +80,7 @@ list_add_item(struct list* self, long item)
 }
 
 /*****************************************************************************/
-long
+long APP_CC
 list_get_item(struct list* self, int index)
 {
   if (index < 0 || index >= self->count)
@@ -91,7 +91,7 @@ list_get_item(struct list* self, int index)
 }
 
 /*****************************************************************************/
-void
+void APP_CC
 list_clear(struct list* self)
 {
   int i;
@@ -112,7 +112,7 @@ list_clear(struct list* self)
 }
 
 /*****************************************************************************/
-int
+int APP_CC
 list_index_of(struct list* self, long item)
 {
   int i;
@@ -128,7 +128,7 @@ list_index_of(struct list* self, long item)
 }
 
 /*****************************************************************************/
-void
+void APP_CC
 list_remove_item(struct list* self, int index)
 {
   int i;
@@ -149,7 +149,7 @@ list_remove_item(struct list* self, int index)
 }
 
 /*****************************************************************************/
-void
+void APP_CC
 list_insert_item(struct list* self, int index, long item)
 {
   long* p;
