@@ -31,13 +31,19 @@ static struct xrdp_listen* g_listen = 0;
 static int g_threadid = 0; /* main threadid */
 
 #if defined(_WIN32)
+static SERVICE_STATUS_HANDLE g_ssh = 0;
+static SERVICE_STATUS g_service_status;
 static CRITICAL_SECTION g_term_mutex;
 static CRITICAL_SECTION g_sync_mutex;
 static CRITICAL_SECTION g_sync1_mutex;
+#define LOCK_ENTER(mutex) EnterCriticalSection(&mutex)
+#define LOCK_LEAVE(mutex) LeaveCriticalSection(&mutex)
 #else
 static pthread_mutex_t g_term_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t g_sync_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t g_sync1_mutex = PTHREAD_MUTEX_INITIALIZER;
+#define LOCK_ENTER(mutex) pthread_mutex_lock(&mutex)
+#define LOCK_LEAVE(mutex) pthread_mutex_unlock(&mutex)
 #endif
 static int g_term = 0;
 /* syncronize stuff */
@@ -55,11 +61,7 @@ g_xrdp_sync(long (*sync_func)(long param1, long param2), long sync_param1,
   long sync_result;
   int sync_command;
 
-#if defined(_WIN32)
-  EnterCriticalSection(&g_sync1_mutex);
-#else
-  pthread_mutex_lock(&g_sync1_mutex);
-#endif
+  LOCK_ENTER(g_sync1_mutex);
   g_lock();
   g_sync_param1 = sync_param1;
   g_sync_param2 = sync_param2;
@@ -75,11 +77,7 @@ g_xrdp_sync(long (*sync_func)(long param1, long param2), long sync_param1,
     g_unlock();
   }
   while (sync_command != 0);
-#if defined(_WIN32)
-  LeaveCriticalSection(&g_sync1_mutex);
-#else
-  pthread_mutex_unlock(&g_sync1_mutex);
-#endif
+  LOCK_LEAVE(g_sync1_mutex);
   return sync_result;
 }
 
@@ -113,15 +111,9 @@ g_is_term(void)
 {
   int rv;
 
-#if defined(_WIN32)
-  EnterCriticalSection(&g_term_mutex);
+  LOCK_ENTER(g_term_mutex);
   rv = g_term;
-  LeaveCriticalSection(&g_term_mutex);
-#else
-  pthread_mutex_lock(&g_term_mutex);
-  rv = g_term;
-  pthread_mutex_unlock(&g_term_mutex);
-#endif
+  LOCK_LEAVE(g_term_mutex);
   return rv;
 }
 
@@ -129,37 +121,23 @@ g_is_term(void)
 void APP_CC
 g_lock(void)
 {
-#if defined(_WIN32)
-  EnterCriticalSection(&g_sync_mutex);
-#else
-  pthread_mutex_lock(&g_sync_mutex);
-#endif
+  LOCK_ENTER(g_sync_mutex);
 }
 
 /*****************************************************************************/
 void APP_CC
 g_unlock(void)
 {
-#if defined(_WIN32)
-  LeaveCriticalSection(&g_sync_mutex);
-#else
-  pthread_mutex_unlock(&g_sync_mutex);
-#endif
+  LOCK_LEAVE(g_sync_mutex);
 }
 
 /*****************************************************************************/
 void APP_CC
 g_set_term(int in_val)
 {
-#if defined(_WIN32)
-  EnterCriticalSection(&g_term_mutex);
+  LOCK_ENTER(g_term_mutex);
   g_term = in_val;
-  LeaveCriticalSection(&g_term_mutex);
-#else
-  pthread_mutex_lock(&g_term_mutex);
-  g_term = in_val;
-  pthread_mutex_unlock(&g_term_mutex);
-#endif
+  LOCK_LEAVE(g_term_mutex);
 }
 
 /*****************************************************************************/
@@ -187,8 +165,113 @@ g_loop(void)
     g_sync_command = 0;
   }
   g_unlock();
+#if defined(_WIN32)
+  if (g_ssh != 0)
+  {
+  }
+#endif
 }
 
+/* win32 service control functions */
+#if defined(_WIN32)
+
+/*****************************************************************************/
+VOID WINAPI
+MyHandler(DWORD fdwControl)
+{
+  if (g_ssh == 0)
+  {
+    return;
+  }
+  if (fdwControl == SERVICE_CONTROL_STOP)
+  {
+    g_service_status.dwCurrentState = SERVICE_STOP_PENDING;
+    g_set_term(1);
+  }
+  else if (fdwControl == SERVICE_CONTROL_PAUSE)
+  {
+    /* shouldn't happen */
+  }
+  else if (fdwControl == SERVICE_CONTROL_CONTINUE)
+  {
+    /* shouldn't happen */
+  }
+  else if (fdwControl == SERVICE_CONTROL_INTERROGATE)
+  {
+  }
+  else if (fdwControl == SERVICE_CONTROL_SHUTDOWN)
+  {
+    g_service_status.dwCurrentState = SERVICE_STOP_PENDING;
+    g_set_term(1);
+  }
+  SetServiceStatus(g_ssh, &g_service_status);
+}
+
+/*****************************************************************************/
+static void DEFAULT_CC
+log_event(HANDLE han, char* msg)
+{
+  ReportEvent(han, EVENTLOG_INFORMATION_TYPE, 0, 0, 0, 1, 0, &msg, 0);
+}
+
+/*****************************************************************************/
+VOID WINAPI
+MyServiceMain(DWORD dwArgc, LPTSTR* lpszArgv)
+{
+  WSADATA w;
+  //HANDLE event_han;
+//  int fd;
+//  char text[256];
+
+//  fd = g_file_open("c:\\temp\\xrdp\\log.txt");
+//  g_file_write(fd, "hi\r\n", 4);
+  //event_han = RegisterEventSource(0, "xrdp");
+  //log_event(event_han, "hi xrdp log");
+  g_threadid = g_get_threadid();
+  g_set_current_dir("c:\\temp\\xrdp");
+  g_listen = 0;
+  WSAStartup(2, &w);
+  InitializeCriticalSection(&g_term_mutex);
+  InitializeCriticalSection(&g_sync_mutex);
+  InitializeCriticalSection(&g_sync1_mutex);
+  g_memset(&g_service_status, 0, sizeof(SERVICE_STATUS));
+  g_service_status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
+  g_service_status.dwCurrentState = SERVICE_RUNNING;
+  g_service_status.dwControlsAccepted = SERVICE_CONTROL_INTERROGATE |
+                                        SERVICE_ACCEPT_STOP |
+                                        SERVICE_ACCEPT_SHUTDOWN;
+  g_service_status.dwWin32ExitCode = NO_ERROR;
+  g_service_status.dwServiceSpecificExitCode = 0;
+  g_service_status.dwCheckPoint = 0;
+  g_service_status.dwWaitHint = 0;
+//  g_sprintf(text, "calling RegisterServiceCtrlHandler\r\n");
+//  g_file_write(fd, text, g_strlen(text));
+  g_ssh = RegisterServiceCtrlHandler("xrdp", MyHandler);
+  if (g_ssh != 0)
+  {
+//    g_sprintf(text, "ok\r\n");
+//    g_file_write(fd, text, g_strlen(text));
+    SetServiceStatus(g_ssh, &g_service_status);
+    g_listen = xrdp_listen_create();
+    xrdp_listen_main_loop(g_listen);
+    g_sleep(100);
+    g_service_status.dwCurrentState = SERVICE_STOPPED;
+    SetServiceStatus(g_ssh, &g_service_status);
+  }
+  else
+  {
+    //g_sprintf(text, "RegisterServiceCtrlHandler failed\r\n");
+    //g_file_write(fd, text, g_strlen(text));
+  }
+  WSACleanup();
+  DeleteCriticalSection(&g_term_mutex);
+  DeleteCriticalSection(&g_sync_mutex);
+  DeleteCriticalSection(&g_sync1_mutex);
+  xrdp_listen_delete(g_listen);
+  //CloseHandle(event_han);
+}
+
+#endif
 /*****************************************************************************/
 int DEFAULT_CC
 main(int argc, char** argv)
@@ -197,6 +280,10 @@ main(int argc, char** argv)
   int host_be;
 #if defined(_WIN32)
   WSADATA w;
+  SC_HANDLE sc_man;
+  SC_HANDLE sc_ser;
+  int run_as_service;
+  SERVICE_TABLE_ENTRY te[2];
 #else
   int pid;
   int fd;
@@ -234,11 +321,108 @@ main(int argc, char** argv)
     return 0;
   }
 #if defined(_WIN32)
+  run_as_service = 1;
+  if (argc == 2)
+  {
+    if (g_strncasecmp(argv[1], "-help", 255) == 0 ||
+        g_strncasecmp(argv[1], "--help", 255) == 0 ||
+        g_strncasecmp(argv[1], "-h", 255) == 0)
+    {
+      g_printf("\r\n");
+      g_printf("xrdp: A Remote Desktop Protocol server.\r\n");
+      g_printf("Copyright (C) Jay Sorg 2004-2005\r\n");
+      g_printf("See http://xrdp.sourceforge.net for more information.\r\n");
+      g_printf("\r\n");
+      g_printf("Usage: xrdp [options]\r\n");
+      g_printf("   -h: show help\r\n");
+      g_printf("   -install: install service\r\n");
+      g_printf("   -remove: remove service\r\n");
+      g_printf("\r\n");
+      g_exit(0);
+    }
+    else if (g_strncasecmp(argv[1], "-install", 255) == 0 ||
+             g_strncasecmp(argv[1], "--install", 255) == 0 ||
+             g_strncasecmp(argv[1], "-i", 255) == 0)
+    {
+      /* open service manager */
+      sc_man = OpenSCManager(0, 0, GENERIC_WRITE);
+      if (sc_man == 0)
+      {
+        g_printf("error OpenSCManager, do you have rights?\r\n");
+        g_exit(0);
+      }
+      /* check if service is allready installed */
+      sc_ser = OpenService(sc_man, "xrdp", SERVICE_ALL_ACCESS);
+      if (sc_ser == 0)
+      {
+        /* install service */
+        CreateService(sc_man, "xrdp", "xrdp", SERVICE_ALL_ACCESS,
+                      SERVICE_WIN32_OWN_PROCESS, SERVICE_DEMAND_START,
+                      SERVICE_ERROR_IGNORE, "c:\\temp\\xrdp\\xrdp.exe",
+                      0, 0, 0, 0, 0);
+
+      }
+      else
+      {
+        g_printf("error service is allready installed\r\n");
+        CloseServiceHandle(sc_ser);
+        CloseServiceHandle(sc_man);
+        g_exit(0);
+      }
+      CloseServiceHandle(sc_man);
+      g_exit(0);
+    }
+    else if (g_strncasecmp(argv[1], "-remove", 255) == 0 ||
+             g_strncasecmp(argv[1], "--remove", 255) == 0 ||
+             g_strncasecmp(argv[1], "-r", 255) == 0)
+    {
+      /* open service manager */
+      sc_man = OpenSCManager(0, 0, GENERIC_WRITE);
+      if (sc_man == 0)
+      {
+        g_printf("error OpenSCManager, do you have rights?\r\n");
+        g_exit(0);
+      }
+      /* check if service is allready installed */
+      sc_ser = OpenService(sc_man, "xrdp", SERVICE_ALL_ACCESS);
+      if (sc_ser == 0)
+      {
+        g_printf("error service is not installed\r\n");
+        CloseServiceHandle(sc_man);
+        g_exit(0);
+      }
+      DeleteService(sc_ser);
+      CloseServiceHandle(sc_man);
+      g_exit(0);
+    }
+    else
+    {
+      g_printf("Unknown Parameter\r\n");
+      g_printf("xrdp -h for help\r\n");
+      g_printf("\r\n");
+      g_exit(0);
+    }
+  }
+  else if (argc > 1)
+  {
+    g_printf("Unknown Parameter\r\n");
+    g_printf("xrdp -h for help\r\n");
+    g_printf("\r\n");
+    g_exit(0);
+  }
+  if (run_as_service)
+  {
+    g_memset(&te, 0, sizeof(te));
+    te[0].lpServiceName = "xrdp";
+    te[0].lpServiceProc = MyServiceMain;
+    StartServiceCtrlDispatcher(&te);
+    g_exit(0);
+  }
   WSAStartup(2, &w);
   InitializeCriticalSection(&g_term_mutex);
   InitializeCriticalSection(&g_sync_mutex);
   InitializeCriticalSection(&g_sync1_mutex);
-#else
+#else /* _WIN32 */
   no_daemon = 0;
   if (argc == 2)
   {
@@ -294,13 +478,17 @@ main(int argc, char** argv)
     }
     else
     {
-      g_printf("unknown parameter\r\n");
+      g_printf("Unknown Parameter\r\n");
+      g_printf("xrdp -h for help\r\n");
+      g_printf("\r\n");
       g_exit(0);
     }
   }
   else if (argc > 1)
   {
-    g_printf("unknown parameter\r\n");
+    g_printf("Unknown Parameter\r\n");
+    g_printf("xrdp -h for help\r\n");
+    g_printf("\r\n");
     g_exit(0);
   }
   if (g_file_exist("./xrdp.pid"))
@@ -367,3 +555,4 @@ main(int argc, char** argv)
 #endif
   return 0;
 }
+
