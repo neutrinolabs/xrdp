@@ -364,6 +364,7 @@ xrdp_wm_init(struct xrdp_wm* self)
   struct list* values;
   char* q;
   char* r;
+  char section_name[256];
 
   xrdp_wm_load_static_colors(self);
   xrdp_wm_load_static_pointers(self);
@@ -383,8 +384,24 @@ xrdp_wm_init(struct xrdp_wm* self)
       mod_data->names->auto_free = 1;
       mod_data->values = list_create();
       mod_data->values->auto_free = 1;
-      if (file_read_section(fd, self->session->client_info->domain,
-                            names, values) == 0)
+      g_strncpy(section_name, self->session->client_info->domain, 255);
+      if (section_name[0] == 0)
+      {
+        /* if no doamin is passed, use the first item in the xrdp.ini
+           file thats not named 'globals' */
+        file_read_sections(fd, names);
+        for (index = 0; index < names->count; index++)
+        {
+          q = (char*)list_get_item(names, index);
+          if (g_strncasecmp("globals", q, 8) != 0)
+          {
+            g_strncpy(section_name, q, 255);
+            break;
+          }
+        }
+      }
+      list_clear(names);
+      if (file_read_section(fd, section_name, names, values) == 0)
       {
         for (index = 0; index < names->count; index++)
         {
