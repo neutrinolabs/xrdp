@@ -571,7 +571,7 @@ char*
 g_get_current_dir(char* dirname, int maxlen)
 {
 #if defined(_WIN32)
-  return 0;
+  return GetCurrentDirectory(maxlen, dirname);
 #else
   return getcwd(dirname, maxlen);
 #endif
@@ -582,7 +582,7 @@ int
 g_set_current_dir(char* dirname)
 {
 #if defined(_WIN32)
-  return 0;
+  return SetCurrentDirectory(dirname);
 #else
   return chdir(dirname);
 #endif
@@ -594,7 +594,7 @@ int
 g_file_exist(char* filename)
 {
 #if defined(_WIN32)
-  return 0;
+  return 0; // use FindFirstFile();
 #else
   return access(filename, F_OK) == 0;
 #endif
@@ -938,10 +938,7 @@ g_getenv(char* name)
 int
 g_exit(int exit_code)
 {
-#if defined(_WIN32)
-#else
   _exit(exit_code);
-#endif
   return 0;
 }
 
