@@ -142,16 +142,51 @@ int APP_CC
 xrdp_listen_main_loop(struct xrdp_listen* self)
 {
   int error;
+  int fd;
+  int index;
+  char port[8];
+  char* val;
+  struct list* names;
+  struct list* values;
 
+  /* default to port 3389 */
+  g_strncpy(port, "3389", 7);
+  /* see if port is in xrdp.ini file */
+  fd = g_file_open("xrdp.ini");
+  if (fd > 0)
+  {
+    names = list_create();
+    names->auto_free = 1;
+    values = list_create();
+    values->auto_free = 1;
+    if (file_read_section(fd, "globals", names, values) == 0)
+    {
+      for (index = 0; index < names->count; index++)
+      {
+        val = (char*)list_get_item(names, index);
+        if (val != 0)
+        {
+          if (g_strncasecmp(val, "port", 5) == 0)
+          {
+            val = (char*)list_get_item(values, index);
+            error = g_atoi(val);
+            if (error > 0 && error < 65000)
+            {
+              g_strncpy(port, val, 7);
+            }
+            break;
+          }
+        }
+      }
+    }
+    list_delete(names);
+    list_delete(values);
+    g_file_close(fd);
+  }
   self->status = 1;
   self->sck = g_tcp_socket();
   g_tcp_set_non_blocking(self->sck);
-  error = g_tcp_bind(self->sck, "3389");
-  if (error != 0)
-  {
-    g_printf("listening on 3390\r\n");
-    error = g_tcp_bind(self->sck, "3390");
-  }
+  error = g_tcp_bind(self->sck, port);
   if (error != 0)
   {
     g_printf("bind error in xrdp_listen_main_loop\r\n");
