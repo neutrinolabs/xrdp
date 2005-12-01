@@ -455,8 +455,8 @@ main(int argc, char** argv)
       }
       g_exit(0);
     }
-    else if (g_strncasecmp(argv[1], "-nodeamon", 255) == 0 ||
-             g_strncasecmp(argv[1], "--nodeamon", 255) == 0)
+    else if (g_strncasecmp(argv[1], "-nodaemon", 255) == 0 ||
+             g_strncasecmp(argv[1], "--nodaemon", 255) == 0)
     {
       no_daemon = 1;
     }
@@ -471,7 +471,7 @@ main(int argc, char** argv)
       g_printf("\r\n");
       g_printf("Usage: xrdp [options]\r\n");
       g_printf("   -h: show help\r\n");
-      g_printf("   -nodeamon: don't fork into background\r\n");
+      g_printf("   -nodaemon: don't fork into background\r\n");
       g_printf("   -kill: shut down xrdp\r\n");
       g_printf("\r\n");
       g_exit(0);
