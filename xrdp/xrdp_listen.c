@@ -152,7 +152,7 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
   /* default to port 3389 */
   g_strncpy(port, "3389", 7);
   /* see if port is in xrdp.ini file */
-  fd = g_file_open("xrdp.ini");
+  fd = g_file_open(XRDP_CFG_FILE);
   if (fd > 0)
   {
     names = list_create();

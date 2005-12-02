@@ -102,7 +102,7 @@ xrdp_shutdown(int sig)
     xrdp_listen_delete(listen);
   }
   /* delete the xrdp.pid file */
-  g_file_delete("./xrdp.pid");
+  g_file_delete(XRDP_PID_FILE);
 }
 
 /*****************************************************************************/
@@ -432,9 +432,9 @@ main(int argc, char** argv)
       g_printf("stopping xrdp\r\n");
       /* read the xrdp.pid file */
       fd = -1;
-      if (g_file_exist("./xrdp.pid"))
+      if (g_file_exist(XRDP_PID_FILE)) /* xrdp.pid */
       {
-        fd = g_file_open("./xrdp.pid");
+        fd = g_file_open(XRDP_PID_FILE); /* xrdp.pid */
       }
       if (fd == -1)
       {
@@ -491,7 +491,7 @@ main(int argc, char** argv)
     g_printf("\r\n");
     g_exit(0);
   }
-  if (g_file_exist("./xrdp.pid"))
+  if (g_file_exist(XRDP_PID_FILE)) /* xrdp.pid */
   {
     g_printf("It looks like xrdp is allready running,\r\n");
     g_printf("if not delete the xrdp.pid file and try again\r\n");
@@ -523,7 +523,7 @@ main(int argc, char** argv)
   }
   /* write the pid to file */
   pid = g_getpid();
-  fd = g_file_open("./xrdp.pid");
+  fd = g_file_open(XRDP_PID_FILE); /* xrdp.pid */
   if (fd == -1)
   {
     g_printf("trying to write process id to xrdp.pid\r\n");
@@ -532,7 +532,7 @@ main(int argc, char** argv)
   }
   else
   {
-    g_set_file_rights("./xrdp.pid", 1, 1);
+    g_set_file_rights(XRDP_PID_FILE, 1, 1); /* xrdp.pid */
     g_sprintf(text, "%d", pid);
     g_file_write(fd, text, g_strlen(text));
     g_file_close(fd);

@@ -371,7 +371,7 @@ xrdp_wm_init(struct xrdp_wm* self)
   self->screen->bg_color = self->black;
   if (self->session->client_info->rdp_autologin)
   {
-    fd = g_file_open("xrdp.ini");
+    fd = g_file_open(XRDP_CFG_FILE); /* xrdp.ini */
     if (fd > 0)
     {
       names = list_create();

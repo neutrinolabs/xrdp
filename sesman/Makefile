@@ -43,9 +43,8 @@ clean:
 install:
 	install sesman $(DESTDIR)/sesman
 	install sesrun $(DESTDIR)/sesrun
-	install startwm.sh $(CFGDIR)/startwm.sh
+	install startwm.sh $(DESTDIR)/startwm.sh
 	install sesman.ini $(CFGDIR)/sesman.ini
-	install pam.d/sesman /etc/pam.d/sesman
 
 os_calls.o:
 	$(CC) $(C_OS_FLAGS) ../common/os_calls.c

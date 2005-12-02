@@ -576,7 +576,7 @@ xrdp_wm_login_fill_in_combo(struct xrdp_wm* self, struct xrdp_bitmap* b)
   section_names->auto_free = 1;
   section_values = list_create();
   section_values->auto_free = 1;
-  fd = g_file_open("xrdp.ini");
+  fd = g_file_open(XRDP_CFG_FILE); /* xrdp.ini */
   file_read_sections(fd, sections);
   for (i = 0; i < sections->count; i++)
   {

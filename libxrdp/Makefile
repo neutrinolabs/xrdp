@@ -10,7 +10,8 @@ PIDDIR = /var/run
 MANDIR = /usr/local/man
 DOCDIR = /usr/doc/xrdp
 
-DEFINES =
+DEFINES = -DXRDP_CFG_FILE=\"$(CFGDIR)/xrdp.ini\" \
+          -DXRDP_KEY_FILE=\"$(CFGDIR)/rsakeys.ini\"
 
 CFLAGS = -Wall -O2 -I../common -fPIC $(DEFINES)
 C_OS_FLAGS = $(CFLAGS) -c

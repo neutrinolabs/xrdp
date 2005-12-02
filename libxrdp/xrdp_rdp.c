@@ -57,7 +57,7 @@ xrdp_rdp_read_config(struct xrdp_client_info* client_info)
   char* item;
   char* value;
 
-  fd = g_file_open("xrdp.ini");
+  fd = g_file_open(XRDP_CFG_FILE); /* xrdp.ini */
   if (fd > 0)
   {
     items = list_create();

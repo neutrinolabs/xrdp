@@ -32,6 +32,7 @@
 #include "thread_calls.h"
 #include "list.h"
 #include "file.h"
+#include "file_loc.h"
 
 /* xrdp.c */
 long APP_CC

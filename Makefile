@@ -31,7 +31,7 @@ clean:
 
 install:
 	mkdir -p $(DESTDIR)
-	mkdir -p $(CONFDIR)
+	mkdir -p $(CFGDIR)
 	mkdir -p $(PIDDIR)
 	mkdir -p $(MANDIR)
 	mkdir -p $(DOCDIR)
@@ -41,4 +41,5 @@ install:
 	make -C rdp install
 	make -C sesman install
 	make -C docs install
-#	install instfiles/pam.d/sesman /etc/pam.d/sesman
+	install instfiles/pam.d/sesman /etc/pam.d/sesman
+	install instfiles/xrdpstart.sh $(DESTDIR)/xrdpstart.sh

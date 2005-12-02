@@ -11,7 +11,8 @@ PIDDIR = /var/run
 MANDIR = /usr/local/man
 DOCDIR = /usr/doc/xrdp
 
-DEFINES =
+DEFINES = -DXRDP_CFG_FILE=\"$(CFGDIR)/xrdp.ini\" \
+          -DXRDP_PID_FILE=\"$(PIDDIR)/xrdp.pid\"
 
 CFLAGS = -Wall -O2 -I../common -I../libxrdp $(DEFINES)
 #CFLAGS += -DXRDP_DEBUG
@@ -36,8 +37,8 @@ install:
 	install cursor1.cur $(DESTDIR)/cursor1.cur
 	install Tahoma-10.fv1 $(DESTDIR)/Tahoma-10.fv1
 	install xrdp.ini $(CFGDIR)/xrdp.ini
-	install xrdpstart.sh $(DESTDIR)/xrdpstart.sh
 	install rsakeys.ini $(CFGDIR)/rsakeys.ini
+	install xrdp $(DESTDIR)/xrdp
 
 list.o:
 	$(CC) $(C_OS_FLAGS) ../common/list.c

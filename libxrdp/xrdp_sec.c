@@ -187,7 +187,7 @@ xrdp_sec_create(struct xrdp_rdp* owner, int sck)
   g_random(self->server_random, 32);
   self->mcs_layer = xrdp_mcs_create(self, sck, &self->client_mcs_data,
                                     &self->server_mcs_data);
-  fd = g_file_open("rsakeys.ini");
+  fd = g_file_open(XRDP_KEY_FILE); /* rsakeys.ini */
   if (fd > 0)
   {
     items = list_create();
