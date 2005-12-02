@@ -5,8 +5,16 @@ XRDPOBJ = xrdp.o xrdp_process.o xrdp_listen.o \
           xrdp_login_wnd.o xrdp_interface.o \
           list.o file.o os_calls.o thread_calls.o
 
-#CFLAGS = -Wall -O2 -I../common -I../libxrdp -DXRDP_DEBUG
-CFLAGS = -Wall -O2 -I../common -I../libxrdp
+DESTDIR = /usr/local/xrdp
+CFGDIR = /etc/xrdp
+PIDDIR = /var/run
+MANDIR = /usr/local/man
+DOCDIR = /usr/doc/xrdp
+
+DEFINES =
+
+CFLAGS = -Wall -O2 -I../common -I../libxrdp $(DEFINES)
+#CFLAGS += -DXRDP_DEBUG
 C_OS_FLAGS = $(CFLAGS) -c
 LDFLAGS = -L/usr/gnu/lib -L../libxrdp -Wl,-rpath,.
 LIBS = -ldl -lpthread -lxrdp
@@ -20,6 +28,16 @@ xrdp: $(XRDPOBJ)
 
 clean:
 	rm -f $(XRDPOBJ) xrdp
+
+install:
+	install ad256.bmp $(DESTDIR)/ad256.bmp
+	install xrdp256.bmp $(DESTDIR)/xrdp256.bmp
+	install cursor0.cur $(DESTDIR)/cursor0.cur
+	install cursor1.cur $(DESTDIR)/cursor1.cur
+	install Tahoma-10.fv1 $(DESTDIR)/Tahoma-10.fv1
+	install xrdp.ini $(CFGDIR)/xrdp.ini
+	install xrdpstart.sh $(DESTDIR)/xrdpstart.sh
+	install rsakeys.ini $(CFGDIR)/rsakeys.ini
 
 list.o:
 	$(CC) $(C_OS_FLAGS) ../common/list.c

@@ -1,6 +1,15 @@
-
+# libvnc makefile
 VNCOBJ = vnc.o os_calls.o d3des.o
-CFLAGS = -Wall -O2 -I../common -fPIC
+
+DESTDIR = /usr/local/xrdp
+CFGDIR = /etc/xrdp
+PIDDIR = /var/run
+MANDIR = /usr/local/man
+DOCDIR = /usr/doc/xrdp
+
+DEFINES =
+
+CFLAGS = -Wall -O2 -I../common -fPIC $(DEFINES)
 C_OS_FLAGS = $(CFLAGS) -c
 LDFLAGS = -shared
 LIBS = -ldl
@@ -19,3 +28,7 @@ os_calls.o:
 
 d3des.o:
 	$(CC) $(C_OS_FLAGS) ../common/d3des.c
+
+install:
+	install libvnc.so $(DESTDIR)/libvnc.so
+

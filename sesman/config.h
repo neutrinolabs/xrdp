@@ -32,7 +32,9 @@
  * @brief Configuration file path
  * 
  */
+#ifndef SESMAN_CFG_FILE
 #define SESMAN_CFG_FILE              "./sesman.ini"
+#endif
 
 #define SESMAN_CFG_GLOBALS           "Globals"
 #define SESMAN_CFG_DEFWM             "DefaultWindowManager"

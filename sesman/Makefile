@@ -1,14 +1,24 @@
-
+# sesman makefile
 SESMANOBJ = sesman.o config.o tcp.o sig.o session.o env.o \
             os_calls.o d3des.o list.o file.o log.o
 
 SESRUNOBJ = sesrun.o config.o tcp.o \
             os_calls.o d3des.o list.o file.o log.o
 
-CFLAGS = -Wall -O2 -I../common
+DESTDIR = /usr/local/xrdp
+CFGDIR = /etc/xrdp
+PIDDIR = /var/run
+MANDIR = /usr/local/man
+DOCDIR = /usr/doc/xrdp
+
+DEFINES = -DSESMAN_CFG_FILE=\"$(CFGDIR)/sesman.ini\" \
+          -DSESMAN_PID_FILE=\"$(PIDDIR)/sesman.pid\"
+
+CFLAGS = -Wall -O2 -I../common $(DEFINES)
 LDFLAGS = -L /usr/gnu/lib
 C_OS_FLAGS = $(CFLAGS) -c
 CC = gcc
+
 
 all: pam tools
 
@@ -28,7 +38,14 @@ tools: $(SESRUNOBJ)
 	$(CC) $(LDFLAGS) -o sesrun $(SESRUNOBJ) -ldl
 
 clean:
-	rm -f $(SESMANOBJ) verify_user.o verify_user_pam.o verify_user_pam_userpass.o verify_user_kerberos.o sesman sesrun.o sesrun
+	rm -f $(SESMANOBJ) verify_user.o verify_user_pam.o verify_user_pam_userpass.o sesman sesrun.o sesrun
+
+install:
+	install sesman $(DESTDIR)/sesman
+	install sesrun $(DESTDIR)/sesrun
+	install startwm.sh $(CFGDIR)/startwm.sh
+	install sesman.ini $(CFGDIR)/sesman.ini
+	install pam.d/sesman /etc/pam.d/sesman
 
 os_calls.o:
 	$(CC) $(C_OS_FLAGS) ../common/os_calls.c

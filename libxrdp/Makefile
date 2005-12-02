@@ -1,10 +1,18 @@
-
+# libxrdp makefile
 LIBXRDPOBJ = libxrdp.o xrdp_tcp.o xrdp_iso.o xrdp_mcs.o \
              xrdp_sec.o xrdp_rdp.o xrdp_orders.o \
              xrdp_bitmap_compress.o \
              os_calls.o ssl_calls.o file.o
 
-CFLAGS = -Wall -O2 -I../common -fPIC
+DESTDIR = /usr/local/xrdp
+CFGDIR = /etc/xrdp
+PIDDIR = /var/run
+MANDIR = /usr/local/man
+DOCDIR = /usr/doc/xrdp
+
+DEFINES =
+
+CFLAGS = -Wall -O2 -I../common -fPIC $(DEFINES)
 C_OS_FLAGS = $(CFLAGS) -c
 LDFLAGS = -shared
 LIBS = -ldl
@@ -23,6 +31,9 @@ libxrdp: $(LIBXRDPOBJ)
 
 clean:
 	rm -f $(LIBXRDPOBJ) libxrdp.a libxrdp.so
+
+install:
+	install libxrdp.so $(DESTDIR)/libxrdp.so
 
 file.o:
 	$(CC) $(C_OS_FLAGS) ../common/file.c
