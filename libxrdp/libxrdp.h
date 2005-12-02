@@ -32,7 +32,6 @@
 #include "list.h"
 #include "file.h"
 #include "libxrdpinc.h"
-#include "file_loc.h"
 
 /* tcp */
 struct xrdp_tcp
