@@ -796,7 +796,7 @@ g_execlp3(char* a1, char* a2, char* a3)
 #if defined(_WIN32)
   return 0;
 #else
-  return execlp(a1, a2, a3);
+  return execlp(a1, a2, a3, (void*)0);
 #endif
 }
 
@@ -808,7 +808,7 @@ g_execlp11(char* a1, char* a2, char* a3, char* a4, char* a5, char* a6,
 #if defined(_WIN32)
   return 0;
 #else
-  return execlp(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11);
+  return execlp(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, (void*)0);
 #endif
 }
 
