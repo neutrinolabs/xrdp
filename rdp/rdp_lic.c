@@ -168,6 +168,7 @@ rdp_lic_process_demand(struct rdp_lic* self, struct stream* s)
   int licence_size;
   void* crypt_key;
 
+  licence_data = 0;
   /* Retrieve the server random from the incoming packet */
   in_uint8p(s, server_random, SEC_RANDOM_SIZE);
   /* We currently use null client keys. This is a bit naughty but, hey,
@@ -262,6 +263,8 @@ rdp_lic_process_authreq(struct rdp_lic* self, struct stream* s)
   char out_sig[LICENCE_SIGNATURE_SIZE];
   void* crypt_key;
 
+  in_token = 0;
+  in_sig = 0;
   /* Parse incoming packet and save the encrypted token */
   rdp_lic_parse_authreq(self, s, &in_token, &in_sig);
   g_memcpy(out_token, in_token, LICENCE_TOKEN_SIZE);
