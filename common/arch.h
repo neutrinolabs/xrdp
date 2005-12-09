@@ -22,7 +22,7 @@
 #define ARCH_H
 
 /* check endianess */
-#if defined(__sparc__)
+#if defined(__sparc__) || defined(__PPC__)
 #define B_ENDIAN
 #elif __BYTE_ORDER == __LITTLE_ENDIAN
 #define L_ENDIAN
