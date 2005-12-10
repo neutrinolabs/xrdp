@@ -36,12 +36,12 @@ clean:
 install:
 	install libxrdp.so $(DESTDIR)/libxrdp.so
 
-file.o:
+file.o: ../common/file.c
 	$(CC) $(C_OS_FLAGS) ../common/file.c
 
-os_calls.o:
+os_calls.o: ../common/os_calls.c
 	$(CC) $(C_OS_FLAGS) ../common/os_calls.c
 
 
-ssl_calls.o:
+ssl_calls.o: ../common/ssl_calls.c
 	$(CC) $(C_OS_FLAGS) ../common/ssl_calls.c
