@@ -46,17 +46,17 @@ install:
 	install startwm.sh $(DESTDIR)/startwm.sh
 	install sesman.ini $(CFGDIR)/sesman.ini
 
-os_calls.o:
+os_calls.o: ../common/os_calls.c
 	$(CC) $(C_OS_FLAGS) ../common/os_calls.c
 
-d3des.o:
+d3des.o: ../common/d3des.c
 	$(CC) $(C_OS_FLAGS) ../common/d3des.c
 
-list.o:
+list.o: ../common/list.c
 	$(CC) $(C_OS_FLAGS) ../common/list.c
 
-file.o:
+file.o: ../common/file.c
 	$(CC) $(C_OS_FLAGS) ../common/file.c
 
-log.o:
+log.o: ../common/log.c
 	$(CC) $(C_OS_FLAGS) ../common/log.c
