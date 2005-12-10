@@ -23,10 +23,10 @@ vnc: $(VNCOBJ)
 clean:
 	rm -f $(VNCOBJ) libvnc.so
 
-os_calls.o:
+os_calls.o: ../common/os_calls.c
 	$(CC) $(C_OS_FLAGS) ../common/os_calls.c
 
-d3des.o:
+d3des.o: ../common/d3des.c
 	$(CC) $(C_OS_FLAGS) ../common/d3des.c
 
 install:
