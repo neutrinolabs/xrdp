@@ -42,6 +42,7 @@
 #include <signal.h>
 #include <fcntl.h>
 #include <pwd.h>
+#include <time.h>
 #endif
 
 #include <stdlib.h>
@@ -999,4 +1000,17 @@ g_getuser_info(char* username, int* gid, int* uid, char* shell, char* dir,
   }
 #endif
   return 0;
+}
+
+/*****************************************************************************/
+/* returns the time since the Epoch (00:00:00 UTC, January 1, 1970),
+   measured in seconds. */
+int
+g_time1(void)
+{
+#if defined(_WIN32)
+  return 0;
+#else
+  return time(0);
+#endif
 }

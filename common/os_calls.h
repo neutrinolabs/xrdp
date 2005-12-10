@@ -167,5 +167,7 @@ g_sigterm(int pid);
 int
 g_getuser_info(char* username, int* gid, int* uid, char* shell, char* dir,
                char* gecos);
+int
+g_time1(void);
 
 #endif
