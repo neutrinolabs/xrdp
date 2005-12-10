@@ -26,10 +26,10 @@ rdp: $(RDPOBJ)
 clean:
 	rm -f $(RDPOBJ) librdp.so
 
-os_calls.o:
+os_calls.o: ../common/os_calls.c
 	$(CC) $(C_OS_FLAGS) ../common/os_calls.c
 
-ssl_calls.o:
+ssl_calls.o: ../common/ssl_calls.c
 	$(CC) $(C_OS_FLAGS) ../common/ssl_calls.c
 
 install:
