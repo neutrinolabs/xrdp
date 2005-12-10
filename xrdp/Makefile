@@ -40,15 +40,15 @@ install:
 	install rsakeys.ini $(CFGDIR)/rsakeys.ini
 	install xrdp $(DESTDIR)/xrdp
 
-list.o:
+list.o: ../common/list.c
 	$(CC) $(C_OS_FLAGS) ../common/list.c
 
-file.o:
+file.o: ../common/file.c
 	$(CC) $(C_OS_FLAGS) ../common/file.c
 
-os_calls.o:
+os_calls.o: ../common/os_calls.c
 	$(CC) $(C_OS_FLAGS) ../common/os_calls.c
 
-thread_calls.o:
+thread_calls.o: ../common/thread_calls.c
 	$(CC) $(C_OS_FLAGS) ../common/thread_calls.c
 
