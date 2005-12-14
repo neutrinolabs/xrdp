@@ -170,6 +170,7 @@ rdp_orders_process_colcache(struct rdp_orders* self, struct stream* s,
                             int flags)
 {
   struct rdp_colormap* colormap;
+  struct stream* rec_s;
   int cache_id;
   int i;
 
@@ -182,6 +183,21 @@ rdp_orders_process_colcache(struct rdp_orders* self, struct stream* s,
   }
   g_free(self->cache_colormap[cache_id]);
   self->cache_colormap[cache_id] = colormap;
+  if (self->rdp_layer->rec_mode)
+  {
+    rdp_rec_check_file(self->rdp_layer);
+    make_stream(rec_s);
+    init_stream(rec_s, 4096);
+    s_push_layer(rec_s, iso_hdr, 4);
+    out_uint8(rec_s, 10);
+    out_uint8(rec_s, cache_id);
+    for (i = 0; i < 256; i++)
+    {
+      out_uint32_le(rec_s, colormap->colors[i]);
+    }
+    rdp_rec_write_item(self->rdp_layer, rec_s);
+    free_stream(rec_s);
+  }
 }
 
 /*****************************************************************************/
@@ -203,6 +219,7 @@ rdp_orders_process_raw_bmpcache(struct rdp_orders* self, struct stream* s,
   char* src;
   char* dst;
   struct rdp_bitmap* bitmap;
+  struct stream* rec_s;
 
   in_uint8(s, cache_id);
   in_uint8s(s, 1);
@@ -231,6 +248,23 @@ rdp_orders_process_raw_bmpcache(struct rdp_orders* self, struct stream* s,
   }
   g_free(self->cache_bitmap[cache_id][cache_idx]);
   self->cache_bitmap[cache_id][cache_idx] = bitmap;
+  if (self->rdp_layer->rec_mode)
+  {
+    y = width * height * Bpp;
+    rdp_rec_check_file(self->rdp_layer);
+    make_stream(rec_s);
+    init_stream(rec_s, y + 256);
+    s_push_layer(rec_s, iso_hdr, 4);
+    out_uint8(rec_s, 8);
+    out_uint8(rec_s, cache_id);
+    out_uint16_le(rec_s, cache_idx);
+    out_uint16_le(rec_s, width);
+    out_uint16_le(rec_s, height);
+    out_uint16_le(rec_s, y);
+    out_uint8a(rec_s, inverted, y);
+    rdp_rec_write_item(self->rdp_layer, rec_s);
+    free_stream(rec_s);
+  }
 }
 
 /*****************************************************************************/
@@ -254,6 +288,7 @@ rdp_orders_process_bmpcache(struct rdp_orders* self, struct stream* s,
   int row_size;
   int final_size;
   struct rdp_bitmap* bitmap;
+  struct stream* rec_s;
 
   in_uint8(s, cache_id);
   in_uint8(s, pad1);
@@ -294,6 +329,23 @@ rdp_orders_process_bmpcache(struct rdp_orders* self, struct stream* s,
   }
   g_free(self->cache_bitmap[cache_id][cache_idx]);
   self->cache_bitmap[cache_id][cache_idx] = bitmap;
+  if (self->rdp_layer->rec_mode)
+  {
+    size = width * height * Bpp;
+    rdp_rec_check_file(self->rdp_layer);
+    make_stream(rec_s);
+    init_stream(rec_s, size + 256);
+    s_push_layer(rec_s, iso_hdr, 4);
+    out_uint8(rec_s, 8);
+    out_uint8(rec_s, cache_id);
+    out_uint16_le(rec_s, cache_idx);
+    out_uint16_le(rec_s, width);
+    out_uint16_le(rec_s, height);
+    out_uint16_le(rec_s, size);
+    out_uint8a(rec_s, bmpdata, size);
+    rdp_rec_write_item(self->rdp_layer, rec_s);
+    free_stream(rec_s);
+  }
 }
 
 /*****************************************************************************/
@@ -302,6 +354,7 @@ static void APP_CC
 rdp_orders_process_fontcache(struct rdp_orders* self, struct stream* s,
                              int flags)
 {
+  struct stream* rec_s;
   int font;
   int nglyphs;
   int character;
@@ -327,6 +380,24 @@ rdp_orders_process_fontcache(struct rdp_orders* self, struct stream* s,
     self->rdp_layer->mod->server_add_char(self->rdp_layer->mod, font,
                                           character, offset, baseline,
                                           width, height, data);
+    if (self->rdp_layer->rec_mode)
+    {
+      rdp_rec_check_file(self->rdp_layer);
+      make_stream(rec_s);
+      init_stream(rec_s, datasize + 256);
+      s_push_layer(rec_s, iso_hdr, 4);
+      out_uint8(rec_s, 9);
+      out_uint8(rec_s, font);
+      out_uint16_le(rec_s, character);
+      out_uint16_le(rec_s, offset);
+      out_uint16_le(rec_s, baseline);
+      out_uint16_le(rec_s, width);
+      out_uint16_le(rec_s, height);
+      out_uint16_le(rec_s, datasize);
+      out_uint8a(rec_s, data, datasize);
+      rdp_rec_write_item(self->rdp_layer, rec_s);
+      free_stream(rec_s);
+    }
   }
 }
 
@@ -435,6 +506,7 @@ rdp_orders_process_text2(struct rdp_orders* self, struct stream* s,
 {
   int fgcolor;
   int bgcolor;
+  struct stream* rec_s;
 
   if (present & 0x000001)
   {
@@ -535,6 +607,34 @@ rdp_orders_process_text2(struct rdp_orders* self, struct stream* s,
                                          self->state.text_text,
                                          self->state.text_length);
   self->rdp_layer->mod->server_set_opcode(self->rdp_layer->mod, 0xcc);
+  if (self->rdp_layer->rec_mode)
+  {
+    rdp_rec_check_file(self->rdp_layer);
+    make_stream(rec_s);
+    init_stream(rec_s, 512);
+    s_push_layer(rec_s, iso_hdr, 4);
+    out_uint8(rec_s, 7);
+    out_uint8(rec_s, self->state.text_font);
+    out_uint8(rec_s, self->state.text_flags);
+    out_uint8(rec_s, self->state.text_opcode);
+    out_uint8(rec_s, self->state.text_mixmode);
+    out_uint32_le(rec_s, self->state.text_fgcolor);
+    out_uint32_le(rec_s, self->state.text_bgcolor);
+    out_uint16_le(rec_s, self->state.text_clipleft);
+    out_uint16_le(rec_s, self->state.text_cliptop);
+    out_uint16_le(rec_s, self->state.text_clipright);
+    out_uint16_le(rec_s, self->state.text_clipbottom);
+    out_uint16_le(rec_s, self->state.text_boxleft);
+    out_uint16_le(rec_s, self->state.text_boxtop);
+    out_uint16_le(rec_s, self->state.text_boxright);
+    out_uint16_le(rec_s, self->state.text_boxbottom);
+    out_uint16_le(rec_s, self->state.text_x);
+    out_uint16_le(rec_s, self->state.text_y);
+    out_uint16_le(rec_s, self->state.text_length);
+    out_uint8a(rec_s, self->state.text_text, self->state.text_length);
+    rdp_rec_write_item(self->rdp_layer, rec_s);
+    free_stream(rec_s);
+  }
 }
 
 /*****************************************************************************/
@@ -543,6 +643,8 @@ static void APP_CC
 rdp_orders_process_destblt(struct rdp_orders* self, struct stream* s,
                            int present, int delta)
 {
+  struct stream* rec_s;
+
   if (present & 0x01)
   {
     rdp_orders_in_coord(s, &self->state.dest_x, delta);
@@ -571,6 +673,21 @@ rdp_orders_process_destblt(struct rdp_orders* self, struct stream* s,
                                          self->state.dest_cx,
                                          self->state.dest_cy);
   self->rdp_layer->mod->server_set_opcode(self->rdp_layer->mod, 0xcc);
+  if (self->rdp_layer->rec_mode)
+  {
+    rdp_rec_check_file(self->rdp_layer);
+    make_stream(rec_s);
+    init_stream(rec_s, 512);
+    s_push_layer(rec_s, iso_hdr, 4);
+    out_uint8(rec_s, 6);
+    out_uint16_le(rec_s, self->state.dest_x);
+    out_uint16_le(rec_s, self->state.dest_y);
+    out_uint16_le(rec_s, self->state.dest_cx);
+    out_uint16_le(rec_s, self->state.dest_cy);
+    out_uint8(rec_s, self->state.dest_opcode);
+    rdp_rec_write_item(self->rdp_layer, rec_s);
+    free_stream(rec_s);
+  }
 }
 
 /*****************************************************************************/
@@ -581,6 +698,7 @@ rdp_orders_process_patblt(struct rdp_orders* self, struct stream* s,
 {
   int fgcolor;
   int bgcolor;
+  struct stream* rec_s;
 
   if (present & 0x0001)
   {
@@ -636,6 +754,27 @@ rdp_orders_process_patblt(struct rdp_orders* self, struct stream* s,
                                          self->state.pat_cy);
   self->rdp_layer->mod->server_set_opcode(self->rdp_layer->mod, 0xcc);
   self->rdp_layer->mod->server_set_mixmode(self->rdp_layer->mod, 0);
+  if (self->rdp_layer->rec_mode)
+  {
+    rdp_rec_check_file(self->rdp_layer);
+    make_stream(rec_s);
+    init_stream(rec_s, 512);
+    s_push_layer(rec_s, iso_hdr, 4);
+    out_uint8(rec_s, 5);
+    out_uint16_le(rec_s, self->state.pat_x);
+    out_uint16_le(rec_s, self->state.pat_y);
+    out_uint16_le(rec_s, self->state.pat_cx);
+    out_uint16_le(rec_s, self->state.pat_cy);
+    out_uint8(rec_s, self->state.pat_opcode);
+    out_uint32_le(rec_s, self->state.pat_fgcolor);
+    out_uint32_le(rec_s, self->state.pat_bgcolor);
+    out_uint8(rec_s, self->state.pat_brush.xorigin);
+    out_uint8(rec_s, self->state.pat_brush.yorigin);
+    out_uint8(rec_s, self->state.pat_brush.style);
+    out_uint8a(rec_s, self->state.pat_brush.pattern, 8);
+    rdp_rec_write_item(self->rdp_layer, rec_s);
+    free_stream(rec_s);
+  }
 }
 
 /*****************************************************************************/
@@ -644,6 +783,8 @@ static void APP_CC
 rdp_orders_process_screenblt(struct rdp_orders* self, struct stream* s,
                              int present, int delta)
 {
+  struct stream* rec_s;
+
   if (present & 0x0001)
   {
     rdp_orders_in_coord(s, &self->state.screenblt_x, delta);
@@ -682,6 +823,23 @@ rdp_orders_process_screenblt(struct rdp_orders* self, struct stream* s,
                                           self->state.screenblt_srcx,
                                           self->state.screenblt_srcy);
   self->rdp_layer->mod->server_set_opcode(self->rdp_layer->mod, 0xcc);
+  if (self->rdp_layer->rec_mode)
+  {
+    rdp_rec_check_file(self->rdp_layer);
+    make_stream(rec_s);
+    init_stream(rec_s, 512);
+    s_push_layer(rec_s, iso_hdr, 4);
+    out_uint8(rec_s, 4);
+    out_uint16_le(rec_s, self->state.screenblt_x);
+    out_uint16_le(rec_s, self->state.screenblt_y);
+    out_uint16_le(rec_s, self->state.screenblt_cx);
+    out_uint16_le(rec_s, self->state.screenblt_cy);
+    out_uint16_le(rec_s, self->state.screenblt_srcx);
+    out_uint16_le(rec_s, self->state.screenblt_srcy);
+    out_uint8(rec_s, self->state.screenblt_opcode);
+    rdp_rec_write_item(self->rdp_layer, rec_s);
+    free_stream(rec_s);
+  }
 }
 
 /*****************************************************************************/
@@ -690,7 +848,9 @@ static void APP_CC
 rdp_orders_process_line(struct rdp_orders* self, struct stream* s,
                         int present, int delta)
 {
+  int bgcolor;
   int fgcolor;
+  struct stream* rec_s;
 
   if (present & 0x0001)
   {
@@ -723,11 +883,16 @@ rdp_orders_process_line(struct rdp_orders* self, struct stream* s,
   rdp_orders_parse_pen(s, &self->state.line_pen, present >> 7);
   self->rdp_layer->mod->server_set_opcode(self->rdp_layer->mod,
                                           self->state.line_opcode);
+  bgcolor = rdp_orders_convert_color(self->rdp_layer->mod->rdp_bpp,
+                                     self->rdp_layer->mod->xrdp_bpp,
+                                     self->state.line_bgcolor,
+                                     self->rdp_layer->colormap.colors);
   fgcolor = rdp_orders_convert_color(self->rdp_layer->mod->rdp_bpp,
                                      self->rdp_layer->mod->xrdp_bpp,
                                      self->state.line_pen.color,
                                      self->rdp_layer->colormap.colors);
   self->rdp_layer->mod->server_set_fgcolor(self->rdp_layer->mod, fgcolor);
+  self->rdp_layer->mod->server_set_bgcolor(self->rdp_layer->mod, bgcolor);
   self->rdp_layer->mod->server_set_pen(self->rdp_layer->mod,
                                        self->state.line_pen.style,
                                        self->state.line_pen.width);
@@ -737,6 +902,26 @@ rdp_orders_process_line(struct rdp_orders* self, struct stream* s,
                                          self->state.line_endx,
                                          self->state.line_endy);
   self->rdp_layer->mod->server_set_opcode(self->rdp_layer->mod, 0xcc);
+  if (self->rdp_layer->rec_mode)
+  {
+    rdp_rec_check_file(self->rdp_layer);
+    make_stream(rec_s);
+    init_stream(rec_s, 512);
+    s_push_layer(rec_s, iso_hdr, 4);
+    out_uint8(rec_s, 3);
+    out_uint16_le(rec_s, self->state.line_mixmode);
+    out_uint16_le(rec_s, self->state.line_startx);
+    out_uint16_le(rec_s, self->state.line_starty);
+    out_uint16_le(rec_s, self->state.line_endx);
+    out_uint16_le(rec_s, self->state.line_endy);
+    out_uint32_le(rec_s, self->state.line_bgcolor);
+    out_uint8(rec_s, self->state.line_opcode);
+    out_uint8(rec_s, self->state.line_pen.style);
+    out_uint8(rec_s, self->state.line_pen.width);
+    out_uint32_le(rec_s, self->state.line_pen.color);
+    rdp_rec_write_item(self->rdp_layer, rec_s);
+    free_stream(rec_s);
+  }
 }
 
 /*****************************************************************************/
@@ -747,6 +932,7 @@ rdp_orders_process_rect(struct rdp_orders* self, struct stream* s,
 {
   int i;
   int fgcolor;
+  struct stream* rec_s;
 
   if (present & 0x01)
   {
@@ -789,6 +975,21 @@ rdp_orders_process_rect(struct rdp_orders* self, struct stream* s,
                                          self->state.rect_y,
                                          self->state.rect_cx,
                                          self->state.rect_cy);
+  if (self->rdp_layer->rec_mode)
+  {
+    rdp_rec_check_file(self->rdp_layer);
+    make_stream(rec_s);
+    init_stream(rec_s, 512);
+    s_push_layer(rec_s, iso_hdr, 4);
+    out_uint8(rec_s, 1);
+    out_uint16_le(rec_s, self->state.rect_x);
+    out_uint16_le(rec_s, self->state.rect_y);
+    out_uint16_le(rec_s, self->state.rect_cx);
+    out_uint16_le(rec_s, self->state.rect_cy);
+    out_uint32_le(rec_s, self->state.rect_color);
+    rdp_rec_write_item(self->rdp_layer, rec_s);
+    free_stream(rec_s);
+  }
 }
 
 /*****************************************************************************/
@@ -843,6 +1044,7 @@ rdp_orders_process_memblt(struct rdp_orders* self, struct stream* s,
                           int present, int delta)
 {
   struct rdp_bitmap* bitmap;
+  struct stream* rec_s;
   char* bmpdata;
 
   if (present & 0x0001)
@@ -905,6 +1107,25 @@ rdp_orders_process_memblt(struct rdp_orders* self, struct stream* s,
                                             self->state.memblt_srcx,
                                             self->state.memblt_srcy);
     self->rdp_layer->mod->server_set_opcode(self->rdp_layer->mod, 0xcc);
+    if (self->rdp_layer->rec_mode)
+    {
+      rdp_rec_check_file(self->rdp_layer);
+      make_stream(rec_s);
+      init_stream(rec_s, 512);
+      s_push_layer(rec_s, iso_hdr, 4);
+      out_uint8(rec_s, 2);
+      out_uint8(rec_s, self->state.memblt_opcode);
+      out_uint16_le(rec_s, self->state.memblt_x);
+      out_uint16_le(rec_s, self->state.memblt_y);
+      out_uint16_le(rec_s, self->state.memblt_cx);
+      out_uint16_le(rec_s, self->state.memblt_cy);
+      out_uint16_le(rec_s, self->state.memblt_cache_id);
+      out_uint16_le(rec_s, self->state.memblt_cache_idx);
+      out_uint16_le(rec_s, self->state.memblt_srcx);
+      out_uint16_le(rec_s, self->state.memblt_srcy);
+      rdp_rec_write_item(self->rdp_layer, rec_s);
+      free_stream(rec_s);
+    }
     if (bmpdata != bitmap->data)
     {
       g_free(bmpdata);

@@ -138,6 +138,8 @@ struct rdp_rdp
   int bitmap_cache;
   int desktop_save;
   int polygon_ellipse_orders;
+  int rec_mode;
+  int rec_fd;
   /* cache */
   struct rdp_colormap colormap;
   struct rdp_cursor cursors[32];
@@ -410,6 +412,10 @@ int APP_CC
 rdp_rdp_process_demand_active(struct rdp_rdp* self, struct stream* s);
 void APP_CC
 rdp_rdp_out_unistr(struct stream* s, char* text);
+int APP_CC
+rdp_rec_check_file(struct rdp_rdp* self);
+int APP_CC
+rdp_rec_write_item(struct rdp_rdp* self, struct stream* s);
 
 /* rdp_bitmap.c */
 int APP_CC

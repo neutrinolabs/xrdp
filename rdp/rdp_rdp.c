@@ -35,6 +35,7 @@ rdp_rdp_create(struct mod* owner)
   self->bitmap_cache = 1;
   self->desktop_save = 0;
   self->orders = rdp_orders_create(self);
+  self->rec_mode = 0;
   return self;
 }
 
@@ -48,6 +49,11 @@ rdp_rdp_delete(struct rdp_rdp* self)
   }
   rdp_orders_delete(self->orders);
   rdp_sec_delete(self->sec_layer);
+  if (self->rec_fd != 0)
+  {
+    g_file_close(self->rec_fd);
+    self->rec_fd = 0;
+  }
   g_free(self);
 }
 
@@ -1008,5 +1014,61 @@ rdp_rdp_process_demand_active(struct rdp_rdp* self, struct stream* s)
   rdp_rdp_send_fonts(self, s, 2);
   rdp_rdp_recv(self, s, &type); /* RDP_PDU_UNKNOWN 0x28 (Fonts?) */
   rdp_orders_reset_state(self->orders);
+  return 0;
+}
+
+/******************************************************************************/
+int APP_CC
+rdp_rec_check_file(struct rdp_rdp* self)
+{
+  char file_name[256];
+  int index;
+  int len;
+  struct stream* s;
+
+  if (self->rec_fd == 0)
+  {
+    index = 1;
+    g_sprintf(file_name, "rec%8.8d.rec", index);
+    while (g_file_exist(file_name))
+    {
+      index++;
+      if (index >= 9999)
+      {
+        return 1;
+      }
+      g_sprintf(file_name, "rec%8.8d.rec", index);
+    }
+    self->rec_fd = g_file_open(file_name);
+    make_stream(s);
+    init_stream(s, 8192);
+    out_uint8a(s, "XRDPREC1", 8);
+    out_uint8s(s, 8);
+    s_mark_end(s);
+    len = s->end - s->data;
+    g_file_write(self->rec_fd, s->data, len);
+    free_stream(s);
+  }
+  return 0;
+}
+
+/******************************************************************************/
+int APP_CC
+rdp_rec_write_item(struct rdp_rdp* self, struct stream* s)
+{
+  int len;
+  int time;
+
+  if (self->rec_fd == 0)
+  {
+    return 1;
+  }
+  time = g_time1();
+  out_uint32_le(s, time);
+  s_mark_end(s);
+  len = s->end - s->data;
+  s_pop_layer(s, iso_hdr);
+  out_uint32_le(s, len);
+  g_file_write(self->rec_fd, s->data, len);
   return 0;
 }
