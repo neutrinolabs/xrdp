@@ -21,9 +21,9 @@
 #if !defined(THREAD_CALLS_H)
 #define THREAD_CALLS_H
 
-int
+int APP_CC
 g_thread_create(THREAD_RV (THREAD_CC * start_routine)(void*), void* arg);
-int
+long APP_CC
 g_get_threadid(void);
 
 #endif

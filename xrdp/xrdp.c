@@ -28,7 +28,7 @@
 #include "xrdp.h"
 
 static struct xrdp_listen* g_listen = 0;
-static int g_threadid = 0; /* main threadid */
+static long g_threadid = 0; /* main threadid */
 
 #if defined(_WIN32)
 static SERVICE_STATUS_HANDLE g_ssh = 0;

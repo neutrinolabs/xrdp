@@ -25,10 +25,11 @@
 #else
 #include <pthread.h>
 #endif
+#include "arch.h"
 
 /*****************************************************************************/
 #if defined(_WIN32)
-int
+int APP_CC
 g_thread_create(unsigned long (__stdcall * start_routine)(void*), void* arg)
 {
   DWORD thread;
@@ -36,7 +37,7 @@ g_thread_create(unsigned long (__stdcall * start_routine)(void*), void* arg)
   return !CreateThread(0, 0, start_routine, arg, 0, &thread);
 }
 #else
-int
+int APP_CC
 g_thread_create(void* (* start_routine)(void*), void* arg)
 {
   pthread_t thread;
@@ -49,12 +50,12 @@ g_thread_create(void* (* start_routine)(void*), void* arg)
 #endif
 
 /*****************************************************************************/
-int
+long APP_CC
 g_get_threadid(void)
 {
 #if defined(_WIN32)
   return 0;
 #else
-  return pthread_self();
+  return (long)pthread_self();
 #endif
 }
