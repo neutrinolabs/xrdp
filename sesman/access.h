@@ -16,27 +16,18 @@
    xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2005
 
-   session manager - main header
+   session manager - access control header
 */
 
-#ifndef SESMAN_H
-#define SESMAN_H
+#ifndef ACCESS_H
+#define ACCESS_H
 
-#include "d3des.h"
-#include "arch.h"
-#include "parse.h"
-#include "os_calls.h"
-#include "log.h"
-#include "env.h"
-#include "auth.h"
-#include "config.h"
-#include "tcp.h"
-#include "sig.h"
-#include "session.h"
-#include "access.h"
-
-#ifndef SESMAN_PID_FILE
-  #define SESMAN_PID_FILE "./sesman.pid"
-#endif
+/**
+ *
+ *
+ *
+ */
+int DEFAULT_CC
+access_login_allowed(char* user);
 
 #endif

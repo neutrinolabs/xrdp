@@ -22,6 +22,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include "sys/types.h"
 #include "arch.h"
 #include "list.h"
 #include "log.h"
@@ -41,12 +42,54 @@
 #define SESMAN_CFG_PORT              "ListenPort"
 #define SESMAN_CFG_ENABLE_USERWM     "EnableUserWindowManager"
 #define SESMAN_CFG_USERWM            "UserWindowManager"
+#define SESMAN_CFG_MAX_SESSION       "MaxSessions"
 
 #define SESMAN_CFG_LOGGING           "Logging"
 #define SESMAN_CFG_LOG_FILE          "LogFile"
 #define SESMAN_CFG_LOG_LEVEL         "LogLevel"
 #define SESMAN_CFG_LOG_ENABLE_SYSLOG "EnableSyslog"
 #define SESMAN_CFG_LOG_SYSLOG_LEVEL  "SyslogLevel"
+
+#define SESMAN_CFG_SECURITY          "Security"
+#define SESMAN_CFG_SEC_ALLOW_ROOT    "AllowRootLogin"
+#define SESMAN_CFG_SEC_USR_GROUP      "TerminalServerUsers"
+#define SESMAN_CFG_SEC_ADM_GROUP     "TerminalServerAdmins"
+
+#define SESMAN_CFG_SESSIONS          "Sessions"
+#define SESMAN_CFG_SESS_MAX          "MaxSessions"
+#define SESMAN_CFG_SESS_KILL_DISC    "KillDisconnected"
+#define SESMAN_CFG_SESS_IDLE_LIMIT   "IdleTimeLimit"
+
+/**
+ *
+ * @struct config_sesman
+ * @brief \t struct that contains \t sesman configuration
+ *
+ * This \t struct contains all of \t sesman configuration parameters\n
+ * Every parameter in \t [globals] is a member of this struct, other
+ * sections options are embedded in this \t struct as member structures
+ *
+ */
+struct config_security
+{
+  /**
+   * @var allow_root
+   * @brief 
+   */
+  int allow_root;
+  /**
+   * @var ts_users
+   * @brief Terminal Server Users group
+   */
+  int ts_users_enable;
+  gid_t ts_users;
+  /**
+   * @var ts_admins
+   * @brief Terminal Server Adminnistrators group
+   */
+  int ts_admins_enable;
+  gid_t ts_admins;
+};
 
 /**
  *
@@ -85,6 +128,11 @@ struct config_sesman
    * @brief Log configuration \t struct 
    */
   struct log_config log;
+  /**
+   * @var sec
+   * @brief Security configuration options \t struct
+   */
+  struct config_security sec;
 };
 
 /**
@@ -122,5 +170,17 @@ config_read_globals(int file, struct config_sesman* cf, struct list* param_n, st
  */
 int DEFAULT_CC
 config_read_logging(int file, struct log_config* lc, struct list* param_n, struct list* param_v);
+
+/**
+ *
+ * @brief Reads sesman [iSecurity] configuration section
+ *
+ * @param cfg pointer to configuration object to be replaced
+ *
+ * @return 0 on success, 1 on failure
+ * 
+ */
+int DEFAULT_CC
+config_read_security(int file, struct config_security* sc, struct list* param_n, struct list* param_v);
 
 #endif

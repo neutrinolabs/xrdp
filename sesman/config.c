@@ -19,6 +19,9 @@
    session manager - read config file
 */
 
+#include "sys/types.h"
+#include "grp.h"
+
 #include "arch.h"
 #include "list.h"
 #include "file.h"
@@ -68,6 +71,9 @@ config_read(struct config_sesman* cfg)
   /* read logging config */
   config_read_logging(fd, &(cfg->log), param_n, param_v);
 
+  /* read security config */
+  config_read_security(fd, &(cfg->sec), param_n, param_v);
+
   /* cleanup */
   list_delete(sec);
   list_delete(param_v);
@@ -85,6 +91,12 @@ config_read_globals(int file, struct config_sesman* cf, struct list* param_n,
 
   list_clear(param_v);
   list_clear(param_n);
+  
+  /* resetting the struct */
+  cf->listen_port[0]='\0';
+  cf->enable_user_wm=0;
+  cf->user_wm[0]='\0';
+  cf->default_wm[0]='\0';
 
   file_read_section(file, SESMAN_CFG_GLOBALS, param_n, param_v);
   for (i = 0; i < param_n->count; i++)
@@ -108,6 +120,21 @@ config_read_globals(int file, struct config_sesman* cf, struct list* param_n,
     }
   }
 
+  /* checking for missing required parameters */
+  if ('\0'==cf->listen_port[0]) 
+  {
+    g_strncpy(cf->listen_port, "3350", 5);
+  }
+  if ('\0'==cf->user_wm[0]) 
+  {
+    cf->enable_user_wm=0;
+  }
+  if ('\0'==cf->default_wm[0])
+  {
+    g_strncpy(cf->default_wm, "startwm.sh", 11);
+  }
+  
+  /* showing read config */
   g_printf("sesman config:\r\n");
   g_printf("\tListenPort:               %s\r\n", cf->listen_port);
   g_printf("\tEnableUserWindowManager:  %i\r\n", cf->enable_user_wm);
@@ -158,11 +185,75 @@ config_read_logging(int file, struct log_config* lc, struct list* param_n,
     }
   }
 
+  if (0==lc->log_file)
+  {
+    lc->log_file=g_strdup("./sesman.log");
+  }
+  
   g_printf("logging configuration:\r\n");
   g_printf("\tLogFile:       %s\r\n",lc->log_file);
   g_printf("\tLogLevel:      %i\r\n", lc->log_level);
   g_printf("\tEnableSyslog:  %i\r\n", lc->enable_syslog);
   g_printf("\tSyslogLevel:   %i\r\n", lc->syslog_level);
+
+  return 0;
+}
+
+/******************************************************************************/
+int DEFAULT_CC
+config_read_security(int file, struct config_security* sc, struct list* param_n,
+                    struct list* param_v)
+{
+  int i;
+  char* buf;
+
+  list_clear(param_v);
+  list_clear(param_n);
+
+  /* setting defaults */
+  sc->allow_root=0;
+  sc->ts_users_enable=0;
+  sc->ts_admins_enable=0;
+
+  file_read_section(file, SESMAN_CFG_SECURITY, param_n, param_v);
+  for (i = 0; i < param_n->count; i++)
+  {
+    buf = (char*)list_get_item(param_n, i);
+    if (0 == g_strncasecmp(buf, SESMAN_CFG_SEC_ALLOW_ROOT, 20))
+    {
+      sc->allow_root = text2bool((char*)list_get_item(param_v, i));
+    }
+    if (0 == g_strncasecmp(buf, SESMAN_CFG_SEC_USR_GROUP, 20))
+    {
+      sc->ts_users_enable=1;
+      sc->ts_users=(getgrnam((char*)list_get_item(param_v, i))->gr_gid);
+    }
+    if (0 == g_strncasecmp(buf, SESMAN_CFG_SEC_ADM_GROUP, 20))
+    {
+      sc->ts_admins_enable=1;
+      sc->ts_admins=(getgrnam((char*)list_get_item(param_v, i))->gr_gid);
+    }
+  }
+
+  /* printing security config */
+  g_printf("security configuration:\r\n");
+  g_printf("\tAllowRootLogin:       %i\r\n",sc->allow_root);
+  if (sc->ts_users_enable)
+  {
+    g_printf("\tTSUsersGroup:         %i\r\n", sc->ts_users);
+  }
+  else
+  {
+    g_printf("\tNo TSUsersGroup defined\r\n");
+  }
+  if (sc->ts_admins_enable)
+  {
+    g_printf("\tTSAdminsGroup:        %i\r\n", sc->ts_admins);
+  }
+  else
+  {
+    g_printf("\tNo TSAdminsGroup defined\r\n");
+  }
 
   return 0;
 }

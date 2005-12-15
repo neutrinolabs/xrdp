@@ -1,6 +1,6 @@
 # sesman makefile
 SESMANOBJ = sesman.o config.o tcp.o sig.o session.o env.o \
-            os_calls.o d3des.o list.o file.o log.o
+            os_calls.o d3des.o list.o file.o log.o access.o
 
 SESRUNOBJ = sesrun.o config.o tcp.o \
             os_calls.o d3des.o list.o file.o log.o
@@ -15,7 +15,7 @@ DEFINES = -DSESMAN_CFG_FILE=\"$(CFGDIR)/sesman.ini\" \
           -DSESMAN_PID_FILE=\"$(PIDDIR)/sesman.pid\"
 
 CFLAGS = -Wall -O2 -I../common $(DEFINES)
-LDFLAGS = -L /usr/gnu/lib
+LDFLAGS = -L /usr/gnu/lib $(DEFINES)
 C_OS_FLAGS = $(CFLAGS) -c
 CC = gcc
 

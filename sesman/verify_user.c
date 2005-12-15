@@ -20,18 +20,19 @@
 
 */
 
-#include "arch.h"
-#include "os_calls.h"
+#include "sesman.h"
 
 #define _XOPEN_SOURCE
-#include <unistd.h>
-#include <string.h>
+#include <sys/types.h>
+#include <crypt.h>
 #include <shadow.h>
 #include <pwd.h>
 
+extern struct config_sesman g_cfg;
+
 /******************************************************************************/
 /* returns boolean */
-int DEFAULT_CC
+long DEFAULT_CC
 auth_userpass(char* user, char* pass)
 {
   char salt[13] = "$1$";
@@ -46,7 +47,7 @@ auth_userpass(char* user, char* pass)
   {
     return 0;
   }
-  if (strncmp(spw->pw_passwd, "x", 3) == 0)
+  if (g_strncmp(spw->pw_passwd, "x", 3) == 0)
   {
     /* the system is using shadow */
     stp = getspnam(user);
@@ -54,15 +55,15 @@ auth_userpass(char* user, char* pass)
     {
       return 0;
     }
-    strncpy(hash, stp->sp_pwdp, 34);
+    g_strncpy(hash, stp->sp_pwdp, 34);
   }
   else
   {
     /* old system with only passwd */
-    strncpy(hash, spw->pw_passwd, 34);
+    g_strncpy(hash, spw->pw_passwd, 34);
   }
   hash[34] = '\0';
-  if (strncmp(hash, "$1$", 3) == 0)
+  if (g_strncmp(hash, "$1$", 3) == 0)
   {
     /* gnu style crypt(); */
     saltcnt = 3;
@@ -82,7 +83,7 @@ auth_userpass(char* user, char* pass)
     salt[2] = '\0';
   }
   encr = crypt(pass,salt);
-  if (strncmp(encr, hash, 34) != 0)
+  if (g_strncmp(encr, hash, 34) != 0)
   {
     return 0;
   }
@@ -92,21 +93,22 @@ auth_userpass(char* user, char* pass)
 /******************************************************************************/
 /* returns error */
 int DEFAULT_CC
-auth_start_session(void)
+auth_start_session(long in_val, int in_display)
 {
   return 0;
 }
 
 /******************************************************************************/
 int DEFAULT_CC
-auth_end(void)
+auth_end(long in_val)
 {
   return 0;
 }
 
 /******************************************************************************/
 int DEFAULT_CC
-auth_set_env(void)
+auth_set_env(long in_val)
 {
   return 0;
 }
+

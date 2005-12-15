@@ -142,8 +142,17 @@ sesman_main_loop()
                   }
                   else
                   {
-                    display = session_start(width, height, bpp, user, pass,
-                                            data);
+                    g_printf("pre auth");
+		    if (1==access_login_allowed(user))
+                    {
+		      log_message(LOG_LEVEL_INFO, "granted TS access to user %s", user);
+                      display = session_start(width, height, bpp, user, pass,
+                                              data);
+		    }
+		    else
+                    {
+                      display=0;
+		    }
                   }
                   if (display == 0)
                   {
@@ -227,7 +236,7 @@ main(int argc, char** argv)
     /* check if sesman is running */
     if (!g_file_exist(SESMAN_PID_FILE))
     {
-      g_printf("sesman is not running (pid file not found)\n");
+      g_printf("sesman is not running (pid file not found - %s)\n", SESMAN_PID_FILE);
       g_exit(1);
     }
 	  
@@ -247,6 +256,10 @@ main(int argc, char** argv)
     {
       g_printf("error killing sesman: %s\n", strerror(errno));
     }
+    else
+    {
+      g_file_delete(SESMAN_PID_FILE);
+    }
 
     g_exit(error);
   }
@@ -259,7 +272,6 @@ main(int argc, char** argv)
     g_exit(1);
   }
 
-  
   
   if (g_file_exist(SESMAN_PID_FILE))
   {
@@ -338,7 +350,10 @@ main(int argc, char** argv)
 
   sesman_main_loop();
 
-  log_end();
+  if (!daemon)
+  {
+    log_end();
+  }
 
   return 0;
 }
