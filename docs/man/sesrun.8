@@ -1,0 +1,47 @@
+.TH "sesrun" "8" "0.1.0" "xrdp team" ""
+.SH "NAME"
+.LP 
+\fBsesrun\fR \- \fBsesman\fR(8) session launcher
+.SH "SYNTAX"
+.LP 
+sesrun <server> <username> <password> <width> <height> <bpp>
+.SH "DESCRIPTION"
+.LP 
+\fBsesrun\fR starts a session using \fBsesman\fR(8). 
+.br 
+This is a tool useful for testing, it simply behaves like xrdp when some user logs in a new session and authenticates, thus starting a new session.
+.SH "OPTIONS"
+.LP 
+.TP 
+<server> 
+Server on which sesman is running
+.TP 
+<username> 
+user name of the session being started
+.TP 
+<password> 
+user password
+.TP 
+<width>
+Screen width
+.TP  
+<height> 
+Screen height
+.TP 
+<bpp>
+Session color depth
+.SH "FILES"
+.LP 
+${SESMAN_BIN_DIR}/sesman
+.br 
+${SESMAN_BIN_DIR}/sesrun
+.SH "AUTHORS"
+.LP 
+Jay Sorg <jsorg71@users.sourceforge.net>
+.br 
+Simone Fedele <ilsimo@users.sourceforge.net>
+.SH "SEE ALSO"
+.LP 
+sesman(8) sesman.ini(5) xrdp(8) xrdp.ini(5)
+
+for more info on \fBxrdp\fR see http://xrdp.sf.net

@@ -1,0 +1,99 @@
+.\" 
+.TH "xrdp.ini" "5" "0.1.0" "xrdp team" ""
+.SH "NAME"
+.LP 
+\fBxrdp.ini\fR \- Configuration file for \fBxrdp\fR(8)
+.SH "DESCRIPTION"
+.LP 
+This is the man page for \fBxrdp.ini\fR, \fBxrdp\fR(8) configuration file.
+It is composed by a number of sections, each one composed by a section name, enclosed by square brackets, folowed by a list of \fI<parameter>\fR=\fI<value>\fR lines.
+
+\fBxrdp.ini\fR is contains a \fB[Globals]\fR section, which sets some global configuration settings for \fBxrdp\fR(8), and one or more "connection" sections which contain the info on which services \fBxrdp\fR(8) can connect to.
+
+.LP 
+All options and values (except for file names and paths) are case insensitive, and are described in detail below.
+.SH "GLOBALS"
+.LP 
+
+.TP 
+The options to be specified in the \fB[Globals]\fR section are the following:
+.br 
+
+.TP 
+\fBbitmap_cache\fR=\fI[0|1]\fR
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables bitmap caching in \fBxrdp\fR(8)
+.br 
+
+.TP 
+\fBbitmap_compression\fR=\fI[0|1]\fR
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables bitmap compression in \fBxrdp\fR(8)
+.SH "CONNECTIONS"
+.LP 
+
+
+.TP 
+A connection section is made of a section name, enclosed in square brackets, and the following entries:
+.br 
+
+.TP 
+\fBname\fR=\fI<session name>\fR
+The name displayed in \fBxrdp\fR(8) login window's combo box.
+.br 
+
+.TP 
+\fBlib\fR=\fI../vnc/libvnc.so\fR
+Sets the library to be used with this connection.
+.br 
+
+.TP 
+\fBusername\fR=\fI<username>\fR|\fIask\fR
+Specifies the username used for authenticating in the connection.
+If set to \fIask\fR, user name should be provided in the login window.
+.br 
+
+.TP 
+\fBpassword\fR=\fI<password>\fR|\fIask\fR
+Specifies the password used for authenticating in the connection.
+If set to \fIask\fR, password should be provided in the login window.
+.br 
+
+.TP 
+\fBip\fR=\fI127.0.0.1\fR
+Specifies the ip address of the host to connect to.
+.br 
+
+.TP 
+\fBport\fR=\fI<number>\fR|\fI\-1\fR
+Specifies the port number to connect to. If set to \fI\-1\fR, the default port for the specified library is used.
+.SH "EXAMPLES"
+.LP 
+This is an example \fBxrdp.ini\fR:
+
+[Globals]
+.br 
+bitmap_cache=yes
+.br 
+bitmap_compression=yes
+
+
+[vnc1]
+.br 
+name=sesman
+.br 
+lib=../vnc/libvnc.so
+.br 
+username=ask
+.br 
+password=ask
+.br 
+ip=127.0.0.1
+.br 
+port=\-1
+.SH "FILES"
+.LP 
+${XRDP_CFG_DIR}/xrdp.ini
+.SH "SEE ALSO"
+.LP 
+xrdp(8) sesman(8) sesrun(8)  sesman.ini(5)
+
+for more info on \fBxrdp\fR see http://xrdp.sf.net
