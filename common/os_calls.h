@@ -114,6 +114,8 @@ g_strcat(char* dest, char* src);
 char*
 g_strdup(char* in);
 int
+g_strcmp(char* c1, char* c2);
+int
 g_strncmp(char* c1, char* c2, int len);
 int
 g_strncasecmp(char* c1, char* c2, int len);
