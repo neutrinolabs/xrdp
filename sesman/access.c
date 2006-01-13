@@ -26,8 +26,6 @@
 #include <sys/types.h>
 #include <pwd.h>
 #include <grp.h>
-//#include <unistd.h>
-//#include <pwd.h>
 
 extern struct config_sesman g_cfg;
 
@@ -76,7 +74,7 @@ access_login_allowed(char* user)
   while (0!=groups->gr_mem[i])
   {
     LOG_DBG("user: %s", groups->gr_mem[i]);
-    if (0==strcmp(groups->gr_mem[i], user)) return 1;
+    if (0==g_strcmp(groups->gr_mem[i], user)) return 1;
     i++;
   }
   

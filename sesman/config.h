@@ -59,15 +59,12 @@
 #define SESMAN_CFG_SESS_MAX          "MaxSessions"
 #define SESMAN_CFG_SESS_KILL_DISC    "KillDisconnected"
 #define SESMAN_CFG_SESS_IDLE_LIMIT   "IdleTimeLimit"
+#define SESMAN_CFG_SESS_DISC_LIMIT   "DisconnectedTimeLimit"
 
 /**
  *
- * @struct config_sesman
- * @brief \t struct that contains \t sesman configuration
- *
- * This \t struct contains all of \t sesman configuration parameters\n
- * Every parameter in \t [globals] is a member of this struct, other
- * sections options are embedded in this \t struct as member structures
+ * @struct config_security
+ * @brief \t struct that contains \t sesman access control configuration
  *
  */
 struct config_security
@@ -89,6 +86,36 @@ struct config_security
    */
   int ts_admins_enable;
   gid_t ts_admins;
+};
+
+/**
+ *
+ * @struct config_sessions
+ * @brief \t struct that contains \t sesman session handling configuration
+ *
+ */
+struct config_sessions
+{
+  /**
+   * @var max_sessions
+   * @brief maximum number of allowed sessions. 0 for unlimited
+   */
+  int max_sessions;
+  /**
+   * @var max_idle_time
+   * @brief maximum idle time for each session
+   */
+  int max_idle_time;
+  /**
+   * @var max_disc_time
+   * @brief maximum disconnected time for each session
+   */
+  int max_disc_time;
+  /**
+   * @var kill_disconnected
+   * @brief enables automatic killing of disconnected session
+   */
+  int kill_disconnected;
 };
 
 /**
@@ -133,6 +160,11 @@ struct config_sesman
    * @brief Security configuration options \t struct
    */
   struct config_security sec;
+  /**
+   * @var sess
+   * @brief Session configuration options \t struct
+   */
+  struct config_sessions sess;
 };
 
 /**
@@ -173,7 +205,7 @@ config_read_logging(int file, struct log_config* lc, struct list* param_n, struc
 
 /**
  *
- * @brief Reads sesman [iSecurity] configuration section
+ * @brief Reads sesman [Security] configuration section
  *
  * @param cfg pointer to configuration object to be replaced
  *
@@ -182,5 +214,17 @@ config_read_logging(int file, struct log_config* lc, struct list* param_n, struc
  */
 int DEFAULT_CC
 config_read_security(int file, struct config_security* sc, struct list* param_n, struct list* param_v);
+
+/**
+ *
+ * @brief Reads sesman [Sessions] configuration section
+ *
+ * @param cfg pointer to configuration object to be replaced
+ *
+ * @return 0 on success, 1 on failure
+ * 
+ */
+int DEFAULT_CC
+config_read_sessions(int file, struct config_sessions* ss, struct list* param_n, struct list* param_v);
 
 #endif

@@ -24,6 +24,20 @@
 #ifndef SESSION_H
 #define SESSION_H
 
+#define SESMAN_SESSION_TYPE_XRDP  1
+#define SESMAN_SESSION_TYPE_XVNC  2
+
+#define SESMAN_SESSION_STATUS_ACTIVE        1
+#define SESMAN_SESSION_STATUS_IDLE          2
+#define SESMAN_SESSION_STATUS_DISCONNECTED  3
+/* future expansion
+#define SESMAN_SESSION_STATUS_REMCONTROL    4
+*/
+
+#define SESMAN_SESSION_KILL_OK        0
+#define SESMAN_SESSION_KILL_NULLITEM  1
+#define SESMAN_SESSION_KILL_NOTFOUND  2
+
 struct session_item
 {
   char name[256];
@@ -33,17 +47,70 @@ struct session_item
   int height;
   int bpp;
   long data;
+
+  /* status info */
+  unsigned char status;
+  unsigned char type;
+  
+  /* time data  */
+  time_t connect_time;
+  time_t disconnect_time;
+  time_t idle_time;
 };
 
-/******************************************************************************/
-struct session_item* DEFAULT_CC
-session_find_item(char* name, int width, int height, int bpp);
+struct session_chain
+{
+  struct session_chain* next;
+  struct session_item* item;
+};
 
-/******************************************************************************/
-/* returns 0 if error else the display number the session was started on */
+/**
+ *
+ * finds a session matching the supplied parameters
+ *
+ * @return session data or 0
+ *
+ */
+struct session_item* DEFAULT_CC
+session_get_bydata(char* name, int width, int height, int bpp);
+#ifndef session_find_item
+  #define session_find_item(a, b, c, d) session_get_bydata(a, b, c, d);
+#endif
+
+/**
+ *
+ * starts a session
+ *
+ * @return 0 on error, display number if success
+ *
+ */
 int DEFAULT_CC
 session_start(int width, int height, int bpp, char* username, char* password,
               long data);
+
+/**
+ *
+ * kills a session
+ *
+ * @param the id of the session to be killed
+ *
+ * @return 
+ * 
+ */
+int DEFAULT_CC
+session_kill(int pid);
+
+/**
+ *
+ * retrieves a session's descriptor
+ *
+ * @param pid the session pid
+ *
+ * @return a pointer to the session descriptor on success, NULL otherwise
+ *
+ */
+struct session_item* DEFAULT_CC
+session_get_bypid(int pid); 
 
 #endif
 

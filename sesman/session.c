@@ -21,16 +21,24 @@
 
 */
 
+#include <stdlib.h>
+
 #include "sesman.h"
 
 extern unsigned char g_fixedkey[8];
-extern struct session_item g_session_items[100]; /* sesman.h */
 extern struct config_sesman g_cfg; /* config.h */
+#ifdef OLDSESSION
+extern struct session_item g_session_items[100]; /* sesman.h */
+#else
+struct session_chain* g_sessions;
+#endif
+int g_session_count;
 
 /******************************************************************************/
 struct session_item* DEFAULT_CC
-session_find_item(char* name, int width, int height, int bpp)
+session_get_bydata(char* name, int width, int height, int bpp)
 {
+#ifdef OLDSESSION
   int i;
 
   for (i = 0; i < 100; i++)
@@ -43,6 +51,27 @@ session_find_item(char* name, int width, int height, int bpp)
       return g_session_items + i;
     }
   }
+#else
+  struct session_chain* tmp;
+
+  /*THREAD-FIX require chain lock */
+  tmp=g_sessions;
+
+  while (tmp != 0)
+  {
+    if (g_strncmp(name, tmp->item->name, 255) == 0 &&
+        tmp->item->width == width &&
+        tmp->item->height == height &&
+        tmp->item->bpp == bpp)
+    {
+      /*THREAD-FIX release chain lock */
+      return tmp->item;
+    }
+    tmp=tmp->next;   
+  }
+  
+  /*THREAD-FIX release chain lock */
+#endif
   return 0;
 }
 
@@ -73,10 +102,40 @@ session_start(int width, int height, int bpp, char* username, char* password,
   char cur_dir[256];
   char text[256];
   char passwd_file[256];
+#ifndef OLDSESSION
+  struct session_chain* temp;
+#endif
+  
+  /*THREAD-FIX lock to control g_session_count*/
+  /* check to limit concurrent sessions */
+  if (g_session_count >= g_cfg.sess.max_sessions)
+  {
+    log_message(LOG_LEVEL_INFO, "max concurrent session limit exceeded. login for user %s denied", username);
+    return 0;
+  }
+  
+#ifndef OLDSESSION
+  temp=malloc(sizeof(struct session_chain));
+  if (temp == 0)
+  {
+    log_message(LOG_LEVEL_ERROR, "cannot create new chain element - user %s", username);
+    return 0;
+  }
+  temp->item = malloc(sizeof(struct session_item));
+  if (temp->item == 0)
+  {
+    free(temp);
+    log_message(LOG_LEVEL_ERROR, "cannot create new session item - user %s", username);
+    return 0;
+  }
+#endif
 
   g_get_current_dir(cur_dir, 255);
   display = 10;
-  while (x_server_running(display) && display < 50)
+  /*while (x_server_running(display) && display < 50)*/
+  /* we search for a free display up to max_sessions */
+  /* we should need no more displays than this       */
+  while (x_server_running(display) && (display <= g_cfg.sess.max_sessions))
   {
     display++;
   }
@@ -159,6 +218,7 @@ session_start(int width, int height, int bpp, char* username, char* password,
   }
   else /* parent */
   {
+#ifdef OLDSESSION
     g_session_items[display].pid = pid;
     g_strcpy(g_session_items[display].name, username);
     g_session_items[display].display = display;
@@ -166,8 +226,169 @@ session_start(int width, int height, int bpp, char* username, char* password,
     g_session_items[display].height = height;
     g_session_items[display].bpp = bpp;
     g_session_items[display].data = data;
+
+    g_session_items[display].connect_time=g_time1();
+    g_session_items[display].disconnect_time=(time_t) 0;
+    g_session_items[display].idle_time=(time_t) 0;
+    
+    g_session_items[display].type=SESMAN_SESSION_TYPE_XVNC;
+    g_session_items[display].status=SESMAN_SESSION_STATUS_ACTIVE;
+    
+    g_session_count++;
+#else
+    temp->item->pid=pid;
+    temp->item->display=display;
+    temp->item->width=width;
+    temp->item->height=height;
+    temp->item->bpp=bpp;
+    temp->item->data=data;
+    g_strncpy(temp->item->name, username, 255);
+
+    temp->item->connect_time=g_time1();
+    temp->item->disconnect_time=(time_t) 0;
+    temp->item->idle_time=(time_t) 0;
+
+    temp->item->type=SESMAN_SESSION_TYPE_XVNC;
+    temp->item->status=SESMAN_SESSION_STATUS_ACTIVE;
+    
+    /*THREAD-FIX lock the chain*/
+    temp->next=g_sessions;
+    g_sessions=temp;
+    g_session_count++;
+    /*THERAD-FIX free the chain*/
+#endif
     g_sleep(5000);
   }
   return display;
 }
+
+/*
+SESMAN_SESSION_TYPE_XRDP  1
+SESMAN_SESSION_TYPE_XVNC  2
+
+SESMAN_SESSION_STATUS_ACTIVE        1
+SESMAN_SESSION_STATUS_IDLE          2
+SESMAN_SESSION_STATUS_DISCONNECTED  3
+
+struct session_item
+{
+  char name[256];
+  int pid; 
+  int display;
+  int width;
+  int height;
+  int bpp;
+  long data;
+
+  / *
+  unsigned char status;
+  unsigned char type;
+  * / 
+  
+  / *
+  time_t connect_time;
+  time_t disconnect_time;
+  time_t idle_time;
+  * /
+};
+
+struct session_chain
+{
+  struct session_chain* next;
+  struct session_item* item;
+};
+*/
+
+#ifndef OLDSESSION
+
+/******************************************************************************/
+int DEFAULT_CC
+session_kill(int pid)
+{
+  struct session_chain* tmp;
+  struct session_chain* prev;
+  
+  /*THREAD-FIX require chain lock */
+  tmp=g_sessions;
+  prev=0;
+  
+  while (tmp != 0)
+  {
+    if (tmp->item == 0)
+    {
+      log_message(LOG_LEVEL_ERROR, "session descriptor for pid %d is null!", pid);
+      if (prev == 0)
+      {
+        /* prev does no exist, so it's the first element - so we set g_sessions */
+	g_sessions = tmp->next;
+      }
+      else
+      {
+        prev->next = tmp->next;
+      }
+      /*THREAD-FIX release chain lock */
+      return SESMAN_SESSION_KILL_NULLITEM;
+    }
+
+    if (tmp->item->pid == pid)
+    {
+      /* deleting the session */   
+      log_message(LOG_LEVEL_INFO, "session %d - user %s - terminated", tmp->item->pid, tmp->item->name);
+      free(tmp->item);
+      if (prev == 0)
+      {
+        /* prev does no exist, so it's the first element - so we set g_sessions */
+	g_sessions = tmp->next;
+      }
+      else
+      {
+        prev->next = tmp->next;
+      }
+      free(tmp);
+      g_session_count--;
+      /*THREAD-FIX release chain lock */
+      return SESMAN_SESSION_KILL_OK;
+    }
+     
+    /* go on */
+    prev = tmp;
+    tmp=tmp->next;
+  }
+  
+  /*THREAD-FIX release chain lock */
+  return SESMAN_SESSION_KILL_NOTFOUND;
+}
+
+/******************************************************************************/
+struct session_item* DEFAULT_CC
+session_get_bypid(int pid)
+{
+  struct session_chain* tmp;
+  
+  /*THREAD-FIX  require chain lock */
+  tmp=g_sessions;
+  while (tmp != 0)
+  {
+    if (tmp->item == 0)
+    {
+      log_message(LOG_LEVEL_ERROR, "session descriptor for pid %d is null!", pid);
+      /*THREAD-FIX release chain lock */
+      return 0;
+    }
+    
+    if (tmp->item->pid == pid)
+    {
+      /*THREAD-FIX release chain lock */
+      return tmp->item;
+    }
+
+    /* go on */
+    tmp=tmp->next;
+  }
+  
+  /*THREAD-FIX release chain lock */
+  return 0;
+}
+
+#endif
 

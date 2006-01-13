@@ -32,14 +32,25 @@
 int g_sck;
 int g_pid;
 unsigned char g_fixedkey[8] = { 23, 82, 107, 6, 35, 78, 88, 7 };
+#ifdef OLDSESSION
 struct session_item g_session_items[100]; /* sesman.h */
+extern int g_session_count;
+#endif
 struct config_sesman g_cfg; /* config.h */
 
-/******************************************************************************/
+/**
+ *
+ * trigger when a child process (a session) dies
+ *
+ * @param s received signal
+ * 
+ */
 static void DEFAULT_CC
 cterm(int s)
 {
+#ifdef OLDSESSION
   int i;
+#endif
   int pid;
 
   if (g_getpid() != g_pid)
@@ -49,13 +60,18 @@ cterm(int s)
   pid = g_waitchild();
   if (pid > 0)
   {
+#ifdef OLDSESSION
     for (i = 0; i < 100; i++)
     {
       if (g_session_items[i].pid == pid)
       {
         g_memset(g_session_items + i, 0, sizeof(struct session_item));
+	g_session_count--;
       }
     }
+#else
+    session_kill(pid);
+#endif
   }
 }
 
@@ -133,7 +149,8 @@ sesman_main_loop()
                 display = 0;
                 if (data)
                 {
-                  s_item = session_find_item(user, width, height, bpp);
+                  //s_item = session_find_item(user, width, height, bpp);
+                  s_item = session_get_bydata(user, width, height, bpp);
                   if (s_item != 0)
                   {
                     display = s_item->display;
@@ -325,7 +342,9 @@ main(int argc, char** argv)
   }
   
   /* signal handling */
+#ifdef OLDSESSION
   g_memset(&g_session_items, 0, sizeof(g_session_items));
+#endif
   g_pid = g_getpid();
   g_signal(1, sig_sesman_reload_cfg); /* SIGHUP  */
   g_signal(2, sig_sesman_shutdown);   /* SIGINT  */

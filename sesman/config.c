@@ -74,6 +74,9 @@ config_read(struct config_sesman* cfg)
   /* read security config */
   config_read_security(fd, &(cfg->sec), param_n, param_v);
 
+  /* read session config */
+  config_read_sessions(fd, &(cfg->sess), param_n, param_v);
+
   /* cleanup */
   list_delete(sec);
   list_delete(param_v);
@@ -206,6 +209,7 @@ config_read_security(int file, struct config_security* sc, struct list* param_n,
 {
   int i;
   char* buf;
+  struct group* g;
 
   list_clear(param_v);
   list_clear(param_n);
@@ -225,13 +229,21 @@ config_read_security(int file, struct config_security* sc, struct list* param_n,
     }
     if (0 == g_strncasecmp(buf, SESMAN_CFG_SEC_USR_GROUP, 20))
     {
-      sc->ts_users_enable=1;
-      sc->ts_users=(getgrnam((char*)list_get_item(param_v, i))->gr_gid);
+      g=getgrnam((char*)list_get_item(param_v, i));
+      if (0!=g)
+      {
+        sc->ts_users_enable=1;
+        sc->ts_users=g->gr_gid;
+      }
     }
     if (0 == g_strncasecmp(buf, SESMAN_CFG_SEC_ADM_GROUP, 20))
     {
-      sc->ts_admins_enable=1;
-      sc->ts_admins=(getgrnam((char*)list_get_item(param_v, i))->gr_gid);
+      g=getgrnam((char*)list_get_item(param_v, i));
+      if (0!=g)
+      {
+        sc->ts_admins_enable=1;
+        sc->ts_admins=g->gr_gid;
+      }
     }
   }
 
@@ -254,6 +266,55 @@ config_read_security(int file, struct config_security* sc, struct list* param_n,
   {
     g_printf("\tNo TSAdminsGroup defined\r\n");
   }
+
+  return 0;
+}
+
+/******************************************************************************/
+int DEFAULT_CC
+config_read_sessions(int file, struct config_sessions* se, struct list* param_n,
+                    struct list* param_v)
+{
+  int i;
+  char* buf;
+
+  list_clear(param_v);
+  list_clear(param_n);
+
+  /* setting defaults */
+  se->max_sessions=0;
+  se->max_idle_time=0;
+  se->max_disc_time=0;
+  se->kill_disconnected=0;
+	
+  file_read_section(file, SESMAN_CFG_SESSIONS, param_n, param_v);
+  for (i = 0; i < param_n->count; i++)
+  {
+    buf = (char*)list_get_item(param_n, i);
+    if (0 == g_strncasecmp(buf, SESMAN_CFG_SESS_MAX, 20))
+    {
+      se->max_sessions = g_atoi((char*)list_get_item(param_v, i));
+    }
+    if (0 == g_strncasecmp(buf, SESMAN_CFG_SESS_KILL_DISC, 20))
+    {
+      se->kill_disconnected = text2bool((char*)list_get_item(param_v, i));
+    }
+    if (0 == g_strncasecmp(buf, SESMAN_CFG_SESS_IDLE_LIMIT, 20))
+    {
+      se->max_idle_time=g_atoi((char*)list_get_item(param_v, i));
+    }
+    if (0 == g_strncasecmp(buf, SESMAN_CFG_SESS_DISC_LIMIT, 20))
+    {
+      se->max_disc_time=g_atoi((char*)list_get_item(param_v, i));
+    }
+  }
+
+  /* printing security config */
+  g_printf("session configuration:\r\n");
+  g_printf("\tMaxSessions:                 %i\r\n", se->max_sessions);
+  g_printf("\tKillDisconnected:            %i\r\n", se->kill_disconnected);
+  g_printf("\tIdleTimeLimit:               %i\r\n", se->max_idle_time);
+  g_printf("\tDisconnectedTimeLimit:       %i\r\n", se->max_idle_time);
 
   return 0;
 }
