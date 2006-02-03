@@ -14,7 +14,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
    xrdp: A Remote Desktop Protocol server.
-   Copyright (C) Jay Sorg 2004-2005
+   Copyright (C) Jay Sorg 2004-2006
 
    simple functions
 
@@ -146,7 +146,7 @@ check_bounds(struct xrdp_bitmap* b, int* x, int* y, int* cx, int* cy)
 /*****************************************************************************/
 /*  scan codes
     1 0x01  esc
-    2 0x02  1 or ?
+    2 0x02  1 or !
     3 0x03  2 or @
     4 0x04  3 or #
     5 0x05  4 or $
@@ -172,7 +172,7 @@ check_bounds(struct xrdp_bitmap* b, int* x, int* y, int* cx, int* cy)
     25 0x19 p or P
     26 0x1a [ or {
     27 0x1b ] or }
-    28 0x1c enter, keypad if ext
+    28 0x1c enter, keypad is ext
     29 0x1d left or right ctrl, ext flag is right
     30 0x1e a or A
     31 0x1f s or S
