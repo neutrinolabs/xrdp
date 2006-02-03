@@ -584,6 +584,7 @@ xrdp_painter_line(struct xrdp_painter* self,
   int k;
   int dx;
   int dy;
+  int rop;
 
   if (self == 0)
   {
@@ -606,12 +607,17 @@ xrdp_painter_line(struct xrdp_painter* self,
   x2 += dx;
   y2 += dy;
   k = 0;
+  rop = self->rop;
+  if (rop < 0x01 || rop > 0x10)
+  {
+    rop = (rop & 0xf) + 1;
+  }
   while (xrdp_region_get_rect(region, k, &rect) == 0)
   {
     if (rect_intersect(&rect, &clip_rect, &draw_rect))
     {
       libxrdp_orders_line(self->session, 0, x1, y1, x2, y2,
-                          self->rop, self->bg_color,
+                          rop, self->bg_color,
                           &self->pen, &draw_rect);
     }
     k++;
