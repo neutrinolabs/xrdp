@@ -14,7 +14,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
    xrdp: A Remote Desktop Protocol server.
-   Copyright (C) Jay Sorg 2004-2005
+   Copyright (C) Jay Sorg 2004-2006
 
    orders
 
@@ -138,7 +138,7 @@ xrdp_orders_send(struct xrdp_orders* self)
 int APP_CC
 xrdp_orders_force_send(struct xrdp_orders* self)
 {
-  if (self->order_count > 0 && self->order_count > 0)
+  if (self->order_level > 0 && self->order_count > 0)
   {
     s_mark_end(self->out_s);
     DEBUG(("xrdp_orders_force_send sending %d orders\r\n", self->order_count));
@@ -156,7 +156,7 @@ xrdp_orders_force_send(struct xrdp_orders* self)
 }
 
 /*****************************************************************************/
-/* check if the current order will fix in packet size of 16384, if not */
+/* check if the current order will fit in packet size of 16384, if not */
 /* send what we got and init a new one */
 /* returns error */
 static int APP_CC
