@@ -46,3 +46,4 @@ install:
 	make -C docs install
 	install instfiles/pam.d/sesman /etc/pam.d/sesman
 	install instfiles/xrdpstart.sh $(DESTDIR)/xrdpstart.sh
+	install instfiles/xrdp_control.sh $(DESTDIR)/xrdp_control.sh
