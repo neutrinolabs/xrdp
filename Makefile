@@ -15,6 +15,7 @@ base:
 	make -C libxrdp
 	make -C xrdp
 	make -C rdp
+	make -C xup
 
 nopam: base
 	make -C sesman nopam
@@ -28,6 +29,7 @@ clean:
 	make -C xrdp clean
 	make -C rdp clean
 	make -C sesman clean
+	make -C xup clean
 
 install:
 	mkdir -p $(DESTDIR)
@@ -40,6 +42,7 @@ install:
 	make -C xrdp install
 	make -C rdp install
 	make -C sesman install
+	make -C xup install
 	make -C docs install
 	install instfiles/pam.d/sesman /etc/pam.d/sesman
 	install instfiles/xrdpstart.sh $(DESTDIR)/xrdpstart.sh
