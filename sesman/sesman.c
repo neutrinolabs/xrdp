@@ -37,6 +37,7 @@ struct session_item g_session_items[100]; /* sesman.h */
 extern int g_session_count;
 #endif
 struct config_sesman g_cfg; /* config.h */
+int g_server_type = 0; /* Xvnc 0 Xrdp 10 */
 
 /**
  *
@@ -134,8 +135,9 @@ sesman_main_loop()
             if (version == 0)
             {
               in_uint16_be(in_s, code);
-              if (code == 0) /* check username - password, start session */
-              {
+              if (code == 0 || code == 10) /* check username - password, */
+              {                            /* start session */
+                g_server_type = code;
                 in_uint16_be(in_s, i);
                 in_uint8a(in_s, user, i);
                 user[i] = 0;

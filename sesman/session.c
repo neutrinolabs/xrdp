@@ -27,6 +27,7 @@
 
 extern unsigned char g_fixedkey[8];
 extern struct config_sesman g_cfg; /* config.h */
+extern int g_server_type;
 #ifdef OLDSESSION
 extern struct session_item g_session_items[100]; /* sesman.h */
 #else
@@ -105,7 +106,7 @@ session_start(int width, int height, int bpp, char* username, char* password,
 #ifndef OLDSESSION
   struct session_chain* temp;
 #endif
-  
+
   /*THREAD-FIX lock to control g_session_count*/
   /* check to limit concurrent sessions */
   if (g_session_count >= g_cfg.sess.max_sessions)
@@ -113,7 +114,7 @@ session_start(int width, int height, int bpp, char* username, char* password,
     log_message(LOG_LEVEL_INFO, "max concurrent session limit exceeded. login for user %s denied", username);
     return 0;
   }
-  
+
 #ifndef OLDSESSION
   temp=malloc(sizeof(struct session_chain));
   if (temp == 0)
@@ -135,13 +136,13 @@ session_start(int width, int height, int bpp, char* username, char* password,
   /*while (x_server_running(display) && display < 50)*/
   /* we search for a free display up to max_sessions */
   /* we should need no more displays than this       */
-  while (x_server_running(display) && (display <= g_cfg.sess.max_sessions))
+  while (x_server_running(display))
   {
     display++;
-  }
-  if (display >= 50)
-  {
-    return 0;
+    if ((display - 10) > g_cfg.sess.max_sessions || display >= 50)
+    {
+      return 0;
+    }
   }
   wmpid = 0;
   pid = g_fork();
@@ -198,9 +199,16 @@ session_start(int width, int height, int bpp, char* username, char* password,
       {
         env_set_user(username, passwd_file, display);
         env_check_password_file(passwd_file, password);
-        g_execlp11("Xvnc", "Xvnc", screen, "-geometry", geometry,
-                   "-depth", depth, "-bs", "-rfbauth", passwd_file, 0);
-	
+        if (g_server_type == 0)
+        {
+          g_execlp11("Xvnc", "Xvnc", screen, "-geometry", geometry,
+                     "-depth", depth, "-bs", "-rfbauth", passwd_file, 0);
+        }
+        else if (g_server_type == 10)
+        {
+          g_execlp11("Xrdp", "Xrdp", screen, "-geometry", geometry,
+                     "-depth", depth, "-bs", 0, 0, 0);
+        }
         /* should not get here */
         log_message(LOG_LEVEL_ALWAYS,"error doing execve for user %s - pid %d",username,g_getpid());
         g_exit(0);
