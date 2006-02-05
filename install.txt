@@ -1,0 +1,44 @@
+
+Installation directions for xrdp.
+
+Things you need to compile and install.  Most systems don't
+have these installed by default.
+  gcc and make
+  Header files for pam
+  Header files for openssl
+
+You can build sesman without pam, there is a Makefile parameter
+for that.
+I also have a replacement ssl_calls.c to avoid the openssl dependency
+email me(Jay) for it.  Due to the licence, I can't include it in this
+project.
+
+unpackage the tarball
+
+tar -zxvf xrdp-0.1.tar.gz
+
+this will create a folder xrdp
+
+switch to the xrdp folder(cd xrdp)
+
+run make
+
+as root, run make install
+
+This will install most of the files in /usr/local/xrdp.
+Some files install in /etc/xrdp.  These are configuation
+files.
+
+files and location
+/usr/local/xrdp/startwm.sh - script that starts the window manager
+/etc/sesman.ini - sesman configuration file
+/etc/rsakeys.ini - rsa stuff
+/etc/xrdp.ini - xrdp configuration file
+/var/run/sesman.pid
+/var/rub/xrdp.pid
+
+Sesman and xrdp both have to be running as root.
+You should set them to start when the system starts.
+You can use xrdp_control.sh script to start them.
+
+jay.sorg@gmail.com
