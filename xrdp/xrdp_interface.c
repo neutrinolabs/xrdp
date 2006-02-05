@@ -219,6 +219,7 @@ server_msg(struct xrdp_mod* mod, char* msg, int code)
     wm->log_wnd->notify = xrdp_wm_log_wnd_notify;
   }
   xrdp_bitmap_invalidate(wm->log_wnd, 0);
+  g_sleep(100);
   return 0;
 }
 
