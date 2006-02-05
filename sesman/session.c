@@ -82,9 +82,16 @@ static int DEFAULT_CC
 x_server_running(int display)
 {
   char text[256];
+  int x_running;
 
   g_sprintf(text, "/tmp/.X11-unix/X%d", display);
-  return g_file_exist(text);
+  x_running = g_file_exist(text);
+  if (!x_running)
+  {
+    g_sprintf(text, "/tmp/.X%d-lock", display);
+    x_running = g_file_exist(text);
+  }
+  return x_running;
 }
 
 /******************************************************************************/
