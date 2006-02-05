@@ -116,6 +116,7 @@ lib_mod_start(struct mod* mod, int w, int h, int bpp)
   DEBUG(("in lib_mod_start\r\n"));
   mod->width = w;
   mod->height = h;
+  mod->bpp = bpp;
   DEBUG(("out lib_mod_start\r\n"));
   return 0;
 }
@@ -127,7 +128,14 @@ lib_mod_connect(struct mod* mod)
 {
   int error;
   int len;
+  int display;
+  int i;
+  int version;
+  int size;
+  int code;
+  int ok;
   struct stream* s;
+  char con_port[256];
 
   DEBUG(("in lib_mod_connect\r\n"));
   /* clear screen */
@@ -135,9 +143,106 @@ lib_mod_connect(struct mod* mod)
   mod->server_set_fgcolor(mod, 0);
   mod->server_fill_rect(mod, 0, 0, mod->width, mod->height);
   mod->server_end_update(mod);
+  mod->server_msg(mod, "started connecting", 0);
+  /* only support 8 and 16 bpp connections from rdp client */
+  if (mod->bpp != 8 && mod->bpp != 16)
+  {
+    mod->server_msg(mod,
+      "error - only supporting 8 and 16 bpp rdp connections", 0);
+    return 1;
+  }
+  if (g_strncmp(mod->ip, "", 1) == 0)
+  {
+    mod->server_msg(mod, "error - no ip set", 0);
+    return 1;
+  }
+  make_stream(s);
+  /* if port = -1, use sesman to get port / desktop */
+  if (g_strncmp(mod->port, "-1", 2) == 0)
+  {
+    display = 0;
+    error = 0;
+    init_stream(s, 8192);
+    mod->sck = g_tcp_socket();
+    mod->sck_closed = 0;
+    mod->server_msg(mod, "connecting to sesman", 0);
+    if (g_tcp_connect(mod->sck, mod->ip, "3350") == 0)
+    {
+      g_tcp_set_non_blocking(mod->sck);
+      g_tcp_set_no_delay(mod->sck);
+      s_push_layer(s, channel_hdr, 8);
+      out_uint16_be(s, 10); // code
+      i = g_strlen(mod->username);
+      out_uint16_be(s, i);
+      out_uint8a(s, mod->username, i);
+      i = g_strlen(mod->password);
+      out_uint16_be(s, i);
+      out_uint8a(s, mod->password, i);
+      out_uint16_be(s, mod->width);
+      out_uint16_be(s, mod->height);
+      out_uint16_be(s, mod->bpp);
+      s_mark_end(s);
+      s_pop_layer(s, channel_hdr);
+      out_uint32_be(s, 0); // version
+      out_uint32_be(s, s->end - s->data); // size
+      mod->server_msg(mod, "sending login info to sesman", 0);
+      error = lib_send(mod, s->data, s->end - s->data);
+      if (error == 0)
+      {
+        init_stream(s, 8192);
+        mod->server_msg(mod, "receiving sesman header", 0);
+        error = lib_recv(mod, s->data, 8);
+      }
+      if (error == 0)
+      {
+        in_uint32_be(s, version);
+        in_uint32_be(s, size);
+        init_stream(s, 8192);
+        mod->server_msg(mod, "receiving sesman data", 0);
+        error = lib_recv(mod, s->data, size - 8);
+      }
+      if (error == 0)
+      {
+        if (version == 0)
+        {
+          in_uint16_be(s, code);
+          if (code == 3)
+          {
+            in_uint16_be(s, ok);
+            if (ok)
+            {
+              in_uint16_be(s, display);
+            }
+            else
+            {
+              in_uint8s(s, 2);
+              mod->server_msg(mod, "error - sesman returned no", 0);
+            }
+          }
+        }
+      }
+    }
+    else
+    {
+      mod->server_msg(mod, "error - connecting to sesman", 0);
+    }
+    g_tcp_close(mod->sck);
+    if (error != 0 || display == 0)
+    {
+      mod->server_msg(mod, "error - connection failed", 0);
+      free_stream(s);
+      return 1;
+    }
+    mod->server_msg(mod, "sesman started a session", 0);
+    g_sprintf(con_port, "%d", 6200 + display);
+  }
+  else
+  {
+    g_sprintf(con_port, "%s", mod->port);
+  }
   mod->sck = g_tcp_socket();
   mod->sck_closed = 0;
-  error = g_tcp_connect(mod->sck, "127.0.0.1", "6210");
+  error = g_tcp_connect(mod->sck, mod->ip, con_port);
   if (error == 0)
   {
     g_tcp_set_non_blocking(mod->sck);
@@ -145,7 +250,6 @@ lib_mod_connect(struct mod* mod)
   }
   if (error == 0)
   {
-    make_stream(s);
     init_stream(s, 8192);
     s_push_layer(s, iso_hdr, 4);
     out_uint16_le(s, 103);
@@ -159,9 +263,14 @@ lib_mod_connect(struct mod* mod)
     s_pop_layer(s, iso_hdr);
     out_uint32_le(s, len);
     lib_send(mod, s->data, len);
-    free_stream(s);
   }
+  free_stream(s);
   DEBUG(("out lib_mod_connect error\r\n"));
+  if (error != 0)
+  {
+    mod->server_msg(mod, "some problem", 0);
+    return 1;
+  }
   return 0;
 }
 

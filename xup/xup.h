@@ -78,6 +78,7 @@ struct mod
   /* mod data */
   int width;
   int height;
+  int bpp;
   int sck_closed;
   char username[256];
   char password[256];
