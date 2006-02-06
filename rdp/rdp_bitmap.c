@@ -25,6 +25,14 @@
 /******************************************************************************/
 #define CVAL(p) ((unsigned char)(*(p++)))
 
+#if defined(B_ENDIAN)
+#define EIK0 1
+#define EIK1 0
+#else
+#define EIK0 0
+#define EIK1 1
+#endif
+
 /******************************************************************************/
 #define REPEAT(statement) \
 { \
@@ -395,16 +403,16 @@ bitmap_decompress2(char* output, int width, int height, char* input, int size)
         }
         break;
       case 8: /* Bicolor */
-        color1[0] = CVAL(input);
-        color1[1] = CVAL(input);
+        color1[EIK0] = CVAL(input);
+        color1[EIK1] = CVAL(input);
       case 3: /* Color */
-        color2[0] = CVAL(input);
-        color2[1] = CVAL(input);
+        color2[EIK0] = CVAL(input);
+        color2[EIK1] = CVAL(input);
         break;
       case 6: /* SetMix/Mix */
       case 7: /* SetMix/FillOrMix */
-        mix[0] = CVAL(input);
-        mix[1] = CVAL(input);
+        mix[EIK0] = CVAL(input);
+        mix[EIK1] = CVAL(input);
         opcode -= 5;
         break;
       case 9: /* FillOrMix_1 */
@@ -534,8 +542,8 @@ bitmap_decompress2(char* output, int width, int height, char* input, int size)
         case 4: /* Copy */
           REPEAT
           (
-            line[x * 2 + 0] = CVAL(input);
-            line[x * 2 + 1] = CVAL(input);
+            line[x * 2 + EIK0] = CVAL(input);
+            line[x * 2 + EIK1] = CVAL(input);
           )
           break;
         case 8: /* Bicolor */
