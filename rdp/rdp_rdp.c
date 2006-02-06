@@ -505,6 +505,7 @@ rdp_rdp_process_bitmap_updates(struct rdp_rdp* self, struct stream* s)
   int bufsize;
   int size;
   int i;
+  int x;
   int y;
   char* data;
   char* bmpdata0;
@@ -546,12 +547,25 @@ rdp_rdp_process_bitmap_updates(struct rdp_rdp* self, struct stream* s)
       self->mod->server_paint_rect(self->mod, left, top, cx, cy, bmpdata1,
                                    width, height, 0, 0);
     }
-    else
+    else /* not compressed */
     {
       for (y = 0; y < height; y++)
       {
         data = bmpdata0 + ((height - y) - 1) * (width * Bpp);
-        in_uint8a(s, data, width * Bpp);
+        if (Bpp == 1)
+        {
+          for (x = 0; x < width; x++)
+          {
+            in_uint8(s, data[x]);
+          }
+        }
+        else if (Bpp == 2)
+        {
+          for (x = 0; x < width; x++)
+          {
+            in_uint16_le(s, ((unsigned short*)data)[x]);
+          }
+        }
       }
       bmpdata1 = rdp_orders_convert_bitmap(bpp, self->mod->xrdp_bpp,
                                            bmpdata0, width, height,
