@@ -86,7 +86,7 @@ session_get_bydata(char* name, int width, int height, int bpp);
  */
 int DEFAULT_CC
 session_start(int width, int height, int bpp, char* username, char* password,
-              long data);
+              long data, unsigned char type);
 
 /**
  *

@@ -19,9 +19,11 @@ base:
 
 nopam: base
 	make -C sesman nopam
+	make -C sesman tools
 
 kerberos: base
 	make -C sesman kerberos
+	make -C sesman tools
 
 clean:
 	make -C vnc clean
@@ -44,6 +46,6 @@ install:
 	make -C sesman install
 	make -C xup install
 	make -C docs install
-	install instfiles/pam.d/sesman /etc/pam.d/sesman
+	if [ -d /etc/pam.d ]; then install instfiles/pam.d/sesman /etc/pam.d/sesman; fi
 	install instfiles/xrdpstart.sh $(DESTDIR)/xrdpstart.sh
 	install instfiles/xrdp_control.sh $(DESTDIR)/xrdp_control.sh

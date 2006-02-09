@@ -22,7 +22,11 @@ CC = gcc
 
 all: pam tools
 
-nopam: $(SESMANOBJ) verify_user.o
+nopam: no-pam tools
+
+kerberos: kerberos-base tools
+
+no-pam: $(SESMANOBJ) verify_user.o
 	$(CC) $(LDFLAGS) -o sesman $(SESMANOBJ) verify_user.o -ldl -lcrypt
 
 pam: $(SESMANOBJ) verify_user_pam.o
@@ -31,7 +35,7 @@ pam: $(SESMANOBJ) verify_user_pam.o
 pam_userpass: $(SESMANOBJ) verify_user_pam_userpass.o
 	$(CC) $(LDFLAGS) -o sesman $(SESMANOBJ) verify_user_pam_userpass.o -ldl -lpam -lpam_userpass
 
-kerberos: $(SESMANOBJ) verify_user_kerberos.o
+kerberos-base: $(SESMANOBJ) verify_user_kerberos.o
 	$(CC) $(LDFLAGS) -o sesman $(SESMANOBJ) verify_user_kerberos.o -ldl -lkrb5
 
 tools: $(SESRUNOBJ)

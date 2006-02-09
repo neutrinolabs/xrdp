@@ -37,7 +37,7 @@ struct session_item g_session_items[100]; /* sesman.h */
 extern int g_session_count;
 #endif
 struct config_sesman g_cfg; /* config.h */
-int g_server_type = 0; /* Xvnc 0 Xrdp 10 */
+//int g_server_type = 0; /* Xvnc 0 Xrdp 10 */
 
 /**
  *
@@ -137,7 +137,7 @@ sesman_main_loop()
               in_uint16_be(in_s, code);
               if (code == 0 || code == 10) /* check username - password, */
               {                            /* start session */
-                g_server_type = code;
+                //g_server_type = code;
                 in_uint16_be(in_s, i);
                 in_uint8a(in_s, user, i);
                 user[i] = 0;
@@ -165,8 +165,18 @@ sesman_main_loop()
 		    if (1==access_login_allowed(user))
                     {
 		      log_message(LOG_LEVEL_INFO, "granted TS access to user %s", user);
-                      display = session_start(width, height, bpp, user, pass,
-                                              data);
+		      if (0 == code)
+		      {
+		        log_message(LOG_LEVEL_INFO, "starting Xvnc session...");
+                        display = session_start(width, height, bpp, user, pass,
+                                                data, SESMAN_SESSION_TYPE_XVNC);
+                      }
+                      else
+		      {
+		        log_message(LOG_LEVEL_INFO, "starting Xrdp session...");
+                        display = session_start(width, height, bpp, user, pass,
+                                                data, SESMAN_SESSION_TYPE_XRDP);
+                      }
 		    }
 		    else
                     {

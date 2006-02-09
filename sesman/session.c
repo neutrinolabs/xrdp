@@ -27,7 +27,7 @@
 
 extern unsigned char g_fixedkey[8];
 extern struct config_sesman g_cfg; /* config.h */
-extern int g_server_type;
+//extern int g_server_type;
 #ifdef OLDSESSION
 extern struct session_item g_session_items[100]; /* sesman.h */
 #else
@@ -98,7 +98,7 @@ x_server_running(int display)
 /* returns 0 if error else the display number the session was started on */
 int DEFAULT_CC
 session_start(int width, int height, int bpp, char* username, char* password,
-              long data)
+              long data, unsigned char type)
 {
   int display;
   int pid;
@@ -206,19 +206,24 @@ session_start(int width, int height, int bpp, char* username, char* password,
       {
         env_set_user(username, passwd_file, display);
         env_check_password_file(passwd_file, password);
-        if (g_server_type == 0)
+        if (type == SESMAN_SESSION_TYPE_XVNC)
         {
           g_execlp11("Xvnc", "Xvnc", screen, "-geometry", geometry,
                      "-depth", depth, "-bs", "-rfbauth", passwd_file, 0);
         }
-        else if (g_server_type == 10)
+        else if (type == SESMAN_SESSION_TYPE_XRDP)
         {
           g_execlp11("Xrdp", "Xrdp", screen, "-geometry", geometry,
                      "-depth", depth, "-bs", 0, 0, 0);
         }
+	else
+        {
+          log_message(LOG_LEVEL_ALWAYS, "bad session type - user %s - pid %d", username, g_getpid());
+	  g_exit(1);
+        }
         /* should not get here */
         log_message(LOG_LEVEL_ALWAYS,"error doing execve for user %s - pid %d",username,g_getpid());
-        g_exit(0);
+        g_exit(1);
       }
       else /* parent */
       {
@@ -245,8 +250,16 @@ session_start(int width, int height, int bpp, char* username, char* password,
     g_session_items[display].connect_time=g_time1();
     g_session_items[display].disconnect_time=(time_t) 0;
     g_session_items[display].idle_time=(time_t) 0;
-    
-    g_session_items[display].type=SESMAN_SESSION_TYPE_XVNC;
+   
+    i/*if (type==0)
+    {
+      g_session_items[display].type=SESMAN_SESSION_TYPE_XVNC;
+    }
+    else
+    {
+      g_session_items[display].type=SESMAN_SESSION_TYPE_XRDP;
+    }*/
+    g_session_items[display].type=type;
     g_session_items[display].status=SESMAN_SESSION_STATUS_ACTIVE;
     
     g_session_count++;
@@ -263,7 +276,16 @@ session_start(int width, int height, int bpp, char* username, char* password,
     temp->item->disconnect_time=(time_t) 0;
     temp->item->idle_time=(time_t) 0;
 
-    temp->item->type=SESMAN_SESSION_TYPE_XVNC;
+/*    if (type==0)
+    {
+      temp->item->type=SESMAN_SESSION_TYPE_XVNC;
+    }
+    else
+    {
+      temp->item->type=SESMAN_SESSION_TYPE_XRDP;
+    }*/
+	    
+    temp->item->type=type;
     temp->item->status=SESMAN_SESSION_STATUS_ACTIVE;
     
     /*THREAD-FIX lock the chain*/
