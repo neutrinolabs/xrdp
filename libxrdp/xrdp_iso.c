@@ -116,7 +116,7 @@ xrdp_iso_send_msg(struct xrdp_iso* self, struct stream* s, int code)
   out_uint8(s, 3);
   out_uint8(s, 0);
   out_uint16_be(s, 11); /* length */
-  out_uint8(s, 8);
+  out_uint8(s, 6);
   out_uint8(s, code);
   out_uint16_le(s, 0);
   out_uint16_le(s, 0);
