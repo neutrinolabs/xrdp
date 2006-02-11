@@ -332,6 +332,8 @@ lib_mod_signal(struct mod* mod)
   int x2;
   int y2;
   char* bmpdata;
+  char cur_data[32 * (32 * 3)];
+  char cur_mask[32 * (32 / 8)];
 
   DEBUG(("in lib_mod_signal\r\n"));
   make_stream(s);
@@ -419,6 +421,13 @@ lib_mod_signal(struct mod* mod)
               in_sint16_le(s, x2);
               in_sint16_le(s, y2);
               rv = mod->server_draw_line(mod, x1, y1, x2, y2);
+              break;
+            case 19:
+              in_sint16_le(s, x);
+              in_sint16_le(s, y);
+              in_uint8a(s, cur_data, 32 * (32 * 3));
+              in_uint8a(s, cur_mask, 32 * (32 / 8));
+              rv = mod->server_set_cursor(mod, x, y, cur_data, cur_mask);
               break;
             default:
               rv = 1;
