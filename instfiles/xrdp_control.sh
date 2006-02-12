@@ -39,6 +39,11 @@ check_up () {
   then
      if [ -e /var/run/sesman.pid ] ; then rm /var/run/sesman.pid ; fi
   fi
+  # Cleanup : If xrdp isn't running, but the pid exists, erase it.
+  if [ "$xrdpup" == "" ]
+  then
+     if [ -e /var/run/xrdp.pid ] ; then rm /var/run/xrdp.pid ; fi
+  fi
 }
 
 case "$1" in
