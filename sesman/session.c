@@ -83,6 +83,7 @@ x_server_running(int display)
 {
   char text[256];
   int x_running;
+  int sck;
 
   g_sprintf(text, "/tmp/.X11-unix/X%d", display);
   x_running = g_file_exist(text);
@@ -90,6 +91,27 @@ x_server_running(int display)
   {
     g_sprintf(text, "/tmp/.X%d-lock", display);
     x_running = g_file_exist(text);
+  }
+  if (!x_running) /* check 59xx */
+  {
+    sck = g_tcp_socket();
+    g_sprintf(text, "59%2.2d", display);
+    x_running = g_tcp_bind(sck, text);
+    g_tcp_close(sck);
+  }
+  if (!x_running) /* check 61xx */
+  {
+    sck = g_tcp_socket();
+    g_sprintf(text, "61%2.2d", display);
+    x_running = g_tcp_bind(sck, text);
+    g_tcp_close(sck);
+  }
+  if (!x_running) /* check 62xx */
+  {
+    sck = g_tcp_socket();
+    g_sprintf(text, "62%2.2d", display);
+    x_running = g_tcp_bind(sck, text);
+    g_tcp_close(sck);
   }
   return x_running;
 }
