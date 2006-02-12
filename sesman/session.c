@@ -99,10 +99,10 @@ x_server_running(int display)
     x_running = g_tcp_bind(sck, text);
     g_tcp_close(sck);
   }
-  if (!x_running) /* check 61xx */
+  if (!x_running) /* check 60xx */
   {
     sck = g_tcp_socket();
-    g_sprintf(text, "61%2.2d", display);
+    g_sprintf(text, "60%2.2d", display);
     x_running = g_tcp_bind(sck, text);
     g_tcp_close(sck);
   }
