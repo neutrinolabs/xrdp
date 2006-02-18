@@ -31,6 +31,7 @@ files.
 
 files and location
 /usr/local/xrdp/startwm.sh - script that starts the window manager
+  You may need to edit this file to run your window manager.
 /etc/sesman.ini - sesman configuration file
 /etc/rsakeys.ini - rsa stuff
 /etc/xrdp.ini - xrdp configuration file
@@ -40,5 +41,12 @@ files and location
 Sesman and xrdp both have to be running as root.
 You should set them to start when the system starts.
 You can use xrdp_control.sh script to start them.
+
+To completely remove xrdp
+  remove directory /usr/local/xrdp
+  remove directory /etc/xrdp
+  remove file /var/run/xrdp.pid
+  remove file /var/run/sesman.pid
+  remove any startup links added to /etc/init.d or /etc/rcX.d
 
 jay.sorg@gmail.com
