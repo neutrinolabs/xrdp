@@ -1,0 +1,2 @@
+#!/bin/sh
+update-rc.d xrdp_control.sh defaults > /dev/null

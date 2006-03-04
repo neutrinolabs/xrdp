@@ -1,0 +1,4 @@
+#!/bin/sh
+if [ -e /usr/xrdp/xrdp ]; then
+  /etc/init.d/xrdp_control.sh stop
+fi
