@@ -36,6 +36,9 @@ clean:
 install:
 	install libxrdp.so $(DESTDIR)/libxrdp.so
 
+installdeb:
+	install libxrdp.so $(DESTDIRDEB)/usr/xrdp/libxrdp.so
+
 file.o: ../common/file.c
 	$(CC) $(C_OS_FLAGS) ../common/file.c
 

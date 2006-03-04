@@ -34,3 +34,6 @@ ssl_calls.o: ../common/ssl_calls.c
 
 install:
 	install librdp.so $(DESTDIR)/librdp.so
+
+installdeb:
+	install librdp.so $(DESTDIRDEB)/usr/xrdp/librdp.so

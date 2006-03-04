@@ -32,3 +32,5 @@ d3des.o: ../common/d3des.c
 install:
 	install libvnc.so $(DESTDIR)/libvnc.so
 
+installdeb:
+	install libvnc.so $(DESTDIRDEB)/usr/xrdp/libvnc.so

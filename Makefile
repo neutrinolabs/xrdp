@@ -49,3 +49,21 @@ install:
 	if [ -d /etc/pam.d ]; then install instfiles/pam.d/sesman /etc/pam.d/sesman; fi
 	install instfiles/xrdpstart.sh $(DESTDIR)/xrdpstart.sh
 	install instfiles/xrdp_control.sh $(DESTDIR)/xrdp_control.sh
+
+installdeb:
+	mkdir -p $(DESTDIRDEB)/usr/xrdp
+	mkdir -p $(DESTDIRDEB)/etc/xrdp
+	mkdir -p $(DESTDIRDEB)/etc/pam.d
+	mkdir -p $(DESTDIRDEB)/etc/init.d
+	mkdir -p $(DESTDIRDEB)/usr/man
+	mkdir -p $(DESTDIRDEB)/usr/man/man5
+	mkdir -p $(DESTDIRDEB)/usr/man/man8
+	make -C vnc installdeb DESTDIRDEB=$(DESTDIRDEB)
+	make -C libxrdp installdeb DESTDIRDEB=$(DESTDIRDEB)
+	make -C xrdp installdeb DESTDIRDEB=$(DESTDIRDEB)
+	make -C rdp installdeb DESTDIRDEB=$(DESTDIRDEB)
+	make -C sesman installdeb DESTDIRDEB=$(DESTDIRDEB)
+	make -C xup installdeb DESTDIRDEB=$(DESTDIRDEB)
+	make -C docs installdeb DESTDIRDEB=$(DESTDIRDEB)
+	install instfiles/pam.d/sesman $(DESTDIRDEB)/etc/pam.d/sesman
+	install instfiles/xrdp_control1.sh $(DESTDIRDEB)/etc/init.d/xrdp_control.sh

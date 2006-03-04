@@ -29,3 +29,6 @@ os_calls.o: ../common/os_calls.c
 
 install:
 	install libxup.so $(DESTDIR)/libxup.so
+
+installdeb:
+	install libxup.so $(DESTDIRDEB)/usr/xrdp/libxup.so
