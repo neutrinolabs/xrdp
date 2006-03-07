@@ -236,6 +236,7 @@ xrdp_painter_fill_rect(struct xrdp_painter* self,
   int k;
   int dx;
   int dy;
+  int rop;
 
   if (self == 0)
   {
@@ -286,12 +287,32 @@ xrdp_painter_fill_rect(struct xrdp_painter* self,
   else
   {
     k = 0;
+    rop = self->rop;
+    /* if opcode is in the form 0x00, 0x11, 0x22, ... convert it */
+    if (((rop & 0xf0) >> 4) == (rop & 0xf))
+    {
+      switch (rop)
+      {
+        case 0x66: /* xor */
+          rop = 0x5a;
+          break;
+        case 0xaa: /* noop */
+          rop = 0xfb;
+          break;
+        case 0xcc: /* copy */
+          rop = 0xf0;
+          break;
+        case 0x88: /* and */
+          rop = 0xc0;
+          break;
+      }
+    }
     while (xrdp_region_get_rect(region, k, &rect) == 0)
     {
       if (rect_intersect(&rect, &clip_rect, &draw_rect))
       {
         libxrdp_orders_pat_blt(self->session, x, y, cx, cy,
-                               self->rop, self->bg_color, self->fg_color,
+                               rop, self->bg_color, self->fg_color,
                                &self->brush, &draw_rect);
       }
       k++;
