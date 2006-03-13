@@ -473,8 +473,7 @@ xrdp_wm_show_edits(struct xrdp_wm* self, struct xrdp_bitmap* combo)
         }
         if (g_strncmp(name, "username", 255) == 0)
         {
-          g_free(b->caption1);
-          b->caption1 = g_strdup(self->session->client_info->username);
+          g_strcpy(b->caption1, self->session->client_info->username);
           b->edit_pos = g_strlen(b->caption1);
           if (g_strlen(b->caption1) > 0)
           {
