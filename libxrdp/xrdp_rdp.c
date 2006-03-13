@@ -107,6 +107,13 @@ xrdp_rdp_create(struct xrdp_session* session, int sck)
   self->sec_layer = xrdp_sec_create(self, sck);
   /* read ini settings */
   xrdp_rdp_read_config(&self->client_info);
+  /* deafult 8 bit color bitmap cache entries and size */
+  self->client_info.cache1_entries = 600;
+  self->client_info.cache1_size = 256;
+  self->client_info.cache2_entries = 300;
+  self->client_info.cache2_size = 1024;
+  self->client_info.cache3_entries = 262;
+  self->client_info.cache3_size = 4096;
   return self;
 }
 
@@ -495,6 +502,12 @@ xrdp_process_capset_bmpcache(struct xrdp_rdp* self, struct stream* s,
   in_uint16_le(s, self->client_info.cache2_size);
   in_uint16_le(s, self->client_info.cache3_entries);
   in_uint16_le(s, self->client_info.cache3_size);
+  DEBUG(("cache1 entries %d size %d\r\n", self->client_info.cache1_entries,
+         self->client_info.cache1_size));
+  DEBUG(("cache2 entries %d size %d\r\n", self->client_info.cache2_entries,
+         self->client_info.cache2_size));
+  DEBUG(("cache3 entries %d size %d\r\n", self->client_info.cache3_entries,
+         self->client_info.cache3_size));
   return 0;
 }
 
@@ -525,6 +538,7 @@ xrdp_rdp_process_confirm_active(struct xrdp_rdp* self, struct stream* s)
   int len;
   char* p;
 
+  DEBUG(("in xrdp_rdp_process_confirm_active\r\n"));
   in_uint8s(s, 4); /* rdp_shareid */
   in_uint8s(s, 2); /* userid */
   in_uint16_le(s, source_len); /* sizeof RDP_SOURCE */
@@ -540,20 +554,70 @@ xrdp_rdp_process_confirm_active(struct xrdp_rdp* self, struct stream* s)
     switch (type)
     {
       case RDP_CAPSET_GENERAL: /* 1 */
+        DEBUG(("RDP_CAPSET_GENERAL\r\n"));
         xrdp_process_capset_general(self, s, len);
         break;
+      case RDP_CAPSET_BITMAP: /* 2 */
+        DEBUG(("RDP_CAPSET_BITMAP\r\n"));
+        break;
       case RDP_CAPSET_ORDER: /* 3 */
+        DEBUG(("RDP_CAPSET_ORDER\r\n"));
         xrdp_process_capset_order(self, s, len);
         break;
       case RDP_CAPSET_BMPCACHE: /* 4 */
+        DEBUG(("RDP_CAPSET_BMPCACHE\r\n"));
         xrdp_process_capset_bmpcache(self, s, len);
         break;
+      case RDP_CAPSET_CONTROL: /* 5 */
+        DEBUG(("RDP_CAPSET_CONTROL\r\n"));
+        break;
+      case RDP_CAPSET_ACTIVATE: /* 7 */
+        DEBUG(("RDP_CAPSET_ACTIVATE\r\n"));
+        break;
       case RDP_CAPSET_POINTER: /* 8 */
+        DEBUG(("RDP_CAPSET_POINTER\r\n"));
         xrdp_process_capset_pointercache(self, s, len);
+        break;
+      case RDP_CAPSET_SHARE: /* 9 */
+        DEBUG(("RDP_CAPSET_SHARE\r\n"));
+        break;
+      case RDP_CAPSET_COLCACHE: /* 10 */
+        DEBUG(("RDP_CAPSET_COLCACHE\r\n"));
+        break;
+      case 12: /* 12 */
+        DEBUG(("--12\r\n"));
+        break;
+      case 13: /* 13 */
+        DEBUG(("--13\r\n"));
+        break;
+      case 14: /* 14 */
+        DEBUG(("--14\r\n"));
+        break;
+      case 15: /* 15 */
+        DEBUG(("--15\r\n"));
+        break;
+      case 16: /* 16 */
+        DEBUG(("--16\r\n"));
+        break;
+      case 17: /* 17 */
+        DEBUG(("--16\r\n"));
+        break;
+      case RDP_CAPSET_BMPCACHE2: /* 19 */
+        DEBUG(("RDP_CAPSET_BMPCACHE2\r\n"));
+        break;
+      case 20: /* 20 */
+        DEBUG(("--20\r\n"));
+        break;
+      case 21: /* 21 */
+        DEBUG(("--21\r\n"));
+        break;
+      default:
+        g_printf("unknown in xrdp_rdp_process_confirm_active %d\r\n", type);
         break;
     }
     s->p = p + len;
   }
+  DEBUG(("out xrdp_rdp_process_confirm_active\r\n"));
   return 0;
 }
 
@@ -579,7 +643,7 @@ xrdp_rdp_process_data_input(struct xrdp_rdp* self, struct stream* s)
 
   in_uint16_le(s, num_events);
   in_uint8s(s, 2); /* pad */
-  DEBUG(("xrdp_rdp_process_data_input %d events\r\n", num_events));
+  DEBUG(("in xrdp_rdp_process_data_input %d events\r\n", num_events));
   for (index = 0; index < num_events; index++)
   {
     in_uint32_le(s, time);
@@ -595,10 +659,12 @@ param2 %d time %d\r\n", msg_type, device_flags, param1, param2, time));
          RDP_INPUT_SYNCHRONIZE - 0
          RDP_INPUT_SCANCODE - 4
          RDP_INPUT_MOUSE - 0x8001 */
+      /* call to xrdp_wm.c : callback */
       self->session->callback(self->session->id, msg_type, param1, param2,
                               device_flags, time);
     }
   }
+  DEBUG(("out xrdp_rdp_process_data_input\r\n"));
   return 0;
 }
 

@@ -14,6 +14,7 @@ DEFINES = -DXRDP_CFG_FILE=\"$(CFGDIR)/xrdp.ini\" \
           -DXRDP_KEY_FILE=\"$(CFGDIR)/rsakeys.ini\"
 
 CFLAGS = -Wall -O2 -I../common -fPIC $(DEFINES)
+#CFLAGS += -DXRDP_DEBUG
 C_OS_FLAGS = $(CFLAGS) -c
 LDFLAGS = -shared
 LIBS = -ldl
