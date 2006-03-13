@@ -1245,7 +1245,7 @@ xrdp_wm_process_input_mouse(struct xrdp_wm* self, int device_flags,
 
 /******************************************************************************/
 /* this is the callbacks comming from libxrdp.so */
-int
+int DEFAULT_CC
 callback(long id, int msg, long param1, long param2, long param3, long param4)
 {
   int rv;
