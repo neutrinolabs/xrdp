@@ -565,30 +565,36 @@ xrdp_sec_recv(struct xrdp_sec* self, struct stream* s, int* chan)
                     self->pub_mod, self->pri_exp);
     xrdp_sec_establish_keys(self);
     *chan = 1; /* just set a non existing channel and exit */
+    DEBUG((" out xrdp_sec_recv\r\n"));
     return 0;
   }
   if (flags & SEC_LOGON_INFO) /* 0x40 */
   {
     if (xrdp_sec_process_logon_info(self, s) != 0)
     {
+      DEBUG((" out xrdp_sec_recv error\r\n"));
       return 1;
     }
     if (xrdp_sec_send_lic_initial(self) != 0)
     {
+      DEBUG((" out xrdp_sec_recv error\r\n"));
       return 1;
     }
     *chan = 1; /* just set a non existing channel and exit */
+    DEBUG((" out xrdp_sec_recv\r\n"));
     return 0;
   }
   if (flags & SEC_LICENCE_NEG) /* 0x80 */
   {
     if (xrdp_sec_send_lic_response(self) != 0)
     {
+      DEBUG((" out xrdp_sec_recv error\r\n"));
       return 1;
     }
+    DEBUG((" out xrdp_sec_recv\r\n"));
     return -1; /* special error that means send demand active */
   }
-  DEBUG((" out xrdp_sec_recv error\r\n"));
+  DEBUG((" out xrdp_sec_recv\r\n"));
   return 0;
 }
 
