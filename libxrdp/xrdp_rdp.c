@@ -294,6 +294,16 @@ xrdp_rdp_parse_client_mcs_data(struct xrdp_rdp* self)
       self->client_info.bpp = 24;
       break;
   }
+  /* todo - for now, don't allow unsupported bpp connections
+     xrdp_rdp_send_demand_active will tell the client what bpp to use */
+  if (self->client_info.bpp == 24)
+  {
+    self->client_info.bpp = 16;
+  }
+  if (self->client_info.bpp == 15)
+  {
+    self->client_info.bpp = 16;
+  }
   p->p = p->data;
   DEBUG(("client width %d, client height %d bpp %d\r\n",
          self->client_info.width, self->client_info.height,
