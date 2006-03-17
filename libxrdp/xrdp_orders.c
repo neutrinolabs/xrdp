@@ -1476,6 +1476,16 @@ xrdp_orders_send_raw_bitmap(struct xrdp_orders* self,
   int pixel;
   int e;
 
+  if (width > 64)
+  {
+    g_printf("error, width > 64\r\n");
+    return 1;
+  }
+  if (height > 64)
+  {
+    g_printf("error, height > 64\r\n");
+    return 1;
+  }
   e = width % 4;
   if (e != 0)
   {
@@ -1649,5 +1659,161 @@ xrdp_orders_send_font(struct xrdp_orders* self,
   out_uint16_le(self->out_s, font_char->width);
   out_uint16_le(self->out_s, font_char->height);
   out_uint8a(self->out_s, font_char->data, datasize);
+  return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+/* max size width * height * Bpp + 14 */
+int APP_CC
+xrdp_orders_send_raw_bitmap2(struct xrdp_orders* self,
+                             int width, int height, int bpp, char* data,
+                             int cache_id, int cache_idx)
+{
+  int order_flags;
+  int len;
+  int bufsize;
+  int Bpp;
+  int i;
+  int j;
+  int pixel;
+  int e;
+
+  if (width > 64)
+  {
+    g_printf("error, width > 64\r\n");
+    return 1;
+  }
+  if (height > 64)
+  {
+    g_printf("error, height > 64\r\n");
+    return 1;
+  }
+  e = width % 4;
+  if (e != 0)
+  {
+    e = 4 - e;
+  }
+  Bpp = (bpp + 7) / 8;
+  bufsize = (width + e) * height * Bpp;
+  xrdp_orders_check(self, bufsize + 14);
+  self->order_count++;
+  order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
+  out_uint8(self->out_s, order_flags);
+  len = (bufsize + 6) - 7; /* length after type minus 7 */
+  out_uint16_le(self->out_s, len);
+  i = (((Bpp + 2) << 3) & 0x38) | (cache_id & 7);
+  out_uint16_le(self->out_s, i); /* flags */
+  out_uint8(self->out_s, RDP_ORDER_RAW_BMPCACHE2); /* type */
+  out_uint8(self->out_s, width + e);
+  out_uint8(self->out_s, height);
+  out_uint16_be(self->out_s, bufsize | 0x4000);
+  i = ((cache_idx >> 8) & 0xff) | 0x80;
+  out_uint8(self->out_s, i);
+  i = cache_idx & 0xff;
+  out_uint8(self->out_s, i);
+  for (i = height - 1; i >= 0; i--)
+  {
+    for (j = 0; j < width; j++)
+    {
+      if (Bpp == 3)
+      {
+        pixel = GETPIXEL32(data, j, i, width);
+        out_uint8(self->out_s, pixel >> 16);
+        out_uint8(self->out_s, pixel >> 8);
+        out_uint8(self->out_s, pixel);
+      }
+      else if (Bpp == 2)
+      {
+        pixel = GETPIXEL16(data, j, i, width);
+        out_uint8(self->out_s, pixel);
+        out_uint8(self->out_s, pixel >> 8);
+      }
+      else if (Bpp == 1)
+      {
+        pixel = GETPIXEL8(data, j, i, width);
+        out_uint8(self->out_s, pixel);
+      }
+    }
+    for (j = 0; j < e; j++)
+    {
+      out_uint8s(self->out_s, Bpp);
+    }
+  }
+  return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+/* max size width * height * Bpp + 14 */
+int APP_CC
+xrdp_orders_send_bitmap2(struct xrdp_orders* self,
+                         int width, int height, int bpp, char* data,
+                         int cache_id, int cache_idx)
+{
+  int order_flags;
+  int len;
+  int bufsize;
+  int Bpp;
+  int i;
+  int lines_sending;
+  int e;
+  struct stream* s;
+  struct stream* temp_s;
+  char* p;
+
+  if (width > 64)
+  {
+    g_printf("error, width > 64\r\n");
+    return 1;
+  }
+  if (height > 64)
+  {
+    g_printf("error, height > 64\r\n");
+    return 1;
+  }
+  e = width % 4;
+  if (e != 0)
+  {
+    e = 4 - e;
+  }
+  make_stream(s);
+  init_stream(s, 16384);
+  make_stream(temp_s);
+  init_stream(temp_s, 16384);
+  p = s->p;
+  i = height;
+  lines_sending = xrdp_bitmap_compress(data, width, height, s, bpp, 16384,
+                                       i - 1, temp_s, e);
+  if (lines_sending != height)
+  {
+    free_stream(s);
+    free_stream(temp_s);
+    g_printf("error in xrdp_orders_send_bitmap2, lines_sending(%d) != \
+height(%d)\r\n", lines_sending, height);
+    return 1;
+  }
+  bufsize = s->p - p;
+  Bpp = (bpp + 7) / 8;
+  xrdp_orders_check(self, bufsize + 14);
+  self->order_count++;
+  order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
+  out_uint8(self->out_s, order_flags);
+  len = (bufsize + 6) - 7; /* length after type minus 7 */
+  out_uint16_le(self->out_s, len);
+  i = (((Bpp + 2) << 3) & 0x38) | (cache_id & 7);
+  i = i | 0x400;
+  out_uint16_le(self->out_s, i); /* flags */
+  out_uint8(self->out_s, RDP_ORDER_BMPCACHE2); /* type */
+  out_uint8(self->out_s, width + e);
+  out_uint8(self->out_s, height);
+  out_uint16_be(self->out_s, bufsize | 0x4000);
+  i = ((cache_idx >> 8) & 0xff) | 0x80;
+  out_uint8(self->out_s, i);
+  i = cache_idx & 0xff;
+  out_uint8(self->out_s, i);
+  out_uint8a(self->out_s, s->data, bufsize);
+  free_stream(s);
+  free_stream(temp_s);
   return 0;
 }

@@ -578,3 +578,25 @@ libxrdp_reset(struct xrdp_session* session,
   libxrdp_process_data(session);
   return 0;
 }
+
+/*****************************************************************************/
+int EXPORT_CC
+libxrdp_orders_send_raw_bitmap2(struct xrdp_session* session,
+                                int width, int height, int bpp, char* data,
+                                int cache_id, int cache_idx)
+{
+  return xrdp_orders_send_raw_bitmap2((struct xrdp_orders*)session->orders,
+                                      width, height, bpp, data,
+                                      cache_id, cache_idx);
+}
+
+/*****************************************************************************/
+int EXPORT_CC
+libxrdp_orders_send_bitmap2(struct xrdp_session* session,
+                            int width, int height, int bpp, char* data,
+                            int cache_id, int cache_idx)
+{
+  return xrdp_orders_send_bitmap2((struct xrdp_orders*)session->orders,
+                                  width, height, bpp, data,
+                                  cache_id, cache_idx);
+}

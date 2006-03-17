@@ -28,13 +28,18 @@ struct xrdp_client_info
   int bpp;
   int width;
   int height;
+  /* bitmap cache info */
   int cache1_entries;
   int cache1_size;
   int cache2_entries;
   int cache2_size;
   int cache3_entries;
   int cache3_size;
+  int bitmap_cache_persist_enable; /* 0 or 2 */
+  int bitmap_cache_version; /* 0 = original version, 2 = v2 */
+  /* pointer info */
   int pointer_cache_entries;
+  /* other */
   int use_bitmap_comp;
   int use_bitmap_cache;
   int op1; /* use smaller bitmap header, non cache */
@@ -181,5 +186,13 @@ libxrdp_orders_send_font(struct xrdp_session* session,
 int DEFAULT_CC
 libxrdp_reset(struct xrdp_session* session,
               int width, int height, int bpp);
+int DEFAULT_CC
+libxrdp_orders_send_raw_bitmap2(struct xrdp_session* session,
+                                int width, int height, int bpp, char* data,
+                                int cache_id, int cache_idx);
+int DEFAULT_CC
+libxrdp_orders_send_bitmap2(struct xrdp_session* session,
+                            int width, int height, int bpp, char* data,
+                            int cache_id, int cache_idx);
 
 #endif

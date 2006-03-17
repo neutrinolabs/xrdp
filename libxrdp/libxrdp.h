@@ -339,6 +339,14 @@ int APP_CC
 xrdp_orders_send_font(struct xrdp_orders* self,
                       struct xrdp_font_char* font_char,
                       int font_index, int char_index);
+int APP_CC
+xrdp_orders_send_raw_bitmap2(struct xrdp_orders* self,
+                             int width, int height, int bpp, char* data,
+                             int cache_id, int cache_idx);
+int APP_CC
+xrdp_orders_send_bitmap2(struct xrdp_orders* self,
+                         int width, int height, int bpp, char* data,
+                         int cache_id, int cache_idx);
 
 /* xrdp_bitmap_compress.c */
 int APP_CC

@@ -107,7 +107,7 @@ xrdp_rdp_create(struct xrdp_session* session, int sck)
   self->sec_layer = xrdp_sec_create(self, sck);
   /* read ini settings */
   xrdp_rdp_read_config(&self->client_info);
-  /* deafult 8 bit color bitmap cache entries and size */
+  /* default 8 bit v1 color bitmap cache entries and size */
   self->client_info.cache1_entries = 600;
   self->client_info.cache1_size = 256;
   self->client_info.cache2_entries = 300;
@@ -352,7 +352,7 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp* self)
   out_uint16_le(s, 0x200); /* Protocol version */
   out_uint16_le(s, 0); /* pad */
   out_uint16_le(s, 0); /* Compression types */
-  out_uint16_le(s, 0); /* pad use 0x40d for rdp packets */
+  out_uint16_le(s, 0); /* pad use 0x40d for rdp packets, 0 for not */
   out_uint16_le(s, 0); /* Update capability */
   out_uint16_le(s, 0); /* Remote unshare capability */
   out_uint16_le(s, 0); /* Compression level */
@@ -512,6 +512,42 @@ xrdp_process_capset_bmpcache(struct xrdp_rdp* self, struct stream* s,
 }
 
 /*****************************************************************************/
+/* get the bitmap cache size */
+static int APP_CC
+xrdp_process_capset_bmpcache2(struct xrdp_rdp* self, struct stream* s,
+                              int len)
+{
+  int Bpp;
+  int i;
+
+  self->client_info.bitmap_cache_version = 2;
+  Bpp = (self->client_info.bpp + 7) / 8;
+  in_uint16_le(s, i);
+  self->client_info.bitmap_cache_persist_enable = i;
+  in_uint8s(s, 2); /* number of caches in set, 3 */
+  in_uint32_le(s, i);
+  i = MIN(i, 2000);
+  self->client_info.cache1_entries = i;
+  self->client_info.cache1_size = 256 * Bpp;
+  in_uint32_le(s, i);
+  i = MIN(i, 2000);
+  self->client_info.cache2_entries = i;
+  self->client_info.cache2_size = 1024 * Bpp;
+  in_uint32_le(s, i);
+  i = i & 0x7fffffff;
+  i = MIN(i, 2000);
+  self->client_info.cache3_entries = i;
+  self->client_info.cache3_size = 4096 * Bpp;
+  DEBUG(("cache1 entries %d size %d\r\n", self->client_info.cache1_entries,
+         self->client_info.cache1_size));
+  DEBUG(("cache2 entries %d size %d\r\n", self->client_info.cache2_entries,
+         self->client_info.cache2_size));
+  DEBUG(("cache3 entries %d size %d\r\n", self->client_info.cache3_entries,
+         self->client_info.cache3_size));
+  return 0;
+}
+
+/*****************************************************************************/
 /* get the number of client cursor cache */
 static int APP_CC
 xrdp_process_capset_pointercache(struct xrdp_rdp* self, struct stream* s,
@@ -604,6 +640,7 @@ xrdp_rdp_process_confirm_active(struct xrdp_rdp* self, struct stream* s)
         break;
       case RDP_CAPSET_BMPCACHE2: /* 19 */
         DEBUG(("RDP_CAPSET_BMPCACHE2\r\n"));
+        xrdp_process_capset_bmpcache2(self, s, len);
         break;
       case 20: /* 20 */
         DEBUG(("--20\r\n"));
