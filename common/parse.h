@@ -18,8 +18,11 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-/* modified for xrdp */
-/* this is a super fast stream method, you bet */
+/* modified for xrdp
+   this is a super fast stream method, you bet
+
+   needed functions g_malloc, g_free, g_memset, g_memcpy
+*/
 
 #if !defined(PARSE_H)
 #define PARSE_H

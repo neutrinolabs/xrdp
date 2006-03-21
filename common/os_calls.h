@@ -14,7 +14,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
    xrdp: A Remote Desktop Protocol server.
-   Copyright (C) Jay Sorg 2004-2005
+   Copyright (C) Jay Sorg 2004-2006
 
    generic operating system calls
 
@@ -31,6 +31,10 @@ void
 g_printf(char *format, ...);
 void
 g_sprintf(char* dest, char* format, ...);
+void
+g_writeln(char* format, ...);
+void
+g_write(char* format, ...);
 void
 g_hexdump(char* p, int len);
 void
