@@ -75,14 +75,11 @@ xrdp_font_create(struct xrdp_wm* wm)
   int datasize;
   struct xrdp_font_char* f;
 
-  //g_printf("loading font\n");
   self = (struct xrdp_font*)g_malloc(sizeof(struct xrdp_font), 1);
   self->wm = wm;
   make_stream(s);
   init_stream(s, 8192);
-//  fd = g_file_open("Arial-10.fv1");
   fd = g_file_open("Tahoma-10.fv1");
-//  fd = g_file_open("Serif-10.fv1");
   if (fd != -1)
   {
     b = g_file_read(fd, s->data, 8192);
@@ -95,9 +92,8 @@ xrdp_font_create(struct xrdp_wm* wm)
       in_uint16_le(s, self->size);
       in_uint16_le(s, self->style);
       in_uint8s(s, 8);
-      //g_printf("%s %d %d %d\n", self->name, self->size, self->style, b);
       index = 32;
-      while (!s_check_end(s))
+      while (s_check_rem(s, 16))
       {
         f = self->font_items + index;
         in_sint16_le(s, i);
@@ -112,9 +108,15 @@ xrdp_font_create(struct xrdp_wm* wm)
         f->incby = i;
         in_uint8s(s, 6);
         datasize = FONT_DATASIZE(f);
-        //g_printf("%d %d %d %d %d\n", f->width, f->height, datasize, f->baseline, f->offset);
-        f->data = (char*)g_malloc(datasize, 0);
-        in_uint8a(s, f->data, datasize);
+        if (s_check_rem(s, datasize))
+        {
+          f->data = (char*)g_malloc(datasize, 0);
+          in_uint8a(s, f->data, datasize);
+        }
+        else
+        {
+          g_writeln("error in xrdp_font_create");
+        }
         index++;
       }
     }
