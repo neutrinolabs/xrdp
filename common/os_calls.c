@@ -429,6 +429,10 @@ g_tcp_select(int sck1, int sck2)
       rv = rv | 2;
     }
   }
+  else
+  {
+    rv = 0;
+  }
   return rv;
 }
 
