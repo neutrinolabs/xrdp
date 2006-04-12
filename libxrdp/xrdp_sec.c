@@ -599,6 +599,48 @@ xrdp_sec_recv(struct xrdp_sec* self, struct stream* s, int* chan)
 }
 
 /*****************************************************************************/
+/* Output a uint32 into a buffer (little-endian) */
+static void
+buf_out_uint32(char* buffer, int value)
+{
+  buffer[0] = (value) & 0xff;
+  buffer[1] = (value >> 8) & 0xff;
+  buffer[2] = (value >> 16) & 0xff;
+  buffer[3] = (value >> 24) & 0xff;
+}
+
+/*****************************************************************************/
+/* Generate a MAC hash (5.2.3.1), using a combination of SHA1 and MD5 */
+static void APP_CC
+xrdp_sec_sign(struct xrdp_sec* self, char* out, int out_len,
+              char* data, int data_len)
+{
+  char shasig[20];
+  char md5sig[16];
+  char lenhdr[4];
+  void* sha1_info;
+  void* md5_info;
+
+  buf_out_uint32(lenhdr, data_len);
+  sha1_info = ssl_sha1_info_create();
+  md5_info = ssl_md5_info_create();
+  ssl_sha1_clear(sha1_info);
+  ssl_sha1_transform(sha1_info, self->sign_key, self->rc4_key_len);
+  ssl_sha1_transform(sha1_info, pad_54, 40);
+  ssl_sha1_transform(sha1_info, lenhdr, 4);
+  ssl_sha1_transform(sha1_info, data, data_len);
+  ssl_sha1_complete(sha1_info, shasig);
+  ssl_md5_clear(md5_info);
+  ssl_md5_transform(md5_info, self->sign_key, self->rc4_key_len);
+  ssl_md5_transform(md5_info, pad_92, 48);
+  ssl_md5_transform(md5_info, shasig, 20);
+  ssl_md5_complete(md5_info, md5sig);
+  g_memcpy(out, md5sig, out_len);
+  ssl_sha1_info_delete(sha1_info);
+  ssl_md5_info_delete(md5_info);
+}
+
+/*****************************************************************************/
 /* returns error */
 /* TODO needs outgoing encryption */
 int APP_CC
