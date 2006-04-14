@@ -169,7 +169,7 @@ hex_str_to_bin(char* in, char* out, int out_len)
 
 /*****************************************************************************/
 struct xrdp_sec* APP_CC
-xrdp_sec_create(struct xrdp_rdp* owner, int sck)
+xrdp_sec_create(struct xrdp_rdp* owner, int sck, int crypt_level)
 {
   struct xrdp_sec* self;
   struct list* items;
@@ -181,7 +181,23 @@ xrdp_sec_create(struct xrdp_rdp* owner, int sck)
 
   self = (struct xrdp_sec*)g_malloc(sizeof(struct xrdp_sec), 1);
   self->rdp_layer = owner;
-  self->rc4_key_size = 1;
+  self->rc4_key_size = 1; /* 1 = 40 bit, 2 = 128 bit */
+  self->crypt_level = 1; /* 1, 2, 3 = low, medium, high */
+  switch (crypt_level)
+  {
+    case 1:
+      self->rc4_key_size = 1;
+      self->crypt_level = 1;
+      break;
+    case 2:
+      self->rc4_key_size = 1;
+      self->crypt_level = 2;
+      break;
+    case 3:
+      self->rc4_key_size = 2;
+      self->crypt_level = 3;
+      break;
+  }
   self->decrypt_rc4_info = ssl_rc4_info_create();
   self->encrypt_rc4_info = ssl_rc4_info_create();
   g_random(self->server_random, 32);
@@ -248,7 +264,14 @@ xrdp_sec_init(struct xrdp_sec* self, struct stream* s)
   {
     return 1;
   }
-  s_push_layer(s, sec_hdr, 4);
+  if (self->crypt_level > 1)
+  {
+    s_push_layer(s, sec_hdr, 4 + 8);
+  }
+  else
+  {
+    s_push_layer(s, sec_hdr, 4);
+  }
   return 0;
 }
 
@@ -312,6 +335,22 @@ xrdp_sec_decrypt(struct xrdp_sec* self, char* data, int len)
   }
   ssl_rc4_crypt(self->decrypt_rc4_info, data, len);
   self->decrypt_use_count++;
+}
+
+/*****************************************************************************/
+static void APP_CC
+xrdp_sec_encrypt(struct xrdp_sec* self, char* data, int len)
+{
+  if (self->encrypt_use_count == 4096)
+  {
+    xrdp_sec_update(self->encrypt_key, self->encrypt_update_key,
+                    self->rc4_key_len);
+    ssl_rc4_set_key(self->encrypt_rc4_info, self->encrypt_key,
+                    self->rc4_key_len);
+    self->encrypt_use_count = 0;
+  }
+  ssl_rc4_crypt(self->encrypt_rc4_info, data, len);
+  self->encrypt_use_count++;
 }
 
 /*****************************************************************************/
@@ -642,13 +681,24 @@ xrdp_sec_sign(struct xrdp_sec* self, char* out, int out_len,
 
 /*****************************************************************************/
 /* returns error */
-/* TODO needs outgoing encryption */
 int APP_CC
-xrdp_sec_send(struct xrdp_sec* self, struct stream* s, int flags)
+xrdp_sec_send(struct xrdp_sec* self, struct stream* s)
 {
+  int datalen;
+
   DEBUG((" in xrdp_sec_send\r\n"));
   s_pop_layer(s, sec_hdr);
-  out_uint32_le(s, flags);
+  if (self->crypt_level > 1)
+  {
+    out_uint32_le(s, SEC_ENCRYPT);
+    datalen = (s->end - s->p) - 8;
+    xrdp_sec_sign(self, s->p, 8, s->p + 8, datalen);
+    xrdp_sec_encrypt(self, s->p + 8, datalen);
+  }
+  else
+  {
+    out_uint32_le(s, 0);
+  }
   if (xrdp_mcs_send(self->mcs_layer, s) != 0)
   {
     return 1;
@@ -698,8 +748,9 @@ xrdp_sec_out_mcs_data(struct xrdp_sec* self)
   out_uint8(p, 0);
   out_uint16_le(p, SEC_TAG_SRV_CRYPT);
   out_uint16_le(p, 0x00ec); /* len is 236 */
-  out_uint32_le(p, 1);      /* key len 1 = 40 bit 2 = 128 bit */
-  out_uint32_le(p, 1);      /* crypt level 1 = low 2 = medium 3 = high */
+  out_uint32_le(p, self->rc4_key_size); /* key len 1 = 40 bit 2 = 128 bit */
+  out_uint32_le(p, self->crypt_level); /* crypt level 1 = low 2 = medium */
+                                       /* 3 = high */
   out_uint32_le(p, 32);     /* 32 bytes random len */
   out_uint32_le(p, 0xb8);   /* 184 bytes rsa info(certificate) len */
   out_uint8a(p, self->server_random, 32);

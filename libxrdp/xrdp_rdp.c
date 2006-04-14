@@ -87,6 +87,21 @@ xrdp_rdp_read_config(struct xrdp_client_info* client_info)
           client_info->use_bitmap_comp = 1;
         }
       }
+      else if (g_strncasecmp(item, "crypt_level", 255) == 0)
+      {
+        if (g_strncasecmp(value, "low", 255) == 0)
+        {
+          client_info->crypt_level = 1;
+        }
+        else if (g_strncasecmp(value, "medium", 255) == 0)
+        {
+          client_info->crypt_level = 2;
+        }
+        else if (g_strncasecmp(value, "high", 255) == 0)
+        {
+          client_info->crypt_level = 3;
+        }
+      }
     }
     list_delete(items);
     list_delete(values);
@@ -104,9 +119,10 @@ xrdp_rdp_create(struct xrdp_session* session, int sck)
   self = (struct xrdp_rdp*)g_malloc(sizeof(struct xrdp_rdp), 1);
   self->session = session;
   self->share_id = 66538;
-  self->sec_layer = xrdp_sec_create(self, sck);
   /* read ini settings */
   xrdp_rdp_read_config(&self->client_info);
+  /* create sec layer */
+  self->sec_layer = xrdp_sec_create(self, sck, self->client_info.crypt_level);
   /* default 8 bit v1 color bitmap cache entries and size */
   self->client_info.cache1_entries = 600;
   self->client_info.cache1_size = 256;
@@ -221,7 +237,7 @@ xrdp_rdp_send(struct xrdp_rdp* self, struct stream* s, int pdu_type)
   out_uint16_le(s, len);
   out_uint16_le(s, 0x10 | pdu_type);
   out_uint16_le(s, self->mcs_channel);
-  if (xrdp_sec_send(self->sec_layer, s, 0) != 0)
+  if (xrdp_sec_send(self->sec_layer, s) != 0)
   {
     DEBUG(("out xrdp_rdp_send error\r\n"));
     return 1;
@@ -250,7 +266,7 @@ xrdp_rdp_send_data(struct xrdp_rdp* self, struct stream* s,
   out_uint8(s, data_pdu_type);
   out_uint8(s, 0);
   out_uint16_le(s, 0);
-  if (xrdp_sec_send(self->sec_layer, s, 0) != 0)
+  if (xrdp_sec_send(self->sec_layer, s) != 0)
   {
     DEBUG(("out xrdp_rdp_send_data error\r\n"));
     return 1;

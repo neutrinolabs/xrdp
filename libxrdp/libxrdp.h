@@ -75,8 +75,9 @@ struct xrdp_sec
   char encrypt_key[16];
   char decrypt_update_key[16];
   char encrypt_update_key[16];
-  int rc4_key_size;
-  int rc4_key_len;
+  int rc4_key_size; /* 1 = 40 bit, 2 = 128 bit */
+  int rc4_key_len; /* 8 = 40 bit, 16 = 128 bit */
+  int crypt_level; /* 1, 2, 3 = low, meduim, high */
   char sign_key[16];
   void* decrypt_rc4_info;
   void* encrypt_rc4_info;
@@ -230,7 +231,7 @@ xrdp_mcs_disconnect(struct xrdp_mcs* self);
 
 /* xrdp_sec.c */
 struct xrdp_sec* APP_CC
-xrdp_sec_create(struct xrdp_rdp* owner, int sck);
+xrdp_sec_create(struct xrdp_rdp* owner, int sck, int crypt_level);
 void APP_CC
 xrdp_sec_delete(struct xrdp_sec* self);
 int APP_CC
@@ -238,7 +239,7 @@ xrdp_sec_init(struct xrdp_sec* self, struct stream* s);
 int APP_CC
 xrdp_sec_recv(struct xrdp_sec* self, struct stream* s, int* chan);
 int APP_CC
-xrdp_sec_send(struct xrdp_sec* self, struct stream* s, int flags);
+xrdp_sec_send(struct xrdp_sec* self, struct stream* s);
 int APP_CC
 xrdp_sec_incoming(struct xrdp_sec* self);
 int APP_CC

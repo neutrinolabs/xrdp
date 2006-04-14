@@ -56,6 +56,7 @@ struct xrdp_client_info
   char directory[256];
   int rdp_compression;
   int rdp_autologin;
+  int crypt_level; /* 1, 2, 3 = low, medium, high */
 };
 
 struct xrdp_brush
