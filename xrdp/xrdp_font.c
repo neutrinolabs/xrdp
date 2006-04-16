@@ -108,6 +108,13 @@ xrdp_font_create(struct xrdp_wm* wm)
         f->incby = i;
         in_uint8s(s, 6);
         datasize = FONT_DATASIZE(f);
+        if (datasize < 0 || datasize > 512)
+        {
+          /* shouldn't happen */
+          g_writeln("error in xrdp_font_create, datasize wrong");
+          g_writeln("%d %d %d", f->width, f->height, datasize);
+          break;
+        }
         if (s_check_rem(s, datasize))
         {
           f->data = (char*)g_malloc(datasize, 0);
