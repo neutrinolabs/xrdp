@@ -26,6 +26,10 @@
 #include <windows.h>
 #include <winsock.h>
 #else
+/* fix for solaris 10 with gcc 3.3.2 problem */
+#if defined(sun) || defined(__sun)
+#define ctid_t id_t
+#endif
 #include <unistd.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -43,6 +47,7 @@
 #include <fcntl.h>
 #include <pwd.h>
 #include <time.h>
+#include <grp.h>
 #endif
 
 #include <stdlib.h>
@@ -54,6 +59,14 @@
 #if defined(_WIN32)
 #else
 extern char** environ;
+#endif
+
+/* for solaris */
+#if !defined(PF_LOCAL)
+#define PF_LOCAL AF_UNIX
+#endif
+#if !defined(INADDR_NONE)
+#define INADDR_NONE ((unsigned long)-1)
 #endif
 
 /*****************************************************************************/
@@ -735,6 +748,17 @@ g_strncmp(char* c1, char* c2, int len)
 
 /*****************************************************************************/
 int
+g_strcasecmp(char* c1, char* c2)
+{
+#if defined(_WIN32)
+  return stricmp(c1, c2);
+#else
+  return strcasecmp(c1, c2);
+#endif
+}
+
+/*****************************************************************************/
+int
 g_strncasecmp(char* c1, char* c2, int len)
 {
 #if defined(_WIN32)
@@ -815,6 +839,17 @@ g_system(char* aexec)
   return 0;
 #else
   return system(aexec);
+#endif
+}
+
+/*****************************************************************************/
+char*
+g_get_strerror(void)
+{
+#if defined(_WIN32)
+  return 0;
+#else
+  return strerror(errno);
 #endif
 }
 
@@ -1004,11 +1039,13 @@ g_sigterm(int pid)
 }
 
 /*****************************************************************************/
+/* returns 0 if ok */
 int
 g_getuser_info(char* username, int* gid, int* uid, char* shell, char* dir,
                char* gecos)
 {
 #if defined(_WIN32)
+  return 1;
 #else
   struct passwd* pwd_1;
 
@@ -1035,9 +1072,65 @@ g_getuser_info(char* username, int* gid, int* uid, char* shell, char* dir,
     {
       g_strcpy(gecos, pwd_1->pw_gecos);
     }
+    return 0;
   }
+  return 1;
 #endif
+}
+
+/*****************************************************************************/
+/* returns 0 if ok */
+int
+g_getgroup_info(char* groupname, int* gid)
+{
+#if defined(_WIN32)
+  return 1;
+#else
+  struct group* g;
+
+  g = getgrnam(groupname);
+  if (g != 0)
+  {
+    if (gid != 0)
+    {
+      *gid = g->gr_gid;
+    }
+    return 0;
+  }
+  return 1;
+#endif
+}
+
+/*****************************************************************************/
+/* returns error */
+/* if zero is returned, then ok is set */
+int
+g_check_user_in_group(char* username, int gid, int* ok)
+{
+#if defined(_WIN32)
+  return 1;
+#else
+  struct group* groups;
+  int i;
+
+  groups = getgrgid(gid);
+  if (groups == 0)
+  {
+    return 1;
+  }
+  *ok = 0;
+  i = 0;
+  while (0 != groups->gr_mem[i])
+  {
+    if (0 == g_strcmp(groups->gr_mem[i], username))
+    {
+      *ok = 1;
+      break;
+    }
+    i++;
+  }
   return 0;
+#endif
 }
 
 /*****************************************************************************/

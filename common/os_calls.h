@@ -122,6 +122,8 @@ g_strcmp(char* c1, char* c2);
 int
 g_strncmp(char* c1, char* c2, int len);
 int
+g_strcasecmp(char* c1, char* c2);
+int
 g_strncasecmp(char* c1, char* c2, int len);
 int
 g_atoi(char* str);
@@ -135,6 +137,8 @@ void*
 g_get_proc_address(long lib, char* name);
 int
 g_system(char* aexec);
+char*
+g_get_strerror(void);
 void
 g_execvp(char* p1, char* args[]);
 int
@@ -173,6 +177,10 @@ g_sigterm(int pid);
 int
 g_getuser_info(char* username, int* gid, int* uid, char* shell, char* dir,
                char* gecos);
+int
+g_getgroup_info(char* groupname, int* gid);
+int
+g_check_user_in_group(char* username, int gid, int* ok);
 int
 g_time1(void);
 
