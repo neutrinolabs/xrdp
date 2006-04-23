@@ -14,7 +14,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
    xrdp: A Remote Desktop Protocol server.
-   Copyright (C) Jay Sorg 2005
+   Copyright (C) Jay Sorg 2005-2006
 
    session manager
    linux only
@@ -51,11 +51,11 @@ struct session_item
   /* status info */
   unsigned char status;
   unsigned char type;
-  
+
   /* time data  */
-  time_t connect_time;
-  time_t disconnect_time;
-  time_t idle_time;
+  int connect_time;
+  int disconnect_time;
+  int idle_time;
 };
 
 struct session_chain

@@ -14,13 +14,10 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
    xrdp: A Remote Desktop Protocol server.
-   Copyright (C) Jay Sorg 2005
+   Copyright (C) Jay Sorg 2005-2006
 
    session manager - read config file
 */
-
-#include "sys/types.h"
-#include "grp.h"
 
 #include "arch.h"
 #include "list.h"
@@ -31,9 +28,9 @@
 static int APP_CC
 text2bool(char* s)
 {
-  if (0 == g_strncasecmp(s, "1", 1) ||
-      0 == g_strncasecmp(s, "true", 4) ||
-      0 == g_strncasecmp(s, "yes", 3))
+  if (0 == g_strcasecmp(s, "1") ||
+      0 == g_strcasecmp(s, "true") ||
+      0 == g_strcasecmp(s, "yes"))
   {
     return 1;
   }
@@ -94,49 +91,49 @@ config_read_globals(int file, struct config_sesman* cf, struct list* param_n,
 
   list_clear(param_v);
   list_clear(param_n);
-  
+
   /* resetting the struct */
-  cf->listen_port[0]='\0';
-  cf->enable_user_wm=0;
-  cf->user_wm[0]='\0';
-  cf->default_wm[0]='\0';
+  cf->listen_port[0] = '\0';
+  cf->enable_user_wm = 0;
+  cf->user_wm[0] = '\0';
+  cf->default_wm[0] = '\0';
 
   file_read_section(file, SESMAN_CFG_GLOBALS, param_n, param_v);
   for (i = 0; i < param_n->count; i++)
   {
     buf = (char*)list_get_item(param_n, i);
-    if (0 == g_strncasecmp(buf, SESMAN_CFG_DEFWM, 20))
+    if (0 == g_strcasecmp(buf, SESMAN_CFG_DEFWM))
     {
       g_strncpy(cf->default_wm, (char*)list_get_item(param_v, i), 31);
     }
-    else if (0 == g_strncasecmp(buf, SESMAN_CFG_USERWM, 20))
+    else if (0 == g_strcasecmp(buf, SESMAN_CFG_USERWM))
     {
       g_strncpy(cf->user_wm, (char*)list_get_item(param_v, i), 31);
     }
-    else if (0 == g_strncasecmp(buf, SESMAN_CFG_ENABLE_USERWM, 20))
+    else if (0 == g_strcasecmp(buf, SESMAN_CFG_ENABLE_USERWM))
     {
-      cf->enable_user_wm = text2bool((char*) list_get_item(param_v, i));
+      cf->enable_user_wm = text2bool((char*)list_get_item(param_v, i));
     }
-    else if (0 == g_strncasecmp(buf, SESMAN_CFG_PORT, 20))
+    else if (0 == g_strcasecmp(buf, SESMAN_CFG_PORT))
     {
       g_strncpy(cf->listen_port, (char*)list_get_item(param_v, i), 15);
     }
   }
 
   /* checking for missing required parameters */
-  if ('\0'==cf->listen_port[0]) 
+  if ('\0' == cf->listen_port[0])
   {
     g_strncpy(cf->listen_port, "3350", 5);
   }
-  if ('\0'==cf->user_wm[0]) 
+  if ('\0' == cf->user_wm[0])
   {
-    cf->enable_user_wm=0;
+    cf->enable_user_wm = 0;
   }
-  if ('\0'==cf->default_wm[0])
+  if ('\0' == cf->default_wm[0])
   {
     g_strncpy(cf->default_wm, "startwm.sh", 11);
   }
-  
+
   /* showing read config */
   g_printf("sesman config:\r\n");
   g_printf("\tListenPort:               %s\r\n", cf->listen_port);
@@ -170,29 +167,29 @@ config_read_logging(int file, struct log_config* lc, struct list* param_n,
   for (i = 0; i < param_n->count; i++)
   {
     buf = (char*)list_get_item(param_n, i);
-    if (0 == g_strncasecmp(buf, SESMAN_CFG_LOG_FILE, 20))
+    if (0 == g_strcasecmp(buf, SESMAN_CFG_LOG_FILE))
     {
       lc->log_file = g_strdup((char*)list_get_item(param_v, i));
     }
-    if (0 == g_strncasecmp(buf, SESMAN_CFG_LOG_LEVEL, 20))
+    if (0 == g_strcasecmp(buf, SESMAN_CFG_LOG_LEVEL))
     {
       lc->log_level = log_text2level((char*)list_get_item(param_v, i));
     }
-    if (0 == g_strncasecmp(buf, SESMAN_CFG_LOG_ENABLE_SYSLOG, 20))
+    if (0 == g_strcasecmp(buf, SESMAN_CFG_LOG_ENABLE_SYSLOG))
     {
       lc->enable_syslog = text2bool((char*)list_get_item(param_v, i));
     }
-    if (0 == g_strncasecmp(buf, SESMAN_CFG_LOG_SYSLOG_LEVEL, 20))
+    if (0 == g_strcasecmp(buf, SESMAN_CFG_LOG_SYSLOG_LEVEL))
     {
       lc->syslog_level = log_text2level((char*)list_get_item(param_v, i));
     }
   }
 
-  if (0==lc->log_file)
+  if (0 == lc->log_file)
   {
     lc->log_file=g_strdup("./sesman.log");
   }
-  
+
   g_printf("logging configuration:\r\n");
   g_printf("\tLogFile:       %s\r\n",lc->log_file);
   g_printf("\tLogLevel:      %i\r\n", lc->log_level);
@@ -204,45 +201,44 @@ config_read_logging(int file, struct log_config* lc, struct list* param_n,
 
 /******************************************************************************/
 int DEFAULT_CC
-config_read_security(int file, struct config_security* sc, struct list* param_n,
-                    struct list* param_v)
+config_read_security(int file, struct config_security* sc,
+                     struct list* param_n,
+                     struct list* param_v)
 {
   int i;
+  int gid;
   char* buf;
-  struct group* g;
 
   list_clear(param_v);
   list_clear(param_n);
 
   /* setting defaults */
-  sc->allow_root=0;
-  sc->ts_users_enable=0;
-  sc->ts_admins_enable=0;
+  sc->allow_root = 0;
+  sc->ts_users_enable = 0;
+  sc->ts_admins_enable = 0;
 
   file_read_section(file, SESMAN_CFG_SECURITY, param_n, param_v);
   for (i = 0; i < param_n->count; i++)
   {
     buf = (char*)list_get_item(param_n, i);
-    if (0 == g_strncasecmp(buf, SESMAN_CFG_SEC_ALLOW_ROOT, 20))
+    if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_ALLOW_ROOT))
     {
       sc->allow_root = text2bool((char*)list_get_item(param_v, i));
     }
-    if (0 == g_strncasecmp(buf, SESMAN_CFG_SEC_USR_GROUP, 20))
+    if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_USR_GROUP))
     {
-      g=getgrnam((char*)list_get_item(param_v, i));
-      if (0!=g)
+      if (g_getgroup_info((char*)list_get_item(param_v, i), &gid) == 0)
       {
-        sc->ts_users_enable=1;
-        sc->ts_users=g->gr_gid;
+        sc->ts_users_enable = 1;
+        sc->ts_users = gid;
       }
     }
-    if (0 == g_strncasecmp(buf, SESMAN_CFG_SEC_ADM_GROUP, 20))
+    if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_ADM_GROUP))
     {
-      g=getgrnam((char*)list_get_item(param_v, i));
-      if (0!=g)
+      if (g_getgroup_info((char*)list_get_item(param_v, i), &gid) == 0)
       {
-        sc->ts_admins_enable=1;
-        sc->ts_admins=g->gr_gid;
+        sc->ts_admins_enable = 1;
+        sc->ts_admins = gid;
       }
     }
   }
@@ -291,19 +287,19 @@ config_read_sessions(int file, struct config_sessions* se, struct list* param_n,
   for (i = 0; i < param_n->count; i++)
   {
     buf = (char*)list_get_item(param_n, i);
-    if (0 == g_strncasecmp(buf, SESMAN_CFG_SESS_MAX, 20))
+    if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_MAX))
     {
       se->max_sessions = g_atoi((char*)list_get_item(param_v, i));
     }
-    if (0 == g_strncasecmp(buf, SESMAN_CFG_SESS_KILL_DISC, 20))
+    if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_KILL_DISC))
     {
       se->kill_disconnected = text2bool((char*)list_get_item(param_v, i));
     }
-    if (0 == g_strncasecmp(buf, SESMAN_CFG_SESS_IDLE_LIMIT, 20))
+    if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_IDLE_LIMIT))
     {
       se->max_idle_time=g_atoi((char*)list_get_item(param_v, i));
     }
-    if (0 == g_strncasecmp(buf, SESMAN_CFG_SESS_DISC_LIMIT, 20))
+    if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_DISC_LIMIT))
     {
       se->max_disc_time=g_atoi((char*)list_get_item(param_v, i));
     }

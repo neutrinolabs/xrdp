@@ -14,7 +14,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
    xrdp: A Remote Desktop Protocol server.
-   Copyright (C) Jay Sorg 2005
+   Copyright (C) Jay Sorg 2005-2006
 
    session manager
    linux only
@@ -38,14 +38,14 @@ extern struct config_sesman g_cfg;
 void DEFAULT_CC
 sig_sesman_shutdown(int sig)
 {
-  log_message(LOG_LEVEL_INFO, "shutting down sesman %d",1);
-	  
+  log_message(LOG_LEVEL_INFO, "shutting down sesman %d", 1);
+
   if (g_getpid() != g_pid)
   {
     LOG_DBG("g_getpid() [%d] differs from g_pid [%d]", (g_getpid()), g_pid);
     return;
   }
-  
+
   LOG_DBG(" - getting signal %d pid %d", sig, g_getpid());
 
   g_tcp_close(g_sck);
@@ -58,7 +58,7 @@ void DEFAULT_CC
 sig_sesman_reload_cfg(int sig)
 {
   struct config_sesman cfg;
-  
+
   log_message(LOG_LEVEL_WARNING, "receiving SIGHUP %d", 1);
 
   if (g_getpid() != g_pid)

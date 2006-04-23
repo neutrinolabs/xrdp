@@ -14,14 +14,12 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
    xrdp: A Remote Desktop Protocol server.
-   Copyright (C) Jay Sorg 2005
+   Copyright (C) Jay Sorg 2005-2006
 
    session manager
    linux only
 
 */
-
-#include <stdlib.h>
 
 #include "sesman.h"
 
@@ -140,22 +138,25 @@ session_start(int width, int height, int bpp, char* username, char* password,
   /* check to limit concurrent sessions */
   if (g_session_count >= g_cfg.sess.max_sessions)
   {
-    log_message(LOG_LEVEL_INFO, "max concurrent session limit exceeded. login for user %s denied", username);
+    log_message(LOG_LEVEL_INFO, "max concurrent session limit exceeded. login \
+for user %s denied", username);
     return 0;
   }
 
 #ifndef OLDSESSION
-  temp=malloc(sizeof(struct session_chain));
+  temp = (struct session_chain*)g_malloc(sizeof(struct session_chain), 0);
   if (temp == 0)
   {
-    log_message(LOG_LEVEL_ERROR, "cannot create new chain element - user %s", username);
+    log_message(LOG_LEVEL_ERROR, "cannot create new chain element - user %s",
+                username);
     return 0;
   }
-  temp->item = malloc(sizeof(struct session_item));
+  temp->item = (struct session_item*)g_malloc(sizeof(struct session_item), 0);
   if (temp->item == 0)
   {
-    free(temp);
-    log_message(LOG_LEVEL_ERROR, "cannot create new session item - user %s", username);
+    g_free(temp);
+    log_message(LOG_LEVEL_ERROR, "cannot create new session item - user %s",
+                username);
     return 0;
   }
 #endif
@@ -215,7 +216,8 @@ session_start(int width, int height, int bpp, char* username, char* password,
         g_execlp3("xterm", "xterm", 0);
         /* should not get here */
       }
-      log_message(LOG_LEVEL_ALWAYS,"error starting window manager %s - pid %d", username, g_getpid());
+      log_message(LOG_LEVEL_ALWAYS,"error starting window manager %s - pid %d",
+                  username, g_getpid());
       g_exit(0);
     }
     else /* parent */
@@ -238,13 +240,15 @@ session_start(int width, int height, int bpp, char* username, char* password,
           g_execlp11("Xrdp", "Xrdp", screen, "-geometry", geometry,
                      "-depth", depth, "-bs", 0, 0, 0);
         }
-	else
+        else
         {
-          log_message(LOG_LEVEL_ALWAYS, "bad session type - user %s - pid %d", username, g_getpid());
-	  g_exit(1);
+          log_message(LOG_LEVEL_ALWAYS, "bad session type - user %s - pid %d",
+                      username, g_getpid());
+          g_exit(1);
         }
         /* should not get here */
-        log_message(LOG_LEVEL_ALWAYS,"error doing execve for user %s - pid %d",username,g_getpid());
+        log_message(LOG_LEVEL_ALWAYS,"error doing execve for user %s - pid %d",
+                    username, g_getpid());
         g_exit(1);
       }
       else /* parent */
@@ -272,7 +276,7 @@ session_start(int width, int height, int bpp, char* username, char* password,
     g_session_items[display].connect_time=g_time1();
     g_session_items[display].disconnect_time=(time_t) 0;
     g_session_items[display].idle_time=(time_t) 0;
-   
+
     i/*if (type==0)
     {
       g_session_items[display].type=SESMAN_SESSION_TYPE_XVNC;
@@ -281,22 +285,22 @@ session_start(int width, int height, int bpp, char* username, char* password,
     {
       g_session_items[display].type=SESMAN_SESSION_TYPE_XRDP;
     }*/
-    g_session_items[display].type=type;
-    g_session_items[display].status=SESMAN_SESSION_STATUS_ACTIVE;
-    
+    g_session_items[display].type = type;
+    g_session_items[display].status = SESMAN_SESSION_STATUS_ACTIVE;
+
     g_session_count++;
 #else
-    temp->item->pid=pid;
-    temp->item->display=display;
-    temp->item->width=width;
-    temp->item->height=height;
-    temp->item->bpp=bpp;
-    temp->item->data=data;
+    temp->item->pid = pid;
+    temp->item->display = display;
+    temp->item->width = width;
+    temp->item->height = height;
+    temp->item->bpp = bpp;
+    temp->item->data = data;
     g_strncpy(temp->item->name, username, 255);
 
-    temp->item->connect_time=g_time1();
-    temp->item->disconnect_time=(time_t) 0;
-    temp->item->idle_time=(time_t) 0;
+    temp->item->connect_time = g_time1();
+    temp->item->disconnect_time = 0;
+    temp->item->idle_time = 0;
 
 /*    if (type==0)
     {
@@ -306,10 +310,10 @@ session_start(int width, int height, int bpp, char* username, char* password,
     {
       temp->item->type=SESMAN_SESSION_TYPE_XRDP;
     }*/
-	    
+
     temp->item->type=type;
     temp->item->status=SESMAN_SESSION_STATUS_ACTIVE;
-    
+
     /*THREAD-FIX lock the chain*/
     temp->next=g_sessions;
     g_sessions=temp;
@@ -375,10 +379,12 @@ session_kill(int pid)
   {
     if (tmp->item == 0)
     {
-      log_message(LOG_LEVEL_ERROR, "session descriptor for pid %d is null!", pid);
+      log_message(LOG_LEVEL_ERROR, "session descriptor for pid %d is null!",
+                  pid);
       if (prev == 0)
       {
-        /* prev does no exist, so it's the first element - so we set g_sessions */
+        /* prev does no exist, so it's the first element - so we set
+           g_sessions */
 	g_sessions = tmp->next;
       }
       else
@@ -391,29 +397,31 @@ session_kill(int pid)
 
     if (tmp->item->pid == pid)
     {
-      /* deleting the session */   
-      log_message(LOG_LEVEL_INFO, "session %d - user %s - terminated", tmp->item->pid, tmp->item->name);
-      free(tmp->item);
+      /* deleting the session */
+      log_message(LOG_LEVEL_INFO, "session %d - user %s - terminated",
+                  tmp->item->pid, tmp->item->name);
+      g_free(tmp->item);
       if (prev == 0)
       {
-        /* prev does no exist, so it's the first element - so we set g_sessions */
-	g_sessions = tmp->next;
+        /* prev does no exist, so it's the first element - so we set
+           g_sessions */
+        g_sessions = tmp->next;
       }
       else
       {
         prev->next = tmp->next;
       }
-      free(tmp);
+      g_free(tmp);
       g_session_count--;
       /*THREAD-FIX release chain lock */
       return SESMAN_SESSION_KILL_OK;
     }
-     
+
     /* go on */
     prev = tmp;
     tmp=tmp->next;
   }
-  
+
   /*THREAD-FIX release chain lock */
   return SESMAN_SESSION_KILL_NOTFOUND;
 }
@@ -423,18 +431,19 @@ struct session_item* DEFAULT_CC
 session_get_bypid(int pid)
 {
   struct session_chain* tmp;
-  
+
   /*THREAD-FIX  require chain lock */
-  tmp=g_sessions;
+  tmp = g_sessions;
   while (tmp != 0)
   {
     if (tmp->item == 0)
     {
-      log_message(LOG_LEVEL_ERROR, "session descriptor for pid %d is null!", pid);
+      log_message(LOG_LEVEL_ERROR, "session descriptor for pid %d is null!",
+                  pid);
       /*THREAD-FIX release chain lock */
       return 0;
     }
-    
+
     if (tmp->item->pid == pid)
     {
       /*THREAD-FIX release chain lock */
@@ -444,7 +453,7 @@ session_get_bypid(int pid)
     /* go on */
     tmp=tmp->next;
   }
-  
+
   /*THREAD-FIX release chain lock */
   return 0;
 }

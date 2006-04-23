@@ -14,7 +14,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
    xrdp: A Remote Desktop Protocol server.
-   Copyright (C) Jay Sorg 2005
+   Copyright (C) Jay Sorg 2005-2006
 
    session manager - read config file
 */
@@ -22,7 +22,6 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include "sys/types.h"
 #include "arch.h"
 #include "list.h"
 #include "log.h"
@@ -31,7 +30,7 @@
  *
  * @def SESMAN_CFG_FILE
  * @brief Configuration file path
- * 
+ *
  */
 #ifndef SESMAN_CFG_FILE
 #define SESMAN_CFG_FILE              "./sesman.ini"
@@ -52,7 +51,7 @@
 
 #define SESMAN_CFG_SECURITY          "Security"
 #define SESMAN_CFG_SEC_ALLOW_ROOT    "AllowRootLogin"
-#define SESMAN_CFG_SEC_USR_GROUP      "TerminalServerUsers"
+#define SESMAN_CFG_SEC_USR_GROUP     "TerminalServerUsers"
 #define SESMAN_CFG_SEC_ADM_GROUP     "TerminalServerAdmins"
 
 #define SESMAN_CFG_SESSIONS          "Sessions"
@@ -71,7 +70,7 @@ struct config_security
 {
   /**
    * @var allow_root
-   * @brief 
+   * @brief
    */
   int allow_root;
   /**
@@ -79,13 +78,13 @@ struct config_security
    * @brief Terminal Server Users group
    */
   int ts_users_enable;
-  gid_t ts_users;
+  int ts_users;
   /**
    * @var ts_admins
    * @brief Terminal Server Adminnistrators group
    */
   int ts_admins_enable;
-  gid_t ts_admins;
+  int ts_admins;
 };
 
 /**
@@ -152,7 +151,7 @@ struct config_sesman
   char user_wm[32];
   /**
    * @var log
-   * @brief Log configuration \t struct 
+   * @brief Log configuration \t struct
    */
   struct log_config log;
   /**
@@ -174,7 +173,7 @@ struct config_sesman
  * @param cfg pointer to configuration object to be replaced
  *
  * @return 0 on success, 1 on failure
- * 
+ *
  */
 int DEFAULT_CC
 config_read(struct config_sesman* cfg);
@@ -186,10 +185,11 @@ config_read(struct config_sesman* cfg);
  * @param cfg pointer to configuration object to be replaced
  *
  * @return 0 on success, 1 on failure
- * 
+ *
  */
 int DEFAULT_CC
-config_read_globals(int file, struct config_sesman* cf, struct list* param_n, struct list* param_v);
+config_read_globals(int file, struct config_sesman* cf,
+                    struct list* param_n, struct list* param_v);
 
 /**
  *
@@ -198,10 +198,11 @@ config_read_globals(int file, struct config_sesman* cf, struct list* param_n, st
  * @param cfg pointer to configuration object to be replaced
  *
  * @return 0 on success, 1 on failure
- * 
+ *
  */
 int DEFAULT_CC
-config_read_logging(int file, struct log_config* lc, struct list* param_n, struct list* param_v);
+config_read_logging(int file, struct log_config* lc, struct list* param_n,
+                    struct list* param_v);
 
 /**
  *
@@ -210,10 +211,11 @@ config_read_logging(int file, struct log_config* lc, struct list* param_n, struc
  * @param cfg pointer to configuration object to be replaced
  *
  * @return 0 on success, 1 on failure
- * 
+ *
  */
 int DEFAULT_CC
-config_read_security(int file, struct config_security* sc, struct list* param_n, struct list* param_v);
+config_read_security(int file, struct config_security* sc,
+                     struct list* param_n, struct list* param_v);
 
 /**
  *
@@ -222,9 +224,10 @@ config_read_security(int file, struct config_security* sc, struct list* param_n,
  * @param cfg pointer to configuration object to be replaced
  *
  * @return 0 on success, 1 on failure
- * 
+ *
  */
 int DEFAULT_CC
-config_read_sessions(int file, struct config_sessions* ss, struct list* param_n, struct list* param_v);
+config_read_sessions(int file, struct config_sessions* ss,
+                     struct list* param_n, struct list* param_v);
 
 #endif

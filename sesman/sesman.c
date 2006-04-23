@@ -14,7 +14,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
    xrdp: A Remote Desktop Protocol server.
-   Copyright (C) Jay Sorg 2005
+   Copyright (C) Jay Sorg 2005-2006
 
    session manager
    linux only
@@ -22,12 +22,6 @@
 */
 
 #include "sesman.h"
-
-#include <stdio.h>
-#include <sys/types.h>
-#include <signal.h>
-#include <string.h>
-#include <errno.h>
 
 int g_sck;
 int g_pid;
@@ -44,7 +38,7 @@ struct config_sesman g_cfg; /* config.h */
  * trigger when a child process (a session) dies
  *
  * @param s received signal
- * 
+ *
  */
 static void DEFAULT_CC
 cterm(int s)
@@ -106,7 +100,7 @@ sesman_main_loop()
   init_stream(in_s, 8192);
   make_stream(out_s);
   init_stream(out_s, 8192);
-  
+
   log_message(LOG_LEVEL_INFO, "listening...");
   g_sck = g_tcp_socket();
   g_tcp_set_non_blocking(g_sck);
@@ -162,26 +156,27 @@ sesman_main_loop()
                   else
                   {
                     g_printf("pre auth");
-		    if (1==access_login_allowed(user))
+                    if (1 == access_login_allowed(user))
                     {
-		      log_message(LOG_LEVEL_INFO, "granted TS access to user %s", user);
-		      if (0 == code)
-		      {
-		        log_message(LOG_LEVEL_INFO, "starting Xvnc session...");
+                      log_message(LOG_LEVEL_INFO,
+                                  "granted TS access to user %s", user);
+                      if (0 == code)
+                      {
+                        log_message(LOG_LEVEL_INFO, "starting Xvnc session...");
                         display = session_start(width, height, bpp, user, pass,
                                                 data, SESMAN_SESSION_TYPE_XVNC);
                       }
                       else
-		      {
-		        log_message(LOG_LEVEL_INFO, "starting Xrdp session...");
+                      {
+                        log_message(LOG_LEVEL_INFO, "starting Xrdp session...");
                         display = session_start(width, height, bpp, user, pass,
                                                 data, SESMAN_SESSION_TYPE_XRDP);
                       }
-		    }
-		    else
+                    }
+                    else
                     {
-                      display=0;
-		    }
+                      display = 0;
+                    }
                   }
                   if (display == 0)
                   {
@@ -231,23 +226,25 @@ main(int argc, char** argv)
 {
   int fd;
   int error;
-  int daemon=1;
+  int daemon = 1;
   int pid;
   char pid_s[8];
-  
-  if (1==argc)
+
+  if (1 == argc)
   {
     /* no options on command line. normal startup */
     g_printf("starting sesman...\n");
-    daemon=1;
+    daemon = 1;
   }
-  else if ( (2==argc) && ( (0 == g_strncasecmp(argv[1],"--nodaemon",11)) || (0 == g_strncasecmp(argv[1],"-n",11)) ) )
+  else if ((2 == argc) && ((0 == g_strcasecmp(argv[1], "--nodaemon")) ||
+                           (0 == g_strcasecmp(argv[1], "-n")) ) )
   {
     /* starts sesman not daemonized */
     g_printf("starting sesman in foregroud...\n");
     daemon=0;
   }
-  else if ( (2==argc) && ( (0 == g_strncasecmp(argv[1],"--help",7)) || (0 == g_strncasecmp(argv[1],"-h",2)) ) )
+  else if ((2 == argc) && ((0 == g_strcasecmp(argv[1], "--help")) ||
+                           (0 == g_strcasecmp(argv[1], "-h"))))
   {
     /* help screen */
     g_printf("sesman - xrdp session manager\n\n");
@@ -259,31 +256,33 @@ main(int argc, char** argv)
     g_printf("if no command is specified, sesman is started in background");
     g_exit(0);
   }
-  else if ( (2==argc) && ( (0 == g_strncasecmp(argv[1],"--kill",11)) || (0 == g_strncasecmp(argv[1],"-k",11)) ) )
+  else if ((2 == argc) && ((0 == g_strcasecmp(argv[1], "--kill")) ||
+                           (0 == g_strcasecmp(argv[1], "-k"))))
   {
     /* killing running sesman */
     /* check if sesman is running */
     if (!g_file_exist(SESMAN_PID_FILE))
     {
-      g_printf("sesman is not running (pid file not found - %s)\n", SESMAN_PID_FILE);
+      g_printf("sesman is not running (pid file not found - %s)\n",
+               SESMAN_PID_FILE);
       g_exit(1);
     }
-	  
+
     fd = g_file_open(SESMAN_PID_FILE);
 
     if (-1 == fd)
     {
-      g_printf("error opening pid file: %s\n", strerror(errno));
+      g_printf("error opening pid file: %s\n", g_get_strerror());
       return 1;
     }
-    
+
     error = g_file_read(fd, pid_s, 7);
-    sscanf(pid_s, "%i", &pid);
-    
+    pid = g_atoi(pid_s);
+
     error = g_sigterm(pid);
     if (0 != error)
     {
-      g_printf("error killing sesman: %s\n", strerror(errno));
+      g_printf("error killing sesman: %s\n", g_get_strerror());
     }
     else
     {
@@ -301,7 +300,6 @@ main(int argc, char** argv)
     g_exit(1);
   }
 
-  
   if (g_file_exist(SESMAN_PID_FILE))
   {
     g_printf("sesman is already running.\n");
@@ -310,26 +308,29 @@ main(int argc, char** argv)
     g_printf("\n");
     g_exit(1);
   }
-  
+
   /* reading config */
   if (0 != config_read(&g_cfg))
   {
-    g_printf("error reading config: %s\nquitting.\n", strerror(errno));
+    g_printf("error reading config: %s\nquitting.\n", g_get_strerror());
     g_exit(1);
   }
-  
+
   /* starting logging subsystem */
-  error = log_start(g_cfg.log.program_name, g_cfg.log.log_file, g_cfg.log.log_level, 
-                    g_cfg.log.enable_syslog, g_cfg.log.syslog_level);
-  
+  error = log_start(g_cfg.log.program_name, g_cfg.log.log_file,
+                    g_cfg.log.log_level, g_cfg.log.enable_syslog,
+                    g_cfg.log.syslog_level);
+
   if (error != LOG_STARTUP_OK)
   {
     switch (error)
     {
       case LOG_ERROR_MALLOC:
         g_printf("error on malloc. cannot start logging. quitting.\n");
+        break;
       case LOG_ERROR_FILE_OPEN:
         g_printf("error opening log file. quitting.\n");
+        break;
     }
     g_exit(1);
   }
@@ -368,7 +369,8 @@ main(int argc, char** argv)
   fd = g_file_open(SESMAN_PID_FILE);
   if (-1 == fd)
   {
-    log_message(LOG_LEVEL_ERROR, "error opening pid file: %s", strerror(errno));
+    log_message(LOG_LEVEL_ERROR, "error opening pid file: %s",
+                g_get_strerror());
     log_end();
     g_exit(1);
   }

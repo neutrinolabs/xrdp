@@ -14,7 +14,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
    xrdp: A Remote Desktop Protocol server.
-   Copyright (C) Jay Sorg 2005
+   Copyright (C) Jay Sorg 2005-2006
 
    authenticate user
 
@@ -22,63 +22,54 @@
 
 #include "sesman.h"
 
-#define _XOPEN_SOURCE
-#include <sys/types.h>
-#include <pwd.h>
-#include <grp.h>
-
 extern struct config_sesman g_cfg;
 
 /******************************************************************************/
+/* returns non zero if allowed */
 int DEFAULT_CC
 access_login_allowed(char* user)
 {
-  int i;
-  struct group* groups;
-  struct passwd* pwd;
+  int gid;
+  int ok;
 
-  if ((0==g_strncmp(user, "root",5)) && (0==g_cfg.sec.allow_root)) 
+  if ((0 == g_strncmp(user, "root", 5)) && (0 == g_cfg.sec.allow_root))
   {
-    log_message(LOG_LEVEL_WARNING, "ROOT login attempted, but root login is disabled");
+    log_message(LOG_LEVEL_WARNING,
+                "ROOT login attempted, but root login is disabled");
     return 0;
   }
- 
-  if (0==g_cfg.sec.ts_users_enable) 
+
+  if (0 == g_cfg.sec.ts_users_enable)
   {
-    LOG_DBG("Terminal Server Users group is disabled, allowing authentication",1);
+    LOG_DBG("Terminal Server Users group is disabled, allowing authentication",
+            1);
     return 1;
   }
-  
-  groups = getgrgid(g_cfg.sec.ts_users);
 
-  if (0==groups)
-  {
-    log_message(LOG_LEVEL_ERROR,"Cannot read group info! - login denied"); 
-    return 0;
-  }
-  
-  pwd = getpwnam(user);
-  if (0==pwd)
+  if (0 != g_getuser_info(user, &gid, 0, 0, 0, 0))
   {
     log_message(LOG_LEVEL_ERROR, "Cannot read user info! - login denied");
     return 0;
   }
-  
-  if (g_cfg.sec.ts_users==pwd->pw_gid)
+
+  if (g_cfg.sec.ts_users == gid)
   {
-    LOG_DBG("ts_users is user's primary group",1);
+    LOG_DBG("ts_users is user's primary group", 1);
     return 1;
   }
-  
-  i=0;
-  while (0!=groups->gr_mem[i])
+
+  if (0 != g_check_user_in_group(user, g_cfg.sec.ts_users, &ok))
   {
-    LOG_DBG("user: %s", groups->gr_mem[i]);
-    if (0==g_strcmp(groups->gr_mem[i], user)) return 1;
-    i++;
+    log_message(LOG_LEVEL_ERROR, "Cannot read group info! - login denied");
+    return 0;
   }
-  
+
+  if (ok)
+  {
+    return 1;
+  }
+
   log_message(LOG_LEVEL_INFO, "login denied for user %s", user);
-  
+
   return 0;
 }
