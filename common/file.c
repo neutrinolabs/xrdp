@@ -203,7 +203,7 @@ file_read_section(int fd, char* section, struct list* names,
       }
       else if (c == ']')
       {
-        if (g_strncasecmp(section, text, 255) == 0)
+        if (g_strcasecmp(section, text) == 0)
         {
           file_read_line(s, text);
           while (file_read_line(s, text) == 0)
