@@ -113,11 +113,11 @@ lib_send(struct mod* mod, char* data, int len)
 int DEFAULT_CC
 lib_mod_start(struct mod* mod, int w, int h, int bpp)
 {
-  DEBUG(("in lib_mod_start\r\n"));
+  LIB_DEBUG(mod, "in lib_mod_start");
   mod->width = w;
   mod->height = h;
   mod->bpp = bpp;
-  DEBUG(("out lib_mod_start\r\n"));
+  LIB_DEBUG(mod, "out lib_mod_start");
   return 0;
 }
 
@@ -137,7 +137,7 @@ lib_mod_connect(struct mod* mod)
   struct stream* s;
   char con_port[256];
 
-  DEBUG(("in lib_mod_connect\r\n"));
+  LIB_DEBUG(mod, "in lib_mod_connect");
   /* clear screen */
   mod->server_begin_update(mod);
   mod->server_set_fgcolor(mod, 0);
@@ -265,7 +265,7 @@ lib_mod_connect(struct mod* mod)
     lib_send(mod, s->data, len);
   }
   free_stream(s);
-  DEBUG(("out lib_mod_connect error\r\n"));
+  LIB_DEBUG(mod, "out lib_mod_connect error");
   if (error != 0)
   {
     mod->server_msg(mod, "some problem", 0);
@@ -284,7 +284,7 @@ lib_mod_event(struct mod* mod, int msg, long param1, long param2,
   int len;
   int rv;
 
-  DEBUG(("in lib_mod_event\r\n"));
+  LIB_DEBUG(mod, "in lib_mod_event");
   make_stream(s);
   init_stream(s, 8192);
   s_push_layer(s, iso_hdr, 4);
@@ -300,7 +300,7 @@ lib_mod_event(struct mod* mod, int msg, long param1, long param2,
   out_uint32_le(s, len);
   rv = lib_send(mod, s->data, len);
   free_stream(s);
-  DEBUG(("out lib_mod_event\r\n"));
+  LIB_DEBUG(mod, "out lib_mod_event");
   return rv;
 }
 
@@ -335,7 +335,7 @@ lib_mod_signal(struct mod* mod)
   char cur_data[32 * (32 * 3)];
   char cur_mask[32 * (32 / 8)];
 
-  DEBUG(("in lib_mod_signal\r\n"));
+  LIB_DEBUG(mod, "in lib_mod_signal");
   make_stream(s);
   init_stream(s, 8192);
   rv = lib_recv(mod, s->data, 8);
@@ -442,7 +442,7 @@ lib_mod_signal(struct mod* mod)
     }
   }
   free_stream(s);
-  DEBUG(("out lib_mod_signal\r\n"));
+  LIB_DEBUG(mod, "out lib_mod_signal");
   return rv;
 }
 
@@ -484,7 +484,6 @@ mod_init(void)
 {
   struct mod* mod;
 
-  DEBUG(("in mod_init\r\n"));
   mod = (struct mod*)g_malloc(sizeof(struct mod), 1);
   mod->size = sizeof(struct mod);
   mod->handle = (long)mod;
@@ -494,7 +493,6 @@ mod_init(void)
   mod->mod_signal = lib_mod_signal;
   mod->mod_end = lib_mod_end;
   mod->mod_set_param = lib_mod_set_param;
-  DEBUG(("out mod_init\r\n"));
   return mod;
 }
 
@@ -502,13 +500,11 @@ mod_init(void)
 int EXPORT_CC
 mod_exit(struct mod* mod)
 {
-  DEBUG(("in mod_exit\r\n"));
   if (mod == 0)
   {
     return 0;
   }
   g_tcp_close(mod->sck);
   g_free(mod);
-  DEBUG(("out mod_exit\r\n"));
   return 0;
 }

@@ -119,7 +119,7 @@ xrdp_orders_send(struct xrdp_orders* self)
     if (self->order_level == 0 && self->order_count > 0)
     {
       s_mark_end(self->out_s);
-      DEBUG(("xrdp_orders_send sending %d orders\r\n", self->order_count));
+      DEBUG(("xrdp_orders_send sending %d orders", self->order_count));
       self->order_count_ptr[0] = self->order_count;
       self->order_count_ptr[1] = self->order_count >> 8;
       self->order_count = 0;
@@ -141,7 +141,7 @@ xrdp_orders_force_send(struct xrdp_orders* self)
   if (self->order_level > 0 && self->order_count > 0)
   {
     s_mark_end(self->out_s);
-    DEBUG(("xrdp_orders_force_send sending %d orders\r\n", self->order_count));
+    DEBUG(("xrdp_orders_force_send sending %d orders", self->order_count));
     self->order_count_ptr[0] = self->order_count;
     self->order_count_ptr[1] = self->order_count >> 8;
     if (xrdp_rdp_send_data(self->rdp_layer, self->out_s,
@@ -1478,12 +1478,12 @@ xrdp_orders_send_raw_bitmap(struct xrdp_orders* self,
 
   if (width > 64)
   {
-    g_printf("error, width > 64\r\n");
+    g_writeln("error, width > 64");
     return 1;
   }
   if (height > 64)
   {
-    g_printf("error, height > 64\r\n");
+    g_writeln("error, height > 64");
     return 1;
   }
   e = width % 4;
@@ -1560,12 +1560,12 @@ xrdp_orders_send_bitmap(struct xrdp_orders* self,
 
   if (width > 64)
   {
-    g_printf("error, width > 64\r\n");
+    g_writeln("error, width > 64");
     return 1;
   }
   if (height > 64)
   {
-    g_printf("error, height > 64\r\n");
+    g_writeln("error, height > 64");
     return 1;
   }
   e = width % 4;
@@ -1585,8 +1585,8 @@ xrdp_orders_send_bitmap(struct xrdp_orders* self,
   {
     free_stream(s);
     free_stream(temp_s);
-    g_printf("error in xrdp_orders_send_bitmap, lines_sending(%d) != \
-height(%d)\r\n", lines_sending, height);
+    g_writeln("error in xrdp_orders_send_bitmap, lines_sending(%d) != \
+height(%d)", lines_sending, height);
     return 1;
   }
   bufsize = s->p - p;
@@ -1681,12 +1681,12 @@ xrdp_orders_send_raw_bitmap2(struct xrdp_orders* self,
 
   if (width > 64)
   {
-    g_printf("error, width > 64\r\n");
+    g_writeln("error, width > 64");
     return 1;
   }
   if (height > 64)
   {
-    g_printf("error, height > 64\r\n");
+    g_writeln("error, height > 64");
     return 1;
   }
   e = width % 4;
@@ -1764,12 +1764,12 @@ xrdp_orders_send_bitmap2(struct xrdp_orders* self,
 
   if (width > 64)
   {
-    g_printf("error, width > 64\r\n");
+    g_writeln("error, width > 64");
     return 1;
   }
   if (height > 64)
   {
-    g_printf("error, height > 64\r\n");
+    g_writeln("error, height > 64");
     return 1;
   }
   e = width % 4;
@@ -1789,8 +1789,8 @@ xrdp_orders_send_bitmap2(struct xrdp_orders* self,
   {
     free_stream(s);
     free_stream(temp_s);
-    g_printf("error in xrdp_orders_send_bitmap2, lines_sending(%d) != \
-height(%d)\r\n", lines_sending, height);
+    g_writeln("error in xrdp_orders_send_bitmap2, lines_sending(%d) != \
+height(%d)", lines_sending, height);
     return 1;
   }
   bufsize = s->p - p;

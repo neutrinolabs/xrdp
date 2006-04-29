@@ -128,7 +128,7 @@ xrdp_wm_setup_mod1(struct xrdp_wm* self,
       }
       if (func == 0)
       {
-        g_printf("error finding proc mod_init in %s\r\n", mod_data->lib);
+        g_writeln("error finding proc mod_init in %s", mod_data->lib);
       }
       self->mod_init = (struct xrdp_mod* (*)(void))func;
       func = g_get_proc_address(self->mod_handle, "mod_exit");
@@ -138,7 +138,7 @@ xrdp_wm_setup_mod1(struct xrdp_wm* self,
       }
       if (func == 0)
       {
-        g_printf("error finding proc mod_exit in %s\r\n", mod_data->lib);
+        g_writeln("error finding proc mod_exit in %s", mod_data->lib);
       }
       self->mod_exit = (int (*)(struct xrdp_mod*))func;
       if (self->mod_init != 0 && self->mod_exit != 0)
@@ -148,7 +148,7 @@ xrdp_wm_setup_mod1(struct xrdp_wm* self,
     }
     else
     {
-      g_printf("error loading %s\r\n", mod_data->lib);
+      g_writeln("error loading %s", mod_data->lib);
     }
     if (self->mod != 0)
     {
@@ -179,7 +179,7 @@ xrdp_wm_setup_mod1(struct xrdp_wm* self,
   /* id self->mod is null, there must be a problem */
   if (self->mod == 0)
   {
-    DEBUG(("problem loading lib in xrdp_wm_setup_mod1\r\n"));
+    DEBUG(("problem loading lib in xrdp_wm_setup_mod1"));
     return 1;
   }
   return 0;

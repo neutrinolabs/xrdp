@@ -90,19 +90,19 @@ xrdp_mcs_recv(struct xrdp_mcs* self, struct stream* s, int* chan)
   int opcode;
   int len;
 
-  DEBUG(("  in xrdp_mcs_recv\r\n"));
+  DEBUG(("  in xrdp_mcs_recv"));
   while (1)
   {
     if (xrdp_iso_recv(self->iso_layer, s) != 0)
     {
-      DEBUG(("  out xrdp_mcs_recv xrdp_iso_recv returned non zero\r\n"));
+      DEBUG(("  out xrdp_mcs_recv xrdp_iso_recv returned non zero"));
       return 1;
     }
     in_uint8(s, opcode);
     appid = opcode >> 2;
     if (appid == MCS_DPUM)
     {
-      DEBUG(("  out xrdp_mcs_recv appid != MCS_DPUM\r\n"));
+      DEBUG(("  out xrdp_mcs_recv appid != MCS_DPUM"));
       return 1;
     }
     if (appid == MCS_CJRQ)
@@ -114,7 +114,7 @@ xrdp_mcs_recv(struct xrdp_mcs* self, struct stream* s, int* chan)
   }
   if (appid != MCS_SDRQ)
   {
-    DEBUG(("  out xrdp_mcs_recv err got 0x%x need MCS_SDRQ\r\n", appid));
+    DEBUG(("  out xrdp_mcs_recv err got 0x%x need MCS_SDRQ", appid));
     return 1;
   }
   in_uint8s(s, 2);
@@ -125,7 +125,7 @@ xrdp_mcs_recv(struct xrdp_mcs* self, struct stream* s, int* chan)
   {
     in_uint8s(s, 1);
   }
-  DEBUG(("  out xrdp_mcs_recv\r\n"));
+  DEBUG(("  out xrdp_mcs_recv"));
   return 0;
 }
 
@@ -523,7 +523,7 @@ xrdp_mcs_send_connect_response(struct xrdp_mcs* self)
 int APP_CC
 xrdp_mcs_incoming(struct xrdp_mcs* self)
 {
-  DEBUG(("  in xrdp_mcs_incoming\r\n"));
+  DEBUG(("  in xrdp_mcs_incoming"));
   if (xrdp_iso_incoming(self->iso_layer) != 0)
   {
     return 1;
@@ -564,7 +564,7 @@ xrdp_mcs_incoming(struct xrdp_mcs* self)
   {
     return 1;
   }
-  DEBUG(("  out xrdp_mcs_incoming\r\n"));
+  DEBUG(("  out xrdp_mcs_incoming"));
   return 0;
 }
 
@@ -585,7 +585,7 @@ xrdp_mcs_send(struct xrdp_mcs* self, struct stream* s)
 {
   int len;
 
-  DEBUG(("  in xrdp_mcs_send\r\n"));
+  DEBUG(("  in xrdp_mcs_send"));
   s_pop_layer(s, mcs_hdr);
   len = (s->end - s->p) - 8;
   len = len | 0x8000;
@@ -598,7 +598,7 @@ xrdp_mcs_send(struct xrdp_mcs* self, struct stream* s)
   {
     return 1;
   }
-  DEBUG(("  out xrdp_mcs_send\r\n"));
+  DEBUG(("  out xrdp_mcs_send"));
   return 0;
 }
 

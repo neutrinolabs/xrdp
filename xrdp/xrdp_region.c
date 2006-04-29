@@ -90,7 +90,6 @@ xrdp_region_subtract_rect(struct xrdp_region* self,
     r = (struct xrdp_rect*)list_get_item(self->rects, i);
     rect1 = *r;
     r = &rect1;
-    //g_printf("r is %d %d %d %d\n", r->left, r->top, r->right, r->bottom);
     if (rect->left <= r->left &&
         rect->top <= r->top &&
         rect->right >= r->right &&
@@ -275,7 +274,7 @@ xrdp_region_subtract_rect(struct xrdp_region* self,
     }
     else
     {
-      g_printf("error in xrdp_region_subtract_rect\r\n");
+      g_writeln("error in xrdp_region_subtract_rect");
     }
   }
   return 0;

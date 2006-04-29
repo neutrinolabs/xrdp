@@ -342,11 +342,11 @@ xrdp_wm_load_static_pointers(struct xrdp_wm* self)
 {
   struct xrdp_pointer_item pointer_item;
 
-  DEBUG(("sending cursor\r\n"));
+  DEBUG(("sending cursor"));
   xrdp_wm_load_pointer(self, "cursor1.cur", pointer_item.data,
                        pointer_item.mask, &pointer_item.x, &pointer_item.y);
   xrdp_cache_add_pointer_static(self->cache, &pointer_item, 1);
-  DEBUG(("sending cursor\r\n"));
+  DEBUG(("sending cursor"));
   xrdp_wm_load_pointer(self, "cursor0.cur", pointer_item.data,
                        pointer_item.mask, &pointer_item.x, &pointer_item.y);
   xrdp_cache_add_pointer_static(self->cache, &pointer_item, 0);
@@ -1192,7 +1192,7 @@ static int APP_CC
 xrdp_wm_process_input_mouse(struct xrdp_wm* self, int device_flags,
                             int x, int y)
 {
-  DEBUG(("mouse event flags %4.4x x %d y %d\r\n", device_flags, x, y));
+  DEBUG(("mouse event flags %4.4x x %d y %d", device_flags, x, y));
   if (device_flags & MOUSE_FLAG_MOVE) /* 0x0800 */
   {
     xrdp_wm_mouse_move(self->pro_layer->wm, x, y);

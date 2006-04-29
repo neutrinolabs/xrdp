@@ -135,6 +135,7 @@ lib_mod_event(struct vnc* v, int msg, long param1, long param2,
   int y;
   int cx;
   int cy;
+  char text[256];
 
   error = 0;
   make_stream(s);
@@ -259,8 +260,9 @@ lib_mod_event(struct vnc* v, int msg, long param1, long param2,
           key = 0xff13;
           break;
         default:
-          g_printf("unkown key lib_mod_event msg %d \
-param1 0x%4.4x param2 0x%4.4x\r\n", msg, param1, param2);
+          g_sprintf(text, "unkown key lib_mod_event msg %d \
+param1 0x%4.4x param2 0x%4.4x", msg, param1, param2);
+          v->server_msg(v, text, 1);
           break;
       }
     }
@@ -464,6 +466,7 @@ lib_framebuffer_update(struct vnc* v)
   char* d2;
   char cursor_data[32 * (32 * 3)];
   char cursor_mask[32 * (32 / 8)];
+  char text[256];
   int num_recs;
   int i;
   int j;
@@ -580,7 +583,8 @@ lib_framebuffer_update(struct vnc* v)
       }
       else
       {
-        g_printf("error in lib_framebuffer_update\r\n");
+        g_sprintf(text, "error in lib_framebuffer_update");
+        v->server_msg(v, text, 1);
       }
     }
   }
@@ -683,6 +687,7 @@ lib_mod_signal(struct vnc* v)
 {
   char type;
   int error;
+  char text[256];
 
   error = lib_recv(v, &type, 1);
   if (error == 0)
@@ -701,7 +706,8 @@ lib_mod_signal(struct vnc* v)
     }
     else
     {
-      g_printf("unknown in lib_mod_signal %d\r\n", type);
+      g_sprintf(text, "unknown in lib_mod_signal %d", type);
+      v->server_msg(v, text, 1);
     }
   }
   return error;

@@ -666,7 +666,7 @@ rdp_rdp_send_login_info(struct rdp_rdp* self, int flags)
   int sec_flags;
   struct stream* s;
 
-  DEBUG(("in rdp_rdp_send_login_info\r\n"));
+  DEBUG(("in rdp_rdp_send_login_info"));
   make_stream(s);
   init_stream(s, 8192);
   len_domain = 2 * g_strlen(self->mod->domain);
@@ -678,7 +678,7 @@ rdp_rdp_send_login_info(struct rdp_rdp* self, int flags)
   if (rdp_sec_init(self->sec_layer, s, sec_flags) != 0)
   {
     free_stream(s);
-    DEBUG(("out rdp_rdp_send_login_info error 1\r\n"));
+    DEBUG(("out rdp_rdp_send_login_info error 1"));
     return 1;
   }
   out_uint32_le(s, 0);
@@ -697,11 +697,11 @@ rdp_rdp_send_login_info(struct rdp_rdp* self, int flags)
   if (rdp_sec_send(self->sec_layer, s, sec_flags) != 0)
   {
     free_stream(s);
-    DEBUG(("out rdp_rdp_send_login_info error 2\r\n"));
+    DEBUG(("out rdp_rdp_send_login_info error 2"));
     return 1;
   }
   free_stream(s);
-  DEBUG(("out rdp_rdp_send_login_info\r\n"));
+  DEBUG(("out rdp_rdp_send_login_info"));
   return 0;
 }
 
@@ -711,7 +711,7 @@ rdp_rdp_connect(struct rdp_rdp* self, char* ip, char* port)
 {
   int flags;
 
-  DEBUG(("in rdp_rdp_connect\r\n"));
+  DEBUG(("in rdp_rdp_connect"));
   flags = RDP_LOGON_NORMAL;
   if (g_strlen(self->mod->password) > 0)
   {
@@ -719,15 +719,15 @@ rdp_rdp_connect(struct rdp_rdp* self, char* ip, char* port)
   }
   if (rdp_sec_connect(self->sec_layer, ip, port) != 0)
   {
-    DEBUG(("out rdp_rdp_connect error rdp_sec_connect failed\r\n"));
+    DEBUG(("out rdp_rdp_connect error rdp_sec_connect failed"));
     return 1;
   }
   if (rdp_rdp_send_login_info(self, flags) != 0)
   {
-    DEBUG(("out rdp_rdp_connect error rdp_rdp_send_login_info failed\r\n"));
+    DEBUG(("out rdp_rdp_connect error rdp_rdp_send_login_info failed"));
     return 1;
   }
-  DEBUG(("out rdp_rdp_connect\r\n"));
+  DEBUG(("out rdp_rdp_connect"));
   return 0;
 }
 
@@ -787,12 +787,12 @@ rdp_rdp_recv(struct rdp_rdp* self, struct stream* s, int* type)
   int chan;
 
   chan = 0;
-  DEBUG(("in rdp_rdp_recv\r\n"));
+  DEBUG(("in rdp_rdp_recv"));
   if (s->next_packet >= s->end || s->next_packet == 0)
   {
     if (rdp_sec_recv(self->sec_layer, s, &chan) != 0)
     {
-      DEBUG(("error in rdp_rdp_recv, rdp_sec_recv failed\r\n"));
+      DEBUG(("error in rdp_rdp_recv, rdp_sec_recv failed"));
       return 1;
     }
     s->next_packet = s->p;
@@ -805,11 +805,11 @@ rdp_rdp_recv(struct rdp_rdp* self, struct stream* s, int* type)
   if (chan == MCS_GLOBAL_CHANNEL)
   {
     in_uint16_le(s, len);
-    DEBUG(("rdp_rdp_recv got %d len\r\n", len));
+    DEBUG(("rdp_rdp_recv got %d len", len));
     if (len == 0x8000)
     {
       s->next_packet += 8;
-      DEBUG(("out rdp_rdp_recv\r\n"));
+      DEBUG(("out rdp_rdp_recv"));
       return 0;
     }
     in_uint16_le(s, pdu_type);
@@ -820,10 +820,10 @@ rdp_rdp_recv(struct rdp_rdp* self, struct stream* s, int* type)
   else
   {
     /* todo, process channel data */
-    DEBUG(("got channel data channel %d\r\n", chan));
+    DEBUG(("got channel data channel %d", chan));
     s->next_packet = s->end;
   }
-  DEBUG(("out rdp_rdp_recv\r\n"));
+  DEBUG(("out rdp_rdp_recv"));
   return 0;
 }
 

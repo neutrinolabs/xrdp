@@ -116,7 +116,7 @@ xrdp_listen_delete_pro(struct xrdp_listen* self, struct xrdp_process* pro)
   {
     if (self->process_list[i] == pro)
     {
-      DEBUG(("process deleted\r\n"));
+      DEBUG(("process deleted"));
       xrdp_process_delete(pro);
       self->process_list[i] = 0;
       return 0;
@@ -130,9 +130,9 @@ xrdp_listen_delete_pro(struct xrdp_listen* self, struct xrdp_process* pro)
 THREAD_RV THREAD_CC
 xrdp_process_run(void* in_val)
 {
-  DEBUG(("process started\r\n"));
+  DEBUG(("process started"));
   xrdp_process_main_loop(g_process);
-  DEBUG(("process done\r\n"));
+  DEBUG(("process done"));
   return 0;
 }
 
@@ -189,7 +189,7 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
   error = g_tcp_bind(self->sck, port);
   if (error != 0)
   {
-    g_printf("bind error in xrdp_listen_main_loop\r\n");
+    g_writeln("bind error in xrdp_listen_main_loop");
     g_tcp_close(self->sck);
     self->status = -1;
     return 1;
@@ -228,7 +228,7 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
   }
   else
   {
-    DEBUG(("listen error in xrdp_listen_main_loop\r\n"));
+    DEBUG(("listen error in xrdp_listen_main_loop"));
   }
   xrdp_listen_term_processes(self);
   g_tcp_close(self->sck);

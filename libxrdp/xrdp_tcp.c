@@ -60,10 +60,10 @@ xrdp_tcp_recv(struct xrdp_tcp* self, struct stream* s, int len)
 
   if (self->sck_closed)
   {
-    DEBUG(("    in xrdp_tcp_recv, sck closed\r\n"));
+    DEBUG(("    in xrdp_tcp_recv, sck closed"));
     return 1;
   }
-  DEBUG(("    in xrdp_tcp_recv, gota get %d bytes\r\n", len));
+  DEBUG(("    in xrdp_tcp_recv, gota get %d bytes", len));
   init_stream(s, len);
   while (len > 0)
   {
@@ -77,14 +77,14 @@ xrdp_tcp_recv(struct xrdp_tcp* self, struct stream* s, int len)
       else
       {
         self->sck_closed = 1;
-        DEBUG(("    error = -1 in xrdp_tcp_recv socket %d\r\n", self->sck));
+        DEBUG(("    error = -1 in xrdp_tcp_recv socket %d", self->sck));
         return 1;
       }
     }
     else if (rcvd == 0)
     {
       self->sck_closed = 1;
-      DEBUG(("    error = 0 in xrdp_tcp_recv socket %d\r\n", self->sck));
+      DEBUG(("    error = 0 in xrdp_tcp_recv socket %d", self->sck));
       return 1;
     }
     else
@@ -93,7 +93,7 @@ xrdp_tcp_recv(struct xrdp_tcp* self, struct stream* s, int len)
       len -= rcvd;
     }
   }
-  DEBUG(("    out xrdp_tcp_recv\r\n"));
+  DEBUG(("    out xrdp_tcp_recv"));
   return 0;
 }
 
@@ -108,11 +108,11 @@ xrdp_tcp_send(struct xrdp_tcp* self, struct stream* s)
 
   if (self->sck_closed)
   {
-    DEBUG(("    in xrdp_tcp_send, sck closed\r\n"));
+    DEBUG(("    in xrdp_tcp_send, sck closed"));
     return 1;
   }
   len = s->end - s->data;
-  DEBUG(("    in xrdp_tcp_send, gota send %d bytes\r\n", len));
+  DEBUG(("    in xrdp_tcp_send, gota send %d bytes", len));
   total = 0;
   while (total < len)
   {
@@ -126,14 +126,14 @@ xrdp_tcp_send(struct xrdp_tcp* self, struct stream* s)
       else
       {
         self->sck_closed = 1;
-        DEBUG(("    error = -1 in xrdp_tcp_send socket %d\r\n", self->sck));
+        DEBUG(("    error = -1 in xrdp_tcp_send socket %d", self->sck));
         return 1;
       }
     }
     else if (sent == 0)
     {
       self->sck_closed = 1;
-      DEBUG(("    error = 0 in xrdp_tcp_send socket %d\r\n", self->sck));
+      DEBUG(("    error = 0 in xrdp_tcp_send socket %d", self->sck));
       return 1;
     }
     else
@@ -141,6 +141,6 @@ xrdp_tcp_send(struct xrdp_tcp* self, struct stream* s)
       total = total + sent;
     }
   }
-  DEBUG(("    out xrdp_tcp_send, sent %d bytes ok\r\n", len));
+  DEBUG(("    out xrdp_tcp_send, sent %d bytes ok", len));
   return 0;
 }
