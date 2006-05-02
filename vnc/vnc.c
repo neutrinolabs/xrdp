@@ -616,6 +616,7 @@ lib_clip_data(struct vnc* v)
   struct stream* s;
   int size;
   int error;
+  int temp;
 
   make_stream(s);
   init_stream(s, 8192);
@@ -624,8 +625,17 @@ lib_clip_data(struct vnc* v)
   {
     in_uint8s(s, 3);
     in_uint32_be(s, size);
-    init_stream(s, 8192);
-    error = lib_recv(v, s->data, size);
+    while (size > 0 && error == 0)
+    {
+      init_stream(s, 8192);
+      temp = size;
+      if (temp > 8192)
+      {
+        temp = 8192;
+      }
+      error = lib_recv(v, s->data, temp);
+      size -= temp;
+    }
   }
   free_stream(s);
   return error;
