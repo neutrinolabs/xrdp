@@ -15,9 +15,6 @@
 
    xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2005-2006
-
-   session manager
-   linux only
 */
 
 /**
@@ -34,11 +31,9 @@
 /**
  *
  * @brief Force receiving data from tcp stream
- *
  * @param sck The socket to read from
  * @param data Data buffer
  * @param len Data buffer size
- *
  * @return 0 on success, 1 on error
  * 
  */
@@ -48,11 +43,9 @@ tcp_force_recv(int sck, char* data, int len);
 /**
  *
  * @brief Force sending data to tcp stream
- *
  * @param sck the socket to write to
  * @param data Data buffer
  * @param len Data buffer size
- *
  * @return 0 on success, 1 on error
  * 
  */

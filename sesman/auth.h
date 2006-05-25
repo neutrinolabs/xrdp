@@ -15,19 +15,58 @@
 
    xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2005-2006
-
-   session manager - main header
 */
+
+/**
+ *
+ * @file auth.h
+ * @brief User authentication definitions
+ * @author Jay Sorg
+ * 
+ */
 
 #ifndef AUTH_H
 #define AUTH_H
 
+/**
+ *
+ * @brief Validates user's password
+ * @param user user's login name
+ * @param pass user's password
+ * @return 0 on success, 1 on failure
+ *
+ */
 long DEFAULT_CC
 auth_userpass(char* user, char* pass);
+
+/**
+ *
+ * @brief FIXME
+ * @param in_val
+ * @param in_display
+ * @return 0 on success, 1 on failure
+ *
+ */
 int DEFAULT_CC
 auth_start_session(long in_val, int in_display);
+
+/**
+ *
+ * @brief FIXME
+ * @param in_val
+ * @return 0 on success, 1 on failure
+ *
+ */
 int DEFAULT_CC
 auth_end(long in_val);
+
+/**
+ *
+ * @brief FIXME
+ * @param in_val
+ * @return 0 on success, 1 on failure
+ *
+ */
 int DEFAULT_CC
 auth_set_env(long in_val);
 

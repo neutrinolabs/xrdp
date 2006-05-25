@@ -15,10 +15,15 @@
 
    xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2005-2006
-
-   authenticate user
-
 */
+
+/**
+ *
+ * @file verify_user.c
+ * @brief Authenticate user using standard unix passwd/shadow system
+ * @author Jay Sorg
+ * 
+ */
 
 #include "sesman.h"
 

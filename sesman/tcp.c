@@ -15,9 +15,6 @@
 
    xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2005-2006
-
-   session manager
-   linux only
 */
 
 /**

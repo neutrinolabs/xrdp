@@ -15,11 +15,16 @@
 
    xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2005-2006
-
-   session manager
-   linux only
-
 */
+
+/**
+ *
+ * @file session.h
+ * @brief Session management definitions
+ * @author Jay Sorg, Simone Fedele
+ * 
+ */
+
 
 #ifndef SESSION_H
 #define SESSION_H
@@ -66,8 +71,7 @@ struct session_chain
 
 /**
  *
- * finds a session matching the supplied parameters
- *
+ * @brief finds a session matching the supplied parameters
  * @return session data or 0
  *
  */
@@ -79,8 +83,7 @@ session_get_bydata(char* name, int width, int height, int bpp);
 
 /**
  *
- * starts a session
- *
+ * @brief starts a session
  * @return 0 on error, display number if success
  *
  */
@@ -90,10 +93,8 @@ session_start(int width, int height, int bpp, char* username, char* password,
 
 /**
  *
- * kills a session
- *
- * @param the id of the session to be killed
- *
+ * @brief kills a session
+ * @param pid the pid of the session to be killed
  * @return 
  * 
  */
@@ -102,10 +103,8 @@ session_kill(int pid);
 
 /**
  *
- * retrieves a session's descriptor
- *
+ * @brief retrieves a session's descriptor
  * @param pid the session pid
- *
  * @return a pointer to the session descriptor on success, NULL otherwise
  *
  */

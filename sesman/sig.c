@@ -15,9 +15,6 @@
 
    xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2005-2006
-
-   session manager
-   linux only
 */
 
 /**
@@ -76,4 +73,3 @@ sig_sesman_reload_cfg(int sig)
   
   log_message(LOG_LEVEL_INFO, "configuration reloaded");
 }
-

@@ -15,17 +15,21 @@
 
    xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2005-2006
-
-   authenticate user
-
 */
+
+/**
+ *
+ * @file access.c
+ * @brief User access control code
+ * @author Simone Fedele
+ * 
+ */
 
 #include "sesman.h"
 
 extern struct config_sesman g_cfg;
 
 /******************************************************************************/
-/* returns non zero if allowed */
 int DEFAULT_CC
 access_login_allowed(char* user)
 {

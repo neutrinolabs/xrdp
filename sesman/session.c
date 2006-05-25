@@ -15,11 +15,15 @@
 
    xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2005-2006
-
-   session manager
-   linux only
-
 */
+
+/**
+ *
+ * @file session.c
+ * @brief Session management code
+ * @author Jay Sorg, Simone Fedele
+ * 
+ */
 
 #include "sesman.h"
 
@@ -75,7 +79,13 @@ session_get_bydata(char* name, int width, int height, int bpp)
 }
 
 /******************************************************************************/
-/* returns non zero if there is an xserver running on this display */
+/**
+ *
+ * @brief checks if there's a server running on a display
+ * @param display the display to check
+ * @return 0 if there isn't a display running, nonzero otherwise
+ *
+ */
 static int DEFAULT_CC
 x_server_running(int display)
 {
@@ -115,7 +125,6 @@ x_server_running(int display)
 }
 
 /******************************************************************************/
-/* returns 0 if error else the display number the session was started on */
 int DEFAULT_CC
 session_start(int width, int height, int bpp, char* username, char* password,
               long data, unsigned char type)

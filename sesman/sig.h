@@ -15,9 +15,6 @@
 
    xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2005-2006
-
-   session manager
-   linux only
 */
 
 /**
@@ -34,7 +31,6 @@
 /**
  *
  * @brief Shutdown signal code
- *
  * @param sig The received signal
  *
  */
@@ -44,7 +40,6 @@ sig_sesman_shutdown(int sig);
 /**
  *
  * @brief SIGHUP handling code
- *
  * @param sig The received signal
  *
  */

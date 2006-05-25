@@ -15,11 +15,15 @@
 
    xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2005-2006
-
-   session manager
-   linux only
-
 */
+
+/**
+ *
+ * @file sesrun.c
+ * @brief An utility to start a session
+ * @author Jay Sorg, Simone Fedele
+ * 
+ */
 
 #include "sesman.h"
 

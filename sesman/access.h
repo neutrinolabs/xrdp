@@ -15,16 +15,24 @@
 
    xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2005-2006
-
-   session manager - access control header
 */
+
+/**
+ *
+ * @file access.h
+ * @brief User access control definitions
+ * @author Simone Fedele
+ * 
+ */
 
 #ifndef ACCESS_H
 #define ACCESS_H
 
 /**
  *
- *
+ * @brief Checks if the user is allowed to access the terminal server
+ * @param user the user to check
+ * @return 0 if access is denied, !=0 if allowed
  *
  */
 int DEFAULT_CC

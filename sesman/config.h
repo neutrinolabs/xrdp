@@ -15,9 +15,15 @@
 
    xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2005-2006
-
-   session manager - read config file
 */
+
+/**
+ *
+ * @file config.h
+ * @brief User authentication definitions
+ * @author Simone Fedele @< simo [at] esseemme [dot] org @>
+ * 
+ */
 
 #ifndef CONFIG_H
 #define CONFIG_H
@@ -63,7 +69,7 @@
 /**
  *
  * @struct config_security
- * @brief \t struct that contains \t sesman access control configuration
+ * @brief struct that contains sesman access control configuration
  *
  */
 struct config_security
@@ -90,7 +96,7 @@ struct config_security
 /**
  *
  * @struct config_sessions
- * @brief \t struct that contains \t sesman session handling configuration
+ * @brief struct that contains sesman session handling configuration
  *
  */
 struct config_sessions
@@ -120,11 +126,11 @@ struct config_sessions
 /**
  *
  * @struct config_sesman
- * @brief \t struct that contains \t sesman configuration
+ * @brief struct that contains sesman configuration
  *
- * This \t struct contains all of \t sesman configuration parameters\n
- * Every parameter in \t [globals] is a member of this struct, other
- * sections options are embedded in this \t struct as member structures
+ * This struct contains all of sesman configuration parameters\n
+ * Every parameter in [globals] is a member of this struct, other
+ * sections options are embedded in this struct as member structures
  *
  */
 struct config_sesman
@@ -151,17 +157,17 @@ struct config_sesman
   char user_wm[32];
   /**
    * @var log
-   * @brief Log configuration \t struct
+   * @brief Log configuration struct
    */
   struct log_config log;
   /**
    * @var sec
-   * @brief Security configuration options \t struct
+   * @brief Security configuration options struct
    */
   struct config_security sec;
   /**
    * @var sess
-   * @brief Session configuration options \t struct
+   * @brief Session configuration options struct
    */
   struct config_sessions sess;
 };
@@ -169,9 +175,7 @@ struct config_sesman
 /**
  *
  * @brief Reads sesman configuration
- *
  * @param cfg pointer to configuration object to be replaced
- *
  * @return 0 on success, 1 on failure
  *
  */
@@ -181,9 +185,10 @@ config_read(struct config_sesman* cfg);
 /**
  *
  * @brief Reads sesman [global] configuration section
- *
- * @param cfg pointer to configuration object to be replaced
- *
+ * @param file configuration file descriptor
+ * @param cf pointer to a config struct
+ * @param param_n parameter name list
+ * @param param_v parameter value list
  * @return 0 on success, 1 on failure
  *
  */
@@ -194,9 +199,10 @@ config_read_globals(int file, struct config_sesman* cf,
 /**
  *
  * @brief Reads sesman [logging] configuration section
- *
- * @param cfg pointer to configuration object to be replaced
- *
+ * @param file configuration file descriptor
+ * @param lc pointer to a log_config struct
+ * @param param_n parameter name list
+ * @param param_v parameter value list
  * @return 0 on success, 1 on failure
  *
  */
@@ -207,9 +213,10 @@ config_read_logging(int file, struct log_config* lc, struct list* param_n,
 /**
  *
  * @brief Reads sesman [Security] configuration section
- *
- * @param cfg pointer to configuration object to be replaced
- *
+ * @param file configuration file descriptor
+ * @param sc pointer to a config_security struct
+ * @param param_n parameter name list
+ * @param param_v parameter value list
  * @return 0 on success, 1 on failure
  *
  */
@@ -220,9 +227,10 @@ config_read_security(int file, struct config_security* sc,
 /**
  *
  * @brief Reads sesman [Sessions] configuration section
- *
- * @param cfg pointer to configuration object to be replaced
- *
+ * @param file configuration file descriptor
+ * @param ss pointer to a config_sessions struct
+ * @param param_n parameter name list
+ * @param param_v parameter value list
  * @return 0 on success, 1 on failure
  *
  */

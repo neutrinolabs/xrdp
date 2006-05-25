@@ -15,10 +15,15 @@
 
    xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2005-2006
-
-   authenticate user using kerberos
-
 */
+
+/**
+ *
+ * @file verify_user_kerberos.c
+ * @brief Authenticate user using kerberos
+ * @author Jay Sorg
+ * 
+ */
 
 #include "arch.h"
 #include "os_calls.h"

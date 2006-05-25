@@ -15,9 +15,15 @@
 
    xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2005-2006
-
-   session manager - read config file
 */
+
+/**
+ *
+ * @file config.c
+ * @brief User authentication code
+ * @author Simone Fedele @< simo [at] esseemme [dot] org @>
+ * 
+ */
 
 #include "arch.h"
 #include "list.h"
@@ -25,6 +31,13 @@
 #include "sesman.h"
 
 /******************************************************************************/
+/**
+ *
+ * @brief Reads sesman configuration
+ * @param s translates the strings "1", "true" and "yes" in 1 (true) and other strings in 0
+ * @return 0 on success, 1 on failure
+ *
+ */
 static int APP_CC
 text2bool(char* s)
 {
@@ -38,7 +51,6 @@ text2bool(char* s)
 }
 
 /******************************************************************************/
-/* returns error */
 int DEFAULT_CC
 config_read(struct config_sesman* cfg)
 {

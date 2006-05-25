@@ -15,9 +15,6 @@
 
    xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2005-2006
-
-   session manager
-   linux only
 */
 
 /**
@@ -34,10 +31,8 @@
 /**
  *
  * @brief Creates vnc password file
- *
  * @param filename VNC password file name
  * @param password The password to be encrypte
- *
  * @return 0 on success, 1 on error
  *
  */
@@ -47,11 +42,9 @@ env_check_password_file(char* filename, char* password);
 /**
  *
  * @brief Sets user environment ($PATH, $HOME, $UID, and others)
- *
  * @param username Username 
  * @param passwd_file VNC password file
  * @param display The session display
- * 
  * @return 0 on success, g_getuser_info() error codes on error
  *
  */

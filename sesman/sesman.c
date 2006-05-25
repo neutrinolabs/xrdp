@@ -15,11 +15,15 @@
 
    xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2005-2006
-
-   session manager
-   linux only
-
 */
+
+/**
+ *
+ * @file sesman.c
+ * @brief Main program file
+ * @author Jay Sorg
+ * 
+ */
 
 #include "sesman.h"
 
@@ -35,8 +39,7 @@ struct config_sesman g_cfg; /* config.h */
 
 /**
  *
- * trigger when a child process (a session) dies
- *
+ * @brief triggered when a child process (a session) dies
  * @param s received signal
  *
  */
@@ -70,9 +73,10 @@ cterm(int s)
   }
 }
 
+/******************************************************************************/
 /**
  *
- * Starts sesman main loop
+ * @brief Starts sesman main loop
  *
  */
 static void DEFAULT_CC 
