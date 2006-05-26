@@ -83,28 +83,9 @@ static void DEFAULT_CC
 sesman_main_loop()
 {
   int in_sck;
-  int code;
-  int i;
-  int size;
-  int version;
-  int width;
-  int height;
-  int bpp;
-  int display;
   int error;
-  struct stream* in_s;
-  struct stream* out_s;
-  char user[256];
-  char pass[256];
-  struct session_item* s_item;
-  long data;
 
   /*main program loop*/
-  make_stream(in_s);
-  init_stream(in_s, 8192);
-  make_stream(out_s);
-  init_stream(out_s, 8192);
-
   log_message(LOG_LEVEL_INFO, "listening...");
   g_sck = g_tcp_socket();
   g_tcp_set_non_blocking(g_sck);
@@ -122,86 +103,10 @@ sesman_main_loop()
       }
       while (in_sck > 0)
       {
-        init_stream(in_s, 8192);
-        if (tcp_force_recv(in_sck, in_s->data, 8) == 0)
-        {
-          in_uint32_be(in_s, version);
-          in_uint32_be(in_s, size);
-          init_stream(in_s, 8192);
-          if (tcp_force_recv(in_sck, in_s->data, size - 8) == 0)
-          {
-            if (version == 0)
-            {
-              in_uint16_be(in_s, code);
-              if (code == 0 || code == 10) /* check username - password, */
-              {                            /* start session */
-                //g_server_type = code;
-                in_uint16_be(in_s, i);
-                in_uint8a(in_s, user, i);
-                user[i] = 0;
-                in_uint16_be(in_s, i);
-                in_uint8a(in_s, pass, i);
-                pass[i] = 0;
-                in_uint16_be(in_s, width);
-                in_uint16_be(in_s, height);
-                in_uint16_be(in_s, bpp);
-                data = auth_userpass(user, pass);
-                display = 0;
-                if (data)
-                {
-                  //s_item = session_find_item(user, width, height, bpp);
-                  s_item = session_get_bydata(user, width, height, bpp);
-                  if (s_item != 0)
-                  {
-                    display = s_item->display;
-                    auth_end(data);
-                    /* don't set data to null here */
-                  }
-                  else
-                  {
-                    g_printf("pre auth");
-                    if (1 == access_login_allowed(user))
-                    {
-                      log_message(LOG_LEVEL_INFO,
-                                  "granted TS access to user %s", user);
-                      if (0 == code)
-                      {
-                        log_message(LOG_LEVEL_INFO, "starting Xvnc session...");
-                        display = session_start(width, height, bpp, user, pass,
-                                                data, SESMAN_SESSION_TYPE_XVNC);
-                      }
-                      else
-                      {
-                        log_message(LOG_LEVEL_INFO, "starting Xrdp session...");
-                        display = session_start(width, height, bpp, user, pass,
-                                                data, SESMAN_SESSION_TYPE_XRDP);
-                      }
-                    }
-                    else
-                    {
-                      display = 0;
-                    }
-                  }
-                  if (display == 0)
-                  {
-                    auth_end(data);
-                    data = 0;
-                  }
-                }
-                init_stream(out_s, 8192);
-                out_uint32_be(out_s, 0); /* version */
-                out_uint32_be(out_s, 14); /* size */
-                out_uint16_be(out_s, 3); /* cmd */
-                out_uint16_be(out_s, data != 0); /* data */
-                out_uint16_be(out_s, display); /* data */
-                s_mark_end(out_s);
-                tcp_force_send(in_sck, out_s->data,
-                               out_s->end - out_s->data);
-              }
-            }
-          }
-        }
-        g_tcp_close(in_sck);
+        /* we've got a connection, so we pass it to scp code */
+        scp_process_start(in_sck);
+
+        /* once we've processed the connection, we go back listening */
         in_sck = g_tcp_accept(g_sck);
         while (in_sck == -1 && g_tcp_last_error_would_block(g_sck))
         {
@@ -220,8 +125,6 @@ sesman_main_loop()
     log_message(LOG_LEVEL_ERROR, "bind error");
   }
   g_tcp_close(g_sck);
-  free_stream(in_s);
-  free_stream(out_s);
 }
 
 /******************************************************************************/

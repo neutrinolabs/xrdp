@@ -19,31 +19,27 @@
 
 /**
  *
- * @file sesman.h
- * @brief Main include file
- * @author Jay Sorg
+ * @file scp.h
+ * @brief scp (sesman control protocol) common definitions
+ * @author Simone Fedele
  * 
  */
 
-#ifndef SESMAN_H
-#define SESMAN_H
+#ifndef SCP_H
+#define SCP_H
 
-#include "d3des.h"
-#include "arch.h"
-#include "parse.h"
-#include "os_calls.h"
-#include "log.h"
-#include "env.h"
-#include "auth.h"
-#include "config.h"
-#include "tcp.h"
-#include "sig.h"
-#include "session.h"
-#include "access.h"
-#include "scp.h"
+#include "scp_v0.h"
+//#include "scp_v1.h"
 
-#ifndef SESMAN_PID_FILE
-  #define SESMAN_PID_FILE "./sesman.pid"
-#endif
+/**
+ *
+ * @brief Starts a an scp protocol thread.
+ *        Starts a an scp protocol thread.
+ *        But does only version control....
+ * @param socket the connection socket
+ *
+ */
+void DEFAULT_CC
+scp_process_start(int socket);
 
 #endif

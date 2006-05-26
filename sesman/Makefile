@@ -1,6 +1,7 @@
 # sesman makefile
 SESMANOBJ = sesman.o config.o tcp.o sig.o session.o env.o \
-            os_calls.o d3des.o list.o file.o log.o access.o
+            os_calls.o d3des.o list.o file.o log.o access.o \
+            scp.o scp_v0.o
 
 SESRUNOBJ = sesrun.o config.o tcp.o \
             os_calls.o d3des.o list.o file.o log.o

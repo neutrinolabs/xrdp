@@ -19,31 +19,24 @@
 
 /**
  *
- * @file sesman.h
- * @brief Main include file
- * @author Jay Sorg
+ * @file scp_v0.h
+ * @brief scp version 0 declarations
+ * @author Simone Fedele
  * 
  */
 
-#ifndef SESMAN_H
-#define SESMAN_H
+#ifndef SCP_V0_H
+#define SCP_V0_H
 
-#include "d3des.h"
-#include "arch.h"
-#include "parse.h"
-#include "os_calls.h"
-#include "log.h"
-#include "env.h"
-#include "auth.h"
-#include "config.h"
-#include "tcp.h"
-#include "sig.h"
-#include "session.h"
-#include "access.h"
-#include "scp.h"
-
-#ifndef SESMAN_PID_FILE
-  #define SESMAN_PID_FILE "./sesman.pid"
-#endif
+/**
+ *
+ * @brief processes the stream using scp version 0
+ * @param in_sck connection socket
+ * @param in_s input stream
+ * @param out_s output stream
+ *
+ */
+void DEFAULT_CC 
+scp_v0_process(int in_sck, struct stream* in_s, struct stream* out_s);
 
 #endif
