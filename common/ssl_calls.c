@@ -23,6 +23,7 @@
 #include "os_calls.h"
 #include "arch.h"
 
+#include <stdlib.h> /* needed for openssl headers */
 #include <openssl/rc4.h>
 #include <openssl/md5.h>
 #include <openssl/sha.h>
