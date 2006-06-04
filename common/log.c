@@ -15,12 +15,6 @@
 
    xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2005-2006
-
-   session manager
-   linux only
-
-   log.c: logging code
-
 */
 
 #include "sys/types.h"
@@ -37,12 +31,17 @@
 
 static struct log_config *l_cfg;
 
+/* threading additions */
+#ifdef LOG_ENABLE_THREAD
+#include "nptl/pthread.h"
+static pthread_mutex_t log_lock;
+static pthread_mutexattr_t log_lock_attr;
+#endif
+
 /**
  *
- * Opens log file
- *
+ * @brief Opens log file
  * @param fname log file name
- * 
  * @return see open(2) return values
  * 
  */
@@ -53,10 +52,8 @@ static int log_file_open(const char* fname)
 
 /**
  *
- * Converts xrdp log level to syslog logging level
- *
+ * @brief Converts xrdp log level to syslog logging level
  * @param xrdp logging level
- *
  * @return syslog equivalent logging level
  *
  */
@@ -79,11 +76,10 @@ static int log_xrdp2syslog(const int lvl)
 }
 
 /**
- *
- * Converts xrdp log level to syslog logging level
- *
- * @param xrdp logging level
- *
+ *ring 
+ * @brief Converts xrdp log level to syslog logging level
+ * @param lvl logging level
+ * @param str pointer to a st
  * @return syslog equivalent logging level
  *
  */
@@ -167,8 +163,15 @@ log_message(const unsigned int lvl, const char* msg, ...)
   {
     /* log to console */
     g_printf((char*) buff);
+
     /* log to application logfile */
+#ifdef LOG_ENABLE_THREAD
+    pthread_mutex_lock(&log_lock);
+#endif
     return g_file_write(l_cfg->fd, (char*) buff, g_strlen((char*) buff));
+#ifdef LOG_ENABLE_THREAD
+    pthread_mutex_unlock(&log_lock);
+#endif
   }
   return 0;
 }
@@ -224,6 +227,11 @@ log_start(const char* progname, const char* logfile, const unsigned int loglvl,
 
   /* if syslog is enabled, open it */
   if (l_cfg->enable_syslog) openlog(l_cfg->program_name, LOG_CONS | LOG_PID, LOG_DAEMON);
+
+#ifdef LOG_ENABLE_THREAD
+  pthread_mutexattr_init(&log_lock_attr);
+  pthread_mutex_init(&log_lock, &log_lock_attr);
+#endif
 
   return LOG_STARTUP_OK;
 }
@@ -295,4 +303,3 @@ log_text2level(char* buf)
   
   return LOG_LEVEL_DEBUG;
 }
-

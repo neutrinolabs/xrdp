@@ -15,12 +15,6 @@
 
    xrdp: A Remote Desktop Protocol server.
    Copyright (C) Jay Sorg 2005-2006
-
-   session manager
-   linux only
-
-   log.h: logging code declarations
-
 */
 
 #ifndef LOG_H
@@ -29,7 +23,7 @@
 #include "arch.h"
 
 /* logging buffer size */
-#define LOG_BUFFER_SIZE      8192
+#define LOG_BUFFER_SIZE      1024
 
 /* logging levels */
 #define LOG_LEVEL_ALWAYS        0
@@ -45,6 +39,9 @@
 #define LOG_ERROR_FILE_OPEN     3
 #define LOG_ERROR_NO_CFG        4
 #define LOG_ERROR_FILE_NOT_OPEN 5
+
+/* enable threading */
+/*#define LOG_ENABLE_THREAD*/
 
 #ifdef DEBUG
   #define LOG_DBG(s,args...) log_message(LOG_LEVEL_DEBUG,s,args);
@@ -64,12 +61,9 @@ struct log_config
 
 /**
  *
- * Logs a message. Optionally logs the same message on syslog
- *
+ * @brief Logs a message. Optionally logs the same message on syslog
  * @param lvl The level of the logged message
- *
  * @param msg The message to be logged
- *
  * @return
  *
  */
@@ -78,18 +72,12 @@ log_message(const unsigned int lvl, const char* msg, ...);
 
 /**
  *
- * Starts the logging subsystem
- *
+ * @brief Starts the logging subsystem
  * @param progname string to prepend to syslog messages
- *
  * @param logfile log file path
- *
  * @param loglvl level of messages to log
- *
  * @param syslog if set to 0, disables the use of syslog
- *
  * @param syslvl level of messages to log to syslog
- *
  * @return
  *
  */
@@ -99,7 +87,7 @@ log_start(const char* progname, const char* logfile, const unsigned int loglvl,
 
 /**
  *
- * Shuts down the logging subsystem
+ * @brief Shuts down the logging subsystem
  *
  */
 void DEFAULT_CC
@@ -107,11 +95,9 @@ log_end();
 
 /**
  *
- * Converts a string to a log level
- *
- * @s The string to convert
- *
- * @return The corresponding level od LOG_LEVEL_DEBUG if error
+ * @brief Converts a string to a log level
+ * @param s The string to convert
+ * @return The corresponding level or LOG_LEVEL_DEBUG if error
  *
  */
 int DEFAULT_CC
