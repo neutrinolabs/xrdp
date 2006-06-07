@@ -20,8 +20,8 @@ if [ "'which kde'" != "" ]; then
 fi
 
 # gnome
-#if [ "'which gnome'" != "" ]; then
-#  gnome
+#if [ "'which gnome-session'" != "" ]; then
+#  gnome-session
 #  exit 0
 #fi
 
