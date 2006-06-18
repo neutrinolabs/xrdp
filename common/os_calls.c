@@ -70,6 +70,8 @@ extern char** environ;
 #endif
 
 /*****************************************************************************/
+/* allocate memory, returns a pointer to it, size bytes are allocated,
+   if zero is non zero, each byte will be set to zero */
 void*
 g_malloc(int size, int zero)
 {
@@ -84,6 +86,7 @@ g_malloc(int size, int zero)
 }
 
 /*****************************************************************************/
+/* free the memory pointed to by ptr, ptr can be zero */
 void
 g_free(void* ptr)
 {
@@ -94,6 +97,8 @@ g_free(void* ptr)
 }
 
 /*****************************************************************************/
+/* output text to stdout, try to use g_write / g_writeln instead to avoid
+   linux / windows EOL problems */
 void
 g_printf(char* format, ...)
 {
@@ -612,13 +617,18 @@ g_mkdir(char* dirname)
 }
 
 /*****************************************************************************/
+/* gets the current working directory and puts up to maxlen chars in
+   dirname 
+   always returns 0 */
 char*
 g_get_current_dir(char* dirname, int maxlen)
 {
 #if defined(_WIN32)
-  return GetCurrentDirectory(maxlen, dirname);
+  GetCurrentDirectory(maxlen, dirname);
+  return 0;
 #else
-  return getcwd(dirname, maxlen);
+  getcwd(dirname, maxlen);
+  return 0;
 #endif
 }
 
