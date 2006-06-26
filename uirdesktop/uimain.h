@@ -33,8 +33,10 @@ void
 ui_key_down(int key, int ext);
 void
 ui_key_up(int key, int ext);
-void
-ui_set_modifier_state(int code);
+
+void
+
+ui_set_modifier_state(int code);
 
 #define SPLIT_COLOUR15(c, r, g, b) \
 { \

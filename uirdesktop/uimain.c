@@ -752,10 +752,14 @@ read_keyboard_state(void)
 /*****************************************************************************/
 void
 ui_set_modifier_state(int code)
-{
-  //error("%8.8x", code);
-  rdp_send_input(0, RDP_INPUT_SYNCHRONIZE, 0, (uint16) code, 0);
-}
+
+{
+
+  //error("%8.8x", code);
+
+  rdp_send_input(0, RDP_INPUT_SYNCHRONIZE, 0, (uint16) code, 0);
+
+}
 
 /*****************************************************************************/
 void
