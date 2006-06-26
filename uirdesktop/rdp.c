@@ -18,9 +18,11 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include <time.h>
+//#include <time.h>
+#ifndef _WIN32
 #include <errno.h>
 #include <unistd.h>
+#endif
 #include "rdesktop.h"
 
 #ifdef HAVE_ICONV
@@ -49,7 +51,6 @@ extern int g_width;
 extern int g_height;
 extern BOOL g_bitmap_cache;
 extern BOOL g_bitmap_cache_persist_enable;
-extern BOOL g_numlock_sync;
 
 uint8 *g_next_packet;
 uint32 g_rdp_shareid;
@@ -66,7 +67,7 @@ extern char g_redirect_cookie[128];
 extern uint32 g_redirect_flags;
 /* END Session Directory support */
 
-#if WITH_DEBUG
+#ifdef WITH_DEBUG
 static uint32 g_packetno;
 #endif
 
@@ -120,7 +121,7 @@ rdp_recv(uint8 * type)
 	in_uint8s(rdp_s, 2);	/* userid */
 	*type = pdu_type & 0xf;
 
-#if WITH_DEBUG
+#ifdef WITH_DEBUG
 	DEBUG(("RDP packet #%d, (type %x)\n", ++g_packetno, *type));
 	hexdump(g_next_packet, length);
 #endif /*  */
@@ -309,8 +310,8 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	int packetlen = 0;
 	uint32 sec_flags = g_encryption ? (SEC_LOGON_INFO | SEC_ENCRYPT) : SEC_LOGON_INFO;
 	STREAM s;
-	time_t t = time(NULL);
-	time_t tzone;
+	//time_t t = time(NULL);
+	//time_t tzone;
 
 	if (!g_use_rdp5 || 1 == g_server_rdp_version)
 	{
@@ -334,7 +335,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	}
 	else
 	{
-
+#if 0
 		flags |= RDP_LOGON_BLOB;
 		DEBUG_RDP5(("Sending RDP5-style Logon packet\n"));
 		packetlen = 4 +	/* Unknown uint32 */
@@ -438,7 +439,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		out_uint32_le(s, g_rdp5_performanceflags);
 		out_uint32(s, 0);
 
-
+#endif
 	}
 	s_mark_end(s);
 	sec_send(s, sec_flags);
@@ -972,8 +973,7 @@ process_demand_active(STREAM s)
 	rdp_recv(&type);	/* RDP_PDU_SYNCHRONIZE */
 	rdp_recv(&type);	/* RDP_CTL_COOPERATE */
 	rdp_recv(&type);	/* RDP_CTL_GRANT_CONTROL */
-	rdp_send_input(0, RDP_INPUT_SYNCHRONIZE, 0,
-		       g_numlock_sync ? ui_get_numlock_state(read_keyboard_state()) : 0, 0);
+	rdp_send_input(0, RDP_INPUT_SYNCHRONIZE, 0, ui_get_numlock_state(read_keyboard_state()), 0);
 
 	if (g_use_rdp5)
 	{
@@ -1106,7 +1106,23 @@ process_bitmap_updates(STREAM s)
 
 		DEBUG(("BITMAP_UPDATE(l=%d,t=%d,r=%d,b=%d,w=%d,h=%d,Bpp=%d,cmp=%d)\n",
 		       left, top, right, bottom, width, height, Bpp, compress));
-
+		if (!compress)
+		{
+			size = width * height * Bpp;	/* same as bufsize */
+		} 
+		else if (compress & 0x400)
+		{
+			size = bufsize;
+		}
+		else
+		{
+			in_uint8s(s, 2);	/* pad */
+			in_uint16_le(s, size);
+			in_uint8s(s, 4);
+		}
+		in_uint8p(s, data, size);
+		ui_paint_bitmap_ex(left, top, cx, cy, width, height, data, size, compress);
+#if 0
 		if (!compress)
 		{
 			int y;
@@ -1142,8 +1158,8 @@ process_bitmap_updates(STREAM s)
 		{
 			DEBUG_RDP5(("Failed to decompress data\n"));
 		}
-
 		xfree(bmpdata);
+#endif
 	}
 }
 
@@ -1153,7 +1169,7 @@ process_palette(STREAM s)
 {
 	COLOURENTRY *entry;
 	COLOURMAP map;
-	HCOLOURMAP hmap;
+	RD_HCOLOURMAP hmap;
 	int i;
 
 	in_uint8s(s, 2);	/* pad */
@@ -1293,13 +1309,7 @@ process_data_pdu(STREAM s, uint32 * ext_disc_reason)
 
 		case RDP_DATA_PDU_DISCONNECT:
 			process_disconnect_pdu(s, ext_disc_reason);
-
-			/* We used to return true and disconnect immediately here, but
-			 * Windows Vista sends a disconnect PDU with reason 0 when
-			 * reconnecting to a disconnected session, and MSTSC doesn't
-			 * drop the connection.  I think we should just save the status.
-			 */
-			break;
+			return True;
 
 		default:
 			unimpl("data PDU %d\n", data_pdu_type);

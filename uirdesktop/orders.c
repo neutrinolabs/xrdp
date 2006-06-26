@@ -296,7 +296,7 @@ process_line(STREAM s, LINE_ORDER * os, uint32 present, BOOL delta)
 		return;
 	}
 
-	ui_line(os->opcode - 1, os->startx, os->starty, os->endx, os->endy, &os->pen);
+	ui_line(ROP_MINUS_1(os->opcode), os->startx, os->starty, os->endx, os->endy, &os->pen);
 }
 
 /* Process an opaque rectangle order */
@@ -379,7 +379,7 @@ process_desksave(STREAM s, DESKSAVE_ORDER * os, uint32 present, BOOL delta)
 static void
 process_memblt(STREAM s, MEMBLT_ORDER * os, uint32 present, BOOL delta)
 {
-	HBITMAP bitmap;
+	RD_HBITMAP bitmap;
 
 	if (present & 0x0001)
 	{
@@ -425,7 +425,7 @@ process_memblt(STREAM s, MEMBLT_ORDER * os, uint32 present, BOOL delta)
 static void
 process_triblt(STREAM s, TRIBLT_ORDER * os, uint32 present, BOOL delta)
 {
-	HBITMAP bitmap;
+	RD_HBITMAP bitmap;
 
 	if (present & 0x000001)
 	{
@@ -551,7 +551,7 @@ process_polygon(STREAM s, POLYGON_ORDER * os, uint32 present, BOOL delta)
 	}
 
 	if (next - 1 == os->npoints)
-		ui_polygon(os->opcode - 1, os->fillmode, points, os->npoints + 1, NULL, 0,
+		ui_polygon(ROP_MINUS_1(os->opcode), os->fillmode, points, os->npoints + 1, NULL, 0,
 			   os->fgcolour);
 	else
 		error("polygon parse error\n");
@@ -636,7 +636,7 @@ process_polygon2(STREAM s, POLYGON2_ORDER * os, uint32 present, BOOL delta)
 	}
 
 	if (next - 1 == os->npoints)
-		ui_polygon(os->opcode - 1, os->fillmode, points, os->npoints + 1,
+		ui_polygon(ROP_MINUS_1(os->opcode), os->fillmode, points, os->npoints + 1,
 			   &os->brush, os->bgcolour, os->fgcolour);
 	else
 		error("polygon2 parse error\n");
@@ -715,7 +715,7 @@ process_polyline(STREAM s, POLYLINE_ORDER * os, uint32 present, BOOL delta)
 	}
 
 	if (next - 1 == os->lines)
-		ui_polyline(os->opcode - 1, points, os->lines + 1, &pen);
+		ui_polyline(ROP_MINUS_1(os->opcode), points, os->lines + 1, &pen);
 	else
 		error("polyline parse error\n");
 
@@ -750,7 +750,7 @@ process_ellipse(STREAM s, ELLIPSE_ORDER * os, uint32 present, BOOL delta)
 	DEBUG(("ELLIPSE(l=%d,t=%d,r=%d,b=%d,op=0x%x,fm=%d,fg=0x%x)\n", os->left, os->top,
 	       os->right, os->bottom, os->opcode, os->fillmode, os->fgcolour));
 
-	ui_ellipse(os->opcode - 1, os->fillmode, os->left, os->top, os->right - os->left,
+	ui_ellipse(ROP_MINUS_1(os->opcode), os->fillmode, os->left, os->top, os->right - os->left,
 		   os->bottom - os->top, NULL, 0, os->fgcolour);
 }
 
@@ -788,7 +788,7 @@ process_ellipse2(STREAM s, ELLIPSE2_ORDER * os, uint32 present, BOOL delta)
 	       os->left, os->top, os->right, os->bottom, os->opcode, os->fillmode, os->brush.style,
 	       os->bgcolour, os->fgcolour));
 
-	ui_ellipse(os->opcode - 1, os->fillmode, os->left, os->top, os->right - os->left,
+	ui_ellipse(ROP_MINUS_1(os->opcode), os->fillmode, os->left, os->top, os->right - os->left,
 		   os->bottom - os->top, &os->brush, os->bgcolour, os->fgcolour);
 }
 
@@ -863,7 +863,7 @@ process_text2(STREAM s, TEXT2_ORDER * os, uint32 present, BOOL delta)
 
 	DEBUG(("\n"));
 
-	ui_draw_text(os->font, os->flags, os->opcode - 1, os->mixmode, os->x, os->y,
+	ui_draw_text(os->font, os->flags, ROP_MINUS_1(os->opcode), os->mixmode, os->x, os->y,
 		     os->clipleft, os->cliptop, os->clipright - os->clipleft,
 		     os->clipbottom - os->cliptop, os->boxleft, os->boxtop,
 		     os->boxright - os->boxleft, os->boxbottom - os->boxtop,
@@ -874,10 +874,10 @@ process_text2(STREAM s, TEXT2_ORDER * os, uint32 present, BOOL delta)
 static void
 process_raw_bmpcache(STREAM s)
 {
-	HBITMAP bitmap;
+	RD_HBITMAP bitmap;
 	uint16 cache_idx, bufsize;
 	uint8 cache_id, width, height, bpp, Bpp;
-	uint8 *data, *inverted;
+	uint8 *data/*, *inverted*/;
 	int y;
 
 	in_uint8(s, cache_id);
@@ -889,7 +889,8 @@ process_raw_bmpcache(STREAM s)
 	in_uint16_le(s, bufsize);
 	in_uint16_le(s, cache_idx);
 	in_uint8p(s, data, bufsize);
-
+	bitmap = ui_create_bitmap_ex(width, height, data, bufsize, False);
+/*
 	DEBUG(("RAW_BMPCACHE(cx=%d,cy=%d,id=%d,idx=%d)\n", width, height, cache_id, cache_idx));
 	inverted = (uint8 *) xmalloc(width * height * Bpp);
 	for (y = 0; y < height; y++)
@@ -900,6 +901,7 @@ process_raw_bmpcache(STREAM s)
 
 	bitmap = ui_create_bitmap(width, height, inverted);
 	xfree(inverted);
+*/
 	cache_put_bitmap(cache_id, cache_idx, bitmap);
 }
 
@@ -907,10 +909,10 @@ process_raw_bmpcache(STREAM s)
 static void
 process_bmpcache(STREAM s)
 {
-	HBITMAP bitmap;
+	RD_HBITMAP bitmap;
 	uint16 cache_idx, size;
 	uint8 cache_id, width, height, bpp, Bpp;
-	uint8 *data, *bmpdata;
+	uint8 *data/*, *bmpdata*/;
 	uint16 bufsize, pad2, row_size, final_size;
 	uint8 pad1;
 
@@ -944,6 +946,9 @@ process_bmpcache(STREAM s)
 
 	DEBUG(("BMPCACHE(cx=%d,cy=%d,id=%d,idx=%d,bpp=%d,size=%d,pad1=%d,bufsize=%d,pad2=%d,rs=%d,fs=%d)\n", width, height, cache_id, cache_idx, bpp, size, pad1, bufsize, pad2, row_size, final_size));
 
+	bitmap = ui_create_bitmap_ex(width, height, data, size, True);
+	cache_put_bitmap(cache_id, cache_idx, bitmap);
+/*
 	bmpdata = (uint8 *) xmalloc(width * height * Bpp);
 
 	if (bitmap_decompress(bmpdata, width, height, data, size, Bpp))
@@ -957,13 +962,14 @@ process_bmpcache(STREAM s)
 	}
 
 	xfree(bmpdata);
+*/
 }
 
 /* Process a bitmap cache v2 order */
 static void
 process_bmpcache2(STREAM s, uint16 flags, BOOL compressed)
 {
-	HBITMAP bitmap;
+	RD_HBITMAP bitmap;
 	int y;
 	uint8 cache_id, cache_idx_low, width, height, Bpp;
 	uint16 cache_idx, bufsize;
@@ -1004,6 +1010,11 @@ process_bmpcache2(STREAM s, uint16 flags, BOOL compressed)
 	DEBUG(("BMPCACHE2(compr=%d,flags=%x,cx=%d,cy=%d,id=%d,idx=%d,Bpp=%d,bs=%d)\n",
 	       compressed, flags, width, height, cache_id, cache_idx, Bpp, bufsize));
 
+	bitmap = ui_create_bitmap_ex(width, height, data, bufsize, compressed);
+	cache_put_bitmap(cache_id, cache_idx, bitmap);
+
+	/* todo, persitant bitmap not working this was */
+/*
 	bmpdata = (uint8 *) xmalloc(width * height * Bpp);
 
 	if (compressed)
@@ -1029,7 +1040,7 @@ process_bmpcache2(STREAM s, uint16 flags, BOOL compressed)
 		cache_put_bitmap(cache_id, cache_idx, bitmap);
 		if (flags & PERSIST)
 			pstcache_save_bitmap(cache_id, cache_idx, bitmap_id, width, height,
-					     width * height * Bpp, bmpdata);
+					     (uint16) (width * height * Bpp), bmpdata);
 	}
 	else
 	{
@@ -1037,6 +1048,7 @@ process_bmpcache2(STREAM s, uint16 flags, BOOL compressed)
 	}
 
 	xfree(bmpdata);
+*/
 }
 
 /* Process a colourmap cache order */
@@ -1045,7 +1057,7 @@ process_colcache(STREAM s)
 {
 	COLOURENTRY *entry;
 	COLOURMAP map;
-	HCOLOURMAP hmap;
+	RD_HCOLOURMAP hmap;
 	uint8 cache_id;
 	int i;
 
@@ -1077,7 +1089,7 @@ process_colcache(STREAM s)
 static void
 process_fontcache(STREAM s)
 {
-	HGLYPH bitmap;
+	RD_HGLYPH bitmap;
 	uint8 font, nglyphs;
 	uint16 character, offset, baseline, width, height;
 	int i, datasize;

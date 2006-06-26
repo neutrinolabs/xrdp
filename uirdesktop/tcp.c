@@ -2,12 +2,12 @@
    rdesktop: A Remote Desktop Protocol client.
    Protocol services - TCP layer
    Copyright (C) Matthew Chapman 1999-2005
-   
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 2 of the License, or
    (at your option) any later version.
-   
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -18,6 +18,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#ifndef _WIN32
 #include <unistd.h>		/* select read write close */
 #include <sys/socket.h>		/* socket connect setsockopt */
 #include <sys/time.h>		/* timeval */
@@ -26,7 +27,22 @@
 #include <netinet/tcp.h>	/* TCP_NODELAY */
 #include <arpa/inet.h>		/* inet_addr */
 #include <errno.h>		/* errno */
+#endif /* _WIN32 */
+
 #include "rdesktop.h"
+
+#ifdef _WIN32
+#define socklen_t int
+#define TCP_CLOSE(_sck) closesocket(_sck)
+#define TCP_STRERROR "tcp error"
+#define TCP_SLEEP(_n) Sleep(_n)
+#define TCP_BLOCKS (WSAGetLastError() == WSAEWOULDBLOCK)
+#else /* _WIN32 */
+#define TCP_CLOSE(_sck) close(_sck)
+#define TCP_STRERROR strerror(errno)
+#define TCP_SLEEP(_n) sleep(_n)
+#define TCP_BLOCKS (errno == EWOULDBLOCK)
+#endif /* _WIN32 */
 
 #ifndef INADDR_NONE
 #define INADDR_NONE ((unsigned long) -1)
@@ -64,10 +80,17 @@ tcp_send(STREAM s)
 		sent = send(sock, s->data + total, length - total, 0);
 		if (sent <= 0)
 		{
-			error("send: %s\n", strerror(errno));
-			return;
+			if (sent == -1 && TCP_BLOCKS)
+			{
+				TCP_SLEEP(0);
+				sent = 0;
+			}
+			else
+			{
+				error("send: %s\n", TCP_STRERROR);
+				return;
+			}
 		}
-
 		total += sent;
 	}
 }
@@ -114,8 +137,16 @@ tcp_recv(STREAM s, uint32 length)
 		rcvd = recv(sock, s->end, length, 0);
 		if (rcvd < 0)
 		{
-			error("recv: %s\n", strerror(errno));
-			return NULL;
+			if (rcvd == -1 && TCP_BLOCKS)
+			{
+				TCP_SLEEP(0);
+				rcvd = 0;
+			}
+			else
+			{
+				error("recv: %s\n", TCP_STRERROR);
+				return NULL;
+			}
 		}
 		else if (rcvd == 0)
 		{
@@ -163,7 +194,7 @@ tcp_connect(char *server)
 		{
 			if (connect(sock, res->ai_addr, res->ai_addrlen) == 0)
 				break;
-			close(sock);
+			TCP_CLOSE(sock);
 			sock = -1;
 		}
 		res = res->ai_next;
@@ -193,17 +224,17 @@ tcp_connect(char *server)
 
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	{
-		error("socket: %s\n", strerror(errno));
+		error("socket: %s\n", TCP_STRERROR);
 		return False;
 	}
 
 	servaddr.sin_family = AF_INET;
-	servaddr.sin_port = htons(g_tcp_port_rdp);
+	servaddr.sin_port = htons((uint16) g_tcp_port_rdp);
 
 	if (connect(sock, (struct sockaddr *) &servaddr, sizeof(struct sockaddr)) < 0)
 	{
-		error("connect: %s\n", strerror(errno));
-		close(sock);
+		error("connect: %s\n", TCP_STRERROR);
+		TCP_CLOSE(sock);
 		return False;
 	}
 
@@ -224,7 +255,7 @@ tcp_connect(char *server)
 void
 tcp_disconnect(void)
 {
-	close(sock);
+	TCP_CLOSE(sock);
 }
 
 char *

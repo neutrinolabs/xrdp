@@ -390,7 +390,7 @@ mcs_connect(char *server, STREAM mcs_data, char *username)
 	if (!mcs_recv_aucf(&g_mcs_userid))
 		goto error;
 
-	mcs_send_cjrq(g_mcs_userid + MCS_USERCHANNEL_BASE);
+	mcs_send_cjrq((uint16) (g_mcs_userid + MCS_USERCHANNEL_BASE));
 
 	if (!mcs_recv_cjcf())
 		goto error;
@@ -431,7 +431,7 @@ mcs_reconnect(char *server, STREAM mcs_data)
 	if (!mcs_recv_aucf(&g_mcs_userid))
 		goto error;
 
-	mcs_send_cjrq(g_mcs_userid + MCS_USERCHANNEL_BASE);
+	mcs_send_cjrq((uint16) (g_mcs_userid + MCS_USERCHANNEL_BASE));
 
 	if (!mcs_recv_cjcf())
 		goto error;
