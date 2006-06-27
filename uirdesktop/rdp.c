@@ -1309,7 +1309,13 @@ process_data_pdu(STREAM s, uint32 * ext_disc_reason)
 
 		case RDP_DATA_PDU_DISCONNECT:
 			process_disconnect_pdu(s, ext_disc_reason);
-			return True;
+			
+			/* We used to return true and disconnect immediately here, but
+			 * Windows Vista sends a disconnect PDU with reason 0 when
+			 * reconnecting to a disconnected session, and MSTSC doesn't
+			 * drop the connection.  I think we should just save the status.
+			 */
+			break;
 
 		default:
 			unimpl("data PDU %d\n", data_pdu_type);
