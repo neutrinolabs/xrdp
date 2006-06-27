@@ -1014,7 +1014,7 @@ mi_create_window(void)
   SetTimer(g_Wnd, 1, 1000 / 60, 0); /* 60 per second */
 #else /* MYWINCE */
   WSAAsyncSelect(g_tcp_sck, g_Wnd, WM_APP + 1, FD_READ);
-  SetTimer(g_Wnd, 1, 333, 0);
+  SetTimer(g_Wnd, 1, 1000 / 60, 0);
 #endif /* MYWINCE */
   return 1;
 }
