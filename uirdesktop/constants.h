@@ -62,6 +62,7 @@ enum MCS_PDU_TYPE
 /* RDP secure transport constants */
 #define SEC_RANDOM_SIZE		32
 #define SEC_MODULUS_SIZE	64
+#define SEC_MAX_MODULUS_SIZE  256
 #define SEC_PADDING_SIZE	8
 #define SEC_EXPONENT_SIZE	4
 

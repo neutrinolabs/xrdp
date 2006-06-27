@@ -83,13 +83,14 @@ static void * rc4_decrypt_key = 0;
 static void * rc4_encrypt_key = 0;
 //static RSA *server_public_key;
 static void * server_public_key;
+static uint32 server_public_key_len;
 
 static uint8 sec_sign_key[16];
 static uint8 sec_decrypt_key[16];
 static uint8 sec_encrypt_key[16];
 static uint8 sec_decrypt_update_key[16];
 static uint8 sec_encrypt_update_key[16];
-static uint8 sec_crypted_random[SEC_MODULUS_SIZE];
+static uint8 sec_crypted_random[SEC_MAX_MODULUS_SIZE];
 
 uint16 g_server_rdp_version = 0;
 
@@ -353,9 +354,10 @@ reverse(uint8 * p, int len)
 
 /* Perform an RSA public key encryption operation */
 static void
-sec_rsa_encrypt(uint8 * out, uint8 * in, int len, uint8 * modulus, uint8 * exponent)
+sec_rsa_encrypt(uint8 * out, uint8 * in, int len, uint32 modulus_size, uint8 * modulus,
+                uint8 * exponent)
 {
-	ssl_mod_exp(out, 64, in, 32, modulus, 64, exponent, 4);
+	ssl_mod_exp(out, 64, in, 32, modulus, modulus_size, exponent, 4);
 /*
 	BN_CTX *ctx;
 	BIGNUM mod, exp, x, y;
@@ -446,14 +448,14 @@ sec_send(STREAM s, uint32 flags)
 static void
 sec_establish_key(void)
 {
-	uint32 length = SEC_MODULUS_SIZE + SEC_PADDING_SIZE;
+	uint32 length = server_public_key_len + SEC_PADDING_SIZE;
 	uint32 flags = SEC_CLIENT_RANDOM;
 	STREAM s;
 
-	s = sec_init(flags, 76);
+	s = sec_init(flags, length+4);
 
 	out_uint32_le(s, length);
-	out_uint8p(s, sec_crypted_random, SEC_MODULUS_SIZE);
+	out_uint8p(s, sec_crypted_random, server_public_key_len);
 	out_uint8s(s, SEC_PADDING_SIZE);
 
 	s_mark_end(s);
@@ -565,16 +567,18 @@ sec_parse_public_key(STREAM s, uint8 ** modulus, uint8 ** exponent)
 	}
 
 	in_uint32_le(s, modulus_len);
-	if (modulus_len != SEC_MODULUS_SIZE + SEC_PADDING_SIZE)
+	modulus_len -= SEC_PADDING_SIZE;
+	if ((modulus_len < 64) || (modulus_len > SEC_MAX_MODULUS_SIZE))
 	{
-		error("modulus len 0x%x\n", modulus_len);
+		error("Bad server public key size (%u bits)\n", modulus_len*8);
 		return False;
 	}
 
 	in_uint8s(s, 8);	/* modulus_bits, unknown */
 	in_uint8p(s, *exponent, SEC_EXPONENT_SIZE);
-	in_uint8p(s, *modulus, SEC_MODULUS_SIZE);
+	in_uint8p(s, *modulus, modulus_len);
 	in_uint8s(s, SEC_PADDING_SIZE);
+	server_public_key_len = modulus_len;
 
 	return s_check(s);
 }
@@ -789,7 +793,7 @@ sec_process_crypt_info(STREAM s)
 	else
 	{			/* RDP4-style encryption */
 		sec_rsa_encrypt(sec_crypted_random,
-				client_random, SEC_RANDOM_SIZE, modulus, exponent);
+				client_random, SEC_RANDOM_SIZE, server_public_key_len, modulus, exponent);
 	}
 	sec_generate_keys(client_random, server_random, rc4_key_size);
 }

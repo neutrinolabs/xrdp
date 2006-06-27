@@ -1607,6 +1607,7 @@ ssl_mod_exp(char* out, int out_len, char* in, int in_len,
   memcpy(l_in, in, in_len);
   memcpy(l_mod, mod, mod_len);
   memcpy(l_exp, exp, exp_len);
+  max_size = out_len;
   e = (DIGIT_T*)l_exp;
   x = (DIGIT_T*)l_in;
   y = (DIGIT_T*)l_out;
