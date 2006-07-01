@@ -14,6 +14,9 @@ xrdp directory is the main server code
 vnc directory is a simple vnc client module for xrdp
 sesman directory is a session manager for xrdp that uses Xvnc for the Xserver
 libxrdp directory is a static library needed by xrdp
+rdp is an rdp client module for connecting to another rdp server
+xup is a module used to connect to an rdp specific X11 server
+Xserver is the files needed to build an rdp specific X11 server
 COPYING is the licence file
 design.txt is an attempt to expain the project design
 prog_std.txt is an attemp to explain the programming standard used
