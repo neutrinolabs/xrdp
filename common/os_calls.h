@@ -157,6 +157,8 @@ g_fork(void);
 int
 g_setgid(int pid);
 int
+g_initgroups(const char* user, int gid);
+int
 g_setuid(int pid);
 int
 g_waitchild(void);

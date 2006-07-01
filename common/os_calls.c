@@ -953,6 +953,17 @@ g_setgid(int pid)
 
 /*****************************************************************************/
 int
+g_initgroups(const char* user, int gid)
+{
+#if defined(_WIN32)
+  return 0;
+#else
+  return initgroups(user ,gid);
+#endif
+}
+  
+/*****************************************************************************/
+int
 g_setuid(int pid)
 {
 #if defined(_WIN32)
