@@ -1,0 +1,126 @@
+
+complete rdp key code listing
+
+en-us
+
+4000s in the down flags columm is from repeating keys(holding a key down)
+When holding a key down, the down flags repeat but the up flags only
+come once at the end.
+Rdesktop does not do this as of yet.  It always sends down and up
+for each repeat.
+
+key         rdp code  down flags  up flags
+esc         01        0000        8000
+1           02        0000        8000
+2           03        0000        8000
+3           04        0000        8000
+4           05        0000        8000
+5           06        0000        8000
+6           07        0000        8000
+7           08        0000        8000
+8           09        0000        8000
+9           0a        0000        8000
+0           0b        0000        8000
+-           0c        0000        8000
+=           0d        0000        8000
+backspace   0e        0000        8000
+tab         0f        0000        8000
+q           10        0000        8000
+w           11        0000        8000
+e           12        0000        8000
+r           13        0000        8000
+t           14        0000        8000
+y           15        0000        8000
+u           16        0000        8000
+i           17        0000        8000
+o           18        0000        8000
+p           19        0000        8000
+[           1a        0000        8000
+]           1b        0000        8000
+enter       1c        0000        8000
+left ctrl   1d        0000/4000   c000
+right ctrl  1d        0100/4100   c100
+a           1e        0000        8000
+s           1f        0000        8000
+d           20        0000        8000
+f           21        0000        8000
+g           22        0000        8000
+h           23        0000        8000
+j           24        0000        8000
+k           25        0000        8000
+l           26        0000        8000
+;           27        0000        8000
+'           28        0000        8000
+`           29        0000        8000
+left shift  2a        0000/4000   c000
+\           2b        0000        8000
+z           2c        0000        8000
+x           2d        0000        8000
+c           2e        0000        8000
+v           2f        0000        8000
+b           30        0000        8000
+n           31        0000        8000
+m           32        0000        8000
+,           33        0000        8000
+.           34        0000        8000
+/           35        0000        8000
+right shift 36        0000/4000   c000
+*(keypad)   37        0000        8000
+print scrn  37        0100        8100
+left alt    38        0000/4000   c000
+right alt   38        0100/4100   c100
+space       39        0000        8000
+caps lock   3a        0000/4000   c000
+f1          3b        0000        8000
+f2          3c        0000        8000
+f3          3d        0000        8000
+f4          3e        0000        8000
+f5          3f        0000        8000
+f6          40        0000        8000
+f7          41        0000        8000
+f8          42        0000        8000
+f9          43        0000        8000
+f10         44        0000        8000
+num lock    45        0000/4000   c000
+scroll lock 46        0000/4000   c000
+7(keypad)   47        0000        8000
+home        47        0100        8100
+8(keypad)   48        0000        8000
+up arrow    48        0100        8100
+9(kaypad)   49        0000        8000
+pg up       49        0100        8100
+-(keypad)   4a        0000        8000
+4(keypad)   4b        0000        8000
+left arrow  4b        0100        8100
+5(keypad)   4c        0000        8000
+6(keypad)   4d        0000        8000
+right arrow 4d        0100        8100
++(keypad)   4e        0000        8000
+1(keypad)   4f        0000        8000
+end         4f        0100        8100
+2(keypad)   50        0000        8000
+down arrow  50        0100        8100
+3(keypad)   51        0000        8000
+pg down     51        0100        8100
+o(keypad)   52        0000        8000
+insert      52        0100        8100
+.(keypad)   53        0000        8000
+delete      53        0100        8100
+?           54
+?           55
+?           56
+f11         57        0000        8000
+f12         58        0000        8000
+?           59
+?           5a
+left win    5b        0100        8100
+right win   5c        0100        8100
+menu key    5d        0100        8100
+
+pause break 1d        0200        8200
+            45        0000        8000
+This is a special key that sends 2 down and 2 up like this
+down 001d 0200
+down 0045 0000
+up   001d 8200
+up   0045 8000
