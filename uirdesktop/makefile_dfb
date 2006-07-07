@@ -1,4 +1,28 @@
 
 # makefile
+# directfb
 
+CC = mipsel-linux-gnu-gcc
+OBJS = tcp.o iso.o mcs.o secure.o rdp.o rdp5.o orders.o \
+bitmap.o cache.o mppc.o pstcache.o channels.o licence.o \
+ssl_calls.o
 
+UIOBJS = uimain.o bsops.o dfb.o
+
+#CFLAGS = -O2 -mips3 -Wall -I../../../staging/usr/local/include/directfb
+#CFLAGS = -O3 -Wall -I../../../staging/usr/local/include/directfb
+CFLAGS = -O2 -Wall -I../../../staging/usr/local/include/directfb
+# -DWITH_DEBUG
+
+LDFLAGS = -L../../usr/local/lib -L../../usr/lib -L../../lib
+
+all: rd
+
+rd: $(OBJS) $(UIOBJS)
+	$(CC) -o dfbrdesktop $(LDFLAGS) $(OBJS) $(UIOBJS) -ldirectfb -lfusion -ldirect -lz
+
+clean:
+	rm -f $(OBJS) $(UIOBJS) dfbrdesktop librdesktop.so
+
+librdesktop.so: $(OBJS) $(UIOBJS)
+	$(CC) $(LDFLAGS) -shared -o librdesktop.so $(OBJS) $(UIOBJS) -ldirectfb -lfusion -ldirect -lz
