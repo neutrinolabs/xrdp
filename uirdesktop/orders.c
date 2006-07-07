@@ -486,7 +486,7 @@ process_polygon(STREAM s, POLYGON_ORDER * os, uint32 present, BOOL delta)
 {
 	int index, data, next;
 	uint8 flags = 0;
-	POINT *points;
+	RD_POINT *points;
 
 	if (present & 0x01)
 		rdp_in_coord(s, &os->x, delta);
@@ -528,8 +528,8 @@ process_polygon(STREAM s, POLYGON_ORDER * os, uint32 present, BOOL delta)
 		return;
 	}
 
-	points = (POINT *) xmalloc((os->npoints + 1) * sizeof(POINT));
-	memset(points, 0, (os->npoints + 1) * sizeof(POINT));
+	points = (RD_POINT *) xmalloc((os->npoints + 1) * sizeof(RD_POINT));
+	memset(points, 0, (os->npoints + 1) * sizeof(RD_POINT));
 
 	points[0].x = os->x;
 	points[0].y = os->y;
@@ -565,7 +565,7 @@ process_polygon2(STREAM s, POLYGON2_ORDER * os, uint32 present, BOOL delta)
 {
 	int index, data, next;
 	uint8 flags = 0;
-	POINT *points;
+	RD_POINT *points;
 
 	if (present & 0x0001)
 		rdp_in_coord(s, &os->x, delta);
@@ -613,8 +613,8 @@ process_polygon2(STREAM s, POLYGON2_ORDER * os, uint32 present, BOOL delta)
 		return;
 	}
 
-	points = (POINT *) xmalloc((os->npoints + 1) * sizeof(POINT));
-	memset(points, 0, (os->npoints + 1) * sizeof(POINT));
+	points = (RD_POINT *) xmalloc((os->npoints + 1) * sizeof(RD_POINT));
+	memset(points, 0, (os->npoints + 1) * sizeof(RD_POINT));
 
 	points[0].x = os->x;
 	points[0].y = os->y;
@@ -651,7 +651,7 @@ process_polyline(STREAM s, POLYLINE_ORDER * os, uint32 present, BOOL delta)
 	int index, next, data;
 	uint8 flags = 0;
 	PEN pen;
-	POINT *points;
+	RD_POINT *points;
 
 	if (present & 0x01)
 		rdp_in_coord(s, &os->x, delta);
@@ -690,8 +690,8 @@ process_polyline(STREAM s, POLYLINE_ORDER * os, uint32 present, BOOL delta)
 		return;
 	}
 
-	points = (POINT *) xmalloc((os->lines + 1) * sizeof(POINT));
-	memset(points, 0, (os->lines + 1) * sizeof(POINT));
+	points = (RD_POINT *) xmalloc((os->lines + 1) * sizeof(RD_POINT));
+	memset(points, 0, (os->lines + 1) * sizeof(RD_POINT));
 
 	points[0].x = os->x;
 	points[0].y = os->y;

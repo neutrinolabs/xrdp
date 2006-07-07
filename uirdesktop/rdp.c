@@ -996,7 +996,7 @@ process_colour_pointer_pdu(STREAM s)
 {
 	uint16 x, y, width, height, cache_idx, masklen, datalen;
 	uint8 *mask, *data;
-	HCURSOR cursor;
+	RD_HCURSOR cursor;
 
 	in_uint16_le(s, cache_idx);
 	in_uint16_le(s, x);

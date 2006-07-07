@@ -170,8 +170,8 @@ BOOL rdpsnd_init(void);
 /* rdpsnd_oss.c */
 BOOL wave_out_open(void);
 void wave_out_close(void);
-BOOL wave_out_format_supported(WAVEFORMATEX * pwfx);
-BOOL wave_out_set_format(WAVEFORMATEX * pwfx);
+BOOL wave_out_format_supported(RD_WAVEFORMATEX * pwfx);
+BOOL wave_out_set_format(RD_WAVEFORMATEX * pwfx);
 void wave_out_volume(uint16 left, uint16 right);
 void wave_out_write(STREAM s, uint16 tick, uint8 index);
 void wave_out_play(void);
@@ -266,9 +266,9 @@ void ui_triblt(uint8 opcode, int x, int y, int cx, int cy, RD_HBITMAP src, int s
 	       BRUSH * brush, int bgcolour, int fgcolour);
 void ui_line(uint8 opcode, int startx, int starty, int endx, int endy, PEN * pen);
 void ui_rect(int x, int y, int cx, int cy, int colour);
-void ui_polygon(uint8 opcode, uint8 fillmode, POINT * point, int npoints, BRUSH * brush,
+void ui_polygon(uint8 opcode, uint8 fillmode, RD_POINT * point, int npoints, BRUSH * brush,
 		int bgcolour, int fgcolour);
-void ui_polyline(uint8 opcode, POINT * points, int npoints, PEN * pen);
+void ui_polyline(uint8 opcode, RD_POINT * points, int npoints, PEN * pen);
 void ui_ellipse(uint8 opcode, uint8 fillmode, int x, int y, int cx, int cy, BRUSH * brush,
 		int bgcolour, int fgcolour);
 void ui_draw_glyph(int mixmode, int x, int y, int cx, int cy, RD_HGLYPH glyph, int srcx, int srcy,

@@ -18,6 +18,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#include <stdarg.h>
 #include "rdesktop.h"
 #include "bsops.h"
 #include "uimain.h"
@@ -107,6 +108,7 @@ void
 mi_reset_clip(void);
 void
 mi_line(int x1, int y1, int x2, int y2, int colour);
+void *
 mi_create_cursor(unsigned int x, unsigned int y,
                  int width, int height,
                  unsigned char * andmask, unsigned char * xormask);
@@ -783,7 +785,7 @@ ui_end_update(void)
 
 /*****************************************************************************/
 void
-ui_polygon(uint8 opcode, uint8 fillmode, POINT * point, int npoints,
+ui_polygon(uint8 opcode, uint8 fillmode, RD_POINT * point, int npoints,
            BRUSH * brush, int bgcolour, int fgcolour)
 {
   /* not used */
@@ -791,7 +793,7 @@ ui_polygon(uint8 opcode, uint8 fillmode, POINT * point, int npoints,
 
 /*****************************************************************************/
 void
-ui_polyline(uint8 opcode, POINT * points, int npoints, PEN * pen)
+ui_polyline(uint8 opcode, RD_POINT * points, int npoints, PEN * pen)
 {
   int i, x, y, dx, dy;
   if (npoints > 0)

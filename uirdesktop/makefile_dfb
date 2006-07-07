@@ -2,6 +2,9 @@
 # makefile
 # directfb
 
+INCDIR=/home/j/stb/stb810-SP2/build/staging/usr/local/include/directfb
+ROOTFS=/home/j/stb/stb810-SP2/build/rootfs
+
 CC = mipsel-linux-gnu-gcc
 OBJS = tcp.o iso.o mcs.o secure.o rdp.o rdp5.o orders.o \
 bitmap.o cache.o mppc.o pstcache.o channels.o licence.o \
@@ -9,12 +12,10 @@ ssl_calls.o
 
 UIOBJS = uimain.o bsops.o dfb.o
 
-#CFLAGS = -O2 -mips3 -Wall -I../../../staging/usr/local/include/directfb
-#CFLAGS = -O3 -Wall -I../../../staging/usr/local/include/directfb
-CFLAGS = -O2 -Wall -I../../../staging/usr/local/include/directfb
+CFLAGS = -O2 -Wall -I$(INCDIR)
 # -DWITH_DEBUG
 
-LDFLAGS = -L../../usr/local/lib -L../../usr/lib -L../../lib
+LDFLAGS = -L$(ROOTFS)/usr/local/lib -L$(ROOTFS)/usr/lib -L$(ROOTFS)/lib
 
 all: rd
 

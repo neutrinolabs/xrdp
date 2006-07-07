@@ -339,6 +339,13 @@ mi_invalidate(int x, int y, int cx, int cy)
 }
 
 /*****************************************************************************/
+int
+mi_create_bs(void)
+{
+  return 0;
+}
+
+/*****************************************************************************/
 static void
 render_callback(DFBRectangle * rect, void * ctx)
 {

@@ -56,7 +56,7 @@ pstcache_load_bitmap(uint8 cache_id, uint16 cache_idx)
 	uint8 *celldata;
 	int fd;
 	CELLHEADER cellhdr;
-	HBITMAP bitmap;
+	RD_HBITMAP bitmap;
 
 	if (!g_bitmap_cache_persist_enable)
 		return False;
