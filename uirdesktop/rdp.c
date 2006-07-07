@@ -310,9 +310,14 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	int packetlen = 0;
 	uint32 sec_flags = g_encryption ? (SEC_LOGON_INFO | SEC_ENCRYPT) : SEC_LOGON_INFO;
 	STREAM s;
-	//time_t t = time(NULL);
-	//time_t tzone;
-
+	time_t tzone;
+	
+#ifdef _WIN32
+	TIME_ZONE_INFORMATION tzi;
+#else
+	time_t t = time(NULL);
+#endif	
+	
 	if (!g_use_rdp5 || 1 == g_server_rdp_version)
 	{
 		DEBUG_RDP5(("Sending RDP4-style Logon packet\n"));
@@ -335,7 +340,6 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	}
 	else
 	{
-#if 0
 		flags |= RDP_LOGON_BLOB;
 		DEBUG_RDP5(("Sending RDP5-style Logon packet\n"));
 		packetlen = 4 +	/* Unknown uint32 */
@@ -415,7 +419,12 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		out_uint16_le(s, len_dll + 2);
 		rdp_out_unistr(s, "C:\\WINNT\\System32\\mstscax.dll", len_dll);
 
+#ifdef _WIN32		
+		GetTimeZoneInformation(&tzi);
+		tzone = tzi.Bias;
+#else
 		tzone = (mktime(gmtime(&t)) - mktime(localtime(&t))) / 60;
+#endif
 		out_uint32_le(s, tzone);
 
 		rdp_out_unistr(s, "GTB, normaltid", 2 * strlen("GTB, normaltid"));
@@ -438,8 +447,6 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		out_uint32_le(s, 0xfffffffe);
 		out_uint32_le(s, g_rdp5_performanceflags);
 		out_uint32(s, 0);
-
-#endif
 	}
 	s_mark_end(s);
 	sec_send(s, sec_flags);
@@ -1309,7 +1316,7 @@ process_data_pdu(STREAM s, uint32 * ext_disc_reason)
 
 		case RDP_DATA_PDU_DISCONNECT:
 			process_disconnect_pdu(s, ext_disc_reason);
-			
+                        
 			/* We used to return true and disconnect immediately here, but
 			 * Windows Vista sends a disconnect PDU with reason 0 when
 			 * reconnecting to a disconnected session, and MSTSC doesn't
