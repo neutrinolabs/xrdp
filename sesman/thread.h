@@ -19,33 +19,39 @@
 
 /**
  *
- * @file sesman.h
- * @brief Main include file
- * @author Jay Sorg
+ * @file thread.h
+ * @brief thread stuff...
+ * @author Simone Fedele
  * 
  */
 
-#ifndef SESMAN_H
-#define SESMAN_H
+#ifndef THREAD_H
+#define THREAD_H
 
-#include "d3des.h"
-#include "arch.h"
-#include "parse.h"
-#include "os_calls.h"
-#include "log.h"
-#include "env.h"
-#include "auth.h"
-#include "config.h"
-#include "tcp.h"
-#include "sig.h"
-#include "session.h"
-#include "access.h"
-#include "scp.h"
-#include "thread.h"
-#include "lock.h"
+/**
+ *
+ * @brief Starts the signal handling thread
+ * @retval 0 on success
+ * @retval 1 on error
+ *
+ */
+int DEFAULT_CC
+thread_sighandler_start();
 
-#ifndef SESMAN_PID_FILE
-  #define SESMAN_PID_FILE "./sesman.pid"
-#endif
+/**
+ *
+ * @brief Starts the session update thread
+ *
+ */
+int DEFAULT_CC
+thread_session_update_start();
+
+/**
+ *
+ * @brief Starts a thread to handle an incoming connection
+ *
+ */
+int DEFAULT_CC
+thread_scp_start();
 
 #endif

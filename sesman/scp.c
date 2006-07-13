@@ -29,9 +29,11 @@
 
 #include "sesman.h"
 
+extern int thread_sck;
+
 /******************************************************************************/
-void DEFAULT_CC
-scp_process_start(int sck)
+void* DEFAULT_CC
+scp_process_start(void* sck)
 {
   int socket;
   int version;
@@ -39,12 +41,14 @@ scp_process_start(int sck)
   struct stream* in_s;
   struct stream* out_s;
 
-  /* making a local copy of the socket                    */
-  /* sck should NEVER be used after lock_socket_release() */
-  /* probably this is just paranoia                       */
-  socket = sck;
-#warning locking disabled
-//  lock_socket_release();
+  /* making a local copy of the socket (it's on the stack) */
+  /* probably this is just paranoia                        */
+  //socket = *((int*) sck);
+  socket = thread_sck;
+  LOG_DBG("started scp thread on socket %d", socket);
+  
+  /* unlocking thread_sck */
+  lock_socket_release();
   
   make_stream(in_s);
   make_stream(out_s);
@@ -63,7 +67,7 @@ scp_process_start(int sck)
         scp_v0_process(socket, in_s, out_s);
       }
 #warning scp v1 is disabled
-/* this is temporarily disabled...
+      /* this is temporarily disabled...
       else if (version == 1)
       {
         / * starts processing an scp v0 connection * /
@@ -80,5 +84,6 @@ scp_process_start(int sck)
   g_tcp_close(socket);
   free_stream(in_s);
   free_stream(out_s);
+  return 0;
 }
 

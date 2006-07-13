@@ -32,6 +32,9 @@ int DEFAULT_CC
 tcp_force_recv(int sck, char* data, int len)
 {
   int rcvd;
+  int block;
+
+  block = lock_fork_critical_section_start();
 
   while (len > 0)
   {
@@ -57,6 +60,9 @@ tcp_force_recv(int sck, char* data, int len)
       len -= rcvd;
     }
   }
+
+  lock_fork_critical_section_end(block);
+  
   return 0;
 }
 
@@ -65,7 +71,10 @@ int DEFAULT_CC
 tcp_force_send(int sck, char* data, int len)
 {
   int sent;
+  int block;
 
+  block = lock_fork_critical_section_start();
+  
   while (len > 0)
   {
     sent = g_tcp_send(sck, data, len, 0);
@@ -90,6 +99,9 @@ tcp_force_send(int sck, char* data, int len)
       len -= sent;
     }
   }
+
+  lock_fork_critical_section_end(block);
+  
   return 0;
 }
 

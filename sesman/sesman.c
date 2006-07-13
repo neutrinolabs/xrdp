@@ -30,48 +30,9 @@
 int g_sck;
 int g_pid;
 unsigned char g_fixedkey[8] = { 23, 82, 107, 6, 35, 78, 88, 7 };
-#ifdef OLDSESSION
-struct session_item g_session_items[100]; /* sesman.h */
-extern int g_session_count;
-#endif
 struct config_sesman g_cfg; /* config.h */
-//int g_server_type = 0; /* Xvnc 0 Xrdp 10 */
 
-/**
- *
- * @brief triggered when a child process (a session) dies
- * @param s received signal
- *
- */
-static void DEFAULT_CC
-cterm(int s)
-{
-#ifdef OLDSESSION
-  int i;
-#endif
-  int pid;
-
-  if (g_getpid() != g_pid)
-  {
-    return;
-  }
-  pid = g_waitchild();
-  if (pid > 0)
-  {
-#ifdef OLDSESSION
-    for (i = 0; i < 100; i++)
-    {
-      if (g_session_items[i].pid == pid)
-      {
-        g_memset(g_session_items + i, 0, sizeof(struct session_item));
-	g_session_count--;
-      }
-    }
-#else
-    session_kill(pid);
-#endif
-  }
-}
+extern int thread_sck;
 
 /******************************************************************************/
 /**
@@ -104,7 +65,10 @@ sesman_main_loop()
       while (in_sck > 0)
       {
         /* we've got a connection, so we pass it to scp code */
-        scp_process_start(in_sck);
+	LOG_DBG("new connection",0);
+	thread_sck=in_sck;
+        //scp_process_start((void*)in_sck);
+        thread_scp_start(in_sck);
 
         /* once we've processed the connection, we go back listening */
         in_sck = g_tcp_accept(g_sck);
@@ -260,17 +224,23 @@ main(int argc, char** argv)
     g_file_open("/dev/null");
     g_file_open("/dev/null");
   }
+
+  /* initializing locks */
+  lock_init();
   
   /* signal handling */
-#ifdef OLDSESSION
-  g_memset(&g_session_items, 0, sizeof(g_session_items));
-#endif
   g_pid = g_getpid();
-  g_signal(1, sig_sesman_reload_cfg); /* SIGHUP  */
-  g_signal(2, sig_sesman_shutdown);   /* SIGINT  */
-  g_signal(9, sig_sesman_shutdown);   /* SIGKILL */
-  g_signal(15, sig_sesman_shutdown);  /* SIGTERM */
-  g_signal_child_stop(cterm);         /* SIGCHLD */
+  /* old style signal handling is now managed synchronously by a
+   * separate thread. uncomment this block if you need old style
+   * signal handling and comment out thread_sighandler_start() */
+  /*
+  g_signal(1, sig_sesman_reload_cfg); / * SIGHUP  * /
+  g_signal(2, sig_sesman_shutdown);   / * SIGINT  * /
+  g_signal(9, sig_sesman_shutdown);   / * SIGKILL * /
+  g_signal(15, sig_sesman_shutdown);  / * SIGTERM * /
+  g_signal_child_stop(cterm);         / * SIGCHLD * /
+  */
+  thread_sighandler_start();
 
   /* writing pid file */
   fd = g_file_open(SESMAN_PID_FILE);

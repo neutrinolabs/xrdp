@@ -1,9 +1,9 @@
 # sesman makefile
 SESMANOBJ = sesman.o config.o tcp.o sig.o session.o env.o \
             os_calls.o d3des.o list.o file.o log.o access.o \
-            scp.o scp_v0.o
+            scp.o scp_v0.o thread.o lock.o
 
-SESRUNOBJ = sesrun.o config.o tcp.o \
+SESRUNOBJ = sesrun.o config.o tcp.o lock.o \
             os_calls.o d3des.o list.o file.o log.o
 
 DESTDIR = /usr/local/xrdp
@@ -15,8 +15,8 @@ DOCDIR = /usr/doc/xrdp
 DEFINES = -DSESMAN_CFG_FILE=\"$(CFGDIR)/sesman.ini\" \
           -DSESMAN_PID_FILE=\"$(PIDDIR)/sesman.pid\"
 
-CFLAGS = -Wall -O2 -I../common $(DEFINES)
-LDFLAGS = -L /usr/gnu/lib $(DEFINES)
+CFLAGS = -Wall -O2 -I../common -I/usr/include/nptl $(DEFINES)
+LDFLAGS = -L /usr/gnu/lib -I/usr/include/nptl -L/usr/lib/nptl -lpthread $(DEFINES)
 C_OS_FLAGS = $(CFLAGS) -c
 CC = gcc
 
@@ -70,4 +70,4 @@ file.o: ../common/file.c
 	$(CC) $(C_OS_FLAGS) ../common/file.c
 
 log.o: ../common/log.c
-	$(CC) $(C_OS_FLAGS) ../common/log.c
+	$(CC) $(C_OS_FLAGS) -DLOG_ENABLE_THREAD ../common/log.c

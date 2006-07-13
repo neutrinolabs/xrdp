@@ -29,35 +29,18 @@
 
 extern unsigned char g_fixedkey[8];
 extern struct config_sesman g_cfg; /* config.h */
-//extern int g_server_type;
-#ifdef OLDSESSION
-extern struct session_item g_session_items[100]; /* sesman.h */
-#else
 struct session_chain* g_sessions;
-#endif
 int g_session_count;
 
 /******************************************************************************/
 struct session_item* DEFAULT_CC
 session_get_bydata(char* name, int width, int height, int bpp)
 {
-#ifdef OLDSESSION
-  int i;
-
-  for (i = 0; i < 100; i++)
-  {
-    if (g_strncmp(name, g_session_items[i].name, 255) == 0 &&
-        g_session_items[i].width == width &&
-        g_session_items[i].height == height &&
-        g_session_items[i].bpp == bpp)
-    {
-      return g_session_items + i;
-    }
-  }
-#else
   struct session_chain* tmp;
 
   /*THREAD-FIX require chain lock */
+  lock_chain_acquire();
+
   tmp=g_sessions;
 
   while (tmp != 0)
@@ -68,13 +51,14 @@ session_get_bydata(char* name, int width, int height, int bpp)
         tmp->item->bpp == bpp)
     {
       /*THREAD-FIX release chain lock */
+      lock_chain_release();
       return tmp->item;
     }
     tmp=tmp->next;   
   }
   
   /*THREAD-FIX release chain lock */
-#endif
+  lock_chain_release();
   return 0;
 }
 
@@ -139,20 +123,23 @@ session_start(int width, int height, int bpp, char* username, char* password,
   char cur_dir[256];
   char text[256];
   char passwd_file[256];
-#ifndef OLDSESSION
   struct session_chain* temp;
-#endif
 
   /*THREAD-FIX lock to control g_session_count*/
+  lock_chain_acquire();
   /* check to limit concurrent sessions */
   if (g_session_count >= g_cfg.sess.max_sessions)
   {
+    /*THREAD-FIX unlock chain*/
+    lock_chain_release();
     log_message(LOG_LEVEL_INFO, "max concurrent session limit exceeded. login \
 for user %s denied", username);
     return 0;
   }
 
-#ifndef OLDSESSION
+  /*THREAD-FIX unlock chain*/
+  lock_chain_release();
+    
   temp = (struct session_chain*)g_malloc(sizeof(struct session_chain), 0);
   if (temp == 0)
   {
@@ -168,13 +155,15 @@ for user %s denied", username);
                 username);
     return 0;
   }
-#endif
 
   g_get_current_dir(cur_dir, 255);
   display = 10;
   /*while (x_server_running(display) && display < 50)*/
   /* we search for a free display up to max_sessions */
   /* we should need no more displays than this       */
+
+  /* block all the threads running to enable forking */
+  lock_fork_request();
   while (x_server_running(display))
   {
     display++;
@@ -256,7 +245,7 @@ for user %s denied", username);
           g_exit(1);
         }
         /* should not get here */
-        log_message(LOG_LEVEL_ALWAYS,"error doing execve for user %s - pid %d",
+        log_message(LOG_LEVEL_ALWAYS,"error doing execve (%s) for user %s - pid %d",
                     username, g_getpid());
         g_exit(1);
       }
@@ -273,32 +262,9 @@ for user %s denied", username);
   }
   else /* parent */
   {
-#ifdef OLDSESSION
-    g_session_items[display].pid = pid;
-    g_strcpy(g_session_items[display].name, username);
-    g_session_items[display].display = display;
-    g_session_items[display].width = width;
-    g_session_items[display].height = height;
-    g_session_items[display].bpp = bpp;
-    g_session_items[display].data = data;
-
-    g_session_items[display].connect_time=g_time1();
-    g_session_items[display].disconnect_time=(time_t) 0;
-    g_session_items[display].idle_time=(time_t) 0;
-
-    i/*if (type==0)
-    {
-      g_session_items[display].type=SESMAN_SESSION_TYPE_XVNC;
-    }
-    else
-    {
-      g_session_items[display].type=SESMAN_SESSION_TYPE_XRDP;
-    }*/
-    g_session_items[display].type = type;
-    g_session_items[display].status = SESMAN_SESSION_STATUS_ACTIVE;
-
-    g_session_count++;
-#else
+    /* let the other threads go on */
+    lock_fork_release();
+    
     temp->item->pid = pid;
     temp->item->display = display;
     temp->item->width = width;
@@ -311,24 +277,17 @@ for user %s denied", username);
     temp->item->disconnect_time = 0;
     temp->item->idle_time = 0;
 
-/*    if (type==0)
-    {
-      temp->item->type=SESMAN_SESSION_TYPE_XVNC;
-    }
-    else
-    {
-      temp->item->type=SESMAN_SESSION_TYPE_XRDP;
-    }*/
-
     temp->item->type=type;
     temp->item->status=SESMAN_SESSION_STATUS_ACTIVE;
 
-    /*THREAD-FIX lock the chain*/
+    /*THREAD-FIX lock the chain*/ 
+    lock_chain_acquire();
     temp->next=g_sessions;
     g_sessions=temp;
     g_session_count++;
     /*THERAD-FIX free the chain*/
-#endif
+    lock_chain_release();
+    
     g_sleep(5000);
   }
   return display;
@@ -371,8 +330,6 @@ struct session_chain
 };
 */
 
-#ifndef OLDSESSION
-
 /******************************************************************************/
 int DEFAULT_CC
 session_kill(int pid)
@@ -381,6 +338,8 @@ session_kill(int pid)
   struct session_chain* prev;
   
   /*THREAD-FIX require chain lock */
+  lock_chain_acquire();
+  
   tmp=g_sessions;
   prev=0;
   
@@ -401,6 +360,7 @@ session_kill(int pid)
         prev->next = tmp->next;
       }
       /*THREAD-FIX release chain lock */
+      lock_chain_release();
       return SESMAN_SESSION_KILL_NULLITEM;
     }
 
@@ -423,6 +383,7 @@ session_kill(int pid)
       g_free(tmp);
       g_session_count--;
       /*THREAD-FIX release chain lock */
+      lock_chain_release();
       return SESMAN_SESSION_KILL_OK;
     }
 
@@ -432,6 +393,7 @@ session_kill(int pid)
   }
 
   /*THREAD-FIX release chain lock */
+  lock_chain_release();
   return SESMAN_SESSION_KILL_NOTFOUND;
 }
 
@@ -441,7 +403,9 @@ session_get_bypid(int pid)
 {
   struct session_chain* tmp;
 
-  /*THREAD-FIX  require chain lock */
+  /*THREAD-FIX require chain lock */
+  lock_chain_acquire();
+
   tmp = g_sessions;
   while (tmp != 0)
   {
@@ -450,12 +414,14 @@ session_get_bypid(int pid)
       log_message(LOG_LEVEL_ERROR, "session descriptor for pid %d is null!",
                   pid);
       /*THREAD-FIX release chain lock */
+      lock_chain_release();
       return 0;
     }
 
     if (tmp->item->pid == pid)
     {
       /*THREAD-FIX release chain lock */
+      lock_chain_release();
       return tmp->item;
     }
 
@@ -464,8 +430,7 @@ session_get_bypid(int pid)
   }
 
   /*THREAD-FIX release chain lock */
+  lock_chain_release();
   return 0;
 }
-
-#endif
 
