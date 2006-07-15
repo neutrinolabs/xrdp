@@ -18,6 +18,9 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+//#define USE_FLIPPING
+#define USE_ORDERS
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,16 +45,18 @@ extern int g_height;
 extern int g_tcp_sck;
 extern int g_server_depth;
 extern int g_tcp_port_rdp; /* in tcp.c */
+extern int g_bytes_in;
 extern int pal_entries[];
 
 extern char * g_bs;
+
+static DFBRegion g_reg;
 
 static pthread_mutex_t g_mutex1 = PTHREAD_MUTEX_INITIALIZER;
 
 /* direct frame buffer stuff */
 static IDirectFB * g_dfb = 0;
 static IDirectFBSurface * g_primary = 0;
-static int g_event_fd = 0;
 static IDirectFBEventBuffer * g_event = 0;
 static DFBRectangle g_rect = {0, 0, 0, 0};
 
@@ -108,16 +113,26 @@ mi_create_window(void)
 void
 mi_update_screen(void)
 {
-  //g_provider->RenderTo(g_provider, g_primary, 0);
   if (g_rect.w > 0 && g_rect.h > 0)
   {
+#ifdef USE_ORDERS_NOT
+    DFBRegion reg;
+    reg.x1 = 0;
+    reg.y1 = 0;
+    reg.x2 = g_width;
+    reg.y2 = g_height;
+    g_primary->SetClip(g_primary, &reg);
+#endif
+#ifdef USE_FLIPPING
+    g_primary->Blit(g_primary, g_primary, 0, 0, 0);
     g_primary->Blit(g_primary, g_s, &g_rect, g_rect.x, g_rect.y);
-
-    //g_primary->Blit(g_primary, g_s, 0, 0, 0);
-
-    //g_primary->Blit(g_primary, g_primary, 0, 0, 0);
-    //g_primary->Blit(g_primary, g_s, &g_rect, g_rect.x, g_rect.y);
-    //g_primary->Flip(g_primary, 0, 0);
+    g_primary->Flip(g_primary, 0, 0);
+#else
+    g_primary->Blit(g_primary, g_s, &g_rect, g_rect.x, g_rect.y);
+#endif
+#ifdef USE_ORDERS_NOT
+    g_primary->SetClip(g_primary, &g_reg);
+#endif
   }
   g_rect.x = 0;
   g_rect.y = 0;
@@ -225,6 +240,7 @@ void process_event(DFBEvent * event)
   g_mouse_x = mouse_x - g_mcursor.x;
   g_mouse_y = mouse_y - g_mcursor.y;
 //  printf("%d %d\n", g_mouse_x, g_mouse_y);
+  g_primary->SetColor(g_primary, 0, 0, 0, 0xff);
   g_primary->FillRectangle(g_primary, g_mouse_x, g_mouse_y, 5, 5);
 //  draw_mouse();
 }
@@ -236,23 +252,24 @@ mi_main_loop(void)
   fd_set rfds;
   int rv;
   int fd;
-  int count;
   DFBEvent event[10];
   struct timeval tv;
 
   fd = g_tcp_sck;
-  if (g_event_fd > fd)
-  {
-    fd = g_event_fd;
-  }
   FD_ZERO(&rfds);
   FD_SET(g_tcp_sck, &rfds);
-  FD_SET(g_event_fd, &rfds);
   tv.tv_sec = 0;
   tv.tv_usec = 0;
   rv = select(fd + 1, &rfds, 0, 0, &tv);
   while (rv > -1)
   {
+    if (g_event->HasEvent(g_event) == DFB_OK)
+    {
+      if (g_event->GetEvent(g_event, &event[0]) == 0)
+      {
+        process_event(&event[0]);
+      }
+    }
     if (rv > 0)
     {
       if (FD_ISSET(g_tcp_sck, &rfds))
@@ -260,20 +277,6 @@ mi_main_loop(void)
         if (!ui_read_wire())
         {
           return 0;
-        }
-      }
-      if (FD_ISSET(g_event_fd, &rfds))
-      {
-        count = read(g_event_fd, &(event[0]), sizeof(DFBEvent));
-        if (count == sizeof(DFBEvent))
-        {
-          //printf("got event\n");
-          //hexdump(&event, sizeof(DFBEvent));
-          process_event(&(event[0]));
-        }
-        else
-        {
-          printf("error reading g_event_fd in main_loop\n");
         }
       }
     }
@@ -284,7 +287,6 @@ mi_main_loop(void)
     }
     FD_ZERO(&rfds);
     FD_SET(g_tcp_sck, &rfds);
-    FD_SET(g_event_fd, &rfds);
     tv.tv_sec = 0;
     tv.tv_usec = 0;
     rv = select(fd + 1, &rfds, 0, 0, &tv);
@@ -336,165 +338,72 @@ void
 mi_invalidate(int x, int y, int cx, int cy)
 {
   mi_add_to(x, y, cx, cy);
-}
-
-/*****************************************************************************/
-int
-mi_create_bs(void)
-{
-  return 0;
-}
-
-/*****************************************************************************/
-static void
-render_callback(DFBRectangle * rect, void * ctx)
-{
-  printf("hi11\n");
-/*     int               width;
-     int               height;
-     IDirectFBSurface *image = (IDirectFBSurface*) ctx;
-
-     image->GetSize( image, &width, &height );
-
-     primary->Blit( primary, image, rect,
-                    (screen_width - width) / 2 + rect->x,
-                    (screen_height - height) / 2 + rect->y); */
+  mi_update_screen();
 }
 
 /*****************************************************************************/
 void *
 update_thread(void * arg)
 {
+  struct timeval ltime;
+  struct timeval ntime;
+  int nsecs;
+
+  gettimeofday(&ltime, 0);
   while (g_bs != 0)
   {
-    //usleep(1000000 / 24); /* 24 times per second */
-    usleep(1000000 / 12); /* 12 times per second */
+    gettimeofday(&ntime, 0);
+    nsecs = (ntime.tv_sec - ltime.tv_sec) * 1000000 + (ntime.tv_usec - ltime.tv_usec);
+    nsecs = (1000000 / 12) - nsecs;
+    if (nsecs < 0)
+    {
+      nsecs = 0;
+    }
+    usleep(nsecs);
+    gettimeofday(&ltime, 0);
     pthread_mutex_lock(&g_mutex1);
     mi_update_screen();
-
-    //g_primary->Blit(g_primary, g_s, &g_rect, g_rect.x, g_rect.y);
-    //g_primary->Flip(g_primary, 0, 0);
-
     pthread_mutex_unlock(&g_mutex1);
   }
   return 0;
 }
 
 /*****************************************************************************/
+int
+mi_create_bs(void)
+{
+  //pthread_t thread;
+  DFBSurfaceDescription dsc;
+
+  g_bs = malloc(g_width * g_height * 4);
+  dsc.flags = DSDESC_CAPS | DSDESC_WIDTH | DSDESC_HEIGHT |
+              DSDESC_PREALLOCATED | DSDESC_PIXELFORMAT;
+  dsc.caps = DSCAPS_SYSTEMONLY;
+  dsc.width = g_width;
+  dsc.height = g_height;
+  dsc.pixelformat = DSPF_AiRGB;
+  dsc.preallocated[0].data = g_bs;
+  dsc.preallocated[0].pitch = g_width * 4;
+  if (g_dfb->CreateSurface(g_dfb, &dsc, &g_s) == 0)
+  {
+    //pthread_create(&thread, 0, update_thread, 0);
+    //pthread_detach(thread);
+  }
+  else
+  {
+    g_s = 0;
+    free(g_bs);
+    g_bs = 0;
+    return 0;
+  }
+  return 1;
+}
+
+/*****************************************************************************/
 void
 mi_begin_update(void)
 {
-#if 0
-  //DFBSurfaceDescription dsc;
-  DFBDataBufferDescription ddsc;
-  pthread_t thread;
-  //pthread_attr_t tt;
-  //struct sched_param param;
-  //char * priority;
-  //int policy;
-  void * data;
-  int fd;
-  IDirectFBDataBuffer * g_buffer1 = 0;
-
   pthread_mutex_lock(&g_mutex1);
-
-  if (g_provider == 0)
-  {
-
-    ddsc.flags         = DBDESC_FILE;
-    ddsc.file   = strdup("/media/xrdp256.bmp");
-    g_dfb->CreateDataBuffer(g_dfb, &ddsc, &g_buffer1);
-
-    //data = g_bs;
-    data = malloc(50230 * 2);
-    g_buffer1->GetData(g_buffer1, 50230 * 2, data, &fd);
-    printf("here %d\n", fd);
-
-    //fd = open("/media/xrdp256.bmp", O_RDONLY);
-    //data = mmap( NULL, 50230, PROT_READ, MAP_SHARED, fd, 0 );
-    //if (data == MAP_FAILED)
-    //{
-    //  printf("error\n");
-    //}
-    //printf("%d\n", read(fd, data, 50231));
-    //close(fd);
-    /*mmap(g_bs, g_width * g_height * 4, PROT_READ, MAP_SHARED, 0, 0);
-    if (data == MAP_FAILED)
-    {
-      printf("error calling mmap in mi_begin_update\n");
-      data = 0;
-    }*/
-    /* create a data buffer for memory */
-    ddsc.flags         = DBDESC_MEMORY;
-    //ddsc.flags         = DBDESC_FILE;
-    ddsc.file         = 0;
-    ddsc.memory.data   = data;
-    //ddsc.file   = strdup("/media/xrdp256.bmp");
-    ddsc.memory.length = 50230;
-    //ddsc.memory.length = g_width * g_height * 4;
-    if (g_buffer == 0)
-    {
-      //if (g_dfb->CreateDataBuffer(g_dfb, &ddsc, &g_buffer) != 0)
-      if (g_dfb->CreateDataBuffer(g_dfb, 0, &g_buffer) != 0)
-      {
-        printf("error calling CreateDataBuffer in mi_begin_update\n");
-        g_buffer = 0;
-      }
-    }
-    if (g_buffer != 0)
-    {
-      g_buffer->PutData(g_buffer, data, 50230);
-      usleep(1000000);
-      g_buffer->SeekTo(g_buffer, 0);
-      fd = g_buffer->CreateImageProvider(g_buffer, &g_provider);
-      printf("%d %d\n", fd, DFB_NOIMPL);
-      if (fd != 0)
-      {
-        printf("error calling CreateImageProvider in mi_begin_update\n");
-        g_provider = 0;
-      }
-    }
-    if (g_provider != 0)
-    {
-      //g_provider->SetRenderCallback(g_provider, render_callback, 0);
-      pthread_create(&thread, 0, update_thread, 0);
-      pthread_detach(thread);
-    }
-  }
-#endif
-  DFBSurfaceDescription dsc;
-  pthread_t thread;
-
-  pthread_mutex_lock(&g_mutex1);
-  if (g_s == 0)
-  {
-
-    dsc.flags = DSDESC_CAPS | DSDESC_WIDTH | DSDESC_HEIGHT |
-                DSDESC_PREALLOCATED | DSDESC_PIXELFORMAT;
-    dsc.caps = DSCAPS_SYSTEMONLY;
-    dsc.width = g_width;
-    dsc.height = g_height;
-    dsc.pixelformat = DSPF_AiRGB;
-    //dsc.pixelformat = DSPF_RGB32;
-    dsc.preallocated[0].data = g_bs;
-    dsc.preallocated[0].pitch = g_width * 4;
-    if (g_dfb->CreateSurface(g_dfb, &dsc, &g_s) == 0)
-    {
-      //policy = SCHED_RR;
-      //pthread_attr_init(&tt);
-      //pthread_attr_setschedpolicy(&tt, policy);
-      //param.sched_priority = 10;
-      //pthread_attr_setschedparam(&tt, &param);
-      //priority = strdup("Low");
-      //pthread_create(&thread, &tt, update_thread, (void *) priority);
-      pthread_create(&thread, 0, update_thread, 0);
-      pthread_detach(thread);
-    }
-    else
-    {
-      g_s = 0;
-    }
-  }
 }
 
 /*****************************************************************************/
@@ -506,15 +415,40 @@ mi_end_update(void)
 
 /*****************************************************************************/
 void
-mi_fill_rect(int x, int y, int cx, int cy, int red, int green, int blue)
+mi_fill_rect(int x, int y, int cx, int cy, int colour)
 {
+#ifdef USE_ORDERS
+  int red;
+  int green;
+  int blue;
+
+  mi_update_screen();
+  red = (colour & 0xff0000) >> 16;
+  green = (colour & 0xff00) >> 8;
+  blue = colour & 0xff;
+  g_primary->SetColor(g_primary, red, green, blue, 0xff);
+  g_primary->FillRectangle(g_primary, x, y, cx, cy);
+#else
   mi_add_to(x, y, cx, cy);
+#endif
 }
 
 /*****************************************************************************/
 void
-mi_line(int x1, int y1, int x2, int y2, int red, int green, int blue)
+mi_line(int x1, int y1, int x2, int y2, int colour)
 {
+#ifdef USE_ORDERS_TOO_SLOW
+  int r;
+  int g;
+  int b;
+
+  mi_update_screen();
+  r = (colour >> 16) & 0xff;
+  g = (colour >> 8) & 0xff;
+  b = colour & 0xff;
+  g_primary->SetColor(g_primary, r, g, b, 0xff);
+  g_primary->DrawLine(g_primary, x1, y1, x2, y2);
+#else
   int x;
   int y;
   int cx;
@@ -525,25 +459,75 @@ mi_line(int x1, int y1, int x2, int y2, int red, int green, int blue)
   cx = (UI_MAX(x1, x2) + 1) - x;
   cy = (UI_MAX(y1, y2) + 1) - y;
   mi_add_to(x, y, cx, cy);
+#endif
 }
 
 /*****************************************************************************/
 void
 mi_screen_copy(int x, int y, int cx, int cy, int srcx, int srcy)
 {
+#ifdef USE_ORDERS
+  DFBRectangle rect;
+  DFBSurfaceDescription dsc;
+  IDirectFBSurface * surface;
+
+  mi_update_screen();
+  //if (srcy < y)
+  {
+    dsc.flags = DSDESC_CAPS | DSDESC_WIDTH | DSDESC_HEIGHT;
+    dsc.caps = DSCAPS_VIDEOONLY;
+    dsc.width = cx;
+    dsc.height = cy;
+    if (g_dfb->CreateSurface(g_dfb, &dsc, &surface) == 0)
+    {
+      rect.x = srcx;
+      rect.y = srcy;
+      rect.w = cx;
+      rect.h = cy;
+      surface->Blit(surface, g_primary, &rect, 0, 0);
+      g_primary->Blit(g_primary, surface, 0, x, y);
+      surface->Release(surface);
+    }
+  }
+  //else
+  //{
+  //  rect.x = srcx;
+  //  rect.y = srcy;
+  //  rect.w = cx;
+  //  rect.h = cy;
+  //  g_primary->Blit(g_primary, g_primary, &rect, x, y);
+  //}
+#else
   mi_add_to(x, y, cx, cy);
+#endif
 }
 
 /*****************************************************************************/
 void
 mi_set_clip(int x, int y, int cx, int cy)
 {
+#ifdef USE_ORDERS
+  g_reg.x1 = x;
+  g_reg.y1 = y;
+  g_reg.x2 = (x + cx) - 1;
+  g_reg.y2 = (y + cy) - 1;
+  g_primary->SetClip(g_primary, &g_reg);
+#endif
 }
 
 /*****************************************************************************/
 void
 mi_reset_clip(void)
 {
+#ifdef USE_ORDERS
+// this dosen't work, directb bug?
+//  g_primary->SetClip(g_primary, 0);
+  g_reg.x1 = 0;
+  g_reg.y1 = 0;
+  g_reg.x2 = g_width;
+  g_reg.y2 = g_height;
+  g_primary->SetClip(g_primary, &g_reg);
+#endif
 }
 
 /*****************************************************************************/
@@ -588,6 +572,7 @@ out_params(void)
   fprintf(stderr, "   -p: password\n");
   fprintf(stderr, "   -d: domain\n");
   fprintf(stderr, "   -c: working directory\n");
+  fprintf(stderr, "   -a: colour depth\n");
   fprintf(stderr, "\n");
 }
 
@@ -634,6 +619,10 @@ parse_parameters(int in_argc, char ** in_argv)
     {
       strcpy(g_directory, in_argv[i + 1]);
     }
+    else if (strcmp(in_argv[i], "-a") == 0)
+    {
+      g_server_depth = atoi(in_argv[i + 1]);
+    }
   }
   return 1;
 }
@@ -643,88 +632,147 @@ int
 main(int argc, char ** argv)
 {
   int rv;
-  int i;
   DFBSurfaceDescription dsc;
   DFBResult err;
-  IDirectFBScreen * pScreen = NULL;
-  DFBScreenEncoderConfig encConfig;
-  DFBScreenEncoderConfigFlags encFlags;
-  IDirectFBDisplayLayer * layer;
 
-  //strcpy(g_servername, "205.5.61.3");
-  //strcpy(g_servername, "127.0.0.1");
-  //strcpy(g_servername, "24.158.1.82");
   strcpy(g_hostname, "test");
-  //strcpy(g_username, "d");
-  //strcpy(g_password, "tucker");
   g_server_depth = 24;
-
   if (!parse_parameters(argc, argv))
   {
     return 0;
   }
-
-  printf("DirectFBInit\n");
   err = DirectFBInit(&argc, &argv);
   if (err == 0)
   {
-    printf("DirectFBCreate\n");
     err = DirectFBCreate(&g_dfb);
   }
   if (err == 0)
   {
-    printf("SetCooperativeLevel\n");
     err = g_dfb->SetCooperativeLevel(g_dfb, DFSCL_FULLSCREEN);
   }
   if (err == 0)
   {
-    /*g_dfb->GetScreen(g_dfb, 0, &pScreen);
-    pScreen->GetEncoderConfiguration(pScreen, 0, &encConfig);
-    if (encConfig.tv_standard != DSETV_NTSC)
-    {
-      encConfig.tv_standard = DSETV_NTSC;
-      //encConfig.tv_standard = DSETV_SECAM;
-      encConfig.flags = DSECONF_TV_STANDARD;
-      g_dfb->SetVideoMode(g_dfb, 720, 480, 32);
-      if (pScreen->TestEncoderConfiguration(pScreen, 0, &encConfig,
-                                            &encFlags) == DFB_UNSUPPORTED)
-      {
-        printf("error\n");
-      }
-      pScreen->SetEncoderConfiguration(pScreen, 0, &encConfig);
-      for (i = 0; i < 5; i++)
-      {
-        g_dfb->GetDisplayLayer(g_dfb, i, &layer);
-        layer->SetCooperativeLevel(layer, DLSCL_EXCLUSIVE);
-      }
-    } */
-    err = g_dfb->GetScreen(g_dfb, 1, &pScreen);
-  }
-  if (err == 0)
-  {
     dsc.flags = DSDESC_CAPS;
-    dsc.caps  = DSCAPS_PRIMARY; // | DSCAPS_DOUBLE;
-    //dsc.caps  = DSCAPS_PRIMARY | DSCAPS_DOUBLE;
+#ifdef USE_FLIPPING
+    dsc.caps  = DSCAPS_PRIMARY | DSCAPS_DOUBLE | DSCAPS_FLIPPING;
+#else
+    dsc.caps  = DSCAPS_PRIMARY;
+#endif
     err = g_dfb->CreateSurface(g_dfb, &dsc, &g_primary);
   }
   if (err == 0)
   {
     g_dfb->CreateInputEventBuffer(g_dfb, DICAPS_AXES | DICAPS_BUTTONS |
                                   DICAPS_KEYS, 0, &g_event);
-    g_event->CreateFileDescriptor(g_event, &g_event_fd);
   }
   if (err == 0)
   {
     err = g_primary->GetSize(g_primary, &g_width, &g_height);
   }
-  printf("%d %d\n", g_width, g_height);
   if (err != 0)
   {
     printf("error in main\n");
     return 1;
   }
   rv = ui_main();
+  g_s->Release(g_s);
   g_primary->Release(g_primary);
   g_dfb->Release(g_dfb);
   return rv;
+}
+
+/*****************************************************************************/
+/* returns non zero ok */
+int
+librdesktop_init(long obj1, long obj2, long obj3, int in_argc, char ** in_argv)
+{
+  strcpy(g_hostname, "test");
+  g_dfb = (IDirectFB *) obj1;
+  g_primary = (IDirectFBSurface *) obj2;
+  g_primary->GetSize(g_primary, &g_width, &g_height);
+  g_server_depth = 24;
+  if (!parse_parameters(in_argc, in_argv))
+  {
+    return 0;
+  }
+  return 1;
+}
+
+/*****************************************************************************/
+/* returns non zero ok */
+int
+librdesktop_connect(void)
+{
+  return ui_lib_main();
+}
+
+/*****************************************************************************/
+/* returns non zero ok */
+int
+librdesktop_check_wire(void)
+{
+  fd_set rfds;
+  int rv;
+  int fd;
+  struct timeval tv;
+
+  fd = g_tcp_sck;
+  FD_ZERO(&rfds);
+  FD_SET(g_tcp_sck, &rfds);
+  tv.tv_sec = 0;
+  tv.tv_usec = 0;
+  rv = select(fd + 1, &rfds, 0, 0, &tv);
+  if (rv > -1)
+  {
+    if (rv > 0)
+    {
+      if (FD_ISSET(g_tcp_sck, &rfds))
+      {
+        if (!ui_read_wire())
+        {
+          return 0;
+        }
+      }
+    }
+  }
+  return 1;
+}
+
+/*****************************************************************************/
+int
+librdesktop_mouse_move(int x, int y)
+{
+  ui_mouse_move(x, y);
+  return 0;
+}
+
+/*****************************************************************************/
+int
+librdesktop_mouse_button(int button, int x, int y, int down)
+{
+  ui_mouse_button(button, x, y, down);
+  return 0;
+}
+
+/*****************************************************************************/
+int
+librdesktop_key_down(int key, int ext)
+{
+  ui_key_down(key, ext);
+  return 0;
+}
+
+/*****************************************************************************/
+int
+librdesktop_key_up(int key, int ext)
+{
+  ui_key_up(key, ext);
+  return 0;
+}
+
+/*****************************************************************************/
+int
+librdesktop_quit(void)
+{
+  return 1;
 }

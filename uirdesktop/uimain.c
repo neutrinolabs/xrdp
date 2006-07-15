@@ -43,7 +43,7 @@ BOOL g_bitmap_cache_precache = True;
 BOOL g_bitmap_cache = True;
 BOOL g_encryption = True;
 int g_server_depth = 8;
-BOOL g_use_rdp5 = False;
+BOOL g_use_rdp5 = True;
 int g_width = 800;
 int g_height = 600;
 uint32 g_keylayout = 0x409; /* Defaults to US keyboard layout */
@@ -163,7 +163,7 @@ convert_colour(int in_colour)
   else if (g_server_depth == 15)
   {
     SPLIT_COLOUR15(in_colour, r, g, b);
-  }  
+  }
   else if (g_server_depth == 16)
   {
     SPLIT_COLOUR16(in_colour, r, g, b);
@@ -176,7 +176,7 @@ convert_colour(int in_colour)
   {
     MAKE_COLOUR32(in_colour, r, g, b);
   }
-  return in_colour;  
+  return in_colour;
 }
 
 /*****************************************************************************/
@@ -356,7 +356,7 @@ ui_create_bitmap_ex(int width, int height, uint8 * data, int data_size,
           d32++;
         }
       }
-    }  
+    }
     else if (g_server_depth == 24 && g_bs_bpp == 32)
     {
       for (i = 0; i < height; i++)
@@ -376,7 +376,7 @@ ui_create_bitmap_ex(int width, int height, uint8 * data, int data_size,
           d32++;
         }
       }
-    }  
+    }
   }
   b->width = width;
   b->height = height;
@@ -1096,6 +1096,43 @@ ui_main(void)
   bs_init();
   /* if all ok, enter main loop */
   return mi_main_loop();
+}
+
+/*****************************************************************************/
+/* called after the command line parameters are processed */
+/* returns boolean, non zero is ok */
+int
+ui_lib_main(void)
+{
+  uint32 flags;
+
+  /* try to connect */
+  flags = RDP_LOGON_NORMAL;
+  if (g_password[0] != 0)
+  {
+    flags |= RDP_LOGON_AUTO;
+  }
+  if (!rdp_connect(g_servername, flags, g_domain, g_password,
+                   g_shell, g_directory))
+  {
+    return 0;
+  }
+  /* create the window */
+  if (!mi_create_window())
+  {
+    error("mi_create_window failed\r\n");
+    return 0;
+  }
+  /* create backingstore stuff for use in bsops.c */
+  if (!mi_create_bs())
+  {
+    error("mi_create_bs failed\r\n");
+    return 0;
+  }
+  /* init backingstore */
+  bs_init();
+  /* if all ok, enter main loop */
+  return 1;
 }
 
 /*****************************************************************************/

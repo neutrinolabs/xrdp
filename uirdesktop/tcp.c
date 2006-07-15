@@ -52,6 +52,7 @@ static int sock;
 static struct stream in;
 static struct stream out;
 int g_tcp_port_rdp = TCP_PORT_RDP;
+int g_bytes_in = 0;
 
 /* Initialise TCP transport data packet */
 STREAM
@@ -102,6 +103,7 @@ tcp_recv(STREAM s, uint32 length)
 	unsigned int new_length, end_offset, p_offset;
 	int rcvd = 0;
 
+	g_bytes_in += length;
 	if (s == NULL)
 	{
 		/* read into "new" stream */
@@ -165,7 +167,7 @@ tcp_recv(STREAM s, uint32 length)
 BOOL
 tcp_connect(char *server)
 {
-	int true_value = 1;
+	int lvalue;
 
 #ifdef IPv6
 
@@ -240,12 +242,17 @@ tcp_connect(char *server)
 
 #endif /* IPv6 */
 
-	setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (void *) &true_value, sizeof(true_value));
+	//lvalue = 1;
+	//setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (void *) &lvalue, sizeof(lvalue));
+	lvalue = 8192 * 2;
+	setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (void *) &lvalue, sizeof(lvalue));
+	lvalue = 8192 * 2;
+	setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (void *) &lvalue, sizeof(lvalue));
 
-	in.size = 4096;
+	in.size = 8192 * 2;
 	in.data = (uint8 *) xmalloc(in.size);
 
-	out.size = 4096;
+	out.size = 8192 * 2;
 	out.data = (uint8 *) xmalloc(out.size);
 
 	return True;

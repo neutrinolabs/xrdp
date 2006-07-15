@@ -2,15 +2,18 @@
 # makefile
 # directfb
 
+# these are for phillips stb compiling
+#-mips3
 INCDIR=/home/j/stb/stb810-SP2/build/staging/usr/local/include/directfb
 ROOTFS=/home/j/stb/stb810-SP2/build/rootfs
-
 CC = mipsel-linux-gnu-gcc
+
 OBJS = tcp.o iso.o mcs.o secure.o rdp.o rdp5.o orders.o \
 bitmap.o cache.o mppc.o pstcache.o channels.o licence.o \
 ssl_calls.o
 
 UIOBJS = uimain.o bsops.o dfb.o
+
 
 CFLAGS = -O2 -Wall -I$(INCDIR)
 # -DWITH_DEBUG

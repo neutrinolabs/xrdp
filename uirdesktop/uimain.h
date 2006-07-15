@@ -21,6 +21,8 @@
 /* in uimain.c */
 int
 ui_main(void);
+int
+ui_lib_main(void);
 void
 ui_invalidate(int x, int y, int cx, int cy);
 int
