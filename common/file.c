@@ -88,9 +88,11 @@ int APP_CC
 file_read_line(struct stream* s, char* text)
 {
   int i;
+  int skip_to_end;
   char c;
   char* hold;
 
+  skip_to_end = 0;
   if (!s_check(s))
   {
     return 1;
@@ -100,8 +102,15 @@ file_read_line(struct stream* s, char* text)
   in_uint8(s, c);
   while (c != 10 && c != 13 && s_check(s))
   {
-    text[i] = c;
-    i++;
+    if (c == '#' || c == '!')
+    {
+      skip_to_end = 1;
+    }
+    if (!skip_to_end)
+    {
+      text[i] = c;
+      i++;
+    }
     in_uint8(s, c);
   }
   if (c == 10 || c == 13)
@@ -118,7 +127,7 @@ file_read_line(struct stream* s, char* text)
     s->p = hold;
     return 1;
   }
-  if (g_strlen(text) > 0)
+  if (s_check(s))
   {
     return 0;
   }
@@ -208,9 +217,12 @@ file_read_section(int fd, char* section, struct list* names,
           file_read_line(s, text);
           while (file_read_line(s, text) == 0)
           {
-            file_split_name_value(text, name, value);
-            list_add_item(names, (long)g_strdup(name));
-            list_add_item(values, (long)g_strdup(value));
+            if (g_strlen(text) > 0)
+            {
+              file_split_name_value(text, name, value);
+              list_add_item(names, (long)g_strdup(name));
+              list_add_item(values, (long)g_strdup(value));
+            }
           }
           free_stream(s);
           return 0;
