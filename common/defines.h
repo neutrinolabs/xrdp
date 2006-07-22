@@ -55,7 +55,7 @@
 #define SETPIXEL16(d, x, y, w, v) \
 (*(((unsigned short*)d) + ((y) * (w) + (x))) = (v))
 #define SETPIXEL32(d, x, y, w, v) \
-(*(((unsigned long*)d) + ((y) * (w) + (x))) = (v))
+(*(((unsigned int*)d) + ((y) * (w) + (x))) = (v))
 #define COLOR8(r, g, b) \
 ( \
   (((r) >> 5) << 0) | \
