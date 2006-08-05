@@ -311,13 +311,13 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	uint32 sec_flags = g_encryption ? (SEC_LOGON_INFO | SEC_ENCRYPT) : SEC_LOGON_INFO;
 	STREAM s;
 	time_t tzone;
-	
+
 #ifdef _WIN32
 	TIME_ZONE_INFORMATION tzi;
 #else
 	time_t t = time(NULL);
-#endif	
-	
+#endif
+
 	if (!g_use_rdp5 || 1 == g_server_rdp_version)
 	{
 		DEBUG_RDP5(("Sending RDP4-style Logon packet\n"));
@@ -611,10 +611,10 @@ rdp_out_general_caps(STREAM s)
 	out_uint16_le(s, g_use_rdp5 ? 0x40d : 0);
 	/* Pad, according to T.128. 0x40d seems to 
 	   trigger
-	   the server to start sending RDP5 packets. 
+	   the server to start sending RDP5 packets.
 	   However, the value is 0x1d04 with W2KTSK and
 	   NT4MS. Hmm.. Anyway, thankyou, Microsoft,
-	   for sending such information in a padding 
+	   for sending such information in a padding
 	   field.. */
 	out_uint16(s, 0);	/* Update capability */
 	out_uint16(s, 0);	/* Remote unshare capability */

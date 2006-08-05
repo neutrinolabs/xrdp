@@ -532,7 +532,7 @@ bs_screenblt(int rop, int x, int y, int cx, int cy,
 }
 
 /*****************************************************************************/
-void
+int
 bs_memblt(int opcode, int x, int y, int cx, int cy,
           void * srcdata, int srcwidth, int srcheight,
           int srcx, int srcy)
@@ -540,13 +540,16 @@ bs_memblt(int opcode, int x, int y, int cx, int cy,
   int i;
   int j;
   int p;
+  int rv;
   char * dst;
   char * src;
 
+  rv = 1;
   if (bs_warp_coords(&x, &y, &cx, &cy, &srcx, &srcy))
   {
     if (opcode == 12) /* copy */
     {
+      rv = 0;
       if (g_bs_Bpp == 1)
       {
         src = (char *) (((unsigned char *) srcdata) + srcy * srcwidth + srcx);
@@ -564,6 +567,13 @@ bs_memblt(int opcode, int x, int y, int cx, int cy,
         dst = get_bs_ptr(x, y + i);
         if (dst != 0)
         {
+          if (!rv)
+          {
+            if (memcmp(dst, src, cx * g_bs_Bpp) != 0)
+            {
+              rv = 1;
+            }
+          }
           bs_copy_mem(dst, src, cx * g_bs_Bpp);
           src += srcwidth * g_bs_Bpp;
         }
@@ -609,6 +619,7 @@ bs_memblt(int opcode, int x, int y, int cx, int cy,
       }
     }
   }
+  return rv;
 }
 
 /*****************************************************************************/

@@ -75,6 +75,17 @@ static int g_mouse_y = 0;
 
 static IDirectFBSurface * g_s = 0;
 
+static int g_wfpx = 0; /* wait for pixel stuff */
+static int g_wfpy = 0;
+static int g_wfpv = 0;
+static int g_show_wfp = 0;
+static int g_no_draw = 0; /* this means don't draw the screen but draw on
+                             backingstore */
+
+/* for transparent colour */
+static int g_use_trans = 0;
+static int g_trans_colour = 0;
+
 //static IDirectFBDataBuffer * g_buffer = 0;
 //static IDirectFBImageProvider * g_provider = 0;
 
@@ -113,6 +124,14 @@ mi_create_window(void)
 void
 mi_update_screen(void)
 {
+  int r;
+  int g;
+  int b;
+
+  if (g_no_draw)
+  {
+    return;
+  }
   if (g_rect.w > 0 && g_rect.h > 0)
   {
 #ifdef USE_ORDERS_NOT
@@ -129,6 +148,17 @@ mi_update_screen(void)
     g_primary->Flip(g_primary, 0, 0);
 #else
     g_primary->Blit(g_primary, g_s, &g_rect, g_rect.x, g_rect.y);
+    if (g_use_trans)
+    {
+      r = (g_trans_colour >> 16) & 0xff;
+      g = (g_trans_colour >> 8) & 0xff;
+      b = g_trans_colour & 0xff;
+      g_primary->SetDrawingFlags(g_primary, DSDRAW_DST_COLORKEY);
+      g_primary->SetDstColorKey(g_primary, r, g, b);
+      g_primary->SetColor(g_primary, r, g, b, 0);
+      g_primary->FillRectangle(g_primary, g_rect.x, g_rect.y, g_rect.w, g_rect.h);
+      g_primary->SetDrawingFlags(g_primary, DSDRAW_NOFX);
+    }
 #endif
 #ifdef USE_ORDERS_NOT
     g_primary->SetClip(g_primary, &g_reg);
@@ -369,6 +399,7 @@ update_thread(void * arg)
 }
 
 /*****************************************************************************/
+/* return boolean */
 int
 mi_create_bs(void)
 {
@@ -411,12 +442,29 @@ void
 mi_end_update(void)
 {
   pthread_mutex_unlock(&g_mutex1);
+  if (g_show_wfp)
+  {
+    printf("pixel at %d %d is %d\n", g_wfpx, g_wfpy, bs_get_pixel(g_wfpx, g_wfpy));
+  }
+  if (g_no_draw)
+  {
+    if (g_wfpv == bs_get_pixel(g_wfpx, g_wfpy))
+    {
+      g_no_draw = 0;
+      mi_invalidate(0, 0, g_width, g_height);
+    }
+  }
+
 }
 
 /*****************************************************************************/
 void
 mi_fill_rect(int x, int y, int cx, int cy, int colour)
 {
+  if (g_no_draw)
+  {
+    return;
+  }
 #ifdef USE_ORDERS
   int red;
   int green;
@@ -426,7 +474,14 @@ mi_fill_rect(int x, int y, int cx, int cy, int colour)
   red = (colour & 0xff0000) >> 16;
   green = (colour & 0xff00) >> 8;
   blue = colour & 0xff;
-  g_primary->SetColor(g_primary, red, green, blue, 0xff);
+  if (g_use_trans && g_trans_colour == colour)
+  {
+    g_primary->SetColor(g_primary, red, green, blue, 0);
+  }
+  else
+  {
+    g_primary->SetColor(g_primary, red, green, blue, 0xff);
+  }
   g_primary->FillRectangle(g_primary, x, y, cx, cy);
 #else
   mi_add_to(x, y, cx, cy);
@@ -437,16 +492,27 @@ mi_fill_rect(int x, int y, int cx, int cy, int colour)
 void
 mi_line(int x1, int y1, int x2, int y2, int colour)
 {
+  if (g_no_draw)
+  {
+    return;
+  }
 #ifdef USE_ORDERS_TOO_SLOW
-  int r;
-  int g;
-  int b;
+  int red;
+  int green;
+  int blue;
 
   mi_update_screen();
-  r = (colour >> 16) & 0xff;
-  g = (colour >> 8) & 0xff;
-  b = colour & 0xff;
-  g_primary->SetColor(g_primary, r, g, b, 0xff);
+  red = (colour >> 16) & 0xff;
+  green = (colour >> 8) & 0xff;
+  blue = colour & 0xff;
+  if (g_use_trans && g_trans_colour == colour)
+  {
+    g_primary->SetColor(g_primary, red, green, blue, 0);
+  }
+  else
+  {
+    g_primary->SetColor(g_primary, red, green, blue, 0xff);
+  }
   g_primary->DrawLine(g_primary, x1, y1, x2, y2);
 #else
   int x;
@@ -466,6 +532,10 @@ mi_line(int x1, int y1, int x2, int y2, int colour)
 void
 mi_screen_copy(int x, int y, int cx, int cy, int srcx, int srcy)
 {
+  if (g_no_draw)
+  {
+    return;
+  }
 #ifdef USE_ORDERS
   DFBRectangle rect;
   DFBSurfaceDescription dsc;
@@ -573,6 +643,9 @@ out_params(void)
   fprintf(stderr, "   -d: domain\n");
   fprintf(stderr, "   -c: working directory\n");
   fprintf(stderr, "   -a: colour depth\n");
+  fprintf(stderr, "   -wfp x y pixel: skip screen updates till x, y pixel is \
+this colour\n");
+  fprintf(stderr, "   -trans pixel: transparent colour\n");
   fprintf(stderr, "\n");
 }
 
@@ -622,6 +695,25 @@ parse_parameters(int in_argc, char ** in_argv)
     else if (strcmp(in_argv[i], "-a") == 0)
     {
       g_server_depth = atoi(in_argv[i + 1]);
+    }
+    else if (strcmp(in_argv[i], "-wfp") == 0)
+    {
+      g_wfpx = atoi(in_argv[i + 1]);
+      g_wfpy = atoi(in_argv[i + 2]);
+      g_wfpv = atoi(in_argv[i + 3]);
+      if (g_wfpv == 0)
+      {
+        g_show_wfp = 1;
+      }
+      else
+      {
+        g_no_draw = 1;
+      }
+    }
+    else if (strcmp(in_argv[i], "-trans") == 0)
+    {
+      g_use_trans = 1;
+      g_trans_colour = atoi(in_argv[i + 1]);
     }
   }
   return 1;

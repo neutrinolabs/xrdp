@@ -35,9 +35,9 @@ int bs_warp_coords(int * x, int * y, int * cx, int * cy,
 void bs_rect(int x, int y, int cx, int cy, int colour, int rop);
 void bs_screenblt(int opcode, int x, int y, int cx, int cy,
                   int srcx, int srcy);
-void bs_memblt(int opcode, int x, int y, int cx, int cy,
-               void * srcdata, int srcwidth, int srcheight,
-               int srcx, int srcy);
+int bs_memblt(int opcode, int x, int y, int cx, int cy,
+              void * srcdata, int srcwidth, int srcheight,
+              int srcx, int srcy);
 void bs_copy_box(char * dst, int x, int y, int cx, int cy, int line_size);
 void bs_draw_glyph(int x, int y, char * glyph_data, int glyph_width,
                    int glyph_height, int fgcolour);

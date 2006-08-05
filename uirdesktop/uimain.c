@@ -154,6 +154,9 @@ convert_colour(int in_colour)
   int g;
   int b;
 
+  r = 0;
+  g = 0;
+  b = 0;
   if (g_server_depth == 8)
   {
     r = (pal_entries[in_colour & 0xff] & 0xff0000) >> 16;
@@ -665,9 +668,15 @@ ui_memblt(uint8 opcode, int x, int y, int cx, int cy,
   struct bitmap* b;
 
   b = (struct bitmap *) src;
-  bs_memblt(opcode, x, y, cx, cy, b->data, b->width, b->height,
-            srcx, srcy);
-  ui_invalidate(x, y, cx, cy);
+  if (bs_memblt(opcode, x, y, cx, cy, b->data, b->width, b->height,
+                srcx, srcy))
+  {
+    ui_invalidate(x, y, cx, cy);
+  }
+  else
+  {
+    //printf("skipped %d %d\r\n", cx, cy);
+  }
 }
 
 /*****************************************************************************/
