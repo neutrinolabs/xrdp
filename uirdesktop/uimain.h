@@ -70,6 +70,15 @@ ui_set_modifier_state(int code);
       ); \
 }
 
+#define MAKE_COLOUR16(c, r, g, b) \
+{ \
+  c = ( \
+        (((r & 0xff) >> 3) << 11) | \
+        (((g & 0xff) >> 2) <<  5) | \
+        (((b & 0xff) >> 3) <<  0) \
+      ); \
+}
+
 #define MAKE_COLOUR32(c, r, g, b) \
 { \
   c = ( \
