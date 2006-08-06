@@ -501,7 +501,7 @@ g_file_open(char* file_name)
                          FILE_SHARE_READ | FILE_SHARE_WRITE,
                          0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 #else
-  return open(file_name, O_RDWR | O_CREAT);
+  return open(file_name, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
 #endif
 }
 
