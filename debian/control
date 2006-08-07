@@ -1,8 +1,8 @@
 Source: xrdp
 Section: net
 Priority: optional
-Maintainer: Jay Sorg <jay.sorg@gmail.com>
-Build-Depends: debhelper (>= 4.0.0)
+Maintainer: Jay Sorg <jay.sorg@gmail.com>, Per Hansen <spamhans@yahoo.de>
+Build-Depends: debhelper (>= 4.0.0) libssl-dev, libpam0g-dev
 Standards-Version: 3.6.0
 
 Package: xrdp
