@@ -31,4 +31,4 @@ install:
 	install libxup.so $(DESTDIR)/libxup.so
 
 installdeb:
-	install libxup.so $(DESTDIRDEB)/usr/xrdp/libxup.so
+	install libxup.so $(DESTDIRDEB)/usr/lib/xrdp/libxup.so

@@ -36,4 +36,4 @@ install:
 	install librdp.so $(DESTDIR)/librdp.so
 
 installdeb:
-	install librdp.so $(DESTDIRDEB)/usr/xrdp/librdp.so
+	install librdp.so $(DESTDIRDEB)/usr/lib/xrdp/librdp.so

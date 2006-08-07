@@ -33,4 +33,4 @@ install:
 	install libvnc.so $(DESTDIR)/libvnc.so
 
 installdeb:
-	install libvnc.so $(DESTDIRDEB)/usr/xrdp/libvnc.so
+	install libvnc.so $(DESTDIRDEB)/usr/lib/xrdp/libvnc.so
