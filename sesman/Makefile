@@ -52,9 +52,9 @@ install:
 	install sesman.ini $(CFGDIR)/sesman.ini
 
 installdeb:
-	install sesman $(DESTDIRDEB)/usr/xrdp/sesman
-	install sesrun $(DESTDIRDEB)/usr/xrdp/sesrun
-	install startwm.sh $(DESTDIRDEB)/usr/xrdp/startwm.sh
+	install sesman $(DESTDIRDEB)/usr/lib/xrdp/sesman
+	install sesrun $(DESTDIRDEB)/usr/lib/xrdp/sesrun
+	install startwm.sh $(DESTDIRDEB)/usr/lib/xrdp/startwm.sh
 	install sesman.ini $(DESTDIRDEB)/etc/xrdp/sesman.ini
 
 os_calls.o: ../common/os_calls.c
