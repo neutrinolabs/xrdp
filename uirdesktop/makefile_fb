@@ -12,6 +12,7 @@ UIOBJS = uimain.o bsops.o fb.o
 
 
 CFLAGS = -O2 -Wall
+#-DWITH_DEBUG
 # -I$(INCDIR)
 # -DWITH_DEBUG
 

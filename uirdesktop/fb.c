@@ -170,6 +170,10 @@ mi_update_screen(void)
   int g;
   int b;
 
+  if (g_no_draw)
+  {
+    return;
+  }
   endi = UI_MIN(g_rect.y + g_rect.h, g_clip_bottom);
   endj = UI_MIN(g_rect.x + g_rect.w, g_clip_right);
   x = UI_MAX(g_rect.x, g_clip_left);
@@ -491,6 +495,21 @@ mi_begin_update(void)
 void
 mi_end_update(void)
 {
+  int pixel;
+
+  if (g_show_wfp)
+  {
+    printf("    %d\r\n", bs_get_pixel(g_wfpx, g_wfpy));
+  }
+  if (g_no_draw)
+  {
+    pixel = bs_get_pixel(g_wfpx, g_wfpy);
+    if ((pixel & 0xffffff) == (g_wfpv & 0xffffff))
+    {
+      g_no_draw = 0;
+      mi_invalidate(0, 0, g_width, g_height);
+    }
+  }
 }
 
 /*****************************************************************************/
@@ -1063,7 +1082,44 @@ main(int in_argc, char ** in_argv)
 int
 librdesktop_init(long obj1, long obj2, long obj3, int in_argc, char ** in_argv)
 {
-  return 1;
+  int screensize;
+  struct termios new_termios;
+
+  g_server_depth = 24;
+  memset(&g_mcursor, 0, sizeof(struct cursor));
+  get_username_and_hostname();
+  /* read command line options */
+  if (!parse_parameters(in_argc, in_argv))
+  {
+    return 0;
+  }
+  /* Open the file for reading and writing */
+  //g_fbfd = open("/dev/fb0", O_RDWR);
+  g_fbfd = obj1;
+  /* Get fixed screen information */
+  if (ioctl(g_fbfd, FBIOGET_FSCREENINFO, &g_finfo))
+  {
+    printf("Error reading fixed information.\n");
+    return 1;
+  }
+  /* Get variable screen information */
+  if (ioctl(g_fbfd, FBIOGET_VSCREENINFO, &g_vinfo))
+  {
+    printf("Error reading variable information.\n");
+    return 1;
+  }
+  g_bpp = g_vinfo.bits_per_pixel;
+  g_Bpp = (g_bpp + 7) / 8;
+  g_width = g_vinfo.xres;
+  g_height = g_vinfo.yres;
+  g_clip_right = g_width;
+  g_clip_bottom = g_height;
+  printf("%dx%d, %dbpp\n", g_vinfo.xres, g_vinfo.yres, g_vinfo.bits_per_pixel);
+  /* Figure out the size of the screen in bytes */
+  screensize = g_vinfo.xres * g_vinfo.yres * 4;
+  g_sdata = (char*)obj2;
+  g_bs = malloc(screensize);
+  return 0;
 }
 
 /*****************************************************************************/
