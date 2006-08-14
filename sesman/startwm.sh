@@ -10,20 +10,23 @@ fi
 if [ -d /opt/kde/bin ]; then
   export PATH=/opt/kde/bin:$PATH
 fi
-if [ "'which startkde'" != "" ]; then
+which startkde
+if [ $? -eq 0 ]; then
   startkde
   exit 0
 fi
-if [ "'which kde'" != "" ]; then
+which kde
+if [ $? -eq 0 ]; then
   kde
   exit 0
 fi
 
 # gnome
-#if [ "'which gnome-session'" != "" ]; then
-#  gnome-session
-#  exit 0
-#fi
+which gnome-session
+if [ $? -eq 0 ]; then
+  gnome-session
+  exit 0
+fi
 
 # blackbox
 #if [ "'which blackbox'" != "" ]; then
@@ -38,7 +41,8 @@ fi
 #fi
 
 # fall back on xterm
-if [ "'which xterm'" != "" ]; then
+which xterm
+if [ $? -eq 0 ]; then
   xterm
   exit 0
 fi

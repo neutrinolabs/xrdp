@@ -51,7 +51,7 @@ install:
 	install instfiles/xrdp_control.sh $(DESTDIR)/xrdp_control.sh
 
 installdeb:
-	mkdir -p $(DESTDIRDEB)/usr/xrdp
+	mkdir -p $(DESTDIRDEB)/usr/lib/xrdp
 	mkdir -p $(DESTDIRDEB)/etc/xrdp
 	mkdir -p $(DESTDIRDEB)/etc/pam.d
 	mkdir -p $(DESTDIRDEB)/etc/init.d
