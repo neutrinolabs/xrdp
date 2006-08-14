@@ -1,4 +1,6 @@
 #!/bin/sh
 if [ -e /usr/lib/xrdp ]; then
-  /etc/init.d/xrdp_control.sh stop
+  if [ -e /etc/init.d/xrdp_control.sh ]; then
+    /etc/init.d/xrdp_control.sh stop
+  fi
 fi
