@@ -230,13 +230,14 @@ for user %s denied", username);
         env_check_password_file(passwd_file, password);
         if (type == SESMAN_SESSION_TYPE_XVNC)
         {
-          g_execlp11("Xvnc", "Xvnc", screen, "-geometry", geometry,
-                     "-depth", depth, "-bs", "-rfbauth", passwd_file, 0);
+          g_execlp13("Xvnc", "Xvnc", screen, "-geometry", geometry,
+                     "-depth", depth, "-bs", "-ac", "-rfbauth", passwd_file,
+                     0, 0);
         }
         else if (type == SESMAN_SESSION_TYPE_XRDP)
         {
           g_execlp11("Xrdp", "Xrdp", screen, "-geometry", geometry,
-                     "-depth", depth, "-bs", 0, 0, 0);
+                     "-depth", depth, "-bs", "-ac", 0, 0);
         }
         else
         {
