@@ -116,17 +116,28 @@ rdpWakeupHandler(int i, pointer blockData, unsigned long err,
 
   /*ErrorF("rdpWakeupHandler %d\n", err);*/
   e = (int)err;
-  if (e < 0)
+  if (!(e < 0))
   {
-    g_pScreen->WakeupHandler = g_rdpScreen.WakeupHandler;
-    g_pScreen->WakeupHandler(i, blockData, err, pReadmask);
-    g_pScreen->WakeupHandler = rdpWakeupHandler;
-    return;
+    /*rdpup_check();*/
   }
-  rdpup_check();
   g_pScreen->WakeupHandler = g_rdpScreen.WakeupHandler;
   g_pScreen->WakeupHandler(i, blockData, err, pReadmask);
   g_pScreen->WakeupHandler = rdpWakeupHandler;
+}
+
+/******************************************************************************/
+static void
+rdpBlockHandler1(pointer blockData, OSTimePtr pTimeout, pointer pReadmask)
+{
+  /*ErrorF("hi rdpBlockHandler1\n");*/
+}
+
+/******************************************************************************/
+static void
+rdpWakeupHandler1(pointer blockData, int result, pointer pReadmask)
+{
+  /*ErrorF("hi rdpWakeupHandler1\n");*/
+  rdpup_check();
 }
 
 /******************************************************************************/
@@ -310,6 +321,10 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
   {
     ret = rdpup_init();
   }
+  if (ret)
+  {
+    RegisterBlockAndWakeupHandlers(rdpBlockHandler1, rdpWakeupHandler1, NULL);
+  }
   return ret;
 }
 
@@ -370,6 +385,7 @@ OsVendorInit(void)
   /*ErrorF("hi OsVendorInit\n");*/
 }
 
+#if 0
 /******************************************************************************/
 CARD32
 GetTimeInMillis(void)
@@ -380,6 +396,7 @@ GetTimeInMillis(void)
   X_GETTIMEOFDAY(&tp);
   return (tp.tv_sec * 1000) + (tp.tv_usec / 1000);
 }
+#endif
 
 /* Common pixmap formats */
 static PixmapFormatRec formats[MAXFORMATS] =
@@ -525,4 +542,10 @@ ddxUseMsg(void)
   ErrorF("-depth D               set framebuffer depth\n");
   ErrorF("\n");
   exit(1);
+}
+
+/******************************************************************************/
+void
+OsVendorPreInit(void)
+{
 }
