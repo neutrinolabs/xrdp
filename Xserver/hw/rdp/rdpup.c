@@ -265,11 +265,44 @@ rdpup_process_msg(struct stream* s)
     in_uint32_le(s, param4);
     DEBUG_OUT_UP(("rdpup_process_msg - msg %d param1 %d param2 %d param3 %d \
 param4 %d\n", msg, param1, param2, param3, param4));
+    /*ErrorF("rdpup_process_msg - msg %d param1 %d param2 %d param3 %d \
+param4 %d\n", msg, param1, param2, param3, param4);*/
     switch (msg)
     {
       case 15: /* key down */
       case 16: /* key up */
         KbdAddEvent(msg == 15, param1, param2, param3, param4);
+        break;
+      case 17: /* from RDP_INPUT_SYNCHRONIZE */
+#if 0
+        /* scroll lock */
+        if (param1 & 1)
+        {
+          KbdAddEvent(1, 70, 0, 70, 0);
+        }
+        else
+        {
+          KbdAddEvent(0, 70, 49152, 70, 49152);
+        }
+        /* num lock */
+        if (param1 & 2)
+        {
+          KbdAddEvent(1, 69, 0, 69, 0);
+        }
+        else
+        {
+          KbdAddEvent(0, 69, 49152, 69, 49152);
+        }
+        /* caps lock */
+        if (param1 & 4)
+        {
+          KbdAddEvent(1, 58, 0, 58, 0);
+        }
+        else
+        {
+          KbdAddEvent(0, 58, 49152, 58, 49152);
+        }
+#endif
         break;
       case 100:
         g_cursor_x = param1;
@@ -393,8 +426,9 @@ rdpup_check(void)
     }
     else
     {
-      ErrorF("rejecting connection - maybe\n");
-     /* g_tcp_close(g_tcp_accept(g_listen_sck));*/
+      ErrorF("rejecting connection\n");
+      g_sleep(10);
+      g_tcp_close(g_tcp_accept(g_listen_sck));
     }
   }
   if (sel & 2)

@@ -25,6 +25,7 @@ keyboard and mouse stuff
 
 static DeviceIntPtr kbdDevice;
 static int g_old_button_mask = 0;
+static int g_caps_lock = 0;
 extern int g_Bpp; /* from rdpmain.c */
 extern ScreenPtr g_pScreen; /* from rdpmain.c */
 extern rdpScreenInfo rdpScreen; /* from rdpmain.c */
@@ -197,7 +198,33 @@ static KeySym kbdMap[] =
   XK_KP_0,              NoSymbol,             /* 114 */
   XK_Insert,            NoSymbol,             /* 115 */
   XK_KP_Delete,         NoSymbol,             /* 116 */
-  XK_KP_Decimal,        NoSymbol              /* 117 */
+  XK_KP_Decimal,        NoSymbol,             /* 117 */
+  XK_A,                 XK_a,                 /* 118 */
+  XK_B,                 XK_b,                 /* 119 */
+  XK_C,                 XK_c,                 /* 120 */
+  XK_D,                 XK_d,                 /* 121 */
+  XK_E,                 XK_e,                 /* 122 */
+  XK_F,                 XK_f,                 /* 123 */
+  XK_G,                 XK_g,                 /* 124 */
+  XK_H,                 XK_h,                 /* 125 */
+  XK_I,                 XK_i,                 /* 126 */
+  XK_J,                 XK_j,                 /* 127 */
+  XK_K,                 XK_k,                 /* 128 */
+  XK_L,                 XK_l,                 /* 129 */
+  XK_M,                 XK_m,                 /* 130 */
+  XK_N,                 XK_n,                 /* 131 */
+  XK_O,                 XK_o,                 /* 132 */
+  XK_P,                 XK_p,                 /* 133 */
+  XK_Q,                 XK_q,                 /* 134 */
+  XK_R,                 XK_r,                 /* 135 */
+  XK_S,                 XK_s,                 /* 136 */
+  XK_T,                 XK_t,                 /* 137 */
+  XK_U,                 XK_u,                 /* 138 */
+  XK_V,                 XK_v,                 /* 139 */
+  XK_W,                 XK_w,                 /* 140 */
+  XK_X,                 XK_x,                 /* 141 */
+  XK_Y,                 XK_y,                 /* 142 */
+  XK_Z,                 XK_z                  /* 143 */
 
 };
 
@@ -699,6 +726,8 @@ KbdAddEvent(int down, int param1, int param2, int param3, int param4)
       }
       break;
     case 30: /* a */
+      /*ch = g_caps_lock ? 118 : 38;*/
+      /*ch = 118;*/
       ch = 38;
       break;
     case 31: /* s */
@@ -798,6 +827,7 @@ KbdAddEvent(int down, int param1, int param2, int param3, int param4)
       break;
     case 58: /* caps lock */
       ch = 91;
+      g_caps_lock = down;
       break;
     case 59: /* F1 */
       ch = 77;
