@@ -29,11 +29,14 @@
 
 #include "log.h"
 
-static struct log_config *l_cfg;
+/* this gets created in log_start and freed in log_end */
+static struct log_config* l_cfg;
 
 /* threading additions */
 #ifdef LOG_ENABLE_THREAD
-#include "nptl/pthread.h"
+#include "pthread.h"
+/* these get initalized in log_start, they don't need
+   to get freed */
 static pthread_mutex_t log_lock;
 static pthread_mutexattr_t log_lock_attr;
 #endif
@@ -45,9 +48,11 @@ static pthread_mutexattr_t log_lock_attr;
  * @return see open(2) return values
  * 
  */
-static int log_file_open(const char* fname)
+static int DEFAULT_CC
+log_file_open(const char* fname)
 {
-  return open(fname, O_WRONLY | O_CREAT | O_APPEND | O_SYNC, S_IRUSR | S_IWUSR);
+  return open(fname, O_WRONLY | O_CREAT | O_APPEND | O_SYNC, S_IRUSR |
+              S_IWUSR);
 }
 
 /**
@@ -57,21 +62,22 @@ static int log_file_open(const char* fname)
  * @return syslog equivalent logging level
  *
  */
-static int log_xrdp2syslog(const int lvl)
+static int DEFAULT_CC
+log_xrdp2syslog(const int lvl)
 {
   switch (lvl)
   {
     case LOG_LEVEL_ALWAYS:
-	    return LOG_CRIT;
+      return LOG_CRIT;
     case LOG_LEVEL_ERROR:
-	    return LOG_ERR;
+      return LOG_ERR;
     case LOG_LEVEL_WARNING:
-	    return LOG_WARNING;
+      return LOG_WARNING;
     case LOG_LEVEL_INFO:
-	    return LOG_INFO;
+      return LOG_INFO;
     /* case LOG_LEVEL_DEBUG: */
     default:
-	    return LOG_DEBUG;
+      return LOG_DEBUG;
   }
 }
 
@@ -83,92 +89,100 @@ static int log_xrdp2syslog(const int lvl)
  * @return syslog equivalent logging level
  *
  */
-void log_lvl2str(int lvl, char* str)
+void DEFAULT_CC
+log_lvl2str(int lvl, char* str)
 {
   switch (lvl)
   {
     case LOG_LEVEL_ALWAYS:
-	    snprintf(str, 9, "%s", "[CORE ] ");
+      snprintf(str, 9, "%s", "[CORE ] ");
+      break;
     case LOG_LEVEL_ERROR:
-	    snprintf(str, 9, "%s", "[ERROR] ");
+      snprintf(str, 9, "%s", "[ERROR] ");
+      break;
     case LOG_LEVEL_WARNING:
-	    snprintf(str, 9, "%s", "[WARN ] ");
+      snprintf(str, 9, "%s", "[WARN ] ");
+      break;
     case LOG_LEVEL_INFO:
-	    snprintf(str, 9, "%s", "[INFO ] ");
+      snprintf(str, 9, "%s", "[INFO ] ");
+      break;
     /* case LOG_LEVEL_DEBUG: */
     default:
-	    snprintf(str, 9, "%s", "[DEBUG] ");
+      snprintf(str, 9, "%s", "[DEBUG] ");
+      break;
   }
 }
+
 /******************************************************************************/
 int DEFAULT_CC
 log_message(const unsigned int lvl, const char* msg, ...)
 {
-  char buff[LOG_BUFFER_SIZE+31]; /* 19 (datetime) 4 (space+cr+lf+\0) */
+  char buff[LOG_BUFFER_SIZE + 31]; /* 19 (datetime) 4 (space+cr+lf+\0) */
   va_list ap;
   int len = 0;
   time_t now_t;
   struct tm* now;
 
-  if (0 == l_cfg) 
+  if (0 == l_cfg)
   {
     return LOG_ERROR_NO_CFG;
   }
 
-  if (0 > l_cfg->fd) 
+  if (0 > l_cfg->fd)
   {
     return LOG_ERROR_FILE_NOT_OPEN;
   }
-  
+
   now_t = time(&now_t);
   now = localtime(&now_t);
-  
-  snprintf(buff, 21, "[%.4d%.2d%.2d-%.2d:%.2d:%.2d] ", (now->tm_year)+1900, (now->tm_mon)+1, 
-           now->tm_mday, now->tm_hour, now->tm_min, now->tm_sec);
 
-  log_lvl2str(lvl, buff+20);
+  snprintf(buff, 21, "[%.4d%.2d%.2d-%.2d:%.2d:%.2d] ", (now->tm_year) + 1900,
+           (now->tm_mon) + 1, now->tm_mday, now->tm_hour, now->tm_min,
+           now->tm_sec);
+
+  log_lvl2str(lvl, buff + 20);
 
   va_start(ap, msg);
-  len = vsnprintf(buff+28, LOG_BUFFER_SIZE, msg, ap);
+  len = vsnprintf(buff + 28, LOG_BUFFER_SIZE, msg, ap);
   va_end(ap);
- 
+
   /* checking for truncated messages */ 
   if (len > LOG_BUFFER_SIZE)
   {
     log_message(LOG_LEVEL_WARNING, "next message will be truncated");
-  }  
-  
+  }
+
   /* forcing the end of message string */
   #ifdef _WIN32
-    buff[len+28] = '\r';
-    buff[len+29] = '\n';
-    buff[len+30] = '\0';
+    buff[len + 28] = '\r';
+    buff[len + 29] = '\n';
+    buff[len + 30] = '\0';
   #else
     #ifdef _MACOS
-      buff[len+28] = '\r';
-      buff[len+29] = '\0';
+      buff[len + 28] = '\r';
+      buff[len + 29] = '\0';
     #else
-      buff[len+28] = '\n';
-      buff[len+29] = '\0';
+      buff[len + 28] = '\n';
+      buff[len + 29] = '\0';
     #endif
   #endif
-  
-  if ( l_cfg->enable_syslog  && (lvl <= l_cfg->log_level) )
+
+  if (l_cfg->enable_syslog  && (lvl <= l_cfg->log_level))
   {
     /* log to syslog */
-    syslog(log_xrdp2syslog(lvl), buff+20);
+    syslog(log_xrdp2syslog(lvl), buff + 20);
   }
-  
+
   if (lvl <= l_cfg->log_level)
   {
     /* log to console */
-    g_printf((char*) buff);
+    g_printf((char*)buff);
 
     /* log to application logfile */
 #ifdef LOG_ENABLE_THREAD
     pthread_mutex_lock(&log_lock);
 #endif
-    return g_file_write(l_cfg->fd, (char*) buff, g_strlen((char*) buff));
+    return g_file_write(l_cfg->fd, (char*)buff, g_strlen((char*)buff));
 #ifdef LOG_ENABLE_THREAD
     pthread_mutex_unlock(&log_lock);
 #endif
@@ -178,11 +192,11 @@ log_message(const unsigned int lvl, const char* msg, ...)
 
 /******************************************************************************/
 int DEFAULT_CC
-log_start(const char* progname, const char* logfile, const unsigned int loglvl, 
+log_start(const char* progname, const char* logfile, const unsigned int loglvl,
           const int syslog, const unsigned int syslvl)
 {
   /* setup log struct */
-  l_cfg = (struct log_config*) g_malloc(sizeof(struct log_config),1);
+  l_cfg = (struct log_config*)g_malloc(sizeof(struct log_config), 1);
 
   if (0 == l_cfg)
   {
@@ -198,7 +212,7 @@ log_start(const char* progname, const char* logfile, const unsigned int loglvl,
   {
     l_cfg->log_file = g_strdup((char*) logfile);
   }
- 
+
   /* if progname is NULL, we use a default name */
   if (0 == progname)
   {
@@ -208,15 +222,15 @@ log_start(const char* progname, const char* logfile, const unsigned int loglvl,
   {
     l_cfg->program_name = g_strdup((char*) progname);
   }
-  
+
   /* setting log level */
   l_cfg->log_level = loglvl;
 
   /* 0 disables syslog, everything else enables it */
   l_cfg->enable_syslog = (syslog ? 1 : 0);
   /* forcing syslog_level to be always <= app logging level */
-  l_cfg->syslog_level = (syslvl>loglvl ? loglvl : syslvl );
-  
+  l_cfg->syslog_level = (syslvl>loglvl ? loglvl : syslvl);
+
   /* open file */
   l_cfg->fd = log_file_open(l_cfg->log_file);
 
@@ -226,7 +240,10 @@ log_start(const char* progname, const char* logfile, const unsigned int loglvl,
   }
 
   /* if syslog is enabled, open it */
-  if (l_cfg->enable_syslog) openlog(l_cfg->program_name, LOG_CONS | LOG_PID, LOG_DAEMON);
+  if (l_cfg->enable_syslog)
+  {
+    openlog(l_cfg->program_name, LOG_CONS | LOG_PID, LOG_DAEMON);
+  }
 
 #ifdef LOG_ENABLE_THREAD
   pthread_mutexattr_init(&log_lock_attr);
@@ -245,21 +262,27 @@ log_end()
   {
     return;
   }
-  
+
   /* closing log file */
   log_message(LOG_LEVEL_ALWAYS,"shutting down log subsystem...");
 
   if (0 > l_cfg->fd)
   {
     /* if syslog is enabled, close it */
-    if (l_cfg->enable_syslog) closelog();
+    if (l_cfg->enable_syslog)
+    {
+      closelog();
+    }
   }
 
   /* closing logfile... */
   g_file_close(l_cfg->fd);
-  
+
   /* if syslog is enabled, close it */
-  if (l_cfg->enable_syslog) closelog();
+  if (l_cfg->enable_syslog)
+  {
+    closelog();
+  }
 
   /* freeing allocated memory */
   g_free(l_cfg->log_file);
@@ -272,34 +295,34 @@ log_end()
 /******************************************************************************/
 int DEFAULT_CC
 log_text2level(char* buf)
-{	
+{
   if (0 == g_strncasecmp(buf, "0", 2) ||
       0 == g_strncasecmp(buf, "core", 5))
   {
     return LOG_LEVEL_ALWAYS;
-  } 
+  }
   else if (0 == g_strncasecmp(buf, "1", 2) ||
-      0 == g_strncasecmp(buf, "error", 6))
+           0 == g_strncasecmp(buf, "error", 6))
   {
     return LOG_LEVEL_ERROR;
-  } 
+  }
   else if (0 == g_strncasecmp(buf, "2", 2) ||
-      0 == g_strncasecmp(buf, "warn", 5) ||
-      0 == g_strncasecmp(buf, "warning", 8))
+           0 == g_strncasecmp(buf, "warn", 5) ||
+           0 == g_strncasecmp(buf, "warning", 8))
   {
     return LOG_LEVEL_WARNING;
-  } 
+  }
   else if (0 == g_strncasecmp(buf, "3", 2) ||
-      0 == g_strncasecmp(buf, "info", 5))
+           0 == g_strncasecmp(buf, "info", 5))
   {
     return LOG_LEVEL_INFO;
-  } 
-  /* else if (0 == g_strncasecmp(buf, "1", 1) ||
-      0 == g_strncasecmp(buf, "true", 4) ||
-      0 == g_strncasecmp(buf, "yes", 3))
+  }
+  /* else if (0 == g_strncasecmp(buf, "1", 2) ||
+      0 == g_strncasecmp(buf, "true", 5) ||
+      0 == g_strncasecmp(buf, "yes", 4))
   {
     return LOG_LEVEL_DEBUG;
   }*/
-  
+
   return LOG_LEVEL_DEBUG;
 }
