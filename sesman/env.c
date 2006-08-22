@@ -73,8 +73,10 @@ env_set_user(char* username, char* passwd_file, int display)
   if (error == 0)
   {
     error = g_setgid(pw_gid);
-    g_initgroups(username,pw_gid);
-
+    if (error == 0)
+    {
+      error = g_initgroups(username, pw_gid);
+    }
     if (error == 0)
     {
       uid = pw_uid;
