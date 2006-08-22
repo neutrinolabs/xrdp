@@ -966,6 +966,7 @@ g_setgid(int pid)
 }
 
 /*****************************************************************************/
+/* returns error, zero is success, non zero is error */
 int
 g_initgroups(const char* user, int gid)
 {
