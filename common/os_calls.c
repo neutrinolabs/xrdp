@@ -122,6 +122,17 @@ g_sprintf(char* dest, char* format, ...)
 
 /*****************************************************************************/
 void
+g_snprintf(char* dest, int len, char* format, ...)
+{
+  va_list ap;
+
+  va_start(ap, format);
+  vsnprintf(dest, len, format, ap);
+  va_end(ap);
+}
+
+/*****************************************************************************/
+void
 g_writeln(char* format, ...)
 {
   va_list ap;
@@ -506,6 +517,7 @@ g_file_open(char* file_name)
 }
 
 /*****************************************************************************/
+/* returns error, always 0 */
 int
 g_file_close(int fd)
 {
@@ -518,7 +530,7 @@ g_file_close(int fd)
 }
 
 /*****************************************************************************/
-/* read from file*/
+/* read from file, returns the number of bytes read or -1 on error */
 int
 g_file_read(int fd, char* ptr, int len)
 {
@@ -537,7 +549,7 @@ g_file_read(int fd, char* ptr, int len)
 }
 
 /*****************************************************************************/
-/* write to file */
+/* write to file, returns the number of bytes writen or -1 on error */
 int
 g_file_write(int fd, char* ptr, int len)
 {
@@ -556,14 +568,24 @@ g_file_write(int fd, char* ptr, int len)
 }
 
 /*****************************************************************************/
-/* move file pointer */
+/* move file pointer, returns offset on success, -1 on failure */
 int
 g_file_seek(int fd, int offset)
 {
 #if defined(_WIN32)
-  return SetFilePointer((HANDLE)fd, offset, 0, FILE_BEGIN);
+  int rv;
+
+  rv = (int)SetFilePointer((HANDLE)fd, offset, 0, FILE_BEGIN);
+  if (rv == (int)INVALID_SET_FILE_POINTER)
+  {
+    return -1;
+  }
+  else
+  {
+    return rv;
+  }
 #else
-  return lseek(fd, offset, SEEK_SET);
+  return (int)lseek(fd, offset, SEEK_SET);
 #endif
 }
 
@@ -591,29 +613,33 @@ g_file_lock(int fd, int start, int len)
 }
 
 /*****************************************************************************/
+/* returns error, always zero */
 int
 g_set_file_rights(char* filename, int read, int write)
 {
 #if defined(_WIN32)
+  return 0;
 #else
   int flags;
 
   flags = read ? S_IRUSR : 0;
   flags |= write ? S_IWUSR : 0;
   chmod(filename, flags);
-#endif
   return 0;
+#endif
 }
 
 /*****************************************************************************/
+/* returns error, always zero */
 int
 g_mkdir(char* dirname)
 {
 #if defined(_WIN32)
+  return 0;
 #else
   mkdir(dirname, S_IRWXU);
-#endif
   return 0;
+#endif
 }
 
 /*****************************************************************************/
@@ -633,18 +659,26 @@ g_get_current_dir(char* dirname, int maxlen)
 }
 
 /*****************************************************************************/
+/* returns error, zero on success and -1 on failure */
 int
 g_set_current_dir(char* dirname)
 {
 #if defined(_WIN32)
-  return SetCurrentDirectory(dirname);
+  if (SetCurrentDirectory(dirname))
+  {
+    return 0;
+  }
+  else
+  {
+    return -1;
+  }
 #else
   return chdir(dirname);
 #endif
 }
 
 /*****************************************************************************/
-/* returns non zero if the file exists */
+/* returns boolean, non zero if the file exists */
 int
 g_file_exist(char* filename)
 {
@@ -668,6 +702,7 @@ g_file_delete(char* filename)
 }
 
 /*****************************************************************************/
+/* returns length of text */
 int
 g_strlen(char* text)
 {
@@ -679,6 +714,7 @@ g_strlen(char* text)
 }
 
 /*****************************************************************************/
+/* returns dest */
 char*
 g_strcpy(char* dest, char* src)
 {
@@ -695,6 +731,7 @@ g_strcpy(char* dest, char* src)
 }
 
 /*****************************************************************************/
+/* returns dest */
 char*
 g_strncpy(char* dest, char* src, int len)
 {
@@ -715,6 +752,7 @@ g_strncpy(char* dest, char* src, int len)
 }
 
 /*****************************************************************************/
+/* returns dest */
 char*
 g_strcat(char* dest, char* src)
 {
@@ -726,6 +764,7 @@ g_strcat(char* dest, char* src)
 }
 
 /*****************************************************************************/
+/* if in = 0, return 0 else return newly alloced copy of in */
 char*
 g_strdup(char* in)
 {
