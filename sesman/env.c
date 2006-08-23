@@ -30,7 +30,7 @@
 #include "sys/types.h"
 #include "grp.h"
 
-extern unsigned char g_fixedkey[8];
+extern unsigned char g_fixedkey[8]; /* in sesman.c */
 
 /******************************************************************************/
 int DEFAULT_CC
@@ -42,11 +42,12 @@ env_check_password_file(char* filename, char* password)
   g_memset(encryptedPasswd, 0, 16);
   g_strncpy(encryptedPasswd, password, 8);
   rfbDesKey(g_fixedkey, 0);
-  rfbDes(encryptedPasswd, encryptedPasswd);
+  rfbDes((unsigned char*)encryptedPasswd, (unsigned char*)encryptedPasswd);
   fd = g_file_open(filename);
   if (fd == 0)
   {
-    log_message(LOG_LEVEL_WARNING, "can't read vnc password file - %s", filename);
+    log_message(LOG_LEVEL_WARNING, "can't read vnc password file - %s",
+                filename);
     return 1;
   }
   g_file_write(fd, encryptedPasswd, 8);
