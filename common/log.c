@@ -17,13 +17,13 @@
    Copyright (C) Jay Sorg 2005-2006
 */
 
-#include "sys/types.h"
-#include "sys/stat.h"
-#include "fcntl.h"
-#include "syslog.h"
-#include "stdarg.h"
-#include "stdio.h"
-#include "time.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <syslog.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <time.h>
 
 #include "os_calls.h"
 
