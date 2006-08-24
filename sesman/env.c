@@ -44,7 +44,7 @@ env_check_password_file(char* filename, char* password)
   rfbDesKey(g_fixedkey, 0);
   rfbDes((unsigned char*)encryptedPasswd, (unsigned char*)encryptedPasswd);
   fd = g_file_open(filename);
-  if (fd == 0)
+  if (fd == -1)
   {
     log_message(LOG_LEVEL_WARNING, "can't read vnc password file - %s",
                 filename);

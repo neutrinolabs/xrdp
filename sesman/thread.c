@@ -39,7 +39,7 @@ int thread_sck;
 
 /******************************************************************************/
 int DEFAULT_CC
-thread_sighandler_start()
+thread_sighandler_start(void)
 {
   int ret;
   sigset_t sigmask;
@@ -61,11 +61,11 @@ thread_sighandler_start()
   pthread_sigmask(SIG_UNBLOCK, &waitmask, NULL);
 
   log_message(LOG_LEVEL_INFO,"starting signal handling thread...");
-  
+
   ret = pthread_create(&thread_sighandler, NULL, sig_handler_thread, "");
   pthread_detach(thread_sighandler);
-  
-  if (ret==0) 
+
+  if (ret == 0)
   {
     log_message(LOG_LEVEL_INFO, "signal handler thread started successfully");
     return 0;
@@ -93,7 +93,7 @@ thread_sighandler_start()
 #ifdef JUST_TO_AVOID_COMPILER_ERRORS
 /******************************************************************************/
 int DEFAULT_CC
-thread_session_update_start()
+thread_session_update_start(void)
 {
   int ret;
   //starts the session update thread
@@ -140,13 +140,13 @@ thread_scp_start(int skt)
   /* blocking the use of thread_skt */
   lock_socket_acquire();
   thread_sck=skt;
-  
+
   /* start a thread that processes a connection */
   ret = pthread_create(&th, NULL, scp_process_start, "");
   //ret = pthread_create(&th, NULL, scp_process_start, (void*) (&thread_sck));
   pthread_detach(th);
 
-  if (ret==0) 
+  if (ret == 0) 
   {
     log_message(LOG_LEVEL_INFO, "scp thread on sck %d started successfully", skt);
     return 0;

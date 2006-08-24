@@ -41,7 +41,7 @@ extern int thread_sck;
  *
  */
 static void DEFAULT_CC 
-sesman_main_loop()
+sesman_main_loop(void)
 {
   int in_sck;
   int error;
@@ -112,7 +112,7 @@ main(int argc, char** argv)
   {
     /* starts sesman not daemonized */
     g_printf("starting sesman in foregroud...\n");
-    daemon=0;
+    daemon = 0;
   }
   else if ((2 == argc) && ((0 == g_strcasecmp(argv[1], "--help")) ||
                            (0 == g_strcasecmp(argv[1], "-h"))))
@@ -205,17 +205,17 @@ main(int argc, char** argv)
     }
     g_exit(1);
   }
-  
+
   if (daemon)
   {
     /* start of daemonizing code */
     g_pid = g_fork();
 
-    if (0!=g_pid)
+    if (0 != g_pid)
     {
       g_exit(0);
     }
-  
+
     g_file_close(0);
     g_file_close(1);
     g_file_close(2);
@@ -227,7 +227,7 @@ main(int argc, char** argv)
 
   /* initializing locks */
   lock_init();
-  
+
   /* signal handling */
   g_pid = g_getpid();
   /* old style signal handling is now managed synchronously by a
@@ -252,7 +252,7 @@ main(int argc, char** argv)
     g_exit(1);
   }
   g_sprintf(pid_s, "%d", g_pid);
-  g_file_write(fd, pid_s, g_strlen(pid_s)+1);
+  g_file_write(fd, pid_s, g_strlen(pid_s) + 1);
   g_file_close(fd);
 
   /* start program main loop */

@@ -101,13 +101,13 @@ sig_handler_thread(void* arg)
   sigset_t sigmask;
   sigset_t oldmask;
   sigset_t waitmask;
-  
+
   /* mask signals to be able to wait for them... */
   sigfillset(&sigmask); 
   /* it is a good idea not to block SIGILL SIGSEGV */
   /* SIGFPE -- see sigaction(2) NOTES              */
   pthread_sigmask(SIG_BLOCK, &sigmask, &oldmask);
-  
+
   /* building the signal wait mask... */
   sigemptyset(&waitmask);
   sigaddset(&waitmask, SIGHUP);
@@ -116,7 +116,7 @@ sig_handler_thread(void* arg)
 //  sigaddset(&waitmask, SIGFPE);
 //  sigaddset(&waitmask, SIGILL);
 //  sigaddset(&waitmask, SIGSEGV);
-  
+
   do
   {
     LOG_DBG("calling sigwait()",0);
@@ -126,27 +126,27 @@ sig_handler_thread(void* arg)
     {
       case SIGHUP:
         //reload cfg
-	LOG_DBG("sesman received SIGHUP",0);
-	//return 0;
+        LOG_DBG("sesman received SIGHUP",0);
+        //return 0;
         break;
       case SIGCHLD:
         /* a session died */
-	LOG_DBG("sesman received SIGCHLD",0);
+        LOG_DBG("sesman received SIGCHLD",0);
         sig_sesman_session_end(SIGCHLD);
         break;
       /*case SIGKILL;
         /* we die * /
         LOG_DBG("sesman received SIGKILL",0);
-	sig_sesman_shutdown(recv_signal);
+        sig_sesman_shutdown(recv_signal);
         break;*/
       case SIGTERM:
         /* we die */
         LOG_DBG("sesman received SIGTERM",0);
-	sig_sesman_shutdown(recv_signal);
+        sig_sesman_shutdown(recv_signal);
         break;
     }
   } while (1);
-  
+
   return 0;
 }
 
