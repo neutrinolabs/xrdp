@@ -120,9 +120,11 @@ log_message(const unsigned int lvl, const char* msg, ...)
   char buff[LOG_BUFFER_SIZE + 31]; /* 19 (datetime) 4 (space+cr+lf+\0) */
   va_list ap;
   int len = 0;
+  int rv;
   time_t now_t;
   struct tm* now;
 
+  rv = 0;
   if (0 == l_cfg)
   {
     return LOG_ERROR_NO_CFG;
@@ -182,12 +184,12 @@ log_message(const unsigned int lvl, const char* msg, ...)
 #ifdef LOG_ENABLE_THREAD
     pthread_mutex_lock(&log_lock);
 #endif
-    return g_file_write(l_cfg->fd, (char*)buff, g_strlen((char*)buff));
+    rv = g_file_write(l_cfg->fd, (char*)buff, g_strlen((char*)buff));
 #ifdef LOG_ENABLE_THREAD
     pthread_mutex_unlock(&log_lock);
 #endif
   }
-  return 0;
+  return rv;
 }
 
 /******************************************************************************/
