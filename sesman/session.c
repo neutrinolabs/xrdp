@@ -236,7 +236,7 @@ for user %s denied", username);
         }
         else if (type == SESMAN_SESSION_TYPE_XRDP)
         {
-          g_execlp11("Xrdp", "Xrdp", screen, "-geometry", geometry,
+          g_execlp11("X11rdp", "X11rdp", screen, "-geometry", geometry,
                      "-depth", depth, "-bs", "-ac", 0, 0);
         }
         else
