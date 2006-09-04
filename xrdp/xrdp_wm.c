@@ -42,6 +42,8 @@ xrdp_wm_create(struct xrdp_process* owner,
   self->cache = xrdp_cache_create(self, self->session, self->client_info);
   self->log = list_create();
   self->log->auto_free = 1;
+  self->key_down_list = list_create();
+  self->key_down_list->auto_free = 1;
   return self;
 }
 
@@ -79,6 +81,8 @@ xrdp_wm_delete(struct xrdp_wm* self)
   }
   /* free the log */
   list_delete(self->log);
+  /* key down list */
+  list_delete(self->key_down_list);
   /* free self */
   g_free(self);
 }
@@ -1069,13 +1073,60 @@ xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
 }
 
 /*****************************************************************************/
+static struct xrdp_key_down* APP_CC
+xrdp_get_key_down(struct xrdp_wm* self, int scan_code, int* index)
+{
+  int i;
+  struct xrdp_key_down* key_down;
+
+  for (i = 0; i < self->key_down_list->count; i++)
+  {
+    key_down = (struct xrdp_key_down*)list_get_item(self->key_down_list, i);
+    if (key_down != 0)
+    {
+      if (key_down->scan_code == scan_code)
+      {
+        if (index != 0)
+        {
+          *index = i;
+        }
+        return key_down;
+      }
+    }
+  }
+  return 0;
+}
+
+/*****************************************************************************/
+static void APP_CC
+xrdp_add_key_down(struct xrdp_wm* self, int param1, int param2,
+                  int scan_code,  int param4)
+{
+  struct xrdp_key_down* key_down;
+  if (xrdp_get_key_down(self, scan_code, 0) != 0)
+  {
+    return;
+  }
+  key_down = (struct xrdp_key_down*)g_malloc(sizeof(struct xrdp_key_down), 0);
+  key_down->scan_code = scan_code;
+  key_down->param1 = param1;
+  key_down->param2 = param2;
+  key_down->param4 = param4;
+  list_add_item(self->key_down_list, (long)key_down);
+}
+
+/*****************************************************************************/
 int APP_CC
 xrdp_wm_key(struct xrdp_wm* self, int device_flags, int scan_code)
 {
   int msg;
+  int key_down_index;
   char c;
+  struct xrdp_key_down* key_down;
 
+  /*g_printf("count %d\n", self->key_down_list->count);*/
   scan_code = scan_code % 128;
+  key_down = 0;
   if (self->popup_wnd != 0)
   {
     xrdp_wm_clear_popup(self);
@@ -1085,6 +1136,12 @@ xrdp_wm_key(struct xrdp_wm* self, int device_flags, int scan_code)
   {
     self->keys[scan_code] = 0;
     msg = WM_KEYUP;
+    key_down = xrdp_get_key_down(self, scan_code, &key_down_index);
+    /* if there was no key down, don't allow a key up */
+    if (key_down == 0)
+    {
+      return 0;
+    }
   }
   else /* key down */
   {
@@ -1092,28 +1149,51 @@ xrdp_wm_key(struct xrdp_wm* self, int device_flags, int scan_code)
     msg = WM_KEYDOWN;
     switch (scan_code)
     {
-      case 58: self->caps_lock = !self->caps_lock; break; /* caps lock */
-      case 69: self->num_lock = !self->num_lock; break; /* num lock */
-      case 70: self->scroll_lock = !self->scroll_lock; break; /* scroll lock */
+      case 58:
+        self->caps_lock = !self->caps_lock;
+        break; /* caps lock */
+      case 69:
+        self->num_lock = !self->num_lock;
+        break; /* num lock */
+      case 70:
+        self->scroll_lock = !self->scroll_lock;
+        break; /* scroll lock */
     }
   }
   if (self->mod != 0)
   {
     if (self->mod->mod_event != 0)
     {
-      c = get_char_from_scan_code(device_flags, scan_code, self->keys,
-                                  self->caps_lock,
-                                  self->num_lock,
-                                  self->scroll_lock);
-      if (c != 0)
+      if (msg == WM_KEYDOWN)
       {
-        self->mod->mod_event(self->mod, msg, c, 0xffff,
-                             scan_code, device_flags);
+        c = get_char_from_scan_code(device_flags, scan_code, self->keys,
+                                    self->caps_lock,
+                                    self->num_lock,
+                                    self->scroll_lock);
+        /*g_printf("%x\n", c);*/
+        if (c != 0)
+        {
+          self->mod->mod_event(self->mod, msg, c, 0xffff,
+                               scan_code, device_flags);
+          xrdp_add_key_down(self, c, 0xffff, scan_code, device_flags);
+        }
+        else
+        {
+          self->mod->mod_event(self->mod, msg, scan_code, device_flags,
+                               scan_code, device_flags);
+          xrdp_add_key_down(self, scan_code, device_flags, scan_code,
+                            device_flags);
+        }
       }
-      else
+      else /* key up */
       {
-        self->mod->mod_event(self->mod, msg, scan_code, device_flags,
-                             scan_code, device_flags);
+        if (key_down != 0)
+        {
+          self->mod->mod_event(self->mod, msg, key_down->param1,
+                               key_down->param2, key_down->scan_code,
+                               key_down->param4);
+          list_remove_item(self->key_down_list, key_down_index);
+        }
       }
     }
   }
