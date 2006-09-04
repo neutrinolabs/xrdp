@@ -53,6 +53,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "picturestr.h"
 #include <netinet/tcp.h>
 
+/* test to see if this is xorg source or xfree86 */
+#ifdef XORGSERVER
+#  define RDP_IS_XORG
+#else
+#  include <xf86Version.h>
+#  if (XF86_VERSION_MAJOR == 4 && XF86_VERSION_MINOR > 3)
+#    define RDP_IS_XFREE86
+#  elif (XF86_VERSION_MAJOR > 4)
+#    define RDP_IS_XFREE86
+#  else
+#    define RDP_IS_XORG
+#  endif
+#endif
+
 /* Per-screen (framebuffer) structure.  There is only one of these, since we
    don't allow the X server to have multiple screens. */
 typedef struct

@@ -379,3 +379,608 @@ g_tcp_listen(int sck)
 {
   return listen(sck, 2);
 }
+
+/*
+  stub for XpClient* functions.
+*/
+
+/*****************************************************************************/
+Bool
+XpClientIsBitmapClient(ClientPtr client)
+{
+  return 1;
+}
+
+/*****************************************************************************/
+Bool
+XpClientIsPrintClient(ClientPtr client, FontPathElementPtr fpe)
+{
+  return 0;
+}
+
+/*****************************************************************************/
+int
+PrinterOptions(int argc, char** argv, int i)
+{
+  return i;
+}
+
+/*****************************************************************************/
+void
+PrinterInitOutput(ScreenInfo* pScreenInfo, int argc, char** argv)
+{
+}
+
+/*****************************************************************************/
+void PrinterUseMsg(void)
+{
+}
+
+/*****************************************************************************/
+void PrinterInitGlobals(void)
+{
+}
+
+#ifdef RDP_IS_XORG
+
+#define NEED_XF86_TYPES
+#include <xf86_libc.h>
+
+#define XF86FILE_magic 0x58464856 /* "XFHV" */
+
+typedef struct _xf86_file_
+{
+  INT32 fileno;
+  INT32 magic;
+  FILE* filehnd;
+  char* fname;
+} XF86FILE_priv;
+
+XF86FILE_priv stdhnd[3] =
+{
+  { 0, XF86FILE_magic, NULL, "$stdinp$" },
+  { 0, XF86FILE_magic, NULL, "$stdout$" },
+  { 0, XF86FILE_magic, NULL, "$stderr$" }
+};
+
+XF86FILE* xf86stdin = (XF86FILE*)&stdhnd[0];
+XF86FILE* xf86stdout = (XF86FILE*)&stdhnd[1];
+XF86FILE* xf86stderr = (XF86FILE*)&stdhnd[2];
+
+double xf86HUGE_VAL;
+int xf86errno;
+Bool noFontCacheExtension = 1;
+
+#define mapnum(e) case (xf86_##e): err = e; break;
+
+/*****************************************************************************/
+static int
+xf86GetErrno(void)
+{
+  int err;
+
+  switch (errno)
+  {
+    case 0:
+      return 0;
+    mapnum(EACCES);
+    mapnum(EAGAIN);
+    mapnum(EBADF);
+    mapnum(EEXIST);
+    mapnum(EFAULT);
+    mapnum(EINTR);
+    mapnum(EINVAL);
+    mapnum(EISDIR);
+    mapnum(ELOOP); /* not POSIX 1 */
+    mapnum(EMFILE);
+    mapnum(ENAMETOOLONG);
+    mapnum(ENFILE);
+    mapnum(ENOENT);
+    mapnum(ENOMEM);
+    mapnum(ENOSPC);
+    mapnum(ENOTDIR);
+    mapnum(EPIPE);
+    mapnum(EROFS);
+    mapnum(ETXTBSY); /* not POSIX 1 */
+    mapnum(ENOTTY);
+    mapnum(EBUSY);
+    mapnum(ENODEV);
+    mapnum(EIO);
+    default:
+      return xf86_UNKNOWN;
+  }
+  return (int)strerror(err);
+}
+
+/*****************************************************************************/
+static void
+_xf86checkhndl(XF86FILE_priv* f, const char* func)
+{
+  if (!f || f->magic != XF86FILE_magic ||
+      !f->filehnd || !f->fname)
+  {
+    FatalError("libc_wrapper error: passed invalid FILE handle to %s", func);
+    exit(42);
+  }
+}
+
+/*****************************************************************************/
+void
+xf86WrapperInit(void)
+{
+  if (stdhnd[0].filehnd == NULL)
+  {
+    stdhnd[0].filehnd = stdin;
+  }
+  if (stdhnd[1].filehnd == NULL)
+  {
+    stdhnd[1].filehnd = stdout;
+  }
+  if (stdhnd[2].filehnd == NULL)
+  {
+    stdhnd[2].filehnd = stderr;
+  }
+  xf86HUGE_VAL = HUGE_VAL;
+}
+
+/*****************************************************************************/
+int
+xf86strcmp(const char* s1, const char* s2)
+{
+  return strcmp(s1, s2);
+}
+
+/*****************************************************************************/
+char*
+xf86strchr(const char* s, int c)
+{
+  return strchr(s, c);
+}
+
+/*****************************************************************************/
+double
+xf86fabs(double x)
+{
+  return fabs(x);
+}
+
+/*****************************************************************************/
+double
+xf86exp(double x)
+{
+  return exp(x);
+}
+
+/*****************************************************************************/
+double
+xf86log(double x)
+{
+  return log(x);
+}
+
+/*****************************************************************************/
+double
+xf86sin(double x)
+{
+  return sin(x);
+}
+
+/*****************************************************************************/
+double
+xf86cos(double x)
+{
+  return cos(x);
+}
+
+/*****************************************************************************/
+double
+xf86sqrt(double x)
+{
+  return sqrt(x);
+}
+
+/*****************************************************************************/
+double
+xf86floor(double x)
+{
+  return floor(x);
+}
+
+/*****************************************************************************/
+void
+xf86free(void* p)
+{
+  xfree(p);
+}
+
+/*****************************************************************************/
+int
+xf86fclose(XF86FILE* f)
+{
+  XF86FILE_priv* fp = (XF86FILE_priv*)f;
+  int ret;
+
+  _xf86checkhndl(fp, "xf86fclose");
+
+  /* somewhat bad check */
+  if (fp->fileno < 3 && fp->fname[0] == '$')
+  {
+    /* assume this is stdin/out/err, don't dispose */
+    ret = fclose(fp->filehnd);
+  }
+  else
+  {
+    ret = fclose(fp->filehnd);
+    fp->magic = 0; /* invalidate */
+    xfree(fp->fname);
+    xfree(fp);
+  }
+  return ret ? -1 : 0;
+}
+
+/*****************************************************************************/
+int
+xf86fflush(XF86FILE* f)
+{
+  XF86FILE_priv* fp = (XF86FILE_priv*)f;
+
+  _xf86checkhndl(fp,"xf86fflush");
+  return fflush(fp->filehnd);
+}
+
+/*****************************************************************************/
+int
+xf86fprintf(XF86FILE* f, const char *format, ...)
+{
+  XF86FILE_priv* fp = (XF86FILE_priv*)f;
+
+  int ret;
+  va_list args;
+  va_start(args, format);
+
+#ifdef DEBUG
+  ErrorF("xf86fprintf for XF86FILE %p\n", fp);
+#endif
+  _xf86checkhndl(fp,"xf86fprintf");
+
+  ret = vfprintf(fp->filehnd,format,args);
+  va_end(args);
+  return ret;
+}
+
+/*****************************************************************************/
+char*
+xf86strdup(const char* s)
+{
+  return xstrdup(s);
+}
+
+/*****************************************************************************/
+XF86FILE*
+xf86fopen(const char* fn, const char* mode)
+{
+  XF86FILE_priv* fp;
+  FILE* f = fopen(fn, mode);
+
+  xf86errno = xf86GetErrno();
+  if (!f)
+  {
+    return 0;
+  }
+  fp = (XF86FILE_priv*)xalloc(sizeof(XF86FILE_priv));
+  fp->magic = XF86FILE_magic;
+  fp->filehnd = f;
+  fp->fileno = fileno(f);
+  fp->fname = (char*)xf86strdup(fn);
+#ifdef DEBUG
+  ErrorF("xf86fopen(%s,%s) yields FILE %p XF86FILE %p\n",
+         fn,mode,f,fp);
+#endif
+  return (XF86FILE*)fp;
+}
+
+/*****************************************************************************/
+int
+xf86sprintf(char* s, const char* format, ...)
+{
+  int ret;
+  va_list args;
+  va_start(args, format);
+  ret = vsprintf(s, format, args);
+  va_end(args);
+  return ret;
+}
+
+/*****************************************************************************/
+double
+xf86atof(const char* s)
+{
+  return atof(s);
+}
+
+/*****************************************************************************/
+xf86size_t
+xf86strlen(const char* s)
+{
+  return (xf86size_t)strlen(s);
+}
+
+/*****************************************************************************/
+void
+xf86exit(int ex)
+{
+  ErrorF("Module called exit() function with value=%d\n", ex);
+  exit(ex);
+}
+
+/*****************************************************************************/
+int
+xf86vsprintf(char* s, const char* format, va_list ap)
+{
+  return vsprintf(s, format, ap);
+}
+
+/*****************************************************************************/
+double
+xf86frexp(double x, int* exp)
+{
+  return frexp(x, exp);
+}
+
+/*****************************************************************************/
+void*
+xf86memcpy(void* dest, const void* src, xf86size_t n)
+{
+  return memcpy(dest,src,(size_t)n);
+}
+
+/*****************************************************************************/
+int
+xf86memcmp(const void* s1, const void* s2, xf86size_t n)
+{
+  return memcmp(s1,s2,(size_t)n);
+}
+
+/*****************************************************************************/
+int
+xf86ffs(int mask)
+{
+  int n;
+
+  if (mask == 0)
+  {
+    return 0;
+  }
+  for (n = 1; (mask & 1) == 0; n++)
+  {
+    mask >>= 1;
+  }
+  return n;
+}
+
+/*****************************************************************************/
+void
+xf86abort(void)
+{
+  ErrorF("Module called abort() function\n");
+  abort();
+}
+
+/*****************************************************************************/
+double
+xf86ldexp(double x, int exp)
+{
+  return ldexp(x, exp);
+}
+
+/*****************************************************************************/
+char*
+xf86getenv(const char* a)
+{
+  /* Only allow this when the real and effective uids are the same */
+  if (getuid() != geteuid())
+  {
+    return NULL;
+  }
+  else
+  {
+    return getenv(a);
+  }
+}
+
+/*****************************************************************************/
+void*
+xf86memset(void* s, int c, xf86size_t n)
+{
+  return memset(s, c, (size_t)n);
+}
+
+/*****************************************************************************/
+void*
+xf86malloc(xf86size_t n)
+{
+  return (void*)xalloc((size_t)n);
+}
+
+/*****************************************************************************/
+void*
+xf86calloc(xf86size_t sz, xf86size_t n)
+{
+  return (void*)xcalloc((size_t)sz, (size_t)n);
+}
+
+/*****************************************************************************/
+double
+xf86pow(double x, double y)
+{
+  return pow(x, y);
+}
+
+/*****************************************************************************/
+int
+xf86vsnprintf(char* s, xf86size_t len, const char* format, va_list ap)
+{
+  return vsnprintf(s, (size_t)len, format, ap);
+}
+
+/*****************************************************************************/
+char*
+xf86strstr(const char* s1, const char* s2)
+{
+  return strstr(s1, s2);
+}
+
+/*****************************************************************************/
+char*
+xf86strncat(char* dest, const char* src, xf86size_t n)
+{
+  return strncat(dest, src, (size_t)n);
+}
+
+/*****************************************************************************/
+char*
+xf86strcpy(char* dest, const char* src)
+{
+  return strcpy(dest, src);
+}
+
+/*****************************************************************************/
+char*
+xf86strncpy(char* dest, const char* src, xf86size_t n)
+{
+  return strncpy(dest, src, (size_t)n);
+}
+
+/*****************************************************************************/
+int
+xf86strncmp(const char* s1, const char* s2, xf86size_t n)
+{
+  return strncmp(s1, s2, (size_t)n);
+}
+
+/*****************************************************************************/
+double
+xf86strtod(const char* s, char** end)
+{
+  return strtod(s, end);
+}
+
+/*****************************************************************************/
+int
+xf86printf(const char* format, ...)
+{
+  int ret;
+  va_list args;
+
+  va_start(args, format);
+  ret = printf(format, args);
+  va_end(args);
+  return ret;
+}
+
+/*****************************************************************************/
+void*
+xf86realloc(void* p, xf86size_t n)
+{
+  return (void*)xrealloc(p, n);
+}
+
+/*****************************************************************************/
+int
+xf86atoi(const char* s)
+{
+  return atoi(s);
+}
+
+/*****************************************************************************/
+int
+xf86vfprintf(XF86FILE* f, const char *format, va_list ap)
+{
+  XF86FILE_priv* fp = (XF86FILE_priv*)f;
+
+#ifdef DEBUG
+  ErrorF("xf86vfprintf for XF86FILE %p\n", fp);
+#endif
+  _xf86checkhndl(fp,"xf86vfprintf");
+  return vfprintf(fp->filehnd, format, ap);
+}
+
+/*****************************************************************************/
+void*
+xf86bsearch(const void* key, const void* base, xf86size_t nmemb,
+            xf86size_t size, int (*compar)(const void*, const void*))
+{
+  return bsearch(key, base, (size_t)nmemb, (size_t)size, compar);
+}
+
+/*****************************************************************************/
+int
+xf86sscanf(char* s, const char* format, ...)
+{
+  int ret;
+  va_list args;
+
+  va_start(args, format);
+  ret = vsscanf(s,format,args);
+  va_end(args);
+  return ret;
+}
+
+/*****************************************************************************/
+char*
+xf86strtok(char* s1, const char* s2)
+{
+  return strtok(s1, s2);
+}
+
+/*****************************************************************************/
+char*
+xf86strcat(char* dest, const char* src)
+{
+  return strcat(dest, src);
+}
+
+/*****************************************************************************/
+xf86size_t
+xf86strcspn(const char* s1, const char* s2)
+{
+  return (xf86size_t)strcspn(s1, s2);
+}
+
+/*****************************************************************************/
+int
+xf86abs(int x)
+{
+  return abs(x);
+}
+
+/*****************************************************************************/
+double
+xf86atan2(double x, double y)
+{
+  return atan2(x, y);
+}
+
+/*****************************************************************************/
+void*
+xf86memmove(void* dest, const void* src, xf86size_t n)
+{
+  return memmove(dest, src, (size_t)n);
+}
+
+/*****************************************************************************/
+void
+xf86bzero(void* s, unsigned int n)
+{
+  memset(s, 0, n);
+}
+
+/* other, what is this? */
+
+/*****************************************************************************/
+void
+FontCacheExtensionInit(INITARGS)
+{
+}
+
+#endif

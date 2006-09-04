@@ -385,7 +385,8 @@ OsVendorInit(void)
   /*ErrorF("hi OsVendorInit\n");*/
 }
 
-#if 0
+#ifdef RDP_IS_XORG
+
 /******************************************************************************/
 CARD32
 GetTimeInMillis(void)
@@ -396,6 +397,13 @@ GetTimeInMillis(void)
   X_GETTIMEOFDAY(&tp);
   return (tp.tv_sec * 1000) + (tp.tv_usec / 1000);
 }
+
+/* ddxInitGlobals - called by |InitGlobals| from os/util.c */
+void
+ddxInitGlobals(void)
+{
+}
+
 #endif
 
 /* Common pixmap formats */
@@ -537,7 +545,7 @@ void
 ddxUseMsg(void)
 {
   ErrorF("\n");
-  ErrorF("Xrdp specific options\n");
+  ErrorF("X11rdp specific options\n");
   ErrorF("-geometry WxH          set framebuffer width & height\n");
   ErrorF("-depth D               set framebuffer depth\n");
   ErrorF("\n");

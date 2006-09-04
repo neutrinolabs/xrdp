@@ -989,7 +989,8 @@ INSTPGMFLAGS =
 
     LIBCWRAPPER = os/libcwrapper.o
 
-XPFBLIBS = dix/libxpstubs.a
+#       XPFBLIBS = dix/libxpstubs.a
+       XPFBLIBS =
 
       RENDERDIR = render
       RENDERLIB = $(RENDERDIR)/librender.a
@@ -1173,7 +1174,7 @@ install.sdk:: XFree86
 #
 MFBSUBDIR = mfb
 FBSUBDIR  = fb
-RDPDDXDIR  = hw/rdp
+RDPDDXDIR = hw/rdp
 XRDPDIRS = $(STDDIRS) $(MFBDIR) $(FBDIR) $(RDPDDXDIR) $(DEPDIRS)
 XRDPOBJS =
 RDPLIBS =
@@ -1182,20 +1183,20 @@ XRDP = $(OTHEREXTS) hw/rdp/librdp.a $(RDPLIBS) $(OTHEREXTS)
 XRDPLIBS = $(DIX) $(OS) $(XPDDX) $(XRDP) $(MFB) $(FB) $(MFB) $(XPFBLIBS) $(MI) $(EXTENSIONS)
 XRDPSYSLIBS = $(FONTLIBS) $(SYSLIBS) $(RDPSYSLIBS) $(LOADABLEEXTS)
 
-all:: Xrdp
-Xrdp: $(XRDPDIRS) $(XRDPOBJS)  	$(XRDPLIBS)
+all:: X11rdp
+X11rdp: $(XRDPDIRS) $(XRDPOBJS)  	$(XRDPLIBS)
 	-@if [ -f $@ ]; then set -x; \
 	$(MV) $@ $@.bak; else exit 0; fi
 	$(CCLINK) -o $@ $(LDOPTIONS) $(XRDPOBJS)  	$(XRDPLIBS) $(LDLIBS) $(XRDPSYSLIBS) $(FONTLIBS) -L/usr/local/lib $(EXTRA_LOAD_FLAGS)
 
 loadXrdp:
-	-@if [ -f Xrdp ]; then set -x; \
-	$(MV) Xrdp Xrdp.bak; else exit 0; fi
-	$(CCLINK) -o Xrdp $(LDOPTIONS) $(XRDPOBJS)  	$(XRDPLIBS) $(LDLIBS) $(XRDPSYSLIBS) $(FONTLIBS) -L/usr/local/lib $(EXTRA_LOAD_FLAGS)
+	-@if [ -f X11rdp ]; then set -x; \
+	$(MV) X11rdp X11rdp.bak; else exit 0; fi
+	$(CCLINK) -o X11rdp $(LDOPTIONS) $(XRDPOBJS)  	$(XRDPLIBS) $(LDLIBS) $(XRDPSYSLIBS) $(FONTLIBS) -L/usr/local/lib $(EXTRA_LOAD_FLAGS)
 
 loadX:: loadXrdp
 
-install:: Xrdp
+install:: X11rdp
 	@if [ -d $(DESTDIR)$(BINDIR) ]; then \
 		set +x; \
 	else \
@@ -1204,10 +1205,10 @@ install:: Xrdp
 		fi; \
 		(set -x; $(MKDIRHIER) $(DESTDIR)$(BINDIR)); \
 	fi
-	$(INSTALL) $(INSTALLFLAGS) $(INSTPGMFLAGS) $(_NOOP_) Xrdp $(DESTDIR)$(BINDIR)/Xrdp
+	$(INSTALL) $(INSTALLFLAGS) $(INSTPGMFLAGS) $(_NOOP_) X11rdp $(DESTDIR)$(BINDIR)/X11rdp
 
 cleandir::
-	$(RM) Xrdp
+	$(RM) X11rdp
 
 CFBSUBDIRS = $(CFB8SUBDIR) $(CFB16SUBDIR) $(CFB24SUBDIR) $(CFB32SUBDIR)
 MIEXTDIRS = $(SHADOWDIR) $(LAYERDIR) $(ROOTLESSDIR)
