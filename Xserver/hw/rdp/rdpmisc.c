@@ -685,6 +685,7 @@ xf86sprintf(char* s, const char* format, ...)
 {
   int ret;
   va_list args;
+
   va_start(args, format);
   ret = vsprintf(s, format, args);
   va_end(args);
@@ -731,14 +732,14 @@ xf86frexp(double x, int* exp)
 void*
 xf86memcpy(void* dest, const void* src, xf86size_t n)
 {
-  return memcpy(dest,src,(size_t)n);
+  return memcpy(dest, src, (size_t)n);
 }
 
 /*****************************************************************************/
 int
 xf86memcmp(const void* s1, const void* s2, xf86size_t n)
 {
-  return memcmp(s1,s2,(size_t)n);
+  return memcmp(s1, s2, (size_t)n);
 }
 
 /*****************************************************************************/
@@ -931,6 +932,14 @@ char*
 xf86strtok(char* s1, const char* s2)
 {
   return strtok(s1, s2);
+}
+
+/*****************************************************************************/
+void
+xf86qsort(void* base, xf86size_t nmemb, xf86size_t size,
+          int (*comp)(const void *, const void *))
+{
+  qsort(base, nmemb, size, comp);
 }
 
 /*****************************************************************************/
