@@ -47,5 +47,7 @@ void APP_CC
 list_remove_item(struct list* self, int index);
 void APP_CC
 list_insert_item(struct list* self, int index, long item);
+void APP_CC
+list_append_list_strdup(struct list* self, struct list* dest, int start_index);
 
 #endif
