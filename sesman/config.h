@@ -238,4 +238,15 @@ int DEFAULT_CC
 config_read_sessions(int file, struct config_sessions* ss,
                      struct list* param_n, struct list* param_v);
 
+/**
+ *
+ * @brief Reads sesman [X11rdp, Xvnc, ...] configuration section
+ * @param server_type integer representing server type
+ * @param param_array pointer to list to add strings to
+ * @return 0 on success, 1 on failure
+ *
+ */
+int DEFAULT_CC
+config_read_xserver_params(int server_type, struct list* param_array);
+
 #endif

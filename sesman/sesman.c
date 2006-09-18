@@ -148,6 +148,11 @@ main(int argc, char** argv)
     }
 
     error = g_file_read(fd, pid_s, 7);
+    if (0 != error)
+    {
+      g_printf("error reading pid file: %s\n", g_get_strerror());
+    }
+    g_file_close(fd);
     pid = g_atoi(pid_s);
 
     error = g_sigterm(pid);

@@ -123,7 +123,9 @@ session_start(int width, int height, int bpp, char* username, char* password,
   char cur_dir[256];
   char text[256];
   char passwd_file[256];
+  char** pp1;
   struct session_chain* temp;
+  struct list* xserver_params;
 
   /*THREAD-FIX lock to control g_session_count*/
   lock_chain_acquire();
@@ -139,7 +141,7 @@ for user %s denied", username);
 
   /*THREAD-FIX unlock chain*/
   lock_chain_release();
-    
+
   temp = (struct session_chain*)g_malloc(sizeof(struct session_chain), 0);
   if (temp == 0)
   {
@@ -230,14 +232,45 @@ for user %s denied", username);
         env_check_password_file(passwd_file, password);
         if (type == SESMAN_SESSION_TYPE_XVNC)
         {
-          g_execlp13("Xvnc", "Xvnc", screen, "-geometry", geometry,
-                     "-depth", depth, "-bs", "-ac", "-rfbauth", passwd_file,
-                     0, 0);
+          xserver_params = list_create();
+          xserver_params->auto_free = 1;
+          /* these are the must have parameters */
+          list_add_item(xserver_params, (long)g_strdup("Xvnc"));
+          list_add_item(xserver_params, (long)g_strdup(screen));
+          list_add_item(xserver_params, (long)g_strdup("-geometry"));
+          list_add_item(xserver_params, (long)g_strdup(geometry));
+          list_add_item(xserver_params, (long)g_strdup("-depth"));
+          list_add_item(xserver_params, (long)g_strdup(depth));
+          list_add_item(xserver_params, (long)g_strdup("-rfbauth"));
+          list_add_item(xserver_params, (long)g_strdup(passwd_file));
+          /* additional parameters from sesman.ini file */
+          config_read_xserver_params(SESMAN_SESSION_TYPE_XVNC,
+                                     xserver_params);
+          /* make sure it ends with a zero */
+          list_add_item(xserver_params, 0);
+          pp1 = (char**)xserver_params->items;
+          g_execvp("Xvnc", pp1);
+          list_delete(xserver_params);
         }
         else if (type == SESMAN_SESSION_TYPE_XRDP)
         {
-          g_execlp11("X11rdp", "X11rdp", screen, "-geometry", geometry,
-                     "-depth", depth, "-bs", "-ac", 0, 0);
+          xserver_params = list_create();
+          xserver_params->auto_free = 1;
+          /* these are the must have parameters */
+          list_add_item(xserver_params, (long)g_strdup("X11rdp"));
+          list_add_item(xserver_params, (long)g_strdup(screen));
+          list_add_item(xserver_params, (long)g_strdup("-geometry"));
+          list_add_item(xserver_params, (long)g_strdup(geometry));
+          list_add_item(xserver_params, (long)g_strdup("-depth"));
+          list_add_item(xserver_params, (long)g_strdup(depth));
+          /* additional parameters from sesman.ini file */
+          config_read_xserver_params(SESMAN_SESSION_TYPE_XRDP,
+                                     xserver_params);
+          /* make sure it ends with a zero */
+          list_add_item(xserver_params, 0);
+          pp1 = (char**)xserver_params->items;
+          g_execvp("X11rdp", pp1);
+          list_delete(xserver_params);
         }
         else
         {

@@ -62,7 +62,8 @@ config_read(struct config_sesman* cfg)
   fd = g_file_open(SESMAN_CFG_FILE);
   if (-1 == fd)
   {
-    g_printf("sesman: error reading config: %s\r\n", SESMAN_CFG_FILE);
+    log_message(LOG_LEVEL_ALWAYS, "error opening %s in \
+config_read", SESMAN_CFG_FILE);
     return 1;
   }
   g_memset(cfg, 0, sizeof(struct config_sesman));
@@ -90,6 +91,7 @@ config_read(struct config_sesman* cfg)
   list_delete(sec);
   list_delete(param_v);
   list_delete(param_n);
+  g_file_close(fd);
   return 0;
 }
 
@@ -327,3 +329,50 @@ config_read_sessions(int file, struct config_sessions* se, struct list* param_n,
   return 0;
 }
 
+/******************************************************************************/
+/* returns in params a list of parameters that need to be freed */
+/* returns error */
+int DEFAULT_CC
+config_read_xserver_params(int server_type, struct list* param_array)
+{
+  struct list* names;
+  struct list* params;
+  int fd;
+  char section_name[16];
+
+  if (server_type == SESMAN_SESSION_TYPE_XRDP)
+  {
+    g_strncpy(section_name, "X11rdp", 15);
+  }
+  else if (server_type == SESMAN_SESSION_TYPE_XVNC)
+  {
+    g_strncpy(section_name, "Xvnc", 15);
+  }
+  else
+  {
+    /* error */
+    log_message(LOG_LEVEL_ALWAYS, "error unknown type in \
+config_read_xserver_params");
+    return 1;
+  }
+  fd = g_file_open(SESMAN_CFG_FILE);
+  if (-1 == fd)
+  {
+    /* error */
+    log_message(LOG_LEVEL_ALWAYS, "error opening %s in \
+config_read_xserver_params %s", SESMAN_CFG_FILE, g_get_strerror());
+    return 1;
+  }
+  names = list_create();
+  names->auto_free = 1;
+  params = list_create();
+  params->auto_free = 1;
+  if (file_read_section(fd, section_name, names, params) == 0)
+  {
+    list_append_list_strdup(params, param_array, 0);
+  }
+  g_file_close(fd);
+  list_delete(names);
+  list_delete(params);
+  return 0;
+}
