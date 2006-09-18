@@ -512,7 +512,15 @@ g_file_open(char* file_name)
                          FILE_SHARE_READ | FILE_SHARE_WRITE,
                          0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 #else
-  return open(file_name, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+  int rv;
+
+  rv =  open(file_name, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+  if (rv == -1)
+  {
+    /* can't open read / write, try to open read only */
+    rv =  open(file_name, O_RDONLY);
+  }
+  return rv;
 #endif
 }
 
@@ -903,12 +911,45 @@ g_get_strerror(void)
 }
 
 /*****************************************************************************/
-void
+int
 g_execvp(char* p1, char* args[])
 {
 #if defined(_WIN32)
+  return 0;
 #else
-  execvp(p1, args);
+  return execvp(p1, args);
+#endif
+}
+
+/*****************************************************************************/
+/* takes up to 30 parameters */
+int
+g_execlp(int num_params, char* param1, ...)
+{
+#if defined(_WIN32)
+  return 0;
+#else
+  va_list ap;
+  char* p[32];
+  int index;
+
+  if (num_params > 30)
+  {
+    return 0;
+  }
+  memset(p, 0, sizeof(p));
+  p[0] = param1;
+  va_start(ap, param1);
+  for (index = 1; index < num_params; index++)
+  {
+    p[index] = va_arg(ap, char*);
+  }
+  va_end(ap);
+  return execlp(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],
+                p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15],
+                p[16], p[17], p[18], p[19], p[20], p[21], p[22], p[23],
+                p[24], p[25], p[26], p[27], p[28], p[29], p[30], p[31],
+                (void*)0);
 #endif
 }
 

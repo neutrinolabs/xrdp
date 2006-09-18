@@ -139,8 +139,10 @@ int
 g_system(char* aexec);
 char*
 g_get_strerror(void);
-void
+int
 g_execvp(char* p1, char* args[]);
+int
+g_execlp(int num_params, char* param1, ...);
 int
 g_execlp3(char* a1, char* a2, char* a3);
 int
