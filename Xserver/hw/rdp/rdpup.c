@@ -351,7 +351,8 @@ param4 %d\n", msg, param1, param2, param3, param4);*/
         break;
       case 200:
         rdpup_begin_update();
-        rdpup_send_area(param1, param2, param3, param4);
+        rdpup_send_area((param1 >> 16) & 0xffff, param1 & 0xffff,
+                        (param2 >> 16) & 0xffff, param2 & 0xffff);
         rdpup_end_update();
         break;
     }

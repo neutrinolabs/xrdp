@@ -254,10 +254,14 @@ lib_mod_connect(struct mod* mod)
     s_push_layer(s, iso_hdr, 4);
     out_uint16_le(s, 103);
     out_uint32_le(s, 200);
+    /* x and y */
+    i = 0;
+    out_uint32_le(s, i);
+    /* width and height */
+    i = ((mod->width & 0xffff) << 16) | mod->height;
+    out_uint32_le(s, i);
     out_uint32_le(s, 0);
     out_uint32_le(s, 0);
-    out_uint32_le(s, mod->width);
-    out_uint32_le(s, mod->height);
     s_mark_end(s);
     len = s->end - s->data;
     s_pop_layer(s, iso_hdr);
