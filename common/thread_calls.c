@@ -62,7 +62,7 @@ long APP_CC
 g_get_threadid(void)
 {
 #if defined(_WIN32)
-  return 0;
+  return (long)GetCurrentThreadId();
 #else
   return (long)pthread_self();
 #endif
