@@ -28,13 +28,20 @@
 #include "arch.h"
 
 /*****************************************************************************/
+/* returns error */
 #if defined(_WIN32)
 int APP_CC
 g_thread_create(unsigned long (__stdcall * start_routine)(void*), void* arg)
 {
-  DWORD thread;
+  DWORD thread_id;
+  HANDLE thread;
+  int rv;
 
-  return !CreateThread(0, 0, start_routine, arg, 0, &thread);
+  /* CreateThread returns handle or zero on error */
+  thread = CreateThread(0, 0, start_routine, arg, 0, &thread_id);
+  rv = !thread;
+  CloseHandle(thread);
+  return rv;
 }
 #else
 int APP_CC
@@ -43,6 +50,7 @@ g_thread_create(void* (* start_routine)(void*), void* arg)
   pthread_t thread;
   int rv;
 
+  /* pthread_create returns error */
   rv = pthread_create(&thread, 0, start_routine, arg);
   pthread_detach(thread);
   return rv;
