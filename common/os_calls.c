@@ -239,12 +239,21 @@ g_tcp_socket(void)
   int rv;
   int i;
 
-  i = 1;
   rv = socket(PF_INET, SOCK_STREAM, 0);
 #if defined(_WIN32)
+  i = 1;
   setsockopt(rv, IPPROTO_TCP, TCP_NODELAY, (char*)&i, sizeof(i));
+  i = 1;
+  setsockopt(rv, SOL_SOCKET, SO_REUSEADDR, (char*)&i, sizeof(i));
+  i = 8192 * 2;
+  setsockopt(rv, SOL_SOCKET, SO_SNDBUF, (char*)&i, sizeof(i));
 #else
+  i = 1;
   setsockopt(rv, IPPROTO_TCP, TCP_NODELAY, (void*)&i, sizeof(i));
+  i = 1;
+  setsockopt(rv, SOL_SOCKET, SO_REUSEADDR, (void*)&i, sizeof(i));
+  i = 8192 * 2;
+  setsockopt(rv, SOL_SOCKET, SO_SNDBUF, (void*)&i, sizeof(i));
 #endif
   return rv;
 }
