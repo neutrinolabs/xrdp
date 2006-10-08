@@ -280,15 +280,18 @@ rect_contained_by(struct xrdp_rect* in1, int left, int top,
                   int right, int bottom);
 int APP_CC
 check_bounds(struct xrdp_bitmap* b, int* x, int* y, int* cx, int* cy);
-char APP_CC
-get_char_from_scan_code(int device_flags, int scan_code, int* keys,
-                        int caps_lock, int num_lock, int scroll_lock);
 int APP_CC
 add_char_at(char* text, char ch, int index);
 int APP_CC
 remove_char_at(char* text, int index);
 int APP_CC
 set_string(char** in_str, char* in);
+
+/* in lang.c */
+char APP_CC
+get_char_from_scan_code(int device_flags, int scan_code, int* keys,
+                        int caps_lock, int num_lock, int scroll_lock,
+                        int keylayout);
 
 /* xrdp_login_wnd.c */
 int APP_CC

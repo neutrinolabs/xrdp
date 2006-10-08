@@ -1169,7 +1169,8 @@ xrdp_wm_key(struct xrdp_wm* self, int device_flags, int scan_code)
         c = get_char_from_scan_code(device_flags, scan_code, self->keys,
                                     self->caps_lock,
                                     self->num_lock,
-                                    self->scroll_lock);
+                                    self->scroll_lock,
+                                    self->session->client_info->keylayout);
         /*g_printf("%x\n", c);*/
         if (c != 0)
         {

@@ -78,11 +78,11 @@ xrdp_font_create(struct xrdp_wm* wm)
   self = (struct xrdp_font*)g_malloc(sizeof(struct xrdp_font), 1);
   self->wm = wm;
   make_stream(s);
-  init_stream(s, 8192);
+  init_stream(s, 8192 * 2);
   fd = g_file_open("Tahoma-10.fv1");
   if (fd != -1)
   {
-    b = g_file_read(fd, s->data, 8192);
+    b = g_file_read(fd, s->data, 8192 * 2);
     g_file_close(fd);
     if (b > 0)
     {
