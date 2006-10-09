@@ -1385,7 +1385,7 @@ xrdp_bitmap_def_proc(struct xrdp_bitmap* self, int msg,
                                     self->wm->num_lock,
                                     self->wm->scroll_lock,
                                     self->wm->session->client_info->keylayout);
-        if (c != 0)
+        if ((unsigned char)c >= 32)
         {
           add_char_at(self->caption1, c, self->edit_pos);
           self->edit_pos++;
