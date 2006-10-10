@@ -456,7 +456,11 @@ main(int argc, char** argv)
       g_exit(0);
     }
     else if (g_strncasecmp(argv[1], "-nodaemon", 255) == 0 ||
-             g_strncasecmp(argv[1], "--nodaemon", 255) == 0)
+             g_strncasecmp(argv[1], "--nodaemon", 255) == 0 ||
+	     g_strncasecmp(argv[1], "-nd", 255) == 0 ||
+	     g_strncasecmp(argv[1], "--nd", 255) == 0 ||
+	     g_strncasecmp(argv[1], "-ns", 255) == 0 ||
+	     g_strncasecmp(argv[1], "--ns", 255) == 0)
     {
       no_daemon = 1;
     }
