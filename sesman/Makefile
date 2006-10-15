@@ -1,7 +1,10 @@
 # sesman makefile
+LIBSCPOBJ = libscp_vX.o libscp_v0.o libscp_v1s.o
+
 SESMANOBJ = sesman.o config.o tcp.o sig.o session.o env.o \
             os_calls.o d3des.o list.o file.o log.o access.o \
-            scp.o scp_v0.o thread.o lock.o
+            scp.o scp_v0.o thread.o lock.o \
+	    $(LIBSCPOBJ)
 
 SESRUNOBJ = sesrun.o config.o tcp.o lock.o \
             os_calls.o d3des.o list.o file.o log.o

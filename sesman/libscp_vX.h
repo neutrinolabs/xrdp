@@ -19,26 +19,30 @@
 
 /**
  *
- * @file scp_v0.h
- * @brief scp version 0 declarations
+ * @file libscp_vX.h
+ * @brief libscp version neutral code header
  * @author Simone Fedele
  * 
  */
 
-#ifndef SCP_V0_H
-#define SCP_V0_H
+#ifndef LIBSCP_VX_H
+#define LIBSCP_VX_H
 
-#include "libscp.h"
+#include "libscp_types.h"
 
+#include "libscp_v0.h"
+#include "libscp_v1s.h"
+
+/* server API */
 /**
  *
- * @brief processes the stream using scp version 0
- * @param in_sck connection socket
- * @param in_s input stream
- * @param out_s output stream
+ * @brief version neutral server accept function
+ * @param c connection descriptor
+ * @param s session descriptor pointer address.
+ *          it will return a newely allocated descriptor.
+ *          It this memory needs to be g_free()d
  *
  */
-void DEFAULT_CC 
-scp_v0_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s);
+enum SCP_SERVER_STATES_E scp_vXs_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s);
 
 #endif

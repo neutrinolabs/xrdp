@@ -19,26 +19,35 @@
 
 /**
  *
- * @file scp_v0.h
- * @brief scp version 0 declarations
+ * @file libscp_vX.c
+ * @brief libscp version neutral code
  * @author Simone Fedele
  * 
  */
 
-#ifndef SCP_V0_H
-#define SCP_V0_H
+#include "libscp_vX.h"
 
-#include "libscp.h"
+/* server API */
+enum SCP_SERVER_STATES_E scp_vXs_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s)
+{
+  uint32_t version;
 
-/**
- *
- * @brief processes the stream using scp version 0
- * @param in_sck connection socket
- * @param in_s input stream
- * @param out_s output stream
- *
- */
-void DEFAULT_CC 
-scp_v0_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s);
-
-#endif
+  /* reading version and packet size */
+  if (0!=tcp_force_recv(c->in_sck, c->in_s->data, 8))
+  {
+    return SCP_SERVER_STATE_NETWORK_ERR;
+  }
+  
+  in_uint32_be(c->in_s, version);
+  
+  if (version == 0)
+  {
+    return scp_v0s_accept(c, s, 1);
+  }
+  else if (version == 1)
+  {
+    return scp_v1s_accept(c, s, 1);
+  }
+  
+  return SCP_SERVER_STATE_VERSION_ERR;
+}

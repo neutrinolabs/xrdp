@@ -35,55 +35,61 @@ extern int thread_sck;
 void* DEFAULT_CC
 scp_process_start(void* sck)
 {
-  int socket;
-  int version;
-  int size;
-  struct stream* in_s;
-  struct stream* out_s;
+  struct SCP_CONNECTION scon;
+  struct SCP_SESSION* sdata;
 
   /* making a local copy of the socket (it's on the stack) */
   /* probably this is just paranoia                        */
-  //socket = *((int*) sck);
-  socket = thread_sck;
-  LOG_DBG("started scp thread on socket %d", socket);
+  scon.in_sck = thread_sck;
+  LOG_DBG("started scp thread on socket %d", scon.in_sck);
   
   /* unlocking thread_sck */
   lock_socket_release();
   
-  make_stream(in_s);
-  make_stream(out_s);
+  make_stream(scon.in_s);
+  make_stream(scon.out_s);
   
-  init_stream(in_s, 8192);
-  if (tcp_force_recv(socket, in_s->data, 8) == 0)
+  init_stream(scon.in_s, 8192);
+  init_stream(scon.out_s, 8192);
+  
+  switch (scp_vXs_accept(&scon, &(sdata)))
   {
-    in_uint32_be(in_s, version);
-    in_uint32_be(in_s, size);
-    init_stream(in_s, 8192);
-    if (tcp_force_recv(socket, in_s->data, size - 8) == 0)
-    {
-      if (version == 0)
+    case SCP_SERVER_STATE_OK:
+      if (sdata->version == 0)
       {
         /* starts processing an scp v0 connection */
-        scp_v0_process(socket, in_s, out_s);
+        scp_v0_process(&scon, sdata);
       }
-#warning scp v1 is disabled
-      /* this is temporarily disabled...
-      else if (version == 1)
-      {
-        / * starts processing an scp v0 connection * /
-        //scp_v1_process();
-      }*/
       else
       {
-        /* an unknown scp version was requested, so we shut down the */
-	/* connection (and log the fact)                             */
-	log_message(LOG_LEVEL_WARNING,"unknown protocol version specified. connection refused.");
+        //scp_v1_process();
       }
-    }
+      
+    case SCP_SERVER_STATE_VERSION_ERR:
+        /* an unknown scp version was requested, so we shut down the */
+        /* connection (and log the fact)                             */
+        log_message(LOG_LEVEL_WARNING,"unknown protocol version specified. connection refused.");
+        break; 
+	
+    case SCP_SERVER_STATE_NETWORK_ERR:
+        log_message(LOG_LEVEL_WARNING,"libscp network error.");
+        break; 
+	
+    case SCP_SERVER_STATE_SEQUENCE_ERR:
+        log_message(LOG_LEVEL_WARNING,"libscp sequence error.");
+        break; 
+	
+    case SCP_SERVER_STATE_INTERNAL_ERR:
+        /* internal error occurred (eg. malloc() error, ecc.) */
+        log_message(LOG_LEVEL_ERROR, "libscp internal error occurred.");
+        break;
+    default:
+	log_message(LOG_LEVEL_ALWAYS, "unknown return from scp_vXs_accept()");
   }
-  g_tcp_close(socket);
-  free_stream(in_s);
-  free_stream(out_s);
+  
+  g_tcp_close(scon.in_sck);
+  free_stream(scon.in_s);
+  free_stream(scon.out_s);
   return 0;
 }
 

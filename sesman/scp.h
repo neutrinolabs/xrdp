@@ -29,7 +29,7 @@
 #define SCP_H
 
 #include "scp_v0.h"
-//#include "scp_v1.h"
+#include "libscp.h"
 
 /**
  *

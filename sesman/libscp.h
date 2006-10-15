@@ -19,26 +19,19 @@
 
 /**
  *
- * @file scp_v0.h
- * @brief scp version 0 declarations
+ * @file libscp.h
+ * @brief libscp main header
  * @author Simone Fedele
  * 
  */
 
-#ifndef SCP_V0_H
-#define SCP_V0_H
+#ifndef LIBSCP_H
+#define LIBSCP_H
 
-#include "libscp.h"
-
-/**
- *
- * @brief processes the stream using scp version 0
- * @param in_sck connection socket
- * @param in_s input stream
- * @param out_s output stream
- *
- */
-void DEFAULT_CC 
-scp_v0_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s);
+#include "libscp_types.h"
+#include "libscp_vX.h"
+#include "libscp_v0.h"
+#include "libscp_v1s.h"
+//#include "libscp_v1c.h"
 
 #endif

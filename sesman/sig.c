@@ -135,7 +135,7 @@ sig_handler_thread(void* arg)
         sig_sesman_session_end(SIGCHLD);
         break;
       /*case SIGKILL;
-        /* we die * /
+        / * we die * /
         LOG_DBG("sesman received SIGKILL",0);
         sig_sesman_shutdown(recv_signal);
         break;*/
