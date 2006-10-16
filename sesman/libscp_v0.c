@@ -106,9 +106,10 @@ enum SCP_SERVER_STATES_E scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SES
   if (code == 0 || code == 10) 
   {
     session = g_malloc(sizeof(struct SCP_SESSION),1);
-    if (0 == session) return SCP_SERVER_STATE_INTERNAL_ERR;
-    
-    g_printf("session %x\n",session);
+    if (0 == session)
+    {
+      return SCP_SERVER_STATE_INTERNAL_ERR;
+    }
     
     session->version=version;
     
@@ -124,14 +125,23 @@ enum SCP_SERVER_STATES_E scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SES
     /* reading username */
     in_uint16_be(c->in_s, sz);
     session->username=g_malloc(sz+1,0);
-    if (0==session->username) return SCP_SERVER_STATE_INTERNAL_ERR;
+    if (0==session->username)
+    {
+      g_free(session);
+      return SCP_SERVER_STATE_INTERNAL_ERR;
+    }
     session->username[sz]='\0';
     in_uint8a(c->in_s, session->username, sz);
 
     /* reading password */
     in_uint16_be(c->in_s, sz);
     session->password=g_malloc(sz+1,0);
-    if (0==session->password) return SCP_SERVER_STATE_INTERNAL_ERR;
+    if (0==session->password)
+    {
+      g_free(session->username);
+      g_free(session);
+      return SCP_SERVER_STATE_INTERNAL_ERR;
+    }
     session->password[sz]='\0';
     in_uint8a(c->in_s, session->password, sz);
 
@@ -145,8 +155,6 @@ enum SCP_SERVER_STATES_E scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SES
     return SCP_SERVER_STATE_SEQUENCE_ERR;
   }
 
-  //reset_stream(c->in_s);
-  //reset_stream(c->out_s);
   (*s)=session;
   return SCP_SERVER_STATE_OK;
 }
