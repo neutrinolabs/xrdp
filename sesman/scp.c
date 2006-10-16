@@ -64,6 +64,7 @@ scp_process_start(void* sck)
       {
         //scp_v1_process();
       }
+      break;
       
     case SCP_SERVER_STATE_VERSION_ERR:
         /* an unknown scp version was requested, so we shut down the */
