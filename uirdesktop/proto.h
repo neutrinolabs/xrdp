@@ -294,6 +294,7 @@ void ui_seamless_settitle(unsigned long id, const char *title, unsigned long fla
 void ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags);
 void ui_seamless_syncbegin(unsigned long flags);
 void ui_seamless_ack(unsigned int serial);
+void ui_logon(void);
 /* lspci.c */
 BOOL lspci_init(void);
 /* seamless.c */

@@ -32,6 +32,7 @@
 #include <directfb.h>
 #include <pthread.h>
 #include "uimain.h"
+#include "bsops.h"
 
 extern char g_username[];
 extern char g_hostname[];
@@ -89,6 +90,8 @@ static int g_trans_colour = 0;
 //static IDirectFBDataBuffer * g_buffer = 0;
 //static IDirectFBImageProvider * g_provider = 0;
 
+void (* master_callback)(int msg, int param1, int param2) = 0;
+
 /*****************************************************************************/
 void
 mi_error(char * msg)
@@ -115,8 +118,11 @@ mi_read_keyboard_state(void)
 int
 mi_create_window(void)
 {
-  g_primary->SetColor(g_primary, 0, 0, 0, 0xff);
-  g_primary->FillRectangle(g_primary, 0, 0, g_width, g_height);
+  if (!g_no_draw)
+  {
+    g_primary->SetColor(g_primary, 0, 0, 0, 0xff);
+    g_primary->FillRectangle(g_primary, 0, 0, g_width, g_height);
+  }
   return 1;
 }
 
@@ -628,6 +634,16 @@ mi_set_null_cursor(void)
 }
 
 /*****************************************************************************/
+void
+mi_logon(void)
+{
+  if (master_callback != 0)
+  {
+    master_callback(1, 0, 0);
+  }
+}
+
+/*****************************************************************************/
 static void
 out_params(void)
 {
@@ -867,4 +883,12 @@ int
 librdesktop_quit(void)
 {
   return 1;
+}
+
+/*****************************************************************************/
+int
+librdesktop_set_callback(void (* callback)(int, int, int))
+{
+  master_callback = callback;
+  return 0;
 }

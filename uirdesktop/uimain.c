@@ -120,6 +120,8 @@ void
 mi_set_null_cursor(void);
 int
 mi_read_keyboard_state(void);
+void
+mi_logon(void);
 
 /*****************************************************************************/
 /* put part of the screen from the backing store to the display */
@@ -827,6 +829,13 @@ ui_ellipse(uint8 opcode, uint8 fillmode,
            BRUSH * brush, int bgcolour, int fgcolour)
 {
   /* not used */
+}
+
+/*****************************************************************************/
+void
+ui_logon(void)
+{
+  mi_logon();
 }
 
 /*****************************************************************************/
