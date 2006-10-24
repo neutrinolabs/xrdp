@@ -86,7 +86,7 @@ file_read_sections(int fd, struct list* names)
 }
 
 /*****************************************************************************/
-int APP_CC
+static int APP_CC
 file_read_line(struct stream* s, char* text)
 {
   int i;
@@ -140,7 +140,7 @@ file_read_line(struct stream* s, char* text)
 }
 
 /*****************************************************************************/
-int APP_CC
+static int APP_CC
 file_split_name_value(char* text, char* name, char* value)
 {
   int len;

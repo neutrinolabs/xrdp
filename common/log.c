@@ -89,7 +89,7 @@ log_xrdp2syslog(const int lvl)
  * @return syslog equivalent logging level
  *
  */
-void DEFAULT_CC
+static void DEFAULT_CC
 log_lvl2str(int lvl, char* str)
 {
   switch (lvl)

@@ -281,7 +281,7 @@ xrdp_bitmap_set_focus(struct xrdp_bitmap* self, int focused)
 }
 
 /*****************************************************************************/
-int APP_CC
+static int APP_CC
 xrdp_bitmap_get_index(struct xrdp_bitmap* self, int* palette, int color)
 {
   int r;
@@ -772,7 +772,7 @@ xrdp_bitmap_compare_with_crc(struct xrdp_bitmap* self,
 }
 
 /*****************************************************************************/
-int APP_CC
+static int APP_CC
 xrdp_bitmap_draw_focus_box(struct xrdp_bitmap* self,
                            struct xrdp_painter* painter,
                            int x, int y, int cx, int cy)
@@ -810,7 +810,7 @@ xrdp_bitmap_draw_focus_box(struct xrdp_bitmap* self,
 
 /*****************************************************************************/
 /* x and y are in relation to self for 0, 0 is the top left of the control */
-int APP_CC
+static int APP_CC
 xrdp_bitmap_draw_button(struct xrdp_bitmap* self,
                         struct xrdp_painter* painter,
                         int x, int y, int w, int h,

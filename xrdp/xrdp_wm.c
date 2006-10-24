@@ -137,7 +137,7 @@ xrdp_wm_set_focused(struct xrdp_wm* self, struct xrdp_bitmap* wnd)
 }
 
 /******************************************************************************/
-int APP_CC
+static int APP_CC
 xrdp_wm_get_pixel(char* data, int x, int y, int width, int bpp)
 {
   int start;
@@ -622,7 +622,7 @@ xrdp_wm_xor_pat(struct xrdp_wm* self, int x, int y, int cx, int cy)
 /*****************************************************************************/
 /* this don't are about nothing, just copy the bits */
 /* no clipping rects, no windows in the way, nothing */
-int APP_CC
+static int APP_CC
 xrdp_wm_bitblt(struct xrdp_wm* self,
                struct xrdp_bitmap* dst, int dx, int dy,
                struct xrdp_bitmap* src, int sx, int sy,
@@ -658,7 +658,7 @@ xrdp_wm_bitblt(struct xrdp_wm* self,
 /*****************************************************************************/
 /* return true is rect is totaly exposed going in reverse z order */
 /* from wnd up */
-int APP_CC
+static int APP_CC
 xrdp_wm_is_rect_vis(struct xrdp_wm* self, struct xrdp_bitmap* wnd,
                     struct xrdp_rect* rect)
 {
@@ -700,7 +700,7 @@ xrdp_wm_is_rect_vis(struct xrdp_wm* self, struct xrdp_bitmap* wnd,
 }
 
 /*****************************************************************************/
-int APP_CC
+static int APP_CC
 xrdp_wm_move_window(struct xrdp_wm* self, struct xrdp_bitmap* wnd,
                     int dx, int dy)
 {

@@ -43,7 +43,7 @@ xrdp_listen_delete(struct xrdp_listen* self)
 }
 
 /*****************************************************************************/
-int APP_CC
+static int APP_CC
 xrdp_listen_term_processes(struct xrdp_listen* self)
 {
   int i;
@@ -80,7 +80,7 @@ xrdp_listen_term_processes(struct xrdp_listen* self)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+static int APP_CC
 xrdp_listen_add_pro(struct xrdp_listen* self)
 {
   int i;

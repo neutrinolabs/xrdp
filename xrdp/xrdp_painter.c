@@ -77,7 +77,7 @@ xrdp_painter_font_needed(struct xrdp_painter* self)
 
 /*****************************************************************************/
 /* returns boolean, true if there is something to draw */
-int APP_CC
+static int APP_CC
 xrdp_painter_clip_adj(struct xrdp_painter* self, int* x, int* y,
                       int* cx, int* cy)
 {
@@ -149,7 +149,7 @@ xrdp_painter_clr_clip(struct xrdp_painter* self)
 }
 
 /*****************************************************************************/
-int APP_CC
+static int APP_CC
 xrdp_painter_rop(int rop, int src, int dst)
 {
   switch (rop & 0x0f)
