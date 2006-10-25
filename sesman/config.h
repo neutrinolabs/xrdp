@@ -56,6 +56,7 @@
 #define SESMAN_CFG_LOG_SYSLOG_LEVEL  "SyslogLevel"
 
 #define SESMAN_CFG_SECURITY          "Security"
+#define SESMAN_CFG_SEC_LOGIN_RETRY   "MaxLoginRetry"
 #define SESMAN_CFG_SEC_ALLOW_ROOT    "AllowRootLogin"
 #define SESMAN_CFG_SEC_USR_GROUP     "TerminalServerUsers"
 #define SESMAN_CFG_SEC_ADM_GROUP     "TerminalServerAdmins"
@@ -76,9 +77,14 @@ struct config_security
 {
   /**
    * @var allow_root
-   * @brief
+   * @brief allow root login on TS
    */
   int allow_root;
+  /**
+   * @var login_retry
+   * @brief maximum login attempts
+   */
+  int login_retry;
   /**
    * @var ts_users
    * @brief Terminal Server Users group
