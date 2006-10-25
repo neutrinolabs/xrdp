@@ -142,6 +142,11 @@ If set to \fB1\fR, \fBtrue\fR or \fByes\fR enables root login on the terminal se
 .br 
 
 .TP 
+\fBMaxLoginRetry\fR=\fI[0|1]\fR
+The number of login attempts that are allowed on terminal server. If set to \fI0\fR, unlimited attempts are allowed. The default value for this field is \fI3\fR.
+.br 
+
+.TP 
 \fBTerminalServerUsers\fR=\fItsusers\fR
 Only the users belonging to the group \fItsusers\fR are allowed to login on terminal server.
 .br 
@@ -191,6 +196,8 @@ DisconnectedTimeLimit=0
 [Security]
 .br 
 AllowRootLogin=1
+.br 
+MaxLoginRetry=3
 .br 
 TerminalServerUsers=tsusers
 .br 
