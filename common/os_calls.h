@@ -100,6 +100,8 @@ g_file_lock(int fd, int start, int len);
 int
 g_set_file_rights(char* filename, int read, int write);
 int
+g_chmod(char* filename, int flags);
+int
 g_mkdir(char* dirname);
 char*
 g_get_current_dir(char* dirname, int maxlen);
@@ -107,6 +109,12 @@ int
 g_set_current_dir(char* dirname);
 int
 g_file_exist(char* filename);
+int
+g_directory_exist(char* dirname);
+int
+g_create_dir(char* dirname);
+int
+g_remove_dir(char* dirname);
 int
 g_file_delete(char* filename);
 int

@@ -649,6 +649,18 @@ g_set_file_rights(char* filename, int read, int write)
 }
 
 /*****************************************************************************/
+/* returns error */
+int
+g_chmod(char* filename, int flags)
+{
+#if defined(_WIN32)
+  return 0;
+#else
+  return chmod(filename, flags);
+#endif
+}
+
+/*****************************************************************************/
 /* returns error, always zero */
 int
 g_mkdir(char* dirname)
@@ -702,9 +714,55 @@ int
 g_file_exist(char* filename)
 {
 #if defined(_WIN32)
-  return 0; // use FindFirstFile();
+  return 0; // use FileAge(filename) <> -1
 #else
   return access(filename, F_OK) == 0;
+#endif
+}
+
+/*****************************************************************************/
+/* returns boolean, non zero if the directory exists */
+int
+g_directory_exist(char* dirname)
+{
+#if defined(_WIN32)
+  return 0; // use GetFileAttributes and check return value
+            // is not -1 and FILE_ATTRIBUT_DIRECTORY bit is set
+#else
+  struct stat st;
+
+  if (stat(dirname, &st) == 0)
+  {
+    return S_ISDIR(st.st_mode);
+  }
+  else
+  {
+    return 0;
+  }
+#endif
+}
+
+/*****************************************************************************/
+/* returns boolean */
+int
+g_create_dir(char* dirname)
+{
+#if defined(_WIN32)
+  return CreateDirectory(dirname, 0); // test this
+#else
+  return mkdir(dirname, (mode_t)-1) == 0;
+#endif
+}
+
+/*****************************************************************************/
+/* returns boolean */
+int
+g_remove_dir(char* dirname)
+{
+#if defined(_WIN32)
+  return RemoveDirectory(dirname); // test this
+#else
+  return rmdir(dirname) == 0;
 #endif
 }
 
