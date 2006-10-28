@@ -31,7 +31,6 @@
 void DEFAULT_CC 
 scp_v0_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
 {
-  int code=0;
   int display=0;
   long data;
   struct session_item* s_item;
@@ -53,7 +52,7 @@ scp_v0_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
       if (1 == access_login_allowed(s->username))
       {
         log_message(LOG_LEVEL_INFO, "granted TS access to user %s", s->username);
-        if (0 == code)
+        if (SCP_SESSION_TYPE_XVNC == s->type)
         {
           log_message(LOG_LEVEL_INFO, "starting Xvnc session...");
           display = session_start(s->width, s->height, s->bpp, s->username, s->password,
