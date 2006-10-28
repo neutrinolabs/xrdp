@@ -100,7 +100,7 @@ g_file_lock(int fd, int start, int len);
 int
 g_set_file_rights(char* filename, int read, int write);
 int
-g_chmod(char* filename, int flags);
+g_chmod_hex(char* filename, int flags);
 int
 g_mkdir(char* dirname);
 char*

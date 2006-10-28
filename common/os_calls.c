@@ -651,12 +651,27 @@ g_set_file_rights(char* filename, int read, int write)
 /*****************************************************************************/
 /* returns error */
 int
-g_chmod(char* filename, int flags)
+g_chmod_hex(char* filename, int flags)
 {
 #if defined(_WIN32)
   return 0;
 #else
-  return chmod(filename, flags);
+  int fl;
+
+  fl = 0;
+  fl |= (flags & 0x4000) ? S_ISUID : 0;
+  fl |= (flags & 0x2000) ? S_ISGID : 0;
+  fl |= (flags & 0x1000) ? S_ISVTX : 0;
+  fl |= (flags & 0x0400) ? S_IRUSR : 0;
+  fl |= (flags & 0x0200) ? S_IWUSR : 0;
+  fl |= (flags & 0x0100) ? S_IXUSR : 0;
+  fl |= (flags & 0x0040) ? S_IRGRP : 0;
+  fl |= (flags & 0x0020) ? S_IWGRP : 0;
+  fl |= (flags & 0x0010) ? S_IXGRP : 0;
+  fl |= (flags & 0x0004) ? S_IROTH : 0;
+  fl |= (flags & 0x0002) ? S_IWOTH : 0;
+  fl |= (flags & 0x0001) ? S_IXOTH : 0;
+  return chmod(filename, fl);
 #endif
 }
 

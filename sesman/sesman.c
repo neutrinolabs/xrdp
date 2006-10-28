@@ -267,7 +267,7 @@ main(int argc, char** argv)
   if (!g_directory_exist("/tmp/.X11-unix"))
   {
     g_create_dir("/tmp/.X11-unix");
-    g_chmod("/tmp/.X11-unix", 0x1777);
+    g_chmod_hex("/tmp/.X11-unix", 0x1777);
   }
 
   sesman_main_loop();
