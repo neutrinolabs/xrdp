@@ -1,5 +1,5 @@
 
-LDFLAGS = -L../../lib/Xau -L../../lib/Xdmcp
+LDFLAGS = -L../../lib/Xau -L../../lib/Xdmcp -L../../lib/freetype2
 
 LIBS = dbe/libdbe.a \
 	dix/libdix.a \
