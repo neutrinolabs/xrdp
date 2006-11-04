@@ -57,6 +57,9 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#include "os_calls.h"
+#include "arch.h"
+
 /* for clearenv() */
 #if defined(_WIN32)
 #else
@@ -102,7 +105,7 @@ g_free(void* ptr)
 /* output text to stdout, try to use g_write / g_writeln instead to avoid
    linux / windows EOL problems */
 void
-g_printf(char* format, ...)
+g_printf(const char* format, ...)
 {
   va_list ap;
 
@@ -113,7 +116,7 @@ g_printf(char* format, ...)
 
 /*****************************************************************************/
 void
-g_sprintf(char* dest, char* format, ...)
+g_sprintf(char* dest, const char* format, ...)
 {
   va_list ap;
 
@@ -124,7 +127,7 @@ g_sprintf(char* dest, char* format, ...)
 
 /*****************************************************************************/
 void
-g_snprintf(char* dest, int len, char* format, ...)
+g_snprintf(char* dest, int len, const char* format, ...)
 {
   va_list ap;
 
@@ -135,7 +138,7 @@ g_snprintf(char* dest, int len, char* format, ...)
 
 /*****************************************************************************/
 void
-g_writeln(char* format, ...)
+g_writeln(const char* format, ...)
 {
   va_list ap;
 
@@ -151,7 +154,7 @@ g_writeln(char* format, ...)
 
 /*****************************************************************************/
 void
-g_write(char* format, ...)
+g_write(const char* format, ...)
 {
   va_list ap;
 
@@ -289,7 +292,7 @@ g_tcp_close(int sck)
 
 /*****************************************************************************/
 int
-g_tcp_connect(int sck, char* address, char* port)
+g_tcp_connect(int sck, const char* address, const char* port)
 {
   struct sockaddr_in s;
   struct hostent* h;
@@ -422,10 +425,10 @@ g_tcp_recv(int sck, void* ptr, int len, int flags)
 
 /*****************************************************************************/
 int
-g_tcp_send(int sck, void* ptr, int len, int flags)
+g_tcp_send(int sck, const void* ptr, int len, int flags)
 {
 #if defined(_WIN32)
-  return send(sck, (char*)ptr, len, flags);
+  return send(sck, (const char*)ptr, len, flags);
 #else
   return send(sck, ptr, len, flags);
 #endif
@@ -508,7 +511,7 @@ g_abs(int i)
 
 /*****************************************************************************/
 int
-g_memcmp(void* s1, void* s2, int len)
+g_memcmp(const void* s1, const void* s2, int len)
 {
   return memcmp(s1, s2, len);
 }
@@ -516,7 +519,7 @@ g_memcmp(void* s1, void* s2, int len)
 /*****************************************************************************/
 /* returns -1 on error, else return handle or file descriptor */
 int
-g_file_open(char* file_name)
+g_file_open(const char* file_name)
 {
 #if defined(_WIN32)
   return (int)CreateFile(file_name, GENERIC_READ | GENERIC_WRITE,
@@ -634,7 +637,7 @@ g_file_lock(int fd, int start, int len)
 /*****************************************************************************/
 /* returns error, always zero */
 int
-g_set_file_rights(char* filename, int read, int write)
+g_set_file_rights(const char* filename, int read, int write)
 {
 #if defined(_WIN32)
   return 0;
@@ -651,7 +654,7 @@ g_set_file_rights(char* filename, int read, int write)
 /*****************************************************************************/
 /* returns error */
 int
-g_chmod_hex(char* filename, int flags)
+g_chmod_hex(const char* filename, int flags)
 {
 #if defined(_WIN32)
   return 0;
@@ -678,7 +681,7 @@ g_chmod_hex(char* filename, int flags)
 /*****************************************************************************/
 /* returns error, always zero */
 int
-g_mkdir(char* dirname)
+g_mkdir(const char* dirname)
 {
 #if defined(_WIN32)
   return 0;
@@ -726,7 +729,7 @@ g_set_current_dir(char* dirname)
 /*****************************************************************************/
 /* returns boolean, non zero if the file exists */
 int
-g_file_exist(char* filename)
+g_file_exist(const char* filename)
 {
 #if defined(_WIN32)
   return 0; // use FileAge(filename) <> -1
@@ -738,7 +741,7 @@ g_file_exist(char* filename)
 /*****************************************************************************/
 /* returns boolean, non zero if the directory exists */
 int
-g_directory_exist(char* dirname)
+g_directory_exist(const char* dirname)
 {
 #if defined(_WIN32)
   return 0; // use GetFileAttributes and check return value
@@ -760,7 +763,7 @@ g_directory_exist(char* dirname)
 /*****************************************************************************/
 /* returns boolean */
 int
-g_create_dir(char* dirname)
+g_create_dir(const char* dirname)
 {
 #if defined(_WIN32)
   return CreateDirectory(dirname, 0); // test this
@@ -772,7 +775,7 @@ g_create_dir(char* dirname)
 /*****************************************************************************/
 /* returns boolean */
 int
-g_remove_dir(char* dirname)
+g_remove_dir(const char* dirname)
 {
 #if defined(_WIN32)
   return RemoveDirectory(dirname); // test this
@@ -784,7 +787,7 @@ g_remove_dir(char* dirname)
 /*****************************************************************************/
 /* returns non zero if the file was deleted */
 int
-g_file_delete(char* filename)
+g_file_delete(const char* filename)
 {
 #if defined(_WIN32)
   return DeleteFile(filename);
@@ -796,7 +799,7 @@ g_file_delete(char* filename)
 /*****************************************************************************/
 /* returns length of text */
 int
-g_strlen(char* text)
+g_strlen(const char* text)
 {
   if (text == 0)
   {
@@ -808,7 +811,7 @@ g_strlen(char* text)
 /*****************************************************************************/
 /* returns dest */
 char*
-g_strcpy(char* dest, char* src)
+g_strcpy(char* dest, const char* src)
 {
   if (src == 0 && dest != 0)
   {
@@ -825,7 +828,7 @@ g_strcpy(char* dest, char* src)
 /*****************************************************************************/
 /* returns dest */
 char*
-g_strncpy(char* dest, char* src, int len)
+g_strncpy(char* dest, const char* src, int len)
 {
   char* rv;
 
@@ -846,7 +849,7 @@ g_strncpy(char* dest, char* src, int len)
 /*****************************************************************************/
 /* returns dest */
 char*
-g_strcat(char* dest, char* src)
+g_strcat(char* dest, const char* src)
 {
   if (dest == 0 || src == 0)
   {
@@ -858,7 +861,7 @@ g_strcat(char* dest, char* src)
 /*****************************************************************************/
 /* if in = 0, return 0 else return newly alloced copy of in */
 char*
-g_strdup(char* in)
+g_strdup(const char* in)
 {
   int len;
   char* p;
@@ -875,21 +878,21 @@ g_strdup(char* in)
 
 /*****************************************************************************/
 int
-g_strcmp(char* c1, char* c2)
+g_strcmp(const char* c1, const char* c2)
 {
   return strcmp(c1, c2);
 }
 
 /*****************************************************************************/
 int
-g_strncmp(char* c1, char* c2, int len)
+g_strncmp(const char* c1, const char* c2, int len)
 {
   return strncmp(c1, c2, len);
 }
 
 /*****************************************************************************/
 int
-g_strcasecmp(char* c1, char* c2)
+g_strcasecmp(const char* c1, const char* c2)
 {
 #if defined(_WIN32)
   return stricmp(c1, c2);
@@ -900,7 +903,7 @@ g_strcasecmp(char* c1, char* c2)
 
 /*****************************************************************************/
 int
-g_strncasecmp(char* c1, char* c2, int len)
+g_strncasecmp(const char* c1, const char* c2, int len)
 {
 #if defined(_WIN32)
   return strnicmp(c1, c2, len);
@@ -918,7 +921,7 @@ g_atoi(char* str)
 
 /*****************************************************************************/
 int
-g_pos(char* str, char* to_find)
+g_pos(char* str, const char* to_find)
 {
   char* pp;
 
@@ -959,7 +962,7 @@ g_free_library(long lib)
 /*****************************************************************************/
 /* returns NULL if not found */
 void*
-g_get_proc_address(long lib, char* name)
+g_get_proc_address(long lib, const char* name)
 {
   if (lib == 0)
   {
@@ -996,7 +999,7 @@ g_get_strerror(void)
 
 /*****************************************************************************/
 int
-g_execvp(char* p1, char* args[])
+g_execvp(const char* p1, char* args[])
 {
 #if defined(_WIN32)
   return 0;
@@ -1006,71 +1009,13 @@ g_execvp(char* p1, char* args[])
 }
 
 /*****************************************************************************/
-/* takes up to 30 parameters */
 int
-g_execlp(int num_params, char* param1, ...)
-{
-#if defined(_WIN32)
-  return 0;
-#else
-  va_list ap;
-  char* p[32];
-  int index;
-
-  if (num_params > 30)
-  {
-    return 0;
-  }
-  memset(p, 0, sizeof(p));
-  p[0] = param1;
-  va_start(ap, param1);
-  for (index = 1; index < num_params; index++)
-  {
-    p[index] = va_arg(ap, char*);
-  }
-  va_end(ap);
-  return execlp(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],
-                p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15],
-                p[16], p[17], p[18], p[19], p[20], p[21], p[22], p[23],
-                p[24], p[25], p[26], p[27], p[28], p[29], p[30], p[31],
-                (void*)0);
-#endif
-}
-
-/*****************************************************************************/
-int
-g_execlp3(char* a1, char* a2, char* a3)
+g_execlp3(const char* a1, const char* a2, const char* a3)
 {
 #if defined(_WIN32)
   return 0;
 #else
   return execlp(a1, a2, a3, (void*)0);
-#endif
-}
-
-/*****************************************************************************/
-int
-g_execlp11(char* a1, char* a2, char* a3, char* a4, char* a5, char* a6,
-           char* a7, char* a8, char* a9, char* a10, char* a11)
-{
-#if defined(_WIN32)
-  return 0;
-#else
-  return execlp(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, (void*)0);
-#endif
-}
-
-/*****************************************************************************/
-int
-g_execlp13(char* a1, char* a2, char* a3, char* a4, char* a5, char* a6,
-           char* a7, char* a8, char* a9, char* a10, char* a11,
-           char* a12, char* a13)
-{
-#if defined(_WIN32)
-  return 0;
-#else
-  return execlp(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11,
-                a12, a13, (void*)0);
 #endif
 }
 
@@ -1188,7 +1133,7 @@ g_clearenv(void)
 
 /*****************************************************************************/
 int
-g_setenv(char* name, char* value, int rewrite)
+g_setenv(const char* name, const char* value, int rewrite)
 {
 #if defined(_WIN32)
   return 0;
@@ -1199,7 +1144,7 @@ g_setenv(char* name, char* value, int rewrite)
 
 /*****************************************************************************/
 char*
-g_getenv(char* name)
+g_getenv(const char* name)
 {
 #if defined(_WIN32)
   return 0;
@@ -1241,8 +1186,8 @@ g_sigterm(int pid)
 /*****************************************************************************/
 /* returns 0 if ok */
 int
-g_getuser_info(char* username, int* gid, int* uid, char* shell, char* dir,
-               char* gecos)
+g_getuser_info(const char* username, int* gid, int* uid, char* shell,
+               char* dir, char* gecos)
 {
 #if defined(_WIN32)
   return 1;
@@ -1281,7 +1226,7 @@ g_getuser_info(char* username, int* gid, int* uid, char* shell, char* dir,
 /*****************************************************************************/
 /* returns 0 if ok */
 int
-g_getgroup_info(char* groupname, int* gid)
+g_getgroup_info(const char* groupname, int* gid)
 {
 #if defined(_WIN32)
   return 1;
@@ -1305,7 +1250,7 @@ g_getgroup_info(char* groupname, int* gid)
 /* returns error */
 /* if zero is returned, then ok is set */
 int
-g_check_user_in_group(char* username, int gid, int* ok)
+g_check_user_in_group(const char* username, int gid, int* ok)
 {
 #if defined(_WIN32)
   return 1;

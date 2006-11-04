@@ -330,7 +330,7 @@ xrdp_bitmap_resize(struct xrdp_bitmap* self, int width, int height)
 /* return 0 ok */
 /* return 1 error */
 int APP_CC
-xrdp_bitmap_load(struct xrdp_bitmap* self, char* filename, int* palette)
+xrdp_bitmap_load(struct xrdp_bitmap* self, const char* filename, int* palette)
 {
   int fd;
   int i;

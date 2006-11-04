@@ -26,6 +26,7 @@
 #include <pthread.h>
 #endif
 #include "arch.h"
+#include "thread_calls.h"
 
 /*****************************************************************************/
 /* returns error */

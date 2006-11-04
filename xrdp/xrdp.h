@@ -169,7 +169,7 @@ xrdp_bitmap_set_focus(struct xrdp_bitmap* self, int focused);
 int APP_CC
 xrdp_bitmap_resize(struct xrdp_bitmap* self, int width, int height);
 int APP_CC
-xrdp_bitmap_load(struct xrdp_bitmap* self, char* filename, int* palette);
+xrdp_bitmap_load(struct xrdp_bitmap* self, const char* filename, int* palette);
 int APP_CC
 xrdp_bitmap_get_pixel(struct xrdp_bitmap* self, int x, int y);
 int APP_CC
@@ -239,7 +239,7 @@ xrdp_painter_text_height(struct xrdp_painter* self, char* text);
 int APP_CC
 xrdp_painter_draw_text(struct xrdp_painter* self,
                        struct xrdp_bitmap* bitmap,
-                       int x, int y, char* text);
+                       int x, int y, const char* text);
 int APP_CC
 xrdp_painter_draw_text2(struct xrdp_painter* self,
                         struct xrdp_bitmap* bitmap,
@@ -285,7 +285,7 @@ add_char_at(char* text, char ch, int index);
 int APP_CC
 remove_char_at(char* text, int index);
 int APP_CC
-set_string(char** in_str, char* in);
+set_string(char** in_str, const char* in);
 
 /* in lang.c */
 char APP_CC

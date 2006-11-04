@@ -212,7 +212,7 @@ log_start(const char* progname, const char* logfile, const unsigned int loglvl,
   }
   else
   {
-    l_cfg->log_file = g_strdup((char*) logfile);
+    l_cfg->log_file = g_strdup(logfile);
   }
 
   /* if progname is NULL, we use a default name */
@@ -222,7 +222,7 @@ log_start(const char* progname, const char* logfile, const unsigned int loglvl,
   }
   else
   {
-    l_cfg->program_name = g_strdup((char*) progname);
+    l_cfg->program_name = g_strdup(progname);
   }
 
   /* setting log level */

@@ -197,7 +197,7 @@ remove_char_at(char* text, int index)
 
 /*****************************************************************************/
 int APP_CC
-set_string(char** in_str, char* in)
+set_string(char** in_str, const char* in)
 {
   if (in_str == 0)
   {

@@ -21,6 +21,8 @@
 #if !defined(THREAD_CALLS_H)
 #define THREAD_CALLS_H
 
+#include "arch.h"
+
 int APP_CC
 g_thread_create(THREAD_RV (THREAD_CC * start_routine)(void*), void* arg);
 long APP_CC

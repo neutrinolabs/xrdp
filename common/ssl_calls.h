@@ -21,6 +21,8 @@
 #if !defined(SSL_CALLS_H)
 #define SSL_CALLS_H
 
+#include "arch.h"
+
 void* APP_CC
 ssl_rc4_info_create(void);
 void APP_CC

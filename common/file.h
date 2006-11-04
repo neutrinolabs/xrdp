@@ -30,7 +30,7 @@
 int APP_CC
 file_read_sections(int fd, struct list* names);
 int APP_CC
-file_read_section(int fd, char* section, struct list* names,
+file_read_section(int fd, const char* section, struct list* names,
                   struct list* values);
 
 #endif

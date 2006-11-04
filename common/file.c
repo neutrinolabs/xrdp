@@ -180,7 +180,7 @@ file_split_name_value(char* text, char* name, char* value)
 /*****************************************************************************/
 /* return error */
 int APP_CC
-file_read_section(int fd, char* section, struct list* names,
+file_read_section(int fd, const char* section, struct list* names,
                   struct list* values)
 {
   struct stream* s;

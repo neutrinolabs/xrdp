@@ -326,7 +326,7 @@ xrdp_painter_fill_rect(struct xrdp_painter* self,
 int APP_CC
 xrdp_painter_draw_text(struct xrdp_painter* self,
                        struct xrdp_bitmap* bitmap,
-                       int x, int y, char* text)
+                       int x, int y, const char* text)
 {
   int i;
   int f;
