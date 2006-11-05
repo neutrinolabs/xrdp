@@ -457,8 +457,13 @@ get_pixel_safe(char* data, int x, int y, int width, int height, int bpp)
     start = (y * width) + x / 8;
     shift = x % 8;
     c = (unsigned char)(data[start]);
-    /* todo LSBFirst */
+    /* todo, for now checking processor but is there a better way?
+       maybe LSBFirst */
+#if defined(__sparc__) || defined(__PPC__)
+    return (c & (0x80 >> shift)) != 0;
+#else
     return (g_reverse_byte[c] & (0x80 >> shift)) != 0;
+#endif
   }
   return 0;
 }
