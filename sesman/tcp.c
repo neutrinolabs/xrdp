@@ -32,9 +32,11 @@ int DEFAULT_CC
 tcp_force_recv(int sck, char* data, int len)
 {
   int rcvd;
-  int block;
 
+#ifndef LIBSCP_CLIENT
+  int block;
   block = lock_fork_critical_section_start();
+#endif
 
   while (len > 0)
   {
@@ -61,7 +63,9 @@ tcp_force_recv(int sck, char* data, int len)
     }
   }
 
+#ifndef LIBSCP_CLIENT
   lock_fork_critical_section_end(block);
+#endif
   
   return 0;
 }
@@ -71,9 +75,11 @@ int DEFAULT_CC
 tcp_force_send(int sck, char* data, int len)
 {
   int sent;
-  int block;
 
+#ifndef LIBSCP_CLIENT
+  int block;
   block = lock_fork_critical_section_start();
+#endif
   
   while (len > 0)
   {
@@ -100,7 +106,9 @@ tcp_force_send(int sck, char* data, int len)
     }
   }
 
+#ifndef LIBSCP_CLIENT
   lock_fork_critical_section_end(block);
+#endif
   
   return 0;
 }

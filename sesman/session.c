@@ -26,6 +26,7 @@
  */
 
 #include "sesman.h"
+#include "libscp_types.h"
 
 extern unsigned char g_fixedkey[8];
 extern struct config_sesman g_cfg; /* config.h */
@@ -466,5 +467,75 @@ session_get_bypid(int pid)
   /*THREAD-FIX release chain lock */
   lock_chain_release();
   return 0;
+}
+
+/******************************************************************************/
+struct SCP_DISCONNECTED_SESSION*
+session_get_byuser(char* user, int* cnt)
+{
+  struct session_chain* tmp;
+  struct SCP_DISCONNECTED_SESSION* sess;
+  int count;
+  int index;
+
+  count=0;
+  
+  /*THREAD-FIX require chain lock */
+  lock_chain_acquire();
+
+  tmp = g_sessions;
+  while (tmp != 0)
+  {
+#warning FIXME: we should get only disconnected sessions!
+    if (!g_strncasecmp(user, tmp->item->name, 256))
+    {
+      count++;
+    }
+  
+    /* go on */
+    tmp=tmp->next;
+  }
+
+  if (count==0)
+  {
+    (*cnt)=0;
+    /*THREAD-FIX release chain lock */
+    lock_chain_release();
+    return 0;
+  }
+
+  /* malloc() an array of disconnected sessions */
+  sess=g_malloc(count * sizeof(struct SCP_DISCONNECTED_SESSION),1);
+  if (sess==0)
+  {
+    (*cnt)=0;
+    /*THREAD-FIX release chain lock */
+    lock_chain_release();
+    return 0;
+  }
+
+  tmp = g_sessions;
+  index = 0;
+  while (tmp != 0)
+  {
+    (sess[index]).SID=tmp->item->pid;
+    (sess[index]).type=tmp->item->type;
+    (sess[index]).height=tmp->item->height;
+    (sess[index]).width=tmp->item->width;
+    (sess[index]).bpp=tmp->item->bpp;
+#warning FIXME: setting idle times and such
+    (sess[index]).idle_days=0;
+    (sess[index]).idle_hours=0;
+    (sess[index]).idle_minutes=0;
+
+    /* go on */
+    tmp=tmp->next;
+    index++;
+  }
+  
+  /*THREAD-FIX release chain lock */
+  lock_chain_release();
+  (*cnt)=count;
+  return sess;
 }
 

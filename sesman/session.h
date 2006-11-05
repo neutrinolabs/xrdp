@@ -29,6 +29,8 @@
 #ifndef SESSION_H
 #define SESSION_H
 
+#include "libscp_types.h"
+
 #define SESMAN_SESSION_TYPE_XRDP  1
 #define SESMAN_SESSION_TYPE_XVNC  2
 
@@ -110,6 +112,16 @@ session_kill(int pid);
  */
 struct session_item* DEFAULT_CC
 session_get_bypid(int pid); 
+
+/**
+ *
+ * @brief retrieves a session's descriptor
+ * @param pid the session pid
+ * @return a pointer to the session descriptor on success, NULL otherwise
+ *
+ */
+struct SCP_DISCONNECTED_SESSION* 
+session_get_byuser(char* user, int* cnt); 
 
 #endif
 
