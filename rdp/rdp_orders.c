@@ -108,11 +108,11 @@ rdp_orders_in_present(struct stream* s, int* present,
 static void APP_CC
 rdp_orders_in_coord(struct stream* s, int* coord, int delta)
 {
-  signed char change;
+  int change;
 
   if (delta)
   {
-    in_uint8(s, change);
+    in_sint8(s, change);
     *coord += change;
   }
   else
