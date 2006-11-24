@@ -42,7 +42,8 @@
  * this function places in *s the address of a newely allocated SCP_SESSION structure
  * that should be free()d
  */
-enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk);          
+enum SCP_SERVER_STATES_E 
+scp_v1s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk);          
 
 /**
  *
@@ -51,25 +52,36 @@ enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION* c, struct SCP_SES
  * @param reason pointer to a string containinge the reason for denying connection
  */
 /* 002 */ 
-enum SCP_SERVER_STATES_E scp_v1s_deny_connection(struct SCP_CONNECTION* c, char* reason);
+enum SCP_SERVER_STATES_E 
+scp_v1s_deny_connection(struct SCP_CONNECTION* c, char* reason);
 
+enum SCP_SERVER_STATES_E 
+scp_v1s_request_password(struct SCP_CONNECTION* c, struct SCP_SESSION* s, char* reason);
+	
 /* 020 */ 
-enum SCP_SERVER_STATES_E scp_v1s_request_pwd_change(struct SCP_CONNECTION* c, char* reason, char* npw);
+enum SCP_SERVER_STATES_E 
+scp_v1s_request_pwd_change(struct SCP_CONNECTION* c, char* reason, char* npw);
 
 /* 023 */ 
-enum SCP_SERVER_STATES_E scp_v1s_pwd_change_error(struct SCP_CONNECTION* s, char* error, int retry, char* npw);
+enum SCP_SERVER_STATES_E 
+scp_v1s_pwd_change_error(struct SCP_CONNECTION* c, char* error, int retry, char* npw);
 
 /* 030 */ 
-enum SCP_SERVER_STATES_E scp_v1s_connect_new_session(struct SCP_CONNECTION* s, SCP_DISPLAY d);
+enum SCP_SERVER_STATES_E 
+scp_v1s_connect_new_session(struct SCP_CONNECTION* c, SCP_DISPLAY d);
 
 /* 031 */ 
-enum SCP_SERVER_STATES_E scp_v1s_reconnect_session(struct SCP_CONNECTION* s, SCP_DISPLAY d);
+enum SCP_SERVER_STATES_E 
+scp_v1s_reconnect_session(struct SCP_CONNECTION* c, struct SCP_DISCONNECTED_SESSION* ds, 
+		          SCP_DISPLAY d);
 
 /* 032 */ 
-enum SCP_SERVER_STATES_E scp_v1s_connection_error(struct SCP_CONNECTION* s, char* error);
+enum SCP_SERVER_STATES_E 
+scp_v1s_connection_error(struct SCP_CONNECTION* c, char* error);
 
 /* 040 */ 
-enum SCP_SERVER_STATES_E scp_v1s_list_sessions(struct SCP_CONNECTION* s, int sescnt, struct
-                                               SCP_DISCONNECTED_SESSION** ds, SCP_SID* sid);
+enum SCP_SERVER_STATES_E 
+scp_v1s_list_sessions(struct SCP_CONNECTION* c, int sescnt, struct SCP_DISCONNECTED_SESSION* ds,
+                      SCP_SID* sid);
 
 #endif

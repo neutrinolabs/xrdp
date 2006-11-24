@@ -58,11 +58,14 @@ scp_process_start(void* sck)
       if (sdata->version == 0)
       {
         /* starts processing an scp v0 connection */
+        LOG_DBG("accept ok, go on with scp v0\n",0);
         scp_v0_process(&scon, sdata);
       }
       else
       {
-        //scp_v1_process();
+        LOG_DBG("accept ok, go on with scp v1\n",0);
+	LOG_DBG("user: %s\npass: %s",sdata->username, sdata->password);
+        scp_v1_process(&scon, sdata);
       }
       break;
       

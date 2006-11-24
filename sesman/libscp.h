@@ -32,6 +32,6 @@
 #include "libscp_vX.h"
 #include "libscp_v0.h"
 #include "libscp_v1s.h"
-//#include "libscp_v1c.h"
+#include "libscp_v1c.h"
 
 #endif

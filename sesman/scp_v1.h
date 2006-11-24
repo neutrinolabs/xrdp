@@ -19,28 +19,24 @@
 
 /**
  *
- * @file scp.h
- * @brief scp (sesman control protocol) common definitions
+ * @file scp_v1.h
+ * @brief scp version 1 declarations
  * @author Simone Fedele
  * 
  */
 
-#ifndef SCP_H
-#define SCP_H
-
-//#include "libscp.h"
-#include "scp_v0.h"
-#include "scp_v1.h"
+#ifndef SCP_V1_H
+#define SCP_V1_H
 
 /**
  *
- * @brief Starts a an scp protocol thread.
- *        Starts a an scp protocol thread.
- *        But does only version control....
- * @param socket the connection socket
+ * @brief processes the stream using scp version 1
+ * @param in_sck connection socket
+ * @param in_s input stream
+ * @param out_s output stream
  *
  */
-void* DEFAULT_CC
-scp_process_start(void* sck);
+void DEFAULT_CC 
+scp_v1_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s);
 
 #endif

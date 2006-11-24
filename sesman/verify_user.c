@@ -21,7 +21,7 @@
  *
  * @file verify_user.c
  * @brief Authenticate user using standard unix passwd/shadow system
- * @author Jay Sorg
+ * @author Jay Sorg, Simone Fedele
  * 
  */
 
@@ -34,7 +34,14 @@
 #include <shadow.h>
 #include <pwd.h>
 
+#ifndef SECS_PER_DAY
+#define SECS_PER_DAY (24L*3600L)
+#endif
+
 extern struct config_sesman g_cfg;
+
+static int DEFAULT_CC
+auth_account_disabled(struct spwd* stp);
 
 /******************************************************************************/
 /* returns boolean */
@@ -59,6 +66,11 @@ auth_userpass(char* user, char* pass)
     stp = getspnam(user);
     if (stp == 0)
     {
+      return 0;
+    }
+    if (1==auth_account_disabled(stp))
+    {
+      log_message(LOG_LEVEL_INFO, "account %s is disabled", user);
       return 0;
     }
     g_strncpy(hash, stp->sp_pwdp, 34);
@@ -118,3 +130,90 @@ auth_set_env(long in_val)
   return 0;
 }
 
+#define AUTH_NO_PWD_CHANGE 0
+#define AUTH_PWD_CHANGE 1 
+
+/******************************************************************************/
+int DEFAULT_CC
+auth_check_pwd_chg(char* user)
+{
+  struct passwd* spw;
+  struct spwd* stp;
+  int now;
+  long today;
+
+  spw = getpwnam(user);
+  if (spw == 0)
+  {
+    return AUTH_NO_PWD_CHANGE;
+  }
+  if (g_strncmp(spw->pw_passwd, "x", 3) != 0)
+  {
+    /* old system with only passwd */
+    return AUTH_NO_PWD_CHANGE;
+  }
+  
+  /* the system is using shadow */
+  stp = getspnam(user);
+  if (stp == 0)
+  {
+    return AUTH_NO_PWD_CHANGE;
+  }
+ 
+  /* check if we need a pwd change */
+  now=g_time1();
+  today=now/SECS_PER_DAY;
+  
+  if (today >= (stp->sp_lstchg + stp->sp_max - stp->sp_warn))
+  {
+    return AUTH_PWD_CHANGE;
+  }
+  
+  if (today < ((stp->sp_lstchg)+(stp->sp_min)))
+  {
+    /* cannot change pwd for now */
+    return AUTH_NO_PWD_CHANGE;
+  }
+  
+  return AUTH_NO_PWD_CHANGE;
+}
+
+/**
+ *
+ * @return 1 if the account is disabled, 0 otherwise
+ * 
+ */
+static int DEFAULT_CC
+auth_account_disabled(struct spwd* stp)
+{
+  int today;
+
+  if (0==stp)
+  {
+    /* if an invalid struct was passed we assume a disabled account */
+    return 1;
+  }
+  
+  today=g_time1()/SECS_PER_DAY;
+
+  LOG_DBG("last   %d",stp->sp_lstchg);
+  LOG_DBG("min    %d",stp->sp_min);
+  LOG_DBG("max    %d",stp->sp_max);
+  LOG_DBG("inact  %d",stp->sp_inact);
+  LOG_DBG("warn   %d",stp->sp_warn);
+  LOG_DBG("expire %d",stp->sp_expire);
+  LOG_DBG("today  %d",today);
+
+  if ((stp->sp_expire != -1) && (today >= stp->sp_expire))
+  {
+    return 1;
+  }
+		 
+  if (today >= (stp->sp_lstchg+stp->sp_max+stp->sp_inact))
+  {
+    return 1;
+  }
+
+  return 0;  
+}
+  

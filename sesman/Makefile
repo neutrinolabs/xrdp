@@ -3,7 +3,7 @@ LIBSCPOBJ = libscp_vX.o libscp_v0.o libscp_v1s.o
 
 SESMANOBJ = sesman.o config.o tcp.o sig.o session.o env.o \
             os_calls.o d3des.o list.o file.o log.o access.o \
-            scp.o scp_v0.o thread.o lock.o \
+            scp.o scp_v0.o scp_v1.o thread.o lock.o \
 	    $(LIBSCPOBJ)
 
 SESRUNOBJ = sesrun.o config.o tcp.o lock.o \
@@ -16,7 +16,7 @@ MANDIR = /usr/local/man
 DOCDIR = /usr/doc/xrdp
 
 DEFINES = -DSESMAN_CFG_FILE=\"$(CFGDIR)/sesman.ini\" \
-          -DSESMAN_PID_FILE=\"$(PIDDIR)/sesman.pid\"
+          -DSESMAN_PID_FILE=\"$(PIDDIR)/sesman.pid\" -DDEBUG
 
 CFLAGS = -Wall -O2 -I../common -I/usr/include/nptl $(DEFINES)
 LDFLAGS = -L /usr/gnu/lib -I/usr/include/nptl -L/usr/lib/nptl -lpthread $(DEFINES)
@@ -44,15 +44,18 @@ kerberos-base: $(SESMANOBJ) verify_user_kerberos.o
 
 tools: $(SESRUNOBJ)
 	$(CC) $(LDFLAGS) -o sesrun $(SESRUNOBJ) -ldl
+	make -C tools
 
 clean:
 	rm -f $(SESMANOBJ) verify_user.o verify_user_pam.o verify_user_pam_userpass.o sesman sesrun.o sesrun
+	make -C tools clean
 
 install:
 	install sesman $(DESTDIR)/sesman
 	install sesrun $(DESTDIR)/sesrun
 	install startwm.sh $(DESTDIR)/startwm.sh
 	install sesman.ini $(CFGDIR)/sesman.ini
+	make -C tools install
 
 installdeb:
 	install sesman $(DESTDIRDEB)/usr/lib/xrdp/sesman
