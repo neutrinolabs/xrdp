@@ -1991,11 +1991,10 @@ rdpInstallColormap(ColormapPtr pmap)
 {
   ColormapPtr oldpmap;
 
-  ErrorF("hi rdpInstallColormap\n");
   oldpmap = g_rdpInstalledColormap;
   if (pmap != oldpmap)
   {
-    if(oldpmap != (ColormapPtr)None)
+    if (oldpmap != (ColormapPtr)None)
     {
       WalkTree(pmap->pScreen, TellLostMap, (char*)&oldpmap->mid);
     }
@@ -2013,7 +2012,6 @@ rdpUninstallColormap(ColormapPtr pmap)
 {
   ColormapPtr curpmap;
 
-  ErrorF("hi rdpUninstallColormap\n");
   curpmap = g_rdpInstalledColormap;
   if (pmap == curpmap)
   {
@@ -2030,8 +2028,6 @@ rdpUninstallColormap(ColormapPtr pmap)
 int
 rdpListInstalledColormaps(ScreenPtr pScreen, Colormap* pmaps)
 {
-  ErrorF("hi rdpListInstalledColormaps\n");
-
   *pmaps = g_rdpInstalledColormap->mid;
   return 1;
 }
@@ -2040,7 +2036,6 @@ rdpListInstalledColormaps(ScreenPtr pScreen, Colormap* pmaps)
 void
 rdpStoreColors(ColormapPtr pmap, int ndef, xColorItem* pdefs)
 {
-  ErrorF("hi rdpStoreColors\n");
 }
 
 /******************************************************************************/

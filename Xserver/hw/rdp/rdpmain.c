@@ -112,14 +112,6 @@ static void
 rdpWakeupHandler(int i, pointer blockData, unsigned long err,
                  pointer pReadmask)
 {
-  int e;
-
-  /*ErrorF("rdpWakeupHandler %d\n", err);*/
-  e = (int)err;
-  if (!(e < 0))
-  {
-    /*rdpup_check();*/
-  }
   g_pScreen->WakeupHandler = g_rdpScreen.WakeupHandler;
   g_pScreen->WakeupHandler(i, blockData, err, pReadmask);
   g_pScreen->WakeupHandler = rdpWakeupHandler;
@@ -129,14 +121,12 @@ rdpWakeupHandler(int i, pointer blockData, unsigned long err,
 static void
 rdpBlockHandler1(pointer blockData, OSTimePtr pTimeout, pointer pReadmask)
 {
-  /*ErrorF("hi rdpBlockHandler1\n");*/
 }
 
 /******************************************************************************/
 static void
 rdpWakeupHandler1(pointer blockData, int result, pointer pReadmask)
 {
-  /*ErrorF("hi rdpWakeupHandler1\n");*/
   rdpup_check();
 }
 
@@ -153,7 +143,6 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
 
   g_pScreen = pScreen;
 
-  /*ErrorF("hi rdpScreenInit\n");*/
   /*dpix = 75;
   dpiy = 75;*/
   dpix = 100;
@@ -335,7 +324,6 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
 int
 ddxProcessArgument(int argc, char** argv, int i)
 {
-  /*ErrorF("hi ddxProcessArgument %s\n", argv[i]);*/
   if (g_firstTime)
   {
     memset(&g_rdpScreen, 0, sizeof(g_rdpScreen));
@@ -382,7 +370,6 @@ ddxProcessArgument(int argc, char** argv, int i)
 void
 OsVendorInit(void)
 {
-  /*ErrorF("hi OsVendorInit\n");*/
 }
 
 #ifdef RDP_IS_XORG
@@ -393,7 +380,6 @@ GetTimeInMillis(void)
 {
   struct timeval tp;
 
-  /*ErrorF("hi GetTimeInMillis\n");*/
   X_GETTIMEOFDAY(&tp);
   return (tp.tv_sec * 1000) + (tp.tv_usec / 1000);
 }
@@ -428,7 +414,6 @@ InitOutput(ScreenInfo* screenInfo, int argc, char** argv)
 {
   int i;
 
-  /*ErrorF("hi InitOutput\n");*/
   g_initOutputCalled = 1;
   /* initialize pixmap formats */
   screenInfo->imageByteOrder = IMAGE_BYTE_ORDER;
@@ -464,7 +449,6 @@ InitInput(int argc, char** argv)
   DeviceIntPtr p;
   DeviceIntPtr k;
 
-  /*ErrorF("hi InitInput\n");*/
   k = AddInputDevice(rdpKeybdProc, 1);
   p = AddInputDevice(rdpMouseProc, 1);
   RegisterKeyboardDevice(k);
@@ -484,7 +468,6 @@ ddxGiveUp(void)
 {
   char unixSocketName[32];
 
-  /*ErrorF("hi ddxGiveUp\n");*/
   Xfree(g_rdpScreen.pfbMemory);
   if (g_initOutputCalled)
   {
@@ -497,7 +480,6 @@ ddxGiveUp(void)
 Bool
 LegalModifier(unsigned int key, DevicePtr pDev)
 {
-  /*ErrorF("hi LegalModifier\n");*/
   return 1; /* true */
 }
 
@@ -505,14 +487,8 @@ LegalModifier(unsigned int key, DevicePtr pDev)
 void
 ProcessInputEvents(void)
 {
-  /*ErrorF("hi ProcessInputEvents\n");*/
-  /*rdpup_check();*/
-  /*if (*mieqCheckForInput[0] != *mieqCheckForInput[1])*/
-  {
-    /*ErrorF("hi ProcessInputEvents2 \n");*/
-    mieqProcessInputEvents();
-    miPointerUpdate();
-  }
+  mieqProcessInputEvents();
+  miPointerUpdate();
 }
 
 /******************************************************************************/
@@ -521,14 +497,12 @@ ProcessInputEvents(void)
 void
 rfbRootPropertyChange(PropertyPtr pProp)
 {
-  /*ErrorF("hi rdpRootPropertyChange\n");*/
 }
 
 /******************************************************************************/
 void
 AbortDDX(void)
 {
-  /*ErrorF("hi AbortDDX\n");*/
   ddxGiveUp();
 }
 
@@ -536,7 +510,6 @@ AbortDDX(void)
 void
 OsVendorFatalError(void)
 {
-  /*ErrorF("hi OsVendorFatalError\n");*/
 }
 
 /******************************************************************************/
