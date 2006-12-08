@@ -1132,7 +1132,7 @@ xrdp_wm_key(struct xrdp_wm* self, int device_flags, int scan_code)
     xrdp_wm_clear_popup(self);
     return 0;
   }
-  if (device_flags & 0x8000) /* key up */
+  if (device_flags & KBD_FLAG_UP) /* 0x8000 */
   {
     self->keys[scan_code] = 0;
     msg = WM_KEYUP;
@@ -1197,8 +1197,9 @@ xrdp_wm_key(struct xrdp_wm* self, int device_flags, int scan_code)
         if (key_down != 0)
         {
           self->mod->mod_event(self->mod, msg, key_down->param1,
-                               key_down->param2, key_down->scan_code,
-                               key_down->param4);
+                               key_down->param2 | KBD_FLAG_UP,
+                               key_down->scan_code,
+                               key_down->param4 | KBD_FLAG_UP);
           list_remove_item(self->key_down_list, key_down_index);
         }
       }
