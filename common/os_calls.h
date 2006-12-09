@@ -76,6 +76,10 @@ g_tcp_send(int sck, const void* ptr, int len, int flags);
 int
 g_tcp_last_error_would_block(int sck);
 int
+g_tcp_can_send(int sck, int millis);
+int
+g_tcp_can_recv(int sck, int millis);
+int
 g_tcp_select(int sck1, int sck2);
 void
 g_sleep(int msecs);

@@ -72,7 +72,7 @@ xrdp_tcp_recv(struct xrdp_tcp* self, struct stream* s, int len)
     {
       if (g_tcp_last_error_would_block(self->sck))
       {
-        g_sleep(1);
+        g_tcp_can_recv(self->sck, 10);
       }
       else
       {
@@ -121,7 +121,7 @@ xrdp_tcp_send(struct xrdp_tcp* self, struct stream* s)
     {
       if (g_tcp_last_error_would_block(self->sck))
       {
-        g_sleep(1);
+        g_tcp_can_send(self->sck, 10);
       }
       else
       {

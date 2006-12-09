@@ -460,6 +460,31 @@ g_tcp_can_send(int sck, int millis)
 }
 
 /*****************************************************************************/
+/* wait 'millis' milliseconds for the socket to be able to receive */
+/* returns boolean */
+int
+g_tcp_can_recv(int sck, int millis)
+{
+  fd_set rfds;
+  struct timeval time;
+  int rv;
+
+  time.tv_sec = millis / 1000;
+  time.tv_usec = (millis * 1000) % 1000000;
+  FD_ZERO(&rfds);
+  if (sck > 0)
+  {
+    FD_SET(((unsigned int)sck), &rfds);
+    rv = select(sck + 1, &rfds, 0, 0, &time);
+    if (rv > 0)
+    {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+/*****************************************************************************/
 int
 g_tcp_select(int sck1, int sck2)
 {
