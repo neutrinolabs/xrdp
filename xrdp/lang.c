@@ -431,54 +431,42 @@ get_char_from_scan_code(int device_flags, int scan_code, int* keys,
   int shift;
   int altgr;
   int ext;
-  int has_altgr;
 
   if (keylayout == 0x40c) /* france */
   {
     keys_noshift = fr_noshift;
     keys_shift = fr_shift;
     keys_altgr = fr_altgr;
-    has_altgr = 1;
   }
   else if (keylayout == 0x809) /* en-uk or en-gb */
   {
     keys_noshift = en_uk_noshift;
     keys_shift = en_uk_shift;
     keys_altgr = en_uk_altgr;
-    has_altgr = 1;
   }
   else if (keylayout == 0x407) /* german */
   {
     keys_noshift = de_noshift;
     keys_shift = de_shift;
     keys_altgr = de_altgr;
-    has_altgr = 1;
   }
   else if (keylayout == 0x416) /* Portuguese (Brazil) */
   {
     keys_noshift = pt_br_noshift;
     keys_shift = pt_br_shift;
     keys_altgr = pt_br_altgr;
-    has_altgr = 1;
   }
   else if (keylayout == 0x410) /* italy */
   {
     keys_noshift = it_noshift;
     keys_shift = it_shift;
     keys_altgr = it_altgr;
-    has_altgr = 1;
   }
   else /* english us 0x409 */
   {
     keys_noshift = en_us_noshift;
     keys_shift = en_us_shift;
     keys_altgr = en_us_altgr;
-    has_altgr = 0;
-  }
-  /* don't send altgr */
-  if (has_altgr && (scan_code == 56) && (device_flags & 0x100))
-  {
-    return 1;
   }
   /*g_writeln("%d %d %x", scan_code, device_flags, keylayout);*/
   shift = keys[42] || keys[54];

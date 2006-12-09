@@ -190,7 +190,18 @@ lib_mod_event(struct vnc* v, int msg, long param1, long param2,
           v->shift_state = (msg == 15);
           break;
         case 0x0038: /* left-right alt */
-          key = (param2 & 0x0100) ? 0xffea : 0xffe9;
+          if (param2 & 0x0100) /* right alt */
+          {
+            /* only en-us keymap can send right alt(alt-gr) */
+            if (v->keylayout == 0x409)
+            {
+              key = 0xffea;
+            }
+          }
+          else /* left alt */
+          {
+            key = 0xffe9;
+          }
           break;
         case 0x003b: /* F1 */
           key = 0xffbe;
@@ -1102,21 +1113,25 @@ lib_mod_end(struct vnc* v)
 int DEFAULT_CC
 lib_mod_set_param(struct vnc* v, char* name, char* value)
 {
-  if (g_strncasecmp(name, "username", 8) == 0)
+  if (g_strcasecmp(name, "username") == 0)
   {
     g_strncpy(v->username, value, 255);
   }
-  else if (g_strncasecmp(name, "password", 8) == 0)
+  else if (g_strcasecmp(name, "password") == 0)
   {
     g_strncpy(v->password, value, 255);
   }
-  else if (g_strncasecmp(name, "ip", 2) == 0)
+  else if (g_strcasecmp(name, "ip") == 0)
   {
     g_strncpy(v->ip, value, 255);
   }
-  else if (g_strncasecmp(name, "port", 4) == 0)
+  else if (g_strcasecmp(name, "port") == 0)
   {
     g_strncpy(v->port, value, 255);
+  }
+  else if (g_strcasecmp(name, "keylayout") == 0)
+  {
+    v->keylayout = g_atoi(value);
   }
   return 0;
 }

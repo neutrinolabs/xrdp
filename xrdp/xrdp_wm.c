@@ -1171,13 +1171,7 @@ xrdp_wm_key(struct xrdp_wm* self, int device_flags, int scan_code)
                                     self->num_lock,
                                     self->scroll_lock,
                                     self->session->client_info->keylayout);
-        /* this means don't send anything */
-        /* used to qvoid sending alt to xserver eg altgr */
-        /* if alt state is down, the xserver avoids the keystroke */
-        if (c == 1)
-        {
-        }
-        else if (c != 0)
+        if (c != 0)
         {
           self->mod->mod_event(self->mod, msg, (unsigned char)c, 0xffff,
                                scan_code, device_flags);
