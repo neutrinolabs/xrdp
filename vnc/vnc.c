@@ -59,7 +59,7 @@ lib_recv(struct vnc* v, char* data, int len)
         {
           return 1;
         }
-        g_sleep(1);
+        g_tcp_can_recv(v->sck, 10);
       }
       else
       {
@@ -102,7 +102,7 @@ lib_send(struct vnc* v, char* data, int len)
         {
           return 1;
         }
-        g_sleep(1);
+        g_tcp_can_send(v->sck, 10);
       }
       else
       {
