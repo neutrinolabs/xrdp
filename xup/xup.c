@@ -44,7 +44,7 @@ lib_recv(struct mod* mod, char* data, int len)
         {
           return 1;
         }
-        g_sleep(1);
+        g_tcp_can_recv(mod->sck, 10);
       }
       else
       {
@@ -87,7 +87,7 @@ lib_send(struct mod* mod, char* data, int len)
         {
           return 1;
         }
-        g_sleep(1);
+        g_tcp_can_send(mod->sck, 10);
       }
       else
       {
