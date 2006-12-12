@@ -25,176 +25,178 @@
 #if !defined(OS_CALLS_H)
 #define OS_CALLS_H
 
-void*
+#include "arch.h"
+
+void* APP_CC
 g_malloc(int size, int zero);
-void
+void APP_CC
 g_free(void* ptr);
-void
+void DEFAULT_CC
 g_printf(const char *format, ...);
-void
+void DEFAULT_CC
 g_sprintf(char* dest, const char* format, ...);
-void
+void DEFAULT_CC
 g_writeln(const char* format, ...);
-void
+void DEFAULT_CC
 g_write(const char* format, ...);
-void
+void APP_CC
 g_hexdump(char* p, int len);
-void
+void APP_CC
 g_memset(void* ptr, int val, int size);
-void
+void APP_CC
 g_memcpy(void* d_ptr, const void* s_ptr, int size);
-int
+int APP_CC
 g_getchar(void);
-int
+int APP_CC
 g_tcp_set_no_delay(int sck);
-int
+int APP_CC
 g_tcp_socket(void);
-int
+int APP_CC
 g_tcp_local_socket(void);
-void
+void APP_CC
 g_tcp_close(int sck);
-int
+int APP_CC
 g_tcp_connect(int sck, const char* address, const char* port);
-int
+int APP_CC
 g_tcp_force_send(int sck, char* data, int len);
-int
+int APP_CC
 g_tcp_force_recv(int sck, char* data, int len);
-int
+int APP_CC
 g_tcp_set_non_blocking(int sck);
-int
+int APP_CC
 g_tcp_bind(int sck, char* port);
-int
+int APP_CC
 g_tcp_local_bind(int sck, char* port);
-int
+int APP_CC
 g_tcp_listen(int sck);
-int
+int APP_CC
 g_tcp_accept(int sck);
-int
+int APP_CC
 g_tcp_recv(int sck, void* ptr, int len, int flags);
-int
+int APP_CC
 g_tcp_send(int sck, const void* ptr, int len, int flags);
-int
+int APP_CC
 g_tcp_last_error_would_block(int sck);
-int
+int APP_CC
 g_tcp_can_send(int sck, int millis);
-int
+int APP_CC
 g_tcp_can_recv(int sck, int millis);
-int
+int APP_CC
 g_tcp_select(int sck1, int sck2);
-void
+void APP_CC
 g_sleep(int msecs);
-void
+void APP_CC
 g_random(char* data, int len);
-int
+int APP_CC
 g_abs(int i);
-int
+int APP_CC
 g_memcmp(const void* s1, const void* s2, int len);
-int
+int APP_CC
 g_file_open(const char* file_name);
-int
+int APP_CC
 g_file_close(int fd);
-int
+int APP_CC
 g_file_read(int fd, char* ptr, int len);
-int
+int APP_CC
 g_file_write(int fd, char* ptr, int len);
-int
+int APP_CC
 g_file_seek(int fd, int offset);
-int
+int APP_CC
 g_file_lock(int fd, int start, int len);
-int
+int APP_CC
 g_set_file_rights(const char* filename, int read, int write);
-int
+int APP_CC
 g_chmod_hex(const char* filename, int flags);
-int
+int APP_CC
 g_mkdir(const char* dirname);
-char*
+char* APP_CC
 g_get_current_dir(char* dirname, int maxlen);
-int
+int APP_CC
 g_set_current_dir(char* dirname);
-int
+int APP_CC
 g_file_exist(const char* filename);
-int
+int APP_CC
 g_directory_exist(const char* dirname);
-int
+int APP_CC
 g_create_dir(const char* dirname);
-int
+int APP_CC
 g_remove_dir(const char* dirname);
-int
+int APP_CC
 g_file_delete(const char* filename);
-int
+int APP_CC
 g_strlen(const char* text);
-char*
+char* APP_CC
 g_strcpy(char* dest, const char* src);
-char*
+char* APP_CC
 g_strncpy(char* dest, const char* src, int len);
-char*
+char* APP_CC
 g_strcat(char* dest, const char* src);
-char*
+char* APP_CC
 g_strdup(const char* in);
-int
+int APP_CC
 g_strcmp(const char* c1, const char* c2);
-int
+int APP_CC
 g_strncmp(const char* c1, const char* c2, int len);
-int
+int APP_CC
 g_strcasecmp(const char* c1, const char* c2);
-int
+int APP_CC
 g_strncasecmp(const char* c1, const char* c2, int len);
-int
+int APP_CC
 g_atoi(char* str);
-int
+int APP_CC
 g_pos(char* str, const char* to_find);
-long
+long APP_CC
 g_load_library(char* in);
-int
+int APP_CC
 g_free_library(long lib);
-void*
+void* APP_CC
 g_get_proc_address(long lib, const char* name);
-int
+int APP_CC
 g_system(char* aexec);
-char*
+char* APP_CC
 g_get_strerror(void);
-int
+int APP_CC
 g_execvp(const char* p1, char* args[]);
-int
+int APP_CC
 g_execlp3(const char* a1, const char* a2, const char* a3);
-void
+void APP_CC
 g_signal(int sig_num, void (*func)(int));
-void
+void APP_CC
 g_signal_child_stop(void (*func)(int));
-void
+void APP_CC
 g_unset_signals(void);
-int
+int APP_CC
 g_fork(void);
-int
+int APP_CC
 g_setgid(int pid);
-int
+int APP_CC
 g_initgroups(const char* user, int gid);
-int
+int APP_CC
 g_setuid(int pid);
-int
+int APP_CC
 g_waitchild(void);
-int
+int APP_CC
 g_waitpid(int pid);
-void
+void APP_CC
 g_clearenv(void);
-int
+int APP_CC
 g_setenv(const char* name, const char* value, int rewrite);
-char*
+char* APP_CC
 g_getenv(const char* name);
-int
+int APP_CC
 g_exit(int exit_code);
-int
+int APP_CC
 g_getpid(void);
-int
+int APP_CC
 g_sigterm(int pid);
-int
+int APP_CC
 g_getuser_info(const char* username, int* gid, int* uid, char* shell,
                char* dir, char* gecos);
-int
+int APP_CC
 g_getgroup_info(const char* groupname, int* gid);
-int
+int APP_CC
 g_check_user_in_group(const char* username, int gid, int* ok);
-int
+int APP_CC
 g_time1(void);
 
 #endif
