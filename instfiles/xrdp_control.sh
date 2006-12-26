@@ -1,6 +1,8 @@
 #!/bin/sh
 # xrdp control script
 # Written : 1-13-2006 - Mark Balliet - posicat@pobox.com
+# chkconfig: 2345 11 89
+# description: starts xrdp
 
 XRDP=xrdp
 SESMAN=sesman

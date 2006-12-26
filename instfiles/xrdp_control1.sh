@@ -2,6 +2,8 @@
 # xrdp control script
 # same as xrdp_control.sh except the XRDP_DIR is /usr/lib/xrdp
 # Written : 1-13-2006 - Mark Balliet - posicat@pobox.com
+# chkconfig: 2345 11 89
+# description: starts xrdp
 
 XRDP=xrdp
 SESMAN=sesman
