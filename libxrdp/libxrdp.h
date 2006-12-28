@@ -48,6 +48,15 @@ struct xrdp_iso
   struct xrdp_tcp* tcp_layer;
 };
 
+/* used in mcs */
+struct mcs_channel_item
+{
+  char name[16];
+  int flags;
+  int chanid;
+  struct stream* in_s;
+};
+
 /* mcs */
 struct xrdp_mcs
 {
@@ -57,6 +66,7 @@ struct xrdp_mcs
   int chanid;
   struct stream* client_mcs_data;
   struct stream* server_mcs_data;
+  struct list* channel_list;
 };
 
 /* sec */
@@ -64,6 +74,7 @@ struct xrdp_sec
 {
   struct xrdp_rdp* rdp_layer; /* owner */
   struct xrdp_mcs* mcs_layer;
+  struct xrdp_channel* chan_layer;
   char server_random[32];
   char client_random[64];
   char client_crypt_random[72];
@@ -85,6 +96,14 @@ struct xrdp_sec
   char pub_mod[64];
   char pub_sig[64];
   char pri_exp[64];
+  int channel_code;
+};
+
+/* channel */
+struct xrdp_channel
+{
+  struct xrdp_sec* sec_layer;
+  struct xrdp_mcs* mcs_layer;
 };
 
 /* rdp */
@@ -223,7 +242,7 @@ xrdp_mcs_init(struct xrdp_mcs* self, struct stream* s);
 int APP_CC
 xrdp_mcs_recv(struct xrdp_mcs* self, struct stream* s, int* chan);
 int APP_CC
-xrdp_mcs_send(struct xrdp_mcs* self, struct stream* s);
+xrdp_mcs_send(struct xrdp_mcs* self, struct stream* s, int chan);
 int APP_CC
 xrdp_mcs_incoming(struct xrdp_mcs* self);
 int APP_CC
@@ -231,7 +250,8 @@ xrdp_mcs_disconnect(struct xrdp_mcs* self);
 
 /* xrdp_sec.c */
 struct xrdp_sec* APP_CC
-xrdp_sec_create(struct xrdp_rdp* owner, int sck, int crypt_level);
+xrdp_sec_create(struct xrdp_rdp* owner, int sck, int crypt_level,
+                int channel_code);
 void APP_CC
 xrdp_sec_delete(struct xrdp_sec* self);
 int APP_CC
@@ -239,7 +259,11 @@ xrdp_sec_init(struct xrdp_sec* self, struct stream* s);
 int APP_CC
 xrdp_sec_recv(struct xrdp_sec* self, struct stream* s, int* chan);
 int APP_CC
-xrdp_sec_send(struct xrdp_sec* self, struct stream* s);
+xrdp_sec_send(struct xrdp_sec* self, struct stream* s, int chan);
+int APP_CC
+xrdp_sec_process_mcs_data(struct xrdp_sec* self);
+int APP_CC
+xrdp_sec_out_mcs_data(struct xrdp_sec* self);
 int APP_CC
 xrdp_sec_incoming(struct xrdp_sec* self);
 int APP_CC
@@ -355,5 +379,18 @@ xrdp_bitmap_compress(char* in_data, int width, int height,
                      struct stream* s, int bpp, int byte_limit,
                      int start_line, struct stream* temp,
                      int e);
+
+/* xrdp_channel.c */
+struct xrdp_channel* APP_CC
+xrdp_channel_create(struct xrdp_sec* owner, struct xrdp_mcs* mcs_layer);
+void APP_CC
+xrdp_channel_delete(struct xrdp_channel* self);
+int APP_CC
+xrdp_channel_init(struct xrdp_channel* self, struct stream* s);
+int APP_CC
+xrdp_channel_send(struct xrdp_channel* self, struct stream* s, int channel_id);
+int APP_CC
+xrdp_channel_process(struct xrdp_channel* self, struct stream* s,
+                     int chanid);
 
 #endif

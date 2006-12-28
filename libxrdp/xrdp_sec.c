@@ -139,7 +139,7 @@ hex_to_bin(char* in, char* out)
 }
 
 /*****************************************************************************/
-static void
+static void APP_CC
 hex_str_to_bin(char* in, char* out, int out_len)
 {
   int in_index;
@@ -169,7 +169,8 @@ hex_str_to_bin(char* in, char* out, int out_len)
 
 /*****************************************************************************/
 struct xrdp_sec* APP_CC
-xrdp_sec_create(struct xrdp_rdp* owner, int sck, int crypt_level)
+xrdp_sec_create(struct xrdp_rdp* owner, int sck, int crypt_level,
+                int channel_code)
 {
   struct xrdp_sec* self;
   struct list* items;
@@ -198,6 +199,7 @@ xrdp_sec_create(struct xrdp_rdp* owner, int sck, int crypt_level)
       self->crypt_level = 3;
       break;
   }
+  self->channel_code = channel_code;
   self->decrypt_rc4_info = ssl_rc4_info_create();
   self->encrypt_rc4_info = ssl_rc4_info_create();
   g_random(self->server_random, 32);
@@ -398,6 +400,10 @@ xrdp_sec_process_logon_info(struct xrdp_sec* self, struct stream* s)
   {                                                   /* must be or error */
     return 1;
   }
+  if (flags & RDP_LOGON_LEAVE_AUDIO)
+  {
+    self->rdp_layer->client_info.sound_code = 1;
+  }
   if (flags & RDP_LOGON_AUTO)
   {
     self->rdp_layer->client_info.rdp_autologin = 1;
@@ -451,7 +457,7 @@ xrdp_sec_send_lic_initial(struct xrdp_sec* self)
   }
   out_uint8a(s, g_lic1, 322);
   s_mark_end(s);
-  if (xrdp_mcs_send(self->mcs_layer, s) != 0)
+  if (xrdp_mcs_send(self->mcs_layer, s, MCS_GLOBAL_CHANNEL) != 0)
   {
     free_stream(s);
     return 1;
@@ -476,7 +482,7 @@ xrdp_sec_send_lic_response(struct xrdp_sec* self)
   }
   out_uint8a(s, g_lic2, 20);
   s_mark_end(s);
-  if (xrdp_mcs_send(self->mcs_layer, s) != 0)
+  if (xrdp_mcs_send(self->mcs_layer, s, MCS_GLOBAL_CHANNEL) != 0)
   {
     free_stream(s);
     return 1;
@@ -682,7 +688,7 @@ xrdp_sec_sign(struct xrdp_sec* self, char* out, int out_len,
 /*****************************************************************************/
 /* returns error */
 int APP_CC
-xrdp_sec_send(struct xrdp_sec* self, struct stream* s)
+xrdp_sec_send(struct xrdp_sec* self, struct stream* s, int chan)
 {
   int datalen;
 
@@ -699,7 +705,7 @@ xrdp_sec_send(struct xrdp_sec* self, struct stream* s)
   {
     out_uint32_le(s, 0);
   }
-  if (xrdp_mcs_send(self->mcs_layer, s) != 0)
+  if (xrdp_mcs_send(self->mcs_layer, s, chan) != 0)
   {
     return 1;
   }
@@ -708,73 +714,168 @@ xrdp_sec_send(struct xrdp_sec* self, struct stream* s)
 }
 
 /*****************************************************************************/
+/* this adds the mcs channels in the list of channels to be used when
+   creating the server mcs data */
+static int APP_CC
+xrdp_sec_process_mcs_data_channels(struct xrdp_sec* self, struct stream* s)
+{
+  int num_channels;
+  int index;
+  struct mcs_channel_item* channel_item;
+
+  /* this is an option set in xrdp.ini */
+  if (self->channel_code != 1) /* are channels on? */
+  {
+    return 0;
+  }
+  in_uint32_le(s, num_channels);
+  for (index = 0; index < num_channels; index++)
+  {
+    channel_item = (struct mcs_channel_item*)
+             g_malloc(sizeof(struct mcs_channel_item), 1);
+    in_uint8a(s, channel_item->name, 8);
+    in_uint32_be(s, channel_item->flags);
+    channel_item->chanid = MCS_GLOBAL_CHANNEL + (index + 1);
+    list_add_item(self->mcs_layer->channel_list, (long)channel_item);
+  }
+  return 0;
+}
+
+/*****************************************************************************/
+/* process client mcs data, we need some things in here to create the server
+   mcs data */
+int APP_CC
+xrdp_sec_process_mcs_data(struct xrdp_sec* self)
+{
+  struct stream* s;
+  char* hold_p;
+  int tag;
+  int size;
+
+  s = &self->client_mcs_data;
+  /* set p to beginning */
+  s->p = s->data;
+  /* skip header */
+  in_uint8s(s, 23);
+  while (s_check_rem(s, 4))
+  {
+    hold_p = s->p;
+    in_uint16_le(s, tag);
+    in_uint16_le(s, size);
+    if (size < 4 || !s_check_rem(s, size - 4))
+    {
+      g_writeln("error in xrdp_sec_process_mcs_data tag %d size %d",
+                tag, size);
+      break;
+    }
+    switch (tag)
+    {
+      case SEC_TAG_CLI_INFO:
+        break;
+      case SEC_TAG_CLI_CRYPT:
+        break;
+      case SEC_TAG_CLI_CHANNELS:
+        xrdp_sec_process_mcs_data_channels(self, s);
+        break;
+      case SEC_TAG_CLI_4:
+        break;
+      default:
+        g_writeln("error unknown xrdp_sec_process_mcs_data tag %d size %d",
+                  tag, size);
+        break;
+    }
+    s->p = hold_p + size;
+  }
+  /* set p to beginning */
+  s->p = s->data;
+  return 0;
+}
+
+/*****************************************************************************/
 /* prepare server mcs data to send in mcs layer */
-static void APP_CC
+int APP_CC
 xrdp_sec_out_mcs_data(struct xrdp_sec* self)
 {
-  struct stream* p;
-
-  p = &self->server_mcs_data;
-  init_stream(p, 512);
-  out_uint16_be(p, 5);
-  out_uint16_be(p, 0x14);
-  out_uint8(p, 0x7c);
-  out_uint16_be(p, 1);
-  out_uint8(p, 0x2a);
-  out_uint8(p, 0x14);
-  out_uint8(p, 0x76);
-  out_uint8(p, 0x0a);
-  out_uint8(p, 1);
-  out_uint8(p, 1);
-  out_uint8(p, 0);
-  out_uint16_le(p, 0xc001);
-  out_uint8(p, 0);
-  out_uint8(p, 0x4d); /* M */
-  out_uint8(p, 0x63); /* c */
-  out_uint8(p, 0x44); /* D */
-  out_uint8(p, 0x6e); /* n */
-  out_uint16_be(p, 0x80fc);
-  out_uint16_le(p, SEC_TAG_SRV_INFO);
-  out_uint16_le(p, 8); /* len */
-  out_uint8(p, 4); /* 4 = rdp5 1 = rdp4 */
-  out_uint8(p, 0);
-  out_uint8(p, 8);
-  out_uint8(p, 0);
-  out_uint16_le(p, SEC_TAG_SRV_CHANNELS);
-  out_uint16_le(p, 8); /* len */
-  out_uint8(p, 0xeb);
-  out_uint8(p, 3);
-  out_uint8(p, 0);
-  out_uint8(p, 0);
-  out_uint16_le(p, SEC_TAG_SRV_CRYPT);
-  out_uint16_le(p, 0x00ec); /* len is 236 */
-  out_uint32_le(p, self->rc4_key_size); /* key len 1 = 40 bit 2 = 128 bit */
-  out_uint32_le(p, self->crypt_level); /* crypt level 1 = low 2 = medium */
+  struct stream* s;
+  int num_channels_even;
+  int num_channels;
+  int index;
+  int channel;
+  
+  num_channels = self->mcs_layer->channel_list->count;
+  num_channels_even = num_channels + (num_channels & 1);
+  s = &self->server_mcs_data;
+  init_stream(s, 512);
+  out_uint16_be(s, 5);
+  out_uint16_be(s, 0x14);
+  out_uint8(s, 0x7c);
+  out_uint16_be(s, 1);
+  out_uint8(s, 0x2a);
+  out_uint8(s, 0x14);
+  out_uint8(s, 0x76);
+  out_uint8(s, 0x0a);
+  out_uint8(s, 1);
+  out_uint8(s, 1);
+  out_uint8(s, 0);
+  out_uint16_le(s, 0xc001);
+  out_uint8(s, 0);
+  out_uint8(s, 0x4d); /* M */
+  out_uint8(s, 0x63); /* c */
+  out_uint8(s, 0x44); /* D */
+  out_uint8(s, 0x6e); /* n */
+  out_uint16_be(s, 0x80fc + (num_channels_even * 2));
+  out_uint16_le(s, SEC_TAG_SRV_INFO);
+  out_uint16_le(s, 8); /* len */
+  out_uint8(s, 4); /* 4 = rdp5 1 = rdp4 */
+  out_uint8(s, 0);
+  out_uint8(s, 8);
+  out_uint8(s, 0);
+  out_uint16_le(s, SEC_TAG_SRV_CHANNELS);
+  out_uint16_le(s, 8 + (num_channels_even * 2)); /* len */
+  out_uint16_le(s, MCS_GLOBAL_CHANNEL); /* 1003, 0x03eb main channel */
+  out_uint16_le(s, num_channels); /* number of other channels */
+  for (index = 0; index < num_channels_even; index++)
+  {
+    if (index < num_channels)
+    {
+      channel = MCS_GLOBAL_CHANNEL + (index + 1);
+      out_uint16_le(s, channel);
+    }
+    else
+    {
+      out_uint16_le(s, 0);
+    }
+  }
+  out_uint16_le(s, SEC_TAG_SRV_CRYPT);
+  out_uint16_le(s, 0x00ec); /* len is 236 */
+  out_uint32_le(s, self->rc4_key_size); /* key len 1 = 40 bit 2 = 128 bit */
+  out_uint32_le(s, self->crypt_level); /* crypt level 1 = low 2 = medium */
                                        /* 3 = high */
-  out_uint32_le(p, 32);     /* 32 bytes random len */
-  out_uint32_le(p, 0xb8);   /* 184 bytes rsa info(certificate) len */
-  out_uint8a(p, self->server_random, 32);
+  out_uint32_le(s, 32);     /* 32 bytes random len */
+  out_uint32_le(s, 0xb8);   /* 184 bytes rsa info(certificate) len */
+  out_uint8a(s, self->server_random, 32);
   /* here to end is certificate */
   /* HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\ */
   /* TermService\Parameters\Certificate */
-  out_uint32_le(p, 1);
-  out_uint32_le(p, 1);
-  out_uint32_le(p, 1);
-  out_uint16_le(p, SEC_TAG_PUBKEY);
-  out_uint16_le(p, 0x005c); /* 92 bytes length of SEC_TAG_PUBKEY */
-  out_uint32_le(p, SEC_RSA_MAGIC);
-  out_uint32_le(p, 0x48); /* 72 bytes modulus len */
-  out_uint32_be(p, 0x00020000);
-  out_uint32_be(p, 0x3f000000);
-  out_uint8a(p, self->pub_exp, 4); /* pub exp */
-  out_uint8a(p, self->pub_mod, 64); /* pub mod */
-  out_uint8s(p, 8); /* pad */
-  out_uint16_le(p, SEC_TAG_KEYSIG);
-  out_uint16_le(p, 72); /* len */
-  out_uint8a(p, self->pub_sig, 64); /* pub sig */
-  out_uint8s(p, 8); /* pad */
+  out_uint32_le(s, 1);
+  out_uint32_le(s, 1);
+  out_uint32_le(s, 1);
+  out_uint16_le(s, SEC_TAG_PUBKEY);
+  out_uint16_le(s, 0x005c); /* 92 bytes length of SEC_TAG_PUBKEY */
+  out_uint32_le(s, SEC_RSA_MAGIC);
+  out_uint32_le(s, 0x48); /* 72 bytes modulus len */
+  out_uint32_be(s, 0x00020000);
+  out_uint32_be(s, 0x3f000000);
+  out_uint8a(s, self->pub_exp, 4); /* pub exp */
+  out_uint8a(s, self->pub_mod, 64); /* pub mod */
+  out_uint8s(s, 8); /* pad */
+  out_uint16_le(s, SEC_TAG_KEYSIG);
+  out_uint16_le(s, 72); /* len */
+  out_uint8a(s, self->pub_sig, 64); /* pub sig */
+  out_uint8s(s, 8); /* pad */
   /* end certificate */
-  s_mark_end(p);
+  s_mark_end(s);
+  return 0;
 }
 
 /*****************************************************************************/
@@ -818,7 +919,6 @@ int APP_CC
 xrdp_sec_incoming(struct xrdp_sec* self)
 {
   DEBUG(("in xrdp_sec_incoming"));
-  xrdp_sec_out_mcs_data(self);
   if (xrdp_mcs_incoming(self->mcs_layer) != 0)
   {
     return 1;

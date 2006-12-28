@@ -122,7 +122,8 @@ xrdp_rdp_create(struct xrdp_session* session, int sck)
   /* read ini settings */
   xrdp_rdp_read_config(&self->client_info);
   /* create sec layer */
-  self->sec_layer = xrdp_sec_create(self, sck, self->client_info.crypt_level);
+  self->sec_layer = xrdp_sec_create(self, sck, self->client_info.crypt_level,
+                                    self->client_info.channel_code);
   /* default 8 bit v1 color bitmap cache entries and size */
   self->client_info.cache1_entries = 600;
   self->client_info.cache1_size = 256;
@@ -198,6 +199,10 @@ xrdp_rdp_recv(struct xrdp_rdp* self, struct stream* s, int* code)
     }
     if (chan != MCS_GLOBAL_CHANNEL && chan > 0)
     {
+      if (chan > MCS_GLOBAL_CHANNEL)
+      {
+        xrdp_channel_process(self->sec_layer->chan_layer, s, chan);
+      }
       s->next_packet = 0;
       *code = 0;
       DEBUG(("out xrdp_rdp_recv"));
@@ -237,7 +242,7 @@ xrdp_rdp_send(struct xrdp_rdp* self, struct stream* s, int pdu_type)
   out_uint16_le(s, len);
   out_uint16_le(s, 0x10 | pdu_type);
   out_uint16_le(s, self->mcs_channel);
-  if (xrdp_sec_send(self->sec_layer, s) != 0)
+  if (xrdp_sec_send(self->sec_layer, s, MCS_GLOBAL_CHANNEL) != 0)
   {
     DEBUG(("out xrdp_rdp_send error"));
     return 1;
@@ -266,7 +271,7 @@ xrdp_rdp_send_data(struct xrdp_rdp* self, struct stream* s,
   out_uint8(s, data_pdu_type);
   out_uint8(s, 0);
   out_uint16_le(s, 0);
-  if (xrdp_sec_send(self->sec_layer, s) != 0)
+  if (xrdp_sec_send(self->sec_layer, s, MCS_GLOBAL_CHANNEL) != 0)
   {
     DEBUG(("out xrdp_rdp_send_data error"));
     return 1;

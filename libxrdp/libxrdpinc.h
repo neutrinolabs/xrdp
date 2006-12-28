@@ -57,6 +57,8 @@ struct xrdp_client_info
   int rdp_compression;
   int rdp_autologin;
   int crypt_level; /* 1, 2, 3 = low, medium, high */
+  int channel_code; /* 0 = no channels 1 = channels */
+  int sound_code; /* 1 = leave sound at server */
 };
 
 struct xrdp_brush

@@ -37,6 +37,7 @@ xrdp_mcs_create(struct xrdp_sec* owner, int sck,
   self->client_mcs_data = client_mcs_data;
   self->server_mcs_data = server_mcs_data;
   self->iso_layer = xrdp_iso_create(self, sck);
+  self->channel_list = list_create();
   return self;
 }
 
@@ -44,10 +45,27 @@ xrdp_mcs_create(struct xrdp_sec* owner, int sck,
 void APP_CC
 xrdp_mcs_delete(struct xrdp_mcs* self)
 {
+  struct mcs_channel_item* channel_item;
+  int index;
+  int count;
+
   if (self == 0)
   {
     return;
   }
+  /* here we have to free the channel items and anything in them */
+  count = self->channel_list->count;
+  for (index = count - 1; index >= 0; index--)
+  {
+    channel_item = (struct mcs_channel_item*)
+                      list_get_item(self->channel_list, index);
+    if (channel_item != 0)
+    {
+      free_stream(channel_item->in_s);
+      g_free(channel_item);
+    }
+  }
+  list_delete(self->channel_list);
   xrdp_iso_delete(self->iso_layer);
   g_free(self);
 }
@@ -55,7 +73,7 @@ xrdp_mcs_delete(struct xrdp_mcs* self)
 /*****************************************************************************/
 /* returns error */
 static int APP_CC
-xrdp_mcs_send_cjcf(struct xrdp_mcs* self, int chanid)
+xrdp_mcs_send_cjcf(struct xrdp_mcs* self, int userid, int chanid)
 {
   struct stream* s;
 
@@ -68,7 +86,7 @@ xrdp_mcs_send_cjcf(struct xrdp_mcs* self, int chanid)
   }
   out_uint8(s, (MCS_CJCF << 2) | 2);
   out_uint8(s, 0);
-  out_uint16_be(s, self->userid);
+  out_uint16_be(s, userid);
   out_uint16_be(s, chanid);
   out_uint16_be(s, chanid);
   s_mark_end(s);
@@ -89,6 +107,8 @@ xrdp_mcs_recv(struct xrdp_mcs* self, struct stream* s, int* chan)
   int appid;
   int opcode;
   int len;
+  int userid;
+  int chanid;
 
   DEBUG(("  in xrdp_mcs_recv"));
   while (1)
@@ -105,9 +125,12 @@ xrdp_mcs_recv(struct xrdp_mcs* self, struct stream* s, int* chan)
       DEBUG(("  out xrdp_mcs_recv appid != MCS_DPUM"));
       return 1;
     }
+    /* this is channels getting added from the client */
     if (appid == MCS_CJRQ)
     {
-      xrdp_mcs_send_cjcf(self, self->userid + MCS_USERCHANNEL_BASE);
+      in_uint16_be(s, userid);
+      in_uint16_be(s, chanid);
+      xrdp_mcs_send_cjcf(self, userid, chanid);
       continue;
     }
     break;
@@ -499,12 +522,12 @@ xrdp_mcs_send_connect_response(struct xrdp_mcs* self)
   init_stream(s, 8192);
   data_len = self->server_mcs_data->end - self->server_mcs_data->data;
   xrdp_iso_init(self->iso_layer, s);
-  xrdp_mcs_ber_out_header(self, s, MCS_CONNECT_RESPONSE, 313);
+  xrdp_mcs_ber_out_header(self, s, MCS_CONNECT_RESPONSE, data_len + 38);
   xrdp_mcs_ber_out_header(self, s, BER_TAG_RESULT, 1);
   out_uint8(s, 0);
   xrdp_mcs_ber_out_header(self, s, BER_TAG_INTEGER, 1);
   out_uint8(s, 0);
-  xrdp_mcs_out_domain_params(self, s, 2, 2, 0, 0xffff);
+  xrdp_mcs_out_domain_params(self, s, 22, 3, 0, 0xfff8);
   xrdp_mcs_ber_out_header(self, s, BER_TAG_OCTET_STRING, data_len);
   /* mcs data */
   out_uint8a(s, self->server_mcs_data->data, data_len);
@@ -532,6 +555,16 @@ xrdp_mcs_incoming(struct xrdp_mcs* self)
   {
     return 1;
   }
+  /* in xrdp_sec.c */
+  if (xrdp_sec_process_mcs_data(self->sec_layer) != 0)
+  {
+    return 1;
+  }
+  /* in xrdp_sec.c */
+  if (xrdp_sec_out_mcs_data(self->sec_layer) != 0)
+  {
+    return 1;
+  }
   if (xrdp_mcs_send_connect_response(self) != 0)
   {
     return 1;
@@ -552,7 +585,8 @@ xrdp_mcs_incoming(struct xrdp_mcs* self)
   {
     return 1;
   }
-  if (xrdp_mcs_send_cjcf(self, self->userid + MCS_USERCHANNEL_BASE) != 0)
+  if (xrdp_mcs_send_cjcf(self, self->userid,
+                         self->userid + MCS_USERCHANNEL_BASE) != 0)
   {
     return 1;
   }
@@ -560,7 +594,7 @@ xrdp_mcs_incoming(struct xrdp_mcs* self)
   {
     return 1;
   }
-  if (xrdp_mcs_send_cjcf(self, MCS_GLOBAL_CHANNEL) != 0)
+  if (xrdp_mcs_send_cjcf(self, self->userid, MCS_GLOBAL_CHANNEL) != 0)
   {
     return 1;
   }
@@ -580,23 +614,73 @@ xrdp_mcs_init(struct xrdp_mcs* self, struct stream* s)
 
 /*****************************************************************************/
 /* returns error */
+/* Inform the callback that an mcs packet has been sent.  This is needed so
+   the module can send any high priority mcs packets like audio. */
+static int APP_CC
+xrdp_mcs_call_callback(struct xrdp_mcs* self)
+{
+  int rv;
+  struct xrdp_session* session;
+
+  rv = 0;
+  /* if there is a callback, call it here */
+  session = self->sec_layer->rdp_layer->session;
+  if (session != 0)
+  {
+    if (session->callback != 0)
+    {
+      /* in xrdp_wm.c */
+      rv = session->callback(session->id, 0x5556, 0, 0, 0, 0);
+    }
+    else
+    {
+      g_writeln("in xrdp_mcs_send, session->callback is nil");
+    }
+  }
+  else
+  {
+    g_writeln("in xrdp_mcs_send, session is nil");
+  }
+  return rv;
+}
+
+/*****************************************************************************/
+/* returns error */
 int APP_CC
-xrdp_mcs_send(struct xrdp_mcs* self, struct stream* s)
+xrdp_mcs_send(struct xrdp_mcs* self, struct stream* s, int chan)
 {
   int len;
+  //static int max_len = 0;
 
   DEBUG(("  in xrdp_mcs_send"));
   s_pop_layer(s, mcs_hdr);
   len = (s->end - s->p) - 8;
+  if (len > 8192 * 2)
+  {
+    g_writeln("error in xrdp_mcs_send, size too bog, its %d", len);
+  }
+  //if (len > max_len)
+  //{
+  //  max_len = len;
+  //  g_printf("mcs max length is %d\r\n", max_len);
+  //}
+  //g_printf("mcs length %d max length is %d\r\n", len, max_len);
+  //g_printf("mcs length %d\r\n", len);
   len = len | 0x8000;
   out_uint8(s, MCS_SDIN << 2);
   out_uint16_be(s, self->userid);
-  out_uint16_be(s, MCS_GLOBAL_CHANNEL);
+  out_uint16_be(s, chan);
   out_uint8(s, 0x70);
   out_uint16_be(s, len);
   if (xrdp_iso_send(self->iso_layer, s) != 0)
   {
     return 1;
+  }
+  /* todo, do we need to call this for every mcs packet,
+     maybe every 5 or so */
+  if (chan == MCS_GLOBAL_CHANNEL)
+  {
+    xrdp_mcs_call_callback(self);
   }
   DEBUG(("  out xrdp_mcs_send"));
   return 0;
