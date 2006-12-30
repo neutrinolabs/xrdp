@@ -1326,6 +1326,22 @@ xrdp_wm_process_input_mouse(struct xrdp_wm* self, int device_flags,
 }
 
 /******************************************************************************/
+static int APP_CC
+xrdp_wm_process_channel_data(struct xrdp_wm* self, int channel_id,
+                             char* data, int data_len)
+{
+ if (self->mod != 0)
+  {
+    if (self->mod->mod_event != 0)
+    {
+      self->mod->mod_event(self->mod, 0x5555, channel_id, (long)data,
+                           data_len, 0);
+    }
+  }
+  return 0;
+}
+
+/******************************************************************************/
 /* this is the callbacks comming from libxrdp.so */
 int DEFAULT_CC
 callback(long id, int msg, long param1, long param2, long param3, long param4)
@@ -1360,6 +1376,10 @@ callback(long id, int msg, long param1, long param2, long param3, long param4)
                  /* its the rdp client asking for a screen update */
       MAKERECT(rect, param1, param2, param3, param4);
       rv = xrdp_bitmap_invalidate(wm->screen, &rect);
+      break;
+    case 0x5555: /* called from xrdp_channel.c, channel data has come in,
+                    pass it to module if there is one */
+      rv = xrdp_wm_process_channel_data(wm, param1, (char*)param2, param3);
       break;
   }
   return rv;
