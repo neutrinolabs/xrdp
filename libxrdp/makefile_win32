@@ -8,7 +8,7 @@
 
 XRDPOBJ = libxrdp.obj xrdp_tcp.obj xrdp_iso.obj xrdp_mcs.obj \
           xrdp_sec.obj xrdp_rdp.obj xrdp_orders.obj \
-          xrdp_bitmap_compress.obj \
+          xrdp_bitmap_compress.obj xrdp_channel.obj \
           list.obj \
           file.obj \
           os_calls.obj \

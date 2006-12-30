@@ -29,6 +29,7 @@
 struct vnc
 {
   int size; /* size of this struct */
+  int version; /* internal version */
   /* client functions */
   int (*mod_start)(struct vnc* v, int w, int h, int bpp);
   int (*mod_connect)(struct vnc* v);
@@ -37,6 +38,8 @@ struct vnc
   int (*mod_signal)(struct vnc* v);
   int (*mod_end)(struct vnc* v);
   int (*mod_set_param)(struct vnc* v, char* name, char* value);
+  long mod_dumby[100 - 6]; /* align, 100 minus the number of mod 
+                              functions above */
   /* server functions */
   int (*server_begin_update)(struct vnc* v);
   int (*server_end_update)(struct vnc* v);
@@ -70,6 +73,14 @@ struct vnc
                           int box_right, int box_bottom,
                           int x, int y, char* data, int data_len);
   int (*server_reset)(struct vnc* v, int width, int height, int bpp);
+  int (*server_query_channel)(struct vnc* v, int index,
+                              char* channel_name,
+                              int* channel_flags);
+  int (*server_get_channel_id)(struct vnc* v, char* name);
+  int (*server_send_to_channel)(struct vnc* v, int channel_id,
+                                char* data, int data_len);
+  long server_dumby[100 - 24]; /* align, 100 minus the number of server 
+                                  functions above */
   /* common */
   long handle; /* pointer to self as long */
   long wm;

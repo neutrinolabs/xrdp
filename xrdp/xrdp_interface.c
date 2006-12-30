@@ -411,3 +411,36 @@ server_reset(struct xrdp_mod* mod, int width, int height, int bpp)
   xrdp_wm_load_static_pointers(wm);
   return 0;
 }
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_query_channel(struct xrdp_mod* mod, int index, char* channel_name,
+                     int* channel_flags)
+{
+  struct xrdp_wm* wm;
+
+  wm = (struct xrdp_wm*)mod->wm;
+  return libxrdp_query_channel(wm->session, index, channel_name,
+                               channel_flags);
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_get_channel_id(struct xrdp_mod* mod, char* name)
+{
+  struct xrdp_wm* wm;
+
+  wm = (struct xrdp_wm*)mod->wm;
+  return libxrdp_get_channel_id(wm->session, name);
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_send_to_channel(struct xrdp_mod* mod, int channel_id,
+                       char* data, int data_len)
+{
+  struct xrdp_wm* wm;
+
+  wm = (struct xrdp_wm*)mod->wm;
+  return libxrdp_send_to_channel(wm->session, channel_id, data, data_len);
+}

@@ -24,6 +24,7 @@
 struct xrdp_mod
 {
   int size; /* size of this struct */
+  int version; /* internal version */
   /* client functions */
   int (*mod_start)(struct xrdp_mod* v, int w, int h, int bpp);
   int (*mod_connect)(struct xrdp_mod* v);
@@ -32,6 +33,8 @@ struct xrdp_mod
   int (*mod_signal)(struct xrdp_mod* v);
   int (*mod_end)(struct xrdp_mod* v);
   int (*mod_set_param)(struct xrdp_mod* v, char* name, char* value);
+  long mod_dumby[100 - 6]; /* align, 100 minus the number of mod 
+                              functions above */
   /* server functions */
   int (*server_begin_update)(struct xrdp_mod* v);
   int (*server_end_update)(struct xrdp_mod* v);
@@ -65,6 +68,14 @@ struct xrdp_mod
                           int box_right, int box_bottom,
                           int x, int y, char* data, int data_len);
   int (*server_reset)(struct xrdp_mod* v, int width, int height, int bpp);
+  int (*server_query_channel)(struct xrdp_mod* v, int index,
+                              char* channel_name,
+                              int* channel_flags);
+  int (*server_get_channel_id)(struct xrdp_mod* v, char* name);
+  int (*server_send_to_channel)(struct xrdp_mod* v, int channel_id,
+                                char* data, int data_len);
+  long server_dumby[100 - 24]; /* align, 100 minus the number of server 
+                                  functions above */
   /* common */
   long handle; /* pointer to self as int */
   long wm; /* struct xrdp_wm* */

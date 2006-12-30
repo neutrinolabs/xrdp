@@ -600,3 +600,105 @@ libxrdp_orders_send_bitmap2(struct xrdp_session* session,
                                   width, height, bpp, data,
                                   cache_id, cache_idx);
 }
+
+/*****************************************************************************/
+/* returns error */
+/* this function gets the channel name and its flags, index is zero
+   based.  either channel_name or channel_flags can be passed in nil if
+   they are not needed */
+int EXPORT_CC
+libxrdp_query_channel(struct xrdp_session* session, int index,
+                      char* channel_name, int* channel_flags)
+{
+  int count;
+  struct xrdp_rdp* rdp;
+  struct xrdp_mcs* mcs;
+  struct mcs_channel_item* channel_item;
+
+  rdp = (struct xrdp_rdp*)session->rdp;
+  mcs = rdp->sec_layer->mcs_layer;
+  count = mcs->channel_list->count;
+  if (index < 0 || index >= count)
+  {
+    return 1;
+  }
+  channel_item = (struct mcs_channel_item*)
+            list_get_item(mcs->channel_list, index);
+  if (channel_item == 0)
+  {
+    /* this should not happen */
+    return 1;
+  }
+  if (channel_name != 0)
+  {
+    g_strncpy(channel_name, channel_item->name, 8);
+  }
+  if (channel_flags != 0)
+  {
+    *channel_flags = channel_item->flags;
+  }
+  return 0;
+}
+
+/*****************************************************************************/
+/* returns a zero based index of the channel, -1 if error or it dosen't
+   exist */
+int EXPORT_CC
+libxrdp_get_channel_id(struct xrdp_session* session, char* name)
+{
+  int index;
+  int count;
+  struct xrdp_rdp* rdp;
+  struct xrdp_mcs* mcs;
+  struct mcs_channel_item* channel_item;
+
+  rdp = (struct xrdp_rdp*)session->rdp;
+  mcs = rdp->sec_layer->mcs_layer;
+  count = mcs->channel_list->count;
+  for (index = 0; index < count; index++)
+  {
+    channel_item = (struct mcs_channel_item*)
+              list_get_item(mcs->channel_list, index);
+    if (channel_item != 0)
+    {
+      if (g_strcasecmp(name, channel_item->name) == 0)
+      {
+        return index;
+      }
+    }
+  }
+  return -1;
+}
+
+/*****************************************************************************/
+int EXPORT_CC
+libxrdp_send_to_channel(struct xrdp_session* session, int channel_id,
+                        char* data, int data_len)
+{
+  struct xrdp_rdp* rdp;
+  struct xrdp_sec* sec;
+  struct xrdp_channel* chan;
+  struct stream* s;
+
+  rdp = (struct xrdp_rdp*)session->rdp;
+  sec = rdp->sec_layer;
+  chan = sec->chan_layer;
+  make_stream(s);
+  init_stream(s, data_len + 1024); /* this should be big enough */
+  if (xrdp_channel_init(chan, s) != 0)
+  {
+    free_stream(s);
+    return 1;
+  }
+  /* here we make a copy of the data, xrdp_channel_send is
+     going to alter it if its bigger that 8192 or something */
+  out_uint8a(s, data, data_len);
+  s_mark_end(s);
+  if (xrdp_channel_send(chan, s, channel_id) != 0)
+  {
+    free_stream(s);
+    return 1;
+  }
+  free_stream(s);
+  return 0;
+}

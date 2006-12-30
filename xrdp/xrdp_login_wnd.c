@@ -174,6 +174,9 @@ xrdp_wm_setup_mod1(struct xrdp_wm* self,
       self->mod->server_add_char = server_add_char;
       self->mod->server_draw_text = server_draw_text;
       self->mod->server_reset = server_reset;
+      self->mod->server_query_channel = server_query_channel;
+      self->mod->server_get_channel_id = server_get_channel_id;
+      self->mod->server_send_to_channel = server_send_to_channel;
     }
   }
   /* id self->mod is null, there must be a problem */

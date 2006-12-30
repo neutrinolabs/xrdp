@@ -365,3 +365,11 @@ server_draw_text(struct xrdp_mod* mod, int font,
                  int x, int y, char* data, int data_len);
 int DEFAULT_CC
 server_reset(struct xrdp_mod* mod, int width, int height, int bpp);
+int DEFAULT_CC
+server_query_channel(struct xrdp_mod* mod, int index, char* channel_name,
+                     int* channel_flags);
+int DEFAULT_CC
+server_get_channel_id(struct xrdp_mod* mod, char* name);
+int DEFAULT_CC
+server_send_to_channel(struct xrdp_mod* mod, int channel_id,
+                       char* data, int data_len);

@@ -1,7 +1,7 @@
 # libxrdp makefile
 LIBXRDPOBJ = libxrdp.o xrdp_tcp.o xrdp_iso.o xrdp_mcs.o \
              xrdp_sec.o xrdp_rdp.o xrdp_orders.o \
-             xrdp_bitmap_compress.o \
+             xrdp_bitmap_compress.o xrdp_channel.o \
              os_calls.o ssl_calls.o file.o
 
 DESTDIR = /usr/local/xrdp
