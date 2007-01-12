@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2006 Jay Sorg
+Copyright 2005-2007 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
