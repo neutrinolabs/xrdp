@@ -67,6 +67,15 @@ xrdp_process_loop(struct xrdp_process* self)
 }
 
 /*****************************************************************************/
+/* returns boolean */
+/* this is so libxrdp.so can known when to quit looping */
+static int DEFAULT_CC
+xrdp_is_term(void)
+{
+  return g_is_term();
+}
+
+/*****************************************************************************/
 int APP_CC
 xrdp_process_main_loop(struct xrdp_process* self)
 {
@@ -74,7 +83,10 @@ xrdp_process_main_loop(struct xrdp_process* self)
 
   self->status = 1;
   self->session = libxrdp_init((long)self, self->sck);
+  /* this callback function is in xrdp_wm.c */
   self->session->callback = callback;
+  /* this function is just above */
+  self->session->is_term = xrdp_is_term;
   g_tcp_set_non_blocking(self->sck);
   g_tcp_set_no_delay(self->sck);
   if (libxrdp_process_incomming(self->session) == 0)
