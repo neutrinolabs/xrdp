@@ -57,6 +57,7 @@ int APP_CC
 xrdp_tcp_recv(struct xrdp_tcp* self, struct stream* s, int len)
 {
   int rcvd;
+  struct xrdp_session* session;
 
   if (self->sck_closed)
   {
@@ -64,6 +65,7 @@ xrdp_tcp_recv(struct xrdp_tcp* self, struct stream* s, int len)
     return 1;
   }
   DEBUG(("    in xrdp_tcp_recv, gota get %d bytes", len));
+  session = self->iso_layer->mcs_layer->sec_layer->rdp_layer->session;
   init_stream(s, len);
   while (len > 0)
   {
@@ -72,7 +74,17 @@ xrdp_tcp_recv(struct xrdp_tcp* self, struct stream* s, int len)
     {
       if (g_tcp_last_error_would_block(self->sck))
       {
-        g_tcp_can_recv(self->sck, 10);
+        if (!g_tcp_can_recv(self->sck, 10))
+        {
+          if (session->is_term != 0)
+          {
+            if (session->is_term())
+            {
+              DEBUG(("    out xrdp_tcp_recv, terminated"));
+              return 1;
+            }
+          }
+        }
       }
       else
       {
@@ -105,6 +117,7 @@ xrdp_tcp_send(struct xrdp_tcp* self, struct stream* s)
   int len;
   int total;
   int sent;
+  struct xrdp_session* session;
 
   if (self->sck_closed)
   {
@@ -113,6 +126,7 @@ xrdp_tcp_send(struct xrdp_tcp* self, struct stream* s)
   }
   len = s->end - s->data;
   DEBUG(("    in xrdp_tcp_send, gota send %d bytes", len));
+  session = self->iso_layer->mcs_layer->sec_layer->rdp_layer->session;
   total = 0;
   while (total < len)
   {
@@ -121,7 +135,17 @@ xrdp_tcp_send(struct xrdp_tcp* self, struct stream* s)
     {
       if (g_tcp_last_error_would_block(self->sck))
       {
-        g_tcp_can_send(self->sck, 10);
+        if (!g_tcp_can_send(self->sck, 10))
+        {
+          if (session->is_term != 0)
+          {
+            if (session->is_term())
+            {
+              DEBUG(("    out xrdp_tcp_send, terminated"));
+              return 1;
+            }
+          }
+        }
       }
       else
       {

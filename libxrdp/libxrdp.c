@@ -74,11 +74,20 @@ libxrdp_process_data(struct xrdp_session* session)
   int cont;
   int rv;
   int code;
+  int term;
 
+  term = 0;
   cont = 1;
   rv = 0;
-  while ((cont || !session->up_and_running) && !session->term)
+  while ((cont || !session->up_and_running) && !term)
   {
+    if (session->is_term != 0)
+    {
+      if (session->is_term())
+      {
+        term = 1;
+      }
+    }
     code = 0;
     if (xrdp_rdp_recv((struct xrdp_rdp*)session->rdp, session->s, &code) != 0)
     {
@@ -104,7 +113,7 @@ libxrdp_process_data(struct xrdp_session* session)
         {
           DEBUG(("libxrdp_process_data returned non zero"));
           cont = 0;
-          session->term = 1;
+          term = 1;
         }
         break;
       default:

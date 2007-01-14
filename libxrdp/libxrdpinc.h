@@ -98,7 +98,6 @@ struct xrdp_session
 {
   long id;
   int sck;
-  int term; /* do we need this */
   int (*callback)(long id, int msg, long param1, long param2, long param3,
                   long param4);
   void* rdp;
@@ -106,6 +105,7 @@ struct xrdp_session
   struct xrdp_client_info* client_info;
   int up_and_running;
   struct stream* s;
+  int (*is_term)(void);
 };
 
 struct xrdp_session* DEFAULT_CC
