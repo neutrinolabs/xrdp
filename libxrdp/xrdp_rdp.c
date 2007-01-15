@@ -116,6 +116,7 @@ xrdp_rdp_create(struct xrdp_session* session, int sck)
 {
   struct xrdp_rdp* self;
 
+  DEBUG(("in xrdp_rdp_create"));
   self = (struct xrdp_rdp*)g_malloc(sizeof(struct xrdp_rdp), 1);
   self->session = session;
   self->share_id = 66538;
@@ -131,6 +132,7 @@ xrdp_rdp_create(struct xrdp_session* session, int sck)
   self->client_info.cache2_size = 1024;
   self->client_info.cache3_entries = 262;
   self->client_info.cache3_size = 4096;
+  DEBUG(("out xrdp_rdp_create"));
   return self;
 }
 
@@ -991,7 +993,12 @@ xrdp_rdp_process_data(struct xrdp_rdp* self, struct stream* s)
 int APP_CC
 xrdp_rdp_disconnect(struct xrdp_rdp* self)
 {
-  return xrdp_sec_disconnect(self->sec_layer);
+  int rv;
+
+  DEBUG(("in xrdp_rdp_disconnect"));
+  rv = xrdp_sec_disconnect(self->sec_layer);
+  DEBUG(("out xrdp_rdp_disconnect"));
+  return rv;
 }
 
 /*****************************************************************************/
@@ -1000,19 +1007,23 @@ xrdp_rdp_send_deactive(struct xrdp_rdp* self)
 {
   struct stream* s;
 
+  DEBUG(("in xrdp_rdp_send_deactive"));
   make_stream(s);
   init_stream(s, 8192);
   if (xrdp_rdp_init(self, s) != 0)
   {
     free_stream(s);
+    DEBUG(("out xrdp_rdp_send_deactive error"));
     return 1;
   }
   s_mark_end(s);
   if (xrdp_rdp_send(self, s, RDP_PDU_DEACTIVATE) != 0)
   {
     free_stream(s);
+    DEBUG(("out xrdp_rdp_send_deactive error"));
     return 1;
   }
   free_stream(s);
+  DEBUG(("out xrdp_rdp_send_deactive"));
   return 0;
 }

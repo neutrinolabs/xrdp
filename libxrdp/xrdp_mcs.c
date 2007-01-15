@@ -30,6 +30,7 @@ xrdp_mcs_create(struct xrdp_sec* owner, int sck,
 {
   struct xrdp_mcs* self;
 
+  DEBUG(("  in xrdp_mcs_create"));
   self = (struct xrdp_mcs*)g_malloc(sizeof(struct xrdp_mcs), 1);
   self->sec_layer = owner;
   self->userid = 1;
@@ -38,6 +39,7 @@ xrdp_mcs_create(struct xrdp_sec* owner, int sck,
   self->server_mcs_data = server_mcs_data;
   self->iso_layer = xrdp_iso_create(self, sck);
   self->channel_list = list_create();
+  DEBUG(("  out xrdp_mcs_create"));
   return self;
 }
 
@@ -77,11 +79,13 @@ xrdp_mcs_send_cjcf(struct xrdp_mcs* self, int userid, int chanid)
 {
   struct stream* s;
 
+  DEBUG(("  in xrdp_mcs_send_cjcf"));
   make_stream(s);
   init_stream(s, 8192);
   if (xrdp_iso_init(self->iso_layer, s) != 0)
   {
     free_stream(s);
+    DEBUG(("  out xrdp_mcs_send_cjcf error"));
     return 1;
   }
   out_uint8(s, (MCS_CJCF << 2) | 2);
@@ -93,9 +97,11 @@ xrdp_mcs_send_cjcf(struct xrdp_mcs* self, int userid, int chanid)
   if (xrdp_iso_send(self->iso_layer, s) != 0)
   {
     free_stream(s);
+    DEBUG(("  out xrdp_mcs_send_cjcf error"));
     return 1;
   }
   free_stream(s);
+  DEBUG(("  out xrdp_mcs_send_cjcf"));
   return 0;
 }
 
@@ -374,11 +380,13 @@ xrdp_mcs_send_aucf(struct xrdp_mcs* self)
 {
   struct stream* s;
 
+  DEBUG(("  in xrdp_mcs_send_aucf"));
   make_stream(s);
   init_stream(s, 8192);
   if (xrdp_iso_init(self->iso_layer, s) != 0)
   {
     free_stream(s);
+    DEBUG(("  out xrdp_mcs_send_aucf error"));
     return 1;
   }
   out_uint8(s, ((MCS_AUCF << 2) | 2));
@@ -388,9 +396,11 @@ xrdp_mcs_send_aucf(struct xrdp_mcs* self)
   if (xrdp_iso_send(self->iso_layer, s) != 0)
   {
     free_stream(s);
+    DEBUG(("  out xrdp_mcs_send_aucf error"));
     return 1;
   }
   free_stream(s);
+  DEBUG(("  out xrdp_mcs_send_aucf"));
   return 0;
 }
 
@@ -518,6 +528,7 @@ xrdp_mcs_send_connect_response(struct xrdp_mcs* self)
   int data_len;
   struct stream* s;
 
+  DEBUG(("  in xrdp_mcs_send_connect_response"));
   make_stream(s);
   init_stream(s, 8192);
   data_len = self->server_mcs_data->end - self->server_mcs_data->data;
@@ -535,9 +546,11 @@ xrdp_mcs_send_connect_response(struct xrdp_mcs* self)
   if (xrdp_iso_send(self->iso_layer, s) != 0)
   {
     free_stream(s);
+    DEBUG(("  out xrdp_mcs_send_connect_response error"));
     return 1;
   }
   free_stream(s);
+  DEBUG(("  out xrdp_mcs_send_connect_response"));
   return 0;
 }
 
@@ -674,6 +687,7 @@ xrdp_mcs_send(struct xrdp_mcs* self, struct stream* s, int chan)
   out_uint16_be(s, len);
   if (xrdp_iso_send(self->iso_layer, s) != 0)
   {
+    DEBUG(("  out xrdp_mcs_send error"));
     return 1;
   }
   /* todo, do we need to call this for every mcs packet,
@@ -693,11 +707,13 @@ xrdp_mcs_disconnect(struct xrdp_mcs* self)
 {
   struct stream* s;
 
+  DEBUG(("  in xrdp_mcs_disconnect"));
   make_stream(s);
   init_stream(s, 8192);
   if (xrdp_iso_init(self->iso_layer, s) != 0)
   {
     free_stream(s);
+    DEBUG(("  out xrdp_mcs_disconnect error"));
     return 1;
   }
   out_uint8(s, (MCS_DPUM << 2) | 1);
@@ -706,8 +722,10 @@ xrdp_mcs_disconnect(struct xrdp_mcs* self)
   if (xrdp_iso_send(self->iso_layer, s) != 0)
   {
     free_stream(s);
+    DEBUG(("  out xrdp_mcs_disconnect error"));
     return 1;
   }
   free_stream(s);
+  DEBUG(("  out xrdp_mcs_disconnect"));
   return 0;
 }

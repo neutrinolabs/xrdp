@@ -28,9 +28,11 @@ xrdp_iso_create(struct xrdp_mcs* owner, int sck)
 {
   struct xrdp_iso* self;
 
+  DEBUG(("   in xrdp_iso_create"));
   self = (struct xrdp_iso*)g_malloc(sizeof(struct xrdp_iso), 1);
   self->mcs_layer = owner;
   self->tcp_layer = xrdp_tcp_create(self, sck);
+  DEBUG(("   out xrdp_iso_create"));
   return self;
 }
 
