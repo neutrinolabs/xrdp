@@ -91,18 +91,19 @@ file_read_line(struct stream* s, char* text)
 {
   int i;
   int skip_to_end;
+  int at_end;
   char c;
   char* hold;
 
   skip_to_end = 0;
-  if (!s_check(s))
+  if (!s_check_rem(s, 1))
   {
     return 1;
   }
   hold = s->p;
   i = 0;
   in_uint8(s, c);
-  while (c != 10 && c != 13 && s_check(s))
+  while (c != 10 && c != 13)
   {
     if (c == '#' || c == '!')
     {
@@ -113,15 +114,35 @@ file_read_line(struct stream* s, char* text)
       text[i] = c;
       i++;
     }
-    in_uint8(s, c);
-  }
-  if (c == 10 || c == 13)
-  {
-    while ((c == 10 || c == 13) && s_check(s))
+    if (s_check_rem(s, 1))
     {
       in_uint8(s, c);
     }
-    s->p--;
+    else
+    {
+      c = 0;
+      break;
+    }
+  }
+  if (c == 10 || c == 13)
+  {
+    at_end = 0;
+    while (c == 10 || c == 13)
+    {
+      if (s_check_rem(s, 1))
+      {
+        in_uint8(s, c);
+      }
+      else
+      {
+        at_end = 1;
+        break;
+      }
+    }
+    if (!at_end)
+    {
+      s->p--;
+    }
   }
   text[i] = 0;
   if (text[0] == '[')
@@ -129,14 +150,7 @@ file_read_line(struct stream* s, char* text)
     s->p = hold;
     return 1;
   }
-  if (s_check(s))
-  {
-    return 0;
-  }
-  else
-  {
-    return 1;
-  }
+  return 0;
 }
 
 /*****************************************************************************/
