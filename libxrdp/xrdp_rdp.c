@@ -102,6 +102,13 @@ xrdp_rdp_read_config(struct xrdp_client_info* client_info)
           client_info->crypt_level = 3;
         }
       }
+      else if (g_strcasecmp(item, "channel_code") == 0)
+      {
+        if (g_strcasecmp(value, "1") == 0)
+        {
+          client_info->channel_code = 1;
+        }
+      }
     }
     list_delete(items);
     list_delete(values);

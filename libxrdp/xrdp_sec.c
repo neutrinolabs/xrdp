@@ -80,6 +80,12 @@ static char g_lic2[20] =
   0x07, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
   0x28, 0x14, 0x00, 0x00 };
 
+/* mce */
+static char g_lic3[20] =
+{ 0x80, 0x02, 0x10, 0x00, 0xff, 0x03, 0x10, 0x00,
+  0x07, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+  0xf3, 0x99, 0x00, 0x00 };
+
 /*****************************************************************************/
 static void APP_CC
 hex_to_bin(char* in, char* out)
@@ -180,6 +186,7 @@ xrdp_sec_create(struct xrdp_rdp* owner, int sck, int crypt_level,
   char* item;
   char* value;
 
+  DEBUG((" in xrdp_sec_create"));
   self = (struct xrdp_sec*)g_malloc(sizeof(struct xrdp_sec), 1);
   self->rdp_layer = owner;
   self->rc4_key_size = 1; /* 1 = 40 bit, 2 = 128 bit */
@@ -238,6 +245,7 @@ xrdp_sec_create(struct xrdp_rdp* owner, int sck, int crypt_level,
     list_delete(values);
     g_file_close(fd);
   }
+  DEBUG((" out xrdp_sec_create"));
   return self;
 }
 
@@ -400,17 +408,26 @@ xrdp_sec_process_logon_info(struct xrdp_sec* self, struct stream* s)
   {                                                   /* must be or error */
     return 1;
   }
+  if (flags & 0x400)
+  {
+    self->rdp_layer->client_info.is_mce = 1;
+    DEBUG(("flag 0x400 found"));
+  }
   if (flags & RDP_LOGON_LEAVE_AUDIO)
   {
     self->rdp_layer->client_info.sound_code = 1;
+    DEBUG(("flag RDP_LOGON_LEAVE_AUDIO found"));
   }
-  if (flags & RDP_LOGON_AUTO)
+  if ((flags & RDP_LOGON_AUTO) && (!self->rdp_layer->client_info.is_mce))
+  /* todo, for now not allowing autologon and mce both */
   {
     self->rdp_layer->client_info.rdp_autologin = 1;
+    DEBUG(("flag RDP_LOGON_AUTO found"));
   }
   if (flags & RDP_COMPRESSION)
   {
     self->rdp_layer->client_info.rdp_compression = 1;
+    DEBUG(("flag RDP_COMPRESSION found"));
   }
   in_uint16_le(s, len_domain);
   in_uint16_le(s, len_user);
@@ -420,24 +437,23 @@ xrdp_sec_process_logon_info(struct xrdp_sec* self, struct stream* s)
   /* todo, we should error out in any of the above lengths are > 512 */
   /* to avoid buffer overruns */
   unicode_in(s, len_domain, self->rdp_layer->client_info.domain, 255);
+  DEBUG(("domain %s", self->rdp_layer->client_info.domain));
   unicode_in(s, len_user, self->rdp_layer->client_info.username, 255);
+  DEBUG(("username %s", self->rdp_layer->client_info.username));
   if (flags & RDP_LOGON_AUTO)
   {
     unicode_in(s, len_password, self->rdp_layer->client_info.password, 255);
+    DEBUG(("flag RDP_LOGON_AUTO found"));
   }
   else
   {
     in_uint8s(s, len_password + 2);
   }
   unicode_in(s, len_program, self->rdp_layer->client_info.program, 255);
+  DEBUG(("program %s", self->rdp_layer->client_info.program));
   unicode_in(s, len_directory, self->rdp_layer->client_info.directory, 255);
-  /*
-  g_printf("%d %s\n", len_domain, self->rdp_layer->client_info.domain);
-  g_printf("%d %s\n", len_user, self->rdp_layer->client_info.username);
-  g_printf("%d %s\n", len_password, self->rdp_layer->client_info.password);
-  g_printf("%d %s\n", len_program, self->rdp_layer->client_info.program);
-  g_printf("%d %s\n", len_directory, self->rdp_layer->client_info.directory);
-  */
+  DEBUG(("directory %s", self->rdp_layer->client_info.directory));
+  DEBUG(("out xrdp_sec_process_logon_info"));
   return 0;
 }
 
@@ -481,6 +497,31 @@ xrdp_sec_send_lic_response(struct xrdp_sec* self)
     return 1;
   }
   out_uint8a(s, g_lic2, 20);
+  s_mark_end(s);
+  if (xrdp_mcs_send(self->mcs_layer, s, MCS_GLOBAL_CHANNEL) != 0)
+  {
+    free_stream(s);
+    return 1;
+  }
+  free_stream(s);
+  return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+static int APP_CC
+xrdp_sec_send_media_lic_response(struct xrdp_sec* self)
+{
+  struct stream* s;
+
+  make_stream(s);
+  init_stream(s, 8192);
+  if (xrdp_mcs_init(self->mcs_layer, s) != 0)
+  {
+    free_stream(s);
+    return 1;
+  }
+  out_uint8a(s, g_lic3, sizeof(g_lic3));
   s_mark_end(s);
   if (xrdp_mcs_send(self->mcs_layer, s, MCS_GLOBAL_CHANNEL) != 0)
   {
@@ -620,6 +661,16 @@ xrdp_sec_recv(struct xrdp_sec* self, struct stream* s, int* chan)
       DEBUG((" out xrdp_sec_recv error"));
       return 1;
     }
+    if (self->rdp_layer->client_info.is_mce)
+    {
+      if (xrdp_sec_send_media_lic_response(self) != 0)
+      {
+        DEBUG((" out xrdp_sec_recv error"));
+        return 1;
+      }
+      DEBUG((" out xrdp_sec_recv"));
+      return -1; /* special error that means send demand active */
+    }
     if (xrdp_sec_send_lic_initial(self) != 0)
     {
       DEBUG((" out xrdp_sec_recv error"));
@@ -723,6 +774,7 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec* self, struct stream* s)
   int index;
   struct mcs_channel_item* channel_item;
 
+  DEBUG(("processing channels, channel_code is %d", self->channel_code));
   /* this is an option set in xrdp.ini */
   if (self->channel_code != 1) /* are channels on? */
   {
@@ -737,6 +789,8 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec* self, struct stream* s)
     in_uint32_be(s, channel_item->flags);
     channel_item->chanid = MCS_GLOBAL_CHANNEL + (index + 1);
     list_add_item(self->mcs_layer->channel_list, (long)channel_item);
+    DEBUG(("got channel flags %8.8x name %s", channel_item->flags,
+           channel_item->name));
   }
   return 0;
 }
@@ -918,7 +972,7 @@ xrdp_sec_in_mcs_data(struct xrdp_sec* self)
 int APP_CC
 xrdp_sec_incoming(struct xrdp_sec* self)
 {
-  DEBUG(("in xrdp_sec_incoming"));
+  DEBUG((" in xrdp_sec_incoming"));
   if (xrdp_mcs_incoming(self->mcs_layer) != 0)
   {
     return 1;
@@ -931,7 +985,7 @@ xrdp_sec_incoming(struct xrdp_sec* self)
   g_hexdump(self->server_mcs_data.data,
             self->server_mcs_data.end - self->server_mcs_data.data);
 #endif
-  DEBUG(("out xrdp_sec_incoming"));
+  DEBUG((" out xrdp_sec_incoming"));
   xrdp_sec_in_mcs_data(self);
   return 0;
 }
@@ -940,5 +994,10 @@ xrdp_sec_incoming(struct xrdp_sec* self)
 int APP_CC
 xrdp_sec_disconnect(struct xrdp_sec* self)
 {
-  return xrdp_mcs_disconnect(self->mcs_layer);
+  int rv;
+
+  DEBUG((" in xrdp_sec_disconnect"));
+  rv = xrdp_mcs_disconnect(self->mcs_layer);
+  DEBUG((" out xrdp_sec_disconnect"));
+  return rv;
 }
