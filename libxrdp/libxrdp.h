@@ -116,18 +116,9 @@ struct xrdp_rdp
   struct xrdp_client_info client_info;
 };
 
-/* orders */
-struct xrdp_orders
+/* state */
+struct xrdp_orders_state
 {
-  struct stream* out_s;
-  struct xrdp_rdp* rdp_layer;
-  struct xrdp_session* session;
-  struct xrdp_wm* wm;
-
-  char* order_count_ptr; /* pointer to count, set when sending */
-  int order_count;
-  int order_level; /* inc for every call to xrdp_orders_init */
-
   int last_order; /* last order sent */
 
   int clip_left;  /* RDP_ORDER_BOUNDS, RDP_ORDER_LASTBOUNDS */
@@ -202,6 +193,20 @@ struct xrdp_orders
   int text_y;
   int text_len;
   char* text_data;
+};
+
+/* orders */
+struct xrdp_orders
+{
+  struct stream* out_s;
+  struct xrdp_rdp* rdp_layer;
+  struct xrdp_session* session;
+  struct xrdp_wm* wm;
+
+  char* order_count_ptr; /* pointer to count, set when sending */
+  int order_count;
+  int order_level; /* inc for every call to xrdp_orders_init */
+  struct xrdp_orders_state orders_state;
 };
 
 /* xrdp_tcp.c */
