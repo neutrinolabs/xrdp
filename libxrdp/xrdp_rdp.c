@@ -877,6 +877,7 @@ xrdp_rdp_process_data_font(struct xrdp_rdp* self, struct stream* s)
 {
   int seq;
 
+  DEBUG(("in xrdp_rdp_process_data_font"));
   in_uint8s(s, 2); /* num of fonts */
   in_uint8s(s, 2); /* unknown */
   in_uint16_le(s, seq);
@@ -886,7 +887,9 @@ xrdp_rdp_process_data_font(struct xrdp_rdp* self, struct stream* s)
   {                                           /* running */
     xrdp_rdp_send_unknown1(self);
     self->session->up_and_running = 1;
+    DEBUG(("up_and_running set"));
   }
+  DEBUG(("out xrdp_rdp_process_data_font"));
   return 0;
 }
 
