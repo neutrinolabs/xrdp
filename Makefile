@@ -47,7 +47,6 @@ install:
 	make -C xup install
 	make -C docs install
 	if [ -d /etc/pam.d ]; then install instfiles/pam.d/sesman /etc/pam.d/sesman; fi
-	install instfiles/xrdpstart.sh $(DESTDIR)/xrdpstart.sh
 	install instfiles/xrdp_control.sh $(DESTDIR)/xrdp_control.sh
 
 installdeb:
