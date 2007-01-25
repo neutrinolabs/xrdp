@@ -124,6 +124,85 @@ lib_send(struct vnc* v, char* data, int len)
 }
 
 /******************************************************************************/
+static int DEFAULT_CC
+lib_process_channel_data(struct vnc* v, int chanid, int size, struct stream* s)
+{
+  int type;
+  int status;
+  int length;
+  int index;
+  int format;
+  struct stream* out_s;
+
+  if (chanid == v->clip_chanid)
+  {
+    in_uint16_le(s, type);
+    in_uint16_le(s, status);
+    in_uint32_le(s, length);
+    //g_writeln("clip data type %d status %d length %d", type, status, length);
+    //g_hexdump(s->p, s->end - s->p);
+    switch (type)
+    {
+      case 2: /* CLIPRDR_FORMAT_ANNOUNCE */
+        make_stream(out_s);
+        init_stream(out_s, 8192);
+        out_uint16_le(out_s, 3);
+        out_uint16_le(out_s, 1);
+        out_uint32_le(out_s, 0);
+        out_uint8s(out_s, 4); /* pad */
+        s_mark_end(out_s);
+        length = (int)(out_s->end - out_s->data);
+        v->server_send_to_channel(v, v->clip_chanid, out_s->data, length);
+        free_stream(out_s);
+        break;
+      case 3: /* CLIPRDR_FORMAT_ACK */
+        break;
+      case 4: /* CLIPRDR_DATA_REQUEST */
+        format = 0;
+        if (length >= 4)
+        {
+          in_uint32_le(s, format);
+        }
+        /* only support CF_TEXT and CF_UNICODETEXT */
+        if ((format != 1) && (format != 13))
+        {
+          break;
+        }
+        make_stream(out_s);
+        init_stream(out_s, 8192);
+        out_uint16_le(out_s, 5);
+        out_uint16_le(out_s, 1);
+        if (format == 13) /* CF_UNICODETEXT */
+        {
+          out_uint32_le(out_s, v->clip_data_size * 2 + 2);
+          for (index = 0; index < v->clip_data_size; index++)
+          {
+            out_uint8(out_s, v->clip_data[index]);
+            out_uint8(out_s, 0);
+          }
+          out_uint8s(out_s, 2);
+        }
+        else if (format == 1) /* CF_TEXT */
+        {
+          out_uint32_le(out_s, v->clip_data_size + 1);
+          for (index = 0; index < v->clip_data_size; index++)
+          {
+            out_uint8(out_s, v->clip_data[index]);
+          }
+          out_uint8s(out_s, 1);
+        }
+        out_uint8s(out_s, 4); /* pad */
+        s_mark_end(out_s);
+        length = (int)(out_s->end - out_s->data);
+        v->server_send_to_channel(v, v->clip_chanid, out_s->data, length);
+        free_stream(out_s);
+        break;
+    }
+  }
+  return 0;
+}
+
+/******************************************************************************/
 int DEFAULT_CC
 lib_mod_event(struct vnc* v, int msg, long param1, long param2,
               long param3, long param4)
@@ -135,11 +214,32 @@ lib_mod_event(struct vnc* v, int msg, long param1, long param2,
   int y;
   int cx;
   int cy;
+  int size;
+  int chanid;
+  char* data;
   char text[256];
 
   error = 0;
   make_stream(s);
-  if (msg >= 15 && msg <= 16) /* key events */
+  if (msg == 0x5555) /* channel data */
+  {
+    chanid = (int)param1;
+    size = (int)param2;
+    data = (char*)param3;
+    if ((size >= 0) && (size <= (32 * 1024)) && (data != 0))
+    {
+      init_stream(s, size);
+      out_uint8a(s, data, size);
+      s_mark_end(s);
+      s->p = s->data;
+      error = lib_process_channel_data(v, chanid, size, s);
+    }
+    else
+    {
+      error = 1;
+    }
+  }
+  else if (msg >= 15 && msg <= 16) /* key events */
   {
     key = 0;
     if (param2 == 0xffff) /* ascii char */
@@ -635,10 +735,13 @@ int DEFAULT_CC
 lib_clip_data(struct vnc* v)
 {
   struct stream* s;
+  struct stream* out_s;
   int size;
   int error;
-  int temp;
 
+  g_free(v->clip_data);
+  v->clip_data = 0;
+  v->clip_data_size = 0;
   make_stream(s);
   init_stream(s, 8192);
   error = lib_recv(v, s->data, 7);
@@ -646,17 +749,30 @@ lib_clip_data(struct vnc* v)
   {
     in_uint8s(s, 3);
     in_uint32_be(s, size);
-    while (size > 0 && error == 0)
-    {
-      init_stream(s, 8192);
-      temp = size;
-      if (temp > 8192)
-      {
-        temp = 8192;
-      }
-      error = lib_recv(v, s->data, temp);
-      size -= temp;
-    }
+    v->clip_data = (char*)g_malloc(size, 0);
+    v->clip_data_size = size;
+    error = lib_recv(v, v->clip_data, size);
+  }
+  if (error == 0)
+  {
+    make_stream(out_s);
+    init_stream(out_s, 8192);
+    out_uint16_le(out_s, 2);
+    out_uint16_le(out_s, 0);
+    out_uint32_le(out_s, 0x90);
+    out_uint8(out_s, 0x0d);
+    out_uint8s(out_s, 35);
+    out_uint8(out_s, 0x10);
+    out_uint8s(out_s, 35);
+    out_uint8(out_s, 0x01);
+    out_uint8s(out_s, 35);
+    out_uint8(out_s, 0x07);
+    out_uint8s(out_s, 35);
+    out_uint8s(out_s, 4);
+    s_mark_end(out_s);
+    size = (int)(out_s->end - out_s->data);
+    error = v->server_send_to_channel(v, v->clip_chanid, out_s->data, size);
+    free_stream(out_s);
   }
   free_stream(s);
   return error;
@@ -755,6 +871,20 @@ lib_mod_start(struct vnc* v, int w, int h, int bpp)
   v->server_width = w;
   v->server_height = h;
   v->server_bpp = bpp;
+  return 0;
+}
+
+/******************************************************************************/
+static int APP_CC
+lib_open_clip_channel(struct vnc* v)
+{
+  char init_data[12] = { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+  v->clip_chanid = v->server_get_channel_id(v, "cliprdr");
+  if (v->clip_chanid >= 0)
+  {
+    v->server_send_to_channel(v, v->clip_chanid, init_data, 12);
+  }
   return 0;
 }
 
@@ -1091,6 +1221,7 @@ lib_mod_connect(struct vnc* v)
   if (error == 0)
   {
     v->server_msg(v, "connection complete, connected ok", 0);
+    lib_open_clip_channel(v);
   }
   else
   {
@@ -1106,6 +1237,9 @@ lib_mod_end(struct vnc* v)
   if (v->vnc_desktop != 0)
   {
   }
+  g_free(v->clip_data);
+  v->clip_data = 0;
+  v->clip_data_size = 0;
   return 0;
 }
 

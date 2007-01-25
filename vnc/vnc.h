@@ -104,4 +104,7 @@ struct vnc
   int sck_closed;
   int shift_state; /* 0 up, 1 down */
   int keylayout;
+  int clip_chanid;
+  char* clip_data;
+  int clip_data_size;
 };
