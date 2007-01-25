@@ -245,6 +245,7 @@ xrdp_sec_create(struct xrdp_rdp* owner, int sck, int crypt_level,
     list_delete(values);
     g_file_close(fd);
   }
+  self->chan_layer = xrdp_channel_create(self, self->mcs_layer);
   DEBUG((" out xrdp_sec_create"));
   return self;
 }
@@ -257,6 +258,7 @@ xrdp_sec_delete(struct xrdp_sec* self)
   {
     return;
   }
+  xrdp_channel_delete(self->chan_layer);
   xrdp_mcs_delete(self->mcs_layer);
   ssl_rc4_info_delete(self->decrypt_rc4_info);
   ssl_rc4_info_delete(self->encrypt_rc4_info);
