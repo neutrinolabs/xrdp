@@ -36,6 +36,8 @@ g_printf(const char *format, ...);
 void DEFAULT_CC
 g_sprintf(char* dest, const char* format, ...);
 void DEFAULT_CC
+g_snprintf(char* dest, int len, const char* format, ...);
+void DEFAULT_CC
 g_writeln(const char* format, ...);
 void DEFAULT_CC
 g_write(const char* format, ...);
