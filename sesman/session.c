@@ -42,7 +42,7 @@ session_get_bydata(char* name, int width, int height, int bpp)
   /*THREAD-FIX require chain lock */
   lock_chain_acquire();
 
-  tmp=g_sessions;
+  tmp = g_sessions;
 
   while (tmp != 0)
   {
@@ -55,9 +55,9 @@ session_get_bydata(char* name, int width, int height, int bpp)
       lock_chain_release();
       return tmp->item;
     }
-    tmp=tmp->next;   
+    tmp = tmp->next;   
   }
-  
+
   /*THREAD-FIX release chain lock */
   lock_chain_release();
   return 0;
@@ -161,6 +161,7 @@ for user %s denied", username);
 
   g_get_current_dir(cur_dir, 255);
   display = 10;
+
   /*while (x_server_running(display) && display < 50)*/
   /* we search for a free display up to max_sessions */
   /* we should need no more displays than this       */
@@ -170,7 +171,7 @@ for user %s denied", username);
   while (x_server_running(display))
   {
     display++;
-    if ((display - 10) > g_cfg.sess.max_sessions || display >= 50)
+    if (((display - 10) > g_cfg.sess.max_sessions) || (display >= 50))
     {
       return 0;
     }

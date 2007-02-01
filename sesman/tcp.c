@@ -66,7 +66,7 @@ tcp_force_recv(int sck, char* data, int len)
 #ifndef LIBSCP_CLIENT
   lock_fork_critical_section_end(block);
 #endif
-  
+
   return 0;
 }
 
@@ -80,7 +80,7 @@ tcp_force_send(int sck, char* data, int len)
   int block;
   block = lock_fork_critical_section_start();
 #endif
-  
+
   while (len > 0)
   {
     sent = g_tcp_send(sck, data, len, 0);
@@ -109,7 +109,6 @@ tcp_force_send(int sck, char* data, int len)
 #ifndef LIBSCP_CLIENT
   lock_fork_critical_section_end(block);
 #endif
-  
+
   return 0;
 }
-
