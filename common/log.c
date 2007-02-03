@@ -257,7 +257,7 @@ log_start(const char* progname, const char* logfile, const unsigned int loglvl,
 
 /******************************************************************************/
 void DEFAULT_CC
-log_end()
+log_end(void)
 {
   /* if log is closed, quit silently */
   if (0 == l_cfg)
@@ -266,7 +266,7 @@ log_end()
   }
 
   /* closing log file */
-  log_message(LOG_LEVEL_ALWAYS,"shutting down log subsystem...");
+  log_message(LOG_LEVEL_ALWAYS, "shutting down log subsystem...");
 
   if (0 > l_cfg->fd)
   {
@@ -298,33 +298,26 @@ log_end()
 int DEFAULT_CC
 log_text2level(char* buf)
 {
-  if (0 == g_strncasecmp(buf, "0", 2) ||
-      0 == g_strncasecmp(buf, "core", 5))
+  if (0 == g_strcasecmp(buf, "0") ||
+      0 == g_strcasecmp(buf, "core"))
   {
     return LOG_LEVEL_ALWAYS;
   }
-  else if (0 == g_strncasecmp(buf, "1", 2) ||
-           0 == g_strncasecmp(buf, "error", 6))
+  else if (0 == g_strcasecmp(buf, "1") ||
+           0 == g_strcasecmp(buf, "error"))
   {
     return LOG_LEVEL_ERROR;
   }
-  else if (0 == g_strncasecmp(buf, "2", 2) ||
-           0 == g_strncasecmp(buf, "warn", 5) ||
-           0 == g_strncasecmp(buf, "warning", 8))
+  else if (0 == g_strcasecmp(buf, "2") ||
+           0 == g_strcasecmp(buf, "warn") ||
+           0 == g_strcasecmp(buf, "warning"))
   {
     return LOG_LEVEL_WARNING;
   }
-  else if (0 == g_strncasecmp(buf, "3", 2) ||
-           0 == g_strncasecmp(buf, "info", 5))
+  else if (0 == g_strcasecmp(buf, "3") ||
+           0 == g_strcasecmp(buf, "info"))
   {
     return LOG_LEVEL_INFO;
   }
-  /* else if (0 == g_strncasecmp(buf, "1", 2) ||
-      0 == g_strncasecmp(buf, "true", 5) ||
-      0 == g_strncasecmp(buf, "yes", 4))
-  {
-    return LOG_LEVEL_DEBUG;
-  }*/
-
   return LOG_LEVEL_DEBUG;
 }
