@@ -22,8 +22,6 @@
 
 #if defined(_WIN32)
 #include <windows.h>
-#else
-#include <pthread.h>
 #endif
 #include "xrdp.h"
 
@@ -33,18 +31,10 @@ static long g_threadid = 0; /* main threadid */
 #if defined(_WIN32)
 static SERVICE_STATUS_HANDLE g_ssh = 0;
 static SERVICE_STATUS g_service_status;
-static CRITICAL_SECTION g_term_mutex;
-static CRITICAL_SECTION g_sync_mutex;
-static CRITICAL_SECTION g_sync1_mutex;
-#define LOCK_ENTER(mutex) EnterCriticalSection(&mutex)
-#define LOCK_LEAVE(mutex) LeaveCriticalSection(&mutex)
-#else
-static pthread_mutex_t g_term_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t g_sync_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t g_sync1_mutex = PTHREAD_MUTEX_INITIALIZER;
-#define LOCK_ENTER(mutex) pthread_mutex_lock(&mutex)
-#define LOCK_LEAVE(mutex) pthread_mutex_unlock(&mutex)
 #endif
+static long g_term_mutex = 0;
+static long g_sync_mutex = 0;
+static long g_sync1_mutex = 0;
 static int g_term = 0;
 /* syncronize stuff */
 static int g_sync_command = 0;
@@ -61,23 +51,23 @@ g_xrdp_sync(long (*sync_func)(long param1, long param2), long sync_param1,
   long sync_result;
   int sync_command;
 
-  LOCK_ENTER(g_sync1_mutex);
-  g_lock();
+  tc_lock_mutex(g_sync1_mutex);
+  tc_lock_mutex(g_sync_mutex);
   g_sync_param1 = sync_param1;
   g_sync_param2 = sync_param2;
   g_sync_func = sync_func;
   g_sync_command = 100;
-  g_unlock();
+  tc_unlock_mutex(g_sync_mutex);
   do
   {
     g_sleep(100);
-    g_lock();
+    tc_lock_mutex(g_sync_mutex);
     sync_command = g_sync_command;
     sync_result = g_sync_result;
-    g_unlock();
+    tc_unlock_mutex(g_sync_mutex);
   }
   while (sync_command != 0);
-  LOCK_LEAVE(g_sync1_mutex);
+  tc_unlock_mutex(g_sync1_mutex);
   return sync_result;
 }
 
@@ -87,12 +77,12 @@ xrdp_shutdown(int sig)
 {
   struct xrdp_listen* listen;
 
-  if (g_get_threadid() != g_threadid)
+  if (tc_get_threadid() != g_threadid)
   {
     return;
   }
   g_writeln("shutting down");
-  g_writeln("signal %d threadid %d", sig, g_get_threadid());
+  g_writeln("signal %d threadid $%8.8x", sig, tc_get_threadid());
   listen = g_listen;
   g_listen = 0;
   if (listen != 0)
@@ -111,33 +101,19 @@ g_is_term(void)
 {
   int rv;
 
-  LOCK_ENTER(g_term_mutex);
+  tc_lock_mutex(g_term_mutex);
   rv = g_term;
-  LOCK_LEAVE(g_term_mutex);
+  tc_unlock_mutex(g_term_mutex);
   return rv;
-}
-
-/*****************************************************************************/
-void APP_CC
-g_lock(void)
-{
-  LOCK_ENTER(g_sync_mutex);
-}
-
-/*****************************************************************************/
-void APP_CC
-g_unlock(void)
-{
-  LOCK_LEAVE(g_sync_mutex);
 }
 
 /*****************************************************************************/
 void APP_CC
 g_set_term(int in_val)
 {
-  LOCK_ENTER(g_term_mutex);
+  tc_lock_mutex(g_term_mutex);
   g_term = in_val;
-  LOCK_LEAVE(g_term_mutex);
+  tc_unlock_mutex(g_term_mutex);
 }
 
 /*****************************************************************************/
@@ -152,7 +128,7 @@ pipe_sig(int sig_num)
 void APP_CC
 g_loop(void)
 {
-  g_lock();
+  tc_lock_mutex(g_sync_mutex);
   if (g_sync_command != 0)
   {
     if (g_sync_func != 0)
@@ -164,12 +140,7 @@ g_loop(void)
     }
     g_sync_command = 0;
   }
-  g_unlock();
-#if defined(_WIN32)
-  if (g_ssh != 0)
-  {
-  }
-#endif
+  tc_unlock_mutex(g_sync_mutex);
 }
 
 /* win32 service control functions */
@@ -227,13 +198,13 @@ MyServiceMain(DWORD dwArgc, LPTSTR* lpszArgv)
 //  g_file_write(fd, "hi\r\n", 4);
   //event_han = RegisterEventSource(0, "xrdp");
   //log_event(event_han, "hi xrdp log");
-  g_threadid = g_get_threadid();
+  g_threadid = tc_get_threadid();
   g_set_current_dir("c:\\temp\\xrdp");
   g_listen = 0;
   WSAStartup(2, &w);
-  InitializeCriticalSection(&g_term_mutex);
-  InitializeCriticalSection(&g_sync_mutex);
-  InitializeCriticalSection(&g_sync1_mutex);
+  g_term_mutex = tc_create_mutex();
+  g_sync_mutex = tc_create_mutex();
+  g_sync1_mutex = tc_create_mutex();
   g_memset(&g_service_status, 0, sizeof(SERVICE_STATUS));
   g_service_status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
   g_service_status.dwCurrentState = SERVICE_RUNNING;
@@ -264,9 +235,9 @@ MyServiceMain(DWORD dwArgc, LPTSTR* lpszArgv)
     //g_file_write(fd, text, g_strlen(text));
   }
   WSACleanup();
-  DeleteCriticalSection(&g_term_mutex);
-  DeleteCriticalSection(&g_sync_mutex);
-  DeleteCriticalSection(&g_sync1_mutex);
+  tc_delete_mutex(g_term_mutex);
+  tc_delete_mutex(g_sync_mutex);
+  tc_delete_mutex(g_sync1_mutex);
   xrdp_listen_delete(g_listen);
   //CloseHandle(event_han);
 }
@@ -419,9 +390,6 @@ main(int argc, char** argv)
     g_exit(0);
   }
   WSAStartup(2, &w);
-  InitializeCriticalSection(&g_term_mutex);
-  InitializeCriticalSection(&g_sync_mutex);
-  InitializeCriticalSection(&g_sync1_mutex);
 #else /* _WIN32 */
   no_daemon = 0;
   if (argc == 2)
@@ -542,19 +510,22 @@ main(int argc, char** argv)
     g_file_close(fd);
   }
 #endif
-  g_threadid = g_get_threadid();
+  g_threadid = tc_get_threadid();
   g_listen = xrdp_listen_create();
   g_signal(2, xrdp_shutdown); /* SIGINT */
   g_signal(9, xrdp_shutdown); /* SIGKILL */
   g_signal(13, pipe_sig); /* sig pipe */
   g_signal(15, xrdp_shutdown); /* SIGTERM */
+  g_term_mutex = tc_create_mutex();
+  g_sync_mutex = tc_create_mutex();
+  g_sync1_mutex = tc_create_mutex();
   xrdp_listen_main_loop(g_listen);
+  tc_delete_mutex(g_term_mutex);
+  tc_delete_mutex(g_sync_mutex);
+  tc_delete_mutex(g_sync1_mutex);
 #if defined(_WIN32)
   /* I don't think it ever gets here */
   WSACleanup();
-  DeleteCriticalSection(&g_term_mutex);
-  DeleteCriticalSection(&g_sync_mutex);
-  DeleteCriticalSection(&g_sync1_mutex);
   xrdp_listen_delete(g_listen);
 #endif
   return 0;

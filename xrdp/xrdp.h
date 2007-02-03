@@ -42,10 +42,6 @@ g_is_term(void);
 void APP_CC
 g_set_term(int in_val);
 void APP_CC
-g_lock(void);
-void APP_CC
-g_unlock(void);
-void APP_CC
 g_loop(void);
 
 /* xrdp_cache.c */
