@@ -216,7 +216,7 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
         {
           /* start thread */
           g_process->sck = error;
-          g_thread_create(xrdp_process_run, 0);
+          tc_thread_create(xrdp_process_run, 0);
           g_sleep(100);
         }
         else
