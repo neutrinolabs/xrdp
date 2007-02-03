@@ -91,7 +91,7 @@ log_start(const char* progname, const char* logfile, const unsigned int loglvl,
  *
  */
 void DEFAULT_CC
-log_end();
+log_end(void);
 
 /**
  *
