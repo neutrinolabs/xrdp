@@ -27,12 +27,13 @@
 #endif
 #include "arch.h"
 #include "thread_calls.h"
+#include "os_calls.h"
 
 /*****************************************************************************/
 /* returns error */
 #if defined(_WIN32)
 int APP_CC
-g_thread_create(unsigned long (__stdcall * start_routine)(void*), void* arg)
+tc_thread_create(unsigned long (__stdcall * start_routine)(void*), void* arg)
 {
   DWORD thread_id;
   HANDLE thread;
@@ -46,7 +47,7 @@ g_thread_create(unsigned long (__stdcall * start_routine)(void*), void* arg)
 }
 #else
 int APP_CC
-g_thread_create(void* (* start_routine)(void*), void* arg)
+tc_thread_create(void* (* start_routine)(void*), void* arg)
 {
   pthread_t thread;
   int rv;
@@ -60,11 +61,67 @@ g_thread_create(void* (* start_routine)(void*), void* arg)
 
 /*****************************************************************************/
 long APP_CC
-g_get_threadid(void)
+tc_get_threadid(void)
 {
 #if defined(_WIN32)
   return (long)GetCurrentThreadId();
 #else
   return (long)pthread_self();
+#endif
+}
+
+/*****************************************************************************/
+long APP_CC
+tc_create_mutex(void)
+{
+#if defined(_WIN32)
+  return (long)CreateMutex(0, 0, 0);
+#else
+  pthread_mutex_t* lmutex;
+
+  lmutex = (pthread_mutex_t*)g_malloc(sizeof(pthread_mutex_t), 0);
+  pthread_mutex_init(lmutex, 0);
+  return (long)lmutex;
+#endif
+}
+
+/*****************************************************************************/
+void APP_CC
+tc_delete_mutex(long mutex)
+{
+#if defined(_WIN32)
+  CloseHandle((HANDLE)mutex);
+#else
+  pthread_mutex_t* lmutex;
+
+  lmutex = (pthread_mutex_t*)mutex;
+  pthread_mutex_destroy(lmutex);
+  g_free(lmutex);
+#endif
+}
+
+/*****************************************************************************/
+int APP_CC
+tc_lock_mutex(long mutex)
+{
+#if defined(_WIN32)
+  WaitForSingleObject((HANDLE)mutex, INFINITE);
+  return 0;
+#else
+  pthread_mutex_lock((pthread_mutex_t*)mutex);
+  return 0;
+#endif
+}
+
+/*****************************************************************************/
+int APP_CC
+tc_unlock_mutex(long mutex)
+{
+#if defined(_WIN32)
+  ReleaseMutex((HANDLE)mutex);
+  return 0;
+#else
+  pthread_mutex_unlock((pthread_mutex_t*)mutex);
+  return 0;
 #endif
 }
