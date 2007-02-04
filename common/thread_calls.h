@@ -28,12 +28,20 @@ tc_thread_create(THREAD_RV (THREAD_CC * start_routine)(void*), void* arg);
 long APP_CC
 tc_get_threadid(void);
 long APP_CC
-tc_create_mutex(void);
+tc_mutex_create(void);
 void APP_CC
-tc_delete_mutex(long mutex);
+tc_mutex_delete(long mutex);
 int APP_CC
-tc_lock_mutex(long mutex);
+tc_mutex_lock(long mutex);
 int APP_CC
-tc_unlock_mutex(long mutex);
+tc_mutex_unlock(long mutex);
+long APP_CC
+tc_sem_create(int init_count);
+void APP_CC
+tc_sem_delete(long sem);
+int APP_CC
+tc_sem_dec(long sem);
+int APP_CC
+tc_sem_inc(long sem);
 
 #endif

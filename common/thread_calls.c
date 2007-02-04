@@ -24,6 +24,7 @@
 #include <windows.h>
 #else
 #include <pthread.h>
+#include <semaphore.h>
 #endif
 #include "arch.h"
 #include "thread_calls.h"
@@ -72,7 +73,7 @@ tc_get_threadid(void)
 
 /*****************************************************************************/
 long APP_CC
-tc_create_mutex(void)
+tc_mutex_create(void)
 {
 #if defined(_WIN32)
   return (long)CreateMutex(0, 0, 0);
@@ -87,7 +88,7 @@ tc_create_mutex(void)
 
 /*****************************************************************************/
 void APP_CC
-tc_delete_mutex(long mutex)
+tc_mutex_delete(long mutex)
 {
 #if defined(_WIN32)
   CloseHandle((HANDLE)mutex);
@@ -102,7 +103,7 @@ tc_delete_mutex(long mutex)
 
 /*****************************************************************************/
 int APP_CC
-tc_lock_mutex(long mutex)
+tc_mutex_lock(long mutex)
 {
 #if defined(_WIN32)
   WaitForSingleObject((HANDLE)mutex, INFINITE);
@@ -115,13 +116,72 @@ tc_lock_mutex(long mutex)
 
 /*****************************************************************************/
 int APP_CC
-tc_unlock_mutex(long mutex)
+tc_mutex_unlock(long mutex)
 {
 #if defined(_WIN32)
   ReleaseMutex((HANDLE)mutex);
   return 0;
 #else
   pthread_mutex_unlock((pthread_mutex_t*)mutex);
+  return 0;
+#endif
+}
+
+/*****************************************************************************/
+long APP_CC
+tc_sem_create(int init_count)
+{
+#if defined(_WIN32)
+  HANDLE sem;
+
+  sem = CreateSemaphore(0, init_count, init_count + 10, 0);
+  return (long)sem;
+#else
+  sem_t* sem;
+
+  sem = g_malloc(sizeof(sem_t), 0);
+  sem_init(sem, 0, init_count);
+  return (long)sem;
+#endif
+}
+
+/*****************************************************************************/
+void APP_CC
+tc_sem_delete(long sem)
+{
+#if defined(_WIN32)
+  CloseHandle((HANDLE)sem);
+#else
+  sem_t* lsem;
+
+  lsem = (sem_t*)sem;
+  sem_destroy(lsem);
+  g_free(lsem);
+#endif
+}
+
+/*****************************************************************************/
+int APP_CC
+tc_sem_dec(long sem)
+{
+#if defined(_WIN32)
+  WaitForSingleObject((HANDLE)sem, INFINITE);
+  return 0;
+#else
+  sem_wait((sem_t*)sem);
+  return 0;
+#endif
+}
+
+/*****************************************************************************/
+int APP_CC
+tc_sem_inc(long sem)
+{
+#if defined(_WIN32)
+  ReleaseSemaphore((HANDLE)sem, 1, 0);
+  return 0;
+#else
+  sem_post((sem_t*)sem);
   return 0;
 #endif
 }
