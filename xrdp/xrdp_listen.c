@@ -22,6 +22,9 @@
 
 #include "xrdp.h"
 
+/* 'g_process' is protected by the semaphore 'g_process_sem'.  One thread sets
+   g_process and waits for the other to process it */
+static long g_process_sem = 0;
 static struct xrdp_process* g_process = 0;
 
 /*****************************************************************************/
@@ -130,8 +133,13 @@ xrdp_listen_delete_pro(struct xrdp_listen* self, struct xrdp_process* pro)
 THREAD_RV THREAD_CC
 xrdp_process_run(void* in_val)
 {
+  struct xrdp_process* process;
+
   DEBUG(("process started"));
-  xrdp_process_main_loop(g_process);
+  process = g_process;
+  g_process = 0;
+  tc_sem_inc(g_process_sem);
+  xrdp_process_main_loop(process);
   DEBUG(("process done"));
   return 0;
 }
@@ -149,6 +157,8 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
   struct list* names;
   struct list* values;
 
+  self->status = 1;
+  g_process_sem = tc_sem_create(0);
   /* default to port 3389 */
   g_strncpy(port, "3389", 7);
   /* see if port is in xrdp.ini file */
@@ -183,7 +193,6 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
     list_delete(values);
     g_file_close(fd);
   }
-  self->status = 1;
   self->sck = g_tcp_socket();
   g_tcp_set_non_blocking(self->sck);
   error = g_tcp_bind(self->sck, port);
@@ -200,7 +209,7 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
     while (!g_is_term() && !self->term)
     {
       error = g_tcp_accept(self->sck);
-      if (error == -1 && g_tcp_last_error_would_block(self->sck))
+      if ((error == -1) && g_tcp_last_error_would_block(self->sck))
       {
         g_sleep(100);
         g_loop();
@@ -217,7 +226,8 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
           /* start thread */
           g_process->sck = error;
           tc_thread_create(xrdp_process_run, 0);
-          g_sleep(100);
+          tc_sem_dec(g_process_sem); /* this will wait */
+          g_sleep(250); /* just for safety */
         }
         else
         {
@@ -232,6 +242,7 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
   }
   xrdp_listen_term_processes(self);
   g_tcp_close(self->sck);
+  tc_sem_delete(g_process_sem);
   self->status = -1;
   return 0;
 }

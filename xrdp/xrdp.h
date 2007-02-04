@@ -117,8 +117,6 @@ xrdp_process_create(struct xrdp_listen* owner);
 void APP_CC
 xrdp_process_delete(struct xrdp_process* self);
 int APP_CC
-xrdp_process_loop(struct xrdp_process* self);
-int APP_CC
 xrdp_process_main_loop(struct xrdp_process* self);
 
 /* xrdp_listen.c */

@@ -47,7 +47,7 @@ xrdp_process_delete(struct xrdp_process* self)
 }
 
 /*****************************************************************************/
-int APP_CC
+static int APP_CC
 xrdp_process_loop(struct xrdp_process* self)
 {
   int rv;
