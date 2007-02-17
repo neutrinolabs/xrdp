@@ -49,11 +49,17 @@ tcp_force_recv(int sck, char* data, int len)
       }
       else
       {
+#ifndef LIBSCP_CLIENT
+        lock_fork_critical_section_end(block);
+#endif
         return 1;
       }
     }
     else if (rcvd == 0)
     {
+#ifndef LIBSCP_CLIENT
+      lock_fork_critical_section_end(block);
+#endif
       return 1;
     }
     else
@@ -92,11 +98,17 @@ tcp_force_send(int sck, char* data, int len)
       }
       else
       {
+#ifndef LIBSCP_CLIENT
+        lock_fork_critical_section_end(block);
+#endif
         return 1;
       }
     }
     else if (sent == 0)
     {
+#ifndef LIBSCP_CLIENT
+      lock_fork_critical_section_end(block);
+#endif
       return 1;
     }
     else
