@@ -22,7 +22,7 @@
  * @file libscp_types.h
  * @brief libscp data types definitions
  * @author Simone Fedele
- * 
+ *
  */
 
 #ifndef LIBSCP_TYPES_H
@@ -36,7 +36,7 @@
 #include "arch.h"
 #include "log.h"
 
-//#warning sesman requires its own tcp streaming functions for threading safety
+//sesman requires its own tcp streaming functions for threading safety
 #include "tcp.h"
 
 #define SCP_SID      uint32_t
@@ -57,6 +57,8 @@
 #define SCP_COMMAND_SET_DEFAULT 0x0000
 #define SCP_COMMAND_SET_MANAGE  0x0001
 #define SCP_COMMAND_SET_RSR     0x0002
+
+#define SCP_SERVER_MAX_LIST_SIZE 100
 
 #define free_session(s) {g_free((s)->username); g_free((s)->password); g_free((s)->hostname); g_free(s);}
 
@@ -89,13 +91,13 @@ struct SCP_SESSION
 struct SCP_DISCONNECTED_SESSION
 {
   uint32_t SID;
-  unsigned char type;
+  uint8_t type;
   uint16_t height;
   uint16_t width;
-  unsigned char bpp;
-  unsigned char idle_days;
-  unsigned char idle_hours;
-  unsigned char idle_minutes;
+  uint8_t bpp;
+  uint8_t idle_days;
+  uint8_t idle_hours;
+  uint8_t idle_minutes;
 };
 
 enum SCP_CLIENT_STATES_E
@@ -104,12 +106,16 @@ enum SCP_CLIENT_STATES_E
   SCP_CLIENT_STATE_NETWORK_ERR,
   SCP_CLIENT_STATE_VERSION_ERR,
   SCP_CLIENT_STATE_SEQUENCE_ERR,
+  SCP_CLIENT_STATE_SIZE_ERR,
   SCP_CLIENT_STATE_INTERNAL_ERR,
   SCP_CLIENT_STATE_SESSION_LIST,
+  SCP_CLIENT_STATE_LIST_OK,
   SCP_CLIENT_STATE_RESEND_CREDENTIALS,
   SCP_CLIENT_STATE_CONNECTION_DENIED,
   SCP_CLIENT_STATE_PWD_CHANGE_REQ,
-  SCP_CLIENT_STATE_RECONNECT
+  SCP_CLIENT_STATE_RECONNECT_SINGLE,
+  SCP_CLIENT_STATE_SELECTION_CANCEL,
+  SCP_CLIENT_STATE_END
 };
 
 enum SCP_SERVER_STATES_E
@@ -121,6 +127,8 @@ enum SCP_SERVER_STATES_E
   SCP_SERVER_STATE_INTERNAL_ERR,
   SCP_SERVER_STATE_SESSION_TYPE_ERR,
   SCP_SERVER_STATE_SIZE_ERR,
+  SCP_SERVER_STATE_SELECTION_CANCEL,
+  /*SCP_SERVER_STATE_FORCE_NEW,*/
   SCP_SERVER_STATE_START_MANAGE,
   SCP_SERVER_STATE_END
 };

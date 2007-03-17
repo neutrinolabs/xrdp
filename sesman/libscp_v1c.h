@@ -18,11 +18,11 @@
 */
 
 /**
- * 
+ *
  * @file libscp_v1c.h
  * @brief libscp version 1 client api declarations
  * @author Simone Fedele
- * 
+ *
  */
 
 #ifndef LIBSCP_V1C_H
@@ -31,14 +31,34 @@
 #include "libscp_types.h"
 
 /* client API */
-/* 001 */ enum SCP_CLIENT_STATES_E scp_v1c_connect(struct SCP_CONNECTION* c, struct SCP_SESSION* s);
-/* 004 */ enum SCP_CLIENT_STATES_E scp_v1c_resend_credentials(struct SCP_CONNECTION* c, struct SCP_SESSION* s);
+/* 001 */
+enum SCP_CLIENT_STATES_E
+scp_v1c_connect(struct SCP_CONNECTION* c, struct SCP_SESSION* s);
 
-/* 021 */ enum SCP_CLIENT_STATES_E scp_v1c_pwd_change(struct SCP_CONNECTION* c, char* newpass);
-/* 022 */ enum SCP_CLIENT_STATES_E scp_v1c_pwd_change_cancel(struct SCP_CONNECTION* c);
+/* 004 */
+enum SCP_CLIENT_STATES_E
+scp_v1c_resend_credentials(struct SCP_CONNECTION* c, struct SCP_SESSION* s);
 
-/* ... */ enum SCP_CLIENT_STATES_E scp_v1c_get_session_list(struct SCP_CONNECTION* c, int* scount, struct SCP_DISCONNECTED_SESSION** s);
-/* 041 */ enum SCP_CLIENT_STATES_E scp_v1c_select_session(struct SCP_CONNECTION* c, SCP_SID sid);
-/* 042 */ enum SCP_CLIENT_STATES_E scp_v1c_select_session_cancel(struct SCP_CONNECTION* c);
+/* 021 */
+enum SCP_CLIENT_STATES_E
+scp_v1c_pwd_change(struct SCP_CONNECTION* c, char* newpass);
+
+/* 022 */
+enum SCP_CLIENT_STATES_E
+scp_v1c_pwd_change_cancel(struct SCP_CONNECTION* c);
+
+/* 041 */
+enum SCP_CLIENT_STATES_E
+scp_v1c_get_session_list(struct SCP_CONNECTION* c, int* scount,
+                         struct SCP_DISCONNECTED_SESSION** s);
+
+/* 043 */
+enum SCP_CLIENT_STATES_E
+scp_v1c_select_session(struct SCP_CONNECTION* c, struct SCP_SESSION* s,
+                       SCP_SID sid);
+
+/* 044 */
+enum SCP_CLIENT_STATES_E
+scp_v1c_select_session_cancel(struct SCP_CONNECTION* c);
 
 #endif

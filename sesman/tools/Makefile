@@ -6,8 +6,9 @@ SESTESTOBJ = sestest.o tcp.o \
 DEFINES = -DLIBSCP_CLIENT
 
 CFLAGS = -Wall -O2 -I../../common -I../ -I/usr/include/nptl $(DEFINES)
-LDFLAGS = -L /usr/gnu/lib -I/usr/include/nptl -L/usr/lib/nptl -lpthread -ldl $(DEFINES)
-C_OS_FLAGS = $(CFLAGS) -c
+#LDFLAGS = -L /usr/gnu/lib -I/usr/include/nptl -L/usr/lib/nptl -lpthread -ldl $(DEFINES) 
+LDFLAGS = -L /usr/gnu/lib -ldl $(DEFINES) 
+C_OS_FLAGS = $(CFLAGS) -c -g
 CC = gcc
 
 all: sestest 
@@ -37,4 +38,4 @@ clean:
 	rm $(SESTESTOBJ) sestest
 
 install:
-	#install:wq
+	#install
