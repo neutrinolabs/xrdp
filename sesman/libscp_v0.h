@@ -18,11 +18,11 @@
 */
 
 /**
- * 
+ *
  * @file libscp_v0.h
  * @brief libscp version 0 declarations
  * @author Simone Fedele
- * 
+ *
  */
 
 #ifndef LIBSCP_V0_H
@@ -39,7 +39,7 @@
  * @param d display
  *
  */
-enum SCP_CLIENT_STATES_E scp_v0c_connect(struct SCP_CONNECTION* c, struct SCP_SESSION* s, SCP_DISPLAY* d);
+enum SCP_CLIENT_STATES_E scp_v0c_connect(struct SCP_CONNECTION* c, struct SCP_SESSION* s);
 
 /* server API */
 /**
@@ -47,7 +47,7 @@ enum SCP_CLIENT_STATES_E scp_v0c_connect(struct SCP_CONNECTION* c, struct SCP_SE
  * @brief processes the stream using scp version 0
  * @param c connection descriptor
  * @param s session descriptor
- * @param skipVchk if set to !0 skips the version control (to be used after 
+ * @param skipVchk if set to !0 skips the version control (to be used after
  *                 scp_vXs_accept() )
  *
  */

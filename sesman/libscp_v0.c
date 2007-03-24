@@ -30,10 +30,12 @@
 #include "os_calls.h"
 /* client API */
 /******************************************************************************/
-enum SCP_CLIENT_STATES_E scp_v0c_connect(struct SCP_CONNECTION* c, struct SCP_SESSION* s, SCP_DISPLAY* d)
+enum SCP_CLIENT_STATES_E scp_v0c_connect(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
 {
+  uint32_t version;
+  uint32_t size;
   uint16_t sz;
-  
+
   init_stream(c->in_s, c->in_s->size);
   init_stream(c->out_s, c->in_s->size);
 
@@ -41,7 +43,18 @@ enum SCP_CLIENT_STATES_E scp_v0c_connect(struct SCP_CONNECTION* c, struct SCP_SE
   g_tcp_set_no_delay(c->in_sck);
   s_push_layer(c->out_s, channel_hdr, 8);
 
-  out_uint16_be(c->out_s, 10); // code
+  if (s->type==SCP_SESSION_TYPE_XVNC)
+  {
+    out_uint16_be(c->out_s, 0); // code
+  }
+  else if (s->type==SCP_SESSION_TYPE_XRDP)
+  {
+    out_uint16_be(c->out_s, 10); // code
+  }
+  else
+  {
+    return SCP_CLIENT_STATE_INTERNAL_ERR;
+  }
   sz = g_strlen(s->username);
   out_uint16_be(c->out_s, sz);
   out_uint8a(c->out_s, s->username, sz);
@@ -64,7 +77,45 @@ enum SCP_CLIENT_STATES_E scp_v0c_connect(struct SCP_CONNECTION* c, struct SCP_SE
     return SCP_CLIENT_STATE_NETWORK_ERR;
   }
 
-  return SCP_CLIENT_STATE_OK;
+  if (0!=tcp_force_recv(c->in_sck, c->in_s->data, 8))
+  {
+    return SCP_CLIENT_STATE_NETWORK_ERR;
+  }
+
+  in_uint32_be(c->in_s, version);
+  if (0 != version)
+  {
+    return SCP_CLIENT_STATE_VERSION_ERR;
+  }
+
+  in_uint32_be(c->in_s, size);
+  if (size < 14)
+  {
+    return SCP_CLIENT_STATE_SIZE_ERR;
+  }
+
+  init_stream(c->in_s, c->in_s->size);
+  if (0!=tcp_force_recv(c->in_sck, c->in_s->data, size - 8))
+  {
+    return SCP_CLIENT_STATE_NETWORK_ERR;
+  }
+
+  in_uint16_be(c->in_s, sz);
+  if (3!=sz)
+  {
+    return SCP_CLIENT_STATE_SEQUENCE_ERR;
+  }
+
+  in_uint16_be(c->in_s, sz);
+  if (1!=sz)
+  {
+    return SCP_CLIENT_STATE_CONNECTION_DENIED;
+  }
+
+  in_uint16_be(c->in_s, sz);
+  s->display=sz;
+
+  return SCP_CLIENT_STATE_END;
 }
 
 /* server API */
@@ -103,16 +154,16 @@ enum SCP_SERVER_STATES_E scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SES
 
   in_uint16_be(c->in_s, code);
 
-  if (code == 0 || code == 10) 
+  if (code == 0 || code == 10)
   {
     session = g_malloc(sizeof(struct SCP_SESSION),1);
     if (0 == session)
     {
       return SCP_SERVER_STATE_INTERNAL_ERR;
     }
-    
+
     session->version=version;
-    
+
     if (code == 0)
     {
       session->type=SCP_SESSION_TYPE_XVNC;
@@ -121,7 +172,7 @@ enum SCP_SERVER_STATES_E scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SES
     {
       session->type=SCP_SESSION_TYPE_XRDP;
     }
-    
+
     /* reading username */
     in_uint16_be(c->in_s, sz);
     session->username=g_malloc(sz+1,0);
