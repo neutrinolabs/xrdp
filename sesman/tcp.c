@@ -21,11 +21,17 @@
  *
  * @file tcp.c
  * @brief Tcp stream funcions
- * @author Jay Sorg
- * 
+ * @author Jay Sorg, Simone Fedele
+ *
  */
 
 #include "sesman.h"
+
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <stdlib.h>
+#include <string.h>
 
 /*****************************************************************************/
 int DEFAULT_CC
@@ -123,4 +129,17 @@ tcp_force_send(int sck, char* data, int len)
 #endif
 
   return 0;
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+tcp_bind(int sck, char* addr, char* port)
+{
+  struct sockaddr_in s;
+
+  memset(&s, 0, sizeof(struct sockaddr_in));
+  s.sin_family = AF_INET;
+  s.sin_port = htons(atoi(port));
+  s.sin_addr.s_addr = inet_addr(addr);
+  return bind(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
 }

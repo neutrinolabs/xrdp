@@ -22,7 +22,7 @@
  * @file config.h
  * @brief User authentication definitions
  * @author Simone Fedele @< simo [at] esseemme [dot] org @>
- * 
+ *
  */
 
 #ifndef CONFIG_H
@@ -44,6 +44,7 @@
 
 #define SESMAN_CFG_GLOBALS           "Globals"
 #define SESMAN_CFG_DEFWM             "DefaultWindowManager"
+#define SESMAN_CFG_ADDRESS           "ListenAddress"
 #define SESMAN_CFG_PORT              "ListenPort"
 #define SESMAN_CFG_ENABLE_USERWM     "EnableUserWindowManager"
 #define SESMAN_CFG_USERWM            "UserWindowManager"
@@ -141,6 +142,11 @@ struct config_sessions
  */
 struct config_sesman
 {
+  /**
+   * @var listen_address
+   * @brief Listening address
+   */
+  char listen_address[32];
   /**
    * @var listen_port
    * @brief Listening port

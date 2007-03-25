@@ -37,6 +37,11 @@ The options to be specified in the \fB[globals]\fR section are the following:
 .br 
 
 .TP 
+\fBListenAddress\fR=\fIip address\fR
+Specifies sesman listening address. Default is 0.0.0.0 (all interfaces)
+.br 
+
+.TP 
 \fBListenPort\fR=\fIport number\fR
 Specifies sesman listening port. Default is 3350
 .br 
@@ -164,6 +169,8 @@ Sets the group which a user shall belong to have session management rights.
 This is an example \fBsesman.ini\fR:
 
 [Globals]
+.br 
+ListenAddress=127.0.0.1
 .br 
 ListenPort=3350
 .br 

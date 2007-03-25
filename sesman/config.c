@@ -22,7 +22,7 @@
  * @file config.c
  * @brief User authentication code
  * @author Simone Fedele @< simo [at] esseemme [dot] org @>
- * 
+ *
  */
 
 #include "arch.h"
@@ -107,6 +107,7 @@ config_read_globals(int file, struct config_sesman* cf, struct list* param_n,
   list_clear(param_n);
 
   /* resetting the struct */
+  cf->listen_address[0] = '\0';
   cf->listen_port[0] = '\0';
   cf->enable_user_wm = 0;
   cf->user_wm[0] = '\0';
@@ -132,9 +133,17 @@ config_read_globals(int file, struct config_sesman* cf, struct list* param_n,
     {
       g_strncpy(cf->listen_port, (char*)list_get_item(param_v, i), 15);
     }
+    else if (0 == g_strcasecmp(buf, SESMAN_CFG_ADDRESS))
+    {
+      g_strncpy(cf->listen_address, (char*)list_get_item(param_v, i), 31);
+    }
   }
 
   /* checking for missing required parameters */
+  if ('\0' == cf->listen_address[0])
+  {
+    g_strncpy(cf->listen_address, "0.0.0.0", 8);
+  }
   if ('\0' == cf->listen_port[0])
   {
     g_strncpy(cf->listen_port, "3350", 5);
@@ -150,6 +159,7 @@ config_read_globals(int file, struct config_sesman* cf, struct list* param_n,
 
   /* showing read config */
   g_printf("sesman config:\r\n");
+  g_printf("\tListenAddress:            %s\r\n", cf->listen_address);
   g_printf("\tListenPort:               %s\r\n", cf->listen_port);
   g_printf("\tEnableUserWindowManager:  %i\r\n", cf->enable_user_wm);
   g_printf("\tUserWindowManager:        %s\r\n", cf->user_wm);
@@ -302,7 +312,7 @@ config_read_sessions(int file, struct config_sessions* se, struct list* param_n,
   se->max_idle_time=0;
   se->max_disc_time=0;
   se->kill_disconnected=0;
-	
+
   file_read_section(file, SESMAN_CFG_SESSIONS, param_n, param_v);
   for (i = 0; i < param_n->count; i++)
   {
