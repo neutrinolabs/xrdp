@@ -904,11 +904,10 @@ lib_mod_connect(struct vnc* v)
   int error;
   int i;
   int check_sec_result;
-  int version;
-  int size;
-  int code;
-  int ok;
-  int display;
+
+  struct SCP_SESSION scp_s;
+  struct SCP_CONNECTION scp_c;
+  enum SCP_CLIENT_STATES_E scp_e;
 
   v->server_msg(v, "started connecting", 0);
   check_sec_result = 1;
@@ -927,82 +926,66 @@ lib_mod_connect(struct vnc* v)
   /* if port = -1, use sesman to get port / desktop */
   if (g_strncmp(v->port, "-1", 2) == 0)
   {
-    display = 0;
+    scp_s.type=SCP_SESSION_TYPE_XVNC;
+    scp_s.display=0;
+    scp_s.height=v->server_height;
+    scp_s.width=v->server_width;
+    scp_s.bpp=v->server_bpp;
+    scp_s.username=g_strdup(v->username);
+    scp_s.password=g_strdup(v->password);
+
     error = 0;
     init_stream(s, 8192);
-    v->sck = g_tcp_socket();
-    v->sck_closed = 0;
+    scp_c.in_sck=g_tcp_socket();
+    make_stream((scp_c.in_s));
+    make_stream((scp_c.out_s));
+    init_stream((scp_c.in_s), 8192);
+    init_stream((scp_c.out_s), 8192);
     v->server_msg(v, "connecting to sesman", 0);
-    if (g_tcp_connect(v->sck, v->ip, "3350") == 0)
+    v->sck_closed = 0;
+    if (g_tcp_connect(scp_c.in_sck, v->ip, "3350") == 0)
     {
-      g_tcp_set_non_blocking(v->sck);
-      g_tcp_set_no_delay(v->sck);
-      s_push_layer(s, channel_hdr, 8);
-      out_uint16_be(s, 0); // code
-      i = g_strlen(v->username);
-      out_uint16_be(s, i);
-      out_uint8a(s, v->username, i);
-      i = g_strlen(v->password);
-      out_uint16_be(s, i);
-      out_uint8a(s, v->password, i);
-      out_uint16_be(s, v->server_width);
-      out_uint16_be(s, v->server_height);
-      out_uint16_be(s, v->server_bpp);
-      s_mark_end(s);
-      s_pop_layer(s, channel_hdr);
-      out_uint32_be(s, 0); // version
-      out_uint32_be(s, s->end - s->data); // size
-      v->server_msg(v, "sending login info to sesman", 0);
-      error = lib_send(v, s->data, s->end - s->data);
-      if (error == 0)
+      error=1;
+      scp_e=scp_v0c_connect(&scp_c, &scp_s);
+      switch (scp_e)
       {
-        init_stream(s, 8192);
-        v->server_msg(v, "receiving sesman header", 0);
-        error = lib_recv(v, s->data, 8);
-      }
-      if (error == 0)
-      {
-        in_uint32_be(s, version);
-        in_uint32_be(s, size);
-        init_stream(s, 8192);
-        v->server_msg(v, "receiving sesman data", 0);
-        error = lib_recv(v, s->data, size - 8);
-      }
-      if (error == 0)
-      {
-        if (version == 0)
-        {
-          in_uint16_be(s, code);
-          if (code == 3)
-          {
-            in_uint16_be(s, ok);
-            if (ok)
-            {
-              in_uint16_be(s, display);
-            }
-            else
-            {
-              in_uint8s(s, 2);
-              v->server_msg(v, "error - sesman returned no", 0);
-            }
-          }
-        }
+        case SCP_CLIENT_STATE_CONNECTION_DENIED:
+          v->server_msg(v, "error - sesman returned no", 0);
+          break;
+        case SCP_CLIENT_STATE_VERSION_ERR:
+          v->server_msg(v, "error - libscp version error", 0);
+          break;
+        case SCP_CLIENT_STATE_SIZE_ERR:
+          v->server_msg(v, "error - libscp size error", 0);
+          break;
+        case SCP_CLIENT_STATE_NETWORK_ERR:
+          v->server_msg(v, "error - libscp network error", 0);
+          break;
+        case SCP_CLIENT_STATE_SEQUENCE_ERR:
+          v->server_msg(v, "error - libscp sequence error", 0);
+          break;
+        case SCP_CLIENT_STATE_END:
+          v->server_msg(v, "error - sesman returned ok", 0);
+          error=0;
+          break;
+        default:
+          v->server_msg(v, "error - unknown error", 0);
       }
     }
     else
     {
       v->server_msg(v, "error - connecting to sesman", 0);
     }
-    g_tcp_close(v->sck);
-    if (error != 0 || display == 0)
+    g_tcp_close(scp_c.in_sck);
+    if (error != 0 || scp_s.display == 0)
     {
       v->server_msg(v, "error - connection failed", 0);
       free_stream(s);
       return 1;
     }
     v->server_msg(v, "sesman started a session", 0);
-    g_sprintf(con_port, "%d", 5900 + display);
-    v->vnc_desktop = display;
+    g_sprintf(con_port, "%d", 5900 + scp_s.display);
+    v->vnc_desktop = scp_s.display;
   }
   else
   {

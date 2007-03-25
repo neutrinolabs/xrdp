@@ -1,5 +1,7 @@
 # libvnc makefile
-VNCOBJ = vnc.o os_calls.o d3des.o
+LIBSCPOBJ = libscp_v0.o tcp.o
+
+VNCOBJ = vnc.o os_calls.o d3des.o $(LIBSCPOBJ)
 
 DESTDIR = /usr/local/xrdp
 CFGDIR = /etc/xrdp
@@ -10,7 +12,7 @@ DOCDIR = /usr/doc/xrdp
 DEFINES =
 
 CFLAGS = -Wall -O2 -I../common -fPIC $(DEFINES)
-C_OS_FLAGS = $(CFLAGS) -c
+C_OS_FLAGS = $(CFLAGS) -c -g
 LDFLAGS = -shared
 LIBS = -ldl
 CC = gcc
@@ -34,3 +36,9 @@ install:
 
 installdeb:
 	install libvnc.so $(DESTDIRDEB)/usr/lib/xrdp/libvnc.so
+
+libscp_v0.o:
+	$(CC) $(C_OS_FLAGS) ../sesman/libscp_v0.c
+
+tcp.o:
+	$(CC) $(C_OS_FLAGS) -DLIBSCP_CLIENT ../sesman/tcp.c
