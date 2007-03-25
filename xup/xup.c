@@ -128,14 +128,18 @@ lib_mod_connect(struct mod* mod)
 {
   int error;
   int len;
-  int display;
+  //int display;
   int i;
-  int version;
+  /*int version;
   int size;
   int code;
-  int ok;
+  int ok;*/
   struct stream* s;
   char con_port[256];
+
+  struct SCP_SESSION scp_s;
+  struct SCP_CONNECTION scp_c;
+  enum SCP_CLIENT_STATES_E scp_e;
 
   LIB_DEBUG(mod, "in lib_mod_connect");
   /* clear screen */
@@ -160,81 +164,68 @@ lib_mod_connect(struct mod* mod)
   /* if port = -1, use sesman to get port / desktop */
   if (g_strncmp(mod->port, "-1", 2) == 0)
   {
-    display = 0;
+    scp_s.type=SCP_SESSION_TYPE_XRDP;
+    scp_s.display=0;
+    scp_s.height=mod->height;
+    scp_s.width=mod->width;
+    scp_s.bpp=mod->bpp;
+    scp_s.username=g_strdup(mod->username);
+    scp_s.password=g_strdup(mod->password);
+
     error = 0;
     init_stream(s, 8192);
-    mod->sck = g_tcp_socket();
+    scp_c.in_sck=g_tcp_socket();
+    make_stream((scp_c.in_s));
+    make_stream((scp_c.out_s));
+    init_stream((scp_c.in_s), 8192);
+    init_stream((scp_c.out_s), 8192);
     mod->sck_closed = 0;
     mod->server_msg(mod, "connecting to sesman", 0);
-    if (g_tcp_connect(mod->sck, mod->ip, "3350") == 0)
+    if (g_tcp_connect(scp_c.in_sck, mod->ip, "3350") == 0)
     {
-      g_tcp_set_non_blocking(mod->sck);
-      g_tcp_set_no_delay(mod->sck);
-      s_push_layer(s, channel_hdr, 8);
-      out_uint16_be(s, 10); // code
-      i = g_strlen(mod->username);
-      out_uint16_be(s, i);
-      out_uint8a(s, mod->username, i);
-      i = g_strlen(mod->password);
-      out_uint16_be(s, i);
-      out_uint8a(s, mod->password, i);
-      out_uint16_be(s, mod->width);
-      out_uint16_be(s, mod->height);
-      out_uint16_be(s, mod->bpp);
-      s_mark_end(s);
-      s_pop_layer(s, channel_hdr);
-      out_uint32_be(s, 0); // version
-      out_uint32_be(s, s->end - s->data); // size
-      mod->server_msg(mod, "sending login info to sesman", 0);
-      error = lib_send(mod, s->data, s->end - s->data);
-      if (error == 0)
+      error=1;
+      scp_e=scp_v0c_connect(&scp_c, &scp_s);
+      switch (scp_e)
       {
-        init_stream(s, 8192);
-        mod->server_msg(mod, "receiving sesman header", 0);
-        error = lib_recv(mod, s->data, 8);
+        case SCP_CLIENT_STATE_CONNECTION_DENIED:
+          mod->server_msg(mod, "error - sesman returned no", 0);
+          break;
+        case SCP_CLIENT_STATE_VERSION_ERR:
+          mod->server_msg(mod, "error - libscp version error", 0);
+          break;
+        case SCP_CLIENT_STATE_SIZE_ERR:
+          mod->server_msg(mod, "error - libscp size error", 0);
+          break;
+        case SCP_CLIENT_STATE_NETWORK_ERR:
+          mod->server_msg(mod, "error - libscp network error", 0);
+          break;
+        case SCP_CLIENT_STATE_SEQUENCE_ERR:
+          mod->server_msg(mod, "error - libscp sequence error", 0);
+          break;
+        case SCP_CLIENT_STATE_END:
+          mod->server_msg(mod, "error - sesman returned ok", 0);
+          error=0;
+          break;
+        default:
+          mod->server_msg(mod, "error - unknown error", 0);
       }
-      if (error == 0)
-      {
-        in_uint32_be(s, version);
-        in_uint32_be(s, size);
-        init_stream(s, 8192);
-        mod->server_msg(mod, "receiving sesman data", 0);
-        error = lib_recv(mod, s->data, size - 8);
-      }
-      if (error == 0)
-      {
-        if (version == 0)
-        {
-          in_uint16_be(s, code);
-          if (code == 3)
-          {
-            in_uint16_be(s, ok);
-            if (ok)
-            {
-              in_uint16_be(s, display);
-            }
-            else
-            {
-              in_uint8s(s, 2);
-              mod->server_msg(mod, "error - sesman returned no", 0);
-            }
-          }
-        }
-      }
+
     }
     else
     {
       mod->server_msg(mod, "error - connecting to sesman", 0);
     }
-    g_tcp_close(mod->sck);
-    if (error != 0 || display == 0)
+    g_free(scp_s.username);
+    g_free(scp_s.password);
+    g_tcp_close(scp_c.in_sck);
+    if (error != 0 || scp_s.display == 0)
     {
       mod->server_msg(mod, "error - connection failed", 0);
       free_stream(s);
       return 1;
     }
     mod->server_msg(mod, "sesman started a session", 0);
-    g_sprintf(con_port, "%d", 6200 + display);
+    g_sprintf(con_port, "%d", 6200 + scp_s.display);
   }
   else
   {

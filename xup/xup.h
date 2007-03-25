@@ -26,6 +26,8 @@
 #include "os_calls.h"
 #include "defines.h"
 
+#include "../sesman/libscp.h"
+
 struct mod
 {
   int size; /* size of this struct */
@@ -38,7 +40,7 @@ struct mod
   int (*mod_signal)(struct mod* v);
   int (*mod_end)(struct mod* v);
   int (*mod_set_param)(struct mod* v, char* name, char* value);
-  long mod_dumby[100 - 6]; /* align, 100 minus the number of mod 
+  long mod_dumby[100 - 6]; /* align, 100 minus the number of mod
                               functions above */
   /* server functions */
   int (*server_begin_update)(struct mod* v);
@@ -79,7 +81,7 @@ struct mod
   int (*server_get_channel_id)(struct mod* v, char* name);
   int (*server_send_to_channel)(struct mod* v, int channel_id,
                                 char* data, int data_len);
-  long server_dumby[100 - 24]; /* align, 100 minus the number of server 
+  long server_dumby[100 - 24]; /* align, 100 minus the number of server
                                   functions above */
   /* common */
   long handle; /* pointer to self as long */

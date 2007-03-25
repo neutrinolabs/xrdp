@@ -976,6 +976,8 @@ lib_mod_connect(struct vnc* v)
     {
       v->server_msg(v, "error - connecting to sesman", 0);
     }
+    g_free(scp_s.username);
+    g_free(scp_s.password);
     g_tcp_close(scp_c.in_sck);
     if (error != 0 || scp_s.display == 0)
     {
