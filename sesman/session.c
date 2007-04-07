@@ -22,11 +22,14 @@
  * @file session.c
  * @brief Session management code
  * @author Jay Sorg, Simone Fedele
- * 
+ *
  */
 
 #include "sesman.h"
 #include "libscp_types.h"
+
+//#include "unistd.h"
+//#include "stdio.h"
 
 extern unsigned char g_fixedkey[8];
 extern struct config_sesman g_cfg; /* config.h */
@@ -55,7 +58,7 @@ session_get_bydata(char* name, int width, int height, int bpp)
       lock_chain_release();
       return tmp->item;
     }
-    tmp = tmp->next;   
+    tmp = tmp->next;
   }
 
   /*THREAD-FIX release chain lock */
@@ -107,6 +110,46 @@ x_server_running(int display)
     g_tcp_close(sck);
   }
   return x_running;
+}
+
+static void DEFAULT_CC
+session_start_sessvc(int xpid, int wmpid, long data)
+{
+  struct list* sessvc_params;
+  char text[256];
+  char wmpid_str[25];
+  char xpid_str[25];
+
+  /* new style waiting for clients */
+  g_sprintf(wmpid_str, "%d", wmpid);
+  g_sprintf(xpid_str, "%d",  xpid);
+  log_message(LOG_LEVEL_INFO, "starting sessvc xpid=%s wmpid=%s ",xpid_str, wmpid_str);
+
+  sessvc_params = list_create();
+  sessvc_params->auto_free = 1;
+
+  /* building parameters */
+  list_add_item(sessvc_params, (long)g_strdup(SESMAN_SESSVC_FILE));
+  list_add_item(sessvc_params, (long)g_strdup(xpid_str));
+  list_add_item(sessvc_params, (long)g_strdup(wmpid_str));
+  list_add_item(sessvc_params, 0); /* mandatory */
+
+  g_execvp(SESMAN_SESSVC_FILE, ((char**)sessvc_params->items));
+  list_delete(sessvc_params);
+  //#warning FIXME sessvc PATH!!
+  //execlp("/usr/local/xrdp/sessvc", "/usr/local/xrdp/sessvc", xpid_str, wmpid_str, 0);
+
+  /* if we get here there's some error */
+  //strerror_r(errno, text, 255);
+  log_message(LOG_LEVEL_ALWAYS, "Error in execlp for sessvc: %s", text);
+
+  /* keep the old waitpid if some error occurs during execlp */
+  g_waitpid(wmpid);
+  g_sigterm(xpid);
+  g_sigterm(wmpid);
+  g_sleep(1000);
+  auth_end(data);
+  g_exit(0);
 }
 
 /******************************************************************************/
@@ -181,7 +224,7 @@ for user %s denied", username);
   if (pid == -1)
   {
   }
-  else if (pid == 0) /* child */
+  else if (pid == 0) /* child sesman */
   {
     g_unset_signals();
     auth_start_session(data, display);
@@ -192,7 +235,7 @@ for user %s denied", username);
     if (wmpid == -1)
     {
     }
-    else if (wmpid == 0) /* child */
+    else if (wmpid == 0) /* child (child sesman) xserver */
     {
       /* give X a bit to start */
       g_sleep(1000);
@@ -213,7 +256,7 @@ for user %s denied", username);
            so we try running the default window manager */
         g_sprintf(text, "%s/%s", cur_dir, g_cfg.default_wm);
         g_execlp3(text, g_cfg.default_wm, 0);
-	
+
         /* still a problem starting window manager just start xterm */
         g_execlp3("xterm", "xterm", 0);
         /* should not get here */
@@ -222,7 +265,7 @@ for user %s denied", username);
                   username, g_getpid());
       g_exit(0);
     }
-    else /* parent */
+    else /* parent (child sesman) */
     {
       xpid = g_fork();
       if (xpid == -1)
@@ -285,22 +328,18 @@ for user %s denied", username);
                     username, g_getpid());
         g_exit(1);
       }
-      else /* parent */
+      else /* parent (child sesman)*/
       {
-        g_waitpid(wmpid);
-        g_sigterm(xpid);
-        g_sigterm(wmpid);
-        g_sleep(1000);
-        auth_end(data);
-        g_exit(0);
+        /* new style waiting for clients */
+        session_start_sessvc(xpid, wmpid, data);
       }
     }
   }
-  else /* parent */
+  else /* parent sesman process */
   {
     /* let the other threads go on */
     lock_fork_release();
-    
+
     temp->item->pid = pid;
     temp->item->display = display;
     temp->item->width = width;
@@ -316,14 +355,14 @@ for user %s denied", username);
     temp->item->type=type;
     temp->item->status=SESMAN_SESSION_STATUS_ACTIVE;
 
-    /*THREAD-FIX lock the chain*/ 
+    /*THREAD-FIX lock the chain*/
     lock_chain_acquire();
     temp->next=g_sessions;
     g_sessions=temp;
     g_session_count++;
     /*THERAD-FIX free the chain*/
     lock_chain_release();
-    
+
     g_sleep(5000);
   }
   return display;
@@ -340,7 +379,7 @@ SESMAN_SESSION_STATUS_DISCONNECTED  3
 struct session_item
 {
   char name[256];
-  int pid; 
+  int pid;
   int display;
   int width;
   int height;
@@ -350,8 +389,8 @@ struct session_item
   / *
   unsigned char status;
   unsigned char type;
-  * / 
-  
+  * /
+
   / *
   time_t connect_time;
   time_t disconnect_time;
@@ -372,13 +411,13 @@ session_kill(int pid)
 {
   struct session_chain* tmp;
   struct session_chain* prev;
-  
+
   /*THREAD-FIX require chain lock */
   lock_chain_acquire();
-  
+
   tmp=g_sessions;
   prev=0;
-  
+
   while (tmp != 0)
   {
     if (tmp->item == 0)
@@ -389,7 +428,7 @@ session_kill(int pid)
       {
         /* prev does no exist, so it's the first element - so we set
            g_sessions */
-	g_sessions = tmp->next;
+        g_sessions = tmp->next;
       }
       else
       {
@@ -431,6 +470,36 @@ session_kill(int pid)
   /*THREAD-FIX release chain lock */
   lock_chain_release();
   return SESMAN_SESSION_KILL_NOTFOUND;
+}
+
+/******************************************************************************/
+void DEFAULT_CC
+session_sigkill_all()
+{
+  struct session_chain* tmp;
+
+  /*THREAD-FIX require chain lock */
+  lock_chain_acquire();
+
+  tmp=g_sessions;
+
+  while (tmp != 0)
+  {
+    if (tmp->item == 0)
+    {
+      log_message(LOG_LEVEL_ERROR, "found null session descriptor!");
+    }
+    else
+    {
+      g_sigterm(tmp->item->pid);
+    }
+
+    /* go on */
+    tmp=tmp->next;
+  }
+
+  /*THREAD-FIX release chain lock */
+  lock_chain_release();
 }
 
 /******************************************************************************/
@@ -480,7 +549,7 @@ session_get_byuser(char* user, int* cnt)
   int index;
 
   count=0;
-  
+
   /*THREAD-FIX require chain lock */
   lock_chain_acquire();
 
@@ -492,7 +561,7 @@ session_get_byuser(char* user, int* cnt)
     {
       count++;
     }
-  
+
     /* go on */
     tmp=tmp->next;
   }
@@ -533,7 +602,7 @@ session_get_byuser(char* user, int* cnt)
     tmp=tmp->next;
     index++;
   }
-  
+
   /*THREAD-FIX release chain lock */
   lock_chain_release();
   (*cnt)=count;

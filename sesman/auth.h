@@ -22,7 +22,7 @@
  * @file auth.h
  * @brief User authentication definitions
  * @author Jay Sorg
- * 
+ *
  */
 
 #ifndef AUTH_H
@@ -69,5 +69,32 @@ auth_end(long in_val);
  */
 int DEFAULT_CC
 auth_set_env(long in_val);
+
+
+#define AUTH_PWD_CHG_OK                0
+#define AUTH_PWD_CHG_CHANGE            1
+#define AUTH_PWD_CHG_CHANGE_MANDATORY  2
+#define AUTH_PWD_CHG_NOT_NOW           3
+#define AUTH_PWD_CHG_ERROR             4
+
+/**
+ *
+ * @brief FIXME
+ * @param in_val
+ * @return 0 on success, 1 on failure
+ *
+ */
+int DEFAULT_CC
+auth_check_pwd_chg(char* user);
+
+/**
+ *
+ * @brief FIXME
+ * @param in_val
+ * @return 0 on success, 1 on failure
+ *
+ */
+int DEFAULT_CC
+auth_change_pwd(char* user, char* newpwd);
 
 #endif

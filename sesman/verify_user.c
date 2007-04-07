@@ -22,7 +22,7 @@
  * @file verify_user.c
  * @brief Authenticate user using standard unix passwd/shadow system
  * @author Jay Sorg, Simone Fedele
- * 
+ *
  */
 
 #include "sesman.h"
@@ -39,6 +39,9 @@
 #endif
 
 extern struct config_sesman g_cfg;
+
+static int DEFAULT_CC
+auth_crypt_pwd(char* pwd, char* pln, char* crp);
 
 static int DEFAULT_CC
 auth_account_disabled(struct spwd* stp);
@@ -130,9 +133,6 @@ auth_set_env(long in_val)
   return 0;
 }
 
-#define AUTH_NO_PWD_CHANGE 0
-#define AUTH_PWD_CHANGE 1 
-
 /******************************************************************************/
 int DEFAULT_CC
 auth_check_pwd_chg(char* user)
@@ -145,43 +145,153 @@ auth_check_pwd_chg(char* user)
   spw = getpwnam(user);
   if (spw == 0)
   {
-    return AUTH_NO_PWD_CHANGE;
+    return AUTH_PWD_CHG_ERROR;
   }
   if (g_strncmp(spw->pw_passwd, "x", 3) != 0)
   {
     /* old system with only passwd */
-    return AUTH_NO_PWD_CHANGE;
+    return AUTH_PWD_CHG_OK;
   }
-  
+
   /* the system is using shadow */
   stp = getspnam(user);
   if (stp == 0)
   {
-    return AUTH_NO_PWD_CHANGE;
+    return AUTH_PWD_CHG_ERROR;
   }
- 
+
   /* check if we need a pwd change */
   now=g_time1();
   today=now/SECS_PER_DAY;
-  
+
   if (today >= (stp->sp_lstchg + stp->sp_max - stp->sp_warn))
   {
-    return AUTH_PWD_CHANGE;
+    return AUTH_PWD_CHG_CHANGE;
   }
-  
+
+  if (today >= (stp->sp_lstchg + stp->sp_max))
+  {
+    return AUTH_PWD_CHG_CHANGE_MANDATORY;
+  }
+
   if (today < ((stp->sp_lstchg)+(stp->sp_min)))
   {
     /* cannot change pwd for now */
-    return AUTH_NO_PWD_CHANGE;
+    return AUTH_PWD_CHG_NOT_NOW;
   }
-  
-  return AUTH_NO_PWD_CHANGE;
+
+  return AUTH_PWD_CHG_OK;
+}
+
+int DEFAULT_CC
+auth_change_pwd(char* user, char* newpwd)
+{
+  struct passwd* spw;
+  struct spwd* stp;
+  char hash[35] = "";
+  long today;
+
+  FILE* fd;
+
+  if (0 != lckpwdf())
+  {
+    return 1;
+  }
+
+  /* open passwd */
+  spw = getpwnam(user);
+  if (spw == 0)
+  {
+    return 1;
+  }
+
+  if (g_strncmp(spw->pw_passwd, "x", 3) != 0)
+  {
+    /* old system with only passwd */
+    if (auth_crypt_pwd(spw->pw_passwd, newpwd, hash) != 0)
+    {
+      ulckpwdf();
+      return 1;
+    }
+
+    spw->pw_passwd=g_strdup(hash);
+    fd = fopen("/etc/passwd", "rw");
+    putpwent(spw, fd);
+  }
+  else
+  {
+    /* the system is using shadow */
+    stp = getspnam(user);
+    if (stp == 0)
+    {
+      return 1;
+    }
+
+    /* old system with only passwd */
+    if (auth_crypt_pwd(stp->sp_pwdp, newpwd, hash) != 0)
+    {
+      ulckpwdf();
+      return 1;
+    }
+
+    stp->sp_pwdp = g_strdup(hash);
+    today = g_time1() / SECS_PER_DAY;
+    stp->sp_lstchg = today;
+    stp->sp_expire = today + stp->sp_max + stp->sp_inact;
+    fd = fopen("/etc/shadow", "rw");
+    putspent(stp, fd);
+  }
+
+  ulckpwdf();
+  return 0;
+}
+
+/**
+ *
+ * @brief Password encryption
+ * @param pwd Old password
+ * @param pln Plaintext new password
+ * @param crp Crypted new password
+ *
+ */
+
+static int DEFAULT_CC
+auth_crypt_pwd(char* pwd, char* pln, char* crp)
+{
+  char salt[13] = "$1$";
+  int saltcnt = 0;
+  char* encr;
+
+  if (g_strncmp(pwd, "$1$", 3) == 0)
+  {
+    /* gnu style crypt(); */
+    saltcnt = 3;
+    while ((pwd[saltcnt] != '$') && (saltcnt < 11))
+    {
+      salt[saltcnt] = pwd[saltcnt];
+      saltcnt++;
+    }
+    salt[saltcnt] = '$';
+    salt[saltcnt + 1] = '\0';
+  }
+  else
+  {
+    /* classic two char salt */
+    salt[0] = pwd[0];
+    salt[1] = pwd[1];
+    salt[2] = '\0';
+  }
+
+  encr = crypt(pln, salt);
+  g_strncpy(crp, encr, 34);
+
+  return 0;
 }
 
 /**
  *
  * @return 1 if the account is disabled, 0 otherwise
- * 
+ *
  */
 static int DEFAULT_CC
 auth_account_disabled(struct spwd* stp)
@@ -193,7 +303,7 @@ auth_account_disabled(struct spwd* stp)
     /* if an invalid struct was passed we assume a disabled account */
     return 1;
   }
-  
+
   today=g_time1()/SECS_PER_DAY;
 
   LOG_DBG("last   %d",stp->sp_lstchg);
@@ -208,12 +318,12 @@ auth_account_disabled(struct spwd* stp)
   {
     return 1;
   }
-		 
+
   if (today >= (stp->sp_lstchg+stp->sp_max+stp->sp_inact))
   {
     return 1;
   }
 
-  return 0;  
+  return 0;
 }
-  
+

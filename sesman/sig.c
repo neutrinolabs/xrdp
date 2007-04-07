@@ -22,7 +22,7 @@
  * @file sig.c
  * @brief signal handling functions
  * @author Jay Sorg, Simone Fedele
- * 
+ *
  */
 
 #include "sesman.h"
@@ -49,6 +49,8 @@ sig_sesman_shutdown(int sig)
 
   g_tcp_close(g_sck);
 
+  session_sigkill_all();
+
   g_file_delete(SESMAN_PID_FILE);
 }
 
@@ -65,14 +67,14 @@ sig_sesman_reload_cfg(int sig)
     LOG_DBG("g_getpid() [%d] differs from g_pid [%d]", g_getpid(), g_pid);
     return;
   }
-  
+
   if (config_read(&cfg) != 0)
   {
     log_message(LOG_LEVEL_ERROR, "error reading config - keeping old cfg");
     return;
   }
   g_cfg = cfg;
-  
+
   log_message(LOG_LEVEL_INFO, "configuration reloaded");
 }
 
@@ -103,7 +105,7 @@ sig_handler_thread(void* arg)
   sigset_t waitmask;
 
   /* mask signals to be able to wait for them... */
-  sigfillset(&sigmask); 
+  sigfillset(&sigmask);
   /* it is a good idea not to block SIGILL SIGSEGV */
   /* SIGFPE -- see sigaction(2) NOTES              */
   pthread_sigmask(SIG_BLOCK, &sigmask, &oldmask);

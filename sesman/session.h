@@ -22,7 +22,7 @@
  * @file session.h
  * @brief Session management definitions
  * @author Jay Sorg, Simone Fedele
- * 
+ *
  */
 
 
@@ -97,11 +97,20 @@ session_start(int width, int height, int bpp, char* username, char* password,
  *
  * @brief kills a session
  * @param pid the pid of the session to be killed
- * @return 
- * 
+ * @return
+ *
  */
 int DEFAULT_CC
 session_kill(int pid);
+
+/**
+ *
+ * @brief sends sigkill to all sessions
+ * @return
+ *
+ */
+void DEFAULT_CC
+session_sigkill_all();
 
 /**
  *
@@ -111,7 +120,7 @@ session_kill(int pid);
  *
  */
 struct session_item* DEFAULT_CC
-session_get_bypid(int pid); 
+session_get_bypid(int pid);
 
 /**
  *
@@ -120,8 +129,8 @@ session_get_bypid(int pid);
  * @return a pointer to the session descriptor on success, NULL otherwise
  *
  */
-struct SCP_DISCONNECTED_SESSION* 
-session_get_byuser(char* user, int* cnt); 
+struct SCP_DISCONNECTED_SESSION*
+session_get_byuser(char* user, int* cnt);
 
 #endif
 
