@@ -22,7 +22,7 @@
 
 #include "libxrdp.h"
 
-static char unknown1[172] =
+static char g_unknown1[172] =
 { 0xff, 0x02, 0xb6, 0x00, 0x28, 0x00, 0x00, 0x00,
   0x27, 0x00, 0x27, 0x00, 0x03, 0x00, 0x04, 0x00,
   0x00, 0x00, 0x26, 0x00, 0x01, 0x00, 0x1e, 0x00,
@@ -45,6 +45,11 @@ static char unknown1[172] =
   0x27, 0x00, 0x03, 0x00, 0x28, 0x00, 0x02, 0x00,
   0x29, 0x00, 0x01, 0x00, 0x2a, 0x00, 0x05, 0x00,
   0x2b, 0x00, 0x2a, 0x00 };
+
+/*
+static char g_unknown2[8] =
+{ 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00 };
+*/
 
 /*****************************************************************************/
 static int APP_CC
@@ -206,7 +211,7 @@ xrdp_rdp_recv(struct xrdp_rdp* self, struct stream* s, int* code)
       DEBUG(("out xrdp_rdp_recv error"));
       return 1;
     }
-    if (chan != MCS_GLOBAL_CHANNEL && chan > 0)
+    if ((chan != MCS_GLOBAL_CHANNEL) && (chan > 0))
     {
       if (chan > MCS_GLOBAL_CHANNEL)
       {
@@ -290,13 +295,42 @@ xrdp_rdp_send_data(struct xrdp_rdp* self, struct stream* s,
 }
 
 /*****************************************************************************/
+int APP_CC
+xrdp_rdp_send_data_update_sync(struct xrdp_rdp* self)
+{
+  struct stream* s;
+
+  make_stream(s);
+  init_stream(s, 8192);
+  DEBUG(("in xrdp_rdp_send_data_update_sync"));
+  if (xrdp_rdp_init_data(self, s) != 0)
+  {
+    DEBUG(("out xrdp_rdp_send_data_update_sync error"));
+    free_stream(s);
+    return 1;
+  }
+  out_uint16_le(s, RDP_UPDATE_SYNCHRONIZE);
+  out_uint8s(s, 2);
+  s_mark_end(s);
+  if (xrdp_rdp_send_data(self, s, RDP_DATA_PDU_UPDATE) != 0)
+  {
+    DEBUG(("out xrdp_rdp_send_data_update_sync error"));
+    free_stream(s);
+    return 1;
+  }
+  DEBUG(("out xrdp_rdp_send_data_update_sync"));
+  free_stream(s);
+  return 0;
+}
+
+/*****************************************************************************/
 static int APP_CC
 xrdp_rdp_parse_client_mcs_data(struct xrdp_rdp* self)
 {
   struct stream* p;
   int i;
 
-  p = &self->sec_layer->client_mcs_data;
+  p = &(self->sec_layer->client_mcs_data);
   p->p = p->data;
   in_uint8s(p, 31);
   in_uint16_le(p, self->client_info.width);
@@ -522,10 +556,43 @@ xrdp_process_capset_order(struct xrdp_rdp* self, struct stream* s,
                           int len)
 {
   int i;
+  char order_caps[32];
 
-  in_uint8s(s, 72);
+  DEBUG(("order capabilities"));
+  in_uint8s(s, 20); /* Terminal desc, pad */
+  in_uint8s(s, 2); /* Cache X granularity */
+  in_uint8s(s, 2); /* Cache Y granularity */
+  in_uint8s(s, 2); /* Pad */
+  in_uint8s(s, 2); /* Max order level */
+  in_uint8s(s, 2); /* Number of fonts */
+  in_uint8s(s, 2); /* Capability flags */
+  in_uint8a(s, order_caps, 32); /* Orders supported */
+  DEBUG(("dest blt-0 %d", order_caps[0]));
+  DEBUG(("pat blt-1 %d", order_caps[1]));
+  DEBUG(("screen blt-2 %d", order_caps[2]));
+  DEBUG(("memblt-3-13 %d %d", order_caps[3], order_caps[13]));
+  DEBUG(("triblt-4-14 %d %d", order_caps[4], order_caps[14]));
+  DEBUG(("line-8 %d", order_caps[8]));
+  DEBUG(("line-9 %d", order_caps[9]));
+  DEBUG(("rect-10 %d", order_caps[10]));
+  DEBUG(("desksave-11 %d", order_caps[11]));
+  DEBUG(("polygon-20 %d", order_caps[20]));
+  DEBUG(("polygon2-21 %d", order_caps[21]));
+  DEBUG(("polyline-22 %d", order_caps[22]));
+  DEBUG(("ellipse-25 %d", order_caps[25]));
+  DEBUG(("ellipse2-26 %d", order_caps[26]));
+  DEBUG(("text2-27 %d", order_caps[27]));
+  DEBUG(("order_caps dump"));
+#if defined(XRDP_DEBUG)
+  g_hexdump(order_caps, 32);
+#endif
+  in_uint8s(s, 2); /* Text capability flags */
+  in_uint8s(s, 6); /* Pad */
   in_uint32_le(s, i); /* desktop cache size, usually 0x38400 */
   self->client_info.desktop_cache = i;
+  DEBUG(("desktop cache size %d", i));
+  in_uint8s(s, 4); /* Unknown */
+  in_uint8s(s, 4); /* Unknown */
   return 0;
 }
 
@@ -802,14 +869,23 @@ xrdp_rdp_process_data_control(struct xrdp_rdp* self, struct stream* s)
 {
   int action;
 
+  DEBUG(("xrdp_rdp_process_data_control"));
   in_uint16_le(s, action);
   in_uint8s(s, 2); /* user id */
   in_uint8s(s, 4); /* control id */
   if (action == RDP_CTL_REQUEST_CONTROL)
   {
+    DEBUG(("xrdp_rdp_process_data_control got RDP_CTL_REQUEST_CONTROL"));
+    DEBUG(("xrdp_rdp_process_data_control calling xrdp_rdp_send_synchronise"));
     xrdp_rdp_send_synchronise(self);
+    DEBUG(("xrdp_rdp_process_data_control sending RDP_CTL_COOPERATE"));
     xrdp_rdp_send_control(self, RDP_CTL_COOPERATE);
+    DEBUG(("xrdp_rdp_process_data_control sending RDP_CTL_GRANT_CONTROL"));
     xrdp_rdp_send_control(self, RDP_CTL_GRANT_CONTROL);
+  }
+  else
+  {
+    DEBUG(("xrdp_rdp_process_data_control unknown action"));
   }
   return 0;
 }
@@ -818,6 +894,7 @@ xrdp_rdp_process_data_control(struct xrdp_rdp* self, struct stream* s)
 static int APP_CC
 xrdp_rdp_process_data_sync(struct xrdp_rdp* self)
 {
+  DEBUG(("xrdp_rdp_process_data_sync"));
   return 0;
 }
 
@@ -860,7 +937,7 @@ xrdp_rdp_send_unknown1(struct xrdp_rdp* self)
     free_stream(s);
     return 1;
   }
-  out_uint8a(s, unknown1, 172);
+  out_uint8a(s, g_unknown1, 172);
   s_mark_end(s);
   if (xrdp_rdp_send_data(self, s, 0x28) != 0)
   {
@@ -885,9 +962,11 @@ xrdp_rdp_process_data_font(struct xrdp_rdp* self, struct stream* s)
   /* 2600 clients sends only Seq 3 */
   if (seq == 2 || seq == 3) /* after second font message, we are up and */
   {                                           /* running */
+    DEBUG(("sending unknown1"));
     xrdp_rdp_send_unknown1(self);
     self->session->up_and_running = 1;
     DEBUG(("up_and_running set"));
+    xrdp_rdp_send_data_update_sync(self);
   }
   DEBUG(("out xrdp_rdp_process_data_font"));
   return 0;
@@ -962,34 +1041,34 @@ xrdp_rdp_process_data(struct xrdp_rdp* self, struct stream* s)
   DEBUG(("xrdp_rdp_process_data code %d", data_type));
   switch (data_type)
   {
-    case RDP_DATA_PDU_POINTER: /* 27 */
+    case RDP_DATA_PDU_POINTER: /* 27(0x1b) */
       xrdp_rdp_process_data_pointer(self, s);
       break;
-    case RDP_DATA_PDU_INPUT: /* 28 */
+    case RDP_DATA_PDU_INPUT: /* 28(0x1c) */
       xrdp_rdp_process_data_input(self, s);
       break;
-    case RDP_DATA_PDU_CONTROL: /* 20 */
+    case RDP_DATA_PDU_CONTROL: /* 20(0x14) */
       xrdp_rdp_process_data_control(self, s);
       break;
-    case RDP_DATA_PDU_SYNCHRONISE: /* 31 */
+    case RDP_DATA_PDU_SYNCHRONISE: /* 31(0x1f) */
       xrdp_rdp_process_data_sync(self);
       break;
-    case 33: /* 33 ?? Invalidate an area I think */
+    case 33: /* 33(0x21) ?? Invalidate an area I think */
       xrdp_rdp_process_screen_update(self, s);
       break;
-    case 35:
+    case 35: /* 35(0x23) */
       /* 35 ?? this comes when minimuzing a full screen mstsc.exe 2600 */
       /* I think this is saying the client no longer wants screen */
       /* updates and it will issue a 33 above to catch up */
       /* so minimized apps don't take bandwidth */
       break;
-    case 36: /* 36 ?? disconnect query? */
+    case 36: /* 36(0x24) ?? disconnect query? */
       /* when this message comes, send a 37 back so the client */
       /* is sure the connection is alive and it can ask if user */
       /* really wants to disconnect */
       xrdp_rdp_send_disconnect_query_response(self); /* send a 37 back */
       break;
-    case RDP_DATA_PDU_FONT2: /* 39 */
+    case RDP_DATA_PDU_FONT2: /* 39(0x27) */
       xrdp_rdp_process_data_font(self, s);
       break;
     default:
