@@ -29,7 +29,6 @@ static: $(LIBXRDPOBJ)
 
 libxrdp: $(LIBXRDPOBJ)
 	$(CC) $(LDFLAGS) -o libxrdp.so $(LIBXRDPOBJ) $(LIBS)
-	strip libxrdp.so
 
 clean:
 	rm -f $(LIBXRDPOBJ) libxrdp.a libxrdp.so
