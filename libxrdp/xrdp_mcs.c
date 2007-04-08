@@ -136,6 +136,7 @@ xrdp_mcs_recv(struct xrdp_mcs* self, struct stream* s, int* chan)
     {
       in_uint16_be(s, userid);
       in_uint16_be(s, chanid);
+      DEBUG(("  adding channel %4.4x", chanid));
       xrdp_mcs_send_cjcf(self, userid, chanid);
       continue;
     }

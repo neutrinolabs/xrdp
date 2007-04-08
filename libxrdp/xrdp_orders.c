@@ -105,7 +105,7 @@ xrdp_orders_send(struct xrdp_orders* self)
   if (self->order_level > 0)
   {
     self->order_level--;
-    if (self->order_level == 0 && self->order_count > 0)
+    if ((self->order_level == 0) && (self->order_count > 0))
     {
       s_mark_end(self->out_s);
       DEBUG(("xrdp_orders_send sending %d orders", self->order_count));
@@ -127,7 +127,7 @@ xrdp_orders_send(struct xrdp_orders* self)
 int APP_CC
 xrdp_orders_force_send(struct xrdp_orders* self)
 {
-  if (self->order_level > 0 && self->order_count > 0)
+  if ((self->order_level > 0) && (self->order_count > 0))
   {
     s_mark_end(self->out_s);
     DEBUG(("xrdp_orders_force_send sending %d orders", self->order_count));
@@ -174,11 +174,11 @@ xrdp_orders_check(struct xrdp_orders* self, int max_size)
     }
   }
   size = self->out_s->p - self->order_count_ptr;
-  if (size < 0 || size > max_packet_size)
+  if ((size < 0) || (size > max_packet_size))
   {
     return 1;
   }
-  if (size + max_size + 100 > max_packet_size)
+  if ((size + max_size + 100) > max_packet_size)
   {
     xrdp_orders_force_send(self);
     xrdp_orders_init(self);

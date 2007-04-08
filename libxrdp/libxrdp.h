@@ -291,6 +291,8 @@ int APP_CC
 xrdp_rdp_send_data(struct xrdp_rdp* self, struct stream* s,
                    int data_pdu_type);
 int APP_CC
+xrdp_rdp_send_data_update_sync(struct xrdp_rdp* self);
+int APP_CC
 xrdp_rdp_incoming(struct xrdp_rdp* self);
 int APP_CC
 xrdp_rdp_send_demand_active(struct xrdp_rdp* self);

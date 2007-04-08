@@ -140,6 +140,7 @@ libxrdp_send_palette(struct xrdp_session* session, int* palette)
   {
     return 0;
   }
+  DEBUG(("libxrdp_send_palette sending palette"));
   /* clear orders */
   libxrdp_orders_force_send(session);
   make_stream(s);
@@ -188,6 +189,7 @@ libxrdp_send_bitmap(struct xrdp_session* session, int width, int height,
   struct stream* s;
   struct stream* temp_s;
 
+  DEBUG(("libxrdp_send_bitmap sending bitmap"));
   Bpp = (bpp + 7) / 8;
   e = width % 4;
   if (e != 0)
@@ -343,6 +345,9 @@ libxrdp_send_pointer(struct xrdp_session* session, int cache_idx,
   int i;
   int j;
 
+  return 0;
+
+  DEBUG(("libxrdp_send_pointer sending cursor"));
   make_stream(s);
   init_stream(s, 8192);
   xrdp_rdp_init_data((struct xrdp_rdp*)session->rdp, s);
@@ -381,6 +386,7 @@ libxrdp_set_pointer(struct xrdp_session* session, int cache_idx)
 {
   struct stream* s;
 
+  DEBUG(("libxrdp_set_pointer sending cursor index"));
   make_stream(s);
   init_stream(s, 8192);
   xrdp_rdp_init_data((struct xrdp_rdp*)session->rdp, s);
