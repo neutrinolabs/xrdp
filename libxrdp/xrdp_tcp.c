@@ -164,6 +164,9 @@ xrdp_tcp_send(struct xrdp_tcp* self, struct stream* s)
     }
     else
     {
+#if defined(XRDP_DEBUG)
+      g_hexdump(s->data + total, sent);
+#endif
       total = total + sent;
     }
   }
