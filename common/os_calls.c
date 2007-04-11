@@ -435,6 +435,30 @@ g_tcp_send(int sck, const void* ptr, int len, int flags)
 }
 
 /*****************************************************************************/
+/* returns boolean */
+int APP_CC
+g_tcp_socket_ok(int sck)
+{
+#if defined(_WIN32)
+  int opt;
+  int opt_len;
+#else
+  int opt;
+  unsigned int opt_len;
+#endif
+
+  opt_len = sizeof(opt);
+  if (getsockopt(sck, SOL_SOCKET, SO_ERROR, (char*)(&opt), &opt_len) == 0)
+  {
+    if (opt == 0)
+    {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+/*****************************************************************************/
 /* wait 'millis' milliseconds for the socket to be able to write */
 /* returns boolean */
 int APP_CC
@@ -453,7 +477,7 @@ g_tcp_can_send(int sck, int millis)
     rv = select(sck + 1, 0, &wfds, 0, &time);
     if (rv > 0)
     {
-      return 1;
+      return g_tcp_socket_ok(sck);
     }
   }
   return 0;
@@ -478,7 +502,7 @@ g_tcp_can_recv(int sck, int millis)
     rv = select(sck + 1, &rfds, 0, 0, &time);
     if (rv > 0)
     {
-      return 1;
+      return g_tcp_socket_ok(sck);
     }
   }
   return 0;

@@ -80,6 +80,8 @@ g_tcp_send(int sck, const void* ptr, int len, int flags);
 int APP_CC
 g_tcp_last_error_would_block(int sck);
 int APP_CC
+g_tcp_socket_ok(int sck);
+int APP_CC
 g_tcp_can_send(int sck, int millis);
 int APP_CC
 g_tcp_can_recv(int sck, int millis);
