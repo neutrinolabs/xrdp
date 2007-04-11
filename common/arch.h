@@ -62,4 +62,15 @@
 #define EXPORT_CC
 #endif
 
+typedef char ti8;
+typedef unsigned char tui8;
+typedef signed char tsi8;
+typedef short ti16;
+typedef unsigned short tui16;
+typedef signed short tsi16;
+typedef int ti32;
+typedef unsigned int tui32;
+typedef signed int tsi32;
+typedef long tbus;
+
 #endif
