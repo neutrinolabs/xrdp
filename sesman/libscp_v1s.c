@@ -34,11 +34,11 @@
 enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk)
 {
   struct SCP_SESSION* session;
-  uint32_t version;
-  uint32_t size;
-  uint16_t cmdset;
-  uint16_t cmd;
-  unsigned char sz;
+  tui32 version;
+  tui32 size;
+  tui16 cmdset;
+  tui16 cmd;
+  tui8 sz;
 
   if (!skipVchk)
   {
@@ -202,13 +202,13 @@ scp_v1s_deny_connection(struct SCP_CONNECTION* c, char* reason)
 enum SCP_SERVER_STATES_E
 scp_v1s_request_password(struct SCP_CONNECTION* c, struct SCP_SESSION* s, char* reason)
 {
-  unsigned char sz;
+  tui8 sz;
   char *ubuf;
   char *pbuf;
-  uint32_t version;
-  uint32_t size;
-  uint16_t cmdset;
-  uint16_t cmd;
+  tui32 version;
+  tui32 size;
+  tui16 cmdset;
+  tui16 cmd;
   int rlen;
 
   init_stream(c->in_s, c->in_s->size);
@@ -325,9 +325,9 @@ enum SCP_SERVER_STATES_E
 scp_v1s_connect_new_session(struct SCP_CONNECTION* c, SCP_DISPLAY d)
 {
   /* send password request */
-  uint32_t version=1;
-  uint32_t size=14;
-  uint16_t cmd=30;
+  tui32 version=1;
+  tui32 size=14;
+  tui16 cmd=30;
 
   init_stream(c->out_s, c->out_s->size);
 
@@ -358,9 +358,9 @@ scp_v1s_connection_error(struct SCP_CONNECTION* c, char* error)
 enum SCP_SERVER_STATES_E
 scp_v1s_list_sessions(struct SCP_CONNECTION* c, int sescnt, struct SCP_DISCONNECTED_SESSION* ds, SCP_SID* sid)
 {
-  uint32_t version=1;
-  uint32_t size=12;
-  uint16_t cmd=40;
+  tui32 version=1;
+  tui32 size=12;
+  tui16 cmd=40;
   int pktcnt;
   int idx;
   int sidx;
@@ -564,9 +564,9 @@ scp_v1s_list_sessions(struct SCP_CONNECTION* c, int sescnt, struct SCP_DISCONNEC
 enum SCP_SERVER_STATES_E
 scp_v1s_reconnect_session(struct SCP_CONNECTION* c, SCP_DISPLAY d)
 {
-  uint32_t version = 1;
-  uint32_t size = 14;
-  uint16_t cmd = 46;
+  tui32 version = 1;
+  tui32 size = 14;
+  tui16 cmd = 46;
 
   /* ok, we send session data and display */
   init_stream(c->out_s, c->out_s->size);

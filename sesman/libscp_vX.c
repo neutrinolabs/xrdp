@@ -22,7 +22,7 @@
  * @file libscp_vX.c
  * @brief libscp version neutral code
  * @author Simone Fedele
- * 
+ *
  */
 
 #include "libscp_vX.h"
@@ -30,16 +30,16 @@
 /* server API */
 enum SCP_SERVER_STATES_E scp_vXs_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s)
 {
-  uint32_t version;
+  tui32 version;
 
   /* reading version and packet size */
   if (0!=tcp_force_recv(c->in_sck, c->in_s->data, 8))
   {
     return SCP_SERVER_STATE_NETWORK_ERR;
   }
-  
+
   in_uint32_be(c->in_s, version);
-  
+
   if (version == 0)
   {
     return scp_v0s_accept(c, s, 1);
@@ -48,6 +48,6 @@ enum SCP_SERVER_STATES_E scp_vXs_accept(struct SCP_CONNECTION* c, struct SCP_SES
   {
     return scp_v1s_accept(c, s, 1);
   }
-  
+
   return SCP_SERVER_STATE_VERSION_ERR;
 }

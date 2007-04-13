@@ -32,9 +32,9 @@
 /******************************************************************************/
 enum SCP_CLIENT_STATES_E scp_v0c_connect(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
 {
-  uint32_t version;
-  uint32_t size;
-  uint16_t sz;
+  tui32 version;
+  tui32 size;
+  tui16 sz;
 
   init_stream(c->in_s, c->in_s->size);
   init_stream(c->out_s, c->in_s->size);
@@ -122,11 +122,11 @@ enum SCP_CLIENT_STATES_E scp_v0c_connect(struct SCP_CONNECTION* c, struct SCP_SE
 /******************************************************************************/
 enum SCP_SERVER_STATES_E scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk)
 {
-  uint32_t version=0;
-  uint32_t size;
+  tui32 version=0;
+  tui32 size;
   struct SCP_SESSION* session=0;
-  uint16_t sz;
-  uint32_t code=0;
+  tui16 sz;
+  tui32 code=0;
 
   if (!skipVchk)
   {

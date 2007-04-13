@@ -36,11 +36,8 @@ static enum SCP_CLIENT_STATES_E _scp_v1c_check_response(struct SCP_CONNECTION* c
 /* 001 */
 enum SCP_CLIENT_STATES_E scp_v1c_connect(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
 {
-  unsigned char sz;
-  uint32_t size;
-  //uint32_t version;
-  //uint16_t cmd;
-  //uint16_t dim;
+  tui8 sz;
+  tui32 size;
 
   init_stream(c->out_s, c->out_s->size);
   init_stream(c->in_s, c->in_s->size);
@@ -103,11 +100,8 @@ enum SCP_CLIENT_STATES_E scp_v1c_connect(struct SCP_CONNECTION* c, struct SCP_SE
 /* 004 */
 enum SCP_CLIENT_STATES_E scp_v1c_resend_credentials(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
 {
-  unsigned char sz;
-  uint32_t size;
-  //uint32_t version;
-  //uint16_t cmd;
-  //uint16_t dim;
+  tui8 sz;
+  tui32 size;
 
   init_stream(c->out_s, c->out_s->size);
   init_stream(c->in_s, c->in_s->size);
@@ -145,14 +139,14 @@ enum SCP_CLIENT_STATES_E scp_v1c_resend_credentials(struct SCP_CONNECTION* c, st
 enum SCP_CLIENT_STATES_E
 scp_v1c_get_session_list(struct SCP_CONNECTION* c, int* scount, struct SCP_DISCONNECTED_SESSION** s)
 {
-  uint32_t version=1;
-  uint32_t size=12;
-  uint16_t cmd=41;
-  uint32_t sescnt=0;     /* total session number */
-  uint32_t sestmp=0;     /* additional total session number */
-  uint8_t pktcnt=0;     /* packet session count */
-  uint32_t totalcnt=0;   /* session counter */
-  uint8_t continued=0;  /* continue flag */
+  tui32 version=1;
+  tui32 size=12;
+  tui16 cmd=41;
+  tui32 sescnt=0;     /* total session number */
+  tui32 sestmp=0;     /* additional total session number */
+  tui8 pktcnt=0;     /* packet session count */
+  tui32 totalcnt=0;   /* session counter */
+  tui8 continued=0;  /* continue flag */
   int firstpkt=1;        /* "first packet" flag */
   int idx;
   struct SCP_DISCONNECTED_SESSION* ds=0;
@@ -255,9 +249,9 @@ scp_v1c_get_session_list(struct SCP_CONNECTION* c, int* scount, struct SCP_DISCO
 enum SCP_CLIENT_STATES_E
 scp_v1c_select_session(struct SCP_CONNECTION* c, struct SCP_SESSION* s, SCP_SID sid)
 {
-  uint32_t version = 1;
-  uint32_t size = 16;
-  uint16_t cmd = 43;
+  tui32 version = 1;
+  tui32 size = 16;
+  tui16 cmd = 43;
 
   init_stream(c->out_s, c->out_s->size);
 
@@ -324,9 +318,9 @@ scp_v1c_select_session(struct SCP_CONNECTION* c, struct SCP_SESSION* s, SCP_SID 
 enum SCP_CLIENT_STATES_E
 scp_v1c_select_session_cancel(struct SCP_CONNECTION* c)
 {
-  uint32_t version = 1;
-  uint32_t size = 12;
-  uint16_t cmd = 44;
+  tui32 version = 1;
+  tui32 size = 12;
+  tui16 cmd = 44;
 
   init_stream(c->out_s, c->out_s->size);
 
@@ -346,10 +340,10 @@ scp_v1c_select_session_cancel(struct SCP_CONNECTION* c)
 
 static enum SCP_CLIENT_STATES_E _scp_v1c_check_response(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
 {
-  uint32_t version;
-  uint32_t size;
-  uint16_t cmd;
-  uint16_t dim;
+  tui32 version;
+  tui32 size;
+  tui16 cmd;
+  tui16 dim;
 
   init_stream(c->in_s, c->in_s->size);
   if (0!=tcp_force_recv(c->in_sck, c->in_s->data, 8))

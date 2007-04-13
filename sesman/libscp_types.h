@@ -28,9 +28,6 @@
 #ifndef LIBSCP_TYPES_H
 #define LIBSCP_TYPES_H
 
-#include <sys/types.h>
-#include <inttypes.h>
-
 #include "os_calls.h"
 #include "parse.h"
 #include "arch.h"
@@ -39,11 +36,8 @@
 //sesman requires its own tcp streaming functions for threading safety
 #include "tcp.h"
 
-#define SCP_SID      uint32_t
-#define SCP_DISPLAY  uint16_t
-
-//#warning this should be an INT16 on every platform...
-//typedef unsigned int SCP_DISPLAY_PORT; --> uint16_t is it portable?
+#define SCP_SID      tui32
+#define SCP_DISPLAY  tui16
 
 #define SCP_RESOURCE_SHARING_REQUEST_YES 0x01
 #define SCP_RESOURCE_SHARING_REQUEST_NO  0x00
@@ -71,33 +65,33 @@ struct SCP_CONNECTION
 
 struct SCP_SESSION
 {
-  unsigned char type;
-  uint32_t version;
-  uint16_t height;
-  uint16_t width;
-  unsigned char bpp;
-  unsigned char rsr;
+  tui8 type;
+  tui32 version;
+  tui16 height;
+  tui16 width;
+  tui8 bpp;
+  tui8 rsr;
   char locale[18];
   char* username;
   char* password;
   char* hostname;
-  unsigned char addr_type;
-  uint32_t ipv4addr; //htons
-  uint32_t ipv6addr; //should be 128bit
-  uint16_t display;
+  tui8 addr_type;
+  tui32 ipv4addr; //htons
+  tui32 ipv6addr; //should be 128bit
+  tui16 display;
   char* errstr;
 };
 
 struct SCP_DISCONNECTED_SESSION
 {
-  uint32_t SID;
-  uint8_t type;
-  uint16_t height;
-  uint16_t width;
-  uint8_t bpp;
-  uint8_t idle_days;
-  uint8_t idle_hours;
-  uint8_t idle_minutes;
+  tui32 SID;
+  tui8  type;
+  tui16 height;
+  tui16 width;
+  tui8  bpp;
+  tui8  idle_days;
+  tui8  idle_hours;
+  tui8  idle_minutes;
 };
 
 enum SCP_CLIENT_STATES_E
@@ -134,4 +128,3 @@ enum SCP_SERVER_STATES_E
 };
 
 #endif
-
