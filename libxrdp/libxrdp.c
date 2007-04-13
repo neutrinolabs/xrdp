@@ -345,8 +345,6 @@ libxrdp_send_pointer(struct xrdp_session* session, int cache_idx,
   int i;
   int j;
 
-  return 0;
-
   DEBUG(("libxrdp_send_pointer sending cursor"));
   make_stream(s);
   init_stream(s, 8192);
