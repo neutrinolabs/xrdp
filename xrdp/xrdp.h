@@ -110,6 +110,14 @@ int APP_CC
 xrdp_wm_pointer(struct xrdp_wm* self, char* data, char* mask, int x, int y);
 int
 callback(long id, int msg, long param1, long param2, long param3, long param4);
+int APP_CC
+xrdp_wm_delete_all_childs(struct xrdp_wm* self);
+int APP_CC
+xrdp_wm_idle(struct xrdp_wm* self);
+int APP_CC
+xrdp_wm_app_sck_signal(struct xrdp_wm* self, int app_sck);
+int APP_CC
+xrdp_wm_log_msg(struct xrdp_wm* self, char* msg);
 
 /* xrdp_process.c */
 struct xrdp_process* APP_CC
@@ -289,13 +297,6 @@ get_char_from_scan_code(int device_flags, int scan_code, int* keys,
 
 /* xrdp_login_wnd.c */
 int APP_CC
-xrdp_wm_setup_mod1(struct xrdp_wm* self,
-                   struct xrdp_mod_data* mod_data);
-int APP_CC
-xrdp_wm_setup_mod2(struct xrdp_wm* self,
-                   struct list* names,
-                   struct list* values);
-int APP_CC
 xrdp_login_wnd_create(struct xrdp_wm* self);
 
 /* xrdp_bitmap_compress.c */
@@ -305,7 +306,25 @@ xrdp_bitmap_compress(char* in_data, int width, int height,
                      int start_line, struct stream* temp,
                      int e);
 
-/* xrdp_interface.c */
+/* xrdp_mm.c */
+struct xrdp_mm* APP_CC
+xrdp_mm_create(struct xrdp_wm* owner);
+void APP_CC
+xrdp_mm_delete(struct xrdp_mm* self);
+int APP_CC
+xrdp_mm_connect(struct xrdp_mm* self);
+int APP_CC
+xrdp_mm_signal(struct xrdp_mm* self);
+
+int APP_CC
+xrdp_mm_setup_mod1(struct xrdp_mm* self,
+                   struct list* names,
+                   struct list* values);
+int APP_CC
+xrdp_mm_setup_mod2(struct xrdp_mm* self,
+                   struct list* names,
+                   struct list* values);
+
 int DEFAULT_CC
 server_begin_update(struct xrdp_mod* mod);
 int DEFAULT_CC
