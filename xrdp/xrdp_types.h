@@ -155,6 +155,23 @@ struct xrdp_cache
   int pointer_cache_entries;
 };
 
+struct xrdp_mm
+{
+  struct xrdp_wm* wm; /* owner */
+  int connected_state;
+  int sck;
+  int sck_closed;
+  struct list* login_names;
+  struct list* login_values;
+  /* mod vars */
+  long mod_handle; /* returned from g_load_library */
+  struct xrdp_mod* (*mod_init)(void);
+  int (*mod_exit)(struct xrdp_mod*);
+  struct xrdp_mod* mod;
+  int display;
+  int code;
+};
+
 /* the window manager */
 struct xrdp_wm
 {
@@ -202,16 +219,13 @@ struct xrdp_wm
   int scroll_lock;
   int num_lock;
   struct list* key_down_list;
-  /* mod vars */
-  long mod_handle; /* returned from g_load_library */
-  struct xrdp_mod* (*mod_init)(void);
-  int (*mod_exit)(struct xrdp_mod*);
-  struct xrdp_mod* mod;
   /* client info */
   struct xrdp_client_info* client_info;
   /* session log */
   struct list* log;
   struct xrdp_bitmap* log_wnd;
+  int login_mode;
+  struct xrdp_mm* mm;
 };
 
 /* rdp process */
