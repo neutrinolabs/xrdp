@@ -962,9 +962,9 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
   }
   else if (self->type == WND_TYPE_SCREEN) /* 2 */
   {
-    if (self->wm->mod != 0)
+    if (self->wm->mm->mod != 0)
     {
-      if (self->wm->mod->mod_event != 0)
+      if (self->wm->mm->mod->mod_event != 0)
       {
         if (rect != 0)
         {
@@ -974,8 +974,9 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
           h = rect->bottom - rect->top;
           if (check_bounds(self->wm->screen, &x, &y, &w, &h))
           {
-            self->wm->mod->mod_event(self->wm->mod, WM_INVALIDATE,
-                                     MAKELONG(y, x), MAKELONG(h, w), 0, 0);
+            self->wm->mm->mod->mod_event(self->wm->mm->mod, WM_INVALIDATE,
+                                         MAKELONG(y, x), MAKELONG(h, w),
+                                         0, 0);
           }
         }
       }
