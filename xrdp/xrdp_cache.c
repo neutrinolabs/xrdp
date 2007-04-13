@@ -459,6 +459,7 @@ xrdp_cache_add_pointer(struct xrdp_cache* self,
 }
 
 /*****************************************************************************/
+/* this does not take owership of pointer_item, it makes a copy */
 int APP_CC
 xrdp_cache_add_pointer_static(struct xrdp_cache* self,
                               struct xrdp_pointer_item* pointer_item,
