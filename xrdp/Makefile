@@ -2,8 +2,9 @@
 XRDPOBJ = xrdp.o xrdp_process.o xrdp_listen.o \
           xrdp_bitmap.o xrdp_wm.o xrdp_painter.o \
           xrdp_region.o xrdp_cache.o xrdp_font.o funcs.o \
-          xrdp_login_wnd.o xrdp_interface.o lang.o \
-          list.o file.o os_calls.o thread_calls.o
+          xrdp_login_wnd.o lang.o \
+          list.o file.o os_calls.o thread_calls.o \
+          xrdp_mm.o
 
 DESTDIR = /usr/local/xrdp
 CFGDIR = /etc/xrdp
@@ -25,7 +26,6 @@ all: xrdp
 
 xrdp: $(XRDPOBJ)
 	$(CC) $(LDFLAGS) -o xrdp $(XRDPOBJ) $(LIBS)
-	strip xrdp
 
 clean:
 	rm -f $(XRDPOBJ) xrdp
