@@ -57,11 +57,12 @@ xrdp_process_loop(struct xrdp_process* self)
   {
     rv = libxrdp_process_data(self->session);
   }
-  if (self->wm == 0 && self->session->up_and_running && rv == 0)
+  if ((self->wm == 0) && (self->session->up_and_running) && (rv == 0))
   {
     DEBUG(("calling xrdp_wm_init and creating wm"));
     self->wm = xrdp_wm_create(self, self->session->client_info);
-    xrdp_wm_init(self->wm);
+    /* at this point the wm(window manager) is create and wm::login_mode is
+       zero so xrdp_wm_init should be called by xrdp_wm_idle */
   }
   return rv;
 }
@@ -96,7 +97,7 @@ xrdp_process_main_loop(struct xrdp_process* self)
       sel_r = g_tcp_select(self->sck, self->app_sck);
       if (sel_r == 0) /* no data on any stream */
       {
-        g_sleep(10);
+        xrdp_wm_idle(self->wm);
       }
       else if (sel_r < 0)
       {
@@ -111,15 +112,7 @@ xrdp_process_main_loop(struct xrdp_process* self)
       }
       if (sel_r & 2) /* mod socket fired */
       {
-        if (self->wm->mod == 0)
-        {
-          break;
-        }
-        if (self->wm->mod->mod_signal == 0)
-        {
-          break;
-        }
-        if (self->wm->mod->mod_signal(self->wm->mod) != 0)
+        if (xrdp_wm_app_sck_signal(self->wm, self->app_sck) != 0)
         {
           break;
         }
@@ -130,11 +123,14 @@ xrdp_process_main_loop(struct xrdp_process* self)
   }
   if (self->wm != 0)
   {
-    if (self->wm->mod != 0)
+    if (self->wm->mm != 0)
     {
-      if (self->wm->mod->mod_end != 0)
+      if (self->wm->mm->mod != 0)
       {
-        self->wm->mod->mod_end(self->wm->mod);
+        if (self->wm->mm->mod->mod_end != 0)
+        {
+          self->wm->mm->mod->mod_end(self->wm->mm->mod);
+        }
       }
     }
   }
