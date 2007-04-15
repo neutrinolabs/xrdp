@@ -43,7 +43,7 @@ int lock_fork_waiting_count;          /* threads suspended until the fork finish
 sem_t lock_socket;
 
 void DEFAULT_CC
-lock_init()
+lock_init(void)
 {
   /* initializing socket lock */
   sem_init(&lock_socket, 0, 1);
@@ -51,11 +51,11 @@ lock_init()
   /* initializing chain lock */
   pthread_mutexattr_init(&lock_chain_attr);
   pthread_mutex_init(&lock_chain, &lock_chain_attr);
-  
+
   /* initializing config lock */
   pthread_mutexattr_init(&lock_config_attr);
   pthread_mutex_init(&lock_config, &lock_config_attr);
-  
+
   /* initializing fork lock */
   pthread_mutexattr_init(&lock_fork_attr);
   pthread_mutex_init(&lock_chain, &lock_fork_attr);
@@ -71,7 +71,7 @@ lock_init()
 
 /******************************************************************************/
 void DEFAULT_CC
-lock_chain_acquire()
+lock_chain_acquire(void)
 {
   /*lock the chain*/
   LOG_DBG("lock_chain_acquire()",0);
@@ -80,7 +80,7 @@ lock_chain_acquire()
 
 /******************************************************************************/
 void DEFAULT_CC
-lock_chain_release()
+lock_chain_release(void)
 {
   /*unlock the chain*/
   LOG_DBG("lock_chain_release()",0);
@@ -89,7 +89,7 @@ lock_chain_release()
 
 /******************************************************************************/
 void DEFAULT_CC
-lock_socket_acquire()
+lock_socket_acquire(void)
 {
   /* lock socket variable */
   LOG_DBG("lock_socket_acquire()",0);
@@ -98,7 +98,7 @@ lock_socket_acquire()
 
 /******************************************************************************/
 void DEFAULT_CC
-lock_socket_release()
+lock_socket_release(void)
 {
   /* unlock socket variable */
   LOG_DBG("lock_socket_release()",0);
@@ -107,7 +107,7 @@ lock_socket_release()
 
 /******************************************************************************/
 void DEFAULT_CC
-lock_fork_request()
+lock_fork_request(void)
 {
   /* lock mutex */
   pthread_mutex_lock(&lock_fork);
@@ -118,14 +118,14 @@ lock_fork_request()
   }
   lock_fork_forkers_count++;
   pthread_mutex_unlock(&lock_fork);
-  
+
   /* we wait to be allowed to fork() */
   sem_wait(&lock_fork_req);
 }
 
 /******************************************************************************/
 void DEFAULT_CC
-lock_fork_release()
+lock_fork_release(void)
 {
   pthread_mutex_lock(&lock_fork);
   lock_fork_forkers_count--;
@@ -135,7 +135,7 @@ lock_fork_release()
   {
     sem_post(&lock_fork_req);
   }
-  
+
   for (;lock_fork_waiting_count > 0; lock_fork_waiting_count--)
   {
     /* waking up the other processes */
@@ -156,7 +156,7 @@ lock_fork_critical_section_end(int blocking)
   {
     lock_fork_blockers_count--;
   }
-  
+
   /* if there's someone who wants to fork and we're the last blocking */
   /* then we let him go */
   if ((lock_fork_blockers_count == 0) && (lock_fork_forkers_count>0))
@@ -168,22 +168,22 @@ lock_fork_critical_section_end(int blocking)
 
 /******************************************************************************/
 int DEFAULT_CC
-lock_fork_critical_section_start()
+lock_fork_critical_section_start(void)
 {
   LOG_DBG("lock_fork_critical_secection_start()",0);
   do
-  {	  
+  {
     pthread_mutex_lock(&lock_fork);
-  
+
     /* someone requested to fork */
     if (lock_fork_forkers_count > 0)
     {
       lock_fork_waiting_count++;
       pthread_mutex_unlock(&lock_fork);
-      
+
       /* we wait until the fork finishes */
       sem_wait(&lock_fork_wait);
-    
+
     }
     else
     {

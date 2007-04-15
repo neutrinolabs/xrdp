@@ -31,7 +31,7 @@
  *
  */
 void DEFAULT_CC
-lock_init();
+lock_init(void);
 
 /**
  *
@@ -39,7 +39,7 @@ lock_init();
  *
  */
 void DEFAULT_CC
-lock_chain_acquire();
+lock_chain_acquire(void);
 
 /**
  *
@@ -47,7 +47,7 @@ lock_chain_acquire();
  *
  */
 void DEFAULT_CC
-lock_chain_release();
+lock_chain_release(void);
 
 /**
  *
@@ -55,7 +55,7 @@ lock_chain_release();
  *
  */
 void DEFAULT_CC
-lock_cfg_acquire();
+lock_cfg_acquire(void);
 
 /**
  *
@@ -63,7 +63,7 @@ lock_cfg_acquire();
  *
  */
 void DEFAULT_CC
-lock_cfg_release();
+lock_cfg_release(void);
 
 /**
  *
@@ -71,7 +71,7 @@ lock_cfg_release();
  *
  */
 void DEFAULT_CC
-lock_socket_acquire();
+lock_socket_acquire(void);
 
 /**
  *
@@ -79,7 +79,7 @@ lock_socket_acquire();
  *
  */
 void DEFAULT_CC
-lock_socket_release();
+lock_socket_release(void);
 
 /**
  *
@@ -87,7 +87,7 @@ lock_socket_release();
  *
  */
 void DEFAULT_CC
-lock_fork_request();
+lock_fork_request(void);
 
 /**
  *
@@ -95,21 +95,21 @@ lock_fork_request();
  *
  */
 void DEFAULT_CC
-lock_fork_release();
+lock_fork_release(void);
 
 /**
  *
  * @brief starts a section that is critical for forking
  *
- * starts a section that is critical for forking, that is noone can fork() 
- * while i'm in a critical section. But if someone wanted to fork we have 
+ * starts a section that is critical for forking, that is noone can fork()
+ * while i'm in a critical section. But if someone wanted to fork we have
  * to wait until he finishes with lock_fork_release()
  *
  * @return
  *
  */
 int DEFAULT_CC
-lock_fork_critical_section_start();
+lock_fork_critical_section_start(void);
 
 /**
  *

@@ -22,7 +22,7 @@
  * @file thread.h
  * @brief thread stuff...
  * @author Simone Fedele
- * 
+ *
  */
 
 #ifndef THREAD_H
@@ -36,7 +36,7 @@
  *
  */
 int DEFAULT_CC
-thread_sighandler_start();
+thread_sighandler_start(void);
 
 /**
  *
@@ -44,7 +44,7 @@ thread_sighandler_start();
  *
  */
 int DEFAULT_CC
-thread_session_update_start();
+thread_session_update_start(void);
 
 /**
  *
@@ -52,6 +52,6 @@ thread_session_update_start();
  *
  */
 int DEFAULT_CC
-thread_scp_start();
+thread_scp_start(int skt);
 
 #endif
