@@ -28,8 +28,7 @@
 #include "sesman.h"
 #include "libscp_types.h"
 
-//#include "unistd.h"
-//#include "stdio.h"
+#include "errno.h"
 
 extern unsigned char g_fixedkey[8];
 extern struct config_sesman g_cfg; /* config.h */
@@ -116,14 +115,14 @@ static void DEFAULT_CC
 session_start_sessvc(int xpid, int wmpid, long data)
 {
   struct list* sessvc_params;
-  char text[256];
   char wmpid_str[25];
   char xpid_str[25];
+  int i;
 
   /* new style waiting for clients */
   g_sprintf(wmpid_str, "%d", wmpid);
   g_sprintf(xpid_str, "%d",  xpid);
-  log_message(LOG_LEVEL_INFO, "starting sessvc xpid=%s wmpid=%s ",xpid_str, wmpid_str);
+  log_message(LOG_LEVEL_INFO, "starting sessvc - xpid=%s - wmpid=%s",xpid_str, wmpid_str);
 
   sessvc_params = list_create();
   sessvc_params->auto_free = 1;
@@ -135,13 +134,20 @@ session_start_sessvc(int xpid, int wmpid, long data)
   list_add_item(sessvc_params, 0); /* mandatory */
 
   g_execvp(SESMAN_SESSVC_FILE, ((char**)sessvc_params->items));
-  list_delete(sessvc_params);
-  //#warning FIXME sessvc PATH!!
-  //execlp("/usr/local/xrdp/sessvc", "/usr/local/xrdp/sessvc", xpid_str, wmpid_str, 0);
 
-  /* if we get here there's some error */
-  //strerror_r(errno, text, 255);
-  log_message(LOG_LEVEL_ALWAYS, "Error in execlp for sessvc: %s", text);
+  /* should not get here */
+  log_message(LOG_LEVEL_ALWAYS, "error starting sessvc - pid %d - xpid=%s - wmpid=%s",
+              g_getpid(), xpid_str, wmpid_str);
+
+  /* logging parameters */
+  /* no problem calling strerror for thread safety: other threads are blocked */
+  log_message(LOG_LEVEL_DEBUG, "errno: %d, description: %s", errno, g_get_strerror());
+  log_message(LOG_LEVEL_DEBUG,"execve parameter list:");
+  for (i=0; i < (sessvc_params->count); i++)
+  {
+    log_message(LOG_LEVEL_DEBUG, "        argv[%d] = %s", i, (char*)list_get_item(sessvc_params, i));
+  }
+  list_delete(sessvc_params);
 
   /* keep the old waitpid if some error occurs during execlp */
   g_waitpid(wmpid);
@@ -161,6 +167,7 @@ session_start(int width, int height, int bpp, char* username, char* password,
   int pid;
   int wmpid;
   int xpid;
+  int i;
   char geometry[32];
   char depth[32];
   char screen[32];
@@ -169,7 +176,7 @@ session_start(int width, int height, int bpp, char* username, char* password,
   char passwd_file[256];
   char** pp1;
   struct session_chain* temp;
-  struct list* xserver_params;
+  struct list* xserver_params=0;
 
   /*THREAD-FIX lock to control g_session_count*/
   lock_chain_acquire();
@@ -250,6 +257,15 @@ for user %s denied", username);
           if (g_file_exist(text))
           {
             g_execlp3(text, g_cfg.user_wm, 0);
+            log_message(LOG_LEVEL_ALWAYS,"error starting user wm for user %s - pid %d",
+                        username, g_getpid());
+            /* logging parameters */
+            /* no problem calling strerror for thread safety: other threads are blocked */
+            log_message(LOG_LEVEL_DEBUG, "errno: %d, description: %s", errno,
+                        g_get_strerror());
+            log_message(LOG_LEVEL_DEBUG,"execlp3 parameter list:");
+            log_message(LOG_LEVEL_DEBUG, "        argv[0] = %s", text);
+            log_message(LOG_LEVEL_DEBUG, "        argv[1] = %s", g_cfg.user_wm);
           }
         }
         /* if we're here something happened to g_execlp3
@@ -257,12 +273,26 @@ for user %s denied", username);
         g_sprintf(text, "%s/%s", cur_dir, g_cfg.default_wm);
         g_execlp3(text, g_cfg.default_wm, 0);
 
+        log_message(LOG_LEVEL_ALWAYS,"error starting default wm for user %s - pid %d",
+                    username, g_getpid());
+        /* logging parameters */
+        /* no problem calling strerror for thread safety: other threads are blocked */
+        log_message(LOG_LEVEL_DEBUG, "errno: %d, description: %s", errno,
+                    g_get_strerror());
+        log_message(LOG_LEVEL_DEBUG,"execlp3 parameter list:");
+        log_message(LOG_LEVEL_DEBUG, "        argv[0] = %s", text);
+        log_message(LOG_LEVEL_DEBUG, "        argv[1] = %s", g_cfg.default_wm);
+
         /* still a problem starting window manager just start xterm */
         g_execlp3("xterm", "xterm", 0);
-        /* should not get here */
       }
-      log_message(LOG_LEVEL_ALWAYS,"error starting window manager %s - pid %d",
+      /* should not get here */
+      log_message(LOG_LEVEL_ALWAYS,"error starting xterm for user %s - pid %d",
                   username, g_getpid());
+      /* logging parameters */
+      /* no problem calling strerror for thread safety: other threads are blocked */
+      log_message(LOG_LEVEL_DEBUG, "errno: %d, description: %s", errno, g_get_strerror());
+      log_message(LOG_LEVEL_DEBUG,"aborting connection...");
       g_exit(0);
     }
     else /* parent (child sesman) */
@@ -295,7 +325,6 @@ for user %s denied", username);
           list_add_item(xserver_params, 0);
           pp1 = (char**)xserver_params->items;
           g_execvp("Xvnc", pp1);
-          list_delete(xserver_params);
         }
         else if (type == SESMAN_SESSION_TYPE_XRDP)
         {
@@ -315,7 +344,6 @@ for user %s denied", username);
           list_add_item(xserver_params, 0);
           pp1 = (char**)xserver_params->items;
           g_execvp("X11rdp", pp1);
-          list_delete(xserver_params);
         }
         else
         {
@@ -323,9 +351,21 @@ for user %s denied", username);
                       username, g_getpid());
           g_exit(1);
         }
+
         /* should not get here */
-        log_message(LOG_LEVEL_ALWAYS,"error doing execve (%s) for user %s - pid %d",
+        log_message(LOG_LEVEL_ALWAYS, "error starting X server - user %s - pid %d",
                     username, g_getpid());
+
+        /* logging parameters */
+        /* no problem calling strerror for thread safety: other threads are blocked */
+        log_message(LOG_LEVEL_DEBUG, "errno: %d, description: %s", errno, g_get_strerror());
+        log_message(LOG_LEVEL_DEBUG, "execve parameter list: %d", (xserver_params)->count);
+
+        for (i=0; i<(xserver_params->count); i++)
+        {
+          log_message(LOG_LEVEL_DEBUG, "        argv[%d] = %s", i, (char*)list_get_item(xserver_params, i));
+        }
+        list_delete(xserver_params);
         g_exit(1);
       }
       else /* parent (child sesman)*/
