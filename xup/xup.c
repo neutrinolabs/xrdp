@@ -128,18 +128,9 @@ lib_mod_connect(struct mod* mod)
 {
   int error;
   int len;
-  //int display;
   int i;
-  /*int version;
-  int size;
-  int code;
-  int ok;*/
   struct stream* s;
   char con_port[256];
-
-  struct SCP_SESSION scp_s;
-  struct SCP_CONNECTION scp_c;
-  enum SCP_CLIENT_STATES_E scp_e;
 
   LIB_DEBUG(mod, "in lib_mod_connect");
   /* clear screen */
@@ -153,84 +144,17 @@ lib_mod_connect(struct mod* mod)
   {
     mod->server_msg(mod,
       "error - only supporting 8 and 16 bpp rdp connections", 0);
+    LIB_DEBUG(mod, "out lib_mod_connect error");
     return 1;
   }
-  if (g_strncmp(mod->ip, "", 1) == 0)
+  if (g_strcmp(mod->ip, "") == 0)
   {
     mod->server_msg(mod, "error - no ip set", 0);
+    LIB_DEBUG(mod, "out lib_mod_connect error");
     return 1;
   }
   make_stream(s);
-  /* if port = -1, use sesman to get port / desktop */
-  if (g_strncmp(mod->port, "-1", 2) == 0)
-  {
-    scp_s.type=SCP_SESSION_TYPE_XRDP;
-    scp_s.display=0;
-    scp_s.height=mod->height;
-    scp_s.width=mod->width;
-    scp_s.bpp=mod->bpp;
-    scp_s.username=g_strdup(mod->username);
-    scp_s.password=g_strdup(mod->password);
-
-    error = 0;
-    init_stream(s, 8192);
-    scp_c.in_sck=g_tcp_socket();
-    make_stream((scp_c.in_s));
-    make_stream((scp_c.out_s));
-    init_stream((scp_c.in_s), 8192);
-    init_stream((scp_c.out_s), 8192);
-    mod->sck_closed = 0;
-    mod->server_msg(mod, "connecting to sesman", 0);
-    if (g_tcp_connect(scp_c.in_sck, mod->ip, "3350") == 0)
-    {
-      error=1;
-      scp_e=scp_v0c_connect(&scp_c, &scp_s);
-      switch (scp_e)
-      {
-        case SCP_CLIENT_STATE_CONNECTION_DENIED:
-          mod->server_msg(mod, "error - sesman returned no", 0);
-          break;
-        case SCP_CLIENT_STATE_VERSION_ERR:
-          mod->server_msg(mod, "error - libscp version error", 0);
-          break;
-        case SCP_CLIENT_STATE_SIZE_ERR:
-          mod->server_msg(mod, "error - libscp size error", 0);
-          break;
-        case SCP_CLIENT_STATE_NETWORK_ERR:
-          mod->server_msg(mod, "error - libscp network error", 0);
-          break;
-        case SCP_CLIENT_STATE_SEQUENCE_ERR:
-          mod->server_msg(mod, "error - libscp sequence error", 0);
-          break;
-        case SCP_CLIENT_STATE_END:
-          mod->server_msg(mod, "error - sesman returned ok", 0);
-          error=0;
-          break;
-        default:
-          mod->server_msg(mod, "error - unknown error", 0);
-      }
-
-    }
-    else
-    {
-      mod->server_msg(mod, "error - connecting to sesman", 0);
-    }
-    g_free(scp_s.username);
-    g_free(scp_s.password);
-    g_tcp_close(scp_c.in_sck);
-    if (error != 0 || scp_s.display == 0)
-    {
-      mod->server_msg(mod, "error - connection failed", 0);
-      free_stream(s);
-      return 1;
-    }
-    mod->server_msg(mod, "sesman started a session", 0);
-    g_sprintf(con_port, "%d", 6200 + scp_s.display);
-  }
-  else
-  {
-    g_sprintf(con_port, "%s", mod->port);
-  }
+  g_sprintf(con_port, "%s", mod->port);
   mod->sck = g_tcp_socket();
   mod->sck_closed = 0;
   error = g_tcp_connect(mod->sck, mod->ip, con_port);
@@ -260,12 +184,13 @@ lib_mod_connect(struct mod* mod)
     lib_send(mod, s->data, len);
   }
   free_stream(s);
-  LIB_DEBUG(mod, "out lib_mod_connect error");
   if (error != 0)
   {
     mod->server_msg(mod, "some problem", 0);
+    LIB_DEBUG(mod, "out lib_mod_connect error");
     return 1;
   }
+  LIB_DEBUG(mod, "out lib_mod_connect");
   return 0;
 }
 
@@ -454,19 +379,19 @@ lib_mod_end(struct mod* mod)
 int DEFAULT_CC
 lib_mod_set_param(struct mod* mod, char* name, char* value)
 {
-  if (g_strncasecmp(name, "username", 8) == 0)
+  if (g_strcasecmp(name, "username") == 0)
   {
     g_strncpy(mod->username, value, 255);
   }
-  else if (g_strncasecmp(name, "password", 8) == 0)
+  else if (g_strcasecmp(name, "password") == 0)
   {
     g_strncpy(mod->password, value, 255);
   }
-  else if (g_strncasecmp(name, "ip", 2) == 0)
+  else if (g_strcasecmp(name, "ip") == 0)
   {
     g_strncpy(mod->ip, value, 255);
   }
-  else if (g_strncasecmp(name, "port", 4) == 0)
+  else if (g_strcasecmp(name, "port") == 0)
   {
     g_strncpy(mod->port, value, 255);
   }

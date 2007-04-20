@@ -26,8 +26,6 @@
 #include "os_calls.h"
 #include "defines.h"
 
-#include "../sesman/libscp.h"
-
 struct mod
 {
   int size; /* size of this struct */
