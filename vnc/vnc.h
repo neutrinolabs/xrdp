@@ -26,8 +26,6 @@
 #include "os_calls.h"
 #include "d3des.h"
 
-#include "../sesman/libscp.h"
-
 struct vnc
 {
   int size; /* size of this struct */
