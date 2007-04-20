@@ -905,10 +905,6 @@ lib_mod_connect(struct vnc* v)
   int i;
   int check_sec_result;
 
-  struct SCP_SESSION scp_s;
-  struct SCP_CONNECTION scp_c;
-  enum SCP_CLIENT_STATES_E scp_e;
-
   v->server_msg(v, "started connecting", 0);
   check_sec_result = 1;
   /* only support 8 and 16 bpp connections from rdp client */
@@ -917,82 +913,13 @@ lib_mod_connect(struct vnc* v)
     v->server_msg(v, "error - only supporting 8 and 16 bpp rdp connections", 0);
     return 1;
   }
-  if (g_strncmp(v->ip, "", 1) == 0)
+  if (g_strcmp(v->ip, "") == 0)
   {
     v->server_msg(v, "error - no ip set", 0);
     return 1;
   }
   make_stream(s);
-  /* if port = -1, use sesman to get port / desktop */
-  if (g_strncmp(v->port, "-1", 2) == 0)
-  {
-    scp_s.type=SCP_SESSION_TYPE_XVNC;
-    scp_s.display=0;
-    scp_s.height=v->server_height;
-    scp_s.width=v->server_width;
-    scp_s.bpp=v->server_bpp;
-    scp_s.username=g_strdup(v->username);
-    scp_s.password=g_strdup(v->password);
-
-    error = 0;
-    init_stream(s, 8192);
-    scp_c.in_sck=g_tcp_socket();
-    make_stream((scp_c.in_s));
-    make_stream((scp_c.out_s));
-    init_stream((scp_c.in_s), 8192);
-    init_stream((scp_c.out_s), 8192);
-    v->server_msg(v, "connecting to sesman", 0);
-    v->sck_closed = 0;
-    if (g_tcp_connect(scp_c.in_sck, v->ip, "3350") == 0)
-    {
-      error=1;
-      scp_e=scp_v0c_connect(&scp_c, &scp_s);
-      switch (scp_e)
-      {
-        case SCP_CLIENT_STATE_CONNECTION_DENIED:
-          v->server_msg(v, "error - sesman returned no", 0);
-          break;
-        case SCP_CLIENT_STATE_VERSION_ERR:
-          v->server_msg(v, "error - libscp version error", 0);
-          break;
-        case SCP_CLIENT_STATE_SIZE_ERR:
-          v->server_msg(v, "error - libscp size error", 0);
-          break;
-        case SCP_CLIENT_STATE_NETWORK_ERR:
-          v->server_msg(v, "error - libscp network error", 0);
-          break;
-        case SCP_CLIENT_STATE_SEQUENCE_ERR:
-          v->server_msg(v, "error - libscp sequence error", 0);
-          break;
-        case SCP_CLIENT_STATE_END:
-          v->server_msg(v, "error - sesman returned ok", 0);
-          error=0;
-          break;
-        default:
-          v->server_msg(v, "error - unknown error", 0);
-      }
-    }
-    else
-    {
-      v->server_msg(v, "error - connecting to sesman", 0);
-    }
-    g_free(scp_s.username);
-    g_free(scp_s.password);
-    g_tcp_close(scp_c.in_sck);
-    if (error != 0 || scp_s.display == 0)
-    {
-      v->server_msg(v, "error - connection failed", 0);
-      free_stream(s);
-      return 1;
-    }
-    v->server_msg(v, "sesman started a session", 0);
-    g_sprintf(con_port, "%d", 5900 + scp_s.display);
-    v->vnc_desktop = scp_s.display;
-  }
-  else
-  {
-    g_sprintf(con_port, "%s", v->port);
-  }
+  g_sprintf(con_port, "%s", v->port);
   make_stream(pixel_format);
   v->sck = g_tcp_socket();
   v->sck_closed = 0;
