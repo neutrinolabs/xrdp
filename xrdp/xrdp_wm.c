@@ -44,16 +44,8 @@ xrdp_wm_create(struct xrdp_process* owner,
   self->log->auto_free = 1;
   self->key_down_list = list_create();
   self->key_down_list->auto_free = 1;
+  self->mm = xrdp_mm_create(self);
   return self;
-}
-
-/*****************************************************************************/
-/* called from main thread */
-static long DEFAULT_CC
-sync_unload(long param1, long param2)
-{
-  g_free_library(param1);
-  return 0;
 }
 
 /*****************************************************************************/
@@ -64,21 +56,10 @@ xrdp_wm_delete(struct xrdp_wm* self)
   {
     return;
   }
+  xrdp_mm_delete(self->mm);
   xrdp_cache_delete(self->cache);
   xrdp_painter_delete(self->painter);
   xrdp_bitmap_delete(self->screen);
-  /* free any modual stuff */
-  if (self->mod != 0)
-  {
-    if (self->mod_exit != 0)
-    {
-      self->mod_exit(self->mod);
-    }
-  }
-  if (self->mod_handle != 0)
-  {
-    g_xrdp_sync(sync_unload, self->mod_handle, 0);
-  }
   /* free the log */
   list_delete(self->log);
   /* key down list */
@@ -361,6 +342,7 @@ xrdp_wm_load_static_pointers(struct xrdp_wm* self)
 int APP_CC
 xrdp_wm_init(struct xrdp_wm* self)
 {
+#if 0
   int fd;
   int index;
   struct xrdp_mod_data* mod_data;
@@ -369,10 +351,13 @@ xrdp_wm_init(struct xrdp_wm* self)
   char* q;
   char* r;
   char section_name[256];
+#endif
 
   xrdp_wm_load_static_colors(self);
   xrdp_wm_load_static_pointers(self);
   self->screen->bg_color = self->black;
+#if 0
+  // todo, get autologin working
   if (self->session->client_info->rdp_autologin)
   {
     fd = g_file_open(XRDP_CFG_FILE); /* xrdp.ini */
@@ -494,6 +479,7 @@ xrdp_wm_init(struct xrdp_wm* self)
     }
   }
   else
+#endif
   {
     xrdp_login_wnd_create(self);
     /* clear screen */
@@ -797,11 +783,11 @@ xrdp_wm_mouse_move(struct xrdp_wm* self, int x, int y)
       xrdp_wm_set_pointer(self, self->screen->pointer);
       self->current_pointer = self->screen->pointer;
     }
-    if (self->mod != 0) /* if screen is mod controled */
+    if (self->mm->mod != 0) /* if screen is mod controled */
     {
-      if (self->mod->mod_event != 0)
+      if (self->mm->mod->mod_event != 0)
       {
-        self->mod->mod_event(self->mod, WM_MOUSEMOVE, x, y, 0, 0);
+        self->mm->mod->mod_event(self->mm->mod, WM_MOUSEMOVE, x, y, 0, 0);
       }
     }
   }
@@ -920,47 +906,47 @@ xrdp_wm_mouse_click(struct xrdp_wm* self, int x, int y, int but, int down)
   control = xrdp_wm_at_pos(self->screen, x, y, &wnd);
   if (control == 0)
   {
-    if (self->mod != 0) /* if screen is mod controled */
+    if (self->mm->mod != 0) /* if screen is mod controled */
     {
-      if (self->mod->mod_event != 0)
+      if (self->mm->mod->mod_event != 0)
       {
         if (but == 1 && down)
         {
-          self->mod->mod_event(self->mod, WM_LBUTTONDOWN, x, y, 0, 0);
+          self->mm->mod->mod_event(self->mm->mod, WM_LBUTTONDOWN, x, y, 0, 0);
         }
         else if (but == 1 && !down)
         {
-          self->mod->mod_event(self->mod, WM_LBUTTONUP, x, y, 0, 0);
+          self->mm->mod->mod_event(self->mm->mod, WM_LBUTTONUP, x, y, 0, 0);
         }
         if (but == 2 && down)
         {
-          self->mod->mod_event(self->mod, WM_RBUTTONDOWN, x, y, 0, 0);
+          self->mm->mod->mod_event(self->mm->mod, WM_RBUTTONDOWN, x, y, 0, 0);
         }
         else if (but == 2 && !down)
         {
-          self->mod->mod_event(self->mod, WM_RBUTTONUP, x, y, 0, 0);
+          self->mm->mod->mod_event(self->mm->mod, WM_RBUTTONUP, x, y, 0, 0);
         }
         if (but == 3 && down)
         {
-          self->mod->mod_event(self->mod, WM_BUTTON3DOWN, x, y, 0, 0);
+          self->mm->mod->mod_event(self->mm->mod, WM_BUTTON3DOWN, x, y, 0, 0);
         }
         else if (but == 3 && !down)
         {
-          self->mod->mod_event(self->mod, WM_BUTTON3UP, x, y, 0, 0);
+          self->mm->mod->mod_event(self->mm->mod, WM_BUTTON3UP, x, y, 0, 0);
         }
         if (but == 4)
         {
-          self->mod->mod_event(self->mod, WM_BUTTON4DOWN,
-                               self->mouse_x, self->mouse_y, 0, 0);
-          self->mod->mod_event(self->mod, WM_BUTTON4UP,
-                               self->mouse_x, self->mouse_y, 0, 0);
+          self->mm->mod->mod_event(self->mm->mod, WM_BUTTON4DOWN,
+                                   self->mouse_x, self->mouse_y, 0, 0);
+          self->mm->mod->mod_event(self->mm->mod, WM_BUTTON4UP,
+                                   self->mouse_x, self->mouse_y, 0, 0);
         }
         if (but == 5)
         {
-          self->mod->mod_event(self->mod, WM_BUTTON5DOWN,
-                               self->mouse_x, self->mouse_y, 0, 0);
-          self->mod->mod_event(self->mod, WM_BUTTON5UP,
-                               self->mouse_x, self->mouse_y, 0, 0);
+          self->mm->mod->mod_event(self->mm->mod, WM_BUTTON5DOWN,
+                                   self->mouse_x, self->mouse_y, 0, 0);
+          self->mm->mod->mod_event(self->mm->mod, WM_BUTTON5UP,
+                                   self->mouse_x, self->mouse_y, 0, 0);
         }
       }
     }
@@ -1160,9 +1146,9 @@ xrdp_wm_key(struct xrdp_wm* self, int device_flags, int scan_code)
         break; /* scroll lock */
     }
   }
-  if (self->mod != 0)
+  if (self->mm->mod != 0)
   {
-    if (self->mod->mod_event != 0)
+    if (self->mm->mod->mod_event != 0)
     {
       if (msg == WM_KEYDOWN)
       {
@@ -1173,15 +1159,15 @@ xrdp_wm_key(struct xrdp_wm* self, int device_flags, int scan_code)
                                     self->session->client_info->keylayout);
         if (c != 0)
         {
-          self->mod->mod_event(self->mod, msg, (unsigned char)c, 0xffff,
-                               scan_code, device_flags);
+          self->mm->mod->mod_event(self->mm->mod, msg, (unsigned char)c,
+                                   0xffff, scan_code, device_flags);
           xrdp_add_key_down(self, (unsigned char)c, 0xffff, scan_code,
                             device_flags);
         }
         else
         {
-          self->mod->mod_event(self->mod, msg, scan_code, device_flags,
-                               scan_code, device_flags);
+          self->mm->mod->mod_event(self->mm->mod, msg, scan_code,
+                                   device_flags, scan_code, device_flags);
           xrdp_add_key_down(self, scan_code, device_flags, scan_code,
                             device_flags);
         }
@@ -1190,10 +1176,10 @@ xrdp_wm_key(struct xrdp_wm* self, int device_flags, int scan_code)
       {
         if (key_down != 0)
         {
-          self->mod->mod_event(self->mod, msg, key_down->param1,
-                               key_down->param2 | KBD_FLAG_UP,
-                               key_down->scan_code,
-                               key_down->param4 | KBD_FLAG_UP);
+          self->mm->mod->mod_event(self->mm->mod, msg, key_down->param1,
+                                   key_down->param2 | KBD_FLAG_UP,
+                                   key_down->scan_code,
+                                   key_down->param4 | KBD_FLAG_UP);
           list_remove_item(self->key_down_list, key_down_index);
         }
       }
@@ -1227,12 +1213,12 @@ xrdp_wm_key_sync(struct xrdp_wm* self, int device_flags, int key_flags)
   {
     self->caps_lock = 1;
   }
-  if (self->mod != 0)
+  if (self->mm->mod != 0)
   {
-    if (self->mod->mod_event != 0)
+    if (self->mm->mod->mod_event != 0)
     {
-      self->mod->mod_event(self->mod, 17, key_flags, device_flags,
-                           key_flags, device_flags);
+      self->mm->mod->mod_event(self->mm->mod, 17, key_flags, device_flags,
+                               key_flags, device_flags);
     }
   }
   return 0;
@@ -1330,12 +1316,12 @@ static int APP_CC
 xrdp_wm_process_channel_data(struct xrdp_wm* self, int channel_id,
                              char* data, int data_len)
 {
- if (self->mod != 0)
+ if (self->mm->mod != 0)
   {
-    if (self->mod->mod_event != 0)
+    if (self->mm->mod->mod_event != 0)
     {
-      self->mod->mod_event(self->mod, 0x5555, channel_id, (long)data,
-                           data_len, 0);
+      self->mm->mod->mod_event(self->mm->mod, 0x5555, channel_id, (long)data,
+                               data_len, 0);
     }
   }
   return 0;
@@ -1383,4 +1369,162 @@ callback(long id, int msg, long param1, long param2, long param3, long param4)
       break;
   }
   return rv;
+}
+
+/******************************************************************************/
+/* returns error */
+/* this gets called when there is nothing on any socket */
+int APP_CC
+xrdp_wm_idle(struct xrdp_wm* self)
+{
+  g_sleep(10);
+  if (self == 0)
+  {
+    return 0;
+  }
+  if (self->login_mode == 0)
+  {
+    /* this is the inital state of the login window */
+    list_clear(self->log);
+    xrdp_wm_delete_all_childs(self);
+    if (xrdp_wm_init(self) == 0)
+    {
+      /* put the wm in login mode */
+      self->login_mode = 1;
+    }
+  }
+  else if (self->login_mode == 2)
+  {
+    self->login_mode = 3;
+    xrdp_wm_delete_all_childs(self);
+    xrdp_mm_connect(self->mm);
+  }
+  return 0;
+}
+
+/******************************************************************************/
+/* returns error */
+/* this gets called when there is nothing on any socket */
+int APP_CC
+xrdp_wm_app_sck_signal(struct xrdp_wm* self, int app_sck)
+{
+  if (self->login_mode == 3)
+  {
+    if (xrdp_mm_signal(self->mm) != 0)
+    {
+      return 1;
+    }
+  }
+  else if (self->login_mode == 10)
+  {
+    if (self->mm->mod == 0)
+    {
+      return 1;
+    }
+    if (self->mm->mod->mod_signal == 0)
+    {
+      return 1;
+    }
+    if (self->mm->mod->mod_signal(self->mm->mod) != 0)
+    {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+/*****************************************************************************/
+/* this is the log windows nofity function */
+static int DEFAULT_CC
+xrdp_wm_log_wnd_notify(struct xrdp_bitmap* wnd,
+                       struct xrdp_bitmap* sender,
+                       int msg, long param1, long param2)
+{
+  struct xrdp_painter* painter;
+  struct xrdp_wm* wm;
+  struct xrdp_rect rect;
+  int index;
+  char* text;
+
+  if (wnd == 0)
+  {
+    return 0;
+  }
+  if (sender == 0)
+  {
+    return 0;
+  }
+  if (wnd->owner == 0)
+  {
+    return 0;
+  }
+  wm = wnd->wm;
+  if (msg == 1) /* click */
+  {
+    if (sender->id == 1) /* ok button */
+    {
+      /* close the log window */
+      MAKERECT(rect, wnd->left, wnd->top, wnd->width, wnd->height);
+      xrdp_bitmap_delete(wnd);
+      xrdp_bitmap_invalidate(wm->screen, &rect);
+      /* if module is gone, end the session when ok is clicked */
+      if (wm->mm->mod_handle == 0)
+      {
+        wm->login_mode = 0; /* reset session */
+      }
+    }
+  }
+  else if (msg == WM_PAINT) /* 3 */
+  {
+    painter = (struct xrdp_painter*)param1;
+    if (painter != 0)
+    {
+      painter->font->color = wnd->wm->black;
+      for (index = 0; index < wnd->wm->log->count; index++)
+      {
+        text = (char*)list_get_item(wnd->wm->log, index);
+        xrdp_painter_draw_text(painter, wnd, 10, 30 + index * 15, text);
+      }
+    }
+  }
+  return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+xrdp_wm_log_msg(struct xrdp_wm* self, char* msg)
+{
+  struct xrdp_bitmap* but;
+
+  list_add_item(self->log, (long)g_strdup(msg));
+  if (self->log_wnd == 0)
+  {
+    /* log window */
+    self->log_wnd = xrdp_bitmap_create(400, 400, self->screen->bpp,
+                                       WND_TYPE_WND, self);
+    list_add_item(self->screen->child_list, (long)self->log_wnd);
+    self->log_wnd->parent = self->screen;
+    self->log_wnd->owner = self->screen;
+    self->log_wnd->bg_color = self->grey;
+    self->log_wnd->left = 10;
+    self->log_wnd->top = 10;
+    set_string(&(self->log_wnd->caption1), "Connection Log");
+    /* ok button */
+    but = xrdp_bitmap_create(60, 25, self->screen->bpp, WND_TYPE_BUTTON, self);
+    list_insert_item(self->log_wnd->child_list, 0, (long)but);
+    but->parent = self->log_wnd;
+    but->owner = self->log_wnd;
+    but->left = (400 - 60) - 10;
+    but->top = (400 - 25) - 10;
+    but->id = 1;
+    but->tab_stop = 1;
+    set_string(&but->caption1, "OK");
+    self->log_wnd->focused_control = but;
+    /* set notify function */
+    self->log_wnd->notify = xrdp_wm_log_wnd_notify;
+  }
+  xrdp_wm_set_focused(self, self->log_wnd);
+  xrdp_bitmap_invalidate(self->log_wnd, 0);
+  g_sleep(100);
+  return 0;
 }

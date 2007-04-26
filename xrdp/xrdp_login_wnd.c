@@ -90,147 +90,7 @@ xrdp_wm_popup_notify(struct xrdp_bitmap* wnd,
 #endif
 
 /*****************************************************************************/
-/* called from main thread */
-static long DEFAULT_CC
-sync_unload(long param1, long param2)
-{
-  return g_free_library(param1);
-}
-
-/*****************************************************************************/
-/* called from main thread */
-static long DEFAULT_CC
-sync_load(long param1, long param2)
-{
-  return g_load_library((char*)param1);
-}
-
-/*****************************************************************************/
 int APP_CC
-xrdp_wm_setup_mod1(struct xrdp_wm* self,
-                   struct xrdp_mod_data* mod_data)
-{
-  void* func;
-
-  if (self == 0)
-  {
-    return 1;
-  }
-  if (self->mod_handle == 0)
-  {
-    self->mod_handle = g_xrdp_sync(sync_load, (long)mod_data->lib, 0);
-    if (self->mod_handle != 0)
-    {
-      func = g_get_proc_address(self->mod_handle, "mod_init");
-      if (func == 0)
-      {
-        func = g_get_proc_address(self->mod_handle, "_mod_init");
-      }
-      if (func == 0)
-      {
-        g_writeln("error finding proc mod_init in %s", mod_data->lib);
-      }
-      self->mod_init = (struct xrdp_mod* (*)(void))func;
-      func = g_get_proc_address(self->mod_handle, "mod_exit");
-      if (func == 0)
-      {
-        func = g_get_proc_address(self->mod_handle, "_mod_exit");
-      }
-      if (func == 0)
-      {
-        g_writeln("error finding proc mod_exit in %s", mod_data->lib);
-      }
-      self->mod_exit = (int (*)(struct xrdp_mod*))func;
-      if (self->mod_init != 0 && self->mod_exit != 0)
-      {
-        self->mod = self->mod_init();
-      }
-    }
-    else
-    {
-      g_writeln("error loading %s", mod_data->lib);
-    }
-    if (self->mod != 0)
-    {
-      self->mod->wm = (long)self;
-      self->mod->server_begin_update = server_begin_update;
-      self->mod->server_end_update = server_end_update;
-      self->mod->server_fill_rect = server_fill_rect;
-      self->mod->server_screen_blt = server_screen_blt;
-      self->mod->server_paint_rect = server_paint_rect;
-      self->mod->server_set_pointer = server_set_pointer;
-      self->mod->server_palette = server_palette;
-      self->mod->server_msg = server_msg;
-      self->mod->server_is_term = server_is_term;
-      self->mod->server_set_clip = server_set_clip;
-      self->mod->server_reset_clip = server_reset_clip;
-      self->mod->server_set_fgcolor = server_set_fgcolor;
-      self->mod->server_set_bgcolor = server_set_bgcolor;
-      self->mod->server_set_opcode = server_set_opcode;
-      self->mod->server_set_mixmode = server_set_mixmode;
-      self->mod->server_set_brush = server_set_brush;
-      self->mod->server_set_pen = server_set_pen;
-      self->mod->server_draw_line = server_draw_line;
-      self->mod->server_add_char = server_add_char;
-      self->mod->server_draw_text = server_draw_text;
-      self->mod->server_reset = server_reset;
-      self->mod->server_query_channel = server_query_channel;
-      self->mod->server_get_channel_id = server_get_channel_id;
-      self->mod->server_send_to_channel = server_send_to_channel;
-    }
-  }
-  /* id self->mod is null, there must be a problem */
-  if (self->mod == 0)
-  {
-    DEBUG(("problem loading lib in xrdp_wm_setup_mod1"));
-    return 1;
-  }
-  return 0;
-}
-
-/*****************************************************************************/
-int APP_CC
-xrdp_wm_setup_mod2(struct xrdp_wm* self,
-                   struct list* names,
-                   struct list* values)
-{
-  char text[256];
-  int i;
-  int rv;
-
-  rv = 1;
-  if (!self->pro_layer->term)
-  {
-    if (self->mod->mod_start(self->mod, self->screen->width,
-                             self->screen->height, self->screen->bpp) != 0)
-    {
-      self->pro_layer->term = 1; /* kill session */
-    }
-  }
-  if (!self->pro_layer->term)
-  {
-    /* always set these */
-    self->mod->mod_set_param(self->mod, "hostname",
-                             self->session->client_info->hostname);
-    g_sprintf(text, "%d", self->session->client_info->keylayout);
-    self->mod->mod_set_param(self->mod, "keylayout", text);
-    for (i = 0; i < names->count; i++)
-    {
-      self->mod->mod_set_param(self->mod,
-                   (char*)list_get_item(names, i),
-                   (char*)list_get_item(values, i));
-    }
-    /* connect */
-    if (self->mod->mod_connect(self->mod) == 0)
-    {
-      rv = 0;
-    }
-  }
-  return rv;
-}
-
-/*****************************************************************************/
-static int APP_CC
 xrdp_wm_delete_all_childs(struct xrdp_wm* self)
 {
   int i;
@@ -326,8 +186,6 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap* wnd)
   struct xrdp_bitmap* label;
   struct xrdp_bitmap* edit;
   struct xrdp_wm* wm;
-  struct list* names;
-  struct list* values;
   struct xrdp_mod_data* mod_data;
   int i;
 
@@ -350,57 +208,18 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap* wnd)
         label = xrdp_bitmap_get_child_by_id(wnd, i);
         edit = xrdp_bitmap_get_child_by_id(wnd, i + 1);
       }
-      if (xrdp_wm_setup_mod1(wm, mod_data) == 0)
-      {
-        /* gota copy these cause dialog gets freed */
-        names = list_create();
-        names->auto_free = 1;
-        for (i = 0; i < mod_data->names->count; i++)
-        {
-          list_add_item(names,
-            (long)g_strdup((char*)list_get_item(mod_data->names, i)));
-        }
-        values = list_create();
-        values->auto_free = 1;
-        for (i = 0; i < mod_data->values->count; i++)
-        {
-          list_add_item(values,
-            (long)g_strdup((char*)list_get_item(mod_data->values, i)));
-        }
-        xrdp_wm_delete_all_childs(wm);
-        if (xrdp_wm_setup_mod2(wm, names, values) != 0)
-        {
-          /* totaly free mod */
-          if (wm->mod_exit != 0)
-          {
-            wm->mod_exit(wm->mod);
-          }
-          g_xrdp_sync(sync_unload, wm->mod_handle, 0);
-          wm->mod = 0;
-          wm->mod_handle = 0;
-          wm->mod_init = 0;
-          wm->mod_exit = 0;
-        }
-        else /* close connection log window if connection is ok */
-        {
-          if (wm->log_wnd != 0)
-          {
-            xrdp_bitmap_delete(wm->log_wnd);
-          }
-        }
-        if (!wm->pro_layer->term)
-        {
-          if (wm->mod != 0)
-          {
-            if (wm->mod->sck != 0)
-            {
-              wm->pro_layer->app_sck = wm->mod->sck;
-            }
-          }
-        }
-        list_delete(names);
-        list_delete(values);
-      }
+      list_delete(wm->mm->login_names);
+      list_delete(wm->mm->login_values);
+      wm->mm->login_names = list_create();
+      wm->mm->login_names->auto_free = 1;
+      wm->mm->login_values = list_create();
+      wm->mm->login_values->auto_free = 1;
+      /* gota copy these cause dialog gets freed */
+      list_append_list_strdup(mod_data->names, wm->mm->login_names, 0);
+      list_append_list_strdup(mod_data->values, wm->mm->login_values, 0);
+      list_add_item(wm->mm->login_names, (long)g_strdup("lib"));
+      list_add_item(wm->mm->login_values, (long)g_strdup(mod_data->lib));
+      wm->login_mode = 2;
     }
   }
   return 0;
