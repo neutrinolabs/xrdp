@@ -47,7 +47,7 @@ libscp_v1c.o: ../libscp_v1c.c
 	$(CC) $(C_OS_FLAGS) ../libscp_v1c.c
 
 clean:
-	rm *.o sestest sesrun
+	rm -f *.o sestest sesrun
 
 install:
 	install sesrun $(DESTDIR)/sesrun
