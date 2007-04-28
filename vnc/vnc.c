@@ -492,6 +492,14 @@ get_pixel_safe(char* data, int x, int y, int width, int height, int bpp)
   {
     return *(((unsigned short*)data) + (y * width + x));
   }
+  else if (bpp == 24 || bpp == 32)
+  {
+    return *(((unsigned int*)data) + (y * width + x));
+  }
+  else
+  {
+    g_writeln("error in get_pixel_safe bpp %d", bpp);
+  }
   return 0;
 }
 
@@ -543,6 +551,10 @@ set_pixel_safe(char* data, int x, int y, int width, int height, int bpp,
     *(data + (3 * (y * width + x)) + 1) = pixel >> 8;
     *(data + (3 * (y * width + x)) + 2) = pixel >> 16;
   }
+  else
+  {
+    g_writeln("error in set_pixel_safe bpp %d", bpp);
+  }
 }
 
 /******************************************************************************/
@@ -564,6 +576,16 @@ split_color(int pixel, int* r, int* g, int* b, int bpp, int* palette)
     *g = ((pixel >> 3) & 0xfc) | ((pixel >> 9) & 0x3);
     *b = ((pixel << 3) & 0xf8) | ((pixel >> 2) & 0x7);
   }
+  else if (bpp == 24 || bpp == 32)
+  {
+    *r = (pixel >> 16) & 0xff;
+    *g = (pixel >> 8) & 0xff;
+    *b = pixel & 0xff;
+  }
+  else
+  {
+    g_writeln("error in split_color bpp %d", bpp);
+  }
   return 0;
 }
 
@@ -574,6 +596,10 @@ make_color(int r, int g, int b, int bpp)
   if (bpp == 24)
   {
     return (r << 16) | (g << 8) | b;
+  }
+  else
+  {
+    g_writeln("error in make_color bpp %d", bpp);
   }
   return 0;
 }
@@ -613,6 +639,10 @@ lib_framebuffer_update(struct vnc* v)
   data = 0;
   num_recs = 0;
   Bpp = (v->mod_bpp + 7) / 8;
+  if (Bpp == 3)
+  {
+    Bpp = 4;
+  }
   make_stream(s);
   init_stream(s, 8192);
   error = lib_recv(v, s->data, 3);
@@ -704,7 +734,8 @@ lib_framebuffer_update(struct vnc* v)
       }
       else
       {
-        g_sprintf(text, "error in lib_framebuffer_update");
+        g_sprintf(text, "error in lib_framebuffer_update encoding = %8.8x",
+                  encoding);
         v->server_msg(v, text, 1);
       }
     }
@@ -908,9 +939,10 @@ lib_mod_connect(struct vnc* v)
   v->server_msg(v, "started connecting", 0);
   check_sec_result = 1;
   /* only support 8 and 16 bpp connections from rdp client */
-  if (v->server_bpp != 8 && v->server_bpp != 16)
+  if ((v->server_bpp != 8) && (v->server_bpp != 16) && (v->server_bpp != 24))
   {
-    v->server_msg(v, "error - only supporting 8 and 16 bpp rdp connections", 0);
+    v->server_msg(v, "error - only supporting 8, 16 and 24 bpp rdp \
+connections", 0);
     return 1;
   }
   if (g_strcmp(v->ip, "") == 0)
