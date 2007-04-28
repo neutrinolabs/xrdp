@@ -309,14 +309,14 @@ xrdp_wm_load_static_colors(struct xrdp_wm* self)
   }
   else if (self->screen->bpp == 24)
   {
-    self->black     = COLOR24(0, 0, 0);
-    self->grey      = COLOR24(0xc0, 0xc0, 0xc0);
-    self->dark_grey = COLOR24(0x80, 0x80, 0x80);
-    self->blue      = COLOR24(0x00, 0x00, 0xff);
-    self->dark_blue = COLOR24(0x00, 0x00, 0x7f);
-    self->white     = COLOR24(0xff, 0xff, 0xff);
-    self->red       = COLOR24(0xff, 0x00, 0x00);
-    self->green     = COLOR24(0x00, 0xff, 0x00);
+    self->black     = COLOR24BGR(0, 0, 0);
+    self->grey      = COLOR24BGR(0xc0, 0xc0, 0xc0);
+    self->dark_grey = COLOR24BGR(0x80, 0x80, 0x80);
+    self->blue      = COLOR24BGR(0x00, 0x00, 0xff);
+    self->dark_blue = COLOR24BGR(0x00, 0x00, 0x7f);
+    self->white     = COLOR24BGR(0xff, 0xff, 0xff);
+    self->red       = COLOR24BGR(0xff, 0x00, 0x00);
+    self->green     = COLOR24BGR(0x00, 0xff, 0x00);
   }
   return 0;
 }

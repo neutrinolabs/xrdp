@@ -429,9 +429,9 @@ xrdp_bitmap_load(struct xrdp_bitmap* self, const char* filename, int* palette)
           }
           else if (self->bpp == 24)
           {
-            color = COLOR24((color & 0xff0000) >> 16,
-                            (color & 0x00ff00) >> 8,
-                            (color & 0x0000ff) >> 0);
+            //color = COLOR24((color & 0xff0000) >> 16,
+            //                (color & 0x00ff00) >> 8,
+            //                (color & 0x0000ff) >> 0);
           }
           xrdp_bitmap_set_pixel(self, j, i, color);
         }

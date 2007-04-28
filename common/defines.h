@@ -64,7 +64,8 @@
 )
 #define COLOR15(r, g, b) ((((r) >> 3) << 10) | (((g) >> 3) << 5) | ((b) >> 3))
 #define COLOR16(r, g, b) ((((r) >> 3) << 11) | (((g) >> 2) << 5) | ((b) >> 3))
-#define COLOR24(r, g, b) ((r) | ((g) << 8) | ((b) << 16))
+#define COLOR24RGB(r, g, b) (((r) << 16) | ((g) << 8) | (b))
+#define COLOR24BGR(r, g, b) (((b) << 16) | ((g) << 8) | (r))
 #define SPLITCOLOR15(r, g, b, c) \
 { \
   r = (((c) >> 7) & 0xf8) | (((c) >> 12) & 0x7); \
