@@ -57,6 +57,23 @@
 }
 
 /*****************************************************************************/
+#define IN_PIXEL32(in_ptr, in_x, in_y, in_w, in_last_pixel, in_pixel); \
+{ \
+  if (in_ptr == 0) \
+  { \
+    in_pixel = 0; \
+  } \
+  else if (in_x < in_w) \
+  { \
+    in_pixel = GETPIXEL32(in_ptr, in_x, in_y, in_w); \
+  } \
+  else \
+  { \
+    in_pixel = in_last_pixel; \
+  } \
+}
+
+/*****************************************************************************/
 /* color */
 #define OUT_COLOR_COUNT1(in_count, in_s, in_data) \
 { \
@@ -109,6 +126,41 @@
       out_uint8(in_s, 0xf3); \
       out_uint16_le(in_s, in_count); \
       out_uint16_le(in_s, in_data); \
+    } \
+  } \
+  in_count = 0; \
+}
+
+/*****************************************************************************/
+/* color */
+#define OUT_COLOR_COUNT3(in_count, in_s, in_data) \
+{ \
+  if (in_count > 0) \
+  { \
+    if (in_count < 32) \
+    { \
+      temp = (0x3 << 5) | in_count; \
+      out_uint8(in_s, temp); \
+      out_uint8(in_s, in_data & 0xff); \
+      out_uint8(in_s, (in_data >> 8) & 0xff); \
+      out_uint8(in_s, (in_data >> 16) & 0xff); \
+    } \
+    else if (in_count < 256 + 32) \
+    { \
+      out_uint8(in_s, 0x60); \
+      temp = in_count - 32; \
+      out_uint8(in_s, temp); \
+      out_uint8(in_s, in_data & 0xff); \
+      out_uint8(in_s, (in_data >> 8) & 0xff); \
+      out_uint8(in_s, (in_data >> 16) & 0xff); \
+    } \
+    else \
+    { \
+      out_uint8(in_s, 0xf3); \
+      out_uint16_le(in_s, in_count); \
+      out_uint8(in_s, in_data & 0xff); \
+      out_uint8(in_s, (in_data >> 8) & 0xff); \
+      out_uint8(in_s, (in_data >> 16) & 0xff); \
     } \
   } \
   in_count = 0; \
@@ -171,6 +223,39 @@
       out_uint16_le(in_s, in_count); \
       temp = in_count * 2; \
       out_uint8a(in_s, in_data->data, temp); \
+    } \
+  } \
+  in_count = 0; \
+  init_stream(in_data, 0); \
+}
+
+/*****************************************************************************/
+/* copy */
+#define OUT_COPY_COUNT3(in_count, in_s, in_data) \
+{ \
+  if (in_count > 0) \
+  { \
+    if (in_count < 32) \
+    { \
+      temp = (0x4 << 5) | in_count; \
+      out_uint8(in_s, temp); \
+      temp = in_count * 3; \
+      out_uint8a(in_s, in_data->end, temp); \
+    } \
+    else if (in_count < 256 + 32) \
+    { \
+      out_uint8(in_s, 0x80); \
+      temp = in_count - 32; \
+      out_uint8(in_s, temp); \
+      temp = in_count * 3; \
+      out_uint8a(in_s, in_data->end, temp); \
+    } \
+    else \
+    { \
+      out_uint8(in_s, 0xf4); \
+      out_uint16_le(in_s, in_count); \
+      temp = in_count * 3; \
+      out_uint8a(in_s, in_data->end, temp); \
     } \
   } \
   in_count = 0; \
@@ -244,6 +329,51 @@
 }
 
 /*****************************************************************************/
+/* bicolor */
+#define OUT_BICOLOR_COUNT3(in_count, in_s, in_color1, in_color2) \
+{ \
+  if (in_count > 0) \
+  { \
+    if (in_count / 2 < 16) \
+    { \
+      temp = (0xe << 4) | (in_count / 2); \
+      out_uint8(in_s, temp); \
+      out_uint8(in_s, in_color1 & 0xff); \
+      out_uint8(in_s, (in_color1 >> 8) & 0xff); \
+      out_uint8(in_s, (in_color1 >> 16) & 0xff); \
+      out_uint8(in_s, in_color2 & 0xff); \
+      out_uint8(in_s, (in_color2 >> 8) & 0xff); \
+      out_uint8(in_s, (in_color2 >> 16) & 0xff); \
+    } \
+    else if (in_count / 2 < 256 + 16) \
+    { \
+      out_uint8(in_s, 0xe0); \
+      temp = in_count / 2 - 16; \
+      out_uint8(in_s, temp); \
+      out_uint8(in_s, in_color1 & 0xff); \
+      out_uint8(in_s, (in_color1 >> 8) & 0xff); \
+      out_uint8(in_s, (in_color1 >> 16) & 0xff); \
+      out_uint8(in_s, in_color2 & 0xff); \
+      out_uint8(in_s, (in_color2 >> 8) & 0xff); \
+      out_uint8(in_s, (in_color2 >> 16) & 0xff); \
+    } \
+    else \
+    { \
+      out_uint8(in_s, 0xf8); \
+      temp = in_count / 2; \
+      out_uint16_le(in_s, temp); \
+      out_uint8(in_s, in_color1 & 0xff); \
+      out_uint8(in_s, (in_color1 >> 8) & 0xff); \
+      out_uint8(in_s, (in_color1 >> 16) & 0xff); \
+      out_uint8(in_s, in_color2 & 0xff); \
+      out_uint8(in_s, (in_color2 >> 8) & 0xff); \
+      out_uint8(in_s, (in_color2 >> 16) & 0xff); \
+    } \
+  } \
+  in_count = 0; \
+}
+
+/*****************************************************************************/
 /* fill */
 #define OUT_FILL_COUNT1(in_count, in_s) \
 { \
@@ -271,6 +401,31 @@
 /*****************************************************************************/
 /* fill */
 #define OUT_FILL_COUNT2(in_count, in_s) \
+{ \
+  if (in_count > 0) \
+  { \
+    if (in_count < 32) \
+    { \
+      out_uint8(in_s, in_count); \
+    } \
+    else if (in_count < 256 + 32) \
+    { \
+      out_uint8(in_s, 0x0); \
+      temp = in_count - 32; \
+      out_uint8(in_s, temp); \
+    } \
+    else \
+    { \
+      out_uint8(in_s, 0xf0); \
+      out_uint16_le(in_s, in_count); \
+    } \
+  } \
+  in_count = 0; \
+}
+
+/*****************************************************************************/
+/* fill */
+#define OUT_FILL_COUNT3(in_count, in_s) \
 { \
   if (in_count > 0) \
   { \
@@ -346,6 +501,32 @@
 }
 
 /*****************************************************************************/
+/* mix */
+#define OUT_MIX_COUNT3(in_count, in_s) \
+{ \
+  if (in_count > 0) \
+  { \
+    if (in_count < 32) \
+    { \
+      temp = (0x1 << 5) | in_count; \
+      out_uint8(in_s, temp); \
+    } \
+    else if (in_count < 256 + 32) \
+    { \
+      out_uint8(in_s, 0x20); \
+      temp = in_count - 32; \
+      out_uint8(in_s, temp); \
+    } \
+    else \
+    { \
+      out_uint8(in_s, 0xf1); \
+      out_uint16_le(in_s, in_count); \
+    } \
+  } \
+  in_count = 0; \
+}
+
+/*****************************************************************************/
 /* fom */
 #define OUT_FOM_COUNT1(in_count, in_s, in_mask, in_mask_len) \
 { \
@@ -377,6 +558,35 @@
 /*****************************************************************************/
 /* fom */
 #define OUT_FOM_COUNT2(in_count, in_s, in_mask, in_mask_len) \
+{ \
+  if (in_count > 0) \
+  { \
+    if ((in_count % 8) == 0 && in_count < 249) \
+    { \
+      temp = (0x2 << 5) | (in_count / 8); \
+      out_uint8(in_s, temp); \
+      out_uint8a(in_s, in_mask, in_mask_len); \
+    } \
+    else if (in_count < 256) \
+    { \
+      out_uint8(in_s, 0x40); \
+      temp = in_count - 1; \
+      out_uint8(in_s, temp); \
+      out_uint8a(in_s, in_mask, in_mask_len); \
+    } \
+    else \
+    { \
+      out_uint8(in_s, 0xf2); \
+      out_uint16_le(in_s, in_count); \
+      out_uint8a(in_s, in_mask, in_mask_len); \
+    } \
+  } \
+  in_count = 0; \
+}
+
+/*****************************************************************************/
+/* fill or mix (fom) */
+#define OUT_FOM_COUNT3(in_count, in_s, in_mask, in_mask_len) \
 { \
   if (in_count > 0) \
   { \
@@ -996,6 +1206,268 @@ xrdp_bitmap_compress(char* in_data, int width, int height,
     else
     {
       OUT_COPY_COUNT2(count, s, temp_s);
+    }
+  }
+  else if (bpp == 24)
+  {
+    mix = 0xffffff;
+    out_count = end * 3;
+    line = in_data + width * start_line * 4;
+    while (start_line >= 0 && out_count < 32768)
+    {
+      i = (s->p - s->data) + count * 3;
+      if (i - (color_count * 3) >= byte_limit &&
+          i - (bicolor_count * 3) >= byte_limit &&
+          i - (fill_count * 3) >= byte_limit &&
+          i - (mix_count * 3) >= byte_limit &&
+          i - (fom_count * 3) >= byte_limit)
+      {
+        break;
+      }
+      out_count += end * 3;
+      for (i = 0; i < end; i++)
+      {
+        /* read next pixel */
+        IN_PIXEL32(line, i, 0, width, last_pixel, pixel);
+        IN_PIXEL32(last_line, i, 0, width, last_ypixel, ypixel);
+        if (!TEST_FILL)
+        {
+          if (fill_count > 3 &&
+              fill_count >= color_count &&
+              fill_count >= bicolor_count &&
+              fill_count >= mix_count &&
+              fill_count >= fom_count)
+          {
+            count -= fill_count;
+            OUT_COPY_COUNT3(count, s, temp_s);
+            OUT_FILL_COUNT3(fill_count, s);
+            RESET_COUNTS;
+          }
+          fill_count = 0;
+        }
+        if (!TEST_MIX)
+        {
+          if (mix_count > 3 &&
+              mix_count >= fill_count &&
+              mix_count >= bicolor_count &&
+              mix_count >= color_count &&
+              mix_count >= fom_count)
+          {
+            count -= mix_count;
+            OUT_COPY_COUNT3(count, s, temp_s);
+            OUT_MIX_COUNT3(mix_count, s);
+            RESET_COUNTS;
+          }
+          mix_count = 0;
+        }
+        if (!TEST_COLOR)
+        {
+          if (color_count > 3 &&
+              color_count >= fill_count &&
+              color_count >= bicolor_count &&
+              color_count >= mix_count &&
+              color_count >= fom_count)
+          {
+            count -= color_count;
+            OUT_COPY_COUNT3(count, s, temp_s);
+            OUT_COLOR_COUNT3(color_count, s, last_pixel);
+            RESET_COUNTS;
+          }
+          color_count = 0;
+        }
+        if (!TEST_BICOLOR)
+        {
+          if (bicolor_count > 3 &&
+              bicolor_count >= fill_count &&
+              bicolor_count >= color_count &&
+              bicolor_count >= mix_count &&
+              bicolor_count >= fom_count)
+          {
+            if ((bicolor_count % 2) == 0)
+            {
+              count -= bicolor_count;
+              OUT_COPY_COUNT3(count, s, temp_s);
+              OUT_BICOLOR_COUNT3(bicolor_count, s, bicolor1, bicolor2);
+            }
+            else
+            {
+              bicolor_count--;
+              count -= bicolor_count;
+              OUT_COPY_COUNT3(count, s, temp_s);
+              OUT_BICOLOR_COUNT3(bicolor_count, s, bicolor2, bicolor1);
+            }
+            RESET_COUNTS;
+          }
+          bicolor_count = 0;
+          bicolor1 = last_pixel;
+          bicolor2 = pixel;
+          bicolor_spin = 0;
+        }
+        if (!TEST_FOM)
+        {
+          if (fom_count > 3 &&
+              fom_count >= fill_count &&
+              fom_count >= color_count &&
+              fom_count >= mix_count &&
+              fom_count >= bicolor_count)
+          {
+            count -= fom_count;
+            OUT_COPY_COUNT3(count, s, temp_s);
+            OUT_FOM_COUNT3(fom_count, s, fom_mask, fom_mask_len);
+            RESET_COUNTS;
+          }
+          fom_count = 0;
+          fom_mask_len = 0;
+        }
+        if (TEST_FILL)
+        {
+          fill_count++;
+        }
+        if (TEST_MIX)
+        {
+          mix_count++;
+        }
+        if (TEST_COLOR)
+        {
+          color_count++;
+        }
+        if (TEST_BICOLOR)
+        {
+          bicolor_spin = !bicolor_spin;
+          bicolor_count++;
+        }
+        if (TEST_FOM)
+        {
+          if ((fom_count % 8) == 0)
+          {
+            fom_mask[fom_mask_len] = 0;
+            fom_mask_len++;
+          }
+          if (pixel == (ypixel ^ mix))
+          {
+            fom_mask[fom_mask_len - 1] |= (1 << (fom_count % 8));
+          }
+          fom_count++;
+        }
+        out_uint8(temp_s, pixel & 0xff);
+        out_uint8(temp_s, (pixel >> 8) & 0xff);
+        out_uint8(temp_s, (pixel >> 16) & 0xff);
+        count++;
+        last_pixel = pixel;
+        last_ypixel = ypixel;
+      }
+      /* can't take fix, mix, or fom past first line */
+      if (last_line == 0)
+      {
+        if (fill_count > 3 &&
+            fill_count >= color_count &&
+            fill_count >= bicolor_count &&
+            fill_count >= mix_count &&
+            fill_count >= fom_count)
+        {
+          count -= fill_count;
+          OUT_COPY_COUNT3(count, s, temp_s);
+          OUT_FILL_COUNT3(fill_count, s);
+          RESET_COUNTS;
+        }
+        fill_count = 0;
+        if (mix_count > 3 &&
+            mix_count >= fill_count &&
+            mix_count >= bicolor_count &&
+            mix_count >= color_count &&
+            mix_count >= fom_count)
+        {
+          count -= mix_count;
+          OUT_COPY_COUNT3(count, s, temp_s);
+          OUT_MIX_COUNT3(mix_count, s);
+          RESET_COUNTS;
+        }
+        mix_count = 0;
+        if (fom_count > 3 &&
+            fom_count >= fill_count &&
+            fom_count >= color_count &&
+            fom_count >= mix_count &&
+            fom_count >= bicolor_count)
+        {
+          count -= fom_count;
+          OUT_COPY_COUNT3(count, s, temp_s);
+          OUT_FOM_COUNT3(fom_count, s, fom_mask, fom_mask_len);
+          RESET_COUNTS;
+        }
+        fom_count = 0;
+        fom_mask_len = 0;
+      }
+      last_line = line;
+      line = line - width * 4;
+      start_line--;
+      lines_sent++;
+    }
+    if (fill_count > 3 &&
+        fill_count >= color_count &&
+        fill_count >= bicolor_count &&
+        fill_count >= mix_count &&
+        fill_count >= fom_count)
+    {
+      count -= fill_count;
+      OUT_COPY_COUNT3(count, s, temp_s);
+      OUT_FILL_COUNT3(fill_count, s);
+    }
+    else if (mix_count > 3 &&
+             mix_count >= color_count &&
+             mix_count >= bicolor_count &&
+             mix_count >= fill_count &&
+             mix_count >= fom_count)
+    {
+      count -= mix_count;
+      OUT_COPY_COUNT3(count, s, temp_s);
+      OUT_MIX_COUNT3(mix_count, s);
+    }
+    else if (color_count > 3 &&
+             color_count >= mix_count &&
+             color_count >= bicolor_count &&
+             color_count >= fill_count &&
+             color_count >= fom_count)
+    {
+      count -= color_count;
+      OUT_COPY_COUNT3(count, s, temp_s);
+      OUT_COLOR_COUNT3(color_count, s, last_pixel);
+    }
+    else if (bicolor_count > 3 &&
+             bicolor_count >= mix_count &&
+             bicolor_count >= color_count &&
+             bicolor_count >= fill_count &&
+             bicolor_count >= fom_count)
+    {
+      if ((bicolor_count % 2) == 0)
+      {
+        count -= bicolor_count;
+        OUT_COPY_COUNT3(count, s, temp_s);
+        OUT_BICOLOR_COUNT3(bicolor_count, s, bicolor1, bicolor2);
+      }
+      else
+      {
+        bicolor_count--;
+        count -= bicolor_count;
+        OUT_COPY_COUNT3(count, s, temp_s);
+        OUT_BICOLOR_COUNT3(bicolor_count, s, bicolor2, bicolor1);
+      }
+      count -= bicolor_count;
+      OUT_COPY_COUNT3(count, s, temp_s);
+      OUT_BICOLOR_COUNT3(bicolor_count, s, bicolor1, bicolor2);
+    }
+    else if (fom_count > 3 &&
+             fom_count >= mix_count &&
+             fom_count >= color_count &&
+             fom_count >= fill_count &&
+             fom_count >= bicolor_count)
+    {
+      count -= fom_count;
+      OUT_COPY_COUNT3(count, s, temp_s);
+      OUT_FOM_COUNT3(fom_count, s, fom_mask, fom_mask_len);
+    }
+    else
+    {
+      OUT_COPY_COUNT3(count, s, temp_s);
     }
   }
   return lines_sent;

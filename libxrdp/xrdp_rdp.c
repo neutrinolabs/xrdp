@@ -362,7 +362,7 @@ xrdp_rdp_parse_client_mcs_data(struct xrdp_rdp* self)
      xrdp_rdp_send_demand_active will tell the client what bpp to use */
   if (self->client_info.bpp == 24)
   {
-    self->client_info.bpp = 16;
+    //self->client_info.bpp = 16;
   }
   if (self->client_info.bpp == 15)
   {
