@@ -1,5 +1,4 @@
-#!/bin/bash
-# this needs to be a bash script, the first line needs to be #!/bin/bash
+#!/bin/sh
 # xrdp control script
 # same as xrdp_control.sh except the XRDP_DIR is /usr/lib/xrdp
 # Written : 1-13-2006 - Mark Balliet - posicat@pobox.com
@@ -15,57 +14,97 @@ LOG=/dev/null
 
 cd $XRDP_DIR
 
-test -x $XRDP || (echo "$XRDP is not executable" ; exit 0)
-test -x $SESMAN || (echo "$SESMAN is not executable" ; exit 0)
-test -x $STARTWM || (echo "$STARTWM is not executable" ; exit 0)
+if ! test -x $XRDP
+then
+  echo "$XRDP is not executable"
+  exit 0
+fi
+if ! test -x $SESMAN
+then
+  echo "$SESMAN is not executable"
+  exit 0
+fi
+if ! test -x $STARTWM
+then
+  echo "$STARTWM is not executable"
+  exit 0
+fi
 
-xrdp_start () {
-  echo -n "Starting : xrdp and sesman . . "
+xrdp_start()
+{
+  echo -n "Starting: xrdp and sesman . . "
   ./$XRDP >> $LOG
   ./$SESMAN >> $LOG
   echo "."
   sleep 1
-  return 0
+  return 0;
 }
 
-xrdp_stop () {
-  echo -n "Stopping : xrdp and sesman . . "
+xrdp_stop()
+{
+  echo -n "Stopping: xrdp and sesman . . "
   ./$SESMAN --kill >> $LOG
   ./$XRDP --kill >> $LOG
   echo "."
+  return 0;
 }
 
-check_up () {
-  xrdpup=`ps u --noheading -C $XRDP`
-  sesup=`ps u --noheading -C $SESMAN`
-
-  # Cleanup : If sesman isn't running, but the pid exists, erase it.
-  if [ "$sesup" == "" ]
+is_xrdp_running()
+{
+  ps u --noheading -C $XRDP | grep -q -i $XRDP
+  if test $? -eq 0
   then
-    if [ -e /var/run/sesman.pid ]
+    return 1;
+  else
+    return 0;
+  fi
+}
+
+is_sesman_running()
+{
+  ps u --noheading -C $SESMAN | grep -q -i $SESMAN
+  if test $? -eq 0
+  then
+    return 1;
+  else
+    return 0;
+  fi
+}
+
+check_up()
+{
+  # Cleanup : If sesman isn't running, but the pid exists, erase it.
+  is_sesman_running
+  if test $? -eq 0
+  then
+    if test -e /var/run/sesman.pid
     then
       rm /var/run/sesman.pid
     fi
   fi
   # Cleanup : If xrdp isn't running, but the pid exists, erase it.
-  if [ "$xrdpup" == "" ]
+  is_xrdp_running
+  if test $? -eq 0
   then
-    if [ -e /var/run/xrdp.pid ]
+    if test -e /var/run/xrdp.pid
     then
       rm /var/run/xrdp.pid
     fi
   fi
+  return 0;
 }
 
 case "$1" in
   start)
     check_up
-    if [ "$xrdpup" != "" ]
+    is_xrdp_running
+    if ! test $? -eq 0
     then
-      echo "Xrdp is already loaded"
+      echo "xrdp is already loaded"
       exit 1
     fi
-    if [ "$sesup" != "" ]
+    is_sesman_running
+    if ! test $? -eq 0
     then
       echo "sesman is already loaded"
       exit 1
@@ -74,11 +113,13 @@ case "$1" in
     ;;
   stop)
     check_up
-    if [ "$xrdpup" == "" ]
+    is_xrdp_running
+    if test $? -eq 0
     then
       echo "xrdp is not loaded."
     fi
-    if [ "$sesup" == "" ]
+    is_sesman_running
+    if test $? -eq 0
     then
       echo "sesman is not loaded."
     fi
@@ -86,11 +127,14 @@ case "$1" in
     ;;
   force-reload|restart)
     check_up
-    echo "Restarting Xrdp ..."
+    echo "Restarting xrdp ..."
     xrdp_stop
-    while [ "$xrdpup" != "" ]; do
+    is_xrdp_running
+    while ! test $? -eq 0
+    do
       check_up
       sleep 1
+      is_xrdp_running
     done
     xrdp_start
     ;;
