@@ -1107,6 +1107,24 @@ connections", 0);
       out_uint8(pixel_format, 0); /* blue shift */
       out_uint8s(pixel_format, 3); /* pad */
     }
+    else if (v->mod_bpp == 24)
+    {
+      out_uint8(pixel_format, 32); /* bits per pixel */
+      out_uint8(pixel_format, 24); /* depth */
+#if defined(B_ENDIAN)
+      out_uint8(pixel_format, 1); /* big endian */
+#else
+      out_uint8(pixel_format, 0); /* big endian */
+#endif
+      out_uint8(pixel_format, 1); /* true color flag */
+      out_uint16_be(pixel_format, 255); /* red max */
+      out_uint16_be(pixel_format, 255); /* green max */
+      out_uint16_be(pixel_format, 255); /* blue max */
+      out_uint8(pixel_format, 16); /* red shift */
+      out_uint8(pixel_format, 8); /* green shift */
+      out_uint8(pixel_format, 0); /* blue shift */
+      out_uint8s(pixel_format, 3); /* pad */
+    }
     out_uint8a(s, pixel_format->data, 16);
     v->server_msg(v, "sending pixel format", 0);
     error = lib_send(v, s->data, 20);
