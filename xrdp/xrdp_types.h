@@ -343,8 +343,6 @@ struct xrdp_font
 /* module */
 struct xrdp_mod_data
 {
-  char name[256];
-  char lib[256];
   struct list* names;
   struct list* values;
 };

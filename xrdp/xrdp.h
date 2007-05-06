@@ -317,13 +317,9 @@ int APP_CC
 xrdp_mm_signal(struct xrdp_mm* self);
 
 int APP_CC
-xrdp_mm_setup_mod1(struct xrdp_mm* self,
-                   struct list* names,
-                   struct list* values);
+xrdp_mm_setup_mod1(struct xrdp_mm* self);
 int APP_CC
-xrdp_mm_setup_mod2(struct xrdp_mm* self,
-                   struct list* names,
-                   struct list* values);
+xrdp_mm_setup_mod2(struct xrdp_mm* self);
 
 int DEFAULT_CC
 server_begin_update(struct xrdp_mod* mod);

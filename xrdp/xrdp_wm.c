@@ -342,22 +342,17 @@ xrdp_wm_load_static_pointers(struct xrdp_wm* self)
 int APP_CC
 xrdp_wm_init(struct xrdp_wm* self)
 {
-#if 0
   int fd;
   int index;
-  struct xrdp_mod_data* mod_data;
   struct list* names;
   struct list* values;
   char* q;
   char* r;
   char section_name[256];
-#endif
 
   xrdp_wm_load_static_colors(self);
   xrdp_wm_load_static_pointers(self);
   self->screen->bg_color = self->black;
-#if 0
-  // todo, get autologin working
   if (self->session->client_info->rdp_autologin)
   {
     fd = g_file_open(XRDP_CFG_FILE); /* xrdp.ini */
@@ -367,12 +362,6 @@ xrdp_wm_init(struct xrdp_wm* self)
       names->auto_free = 1;
       values = list_create();
       values->auto_free = 1;
-      mod_data = (struct xrdp_mod_data*)
-                     g_malloc(sizeof(struct xrdp_mod_data), 1);
-      mod_data->names = list_create();
-      mod_data->names->auto_free = 1;
-      mod_data->values = list_create();
-      mod_data->values->auto_free = 1;
       g_strncpy(section_name, self->session->client_info->domain, 255);
       if (section_name[0] == 0)
       {
@@ -396,95 +385,38 @@ xrdp_wm_init(struct xrdp_wm* self)
         {
           q = (char*)list_get_item(names, index);
           r = (char*)list_get_item(values, index);
-          if (g_strncmp("name", q, 255) == 0)
+          if (g_strncmp("password", q, 255) == 0)
           {
-            g_strcpy(mod_data->name, r);
+            list_add_item(self->mm->login_names, (long)g_strdup("password"));
+            list_add_item(self->mm->login_values,
+                   (long)g_strdup(self->session->client_info->password));
           }
-          else if (g_strncmp("lib", q, 255) == 0)
+          else if (g_strncmp("username", q, 255) == 0)
           {
-            g_strcpy(mod_data->lib, r);
+            list_add_item(self->mm->login_names, (long)g_strdup("username"));
+            list_add_item(self->mm->login_values,
+                   (long)g_strdup(self->session->client_info->username));
           }
           else
           {
-            if (g_strncmp("password", q, 255) == 0)
-            {
-              list_add_item(mod_data->names, (long)g_strdup("password"));
-              list_add_item(mod_data->values,
-                     (long)g_strdup(self->session->client_info->password));
-            }
-            else if (g_strncmp("username", q, 255) == 0)
-            {
-              list_add_item(mod_data->names, (long)g_strdup("username"));
-              list_add_item(mod_data->values,
-                     (long)g_strdup(self->session->client_info->username));
-            }
-            else
-            {
-              list_add_item(mod_data->names, (long)g_strdup(q));
-              list_add_item(mod_data->values, (long)g_strdup(r));
-            }
+            list_add_item(self->mm->login_names, (long)g_strdup(q));
+            list_add_item(self->mm->login_values, (long)g_strdup(r));
           }
         }
-        if (xrdp_wm_setup_mod1(self, mod_data) != 0)
-        {
-          /* totaly free mod */
-          if (self->mod_exit != 0)
-          {
-            self->mod_exit(self->mod);
-          }
-          g_xrdp_sync(sync_unload, self->mod_handle, 0);
-          self->mod = 0;
-          self->mod_handle = 0;
-          self->mod_init = 0;
-          self->mod_exit = 0;
-        }
-        else if (xrdp_wm_setup_mod2(self, mod_data->names, mod_data->values) != 0)
-        {
-          /* totaly free mod */
-          if (self->mod_exit != 0)
-          {
-            self->mod_exit(self->mod);
-          }
-          g_xrdp_sync(sync_unload, self->mod_handle, 0);
-          self->mod = 0;
-          self->mod_handle = 0;
-          self->mod_init = 0;
-          self->mod_exit = 0;
-          /* don't close here so user can see error */
-        }
-        else /* close connection log window if connection is ok */
-        {
-          if (self->log_wnd != 0)
-          {
-            xrdp_bitmap_delete(self->log_wnd);
-          }
-        }
-        if (!self->pro_layer->term)
-        {
-          if (self->mod != 0)
-          {
-            if (self->mod->sck != 0)
-            {
-              self->pro_layer->app_sck = self->mod->sck;
-            }
-          }
-        }
+        self->login_mode = 2;
       }
-      list_delete(mod_data->names);
-      list_delete(mod_data->values);
       list_delete(names);
       list_delete(values);
-      g_free(mod_data);
       g_file_close(fd);
     }
   }
   else
-#endif
   {
     xrdp_login_wnd_create(self);
     /* clear screen */
     xrdp_bitmap_invalidate(self->screen, 0);
     xrdp_wm_set_focused(self, self->login_window);
+    self->login_mode = 1;
   }
   return 0;
 }
@@ -1385,19 +1317,21 @@ xrdp_wm_idle(struct xrdp_wm* self)
   if (self->login_mode == 0)
   {
     /* this is the inital state of the login window */
+    self->login_mode = 1; /* put the wm in login mode */
     list_clear(self->log);
     xrdp_wm_delete_all_childs(self);
-    if (xrdp_wm_init(self) == 0)
-    {
-      /* put the wm in login mode */
-      self->login_mode = 1;
-    }
+    xrdp_wm_init(self);
   }
   else if (self->login_mode == 2)
   {
-    self->login_mode = 3;
+    self->login_mode = 3; /* put the wm in connected mode */
     xrdp_wm_delete_all_childs(self);
     xrdp_mm_connect(self->mm);
+  }
+  else if (self->login_mode == 10)
+  {
+    xrdp_wm_delete_all_childs(self);
+    self->login_mode = 11;
   }
   return 0;
 }
@@ -1415,7 +1349,7 @@ xrdp_wm_app_sck_signal(struct xrdp_wm* self, int app_sck)
       return 1;
     }
   }
-  else if (self->login_mode == 10)
+  else if (self->login_mode > 9)
   {
     if (self->mm->mod == 0)
     {
@@ -1467,9 +1401,11 @@ xrdp_wm_log_wnd_notify(struct xrdp_bitmap* wnd,
       MAKERECT(rect, wnd->left, wnd->top, wnd->width, wnd->height);
       xrdp_bitmap_delete(wnd);
       xrdp_bitmap_invalidate(wm->screen, &rect);
-      /* if module is gone, end the session when ok is clicked */
+      /* if module is gone, reset the session when ok is clicked */
       if (wm->mm->mod_handle == 0)
       {
+        /* make sure autologin is off */
+        wm->session->client_info->rdp_autologin = 0;
         wm->login_mode = 0; /* reset session */
       }
     }

@@ -254,9 +254,9 @@ xrdp_mm_process_login_response(struct xrdp_mm* self, struct stream* s)
     self->display = display;
     g_snprintf(text, 255, "login successful for display %d", display);
     xrdp_wm_log_msg(self->wm, text);
-    if (xrdp_mm_setup_mod1(self, self->login_names, self->login_values) == 0)
+    if (xrdp_mm_setup_mod1(self) == 0)
     {
-      if (xrdp_mm_setup_mod2(self, self->login_names, self->login_values) == 0)
+      if (xrdp_mm_setup_mod2(self) == 0)
       {
         self->wm->login_mode = 10;
         self->wm->pro_layer->app_sck = self->mod->sck;
@@ -457,9 +457,7 @@ xrdp_mm_get_lib(struct xrdp_mm* self, char* dest, int dest_len)
 
 /*****************************************************************************/
 int APP_CC
-xrdp_mm_setup_mod1(struct xrdp_mm* self,
-                   struct list* names,
-                   struct list* values)
+xrdp_mm_setup_mod1(struct xrdp_mm* self)
 {
   void* func;
   char lib[256];
@@ -553,9 +551,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm* self,
 
 /*****************************************************************************/
 int APP_CC
-xrdp_mm_setup_mod2(struct xrdp_mm* self,
-                   struct list* names,
-                   struct list* values)
+xrdp_mm_setup_mod2(struct xrdp_mm* self)
 {
   char text[256];
   char* name;
@@ -594,17 +590,17 @@ xrdp_mm_setup_mod2(struct xrdp_mm* self,
     /* this adds the port to the end of the list, it will already be in
        the list as -1
        the module should use the last one */
-    list_add_item(names, (long)g_strdup("port"));
-    list_add_item(values, (long)g_strdup(text));
+    list_add_item(self->login_names, (long)g_strdup("port"));
+    list_add_item(self->login_values, (long)g_strdup(text));
     /* always set these */
     name = self->wm->session->client_info->hostname;
     self->mod->mod_set_param(self->mod, "hostname", name);
     g_snprintf(text, 255, "%d", self->wm->session->client_info->keylayout);
     self->mod->mod_set_param(self->mod, "keylayout", text);
-    for (i = 0; i < names->count; i++)
+    for (i = 0; i < self->login_names->count; i++)
     {
-      name = (char*)list_get_item(names, i);
-      value = (char*)list_get_item(values, i);
+      name = (char*)list_get_item(self->login_names, i);
+      value = (char*)list_get_item(self->login_values, i);
       self->mod->mod_set_param(self->mod, name, value);
     }
     /* connect */

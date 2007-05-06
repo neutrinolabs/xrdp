@@ -979,6 +979,16 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
                                          0, 0);
           }
         }
+        else
+        {
+          x = 0;
+          y = 0;
+          w = self->wm->screen->width;
+          h = self->wm->screen->height;
+          self->wm->mm->mod->mod_event(self->wm->mm->mod, WM_INVALIDATE,
+                                       MAKELONG(y, x), MAKELONG(h, w),
+                                       0, 0);
+        }
       }
     }
     else

@@ -93,15 +93,17 @@ xrdp_wm_popup_notify(struct xrdp_bitmap* wnd,
 int APP_CC
 xrdp_wm_delete_all_childs(struct xrdp_wm* self)
 {
-  int i;
+  int index;
   struct xrdp_bitmap* b;
+  struct xrdp_rect rect;
 
-  for (i = self->screen->child_list->count - 1; i >= 0; i--)
+  for (index = self->screen->child_list->count - 1; index >= 0; index--)
   {
-    b = (struct xrdp_bitmap*)list_get_item(self->screen->child_list, i);
+    b = (struct xrdp_bitmap*)list_get_item(self->screen->child_list, index);
+    MAKERECT(rect, b->left, b->top, b->width, b->height);
     xrdp_bitmap_delete(b);
+    xrdp_bitmap_invalidate(self->screen, &rect);
   }
-  xrdp_bitmap_invalidate(self->screen, 0);
   return 0;
 }
 
@@ -217,8 +219,6 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap* wnd)
       /* gota copy these cause dialog gets freed */
       list_append_list_strdup(mod_data->names, wm->mm->login_names, 0);
       list_append_list_strdup(mod_data->values, wm->mm->login_values, 0);
-      list_add_item(wm->mm->login_names, (long)g_strdup("lib"));
-      list_add_item(wm->mm->login_values, (long)g_strdup(mod_data->lib));
       wm->login_mode = 2;
     }
   }
@@ -287,7 +287,7 @@ xrdp_wm_show_edits(struct xrdp_wm* self, struct xrdp_bitmap* combo)
         b->pointer = 1;
         b->tab_stop = 1;
         b->caption1 = (char*)g_malloc(256, 1);
-        g_strcpy(b->caption1, value + 3);
+        g_strncpy(b->caption1, value + 3, 255);
         b->edit_pos = g_strlen(b->caption1);
         if (self->login_window->focused_control == 0)
         {
@@ -295,7 +295,7 @@ xrdp_wm_show_edits(struct xrdp_wm* self, struct xrdp_bitmap* combo)
         }
         if (g_strncmp(name, "username", 255) == 0)
         {
-          g_strcpy(b->caption1, self->session->client_info->username);
+          g_strncpy(b->caption1, self->session->client_info->username, 255);
           b->edit_pos = g_strlen(b->caption1);
           if (g_strlen(b->caption1) > 0)
           {
@@ -389,6 +389,7 @@ xrdp_wm_login_fill_in_combo(struct xrdp_wm* self, struct xrdp_bitmap* b)
   char* p;
   char* q;
   char* r;
+  char name[256];
   struct xrdp_mod_data* mod_data;
 
   sections = list_create();
@@ -408,32 +409,25 @@ xrdp_wm_login_fill_in_combo(struct xrdp_wm* self, struct xrdp_bitmap* b)
     }
     else
     {
+      g_strncpy(name, p, 255);
       mod_data = (struct xrdp_mod_data*)
                      g_malloc(sizeof(struct xrdp_mod_data), 1);
       mod_data->names = list_create();
       mod_data->names->auto_free = 1;
       mod_data->values = list_create();
       mod_data->values->auto_free = 1;
-      g_strcpy(mod_data->name, p); /* set name in square bracket */
       for (j = 0; j < section_names->count; j++)
       {
         q = (char*)list_get_item(section_names, j);
         r = (char*)list_get_item(section_values, j);
         if (g_strncmp("name", q, 255) == 0)
         {
-          g_strcpy(mod_data->name, r);
+          g_strncpy(name, r, 255);
         }
-        else if (g_strncmp("lib", q, 255) == 0)
-        {
-          g_strcpy(mod_data->lib, r);
-        }
-        else
-        {
-          list_add_item(mod_data->names, (long)g_strdup(q));
-          list_add_item(mod_data->values, (long)g_strdup(r));
-        }
+        list_add_item(mod_data->names, (long)g_strdup(q));
+        list_add_item(mod_data->values, (long)g_strdup(r));
       }
-      list_add_item(b->string_list, (long)g_strdup(mod_data->name));
+      list_add_item(b->string_list, (long)g_strdup(name));
       list_add_item(b->data_list, (long)mod_data);
     }
   }
