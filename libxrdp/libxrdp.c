@@ -122,7 +122,8 @@ libxrdp_process_data(struct xrdp_session* session)
     }
     if (cont)
     {
-      cont = session->s->next_packet < session->s->end;
+      cont = (session->s->next_packet != 0) &&
+             (session->s->next_packet < session->s->end);
     }
   }
   return rv;
