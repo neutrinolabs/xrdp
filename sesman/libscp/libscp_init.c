@@ -17,66 +17,43 @@
    Copyright (C) Jay Sorg 2005-2007
 */
 
-#ifndef LOCK_H
-#define LOCK_H
-
-#include "sesman.h"
-
 /**
  *
- * @brief initializes all the locks
+ * @file libscp_init.c
+ * @brief libscp initialization code
+ * @author Simone Fedele
  *
  */
-void DEFAULT_CC
-lock_init(void);
 
-/**
- *
- * @brief acquires the lock for the session chain
- *
- */
-void DEFAULT_CC
-lock_chain_acquire(void);
+#include "libscp_init.h"
 
-/**
- *
- * @brief releases the sessiona chain lock
- *
- */
-void DEFAULT_CC
-lock_chain_release(void);
+/* server API */
+int DEFAULT_CC 
+scp_init(void)
+{
+  scp_lock_init();
 
-/**
- *
- * @brief acquires config lock
- *
- */
-void DEFAULT_CC
-lock_cfg_acquire(void);
+  return 0;
+}
 
-/**
- *
- * @brief releases config lock
- *
- */
-void DEFAULT_CC
-lock_cfg_release(void);
+struct SCP_CONNECTION*
+scp_make_connection(int sck)
+{
+  struct SCP_CONNECTION* conn;
+  
+  conn = g_malloc(sizeof(struct SCP_CONNECTION), 0);
 
-/**
- *
- * @brief request the socket lock
- *
- */
-void DEFAULT_CC
-lock_socket_acquire(void);
+  if (0 == conn)
+  {
+    return 0;
+  }
+  
+  conn->in_sck=sck;
+  make_stream(conn->in_s);
+  init_stream(conn->in_s, 8196);
+  make_stream(conn->out_s);
+  init_stream(conn->out_s, 8196);
 
-/**
- *
- * @brief releases the socket lock
- *
- */
-void DEFAULT_CC
-lock_socket_release(void);
-
-#endif
+  return conn;
+}
 

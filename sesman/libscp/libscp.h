@@ -17,66 +17,26 @@
    Copyright (C) Jay Sorg 2005-2007
 */
 
-#ifndef LOCK_H
-#define LOCK_H
-
-#include "sesman.h"
-
 /**
  *
- * @brief initializes all the locks
- *
+ * @file libscp.h
+ * @brief libscp main header
+ * @author Simone Fedele
+ * 
  */
-void DEFAULT_CC
-lock_init(void);
 
-/**
- *
- * @brief acquires the lock for the session chain
- *
- */
-void DEFAULT_CC
-lock_chain_acquire(void);
+#ifndef LIBSCP_H
+#define LIBSCP_H
 
-/**
- *
- * @brief releases the sessiona chain lock
- *
- */
-void DEFAULT_CC
-lock_chain_release(void);
+#include "libscp_types.h"
 
-/**
- *
- * @brief acquires config lock
- *
- */
-void DEFAULT_CC
-lock_cfg_acquire(void);
+#include "libscp_init.h"
+#include "libscp_tcp.h"
+#include "libscp_lock.h"
 
-/**
- *
- * @brief releases config lock
- *
- */
-void DEFAULT_CC
-lock_cfg_release(void);
-
-/**
- *
- * @brief request the socket lock
- *
- */
-void DEFAULT_CC
-lock_socket_acquire(void);
-
-/**
- *
- * @brief releases the socket lock
- *
- */
-void DEFAULT_CC
-lock_socket_release(void);
+#include "libscp_vX.h"
+#include "libscp_v0.h"
+#include "libscp_v1s.h"
+#include "libscp_v1c.h"
 
 #endif
-

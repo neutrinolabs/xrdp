@@ -17,66 +17,32 @@
    Copyright (C) Jay Sorg 2005-2007
 */
 
-#ifndef LOCK_H
-#define LOCK_H
-
-#include "sesman.h"
-
 /**
  *
- * @brief initializes all the locks
- *
+ * @file libscp_vX.h
+ * @brief libscp version neutral code header
+ * @author Simone Fedele
+ * 
  */
-void DEFAULT_CC
-lock_init(void);
 
+#ifndef LIBSCP_VX_H
+#define LIBSCP_VX_H
+
+#include "libscp_types.h"
+
+#include "libscp_v0.h"
+#include "libscp_v1s.h"
+
+/* server API */
 /**
  *
- * @brief acquires the lock for the session chain
+ * @brief version neutral server accept function
+ * @param c connection descriptor
+ * @param s session descriptor pointer address.
+ *          it will return a newely allocated descriptor.
+ *          It this memory needs to be g_free()d
  *
  */
-void DEFAULT_CC
-lock_chain_acquire(void);
-
-/**
- *
- * @brief releases the sessiona chain lock
- *
- */
-void DEFAULT_CC
-lock_chain_release(void);
-
-/**
- *
- * @brief acquires config lock
- *
- */
-void DEFAULT_CC
-lock_cfg_acquire(void);
-
-/**
- *
- * @brief releases config lock
- *
- */
-void DEFAULT_CC
-lock_cfg_release(void);
-
-/**
- *
- * @brief request the socket lock
- *
- */
-void DEFAULT_CC
-lock_socket_acquire(void);
-
-/**
- *
- * @brief releases the socket lock
- *
- */
-void DEFAULT_CC
-lock_socket_release(void);
+enum SCP_SERVER_STATES_E scp_vXs_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s);
 
 #endif
-

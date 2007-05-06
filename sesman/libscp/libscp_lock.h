@@ -17,10 +17,13 @@
    Copyright (C) Jay Sorg 2005-2007
 */
 
-#ifndef LOCK_H
-#define LOCK_H
+#ifndef LIBSCP_LOCK_H
+#define LIBSCP_LOCK_H
 
-#include "sesman.h"
+#include "libscp_types.h"
+
+#define LIBSCP_LOCK_FORK_BLOCKER   1
+#define LIBSCP_LOCK_FORK_WAITING   0
 
 /**
  *
@@ -28,55 +31,45 @@
  *
  */
 void DEFAULT_CC
-lock_init(void);
+scp_lock_init(void);
 
 /**
  *
- * @brief acquires the lock for the session chain
+ * @brief requires to fork a new child process
  *
  */
 void DEFAULT_CC
-lock_chain_acquire(void);
+scp_lock_fork_request(void);
 
 /**
  *
- * @brief releases the sessiona chain lock
+ * @brief releases a fork() request
  *
  */
 void DEFAULT_CC
-lock_chain_release(void);
+scp_lock_fork_release(void);
 
 /**
  *
- * @brief acquires config lock
+ * @brief starts a section that is critical for forking
+ *
+ * starts a section that is critical for forking, that is noone can fork()
+ * while i'm in a critical section. But if someone wanted to fork we have
+ * to wait until he finishes with lock_fork_release()
+ *
+ * @return
  *
  */
-void DEFAULT_CC
-lock_cfg_acquire(void);
+int DEFAULT_CC
+scp_lock_fork_critical_section_start(void);
 
 /**
  *
- * @brief releases config lock
+ * @brief closes the critical section
  *
  */
 void DEFAULT_CC
-lock_cfg_release(void);
-
-/**
- *
- * @brief request the socket lock
- *
- */
-void DEFAULT_CC
-lock_socket_acquire(void);
-
-/**
- *
- * @brief releases the socket lock
- *
- */
-void DEFAULT_CC
-lock_socket_release(void);
+scp_lock_fork_critical_section_end(int blocking);
 
 #endif
 

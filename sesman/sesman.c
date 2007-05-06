@@ -50,7 +50,7 @@ sesman_main_loop(void)
   log_message(LOG_LEVEL_INFO, "listening...");
   g_sck = g_tcp_socket();
   g_tcp_set_non_blocking(g_sck);
-  error = tcp_bind(g_sck, g_cfg.listen_address, g_cfg.listen_port);
+  error = scp_tcp_bind(g_sck, g_cfg.listen_address, g_cfg.listen_port);
   if (error == 0)
   {
     error = g_tcp_listen(g_sck);
@@ -212,6 +212,9 @@ main(int argc, char** argv)
     }
     g_exit(1);
   }
+
+  /* libscp initialization */
+  scp_init();
 
   if (daemon)
   {

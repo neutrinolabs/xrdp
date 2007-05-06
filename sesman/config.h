@@ -49,6 +49,10 @@
 #define SESMAN_CFG_ENABLE_USERWM     "EnableUserWindowManager"
 #define SESMAN_CFG_USERWM            "UserWindowManager"
 #define SESMAN_CFG_MAX_SESSION       "MaxSessions"
+#define SESMAN_CFG_AUTH_FILE_PATH    "AuthFilePath"
+
+#define SESMAN_CFG_RDP_PARAMS        "X11rdp"
+#define SESMAN_CFG_VNC_PARAMS        "Xvnc"
 
 #define SESMAN_CFG_LOGGING           "Logging"
 #define SESMAN_CFG_LOG_FILE          "LogFile"
@@ -168,6 +172,21 @@ struct config_sesman
    */
   char user_wm[32];
   /**
+   * @var auth_file_path
+   * @brief Auth file path
+   */
+  char* auth_file_path;
+  /**
+   * @var vnc_params
+   * @brief Xvnc additional parameter list
+   */
+struct list* vnc_params;
+  /**
+   * @var rdp_params
+   * @brief X11rdp additional parameter list
+   */
+struct list* rdp_params;
+  /**
    * @var log
    * @brief Log configuration struct
    */
@@ -252,13 +271,32 @@ config_read_sessions(int file, struct config_sessions* ss,
 
 /**
  *
- * @brief Reads sesman [X11rdp, Xvnc, ...] configuration section
- * @param server_type integer representing server type
- * @param param_array pointer to list to add strings to
+ * @brief Reads sesman [X11rdp] configuration section
+ * @param file configuration file descriptor
+ * @param cs pointer to a config_sesman struct
+ * @param param_n parameter name list
+ * @param param_v parameter value list
  * @return 0 on success, 1 on failure
  *
  */
 int DEFAULT_CC
-config_read_xserver_params(int server_type, struct list* param_array);
+config_read_rdp_params(int file, struct config_sesman* cs, struct list* param_n,
+                       struct list* param_v);
+
+
+/**
+ *
+ * @brief Reads sesman [Xvnc] configuration section
+ * @param file configuration file descriptor
+ * @param cs pointer to a config_sesman struct
+ * @param param_n parameter name list
+ * @param param_v parameter value list
+ * @return 0 on success, 1 on failure
+ *
+ */
+int DEFAULT_CC
+config_read_vnc_params(int file, struct config_sesman* cs, struct list* param_n,
+                       struct list* param_v);
 
 #endif
+

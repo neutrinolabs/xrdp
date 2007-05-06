@@ -31,6 +31,7 @@
 #include "grp.h"
 
 extern unsigned char g_fixedkey[8]; /* in sesman.c */
+extern struct config_sesman g_cfg; 
 
 /******************************************************************************/
 int DEFAULT_CC
@@ -97,8 +98,18 @@ env_set_user(char* username, char* passwd_file, int display)
       g_setenv("DISPLAY", text, 1);
       if (passwd_file != 0)
       {
-        g_mkdir(".vnc");
-        g_sprintf(passwd_file, "%s/.vnc/sesman_passwd", pw_dir);
+        if (0==g_cfg.auth_file_path)
+        {
+          /* if no auth_file_path is set, then we go for $HOME/.vnc/sesman_passwd */
+          g_mkdir(".vnc");
+          g_sprintf(passwd_file, "%s/.vnc/sesman_passwd", pw_dir);
+        }
+	else
+	{
+          /* we use auth_file_path as requested */
+          g_sprintf(passwd_file, g_cfg.auth_file_path, username);
+        }
+	LOG_DBG("pass file: %s", passwd_file);
       }
     }
   }

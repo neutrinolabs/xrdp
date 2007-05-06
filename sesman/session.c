@@ -217,7 +217,7 @@ for user %s denied", username);
   /* we should need no more displays than this       */
 
   /* block all the threads running to enable forking */
-  lock_fork_request();
+  scp_lock_fork_request();
   while (x_server_running(display))
   {
     display++;
@@ -285,13 +285,18 @@ for user %s denied", username);
 
         /* still a problem starting window manager just start xterm */
         g_execlp3("xterm", "xterm", 0);
+	
+        /* should not get here */
+        log_message(LOG_LEVEL_ALWAYS,"error starting xterm for user %s - pid %d",
+                    username, g_getpid());
+        /* logging parameters */
+        /* no problem calling strerror for thread safety: other threads are blocked */
+        log_message(LOG_LEVEL_DEBUG, "errno: %d, description: %s", errno, g_get_strerror());
       }
-      /* should not get here */
-      log_message(LOG_LEVEL_ALWAYS,"error starting xterm for user %s - pid %d",
-                  username, g_getpid());
-      /* logging parameters */
-      /* no problem calling strerror for thread safety: other threads are blocked */
-      log_message(LOG_LEVEL_DEBUG, "errno: %d, description: %s", errno, g_get_strerror());
+      else
+      {
+        log_message(LOG_LEVEL_ERROR, "another Xserver is already active on display %d", display);
+      }
       log_message(LOG_LEVEL_DEBUG,"aborting connection...");
       g_exit(0);
     }
@@ -318,9 +323,12 @@ for user %s denied", username);
           list_add_item(xserver_params, (long)g_strdup(depth));
           list_add_item(xserver_params, (long)g_strdup("-rfbauth"));
           list_add_item(xserver_params, (long)g_strdup(passwd_file));
+
           /* additional parameters from sesman.ini file */
-          config_read_xserver_params(SESMAN_SESSION_TYPE_XVNC,
-                                     xserver_params);
+          //config_read_xserver_params(SESMAN_SESSION_TYPE_XVNC,
+          //                           xserver_params);
+          list_append_list_strdup(g_cfg.vnc_params, xserver_params, 0);
+
           /* make sure it ends with a zero */
           list_add_item(xserver_params, 0);
           pp1 = (char**)xserver_params->items;
@@ -337,9 +345,12 @@ for user %s denied", username);
           list_add_item(xserver_params, (long)g_strdup(geometry));
           list_add_item(xserver_params, (long)g_strdup("-depth"));
           list_add_item(xserver_params, (long)g_strdup(depth));
+
           /* additional parameters from sesman.ini file */
-          config_read_xserver_params(SESMAN_SESSION_TYPE_XRDP,
-                                     xserver_params);
+          //config_read_xserver_params(SESMAN_SESSION_TYPE_XRDP,
+          //                           xserver_params);
+	  list_append_list_strdup(g_cfg.rdp_params, xserver_params, 0);
+
           /* make sure it ends with a zero */
           list_add_item(xserver_params, 0);
           pp1 = (char**)xserver_params->items;
@@ -378,7 +389,7 @@ for user %s denied", username);
   else /* parent sesman process */
   {
     /* let the other threads go on */
-    lock_fork_release();
+    scp_lock_fork_release();
 
     temp->item->pid = pid;
     temp->item->display = display;

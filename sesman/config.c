@@ -78,6 +78,10 @@ config_read", SESMAN_CFG_FILE);
   /* read global config */
   config_read_globals(fd, cfg, param_n, param_v);
 
+  /* read Xvnc/X11rdp parameter list */
+  config_read_vnc_params(fd, cfg, param_n, param_v);
+  config_read_rdp_params(fd, cfg, param_n, param_v);
+
   /* read logging config */
   config_read_logging(fd, &(cfg->log), param_n, param_v);
 
@@ -112,6 +116,7 @@ config_read_globals(int file, struct config_sesman* cf, struct list* param_n,
   cf->enable_user_wm = 0;
   cf->user_wm[0] = '\0';
   cf->default_wm[0] = '\0';
+  cf->auth_file_path = 0;
 
   file_read_section(file, SESMAN_CFG_GLOBALS, param_n, param_v);
   for (i = 0; i < param_n->count; i++)
@@ -136,6 +141,10 @@ config_read_globals(int file, struct config_sesman* cf, struct list* param_n,
     else if (0 == g_strcasecmp(buf, SESMAN_CFG_ADDRESS))
     {
       g_strncpy(cf->listen_address, (char*)list_get_item(param_v, i), 31);
+    }
+    else if (0 == g_strcasecmp(buf, SESMAN_CFG_AUTH_FILE_PATH))
+    {
+      cf->auth_file_path = g_strdup((char*)list_get_item(param_v, i));
     }
   }
 
@@ -164,6 +173,7 @@ config_read_globals(int file, struct config_sesman* cf, struct list* param_n,
   g_printf("\tEnableUserWindowManager:  %i\r\n", cf->enable_user_wm);
   g_printf("\tUserWindowManager:        %s\r\n", cf->user_wm);
   g_printf("\tDefaultWindowManager:     %s\r\n", cf->default_wm);
+  g_printf("\tAuthFilePath:             %s\r\n", ((cf->auth_file_path) ? (cf->auth_file_path) : ("disabled")));
 
   return 0;
 }
@@ -346,49 +356,58 @@ config_read_sessions(int file, struct config_sessions* se, struct list* param_n,
 }
 
 /******************************************************************************/
-/* returns in params a list of parameters that need to be freed */
-/* returns error */
 int DEFAULT_CC
-config_read_xserver_params(int server_type, struct list* param_array)
+config_read_rdp_params(int file, struct config_sesman* cs, struct list* param_n,
+                       struct list* param_v)
 {
-  struct list* names;
-  struct list* params;
-  int fd;
-  char section_name[16];
+  int i;
 
-  if (server_type == SESMAN_SESSION_TYPE_XRDP)
+  list_clear(param_v);
+  list_clear(param_n);
+
+  cs->rdp_params=list_create();
+
+  file_read_section(file, SESMAN_CFG_RDP_PARAMS, param_n, param_v);
+  for (i = 0; i < param_n->count; i++)
   {
-    g_strncpy(section_name, "X11rdp", 15);
+    list_add_item(cs->rdp_params, (long)g_strdup((char*)list_get_item(param_v, i)));
   }
-  else if (server_type == SESMAN_SESSION_TYPE_XVNC)
+
+  /* printing security config */
+  g_printf("X11rdp parameters:\r\n");
+  for (i = 0; i < cs->rdp_params->count; i++)
   {
-    g_strncpy(section_name, "Xvnc", 15);
+    g_printf("\tParameter %02d                   %s\r\n", i, (char*)list_get_item(cs->rdp_params, i));
   }
-  else
-  {
-    /* error */
-    log_message(LOG_LEVEL_ALWAYS, "error unknown type in \
-config_read_xserver_params");
-    return 1;
-  }
-  fd = g_file_open(SESMAN_CFG_FILE);
-  if (-1 == fd)
-  {
-    /* error */
-    log_message(LOG_LEVEL_ALWAYS, "error opening %s in \
-config_read_xserver_params %s", SESMAN_CFG_FILE, g_get_strerror());
-    return 1;
-  }
-  names = list_create();
-  names->auto_free = 1;
-  params = list_create();
-  params->auto_free = 1;
-  if (file_read_section(fd, section_name, names, params) == 0)
-  {
-    list_append_list_strdup(params, param_array, 0);
-  }
-  g_file_close(fd);
-  list_delete(names);
-  list_delete(params);
+
   return 0;
 }
+
+/******************************************************************************/
+int DEFAULT_CC
+config_read_vnc_params(int file, struct config_sesman* cs, struct list* param_n,
+                       struct list* param_v)
+{
+  int i;
+
+  list_clear(param_v);
+  list_clear(param_n);
+
+  cs->vnc_params=list_create();
+
+  file_read_section(file, SESMAN_CFG_VNC_PARAMS, param_n, param_v);
+  for (i = 0; i < param_n->count; i++)
+  {
+    list_add_item(cs->vnc_params, (long)g_strdup((char*)list_get_item(param_v, i)));
+  }
+
+  /* printing security config */
+  g_printf("Xvnc parameters:\r\n");
+  for (i = 0; i < cs->vnc_params->count; i++)
+  {
+    g_printf("\tParameter %02d                   %s\r\n", i, (char*)list_get_item(cs->vnc_params, i));
+  }
+
+  return 0;
+}
+

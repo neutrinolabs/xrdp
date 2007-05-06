@@ -26,6 +26,7 @@
  */
 
 #include "sesman.h"
+#include "tcp.h"
 
 int g_sck;
 int g_pid;

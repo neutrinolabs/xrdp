@@ -17,66 +17,39 @@
    Copyright (C) Jay Sorg 2005-2007
 */
 
-#ifndef LOCK_H
-#define LOCK_H
+/**
+ *
+ * @file libscp_init.h
+ * @brief libscp initialization code header
+ * @author Simone Fedele
+ * 
+ */
 
-#include "sesman.h"
+#ifndef LIBSCP_INIT_H
+#define LIBSCP_INIT_H
+
+#include "libscp.h"
 
 /**
  *
- * @brief initializes all the locks
+ * @brief version neutral server accept function
+ * @param c connection descriptor
+ * @param s session descriptor pointer address.
+ *          it will return a newely allocated descriptor.
+ *          It this memory needs to be g_free()d
  *
  */
-void DEFAULT_CC
-lock_init(void);
+int DEFAULT_CC 
+scp_init(void);
 
 /**
  *
- * @brief acquires the lock for the session chain
+ * @brief mmm
+ * @param sck
  *
- */
-void DEFAULT_CC
-lock_chain_acquire(void);
-
-/**
- *
- * @brief releases the sessiona chain lock
- *
- */
-void DEFAULT_CC
-lock_chain_release(void);
-
-/**
- *
- * @brief acquires config lock
- *
- */
-void DEFAULT_CC
-lock_cfg_acquire(void);
-
-/**
- *
- * @brief releases config lock
- *
- */
-void DEFAULT_CC
-lock_cfg_release(void);
-
-/**
- *
- * @brief request the socket lock
- *
- */
-void DEFAULT_CC
-lock_socket_acquire(void);
-
-/**
- *
- * @brief releases the socket lock
- *
- */
-void DEFAULT_CC
-lock_socket_release(void);
+ */	
+struct SCP_CONNECTION*
+scp_make_connection(int sck);
 
 #endif
 

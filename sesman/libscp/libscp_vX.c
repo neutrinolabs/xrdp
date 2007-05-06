@@ -17,66 +17,37 @@
    Copyright (C) Jay Sorg 2005-2007
 */
 
-#ifndef LOCK_H
-#define LOCK_H
-
-#include "sesman.h"
-
 /**
  *
- * @brief initializes all the locks
+ * @file libscp_vX.c
+ * @brief libscp version neutral code
+ * @author Simone Fedele
  *
  */
-void DEFAULT_CC
-lock_init(void);
 
-/**
- *
- * @brief acquires the lock for the session chain
- *
- */
-void DEFAULT_CC
-lock_chain_acquire(void);
+#include "libscp_vX.h"
 
-/**
- *
- * @brief releases the sessiona chain lock
- *
- */
-void DEFAULT_CC
-lock_chain_release(void);
+/* server API */
+enum SCP_SERVER_STATES_E scp_vXs_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s)
+{
+  tui32 version;
 
-/**
- *
- * @brief acquires config lock
- *
- */
-void DEFAULT_CC
-lock_cfg_acquire(void);
+  /* reading version and packet size */
+  if (0!=scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))
+  {
+    return SCP_SERVER_STATE_NETWORK_ERR;
+  }
 
-/**
- *
- * @brief releases config lock
- *
- */
-void DEFAULT_CC
-lock_cfg_release(void);
+  in_uint32_be(c->in_s, version);
 
-/**
- *
- * @brief request the socket lock
- *
- */
-void DEFAULT_CC
-lock_socket_acquire(void);
+  if (version == 0)
+  {
+    return scp_v0s_accept(c, s, 1);
+  }
+  else if (version == 1)
+  {
+    return scp_v1s_accept(c, s, 1);
+  }
 
-/**
- *
- * @brief releases the socket lock
- *
- */
-void DEFAULT_CC
-lock_socket_release(void);
-
-#endif
-
+  return SCP_SERVER_STATE_VERSION_ERR;
+}

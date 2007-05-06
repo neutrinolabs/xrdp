@@ -1,10 +1,9 @@
 # sesman makefile
 LIBSCPOBJ = libscp_vX.o libscp_v0.o libscp_v1s.o
 
-SESMANOBJ = sesman.o config.o tcp.o sig.o session.o env.o \
+SESMANOBJ = sesman.o config.o sig.o session.o env.o \
             os_calls.o d3des.o list.o file.o log.o access.o \
-            scp.o scp_v0.o scp_v1.o thread.o lock.o \
-	    $(LIBSCPOBJ)
+            scp.o scp_v0.o scp_v1.o thread.o lock.o
 
 SESSVCOBJ = sessvc.o os_calls.o
 
@@ -19,18 +18,19 @@ DEFINES = -DSESMAN_CFG_FILE=\"$(CFGDIR)/sesman.ini\" \
           -DSESMAN_SESSVC_FILE=\"$(DESTDIR)/sessvc\" \
 	  -DDEBUG
 
-CFLAGS = -Wall -O2 -I../common -I/usr/include/nptl $(DEFINES)
-LDFLAGS = -L /usr/gnu/lib -I/usr/include/nptl -L/usr/lib/nptl -lpthread -ldl $(DEFINES)
+CFLAGS = -Wall -O2 -I../common -I/usr/include/nptl -I./libscp $(DEFINES)
+LDFLAGS = -L /usr/gnu/lib -I/usr/include/nptl -L/usr/lib/nptl -lpthread -ldl -Wl,-rpath,./libscp -L./libscp -lscp $(DEFINES)
 C_OS_FLAGS = $(CFLAGS) -c
 CC = gcc
 
-all: pam tools
+all: libscp pam tools
 
-nopam: no-pam tools
+nopam: libscp no-pam tools
 
-kerberos: kerberos-base tools
+kerberos: libscp kerberos-base tools
 
 no-pam: $(SESMANOBJ) verify_user.o
+	make -C libscp
 	$(CC) $(LDFLAGS) -o sesman $(SESMANOBJ) verify_user.o -lcrypt
 
 pam: $(SESMANOBJ) verify_user_pam.o
@@ -48,9 +48,13 @@ sessvc: $(SESSVCOBJ)
 tools: sessvc
 	make -C tools
 
+libscp:
+	make -C libscp
+
 clean:
 	rm -f $(SESMANOBJ) verify_user.o verify_user_pam.o verify_user_pam_userpass.o sesman sesrun.o sesrun sessvc.o sessvc
 	make -C tools clean
+	make -C libscp clean
 
 install:
 	install sesman $(DESTDIR)/sesman
@@ -58,6 +62,7 @@ install:
 	install sesman.ini $(CFGDIR)/sesman.ini
 	install sessvc $(DESTDIR)/sessvc
 	make -C tools install
+	make -C libscp install
 
 installdeb:
 	install sesman $(DESTDIRDEB)/usr/lib/xrdp/sesman

@@ -36,7 +36,7 @@
 #include "env.h"
 #include "auth.h"
 #include "config.h"
-#include "tcp.h"
+//#include "tcp.h"
 #include "sig.h"
 #include "session.h"
 #include "access.h"
