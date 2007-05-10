@@ -1,7 +1,6 @@
 # libxup makefile
-LIBSCPOBJ = libscp_v0.o tcp.o
 
-XUPOBJ = os_calls.o xup.o $(LIBSCPOBJ)
+XUPOBJ = os_calls.o xup.o
 
 DESTDIR = /usr/local/xrdp
 CFGDIR = /etc/xrdp

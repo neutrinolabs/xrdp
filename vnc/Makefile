@@ -1,7 +1,6 @@
 # libvnc makefile
-LIBSCPOBJ = libscp_v0.o tcp.o
 
-VNCOBJ = vnc.o os_calls.o d3des.o $(LIBSCPOBJ)
+VNCOBJ = vnc.o os_calls.o d3des.o
 
 DESTDIR = /usr/local/xrdp
 CFGDIR = /etc/xrdp
