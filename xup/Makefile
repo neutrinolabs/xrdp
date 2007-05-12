@@ -33,10 +33,3 @@ install:
 
 installdeb:
 	install libxup.so $(DESTDIRDEB)/usr/lib/xrdp/libxup.so
-
-#building libscp objects
-libscp_v0.o:
-	$(CC) $(C_OS_FLAGS) ../sesman/libscp_v0.c
-
-tcp.o:
-	$(CC) $(C_OS_FLAGS) -DLIBSCP_CLIENT ../sesman/tcp.c
