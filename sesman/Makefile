@@ -23,11 +23,11 @@ LDFLAGS = -L /usr/gnu/lib -I/usr/include/nptl -L/usr/lib/nptl -lpthread -ldl -Wl
 C_OS_FLAGS = $(CFLAGS) -c
 CC = gcc
 
-all: libscp pam tools
+all: libscp_ pam tools
 
-nopam: libscp no-pam tools
+nopam: libscp_ no-pam tools
 
-kerberos: libscp kerberos-base tools
+kerberos: libscp_ kerberos-base tools
 
 no-pam: $(SESMANOBJ) verify_user.o
 	make -C libscp
@@ -48,7 +48,7 @@ sessvc: $(SESSVCOBJ)
 tools: sessvc
 	make -C tools
 
-libscp:
+libscp_:
 	make -C libscp
 
 clean:
