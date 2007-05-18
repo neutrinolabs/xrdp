@@ -1195,50 +1195,50 @@ xrdp_wm_process_input_mouse(struct xrdp_wm* self, int device_flags,
   DEBUG(("mouse event flags %4.4x x %d y %d", device_flags, x, y));
   if (device_flags & MOUSE_FLAG_MOVE) /* 0x0800 */
   {
-    xrdp_wm_mouse_move(self->pro_layer->wm, x, y);
+    xrdp_wm_mouse_move(self, x, y);
   }
   if (device_flags & MOUSE_FLAG_BUTTON1) /* 0x1000 */
   {
     if (device_flags & MOUSE_FLAG_DOWN) /* 0x8000 */
     {
-      xrdp_wm_mouse_click(self->pro_layer->wm, x, y, 1, 1);
+      xrdp_wm_mouse_click(self, x, y, 1, 1);
     }
     else
     {
-      xrdp_wm_mouse_click(self->pro_layer->wm, x, y, 1, 0);
+      xrdp_wm_mouse_click(self, x, y, 1, 0);
     }
   }
   if (device_flags & MOUSE_FLAG_BUTTON2) /* 0x2000 */
   {
     if (device_flags & MOUSE_FLAG_DOWN) /* 0x8000 */
     {
-      xrdp_wm_mouse_click(self->pro_layer->wm, x, y, 2, 1);
+      xrdp_wm_mouse_click(self, x, y, 2, 1);
     }
     else
     {
-      xrdp_wm_mouse_click(self->pro_layer->wm, x, y, 2, 0);
+      xrdp_wm_mouse_click(self, x, y, 2, 0);
     }
   }
   if (device_flags & MOUSE_FLAG_BUTTON3) /* 0x4000 */
   {
     if (device_flags & MOUSE_FLAG_DOWN) /* 0x8000 */
     {
-      xrdp_wm_mouse_click(self->pro_layer->wm, x, y, 3, 1);
+      xrdp_wm_mouse_click(self, x, y, 3, 1);
     }
     else
     {
-      xrdp_wm_mouse_click(self->pro_layer->wm, x, y, 3, 0);
+      xrdp_wm_mouse_click(self, x, y, 3, 0);
     }
   }
   if (device_flags == MOUSE_FLAG_BUTTON4 || /* 0x0280 */
       device_flags == 0x0278)
   {
-    xrdp_wm_mouse_click(self->pro_layer->wm, 0, 0, 4, 0);
+    xrdp_wm_mouse_click(self, 0, 0, 4, 0);
   }
   if (device_flags == MOUSE_FLAG_BUTTON5 || /* 0x0380 */
       device_flags == 0x0388)
   {
-    xrdp_wm_mouse_click(self->pro_layer->wm, 0, 0, 5, 0);
+    xrdp_wm_mouse_click(self, 0, 0, 5, 0);
   }
   return 0;
 }
@@ -1338,7 +1338,6 @@ xrdp_wm_idle(struct xrdp_wm* self)
 
 /******************************************************************************/
 /* returns error */
-/* this gets called when there is nothing on any socket */
 int APP_CC
 xrdp_wm_app_sck_signal(struct xrdp_wm* self, int app_sck)
 {
