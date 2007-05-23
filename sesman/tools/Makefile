@@ -7,6 +7,12 @@ SESTESTOBJ = sestest.o \
 SESRUNOBJ = sesrun.o config.o tcp.o \
             os_calls.o d3des.o list.o file.o log.o
 
+DESTDIR = /usr/local/xrdp
+CFGDIR = /etc/xrdp
+PIDDIR = /var/run
+MANDIR = /usr/local/man
+DOCDIR = /usr/doc/xrdp
+
 DEFINES = -DLIBSCP_CLIENT
 
 CFLAGS = -Wall -O2 -I../../common -I../ -I/usr/include/nptl -I../libscp $(DEFINES)
