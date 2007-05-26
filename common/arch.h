@@ -25,7 +25,7 @@
 #define ARCH_H
 
 /* check endianess */
-#if defined(__sparc__) || defined(__PPC__)
+#if defined(__sparc__) || defined(__PPC__) || defined(__ppc__)
 #define B_ENDIAN
 #elif __BYTE_ORDER == __LITTLE_ENDIAN
 #define L_ENDIAN
@@ -35,7 +35,7 @@
 /* check if we need to align data */
 #if defined(__sparc__) || defined(__alpha__) || defined(__hppa__) || \
     defined(__AIX__) || defined(__PPC__) || defined(__mips__) || \
-    defined(__ia64__)
+    defined(__ia64__) || defined(__ppc__)
 #define NEED_ALIGN
 #endif
 
