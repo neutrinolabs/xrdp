@@ -48,7 +48,7 @@
 #define THREAD_CC
 #endif
 
-#if defined(__BORLANDC__)
+#if defined(__BORLANDC__) || defined(_WIN32)
 #define APP_CC __fastcall
 #define DEFAULT_CC __cdecl
 #else
@@ -57,7 +57,11 @@
 #endif
 
 #if defined(_WIN32)
+#if defined(__BORLANDC__)
 #define EXPORT_CC _export __cdecl
+#else
+#define EXPORT_CC
+#endif
 #else
 #define EXPORT_CC
 #endif
