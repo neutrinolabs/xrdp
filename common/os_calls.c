@@ -558,7 +558,14 @@ void APP_CC
 g_random(char* data, int len)
 {
 #if defined(_WIN32)
-  memset(data, 0x44, len);
+  int index;
+
+  srand(g_time1());
+  for (index = 0; index < len; index++)
+  {
+    data[index] = (char)rand(); /* rand returns a number between 0 and
+                                   RAND_MAX */
+  }
 #else
   int fd;
 
