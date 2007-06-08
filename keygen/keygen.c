@@ -49,20 +49,84 @@ out_params(void)
 /*****************************************************************************/
 static int APP_CC
 sign_key(char* e_data, int e_len, char* n_data, int n_len,
-         char* d_data, int d_len, char* sig_data, int sign_len)
+         char* d_data, int d_len, char* sign_data, int sign_len)
 {
-  g_writeln("sign here");
+  g_writeln("todo sign here");
   g_writeln("");
   return 0;
 }
 
 /*****************************************************************************/
 static int APP_CC
-save_all(char* e_data, int e_len, char* n_data, int n_len,
-         char* d_data, int d_len, char* sig_data, int sign_len)
+write_out_line(int fd, char* name, char* data, int len)
 {
-  g_writeln("save to rsakeys.ini here");
+  int max;
+  int error;
+  int index;
+  int data_item;
+  int buf_pos;
+  char* buf;
+  char* text;
+
+  text = (char*)g_malloc(256, 0);
+  max = len;
+  max = max * 10;
+  buf_pos = g_strlen(name);
+  max = max + buf_pos + 16;
+  buf = (char*)g_malloc(max, 0);
+  g_strncpy(buf, name, max - 1);
+  buf[buf_pos] = '=';
+  buf_pos++;
+  for (index = 0; index < len; index++)
+  {
+    data_item = (unsigned char)data[index];
+    g_snprintf(text, 255, "0x%2.2x", data_item);
+    if (index != 0)
+    {
+      buf[buf_pos] = ',';
+      buf_pos++;
+    }
+    buf[buf_pos] = text[0];
+    buf_pos++;
+    buf[buf_pos] = text[1];
+    buf_pos++;
+    buf[buf_pos] = text[2];
+    buf_pos++;
+    buf[buf_pos] = text[3];
+    buf_pos++;
+  }
+  buf[buf_pos] = '\n';
+  buf_pos++;
+  buf[buf_pos] = 0;
+  error = g_file_write(fd, buf, buf_pos) == -1;
+  g_free(buf);
+  g_free(text);
+  return error;
+}
+
+/*****************************************************************************/
+static int APP_CC
+save_all(char* e_data, int e_len, char* n_data, int n_len,
+         char* d_data, int d_len, char* sign_data, int sign_len)
+{
+  int fd;
+
+  g_writeln("saving to rsakeys.ini");
   g_writeln("");
+  if (g_file_exist("rsakeys.ini"))
+  {
+    g_file_delete("rsakeys.ini");
+  }
+  fd = g_file_open("rsakeys.ini");
+  if (fd > 0)
+  {
+    g_file_write(fd, "[keys]\n", 7);
+    write_out_line(fd, "pub_exp", e_data, e_len);
+    write_out_line(fd, "pub_mod", n_data, n_len);
+    write_out_line(fd, "pub_sig", sign_data, sign_len);
+    write_out_line(fd, "pri_exp", d_data, d_len);
+  }
+  g_file_close(fd);  
   return 0;
 }
 
@@ -137,6 +201,7 @@ key_gen(void)
       g_writeln("public modulus size %d bytes", n_len);
       g_hexdump(n_data, n_len);
       g_writeln("");
+      /* signature is same size as public modulus */
       sign_data = (char*)g_malloc(n_len, 1);
       sign_len = n_len;
     }
