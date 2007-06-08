@@ -48,16 +48,38 @@ out_params(void)
 
 /*****************************************************************************/
 static int APP_CC
+sign_key(char* e_data, int e_len, char* n_data, int n_len,
+         char* d_data, int d_len, char* sig_data, int sign_len)
+{
+  g_writeln("sign here");
+  g_writeln("");
+  return 0;
+}
+
+/*****************************************************************************/
+static int APP_CC
+save_all(char* e_data, int e_len, char* n_data, int n_len,
+         char* d_data, int d_len, char* sig_data, int sign_len)
+{
+  g_writeln("save to rsakeys.ini here");
+  g_writeln("");
+  return 0;
+}
+
+/*****************************************************************************/
+static int APP_CC
 key_gen(void)
 {
   char* e_data;
   char* n_data;
   char* d_data;
+  char* sign_data;
   unsigned char* p;
   int len;
   int e_len;
   int n_len;
   int d_len;
+  int sign_len;
   int error;
   BN_CTX* my_ctx;
   RSA* my_key;
@@ -66,6 +88,12 @@ key_gen(void)
   e_data = 0;
   n_data = 0;
   d_data = 0;
+  sign_data = 0;
+  e_len = 0;
+  n_len = 0;
+  d_len = 0;
+  sign_len = 0;
+  error = 0;
   my_ctx = BN_CTX_new();
   my_e = BN_new();
   p = (unsigned char*)g_rev_exponent;
@@ -75,16 +103,24 @@ key_gen(void)
   g_writeln("");
   g_writeln("Generating %d bit rsa key...", MY_KEY_SIZE);
   g_writeln("");
-  /* RSA_generate_key_ex returns boolean */
-  error = RSA_generate_key_ex(my_key, MY_KEY_SIZE, my_e, 0) == 0;
+  if (error == 0)
+  {
+    /* RSA_generate_key_ex returns boolean */
+    error = RSA_generate_key_ex(my_key, MY_KEY_SIZE, my_e, 0) == 0;
+    if (error != 0)
+    {
+      g_writeln("error %d in key_gen, RSA_generate_key_ex", error);
+    }
+  }
   if (error == 0)
   {
     g_writeln("RSA_generate_key_ex ok");
     g_writeln("");
     e_len = BN_num_bytes(my_key->e);
+    e_len = ((e_len + 3) / 4) * 4;
     if (e_len > 0)
     {
-      e_data = (char*)g_malloc(e_len, 0);
+      e_data = (char*)g_malloc(e_len, 1);
       p = (unsigned char*)e_data;
       BN_bn2bin(my_key->e, p);
       g_writeln("public exponent size %d bytes", e_len);
@@ -92,16 +128,20 @@ key_gen(void)
       g_writeln("");
     }
     n_len = BN_num_bytes(my_key->n);
+    n_len = ((n_len + 3) / 4) * 4;
     if (n_len > 0)
     {
-      n_data = (char*)g_malloc(n_len, 0);
+      n_data = (char*)g_malloc(n_len, 1);
       p = (unsigned char*)n_data;
       BN_bn2bin(my_key->n, p);
       g_writeln("public modulus size %d bytes", n_len);
       g_hexdump(n_data, n_len);
       g_writeln("");
+      sign_data = (char*)g_malloc(n_len, 1);
+      sign_len = n_len;
     }
     d_len = BN_num_bytes(my_key->d);
+    d_len = ((d_len + 3) / 4) * 4;
     if (d_len > 0)
     {
       d_data = (char*)g_malloc(d_len, 0);
@@ -111,10 +151,21 @@ key_gen(void)
       g_hexdump(d_data, d_len);
       g_writeln("");
     }
+    error = sign_key(e_data, e_len, n_data, n_len, d_data, d_len,
+                     sign_data, sign_len);
+    if (error != 0)
+    {
+      g_writeln("error %d in key_gen, sign_key", error);
+    }
   }
-  else
+  if (error == 0)
   {
-    g_writeln("error %d in key_gen, RSA_generate_key_ex", error);
+    error = save_all(e_data, e_len, n_data, n_len, d_data, d_len,
+                     sign_data, sign_len);
+    if (error != 0)
+    {
+      g_writeln("error %d in key_gen, save_all", error);
+    }
   }
   BN_free(my_e);
   RSA_free(my_key);
@@ -122,6 +173,7 @@ key_gen(void)
   g_free(e_data);
   g_free(n_data);
   g_free(d_data);
+  g_free(sign_data);
   return error;
 }
 
