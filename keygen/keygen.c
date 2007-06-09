@@ -37,6 +37,22 @@
 static char g_rev_exponent[4] = { 0x00, 0x01, 0x00, 0x01 };
 
 /*****************************************************************************/
+static void
+reverse(char* p, int len)
+{
+  int i;
+  int j;
+  char temp;
+
+  for (i = 0, j = len - 1; i < j; i++, j--)
+  {
+    temp = p[i];
+    p[i] = p[j];
+    p[j] = temp;
+  }
+}
+
+/*****************************************************************************/
 static int APP_CC
 out_params(void)
 {
@@ -145,6 +161,7 @@ key_gen(void)
   int d_len;
   int sign_len;
   int error;
+  int offset;
   BN_CTX* my_ctx;
   RSA* my_key;
   BIGNUM* my_e;
@@ -181,23 +198,27 @@ key_gen(void)
     g_writeln("RSA_generate_key_ex ok");
     g_writeln("");
     e_len = BN_num_bytes(my_key->e);
-    e_len = ((e_len + 3) / 4) * 4;
     if (e_len > 0)
     {
       e_data = (char*)g_malloc(e_len, 1);
-      p = (unsigned char*)e_data;
+      offset = (((e_len + 3) / 4) * 4) - e_len;
+      e_len = e_len + offset;
+      p = (unsigned char*)(e_data + offset);
       BN_bn2bin(my_key->e, p);
+      reverse(e_data, e_len);
       g_writeln("public exponent size %d bytes", e_len);
       g_hexdump(e_data, e_len);
       g_writeln("");
     }
     n_len = BN_num_bytes(my_key->n);
-    n_len = ((n_len + 3) / 4) * 4;
     if (n_len > 0)
     {
       n_data = (char*)g_malloc(n_len, 1);
-      p = (unsigned char*)n_data;
+      offset = (((n_len + 3) / 4) * 4) - n_len;
+      n_len = n_len + offset;
+      p = (unsigned char*)(n_data + offset);
       BN_bn2bin(my_key->n, p);
+      reverse(n_data, n_len);
       g_writeln("public modulus size %d bytes", n_len);
       g_hexdump(n_data, n_len);
       g_writeln("");
@@ -206,12 +227,14 @@ key_gen(void)
       sign_len = n_len;
     }
     d_len = BN_num_bytes(my_key->d);
-    d_len = ((d_len + 3) / 4) * 4;
     if (d_len > 0)
     {
       d_data = (char*)g_malloc(d_len, 0);
-      p = (unsigned char*)d_data;
+      offset = (((d_len + 3) / 4) * 4) - d_len;
+      d_len = d_len + offset;
+      p = (unsigned char*)(d_data + offset);
       BN_bn2bin(my_key->d, p);
+      reverse(d_data, d_len);
       g_writeln("private exponent size %d bytes", d_len);
       g_hexdump(d_data, d_len);
       g_writeln("");
