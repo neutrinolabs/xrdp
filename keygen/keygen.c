@@ -82,48 +82,7 @@ static char g_ppk_d[108] =
   0x00, 0x00, 0x00, 0x00
 };
 
-static char g_test_e[4] =
-{
-  0x01, 0x00, 0x01, 0x00
-};
-
-static char g_test_n[64] =
-{
-  0x67, 0xab, 0x0e, 0x6a, 0x9f, 0xd6, 0x2b, 0xa3,
-  0x32, 0x2f, 0x41, 0xd1, 0xce, 0xee, 0x61, 0xc3,
-  0x76, 0x0b, 0x26, 0x11, 0x70, 0x48, 0x8a, 0x8d,
-  0x23, 0x81, 0x95, 0xa0, 0x39, 0xf7, 0x5b, 0xaa,
-  0x3e, 0xf1, 0xed, 0xb8, 0xc4, 0xee, 0xce, 0x5f,
-  0x6a, 0xf5, 0x43, 0xce, 0x5f, 0x60, 0xca, 0x6c,
-  0x06, 0x75, 0xae, 0xc0, 0xd6, 0xa4, 0x0c, 0x92,
-  0xa4, 0xc6, 0x75, 0xea, 0x64, 0xb2, 0x50, 0x5b
-};
-
-static char g_test_sign[64] =
-{
-  0x6a, 0x41, 0xb1, 0x43, 0xcf, 0x47, 0x6f, 0xf1,
-  0xe6, 0xcc, 0xa1, 0x72, 0x97, 0xd9, 0xe1, 0x85,
-  0x15, 0xb3, 0xc2, 0x39, 0xa0, 0xa6, 0x26, 0x1a,
-  0xb6, 0x49, 0x01, 0xfa, 0xa6, 0xda, 0x60, 0xd7,
-  0x45, 0xf7, 0x2c, 0xee, 0xe4, 0x8e, 0x64, 0x2e,
-  0x37, 0x49, 0xf0, 0x4c, 0x94, 0x6f, 0x08, 0xf5,
-  0x63, 0x4c, 0x56, 0x29, 0x55, 0x5a, 0x63, 0x41,
-  0x2c, 0x20, 0x65, 0x95, 0x99, 0xb1, 0x15, 0x7c
-};
-
-static char g_test_d[64] =
-{
-  0x41, 0x93, 0x05, 0xB1, 0xF4, 0x38, 0xFC, 0x47,
-  0x88, 0xC4, 0x7F, 0x83, 0x8C, 0xEC, 0x90, 0xDA,
-  0x0C, 0x8A, 0xB5, 0xAE, 0x61, 0x32, 0x72, 0xF5,
-  0x2B, 0xD1, 0x7B, 0x5F, 0x44, 0xC0, 0x7C, 0xBD,
-  0x8A, 0x35, 0xFA, 0xAE, 0x30, 0xF6, 0xC4, 0x6B,
-  0x55, 0xA7, 0x65, 0xEF, 0xF4, 0xB2, 0xAB, 0x18,
-  0x4E, 0xAA, 0xE6, 0xDC, 0x71, 0x17, 0x3B, 0x4C,
-  0xC2, 0x15, 0x4C, 0xF7, 0x81, 0xBB, 0xF0, 0x03
-};
-
-static char g_testa[22 * 8] =
+static char g_testkey[176] =
 {
   0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
   0x01, 0x00, 0x00, 0x00, 0x06, 0x00, 0x5c, 0x00,
@@ -168,10 +127,69 @@ reverse(char* p, int len)
 
 /*****************************************************************************/
 static int APP_CC
+ssl_mod_exp(char* out, int out_len, char* in, int in_len,
+            char* mod, int mod_len, char* exp, int exp_len)
+{
+  BN_CTX* ctx;
+  BIGNUM lmod;
+  BIGNUM lexp;
+  BIGNUM lin;
+  BIGNUM lout;
+  int rv;
+  char* l_out;
+  char* l_in;
+  char* l_mod;
+  char* l_exp;
+
+  l_out = (char*)g_malloc(out_len, 1);
+  l_in = (char*)g_malloc(in_len, 1);
+  l_mod = (char*)g_malloc(mod_len, 1);
+  l_exp = (char*)g_malloc(exp_len, 1);
+  g_memcpy(l_in, in, in_len);
+  g_memcpy(l_mod, mod, mod_len);
+  g_memcpy(l_exp, exp, exp_len);
+  reverse(l_in, in_len);
+  reverse(l_mod, mod_len);
+  reverse(l_exp, exp_len);
+  ctx = BN_CTX_new();
+  BN_init(&lmod);
+  BN_init(&lexp);
+  BN_init(&lin);
+  BN_init(&lout);
+  BN_bin2bn((unsigned char*)l_mod, mod_len, &lmod);
+  BN_bin2bn((unsigned char*)l_exp, exp_len, &lexp);
+  BN_bin2bn((unsigned char*)l_in, in_len, &lin);
+  BN_mod_exp(&lout, &lin, &lexp, &lmod, ctx);
+  rv = BN_bn2bin(&lout, (unsigned char*)l_out);
+  if (rv <= out_len)
+  {
+    reverse(l_out, rv);
+    g_memcpy(out, l_out, out_len);
+  }
+  else
+  {
+    rv = 0;
+  }
+  BN_free(&lin);
+  BN_free(&lout);
+  BN_free(&lexp);
+  BN_free(&lmod);
+  BN_CTX_free(ctx);
+  g_free(l_out);
+  g_free(l_in);
+  g_free(l_mod);
+  g_free(l_exp);
+  return rv;
+}
+
+/*****************************************************************************/
+static int APP_CC
 out_params(void)
 {
   g_writeln("");
-  g_writeln("key gen utility example './keygen xrdp'");
+  g_writeln("key gen utility examples");
+  g_writeln("  './keygen xrdp'");
+  g_writeln("  './keygen test'");
   g_writeln("");
   return 0;
 }
@@ -181,8 +199,25 @@ static int APP_CC
 sign_key(char* e_data, int e_len, char* n_data, int n_len,
          char* d_data, int d_len, char* sign_data, int sign_len)
 {
-  g_writeln("todo sign here");
-  g_writeln("");
+  char key[176];
+  char md5_final[64];
+  MD5_CTX md5;
+
+  if ((e_len != 4) || (n_len != 64) || (sign_len != 64))
+  {
+    return 1;
+  }
+  g_memcpy(key, g_testkey, 176);
+  g_memcpy(key + 32, e_data, 4);
+  g_memcpy(key + 36, n_data, 64);
+  MD5_Init(&md5);
+  MD5_Update(&md5, (unsigned char*)key, 108);
+  g_memset(md5_final, 0xff, 64);
+  MD5_Final((unsigned char*)md5_final, &md5);
+  md5_final[16] = 0;
+  md5_final[62] = 1;
+  md5_final[63] = 0;
+  ssl_mod_exp(sign_data, 64, md5_final, 64, g_ppk_n, 64, g_ppk_d, 64);
   return 0;
 }
 
@@ -359,6 +394,12 @@ key_gen(void)
     {
       g_writeln("error %d in key_gen, sign_key", error);
     }
+    else
+    {
+      g_writeln("signature size %d bytes", sign_len);
+      g_hexdump(sign_data, sign_len);
+      g_writeln("");
+    }
   }
   if (error == 0)
   {
@@ -380,89 +421,37 @@ key_gen(void)
 }
 
 /*****************************************************************************/
-int APP_CC
-ssl_mod_exp(char* out, int out_len, char* in, int in_len,
-            char* mod, int mod_len, char* exp, int exp_len)
-{
-  BN_CTX* ctx;
-  BIGNUM lmod;
-  BIGNUM lexp;
-  BIGNUM lin;
-  BIGNUM lout;
-  int rv;
-  char* l_out;
-  char* l_in;
-  char* l_mod;
-  char* l_exp;
-
-  l_out = (char*)g_malloc(out_len, 1);
-  l_in = (char*)g_malloc(in_len, 1);
-  l_mod = (char*)g_malloc(mod_len, 1);
-  l_exp = (char*)g_malloc(exp_len, 1);
-  g_memcpy(l_in, in, in_len);
-  g_memcpy(l_mod, mod, mod_len);
-  g_memcpy(l_exp, exp, exp_len);
-  reverse(l_in, in_len);
-  reverse(l_mod, mod_len);
-  reverse(l_exp, exp_len);
-  ctx = BN_CTX_new();
-  BN_init(&lmod);
-  BN_init(&lexp);
-  BN_init(&lin);
-  BN_init(&lout);
-  BN_bin2bn((unsigned char*)l_mod, mod_len, &lmod);
-  BN_bin2bn((unsigned char*)l_exp, exp_len, &lexp);
-  BN_bin2bn((unsigned char*)l_in, in_len, &lin);
-  BN_mod_exp(&lout, &lin, &lexp, &lmod, ctx);
-  rv = BN_bn2bin(&lout, (unsigned char*)l_out);
-  if (rv <= out_len)
-  {
-    reverse(l_out, rv);
-    g_memcpy(out, l_out, out_len);
-  }
-  else
-  {
-    rv = 0;
-  }
-  BN_free(&lin);
-  BN_free(&lout);
-  BN_free(&lexp);
-  BN_free(&lmod);
-  BN_CTX_free(ctx);
-  g_free(l_out);
-  g_free(l_in);
-  g_free(l_mod);
-  g_free(l_exp);
-  return rv;
-}
-
-/*****************************************************************************/
 static int APP_CC
 key_test(void)
 {
-  char md5_final[16];
+  char md5_final[64];
   char sig[64];
-  unsigned char* p;
   MD5_CTX md5;
 
   g_writeln("original key is:");
-  g_hexdump(g_testa, 176);
+  g_hexdump(g_testkey, 176);
   g_writeln("original exponent is:");
-  g_hexdump(g_testa + 32, 4);
+  g_hexdump(g_testkey + 32, 4);
   g_writeln("original modulus is:");
-  g_hexdump(g_testa + 36, 64);
+  g_hexdump(g_testkey + 36, 64);
   g_writeln("original signature is:");
-  g_hexdump(g_testa + 112, 64);
+  g_hexdump(g_testkey + 112, 64);
   MD5_Init(&md5);
-  p = (unsigned char*)g_testa;
-  MD5_Update(&md5, p, 108);
-  p = (unsigned char*)md5_final;
-  MD5_Final(p, &md5);
+  MD5_Update(&md5, (unsigned char*)g_testkey, 108);
+  g_memset(md5_final, 0xff, 64);
+  MD5_Final((unsigned char*)md5_final, &md5);
   g_writeln("md5 hash of first 108 bytes of this key is:");
   g_hexdump(md5_final, 16);
-  ssl_mod_exp(sig, 64, md5_final, 16, g_ppk_n, 64, g_ppk_d, 64);
-  g_writeln("produced signature(fix this, it should match original signature above) is:");
+  md5_final[16] = 0;
+  md5_final[62] = 1;
+  md5_final[63] = 0;
+  ssl_mod_exp(sig, 64, md5_final, 64, g_ppk_n, 64, g_ppk_d, 64);
+  g_writeln("produced signature(this should match original signature above) is:");
   g_hexdump(sig, 64);
+  g_memset(md5_final, 0, 64);
+  ssl_mod_exp(md5_final, 64, g_testkey + 112, 64, g_ppk_n, 64, g_ppk_e, 4);
+  g_writeln("decrypted hash of first 108 bytes of this key is:");
+  g_hexdump(md5_final, 64);
   return 0;
 }
 
