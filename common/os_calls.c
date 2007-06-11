@@ -226,40 +226,72 @@ g_getchar(void)
 int APP_CC
 g_tcp_set_no_delay(int sck)
 {
-  int i;
-
-  i = 1;
 #if defined(_WIN32)
-  setsockopt(sck, IPPROTO_TCP, TCP_NODELAY, (char*)&i, sizeof(i));
+  int option_value;
+  int option_len;
 #else
-  setsockopt(sck, IPPROTO_TCP, TCP_NODELAY, (void*)&i, sizeof(i));
+  int option_value;
+  unsigned int option_len;
 #endif
+
+  option_value = 1;
+  option_len = sizeof(option_value);
+  setsockopt(sck, IPPROTO_TCP, TCP_NODELAY, (char*)&option_value,
+             option_len);
+  if (getsockopt(sck, SOL_SOCKET, SO_SNDBUF, (char*)&option_value,
+                 &option_len) == 0)
+  {
+    if (option_value < (1024 * 32))
+    {
+      option_value = 1024 * 32;
+      option_len = sizeof(option_value);
+      setsockopt(sck, SOL_SOCKET, SO_SNDBUF, (char*)&option_value,
+                 option_len);
+    }
+  }
   return 0;
 }
 
 /*****************************************************************************/
+/* returns a newly created socket or -1 on error */
 int APP_CC
 g_tcp_socket(void)
 {
-  int rv;
-  int i;
-
-  rv = socket(PF_INET, SOCK_STREAM, 0);
 #if defined(_WIN32)
-  i = 1;
-  setsockopt(rv, IPPROTO_TCP, TCP_NODELAY, (char*)&i, sizeof(i));
-  i = 1;
-  setsockopt(rv, SOL_SOCKET, SO_REUSEADDR, (char*)&i, sizeof(i));
-  i = 8192 * 2;
-  setsockopt(rv, SOL_SOCKET, SO_SNDBUF, (char*)&i, sizeof(i));
+  int rv;
+  int option_value;
+  int option_len;
 #else
-  i = 1;
-  setsockopt(rv, IPPROTO_TCP, TCP_NODELAY, (void*)&i, sizeof(i));
-  i = 1;
-  setsockopt(rv, SOL_SOCKET, SO_REUSEADDR, (void*)&i, sizeof(i));
-  i = 8192 * 2;
-  setsockopt(rv, SOL_SOCKET, SO_SNDBUF, (void*)&i, sizeof(i));
+  int rv;
+  int option_value;
+  unsigned int option_len;
 #endif
+
+  /* in win32 a socket is an unsigned int, in linux, its an int */
+  rv = (int)socket(PF_INET, SOCK_STREAM, 0);
+  if (rv < 0)
+  {
+    return -1;
+  }
+  option_value = 1;
+  option_len = sizeof(option_value);
+  setsockopt(rv, IPPROTO_TCP, TCP_NODELAY, (char*)&option_value,
+             option_len);
+  option_value = 1;
+  setsockopt(rv, SOL_SOCKET, SO_REUSEADDR, (char*)&option_value,
+             option_len);
+
+  if (getsockopt(rv, SOL_SOCKET, SO_SNDBUF, (char*)&option_value,
+                 &option_len) == 0)
+  {
+    if (option_value < (1024 * 32))
+    {
+      option_value = 1024 * 32;
+      option_len = sizeof(option_value);
+      setsockopt(rv, SOL_SOCKET, SO_SNDBUF, (char*)&option_value,
+                 option_len);
+    }
+  }
   return rv;
 }
 
@@ -291,6 +323,7 @@ g_tcp_close(int sck)
 }
 
 /*****************************************************************************/
+/* returns error, zero is good */
 int APP_CC
 g_tcp_connect(int sck, const char* address, const char* port)
 {
@@ -339,6 +372,7 @@ g_tcp_set_non_blocking(int sck)
 }
 
 /*****************************************************************************/
+/* returns error, zero is good */
 int APP_CC
 g_tcp_bind(int sck, char* port)
 {
@@ -368,6 +402,7 @@ g_tcp_local_bind(int sck, char* port)
 }
 
 /*****************************************************************************/
+/* returns error, zero is good */
 int APP_CC
 g_tcp_listen(int sck)
 {
@@ -1166,7 +1201,7 @@ g_initgroups(const char* user, int gid)
   return initgroups(user ,gid);
 #endif
 }
-  
+
 /*****************************************************************************/
 int APP_CC
 g_setuid(int pid)
@@ -1361,7 +1396,9 @@ g_check_user_in_group(const char* username, int gid, int* ok)
 
 /*****************************************************************************/
 /* returns the time since the Epoch (00:00:00 UTC, January 1, 1970),
-   measured in seconds. */
+   measured in seconds.
+   for windows, returns the number of seconds since the machine was
+   started. */
 int APP_CC
 g_time1(void)
 {
