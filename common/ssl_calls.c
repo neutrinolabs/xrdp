@@ -25,6 +25,7 @@
 #include <openssl/md5.h>
 #include <openssl/sha.h>
 #include <openssl/bn.h>
+#include <openssl/rsa.h>
 
 #include "os_calls.h"
 #include "arch.h"
@@ -36,7 +37,7 @@
 void* APP_CC
 ssl_rc4_info_create(void)
 {
-  return g_malloc(sizeof(RC4_KEY), 1);;
+  return g_malloc(sizeof(RC4_KEY), 1);
 }
 
 /*****************************************************************************/
@@ -157,7 +158,7 @@ ssl_reverse_it(char* p, int len)
 /*****************************************************************************/
 int APP_CC
 ssl_mod_exp(char* out, int out_len, char* in, int in_len,
-          char* mod, int mod_len, char* exp, int exp_len)
+            char* mod, int mod_len, char* exp, int exp_len)
 {
   BN_CTX* ctx;
   BIGNUM lmod;
@@ -209,4 +210,66 @@ ssl_mod_exp(char* out, int out_len, char* in, int in_len,
   g_free(l_mod);
   g_free(l_exp);
   return rv;
+}
+
+/*****************************************************************************/
+/* returns error
+   generates a new rsa key
+   exp is passed in and mod and pri are passed out */
+int APP_CC
+ssl_gen_key_xrdp1(int key_size_in_bits, char* exp, int exp_len,
+                  char* mod, int mod_len, char* pri, int pri_len)
+{
+  BIGNUM* my_e;
+  RSA* my_key;
+  char* lexp;
+  char* lmod;
+  char* lpri;
+  int error;
+  int len;
+
+  if ((exp_len != 4) || (mod_len != 64) || (pri_len != 64))
+  {
+    return 1;
+  }
+  lexp = (char*)g_malloc(exp_len, 0);
+  lmod = (char*)g_malloc(mod_len, 0);
+  lpri = (char*)g_malloc(pri_len, 0);
+  g_memcpy(lexp, exp, exp_len);
+  ssl_reverse_it(lexp, exp_len);
+  my_e = BN_new();
+  BN_bin2bn((unsigned char*)lexp, exp_len, my_e);
+  my_key = RSA_new();
+  error = RSA_generate_key_ex(my_key, key_size_in_bits, my_e, 0) == 0;
+  if (error == 0)
+  {
+    len = BN_num_bytes(my_key->n);
+    error = len != mod_len;
+  }
+  if (error == 0)
+  {
+    BN_bn2bin(my_key->n, (unsigned char*)lmod);
+    ssl_reverse_it(lmod, mod_len);
+  }
+  if (error == 0)
+  {
+    len = BN_num_bytes(my_key->d);
+    error = len != pri_len;
+  }
+  if (error == 0)
+  {
+    BN_bn2bin(my_key->d, (unsigned char*)lpri);
+    ssl_reverse_it(lpri, pri_len);
+  }
+  if (error == 0)
+  {
+    g_memcpy(mod, lmod, mod_len);
+    g_memcpy(pri, lpri, pri_len);
+  }
+  BN_free(my_e);
+  RSA_free(my_key);
+  g_free(lexp);
+  g_free(lmod);
+  g_free(lpri);
+  return error;
 }
