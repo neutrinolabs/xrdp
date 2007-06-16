@@ -27,23 +27,15 @@
 
 */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <openssl/rc4.h>
-#include <openssl/md5.h>
-#include <openssl/sha.h>
-#include <openssl/bn.h>
-#include <openssl/x509v3.h>
-#include <openssl/rsa.h>
 #include "os_calls.h"
+#include "ssl_calls.h"
 #include "arch.h"
 
 #define MY_KEY_SIZE 512
 
-static char g_rev_exponent[4] =
+static char g_exponent[4] =
 {
-  0x00, 0x01, 0x00, 0x01
+  0x01, 0x00, 0x01, 0x00
 };
 
 static char g_ppk_e[4] =
@@ -110,79 +102,6 @@ static char g_testkey[176] =
 };
 
 /*****************************************************************************/
-static void
-reverse(char* p, int len)
-{
-  int i;
-  int j;
-  char temp;
-
-  for (i = 0, j = len - 1; i < j; i++, j--)
-  {
-    temp = p[i];
-    p[i] = p[j];
-    p[j] = temp;
-  }
-}
-
-/*****************************************************************************/
-static int APP_CC
-ssl_mod_exp(char* out, int out_len, char* in, int in_len,
-            char* mod, int mod_len, char* exp, int exp_len)
-{
-  BN_CTX* ctx;
-  BIGNUM lmod;
-  BIGNUM lexp;
-  BIGNUM lin;
-  BIGNUM lout;
-  int rv;
-  char* l_out;
-  char* l_in;
-  char* l_mod;
-  char* l_exp;
-
-  l_out = (char*)g_malloc(out_len, 1);
-  l_in = (char*)g_malloc(in_len, 1);
-  l_mod = (char*)g_malloc(mod_len, 1);
-  l_exp = (char*)g_malloc(exp_len, 1);
-  g_memcpy(l_in, in, in_len);
-  g_memcpy(l_mod, mod, mod_len);
-  g_memcpy(l_exp, exp, exp_len);
-  reverse(l_in, in_len);
-  reverse(l_mod, mod_len);
-  reverse(l_exp, exp_len);
-  ctx = BN_CTX_new();
-  BN_init(&lmod);
-  BN_init(&lexp);
-  BN_init(&lin);
-  BN_init(&lout);
-  BN_bin2bn((unsigned char*)l_mod, mod_len, &lmod);
-  BN_bin2bn((unsigned char*)l_exp, exp_len, &lexp);
-  BN_bin2bn((unsigned char*)l_in, in_len, &lin);
-  BN_mod_exp(&lout, &lin, &lexp, &lmod, ctx);
-  rv = BN_bn2bin(&lout, (unsigned char*)l_out);
-  if (rv <= out_len)
-  {
-    reverse(l_out, rv);
-    g_memcpy(out, l_out, out_len);
-  }
-  else
-  {
-    rv = 0;
-  }
-  BN_free(&lin);
-  BN_free(&lout);
-  BN_free(&lexp);
-  BN_free(&lmod);
-  BN_CTX_free(ctx);
-  g_free(l_out);
-  g_free(l_in);
-  g_free(l_mod);
-  g_free(l_exp);
-  return rv;
-}
-
-/*****************************************************************************/
 static int APP_CC
 out_params(void)
 {
@@ -199,25 +118,31 @@ static int APP_CC
 sign_key(char* e_data, int e_len, char* n_data, int n_len,
          char* d_data, int d_len, char* sign_data, int sign_len)
 {
-  char key[176];
-  char md5_final[64];
-  MD5_CTX md5;
+  char* key;
+  char* md5_final;
+  void* md5;
 
   if ((e_len != 4) || (n_len != 64) || (sign_len != 64))
   {
     return 1;
   }
+  key = (char*)g_malloc(176, 0);
+  md5_final = (char*)g_malloc(64, 0);
+  md5 = ssl_md5_info_create();
   g_memcpy(key, g_testkey, 176);
   g_memcpy(key + 32, e_data, 4);
   g_memcpy(key + 36, n_data, 64);
-  MD5_Init(&md5);
-  MD5_Update(&md5, (unsigned char*)key, 108);
+  ssl_md5_clear(md5);
+  ssl_md5_transform(md5, key, 108);
   g_memset(md5_final, 0xff, 64);
-  MD5_Final((unsigned char*)md5_final, &md5);
+  ssl_md5_complete(md5, md5_final);
   md5_final[16] = 0;
   md5_final[62] = 1;
   md5_final[63] = 0;
   ssl_mod_exp(sign_data, 64, md5_final, 64, g_ppk_n, 64, g_ppk_d, 64);
+  ssl_md5_info_delete(md5);
+  g_free(key);
+  g_free(md5_final);
   return 0;
 }
 
@@ -303,102 +228,42 @@ key_gen(void)
   char* n_data;
   char* d_data;
   char* sign_data;
-  unsigned char* p;
-  int len;
   int e_len;
   int n_len;
   int d_len;
   int sign_len;
   int error;
-  int offset;
-  BN_CTX* my_ctx;
-  RSA* my_key;
-  BIGNUM* my_e;
 
-  e_data = 0;
-  n_data = 0;
-  d_data = 0;
-  sign_data = 0;
-  e_len = 0;
-  n_len = 0;
-  d_len = 0;
-  sign_len = 0;
+  e_data = g_exponent;
+  n_data = (char*)g_malloc(64, 0);
+  d_data = (char*)g_malloc(64, 0);
+  sign_data = (char*)g_malloc(64, 0);
+  e_len = 4;
+  n_len = 64;
+  d_len = 64;
+  sign_len = 64;
   error = 0;
-  my_ctx = BN_CTX_new();
-  my_e = BN_new();
-  p = (unsigned char*)g_rev_exponent;
-  len = sizeof(g_rev_exponent);
-  BN_bin2bn(p, len, my_e);
-  my_key = RSA_new();
   g_writeln("");
   g_writeln("Generating %d bit rsa key...", MY_KEY_SIZE);
   g_writeln("");
   if (error == 0)
   {
-    /* RSA_generate_key_ex returns boolean */
-    error = RSA_generate_key_ex(my_key, MY_KEY_SIZE, my_e, 0) == 0;
+    error = ssl_gen_key_xrdp1(MY_KEY_SIZE, e_data, e_len, n_data, n_len,
+                              d_data, d_len);
     if (error != 0)
     {
-      g_writeln("error %d in key_gen, RSA_generate_key_ex", error);
+      g_writeln("error %d in key_gen, ssl_gen_key_xrdp1", error);
     }
   }
   if (error == 0)
   {
     g_writeln("RSA_generate_key_ex ok");
     g_writeln("");
-    e_len = BN_num_bytes(my_key->e);
-    if (e_len > 0)
-    {
-      e_data = (char*)g_malloc(e_len, 1);
-      offset = (((e_len + 3) / 4) * 4) - e_len;
-      e_len = e_len + offset;
-      p = (unsigned char*)(e_data + offset);
-      BN_bn2bin(my_key->e, p);
-      reverse(e_data, e_len);
-      g_writeln("public exponent size %d bytes", e_len);
-      g_hexdump(e_data, e_len);
-      g_writeln("");
-    }
-    n_len = BN_num_bytes(my_key->n);
-    if (n_len > 0)
-    {
-      n_data = (char*)g_malloc(n_len, 1);
-      offset = (((n_len + 3) / 4) * 4) - n_len;
-      n_len = n_len + offset;
-      p = (unsigned char*)(n_data + offset);
-      BN_bn2bin(my_key->n, p);
-      reverse(n_data, n_len);
-      g_writeln("public modulus size %d bytes", n_len);
-      g_hexdump(n_data, n_len);
-      g_writeln("");
-      /* signature is same size as public modulus */
-      sign_data = (char*)g_malloc(n_len, 1);
-      sign_len = n_len;
-    }
-    d_len = BN_num_bytes(my_key->d);
-    if (d_len > 0)
-    {
-      d_data = (char*)g_malloc(d_len, 0);
-      offset = (((d_len + 3) / 4) * 4) - d_len;
-      d_len = d_len + offset;
-      p = (unsigned char*)(d_data + offset);
-      BN_bn2bin(my_key->d, p);
-      reverse(d_data, d_len);
-      g_writeln("private exponent size %d bytes", d_len);
-      g_hexdump(d_data, d_len);
-      g_writeln("");
-    }
     error = sign_key(e_data, e_len, n_data, n_len, d_data, d_len,
                      sign_data, sign_len);
     if (error != 0)
     {
       g_writeln("error %d in key_gen, sign_key", error);
-    }
-    else
-    {
-      g_writeln("signature size %d bytes", sign_len);
-      g_hexdump(sign_data, sign_len);
-      g_writeln("");
     }
   }
   if (error == 0)
@@ -410,10 +275,6 @@ key_gen(void)
       g_writeln("error %d in key_gen, save_all", error);
     }
   }
-  BN_free(my_e);
-  RSA_free(my_key);
-  BN_CTX_free(my_ctx);
-  g_free(e_data);
   g_free(n_data);
   g_free(d_data);
   g_free(sign_data);
@@ -424,10 +285,13 @@ key_gen(void)
 static int APP_CC
 key_test(void)
 {
-  char md5_final[64];
-  char sig[64];
-  MD5_CTX md5;
+  char* md5_final;
+  char* sig;
+  void* md5;
 
+  md5_final = (char*)g_malloc(64, 0);
+  sig = (char*)g_malloc(64, 0);
+  md5 = ssl_md5_info_create();
   g_writeln("original key is:");
   g_hexdump(g_testkey, 176);
   g_writeln("original exponent is:");
@@ -436,22 +300,26 @@ key_test(void)
   g_hexdump(g_testkey + 36, 64);
   g_writeln("original signature is:");
   g_hexdump(g_testkey + 112, 64);
-  MD5_Init(&md5);
-  MD5_Update(&md5, (unsigned char*)g_testkey, 108);
+  ssl_md5_clear(md5);
+  ssl_md5_transform(md5, g_testkey, 108);
   g_memset(md5_final, 0xff, 64);
-  MD5_Final((unsigned char*)md5_final, &md5);
+  ssl_md5_complete(md5, md5_final);
   g_writeln("md5 hash of first 108 bytes of this key is:");
   g_hexdump(md5_final, 16);
   md5_final[16] = 0;
   md5_final[62] = 1;
   md5_final[63] = 0;
   ssl_mod_exp(sig, 64, md5_final, 64, g_ppk_n, 64, g_ppk_d, 64);
-  g_writeln("produced signature(this should match original signature above) is:");
+  g_writeln("produced signature(this should match original \
+signature above) is:");
   g_hexdump(sig, 64);
   g_memset(md5_final, 0, 64);
   ssl_mod_exp(md5_final, 64, g_testkey + 112, 64, g_ppk_n, 64, g_ppk_e, 4);
   g_writeln("decrypted hash of first 108 bytes of this key is:");
   g_hexdump(md5_final, 64);
+  ssl_md5_info_delete(md5);
+  g_free(md5_final);
+  g_free(sig);
   return 0;
 }
 

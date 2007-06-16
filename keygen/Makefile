@@ -1,6 +1,6 @@
 # libvnc makefile
 
-KEYGENOBJ = keygen.o os_calls.o
+KEYGENOBJ = keygen.o os_calls.o ssl_calls.o
 
 DEFINES =
 
@@ -20,3 +20,6 @@ clean:
 
 os_calls.o: ../common/os_calls.c
 	$(CC) $(C_OS_FLAGS) ../common/os_calls.c
+
+ssl_calls.o: ../common/ssl_calls.c
+	$(CC) $(C_OS_FLAGS) ../common/ssl_calls.c
