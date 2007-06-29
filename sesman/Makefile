@@ -1,5 +1,4 @@
 # sesman makefile
-LIBSCPOBJ = libscp_vX.o libscp_v0.o libscp_v1s.o
 
 SESMANOBJ = sesman.o config.o sig.o session.o env.o \
             os_calls.o d3des.o list.o file.o log.o access.o \
@@ -14,12 +13,11 @@ MANDIR = /usr/local/man
 DOCDIR = /usr/doc/xrdp
 
 DEFINES = -DSESMAN_CFG_FILE=\"$(CFGDIR)/sesman.ini\" \
-          -DSESMAN_PID_FILE=\"$(PIDDIR)/sesman.pid\" \
-          -DSESMAN_SESSVC_FILE=\"$(DESTDIR)/sessvc\" \
-	  -DDEBUG
+	  -DSESMAN_PID_FILE=\"$(PIDDIR)/sesman.pid\" \
+	  -DSESMAN_SESSVC_FILE=\"sessvc\"
 
 CFLAGS = -Wall -O2 -I../common -I/usr/include/nptl -I./libscp $(DEFINES)
-LDFLAGS = -L /usr/gnu/lib -I/usr/include/nptl -L/usr/lib/nptl -lpthread -ldl -Wl,-rpath,./libscp -L./libscp -lscp $(DEFINES)
+LDFLAGS = -L/usr/gnu/lib -L/usr/lib/nptl -L./libscp -Wl,-rpath,. -lpthread -ldl -lscp
 C_OS_FLAGS = $(CFLAGS) -c
 CC = gcc
 
