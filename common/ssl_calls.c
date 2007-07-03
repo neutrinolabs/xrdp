@@ -32,6 +32,7 @@
 #include "ssl_calls.h"
 
 #if defined(OPENSSL_VERSION_NUMBER) && (OPENSSL_VERSION_NUMBER >= 0x0090800f)
+#undef OLD_RSA_GEN1
 #else
 #define OLD_RSA_GEN1
 #endif
@@ -246,6 +247,7 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char* exp, int exp_len,
   BN_bin2bn((unsigned char*)lexp, exp_len, my_e);
   my_key = RSA_new();
 #if defined(OLD_RSA_GEN1)
+  g_writeln("openssl library old, RSA_generate_key_ex not right");
   error = 1;
 #else
   error = RSA_generate_key_ex(my_key, key_size_in_bits, my_e, 0) == 0;
