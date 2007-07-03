@@ -31,6 +31,11 @@
 #include "arch.h"
 #include "ssl_calls.h"
 
+#if defined(OPENSSL_VERSION_NUMBER) && (OPENSSL_VERSION_NUMBER >= 0x0090800f)
+#else
+#define OLD_RSA_GEN1
+#endif
+
 /* rc4 stuff */
 
 /*****************************************************************************/
@@ -240,7 +245,11 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char* exp, int exp_len,
   my_e = BN_new();
   BN_bin2bn((unsigned char*)lexp, exp_len, my_e);
   my_key = RSA_new();
+#if defined(OLD_RSA_GEN1)
+  error = 1;
+#else
   error = RSA_generate_key_ex(my_key, key_size_in_bits, my_e, 0) == 0;
+#endif
   if (error == 0)
   {
     len = BN_num_bytes(my_key->n);
