@@ -27,18 +27,18 @@ CC = gcc
 
 all: $(LIBSCPOBJ)
 	$(CC) $(LDFLAGS) -o $(LIBSCPFNAME) $(LIBSCPOBJ)
-	ln -s $(LIBSCPFNAME) $(LIBSCPLNAME)
+	ln -f -s $(LIBSCPFNAME) $(LIBSCPLNAME)
 
 clean:
 	rm -f $(LIBSCPOBJ) $(LIBSCPFNAME) $(LIBSCPLNAME)
 
 install:
 	install $(LIBSCPFNAME) $(DESTDIR)/$(LIBSCPFNAME)
-	ln -s $(LIBSCPFNAME) $(DESTDIR)/$(LIBSCPLNAME)
+	ln -f -s $(LIBSCPFNAME) $(DESTDIR)/$(LIBSCPLNAME)
 
 installdeb:
 	install $(LIBSCPFNAME) $(DESTDIRDEB)/usr/lib/xrdp/$(LIBSCPFNAME)
-	ln -s $(LIBSCPFNAME) $(DESTDIRDEB)/usr/lib/xrdp/$(LIBSCPLNAME)
+	ln -f -s $(LIBSCPFNAME) $(DESTDIRDEB)/usr/lib/xrdp/$(LIBSCPLNAME)
 
 os_calls.o: ../../common/os_calls.c
 	$(CC) $(C_OS_FLAGS) ../../common/os_calls.c
