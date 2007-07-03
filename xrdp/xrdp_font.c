@@ -79,7 +79,7 @@ xrdp_font_create(struct xrdp_wm* wm)
   self->wm = wm;
   make_stream(s);
   init_stream(s, 8192 * 2);
-  fd = g_file_open("Tahoma-10.fv1");
+  fd = g_file_open("sans-10.fv1");
   if (fd != -1)
   {
     b = g_file_read(fd, s->data, 8192 * 2);
