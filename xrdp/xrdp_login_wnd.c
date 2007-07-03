@@ -132,7 +132,7 @@ xrdp_wm_help_clicked(struct xrdp_bitmap* wnd)
   struct xrdp_bitmap* but;
 
   /* create help screen */
-  help = xrdp_bitmap_create(300, 300, wnd->wm->screen->bpp,
+  help = xrdp_bitmap_create(340, 300, wnd->wm->screen->bpp,
                             WND_TYPE_WND, wnd->wm);
   list_insert_item(wnd->wm->screen->child_list, 0, (long)help);
   help->parent = wnd->wm->screen;
@@ -149,7 +149,7 @@ xrdp_wm_help_clicked(struct xrdp_bitmap* wnd)
   list_insert_item(help->child_list, 0, (long)but);
   but->parent = help;
   but->owner = help;
-  but->left = 120;
+  but->left = 140;
   but->top = 260;
   but->id = 1;
   but->tab_stop = 1;
@@ -261,7 +261,7 @@ xrdp_wm_show_edits(struct xrdp_wm* self, struct xrdp_bitmap* combo)
       if (g_strncmp("ask", value, 3) == 0)
       {
         /* label */
-        b = xrdp_bitmap_create(60, 20, self->screen->bpp,
+        b = xrdp_bitmap_create(70, 20, self->screen->bpp,
                                WND_TYPE_LABEL, self);
         list_insert_item(self->login_window->child_list, insert_index,
                               (long)b);
@@ -281,7 +281,7 @@ xrdp_wm_show_edits(struct xrdp_wm* self, struct xrdp_bitmap* combo)
         insert_index++;
         b->parent = self->login_window;
         b->owner = self->login_window;
-        b->left = 220;
+        b->left = 230;
         b->top = 60 + 25 * count;
         b->id = 100 + 2 * count + 1;
         b->pointer = 1;
@@ -491,7 +491,7 @@ xrdp_login_wnd_create(struct xrdp_wm* self)
   list_add_item(self->login_window->child_list, (long)combo);
   combo->parent = self->login_window;
   combo->owner = self->login_window;
-  combo->left = 220;
+  combo->left = 230;
   combo->top = 35;
   combo->id = 6;
   combo->tab_stop = 1;
