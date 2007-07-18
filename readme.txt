@@ -7,9 +7,9 @@ Credits
 
   Mark from up 19.9 was the first to work with rdp server code.
 
-Tested with linux and i386.
+Tested with linux on i386, x64, sparc, and ppc.
 I've got it compiling and working in windows with borland free tools.
-I've got it compiling and working with linux on x64 processor
+Non of the sesman or Xserver stuff works in windows of course.
 
 xrdp directory is the main server code
 vnc directory is a simple vnc client module for xrdp
