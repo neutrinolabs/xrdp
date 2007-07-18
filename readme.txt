@@ -7,7 +7,6 @@ Credits
 
   Mark from up 19.9 was the first to work with rdp server code.
 
-To use this run make the ./xrdp, then connect with rdesktop or mstsc.
 Tested with linux and i386.
 I've got it compiling and working in windows with borland free tools.
 I've got it compiling and working with linux on x64 processor
