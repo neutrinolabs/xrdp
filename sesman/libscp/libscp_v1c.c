@@ -30,11 +30,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-static enum SCP_CLIENT_STATES_E _scp_v1c_check_response(struct SCP_CONNECTION* c, struct SCP_SESSION* s);
+static enum SCP_CLIENT_STATES_E
+_scp_v1c_check_response(struct SCP_CONNECTION* c, struct SCP_SESSION* s);
 
 /* client API */
 /* 001 */
-enum SCP_CLIENT_STATES_E scp_v1c_connect(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
+enum SCP_CLIENT_STATES_E
+scp_v1c_connect(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
 {
   tui8 sz;
   tui32 size;
@@ -42,14 +44,15 @@ enum SCP_CLIENT_STATES_E scp_v1c_connect(struct SCP_CONNECTION* c, struct SCP_SE
   init_stream(c->out_s, c->out_s->size);
   init_stream(c->in_s, c->in_s->size);
 
-  size=19+17+4+ g_strlen(s->hostname) + g_strlen(s->username) + g_strlen(s->password);
-  if (s->addr_type==SCP_ADDRESS_TYPE_IPV4)
+  size = 19 + 17 + 4 + g_strlen(s->hostname) + g_strlen(s->username) +
+         g_strlen(s->password);
+  if (s->addr_type == SCP_ADDRESS_TYPE_IPV4)
   {
-    size=size+4;
+    size = size + 4;
   }
   else
   {
-    size=size+16;
+    size = size + 16;
   }
 
   /* sending request */
@@ -69,7 +72,7 @@ enum SCP_CLIENT_STATES_E scp_v1c_connect(struct SCP_CONNECTION* c, struct SCP_SE
   out_uint8p(c->out_s, s->locale, 17);
   out_uint8(c->out_s, s->addr_type);
 
-  if (s->addr_type==SCP_ADDRESS_TYPE_IPV4)
+  if (s->addr_type == SCP_ADDRESS_TYPE_IPV4)
   {
     out_uint32_be(c->out_s, s->ipv4addr);
   }
@@ -78,17 +81,17 @@ enum SCP_CLIENT_STATES_E scp_v1c_connect(struct SCP_CONNECTION* c, struct SCP_SE
     #warning ipv6 address needed
   }
 
-  sz=g_strlen(s->hostname);
+  sz = g_strlen(s->hostname);
   out_uint8(c->out_s, sz);
   out_uint8p(c->out_s, s->hostname, sz);
-  sz=g_strlen(s->username);
+  sz = g_strlen(s->username);
   out_uint8(c->out_s, sz);
   out_uint8p(c->out_s, s->username, sz);
-  sz=g_strlen(s->password);
+  sz = g_strlen(s->password);
   out_uint8(c->out_s, sz);
   out_uint8p(c->out_s, s->password, sz);
 
-  if (0!=scp_tcp_force_send(c->in_sck, c->out_s->data, size))
+  if (0 != scp_tcp_force_send(c->in_sck, c->out_s->data, size))
   {
     return SCP_CLIENT_STATE_NETWORK_ERR;
   }
@@ -98,7 +101,8 @@ enum SCP_CLIENT_STATES_E scp_v1c_connect(struct SCP_CONNECTION* c, struct SCP_SE
 }
 
 /* 004 */
-enum SCP_CLIENT_STATES_E scp_v1c_resend_credentials(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
+enum SCP_CLIENT_STATES_E
+scp_v1c_resend_credentials(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
 {
   tui8 sz;
   tui32 size;
@@ -106,7 +110,7 @@ enum SCP_CLIENT_STATES_E scp_v1c_resend_credentials(struct SCP_CONNECTION* c, st
   init_stream(c->out_s, c->out_s->size);
   init_stream(c->in_s, c->in_s->size);
 
-  size=12+2+g_strlen(s->username)+g_strlen(s->password);
+  size = 12 + 2 + g_strlen(s->username) + g_strlen(s->password);
 
   /* sending request */
   /* header */
@@ -116,14 +120,14 @@ enum SCP_CLIENT_STATES_E scp_v1c_resend_credentials(struct SCP_CONNECTION* c, st
   out_uint16_be(c->out_s, 4);
 
   /* body */
-  sz=g_strlen(s->username);
+  sz = g_strlen(s->username);
   out_uint8(c->out_s, sz);
   out_uint8p(c->out_s, s->username, sz);
-  sz=g_strlen(s->password);
+  sz = g_strlen(s->password);
   out_uint8(c->out_s, sz);
   out_uint8p(c->out_s, s->password, sz);
 
-  if (0!=scp_tcp_force_send(c->in_sck, c->out_s->data, size))
+  if (0 != scp_tcp_force_send(c->in_sck, c->out_s->data, size))
   {
     return SCP_CLIENT_STATE_NETWORK_ERR;
   }
@@ -132,24 +136,29 @@ enum SCP_CLIENT_STATES_E scp_v1c_resend_credentials(struct SCP_CONNECTION* c, st
   return _scp_v1c_check_response(c, s);
 }
 
-/* 021 */ enum SCP_CLIENT_STATES_E scp_v1c_pwd_change(struct SCP_CONNECTION* c, char* newpass);
-/* 022 */ enum SCP_CLIENT_STATES_E scp_v1c_pwd_change_cancel(struct SCP_CONNECTION* c);
+/* 021 */
+enum SCP_CLIENT_STATES_E
+scp_v1c_pwd_change(struct SCP_CONNECTION* c, char* newpass);
+/* 022 */
+enum SCP_CLIENT_STATES_E
+scp_v1c_pwd_change_cancel(struct SCP_CONNECTION* c);
 
 /* 041 */
 enum SCP_CLIENT_STATES_E
-scp_v1c_get_session_list(struct SCP_CONNECTION* c, int* scount, struct SCP_DISCONNECTED_SESSION** s)
+scp_v1c_get_session_list(struct SCP_CONNECTION* c, int* scount,
+                         struct SCP_DISCONNECTED_SESSION** s)
 {
-  tui32 version=1;
-  tui32 size=12;
-  tui16 cmd=41;
-  tui32 sescnt=0;     /* total session number */
-  tui32 sestmp=0;     /* additional total session number */
-  tui8 pktcnt=0;     /* packet session count */
-  tui32 totalcnt=0;   /* session counter */
-  tui8 continued=0;  /* continue flag */
-  int firstpkt=1;        /* "first packet" flag */
+  tui32 version = 1;
+  tui32 size = 12;
+  tui16 cmd = 41;
+  tui32 sescnt = 0;    /* total session number */
+  tui32 sestmp = 0;    /* additional total session number */
+  tui8 pktcnt = 0;     /* packet session count */
+  tui32 totalcnt = 0;  /* session counter */
+  tui8 continued = 0;  /* continue flag */
+  int firstpkt = 1;    /* "first packet" flag */
   int idx;
-  struct SCP_DISCONNECTED_SESSION* ds=0;
+  struct SCP_DISCONNECTED_SESSION* ds = 0;
 
   init_stream(c->out_s, c->out_s->size);
 
@@ -159,7 +168,7 @@ scp_v1c_get_session_list(struct SCP_CONNECTION* c, int* scount, struct SCP_DISCO
   out_uint16_be(c->out_s, SCP_COMMAND_SET_DEFAULT); /* cmdset  */
   out_uint16_be(c->out_s, cmd);                     /* cmd     */
 
-  if (0!=scp_tcp_force_send(c->in_sck, c->out_s->data, size))
+  if (0 != scp_tcp_force_send(c->in_sck, c->out_s->data, size))
   {
     return SCP_CLIENT_STATE_NETWORK_ERR;
   }
@@ -168,37 +177,37 @@ scp_v1c_get_session_list(struct SCP_CONNECTION* c, int* scount, struct SCP_DISCO
   {
     /* then we wait for server response */
     init_stream(c->in_s, c->in_s->size);
-    if (0!=scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))
+    if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))
     {
       return SCP_CLIENT_STATE_NETWORK_ERR;
     }
 
     in_uint32_be(c->in_s, version);
-    if (version!=1)
+    if (version != 1)
     {
       return SCP_CLIENT_STATE_VERSION_ERR;
     }
 
     in_uint32_be(c->in_s, size);
-    if (size<12)
+    if (size < 12)
     {
       return SCP_CLIENT_STATE_SIZE_ERR;
     }
 
     init_stream(c->in_s, c->in_s->size);
-    if (0!=scp_tcp_force_recv(c->in_sck, c->in_s->data, size-8))
+    if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, size - 8))
     {
       return SCP_CLIENT_STATE_NETWORK_ERR;
     }
 
     in_uint16_be(c->in_s, cmd);
-    if (cmd!=SCP_COMMAND_SET_DEFAULT)
+    if (cmd != SCP_COMMAND_SET_DEFAULT)
     {
       return SCP_CLIENT_STATE_SEQUENCE_ERR;
     }
 
     in_uint16_be(c->in_s, cmd);
-    if (cmd!=42)
+    if (cmd != 42)
     {
       return SCP_CLIENT_STATE_SEQUENCE_ERR;
     }
@@ -209,7 +218,7 @@ scp_v1c_get_session_list(struct SCP_CONNECTION* c, int* scount, struct SCP_DISCO
       in_uint32_be(c->in_s, sescnt);
       sestmp = sescnt;
 
-      ds = g_malloc(sizeof(struct SCP_DISCONNECTED_SESSION)*sescnt, 0);
+      ds = g_malloc(sizeof(struct SCP_DISCONNECTED_SESSION) * sescnt, 0);
       if (ds == 0)
       {
         return SCP_CLIENT_STATE_INTERNAL_ERR;
@@ -222,7 +231,7 @@ scp_v1c_get_session_list(struct SCP_CONNECTION* c, int* scount, struct SCP_DISCO
     in_uint8(c->in_s, continued);
     in_uint8(c->in_s, pktcnt);
 
-    for (idx=0; idx<pktcnt; idx++)
+    for (idx = 0; idx < pktcnt; idx++)
     {
       in_uint32_be(c->in_s, (ds[totalcnt]).SID); /* session id */
       in_uint8(c->in_s, (ds[totalcnt]).type);
@@ -247,7 +256,8 @@ scp_v1c_get_session_list(struct SCP_CONNECTION* c, int* scount, struct SCP_DISCO
 
 /* 043 */
 enum SCP_CLIENT_STATES_E
-scp_v1c_select_session(struct SCP_CONNECTION* c, struct SCP_SESSION* s, SCP_SID sid)
+scp_v1c_select_session(struct SCP_CONNECTION* c, struct SCP_SESSION* s,
+                       SCP_SID sid)
 {
   tui32 version = 1;
   tui32 size = 16;
@@ -263,33 +273,33 @@ scp_v1c_select_session(struct SCP_CONNECTION* c, struct SCP_SESSION* s, SCP_SID 
 
   out_uint32_be(c->out_s, sid);
 
-  if (0!=scp_tcp_force_send(c->in_sck, c->out_s->data, size))
+  if (0 != scp_tcp_force_send(c->in_sck, c->out_s->data, size))
   {
     return SCP_CLIENT_STATE_NETWORK_ERR;
   }
 
   /* waiting for response.... */
   init_stream(c->in_s, c->in_s->size);
-  if (0!=scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))
+  if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))
   {
     return SCP_CLIENT_STATE_NETWORK_ERR;
   }
 
   in_uint32_be(c->in_s, version);
-  if (version!=1)
+  if (version != 1)
   {
     return SCP_CLIENT_STATE_VERSION_ERR;
   }
 
   in_uint32_be(c->in_s, size);
-  if (size<12)
+  if (size < 12)
   {
     return SCP_CLIENT_STATE_SIZE_ERR;
   }
 
   init_stream(c->in_s, c->in_s->size);
   /* read the rest of the packet */
-  if (0!=scp_tcp_force_recv(c->in_sck, c->in_s->data, size-8))
+  if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, size - 8))
   {
     return SCP_CLIENT_STATE_NETWORK_ERR;
   }
@@ -330,7 +340,7 @@ scp_v1c_select_session_cancel(struct SCP_CONNECTION* c)
   out_uint16_be(c->out_s, SCP_COMMAND_SET_DEFAULT); /* cmdset  */
   out_uint16_be(c->out_s, cmd);                     /* cmd     */
 
-  if (0!=scp_tcp_force_send(c->in_sck, c->out_s->data, size))
+  if (0 != scp_tcp_force_send(c->in_sck, c->out_s->data, size))
   {
     return SCP_CLIENT_STATE_NETWORK_ERR;
   }
@@ -338,7 +348,8 @@ scp_v1c_select_session_cancel(struct SCP_CONNECTION* c)
   return SCP_CLIENT_STATE_END;
 }
 
-static enum SCP_CLIENT_STATES_E _scp_v1c_check_response(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
+static enum SCP_CLIENT_STATES_E
+_scp_v1c_check_response(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
 {
   tui32 version;
   tui32 size;
@@ -346,13 +357,13 @@ static enum SCP_CLIENT_STATES_E _scp_v1c_check_response(struct SCP_CONNECTION* c
   tui16 dim;
 
   init_stream(c->in_s, c->in_s->size);
-  if (0!=scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))
+  if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))
   {
     return SCP_CLIENT_STATE_NETWORK_ERR;
   }
 
   in_uint32_be(c->in_s, version);
-  if (version!=1)
+  if (version != 1)
   {
     return SCP_CLIENT_STATE_VERSION_ERR;
   }
@@ -361,88 +372,87 @@ static enum SCP_CLIENT_STATES_E _scp_v1c_check_response(struct SCP_CONNECTION* c
 
   init_stream(c->in_s, c->in_s->size);
   /* read the rest of the packet */
-  if (0!=scp_tcp_force_recv(c->in_sck, c->in_s->data, size-8))
+  if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, size - 8))
   {
     return SCP_CLIENT_STATE_NETWORK_ERR;
   }
 
   in_uint16_be(c->in_s, cmd);
-  if (cmd!=SCP_COMMAND_SET_DEFAULT)
+  if (cmd != SCP_COMMAND_SET_DEFAULT)
   {
     return SCP_CLIENT_STATE_SEQUENCE_ERR;
   }
 
   in_uint16_be(c->in_s, cmd)
-  if (cmd==2) /* connection denied */
+  if (cmd == 2) /* connection denied */
   {
     in_uint16_be(c->in_s, dim);
-    if (s->errstr!=0)
+    if (s->errstr != 0)
     {
       g_free(s->errstr);
     }
-    s->errstr=g_malloc(dim+1,0);
-    if (s->errstr==0)
+    s->errstr = g_malloc(dim + 1, 0);
+    if (s->errstr == 0)
     {
       return SCP_CLIENT_STATE_INTERNAL_ERR;
     }
     in_uint8a(c->in_s, s->errstr, dim);
-    (s->errstr)[dim]='\0';
+    (s->errstr)[dim] = '\0';
 
     return SCP_CLIENT_STATE_CONNECTION_DENIED;
   }
-  else if (cmd==3) /* resend usr/pwd */
+  else if (cmd == 3) /* resend usr/pwd */
   {
     in_uint16_be(c->in_s, dim);
-    if (s->errstr!=0)
+    if (s->errstr != 0)
     {
       g_free(s->errstr);
     }
-    s->errstr=g_malloc(dim+1,0);
-    if (s->errstr==0)
+    s->errstr = g_malloc(dim + 1, 0);
+    if (s->errstr == 0)
     {
       return SCP_CLIENT_STATE_INTERNAL_ERR;
     }
     in_uint8a(c->in_s, s->errstr, dim);
-    (s->errstr)[dim]='\0';
+    (s->errstr)[dim] = '\0';
 
     return SCP_CLIENT_STATE_RESEND_CREDENTIALS;
   }
-  else if (cmd==20) /* password change */
+  else if (cmd == 20) /* password change */
   {
     in_uint16_be(c->in_s, dim);
-    if (s->errstr!=0)
+    if (s->errstr != 0)
     {
       g_free(s->errstr);
     }
-    s->errstr=g_malloc(dim+1,0);
-    if (s->errstr==0)
+    s->errstr = g_malloc(dim + 1, 0);
+    if (s->errstr == 0)
     {
       return SCP_CLIENT_STATE_INTERNAL_ERR;
     }
     in_uint8a(c->in_s, s->errstr, dim);
-    (s->errstr)[dim]='\0';
+    (s->errstr)[dim] = '\0';
 
     return SCP_CLIENT_STATE_PWD_CHANGE_REQ;
   }
-  else if (cmd==30) /* display */
+  else if (cmd == 30) /* display */
   {
     in_uint16_be(c->in_s, s->display);
 
     return SCP_CLIENT_STATE_OK;
   }
-  //else if (cmd==31) /* there's a disconnected session */
+  //else if (cmd == 31) /* there's a disconnected session */
   //{
   //  return SCP_CLIENT_STATE_RECONNECT_SINGLE;
   //}
-  //else if (cmd==33) /* display of a disconnected session */
+  //else if (cmd == 33) /* display of a disconnected session */
   //{
   //  return SCP_CLIENT_STATE_RECONNECT;
   //}
-  else if (cmd==40) /* session list */
+  else if (cmd == 40) /* session list */
   {
     return SCP_CLIENT_STATE_SESSION_LIST;
   }
 
   return SCP_CLIENT_STATE_SEQUENCE_ERR;
 }
-
