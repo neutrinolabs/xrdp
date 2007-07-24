@@ -1039,7 +1039,7 @@ xrdp_wm_key(struct xrdp_wm* self, int device_flags, int scan_code)
 {
   int msg;
   int key_down_index;
-  char c;
+  int c;
   struct xrdp_key_down* key_down;
 
   /*g_printf("count %d\n", self->key_down_list->count);*/
@@ -1091,9 +1091,9 @@ xrdp_wm_key(struct xrdp_wm* self, int device_flags, int scan_code)
                                     self->session->client_info->keylayout);
         if (c != 0)
         {
-          self->mm->mod->mod_event(self->mm->mod, msg, (unsigned char)c,
+          self->mm->mod->mod_event(self->mm->mod, msg, c,
                                    0xffff, scan_code, device_flags);
-          xrdp_add_key_down(self, (unsigned char)c, 0xffff, scan_code,
+          xrdp_add_key_down(self, c, 0xffff, scan_code,
                             device_flags);
         }
         else
