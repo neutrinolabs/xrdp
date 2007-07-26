@@ -85,7 +85,10 @@ g_malloc(int size, int zero)
   rv = (char*)malloc(size);
   if (zero)
   {
-    memset(rv, 0, size);
+    if (rv != 0)
+    {
+      memset(rv, 0, size);
+    }
   }
   return rv;
 }
