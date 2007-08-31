@@ -98,11 +98,12 @@ env_set_user(char* username, char* passwd_file, int display)
       g_setenv("DISPLAY", text, 1);
       if (passwd_file != 0)
       {
-        if (0==g_cfg.auth_file_path)
+        if (0 == g_cfg.auth_file_path)
         {
-          /* if no auth_file_path is set, then we go for $HOME/.vnc/sesman_passwd */
+          /* if no auth_file_path is set, then we go for
+             $HOME/.vnc/sesman_username_passwd */
           g_mkdir(".vnc");
-          g_sprintf(passwd_file, "%s/.vnc/sesman_passwd", pw_dir);
+          g_sprintf(passwd_file, "%s/.vnc/sesman_%s_passwd", pw_dir, username);
         }
 	else
 	{
