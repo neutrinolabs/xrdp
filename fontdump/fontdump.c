@@ -10,9 +10,25 @@ static char* g_font_name = "Tahoma";
 static int g_font_size = 10;
 static HFONT g_font = 0;
 
+/*****************************************************************************/
 int
 msg(char* msg1, ...)
 {
+  return 0;
+}
+
+/*****************************************************************************/
+int
+show_last_error(void)
+{
+  LPVOID lpMsgBuf;
+ 
+  FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+                NULL, GetLastError(),
+                MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                (LPTSTR)&lpMsgBuf, 0, NULL);
+  MessageBox(g_wnd, lpMsgBuf, _T("GetLastError"), MB_OK | MB_ICONINFORMATION);
+  LocalFree(lpMsgBuf);
   return 0;
 }
 
@@ -21,10 +37,15 @@ static int
 font_dump(void)
 {
   HDC dc;
+  HDC dc1;
   RECT rect;
   HBRUSH brush;
   HGDIOBJ saved;
+  HBITMAP bitmap;
+  BITMAPINFO bi;
+  char* bits;
   ABC abc;
+  SIZE sz;
   char filename[256];
   TCHAR text[256];
   char zero1;
@@ -48,31 +69,83 @@ font_dump(void)
   }
   x2 = g_font_size; /* font size */
   g_file_write(fd, (char*)&x2, 2);
-  x2 = 1;
+  x2 = 1; /* style */
   g_file_write(fd, (char*)&x2, 2);
+  x1 = 0;
+  while (x1 < 8)
+  {
+    g_file_write(fd, &zero1, 1);
+    x1++;
+  }
   for (x1 = 32; x1 < 1024; x1++)
   {
     dc = GetWindowDC(g_wnd);
-    GetCharABCWidths(dc, x1, x1, &abc);
-    ReleaseDC(g_wnd, dc);
-    text[0] = ' ';
-    text[1] = (TCHAR)x1;
-    text[2] = ' ';
-    dc = GetWindowDC(g_wnd);
     saved = SelectObject(dc, g_font);
-    TextOut(dc, 50, 50, text, 3);
+    if (!GetCharABCWidths(dc, x1, x1, &abc))
+    {
+      show_last_error();
+    }
+    text[0] = (TCHAR)x1;
+    text[1] = 0;
+    if (!GetTextExtentPoint32(dc, text, 1, &sz))
+    {
+      show_last_error();
+    }
     SelectObject(dc, saved);
     ReleaseDC(g_wnd, dc);
-    Sleep(10);
-    dc = GetWindowDC(g_wnd);
-    rect.left = 50;
-    rect.top = 50;
-    rect.right = 100;
-    rect.bottom = 100;
-    brush = CreateSolidBrush(RGB(0, 0, 255));
-    FillRect(dc, &rect, brush);
-    DeleteObject(brush);
-    ReleaseDC(g_wnd, dc);
+    if ((sz.cx > 0) && (sz.cy > 0))
+    {
+      dc = GetWindowDC(g_wnd);
+      saved = SelectObject(dc, g_font);
+      SetBkColor(dc, RGB(255, 255, 255));
+      if (!ExtTextOut(dc, 50, 50, ETO_OPAQUE, 0, text, 1, 0))
+      {
+        show_last_error();
+      }
+      SelectObject(dc, saved);
+      ReleaseDC(g_wnd, dc);
+      Sleep(10);
+      dc = GetWindowDC(g_wnd);
+      rect.left = 50 + abc.abcA;
+      rect.top = 50;
+      rect.right = 50 + sz.cx;
+      rect.bottom = 50 + sz.cy;
+      memset(&bi, 0, sizeof(bi));
+      bi.bmiHeader.biSize = sizeof(bi.bmiHeader);
+      bi.bmiHeader.biWidth = sz.cx;
+      bi.bmiHeader.biHeight = sz.cy;
+      bi.bmiHeader.biPlanes = 1;
+      bi.bmiHeader.biBitCount = 32;
+      bitmap = CreateDIBSection(dc, &bi, DIB_RGB_COLORS, (void*)&bits, 0, 0);
+      if (bitmap == 0)
+      {
+        MessageBox(g_wnd, _T("CreateDIBSection failed"), _T("error"), MB_OK);
+      }
+      else
+      {
+        memset(bits, 0, sz.cx * sz.cy * 4);
+        dc1 = CreateCompatibleDC(dc);
+        SelectObject(dc1, bitmap);
+        if (!BitBlt(dc1, 0, 0, sz.cx, sz.cy, dc, rect.left, rect.top, SRCCOPY))
+        {
+          show_last_error();
+        }
+        DeleteDC(dc1);
+        DeleteObject(bitmap);
+      }
+      if (sz.cx != (long)(abc.abcA + abc.abcB + abc.abcC))
+      {
+        MessageBox(g_wnd, _T("width not right 1"), _T("error"), MB_OK);
+      }
+      brush = CreateSolidBrush(RGB(255, 255, 255));
+      FillRect(dc, &rect, brush);
+      DeleteObject(brush);
+      ReleaseDC(g_wnd, dc);
+    }
+    else
+    {
+      //MessageBox(g_wnd, _T("width not right 2"), _T("error"), MB_OK);
+    }
   }
   g_file_close(fd);
   return 0;
@@ -90,7 +163,7 @@ wnd_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
   {
     case WM_PAINT:
       BeginPaint(hWnd, &ps);
-      brush = CreateSolidBrush(RGB(0, 0, 255));
+      brush = CreateSolidBrush(RGB(255, 255, 255));
       rect = ps.rcPaint;
       FillRect(ps.hdc, &rect, brush);
       DeleteObject(brush);
