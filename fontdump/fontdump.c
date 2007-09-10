@@ -6,9 +6,18 @@
 
 static HINSTANCE g_instance = 0;
 static HWND g_wnd = 0;
-static char* g_font_name = "Tahoma";
+static HWND g_lb = 0;
+static HWND g_exit_button = 0;
+static HWND g_go_button = 0;
+//static char* g_font_name = "Tahoma";
+//static char* g_font_name = "MS Sans Serif";
+//static char* g_font_name = "DejaVu Serif";
+//static char* g_font_name = "Arial";
+static char* g_font_name = "Comic Sans MS";
 static int g_font_size = 10;
 static HFONT g_font = 0;
+
+#define FONT_DATASIZE(_w, _h) (((_h * ((_w + 7) / 8)) + 3) & ~3)
 
 /*****************************************************************************/
 int
@@ -49,9 +58,23 @@ font_dump(void)
   char filename[256];
   TCHAR text[256];
   char zero1;
+  char* bmtext;
+  int bmtextindex;
   int fd;
   int x1;
   int strlen1;
+  int index1;
+  int index2;
+  int len;
+  int pixel;
+  int red;
+  int green;
+  int blue;
+  int width;
+  int height;
+  int roller;
+  int outlen;
+  tui8 b1;
   short x2;
 
   zero1 = 0;
@@ -71,11 +94,12 @@ font_dump(void)
   g_file_write(fd, (char*)&x2, 2);
   x2 = 1; /* style */
   g_file_write(fd, (char*)&x2, 2);
-  x1 = 0;
-  while (x1 < 8)
+  /* pad */
+  index1 = 0;
+  while (index1 < 8)
   {
     g_file_write(fd, &zero1, 1);
-    x1++;
+    index1++;
   }
   for (x1 = 32; x1 < 1024; x1++)
   {
@@ -105,15 +129,39 @@ font_dump(void)
       SelectObject(dc, saved);
       ReleaseDC(g_wnd, dc);
       Sleep(10);
+      /* width */
+      x2 = abc.abcB;
+      g_file_write(fd, (char*)&x2, 2);
+      /* height */
+      x2 = sz.cy;
+      g_file_write(fd, (char*)&x2, 2);
+      /* baseline */
+      x2 = -sz.cy;
+      g_file_write(fd, (char*)&x2, 2);
+      /* offset */
+      x2 = abc.abcA;
+      g_file_write(fd, (char*)&x2, 2);
+      /* incby */
+      x2 = sz.cx;
+      g_file_write(fd, (char*)&x2, 2);
+      /* pad */
+      index1 = 0;
+      while (index1 < 6)
+      {
+        g_file_write(fd, &zero1, 1);
+        index1++;
+      }
       dc = GetWindowDC(g_wnd);
       rect.left = 50 + abc.abcA;
       rect.top = 50;
-      rect.right = 50 + sz.cx;
-      rect.bottom = 50 + sz.cy;
+      rect.right = rect.left + abc.abcB;
+      rect.bottom = rect.top + sz.cy;
       memset(&bi, 0, sizeof(bi));
+      width = (abc.abcB + 7) & (~7);
+      height = sz.cy;
       bi.bmiHeader.biSize = sizeof(bi.bmiHeader);
-      bi.bmiHeader.biWidth = sz.cx;
-      bi.bmiHeader.biHeight = sz.cy;
+      bi.bmiHeader.biWidth = width;
+      bi.bmiHeader.biHeight = height;
       bi.bmiHeader.biPlanes = 1;
       bi.bmiHeader.biBitCount = 32;
       bitmap = CreateDIBSection(dc, &bi, DIB_RGB_COLORS, (void*)&bits, 0, 0);
@@ -123,13 +171,70 @@ font_dump(void)
       }
       else
       {
-        memset(bits, 0, sz.cx * sz.cy * 4);
+        memset(bits, 0, width * height * 4);
         dc1 = CreateCompatibleDC(dc);
         SelectObject(dc1, bitmap);
-        if (!BitBlt(dc1, 0, 0, sz.cx, sz.cy, dc, rect.left, rect.top, SRCCOPY))
+        if (!BitBlt(dc1, 0, 0, width, height, dc, rect.left, rect.top, SRCCOPY))
         {
           show_last_error();
         }
+        bmtext = (char*)g_malloc(width * height + 16, 1);
+        bmtextindex = 0;
+        for (index1 = (height - 1); index1 >= 0; index1--)
+        {
+          for (index2 = 0; index2 < width; index2++)
+          {
+            pixel = ((int*)bits)[index1 * width + index2];
+            red = (pixel >> 16) & 0xff;
+            green = (pixel >> 8) & 0xff;
+            blue = (pixel >> 0) & 0xff;
+            if (red == 0 && green == 0 && blue == 0)
+            {
+              bmtext[bmtextindex] = '1';
+              bmtextindex++;
+            }
+            else
+            {
+              bmtext[bmtextindex] = '0';
+              bmtextindex++;
+            }
+          }
+        }
+        outlen = 0;
+        b1 = 0;
+        roller = 0;
+        len = g_strlen(bmtext);
+        for (index2 = 0; index2 < len; index2++)
+        {
+          if (bmtext[index2] == '1')
+          {
+            switch (roller)
+            {
+              case 0: b1 = b1 | 0x80; break;
+              case 1: b1 = b1 | 0x40; break;
+              case 2: b1 = b1 | 0x20; break;
+              case 3: b1 = b1 | 0x10; break;
+              case 4: b1 = b1 | 0x08; break;
+              case 5: b1 = b1 | 0x04; break;
+              case 6: b1 = b1 | 0x02; break;
+              case 7: b1 = b1 | 0x01; break;
+            }
+          }
+          roller++;
+          if (roller == 8)
+          {
+            roller = 0;
+            g_file_write(fd, &b1, 1);
+            outlen++;
+            b1 = 0;
+          }
+        }
+        while ((outlen % 4) != 0)
+        {
+          g_file_write(fd, &zero1, 1);
+          outlen++;
+        }
+        free(bmtext);
         DeleteDC(dc1);
         DeleteObject(bitmap);
       }
@@ -144,10 +249,40 @@ font_dump(void)
     }
     else
     {
-      //MessageBox(g_wnd, _T("width not right 2"), _T("error"), MB_OK);
+      /* write out a blank glyph here */
+      /* width */
+      x2 = 1;
+      g_file_write(fd, (char*)&x2, 2);
+      /* height */
+      x2 = 1;
+      g_file_write(fd, (char*)&x2, 2);
+      /* baseline */
+      x2 = 0;
+      g_file_write(fd, (char*)&x2, 2);
+      /* offset */
+      x2 = 0;
+      g_file_write(fd, (char*)&x2, 2);
+      /* incby */
+      x2 = 1;
+      g_file_write(fd, (char*)&x2, 2);
+      /* pad */
+      index1 = 0;
+      while (index1 < 6)
+      {
+        g_file_write(fd, &zero1, 1);
+        index1++;
+      }
+      /* blank bitmap */
+      index1 = 0;
+      while (index1 < 4)
+      {
+        g_file_write(fd, &zero1, 1);
+        index1++;
+      }
     }
   }
   g_file_close(fd);
+  PostMessage(g_wnd, WM_CLOSE, 0, 0);
   return 0;
 }
 
@@ -180,6 +315,8 @@ wnd_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       KillTimer(g_wnd, 1);
       font_dump();
       break;
+    case WM_COMMAND:
+      break;
   }
   return DefWindowProc(hWnd, message, wParam, lParam);
 }
@@ -206,9 +343,17 @@ create_window(void)
   style = WS_OVERLAPPED | WS_CAPTION | WS_POPUP | WS_MINIMIZEBOX |
           WS_SYSMENU | WS_SIZEBOX | WS_MAXIMIZEBOX;
   g_wnd = CreateWindow(wc.lpszClassName, _T("fontdump"),
-                       style, 0, 0, 200, 200,
+                       style, 0, 0, 640, 480,
                        (HWND) NULL, (HMENU) NULL, g_instance,
                        (LPVOID) NULL);
+  style = WS_CHILD | WS_VISIBLE | WS_BORDER;
+  g_lb = CreateWindow(_T("LISTBOX"), _T("LISTBOX1"), style,
+                      200, 10, 400, 400, g_wnd, 0, g_instance, 0);
+  style = WS_CHILD | WS_VISIBLE;
+  g_exit_button = CreateWindow(_T("BUTTON"), _T("Exit"), style,
+                               540, 410, 75, 25, g_wnd, 0, g_instance, 0);
+  g_go_button = CreateWindow(_T("BUTTON"), _T("Go"), style,
+                             440, 410, 75, 25, g_wnd, 0, g_instance, 0);
   ShowWindow(g_wnd, SW_SHOWNORMAL);
   dc = GetDC(g_wnd);
   height = -MulDiv(g_font_size, GetDeviceCaps(dc, LOGPIXELSY), 72);
@@ -220,7 +365,7 @@ create_window(void)
   }
   ReleaseDC(g_wnd, dc);
   PostMessage(g_wnd, WM_SETFONT, (WPARAM)g_font, 0);
-  SetTimer(g_wnd, 1, 1000, 0);
+  //SetTimer(g_wnd, 1, 1000, 0);
   return 0;
 }
 
