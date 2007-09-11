@@ -13,12 +13,8 @@ static HWND g_wnd = 0;
 static HWND g_lb = 0;
 static HWND g_exit_button = 0;
 static HWND g_go_button = 0;
-//static char* g_font_name = "Tahoma";
-//static char* g_font_name = "MS Sans Serif";
-//static char* g_font_name = "DejaVu Serif";
-//static char* g_font_name = "DejaVu Sans";
-static char* g_font_name = "Arial";
-//static char* g_font_name = "Comic Sans MS";
+static HWND g_font_list = 0;
+static char g_font_name[512] = "";
 static int g_font_size = 10;
 static HFONT g_font = 0;
 static int g_running = 0;
@@ -111,6 +107,23 @@ font_dump(void)
   }
   g_running = 1;
   msg("starting");
+  g_font_name[0] = 0;
+  SendMessageA(g_font_list, WM_GETTEXT, 255, (LPARAM)g_font_name);
+  if (g_strlen(g_font_name) == 0)
+  {
+    msg("error font not set");
+    g_running = 0;
+    return 1;
+  }
+  dc = GetDC(g_wnd);
+  height = -MulDiv(g_font_size, GetDeviceCaps(dc, LOGPIXELSY), 72);
+  g_font = CreateFontA(height, 0, 0, 0, FW_DONTCARE, 0, 0, 0, 0, 0, 0,
+                       0, 0, g_font_name);
+  ReleaseDC(g_wnd, dc);
+  if (g_font == 0)
+  {
+    msg("error - Font creation failed");
+  }
   zero1 = 0;
   g_snprintf(filename, 255, "%s-%d.fv1", g_font_name, g_font_size);
   msg("creating file %s", filename);
@@ -407,17 +420,16 @@ create_window(void)
                                540, 410, 75, 25, g_wnd, 0, g_instance, 0);
   g_go_button = CreateWindow(_T("BUTTON"), _T("Go"), style,
                              440, 410, 75, 25, g_wnd, 0, g_instance, 0);
+  style = WS_CHILD | WS_VISIBLE | CBS_DROPDOWN;
+  g_font_list = CreateWindow(_T("COMBOBOX"), _T("COMBOBOX1"), style,
+                             50, 250, 125, 125, g_wnd, 0, g_instance, 0);
   ShowWindow(g_wnd, SW_SHOWNORMAL);
-  dc = GetDC(g_wnd);
-  height = -MulDiv(g_font_size, GetDeviceCaps(dc, LOGPIXELSY), 72);
-  g_font = CreateFontA(height, 0, 0, 0, FW_DONTCARE, 0, 0, 0, 0, 0, 0,
-                       0, 0, g_font_name);
-  if (g_font == 0)
-  {
-    msg("error - Font creation failed");
-  }
-  ReleaseDC(g_wnd, dc);
   PostMessage(g_wnd, WM_SETFONT, (WPARAM)g_font, 0);
+  SendMessageA(g_font_list, CB_ADDSTRING, 0, (LPARAM)"Tahoma");
+  SendMessageA(g_font_list, CB_ADDSTRING, 0, (LPARAM)"DejaVu Serif");
+  SendMessageA(g_font_list, CB_ADDSTRING, 0, (LPARAM)"DejaVu Sans");
+  SendMessageA(g_font_list, CB_ADDSTRING, 0, (LPARAM)"Arial");
+  SendMessageA(g_font_list, CB_ADDSTRING, 0, (LPARAM)"Comic Sans MS");
   return 0;
 }
 
