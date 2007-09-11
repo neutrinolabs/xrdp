@@ -1,6 +1,10 @@
 
 #include <windows.h>
 #include <tchar.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 #include "os_calls.h"
 #include "arch.h"
 
@@ -12,31 +16,55 @@ static HWND g_go_button = 0;
 //static char* g_font_name = "Tahoma";
 //static char* g_font_name = "MS Sans Serif";
 //static char* g_font_name = "DejaVu Serif";
-//static char* g_font_name = "Arial";
-static char* g_font_name = "Comic Sans MS";
+//static char* g_font_name = "DejaVu Sans";
+static char* g_font_name = "Arial";
+//static char* g_font_name = "Comic Sans MS";
 static int g_font_size = 10;
 static HFONT g_font = 0;
+static int g_running = 0;
 
 #define FONT_DATASIZE(_w, _h) (((_h * ((_w + 7) / 8)) + 3) & ~3)
 
 /*****************************************************************************/
 int
-msg(char* msg1, ...)
+check_messages(void)
 {
+  MSG msg;
+
+  while (PeekMessage(&msg, 0, 0, 0, PM_NOREMOVE))
+  {
+    GetMessage(&msg, NULL, 0, 0);
+    TranslateMessage(&msg);
+    DispatchMessage(&msg);  
+  }
   return 0;
 }
 
 /*****************************************************************************/
-int
+static int
+msg(char* msg1, ...)
+{
+  va_list ap;
+  char text1[512];
+
+  va_start(ap, msg1);
+  vsnprintf(text1, 511, msg1, ap);
+  SendMessageA(g_lb, LB_ADDSTRING, 0, (LPARAM)text1);
+  va_end(ap);
+  return 0;
+}
+
+/*****************************************************************************/
+static int
 show_last_error(void)
 {
   LPVOID lpMsgBuf;
  
-  FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-                NULL, GetLastError(),
-                MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                (LPTSTR)&lpMsgBuf, 0, NULL);
-  MessageBox(g_wnd, lpMsgBuf, _T("GetLastError"), MB_OK | MB_ICONINFORMATION);
+  FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+                 NULL, GetLastError(),
+                 MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                 (LPSTR)&lpMsgBuf, 0, NULL);
+  msg("GetLastError - %s", lpMsgBuf);
   LocalFree(lpMsgBuf);
   return 0;
 }
@@ -77,8 +105,15 @@ font_dump(void)
   tui8 b1;
   short x2;
 
+  if (g_running)
+  {
+    return 0;
+  }
+  g_running = 1;
+  msg("starting");
   zero1 = 0;
   g_snprintf(filename, 255, "%s-%d.fv1", g_font_name, g_font_size);
+  msg("creating file %s", filename);
   g_file_delete(filename);
   fd = g_file_open(filename);
   g_file_write(fd, "FNT1", 4);
@@ -103,6 +138,7 @@ font_dump(void)
   }
   for (x1 = 32; x1 < 1024; x1++)
   {
+    check_messages();
     dc = GetWindowDC(g_wnd);
     saved = SelectObject(dc, g_font);
     if (!GetCharABCWidths(dc, x1, x1, &abc))
@@ -167,7 +203,7 @@ font_dump(void)
       bitmap = CreateDIBSection(dc, &bi, DIB_RGB_COLORS, (void*)&bits, 0, 0);
       if (bitmap == 0)
       {
-        MessageBox(g_wnd, _T("CreateDIBSection failed"), _T("error"), MB_OK);
+        msg("error - CreateDIBSection failed");
       }
       else
       {
@@ -240,7 +276,7 @@ font_dump(void)
       }
       if (sz.cx != (long)(abc.abcA + abc.abcB + abc.abcC))
       {
-        MessageBox(g_wnd, _T("width not right 1"), _T("error"), MB_OK);
+        msg("error - width not right 1");
       }
       brush = CreateSolidBrush(RGB(255, 255, 255));
       FillRect(dc, &rect, brush);
@@ -282,7 +318,8 @@ font_dump(void)
     }
   }
   g_file_close(fd);
-  PostMessage(g_wnd, WM_CLOSE, 0, 0);
+  msg("done");
+  g_running = 0;
   return 0;
 }
 
@@ -316,6 +353,18 @@ wnd_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       font_dump();
       break;
     case WM_COMMAND:
+      if ((HWND)lParam == g_exit_button)
+      {
+        PostMessage(g_wnd, WM_CLOSE, 0, 0);
+      }
+      else if ((HWND)lParam == g_go_button)
+      {
+        while (SendMessage(g_lb, LB_GETCOUNT, 0, 0) > 0)
+        {
+          SendMessage(g_lb, LB_DELETESTRING, 0, 0);
+        }
+        SetTimer(g_wnd, 1, 1000, 0);
+      }
       break;
   }
   return DefWindowProc(hWnd, message, wParam, lParam);
@@ -329,6 +378,8 @@ create_window(void)
   DWORD style;
   HDC dc;
   int height;
+  int left;
+  int top;
 
   ZeroMemory(&wc, sizeof(wc));
   wc.lpfnWndProc = wnd_proc; /* points to window procedure */
@@ -342,8 +393,10 @@ create_window(void)
   }
   style = WS_OVERLAPPED | WS_CAPTION | WS_POPUP | WS_MINIMIZEBOX |
           WS_SYSMENU | WS_SIZEBOX | WS_MAXIMIZEBOX;
+  left = GetSystemMetrics(SM_CXSCREEN) / 2 - 640 / 2;
+  top = GetSystemMetrics(SM_CYSCREEN) / 2 - 480 / 2;
   g_wnd = CreateWindow(wc.lpszClassName, _T("fontdump"),
-                       style, 0, 0, 640, 480,
+                       style, left, top, 640, 480,
                        (HWND) NULL, (HMENU) NULL, g_instance,
                        (LPVOID) NULL);
   style = WS_CHILD | WS_VISIBLE | WS_BORDER;
@@ -361,11 +414,10 @@ create_window(void)
                        0, 0, g_font_name);
   if (g_font == 0)
   {
-    MessageBox(g_wnd, _T("Font creation failed"), _T("error"), MB_OK);
+    msg("error - Font creation failed");
   }
   ReleaseDC(g_wnd, dc);
   PostMessage(g_wnd, WM_SETFONT, (WPARAM)g_font, 0);
-  //SetTimer(g_wnd, 1, 1000, 0);
   return 0;
 }
 
