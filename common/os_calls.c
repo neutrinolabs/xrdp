@@ -56,6 +56,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <locale.h>
 
 #include "os_calls.h"
 #include "arch.h"
@@ -73,6 +74,27 @@ extern char** environ;
 #if !defined(INADDR_NONE)
 #define INADDR_NONE ((unsigned long)-1)
 #endif
+
+/*****************************************************************************/
+void APP_CC
+g_init(void)
+{
+#if defined(_WIN32)
+  WSADATA wsadata;
+
+  WSAStartup(2, &wsadata);
+#endif
+  setlocale(LC_CTYPE, "");
+}
+
+/*****************************************************************************/
+void APP_CC
+g_deinit(void)
+{
+#if defined(_WIN32)
+  WSACleanup();
+#endif
+}
 
 /*****************************************************************************/
 /* allocate memory, returns a pointer to it, size bytes are allocated,
@@ -641,9 +663,9 @@ int APP_CC
 g_file_open(const char* file_name)
 {
 #if defined(_WIN32)
-  return (int)CreateFile(file_name, GENERIC_READ | GENERIC_WRITE,
-                         FILE_SHARE_READ | FILE_SHARE_WRITE,
-                         0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+  return (int)CreateFileA(file_name, GENERIC_READ | GENERIC_WRITE,
+                          FILE_SHARE_READ | FILE_SHARE_WRITE,
+                          0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 #else
   int rv;
 
@@ -818,7 +840,7 @@ char* APP_CC
 g_get_current_dir(char* dirname, int maxlen)
 {
 #if defined(_WIN32)
-  GetCurrentDirectory(maxlen, dirname);
+  GetCurrentDirectoryA(maxlen, dirname);
   return 0;
 #else
   getcwd(dirname, maxlen);
@@ -832,7 +854,7 @@ int APP_CC
 g_set_current_dir(char* dirname)
 {
 #if defined(_WIN32)
-  if (SetCurrentDirectory(dirname))
+  if (SetCurrentDirectoryA(dirname))
   {
     return 0;
   }
@@ -885,7 +907,7 @@ int APP_CC
 g_create_dir(const char* dirname)
 {
 #if defined(_WIN32)
-  return CreateDirectory(dirname, 0); // test this
+  return CreateDirectoryA(dirname, 0); // test this
 #else
   return mkdir(dirname, (mode_t)-1) == 0;
 #endif
@@ -897,7 +919,7 @@ int APP_CC
 g_remove_dir(const char* dirname)
 {
 #if defined(_WIN32)
-  return RemoveDirectory(dirname); // test this
+  return RemoveDirectoryA(dirname); // test this
 #else
   return rmdir(dirname) == 0;
 #endif
@@ -909,7 +931,7 @@ int APP_CC
 g_file_delete(const char* filename)
 {
 #if defined(_WIN32)
-  return DeleteFile(filename);
+  return DeleteFileA(filename);
 #else
   return unlink(filename) != -1;
 #endif
@@ -1057,7 +1079,7 @@ long APP_CC
 g_load_library(char* in)
 {
 #if defined(_WIN32)
-  return (long)LoadLibrary(in);
+  return (long)LoadLibraryA(in);
 #else
   return (long)dlopen(in, RTLD_LOCAL | RTLD_LAZY);
 #endif

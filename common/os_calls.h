@@ -27,6 +27,10 @@
 
 #include "arch.h"
 
+void APP_CC
+g_init(void);
+void APP_CC
+g_deinit(void);
 void* APP_CC
 g_malloc(int size, int zero);
 void APP_CC
