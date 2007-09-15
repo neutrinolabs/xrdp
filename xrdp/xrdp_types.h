@@ -333,7 +333,7 @@ struct xrdp_bitmap
 struct xrdp_font
 {
   struct xrdp_wm* wm;
-  struct xrdp_font_char font_items[256];
+  struct xrdp_font_char font_items[1024];
   int color;
   char name[32];
   int size;
