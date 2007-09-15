@@ -22,17 +22,20 @@
 
 #include "libxrdp.h"
 
-static char g_pad_54[40] =
+/* some compilers need unsigned char to avoid warnings */
+static tui8 g_pad_54[40] =
 { 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54,
   54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54,
   54, 54, 54, 54, 54, 54, 54, 54 };
 
-static char g_pad_92[48] =
+/* some compilers need unsigned char to avoid warnings */
+static tui8 g_pad_92[48] =
 { 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92,
   92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92,
   92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92 };
 
-static char g_lic1[322] =
+/* some compilers need unsigned char to avoid warnings */
+static tui8 g_lic1[322] =
 { 0x80, 0x00, 0x3e, 0x01, 0x01, 0x02, 0x3e, 0x01,
   0x7b, 0x3c, 0x31, 0xa6, 0xae, 0xe8, 0x74, 0xf6,
   0xb4, 0xa5, 0x03, 0x90, 0xe7, 0xc2, 0xc7, 0x39,
@@ -75,13 +78,15 @@ static char g_lic1[322] =
   0x6f, 0x73, 0x6f, 0x66, 0x74, 0x2e, 0x63, 0x6f,
   0x6d, 0x00 };
 
-static char g_lic2[20] =
+/* some compilers need unsigned char to avoid warnings */
+static tui8 g_lic2[20] =
 { 0x80, 0x00, 0x10, 0x00, 0xff, 0x02, 0x10, 0x00,
   0x07, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
   0x28, 0x14, 0x00, 0x00 };
 
 /* mce */
-static char g_lic3[20] =
+/* some compilers need unsigned char to avoid warnings */
+static tui8 g_lic3[20] =
 { 0x80, 0x02, 0x10, 0x00, 0xff, 0x03, 0x10, 0x00,
   0x07, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
   0xf3, 0x99, 0x00, 0x00 };
@@ -313,12 +318,12 @@ xrdp_sec_update(char* key, char* update_key, int key_len)
   rc4_info = ssl_rc4_info_create();
   ssl_sha1_clear(sha1_info);
   ssl_sha1_transform(sha1_info, update_key, key_len);
-  ssl_sha1_transform(sha1_info, g_pad_54, 40);
+  ssl_sha1_transform(sha1_info, (char*)g_pad_54, 40);
   ssl_sha1_transform(sha1_info, key, key_len);
   ssl_sha1_complete(sha1_info, shasig);
   ssl_md5_clear(md5_info);
   ssl_md5_transform(md5_info, update_key, key_len);
-  ssl_md5_transform(md5_info, g_pad_92, 48);
+  ssl_md5_transform(md5_info, (char*)g_pad_92, 48);
   ssl_md5_transform(md5_info, shasig, 20);
   ssl_md5_complete(md5_info, key);
   ssl_rc4_set_key(rc4_info, key, key_len);
@@ -724,13 +729,13 @@ xrdp_sec_sign(struct xrdp_sec* self, char* out, int out_len,
   md5_info = ssl_md5_info_create();
   ssl_sha1_clear(sha1_info);
   ssl_sha1_transform(sha1_info, self->sign_key, self->rc4_key_len);
-  ssl_sha1_transform(sha1_info, g_pad_54, 40);
+  ssl_sha1_transform(sha1_info, (char*)g_pad_54, 40);
   ssl_sha1_transform(sha1_info, lenhdr, 4);
   ssl_sha1_transform(sha1_info, data, data_len);
   ssl_sha1_complete(sha1_info, shasig);
   ssl_md5_clear(md5_info);
   ssl_md5_transform(md5_info, self->sign_key, self->rc4_key_len);
-  ssl_md5_transform(md5_info, g_pad_92, 48);
+  ssl_md5_transform(md5_info, (char*)g_pad_92, 48);
   ssl_md5_transform(md5_info, shasig, 20);
   ssl_md5_complete(md5_info, md5sig);
   g_memcpy(out, md5sig, out_len);
