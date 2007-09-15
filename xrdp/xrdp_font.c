@@ -78,11 +78,11 @@ xrdp_font_create(struct xrdp_wm* wm)
   self = (struct xrdp_font*)g_malloc(sizeof(struct xrdp_font), 1);
   self->wm = wm;
   make_stream(s);
-  init_stream(s, 8192 * 2);
+  init_stream(s, 1024 * 64);
   fd = g_file_open("sans-10.fv1");
   if (fd != -1)
   {
-    b = g_file_read(fd, s->data, 8192 * 2);
+    b = g_file_read(fd, s->data, 1024 * 64);
     g_file_close(fd);
     if (b > 0)
     {
@@ -112,7 +112,8 @@ xrdp_font_create(struct xrdp_wm* wm)
         {
           /* shouldn't happen */
           g_writeln("error in xrdp_font_create, datasize wrong");
-          g_writeln("%d %d %d", f->width, f->height, datasize);
+          g_writeln("width %d height %d datasize %d index %d",
+                    f->width, f->height, datasize, index);
           break;
         }
         if (s_check_rem(s, datasize))
