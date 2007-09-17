@@ -28,7 +28,7 @@
 #include "libscp_init.h"
 
 /* server API */
-int DEFAULT_CC 
+int DEFAULT_CC
 scp_init(void)
 {
   scp_lock_init();
@@ -40,15 +40,15 @@ struct SCP_CONNECTION*
 scp_make_connection(int sck)
 {
   struct SCP_CONNECTION* conn;
-  
+
   conn = g_malloc(sizeof(struct SCP_CONNECTION), 0);
 
   if (0 == conn)
   {
     return 0;
   }
-  
-  conn->in_sck=sck;
+
+  conn->in_sck = sck;
   make_stream(conn->in_s);
   init_stream(conn->in_s, 8196);
   make_stream(conn->out_s);
@@ -56,4 +56,3 @@ scp_make_connection(int sck)
 
   return conn;
 }
-

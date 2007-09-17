@@ -2,6 +2,7 @@
 LIBSCPOBJ = libscp_vX.o libscp_v0.o \
 	    libscp_v1s.o libscp_v1c.o \
 	    libscp_init.o libscp_lock.o libscp_tcp.o \
+	    libscp_session.o libscp_connection.o \
 	    os_calls.o
 
 DESTDIR = /usr/local/xrdp

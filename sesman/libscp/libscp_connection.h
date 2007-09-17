@@ -19,26 +19,36 @@
 
 /**
  *
- * @file libscp.h
- * @brief libscp main header
+ * @file libscp_connection.h
+ * @brief SCP_CONNECTION handling code
  * @author Simone Fedele
  * 
  */
 
-#ifndef LIBSCP_H
-#define LIBSCP_H
+#ifndef LIBSCP_CONNECTION_H
+#define LIBSCP_CONNECTION_H
 
-#include "libscp_types.h"
+#include "libscp.h"
 
-#include "libscp_connection.h"
-#include "libscp_session.h"
-#include "libscp_init.h"
-#include "libscp_tcp.h"
-#include "libscp_lock.h"
+/**
+ *
+ * @brief creates a new connection
+ * @param sck the connection socket
+ *
+ * @return a struct SCP_CONNECTION* object on success, NULL otherwise
+ *
+ */	
+struct SCP_CONNECTION*
+scp_connection_create(int sck);
 
-#include "libscp_vX.h"
-#include "libscp_v0.h"
-#include "libscp_v1s.h"
-#include "libscp_v1c.h"
+/**
+ *
+ * @brief destroys a struct SCP_CONNECTION* object
+ * @param c the object to be destroyed
+ * 
+ */
+void
+scp_connection_destroy(struct SCP_CONNECTION* c);
 
 #endif
+

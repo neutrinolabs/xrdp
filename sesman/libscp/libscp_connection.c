@@ -19,26 +19,39 @@
 
 /**
  *
- * @file libscp.h
- * @brief libscp main header
+ * @file libscp_connection.c
+ * @brief SCP_CONNECTION handling code
  * @author Simone Fedele
- * 
+ *
  */
 
-#ifndef LIBSCP_H
-#define LIBSCP_H
-
-#include "libscp_types.h"
-
 #include "libscp_connection.h"
-#include "libscp_session.h"
-#include "libscp_init.h"
-#include "libscp_tcp.h"
-#include "libscp_lock.h"
 
-#include "libscp_vX.h"
-#include "libscp_v0.h"
-#include "libscp_v1s.h"
-#include "libscp_v1c.h"
+struct SCP_CONNECTION*
+scp_connection_create(int sck)
+{
+  struct SCP_CONNECTION* conn;
 
-#endif
+  conn = g_malloc(sizeof(struct SCP_CONNECTION), 0);
+
+  if (0 == conn)
+  {
+    return 0;
+  }
+
+  conn->in_sck=sck;
+  make_stream(conn->in_s);
+  init_stream(conn->in_s, 8196);
+  make_stream(conn->out_s);
+  init_stream(conn->out_s, 8196);
+
+  return conn;
+}
+
+void
+scp_connection_destroy(struct SCP_CONNECTION* c)
+{
+  free_stream(c->in_s);
+  free_stream(c->out_s);
+  g_free(c);
+}
