@@ -13,7 +13,7 @@ unsigned int menuSelect(unsigned int choices);
 int main(int argc, char** argv)
 {
   struct SCP_SESSION s;
-  struct SCP_CONNECTION c;
+  struct SCP_CONNECTION* c;
   /*struct SCP_DISCONNECTED_SESSION ds;*/
   struct SCP_DISCONNECTED_SESSION* dsl;
   enum SCP_CLIENT_STATES_E e;
@@ -21,14 +21,17 @@ int main(int argc, char** argv)
   int scnt;
   int idx;
   int sel;
+  int sock;
 
-  make_stream(c.in_s);
+  sock=g_tcp_socket();
+  c=scp_connection_create(sock);
+  /*make_stream(c.in_s);
   init_stream(c.in_s, 8192);
   make_stream(c.out_s);
   init_stream(c.out_s, 8192);
-  c.in_sck = g_tcp_socket();
+  c.in_sck = g_tcp_socket();*/
 
-  if (0!=g_tcp_connect(c.in_sck, "localhost", "3350"))
+  if (0!=g_tcp_connect(sock, "localhost", "3350"))
   {
     g_printf("error connecting");
     return 1;
@@ -78,7 +81,7 @@ int main(int argc, char** argv)
         break;
       case SCP_CLIENT_STATE_SESSION_LIST:
         g_printf("OK : session list needed\n");
-        e=scp_v1c_get_session_list(&c, &scnt, &dsl);
+        e=scp_v1c_get_session_list(c, &scnt, &dsl);
         printf("Sessions: %d\n", scnt);
         for (idx=0; idx <scnt; idx++)
         {
@@ -88,7 +91,7 @@ int main(int argc, char** argv)
       case SCP_CLIENT_STATE_LIST_OK:
         g_printf("OK : selecting a session:\n");
         sel = menuSelect(scnt);
-        e=scp_v1c_select_session(&c, &s, dsl[sel-1].SID);
+        e=scp_v1c_select_session(c, &s, dsl[sel-1].SID);
         g_printf("\n return: %d \n", e);
         break;
       case SCP_CLIENT_STATE_RESEND_CREDENTIALS:
@@ -97,7 +100,7 @@ int main(int argc, char** argv)
         scanf("%255s", s.username);
         g_printf("     password:");
         scanf("%255s", s.password);
-        e=scp_v1c_resend_credentials(&c,&s);
+        e=scp_v1c_resend_credentials(c,&s);
         break;
       case SCP_CLIENT_STATE_CONNECTION_DENIED:
         g_printf("ERR: connection denied: %s\n", s.errstr);
@@ -118,9 +121,10 @@ int main(int argc, char** argv)
     }
   }
 
-  g_tcp_close(c.in_sck);
-  free_stream(c.in_s);
-  free_stream(c.out_s);
+  g_tcp_close(sock);
+  scp_connection_destroy(c);
+  /*free_stream(c.in_s);
+  free_stream(c.out_s);*/
 
   return 0;
 }

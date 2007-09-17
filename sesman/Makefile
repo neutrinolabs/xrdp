@@ -13,8 +13,7 @@ MANDIR = /usr/local/man
 DOCDIR = /usr/doc/xrdp
 
 DEFINES = -DSESMAN_CFG_FILE=\"$(CFGDIR)/sesman.ini\" \
-	  -DSESMAN_PID_FILE=\"$(PIDDIR)/sesman.pid\" \
-	  -DSESMAN_SESSVC_FILE=\"sessvc\"
+	  -DSESMAN_PID_FILE=\"$(PIDDIR)/sesman.pid\"
 
 CFLAGS = -Wall -O2 -I../common -I/usr/include/nptl -I./libscp $(DEFINES)
 LDFLAGS = -L/usr/gnu/lib -L/usr/lib/nptl -L./libscp -Wl,-rpath,. -lpthread -ldl -lscp
@@ -41,7 +40,7 @@ kerberos-base: $(SESMANOBJ) verify_user_kerberos.o
 	$(CC) $(LDFLAGS) -o sesman $(SESMANOBJ) verify_user_kerberos.o -lkrb5
 
 sessvc: $(SESSVCOBJ)
-	$(CC) $(LDFLAGS) -o sessvc $(SESSVCOBJ) 
+	$(CC) $(LDFLAGS) -o sessvc $(SESSVCOBJ)
 
 tools: sessvc
 	make -C tools

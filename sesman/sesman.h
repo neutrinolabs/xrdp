@@ -22,7 +22,7 @@
  * @file sesman.h
  * @brief Main include file
  * @author Jay Sorg
- * 
+ *
  */
 
 #ifndef SESMAN_H
@@ -48,10 +48,6 @@
 
 #ifndef SESMAN_PID_FILE
   #define SESMAN_PID_FILE "./sesman.pid"
-#endif
-
-#ifndef SESMAN_SESSVC_FILE
-  #define SESMAN_SESSVC_FILE "./sessvc"
 #endif
 
 #endif

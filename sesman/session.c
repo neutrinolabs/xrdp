@@ -117,6 +117,8 @@ session_start_sessvc(int xpid, int wmpid, long data)
   struct list* sessvc_params;
   char wmpid_str[25];
   char xpid_str[25];
+  char exe_path[262];
+  char cur_dir[256];
   int i;
 
   /* new style waiting for clients */
@@ -128,12 +130,16 @@ session_start_sessvc(int xpid, int wmpid, long data)
   sessvc_params->auto_free = 1;
 
   /* building parameters */
-  list_add_item(sessvc_params, (long)g_strdup(SESMAN_SESSVC_FILE));
+  g_get_current_dir(cur_dir, 255);
+  g_snprintf(exe_path, 261, "%s/%s", cur_dir, "sessvc");
+
+  list_add_item(sessvc_params, (long)g_strdup(exe_path));
   list_add_item(sessvc_params, (long)g_strdup(xpid_str));
   list_add_item(sessvc_params, (long)g_strdup(wmpid_str));
   list_add_item(sessvc_params, 0); /* mandatory */
 
-  g_execvp(SESMAN_SESSVC_FILE, ((char**)sessvc_params->items));
+  /* executing sessvc */
+  g_execvp(exe_path, ((char**)sessvc_params->items));
 
   /* should not get here */
   log_message(LOG_LEVEL_ALWAYS, "error starting sessvc - pid %d - xpid=%s - wmpid=%s",
@@ -285,7 +291,7 @@ for user %s denied", username);
 
         /* still a problem starting window manager just start xterm */
         g_execlp3("xterm", "xterm", 0);
-	
+
         /* should not get here */
         log_message(LOG_LEVEL_ALWAYS,"error starting xterm for user %s - pid %d",
                     username, g_getpid());
