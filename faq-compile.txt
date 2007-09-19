@@ -1,0 +1,8 @@
+Compile FAQ
+
+Q.  I get error: security/pam_appl.h: File or directory doesn't exist
+    What is wrong?
+
+A.  You need to install pam development package.
+    For Ubuntu 7.04 this package is called libpam0g-dev.
+    For Suse 10.1 this package is call pam-devel.
