@@ -153,6 +153,10 @@ int APP_CC
 g_atoi(char* str);
 int APP_CC
 g_pos(char* str, const char* to_find);
+int APP_CC
+g_mbstowcs(twchar* dest, const char* src, int n);
+int APP_CC
+g_wcstombs(char* dest, const twchar* src, int n);
 long APP_CC
 g_load_library(char* in);
 int APP_CC

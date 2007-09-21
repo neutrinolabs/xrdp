@@ -1075,6 +1075,20 @@ g_pos(char* str, const char* to_find)
 }
 
 /*****************************************************************************/
+int APP_CC
+g_mbstowcs(twchar* dest, const char* src, int n)
+{
+  return mbstowcs(dest, src, n);
+}
+
+/*****************************************************************************/
+int APP_CC
+g_wcstombs(char* dest, const twchar* src, int n)
+{
+  return wcstombs(dest, src, n);
+}
+
+/*****************************************************************************/
 long APP_CC
 g_load_library(char* in)
 {

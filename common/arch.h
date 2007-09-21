@@ -76,5 +76,6 @@ typedef int ti32;
 typedef unsigned int tui32;
 typedef signed int tsi32;
 typedef long tbus;
+typedef int twchar;
 
 #endif
