@@ -1078,14 +1078,20 @@ g_pos(char* str, const char* to_find)
 int APP_CC
 g_mbstowcs(twchar* dest, const char* src, int n)
 {
-  return mbstowcs(dest, src, n);
+  wchar_t* ldest;
+
+  ldest = (wchar_t*)dest;
+  return mbstowcs(ldest, src, n);
 }
 
 /*****************************************************************************/
 int APP_CC
 g_wcstombs(char* dest, const twchar* src, int n)
 {
-  return wcstombs(dest, src, n);
+  const wchar_t* lsrc;
+
+  lsrc = (const wchar_t*)src;
+  return wcstombs(dest, lsrc, n);
 }
 
 /*****************************************************************************/
