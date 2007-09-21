@@ -35,7 +35,7 @@ install:
 	install xrdp256.bmp $(DESTDIR)/xrdp256.bmp
 	install cursor0.cur $(DESTDIR)/cursor0.cur
 	install cursor1.cur $(DESTDIR)/cursor1.cur
-	install Tahoma-10.fv1 $(DESTDIR)/Tahoma-10.fv1
+	install sans-10.fv1 $(DESTDIR)/sans-10.fv1
 	install xrdp.ini $(CFGDIR)/xrdp.ini
 	install rsakeys.ini $(CFGDIR)/rsakeys.ini
 	install xrdp $(DESTDIR)/xrdp
@@ -45,7 +45,7 @@ installdeb:
 	install xrdp256.bmp $(DESTDIRDEB)/usr/lib/xrdp/xrdp256.bmp
 	install cursor0.cur $(DESTDIRDEB)/usr/lib/xrdp/cursor0.cur
 	install cursor1.cur $(DESTDIRDEB)/usr/lib/xrdp/cursor1.cur
-	install Tahoma-10.fv1 $(DESTDIRDEB)/usr/lib/xrdp/Tahoma-10.fv1
+	install sans-10.fv1 $(DESTDIRDEB)/usr/lib/xrdp/sans-10.fv1
 	install xrdp.ini $(DESTDIRDEB)/etc/xrdp/xrdp.ini
 	install rsakeys.ini $(DESTDIRDEB)/etc/xrdp/rsakeys.ini
 	install xrdp $(DESTDIRDEB)/usr/lib/xrdp/xrdp
