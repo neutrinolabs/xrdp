@@ -283,11 +283,13 @@ rect_contained_by(struct xrdp_rect* in1, int left, int top,
 int APP_CC
 check_bounds(struct xrdp_bitmap* b, int* x, int* y, int* cx, int* cy);
 int APP_CC
-add_char_at(char* text, char ch, int index);
+add_char_at(char* text, int text_size, twchar ch, int index);
 int APP_CC
-remove_char_at(char* text, int index);
+remove_char_at(char* text, int text_size, int index);
 int APP_CC
 set_string(char** in_str, const char* in);
+int APP_CC
+wchar_repeat(twchar* dest, int dest_size_in_wchars, twchar ch, int repeat);
 
 /* in lang.c */
 int APP_CC
