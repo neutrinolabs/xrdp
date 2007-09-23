@@ -1079,9 +1079,11 @@ int APP_CC
 g_mbstowcs(twchar* dest, const char* src, int n)
 {
   wchar_t* ldest;
+  int rv;
 
   ldest = (wchar_t*)dest;
-  return mbstowcs(ldest, src, n);
+  rv = mbstowcs(ldest, src, n);
+  return rv;
 }
 
 /*****************************************************************************/
@@ -1089,9 +1091,11 @@ int APP_CC
 g_wcstombs(char* dest, const twchar* src, int n)
 {
   const wchar_t* lsrc;
+  int rv;
 
   lsrc = (const wchar_t*)src;
-  return wcstombs(dest, lsrc, n);
+  rv = wcstombs(dest, lsrc, n);
+  return rv;
 }
 
 /*****************************************************************************/
