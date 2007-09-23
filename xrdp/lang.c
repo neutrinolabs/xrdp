@@ -551,7 +551,7 @@ int cs_altgr[] =
 };
 
 /*****************************************************************************/
-int APP_CC
+twchar APP_CC
 get_char_from_scan_code(int device_flags, int scan_code, int* keys,
                         int caps_lock, int num_lock, int scroll_lock,
                         int keylayout)
@@ -637,7 +637,7 @@ get_char_from_scan_code(int device_flags, int scan_code, int* keys,
       case 81: /* 3 */
       case 82: /* 0 */
       case 83: /* . */
-        return rv;
+        return (twchar)rv;
     }
   }
   if (ext)
@@ -673,5 +673,5 @@ get_char_from_scan_code(int device_flags, int scan_code, int* keys,
       rv = rv + ('a' - 'A');
     }
   }
-  return rv;
+  return (twchar)rv;
 }
