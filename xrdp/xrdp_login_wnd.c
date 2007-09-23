@@ -288,7 +288,7 @@ xrdp_wm_show_edits(struct xrdp_wm* self, struct xrdp_bitmap* combo)
         b->tab_stop = 1;
         b->caption1 = (char*)g_malloc(256, 1);
         g_strncpy(b->caption1, value + 3, 255);
-        b->edit_pos = g_strlen(b->caption1);
+        b->edit_pos = g_mbstowcs(0, b->caption1, 0);
         if (self->login_window->focused_control == 0)
         {
           self->login_window->focused_control = b;
@@ -296,8 +296,8 @@ xrdp_wm_show_edits(struct xrdp_wm* self, struct xrdp_bitmap* combo)
         if (g_strncmp(name, "username", 255) == 0)
         {
           g_strncpy(b->caption1, self->session->client_info->username, 255);
-          b->edit_pos = g_strlen(b->caption1);
-          if (g_strlen(b->caption1) > 0)
+          b->edit_pos = g_mbstowcs(0, b->caption1, 0);
+          if (b->edit_pos > 0)
           {
             username_set = 1;
           }
