@@ -147,24 +147,31 @@ check_bounds(struct xrdp_bitmap* b, int* x, int* y, int* cx, int* cy)
 /* add a ch at index position in text, index starts at 0 */
 /* if index = -1 add it to the end */
 int APP_CC
-add_char_at(char* text, char ch, int index)
+add_char_at(char* text, int text_size, twchar ch, int index)
 {
   int len;
   int i;
+  twchar* wstr;
 
-  len = g_strlen(text);
-  if (index >= len || index < 0)
+  len = g_mbstowcs(0, text, 0);
+  wstr = (twchar*)g_malloc((len + 16) * sizeof(twchar), 0);
+  g_mbstowcs(wstr, text, len + 1);
+  if ((index >= len) || (index < 0))
   {
-    text[len] = ch;
-    text[len + 1] = 0;
+    wstr[len] = ch;
+    wstr[len + 1] = 0;
+    g_wcstombs(text, wstr, text_size);
+    g_free(wstr);
     return 0;
   }
-  for (i = len - 1; i >= index; i--)
+  for (i = (len - 1); i >= index; i--)
   {
-    text[i + 1] = text[i];
+    wstr[i + 1] = wstr[i];
   }
-  text[i + 1] = ch;
-  text[len + 1] = 0;
+  wstr[i + 1] = ch;
+  wstr[len + 1] = 0;
+  g_wcstombs(text, wstr, text_size);
+  g_free(wstr);
   return 0;
 }
 
@@ -172,26 +179,33 @@ add_char_at(char* text, char ch, int index)
 /* remove a ch at index position in text, index starts at 0 */
 /* if index = -1 remove it from the end */
 int APP_CC
-remove_char_at(char* text, int index)
+remove_char_at(char* text, int text_size, int index)
 {
   int len;
   int i;
+  twchar* wstr;
 
-  len = g_strlen(text);
+  len = g_mbstowcs(0, text, 0);
   if (len <= 0)
   {
     return 0;
   }
-  if (index >= len - 1 || index < 0)
+  wstr = (twchar*)g_malloc((len + 16) * sizeof(twchar), 0);
+  g_mbstowcs(wstr, text, len + 1);
+  if ((index >= (len - 1)) || (index < 0))
   {
-    text[len - 1] = 0;
+    wstr[len - 1] = 0;
+    g_wcstombs(text, wstr, text_size);
+    g_free(wstr);
     return 0;
   }
-  for (i = index; i < len - 1; i++)
+  for (i = index; i < (len - 1); i++)
   {
-    text[i] = text[i + 1];
+    wstr[i] = wstr[i + 1];
   }
-  text[len - 1] = 0;
+  wstr[len - 1] = 0;
+  g_wcstombs(text, wstr, text_size);
+  g_free(wstr);
   return 0;
 }
 
@@ -205,5 +219,22 @@ set_string(char** in_str, const char* in)
   }
   g_free(*in_str);
   *in_str = g_strdup(in);
+  return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+wchar_repeat(twchar* dest, int dest_size_in_wchars, twchar ch, int repeat)
+{
+  int index;
+
+  for (index = 0; index < repeat; index++)
+  {
+    if (index >= dest_size_in_wchars)
+    {
+      break;
+    }
+    dest[index] = ch;
+  }
   return 0;
 }

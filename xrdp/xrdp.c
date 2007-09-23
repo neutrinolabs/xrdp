@@ -262,6 +262,7 @@ main(int argc, char** argv)
   char text[32];
 #endif
 
+  g_init();
   /* check compiled endian with actual endian */
   test = 1;
   host_be = !((int)(*(unsigned char*)(&test)));
