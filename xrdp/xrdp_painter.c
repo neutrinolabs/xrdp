@@ -182,6 +182,7 @@ xrdp_painter_text_width(struct xrdp_painter* self, char* text)
   int rv;
   int len;
   struct xrdp_font_char* font_item;
+  twchar* wstr;
 
   xrdp_painter_font_needed(self);
   if (text == 0)
@@ -189,12 +190,15 @@ xrdp_painter_text_width(struct xrdp_painter* self, char* text)
     return 0;
   }
   rv = 0;
-  len = g_strlen(text);
+  len = g_mbstowcs(0, text, 0);
+  wstr = (twchar*)g_malloc((len + 2) * sizeof(twchar), 0);
+  g_mbstowcs(wstr, text, len + 1);
   for (index = 0; index < len; index++)
   {
-    font_item = self->font->font_items + (unsigned char)text[index];
+    font_item = self->font->font_items + wstr[index];
     rv = rv + font_item->incby;
   }
+  g_free(wstr);
   return rv;
 }
 
@@ -206,6 +210,7 @@ xrdp_painter_text_height(struct xrdp_painter* self, char* text)
   int rv;
   int len;
   struct xrdp_font_char* font_item;
+  twchar* wstr;
 
   xrdp_painter_font_needed(self);
   if (text == 0)
@@ -213,12 +218,15 @@ xrdp_painter_text_height(struct xrdp_painter* self, char* text)
     return 0;
   }
   rv = 0;
-  len = g_strlen(text);
+  len = g_mbstowcs(0, text, 0);
+  wstr = (twchar*)g_malloc((len + 2) * sizeof(twchar), 0);
+  g_mbstowcs(wstr, text, len + 1);
   for (index = 0; index < len; index++)
   {
-    font_item = self->font->font_items + (unsigned char)text[index];
+    font_item = self->font->font_items + wstr[index];
     rv = MAX(rv, font_item->height);
   }
+  g_free(wstr);
   return rv;
 }
 
@@ -348,12 +356,13 @@ xrdp_painter_draw_text(struct xrdp_painter* self,
   struct xrdp_rect draw_rect;
   struct xrdp_font* font;
   struct xrdp_font_char* font_item;
+  twchar* wstr;
 
   if (self == 0)
   {
     return 0;
   }
-  len = g_strlen(text);
+  len = g_mbstowcs(0, text, 0);
   if (len < 1)
   {
     return 0;
@@ -365,6 +374,9 @@ xrdp_painter_draw_text(struct xrdp_painter* self,
   {
     return 0;
   }
+  /* convert to wide char */
+  wstr = (twchar*)g_malloc((len + 2) * sizeof(twchar), 0);
+  g_mbstowcs(wstr, text, len + 1);
   xrdp_painter_font_needed(self);
   font = self->font;
   f = 0;
@@ -374,7 +386,7 @@ xrdp_painter_draw_text(struct xrdp_painter* self,
   data = (char*)g_malloc(len * 4, 1);
   for (index = 0; index < len; index++)
   {
-    font_item = font->font_items + (unsigned char)text[index];
+    font_item = font->font_items + wstr[index];
     i = xrdp_cache_add_char(self->wm->cache, font_item);
     f = HIWORD(i);
     c = LOWORD(i);
@@ -408,6 +420,7 @@ xrdp_painter_draw_text(struct xrdp_painter* self,
   }
   xrdp_region_delete(region);
   g_free(data);
+  g_free(wstr);
   return 0;
 }
 

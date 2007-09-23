@@ -314,7 +314,7 @@ struct xrdp_bitmap
   struct list* child_list;
   /* for edit */
   int edit_pos;
-  int password_char;
+  twchar password_char;
   /* for button or combo */
   int state; /* for button 0 = normal 1 = down */
   /* for combo */
@@ -329,11 +329,13 @@ struct xrdp_bitmap
   int crc;
 };
 
+#define NUM_FONTS 4096
+
 /* font */
 struct xrdp_font
 {
   struct xrdp_wm* wm;
-  struct xrdp_font_char font_items[1024];
+  struct xrdp_font_char font_items[NUM_FONTS];
   int color;
   char name[32];
   int size;
