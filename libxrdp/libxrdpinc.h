@@ -60,6 +60,7 @@ struct xrdp_client_info
   int channel_code; /* 0 = no channels 1 = channels */
   int sound_code; /* 1 = leave sound at server */
   int is_mce;
+  int rdp5_performanceflags;
 };
 
 struct xrdp_brush

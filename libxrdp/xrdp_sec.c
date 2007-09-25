@@ -405,8 +405,11 @@ xrdp_sec_process_logon_info(struct xrdp_sec* self, struct stream* s)
   int len_password;
   int len_program;
   int len_directory;
+  int len_ip;
+  int len_dll;
+  int tzone;
+  char tmpdata[256];
 
-  //g_hexdump(s->p, 100);
   in_uint8s(s, 4);
   in_uint32_le(s, flags);
   DEBUG(("in xrdp_sec_process_logon_info flags $%x", flags));
@@ -460,6 +463,20 @@ xrdp_sec_process_logon_info(struct xrdp_sec* self, struct stream* s)
   DEBUG(("program %s", self->rdp_layer->client_info.program));
   unicode_in(s, len_directory, self->rdp_layer->client_info.directory, 255);
   DEBUG(("directory %s", self->rdp_layer->client_info.directory));
+  if (flags & RDP_LOGON_BLOB)
+  {
+    in_uint8s(s, 2);                                    /* unknown */
+    in_uint16_le(s, len_ip);
+    unicode_in(s, len_ip - 2, tmpdata, 255);
+    in_uint16_le(s, len_dll);
+    unicode_in(s, len_dll - 2, tmpdata, 255);
+    in_uint32_le(s, tzone);                             /* len of timetone */
+    in_uint8s(s, 62);                                   /* skip */
+    in_uint8s(s, 22);                                   /* skip misc. */
+    in_uint8s(s, 62);                                   /* skip */
+    in_uint8s(s, 26);                                   /* skip stuff */
+    in_uint32_le(s, self->rdp_layer->client_info.rdp5_performanceflags);
+  }
   DEBUG(("out xrdp_sec_process_logon_info"));
   return 0;
 }
@@ -648,7 +665,7 @@ xrdp_sec_recv(struct xrdp_sec* self, struct stream* s, int* chan)
   if (flags & SEC_ENCRYPT) /* 0x08 */
   {
     in_uint8s(s, 8); /* signature */
-    xrdp_sec_decrypt(self, s->p, s->end - s->p);
+    xrdp_sec_decrypt(self, s->p, (int)(s->end - s->p));
   }
   if (flags & SEC_CLIENT_RANDOM) /* 0x01 */
   {
@@ -755,7 +772,7 @@ xrdp_sec_send(struct xrdp_sec* self, struct stream* s, int chan)
   if (self->crypt_level > 1)
   {
     out_uint32_le(s, SEC_ENCRYPT);
-    datalen = (s->end - s->p) - 8;
+    datalen = (int)((s->end - s->p) - 8);
     xrdp_sec_sign(self, s->p, 8, s->p + 8, datalen);
     xrdp_sec_encrypt(self, s->p + 8, datalen);
   }
@@ -862,7 +879,7 @@ xrdp_sec_out_mcs_data(struct xrdp_sec* self)
   int num_channels;
   int index;
   int channel;
-  
+
   num_channels = self->mcs_layer->channel_list->count;
   num_channels_even = num_channels + (num_channels & 1);
   s = &self->server_mcs_data;
@@ -987,10 +1004,10 @@ xrdp_sec_incoming(struct xrdp_sec* self)
 #ifdef XRDP_DEBUG
   g_writeln("client mcs data received");
   g_hexdump(self->client_mcs_data.data,
-            self->client_mcs_data.end - self->client_mcs_data.data);
+            (int)(self->client_mcs_data.end - self->client_mcs_data.data));
   g_writeln("server mcs data sent");
   g_hexdump(self->server_mcs_data.data,
-            self->server_mcs_data.end - self->server_mcs_data.data);
+            (int)(self->server_mcs_data.end - self->server_mcs_data.data));
 #endif
   DEBUG((" out xrdp_sec_incoming"));
   xrdp_sec_in_mcs_data(self);
