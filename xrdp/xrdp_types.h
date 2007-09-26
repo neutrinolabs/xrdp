@@ -226,6 +226,7 @@ struct xrdp_wm
   struct xrdp_bitmap* log_wnd;
   int login_mode;
   struct xrdp_mm* mm;
+  struct xrdp_font* default_font;
 };
 
 /* rdp process */
@@ -329,14 +330,14 @@ struct xrdp_bitmap
   int crc;
 };
 
-#define NUM_FONTS 4096
+#define NUM_FONTS 0x4e00
+#define DEFAULT_FONT_NAME "sans-10.fv1"
 
 /* font */
 struct xrdp_font
 {
   struct xrdp_wm* wm;
   struct xrdp_font_char font_items[NUM_FONTS];
-  int color;
   char name[32];
   int size;
   int style;

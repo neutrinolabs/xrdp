@@ -45,6 +45,7 @@ xrdp_wm_create(struct xrdp_process* owner,
   self->key_down_list = list_create();
   self->key_down_list->auto_free = 1;
   self->mm = xrdp_mm_create(self);
+  self->default_font = xrdp_font_create(self);
   return self;
 }
 
@@ -64,6 +65,8 @@ xrdp_wm_delete(struct xrdp_wm* self)
   list_delete(self->log);
   /* key down list */
   list_delete(self->key_down_list);
+  /* free default font */
+  xrdp_font_delete(self->default_font);
   /* free self */
   g_free(self);
 }
@@ -1414,7 +1417,7 @@ xrdp_wm_log_wnd_notify(struct xrdp_bitmap* wnd,
     painter = (struct xrdp_painter*)param1;
     if (painter != 0)
     {
-      painter->font->color = wnd->wm->black;
+      painter->fg_color = wnd->wm->black;
       for (index = 0; index < wnd->wm->log->count; index++)
       {
         text = (char*)list_get_item(wnd->wm->log, index);

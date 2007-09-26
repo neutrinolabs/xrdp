@@ -44,7 +44,6 @@ xrdp_painter_delete(struct xrdp_painter* self)
   {
     return;
   }
-  xrdp_font_delete(self->font);
   g_free(self);
 }
 
@@ -70,7 +69,7 @@ xrdp_painter_font_needed(struct xrdp_painter* self)
 {
   if (self->font == 0)
   {
-    self->font = xrdp_font_create(self->wm);
+    self->font = self->wm->default_font;
   }
   return 0;
 }
@@ -411,7 +410,7 @@ xrdp_painter_draw_text(struct xrdp_painter* self,
       y1 = y + total_height;
       flags = 0x03; /* 0x03 0x73; TEXT2_IMPLICIT_X and something else */
       libxrdp_orders_text(self->session, f, flags, 0,
-                          font->color, 0,
+                          self->fg_color, 0,
                           x - 1, y - 1, x + total_width, y + total_height,
                           0, 0, 0, 0,
                           x1, y1, data, len * 2, &draw_rect);

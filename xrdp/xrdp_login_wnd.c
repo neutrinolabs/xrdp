@@ -58,7 +58,7 @@ xrdp_wm_login_help_notify(struct xrdp_bitmap* wnd,
     p = (struct xrdp_painter*)param1;
     if (p != 0)
     {
-      p->font->color = wnd->wm->black;
+      p->fg_color = wnd->wm->black;
       xrdp_painter_draw_text(p, wnd, 10, 30, "You must be authenticated \
 before using this");
       xrdp_painter_draw_text(p, wnd, 10, 46, "session.");

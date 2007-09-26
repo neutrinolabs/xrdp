@@ -73,17 +73,23 @@ xrdp_font_create(struct xrdp_wm* wm)
   int i;
   int index;
   int datasize;
+  int file_size;
   struct xrdp_font_char* f;
 
   DEBUG(("in xrdp_font_create"));
+  file_size = g_file_get_size(DEFAULT_FONT_NAME);
+  if (file_size < 1)
+  {
+    return 0;
+  }
   self = (struct xrdp_font*)g_malloc(sizeof(struct xrdp_font), 1);
   self->wm = wm;
   make_stream(s);
-  init_stream(s, 1024 * 256);
-  fd = g_file_open("sans-10.fv1");
+  init_stream(s, file_size + 1024);
+  fd = g_file_open(DEFAULT_FONT_NAME);
   if (fd != -1)
   {
-    b = g_file_read(fd, s->data, 1024 * 256);
+    b = g_file_read(fd, s->data, file_size + 1024);
     g_file_close(fd);
     if (b > 0)
     {
