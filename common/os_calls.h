@@ -132,6 +132,8 @@ g_remove_dir(const char* dirname);
 int APP_CC
 g_file_delete(const char* filename);
 int APP_CC
+g_file_get_size(const char* filename);
+int APP_CC
 g_strlen(const char* text);
 char* APP_CC
 g_strcpy(char* dest, const char* src);

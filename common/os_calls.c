@@ -938,6 +938,27 @@ g_file_delete(const char* filename)
 }
 
 /*****************************************************************************/
+/* returns file size, -1 on error */
+int APP_CC
+g_file_get_size(const char* filename)
+{
+#if defined(_WIN32)
+  return -1;
+#else
+  struct stat st;
+
+  if (stat(filename, &st) == 0)
+  {
+    return (int)(st.st_size);
+  }
+  else
+  {
+    return -1;
+  }
+#endif
+}
+
+/*****************************************************************************/
 /* returns length of text */
 int APP_CC
 g_strlen(const char* text)
