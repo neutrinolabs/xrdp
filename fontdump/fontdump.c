@@ -149,7 +149,7 @@ font_dump(void)
     g_file_write(fd, &zero1, 1);
     index1++;
   }
-  for (x1 = 32; x1 < 4096; x1++)
+  for (x1 = 32; x1 < 0x4e00; x1++)
   {
     check_messages();
     dc = GetWindowDC(g_wnd);
