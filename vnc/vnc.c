@@ -203,6 +203,24 @@ lib_process_channel_data(struct vnc* v, int chanid, int size, struct stream* s)
 }
 
 /******************************************************************************/
+static int APP_CC
+unicode_to_keysym(int unicode)
+{
+  int keysym;
+
+  switch (unicode)
+  {
+    case 0x017e: /* LATIN SMALL LETTER Z WITH CARON */
+      keysym = 0x01be;
+      break;
+    default:
+      keysym = unicode;
+      break;
+  }
+  return keysym;
+}
+
+/******************************************************************************/
 int DEFAULT_CC
 lib_mod_event(struct vnc* v, int msg, long param1, long param2,
               long param3, long param4)
@@ -244,17 +262,7 @@ lib_mod_event(struct vnc* v, int msg, long param1, long param2,
     key = 0;
     if (param2 == 0xffff) /* ascii char */
     {
-      /*g_writeln("msg %d param1 %x param2 %x param3 %x param4 %x",
-                msg, param1, param2, param3, param4);*/
-      switch (param1)
-      {
-        case 0x80: /* EuroSign */
-          key = 0x20ac;
-          break;
-        default:
-          key = param1;
-          break;
-      }
+      key = unicode_to_keysym(param1);
     }
     else /* non ascii key event */
     {
