@@ -1,0 +1,37 @@
+# libvnc makefile
+
+VNCOBJ = vnc.o os_calls.o d3des.o
+
+DESTDIR = /usr/local/xrdp
+CFGDIR = /etc/xrdp
+PIDDIR = /var/run
+MANDIR = /usr/local/man
+DOCDIR = /usr/doc/xrdp
+
+DEFINES =
+
+VNCLIB = libvnc.dylib
+
+CFLAGS = -Wall -O2 -I../common -fPIC $(DEFINES)
+C_OS_FLAGS = $(CFLAGS) -c -g
+LDFLAGS = -dynamiclib -Wl,-flat_namespace -Wl,-undefined -Wl,suppress
+LIBS =
+CC = gcc
+
+all: $(VNCLIB)
+
+$(VNCLIB): $(VNCOBJ)
+       $(CC) $(LDFLAGS) -o $(VNCLIB) $(VNCOBJ) $(LIBS)
+
+clean:
+       rm -f $(VNCOBJ) $(VNCLIB)
+
+os_calls.o: ../common/os_calls.c
+       $(CC) $(C_OS_FLAGS) ../common/os_calls.c
+
+d3des.o: ../common/d3des.c
+       $(CC) $(C_OS_FLAGS) ../common/d3des.c
+
+install:
+       install $(VNCLIB) $(DESTDIR)/$(VNCLIB)
+
