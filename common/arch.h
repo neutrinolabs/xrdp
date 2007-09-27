@@ -76,6 +76,19 @@ typedef int ti32;
 typedef unsigned int tui32;
 typedef signed int tsi32;
 typedef long tbus;
+#if defined(_WIN64)
+/* Microsoft's VC++ compiler uses the more backwards-compatible LLP64 model.
+   Most other 64 bit compilers(Solaris, AIX, HP, Linux, Mac OS X) use
+   the LP64 model.
+   long is 32 bits in LLP64 model, 64 bits in LP64 model. */
+typedef __int64 tbus;
+#else
+typedef long tbus;
+#endif
+#if defined _WIN32
+typedef unsigned short twchar;
+#else
 typedef int twchar;
+#endif
 
 #endif
