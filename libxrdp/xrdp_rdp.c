@@ -757,6 +757,12 @@ xrdp_rdp_process_confirm_active(struct xrdp_rdp* self, struct stream* s)
       case 21: /* 21 */
         DEBUG(("--21"));
         break;
+      case 22: /* 22 */
+        DEBUG(("--22"));
+        break;
+      case 26: /* 26 */
+        DEBUG(("--26"));
+        break;
       default:
         g_writeln("unknown in xrdp_rdp_process_confirm_active %d", type);
         break;
