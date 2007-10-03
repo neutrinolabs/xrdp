@@ -39,6 +39,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/time.h>
+#include <sys/times.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
@@ -1476,5 +1477,22 @@ g_time1(void)
   return GetTickCount() / 1000;
 #else
   return time(0);
+#endif
+}
+
+/*****************************************************************************/
+/* returns the number of milliseconds since the machine was
+   started. */
+int APP_CC
+g_time2(void)
+{
+#if defined(_WIN32)
+  return (int)GetTickCount();
+#else
+  struct tms tm;
+  clock_t num_ticks;
+
+  num_ticks = times(&tm);
+  return (int)((num_ticks / CLK_TCK) * 1000);
 #endif
 }
