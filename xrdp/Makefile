@@ -40,16 +40,6 @@ install:
 	install rsakeys.ini $(CFGDIR)/rsakeys.ini
 	install xrdp $(DESTDIR)/xrdp
 
-installdeb:
-	install ad256.bmp $(DESTDIRDEB)/usr/lib/xrdp/ad256.bmp
-	install xrdp256.bmp $(DESTDIRDEB)/usr/lib/xrdp/xrdp256.bmp
-	install cursor0.cur $(DESTDIRDEB)/usr/lib/xrdp/cursor0.cur
-	install cursor1.cur $(DESTDIRDEB)/usr/lib/xrdp/cursor1.cur
-	install sans-10.fv1 $(DESTDIRDEB)/usr/lib/xrdp/sans-10.fv1
-	install xrdp.ini $(DESTDIRDEB)/etc/xrdp/xrdp.ini
-	install rsakeys.ini $(DESTDIRDEB)/etc/xrdp/rsakeys.ini
-	install xrdp $(DESTDIRDEB)/usr/lib/xrdp/xrdp
-
 list.o: ../common/list.c
 	$(CC) $(C_OS_FLAGS) ../common/list.c
 
@@ -61,4 +51,3 @@ os_calls.o: ../common/os_calls.c
 
 thread_calls.o: ../common/thread_calls.c
 	$(CC) $(C_OS_FLAGS) ../common/thread_calls.c
-
