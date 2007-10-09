@@ -210,8 +210,107 @@ unicode_to_keysym(int unicode)
 
   switch (unicode)
   {
-    case 0x017e: /* LATIN SMALL LETTER Z WITH CARON */
-      keysym = 0x01be;
+    case 0x017e:
+      keysym = 0x01be; /* XK_zcaron */
+      break;
+    case 0x0451:
+      keysym = 0x06a3; /* XK_Cyrillic_io */
+      break;
+    case 0x0439:
+      keysym = 0x06ca; /* XK_Cyrillic_shorti */
+      break;
+    case 0x0446:
+      keysym = 0x06c3; /* XK_Cyrillic_tse */
+      break;
+    case 0x0443:
+      keysym = 0x06d5; /* XK_Cyrillic_u */
+      break;
+    case 0x043a:
+      keysym = 0x06cb; /* XK_Cyrillic_ka */
+      break;
+    case 0x0435:
+      keysym = 0x06c5; /* XK_Cyrillic_ie */
+      break;
+    case 0x043d:
+      keysym = 0x06ce; /* XK_Cyrillic_en */
+      break;
+    case 0x0433:
+      keysym = 0x06c7; /* XK_Cyrillic_ghe */
+      break;
+    case 0x0448:
+      keysym = 0x06db; /* XK_Cyrillic_sha */
+      break;
+    case 0x0449:
+      keysym = 0x06dd; /* XK_Cyrillic_shcha */
+      break;
+    case 0x0437:
+      keysym = 0x06da; /* XK_Cyrillic_ze */
+      break;
+    case 0x0445:
+      keysym = 0x06c8; /* XK_Cyrillic_ha */
+      break;
+    case 0x044a:
+      keysym = 0x06df; /* XK_Cyrillic_hardsign */
+      break;
+    case 0x0444:
+      keysym = 0x06c6; /* XK_Cyrillic_ef */
+      break;
+    case 0x044b:
+      keysym = 0x06d9; /* XK_Cyrillic_yeru */
+      break;
+    case 0x0432:
+      keysym = 0x06d7; /* XK_Cyrillic_ve */
+      break;
+    case 0x0430:
+      keysym = 0x06c1; /* XK_Cyrillic_a */
+      break;
+    case 0x043f:
+      keysym = 0x06d0; /* XK_Cyrillic_pe */
+      break;
+    case 0x0440:
+      keysym = 0x06d2; /* XK_Cyrillic_er */
+      break;
+    case 0x043e:
+      keysym = 0x06cf; /* XK_Cyrillic_o */
+      break;
+    case 0x043b:
+      keysym = 0x06cc; /* XK_Cyrillic_el */
+      break;
+    case 0x0434:
+      keysym = 0x06c4; /* XK_Cyrillic_de */
+      break;
+    case 0x0436:
+      keysym = 0x06d6; /* XK_Cyrillic_zhe */
+      break;
+    case 0x044d:
+      keysym = 0x06dc; /* XK_Cyrillic_e */
+      break;
+    case 0x044f:
+      keysym = 0x06d1; /* XK_Cyrillic_ya */
+      break;
+    case 0x0447:
+      keysym = 0x06de; /* XK_Cyrillic_che */
+      break;
+    case 0x0441:
+      keysym = 0x06d3; /* XK_Cyrillic_es */
+      break;
+    case 0x043c:
+      keysym = 0x06cd; /* XK_Cyrillic_em */
+      break;
+    case 0x0438:
+      keysym = 0x06c9; /* XK_Cyrillic_i */
+      break;
+    case 0x0442:
+      keysym = 0x06d4; /* XK_Cyrillic_te */
+      break;
+    case 0x044c:
+      keysym = 0x06d8; /* XK_Cyrillic_softsign */
+      break;
+    case 0x0431:
+      keysym = 0x06c2; /* XK_Cyrillic_be */
+      break;
+    case 0x044e:
+      keysym = 0x06c0; /* XK_Cyrillic_yu */
       break;
     default:
       keysym = unicode;
