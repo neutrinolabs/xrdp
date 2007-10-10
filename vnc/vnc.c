@@ -213,56 +213,149 @@ unicode_to_keysym(int unicode)
     case 0x017e:
       keysym = 0x01be; /* XK_zcaron */
       break;
-    case 0x0451:
-      keysym = 0x06a3; /* XK_Cyrillic_io */
+    case 0x0401:
+      keysym = 0x06b3; /* XK_Cyrillic_IO */
       break;
-    case 0x0439:
-      keysym = 0x06ca; /* XK_Cyrillic_shorti */
+    case 0x0410:
+      keysym = 0x06e1; /* XK_Cyrillic_A */
       break;
-    case 0x0446:
-      keysym = 0x06c3; /* XK_Cyrillic_tse */
+    case 0x0411:
+      keysym = 0x06e2; /* XK_Cyrillic_BE */
       break;
-    case 0x0443:
-      keysym = 0x06d5; /* XK_Cyrillic_u */
+    case 0x0412:
+      keysym = 0x06f7; /* XK_Cyrillic_VE */
       break;
-    case 0x043a:
-      keysym = 0x06cb; /* XK_Cyrillic_ka */
+    case 0x0413:
+      keysym = 0x06e7; /* XK_Cyrillic_GHE */
       break;
-    case 0x0435:
-      keysym = 0x06c5; /* XK_Cyrillic_ie */
+    case 0x0414:
+      keysym = 0x06e4; /* XK_Cyrillic_DE */
       break;
-    case 0x043d:
-      keysym = 0x06ce; /* XK_Cyrillic_en */
+    case 0x0415:
+      keysym = 0x06e5; /* XK_Cyrillic_IE */
       break;
-    case 0x0433:
-      keysym = 0x06c7; /* XK_Cyrillic_ghe */
+    case 0x0416:
+      keysym = 0x06f6; /* XK_Cyrillic_ZHE */
       break;
-    case 0x0448:
-      keysym = 0x06db; /* XK_Cyrillic_sha */
+    case 0x0417:
+      keysym = 0x06fa; /* XK_Cyrillic_ZE */
       break;
-    case 0x0449:
-      keysym = 0x06dd; /* XK_Cyrillic_shcha */
+    case 0x0418:
+      keysym = 0x06e9; /* XK_Cyrillic_I */
       break;
-    case 0x0437:
-      keysym = 0x06da; /* XK_Cyrillic_ze */
+    case 0x0419:
+      keysym = 0x06ea; /* XK_Cyrillic_SHORTI */
       break;
-    case 0x0445:
-      keysym = 0x06c8; /* XK_Cyrillic_ha */
+    case 0x041a:
+      keysym = 0x06eb; /* XK_Cyrillic_KA */
       break;
-    case 0x044a:
-      keysym = 0x06df; /* XK_Cyrillic_hardsign */
+    case 0x041b:
+      keysym = 0x06ec; /* XK_Cyrillic_EL */
       break;
-    case 0x0444:
-      keysym = 0x06c6; /* XK_Cyrillic_ef */
+    case 0x041c:
+      keysym = 0x06ed; /* XK_Cyrillic_EM */
       break;
-    case 0x044b:
-      keysym = 0x06d9; /* XK_Cyrillic_yeru */
+    case 0x041d:
+      keysym = 0x06ee; /* XK_Cyrillic_EN */
+      break;
+    case 0x041e:
+      keysym = 0x06ef; /* XK_Cyrillic_O */
+      break;
+    case 0x041f:
+      keysym = 0x06f0; /* XK_Cyrillic_PE */
+      break;
+    case 0x0420:
+      keysym = 0x06f2; /* XK_Cyrillic_ER */
+      break;
+    case 0x0423:
+      keysym = 0x06f5; /* XK_Cyrillic_U */
+      break;
+    case 0x0424:
+      keysym = 0x06e6; /* XK_Cyrillic_EF */
+      break;
+    case 0x0425:
+      keysym = 0x06e8; /* XK_Cyrillic_HA */
+      break;
+    case 0x0426:
+      keysym = 0x06e3; /* XK_Cyrillic_TSE */
+      break;
+    case 0x0428:
+      keysym = 0x06fb; /* XK_Cyrillic_SHA */
+      break;
+    case 0x0429:
+      keysym = 0x06fd; /* XK_Cyrillic_SHCHA */
+      break;
+    case 0x042a:
+      keysym = 0x06ff; /* XK_Cyrillic_HARDSIGN */
+      break;
+    case 0x042b:
+      keysym = 0x06f9; /* XK_Cyrillic_YERU */
+      break;
+    case 0x042d:
+      keysym = 0x06fc; /* XK_Cyrillic_E */
+      break;
+    case 0x042f:
+      keysym = 0x06f1; /* XK_Cyrillic_YA */
+      break;
+    case 0x0427:
+      keysym = 0x06fe; /* XK_Cyrillic_CHE */
+      break;
+    case 0x0421:
+      keysym = 0x06f3; /* XK_Cyrillic_ES */
+      break;
+    case 0x0422:
+      keysym = 0x06f4; /* XK_Cyrillic_TE */
+      break;
+    case 0x042c:
+      keysym = 0x06f8; /* XK_Cyrillic_SOFTSIGN */
+      break;
+    case 0x042e:
+      keysym = 0x06e0; /* XK_Cyrillic_YU */
+      break;
+    case 0x0430:
+      keysym = 0x06c1; /* XK_Cyrillic_a */
+      break;
+    case 0x0431:
+      keysym = 0x06c2; /* XK_Cyrillic_be */
       break;
     case 0x0432:
       keysym = 0x06d7; /* XK_Cyrillic_ve */
       break;
-    case 0x0430:
-      keysym = 0x06c1; /* XK_Cyrillic_a */
+    case 0x0433:
+      keysym = 0x06c7; /* XK_Cyrillic_ghe */
+      break;
+    case 0x0434:
+      keysym = 0x06c4; /* XK_Cyrillic_de */
+      break;
+    case 0x0435:
+      keysym = 0x06c5; /* XK_Cyrillic_ie */
+      break;
+    case 0x0436:
+      keysym = 0x06d6; /* XK_Cyrillic_zhe */
+      break;
+    case 0x0437:
+      keysym = 0x06da; /* XK_Cyrillic_ze */
+      break;
+    case 0x0438:
+      keysym = 0x06c9; /* XK_Cyrillic_i */
+      break;
+    case 0x0439:
+      keysym = 0x06ca; /* XK_Cyrillic_shorti */
+      break;
+    case 0x043a:
+      keysym = 0x06cb; /* XK_Cyrillic_ka */
+      break;
+    case 0x043b:
+      keysym = 0x06cc; /* XK_Cyrillic_el */
+      break;
+    case 0x043c:
+      keysym = 0x06cd; /* XK_Cyrillic_em */
+      break;
+    case 0x043d:
+      keysym = 0x06ce; /* XK_Cyrillic_en */
+      break;
+    case 0x043e:
+      keysym = 0x06cf; /* XK_Cyrillic_o */
       break;
     case 0x043f:
       keysym = 0x06d0; /* XK_Cyrillic_pe */
@@ -270,47 +363,53 @@ unicode_to_keysym(int unicode)
     case 0x0440:
       keysym = 0x06d2; /* XK_Cyrillic_er */
       break;
-    case 0x043e:
-      keysym = 0x06cf; /* XK_Cyrillic_o */
-      break;
-    case 0x043b:
-      keysym = 0x06cc; /* XK_Cyrillic_el */
-      break;
-    case 0x0434:
-      keysym = 0x06c4; /* XK_Cyrillic_de */
-      break;
-    case 0x0436:
-      keysym = 0x06d6; /* XK_Cyrillic_zhe */
-      break;
-    case 0x044d:
-      keysym = 0x06dc; /* XK_Cyrillic_e */
-      break;
-    case 0x044f:
-      keysym = 0x06d1; /* XK_Cyrillic_ya */
-      break;
-    case 0x0447:
-      keysym = 0x06de; /* XK_Cyrillic_che */
-      break;
     case 0x0441:
       keysym = 0x06d3; /* XK_Cyrillic_es */
-      break;
-    case 0x043c:
-      keysym = 0x06cd; /* XK_Cyrillic_em */
-      break;
-    case 0x0438:
-      keysym = 0x06c9; /* XK_Cyrillic_i */
       break;
     case 0x0442:
       keysym = 0x06d4; /* XK_Cyrillic_te */
       break;
+    case 0x0443:
+      keysym = 0x06d5; /* XK_Cyrillic_u */
+      break;
+    case 0x0444:
+      keysym = 0x06c6; /* XK_Cyrillic_ef */
+      break;
+    case 0x0445:
+      keysym = 0x06c8; /* XK_Cyrillic_ha */
+      break;
+    case 0x0446:
+      keysym = 0x06c3; /* XK_Cyrillic_tse */
+      break;
+    case 0x0447:
+      keysym = 0x06de; /* XK_Cyrillic_che */
+      break;
+    case 0x0448:
+      keysym = 0x06db; /* XK_Cyrillic_sha */
+      break;
+    case 0x0449:
+      keysym = 0x06dd; /* XK_Cyrillic_shcha */
+      break;
+    case 0x044a:
+      keysym = 0x06df; /* XK_Cyrillic_hardsign */
+      break;
+    case 0x044b:
+      keysym = 0x06d9; /* XK_Cyrillic_yeru */
+      break;
     case 0x044c:
       keysym = 0x06d8; /* XK_Cyrillic_softsign */
       break;
-    case 0x0431:
-      keysym = 0x06c2; /* XK_Cyrillic_be */
+    case 0x044d:
+      keysym = 0x06dc; /* XK_Cyrillic_e */
       break;
     case 0x044e:
       keysym = 0x06c0; /* XK_Cyrillic_yu */
+      break;
+    case 0x044f:
+      keysym = 0x06d1; /* XK_Cyrillic_ya */
+      break;
+    case 0x0451:
+      keysym = 0x06a3; /* XK_Cyrillic_io */
       break;
     default:
       keysym = unicode;
@@ -356,7 +455,7 @@ lib_mod_event(struct vnc* v, int msg, long param1, long param2,
       error = 1;
     }
   }
-  else if (msg >= 15 && msg <= 16) /* key events */
+  else if ((msg >= 15) && (msg <= 16)) /* key events */
   {
     key = 0;
     if (param2 == 0xffff) /* ascii char */
@@ -368,10 +467,10 @@ lib_mod_event(struct vnc* v, int msg, long param1, long param2,
       switch (param1)
       {
         case 0x0001: /* ecs */
-          key = 0xff1b;
+          key = 0xff1b; /* XK_Escape */
           break;
         case 0x000e: /* backspace */
-          key = 0xff08;
+          key = 0xff08; /* XK_BackSpace */
           break;
         case 0x000f: /* tab(0xff09) or left tab(0xfe20) */
           /* some documentation says don't send left tab */
@@ -380,112 +479,113 @@ lib_mod_event(struct vnc* v, int msg, long param1, long param2,
           /* for now, sending left tab, I don't know which is best */
           /* nope, sending tab always */
           /* key = (v->shift_state) ? 0xfe20 : 0xff09; */
-          key = 0xff09;
+          key = 0xff09; /* XK_Tab */
           break;
         case 0x001c: /* enter */
-          key = 0xff0d;
+          key = 0xff0d; /* XK_Return */
           break;
         case 0x001d: /* left-right control */
-          key = (param2 & 0x0100) ? 0xffe4 : 0xffe3;
+          key = (param2 & 0x0100) ? 0xffe4 : 0xffe3; /* XK_Control_R */
+                                                     /* XK_Control_L */
           break;
         case 0x002a: /* left shift */
-          key = 0xffe1;
+          key = 0xffe1; /* XK_Shift_L */
           v->shift_state = (msg == 15);
           break;
         case 0x0036: /* right shift */
-          key = 0xffe2;
+          key = 0xffe2; /* XK_Shift_R */
           v->shift_state = (msg == 15);
           break;
         case 0x0038: /* left-right alt */
           if (param2 & 0x0100) /* right alt */
           {
             /* only en-us keymap can send right alt(alt-gr) */
-            if (v->keylayout == 0x409)
+            if (v->keylayout == 0x409) /* todo */
             {
-              key = 0xffea;
+              key = 0xffea; /* XK_Alt_R */
             }
           }
           else /* left alt */
           {
-            key = 0xffe9;
+            key = 0xffe9; /* XK_Alt_L */
           }
           break;
         case 0x003b: /* F1 */
-          key = 0xffbe;
+          key = 0xffbe; /* XK_F1 */
           break;
         case 0x003c: /* F2 */
-          key = 0xffbf;
+          key = 0xffbf; /* XK_F2 */
           break;
         case 0x003d: /* F3 */
-          key = 0xffc0;
+          key = 0xffc0; /* XK_F3 */
           break;
         case 0x003e: /* F4 */
-          key = 0xffc1;
+          key = 0xffc1; /* XK_F4 */
           break;
         case 0x003f: /* F5 */
-          key = 0xffc2;
+          key = 0xffc2; /* XK_F5 */
           break;
         case 0x0040: /* F6 */
-          key = 0xffc3;
+          key = 0xffc3; /* XK_F6 */
           break;
         case 0x0041: /* F7 */
-          key = 0xffc4;
+          key = 0xffc4; /* XK_F7 */
           break;
         case 0x0042: /* F8 */
-          key = 0xffc5;
+          key = 0xffc5; /* XK_F8 */
           break;
         case 0x0043: /* F9 */
-          key = 0xffc6;
+          key = 0xffc6; /* XK_F9 */
           break;
         case 0x0044: /* F10 */
-          key = 0xffc7;
+          key = 0xffc7; /* XK_F10 */
           break;
         case 0x0047: /* home */
-          key = 0xff50;
+          key = 0xff50; /* XK_Home */
           break;
         case 0x0048: /* up arrow */
-          key = 0xff52;
+          key = 0xff52; /* XK_Up */
           break;
         case 0x0049: /* page up */
-          key = 0xff55;
+          key = 0xff55; /* XK_Prior */
           break;
         case 0x004b: /* left arrow */
-          key = 0xff51;
+          key = 0xff51; /* XK_Left */
           break;
         case 0x004d: /* right arrow */
-          key = 0xff53;
+          key = 0xff53; /* XK_Right */
           break;
         case 0x004f: /* end */
-          key = 0xff57;
+          key = 0xff57; /* XK_End */
           break;
         case 0x0050: /* down arrow */
-          key = 0xff54;
+          key = 0xff54; /* XK_Down */
           break;
         case 0x0051: /* page down */
-          key = 0xff56;
+          key = 0xff56; /* XK_Next */
           break;
         case 0x0052: /* insert */
-          key = 0xff63;
+          key = 0xff63; /* XK_Insert */
           break;
         case 0x0053: /* delete */
-          key = 0xffff;
+          key = 0xffff; /* XK_Delete */
           break;
         case 0x0057: /* F11 */
-          key = 0xffc8;
+          key = 0xffc8; /* XK_F11 */
           break;
         case 0x0058: /* F12 */
-          key = 0xffc9;
+          key = 0xffc9; /* XK_F12 */
           break;
         /* not sure about the next three, I don't think rdesktop */
         /* sends them right */
         case 0x0037: /* Print Screen */
-          key = 0xff61;
+          key = 0xff61; /* XK_Print */
           break;
         case 0x0046: /* Scroll Lock */
-          key = 0xff14;
+          key = 0xff14; /* XK_Scroll_Lock */
           break;
         case 0x0045: /* Pause */
-          key = 0xff13;
+          key = 0xff13; /* XK_Pause */
           break;
         default:
           g_sprintf(text, "unkown key lib_mod_event msg %d \
