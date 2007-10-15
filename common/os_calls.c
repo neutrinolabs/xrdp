@@ -1084,6 +1084,84 @@ g_atoi(char* str)
 
 /*****************************************************************************/
 int APP_CC
+g_htoi(char* str)
+{
+  int len;
+  int index;
+  int rv;
+  int val;
+  int shift;
+
+  rv = 0;
+  len = strlen(str);
+  index = len - 1;
+  shift = 0;
+  while (index >= 0)
+  {
+    val = 0;
+    switch (str[index])
+    {
+      case '1':
+        val = 1;
+        break;
+      case '2':
+        val = 2;
+        break;
+      case '3':
+        val = 3;
+        break;
+      case '4':
+        val = 4;
+        break;
+      case '5':
+        val = 5;
+        break;
+      case '6':
+        val = 6;
+        break;
+      case '7':
+        val = 7;
+        break;
+      case '8':
+        val = 8;
+        break;
+      case '9':
+        val = 9;
+        break;
+      case 'a':
+      case 'A':
+        val = 10;
+        break;
+      case 'b':
+      case 'B':
+        val = 11;
+        break;
+      case 'c':
+      case 'C':
+        val = 12;
+        break;
+      case 'd':
+      case 'D':
+        val = 13;
+        break;
+      case 'e':
+      case 'E':
+        val = 14;
+        break;
+      case 'f':
+      case 'F':
+        val = 15;
+        break;
+    }
+    rv = rv | (val << shift);
+    index--;
+    shift += 4;
+  }
+  return rv;
+}
+
+/*****************************************************************************/
+int APP_CC
 g_pos(char* str, const char* to_find)
 {
   char* pp;

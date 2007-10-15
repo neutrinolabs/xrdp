@@ -154,6 +154,8 @@ g_strncasecmp(const char* c1, const char* c2, int len);
 int APP_CC
 g_atoi(char* str);
 int APP_CC
+g_htoi(char* str);
+int APP_CC
 g_pos(char* str, const char* to_find);
 int APP_CC
 g_mbstowcs(twchar* dest, const char* src, int n);
