@@ -93,69 +93,12 @@ static tui8 g_lic3[20] =
 
 /*****************************************************************************/
 static void APP_CC
-hex_to_bin(char* in, char* out)
-{
-  int val;
-
-  val = 0;
-  switch (in[0])
-  {
-    case '1': val = 16; break;
-    case '2': val = 16 * 2; break;
-    case '3': val = 16 * 3; break;
-    case '4': val = 16 * 4; break;
-    case '5': val = 16 * 5; break;
-    case '6': val = 16 * 6; break;
-    case '7': val = 16 * 7; break;
-    case '8': val = 16 * 8; break;
-    case '9': val = 16 * 9; break;
-    case 'a': val = 16 * 10; break;
-    case 'A': val = 16 * 10; break;
-    case 'b': val = 16 * 11; break;
-    case 'B': val = 16 * 11; break;
-    case 'c': val = 16 * 12; break;
-    case 'C': val = 16 * 12; break;
-    case 'd': val = 16 * 13; break;
-    case 'D': val = 16 * 13; break;
-    case 'e': val = 16 * 14; break;
-    case 'E': val = 16 * 14; break;
-    case 'f': val = 16 * 15; break;
-    case 'F': val = 16 * 15; break;
-  }
-  switch (in[1])
-  {
-    case '1': val += 1; break;
-    case '2': val += 2; break;
-    case '3': val += 3; break;
-    case '4': val += 4; break;
-    case '5': val += 5; break;
-    case '6': val += 6; break;
-    case '7': val += 7; break;
-    case '8': val += 8; break;
-    case '9': val += 9; break;
-    case 'a': val += 10; break;
-    case 'A': val += 10; break;
-    case 'b': val += 11; break;
-    case 'B': val += 11; break;
-    case 'c': val += 12; break;
-    case 'C': val += 12; break;
-    case 'd': val += 13; break;
-    case 'D': val += 13; break;
-    case 'e': val += 14; break;
-    case 'E': val += 14; break;
-    case 'f': val += 15; break;
-    case 'F': val += 15; break;
-  }
-  *out = val;
-}
-
-/*****************************************************************************/
-static void APP_CC
 hex_str_to_bin(char* in, char* out, int out_len)
 {
   int in_index;
   int in_len;
   int out_index;
+  int val;
   char hex[16];
 
   in_len = g_strlen(in);
@@ -163,14 +106,15 @@ hex_str_to_bin(char* in, char* out, int out_len)
   in_index = 0;
   while (in_index <= (in_len - 4))
   {
-    if (in[in_index] == '0' && in[in_index + 1] == 'x')
+    if ((in[in_index] == '0') && (in[in_index + 1] == 'x'))
     {
       hex[0] = in[in_index + 2];
       hex[1] = in[in_index + 3];
       hex[2] = 0;
       if (out_index < out_len)
       {
-        hex_to_bin(hex, out + out_index);
+        val = g_htoi(hex);
+        out[out_index] = val;
       }
       out_index++;
     }
