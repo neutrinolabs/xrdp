@@ -1571,6 +1571,6 @@ g_time2(void)
   clock_t num_ticks;
 
   num_ticks = times(&tm);
-  return (int)((num_ticks / CLK_TCK) * 1000);
+  return (int)(num_ticks * 10);
 #endif
 }
