@@ -32,6 +32,7 @@
 #include "thread_calls.h"
 #include "list.h"
 #include "file.h"
+#include "file_loc.h"
 
 /* xrdp.c */
 long APP_CC
@@ -292,10 +293,12 @@ int APP_CC
 wchar_repeat(twchar* dest, int dest_size_in_wchars, twchar ch, int repeat);
 
 /* in lang.c */
-int APP_CC
+twchar APP_CC
 get_char_from_scan_code(int device_flags, int scan_code, int* keys,
                         int caps_lock, int num_lock, int scroll_lock,
-                        int keylayout);
+                        struct xrdp_keymap* keymap);
+int APP_CC
+get_keymaps(int keylayout, struct xrdp_keymap* keymap);
 
 /* xrdp_login_wnd.c */
 int APP_CC

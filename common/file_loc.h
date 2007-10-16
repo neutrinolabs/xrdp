@@ -35,4 +35,8 @@
 #define XRDP_PID_FILE "xrdp.pid"
 #endif
 
+#if !defined(XRDP_KEYMAP_PATH)
+#define XRDP_KEYMAP_FILE "km-%4.4x.ini"
+#endif
+
 #endif

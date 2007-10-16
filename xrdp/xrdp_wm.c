@@ -46,6 +46,8 @@ xrdp_wm_create(struct xrdp_process* owner,
   self->key_down_list->auto_free = 1;
   self->mm = xrdp_mm_create(self);
   self->default_font = xrdp_font_create(self);
+  /* this will use built in keymap or load from file */
+  get_keymaps(self->session->client_info->keylayout, &(self->keymap));
   return self;
 }
 
@@ -1087,11 +1089,10 @@ xrdp_wm_key(struct xrdp_wm* self, int device_flags, int scan_code)
     {
       if (msg == WM_KEYDOWN)
       {
-        c = get_char_from_scan_code(device_flags, scan_code, self->keys,
-                                    self->caps_lock,
-                                    self->num_lock,
-                                    self->scroll_lock,
-                                    self->session->client_info->keylayout);
+        c = get_char_from_scan_code
+            (device_flags, scan_code, self->keys, self->caps_lock,
+             self->num_lock, self->scroll_lock,
+             &(self->keymap));
         if (c != 0)
         {
           self->mm->mod->mod_event(self->mm->mod, msg, c,

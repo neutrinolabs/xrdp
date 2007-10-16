@@ -88,6 +88,46 @@ int en_us_altgr[] =
       0,      0,      0,      0,      0,      0,      0,      0
 };
 
+int en_us_capslock[] =
+{
+      0,      0,    '1',    '2',    '3',    '4',    '5',    '6',
+    '7',    '8',    '9',    '0',    '-',    '=',      0,      0,
+    'Q',    'W',    'E',    'R',    'T',    'Y',    'U',    'I',
+    'O',    'P',    '[',    ']',      0,      0,    'A',    'S',
+    'D',    'F',    'G',    'H',    'J',    'K',    'L',    ';',
+   '\'',    '`',      0,   '\\',    'Z',    'X',    'C',    'V',
+    'B',    'N',    'M',    ',',    '.',    '/',      0,    '*',
+      0,    ' ',      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,    '7',
+    '8',    '9',    '-',    '4',    '5',    '6',    '+',    '1',
+    '2',    '3',    '0',    '.',      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0
+};
+
+int en_us_shiftcapslock[] =
+{
+      0,      0,    '!',    '@',    '#',    '$',    '%',    '^',
+    '&',    '*',    '(',    ')',    '_',    '+',      0,      0,
+    'q',    'w',    'e',    'r',    't',    'y',    'u',    'i',
+    'o',    'p',    '{',    '}',      0,      0,    'a',    's',
+    'd',    'f',    'g',    'h',    'j',    'k',    'l',    ':',
+    '"',    '~',      0,    '|',    'z',    'x',    'c',    'v',
+    'b',    'n',    'm',    '<',    '>',    '?',      0,    '*',
+      0,    ' ',      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,    '7',
+    '8',    '9',    '-',    '4',    '5',    '6',    '+',    '1',
+    '2',    '3',    '0',    '.',      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0
+};
+
 /*****************************************************************************/
 /* italy */
 
@@ -142,6 +182,46 @@ int it_altgr[] =
       0,      0,    '[',    ']',      0,      0,      0,      0,
       0,      0,      0,      0,      0,      0,      0,    '@',
      '#',     0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0
+};
+
+int it_capslock[] =
+{
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0
+};
+
+int it_shiftcapslock[] =
+{
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
       0,      0,      0,      0,      0,      0,      0,      0,
       0,      0,      0,      0,      0,      0,      0,      0,
       0,      0,      0,      0,      0,      0,      0,      0,
@@ -220,6 +300,46 @@ int pt_br_altgr[] =
       0,      0,      0,      0,      0,      0,      0,      0
 };
 
+int pt_br_capslock[] =
+{
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0
+};
+
+int pt_br_shiftcapslock[] =
+{
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0
+};
+
 /*****************************************************************************/
 /* uk english */
 
@@ -286,6 +406,46 @@ int en_uk_altgr[] =
       0,      0,      0,      0,      0,      0,      0,      0
 };
 
+int en_uk_capslock[] =
+{
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0
+};
+
+int en_uk_shiftcapslock[] =
+{
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0
+};
+
 /*****************************************************************************/
 /* german */
 
@@ -341,6 +501,46 @@ int de_altgr[] =
       0,      0,      0,      0,      0,      0,      0,      0,
       0,      0,      0,      0,      0,      0,      0,      0,
       0,      0,   0xb5,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0
+};
+
+int de_capslock[] =
+{
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0
+};
+
+int de_shiftcapslock[] =
+{
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
       0,      0,      0,      0,      0,      0,      0,      0,
       0,      0,      0,      0,      0,      0,      0,      0,
       0,      0,      0,      0,      0,      0,      0,      0,
@@ -418,6 +618,46 @@ int fr_altgr[] =
       0,      0,      0,      0,      0,      0,      0,      0
 };
 
+int fr_capslock[] =
+{
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0
+};
+
+int fr_shiftcapslock[] =
+{
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0
+};
+
 /*****************************************************************************/
 /* swedish */
 
@@ -425,11 +665,11 @@ int fr_altgr[] =
 int se_noshift[] =
 {
       0,      0,    '1',    '2',    '3',    '4',    '5',    '6',
-    '7',    '8',    '9',    '0',    '+', 0x00b4,      0,      0,
+    '7',    '8',    '9',    '0',    '+',   0xb4,      0,      0,
     'q',    'w',    'e',    'r',    't',    'y',    'u',    'i',
-    'o',    'p', 0x00e5, 0x0022,      0,      0,    'a',    's',
-    'd',    'f',    'g',    'h',    'j',    'k',    'l', 0x00f6,
- 0x00e4, 0x00a7,      0,   '\'',    'z',    'x',    'c',    'v',
+    'o',    'p',   0xe5,   0x22,      0,      0,    'a',    's',
+    'd',    'f',    'g',    'h',    'j',    'k',    'l',   0xf6,
+   0xe4,   0xa7,      0,   '\'',    'z',    'x',    'c',    'v',
     'b',    'n',    'm',    ',',    '.',    '-',      0,    '*',
       0,    ' ',      0,      0,      0,      0,      0,      0,
       0,      0,      0,      0,      0,      0,      0,    '7',
@@ -445,12 +685,12 @@ int se_noshift[] =
 /* shift chars */
 int se_shift[] =
 {
-      0,      0,    '!',    '"',    '#', 0x00a4,    '%',    '&',
+      0,      0,    '!',    '"',    '#',   0xa4,    '%',    '&',
     '/',    '(',    ')',    '=',    '?',    '`',      0,      0,
     'Q',    'W',    'E',    'R',    'T',    'Y',    'U',    'I',
-    'O',    'P', 0x00c5, 0x005e,      0,      0,    'A',    'S',
-    'D',    'F',    'G',    'H',    'J',    'K',    'L', 0x00d6,
- 0x00c4, 0x00bd,      0,    '*',    'Z',    'X',    'C',    'V',
+    'O',    'P',   0xc5,   0x5e,      0,      0,    'A',    'S',
+    'D',    'F',    'G',    'H',    'J',    'K',    'L',   0xd6,
+   0xc4,   0xbd,      0,    '*',    'Z',    'X',    'C',    'V',
     'B',    'N',    'M',    ';',    ':',    '_',      0,    '*',
       0,    ' ',      0,      0,      0,      0,      0,      0,
       0,      0,      0,      0,      0,      0,      0,    '7',
@@ -466,13 +706,13 @@ int se_shift[] =
 /* right alt chars */
 int se_altgr[] =
 {
-      0,      0,      0,    '@', 0x00a3,    '$',      0,      0,
+      0,      0,      0,    '@',   0xa3,    '$',      0,      0,
     '{',    '[',    ']',    '}',   '\\',      0,      0,      0,
-    '@',      0, 0x0080,      0,      0,      0,      0,      0,
+    '@',      0, 0x20ac,      0,      0,      0,      0,      0,
       0,      0,      0,    '~',      0,      0,      0,      0,
       0,      0,      0,      0,      0,      0,      0,      0,
       0,      0,      0,      0,      0,      0,      0,      0,
-      0,      0, 0x00b5,      0,      0,      0,      0,      0,
+      0,      0,   0xb5,      0,      0,      0,      0,      0,
       0,      0,      0,      0,      0,      0,      0,      0,
       0,      0,      0,      0,      0,      0,      0,      0,
       0,      0,      0,    '$',      0,      0,      0,      0,
@@ -484,8 +724,48 @@ int se_altgr[] =
       0,      0,      0,      0,      0,      0,      0,      0
 };
 
+int se_capslock[] =
+{
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0
+};
+
+int se_shiftcapslock[] =
+{
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0
+};
+
 /*****************************************************************************/
-/* czech - todo */
+/* czech */
 
 /* non shift chars */
 int cs_noshift[] =
@@ -494,9 +774,9 @@ int cs_noshift[] =
    0xfd,   0xe1,   0xed,   0xe9,    '=',   0xb4,      0,      0,
     'q',    'w',    'e',    'r',    't',    'z',    'u',    'i',
     'o',    'p',   0xfa,    ')',      0,      0,    'a',    's',
-    'd',    'f',    'g',    'h',    'j',    'k',    'l',    ';',
-   '\'',    '`',      0,   0xa8,    'z',    'x',    'c',    'v',
-    'b',    'n',    'm',    ',',    '.',    '/',      0,    '*',
+    'd',    'f',    'g',    'h',    'j',    'k',    'l',  0x16f,
+   0xa7,    ';',      0,   0xa8,    'y',    'x',    'c',    'v',
+    'b',    'n',    'm',    ',',    '.',    '-',      0,    '*',
       0,    ' ',      0,      0,      0,      0,      0,      0,
       0,      0,      0,      0,      0,      0,      0,    '7',
     '8',    '9',    '-',    '4',    '5',    '6',    '+',    '1',
@@ -514,10 +794,10 @@ int cs_shift[] =
       0,      0,    '1',    '2',    '3',    '4',    '5',    '6',
     '7',    '8',    '9',    '0',    '%',  0x2c7,      0,      0,
     'Q',    'W',    'E',    'R',    'T',    'Z',    'U',    'I',
-    'O',    'P',    '{',    '}',      0,      0,    'A',    'S',
-    'D',    'F',    'G',    'H',    'J',    'K',    'L',    ':',
-    '"',    '~',      0,    '|',    'Z',    'X',    'C',    'V',
-    'B',    'N',    'M',    '<',    '>',    '?',      0,    '*',
+    'O',    'P',    '/',    '(',      0,      0,    'A',    'S',
+    'D',    'F',    'G',    'H',    'J',    'K',    'L',    '"',
+    '!',   0xb0,      0,  0x2c7,    'Y',    'X',    'C',    'V',
+    'B',    'N',    'M',    '?',    ':',    '_',      0,    '*',
       0,    ' ',      0,      0,      0,      0,      0,      0,
       0,      0,      0,      0,      0,      0,      0,    '7',
     '8',    '9',    '-',    '4',    '5',    '6',    '+',    '1',
@@ -531,6 +811,152 @@ int cs_shift[] =
 
 /* right alt chars */
 int cs_altgr[] =
+{
+      0,      0,    '~',  0x2c7,    '^',  0x2d8,   0xb0,  0x2db,
+    '`',   0xb7,   0xb4,  0x2dd,   0xa8,   0xb8,      0,      0,
+   '\\',    '|', 0x20ac,      0,      0,      0,      0,      0,
+      0,      0,   0xf7,   0xd7,      0,      0,      0,  0x111,
+  0x110,    '[',    ']',      0,      0,  0x142,  0x141,    '$',
+   0xdf,      0,      0,      0,      0,    '#',    '&',    '@',
+     '{',   '}',      0,    '<',    '>',    '*',     0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0
+};
+
+int cs_capslock[] =
+{
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0
+};
+
+int cs_shiftcapslock[] =
+{
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0
+};
+
+/*****************************************************************************/
+/* russian */
+
+/* non shift chars */
+int ru_noshift[] =
+{
+      0,      0,    '1',    '2',    '3',    '4',    '5',    '6',
+    '7',    '8',    '9',    '0',    '-',    '=',      0,      0,
+  0x439,  0x446,  0x443,  0x43a,  0x435,  0x43d,  0x433,  0x448,
+  0x449,  0x437,  0x445,  0x44a,      0,      0,  0x444,  0x44b,
+  0x432,  0x430,  0x43f,  0x440,  0x43e,  0x43b,  0x434,  0x436,
+  0x44d,  0x451,      0,   '\\',  0x44f,  0x447,  0x441,  0x43c,
+  0x438,  0x442,  0x44c,  0x431,  0x44e,    '.',      0,    '*',
+      0,    ' ',      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,    '7',
+    '8',    '9',    '-',    '4',    '5',    '6',    '+',    '1',
+    '2',    '3',    '0',    '.',      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0
+};
+
+/* shift chars */
+int ru_shift[] =
+{
+      0,      0,    '!',    '"', 0x2116,    ';',    '%',    ':',
+    '?',    '*',    '(',    ')',    '_',    '+',      0,      0,
+  0x419,  0x426,  0x423,  0x41a,  0x415,  0x41d,  0x413,  0x428,
+  0x429,  0x417,  0x425,  0x42a,      0,      0,  0x424,  0x42b,
+  0x412,  0x410,  0x41f,  0x420,  0x41e,  0x41b,  0x414,  0x416,
+  0x42d,  0x401,      0,    '/',  0x42f,  0x427,  0x421,  0x41c,
+  0x418,  0x422,  0x42c,  0x411,  0x42e,    ',',      0,    '*',
+      0,    ' ',      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,    '7',
+    '8',    '9',    '-',    '4',    '5',    '6',    '+',    '1',
+    '2',    '3',    '0',    '.',      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0
+};
+
+/* right alt chars */
+int ru_altgr[] =
+{
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0
+};
+
+int ru_capslock[] =
+{
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0,
+      0,      0,      0,      0,      0,      0,      0,      0
+};
+
+int ru_shiftcapslock[] =
 {
       0,      0,      0,      0,      0,      0,      0,      0,
       0,      0,      0,      0,      0,      0,      0,      0,
@@ -554,65 +980,14 @@ int cs_altgr[] =
 twchar APP_CC
 get_char_from_scan_code(int device_flags, int scan_code, int* keys,
                         int caps_lock, int num_lock, int scroll_lock,
-                        int keylayout)
+                        struct xrdp_keymap* keymap)
 {
   int rv;
-  int* keys_noshift;
-  int* keys_shift;
-  int* keys_altgr;
   int shift;
   int altgr;
   int ext;
 
-  if (keylayout == 0x40c) /* france */
-  {
-    keys_noshift = fr_noshift;
-    keys_shift = fr_shift;
-    keys_altgr = fr_altgr;
-  }
-  else if (keylayout == 0x809) /* en-uk or en-gb */
-  {
-    keys_noshift = en_uk_noshift;
-    keys_shift = en_uk_shift;
-    keys_altgr = en_uk_altgr;
-  }
-  else if (keylayout == 0x407) /* german */
-  {
-    keys_noshift = de_noshift;
-    keys_shift = de_shift;
-    keys_altgr = de_altgr;
-  }
-  else if (keylayout == 0x416) /* Portuguese (Brazil) */
-  {
-    keys_noshift = pt_br_noshift;
-    keys_shift = pt_br_shift;
-    keys_altgr = pt_br_altgr;
-  }
-  else if (keylayout == 0x410) /* italy */
-  {
-    keys_noshift = it_noshift;
-    keys_shift = it_shift;
-    keys_altgr = it_altgr;
-  }
-  else if (keylayout == 0x41d) /* swedish */
-  {
-    keys_noshift = se_noshift;
-    keys_shift = se_shift;
-    keys_altgr = se_altgr;
-  }
-  else if (keylayout == 0x405) /* czech */
-  {
-    keys_noshift = cs_noshift;
-    keys_shift = cs_shift;
-    keys_altgr = cs_altgr;
-  }
-  else /* english us 0x409 */
-  {
-    keys_noshift = en_us_noshift;
-    keys_shift = en_us_shift;
-    keys_altgr = en_us_altgr;
-  }
-  /*g_writeln("%d %d $%x", scan_code, device_flags, keylayout);*/
+  /*g_writeln("%d %d", scan_code, device_flags);*/
   shift = keys[42] || keys[54];
   altgr = keys[56]; /* right alt */
   ext = device_flags & 0x0100;
@@ -649,29 +1024,176 @@ get_char_from_scan_code(int device_flags, int scan_code, int* keys,
   }
   else
   {
-    if (shift)
+    if (shift && caps_lock)
     {
-      rv = keys_shift[scan_code];
+      rv = keymap->keys_shiftcapslock[scan_code];
+    }
+    else if (shift)
+    {
+      rv = keymap->keys_shift[scan_code];
+    }
+    else if (caps_lock)
+    {
+      rv = keymap->keys_capslock[scan_code];
+    }
+    else if (altgr)
+    {
+      rv = keymap->keys_altgr[scan_code];
     }
     else
     {
-      if (altgr)
-      {
-        rv = keys_altgr[scan_code];
-      }
-      else
-      {
-        rv = keys_noshift[scan_code];
-      }
-    }
-    if (rv >= 'a' && rv <= 'z' && caps_lock)
-    {
-      rv = rv - ('a' - 'A');
-    }
-    else if (rv >= 'A' && rv <= 'Z' && caps_lock)
-    {
-      rv = rv + ('a' - 'A');
+      rv = keymap->keys_noshift[scan_code];
     }
   }
   return (twchar)rv;
+}
+
+/*****************************************************************************/
+static int APP_CC
+km_read_section(int fd, const char* section_name, int* keymap)
+{
+  struct list* names;
+  struct list* values;
+  int index;
+  int code;
+  char* name;
+  char* value;
+
+  names = list_create();
+  names->auto_free = 0;
+  values = list_create();
+  values->auto_free = 1;
+  if (file_read_section(fd, section_name, names, values) == 0)
+  {
+    for (index = names->count - 1; index >= 0; index--)
+    {
+      name = (char*)list_get_item(names, index);
+      value = (char*)list_get_item(values, index);
+      if ((name != 0) && (value != 0))
+      {
+        if (g_strncasecmp(name, "key", 3) == 0)
+        {
+          code = g_atoi(name + 3);
+        }
+        else
+        {
+          code = g_atoi(name);
+        }
+        if ((code >= 0) && (code < 128))
+        {
+          if (g_strncasecmp(value, "0x", 2) == 0)
+          {
+            keymap[code] = g_htoi(value + 2);
+          }
+          else
+          {
+            keymap[code] = g_atoi(value);
+          }
+        }
+      }
+    }
+  }
+  list_delete(names);
+  list_delete(values);
+  return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+get_keymaps(int keylayout, struct xrdp_keymap* keymap)
+{
+  int ks;
+  int fd;
+  char filename[256];
+
+  ks = sizeof(int) * 128;
+  switch (keylayout)
+  {
+    case 0x40c: /* france */
+      g_memcpy(keymap->keys_noshift, fr_noshift, ks);
+      g_memcpy(keymap->keys_shift, fr_shift, ks);
+      g_memcpy(keymap->keys_altgr, fr_altgr, ks);
+      g_memcpy(keymap->keys_capslock, fr_capslock, ks);
+      g_memcpy(keymap->keys_shiftcapslock, fr_shiftcapslock, ks);
+      break;
+    case 0x809: /* en-uk or en-gb */
+      g_memcpy(keymap->keys_noshift, en_uk_noshift, ks);
+      g_memcpy(keymap->keys_shift, en_uk_shift, ks);
+      g_memcpy(keymap->keys_altgr, en_uk_altgr, ks);
+      g_memcpy(keymap->keys_capslock, en_uk_capslock, ks);
+      g_memcpy(keymap->keys_shiftcapslock, en_uk_shiftcapslock, ks);
+      break;
+    case 0x407: /* german */
+      g_memcpy(keymap->keys_noshift, de_noshift, ks);
+      g_memcpy(keymap->keys_shift, de_shift, ks);
+      g_memcpy(keymap->keys_altgr, de_altgr, ks);
+      g_memcpy(keymap->keys_capslock, de_capslock, ks);
+      g_memcpy(keymap->keys_shiftcapslock, de_shiftcapslock, ks);
+      break;
+    case 0x416: /* Portuguese (Brazil) */
+      g_memcpy(keymap->keys_noshift, pt_br_noshift, ks);
+      g_memcpy(keymap->keys_shift, pt_br_shift, ks);
+      g_memcpy(keymap->keys_altgr, pt_br_altgr, ks);
+      g_memcpy(keymap->keys_capslock, pt_br_capslock, ks);
+      g_memcpy(keymap->keys_shiftcapslock, pt_br_shiftcapslock, ks);
+      break;
+    case 0x410: /* italy */
+      g_memcpy(keymap->keys_noshift, it_noshift, ks);
+      g_memcpy(keymap->keys_shift, it_shift, ks);
+      g_memcpy(keymap->keys_altgr, it_altgr, ks);
+      g_memcpy(keymap->keys_capslock, it_capslock, ks);
+      g_memcpy(keymap->keys_shiftcapslock, it_shiftcapslock, ks);
+      break;
+    case 0x41d: /* swedish */
+      g_memcpy(keymap->keys_noshift, se_noshift, ks);
+      g_memcpy(keymap->keys_shift, se_shift, ks);
+      g_memcpy(keymap->keys_altgr, se_altgr, ks);
+      g_memcpy(keymap->keys_capslock, se_capslock, ks);
+      g_memcpy(keymap->keys_shiftcapslock, se_shiftcapslock, ks);
+      break;
+    case 0x405: /* czech */
+      g_memcpy(keymap->keys_noshift, cs_noshift, ks);
+      g_memcpy(keymap->keys_shift, cs_shift, ks);
+      g_memcpy(keymap->keys_altgr, cs_altgr, ks);
+      g_memcpy(keymap->keys_capslock, cs_capslock, ks);
+      g_memcpy(keymap->keys_shiftcapslock, cs_shiftcapslock, ks);
+      break;
+    case 0x419: /* russian */
+      g_memcpy(keymap->keys_noshift, ru_noshift, ks);
+      g_memcpy(keymap->keys_shift, ru_shift, ks);
+      g_memcpy(keymap->keys_altgr, ru_altgr, ks);
+      g_memcpy(keymap->keys_capslock, ru_capslock, ks);
+      g_memcpy(keymap->keys_shiftcapslock, ru_shiftcapslock, ks);
+      break;
+    default: /* default 0x409 us en */
+      g_memcpy(keymap->keys_noshift, en_us_noshift, ks);
+      g_memcpy(keymap->keys_shift, en_us_shift, ks);
+      g_memcpy(keymap->keys_altgr, en_us_altgr, ks);
+      g_memcpy(keymap->keys_capslock, en_us_capslock, ks);
+      g_memcpy(keymap->keys_shiftcapslock, en_us_shiftcapslock, ks);
+      break;
+  }
+  /* check if there is a keymap file */
+  g_snprintf(filename, 255, XRDP_KEYMAP_FILE, keylayout);
+  if (g_file_exist(filename))
+  {
+    fd = g_file_open(filename);
+    if (fd > 0)
+    {
+      /* clear the keymaps */
+      g_memset(keymap->keys_noshift, 0, ks);
+      g_memset(keymap->keys_shift, 0, ks);
+      g_memset(keymap->keys_altgr, 0, ks);
+      g_memset(keymap->keys_capslock, 0, ks);
+      g_memset(keymap->keys_shiftcapslock, 0, ks);
+      /* read the keymaps */
+      km_read_section(fd, "noshift", keymap->keys_noshift);
+      km_read_section(fd, "shift", keymap->keys_shift);
+      km_read_section(fd, "altgr", keymap->keys_altgr);
+      km_read_section(fd, "capslock", keymap->keys_capslock);
+      km_read_section(fd, "shiftcapslock", keymap->keys_shiftcapslock);
+      g_file_close(fd);
+    }
+  }
+  return 0;
 }

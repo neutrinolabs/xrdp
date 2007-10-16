@@ -1422,7 +1422,7 @@ xrdp_bitmap_def_proc(struct xrdp_bitmap* self, int msg,
         c = get_char_from_scan_code
             (param2, scan_code, self->wm->keys, self->wm->caps_lock,
              self->wm->num_lock, self->wm->scroll_lock,
-             self->wm->session->client_info->keylayout);
+             &(self->wm->keymap));
         if (c >= 32)
         {
           add_char_at(self->caption1, 255, c, self->edit_pos);

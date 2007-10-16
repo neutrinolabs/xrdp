@@ -172,6 +172,15 @@ struct xrdp_mm
   int code;
 };
 
+struct xrdp_keymap
+{
+  int keys_noshift[128];
+  int keys_shift[128];
+  int keys_altgr[128];
+  int keys_capslock[128];
+  int keys_shiftcapslock[128];
+};
+
 /* the window manager */
 struct xrdp_wm
 {
@@ -227,6 +236,7 @@ struct xrdp_wm
   int login_mode;
   struct xrdp_mm* mm;
   struct xrdp_font* default_font;
+  struct xrdp_keymap keymap;
 };
 
 /* rdp process */
