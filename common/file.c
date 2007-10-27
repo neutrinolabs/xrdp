@@ -65,7 +65,7 @@ file_read_sections(int fd, struct list* names)
       }
       else if (c == ']')
       {
-        list_add_item(names, (long)g_strdup(text));
+        list_add_item(names, (tbus)g_strdup(text));
         in_it = 0;
         in_it_index = 0;
         g_memset(text, 0, 256);
@@ -238,8 +238,8 @@ file_read_section(int fd, const char* section, struct list* names,
             if (g_strlen(text) > 0)
             {
               file_split_name_value(text, name, value);
-              list_add_item(names, (long)g_strdup(name));
-              list_add_item(values, (long)g_strdup(value));
+              list_add_item(names, (tbus)g_strdup(name));
+              list_add_item(values, (tbus)g_strdup(value));
             }
           }
           free_stream(s);
