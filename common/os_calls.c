@@ -1199,6 +1199,125 @@ g_wcstombs(char* dest, const twchar* src, int n)
 }
 
 /*****************************************************************************/
+/* returns error */
+/* trim spaces and tabs, anything <= space */
+/* trim_flags 1 trim left, 2 trim right, 3 trim both, 4 trim through */
+/* this will always shorten the string or not change it */
+int APP_CC
+g_strtrim(char* str, int trim_flags)
+{
+  int index;
+  int len;
+  int text1_index;
+  int got_char;
+  wchar_t* text;
+  wchar_t* text1;
+
+  len = mbstowcs(0, str, 0);
+  if (len < 1)
+  {
+    return 0;
+  }
+  if ((trim_flags < 1) || (trim_flags > 4))
+  {
+    return 1;
+  }
+  text = (wchar_t*)malloc(len * sizeof(wchar_t) + 8);
+  text1 = (wchar_t*)malloc(len * sizeof(wchar_t) + 8);
+  text1_index = 0;
+  mbstowcs(text, str, len + 1);
+  switch (trim_flags)
+  {
+    case 4: /* trim through */
+      for (index = 0; index < len; index++)
+      {
+        if (text[index] > 32)
+        {
+          text1[text1_index] = text[index];
+          text1_index++;
+        }
+      }
+      text1[text1_index] = 0;
+      break;
+    case 3: /* trim both */
+      got_char = 0;
+      for (index = 0; index < len; index++)
+      {
+        if (got_char)
+        {
+          text1[text1_index] = text[index];
+          text1_index++;
+        }
+        else
+        {
+          if (text[index] > 32)
+          {
+            text1[text1_index] = text[index];
+            text1_index++;
+            got_char = 1;
+          }
+        }
+      }
+      text1[text1_index] = 0;
+      len = text1_index;
+      /* trim right */
+      for (index = len - 1; index >= 0; index--)
+      {
+        if (text1[index] > 32)
+        {
+          break;
+        }
+      }
+      text1_index = index + 1;
+      text1[text1_index] = 0;
+      break;
+    case 2: /* trim right */
+      /* copy it */
+      for (index = 0; index < len; index++)
+      {
+        text1[text1_index] = text[index];
+        text1_index++;
+      }
+      /* trim right */
+      for (index = len - 1; index >= 0; index--)
+      {
+        if (text1[index] > 32)
+        {
+          break;
+        }
+      }
+      text1_index = index + 1;
+      text1[text1_index] = 0;
+      break;
+    case 1: /* trim left */
+      got_char = 0;
+      for (index = 0; index < len; index++)
+      {
+        if (got_char)
+        {
+          text1[text1_index] = text[index];
+          text1_index++;
+        }
+        else
+        {
+          if (text[index] > 32)
+          {
+            text1[text1_index] = text[index];
+            text1_index++;
+            got_char = 1;
+          }
+        }
+      }
+      text1[text1_index] = 0;
+      break;
+  }
+  wcstombs(str, text1, text1_index + 1);
+  free(text);
+  free(text1);
+  return 0;
+}
+
+/*****************************************************************************/
 long APP_CC
 g_load_library(char* in)
 {

@@ -188,6 +188,8 @@ file_split_name_value(char* text, char* name, char* value)
       name[name_index] = 0;
     }
   }
+  g_strtrim(name, 3); /* trim both right and left */
+  g_strtrim(value, 3); /* trim both right and left */
   return 0;
 }
 

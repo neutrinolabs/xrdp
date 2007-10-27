@@ -161,6 +161,8 @@ int APP_CC
 g_mbstowcs(twchar* dest, const char* src, int n);
 int APP_CC
 g_wcstombs(char* dest, const twchar* src, int n);
+int APP_CC
+g_strtrim(char* str, int trim_flags);
 long APP_CC
 g_load_library(char* in);
 int APP_CC
