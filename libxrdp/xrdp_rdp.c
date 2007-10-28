@@ -57,70 +57,64 @@ static tui8 g_unknown2[8] =
 static int APP_CC
 xrdp_rdp_read_config(struct xrdp_client_info* client_info)
 {
-  int fd;
   int index;
   struct list* items;
   struct list* values;
   char* item;
   char* value;
 
-  fd = g_file_open(XRDP_CFG_FILE); /* xrdp.ini */
-  if (fd > 0)
+  items = list_create();
+  items->auto_free = 1;
+  values = list_create();
+  values->auto_free = 1;
+  file_by_name_read_section(XRDP_CFG_FILE, "globals", items, values);
+  for (index = 0; index < items->count; index++)
   {
-    items = list_create();
-    items->auto_free = 1;
-    values = list_create();
-    values->auto_free = 1;
-    file_read_section(fd, "globals", items, values);
-    for (index = 0; index < items->count; index++)
+    item = (char*)list_get_item(items, index);
+    value = (char*)list_get_item(values, index);
+    if (g_strcasecmp(item, "bitmap_cache") == 0)
     {
-      item = (char*)list_get_item(items, index);
-      value = (char*)list_get_item(values, index);
-      if (g_strncasecmp(item, "bitmap_cache", 255) == 0)
+      if ((g_strcasecmp(value, "yes") == 0) ||
+          (g_strcasecmp(value, "true") == 0) ||
+          (g_strcasecmp(value, "1") == 0))
       {
-        if (g_strncasecmp(value, "yes", 255) == 0 ||
-            g_strncasecmp(value, "true", 255) == 0 ||
-            g_strncasecmp(value, "1", 255) == 0)
-        {
-          client_info->use_bitmap_cache = 1;
-        }
-      }
-      else if (g_strncasecmp(item, "bitmap_compression", 255) == 0)
-      {
-        if (g_strncasecmp(value, "yes", 255) == 0 ||
-            g_strncasecmp(value, "true", 255) == 0 ||
-            g_strncasecmp(value, "1", 255) == 0)
-        {
-          client_info->use_bitmap_comp = 1;
-        }
-      }
-      else if (g_strncasecmp(item, "crypt_level", 255) == 0)
-      {
-        if (g_strncasecmp(value, "low", 255) == 0)
-        {
-          client_info->crypt_level = 1;
-        }
-        else if (g_strncasecmp(value, "medium", 255) == 0)
-        {
-          client_info->crypt_level = 2;
-        }
-        else if (g_strncasecmp(value, "high", 255) == 0)
-        {
-          client_info->crypt_level = 3;
-        }
-      }
-      else if (g_strcasecmp(item, "channel_code") == 0)
-      {
-        if (g_strcasecmp(value, "1") == 0)
-        {
-          client_info->channel_code = 1;
-        }
+        client_info->use_bitmap_cache = 1;
       }
     }
-    list_delete(items);
-    list_delete(values);
-    g_file_close(fd);
+    else if (g_strcasecmp(item, "bitmap_compression") == 0)
+    {
+      if (g_strcasecmp(value, "yes") == 0 ||
+          g_strcasecmp(value, "true") == 0 ||
+          g_strcasecmp(value, "1") == 0)
+      {
+        client_info->use_bitmap_comp = 1;
+      }
+    }
+    else if (g_strcasecmp(item, "crypt_level") == 0)
+    {
+      if (g_strcasecmp(value, "low") == 0)
+      {
+        client_info->crypt_level = 1;
+      }
+      else if (g_strcasecmp(value, "medium") == 0)
+      {
+        client_info->crypt_level = 2;
+      }
+      else if (g_strcasecmp(value, "high") == 0)
+      {
+        client_info->crypt_level = 3;
+      }
+    }
+    else if (g_strcasecmp(item, "channel_code") == 0)
+    {
+      if (g_strcasecmp(value, "1") == 0)
+      {
+        client_info->channel_code = 1;
+      }
+    }
   }
+  list_delete(items);
+  list_delete(values);
   return 0;
 }
 

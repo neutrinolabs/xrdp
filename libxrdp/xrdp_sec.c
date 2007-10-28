@@ -130,7 +130,6 @@ xrdp_sec_create(struct xrdp_rdp* owner, int sck, int crypt_level,
   struct xrdp_sec* self;
   struct list* items;
   struct list* values;
-  int fd;
   int index;
   char* item;
   char* value;
@@ -161,39 +160,34 @@ xrdp_sec_create(struct xrdp_rdp* owner, int sck, int crypt_level,
   g_random(self->server_random, 32);
   self->mcs_layer = xrdp_mcs_create(self, sck, &self->client_mcs_data,
                                     &self->server_mcs_data);
-  fd = g_file_open(XRDP_KEY_FILE); /* rsakeys.ini */
-  if (fd > 0)
+  items = list_create();
+  items->auto_free = 1;
+  values = list_create();
+  values->auto_free = 1;
+  file_by_name_read_section(XRDP_KEY_FILE, "keys", items, values);
+  for (index = 0; index < items->count; index++)
   {
-    items = list_create();
-    items->auto_free = 1;
-    values = list_create();
-    values->auto_free = 1;
-    file_read_section(fd, "keys", items, values);
-    for (index = 0; index < items->count; index++)
+    item = (char*)list_get_item(items, index);
+    value = (char*)list_get_item(values, index);
+    if (g_strcasecmp(item, "pub_exp") == 0)
     {
-      item = (char*)list_get_item(items, index);
-      value = (char*)list_get_item(values, index);
-      if (g_strncasecmp(item, "pub_exp", 255) == 0)
-      {
-        hex_str_to_bin(value, self->pub_exp, 4);
-      }
-      else if (g_strncasecmp(item, "pub_mod", 255) == 0)
-      {
-        hex_str_to_bin(value, self->pub_mod, 64);
-      }
-      else if (g_strncasecmp(item, "pub_sig", 255) == 0)
-      {
-        hex_str_to_bin(value, self->pub_sig, 64);
-      }
-      else if (g_strncasecmp(item, "pri_exp", 255) == 0)
-      {
-        hex_str_to_bin(value, self->pri_exp, 64);
-      }
+      hex_str_to_bin(value, self->pub_exp, 4);
     }
-    list_delete(items);
-    list_delete(values);
-    g_file_close(fd);
+    else if (g_strcasecmp(item, "pub_mod") == 0)
+    {
+      hex_str_to_bin(value, self->pub_mod, 64);
+    }
+    else if (g_strcasecmp(item, "pub_sig") == 0)
+    {
+      hex_str_to_bin(value, self->pub_sig, 64);
+    }
+    else if (g_strcasecmp(item, "pri_exp") == 0)
+    {
+      hex_str_to_bin(value, self->pri_exp, 64);
+    }
   }
+  list_delete(items);
+  list_delete(values);
   self->chan_layer = xrdp_channel_create(self, self->mcs_layer);
   DEBUG((" out xrdp_sec_create"));
   return self;
