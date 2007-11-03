@@ -35,7 +35,7 @@ list_create(void)
   self = (struct list*)g_malloc(sizeof(struct list), 1);
   self->grow_by = 10;
   self->alloc_size = 10;
-  self->items = (long*)g_malloc(sizeof(long) * 10, 1);
+  self->items = (tbus*)g_malloc(sizeof(tbus) * 10, 1);
   return self;
 }
 
@@ -63,17 +63,17 @@ list_delete(struct list* self)
 
 /*****************************************************************************/
 void APP_CC
-list_add_item(struct list* self, long item)
+list_add_item(struct list* self, tbus item)
 {
-  long* p;
+  tbus* p;
   int i;
 
   if (self->count >= self->alloc_size)
   {
     i = self->alloc_size;
     self->alloc_size += self->grow_by;
-    p = (long*)g_malloc(sizeof(long) * self->alloc_size, 1);
-    g_memcpy(p, self->items, sizeof(long) * i);
+    p = (tbus*)g_malloc(sizeof(tbus) * self->alloc_size, 1);
+    g_memcpy(p, self->items, sizeof(tbus) * i);
     g_free(self->items);
     self->items = p;
   }
@@ -82,7 +82,7 @@ list_add_item(struct list* self, long item)
 }
 
 /*****************************************************************************/
-long APP_CC
+tbus APP_CC
 list_get_item(struct list* self, int index)
 {
   if (index < 0 || index >= self->count)
@@ -110,12 +110,12 @@ list_clear(struct list* self)
   self->count = 0;
   self->grow_by = 10;
   self->alloc_size = 10;
-  self->items = (long*)g_malloc(sizeof(long) * 10, 1);
+  self->items = (tbus*)g_malloc(sizeof(tbus) * 10, 1);
 }
 
 /*****************************************************************************/
 int APP_CC
-list_index_of(struct list* self, long item)
+list_index_of(struct list* self, tbus item)
 {
   int i;
 
@@ -152,9 +152,9 @@ list_remove_item(struct list* self, int index)
 
 /*****************************************************************************/
 void APP_CC
-list_insert_item(struct list* self, int index, long item)
+list_insert_item(struct list* self, int index, tbus item)
 {
-  long* p;
+  tbus* p;
   int i;
 
   if (index == self->count)
@@ -169,8 +169,8 @@ list_insert_item(struct list* self, int index, long item)
     {
       i = self->alloc_size;
       self->alloc_size += self->grow_by;
-      p = (long*)g_malloc(sizeof(long) * self->alloc_size, 1);
-      g_memcpy(p, self->items, sizeof(long) * i);
+      p = (tbus*)g_malloc(sizeof(tbus) * self->alloc_size, 1);
+      g_memcpy(p, self->items, sizeof(tbus) * i);
       g_free(self->items);
       self->items = p;
     }
@@ -189,13 +189,13 @@ void APP_CC
 list_append_list_strdup(struct list* self, struct list* dest, int start_index)
 {
   int index;
-  long item;
+  tbus item;
   char* dup;
 
   for (index = start_index; index < self->count; index++)
   {
     item = list_get_item(self, index);
     dup = g_strdup((char*)item);
-    list_add_item(dest, (long)dup);
+    list_add_item(dest, (tbus)dup);
   }
 }

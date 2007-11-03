@@ -30,7 +30,7 @@
 /* list */
 struct list
 {
-  long* items;
+  tbus* items;
   int count;
   int alloc_size;
   int grow_by;
@@ -42,17 +42,17 @@ list_create(void);
 void APP_CC
 list_delete(struct list* self);
 void APP_CC
-list_add_item(struct list* self, long item);
-long APP_CC
+list_add_item(struct list* self, tbus item);
+tbus APP_CC
 list_get_item(struct list* self, int index);
 void APP_CC
 list_clear(struct list* self);
 int APP_CC
-list_index_of(struct list* self, long item);
+list_index_of(struct list* self, tbus item);
 void APP_CC
 list_remove_item(struct list* self, int index);
 void APP_CC
-list_insert_item(struct list* self, int index, long item);
+list_insert_item(struct list* self, int index, tbus item);
 void APP_CC
 list_append_list_strdup(struct list* self, struct list* dest, int start_index);
 
