@@ -64,34 +64,34 @@ tc_thread_create(void* (* start_routine)(void*), void* arg)
 #endif
 
 /*****************************************************************************/
-long APP_CC
+tbus APP_CC
 tc_get_threadid(void)
 {
 #if defined(_WIN32)
-  return (long)GetCurrentThreadId();
+  return (tbus)GetCurrentThreadId();
 #else
-  return (long)pthread_self();
+  return (tbus)pthread_self();
 #endif
 }
 
 /*****************************************************************************/
-long APP_CC
+tbus APP_CC
 tc_mutex_create(void)
 {
 #if defined(_WIN32)
-  return (long)CreateMutex(0, 0, 0);
+  return (tbus)CreateMutex(0, 0, 0);
 #else
   pthread_mutex_t* lmutex;
 
   lmutex = (pthread_mutex_t*)g_malloc(sizeof(pthread_mutex_t), 0);
   pthread_mutex_init(lmutex, 0);
-  return (long)lmutex;
+  return (tbus)lmutex;
 #endif
 }
 
 /*****************************************************************************/
 void APP_CC
-tc_mutex_delete(long mutex)
+tc_mutex_delete(tbus mutex)
 {
 #if defined(_WIN32)
   CloseHandle((HANDLE)mutex);
@@ -106,7 +106,7 @@ tc_mutex_delete(long mutex)
 
 /*****************************************************************************/
 int APP_CC
-tc_mutex_lock(long mutex)
+tc_mutex_lock(tbus mutex)
 {
 #if defined(_WIN32)
   WaitForSingleObject((HANDLE)mutex, INFINITE);
@@ -119,7 +119,7 @@ tc_mutex_lock(long mutex)
 
 /*****************************************************************************/
 int APP_CC
-tc_mutex_unlock(long mutex)
+tc_mutex_unlock(tbus mutex)
 {
 #if defined(_WIN32)
   ReleaseMutex((HANDLE)mutex);
@@ -131,26 +131,26 @@ tc_mutex_unlock(long mutex)
 }
 
 /*****************************************************************************/
-long APP_CC
+tbus APP_CC
 tc_sem_create(int init_count)
 {
 #if defined(_WIN32)
   HANDLE sem;
 
   sem = CreateSemaphore(0, init_count, init_count + 10, 0);
-  return (long)sem;
+  return (tbus)sem;
 #else
   sem_t* sem;
 
   sem = g_malloc(sizeof(sem_t), 0);
   sem_init(sem, 0, init_count);
-  return (long)sem;
+  return (tbus)sem;
 #endif
 }
 
 /*****************************************************************************/
 void APP_CC
-tc_sem_delete(long sem)
+tc_sem_delete(tbus sem)
 {
 #if defined(_WIN32)
   CloseHandle((HANDLE)sem);
@@ -165,7 +165,7 @@ tc_sem_delete(long sem)
 
 /*****************************************************************************/
 int APP_CC
-tc_sem_dec(long sem)
+tc_sem_dec(tbus sem)
 {
 #if defined(_WIN32)
   WaitForSingleObject((HANDLE)sem, INFINITE);
@@ -178,7 +178,7 @@ tc_sem_dec(long sem)
 
 /*****************************************************************************/
 int APP_CC
-tc_sem_inc(long sem)
+tc_sem_inc(tbus sem)
 {
 #if defined(_WIN32)
   ReleaseSemaphore((HANDLE)sem, 1, 0);
