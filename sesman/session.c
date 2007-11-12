@@ -645,19 +645,23 @@ session_get_byuser(char* user, int* cnt)
   index = 0;
   while (tmp != 0)
   {
-    (sess[index]).SID=tmp->item->pid;
-    (sess[index]).type=tmp->item->type;
-    (sess[index]).height=tmp->item->height;
-    (sess[index]).width=tmp->item->width;
-    (sess[index]).bpp=tmp->item->bpp;
+#warning FIXME: we should get only disconnected sessions!
+    if (!g_strncasecmp(user, tmp->item->name, 256))
+    {
+      (sess[index]).SID=tmp->item->pid;
+      (sess[index]).type=tmp->item->type;
+      (sess[index]).height=tmp->item->height;
+      (sess[index]).width=tmp->item->width;
+      (sess[index]).bpp=tmp->item->bpp;
 #warning FIXME: setting idle times and such
-    (sess[index]).idle_days=0;
-    (sess[index]).idle_hours=0;
-    (sess[index]).idle_minutes=0;
+      (sess[index]).idle_days=0;
+      (sess[index]).idle_hours=0;
+      (sess[index]).idle_minutes=0;
+      index++;
+    }
 
     /* go on */
     tmp=tmp->next;
-    index++;
   }
 
   /*THREAD-FIX release chain lock */
