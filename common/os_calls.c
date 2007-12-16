@@ -1360,6 +1360,7 @@ g_get_proc_address(long lib, const char* name)
 }
 
 /*****************************************************************************/
+/* does not work in win32 */
 int APP_CC
 g_system(char* aexec)
 {
@@ -1371,6 +1372,7 @@ g_system(char* aexec)
 }
 
 /*****************************************************************************/
+/* does not work in win32 */
 char* APP_CC
 g_get_strerror(void)
 {
@@ -1382,6 +1384,7 @@ g_get_strerror(void)
 }
 
 /*****************************************************************************/
+/* does not work in win32 */
 int APP_CC
 g_execvp(const char* p1, char* args[])
 {
@@ -1393,6 +1396,7 @@ g_execvp(const char* p1, char* args[])
 }
 
 /*****************************************************************************/
+/* does not work in win32 */
 int APP_CC
 g_execlp3(const char* a1, const char* a2, const char* a3)
 {
@@ -1404,6 +1408,7 @@ g_execlp3(const char* a1, const char* a2, const char* a3)
 }
 
 /*****************************************************************************/
+/* does not work in win32 */
 void APP_CC
 g_signal(int sig_num, void (*func)(int))
 {
@@ -1414,6 +1419,7 @@ g_signal(int sig_num, void (*func)(int))
 }
 
 /*****************************************************************************/
+/* does not work in win32 */
 void APP_CC
 g_signal_child_stop(void (*func)(int))
 {
@@ -1424,6 +1430,7 @@ g_signal_child_stop(void (*func)(int))
 }
 
 /*****************************************************************************/
+/* does not work in win32 */
 void APP_CC
 g_unset_signals(void)
 {
@@ -1437,6 +1444,7 @@ g_unset_signals(void)
 }
 
 /*****************************************************************************/
+/* does not work in win32 */
 int APP_CC
 g_fork(void)
 {
@@ -1448,6 +1456,7 @@ g_fork(void)
 }
 
 /*****************************************************************************/
+/* does not work in win32 */
 int APP_CC
 g_setgid(int pid)
 {
@@ -1460,6 +1469,7 @@ g_setgid(int pid)
 
 /*****************************************************************************/
 /* returns error, zero is success, non zero is error */
+/* does not work in win32 */
 int APP_CC
 g_initgroups(const char* user, int gid)
 {
@@ -1471,6 +1481,7 @@ g_initgroups(const char* user, int gid)
 }
 
 /*****************************************************************************/
+/* does not work in win32 */
 int APP_CC
 g_setuid(int pid)
 {
@@ -1482,6 +1493,7 @@ g_setuid(int pid)
 }
 
 /*****************************************************************************/
+/* does not work in win32 */
 int APP_CC
 g_waitchild(void)
 {
@@ -1495,6 +1507,7 @@ g_waitchild(void)
 }
 
 /*****************************************************************************/
+/* does not work in win32 */
 int APP_CC
 g_waitpid(int pid)
 {
@@ -1506,6 +1519,7 @@ g_waitpid(int pid)
 }
 
 /*****************************************************************************/
+/* does not work in win32 */
 void APP_CC
 g_clearenv(void)
 {
@@ -1516,6 +1530,7 @@ g_clearenv(void)
 }
 
 /*****************************************************************************/
+/* does not work in win32 */
 int APP_CC
 g_setenv(const char* name, const char* value, int rewrite)
 {
@@ -1527,6 +1542,7 @@ g_setenv(const char* name, const char* value, int rewrite)
 }
 
 /*****************************************************************************/
+/* does not work in win32 */
 char* APP_CC
 g_getenv(const char* name)
 {
@@ -1546,6 +1562,7 @@ g_exit(int exit_code)
 }
 
 /*****************************************************************************/
+/* does not work in win32 */
 int APP_CC
 g_getpid(void)
 {
@@ -1557,6 +1574,7 @@ g_getpid(void)
 }
 
 /*****************************************************************************/
+/* does not work in win32 */
 int APP_CC
 g_sigterm(int pid)
 {
@@ -1569,6 +1587,7 @@ g_sigterm(int pid)
 
 /*****************************************************************************/
 /* returns 0 if ok */
+/* does not work in win32 */
 int APP_CC
 g_getuser_info(const char* username, int* gid, int* uid, char* shell,
                char* dir, char* gecos)
@@ -1609,6 +1628,7 @@ g_getuser_info(const char* username, int* gid, int* uid, char* shell,
 
 /*****************************************************************************/
 /* returns 0 if ok */
+/* does not work in win32 */
 int APP_CC
 g_getgroup_info(const char* groupname, int* gid)
 {
@@ -1633,6 +1653,7 @@ g_getgroup_info(const char* groupname, int* gid)
 /*****************************************************************************/
 /* returns error */
 /* if zero is returned, then ok is set */
+/* does not work in win32 */
 int APP_CC
 g_check_user_in_group(const char* username, int gid, int* ok)
 {
