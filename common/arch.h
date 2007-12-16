@@ -27,11 +27,16 @@
 /* check endianess */
 #if defined(__sparc__) || defined(__PPC__) || defined(__ppc__)
 #define B_ENDIAN
-#elif __BYTE_ORDER == __LITTLE_ENDIAN
+#elif defined(__BYTE_ORDER)
+#if __BYTE_ORDER == __LITTLE_ENDIAN
 #define L_ENDIAN
 #elif __BYTE_ORDER == __BIG_ENDIAN
 #define B_ENDIAN
 #endif
+#else
+#define L_ENDIAN
+#endif
+
 /* check if we need to align data */
 #if defined(__sparc__) || defined(__alpha__) || defined(__hppa__) || \
     defined(__AIX__) || defined(__PPC__) || defined(__mips__) || \
