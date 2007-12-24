@@ -358,7 +358,7 @@ g_tcp_connect(int sck, const char* address, const char* port)
 
   g_memset(&s, 0, sizeof(struct sockaddr_in));
   s.sin_family = AF_INET;
-  s.sin_port = htons(atoi(port));
+  s.sin_port = htons((tui16)atoi(port));
   s.sin_addr.s_addr = inet_addr(address);
   if (s.sin_addr.s_addr == INADDR_NONE)
   {
@@ -406,7 +406,7 @@ g_tcp_bind(int sck, char* port)
 
   memset(&s, 0, sizeof(struct sockaddr_in));
   s.sin_family = AF_INET;
-  s.sin_port = htons(atoi(port));
+  s.sin_port = htons((tui16)atoi(port));
   s.sin_addr.s_addr = INADDR_ANY;
   return bind(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
 }
