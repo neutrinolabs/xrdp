@@ -469,6 +469,7 @@ xrdp_mm_process_login_response(struct xrdp_mm* self, struct stream* s)
       {
         self->wm->login_mode = 10;
         self->wm->pro_layer->app_sck = self->mod->sck;
+        self->wm->dragging = 0;
       }
     }
   }

@@ -665,12 +665,74 @@ xrdp_wm_move_window(struct xrdp_wm* self, struct xrdp_bitmap* wnd,
 }
 
 /*****************************************************************************/
+static int APP_CC
+xrdp_wm_undraw_dragging_box(struct xrdp_wm* self, int do_begin_end)
+{
+  int boxx;
+  int boxy;
+
+  if (self == 0)
+  {
+    return 0;
+  }
+  if (self->dragging)
+  {
+    if (self->draggingxorstate)
+    {
+      if (do_begin_end)
+      {
+        xrdp_painter_begin_update(self->painter);
+      }
+      boxx = self->draggingx - self->draggingdx;
+      boxy = self->draggingy - self->draggingdy;
+      xrdp_wm_xor_pat(self, boxx, boxy, self->draggingcx, self->draggingcy);
+      self->draggingxorstate = 0;
+      if (do_begin_end)
+      {
+        xrdp_painter_end_update(self->painter);
+      }
+    }
+  }
+  return 0;
+}
+
+/*****************************************************************************/
+static int APP_CC
+xrdp_wm_draw_dragging_box(struct xrdp_wm* self, int do_begin_end)
+{
+  int boxx;
+  int boxy;
+
+  if (self == 0)
+  {
+    return 0;
+  }
+  if (self->dragging)
+  {
+    if (!self->draggingxorstate)
+    {
+      if (do_begin_end)
+      {
+        xrdp_painter_begin_update(self->painter);
+      }
+      boxx = self->draggingx - self->draggingdx;
+      boxy = self->draggingy - self->draggingdy;
+      xrdp_wm_xor_pat(self, boxx, boxy, self->draggingcx, self->draggingcy);
+      self->draggingxorstate = 1;
+      if (do_begin_end)
+      {
+        xrdp_painter_end_update(self->painter);
+      }
+    }
+  }
+  return 0;
+}
+
+/*****************************************************************************/
 int APP_CC
 xrdp_wm_mouse_move(struct xrdp_wm* self, int x, int y)
 {
   struct xrdp_bitmap* b;
-  int boxx;
-  int boxy;
 
   if (self == 0)
   {
@@ -697,18 +759,10 @@ xrdp_wm_mouse_move(struct xrdp_wm* self, int x, int y)
   if (self->dragging)
   {
     xrdp_painter_begin_update(self->painter);
-    boxx = self->draggingx - self->draggingdx;
-    boxy = self->draggingy - self->draggingdy;
-    if (self->draggingxorstate)
-    {
-      xrdp_wm_xor_pat(self, boxx, boxy, self->draggingcx, self->draggingcy);
-    }
+    xrdp_wm_undraw_dragging_box(self, 0);
     self->draggingx = x;
     self->draggingy = y;
-    boxx = self->draggingx - self->draggingdx;
-    boxy = self->draggingy - self->draggingdy;
-    xrdp_wm_xor_pat(self, boxx, boxy, self->draggingcx, self->draggingcy);
-    self->draggingxorstate = 1;
+    xrdp_wm_draw_dragging_box(self, 0);
     xrdp_painter_end_update(self->painter);
     return 0;
   }
@@ -1324,17 +1378,20 @@ xrdp_wm_idle(struct xrdp_wm* self)
     self->login_mode = 1; /* put the wm in login mode */
     list_clear(self->log);
     xrdp_wm_delete_all_childs(self);
+    self->dragging = 0;
     xrdp_wm_init(self);
   }
   else if (self->login_mode == 2)
   {
     self->login_mode = 3; /* put the wm in connected mode */
     xrdp_wm_delete_all_childs(self);
+    self->dragging = 0;
     xrdp_mm_connect(self->mm);
   }
   else if (self->login_mode == 10)
   {
     xrdp_wm_delete_all_childs(self);
+    self->dragging = 0;
     self->login_mode = 11;
   }
   return 0;
