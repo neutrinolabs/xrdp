@@ -14,7 +14,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
    xrdp: A Remote Desktop Protocol server.
-   Copyright (C) Jay Sorg 2007
+   Copyright (C) Jay Sorg 2007-2008
 
    rsa key generator for xrdp
 
