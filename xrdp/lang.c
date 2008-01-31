@@ -1105,6 +1105,7 @@ get_keymaps(int keylayout, struct xrdp_keymap* keymap)
   int ks;
   int fd;
   char filename[256];
+  struct xrdp_keymap lkeymap;
 
   ks = sizeof(int) * 128;
   switch (keylayout)
@@ -1180,6 +1181,7 @@ get_keymaps(int keylayout, struct xrdp_keymap* keymap)
     fd = g_file_open(filename);
     if (fd > 0)
     {
+      lkeymap = *keymap; /* make a copy of the build in kaymap */
       /* clear the keymaps */
       g_memset(keymap->keys_noshift, 0, ks);
       g_memset(keymap->keys_shift, 0, ks);
@@ -1192,6 +1194,11 @@ get_keymaps(int keylayout, struct xrdp_keymap* keymap)
       km_read_section(fd, "altgr", keymap->keys_altgr);
       km_read_section(fd, "capslock", keymap->keys_capslock);
       km_read_section(fd, "shiftcapslock", keymap->keys_shiftcapslock);
+      if (g_memcmp(&lkeymap, keymap, sizeof(struct xrdp_keymap)) != 0)
+      {
+        g_writeln("local keymap file for 0x%4.4x found and dosen't match built \
+in keymap, using local keymap file", keylayout);
+      }
       g_file_close(fd);
     }
   }
