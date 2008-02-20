@@ -30,6 +30,8 @@
 #include "file.h"
 #include "sesman.h"
 
+extern struct config_sesman g_cfg;
+
 /******************************************************************************/
 /**
  *
@@ -62,8 +64,16 @@ config_read(struct config_sesman* cfg)
   fd = g_file_open(SESMAN_CFG_FILE);
   if (-1 == fd)
   {
-    log_message(LOG_LEVEL_ALWAYS, "error opening %s in \
-config_read", SESMAN_CFG_FILE);
+    if (g_cfg.log.fd >= 0)
+    {
+      /* logging is already active */
+      log_message(&(g_cfg.log), LOG_LEVEL_ALWAYS, "error opening %s in \
+                  config_read", SESMAN_CFG_FILE);
+    }
+    else
+    {
+      g_printf("error opening %s in config_read", SESMAN_CFG_FILE);
+    }
     return 1;
   }
   g_memset(cfg, 0, sizeof(struct config_sesman));

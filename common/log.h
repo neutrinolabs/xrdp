@@ -20,6 +20,8 @@
 #ifndef LOG_H
 #define LOG_H
 
+#include <pthread.h>
+
 #include "arch.h"
 
 /* logging buffer size */
@@ -44,9 +46,9 @@
 /*#define LOG_ENABLE_THREAD*/
 
 #ifdef DEBUG
-  #define LOG_DBG(s,args...) log_message(LOG_LEVEL_DEBUG,s,args);
+  #define LOG_DBG(lcfg,args...) log_message((lcfg), LOG_LEVEL_DEBUG, args);
 #else
-  #define LOG_DBG(s,args...)
+  #define LOG_DBG(lcfg,args...)
 #endif
 
 struct log_config
@@ -57,6 +59,8 @@ struct log_config
   unsigned int log_level;
   int enable_syslog;
   unsigned int syslog_level;
+  pthread_mutex_t log_lock;
+  pthread_mutexattr_t log_lock_attr;
 };
 
 /**
@@ -68,30 +72,26 @@ struct log_config
  *
  */
 int DEFAULT_CC
-log_message(const unsigned int lvl, const char* msg, ...);
+log_message(struct log_config* l_cfg, const unsigned int lvl, const char* msg, ...);
 
 /**
  *
  * @brief Starts the logging subsystem
- * @param progname string to prepend to syslog messages
- * @param logfile log file path
- * @param loglvl level of messages to log
- * @param syslog if set to 0, disables the use of syslog
- * @param syslvl level of messages to log to syslog
+ * @param l_cfg loggging system configuration
  * @return
  *
  */
 int DEFAULT_CC
-log_start(const char* progname, const char* logfile, const unsigned int loglvl,
-          const int syslog, const unsigned int syslvl);
+log_start(struct log_config* l_cfg);
 
 /**
  *
  * @brief Shuts down the logging subsystem
+ * @param l_cfg pointer to the logging subsystem to stop
  *
  */
 void DEFAULT_CC
-log_end(void);
+log_end(struct log_config* l_cfg);
 
 /**
  *

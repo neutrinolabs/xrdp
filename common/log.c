@@ -29,18 +29,6 @@
 
 #include "log.h"
 
-/* this gets created in log_start and freed in log_end */
-static struct log_config* l_cfg;
-
-/* threading additions */
-#ifdef LOG_ENABLE_THREAD
-#include "pthread.h"
-/* these get initalized in log_start, they don't need
-   to get freed */
-static pthread_mutex_t log_lock;
-static pthread_mutexattr_t log_lock_attr;
-#endif
-
 /**
  *
  * @brief Opens log file
@@ -115,7 +103,7 @@ log_lvl2str(int lvl, char* str)
 
 /******************************************************************************/
 int DEFAULT_CC
-log_message(const unsigned int lvl, const char* msg, ...)
+log_message(struct log_config* l_cfg, const unsigned int lvl, const char* msg, ...)
 {
   char buff[LOG_BUFFER_SIZE + 31]; /* 19 (datetime) 4 (space+cr+lf+\0) */
   va_list ap;
@@ -151,7 +139,7 @@ log_message(const unsigned int lvl, const char* msg, ...)
   /* checking for truncated messages */ 
   if (len > LOG_BUFFER_SIZE)
   {
-    log_message(LOG_LEVEL_WARNING, "next message will be truncated");
+    log_message(l_cfg, LOG_LEVEL_WARNING, "next message will be truncated");
   }
 
   /* forcing the end of message string */
@@ -182,11 +170,11 @@ log_message(const unsigned int lvl, const char* msg, ...)
 
     /* log to application logfile */
 #ifdef LOG_ENABLE_THREAD
-    pthread_mutex_lock(&log_lock);
+    pthread_mutex_lock(&(l_cfg->log_lock));
 #endif
     rv = g_file_write(l_cfg->fd, (char*)buff, g_strlen((char*)buff));
 #ifdef LOG_ENABLE_THREAD
-    pthread_mutex_unlock(&log_lock);
+    pthread_mutex_unlock(&(l_cfg->log_lock));
 #endif
   }
   return rv;
@@ -194,44 +182,24 @@ log_message(const unsigned int lvl, const char* msg, ...)
 
 /******************************************************************************/
 int DEFAULT_CC
-log_start(const char* progname, const char* logfile, const unsigned int loglvl,
-          const int syslog, const unsigned int syslvl)
+log_start(struct log_config* l_cfg)
 {
-  /* setup log struct */
-  l_cfg = (struct log_config*)g_malloc(sizeof(struct log_config), 1);
-
   if (0 == l_cfg)
   {
     return LOG_ERROR_MALLOC;
   }
 
   /* if logfile is NULL, we use a default logfile */
-  if (0 == logfile)
+  if (0 == l_cfg->log_file)
   {
     l_cfg->log_file = g_strdup("./myprogram.log");
   }
-  else
-  {
-    l_cfg->log_file = g_strdup(logfile);
-  }
 
   /* if progname is NULL, we use a default name */
-  if (0 == progname)
+  if (0 == l_cfg->program_name)
   {
     l_cfg->program_name = g_strdup("myprogram");
   }
-  else
-  {
-    l_cfg->program_name = g_strdup(progname);
-  }
-
-  /* setting log level */
-  l_cfg->log_level = loglvl;
-
-  /* 0 disables syslog, everything else enables it */
-  l_cfg->enable_syslog = (syslog ? 1 : 0);
-  /* forcing syslog_level to be always <= app logging level */
-  l_cfg->syslog_level = (syslvl>loglvl ? loglvl : syslvl);
 
   /* open file */
   l_cfg->fd = log_file_open(l_cfg->log_file);
@@ -248,8 +216,8 @@ log_start(const char* progname, const char* logfile, const unsigned int loglvl,
   }
 
 #ifdef LOG_ENABLE_THREAD
-  pthread_mutexattr_init(&log_lock_attr);
-  pthread_mutex_init(&log_lock, &log_lock_attr);
+  pthread_mutexattr_init(&(l_cfg->log_lock_attr));
+  pthread_mutex_init(&(l_cfg->log_lock), &(l_cfg->log_lock_attr));
 #endif
 
   return LOG_STARTUP_OK;
@@ -257,7 +225,7 @@ log_start(const char* progname, const char* logfile, const unsigned int loglvl,
 
 /******************************************************************************/
 void DEFAULT_CC
-log_end(void)
+log_end(struct log_config* l_cfg)
 {
   /* if log is closed, quit silently */
   if (0 == l_cfg)
@@ -266,7 +234,7 @@ log_end(void)
   }
 
   /* closing log file */
-  log_message(LOG_LEVEL_ALWAYS, "shutting down log subsystem...");
+  log_message(l_cfg, LOG_LEVEL_ALWAYS, "shutting down log subsystem...");
 
   if (0 > l_cfg->fd)
   {
@@ -287,11 +255,16 @@ log_end(void)
   }
 
   /* freeing allocated memory */
-  g_free(l_cfg->log_file);
-  g_free(l_cfg->program_name);
-  g_free(l_cfg);
-
-  l_cfg = 0;
+  if (0 != l_cfg->log_file)
+  {
+    g_free(l_cfg->log_file);
+    l_cfg->log_file = 0;
+  }
+  if (0 != l_cfg->program_name)
+  {
+    g_free(l_cfg->program_name);
+    l_cfg->program_name = 0;
+  }
 }
 
 /******************************************************************************/

@@ -47,7 +47,7 @@ sesman_main_loop(void)
   int error;
 
   /*main program loop*/
-  log_message(LOG_LEVEL_INFO, "listening...");
+  log_message(&(g_cfg.log), LOG_LEVEL_INFO, "listening...");
   g_sck = g_tcp_socket();
   g_tcp_set_non_blocking(g_sck);
   error = scp_tcp_bind(g_sck, g_cfg.listen_address, g_cfg.listen_port);
@@ -81,12 +81,12 @@ sesman_main_loop(void)
     }
     else
     {
-      log_message(LOG_LEVEL_ERROR, "listen error");
+      log_message(&(g_cfg.log), LOG_LEVEL_ERROR, "listen error");
     }
   }
   else
   {
-    log_message(LOG_LEVEL_ERROR, "bind error");
+    log_message(&(g_cfg.log), LOG_LEVEL_ERROR, "bind error");
   }
   g_tcp_close(g_sck);
 }
@@ -188,6 +188,7 @@ main(int argc, char** argv)
   }
 
   /* reading config */
+  g_cfg.log.fd = -1; /* don't use logging before reading its config */
   if (0 != config_read(&g_cfg))
   {
     g_printf("error reading config: %s\nquitting.\n", g_get_strerror());
@@ -195,9 +196,7 @@ main(int argc, char** argv)
   }
 
   /* starting logging subsystem */
-  error = log_start(g_cfg.log.program_name, g_cfg.log.log_file,
-                    g_cfg.log.log_level, g_cfg.log.enable_syslog,
-                    g_cfg.log.syslog_level);
+  error = log_start(&(g_cfg.log));
 
   if (error != LOG_STARTUP_OK)
   {
@@ -256,9 +255,9 @@ main(int argc, char** argv)
   fd = g_file_open(SESMAN_PID_FILE);
   if (-1 == fd)
   {
-    log_message(LOG_LEVEL_ERROR, "error opening pid file: %s",
+    log_message(&(g_cfg.log), LOG_LEVEL_ERROR, "error opening pid file: %s",
                 g_get_strerror());
-    log_end();
+    log_end(&(g_cfg.log));
     g_exit(1);
   }
   g_sprintf(pid_s, "%d", g_pid);
@@ -266,7 +265,7 @@ main(int argc, char** argv)
   g_file_close(fd);
 
   /* start program main loop */
-  log_message(LOG_LEVEL_ALWAYS, "starting sesman with pid %d", g_pid);
+  log_message(&(g_cfg.log), LOG_LEVEL_ALWAYS, "starting sesman with pid %d", g_pid);
 
   /* make sure the /tmp/.X11-unix directory exist */
   if (!g_directory_exist("/tmp/.X11-unix"))
@@ -279,7 +278,7 @@ main(int argc, char** argv)
 
   if (!daemon)
   {
-    log_end();
+    log_end(&(g_cfg.log));
   }
 
   return 0;

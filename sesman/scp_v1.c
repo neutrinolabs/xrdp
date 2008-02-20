@@ -83,7 +83,7 @@ scp_v1_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
   if (!data)
   {
     scp_v1s_deny_connection(c, "Login failed");
-    log_message(LOG_LEVEL_INFO,
+    log_message(&(g_cfg.log), LOG_LEVEL_INFO,
       "Login failed for user %s. Connection terminated", s->username);
     free_session(s);
     return;
@@ -93,7 +93,7 @@ scp_v1_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
   if (0 == access_login_allowed(s->username))
   {
     scp_v1s_deny_connection(c, "Access to Terminal Server not allowed.");
-    log_message(LOG_LEVEL_INFO,
+    log_message(&(g_cfg.log), LOG_LEVEL_INFO,
       "User %s not allowed on TS. Connection terminated", s->username);
     free_session(s);
     return;
@@ -107,16 +107,16 @@ scp_v1_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
   if (scount == 0)
   {
     /* no disconnected sessions - start a new one */
-    log_message(LOG_LEVEL_INFO, "granted TS access to user %s", s->username);
+    log_message(&(g_cfg.log), LOG_LEVEL_INFO, "granted TS access to user %s", s->username);
     if (SCP_SESSION_TYPE_XVNC == s->type)
     {
-      log_message(LOG_LEVEL_INFO, "starting Xvnc session...");
+      log_message(&(g_cfg.log), LOG_LEVEL_INFO, "starting Xvnc session...");
       display = session_start(s->width, s->height, s->bpp, s->username,
                               s->password, data, SESMAN_SESSION_TYPE_XVNC);
     }
     else
     {
-      log_message(LOG_LEVEL_INFO, "starting Xrdp session...");
+      log_message(&(g_cfg.log), LOG_LEVEL_INFO, "starting Xrdp session...");
       display = session_start(s->width, s->height, s->bpp, s->username,
                               s->password, data, SESMAN_SESSION_TYPE_XRDP);
     }
@@ -145,7 +145,7 @@ scp_v1_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
       /*case SCP_SERVER_STATE_FORCE_NEW:*/
       /* we should check for MaxSessions */
       case SCP_SERVER_STATE_SELECTION_CANCEL:
-        log_message(LOG_LEVEL_INFO, "Connection cancelled after session listing");
+        log_message(&(g_cfg.log), LOG_LEVEL_INFO, "Connection cancelled after session listing");
         break;
       case SCP_SERVER_STATE_OK:
         /* ok, reconnecting... */
@@ -153,14 +153,14 @@ scp_v1_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
         if (0==sitem)
         {
           e=scp_v1s_connection_error(c, "Internal error");
-          log_message(LOG_LEVEL_INFO, "Cannot find session item on the chain");
+          log_message(&(g_cfg.log), LOG_LEVEL_INFO, "Cannot find session item on the chain");
         }
         else
         {
           display=sitem->display;
           /*e=scp_v1s_reconnect_session(c, sitem, display);*/
           e=scp_v1s_reconnect_session(c, display);
-          log_message(LOG_LEVEL_INFO, "User %s reconnected to session %d on port %d", \
+          log_message(&(g_cfg.log), LOG_LEVEL_INFO, "User %s reconnected to session %d on port %d", \
                       s->username, sitem->pid, display);
         }
         break;
@@ -188,27 +188,27 @@ static void parseCommonStates(enum SCP_SERVER_STATES_E e, char* f)
   switch (e)
   {
     case SCP_SERVER_STATE_VERSION_ERR:
-      LOG_DBG("version error", 0)
+      LOG_DBG(&(g_cfg.log), "version error")
     case SCP_SERVER_STATE_SIZE_ERR:
       /* an unknown scp version was requested, so we shut down the */
       /* connection (and log the fact)                             */
-      log_message(LOG_LEVEL_WARNING,
+      log_message(&(g_cfg.log), LOG_LEVEL_WARNING,
         "protocol violation. connection closed.");
       break;
     case SCP_SERVER_STATE_NETWORK_ERR:
-      log_message(LOG_LEVEL_WARNING, "libscp network error.");
+      log_message(&(g_cfg.log), LOG_LEVEL_WARNING, "libscp network error.");
       break;
     case SCP_SERVER_STATE_SEQUENCE_ERR:
-      log_message(LOG_LEVEL_WARNING, "libscp sequence error.");
+      log_message(&(g_cfg.log), LOG_LEVEL_WARNING, "libscp sequence error.");
       break;
     case SCP_SERVER_STATE_INTERNAL_ERR:
       /* internal error occurred (eg. malloc() error, ecc.) */
-      log_message(LOG_LEVEL_ERROR, "libscp internal error occurred.");
+      log_message(&(g_cfg.log), LOG_LEVEL_ERROR, "libscp internal error occurred.");
       break;
     default:
       /* dummy: scp_v1s_request_password won't generate any other */
       /* error other than the ones before                         */
-      log_message(LOG_LEVEL_ALWAYS, "unknown return from %s", f);
+      log_message(&(g_cfg.log), LOG_LEVEL_ALWAYS, "unknown return from %s", f);
       break;
   }
 }

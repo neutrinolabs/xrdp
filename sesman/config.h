@@ -180,12 +180,12 @@ struct config_sesman
    * @var vnc_params
    * @brief Xvnc additional parameter list
    */
-struct list* vnc_params;
+  struct list* vnc_params;
   /**
    * @var rdp_params
    * @brief X11rdp additional parameter list
    */
-struct list* rdp_params;
+  struct list* rdp_params;
   /**
    * @var log
    * @brief Log configuration struct

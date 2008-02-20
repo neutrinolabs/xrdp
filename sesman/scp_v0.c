@@ -27,6 +27,8 @@
 
 #include "sesman.h"
 
+extern struct config_sesman g_cfg;
+
 /******************************************************************************/
 void DEFAULT_CC 
 scp_v0_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
@@ -51,16 +53,16 @@ scp_v0_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
       g_printf("pre auth");
       if (1 == access_login_allowed(s->username))
       {
-        log_message(LOG_LEVEL_INFO, "granted TS access to user %s", s->username);
+        log_message(&(g_cfg.log), LOG_LEVEL_INFO, "granted TS access to user %s", s->username);
         if (SCP_SESSION_TYPE_XVNC == s->type)
         {
-          log_message(LOG_LEVEL_INFO, "starting Xvnc session...");
+          log_message(&(g_cfg.log), LOG_LEVEL_INFO, "starting Xvnc session...");
           display = session_start(s->width, s->height, s->bpp, s->username, s->password,
                                   data, SESMAN_SESSION_TYPE_XVNC);
         }
         else
         {
-          log_message(LOG_LEVEL_INFO, "starting Xrdp session...");
+          log_message(&(g_cfg.log), LOG_LEVEL_INFO, "starting Xrdp session...");
           display = session_start(s->width, s->height, s->bpp, s->username, s->password,
                                   data, SESMAN_SESSION_TYPE_XRDP);
         }
