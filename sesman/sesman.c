@@ -213,7 +213,7 @@ main(int argc, char** argv)
   }
 
   /* libscp initialization */
-  scp_init();
+  scp_init(&(g_cfg.log));
 
   if (daemon)
   {

@@ -1,9 +1,14 @@
-
+/* 
+ * sestest.c - an scp_v1 testing tool 
+ * (c) 2008 Simone Fedele
+ *
+ */
 
 #include "arch.h"
 #include "tcp.h"
 #include "libscp.h"
 #include "parse.h"
+#include "log.h"
 
 #include <stdio.h>
 
@@ -17,11 +22,20 @@ int main(int argc, char** argv)
   /*struct SCP_DISCONNECTED_SESSION ds;*/
   struct SCP_DISCONNECTED_SESSION* dsl;
   enum SCP_CLIENT_STATES_E e;
+  struct log_config log;
   int end;
   int scnt;
   int idx;
   int sel;
   int sock;
+
+
+  log.enable_syslog=0;
+  log.log_level=99;
+  log.program_name=g_strdup("sestest");
+  log.log_file=g_strdup("sestest.log");
+  log_start(&log);
+  scp_init(&log);
 
   sock=g_tcp_socket();
   c=scp_connection_create(sock);
@@ -69,7 +83,7 @@ int main(int argc, char** argv)
   s.errstr=0;
 
   end=0;
-  e=scp_v1c_connect(&c,&s);
+  e=scp_v1c_connect(c,&s);
 
   while (!end)
   {

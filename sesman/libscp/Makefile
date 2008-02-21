@@ -21,7 +21,8 @@ DEFINES = -DSESMAN_CFG_FILE=\"$(CFGDIR)/sesman.ini\" \
 	  -DSESMAN_PID_FILE=\"$(PIDDIR)/sesman.pid\" \
 	  -DSESMAN_SESSVC_FILE=\"sessvc\"
 
-CFLAGS = -Wall -O2 -I../../common -I/usr/include/nptl -fPIC $(DEFINES)
+#CFLAGS = -Wall -O2 -I../../common -I/usr/include/nptl -fPIC $(DEFINES)
+CFLAGS = -Wall -g -I../../common -I/usr/include/nptl -fPIC $(DEFINES)
 LDFLAGS = -shared -L/usr/gnu/lib -L/usr/lib/nptl -lpthread
 C_OS_FLAGS = $(CFLAGS) -c
 CC = gcc

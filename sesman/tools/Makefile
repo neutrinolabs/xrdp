@@ -1,6 +1,6 @@
 # sesman tools makefile
 SESTESTOBJ = sestest.o \
-            os_calls.o 
+            os_calls.o log.o
 #	    d3des.o list.o file.o \
 #            libscp_v1c.o tcp.o
 
@@ -15,7 +15,8 @@ DOCDIR = /usr/doc/xrdp
 
 DEFINES = -DLIBSCP_CLIENT
 
-CFLAGS = -Wall -O2 -I../../common -I../ -I/usr/include/nptl -I../libscp $(DEFINES)
+#CFLAGS = -Wall -O2 -I../../common -I../ -I/usr/include/nptl -I../libscp $(DEFINES)
+CFLAGS = -Wall -g -I../../common -I../ -I/usr/include/nptl -I../libscp $(DEFINES)
 LDFLAGS = -L /usr/gnu/lib -I/usr/include/nptl -L/usr/lib/nptl -L../libscp -lpthread -ldl -lscp -Wl,-rpath,../libscp $(DEFINES)
 #LDFLAGS = -L /usr/gnu/lib -ldl $(DEFINES)
 C_OS_FLAGS = $(CFLAGS) -c -g

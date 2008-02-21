@@ -27,32 +27,21 @@
 
 #include "libscp_init.h"
 
+static struct log_config* s_log;
+
 /* server API */
 int DEFAULT_CC
-scp_init(void)
+scp_init(struct log_config* log)
 {
+  if (0 == log)
+  {
+    return 1;
+  }
+
+  s_log = log;
+
   scp_lock_init();
 
   return 0;
 }
 
-struct SCP_CONNECTION*
-scp_make_connection(int sck)
-{
-  struct SCP_CONNECTION* conn;
-
-  conn = g_malloc(sizeof(struct SCP_CONNECTION), 0);
-
-  if (0 == conn)
-  {
-    return 0;
-  }
-
-  conn->in_sck = sck;
-  make_stream(conn->in_s);
-  init_stream(conn->in_s, 8196);
-  make_stream(conn->out_s);
-  init_stream(conn->out_s, 8196);
-
-  return conn;
-}

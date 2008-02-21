@@ -28,6 +28,8 @@
 #ifndef LIBSCP_INIT_H
 #define LIBSCP_INIT_H
 
+#include "log.h"
+
 #include "libscp.h"
 
 /**
@@ -40,16 +42,7 @@
  *
  */
 int DEFAULT_CC 
-scp_init(void);
-
-/**
- *
- * @brief mmm
- * @param sck
- *
- */	
-struct SCP_CONNECTION*
-scp_make_connection(int sck);
+scp_init(struct log_config* log);
 
 #endif
 

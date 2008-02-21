@@ -43,7 +43,7 @@ scp_session_create()
   s->password=0;
   s->hostname=0;
   s->errstr=0;
-#warning usare scp_session_set* per inizializzare la sessione!!!!!!
+#warning FIXME use scp_session_set* to init session
 
   return s;
 }
@@ -135,7 +135,10 @@ scp_session_set_rsr(struct SCP_SESSION* s, tui8 rsr)
 int
 scp_session_set_locale(struct SCP_SESSION* s, char* str)
 {
-  if (0 == str) return 1;
+  if (0 == str)
+  {
+    return 1;
+  }
   g_strncpy(s->locale, str, 17);
   s->locale[17]='\0';
   return 0;
@@ -145,8 +148,14 @@ scp_session_set_locale(struct SCP_SESSION* s, char* str)
 int
 scp_session_set_username(struct SCP_SESSION* s, char* str)
 {
-  if (0 == str) return 1;
-  if (0 != s->username) g_free(s->username);
+  if (0 == str)
+  {
+    return 1;
+  }
+  if (0 != s->username) 
+  {
+    g_free(s->username);
+  }
   s->username = g_strdup(str);
   return 0;
 }
@@ -155,8 +164,14 @@ scp_session_set_username(struct SCP_SESSION* s, char* str)
 int
 scp_session_set_password(struct SCP_SESSION* s, char* str)
 {
-  if (0 == str) return 1;
-  if (0 != s->password) g_free(s->password);
+  if (0 == str)
+  {
+    return 1;
+  }
+  if (0 != s->password) 
+  {
+    g_free(s->password);
+  }
   s->password = g_strdup(str);
   return 0;
 }
@@ -165,8 +180,14 @@ scp_session_set_password(struct SCP_SESSION* s, char* str)
 int
 scp_session_set_hostname(struct SCP_SESSION* s, char* str)
 {
-  if (0 == str) return 1;
-  if (0 != s->hostname) g_free(s->hostname);
+  if (0 == str) 
+  {
+    return 1;
+  }
+  if (0 != s->hostname) 
+  {
+    g_free(s->hostname);
+  }
   s->hostname = g_strdup(str);
   return 0;
 }
@@ -175,8 +196,14 @@ scp_session_set_hostname(struct SCP_SESSION* s, char* str)
 int
 scp_session_set_errstr(struct SCP_SESSION* s, char* str)
 {
-  if (0 == str) return 1;
-  if (0 != s->errstr) g_free(s->errstr);
+  if (0 == str) 
+  {
+    return 1;
+  }
+  if (0 != s->errstr) 
+  {
+    g_free(s->errstr);
+  }
   s->errstr = g_strdup(str);
   return 0;
 }
@@ -193,7 +220,8 @@ scp_session_set_display(struct SCP_SESSION* s, SCP_DISPLAY display)
 int
 scp_session_set_addr(struct SCP_SESSION* s, int type, char* addr)
 {
-
+#warning FIXME managing addresses
+  return 1;
 }
 
 /*******************************************************************/
