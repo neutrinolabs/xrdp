@@ -386,6 +386,8 @@ xrdp_mm_setup_mod2(struct xrdp_mm* self)
   char* value;
   int i;
   int rv;
+  int key_flags;
+  int device_flags;
 
   rv = 1;
   text[0] = 0;
@@ -441,6 +443,32 @@ xrdp_mm_setup_mod2(struct xrdp_mm* self)
     if (self->mod->mod_connect(self->mod) == 0)
     {
       rv = 0;
+    }
+  }
+  if (rv == 0)
+  {
+    /* sync modifiers */
+    key_flags = 0;
+    device_flags = 0;
+    if (self->wm->scroll_lock)
+    {
+      key_flags |= 1;
+    }
+    if (self->wm->num_lock)
+    {
+      key_flags |= 2;
+    }
+    if (self->wm->caps_lock)
+    {
+      key_flags |= 4;
+    }
+    if (self->mod != 0)
+    {
+      if (self->mod->mod_event != 0)
+      {
+        self->mod->mod_event(self->mod, 17, key_flags, device_flags,
+                             key_flags, device_flags);
+      }
     }
   }
   return rv;

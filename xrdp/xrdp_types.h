@@ -227,7 +227,6 @@ struct xrdp_wm
   int caps_lock;
   int scroll_lock;
   int num_lock;
-  struct list* key_down_list;
   /* client info */
   struct xrdp_client_info* client_info;
   /* session log */
@@ -358,12 +357,4 @@ struct xrdp_mod_data
 {
   struct list* names;
   struct list* values;
-};
-
-struct xrdp_key_down
-{
-  int scan_code;
-  int param1;
-  int param2;
-  int param4;
 };
