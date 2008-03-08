@@ -24,7 +24,7 @@
 
 /* 'g_process' is protected by the semaphore 'g_process_sem'.  One thread sets
    g_process and waits for the other to process it */
-static long g_process_sem = 0;
+static tbus g_process_sem = 0;
 static struct xrdp_process* g_process = 0;
 
 /*****************************************************************************/
@@ -35,6 +35,7 @@ xrdp_listen_create(void)
 
   self = (struct xrdp_listen*)g_malloc(sizeof(struct xrdp_listen), 1);
   self->process_list_max = 100;
+  g_process_sem = tc_sem_create(0);
   return self;
 }
 
@@ -42,6 +43,7 @@ xrdp_listen_create(void)
 void APP_CC
 xrdp_listen_delete(struct xrdp_listen* self)
 {
+  tc_sem_delete(g_process_sem);
   g_free(self);
 }
 
@@ -84,7 +86,7 @@ xrdp_listen_term_processes(struct xrdp_listen* self)
 /*****************************************************************************/
 /* returns error */
 static int APP_CC
-xrdp_listen_add_pro(struct xrdp_listen* self)
+xrdp_listen_add_pro(struct xrdp_listen* self, struct xrdp_process* process)
 {
   int i;
 
@@ -93,16 +95,16 @@ xrdp_listen_add_pro(struct xrdp_listen* self)
     /* add process in new slot */
     if (self->process_list[i] == 0)
     {
-      self->process_list[i] = g_process;
+      self->process_list[i] = process;
       self->process_list_count++;
       return 0;
     }
     /* add process in unused slot */
     /* this shouldn't happen */
-    if (self->process_list[i]->status <= 0)
+    if (self->process_list[i]->status < 0)
     {
       xrdp_process_delete(self->process_list[i]);
-      self->process_list[i] = g_process;
+      self->process_list[i] = process;
       return 0;
     }
   }
@@ -145,22 +147,18 @@ xrdp_process_run(void* in_val)
 }
 
 /*****************************************************************************/
-/* wait for incoming connections */
-int APP_CC
-xrdp_listen_main_loop(struct xrdp_listen* self)
+static int
+xrdp_listen_get_port(char* port, int port_bytes)
 {
-  int error;
   int fd;
+  int error;
   int index;
-  char port[8];
   char* val;
   struct list* names;
   struct list* values;
 
-  self->status = 1;
-  g_process_sem = tc_sem_create(0);
   /* default to port 3389 */
-  g_strncpy(port, "3389", 7);
+  g_strncpy(port, "3389", port_bytes - 1);
   /* see if port is in xrdp.ini file */
   fd = g_file_open(XRDP_CFG_FILE);
   if (fd > 0)
@@ -176,13 +174,13 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
         val = (char*)list_get_item(names, index);
         if (val != 0)
         {
-          if (g_strncasecmp(val, "port", 5) == 0)
+          if (g_strcasecmp(val, "port") == 0)
           {
             val = (char*)list_get_item(values, index);
             error = g_atoi(val);
-            if (error > 0 && error < 65000)
+            if ((error > 0) && (error < 65000))
             {
-              g_strncpy(port, val, 7);
+              g_strncpy(port, val, port_bytes - 1);
             }
             break;
           }
@@ -193,6 +191,19 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
     list_delete(values);
     g_file_close(fd);
   }
+  return 0;
+}
+
+/*****************************************************************************/
+/* wait for incoming connections */
+int APP_CC
+xrdp_listen_main_loop(struct xrdp_listen* self)
+{
+  int error;
+  char port[8];
+
+  self->status = 1;
+  xrdp_listen_get_port(port, sizeof(port));
   self->sck = g_tcp_socket();
   g_tcp_set_non_blocking(self->sck);
   error = g_tcp_bind(self->sck, port);
@@ -221,13 +232,12 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
       else
       {
         g_process = xrdp_process_create(self);
-        if (xrdp_listen_add_pro(self) == 0)
+        if (xrdp_listen_add_pro(self, g_process) == 0)
         {
           /* start thread */
           g_process->sck = error;
           tc_thread_create(xrdp_process_run, 0);
           tc_sem_dec(g_process_sem); /* this will wait */
-          g_sleep(250); /* just for safety */
         }
         else
         {
@@ -242,7 +252,6 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
   }
   xrdp_listen_term_processes(self);
   g_tcp_close(self->sck);
-  tc_sem_delete(g_process_sem);
   self->status = -1;
   return 0;
 }
