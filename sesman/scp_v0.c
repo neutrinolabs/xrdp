@@ -62,7 +62,7 @@ scp_v0_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
         }
         else
         {
-          log_message(&(g_cfg.log), LOG_LEVEL_INFO, "starting Xrdp session...");
+          log_message(&(g_cfg.log), LOG_LEVEL_INFO, "starting X11rdp session...");
           display = session_start(s->width, s->height, s->bpp, s->username, s->password,
                                   data, SESMAN_SESSION_TYPE_XRDP);
         }
