@@ -1063,7 +1063,7 @@ km_read_section(int fd, const char* section_name, int* keymap)
   char* value;
 
   names = list_create();
-  names->auto_free = 0;
+  names->auto_free = 1;
   values = list_create();
   values->auto_free = 1;
   if (file_read_section(fd, section_name, names, values) == 0)
