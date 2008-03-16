@@ -22,14 +22,14 @@ CC = gcc
 all: $(LIBXUP)
 
 $(LIBXUP): $(XUPOBJ)
-       $(CC) $(LDFLAGS) -o $(LIBXUP) $(XUPOBJ) $(LIBS)
+	$(CC) $(LDFLAGS) -o $(LIBXUP) $(XUPOBJ) $(LIBS)
 
 clean:
-       rm -f $(XUPOBJ) $(LIBXUP)
+	rm -f $(XUPOBJ) $(LIBXUP)
 
 os_calls.o: ../common/os_calls.c
-       $(CC) $(C_OS_FLAGS) ../common/os_calls.c
+	$(CC) $(C_OS_FLAGS) ../common/os_calls.c
 
 install:
-       install $(LIBXUP) $(DESTDIR)/$(LIBXUP)
+	install $(LIBXUP) $(DESTDIR)/$(LIBXUP)
 

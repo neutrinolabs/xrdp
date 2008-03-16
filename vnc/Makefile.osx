@@ -21,17 +21,17 @@ CC = gcc
 all: $(VNCLIB)
 
 $(VNCLIB): $(VNCOBJ)
-       $(CC) $(LDFLAGS) -o $(VNCLIB) $(VNCOBJ) $(LIBS)
+	$(CC) $(LDFLAGS) -o $(VNCLIB) $(VNCOBJ) $(LIBS)
 
 clean:
-       rm -f $(VNCOBJ) $(VNCLIB)
+	rm -f $(VNCOBJ) $(VNCLIB)
 
 os_calls.o: ../common/os_calls.c
-       $(CC) $(C_OS_FLAGS) ../common/os_calls.c
+	$(CC) $(C_OS_FLAGS) ../common/os_calls.c
 
 d3des.o: ../common/d3des.c
-       $(CC) $(C_OS_FLAGS) ../common/d3des.c
+	$(CC) $(C_OS_FLAGS) ../common/d3des.c
 
 install:
-       install $(VNCLIB) $(DESTDIR)/$(VNCLIB)
+	install $(VNCLIB) $(DESTDIR)/$(VNCLIB)
 

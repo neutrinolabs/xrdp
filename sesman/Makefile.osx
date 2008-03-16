@@ -27,51 +27,51 @@ nopam: libscp_ no-pam tools
 kerberos: libscp_ kerberos-base tools
 
 no-pam: $(SESMANOBJ) verify_user.o
-       $(MAKE) -C libscp
-       $(CC) $(LDFLAGS) -o sesman $(SESMANOBJ) verify_user.o -lcrypt
+	$(MAKE) -C libscp
+	$(CC) $(LDFLAGS) -o sesman $(SESMANOBJ) verify_user.o -lcrypt
 
 pam: $(SESMANOBJ) verify_user_pam.o
-       $(CC) $(LDFLAGS) -o sesman $(SESMANOBJ) verify_user_pam.o -lpam
+	$(CC) $(LDFLAGS) -o sesman $(SESMANOBJ) verify_user_pam.o -lpam
 
 pam_userpass: $(SESMANOBJ) verify_user_pam_userpass.o
-       $(CC) $(LDFLAGS) -o sesman $(SESMANOBJ) verify_user_pam_userpass.o -lpam -lpam_userpass
+	$(CC) $(LDFLAGS) -o sesman $(SESMANOBJ) verify_user_pam_userpass.o -lpam -lpam_userpass
 
 kerberos-base: $(SESMANOBJ) verify_user_kerberos.o
-       $(CC) $(LDFLAGS) -o sesman $(SESMANOBJ) verify_user_kerberos.o -lkrb5
+	$(CC) $(LDFLAGS) -o sesman $(SESMANOBJ) verify_user_kerberos.o -lkrb5
 
 sessvc: $(SESSVCOBJ)
-       $(CC) $(LDFLAGS) -o sessvc $(SESSVCOBJ)
+	$(CC) $(LDFLAGS) -o sessvc $(SESSVCOBJ)
 
 tools: sessvc
-       $(MAKE) -C tools -f Makefile.osx
+	$(MAKE) -C tools -f Makefile.osx
 
 libscp_:
-       $(MAKE) -C libscp -f Makefile.osx
+	$(MAKE) -C libscp -f Makefile.osx
 
 clean:
-       rm -f $(SESMANOBJ) verify_user.o verify_user_pam.o verify_user_pam_userpass.o sesman sesrun.o sesrun sessvc.o sessvc
-       $(MAKE) -C tools -f Makefile.osx clean
-       $(MAKE) -C libscp -f Makefile.osx clean
+	rm -f $(SESMANOBJ) verify_user.o verify_user_pam.o verify_user_pam_userpass.o sesman sesrun.o sesrun sessvc.o sessvc
+	$(MAKE) -C tools -f Makefile.osx clean
+	$(MAKE) -C libscp -f Makefile.osx clean
 
 install:
-       install sesman $(DESTDIR)/sesman
-       install startwm.sh $(DESTDIR)/startwm.sh
-       install sesman.ini $(CFGDIR)/sesman.ini
-       install sessvc $(DESTDIR)/sessvc
-       $(MAKE) -C tools install
-       $(MAKE) -C libscp install
+	install sesman $(DESTDIR)/sesman
+	install startwm.sh $(DESTDIR)/startwm.sh
+	install sesman.ini $(CFGDIR)/sesman.ini
+	install sessvc $(DESTDIR)/sessvc
+	$(MAKE) -C tools install
+	$(MAKE) -C libscp install
 
 os_calls.o: ../common/os_calls.c
-       $(CC) $(C_OS_FLAGS) ../common/os_calls.c
+	$(CC) $(C_OS_FLAGS) ../common/os_calls.c
 
 d3des.o: ../common/d3des.c
-       $(CC) $(C_OS_FLAGS) ../common/d3des.c
+	$(CC) $(C_OS_FLAGS) ../common/d3des.c
 
 list.o: ../common/list.c
-       $(CC) $(C_OS_FLAGS) ../common/list.c
+	$(CC) $(C_OS_FLAGS) ../common/list.c
 
 file.o: ../common/file.c
-       $(CC) $(C_OS_FLAGS) ../common/file.c
+	$(CC) $(C_OS_FLAGS) ../common/file.c
 
 log.o: ../common/log.c
-       $(CC) $(C_OS_FLAGS) -DLOG_ENABLE_THREAD ../common/log.c
+	$(CC) $(C_OS_FLAGS) -DLOG_ENABLE_THREAD ../common/log.c
