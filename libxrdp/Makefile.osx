@@ -25,24 +25,24 @@ CC = gcc
 all: $(LIBXRDP)
 
 static: $(LIBXRDPOBJ)
-       $(AR) rvu libxrdp.a $(LIBXRDPOBJ)
-       ranlib libxrdp.a
+	$(AR) rvu libxrdp.a $(LIBXRDPOBJ)
+	ranlib libxrdp.a
 
 $(LIBXRDP): $(LIBXRDPOBJ)
-       $(CC) $(LDFLAGS) -o $(LIBXRDP) $(LIBXRDPOBJ) $(LIBS)
+	$(CC) $(LDFLAGS) -o $(LIBXRDP) $(LIBXRDPOBJ) $(LIBS)
 
 clean:
-       rm -f $(LIBXRDPOBJ) libxrdp.a $(LIBXRDP)
+	rm -f $(LIBXRDPOBJ) libxrdp.a $(LIBXRDP)
 
 install:
-       install $(LIBXRDP) $(DESTDIR)/$(LIBXRDP)
+	install $(LIBXRDP) $(DESTDIR)/$(LIBXRDP)
 
 file.o: ../common/file.c
-       $(CC) $(C_OS_FLAGS) ../common/file.c
+	$(CC) $(C_OS_FLAGS) ../common/file.c
 
 os_calls.o: ../common/os_calls.c
-       $(CC) $(C_OS_FLAGS) ../common/os_calls.c
+	$(CC) $(C_OS_FLAGS) ../common/os_calls.c
 
 
 ssl_calls.o: ../common/ssl_calls.c
-       $(CC) $(C_OS_FLAGS) ../common/ssl_calls.c
+	$(CC) $(C_OS_FLAGS) ../common/ssl_calls.c

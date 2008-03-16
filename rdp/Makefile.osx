@@ -23,17 +23,17 @@ CC = gcc
 all: $(LIBRDP)
 
 $(LIBRDP): $(RDPOBJ)
-       $(CC) $(LDFLAGS) -o $(LIBRDP) $(RDPOBJ) $(LIBS)
+	$(CC) $(LDFLAGS) -o $(LIBRDP) $(RDPOBJ) $(LIBS)
 
 clean:
-       rm -f $(RDPOBJ) $(LIBRDP)
+	rm -f $(RDPOBJ) $(LIBRDP)
 
 os_calls.o: ../common/os_calls.c
-       $(CC) $(C_OS_FLAGS) ../common/os_calls.c
+	$(CC) $(C_OS_FLAGS) ../common/os_calls.c
 
 ssl_calls.o: ../common/ssl_calls.c
-       $(CC) $(C_OS_FLAGS) ../common/ssl_calls.c
+	$(CC) $(C_OS_FLAGS) ../common/ssl_calls.c
 
 install:
-       install $(LIBRDP) $(DESTDIR)/$(LIBRDP)
+	install $(LIBRDP) $(DESTDIR)/$(LIBRDP)
 
