@@ -42,7 +42,7 @@ os_calls.o: ../../common/os_calls.c
 #       $(CC) $(C_OS_FLAGS) ../../common/file.c
 
 log.o: ../../common/log.c
-       $(CC) $(C_OS_FLAGS) ../../common/log.c
+	$(CC) $(C_OS_FLAGS) ../../common/log.c
 
 #tcp.o: tcp.c
 #      $(CC) $(C_OS_FLAGS) ../tcp.c
