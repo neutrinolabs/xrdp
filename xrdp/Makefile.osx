@@ -25,7 +25,7 @@ CC = gcc
 all: xrdp
 
 xrdp: $(XRDPOBJ)
-        $(CC) $(LDFLAGS) -o xrdp $(XRDPOBJ) $(LIBS)
+	$(CC) $(LDFLAGS) -o xrdp $(XRDPOBJ) $(LIBS)
 
 clean:
 	rm -f $(XRDPOBJ) xrdp
