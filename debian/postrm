@@ -1,2 +1,0 @@
-#!/bin/sh
-update-rc.d -f xrdp_control.sh remove > /dev/null

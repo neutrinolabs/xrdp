@@ -1,9 +1,0 @@
-xrdp (0.3.1) unstable; urgency=low
-
-  * Initial Release.
-
- -- Jay Sorg <jay.sorg@gmail.com>  Sat, 6 August 2006 13:58:29 -0600
-
-Local variables:
-mode: debian-changelog
-End:
