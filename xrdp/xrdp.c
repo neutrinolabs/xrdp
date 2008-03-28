@@ -84,15 +84,10 @@ xrdp_shutdown(int sig)
   g_writeln("shutting down");
   g_writeln("signal %d threadid $%8.8x", sig, tc_get_threadid());
   listen = g_listen;
-  g_listen = 0;
   if (listen != 0)
   {
     g_set_term(1);
-    g_sleep(1000);
-    xrdp_listen_delete(listen);
   }
-  /* delete the xrdp.pid file */
-  g_file_delete(XRDP_PID_FILE);
 }
 
 /*****************************************************************************/
@@ -234,11 +229,11 @@ MyServiceMain(DWORD dwArgc, LPTSTR* lpszArgv)
     //g_sprintf(text, "RegisterServiceCtrlHandler failed\r\n");
     //g_file_write(fd, text, g_strlen(text));
   }
-  WSACleanup();
+  xrdp_listen_delete(g_listen);
   tc_mutex_delete(g_term_mutex);
   tc_mutex_delete(g_sync_mutex);
   tc_mutex_delete(g_sync1_mutex);
-  xrdp_listen_delete(g_listen);
+  WSACleanup();
   //CloseHandle(event_han);
 }
 
@@ -521,13 +516,17 @@ main(int argc, char** argv)
   g_sync_mutex = tc_mutex_create();
   g_sync1_mutex = tc_mutex_create();
   xrdp_listen_main_loop(g_listen);
+  xrdp_listen_delete(g_listen);
   tc_mutex_delete(g_term_mutex);
   tc_mutex_delete(g_sync_mutex);
   tc_mutex_delete(g_sync1_mutex);
 #if defined(_WIN32)
   /* I don't think it ever gets here */
+  /* when running in win32 app mode, control c exits right away */
   WSACleanup();
-  xrdp_listen_delete(g_listen);
+#else
+  /* delete the xrdp.pid file */
+  g_file_delete(XRDP_PID_FILE);
 #endif
   return 0;
 }
