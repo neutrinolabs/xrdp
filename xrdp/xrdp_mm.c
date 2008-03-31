@@ -50,7 +50,12 @@ sync_unload(long param1, long param2)
 static long DEFAULT_CC
 sync_load(long param1, long param2)
 {
-  return g_load_library((char*)param1);
+  long rv;
+  char* libname;
+
+  libname = (char*)param1;
+  rv = g_load_library(libname);
+  return rv;
 }
 
 /*****************************************************************************/
@@ -82,7 +87,7 @@ xrdp_mm_delete(struct xrdp_mm* self)
   {
     return;
   }
-  /* free any modual stuff */
+  /* free any module stuff */
   xrdp_mm_module_cleanup(self);
   if (self->sck != 0)
   {
