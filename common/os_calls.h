@@ -93,6 +93,21 @@ int APP_CC
 g_tcp_select(int sck1, int sck2);
 void APP_CC
 g_sleep(int msecs);
+tbus APP_CC
+g_create_wait_obj(char* name);
+tbus APP_CC
+g_create_wait_obj_from_socket(tbus socket, int write);
+int APP_CC
+g_set_wait_obj(tbus obj);
+int APP_CC
+g_reset_wait_obj(tbus obj);
+int APP_CC
+g_is_wait_obj_set(tbus obj);
+int APP_CC
+g_destroy_wait_obj(tbus obj);
+int APP_CC
+g_obj_wait(tbus* read_objs, int rcount, tbus* write_objs, int wcount,
+           int mstimeout);
 void APP_CC
 g_random(char* data, int len);
 int APP_CC

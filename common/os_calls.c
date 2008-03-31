@@ -615,6 +615,272 @@ g_tcp_select(int sck1, int sck2)
 }
 
 /*****************************************************************************/
+/* returns 0 on error */
+tbus APP_CC
+g_create_wait_obj(char* name)
+{
+  tbus obj;
+
+#ifdef _WIN32
+  obj = (tbus)CreateEvent(0, 1, 0, name);
+  return obj;
+#else
+  struct sockaddr_un sa;
+  int len;
+  int sck;
+
+  sck = socket(PF_UNIX, SOCK_DGRAM, 0);
+  if (sck < 0)
+  {
+    return 0;
+  }
+  memset(&sa, 0, sizeof(sa));
+  sa.sun_family = AF_UNIX;
+  sprintf(sa.sun_path, "/tmp/%s", name);
+  unlink(sa.sun_path);
+  len = sizeof(sa);
+  if (bind(sck, (struct sockaddr*)&sa, len) < 0)
+  {
+    close(sck);
+    return 0;
+  }
+  obj = (tbus)sck;
+  return obj;
+#endif
+}
+
+/*****************************************************************************/
+tbus APP_CC
+g_create_wait_obj_from_socket(tbus socket, int write)
+{
+#ifdef _WIN32
+  /* Create and return corresponding event handle for WaitForMultipleObjets */
+  WSAEVENT event;
+  long lnetevent;
+
+  event = WSACreateEvent();
+  lnetevent = (write ? FD_WRITE : FD_READ) | FD_CLOSE;
+  if (WSAEventSelect(socket, event, lnetevent) == 0)
+  {
+    return (tbus)event;
+  }
+  else
+  {
+    return 0;
+  }
+#else
+  return socket;
+#endif
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+g_set_wait_obj(tbus obj)
+{
+#ifdef _WIN32
+  if (obj == 0)
+  {
+    return 0;
+  }
+  SetEvent((HANDLE)obj);
+  return 0;
+#else
+  socklen_t sa_size;
+  int s;
+  struct sockaddr_un sa;
+
+  if (obj == 0)
+  {
+    return 0;
+  }
+  if (g_tcp_can_recv((int)obj, 0))
+  {
+    /* already signalled */
+    return 0;
+  }
+  sa_size = sizeof(sa);
+  if (getsockname((int)obj, (struct sockaddr*)&sa, &sa_size) < 0)
+  {
+    return 1;
+  }
+  s = socket(PF_UNIX, SOCK_DGRAM, 0);
+  if (s < 0)
+  {
+    return 1;
+  }
+  sendto(s, "sig", 4, 0, (struct sockaddr*)&sa, sa_size);
+  close(s);
+  return 0;
+#endif
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+g_reset_wait_obj(tbus obj)
+{
+#ifdef _WIN32
+  if (obj == 0)
+  {
+    return 0;
+  }
+  ResetEvent((HANDLE)obj);
+  return 0;
+#else
+  char buf[64];
+
+  if (obj == 0)
+  {
+    return 0;
+  }
+  while (g_tcp_can_recv((int)obj, 0))
+  {
+    recvfrom((int)obj, &buf, 64, 0, 0, 0);
+  }
+  return 0;
+#endif
+}
+
+/*****************************************************************************/
+/* returns boolean */
+int APP_CC
+g_is_wait_obj_set(tbus obj)
+{
+#ifdef _WIN32
+  if (obj == 0)
+  {
+    return 0;
+  }
+  if (WaitForSingleObject((HANDLE)obj, 0) == WAIT_OBJECT_0)
+  {
+    return 1;
+  }
+  return 0;
+#else
+  if (obj == 0)
+  {
+    return 0;
+  }
+  return g_tcp_can_recv((int)obj, 0);
+#endif
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+g_destroy_wait_obj(tbus obj)
+{
+#ifdef _WIN32
+  if (obj == 0)
+  {
+    return 0;
+  }
+  /* Close event handle */
+  WSACloseEvent((HANDLE)obj);
+  return 0;
+#else
+  socklen_t sa_size;
+  struct sockaddr_un sa;
+
+  if (obj == 0)
+  {
+    return 0;
+  }
+  sa_size = sizeof(sa);
+  if (getsockname((int)obj, (struct sockaddr*)&sa, &sa_size) < 0)
+  {
+    return 1;
+  }
+  close((int)obj);
+  unlink(sa.sun_path);
+  return 0;
+#endif
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+g_obj_wait(tbus* read_objs, int rcount, tbus* write_objs, int wcount,
+           int mstimeout)
+{
+#ifdef _WIN32
+  HANDLE handles[256];
+  DWORD count;
+  DWORD error;
+  int j;
+  int i;
+
+  j = 0;
+  count = rcount + wcount;
+  for (i = 0; i < rcount; i++)
+  {
+    handles[j++] = (HANDLE)(read_objs[i]);
+  }
+  for (i = 0; i < wcount; i++)
+  {
+    handles[j++] = (HANDLE)(write_objs[i]);
+  }
+  if (mstimeout < 1)
+  {
+    mstimeout = INFINITE;
+  }
+  error = WaitForMultipleObjects(count, handles, FALSE, mstimeout);
+  if (error == WAIT_FAILED)
+  {
+    return 1;
+  }
+  return 0;
+#else
+  fd_set rfds;
+  fd_set wfds;
+  struct timeval time;
+  struct timeval* ptime;
+  int i;
+  int max;
+  int sck;
+
+  max = 0;
+  if (mstimeout < 1)
+  {
+    ptime = 0;
+  }
+  else
+  {
+    time.tv_sec = mstimeout / 1000;
+    time.tv_usec = (mstimeout % 1000) * 1000;
+    ptime = &time;
+  }
+  FD_ZERO(&rfds);
+  FD_ZERO(&wfds);
+  for (i = 0; i < rcount; i++)
+  {
+    sck = (int)(read_objs[i]);
+    FD_SET(sck, &rfds);
+    if (sck > max)
+    {
+      max = sck;
+    }
+  }
+  for (i = 0; i < wcount; i++)
+  {
+    sck = (int)(write_objs[i]);
+    FD_SET(sck, &wfds);
+    if (sck > max)
+    {
+      max = sck;
+    }
+  }
+  i = select(max + 1, &rfds, &wfds, 0, ptime);
+  if (i < 0)
+  {
+    return 1;
+  }
+  return 0;
+#endif
+}
+
+/*****************************************************************************/
 void APP_CC
 g_random(char* data, int len)
 {
