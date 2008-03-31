@@ -24,12 +24,13 @@
 
 /*****************************************************************************/
 struct xrdp_process* APP_CC
-xrdp_process_create(struct xrdp_listen* owner)
+xrdp_process_create(struct xrdp_listen* owner, tbus done_event)
 {
   struct xrdp_process* self;
 
   self = (struct xrdp_process*)g_malloc(sizeof(struct xrdp_process), 1);
   self->lis_layer = owner;
+  self->done_event = done_event;
   return self;
 }
 
@@ -138,6 +139,6 @@ xrdp_process_main_loop(struct xrdp_process* self)
   self->session = 0;
   g_tcp_close(self->sck);
   self->status = -1;
-  xrdp_listen_delete_pro(self->lis_layer, self);
+  g_set_wait_obj(self->done_event);
   return 0;
 }

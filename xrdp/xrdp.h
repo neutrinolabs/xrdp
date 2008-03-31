@@ -42,6 +42,10 @@ int APP_CC
 g_is_term(void);
 void APP_CC
 g_set_term(int in_val);
+tbus APP_CC
+g_get_term_event(void);
+tbus APP_CC
+g_get_sync_event(void);
 void APP_CC
 g_loop(void);
 
@@ -122,7 +126,7 @@ xrdp_wm_log_msg(struct xrdp_wm* self, char* msg);
 
 /* xrdp_process.c */
 struct xrdp_process* APP_CC
-xrdp_process_create(struct xrdp_listen* owner);
+xrdp_process_create(struct xrdp_listen* owner, tbus done_event);
 void APP_CC
 xrdp_process_delete(struct xrdp_process* self);
 int APP_CC
@@ -133,8 +137,6 @@ struct xrdp_listen* APP_CC
 xrdp_listen_create(void);
 void APP_CC
 xrdp_listen_delete(struct xrdp_listen* self);
-int APP_CC
-xrdp_listen_delete_pro(struct xrdp_listen* self, struct xrdp_process* pro);
 int APP_CC
 xrdp_listen_main_loop(struct xrdp_listen* self);
 

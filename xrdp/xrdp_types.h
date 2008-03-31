@@ -249,6 +249,7 @@ struct xrdp_process
   /* create these when up and running */
   struct xrdp_wm* wm;
   int app_sck;
+  tbus done_event;
 };
 
 /* rdp listener */
@@ -256,10 +257,8 @@ struct xrdp_listen
 {
   int status;
   int sck;
-  int term;
-  struct xrdp_process* process_list[100]; /* 100 processes possible */
-  int process_list_count;
-  int process_list_max;
+  struct list* process_list;
+  tbus pro_done_event;
 };
 
 /* region */
