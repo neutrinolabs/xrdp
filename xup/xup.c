@@ -156,6 +156,7 @@ lib_mod_connect(struct mod* mod)
   make_stream(s);
   g_sprintf(con_port, "%s", mod->port);
   mod->sck = g_tcp_socket();
+  mod->sck_obj = g_create_wait_obj_from_socket(mod->sck, 0);
   mod->sck_closed = 0;
   error = g_tcp_connect(mod->sck, mod->ip, con_port);
   if (error == 0)
@@ -399,6 +400,47 @@ lib_mod_set_param(struct mod* mod, char* name, char* value)
 }
 
 /******************************************************************************/
+/* return error */
+int DEFAULT_CC
+lib_mod_get_wait_objs(struct mod* mod, tbus* read_objs, int* rcount,
+                      tbus* write_objs, int* wcount, int* timeout)
+{
+  int i;
+
+  i = *rcount;
+  if (mod != 0)
+  {
+    if (mod->sck_obj != 0)
+    {
+      read_objs[i++] = mod->sck_obj;
+    }
+  }
+  *rcount = i;
+  return 0;
+}
+
+/******************************************************************************/
+/* return error */
+int DEFAULT_CC
+lib_mod_check_wait_objs(struct mod* mod)
+{
+  int rv;
+
+  rv = 0;
+  if (mod != 0)
+  {
+    if (mod->sck_obj != 0)
+    {
+      if (g_is_wait_obj_set(mod->sck_obj))
+      {
+        rv = lib_mod_signal(mod);
+      }
+    }
+  }
+  return rv;
+}
+
+/******************************************************************************/
 struct mod* EXPORT_CC
 mod_init(void)
 {
@@ -424,6 +466,7 @@ mod_exit(struct mod* mod)
   {
     return 0;
   }
+  g_delete_wait_obj_from_socket(mod->sck_obj);
   g_tcp_close(mod->sck);
   g_free(mod);
   return 0;
