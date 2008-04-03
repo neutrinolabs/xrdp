@@ -1161,6 +1161,7 @@ connections", 0);
   g_sprintf(con_port, "%s", v->port);
   make_stream(pixel_format);
   v->sck = g_tcp_socket();
+  v->sck_obj = g_create_wait_obj_from_socket(v->sck, 0);
   v->sck_closed = 0;
   g_sprintf(text, "connecting to %s %s", v->ip, con_port);
   v->server_msg(v, text, 0);
@@ -1440,6 +1441,47 @@ lib_mod_set_param(struct vnc* v, char* name, char* value)
 }
 
 /******************************************************************************/
+/* return error */
+int DEFAULT_CC
+lib_mod_get_wait_objs(struct vnc* v, tbus* read_objs, int* rcount,
+                      tbus* write_objs, int* wcount, int* timeout)
+{
+  int i;
+
+  i = *rcount;
+  if (v != 0)
+  {
+    if (v->sck_obj != 0)
+    {
+      read_objs[i++] = v->sck_obj;
+    }
+  }
+  *rcount = i;
+  return 0;
+}
+
+/******************************************************************************/
+/* return error */
+int DEFAULT_CC
+lib_mod_check_wait_objs(struct vnc* v)
+{
+  int rv;
+
+  rv = 0;
+  if (v != 0)
+  {
+    if (v->sck_obj != 0)
+    {
+      if (g_is_wait_obj_set(v->sck_obj))
+      {
+        rv = lib_mod_signal(v);
+      }
+    }
+  }
+  return rv;
+}
+
+/******************************************************************************/
 struct vnc* EXPORT_CC
 mod_init(void)
 {
@@ -1455,6 +1497,8 @@ mod_init(void)
   v->mod_signal = lib_mod_signal;
   v->mod_end = lib_mod_end;
   v->mod_set_param = lib_mod_set_param;
+  v->mod_get_wait_objs = lib_mod_get_wait_objs;
+  v->mod_check_wait_objs = lib_mod_check_wait_objs;
   return v;
 }
 
@@ -1466,6 +1510,7 @@ mod_exit(struct vnc* v)
   {
     return 0;
   }
+  g_delete_wait_obj_from_socket(v->sck_obj);
   g_tcp_close(v->sck);
   g_free(v);
   return 0;

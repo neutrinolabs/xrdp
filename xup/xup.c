@@ -455,6 +455,8 @@ mod_init(void)
   mod->mod_signal = lib_mod_signal;
   mod->mod_end = lib_mod_end;
   mod->mod_set_param = lib_mod_set_param;
+  mod->mod_get_wait_objs = lib_mod_get_wait_objs;
+  mod->mod_check_wait_objs = lib_mod_check_wait_objs;
   return mod;
 }
 
