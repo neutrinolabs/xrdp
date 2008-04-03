@@ -18,9 +18,9 @@ LIBS = -ldl
 LIBS += -lcrypto
 CC = gcc
 
-all: rdp
+all: librdp.so
 
-rdp: $(RDPOBJ)
+librdp.so: $(RDPOBJ)
 	$(CC) $(LDFLAGS) -o librdp.so $(RDPOBJ) $(LIBS)
 
 clean:

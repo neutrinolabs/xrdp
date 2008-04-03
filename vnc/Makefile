@@ -16,9 +16,9 @@ LDFLAGS = -shared
 LIBS = -ldl
 CC = gcc
 
-all: vnc
+all: libvnc.so
 
-vnc: $(VNCOBJ)
+libvnc.so: $(VNCOBJ)
 	$(CC) $(LDFLAGS) -o libvnc.so $(VNCOBJ) $(LIBS)
 
 clean:

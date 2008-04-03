@@ -17,9 +17,9 @@ LDFLAGS = -shared
 LIBS = -ldl
 CC = gcc
 
-all: xup
+all: libxup.so
 
-xup: $(XUPOBJ)
+libxup.so: $(XUPOBJ)
 	$(CC) $(LDFLAGS) -o libxup.so $(XUPOBJ) $(LIBS)
 
 clean:
