@@ -619,15 +619,17 @@ g_tcp_select(int sck1, int sck2)
 tbus APP_CC
 g_create_wait_obj(char* name)
 {
+#ifdef _WIN32
   tbus obj;
 
-#ifdef _WIN32
   obj = (tbus)CreateEvent(0, 1, 0, name);
   return obj;
 #else
+  tbus obj;
   struct sockaddr_un sa;
   int len;
   int sck;
+  int i;
 
   sck = socket(PF_UNIX, SOCK_DGRAM, 0);
   if (sck < 0)
@@ -636,7 +638,20 @@ g_create_wait_obj(char* name)
   }
   memset(&sa, 0, sizeof(sa));
   sa.sun_family = AF_UNIX;
-  sprintf(sa.sun_path, "/tmp/%s", name);
+  if ((name == 0) || (strlen(name) == 0))
+  {
+    g_random((char*)&i, sizeof(i));
+    sprintf(sa.sun_path, "/tmp/auto%8.8x", i);
+    while (g_file_exist(sa.sun_path))
+    {
+      g_random((char*)&i, sizeof(i));
+      sprintf(sa.sun_path, "/tmp/auto%8.8x", i);
+    }
+  }
+  else
+  {
+    sprintf(sa.sun_path, "/tmp/%s", name);
+  }
   unlink(sa.sun_path);
   len = sizeof(sa);
   if (bind(sck, (struct sockaddr*)&sa, len) < 0)
@@ -650,6 +665,7 @@ g_create_wait_obj(char* name)
 }
 
 /*****************************************************************************/
+/* returns 0 on error */
 tbus APP_CC
 g_create_wait_obj_from_socket(tbus socket, int write)
 {
@@ -670,6 +686,20 @@ g_create_wait_obj_from_socket(tbus socket, int write)
   }
 #else
   return socket;
+#endif
+}
+
+/*****************************************************************************/
+void APP_CC
+g_delete_wait_obj_from_socket(tbus wait_obj)
+{
+#ifdef _WIN32
+  if (wait_obj == 0)
+  {
+    return;
+  }
+  WSACloseEvent((HANDLE)wait_obj);
+#else
 #endif
 }
 
@@ -769,7 +799,7 @@ g_is_wait_obj_set(tbus obj)
 /*****************************************************************************/
 /* returns error */
 int APP_CC
-g_destroy_wait_obj(tbus obj)
+g_delete_wait_obj(tbus obj)
 {
 #ifdef _WIN32
   if (obj == 0)
@@ -777,7 +807,7 @@ g_destroy_wait_obj(tbus obj)
     return 0;
   }
   /* Close event handle */
-  WSACloseEvent((HANDLE)obj);
+  CloseHandle((HANDLE)obj);
   return 0;
 #else
   socklen_t sa_size;

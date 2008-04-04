@@ -97,6 +97,8 @@ tbus APP_CC
 g_create_wait_obj(char* name);
 tbus APP_CC
 g_create_wait_obj_from_socket(tbus socket, int write);
+void APP_CC
+g_delete_wait_obj_from_socket(tbus wait_obj);
 int APP_CC
 g_set_wait_obj(tbus obj);
 int APP_CC
@@ -104,7 +106,7 @@ g_reset_wait_obj(tbus obj);
 int APP_CC
 g_is_wait_obj_set(tbus obj);
 int APP_CC
-g_destroy_wait_obj(tbus obj);
+g_delete_wait_obj(tbus obj);
 int APP_CC
 g_obj_wait(tbus* read_objs, int rcount, tbus* write_objs, int wcount,
            int mstimeout);
