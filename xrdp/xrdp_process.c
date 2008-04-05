@@ -22,15 +22,24 @@
 
 #include "xrdp.h"
 
+static int g_session_id = 0;
+
 /*****************************************************************************/
+/* always called from xrdp_listen thread */
 struct xrdp_process* APP_CC
 xrdp_process_create(struct xrdp_listen* owner, tbus done_event)
 {
   struct xrdp_process* self;
+  char event_name[64];
 
   self = (struct xrdp_process*)g_malloc(sizeof(struct xrdp_process), 1);
   self->lis_layer = owner;
   self->done_event = done_event;
+  g_session_id++;
+  self->session_id = g_session_id;
+  g_snprintf(event_name, 63, "xrdp_process_self_term_event_%8.8x",
+             self->session_id);
+  self->self_term_event = g_create_wait_obj(event_name);
   return self;
 }
 
@@ -42,6 +51,7 @@ xrdp_process_delete(struct xrdp_process* self)
   {
     return;
   }
+  g_delete_wait_obj(self->self_term_event);
   libxrdp_exit(self->session);
   xrdp_wm_delete(self->wm);
   g_free(self);
@@ -63,7 +73,8 @@ xrdp_process_loop(struct xrdp_process* self)
     DEBUG(("calling xrdp_wm_init and creating wm"));
     self->wm = xrdp_wm_create(self, self->session->client_info);
     /* at this point the wm(window manager) is create and wm::login_mode is
-       zero so xrdp_wm_init should be called by xrdp_wm_idle */
+       zero and login_mode_event is set so xrdp_wm_init should be called by
+       xrdp_wm_check_wait_objs */
   }
   return rv;
 }
@@ -78,10 +89,37 @@ xrdp_is_term(void)
 }
 
 /*****************************************************************************/
+static int APP_CC
+xrdp_process_mod_end(struct xrdp_process* self)
+{
+  if (self->wm != 0)
+  {
+    if (self->wm->mm != 0)
+    {
+      if (self->wm->mm->mod != 0)
+      {
+        if (self->wm->mm->mod->mod_end != 0)
+        {
+          return self->wm->mm->mod->mod_end(self->wm->mm->mod);
+        }
+      }
+    }
+  }
+  return 0;
+}
+
+/*****************************************************************************/
 int APP_CC
 xrdp_process_main_loop(struct xrdp_process* self)
 {
-  int sel_r;
+  int robjs_count;
+  int wobjs_count;
+  int cont;
+  int timeout;
+  tbus robjs[32];
+  tbus wobjs[32];
+  tbus term_obj;
+  tbus sck_obj;
 
   self->status = 1;
   self->session = libxrdp_init((long)self, self->sck);
@@ -93,48 +131,50 @@ xrdp_process_main_loop(struct xrdp_process* self)
   g_tcp_set_no_delay(self->sck);
   if (libxrdp_process_incomming(self->session) == 0)
   {
-    while (!g_is_term() && !self->term)
+    term_obj = g_get_term_event();
+    sck_obj = g_create_wait_obj_from_socket(self->sck, 0);
+    cont = 1;
+    while (cont)
     {
-      sel_r = g_tcp_select(self->sck, self->app_sck);
-      if (sel_r == 0) /* no data on any stream */
+      /* build the wait obj list */
+      timeout = -1;
+      robjs_count = 0;
+      wobjs_count = 0;
+      robjs[robjs_count++] = term_obj;
+      robjs[robjs_count++] = sck_obj;
+      robjs[robjs_count++] = self->self_term_event;
+      xrdp_wm_get_wait_objs(self->wm, robjs, &robjs_count,
+                            wobjs, &wobjs_count, &timeout);
+      /* wait */
+      if (g_obj_wait(robjs, robjs_count, wobjs, wobjs_count, timeout) != 0)
       {
-        xrdp_wm_idle(self->wm);
+        /* error, should not get here */
+        g_sleep(100);
       }
-      else if (sel_r < 0)
+      if (g_is_wait_obj_set(term_obj)) /* term */
       {
         break;
       }
-      if (sel_r & 1)
+      if (g_is_wait_obj_set(self->self_term_event))
+      {
+        break;
+      }
+      if (g_is_wait_obj_set(sck_obj)) /* incomming client data */
       {
         if (xrdp_process_loop(self) != 0)
         {
           break;
         }
       }
-      if (sel_r & 2) /* mod socket fired */
+      if (xrdp_wm_check_wait_objs(self->wm) != 0)
       {
-        if (xrdp_wm_app_sck_signal(self->wm, self->app_sck) != 0)
-        {
-          break;
-        }
+        break;
       }
     }
+    g_delete_wait_obj_from_socket(sck_obj);
     libxrdp_disconnect(self->session);
-    g_sleep(500);
   }
-  if (self->wm != 0)
-  {
-    if (self->wm->mm != 0)
-    {
-      if (self->wm->mm->mod != 0)
-      {
-        if (self->wm->mm->mod->mod_end != 0)
-        {
-          self->wm->mm->mod->mod_end(self->wm->mm->mod);
-        }
-      }
-    }
-  }
+  xrdp_process_mod_end(self);
   libxrdp_exit(self->session);
   self->session = 0;
   g_tcp_close(self->sck);

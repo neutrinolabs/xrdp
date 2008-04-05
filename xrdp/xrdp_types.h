@@ -33,7 +33,11 @@ struct xrdp_mod
   int (*mod_signal)(struct xrdp_mod* v);
   int (*mod_end)(struct xrdp_mod* v);
   int (*mod_set_param)(struct xrdp_mod* v, char* name, char* value);
-  long mod_dumby[100 - 6]; /* align, 100 minus the number of mod 
+  int (*mod_session_change)(struct xrdp_mod* v, int, int);
+  int (*mod_get_wait_objs)(struct xrdp_mod* v, tbus* read_objs, int* rcount,
+                           tbus* write_objs, int* wcount, int* timeout);
+  int (*mod_check_wait_objs)(struct xrdp_mod* v);
+  long mod_dumby[100 - 9]; /* align, 100 minus the number of mod 
                               functions above */
   /* server functions */
   int (*server_begin_update)(struct xrdp_mod* v);
@@ -160,6 +164,7 @@ struct xrdp_mm
   struct xrdp_wm* wm; /* owner */
   int connected_state;
   int sck;
+  tbus sck_obj;
   int sck_closed;
   struct list* login_names;
   struct list* login_values;
@@ -233,6 +238,7 @@ struct xrdp_wm
   struct list* log;
   struct xrdp_bitmap* log_wnd;
   int login_mode;
+  tbus login_mode_event;
   struct xrdp_mm* mm;
   struct xrdp_font* default_font;
   struct xrdp_keymap keymap;
@@ -243,13 +249,14 @@ struct xrdp_process
 {
   int status;
   int sck;
-  int term;
+  tbus self_term_event;
   struct xrdp_listen* lis_layer; /* owner */
   struct xrdp_session* session;
   /* create these when up and running */
   struct xrdp_wm* wm;
   int app_sck;
   tbus done_event;
+  int session_id;
 };
 
 /* rdp listener */

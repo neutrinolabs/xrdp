@@ -34,9 +34,12 @@ xrdp_listen_create(void)
   struct xrdp_listen* self;
 
   self = (struct xrdp_listen*)g_malloc(sizeof(struct xrdp_listen), 1);
-  g_process_sem = tc_sem_create(0);
   self->pro_done_event = g_create_wait_obj("xrdp_listen_pro_done_event");
   self->process_list = list_create();
+  if (g_process_sem == 0)
+  {
+    g_process_sem = tc_sem_create(0);
+  }
   return self;
 }
 
@@ -44,51 +47,14 @@ xrdp_listen_create(void)
 void APP_CC
 xrdp_listen_delete(struct xrdp_listen* self)
 {
-  tc_sem_delete(g_process_sem);
-  g_destroy_wait_obj(self->pro_done_event);
+  if (g_process_sem != 0)
+  {
+    tc_sem_delete(g_process_sem);
+    g_process_sem = 0;
+  }
+  g_delete_wait_obj(self->pro_done_event);
   list_delete(self->process_list);
   g_free(self);
-}
-
-/*****************************************************************************/
-static int APP_CC
-xrdp_listen_term_processes(struct xrdp_listen* self)
-{
-  int i;
-  struct xrdp_process* pro;
-
-  /* tell all xrdp processes to end */
-  for (i = self->process_list->count - 1; i >= 0; i--)
-  {
-    pro = (struct xrdp_process*)list_get_item(self->process_list, i);
-    if (pro != 0)
-    {
-      pro->term = 1;
-    }
-  }
-  /* make sure they are done */
-  for (i = self->process_list->count - 1; i >= 0; i--)
-  {
-    pro = (struct xrdp_process*)list_get_item(self->process_list, i);
-    if (pro != 0)
-    {
-      while (pro->status > 0)
-      {
-        g_sleep(10);
-      }
-    }
-  }
-  /* free them all */
-  for (i = self->process_list->count - 1; i >= 0; i--)
-  {
-    pro = (struct xrdp_process*)list_get_item(self->process_list, i);
-    if (pro != 0)
-    {
-      xrdp_process_delete(pro);
-      list_remove_item(self->process_list, i);
-    }
-  }
-  return 0;
 }
 
 /*****************************************************************************/
@@ -195,10 +161,14 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
   int robjs_count;
   int cont;
   char port[8];
-  tbus robjs[4];
+  tbus robjs[8];
+  tbus term_obj;
+  tbus sync_obj;
+  tbus sck_obj;
+  tbus done_obj;
+  struct xrdp_process* process;
 
   self->status = 1;
-  robjs_count = 0;
   xrdp_listen_get_port(port, sizeof(port));
   self->sck = g_tcp_socket();
   g_tcp_set_non_blocking(self->sck);
@@ -213,57 +183,99 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
   error = g_tcp_listen(self->sck);
   if (error == 0)
   {
-    robjs[0] = g_get_term_event();
-    robjs[1] = g_get_sync_event();
-    robjs[2] = g_create_wait_obj_from_socket(self->sck, 0);
-    robjs[3] = self->pro_done_event;
-    robjs_count = 4;
+    term_obj = g_get_term_event();
+    sync_obj = g_get_sync_event();
+    sck_obj = g_create_wait_obj_from_socket(self->sck, 0);
+    done_obj = self->pro_done_event;
     cont = 1;
     while (cont)
     {
+      /* build the wait obj list */
+      robjs_count = 0;
+      robjs[robjs_count++] = term_obj;
+      robjs[robjs_count++] = sync_obj;
+      robjs[robjs_count++] = sck_obj;
+      robjs[robjs_count++] = done_obj;
+      /* wait */
       if (g_obj_wait(robjs, robjs_count, 0, 0, -1) != 0)
       {
+        /* error, should not get here */
         g_sleep(100);
       }
-      if (g_is_wait_obj_set(robjs[0])) /* term */
+      if (g_is_wait_obj_set(term_obj)) /* term */
       {
         break;
       }
-      if (g_is_wait_obj_set(robjs[1])) /* sync */
+      if (g_is_wait_obj_set(sync_obj)) /* sync */
       {
-        g_reset_wait_obj(robjs[1]);
+        g_reset_wait_obj(sync_obj);
         g_loop();
       }
-      if (g_is_wait_obj_set(robjs[2])) /* incomming connection */
+      if (g_is_wait_obj_set(sck_obj)) /* incomming connection */
       {
         error = g_tcp_accept(self->sck);
         if ((error == -1) && g_tcp_last_error_would_block(self->sck))
         {
+          /* should not get here */
           g_sleep(100);
         }
         else if (error == -1)
         {
+          /* error, should not get here */
           break;
         }
         else
         {
-          g_process = xrdp_process_create(self, self->pro_done_event);
-          if (xrdp_listen_add_pro(self, g_process) == 0)
+          process = xrdp_process_create(self, self->pro_done_event);
+          if (xrdp_listen_add_pro(self, process) == 0)
           {
             /* start thread */
-            g_process->sck = error;
+            process->sck = error;
+            g_process = process;
             tc_thread_create(xrdp_process_run, 0);
             tc_sem_dec(g_process_sem); /* this will wait */
           }
           else
           {
-            xrdp_process_delete(g_process);
+            xrdp_process_delete(process);
           }
         }
       }
-      if (g_is_wait_obj_set(robjs[3])) /* pro_done_event */
+      if (g_is_wait_obj_set(done_obj)) /* pro_done_event */
       {
-        g_reset_wait_obj(robjs[3]);
+        g_reset_wait_obj(done_obj);
+        xrdp_listen_delete_done_pro(self);
+      }
+    }
+    /* stop listening */
+    g_delete_wait_obj_from_socket(sck_obj);
+    g_tcp_close(self->sck);
+    /* second loop to wait for all process threads to close */
+    cont = 1;
+    while (cont)
+    {
+      if (self->process_list->count == 0)
+      {
+        break;
+      }
+      /* build the wait obj list */
+      robjs_count = 0;
+      robjs[robjs_count++] = sync_obj;
+      robjs[robjs_count++] = done_obj;
+      /* wait */
+      if (g_obj_wait(robjs, robjs_count, 0, 0, -1) != 0)
+      {
+        /* error, should not get here */
+        g_sleep(100);
+      }
+      if (g_is_wait_obj_set(sync_obj)) /* sync */
+      {
+        g_reset_wait_obj(sync_obj);
+        g_loop();
+      }
+      if (g_is_wait_obj_set(done_obj)) /* pro_done_event */
+      {
+        g_reset_wait_obj(done_obj);
         xrdp_listen_delete_done_pro(self);
       }
     }
@@ -272,8 +284,6 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
   {
     DEBUG(("listen error in xrdp_listen_main_loop"));
   }
-  xrdp_listen_term_processes(self);
-  g_tcp_close(self->sck);
   self->status = -1;
   return 0;
 }

@@ -549,8 +549,8 @@ main(int argc, char** argv)
   xrdp_listen_delete(g_listen);
   tc_mutex_delete(g_sync_mutex);
   tc_mutex_delete(g_sync1_mutex);
-  g_destroy_wait_obj(g_term_event);
-  g_destroy_wait_obj(g_sync_event);
+  g_delete_wait_obj(g_term_event);
+  g_delete_wait_obj(g_sync_event);
 #if defined(_WIN32)
   /* I don't think it ever gets here */
   /* when running in win32 app mode, control c exits right away */

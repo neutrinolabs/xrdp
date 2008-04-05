@@ -173,7 +173,7 @@ xrdp_wm_cancel_clicked(struct xrdp_bitmap* wnd)
     {
       if (wnd->wm->pro_layer != 0)
       {
-        wnd->wm->pro_layer->term = 1;
+        g_set_wait_obj(wnd->wm->pro_layer->self_term_event);
       }
     }
   }
@@ -219,7 +219,7 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap* wnd)
       /* gota copy these cause dialog gets freed */
       list_append_list_strdup(mod_data->names, wm->mm->login_names, 0);
       list_append_list_strdup(mod_data->values, wm->mm->login_values, 0);
-      wm->login_mode = 2;
+      xrdp_wm_set_login_mode(wm, 2);
     }
   }
   return 0;
