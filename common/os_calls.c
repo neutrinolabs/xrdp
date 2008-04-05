@@ -260,18 +260,16 @@ g_tcp_set_no_delay(int sck)
   unsigned int option_len;
 #endif
 
-  option_value = 1;
   option_len = sizeof(option_value);
-  setsockopt(sck, IPPROTO_TCP, TCP_NODELAY, (char*)&option_value,
-             option_len);
-  if (getsockopt(sck, SOL_SOCKET, SO_SNDBUF, (char*)&option_value,
+  /* SOL_TCP IPPROTO_TCP */
+  if (getsockopt(sck, IPPROTO_TCP, TCP_NODELAY, (char*)&option_value,
                  &option_len) == 0)
   {
-    if (option_value < (1024 * 32))
+    if (option_value == 0)
     {
-      option_value = 1024 * 32;
+      option_value = 1;
       option_len = sizeof(option_value);
-      setsockopt(sck, SOL_SOCKET, SO_SNDBUF, (char*)&option_value,
+      setsockopt(sck, IPPROTO_TCP, TCP_NODELAY, (char*)&option_value,
                  option_len);
     }
   }
@@ -299,14 +297,19 @@ g_tcp_socket(void)
   {
     return -1;
   }
-  option_value = 1;
   option_len = sizeof(option_value);
-  setsockopt(rv, IPPROTO_TCP, TCP_NODELAY, (char*)&option_value,
-             option_len);
-  option_value = 1;
-  setsockopt(rv, SOL_SOCKET, SO_REUSEADDR, (char*)&option_value,
-             option_len);
-
+  if (getsockopt(rv, SOL_SOCKET, SO_REUSEADDR, (char*)&option_value,
+                 &option_len) == 0)
+  {
+    if (option_value == 0)
+    {
+      option_value = 1;
+      option_len = sizeof(option_value);
+      setsockopt(rv, SOL_SOCKET, SO_REUSEADDR, (char*)&option_value,
+                 option_len);
+    }
+  }
+  option_len = sizeof(option_value);
   if (getsockopt(rv, SOL_SOCKET, SO_SNDBUF, (char*)&option_value,
                  &option_len) == 0)
   {
