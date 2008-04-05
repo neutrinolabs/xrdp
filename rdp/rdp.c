@@ -53,6 +53,8 @@ lib_mod_connect(struct mod* mod)
   if (rdp_rdp_connect(mod->rdp_layer, mod->ip, mod->port) == 0)
   {
     mod->sck = mod->rdp_layer->sec_layer->mcs_layer->iso_layer->tcp_layer->sck;
+    g_tcp_set_non_blocking(mod->sck);
+    g_tcp_set_no_delay(mod->sck);
     mod->sck_obj = g_create_wait_obj_from_socket(mod->sck, 0);
     DEBUG(("out lib_mod_connect"));
     return 0;
