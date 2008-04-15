@@ -33,17 +33,17 @@
 
 #define MY_KEY_SIZE 512
 
-static char g_exponent[4] =
+static tui8 g_exponent[4] =
 {
   0x01, 0x00, 0x01, 0x00
 };
 
-static char g_ppk_e[4] =
+static tui8 g_ppk_e[4] =
 {
   0x5B, 0x7B, 0x88, 0xC0
 };
 
-static char g_ppk_n[72] =
+static tui8 g_ppk_n[72] =
 {
   0x3D, 0x3A, 0x5E, 0xBD, 0x72, 0x43, 0x3E, 0xC9,
   0x4D, 0xBB, 0xC1, 0x1E, 0x4A, 0xBA, 0x5F, 0xCB,
@@ -56,7 +56,7 @@ static char g_ppk_n[72] =
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-static char g_ppk_d[108] =
+static tui8 g_ppk_d[108] =
 {
   0x87, 0xA7, 0x19, 0x32, 0xDA, 0x11, 0x87, 0x55,
   0x58, 0x00, 0x16, 0x16, 0x25, 0x65, 0x68, 0xF8,
@@ -74,7 +74,7 @@ static char g_ppk_d[108] =
   0x00, 0x00, 0x00, 0x00
 };
 
-static char g_testkey[176] =
+static tui8 g_testkey[176] =
 {
   0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
   0x01, 0x00, 0x00, 0x00, 0x06, 0x00, 0x5c, 0x00,
@@ -139,7 +139,8 @@ sign_key(char* e_data, int e_len, char* n_data, int n_len,
   md5_final[16] = 0;
   md5_final[62] = 1;
   md5_final[63] = 0;
-  ssl_mod_exp(sign_data, 64, md5_final, 64, g_ppk_n, 64, g_ppk_d, 64);
+  ssl_mod_exp(sign_data, 64, md5_final, 64, (char*)g_ppk_n, 64,
+              (char*)g_ppk_d, 64);
   ssl_md5_info_delete(md5);
   g_free(key);
   g_free(md5_final);
@@ -169,7 +170,7 @@ write_out_line(int fd, char* name, char* data, int len)
   buf_pos++;
   for (index = 0; index < len; index++)
   {
-    data_item = (unsigned char)data[index];
+    data_item = (tui8)(data[index]);
     g_snprintf(text, 255, "0x%2.2x", data_item);
     if (index != 0)
     {
@@ -234,7 +235,7 @@ key_gen(void)
   int sign_len;
   int error;
 
-  e_data = g_exponent;
+  e_data = (char*)g_exponent;
   n_data = (char*)g_malloc(64, 0);
   d_data = (char*)g_malloc(64, 0);
   sign_data = (char*)g_malloc(64, 0);
@@ -257,7 +258,7 @@ key_gen(void)
   }
   if (error == 0)
   {
-    g_writeln("RSA_generate_key_ex ok");
+    g_writeln("ssl_gen_key_xrdp1 ok");
     g_writeln("");
     error = sign_key(e_data, e_len, n_data, n_len, d_data, d_len,
                      sign_data, sign_len);
@@ -293,15 +294,15 @@ key_test(void)
   sig = (char*)g_malloc(64, 0);
   md5 = ssl_md5_info_create();
   g_writeln("original key is:");
-  g_hexdump(g_testkey, 176);
+  g_hexdump((char*)g_testkey, 176);
   g_writeln("original exponent is:");
-  g_hexdump(g_testkey + 32, 4);
+  g_hexdump((char*)g_testkey + 32, 4);
   g_writeln("original modulus is:");
-  g_hexdump(g_testkey + 36, 64);
+  g_hexdump((char*)g_testkey + 36, 64);
   g_writeln("original signature is:");
-  g_hexdump(g_testkey + 112, 64);
+  g_hexdump((char*)g_testkey + 112, 64);
   ssl_md5_clear(md5);
-  ssl_md5_transform(md5, g_testkey, 108);
+  ssl_md5_transform(md5, (char*)g_testkey, 108);
   g_memset(md5_final, 0xff, 64);
   ssl_md5_complete(md5, md5_final);
   g_writeln("md5 hash of first 108 bytes of this key is:");
@@ -309,12 +310,13 @@ key_test(void)
   md5_final[16] = 0;
   md5_final[62] = 1;
   md5_final[63] = 0;
-  ssl_mod_exp(sig, 64, md5_final, 64, g_ppk_n, 64, g_ppk_d, 64);
+  ssl_mod_exp(sig, 64, md5_final, 64, (char*)g_ppk_n, 64, (char*)g_ppk_d, 64);
   g_writeln("produced signature(this should match original \
 signature above) is:");
   g_hexdump(sig, 64);
   g_memset(md5_final, 0, 64);
-  ssl_mod_exp(md5_final, 64, g_testkey + 112, 64, g_ppk_n, 64, g_ppk_e, 4);
+  ssl_mod_exp(md5_final, 64, (char*)g_testkey + 112, 64, (char*)g_ppk_n, 64,
+              (char*)g_ppk_e, 4);
   g_writeln("decrypted hash of first 108 bytes of this key is:");
   g_hexdump(md5_final, 64);
   ssl_md5_info_delete(md5);
