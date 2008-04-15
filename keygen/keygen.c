@@ -106,17 +106,18 @@ static int APP_CC
 out_params(void)
 {
   g_writeln("");
-  g_writeln("key gen utility examples");
-  g_writeln("  './keygen xrdp'");
-  g_writeln("  './keygen test'");
+  g_writeln("xrdp rsa key gen utility examples");
+  g_writeln("  './xrdp-keygen xrdp'");
+  g_writeln("  './xrdp-keygen test'");
   g_writeln("");
   return 0;
 }
 
 /*****************************************************************************/
+/* this is the special key signing algorithm */
 static int APP_CC
 sign_key(char* e_data, int e_len, char* n_data, int n_len,
-         char* d_data, int d_len, char* sign_data, int sign_len)
+         char* sign_data, int sign_len)
 {
   char* key;
   char* md5_final;
@@ -129,18 +130,26 @@ sign_key(char* e_data, int e_len, char* n_data, int n_len,
   key = (char*)g_malloc(176, 0);
   md5_final = (char*)g_malloc(64, 0);
   md5 = ssl_md5_info_create();
+  /* copy the test key */
   g_memcpy(key, g_testkey, 176);
+  /* replace e and n */
   g_memcpy(key + 32, e_data, 4);
   g_memcpy(key + 36, n_data, 64);
   ssl_md5_clear(md5);
+  /* the first 108 bytes */
   ssl_md5_transform(md5, key, 108);
+  /* set the whole thing with 0xff */
   g_memset(md5_final, 0xff, 64);
+  /* digest 16 bytes */
   ssl_md5_complete(md5, md5_final);
+  /* set non 0xff array items */
   md5_final[16] = 0;
   md5_final[62] = 1;
   md5_final[63] = 0;
+  /* encrypt */
   ssl_mod_exp(sign_data, 64, md5_final, 64, (char*)g_ppk_n, 64,
               (char*)g_ppk_d, 64);
+  /* cleanup */
   ssl_md5_info_delete(md5);
   g_free(key);
   g_free(md5_final);
@@ -260,8 +269,7 @@ key_gen(void)
   {
     g_writeln("ssl_gen_key_xrdp1 ok");
     g_writeln("");
-    error = sign_key(e_data, e_len, n_data, n_len, d_data, d_len,
-                     sign_data, sign_len);
+    error = sign_key(e_data, e_len, n_data, n_len, sign_data, sign_len);
     if (error != 0)
     {
       g_writeln("error %d in key_gen, sign_key", error);

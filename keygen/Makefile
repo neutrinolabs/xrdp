@@ -10,13 +10,13 @@ LDFLAGS =
 LIBS = -ldl -lcrypto
 CC = gcc
 
-all: keygen_
+all: xrdp-keygen
 
-keygen_: $(KEYGENOBJ)
-	$(CC) $(LDFLAGS) -o keygen $(KEYGENOBJ) $(LIBS)
+xrdp-keygen: $(KEYGENOBJ)
+	$(CC) $(LDFLAGS) -o xrdp-keygen $(KEYGENOBJ) $(LIBS)
 
 clean:
-	rm -f $(KEYGENOBJ) keygen
+	rm -f $(KEYGENOBJ) xrdp-keygen
 
 os_calls.o: ../common/os_calls.c
 	$(CC) $(C_OS_FLAGS) ../common/os_calls.c
