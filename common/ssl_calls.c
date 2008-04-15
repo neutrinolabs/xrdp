@@ -246,7 +246,7 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char* exp, int exp_len,
   my_e |= lexp[1] << 8;
   my_e |= lexp[2] << 16;
   my_e |= lexp[3] << 24;
-  /* srand is in stdlib.h*/
+  /* srand is in stdlib.h */
   srand(g_time1());
   my_key = RSA_generate_key(key_size_in_bits, my_e, 0, 0);
   error = my_key == 0;
