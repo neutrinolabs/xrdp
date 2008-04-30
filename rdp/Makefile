@@ -1,12 +1,9 @@
 # librdp makefile
+
 RDPOBJ = ssl_calls.o os_calls.o rdp.o rdp_tcp.o rdp_iso.o rdp_mcs.o rdp_sec.o \
          rdp_orders.o rdp_bitmap.o rdp_rdp.o rdp_lic.o
 
-DESTDIR = /usr/local/xrdp
-CFGDIR = /etc/xrdp
-PIDDIR = /var/run
-MANDIR = /usr/local/man
-DOCDIR = /usr/doc/xrdp
+LIBDIR = /usr/local/lib/xrdp
 
 DEFINES =
 
@@ -33,7 +30,4 @@ ssl_calls.o: ../common/ssl_calls.c
 	$(CC) $(C_OS_FLAGS) ../common/ssl_calls.c
 
 install:
-	install librdp.so $(DESTDIR)/librdp.so
-
-installdeb:
-	install librdp.so $(DESTDIRDEB)/usr/lib/xrdp/librdp.so
+	install librdp.so $(LIBDIR)/librdp.so
