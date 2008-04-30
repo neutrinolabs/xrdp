@@ -1,40 +1,34 @@
 #!/bin/sh
 # xrdp control script
-# same as xrdp_control.sh except the XRDP_DIR is /usr/lib/xrdp
 # Written : 1-13-2006 - Mark Balliet - posicat@pobox.com
 # maintaned by Jay Sorg
 # chkconfig: 2345 11 89
 # description: starts xrdp
 
-XRDP=xrdp
-SESMAN=sesman
-STARTWM=startwm.sh
-XRDP_DIR=/usr/lib/xrdp/
+SBINDIR=/usr/local/sbin
 LOG=/dev/null
 
-cd $XRDP_DIR
-
-if ! test -x $XRDP
+if ! test -x $SBINDIR/xrdp
 then
-  echo "$XRDP is not executable"
+  echo "xrdp is not executable"
   exit 0
 fi
-if ! test -x $SESMAN
+if ! test -x $SBINDIR/xrdp-sesman
 then
-  echo "$SESMAN is not executable"
+  echo "xrdp-sesman is not executable"
   exit 0
 fi
-if ! test -x $STARTWM
+if ! test -x $CFGDIR/startwm.sh
 then
-  echo "$STARTWM is not executable"
+  echo "startwm.sh is not executable"
   exit 0
 fi
 
 xrdp_start()
 {
   echo -n "Starting: xrdp and sesman . . "
-  ./$XRDP >> $LOG
-  ./$SESMAN >> $LOG
+  $SBINDIR/xrdp >> $LOG
+  $SBINDIR/xrdp-sesman >> $LOG
   echo "."
   sleep 1
   return 0;
@@ -43,15 +37,15 @@ xrdp_start()
 xrdp_stop()
 {
   echo -n "Stopping: xrdp and sesman . . "
-  ./$SESMAN --kill >> $LOG
-  ./$XRDP --kill >> $LOG
+  $SBINDIR/xrdp-sesman --kill >> $LOG
+  $SBINDIR/xrdp --kill >> $LOG
   echo "."
   return 0;
 }
 
 is_xrdp_running()
 {
-  ps u --noheading -C $XRDP | grep -q -i $XRDP
+  ps u --noheading -C xrdp | grep -q -i xrdp
   if test $? -eq 0
   then
     return 1;
@@ -62,7 +56,7 @@ is_xrdp_running()
 
 is_sesman_running()
 {
-  ps u --noheading -C $SESMAN | grep -q -i $SESMAN
+  ps u --noheading -C xrdp-sesman | grep -q -i xrdp-sesman
   if test $? -eq 0
   then
     return 1;
@@ -77,9 +71,9 @@ check_up()
   is_sesman_running
   if test $? -eq 0
   then
-    if test -e /var/run/sesman.pid
+    if test -e /var/run/xrdp-sesman.pid
     then
-      rm /var/run/sesman.pid
+      rm /var/run/xrdp-sesman.pid
     fi
   fi
   # Cleanup : If xrdp isn't running, but the pid exists, erase it.
