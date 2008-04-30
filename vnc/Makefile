@@ -2,11 +2,7 @@
 
 VNCOBJ = vnc.o os_calls.o d3des.o
 
-DESTDIR = /usr/local/xrdp
-CFGDIR = /etc/xrdp
-PIDDIR = /var/run
-MANDIR = /usr/local/man
-DOCDIR = /usr/doc/xrdp
+LIBDIR = /usr/local/lib/xrdp
 
 DEFINES =
 
@@ -31,7 +27,4 @@ d3des.o: ../common/d3des.c
 	$(CC) $(C_OS_FLAGS) ../common/d3des.c
 
 install:
-	install libvnc.so $(DESTDIR)/libvnc.so
-
-installdeb:
-	install libvnc.so $(DESTDIRDEB)/usr/lib/xrdp/libvnc.so
+	install libvnc.so $(LIBDIR)/libvnc.so
