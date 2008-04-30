@@ -2,11 +2,7 @@
 
 XUPOBJ = os_calls.o xup.o
 
-DESTDIR = /usr/local/xrdp
-CFGDIR = /etc/xrdp
-PIDDIR = /var/run
-MANDIR = /usr/local/man
-DOCDIR = /usr/doc/xrdp
+LIBDIR = /usr/local/lib/xrdp
 
 DEFINES =
 
@@ -29,7 +25,4 @@ os_calls.o: ../common/os_calls.c
 	$(CC) $(C_OS_FLAGS) ../common/os_calls.c
 
 install:
-	install libxup.so $(DESTDIR)/libxup.so
-
-installdeb:
-	install libxup.so $(DESTDIRDEB)/usr/lib/xrdp/libxup.so
+	install libxup.so $(LIBDIR)/libxup.so
