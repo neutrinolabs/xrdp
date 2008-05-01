@@ -392,6 +392,11 @@ int APP_CC
 xrdp_rdp_send_demand_active(struct xrdp_rdp* self)
 {
   struct stream* s;
+  int caps_count;
+  int caps_size;
+  char* caps_count_ptr;
+  char* caps_size_ptr;
+  char* caps_ptr;
 
   make_stream(s);
   init_stream(s, 8192);
@@ -401,20 +406,27 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp* self)
     return 1;
   }
 
+  caps_count = 0;
   out_uint32_le(s, self->share_id);
-
   out_uint16_le(s, 4); /* 4 chars for RDP\0 */
-  out_uint16_le(s, 0x0104); /* size after num caps */
+  /* 2 bytes size after num caps, set later */
+  caps_size_ptr = s->p;
+  out_uint8s(s, 2);
   out_uint8a(s, "RDP", 4);
-  out_uint32_le(s, 8); /* num caps 8 */
+  /* 4 byte num caps, set later */
+  caps_count_ptr = s->p;
+  out_uint8s(s, 4);
+  caps_ptr = s->p;
 
   /* Output share capability set */
+  caps_count++;
   out_uint16_le(s, RDP_CAPSET_SHARE);
   out_uint16_le(s, RDP_CAPLEN_SHARE);
   out_uint16_le(s, self->mcs_channel);
   out_uint16_be(s, 0xb5e2); /* 0x73e1 */
 
   /* Output general capability set */
+  caps_count++;
   out_uint16_le(s, RDP_CAPSET_GENERAL); /* 1 */
   out_uint16_le(s, RDP_CAPLEN_GENERAL); /* 24(0x18) */
   out_uint16_le(s, 1); /* OS major type */
@@ -429,6 +441,7 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp* self)
   out_uint16_le(s, 0); /* Pad */
 
   /* Output bitmap capability set */
+  caps_count++;
   out_uint16_le(s, RDP_CAPSET_BITMAP); /* 2 */
   out_uint16_le(s, RDP_CAPLEN_BITMAP); /* 28(0x1c) */
   out_uint16_le(s, self->client_info.bpp); /* Preferred BPP */
@@ -444,11 +457,13 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp* self)
   out_uint16_le(s, 0); /* unknown */
   out_uint16_le(s, 0); /* pad */
 
-  /* Output ? */
-  out_uint16_le(s, 14);
-  out_uint16_le(s, 4);
+  /* Output font capability set */
+  caps_count++;
+  out_uint16_le(s, RDP_CAPSET_FONT); /* 14 */
+  out_uint16_le(s, RDP_CAPLEN_FONT); /* 4 */
 
   /* Output order capability set */
+  caps_count++;
   out_uint16_le(s, RDP_CAPSET_ORDER); /* 3 */
   out_uint16_le(s, RDP_CAPLEN_ORDER); /* 88(0x58) */
   out_uint8s(s, 16);
@@ -500,24 +515,39 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp* self)
   out_uint32_le(s, 0); /* ? */
 
   /* Output color cache capability set */
+  caps_count++;
   out_uint16_le(s, RDP_CAPSET_COLCACHE);
   out_uint16_le(s, RDP_CAPLEN_COLCACHE);
   out_uint16_le(s, 6); /* cache size */
   out_uint16_le(s, 0); /* pad */
 
   /* Output pointer capability set */
+  caps_count++;
   out_uint16_le(s, RDP_CAPSET_POINTER);
   out_uint16_le(s, RDP_CAPLEN_POINTER);
   out_uint16_le(s, 1); /* Colour pointer */
   out_uint16_le(s, 0x19); /* Cache size */
+  out_uint16_le(s, 0x19); /* Cache size */
 
-  /* Output ? */
-  out_uint16_le(s, 0xd);
-  out_uint16_le(s, 0x58); /* 88 */
+  /* Output input capability set */
+  caps_count++;
+  out_uint16_le(s, RDP_CAPSET_INPUT); /* 13(0xd) */
+  out_uint16_le(s, RDP_CAPLEN_INPUT); /* 88(0x58) */
   out_uint8(s, 1);
   out_uint8s(s, 83);
 
+  out_uint8s(s, 4); /* pad */
+
   s_mark_end(s);
+
+  caps_size = (int)(s->end - caps_ptr);
+  caps_size_ptr[0] = caps_size;
+  caps_size_ptr[1] = caps_size >> 8;
+
+  caps_count_ptr[0] = caps_count;
+  caps_count_ptr[1] = caps_count >> 8;
+  caps_count_ptr[2] = caps_count >> 16;
+  caps_count_ptr[3] = caps_count >> 24;
 
   if (xrdp_rdp_send(self, s, RDP_PDU_DEMAND_ACTIVE) != 0)
   {
