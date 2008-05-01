@@ -356,11 +356,6 @@ xrdp_sec_process_logon_info(struct xrdp_sec* self, struct stream* s)
   {                                                   /* must be or error */
     return 1;
   }
-  if (flags & 0x400)
-  {
-    self->rdp_layer->client_info.is_mce = 1;
-    DEBUG(("flag 0x400 found"));
-  }
   if (flags & RDP_LOGON_LEAVE_AUDIO)
   {
     self->rdp_layer->client_info.sound_code = 1;
