@@ -89,6 +89,7 @@ typedef __int64 tbus;
 #else
 typedef long tbus;
 #endif
+typedef tbus thandle;
 /* wide char, socket */
 #if defined(_WIN32)
 typedef unsigned short twchar;
