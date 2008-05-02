@@ -5,6 +5,7 @@ LIBXRDPOBJ = libxrdp.o xrdp_tcp.o xrdp_iso.o xrdp_mcs.o \
              xrdp_bitmap_compress.o xrdp_channel.o \
              os_calls.o ssl_calls.o file.o
 
+CFGDIR = /etc/xrdp
 LIBDIR = /usr/local/lib/xrdp
 
 DEFINES = -DXRDP_CFG_FILE=\"$(CFGDIR)/xrdp.ini\" \
@@ -18,13 +19,13 @@ LIBS = -ldl
 LIBS += -lcrypto
 CC = gcc
 
-all: libxrdp
+all: libxrdp.so
 
 static: $(LIBXRDPOBJ)
 	$(AR) rvu libxrdp.a $(LIBXRDPOBJ)
 	ranlib libxrdp.a
 
-libxrdp: $(LIBXRDPOBJ)
+libxrdp.so: $(LIBXRDPOBJ)
 	$(CC) $(LDFLAGS) -o libxrdp.so $(LIBXRDPOBJ) $(LIBS)
 
 clean:
@@ -38,7 +39,6 @@ file.o: ../common/file.c
 
 os_calls.o: ../common/os_calls.c
 	$(CC) $(C_OS_FLAGS) ../common/os_calls.c
-
 
 ssl_calls.o: ../common/ssl_calls.c
 	$(CC) $(C_OS_FLAGS) ../common/ssl_calls.c
