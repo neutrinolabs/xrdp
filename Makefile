@@ -1,9 +1,11 @@
 
-DESTDIR = /usr/local/xrdp
 CFGDIR = /etc/xrdp
 PIDDIR = /var/run
 MANDIR = /usr/local/man
-DOCDIR = /usr/doc/xrdp
+LIBDIR = /usr/local/lib/xrdp
+BINDIR = /usr/local/bin
+SBINDIR = /usr/local/sbin
+SHAREDIR = /usr/local/share/xrdp
 
 all: world
 
@@ -34,11 +36,13 @@ clean:
 	$(MAKE) -C xup clean
 
 install:
-	mkdir -p $(DESTDIR)
 	mkdir -p $(CFGDIR)
 	mkdir -p $(PIDDIR)
 	mkdir -p $(MANDIR)
-	mkdir -p $(DOCDIR)
+	mkdir -p $(LIBDIR)
+	mkdir -p $(BINDIR)
+	mkdir -p $(SBINDIR)
+	mkdir -p $(SHAREDIR)
 	$(MAKE) -C vnc install
 	$(MAKE) -C libxrdp install
 	$(MAKE) -C xrdp install
