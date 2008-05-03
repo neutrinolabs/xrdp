@@ -51,4 +51,4 @@ install:
 	$(MAKE) -C xup install
 	$(MAKE) -C docs install
 	if [ -d /etc/pam.d ]; then install instfiles/pam.d/sesman /etc/pam.d/sesman; fi
-	install instfiles/xrdp_control.sh $(DESTDIR)/xrdp_control.sh
+	if [ -d /etc/init.d ]; then install instfiles/xrdp /etc/init.d/xrdp; fi
