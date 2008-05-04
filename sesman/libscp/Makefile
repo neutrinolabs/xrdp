@@ -5,21 +5,18 @@ LIBSCPOBJ = libscp_vX.o libscp_v0.o \
 	    libscp_session.o libscp_connection.o \
 	    os_calls.o
 
-DESTDIR = /usr/local/xrdp
 CFGDIR = /etc/xrdp
 PIDDIR = /var/run
 MANDIR = /usr/local/man
-DOCDIR = /usr/doc/xrdp
-
-DESTDIRDEB = /tmp
+LIBDIR = /usr/local/lib/xrdp
 
 LIBSCPLNAME = libscp.so
 LIBSCPSONAME = $(LIBSCPLNAME).1
 LIBSCPFNAME = $(LIBSCPSONAME).0.0
 
-DEFINES = -DSESMAN_CFG_FILE=\"$(CFGDIR)/sesman.ini\" \
-	  -DSESMAN_PID_FILE=\"$(PIDDIR)/sesman.pid\" \
-	  -DSESMAN_SESSVC_FILE=\"sessvc\"
+DEFINES = -DSESMAN_CFG_FILE=\"$(CFGDIR)/xrdp-sesman.ini\" \
+	  -DSESMAN_PID_FILE=\"$(PIDDIR)/xrdp-sesman.pid\" \
+	  -DSESMAN_SESSVC_FILE=\"xrdp-sessvc\"
 
 #CFLAGS = -Wall -O2 -I../../common -I/usr/include/nptl -fPIC $(DEFINES)
 CFLAGS = -Wall -g -I../../common -I/usr/include/nptl -fPIC $(DEFINES)
@@ -27,7 +24,9 @@ LDFLAGS = -shared -L/usr/gnu/lib -L/usr/lib/nptl -lpthread
 C_OS_FLAGS = $(CFLAGS) -c
 CC = gcc
 
-all: $(LIBSCPOBJ)
+all: libscp.so
+
+libscp.so: $(LIBSCPOBJ)
 	$(CC) $(LDFLAGS) -o $(LIBSCPFNAME) $(LIBSCPOBJ)
 	ln -f -s $(LIBSCPFNAME) $(LIBSCPLNAME)
 
@@ -35,12 +34,8 @@ clean:
 	rm -f $(LIBSCPOBJ) $(LIBSCPFNAME) $(LIBSCPLNAME)
 
 install:
-	install $(LIBSCPFNAME) $(DESTDIR)/$(LIBSCPFNAME)
-	ln -f -s $(LIBSCPFNAME) $(DESTDIR)/$(LIBSCPLNAME)
-
-installdeb:
-	install $(LIBSCPFNAME) $(DESTDIRDEB)/usr/lib/xrdp/$(LIBSCPFNAME)
-	ln -f -s $(LIBSCPFNAME) $(DESTDIRDEB)/usr/lib/xrdp/$(LIBSCPLNAME)
+	install $(LIBSCPFNAME) $(LIBDIR)/$(LIBSCPFNAME)
+	ln -f -s $(LIBSCPFNAME) $(LIBDIR)/$(LIBSCPLNAME)
 
 os_calls.o: ../../common/os_calls.c
 	$(CC) $(C_OS_FLAGS) ../../common/os_calls.c
