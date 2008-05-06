@@ -7,6 +7,7 @@
 
 SBINDIR=/usr/local/sbin
 LOG=/dev/null
+CFGDIR=/etc/xrdp
 
 if ! test -x $SBINDIR/xrdp
 then
