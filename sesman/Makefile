@@ -19,9 +19,9 @@ LDFLAGS = -L/usr/gnu/lib -L/usr/lib/nptl -L./libscp -Wl,-rpath,$(LIBDIR) -lpthre
 C_OS_FLAGS = $(CFLAGS) -c
 CC = gcc
 
-all: libscp_ pam_base xrdp-sessvc tools
+all: libscp_ pam_base xrdp-sessvc tools_
 
-nopam: libscp_ no_pam_base xrdp-sessvc tools
+nopam: libscp_ no_pam_base xrdp-sessvc tools_
 
 pamuserpass: libscp_ pam_userpass_base xrdp-sessvc tools
 
@@ -43,7 +43,7 @@ kerberos_base: $(SESMANOBJ) verify_user_kerberos.o
 xrdp-sessvc: $(SESSVCOBJ)
 	$(CC) $(LDFLAGS) -o xrdp-sessvc $(SESSVCOBJ)
 
-tools:
+tools_:
 	make -C tools
 
 libscp_:
