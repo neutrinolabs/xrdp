@@ -23,6 +23,10 @@
 #if !defined(FILE_LOC_H)
 #define FILE_LOC_H
 
+#if !defined(XRDP_CFG_PATH)
+#define XRDP_CFG_PATH "/etc/xrdp"
+#endif
+
 #if !defined(XRDP_CFG_FILE)
 #define XRDP_CFG_FILE "/etc/xrdp/xrdp.ini"
 #endif
@@ -31,12 +35,20 @@
 #define XRDP_KEY_FILE "/etc/xrdp/rsakeys.ini"
 #endif
 
+#if !defined(XRDP_KEYMAP_PATH)
+#define XRDP_KEYMAP_FILE "/etc/xrdp/km-%4.4x.ini"
+#endif
+
 #if !defined(XRDP_PID_FILE)
 #define XRDP_PID_FILE "/var/run/xrdp.pid"
 #endif
 
-#if !defined(XRDP_KEYMAP_PATH)
-#define XRDP_KEYMAP_FILE "/etc/km-%4.4x.ini"
+#if !defined(XRDP_SBIN_PATH)
+#define XRDP_SBIN_PATH "/usr/local/sbin"
+#endif
+
+#if !defined(XRDP_SHARE_PATH)
+#define XRDP_SHARE_PATH "/usr/local/share/xrdp"
 #endif
 
 #endif
