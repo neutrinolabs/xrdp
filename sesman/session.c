@@ -111,6 +111,7 @@ x_server_running(int display)
   return x_running;
 }
 
+/******************************************************************************/
 static void DEFAULT_CC
 session_start_sessvc(int xpid, int wmpid, long data)
 {
@@ -118,20 +119,20 @@ session_start_sessvc(int xpid, int wmpid, long data)
   char wmpid_str[25];
   char xpid_str[25];
   char exe_path[262];
-  char cur_dir[256];
   int i;
 
   /* new style waiting for clients */
   g_sprintf(wmpid_str, "%d", wmpid);
   g_sprintf(xpid_str, "%d",  xpid);
-  log_message(&(g_cfg.log), LOG_LEVEL_INFO, "starting sessvc - xpid=%s - wmpid=%s",xpid_str, wmpid_str);
+  log_message(&(g_cfg.log), LOG_LEVEL_INFO,
+              "starting xrdp-sessvc - xpid=%s - wmpid=%s",
+              xpid_str, wmpid_str);
 
   sessvc_params = list_create();
   sessvc_params->auto_free = 1;
 
   /* building parameters */
-  g_get_current_dir(cur_dir, 255);
-  g_snprintf(exe_path, 261, "%s/%s", cur_dir, "sessvc");
+  g_snprintf(exe_path, 261, "%s/xrdp-sessvc", XRDP_SBIN_PATH);
 
   list_add_item(sessvc_params, (long)g_strdup(exe_path));
   list_add_item(sessvc_params, (long)g_strdup(xpid_str));
@@ -142,16 +143,20 @@ session_start_sessvc(int xpid, int wmpid, long data)
   g_execvp(exe_path, ((char**)sessvc_params->items));
 
   /* should not get here */
-  log_message(&(g_cfg.log), LOG_LEVEL_ALWAYS, "error starting sessvc - pid %d - xpid=%s - wmpid=%s",
+  log_message(&(g_cfg.log), LOG_LEVEL_ALWAYS,
+              "error starting xrdp-sessvc - pid %d - xpid=%s - wmpid=%s",
               g_getpid(), xpid_str, wmpid_str);
 
   /* logging parameters */
-  /* no problem calling strerror for thread safety: other threads are blocked */
-  log_message(&(g_cfg.log), LOG_LEVEL_DEBUG, "errno: %d, description: %s", errno, g_get_strerror());
-  log_message(&(g_cfg.log), LOG_LEVEL_DEBUG,"execve parameter list:");
-  for (i=0; i < (sessvc_params->count); i++)
+  /* no problem calling strerror for thread safety: other threads
+     are blocked */
+  log_message(&(g_cfg.log), LOG_LEVEL_DEBUG, "errno: %d, description: %s",
+              errno, g_get_strerror());
+  log_message(&(g_cfg.log), LOG_LEVEL_DEBUG, "execve parameter list:");
+  for (i = 0; i < (sessvc_params->count); i++)
   {
-    log_message(&(g_cfg.log), LOG_LEVEL_DEBUG, "        argv[%d] = %s", i, (char*)list_get_item(sessvc_params, i));
+    log_message(&(g_cfg.log), LOG_LEVEL_DEBUG, "        argv[%d] = %s", i,
+                (char*)list_get_item(sessvc_params, i));
   }
   list_delete(sessvc_params);
 
@@ -177,7 +182,6 @@ session_start(int width, int height, int bpp, char* username, char* password,
   char geometry[32];
   char depth[32];
   char screen[32];
-  char cur_dir[256];
   char text[256];
   char passwd_file[256];
   char** pp1;
@@ -215,7 +219,6 @@ for user %s denied", username);
     return 0;
   }
 
-  g_get_current_dir(cur_dir, 255);
   display = 10;
 
   /*while (x_server_running(display) && display < 50)*/
@@ -276,7 +279,7 @@ for user %s denied", username);
         }
         /* if we're here something happened to g_execlp3
            so we try running the default window manager */
-        g_sprintf(text, "%s/%s", cur_dir, g_cfg.default_wm);
+        g_sprintf(text, "%s/%s", XRDP_CFG_PATH, g_cfg.default_wm);
         g_execlp3(text, g_cfg.default_wm, 0);
 
         log_message(&(g_cfg.log), LOG_LEVEL_ALWAYS,"error starting default wm for user %s - pid %d",
