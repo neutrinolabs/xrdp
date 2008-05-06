@@ -47,7 +47,8 @@ env_check_password_file(char* filename, char* password)
   fd = g_file_open(filename);
   if (fd == -1)
   {
-    log_message(&(g_cfg.log), LOG_LEVEL_WARNING, "can't read vnc password file - %s",
+    log_message(&(g_cfg.log), LOG_LEVEL_WARNING,
+                "can't read vnc password file - %s",
                 filename);
     return 1;
   }
@@ -116,7 +117,8 @@ env_set_user(char* username, char* passwd_file, int display)
   }
   else
   {
-    log_message(&(g_cfg.log), LOG_LEVEL_ERROR, "error getting user info for user %s", username);
+    log_message(&(g_cfg.log), LOG_LEVEL_ERROR,
+                "error getting user info for user %s", username);
   }
   return error;
 }
