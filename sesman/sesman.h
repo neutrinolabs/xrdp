@@ -33,6 +33,7 @@
 #include "parse.h"
 #include "os_calls.h"
 #include "log.h"
+#include "file_loc.h"
 #include "env.h"
 #include "auth.h"
 #include "config.h"
