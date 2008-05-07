@@ -444,6 +444,7 @@ xrdp_login_wnd_create(struct xrdp_wm* self)
 {
   struct xrdp_bitmap* but;
   struct xrdp_bitmap* combo;
+  char file_path[256];
 
   /* draw login window */
   self->login_window = xrdp_bitmap_create(400, 200, self->screen->bpp,
@@ -461,7 +462,8 @@ xrdp_login_wnd_create(struct xrdp_wm* self)
 
   /* image */
   but = xrdp_bitmap_create(4, 4, self->screen->bpp, WND_TYPE_IMAGE, self);
-  xrdp_bitmap_load(but, "xrdp256.bmp", self->palette);
+  g_snprintf(file_path, 255, "%s/xrdp256.bmp", XRDP_SHARE_PATH);
+  xrdp_bitmap_load(but, file_path, self->palette);
   but->parent = self->screen;
   but->owner = self->screen;
   but->left = self->screen->width - but->width;
@@ -470,7 +472,8 @@ xrdp_login_wnd_create(struct xrdp_wm* self)
 
   /* image */
   but = xrdp_bitmap_create(4, 4, self->screen->bpp, WND_TYPE_IMAGE, self);
-  xrdp_bitmap_load(but, "ad256.bmp", self->palette);
+  g_snprintf(file_path, 255, "%s/ad256.bmp", XRDP_SHARE_PATH);
+  xrdp_bitmap_load(but, file_path, self->palette);
   but->parent = self->login_window;
   but->owner = self->login_window;
   but->left = 10;

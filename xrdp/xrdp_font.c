@@ -75,9 +75,11 @@ xrdp_font_create(struct xrdp_wm* wm)
   int datasize;
   int file_size;
   struct xrdp_font_char* f;
+  char file_path[256];
 
   DEBUG(("in xrdp_font_create"));
-  file_size = g_file_get_size(DEFAULT_FONT_NAME);
+  g_snprintf(file_path, 255, "%s/%s", XRDP_SHARE_PATH, DEFAULT_FONT_NAME);
+  file_size = g_file_get_size(file_path);
   if (file_size < 1)
   {
     return 0;
@@ -86,7 +88,7 @@ xrdp_font_create(struct xrdp_wm* wm)
   self->wm = wm;
   make_stream(s);
   init_stream(s, file_size + 1024);
-  fd = g_file_open(DEFAULT_FONT_NAME);
+  fd = g_file_open(file_path);
   if (fd != -1)
   {
     b = g_file_read(fd, s->data, file_size + 1024);

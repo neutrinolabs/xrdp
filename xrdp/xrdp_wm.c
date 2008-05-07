@@ -333,13 +333,16 @@ int APP_CC
 xrdp_wm_load_static_pointers(struct xrdp_wm* self)
 {
   struct xrdp_pointer_item pointer_item;
+  char file_path[256];
 
   DEBUG(("sending cursor"));
-  xrdp_wm_load_pointer(self, "cursor1.cur", pointer_item.data,
+  g_snprintf(file_path, 255, "%s/cursor1.cur", XRDP_SHARE_PATH);
+  xrdp_wm_load_pointer(self, file_path, pointer_item.data,
                        pointer_item.mask, &pointer_item.x, &pointer_item.y);
   xrdp_cache_add_pointer_static(self->cache, &pointer_item, 1);
   DEBUG(("sending cursor"));
-  xrdp_wm_load_pointer(self, "cursor0.cur", pointer_item.data,
+  g_snprintf(file_path, 255, "%s/cursor0.cur", XRDP_SHARE_PATH);
+  xrdp_wm_load_pointer(self, file_path, pointer_item.data,
                        pointer_item.mask, &pointer_item.x, &pointer_item.y);
   xrdp_cache_add_pointer_static(self->cache, &pointer_item, 0);
   return 0;
