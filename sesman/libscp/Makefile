@@ -14,7 +14,7 @@ LIBSCPLNAME = libscp.so
 LIBSCPSONAME = $(LIBSCPLNAME).1
 LIBSCPFNAME = $(LIBSCPSONAME).0.0
 
-DEFINES = -DSESMAN_CFG_FILE=\"$(CFGDIR)/xrdp-sesman.ini\" \
+DEFINES = -DSESMAN_CFG_FILE=\"$(CFGDIR)/sesman.ini\" \
 	  -DSESMAN_PID_FILE=\"$(PIDDIR)/xrdp-sesman.pid\" \
 	  -DSESMAN_SESSVC_FILE=\"xrdp-sessvc\"
 
