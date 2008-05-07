@@ -12,7 +12,7 @@ LIBDIR = /usr/local/lib/xrdp
 SBINDIR = /usr/local/sbin
 
 DEFINES = -DSESMAN_CFG_FILE=\"$(CFGDIR)/sesman.ini\" \
-          -DSESMAN_PID_FILE=\"$(PIDDIR)/sesman.pid\"
+          -DSESMAN_PID_FILE=\"$(PIDDIR)/xrdp-sesman.pid\"
 
 CFLAGS = -Wall -O2 -I../common -I/usr/include/nptl -I./libscp $(DEFINES)
 LDFLAGS = -L/usr/gnu/lib -L/usr/lib/nptl -L./libscp -Wl,-rpath,$(LIBDIR) -lpthread -ldl -lscp
