@@ -1775,12 +1775,26 @@ g_initgroups(const char* user, int gid)
 #if defined(_WIN32)
   return 0;
 #else
-  return initgroups(user ,gid);
+  return initgroups(user, gid);
 #endif
 }
 
 /*****************************************************************************/
 /* does not work in win32 */
+/* returns user id */
+int APP_CC
+g_getuid(void)
+{
+#if defined(_WIN32)
+  return 0;
+#else
+  return getuid();
+#endif
+}
+
+/*****************************************************************************/
+/* does not work in win32 */
+/* On success, zero is returned. On error, -1 is returned */
 int APP_CC
 g_setuid(int pid)
 {

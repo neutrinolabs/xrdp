@@ -207,6 +207,8 @@ g_setgid(int pid);
 int APP_CC
 g_initgroups(const char* user, int gid);
 int APP_CC
+g_getuid(void);
+int APP_CC
 g_setuid(int pid);
 int APP_CC
 g_waitchild(void);
