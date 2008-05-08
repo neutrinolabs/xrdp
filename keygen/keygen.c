@@ -30,6 +30,8 @@
 #include "os_calls.h"
 #include "ssl_calls.h"
 #include "arch.h"
+#include "list.h"
+#include "file.h"
 
 #define MY_KEY_SIZE 512
 
@@ -101,14 +103,22 @@ static tui8 g_testkey[176] =
   0xb6, 0x8e, 0xbe, 0x57, 0x57, 0xd2, 0xa9, 0x36
 };
 
+/* this is the installed signature */
+char inst_pub_sig[]="0x6a,0x41,0xb1,0x43,0xcf,0x47,0x6f,0xf1,0xe6,0xcc,0xa1,\
+0x72,0x97,0xd9,0xe1,0x85,0x15,0xb3,0xc2,0x39,0xa0,0xa6,0x26,0x1a,0xb6,\
+0x49,0x01,0xfa,0xa6,0xda,0x60,0xd7,0x45,0xf7,0x2c,0xee,0xe4,0x8e,0x64,\
+0x2e,0x37,0x49,0xf0,0x4c,0x94,0x6f,0x08,0xf5,0x63,0x4c,0x56,0x29,0x55,\
+0x5a,0x63,0x41,0x2c,0x20,0x65,0x95,0x99,0xb1,0x15,0x7c";
+
+
 /*****************************************************************************/
 static int APP_CC
 out_params(void)
 {
   g_writeln("");
   g_writeln("xrdp rsa key gen utility examples");
-  g_writeln("  './xrdp-keygen xrdp'");
-  g_writeln("  './xrdp-keygen test'");
+  g_writeln("  xrdp-keygen xrdp ['path and file name' | auto]");
+  g_writeln("  xrdp-keygen test");
   g_writeln("");
   return 0;
 }
@@ -207,24 +217,47 @@ write_out_line(int fd, char* name, char* data, int len)
 /*****************************************************************************/
 static int APP_CC
 save_all(char* e_data, int e_len, char* n_data, int n_len,
-         char* d_data, int d_len, char* sign_data, int sign_len)
+         char* d_data, int d_len, char* sign_data, int sign_len,
+         const char* path_and_file_name)
 {
   int fd;
+  char filename[256];
 
-  g_writeln("saving to rsakeys.ini");
-  g_writeln("");
-  if (g_file_exist("rsakeys.ini"))
+  if (path_and_file_name == 0)
   {
-    g_file_delete("rsakeys.ini");
+    g_strncpy(filename, "rsakeys.ini", 255);
   }
-  fd = g_file_open("rsakeys.ini");
+  else
+  {
+    g_strncpy(filename, path_and_file_name, 255);
+  }
+  g_writeln("saving to %s", filename);
+  g_writeln("");
+  if (g_file_exist(filename))
+  {
+    if (g_file_delete(filename) == 0)
+    {
+      g_writeln("problem deleting %s, maybe no rights", filename);
+      return 1;
+    }
+  }
+  fd = g_file_open(filename);
   if (fd > 0)
   {
-    g_file_write(fd, "[keys]\n", 7);
+    if (g_file_write(fd, "[keys]\n", 7) == -1)
+    {
+      g_writeln("problem writing to %s, maybe no rights", filename);
+      return 1;
+    }
     write_out_line(fd, "pub_exp", e_data, e_len);
     write_out_line(fd, "pub_mod", n_data, n_len);
     write_out_line(fd, "pub_sig", sign_data, sign_len);
     write_out_line(fd, "pri_exp", d_data, d_len);
+  }
+  else
+  {
+    g_writeln("problem opening %s, maybe no rights", filename);
+    return 1;
   }
   g_file_close(fd);  
   return 0;
@@ -232,7 +265,7 @@ save_all(char* e_data, int e_len, char* n_data, int n_len,
 
 /*****************************************************************************/
 static int APP_CC
-key_gen(void)
+key_gen(const char* path_and_file_name)
 {
   char* e_data;
   char* n_data;
@@ -278,7 +311,7 @@ key_gen(void)
   if (error == 0)
   {
     error = save_all(e_data, e_len, n_data, n_len, d_data, d_len,
-                     sign_data, sign_len);
+                     sign_data, sign_len, path_and_file_name);
     if (error != 0)
     {
       g_writeln("error %d in key_gen, save_all", error);
@@ -288,6 +321,74 @@ key_gen(void)
   g_free(d_data);
   g_free(sign_data);
   return error;
+}
+
+/*****************************************************************************/
+/* returns boolean */
+static int APP_CC
+key_gen_run_it(void)
+{
+  int fd;
+  int index;
+  int rv;
+  struct list* names;
+  struct list* values;
+  char* name;
+  char* value;
+
+  if (!g_file_exist("/etc/xrdp/rsakeys.ini"))
+  {
+    return 1;
+  }
+  if (g_file_get_size("/etc/xrdp/rsakeys.ini") < 10)
+  {
+    return 1;
+  }
+  fd = g_file_open("/etc/xrdp/rsakeys.ini");
+  if (fd < 0)
+  {
+    return 1;
+  }
+  rv = 0;
+  names = list_create();
+  names->auto_free = 1;
+  values = list_create();
+  values->auto_free = 1;
+  if (file_read_section(fd, "keys", names, values) == 0)
+  {
+    for (index = 0; index < names->count; index++)
+    {
+      name = (char*)list_get_item(names, index);
+      value = (char*)list_get_item(values, index);
+      if (g_strcasecmp(name, "pub_sig") == 0)
+      {
+        if (g_strcasecmp(value, inst_pub_sig) == 0)
+        {
+          rv = 1;
+        }
+      }
+    }
+  }
+  else
+  {
+    g_writeln("error reading keys section of rsakeys.ini");
+  }
+  list_delete(names);
+  list_delete(values);
+  g_file_close(fd);
+  return rv;
+}
+
+/*****************************************************************************/
+static int APP_CC
+key_gen_auto(void)
+{
+  if (key_gen_run_it())
+  {
+    return key_gen("/etc/xrdp/rsakeys.ini");
+  }
+  g_writeln("xrdp-keygen does not need to run");
+  return 0;
 }
 
 /*****************************************************************************/
@@ -337,11 +438,30 @@ signature above) is:");
 int DEFAULT_CC
 main(int argc, char** argv)
 {
-  if (argc == 2)
+  if (argc > 1)
   {
     if (g_strcasecmp(argv[1], "xrdp") == 0)
     {
-      return key_gen();
+      if (argc > 2)
+      {
+        if (g_strcasecmp(argv[2], "auto") == 0)
+        {
+          if (g_getuid() != 0)
+          {
+            g_writeln("must run as root");
+            return 0;
+          }
+          return key_gen_auto();
+        }
+        else
+        {
+          return key_gen(argv[2]);
+        }
+      }
+      else
+      {
+        return key_gen(0);
+      }
     }
     else if (g_strcasecmp(argv[1], "test") == 0)
     {
