@@ -18,6 +18,7 @@ base:
 	$(MAKE) -C xrdp
 	$(MAKE) -C rdp
 	$(MAKE) -C xup
+	$(MAKE) -C keygen
 
 nopam: base
 	$(MAKE) -C sesman nopam
@@ -34,6 +35,7 @@ clean:
 	$(MAKE) -C rdp clean
 	$(MAKE) -C sesman clean
 	$(MAKE) -C xup clean
+	$(MAKE) -C keygen clean
 
 install:
 	mkdir -p $(CFGDIR)
@@ -49,6 +51,8 @@ install:
 	$(MAKE) -C rdp install
 	$(MAKE) -C sesman install
 	$(MAKE) -C xup install
+	$(MAKE) -C keygen install
 	$(MAKE) -C docs install
 	if [ -d /etc/pam.d ]; then install instfiles/pam.d/xrdp-sesman /etc/pam.d/xrdp-sesman; fi
 	if [ -d /etc/init.d ]; then install instfiles/xrdp.sh /etc/init.d/xrdp.sh; fi
+	xrdp-keygen xrdp auto
