@@ -322,7 +322,7 @@ main(int argc, char** argv)
     {
       g_writeln("");
       g_writeln("xrdp: A Remote Desktop Protocol server.");
-      g_writeln("Copyright (C) Jay Sorg 2004-2005");
+      g_writeln("Copyright (C) Jay Sorg 2004-2008");
       g_writeln("See http://xrdp.sourceforge.net for more information.");
       g_writeln("");
       g_writeln("Usage: xrdp [options]");
@@ -415,8 +415,9 @@ main(int argc, char** argv)
   no_daemon = 0;
   if (argc == 2)
   {
-    if (g_strncasecmp(argv[1], "-kill", 255) == 0 ||
-        g_strncasecmp(argv[1], "--kill", 255) == 0)
+    if ((g_strncasecmp(argv[1], "-kill", 255) == 0) ||
+        (g_strncasecmp(argv[1], "--kill", 255) == 0) ||
+        (g_strncasecmp(argv[1], "-k", 255) == 0))
     {
       g_writeln("stopping xrdp");
       /* read the xrdp.pid file */
@@ -459,13 +460,24 @@ main(int argc, char** argv)
     {
       g_writeln("");
       g_writeln("xrdp: A Remote Desktop Protocol server.");
-      g_writeln("Copyright (C) Jay Sorg 2004-2005");
+      g_writeln("Copyright (C) Jay Sorg 2004-2008");
       g_writeln("See http://xrdp.sourceforge.net for more information.");
       g_writeln("");
       g_writeln("Usage: xrdp [options]");
       g_writeln("   -h: show help");
       g_writeln("   -nodaemon: don't fork into background");
       g_writeln("   -kill: shut down xrdp");
+      g_writeln("");
+      g_exit(0);
+    }
+    else if ((g_strncasecmp(argv[1], "-v", 255) == 0) ||
+             (g_strncasecmp(argv[1], "--version", 255) == 0))
+    {
+      g_writeln("");
+      g_writeln("xrdp: A Remote Desktop Protocol server.");
+      g_writeln("Copyright (C) Jay Sorg 2004-2008");
+      g_writeln("See http://xrdp.sourceforge.net for more information.");
+      g_writeln("Version 0.5.0");
       g_writeln("");
       g_exit(0);
     }
@@ -492,6 +504,23 @@ main(int argc, char** argv)
   }
   if (!no_daemon)
   {
+    /* make sure we can write to pid file */
+    fd = g_file_open(XRDP_PID_FILE); /* xrdp.pid */
+    if (fd == -1)
+    {
+      g_writeln("running in daemon mode with no access to pid files, quitting");
+      g_exit(0);
+    }
+    if (g_file_write(fd, "0", 1) == -1)
+    {
+      g_writeln("running in daemon mode with no access to pid files, quitting");
+      g_exit(0);
+    }
+    g_file_close(fd);
+    g_file_delete(XRDP_PID_FILE);
+  }
+  if (!no_daemon)
+  {
     /* start of daemonizing code */
     pid = g_fork();
     if (pid == -1)
@@ -514,21 +543,24 @@ main(int argc, char** argv)
     g_file_open("/dev/null");
     /* end of daemonizing code */
   }
-  /* write the pid to file */
-  pid = g_getpid();
-  fd = g_file_open(XRDP_PID_FILE); /* xrdp.pid */
-  if (fd == -1)
+  if (!no_daemon)
   {
-    g_writeln("trying to write process id to xrdp.pid");
-    g_writeln("problem opening xrdp.pid");
-    g_writeln("maybe no rights");
-  }
-  else
-  {
-    g_set_file_rights(XRDP_PID_FILE, 1, 1); /* xrdp.pid */
-    g_sprintf(text, "%d", pid);
-    g_file_write(fd, text, g_strlen(text));
-    g_file_close(fd);
+    /* write the pid to file */
+    pid = g_getpid();
+    fd = g_file_open(XRDP_PID_FILE); /* xrdp.pid */
+    if (fd == -1)
+    {
+      g_writeln("trying to write process id to xrdp.pid");
+      g_writeln("problem opening xrdp.pid");
+      g_writeln("maybe no rights");
+    }
+    else
+    {
+      g_set_file_rights(XRDP_PID_FILE, 1, 1); /* xrdp.pid */
+      g_sprintf(text, "%d", pid);
+      g_file_write(fd, text, g_strlen(text));
+      g_file_close(fd);
+    }
   }
 #endif
   g_threadid = tc_get_threadid();
