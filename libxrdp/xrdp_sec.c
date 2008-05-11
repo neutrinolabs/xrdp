@@ -128,11 +128,6 @@ xrdp_sec_create(struct xrdp_rdp* owner, int sck, int crypt_level,
                 int channel_code)
 {
   struct xrdp_sec* self;
-  struct list* items;
-  struct list* values;
-  int index;
-  char* item;
-  char* value;
 
   DEBUG((" in xrdp_sec_create"));
   self = (struct xrdp_sec*)g_malloc(sizeof(struct xrdp_sec), 1);
@@ -157,37 +152,8 @@ xrdp_sec_create(struct xrdp_rdp* owner, int sck, int crypt_level,
   self->channel_code = channel_code;
   self->decrypt_rc4_info = ssl_rc4_info_create();
   self->encrypt_rc4_info = ssl_rc4_info_create();
-  g_random(self->server_random, 32);
   self->mcs_layer = xrdp_mcs_create(self, sck, &self->client_mcs_data,
                                     &self->server_mcs_data);
-  items = list_create();
-  items->auto_free = 1;
-  values = list_create();
-  values->auto_free = 1;
-  file_by_name_read_section(XRDP_KEY_FILE, "keys", items, values);
-  for (index = 0; index < items->count; index++)
-  {
-    item = (char*)list_get_item(items, index);
-    value = (char*)list_get_item(values, index);
-    if (g_strcasecmp(item, "pub_exp") == 0)
-    {
-      hex_str_to_bin(value, self->pub_exp, 4);
-    }
-    else if (g_strcasecmp(item, "pub_mod") == 0)
-    {
-      hex_str_to_bin(value, self->pub_mod, 64);
-    }
-    else if (g_strcasecmp(item, "pub_sig") == 0)
-    {
-      hex_str_to_bin(value, self->pub_sig, 64);
-    }
-    else if (g_strcasecmp(item, "pri_exp") == 0)
-    {
-      hex_str_to_bin(value, self->pri_exp, 64);
-    }
-  }
-  list_delete(items);
-  list_delete(values);
   self->chan_layer = xrdp_channel_create(self, self->mcs_layer);
   DEBUG((" out xrdp_sec_create"));
   return self;
@@ -354,6 +320,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec* self, struct stream* s)
   /* this is the first test that the decrypt is working */
   if ((flags & RDP_LOGON_NORMAL) != RDP_LOGON_NORMAL) /* 0x33 */
   {                                                   /* must be or error */
+    DEBUG(("xrdp_sec_process_logon_info: flags wrong, major error"));
     return 1;
   }
   if (flags & RDP_LOGON_LEAVE_AUDIO)
@@ -929,7 +896,49 @@ xrdp_sec_in_mcs_data(struct xrdp_sec* self)
 int APP_CC
 xrdp_sec_incoming(struct xrdp_sec* self)
 {
+  struct list* items;
+  struct list* values;
+  int index;
+  char* item;
+  char* value;
+
   DEBUG((" in xrdp_sec_incoming"));
+  g_random(self->server_random, 32);
+  items = list_create();
+  items->auto_free = 1;
+  values = list_create();
+  values->auto_free = 1;
+  if (file_by_name_read_section(XRDP_KEY_FILE, "keys", items, values) != 0)
+  {
+    /* this is a show stopper */
+    g_writeln("xrdp_sec_incoming: error reading %s file", XRDP_KEY_FILE);
+    list_delete(items);
+    list_delete(values);
+    return 1;
+  }
+  for (index = 0; index < items->count; index++)
+  {
+    item = (char*)list_get_item(items, index);
+    value = (char*)list_get_item(values, index);
+    if (g_strcasecmp(item, "pub_exp") == 0)
+    {
+      hex_str_to_bin(value, self->pub_exp, 4);
+    }
+    else if (g_strcasecmp(item, "pub_mod") == 0)
+    {
+      hex_str_to_bin(value, self->pub_mod, 64);
+    }
+    else if (g_strcasecmp(item, "pub_sig") == 0)
+    {
+      hex_str_to_bin(value, self->pub_sig, 64);
+    }
+    else if (g_strcasecmp(item, "pri_exp") == 0)
+    {
+      hex_str_to_bin(value, self->pri_exp, 64);
+    }
+  }
+  list_delete(items);
+  list_delete(values);
   if (xrdp_mcs_incoming(self->mcs_layer) != 0)
   {
     return 1;
