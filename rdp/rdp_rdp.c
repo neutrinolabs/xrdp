@@ -271,7 +271,7 @@ static int APP_CC
 rdp_rdp_out_pointer_caps(struct rdp_rdp* self, struct stream* s)
 {
   out_uint16_le(s, RDP_CAPSET_POINTER);
-  out_uint16_le(s, RDP_CAPLEN_POINTER);
+  out_uint16_le(s, RDP_CAPLEN_POINTER_MONO);
   out_uint16_le(s, 0); /* Color pointer */
   out_uint16_le(s, 20); /* Cache size */
   return 0;
@@ -355,7 +355,7 @@ rdp_rdp_send_confirm_active(struct rdp_rdp* self, struct stream* s)
   caplen = RDP_CAPLEN_GENERAL + RDP_CAPLEN_BITMAP + RDP_CAPLEN_ORDER +
            RDP_CAPLEN_BMPCACHE + RDP_CAPLEN_COLCACHE +
            RDP_CAPLEN_ACTIVATE + RDP_CAPLEN_CONTROL +
-           RDP_CAPLEN_POINTER + RDP_CAPLEN_SHARE +
+           RDP_CAPLEN_POINTER_MONO + RDP_CAPLEN_SHARE +
            0x58 + 0x08 + 0x08 + 0x34 /* unknown caps */  +
            4 /* w2k fix, why? */ ;
   if (rdp_sec_init(self->sec_layer, s, sec_flags) != 0)
