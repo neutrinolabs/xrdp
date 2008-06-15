@@ -243,7 +243,16 @@ rdp_orders_process_raw_bmpcache(struct rdp_orders* self, struct stream* s,
     {
       for (x = 0; x < width; x++)
       {
-        in_uint16_le(s, ((unsigned short*)dst)[x]);
+        in_uint16_le(s, ((tui16*)dst)[x]);
+      }
+    }
+    else if (Bpp == 3)
+    {
+      for (x = 0; x < width; x++)
+      {
+        in_uint8(s, dst[x * 3 + 0]);
+        in_uint8(s, dst[x * 3 + 1]);
+        in_uint8(s, dst[x * 3 + 2]);
       }
     }
   }
@@ -1309,11 +1318,7 @@ rdp_orders_convert_bitmap(int in_bpp, int out_bpp, char* bmpdata,
   int blue;
   int pixel;
 
-  if (in_bpp == out_bpp && in_bpp == 16)
-  {
-    return bmpdata;
-  }
-  if (in_bpp == 8 && out_bpp == 8)
+  if ((in_bpp == 8) && (out_bpp == 8))
   {
     out = (char*)g_malloc(width * height, 0);
     src = bmpdata;
@@ -1322,7 +1327,7 @@ rdp_orders_convert_bitmap(int in_bpp, int out_bpp, char* bmpdata,
     {
       for (j = 0; j < width; j++)
       {
-        pixel = *((unsigned char*)src);
+        pixel = *((tui8*)src);
         pixel = palette[pixel];
         SPLITCOLOR32(red, green, blue, pixel);
         pixel = COLOR8(red, green, blue);
@@ -1333,7 +1338,7 @@ rdp_orders_convert_bitmap(int in_bpp, int out_bpp, char* bmpdata,
     }
     return out;
   }
-  if (in_bpp == 8 && out_bpp == 16)
+  if ((in_bpp == 8) && (out_bpp == 16))
   {
     out = (char*)g_malloc(width * height * 2, 0);
     src = bmpdata;
@@ -1342,13 +1347,39 @@ rdp_orders_convert_bitmap(int in_bpp, int out_bpp, char* bmpdata,
     {
       for (j = 0; j < width; j++)
       {
-        pixel = *((unsigned char*)src);
+        pixel = *((tui8*)src);
         pixel = palette[pixel];
         SPLITCOLOR32(red, green, blue, pixel);
         pixel = COLOR16(red, green, blue);
-        *((unsigned short*)dst) = pixel;
+        *((tui16*)dst) = pixel;
         src++;
         dst += 2;
+      }
+    }
+    return out;
+  }
+  if ((in_bpp == 16) && (out_bpp == 16))
+  {
+    return bmpdata;
+  }
+  if ((in_bpp == 24) && (out_bpp == 24))
+  {
+    out = (char*)g_malloc(width * height * 4, 0);
+    src = bmpdata;
+    dst = out;
+    for (i = 0; i < height; i++)
+    {
+      for (j = 0; j < width; j++)
+      {
+        blue = *((tui8*)src);
+        src++;
+        green = *((tui8*)src);
+        src++;
+        red = *((tui8*)src);
+        src++;
+        pixel = COLOR24RGB(red, green, blue);
+        *((tui32*)dst) = pixel;
+        dst += 4;
       }
     }
     return out;
@@ -1366,23 +1397,27 @@ rdp_orders_convert_color(int in_bpp, int out_bpp, int in_color, int* palette)
   int green;
   int blue;
 
-  if (in_bpp == out_bpp && in_bpp == 16)
-  {
-    return in_color;
-  }
-  if (in_bpp == 8 && out_bpp == 8)
+  if ((in_bpp == 8) && (out_bpp == 8))
   {
     pixel = palette[in_color];
     SPLITCOLOR32(red, green, blue, pixel);
     pixel = COLOR8(red, green, blue);
     return pixel;
   }
-  if (in_bpp == 8 && out_bpp == 16)
+  if ((in_bpp == 8) && (out_bpp == 16))
   {
     pixel = palette[in_color];
     SPLITCOLOR32(red, green, blue, pixel);
     pixel = COLOR16(red, green, blue);
     return pixel;
+  }
+  if ((in_bpp == 16) && (out_bpp == 16))
+  {
+    return in_color;
+  }
+  if ((in_bpp == 24) && (out_bpp == 24))
+  {
+    return in_color;
   }
   return 0;
 }

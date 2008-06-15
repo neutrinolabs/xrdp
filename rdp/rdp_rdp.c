@@ -563,7 +563,16 @@ rdp_rdp_process_bitmap_updates(struct rdp_rdp* self, struct stream* s)
         {
           for (x = 0; x < width; x++)
           {
-            in_uint16_le(s, ((unsigned short*)data)[x]);
+            in_uint16_le(s, ((tui16*)data)[x]);
+          }
+        }
+        else if (Bpp == 3)
+        {
+          for (x = 0; x < width; x++)
+          {
+            in_uint8(s, data[x * 3 + 0]);
+            in_uint8(s, data[x * 3 + 1]);
+            in_uint8(s, data[x * 3 + 2]);
           }
         }
       }
