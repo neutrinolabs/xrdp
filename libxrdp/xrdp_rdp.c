@@ -478,35 +478,35 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp* self)
   out_uint8(s, 1); /* dest blt */
   out_uint8(s, 1); /* pat blt */
   out_uint8(s, 1); /* screen blt */
-  out_uint8(s, 1); /* memblt */
-  out_uint8(s, 1);
-  out_uint8(s, 1);
-  out_uint8(s, 1);
-  out_uint8(s, 1);
-  out_uint8(s, 1);
-  out_uint8(s, 1);
-  out_uint8(s, 1);
-  out_uint8(s, 1);
-  out_uint8(s, 1);
-  out_uint8(s, 0);
-  out_uint8(s, 0);
-  out_uint8(s, 1);
-  out_uint8(s, 1);
-  out_uint8(s, 1);
-  out_uint8(s, 1);
-  out_uint8(s, 1);
-  out_uint8(s, 1);
-  out_uint8(s, 1);
-  out_uint8(s, 1);
-  out_uint8(s, 1);
-  out_uint8(s, 1);
-  out_uint8(s, 1);
-  out_uint8(s, 1);
-  out_uint8(s, 1);
-  out_uint8(s, 1);
-  out_uint8(s, 0);
-  out_uint8(s, 0);
-  out_uint8(s, 0);
+  out_uint8(s, 1); /* mem blt */
+  out_uint8(s, 0); /* tri blt */
+  out_uint8(s, 0); /* unused */
+  out_uint8(s, 0); /* unused */
+  out_uint8(s, 0); /* nine grid */
+  out_uint8(s, 1); /* line to */
+  out_uint8(s, 0); /* multi nine grid */
+  out_uint8(s, 1); /* rect */
+  out_uint8(s, 0); /* desk save */
+  out_uint8(s, 0); /* unused */
+  out_uint8(s, 0); /* unused */
+  out_uint8(s, 0); /* unused */
+  out_uint8(s, 0); /* multi dest blt */
+  out_uint8(s, 0); /* multi pat blt */
+  out_uint8(s, 0); /* multi screen blt */
+  out_uint8(s, 0); /* multi rect */
+  out_uint8(s, 0); /* fast index */
+  out_uint8(s, 0); /* polygon */
+  out_uint8(s, 0); /* polygon */
+  out_uint8(s, 0); /* polyline */
+  out_uint8(s, 0); /* unused */
+  out_uint8(s, 0); /* fast glyph */
+  out_uint8(s, 0); /* ellipse */
+  out_uint8(s, 0); /* ellipse */
+  out_uint8(s, 0); /* ? */
+  out_uint8(s, 0); /* unused */
+  out_uint8(s, 0); /* unused */
+  out_uint8(s, 0); /* unused */
+  out_uint8(s, 0); /* unused */
   out_uint16_le(s, 0x6a1);
   out_uint8s(s, 2); /* ? */
   out_uint32_le(s, 0x0f4240); /* desk save */
