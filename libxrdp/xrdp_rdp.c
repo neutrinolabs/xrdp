@@ -696,6 +696,19 @@ xrdp_process_capset_pointercache(struct xrdp_rdp* self, struct stream* s,
 }
 
 /*****************************************************************************/
+/* get the type of client brush cache */
+static int APP_CC
+xrdp_process_capset_brushcache(struct xrdp_rdp* self, struct stream* s,
+                               int len)
+{
+  int code;
+
+  in_uint32_le(s, code);
+  self->client_info.brush_cache_code = code;
+  return 0;
+}
+
+/*****************************************************************************/
 int APP_CC
 xrdp_rdp_process_confirm_active(struct xrdp_rdp* self, struct stream* s)
 {
@@ -762,8 +775,8 @@ xrdp_rdp_process_confirm_active(struct xrdp_rdp* self, struct stream* s)
       case 14: /* 14 */
         DEBUG(("--14"));
         break;
-      case 15: /* 15 */
-        DEBUG(("--15"));
+      case RDP_CAPSET_BRUSHCACHE: /* 15 */
+        xrdp_process_capset_brushcache(self, s, len);
         break;
       case 16: /* 16 */
         DEBUG(("--16"));

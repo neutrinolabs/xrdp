@@ -227,6 +227,9 @@
 #define RDP_CAPSET_FONT                14
 #define RDP_CAPLEN_FONT                0x04
 
+#define RDP_CAPSET_BRUSHCACHE          15
+#define RDP_CAPLEN_BRUSHCACHE          0x08
+
 #define RDP_CAPSET_BITMAP_OFFSCREEN    18
 #define RDP_CAPLEN_BITMAP_OFFSCREEN    0x08
 
@@ -414,6 +417,7 @@
 #define RDP_ORDER_FONTCACHE     3
 #define RDP_ORDER_RAW_BMPCACHE2 4
 #define RDP_ORDER_BMPCACHE2     5
+#define RDP_ORDER_BRUSHCACHE    7
 
 /* drawable types */
 #define WND_TYPE_BITMAP  0

@@ -486,3 +486,49 @@ xrdp_cache_add_pointer_static(struct xrdp_cache* self,
   DEBUG(("adding pointer at %d", index));
   return index;
 }
+
+/*****************************************************************************/
+/* this does not take owership of brush_item_data, it makes a copy */
+int APP_CC
+xrdp_cache_add_brush(struct xrdp_cache* self,
+                     char* brush_item_data)
+{
+  int i;
+  int oldest;
+  int index;
+
+  if (self == 0)
+  {
+    return 0;
+  }
+  self->brush_stamp++;
+  /* look for match */
+  for (i = 0; i < 64; i++)
+  {
+    if (g_memcmp(self->brush_items[i].pattern,
+                 brush_item_data, 8) == 0)
+    {
+      self->brush_items[i].stamp = self->brush_stamp;
+      DEBUG(("found brush at %d", i));
+      return i;
+    }
+  }
+  /* look for oldest */
+  index = 0;
+  oldest = 0x7fffffff;
+  for (i = 0; i < 64; i++)
+  {
+    if (self->brush_items[i].stamp < oldest)
+    {
+      oldest = self->brush_items[i].stamp;
+      index = i;
+    }
+  }
+  g_memcpy(self->brush_items[index].pattern,
+           brush_item_data, 8);
+  self->brush_items[index].stamp = self->brush_stamp;
+  libxrdp_orders_send_brush(self->session, 8, 8, 1, 0x81, 8,
+                            self->brush_items[index].pattern, index);
+  DEBUG(("adding brush at %d", index));
+  return index;
+}

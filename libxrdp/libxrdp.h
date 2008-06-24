@@ -379,6 +379,9 @@ int APP_CC
 xrdp_orders_send_bitmap2(struct xrdp_orders* self,
                          int width, int height, int bpp, char* data,
                          int cache_id, int cache_idx);
+int APP_CC
+xrdp_orders_send_brush(struct xrdp_orders* self, int width, int height,
+                       int bpp, int type, int size, char* data, int cache_id);
 
 /* xrdp_bitmap_compress.c */
 int APP_CC

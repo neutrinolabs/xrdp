@@ -72,6 +72,9 @@ int APP_CC
 xrdp_cache_add_pointer_static(struct xrdp_cache* self,
                               struct xrdp_pointer_item* pointer_item,
                               int index);
+int APP_CC
+xrdp_cache_add_brush(struct xrdp_cache* self,
+                     char* brush_item_data);
 
 /* xrdp_wm.c */
 struct xrdp_wm* APP_CC

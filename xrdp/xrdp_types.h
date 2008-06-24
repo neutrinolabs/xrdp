@@ -130,6 +130,14 @@ struct xrdp_pointer_item
   char mask[32 * 32 / 8];
 };
 
+struct xrdp_brush_item
+{
+  int stamp;
+  /* expand this to a structure to handle more complicated brushes
+     for now its 8x8 1bpp brushes only */
+  char pattern[8];
+};
+
 /* differnce caches */
 struct xrdp_cache
 {
@@ -157,6 +165,8 @@ struct xrdp_cache
   int pointer_stamp;
   struct xrdp_pointer_item pointer_items[32];
   int pointer_cache_entries;
+  int brush_stamp;
+  struct xrdp_brush_item brush_items[64];
 };
 
 struct xrdp_mm

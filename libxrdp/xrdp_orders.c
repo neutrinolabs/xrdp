@@ -1841,3 +1841,31 @@ height(%d)", lines_sending, height);
   free_stream(temp_s);
   return 0;
 }
+
+/*****************************************************************************/
+/* returns error */
+/* send a brush cache entry */
+int APP_CC
+xrdp_orders_send_brush(struct xrdp_orders* self, int width, int height,
+                       int bpp, int type, int size, char* data, int cache_id)
+{
+  int order_flags;
+  int len;
+
+  xrdp_orders_check(self, size + 12);
+  self->order_count++;
+  order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
+  out_uint8(self->out_s, order_flags);
+  len = (size + 6) - 7; /* length after type minus 7 */
+  out_uint16_le(self->out_s, len);
+  out_uint16_le(self->out_s, 0); /* flags */
+  out_uint8(self->out_s, RDP_ORDER_BRUSHCACHE); /* type */
+  out_uint8(self->out_s, cache_id);
+  out_uint8(self->out_s, bpp);
+  out_uint8(self->out_s, width);
+  out_uint8(self->out_s, height);
+  out_uint8(self->out_s, type);
+  out_uint8(self->out_s, size);
+  out_uint8a(self->out_s, data, size);
+  return 0;
+}

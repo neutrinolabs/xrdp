@@ -230,6 +230,28 @@ xrdp_painter_text_height(struct xrdp_painter* self, char* text)
 }
 
 /*****************************************************************************/
+static int APP_CC
+xrdp_painter_setup_brush(struct xrdp_painter* self,
+                         struct xrdp_brush* out_brush,
+                         struct xrdp_brush* in_brush)
+{
+  int cache_id;
+
+  g_memcpy(out_brush, in_brush, sizeof(struct xrdp_brush));
+  if (in_brush->style == 3)
+  {
+    if (self->session->client_info->brush_cache_code == 1)
+    {
+      cache_id = xrdp_cache_add_brush(self->wm->cache, in_brush->pattern);
+      g_memset(out_brush->pattern, 0, 8);
+      out_brush->pattern[0] = cache_id;
+      out_brush->style = 0x81;
+    }
+  }
+  return 0;
+}
+
+/*****************************************************************************/
 /* fill in an area of the screen with one color */
 int APP_CC
 xrdp_painter_fill_rect(struct xrdp_painter* self,
@@ -240,6 +262,7 @@ xrdp_painter_fill_rect(struct xrdp_painter* self,
   struct xrdp_rect draw_rect;
   struct xrdp_rect rect;
   struct xrdp_region* region;
+  struct xrdp_brush brush;
   int k;
   int dx;
   int dy;
@@ -314,13 +337,14 @@ xrdp_painter_fill_rect(struct xrdp_painter* self,
           break;
       }
     }
+    xrdp_painter_setup_brush(self, &brush, &self->brush);
     while (xrdp_region_get_rect(region, k, &rect) == 0)
     {
       if (rect_intersect(&rect, &clip_rect, &draw_rect))
       {
         libxrdp_orders_pat_blt(self->session, x, y, cx, cy,
                                rop, self->bg_color, self->fg_color,
-                               &self->brush, &draw_rect);
+                               &brush, &draw_rect);
       }
       k++;
     }
