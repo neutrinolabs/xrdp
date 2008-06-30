@@ -330,6 +330,55 @@ xrdp_orders_out_bounds(struct xrdp_orders* self, struct xrdp_rect* rect)
 
 /*****************************************************************************/
 /* returns error */
+static int APP_CC
+xrdp_order_pack_small_or_tiny(struct xrdp_orders* self,
+                              char* order_flags_ptr, int orders_flags,
+                              char* present_ptr, int present,
+                              int present_size)
+{
+  int move_up_count;
+  int index;
+  int size;
+  int keep_looking;
+
+  move_up_count = 0;
+  keep_looking = 1;
+  for (index = present_size - 1; index >= 0; index--)
+  {
+    if (keep_looking)
+    {
+      if (((present >> (index * 8)) & 0xff) == 0)
+      {
+        move_up_count++;
+      }
+      else
+      {
+        keep_looking = 0;
+      }
+    }
+    present_ptr[index] = present >> (index * 8);
+  }
+  if (move_up_count > 0)
+  {
+    /* move_up_count should be 0, 1, 2, or 3
+       shifting it 6 will make it RDP_ORDER_TINY(0x80) or
+       RDP_ORDER_SMALL(0x40) or both */
+    orders_flags |= move_up_count << 6;
+    size = (int)(self->out_s->p - present_ptr);
+    size -= present_size;
+    for (index = 0; index < size; index++)
+    {
+      present_ptr[index + (present_size - move_up_count)] =
+        present_ptr[index + present_size];
+    }
+    self->out_s->p -= move_up_count;
+  }
+  order_flags_ptr[0] = orders_flags;
+  return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
 /* send a solid rect to client */
 /* max size 23 */
 int APP_CC
@@ -340,6 +389,7 @@ xrdp_orders_rect(struct xrdp_orders* self, int x, int y, int cx, int cy,
   int vals[8];
   int present;
   char* present_ptr;
+  char* order_flags_ptr;
 
   xrdp_orders_check(self, 23);
   self->order_count++;
@@ -374,14 +424,17 @@ xrdp_orders_rect(struct xrdp_orders* self, int x, int y, int cx, int cy,
   {
     order_flags |= RDP_ORDER_DELTA;
   }
-  out_uint8(self->out_s, order_flags)
+  /* order_flags, set later, 1 byte */
+  order_flags_ptr = self->out_s->p;
+  out_uint8s(self->out_s, 1);
   if (order_flags & RDP_ORDER_CHANGE)
   {
     out_uint8(self->out_s, self->orders_state.last_order);
   }
   present = 0;
-  present_ptr = self->out_s->p; /* hold 1 byte present pointer */
-  out_uint8s(self->out_s, 1)
+  /* present, set later, 1 byte */
+  present_ptr = self->out_s->p;
+  out_uint8s(self->out_s, 1);
   if ((order_flags & RDP_ORDER_BOUNDS) &&
       !(order_flags & RDP_ORDER_LASTBOUNDS))
   {
@@ -460,7 +513,8 @@ xrdp_orders_rect(struct xrdp_orders* self, int x, int y, int cx, int cy,
                  (self->orders_state.rect_color & 0x00ffff) | (color & 0xff0000);
     out_uint8(self->out_s, color >> 16);
   }
-  present_ptr[0] = present;
+  xrdp_order_pack_small_or_tiny(self, order_flags_ptr, order_flags,
+                                present_ptr, present, 1);
   return 0;
 }
 
@@ -477,6 +531,7 @@ xrdp_orders_screen_blt(struct xrdp_orders* self, int x, int y,
   int vals[12];
   int present;
   char* present_ptr;
+  char* order_flags_ptr;
 
   xrdp_orders_check(self, 25);
   self->order_count++;
@@ -515,14 +570,17 @@ xrdp_orders_screen_blt(struct xrdp_orders* self, int x, int y,
   {
     order_flags |= RDP_ORDER_DELTA;
   }
-  out_uint8(self->out_s, order_flags);
+  /* order_flags, set later, 1 byte */
+  order_flags_ptr = self->out_s->p;
+  out_uint8s(self->out_s, 1);
   if (order_flags & RDP_ORDER_CHANGE)
   {
     out_uint8(self->out_s, self->orders_state.last_order);
   }
   present = 0;
-  present_ptr = self->out_s->p; /* hold 1 byte present pointer */
-  out_uint8s(self->out_s, 1)
+  /* present, set later, 1 byte */
+  present_ptr = self->out_s->p;
+  out_uint8s(self->out_s, 1);
   if ((order_flags & RDP_ORDER_BOUNDS) &&
       !(order_flags & RDP_ORDER_LASTBOUNDS))
   {
@@ -612,7 +670,8 @@ xrdp_orders_screen_blt(struct xrdp_orders* self, int x, int y,
     }
     self->orders_state.scr_blt_srcy = srcy;
   }
-  present_ptr[0] = present;
+  xrdp_order_pack_small_or_tiny(self, order_flags_ptr, order_flags,
+                                present_ptr, present, 1);
   return 0;
 }
 
@@ -628,8 +687,6 @@ xrdp_orders_pat_blt(struct xrdp_orders* self, int x, int y,
 {
   int order_flags;
   int present;
-  int size;
-  int index;
   int vals[8];
   char* present_ptr;
   char* order_flags_ptr;
@@ -668,7 +725,7 @@ xrdp_orders_pat_blt(struct xrdp_orders* self, int x, int y,
   {
     order_flags |= RDP_ORDER_DELTA;
   }
-  /* order_flags, set later */
+  /* order_flags, set later, 1 byte */
   order_flags_ptr = self->out_s->p;
   out_uint8s(self->out_s, 1);
   if (order_flags & RDP_ORDER_CHANGE)
@@ -676,7 +733,7 @@ xrdp_orders_pat_blt(struct xrdp_orders* self, int x, int y,
     out_uint8(self->out_s, self->orders_state.last_order);
   }
   present = 0;
-  /* present, set later */
+  /* present, set later, 2 bytes */
   present_ptr = self->out_s->p;
   out_uint8s(self->out_s, 2);
   if ((order_flags & RDP_ORDER_BOUNDS) &&
@@ -796,33 +853,8 @@ xrdp_orders_pat_blt(struct xrdp_orders* self, int x, int y,
     g_memcpy(self->orders_state.pat_blt_brush.pattern + 1,
              brush->pattern + 1, 7);
   }
-  present_ptr[0] = present;
-  present_ptr[1] = present >> 8;
-  if ((present_ptr[0] == 0) && (present_ptr[1] == 0))
-  {
-    order_flags |= RDP_ORDER_TINY; /* 0x80 */
-    size = (int)(self->out_s->p - present_ptr);
-    size -= 2;
-    /* move everything 2 up */
-    for (index = 0; index < size; index++)
-    {
-      present_ptr[index] = present_ptr[index + 2];
-    }
-    self->out_s->p -= 2;
-  }
-  else if (present_ptr[1] == 0)
-  {
-    order_flags |= RDP_ORDER_SMALL; /* 0x40 */
-    size = (int)(self->out_s->p - present_ptr);
-    size -= 2;
-    /* move everything 1 up */
-    for (index = 0; index < size; index++)
-    {
-      present_ptr[index + 1] = present_ptr[index + 2];
-    }
-    self->out_s->p -= 1;
-  }
-  order_flags_ptr[0] = order_flags;
+  xrdp_order_pack_small_or_tiny(self, order_flags_ptr, order_flags,
+                                present_ptr, present, 2);
   return 0;
 }
 
@@ -839,6 +871,7 @@ xrdp_orders_dest_blt(struct xrdp_orders* self, int x, int y,
   int vals[8];
   int present;
   char* present_ptr;
+  char* order_flags_ptr;
 
   xrdp_orders_check(self, 21);
   self->order_count++;
@@ -873,14 +906,17 @@ xrdp_orders_dest_blt(struct xrdp_orders* self, int x, int y,
   {
     order_flags |= RDP_ORDER_DELTA;
   }
-  out_uint8(self->out_s, order_flags);
+  /* order_flags, set later, 1 byte */
+  order_flags_ptr = self->out_s->p;
+  out_uint8s(self->out_s, 1);
   if (order_flags & RDP_ORDER_CHANGE)
   {
     out_uint8(self->out_s, self->orders_state.last_order)
   }
   present = 0;
-  present_ptr = self->out_s->p; /* hold 1 byte present pointer */
-  out_uint8s(self->out_s, 1)
+  /* present, set later, 1 byte */
+  present_ptr = self->out_s->p;
+  out_uint8s(self->out_s, 1);
   if ((order_flags & RDP_ORDER_BOUNDS) &&
       !(order_flags & RDP_ORDER_LASTBOUNDS))
   {
@@ -944,7 +980,8 @@ xrdp_orders_dest_blt(struct xrdp_orders* self, int x, int y,
     out_uint8(self->out_s, rop);
     self->orders_state.dest_blt_rop = rop;
   }
-  present_ptr[0] = present;
+  xrdp_order_pack_small_or_tiny(self, order_flags_ptr, order_flags,
+                                present_ptr, present, 1);
   return 0;
 }
 
@@ -963,6 +1000,7 @@ xrdp_orders_line(struct xrdp_orders* self, int mix_mode,
   int vals[8];
   int present;
   char* present_ptr;
+  char* order_flags_ptr;
   struct xrdp_pen blank_pen;
 
   xrdp_orders_check(self, 32);
@@ -1000,14 +1038,17 @@ xrdp_orders_line(struct xrdp_orders* self, int mix_mode,
   {
     order_flags |= RDP_ORDER_DELTA;
   }
-  out_uint8(self->out_s, order_flags);
+  /* order_flags, set later, 1 byte */
+  order_flags_ptr = self->out_s->p;
+  out_uint8s(self->out_s, 1);
   if (order_flags & RDP_ORDER_CHANGE)
   {
     out_uint8(self->out_s, self->orders_state.last_order);
   }
   present = 0;
-  present_ptr = self->out_s->p; /* hold 2 byte present pointer */
-  out_uint8s(self->out_s, 2)
+  /* present, set later, 2 bytes */
+  present_ptr = self->out_s->p;
+  out_uint8s(self->out_s, 2);
   if ((order_flags & RDP_ORDER_BOUNDS) &&
       !(order_flags & RDP_ORDER_LASTBOUNDS))
   {
@@ -1110,8 +1151,8 @@ xrdp_orders_line(struct xrdp_orders* self, int mix_mode,
     out_uint8(self->out_s, pen->color >> 16)
     self->orders_state.line_pen.color = pen->color;
   }
-  present_ptr[0] = present;
-  present_ptr[1] = present >> 8;
+  xrdp_order_pack_small_or_tiny(self, order_flags_ptr, order_flags,
+                                present_ptr, present, 2);
   return 0;
 }
 
@@ -1129,6 +1170,7 @@ xrdp_orders_mem_blt(struct xrdp_orders* self, int cache_id,
   int vals[12];
   int present;
   char* present_ptr;
+  char* order_flags_ptr;
 
   xrdp_orders_check(self, 30);
   self->order_count++;
@@ -1167,15 +1209,17 @@ xrdp_orders_mem_blt(struct xrdp_orders* self, int cache_id,
   {
     order_flags |= RDP_ORDER_DELTA;
   }
-  out_uint8(self->out_s, order_flags);
+  /* order_flags, set later, 1 byte */
+  order_flags_ptr = self->out_s->p;
+  out_uint8s(self->out_s, 1);
   if (order_flags & RDP_ORDER_CHANGE)
   {
     out_uint8(self->out_s, self->orders_state.last_order)
   }
   present = 0;
-  present_ptr = self->out_s->p; /* hold 2 byte present pointer, todo */
-  out_uint8s(self->out_s, 2)    /* this can be smaller, */
-                                /* see RDP_ORDER_SMALL and RDP_ORDER_TINY */
+  /* present, set later, 2 bytes */
+  present_ptr = self->out_s->p;
+  out_uint8s(self->out_s, 2);
   if ((order_flags & RDP_ORDER_BOUNDS) &&
       !(order_flags & RDP_ORDER_LASTBOUNDS))
   {
@@ -1280,8 +1324,8 @@ xrdp_orders_mem_blt(struct xrdp_orders* self, int cache_id,
     out_uint16_le(self->out_s, cache_idx);
     self->orders_state.mem_blt_cache_idx = cache_idx;
   }
-  present_ptr[0] = present;
-  present_ptr[1] = present >> 8;
+  xrdp_order_pack_small_or_tiny(self, order_flags_ptr, order_flags,
+                                present_ptr, present, 2);
   return 0;
 }
 
@@ -1301,6 +1345,7 @@ xrdp_orders_text(struct xrdp_orders* self,
   int order_flags;
   int present;
   char* present_ptr;
+  char* order_flags_ptr;
 
   xrdp_orders_check(self, 100);
   self->order_count++;
@@ -1330,15 +1375,17 @@ xrdp_orders_text(struct xrdp_orders* self,
       }
     }
   }
-  out_uint8(self->out_s, order_flags);
+  /* order_flags, set later, 1 byte */
+  order_flags_ptr = self->out_s->p;
+  out_uint8s(self->out_s, 1);
   if (order_flags & RDP_ORDER_CHANGE)
   {
     out_uint8(self->out_s, self->orders_state.last_order);
   }
   present = 0;
-  present_ptr = self->out_s->p; /* hold 3 byte present pointer, todo */
-  out_uint8s(self->out_s, 3)    /* this can be smaller, */
-                                /* see RDP_ORDER_SMALL and RDP_ORDER_TINY */
+  /* present, set later, 3 bytes */
+  present_ptr = self->out_s->p;
+  out_uint8s(self->out_s, 3);
   if ((order_flags & RDP_ORDER_BOUNDS) &&
       !(order_flags & RDP_ORDER_LASTBOUNDS))
   {
@@ -1445,10 +1492,8 @@ xrdp_orders_text(struct xrdp_orders* self,
     out_uint8(self->out_s, data_len);
     out_uint8a(self->out_s, data, data_len);
   }
-  /* send 3 byte present */
-  present_ptr[0] = present;
-  present_ptr[1] = present >> 8;
-  present_ptr[2] = present >> 16;
+  xrdp_order_pack_small_or_tiny(self, order_flags_ptr, order_flags,
+                                present_ptr, present, 3);
   return 0;
 }
 
