@@ -664,6 +664,7 @@ int APP_CC
 xrdp_mcs_send(struct xrdp_mcs* self, struct stream* s, int chan)
 {
   int len;
+  char* lp;
   //static int max_len = 0;
 
   DEBUG(("  in xrdp_mcs_send"));
@@ -680,12 +681,27 @@ xrdp_mcs_send(struct xrdp_mcs* self, struct stream* s, int chan)
   //}
   //g_printf("mcs length %d max length is %d\r\n", len, max_len);
   //g_printf("mcs length %d\r\n", len);
-  len = len | 0x8000;
   out_uint8(s, MCS_SDIN << 2);
   out_uint16_be(s, self->userid);
   out_uint16_be(s, chan);
   out_uint8(s, 0x70);
-  out_uint16_be(s, len);
+  if (len >= 128)
+  {
+    len = len | 0x8000;
+    out_uint16_be(s, len);
+  }
+  else
+  {
+    out_uint8(s, len);
+    /* move everything up one byte */
+    lp = s->p;
+    while (lp < s->end)
+    {
+      lp[0] = lp[1];
+      lp++;
+    }
+    s->end--;
+  }
   if (xrdp_iso_send(self->iso_layer, s) != 0)
   {
     DEBUG(("  out xrdp_mcs_send error"));
