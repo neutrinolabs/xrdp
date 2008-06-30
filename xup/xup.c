@@ -179,7 +179,7 @@ lib_mod_connect(struct mod* mod)
     out_uint32_le(s, 0);
     out_uint32_le(s, 0);
     s_mark_end(s);
-    len = s->end - s->data;
+    len = (int)(s->end - s->data);
     s_pop_layer(s, iso_hdr);
     out_uint32_le(s, len);
     lib_send(mod, s->data, len);
@@ -198,8 +198,8 @@ lib_mod_connect(struct mod* mod)
 /******************************************************************************/
 /* return error */
 int DEFAULT_CC
-lib_mod_event(struct mod* mod, int msg, long param1, long param2,
-              long param3, long param4)
+lib_mod_event(struct mod* mod, int msg, tbus param1, tbus param2,
+              tbus param3, tbus param4)
 {
   struct stream* s;
   int len;
@@ -216,7 +216,7 @@ lib_mod_event(struct mod* mod, int msg, long param1, long param2,
   out_uint32_le(s, param3);
   out_uint32_le(s, param4);
   s_mark_end(s);
-  len = s->end - s->data;
+  len = (int)(s->end - s->data);
   s_pop_layer(s, iso_hdr);
   out_uint32_le(s, len);
   rv = lib_send(mod, s->data, len);
@@ -448,7 +448,7 @@ mod_init(void)
 
   mod = (struct mod*)g_malloc(sizeof(struct mod), 1);
   mod->size = sizeof(struct mod);
-  mod->handle = (long)mod;
+  mod->handle = (tbus)mod;
   mod->mod_connect = lib_mod_connect;
   mod->mod_start = lib_mod_start;
   mod->mod_event = lib_mod_event;

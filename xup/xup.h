@@ -33,8 +33,8 @@ struct mod
   /* client functions */
   int (*mod_start)(struct mod* v, int w, int h, int bpp);
   int (*mod_connect)(struct mod* v);
-  int (*mod_event)(struct mod* v, int msg, long param1, long param2,
-                   long param3, long param4);
+  int (*mod_event)(struct mod* v, int msg, tbus param1, tbus param2,
+                   tbus param3, tbus param4);
   int (*mod_signal)(struct mod* v);
   int (*mod_end)(struct mod* v);
   int (*mod_set_param)(struct mod* v, char* name, char* value);
@@ -42,7 +42,7 @@ struct mod
   int (*mod_get_wait_objs)(struct mod* v, tbus* read_objs, int* rcount,
                            tbus* write_objs, int* wcount, int* timeout);
   int (*mod_check_wait_objs)(struct mod* v);
-  long mod_dumby[100 - 9]; /* align, 100 minus the number of mod
+  tbus mod_dumby[100 - 9]; /* align, 100 minus the number of mod
                               functions above */
   /* server functions */
   int (*server_begin_update)(struct mod* v);
@@ -83,12 +83,12 @@ struct mod
   int (*server_get_channel_id)(struct mod* v, char* name);
   int (*server_send_to_channel)(struct mod* v, int channel_id,
                                 char* data, int data_len);
-  long server_dumby[100 - 24]; /* align, 100 minus the number of server
+  tbus server_dumby[100 - 24]; /* align, 100 minus the number of server
                                   functions above */
   /* common */
-  long handle; /* pointer to self as long */
-  long wm;
-  long painter;
+  tbus handle; /* pointer to self as long */
+  tbus wm;
+  tbus painter;
   int sck;
   /* mod data */
   int width;
