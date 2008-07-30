@@ -1,9 +1,14 @@
 # sesman tools makefile
-
-SESTESTOBJ = sestest.o os_calls.o log.o
+SESTESTOBJ = sestest.o \
+            os_calls.o log.o
+#	    d3des.o list.o file.o \
+#            libscp_v1c.o tcp.o
 
 SESRUNOBJ = sesrun.o config.o tcp.o \
             os_calls.o d3des.o list.o file.o log.o
+
+SESADMINOBJ = sesadmin.o \
+	      os_calls.o log.o
 
 CFGDIR = /etc/xrdp
 PIDDIR = /var/run
@@ -17,10 +22,11 @@ DEFINES = -DLIBSCP_CLIENT
 CFLAGS = -Wall -g -I../../common -I../ -I/usr/include/nptl -I../libscp $(DEFINES)
 LDFLAGS = -L/usr/gnu/lib -L/usr/lib/nptl -L../libscp -lpthread -ldl -lscp -Wl,-rpath,$(LIBDIR)
 #LDFLAGS = -L /usr/gnu/lib -ldl $(DEFINES)
-C_OS_FLAGS = $(CFLAGS) -c
+C_OS_FLAGS = $(CFLAGS) -c -g
 CC = gcc
 
-all: xrdp-sestest xrdp-sesrun
+all: xrdp-sestest xrdp-sesrun 
+#	xrdp-sesadmin
 
 xrdp-sestest: $(SESTESTOBJ)
 	$(CC) $(LDFLAGS) -o xrdp-sestest $(SESTESTOBJ)
@@ -28,8 +34,11 @@ xrdp-sestest: $(SESTESTOBJ)
 xrdp-sesrun: $(SESRUNOBJ)
 	$(CC) $(LDFLAGS) -o xrdp-sesrun $(SESRUNOBJ)
 
+xrdp-sesadmin: $(SESADMINOBJ)
+	$(CC) $(LDFLAGS) -o xrdp-sesadmin $(SESADMINOBJ)
+
 clean:
-	rm -f *.o xrdp-sestest xrdp-sesrun
+	rm -f *.o xrdp-sestest xrdp-sesrun xrdp-sesadmin
 
 install:
 	install xrdp-sesrun $(BINDIR)/xrdp-sesrun

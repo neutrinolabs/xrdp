@@ -28,10 +28,11 @@
 #include "sesman.h"
 #include "libscp_types.h"
 
-#include "errno.h"
+#include <errno.h>
+//#include <time.h>
 
 extern unsigned char g_fixedkey[8];
-extern struct config_sesman g_cfg; /* config.h */
+extern struct config_sesman* g_cfg; /* config.h */
 struct session_chain* g_sessions;
 int g_session_count;
 
@@ -124,7 +125,7 @@ session_start_sessvc(int xpid, int wmpid, long data)
   /* new style waiting for clients */
   g_sprintf(wmpid_str, "%d", wmpid);
   g_sprintf(xpid_str, "%d",  xpid);
-  log_message(&(g_cfg.log), LOG_LEVEL_INFO,
+  log_message(&(g_cfg->log), LOG_LEVEL_INFO,
               "starting xrdp-sessvc - xpid=%s - wmpid=%s",
               xpid_str, wmpid_str);
 
@@ -143,19 +144,19 @@ session_start_sessvc(int xpid, int wmpid, long data)
   g_execvp(exe_path, ((char**)sessvc_params->items));
 
   /* should not get here */
-  log_message(&(g_cfg.log), LOG_LEVEL_ALWAYS,
+  log_message(&(g_cfg->log), LOG_LEVEL_ALWAYS,
               "error starting xrdp-sessvc - pid %d - xpid=%s - wmpid=%s",
               g_getpid(), xpid_str, wmpid_str);
 
   /* logging parameters */
   /* no problem calling strerror for thread safety: other threads
      are blocked */
-  log_message(&(g_cfg.log), LOG_LEVEL_DEBUG, "errno: %d, description: %s",
+  log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "errno: %d, description: %s",
               errno, g_get_strerror());
-  log_message(&(g_cfg.log), LOG_LEVEL_DEBUG, "execve parameter list:");
+  log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "execve parameter list:");
   for (i = 0; i < (sessvc_params->count); i++)
   {
-    log_message(&(g_cfg.log), LOG_LEVEL_DEBUG, "        argv[%d] = %s", i,
+    log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "        argv[%d] = %s", i,
                 (char*)list_get_item(sessvc_params, i));
   }
   list_delete(sessvc_params);
@@ -187,15 +188,17 @@ session_start(int width, int height, int bpp, char* username, char* password,
   char** pp1;
   struct session_chain* temp;
   struct list* xserver_params=0;
+  time_t ltime;
+  struct tm stime;
 
   /*THREAD-FIX lock to control g_session_count*/
   lock_chain_acquire();
   /* check to limit concurrent sessions */
-  if (g_session_count >= g_cfg.sess.max_sessions)
+  if (g_session_count >= g_cfg->sess.max_sessions)
   {
     /*THREAD-FIX unlock chain*/
     lock_chain_release();
-    log_message(&(g_cfg.log), LOG_LEVEL_INFO, "max concurrent session limit exceeded. login \
+    log_message(&(g_cfg->log), LOG_LEVEL_INFO, "max concurrent session limit exceeded. login \
 for user %s denied", username);
     return 0;
   }
@@ -206,7 +209,7 @@ for user %s denied", username);
   temp = (struct session_chain*)g_malloc(sizeof(struct session_chain), 0);
   if (temp == 0)
   {
-    log_message(&(g_cfg.log), LOG_LEVEL_ERROR, "cannot create new chain element - user %s",
+    log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "cannot create new chain element - user %s",
                 username);
     return 0;
   }
@@ -214,7 +217,7 @@ for user %s denied", username);
   if (temp->item == 0)
   {
     g_free(temp);
-    log_message(&(g_cfg.log), LOG_LEVEL_ERROR, "cannot create new session item - user %s",
+    log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "cannot create new session item - user %s",
                 username);
     return 0;
   }
@@ -230,7 +233,7 @@ for user %s denied", username);
   while (x_server_running(display))
   {
     display++;
-    if (((display - 10) > g_cfg.sess.max_sessions) || (display >= 50))
+    if (((display - 10) > g_cfg->sess.max_sessions) || (display >= 50))
     {
       return 0;
     }
@@ -260,53 +263,53 @@ for user %s denied", username);
       {
         auth_set_env(data);
         /* try to execute user window manager if enabled */
-        if (g_cfg.enable_user_wm)
+        if (g_cfg->enable_user_wm)
         {
-          g_sprintf(text,"%s/%s", g_getenv("HOME"), g_cfg.user_wm);
+          g_sprintf(text,"%s/%s", g_getenv("HOME"), g_cfg->user_wm);
           if (g_file_exist(text))
           {
-            g_execlp3(text, g_cfg.user_wm, 0);
-            log_message(&(g_cfg.log), LOG_LEVEL_ALWAYS,"error starting user wm for user %s - pid %d",
+            g_execlp3(text, g_cfg->user_wm, 0);
+            log_message(&(g_cfg->log), LOG_LEVEL_ALWAYS,"error starting user wm for user %s - pid %d",
                         username, g_getpid());
             /* logging parameters */
             /* no problem calling strerror for thread safety: other threads are blocked */
-            log_message(&(g_cfg.log), LOG_LEVEL_DEBUG, "errno: %d, description: %s", errno,
+            log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "errno: %d, description: %s", errno,
                         g_get_strerror());
-            log_message(&(g_cfg.log), LOG_LEVEL_DEBUG,"execlp3 parameter list:");
-            log_message(&(g_cfg.log), LOG_LEVEL_DEBUG, "        argv[0] = %s", text);
-            log_message(&(g_cfg.log), LOG_LEVEL_DEBUG, "        argv[1] = %s", g_cfg.user_wm);
+            log_message(&(g_cfg->log), LOG_LEVEL_DEBUG,"execlp3 parameter list:");
+            log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "        argv[0] = %s", text);
+            log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "        argv[1] = %s", g_cfg->user_wm);
           }
         }
         /* if we're here something happened to g_execlp3
            so we try running the default window manager */
-        g_sprintf(text, "%s/%s", XRDP_CFG_PATH, g_cfg.default_wm);
-        g_execlp3(text, g_cfg.default_wm, 0);
+        g_sprintf(text, "%s/%s", XRDP_CFG_PATH, g_cfg->default_wm);
+        g_execlp3(text, g_cfg->default_wm, 0);
 
-        log_message(&(g_cfg.log), LOG_LEVEL_ALWAYS,"error starting default wm for user %s - pid %d",
+        log_message(&(g_cfg->log), LOG_LEVEL_ALWAYS,"error starting default wm for user %s - pid %d",
                     username, g_getpid());
         /* logging parameters */
         /* no problem calling strerror for thread safety: other threads are blocked */
-        log_message(&(g_cfg.log), LOG_LEVEL_DEBUG, "errno: %d, description: %s", errno,
+        log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "errno: %d, description: %s", errno,
                     g_get_strerror());
-        log_message(&(g_cfg.log), LOG_LEVEL_DEBUG,"execlp3 parameter list:");
-        log_message(&(g_cfg.log), LOG_LEVEL_DEBUG, "        argv[0] = %s", text);
-        log_message(&(g_cfg.log), LOG_LEVEL_DEBUG, "        argv[1] = %s", g_cfg.default_wm);
+        log_message(&(g_cfg->log), LOG_LEVEL_DEBUG,"execlp3 parameter list:");
+        log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "        argv[0] = %s", text);
+        log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "        argv[1] = %s", g_cfg->default_wm);
 
         /* still a problem starting window manager just start xterm */
         g_execlp3("xterm", "xterm", 0);
 
         /* should not get here */
-        log_message(&(g_cfg.log), LOG_LEVEL_ALWAYS,"error starting xterm for user %s - pid %d",
+        log_message(&(g_cfg->log), LOG_LEVEL_ALWAYS,"error starting xterm for user %s - pid %d",
                     username, g_getpid());
         /* logging parameters */
         /* no problem calling strerror for thread safety: other threads are blocked */
-        log_message(&(g_cfg.log), LOG_LEVEL_DEBUG, "errno: %d, description: %s", errno, g_get_strerror());
+        log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "errno: %d, description: %s", errno, g_get_strerror());
       }
       else
       {
-        log_message(&(g_cfg.log), LOG_LEVEL_ERROR, "another Xserver is already active on display %d", display);
+        log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "another Xserver is already active on display %d", display);
       }
-      log_message(&(g_cfg.log), LOG_LEVEL_DEBUG,"aborting connection...");
+      log_message(&(g_cfg->log), LOG_LEVEL_DEBUG,"aborting connection...");
       g_exit(0);
     }
     else /* parent (child sesman) */
@@ -336,7 +339,7 @@ for user %s denied", username);
           /* additional parameters from sesman.ini file */
           //config_read_xserver_params(SESMAN_SESSION_TYPE_XVNC,
           //                           xserver_params);
-          list_append_list_strdup(g_cfg.vnc_params, xserver_params, 0);
+          list_append_list_strdup(g_cfg->vnc_params, xserver_params, 0);
 
           /* make sure it ends with a zero */
           list_add_item(xserver_params, 0);
@@ -358,7 +361,7 @@ for user %s denied", username);
           /* additional parameters from sesman.ini file */
           //config_read_xserver_params(SESMAN_SESSION_TYPE_XRDP,
           //                           xserver_params);
-	  list_append_list_strdup(g_cfg.rdp_params, xserver_params, 0);
+	  list_append_list_strdup(g_cfg->rdp_params, xserver_params, 0);
 
           /* make sure it ends with a zero */
           list_add_item(xserver_params, 0);
@@ -367,23 +370,23 @@ for user %s denied", username);
         }
         else
         {
-          log_message(&(g_cfg.log), LOG_LEVEL_ALWAYS, "bad session type - user %s - pid %d",
+          log_message(&(g_cfg->log), LOG_LEVEL_ALWAYS, "bad session type - user %s - pid %d",
                       username, g_getpid());
           g_exit(1);
         }
 
         /* should not get here */
-        log_message(&(g_cfg.log), LOG_LEVEL_ALWAYS, "error starting X server - user %s - pid %d",
+        log_message(&(g_cfg->log), LOG_LEVEL_ALWAYS, "error starting X server - user %s - pid %d",
                     username, g_getpid());
 
         /* logging parameters */
         /* no problem calling strerror for thread safety: other threads are blocked */
-        log_message(&(g_cfg.log), LOG_LEVEL_DEBUG, "errno: %d, description: %s", errno, g_get_strerror());
-        log_message(&(g_cfg.log), LOG_LEVEL_DEBUG, "execve parameter list: %d", (xserver_params)->count);
+        log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "errno: %d, description: %s", errno, g_get_strerror());
+        log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "execve parameter list: %d", (xserver_params)->count);
 
         for (i=0; i<(xserver_params->count); i++)
         {
-          log_message(&(g_cfg.log), LOG_LEVEL_DEBUG, "        argv[%d] = %s", i, (char*)list_get_item(xserver_params, i));
+          log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "        argv[%d] = %s", i, (char*)list_get_item(xserver_params, i));
         }
         list_delete(xserver_params);
         g_exit(1);
@@ -408,9 +411,15 @@ for user %s denied", username);
     temp->item->data = data;
     g_strncpy(temp->item->name, username, 255);
 
-    temp->item->connect_time = g_time1();
-    temp->item->disconnect_time = 0;
-    temp->item->idle_time = 0;
+    ltime = g_time1();
+    gmtime_r(&ltime, &stime);
+    temp->item->connect_time.year = (tui16)stime.tm_year;
+    temp->item->connect_time.month = (tui8)stime.tm_mon;
+    temp->item->connect_time.day = (tui8)stime.tm_mday;
+    temp->item->connect_time.hour = (tui8)stime.tm_hour;
+    temp->item->connect_time.minute = (tui8)stime.tm_min;
+    zero_time(&(temp->item->disconnect_time));
+    zero_time(&(temp->item->idle_time));
 
     temp->item->type=type;
     temp->item->status=SESMAN_SESSION_STATUS_ACTIVE;
@@ -482,7 +491,7 @@ session_kill(int pid)
   {
     if (tmp->item == 0)
     {
-      log_message(&(g_cfg.log), LOG_LEVEL_ERROR, "session descriptor for pid %d is null!",
+      log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "session descriptor for pid %d is null!",
                   pid);
       if (prev == 0)
       {
@@ -502,7 +511,7 @@ session_kill(int pid)
     if (tmp->item->pid == pid)
     {
       /* deleting the session */
-      log_message(&(g_cfg.log), LOG_LEVEL_INFO, "session %d - user %s - terminated",
+      log_message(&(g_cfg->log), LOG_LEVEL_INFO, "session %d - user %s - terminated",
                   tmp->item->pid, tmp->item->name);
       g_free(tmp->item);
       if (prev == 0)
@@ -547,7 +556,7 @@ session_sigkill_all()
   {
     if (tmp->item == 0)
     {
-      log_message(&(g_cfg.log), LOG_LEVEL_ERROR, "found null session descriptor!");
+      log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "found null session descriptor!");
     }
     else
     {
@@ -576,7 +585,7 @@ session_get_bypid(int pid)
   {
     if (tmp->item == 0)
     {
-      log_message(&(g_cfg.log), LOG_LEVEL_ERROR, "session descriptor for pid %d is null!",
+      log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "session descriptor for pid %d is null!",
                   pid);
       /*THREAD-FIX release chain lock */
       lock_chain_release();
@@ -657,9 +666,30 @@ session_get_byuser(char* user, int* cnt)
       (sess[index]).width=tmp->item->width;
       (sess[index]).bpp=tmp->item->bpp;
 #warning FIXME: setting idle times and such
-      (sess[index]).idle_days=0;
-      (sess[index]).idle_hours=0;
-      (sess[index]).idle_minutes=0;
+      /*(sess[index]).connect_time.year = tmp->item->connect_time.year;
+      (sess[index]).connect_time.month = tmp->item->connect_time.month;
+      (sess[index]).connect_time.day = tmp->item->connect_time.day;
+      (sess[index]).connect_time.hour = tmp->item->connect_time.hour;
+      (sess[index]).connect_time.minute = tmp->item->connect_time.minute;
+      (sess[index]).disconnect_time.year = tmp->item->disconnect_time.year;
+      (sess[index]).disconnect_time.month = tmp->item->disconnect_time.month;
+      (sess[index]).disconnect_time.day = tmp->item->disconnect_time.day;
+      (sess[index]).disconnect_time.hour = tmp->item->disconnect_time.hour;
+      (sess[index]).disconnect_time.minute = tmp->item->disconnect_time.minute;
+      (sess[index]).idle_time.year = tmp->item->idle_time.year;
+      (sess[index]).idle_time.month = tmp->item->idle_time.month;
+      (sess[index]).idle_time.day = tmp->item->idle_time.day;
+      (sess[index]).idle_time.hour = tmp->item->idle_time.hour;
+      (sess[index]).idle_time.minute = tmp->item->idle_time.minute;*/
+      (sess[index]).conn_year = tmp->item->connect_time.year;
+      (sess[index]).conn_month = tmp->item->connect_time.month;
+      (sess[index]).conn_day = tmp->item->connect_time.day;
+      (sess[index]).conn_hour = tmp->item->connect_time.hour;
+      (sess[index]).conn_minute = tmp->item->connect_time.minute;
+      (sess[index]).idle_days = tmp->item->idle_time.day;
+      (sess[index]).idle_hours = tmp->item->idle_time.hour;
+      (sess[index]).idle_minutes = tmp->item->idle_time.minute;
+
       index++;
     }
 

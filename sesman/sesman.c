@@ -22,7 +22,7 @@
  * @file sesman.c
  * @brief Main program file
  * @author Jay Sorg
- * 
+ *
  */
 
 #include "sesman.h"
@@ -30,7 +30,7 @@
 int g_sck;
 int g_pid;
 unsigned char g_fixedkey[8] = { 23, 82, 107, 6, 35, 78, 88, 7 };
-struct config_sesman g_cfg; /* config.h */
+struct config_sesman* g_cfg; /* config.h */
 
 extern int thread_sck;
 
@@ -40,17 +40,17 @@ extern int thread_sck;
  * @brief Starts sesman main loop
  *
  */
-static void DEFAULT_CC 
+static void DEFAULT_CC
 sesman_main_loop(void)
 {
   int in_sck;
   int error;
 
   /*main program loop*/
-  log_message(&(g_cfg.log), LOG_LEVEL_INFO, "listening...");
+  log_message(&(g_cfg->log), LOG_LEVEL_INFO, "listening...");
   g_sck = g_tcp_socket();
   g_tcp_set_non_blocking(g_sck);
-  error = scp_tcp_bind(g_sck, g_cfg.listen_address, g_cfg.listen_port);
+  error = scp_tcp_bind(g_sck, g_cfg->listen_address, g_cfg->listen_port);
   if (error == 0)
   {
     error = g_tcp_listen(g_sck);
@@ -65,8 +65,8 @@ sesman_main_loop(void)
       while (in_sck > 0)
       {
         /* we've got a connection, so we pass it to scp code */
-	LOG_DBG("new connection",0);
-	thread_sck=in_sck;
+        LOG_DBG(&(g_cfg->log), "new connection");
+        thread_sck=in_sck;
         //scp_process_start((void*)in_sck);
         thread_scp_start(in_sck);
 
@@ -81,12 +81,12 @@ sesman_main_loop(void)
     }
     else
     {
-      log_message(&(g_cfg.log), LOG_LEVEL_ERROR, "listen error");
+      log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "listen error");
     }
   }
   else
   {
-    log_message(&(g_cfg.log), LOG_LEVEL_ERROR, "bind error");
+    log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "bind error");
   }
   g_tcp_close(g_sck);
 }
@@ -188,15 +188,21 @@ main(int argc, char** argv)
   }
 
   /* reading config */
-  g_cfg.log.fd = -1; /* don't use logging before reading its config */
-  if (0 != config_read(&g_cfg))
+  g_cfg = g_malloc(sizeof(struct config_sesman), 1);
+  if (0 == g_cfg)
+  {
+    g_printf("error creating config: quitting.\n");
+    g_exit(1);
+  }
+  g_cfg->log.fd = -1; /* don't use logging before reading its config */
+  if (0 != config_read(g_cfg))
   {
     g_printf("error reading config: %s\nquitting.\n", g_get_strerror());
     g_exit(1);
   }
 
   /* starting logging subsystem */
-  error = log_start(&(g_cfg.log));
+  error = log_start(&(g_cfg->log));
 
   if (error != LOG_STARTUP_OK)
   {
@@ -213,7 +219,7 @@ main(int argc, char** argv)
   }
 
   /* libscp initialization */
-  scp_init(&(g_cfg.log));
+  scp_init(&(g_cfg->log));
 
   if (daemon)
   {
@@ -255,9 +261,9 @@ main(int argc, char** argv)
   fd = g_file_open(SESMAN_PID_FILE);
   if (-1 == fd)
   {
-    log_message(&(g_cfg.log), LOG_LEVEL_ERROR, "error opening pid file: %s",
+    log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "error opening pid file: %s",
                 g_get_strerror());
-    log_end(&(g_cfg.log));
+    log_end(&(g_cfg->log));
     g_exit(1);
   }
   g_sprintf(pid_s, "%d", g_pid);
@@ -265,7 +271,7 @@ main(int argc, char** argv)
   g_file_close(fd);
 
   /* start program main loop */
-  log_message(&(g_cfg.log), LOG_LEVEL_ALWAYS, "starting sesman with pid %d", g_pid);
+  log_message(&(g_cfg->log), LOG_LEVEL_ALWAYS, "starting sesman with pid %d", g_pid);
 
   /* make sure the /tmp/.X11-unix directory exist */
   if (!g_directory_exist("/tmp/.X11-unix"))
@@ -278,7 +284,7 @@ main(int argc, char** argv)
 
   if (!daemon)
   {
-    log_end(&(g_cfg.log));
+    log_end(&(g_cfg->log));
   }
 
   return 0;

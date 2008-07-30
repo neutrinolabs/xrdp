@@ -45,6 +45,17 @@
 #define SESMAN_SESSION_KILL_NULLITEM  1
 #define SESMAN_SESSION_KILL_NOTFOUND  2
 
+struct session_date
+{
+  tui16 year;
+  tui8  month;
+  tui8  day;
+  tui8  hour;
+  tui8  minute;
+};
+
+#define zero_time(s) { (s)->year=0; (s)->month=0; (s)->day=0; (s)->hour=0; (s)->minute=0; }
+
 struct session_item
 {
   char name[256];
@@ -60,9 +71,9 @@ struct session_item
   unsigned char type;
 
   /* time data  */
-  int connect_time;
-  int disconnect_time;
-  int idle_time;
+  struct session_date connect_time;
+  struct session_date disconnect_time;
+  struct session_date idle_time;
 };
 
 struct session_chain

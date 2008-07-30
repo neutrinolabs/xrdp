@@ -72,7 +72,7 @@ int
 scp_session_set_hostname(struct SCP_SESSION* s, char* str);
 
 int
-scp_session_set_addr(struct SCP_SESSION* s, int type, char* addr);
+scp_session_set_addr(struct SCP_SESSION* s, int type, void* addr);
 
 int
 scp_session_set_display(struct SCP_SESSION* s, SCP_DISPLAY display);

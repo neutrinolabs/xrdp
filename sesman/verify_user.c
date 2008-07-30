@@ -326,4 +326,3 @@ auth_account_disabled(struct spwd* stp)
 
   return 0;
 }
-

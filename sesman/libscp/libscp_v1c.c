@@ -76,9 +76,9 @@ scp_v1c_connect(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
   {
     out_uint32_be(c->out_s, s->ipv4addr);
   }
-  else
+  else if (s->addr_type == SCP_ADDRESS_TYPE_IPV6)
   {
-    #warning ipv6 address needed
+    out_uint8p(c->out_s, s->ipv6addr, 16);
   }
 
   sz = g_strlen(s->hostname);
@@ -241,6 +241,21 @@ scp_v1c_get_session_list(struct SCP_CONNECTION* c, int* scount,
       in_uint8(c->in_s, (ds[totalcnt]).idle_days);
       in_uint8(c->in_s, (ds[totalcnt]).idle_hours);
       in_uint8(c->in_s, (ds[totalcnt]).idle_minutes);
+
+      in_uint16_be(c->in_s, (ds[totalcnt]).conn_year);
+      in_uint8(c->in_s, (ds[totalcnt]).conn_month);
+      in_uint8(c->in_s, (ds[totalcnt]).conn_day);
+      in_uint8(c->in_s, (ds[totalcnt]).conn_hour);
+      in_uint8(c->in_s, (ds[totalcnt]).conn_minute);
+      in_uint8(c->in_s, (ds[totalcnt]).addr_type);
+      if ((ds[totalcnt]).addr_type == SCP_ADDRESS_TYPE_IPV4)
+      {
+        in_uint32_be(c->in_s, (ds[totalcnt]).ipv4addr);
+      }
+      else if ((ds[totalcnt]).addr_type == SCP_ADDRESS_TYPE_IPV6)
+      {
+        in_uint8a(c->in_s, (ds[totalcnt]).ipv6addr, 16);
+      }
       totalcnt++;
     }
   }

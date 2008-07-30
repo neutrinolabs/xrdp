@@ -26,6 +26,8 @@
 #include <semaphore.h>
 #include <pthread.h>
 
+extern struct config_sesman* g_cfg;
+
 pthread_mutex_t lock_chain;           /* session chain lock */
 pthread_mutexattr_t lock_chain_attr;  /* mutex attributes */
 
@@ -54,7 +56,7 @@ void DEFAULT_CC
 lock_chain_acquire(void)
 {
   /*lock the chain*/
-  LOG_DBG("lock_chain_acquire()",0);
+  LOG_DBG(&(g_cfg->log), "lock_chain_acquire()");
   pthread_mutex_lock(&lock_chain);
 }
 
@@ -63,7 +65,7 @@ void DEFAULT_CC
 lock_chain_release(void)
 {
   /*unlock the chain*/
-  LOG_DBG("lock_chain_release()",0);
+  LOG_DBG(&(g_cfg->log), "lock_chain_release()");
   pthread_mutex_unlock(&lock_chain);
 }
 
@@ -72,7 +74,7 @@ void DEFAULT_CC
 lock_socket_acquire(void)
 {
   /* lock socket variable */
-  LOG_DBG("lock_socket_acquire()",0);
+  LOG_DBG(&(g_cfg->log), "lock_socket_acquire()");
   sem_wait(&lock_socket);
 }
 
@@ -81,7 +83,7 @@ void DEFAULT_CC
 lock_socket_release(void)
 {
   /* unlock socket variable */
-  LOG_DBG("lock_socket_release()",0);
+  LOG_DBG(&(g_cfg->log), "lock_socket_release()");
   sem_post(&lock_socket);
 }
 

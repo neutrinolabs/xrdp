@@ -22,7 +22,7 @@
  * @file access.h
  * @brief User access control definitions
  * @author Simone Fedele
- * 
+ *
  */
 
 #ifndef ACCESS_H
@@ -37,5 +37,15 @@
  */
 int DEFAULT_CC
 access_login_allowed(char* user);
+
+/**
+ *
+ * @brief Checks if the user is allowed to access the terminal server for management
+ * @param user the user to check
+ * @return 0 if access is denied, !=0 if allowed
+ *
+ */
+int DEFAULT_CC
+access_login_mng_allowed(char* user);
 
 #endif

@@ -33,13 +33,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+extern struct log_config* s_log;
+
 /*****************************************************************************/
 int DEFAULT_CC
 scp_tcp_force_recv(int sck, char* data, int len)
 {
   int rcvd;
   int block;
-  
+
+  LOG_DBG(s_log, "scp_tcp_force_recv()");
   block = scp_lock_fork_critical_section_start();
 
   while (len > 0)
@@ -80,7 +83,8 @@ scp_tcp_force_send(int sck, char* data, int len)
 {
   int sent;
   int block;
-  
+
+  LOG_DBG(s_log, "scp_tcp_force_send()");
   block = scp_lock_fork_critical_section_start();
 
   while (len > 0)

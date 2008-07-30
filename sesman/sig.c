@@ -31,21 +31,21 @@
 
 extern int g_sck;
 extern int g_pid;
-extern struct config_sesman g_cfg;
+extern struct config_sesman* g_cfg;
 
 /******************************************************************************/
 void DEFAULT_CC
 sig_sesman_shutdown(int sig)
 {
-  log_message(&(g_cfg.log), LOG_LEVEL_INFO, "shutting down sesman %d", 1);
+  log_message(&(g_cfg->log), LOG_LEVEL_INFO, "shutting down sesman %d", 1);
 
   if (g_getpid() != g_pid)
   {
-    LOG_DBG("g_getpid() [%d] differs from g_pid [%d]", (g_getpid()), g_pid);
+    LOG_DBG(&(g_cfg->log), "g_getpid() [%d] differs from g_pid [%d]", (g_getpid()), g_pid);
     return;
   }
 
-  LOG_DBG(" - getting signal %d pid %d", sig, g_getpid());
+  LOG_DBG(&(g_cfg->log), " - getting signal %d pid %d", sig, g_getpid());
 
   g_tcp_close(g_sck);
 
@@ -58,25 +58,32 @@ sig_sesman_shutdown(int sig)
 void DEFAULT_CC
 sig_sesman_reload_cfg(int sig)
 {
-  struct config_sesman cfg;
+  struct config_sesman *cfg;
 
-#warning FIXME reload configuration must NOT damage logging!
-  log_message(&(g_cfg.log), LOG_LEVEL_WARNING, "receiving SIGHUP %d", 1);
+  log_message(&(g_cfg->log), LOG_LEVEL_WARNING, "receiving SIGHUP %d", 1);
 
   if (g_getpid() != g_pid)
   {
-    LOG_DBG(&(g_cfg.log), "g_getpid() [%d] differs from g_pid [%d]", g_getpid(), g_pid);
+    LOG_DBG(&(g_cfg->log), "g_getpid() [%d] differs from g_pid [%d]", g_getpid(), g_pid);
     return;
   }
 
-  if (config_read(&cfg) != 0)
+  cfg = g_malloc(sizeof(struct config_sesman), 1);
+  if (0 == cfg)
   {
-    log_message(&(g_cfg.log), LOG_LEVEL_ERROR, "error reading config - keeping old cfg");
+    log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "error creating new config:  - keeping old cfg");
     return;
   }
+
+  if (config_read(cfg) != 0)
+  {
+    log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "error reading config - keeping old cfg");
+    return;
+  }
+#warning FIXME reload configuration must NOT damage logging!
   g_cfg = cfg;
 
-  log_message(&(g_cfg.log), LOG_LEVEL_INFO, "configuration reloaded");
+  log_message(&(g_cfg->log), LOG_LEVEL_INFO, "configuration reloaded");
 }
 
 /******************************************************************************/
@@ -122,7 +129,7 @@ sig_handler_thread(void* arg)
 
   do
   {
-    LOG_DBG(&(g_cfg.log), "calling sigwait()",0);
+    LOG_DBG(&(g_cfg->log), "calling sigwait()",0);
     sigwait(&waitmask, &recv_signal);
 
     switch (recv_signal)
@@ -130,12 +137,12 @@ sig_handler_thread(void* arg)
       case SIGHUP:
         //reload cfg
 	//we must stop & restart logging, or copy logging cfg!!!!
-        LOG_DBG(&(g_cfg.log), "sesman received SIGHUP",0);
+        LOG_DBG(&(g_cfg->log), "sesman received SIGHUP",0);
         //return 0;
         break;
       case SIGCHLD:
         /* a session died */
-        LOG_DBG(&(g_cfg.log), "sesman received SIGCHLD",0);
+        LOG_DBG(&(g_cfg->log), "sesman received SIGCHLD",0);
         sig_sesman_session_end(SIGCHLD);
         break;
       /*case SIGKILL;
@@ -145,7 +152,7 @@ sig_handler_thread(void* arg)
         break;*/
       case SIGTERM:
         /* we die */
-        LOG_DBG(&(g_cfg.log), "sesman received SIGTERM",0);
+        LOG_DBG(&(g_cfg->log), "sesman received SIGTERM",0);
         sig_sesman_shutdown(recv_signal);
         break;
     }

@@ -30,6 +30,8 @@
 
 #include "libscp_v1s.h"
 
+extern struct log_config* s_log;
+
 /* server API */
 enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk)
 {
@@ -39,6 +41,7 @@ enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION* c, struct SCP_SES
   tui16 cmdset;
   tui16 cmd;
   tui8 sz;
+  char buf[257];
 
   if (!skipVchk)
   {
@@ -48,28 +51,32 @@ enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION* c, struct SCP_SES
       in_uint32_be(c->in_s, version);
       if (version != 1)
       {
+        log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: version error", __LINE__);
         return SCP_SERVER_STATE_VERSION_ERR;
       }
     }
     else
     {
+      log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
       return SCP_SERVER_STATE_NETWORK_ERR;
     }
   }
   else
   {
-    version=1;
+    version = 1;
   }
 
   in_uint32_be(c->in_s, size);
-  if (size<12)
+  if (size < 12)
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: size error", __LINE__);
     return SCP_SERVER_STATE_SIZE_ERR;
   }
 
   init_stream(c->in_s, c->in_s->size);
-  if (0!=scp_tcp_force_recv(c->in_sck, c->in_s->data, (size-8)))
+  if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, (size-8)))
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
     return SCP_SERVER_STATE_NETWORK_ERR;
   }
 
@@ -77,14 +84,16 @@ enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION* c, struct SCP_SES
   in_uint16_be(c->in_s, cmdset);
 
   /* if we are starting a management session */
-  if (cmdset==SCP_COMMAND_SET_MANAGE)
+  if (cmdset == SCP_COMMAND_SET_MANAGE)
   {
+    log_message(s_log, LOG_LEVEL_DEBUG, "[v1s:%d] requested management connection", __LINE__);
     return SCP_SERVER_STATE_START_MANAGE;
   }
 
   /* if we started with resource sharing... */
-  if (cmdset==SCP_COMMAND_SET_RSR)
+  if (cmdset == SCP_COMMAND_SET_RSR)
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: sequence error", __LINE__);
     return SCP_SERVER_STATE_SEQUENCE_ERR;
   }
 
@@ -92,75 +101,84 @@ enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION* c, struct SCP_SES
   in_uint16_be(c->in_s, cmd);
   if (cmd != 1)
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: sequence error", __LINE__);
     return SCP_SERVER_STATE_SEQUENCE_ERR;
   }
 
-  session = g_malloc(sizeof(struct SCP_SESSION),1);
+  session = scp_session_create();
   if (0 == session)
   {
-     return SCP_SERVER_STATE_INTERNAL_ERR;
-  }
-  session->version=1;
-
-  in_uint8(c->in_s, session->type);
-  if ((session->type != SCP_SESSION_TYPE_XVNC) && (session->type != SCP_SESSION_TYPE_XRDP))
-  {
-    g_free(session);
-    return SCP_SERVER_STATE_SESSION_TYPE_ERR;
-  }
-
-  in_uint16_be(c->in_s,session->height);
-  in_uint16_be(c->in_s, session->width);
-  in_uint8(c->in_s, session->bpp);
-  in_uint8(c->in_s, session->rsr);
-  in_uint8a(c->in_s, session->locale, 17);
-    session->locale[17]='\0';
-
-  in_uint8(c->in_s, session->addr_type);
-  if (session->addr_type==SCP_ADDRESS_TYPE_IPV4)
-  {
-    in_uint32_be(c->in_s, session->ipv4addr);
-  }
-  else if (session->addr_type==SCP_ADDRESS_TYPE_IPV6)
-  {
-    #warning how to handle ipv6 addresses?
-  }
-
-  /* reading hostname */
-  in_uint8(c->in_s, sz);
-  session->hostname=g_malloc(sz+1,1);
-  if (0==session->hostname)
-  {
-    g_free(session);
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error (malloc returned NULL)", __LINE__);
     return SCP_SERVER_STATE_INTERNAL_ERR;
   }
-  session->hostname[sz]='\0';
-  in_uint8a(c->in_s, session->hostname, sz);
+  scp_session_set_version(session, 1);
+
+  in_uint8(c->in_s, sz);
+  if ((sz != SCP_SESSION_TYPE_XVNC) && (sz != SCP_SESSION_TYPE_XRDP))
+  {
+    scp_session_destroy(session);
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: unknown session type", __LINE__);
+    return SCP_SERVER_STATE_SESSION_TYPE_ERR;
+  }
+  scp_session_set_type(session, sz);
+
+  in_uint16_be(c->in_s, cmd);
+  scp_session_set_height(session, cmd);
+  in_uint16_be(c->in_s, cmd);
+  scp_session_set_height(session, cmd);
+  in_uint8(c->in_s, sz);
+  scp_session_set_bpp(session, sz);
+  in_uint8(c->in_s, sz);
+  scp_session_set_rsr(session, sz);
+  in_uint8a(c->in_s, buf, 17);
+    buf[17]='\0';
+  scp_session_set_locale(session, buf);
+
+  in_uint8(c->in_s, sz);
+  if (sz == SCP_ADDRESS_TYPE_IPV4)
+  {
+    in_uint32_be(c->in_s, size);
+    scp_session_set_addr(session, SCP_ADDRESS_TYPE_IPV4_BIN, &size);
+  }
+  else if (sz == SCP_ADDRESS_TYPE_IPV6)
+  {
+    in_uint8a(c->in_s, buf, 16);
+    scp_session_set_addr(session, SCP_ADDRESS_TYPE_IPV6_BIN, buf);
+  }
+
+  buf[256] = '\0';
+  /* reading hostname */
+  in_uint8(c->in_s, sz);
+  buf[sz]='\0';
+  in_uint8a(c->in_s, buf, sz);
+  if (0 != scp_session_set_hostname(session, buf))
+  {
+    scp_session_destroy(session);
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error", __LINE__);
+    return SCP_SERVER_STATE_INTERNAL_ERR;
+  }
 
   /* reading username */
   in_uint8(c->in_s, sz);
-  session->username=g_malloc(sz+1,1);
-  if (0==session->username)
+  buf[sz]='\0';
+  in_uint8a(c->in_s, buf, sz);
+  if (0 != scp_session_set_username(session, buf))
   {
-    g_free(session->hostname);
-    g_free(session);
+    scp_session_destroy(session);
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error", __LINE__);
     return SCP_SERVER_STATE_INTERNAL_ERR;
   }
-  session->username[sz]='\0';
-  in_uint8a(c->in_s, session->username, sz);
 
   /* reading password */
   in_uint8(c->in_s, sz);
-  session->password=g_malloc(sz+1,1);
-  if (0==session->password)
+  buf[sz]='\0';
+  in_uint8a(c->in_s, buf, sz);
+  if (0 != scp_session_set_password(session, buf))
   {
-    g_free(session->username);
-    g_free(session->hostname);
-    g_free(session);
+    scp_session_destroy(session);
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error", __LINE__);
     return SCP_SERVER_STATE_INTERNAL_ERR;
   }
-  session->password[sz]='\0';
-  in_uint8a(c->in_s, session->password, sz);
 
   /* returning the struct */
   (*s)=session;
@@ -193,6 +211,7 @@ scp_v1s_deny_connection(struct SCP_CONNECTION* c, char* reason)
 
   if (0!=scp_tcp_force_send(c->in_sck, c->out_s->data, rlen+14))
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
     return SCP_SERVER_STATE_NETWORK_ERR;
   }
 
@@ -203,13 +222,12 @@ enum SCP_SERVER_STATES_E
 scp_v1s_request_password(struct SCP_CONNECTION* c, struct SCP_SESSION* s, char* reason)
 {
   tui8 sz;
-  char *ubuf;
-  char *pbuf;
   tui32 version;
   tui32 size;
   tui16 cmdset;
   tui16 cmd;
   int rlen;
+  char buf[257];
 
   init_stream(c->in_s, c->in_s->size);
   init_stream(c->out_s, c->out_s->size);
@@ -237,71 +255,74 @@ scp_v1s_request_password(struct SCP_CONNECTION* c, struct SCP_SESSION* s, char* 
 
   if (0!=scp_tcp_force_send(c->in_sck, c->out_s->data, 14+rlen))
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
     return SCP_SERVER_STATE_NETWORK_ERR;
   }
 
   /* receive password & username */
   if (0!=scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
     return SCP_SERVER_STATE_NETWORK_ERR;
   }
 
   in_uint32_be(c->in_s, version);
   if (version!=1)
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: version error", __LINE__);
     return SCP_SERVER_STATE_VERSION_ERR;
   }
 
   in_uint32_be(c->in_s, size);
   if (size<12)
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: size error", __LINE__);
     return SCP_SERVER_STATE_SIZE_ERR;
   }
 
   init_stream(c->in_s, c->in_s->size);
   if (0!=scp_tcp_force_recv(c->in_sck, c->in_s->data, (size-8)))
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
     return SCP_SERVER_STATE_NETWORK_ERR;
   }
 
   in_uint16_be(c->in_s, cmdset);
   if (cmdset != SCP_COMMAND_SET_DEFAULT)
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: sequence error", __LINE__);
     return SCP_SERVER_STATE_SEQUENCE_ERR;
   }
 
   in_uint16_be(c->in_s, cmd);
   if (cmd != 4)
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: sequence error", __LINE__);
     return SCP_SERVER_STATE_SEQUENCE_ERR;
   }
 
+  buf[256] = '\0';
   /* reading username */
   in_uint8(c->in_s, sz);
-  ubuf=g_malloc(sz+1,1);
-  if (0==ubuf)
+  buf[sz] = '\0';
+  in_uint8a(c->in_s, buf, sz);
+  if (0 != scp_session_set_username(s, buf))
   {
+    scp_session_destroy(s);
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error", __LINE__);
     return SCP_SERVER_STATE_INTERNAL_ERR;
   }
-  ubuf[sz]='\0';
-  in_uint8a(c->in_s, ubuf, sz);
 
   /* reading password */
   in_uint8(c->in_s, sz);
-  pbuf=g_malloc(sz+1,1);
-  if (0==pbuf)
+  buf[sz]='\0';
+  in_uint8a(c->in_s, buf, sz);
+  if (0 != scp_session_set_password(s, buf))
   {
-    g_free(ubuf);
+    scp_session_destroy(s);
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error", __LINE__);
     return SCP_SERVER_STATE_INTERNAL_ERR;
   }
-  pbuf[sz]='\0';
-  in_uint8a(c->in_s, pbuf, sz);
-
-  /* replacing username and password */
-  g_free(s->username);
-  g_free(s->password);
-  s->username=ubuf;
-  s->password=pbuf;
 
   return SCP_SERVER_STATE_OK;
 }
@@ -340,6 +361,7 @@ scp_v1s_connect_new_session(struct SCP_CONNECTION* c, SCP_DISPLAY d)
 
   if (0!=scp_tcp_force_send(c->in_sck, c->out_s->data, 14))
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
     return SCP_SERVER_STATE_NETWORK_ERR;
   }
 
@@ -377,6 +399,7 @@ scp_v1s_list_sessions(struct SCP_CONNECTION* c, int sescnt, struct SCP_DISCONNEC
 
   if (0!=scp_tcp_force_send(c->in_sck, c->out_s->data, size))
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
     return SCP_SERVER_STATE_NETWORK_ERR;
   }
 
@@ -386,36 +409,42 @@ scp_v1s_list_sessions(struct SCP_CONNECTION* c, int sescnt, struct SCP_DISCONNEC
   init_stream(c->in_s, c->in_s->size);
   if (0!=scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
     return SCP_SERVER_STATE_NETWORK_ERR;
   }
 
   in_uint32_be(c->in_s, version);
   if (version!=1)
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: version error", __LINE__);
     return SCP_SERVER_STATE_VERSION_ERR;
   }
 
   in_uint32_be(c->in_s, size);
   if (size<12)
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: size error", __LINE__);
     return SCP_SERVER_STATE_SIZE_ERR;
   }
 
   init_stream(c->in_s, c->in_s->size);
   if (0!=scp_tcp_force_recv(c->in_sck, c->in_s->data, (size-8)))
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
     return SCP_SERVER_STATE_NETWORK_ERR;
   }
 
   in_uint16_be(c->in_s, cmd);
   if (cmd != SCP_COMMAND_SET_DEFAULT)
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: sequence error", __LINE__);
     return SCP_SERVER_STATE_SEQUENCE_ERR;
   }
 
   in_uint16_be(c->in_s, cmd);
   if (cmd != 41)
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: sequence error", __LINE__);
     return SCP_SERVER_STATE_SEQUENCE_ERR;
   }
 
@@ -474,16 +503,35 @@ scp_v1s_list_sessions(struct SCP_CONNECTION* c, int sescnt, struct SCP_DISCONNEC
       out_uint8(c->out_s, cds->idle_days);
       out_uint8(c->out_s, cds->idle_hours);
       out_uint8(c->out_s, cds->idle_minutes);
+      size += 13;
 
-      size = size + 13;
+      out_uint16_be(c->out_s, cds->conn_year);
+      out_uint8(c->out_s, cds->conn_month);
+      out_uint8(c->out_s, cds->conn_day);
+      out_uint8(c->out_s, cds->conn_hour);
+      out_uint8(c->out_s, cds->conn_minute);
+      out_uint8(c->out_s, cds->addr_type);
+      size += 7;
+
+      if (cds->addr_type == SCP_ADDRESS_TYPE_IPV4)
+      {
+        in_uint32_be(c->out_s, cds->ipv4addr);
+        size += 4;
+      }
+      else if (cds->addr_type == SCP_ADDRESS_TYPE_IPV6)
+      {
+        in_uint8a(c->out_s, cds->ipv6addr, 16);
+        size += 16;
+      }
     }
 
     s_pop_layer(c->out_s, channel_hdr);
     out_uint32_be(c->out_s, version);
     out_uint32_be(c->out_s, size);
 
-    if (0!=scp_tcp_force_send(c->in_sck, c->out_s->data, size))
+    if (0 != scp_tcp_force_send(c->in_sck, c->out_s->data, size))
     {
+      log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
       return SCP_SERVER_STATE_NETWORK_ERR;
     }
   }
@@ -492,18 +540,21 @@ scp_v1s_list_sessions(struct SCP_CONNECTION* c, int sescnt, struct SCP_DISCONNEC
   init_stream(c->in_s, c->in_s->size);
   if (0!=scp_tcp_force_recv(c->in_sck, c->in_s->data, (8)))
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
     return SCP_SERVER_STATE_NETWORK_ERR;
   }
 
   in_uint32_be(c->in_s, version);
-  if (version!=1)
+  if (version != 1)
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: version error", __LINE__);
     return SCP_SERVER_STATE_VERSION_ERR;
   }
 
   in_uint32_be(c->in_s, size);
-  if (size<12)
+  if (size < 12)
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: size error", __LINE__);
     return SCP_SERVER_STATE_SIZE_ERR;
   }
 
@@ -511,12 +562,14 @@ scp_v1s_list_sessions(struct SCP_CONNECTION* c, int sescnt, struct SCP_DISCONNEC
   init_stream(c->in_s, c->in_s->size);
   if (0!=scp_tcp_force_recv(c->in_sck, c->in_s->data, (size-8)))
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
     return SCP_SERVER_STATE_NETWORK_ERR;
   }
 
   in_uint16_be(c->in_s, cmd);
   if (cmd != SCP_COMMAND_SET_DEFAULT)
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: sequence error", __LINE__);
     return SCP_SERVER_STATE_SEQUENCE_ERR;
   }
 
@@ -539,6 +592,7 @@ scp_v1s_list_sessions(struct SCP_CONNECTION* c, int sescnt, struct SCP_DISCONNEC
 
     /* if we got here, the requested sid wasn't one from the list we sent */
     /* we should kill the connection                                      */
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error (no such session in list)", __LINE__);
     return SCP_CLIENT_STATE_INTERNAL_ERR;
   }
   else if (cmd == 44)
@@ -554,6 +608,7 @@ scp_v1s_list_sessions(struct SCP_CONNECTION* c, int sescnt, struct SCP_DISCONNEC
   else
   {
     /* wrong response */
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: sequence error", __LINE__);
     return SCP_SERVER_STATE_SEQUENCE_ERR;
   }
 
@@ -590,6 +645,7 @@ scp_v1s_reconnect_session(struct SCP_CONNECTION* c, SCP_DISPLAY d)
 
   if (0!=scp_tcp_force_send(c->in_sck, c->out_s->data, size))
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: network error", __LINE__);
     return SCP_SERVER_STATE_NETWORK_ERR;
   }
 

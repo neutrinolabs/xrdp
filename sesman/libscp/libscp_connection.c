@@ -27,6 +27,8 @@
 
 #include "libscp_connection.h"
 
+extern struct log_config* s_log;
+
 struct SCP_CONNECTION*
 scp_connection_create(int sck)
 {
@@ -36,6 +38,7 @@ scp_connection_create(int sck)
 
   if (0 == conn)
   {
+    log_message(s_log, LOG_LEVEL_WARNING, "[connection:%d] connection create: malloc error", __LINE__);
     return 0;
   }
 

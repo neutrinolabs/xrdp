@@ -4,7 +4,7 @@ SESMANOBJ = sesman.o config.o sig.o session.o env.o \
             os_calls.o d3des.o list.o file.o log.o access.o \
             scp.o scp_v0.o scp_v1.o thread.o lock.o
 
-SESSVCOBJ = sessvc.o os_calls.o
+SESSVCOBJ = sessvc.o os_calls.o log.o
 
 CFGDIR = /etc/xrdp
 PIDDIR = /var/run
@@ -12,7 +12,7 @@ LIBDIR = /usr/local/lib/xrdp
 SBINDIR = /usr/local/sbin
 
 DEFINES = -DSESMAN_CFG_FILE=\"$(CFGDIR)/sesman.ini\" \
-          -DSESMAN_PID_FILE=\"$(PIDDIR)/xrdp-sesman.pid\"
+          -DSESMAN_PID_FILE=\"$(PIDDIR)/xrdp-sesman.pid\" -DDEBUG
 
 CFLAGS = -Wall -O2 -I../common -I/usr/include/nptl -I./libscp $(DEFINES)
 LDFLAGS = -L/usr/gnu/lib -L/usr/lib/nptl -L./libscp -Wl,-rpath,$(LIBDIR) -lpthread -ldl -lscp
@@ -76,3 +76,4 @@ file.o: ../common/file.c
 
 log.o: ../common/log.c
 	$(CC) $(C_OS_FLAGS) -DLOG_ENABLE_THREAD ../common/log.c
+

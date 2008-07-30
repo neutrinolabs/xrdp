@@ -25,7 +25,7 @@
  *        This code controls which version is being used and starts the
  *        appropriate process
  * @author Jay Sorg, Simone Fedele
- * 
+ *
  */
 
 #include "sesman.h"
@@ -69,6 +69,12 @@ scp_process_start(void* sck)
         /*LOG_DBG(&(g_cfg.log), "user: %s\npass: %s",sdata->username, sdata->password);*/
         scp_v1_process(&scon, sdata);
       }
+      break;
+    case SCP_SERVER_STATE_START_MANAGE:
+      /* starting a management session */
+      log_message(&(g_cfg.log), LOG_LEVEL_WARNING,
+        "starting a sesman management session...");
+//      scp_v1s_mng_process(&scon, sdata);
       break;
     case SCP_SERVER_STATE_VERSION_ERR:
       /* an unknown scp version was requested, so we shut down the */
