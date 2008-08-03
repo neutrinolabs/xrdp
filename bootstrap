@@ -1,0 +1,24 @@
+#!/bin/sh
+
+which autoconf
+if ! test $? -eq 0
+then
+  echo "error, install autoconf"
+  exit 1
+fi
+
+which automake
+if ! test $? -eq 0
+then
+  echo "error, install automake"
+  exit 1
+fi
+
+which libtool
+if ! test $? -eq 0
+then
+  echo "error, install libtool"
+  exit 1
+fi
+
+autoreconf -fvi
