@@ -21,7 +21,5 @@ xrdp_SOURCES = \
   xrdp_wm.c
 
 xrdp_LDADD = \
-  $(top_srcdir)/common/libxrdp-common.a \
-  $(top_srcdir)/libxrdp/libxrdp.la \
-  -lpthread \
-  -lcrypto
+  $(top_srcdir)/common/libxrdp-common.la \
+  $(top_srcdir)/libxrdp/libxrdp.la
