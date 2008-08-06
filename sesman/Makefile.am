@@ -24,14 +24,11 @@ xrdp_sessvc_SOURCES = \
   sessvc.c
 
 xrdp_sesman_LDADD = \
-  $(top_srcdir)/common/libxrdp-common.a \
+  $(top_srcdir)/common/libxrdp-common.la \
   $(top_srcdir)/sesman/libscp/libscp.la \
-  -ldl \
-  -lpthread \
   -lpam
 
 xrdp_sessvc_LDADD = \
-  $(top_srcdir)/common/libxrdp-common.a \
-  -ldl
+  $(top_srcdir)/common/libxrdp-common.la
 
 SUBDIRS = libscp

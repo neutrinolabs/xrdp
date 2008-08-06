@@ -15,5 +15,8 @@ libscp_la_SOURCES = \
   libscp_v1s.c \
   libscp_vX.c
 
+libscp_la_LIBADD = \
+  $(top_srcdir)/common/libxrdp-common.la
+
 libscp_la_LDFLAGS = \
   -version-info 5:0:5

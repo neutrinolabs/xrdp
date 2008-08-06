@@ -18,7 +18,7 @@ libxrdp_la_SOURCES = \
   xrdp_bitmap_compress.c
 
 libxrdp_la_LIBADD = \
-  $(top_srcdir)/common/libxrdp-common.a
+  $(top_srcdir)/common/libxrdp-common.la
 
 libxrdp_la_LDFLAGS = \
   -version-info 5:0:5
