@@ -21,6 +21,9 @@
 */
 
 /* include other h files */
+#if defined(HAVE_CONFIG_H)
+#include "config.h"
+#endif
 #include "arch.h"
 #include "parse.h"
 #include "libxrdpinc.h"
@@ -33,9 +36,6 @@
 #include "list.h"
 #include "file.h"
 #include "file_loc.h"
-#if defined(HAVE_CONFIG_H)
-#include "config.h"
-#endif
 
 /* xrdp.c */
 long APP_CC

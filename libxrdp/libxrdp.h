@@ -23,6 +23,9 @@
 #if !defined(LIBXRDP_H)
 #define LIBXRDP_H
 
+#if defined(HAVE_CONFIG_H)
+#include "config.h"
+#endif
 #include "arch.h"
 #include "parse.h"
 #include "xrdp_constants.h"
@@ -33,9 +36,6 @@
 #include "file.h"
 #include "libxrdpinc.h"
 #include "file_loc.h"
-#if defined(HAVE_CONFIG_H)
-#include "config.h"
-#endif
 
 /* tcp */
 struct xrdp_tcp
