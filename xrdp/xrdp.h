@@ -22,7 +22,7 @@
 
 /* include other h files */
 #if defined(HAVE_CONFIG_H)
-#include "config.h"
+#include "config_ac.h"
 #endif
 #include "arch.h"
 #include "parse.h"
