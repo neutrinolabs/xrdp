@@ -7,4 +7,5 @@ SUBDIRS = \
   mc \
   libxrdp \
   xrdp \
-  sesman
+  sesman \
+  keygen

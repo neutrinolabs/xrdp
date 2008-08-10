@@ -29,11 +29,11 @@ AC_CONFIG_FILES([Makefile
                  xrdp/Makefile
                  sesman/Makefile
                  sesman/libscp/Makefile
+                 keygen/Makefile
 ])
 #                 docs/Makefile
 #                 docs/man/Makefile
 #                 fontdump/Makefile
-#                 keygen/Makefile
 #                 sesman/tools/Makefile
 #                 xrdp/cursors/Makefile
 #                 Xserver/hw/rdp/Makefile
