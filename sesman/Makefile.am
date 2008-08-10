@@ -49,4 +49,6 @@ xrdp_sesman_LDADD = \
 xrdp_sessvc_LDADD = \
   $(top_srcdir)/common/libxrdp-common.la
 
-SUBDIRS = libscp
+SUBDIRS = \
+  libscp \
+  tools
