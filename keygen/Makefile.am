@@ -7,4 +7,4 @@ bin_PROGRAMS = \
 xrdp_keygen_SOURCES = keygen.c
 
 xrdp_keygen_LDADD = \
-  $(top_srcdir)/common/libxrdp-common.la
+  $(top_srcdir)/common/libcommon.la

@@ -16,8 +16,8 @@ xrdp_sestest_SOURCES = \
   sestest.c
 
 xrdp_sesrun_LDADD = \
-  $(top_srcdir)/common/libxrdp-common.la
+  $(top_srcdir)/common/libcommon.la
 
 xrdp_sestest_LDADD = \
-  $(top_srcdir)/common/libxrdp-common.la \
+  $(top_srcdir)/common/libcommon.la \
   $(top_srcdir)/sesman/libscp/libscp.la
