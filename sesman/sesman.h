@@ -28,6 +28,9 @@
 #ifndef SESMAN_H
 #define SESMAN_H
 
+#if defined(HAVE_CONFIG_H)
+#include "config_ac.h"
+#endif
 #include "d3des.h"
 #include "arch.h"
 #include "parse.h"
