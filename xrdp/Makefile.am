@@ -2,7 +2,7 @@ INCLUDES = \
   -I$(top_srcdir)/common \
   -I$(top_srcdir)/libxrdp
 
-bin_PROGRAMS = \
+sbin_PROGRAMS = \
   xrdp
 
 xrdp_SOURCES = \
@@ -21,5 +21,18 @@ xrdp_SOURCES = \
   xrdp_wm.c
 
 xrdp_LDADD = \
-  $(top_srcdir)/common/libxrdp-common.la \
+  $(top_srcdir)/common/libcommon.la \
   $(top_srcdir)/libxrdp/libxrdp.la
+
+xrdpsysconfdir=$(sysconfdir)/xrdp
+
+xrdpsysconf_DATA = \
+  xrdp.ini \
+  rsakeys.ini
+
+pkgdata_DATA = \
+  ad256.bmp \
+  xrdp256.bmp \
+  sans-10.fv1 \
+  cursor0.cur \
+  cursor1.cur
