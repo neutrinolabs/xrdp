@@ -1,7 +1,7 @@
 lib_LTLIBRARIES = \
-  libxrdp-common.la
+  libcommon.la
 
-libxrdp_common_la_SOURCES = \
+libcommon_la_SOURCES = \
   d3des.c \
   file.c \
   list.c \
@@ -10,9 +10,9 @@ libxrdp_common_la_SOURCES = \
   ssl_calls.c \
   thread_calls.c
 
-libxrdp_common_la_LIBADD = \
+libcommon_la_LIBADD = \
   -lcrypto \
   -lpthread
 
-libxrdp_common_la_LDFLAGS = \
-  -version-info 5:0:5
+libcommon_la_LDFLAGS = \
+  -version-info @XRDP_VERSION_INFO@
