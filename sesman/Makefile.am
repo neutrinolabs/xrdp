@@ -20,7 +20,7 @@ endif
 endif
 endif
 
-bin_PROGRAMS = \
+sbin_PROGRAMS = \
   xrdp-sesman \
   xrdp-sessvc
 
@@ -42,12 +42,18 @@ xrdp_sessvc_SOURCES = \
   sessvc.c
 
 xrdp_sesman_LDADD = \
-  $(top_srcdir)/common/libxrdp-common.la \
+  $(top_srcdir)/common/libcommon.la \
   $(top_srcdir)/sesman/libscp/libscp.la \
   $(AUTH_LIB)
 
 xrdp_sessvc_LDADD = \
-  $(top_srcdir)/common/libxrdp-common.la
+  $(top_srcdir)/common/libcommon.la
+
+sesmansysconfdir=$(sysconfdir)/xrdp
+
+sesmansysconf_DATA = \
+  sesman.ini \
+  startwm.sh
 
 SUBDIRS = \
   libscp \
