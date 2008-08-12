@@ -1,7 +1,5 @@
 INCLUDES = \
-  -I$(top_srcdir)/common \
-  -DXRDP_CFG_FILE=\"/etc/xrdp/xrdp.ini\" \
-  -DXRDP_KEY_FILE=\"/etc/xrdp/rsakeys.ini\"
+  -I$(top_srcdir)/common
 
 lib_LTLIBRARIES = \
   libxrdp.la
@@ -18,7 +16,7 @@ libxrdp_la_SOURCES = \
   xrdp_bitmap_compress.c
 
 libxrdp_la_LIBADD = \
-  $(top_srcdir)/common/libxrdp-common.la
+  $(top_srcdir)/common/libcommon.la
 
 libxrdp_la_LDFLAGS = \
-  -version-info 5:0:5
+  -version-info @XRDP_VERSION_INFO@
