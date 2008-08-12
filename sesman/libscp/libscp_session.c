@@ -259,7 +259,9 @@ int
 scp_session_set_addr(struct SCP_SESSION* s, int type, void* addr)
 {
   struct in_addr ip4;
+#ifdef IN6ADDR_ANY_INIT
   struct in6_addr ip6;
+#endif
   int ret;
 
   switch (type)
@@ -276,6 +278,10 @@ scp_session_set_addr(struct SCP_SESSION* s, int type, void* addr)
       }
       g_memcpy(&(s->ipv4addr), &(ip4.s_addr), 4);
       break;
+    case SCP_ADDRESS_TYPE_IPV4_BIN:
+      g_memcpy(&(s->ipv4addr), addr, 4);
+      break;
+#ifdef IN6ADDR_ANY_INIT
     case SCP_ADDRESS_TYPE_IPV6:
       /* convert from char to 128bit*/
       ret = inet_pton(AF_INET6, addr, &ip6);
@@ -288,12 +294,10 @@ scp_session_set_addr(struct SCP_SESSION* s, int type, void* addr)
       }
       g_memcpy(s->ipv6addr, &(ip6.s6_addr), 16);
       break;
-    case SCP_ADDRESS_TYPE_IPV4_BIN:
-      g_memcpy(&(s->ipv4addr), addr, 4);
-      break;
     case SCP_ADDRESS_TYPE_IPV6_BIN:
       g_memcpy(s->ipv6addr, addr, 16);
       break;
+#endif
     default:
       return 1;
   }
