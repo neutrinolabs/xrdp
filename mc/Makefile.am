@@ -7,7 +7,7 @@ lib_LTLIBRARIES = \
 libmc_la_SOURCES = mc.c
 
 libmc_la_LIBADD = \
-  $(top_srcdir)/common/libxrdp-common.la
+  $(top_srcdir)/common/libcommon.la
 
 libmc_la_LDFLAGS = \
-  -version-info 5:0:5
+  -version-info @XRDP_VERSION_INFO@

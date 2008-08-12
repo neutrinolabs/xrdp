@@ -7,7 +7,7 @@ lib_LTLIBRARIES = \
 libvnc_la_SOURCES = vnc.c
 
 libvnc_la_LIBADD = \
-  $(top_srcdir)/common/libxrdp-common.la
+  $(top_srcdir)/common/libcommon.la
 
 libvnc_la_LDFLAGS = \
-  -version-info 5:0:5
+  -version-info @XRDP_VERSION_INFO@

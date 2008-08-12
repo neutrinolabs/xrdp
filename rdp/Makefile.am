@@ -16,7 +16,7 @@ librdp_la_SOURCES = \
   rdp_tcp.c
 
 librdp_la_LIBADD = \
-  $(top_srcdir)/common/libxrdp-common.la
+  $(top_srcdir)/common/libcommon.la
 
 librdp_la_LDFLAGS = \
-  -version-info 5:0:5
+  -version-info @XRDP_VERSION_INFO@
