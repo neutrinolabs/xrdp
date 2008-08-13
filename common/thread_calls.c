@@ -75,6 +75,18 @@ tc_get_threadid(void)
 }
 
 /*****************************************************************************/
+/* returns boolean */
+int APP_CC
+tc_threadid_equal(tbus tid1, tbus tid2)
+{
+#if defined(_WIN32)
+  return tid1 == tid2;
+#else
+  return pthread_equal((pthread_t)tid1, (pthread_t)tid2);
+#endif
+}
+
+/*****************************************************************************/
 tbus APP_CC
 tc_mutex_create(void)
 {

@@ -32,6 +32,8 @@ int APP_CC
 tc_thread_create(THREAD_RV (THREAD_CC * start_routine)(void*), void* arg);
 tbus APP_CC
 tc_get_threadid(void);
+int APP_CC
+tc_threadid_equal(tbus tid1, tbus tid2);
 tbus APP_CC
 tc_mutex_create(void);
 void APP_CC
