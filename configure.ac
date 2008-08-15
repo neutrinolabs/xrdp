@@ -2,7 +2,6 @@
 
 AC_PREREQ(2.59)
 AC_INIT([xrdp], [0.5.0], [xrdp-devel@lists.sourceforge.net])
-AC_SUBST(XRDP_VERSION_INFO)
 AC_CONFIG_HEADERS([config_ac.h:config-h.in])
 AM_INIT_AUTOMAKE([1.6 foreign])
 AC_PROG_CC
