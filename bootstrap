@@ -21,4 +21,5 @@ then
   exit 1
 fi
 
+touch configure.ac
 autoreconf -fvi
