@@ -8,6 +8,3 @@ libmc_la_SOURCES = mc.c
 
 libmc_la_LIBADD = \
   $(top_srcdir)/common/libcommon.la
-
-libmc_la_LDFLAGS = \
-  -version-info @XRDP_VERSION_INFO@

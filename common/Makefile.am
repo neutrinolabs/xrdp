@@ -13,6 +13,3 @@ libcommon_la_SOURCES = \
 libcommon_la_LIBADD = \
   -lcrypto \
   -lpthread
-
-libcommon_la_LDFLAGS = \
-  -version-info @XRDP_VERSION_INFO@

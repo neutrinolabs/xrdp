@@ -17,6 +17,3 @@ librdp_la_SOURCES = \
 
 librdp_la_LIBADD = \
   $(top_srcdir)/common/libcommon.la
-
-librdp_la_LDFLAGS = \
-  -version-info @XRDP_VERSION_INFO@

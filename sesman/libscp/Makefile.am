@@ -17,6 +17,3 @@ libscp_la_SOURCES = \
 
 libscp_la_LIBADD = \
   $(top_srcdir)/common/libcommon.la
-
-libscp_la_LDFLAGS = \
-  -version-info @XRDP_VERSION_INFO@
