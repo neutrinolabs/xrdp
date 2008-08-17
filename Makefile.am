@@ -9,4 +9,5 @@ SUBDIRS = \
   xrdp \
   sesman \
   keygen \
-  docs
+  docs \
+  instfiles
