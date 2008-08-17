@@ -20,7 +20,9 @@ AC_ARG_ENABLE(pamuserpass, AS_HELP_STRING([--enable-pamuserpass],
               [pamuserpass=true], [pamuserpass=false])
 AM_CONDITIONAL(SESMAN_PAMUSERPASS, [test x$pamuserpass = xtrue])
 libdir="${libdir}/xrdp/";
-if ! test "x${prefix}" = "xNONE" ; then
+if test "x${prefix}" = "xNONE" ; then
+sysconfdir="/etc/";
+else
 AC_DEFINE_UNQUOTED([XRDP_CFG_PATH], ["${prefix}/etc/xrdp"], [xrdp config dir])
 AC_DEFINE_UNQUOTED([XRDP_CFG_FILE], ["${prefix}/etc/xrdp/xrdp.ini"], [xrdp config file])
 AC_DEFINE_UNQUOTED([XRDP_KEY_FILE], ["${prefix}/etc/xrdp/rsakeys.ini"], [xrdp key file])
@@ -45,6 +47,8 @@ AC_CONFIG_FILES([Makefile
                  keygen/Makefile
                  docs/Makefile
                  docs/man/Makefile
+                 instfiles/Makefile
+                 instfiles/pam.d/Makefile
 ])
 #                 fontdump/Makefile
 #                 xrdp/cursors/Makefile
