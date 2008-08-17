@@ -134,7 +134,7 @@ case "$1" in
     xrdp_start
     ;;
   *)
-    echo "Usage: xrdp_control.sh {start|stop|restart|force-reload}"
+    echo "Usage: xrdp.sh {start|stop|restart|force-reload}"
     exit 1
 esac
 
