@@ -36,3 +36,7 @@ pkgdata_DATA = \
   sans-10.fv1 \
   cursor0.cur \
   cursor1.cur
+
+# must be tab below
+install-data-hook:
+	chmod 600 $(DESTDIR)$(sysconfdir)/xrdp/rsakeys.ini
