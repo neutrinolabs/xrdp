@@ -8,4 +8,5 @@ SUBDIRS = \
   libxrdp \
   xrdp \
   sesman \
-  keygen
+  keygen \
+  docs
