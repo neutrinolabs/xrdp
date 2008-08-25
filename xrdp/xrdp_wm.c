@@ -171,6 +171,7 @@ xrdp_wm_pointer(struct xrdp_wm* self, char* data, char* mask, int x, int y)
 }
 
 /*****************************************************************************/
+/* returns error */
 int APP_CC
 xrdp_wm_load_pointer(struct xrdp_wm* self, char* file_name, char* data,
                      char* mask, int* x, int* y)
@@ -185,6 +186,12 @@ xrdp_wm_load_pointer(struct xrdp_wm* self, char* file_name, char* data,
   int palette[16];
   struct stream* fs;
 
+  if (!g_file_exist(file_name))
+  {
+    g_writeln("xrdp_wm_load_pointer: error pointer file [%s] does not exist",
+              file_name);
+    return 1;
+  }
   make_stream(fs);
   init_stream(fs, 8192);
   fd = g_file_open(file_name);
@@ -329,6 +336,7 @@ xrdp_wm_load_static_colors(struct xrdp_wm* self)
 }
 
 /*****************************************************************************/
+/* returns error */
 int APP_CC
 xrdp_wm_load_static_pointers(struct xrdp_wm* self)
 {
@@ -337,11 +345,13 @@ xrdp_wm_load_static_pointers(struct xrdp_wm* self)
 
   DEBUG(("sending cursor"));
   g_snprintf(file_path, 255, "%s/cursor1.cur", XRDP_SHARE_PATH);
+  g_memset(&pointer_item, 0, sizeof(pointer_item));
   xrdp_wm_load_pointer(self, file_path, pointer_item.data,
                        pointer_item.mask, &pointer_item.x, &pointer_item.y);
   xrdp_cache_add_pointer_static(self->cache, &pointer_item, 1);
   DEBUG(("sending cursor"));
   g_snprintf(file_path, 255, "%s/cursor0.cur", XRDP_SHARE_PATH);
+  g_memset(&pointer_item, 0, sizeof(pointer_item));
   xrdp_wm_load_pointer(self, file_path, pointer_item.data,
                        pointer_item.mask, &pointer_item.x, &pointer_item.y);
   xrdp_cache_add_pointer_static(self->cache, &pointer_item, 0);
