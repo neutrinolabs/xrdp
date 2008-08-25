@@ -298,14 +298,19 @@ xrdp_bitmap_get_index(struct xrdp_bitmap* self, int* palette, int color)
 }
 
 /*****************************************************************************/
+/* returns error */
 int APP_CC
 xrdp_bitmap_resize(struct xrdp_bitmap* self, int width, int height)
 {
   int Bpp;
 
-  if (width == self->width && height == self->height)
+  if ((width == self->width) && (height == self->height))
   {
     return 0;
+  }
+  if (self->do_not_free_data)
+  {
+    return 1;
   }
   self->width = width;
   self->height = height;
@@ -316,11 +321,8 @@ xrdp_bitmap_resize(struct xrdp_bitmap* self, int width, int height)
     case 15: Bpp = 2; break;
     case 16: Bpp = 2; break;
   }
-  if (self->data != 0)
-  {
-    g_free(self->data);
-    self->data = (char*)g_malloc(width * height * Bpp, 1);
-  }
+  g_free(self->data);
+  self->data = (char*)g_malloc(width * height * Bpp, 0);
   self->line_size = width * Bpp;
   return 0;
 }
@@ -344,6 +346,12 @@ xrdp_bitmap_load(struct xrdp_bitmap* self, const char* filename, int* palette)
   struct xrdp_bmp_header header;
   struct stream* s;
 
+  if (!g_file_exist(filename))
+  {
+    g_writeln("xrdp_bitmap_load: error bitmap file [%s] does not exist",
+              filename);
+    return 1;
+  }
   s = 0;
   fd = g_file_open(filename);
   if (fd != -1)
