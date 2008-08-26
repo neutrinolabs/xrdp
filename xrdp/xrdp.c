@@ -51,7 +51,7 @@ g_xrdp_sync(long (*sync_func)(long param1, long param2), long sync_param1,
   long sync_result;
   int sync_command;
 
-  if (tc_get_threadid() == g_threadid)
+  if (tc_threadid_equal(tc_get_threadid(), g_threadid))
   {
     /* this is the main thread, call the function directly */
     sync_result = sync_func(sync_param1, sync_param2);
@@ -87,12 +87,8 @@ xrdp_shutdown(int sig)
   tbus threadid;
 
   threadid = tc_get_threadid();
-  if (threadid != g_threadid)
-  {
-    return;
-  }
   g_writeln("shutting down");
-  g_writeln("signal %d threadid $%8.8x", sig, threadid);
+  g_writeln("signal %d threadid %p", sig, threadid);
   if (!g_is_wait_obj_set(g_term_event))
   {
     g_set_wait_obj(g_term_event);
