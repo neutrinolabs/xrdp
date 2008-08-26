@@ -79,6 +79,12 @@ xrdp_font_create(struct xrdp_wm* wm)
 
   DEBUG(("in xrdp_font_create"));
   g_snprintf(file_path, 255, "%s/%s", XRDP_SHARE_PATH, DEFAULT_FONT_NAME);
+  if (!g_file_exist(file_path))
+  {
+    g_writeln("xrdp_font_create: error font file [%s] does not exist",
+              file_path);
+    return 0;
+  }
   file_size = g_file_get_size(file_path);
   if (file_size < 1)
   {

@@ -184,6 +184,10 @@ xrdp_painter_text_width(struct xrdp_painter* self, char* text)
   twchar* wstr;
 
   xrdp_painter_font_needed(self);
+  if (self->font == 0)
+  {
+    return 0;
+  }
   if (text == 0)
   {
     return 0;
@@ -212,6 +216,10 @@ xrdp_painter_text_height(struct xrdp_painter* self, char* text)
   twchar* wstr;
 
   xrdp_painter_font_needed(self);
+  if (self->font == 0)
+  {
+    return 0;
+  }
   if (text == 0)
   {
     return 0;
@@ -397,10 +405,14 @@ xrdp_painter_draw_text(struct xrdp_painter* self,
   {
     return 0;
   }
+  xrdp_painter_font_needed(self);
+  if (self->font == 0)
+  {
+    return 0;
+  }
   /* convert to wide char */
   wstr = (twchar*)g_malloc((len + 2) * sizeof(twchar), 0);
   g_mbstowcs(wstr, text, len + 1);
-  xrdp_painter_font_needed(self);
   font = self->font;
   f = 0;
   k = 0;
