@@ -196,10 +196,10 @@ xrdp_orders_last_bounds(struct xrdp_orders* self, struct xrdp_rect* rect)
   {
     return 0;
   }
-  if (rect->left == self->orders_state.clip_left &&
-      rect->top == self->orders_state.clip_top &&
-      rect->right == self->orders_state.clip_right &&
-      rect->bottom == self->orders_state.clip_bottom)
+  if ((rect->left == self->orders_state.clip_left) &&
+      (rect->top == self->orders_state.clip_top) &&
+      (rect->right == self->orders_state.clip_right) &&
+      (rect->bottom == self->orders_state.clip_bottom))
   {
     return 1;
   }
@@ -1003,6 +1003,8 @@ xrdp_orders_line(struct xrdp_orders* self, int mix_mode,
   char* order_flags_ptr;
   struct xrdp_pen blank_pen;
 
+  /* if mix mode or rop are out of range, mstsc build 6000+ will parse the orders
+     wrong */
   if ((mix_mode < 1) || (mix_mode > 2)) /* TRANSPARENT(1) or OPAQUE(2) */
   {
     mix_mode = 1;
