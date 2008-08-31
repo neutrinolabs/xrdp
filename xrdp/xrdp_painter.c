@@ -685,7 +685,7 @@ xrdp_painter_line(struct xrdp_painter* self,
   {
     if (rect_intersect(&rect, &clip_rect, &draw_rect))
     {
-      libxrdp_orders_line(self->session, 0, x1, y1, x2, y2,
+      libxrdp_orders_line(self->session, 1, x1, y1, x2, y2,
                           rop, self->bg_color,
                           &self->pen, &draw_rect);
     }
