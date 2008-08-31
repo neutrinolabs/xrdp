@@ -173,7 +173,7 @@ xrdp_orders_check(struct xrdp_orders* self, int max_size)
       return 0;
     }
   }
-  size = self->out_s->p - self->order_count_ptr;
+  size = (int)(self->out_s->p - self->order_count_ptr);
   if ((size < 0) || (size > max_packet_size))
   {
     return 1;
@@ -1003,6 +1003,14 @@ xrdp_orders_line(struct xrdp_orders* self, int mix_mode,
   char* order_flags_ptr;
   struct xrdp_pen blank_pen;
 
+  if ((mix_mode < 1) || (mix_mode > 2)) /* TRANSPARENT(1) or OPAQUE(2) */
+  {
+    mix_mode = 1;
+  }
+  if ((rop < 1) || (rop > 0x10))
+  {
+    rop = 0x0d; /* R2_COPYPEN */
+  }
   xrdp_orders_check(self, 32);
   self->order_count++;
   order_flags = RDP_ORDER_STANDARD;
@@ -1658,7 +1666,7 @@ xrdp_orders_send_bitmap(struct xrdp_orders* self,
 height(%d)", lines_sending, height);
     return 1;
   }
-  bufsize = s->p - p;
+  bufsize = (int)(s->p - p);
   Bpp = (bpp + 7) / 8;
   xrdp_orders_check(self, bufsize + 16);
   self->order_count++;
@@ -1862,7 +1870,7 @@ xrdp_orders_send_bitmap2(struct xrdp_orders* self,
 height(%d)", lines_sending, height);
     return 1;
   }
-  bufsize = s->p - p;
+  bufsize = (int)(s->p - p);
   Bpp = (bpp + 7) / 8;
   xrdp_orders_check(self, bufsize + 14);
   self->order_count++;
