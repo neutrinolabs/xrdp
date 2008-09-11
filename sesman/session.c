@@ -412,8 +412,8 @@ for user %s denied", username);
     g_strncpy(temp->item->name, username, 255);
 
     ltime = g_time1();
-    gmtime_r(&ltime, &stime);
-    temp->item->connect_time.year = (tui16)stime.tm_year;
+    localtime_r(&ltime, &stime);
+    temp->item->connect_time.year = (tui16)(stime.tm_year + 1900);
     temp->item->connect_time.month = (tui8)stime.tm_mon;
     temp->item->connect_time.day = (tui8)stime.tm_mday;
     temp->item->connect_time.hour = (tui8)stime.tm_hour;
@@ -436,43 +436,6 @@ for user %s denied", username);
   }
   return display;
 }
-
-/*
-SESMAN_SESSION_TYPE_XRDP  1
-SESMAN_SESSION_TYPE_XVNC  2
-
-SESMAN_SESSION_STATUS_ACTIVE        1
-SESMAN_SESSION_STATUS_IDLE          2
-SESMAN_SESSION_STATUS_DISCONNECTED  3
-
-struct session_item
-{
-  char name[256];
-  int pid;
-  int display;
-  int width;
-  int height;
-  int bpp;
-  long data;
-
-  / *
-  unsigned char status;
-  unsigned char type;
-  * /
-
-  / *
-  time_t connect_time;
-  time_t disconnect_time;
-  time_t idle_time;
-  * /
-};
-
-struct session_chain
-{
-  struct session_chain* next;
-  struct session_item* item;
-};
-*/
 
 /******************************************************************************/
 int DEFAULT_CC
@@ -576,6 +539,14 @@ struct session_item* DEFAULT_CC
 session_get_bypid(int pid)
 {
   struct session_chain* tmp;
+  struct session_item* dummy;
+
+  dummy = g_malloc(sizeof(struct session_item), 1);
+  if (0 == dummy)
+  {
+    log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "internal error", pid);
+    return 0;
+  }
 
   /*THREAD-FIX require chain lock */
   lock_chain_acquire();
@@ -595,8 +566,10 @@ session_get_bypid(int pid)
     if (tmp->item->pid == pid)
     {
       /*THREAD-FIX release chain lock */
+      g_memcpy(dummy, tmp->item, sizeof(struct session_item));
       lock_chain_release();
-      return tmp->item;
+      /*return tmp->item;*/
+      return dummy;
     }
 
     /* go on */
@@ -610,7 +583,7 @@ session_get_bypid(int pid)
 
 /******************************************************************************/
 struct SCP_DISCONNECTED_SESSION*
-session_get_byuser(char* user, int* cnt)
+session_get_byuser(char* user, int* cnt, unsigned char flags)
 {
   struct session_chain* tmp;
   struct SCP_DISCONNECTED_SESSION* sess;
@@ -625,10 +598,14 @@ session_get_byuser(char* user, int* cnt)
   tmp = g_sessions;
   while (tmp != 0)
   {
-#warning FIXME: we should get only disconnected sessions!
-    if (!g_strncasecmp(user, tmp->item->name, 256))
+    LOG_DBG(&(g_cfg->log), "user: %s", user);
+    if ((NULL == user) || (!g_strncasecmp(user, tmp->item->name, 256)))
     {
-      count++;
+      LOG_DBG(&(g_cfg->log), "session_get_byuser: status=%d, flags=%d, result=%d", (tmp->item->status), flags, ((tmp->item->status) & flags));
+      if ((tmp->item->status) & flags)
+      {
+        count++;
+      }
     }
 
     /* go on */
@@ -658,39 +635,42 @@ session_get_byuser(char* user, int* cnt)
   while (tmp != 0)
   {
 #warning FIXME: we should get only disconnected sessions!
-    if (!g_strncasecmp(user, tmp->item->name, 256))
+    if ((NULL == user) || (!g_strncasecmp(user, tmp->item->name, 256)))
     {
-      (sess[index]).SID=tmp->item->pid;
-      (sess[index]).type=tmp->item->type;
-      (sess[index]).height=tmp->item->height;
-      (sess[index]).width=tmp->item->width;
-      (sess[index]).bpp=tmp->item->bpp;
+      if ((tmp->item->status) & flags)
+      {
+        (sess[index]).SID=tmp->item->pid;
+        (sess[index]).type=tmp->item->type;
+        (sess[index]).height=tmp->item->height;
+        (sess[index]).width=tmp->item->width;
+        (sess[index]).bpp=tmp->item->bpp;
 #warning FIXME: setting idle times and such
-      /*(sess[index]).connect_time.year = tmp->item->connect_time.year;
-      (sess[index]).connect_time.month = tmp->item->connect_time.month;
-      (sess[index]).connect_time.day = tmp->item->connect_time.day;
-      (sess[index]).connect_time.hour = tmp->item->connect_time.hour;
-      (sess[index]).connect_time.minute = tmp->item->connect_time.minute;
-      (sess[index]).disconnect_time.year = tmp->item->disconnect_time.year;
-      (sess[index]).disconnect_time.month = tmp->item->disconnect_time.month;
-      (sess[index]).disconnect_time.day = tmp->item->disconnect_time.day;
-      (sess[index]).disconnect_time.hour = tmp->item->disconnect_time.hour;
-      (sess[index]).disconnect_time.minute = tmp->item->disconnect_time.minute;
-      (sess[index]).idle_time.year = tmp->item->idle_time.year;
-      (sess[index]).idle_time.month = tmp->item->idle_time.month;
-      (sess[index]).idle_time.day = tmp->item->idle_time.day;
-      (sess[index]).idle_time.hour = tmp->item->idle_time.hour;
-      (sess[index]).idle_time.minute = tmp->item->idle_time.minute;*/
-      (sess[index]).conn_year = tmp->item->connect_time.year;
-      (sess[index]).conn_month = tmp->item->connect_time.month;
-      (sess[index]).conn_day = tmp->item->connect_time.day;
-      (sess[index]).conn_hour = tmp->item->connect_time.hour;
-      (sess[index]).conn_minute = tmp->item->connect_time.minute;
-      (sess[index]).idle_days = tmp->item->idle_time.day;
-      (sess[index]).idle_hours = tmp->item->idle_time.hour;
-      (sess[index]).idle_minutes = tmp->item->idle_time.minute;
+        /*(sess[index]).connect_time.year = tmp->item->connect_time.year;
+        (sess[index]).connect_time.month = tmp->item->connect_time.month;
+        (sess[index]).connect_time.day = tmp->item->connect_time.day;
+        (sess[index]).connect_time.hour = tmp->item->connect_time.hour;
+        (sess[index]).connect_time.minute = tmp->item->connect_time.minute;
+        (sess[index]).disconnect_time.year = tmp->item->disconnect_time.year;
+        (sess[index]).disconnect_time.month = tmp->item->disconnect_time.month;
+        (sess[index]).disconnect_time.day = tmp->item->disconnect_time.day;
+        (sess[index]).disconnect_time.hour = tmp->item->disconnect_time.hour;
+        (sess[index]).disconnect_time.minute = tmp->item->disconnect_time.minute;
+        (sess[index]).idle_time.year = tmp->item->idle_time.year;
+        (sess[index]).idle_time.month = tmp->item->idle_time.month;
+        (sess[index]).idle_time.day = tmp->item->idle_time.day;
+        (sess[index]).idle_time.hour = tmp->item->idle_time.hour;
+        (sess[index]).idle_time.minute = tmp->item->idle_time.minute;*/
+        (sess[index]).conn_year = tmp->item->connect_time.year;
+        (sess[index]).conn_month = tmp->item->connect_time.month;
+        (sess[index]).conn_day = tmp->item->connect_time.day;
+        (sess[index]).conn_hour = tmp->item->connect_time.hour;
+        (sess[index]).conn_minute = tmp->item->connect_time.minute;
+        (sess[index]).idle_days = tmp->item->idle_time.day;
+        (sess[index]).idle_hours = tmp->item->idle_time.hour;
+        (sess[index]).idle_minutes = tmp->item->idle_time.minute;
 
-      index++;
+        index++;
+      }
     }
 
     /* go on */

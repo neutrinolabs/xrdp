@@ -28,6 +28,7 @@ xrdp_sesman_SOURCES = \
   scp.c \
   scp_v0.c \
   scp_v1.c \
+  scp_v1_mng.c \
   sesman.c \
   session.c \
   sig.c \

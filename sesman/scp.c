@@ -74,7 +74,7 @@ scp_process_start(void* sck)
       /* starting a management session */
       log_message(&(g_cfg.log), LOG_LEVEL_WARNING,
         "starting a sesman management session...");
-//      scp_v1s_mng_process(&scon, sdata);
+      scp_v1_mng_process(&scon, sdata);
       break;
     case SCP_SERVER_STATE_VERSION_ERR:
       /* an unknown scp version was requested, so we shut down the */

@@ -74,7 +74,7 @@ scp_v1_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
       default:
         /* we check the other errors */
         parseCommonStates(e, "scp_v1s_list_sessions()");
-        free_session(s);
+        scp_session_destroy(s);
         return;
         //break;
     }
@@ -85,7 +85,7 @@ scp_v1_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
     scp_v1s_deny_connection(c, "Login failed");
     log_message(&(g_cfg->log), LOG_LEVEL_INFO,
       "Login failed for user %s. Connection terminated", s->username);
-    free_session(s);
+    scp_session_destroy(s);
     return;
   }
 
@@ -95,14 +95,14 @@ scp_v1_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
     scp_v1s_deny_connection(c, "Access to Terminal Server not allowed.");
     log_message(&(g_cfg->log), LOG_LEVEL_INFO,
       "User %s not allowed on TS. Connection terminated", s->username);
-    free_session(s);
+    scp_session_destroy(s);
     return;
   }
 
   //check if we need password change
 
   /* list disconnected sessions */
-  slist = session_get_byuser(s->username, &scount);
+  slist = session_get_byuser(s->username, &scount, SESMAN_SESSION_STATUS_DISCONNECTED);
 
   if (scount == 0)
   {
@@ -135,8 +135,6 @@ scp_v1_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
   }
   else
   {
-#warning FIXME session_get_by*() should return a malloc()ated struct
-#warning FIXME or at least lock the chain
     /* one or more disconnected sessions - listing */
     e = scp_v1s_list_sessions(c, scount, slist, &sid);
 
@@ -162,6 +160,7 @@ scp_v1_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
           e=scp_v1s_reconnect_session(c, display);
           log_message(&(g_cfg->log), LOG_LEVEL_INFO, "User %s reconnected to session %d on port %d", \
                       s->username, sitem->pid, display);
+          g_free(sitem);
         }
         break;
       default:
@@ -179,7 +178,7 @@ scp_v1_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
   }
 
   /* cleanup */
-  free_session(s);
+  scp_session_destroy(s);
   auth_end(data);
 }
 

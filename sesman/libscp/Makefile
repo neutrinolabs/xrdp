@@ -4,7 +4,7 @@ LIBSCPOBJ = libscp_vX.o libscp_v0.o \
 	    libscp_init.o libscp_lock.o libscp_tcp.o \
 	    libscp_session.o libscp_connection.o \
 	    os_calls.o \
-#	    libscp_v1s_mng.o libscp_v1c_mng.o
+	    libscp_v1s_mng.o libscp_v1c_mng.o
 
 CFGDIR = /etc/xrdp
 PIDDIR = /var/run

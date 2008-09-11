@@ -25,8 +25,7 @@ LDFLAGS = -L/usr/gnu/lib -L/usr/lib/nptl -L../libscp -lpthread -ldl -lscp -Wl,-r
 C_OS_FLAGS = $(CFLAGS) -c -g
 CC = gcc
 
-all: xrdp-sestest xrdp-sesrun 
-#	xrdp-sesadmin
+all: xrdp-sestest xrdp-sesrun xrdp-sesadmin
 
 xrdp-sestest: $(SESTESTOBJ)
 	$(CC) $(LDFLAGS) -o xrdp-sestest $(SESTESTOBJ)

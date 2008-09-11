@@ -56,7 +56,7 @@
 
 #define SCP_SERVER_MAX_LIST_SIZE 100
 
-#define free_session(s) {g_free((s)->username); g_free((s)->password); g_free((s)->hostname); g_free(s);}
+#include "libscp_types_mng.h"
 
 struct SCP_CONNECTION
 {
@@ -80,8 +80,9 @@ struct SCP_SESSION
   tui8  addr_type;
   tui32 ipv4addr;
   tui8  ipv6addr[16];
-  tui16 display;
+  SCP_DISPLAY display;
   char* errstr;
+  struct SCP_MNG_DATA* mng;
 };
 
 struct SCP_DISCONNECTED_SESSION
@@ -135,6 +136,8 @@ enum SCP_SERVER_STATES_E
   SCP_SERVER_STATE_SELECTION_CANCEL,
   /*SCP_SERVER_STATE_FORCE_NEW,*/
   SCP_SERVER_STATE_START_MANAGE,
+  SCP_SERVER_STATE_MNG_LISTREQ,
+  SCP_SERVER_STATE_MNG_ACTION,
   SCP_SERVER_STATE_END
 };
 

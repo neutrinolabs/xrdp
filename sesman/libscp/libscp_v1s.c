@@ -87,7 +87,8 @@ enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION* c, struct SCP_SES
   if (cmdset == SCP_COMMAND_SET_MANAGE)
   {
     log_message(s_log, LOG_LEVEL_DEBUG, "[v1s:%d] requested management connection", __LINE__);
-    return SCP_SERVER_STATE_START_MANAGE;
+    /* should return SCP_SERVER_STATE_START_MANAGE */
+    return scp_v1s_mng_accept(c, s);
   }
 
   /* if we started with resource sharing... */
@@ -372,7 +373,23 @@ scp_v1s_connect_new_session(struct SCP_CONNECTION* c, SCP_DISPLAY d)
 enum SCP_SERVER_STATES_E
 scp_v1s_connection_error(struct SCP_CONNECTION* c, char* error)
 {
-  return SCP_SERVER_STATE_INTERNAL_ERR;
+  tui16 len;
+
+  len = g_strlen(error);
+  init_stream(c->out_s,c->out_s->size);
+
+  out_uint32_be(c->out_s, 1);
+  /* packet size: 4 + 4 + 2 + 2 + len */
+  /* version + size + cmdset + cmd */
+  out_uint32_be(c->out_s, (12 + len));
+  out_uint16_be(c->out_s, SCP_COMMAND_SET_DEFAULT);
+  out_uint16_be(c->out_s, SCP_CMD_CONN_ERROR);
+
+  if (0 != scp_tcp_force_send(c->in_sck, c->out_s->data, (12 + len)))
+  {
+    return SCP_SERVER_STATE_NETWORK_ERR;
+  }
+
   return SCP_SERVER_STATE_END;
 }
 

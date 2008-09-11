@@ -50,6 +50,7 @@ scp_session_create()
   s->password = 0;
   s->hostname = 0;
   s->errstr = 0;
+  s->mng = 0;
   s->locale[0]='\0';
 
   return s;
@@ -69,6 +70,12 @@ scp_session_set_type(struct SCP_SESSION* s, tui8 type)
       break;
     case SCP_SESSION_TYPE_MANAGE:
       s->type = SCP_SESSION_TYPE_MANAGE;
+      s->mng = g_malloc(sizeof(struct SCP_MNG_DATA),1);
+      if (NULL == s->mng)
+      {
+        log_message(s_log, LOG_LEVEL_ERROR, "[session:%d] set_type: internal error", __LINE__);
+        return 1;
+      }
       break;
     default:
       log_message(s_log, LOG_LEVEL_WARNING, "[session:%d] set_type: unknown type", __LINE__);
@@ -311,25 +318,31 @@ scp_session_destroy(struct SCP_SESSION* s)
   if (s->username)
   {
     g_free(s->username);
-    s->username=0;
+    s->username = 0;
   }
 
   if (s->password)
   {
     g_free(s->password);
-    s->password=0;
+    s->password = 0;
   }
 
   if (s->hostname)
   {
     g_free(s->hostname);
-    s->hostname=0;
+    s->hostname = 0;
   }
 
   if (s->errstr)
   {
     g_free(s->errstr);
-    s->errstr=0;
+    s->errstr = 0;
+  }
+
+  if (s->mng)
+  {
+    g_free(s->mng);
+    s->mng = 0;
   }
 
   g_free(s);

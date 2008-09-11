@@ -19,28 +19,30 @@
 
 /**
  *
- * @file scp.h
- * @brief scp (sesman control protocol) common definitions
+ * @file libscp_types_mng.h
+ * @brief libscp data types definitions
  * @author Simone Fedele
  *
  */
 
-#ifndef SCP_H
-#define SCP_H
+#ifndef LIBSCP_TYPES_MNG_H
+#define LIBSCP_TYPES_MNG_H
 
-#include "scp_v0.h"
-#include "scp_v1.h"
-#include "scp_v1_mng.h"
+#include "os_calls.h"
+#include "parse.h"
+#include "arch.h"
+#include "log.h"
 
-/**
- *
- * @brief Starts a an scp protocol thread.
- *        Starts a an scp protocol thread.
- *        But does only version control....
- * @param socket the connection socket
- *
- */
-void* DEFAULT_CC
-scp_process_start(void* sck);
+enum SCP_MNG_COMMAND
+{
+  SCP_MNG_CMD_KILL,
+  SCP_MNG_CMD_DISCONNECT
+};
+
+struct SCP_MNG_DATA
+{
+  enum SCP_MNG_COMMAND cmd;
+  SCP_SID sid;
+};
 
 #endif

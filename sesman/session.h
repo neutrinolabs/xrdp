@@ -34,12 +34,13 @@
 #define SESMAN_SESSION_TYPE_XRDP  1
 #define SESMAN_SESSION_TYPE_XVNC  2
 
-#define SESMAN_SESSION_STATUS_ACTIVE        1
-#define SESMAN_SESSION_STATUS_IDLE          2
-#define SESMAN_SESSION_STATUS_DISCONNECTED  3
+#define SESMAN_SESSION_STATUS_ACTIVE        0x01
+#define SESMAN_SESSION_STATUS_IDLE          0x02
+#define SESMAN_SESSION_STATUS_DISCONNECTED  0x04
 /* future expansion
-#define SESMAN_SESSION_STATUS_REMCONTROL    4
+#define SESMAN_SESSION_STATUS_REMCONTROL    0x08
 */
+#define SESMAN_SESSION_STATUS_ALL           0xFF
 
 #define SESMAN_SESSION_KILL_OK        0
 #define SESMAN_SESSION_KILL_NULLITEM  1
@@ -141,7 +142,7 @@ session_get_bypid(int pid);
  *
  */
 struct SCP_DISCONNECTED_SESSION*
-session_get_byuser(char* user, int* cnt);
+session_get_byuser(char* user, int* cnt, unsigned char flags);
 
 #endif
 

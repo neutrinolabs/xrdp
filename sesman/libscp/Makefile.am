@@ -13,6 +13,8 @@ libscp_la_SOURCES = \
   libscp_v0.c \
   libscp_v1c.c \
   libscp_v1s.c \
+  libscp_v1c_mng.c \
+  libscp_v1s_mng.c \
   libscp_vX.c
 
 libscp_la_LIBADD = \

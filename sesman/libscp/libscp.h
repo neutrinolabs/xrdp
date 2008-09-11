@@ -22,7 +22,7 @@
  * @file libscp.h
  * @brief libscp main header
  * @author Simone Fedele
- * 
+ *
  */
 
 #ifndef LIBSCP_H
@@ -33,6 +33,7 @@
 #endif
 
 #include "libscp_types.h"
+#include "libscp_commands.h"
 
 #include "libscp_connection.h"
 #include "libscp_session.h"
@@ -44,6 +45,7 @@
 #include "libscp_v0.h"
 #include "libscp_v1s.h"
 #include "libscp_v1c.h"
-#include "file_loc.h"
+#include "libscp_v1s_mng.h"
+#include "libscp_v1c_mng.h"
 
 #endif
