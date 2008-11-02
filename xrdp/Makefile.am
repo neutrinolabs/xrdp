@@ -30,7 +30,9 @@ xrdpsysconf_DATA = \
   xrdp.ini \
   rsakeys.ini
 
-pkgdata_DATA = \
+xrdppkgdatadir=$(datadir)/xrdp
+
+xrdppkgdata_DATA = \
   ad256.bmp \
   xrdp256.bmp \
   sans-10.fv1 \
