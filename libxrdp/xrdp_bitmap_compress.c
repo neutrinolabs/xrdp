@@ -948,7 +948,7 @@ xrdp_bitmap_compress(char* in_data, int width, int height,
       OUT_COPY_COUNT1(count, s, temp_s);
     }
   }
-  else if (bpp == 16)
+  else if ((bpp == 15) || (bpp == 16))
   {
     mix = 0xffff;
     out_count = end * 2;
