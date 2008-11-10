@@ -198,8 +198,6 @@ void APP_CC
 g_signal(int sig_num, void (*func)(int));
 void APP_CC
 g_signal_child_stop(void (*func)(int));
-void APP_CC
-g_unset_signals(void);
 int APP_CC
 g_fork(void);
 int APP_CC

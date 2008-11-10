@@ -1733,20 +1733,6 @@ g_signal_child_stop(void (*func)(int))
 
 /*****************************************************************************/
 /* does not work in win32 */
-void APP_CC
-g_unset_signals(void)
-{
-#if defined(_WIN32)
-#else
-  sigset_t mask;
-
-  sigemptyset(&mask);
-  sigprocmask(SIG_SETMASK, &mask, NULL);
-#endif
-}
-
-/*****************************************************************************/
-/* does not work in win32 */
 int APP_CC
 g_fork(void)
 {

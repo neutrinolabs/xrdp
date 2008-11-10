@@ -245,7 +245,6 @@ for user %s denied", username);
   }
   else if (pid == 0) /* child sesman */
   {
-    g_unset_signals();
     auth_start_session(data, display);
     g_sprintf(geometry, "%dx%d", width, height);
     g_sprintf(depth, "%d", bpp);
