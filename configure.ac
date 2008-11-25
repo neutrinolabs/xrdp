@@ -44,6 +44,7 @@ AC_CONFIG_FILES([Makefile
                  sesman/Makefile
                  sesman/libscp/Makefile
                  sesman/tools/Makefile
+                 sesman/sessvc/Makefile
                  keygen/Makefile
                  docs/Makefile
                  docs/man/Makefile
