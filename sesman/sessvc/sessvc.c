@@ -56,13 +56,12 @@ main(int argc, char** argv)
   g_signal(9, signal_handler);   /* SIGKILL */
   g_signal(15, signal_handler);  /* SIGTERM */
   g_signal(17, signal_handler);  /* SIGCHLD */
- 
+
   g_printf("\n[sessvc] Waiting for X (pid %d) and WM (pid %d)\n", x_pid, wm_pid);
-  
+
   ret = g_waitpid(wm_pid);
   g_sigterm(x_pid);
 
   g_printf("\n[sessvc] WM is dead (waitpid said %d, errno is %d). exiting...\n", ret, errno);
   return 0;
 }
-

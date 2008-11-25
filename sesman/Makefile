@@ -4,8 +4,6 @@ SESMANOBJ = sesman.o config.o sig.o session.o env.o \
             os_calls.o d3des.o list.o file.o log.o access.o \
             scp.o scp_v0.o scp_v1.o scp_v1_mng.o thread.o lock.o
 
-SESSVCOBJ = sessvc.o os_calls.o log.o
-
 CFGDIR = /etc/xrdp
 PIDDIR = /var/run
 LIBDIR = /usr/local/lib/xrdp
@@ -19,13 +17,13 @@ LDFLAGS = -L/usr/gnu/lib -L/usr/lib/nptl -L./libscp -Wl,-rpath,$(LIBDIR) -lpthre
 C_OS_FLAGS = $(CFLAGS) -c
 CC = gcc
 
-all: libscp_ pam_base xrdp-sessvc tools_
+all: libscp_ pam_base xrdp-sessvc_ tools_
 
-nopam: libscp_ no_pam_base xrdp-sessvc tools_
+nopam: libscp_ no_pam_base xrdp-sessvc_ tools_
 
-pamuserpass: libscp_ pam_userpass_base xrdp-sessvc tools
+pamuserpass: libscp_ pam_userpass_base xrdp-sessvc_ tools
 
-kerberos: libscp_ kerberos_base xrdp-sessvc tools
+kerberos: libscp_ kerberos_base xrdp-sessvc_ tools
 
 pam_base: $(SESMANOBJ) verify_user_pam.o
 	$(CC) $(LDFLAGS) -o xrdp-sesman $(SESMANOBJ) verify_user_pam.o -lpam
@@ -40,8 +38,8 @@ pam_userpass_base: $(SESMANOBJ) verify_user_pam_userpass.o
 kerberos_base: $(SESMANOBJ) verify_user_kerberos.o
 	$(CC) $(LDFLAGS) -o xrdp-sesman $(SESMANOBJ) verify_user_kerberos.o -lkrb5
 
-xrdp-sessvc: $(SESSVCOBJ)
-	$(CC) $(LDFLAGS) -o xrdp-sessvc $(SESSVCOBJ)
+xrdp-sessvc_:
+	make -C sessvc
 
 tools_:
 	make -C tools
@@ -50,17 +48,18 @@ libscp_:
 	make -C libscp
 
 clean:
-	rm -f $(SESMANOBJ) verify_user.o verify_user_pam.o verify_user_pam_userpass.o verify_user_kerberos.o xrdp-sesman sessvc.o xrdp-sessvc
+	rm -f $(SESMANOBJ) verify_user.o verify_user_pam.o verify_user_pam_userpass.o verify_user_kerberos.o xrdp-sesman
 	make -C tools clean
 	make -C libscp clean
+	make -C sessvc clean
 
 install:
 	install xrdp-sesman $(SBINDIR)/xrdp-sesman
 	install startwm.sh $(CFGDIR)/startwm.sh
 	install sesman.ini $(CFGDIR)/sesman.ini
-	install xrdp-sessvc $(SBINDIR)/xrdp-sessvc
 	make -C tools install
 	make -C libscp install
+	make -C sessvc install
 
 os_calls.o: ../common/os_calls.c
 	$(CC) $(C_OS_FLAGS) ../common/os_calls.c

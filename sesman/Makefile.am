@@ -21,8 +21,7 @@ endif
 endif
 
 sbin_PROGRAMS = \
-  xrdp-sesman \
-  xrdp-sessvc
+  xrdp-sesman
 
 xrdp_sesman_SOURCES = \
   scp.c \
@@ -39,16 +38,10 @@ xrdp_sesman_SOURCES = \
   env.c \
   $(AUTH_C)
 
-xrdp_sessvc_SOURCES = \
-  sessvc.c
-
 xrdp_sesman_LDADD = \
   $(top_srcdir)/common/libcommon.la \
   $(top_srcdir)/sesman/libscp/libscp.la \
   $(AUTH_LIB)
-
-xrdp_sessvc_LDADD = \
-  $(top_srcdir)/common/libcommon.la
 
 sesmansysconfdir=$(sysconfdir)/xrdp
 
@@ -58,7 +51,8 @@ sesmansysconf_DATA = \
 
 SUBDIRS = \
   libscp \
-  tools
+  tools \
+  sessvc
 
 # must be tab below
 install-data-hook:
