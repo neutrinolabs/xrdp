@@ -30,15 +30,17 @@ struct xrdp_process* APP_CC
 xrdp_process_create(struct xrdp_listen* owner, tbus done_event)
 {
   struct xrdp_process* self;
-  char event_name[64];
+  char event_name[256];
+  int pid;
 
   self = (struct xrdp_process*)g_malloc(sizeof(struct xrdp_process), 1);
   self->lis_layer = owner;
   self->done_event = done_event;
   g_session_id++;
   self->session_id = g_session_id;
-  g_snprintf(event_name, 63, "xrdp_process_self_term_event_%8.8x",
-             self->session_id);
+  pid = g_getpid();
+  g_snprintf(event_name, 255, "xrdp_%8.8x_process_self_term_event_%8.8x",
+             pid, self->session_id);
   self->self_term_event = g_create_wait_obj(event_name);
   return self;
 }

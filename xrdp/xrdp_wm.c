@@ -28,7 +28,8 @@ xrdp_wm_create(struct xrdp_process* owner,
                struct xrdp_client_info* client_info)
 {
   struct xrdp_wm* self;
-  char event_name[64];
+  char event_name[256];
+  int pid;
 
   self = (struct xrdp_wm*)g_malloc(sizeof(struct xrdp_wm), 1);
   self->client_info = client_info;
@@ -39,8 +40,9 @@ xrdp_wm_create(struct xrdp_process* owner,
   self->screen->wm = self;
   self->pro_layer = owner;
   self->session = owner->session;
-  g_snprintf(event_name, 63, "xrdp_wm_login_mode_event_%8.8x",
-             owner->session_id);
+  pid = g_getpid();
+  g_snprintf(event_name, 255, "xrdp_%8.8x_wm_login_mode_event_%8.8x",
+             pid, owner->session_id);
   self->login_mode_event = g_create_wait_obj(event_name);
   self->painter = xrdp_painter_create(self, self->session);
   self->cache = xrdp_cache_create(self, self->session, self->client_info);

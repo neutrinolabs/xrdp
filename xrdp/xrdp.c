@@ -204,6 +204,8 @@ VOID WINAPI
 MyServiceMain(DWORD dwArgc, LPTSTR* lpszArgv)
 {
   WSADATA w;
+  char text[256];
+  int pid;
   //HANDLE event_han;
 //  int fd;
 //  char text[256];
@@ -218,8 +220,11 @@ MyServiceMain(DWORD dwArgc, LPTSTR* lpszArgv)
   WSAStartup(2, &w);
   g_sync_mutex = tc_mutex_create();
   g_sync1_mutex = tc_mutex_create();
-  g_term_event = g_create_wait_obj("xrdp_main_term");
-  g_sync_event = g_create_wait_obj("xrdp_main_sync");
+  pid = g_getpid();
+  g_snprintf(text, 255, "xrdp_%8.8x_main_term", pid);
+  g_term_event = g_create_wait_obj(text);
+  g_snprintf(text, 255, "xrdp_%8.8x_main_sync", pid);
+  g_sync_event = g_create_wait_obj(text);
   g_memset(&g_service_status, 0, sizeof(SERVICE_STATUS));
   g_service_status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
   g_service_status.dwCurrentState = SERVICE_RUNNING;
@@ -275,7 +280,7 @@ main(int argc, char** argv)
   int pid;
   int fd;
   int no_daemon;
-  char text[32];
+  char text[256];
 #endif
 
   g_init();
@@ -567,8 +572,11 @@ main(int argc, char** argv)
   g_signal(15, xrdp_shutdown); /* SIGTERM */
   g_sync_mutex = tc_mutex_create();
   g_sync1_mutex = tc_mutex_create();
-  g_term_event = g_create_wait_obj("xrdp_main_term");
-  g_sync_event = g_create_wait_obj("xrdp_main_sync");
+  pid = g_getpid();
+  g_snprintf(text, 255, "xrdp_%8.8x_main_term", pid);
+  g_term_event = g_create_wait_obj(text);
+  g_snprintf(text, 255, "xrdp_%8.8x_main_sync", pid);
+  g_sync_event = g_create_wait_obj(text);
   if (g_term_event == 0)
   {
     g_writeln("error creating g_term_event");

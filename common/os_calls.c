@@ -1864,14 +1864,13 @@ g_exit(int exit_code)
 }
 
 /*****************************************************************************/
-/* does not work in win32 */
 int APP_CC
 g_getpid(void)
 {
 #if defined(_WIN32)
-  return 0;
+  return (int)GetCurrentProcessId();
 #else
-  return getpid();
+  return (int)getpid();
 #endif
 }
 

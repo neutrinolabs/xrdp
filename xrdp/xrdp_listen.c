@@ -32,9 +32,13 @@ struct xrdp_listen* APP_CC
 xrdp_listen_create(void)
 {
   struct xrdp_listen* self;
+  int pid;
+  char text[256];
 
+  pid = g_getpid();
   self = (struct xrdp_listen*)g_malloc(sizeof(struct xrdp_listen), 1);
-  self->pro_done_event = g_create_wait_obj("xrdp_listen_pro_done_event");
+  g_snprintf(text, 255, "xrdp_%8.8x_listen_pro_done_event", pid);
+  self->pro_done_event = g_create_wait_obj(text);
   self->process_list = list_create();
   if (g_process_sem == 0)
   {
