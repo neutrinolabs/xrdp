@@ -61,11 +61,7 @@ xrdp_mcs_delete(struct xrdp_mcs* self)
   {
     channel_item = (struct mcs_channel_item*)
                       list_get_item(self->channel_list, index);
-    if (channel_item != 0)
-    {
-      free_stream(channel_item->in_s);
-      g_free(channel_item);
-    }
+    g_free(channel_item);
   }
   list_delete(self->channel_list);
   xrdp_iso_delete(self->iso_layer);

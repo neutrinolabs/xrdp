@@ -58,7 +58,6 @@ struct mcs_channel_item
   char name[16];
   int flags;
   int chanid;
-  struct stream* in_s;
 };
 
 /* mcs */
@@ -402,7 +401,8 @@ xrdp_channel_delete(struct xrdp_channel* self);
 int APP_CC
 xrdp_channel_init(struct xrdp_channel* self, struct stream* s);
 int APP_CC
-xrdp_channel_send(struct xrdp_channel* self, struct stream* s, int channel_id);
+xrdp_channel_send(struct xrdp_channel* self, struct stream* s, int channel_id,
+                  int total_data_len, int flags);
 int APP_CC
 xrdp_channel_process(struct xrdp_channel* self, struct stream* s,
                      int chanid);

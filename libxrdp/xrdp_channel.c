@@ -80,16 +80,11 @@ xrdp_channel_init(struct xrdp_channel* self, struct stream* s)
 
 /*****************************************************************************/
 /* returns error */
-/* This sends data out to the secure layer, breaking up the data to
-   CHANNEL_CHUNK_LENGTH as needed.  This can end up sending many packets. */
+/* This sends data out to the secure layer. */
 int APP_CC
-xrdp_channel_send(struct xrdp_channel* self, struct stream* s, int channel_id)
+xrdp_channel_send(struct xrdp_channel* self, struct stream* s, int channel_id,
+                  int total_data_len, int flags)
 {
-  int length;
-  int flags;
-  int thislength;
-  int remaining;
-  char* data;
   struct mcs_channel_item* channel;
 
   channel = xrdp_channel_get_item(self, channel_id);
@@ -98,46 +93,15 @@ xrdp_channel_send(struct xrdp_channel* self, struct stream* s, int channel_id)
     return 1;
   }
   s_pop_layer(s, channel_hdr);
-  length = (int)((s->end - s->p) - 8);
-  thislength = MIN(length, CHANNEL_CHUNK_LENGTH);
-  remaining = length - thislength;
-  flags = (remaining == 0) ?
-          CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST : CHANNEL_FLAG_FIRST;
+  out_uint32_le(s, total_data_len);
   if (channel->flags & CHANNEL_OPTION_SHOW_PROTOCOL)
   {
     flags |= CHANNEL_FLAG_SHOW_PROTOCOL;
   }
-  out_uint32_le(s, length);
   out_uint32_le(s, flags);
-  s->end = s->p + thislength;
-  data = s->end;
   if (xrdp_sec_send(self->sec_layer, s, channel->chanid) != 0)
   {
     return 1;
-  }
-  while (remaining > 0)
-  {
-    thislength = MIN(remaining, CHANNEL_CHUNK_LENGTH);
-    remaining -= thislength;
-    flags = (remaining == 0) ? CHANNEL_FLAG_LAST : 0;
-    if (channel->flags & CHANNEL_OPTION_SHOW_PROTOCOL)
-    {
-      flags |= CHANNEL_FLAG_SHOW_PROTOCOL;
-    }
-    if (xrdp_sec_init(self->sec_layer, s) != 0)
-    {
-      return 1;
-    }
-    out_uint32_le(s, length);
-    out_uint32_le(s, flags);
-    /* this is copying a later part of the stream up to the front */
-    out_uint8a(s, data, thislength);
-    s_mark_end(s);
-    if (xrdp_sec_send(self->sec_layer, s, channel->chanid) != 0)
-    {
-      return 1;
-    }
-    data += thislength;
   }
   return 0;
 }
@@ -148,7 +112,8 @@ xrdp_channel_send(struct xrdp_channel* self, struct stream* s, int channel_id)
    ready.  the default for this is a call to xrdp_wm.c. */
 static int APP_CC
 xrdp_channel_call_callback(struct xrdp_channel* self, struct stream* s,
-                           int channel_id)
+                           int channel_id,
+                           int total_data_len, int flags)
 {
   struct xrdp_session* session;
   int rv;
@@ -162,17 +127,18 @@ xrdp_channel_call_callback(struct xrdp_channel* self, struct stream* s,
     {
       size = (int)(s->end - s->p);
       /* in xrdp_wm.c */
-      rv = session->callback(session->id, 0x5555, channel_id, size,
-                             (long)s->p, 0);
+      rv = session->callback(session->id, 0x5555,
+                             MAKELONG(channel_id, flags),
+                             size, (tbus)(s->p), total_data_len);
     }
     else
     {
-      g_writeln("in xrdp_channel_process1, session->callback is nil");
+      g_writeln("in xrdp_channel_call_callback, session->callback is nil");
     }
   }
   else
   {
-    g_writeln("in xrdp_channel_process1, session is nil");
+    g_writeln("in xrdp_channel_call_callback, session is nil");
   }
   return rv;
 }
@@ -180,9 +146,7 @@ xrdp_channel_call_callback(struct xrdp_channel* self, struct stream* s,
 /*****************************************************************************/
 /* returns error */
 /* This is called from the secure layer to process an incomming non global
-   channel packet.  It copies the channel data to a special stream contained
-   in the channel struct(the one in xrdp_mcs->channel_list) untill the
-   whole data message is ready.
+   channel packet.
    'chanid' passed in here is the mcs channel id so it MCS_GLOBAL_CHANNEL
    plus something. */
 int APP_CC
@@ -191,10 +155,8 @@ xrdp_channel_process(struct xrdp_channel* self, struct stream* s,
 {
   int length;
   int flags;
-  int thislength;
   int rv;
   int channel_id;
-  struct stream* in_s;
   struct mcs_channel_item* channel;
 
   /* this assumes that the channels are in order of chanid(mcs channel id)
@@ -211,29 +173,6 @@ xrdp_channel_process(struct xrdp_channel* self, struct stream* s,
   rv = 0;
   in_uint32_le(s, length);
   in_uint32_le(s, flags);
-  if ((flags & CHANNEL_FLAG_FIRST) && (flags & CHANNEL_FLAG_LAST))
-  {
-    rv = xrdp_channel_call_callback(self, s, channel_id);
-  }
-  else
-  {
-    if (channel->in_s == 0)
-    {
-      make_stream(channel->in_s);
-    }
-    in_s = channel->in_s;
-    if (flags & CHANNEL_FLAG_FIRST)
-    {
-      init_stream(in_s, length);
-    }
-    thislength = MIN(s->end - s->p, (in_s->data + in_s->size) - in_s->p);
-    out_uint8a(in_s, s->p, thislength);
-    if (flags & CHANNEL_FLAG_LAST)
-    {
-      in_s->end = in_s->p;
-      in_s->p = in_s->data;
-      rv = xrdp_channel_call_callback(self, in_s, channel_id);
-    }
-  }
+  rv = xrdp_channel_call_callback(self, s, channel_id, length, flags);
   return rv;
 }

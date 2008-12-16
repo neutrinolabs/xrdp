@@ -687,7 +687,8 @@ libxrdp_get_channel_id(struct xrdp_session* session, char* name)
 /*****************************************************************************/
 int EXPORT_CC
 libxrdp_send_to_channel(struct xrdp_session* session, int channel_id,
-                        char* data, int data_len)
+                        char* data, int data_len,
+                        int total_data_len, int flags)
 {
   struct xrdp_rdp* rdp;
   struct xrdp_sec* sec;
@@ -704,11 +705,10 @@ libxrdp_send_to_channel(struct xrdp_session* session, int channel_id,
     free_stream(s);
     return 1;
   }
-  /* here we make a copy of the data, xrdp_channel_send is
-     going to alter it if its bigger that 8192 or something */
+  /* here we make a copy of the data */
   out_uint8a(s, data, data_len);
   s_mark_end(s);
-  if (xrdp_channel_send(chan, s, channel_id) != 0)
+  if (xrdp_channel_send(chan, s, channel_id, total_data_len, flags) != 0)
   {
     free_stream(s);
     return 1;

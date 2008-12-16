@@ -208,7 +208,8 @@ int DEFAULT_CC
 libxrdp_get_channel_id(struct xrdp_session* session, char* name);
 int DEFAULT_CC
 libxrdp_send_to_channel(struct xrdp_session* session, int channel_id,
-                        char* data, int data_len);
+                        char* data, int data_len,
+                        int total_data_len, int flags);
 int DEFAULT_CC
 libxrdp_orders_send_brush(struct xrdp_session* session,
                           int width, int height, int bpp, int type,
