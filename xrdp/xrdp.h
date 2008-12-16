@@ -36,6 +36,7 @@
 #include "list.h"
 #include "file.h"
 #include "file_loc.h"
+#include "trans.h"
 
 /* xrdp.c */
 long APP_CC
@@ -333,6 +334,9 @@ int APP_CC
 xrdp_mm_connect(struct xrdp_mm* self);
 int APP_CC
 xrdp_mm_signal(struct xrdp_mm* self);
+int APP_CC
+xrdp_mm_process_channel_data(struct xrdp_mm* self, tbus param1, tbus param2,
+                             tbus param3, tbus param4);
 
 int DEFAULT_CC
 server_begin_update(struct xrdp_mod* mod);
@@ -394,4 +398,5 @@ int DEFAULT_CC
 server_get_channel_id(struct xrdp_mod* mod, char* name);
 int DEFAULT_CC
 server_send_to_channel(struct xrdp_mod* mod, int channel_id,
-                       char* data, int data_len);
+                       char* data, int data_len,
+                       int total_data_len, int flags);

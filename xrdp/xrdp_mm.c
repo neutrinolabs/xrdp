@@ -73,6 +73,7 @@ xrdp_mm_module_cleanup(struct xrdp_mm* self)
   {
     g_xrdp_sync(sync_unload, self->mod_handle, 0);
   }
+  trans_delete(self->chan_trans);
   self->mod_init = 0;
   self->mod_exit = 0;
   self->mod = 0;
@@ -491,6 +492,213 @@ xrdp_mm_setup_mod2(struct xrdp_mm* self)
 }
 
 /*****************************************************************************/
+/* returns error
+   send a list of channels to the channel handler */
+static int APP_CC
+xrdp_mm_trans_send_channel_setup(struct xrdp_mm* self, struct trans* trans)
+{
+  int index;
+  int chan_id;
+  int chan_flags;
+  int size;
+  struct stream* s;
+  char chan_name[256];
+
+  s = trans_get_out_s(trans, 8192);
+  if (s == 0)
+  {
+    return 1;
+  }
+  s_push_layer(s, iso_hdr, 8);
+  s_push_layer(s, mcs_hdr, 8);
+  s_push_layer(s, sec_hdr, 2);
+  index = 0;
+  while (server_query_channel(self->mod, index, chan_name,
+                              &chan_flags) == 0)
+  {
+    chan_id = server_get_channel_id(self->mod, chan_name);
+    out_uint8a(s, chan_name, 8);
+    out_uint16_le(s, chan_id);
+    out_uint16_le(s, chan_flags);
+    index++;
+  }
+  s_mark_end(s);
+  s_pop_layer(s, sec_hdr);
+  out_uint16_le(s, index);
+  s_pop_layer(s, mcs_hdr);
+  size = (int)(s->end - s->p);
+  out_uint32_le(s, 3); /* msg id */
+  out_uint32_le(s, size); /* msg size */
+  s_pop_layer(s, iso_hdr);
+  size = (int)(s->end - s->p);
+  out_uint32_le(s, 0); /* version */
+  out_uint32_le(s, size); /* block size */
+  return trans_force_write(trans);
+}
+
+/*****************************************************************************/
+/* returns error */
+static int APP_CC
+xrdp_mm_trans_send_channel_data_response(struct xrdp_mm* self,
+                                         struct trans* trans)
+{
+  struct stream* s;
+
+  s = trans_get_out_s(trans, 8192);
+  if (s == 0)
+  {
+    return 1;
+  }
+  out_uint32_le(s, 0); /* version */
+  out_uint32_le(s, 8 + 8); /* size */
+  out_uint32_le(s, 7); /* msg id */
+  out_uint32_le(s, 8); /* size */
+  s_mark_end(s);
+  return trans_force_write(trans);
+}
+
+/*****************************************************************************/
+/* returns error
+   init is done, sent channel setup */
+static int APP_CC
+xrdp_mm_trans_process_init_response(struct xrdp_mm* self, struct trans* trans)
+{
+  return xrdp_mm_trans_send_channel_setup(self, trans);
+}
+
+/*****************************************************************************/
+/* returns error
+   data coming in from the channel handler, send it to the client */
+static int APP_CC
+xrdp_mm_trans_process_channel_data(struct xrdp_mm* self, struct trans* trans)
+{
+  struct stream* s;
+  int size;
+  int total_size;
+  int chan_id;
+  int chan_flags;
+  int rv;
+
+  s = trans_get_in_s(trans);
+  if (s == 0)
+  {
+    return 1;
+  }
+  in_uint16_le(s, chan_id);
+  in_uint16_le(s, chan_flags);
+  in_uint16_le(s, size);
+  in_uint32_le(s, total_size);
+  rv = xrdp_mm_trans_send_channel_data_response(self, trans);
+  if (rv == 0)
+  {
+    rv = server_send_to_channel(self->mod, chan_id, s->p, size, total_size,
+                                chan_flags);
+  }
+  return rv;
+}
+
+/*****************************************************************************/
+/* returns error
+   process a message for the channel handler */
+static int APP_CC
+xrdp_mm_chan_process_msg(struct xrdp_mm* self, struct trans* trans,
+                         struct stream* s)
+{
+  int rv;
+  int id;
+  int size;
+  char* next_msg;
+
+  rv = 0;
+  while (s_check_rem(s, 8))
+  {
+    next_msg = s->p;
+    in_uint32_le(s, id);
+    in_uint32_le(s, size);
+    next_msg += size;
+    switch (id)
+    {
+      case 2: /* channel init response */
+        g_writeln("channel init response");
+        rv = xrdp_mm_trans_process_init_response(self, trans);
+        break;
+      case 4: /* channel setup response */
+        g_writeln("channel setup response");
+        break;
+      case 6: /* channel data response */
+        g_writeln("channel data response");
+        break;
+      case 8: /* channel data */
+        g_writeln("channel data");
+        rv = xrdp_mm_trans_process_channel_data(self, trans);
+        break;
+      default:
+        g_writeln("unknown");
+        break;
+    }
+    if (rv != 0)
+    {
+      break;
+    }
+    s->p = next_msg;
+  }
+  return rv;
+}
+
+/*****************************************************************************/
+/* this is callback from trans obj
+   returns error */
+static int APP_CC
+xrdp_mm_chan_data_in(struct trans* trans)
+{
+  struct xrdp_mm* self;
+  struct stream* s;
+  int id;
+  int size;
+  int error;
+
+  if (trans == 0)
+  {
+    return 1;
+  }
+  g_writeln("xrdp_mm_chan_data_in");
+  self = (struct xrdp_mm*)(trans->callback_data);
+  s = trans_get_in_s(trans);
+  if (s == 0)
+  {
+    return 1;
+  }
+  in_uint32_le(s, id);
+  in_uint32_le(s, size);
+  error = trans_force_read(trans, size - 8);
+  if (error == 0)
+  {
+    /* here, the entire message block is read in, process it */
+    error = xrdp_mm_chan_process_msg(self, trans, s);
+  }
+  return error;
+}
+
+/*****************************************************************************/
+static int APP_CC
+xrdp_mm_chan_send_init(struct xrdp_mm* self)
+{
+  struct stream* s;
+
+  s = trans_get_out_s(self->chan_trans, 8192);
+  if (s == 0)
+  {
+    return 1;
+  }
+  out_uint32_le(s, 0); /* version */
+  out_uint32_le(s, 8 + 8); /* size */
+  out_uint32_le(s, 1); /* msg id */
+  out_uint32_le(s, 8); /* size */
+  s_mark_end(s);
+  return trans_force_write(self->chan_trans);
+}
+
+/*****************************************************************************/
 static int APP_CC
 xrdp_mm_process_login_response(struct xrdp_mm* self, struct stream* s)
 {
@@ -513,6 +721,20 @@ xrdp_mm_process_login_response(struct xrdp_mm* self, struct stream* s)
       {
         xrdp_wm_set_login_mode(self->wm, 10);
         self->wm->dragging = 0;
+        /* connect channel redir */
+        self->chan_trans = trans_create(1, 8192, 8192);
+        self->chan_trans->trans_data_in = xrdp_mm_chan_data_in;
+        self->chan_trans->header_size = 8;
+        self->chan_trans->callback_data = self;
+        g_snprintf(text, 255, "%d", 7200 + display);
+        if (trans_connect(self->chan_trans, "127.0.0.1", text, 3) != 0)
+        {
+          g_writeln("error in trans_connect");
+        }
+        if (xrdp_mm_chan_send_init(self) != 0)
+        {
+          g_writeln("error in xrdp_mm_chan_send_init");
+        }
       }
     }
   }
@@ -643,6 +865,7 @@ xrdp_mm_connect(struct xrdp_mm* self)
       xrdp_mm_module_cleanup(self);
     }
   }
+  self->sesman_controlled = use_sesman;
   return rv;
 }
 
@@ -688,6 +911,54 @@ xrdp_mm_signal(struct xrdp_mm* self)
       }
     }
     free_stream(s);
+  }
+  return rv;
+}
+
+/*****************************************************************************/
+/* returns error
+   data coming from client that need to go to channel handler */
+int APP_CC
+xrdp_mm_process_channel_data(struct xrdp_mm* self, tbus param1, tbus param2,
+                             tbus param3, tbus param4)
+{
+  struct stream* s;
+  int rv;
+  int length;
+  int total_length;
+  int flags;
+  int id;
+  char* data;
+
+  g_writeln("in xrdp_mm_process_channel_data %d %d %d %d", param1, param2, param3, param4);
+  rv = 0;
+  if (self->chan_trans != 0)
+  {
+    s = trans_get_out_s(self->chan_trans, 8192);
+    if (s != 0)
+    {
+      id = LOWORD(param1);
+      flags = HIWORD(param1);
+      length = param2;
+      data = (char*)param3;
+      total_length = param4;
+      if (total_length < length)
+      {
+        g_writeln("warning in xrdp_mm_process_channel_data total_len < length");
+        total_length = length;
+      }
+      out_uint32_le(s, 0); /* version */
+      out_uint32_le(s, 8 + 8 + 2 + 2 + 2 + 4 + length);
+      out_uint32_le(s, 5); /* msg id */
+      out_uint32_le(s, 8 + 2 + 2 + 2 + 4 + length);
+      out_uint16_le(s, id);
+      out_uint16_le(s, flags);
+      out_uint16_le(s, length);
+      out_uint32_le(s, total_length);
+      out_uint8a(s, data, length);
+      s_mark_end(s);
+      rv = trans_force_write(self->chan_trans);
+    }
   }
   return rv;
 }
@@ -1004,6 +1275,10 @@ server_query_channel(struct xrdp_mod* mod, int index, char* channel_name,
   struct xrdp_wm* wm;
 
   wm = (struct xrdp_wm*)mod->wm;
+  if (wm->mm->sesman_controlled)
+  {
+    return 1;
+  }
   return libxrdp_query_channel(wm->session, index, channel_name,
                                channel_flags);
 }
@@ -1015,16 +1290,26 @@ server_get_channel_id(struct xrdp_mod* mod, char* name)
   struct xrdp_wm* wm;
 
   wm = (struct xrdp_wm*)mod->wm;
+  if (wm->mm->sesman_controlled)
+  {
+    return 1;
+  }
   return libxrdp_get_channel_id(wm->session, name);
 }
 
 /*****************************************************************************/
 int DEFAULT_CC
 server_send_to_channel(struct xrdp_mod* mod, int channel_id,
-                       char* data, int data_len)
+                       char* data, int data_len,
+                       int total_data_len, int flags)
 {
   struct xrdp_wm* wm;
 
   wm = (struct xrdp_wm*)mod->wm;
-  return libxrdp_send_to_channel(wm->session, channel_id, data, data_len);
+  if (wm->mm->sesman_controlled)
+  {
+    return 1;
+  }
+  return libxrdp_send_to_channel(wm->session, channel_id, data, data_len,
+                                 total_data_len, flags);
 }

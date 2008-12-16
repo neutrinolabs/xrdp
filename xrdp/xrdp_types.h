@@ -77,7 +77,8 @@ struct xrdp_mod
                               int* channel_flags);
   int (*server_get_channel_id)(struct xrdp_mod* v, char* name);
   int (*server_send_to_channel)(struct xrdp_mod* v, int channel_id,
-                                char* data, int data_len);
+                                char* data, int data_len,
+                                int total_data_len, int flags);
   long server_dumby[100 - 24]; /* align, 100 minus the number of server 
                                   functions above */
   /* common */
@@ -185,6 +186,8 @@ struct xrdp_mm
   struct xrdp_mod* mod;
   int display;
   int code;
+  int sesman_controlled;
+  struct trans* chan_trans;
 };
 
 struct xrdp_keymap

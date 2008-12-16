@@ -1250,18 +1250,29 @@ xrdp_wm_process_input_mouse(struct xrdp_wm* self, int device_flags,
 
 /******************************************************************************/
 static int APP_CC
-xrdp_wm_process_channel_data(struct xrdp_wm* self, int channel_id,
-                             char* data, int data_len)
+xrdp_wm_process_channel_data(struct xrdp_wm* self,
+                            tbus param1, tbus param2, tbus param3, tbus param4)
 {
- if (self->mm->mod != 0)
+  int rv;
+
+  rv = 1;
+  if (self->mm->mod != 0)
   {
-    if (self->mm->mod->mod_event != 0)
+    if (self->mm->sesman_controlled)
     {
-      self->mm->mod->mod_event(self->mm->mod, 0x5555, channel_id, (long)data,
-                               data_len, 0);
+      rv = xrdp_mm_process_channel_data(self->mm, param1, param2,
+                                        param3, param4);
+    }
+    else
+    {
+      if (self->mm->mod->mod_event != 0)
+      {
+        rv = self->mm->mod->mod_event(self->mm->mod, 0x5555, param1, param2,
+                                      param3, param4);
+      }
     }
   }
-  return 0;
+  return rv;
 }
 
 /******************************************************************************/
@@ -1302,7 +1313,7 @@ callback(long id, int msg, long param1, long param2, long param3, long param4)
       break;
     case 0x5555: /* called from xrdp_channel.c, channel data has come in,
                     pass it to module if there is one */
-      rv = xrdp_wm_process_channel_data(wm, param1, (char*)param2, param3);
+      rv = xrdp_wm_process_channel_data(wm, param1, param2, param3, param4);
       break;
   }
   return rv;
@@ -1479,6 +1490,10 @@ xrdp_wm_mod_get_wait_objs(struct xrdp_wm* self,
 {
   if (self->mm != 0)
   {
+    if (self->mm->chan_trans != 0)
+    {
+      trans_get_wait_objs(self->mm->chan_trans, read_objs, rcount, timeout);
+    }
     if (self->mm->mod != 0)
     {
       if (self->mm->mod->mod_get_wait_objs != 0)
@@ -1498,6 +1513,10 @@ xrdp_wm_mod_check_wait_objs(struct xrdp_wm* self)
 {
   if (self->mm != 0)
   {
+    if (self->mm->chan_trans != 0)
+    {
+      trans_check_wait_objs(self->mm->chan_trans);
+    }
     if (self->mm->mod != 0)
     {
       if (self->mm->mod->mod_check_wait_objs != 0)
@@ -1555,7 +1574,7 @@ xrdp_wm_check_wait_objs(struct xrdp_wm* self)
     {
       if (g_is_wait_obj_set(self->mm->sck_obj))
       {
-        rv = xrdp_mm_signal(self->mm); 
+        rv = xrdp_mm_signal(self->mm);
       }
     }
   }
