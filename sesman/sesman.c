@@ -32,7 +32,7 @@ int g_pid;
 unsigned char g_fixedkey[8] = { 23, 82, 107, 6, 35, 78, 88, 7 };
 struct config_sesman* g_cfg; /* config.h */
 
-extern int thread_sck;
+extern int g_thread_sck; /* in thread.c */
 
 /******************************************************************************/
 /**
@@ -66,7 +66,7 @@ sesman_main_loop(void)
       {
         /* we've got a connection, so we pass it to scp code */
         LOG_DBG(&(g_cfg->log), "new connection");
-        thread_sck=in_sck;
+        g_thread_sck = in_sck;
         //scp_process_start((void*)in_sck);
         thread_scp_start(in_sck);
 
@@ -108,7 +108,8 @@ main(int argc, char** argv)
     daemon = 1;
   }
   else if ((2 == argc) && ((0 == g_strcasecmp(argv[1], "--nodaemon")) ||
-                           (0 == g_strcasecmp(argv[1], "-n")) ) )
+                           (0 == g_strcasecmp(argv[1], "-n")) ||
+                           (0 == g_strcasecmp(argv[1], "-ns"))))
   {
     /* starts sesman not daemonized */
     g_printf("starting sesman in foregroud...\n");
@@ -121,9 +122,9 @@ main(int argc, char** argv)
     g_printf("sesman - xrdp session manager\n\n");
     g_printf("usage: sesman [command]\n\n");
     g_printf("command can be one of the following:\n");
-    g_printf("-n, --nodaemon  starts sesman in foregroun\n");
-    g_printf("-k, --kill      kills running sesman\n");
-    g_printf("-h, --help      shows this help\n");
+    g_printf("-n, -ns, --nodaemon  starts sesman in foreground\n");
+    g_printf("-k, --kill           kills running sesman\n");
+    g_printf("-h, --help           shows this help\n");
     g_printf("if no command is specified, sesman is started in background");
     g_exit(0);
   }
@@ -143,7 +144,7 @@ main(int argc, char** argv)
 
     if (-1 == fd)
     {
-      g_printf("error opening pid file: %s\n", g_get_strerror());
+      g_printf("error opening pid file[%s]: %s\n", SESMAN_PID_FILE, g_get_strerror());
       return 1;
     }
 
@@ -212,7 +213,7 @@ main(int argc, char** argv)
         g_printf("error on malloc. cannot start logging. quitting.\n");
         break;
       case LOG_ERROR_FILE_OPEN:
-        g_printf("error opening log file. quitting.\n");
+        g_printf("error opening log file [%s]. quitting.\n", g_cfg->log.log_file);
         break;
     }
     g_exit(1);
@@ -257,21 +258,26 @@ main(int argc, char** argv)
   */
   thread_sighandler_start();
 
-  /* writing pid file */
-  fd = g_file_open(SESMAN_PID_FILE);
-  if (-1 == fd)
+  if (daemon)
   {
-    log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "error opening pid file: %s",
-                g_get_strerror());
-    log_end(&(g_cfg->log));
-    g_exit(1);
+    /* writing pid file */
+    fd = g_file_open(SESMAN_PID_FILE);
+    if (-1 == fd)
+    {
+      log_message(&(g_cfg->log), LOG_LEVEL_ERROR,
+                  "error opening pid file[%s]: %s",
+                  SESMAN_PID_FILE, g_get_strerror());
+      log_end(&(g_cfg->log));
+      g_exit(1);
+    }
+    g_sprintf(pid_s, "%d", g_pid);
+    g_file_write(fd, pid_s, g_strlen(pid_s) + 1);
+    g_file_close(fd);
   }
-  g_sprintf(pid_s, "%d", g_pid);
-  g_file_write(fd, pid_s, g_strlen(pid_s) + 1);
-  g_file_close(fd);
 
   /* start program main loop */
-  log_message(&(g_cfg->log), LOG_LEVEL_ALWAYS, "starting sesman with pid %d", g_pid);
+  log_message(&(g_cfg->log), LOG_LEVEL_ALWAYS,
+              "starting sesman with pid %d", g_pid);
 
   /* make sure the /tmp/.X11-unix directory exist */
   if (!g_directory_exist("/tmp/.X11-unix"))

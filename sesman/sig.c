@@ -123,6 +123,9 @@ sig_handler_thread(void* arg)
   sigaddset(&waitmask, SIGHUP);
   sigaddset(&waitmask, SIGCHLD);
   sigaddset(&waitmask, SIGTERM);
+  sigaddset(&waitmask, SIGKILL);
+  sigaddset(&waitmask, SIGINT);
+
 //  sigaddset(&waitmask, SIGFPE);
 //  sigaddset(&waitmask, SIGILL);
 //  sigaddset(&waitmask, SIGSEGV);
@@ -131,28 +134,32 @@ sig_handler_thread(void* arg)
   {
     LOG_DBG(&(g_cfg->log), "calling sigwait()",0);
     sigwait(&waitmask, &recv_signal);
-
     switch (recv_signal)
     {
       case SIGHUP:
         //reload cfg
 	//we must stop & restart logging, or copy logging cfg!!!!
-        LOG_DBG(&(g_cfg->log), "sesman received SIGHUP",0);
+        LOG_DBG(&(g_cfg->log), "sesman received SIGHUP", 0);
         //return 0;
         break;
       case SIGCHLD:
         /* a session died */
-        LOG_DBG(&(g_cfg->log), "sesman received SIGCHLD",0);
+        LOG_DBG(&(g_cfg->log), "sesman received SIGCHLD", 0);
         sig_sesman_session_end(SIGCHLD);
         break;
-      /*case SIGKILL;
-        / * we die * /
-        LOG_DBG("sesman received SIGKILL",0);
+      case SIGINT:
+        /* we die */
+        LOG_DBG(&(g_cfg->log), "sesman received SIGINT", 0);
         sig_sesman_shutdown(recv_signal);
-        break;*/
+        break;
+      case SIGKILL:
+        /* we die */
+        LOG_DBG(&(g_cfg->log), "sesman received SIGKILL", 0);
+        sig_sesman_shutdown(recv_signal);
+        break;
       case SIGTERM:
         /* we die */
-        LOG_DBG(&(g_cfg->log), "sesman received SIGTERM",0);
+        LOG_DBG(&(g_cfg->log), "sesman received SIGTERM", 0);
         sig_sesman_shutdown(recv_signal);
         break;
     }
@@ -160,4 +167,3 @@ sig_handler_thread(void* arg)
 
   return 0;
 }
-

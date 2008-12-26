@@ -30,7 +30,7 @@
 
 #include "sesman.h"
 
-extern int thread_sck;
+extern int g_thread_sck; /* in thread.c */
 extern struct config_sesman g_cfg;
 
 /******************************************************************************/
@@ -42,10 +42,10 @@ scp_process_start(void* sck)
 
   /* making a local copy of the socket (it's on the stack) */
   /* probably this is just paranoia                        */
-  scon.in_sck = thread_sck;
+  scon.in_sck = g_thread_sck;
   LOG_DBG(&(g_cfg.log), "started scp thread on socket %d", scon.in_sck);
 
-  /* unlocking thread_sck */
+  /* unlocking g_thread_sck */
   lock_socket_release();
 
   make_stream(scon.in_s);
