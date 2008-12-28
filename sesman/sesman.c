@@ -248,16 +248,19 @@ main(int argc, char** argv)
   g_pid = g_getpid();
   /* old style signal handling is now managed synchronously by a
    * separate thread. uncomment this block if you need old style
-   * signal handling and comment out thread_sighandler_start() */
-  /*
-  g_signal(1, sig_sesman_reload_cfg); / * SIGHUP  * /
-  g_signal(2, sig_sesman_shutdown);   / * SIGINT  * /
-  g_signal(9, sig_sesman_shutdown);   / * SIGKILL * /
-  g_signal(15, sig_sesman_shutdown);  / * SIGTERM * /
-  g_signal_child_stop(cterm);         / * SIGCHLD * /
-  */
+   * signal handling and comment out thread_sighandler_start()
+   * going back to old style for the time being
+   * problem with the sigaddset functions in sig.c - jts */
+#if 1
+  g_signal(1, sig_sesman_reload_cfg); /* SIGHUP  */
+  g_signal(2, sig_sesman_shutdown);   /* SIGINT  */
+  g_signal(9, sig_sesman_shutdown);   /* SIGKILL */
+  g_signal(15, sig_sesman_shutdown);  /* SIGTERM */
+  g_signal_child_stop(sig_sesman_session_end); /* SIGCHLD */
+#endif
+#if 0
   thread_sighandler_start();
-
+#endif
   if (daemon)
   {
     /* writing pid file */
