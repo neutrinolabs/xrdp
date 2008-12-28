@@ -32,6 +32,7 @@
 extern int g_sck;
 extern int g_pid;
 extern struct config_sesman* g_cfg;
+extern tbus g_term_event;
 
 /******************************************************************************/
 void DEFAULT_CC
@@ -46,6 +47,8 @@ sig_sesman_shutdown(int sig)
   }
 
   LOG_DBG(&(g_cfg->log), " - getting signal %d pid %d", sig, g_getpid());
+
+  g_set_wait_obj(g_term_event);
 
   g_tcp_close(g_sck);
 

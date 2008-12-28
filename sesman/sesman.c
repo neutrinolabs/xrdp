@@ -32,6 +32,8 @@ int g_pid;
 unsigned char g_fixedkey[8] = { 23, 82, 107, 6, 35, 78, 88, 7 };
 struct config_sesman* g_cfg; /* config.h */
 
+tbus g_term_event = 0;
+
 extern int g_thread_sck; /* in thread.c */
 
 /******************************************************************************/
@@ -45,6 +47,10 @@ sesman_main_loop(void)
 {
   int in_sck;
   int error;
+  int robjs_count;
+  int cont;
+  tbus sck_obj;
+  tbus robjs[8];
 
   /*main program loop*/
   log_message(&(g_cfg->log), LOG_LEVEL_INFO, "listening...");
@@ -56,28 +62,48 @@ sesman_main_loop(void)
     error = g_tcp_listen(g_sck);
     if (error == 0)
     {
-      in_sck = g_tcp_accept(g_sck);
-      while (in_sck == -1 && g_tcp_last_error_would_block(g_sck))
+      sck_obj = g_create_wait_obj_from_socket(g_sck, 0);
+      cont = 1;
+      while (cont)
       {
-        g_sleep(1000);
-        in_sck = g_tcp_accept(g_sck);
-      }
-      while (in_sck > 0)
-      {
-        /* we've got a connection, so we pass it to scp code */
-        LOG_DBG(&(g_cfg->log), "new connection");
-        g_thread_sck = in_sck;
-        //scp_process_start((void*)in_sck);
-        thread_scp_start(in_sck);
-
-        /* once we've processed the connection, we go back listening */
-        in_sck = g_tcp_accept(g_sck);
-        while (in_sck == -1 && g_tcp_last_error_would_block(g_sck))
+        /* build the wait obj list */
+        robjs_count = 0;
+        robjs[robjs_count++] = sck_obj;
+        robjs[robjs_count++] = g_term_event;
+        /* wait */
+        if (g_obj_wait(robjs, robjs_count, 0, 0, -1) != 0)
         {
-          g_sleep(1000);
+          /* error, should not get here */
+          g_sleep(100);
+        }
+        if (g_is_wait_obj_set(g_term_event)) /* term */
+        {
+          break;
+        }
+        if (g_is_wait_obj_set(sck_obj)) /* incomming connection */
+        {
           in_sck = g_tcp_accept(g_sck);
+          if ((in_sck == -1) && g_tcp_last_error_would_block(g_sck))
+          {
+            /* should not get here */
+            g_sleep(100);
+          }
+          else if (in_sck == -1)
+          {
+            /* error, should not get here */
+            break;
+          }
+          else
+          {
+            /* we've got a connection, so we pass it to scp code */
+            LOG_DBG(&(g_cfg->log), "new connection");
+            g_thread_sck = in_sck;
+            thread_scp_start(in_sck);
+            /* todo, do we have to wait here ? */
+          }
         }
       }
+      g_delete_wait_obj_from_socket(sck_obj);
     }
     else
     {
@@ -100,6 +126,7 @@ main(int argc, char** argv)
   int daemon = 1;
   int pid;
   char pid_s[8];
+  char text[256];
 
   if (1 == argc)
   {
@@ -289,7 +316,12 @@ main(int argc, char** argv)
     g_chmod_hex("/tmp/.X11-unix", 0x1777);
   }
 
+  g_snprintf(text, 255, "xrdp-sesman_%8.8x_main_term", g_pid);
+  g_term_event = g_create_wait_obj(text);
+
   sesman_main_loop();
+
+  g_delete_wait_obj(g_term_event);
 
   if (!daemon)
   {
