@@ -256,7 +256,20 @@ for user %s denied", username);
     else if (wmpid == 0) /* child (child sesman) xserver */
     {
       /* give X a bit to start */
-      g_sleep(1000);
+      /* wait up to 10 secs for x server to start */
+      i = 0;
+      while (!x_server_running(display))
+      {
+        i++;
+        if (i > 40)
+        {
+          log_message(&(g_cfg->log), LOG_LEVEL_ERROR,
+                      "X server for display %d startup timeout",
+                      display);
+          break;
+        }
+        g_sleep(250);
+      }
       env_set_user(username, 0, display);
       if (x_server_running(display))
       {
