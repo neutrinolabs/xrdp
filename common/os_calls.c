@@ -1733,6 +1733,61 @@ g_signal_child_stop(void (*func)(int))
 
 /*****************************************************************************/
 /* does not work in win32 */
+void APP_CC
+g_signal_hang_up(void (*func)(int))
+{
+#if defined(_WIN32)
+#else
+  signal(SIGHUP, func);
+#endif
+}
+
+/*****************************************************************************/
+/* does not work in win32 */
+void APP_CC
+g_signal_user_interrupt(void (*func)(int))
+{
+#if defined(_WIN32)
+#else
+  signal(SIGINT, func);
+#endif
+}
+
+/*****************************************************************************/
+/* does not work in win32 */
+void APP_CC
+g_signal_kill(void (*func)(int))
+{
+#if defined(_WIN32)
+#else
+  signal(SIGKILL, func);
+#endif
+}
+
+/*****************************************************************************/
+/* does not work in win32 */
+void APP_CC
+g_signal_terminate(void (*func)(int))
+{
+#if defined(_WIN32)
+#else
+  signal(SIGTERM, func);
+#endif
+}
+
+/*****************************************************************************/
+/* does not work in win32 */
+void APP_CC
+g_signal_pipe(void (*func)(int))
+{
+#if defined(_WIN32)
+#else
+  signal(SIGPIPE, func);
+#endif
+}
+
+/*****************************************************************************/
+/* does not work in win32 */
 int APP_CC
 g_fork(void)
 {
