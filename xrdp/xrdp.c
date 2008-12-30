@@ -566,10 +566,10 @@ main(int argc, char** argv)
 #endif
   g_threadid = tc_get_threadid();
   g_listen = xrdp_listen_create();
-  g_signal(2, xrdp_shutdown); /* SIGINT */
-  g_signal(9, xrdp_shutdown); /* SIGKILL */
-  g_signal(13, pipe_sig); /* sig pipe */
-  g_signal(15, xrdp_shutdown); /* SIGTERM */
+  g_signal_user_interrupt(xrdp_shutdown); /* SIGINT */
+  g_signal_kill(xrdp_shutdown); /* SIGKILL */
+  g_signal_pipe(pipe_sig); /* SIGPIPE */
+  g_signal_terminate(xrdp_shutdown); /* SIGTERM */
   g_sync_mutex = tc_mutex_create();
   g_sync1_mutex = tc_mutex_create();
   pid = g_getpid();
