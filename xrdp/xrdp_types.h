@@ -188,6 +188,7 @@ struct xrdp_mm
   int code;
   int sesman_controlled;
   struct trans* chan_trans;
+  int chan_trans_up;
 };
 
 struct xrdp_keymap

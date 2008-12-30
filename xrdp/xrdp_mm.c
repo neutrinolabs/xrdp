@@ -713,7 +713,8 @@ xrdp_mm_process_login_response(struct xrdp_mm* self, struct stream* s)
   if (ok)
   {
     self->display = display;
-    g_snprintf(text, 255, "login successful for display %d", display);
+    g_snprintf(text, 255, "xrdp_mm_process_login_response: login successful "
+               "for display %d", display);
     xrdp_wm_log_msg(self->wm, text);
     if (xrdp_mm_setup_mod1(self) == 0)
     {
@@ -727,20 +728,29 @@ xrdp_mm_process_login_response(struct xrdp_mm* self, struct stream* s)
         self->chan_trans->header_size = 8;
         self->chan_trans->callback_data = self;
         g_snprintf(text, 255, "%d", 7200 + display);
-        if (trans_connect(self->chan_trans, "127.0.0.1", text, 3) != 0)
+        if (trans_connect(self->chan_trans, "127.0.0.1", text, 3) == 0)
         {
-          g_writeln("error in trans_connect");
+          self->chan_trans_up = 1;
         }
-        if (xrdp_mm_chan_send_init(self) != 0)
+        else
         {
-          g_writeln("error in xrdp_mm_chan_send_init");
+          g_writeln("xrdp_mm_process_login_response: error in trans_connect "
+                    "chan");
+        }
+        if (self->chan_trans_up)
+        {
+          if (xrdp_mm_chan_send_init(self) != 0)
+          {
+            g_writeln("xrdp_mm_process_login_response: error in "
+                      "xrdp_mm_chan_send_init");
+          }
         }
       }
     }
   }
   else
   {
-    xrdp_wm_log_msg(self->wm, "login failed");
+    xrdp_wm_log_msg(self->wm, "xrdp_mm_process_login_response: login failed");
   }
   /* close socket */
   g_delete_wait_obj_from_socket(self->sck_obj);
@@ -932,7 +942,7 @@ xrdp_mm_process_channel_data(struct xrdp_mm* self, tbus param1, tbus param2,
 
   g_writeln("in xrdp_mm_process_channel_data %d %d %d %d", param1, param2, param3, param4);
   rv = 0;
-  if (self->chan_trans != 0)
+  if ((self->chan_trans != 0) && self->chan_trans_up)
   {
     s = trans_get_out_s(self->chan_trans, 8192);
     if (s != 0)

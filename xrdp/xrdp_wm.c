@@ -1490,7 +1490,7 @@ xrdp_wm_mod_get_wait_objs(struct xrdp_wm* self,
 {
   if (self->mm != 0)
   {
-    if (self->mm->chan_trans != 0)
+    if ((self->mm->chan_trans != 0) && self->mm->chan_trans_up)
     {
       trans_get_wait_objs(self->mm->chan_trans, read_objs, rcount, timeout);
     }
@@ -1513,7 +1513,7 @@ xrdp_wm_mod_check_wait_objs(struct xrdp_wm* self)
 {
   if (self->mm != 0)
   {
-    if (self->mm->chan_trans != 0)
+    if ((self->mm->chan_trans != 0) && self->mm->chan_trans_up)
     {
       trans_check_wait_objs(self->mm->chan_trans);
     }
