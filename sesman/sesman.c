@@ -279,10 +279,10 @@ main(int argc, char** argv)
    * going back to old style for the time being
    * problem with the sigaddset functions in sig.c - jts */
 #if 1
-  g_signal(1, sig_sesman_reload_cfg); /* SIGHUP  */
-  g_signal(2, sig_sesman_shutdown);   /* SIGINT  */
-  g_signal(9, sig_sesman_shutdown);   /* SIGKILL */
-  g_signal(15, sig_sesman_shutdown);  /* SIGTERM */
+  g_signal_hang_up(sig_sesman_reload_cfg); /* SIGHUP  */
+  g_signal_user_interrupt(sig_sesman_shutdown); /* SIGINT  */
+  g_signal_kill(sig_sesman_shutdown); /* SIGKILL */
+  g_signal_terminate(sig_sesman_shutdown); /* SIGTERM */
   g_signal_child_stop(sig_sesman_session_end); /* SIGCHLD */
 #endif
 #if 0
