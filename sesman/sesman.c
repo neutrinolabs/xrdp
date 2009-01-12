@@ -33,6 +33,7 @@ unsigned char g_fixedkey[8] = { 23, 82, 107, 6, 35, 78, 88, 7 };
 struct config_sesman* g_cfg; /* config.h */
 
 tbus g_term_event = 0;
+tbus g_sync_event = 0;
 
 extern int g_thread_sck; /* in thread.c */
 
@@ -70,6 +71,7 @@ sesman_main_loop(void)
         robjs_count = 0;
         robjs[robjs_count++] = sck_obj;
         robjs[robjs_count++] = g_term_event;
+        robjs[robjs_count++] = g_sync_event;
         /* wait */
         if (g_obj_wait(robjs, robjs_count, 0, 0, -1) != 0)
         {
@@ -79,6 +81,11 @@ sesman_main_loop(void)
         if (g_is_wait_obj_set(g_term_event)) /* term */
         {
           break;
+        }
+        if (g_is_wait_obj_set(g_sync_event)) /* sync */
+        {
+          g_reset_wait_obj(g_sync_event);
+          session_sync_start();
         }
         if (g_is_wait_obj_set(sck_obj)) /* incomming connection */
         {
@@ -318,10 +325,13 @@ main(int argc, char** argv)
 
   g_snprintf(text, 255, "xrdp-sesman_%8.8x_main_term", g_pid);
   g_term_event = g_create_wait_obj(text);
+  g_snprintf(text, 255, "xrdp-sesman_%8.8x_main_sync", g_pid);
+  g_sync_event = g_create_wait_obj(text);
 
   sesman_main_loop();
 
   g_delete_wait_obj(g_term_event);
+  g_delete_wait_obj(g_sync_event);
 
   if (!daemon)
   {

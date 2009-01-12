@@ -78,5 +78,36 @@ lock_socket_acquire(void);
 void DEFAULT_CC
 lock_socket_release(void);
 
-#endif
+/**
+ *
+ * @brief request the main sync lock
+ *
+ */
+void APP_CC
+lock_sync_acquire(void);
 
+/**
+ *
+ * @brief releases the main sync lock
+ *
+ */
+void APP_CC
+lock_sync_release(void);
+
+/**
+ *
+ * @brief request the sync sem lock
+ *
+ */
+void APP_CC
+lock_sync_sem_acquire(void);
+
+/**
+ *
+ * @brief releases the sync sem lock
+ *
+ */
+void APP_CC
+lock_sync_sem_release(void);
+
+#endif

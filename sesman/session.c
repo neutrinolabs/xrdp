@@ -31,10 +31,20 @@
 #include <errno.h>
 //#include <time.h>
 
+extern tbus g_sync_event;
 extern unsigned char g_fixedkey[8];
 extern struct config_sesman* g_cfg; /* config.h */
 struct session_chain* g_sessions;
 int g_session_count;
+
+static int g_sync_width;
+static int g_sync_height;
+static int g_sync_bpp;
+static char* g_sync_username;
+static char* g_sync_password;
+static tbus g_sync_data;
+static tui8 g_sync_type;
+static int g_sync_result;
 
 /******************************************************************************/
 struct session_item* DEFAULT_CC
@@ -171,9 +181,10 @@ session_start_sessvc(int xpid, int wmpid, long data)
 }
 
 /******************************************************************************/
-int DEFAULT_CC
-session_start(int width, int height, int bpp, char* username, char* password,
-              long data, unsigned char type)
+/* called with the main thread */
+static int APP_CC
+session_start_fork(int width, int height, int bpp, char* username,
+                   char* password, tbus data, tui8 type)
 {
   int display;
   int pid;
@@ -191,20 +202,13 @@ session_start(int width, int height, int bpp, char* username, char* password,
   time_t ltime;
   struct tm stime;
 
-  /*THREAD-FIX lock to control g_session_count*/
-  lock_chain_acquire();
   /* check to limit concurrent sessions */
   if (g_session_count >= g_cfg->sess.max_sessions)
   {
-    /*THREAD-FIX unlock chain*/
-    lock_chain_release();
     log_message(&(g_cfg->log), LOG_LEVEL_INFO, "max concurrent session limit exceeded. login \
 for user %s denied", username);
     return 0;
   }
-
-  /*THREAD-FIX unlock chain*/
-  lock_chain_release();
 
   temp = (struct session_chain*)g_malloc(sizeof(struct session_chain), 0);
   if (temp == 0)
@@ -228,8 +232,6 @@ for user %s denied", username);
   /* we search for a free display up to max_sessions */
   /* we should need no more displays than this       */
 
-  /* block all the threads running to enable forking */
-  scp_lock_fork_request();
   while (x_server_running(display))
   {
     display++;
@@ -412,9 +414,6 @@ for user %s denied", username);
   }
   else /* parent sesman process */
   {
-    /* let the other threads go on */
-    scp_lock_fork_release();
-
     temp->item->pid = pid;
     temp->item->display = display;
     temp->item->width = width;
@@ -436,17 +435,57 @@ for user %s denied", username);
     temp->item->type=type;
     temp->item->status=SESMAN_SESSION_STATUS_ACTIVE;
 
-    /*THREAD-FIX lock the chain*/
-    lock_chain_acquire();
     temp->next=g_sessions;
     g_sessions=temp;
     g_session_count++;
-    /*THERAD-FIX free the chain*/
-    lock_chain_release();
+  }
+  return display;
+}
 
+/******************************************************************************/
+/* called by a worker thread, ask the main thread to call session_sync_start
+   and wait till done */
+int DEFAULT_CC
+session_start(int width, int height, int bpp, char* username, char* password,
+              long data, unsigned char type)
+{
+  int display;
+
+  /* lock mutex */
+  lock_sync_acquire();
+  /* set shared vars */
+  g_sync_width = width;
+  g_sync_height = height;
+  g_sync_bpp = bpp;
+  g_sync_username = username;
+  g_sync_password = password;
+  g_sync_data = data;
+  g_sync_type = type;
+  /* set event for main thread to see */
+  g_set_wait_obj(g_sync_event);
+  /* wait for main thread to get done */
+  lock_sync_sem_acquire();
+  /* read result(display) from shared var */
+  display = g_sync_result;
+  /* unlock mutex */
+  lock_sync_release();
+  if (display != 0)
+  {
     g_sleep(5000);
   }
   return display;
+}
+
+/******************************************************************************/
+/* called with the main thread */
+int APP_CC
+session_sync_start(void)
+{
+  g_sync_result = session_start_fork(g_sync_width, g_sync_height, g_sync_bpp,
+                                     g_sync_username, g_sync_password,
+                                     g_sync_data, g_sync_type);
+  lock_sync_sem_release();
+  return 0;
 }
 
 /******************************************************************************/

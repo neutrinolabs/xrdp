@@ -34,6 +34,9 @@ pthread_mutexattr_t lock_chain_attr;  /* mutex attributes */
 pthread_mutex_t lock_config;          /* configuration access lock */
 pthread_mutexattr_t lock_config_attr; /* mutex attributes */
 
+static tbus g_sync_mutex;
+static tbus g_sync_sem;
+
 sem_t lock_socket;
 
 void DEFAULT_CC
@@ -49,6 +52,9 @@ lock_init(void)
   /* initializing config lock */
   pthread_mutexattr_init(&lock_config_attr);
   pthread_mutex_init(&lock_config, &lock_config_attr);
+
+  g_sync_mutex = tc_mutex_create();
+  g_sync_sem = tc_sem_create(0);
 }
 
 /******************************************************************************/
@@ -87,3 +93,38 @@ lock_socket_release(void)
   sem_post(&lock_socket);
 }
 
+/******************************************************************************/
+void APP_CC
+lock_sync_acquire(void)
+{
+  /* lock sync variable */
+  LOG_DBG(&(g_cfg->log), "lock_sync_acquire()");
+  tc_mutex_lock(g_sync_mutex);
+}
+
+/******************************************************************************/
+void APP_CC
+lock_sync_release(void)
+{
+  /* unlock socket variable */
+  LOG_DBG(&(g_cfg->log), "lock_socket_release()");
+  tc_mutex_unlock(g_sync_mutex);
+}
+
+/******************************************************************************/
+void APP_CC
+lock_sync_sem_acquire(void)
+{
+  /* dec sem */
+  LOG_DBG(&(g_cfg->log), "lock_sync_dec()");
+  tc_sem_dec(g_sync_sem);
+}
+
+/******************************************************************************/
+void APP_CC
+lock_sync_sem_release(void)
+{
+  /* inc sem */
+  LOG_DBG(&(g_cfg->log), "lock_sync_inc()");
+  tc_sem_inc(g_sync_sem);
+}

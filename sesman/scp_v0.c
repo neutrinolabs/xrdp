@@ -34,7 +34,7 @@ void DEFAULT_CC
 scp_v0_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
 {
   int display = 0;
-  long data;
+  tbus data;
   struct session_item* s_item;
 
   data = auth_userpass(s->username, s->password);
