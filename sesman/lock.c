@@ -23,74 +23,67 @@
 
 #include "sesman.h"
 
-#include <semaphore.h>
-#include <pthread.h>
-
 extern struct config_sesman* g_cfg;
 
-pthread_mutex_t lock_chain;           /* session chain lock */
-pthread_mutexattr_t lock_chain_attr;  /* mutex attributes */
+static tbus g_sync_mutex = 0;
+static tbus g_lock_chain = 0;
+static tbus g_sync_sem = 0;
+static tbus g_lock_socket = 0;
 
-pthread_mutex_t lock_config;          /* configuration access lock */
-pthread_mutexattr_t lock_config_attr; /* mutex attributes */
-
-static tbus g_sync_mutex;
-static tbus g_sync_sem;
-
-sem_t lock_socket;
-
-void DEFAULT_CC
+/******************************************************************************/
+void APP_CC
 lock_init(void)
 {
-  /* initializing socket lock */
-  sem_init(&lock_socket, 0, 1);
-
-  /* initializing chain lock */
-  pthread_mutexattr_init(&lock_chain_attr);
-  pthread_mutex_init(&lock_chain, &lock_chain_attr);
-
-  /* initializing config lock */
-  pthread_mutexattr_init(&lock_config_attr);
-  pthread_mutex_init(&lock_config, &lock_config_attr);
-
   g_sync_mutex = tc_mutex_create();
+  g_lock_chain = tc_mutex_create();
   g_sync_sem = tc_sem_create(0);
+  g_lock_socket = tc_sem_create(1);
 }
 
 /******************************************************************************/
-void DEFAULT_CC
+void APP_CC
+lock_deinit(void)
+{
+  tc_mutex_delete(g_sync_mutex);
+  tc_mutex_delete(g_lock_chain);
+  tc_sem_delete(g_sync_sem);
+  tc_sem_delete(g_lock_socket);
+}
+
+/******************************************************************************/
+void APP_CC
 lock_chain_acquire(void)
 {
-  /*lock the chain*/
+  /* lock the chain */
   LOG_DBG(&(g_cfg->log), "lock_chain_acquire()");
-  pthread_mutex_lock(&lock_chain);
+  tc_mutex_lock(g_lock_chain);
 }
 
 /******************************************************************************/
-void DEFAULT_CC
+void APP_CC
 lock_chain_release(void)
 {
-  /*unlock the chain*/
+  /* unlock the chain */
   LOG_DBG(&(g_cfg->log), "lock_chain_release()");
-  pthread_mutex_unlock(&lock_chain);
+  tc_mutex_unlock(g_lock_chain);
 }
 
 /******************************************************************************/
-void DEFAULT_CC
+void APP_CC
 lock_socket_acquire(void)
 {
   /* lock socket variable */
   LOG_DBG(&(g_cfg->log), "lock_socket_acquire()");
-  sem_wait(&lock_socket);
+  tc_sem_dec(g_lock_socket);
 }
 
 /******************************************************************************/
-void DEFAULT_CC
+void APP_CC
 lock_socket_release(void)
 {
   /* unlock socket variable */
   LOG_DBG(&(g_cfg->log), "lock_socket_release()");
-  sem_post(&lock_socket);
+  tc_sem_inc(g_lock_socket);
 }
 
 /******************************************************************************/
@@ -107,7 +100,7 @@ void APP_CC
 lock_sync_release(void)
 {
   /* unlock socket variable */
-  LOG_DBG(&(g_cfg->log), "lock_socket_release()");
+  LOG_DBG(&(g_cfg->log), "lock_sync_release()");
   tc_mutex_unlock(g_sync_mutex);
 }
 
@@ -116,7 +109,7 @@ void APP_CC
 lock_sync_sem_acquire(void)
 {
   /* dec sem */
-  LOG_DBG(&(g_cfg->log), "lock_sync_dec()");
+  LOG_DBG(&(g_cfg->log), "lock_sync_sem_acquire()");
   tc_sem_dec(g_sync_sem);
 }
 
@@ -125,6 +118,6 @@ void APP_CC
 lock_sync_sem_release(void)
 {
   /* inc sem */
-  LOG_DBG(&(g_cfg->log), "lock_sync_inc()");
+  LOG_DBG(&(g_cfg->log), "lock_sync_sem_release()");
   tc_sem_inc(g_sync_sem);
 }

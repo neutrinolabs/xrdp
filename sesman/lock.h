@@ -27,47 +27,39 @@
  * @brief initializes all the locks
  *
  */
-void DEFAULT_CC
+void APP_CC
 lock_init(void);
+
+/**
+ *
+ * @brief cleanup all the locks
+ *
+ */
+void APP_CC
+lock_deinit(void);
 
 /**
  *
  * @brief acquires the lock for the session chain
  *
  */
-void DEFAULT_CC
+void APP_CC
 lock_chain_acquire(void);
 
 /**
  *
- * @brief releases the sessiona chain lock
+ * @brief releases the session chain lock
  *
  */
-void DEFAULT_CC
+void APP_CC
 lock_chain_release(void);
-
-/**
- *
- * @brief acquires config lock
- *
- */
-void DEFAULT_CC
-lock_cfg_acquire(void);
-
-/**
- *
- * @brief releases config lock
- *
- */
-void DEFAULT_CC
-lock_cfg_release(void);
 
 /**
  *
  * @brief request the socket lock
  *
  */
-void DEFAULT_CC
+void APP_CC
 lock_socket_acquire(void);
 
 /**
@@ -75,7 +67,7 @@ lock_socket_acquire(void);
  * @brief releases the socket lock
  *
  */
-void DEFAULT_CC
+void APP_CC
 lock_socket_release(void);
 
 /**
