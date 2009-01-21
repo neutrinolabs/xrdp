@@ -1247,6 +1247,8 @@ xrdp_bitmap_def_proc(struct xrdp_bitmap* self, int msg,
   int shift;
   int ext;
   int scan_code;
+  int num_bytes;
+  int num_chars;
   struct xrdp_bitmap* b;
   struct xrdp_bitmap* focus_out_control;
 
@@ -1431,7 +1433,9 @@ xrdp_bitmap_def_proc(struct xrdp_bitmap* self, int msg,
             (param2, scan_code, self->wm->keys, self->wm->caps_lock,
              self->wm->num_lock, self->wm->scroll_lock,
              &(self->wm->keymap));
-        if (c >= 32)
+        num_chars = g_mbstowcs(0, self->caption1, 0);
+        num_bytes = g_strlen(self->caption1);
+        if ((c >= 32) && (num_chars < 127) && (num_bytes < 250))
         {
           add_char_at(self->caption1, 255, c, self->edit_pos);
           self->edit_pos++;
