@@ -395,7 +395,7 @@ rdp_rdp_send_confirm_active(struct rdp_rdp* self, struct stream* s)
 
 /******************************************************************************/
 /* Process a color pointer PDU */
-static void APP_CC
+static int APP_CC
 rdp_rdp_process_color_pointer_pdu(struct rdp_rdp* self, struct stream* s)
 {
   int cache_idx;
@@ -404,6 +404,10 @@ rdp_rdp_process_color_pointer_pdu(struct rdp_rdp* self, struct stream* s)
   struct rdp_cursor* cursor;
 
   in_uint16_le(s, cache_idx);
+  if (cache_idx >= sizeof(self->cursors) / sizeof(cursor))
+  {
+    return 1;
+  }
   cursor = self->cursors + cache_idx;
   in_uint16_le(s, cursor->x);
   in_uint16_le(s, cursor->y);
@@ -411,29 +415,39 @@ rdp_rdp_process_color_pointer_pdu(struct rdp_rdp* self, struct stream* s)
   in_uint16_le(s, cursor->height);
   in_uint16_le(s, mlen); /* mask length */
   in_uint16_le(s, dlen); /* data length */
+  if ((mlen > sizeof(cursor->mask)) || (dlen > sizeof(cursor->data)))
+  {
+    return 1;
+  }
   in_uint8a(s, cursor->data, dlen);
   in_uint8a(s, cursor->mask, mlen);
   self->mod->server_set_cursor(self->mod, cursor->x, cursor->y,
                                cursor->data, cursor->mask);
+  return 0;
 }
 
 /******************************************************************************/
 /* Process a cached pointer PDU */
-static void APP_CC
+static int APP_CC
 rdp_rdp_process_cached_pointer_pdu(struct rdp_rdp* self, struct stream* s)
 {
   int cache_idx;
   struct rdp_cursor* cursor;
 
   in_uint16_le(s, cache_idx);
+  if (cache_idx >= sizeof(self->cursors) / sizeof(cursor))
+  {
+    return 1;
+  }
   cursor = self->cursors + cache_idx;
   self->mod->server_set_cursor(self->mod, cursor->x, cursor->y,
                                cursor->data, cursor->mask);
+  return 0;
 }
 
 /******************************************************************************/
 /* Process a system pointer PDU */
-static void APP_CC
+static int APP_CC
 rdp_rdp_process_system_pointer_pdu(struct rdp_rdp* self, struct stream* s)
 {
   int system_pointer_type;
@@ -452,17 +466,20 @@ rdp_rdp_process_system_pointer_pdu(struct rdp_rdp* self, struct stream* s)
     default:
       break;
   }
+  return 0;
 }
 
 /******************************************************************************/
 /* Process a pointer PDU */
-static void APP_CC
+static int APP_CC
 rdp_rdp_process_pointer_pdu(struct rdp_rdp* self, struct stream* s)
 {
   int message_type;
   int x;
   int y;
+  int rv;
 
+  rv = 0;
   in_uint16_le(s, message_type);
   in_uint8s(s, 2); /* pad */
   switch (message_type)
@@ -472,17 +489,18 @@ rdp_rdp_process_pointer_pdu(struct rdp_rdp* self, struct stream* s)
       in_uint16_le(s, y);
       break;
     case RDP_POINTER_COLOR:
-      rdp_rdp_process_color_pointer_pdu(self, s);
+      rv = rdp_rdp_process_color_pointer_pdu(self, s);
       break;
     case RDP_POINTER_CACHED:
-      rdp_rdp_process_cached_pointer_pdu(self, s);
+      rv = rdp_rdp_process_cached_pointer_pdu(self, s);
       break;
     case RDP_POINTER_SYSTEM:
-      rdp_rdp_process_system_pointer_pdu(self, s);
+      rv = rdp_rdp_process_system_pointer_pdu(self, s);
       break;
     default:
       break;
   }
+  return rv;
 }
 
 /******************************************************************************/
@@ -615,7 +633,7 @@ rdp_rdp_process_palette(struct rdp_rdp* self, struct stream* s)
 
 /******************************************************************************/
 /* Process an update PDU */
-static void APP_CC
+static int APP_CC
 rdp_rdp_process_update_pdu(struct rdp_rdp* self, struct stream* s)
 {
   int update_type;
@@ -643,6 +661,7 @@ rdp_rdp_process_update_pdu(struct rdp_rdp* self, struct stream* s)
       break;
   }
   self->mod->server_end_update(self->mod);
+  return 0;
 }
 
 
@@ -852,7 +871,9 @@ rdp_rdp_process_data_pdu(struct rdp_rdp* self, struct stream* s)
   int ctype;
   int clen;
   int len;
+  int rv;
 
+  rv = 0;
   in_uint8s(s, 6); /* shareid, pad, streamid */
   in_uint16_le(s, len);
   in_uint8(s, data_pdu_type);
@@ -862,26 +883,26 @@ rdp_rdp_process_data_pdu(struct rdp_rdp* self, struct stream* s)
   switch (data_pdu_type)
   {
     case RDP_DATA_PDU_UPDATE:
-      rdp_rdp_process_update_pdu(self, s);
+      rv = rdp_rdp_process_update_pdu(self, s);
       break;
     case RDP_DATA_PDU_CONTROL:
       break;
     case RDP_DATA_PDU_SYNCHRONISE:
       break;
     case RDP_DATA_PDU_POINTER:
-      rdp_rdp_process_pointer_pdu(self, s);
+      rv = rdp_rdp_process_pointer_pdu(self, s);
       break;
     case RDP_DATA_PDU_BELL:
       break;
     case RDP_DATA_PDU_LOGON:
       break;
     case RDP_DATA_PDU_DISCONNECT:
-      rdp_rdp_process_disconnect_pdu(self, s);
+      rv = rdp_rdp_process_disconnect_pdu(self, s);
       break;
     default:
       break;
   }
-  return 0;
+  return rv;
 }
 
 /******************************************************************************/
