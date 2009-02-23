@@ -3,11 +3,18 @@ default build will install the following
 
 /usr/local/lib/xrdp/
   libcommon.so
-  libxrdp.so
+  libmc.so
   librdp.so
+  libscp.so
+  libvnc.so
+  libxrdp.so
   libxup.so
 
 /usr/local/bin/
+  xrdp-keygen
+  xrdp-sesadmin
+  xrdp-sesrun
+  xrdp-sestest
 
 /usr/local/sbin/
   xrdp
@@ -17,3 +24,34 @@ default build will install the following
 /etc/xrdp/
   xrdp.ini
   sesman.ini
+  rsakeys.ini
+  startwm.sh
+  xrdp.sh
+
+/etc/pam.d/
+  xrdp-sesman
+
+/usr/local/share/man/man5
+  sesman.ini.5
+  xrdp.ini.5
+
+/usr/local/share/man/man8
+  xrdp.8
+  xrdp-sesman.8
+  xrdp-sesrun.8
+
+/usr/local/share/xrdp
+  ad256.bmp
+  cursor0.cur
+  cursor1.cur
+  sans-10.fv1
+  xrdp256.bmp
+
+when running, the following are created and written to
+
+/var/run/
+  xrdp.pid
+  sesman.pid
+
+/var/log/
+  xrdp-sesman.log
