@@ -1,0 +1,19 @@
+
+default build will install the following
+
+/usr/local/lib/xrdp/
+  libcommon.so
+  libxrdp.so
+  librdp.so
+  libxup.so
+
+/usr/local/bin/
+
+/usr/local/sbin/
+  xrdp
+  xrdp-sesman
+  xrdp-sessvc
+
+/etc/xrdp/
+  xrdp.ini
+  sesman.ini
