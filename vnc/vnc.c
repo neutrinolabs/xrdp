@@ -777,6 +777,12 @@ split_color(int pixel, int* r, int* g, int* b, int bpp, int* palette)
       *b = (palette[pixel] >> 0) & 0xff;
     }
   }
+  else if (bpp == 15)
+  {
+    *r = ((pixel >> 7) & 0xf8) | ((pixel >> 12) & 0x7);
+    *g = ((pixel >> 2) & 0xf8) | ((pixel >> 8) & 0x7);
+    *b = ((pixel << 3) & 0xf8) | ((pixel >> 2) & 0x7);
+  }
   else if (bpp == 16)
   {
     *r = ((pixel >> 8) & 0xf8) | ((pixel >> 13) & 0x7);
@@ -1146,9 +1152,10 @@ lib_mod_connect(struct vnc* v)
   v->server_msg(v, "started connecting", 0);
   check_sec_result = 1;
   /* only support 8 and 16 bpp connections from rdp client */
-  if ((v->server_bpp != 8) && (v->server_bpp != 16) && (v->server_bpp != 24))
+  if ((v->server_bpp != 8) && (v->server_bpp != 15) &&
+      (v->server_bpp != 16) && (v->server_bpp != 24))
   {
-    v->server_msg(v, "error - only supporting 8, 16 and 24 bpp rdp \
+    v->server_msg(v, "error - only supporting 8, 15, 16 and 24 bpp rdp \
 connections", 0);
     return 1;
   }
@@ -1294,6 +1301,24 @@ connections", 0);
       out_uint16_be(pixel_format, 0); /* blue max */
       out_uint8(pixel_format, 0); /* red shift */
       out_uint8(pixel_format, 0); /* green shift */
+      out_uint8(pixel_format, 0); /* blue shift */
+      out_uint8s(pixel_format, 3); /* pad */
+    }
+    else if (v->mod_bpp == 15)
+    {
+      out_uint8(pixel_format, 16); /* bits per pixel */
+      out_uint8(pixel_format, 15); /* depth */
+#if defined(B_ENDIAN)
+      out_uint8(pixel_format, 1); /* big endian */
+#else
+      out_uint8(pixel_format, 0); /* big endian */
+#endif
+      out_uint8(pixel_format, 1); /* true color flag */
+      out_uint16_be(pixel_format, 31); /* red max */
+      out_uint16_be(pixel_format, 31); /* green max */
+      out_uint16_be(pixel_format, 31); /* blue max */
+      out_uint8(pixel_format, 10); /* red shift */
+      out_uint8(pixel_format, 5); /* green shift */
       out_uint8(pixel_format, 0); /* blue shift */
       out_uint8s(pixel_format, 3); /* pad */
     }

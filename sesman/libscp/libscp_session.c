@@ -126,6 +126,7 @@ scp_session_set_bpp(struct SCP_SESSION* s, tui8 bpp)
   switch (bpp)
   {
     case 8:
+    case 15:
     case 16:
     case 24:
       s->bpp = bpp;
