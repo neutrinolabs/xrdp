@@ -513,10 +513,10 @@ xrdp_mm_trans_send_channel_setup(struct xrdp_mm* self, struct trans* trans)
   s_push_layer(s, mcs_hdr, 8);
   s_push_layer(s, sec_hdr, 2);
   index = 0;
-  while (server_query_channel(self->mod, index, chan_name,
-                              &chan_flags) == 0)
+  while (libxrdp_query_channel(self->wm->session, index, chan_name,
+                               &chan_flags) == 0)
   {
-    chan_id = server_get_channel_id(self->mod, chan_name);
+    chan_id = libxrdp_get_channel_id(self->wm->session, chan_name);
     out_uint8a(s, chan_name, 8);
     out_uint16_le(s, chan_id);
     out_uint16_le(s, chan_flags);
@@ -591,8 +591,8 @@ xrdp_mm_trans_process_channel_data(struct xrdp_mm* self, struct trans* trans)
   rv = xrdp_mm_trans_send_channel_data_response(self, trans);
   if (rv == 0)
   {
-    rv = server_send_to_channel(self->mod, chan_id, s->p, size, total_size,
-                                chan_flags);
+    rv = libxrdp_send_to_channel(self->wm->session, chan_id, s->p, size, total_size,
+                                 chan_flags);
   }
   return rv;
 }
@@ -1294,6 +1294,7 @@ server_query_channel(struct xrdp_mod* mod, int index, char* channel_name,
 }
 
 /*****************************************************************************/
+/* returns -1 on error */
 int DEFAULT_CC
 server_get_channel_id(struct xrdp_mod* mod, char* name)
 {
@@ -1302,7 +1303,7 @@ server_get_channel_id(struct xrdp_mod* mod, char* name)
   wm = (struct xrdp_wm*)mod->wm;
   if (wm->mm->sesman_controlled)
   {
-    return 1;
+    return -1;
   }
   return libxrdp_get_channel_id(wm->session, name);
 }
