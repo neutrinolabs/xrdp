@@ -52,7 +52,8 @@ sesmansysconf_DATA = \
 SUBDIRS = \
   libscp \
   tools \
-  sessvc
+  sessvc \
+  chansrv
 
 # must be tab below
 install-data-hook:
