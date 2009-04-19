@@ -910,6 +910,14 @@ g_obj_wait(tbus* read_objs, int rcount, tbus* write_objs, int wcount,
   i = select(max + 1, &rfds, &wfds, 0, ptime);
   if (i < 0)
   {
+    /* these are not really errors */
+    if ((errno == EAGAIN) ||
+        (errno == EWOULDBLOCK) ||
+        (errno == EINPROGRESS) ||
+        (errno == EINTR)) /* signal occured */
+    {
+      return 0;
+    }
     return 1;
   }
   return 0;
@@ -1381,6 +1389,10 @@ g_strncasecmp(const char* c1, const char* c2, int len)
 int APP_CC
 g_atoi(char* str)
 {
+  if (str == 0)
+  {
+    return 0;
+  }
   return atoi(str);
 }
 
