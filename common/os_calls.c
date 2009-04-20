@@ -1698,6 +1698,13 @@ g_get_strerror(void)
 }
 
 /*****************************************************************************/
+int APP_CC
+g_get_errno(void)
+{
+  return errno;
+}
+
+/*****************************************************************************/
 /* does not work in win32 */
 int APP_CC
 g_execvp(const char* p1, char* args[])

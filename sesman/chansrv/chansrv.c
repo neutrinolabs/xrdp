@@ -173,6 +173,7 @@ process_message_channel_setup(struct stream* s)
 
   g_writeln("xrdp-chansrv: in process_message_channel_setup");
   in_uint16_le(s, num_chans);
+  g_writeln("xrdp-chansrv: num_chans %d", num_chans);
   for (index = 0; index < num_chans; index++)
   {
     ci = &(g_chan_items[g_num_chan_items]);
@@ -180,8 +181,8 @@ process_message_channel_setup(struct stream* s)
     in_uint8a(s, ci->name, 8);
     in_uint16_le(s, ci->id);
     in_uint16_le(s, ci->flags);
-    g_writeln("xrdp-chansrv: chan name %s id %d flags %d", ci->name, ci->id,
-              ci->flags);
+    g_writeln("xrdp-chansrv: chan name %s id %d flags %8.8x",
+              ci->name, ci->id, ci->flags);
     if (g_strcasecmp(ci->name, "cliprdr") == 0)
     {
       g_clip_index = g_num_chan_items;
@@ -470,7 +471,7 @@ main(int argc, char** argv)
   char* display_text;
 
   pid = g_getpid();
-  g_writeln("xrdp-chansrv: started pid %d(0x%8.8x)", pid, pid);
+  g_writeln("xrdp-chansrv: app started pid %d(0x%8.8x)", pid, pid);
   g_signal_kill(term_signal_handler); /* SIGKILL */
   g_signal_terminate(term_signal_handler); /* SIGTERM */
   g_signal_user_interrupt(term_signal_handler); /* SIGINT */
@@ -490,9 +491,10 @@ main(int argc, char** argv)
     g_writeln("xrdp-chansrv: error, display is zero");
     return 1;
   }
-  g_snprintf(text, 255, "xrdp_chansrv_term_%8.8x", pid);
+  g_writeln("xrdp-chansrv: using DISPLAY %d", g_display);
+  g_snprintf(text, 255, "xrdp_chansrv_%8.8x_main_term", pid);
   g_term_event = g_create_wait_obj(text);
-  g_snprintf(text, 255, "xrdp_chansrv_thread_done_%8.8x", pid);
+  g_snprintf(text, 255, "xrdp_chansrv_%8.8x_thread_done", pid);
   g_thread_done_event = g_create_wait_obj(text);
   tc_thread_create(channel_thread_loop, 0);
   if (g_obj_wait(&g_term_event, 1, 0, 0, 0) != 0)
@@ -507,5 +509,6 @@ main(int argc, char** argv)
   /* cleanup */
   g_delete_wait_obj(g_term_event);
   g_delete_wait_obj(g_thread_done_event);
+  g_writeln("xrdp-chansrv: app exiting pid %d(0x%8.8x)", pid, pid);
   return 0;
 }
