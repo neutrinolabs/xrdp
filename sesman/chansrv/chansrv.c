@@ -24,19 +24,23 @@
 #include "chansrv.h"
 #include "defines.h"
 #include "sound.h"
+#include "clipboard.h"
+#include "devredir.h"
 
 static tbus g_thread_done_event = 0;
 static struct trans* g_lis_trans = 0;
 static struct trans* g_con_trans = 0;
 static struct chan_item g_chan_items[32];
 static int g_num_chan_items = 0;
-static int g_clip_index = -1;
-static int g_sound_index = -1;
+static int g_cliprdr_index = -1;
+static int g_rdpsnd_index = -1;
+static int g_rdpdr_index = -1;
 
 tbus g_term_event = 0;
 int g_display = 0;
-int g_clip_chan_id = -1;
-int g_sound_chan_id = -1;
+int g_cliprdr_chan_id = -1; /* cliprdr */
+int g_rdpsnd_chan_id = -1; /* rdpsnd */
+int g_rdpdr_chan_id = -1; /* rdpdr */
 
 /*****************************************************************************/
 /* returns error */
@@ -185,24 +189,33 @@ process_message_channel_setup(struct stream* s)
               ci->name, ci->id, ci->flags);
     if (g_strcasecmp(ci->name, "cliprdr") == 0)
     {
-      g_clip_index = g_num_chan_items;
-      g_clip_chan_id = ci->id;
+      g_cliprdr_index = g_num_chan_items;
+      g_cliprdr_chan_id = ci->id;
     }
     else if (g_strcasecmp(ci->name, "rdpsnd") == 0)
     {
-      g_sound_index = g_num_chan_items;
-      g_sound_chan_id = ci->id;
+      g_rdpsnd_index = g_num_chan_items;
+      g_rdpsnd_chan_id = ci->id;
+    }
+    else if (g_strcasecmp(ci->name, "rdpdr") == 0)
+    {
+      g_rdpdr_index = g_num_chan_items;
+      g_rdpdr_chan_id = ci->id;
     }
     g_num_chan_items++;
   }
   rv = send_channel_setup_response_message();
-  if (g_clip_index >= 0)
+  if (g_cliprdr_index >= 0)
   {
     clipboard_init();
   }
-  if (g_sound_index >= 0)
+  if (g_rdpsnd_index >= 0)
   {
     sound_init();
+  }
+  if (g_rdpdr_index >= 0)
+  {
+    dev_redir_init();
   }
   return rv;
 }
@@ -227,13 +240,17 @@ process_message_channel_data(struct stream* s)
   rv = send_channel_data_response_message();
   if (rv == 0)
   {
-    if (chan_id == g_clip_chan_id)
+    if (chan_id == g_cliprdr_chan_id)
     {
       rv = clipboard_data_in(s, chan_id, chan_flags, length, total_length);
     }
-    else if (chan_id == g_sound_chan_id)
+    else if (chan_id == g_rdpsnd_chan_id)
     {
       rv = sound_data_in(s, chan_id, chan_flags, length, total_length);
+    }
+    else if (chan_id == g_rdpdr_chan_id)
+    {
+      rv = dev_redir_data_in(s, chan_id, chan_flags, length, total_length);
     }
   }
   return rv;
@@ -365,18 +382,16 @@ my_trans_conn_in(struct trans* trans, struct trans* new_trans)
 }
 
 /*****************************************************************************/
-THREAD_RV THREAD_CC
-channel_thread_loop(void* in_val)
+static int APP_CC
+setup_listen(void)
 {
-  tbus objs[32];
-  int num_objs;
-  int timeout;
-  int error;
   char text[256];
-  THREAD_RV rv;
+  int error;
 
-  g_writeln("xrdp-chansrv: thread start");
-  rv = 0;
+  if (g_lis_trans != 0)
+  {
+    trans_delete(g_lis_trans);
+  }
   g_lis_trans = trans_create(1, 8192, 8192);
   g_lis_trans->trans_conn_in = my_trans_conn_in;
   g_snprintf(text, 255, "%d", 7200 + g_display);
@@ -384,7 +399,24 @@ channel_thread_loop(void* in_val)
   if (error != 0)
   {
     g_writeln("xrdp-chansrv: trans_listen failed");
+    return 1;
   }
+  return 0;
+}
+
+/*****************************************************************************/
+THREAD_RV THREAD_CC
+channel_thread_loop(void* in_val)
+{
+  tbus objs[32];
+  int num_objs;
+  int timeout;
+  int error;
+  THREAD_RV rv;
+
+  g_writeln("xrdp-chansrv: thread start");
+  rv = 0;
+  error = setup_listen();
   if (error == 0)
   {
     timeout = 0;
@@ -415,19 +447,16 @@ channel_thread_loop(void* in_val)
           trans_delete(g_con_trans);
           g_con_trans = 0;
           /* create new listener */
-          g_lis_trans = trans_create(1, 8192, 8192);
-          g_lis_trans->trans_conn_in = my_trans_conn_in;
-          g_snprintf(text, 255, "%d", 7200 + g_display);
-          error = trans_listen(g_lis_trans, text);
+          error = setup_listen();
           if (error != 0)
           {
-            g_writeln("xrdp-chansrv: trans_listen failed");
             break;
           }
         }
       }
       clipboard_check_wait_objs();
       sound_check_wait_objs();
+      dev_redir_check_wait_objs();
       timeout = 0;
       num_objs = 0;
       objs[num_objs] = g_term_event;
@@ -436,6 +465,7 @@ channel_thread_loop(void* in_val)
       trans_get_wait_objs(g_con_trans, objs, &num_objs, &timeout);
       clipboard_get_wait_objs(objs, &num_objs, &timeout);
       sound_get_wait_objs(objs, &num_objs, &timeout);
+      dev_redir_get_wait_objs(objs, &num_objs, &timeout);
     }
   }
   trans_delete(g_lis_trans);

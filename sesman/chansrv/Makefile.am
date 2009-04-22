@@ -7,7 +7,8 @@ sbin_PROGRAMS = \
 xrdp_chansrv_SOURCES = \
   chansrv.c \
   sound.c \
-  clipboard.c
+  clipboard.c \
+  devredir.c
 
 xrdp_chansrv_LDADD = \
   $(top_srcdir)/common/libcommon.la

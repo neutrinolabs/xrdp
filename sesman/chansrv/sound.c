@@ -21,6 +21,8 @@
 #include "parse.h"
 #include "os_calls.h"
 
+extern int g_rdpsnd_chan_id; /* in chansrv.c */
+
 /*****************************************************************************/
 int APP_CC
 sound_init(void)
