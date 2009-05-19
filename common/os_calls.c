@@ -1087,23 +1087,6 @@ g_file_lock(int fd, int start, int len)
 }
 
 /*****************************************************************************/
-/* returns error, always zero */
-int APP_CC
-g_set_file_rights(const char* filename, int read, int write)
-{
-#if defined(_WIN32)
-  return 0;
-#else
-  int flags;
-
-  flags = read ? S_IRUSR : 0;
-  flags |= write ? S_IWUSR : 0;
-  chmod(filename, flags);
-  return 0;
-#endif
-}
-
-/*****************************************************************************/
 /* returns error */
 int APP_CC
 g_chmod_hex(const char* filename, int flags)

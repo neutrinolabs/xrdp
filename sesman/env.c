@@ -54,7 +54,6 @@ env_check_password_file(char* filename, char* password)
   }
   g_file_write(fd, encryptedPasswd, 8);
   g_file_close(fd);
-  g_set_file_rights(filename, 1, 1); /* set read and write flags */
   return 0;
 }
 

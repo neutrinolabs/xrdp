@@ -129,8 +129,6 @@ g_file_seek(int fd, int offset);
 int APP_CC
 g_file_lock(int fd, int start, int len);
 int APP_CC
-g_set_file_rights(const char* filename, int read, int write);
-int APP_CC
 g_chmod_hex(const char* filename, int flags);
 int APP_CC
 g_mkdir(const char* dirname);

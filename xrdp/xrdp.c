@@ -559,7 +559,6 @@ main(int argc, char** argv)
     }
     else
     {
-      g_set_file_rights(pid_file, 1, 1); /* xrdp.pid */
       g_sprintf(text, "%d", pid);
       g_file_write(fd, text, g_strlen(text));
       g_file_close(fd);
