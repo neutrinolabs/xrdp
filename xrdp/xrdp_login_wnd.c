@@ -390,6 +390,7 @@ xrdp_wm_login_fill_in_combo(struct xrdp_wm* self, struct xrdp_bitmap* b)
   char* q;
   char* r;
   char name[256];
+  char cfg_file[256];
   struct xrdp_mod_data* mod_data;
 
   sections = list_create();
@@ -398,7 +399,8 @@ xrdp_wm_login_fill_in_combo(struct xrdp_wm* self, struct xrdp_bitmap* b)
   section_names->auto_free = 1;
   section_values = list_create();
   section_values->auto_free = 1;
-  fd = g_file_open(XRDP_CFG_FILE); /* xrdp.ini */
+  g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
+  fd = g_file_open(cfg_file); /* xrdp.ini */
   file_read_sections(fd, sections);
   for (i = 0; i < sections->count; i++)
   {

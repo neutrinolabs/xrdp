@@ -1178,7 +1178,7 @@ get_keymaps(int keylayout, struct xrdp_keymap* keymap)
       break;
   }
   /* check if there is a keymap file */
-  g_snprintf(filename, 255, XRDP_KEYMAP_FILE, keylayout);
+  g_snprintf(filename, 255, "%s/km-%4.4x.ini", XRDP_CFG_PATH, keylayout);
   if (g_file_exist(filename))
   {
     fd = g_file_open(filename);

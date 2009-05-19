@@ -134,7 +134,9 @@ main(int argc, char** argv)
   int pid;
   char pid_s[8];
   char text[256];
+  char pid_file[256];
 
+  g_snprintf(pid_file, 255, "%s/xrdp-sesman.pid", XRDP_PID_PATH);
   if (1 == argc)
   {
     /* no options on command line. normal startup */
@@ -167,18 +169,17 @@ main(int argc, char** argv)
   {
     /* killing running sesman */
     /* check if sesman is running */
-    if (!g_file_exist(SESMAN_PID_FILE))
+    if (!g_file_exist(pid_file))
     {
-      g_printf("sesman is not running (pid file not found - %s)\n",
-               SESMAN_PID_FILE);
+      g_printf("sesman is not running (pid file not found - %s)\n", pid_file);
       g_exit(1);
     }
 
-    fd = g_file_open(SESMAN_PID_FILE);
+    fd = g_file_open(pid_file);
 
     if (-1 == fd)
     {
-      g_printf("error opening pid file[%s]: %s\n", SESMAN_PID_FILE, g_get_strerror());
+      g_printf("error opening pid file[%s]: %s\n", pid_file, g_get_strerror());
       return 1;
     }
 
@@ -199,7 +200,7 @@ main(int argc, char** argv)
     }
     else
     {
-      g_file_delete(SESMAN_PID_FILE);
+      g_file_delete(pid_file);
     }
 
     g_exit(error);
@@ -213,11 +214,11 @@ main(int argc, char** argv)
     g_exit(1);
   }
 
-  if (g_file_exist(SESMAN_PID_FILE))
+  if (g_file_exist(pid_file))
   {
     g_printf("sesman is already running.\n");
     g_printf("if it's not running, try removing ");
-    g_printf(SESMAN_PID_FILE);
+    g_printf(pid_file);
     g_printf("\n");
     g_exit(1);
   }
@@ -298,17 +299,17 @@ main(int argc, char** argv)
   if (daemon)
   {
     /* writing pid file */
-    fd = g_file_open(SESMAN_PID_FILE);
+    fd = g_file_open(pid_file);
     if (-1 == fd)
     {
       log_message(&(g_cfg->log), LOG_LEVEL_ERROR,
                   "error opening pid file[%s]: %s",
-                  SESMAN_PID_FILE, g_get_strerror());
+                  pid_file, g_get_strerror());
       log_end(&(g_cfg->log));
       g_exit(1);
     }
     g_sprintf(pid_s, "%d", g_pid);
-    g_file_write(fd, pid_s, g_strlen(pid_s) + 1);
+    g_file_write(fd, pid_s, g_strlen(pid_s));
     g_file_close(fd);
   }
 

@@ -60,19 +60,21 @@ config_read(struct config_sesman* cfg)
   struct list* sec;
   struct list* param_n;
   struct list* param_v;
+  char cfg_file[256];
 
-  fd = g_file_open(SESMAN_CFG_FILE);
+  g_snprintf(cfg_file, 255, "%s/sesman.ini", XRDP_CFG_PATH);
+  fd = g_file_open(cfg_file);
   if (-1 == fd)
   {
     if (g_cfg->log.fd >= 0)
     {
       /* logging is already active */
       log_message(&(g_cfg->log), LOG_LEVEL_ALWAYS, "error opening %s in \
-                  config_read", SESMAN_CFG_FILE);
+                  config_read", cfg_file);
     }
     else
     {
-      g_printf("error opening %s in config_read", SESMAN_CFG_FILE);
+      g_printf("error opening %s in config_read", cfg_file);
     }
     return 1;
   }

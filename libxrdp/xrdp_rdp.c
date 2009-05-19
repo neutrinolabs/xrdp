@@ -62,12 +62,14 @@ xrdp_rdp_read_config(struct xrdp_client_info* client_info)
   struct list* values;
   char* item;
   char* value;
+  char cfg_file[256];
 
   items = list_create();
   items->auto_free = 1;
   values = list_create();
   values->auto_free = 1;
-  file_by_name_read_section(XRDP_CFG_FILE, "globals", items, values);
+  g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
+  file_by_name_read_section(cfg_file, "globals", items, values);
   for (index = 0; index < items->count; index++)
   {
     item = (char*)list_get_item(items, index);

@@ -32,16 +32,6 @@
 #include "list.h"
 #include "log.h"
 
-/**
- *
- * @def SESMAN_CFG_FILE
- * @brief Configuration file path
- *
- */
-#ifndef SESMAN_CFG_FILE
-#define SESMAN_CFG_FILE              "./sesman.ini"
-#endif
-
 #define SESMAN_CFG_GLOBALS           "Globals"
 #define SESMAN_CFG_DEFWM             "DefaultWindowManager"
 #define SESMAN_CFG_ADDRESS           "ListenAddress"

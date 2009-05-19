@@ -281,6 +281,7 @@ main(int argc, char** argv)
   int fd;
   int no_daemon;
   char text[256];
+  char pid_file[256];
 #endif
 
   g_init();
@@ -413,6 +414,7 @@ main(int argc, char** argv)
   }
   WSAStartup(2, &w);
 #else /* _WIN32 */
+  g_snprintf(pid_file, 255, "%s/xrdp.pid", XRDP_PID_PATH);
   no_daemon = 0;
   if (argc == 2)
   {
@@ -423,9 +425,9 @@ main(int argc, char** argv)
       g_writeln("stopping xrdp");
       /* read the xrdp.pid file */
       fd = -1;
-      if (g_file_exist(XRDP_PID_FILE)) /* xrdp.pid */
+      if (g_file_exist(pid_file)) /* xrdp.pid */
       {
-        fd = g_file_open(XRDP_PID_FILE); /* xrdp.pid */
+        fd = g_file_open(pid_file); /* xrdp.pid */
       }
       if (fd == -1)
       {
@@ -497,7 +499,7 @@ main(int argc, char** argv)
     g_writeln("");
     g_exit(0);
   }
-  if (g_file_exist(XRDP_PID_FILE)) /* xrdp.pid */
+  if (g_file_exist(pid_file)) /* xrdp.pid */
   {
     g_writeln("It looks like xrdp is allready running,");
     g_writeln("if not delete the xrdp.pid file and try again");
@@ -506,7 +508,7 @@ main(int argc, char** argv)
   if (!no_daemon)
   {
     /* make sure we can write to pid file */
-    fd = g_file_open(XRDP_PID_FILE); /* xrdp.pid */
+    fd = g_file_open(pid_file); /* xrdp.pid */
     if (fd == -1)
     {
       g_writeln("running in daemon mode with no access to pid files, quitting");
@@ -518,7 +520,7 @@ main(int argc, char** argv)
       g_exit(0);
     }
     g_file_close(fd);
-    g_file_delete(XRDP_PID_FILE);
+    g_file_delete(pid_file);
   }
   if (!no_daemon)
   {
@@ -548,7 +550,7 @@ main(int argc, char** argv)
   {
     /* write the pid to file */
     pid = g_getpid();
-    fd = g_file_open(XRDP_PID_FILE); /* xrdp.pid */
+    fd = g_file_open(pid_file); /* xrdp.pid */
     if (fd == -1)
     {
       g_writeln("trying to write process id to xrdp.pid");
@@ -557,7 +559,7 @@ main(int argc, char** argv)
     }
     else
     {
-      g_set_file_rights(XRDP_PID_FILE, 1, 1); /* xrdp.pid */
+      g_set_file_rights(pid_file, 1, 1); /* xrdp.pid */
       g_sprintf(text, "%d", pid);
       g_file_write(fd, text, g_strlen(text));
       g_file_close(fd);
@@ -593,7 +595,7 @@ main(int argc, char** argv)
   WSACleanup();
 #else
   /* delete the xrdp.pid file */
-  g_file_delete(XRDP_PID_FILE);
+  g_file_delete(pid_file);
 #endif
   return 0;
 }

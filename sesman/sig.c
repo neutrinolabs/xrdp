@@ -38,6 +38,8 @@ extern tbus g_term_event;
 void DEFAULT_CC
 sig_sesman_shutdown(int sig)
 {
+  char pid_file[256];
+
   log_message(&(g_cfg->log), LOG_LEVEL_INFO, "shutting down sesman %d", 1);
 
   if (g_getpid() != g_pid)
@@ -54,7 +56,8 @@ sig_sesman_shutdown(int sig)
 
   session_sigkill_all();
 
-  g_file_delete(SESMAN_PID_FILE);
+  g_snprintf(pid_file, 255, "%s/xrdp-sesman.pid", XRDP_PID_PATH);
+  g_file_delete(pid_file);
 }
 
 /******************************************************************************/

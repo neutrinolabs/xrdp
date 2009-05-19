@@ -371,13 +371,15 @@ xrdp_wm_init(struct xrdp_wm* self)
   char* q;
   char* r;
   char section_name[256];
+  char cfg_file[256];
 
   xrdp_wm_load_static_colors(self);
   xrdp_wm_load_static_pointers(self);
   self->screen->bg_color = self->black;
   if (self->session->client_info->rdp_autologin)
   {
-    fd = g_file_open(XRDP_CFG_FILE); /* xrdp.ini */
+    g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
+    fd = g_file_open(cfg_file); /* xrdp.ini */
     if (fd > 0)
     {
       names = list_create();

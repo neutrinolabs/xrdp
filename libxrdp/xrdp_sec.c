@@ -901,6 +901,7 @@ xrdp_sec_incoming(struct xrdp_sec* self)
   int index;
   char* item;
   char* value;
+  char key_file[256];
 
   DEBUG((" in xrdp_sec_incoming"));
   g_random(self->server_random, 32);
@@ -908,10 +909,11 @@ xrdp_sec_incoming(struct xrdp_sec* self)
   items->auto_free = 1;
   values = list_create();
   values->auto_free = 1;
-  if (file_by_name_read_section(XRDP_KEY_FILE, "keys", items, values) != 0)
+  g_snprintf(key_file, 255, "%s/rsakeys.ini", XRDP_CFG_PATH);
+  if (file_by_name_read_section(key_file, "keys", items, values) != 0)
   {
     /* this is a show stopper */
-    g_writeln("xrdp_sec_incoming: error reading %s file", XRDP_KEY_FILE);
+    g_writeln("xrdp_sec_incoming: error reading %s file", key_file);
     list_delete(items);
     list_delete(values);
     return 1;

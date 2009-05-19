@@ -51,8 +51,4 @@
 
 #include "libscp.h"
 
-#ifndef SESMAN_PID_FILE
-  #define SESMAN_PID_FILE "./sesman.pid"
-#endif
-
 #endif

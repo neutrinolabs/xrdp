@@ -118,11 +118,13 @@ xrdp_listen_get_port(char* port, int port_bytes)
   char* val;
   struct list* names;
   struct list* values;
+  char cfg_file[256];
 
   /* default to port 3389 */
   g_strncpy(port, "3389", port_bytes - 1);
   /* see if port is in xrdp.ini file */
-  fd = g_file_open(XRDP_CFG_FILE);
+  g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
+  fd = g_file_open(cfg_file);
   if (fd > 0)
   {
     names = list_create();
