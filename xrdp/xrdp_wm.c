@@ -411,21 +411,28 @@ xrdp_wm_init(struct xrdp_wm* self)
           r = (char*)list_get_item(values, index);
           if (g_strncmp("password", q, 255) == 0)
           {
-            list_add_item(self->mm->login_names, (long)g_strdup("password"));
-            list_add_item(self->mm->login_values,
-                   (long)g_strdup(self->session->client_info->password));
+            /* if the password has been asked for by the module, use what the
+               client says.
+               if the password has been manually set in the config, use that
+               instead of what the client says. */
+            if (g_strncmp("ask", r, 3) == 0)
+            {
+              r = self->session->client_info->password;
+            }
           }
           else if (g_strncmp("username", q, 255) == 0)
           {
-            list_add_item(self->mm->login_names, (long)g_strdup("username"));
-            list_add_item(self->mm->login_values,
-                   (long)g_strdup(self->session->client_info->username));
+            /* if the username has been asked for by the module, use what the
+               client says.
+               if the username has been manually set in the config, use that
+               instead of what the client says. */
+            if (g_strncmp("ask", r, 3) == 0)
+            {
+              r = self->session->client_info->username;
+            }
           }
-          else
-          {
-            list_add_item(self->mm->login_names, (long)g_strdup(q));
-            list_add_item(self->mm->login_values, (long)g_strdup(r));
-          }
+          list_add_item(self->mm->login_names, (long)g_strdup(q));
+          list_add_item(self->mm->login_values, (long)g_strdup(r));
         }
         xrdp_wm_set_login_mode(self, 2);
       }
