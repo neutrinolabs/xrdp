@@ -914,7 +914,7 @@ g_obj_wait(tbus* read_objs, int rcount, tbus* write_objs, int wcount,
     if ((errno == EAGAIN) ||
         (errno == EWOULDBLOCK) ||
         (errno == EINPROGRESS) ||
-        (errno == EINTR)) /* signal occured */
+        (errno == EINTR)) /* signal occurred */
     {
       return 0;
     }
@@ -1714,17 +1714,6 @@ g_execlp3(const char* a1, const char* a2, const char* a3)
 /*****************************************************************************/
 /* does not work in win32 */
 void APP_CC
-g_signal(int sig_num, void (*func)(int))
-{
-#if defined(_WIN32)
-#else
-  signal(sig_num, func);
-#endif
-}
-
-/*****************************************************************************/
-/* does not work in win32 */
-void APP_CC
 g_signal_child_stop(void (*func)(int))
 {
 #if defined(_WIN32)
@@ -1852,7 +1841,8 @@ g_setuid(int pid)
 }
 
 /*****************************************************************************/
-/* does not work in win32 */
+/* does not work in win32
+   returns pid of process that exits or zero if signal occurred */
 int APP_CC
 g_waitchild(void)
 {
@@ -1860,20 +1850,40 @@ g_waitchild(void)
   return 0;
 #else
   int wstat;
+  int rv;
 
-  return waitpid(0, &wstat, WNOHANG);
+  rv = waitpid(0, &wstat, WNOHANG);
+  if (rv == -1)
+  {
+    if (errno == EINTR) /* signal occurred */
+    {
+      rv = 0;
+    }
+  }
+  return rv;
 #endif
 }
 
 /*****************************************************************************/
-/* does not work in win32 */
+/* does not work in win32
+   returns pid of process that exits or zero if signal occurred */
 int APP_CC
 g_waitpid(int pid)
 {
 #if defined(_WIN32)
   return 0;
 #else
-  return waitpid(pid, 0, 0);
+  int rv;
+
+  rv = waitpid(pid, 0, 0);
+  if (rv == -1)
+  {
+    if (errno == EINTR) /* signal occurred */
+    {
+      rv = 0;
+    }
+  }
+  return rv;
 #endif
 }
 
