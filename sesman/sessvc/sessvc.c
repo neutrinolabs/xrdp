@@ -32,6 +32,23 @@
 #include "os_calls.h"
 #include "arch.h"
 
+static int g_term = 0;
+
+/*****************************************************************************/
+void DEFAULT_CC
+term_signal_handler(int sig)
+{
+  g_writeln("xrdp-sessvc: term_signal_handler: got signal %d", sig);
+  g_term = 1;
+}
+
+/*****************************************************************************/
+void DEFAULT_CC
+nil_signal_handler(int sig)
+{
+  g_writeln("xrdp-sessvc: nil_signal_handler: got signal %d", sig);
+}
+
 /******************************************************************************/
 int DEFAULT_CC
 main(int argc, char** argv)
@@ -40,6 +57,7 @@ main(int argc, char** argv)
   int chansrv_pid;
   int wm_pid;
   int x_pid;
+  int lerror;
   char exe_path[262];
 
   if (argc < 3)
@@ -47,6 +65,10 @@ main(int argc, char** argv)
     g_writeln("xrdp-sessvc: exiting, not enough params");
     return 1;
   }
+  g_signal_kill(term_signal_handler); /* SIGKILL */
+  g_signal_terminate(term_signal_handler); /* SIGTERM */
+  g_signal_user_interrupt(term_signal_handler); /* SIGINT */
+  g_signal_pipe(nil_signal_handler); /* SIGPIPE */
   x_pid = g_atoi(argv[1]);
   wm_pid = g_atoi(argv[2]);
   g_writeln("xrdp-sessvc: waiting for X (pid %d) and WM (pid %d)",
@@ -60,18 +82,29 @@ main(int argc, char** argv)
   }
   else if (chansrv_pid == 0) /* child */
   {
+    g_set_current_dir(XRDP_SBIN_PATH);
     g_snprintf(exe_path, 261, "%s/xrdp-chansrv", XRDP_SBIN_PATH);
     g_execvp(exe_path, 0);
     /* should not get here */
+    g_writeln("xrdp-sessvc: g_execvp failed");
     return 1;
   }
+  lerror = 0;
   /* wait for window manager to get done */
   ret = g_waitpid(wm_pid);
+  while ((ret == 0) && !g_term)
+  {
+    ret = g_waitpid(wm_pid);
+  }
+  if (ret < 0)
+  {
+    lerror = g_get_errno();
+  }
   /* kill X server */
   g_sigterm(x_pid);
   /* kill channel server */
   g_sigterm(chansrv_pid);
   g_writeln("xrdp-sessvc: WM is dead (waitpid said %d, errno is %d) "
-            "exiting...", ret, g_get_errno());
+            "exiting...", ret, lerror);
   return 0;
 }
