@@ -331,6 +331,12 @@ main(int argc, char** argv)
 
   sesman_main_loop();
 
+  /* clean up PID file on exit */
+  if (daemon)
+  {
+    g_file_delete(pid_file);
+  }
+
   g_delete_wait_obj(g_term_event);
   g_delete_wait_obj(g_sync_event);
 
