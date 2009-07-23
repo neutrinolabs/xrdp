@@ -164,6 +164,10 @@ auth_check_pwd_chg(char* user)
   now=g_time1();
   today=now/SECS_PER_DAY;
 
+  if (stp->sp_expire == -1)
+  {
+    return AUTH_PWD_CHG_OK;
+  }
   if (today >= (stp->sp_lstchg + stp->sp_max - stp->sp_warn))
   {
     return AUTH_PWD_CHG_CHANGE;
