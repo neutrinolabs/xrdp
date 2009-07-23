@@ -19,7 +19,7 @@ AC_ARG_ENABLE(pamuserpass, AS_HELP_STRING([--enable-pamuserpass],
               [Build pam userpass support (default: no)]),
               [pamuserpass=true], [pamuserpass=false])
 AM_CONDITIONAL(SESMAN_PAMUSERPASS, [test x$pamuserpass = xtrue])
-libdir="${libdir}/xrdp/";
+libdir="${libdir}/xrdp";
 if test "x${prefix}" = "xNONE" ; then
 sysconfdir="/etc";
 localstatedir="/var";
