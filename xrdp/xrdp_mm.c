@@ -309,13 +309,15 @@ xrdp_mm_setup_mod1(struct xrdp_mm* self)
   lib[0] = 0;
   if (xrdp_mm_get_lib(self, lib, 255) != 0)
   {
-    g_snprintf(text, 255, "error finding lib");
+    g_snprintf(text, 255, "no library name specified in xrdp.ini, please add "
+               "lib=libxrdp-vnc.so or similar");
     xrdp_wm_log_msg(self->wm, text);
     return 1;
   }
   if (lib[0] == 0)
   {
-    g_snprintf(text, 255, "error finding lib");
+    g_snprintf(text, 255, "empty library name specified in xrdp.ini, please "
+               "add lib=libxrdp-vnc.so or similar");
     xrdp_wm_log_msg(self->wm, text);
     return 1;
   }
@@ -331,7 +333,8 @@ xrdp_mm_setup_mod1(struct xrdp_mm* self)
       }
       if (func == 0)
       {
-        g_snprintf(text, 255, "error finding proc mod_init in %s", lib);
+        g_snprintf(text, 255, "error finding proc mod_init in %s, not a valid "
+                   "xrdp backend", lib);
         xrdp_wm_log_msg(self->wm, text);
       }
       self->mod_init = (struct xrdp_mod* (*)(void))func;
@@ -342,7 +345,8 @@ xrdp_mm_setup_mod1(struct xrdp_mm* self)
       }
       if (func == 0)
       {
-        g_snprintf(text, 255, "error finding proc mod_exit in %s", lib);
+        g_snprintf(text, 255, "error finding proc mod_exit in %s, not a valid "
+                   "xrdp backend", lib);
         xrdp_wm_log_msg(self->wm, text);
       }
       self->mod_exit = (int (*)(struct xrdp_mod*))func;
@@ -353,7 +357,8 @@ xrdp_mm_setup_mod1(struct xrdp_mm* self)
     }
     else
     {
-      g_snprintf(text, 255, "error loading %s", lib);
+      g_snprintf(text, 255, "error loading %s specified in xrdp.ini, please "
+                 "add a valid entry like lib=libxrdp-vnc.so or similar", lib);
       xrdp_wm_log_msg(self->wm, text);
     }
     if (self->mod != 0)

@@ -1684,7 +1684,11 @@ g_get_strerror(void)
 int APP_CC
 g_get_errno(void)
 {
+#if defined(_WIN32)
+  return GetLastError();
+#else
   return errno;
+#endif
 }
 
 /*****************************************************************************/

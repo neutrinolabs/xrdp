@@ -401,6 +401,10 @@ xrdp_wm_login_fill_in_combo(struct xrdp_wm* self, struct xrdp_bitmap* b)
   section_values->auto_free = 1;
   g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
   fd = g_file_open(cfg_file); /* xrdp.ini */
+  if (fd < 1)
+  {
+    g_writeln("Could not read xrdp ini file %s", cfg_file);
+  }
   file_read_sections(fd, sections);
   for (i = 0; i < sections->count; i++)
   {

@@ -55,5 +55,7 @@ void APP_CC
 list_insert_item(struct list* self, int index, tbus item);
 void APP_CC
 list_append_list_strdup(struct list* self, struct list* dest, int start_index);
+void APP_CC
+list_dump_items(struct list* self);
 
 #endif

@@ -199,3 +199,20 @@ list_append_list_strdup(struct list* self, struct list* dest, int start_index)
     list_add_item(dest, (tbus)dup);
   }
 }
+
+/*****************************************************************************/
+void APP_CC
+list_dump_items(struct list* self)
+{
+  int index;
+  tbus item;
+
+  if (self->count == 0)
+  {
+    g_writeln("List is empty");
+  }
+  for (index = 0; index < self->count; index++)
+  {
+    g_writeln("%d: %s", index, list_get_item(self, index));
+  }
+}

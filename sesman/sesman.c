@@ -114,12 +114,15 @@ sesman_main_loop(void)
     }
     else
     {
-      log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "listen error");
+      log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "listen error %d (%s)",
+                  g_get_errno(), g_get_strerror());
     }
   }
   else
   {
-    log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "bind error");
+    log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "bind error on "
+                "port '%s': %d (%s)", g_cfg->listen_port,
+                g_get_errno(), g_get_strerror());
   }
   g_tcp_close(g_sck);
 }

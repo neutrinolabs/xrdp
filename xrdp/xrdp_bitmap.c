@@ -448,6 +448,12 @@ xrdp_bitmap_load(struct xrdp_bitmap* self, const char* filename, int* palette)
     }
     g_file_close(fd);
   }
+  else
+  {
+    g_writeln("xrdp_bitmap_load: error loading bitmap from file [%s]",
+              filename);
+    return 1;
+  }
   free_stream(s);
   return 0;
 }

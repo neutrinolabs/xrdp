@@ -88,6 +88,8 @@ xrdp_font_create(struct xrdp_wm* wm)
   file_size = g_file_get_size(file_path);
   if (file_size < 1)
   {
+    g_writeln("xrdp_font_create: error reading font from file [%s]",
+              file_path);
     return 0;
   }
   self = (struct xrdp_font*)g_malloc(sizeof(struct xrdp_font), 1);

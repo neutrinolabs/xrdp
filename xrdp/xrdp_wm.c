@@ -197,6 +197,12 @@ xrdp_wm_load_pointer(struct xrdp_wm* self, char* file_name, char* data,
   make_stream(fs);
   init_stream(fs, 8192);
   fd = g_file_open(file_name);
+  if (fd < 1)
+  {
+    g_writeln("xrdp_wm_load_pointer: error loading pointer from file [%s]",
+              file_name);
+    return 1;
+  }
   g_file_read(fd, fs->data, 8192);
   g_file_close(fd);
   in_uint8s(fs, 6);
@@ -439,6 +445,10 @@ xrdp_wm_init(struct xrdp_wm* self)
       list_delete(names);
       list_delete(values);
       g_file_close(fd);
+    }
+    else
+    {
+      g_writeln("xrdp_wm_init: Could not read xrdp.ini file %s", cfg_file);
     }
   }
   else
