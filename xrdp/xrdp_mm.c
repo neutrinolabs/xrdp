@@ -767,6 +767,56 @@ xrdp_mm_process_login_response(struct xrdp_mm* self, struct stream* s)
 }
 
 /*****************************************************************************/
+static int
+xrdp_mm_get_sesman_port(char* port, int port_bytes)
+{
+  int fd;
+  int error;
+  int index;
+  char* val;
+  char cfg_file[256];
+  struct list* names;
+  struct list* values;
+
+  /* default to port 3350 */
+  g_strncpy(port, "3350", port_bytes - 1);
+  /* see if port is in xrdp.ini file */
+  g_snprintf(cfg_file, 255, "%s/sesman.ini", XRDP_CFG_PATH);
+  fd = g_file_open(cfg_file);
+  if (fd > 0)
+  {
+    names = list_create();
+    names->auto_free = 1;
+    values = list_create();
+    values->auto_free = 1;
+    if (file_read_section(fd, "Globals", names, values) == 0)
+    {
+      for (index = 0; index < names->count; index++)
+      {
+        val = (char*)list_get_item(names, index);
+        if (val != 0)
+        {
+          if (g_strcasecmp(val, "ListenPort") == 0)
+          {
+            val = (char*)list_get_item(values, index);
+            error = g_atoi(val);
+            if ((error > 0) && (error < 65000))
+            {
+              g_strncpy(port, val, port_bytes - 1);
+            }
+            break;
+          }
+        }
+      }
+    }
+    list_delete(names);
+    list_delete(values);
+    g_file_close(fd);
+  }
+  return 0;
+}
+
+/*****************************************************************************/
 int APP_CC
 xrdp_mm_connect(struct xrdp_mm* self)
 {
@@ -783,6 +833,7 @@ xrdp_mm_connect(struct xrdp_mm* self)
   char ip[256];
   char errstr[256];
   char text[256];
+  char port[8];
 
   rv = 0;
   use_sesman = 0;
@@ -812,9 +863,10 @@ xrdp_mm_connect(struct xrdp_mm* self)
     self->sck = g_tcp_socket();
     self->sck_obj = g_create_wait_obj_from_socket(self->sck, 0);
     g_tcp_set_non_blocking(self->sck);
-    g_snprintf(text, 255, "connecting to sesman ip %s port 3350", ip);
+    xrdp_mm_get_sesman_port(port, sizeof(port));
+    g_snprintf(text, 255, "connecting to sesman ip %s port %s", ip, port);
     xrdp_wm_log_msg(self->wm, text);
-    error = g_tcp_connect(self->sck, ip, "3350");
+    error = g_tcp_connect(self->sck, ip, port);
     if (error == 0)
     {
       ok = 1;
