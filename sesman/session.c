@@ -85,7 +85,7 @@ session_get_bydata(char* name, int width, int height, int bpp)
  *
  */
 static int DEFAULT_CC
-x_server_running(int display)
+x_server_running_check_ports(int display)
 {
   char text[256];
   int x_running;
@@ -118,6 +118,31 @@ x_server_running(int display)
     g_sprintf(text, "62%2.2d", display);
     x_running = g_tcp_bind(sck, text);
     g_tcp_close(sck);
+  }
+  return x_running;
+}
+
+/******************************************************************************/
+/**
+ *
+ * @brief checks if there's a server running on a display
+ * @param display the display to check
+ * @return 0 if there isn't a display running, nonzero otherwise
+ *
+ */
+static int DEFAULT_CC
+x_server_running(int display)
+{
+  char text[256];
+  int x_running;
+  int sck;
+
+  g_sprintf(text, "/tmp/.X11-unix/X%d", display);
+  x_running = g_file_exist(text);
+  if (!x_running)
+  {
+    g_sprintf(text, "/tmp/.X%d-lock", display);
+    x_running = g_file_exist(text);
   }
   return x_running;
 }
@@ -215,7 +240,7 @@ session_get_aval_display_from_chain(void)
   {
     if (!session_is_display_in_chain(display))
     {
-      if (!x_server_running(display))
+      if (!x_server_running_check_ports(display))
       {
         lock_chain_release();
         return display;
