@@ -181,6 +181,53 @@ session_start_sessvc(int xpid, int wmpid, long data)
 }
 
 /******************************************************************************/
+/* called with the main thread
+   returns boolean */
+static int APP_CC
+session_is_display_in_chain(int display)
+{
+  struct session_chain* chain;
+  struct session_item* item;
+
+  chain = g_sessions;
+  while (chain != 0)
+  {
+    item = chain->item;
+    if (item->display == display)
+    {
+      return 1;
+    }
+    chain = chain->next;
+  }
+  return 0;
+}
+
+/******************************************************************************/
+/* called with the main thread */
+static int APP_CC
+session_get_aval_display_from_chain(void)
+{
+  int display;
+
+  display = 10;
+  lock_chain_acquire();
+  while ((display - 10) <= g_cfg->sess.max_sessions)
+  {
+    if (!session_is_display_in_chain(display))
+    {
+      if (!x_server_running(display))
+      {
+        lock_chain_release();
+        return display;
+      }
+    }
+    display++;
+  }
+  lock_chain_release();
+  return 0;
+}
+
+/******************************************************************************/
 /* called with the main thread */
 static int APP_CC
 session_start_fork(int width, int height, int bpp, char* username,
@@ -225,20 +272,12 @@ session_start_fork(int width, int height, int bpp, char* username,
                 "item - user %s", username);
     return 0;
   }
-
-  display = 10;
-
-  /*while (x_server_running(display) && display < 50)*/
-  /* we search for a free display up to max_sessions */
-  /* we should need no more displays than this       */
-
-  while (x_server_running(display))
+  display = session_get_aval_display_from_chain();
+  if (display == 0)
   {
-    display++;
-    if (((display - 10) > g_cfg->sess.max_sessions) || (display >= 50))
-    {
-      return 0;
-    }
+    g_free(temp->item);
+    g_free(temp);
+    return 0;
   }
   wmpid = 0;
   pid = g_fork();
@@ -479,10 +518,6 @@ session_start(int width, int height, int bpp, char* username, char* password,
   display = g_sync_result;
   /* unlock mutex */
   lock_sync_release();
-  if (display != 0)
-  {
-    g_sleep(5000);
-  }
   return display;
 }
 
