@@ -255,6 +255,10 @@ xrdp_mm_send_login(struct xrdp_mm* self)
   index = s->end - s->data;
   out_uint32_be(s, index); /* size */
   rv = xrdp_mm_send(self, s->data, index);
+  if (rv != 0)
+  {
+    xrdp_wm_log_msg(self->wm, "xrdp_mm_send_login: xrdp_mm_send failed");
+  }
   free_stream(s);
   return rv;
 }
