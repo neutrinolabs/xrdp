@@ -191,13 +191,19 @@ struct xrdp_mm
   int chan_trans_up;
 };
 
+struct xrdp_key_info
+{
+  int sym;
+  int chr;
+};
+
 struct xrdp_keymap
 {
-  int keys_noshift[128];
-  int keys_shift[128];
-  int keys_altgr[128];
-  int keys_capslock[128];
-  int keys_shiftcapslock[128];
+  struct xrdp_key_info keys_noshift[128];
+  struct xrdp_key_info keys_shift[128];
+  struct xrdp_key_info keys_altgr[128];
+  struct xrdp_key_info keys_capslock[128];
+  struct xrdp_key_info keys_shiftcapslock[128];
 };
 
 /* the window manager */

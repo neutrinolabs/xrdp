@@ -82,11 +82,11 @@ lib_mod_event(struct mod* mod, int msg, long param1, long param2,
   {
     case 15:
       rdp_rdp_send_input(mod->rdp_layer, s, 0, RDP_INPUT_SCANCODE,
-                         param4, param3, 0);
+                         param2, param1, 0);
       break;
     case 16:
       rdp_rdp_send_input(mod->rdp_layer, s, 0, RDP_INPUT_SCANCODE,
-                         param4, param3, 0);
+                         param2, param1, 0);
       break;
     case 17:
       rdp_rdp_send_input(mod->rdp_layer, s, 0, RDP_INPUT_SYNCHRONIZE,

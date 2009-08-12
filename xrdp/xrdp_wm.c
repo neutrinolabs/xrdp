@@ -1090,7 +1090,7 @@ int APP_CC
 xrdp_wm_key(struct xrdp_wm* self, int device_flags, int scan_code)
 {
   int msg;
-  int c;
+  struct xrdp_key_info* ki;
 
   /*g_printf("count %d\n", self->key_down_list->count);*/
   scan_code = scan_code % 128;
@@ -1125,19 +1125,14 @@ xrdp_wm_key(struct xrdp_wm* self, int device_flags, int scan_code)
   {
     if (self->mm->mod->mod_event != 0)
     {
-      c = get_char_from_scan_code
+      ki = get_key_info_from_scan_code
           (device_flags, scan_code, self->keys, self->caps_lock,
            self->num_lock, self->scroll_lock,
            &(self->keymap));
-      if (c != 0)
-      {
-        self->mm->mod->mod_event(self->mm->mod, msg, c,
-                                 0xffff, scan_code, device_flags);
-      }
-      else
+      if (ki != 0)
       {
         self->mm->mod->mod_event(self->mm->mod, msg, scan_code,
-                                 device_flags, scan_code, device_flags);
+                                 device_flags, ki->sym, ki->chr);
       }
     }
   }

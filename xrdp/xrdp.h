@@ -307,6 +307,14 @@ int APP_CC
 wchar_repeat(twchar* dest, int dest_size_in_wchars, twchar ch, int repeat);
 
 /* in lang.c */
+struct xrdp_key_info* APP_CC
+get_key_info_from_scan_code(int device_flags, int scan_code, int* keys,
+                            int caps_lock, int num_lock, int scroll_lock,
+                            struct xrdp_keymap* keymap);
+int APP_CC
+get_keysym_from_scan_code(int device_flags, int scan_code, int* keys,
+                          int caps_lock, int num_lock, int scroll_lock,
+                          struct xrdp_keymap* keymap);
 twchar APP_CC
 get_char_from_scan_code(int device_flags, int scan_code, int* keys,
                         int caps_lock, int num_lock, int scroll_lock,
