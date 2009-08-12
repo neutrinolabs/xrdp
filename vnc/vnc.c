@@ -241,7 +241,7 @@ lib_mod_event(struct vnc* v, int msg, long param1, long param2,
   }
   else if ((msg >= 15) && (msg <= 16)) /* key events */
   {
-    key = param3;
+    key = param2;
     if (key > 0)
     {
       init_stream(s, 8192);

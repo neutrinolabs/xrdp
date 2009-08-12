@@ -1131,8 +1131,8 @@ xrdp_wm_key(struct xrdp_wm* self, int device_flags, int scan_code)
            &(self->keymap));
       if (ki != 0)
       {
-        self->mm->mod->mod_event(self->mm->mod, msg, scan_code,
-                                 device_flags, ki->sym, ki->chr);
+        self->mm->mod->mod_event(self->mm->mod, msg, ki->chr, ki->sym,
+                                 scan_code, device_flags);
       }
     }
   }
