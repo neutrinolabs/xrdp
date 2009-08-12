@@ -5,7 +5,10 @@ SUBDIRS = \
 startscriptdir=$(sysconfdir)/xrdp
 
 startscript_DATA = \
-  xrdp.sh
+  xrdp.sh \
+  km-0407.ini \
+  km-0409.ini \
+  km-0419.ini
 
 # must be tab below
 install-data-hook:
