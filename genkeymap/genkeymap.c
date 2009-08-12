@@ -1,9 +1,7 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*- */
 /*
- * main.cc
+ * genkeymap.c
  * Copyright (C) Ádám Wallner 2008 <wallner@bitbaro.hu>
- * 
- * main.cc is free software.
  * 
  * You may redistribute it and/or modify it under the terms of the
  * GNU General Public License, as published by the Free Software
