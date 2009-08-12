@@ -42,6 +42,7 @@ AC_CONFIG_FILES([Makefile
                  docs/man/Makefile
                  instfiles/Makefile
                  instfiles/pam.d/Makefile
+                 genkeymap/Makefile
 ])
 #                 fontdump/Makefile
 #                 xrdp/cursors/Makefile

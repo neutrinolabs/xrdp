@@ -10,4 +10,5 @@ SUBDIRS = \
   sesman \
   keygen \
   docs \
-  instfiles
+  instfiles \
+  genkeymap
