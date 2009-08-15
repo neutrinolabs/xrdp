@@ -32,6 +32,13 @@ sound_init(void)
 
 /*****************************************************************************/
 int APP_CC
+sound_deinit(void)
+{
+  return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
 sound_data_in(struct stream* s, int chan_id, int chan_flags, int length,
               int total_length)
 {
