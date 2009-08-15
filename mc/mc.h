@@ -26,6 +26,8 @@
 #include "os_calls.h"
 #include "defines.h"
 
+#define CURRENT_MOD_VER 1
+
 struct mod
 {
   int size; /* size of this struct */
@@ -78,7 +80,8 @@ struct mod
                               int* channel_flags);
   int (*server_get_channel_id)(struct mod* v, char* name);
   int (*server_send_to_channel)(struct mod* v, int channel_id,
-                                char* data, int data_len);
+                                char* data, int data_len,
+                                int total_data_len, int flags);
   long server_dumby[100 - 24]; /* align, 100 minus the number of server
                                   functions above */
   /* common */

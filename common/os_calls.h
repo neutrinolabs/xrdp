@@ -243,5 +243,7 @@ int APP_CC
 g_time1(void);
 int APP_CC
 g_time2(void);
+int APP_CC
+g_time3(void);
 
 #endif

@@ -1263,9 +1263,14 @@ xrdp_wm_process_input_mouse(struct xrdp_wm* self, int device_flags,
 }
 
 /******************************************************************************/
+/* param1 = MAKELONG(channel_id, flags)
+   param2 = size
+   param3 = pointer to data
+   param4 = total size */
 static int APP_CC
 xrdp_wm_process_channel_data(struct xrdp_wm* self,
-                            tbus param1, tbus param2, tbus param3, tbus param4)
+                            tbus param1, tbus param2,
+                            tbus param3, tbus param4)
 {
   int rv;
 

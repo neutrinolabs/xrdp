@@ -357,6 +357,11 @@ xrdp_mm_setup_mod1(struct xrdp_mm* self)
       if ((self->mod_init != 0) && (self->mod_exit != 0))
       {
         self->mod = self->mod_init();
+        if (self->mod != 0)
+        {
+          g_writeln("loaded modual '%s' ok, interface size %d, version %d", lib,
+                    self->mod->size, self->mod->version);
+        }
       }
     }
     else
@@ -1001,7 +1006,6 @@ xrdp_mm_process_channel_data(struct xrdp_mm* self, tbus param1, tbus param2,
   int id;
   char* data;
 
-  g_writeln("in xrdp_mm_process_channel_data %d %d %d %d", param1, param2, param3, param4);
   rv = 0;
   if ((self->chan_trans != 0) && self->chan_trans_up)
   {

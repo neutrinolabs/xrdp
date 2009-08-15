@@ -307,6 +307,7 @@ mod_init(void)
   DEBUG(("in mod_init"));
   mod = (struct mod*)g_malloc(sizeof(struct mod), 1);
   mod->size = sizeof(struct mod);
+  mod->version = CURRENT_MOD_VER;
   mod->handle = (long)mod;
   mod->mod_connect = lib_mod_connect;
   mod->mod_start = lib_mod_start;

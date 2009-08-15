@@ -2086,3 +2086,19 @@ g_time2(void)
   return (int)(num_ticks * 10);
 #endif
 }
+
+/*****************************************************************************/
+/* returns time in milliseconds, uses gettimeofday
+   does not work in win32 */
+int APP_CC
+g_time3(void)
+{
+#if defined(_WIN32)
+  return 0;
+#else
+  struct timeval tp;
+
+  gettimeofday(&tp, 0);
+  return (tp.tv_sec * 1000) + (tp.tv_usec / 1000);
+#endif
+}
