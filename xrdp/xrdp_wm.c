@@ -1106,7 +1106,7 @@ xrdp_wm_key(struct xrdp_wm* self, int device_flags, int scan_code)
   }
   else /* key down */
   {
-    self->keys[scan_code] = 1;
+    self->keys[scan_code] = 1 | device_flags;
     msg = WM_KEYDOWN;
     switch (scan_code)
     {
