@@ -129,6 +129,7 @@ lib_mod_connect(struct mod* mod)
   int error;
   int len;
   int i;
+  int index;
   struct stream* s;
   char con_port[256];
 
@@ -157,12 +158,47 @@ lib_mod_connect(struct mod* mod)
   g_sprintf(con_port, "%s", mod->port);
   mod->sck = g_tcp_socket();
   mod->sck_obj = g_create_wait_obj_from_socket(mod->sck, 0);
+  g_tcp_set_non_blocking(mod->sck);
+  g_tcp_set_no_delay(mod->sck);
   mod->sck_closed = 0;
-  error = g_tcp_connect(mod->sck, mod->ip, con_port);
-  if (error == 0)
+  i = 0;
+  while (1)
   {
-    g_tcp_set_non_blocking(mod->sck);
-    g_tcp_set_no_delay(mod->sck);
+    mod->server_msg(mod, "connecting...", 0);
+    error = g_tcp_connect(mod->sck, mod->ip, con_port);
+    if (error == -1)
+    {
+      if (g_tcp_last_error_would_block(mod->sck))
+      {
+        error = 0;
+        index = 0;
+        while (!g_tcp_can_send(mod->sck, 100))
+        {
+          index++;
+          if ((index >= 30) || mod->server_is_term(mod))
+          {
+            mod->server_msg(mod, "connect timeout", 0);
+            error = 1;
+            break;
+          }
+        }
+      }
+      else
+      {
+        mod->server_msg(mod, "connect error", 0);
+      }
+    }
+    if (error == 0)
+    {
+      break;
+    }
+    i++;
+    if (i >= 4)
+    {
+      mod->server_msg(mod, "connect problem, giving up", 0);
+      break;
+    }
+    g_sleep(250);
   }
   if (error == 0)
   {
@@ -190,6 +226,10 @@ lib_mod_connect(struct mod* mod)
     mod->server_msg(mod, "some problem", 0);
     LIB_DEBUG(mod, "out lib_mod_connect error");
     return 1;
+  }
+  else
+  {
+    mod->server_msg(mod, "connected ok", 0);
   }
   LIB_DEBUG(mod, "out lib_mod_connect");
   return 0;
