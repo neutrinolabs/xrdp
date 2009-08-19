@@ -69,6 +69,15 @@ int
 scp_session_set_password(struct SCP_SESSION* s, char* str);
 
 int
+scp_session_set_domain(struct SCP_SESSION* s, char* str);
+
+int
+scp_session_set_program(struct SCP_SESSION* s, char* str);
+
+int
+scp_session_set_directory(struct SCP_SESSION* s, char* str);
+
+int
 scp_session_set_hostname(struct SCP_SESSION* s, char* str);
 
 int

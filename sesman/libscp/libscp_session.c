@@ -212,6 +212,72 @@ scp_session_set_password(struct SCP_SESSION* s, char* str)
 
 /*******************************************************************/
 int
+scp_session_set_domain(struct SCP_SESSION* s, char* str)
+{
+  if (0 == str)
+  {
+    log_message(s_log, LOG_LEVEL_WARNING, "[session:%d] set_domain: null domain", __LINE__);
+    return 1;
+  }
+  if (0 != s->domain)
+  {
+    g_free(s->domain);
+  }
+  s->domain = g_strdup(str);
+  if (0 == s->domain)
+  {
+    log_message(s_log, LOG_LEVEL_WARNING, "[session:%d] set_domain: strdup error", __LINE__);
+    return 1;
+  }
+  return 0;
+}
+
+/*******************************************************************/
+int
+scp_session_set_program(struct SCP_SESSION* s, char* str)
+{
+  if (0 == str)
+  {
+    log_message(s_log, LOG_LEVEL_WARNING, "[session:%d] set_program: null program", __LINE__);
+    return 1;
+  }
+  if (0 != s->program)
+  {
+    g_free(s->program);
+  }
+  s->program = g_strdup(str);
+  if (0 == s->program)
+  {
+    log_message(s_log, LOG_LEVEL_WARNING, "[session:%d] set_program: strdup error", __LINE__);
+    return 1;
+  }
+  return 0;
+}
+
+/*******************************************************************/
+int
+scp_session_set_directory(struct SCP_SESSION* s, char* str)
+{
+  if (0 == str)
+  {
+    log_message(s_log, LOG_LEVEL_WARNING, "[session:%d] set_directory: null directory", __LINE__);
+    return 1;
+  }
+  if (0 != s->directory)
+  {
+    g_free(s->directory);
+  }
+  s->directory = g_strdup(str);
+  if (0 == s->directory)
+  {
+    log_message(s_log, LOG_LEVEL_WARNING, "[session:%d] set_directory: strdup error", __LINE__);
+    return 1;
+  }
+  return 0;
+}
+
+/*******************************************************************/
+int
 scp_session_set_hostname(struct SCP_SESSION* s, char* str)
 {
   if (0 == str)
@@ -332,6 +398,24 @@ scp_session_destroy(struct SCP_SESSION* s)
   {
     g_free(s->hostname);
     s->hostname = 0;
+  }
+
+  if (s->domain)
+  {
+    g_free(s->domain);
+    s->domain = 0;
+  }
+
+  if (s->program)
+  {
+    g_free(s->program);
+    s->program = 0;
+  }
+
+  if (s->directory)
+  {
+    g_free(s->directory);
+    s->directory = 0;
   }
 
   if (s->errstr)

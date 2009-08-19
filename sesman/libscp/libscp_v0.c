@@ -33,7 +33,8 @@ extern struct log_config* s_log;
 
 /* client API */
 /******************************************************************************/
-enum SCP_CLIENT_STATES_E scp_v0c_connect(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
+enum SCP_CLIENT_STATES_E
+scp_v0c_connect(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
 {
   tui32 version;
   tui32 size;
@@ -139,7 +140,8 @@ enum SCP_CLIENT_STATES_E scp_v0c_connect(struct SCP_CONNECTION* c, struct SCP_SE
 
 /* server API */
 /******************************************************************************/
-enum SCP_SERVER_STATES_E scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk)
+enum SCP_SERVER_STATES_E
+scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk)
 {
   tui32 version = 0;
   tui32 size;
@@ -151,8 +153,9 @@ enum SCP_SERVER_STATES_E scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SES
   if (!skipVchk)
   {
     LOG_DBG(s_log, "[v0:%d] starting connection", __LINE__);
-    if (0==scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))
+    if (0 == scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))
     {
+      c->in_s->end = c->in_s->data + 8;
       in_uint32_be(c->in_s, version);
       if (version != 0)
       {
@@ -170,17 +173,18 @@ enum SCP_SERVER_STATES_E scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SES
   in_uint32_be(c->in_s, size);
 
   init_stream(c->in_s, 8196);
-  if (0!=scp_tcp_force_recv(c->in_sck, c->in_s->data, size-8))
+  if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, size - 8))
   {
     log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);
     return SCP_SERVER_STATE_NETWORK_ERR;
   }
+  c->in_s->end = c->in_s->data + (size - 8);
 
   in_uint16_be(c->in_s, code);
 
   if (code == 0 || code == 10)
   {
-	session = scp_session_create();
+    session = scp_session_create();
     if (0 == session)
     {
       log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);
@@ -228,6 +232,39 @@ enum SCP_SERVER_STATES_E scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SES
     /* bpp */
     in_uint16_be(c->in_s, sz);
     scp_session_set_bpp(session, (tui8)sz);
+    if (s_check_rem(c->in_s, 2))
+    {
+      /* reading domain */
+      in_uint16_be(c->in_s, sz);
+      if (sz > 0)
+      {
+        in_uint8a(c->in_s, buf, sz);
+        buf[sz] = '\0';
+        scp_session_set_domain(session, buf);
+      }
+    }
+    if (s_check_rem(c->in_s, 2))
+    {
+      /* reading program */
+      in_uint16_be(c->in_s, sz);
+      if (sz > 0)
+      {
+        in_uint8a(c->in_s, buf, sz);
+        buf[sz] = '\0';
+        scp_session_set_program(session, buf);
+      }
+    }
+    if (s_check_rem(c->in_s, 2))
+    {
+      /* reading directory */
+      in_uint16_be(c->in_s, sz);
+      if (sz > 0)
+      {
+        in_uint8a(c->in_s, buf, sz);
+        buf[sz] = '\0';
+        scp_session_set_directory(session, buf);
+      }
+    }
   }
   else
   {
@@ -240,7 +277,8 @@ enum SCP_SERVER_STATES_E scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SES
 }
 
 /******************************************************************************/
-enum SCP_SERVER_STATES_E scp_v0s_allow_connection(struct SCP_CONNECTION* c, SCP_DISPLAY d)
+enum SCP_SERVER_STATES_E
+scp_v0s_allow_connection(struct SCP_CONNECTION* c, SCP_DISPLAY d)
 {
   out_uint32_be(c->out_s, 0);  /* version */
   out_uint32_be(c->out_s, 14); /* size */
@@ -260,7 +298,8 @@ enum SCP_SERVER_STATES_E scp_v0s_allow_connection(struct SCP_CONNECTION* c, SCP_
 }
 
 /******************************************************************************/
-enum SCP_SERVER_STATES_E scp_v0s_deny_connection(struct SCP_CONNECTION* c)
+enum SCP_SERVER_STATES_E
+scp_v0s_deny_connection(struct SCP_CONNECTION* c)
 {
   out_uint32_be(c->out_s, 0);  /* version */
   out_uint32_be(c->out_s, 14); /* size */

@@ -83,6 +83,9 @@ struct SCP_SESSION
   SCP_DISPLAY display;
   char* errstr;
   struct SCP_MNG_DATA* mng;
+  char* domain;
+  char* program;
+  char* directory;
 };
 
 struct SCP_DISCONNECTED_SESSION

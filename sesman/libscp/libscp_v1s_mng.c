@@ -36,7 +36,8 @@ static enum SCP_SERVER_STATES_E
 _scp_v1s_mng_check_response(struct SCP_CONNECTION* c, struct SCP_SESSION* s);
 
 /* server API */
-enum SCP_SERVER_STATES_E scp_v1s_mng_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s)
+enum SCP_SERVER_STATES_E
+scp_v1s_mng_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s)
 {
   struct SCP_SESSION* session;
   tui32 ipaddr;
