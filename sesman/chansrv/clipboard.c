@@ -37,6 +37,7 @@ static Atom g_timestamp_atom = 0;
 static Atom g_multiple_atom = 0;
 static Atom g_targets_atom = 0;
 static Atom g_primary_atom = 0;
+static Atom g_secondary_atom = 0;
 static int g_x_socket = 0;
 static tbus g_x_wait_obj = 0;
 static int g_clip_up = 0;
@@ -134,6 +135,7 @@ clipboard_init(void)
     g_targets_atom = XInternAtom(g_display, "TARGETS", False);
     g_multiple_atom = XInternAtom(g_display, "MULTIPLE", False);
     g_primary_atom = XInternAtom(g_display, "PRIMARY", False);
+    g_secondary_atom = XInternAtom(g_display, "SECONDARY", False);
     g_wnd = XCreateSimpleWindow(g_display, RootWindowOfScreen(g_screen),
                                 0, 0, 4, 4, 0, 0, 0);
     input_mask = StructureNotifyMask;
