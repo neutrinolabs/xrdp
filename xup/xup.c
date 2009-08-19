@@ -156,14 +156,13 @@ lib_mod_connect(struct mod* mod)
   }
   make_stream(s);
   g_sprintf(con_port, "%s", mod->port);
-  mod->sck = g_tcp_socket();
-  mod->sck_obj = g_create_wait_obj_from_socket(mod->sck, 0);
-  g_tcp_set_non_blocking(mod->sck);
-  g_tcp_set_no_delay(mod->sck);
   mod->sck_closed = 0;
   i = 0;
   while (1)
   {
+    mod->sck = g_tcp_socket();
+    g_tcp_set_non_blocking(mod->sck);
+    g_tcp_set_no_delay(mod->sck);
     mod->server_msg(mod, "connecting...", 0);
     error = g_tcp_connect(mod->sck, mod->ip, con_port);
     if (error == -1)
@@ -192,6 +191,8 @@ lib_mod_connect(struct mod* mod)
     {
       break;
     }
+    g_tcp_close(mod->sck);
+    mod->sck = 0;
     i++;
     if (i >= 4)
     {
@@ -230,6 +231,7 @@ lib_mod_connect(struct mod* mod)
   else
   {
     mod->server_msg(mod, "connected ok", 0);
+    mod->sck_obj = g_create_wait_obj_from_socket(mod->sck, 0);
   }
   LIB_DEBUG(mod, "out lib_mod_connect");
   return 0;
