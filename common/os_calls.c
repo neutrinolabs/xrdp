@@ -948,7 +948,9 @@ g_random(char* data, int len)
   }
   if (fd != -1)
   {
-    read(fd, data, len);
+    if (read(fd, data, len) != len)
+    {
+    }
     close(fd);
   }
 #endif
@@ -1137,7 +1139,9 @@ g_get_current_dir(char* dirname, int maxlen)
   GetCurrentDirectoryA(maxlen, dirname);
   return 0;
 #else
-  getcwd(dirname, maxlen);
+  if (getcwd(dirname, maxlen) == 0)
+  {
+  }
   return 0;
 #endif
 }
