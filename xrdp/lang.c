@@ -202,12 +202,11 @@ km_read_section(int fd, const char* section_name, struct xrdp_key_info* keymap)
 int APP_CC
 get_keymaps(int keylayout, struct xrdp_keymap* keymap)
 {
-  int ks;
   int fd;
-  char filename[256];
-  struct xrdp_keymap lkeymap;
+  char* filename;
+  struct xrdp_keymap* lkeymap;
 
-  ks = sizeof(int) * 128;
+  filename = (char*)g_malloc(256, 0);
   /* check if there is a keymap file */
   g_snprintf(filename, 255, "%s/km-%4.4x.ini", XRDP_CFG_PATH, keylayout);
   if (g_file_exist(filename))
@@ -215,26 +214,26 @@ get_keymaps(int keylayout, struct xrdp_keymap* keymap)
     fd = g_file_open(filename);
     if (fd > 0)
     {
-      lkeymap = *keymap; /* make a copy of the build in kaymap */
+      lkeymap = (struct xrdp_keymap*)g_malloc(sizeof(struct xrdp_keymap), 0);
+      /* make a copy of the build in kaymap */
+      g_memcpy(lkeymap, keymap, sizeof(struct xrdp_keymap));
       /* clear the keymaps */
-      g_memset(keymap->keys_noshift, 0, ks);
-      g_memset(keymap->keys_shift, 0, ks);
-      g_memset(keymap->keys_altgr, 0, ks);
-      g_memset(keymap->keys_capslock, 0, ks);
-      g_memset(keymap->keys_shiftcapslock, 0, ks);
+      g_memset(keymap, 0, sizeof(struct xrdp_keymap));
       /* read the keymaps */
       km_read_section(fd, "noshift", keymap->keys_noshift);
       km_read_section(fd, "shift", keymap->keys_shift);
       km_read_section(fd, "altgr", keymap->keys_altgr);
       km_read_section(fd, "capslock", keymap->keys_capslock);
       km_read_section(fd, "shiftcapslock", keymap->keys_shiftcapslock);
-      if (g_memcmp(&lkeymap, keymap, sizeof(struct xrdp_keymap)) != 0)
+      if (g_memcmp(lkeymap, keymap, sizeof(struct xrdp_keymap)) != 0)
       {
-        g_writeln("local keymap file for 0x%4.4x found and dosen't match built \
-in keymap, using local keymap file", keylayout);
+        g_writeln("local keymap file for 0x%4.4x found and dosen't match "
+                  "built in keymap, using local keymap file", keylayout);
       }
+      g_free(lkeymap);
       g_file_close(fd);
     }
   }
+  g_free(filename);
   return 0;
 }
