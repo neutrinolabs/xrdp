@@ -327,9 +327,9 @@ main(int argc, char** argv)
     g_chmod_hex("/tmp/.X11-unix", 0x1777);
   }
 
-  g_snprintf(text, 255, "xrdp-sesman_%8.8x_main_term", g_pid);
+  g_snprintf(text, 255, "xrdp_sesman_%8.8x_main_term", g_pid);
   g_term_event = g_create_wait_obj(text);
-  g_snprintf(text, 255, "xrdp-sesman_%8.8x_main_sync", g_pid);
+  g_snprintf(text, 255, "xrdp_sesman_%8.8x_main_sync", g_pid);
   g_sync_event = g_create_wait_obj(text);
 
   sesman_main_loop();
