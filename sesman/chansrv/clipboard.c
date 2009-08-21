@@ -30,7 +30,6 @@
 #include "os_calls.h"
 #include "chansrv.h"
 
-static Display* g_display = 0;
 static Atom g_clipboard_atom = 0;
 static Atom g_clip_property_atom = 0;
 static Atom g_timestamp_atom = 0;
@@ -45,7 +44,6 @@ static Window g_wnd = 0;
 static Screen* g_screen = 0;
 static int g_screen_num = 0;
 static int g_xfixes_event_base = 0;
-static int g_sck_closed = 0;
 
 static int g_last_clip_size = 0;
 static char* g_last_clip_data = 0;
@@ -55,6 +53,7 @@ static int g_got_selection = 0; /* boolean */
 static Time g_selection_time = 0;
 
 extern int g_cliprdr_chan_id; /* in chansrv.c */
+extern Display* g_display;
 
 /*****************************************************************************/
 /* returns time in miliseconds
@@ -86,13 +85,6 @@ clipboard_init(void)
     return 0;
   }
   rv = 0;
-  g_sleep(500);
-  g_display = XOpenDisplay(0);
-  if (g_display == 0)
-  {
-    g_writeln("xrdp-chansrv: clipboard_init: XOpenDisplay failed");
-    rv = 1;
-  }
   if (rv == 0)
   {
     g_x_socket = XConnectionNumber(g_display);
@@ -185,17 +177,11 @@ clipboard_deinit(void)
   {
     return 0;
   }
-  if (!g_sck_closed)
-  {
-    g_delete_wait_obj_from_socket(g_x_wait_obj);
-    g_x_wait_obj = 0;
-    XDestroyWindow(g_display, g_wnd);
-    g_wnd = 0;
-    XCloseDisplay(g_display);
-    g_display = 0;
-    g_x_socket = 0;
-    g_sck_closed = 1;
-  }
+  g_delete_wait_obj_from_socket(g_x_wait_obj);
+  g_x_wait_obj = 0;
+  XDestroyWindow(g_display, g_wnd);
+  g_wnd = 0;
+  g_x_socket = 0;
   g_free(g_last_clip_data);
   g_last_clip_data = 0;
   g_clip_up = 0;
@@ -700,10 +686,6 @@ clipboard_get_wait_objs(tbus* objs, int* count, int* timeout)
   {
     return 0;
   }
-  if (g_sck_closed)
-  {
-    return 0;
-  }
   lcount = *count;
   objs[lcount] = g_x_wait_obj;
   lcount++;
@@ -721,17 +703,12 @@ clipboard_check_wait_objs(void)
   {
     return 0;
   }
-  if (g_sck_closed)
-  {
-    return 0;
-  }
   if (g_is_wait_obj_set(g_x_wait_obj))
   {
     if (XPending(g_display) < 1)
     {
       /* something is wrong, should not get here */
       g_writeln("xrdp-chansrv: clipboard_check_wait_objs: sck closed");
-      g_sck_closed = 1;
       return 0;
     }
     while (XPending(g_display) > 0)

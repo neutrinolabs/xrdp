@@ -17,6 +17,7 @@
    Copyright (C) Jay Sorg 2009
 */
 
+#include <X11/Xlib.h>
 #include "arch.h"
 #include "os_calls.h"
 #include "thread_calls.h"
@@ -41,6 +42,8 @@ int g_display_num = 0;
 int g_cliprdr_chan_id = -1; /* cliprdr */
 int g_rdpsnd_chan_id = -1; /* rdpsnd */
 int g_rdpdr_chan_id = -1; /* rdpdr */
+
+Display* g_display = 0;
 
 /*****************************************************************************/
 /* returns error */
@@ -551,6 +554,19 @@ get_display_num_from_display(char* display_text)
 }
 
 /*****************************************************************************/
+/* The X server had an internal error.  This is the last function called.
+   Do any cleanup that needs to be done on exit, like removing temporary files.
+   Don't worry about memory leaks */
+int DEFAULT_CC
+my_fatal_handler(Display* dis)
+{
+  g_writeln("xrdp-chansrv: fatal error, exiting");
+  g_delete_wait_obj(g_term_event);
+  g_delete_wait_obj(g_thread_done_event);
+  return 0;
+}
+
+/*****************************************************************************/
 int DEFAULT_CC
 main(int argc, char** argv)
 {
@@ -574,6 +590,13 @@ main(int argc, char** argv)
     return 1;
   }
   g_writeln("xrdp-chansrv: main: using DISPLAY %d", g_display_num);
+  g_display = XOpenDisplay(0);
+  if (g_display == 0)
+  {
+    g_writeln("xrdp-chansrv: main: XOpenDisplay failed");
+    return 1;
+  }
+  XSetIOErrorHandler(my_fatal_handler);
   g_snprintf(text, 255, "xrdp_chansrv_%8.8x_main_term", pid);
   g_term_event = g_create_wait_obj(text);
   g_snprintf(text, 255, "xrdp_chansrv_%8.8x_thread_done", pid);
