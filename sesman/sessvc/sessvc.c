@@ -100,11 +100,24 @@ main(int argc, char** argv)
   {
     lerror = g_get_errno();
   }
-  /* kill X server */
-  g_sigterm(x_pid);
-  /* kill channel server */
-  g_sigterm(chansrv_pid);
   g_writeln("xrdp-sessvc: WM is dead (waitpid said %d, errno is %d) "
             "exiting...", ret, lerror);
+  /* kill channel server */
+  g_writeln("xrdp-sessvc: stopping channel server");
+  g_sigterm(chansrv_pid);
+  ret = g_waitpid(chansrv_pid);
+  while ((ret == 0) && !g_term)
+  {
+    ret = g_waitpid(chansrv_pid);
+  }
+  /* kill X server */
+  g_writeln("xrdp-sessvc: stopping X server");
+  g_sigterm(x_pid);
+  ret = g_waitpid(x_pid);
+  while ((ret == 0) && !g_term)
+  {
+    ret = g_waitpid(x_pid);
+  }
+  g_writeln("xrdp-sessvc: clean exit");
   return 0;
 }
