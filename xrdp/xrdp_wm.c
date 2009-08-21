@@ -1467,27 +1467,45 @@ int APP_CC
 xrdp_wm_log_msg(struct xrdp_wm* self, char* msg)
 {
   struct xrdp_bitmap* but;
+  int w;
+  int h;
+  int xoffset;
+  int yoffset;
 
   list_add_item(self->log, (long)g_strdup(msg));
   if (self->log_wnd == 0)
   {
+    w = 400;
+    h = 400;
+    xoffset = 10;
+    yoffset = 10;
+    if (self->screen->width < w)
+    {
+      w = self->screen->width - 4;
+      xoffset = 2;
+    }
+    if (self->screen->height < h)
+    {
+      h = self->screen->height - 4;
+      yoffset = 2;
+    }
     /* log window */
-    self->log_wnd = xrdp_bitmap_create(400, 400, self->screen->bpp,
+    self->log_wnd = xrdp_bitmap_create(w, h, self->screen->bpp,
                                        WND_TYPE_WND, self);
     list_add_item(self->screen->child_list, (long)self->log_wnd);
     self->log_wnd->parent = self->screen;
     self->log_wnd->owner = self->screen;
     self->log_wnd->bg_color = self->grey;
-    self->log_wnd->left = 10;
-    self->log_wnd->top = 10;
+    self->log_wnd->left = xoffset;
+    self->log_wnd->top = yoffset;
     set_string(&(self->log_wnd->caption1), "Connection Log");
     /* ok button */
     but = xrdp_bitmap_create(60, 25, self->screen->bpp, WND_TYPE_BUTTON, self);
     list_insert_item(self->log_wnd->child_list, 0, (long)but);
     but->parent = self->log_wnd;
     but->owner = self->log_wnd;
-    but->left = (400 - 60) - 10;
-    but->top = (400 - 25) - 10;
+    but->left = (w - 60) - xoffset;
+    but->top = (h - 25) - yoffset;
     but->id = 1;
     but->tab_stop = 1;
     set_string(&but->caption1, "OK");

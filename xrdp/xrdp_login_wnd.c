@@ -268,7 +268,7 @@ xrdp_wm_show_edits(struct xrdp_wm* self, struct xrdp_bitmap* combo)
         insert_index++;
         b->parent = self->login_window;
         b->owner = self->login_window;
-        b->left = 155;
+        b->left = self->login_window->width >= 400 ? 155 : 5;
         b->top = 60 + 25 * count;
         b->id = 100 + 2 * count;
         name = (char*)list_get_item(mod->names, index);
@@ -281,7 +281,7 @@ xrdp_wm_show_edits(struct xrdp_wm* self, struct xrdp_bitmap* combo)
         insert_index++;
         b->parent = self->login_window;
         b->owner = self->login_window;
-        b->left = 230;
+        b->left = self->login_window->width >= 400 ? 230 : 70;
         b->top = 60 + 25 * count;
         b->id = 100 + 2 * count + 1;
         b->pointer = 1;
@@ -451,9 +451,27 @@ xrdp_login_wnd_create(struct xrdp_wm* self)
   struct xrdp_bitmap* but;
   struct xrdp_bitmap* combo;
   char file_path[256];
+  int log_width;
+  int log_height;
+  int regular;
 
+  log_width = 400;
+  log_height = 200;
+  regular = 1;
+  if (self->screen->width < log_width)
+  {
+    if (self->screen->width < 240)
+    {
+      log_width = self->screen->width - 4;
+    }
+    else
+    {
+      log_width = 240;
+    }
+    regular = 0;
+  }
   /* draw login window */
-  self->login_window = xrdp_bitmap_create(400, 200, self->screen->bpp,
+  self->login_window = xrdp_bitmap_create(log_width, log_height, self->screen->bpp,
                                           WND_TYPE_WND, self);
   list_add_item(self->screen->child_list, (long)self->login_window);
   self->login_window->parent = self->screen;
@@ -465,33 +483,35 @@ xrdp_login_wnd_create(struct xrdp_wm* self)
                             self->login_window->height / 2;
   self->login_window->notify = xrdp_wm_login_notify;
   set_string(&self->login_window->caption1, "Login to xrdp");
+  if (regular)
+  {
+    /* image */
+    but = xrdp_bitmap_create(4, 4, self->screen->bpp, WND_TYPE_IMAGE, self);
+    g_snprintf(file_path, 255, "%s/xrdp256.bmp", XRDP_SHARE_PATH);
+    xrdp_bitmap_load(but, file_path, self->palette);
+    but->parent = self->screen;
+    but->owner = self->screen;
+    but->left = self->screen->width - but->width;
+    but->top = self->screen->height - but->height;
+    list_add_item(self->screen->child_list, (long)but);
 
-  /* image */
-  but = xrdp_bitmap_create(4, 4, self->screen->bpp, WND_TYPE_IMAGE, self);
-  g_snprintf(file_path, 255, "%s/xrdp256.bmp", XRDP_SHARE_PATH);
-  xrdp_bitmap_load(but, file_path, self->palette);
-  but->parent = self->screen;
-  but->owner = self->screen;
-  but->left = self->screen->width - but->width;
-  but->top = self->screen->height - but->height;
-  list_add_item(self->screen->child_list, (long)but);
-
-  /* image */
-  but = xrdp_bitmap_create(4, 4, self->screen->bpp, WND_TYPE_IMAGE, self);
-  g_snprintf(file_path, 255, "%s/ad256.bmp", XRDP_SHARE_PATH);
-  xrdp_bitmap_load(but, file_path, self->palette);
-  but->parent = self->login_window;
-  but->owner = self->login_window;
-  but->left = 10;
-  but->top = 30;
-  list_add_item(self->login_window->child_list, (long)but);
+    /* image */
+    but = xrdp_bitmap_create(4, 4, self->screen->bpp, WND_TYPE_IMAGE, self);
+    g_snprintf(file_path, 255, "%s/ad256.bmp", XRDP_SHARE_PATH);
+    xrdp_bitmap_load(but, file_path, self->palette);
+    but->parent = self->login_window;
+    but->owner = self->login_window;
+    but->left = 10;
+    but->top = 30;
+    list_add_item(self->login_window->child_list, (long)but);
+  }
 
   /* label */
   but = xrdp_bitmap_create(60, 20, self->screen->bpp, WND_TYPE_LABEL, self);
   list_add_item(self->login_window->child_list, (long)but);
   but->parent = self->login_window;
   but->owner = self->login_window;
-  but->left = 155;
+  but->left = regular ? 155 : 5;
   but->top = 35;
   set_string(&but->caption1, "Module");
 
@@ -500,7 +520,7 @@ xrdp_login_wnd_create(struct xrdp_wm* self)
   list_add_item(self->login_window->child_list, (long)combo);
   combo->parent = self->login_window;
   combo->owner = self->login_window;
-  combo->left = 230;
+  combo->left = regular ? 230 : 70;
   combo->top = 35;
   combo->id = 6;
   combo->tab_stop = 1;
@@ -511,7 +531,7 @@ xrdp_login_wnd_create(struct xrdp_wm* self)
   list_add_item(self->login_window->child_list, (long)but);
   but->parent = self->login_window;
   but->owner = self->login_window;
-  but->left = 180;
+  but->left = regular ? 180 : 30;
   but->top = 160;
   but->id = 3;
   set_string(&but->caption1, "OK");
@@ -523,23 +543,26 @@ xrdp_login_wnd_create(struct xrdp_wm* self)
   list_add_item(self->login_window->child_list, (long)but);
   but->parent = self->login_window;
   but->owner = self->login_window;
-  but->left = 250;
+  but->left = regular ? 250 : ((log_width - 30) - 60);
   but->top = 160;
   but->id = 2;
   set_string(&but->caption1, "Cancel");
   but->tab_stop = 1;
   self->login_window->esc_button = but;
 
-  /* button */
-  but = xrdp_bitmap_create(60, 25, self->screen->bpp, WND_TYPE_BUTTON, self);
-  list_add_item(self->login_window->child_list, (long)but);
-  but->parent = self->login_window;
-  but->owner = self->login_window;
-  but->left = 320;
-  but->top = 160;
-  but->id = 1;
-  set_string(&but->caption1, "Help");
-  but->tab_stop = 1;
+  if (regular)
+  {
+    /* button */
+    but = xrdp_bitmap_create(60, 25, self->screen->bpp, WND_TYPE_BUTTON, self);
+    list_add_item(self->login_window->child_list, (long)but);
+    but->parent = self->login_window;
+    but->owner = self->login_window;
+    but->left = 320;
+    but->top = 160;
+    but->id = 1;
+    set_string(&but->caption1, "Help");
+    but->tab_stop = 1;
+  }
 
   /* labels and edits */
   xrdp_wm_show_edits(self, combo);
