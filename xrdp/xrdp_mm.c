@@ -731,6 +731,7 @@ xrdp_mm_process_login_response(struct xrdp_mm* self, struct stream* s)
   int ok;
   int display;
   int rv;
+  int index;
   char text[256];
 
   rv = 0;
@@ -754,11 +755,17 @@ xrdp_mm_process_login_response(struct xrdp_mm* self, struct stream* s)
         self->chan_trans->header_size = 8;
         self->chan_trans->callback_data = self;
         g_snprintf(text, 255, "%d", 7200 + display);
-        if (trans_connect(self->chan_trans, "127.0.0.1", text, 3000) == 0)
+        /* try to connect up to 4 times */
+        for (index = 0; index < 4; index++)
         {
-          self->chan_trans_up = 1;
+          if (trans_connect(self->chan_trans, "127.0.0.1", text, 3000) == 0)
+          {
+            self->chan_trans_up = 1;
+            break;
+          }
+          g_sleep(250);
         }
-        else
+        if (!(self->chan_trans_up))
         {
           g_writeln("xrdp_mm_process_login_response: error in trans_connect "
                     "chan");
