@@ -554,6 +554,17 @@ get_display_num_from_display(char* display_text)
 }
 
 /*****************************************************************************/
+int DEFAULT_CC
+my_error_handler(Display* dis, XErrorEvent* xer)
+{
+  char text[256];
+
+  XGetErrorText(dis, xer->error_code, text, 255);
+  g_writeln("xrdp-chansrv: error [%s]", text);
+  return 0;
+}
+
+/*****************************************************************************/
 /* The X server had an internal error.  This is the last function called.
    Do any cleanup that needs to be done on exit, like removing temporary files.
    Don't worry about memory leaks */
@@ -596,6 +607,7 @@ main(int argc, char** argv)
     g_writeln("xrdp-chansrv: main: XOpenDisplay failed");
     return 1;
   }
+  XSetErrorHandler(my_error_handler);
   XSetIOErrorHandler(my_fatal_handler);
   g_snprintf(text, 255, "xrdp_chansrv_%8.8x_main_term", pid);
   g_term_event = g_create_wait_obj(text);

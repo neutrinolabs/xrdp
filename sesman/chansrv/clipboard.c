@@ -52,8 +52,10 @@ static Atom g_last_clip_type = 0;
 static int g_got_selection = 0; /* boolean */
 static Time g_selection_time = 0;
 
+static struct stream* g_ins = 0;
+
 extern int g_cliprdr_chan_id; /* in chansrv.c */
-extern Display* g_display;
+extern Display* g_display; /* in chansrv.c */
 
 /*****************************************************************************/
 /* returns time in miliseconds
@@ -163,8 +165,10 @@ clipboard_init(void)
   if (rv == 0)
   {
     g_clip_up = 1;
-    g_writeln("xrdp-chansrv: clipboard_init: dumping env");
-    g_system("env");
+    make_stream(g_ins);
+    init_stream(g_ins, 8192)
+    //g_writeln("xrdp-chansrv: clipboard_init: dumping env");
+    //g_system("env");
   }
   return rv;
 }
@@ -184,6 +188,7 @@ clipboard_deinit(void)
   g_x_socket = 0;
   g_free(g_last_clip_data);
   g_last_clip_data = 0;
+  free_stream(g_ins);
   g_clip_up = 0;
   return 0;
 }
@@ -269,7 +274,7 @@ clipboard_out_unicode(struct stream* s, char* text, int num_chars)
   int lnum_chars;
   twchar* ltext;
 
-  if (num_chars < 1)
+  if ((num_chars < 1) || (text == 0))
   {
     return 0;
   }
@@ -301,17 +306,22 @@ clipboard_send_data_response(void)
 
   g_writeln("xrdp-chansrv: clipboard_send_data_response:");
   num_chars = 0;
-  if (g_last_clip_type == XA_STRING)
+  if (g_last_clip_data != 0)
   {
-    num_chars = g_mbstowcs(0, g_last_clip_data, 1024);
-    if (num_chars < 0)
+    if (g_last_clip_type == XA_STRING)
     {
-      g_writeln("xrdp-chansrv: clipboard_send_data_response: bad string");
-      num_chars = 0;
+      num_chars = g_mbstowcs(0, g_last_clip_data, 1024);
+      if (num_chars < 0)
+      {
+        g_writeln("xrdp-chansrv: clipboard_send_data_response: bad string");
+        num_chars = 0;
+      }
     }
   }
+  g_writeln("xrdp-chansrv: clipboard_send_data_response: g_last_clip_size %d "
+            "num_chars %d", g_last_clip_size, num_chars);
   make_stream(s);
-  init_stream(s, 8192);
+  init_stream(s, 64 + num_chars * 2);
   out_uint16_le(s, 5); /* CLIPRDR_DATA_RESPONSE */
   out_uint16_le(s, 1); /* status */
   out_uint32_le(s, num_chars * 2 + 2); /* length */
@@ -333,7 +343,8 @@ clipboard_send_data_response(void)
 
 /*****************************************************************************/
 static int APP_CC
-clipboard_process_format_announce(struct stream* s)
+clipboard_process_format_announce(struct stream* s, int clip_msg_status,
+                                  int clip_msg_len)
 {
   Time now;
 
@@ -349,7 +360,8 @@ clipboard_process_format_announce(struct stream* s)
 
 /*****************************************************************************/
 static int APP_CC
-clipboard_prcoess_format_ack(struct stream* s)
+clipboard_prcoess_format_ack(struct stream* s, int clip_msg_status,
+                             int clip_msg_len)
 {
   g_writeln("xrdp-chansrv: clipboard_prcoess_format_ack:");
   g_hexdump(s->p, s->end - s->p);
@@ -358,7 +370,8 @@ clipboard_prcoess_format_ack(struct stream* s)
 
 /*****************************************************************************/
 static int APP_CC
-clipboard_process_data_request(struct stream* s)
+clipboard_process_data_request(struct stream* s, int clip_msg_status,
+                               int clip_msg_len)
 {
   g_writeln("xrdp-chansrv: clipboard_process_data_request:");
   g_hexdump(s->p, s->end - s->p);
@@ -368,7 +381,8 @@ clipboard_process_data_request(struct stream* s)
 
 /*****************************************************************************/
 static int APP_CC
-clipboard_process_data_response(struct stream* s)
+clipboard_process_data_response(struct stream* s, int clip_msg_status,
+                                int clip_msg_len)
 {
   g_writeln("xrdp-chansrv: clipboard_process_data_response:");
   g_hexdump(s->p, s->end - s->p);
@@ -384,10 +398,32 @@ clipboard_data_in(struct stream* s, int chan_id, int chan_flags, int length,
   int clip_msg_len;
   int clip_msg_status;
   int rv;
+  struct stream* ls;
 
-  in_uint16_le(s, clip_msg_id);
-  in_uint16_le(s, clip_msg_status);
-  in_uint32_le(s, clip_msg_len);
+  g_writeln("xrdp-chansrv: clipboard_data_in: chan_is %d "
+            "chan_flags %d length %d total_length %d",
+            chan_id, chan_flags, length, total_length); 
+  if ((chan_flags & 3) == 3)
+  {
+    ls = s;
+  }
+  else
+  {
+    if (chan_flags & 1)
+    {
+      init_stream(g_ins, total_length)
+    }
+    in_uint8a(s, g_ins->end, length);
+    g_ins->end += length;
+    if ((chan_flags & 2) == 0)
+    {
+      return 0;
+    }
+    ls = g_ins;
+  }
+  in_uint16_le(ls, clip_msg_id);
+  in_uint16_le(ls, clip_msg_status);
+  in_uint32_le(ls, clip_msg_len);
   g_writeln("xrdp-chansrv: clipboard_data_in: clip_msg_id %d "
             "clip_msg_status %d clip_msg_len %d",
             clip_msg_id, clip_msg_status, clip_msg_len);
@@ -395,16 +431,20 @@ clipboard_data_in(struct stream* s, int chan_id, int chan_flags, int length,
   switch (clip_msg_id)
   {
     case 2: /* CLIPRDR_FORMAT_ANNOUNCE */
-      rv = clipboard_process_format_announce(s);
+      rv = clipboard_process_format_announce(ls, clip_msg_status,
+                                             clip_msg_len);
       break;
     case 3: /* CLIPRDR_FORMAT_ACK */
-      rv = clipboard_prcoess_format_ack(s);
+      rv = clipboard_prcoess_format_ack(ls, clip_msg_status,
+                                        clip_msg_len);
       break;
     case 4: /* CLIPRDR_DATA_REQUEST */
-      rv = clipboard_process_data_request(s);
+      rv = clipboard_process_data_request(ls, clip_msg_status,
+                                          clip_msg_len);
       break;
     case 5: /* CLIPRDR_DATA_RESPONSE */
-      rv = clipboard_process_data_response(s);
+      rv = clipboard_process_data_response(ls, clip_msg_status,
+                                           clip_msg_len);
       break;
     default:
       g_writeln("xrdp-chansrv: clipboard_data_in: unknown clip_msg_id %d",
@@ -725,6 +765,8 @@ clipboard_check_wait_objs(void)
         case SelectionClear:
           clipboard_process_selection_clear(&xevent);
           break;
+        case MappingNotify:
+          break;
         default:
           if (xevent.type == g_xfixes_event_base +
                              XFixesSetSelectionOwnerNotify)
@@ -732,7 +774,7 @@ clipboard_check_wait_objs(void)
             clipboard_process_selection_owner_notify(&xevent);
             break;
           }
-          g_writeln("xrdp-chansrv: clipboard_check_wait_objs type %d",
+          g_writeln("xrdp-chansrv: clipboard_check_wait_objs unknown type %d",
                     xevent.type);
           break;
       }
