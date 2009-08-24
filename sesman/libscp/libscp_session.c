@@ -33,26 +33,18 @@
 
 extern struct log_config* s_log;
 
+/*******************************************************************/
 struct SCP_SESSION*
 scp_session_create()
 {
   struct SCP_SESSION* s;
 
-  s = g_malloc(sizeof(struct SCP_SESSION), 0);
-
+  s = (struct SCP_SESSION*)g_malloc(sizeof(struct SCP_SESSION), 1);
   if (0 == s)
   {
     log_message(s_log, LOG_LEVEL_WARNING, "[session:%d] session create: malloc error", __LINE__);
     return 0;
   }
-
-  s->username = 0;
-  s->password = 0;
-  s->hostname = 0;
-  s->errstr = 0;
-  s->mng = 0;
-  s->locale[0]='\0';
-
   return s;
 }
 
@@ -70,7 +62,7 @@ scp_session_set_type(struct SCP_SESSION* s, tui8 type)
       break;
     case SCP_SESSION_TYPE_MANAGE:
       s->type = SCP_SESSION_TYPE_MANAGE;
-      s->mng = g_malloc(sizeof(struct SCP_MNG_DATA),1);
+      s->mng = (struct SCP_MNG_DATA*)g_malloc(sizeof(struct SCP_MNG_DATA), 1);
       if (NULL == s->mng)
       {
         log_message(s_log, LOG_LEVEL_ERROR, "[session:%d] set_type: internal error", __LINE__);
@@ -382,53 +374,13 @@ scp_session_set_addr(struct SCP_SESSION* s, int type, void* addr)
 void
 scp_session_destroy(struct SCP_SESSION* s)
 {
-  if (s->username)
-  {
-    g_free(s->username);
-    s->username = 0;
-  }
-
-  if (s->password)
-  {
-    g_free(s->password);
-    s->password = 0;
-  }
-
-  if (s->hostname)
-  {
-    g_free(s->hostname);
-    s->hostname = 0;
-  }
-
-  if (s->domain)
-  {
-    g_free(s->domain);
-    s->domain = 0;
-  }
-
-  if (s->program)
-  {
-    g_free(s->program);
-    s->program = 0;
-  }
-
-  if (s->directory)
-  {
-    g_free(s->directory);
-    s->directory = 0;
-  }
-
-  if (s->errstr)
-  {
-    g_free(s->errstr);
-    s->errstr = 0;
-  }
-
-  if (s->mng)
-  {
-    g_free(s->mng);
-    s->mng = 0;
-  }
-
+  g_free(s->username);
+  g_free(s->password);
+  g_free(s->hostname);
+  g_free(s->domain);
+  g_free(s->program);
+  g_free(s->directory);
+  g_free(s->errstr);
+  g_free(s->mng);
   g_free(s);
 }
