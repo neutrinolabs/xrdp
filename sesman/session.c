@@ -256,6 +256,30 @@ session_get_aval_display_from_chain(void)
 }
 
 /******************************************************************************/
+static int APP_CC
+wait_for_xserver(int display)
+{
+  int i;
+
+  /* give X a bit to start */
+  /* wait up to 10 secs for x server to start */
+  i = 0;
+  while (!x_server_running(display))
+  {
+    i++;
+    if (i > 40)
+    {
+      log_message(&(g_cfg->log), LOG_LEVEL_ERROR,
+                  "X server for display %d startup timeout",
+                  display);
+      break;
+    }
+    g_sleep(250);
+  }
+  return 0;
+}
+
+/******************************************************************************/
 /* called with the main thread */
 static int APP_CC
 session_start_fork(int width, int height, int bpp, char* username,
@@ -325,21 +349,7 @@ session_start_fork(int width, int height, int bpp, char* username,
     }
     else if (wmpid == 0) /* child (child sesman) xserver */
     {
-      /* give X a bit to start */
-      /* wait up to 10 secs for x server to start */
-      i = 0;
-      while (!x_server_running(display))
-      {
-        i++;
-        if (i > 40)
-        {
-          log_message(&(g_cfg->log), LOG_LEVEL_ERROR,
-                      "X server for display %d startup timeout",
-                      display);
-          break;
-        }
-        g_sleep(250);
-      }
+      wait_for_xserver(display);
       env_set_user(username, 0, display);
       if (x_server_running(display))
       {
@@ -498,6 +508,7 @@ session_start_fork(int width, int height, int bpp, char* username,
       }
       else /* parent (child sesman)*/
       {
+        wait_for_xserver(display);
         g_snprintf(text, 255, "%d", display);
         g_setenv("XRDP_SESSVC_DISPLAY", text, 1);
         g_snprintf(text, 255, ":%d.0", display);
