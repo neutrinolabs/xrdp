@@ -764,6 +764,8 @@ xrdp_mm_process_login_response(struct xrdp_mm* self, struct stream* s)
             break;
           }
           g_sleep(250);
+          g_writeln("xrdp_mm_process_login_response: connect failed "
+                    "trying again...");
         }
         if (!(self->chan_trans_up))
         {
