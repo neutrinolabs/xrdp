@@ -58,9 +58,9 @@ static struct stream* g_ins = 0;
 static XSelectionRequestEvent g_selection_request_event[16];
 static int g_selection_request_event_count = 0;
 
-static char* g_data_in;
-static int g_data_in_size;
-static int g_data_in_time;
+static char* g_data_in = 0;
+static int g_data_in_size = 0;
+static int g_data_in_time = 0;
 
 extern int g_cliprdr_chan_id; /* in chansrv.c */
 extern Display* g_display; /* in chansrv.c */
@@ -423,7 +423,7 @@ clipboard_process_data_response(struct stream* s, int clip_msg_status,
   {
     return 0;
   }
-  g_hexdump(s->p, len);
+  //g_hexdump(s->p, len);
   wtext = (twchar*)g_malloc(((len / 2) + 1) * sizeof(twchar), 0);
   if (wtext == 0)
   {
@@ -441,11 +441,13 @@ clipboard_process_data_response(struct stream* s, int clip_msg_status,
     index++;
   }
   wtext[index] = 0;
+  g_free(g_data_in);
+  g_data_in = 0;
+  g_data_in_size = 0;
+  g_data_in_time = 0;
   len = g_wcstombs(0, wtext, 0);
   if (len >= 0)
   {
-    g_free(g_data_in);
-    g_data_in_size = 0;
     g_data_in = (char*)g_malloc(len + 16, 0);
     if (g_data_in == 0)
     {
