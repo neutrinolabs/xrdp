@@ -92,6 +92,7 @@ send_channel_data(int chan_id, char* data, int size)
       break;
     }
     sent += size;
+    s = trans_get_out_s(g_con_trans, 8192);
   }
   return rv;
 }
