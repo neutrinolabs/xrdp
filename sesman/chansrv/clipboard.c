@@ -498,8 +498,9 @@ clipboard_process_data_response(struct stream* s, int clip_msg_status,
       xev.xselection.selection = lxev->selection;
       xev.xselection.target = lxev->target;
       xev.xselection.property = lxev->property;
-      xev.xselection.time = CurrentTime;
+      xev.xselection.time = lxev->time;
       XSendEvent(g_display, lxev->requestor, False, NoEventMask, &xev);
+      //XSelectInput(g_display, lxev->requestor, PropertyChangeMask);
       LOG(1, ("clipboard_process_data_response: %d", lxev->requestor));
     }
   }
@@ -795,7 +796,7 @@ clipboard_event_selection_notify(XEvent* xevent)
   if (convert_to_string)
   {
     XConvertSelection(g_display, g_clipboard_atom, XA_STRING,
-                      g_clip_property_atom, g_wnd, CurrentTime);
+                      g_clip_property_atom, g_wnd, lxevent->time);
   }
   if (send_format_announce)
   {
@@ -864,6 +865,7 @@ clipboard_event_selection_request(XEvent* xevent)
     xev.xselection.property = lxev->property;
     xev.xselection.time = lxev->time;
     XSendEvent(g_display, lxev->requestor, False, NoEventMask, &xev);
+    //XSelectInput(g_display, lxev->requestor, PropertyChangeMask);
     return 0;
   }
   else if (lxev->target == g_timestamp_atom)
@@ -883,6 +885,7 @@ clipboard_event_selection_request(XEvent* xevent)
     xev.xselection.property = lxev->property;
     xev.xselection.time = lxev->time;
     XSendEvent(g_display, lxev->requestor, False, NoEventMask, &xev);
+    //XSelectInput(g_display, lxev->requestor, PropertyChangeMask);
     return 0;
   }
   else if (lxev->target == g_multiple_atom)
@@ -916,8 +919,9 @@ clipboard_event_selection_request(XEvent* xevent)
       xev.xselection.selection = lxev->selection;
       xev.xselection.target = lxev->target;
       xev.xselection.property = lxev->property;
-      xev.xselection.time = CurrentTime;
+      xev.xselection.time = lxev->time;
       XSendEvent(g_display, lxev->requestor, False, NoEventMask, &xev);
+      //XSelectInput(g_display, lxev->requestor, PropertyChangeMask);
       return 0;
     }
     if (g_selection_request_event_count > 10)
@@ -951,6 +955,7 @@ clipboard_event_selection_request(XEvent* xevent)
   xev.xselection.property = None;
   xev.xselection.time = lxev->time;
   XSendEvent(g_display, lxev->requestor, False, NoEventMask, &xev);
+  //XSelectInput(g_display, lxev->requestor, PropertyChangeMask);
   return 0;
 }
 
@@ -970,6 +975,27 @@ static int APP_CC
 clipboard_event_selection_clear(XEvent* xevent)
 {
   LOG(1, ("clipboard_event_selection_clear:"));
+  return 0;
+}
+
+/*****************************************************************************/
+/* returns error
+   typedef struct {
+     int type;                // PropertyNotify
+     unsigned long serial;    // # of last request processed by server
+     Bool send_event;         // true if this came from a SendEvent request
+     Display *display;        // Display the event was read from
+     Window window;
+     Atom atom;
+     Time time;
+     int state;               // PropertyNewValue or PropertyDelete
+} XPropertyEvent; */
+static int APP_CC
+clipboard_event_property_notify(XEvent* xevent)
+{
+  LOG(10, ("clipboard_check_wait_objs: PropertyNotify .window %d "
+      ".state %d .atom %d", xevent->xproperty.window,
+      xevent->xproperty.state, xevent->xproperty.atom));
   return 0;
 }
 
@@ -1028,8 +1054,7 @@ clipboard_check_wait_objs(void)
         case MappingNotify:
           break;
         case PropertyNotify:
-          LOG(10, ("clipboard_check_wait_objs: PropertyNotify .window %d "
-	      ".state %d", xevent.xproperty.window, xevent.xproperty.state));
+          clipboard_event_property_notify(&xevent);
           break;
         default:
           if (xevent.type == g_xfixes_event_base +
