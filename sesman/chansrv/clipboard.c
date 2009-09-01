@@ -38,6 +38,7 @@ static Atom g_targets_atom = 0;
 static Atom g_primary_atom = 0;
 static Atom g_secondary_atom = 0;
 static Atom g_get_time_atom = 0;
+static Atom g_utf8_atom = 0;
 static int g_x_socket = 0;
 static tbus g_x_wait_obj = 0;
 static int g_clip_up = 0;
@@ -159,6 +160,7 @@ clipboard_init(void)
     g_multiple_atom = XInternAtom(g_display, "MULTIPLE", False);
     g_primary_atom = XInternAtom(g_display, "PRIMARY", False);
     g_secondary_atom = XInternAtom(g_display, "SECONDARY", False);
+    g_utf8_atom = XInternAtom(g_display, "UTF8_STRING", False);
     g_wnd = XCreateSimpleWindow(g_display, RootWindowOfScreen(g_screen),
                                 0, 0, 4, 4, 0, 0, 0);
     input_mask = StructureNotifyMask | PropertyChangeMask;
@@ -382,6 +384,24 @@ clipboard_send_data_response(void)
 
 /*****************************************************************************/
 static int APP_CC
+clipboard_set_selection_owner(void)
+{
+  Window owner;
+
+  g_selection_time = clipboard_get_server_time();
+  XSetSelectionOwner(g_display, g_clipboard_atom, g_wnd, g_selection_time);
+  owner = XGetSelectionOwner(g_display, g_clipboard_atom);
+  if (owner != g_wnd)
+  {
+    g_got_selection = 0;
+    return 1;
+  }
+  g_got_selection = 1;
+  return 0;
+}
+
+/*****************************************************************************/
+static int APP_CC
 clipboard_process_format_announce(struct stream* s, int clip_msg_status,
                                   int clip_msg_len)
 {
@@ -392,14 +412,8 @@ clipboard_process_format_announce(struct stream* s, int clip_msg_status,
   clipboard_send_format_ack();
   g_got_format_announce = 1;
   g_data_in_up_to_date = 0;
-  g_selection_time = clipboard_get_server_time();
-  XSetSelectionOwner(g_display, g_clipboard_atom, g_wnd, g_selection_time);
-  //XSetSelectionOwner(g_display, XA_PRIMARY, g_wnd, g_selection_time);
-  g_got_selection = 1;
-  owner = XGetSelectionOwner(g_display, g_clipboard_atom);
-  if (owner != g_wnd)
+  if (clipboard_set_selection_owner() != 0)
   {
-    g_got_selection = 0;
     LOG(0, ("clipboard_process_format_announce: XSetSelectionOwner failed"));
   }
   return 0;
@@ -438,6 +452,7 @@ clipboard_process_data_response(struct stream* s, int clip_msg_status,
   int len;
   int index;
   int wtext_size;
+  int data_in_len;
 
   LOG(1, ("clipboard_process_data_response: CLIPRDR_DATA_RESPONSE"));
   len = (int)(s->end - s->p);
@@ -484,12 +499,13 @@ clipboard_process_data_response(struct stream* s, int clip_msg_status,
   }
   if (g_data_in != 0)
   {
+    data_in_len = g_strlen(g_data_in);
     for (index = 0; index < g_selection_request_event_count; index++)
     {
       lxev = &(g_selection_request_event[index]);
       XChangeProperty(g_display, lxev->requestor, lxev->property,
-                      XA_STRING, 8, PropModeReplace, g_data_in,
-                      g_strlen(g_data_in));
+                      lxev->target, 8, PropModeReplace, g_data_in,
+                      data_in_len);
       g_memset(&xev, 0, sizeof(xev));
       xev.xselection.type = SelectionNotify;
       xev.xselection.send_event = True;
@@ -500,8 +516,8 @@ clipboard_process_data_response(struct stream* s, int clip_msg_status,
       xev.xselection.property = lxev->property;
       xev.xselection.time = lxev->time;
       XSendEvent(g_display, lxev->requestor, False, NoEventMask, &xev);
-      //XSelectInput(g_display, lxev->requestor, PropertyChangeMask);
-      LOG(1, ("clipboard_process_data_response: %d", lxev->requestor));
+      LOG(1, ("clipboard_process_data_response: requestor %d data_in_len %d",
+          lxev->requestor, data_in_len));
     }
   }
   g_selection_request_event_count = 0;
@@ -570,6 +586,7 @@ clipboard_data_in(struct stream* s, int chan_id, int chan_flags, int length,
       LOG(0, ("clipboard_data_in: unknown clip_msg_id %d", clip_msg_id));
       break;
   }
+  XFlush(g_display);
   return rv;
 }
 
@@ -829,7 +846,7 @@ clipboard_event_selection_request(XEvent* xevent)
 {
   XEvent xev;
   XSelectionRequestEvent* lxev;
-  tui32 ui32[4];
+  tui32 ui32[8];
   Atom type;
   int fmt;
   int n_items;
@@ -838,8 +855,9 @@ clipboard_event_selection_request(XEvent* xevent)
 
   lxev = (XSelectionRequestEvent*)xevent;
   LOG(1, ("clipboard_event_selection_request: g_wnd %d, "
-      ".requestor %d .owner %d .select %d .target %d .property %d",
+      ".requestor %d .owner %d .selection %d '%s' .target %d .property %d",
       g_wnd, lxev->requestor, lxev->owner, lxev->selection,
+      XGetAtomName(g_display, lxev->selection),
       lxev->target, lxev->property));
   if (lxev->property == None)
   {
@@ -853,8 +871,9 @@ clipboard_event_selection_request(XEvent* xevent)
     ui32[1] = g_timestamp_atom;
     ui32[2] = g_multiple_atom;
     ui32[3] = XA_STRING;
+    ui32[4] = g_utf8_atom;
     XChangeProperty(g_display, lxev->requestor, lxev->property,
-                    XA_ATOM, 32, PropModeReplace, (tui8*)ui32, 4);
+                    XA_ATOM, 32, PropModeReplace, (tui8*)ui32, 5);
     g_memset(&xev, 0, sizeof(xev));
     xev.xselection.type = SelectionNotify;
     xev.xselection.send_event = True;
@@ -865,7 +884,6 @@ clipboard_event_selection_request(XEvent* xevent)
     xev.xselection.property = lxev->property;
     xev.xselection.time = lxev->time;
     XSendEvent(g_display, lxev->requestor, False, NoEventMask, &xev);
-    //XSelectInput(g_display, lxev->requestor, PropertyChangeMask);
     return 0;
   }
   else if (lxev->target == g_timestamp_atom)
@@ -885,7 +903,6 @@ clipboard_event_selection_request(XEvent* xevent)
     xev.xselection.property = lxev->property;
     xev.xselection.time = lxev->time;
     XSendEvent(g_display, lxev->requestor, False, NoEventMask, &xev);
-    //XSelectInput(g_display, lxev->requestor, PropertyChangeMask);
     return 0;
   }
   else if (lxev->target == g_multiple_atom)
@@ -903,13 +920,14 @@ clipboard_event_selection_request(XEvent* xevent)
       g_free(xdata);
     }
   }
-  else if (lxev->target == XA_STRING)
+  else if ((lxev->target == XA_STRING) || (lxev->target == g_utf8_atom))
   {
-    LOG(1, ("clipboard_event_selection_request: XA_STRING"));
+    LOG(1, ("clipboard_event_selection_request: %s",
+        XGetAtomName(g_display, lxev->target)));
     if (g_data_in_up_to_date)
     {
       XChangeProperty(g_display, lxev->requestor, lxev->property,
-                      XA_STRING, 8, PropModeReplace, g_data_in,
+                      lxev->target, 8, PropModeReplace, g_data_in,
                       g_strlen(g_data_in));
       g_memset(&xev, 0, sizeof(xev));
       xev.xselection.type = SelectionNotify;
@@ -921,7 +939,6 @@ clipboard_event_selection_request(XEvent* xevent)
       xev.xselection.property = lxev->property;
       xev.xselection.time = lxev->time;
       XSendEvent(g_display, lxev->requestor, False, NoEventMask, &xev);
-      //XSelectInput(g_display, lxev->requestor, PropertyChangeMask);
       return 0;
     }
     if (g_selection_request_event_count > 10)
@@ -955,7 +972,6 @@ clipboard_event_selection_request(XEvent* xevent)
   xev.xselection.property = None;
   xev.xselection.time = lxev->time;
   XSendEvent(g_display, lxev->requestor, False, NoEventMask, &xev);
-  //XSelectInput(g_display, lxev->requestor, PropertyChangeMask);
   return 0;
 }
 
