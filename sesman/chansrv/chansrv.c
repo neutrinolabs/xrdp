@@ -17,7 +17,6 @@
    Copyright (C) Jay Sorg 2009
 */
 
-#include <X11/Xlib.h>
 #include "arch.h"
 #include "os_calls.h"
 #include "thread_calls.h"
@@ -28,7 +27,6 @@
 #include "clipboard.h"
 #include "devredir.h"
 
-static tbus g_thread_done_event = 0;
 static struct trans* g_lis_trans = 0;
 static struct trans* g_con_trans = 0;
 static struct chan_item g_chan_items[32];
@@ -37,13 +35,13 @@ static int g_cliprdr_index = -1;
 static int g_rdpsnd_index = -1;
 static int g_rdpdr_index = -1;
 
-tbus g_term_event = 0;
+static tbus g_term_event = 0;
+static tbus g_thread_done_event = 0;
+
 int g_display_num = 0;
 int g_cliprdr_chan_id = -1; /* cliprdr */
 int g_rdpsnd_chan_id = -1; /* rdpsnd */
 int g_rdpdr_chan_id = -1; /* rdpdr */
-
-Display* g_display = 0;
 
 /*****************************************************************************/
 /* returns error */
@@ -553,26 +551,12 @@ get_display_num_from_display(char* display_text)
 }
 
 /*****************************************************************************/
-int DEFAULT_CC
-my_error_handler(Display* dis, XErrorEvent* xer)
+int APP_CC
+main_cleanup(void)
 {
-  char text[256];
-
-  XGetErrorText(dis, xer->error_code, text, 255);
-  LOG(1, ("error [%s]", text));
-  return 0;
-}
-
-/*****************************************************************************/
-/* The X server had an internal error.  This is the last function called.
-   Do any cleanup that needs to be done on exit, like removing temporary files.
-   Don't worry about memory leaks */
-int DEFAULT_CC
-my_fatal_handler(Display* dis)
-{
-  LOG(1, ("fatal error, exiting"));
   g_delete_wait_obj(g_term_event);
   g_delete_wait_obj(g_thread_done_event);
+  g_deinit(); /* os_calls */
   return 0;
 }
 
@@ -600,14 +584,6 @@ main(int argc, char** argv)
     return 1;
   }
   LOG(1, ("main: using DISPLAY %d", g_display_num));
-  g_display = XOpenDisplay(0);
-  if (g_display == 0)
-  {
-    LOG(0, ("main: XOpenDisplay failed"));
-    return 1;
-  }
-  XSetErrorHandler(my_error_handler);
-  XSetIOErrorHandler(my_fatal_handler);
   g_snprintf(text, 255, "xrdp_chansrv_%8.8x_main_term", pid);
   g_term_event = g_create_wait_obj(text);
   g_snprintf(text, 255, "xrdp_chansrv_%8.8x_thread_done", pid);
@@ -631,9 +607,7 @@ main(int argc, char** argv)
     }
   }
   /* cleanup */
-  g_delete_wait_obj(g_term_event);
-  g_delete_wait_obj(g_thread_done_event);
+  main_cleanup();
   LOG(1, ("main: app exiting pid %d(0x%8.8x)", pid, pid));
-  g_deinit(); /* os_calls */
   return 0;
 }

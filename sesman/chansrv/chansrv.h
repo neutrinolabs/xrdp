@@ -14,8 +14,10 @@ struct chan_item
 
 int APP_CC
 send_channel_data(int chan_id, char* data, int size);
+int APP_CC
+main_cleanup(void);
 
-#define LOG_LEVEL 10
+#define LOG_LEVEL 5
 
 #define LOG(_a, _params) \
 { \

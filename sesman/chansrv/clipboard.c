@@ -64,9 +64,35 @@ static int g_data_in_size = 0;
 static int g_data_in_time = 0;
 static int g_data_in_up_to_date = 0;
 static int g_got_format_announce = 0;
+static int g_waiting_for_data_response = 0;
+static int g_waiting_for_data_response_time = 0;
+
+static Display* g_display = 0;
 
 extern int g_cliprdr_chan_id; /* in chansrv.c */
-extern Display* g_display; /* in chansrv.c */
+
+/*****************************************************************************/
+int DEFAULT_CC
+clipboard_error_handler(Display* dis, XErrorEvent* xer)
+{
+  char text[256];
+
+  XGetErrorText(dis, xer->error_code, text, 255);
+  LOG(1, ("error [%s]", text));
+  return 0;
+}
+
+/*****************************************************************************/
+/* The X server had an internal error.  This is the last function called.
+   Do any cleanup that needs to be done on exit, like removing temporary files.
+   Don't worry about memory leaks */
+int DEFAULT_CC
+clipboard_fatal_handler(Display* dis)
+{
+  LOG(1, ("fatal error, exiting"));
+  main_cleanup();
+  return 0;
+}
 
 /*****************************************************************************/
 /* this is one way to get the current time from the x server */
@@ -111,12 +137,20 @@ clipboard_init(void)
   int ver_min;
   Status st;
 
-  LOG(1, ("xrdp-chansrv: in clipboard_init"));
+  LOG(5, ("xrdp-chansrv: in clipboard_init"));
   if (g_clip_up)
   {
     return 0;
   }
   rv = 0;
+  XSetErrorHandler(clipboard_error_handler);
+  XSetIOErrorHandler(clipboard_fatal_handler);
+  g_display = XOpenDisplay(0);
+  if (g_display == 0)
+  {
+    LOG(0, ("clipboard_init: XOpenDisplay failed"));
+    rv = 1;
+  }
   if (rv == 0)
   {
     g_x_socket = XConnectionNumber(g_display);
@@ -146,9 +180,9 @@ clipboard_init(void)
   }
   if (rv == 0)
   {
-    LOG(1, ("clipboard_init: g_xfixes_event_base %d", g_xfixes_event_base));
+    LOG(0, ("clipboard_init: g_xfixes_event_base %d", g_xfixes_event_base));
     st = XFixesQueryVersion(g_display, &ver_maj, &ver_min);
-    LOG(1, ("clipboard_init st %d, maj %d min %d", st, ver_maj, ver_min));
+    LOG(0, ("clipboard_init st %d, maj %d min %d", st, ver_maj, ver_min));
     g_screen_num = DefaultScreen(g_display);
     g_screen = ScreenOfDisplay(g_display, g_screen_num);
     g_clip_property_atom = XInternAtom(g_display, "XRDP_CLIP_PROPERTY_ATOM",
@@ -182,7 +216,7 @@ clipboard_init(void)
     out_uint32_le(s, 0); /* extra 4 bytes ? */
     s_mark_end(s);
     size = (int)(s->end - s->data);
-    LOG(1, ("clipboard_init: data out, sending "
+    LOG(5, ("clipboard_init: data out, sending "
         "CLIPRDR_CONNECT (clip_msg_id = 1)"));
     rv = send_channel_data(g_cliprdr_chan_id, s->data, size);
     if (rv != 0)
@@ -236,7 +270,7 @@ clipboard_send_data_request(void)
   int rv;
   int num_chars;
 
-  LOG(1, ("clipboard_send_data_request:"));
+  LOG(5, ("clipboard_send_data_request:"));
   if (!g_got_format_announce)
   {
     LOG(0, ("clipboard_send_data_request: error, no format announce"));
@@ -251,7 +285,7 @@ clipboard_send_data_request(void)
   out_uint32_le(s, 0x0d);
   s_mark_end(s);
   size = (int)(s->end - s->data);
-  LOG(1, ("clipboard_send_data_request: data out, sending "
+  LOG(5, ("clipboard_send_data_request: data out, sending "
       "CLIPRDR_DATA_REQUEST (clip_msg_id = 4)"));
   rv = send_channel_data(g_cliprdr_chan_id, s->data, size);
   free_stream(s);
@@ -274,7 +308,7 @@ clipboard_send_format_ack(void)
   out_uint32_le(s, 0); /* extra 4 bytes ? */
   s_mark_end(s);
   size = (int)(s->end - s->data);
-  LOG(1, ("clipboard_send_format_ack: data out, sending "
+  LOG(5, ("clipboard_send_format_ack: data out, sending "
       "CLIPRDR_FORMAT_ACK (clip_msg_id = 3)"));
   rv = send_channel_data(g_cliprdr_chan_id, s->data, size);
   free_stream(s);
@@ -298,7 +332,7 @@ clipboard_send_format_announce(void)
   out_uint8s(s, 0x90);
   s_mark_end(s);
   size = (int)(s->end - s->data);
-  LOG(1, ("clipboard_send_format_announce: data out, sending "
+  LOG(5, ("clipboard_send_format_announce: data out, sending "
       "CLIPRDR_FORMAT_ANNOUNCE (clip_msg_id = 2)"));
   rv = send_channel_data(g_cliprdr_chan_id, s->data, size);
   free_stream(s);
@@ -348,7 +382,7 @@ clipboard_send_data_response(void)
   num_chars = 0;
   if (g_last_clip_data != 0)
   {
-    if (g_last_clip_type == XA_STRING)
+    if ((g_last_clip_type == XA_STRING) || (g_last_clip_type == g_utf8_atom))
     {
       num_chars = g_mbstowcs(0, g_last_clip_data, 0);
       if (num_chars < 0)
@@ -374,7 +408,7 @@ clipboard_send_data_response(void)
   out_uint32_le(s, 0);
   s_mark_end(s);
   size = (int)(s->end - s->data);
-  LOG(1, ("clipboard_send_data_response: data out, sending "
+  LOG(5, ("clipboard_send_data_response: data out, sending "
       "CLIPRDR_DATA_RESPONSE (clip_msg_id = 5) size %d num_chars %d",
       size, num_chars));
   rv = send_channel_data(g_cliprdr_chan_id, s->data, size);
@@ -402,12 +436,53 @@ clipboard_set_selection_owner(void)
 
 /*****************************************************************************/
 static int APP_CC
+clipboard_provide_selection(XSelectionRequestEvent* req, Atom type, int format,
+                            char* data, int length)
+{
+  XEvent xev;
+
+  XChangeProperty(g_display, req->requestor, req->property,
+                  type, format, PropModeReplace, (tui8*)data, length);
+  g_memset(&xev, 0, sizeof(xev));
+  xev.xselection.type = SelectionNotify;
+  xev.xselection.send_event = True;
+  xev.xselection.display = req->display;
+  xev.xselection.requestor = req->requestor;
+  xev.xselection.selection = req->selection;
+  xev.xselection.target = req->target;
+  xev.xselection.property = req->property;
+  xev.xselection.time = req->time;
+  XSendEvent(g_display, req->requestor, False, NoEventMask, &xev);
+  return 0;
+}
+
+/*****************************************************************************/
+static int APP_CC
+clipboard_refuse_selection(XSelectionRequestEvent* req)
+{
+  XEvent xev;
+
+  g_memset(&xev, 0, sizeof(xev));
+  xev.xselection.type = SelectionNotify;
+  xev.xselection.send_event = True;
+  xev.xselection.display = req->display;
+  xev.xselection.requestor = req->requestor;
+  xev.xselection.selection = req->selection;
+  xev.xselection.target = req->target;
+  xev.xselection.property = None;
+  xev.xselection.time = req->time;
+  XSendEvent(g_display, req->requestor, False, NoEventMask, &xev);
+  return 0;
+}
+
+/*****************************************************************************/
+static int APP_CC
 clipboard_process_format_announce(struct stream* s, int clip_msg_status,
                                   int clip_msg_len)
 {
   Window owner;
 
-  LOG(1, ("clipboard_process_format_announce: CLIPRDR_FORMAT_ANNOUNCE"));
+  LOG(5, ("clipboard_process_format_announce: CLIPRDR_FORMAT_ANNOUNCE"));
   //g_hexdump(s->p, s->end - s->p);
   clipboard_send_format_ack();
   g_got_format_announce = 1;
@@ -424,7 +499,7 @@ static int APP_CC
 clipboard_prcoess_format_ack(struct stream* s, int clip_msg_status,
                              int clip_msg_len)
 {
-  LOG(1, ("clipboard_prcoess_format_ack: CLIPRDR_FORMAT_ACK"));
+  LOG(5, ("clipboard_prcoess_format_ack: CLIPRDR_FORMAT_ACK"));
   //g_hexdump(s->p, s->end - s->p);
   return 0;
 }
@@ -434,7 +509,7 @@ static int APP_CC
 clipboard_process_data_request(struct stream* s, int clip_msg_status,
                                int clip_msg_len)
 {
-  LOG(1, ("clipboard_process_data_request: CLIPRDR_DATA_REQUEST"));
+  LOG(5, ("clipboard_process_data_request: CLIPRDR_DATA_REQUEST"));
   //g_hexdump(s->p, s->end - s->p);
   clipboard_send_data_response();
   return 0;
@@ -454,7 +529,8 @@ clipboard_process_data_response(struct stream* s, int clip_msg_status,
   int wtext_size;
   int data_in_len;
 
-  LOG(1, ("clipboard_process_data_response: CLIPRDR_DATA_RESPONSE"));
+  LOG(5, ("clipboard_process_data_response: CLIPRDR_DATA_RESPONSE"));
+  g_waiting_for_data_response = 0;
   len = (int)(s->end - s->p);
   if (len < 1)
   {
@@ -503,20 +579,9 @@ clipboard_process_data_response(struct stream* s, int clip_msg_status,
     for (index = 0; index < g_selection_request_event_count; index++)
     {
       lxev = &(g_selection_request_event[index]);
-      XChangeProperty(g_display, lxev->requestor, lxev->property,
-                      lxev->target, 8, PropModeReplace, g_data_in,
-                      data_in_len);
-      g_memset(&xev, 0, sizeof(xev));
-      xev.xselection.type = SelectionNotify;
-      xev.xselection.send_event = True;
-      xev.xselection.display = lxev->display;
-      xev.xselection.requestor = lxev->requestor;
-      xev.xselection.selection = lxev->selection;
-      xev.xselection.target = lxev->target;
-      xev.xselection.property = lxev->property;
-      xev.xselection.time = lxev->time;
-      XSendEvent(g_display, lxev->requestor, False, NoEventMask, &xev);
-      LOG(1, ("clipboard_process_data_response: requestor %d data_in_len %d",
+      clipboard_provide_selection(lxev, lxev->target, 8, g_data_in,
+                                  data_in_len);
+      LOG(5, ("clipboard_process_data_response: requestor %d data_in_len %d",
           lxev->requestor, data_in_len));
     }
   }
@@ -611,12 +676,12 @@ clipboard_event_selection_owner_notify(XEvent* xevent)
   XFixesSelectionNotifyEvent* lxevent;
 
   lxevent = (XFixesSelectionNotifyEvent*)xevent;
-  LOG(1, ("clipboard_event_selection_owner_notify: "
+  LOG(5, ("clipboard_event_selection_owner_notify: "
       "window %d subtype %d owner %d g_wnd %d",
       lxevent->window, lxevent->subtype, lxevent->owner, g_wnd));
   if (lxevent->owner == g_wnd)
   {
-    LOG(1, ("clipboard_event_selection_owner_notify: skipping, "
+    LOG(5, ("clipboard_event_selection_owner_notify: skipping, "
         "onwer == g_wnd"));
     g_got_selection = 1;
     return 0;
@@ -731,13 +796,15 @@ clipboard_event_selection_notify(XEvent* xevent)
   int rv;
   int index;
   int convert_to_string;
+  int convert_to_utf8;
   int send_format_announce;
   int atom;
   int* atoms;
   Atom type;
 
-  LOG(1, ("clipboard_event_selection_notify:"));
+  LOG(5, ("clipboard_event_selection_notify:"));
   convert_to_string = 0;
+  convert_to_utf8 = 0;
   send_format_announce = 0;
   rv = 0;
   data = 0;
@@ -773,9 +840,13 @@ clipboard_event_selection_notify(XEvent* xevent)
           for (index = 0; index < n_items; index++)
           {
             atom = atoms[index];
-            LOG(1, ("clipboard_event_selection_notify: %d %s %d", atom,
+            LOG(5, ("clipboard_event_selection_notify: %d %s %d", atom,
                 XGetAtomName(g_display, atom), XA_STRING));
-            if (atom == XA_STRING)
+            if (atom == g_utf8_atom)
+            {
+              convert_to_utf8 = 1;
+            }
+            else if (atom == XA_STRING)
             {
               convert_to_string = 1;
             }
@@ -788,9 +859,21 @@ clipboard_event_selection_notify(XEvent* xevent)
               "type[%d], fmt[%d]", type, fmt, XA_ATOM, 32));
         }
       }
+      else if (lxevent->target == g_utf8_atom)
+      {
+        LOG(5, ("clipboard_event_selection_notify: UTF8_STRING data_size %d",
+            data_size));
+        g_free(g_last_clip_data);
+        g_last_clip_size = data_size;
+        g_last_clip_data = g_malloc(g_last_clip_size + 1, 0);
+        g_last_clip_type = g_utf8_atom;
+        g_memcpy(g_last_clip_data, data, g_last_clip_size);
+        g_last_clip_data[g_last_clip_size] = 0;
+        send_format_announce = 1;
+      }
       else if (lxevent->target == XA_STRING)
       {
-        LOG(10, ("clipboard_event_selection_notify: XA_STRING data_size %d",
+        LOG(5, ("clipboard_event_selection_notify: XA_STRING data_size %d",
             data_size));
         g_free(g_last_clip_data);
         g_last_clip_size = data_size;
@@ -810,7 +893,12 @@ clipboard_event_selection_notify(XEvent* xevent)
       LOG(0, ("clipboard_event_selection_notify: unknown selection"));
     }
   }
-  if (convert_to_string)
+  if (convert_to_utf8)
+  {
+    XConvertSelection(g_display, g_clipboard_atom, g_utf8_atom,
+                      g_clip_property_atom, g_wnd, lxevent->time);
+  }
+  else if (convert_to_string)
   {
     XConvertSelection(g_display, g_clipboard_atom, XA_STRING,
                       g_clip_property_atom, g_wnd, lxevent->time);
@@ -854,67 +942,43 @@ clipboard_event_selection_request(XEvent* xevent)
   char* xdata;
 
   lxev = (XSelectionRequestEvent*)xevent;
-  LOG(1, ("clipboard_event_selection_request: g_wnd %d, "
+  LOG(5, ("clipboard_event_selection_request: g_wnd %d, "
       ".requestor %d .owner %d .selection %d '%s' .target %d .property %d",
       g_wnd, lxev->requestor, lxev->owner, lxev->selection,
       XGetAtomName(g_display, lxev->selection),
       lxev->target, lxev->property));
   if (lxev->property == None)
   {
-    LOG(1, ("clipboard_event_selection_request: lxev->property is None"));
+    LOG(5, ("clipboard_event_selection_request: lxev->property is None"));
   }
   else if (lxev->target == g_targets_atom)
   {
     /* requestor is asking what the selection can be converted to */
-    LOG(1, ("clipboard_event_selection_request: g_targets_atom"));
+    LOG(5, ("clipboard_event_selection_request: g_targets_atom"));
     ui32[0] = g_targets_atom;
     ui32[1] = g_timestamp_atom;
     ui32[2] = g_multiple_atom;
     ui32[3] = XA_STRING;
     ui32[4] = g_utf8_atom;
-    XChangeProperty(g_display, lxev->requestor, lxev->property,
-                    XA_ATOM, 32, PropModeReplace, (tui8*)ui32, 5);
-    g_memset(&xev, 0, sizeof(xev));
-    xev.xselection.type = SelectionNotify;
-    xev.xselection.send_event = True;
-    xev.xselection.display = lxev->display;
-    xev.xselection.requestor = lxev->requestor;
-    xev.xselection.selection = lxev->selection;
-    xev.xselection.target = lxev->target;
-    xev.xselection.property = lxev->property;
-    xev.xselection.time = lxev->time;
-    XSendEvent(g_display, lxev->requestor, False, NoEventMask, &xev);
-    return 0;
+    return clipboard_provide_selection(lxev, XA_ATOM, 32, (char*)ui32, 5);
   }
   else if (lxev->target == g_timestamp_atom)
   {
     /* requestor is asking the time I got the selection */
-    LOG(1, ("clipboard_event_selection_request: g_timestamp_atom"));
+    LOG(5, ("clipboard_event_selection_request: g_timestamp_atom"));
     ui32[0] = g_selection_time;
-    XChangeProperty(g_display, lxev->requestor, lxev->property,
-                    XA_INTEGER, 32, PropModeReplace, (tui8*)ui32, 1);
-    g_memset(&xev, 0, sizeof(xev));
-    xev.xselection.type = SelectionNotify;
-    xev.xselection.send_event = True;
-    xev.xselection.display = lxev->display;
-    xev.xselection.requestor = lxev->requestor;
-    xev.xselection.selection = lxev->selection;
-    xev.xselection.target = lxev->target;
-    xev.xselection.property = lxev->property;
-    xev.xselection.time = lxev->time;
-    XSendEvent(g_display, lxev->requestor, False, NoEventMask, &xev);
-    return 0;
+    return clipboard_provide_selection(lxev, XA_INTEGER, 32, (char*)ui32, 1);
   }
   else if (lxev->target == g_multiple_atom)
   {
     /* target, property pairs */
-    LOG(1, ("clipboard_event_selection_request: g_multiple_atom"));
+    LOG(5, ("clipboard_event_selection_request: g_multiple_atom"));
     if (clipboard_get_window_property(xev.xselection.requestor,
                                       xev.xselection.property,
                                       &type, &fmt, &n_items, &xdata,
                                       &xdata_size) == 0)
     {
-      LOG(1, ("clipboard_event_selection_request: g_multiple_atom "
+      LOG(5, ("clipboard_event_selection_request: g_multiple_atom "
           "n_items %d", n_items));
       /* todo */
       g_free(xdata);
@@ -922,24 +986,12 @@ clipboard_event_selection_request(XEvent* xevent)
   }
   else if ((lxev->target == XA_STRING) || (lxev->target == g_utf8_atom))
   {
-    LOG(1, ("clipboard_event_selection_request: %s",
+    LOG(5, ("clipboard_event_selection_request: %s",
         XGetAtomName(g_display, lxev->target)));
     if (g_data_in_up_to_date)
     {
-      XChangeProperty(g_display, lxev->requestor, lxev->property,
-                      lxev->target, 8, PropModeReplace, g_data_in,
-                      g_strlen(g_data_in));
-      g_memset(&xev, 0, sizeof(xev));
-      xev.xselection.type = SelectionNotify;
-      xev.xselection.send_event = True;
-      xev.xselection.display = lxev->display;
-      xev.xselection.requestor = lxev->requestor;
-      xev.xselection.selection = lxev->selection;
-      xev.xselection.target = lxev->target;
-      xev.xselection.property = lxev->property;
-      xev.xselection.time = lxev->time;
-      XSendEvent(g_display, lxev->requestor, False, NoEventMask, &xev);
-      return 0;
+      return clipboard_provide_selection(lxev, lxev->target, 8,
+                                         g_data_in, g_strlen(g_data_in));
     }
     if (g_selection_request_event_count > 10)
     {
@@ -952,6 +1004,8 @@ clipboard_event_selection_request(XEvent* xevent)
       if (g_selection_request_event_count == 0)
       {
         clipboard_send_data_request();
+        g_waiting_for_data_response = 1;
+        g_waiting_for_data_response_time = clipboard_get_local_time();
       }
       g_selection_request_event_count++;
       return 0;
@@ -959,19 +1013,10 @@ clipboard_event_selection_request(XEvent* xevent)
   }
   else
   {
-    LOG(1, ("clipboard_event_selection_request: unknown "
+    LOG(0, ("clipboard_event_selection_request: unknown "
         "target %s", XGetAtomName(g_display, lxev->target)));
   }
-  g_memset(&xev, 0, sizeof(xev));
-  xev.xselection.type = SelectionNotify;
-  xev.xselection.send_event = True;
-  xev.xselection.display = lxev->display;
-  xev.xselection.requestor = lxev->requestor;
-  xev.xselection.selection = lxev->selection;
-  xev.xselection.target = lxev->target;
-  xev.xselection.property = None;
-  xev.xselection.time = lxev->time;
-  XSendEvent(g_display, lxev->requestor, False, NoEventMask, &xev);
+  clipboard_refuse_selection(lxev);
   return 0;
 }
 
@@ -990,7 +1035,7 @@ clipboard_event_selection_request(XEvent* xevent)
 static int APP_CC
 clipboard_event_selection_clear(XEvent* xevent)
 {
-  LOG(1, ("clipboard_event_selection_clear:"));
+  LOG(5, ("clipboard_event_selection_clear:"));
   return 0;
 }
 
@@ -1040,6 +1085,7 @@ int APP_CC
 clipboard_check_wait_objs(void)
 {
   XEvent xevent;
+  int time_diff;
 
   if (!g_clip_up)
   {
@@ -1052,6 +1098,16 @@ clipboard_check_wait_objs(void)
       /* something is wrong, should not get here */
       LOG(0, ("clipboard_check_wait_objs: sck closed"));
       return 0;
+    }
+    if (g_waiting_for_data_response)
+    {
+      time_diff = clipboard_get_local_time() -
+                  g_waiting_for_data_response_time;
+      if (time_diff > 1000)
+      {
+        LOG(0, ("clipboard_check_wait_objs: warning, waiting for "
+            "data response too long"));
+      }
     }
     while (XPending(g_display) > 0)
     {
