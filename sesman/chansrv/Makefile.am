@@ -18,5 +18,6 @@ xrdp_chansrv_SOURCES = \
   devredir.c
 
 xrdp_chansrv_LDADD = \
+  -L/usr/X11R6/lib \
   $(top_srcdir)/common/libcommon.la \
   -lX11 -lXfixes
