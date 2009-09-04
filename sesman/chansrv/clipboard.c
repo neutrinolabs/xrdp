@@ -143,8 +143,10 @@ clipboard_init(void)
     return 0;
   }
   rv = 0;
-  XSetErrorHandler(clipboard_error_handler);
-  XSetIOErrorHandler(clipboard_fatal_handler);
+  /* setting the error handlers can cause problem when shutting down
+     chansrv on some xlibs */
+  //XSetErrorHandler(clipboard_error_handler);
+  //XSetIOErrorHandler(clipboard_fatal_handler);
   g_display = XOpenDisplay(0);
   if (g_display == 0)
   {
