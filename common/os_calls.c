@@ -387,6 +387,23 @@ g_tcp_connect(int sck, const char* address, const char* port)
 }
 
 /*****************************************************************************/
+/* returns error, zero is good */
+int APP_CC
+g_tcp_local_connect(int sck, const char* port)
+{
+#if defined(_WIN32)
+  return -1;
+#else
+  struct sockaddr_un s;
+
+  memset(&s, 0, sizeof(struct sockaddr_un));
+  s.sun_family = AF_UNIX;
+  strcpy(s.sun_path, port);
+  return connect(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_un));
+#endif
+}
+
+/*****************************************************************************/
 int APP_CC
 g_tcp_set_non_blocking(int sck)
 {

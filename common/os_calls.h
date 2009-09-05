@@ -64,6 +64,8 @@ g_tcp_close(int sck);
 int APP_CC
 g_tcp_connect(int sck, const char* address, const char* port);
 int APP_CC
+g_tcp_local_connect(int sck, const char* port);
+int APP_CC
 g_tcp_force_send(int sck, char* data, int len);
 int APP_CC
 g_tcp_force_recv(int sck, char* data, int len);

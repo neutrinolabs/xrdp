@@ -54,6 +54,11 @@ trans_delete(struct trans* self)
   free_stream(self->in_s);
   free_stream(self->out_s);
   g_tcp_close(self->sck);
+  if (self->listen_filename != 0)
+  {
+    g_file_delete(self->listen_filename);
+    g_free(self->listen_filename);
+  }
   g_free(self);
 }
 
@@ -283,9 +288,23 @@ trans_connect(struct trans* self, const char* server, const char* port,
   {
     g_tcp_close(self->sck);
   }
-  self->sck = g_tcp_socket();
-  g_tcp_set_non_blocking(self->sck);
-  error = g_tcp_connect(self->sck, server, port);
+  if (self->mode == 1) /* tcp */
+  {
+    self->sck = g_tcp_socket();
+    g_tcp_set_non_blocking(self->sck);
+    error = g_tcp_connect(self->sck, server, port);
+  }
+  else if (self->mode == 2) /* unix socket */
+  {
+    self->sck = g_tcp_local_socket();
+    g_tcp_set_non_blocking(self->sck);
+    error = g_tcp_local_connect(self->sck, port);
+  }
+  else
+  {
+    self->status = 0;
+    return 1;
+  }
   if (error == -1)
   {
     if (g_tcp_last_error_would_block(self->sck))
@@ -312,15 +331,37 @@ trans_listen(struct trans* self, char* port)
   {
     g_tcp_close(self->sck);
   }
-  self->sck = g_tcp_socket();
-  g_tcp_set_non_blocking(self->sck);
-  if (g_tcp_bind(self->sck, port) == 0)
+  if (self->mode == 1) /* tcp */
   {
-    if (g_tcp_listen(self->sck) == 0)
+    self->sck = g_tcp_socket();
+    g_tcp_set_non_blocking(self->sck);
+    if (g_tcp_bind(self->sck, port) == 0)
     {
-      self->status = 1; /* ok */
-      self->type1 = 1; /* listener */
-      return 0;
+      if (g_tcp_listen(self->sck) == 0)
+      {
+        self->status = 1; /* ok */
+        self->type1 = 1; /* listener */
+        return 0;
+      }
+    }
+  }
+  else if (self->mode == 2) /* unix socket */
+  {
+    g_free(self->listen_filename);
+    self->listen_filename = 0;
+    g_file_delete(port);
+    self->sck = g_tcp_local_socket();
+    g_tcp_set_non_blocking(self->sck);
+    if (g_tcp_local_bind(self->sck, port) == 0)
+    {
+      self->listen_filename = g_strdup(port);
+      if (g_tcp_listen(self->sck) == 0)
+      {
+        g_chmod_hex(port, 0xffff);
+        self->status = 1; /* ok */
+        self->type1 = 1; /* listener */
+        return 0;
+      }
     }
   }
   return 1;

@@ -37,7 +37,7 @@ typedef int (*ttrans_conn_in)(struct trans* self, struct trans* new_self);
 struct trans
 {
   tbus sck;
-  int mode; /* tcp, shared memory, pipes */
+  int mode; /* 1 tcp, 2 unix socket */
   int status;
   int type1; /* 1 listener 2 server 3 client */
   ttrans_data_in trans_data_in;
@@ -46,6 +46,7 @@ struct trans
   int header_size;
   struct stream* in_s;
   struct stream* out_s;
+  char* listen_filename;
 };
 
 struct trans* APP_CC
