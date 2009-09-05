@@ -750,11 +750,11 @@ xrdp_mm_process_login_response(struct xrdp_mm* self, struct stream* s)
         xrdp_wm_set_login_mode(self->wm, 10);
         self->wm->dragging = 0;
         /* connect channel redir */
-        self->chan_trans = trans_create(1, 8192, 8192);
+        self->chan_trans = trans_create(2, 8192, 8192);
         self->chan_trans->trans_data_in = xrdp_mm_chan_data_in;
         self->chan_trans->header_size = 8;
         self->chan_trans->callback_data = self;
-        g_snprintf(text, 255, "%d", 7200 + display);
+        g_snprintf(text, 255, "/tmp/xrdp_chansrv_socket_%d", 7200 + display);
         /* try to connect up to 4 times */
         for (index = 0; index < 4; index++)
         {

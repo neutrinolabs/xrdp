@@ -394,9 +394,9 @@ setup_listen(void)
   {
     trans_delete(g_lis_trans);
   }
-  g_lis_trans = trans_create(1, 8192, 8192);
+  g_lis_trans = trans_create(2, 8192, 8192);
   g_lis_trans->trans_conn_in = my_trans_conn_in;
-  g_snprintf(text, 255, "%d", 7200 + g_display_num);
+  g_snprintf(text, 255, "/tmp/xrdp_chansrv_socket_%d", 7200 + g_display_num);
   error = trans_listen(g_lis_trans, text);
   if (error != 0)
   {
