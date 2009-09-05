@@ -142,6 +142,7 @@ clipboard_init(void)
   {
     return 0;
   }
+  clipboard_deinit();
   rv = 0;
   /* setting the error handlers can cause problem when shutting down
      chansrv on some xlibs */
@@ -246,19 +247,27 @@ clipboard_init(void)
 int APP_CC
 clipboard_deinit(void)
 {
-  if (!g_clip_up)
+  if (g_x_wait_obj != 0)
   {
-    return 0;
+    g_delete_wait_obj_from_socket(g_x_wait_obj);
+    g_x_wait_obj = 0;
   }
-  g_delete_wait_obj_from_socket(g_x_wait_obj);
-  g_x_wait_obj = 0;
-  XDestroyWindow(g_display, g_wnd);
-  g_wnd = 0;
+  if (g_wnd != 0)
+  {
+    XDestroyWindow(g_display, g_wnd);
+    g_wnd = 0;
+  }
   g_x_socket = 0;
   g_free(g_last_clip_data);
   g_last_clip_data = 0;
   g_last_clip_size = 0;
   free_stream(g_ins);
+  g_ins = 0;
+  if (g_display != 0)
+  {
+    XCloseDisplay(g_display);
+    g_display = 0;
+  }
   g_clip_up = 0;
   return 0;
 }

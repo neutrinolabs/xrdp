@@ -177,6 +177,13 @@ process_message_channel_setup(struct stream* s)
   int rv;
   struct chan_item* ci;
 
+  g_num_chan_items = 0;
+  g_cliprdr_index = -1;
+  g_rdpsnd_index = -1;
+  g_rdpdr_index = -1;
+  g_cliprdr_chan_id = -1;
+  g_rdpsnd_chan_id = -1;
+  g_rdpdr_chan_id = -1;
   LOG(10, ("process_message_channel_setup:"));
   in_uint16_le(s, num_chans);
   LOG(10, ("process_message_channel_setup: num_chans %d", num_chans));
@@ -449,6 +456,9 @@ channel_thread_loop(void* in_val)
         {
           LOG(0, ("channel_thread_loop: "
                   "trans_check_wait_objs error resetting"));
+          clipboard_deinit();
+          sound_deinit();
+          dev_redir_deinit();
           /* delete g_con_trans */
           trans_delete(g_con_trans);
           g_con_trans = 0;
