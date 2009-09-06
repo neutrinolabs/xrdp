@@ -51,7 +51,7 @@ static int g_sync_result;
 
 /******************************************************************************/
 struct session_item* DEFAULT_CC
-session_get_bydata(char* name, int width, int height, int bpp)
+session_get_bydata(char* name, int width, int height, int bpp, int type)
 {
   struct session_chain* tmp;
 
@@ -65,7 +65,8 @@ session_get_bydata(char* name, int width, int height, int bpp)
     if (g_strncmp(name, tmp->item->name, 255) == 0 &&
         tmp->item->width == width &&
         tmp->item->height == height &&
-        tmp->item->bpp == bpp)
+        tmp->item->bpp == bpp &&
+        tmp->item->type == type)
     {
       /*THREAD-FIX release chain lock */
       lock_chain_release();
