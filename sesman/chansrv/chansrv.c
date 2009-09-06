@@ -26,6 +26,9 @@
 #include "sound.h"
 #include "clipboard.h"
 #include "devredir.h"
+#include "list.h"
+#include "file.h"
+#include "file_loc.h"
 
 static struct trans* g_lis_trans = 0;
 static struct trans* g_con_trans = 0;
@@ -37,6 +40,8 @@ static int g_rdpdr_index = -1;
 
 static tbus g_term_event = 0;
 static tbus g_thread_done_event = 0;
+
+static int g_use_unix_socket = 0;
 
 int g_display_num = 0;
 int g_cliprdr_chan_id = -1; /* cliprdr */
@@ -394,20 +399,28 @@ my_trans_conn_in(struct trans* trans, struct trans* new_trans)
 static int APP_CC
 setup_listen(void)
 {
-  char text[256];
+  char port[256];
   int error;
 
   if (g_lis_trans != 0)
   {
     trans_delete(g_lis_trans);
   }
-  g_lis_trans = trans_create(2, 8192, 8192);
+  if (g_use_unix_socket)
+  {
+    g_lis_trans = trans_create(2, 8192, 8192);
+    g_snprintf(port, 255, "/tmp/xrdp_chansrv_socket_%d", 7200 + g_display_num);
+  }
+  else
+  {
+    g_lis_trans = trans_create(1, 8192, 8192);
+    g_snprintf(port, 255, "%d", 7200 + g_display_num);
+  }
   g_lis_trans->trans_conn_in = my_trans_conn_in;
-  g_snprintf(text, 255, "/tmp/xrdp_chansrv_socket_%d", 7200 + g_display_num);
-  error = trans_listen(g_lis_trans, text);
+  error = trans_listen(g_lis_trans, port);
   if (error != 0)
   {
-    LOG(0, ("setup_listen: trans_listen failed"));
+    LOG(0, ("setup_listen: trans_listen failed for port %s", port));
     return 1;
   }
   return 0;
@@ -571,6 +584,43 @@ main_cleanup(void)
 }
 
 /*****************************************************************************/
+static int APP_CC
+read_ini(void)
+{
+  char filename[256];
+  struct list* names;
+  struct list* values;
+  char* name;
+  char* value;
+  int index;
+
+  names = list_create();
+  names->auto_free = 1;
+  values = list_create();
+  values->auto_free = 1;
+  g_use_unix_socket = 0;
+  g_snprintf(filename, 255, "%s/sesman.ini", XRDP_CFG_PATH);
+  if (file_by_name_read_section(filename, "Globals", names, values) == 0)
+  {
+    for (index = 0; index < names->count; index++)
+    {
+      name = (char*)list_get_item(names, index);
+      value = (char*)list_get_item(values, index);
+      if (g_strcasecmp(name, "ListenAddress") == 0)
+      {
+        if (g_strcasecmp(value, "127.0.0.1") == 0)
+        {
+          g_use_unix_socket = 1;
+        }
+      }
+    }
+  }
+  list_delete(names);
+  list_delete(values);
+  return 0;
+}
+
+/*****************************************************************************/
 int DEFAULT_CC
 main(int argc, char** argv)
 {
@@ -579,6 +629,7 @@ main(int argc, char** argv)
   char* display_text;
 
   g_init(); /* os_calls */
+  read_ini();
   pid = g_getpid();
   LOG(1, ("main: app started pid %d(0x%8.8x)", pid, pid));
   g_signal_kill(term_signal_handler); /* SIGKILL */
