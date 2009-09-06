@@ -277,11 +277,11 @@ xrdp_mm_send_login(struct xrdp_mm* self)
 
 /*****************************************************************************/
 /* returns error */
-/* this goes through the login_names looking for one called 'lib'
+/* this goes through the login_names looking for one called 'aname'
    then it copies the corisponding login_values item into 'dest'
    'dest' must be at least 'dest_len' + 1 bytes in size */
 static int APP_CC
-xrdp_mm_get_lib(struct xrdp_mm* self, char* dest, int dest_len)
+xrdp_mm_get_value(struct xrdp_mm* self, char* aname, char* dest, int dest_len)
 {
   char* name;
   char* value;
@@ -301,7 +301,7 @@ xrdp_mm_get_lib(struct xrdp_mm* self, char* dest, int dest_len)
     {
       break;
     }
-    if (g_strcasecmp(name, "lib") == 0)
+    if (g_strcasecmp(name, aname) == 0)
     {
       g_strncpy(dest, value, dest_len);
       rv = 0;
@@ -323,7 +323,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm* self)
     return 1;
   }
   lib[0] = 0;
-  if (xrdp_mm_get_lib(self, lib, 255) != 0)
+  if (xrdp_mm_get_value(self, "lib", lib, 255) != 0)
   {
     g_snprintf(text, 255, "no library name specified in xrdp.ini, please add "
                "lib=libxrdp-vnc.so or similar");
@@ -733,6 +733,8 @@ xrdp_mm_process_login_response(struct xrdp_mm* self, struct stream* s)
   int rv;
   int index;
   char text[256];
+  char ip[256];
+  char port[256];
 
   rv = 0;
   in_uint16_be(s, ok);
@@ -747,23 +749,34 @@ xrdp_mm_process_login_response(struct xrdp_mm* self, struct stream* s)
     {
       if (xrdp_mm_setup_mod2(self) == 0)
       {
+        xrdp_mm_get_value(self, "ip", ip, 255);
         xrdp_wm_set_login_mode(self->wm, 10);
         self->wm->dragging = 0;
         /* connect channel redir */
-        self->chan_trans = trans_create(2, 8192, 8192);
+        if (strcmp(ip, "127.0.0.1") == 0)
+        {
+          /* unix socket */
+          self->chan_trans = trans_create(2, 8192, 8192);
+          g_snprintf(port, 255, "/tmp/xrdp_chansrv_socket_%d", 7200 + display);
+        }
+        else
+        {
+          /* tcp */
+          self->chan_trans = trans_create(1, 8192, 8192);
+          g_snprintf(port, 255, "%d", 7200 + display);
+        }
         self->chan_trans->trans_data_in = xrdp_mm_chan_data_in;
         self->chan_trans->header_size = 8;
         self->chan_trans->callback_data = self;
-        g_snprintf(text, 255, "/tmp/xrdp_chansrv_socket_%d", 7200 + display);
         /* try to connect up to 4 times */
         for (index = 0; index < 4; index++)
         {
-          if (trans_connect(self->chan_trans, "127.0.0.1", text, 3000) == 0)
+          if (trans_connect(self->chan_trans, ip, port, 3000) == 0)
           {
             self->chan_trans_up = 1;
             break;
           }
-          g_sleep(250);
+          g_sleep(1000);
           g_writeln("xrdp_mm_process_login_response: connect failed "
                     "trying again...");
         }
