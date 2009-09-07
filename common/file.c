@@ -105,7 +105,7 @@ file_read_line(struct stream* s, char* text)
   in_uint8(s, c);
   while (c != 10 && c != 13)
   {
-    if (c == '#' || c == '!')
+    if (c == '#' || c == '!' || c == ';')
     {
       skip_to_end = 1;
     }
