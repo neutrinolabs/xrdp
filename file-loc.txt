@@ -11,6 +11,7 @@ default build will install the following
   libxup.so
 
 /usr/local/bin/
+  xrdp-genkeymap
   xrdp-keygen
   xrdp-sesadmin
   xrdp-sesrun
@@ -23,10 +24,11 @@ default build will install the following
   xrdp-chansrv
 
 /etc/xrdp/
-  xrdp.ini
+  km-xxxx.ini
   sesman.ini
   rsakeys.ini
   startwm.sh
+  xrdp.ini
   xrdp.sh
 
 /etc/pam.d/
@@ -56,3 +58,6 @@ when running, the following are created and written to
 
 /var/log/
   xrdp-sesman.log
+
+/tmp
+  xrdp*
