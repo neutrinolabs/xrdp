@@ -645,21 +645,17 @@ xrdp_mm_chan_process_msg(struct xrdp_mm* self, struct trans* trans,
     switch (id)
     {
       case 2: /* channel init response */
-        g_writeln("channel init response");
         rv = xrdp_mm_trans_process_init_response(self, trans);
         break;
       case 4: /* channel setup response */
-        g_writeln("channel setup response");
         break;
       case 6: /* channel data response */
-        g_writeln("channel data response");
         break;
       case 8: /* channel data */
-        g_writeln("channel data");
         rv = xrdp_mm_trans_process_channel_data(self, trans);
         break;
       default:
-        g_writeln("unknown");
+        g_writeln("xrdp_mm_chan_process_msg: unknown id %d", id);
         break;
     }
     if (rv != 0)
@@ -687,7 +683,6 @@ xrdp_mm_chan_data_in(struct trans* trans)
   {
     return 1;
   }
-  g_writeln("xrdp_mm_chan_data_in");
   self = (struct xrdp_mm*)(trans->callback_data);
   s = trans_get_in_s(trans);
   if (s == 0)
