@@ -487,7 +487,14 @@ xrdp_login_wnd_create(struct xrdp_wm* self)
   {
     /* image */
     but = xrdp_bitmap_create(4, 4, self->screen->bpp, WND_TYPE_IMAGE, self);
-    g_snprintf(file_path, 255, "%s/xrdp256.bmp", XRDP_SHARE_PATH);
+    if (self->screen->bpp > 8)
+    {
+      g_snprintf(file_path, 255, "%s/xrdp24b.bmp", XRDP_SHARE_PATH);
+    }
+    else
+    {
+      g_snprintf(file_path, 255, "%s/xrdp256.bmp", XRDP_SHARE_PATH);
+    }
     xrdp_bitmap_load(but, file_path, self->palette);
     but->parent = self->screen;
     but->owner = self->screen;
@@ -497,7 +504,14 @@ xrdp_login_wnd_create(struct xrdp_wm* self)
 
     /* image */
     but = xrdp_bitmap_create(4, 4, self->screen->bpp, WND_TYPE_IMAGE, self);
-    g_snprintf(file_path, 255, "%s/ad256.bmp", XRDP_SHARE_PATH);
+    if (self->screen->bpp > 8)
+    {
+      g_snprintf(file_path, 255, "%s/ad24b.bmp", XRDP_SHARE_PATH);
+    }
+    else
+    {
+      g_snprintf(file_path, 255, "%s/ad256.bmp", XRDP_SHARE_PATH);
+    }
     xrdp_bitmap_load(but, file_path, self->palette);
     but->parent = self->login_window;
     but->owner = self->login_window;

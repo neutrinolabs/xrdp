@@ -451,8 +451,8 @@ xrdp_bitmap_load(struct xrdp_bitmap* self, const char* filename, int* palette)
       /* read palette */
       g_file_seek(fd, 14 + header.size);
       init_stream(s, 8192);
-      g_file_read(fd, s->data, 256 * sizeof(int));
-      for (i = 0; i < 256; i++)
+      g_file_read(fd, s->data, header.clr_used * sizeof(int));
+      for (i = 0; i < header.clr_used; i++)
       {
         in_uint32_le(s, palette1[i]);
       }
@@ -501,8 +501,8 @@ xrdp_bitmap_load(struct xrdp_bitmap* self, const char* filename, int* palette)
       /* read palette */
       g_file_seek(fd, 14 + header.size);
       init_stream(s, 8192);
-      g_file_read(fd, s->data, 16 * sizeof(int));
-      for (i = 0; i < 16; i++)
+      g_file_read(fd, s->data, header.clr_used * sizeof(int));
+      for (i = 0; i < header.clr_used; i++)
       {
         in_uint32_le(s, palette1[i]);
       }
@@ -527,9 +527,13 @@ xrdp_bitmap_load(struct xrdp_bitmap* self, const char* filename, int* palette)
           if ((j & 1) == 0)
           {
             in_uint8(s, k);
+            color = (k >> 4) & 0xf;
           }
-          color = palette1[(k & 0xf0) >> 4];
-          k <<= 4;
+          else
+          {
+            color = k & 0xf;
+          }
+          color = palette1[color];
           if (self->bpp == 8)
           {
             color = xrdp_bitmap_get_index(self, palette, color);
