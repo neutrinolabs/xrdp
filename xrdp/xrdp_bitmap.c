@@ -341,8 +341,7 @@ xrdp_bitmap_load(struct xrdp_bitmap* self, const char* filename, int* palette)
   int color;
   int size;
   int palette1[256];
-  char type1[3];
-  char* data;
+  char type1[4];
   struct xrdp_bmp_header header;
   struct stream* s;
 
@@ -359,20 +358,25 @@ xrdp_bitmap_load(struct xrdp_bitmap* self, const char* filename, int* palette)
     /* read file type */
     if (g_file_read(fd, type1, 2) != 2)
     {
+      g_writeln("xrdp_bitmap_load: error bitmap file [%s] read error",
+                filename);
       g_file_close(fd);
       return 1;
     }
-    if (type1[0] != 'B' || type1[1] != 'M')
+    if ((type1[0] != 'B') || (type1[1] != 'M'))
     {
+      g_writeln("xrdp_bitmap_load: error bitmap file [%s] not BMP file",
+                filename);
       g_file_close(fd);
       return 1;
     }
     /* read file size */
-    size = 0;
-    g_file_read(fd, (char*)&size, 4);
+    make_stream(s);
+    init_stream(s, 8192);
+    g_file_read(fd, s->data, 4);
+    in_uint32_le(s, size);
     /* read bmp header */
     g_file_seek(fd, 14);
-    make_stream(s);
     init_stream(s, 8192);
     g_file_read(fd, s->data, 40); /* size better be 40 */
     in_uint32_le(s, header.size);
@@ -386,8 +390,11 @@ xrdp_bitmap_load(struct xrdp_bitmap* self, const char* filename, int* palette)
     in_uint32_le(s, header.y_pels_per_meter);
     in_uint32_le(s, header.clr_used);
     in_uint32_le(s, header.clr_important);
-    if (header.bit_count != 8 && header.bit_count != 24)
+    if ((header.bit_count != 4) && (header.bit_count != 8) &&
+        (header.bit_count != 24))
     {
+      g_writeln("xrdp_bitmap_load: error bitmap file [%s] bad bpp %d",
+                filename, header.bit_count);
       free_stream(s);
       g_file_close(fd);
       return 1;
@@ -395,8 +402,51 @@ xrdp_bitmap_load(struct xrdp_bitmap* self, const char* filename, int* palette)
     if (header.bit_count == 24) /* 24 bit bitmap */
     {
       g_file_seek(fd, 14 + header.size);
+      xrdp_bitmap_resize(self, header.image_width, header.image_height);
+      size = header.image_width * header.image_height * 3;
+      init_stream(s, size);
+      /* read data */
+      for (i = header.image_height - 1; i >= 0; i--)
+      {
+        size = header.image_width * 3;
+        k = g_file_read(fd, s->data + i * size, size);
+        if (k != size)
+        {
+          g_writeln("xrdp_bitmap_load: error bitmap file [%s] read",
+                    filename);
+        }
+      }
+      for (i = 0; i < self->height; i++)
+      {
+        for (j = 0; j < self->width; j++)
+        {
+          in_uint8(s, k);
+          color = k;
+          in_uint8(s, k);
+          color |= k << 8;
+          in_uint8(s, k);
+          color |= k << 16;
+          if (self->bpp == 8)
+          {
+            color = xrdp_bitmap_get_index(self, palette, color);
+          }
+          else if (self->bpp == 15)
+          {
+            color = COLOR15((color & 0xff0000) >> 16,
+                            (color & 0x00ff00) >> 8,
+                            (color & 0x0000ff) >> 0);
+          }
+          else if (self->bpp == 16)
+          {
+            color = COLOR16((color & 0xff0000) >> 16,
+                            (color & 0x00ff00) >> 8,
+                            (color & 0x0000ff) >> 0);
+          }
+          xrdp_bitmap_set_pixel(self, j, i, color);
+        }
+      }
     }
-    if (header.bit_count == 8) /* 8 bit bitmap */
+    else if (header.bit_count == 8) /* 8 bit bitmap */
     {
       /* read palette */
       g_file_seek(fd, 14 + header.size);
@@ -406,18 +456,25 @@ xrdp_bitmap_load(struct xrdp_bitmap* self, const char* filename, int* palette)
       {
         in_uint32_le(s, palette1[i]);
       }
-      /* read data */
       xrdp_bitmap_resize(self, header.image_width, header.image_height);
-      data = (char*)g_malloc(header.image_width * header.image_height, 1);
+      size = header.image_width * header.image_height;
+      init_stream(s, size);
+      /* read data */
       for (i = header.image_height - 1; i >= 0; i--)
       {
-        g_file_read(fd, data + i * header.image_width, header.image_width);
+        size = header.image_width;
+        k = g_file_read(fd, s->data + i * size, size);
+        if (k != size)
+        {
+          g_writeln("xrdp_bitmap_load: error bitmap file [%s] read",
+                    filename);
+        }
       }
       for (i = 0; i < self->height; i++)
       {
         for (j = 0; j < self->width; j++)
         {
-          k = (unsigned char)data[i * header.image_width + j];
+          in_uint8(s, k);
           color = palette1[k];
           if (self->bpp == 8)
           {
@@ -435,18 +492,66 @@ xrdp_bitmap_load(struct xrdp_bitmap* self, const char* filename, int* palette)
                             (color & 0x00ff00) >> 8,
                             (color & 0x0000ff) >> 0);
           }
-          else if (self->bpp == 24)
+          xrdp_bitmap_set_pixel(self, j, i, color);
+        }
+      }
+    }
+    else if (header.bit_count == 4) /* 4 bit bitmap */
+    {
+      /* read palette */
+      g_file_seek(fd, 14 + header.size);
+      init_stream(s, 8192);
+      g_file_read(fd, s->data, 16 * sizeof(int));
+      for (i = 0; i < 16; i++)
+      {
+        in_uint32_le(s, palette1[i]);
+      }
+      xrdp_bitmap_resize(self, header.image_width, header.image_height);
+      size = (header.image_width * header.image_height) / 2;
+      init_stream(s, size);
+      /* read data */
+      for (i = header.image_height - 1; i >= 0; i--)
+      {
+        size = header.image_width / 2;
+        k = g_file_read(fd, s->data + i * size, size);
+        if (k != size)
+        {
+          g_writeln("xrdp_bitmap_load: error bitmap file [%s] read",
+                    filename);
+        }
+      }
+      for (i = 0; i < self->height; i++)
+      {
+        for (j = 0; j < self->width; j++)
+        {
+          if ((j & 1) == 0)
           {
-            //color = COLOR24((color & 0xff0000) >> 16,
-            //                (color & 0x00ff00) >> 8,
-            //                (color & 0x0000ff) >> 0);
+            in_uint8(s, k);
+          }
+          color = palette1[(k & 0xf0) >> 4];
+          k <<= 4;
+          if (self->bpp == 8)
+          {
+            color = xrdp_bitmap_get_index(self, palette, color);
+          }
+          else if (self->bpp == 15)
+          {
+            color = COLOR15((color & 0xff0000) >> 16,
+                            (color & 0x00ff00) >> 8,
+                            (color & 0x0000ff) >> 0);
+          }
+          else if (self->bpp == 16)
+          {
+            color = COLOR16((color & 0xff0000) >> 16,
+                            (color & 0x00ff00) >> 8,
+                            (color & 0x0000ff) >> 0);
           }
           xrdp_bitmap_set_pixel(self, j, i, color);
         }
       }
-      g_free(data);
     }
     g_file_close(fd);
+    free_stream(s);
   }
   else
   {
@@ -454,7 +559,6 @@ xrdp_bitmap_load(struct xrdp_bitmap* self, const char* filename, int* palette)
               filename);
     return 1;
   }
-  free_stream(s);
   return 0;
 }
 
