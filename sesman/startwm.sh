@@ -10,6 +10,14 @@ SESSIONS="startkde gnome-session startxfce4 xterm"
 #PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games"
 #export PATH=$PATH
 
+# for PATH and LANG from /etc/environment
+#. /etc/environment
+#export PATH=$PATH
+#export LANG=$LANG
+
+# for bash profile
+#. ~/.bash_profile
+
 for WindowManager in $SESSIONS
 do
   which $WindowManager
