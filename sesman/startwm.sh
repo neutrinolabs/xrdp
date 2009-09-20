@@ -11,12 +11,17 @@ SESSIONS="startkde gnome-session startxfce4 xterm"
 #export PATH=$PATH
 
 # for PATH and LANG from /etc/environment
+# pam will auto process the environment file if /etc/pam.d/xrdp-sesman
+# includes
+# auth       required     pam_env.so readenv=1
 #. /etc/environment
 #export PATH=$PATH
 #export LANG=$LANG
 
 # for bash profile
 #. ~/.bash_profile
+
+#. /etc/profile
 
 for WindowManager in $SESSIONS
 do
