@@ -173,22 +173,23 @@ struct xrdp_cache
 struct xrdp_mm
 {
   struct xrdp_wm* wm; /* owner */
-  int connected_state;
-  int sck;
-  tbus sck_obj;
-  int sck_closed;
+  int connected_state; /* true if connected to sesman else false */
+  struct trans* sesman_trans; /* connection to sesman */
+  int sesman_trans_up; /* true once connected to sesman */
+  int delete_sesman_trans; /* boolean set when done with sesman connection */
   struct list* login_names;
   struct list* login_values;
   /* mod vars */
   long mod_handle; /* returned from g_load_library */
   struct xrdp_mod* (*mod_init)(void);
   int (*mod_exit)(struct xrdp_mod*);
-  struct xrdp_mod* mod;
-  int display;
-  int code;
-  int sesman_controlled;
-  struct trans* chan_trans;
-  int chan_trans_up;
+  struct xrdp_mod* mod; /* module interface */
+  int display; /* 10 for :10.0, 11 for :11.0, etc */
+  int code; /* 0 Xvnc session 10 X11rdp session */
+  int sesman_controlled; /* true if this is a sesman session */
+  struct trans* chan_trans; /* connection to chansrv */
+  int chan_trans_up; /* true once connected to chansrv */
+  int delete_chan_trans; /* boolean set when done with channel connection */
 };
 
 struct xrdp_key_info

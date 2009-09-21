@@ -1373,36 +1373,6 @@ xrdp_wm_login_mode_changed(struct xrdp_wm* self)
   return 0;
 }
 
-/******************************************************************************/
-/* returns error */
-int APP_CC
-xrdp_wm_app_sck_signal(struct xrdp_wm* self, int app_sck)
-{
-  if (self->login_mode == 3)
-  {
-    if (xrdp_mm_signal(self->mm) != 0)
-    {
-      return 1;
-    }
-  }
-  else if (self->login_mode > 9)
-  {
-    if (self->mm->mod == 0)
-    {
-      return 1;
-    }
-    if (self->mm->mod->mod_signal == 0)
-    {
-      return 1;
-    }
-    if (self->mm->mod->mod_signal(self->mm->mod) != 0)
-    {
-      return 1;
-    }
-  }
-  return 0;
-}
-
 /*****************************************************************************/
 /* this is the log windows nofity function */
 static int DEFAULT_CC
@@ -1520,52 +1490,6 @@ xrdp_wm_log_msg(struct xrdp_wm* self, char* msg)
 }
 
 /*****************************************************************************/
-static int APP_CC
-xrdp_wm_mod_get_wait_objs(struct xrdp_wm* self,
-                          tbus* read_objs, int* rcount,
-                          tbus* write_objs, int* wcount, int* timeout)
-{
-  if (self->mm != 0)
-  {
-    if ((self->mm->chan_trans != 0) && self->mm->chan_trans_up)
-    {
-      trans_get_wait_objs(self->mm->chan_trans, read_objs, rcount, timeout);
-    }
-    if (self->mm->mod != 0)
-    {
-      if (self->mm->mod->mod_get_wait_objs != 0)
-      {
-        return self->mm->mod->mod_get_wait_objs
-               (self->mm->mod, read_objs, rcount,
-                write_objs, wcount, timeout);
-      }
-    }
-  }
-  return 0;
-}
-
-/*****************************************************************************/
-static int APP_CC
-xrdp_wm_mod_check_wait_objs(struct xrdp_wm* self)
-{
-  if (self->mm != 0)
-  {
-    if ((self->mm->chan_trans != 0) && self->mm->chan_trans_up)
-    {
-      trans_check_wait_objs(self->mm->chan_trans);
-    }
-    if (self->mm->mod != 0)
-    {
-      if (self->mm->mod->mod_check_wait_objs != 0)
-      {
-        return self->mm->mod->mod_check_wait_objs(self->mm->mod);
-      }
-    }
-  }
-  return 0;
-}
-
-/*****************************************************************************/
 int APP_CC
 xrdp_wm_get_wait_objs(struct xrdp_wm* self, tbus* robjs, int* rc,
                       tbus* wobjs, int* wc, int* timeout)
@@ -1578,15 +1502,8 @@ xrdp_wm_get_wait_objs(struct xrdp_wm* self, tbus* robjs, int* rc,
   }
   i = *rc;
   robjs[i++] = self->login_mode_event;
-  if (self->mm != 0)
-  {
-    if (self->mm->sck_obj != 0)
-    {
-      robjs[i++] = self->mm->sck_obj;
-    }
-  }
   *rc = i;
-  return xrdp_wm_mod_get_wait_objs(self, robjs, rc, wobjs, wc, timeout);
+  return xrdp_mm_get_wait_objs(self->mm, robjs, rc, wobjs, wc, timeout);
 }
 
 /******************************************************************************/
@@ -1605,19 +1522,9 @@ xrdp_wm_check_wait_objs(struct xrdp_wm* self)
     g_reset_wait_obj(self->login_mode_event);
     xrdp_wm_login_mode_changed(self);
   }
-  if (self->mm != 0)
-  {
-    if (self->mm->sck_obj != 0)
-    {
-      if (g_is_wait_obj_set(self->mm->sck_obj))
-      {
-        rv = xrdp_mm_signal(self->mm);
-      }
-    }
-  }
   if (rv == 0)
   {
-    rv = xrdp_wm_mod_check_wait_objs(self);
+    rv = xrdp_mm_check_wait_objs(self->mm);
   }
   return rv;
 }
