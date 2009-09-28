@@ -33,7 +33,7 @@
 
 extern tbus g_sync_event;
 extern unsigned char g_fixedkey[8];
-extern struct config_sesman* g_cfg; /* config.h */
+extern struct config_sesman* g_cfg; /* in sesman.c */
 struct session_chain* g_sessions;
 int g_session_count;
 

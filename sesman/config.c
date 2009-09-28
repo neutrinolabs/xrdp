@@ -30,7 +30,7 @@
 #include "file.h"
 #include "sesman.h"
 
-extern struct config_sesman* g_cfg;
+extern struct config_sesman* g_cfg; /* in sesman.c */
 
 /******************************************************************************/
 /**

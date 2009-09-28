@@ -23,7 +23,7 @@
 
 #include "sesman.h"
 
-extern struct config_sesman* g_cfg;
+extern struct config_sesman* g_cfg; /* in sesman.c */
 
 static tbus g_sync_mutex = 0;
 static tbus g_lock_chain = 0;

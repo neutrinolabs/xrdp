@@ -31,7 +31,7 @@
 #include "grp.h"
 
 extern unsigned char g_fixedkey[8]; /* in sesman.c */
-extern struct config_sesman* g_cfg; 
+extern struct config_sesman* g_cfg;  /* in sesman.c */
 
 /******************************************************************************/
 int DEFAULT_CC

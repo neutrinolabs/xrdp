@@ -30,7 +30,7 @@
 int g_sck;
 int g_pid;
 unsigned char g_fixedkey[8] = { 23, 82, 107, 6, 35, 78, 88, 7 };
-struct config_sesman* g_cfg; /* config.h */
+struct config_sesman* g_cfg; /* defined in config.h */
 
 tbus g_term_event = 0;
 tbus g_sync_event = 0;
@@ -104,7 +104,6 @@ sesman_main_loop(void)
           {
             /* we've got a connection, so we pass it to scp code */
             LOG_DBG(&(g_cfg->log), "new connection");
-            g_thread_sck = in_sck;
             thread_scp_start(in_sck);
             /* todo, do we have to wait here ? */
           }
