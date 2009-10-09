@@ -43,7 +43,6 @@ int main(int argc, char **argv)
 {
   const char* programname;
   char text[256];
-  char* ksname = NULL;
   char* displayname = NULL;
   char* outfname;
   char* sections[5] = {"noshift", "shift", "altgr", "capslock", "shiftcapslock"};
@@ -96,14 +95,7 @@ int main(int argc, char **argv)
     {
       e.keycode = i;
       nbytes = XLookupString(&e, text, 255, &ks, NULL);
-      if (ks == NoSymbol)
-      {
-        ksname = "NoSymbol";
-      }
-      else if (!(ksname = XKeysymToString(ks)))
-      {
-        ksname = "(no name)";
-      }
+      text[nbytes] = 0;
       char_count = mbstowcs(wtext, text, 255);
       unicode = 0;
       if (char_count == 1)
