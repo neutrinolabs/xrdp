@@ -8,12 +8,11 @@ startscript_DATA = \
   xrdp.sh \
   km-0407.ini \
   km-0409.ini \
-  km-0419.ini
+  km-040c.ini \
+  km-0410.ini \
+  km-0419.ini \
+  km-041d.ini
 
 # must be tab below
 install-data-hook:
 	chmod 755 $(DESTDIR)$(sysconfdir)/xrdp/xrdp.sh
-
-#	if [ -w /etc/init.d ]; then rm -f /etc/init.d/xrdp.sh; fi
-#	if [ -w /etc/init.d ]; then $(LN_S) $(DESTDIR)$(sysconfdir)/xrdp/xrdp.sh /etc/init.d/xrdp.sh; fi
-#	$(DESTDIR)$(bindir)/xrdp-keygen xrdp $(DESTDIR)$(sysconfdir)/xrdp/rsakeys.ini
