@@ -33,11 +33,11 @@ then
 fi
 
 # checking for Xlib, Xfixes
-AC_CHECK_HEADERS([X11/Xlib.h X11/extensions/Xfixes.h], [],
+AC_CHECK_HEADER([X11/Xlib.h], [],
+  [AC_MSG_ERROR([please install libx11-dev])])
+AC_CHECK_HEADER([X11/extensions/Xfixes.h], [],
   [AC_MSG_ERROR([please install libx11-dev and libxfixes-dev])],
-  [[#ifdef HAVE_XLIB_H
-    #include <X11/Xlib.h>
-    #endif]])
+  [#include <X11/Xlib.h>])
 
 libdir="${libdir}/xrdp";
 if test "x${prefix}" = "xNONE" ; then
