@@ -21,14 +21,17 @@ AC_ARG_ENABLE(pamuserpass, AS_HELP_STRING([--enable-pamuserpass],
 AM_CONDITIONAL(SESMAN_PAMUSERPASS, [test x$pamuserpass = xtrue])
 
 # checking for openssl
-AC_CHECK_HEADER([openssl/rc4.h], [], [AC_MSG_ERROR([please install libssl-dev or openssl-devel])])
+AC_CHECK_HEADER([openssl/rc4.h], [],
+  [AC_MSG_ERROR([please install libssl-dev or openssl-devel])],
+  [#include <stdlib.h>])
 
 # checking if pam should be autodetected.
 if test -z "$enable_nopam"
 then
   if test -z "$enable_kerberos"
   then
-    AC_CHECK_HEADER([security/pam_appl.h], [], [AC_MSG_ERROR([please install libpam0g-dev or pam-devel])])
+    AC_CHECK_HEADER([security/pam_appl.h], [],
+      [AC_MSG_ERROR([please install libpam0g-dev or pam-devel])])
   fi
 fi
 
