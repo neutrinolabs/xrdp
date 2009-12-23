@@ -226,14 +226,16 @@ xrdp_rdp_recv(struct xrdp_rdp* self, struct stream* s, int* code)
   {
     s->p = s->next_packet;
   }
-  in_uint16_le(s, len);
-  if (len == 0x8000)
+  if (!s_check_rem(s, 6))
   {
-    s->next_packet += 8;
+    s->next_packet = 0;
     *code = 0;
     DEBUG(("out xrdp_rdp_recv"));
+    len = (int)(s->end - s->p);
+    g_writeln("xrdp_rdp_recv: bad RDP packet, length [%d]", len);
     return 0;
   }
+  in_uint16_le(s, len);
   in_uint16_le(s, pdu_code);
   *code = pdu_code & 0xf;
   in_uint8s(s, 2); /* mcs user id */
