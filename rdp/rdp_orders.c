@@ -1044,8 +1044,8 @@ rdp_orders_process_desksave(struct rdp_orders* self, struct stream* s,
   {
     in_uint8(s, self->state.desksave_action);
   }
-  width = (self->state.desksave_right - self->state.desksave_left) + 1;
-  height = (self->state.desksave_bottom - self->state.desksave_top) + 1;
+//  width = (self->state.desksave_right - self->state.desksave_left) + 1;
+//  height = (self->state.desksave_bottom - self->state.desksave_top) + 1;
   if (self->state.desksave_action == 0)
   {
 //		ui_desktop_save(os->offset, os->left, os->top, width, height);
