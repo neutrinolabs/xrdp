@@ -869,7 +869,6 @@ rdp_rdp_process_data_pdu(struct rdp_rdp* self, struct stream* s)
 {
   int data_pdu_type;
   int ctype;
-  int clen;
   int len;
   int rv;
 
@@ -878,8 +877,7 @@ rdp_rdp_process_data_pdu(struct rdp_rdp* self, struct stream* s)
   in_uint16_le(s, len);
   in_uint8(s, data_pdu_type);
   in_uint8(s, ctype);
-  in_uint16_le(s, clen);
-  clen -= 18;
+  in_uint8s(s, 2); /* clen */
   switch (data_pdu_type)
   {
     case RDP_DATA_PDU_UPDATE:
