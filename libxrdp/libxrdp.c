@@ -173,7 +173,6 @@ int EXPORT_CC
 libxrdp_send_bitmap(struct xrdp_session* session, int width, int height,
                     int bpp, char* data, int x, int y, int cx, int cy)
 {
-  int data_size;
   int line_size;
   int i;
   int j;
@@ -291,8 +290,6 @@ libxrdp_send_bitmap(struct xrdp_session* session, int width, int height,
   }
   else
   {
-    lines_sending = 0;
-    data_size = width * height * Bpp;
     total_lines = height;
     i = 0;
     p = data;
