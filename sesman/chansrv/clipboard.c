@@ -580,7 +580,6 @@ clipboard_process_data_response(struct stream* s, int clip_msg_status,
     }
     g_data_in_size = len;
     g_wcstombs(g_data_in, wtext, len + 1);
-    len = g_strlen(g_data_in);
     g_data_in_time = clipboard_get_local_time();
     g_data_in_up_to_date = 1;
   }
