@@ -38,15 +38,10 @@ void DEFAULT_CC
 scp_v1_mng_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
 {
   long data;
-  int retries;
-  int current_try;
   enum SCP_SERVER_STATES_E e;
   struct SCP_DISCONNECTED_SESSION* slist = 0;
   int scount;
   int end = 0;
-
-  retries = g_cfg->sec.login_retry;
-  current_try = retries;
 
   data = auth_userpass(s->username, s->password);
   /*LOG_DBG("user: %s\npass: %s", s->username, s->password);*/
