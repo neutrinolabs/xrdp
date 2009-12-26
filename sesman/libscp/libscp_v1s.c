@@ -61,10 +61,6 @@ enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION* c, struct SCP_SES
       return SCP_SERVER_STATE_NETWORK_ERR;
     }
   }
-  else
-  {
-    version = 1;
-  }
 
   in_uint32_be(c->in_s, size);
   if (size < 12)
@@ -242,8 +238,6 @@ scp_v1s_request_password(struct SCP_CONNECTION* c, struct SCP_SESSION* s, char* 
 
   /* send password request */
   version=1;
-  size=12;
-  cmdset=0;
   cmd=3;
 
   out_uint32_be(c->out_s, version);                 /* version */
