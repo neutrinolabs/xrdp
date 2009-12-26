@@ -333,7 +333,6 @@ session_start_fork(int width, int height, int bpp, char* username,
     g_free(temp);
     return 0;
   }
-  wmpid = 0;
   pid = g_fork();
   if (pid == -1)
   {
