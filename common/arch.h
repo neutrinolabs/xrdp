@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2004-2009 Jay Sorg
+   Copyright (c) 2004-2010 Jay Sorg
 
    Permission is hereby granted, free of charge, to any person obtaining a
    copy of this software and associated documentation files (the "Software"),
@@ -24,24 +24,20 @@
 #if !defined(ARCH_H)
 #define ARCH_H
 
+#if !(defined(L_ENDIAN) || defined(B_ENDIAN))
 /* check endianess */
-#if defined(__sparc__) || defined(__PPC__) || defined(__ppc__)
+#if defined(__sparc__) || defined(__PPC__) || defined(__ppc__) || \
+    defined(__hppa__)
 #define B_ENDIAN
-#elif defined(__BYTE_ORDER)
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-#define L_ENDIAN
-#elif __BYTE_ORDER == __BIG_ENDIAN
-#define B_ENDIAN
-#endif
 #else
 #define L_ENDIAN
 #endif
-
 /* check if we need to align data */
 #if defined(__sparc__) || defined(__alpha__) || defined(__hppa__) || \
     defined(__AIX__) || defined(__PPC__) || defined(__mips__) || \
     defined(__ia64__) || defined(__ppc__) || defined(__arm__)
 #define NEED_ALIGN
+#endif
 #endif
 
 /* defines for thread creation factory functions */

@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2004-2009 Jay Sorg
+   Copyright (c) 2004-2010 Jay Sorg
 
    Permission is hereby granted, free of charge, to any person obtaining a
    copy of this software and associated documentation files (the "Software"),
@@ -492,7 +492,7 @@ g_tcp_last_error_would_block(int sck)
 #if defined(_WIN32)
   return WSAGetLastError() == WSAEWOULDBLOCK;
 #else
-  return (errno == EWOULDBLOCK) || (errno == EINPROGRESS);
+  return (errno == EWOULDBLOCK) || (errno == EAGAIN) || (errno == EINPROGRESS);
 #endif
 }
 
