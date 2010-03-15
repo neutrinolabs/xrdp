@@ -60,6 +60,20 @@ session_get_bydata(char* name, int width, int height, int bpp, int type)
 
   tmp = g_sessions;
 
+  /* convert from SCP_SESSION_TYPE namespace to SESMAN_SESSION_TYPE namespace */
+  switch (type)
+  {
+    case SCP_SESSION_TYPE_XVNC: /* 0 */
+      type = SESMAN_SESSION_TYPE_XVNC; /* 2 */
+      break;
+    case SCP_SESSION_TYPE_XRDP: /* 1 */
+      type = SESMAN_SESSION_TYPE_XRDP; /* 1 */
+      break;
+    default:
+      lock_chain_release();
+      return 0;
+  }
+
   while (tmp != 0)
   {
     if (g_strncmp(name, tmp->item->name, 255) == 0 &&
