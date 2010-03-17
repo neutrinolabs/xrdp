@@ -19,6 +19,10 @@ AC_ARG_ENABLE(pamuserpass, AS_HELP_STRING([--enable-pamuserpass],
               [Build pam userpass support (default: no)]),
               [pamuserpass=true], [pamuserpass=false])
 AM_CONDITIONAL(SESMAN_PAMUSERPASS, [test x$pamuserpass = xtrue])
+AC_ARG_ENABLE(xrdpdebug, AS_HELP_STRING([--enable-xrdpdebug],
+              [Build debug (default: no)]),
+              [xrdpdebug=true], [xrdpdebug=false])
+AM_CONDITIONAL(XRDP_DEBUG, [test x$xrdpdebug = xtrue])
 
 # checking for openssl
 AC_CHECK_HEADER([openssl/rc4.h], [],
