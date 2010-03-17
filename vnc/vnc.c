@@ -255,12 +255,29 @@ lib_mod_event(struct vnc* v, int msg, long param1, long param2,
     key = param2;
     if (key > 0)
     {
+      if (key == 65027) /* altgr */
+      {
+        if (v->shift_state)
+        {
+          /* fix for mstsc sending left control down with altgr */
+          init_stream(s, 8192);
+          out_uint8(s, 4);
+          out_uint8(s, 0); /* down flag */
+          out_uint8s(s, 2);
+          out_uint32_be(s, 65507); /* left control */
+          lib_send(v, s->data, 8);
+        }
+      }
       init_stream(s, 8192);
       out_uint8(s, 4);
       out_uint8(s, msg == 15); /* down flag */
       out_uint8s(s, 2);
       out_uint32_be(s, key);
       error = lib_send(v, s->data, 8);
+      if (key == 65507) /* left control */
+      {
+        v->shift_state = msg == 15;
+      }
     }
   }
   else if (msg >= 100 && msg <= 110) /* mouse events */
