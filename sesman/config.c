@@ -330,6 +330,7 @@ config_read_sessions(int file, struct config_sessions* se, struct list* param_n,
   list_clear(param_n);
 
   /* setting defaults */
+  se->x11_display_offset=10;
   se->max_sessions=0;
   se->max_idle_time=0;
   se->max_disc_time=0;
@@ -339,6 +340,10 @@ config_read_sessions(int file, struct config_sessions* se, struct list* param_n,
   for (i = 0; i < param_n->count; i++)
   {
     buf = (char*)list_get_item(param_n, i);
+    if (0 == g_strcasecmp(buf, SESMAN_CFG_X11DISPLAYOFFSET))
+    {
+      se->x11_display_offset = g_atoi((char*)list_get_item(param_v, i));
+    }
     if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_MAX))
     {
       se->max_sessions = g_atoi((char*)list_get_item(param_v, i));
@@ -360,6 +365,7 @@ config_read_sessions(int file, struct config_sessions* se, struct list* param_n,
   /* printing security config */
   g_printf("session configuration:\r\n");
   g_printf("\tMaxSessions:                 %i\r\n", se->max_sessions);
+  g_printf("\tX11DisplayOffset:            %i\r\n", se->x11_display_offset);
   g_printf("\tKillDisconnected:            %i\r\n", se->kill_disconnected);
   g_printf("\tIdleTimeLimit:               %i\r\n", se->max_idle_time);
   g_printf("\tDisconnectedTimeLimit:       %i\r\n", se->max_idle_time);

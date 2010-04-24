@@ -252,9 +252,9 @@ session_get_aval_display_from_chain(void)
 {
   int display;
 
-  display = 10;
+  display = g_cfg->sess.x11_display_offset;
   lock_chain_acquire();
-  while ((display - 10) <= g_cfg->sess.max_sessions)
+  while ((display - g_cfg->sess.x11_display_offset) <= g_cfg->sess.max_sessions)
   {
     if (!session_is_display_in_chain(display))
     {

@@ -38,6 +38,7 @@
 #define SESMAN_CFG_PORT              "ListenPort"
 #define SESMAN_CFG_ENABLE_USERWM     "EnableUserWindowManager"
 #define SESMAN_CFG_USERWM            "UserWindowManager"
+#define SESMAN_CFG_X11DISPLAYOFFSET  "X11DisplayOffset"
 #define SESMAN_CFG_MAX_SESSION       "MaxSessions"
 #define SESMAN_CFG_AUTH_FILE_PATH    "AuthFilePath"
 
@@ -102,6 +103,11 @@ struct config_security
  */
 struct config_sessions
 {
+  /**
+   * @var x11_display_offset
+   * @brief X11 TCP port offset. default value: 10
+   */
+  int x11_display_offset;
   /**
    * @var max_sessions
    * @brief maximum number of allowed sessions. 0 for unlimited

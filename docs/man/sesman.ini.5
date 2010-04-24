@@ -104,6 +104,11 @@ The following parameters can be used in the \fB[Sessions]\fR section:
 .br 
 
 .TP 
+\fBX11DisplayOffset\fR=\fI<number>\fR
+Specifies the first X display number available for sesman(8).  This prevents sesman from interfering with real X11 servers.  The default is 10.
+.br
+
+.TP
 \fBMaxSessions\fR=\fI<number>\fR
 Sets the maximum number of simultaneous session on terminal server.
 .br 
