@@ -269,13 +269,13 @@ struct xrdp_wm
 struct xrdp_process
 {
   int status;
-  int sck;
+  struct trans* server_trans; /* in tcp server mode */
   tbus self_term_event;
   struct xrdp_listen* lis_layer; /* owner */
   struct xrdp_session* session;
   /* create these when up and running */
   struct xrdp_wm* wm;
-  int app_sck;
+  //int app_sck;
   tbus done_event;
   int session_id;
 };
@@ -284,7 +284,7 @@ struct xrdp_process
 struct xrdp_listen
 {
   int status;
-  int sck;
+  struct trans* listen_trans; /* in tcp listen mode */
   struct list* process_list;
   tbus pro_done_event;
 };

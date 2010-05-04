@@ -14,7 +14,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
    xrdp: A Remote Desktop Protocol server.
-   Copyright (C) Jay Sorg 2004-2009
+   Copyright (C) Jay Sorg 2004-2010
 
    module manager
 
@@ -660,13 +660,13 @@ xrdp_mm_process_login_response(struct xrdp_mm* self, struct stream* s)
         if (strcmp(ip, "127.0.0.1") == 0)
         {
           /* unix socket */
-          self->chan_trans = trans_create(2, 8192, 8192);
+          self->chan_trans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
           g_snprintf(port, 255, "/tmp/xrdp_chansrv_socket_%d", 7200 + display);
         }
         else
         {
           /* tcp */
-          self->chan_trans = trans_create(1, 8192, 8192);
+          self->chan_trans = trans_create(TRANS_MODE_TCP, 8192, 8192);
           g_snprintf(port, 255, "%d", 7200 + display);
         }
         self->chan_trans->trans_data_in = xrdp_mm_chan_data_in;
@@ -896,7 +896,7 @@ xrdp_mm_connect(struct xrdp_mm* self)
     ok = 0;
     errstr[0] = 0;
     trans_delete(self->sesman_trans);
-    self->sesman_trans = trans_create(1, 8192, 8192);
+    self->sesman_trans = trans_create(TRANS_MODE_TCP, 8192, 8192);
     xrdp_mm_get_sesman_port(port, sizeof(port));
     g_snprintf(text, 255, "connecting to sesman ip %s port %s", ip, port);
     xrdp_wm_log_msg(self->wm, text);

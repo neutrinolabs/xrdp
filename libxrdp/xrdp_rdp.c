@@ -14,7 +14,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
    xrdp: A Remote Desktop Protocol server.
-   Copyright (C) Jay Sorg 2004-2009
+   Copyright (C) Jay Sorg 2004-2010
 
    rdp layer
 
@@ -122,7 +122,7 @@ xrdp_rdp_read_config(struct xrdp_client_info* client_info)
 
 /*****************************************************************************/
 struct xrdp_rdp* APP_CC
-xrdp_rdp_create(struct xrdp_session* session, int sck)
+xrdp_rdp_create(struct xrdp_session* session, struct trans* trans)
 {
   struct xrdp_rdp* self;
 
@@ -133,7 +133,7 @@ xrdp_rdp_create(struct xrdp_session* session, int sck)
   /* read ini settings */
   xrdp_rdp_read_config(&self->client_info);
   /* create sec layer */
-  self->sec_layer = xrdp_sec_create(self, sck, self->client_info.crypt_level,
+  self->sec_layer = xrdp_sec_create(self, trans, self->client_info.crypt_level,
                                     self->client_info.channel_code);
   /* default 8 bit v1 color bitmap cache entries and size */
   self->client_info.cache1_entries = 600;

@@ -26,6 +26,7 @@
 #endif
 #include "arch.h"
 #include "parse.h"
+#include "trans.h"
 #include "libxrdpinc.h"
 #include "xrdp_types.h"
 #include "xrdp_constants.h"
@@ -36,7 +37,6 @@
 #include "list.h"
 #include "file.h"
 #include "file_loc.h"
-#include "trans.h"
 
 /* xrdp.c */
 long APP_CC

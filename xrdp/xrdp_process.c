@@ -56,6 +56,7 @@ xrdp_process_delete(struct xrdp_process* self)
   g_delete_wait_obj(self->self_term_event);
   libxrdp_exit(self->session);
   xrdp_wm_delete(self->wm);
+  trans_delete(self->server_trans);
   g_free(self);
 }
 
@@ -111,6 +112,21 @@ xrdp_process_mod_end(struct xrdp_process* self)
 }
 
 /*****************************************************************************/
+static int DEFAULT_CC
+xrdp_process_data_in(struct trans* self)
+{
+  struct xrdp_process* pro;
+
+  DEBUG(("xrdp_process_data_in"));
+  pro = (struct xrdp_process*)(self->callback_data);
+  if (xrdp_process_loop(pro) != 0)
+  {
+    return 1;
+  }
+  return 0;
+}
+
+/*****************************************************************************/
 int APP_CC
 xrdp_process_main_loop(struct xrdp_process* self)
 {
@@ -121,20 +137,19 @@ xrdp_process_main_loop(struct xrdp_process* self)
   tbus robjs[32];
   tbus wobjs[32];
   tbus term_obj;
-  tbus sck_obj;
 
+  DEBUG(("xrdp_process_main_loop"));
   self->status = 1;
-  self->session = libxrdp_init((long)self, self->sck);
+  self->server_trans->trans_data_in = xrdp_process_data_in;
+  self->server_trans->callback_data = self;
+  self->session = libxrdp_init((tbus)self, self->server_trans);
   /* this callback function is in xrdp_wm.c */
   self->session->callback = callback;
   /* this function is just above */
   self->session->is_term = xrdp_is_term;
-  g_tcp_set_non_blocking(self->sck);
-  g_tcp_set_no_delay(self->sck);
   if (libxrdp_process_incomming(self->session) == 0)
   {
     term_obj = g_get_term_event();
-    sck_obj = g_create_wait_obj_from_socket(self->sck, 0);
     cont = 1;
     while (cont)
     {
@@ -143,10 +158,10 @@ xrdp_process_main_loop(struct xrdp_process* self)
       robjs_count = 0;
       wobjs_count = 0;
       robjs[robjs_count++] = term_obj;
-      robjs[robjs_count++] = sck_obj;
       robjs[robjs_count++] = self->self_term_event;
       xrdp_wm_get_wait_objs(self->wm, robjs, &robjs_count,
                             wobjs, &wobjs_count, &timeout);
+      trans_get_wait_objs(self->server_trans, robjs, &robjs_count, &timeout);
       /* wait */
       if (g_obj_wait(robjs, robjs_count, wobjs, wobjs_count, timeout) != 0)
       {
@@ -161,25 +176,20 @@ xrdp_process_main_loop(struct xrdp_process* self)
       {
         break;
       }
-      if (g_is_wait_obj_set(sck_obj)) /* incomming client data */
-      {
-        if (xrdp_process_loop(self) != 0)
-        {
-          break;
-        }
-      }
       if (xrdp_wm_check_wait_objs(self->wm) != 0)
       {
         break;
       }
+      if (trans_check_wait_objs(self->server_trans) != 0)
+      {
+        break;
+      }
     }
-    g_delete_wait_obj_from_socket(sck_obj);
     libxrdp_disconnect(self->session);
   }
   xrdp_process_mod_end(self);
   libxrdp_exit(self->session);
   self->session = 0;
-  g_tcp_close(self->sck);
   self->status = -1;
   g_set_wait_obj(self->done_event);
   return 0;

@@ -14,7 +14,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
    xrdp: A Remote Desktop Protocol server.
-   Copyright (C) Jay Sorg 2004-2009
+   Copyright (C) Jay Sorg 2004-2010
 
    listen for incoming connection
 
@@ -44,6 +44,11 @@ xrdp_listen_create(void)
   {
     g_process_sem = tc_sem_create(0);
   }
+  self->listen_trans = trans_create(TRANS_MODE_TCP, 16, 16);
+  if (self->listen_trans == 0)
+  {
+    g_writeln("xrdp_listen_main_loop: trans_create failed");
+  }
   return self;
 }
 
@@ -51,6 +56,10 @@ xrdp_listen_create(void)
 void APP_CC
 xrdp_listen_delete(struct xrdp_listen* self)
 {
+  if (self->listen_trans != 0)
+  {
+    trans_delete(self->listen_trans);
+  }
   if (g_process_sem != 0)
   {
     tc_sem_delete(g_process_sem);
@@ -159,6 +168,32 @@ xrdp_listen_get_port(char* port, int port_bytes)
 }
 
 /*****************************************************************************/
+/* a new connection is coming in */
+int DEFAULT_CC
+xrdp_listen_conn_in(struct trans* self, struct trans* new_self)
+{
+  struct xrdp_process* process;
+  struct xrdp_listen* lis;
+
+  g_writeln("hello");
+  lis = (struct xrdp_listen*)(self->callback_data);
+  process = xrdp_process_create(lis, lis->pro_done_event);
+  if (xrdp_listen_add_pro(lis, process) == 0)
+  {
+    /* start thread */
+    process->server_trans = new_self;
+    g_process = process;
+    tc_thread_create(xrdp_process_run, 0);
+    tc_sem_dec(g_process_sem); /* this will wait */
+  }
+  else
+  {
+    xrdp_process_delete(process);
+  }
+  return 0;
+}
+
+/*****************************************************************************/
 /* wait for incoming connections */
 int APP_CC
 xrdp_listen_main_loop(struct xrdp_listen* self)
@@ -166,32 +201,28 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
   int error;
   int robjs_count;
   int cont;
+  int timeout;
   char port[8];
   tbus robjs[8];
   tbus term_obj;
   tbus sync_obj;
   tbus sck_obj;
   tbus done_obj;
-  struct xrdp_process* process;
 
   self->status = 1;
-  xrdp_listen_get_port(port, sizeof(port));
-  self->sck = g_tcp_socket();
-  g_tcp_set_non_blocking(self->sck);
-  error = g_tcp_bind(self->sck, port);
-  if (error != 0)
+  if (xrdp_listen_get_port(port, sizeof(port)) != 0)
   {
-    g_writeln("bind error in xrdp_listen_main_loop");
-    g_tcp_close(self->sck);
+    g_writeln("xrdp_listen_main_loop: xrdp_listen_get_port failed");
     self->status = -1;
     return 1;
   }
-  error = g_tcp_listen(self->sck);
+  error = trans_listen(self->listen_trans, port);
   if (error == 0)
   {
+    self->listen_trans->trans_conn_in = xrdp_listen_conn_in;
+    self->listen_trans->callback_data = self;
     term_obj = g_get_term_event();
     sync_obj = g_get_sync_event();
-    sck_obj = g_create_wait_obj_from_socket(self->sck, 0);
     done_obj = self->pro_done_event;
     cont = 1;
     while (cont)
@@ -200,10 +231,15 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
       robjs_count = 0;
       robjs[robjs_count++] = term_obj;
       robjs[robjs_count++] = sync_obj;
-      robjs[robjs_count++] = sck_obj;
       robjs[robjs_count++] = done_obj;
+      timeout = -1;
+      if (trans_get_wait_objs(self->listen_trans, robjs, &robjs_count,
+                              &timeout) != 0)
+      {
+        break;
+      }
       /* wait */
-      if (g_obj_wait(robjs, robjs_count, 0, 0, -1) != 0)
+      if (g_obj_wait(robjs, robjs_count, 0, 0, timeout) != 0)
       {
         /* error, should not get here */
         g_sleep(100);
@@ -217,45 +253,19 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
         g_reset_wait_obj(sync_obj);
         g_loop();
       }
-      if (g_is_wait_obj_set(sck_obj)) /* incomming connection */
-      {
-        error = g_tcp_accept(self->sck);
-        if ((error == -1) && g_tcp_last_error_would_block(self->sck))
-        {
-          /* should not get here */
-          g_sleep(100);
-        }
-        else if (error == -1)
-        {
-          /* error, should not get here */
-          break;
-        }
-        else
-        {
-          process = xrdp_process_create(self, self->pro_done_event);
-          if (xrdp_listen_add_pro(self, process) == 0)
-          {
-            /* start thread */
-            process->sck = error;
-            g_process = process;
-            tc_thread_create(xrdp_process_run, 0);
-            tc_sem_dec(g_process_sem); /* this will wait */
-          }
-          else
-          {
-            xrdp_process_delete(process);
-          }
-        }
-      }
       if (g_is_wait_obj_set(done_obj)) /* pro_done_event */
       {
         g_reset_wait_obj(done_obj);
         xrdp_listen_delete_done_pro(self);
       }
+      if (trans_check_wait_objs(self->listen_trans) != 0)
+      {
+        break;  
+      }
     }
     /* stop listening */
-    g_delete_wait_obj_from_socket(sck_obj);
-    g_tcp_close(self->sck);
+    trans_delete(self->listen_trans);
+    self->listen_trans = 0;
     /* second loop to wait for all process threads to close */
     cont = 1;
     while (cont)

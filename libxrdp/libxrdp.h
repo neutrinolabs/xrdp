@@ -28,6 +28,7 @@
 #endif
 #include "arch.h"
 #include "parse.h"
+#include "trans.h"
 #include "xrdp_constants.h"
 #include "defines.h"
 #include "os_calls.h"
@@ -40,8 +41,7 @@
 /* tcp */
 struct xrdp_tcp
 {
-  int sck;
-  int sck_closed;
+  struct trans* trans;
   struct xrdp_iso* iso_layer; /* owner */
 };
 
@@ -214,7 +214,7 @@ struct xrdp_orders
 
 /* xrdp_tcp.c */
 struct xrdp_tcp* APP_CC
-xrdp_tcp_create(struct xrdp_iso* owner, int sck);
+xrdp_tcp_create(struct xrdp_iso* owner, struct trans* trans);
 void APP_CC
 xrdp_tcp_delete(struct xrdp_tcp* self);
 int APP_CC
@@ -226,7 +226,7 @@ xrdp_tcp_send(struct xrdp_tcp* self, struct stream* s);
 
 /* xrdp_iso.c */
 struct xrdp_iso* APP_CC
-xrdp_iso_create(struct xrdp_mcs* owner, int sck);
+xrdp_iso_create(struct xrdp_mcs* owner, struct trans* trans);
 void APP_CC
 xrdp_iso_delete(struct xrdp_iso* self);
 int APP_CC
@@ -240,7 +240,7 @@ xrdp_iso_incoming(struct xrdp_iso* self);
 
 /* xrdp_mcs.c */
 struct xrdp_mcs* APP_CC
-xrdp_mcs_create(struct xrdp_sec* owner, int sck,
+xrdp_mcs_create(struct xrdp_sec* owner, struct trans* trans,
                 struct stream* client_mcs_data,
                 struct stream* server_mcs_data);
 void APP_CC
@@ -258,7 +258,7 @@ xrdp_mcs_disconnect(struct xrdp_mcs* self);
 
 /* xrdp_sec.c */
 struct xrdp_sec* APP_CC
-xrdp_sec_create(struct xrdp_rdp* owner, int sck, int crypt_level,
+xrdp_sec_create(struct xrdp_rdp* owner, struct trans* trans, int crypt_level,
                 int channel_code);
 void APP_CC
 xrdp_sec_delete(struct xrdp_sec* self);
@@ -279,7 +279,7 @@ xrdp_sec_disconnect(struct xrdp_sec* self);
 
 /* xrdp_rdp.c */
 struct xrdp_rdp* APP_CC
-xrdp_rdp_create(struct xrdp_session* session, int sck);
+xrdp_rdp_create(struct xrdp_session* session, struct trans* trans);
 void APP_CC
 xrdp_rdp_delete(struct xrdp_rdp* self);
 int APP_CC

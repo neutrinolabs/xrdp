@@ -14,7 +14,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
    xrdp: A Remote Desktop Protocol server.
-   Copyright (C) Jay Sorg 2004-2009
+   Copyright (C) Jay Sorg 2004-2010
 
    mcs layer
 
@@ -24,7 +24,7 @@
 
 /*****************************************************************************/
 struct xrdp_mcs* APP_CC
-xrdp_mcs_create(struct xrdp_sec* owner, int sck,
+xrdp_mcs_create(struct xrdp_sec* owner, struct trans* trans,
                 struct stream* client_mcs_data,
                 struct stream* server_mcs_data)
 {
@@ -37,7 +37,7 @@ xrdp_mcs_create(struct xrdp_sec* owner, int sck,
   self->chanid = 1001;
   self->client_mcs_data = client_mcs_data;
   self->server_mcs_data = server_mcs_data;
-  self->iso_layer = xrdp_iso_create(self, sck);
+  self->iso_layer = xrdp_iso_create(self, trans);
   self->channel_list = list_create();
   DEBUG(("  out xrdp_mcs_create"));
   return self;
