@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2008-2009 Jay Sorg
+   Copyright (c) 2008-2010 Jay Sorg
 
    Permission is hereby granted, free of charge, to any person obtaining a
    copy of this software and associated documentation files (the "Software"),
@@ -29,6 +29,16 @@
 #include "arch.h"
 #include "parse.h"
 
+#define TRANS_MODE_TCP 1
+#define TRANS_MODE_UNIX 2
+
+#define TRANS_TYPE_LISTENER 1
+#define TRANS_TYPE_SERVER 2
+#define TRANS_TYPE_CLIENT 3
+
+#define TRANS_STATUS_DOWN 0
+#define TRANS_STATUS_UP 1
+
 struct trans; /* forward declaration */
 
 typedef int (*ttrans_data_in)(struct trans* self);
@@ -57,6 +67,10 @@ int APP_CC
 trans_get_wait_objs(struct trans* self, tbus* objs, int* count, int* timeout);
 int APP_CC
 trans_check_wait_objs(struct trans* self);
+int APP_CC
+trans_force_read_s(struct trans* self, struct stream* in_s, int size);
+int APP_CC
+trans_force_write_s(struct trans* self, struct stream* out_s);
 int APP_CC
 trans_force_read(struct trans* self, int size);
 int APP_CC
