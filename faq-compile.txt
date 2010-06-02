@@ -15,6 +15,10 @@ A.  You need to install opensll development package.
 
 Q.
 
-A.
+A.i
+Red Hat
+    libX11-devel
+    libXfixes-devel
+Debian
     libx11-dev
     libxfixes-dev
