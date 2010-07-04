@@ -10,8 +10,10 @@ have these installed by default.
 You can build sesman without pam, there is a Makefile parameter
 for that.
 I also have a replacement ssl_calls.c to avoid the openssl dependency
-email me(Jay) for it.  Due to the licence, I can't include it in this
-project.
+email me(Jay) for it or see http://server1.xrdp.org/xrdp/openssl.
+Due to the licence, I can't include it in this project.
+
+http://server1.xrdp.org/xrdp/openssl/
 
 unpackage the tarball
 
