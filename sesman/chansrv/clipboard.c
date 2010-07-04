@@ -14,7 +14,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
    xrdp: A Remote Desktop Protocol server.
-   Copyright (C) Jay Sorg 2009
+   Copyright (C) Jay Sorg 2009-2010
 
    for help see
    http://tronche.com/gui/x/icccm/sec-2.html#s-2
