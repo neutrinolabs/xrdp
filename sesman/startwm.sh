@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -l
 
 # change the order in line below to run to run whatever window manager you
 # want, default to kde
@@ -17,11 +17,6 @@ SESSIONS="startkde gnome-session startxfce4 xterm"
 #. /etc/environment
 #export PATH=$PATH
 #export LANG=$LANG
-
-# for bash profile
-#. ~/.bash_profile
-
-#. /etc/profile
 
 for WindowManager in $SESSIONS
 do
