@@ -314,6 +314,11 @@ main(int argc, char** argv)
     g_writeln("unusable long size, must be 4 or 8");
     return 0;
   }
+  if (sizeof(tui64) != 8)
+  {
+    g_writeln("unusable tui64 size, must be 8");
+    return 0;
+  }
 #if defined(_WIN32)
   run_as_service = 1;
   if (argc == 2)
@@ -324,7 +329,7 @@ main(int argc, char** argv)
     {
       g_writeln("");
       g_writeln("xrdp: A Remote Desktop Protocol server.");
-      g_writeln("Copyright (C) Jay Sorg 2004-2009");
+      g_writeln("Copyright (C) Jay Sorg 2004-2010");
       g_writeln("See http://xrdp.sourceforge.net for more information.");
       g_writeln("");
       g_writeln("Usage: xrdp [options]");
@@ -463,7 +468,7 @@ main(int argc, char** argv)
     {
       g_writeln("");
       g_writeln("xrdp: A Remote Desktop Protocol server.");
-      g_writeln("Copyright (C) Jay Sorg 2004-2009");
+      g_writeln("Copyright (C) Jay Sorg 2004-2010");
       g_writeln("See http://xrdp.sourceforge.net for more information.");
       g_writeln("");
       g_writeln("Usage: xrdp [options]");
@@ -478,7 +483,7 @@ main(int argc, char** argv)
     {
       g_writeln("");
       g_writeln("xrdp: A Remote Desktop Protocol server.");
-      g_writeln("Copyright (C) Jay Sorg 2004-2009");
+      g_writeln("Copyright (C) Jay Sorg 2004-2010");
       g_writeln("See http://xrdp.sourceforge.net for more information.");
       g_writeln("Version 0.5.0");
       g_writeln("");

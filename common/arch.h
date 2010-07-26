@@ -91,9 +91,13 @@ typedef tbus tintptr;
 #if defined(_WIN32)
 typedef unsigned short twchar;
 typedef unsigned int tsock;
+typedef unsigned __int64 tui64;
+typedef signed __int64 tsi64;
 #else
 typedef int twchar;
 typedef int tsock;
+typedef unsigned long long tui64;
+typedef signed long long tsi64;
 #endif
 
 #endif
