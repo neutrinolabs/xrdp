@@ -542,17 +542,6 @@ main(int argc, char** argv)
       /* exit, this is the main process */
       g_exit(0);
     }
-    g_sleep(1000);
-    g_file_close(0);
-    g_file_close(1);
-    g_file_close(2);
-    g_file_open("/dev/null");
-    g_file_open("/dev/null");
-    g_file_open("/dev/null");
-    /* end of daemonizing code */
-  }
-  if (!no_daemon)
-  {
     /* write the pid to file */
     pid = g_getpid();
     fd = g_file_open(pid_file); /* xrdp.pid */
@@ -568,6 +557,14 @@ main(int argc, char** argv)
       g_file_write(fd, text, g_strlen(text));
       g_file_close(fd);
     }
+    g_sleep(1000);
+    g_file_close(0);
+    g_file_close(1);
+    g_file_close(2);
+    g_file_open("/dev/null");
+    g_file_open("/dev/null");
+    g_file_open("/dev/null");
+    /* end of daemonizing code */
   }
 #endif
   g_threadid = tc_get_threadid();
