@@ -350,7 +350,7 @@ main(int argc, char** argv)
         g_writeln("error OpenSCManager, do you have rights?");
         g_exit(0);
       }
-      /* check if service is allready installed */
+      /* check if service is already installed */
       sc_ser = OpenService(sc_man, "xrdp", SERVICE_ALL_ACCESS);
       if (sc_ser == 0)
       {
@@ -363,7 +363,7 @@ main(int argc, char** argv)
       }
       else
       {
-        g_writeln("error service is allready installed");
+        g_writeln("error service is already installed");
         CloseServiceHandle(sc_ser);
         CloseServiceHandle(sc_man);
         g_exit(0);
@@ -382,7 +382,7 @@ main(int argc, char** argv)
         g_writeln("error OpenSCManager, do you have rights?");
         g_exit(0);
       }
-      /* check if service is allready installed */
+      /* check if service is already installed */
       sc_ser = OpenService(sc_man, "xrdp", SERVICE_ALL_ACCESS);
       if (sc_ser == 0)
       {
@@ -506,7 +506,7 @@ main(int argc, char** argv)
   }
   if (g_file_exist(pid_file)) /* xrdp.pid */
   {
-    g_writeln("It looks like xrdp is allready running,");
+    g_writeln("It looks like xrdp is already running,");
     g_writeln("if not delete the xrdp.pid file and try again");
     g_exit(0);
   }
