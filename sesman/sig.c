@@ -64,6 +64,7 @@ sig_sesman_shutdown(int sig)
 void DEFAULT_CC
 sig_sesman_reload_cfg(int sig)
 {
+  int error;
   struct config_sesman *cfg;
 
   log_message(&(g_cfg->log), LOG_LEVEL_WARNING, "receiving SIGHUP %d", 1);
@@ -86,10 +87,30 @@ sig_sesman_reload_cfg(int sig)
     log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "error reading config - keeping old cfg");
     return;
   }
-#warning FIXME reload configuration must NOT damage logging!
+
+  /* stop logging subsystem */
+  log_end(&(g_cfg->log));
+
+  /* replace old config with new readed one */
   g_cfg = cfg;
 
-  log_message(&(g_cfg->log), LOG_LEVEL_INFO, "configuration reloaded");
+  /* start again logging subsystem */
+  error = log_start(&(g_cfg->log));
+
+  if (error != LOG_STARTUP_OK)
+  {
+    switch (error)
+    {
+      case LOG_ERROR_MALLOC:
+        g_printf("error on malloc. cannot restart logging. log stops here, sorry.\n");
+        break;
+      case LOG_ERROR_FILE_OPEN:
+        g_printf("error reopening log file [%s]. log stops here, sorry.\n", g_cfg->log.log_file);
+        break;
+    }
+  }
+
+  log_message(&(g_cfg->log), LOG_LEVEL_INFO, "configuration reloaded, log subsystem restarted");
 }
 
 /******************************************************************************/
