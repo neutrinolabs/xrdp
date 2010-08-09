@@ -1391,7 +1391,7 @@ g_strncasecmp(const char* c1, const char* c2, int len)
 
 /*****************************************************************************/
 int APP_CC
-g_atoi(char* str)
+g_atoi(const char* str)
 {
   if (str == 0)
   {
