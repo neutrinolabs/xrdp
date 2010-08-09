@@ -234,7 +234,7 @@ clipboard_init(void)
   {
     g_clip_up = 1;
     make_stream(g_ins);
-    init_stream(g_ins, 8192)
+    init_stream(g_ins, 8192);
   }
   else
   {
@@ -622,7 +622,7 @@ clipboard_data_in(struct stream* s, int chan_id, int chan_flags, int length,
   {
     if (chan_flags & 1)
     {
-      init_stream(g_ins, total_length)
+      init_stream(g_ins, total_length);
     }
     in_uint8a(s, g_ins->end, length);
     g_ins->end += length;

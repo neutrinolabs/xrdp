@@ -662,11 +662,11 @@ xrdp_orders_screen_blt(struct xrdp_orders* self, int x, int y,
     present |= 0x40;
     if (order_flags & RDP_ORDER_DELTA)
     {
-      out_uint8(self->out_s, srcy - self->orders_state.scr_blt_srcy)
+      out_uint8(self->out_s, srcy - self->orders_state.scr_blt_srcy);
     }
     else
     {
-      out_uint16_le(self->out_s, srcy)
+      out_uint16_le(self->out_s, srcy);
     }
     self->orders_state.scr_blt_srcy = srcy;
   }
@@ -911,7 +911,7 @@ xrdp_orders_dest_blt(struct xrdp_orders* self, int x, int y,
   out_uint8s(self->out_s, 1);
   if (order_flags & RDP_ORDER_CHANGE)
   {
-    out_uint8(self->out_s, self->orders_state.last_order)
+    out_uint8(self->out_s, self->orders_state.last_order);
   }
   present = 0;
   /* present, set later, 1 byte */
@@ -1067,7 +1067,7 @@ xrdp_orders_line(struct xrdp_orders* self, int mix_mode,
   if (mix_mode != self->orders_state.line_mix_mode)
   {
     present |= 0x0001;
-    out_uint16_le(self->out_s, mix_mode)
+    out_uint16_le(self->out_s, mix_mode);
     self->orders_state.line_mix_mode = mix_mode;
   }
   if (startx != self->orders_state.line_startx)
@@ -1125,15 +1125,15 @@ xrdp_orders_line(struct xrdp_orders* self, int mix_mode,
   if (bg_color != self->orders_state.line_bg_color)
   {
     present |= 0x0020;
-    out_uint8(self->out_s, bg_color)
-    out_uint8(self->out_s, bg_color >> 8)
-    out_uint8(self->out_s, bg_color >> 16)
+    out_uint8(self->out_s, bg_color);
+    out_uint8(self->out_s, bg_color >> 8);
+    out_uint8(self->out_s, bg_color >> 16);
     self->orders_state.line_bg_color = bg_color;
   }
   if (rop != self->orders_state.line_rop)
   {
     present |= 0x0040;
-    out_uint8(self->out_s, rop)
+    out_uint8(self->out_s, rop);
     self->orders_state.line_rop = rop;
   }
   if (pen == 0)
@@ -1144,21 +1144,21 @@ xrdp_orders_line(struct xrdp_orders* self, int mix_mode,
   if (pen->style != self->orders_state.line_pen.style)
   {
     present |= 0x0080;
-    out_uint8(self->out_s, pen->style)
+    out_uint8(self->out_s, pen->style);
     self->orders_state.line_pen.style = pen->style;
   }
   if (pen->width != self->orders_state.line_pen.width)
   {
     present |= 0x0100;
-    out_uint8(self->out_s, pen->width)
+    out_uint8(self->out_s, pen->width);
     self->orders_state.line_pen.width = pen->width;
   }
   if (pen->color != self->orders_state.line_pen.color)
   {
     present |= 0x0200;
-    out_uint8(self->out_s, pen->color)
-    out_uint8(self->out_s, pen->color >> 8)
-    out_uint8(self->out_s, pen->color >> 16)
+    out_uint8(self->out_s, pen->color);
+    out_uint8(self->out_s, pen->color >> 8);
+    out_uint8(self->out_s, pen->color >> 16);
     self->orders_state.line_pen.color = pen->color;
   }
   xrdp_order_pack_small_or_tiny(self, order_flags_ptr, order_flags,
@@ -1224,7 +1224,7 @@ xrdp_orders_mem_blt(struct xrdp_orders* self, int cache_id,
   out_uint8s(self->out_s, 1);
   if (order_flags & RDP_ORDER_CHANGE)
   {
-    out_uint8(self->out_s, self->orders_state.last_order)
+    out_uint8(self->out_s, self->orders_state.last_order);
   }
   present = 0;
   /* present, set later, 2 bytes */
@@ -1423,17 +1423,17 @@ xrdp_orders_text(struct xrdp_orders* self,
   if (fg_color != self->orders_state.text_fg_color)
   {
     present |= 0x000010;
-    out_uint8(self->out_s, fg_color)
-    out_uint8(self->out_s, fg_color >> 8)
-    out_uint8(self->out_s, fg_color >> 16)
+    out_uint8(self->out_s, fg_color);
+    out_uint8(self->out_s, fg_color >> 8);
+    out_uint8(self->out_s, fg_color >> 16);
     self->orders_state.text_fg_color = fg_color;
   }
   if (bg_color != self->orders_state.text_bg_color)
   {
     present |= 0x000020;
-    out_uint8(self->out_s, bg_color)
-    out_uint8(self->out_s, bg_color >> 8)
-    out_uint8(self->out_s, bg_color >> 16)
+    out_uint8(self->out_s, bg_color);
+    out_uint8(self->out_s, bg_color >> 8);
+    out_uint8(self->out_s, bg_color >> 16);
     self->orders_state.text_bg_color = bg_color;
   }
   if (clip_left != self->orders_state.text_clip_left)

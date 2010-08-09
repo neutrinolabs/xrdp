@@ -378,7 +378,7 @@ _scp_v1c_mng_check_response(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
     return SCP_CLIENT_STATE_SEQUENCE_ERR;
   }
 
-  in_uint16_be(c->in_s, cmd)
+  in_uint16_be(c->in_s, cmd);
   if (cmd == SCP_CMD_MNG_LOGIN_ALLOW) /* connection ok */
   {
     log_message(s_log, LOG_LEVEL_INFO, "[v1c_mng:%d] connection ok", __LINE__);

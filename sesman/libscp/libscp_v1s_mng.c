@@ -152,7 +152,7 @@ scp_v1s_mng_deny_connection(struct SCP_CONNECTION* c, char* reason)
   out_uint32_be(c->out_s, rlen+14);
   out_uint16_be(c->out_s, SCP_COMMAND_SET_MANAGE);
   out_uint16_be(c->out_s, SCP_CMD_MNG_LOGIN_DENY);
-  out_uint16_be(c->out_s, rlen)
+  out_uint16_be(c->out_s, rlen);
   out_uint8p(c->out_s, reason, rlen);
 
   if (0!=scp_tcp_force_send(c->in_sck, c->out_s->data, rlen+14))
@@ -307,7 +307,7 @@ _scp_v1s_mng_check_response(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
     return SCP_SERVER_STATE_SEQUENCE_ERR;
   }
 
-  in_uint16_be(c->in_s, cmd)
+  in_uint16_be(c->in_s, cmd);
   if (cmd == SCP_CMD_MNG_LIST_REQ) /* request session list */
   {
     log_message(s_log, LOG_LEVEL_INFO, "[v1s_mng:%d] request session list", __LINE__);

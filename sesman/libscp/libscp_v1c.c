@@ -398,7 +398,7 @@ _scp_v1c_check_response(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
     return SCP_CLIENT_STATE_SEQUENCE_ERR;
   }
 
-  in_uint16_be(c->in_s, cmd)
+  in_uint16_be(c->in_s, cmd);
   if (cmd == 2) /* connection denied */
   {
     in_uint16_be(c->in_s, dim);
