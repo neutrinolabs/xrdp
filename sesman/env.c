@@ -105,12 +105,12 @@ env_set_user(char* username, char* passwd_file, int display)
           g_mkdir(".vnc");
           g_sprintf(passwd_file, "%s/.vnc/sesman_%s_passwd", pw_dir, username);
         }
-	else
-	{
+        else
+        {
           /* we use auth_file_path as requested */
           g_sprintf(passwd_file, g_cfg->auth_file_path, username);
         }
-	LOG_DBG(&(g_cfg->log), "pass file: %s", passwd_file);
+        LOG_DBG(&(g_cfg->log), "pass file: %s", passwd_file);
       }
     }
   }
