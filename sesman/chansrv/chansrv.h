@@ -23,7 +23,7 @@ main_cleanup(void);
 { \
   if (_a < LOG_LEVEL) \
   { \
-    g_write("xrdp-chansrv [%10.10d]: ", g_time3()); \
+    g_write("xrdp-chansrv [%10.10u]: ", g_time3()); \
     g_writeln _params ; \
   } \
 }
