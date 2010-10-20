@@ -453,6 +453,24 @@ g_tcp_local_bind(int sck, char* port)
 /*****************************************************************************/
 /* returns error, zero is good */
 int APP_CC
+g_tcp_bind_address(int sck, char* port, const char* address)
+{
+  struct sockaddr_in s;
+
+  memset(&s, 0, sizeof(struct sockaddr_in));
+  s.sin_family = AF_INET;
+  s.sin_port = htons((tui16)atoi(port));
+  s.sin_addr.s_addr = INADDR_ANY;
+  if (inet_aton(address, &s.sin_addr) < 0)
+  {
+    return -1; /* bad address */
+  }
+  return bind(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
+}
+
+/*****************************************************************************/
+/* returns error, zero is good */
+int APP_CC
 g_tcp_listen(int sck)
 {
   return listen(sck, 2);

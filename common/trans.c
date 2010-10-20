@@ -342,7 +342,7 @@ trans_connect(struct trans* self, const char* server, const char* port,
 
 /*****************************************************************************/
 int APP_CC
-trans_listen(struct trans* self, char* port)
+trans_listen_address(struct trans* self, char* port, const char* address)
 {
   if (self->sck != 0)
   {
@@ -352,7 +352,7 @@ trans_listen(struct trans* self, char* port)
   {
     self->sck = g_tcp_socket();
     g_tcp_set_non_blocking(self->sck);
-    if (g_tcp_bind(self->sck, port) == 0)
+    if (g_tcp_bind_address(self->sck, port, address) == 0)
     {
       if (g_tcp_listen(self->sck) == 0)
       {
@@ -382,6 +382,13 @@ trans_listen(struct trans* self, char* port)
     }
   }
   return 1;
+}
+
+/*****************************************************************************/
+int APP_CC
+trans_listen(struct trans* self, char* port)
+{
+  return trans_listen_address(self, port, "0.0.0.0");
 }
 
 /*****************************************************************************/

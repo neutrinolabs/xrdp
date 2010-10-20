@@ -79,6 +79,8 @@ int APP_CC
 trans_connect(struct trans* self, const char* server, const char* port,
               int timeout);
 int APP_CC
+trans_listen_address(struct trans* self, char* port, const char* address);
+int APP_CC
 trans_listen(struct trans* self, char* port);
 struct stream* APP_CC
 trans_get_in_s(struct trans* self);

@@ -76,6 +76,8 @@ g_tcp_bind(int sck, char* port);
 int APP_CC
 g_tcp_local_bind(int sck, char* port);
 int APP_CC
+g_tcp_bind_address(int sck, char* port, const char* address);
+int APP_CC
 g_tcp_listen(int sck);
 int APP_CC
 g_tcp_accept(int sck);

@@ -119,7 +119,8 @@ xrdp_process_run(void* in_val)
 
 /*****************************************************************************/
 static int
-xrdp_listen_get_port(char* port, int port_bytes)
+xrdp_listen_get_port_address(char* port, int port_bytes,
+                             char* address, int address_bytes)
 {
   int fd;
   int error;
@@ -131,7 +132,9 @@ xrdp_listen_get_port(char* port, int port_bytes)
 
   /* default to port 3389 */
   g_strncpy(port, "3389", port_bytes - 1);
-  /* see if port is in xrdp.ini file */
+  /* Default to all */
+  g_strncpy(address, "0.0.0.0", address_bytes - 1);
+  /* see if port or address is in xrdp.ini file */
   g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
   fd = g_file_open(cfg_file);
   if (fd > 0)
@@ -155,7 +158,11 @@ xrdp_listen_get_port(char* port, int port_bytes)
             {
               g_strncpy(port, val, port_bytes - 1);
             }
-            break;
+          }
+          if (g_strcasecmp(val, "address") == 0)
+          {
+            val = (char*)list_get_item(values, index);
+            g_strncpy(address, val, address_bytes - 1);
           }
         }
       }
@@ -203,6 +210,7 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
   int cont;
   int timeout;
   char port[8];
+  char address[256];
   tbus robjs[8];
   tbus term_obj;
   tbus sync_obj;
@@ -210,13 +218,14 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
   tbus done_obj;
 
   self->status = 1;
-  if (xrdp_listen_get_port(port, sizeof(port)) != 0)
+  if (xrdp_listen_get_port_address(port, sizeof(port),
+                                   address, sizeof(address)) != 0)
   {
     g_writeln("xrdp_listen_main_loop: xrdp_listen_get_port failed");
     self->status = -1;
     return 1;
   }
-  error = trans_listen(self->listen_trans, port);
+  error = trans_listen_address(self->listen_trans, port,address);
   if (error == 0)
   {
     self->listen_trans->trans_conn_in = xrdp_listen_conn_in;
