@@ -114,7 +114,7 @@ trans_check_wait_objs(struct trans* self)
         {
           /* error */
           self->status = TRANS_STATUS_DOWN;
-          rv = 1;
+          return 1;
         }
       }
       if (in_sck != -1)
@@ -157,14 +157,14 @@ trans_check_wait_objs(struct trans* self)
           {
             /* error */
             self->status = TRANS_STATUS_DOWN;
-            rv = 1;
+            return 1;
           }
         }
         else if (read_bytes == 0)
         {
           /* error */
           self->status = TRANS_STATUS_DOWN;
-          rv = 1;
+          return 1;
         }
         else
         {
@@ -189,14 +189,12 @@ trans_check_wait_objs(struct trans* self)
 int APP_CC
 trans_force_read_s(struct trans* self, struct stream* in_s, int size)
 {
-  int rv;
   int rcvd;
 
   if (self->status != TRANS_STATUS_UP)
   {
     return 1;
   }
-  rv = 0;
   while (size > 0)
   {
     rcvd = g_tcp_recv(self->sck, in_s->end, size, 0);
@@ -213,14 +211,14 @@ trans_force_read_s(struct trans* self, struct stream* in_s, int size)
       {
         /* error */
         self->status = TRANS_STATUS_DOWN;
-        rv = 1;
+        return 1;
       }
     }
     else if (rcvd == 0)
     {
       /* error */
       self->status = TRANS_STATUS_DOWN;
-      rv = 1;
+      return 1;
     }
     else
     {
@@ -228,7 +226,7 @@ trans_force_read_s(struct trans* self, struct stream* in_s, int size)
       size -= rcvd;
     }
   }
-  return rv;
+  return 0;
 }
 
 /*****************************************************************************/
@@ -244,14 +242,12 @@ trans_force_write_s(struct trans* self, struct stream* out_s)
 {
   int size;
   int total;
-  int rv;
   int sent;
 
   if (self->status != TRANS_STATUS_UP)
   {
     return 1;
   }
-  rv = 0;
   size = (int)(out_s->end - out_s->data);
   total = 0;
   while (total < size)
@@ -270,21 +266,21 @@ trans_force_write_s(struct trans* self, struct stream* out_s)
       {
         /* error */
         self->status = TRANS_STATUS_DOWN;
-        rv = 1;
+        return 1;
       }
     }
     else if (sent == 0)
     {
       /* error */
       self->status = TRANS_STATUS_DOWN;
-      rv = 1;
+      return 1;
     }
     else
     {
       total = total + sent;
     }
   }
-  return rv;
+  return 0;
 }
 
 /*****************************************************************************/
