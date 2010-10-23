@@ -115,7 +115,8 @@ xrdp_mm_send_login(struct xrdp_mm* self)
   char* name;
   char* value;
 
-  xrdp_wm_log_msg(self->wm, "sending login info to sesman");
+  xrdp_wm_log_msg(self->wm, "sending login info to session manager, "
+                  "please wait...");
   username = 0;
   password = 0;
   self->code = 0;
@@ -646,8 +647,7 @@ xrdp_mm_process_login_response(struct xrdp_mm* self, struct stream* s)
   if (ok)
   {
     self->display = display;
-    g_snprintf(text, 255, "xrdp_mm_process_login_response: login successful "
-               "for display %d", display);
+    g_snprintf(text, 255, "login successful for display %d", display);
     xrdp_wm_log_msg(self->wm, text);
     if (xrdp_mm_setup_mod1(self) == 0)
     {
@@ -702,7 +702,7 @@ xrdp_mm_process_login_response(struct xrdp_mm* self, struct stream* s)
   }
   else
   {
-    xrdp_wm_log_msg(self->wm, "xrdp_mm_process_login_response: login failed");
+    xrdp_wm_log_msg(self->wm, "login failed");
   }
   self->delete_sesman_trans = 1;
   self->connected_state = 0;
