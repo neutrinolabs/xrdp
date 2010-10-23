@@ -225,7 +225,7 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
     self->status = -1;
     return 1;
   }
-  error = trans_listen_address(self->listen_trans, port,address);
+  error = trans_listen_address(self->listen_trans, port, address);
   if (error == 0)
   {
     self->listen_trans->trans_conn_in = xrdp_listen_conn_in;

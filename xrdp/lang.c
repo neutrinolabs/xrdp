@@ -209,6 +209,11 @@ get_keymaps(int keylayout, struct xrdp_keymap* keymap)
   filename = (char*)g_malloc(256, 0);
   /* check if there is a keymap file */
   g_snprintf(filename, 255, "%s/km-%4.4x.ini", XRDP_CFG_PATH, keylayout);
+  /* if the file does not exist, try again with 'en-us' as fallback */
+  if (!g_file_exist(filename))
+  {
+    g_snprintf(filename, 255, "%s/km-0409.ini", XRDP_CFG_PATH);
+  }
   if (g_file_exist(filename))
   {
     fd = g_file_open(filename);
