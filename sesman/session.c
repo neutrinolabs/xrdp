@@ -267,6 +267,7 @@ session_get_aval_display_from_chain(void)
     display++;
   }
   lock_chain_release();
+  log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "X server -- no display in range is available");
   return 0;
 }
 
