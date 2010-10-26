@@ -108,7 +108,7 @@
 #define RDP_DATA_PDU_POINTER           27
 #define RDP_DATA_PDU_INPUT             28
 #define RDP_DATA_PDU_SYNCHRONISE       31
-#define RDP_DATA_PDU_BELL              34
+#define RDP_DATA_PDU_PLAY_SOUND        34
 #define RDP_DATA_PDU_LOGON             38
 #define RDP_DATA_PDU_FONT2             39
 #define RDP_DATA_PDU_DISCONNECT        47

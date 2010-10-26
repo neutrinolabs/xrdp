@@ -50,6 +50,7 @@ struct vnc
   /* server functions */
   int (*server_begin_update)(struct vnc* v);
   int (*server_end_update)(struct vnc* v);
+  int (*server_bell_trigger)(struct vnc* v);
   int (*server_fill_rect)(struct vnc* v, int x, int y, int cx, int cy);
   int (*server_screen_blt)(struct vnc* v, int x, int y, int cx, int cy,
                            int srcx, int srcy);

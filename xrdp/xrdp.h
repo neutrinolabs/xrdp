@@ -89,6 +89,8 @@ xrdp_wm_delete(struct xrdp_wm* self);
 int APP_CC
 xrdp_wm_send_palette(struct xrdp_wm* self);
 int APP_CC
+xrdp_wm_send_bell(struct xrdp_wm* self);
+int APP_CC
 xrdp_wm_load_static_colors(struct xrdp_wm* self);
 int APP_CC
 xrdp_wm_load_static_pointers(struct xrdp_wm* self);
@@ -351,6 +353,8 @@ int DEFAULT_CC
 server_begin_update(struct xrdp_mod* mod);
 int DEFAULT_CC
 server_end_update(struct xrdp_mod* mod);
+int DEFAULT_CC
+server_bell_trigger(struct xrdp_mod* mod);
 int DEFAULT_CC
 server_fill_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy);
 int DEFAULT_CC

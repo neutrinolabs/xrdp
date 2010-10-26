@@ -125,6 +125,8 @@ libxrdp_process_data(struct xrdp_session* session);
 int DEFAULT_CC
 libxrdp_send_palette(struct xrdp_session* session, int* palette);
 int DEFAULT_CC
+libxrdp_send_bell(struct xrdp_session* session);
+int DEFAULT_CC
 libxrdp_send_bitmap(struct xrdp_session* session, int width, int height,
                     int bpp, char* data, int x, int y, int cx, int cy);
 int DEFAULT_CC

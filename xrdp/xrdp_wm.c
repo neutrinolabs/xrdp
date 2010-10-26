@@ -86,6 +86,13 @@ xrdp_wm_send_palette(struct xrdp_wm* self)
 
 /*****************************************************************************/
 int APP_CC
+xrdp_wm_send_bell(struct xrdp_wm* self)
+{
+  return libxrdp_send_bell(self->session);
+}
+
+/*****************************************************************************/
+int APP_CC
 xrdp_wm_send_bitmap(struct xrdp_wm* self, struct xrdp_bitmap* bitmap,
                     int x, int y, int cx, int cy)
 {

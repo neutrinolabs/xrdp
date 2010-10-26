@@ -42,6 +42,7 @@ struct xrdp_mod
   /* server functions */
   int (*server_begin_update)(struct xrdp_mod* v);
   int (*server_end_update)(struct xrdp_mod* v);
+  int (*server_bell_trigger)(struct xrdp_mod* v);
   int (*server_fill_rect)(struct xrdp_mod* v, int x, int y, int cx, int cy);
   int (*server_screen_blt)(struct xrdp_mod* v, int x, int y, int cx, int cy,
                            int srcx, int srcy);

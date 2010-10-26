@@ -168,6 +168,36 @@ libxrdp_send_palette(struct xrdp_session* session, int* palette)
   return 0;
 }
 
+/******************************************************************************/
+int EXPORT_CC
+libxrdp_send_bell(struct xrdp_session* session)
+{
+  struct stream* s = (struct stream *)NULL;
+
+  DEBUG(("libxrdp_send_bell sending bell signal"));
+  /* see MS documentation: Server play sound PDU, TS_PLAY_SOUND_PDU_DATA */
+
+  make_stream(s);
+  init_stream(s, 8192);
+
+  if (xrdp_rdp_init_data((struct xrdp_rdp*)session->rdp, s) != 0)
+  {
+    free_stream(s);
+    return 1;
+  }
+  out_uint32_le(s, 440); /* frequency */
+  out_uint32_le(s, 100); /* duration (ms) */
+  s_mark_end(s);
+  if (xrdp_rdp_send_data((struct xrdp_rdp*)session->rdp, s, RDP_DATA_PDU_PLAY_SOUND) != 0)
+  {
+    free_stream(s);
+    return 1;
+  }
+  free_stream(s);
+  return 0;
+}
+
+
 /*****************************************************************************/
 int EXPORT_CC
 libxrdp_send_bitmap(struct xrdp_session* session, int width, int height,

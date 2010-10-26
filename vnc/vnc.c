@@ -750,6 +750,17 @@ lib_palette_update(struct vnc* v)
 
 /******************************************************************************/
 int DEFAULT_CC
+lib_bell_trigger(struct vnc* v)
+{
+  struct stream* s;
+  int error;
+
+  error = v->server_bell_trigger(v);
+  return error;
+}
+
+/******************************************************************************/
+int DEFAULT_CC
 lib_mod_signal(struct vnc* v)
 {
   char type;
@@ -766,6 +777,10 @@ lib_mod_signal(struct vnc* v)
     else if (type == 1) /* palette */
     {
       error = lib_palette_update(v);
+    }
+	else if (type == 2) /* bell */
+    {
+      error = lib_bell_trigger(v);
     }
     else if (type == 3) /* clipboard */
     {

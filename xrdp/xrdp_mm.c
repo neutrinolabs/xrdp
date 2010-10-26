@@ -297,6 +297,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm* self)
       self->mod->wm = (long)(self->wm);
       self->mod->server_begin_update = server_begin_update;
       self->mod->server_end_update = server_end_update;
+      self->mod->server_bell_trigger = server_bell_trigger;
       self->mod->server_fill_rect = server_fill_rect;
       self->mod->server_screen_blt = server_screen_blt;
       self->mod->server_paint_rect = server_paint_rect;
@@ -1059,6 +1060,19 @@ server_end_update(struct xrdp_mod* mod)
   mod->painter = 0;
   return 0;
 }
+
+/*****************************************************************************/
+/* got bell signal... try to send to client */
+int DEFAULT_CC
+server_bell_trigger(struct xrdp_mod* mod)
+{
+  struct xrdp_wm* wm;
+  wm = (struct xrdp_wm*)(mod->wm);
+
+  xrdp_wm_send_bell(wm);
+  return 0;
+}
+
 
 /*****************************************************************************/
 int DEFAULT_CC

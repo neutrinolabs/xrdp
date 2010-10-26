@@ -890,7 +890,7 @@ rdp_rdp_process_data_pdu(struct rdp_rdp* self, struct stream* s)
     case RDP_DATA_PDU_POINTER:
       rv = rdp_rdp_process_pointer_pdu(self, s);
       break;
-    case RDP_DATA_PDU_BELL:
+    case RDP_DATA_PDU_PLAY_SOUND:
       break;
     case RDP_DATA_PDU_LOGON:
       break;
