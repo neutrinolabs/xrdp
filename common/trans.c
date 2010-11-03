@@ -32,14 +32,16 @@
 struct trans* APP_CC
 trans_create(int mode, int in_size, int out_size)
 {
-  struct trans* self;
+  struct trans* self = (struct trans *)NULL;
 
   self = (struct trans*)g_malloc(sizeof(struct trans), 1);
-  make_stream(self->in_s);
-  init_stream(self->in_s, in_size);
-  make_stream(self->out_s);
-  init_stream(self->out_s, out_size);
-  self->mode = mode;
+  if (self != NULL) {
+    make_stream(self->in_s);
+    init_stream(self->in_s, in_size);
+    make_stream(self->out_s);
+    init_stream(self->out_s, out_size);
+    self->mode = mode;
+  }
   return self;
 }
 
@@ -53,7 +55,10 @@ trans_delete(struct trans* self)
   }
   free_stream(self->in_s);
   free_stream(self->out_s);
-  g_tcp_close(self->sck);
+  if (self->sck > 0) {
+    g_tcp_close(self->sck);
+  }
+  self->sck = 0;
   if (self->listen_filename != 0)
   {
     g_file_delete(self->listen_filename);
@@ -83,12 +88,12 @@ trans_get_wait_objs(struct trans* self, tbus* objs, int* count, int* timeout)
 int APP_CC
 trans_check_wait_objs(struct trans* self)
 {
-  tbus in_sck;
-  struct trans* in_trans;
-  int read_bytes;
-  int to_read;
-  int read_so_far;
-  int rv;
+  tbus in_sck = (tbus)0;
+  struct trans* in_trans = (struct trans *)NULL;
+  int read_bytes = 0;
+  int to_read = 0;
+  int read_so_far = 0;
+  int rv = 0;
 
   if (self == 0)
   {
@@ -391,13 +396,27 @@ trans_listen(struct trans* self, char* port)
 struct stream* APP_CC
 trans_get_in_s(struct trans* self)
 {
-  return self->in_s;
+  struct stream * rv = (struct stream *)NULL;
+  if (self == NULL) {
+    rv = (struct stream *)NULL;
+  }
+  else {
+    rv = self->in_s;
+  }
+  return rv;
 }
 
 /*****************************************************************************/
 struct stream* APP_CC
 trans_get_out_s(struct trans* self, int size)
 {
-  init_stream(self->out_s, size);
-  return self->out_s;
+  struct stream * rv = (struct stream *)NULL;
+  if (self == NULL) {
+    rv = (struct stream *)NULL;
+  }
+  else {
+    init_stream(self->out_s, size);
+    rv = self->out_s;
+  }
+  return rv;
 }

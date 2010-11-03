@@ -87,7 +87,7 @@ sesman_main_loop(void)
           g_reset_wait_obj(g_sync_event);
           session_sync_start();
         }
-        if (g_is_wait_obj_set(sck_obj)) /* incomming connection */
+        if (g_is_wait_obj_set(sck_obj)) /* incoming connection */
         {
           in_sck = g_tcp_accept(g_sck);
           if ((in_sck == -1) && g_tcp_last_error_would_block(g_sck))
@@ -146,6 +146,7 @@ main(int argc, char** argv)
     daemon = 1;
   }
   else if ((2 == argc) && ((0 == g_strcasecmp(argv[1], "--nodaemon")) ||
+                           (0 == g_strcasecmp(argv[1], "-nodaemon")) ||
                            (0 == g_strcasecmp(argv[1], "-n")) ||
                            (0 == g_strcasecmp(argv[1], "-ns"))))
   {
@@ -154,6 +155,7 @@ main(int argc, char** argv)
     daemon = 0;
   }
   else if ((2 == argc) && ((0 == g_strcasecmp(argv[1], "--help")) ||
+                           (0 == g_strcasecmp(argv[1], "-help")) ||
                            (0 == g_strcasecmp(argv[1], "-h"))))
   {
     /* help screen */
@@ -167,6 +169,7 @@ main(int argc, char** argv)
     g_exit(0);
   }
   else if ((2 == argc) && ((0 == g_strcasecmp(argv[1], "--kill")) ||
+                           (0 == g_strcasecmp(argv[1], "-kill")) ||
                            (0 == g_strcasecmp(argv[1], "-k"))))
   {
     /* killing running sesman */

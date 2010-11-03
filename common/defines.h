@@ -20,7 +20,7 @@
 
 */
 
-#if !defined(DEFINES_H)
+#ifndef DEFINES_H
 #define DEFINES_H
 
 /* check for debug */

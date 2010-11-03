@@ -83,8 +83,8 @@ struct xrdp_bitmap* APP_CC
 xrdp_bitmap_create(int width, int height, int bpp,
                    int type, struct xrdp_wm* wm)
 {
-  struct xrdp_bitmap* self;
-  int Bpp;
+  struct xrdp_bitmap* self = (struct xrdp_bitmap *)NULL;
+  int Bpp = 0;
 
   self = (struct xrdp_bitmap*)g_malloc(sizeof(struct xrdp_bitmap), 1);
   self->type = type;
@@ -124,7 +124,7 @@ xrdp_bitmap_create_with_data(int width, int height,
                              int bpp, char* data,
                              struct xrdp_wm* wm)
 {
-  struct xrdp_bitmap* self;
+  struct xrdp_bitmap* self = (struct xrdp_bitmap *)NULL;
 
   self = (struct xrdp_bitmap*)g_malloc(sizeof(struct xrdp_bitmap), 1);
   self->type = WND_TYPE_BITMAP;
@@ -141,8 +141,8 @@ xrdp_bitmap_create_with_data(int width, int height,
 void APP_CC
 xrdp_bitmap_delete(struct xrdp_bitmap* self)
 {
-  int i;
-  struct xrdp_mod_data* mod_data;
+  int i = 0;
+  struct xrdp_mod_data* mod_data = (struct xrdp_mod_data *)NULL;
 
   if (self == 0)
   {
@@ -227,8 +227,8 @@ xrdp_bitmap_delete(struct xrdp_bitmap* self)
 struct xrdp_bitmap* APP_CC
 xrdp_bitmap_get_child_by_id(struct xrdp_bitmap* self, int id)
 {
-  int i;
-  struct xrdp_bitmap* b;
+  int i = 0;
+  struct xrdp_bitmap* b = (struct xrdp_bitmap *)NULL;
 
   for (i = 0; i < self->child_list->count; i++)
   {
@@ -247,7 +247,7 @@ xrdp_bitmap_get_child_by_id(struct xrdp_bitmap* self, int id)
 int APP_CC
 xrdp_bitmap_set_focus(struct xrdp_bitmap* self, int focused)
 {
-  struct xrdp_painter* painter;
+  struct xrdp_painter* painter = (struct xrdp_painter *)NULL;
 
   if (self == 0)
   {
@@ -284,9 +284,9 @@ xrdp_bitmap_set_focus(struct xrdp_bitmap* self, int focused)
 static int APP_CC
 xrdp_bitmap_get_index(struct xrdp_bitmap* self, int* palette, int color)
 {
-  int r;
-  int g;
-  int b;
+  int r = 0;
+  int g = 0;
+  int b = 0;
 
   r = (color & 0xff0000) >> 16;
   g = (color & 0x00ff00) >> 8;
@@ -302,7 +302,7 @@ xrdp_bitmap_get_index(struct xrdp_bitmap* self, int* palette, int color)
 int APP_CC
 xrdp_bitmap_resize(struct xrdp_bitmap* self, int width, int height)
 {
-  int Bpp;
+  int Bpp = 0;
 
   if ((width == self->width) && (height == self->height))
   {
@@ -334,16 +334,20 @@ xrdp_bitmap_resize(struct xrdp_bitmap* self, int width, int height)
 int APP_CC
 xrdp_bitmap_load(struct xrdp_bitmap* self, const char* filename, int* palette)
 {
-  int fd;
-  int i;
-  int j;
-  int k;
-  int color;
-  int size;
+  int fd = 0;
+  int i = 0;
+  int j = 0;
+  int k = 0;
+  int color = 0;
+  int size = 0;
   int palette1[256];
   char type1[4];
   struct xrdp_bmp_header header;
-  struct stream* s;
+  struct stream* s = (struct stream *)NULL;
+
+  g_memset(palette1,0,sizeof(int) * 256);
+  g_memset(type1,0,sizeof(char) * 4);
+  g_memset(&header,0,sizeof(struct xrdp_bmp_header));
 
   if (!g_file_exist(filename))
   {
@@ -351,7 +355,7 @@ xrdp_bitmap_load(struct xrdp_bitmap* self, const char* filename, int* palette)
               filename);
     return 1;
   }
-  s = 0;
+  s = (struct stream *)NULL;
   fd = g_file_open(filename);
   if (fd != -1)
   {
@@ -634,11 +638,11 @@ xrdp_bitmap_copy_box(struct xrdp_bitmap* self,
                      struct xrdp_bitmap* dest,
                      int x, int y, int cx, int cy)
 {
-  int i;
-  int j;
-  int destx;
-  int desty;
-  int pixel;
+  int i = 0;
+  int j = 0;
+  int destx = 0;
+  int desty = 0;
+  int pixel = 0;
 
   if (self == 0)
   {
@@ -718,18 +722,18 @@ xrdp_bitmap_copy_box_with_crc(struct xrdp_bitmap* self,
                               struct xrdp_bitmap* dest,
                               int x, int y, int cx, int cy)
 {
-  int i;
-  int j;
-  int destx;
-  int desty;
-  int pixel;
-  int crc;
-  int incs;
-  int incd;
-  unsigned char* s8;
-  unsigned char* d8;
-  unsigned short* s16;
-  unsigned short* d16;
+  int i = 0;
+  int j = 0;
+  int destx = 0;
+  int desty = 0;
+  int pixel = 0;
+  int crc = 0;
+  int incs = 0;
+  int incd = 0;
+  unsigned char* s8 = (unsigned char *)NULL;
+  unsigned char* d8 = (unsigned char *)NULL;
+  unsigned short* s16 = (unsigned short *)NULL;
+  unsigned short* d16 = (unsigned short *)NULL;
 
   if (self == 0)
   {
@@ -761,6 +765,7 @@ xrdp_bitmap_copy_box_with_crc(struct xrdp_bitmap* self,
   {
     return 1;
   }
+  crc = dest->crc;
   CRC_START(crc);
   if (self->bpp == 24)
   {

@@ -7,7 +7,7 @@ one could be running a custom app made for xrdp
 one could be running a X11 session
 clients control the screen size and color depth
 
-all controlled by a cofiguaration file.
+all controlled by a configuration file.
 
 you can create a lib or use a lib with your executable that talks
 to xrdp server.

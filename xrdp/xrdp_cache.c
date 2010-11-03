@@ -128,14 +128,14 @@ xrdp_cache_reset(struct xrdp_cache* self,
 int APP_CC
 xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
 {
-  int i;
-  int j;
-  int oldest;
-  int cache_id;
-  int cache_idx;
-  int bmp_size;
-  int e;
-  int Bpp;
+  int i = 0;
+  int j = 0;
+  int oldest = 0;
+  int cache_id = 0;
+  int cache_idx = 0;
+  int bmp_size = 0;
+  int e = 0;
+  int Bpp = 0;
 
   e = bitmap->width % 4;
   if (e != 0)

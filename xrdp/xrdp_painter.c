@@ -51,6 +51,10 @@ xrdp_painter_delete(struct xrdp_painter* self)
 int APP_CC
 xrdp_painter_begin_update(struct xrdp_painter* self)
 {
+  if (self == 0)
+  {
+    return 0;
+  }
   libxrdp_orders_init(self->session);
   return 0;
 }
@@ -59,6 +63,10 @@ xrdp_painter_begin_update(struct xrdp_painter* self)
 int APP_CC
 xrdp_painter_end_update(struct xrdp_painter* self)
 {
+  if (self == 0)
+  {
+    return 0;
+  }
   libxrdp_orders_send(self->session);
   return 0;
 }

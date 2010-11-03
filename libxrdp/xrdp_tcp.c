@@ -74,6 +74,8 @@ xrdp_tcp_recv(struct xrdp_tcp* self, struct stream* s, int len)
 int APP_CC
 xrdp_tcp_send(struct xrdp_tcp* self, struct stream* s)
 {
+  int len;
+  len = s->end - s->data;
   DEBUG(("    in xrdp_tcp_send, gota send %d bytes", len));
   if (trans_force_write_s(self->trans, s) != 0)
   {

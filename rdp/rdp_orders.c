@@ -22,11 +22,15 @@
 
 #include "rdp.h"
 
+#ifndef NULL
+#define NULL 0
+#endif
+
 /*****************************************************************************/
 struct rdp_orders* APP_CC
 rdp_orders_create(struct rdp_rdp* owner)
 {
-  struct rdp_orders* self;
+  struct rdp_orders* self = (struct rdp_orders *)NULL;
 
   self = (struct rdp_orders*)g_malloc(sizeof(struct rdp_orders), 1);
   self->rdp_layer = owner;
@@ -37,8 +41,8 @@ rdp_orders_create(struct rdp_rdp* owner)
 void APP_CC
 rdp_orders_delete(struct rdp_orders* self)
 {
-  int i;
-  int j;
+  int i = 0;
+  int j = 0;
 
   if (self == 0)
   {
@@ -77,8 +81,8 @@ static void APP_CC
 rdp_orders_in_present(struct stream* s, int* present,
                       int flags, int size)
 {
-  int bits;
-  int i;
+  int bits = 0;
+  int i = 0;
 
   if (flags & RDP_ORDER_SMALL)
   {
@@ -108,7 +112,7 @@ rdp_orders_in_present(struct stream* s, int* present,
 static void APP_CC
 rdp_orders_in_coord(struct stream* s, int* coord, int delta)
 {
-  int change;
+  int change = 0;
 
   if (delta)
   {
@@ -126,7 +130,7 @@ rdp_orders_in_coord(struct stream* s, int* coord, int delta)
 static void APP_CC
 rdp_orders_parse_bounds(struct rdp_orders* self, struct stream* s)
 {
-  int present;
+  int present = 0;
 
   in_uint8(s, present);
   if (present & 1)
@@ -169,10 +173,10 @@ static void APP_CC
 rdp_orders_process_colcache(struct rdp_orders* self, struct stream* s,
                             int flags)
 {
-  struct rdp_colormap* colormap;
-  struct stream* rec_s;
-  int cache_id;
-  int i;
+  struct rdp_colormap* colormap = (struct rdp_colormap *)NULL;
+  struct stream* rec_s = (struct stream *)NULL;
+  int cache_id = 0;
+  int i = 0;
 
   colormap = (struct rdp_colormap*)g_malloc(sizeof(struct rdp_colormap), 1);
   in_uint8(s, cache_id);
@@ -206,19 +210,19 @@ static void APP_CC
 rdp_orders_process_raw_bmpcache(struct rdp_orders* self, struct stream* s,
                                 int flags)
 {
-  int cache_idx;
-  int bufsize;
-  int cache_id;
-  int width;
-  int height;
-  int bpp;
-  int Bpp;
-  int x;
-  int y;
-  char* inverted;
-  char* dst;
-  struct rdp_bitmap* bitmap;
-  struct stream* rec_s;
+  int cache_idx = 0;
+  int bufsize = 0;
+  int cache_id = 0;
+  int width = 0;
+  int height = 0;
+  int bpp = 0;
+  int Bpp = 0;
+  int x = 0;
+  int y = 0;
+  char* inverted = (char *)NULL;
+  char* dst = (char *)NULL;
+  struct rdp_bitmap* bitmap = (struct rdp_bitmap *)NULL;
+  struct stream* rec_s = (struct stream *)NULL;
 
   in_uint8(s, cache_id);
   in_uint8s(s, 1);
@@ -292,22 +296,22 @@ static void APP_CC
 rdp_orders_process_bmpcache(struct rdp_orders* self, struct stream* s,
                             int flags)
 {
-  char* data;
-  char* bmpdata;
-  int cache_idx;
-  int size;
-  int cache_id;
-  int width;
-  int height;
-  int bpp;
-  int Bpp;
-  int bufsize;
-  int pad1;
-  int pad2;
-  int row_size;
-  int final_size;
-  struct rdp_bitmap* bitmap;
-  struct stream* rec_s;
+  char* data = (char *)NULL;
+  char* bmpdata = (char *)NULL;
+  int cache_idx = 0;
+  int size = 0;
+  int cache_id = 0;
+  int width = 0;
+  int height = 0;
+  int bpp = 0;
+  int Bpp = 0;
+  int bufsize = 0;
+  int pad1 = 0;
+  int pad2 = 0;
+  int row_size = 0;
+  int final_size = 0;
+  struct rdp_bitmap* bitmap = (struct rdp_bitmap *)NULL;
+  struct stream* rec_s = (struct stream *)NULL;
 
   in_uint8(s, cache_id);
   in_uint8(s, pad1);
@@ -373,17 +377,17 @@ static void APP_CC
 rdp_orders_process_fontcache(struct rdp_orders* self, struct stream* s,
                              int flags)
 {
-  struct stream* rec_s;
-  int font;
-  int nglyphs;
-  int character;
-  int offset;
-  int baseline;
-  int width;
-  int height;
-  int i;
-  int datasize;
-  char* data;
+  struct stream* rec_s = (struct stream *)NULL;
+  int font = 0;
+  int nglyphs = 0;
+  int character = 0;
+  int offset = 0;
+  int baseline = 0;
+  int width = 0;
+  int height = 0;
+  int i = 0;
+  int datasize = 0;
+  char* data = (char *)NULL;
 
   in_uint8(s, font);
   in_uint8(s, nglyphs);
@@ -425,10 +429,10 @@ rdp_orders_process_fontcache(struct rdp_orders* self, struct stream* s,
 static int APP_CC
 rdp_orders_process_secondary_order(struct rdp_orders* self, struct stream* s)
 {
-  short length;
-  int flags;
-  int type;
-  char* next_order;
+  short length = 0;
+  int flags = 0;
+  int type = 0;
+  char* next_order = (char *)NULL;
 
   in_uint16_le(s, length);
   in_uint16_le(s, flags);
@@ -461,7 +465,7 @@ rdp_orders_process_secondary_order(struct rdp_orders* self, struct stream* s)
 static void APP_CC
 rdp_orders_in_color(struct stream* s, int* color)
 {
-  int i;
+  int i = 0;
 
   in_uint8(s, i);
   *color = i;
@@ -523,9 +527,9 @@ static void APP_CC
 rdp_orders_process_text2(struct rdp_orders* self, struct stream* s,
                          int present, int delta)
 {
-  int fgcolor;
-  int bgcolor;
-  struct stream* rec_s;
+  int fgcolor = 0;
+  int bgcolor = 0;
+  struct stream* rec_s = (struct stream *)NULL;
 
   if (present & 0x000001)
   {
@@ -662,7 +666,7 @@ static void APP_CC
 rdp_orders_process_destblt(struct rdp_orders* self, struct stream* s,
                            int present, int delta)
 {
-  struct stream* rec_s;
+  struct stream* rec_s = (struct stream *)NULL;
 
   if (present & 0x01)
   {
@@ -715,9 +719,9 @@ static void APP_CC
 rdp_orders_process_patblt(struct rdp_orders* self, struct stream* s,
                           int present, int delta)
 {
-  int fgcolor;
-  int bgcolor;
-  struct stream* rec_s;
+  int fgcolor = 0;
+  int bgcolor = 0;
+  struct stream* rec_s = (struct stream *)NULL;
 
   if (present & 0x0001)
   {
@@ -867,9 +871,9 @@ static void APP_CC
 rdp_orders_process_line(struct rdp_orders* self, struct stream* s,
                         int present, int delta)
 {
-  int bgcolor;
-  int fgcolor;
-  struct stream* rec_s;
+  int bgcolor = 0;
+  int fgcolor = 0;
+  struct stream* rec_s = (struct stream *)NULL;
 
   if (present & 0x0001)
   {
@@ -949,9 +953,9 @@ static void APP_CC
 rdp_orders_process_rect(struct rdp_orders* self, struct stream* s,
                         int present, int delta)
 {
-  int i;
-  int fgcolor;
-  struct stream* rec_s;
+  int i = 0;
+  int fgcolor = 0;
+  struct stream* rec_s = (struct stream *)NULL;
 
   if (present & 0x01)
   {
@@ -1017,8 +1021,8 @@ static void APP_CC
 rdp_orders_process_desksave(struct rdp_orders* self, struct stream* s,
                             int present, int delta)
 {
-  int width;
-  int height;
+  int width = 0;
+  int height = 0;
 
   if (present & 0x01)
   {
@@ -1062,9 +1066,9 @@ static void APP_CC
 rdp_orders_process_memblt(struct rdp_orders* self, struct stream* s,
                           int present, int delta)
 {
-  struct rdp_bitmap* bitmap;
-  struct stream* rec_s;
-  char* bmpdata;
+  struct rdp_bitmap* bitmap = (struct rdp_bitmap *)NULL;
+  struct stream* rec_s = (struct stream *)NULL;
+  char* bmpdata = (char *)NULL;
 
   if (present & 0x0001)
   {
@@ -1200,11 +1204,11 @@ int APP_CC
 rdp_orders_process_orders(struct rdp_orders* self, struct stream* s,
                           int num_orders)
 {
-  int processed;
-  int order_flags;
-  int size;
-  int present;
-  int delta;
+  int processed = 0;
+  int order_flags = 0;
+  int size = 0;
+  int present = 0;
+  int delta = 0;
 
   processed = 0;
   while (processed < num_orders)
@@ -1308,15 +1312,15 @@ char* APP_CC
 rdp_orders_convert_bitmap(int in_bpp, int out_bpp, char* bmpdata,
                           int width, int height, int* palette)
 {
-  char* out;
-  char* src;
-  char* dst;
-  int i;
-  int j;
-  int red;
-  int green;
-  int blue;
-  int pixel;
+  char* out = (char *)NULL;
+  char* src = (char *)NULL;
+  char* dst = (char *)NULL;
+  int i = 0;
+  int j = 0;
+  int red = 0;
+  int green = 0;
+  int blue = 0;
+  int pixel = 0;
 
   if ((in_bpp == 8) && (out_bpp == 8))
   {
@@ -1372,7 +1376,7 @@ rdp_orders_convert_bitmap(int in_bpp, int out_bpp, char* bmpdata,
         SPLITCOLOR32(red, green, blue, pixel);
         pixel = COLOR24RGB(red, green, blue);
         *((tui32*)dst) = pixel;
-        src++;;
+        src++;
         dst += 4;
       }
     }
@@ -1469,10 +1473,10 @@ rdp_orders_convert_bitmap(int in_bpp, int out_bpp, char* bmpdata,
 int APP_CC
 rdp_orders_convert_color(int in_bpp, int out_bpp, int in_color, int* palette)
 {
-  int pixel;
-  int red;
-  int green;
-  int blue;
+  int pixel = 0;
+  int red = 0;
+  int green = 0;
+  int blue = 0;
 
   if ((in_bpp == 8) && (out_bpp == 8))
   {

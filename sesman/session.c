@@ -169,11 +169,16 @@ x_server_running(int display)
 static void DEFAULT_CC
 session_start_sessvc(int xpid, int wmpid, long data)
 {
-  struct list* sessvc_params;
+  struct list * sessvc_params = (struct list *)NULL;
   char wmpid_str[25];
   char xpid_str[25];
   char exe_path[262];
-  int i;
+  int i = 0;
+
+  /* initialize (zero out) local variables: */
+  g_memset(wmpid_str,0,sizeof(char) * 25);
+  g_memset(xpid_str,0,sizeof(char) * 25);
+  g_memset(exe_path,0,sizeof(char) * 262);
 
   /* new style waiting for clients */
   g_sprintf(wmpid_str, "%d", wmpid);
@@ -302,21 +307,30 @@ session_start_fork(int width, int height, int bpp, char* username,
                    char* password, tbus data, tui8 type, char* domain,
                    char* program, char* directory)
 {
-  int display;
-  int pid;
-  int wmpid;
-  int xpid;
-  int i;
+  int display = 0;
+  int pid = 0;
+  int wmpid = 0;
+  int xpid = 0;
+  int i = 0;
   char geometry[32];
   char depth[32];
   char screen[32];
   char text[256];
   char passwd_file[256];
-  char** pp1;
-  struct session_chain* temp;
-  struct list* xserver_params=0;
+  char ** pp1 = (char **)NULL;
+  struct session_chain * temp = (struct session_chain *)NULL;
+  struct list * xserver_params = (struct list *)NULL;
   time_t ltime;
   struct tm stime;
+
+  /* initialize (zero out) local variables: */
+  g_memset(&ltime,0,sizeof(time_t));
+  g_memset(&stime,0,sizeof(struct tm));
+  g_memset(geometry,0,sizeof(char) * 32);
+  g_memset(depth,0,sizeof(char) * 32);
+  g_memset(screen,0,sizeof(char) * 32);
+  g_memset(text,0,sizeof(char) * 256);
+  g_memset(passwd_file,0,sizeof(char) * 256);
 
   /* check to limit concurrent sessions */
   if (g_session_count >= g_cfg->sess.max_sessions)
@@ -348,6 +362,7 @@ session_start_fork(int width, int height, int bpp, char* username,
     g_free(temp);
     return 0;
   }
+  wmpid = 0;
   pid = g_fork();
   if (pid == -1)
   {

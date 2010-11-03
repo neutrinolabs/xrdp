@@ -33,15 +33,16 @@
 #include "thread_calls.h"
 #include "os_calls.h"
 
+
 /*****************************************************************************/
 /* returns error */
 #if defined(_WIN32)
 int APP_CC
 tc_thread_create(unsigned long (__stdcall * start_routine)(void*), void* arg)
 {
-  DWORD thread_id;
-  HANDLE thread;
-  int rv;
+  int rv = 0;
+  DWORD thread_id = 0;
+  HANDLE thread = (HANDLE)0;
 
   /* CreateThread returns handle or zero on error */
   thread = CreateThread(0, 0, start_routine, arg, 0, &thread_id);
@@ -51,14 +52,18 @@ tc_thread_create(unsigned long (__stdcall * start_routine)(void*), void* arg)
 }
 #else
 int APP_CC
-tc_thread_create(void* (* start_routine)(void*), void* arg)
+tc_thread_create(void* (* start_routine)(void *), void* arg)
 {
-  pthread_t thread;
-  int rv;
+  int rv = 0;
+  pthread_t thread = (pthread_t)0;
+
+  g_memset(&thread, 0x00, sizeof(pthread_t));
 
   /* pthread_create returns error */
   rv = pthread_create(&thread, 0, start_routine, arg);
-  pthread_detach(thread);
+  if (!rv) {
+    rv = pthread_detach(thread);
+  }
   return rv;
 }
 #endif
@@ -133,13 +138,15 @@ tc_mutex_lock(tbus mutex)
 int APP_CC
 tc_mutex_unlock(tbus mutex)
 {
+  int rv = 0;
 #if defined(_WIN32)
   ReleaseMutex((HANDLE)mutex);
-  return 0;
 #else
-  pthread_mutex_unlock((pthread_mutex_t*)mutex);
-  return 0;
+  if (mutex != 0) {
+    rv = pthread_mutex_unlock((pthread_mutex_t *)mutex);
+  }
 #endif
+  return rv;
 }
 
 /*****************************************************************************/
@@ -152,9 +159,9 @@ tc_sem_create(int init_count)
   sem = CreateSemaphore(0, init_count, init_count + 10, 0);
   return (tbus)sem;
 #else
-  sem_t* sem;
+  sem_t * sem = (sem_t *)NULL;
 
-  sem = g_malloc(sizeof(sem_t), 0);
+  sem = (sem_t *)g_malloc(sizeof(sem_t), 0);
   sem_init(sem, 0, init_count);
   return (tbus)sem;
 #endif

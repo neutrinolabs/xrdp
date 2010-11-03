@@ -73,16 +73,18 @@ chansrv_cleanup(int pid)
 int DEFAULT_CC
 main(int argc, char** argv)
 {
-  int ret;
-  int chansrv_pid;
-  int wm_pid;
-  int x_pid;
-  int lerror;
+  int ret = 0;
+  int chansrv_pid = 0;
+  int wm_pid = 0;
+  int x_pid = 0;
+  int lerror = 0;
   char exe_path[262];
+
+  g_memset(exe_path,0,sizeof(exe_path));
 
   if (argc < 3)
   {
-    g_writeln("xrdp-sessvc: exiting, not enough params");
+    g_writeln("xrdp-sessvc: exiting, not enough parameters");
     return 1;
   }
   g_signal_kill(term_signal_handler); /* SIGKILL */
@@ -106,7 +108,7 @@ main(int argc, char** argv)
     g_snprintf(exe_path, 261, "%s/xrdp-chansrv", XRDP_SBIN_PATH);
     g_execlp3(exe_path, "xrdp-chansrv", 0);
     /* should not get here */
-    g_writeln("xrdp-sessvc: g_execvp failed");
+    g_writeln("xrdp-sessvc: g_execlp3() failed");
     return 1;
   }
   lerror = 0;
@@ -115,6 +117,7 @@ main(int argc, char** argv)
   while ((ret == 0) && !g_term)
   {
     ret = g_waitpid(wm_pid);
+    g_sleep(1);
   }
   if (ret < 0)
   {
@@ -129,6 +132,7 @@ main(int argc, char** argv)
   while ((ret == 0) && !g_term)
   {
     ret = g_waitpid(chansrv_pid);
+    g_sleep(1);
   }
   chansrv_cleanup(chansrv_pid);
   /* kill X server */
@@ -138,6 +142,7 @@ main(int argc, char** argv)
   while ((ret == 0) && !g_term)
   {
     ret = g_waitpid(x_pid);
+    g_sleep(1);
   }
   g_writeln("xrdp-sessvc: clean exit");
   return 0;

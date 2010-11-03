@@ -22,6 +22,10 @@
 
 #include "rdp.h"
 
+#ifndef NULL
+#define NULL 0
+#endif
+
 /*****************************************************************************/
 struct rdp_rdp* APP_CC
 rdp_rdp_create(struct mod* owner)
@@ -222,7 +226,7 @@ rdp_rdp_out_order_caps(struct rdp_rdp* self, struct stream* s)
 static int APP_CC
 rdp_rdp_out_bmpcache_caps(struct rdp_rdp* self, struct stream* s)
 {
-  int Bpp;
+  int Bpp = 0;
 
   out_uint16_le(s, RDP_CAPSET_BMPCACHE);
   out_uint16_le(s, RDP_CAPLEN_BMPCACHE);
@@ -508,26 +512,26 @@ rdp_rdp_process_pointer_pdu(struct rdp_rdp* self, struct stream* s)
 static void APP_CC
 rdp_rdp_process_bitmap_updates(struct rdp_rdp* self, struct stream* s)
 {
-  int num_updates;
-  int left;
-  int top;
-  int right;
-  int bottom;
-  int width;
-  int height;
-  int cx;
-  int cy;
-  int bpp;
-  int Bpp;
-  int compress;
-  int bufsize;
-  int size;
-  int i;
-  int x;
-  int y;
-  char* data;
-  char* bmpdata0;
-  char* bmpdata1;
+  int num_updates = 0;
+  int left = 0;
+  int top = 0;
+  int right = 0;
+  int bottom = 0;
+  int width = 0;
+  int height = 0;
+  int cx = 0;
+  int cy = 0;
+  int bpp = 0;
+  int Bpp = 0;
+  int compress = 0;
+  int bufsize = 0;
+  int size = 0;
+  int i = 0;
+  int x = 0;
+  int y = 0;
+  char* data = NULL;
+  char* bmpdata0 = NULL;
+  char* bmpdata1 = NULL;
 
   in_uint16_le(s, num_updates);
   for (i = 0; i < num_updates; i++)
@@ -915,9 +919,9 @@ rdp_rdp_process_general_caps(struct rdp_rdp* self, struct stream* s)
 static void APP_CC
 rdp_rdp_process_bitmap_caps(struct rdp_rdp* self, struct stream* s)
 {
-  int width;
-  int height;
-  int bpp;
+  int width = 0;
+  int height = 0;
+  int bpp = 0;
 
   in_uint16_le(s, bpp);
   in_uint8s(s, 6);
@@ -933,12 +937,12 @@ rdp_rdp_process_bitmap_caps(struct rdp_rdp* self, struct stream* s)
 static int APP_CC
 rdp_rdp_process_server_caps(struct rdp_rdp* self, struct stream* s, int len)
 {
-  int n;
-  int ncapsets;
-  int capset_type;
-  int capset_length;
-  char* next;
-  char* start;
+  int n = 0;
+  int ncapsets = 0;
+  int capset_type = 0;
+  int capset_length = 0;
+  char* next = NULL;
+  char* start = NULL;
 
   start = s->p;
   in_uint16_le(s, ncapsets);
@@ -1035,9 +1039,9 @@ rdp_rdp_send_fonts(struct rdp_rdp* self, struct stream* s, int seq)
 int APP_CC
 rdp_rdp_process_demand_active(struct rdp_rdp* self, struct stream* s)
 {
-  int type;
-  int len_src_descriptor;
-  int len_combined_caps;
+  int type = 0;
+  int len_src_descriptor = 0;
+  int len_combined_caps = 0;
 
   in_uint32_le(s, self->share_id);
   in_uint16_le(s, len_src_descriptor);
@@ -1064,9 +1068,11 @@ int APP_CC
 rdp_rec_check_file(struct rdp_rdp* self)
 {
   char file_name[256];
-  int index;
-  int len;
-  struct stream* s;
+  int index = 0;
+  int len = 0;
+  struct stream* s = (struct stream *)NULL;
+
+  g_memset(file_name,0,sizeof(char) * 256);
 
   if (self->rec_fd == 0)
   {
@@ -1098,8 +1104,8 @@ rdp_rec_check_file(struct rdp_rdp* self)
 int APP_CC
 rdp_rec_write_item(struct rdp_rdp* self, struct stream* s)
 {
-  int len;
-  int time;
+  int len = 0;
+  int time = 0;
 
   if (self->rec_fd == 0)
   {

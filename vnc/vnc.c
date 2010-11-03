@@ -327,8 +327,8 @@ lib_mod_event(struct vnc* v, int msg, long param1, long param2,
 int DEFAULT_CC
 get_pixel_safe(char* data, int x, int y, int width, int height, int bpp)
 {
-  int start;
-  int shift;
+  int start = 0;
+  int shift = 0;
 
   if (x < 0)
   {
@@ -391,8 +391,8 @@ void DEFAULT_CC
 set_pixel_safe(char* data, int x, int y, int width, int height, int bpp,
                int pixel)
 {
-  int start;
-  int shift;
+  int start = 0;
+  int shift = 0;
 
   if (x < 0)
   {
@@ -1088,7 +1088,7 @@ connections", 0);
   {
     if (v->server_bpp != v->mod_bpp)
     {
-      v->server_msg(v, "error - server and client bpp don't match", 0);
+      v->server_msg(v, "error - server bpp and client bpp do not match", 0);
       error = 1;
     }
   }

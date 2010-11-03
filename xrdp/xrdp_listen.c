@@ -182,7 +182,7 @@ xrdp_listen_conn_in(struct trans* self, struct trans* new_self)
   struct xrdp_process* process;
   struct xrdp_listen* lis;
 
-  g_writeln("hello");
+  g_writeln("xrdp_listen_conn_in: hello");
   lis = (struct xrdp_listen*)(self->callback_data);
   process = xrdp_process_create(lis, lis->pro_done_event);
   if (xrdp_listen_add_pro(lis, process) == 0)
@@ -208,7 +208,7 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
   int error;
   int robjs_count;
   int cont;
-  int timeout;
+  int timeout = 0;
   char port[8];
   char address[256];
   tbus robjs[8];

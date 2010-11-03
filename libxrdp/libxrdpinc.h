@@ -20,7 +20,7 @@
 
 */
 
-#if !defined(LIBXRDPINC_H)
+#ifndef LIBXRDPINC_H
 #define LIBXRDPINC_H
 
 struct xrdp_client_info

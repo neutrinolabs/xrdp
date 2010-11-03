@@ -303,17 +303,19 @@ unicode_in(struct stream* s, int uni_len, char* dst, int dst_len)
 static int APP_CC
 xrdp_sec_process_logon_info(struct xrdp_sec* self, struct stream* s)
 {
-  int flags;
-  int len_domain;
-  int len_user;
-  int len_password;
-  int len_program;
-  int len_directory;
-  int len_ip;
-  int len_dll;
-  int tzone;
+  int flags = 0;
+  int len_domain = 0;
+  int len_user = 0;
+  int len_password = 0;
+  int len_program = 0;
+  int len_directory = 0;
+  int len_ip = 0;
+  int len_dll = 0;
+  int tzone = 0;
   char tmpdata[256];
 
+  /* initialize (zero out) local variables */
+  g_memset(tmpdata,0,sizeof(char)*256);
   in_uint8s(s, 4);
   in_uint32_le(s, flags);
   DEBUG(("in xrdp_sec_process_logon_info flags $%x", flags));
@@ -340,12 +342,30 @@ xrdp_sec_process_logon_info(struct xrdp_sec* self, struct stream* s)
     DEBUG(("flag RDP_COMPRESSION found"));
   }
   in_uint16_le(s, len_domain);
+  if (len_domain > 511) {
+    DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_domain > 511"));
+    return 1;
+  }
   in_uint16_le(s, len_user);
+  if (len_user > 511) {
+    DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_user > 511"));
+    return 1;
+  }
   in_uint16_le(s, len_password);
+  if (len_password > 511) {
+    DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_password > 511"));
+    return 1;
+  }
   in_uint16_le(s, len_program);
+  if (len_program > 511) {
+    DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_program > 511"));
+    return 1;
+  }
   in_uint16_le(s, len_directory);
-  /* todo, we should error out in any of the above lengths are > 512 */
-  /* to avoid buffer overruns */
+  if (len_directory > 511) {
+    DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_directory > 511"));
+    return 1;
+  }
   unicode_in(s, len_domain, self->rdp_layer->client_info.domain, 255);
   DEBUG(("domain %s", self->rdp_layer->client_info.domain));
   unicode_in(s, len_user, self->rdp_layer->client_info.username, 255);
@@ -386,7 +406,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec* self, struct stream* s)
 static int APP_CC
 xrdp_sec_send_lic_initial(struct xrdp_sec* self)
 {
-  struct stream* s;
+  struct stream* s = (struct stream *)NULL;
 
   make_stream(s);
   init_stream(s, 8192);
@@ -725,10 +745,10 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec* self, struct stream* s)
 int APP_CC
 xrdp_sec_process_mcs_data(struct xrdp_sec* self)
 {
-  struct stream* s;
-  char* hold_p;
-  int tag;
-  int size;
+  struct stream* s = (struct stream *)NULL;
+  char* hold_p = (char *)NULL;
+  int tag = 0;
+  int size = 0;
 
   s = &self->client_mcs_data;
   /* set p to beginning */
@@ -861,13 +881,13 @@ xrdp_sec_out_mcs_data(struct xrdp_sec* self)
 static void APP_CC
 xrdp_sec_in_mcs_data(struct xrdp_sec* self)
 {
-  struct stream* s;
-  struct xrdp_client_info* client_info;
-  int index;
-  char c;
+  struct stream* s = (struct stream *)NULL;
+  struct xrdp_client_info* client_info = (struct xrdp_client_info *)NULL;
+  int index = 0;
+  char c = 0;
 
-  client_info = &self->rdp_layer->client_info;
-  s = &self->client_mcs_data;
+  client_info = &(self->rdp_layer->client_info);
+  s = &(self->client_mcs_data);
   /* get hostname, its unicode */
   s->p = s->data;
   in_uint8s(s, 47);
@@ -896,12 +916,14 @@ xrdp_sec_in_mcs_data(struct xrdp_sec* self)
 int APP_CC
 xrdp_sec_incoming(struct xrdp_sec* self)
 {
-  struct list* items;
-  struct list* values;
-  int index;
-  char* item;
-  char* value;
+  struct list* items = NULL;
+  struct list* values = NULL;
+  int index = 0;
+  char* item = NULL;
+  char* value = NULL;
   char key_file[256];
+
+  g_memset(key_file,0,sizeof(char)*256);
 
   DEBUG((" in xrdp_sec_incoming"));
   g_random(self->server_random, 32);

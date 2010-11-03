@@ -350,7 +350,7 @@ main(int argc, char** argv)
         g_writeln("error OpenSCManager, do you have rights?");
         g_exit(0);
       }
-      /* check if service is already installed */
+      /* check if service is allready installed */
       sc_ser = OpenService(sc_man, "xrdp", SERVICE_ALL_ACCESS);
       if (sc_ser == 0)
       {
@@ -363,7 +363,7 @@ main(int argc, char** argv)
       }
       else
       {
-        g_writeln("error service is already installed");
+        g_writeln("error service is allready installed");
         CloseServiceHandle(sc_ser);
         CloseServiceHandle(sc_man);
         g_exit(0);
@@ -382,7 +382,7 @@ main(int argc, char** argv)
         g_writeln("error OpenSCManager, do you have rights?");
         g_exit(0);
       }
-      /* check if service is already installed */
+      /* check if service is allready installed */
       sc_ser = OpenService(sc_man, "xrdp", SERVICE_ALL_ACCESS);
       if (sc_ser == 0)
       {
@@ -506,7 +506,7 @@ main(int argc, char** argv)
   }
   if (g_file_exist(pid_file)) /* xrdp.pid */
   {
-    g_writeln("It looks like xrdp is already running,");
+    g_writeln("It looks like xrdp is allready running,");
     g_writeln("if not delete the xrdp.pid file and try again");
     g_exit(0);
   }
@@ -542,6 +542,17 @@ main(int argc, char** argv)
       /* exit, this is the main process */
       g_exit(0);
     }
+    g_sleep(1000);
+    g_file_close(0);
+    g_file_close(1);
+    g_file_close(2);
+    g_file_open("/dev/null");
+    g_file_open("/dev/null");
+    g_file_open("/dev/null");
+    /* end of daemonizing code */
+  }
+  if (!no_daemon)
+  {
     /* write the pid to file */
     pid = g_getpid();
     fd = g_file_open(pid_file); /* xrdp.pid */
@@ -557,14 +568,6 @@ main(int argc, char** argv)
       g_file_write(fd, text, g_strlen(text));
       g_file_close(fd);
     }
-    g_sleep(1000);
-    g_file_close(0);
-    g_file_close(1);
-    g_file_close(2);
-    g_file_open("/dev/null");
-    g_file_open("/dev/null");
-    g_file_open("/dev/null");
-    /* end of daemonizing code */
   }
 #endif
   g_threadid = tc_get_threadid();

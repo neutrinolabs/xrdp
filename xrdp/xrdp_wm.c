@@ -27,9 +27,12 @@ struct xrdp_wm* APP_CC
 xrdp_wm_create(struct xrdp_process* owner,
                struct xrdp_client_info* client_info)
 {
-  struct xrdp_wm* self;
+  struct xrdp_wm* self = (struct xrdp_wm *)NULL;
   char event_name[256];
-  int pid;
+  int pid = 0;
+
+  /* initialize (zero out) local variables: */
+  g_memset(event_name,0,sizeof(char) * 256);
 
   self = (struct xrdp_wm*)g_malloc(sizeof(struct xrdp_wm), 1);
   self->client_info = client_info;

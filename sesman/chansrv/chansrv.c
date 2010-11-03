@@ -53,11 +53,11 @@ int g_rdpdr_chan_id = -1; /* rdpdr */
 int APP_CC
 send_channel_data(int chan_id, char* data, int size)
 {
-  struct stream* s;
-  int chan_flags;
-  int total_size;
-  int sent;
-  int rv;
+  struct stream * s = (struct stream *)NULL;
+  int chan_flags = 0;
+  int total_size = 0;
+  int sent = 0;
+  int rv = 0;
 
   s = trans_get_out_s(g_con_trans, 8192);
   if (s == 0)
@@ -105,7 +105,7 @@ send_channel_data(int chan_id, char* data, int size)
 static int APP_CC
 send_init_response_message(void)
 {
-  struct stream* s;
+  struct stream * s = (struct stream *)NULL;
 
   LOG(1, ("send_init_response_message:"));
   s = trans_get_out_s(g_con_trans, 8192);
@@ -126,7 +126,7 @@ send_init_response_message(void)
 static int APP_CC
 send_channel_setup_response_message(void)
 {
-  struct stream* s;
+  struct stream * s = (struct stream *)NULL;
 
   LOG(10, ("send_channel_setup_response_message:"));
   s = trans_get_out_s(g_con_trans, 8192);
@@ -147,7 +147,7 @@ send_channel_setup_response_message(void)
 static int APP_CC
 send_channel_data_response_message(void)
 {
-  struct stream* s;
+  struct stream * s = (struct stream *)NULL;
 
   LOG(10, ("send_channel_data_response_message:"));
   s = trans_get_out_s(g_con_trans, 8192);
@@ -177,10 +177,10 @@ process_message_init(struct stream* s)
 static int APP_CC
 process_message_channel_setup(struct stream* s)
 {
-  int num_chans;
-  int index;
-  int rv;
-  struct chan_item* ci;
+  int num_chans = 0;
+  int index = 0;
+  int rv = 0;
+  struct chan_item* ci = (struct chan_item *)NULL;
 
   g_num_chan_items = 0;
   g_cliprdr_index = -1;
@@ -239,11 +239,11 @@ process_message_channel_setup(struct stream* s)
 static int APP_CC
 process_message_channel_data(struct stream* s)
 {
-  int chan_id;
-  int chan_flags;
-  int rv;
-  int length;
-  int total_length;
+  int chan_id = 0;
+  int chan_flags = 0;
+  int rv = 0;
+  int length = 0;
+  int total_length = 0;
 
   in_uint16_le(s, chan_id);
   in_uint16_le(s, chan_flags);
@@ -284,11 +284,11 @@ process_message_channel_data_response(struct stream* s)
 static int APP_CC
 process_message(void)
 {
-  struct stream* s;
-  int size;
-  int id;
-  int rv;
-  char* next_msg;
+  struct stream * s = (struct stream *)NULL;
+  int size = 0;
+  int id = 0;
+  int rv = 0;
+  char* next_msg = (char *)NULL;
 
   if (g_con_trans == 0)
   {
@@ -329,7 +329,9 @@ process_message(void)
     {
       break;
     }
-    s->p = next_msg;
+    else {
+      s->p = next_msg;
+	}
   }
   return rv;
 }
@@ -339,10 +341,10 @@ process_message(void)
 int DEFAULT_CC
 my_trans_data_in(struct trans* trans)
 {
-  struct stream* s;
-  int id;
-  int size;
-  int error;
+  struct stream * s = (struct stream *)NULL;
+  int id = 0;
+  int size = 0;
+  int error = 0;
 
   if (trans == 0)
   {
@@ -400,7 +402,7 @@ static int APP_CC
 setup_listen(void)
 {
   char port[256];
-  int error;
+  int error = 0;
 
   if (g_lis_trans != 0)
   {
@@ -431,17 +433,17 @@ THREAD_RV THREAD_CC
 channel_thread_loop(void* in_val)
 {
   tbus objs[32];
-  int num_objs;
-  int timeout;
-  int error;
-  THREAD_RV rv;
+  int num_objs = 0;
+  int timeout = 0;
+  int error = 0;
+  THREAD_RV rv = 0;
 
   LOG(1, ("channel_thread_loop: thread start"));
   rv = 0;
   error = setup_listen();
   if (error == 0)
   {
-    timeout = 0;
+    timeout = -1;
     num_objs = 0;
     objs[num_objs] = g_term_event;
     num_objs++;
@@ -486,7 +488,7 @@ channel_thread_loop(void* in_val)
       clipboard_check_wait_objs();
       sound_check_wait_objs();
       dev_redir_check_wait_objs();
-      timeout = 0;
+      timeout = -1;
       num_objs = 0;
       objs[num_objs] = g_term_event;
       num_objs++;
@@ -519,20 +521,25 @@ void DEFAULT_CC
 nil_signal_handler(int sig)
 {
   LOG(1, ("nil_signal_handler: got signal %d", sig));
+  g_set_wait_obj(g_term_event);
 }
 
 /*****************************************************************************/
 static int APP_CC
-get_display_num_from_display(char* display_text)
+get_display_num_from_display(char * display_text)
 {
-  int index;
-  int mode;
-  int host_index;
-  int disp_index;
-  int scre_index;
-  char host[256];
-  char disp[256];
-  char scre[256];
+  int index = 0;
+  int mode = 0;
+  int host_index = 0;
+  int disp_index = 0;
+  int scre_index = 0;
+  char host[256] = "";
+  char disp[256] = "";
+  char scre[256] = "";
+
+  g_memset(host,0,256);
+  g_memset(disp,0,256);
+  g_memset(scre,0,256);
 
   index = 0;
   host_index = 0;
@@ -587,12 +594,14 @@ main_cleanup(void)
 static int APP_CC
 read_ini(void)
 {
-  char filename[256];
-  struct list* names;
-  struct list* values;
-  char* name;
-  char* value;
-  int index;
+  char filename[256] = "";
+  struct list* names = (struct list *)NULL;
+  struct list* values = (struct list *)NULL;
+  char* name  = (char *)NULL;
+  char* value = (char *)NULL;
+  int index = 0;
+
+  g_memset(filename,0,(sizeof(char)*256));
 
   names = list_create();
   names->auto_free = 1;
@@ -624,14 +633,16 @@ read_ini(void)
 int DEFAULT_CC
 main(int argc, char** argv)
 {
-  int pid;
-  char text[256];
-  char* display_text;
+  int pid = 0;
+  char text[256] = "";
+  char* display_text = (char *)NULL;
 
   g_init(); /* os_calls */
   read_ini();
   pid = g_getpid();
   LOG(1, ("main: app started pid %d(0x%8.8x)", pid, pid));
+
+  /*  set up signal handler  */
   g_signal_kill(term_signal_handler); /* SIGKILL */
   g_signal_terminate(term_signal_handler); /* SIGTERM */
   g_signal_user_interrupt(term_signal_handler); /* SIGINT */
@@ -650,7 +661,7 @@ main(int argc, char** argv)
   g_snprintf(text, 255, "xrdp_chansrv_%8.8x_thread_done", pid);
   g_thread_done_event = g_create_wait_obj(text);
   tc_thread_create(channel_thread_loop, 0);
-  while (!g_is_wait_obj_set(g_term_event))
+  while (g_term_event > 0 && !g_is_wait_obj_set(g_term_event))
   {
     if (g_obj_wait(&g_term_event, 1, 0, 0, 0) != 0)
     {
@@ -658,7 +669,7 @@ main(int argc, char** argv)
       break;
     }
   }
-  while (!g_is_wait_obj_set(g_thread_done_event))
+  while (g_thread_done_event > 0 && !g_is_wait_obj_set(g_thread_done_event))
   {
     /* wait for thread to exit */
     if (g_obj_wait(&g_thread_done_event, 1, 0, 0, 0) != 0)

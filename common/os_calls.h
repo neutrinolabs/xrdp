@@ -25,6 +25,10 @@
 #if !defined(OS_CALLS_H)
 #define OS_CALLS_H
 
+#ifndef NULL
+#define NULL 0
+#endif
+
 #include "arch.h"
 
 void APP_CC

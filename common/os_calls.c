@@ -616,8 +616,11 @@ g_tcp_select(int sck1, int sck2)
 {
   fd_set rfds;
   struct timeval time;
-  int max;
-  int rv;
+  int max = 0;
+  int rv = 0;
+
+  g_memset(&rfds,0,sizeof(fd_set));
+  g_memset(&time,0,sizeof(struct timeval));
 
   time.tv_sec = 0;
   time.tv_usec = 0;
@@ -668,9 +671,11 @@ g_create_wait_obj(char* name)
 #else
   tbus obj;
   struct sockaddr_un sa;
-  int len;
-  int sck;
-  int i;
+  size_t len = 0;
+  tbus sck = -1;
+  int i = 0;
+
+  g_memset(&sa,0,sizeof(struct sockaddr_un));
 
   sck = socket(PF_UNIX, SOCK_DGRAM, 0);
   if (sck < 0)
@@ -713,7 +718,9 @@ g_create_wait_obj_from_socket(tbus socket, int write)
 #ifdef _WIN32
   /* Create and return corresponding event handle for WaitForMultipleObjets */
   WSAEVENT event;
-  long lnetevent;
+  long lnetevent = 0;
+
+  g_memset(&event,0,sizeof(WSAEVENT));
 
   event = WSACreateEvent();
   lnetevent = (write ? FD_WRITE : FD_READ) | FD_CLOSE;
@@ -906,15 +913,20 @@ g_obj_wait(tbus* read_objs, int rcount, tbus* write_objs, int wcount,
   fd_set rfds;
   fd_set wfds;
   struct timeval time;
-  struct timeval* ptime;
-  int i;
-  int max;
-  int sck;
+  struct timeval* ptime = (struct timeval *)NULL;
+  int i = 0;
+  int res = 0;
+  int max = 0;
+  int sck = 0;
+
+  g_memset(&rfds,0,sizeof(fd_set));
+  g_memset(&wfds,0,sizeof(fd_set));
+  g_memset(&time,0,sizeof(struct timeval));
 
   max = 0;
   if (mstimeout < 1)
   {
-    ptime = 0;
+    ptime = (struct timeval *)NULL;
   }
   else
   {
@@ -927,23 +939,27 @@ g_obj_wait(tbus* read_objs, int rcount, tbus* write_objs, int wcount,
   for (i = 0; i < rcount; i++)
   {
     sck = (int)(read_objs[i]);
-    FD_SET(sck, &rfds);
-    if (sck > max)
-    {
-      max = sck;
+    if (sck > 0) {
+      FD_SET(sck, &rfds);
+      if (sck > max)
+      {
+        max = sck;
+      }
     }
   }
   for (i = 0; i < wcount; i++)
   {
     sck = (int)(write_objs[i]);
-    FD_SET(sck, &wfds);
-    if (sck > max)
-    {
-      max = sck;
+    if (sck > 0) {
+      FD_SET(sck, &wfds);
+      if (sck > max)
+      {
+        max = sck;
+      }
     }
   }
-  i = select(max + 1, &rfds, &wfds, 0, ptime);
-  if (i < 0)
+  res = select(max + 1, &rfds, &wfds, 0, ptime);
+  if (res < 0)
   {
     /* these are not really errors */
     if ((errno == EAGAIN) ||
@@ -1296,7 +1312,7 @@ g_file_get_size(const char* filename)
 int APP_CC
 g_strlen(const char* text)
 {
-  if (text == 0)
+  if (text == NULL)
   {
     return 0;
   }
@@ -1367,7 +1383,9 @@ g_strdup(const char* in)
   }
   len = g_strlen(in);
   p = (char*)g_malloc(len + 1, 0);
-  g_strcpy(p, in);
+  if (p != NULL) {
+    g_strcpy(p, in);
+  }
   return p;
 }
 
@@ -1916,14 +1934,18 @@ g_waitpid(int pid)
 #if defined(_WIN32)
   return 0;
 #else
-  int rv;
-
-  rv = waitpid(pid, 0, 0);
-  if (rv == -1)
-  {
-    if (errno == EINTR) /* signal occurred */
+  int rv = 0;
+  if (pid < 0) {
+    rv = -1;
+  }
+  else {
+    rv = waitpid(pid, 0, 0);
+    if (rv == -1)
     {
-      rv = 0;
+      if (errno == EINTR) /* signal occurred */
+      {
+        rv = 0;
+      }
     }
   }
   return rv;
@@ -2119,8 +2141,8 @@ g_time2(void)
   return (int)GetTickCount();
 #else
   struct tms tm;
-  clock_t num_ticks;
-
+  clock_t num_ticks = 0;
+  g_memset(&tm,0,sizeof(struct tms));
   num_ticks = times(&tm);
   return (int)(num_ticks * 10);
 #endif

@@ -170,6 +170,7 @@ xrdp_channel_process(struct xrdp_channel* self, struct stream* s,
     g_writeln("xrdp_channel_process, channel not found");
     return 1;
   }
+  rv = 0;
   in_uint32_le(s, length);
   in_uint32_le(s, flags);
   rv = xrdp_channel_call_callback(self, s, channel_id, length, flags);

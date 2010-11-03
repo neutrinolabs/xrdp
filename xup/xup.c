@@ -196,7 +196,7 @@ lib_mod_connect(struct mod* mod)
     i++;
     if (i >= 4)
     {
-      mod->server_msg(mod, "connect problem, giving up", 0);
+      mod->server_msg(mod, "connection problem, giving up", 0);
       break;
     }
     g_sleep(250);

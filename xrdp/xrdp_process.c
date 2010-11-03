@@ -133,7 +133,7 @@ xrdp_process_main_loop(struct xrdp_process* self)
   int robjs_count;
   int wobjs_count;
   int cont;
-  int timeout;
+  int timeout = 0;
   tbus robjs[32];
   tbus wobjs[32];
   tbus term_obj;

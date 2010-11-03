@@ -57,12 +57,15 @@ static tui8 g_unknown2[8] =
 static int APP_CC
 xrdp_rdp_read_config(struct xrdp_client_info* client_info)
 {
-  int index;
-  struct list* items;
-  struct list* values;
-  char* item;
-  char* value;
+  int index = 0;
+  struct list* items = (struct list *)NULL;
+  struct list* values = (struct list *)NULL;
+  char* item = (char *)NULL;
+  char* value = (char *)NULL;
   char cfg_file[256];
+
+  /* initialize (zero out) local variables: */
+  g_memset(cfg_file,0,sizeof(char) * 256);
 
   items = list_create();
   items->auto_free = 1;
@@ -124,7 +127,7 @@ xrdp_rdp_read_config(struct xrdp_client_info* client_info)
 struct xrdp_rdp* APP_CC
 xrdp_rdp_create(struct xrdp_session* session, struct trans* trans)
 {
-  struct xrdp_rdp* self;
+  struct xrdp_rdp* self = (struct xrdp_rdp *)NULL;
 
   DEBUG(("in xrdp_rdp_create"));
   self = (struct xrdp_rdp*)g_malloc(sizeof(struct xrdp_rdp), 1);
@@ -187,10 +190,10 @@ xrdp_rdp_init_data(struct xrdp_rdp* self, struct stream* s)
 int APP_CC
 xrdp_rdp_recv(struct xrdp_rdp* self, struct stream* s, int* code)
 {
-  int error;
-  int len;
-  int pdu_code;
-  int chan;
+  int error = 0;
+  int len = 0;
+  int pdu_code = 0;
+  int chan = 0;
 
   DEBUG(("in xrdp_rdp_recv"));
   if (s->next_packet == 0 || s->next_packet >= s->end)
@@ -248,7 +251,7 @@ xrdp_rdp_recv(struct xrdp_rdp* self, struct stream* s, int* code)
 int APP_CC
 xrdp_rdp_send(struct xrdp_rdp* self, struct stream* s, int pdu_type)
 {
-  int len;
+  int len = 0;
 
   DEBUG(("in xrdp_rdp_send"));
   s_pop_layer(s, rdp_hdr);
@@ -270,7 +273,7 @@ int APP_CC
 xrdp_rdp_send_data(struct xrdp_rdp* self, struct stream* s,
                    int data_pdu_type)
 {
-  int len;
+  int len = 0;
 
   DEBUG(("in xrdp_rdp_send_data"));
   s_pop_layer(s, rdp_hdr);
@@ -298,7 +301,7 @@ xrdp_rdp_send_data(struct xrdp_rdp* self, struct stream* s,
 int APP_CC
 xrdp_rdp_send_data_update_sync(struct xrdp_rdp* self)
 {
-  struct stream* s;
+  struct stream * s = (struct stream *)NULL;
 
   make_stream(s);
   init_stream(s, 8192);
@@ -327,8 +330,8 @@ xrdp_rdp_send_data_update_sync(struct xrdp_rdp* self)
 static int APP_CC
 xrdp_rdp_parse_client_mcs_data(struct xrdp_rdp* self)
 {
-  struct stream* p;
-  int i;
+  struct stream* p = (struct stream *)NULL;
+  int i = 0;
 
   p = &(self->sec_layer->client_mcs_data);
   p->p = p->data;
@@ -428,7 +431,8 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp* self)
   out_uint16_le(s, 0x200); /* Protocol version */
   out_uint16_le(s, 0); /* pad */
   out_uint16_le(s, 0); /* Compression types */
-  out_uint16_le(s, 0); /* pad use 0x40d for rdp packets, 0 for not */
+  //out_uint16_le(s, 0); /* pad use 0x40d for rdp packets, 0 for not */
+  out_uint16_le(s, 0x40d); /* pad use 0x40d for rdp packets, 0 for not */
   out_uint16_le(s, 0); /* Update capability */
   out_uint16_le(s, 0); /* Remote unshare capability */
   out_uint16_le(s, 0); /* Compression level */
@@ -487,10 +491,10 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp* self)
   out_uint8(s, 0); /* multi dest blt */
   out_uint8(s, 0); /* multi pat blt */
   out_uint8(s, 0); /* multi screen blt */
-  out_uint8(s, 0); /* multi rect */
+  out_uint8(s, 1); /* multi rect */
   out_uint8(s, 0); /* fast index */
-  out_uint8(s, 0); /* polygon */
-  out_uint8(s, 0); /* polygon */
+  out_uint8(s, 0); /* polygonSC ([MS-RDPEGDI], 2.2.2.2.1.1.2.16) */
+  out_uint8(s, 0); /* polygonCB ([MS-RDPEGDI], 2.2.2.2.1.1.2.17) */
   out_uint8(s, 0); /* polyline */
   out_uint8(s, 0); /* unused */
   out_uint8(s, 0); /* fast glyph */
@@ -644,8 +648,8 @@ static int APP_CC
 xrdp_process_capset_bmpcache2(struct xrdp_rdp* self, struct stream* s,
                               int len)
 {
-  int Bpp;
-  int i;
+  int Bpp = 0;
+  int i = 0;
 
   self->client_info.bitmap_cache_version = 2;
   Bpp = (self->client_info.bpp + 7) / 8;
