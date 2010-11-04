@@ -107,20 +107,27 @@ scp_v1_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
   if (scount == 0)
   {
     /* no disconnected sessions - start a new one */
-    log_message(&(g_cfg->log), LOG_LEVEL_INFO, "granted TS access to user %s", s->username);
+    if (0 != s->client_ip)
+    {
+      log_message(&(g_cfg->log), LOG_LEVEL_INFO, "++ created session (access granted): username %s, ip %s", s->username, s->client_ip);
+    }
+    else
+    {
+      log_message(&(g_cfg->log), LOG_LEVEL_INFO, "++ created session (access granted): username %s", s->username);
+    }
     if (SCP_SESSION_TYPE_XVNC == s->type)
     {
       log_message(&(g_cfg->log), LOG_LEVEL_INFO, "starting Xvnc session...");
       display = session_start(s->width, s->height, s->bpp, s->username,
                               s->password, data, SESMAN_SESSION_TYPE_XVNC,
-                              s->domain, s->program, s->directory);
+                              s->domain, s->program, s->directory, s->client_ip);
     }
     else
     {
       log_message(&(g_cfg->log), LOG_LEVEL_INFO, "starting X11rdp session...");
       display = session_start(s->width, s->height, s->bpp, s->username,
                               s->password, data, SESMAN_SESSION_TYPE_XRDP,
-                              s->domain, s->program, s->directory);
+                              s->domain, s->program, s->directory, s->client_ip);
     }
 
     e = scp_v1s_connect_new_session(c, display);
@@ -160,8 +167,14 @@ scp_v1_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
           display=sitem->display;
           /*e=scp_v1s_reconnect_session(c, sitem, display);*/
           e=scp_v1s_reconnect_session(c, display);
-          log_message(&(g_cfg->log), LOG_LEVEL_INFO, "User %s reconnected to session %d on port %d", \
-                      s->username, sitem->pid, display);
+          if (0 != s->client_ip)
+          {
+            log_message(&(g_cfg->log), LOG_LEVEL_INFO, "++ reconnected session: username %s, display :%d.0, session_pid %d, ip %s", s->username, display, sitem->pid, s->client_ip);
+          }
+          else
+          {
+            log_message(&(g_cfg->log), LOG_LEVEL_INFO, "++ reconnected session: username %s, display :%d.0, session_pid %d", s->username, display, sitem->pid);
+          }
           g_free(sitem);
         }
         break;

@@ -78,6 +78,9 @@ int
 scp_session_set_directory(struct SCP_SESSION* s, char* str);
 
 int
+scp_session_set_client_ip(struct SCP_SESSION* s, char* str);
+
+int
 scp_session_set_hostname(struct SCP_SESSION* s, char* str);
 
 int

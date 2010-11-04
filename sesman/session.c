@@ -45,6 +45,7 @@ static char* g_sync_password;
 static char* g_sync_domain;
 static char* g_sync_program;
 static char* g_sync_directory;
+static char* g_sync_client_ip;
 static tbus g_sync_data;
 static tui8 g_sync_type;
 static int g_sync_result;
@@ -305,7 +306,7 @@ wait_for_xserver(int display)
 static int APP_CC
 session_start_fork(int width, int height, int bpp, char* username,
                    char* password, tbus data, tui8 type, char* domain,
-                   char* program, char* directory)
+                   char* program, char* directory, char* client_ip)
 {
   int display = 0;
   int pid = 0;
@@ -556,6 +557,7 @@ session_start_fork(int width, int height, int bpp, char* username,
     temp->item->height = height;
     temp->item->bpp = bpp;
     temp->item->data = data;
+    g_strncpy(temp->item->client_ip, client_ip, 255);	/* store client ip data */
     g_strncpy(temp->item->name, username, 255);
 
     ltime = g_time1();
@@ -584,7 +586,7 @@ session_start_fork(int width, int height, int bpp, char* username,
 int DEFAULT_CC
 session_start(int width, int height, int bpp, char* username, char* password,
               long data, tui8 type, char* domain, char* program,
-              char* directory)
+              char* directory, char* client_ip)
 {
   int display;
 
@@ -599,6 +601,7 @@ session_start(int width, int height, int bpp, char* username, char* password,
   g_sync_domain = domain;
   g_sync_program = program;
   g_sync_directory = directory;
+  g_sync_client_ip = client_ip;
   g_sync_data = data;
   g_sync_type = type;
   /* set event for main thread to see */
@@ -620,7 +623,7 @@ session_sync_start(void)
   g_sync_result = session_start_fork(g_sync_width, g_sync_height, g_sync_bpp,
                                      g_sync_username, g_sync_password,
                                      g_sync_data, g_sync_type, g_sync_domain,
-                                     g_sync_program, g_sync_directory);
+                                     g_sync_program, g_sync_directory, g_sync_client_ip);
   lock_sync_sem_release();
   return 0;
 }
@@ -662,8 +665,7 @@ session_kill(int pid)
     if (tmp->item->pid == pid)
     {
       /* deleting the session */
-      log_message(&(g_cfg->log), LOG_LEVEL_INFO, "session %d - user %s - "
-                  "terminated", tmp->item->pid, tmp->item->name);
+      log_message(&(g_cfg->log), LOG_LEVEL_INFO, "++ terminated session:  username %s, display :%d.0, session_pid %d, ip %s", tmp->item->name, tmp->item->display, tmp->item->pid, tmp->item->client_ip);
       g_free(tmp->item);
       if (prev == 0)
       {

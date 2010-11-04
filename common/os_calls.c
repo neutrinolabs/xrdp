@@ -494,6 +494,35 @@ g_tcp_accept(int sck)
 
 /*****************************************************************************/
 void APP_CC
+g_write_ip_address(int rcv_sck, char* ip_address)
+{
+  struct sockaddr_in s;
+  struct in_addr in;
+  int len;
+  int ip_port;
+
+  memset(&s,0,sizeof(&s));
+  len = sizeof(s);
+  getpeername(rcv_sck,(struct sockaddr*)&s, &len);
+
+  memset(&in,0,sizeof(in));
+  in.s_addr = s.sin_addr.s_addr;
+
+  ip_port = ntohs(s.sin_port);
+  
+  if (ip_port != 0)
+  {
+    sprintf(ip_address, "%s:%d - socket: %d", inet_ntoa(in), ip_port, rcv_sck);
+  }
+  else
+  {
+    sprintf(ip_address, "NULL:NULL - socket: %d", rcv_sck);
+  }
+
+}
+
+/*****************************************************************************/
+void APP_CC
 g_sleep(int msecs)
 {
 #if defined(_WIN32)

@@ -75,6 +75,7 @@ struct session_item
   struct session_date connect_time;
   struct session_date disconnect_time;
   struct session_date idle_time;
+  char client_ip[256];
 };
 
 struct session_chain
@@ -104,7 +105,7 @@ session_get_bydata(char* name, int width, int height, int bpp, int type);
 int DEFAULT_CC
 session_start(int width, int height, int bpp, char* username, char* password,
               long data, tui8 type, char* domain, char* program,
-              char* directory);
+              char* directory, char* client_ip);
 
 /**
  *

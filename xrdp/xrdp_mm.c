@@ -172,11 +172,19 @@ xrdp_mm_send_login(struct xrdp_mm* self)
   index = g_strlen(self->wm->client_info->program);
   out_uint16_be(s, index);
   out_uint8a(s, self->wm->client_info->program, index);
+
   /* send directory */
   index = g_strlen(self->wm->client_info->directory);
   out_uint16_be(s, index);
   out_uint8a(s, self->wm->client_info->directory, index);
+
+  /* send client ip */
+  index = g_strlen(self->wm->client_info->client_ip);
+  out_uint16_be(s, index);
+  out_uint8a(s, self->wm->client_info->client_ip, index);
+
   s_mark_end(s);
+
   s_pop_layer(s, channel_hdr);
   out_uint32_be(s, 0); /* version */
   index = (int)(s->end - s->data);
