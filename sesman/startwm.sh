@@ -3,7 +3,7 @@
 # change the order in line below to run to run whatever window manager you
 # want, default to kde
 
-SESSIONS="gnome-session blackbox startxfce4 startkde xterm"
+SESSIONS="gnome-session blackbox fluxbox startxfce4 startkde xterm"
 
 #start the window manager
 wm_start()
