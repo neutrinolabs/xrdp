@@ -181,7 +181,7 @@ km_read_section(int fd, const char* section_name, struct xrdp_key_info* keymap)
         {
           code = g_atoi(name);
         }
-        if ((code >= 0) && (code < 128))
+        if ((code >= 0) && (code < 256))
         {
           pos1 = g_pos(value, ":");
           if (pos1 >= 0)
