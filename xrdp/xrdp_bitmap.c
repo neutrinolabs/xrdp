@@ -765,7 +765,6 @@ xrdp_bitmap_copy_box_with_crc(struct xrdp_bitmap* self,
   {
     return 1;
   }
-  crc = dest->crc;
   CRC_START(crc);
   if (self->bpp == 24)
   {

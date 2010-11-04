@@ -93,7 +93,6 @@ scp_v0_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
     if (display == 0)
     {
       auth_end(data);
-      data = 0;
       scp_v0s_deny_connection(c);
     }
     else
