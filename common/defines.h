@@ -66,6 +66,19 @@
 #define COLOR16(r, g, b) ((((r) >> 3) << 11) | (((g) >> 2) << 5) | ((b) >> 3))
 #define COLOR24RGB(r, g, b) (((r) << 16) | ((g) << 8) | (b))
 #define COLOR24BGR(r, g, b) (((b) << 16) | ((g) << 8) | (r))
+#define HRED(c) ((c & 0xff0000) >> 16)
+#define HGREEN(c) ((c & 0x00ff00) >> 8)
+#define HBLUE(c) ((c & 0x0000ff))
+#define HCOLOR(bpp,c) \
+( \
+  (bpp==8?COLOR8(HRED(c),HGREEN(c),HBLUE(c)): \
+   (bpp==15?COLOR15(HRED(c),HGREEN(c),HBLUE(c)): \
+    (bpp==16?COLOR16(HRED(c),HGREEN(c),HBLUE(c)): \
+      (bpp==24?COLOR24BGR(HRED(c),HGREEN(c),HBLUE(c)):c) \
+    ) \
+   ) \
+  ) \
+)
 #define SPLITCOLOR15(r, g, b, c) \
 { \
   r = (((c) >> 7) & 0xf8) | (((c) >> 12) & 0x7); \

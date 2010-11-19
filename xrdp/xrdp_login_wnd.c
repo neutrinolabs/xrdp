@@ -132,7 +132,7 @@ xrdp_wm_help_clicked(struct xrdp_bitmap* wnd)
   struct xrdp_bitmap* but;
 
   /* create help screen */
-  help = xrdp_bitmap_create(340, 300, wnd->wm->screen->bpp,
+  help = xrdp_bitmap_create(DEFAULT_WND_HELP_W, DEFAULT_WND_HELP_H, wnd->wm->screen->bpp,
                             WND_TYPE_WND, wnd->wm);
   list_insert_item(wnd->wm->screen->child_list, 0, (long)help);
   help->parent = wnd->wm->screen;
@@ -144,13 +144,13 @@ xrdp_wm_help_clicked(struct xrdp_bitmap* wnd)
   help->notify = xrdp_wm_login_help_notify;
   set_string(&help->caption1, "Login help");
   /* ok button */
-  but = xrdp_bitmap_create(60, 25, wnd->wm->screen->bpp,
+  but = xrdp_bitmap_create(DEFAULT_BUTTON_W, DEFAULT_BUTTON_H, wnd->wm->screen->bpp,
                            WND_TYPE_BUTTON, wnd->wm);
   list_insert_item(help->child_list, 0, (long)but);
   but->parent = help;
   but->owner = help;
-  but->left = 140;
-  but->top = 260;
+  but->left = ((DEFAULT_WND_HELP_W / 2) - (DEFAULT_BUTTON_W / 2)); /* center */
+  but->top = DEFAULT_WND_HELP_H - DEFAULT_BUTTON_H - 15;
   but->id = 1;
   but->tab_stop = 1;
   set_string(&but->caption1, "OK");
@@ -261,28 +261,28 @@ xrdp_wm_show_edits(struct xrdp_wm* self, struct xrdp_bitmap* combo)
       if (g_strncmp("ask", value, 3) == 0)
       {
         /* label */
-        b = xrdp_bitmap_create(70, 20, self->screen->bpp,
+        b = xrdp_bitmap_create(70, DEFAULT_EDIT_H, self->screen->bpp,
                                WND_TYPE_LABEL, self);
         list_insert_item(self->login_window->child_list, insert_index,
                               (long)b);
         insert_index++;
         b->parent = self->login_window;
         b->owner = self->login_window;
-        b->left = self->login_window->width >= 400 ? 155 : 5;
-        b->top = 60 + 25 * count;
+        b->left = self->login_window->width >= DEFAULT_WND_LOGIN_W ? 155 : 5;
+        b->top = DEFAULT_ELEMENT_TOP + DEFAULT_COMBO_H + 5 + (DEFAULT_EDIT_H+5) * count;
         b->id = 100 + 2 * count;
         name = (char*)list_get_item(mod->names, index);
         set_string(&b->caption1, name);
         /* edit */
-        b = xrdp_bitmap_create(140, 20, self->screen->bpp,
+        b = xrdp_bitmap_create(DEFAULT_EDIT_W, DEFAULT_EDIT_H, self->screen->bpp,
                                WND_TYPE_EDIT, self);
         list_insert_item(self->login_window->child_list, insert_index,
                               (long)b);
         insert_index++;
         b->parent = self->login_window;
         b->owner = self->login_window;
-        b->left = self->login_window->width >= 400 ? 230 : 70;
-        b->top = 60 + 25 * count;
+        b->left = self->login_window->width >= DEFAULT_WND_LOGIN_W ? DEFAULT_WND_LOGIN_W - DEFAULT_EDIT_W - 30 : 70;
+        b->top = DEFAULT_ELEMENT_TOP + DEFAULT_COMBO_H + 5 + (DEFAULT_EDIT_H+5) * count;
         b->id = 100 + 2 * count + 1;
         b->pointer = 1;
         b->tab_stop = 1;
@@ -455,8 +455,8 @@ xrdp_login_wnd_create(struct xrdp_wm* self)
   int log_height;
   int regular;
 
-  log_width = 400;
-  log_height = 200;
+  log_width = DEFAULT_WND_LOGIN_W;
+  log_height = DEFAULT_WND_LOGIN_H;
   regular = 1;
   if (self->screen->width < log_width)
   {
@@ -521,44 +521,44 @@ xrdp_login_wnd_create(struct xrdp_wm* self)
   }
 
   /* label */
-  but = xrdp_bitmap_create(60, 20, self->screen->bpp, WND_TYPE_LABEL, self);
+  but = xrdp_bitmap_create(60, DEFAULT_EDIT_H, self->screen->bpp, WND_TYPE_LABEL, self);
   list_add_item(self->login_window->child_list, (long)but);
   but->parent = self->login_window;
   but->owner = self->login_window;
   but->left = regular ? 155 : 5;
-  but->top = 35;
+  but->top = DEFAULT_ELEMENT_TOP;
   set_string(&but->caption1, "Module");
 
   /* combo */
-  combo = xrdp_bitmap_create(140, 20, self->screen->bpp, WND_TYPE_COMBO, self);
+  combo = xrdp_bitmap_create(DEFAULT_COMBO_W, DEFAULT_COMBO_H, self->screen->bpp, WND_TYPE_COMBO, self);
   list_add_item(self->login_window->child_list, (long)combo);
   combo->parent = self->login_window;
   combo->owner = self->login_window;
-  combo->left = regular ? 230 : 70;
-  combo->top = 35;
+  combo->left = regular ? DEFAULT_WND_LOGIN_W - DEFAULT_COMBO_W - 30 : 70;
+  combo->top = DEFAULT_ELEMENT_TOP;
   combo->id = 6;
   combo->tab_stop = 1;
   xrdp_wm_login_fill_in_combo(self, combo);
 
   /* button */
-  but = xrdp_bitmap_create(60, 25, self->screen->bpp, WND_TYPE_BUTTON, self);
+  but = xrdp_bitmap_create(DEFAULT_BUTTON_W, DEFAULT_BUTTON_H, self->screen->bpp, WND_TYPE_BUTTON, self);
   list_add_item(self->login_window->child_list, (long)but);
   but->parent = self->login_window;
   but->owner = self->login_window;
-  but->left = regular ? 180 : 30;
-  but->top = 160;
+  but->left = regular ? DEFAULT_WND_LOGIN_W - ((DEFAULT_BUTTON_W+10)*3) - 10 : 30;
+  but->top = DEFAULT_WND_LOGIN_H - DEFAULT_BUTTON_H - 15;
   but->id = 3;
   set_string(&but->caption1, "OK");
   but->tab_stop = 1;
   self->login_window->default_button = but;
 
   /* button */
-  but = xrdp_bitmap_create(60, 25, self->screen->bpp, WND_TYPE_BUTTON, self);
+  but = xrdp_bitmap_create(DEFAULT_BUTTON_W, DEFAULT_BUTTON_H, self->screen->bpp, WND_TYPE_BUTTON, self);
   list_add_item(self->login_window->child_list, (long)but);
   but->parent = self->login_window;
   but->owner = self->login_window;
-  but->left = regular ? 250 : ((log_width - 30) - 60);
-  but->top = 160;
+  but->left = regular ? DEFAULT_WND_LOGIN_W - ((DEFAULT_BUTTON_W+10)*2) - 10 : ((log_width - 30) - DEFAULT_BUTTON_W);
+  but->top = DEFAULT_WND_LOGIN_H - DEFAULT_BUTTON_H - 15;
   but->id = 2;
   set_string(&but->caption1, "Cancel");
   but->tab_stop = 1;
@@ -567,12 +567,12 @@ xrdp_login_wnd_create(struct xrdp_wm* self)
   if (regular)
   {
     /* button */
-    but = xrdp_bitmap_create(60, 25, self->screen->bpp, WND_TYPE_BUTTON, self);
+    but = xrdp_bitmap_create(DEFAULT_BUTTON_W, DEFAULT_BUTTON_H, self->screen->bpp, WND_TYPE_BUTTON, self);
     list_add_item(self->login_window->child_list, (long)but);
     but->parent = self->login_window;
     but->owner = self->login_window;
-    but->left = 320;
-    but->top = 160;
+    but->left = DEFAULT_WND_LOGIN_W - (DEFAULT_BUTTON_W+10) - 10;
+    but->top = DEFAULT_WND_LOGIN_H - DEFAULT_BUTTON_H - 15;
     but->id = 1;
     set_string(&but->caption1, "Help");
     but->tab_stop = 1;
