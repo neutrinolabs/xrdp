@@ -1,3 +1,4 @@
+EXTRA_DIST = xrdp.ini rsakeys.ini ad24b.bmp ad256.bmp xrdp24b.bmp xrdp256.bmp sans-10.fv1 cursor0.cur cursor1.cur xrdp.h xrdp_types.h
 
 if XRDP_DEBUG
 EXTRA_DEFINES = -DXRDP_DEBUG

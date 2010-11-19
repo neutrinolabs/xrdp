@@ -1,3 +1,4 @@
+EXTRA_DIST = libxrdp.h libxrdpinc.h
 
 if XRDP_DEBUG
 EXTRA_DEFINES = -DXRDP_DEBUG

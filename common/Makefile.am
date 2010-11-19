@@ -1,3 +1,5 @@
+EXTRA_DIST = d3des.h arch.h os_calls.h list.h file.h parse.h defines.h file_loc.h log.h os_calls.h ssl_calls.h thread_calls.h trans.h xrdp_constants.h
+
 
 AM_CFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \

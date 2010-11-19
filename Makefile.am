@@ -1,3 +1,4 @@
+EXTRA_DIST = bootstrap
 
 if XRDP_FREERDP
 FREERDPDIR = freerdp
