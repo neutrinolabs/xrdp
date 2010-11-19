@@ -1,3 +1,4 @@
+EXTRA_DIST = chansrv.h clipboard.h devredir.h sound.h
 
 AM_CFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
