@@ -227,6 +227,7 @@ struct xrdp_wm
   int white;
   int red;
   int green;
+  int background;
   /* dragging info */
   int dragging;
   int draggingx;
@@ -369,6 +370,21 @@ struct xrdp_bitmap
 
 #define NUM_FONTS 0x4e00
 #define DEFAULT_FONT_NAME "sans-10.fv1"
+
+#define DEFAULT_ELEMENT_TOP   35
+#define DEFAULT_BUTTON_W      60
+#define DEFAULT_BUTTON_H      23
+#define DEFAULT_COMBO_W       140
+#define DEFAULT_COMBO_H       21
+#define DEFAULT_EDIT_W        140
+#define DEFAULT_EDIT_H        21
+#define DEFAULT_WND_LOGIN_W   400
+#define DEFAULT_WND_LOGIN_H   200
+#define DEFAULT_WND_HELP_W    340
+#define DEFAULT_WND_HELP_H    300
+#define DEFAULT_WND_LOG_W     400
+#define DEFAULT_WND_LOG_H     400
+#define DEFAULT_WND_SPECIAL_H 100
 
 /* font */
 struct xrdp_font

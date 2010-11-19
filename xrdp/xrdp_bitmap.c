@@ -1190,10 +1190,10 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
     xrdp_painter_fill_rect(painter, self, self->width - 1, 0, 1, self->height);
     /* black left line */
     painter->fg_color = self->wm->black;
-    xrdp_painter_fill_rect(painter, self, 1, 1, 1, self->height - 2);
+    xrdp_painter_fill_rect(painter, self, 1, 1, 1, self->height - 3);
     /* black top line */
     painter->fg_color = self->wm->black;
-    xrdp_painter_fill_rect(painter, self, 1, 1, self->width - 2, 1);
+    xrdp_painter_fill_rect(painter, self, 1, 1, self->width - 3, 1);
     /* draw text */
     painter->fg_color = self->wm->black;
     if (self->password_char != 0)
@@ -1267,10 +1267,10 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
     xrdp_painter_fill_rect(painter, self, self->width - 1, 0, 1, self->height);
     /* black left line */
     painter->fg_color = self->wm->black;
-    xrdp_painter_fill_rect(painter, self, 1, 1, 1, self->height - 2);
+    xrdp_painter_fill_rect(painter, self, 1, 1, 1, self->height - 3);
     /* black top line */
     painter->fg_color = self->wm->black;
-    xrdp_painter_fill_rect(painter, self, 1, 1, self->width - 2, 1);
+    xrdp_painter_fill_rect(painter, self, 1, 1, self->width - 3, 1);
     /* draw text */
     if (self->parent->focused_control == self)
     {
@@ -1287,13 +1287,28 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
     y = 2;
     w = (self->width - x) - 2;
     h = self->height - 4;
+    /* looks better with a background around */
+    painter->fg_color = self->wm->grey;
+    xrdp_painter_fill_rect(painter, self, x, y, w, h);
     if (self->state == BUTTON_STATE_UP) /* 0 */
     {
-      xrdp_bitmap_draw_button(self, painter, x, y, w, h, 0);
+      xrdp_bitmap_draw_button(self, painter, x+1, y+1, w-1, h-1, 0);
     }
     else
     {
-      xrdp_bitmap_draw_button(self, painter, x, y, w, h, 1);
+      xrdp_bitmap_draw_button(self, painter, x+1, y+1, w-1, h-1, 1);
+    }
+    /* draw the arrow */
+    w = w / 2;
+    x = x + (w / 2) + 1;
+    h = (h / 2) + 2;
+    y = y + (h / 2) + 1;
+    painter->fg_color = self->wm->black;
+    for (i=w; i>0; i=i-2) 
+    {
+      xrdp_painter_fill_rect(painter, self, x, y, i, 1);
+      y++;
+      x = x + 1;
     }
   }
   else if (self->type == WND_TYPE_SPECIAL) /* 8 special */

@@ -284,12 +284,127 @@ xrdp_wm_set_pointer(struct xrdp_wm* self, int cache_idx)
 }
 
 /*****************************************************************************/
+/* convert hex string to int */
+unsigned int xrdp_wm_htoi (const char *ptr)
+{
+  unsigned int value = 0;
+  char ch = *ptr;
+
+  while (ch == ' ' || ch == '\t')
+    ch = *(++ptr);
+
+  for (;;)
+  {
+    if (ch >= '0' && ch <= '9')
+      value = (value << 4) + (ch - '0');
+    else if (ch >= 'A' && ch <= 'F')
+      value = (value << 4) + (ch - 'A' + 10);
+    else if (ch >= 'a' && ch <= 'f')
+      value = (value << 4) + (ch - 'a' + 10);
+    else
+      return value;
+    ch = *(++ptr);
+  }
+}
+
+/*****************************************************************************/
 int APP_CC
 xrdp_wm_load_static_colors(struct xrdp_wm* self)
 {
   int bindex;
   int gindex;
   int rindex;
+
+  int fd;
+  int index;
+  char* val;
+  struct list* names;
+  struct list* values;
+  char cfg_file[256];
+
+  /* initialize with defaults */
+  self->black      = HCOLOR(self->screen->bpp,0x000000);
+  self->grey       = HCOLOR(self->screen->bpp,0xc0c0c0);
+  self->dark_grey  = HCOLOR(self->screen->bpp,0x808080);
+  self->blue       = HCOLOR(self->screen->bpp,0x0000ff);
+  self->dark_blue  = HCOLOR(self->screen->bpp,0x00007f);
+  self->white      = HCOLOR(self->screen->bpp,0xffffff);
+  self->red        = HCOLOR(self->screen->bpp,0xff0000);
+  self->green      = HCOLOR(self->screen->bpp,0x00ff00);
+  self->background = HCOLOR(self->screen->bpp,0x000000);
+
+  /* now load them from the globals in xrdp.ini if defined */
+  g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
+  fd = g_file_open(cfg_file);
+  if (fd > 0)
+  {
+    names = list_create();
+    names->auto_free = 1;
+    values = list_create();
+    values->auto_free = 1;
+    if (file_read_section(fd, "globals", names, values) == 0)
+    {
+      for (index = 0; index < names->count; index++)
+      {
+        val = (char*)list_get_item(names, index);
+        if (val != 0)
+        {
+          if (g_strcasecmp(val, "black") == 0)
+          {
+            val = (char*)list_get_item(values, index);
+            self->black = HCOLOR(self->screen->bpp,xrdp_wm_htoi(val));            
+          }
+          else if (g_strcasecmp(val, "grey") == 0)
+          {
+            val = (char*)list_get_item(values, index);
+            self->grey = HCOLOR(self->screen->bpp,xrdp_wm_htoi(val));
+          }
+          else if (g_strcasecmp(val, "dark_grey") == 0)
+          {
+            val = (char*)list_get_item(values, index);
+            self->dark_grey = HCOLOR(self->screen->bpp,xrdp_wm_htoi(val));
+          }
+          else if (g_strcasecmp(val, "blue") == 0)
+          {
+            val = (char*)list_get_item(values, index);
+            self->blue = HCOLOR(self->screen->bpp,xrdp_wm_htoi(val));
+          }
+          else if (g_strcasecmp(val, "dark_blue") == 0)
+          {
+            val = (char*)list_get_item(values, index);
+            self->dark_blue = HCOLOR(self->screen->bpp,xrdp_wm_htoi(val));
+          }
+          else if (g_strcasecmp(val, "white") == 0)
+          {
+            val = (char*)list_get_item(values, index);
+            self->white = HCOLOR(self->screen->bpp,xrdp_wm_htoi(val));
+          }
+          else if (g_strcasecmp(val, "red") == 0)
+          {
+            val = (char*)list_get_item(values, index);
+            self->red = HCOLOR(self->screen->bpp,xrdp_wm_htoi(val));
+          }
+          else if (g_strcasecmp(val, "green") == 0)
+          {
+            val = (char*)list_get_item(values, index);
+            self->green = HCOLOR(self->screen->bpp,xrdp_wm_htoi(val));
+          }
+          else if (g_strcasecmp(val, "background") == 0)
+          {
+            val = (char*)list_get_item(values, index);
+            self->background = HCOLOR(self->screen->bpp,xrdp_wm_htoi(val));
+          }
+        }
+      }
+    }
+    list_delete(names);
+    list_delete(values);
+    g_file_close(fd);
+  } 
+  else
+  { 
+    g_writeln("xrdp_wm_load_static_colors: Could not read xrdp.ini file %s", cfg_file);
+  }
 
   if (self->screen->bpp == 8)
   {
@@ -307,48 +422,7 @@ xrdp_wm_load_static_colors(struct xrdp_wm* self)
         }
       }
     }
-    self->black     = COLOR8(0, 0, 0);
-    self->grey      = COLOR8(0xc0, 0xc0, 0xc0);
-    self->dark_grey = COLOR8(0x80, 0x80, 0x80);
-    self->blue      = COLOR8(0x00, 0x00, 0xff);
-    self->dark_blue = COLOR8(0x00, 0x00, 0x7f);
-    self->white     = COLOR8(0xff, 0xff, 0xff);
-    self->red       = COLOR8(0xff, 0x00, 0x00);
-    self->green     = COLOR8(0x00, 0xff, 0x00);
     xrdp_wm_send_palette(self);
-  }
-  else if (self->screen->bpp == 15)
-  {
-    self->black     = COLOR15(0, 0, 0);
-    self->grey      = COLOR15(0xc0, 0xc0, 0xc0);
-    self->dark_grey = COLOR15(0x80, 0x80, 0x80);
-    self->blue      = COLOR15(0x00, 0x00, 0xff);
-    self->dark_blue = COLOR15(0x00, 0x00, 0x7f);
-    self->white     = COLOR15(0xff, 0xff, 0xff);
-    self->red       = COLOR15(0xff, 0x00, 0x00);
-    self->green     = COLOR15(0x00, 0xff, 0x00);
-  }
-  else if (self->screen->bpp == 16)
-  {
-    self->black     = COLOR16(0, 0, 0);
-    self->grey      = COLOR16(0xc0, 0xc0, 0xc0);
-    self->dark_grey = COLOR16(0x80, 0x80, 0x80);
-    self->blue      = COLOR16(0x00, 0x00, 0xff);
-    self->dark_blue = COLOR16(0x00, 0x00, 0x7f);
-    self->white     = COLOR16(0xff, 0xff, 0xff);
-    self->red       = COLOR16(0xff, 0x00, 0x00);
-    self->green     = COLOR16(0x00, 0xff, 0x00);
-  }
-  else if (self->screen->bpp == 24)
-  {
-    self->black     = COLOR24BGR(0, 0, 0);
-    self->grey      = COLOR24BGR(0xc0, 0xc0, 0xc0);
-    self->dark_grey = COLOR24BGR(0x80, 0x80, 0x80);
-    self->blue      = COLOR24BGR(0x00, 0x00, 0xff);
-    self->dark_blue = COLOR24BGR(0x00, 0x00, 0x7f);
-    self->white     = COLOR24BGR(0xff, 0xff, 0xff);
-    self->red       = COLOR24BGR(0xff, 0x00, 0x00);
-    self->green     = COLOR24BGR(0x00, 0xff, 0x00);
   }
   return 0;
 }
@@ -391,7 +465,7 @@ xrdp_wm_init(struct xrdp_wm* self)
 
   xrdp_wm_load_static_colors(self);
   xrdp_wm_load_static_pointers(self);
-  self->screen->bg_color = self->black;
+  self->screen->bg_color = self->background;
   if (self->session->client_info->rdp_autologin)
   {
     g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
@@ -1200,7 +1274,7 @@ xrdp_wm_pu(struct xrdp_wm* self, struct xrdp_bitmap* control)
   {
     return 0;
   }
-  self->popup_wnd = xrdp_bitmap_create(control->width, 100,
+  self->popup_wnd = xrdp_bitmap_create(control->width, DEFAULT_WND_SPECIAL_H,
                                        self->screen->bpp,
                                        WND_TYPE_SPECIAL, self);
   self->popup_wnd->popped_from = control;
@@ -1455,8 +1529,8 @@ xrdp_wm_log_msg(struct xrdp_wm* self, char* msg)
   list_add_item(self->log, (long)g_strdup(msg));
   if (self->log_wnd == 0)
   {
-    w = 400;
-    h = 400;
+    w = DEFAULT_WND_LOG_W;
+    h = DEFAULT_WND_LOG_H;
     xoffset = 10;
     yoffset = 10;
     if (self->screen->width < w)
@@ -1480,12 +1554,12 @@ xrdp_wm_log_msg(struct xrdp_wm* self, char* msg)
     self->log_wnd->top = yoffset;
     set_string(&(self->log_wnd->caption1), "Connection Log");
     /* ok button */
-    but = xrdp_bitmap_create(60, 25, self->screen->bpp, WND_TYPE_BUTTON, self);
+    but = xrdp_bitmap_create(DEFAULT_BUTTON_W, DEFAULT_BUTTON_H, self->screen->bpp, WND_TYPE_BUTTON, self);
     list_insert_item(self->log_wnd->child_list, 0, (long)but);
     but->parent = self->log_wnd;
     but->owner = self->log_wnd;
-    but->left = (w - 60) - xoffset;
-    but->top = (h - 25) - yoffset;
+    but->left = (w - DEFAULT_BUTTON_W) - xoffset;
+    but->top = (h - DEFAULT_BUTTON_H) - yoffset;
     but->id = 1;
     but->tab_stop = 1;
     set_string(&but->caption1, "OK");
