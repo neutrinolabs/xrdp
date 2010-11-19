@@ -1,3 +1,4 @@
+EXTRA_DIST = sesman.ini.5 xrdp.ini.5 xrdp.8 xrdp-sesman.8 xrdp-sesrun.8
 
 xrdpman5dir=$(mandir)/man5
 
