@@ -1,3 +1,4 @@
+EXTRA_DIST = xrdp-sesman
 
 if SESMAN_NOPAM
 PAMFILE =
