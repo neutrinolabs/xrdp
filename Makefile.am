@@ -1,3 +1,4 @@
+EXTRA_DIST = bootstrap
 
 SUBDIRS = \
   common \

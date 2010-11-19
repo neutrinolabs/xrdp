@@ -1,4 +1,4 @@
-EXTRA_DIST = sesman.ini startwm.sh
+EXTRA_DIST = sesman.ini startwm.sh sesman.h access.h auth.h config.h env.h lock.h scp.h scp_v0.h scp_v1.h scp_v1_mng.h session.h sig.h thread.h
 
 AM_CFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
