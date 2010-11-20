@@ -1,3 +1,4 @@
+EXTRA_DIST = xrdp-freerdp.h
 
 AM_CFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
