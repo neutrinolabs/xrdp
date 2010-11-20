@@ -23,6 +23,10 @@ AC_ARG_ENABLE(xrdpdebug, AS_HELP_STRING([--enable-xrdpdebug],
               [Build debug (default: no)]),
               [xrdpdebug=true], [xrdpdebug=false])
 AM_CONDITIONAL(XRDP_DEBUG, [test x$xrdpdebug = xtrue])
+AC_ARG_ENABLE(freerdp, AS_HELP_STRING([--enable-freerdp],
+              [Build freerdp module (default: no)]),
+              [freerdp=true], [freerdp=false])
+AM_CONDITIONAL(XRDP_FREERDP, [test x$freerdp = xtrue])
 
 # checking for openssl
 AC_CHECK_HEADER([openssl/rc4.h], [],

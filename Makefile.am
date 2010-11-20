@@ -1,11 +1,17 @@
 
+if XRDP_FREERDP
+FREERDPDIR = freerdp
+else
+FREERDPDIR =
+endif
+
 SUBDIRS = \
   common \
   vnc \
   rdp \
   xup \
   mc \
-  freerdp \
+  $(FREERDPDIR) \
   libxrdp \
   xrdp \
   sesman \
