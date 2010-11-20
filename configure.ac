@@ -58,6 +58,7 @@ AC_CONFIG_FILES([Makefile
                  libxrdp/Makefile
                  xup/Makefile
                  mc/Makefile
+                 freerdp/Makefile
                  xrdp/Makefile
                  sesman/Makefile
                  sesman/libscp/Makefile

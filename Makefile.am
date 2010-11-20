@@ -5,6 +5,7 @@ SUBDIRS = \
   rdp \
   xup \
   mc \
+  freerdp \
   libxrdp \
   xrdp \
   sesman \

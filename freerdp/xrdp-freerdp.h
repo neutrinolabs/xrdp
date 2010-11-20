@@ -26,6 +26,9 @@
 #include "os_calls.h"
 #include "defines.h"
 
+/* this is the freerdp main header */
+#include "freerdp.h"
+
 #define CURRENT_MOD_VER 2
 
 struct mod
@@ -82,7 +85,7 @@ struct mod
   int (*server_send_to_channel)(struct mod* v, int channel_id,
                                 char* data, int data_len,
                                 int total_data_len, int flags);
-  int (*server_bell_trigger)(struct vnc* v);
+  int (*server_bell_trigger)(struct mod* v);
   long server_dumby[100 - 25]; /* align, 100 minus the number of server
                                   functions above */
   /* common */
