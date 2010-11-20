@@ -3,6 +3,7 @@ AUTHORS
 autom4te.cache/
 ChangeLog
 config_ac.h
+config_ac-h.in
 config.c
 config.guess
 config.log
@@ -19,4 +20,3 @@ Makefile.in
 missing
 NEWS
 README
-config_ac-h.in
