@@ -86,7 +86,7 @@ struct mod
   int (*server_send_to_channel)(struct mod* v, int channel_id,
                                 char* data, int data_len,
                                 int total_data_len, int flags);
-  int (*server_bell_trigger)(struct vnc* v);
+  int (*server_bell_trigger)(struct mod* v);
   tbus server_dumby[100 - 25]; /* align, 100 minus the number of server
                                   functions above */
   /* common */
