@@ -41,9 +41,9 @@ fi
 
 # checking for Xlib, Xfixes
 AC_CHECK_HEADER([X11/Xlib.h], [],
-  [AC_MSG_ERROR([please install libx11-dev])])
+  [AC_MSG_ERROR([please install libx11-dev or libX11-devel])])
 AC_CHECK_HEADER([X11/extensions/Xfixes.h], [],
-  [AC_MSG_ERROR([please install libx11-dev and libxfixes-dev])],
+  [AC_MSG_ERROR([please install libx11-dev and libxfixes-dev or libXfixes-devel])],
   [#include <X11/Xlib.h>])
 
 libdir="${libdir}/xrdp";
