@@ -27,7 +27,7 @@
 #include "defines.h"
 
 /* this is the freerdp main header */
-#include "freerdp.h"
+#include <freerdp.h>
 
 #define CURRENT_MOD_VER 2
 
