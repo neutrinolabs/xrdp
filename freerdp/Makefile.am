@@ -8,7 +8,7 @@ AM_CFLAGS = \
 
 INCLUDES = \
   -I$(top_srcdir)/common \
-  -I$(top_srcdir)/../freerdp/include/freerdp
+  $(FREERDP_CFLAGS)
 
 lib_LTLIBRARIES = \
   libxrdpfreerdp.la
@@ -16,4 +16,5 @@ lib_LTLIBRARIES = \
 libxrdpfreerdp_la_SOURCES = xrdp-freerdp.c
 
 libxrdpfreerdp_la_LIBADD = \
-  $(top_srcdir)/common/libcommon.la
+  $(top_srcdir)/common/libcommon.la \
+  $(FREERDP_LIBS)
