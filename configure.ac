@@ -43,7 +43,7 @@ then
   fi
 fi
 
-AS_IF([test "x$enable_freerdp" = "xyes"], [PKG_CHECK_MODULES(FREERDP, freerdp >= 0.8.1) ], [] )
+AS_IF( [test "x$enable_freerdp" = "xyes"] , [PKG_CHECK_MODULES(FREERDP, freerdp >= 0.8.1)] )
 
 # checking for Xlib, Xfixes
 AC_CHECK_HEADER([X11/Xlib.h], [],
