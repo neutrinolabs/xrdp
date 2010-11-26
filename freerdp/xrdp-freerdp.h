@@ -97,4 +97,6 @@ struct mod
   int width;
   int height;
   int bpp;
+  struct rdp_set* settings;
+  struct rdp_inst* inst;
 };
