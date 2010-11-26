@@ -1313,6 +1313,16 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
   }
   else if (self->type == WND_TYPE_SPECIAL) /* 8 special */
   {
+    if (self->popped_from != 0)
+    {
+      /* change height if there are too many items in the list */
+      i = xrdp_painter_text_height(painter, "W");
+      i = self->popped_from->string_list->count * i;
+      if (i > self->height)
+      {
+        self->height = i;
+      }
+    }
     painter->fg_color = self->wm->white;
     xrdp_painter_fill_rect(painter, self, 0, 0, self->width, self->height);
     /* draw the list items */
