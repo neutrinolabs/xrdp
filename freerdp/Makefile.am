@@ -13,7 +13,7 @@ INCLUDES = \
 lib_LTLIBRARIES = \
   libxrdpfreerdp.la
 
-libxrdpfreerdp_la_SOURCES = xrdp-freerdp.c
+libxrdpfreerdp_la_SOURCES = xrdp-freerdp.c xrdp-color.c
 
 libxrdpfreerdp_la_LIBADD = \
   $(top_srcdir)/common/libcommon.la \

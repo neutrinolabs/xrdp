@@ -21,6 +21,7 @@
 */
 
 #include "xrdp-freerdp.h"
+#include "xrdp-color.h"
 
 #define GET_MOD(_inst) ((struct mod*)((_inst)->param1))
 #define SET_MOD(_inst, _mod) ((_inst)->param1) = _mod
@@ -38,6 +39,18 @@ struct my_glyph
   char* data;
   int width;
   int height;
+};
+
+struct my_cursor
+{
+  char* andmask;
+  int andbpp;
+  char* xormask;
+  int xorbpp;
+  int width;
+  int height;
+  int hotx;
+  int hoty;
 };
 
 /*****************************************************************************/
@@ -310,9 +323,19 @@ ui_paint_bitmap(rdpInst* inst, int x, int y, int cx, int cy, int width,
                 int height, uint8* data)
 {
   struct mod* mod;
+  char* bmpdata;
 
   mod = GET_MOD(inst);
-  mod->server_paint_rect(mod, x, y, cx, cy, data, width, height, 0, 0);
+  bmpdata = convert_bitmap(mod->settings->server_depth, mod->bpp,
+                           data, width, height, mod->cmap);
+  if (bmpdata != 0)
+  {
+    mod->server_paint_rect(mod, x, y, cx, cy, bmpdata, width, height, 0, 0);
+  }
+  if (bmpdata != (char*)data)
+  {
+    g_free(bmpdata);
+  }
 }
 
 /******************************************************************************/
@@ -341,6 +364,8 @@ ui_rect(rdpInst* inst, int x, int y, int cx, int cy, int color)
   struct mod* mod;
 
   mod = GET_MOD(inst);
+  color = convert_color(mod->settings->server_depth, mod->bpp,
+                        color, mod->cmap);
   mod->server_set_fgcolor(mod, color);
   mod->server_fill_rect(mod, x, y, cx, cy);
 }
@@ -428,7 +453,11 @@ ui_patblt(rdpInst* inst, uint8 opcode, int x, int y, int cx, int cy,
 
   mod = GET_MOD(inst);
   mod->server_set_opcode(mod, opcode);
+  fgcolor = convert_color(mod->settings->server_depth, mod->bpp,
+                          fgcolor, mod->cmap);
   mod->server_set_fgcolor(mod, fgcolor);
+  bgcolor = convert_color(mod->settings->server_depth, mod->bpp,
+                          bgcolor, mod->cmap);
   mod->server_set_bgcolor(mod, bgcolor);
   mod->server_set_mixmode(mod, 1);
   if (brush->bd != 0)
@@ -471,13 +500,24 @@ static void DEFAULT_CC
 ui_memblt(rdpInst* inst, uint8 opcode, int x, int y, int cx, int cy,
           RD_HBITMAP src, int srcx, int srcy)
 {
-  struct my_bitmap* bm;
+  struct my_bitmap* bitmap;
   struct mod* mod;
+  char* bmpdata;
 
   mod = GET_MOD(inst);
-  bm = (struct my_bitmap*)src;
-  mod->server_paint_rect(mod, x, y, cx, cy, bm->data,
-                         bm->width, bm->height, srcx, srcy);
+  bitmap = (struct my_bitmap*)src;
+  bmpdata = convert_bitmap(mod->settings->server_depth, mod->bpp,
+                           bitmap->data, bitmap->width,
+                           bitmap->height, mod->cmap);
+  if (bmpdata != 0)
+  {
+    mod->server_paint_rect(mod, x, y, cx, cy, bmpdata,
+                           bitmap->width, bitmap->height, srcx, srcy);
+  }
+  if (bmpdata != bitmap->data)
+  {
+    g_free(bmpdata);
+  }
 }
 
 /******************************************************************************/
@@ -556,14 +596,32 @@ ui_resize_window(rdpInst* inst)
 static void DEFAULT_CC
 ui_set_cursor(rdpInst* inst, RD_HCURSOR cursor)
 {
+  struct mod* mod;
+  struct my_cursor* cur;
+
   g_writeln("ui_set_cursor:");
+  mod = GET_MOD(inst);
+  cur = (struct my_cursor*)cursor;
+  if (cur != 0)
+  {
+    //mod->server_set_cursor(mod, cur->hotx, cur->hoty, cur->
+  }
 }
 
 /******************************************************************************/
 static void DEFAULT_CC
 ui_destroy_cursor(rdpInst* inst, RD_HCURSOR cursor)
 {
+  struct my_cursor* cur;
+
   g_writeln("ui_destroy_cursor:");
+  cur = (struct my_cursor*)cursor;
+  if (cur != 0)
+  {
+    g_free(cur->andmask);
+    g_free(cur->xormask);
+  }
+  g_free(cur);
 }
 
 /******************************************************************************/
@@ -572,8 +630,15 @@ ui_create_cursor(rdpInst* inst, unsigned int x, unsigned int y,
                  int width, int height, uint8* andmask,
                  uint8* xormask, int bpp)
 {
+  struct my_cursor* cur;
+
   g_writeln("ui_create_cursor:");
-  return 0;
+  cur = (struct my_cursor*)g_malloc(sizeof(struct my_cursor), 1);
+  cur->width = width;
+  cur->height = height;
+  cur->hotx = x;
+  cur->hoty = y;
+  return (RD_HCURSOR)cur;
 }
 
 /******************************************************************************/
@@ -594,8 +659,32 @@ ui_set_default_cursor(rdpInst* inst)
 static RD_HPALETTE DEFAULT_CC
 ui_create_colormap(rdpInst* inst, RD_PALETTE* colors)
 {
+  struct mod* mod;
+  int index;
+  int red;
+  int green;
+  int blue;
+  int pixel;
+  int count;
+  int* cmap;
+
+  mod = GET_MOD(inst);
   g_writeln("ui_create_colormap:");
-  return 0;
+  count = 256;
+  if (count > colors->ncolors)
+  {
+    count = colors->ncolors;
+  }
+  cmap = (int*)g_malloc(256 * 4, 1);
+  for (index = 0; index < count; index++)
+  {
+    red = colors->colors[index].red;
+    green = colors->colors[index].green;
+    blue = colors->colors[index].blue;
+    pixel = COLOR24RGB(red, green, blue);
+    cmap[index] = pixel;
+  }
+  return (RD_HPALETTE)cmap;
 }
 
 /******************************************************************************/
@@ -609,7 +698,12 @@ ui_move_pointer(rdpInst* inst, int x, int y)
 static void DEFAULT_CC
 ui_set_colormap(rdpInst* inst, RD_HPALETTE map)
 {
+  struct mod* mod;
+
+  mod = GET_MOD(inst);
   g_writeln("ui_set_colormap:");
+  g_memcpy(mod->cmap, map, 256 * 4);
+  g_free(map);
 }
 
 /******************************************************************************/
@@ -664,6 +758,8 @@ mod_init(void)
   mod->mod_check_wait_objs = mod_check_wait_objs;
   mod->settings = (struct rdp_set*)g_malloc(sizeof(struct rdp_set), 1);
 
+  mod->settings->width = 1280;
+  mod->settings->height = 1024;
   mod->settings->encryption = 1;
   mod->settings->server_depth = 16;
   mod->settings->bitmap_cache = 1;

@@ -103,4 +103,5 @@ struct mod
   int bpp;
   struct rdp_set* settings;
   struct rdp_inst* inst;
+  int cmap[256];
 };
