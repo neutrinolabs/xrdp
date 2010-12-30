@@ -604,7 +604,12 @@ ui_set_cursor(rdpInst* inst, RD_HCURSOR cursor)
   cur = (struct my_cursor*)cursor;
   if (cur != 0)
   {
-    //mod->server_set_cursor(mod, cur->hotx, cur->hoty, cur->
+    mod->server_set_cursor(mod, cur->hotx, cur->hoty,
+                           cur->andmask, cur->xormask);
+  }
+  else
+  {
+    g_writeln("ui_set_cursor: nil cursor");
   }
 }
 
@@ -625,6 +630,8 @@ ui_destroy_cursor(rdpInst* inst, RD_HCURSOR cursor)
 }
 
 /******************************************************************************/
+/* andmask = mask = 32 * 32 / 8
+   xormask = data = 32 * 32 * 3 */
 static RD_HCURSOR DEFAULT_CC
 ui_create_cursor(rdpInst* inst, unsigned int x, unsigned int y,
                  int width, int height, uint8* andmask,
@@ -632,12 +639,15 @@ ui_create_cursor(rdpInst* inst, unsigned int x, unsigned int y,
 {
   struct my_cursor* cur;
 
-  g_writeln("ui_create_cursor:");
+  g_writeln("ui_create_cursor: x %d y %d width %d height %d bpp %d",
+            x, y, width, height, bpp);
   cur = (struct my_cursor*)g_malloc(sizeof(struct my_cursor), 1);
   cur->width = width;
   cur->height = height;
   cur->hotx = x;
   cur->hoty = y;
+  cur->andmask = g_malloc(32 * 32 * 4, 1);
+  cur->xormask = g_malloc(32 * 32 * 4, 1);
   return (RD_HCURSOR)cur;
 }
 
