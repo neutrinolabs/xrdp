@@ -621,6 +621,12 @@ lib_framebuffer_update(struct vnc* v)
           error = v->server_set_cursor(v, x, y, cursor_data, cursor_mask);
         }
       }
+      else if (encoding == 0xffffff21) /* desktop size */
+      {
+        v->mod_width = cx;
+        v->mod_height = cy;
+        error = v->server_reset(v, cx, cy, v->mod_bpp);
+      }
       else
       {
         g_sprintf(text, "error in lib_framebuffer_update encoding = %8.8x",
@@ -1060,12 +1066,13 @@ connections", 0);
     init_stream(s, 8192);
     out_uint8(s, 2);
     out_uint8(s, 0);
-    out_uint16_be(s, 3);
+    out_uint16_be(s, 4);
     out_uint32_be(s, 0); /* raw */
     out_uint32_be(s, 1); /* copy rect */
     out_uint32_be(s, 0xffffff11); /* cursor */
+    out_uint32_be(s, 0xffffff21); /* desktop size */
     v->server_msg(v, "sending encodings", 0);
-    error = lib_send(v, s->data, 4 + 3 * 4);
+    error = lib_send(v, s->data, 4 + 4 * 4);
   }
   if (error == 0)
   {
