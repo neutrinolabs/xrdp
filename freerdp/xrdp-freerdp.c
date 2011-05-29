@@ -34,13 +34,6 @@ struct my_bitmap
   int bpp;
 };
 
-struct my_glyph
-{
-  char* data;
-  int width;
-  int height;
-};
-
 struct my_cursor
 {
   char* andmask;
@@ -63,7 +56,14 @@ lib_mod_start(struct mod* mod, int w, int h, int bpp)
   mod->width = w;
   mod->height = h;
   mod->bpp = bpp;
-  mod->settings->server_depth = mod->bpp;
+  if (bpp == 24)
+  {
+    mod->settings->server_depth = 32;
+  }
+  else
+  {
+    mod->settings->server_depth = mod->bpp;
+  }
   mod->settings->width = mod->width;
   mod->settings->height = mod->height;
   LIB_DEBUG(mod, "out lib_mod_start");
@@ -91,67 +91,70 @@ lib_mod_event(struct mod* mod, int msg, long param1, long param2,
               long param3, long param4)
 {
   LIB_DEBUG(mod, "in lib_mod_event");
+  int ext;
+
+  //g_writeln("%d %d %d %d %d", msg, param1, param2, param3, param4);
   switch (msg)
   {
     case 15:
-      mod->inst->rdp_send_input(mod->inst, RDP_INPUT_SCANCODE,
-                                param4, param3, 0);
+      ext = param4 & 0x100 ? 1 : 0;
+      mod->inst->rdp_send_input_scancode(mod->inst, 0, ext, param3);
       break;
     case 16:
-      mod->inst->rdp_send_input(mod->inst, RDP_INPUT_SCANCODE,
-                                param4, param3, 0);
+      ext = param4 & 0x100 ? 1 : 0;
+      mod->inst->rdp_send_input_scancode(mod->inst, 1, ext, param3);
       break;
     case 17:
       mod->inst->rdp_sync_input(mod->inst, param4);
       break;
     case 100:
-      mod->inst->rdp_send_input(mod->inst, RDP_INPUT_MOUSE, MOUSE_FLAG_MOVE,
-                                param1, param2);
+      mod->inst->rdp_send_input_mouse(mod->inst, PTRFLAGS_MOVE,
+                                      param1, param2);
       break;
     case 101:
-      mod->inst->rdp_send_input(mod->inst, RDP_INPUT_MOUSE,
-                                MOUSE_FLAG_BUTTON1, param1, param2);
+      mod->inst->rdp_send_input_mouse(mod->inst, PTRFLAGS_BUTTON1,
+                                      param1, param2);
       break;
     case 102:
-      mod->inst->rdp_send_input(mod->inst, RDP_INPUT_MOUSE,
-                                MOUSE_FLAG_BUTTON1 | MOUSE_FLAG_DOWN,
-                                param1, param2);
+      mod->inst->rdp_send_input_mouse(mod->inst,
+                                      PTRFLAGS_BUTTON1 | PTRFLAGS_DOWN,
+                                      param1, param2);
       break;
     case 103:
-      mod->inst->rdp_send_input(mod->inst, RDP_INPUT_MOUSE,
-                                MOUSE_FLAG_BUTTON2, param1, param2);
+      mod->inst->rdp_send_input_mouse(mod->inst,
+                                      PTRFLAGS_BUTTON2, param1, param2);
       break;
     case 104:
-      mod->inst->rdp_send_input(mod->inst, RDP_INPUT_MOUSE,
-                                MOUSE_FLAG_BUTTON2 | MOUSE_FLAG_DOWN,
-                                param1, param2);
+      mod->inst->rdp_send_input_mouse(mod->inst,
+                                      PTRFLAGS_BUTTON2 | PTRFLAGS_DOWN,
+                                      param1, param2);
       break;
     case 105:
-      mod->inst->rdp_send_input(mod->inst, RDP_INPUT_MOUSE,
-                                MOUSE_FLAG_BUTTON3, param1, param2);
+      mod->inst->rdp_send_input_mouse(mod->inst,
+                                      PTRFLAGS_BUTTON3, param1, param2);
       break;
     case 106:
-      mod->inst->rdp_send_input(mod->inst, RDP_INPUT_MOUSE,
-                                MOUSE_FLAG_BUTTON3 | MOUSE_FLAG_DOWN,
-                                param1, param2);
+      mod->inst->rdp_send_input_mouse(mod->inst,
+                                      PTRFLAGS_BUTTON3 | PTRFLAGS_DOWN,
+                                      param1, param2);
       break;
     case 107:
-      mod->inst->rdp_send_input(mod->inst, RDP_INPUT_MOUSE,
-                                MOUSE_FLAG_BUTTON4, param1, param2);
+      //mod->inst->rdp_send_input_mouse(mod->inst,
+      //                                MOUSE_FLAG_BUTTON4, param1, param2);
       break;
     case 108:
-      mod->inst->rdp_send_input(mod->inst, RDP_INPUT_MOUSE,
-                                MOUSE_FLAG_BUTTON4 | MOUSE_FLAG_DOWN,
-                                param1, param2);
+      //mod->inst->rdp_send_input_mouse(mod->inst,
+      //                                MOUSE_FLAG_BUTTON4 | MOUSE_FLAG_DOWN,
+      //                                param1, param2);
       break;
     case 109:
-      mod->inst->rdp_send_input(mod->inst, RDP_INPUT_MOUSE,
-                                MOUSE_FLAG_BUTTON5, param1, param2);
+      //mod->inst->rdp_send_input_mouse(mod->inst,
+      //                                MOUSE_FLAG_BUTTON5, param1, param2);
       break;
     case 110:
-      mod->inst->rdp_send_input(mod->inst, RDP_INPUT_MOUSE,
-                                MOUSE_FLAG_BUTTON5 | MOUSE_FLAG_DOWN,
-                                param1, param2);
+      //mod->inst->rdp_send_input_mouse(mod->inst,
+      //                                MOUSE_FLAG_BUTTON5 | MOUSE_FLAG_DOWN,
+      //                                param1, param2);
       break;
   }
   LIB_DEBUG(mod, "out lib_mod_event");
@@ -305,15 +308,27 @@ ui_create_bitmap(rdpInst* inst, int width, int height, uint8* data)
   struct my_bitmap* bm;
   struct mod* mod;
   int size;
+  int bpp;
+  char* bmpdata;
 
   mod = GET_MOD(inst);
+  bpp = mod->bpp == 24 ? 32 : mod->bpp;
   bm = (struct my_bitmap*)g_malloc(sizeof(struct my_bitmap), 1);
   bm->width = width;
   bm->height = height;
-  bm->bpp = mod->bpp;
-  size = width * height * (bm->bpp / 8);
-  bm->data = (char*)g_malloc(size, 0);
-  g_memcpy(bm->data, data, size);
+  bm->bpp = bpp;
+  bmpdata = convert_bitmap(mod->settings->server_depth, bpp,
+                           data, width, height, mod->cmap);
+  if (bmpdata == (char*)data)
+  {
+    size = width * height * ((bpp + 7) / 8);
+    bm->data = (char*)g_malloc(size, 0);
+    g_memcpy(bm->data, bmpdata, size);
+  }
+  else
+  {
+    bm->data = bmpdata;
+  }
   return bm;
 }
 
@@ -359,7 +374,7 @@ ui_line(rdpInst* inst, uint8 opcode, int startx, int starty, int endx,
 
 /******************************************************************************/
 static void DEFAULT_CC
-ui_rect(rdpInst* inst, int x, int y, int cx, int cy, int color)
+ui_rect(rdpInst* inst, int x, int y, int cx, int cy, uint32 color)
 {
   struct mod* mod;
 
@@ -373,7 +388,7 @@ ui_rect(rdpInst* inst, int x, int y, int cx, int cy, int color)
 /******************************************************************************/
 static void DEFAULT_CC
 ui_polygon(rdpInst* inst, uint8 opcode, uint8 fillmode, RD_POINT* point,
-           int npoints, RD_BRUSH* brush, int bgcolor, int fgcolor)
+           int npoints, RD_BRUSH* brush, uint32 bgcolor, uint32 fgcolor)
 {
   g_writeln("ui_polygon:");
 }
@@ -389,14 +404,52 @@ ui_polyline(rdpInst* inst, uint8 opcode, RD_POINT* points, int npoints,
 /******************************************************************************/
 static void DEFAULT_CC
 ui_ellipse(rdpInst* inst, uint8 opcode, uint8 fillmode, int x, int y,
-           int cx, int cy, RD_BRUSH* brush, int bgcolor, int fgcolor)
+           int cx, int cy, RD_BRUSH* brush, uint32 bgcolor, uint32 fgcolor)
 {
   g_writeln("ui_ellipse:");
 }
 
 /******************************************************************************/
 static void DEFAULT_CC
-ui_start_draw_glyphs(rdpInst* inst, int bgcolor, int fgcolor)
+ui_add_char(rdpInst * inst, uint8 font, uint16 character, sint16 offset,
+            sint16 baseline, uint16 width, uint16 height, uint8 * data)
+{
+  struct mod* mod;
+
+  //g_writeln("ui_add_char:");
+  mod = GET_MOD(inst);
+  mod->server_add_char(mod, font, character, offset, baseline,
+                       width, height, (char*)data);
+}
+
+/******************************************************************************/
+static void DEFAULT_CC
+ui_draw_text(rdpInst* inst, uint8 font, uint8 flags,
+             uint8 opcode, int mixmode,
+             int x, int y, int clipx, int clipy, int clipcx, int clipcy,
+             int boxx, int boxy, int boxcx, int boxcy, RD_BRUSH * brush,
+             uint32 bgcolor, uint32 fgcolor, uint8 * text, uint8 length)
+{
+  struct mod* mod;
+
+  //g_writeln("ui_draw_text: flags %d mixmode %d x %d y %d", flags, mixmode, x, y);
+  //g_writeln("%d %d %d %d %d %d %d %d", clipx, clipy, clipcx, clipcy, boxx, boxy, boxcx, boxcy);
+  mod = GET_MOD(inst);
+  fgcolor = convert_color(mod->settings->server_depth, mod->bpp,
+                          fgcolor, mod->cmap);
+  mod->server_set_fgcolor(mod, fgcolor);
+  bgcolor = convert_color(mod->settings->server_depth, mod->bpp,
+                          bgcolor, mod->cmap);
+  mod->server_set_bgcolor(mod, bgcolor);
+  mod->server_draw_text(mod, font, flags, mixmode,
+                        clipx, clipy, clipx + clipcx, clipy + clipcy,
+                        boxx, boxy, boxx + boxcx, boxy + boxcy, x, y,
+                        (char*)text, length);
+}
+
+/******************************************************************************/
+static void DEFAULT_CC
+ui_start_draw_glyphs(rdpInst* inst, uint32 bgcolor, uint32 fgcolor)
 {
   g_writeln("ui_start_draw_glyphs:");
 }
@@ -447,9 +500,11 @@ ui_destblt(rdpInst* inst, uint8 opcode, int x, int y, int cx, int cy)
 /******************************************************************************/
 static void DEFAULT_CC
 ui_patblt(rdpInst* inst, uint8 opcode, int x, int y, int cx, int cy,
-          RD_BRUSH* brush, int bgcolor, int fgcolor)
+          RD_BRUSH* brush, uint32 bgcolor, uint32 fgcolor)
 {
   struct mod* mod;
+  uint8 idata[8];
+  int index;
 
   mod = GET_MOD(inst);
   mod->server_set_opcode(mod, opcode);
@@ -464,8 +519,12 @@ ui_patblt(rdpInst* inst, uint8 opcode, int x, int y, int cx, int cy,
   {
     if (brush->bd->color_code == 1) /* 8x8 1 bpp */
     {
+      for (index = 0; index < 8; index++)
+      {
+        idata[index] = ~(brush->bd->data[index]);
+      }
       mod->server_set_brush(mod, brush->xorigin, brush->yorigin,
-                            brush->style, brush->bd->data);
+                            brush->style, idata);
     }
     else
     {
@@ -474,8 +533,12 @@ ui_patblt(rdpInst* inst, uint8 opcode, int x, int y, int cx, int cy,
   }
   else
   {
+    for (index = 0; index < 8; index++)
+    {
+      idata[index] = ~(brush->pattern[index]);
+    }
     mod->server_set_brush(mod, brush->xorigin, brush->yorigin,
-                          brush->style, brush->pattern);
+                          brush->style, idata);
   }
   mod->server_fill_rect(mod, x, y, cx, cy);
   mod->server_set_opcode(mod, 0xcc);
@@ -506,25 +569,17 @@ ui_memblt(rdpInst* inst, uint8 opcode, int x, int y, int cx, int cy,
 
   mod = GET_MOD(inst);
   bitmap = (struct my_bitmap*)src;
-  bmpdata = convert_bitmap(mod->settings->server_depth, mod->bpp,
-                           bitmap->data, bitmap->width,
-                           bitmap->height, mod->cmap);
-  if (bmpdata != 0)
-  {
-    mod->server_paint_rect(mod, x, y, cx, cy, bmpdata,
-                           bitmap->width, bitmap->height, srcx, srcy);
-  }
-  if (bmpdata != bitmap->data)
-  {
-    g_free(bmpdata);
-  }
+  mod->server_set_opcode(mod, opcode);
+  mod->server_paint_rect(mod, x, y, cx, cy, bitmap->data,
+                         bitmap->width, bitmap->height, srcx, srcy);
+  mod->server_set_opcode(mod, 0xcc);
 }
 
 /******************************************************************************/
 static void DEFAULT_CC
 ui_triblt(rdpInst* inst, uint8 opcode, int x, int y, int cx, int cy,
           RD_HBITMAP src, int srcx, int srcy, RD_BRUSH* brush,
-          int bgcolor, int fgcolor)
+          uint32 bgcolor, uint32 fgcolor)
 {
   g_writeln("ui_triblt:");
 }
@@ -533,29 +588,15 @@ ui_triblt(rdpInst* inst, uint8 opcode, int x, int y, int cx, int cy,
 static RD_HGLYPH DEFAULT_CC
 ui_create_glyph(rdpInst* inst, int width, int height, uint8* data)
 {
-  struct my_glyph* gg;
-  int size;
-
   g_writeln("ui_create_glyph:");
-  gg = (struct my_glyph*)g_malloc(sizeof(struct my_glyph), 1);
-  gg->width = width;
-  gg->height = height;
-  size = ((height * ((width + 7) / 8)) + 3) & (~3);
-  gg->data = (char*)g_malloc(size, 0);
-  g_memcpy(gg->data, data, size);
-  return gg;
+  return 0;
 }
 
 /******************************************************************************/
 static void DEFAULT_CC
 ui_destroy_glyph(rdpInst* inst, RD_HGLYPH glyph)
 {
-  struct my_glyph* gg;
-
   g_writeln("ui_destroy_glyph:");
-  gg = (struct my_glyph*)glyph;
-  g_free(gg->data);
-  g_free(gg);
 }
 
 /******************************************************************************/
@@ -599,13 +640,13 @@ ui_set_cursor(rdpInst* inst, RD_HCURSOR cursor)
   struct mod* mod;
   struct my_cursor* cur;
 
-  g_writeln("ui_set_cursor:");
+  //g_writeln("ui_set_cursor:");
   mod = GET_MOD(inst);
   cur = (struct my_cursor*)cursor;
   if (cur != 0)
   {
     mod->server_set_cursor(mod, cur->hotx, cur->hoty,
-                           cur->andmask, cur->xormask);
+                           cur->xormask, cur->andmask);
   }
   else
   {
@@ -619,7 +660,7 @@ ui_destroy_cursor(rdpInst* inst, RD_HCURSOR cursor)
 {
   struct my_cursor* cur;
 
-  g_writeln("ui_destroy_cursor:");
+  //g_writeln("ui_destroy_cursor:");
   cur = (struct my_cursor*)cursor;
   if (cur != 0)
   {
@@ -629,6 +670,89 @@ ui_destroy_cursor(rdpInst* inst, RD_HCURSOR cursor)
   g_free(cur);
 }
 
+#define RGB24(_r, _g, _b)  \
+  (_r << 16) | (_g << 8) | _b;
+
+/******************************************************************************/
+static int
+l_get_pixel(tui8* data, int x, int y, int width, int height, int bpp)
+{
+  int start;
+  int shift;
+  tui16* src16;
+  tui32* src32;
+  int red, green, blue;
+
+  switch (bpp)
+  {
+    case 1:
+      width = (width + 7) / 8;
+      start = (y * width) + x / 8;
+      shift = x % 8;
+      return (data[start] & (0x80 >> shift)) != 0;
+    case 8:
+      return data[y * width + x];
+    case 15:
+    case 16:
+      src16 = (uint16*) data;
+      return src16[y * width + x];
+    case 24:
+      data += y * width * 3;
+      data += x * 3;
+      red = data[0];
+      green = data[1];
+      blue = data[2];
+      return RGB24(red, green, blue);
+    case 32:
+      src32 = (uint32*) data;
+      return src32[y * width + x];
+    default:
+      g_writeln("l_get_pixel: unknown bpp %d", bpp);
+      break;
+  }
+
+  return 0;
+}
+
+/******************************************************************************/
+static void
+l_set_pixel(tui8* data, int x, int y, int width, int height,
+            int bpp, int pixel)
+{
+  int start;
+  int shift;
+  int* dst32;
+  tui8* dst8;
+
+  if (bpp == 1)
+  {
+    width = (width + 7) / 8;
+    start = (y * width) + x / 8;
+    shift = x % 8;
+    if (pixel)
+      data[start] = data[start] | (0x80 >> shift);
+    else
+      data[start] = data[start] & ~(0x80 >> shift);
+  }
+  else if (bpp == 24)
+  {
+    dst8 = data + (y * width + x) * 3;
+    *(dst8++) = (pixel >> 16) & 0xff;
+    *(dst8++) = (pixel >> 8) & 0xff;
+    *(dst8++) = (pixel >> 0) & 0xff;
+  }
+  else if (bpp == 32)
+  {
+    dst32 = (int*) data;
+    dst32[y * width + x] = pixel;
+  }
+  else
+  {
+    g_writeln("l_set_pixel: unknown bpp %d", bpp);
+  }
+}
+
+
 /******************************************************************************/
 /* andmask = mask = 32 * 32 / 8
    xormask = data = 32 * 32 * 3 */
@@ -637,8 +761,16 @@ ui_create_cursor(rdpInst* inst, unsigned int x, unsigned int y,
                  int width, int height, uint8* andmask,
                  uint8* xormask, int bpp)
 {
+  struct mod* mod;
   struct my_cursor* cur;
+  int i;
+  int j;
+  int jj;
+  int apixel;
+  int xpixel;
+  char* dst;
 
+  mod = GET_MOD(inst);
   g_writeln("ui_create_cursor: x %d y %d width %d height %d bpp %d",
             x, y, width, height, bpp);
   cur = (struct my_cursor*)g_malloc(sizeof(struct my_cursor), 1);
@@ -648,6 +780,18 @@ ui_create_cursor(rdpInst* inst, unsigned int x, unsigned int y,
   cur->hoty = y;
   cur->andmask = g_malloc(32 * 32 * 4, 1);
   cur->xormask = g_malloc(32 * 32 * 4, 1);
+  for (j = 0; j < height; j++)
+  {
+    jj = (bpp != 1) ? j : (height - 1) - j;
+    for (i = 0; i < width; i++)
+    {
+      apixel = l_get_pixel(andmask, i, jj, width, height, 1);
+      xpixel = l_get_pixel(xormask, i, jj, width, height, bpp);
+      xpixel = convert_color(bpp, 24, xpixel, mod->cmap);
+      l_set_pixel(cur->andmask, i, j, width, height, 1, apixel);
+      l_set_pixel(cur->xormask, i, j, width, height, 24, xpixel);
+    }
+  }
   return (RD_HCURSOR)cur;
 }
 
@@ -667,7 +811,7 @@ ui_set_default_cursor(rdpInst* inst)
 
 /******************************************************************************/
 static RD_HPALETTE DEFAULT_CC
-ui_create_colormap(rdpInst* inst, RD_PALETTE* colors)
+ui_create_palette(rdpInst* inst, RD_PALETTE* colors)
 {
   struct mod* mod;
   int index;
@@ -679,18 +823,18 @@ ui_create_colormap(rdpInst* inst, RD_PALETTE* colors)
   int* cmap;
 
   mod = GET_MOD(inst);
-  g_writeln("ui_create_colormap:");
+  g_writeln("ui_create_palette:");
   count = 256;
-  if (count > colors->ncolors)
+  if (count > colors->count)
   {
-    count = colors->ncolors;
+    count = colors->count;
   }
   cmap = (int*)g_malloc(256 * 4, 1);
   for (index = 0; index < count; index++)
   {
-    red = colors->colors[index].red;
-    green = colors->colors[index].green;
-    blue = colors->colors[index].blue;
+    red = colors->entries[index].red;
+    green = colors->entries[index].green;
+    blue = colors->entries[index].blue;
     pixel = COLOR24RGB(red, green, blue);
     cmap[index] = pixel;
   }
@@ -706,12 +850,12 @@ ui_move_pointer(rdpInst* inst, int x, int y)
 
 /******************************************************************************/
 static void DEFAULT_CC
-ui_set_colormap(rdpInst* inst, RD_HPALETTE map)
+ui_set_palette(rdpInst* inst, RD_HPALETTE map)
 {
   struct mod* mod;
 
   mod = GET_MOD(inst);
-  g_writeln("ui_set_colormap:");
+  g_writeln("ui_set_palette:");
   g_memcpy(mod->cmap, map, 256 * 4);
   g_free(map);
 }
@@ -747,12 +891,36 @@ ui_channel_data(rdpInst* inst, int chan_id, char* data, int data_size,
 }
 
 /******************************************************************************/
+static RD_BOOL DEFAULT_CC
+ui_authenticate(rdpInst * inst)
+{
+  return 1;
+}
+
+/******************************************************************************/
+static int DEFAULT_CC
+ui_decode(rdpInst * inst, uint8 * data, int data_size)
+{
+  return 0;
+}
+
+/******************************************************************************/
+static RD_BOOL DEFAULT_CC
+ui_check_certificate(rdpInst * inst, const char * fingerprint,
+                     const char * subject, const char * issuer, RD_BOOL verified)
+{
+  return 1;
+}
+
+/******************************************************************************/
 struct mod* EXPORT_CC
 mod_init(void)
 {
   struct mod* mod;
 
-  freerdp_global_init();
+  //g_writeln("1");
+  //freerdp_global_init();
+  //g_writeln("2");
   mod = (struct mod*)g_malloc(sizeof(struct mod), 1);
   mod->size = sizeof(struct mod);
   mod->version = CURRENT_MOD_VER;
@@ -771,6 +939,8 @@ mod_init(void)
   mod->settings->width = 1280;
   mod->settings->height = 1024;
   mod->settings->encryption = 1;
+  mod->settings->rdp_security = 1;
+  mod->settings->tls_security = 1;
   mod->settings->server_depth = 16;
   mod->settings->bitmap_cache = 1;
   mod->settings->bitmap_compression = 1;
@@ -778,6 +948,7 @@ mod_init(void)
     PERF_DISABLE_WALLPAPER | PERF_DISABLE_FULLWINDOWDRAG | PERF_DISABLE_MENUANIMATIONS;
   mod->settings->new_cursors = 1;
   mod->settings->rdp_version = 5;
+  mod->settings->text_flags = 1;
 
   mod->inst = freerdp_new(mod->settings);
   if (mod->inst == 0)
@@ -800,6 +971,8 @@ mod_init(void)
   mod->inst->ui_polygon = ui_polygon;
   mod->inst->ui_polyline = ui_polyline;
   mod->inst->ui_ellipse = ui_ellipse;
+  mod->inst->ui_add_char = ui_add_char;
+  mod->inst->ui_draw_text = ui_draw_text;
   mod->inst->ui_start_draw_glyphs = ui_start_draw_glyphs;
   mod->inst->ui_draw_glyph = ui_draw_glyph;
   mod->inst->ui_end_draw_glyphs = ui_end_draw_glyphs;
@@ -821,13 +994,18 @@ mod_init(void)
   mod->inst->ui_create_cursor = ui_create_cursor;
   mod->inst->ui_set_null_cursor = ui_set_null_cursor;
   mod->inst->ui_set_default_cursor = ui_set_default_cursor;
-  mod->inst->ui_create_colormap = ui_create_colormap;
+  mod->inst->ui_create_palette = ui_create_palette;
   mod->inst->ui_move_pointer = ui_move_pointer;
-  mod->inst->ui_set_colormap = ui_set_colormap;
+  mod->inst->ui_set_palette = ui_set_palette;
   mod->inst->ui_create_surface = ui_create_surface;
   mod->inst->ui_set_surface = ui_set_surface;
   mod->inst->ui_destroy_surface = ui_destroy_surface;
   mod->inst->ui_channel_data = ui_channel_data;
+
+  mod->inst->ui_authenticate = ui_authenticate;
+  mod->inst->ui_decode = ui_decode;
+  mod->inst->ui_check_certificate = ui_check_certificate;
+
   return mod;
 }
 
@@ -842,6 +1020,6 @@ mod_exit(struct mod* mod)
   freerdp_free(mod->inst);
   g_free(mod->settings);
   g_free(mod);
-  freerdp_global_finish();
+  //freerdp_global_finish();
   return 0;
 }

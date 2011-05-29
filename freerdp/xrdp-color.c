@@ -179,6 +179,16 @@ convert_bitmap(int in_bpp, int out_bpp, char* bmpdata,
     }
     return out;
   }
+  if ((in_bpp == 32) && (out_bpp == 24))
+  {
+    return bmpdata;
+  }
+  if ((in_bpp == 32) && (out_bpp == 32))
+  {
+    return bmpdata;
+  }
+  g_writeln("convert_bitmap: error unknown conversion from %d to %d",
+            in_bpp, out_bpp);
   return 0;
 }
 
@@ -192,6 +202,11 @@ convert_color(int in_bpp, int out_bpp, int in_color, int* palette)
   int green;
   int blue;
 
+  if ((in_bpp == 1) && (out_bpp == 24))
+  {
+    pixel = in_color == 0 ? 0 : 0xffffff;
+    return pixel;
+  }
   if ((in_bpp == 8) && (out_bpp == 8))
   {
     pixel = palette[in_color];
@@ -242,5 +257,15 @@ convert_color(int in_bpp, int out_bpp, int in_color, int* palette)
   {
     return in_color;
   }
+  if ((in_bpp == 32) && (out_bpp == 24))
+  {
+    return in_color;
+  }
+  if ((in_bpp == 32) && (out_bpp == 32))
+  {
+    return in_color;
+  }
+  g_writeln("convert_color: error unknown conversion from %d to %d",
+            in_bpp, out_bpp);
   return 0;
 }
