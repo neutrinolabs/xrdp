@@ -285,6 +285,7 @@ main(int argc, char** argv)
 #endif
 
   g_init();
+  ssl_init();
   /* check compiled endian with actual endian */
   test = 1;
   host_be = !((int)(*(unsigned char*)(&test)));
