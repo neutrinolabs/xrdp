@@ -21,6 +21,8 @@
 */
 
 #include <stdlib.h> /* needed for openssl headers */
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 #include <openssl/rc4.h>
 #include <openssl/md5.h>
 #include <openssl/sha.h>
@@ -36,6 +38,22 @@
 #else
 #define OLD_RSA_GEN1
 #endif
+
+/*****************************************************************************/
+int
+ssl_init(void)
+{
+  SSL_load_error_strings();
+  SSL_library_init();
+  return 0;
+}
+
+/*****************************************************************************/
+int
+ssl_finish(void)
+{
+  return 0;
+}
 
 /* rc4 stuff */
 

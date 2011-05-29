@@ -22,4 +22,5 @@ libcommon_la_SOURCES = \
 
 libcommon_la_LIBADD = \
   -lcrypto \
+  -lssl \
   -lpthread

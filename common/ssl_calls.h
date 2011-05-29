@@ -23,6 +23,10 @@
 
 #include "arch.h"
 
+int
+ssl_init(void);
+int
+ssl_finish(void);
 void* APP_CC
 ssl_rc4_info_create(void);
 void APP_CC
