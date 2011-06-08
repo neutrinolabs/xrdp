@@ -95,6 +95,25 @@ xrdp_rdp_read_config(struct xrdp_client_info* client_info)
         client_info->use_bitmap_comp = 1;
       }
     }
+    else if (g_strcasecmp(item, "auto_login") == 0)
+    {
+      if (g_strcasecmp(value, "yes") == 0 ||
+          g_strcasecmp(value, "true") == 0 ||
+          g_strcasecmp(value, "1") == 0)
+      {
+        // explicit enable
+        client_info->rdp_autologin = 1;
+        client_info->domain[0] = 0; // ignore client domain, use first entry
+      }
+      else
+      if (g_strcasecmp(value, "no") == 0 ||
+          g_strcasecmp(value, "false") == 0 ||
+          g_strcasecmp(value, "0") == 0)
+      {
+        // explicit disable
+        client_info->rdp_autologin = 0;
+      }
+    }
     else if (g_strcasecmp(item, "crypt_level") == 0)
     {
       if (g_strcasecmp(value, "low") == 0)
