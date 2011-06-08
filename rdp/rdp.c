@@ -254,6 +254,10 @@ lib_mod_set_param(struct mod* mod, char* name, char* value)
   {
     mod->keylayout = g_atoi(value);
   }
+  else if (g_strncasecmp(name, "program", 255) == 0)
+  {
+    g_strncpy(mod->program, value, 255);
+  }
   return 0;
 }
 
