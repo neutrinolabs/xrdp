@@ -204,7 +204,7 @@ xrdp_mm_send_login(struct xrdp_mm* self)
 /* this goes through the login_names looking for one called 'aname'
    then it copies the corisponding login_values item into 'dest'
    'dest' must be at least 'dest_len' + 1 bytes in size */
-static int APP_CC
+int APP_CC
 xrdp_mm_get_value(struct xrdp_mm* self, char* aname, char* dest, int dest_len)
 {
   char* name;
@@ -416,9 +416,16 @@ xrdp_mm_setup_mod2(struct xrdp_mm* self)
     {
       rv = 0;
     }
+    else
+    {
+// AUDIT connected Failed
+      AUDIT_FAILED_OPEN( self->wm->pro_layer, "" );
+    }
   }
   if (rv == 0)
   {
+// AUDIT connected Ok
+    AUDIT_OPEN( self->wm->pro_layer, "" );
     /* sync modifiers */
     key_flags = 0;
     device_flags = 0;
