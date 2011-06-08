@@ -757,7 +757,7 @@ xrdp_mm_get_sesman_port(char* port, int port_bytes)
   /* default to port 3350 */
   g_strncpy(port, "3350", port_bytes - 1);
   /* see if port is in xrdp.ini file */
-  g_snprintf(cfg_file, 255, "%s/sesman.ini", XRDP_CFG_PATH);
+  file_config_name("sesman.ini", cfg_file, 255);
   fd = g_file_open(cfg_file);
   if (fd > 0)
   {

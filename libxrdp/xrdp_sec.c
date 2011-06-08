@@ -931,7 +931,7 @@ xrdp_sec_incoming(struct xrdp_sec* self)
   items->auto_free = 1;
   values = list_create();
   values->auto_free = 1;
-  g_snprintf(key_file, 255, "%s/rsakeys.ini", XRDP_CFG_PATH);
+  file_config_name("rsakeys.ini", key_file, 255);
   if (file_by_name_read_section(key_file, "keys", items, values) != 0)
   {
     /* this is a show stopper */

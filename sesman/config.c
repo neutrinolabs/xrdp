@@ -62,7 +62,7 @@ config_read(struct config_sesman* cfg)
   struct list* param_v;
   char cfg_file[256];
 
-  g_snprintf(cfg_file, 255, "%s/sesman.ini", XRDP_CFG_PATH);
+  file_config_name("sesman.ini", cfg_file, 255);
   fd = g_file_open(cfg_file);
   if (-1 == fd)
   {
