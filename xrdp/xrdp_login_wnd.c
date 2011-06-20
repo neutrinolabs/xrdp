@@ -399,7 +399,7 @@ xrdp_wm_login_fill_in_combo(struct xrdp_wm* self, struct xrdp_bitmap* b)
   section_names->auto_free = 1;
   section_values = list_create();
   section_values->auto_free = 1;
-  g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
+  file_config_name("xrdp.ini", cfg_file, 255);
   fd = g_file_open(cfg_file); /* xrdp.ini */
   if (fd < 1)
   {

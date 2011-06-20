@@ -28,6 +28,9 @@
 #include "arch.h"
 
 int APP_CC
+file_config_name(const char* file_name, char* dest, int len );
+
+int APP_CC
 file_read_sections(int fd, struct list* names);
 int APP_CC
 file_by_name_read_sections(const char* file_name, struct list* names);
