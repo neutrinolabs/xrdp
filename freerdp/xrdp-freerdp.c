@@ -190,11 +190,11 @@ lib_mod_set_param(struct mod* mod, char* name, char* value)
   g_writeln("lib_mod_set_param: name [%s] value [%s]", name, value);
   if (g_strcmp(name, "hostname") == 0)
   {
-    g_strncpy(mod->settings->hostname, value, sizeof(mod->settings->hostname));
+    g_strncpy(mod->settings->hostname, value, sizeof(mod->settings->hostname)-1);
   }
   else if (g_strcmp(name, "ip") == 0)
   {
-    g_strncpy(mod->settings->server, value, sizeof(mod->settings->server));
+    g_strncpy(mod->settings->server, value, sizeof(mod->settings->server)-1);
   }
   else if (g_strcmp(name, "port") == 0)
   {
@@ -206,19 +206,19 @@ lib_mod_set_param(struct mod* mod, char* name, char* value)
   }
   else if (g_strcmp(name, "username") == 0)
   {
-    g_strncpy(mod->settings->username, value, sizeof(mod->settings->username));
+    g_strncpy(mod->settings->username, value, sizeof(mod->settings->username)-1);
   }
   else if (g_strcmp(name, "password") == 0)
   {
-    g_strncpy(mod->settings->password, value, sizeof(mod->settings->password));
+    g_strncpy(mod->settings->password, value, sizeof(mod->settings->password)-1);
   }
   else if (g_strcmp(name, "hostname") == 0)
   {
-    g_strncpy(mod->settings->hostname, value, sizeof(mod->settings->hostname));
+    g_strncpy(mod->settings->hostname, value, sizeof(mod->settings->hostname)-1);
   }
   else if (g_strcmp(name, "program") == 0)
   {
-    g_strncpy(mod->settings->shell, value, sizeof(mod->settings->shell));
+    g_strncpy(mod->settings->shell, value, sizeof(mod->settings->shell)-1);
   }
   else if (g_strcmp(name, "nla") == 0)
   {
