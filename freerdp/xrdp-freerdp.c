@@ -66,6 +66,7 @@ lib_mod_start(struct mod* mod, int w, int h, int bpp)
   }
   mod->settings->width = mod->width;
   mod->settings->height = mod->height;
+  mod->settings->nla_security = 1;
   LIB_DEBUG(mod, "out lib_mod_start");
   return 0;
 }
@@ -189,11 +190,11 @@ lib_mod_set_param(struct mod* mod, char* name, char* value)
   g_writeln("lib_mod_set_param: name [%s] value [%s]", name, value);
   if (g_strcmp(name, "hostname") == 0)
   {
-    g_strncpy(mod->settings->hostname, value, sizeof(mod->settings->hostname));
+    g_strncpy(mod->settings->hostname, value, sizeof(mod->settings->hostname)-1);
   }
   else if (g_strcmp(name, "ip") == 0)
   {
-    g_strncpy(mod->settings->server, value, sizeof(mod->settings->server));
+    g_strncpy(mod->settings->server, value, sizeof(mod->settings->server)-1);
   }
   else if (g_strcmp(name, "port") == 0)
   {
@@ -203,16 +204,40 @@ lib_mod_set_param(struct mod* mod, char* name, char* value)
   {
     mod->settings->keyboard_layout = g_atoi(value);
   }
+  else if (g_strcmp(name, "username") == 0)
+  {
+    g_strncpy(mod->settings->username, value, sizeof(mod->settings->username)-1);
+  }
+  else if (g_strcmp(name, "password") == 0)
+  {
+    g_strncpy(mod->settings->password, value, sizeof(mod->settings->password)-1);
+  }
+  else if (g_strcmp(name, "hostname") == 0)
+  {
+    g_strncpy(mod->settings->hostname, value, sizeof(mod->settings->hostname)-1);
+  }
+  else if (g_strcmp(name, "program") == 0)
+  {
+    g_strncpy(mod->settings->shell, value, sizeof(mod->settings->shell)-1);
+  }
+  else if (g_strcmp(name, "nla") == 0)
+  {
+    // todo enhance to handle true/false yes/no strings
+    mod->settings->nla_security = g_atoi(value) & 1; // force 0 or 1 
+  }
   else if (g_strcmp(name, "name") == 0)
   {
+   // entry name
   }
   else if (g_strcmp(name, "lib") == 0)
   {
+   // library name
   }
   else
   {
     g_writeln("lib_mod_set_param: unknown name [%s] value [%s]", name, value);
   }
+  
   return 0;
 }
 

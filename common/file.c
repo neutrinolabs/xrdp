@@ -29,6 +29,38 @@
 #include "parse.h"
 
 /*****************************************************************************/
+/* locate the correct copy of the requested file
+ * This may be a per user copy in the user home directory or a user xrdp sub directory
+ * or a system wide copy. Puts full name of file in passed buffer
+   returns 0 if everything is ok
+   returns 1 if problem finding the file */
+int APP_CC
+file_config_name(const char* file_name, char* dest, int len )
+{
+    g_snprintf(dest, len, "./%s", file_name);
+    if ( g_file_exist(dest) )
+    {
+        return 0;
+    }
+    g_snprintf(dest, len, "%s/%s", g_getenv("HOME"), file_name);
+    if ( g_file_exist(dest) )
+    {
+        return 0;
+    }
+    g_snprintf(dest, len, "%s/xrdp/%s", g_getenv("HOME"), file_name);
+    if ( g_file_exist(dest) )
+    {
+        return 0;
+    }
+    g_snprintf(dest, len, "%s/%s", XRDP_CFG_PATH, file_name);
+    if ( g_file_exist(dest) )
+    {
+        return 0;
+    }
+    return 1;
+}
+
+/*****************************************************************************/
 /* returns error
    returns 0 if everything is ok
    returns 1 if problem reading file */

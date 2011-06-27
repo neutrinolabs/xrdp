@@ -38,6 +38,8 @@
 #include "file.h"
 #include "file_loc.h"
 
+#include "audit.h"
+
 /* xrdp.c */
 long APP_CC
 g_xrdp_sync(long (*sync_func)(long param1, long param2), long sync_param1,
@@ -334,6 +336,9 @@ xrdp_bitmap_compress(char* in_data, int width, int height,
                      int e);
 
 /* xrdp_mm.c */
+int APP_CC
+xrdp_mm_get_value(struct xrdp_mm* self, char* aname, char* dest, int dest_len);
+
 struct xrdp_mm* APP_CC
 xrdp_mm_create(struct xrdp_wm* owner);
 void APP_CC

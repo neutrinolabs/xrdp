@@ -71,7 +71,7 @@ xrdp_rdp_read_config(struct xrdp_client_info* client_info)
   items->auto_free = 1;
   values = list_create();
   values->auto_free = 1;
-  g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
+  file_config_name("xrdp.ini", cfg_file, 255);
   file_by_name_read_section(cfg_file, "globals", items, values);
   for (index = 0; index < items->count; index++)
   {
@@ -93,6 +93,25 @@ xrdp_rdp_read_config(struct xrdp_client_info* client_info)
           g_strcasecmp(value, "1") == 0)
       {
         client_info->use_bitmap_comp = 1;
+      }
+    }
+    else if (g_strcasecmp(item, "auto_login") == 0)
+    {
+      if (g_strcasecmp(value, "yes") == 0 ||
+          g_strcasecmp(value, "true") == 0 ||
+          g_strcasecmp(value, "1") == 0)
+      {
+        // explicit enable
+        client_info->rdp_autologin = 1;
+        client_info->domain[0] = 0; // ignore client domain, use first entry
+      }
+      else
+      if (g_strcasecmp(value, "no") == 0 ||
+          g_strcasecmp(value, "false") == 0 ||
+          g_strcasecmp(value, "0") == 0)
+      {
+        // explicit disable
+        client_info->rdp_autologin = 0;
       }
     }
     else if (g_strcasecmp(item, "crypt_level") == 0)

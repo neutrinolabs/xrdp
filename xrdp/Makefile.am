@@ -21,6 +21,7 @@ sbin_PROGRAMS = \
   xrdp
 
 xrdp_SOURCES = \
+  audit.c \
   funcs.c \
   lang.c \
   xrdp_bitmap.c \

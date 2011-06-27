@@ -135,7 +135,7 @@ xrdp_listen_get_port_address(char* port, int port_bytes,
   /* Default to all */
   g_strncpy(address, "0.0.0.0", address_bytes - 1);
   /* see if port or address is in xrdp.ini file */
-  g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
+  file_config_name("xrdp.ini", cfg_file, 255);
   fd = g_file_open(cfg_file);
   if (fd > 0)
   {

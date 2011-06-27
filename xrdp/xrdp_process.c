@@ -185,6 +185,7 @@ xrdp_process_main_loop(struct xrdp_process* self)
         break;
       }
     }
+    AUDIT_CLOSE( self, "" );
     libxrdp_disconnect(self->session);
   }
   xrdp_process_mod_end(self);
