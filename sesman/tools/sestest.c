@@ -112,10 +112,16 @@ int main(int argc, char** argv)
       case SCP_CLIENT_STATE_RESEND_CREDENTIALS:
         g_printf("ERR: resend credentials - %s\n", s->errstr);
         g_printf("     username:");
-        scanf("%255s", buf);
+        if (scanf("%255s", buf) < 0)
+        {
+          g_writeln("error");
+        }
         scp_session_set_username(s, buf);
         g_printf("     password:");
-        scanf("%255s", buf);
+        if (scanf("%255s", buf) < 0)
+        {
+          g_writeln("error");
+        }
         scp_session_set_password(s, buf);
         e=scp_v1c_resend_credentials(c,s);
         break;
@@ -152,11 +158,20 @@ int inputSession(struct SCP_SESSION* s)
   unsigned int integer;
 
   g_printf("username: ");
-  scanf("%255s", s->username);
+  if (scanf("%255s", s->username) < 0)
+  {
+    g_writeln("error");
+  }
   g_printf("password:");
-  scanf("%255s", s->password);
+  if (scanf("%255s", s->password) < 0)
+  {
+    g_writeln("error");
+  }
   g_printf("hostname:");
-  scanf("%255s", s->hostname);
+  if (scanf("%255s", s->hostname) < 0)
+  {
+    g_writeln("error");
+  }
 
   g_printf("session type:\n");
   g_printf("0: Xvnc\n", SCP_SESSION_TYPE_XVNC);
@@ -183,17 +198,18 @@ int inputSession(struct SCP_SESSION* s)
   return 0;
 }
 
-unsigned int menuSelect(unsigned int choices)
+tui32
+menuSelect(tui32 choices)
 {
-  unsigned int sel;
+  tui32 sel;
   int ret;
 
-  ret=scanf("%u", &sel);
+  ret = scanf("%u", &sel);
 
   while ((ret==0) || (sel > choices))
   {
     g_printf("invalid choice.");
-    scanf("%u", &sel);
+    ret = scanf("%u", &sel);
   }
 
   return sel;
