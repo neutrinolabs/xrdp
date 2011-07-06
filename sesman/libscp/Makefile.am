@@ -27,4 +27,5 @@ libscp_la_SOURCES = \
   libscp_vX.c
 
 libscp_la_LIBADD = \
-  $(top_srcdir)/common/libcommon.la
+  $(top_srcdir)/common/libcommon.la \
+  -lpthread
