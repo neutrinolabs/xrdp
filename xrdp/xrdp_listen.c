@@ -306,7 +306,8 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
   }
   else
   {
-    DEBUG(("listen error in xrdp_listen_main_loop"));
+    g_writeln("xrdp_listen_main_loop: listen error, possible port "
+              "already in use");
   }
   self->status = -1;
   return 0;
