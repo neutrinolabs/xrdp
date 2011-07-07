@@ -26,7 +26,6 @@ NEWS
 *.o
 README
 stamp-h1
-xrdp
 xrdp-chansrv
 xrdp-genkeymap
 xrdp-keygen
