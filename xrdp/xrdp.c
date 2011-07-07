@@ -14,7 +14,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
    xrdp: A Remote Desktop Protocol server.
-   Copyright (C) Jay Sorg 2004-2010
+   Copyright (C) Jay Sorg 2004-2011
 
    main program
 
@@ -330,7 +330,7 @@ main(int argc, char** argv)
     {
       g_writeln("");
       g_writeln("xrdp: A Remote Desktop Protocol server.");
-      g_writeln("Copyright (C) Jay Sorg 2004-2010");
+      g_writeln("Copyright (C) Jay Sorg 2004-2011");
       g_writeln("See http://xrdp.sourceforge.net for more information.");
       g_writeln("");
       g_writeln("Usage: xrdp [options]");
@@ -469,7 +469,7 @@ main(int argc, char** argv)
     {
       g_writeln("");
       g_writeln("xrdp: A Remote Desktop Protocol server.");
-      g_writeln("Copyright (C) Jay Sorg 2004-2010");
+      g_writeln("Copyright (C) Jay Sorg 2004-2011");
       g_writeln("See http://xrdp.sourceforge.net for more information.");
       g_writeln("");
       g_writeln("Usage: xrdp [options]");
@@ -484,7 +484,7 @@ main(int argc, char** argv)
     {
       g_writeln("");
       g_writeln("xrdp: A Remote Desktop Protocol server.");
-      g_writeln("Copyright (C) Jay Sorg 2004-2010");
+      g_writeln("Copyright (C) Jay Sorg 2004-2011");
       g_writeln("See http://xrdp.sourceforge.net for more information.");
       g_writeln("Version %s",PACKAGE_VERSION);
       g_writeln("");
