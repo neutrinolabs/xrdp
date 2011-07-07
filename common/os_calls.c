@@ -1196,6 +1196,14 @@ g_chmod_hex(const char* filename, int flags)
 }
 
 /*****************************************************************************/
+/* returns error, zero is ok */
+int APP_CC
+g_chown(const char* name, int uid, int gid)
+{
+  return chown(name, uid, gid);
+}
+
+/*****************************************************************************/
 /* returns error, always zero */
 int APP_CC
 g_mkdir(const char* dirname)

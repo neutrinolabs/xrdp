@@ -141,6 +141,8 @@ g_file_lock(int fd, int start, int len);
 int APP_CC
 g_chmod_hex(const char* filename, int flags);
 int APP_CC
+g_chown(const char* name, int uid, int gid);
+int APP_CC
 g_mkdir(const char* dirname);
 char* APP_CC
 g_get_current_dir(char* dirname, int maxlen);
