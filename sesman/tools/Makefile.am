@@ -14,7 +14,8 @@ INCLUDES = \
 bin_PROGRAMS = \
   xrdp-sesrun \
   xrdp-sestest \
-  xrdp-sesadmin
+  xrdp-sesadmin \
+  xrdp-dis
 
 xrdp_sesrun_SOURCES = \
   sesrun.c \
@@ -26,6 +27,9 @@ xrdp_sestest_SOURCES = \
 
 xrdp_sesadmin_SOURCES = \
   sesadmin.c
+
+xrdp_dis_SOURCES = \
+  dis.c
 
 xrdp_sesrun_LDADD = \
   $(top_srcdir)/common/libcommon.la
