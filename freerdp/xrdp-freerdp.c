@@ -208,6 +208,10 @@ lib_mod_set_param(struct mod* mod, char* name, char* value)
   {
     g_strncpy(mod->settings->username, value, sizeof(mod->settings->username)-1);
   }
+  else if (g_strcmp(name, "domain") == 0)
+  {
+    g_strncpy(mod->settings->domain, value, sizeof(mod->settings->domain)-1);
+  }
   else if (g_strcmp(name, "password") == 0)
   {
     g_strncpy(mod->settings->password, value, sizeof(mod->settings->password)-1);

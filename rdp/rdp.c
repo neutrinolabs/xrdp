@@ -242,6 +242,10 @@ lib_mod_set_param(struct mod* mod, char* name, char* value)
   {
     g_strncpy(mod->username, value, 255);
   }
+  else if (g_strncasecmp(name, "domain", 255) == 0)
+  {
+    g_strncpy(mod->domain, value, 255);
+  }
   else if (g_strncasecmp(name, "password", 255) == 0)
   {
     g_strncpy(mod->password, value, 255);
