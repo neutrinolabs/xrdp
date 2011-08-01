@@ -226,8 +226,7 @@ lib_mod_set_param(struct mod* mod, char* name, char* value)
   }
   else if (g_strcmp(name, "nla") == 0)
   {
-    // todo enhance to handle true/false yes/no strings
-    mod->settings->nla_security = g_atoi(value) & 1; // force 0 or 1 
+    mod->settings->nla_security = g_strcasecmp(value, "yes") == 0;
   }
   else if (g_strcmp(name, "name") == 0)
   {
@@ -241,7 +240,7 @@ lib_mod_set_param(struct mod* mod, char* name, char* value)
   {
     g_writeln("lib_mod_set_param: unknown name [%s] value [%s]", name, value);
   }
-  
+
   return 0;
 }
 
