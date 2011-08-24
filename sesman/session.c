@@ -77,6 +77,17 @@ session_get_bydata(char* name, int width, int height, int bpp, int type)
 
   while (tmp != 0)
   {
+    if (type == SESMAN_SESSION_TYPE_XRDP)
+    {
+      /* only name need to match for X11rdp, it can resize */
+      if (g_strncmp(name, tmp->item->name, 255) == 0 &&
+          tmp->item->type == type)
+      {
+        /*THREAD-FIX release chain lock */
+        lock_chain_release();
+        return tmp->item;
+      }
+    }
     if (g_strncmp(name, tmp->item->name, 255) == 0 &&
         tmp->item->width == width &&
         tmp->item->height == height &&

@@ -206,6 +206,22 @@ lib_mod_connect(struct mod* mod)
     init_stream(s, 8192);
     s_push_layer(s, iso_hdr, 4);
     out_uint16_le(s, 103);
+    out_uint32_le(s, 300);
+    out_uint32_le(s, mod->width);
+    out_uint32_le(s, mod->height);
+    out_uint32_le(s, mod->bpp);
+    out_uint32_le(s, 0);
+    s_mark_end(s);
+    len = (int)(s->end - s->data);
+    s_pop_layer(s, iso_hdr);
+    out_uint32_le(s, len);
+    lib_send(mod, s->data, len);
+  }
+  if (error == 0)
+  {
+    init_stream(s, 8192);
+    s_push_layer(s, iso_hdr, 4);
+    out_uint16_le(s, 103);
     out_uint32_le(s, 200);
     /* x and y */
     i = 0;
