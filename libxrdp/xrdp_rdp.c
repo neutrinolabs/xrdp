@@ -117,6 +117,10 @@ xrdp_rdp_read_config(struct xrdp_client_info* client_info)
         client_info->channel_code = 1;
       }
     }
+    else if (g_strcasecmp(item, "max_bpp") == 0)
+    {
+      client_info->max_bpp = g_atoi(value);
+    }
   }
   list_delete(items);
   list_delete(values);
@@ -361,6 +365,13 @@ xrdp_rdp_parse_client_mcs_data(struct xrdp_rdp* self)
     case 0xca04:
       self->client_info.bpp = 24;
       break;
+  }
+  if (self->client_info.max_bpp > 0)
+  {
+    if (self->client_info.bpp > self->client_info.max_bpp)
+    {
+      self->client_info.bpp = self->client_info.max_bpp;
+    }
   }
   p->p = p->data;
   DEBUG(("client width %d, client height %d bpp %d",
