@@ -99,10 +99,6 @@ xrdp_mm_delete(struct xrdp_mm* self)
   self->sesman_trans_up = 0;
   list_delete(self->login_names);
   list_delete(self->login_values);
-  if (self->dis_wo > 0)
-  {
-    g_delete_wait_obj(self->dis_wo);
-  }
   g_free(self);
 }
 
@@ -150,10 +146,6 @@ xrdp_mm_send_login(struct xrdp_mm* self)
   {
     xrdp_wm_log_msg(self->wm, "Error finding username and password");
     return 1;
-  }
-  else
-  {
-    g_strncpy(self->username, username, 255);
   }
 
   s = trans_get_out_s(self->sesman_trans, 8192);
@@ -734,17 +726,6 @@ xrdp_mm_process_login_response(struct xrdp_mm* self, struct stream* s)
         }
       }
     }
-    g_snprintf(text, 255, "xrdp_disconnect_display_%d", self->display);
-    self->dis_wo = g_create_wait_obj(text);
-    if (self->dis_wo > 0)
-    {
-      g_snprintf(text, 255, "/tmp/xrdp_disconnect_display_%d",
-                 self->display);
-      if (g_getuser_info(self->username, &uid, &gid, 0, 0, 0) == 0)
-      {
-        g_chown(text, uid, gid);
-      }
-    }
   }
   else
   {
@@ -1030,11 +1011,6 @@ xrdp_mm_get_wait_objs(struct xrdp_mm* self,
   {
     trans_get_wait_objs(self->chan_trans, read_objs, rcount, timeout);
   }
-  if (self->dis_wo > 0)
-  {
-    read_objs[*rcount] = self->dis_wo;
-    (*rcount)++;
-  }
   if (self->mod != 0)
   {
     if (self->mod->mod_get_wait_objs != 0)
@@ -1070,15 +1046,6 @@ xrdp_mm_check_wait_objs(struct xrdp_mm* self)
     if (trans_check_wait_objs(self->chan_trans) != 0)
     {
       self->delete_chan_trans = 1;
-    }
-  }
-  if (self->dis_wo > 0)
-  {
-    if (g_is_wait_obj_set(self->dis_wo))
-    {
-      g_writeln("xrdp_mm_check_wait_objs: disconnecting per user request");
-      g_reset_wait_obj(self->dis_wo);
-      return 1;
     }
   }
   if (self->mod != 0)
