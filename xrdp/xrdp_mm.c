@@ -356,12 +356,11 @@ xrdp_mm_setup_mod2(struct xrdp_mm* self)
   char* name = (char *)NULL;
   char* value = (char *)NULL;
   int i = 0;
-  int rv = 0;
+  int rv = 1; // failure
   int key_flags = 0;
   int device_flags = 0;
 
-  g_memset(text,0,sizeof(char) * 256);
-  rv = 1;
+  g_memset(text,0,sizeof(char) * 256);  
   text[0] = 0;
   if (!g_is_wait_obj_set(self->wm->pro_layer->self_term_event))
   {
@@ -414,7 +413,7 @@ xrdp_mm_setup_mod2(struct xrdp_mm* self)
     /* connect */
     if (self->mod->mod_connect(self->mod) == 0)
     {
-      rv = 0;
+      rv = 0; // connect success
     }
   }
   if (rv == 0)
@@ -895,7 +894,7 @@ xrdp_mm_connect(struct xrdp_mm* self)
   int use_sesman = 0;
   int error = 0;
   int ok = 0;
-  int rv = 0;
+  int rv = 0; // success
   char* name = (char *)NULL;
   char* value = (char *)NULL;
   char ip[256];
@@ -906,8 +905,7 @@ xrdp_mm_connect(struct xrdp_mm* self)
   g_memset(ip,0,sizeof(char) * 256);
   g_memset(errstr,0,sizeof(char) * 256);
   g_memset(text,0,sizeof(char) * 256);
-  g_memset(port,0,sizeof(char) * 8);
-  rv = 0;
+  g_memset(port,0,sizeof(char) * 8);  
   use_sesman = 0;
   names = self->login_names;
   values = self->login_values;
@@ -925,6 +923,10 @@ xrdp_mm_connect(struct xrdp_mm* self)
       if (g_strcasecmp(value, "-1") == 0)
       {
         use_sesman = 1;
+      }
+      else
+      {
+          g_strncpy(port,value,8);
       }
     }
   }
@@ -977,6 +979,13 @@ xrdp_mm_connect(struct xrdp_mm* self)
       if (xrdp_mm_setup_mod2(self) == 0)
       {
         xrdp_wm_set_login_mode(self->wm, 10);
+      }
+      else
+      {        
+        // Connect error
+        g_snprintf(errstr,255,"Failure to connect to: %s port: %s",ip, port);
+        xrdp_wm_log_msg(self->wm, errstr);
+        rv = 1 ; //failure  
       }
     }
     if (self->wm->login_mode != 10)
