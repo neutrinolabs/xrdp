@@ -110,6 +110,7 @@ xrdp_mm_send_login(struct xrdp_mm* self)
   int rv = 0;
   int index = 0;
   int count = 0;
+  int xserverbpp;
   char * username = (char *)NULL;
   char * password = (char *)NULL;
   char * name = (char *)NULL;
@@ -120,6 +121,7 @@ xrdp_mm_send_login(struct xrdp_mm* self)
   username = 0;
   password = 0;
   self->code = 0;
+  xserverbpp = 0;
   count = self->login_names->count;
   for (index = 0; index < count; index++)
   {
@@ -141,6 +143,10 @@ xrdp_mm_send_login(struct xrdp_mm* self)
         self->code = 10;
       }
     }
+    else if (g_strcasecmp(name, "xserverbpp") == 0)
+    {
+      xserverbpp = g_atoi(value);
+    }
   }
   if ((username == 0) || (password == 0))
   {
@@ -161,7 +167,15 @@ xrdp_mm_send_login(struct xrdp_mm* self)
   out_uint8a(s, password, index);
   out_uint16_be(s, self->wm->screen->width);
   out_uint16_be(s, self->wm->screen->height);
-  out_uint16_be(s, self->wm->screen->bpp);
+
+  if (xserverbpp > 0)
+  {
+    out_uint16_be(s, xserverbpp);
+  }
+  else
+  {
+    out_uint16_be(s, self->wm->screen->bpp);
+  }
 
   /* send domain */
   index = g_strlen(self->wm->client_info->domain);
