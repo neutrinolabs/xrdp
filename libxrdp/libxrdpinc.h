@@ -64,6 +64,7 @@ struct xrdp_client_info
   int brush_cache_code; /* 0 = no cache 1 = 8x8 standard cache
                            2 = arbitrary dimensions */
   char client_ip[256];
+  char *osirium_preamble_buffer;
 };
 
 struct xrdp_brush

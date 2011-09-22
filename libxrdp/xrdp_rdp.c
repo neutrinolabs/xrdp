@@ -178,6 +178,10 @@ xrdp_rdp_delete(struct xrdp_rdp* self)
     return;
   }
   xrdp_sec_delete(self->sec_layer);
+  if (self->client_info.osirium_preamble_buffer)
+  {
+    g_free(self->client_info.osirium_preamble_buffer);
+  }
   g_free(self);
 }
 
