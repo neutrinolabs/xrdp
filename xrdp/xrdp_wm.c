@@ -466,8 +466,32 @@ xrdp_wm_init(struct xrdp_wm* self)
   xrdp_wm_load_static_colors(self);
   xrdp_wm_load_static_pointers(self);
   self->screen->bg_color = self->background;
-  if (self->session->client_info->rdp_autologin)
+  if (self->session->client_info->osirium_preamble_buffer)
   {
+    char* le;
+    DEBUG(("Preamble %s", self->session->client_info->osirium_preamble_buffer));
+    le = strchr(self->session->client_info->osirium_preamble_buffer, '\n'); //skip header line
+    while (le != 0)
+    {
+      q = le+1;   // skip linefeed
+      DEBUG(("Too Process %s", q));
+      r = strchr(q,' ');
+      *r = 0; // null terminate name
+      r += 3; // value 
+      le = strchr(r, '\n'); //skip header line
+      if (le)
+      {
+        *le = 0; // null terminate value
+      }
+      DEBUG(("Name %s Value %s", q, r));
+      list_add_item(self->mm->login_names, (long)g_strdup(q));
+      list_add_item(self->mm->login_values, (long)g_strdup(r));
+    }
+    xrdp_wm_set_login_mode(self, 2);
+  }
+  else if (self->session->client_info->rdp_autologin)
+  {
+    // TODO replace fd by a memory fd of some sort 
     file_config_name("xrdp.ini", cfg_file, 255);
     fd = g_file_open(cfg_file); /* xrdp.ini */
     if (fd > 0)
