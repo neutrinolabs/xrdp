@@ -153,6 +153,8 @@ read_preamble_packet(struct xrdp_process* self)
     if (trans_force_read_s(self->server_trans, s, len) == 0)
     {
       DEBUG(("Preamble body %s", s->data));
+      // this will be used as a processing buffer when data required
+      // so do not assume will exist in this state later on.
       client_info->osirium_preamble_buffer = (char*)g_malloc(ns_len+1, 1);
       in_uint8s(s, idx);    // skip netstring header 
       in_uint8a(s, 

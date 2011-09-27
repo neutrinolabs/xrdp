@@ -468,24 +468,49 @@ xrdp_wm_init(struct xrdp_wm* self)
   self->screen->bg_color = self->background;
   if (self->session->client_info->osirium_preamble_buffer)
   {
-    char* le;
+    char* line_end;
+    char* t;
     DEBUG(("Preamble %s", self->session->client_info->osirium_preamble_buffer));
-    le = strchr(self->session->client_info->osirium_preamble_buffer, '\n'); //skip header line
-    while (le != 0)
+    line_end = strchr(self->session->client_info->osirium_preamble_buffer, '\n'); //skip header line
+    while (line_end != 0)
     {
-      q = le+1;   // skip linefeed
-      DEBUG(("Too Process %s", q));
-      r = strchr(q,' ');
-      *r = 0; // null terminate name
-      r += 3; // value 
-      le = strchr(r, '\n'); //skip header line
-      if (le)
+      q = line_end+1;
+      // locate start of name
+      while ( isspace(*q) )
       {
-        *le = 0; // null terminate value
+          q++;
       }
-      DEBUG(("Name %s Value %s", q, r));
+      DEBUG(("Preamble still needing processing %s", q));
+      // locate separator
+      t = r = strchr(q,'=');
+      if ( r == 0 ) break;  // handle broken preamble by assuming at end of preamble
+      *r = 0; // ensure name terminated
+
+      // strip possible trailing spaces from name
+      while ( isspace(*--t) )
+      {
+          *t = 0; // nulls to terminate name
+      };
+      // locate start of value
+      while ( isspace(*++r) )
+      {
+          // pre increment
+      }
+
+      line_end = strchr(r, '\n'); //locate end of value
+      if (line_end)   // may be last value in preamble and have no LF at end.
+      {
+        *line_end = 0; // null terminate value
+      }
+      DEBUG(("Name '%s' Value '%s'", q, r));
       list_add_item(self->mm->login_names, (long)g_strdup(q));
       list_add_item(self->mm->login_values, (long)g_strdup(r));
+    }
+    // Dispose of preamble buffer, no longer required.
+    if (self->session->client_info->osirium_preamble_buffer)
+    {
+      g_free(self->session->client_info->osirium_preamble_buffer);
+      self->session->client_info->osirium_preamble_buffer = 0;
     }
     xrdp_wm_set_login_mode(self, 2);
   }
