@@ -127,6 +127,49 @@ xrdp_process_data_in(struct trans* self)
 }
 
 /*****************************************************************************/
+/* returns error */
+int APP_CC
+read_preamble_packet(struct xrdp_process* self)
+{
+  // Using the session stream
+  int ns_len = 0;
+  int idx;
+  int len;
+  // cache a pointer to client_info
+  struct xrdp_client_info *client_info = self->session->client_info; 
+  
+  struct stream* s;
+  make_stream(s);
+  init_stream(s, 10000);
+
+  // 5 bytes should include the colon  
+  if (trans_force_read_s(self->server_trans, s, 5) == 0)
+  {
+    idx = g_pos(s->data, ":") + 1; // skip colon
+    ns_len = g_atoi(s->data);
+    DEBUG(("Preamble length %i", ns_len));
+    len = ns_len - 5 + idx + 1; // trailing comma as well 
+    DEBUG(("Preamble to read %i", len));
+    if (trans_force_read_s(self->server_trans, s, len) == 0)
+    {
+      DEBUG(("Preamble body %s", s->data));
+      // this will be used as a processing buffer when data required
+      // so do not assume will exist in this state later on.
+      client_info->osirium_preamble_buffer = (char*)g_malloc(ns_len+1, 1);
+      in_uint8s(s, idx);    // skip netstring header 
+      in_uint8a(s, 
+          client_info->osirium_preamble_buffer, 
+          ns_len);
+      DEBUG(("Preamble %s", client_info->osirium_preamble_buffer));
+      free_stream(s);
+      return 0;
+    }
+  }
+  free_stream(s);
+  return 0;
+}
+
+/*****************************************************************************/
 int APP_CC
 xrdp_process_main_loop(struct xrdp_process* self)
 {
@@ -143,6 +186,11 @@ xrdp_process_main_loop(struct xrdp_process* self)
   self->server_trans->trans_data_in = xrdp_process_data_in;
   self->server_trans->callback_data = self;
   self->session = libxrdp_init((tbus)self, self->server_trans);
+  
+  // TODO Read Preamble
+  // self->session->rdp->sec_layer->mcs_layer->iso_layer>tcp_layer->trans
+  read_preamble_packet(self);
+  
   /* this callback function is in xrdp_wm.c */
   self->session->callback = callback;
   /* this function is just above */
