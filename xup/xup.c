@@ -261,10 +261,47 @@ lib_mod_event(struct mod* mod, int msg, tbus param1, tbus param2,
 {
   struct stream* s;
   int len;
+  int key;
   int rv;
 
   LIB_DEBUG(mod, "in lib_mod_event");
   make_stream(s);
+  if ((msg >= 15) && (msg <= 16)) /* key events */
+  {
+    key = param2;
+    if (key > 0)
+    {
+      if (key == 65027) /* altgr */
+      {
+        if (mod->shift_state)
+        {
+          g_writeln("special");
+          /* fix for mstsc sending left control down with altgr */
+          /* control down / up
+          msg param1 param2 param3 param4
+          15  0      65507  29     0
+          16  0      65507  29     49152 */
+          init_stream(s, 8192);
+          s_push_layer(s, iso_hdr, 4);
+          out_uint16_le(s, 103);
+          out_uint32_le(s, 16); /* key up */
+          out_uint32_le(s, 0);
+          out_uint32_le(s, 65507); /* left control */
+          out_uint32_le(s, 29); /* RDP scan code */
+          out_uint32_le(s, 0xc000); /* flags */
+          s_mark_end(s);
+          len = (int)(s->end - s->data);
+          s_pop_layer(s, iso_hdr);
+          out_uint32_le(s, len);
+          lib_send(mod, s->data, len);
+        }
+      }
+      if (key == 65507) /* left control */
+      {
+        mod->shift_state = msg == 15;
+      }
+    }
+  }
   init_stream(s, 8192);
   s_push_layer(s, iso_hdr, 4);
   out_uint16_le(s, 103);

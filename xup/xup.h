@@ -104,4 +104,5 @@ struct mod
   char ip[256];
   char port[256];
   tbus sck_obj;
+  int shift_state;
 };
