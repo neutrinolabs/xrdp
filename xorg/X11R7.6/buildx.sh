@@ -63,6 +63,11 @@ download_file()
         status=$?
         cd ..
         return $status
+    elif [ "$file" = "libxml2-sources-2.7.8.tar.gz" ]; then
+        wget -cq ftp://ftp.xmlsoft.org/libxml2/libxml2-sources-2.7.8.tar.gz
+        status=$?
+        cd ..
+        return $status
     else
         wget -cq $download_url/$file
         status=$?

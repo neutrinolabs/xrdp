@@ -43,6 +43,7 @@ libdrm-2.4.26.tar.bz2                           :  libdrm-2.4.26                
 damageproto-1.2.1.tar.bz2                       :  damageproto-1.2.1                        :
 libXdamage-1.1.3.tar.bz2                        :  libXdamage-1.1.3                         :
 makedepend-1.0.3.tar.bz2                        :  makedepend-1.0.3                         :
+libxml2-sources-2.7.8.tar.gz                    :  libxml2-2.7.8                            :
 MesaLib-7.10.3.tar.bz2                          :  Mesa-7.10.3                              :
 randrproto-1.3.2.tar.bz2                        :  randrproto-1.3.2                         :
 renderproto-0.11.1.tar.bz2                      :  renderproto-0.11.1                       :
