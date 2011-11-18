@@ -53,7 +53,7 @@ download_file()
         cd ..
         return $status
     elif [ "$file" = "xkeyboard-config-2.0.tar.bz2" ]; then
-		cp ../extras/xkeyboard-config-2.0.tar.bz2 .
+        wget -cq http://server1.xrdp.org/xrdp/xkeyboard-config-2.0.tar.bz2
         status=$?
         cd ..
         return $status
