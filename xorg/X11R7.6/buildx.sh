@@ -68,8 +68,8 @@ download_file()
         status=$?
         cd ..
         return $status
-    elif [ "$file" = "Python-2.5.6.tar.bz2" ]; then
-        wget -cq http://www.python.org/ftp/python/2.5.6/Python-2.5.6.tar.bz2
+    elif [ "$file" = "Python-2.7.tar.bz2" ]; then
+        wget -cq http://www.python.org/ftp/python/2.7/Python-2.7.tar.bz2
         status=$?
         cd ..
         return $status
@@ -212,6 +212,7 @@ fi
 export PREFIX_DIR=$1
 export PKG_CONFIG_PATH=$PREFIX_DIR/lib/pkgconfig:$PREFIX_DIR/share/pkgconfig
 export PATH=$PREFIX_DIR/bin:$PATH
+export CFLAGS=-fPIC
 
 # prefix dir must exist...
 if [ ! -d $PREFIX_DIR ]; then

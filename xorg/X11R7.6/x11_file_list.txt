@@ -1,4 +1,4 @@
-Python-2.5.6.tar.bz2                            :  Python-2.5.6                             :
+Python-2.7.tar.bz2                              :  Python-2.7                               :
 util-macros-1.11.0.tar.bz2                      :  util-macros-1.11.0                       :
 font-adobe-75dpi-1.0.3.tar.bz2                  :  font-adobe-75dpi-1.0.3                   : --with-fontrootdir=$PREFIX_DIR/share/fonts/X11
 font-adobe-100dpi-1.0.3.tar.bz2                 :  font-adobe-100dpi-1.0.3                  : --with-fontrootdir=$PREFIX_DIR/share/fonts/X11
