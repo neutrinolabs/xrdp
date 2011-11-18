@@ -1,7 +1,6 @@
 #!/bin/sh
 
-# build.sh: a script for building X11R7.6 X server for use with xrdp
-#
+# build.sh: a script for building X11R7.6 X server for use with xrdp #
 # Copyright 2011 Jay Sorg Jay.Sorg@gmail.com
 #
 # Authors
@@ -19,6 +18,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# flex bison libxml2-dev intltool
 
 download_file()
 {
@@ -53,7 +54,12 @@ download_file()
         cd ..
         return $status
     elif [ "$file" = "xkeyboard-config-2.0.tar.bz2" ]; then
-        wget -cq http://server1.xrdp.org/xrdp/xkeyboard-config-2.0.tar.bz2
+        wget -cq http://www.x.org/releases/individual/data/xkeyboard-config/xkeyboard-config-2.0.tar.bz2
+        status=$?
+        cd ..
+        return $status
+    elif [ "$file" = "makedepend-1.0.3.tar.bz2" ]; then
+        wget -cq http://xorg.freedesktop.org/releases/individual/util/makedepend-1.0.3.tar.bz2
         status=$?
         cd ..
         return $status
@@ -196,11 +202,16 @@ fi
 export PREFIX_DIR=$1
 export PKG_CONFIG_PATH=$PREFIX_DIR/lib/pkgconfig:$PREFIX_DIR/share/pkgconfig
 
-# prefix dir must exist and be writable
+# prefix dir must exist...
 if [ ! -d $PREFIX_DIR ]; then
-    echo "directory $PREFIX_DIR does not exist - cannot continue"
-    exit 1
+    mkdir -p $PREFIX_DIR
+    if [ $? -ne 0 ]; then
+        echo "$PREFIX_DIR does not exist; failed to create it - cannot continue"
+        exit 1
+    fi
 fi
+
+# ...and be writable
 if [ ! -w $PREFIX_DIR ]; then
     echo "directory $PREFIX_DIR is not writable - cannot continue"
     exit 1
@@ -238,6 +249,7 @@ do
     mod_file=`echo $line | cut -d':' -f1`
     mod_dir=`echo $line | cut -d':' -f2`
     mod_args=`echo $line | cut -d':' -f3`
+    mod_args=`eval echo $mod_args`
 
     make_it $mod_file $mod_dir "$mod_args"
 
