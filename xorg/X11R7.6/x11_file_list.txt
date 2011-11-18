@@ -1,4 +1,5 @@
-util-macros-1.11.0.tar.bz2                      :  util-macros-1.11.0                       : 
+Python-2.5.6.tar.bz2                            :  Python-2.5.6                             :
+util-macros-1.11.0.tar.bz2                      :  util-macros-1.11.0                       :
 font-adobe-75dpi-1.0.3.tar.bz2                  :  font-adobe-75dpi-1.0.3                   : --with-fontrootdir=$PREFIX_DIR/share/fonts/X11
 font-adobe-100dpi-1.0.3.tar.bz2                 :  font-adobe-100dpi-1.0.3                  : --with-fontrootdir=$PREFIX_DIR/share/fonts/X11
 font-adobe-utopia-75dpi-1.0.4.tar.bz2           :  font-adobe-utopia-75dpi-1.0.4            : --with-fontrootdir=$PREFIX_DIR/share/fonts/X11
@@ -70,6 +71,8 @@ libSM-1.2.0.tar.bz2                             :  libSM-1.2.0                  
 libXau-1.0.6.tar.bz2                            :  libXau-1.0.6                             :
 kbproto-1.0.5.tar.bz2                           :  kbproto-1.0.5                            :
 libXdmcp-1.1.0.tar.bz2                          :  libXdmcp-1.1.0                           :
+xcb-proto-1.6.tar.bz2                           :  xcb-proto-1.6                            :
+libxcb-1.7.tar.bz2                              :  libxcb-1.7                               :
 libX11-1.4.0.tar.bz2                            :  libX11-1.4.0                             :
 libXt-1.0.9.tar.bz2                             :  libXt-1.0.9                              :
 libxkbfile-1.0.7.tar.bz2                        :  libxkbfile-1.0.7                         :
