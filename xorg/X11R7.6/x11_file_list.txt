@@ -39,6 +39,7 @@ xf86driproto-2.1.0.tar.bz2                      :  xf86driproto-2.1.0           
 dri2proto-2.3.tar.bz2                           :  dri2proto-2.3                            :
 glproto-1.4.12.tar.bz2                          :  glproto-1.4.12                           :
 libpciaccess-0.12.0.tar.bz2                     :  libpciaccess-0.12.0                      :
+libpthread-stubs-0.3.tar.bz2                    :  libpthread-stubs-0.3                     :
 libdrm-2.4.26.tar.bz2                           :  libdrm-2.4.26                            :
 damageproto-1.2.1.tar.bz2                       :  damageproto-1.2.1                        :
 libXdamage-1.1.3.tar.bz2                        :  libXdamage-1.1.3                         :
