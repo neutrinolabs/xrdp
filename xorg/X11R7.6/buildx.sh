@@ -20,6 +20,7 @@
 # limitations under the License.
 
 # flex bison libxml2-dev intltool
+# xsltproc
 
 download_file()
 {
@@ -68,8 +69,33 @@ download_file()
         status=$?
         cd ..
         return $status
+    elif [ "$file" = "Python-2.5.tar.bz2" ]; then
+        wget -cq http://www.python.org/ftp/python/2.5/Python-2.5.tar.bz2
+        status=$?
+        cd ..
+        return $status
     elif [ "$file" = "Python-2.7.tar.bz2" ]; then
         wget -cq http://www.python.org/ftp/python/2.7/Python-2.7.tar.bz2
+        status=$?
+        cd ..
+        return $status
+    elif [ "$file" = "expat-2.0.1.tar.gz" ]; then
+        wget -cq http://server1.xrdp.org/xrdp/expat-2.0.1.tar.gz
+        status=$?
+        cd ..
+        return $status
+    elif [ "$file" = "cairo-1.8.8.tar.gz" ]; then
+        wget -cq http://server1.xrdp.org/xrdp/cairo-1.8.8.tar.gz
+        status=$?
+        cd ..
+        return $status
+    elif [ "$file" = "libpng-1.2.46.tar.gz" ]; then
+        wget -cq http://server1.xrdp.org/xrdp/libpng-1.2.46.tar.gz
+        status=$?
+        cd ..
+        return $status
+    elif [ "$file" = "intltool-0.41.1.tar.gz" ]; then
+        wget -cq http://launchpad.net/intltool/trunk/0.41.1/+download/intltool-0.41.1.tar.gz
         status=$?
         cd ..
         return $status
@@ -150,8 +176,13 @@ make_it()
         fi
     fi
 
-    # configure module - we only need to do this once
+    # patch and configure module - we only need to do this once
     cd $mod_name
+    # check for patches
+    if [ -e ../../$mod_name.patch ]; then
+      patch -p1 ../../$mod_name.patch
+    fi
+    # now configure
     ./configure --prefix=$PREFIX_DIR $mod_args
     if [ $? -ne 0 ]; then
         echo "configuration failed for module $mn"
@@ -175,6 +206,14 @@ make_it()
         echo ""
         exit 1
     fi
+
+    # special case after installing python make this sym link
+    # so Mesa builds using this python version
+    case "$mod_name" in
+      *Python-2*)
+      ln -s python $PREFIX_DIR/bin/python2
+      ;;
+    esac
 
     cd ../..
     touch cookies/$mod_name
@@ -212,7 +251,7 @@ fi
 export PREFIX_DIR=$1
 export PKG_CONFIG_PATH=$PREFIX_DIR/lib/pkgconfig:$PREFIX_DIR/share/pkgconfig
 export PATH=$PREFIX_DIR/bin:$PATH
-export CFLAGS=-fPIC
+#export CFLAGS=-fPIC
 
 # prefix dir must exist...
 if [ ! -d $PREFIX_DIR ]; then
@@ -266,4 +305,3 @@ do
     make_it $mod_file $mod_dir "$mod_args"
 
 done < $data_file
-
