@@ -99,6 +99,11 @@ download_file()
         status=$?
         cd ..
         return $status
+    elif [ "$file" = "libxslt-1.1.26.tar.gz" ]; then
+        wget -cq ftp://xmlsoft.org/libxslt/libxslt-1.1.26.tar.gz
+        status=$?
+        cd ..
+        return $status
     else
         wget -cq $download_url/$file
         status=$?

@@ -75,6 +75,7 @@ libSM-1.2.0.tar.bz2                             :  libSM-1.2.0                  
 libXau-1.0.6.tar.bz2                            :  libXau-1.0.6                             :
 kbproto-1.0.5.tar.bz2                           :  kbproto-1.0.5                            :
 libXdmcp-1.1.0.tar.bz2                          :  libXdmcp-1.1.0                           :
+libxslt-1.1.26.tar.gz                           :  libxslt-1.1.26                           :
 xcb-proto-1.6.tar.bz2                           :  xcb-proto-1.6                            :
 libxcb-1.7.tar.bz2                              :  libxcb-1.7                               :
 libX11-1.4.0.tar.bz2                            :  libX11-1.4.0                             :
