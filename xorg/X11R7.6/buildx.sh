@@ -180,7 +180,7 @@ make_it()
     cd $mod_name
     # check for patches
     if [ -e ../../$mod_name.patch ]; then
-      patch -p1 ../../$mod_name.patch
+      patch -p1 < ../../$mod_name.patch
     fi
     # now configure
     ./configure --prefix=$PREFIX_DIR $mod_args
@@ -305,3 +305,5 @@ do
     make_it $mod_file $mod_dir "$mod_args"
 
 done < $data_file
+
+echo "All done"
