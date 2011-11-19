@@ -256,6 +256,7 @@ fi
 export PREFIX_DIR=$1
 export PKG_CONFIG_PATH=$PREFIX_DIR/lib/pkgconfig:$PREFIX_DIR/share/pkgconfig
 export PATH=$PREFIX_DIR/bin:$PATH
+export LD_LIBRARY_PATH=$PREFIX_DIR/lib
 # really only needed for x84
 export CFLAGS=-fPIC
 
