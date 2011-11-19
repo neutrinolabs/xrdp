@@ -1,4 +1,4 @@
-Python-2.7.tar.bz2                              :  Python-2.7                               : CFLAGS=-fPIC
+Python-2.7.tar.bz2                              :  Python-2.7                               :
 util-macros-1.11.0.tar.bz2                      :  util-macros-1.11.0                       :
 font-adobe-75dpi-1.0.3.tar.bz2                  :  font-adobe-75dpi-1.0.3                   : --with-fontrootdir=$PREFIX_DIR/share/fonts/X11
 font-adobe-100dpi-1.0.3.tar.bz2                 :  font-adobe-100dpi-1.0.3                  : --with-fontrootdir=$PREFIX_DIR/share/fonts/X11
@@ -47,7 +47,7 @@ libXdamage-1.1.3.tar.bz2                        :  libXdamage-1.1.3             
 makedepend-1.0.3.tar.bz2                        :  makedepend-1.0.3                         :
 libxml2-sources-2.7.8.tar.gz                    :  libxml2-2.7.8                            :
 libpng-1.2.46.tar.gz                            :  libpng-1.2.46                            :
-pixman-0.15.20.tar.bz2                          :  pixman-0.15.20                           :
+pixman-0.15.20.tar.bz2                          :  pixman-0.15.20                           : --disable-gtk
 cairo-1.8.8.tar.gz                              :  cairo-1.8.8                              :
 expat-2.0.1.tar.gz                              :  expat-2.0.1                              :
 MesaLib-7.10.3.tar.bz2                          :  Mesa-7.10.3                              : --with-expat=$PREFIX_DIR
