@@ -104,6 +104,11 @@ download_file()
         status=$?
         cd ..
         return $status
+    elif [ "$file" = "fontconfig-2.8.0.tar.gz" ]; then
+        wget -cq http://server1.xrdp.org/xrdp/fontconfig-2.8.0.tar.gz
+        status=$?
+        cd ..
+        return $status
     else
         wget -cq $download_url/$file
         status=$?
