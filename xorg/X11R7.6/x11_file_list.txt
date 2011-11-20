@@ -48,8 +48,8 @@ makedepend-1.0.3.tar.bz2                        :  makedepend-1.0.3             
 libxml2-sources-2.7.8.tar.gz                    :  libxml2-2.7.8                            :
 libpng-1.2.46.tar.gz                            :  libpng-1.2.46                            :
 pixman-0.15.20.tar.bz2                          :  pixman-0.15.20                           : --disable-gtk
-fontconfig-2.8.0.tar.gz                         :  fontconfig-2.8.0                         :
 freetype-2.4.6.tar.bz2                          :  freetype-2.4.6                           :
+fontconfig-2.8.0.tar.gz                         :  fontconfig-2.8.0                         :
 cairo-1.8.8.tar.gz                              :  cairo-1.8.8                              :
 expat-2.0.1.tar.gz                              :  expat-2.0.1                              :
 xextproto-7.1.2.tar.bz2                         :  xextproto-7.1.2                          :
