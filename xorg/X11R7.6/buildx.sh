@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # build.sh: a script for building X11R7.6 X server for use with xrdp #
-# Copyright 2011 Jay Sorg Jay.Sorg@gmail.com
+# Copyright 2011-2012 Jay Sorg Jay.Sorg@gmail.com
 #
 # Authors
 #       Jay Sorg Jay.Sorg@gmail.com
@@ -247,6 +247,7 @@ if [ $# -lt 1 ]; then
     echo ""
     echo "usage: build.sh <installation dir>"
     echo "usage: build.sh <clean>"
+    echo "usage: build.sh default"
     echo ""
     exit 1
 fi
@@ -258,7 +259,23 @@ if [ "$1" = "clean" ]; then
     exit 0
 fi
 
-export PREFIX_DIR=$1
+if [ "$1" = "default" ]; then
+    export PREFIX_DIR=$PWD/staging
+else
+    export PREFIX_DIR=$1
+fi
+
+if ! test -d $PREFIX_DIR; then
+    echo "dir does not exit, creating [$PREFIX_DIR]"
+    mkdir $PREFIX_DIR
+    if ! test $? -eq 0; then
+        echo "mkdir failed [$PREFIX_DIR]"
+        exit 0
+    fi
+fi
+
+echo "using $PREFIX_DIR"
+
 export PKG_CONFIG_PATH=$PREFIX_DIR/lib/pkgconfig:$PREFIX_DIR/share/pkgconfig
 export PATH=$PREFIX_DIR/bin:$PATH
 export LD_LIBRARY_PATH=$PREFIX_DIR/lib
