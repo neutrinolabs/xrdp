@@ -20,11 +20,18 @@
 
 */
 
+#if defined(_WIN32)
+#include <windows.h>
+#endif
 #include "xrdp.h"
 
 static struct xrdp_listen* g_listen = 0;
 static long g_threadid = 0; /* main threadid */
 
+#if defined(_WIN32)
+static SERVICE_STATUS_HANDLE g_ssh = 0;
+static SERVICE_STATUS g_service_status;
+#endif
 static long g_sync_mutex = 0;
 static long g_sync1_mutex = 0;
 static tbus g_term_event = 0;
@@ -150,17 +157,132 @@ g_loop(void)
   tc_mutex_unlock(g_sync_mutex);
 }
 
+/* win32 service control functions */
+#if defined(_WIN32)
+
+/*****************************************************************************/
+VOID WINAPI
+MyHandler(DWORD fdwControl)
+{
+  if (g_ssh == 0)
+  {
+    return;
+  }
+  if (fdwControl == SERVICE_CONTROL_STOP)
+  {
+    g_service_status.dwCurrentState = SERVICE_STOP_PENDING;
+    g_set_term(1);
+  }
+  else if (fdwControl == SERVICE_CONTROL_PAUSE)
+  {
+    /* shouldn't happen */
+  }
+  else if (fdwControl == SERVICE_CONTROL_CONTINUE)
+  {
+    /* shouldn't happen */
+  }
+  else if (fdwControl == SERVICE_CONTROL_INTERROGATE)
+  {
+  }
+  else if (fdwControl == SERVICE_CONTROL_SHUTDOWN)
+  {
+    g_service_status.dwCurrentState = SERVICE_STOP_PENDING;
+    g_set_term(1);
+  }
+  SetServiceStatus(g_ssh, &g_service_status);
+}
+
+/*****************************************************************************/
+static void DEFAULT_CC
+log_event(HANDLE han, char* msg)
+{
+  ReportEvent(han, EVENTLOG_INFORMATION_TYPE, 0, 0, 0, 1, 0, &msg, 0);
+}
+
+/*****************************************************************************/
+VOID WINAPI
+MyServiceMain(DWORD dwArgc, LPTSTR* lpszArgv)
+{
+  WSADATA w;
+  char text[256];
+  int pid;
+  //HANDLE event_han;
+//  int fd;
+//  char text[256];
+
+//  fd = g_file_open("c:\\temp\\xrdp\\log.txt");
+//  g_file_write(fd, "hi\r\n", 4);
+  //event_han = RegisterEventSource(0, "xrdp");
+  //log_event(event_han, "hi xrdp log");
+  g_threadid = tc_get_threadid();
+  g_set_current_dir("c:\\temp\\xrdp");
+  g_listen = 0;
+  WSAStartup(2, &w);
+  g_sync_mutex = tc_mutex_create();
+  g_sync1_mutex = tc_mutex_create();
+  pid = g_getpid();
+  g_snprintf(text, 255, "xrdp_%8.8x_main_term", pid);
+  g_term_event = g_create_wait_obj(text);
+  g_snprintf(text, 255, "xrdp_%8.8x_main_sync", pid);
+  g_sync_event = g_create_wait_obj(text);
+  g_memset(&g_service_status, 0, sizeof(SERVICE_STATUS));
+  g_service_status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
+  g_service_status.dwCurrentState = SERVICE_RUNNING;
+  g_service_status.dwControlsAccepted = SERVICE_CONTROL_INTERROGATE |
+                                        SERVICE_ACCEPT_STOP |
+                                        SERVICE_ACCEPT_SHUTDOWN;
+  g_service_status.dwWin32ExitCode = NO_ERROR;
+  g_service_status.dwServiceSpecificExitCode = 0;
+  g_service_status.dwCheckPoint = 0;
+  g_service_status.dwWaitHint = 0;
+//  g_sprintf(text, "calling RegisterServiceCtrlHandler\r\n");
+//  g_file_write(fd, text, g_strlen(text));
+  g_ssh = RegisterServiceCtrlHandler("xrdp", MyHandler);
+  if (g_ssh != 0)
+  {
+//    g_sprintf(text, "ok\r\n");
+//    g_file_write(fd, text, g_strlen(text));
+    SetServiceStatus(g_ssh, &g_service_status);
+    g_listen = xrdp_listen_create();
+    xrdp_listen_main_loop(g_listen);
+    g_sleep(100);
+    g_service_status.dwCurrentState = SERVICE_STOPPED;
+    SetServiceStatus(g_ssh, &g_service_status);
+  }
+  else
+  {
+    //g_sprintf(text, "RegisterServiceCtrlHandler failed\r\n");
+    //g_file_write(fd, text, g_strlen(text));
+  }
+  xrdp_listen_delete(g_listen);
+  tc_mutex_delete(g_sync_mutex);
+  tc_mutex_delete(g_sync1_mutex);
+  g_destroy_wait_obj(g_term_event);
+  g_destroy_wait_obj(g_sync_event);
+  WSACleanup();
+  //CloseHandle(event_han);
+}
+
+#endif
 /*****************************************************************************/
 int DEFAULT_CC
 main(int argc, char** argv)
 {
   int test;
   int host_be;
+#if defined(_WIN32)
+  WSADATA w;
+  SC_HANDLE sc_man;
+  SC_HANDLE sc_ser;
+  int run_as_service;
+  SERVICE_TABLE_ENTRY te[2];
+#else
   int pid;
   int fd;
   int no_daemon;
   char text[256];
   char pid_file[256];
+#endif
 
   g_init();
   ssl_init();
@@ -198,6 +320,106 @@ main(int argc, char** argv)
     g_writeln("unusable tui64 size, must be 8");
     return 0;
   }
+#if defined(_WIN32)
+  run_as_service = 1;
+  if (argc == 2)
+  {
+    if (g_strncasecmp(argv[1], "-help", 255) == 0 ||
+        g_strncasecmp(argv[1], "--help", 255) == 0 ||
+        g_strncasecmp(argv[1], "-h", 255) == 0)
+    {
+      g_writeln("");
+      g_writeln("xrdp: A Remote Desktop Protocol server.");
+      g_writeln("Copyright (C) Jay Sorg 2004-2011");
+      g_writeln("See http://xrdp.sourceforge.net for more information.");
+      g_writeln("");
+      g_writeln("Usage: xrdp [options]");
+      g_writeln("   -h: show help");
+      g_writeln("   -install: install service");
+      g_writeln("   -remove: remove service");
+      g_writeln("");
+      g_exit(0);
+    }
+    else if (g_strncasecmp(argv[1], "-install", 255) == 0 ||
+             g_strncasecmp(argv[1], "--install", 255) == 0 ||
+             g_strncasecmp(argv[1], "-i", 255) == 0)
+    {
+      /* open service manager */
+      sc_man = OpenSCManager(0, 0, GENERIC_WRITE);
+      if (sc_man == 0)
+      {
+        g_writeln("error OpenSCManager, do you have rights?");
+        g_exit(0);
+      }
+      /* check if service is allready installed */
+      sc_ser = OpenService(sc_man, "xrdp", SERVICE_ALL_ACCESS);
+      if (sc_ser == 0)
+      {
+        /* install service */
+        CreateService(sc_man, "xrdp", "xrdp", SERVICE_ALL_ACCESS,
+                      SERVICE_WIN32_OWN_PROCESS, SERVICE_DEMAND_START,
+                      SERVICE_ERROR_IGNORE, "c:\\temp\\xrdp\\xrdp.exe",
+                      0, 0, 0, 0, 0);
+
+      }
+      else
+      {
+        g_writeln("error service is allready installed");
+        CloseServiceHandle(sc_ser);
+        CloseServiceHandle(sc_man);
+        g_exit(0);
+      }
+      CloseServiceHandle(sc_man);
+      g_exit(0);
+    }
+    else if (g_strncasecmp(argv[1], "-remove", 255) == 0 ||
+             g_strncasecmp(argv[1], "--remove", 255) == 0 ||
+             g_strncasecmp(argv[1], "-r", 255) == 0)
+    {
+      /* open service manager */
+      sc_man = OpenSCManager(0, 0, GENERIC_WRITE);
+      if (sc_man == 0)
+      {
+        g_writeln("error OpenSCManager, do you have rights?");
+        g_exit(0);
+      }
+      /* check if service is allready installed */
+      sc_ser = OpenService(sc_man, "xrdp", SERVICE_ALL_ACCESS);
+      if (sc_ser == 0)
+      {
+        g_writeln("error service is not installed");
+        CloseServiceHandle(sc_man);
+        g_exit(0);
+      }
+      DeleteService(sc_ser);
+      CloseServiceHandle(sc_man);
+      g_exit(0);
+    }
+    else
+    {
+      g_writeln("Unknown Parameter");
+      g_writeln("xrdp -h for help");
+      g_writeln("");
+      g_exit(0);
+    }
+  }
+  else if (argc > 1)
+  {
+    g_writeln("Unknown Parameter");
+    g_writeln("xrdp -h for help");
+    g_writeln("");
+    g_exit(0);
+  }
+  if (run_as_service)
+  {
+    g_memset(&te, 0, sizeof(te));
+    te[0].lpServiceName = "xrdp";
+    te[0].lpServiceProc = MyServiceMain;
+    StartServiceCtrlDispatcher(&te);
+    g_exit(0);
+  }
+  WSAStartup(2, &w);
+#else /* _WIN32 */
   g_snprintf(pid_file, 255, "%s/xrdp.pid", XRDP_PID_PATH);
   no_daemon = 0;
   if (argc == 2)
@@ -348,6 +570,7 @@ main(int argc, char** argv)
       g_file_close(fd);
     }
   }
+#endif
   g_threadid = tc_get_threadid();
   g_listen = xrdp_listen_create();
   g_signal_user_interrupt(xrdp_shutdown); /* SIGINT */
@@ -371,7 +594,14 @@ main(int argc, char** argv)
   tc_mutex_delete(g_sync1_mutex);
   g_delete_wait_obj(g_term_event);
   g_delete_wait_obj(g_sync_event);
+#if defined(_WIN32)
+  /* I don't think it ever gets here */
+  /* when running in win32 app mode, control c exits right away */
+  WSACleanup();
+#else
   /* delete the xrdp.pid file */
   g_file_delete(pid_file);
+#endif
   return 0;
 }
+
