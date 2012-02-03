@@ -47,7 +47,7 @@ xrdp_listen_create(void)
   self->listen_trans = trans_create(TRANS_MODE_TCP, 16, 16);
   if (self->listen_trans == 0)
   {
-    g_writeln("xrdp_listen_main_loop: trans_create failed");
+    g_writeln("xrdp_listen_create: trans_create failed");
   }
   return self;
 }
@@ -120,7 +120,8 @@ xrdp_process_run(void* in_val)
 /*****************************************************************************/
 static int
 xrdp_listen_get_port_address(char* port, int port_bytes,
-                             char* address, int address_bytes)
+                             char* address, int address_bytes,
+                             struct xrdp_startup_params* startup_param)
 {
   int fd;
   int error;
@@ -171,6 +172,11 @@ xrdp_listen_get_port_address(char* port, int port_bytes,
     list_delete(values);
     g_file_close(fd);
   }
+  /* startup_param overrides */
+  if (startup_param->port[0] != 0)
+  {
+    g_strncpy(port, startup_param->port, port_bytes - 1);
+  }
   return 0;
 }
 
@@ -202,13 +208,14 @@ xrdp_listen_conn_in(struct trans* self, struct trans* new_self)
 /*****************************************************************************/
 /* wait for incoming connections */
 int APP_CC
-xrdp_listen_main_loop(struct xrdp_listen* self)
+xrdp_listen_main_loop(struct xrdp_listen* self,
+                      struct xrdp_startup_params* startup_param)
 {
   int error;
   int robjs_count;
   int cont;
   int timeout = 0;
-  char port[8];
+  char port[128];
   char address[256];
   tbus robjs[8];
   tbus term_obj;
@@ -218,7 +225,8 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
 
   self->status = 1;
   if (xrdp_listen_get_port_address(port, sizeof(port),
-                                   address, sizeof(address)) != 0)
+                                   address, sizeof(address),
+                                   startup_param) != 0)
   {
     g_writeln("xrdp_listen_main_loop: xrdp_listen_get_port failed");
     self->status = -1;

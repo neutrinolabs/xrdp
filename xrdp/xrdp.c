@@ -151,11 +151,84 @@ g_loop(void)
 }
 
 /*****************************************************************************/
+int APP_CC
+xrdp_process_params(int argc, char** argv,
+                    struct xrdp_startup_params* startup_params)
+{
+  int index;
+  char option[128];
+  char value[128];
+
+  index = 1;
+  while (index < argc)
+  {
+    g_strncpy(option, argv[index], 127);
+    if (index + 1 < argc)
+    {
+      g_strncpy(value, argv[index + 1], 127);
+    }
+    else
+    {
+      value[0] = 0;
+    }
+    if ((g_strncasecmp(option, "-help", 255)) == 0 ||
+        (g_strncasecmp(option, "--help", 255)) == 0 ||
+        (g_strncasecmp(option, "-h", 255)) == 0)
+    {
+      startup_params->help = 1;
+    }
+    else if ((g_strncasecmp(option, "-kill", 255) == 0) ||
+             (g_strncasecmp(option, "--kill", 255) == 0) ||
+             (g_strncasecmp(option, "-k", 255) == 0))
+    {
+      startup_params->kill = 1;
+    }
+    else if ((g_strncasecmp(option, "-nodaemon", 255) == 0) ||
+             (g_strncasecmp(option, "--nodaemon", 255) == 0) ||
+             (g_strncasecmp(option, "-nd", 255) == 0) ||
+             (g_strncasecmp(option, "--nd", 255) == 0) ||
+             (g_strncasecmp(option, "-ns", 255) == 0) ||
+             (g_strncasecmp(option, "--ns", 255) == 0))
+    {
+      startup_params->no_daemon = 1;
+    }
+    else if ((g_strncasecmp(option, "-v", 255) == 0) ||
+             (g_strncasecmp(option, "--version", 255) == 0))
+    {
+      startup_params->version = 1;
+    }
+    else if ((g_strncasecmp(option, "-p", 255) == 0) ||
+             (g_strncasecmp(option, "--port", 255) == 0))
+    {
+      index++;
+      g_strncpy(startup_params->port, value, 127);
+      if (g_strlen(startup_params->port) < 1)
+      {
+        g_writeln("error processing params, port [%s]", startup_params->port);
+        return 1;
+      }
+      else
+      {
+        g_writeln("--port parameter found, ini override [%s]",
+                  startup_params->port);
+      }
+    }
+    else
+    {
+      return 1;
+    }
+    index++;
+  }
+  return 0;
+}
+
+/*****************************************************************************/
 int DEFAULT_CC
 main(int argc, char** argv)
 {
   int test;
   int host_be;
+  struct xrdp_startup_params* startup_params;
   int pid;
   int fd;
   int no_daemon;
@@ -198,88 +271,73 @@ main(int argc, char** argv)
     g_writeln("unusable tui64 size, must be 8");
     return 0;
   }
-  g_snprintf(pid_file, 255, "%s/xrdp.pid", XRDP_PID_PATH);
-  no_daemon = 0;
-  if (argc == 2)
-  {
-    if ((g_strncasecmp(argv[1], "-kill", 255) == 0) ||
-        (g_strncasecmp(argv[1], "--kill", 255) == 0) ||
-        (g_strncasecmp(argv[1], "-k", 255) == 0))
-    {
-      g_writeln("stopping xrdp");
-      /* read the xrdp.pid file */
-      fd = -1;
-      if (g_file_exist(pid_file)) /* xrdp.pid */
-      {
-        fd = g_file_open(pid_file); /* xrdp.pid */
-      }
-      if (fd == -1)
-      {
-        g_writeln("problem opening to xrdp.pid");
-        g_writeln("maybe its not running");
-      }
-      else
-      {
-        g_memset(text, 0, 32);
-        g_file_read(fd, text, 31);
-        pid = g_atoi(text);
-        g_writeln("stopping process id %d", pid);
-        if (pid > 0)
-        {
-          g_sigterm(pid);
-        }
-        g_file_close(fd);
-      }
-      g_exit(0);
-    }
-    else if (g_strncasecmp(argv[1], "-nodaemon", 255) == 0 ||
-             g_strncasecmp(argv[1], "--nodaemon", 255) == 0 ||
-             g_strncasecmp(argv[1], "-nd", 255) == 0 ||
-             g_strncasecmp(argv[1], "--nd", 255) == 0 ||
-             g_strncasecmp(argv[1], "-ns", 255) == 0 ||
-             g_strncasecmp(argv[1], "--ns", 255) == 0)
-    {
-      no_daemon = 1;
-    }
-    else if (g_strncasecmp(argv[1], "-help", 255) == 0 ||
-             g_strncasecmp(argv[1], "--help", 255) == 0 ||
-             g_strncasecmp(argv[1], "-h", 255) == 0)
-    {
-      g_writeln("");
-      g_writeln("xrdp: A Remote Desktop Protocol server.");
-      g_writeln("Copyright (C) Jay Sorg 2004-2011");
-      g_writeln("See http://xrdp.sourceforge.net for more information.");
-      g_writeln("");
-      g_writeln("Usage: xrdp [options]");
-      g_writeln("   -h: show help");
-      g_writeln("   -nodaemon: don't fork into background");
-      g_writeln("   -kill: shut down xrdp");
-      g_writeln("");
-      g_exit(0);
-    }
-    else if ((g_strncasecmp(argv[1], "-v", 255) == 0) ||
-             (g_strncasecmp(argv[1], "--version", 255) == 0))
-    {
-      g_writeln("");
-      g_writeln("xrdp: A Remote Desktop Protocol server.");
-      g_writeln("Copyright (C) Jay Sorg 2004-2011");
-      g_writeln("See http://xrdp.sourceforge.net for more information.");
-      g_writeln("Version %s",PACKAGE_VERSION);
-      g_writeln("");
-      g_exit(0);
-    }
-    else
-    {
-      g_writeln("Unknown Parameter");
-      g_writeln("xrdp -h for help");
-      g_writeln("");
-      g_exit(0);
-    }
-  }
-  else if (argc > 1)
+
+  startup_params = (struct xrdp_startup_params*)
+                   g_malloc(sizeof(struct xrdp_startup_params), 1);
+  if (xrdp_process_params(argc, argv, startup_params) != 0)
   {
     g_writeln("Unknown Parameter");
     g_writeln("xrdp -h for help");
+    g_writeln("");
+    g_exit(0);
+  }
+
+  g_snprintf(pid_file, 255, "%s/xrdp.pid", XRDP_PID_PATH);
+  no_daemon = 0;
+
+  if (startup_params->kill)
+  {
+    g_writeln("stopping xrdp");
+    /* read the xrdp.pid file */
+    fd = -1;
+    if (g_file_exist(pid_file)) /* xrdp.pid */
+    {
+      fd = g_file_open(pid_file); /* xrdp.pid */
+    }
+    if (fd == -1)
+    {
+      g_writeln("problem opening to xrdp.pid");
+      g_writeln("maybe its not running");
+    }
+    else
+    {
+      g_memset(text, 0, 32);
+      g_file_read(fd, text, 31);
+      pid = g_atoi(text);
+      g_writeln("stopping process id %d", pid);
+      if (pid > 0)
+      {
+        g_sigterm(pid);
+      }
+      g_file_close(fd);
+    }
+    g_exit(0);
+  }
+  if (startup_params->no_daemon)
+  {
+    no_daemon = 1;
+  }
+  if (startup_params->help)
+  {
+    g_writeln("");
+    g_writeln("xrdp: A Remote Desktop Protocol server.");
+    g_writeln("Copyright (C) Jay Sorg 2004-2011");
+    g_writeln("See http://xrdp.sourceforge.net for more information.");
+    g_writeln("");
+    g_writeln("Usage: xrdp [options]");
+    g_writeln("   -h: show help");
+    g_writeln("   -nodaemon: don't fork into background");
+    g_writeln("   -kill: shut down xrdp");
+    g_writeln("");
+    g_exit(0);
+  }
+  if (startup_params->version)
+  {
+    g_writeln("");
+    g_writeln("xrdp: A Remote Desktop Protocol server.");
+    g_writeln("Copyright (C) Jay Sorg 2004-2011");
+    g_writeln("See http://xrdp.sourceforge.net for more information.");
+    g_writeln("Version %s",PACKAGE_VERSION);
     g_writeln("");
     g_exit(0);
   }
@@ -365,7 +423,7 @@ main(int argc, char** argv)
   {
     g_writeln("error creating g_term_event");
   }
-  xrdp_listen_main_loop(g_listen);
+  xrdp_listen_main_loop(g_listen, startup_params);
   xrdp_listen_delete(g_listen);
   tc_mutex_delete(g_sync_mutex);
   tc_mutex_delete(g_sync1_mutex);
@@ -373,5 +431,6 @@ main(int argc, char** argv)
   g_delete_wait_obj(g_sync_event);
   /* delete the xrdp.pid file */
   g_file_delete(pid_file);
+  g_free(startup_params);
   return 0;
 }

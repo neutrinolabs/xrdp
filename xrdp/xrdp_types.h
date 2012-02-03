@@ -402,3 +402,12 @@ struct xrdp_mod_data
   struct list* names;
   struct list* values;
 };
+
+struct xrdp_startup_params
+{
+  char port[128];
+  int kill;
+  int no_daemon;
+  int help;
+  int version;
+};
