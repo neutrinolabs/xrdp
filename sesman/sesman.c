@@ -138,6 +138,7 @@ main(int argc, char** argv)
   char text[256];
   char pid_file[256];
 
+  g_init("xrdp-sesman");
   g_snprintf(pid_file, 255, "%s/xrdp-sesman.pid", XRDP_PID_PATH);
   if (1 == argc)
   {
@@ -350,6 +351,7 @@ main(int argc, char** argv)
     log_end(&(g_cfg->log));
   }
 
+  g_deinit();
   return 0;
 }
 

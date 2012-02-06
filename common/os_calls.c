@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2004-2010 Jay Sorg
+   Copyright (c) 2004-2012 Jay Sorg
 
    Permission is hereby granted, free of charge, to any person obtaining a
    copy of this software and associated documentation files (the "Software"),
@@ -79,9 +79,11 @@ extern char** environ;
 #define INADDR_NONE ((unsigned long)-1)
 #endif
 
+static char g_temp_base[64] = "";
+
 /*****************************************************************************/
 void APP_CC
-g_init(void)
+g_init(const char* app_name)
 {
 #if defined(_WIN32)
   WSADATA wsadata;
@@ -89,6 +91,17 @@ g_init(void)
   WSAStartup(2, &wsadata);
 #endif
   setlocale(LC_CTYPE, "");
+  if (app_name != 0)
+  {
+    if (app_name[0] == 0)
+    {
+      snprintf(g_temp_base, sizeof(g_temp_base), "/tmp/%s-XXXXXX", app_name);
+      if (mkdtemp(g_temp_base) == 0)
+      {
+        printf("g_init: mkdtemp failed [%s]\n", g_temp_base);
+      }
+    }
+  }
 }
 
 /*****************************************************************************/
@@ -98,6 +111,7 @@ g_deinit(void)
 #if defined(_WIN32)
   WSACleanup();
 #endif
+  g_remove_dir(g_temp_base);
 }
 
 /*****************************************************************************/
@@ -700,39 +714,61 @@ g_create_wait_obj(char* name)
 #else
   tbus obj;
   struct sockaddr_un sa;
-  size_t len = 0;
-  tbus sck = -1;
-  int i = 0;
+  size_t len;
+  tbus sck;
+  int i;
+  int safety;
+  int unnamed;
 
-  g_memset(&sa,0,sizeof(struct sockaddr_un));
-
+  if (g_temp_base[0] == 0)
+  {
+    return 0;
+  }
   sck = socket(PF_UNIX, SOCK_DGRAM, 0);
   if (sck < 0)
   {
     return 0;
   }
-  memset(&sa, 0, sizeof(sa));
+  safety = 0;
+  g_memset(&sa, 0, sizeof(sa));
   sa.sun_family = AF_UNIX;
-  if ((name == 0) || (strlen(name) == 0))
+  unnamed = 1;
+  if (name != 0)
   {
-    g_random((char*)&i, sizeof(i));
-    sprintf(sa.sun_path, "/tmp/auto%8.8x", i);
-    while (g_file_exist(sa.sun_path))
+    if (name[0] != 0)
     {
-      g_random((char*)&i, sizeof(i));
-      sprintf(sa.sun_path, "/tmp/auto%8.8x", i);
+      unnamed = 0;
     }
+  }
+  if (unnamed)
+  {
+    do
+    {
+      if (safety > 100)
+      {
+        break;
+      }
+      safety++;
+      g_random((char*)&i, sizeof(i));
+      len = sizeof(sa.sun_path);
+      g_snprintf(sa.sun_path, len, "%s/auto_%8.8x", g_temp_base, i);
+      len = sizeof(sa);
+    } while (bind(sck, (struct sockaddr*)&sa, len) < 0);
   }
   else
   {
-    sprintf(sa.sun_path, "/tmp/%s", name);
-  }
-  unlink(sa.sun_path);
-  len = sizeof(sa);
-  if (bind(sck, (struct sockaddr*)&sa, len) < 0)
-  {
-    close(sck);
-    return 0;
+    do
+    {
+      if (safety > 100)
+      {
+        break;
+      }
+      safety++;
+      g_random((char*)&i, sizeof(i));
+      len = sizeof(sa.sun_path);
+      g_snprintf(sa.sun_path, len, "%s/%s_%8.8x", g_temp_base, name, i);
+      len = sizeof(sa);
+    } while (bind(sck, (struct sockaddr*)&sa, len) < 0);
   }
   obj = (tbus)sck;
   return obj;

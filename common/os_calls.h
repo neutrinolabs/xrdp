@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2004-2010 Jay Sorg
+   Copyright (c) 2004-2012 Jay Sorg
 
    Permission is hereby granted, free of charge, to any person obtaining a
    copy of this software and associated documentation files (the "Software"),
@@ -32,7 +32,7 @@
 #include "arch.h"
 
 void APP_CC
-g_init(void);
+g_init(const char* app_name);
 void APP_CC
 g_deinit(void);
 void* APP_CC

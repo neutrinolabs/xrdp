@@ -637,7 +637,7 @@ main(int argc, char** argv)
   char text[256] = "";
   char* display_text = (char *)NULL;
 
-  g_init(); /* os_calls */
+  g_init("xrdp-chansrv"); /* os_calls */
   read_ini();
   pid = g_getpid();
   LOG(1, ("main: app started pid %d(0x%8.8x)", pid, pid));
@@ -681,5 +681,6 @@ main(int argc, char** argv)
   /* cleanup */
   main_cleanup();
   LOG(1, ("main: app exiting pid %d(0x%8.8x)", pid, pid));
+  g_deinit();
   return 0;
 }

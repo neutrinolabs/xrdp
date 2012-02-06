@@ -80,6 +80,7 @@ main(int argc, char** argv)
   int lerror = 0;
   char exe_path[262];
 
+  g_init("xrdp-sessvc");
   g_memset(exe_path,0,sizeof(exe_path));
 
   if (argc < 3)
@@ -145,5 +146,6 @@ main(int argc, char** argv)
     g_sleep(1);
   }
   g_writeln("xrdp-sessvc: clean exit");
+  g_deinit();
   return 0;
 }

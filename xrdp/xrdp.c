@@ -235,7 +235,7 @@ main(int argc, char** argv)
   char text[256];
   char pid_file[256];
 
-  g_init();
+  g_init("xrdp");
   ssl_init();
   /* check compiled endian with actual endian */
   test = 1;
@@ -432,5 +432,6 @@ main(int argc, char** argv)
   /* delete the xrdp.pid file */
   g_file_delete(pid_file);
   g_free(startup_params);
+  g_deinit();
   return 0;
 }
