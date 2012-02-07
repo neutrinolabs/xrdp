@@ -27,6 +27,10 @@ AC_ARG_ENABLE(freerdp, AS_HELP_STRING([--enable-freerdp],
               [Build freerdp module (default: no)]),
               [freerdp=true], [freerdp=false])
 AM_CONDITIONAL(XRDP_FREERDP, [test x$freerdp = xtrue])
+AC_ARG_ENABLE(freerdp1, AS_HELP_STRING([--enable-freerdp1],
+              [Build freerdp1 module (default: no)]),
+              [freerdp1=true], [freerdp1=false])
+AM_CONDITIONAL(XRDP_FREERDP1, [test x$freerdp1 = xtrue])
 
 # checking for openssl
 AC_CHECK_HEADER([openssl/rc4.h], [],
@@ -44,6 +48,7 @@ then
 fi
 
 AS_IF( [test "x$enable_freerdp" = "xyes"] , [PKG_CHECK_MODULES(FREERDP, freerdp >= 0.8.1)] )
+AS_IF( [test "x$enable_freerdp1" = "xyes"] , [PKG_CHECK_MODULES(FREERDP, freerdp >= 1.0.0)] )
 
 # checking for Xlib, Xfixes
 AC_CHECK_HEADER([X11/Xlib.h], [],
@@ -65,6 +70,7 @@ AC_CONFIG_FILES([Makefile
                  xup/Makefile
                  mc/Makefile
                  freerdp/Makefile
+                 freerdp1/Makefile
                  xrdp/Makefile
                  sesman/Makefile
                  sesman/libscp/Makefile

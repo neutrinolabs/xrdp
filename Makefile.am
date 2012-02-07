@@ -3,7 +3,11 @@ EXTRA_DIST = bootstrap COPYING design.txt faq-compile.txt faq-general.txt file-l
 if XRDP_FREERDP
 FREERDPDIR = freerdp
 else
+if XRDP_FREERDP1
+FREERDPDIR = freerdp1
+else
 FREERDPDIR =
+endif
 endif
 
 SUBDIRS = \
