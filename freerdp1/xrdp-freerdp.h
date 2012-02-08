@@ -2,7 +2,7 @@
  * FreeRDP: A Remote Desktop Protocol Server
  * freerdp wrapper
  *
- * Copyright 2011 Jay Sorg
+ * Copyright 2011-2012 Jay Sorg
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -123,6 +123,7 @@ struct mod
   int width;
   int height;
   int bpp;
+  int colormap[256];
 
   struct rdp_freerdp* inst;
   struct bitmap_item bitmap_cache[4][4096];

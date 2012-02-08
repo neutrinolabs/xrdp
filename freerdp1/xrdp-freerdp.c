@@ -2,7 +2,7 @@
  * FreeRDP: A Remote Desktop Protocol Server
  * freerdp wrapper
  *
- * Copyright 2011 Jay Sorg
+ * Copyright 2011-2012 Jay Sorg
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@
  */
 
 #include "xrdp-freerdp.h"
+#include "xrdp-color.h"
 
 #define LOG_LEVEL 1
 #define LLOG(_level, _args) \
@@ -44,6 +45,7 @@ lxrdp_start(struct mod* mod, int w, int h, int bpp)
   settings->width = w;
   settings->height = h;
   settings->color_depth = bpp;
+  mod->bpp = bpp;
 
   settings->encryption = 1;
   settings->tls_security = 1;
@@ -313,29 +315,56 @@ lfreerdp_bitmap_update(rdpContext* context, BITMAP_UPDATE* bitmap)
   int index;
   int cx;
   int cy;
+  int server_bpp;
+  int server_Bpp;
+  int client_bpp;
+  int j;
+  int line_bytes;
   BITMAP_DATA* bd;
   tui8* dst_data;
+  tui8* dst_data1;
+  tui8* src;
+  tui8* dst;
 
   mod = ((struct mod_context*)context)->modi;
   LLOGLN(10, ("lfreerdp_bitmap_update: %d %d", bitmap->number, bitmap->count));
+
+  server_bpp = mod->inst->settings->color_depth;
+  server_Bpp = (server_bpp + 7) / 8;
+  client_bpp = mod->bpp;
+
   for (index = 0; index < bitmap->number; index++)
   {
     bd = bitmap->rectangles + index;
     cx = (bd->destRight - bd->destLeft) + 1;
     cy = (bd->destBottom - bd->destTop) + 1;
-    dst_data = bd->bitmapDataStream;
+    line_bytes = server_Bpp * bd->width;
+    dst_data = (tui8*)g_malloc(bd->height * line_bytes + 16, 0);
     if (bd->compressed)
     {
-      dst_data = g_malloc(bd->width * bd->height * 2 + 16, 0);
       bitmap_decompress(bd->bitmapDataStream, dst_data, bd->width,
-                        bd->height, bd->bitmapLength, 16, 16);
+                        bd->height, bd->bitmapLength, server_bpp, server_bpp);
     }
+    else
+    { /* bitmap is upside down */
+      src = bd->bitmapDataStream;
+      dst = dst_data + bd->height * line_bytes;
+      for (j = 0; j < bd->height; j++)
+      {
+        dst -= line_bytes;
+        g_memcpy(dst, src, line_bytes);
+        src += line_bytes;
+      }
+    }
+    dst_data1 = convert_bitmap(server_bpp, client_bpp, dst_data,
+                               bd->width, bd->height, mod->colormap);
     mod->server_paint_rect(mod, bd->destLeft, bd->destTop, cx, cy,
-                           dst_data, bd->width, bd->height, 0, 0);
-    if (dst_data != bd->bitmapDataStream)
+                           dst_data1, bd->width, bd->height, 0, 0);
+    if (dst_data1 != dst_data)
     {
-      g_free(dst_data);
+      g_free(dst_data1);
     }
+    g_free(dst_data);
   }
 }
 
@@ -359,15 +388,28 @@ lfreerdp_pat_blt(rdpContext* context, PATBLT_ORDER* patblt)
 {
   struct mod* mod;
   int idx;
+  int fgcolor;
+  int bgcolor;
+  int server_bpp;
+  int client_bpp;
   struct brush_item* bi;
 
   mod = ((struct mod_context*)context)->modi;
   LLOGLN(10, ("lfreerdp_pat_blt:"));
 
+  server_bpp = mod->inst->settings->color_depth;
+  client_bpp = mod->bpp;
+  LLOGLN(0, ("lfreerdp_pat_blt: bpp %d %d", server_bpp, client_bpp));
+
+  fgcolor = convert_color(server_bpp, client_bpp,
+                          patblt->foreColor, mod->colormap);
+  bgcolor = convert_color(server_bpp, client_bpp,
+                          patblt->backColor, mod->colormap);
+
   mod->server_set_mixmode(mod, 1);
   mod->server_set_opcode(mod, patblt->bRop);
-  mod->server_set_fgcolor(mod, patblt->foreColor);
-  mod->server_set_bgcolor(mod, patblt->backColor);
+  mod->server_set_fgcolor(mod, fgcolor);
+  mod->server_set_bgcolor(mod, bgcolor);
 
   if (patblt->brush.style & 0x80)
   {
@@ -413,11 +455,17 @@ static void DEFAULT_CC
 lfreerdp_opaque_rect(rdpContext* context, OPAQUE_RECT_ORDER* opaque_rect)
 {
   struct mod* mod;
+  int server_bpp;
+  int client_bpp;
+  int fgcolor;
 
   mod = ((struct mod_context*)context)->modi;
-  LLOGLN(10, ("lfreerdp_opaque_rect: %p %p color depth %d",
-         context, mod, context->instance->settings->color_depth));
-  mod->server_set_fgcolor(mod, opaque_rect->color);
+  LLOGLN(10, ("lfreerdp_opaque_rect:"));
+  server_bpp = mod->inst->settings->color_depth;
+  client_bpp = mod->bpp;
+  fgcolor = convert_color(server_bpp, client_bpp,
+                          opaque_rect->color, mod->colormap);
+  mod->server_set_fgcolor(mod, fgcolor);
   mod->server_fill_rect(mod, opaque_rect->nLeftRect, opaque_rect->nTopRect,
                         opaque_rect->nWidth, opaque_rect->nHeight);
 }
@@ -470,11 +518,21 @@ static void DEFAULT_CC
 lfreerdp_glyph_index(rdpContext* context, GLYPH_INDEX_ORDER* glyph_index)
 {
   struct mod* mod;
+  int server_bpp;
+  int client_bpp;
+  int fgcolor;
+  int bgcolor;
 
   mod = ((struct mod_context*)context)->modi;
   LLOGLN(10, ("lfreerdp_glyph_index:"));
-  mod->server_set_bgcolor(mod, glyph_index->foreColor);
-  mod->server_set_fgcolor(mod, glyph_index->backColor);
+  server_bpp = mod->inst->settings->color_depth;
+  client_bpp = mod->bpp;
+  fgcolor = convert_color(server_bpp, client_bpp,
+                          glyph_index->foreColor, mod->colormap);
+  bgcolor = convert_color(server_bpp, client_bpp,
+                          glyph_index->backColor, mod->colormap);
+  mod->server_set_bgcolor(mod, fgcolor);
+  mod->server_set_fgcolor(mod, bgcolor);
   mod->server_draw_text(mod, glyph_index->cacheId, glyph_index->flAccel,
       glyph_index->fOpRedundant,
       glyph_index->bkLeft, glyph_index->bkTop,
@@ -490,12 +548,22 @@ static void DEFAULT_CC
 lfreerdp_line_to(rdpContext* context, LINE_TO_ORDER* line_to)
 {
   struct mod* mod;
+  int server_bpp;
+  int client_bpp;
+  int fgcolor;
+  int bgcolor;
 
   mod = ((struct mod_context*)context)->modi;
   LLOGLN(10, ("lfreerdp_line_to:"));
   mod->server_set_opcode(mod, line_to->bRop2);
-  mod->server_set_fgcolor(mod, line_to->penColor);
-  mod->server_set_bgcolor(mod, line_to->backColor);
+  server_bpp = mod->inst->settings->color_depth;
+  client_bpp = mod->bpp;
+  fgcolor = convert_color(server_bpp, client_bpp,
+                          line_to->penColor, mod->colormap);
+  bgcolor = convert_color(server_bpp, client_bpp,
+                          line_to->backColor, mod->colormap);
+  mod->server_set_fgcolor(mod, fgcolor);
+  mod->server_set_bgcolor(mod, bgcolor);
   mod->server_set_pen(mod, line_to->penStyle, line_to->penWidth);
   mod->server_draw_line(mod, line_to->nXStart, line_to->nYStart,
                         line_to->nXEnd, line_to->nYEnd);
@@ -515,12 +583,16 @@ lfreerdp_cache_bitmapV2(rdpContext* context,
                         CACHE_BITMAP_V2_ORDER* cache_bitmap_v2_order)
 {
   char* dst_data;
+  char* dst_data1;
   int bytes;
   int width;
   int height;
   int id;
   int idx;
   int flags;
+  int server_bpp;
+  int server_Bpp;
+  int client_bpp;
   struct mod* mod;
 
   LLOGLN(10, ("lfreerdp_cache_bitmapV2: %d %d 0x%8.8x compressed %d",
@@ -548,25 +620,36 @@ lfreerdp_cache_bitmapV2(rdpContext* context,
     return;
   }
 
+  server_bpp = mod->inst->settings->color_depth;
+  server_Bpp = (server_bpp + 7) / 8;
+  client_bpp = mod->bpp;
+
   width = cache_bitmap_v2_order->bitmapWidth;
   height = cache_bitmap_v2_order->bitmapHeight;
-  bytes = width * height * 2 + 16;
-  dst_data = g_malloc(bytes, 0);
+  bytes = width * height * server_Bpp + 16;
+  dst_data = (char*)g_malloc(bytes, 0);
   if (cache_bitmap_v2_order->compressed)
   {
     bitmap_decompress(cache_bitmap_v2_order->bitmapDataStream,
                       dst_data, width, height,
-                      cache_bitmap_v2_order->bitmapLength, 16, 16);
+                      cache_bitmap_v2_order->bitmapLength,
+                      server_bpp, server_bpp);
   }
   else
   {
     g_memcpy(dst_data, cache_bitmap_v2_order->bitmapDataStream,
-             width * height * 2);
+             width * height * server_Bpp);
   }
+  dst_data1 = convert_bitmap(server_bpp, client_bpp, dst_data,
+                             width, height, mod->colormap);
   g_free(mod->bitmap_cache[id][idx].data);
   mod->bitmap_cache[id][idx].width = width;
   mod->bitmap_cache[id][idx].height = height;
-  mod->bitmap_cache[id][idx].data = dst_data;
+  mod->bitmap_cache[id][idx].data = dst_data1;
+  if (dst_data != dst_data1)
+  {
+    g_free(dst_data);
+  }
 }
 
 /******************************************************************************/
