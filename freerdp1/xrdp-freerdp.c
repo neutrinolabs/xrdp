@@ -165,7 +165,7 @@ lxrdp_event(struct mod* mod, int msg, long param1, long param2,
       total_size = (int)param4;
       if ((chanid < 0) || (chanid >= mod->inst->settings->num_channels))
       {
-        g_writeln("lxrdp_event: error chanid %d", chanid);
+        LLOGLN(0, ("lxrdp_event: error chanid %d", chanid));
         break;
       }
       lchid = mod->inst->settings->channels[chanid].channel_id;
@@ -199,12 +199,6 @@ lxrdp_event(struct mod* mod, int msg, long param1, long param2,
           mod->chan_buf_valid += size;
           break;
       }
-
-      //g_writeln("got channel data from client chanid %d flags %d size %d "
-      //          "data %p total_size %d -- %p",
-      //          chanid, flags, size, data, total_size,
-      //          mod->inst->SendChannelData);
-
       break;
   }
   return 0;
@@ -224,6 +218,20 @@ lxrdp_signal(struct mod* mod)
 static int DEFAULT_CC
 lxrdp_end(struct mod* mod)
 {
+  int i;
+  int j;
+
+  for (j = 0; j < 4; j++)
+  {
+    for (i = 0; i < 4096; i++)
+    {
+      g_free(mod->bitmap_cache[j][i].data);
+    }
+  }
+  for (i = 0; i < 64; i++)
+  {
+    g_free(mod->brush_cache[i].data);
+  }
   LLOGLN(10, ("lxrdp_end:"));
   return 0;
 }
@@ -973,15 +981,14 @@ lfreerdp_pre_connect(freerdp* instance)
   while (error == 0)
   {
     num_chans++;
-    g_writeln("  got channel [%s], flags [0x%8.8x]", ch_name, ch_flags);
+    LLOGLN(10, ("lfreerdp_pre_connect: got channel [%s], flags [0x%8.8x]",
+           ch_name, ch_flags));
     g_strncpy(instance->settings->channels[index].name, ch_name, 8);
     instance->settings->channels[index].options = ch_flags;
     index++;
     error = mod->server_query_channel(mod, index, ch_name, &ch_flags);
   }
   instance->settings->num_channels = num_chans;
-
-  //g_hexdump(instance->settings->order_support, 32);
 
   instance->settings->offscreen_bitmap_cache = false;
 
@@ -1094,17 +1101,13 @@ lfreerdp_receive_channel_data(freerdp* instance, int channelId, uint8* data,
                                         total_size, flags);
     if (error != 0)
     {
-      g_writeln("lfreerdp_receive_channel_data: error %d", error);
+      LLOGLN(0, ("lfreerdp_receive_channel_data: error %d", error));
     }
   }
   else
   {
-    g_writeln("lfreerdp_receive_channel_data: bad lchid");
+    LLOGLN(0, ("lfreerdp_receive_channel_data: bad lchid"));
   }
-
-  //g_writeln("lfreerdp_receive_channel_data: bytes %d id %d flags %d lchid %d",
-  //          size, channelId, flags, lchid);
-
   return 0;
 }
 
