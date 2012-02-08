@@ -83,6 +83,11 @@ lxrdp_event(struct mod* mod, int msg, long param1, long param2,
   int x;
   int y;
   int flags;
+  int size;
+  int total_size;
+  int chanid;
+  int lchid;
+  char* data;
 
   LLOGLN(10, ("lxrdp_event: msg %d", msg));
   switch (msg)
@@ -151,6 +156,55 @@ lxrdp_event(struct mod* mod, int msg, long param1, long param2,
       flags = PTR_FLAGS_WHEEL | PTR_FLAGS_WHEEL_NEGATIVE | 0x0088;
       mod->inst->input->MouseEvent(mod->inst->input, flags, 0, 0);
     case 110:
+      break;
+    case 0x5555:
+      chanid = LOWORD(param1);
+      flags = HIWORD(param1);
+      size = (int)param2;
+      data = (char*)param3;
+      total_size = (int)param4;
+      if ((chanid < 0) || (chanid >= mod->inst->settings->num_channels))
+      {
+        g_writeln("lxrdp_event: error chanid %d", chanid);
+        break;
+      }
+      lchid = mod->inst->settings->channels[chanid].channel_id;
+      switch (flags & 3)
+      {
+        case 3:
+          mod->inst->SendChannelData(mod->inst, lchid, data, total_size);
+          break;
+        case 2:
+          /* end */
+          g_memcpy(mod->chan_buf + mod->chan_buf_valid, data, size);
+          mod->chan_buf_valid += size;
+          mod->inst->SendChannelData(mod->inst, lchid, mod->chan_buf, total_size);
+          g_free(mod->chan_buf);
+          mod->chan_buf = 0;
+          mod->chan_buf_bytes = 0;
+          mod->chan_buf_valid = 0;
+          break;
+        case 1:
+          /* start */
+          g_free(mod->chan_buf);
+          mod->chan_buf = (char*)g_malloc(total_size, 0);
+          mod->chan_buf_bytes = total_size;
+          mod->chan_buf_valid = 0;
+          g_memcpy(mod->chan_buf + mod->chan_buf_valid, data, size);
+          mod->chan_buf_valid += size;
+          break;
+        default:
+          /* middle */
+          g_memcpy(mod->chan_buf + mod->chan_buf_valid, data, size);
+          mod->chan_buf_valid += size;
+          break;
+      }
+
+      //g_writeln("got channel data from client chanid %d flags %d size %d "
+      //          "data %p total_size %d -- %p",
+      //          chanid, flags, size, data, total_size,
+      //          mod->inst->SendChannelData);
+
       break;
   }
   return 0;
@@ -892,9 +946,8 @@ lfreerdp_pointer_cached(rdpContext* context,
   struct mod* mod;
   int index;
 
-  mod = ((struct mod_context*)context)->modi;
-
   LLOGLN(0, ("lfreerdp_pointer_cached:"));
+  mod = ((struct mod_context*)context)->modi;
   index = pointer_cached->cacheIndex;
   mod->server_set_cursor(mod, mod->pointer_cache[index].hotx,
       mod->pointer_cache[index].hoty, mod->pointer_cache[index].data,
@@ -905,9 +958,30 @@ lfreerdp_pointer_cached(rdpContext* context,
 static boolean DEFAULT_CC
 lfreerdp_pre_connect(freerdp* instance)
 {
-  LLOGLN(0, ("lfreerdp_pre_connect:"));
+  struct mod* mod;
+  int index;
+  int error;
+  int num_chans;
+  char ch_name[356];
+  int ch_flags;
 
-  g_hexdump(instance->settings->order_support, 32);
+  LLOGLN(0, ("lfreerdp_pre_connect:"));
+  mod = ((struct mod_context*)(instance->context))->modi;
+  num_chans = 0;
+  index = 0;
+  error = mod->server_query_channel(mod, index, ch_name, &ch_flags);
+  while (error == 0)
+  {
+    num_chans++;
+    g_writeln("  got channel [%s], flags [0x%8.8x]", ch_name, ch_flags);
+    g_strncpy(instance->settings->channels[index].name, ch_name, 8);
+    instance->settings->channels[index].options = ch_flags;
+    index++;
+    error = mod->server_query_channel(mod, index, ch_name, &ch_flags);
+  }
+  instance->settings->num_channels = num_chans;
+
+  //g_hexdump(instance->settings->order_support, 32);
 
   instance->settings->offscreen_bitmap_cache = false;
 
@@ -995,6 +1069,46 @@ lfreerdp_context_free(freerdp* instance, rdpContext* context)
 }
 
 /******************************************************************************/
+static int DEFAULT_CC
+lfreerdp_receive_channel_data(freerdp* instance, int channelId, uint8* data,
+                              int size, int flags, int total_size)
+{
+  struct mod* mod;
+  int lchid;
+  int index;
+  int error;
+
+  mod = ((struct mod_context*)(instance->context))->modi;
+  lchid = -1;
+  for (index = 0; index < instance->settings->num_channels; index++)
+  {
+    if (instance->settings->channels[index].channel_id == channelId)
+    {
+      lchid = index;
+      break;
+    }
+  }
+  if (lchid >= 0)
+  {
+    error = mod->server_send_to_channel(mod, lchid, data, size,
+                                        total_size, flags);
+    if (error != 0)
+    {
+      g_writeln("lfreerdp_receive_channel_data: error %d", error);
+    }
+  }
+  else
+  {
+    g_writeln("lfreerdp_receive_channel_data: bad lchid");
+  }
+
+  //g_writeln("lfreerdp_receive_channel_data: bytes %d id %d flags %d lchid %d",
+  //          size, channelId, flags, lchid);
+
+  return 0;
+}
+
+/******************************************************************************/
 struct mod* EXPORT_CC
 mod_init(void)
 {
@@ -1022,6 +1136,8 @@ mod_init(void)
   mod->inst->context_size = sizeof(modContext);
   mod->inst->ContextNew = lfreerdp_context_new;
   mod->inst->ContextFree = lfreerdp_context_free;
+  mod->inst->ReceiveChannelData = lfreerdp_receive_channel_data;
+
   freerdp_context_new(mod->inst);
 
   lcon = (modContext*)(mod->inst->context);

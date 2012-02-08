@@ -124,6 +124,9 @@ struct mod
   int height;
   int bpp;
   int colormap[256];
+  char* chan_buf;
+  int chan_buf_valid;
+  int chan_buf_bytes;
 
   struct rdp_freerdp* inst;
   struct bitmap_item bitmap_cache[4][4096];
