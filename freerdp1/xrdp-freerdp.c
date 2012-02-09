@@ -163,6 +163,7 @@ lxrdp_event(struct mod* mod, int msg, long param1, long param2,
       size = (int)param2;
       data = (char*)param3;
       total_size = (int)param4;
+      LLOGLN(10, ("lxrdp_event: client to server flags %d", flags));
       if ((chanid < 0) || (chanid >= mod->inst->settings->num_channels))
       {
         LLOGLN(0, ("lxrdp_event: error chanid %d", chanid));
@@ -230,7 +231,10 @@ lxrdp_end(struct mod* mod)
   }
   for (i = 0; i < 64; i++)
   {
-    g_free(mod->brush_cache[i].data);
+    if (mod->brush_cache[i].data != mod->brush_cache[i].b8x8)
+    {
+      g_free(mod->brush_cache[i].data);
+    }
   }
   LLOGLN(10, ("lxrdp_end:"));
   return 0;
@@ -775,6 +779,11 @@ lfreerdp_cache_brush(rdpContext* context, CACHE_BRUSH_ORDER* cache_brush_order)
   g_memset(mod->brush_cache[idx].data, 0, 8);
   if (bytes > 0)
   {
+    if (bytes > 8)
+    {
+      LLOGLN(0, ("lfreerdp_cache_brush: bytes to big %d", bytes));
+      bytes = 8;
+    }
     g_memcpy(mod->brush_cache[idx].data, cache_brush_order->data, bytes);
   }
   LLOGLN(10, ("lfreerdp_cache_brush: out bpp %d cx %d cy %d idx %d bytes %d",
@@ -1097,6 +1106,7 @@ lfreerdp_receive_channel_data(freerdp* instance, int channelId, uint8* data,
   }
   if (lchid >= 0)
   {
+    LLOGLN(10, ("lfreerdp_receive_channel_data: server to client"));
     error = mod->server_send_to_channel(mod, lchid, data, size,
                                         total_size, flags);
     if (error != 0)
