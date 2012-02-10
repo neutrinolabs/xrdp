@@ -49,7 +49,7 @@ lxrdp_start(struct mod* mod, int w, int h, int bpp)
 
   settings->encryption = 1;
   settings->tls_security = 1;
-  settings->nla_security = 1;
+  settings->nla_security = 0;
   settings->rdp_security = 1;
 
   return 0;
@@ -735,7 +735,13 @@ lfreerdp_cache_glyph(rdpContext* context, CACHE_GLYPH_ORDER* cache_glyph_order)
            gd->cx, gd->cy));
     mod->server_add_char(mod, cache_glyph_order->cacheId, gd->cacheIndex,
                          gd->x, gd->y, gd->cx, gd->cy, gd->aj);
+    xfree(gd->aj);
+    gd->aj = 0;
+    xfree(gd);
+    cache_glyph_order->glyphData[index] = 0;
   }
+  xfree(cache_glyph_order->unicodeCharacters);
+  cache_glyph_order->unicodeCharacters = 0;
 }
 
 /******************************************************************************/
@@ -788,6 +794,10 @@ lfreerdp_cache_brush(rdpContext* context, CACHE_BRUSH_ORDER* cache_brush_order)
   }
   LLOGLN(10, ("lfreerdp_cache_brush: out bpp %d cx %d cy %d idx %d bytes %d",
          bpp, cx, cy, idx, bytes));
+
+  xfree(cache_brush_order->data);
+  cache_brush_order->data = 0;
+
 }
 
 /******************************************************************************/
@@ -953,6 +963,12 @@ lfreerdp_pointer_new(rdpContext* context,
   {
     LLOGLN(0, ("lfreerdp_pointer_new: error"));
   }
+
+  xfree(pointer_new->colorPtrAttr.xorMaskData);
+  pointer_new->colorPtrAttr.xorMaskData = 0;
+  xfree(pointer_new->colorPtrAttr.andMaskData);
+  pointer_new->colorPtrAttr.andMaskData = 0;
+
 }
 
 /******************************************************************************/
@@ -979,8 +995,9 @@ lfreerdp_pre_connect(freerdp* instance)
   int index;
   int error;
   int num_chans;
-  char ch_name[356];
   int ch_flags;
+  char ch_name[256];
+  char* dst_ch_name;
 
   LLOGLN(0, ("lfreerdp_pre_connect:"));
   mod = ((struct mod_context*)(instance->context))->modi;
@@ -992,7 +1009,9 @@ lfreerdp_pre_connect(freerdp* instance)
     num_chans++;
     LLOGLN(10, ("lfreerdp_pre_connect: got channel [%s], flags [0x%8.8x]",
            ch_name, ch_flags));
-    g_strncpy(instance->settings->channels[index].name, ch_name, 8);
+    dst_ch_name = instance->settings->channels[index].name;
+    g_memset(dst_ch_name, 0, 8);
+    g_snprintf(dst_ch_name, 8, "%s", ch_name);
     instance->settings->channels[index].options = ch_flags;
     index++;
     error = mod->server_query_channel(mod, index, ch_name, &ch_flags);
@@ -1130,6 +1149,9 @@ mod_init(void)
 
   LLOGLN(0, ("mod_init:"));
   mod = (struct mod*)g_malloc(sizeof(struct mod), 1);
+  freerdp_get_version(&(mod->vmaj), &(mod->vmin), &(mod->vrev));
+  LLOGLN(0, ("  FreeRDP version major %d minor %d revision %d",
+         mod->vmaj, mod->vmin, mod->vrev));
   mod->size = sizeof(struct mod);
   mod->version = CURRENT_MOD_VER;
   mod->handle = (tbus)mod;
@@ -1170,9 +1192,15 @@ mod_exit(struct mod* mod)
     return 0;
   }
 
-  freerdp_context_free(mod->inst);
+  if ((mod->vmaj == 1) && (mod->vmin == 0) && (mod->vrev == 1))
+  {
+    /* this version has a bug with double free in freerdp_free */
+  }
+  else
+  {
+    freerdp_context_free(mod->inst);
+  }
   freerdp_free(mod->inst);
-
   g_free(mod);
   return 0;
 }

@@ -127,6 +127,9 @@ struct mod
   char* chan_buf;
   int chan_buf_valid;
   int chan_buf_bytes;
+  int vmaj;
+  int vmin;
+  int vrev;
 
   struct rdp_freerdp* inst;
   struct bitmap_item bitmap_cache[4][4096];
