@@ -79,7 +79,7 @@ extern char** environ;
 #define INADDR_NONE ((unsigned long)-1)
 #endif
 
-static char g_temp_base[64] = "";
+static char g_temp_base[128] = "";
 
 /*****************************************************************************/
 void APP_CC
@@ -95,7 +95,13 @@ g_init(const char* app_name)
   {
     if (app_name[0] != 0)
     {
-      snprintf(g_temp_base, sizeof(g_temp_base), "/tmp/%s-XXXXXX", app_name);
+      if (!g_directory_exist("/tmp/.xrdp"))
+      {
+        g_create_dir("/tmp/.xrdp");
+        g_chmod_hex("/tmp/.xrdp", 0x1777);
+      }
+      snprintf(g_temp_base, sizeof(g_temp_base), "/tmp/.xrdp/%s-XXXXXX",
+               app_name);
       if (mkdtemp(g_temp_base) == 0)
       {
         printf("g_init: mkdtemp failed [%s]\n", g_temp_base);

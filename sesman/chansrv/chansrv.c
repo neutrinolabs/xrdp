@@ -411,7 +411,7 @@ setup_listen(void)
   if (g_use_unix_socket)
   {
     g_lis_trans = trans_create(2, 8192, 8192);
-    g_snprintf(port, 255, "/tmp/xrdp_chansrv_socket_%d", 7200 + g_display_num);
+    g_snprintf(port, 255, "/tmp/.xrdp/xrdp_chansrv_socket_%d", 7200 + g_display_num);
   }
   else
   {

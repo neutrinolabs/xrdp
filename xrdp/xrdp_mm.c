@@ -702,7 +702,7 @@ xrdp_mm_process_login_response(struct xrdp_mm* self, struct stream* s)
         {
           /* unix socket */
           self->chan_trans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
-          g_snprintf(port, 255, "/tmp/xrdp_chansrv_socket_%d", 7200 + display);
+          g_snprintf(port, 255, "/tmp/.xrdp/xrdp_chansrv_socket_%d", 7200 + display);
         }
         else
         {
