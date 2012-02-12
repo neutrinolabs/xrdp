@@ -272,6 +272,14 @@ lxrdp_set_param(struct mod* mod, char* name, char* value)
   else if (g_strcmp(name, "lib") == 0)
   {
   }
+  else if (g_strcmp(name, "username") == 0)
+  {
+    g_strncpy(mod->username, value, 255);
+  }
+  else if (g_strcmp(name, "password") == 0)
+  {
+    g_strncpy(mod->password, value, 255);
+  }
   else
   {
     LLOGLN(0, ("lxrdp_set_param: unknown name [%s] value [%s]", name, value));
@@ -961,7 +969,9 @@ lfreerdp_pointer_new(rdpContext* context,
   }
   else
   {
-    LLOGLN(0, ("lfreerdp_pointer_new: error"));
+    LLOGLN(0, ("lfreerdp_pointer_new: error bpp %d width %d height %d",
+           pointer_new->xorBpp, pointer_new->colorPtrAttr.width,
+           pointer_new->colorPtrAttr.height));
   }
 
   xfree(pointer_new->colorPtrAttr.xorMaskData);
@@ -1051,6 +1061,9 @@ lfreerdp_pre_connect(freerdp* instance)
   instance->settings->order_support[NEG_MULTIOPAQUERECT_INDEX] = false;
   instance->settings->order_support[NEG_POLYLINE_INDEX] = false;
 
+  instance->settings->username = g_strdup(mod->username);
+  instance->settings->password = g_strdup(mod->password);
+
   // here
   //instance->settings->rdp_version = 4;
 
@@ -1078,6 +1091,16 @@ lfreerdp_pre_connect(freerdp* instance)
   instance->update->pointer->PointerNew = lfreerdp_pointer_new;
   instance->update->pointer->PointerCached = lfreerdp_pointer_cached;
 
+  if ((mod->username[0] != 0) && (mod->password[0] != 0))
+  {
+    /* since we have username and password, we can try nla */
+    instance->settings->nla_security = 1;
+  }
+  else
+  {
+    instance->settings->nla_security = 0;
+  }
+
   return true;
 }
 
@@ -1085,7 +1108,11 @@ lfreerdp_pre_connect(freerdp* instance)
 static boolean  DEFAULT_CC
 lfreerdp_post_connect(freerdp* instance)
 {
+  struct mod* mod;
+
   LLOGLN(0, ("lfreerdp_post_connect:"));
+  mod = ((struct mod_context*)(instance->context))->modi;
+  g_memset(mod->password, 0, sizeof(mod->password));
   return true;
 }
 
@@ -1141,6 +1168,24 @@ lfreerdp_receive_channel_data(freerdp* instance, int channelId, uint8* data,
 }
 
 /******************************************************************************/
+static boolean DEFAULT_CC
+lfreerdp_authenticate(freerdp* instance, char** username,
+                      char** password, char** domain)
+{
+  LLOGLN(0, ("lfreerdp_authenticate:"));
+  return true;
+}
+
+/******************************************************************************/
+static boolean DEFAULT_CC
+lfreerdp_verify_certificate(freerdp* instance, char* subject, char* issuer,
+                            char* fingerprint)
+{
+  LLOGLN(0, ("lfreerdp_verify_certificate:"));
+  return true;
+}
+
+/******************************************************************************/
 struct mod* EXPORT_CC
 mod_init(void)
 {
@@ -1172,6 +1217,8 @@ mod_init(void)
   mod->inst->ContextNew = lfreerdp_context_new;
   mod->inst->ContextFree = lfreerdp_context_free;
   mod->inst->ReceiveChannelData = lfreerdp_receive_channel_data;
+  mod->inst->Authenticate = lfreerdp_authenticate;
+  mod->inst->VerifyCertificate = lfreerdp_verify_certificate;
 
   freerdp_context_new(mod->inst);
 

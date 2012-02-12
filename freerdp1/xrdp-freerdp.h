@@ -130,6 +130,8 @@ struct mod
   int vmaj;
   int vmin;
   int vrev;
+  char username[256];
+  char password[256];
 
   struct rdp_freerdp* inst;
   struct bitmap_item bitmap_cache[4][4096];
