@@ -578,30 +578,37 @@ g_tcp_select(int sck1, int sck2)
     return rv;
 }
 
-
 /*****************************************************************************/
 void APP_CC
 g_random(char* data, int len)
 {
-    #if defined(_WIN32)
-    memset(data, 0x44, len);
-    #else
-    int fd;
+#if defined(_WIN32)
+  int index;
 
-    memset(data, 0x44, len);
-    fd = open("/dev/urandom", O_RDONLY);
-    if (fd == -1)
+  srand(g_time1());
+  for (index = 0; index < len; index++)
+  {
+    data[index] = (char)rand(); /* rand returns a number between 0 and
+                                   RAND_MAX */
+  }
+#else
+  int fd;
+
+  memset(data, 0x44, len);
+  fd = open("/dev/urandom", O_RDONLY);
+  if (fd == -1)
+  {
+    fd = open("/dev/random", O_RDONLY);
+  }
+  if (fd != -1)
+  {
+    if (read(fd, data, len) != len)
     {
-        fd = open("/dev/random", O_RDONLY);
     }
-    if (fd != -1)
-    {
-        read(fd, data, len);
-        close(fd);
-    }
-    #endif
+    close(fd);
+  }
+#endif
 }
-
 
 /*****************************************************************************/
 int APP_CC
@@ -802,7 +809,6 @@ g_mkdir(const char* dirname)
     #endif
 }
 
-
 /*****************************************************************************/
 /* gets the current working directory and puts up to maxlen chars in
    dirname
@@ -810,15 +816,16 @@ g_mkdir(const char* dirname)
 char* APP_CC
 g_get_current_dir(char* dirname, int maxlen)
 {
-    #if defined(_WIN32)
-    GetCurrentDirectory(maxlen, dirname);
-    return 0;
-    #else
-    getcwd(dirname, maxlen);
-    return 0;
-    #endif
+#if defined(_WIN32)
+  GetCurrentDirectoryA(maxlen, dirname);
+  return 0;
+#else
+  if (getcwd(dirname, maxlen) == 0)
+  {
+  }
+  return 0;
+#endif
 }
-
 
 /*****************************************************************************/
 /* returns error, zero on success and -1 on failure */
