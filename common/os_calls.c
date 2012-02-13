@@ -1919,6 +1919,17 @@ g_signal_pipe(void (*func)(int))
 
 /*****************************************************************************/
 /* does not work in win32 */
+void APP_CC
+g_signal_usr1(void (*func)(int))
+{
+#if defined(_WIN32)
+#else
+  signal(SIGUSR1, func);
+#endif
+}
+
+/*****************************************************************************/
+/* does not work in win32 */
 int APP_CC
 g_fork(void)
 {

@@ -218,6 +218,8 @@ void APP_CC
 g_signal_terminate(void (*func)(int));
 void APP_CC
 g_signal_pipe(void (*func)(int));
+void APP_CC
+g_signal_usr1(void (*func)(int));
 int APP_CC
 g_fork(void);
 int APP_CC
