@@ -74,6 +74,7 @@ env_set_user(char* username, char* passwd_file, int display)
                          pw_gecos);
   if (error == 0)
   {
+    g_rm_temp_dir();
     error = g_setgid(pw_gid);
     if (error == 0)
     {
@@ -84,6 +85,7 @@ env_set_user(char* username, char* passwd_file, int display)
       uid = pw_uid;
       error = g_setuid(uid);
     }
+    g_mk_temp_dir(0);
     if (error == 0)
     {
       g_clearenv();

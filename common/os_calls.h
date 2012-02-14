@@ -31,6 +31,10 @@
 
 #include "arch.h"
 
+int APP_CC
+g_rm_temp_dir(void);
+int APP_CC
+g_mk_temp_dir(const char* app_name);
 void APP_CC
 g_init(const char* app_name);
 void APP_CC
