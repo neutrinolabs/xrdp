@@ -80,6 +80,7 @@ extern char** environ;
 #endif
 
 static char g_temp_base[128] = "";
+static char g_temp_base_org[128] = "";
 
 /*****************************************************************************/
 void APP_CC
@@ -100,8 +101,10 @@ g_init(const char* app_name)
         g_create_dir("/tmp/.xrdp");
         g_chmod_hex("/tmp/.xrdp", 0x1777);
       }
-      snprintf(g_temp_base, sizeof(g_temp_base), "/tmp/.xrdp/%s-XXXXXX",
-               app_name);
+      snprintf(g_temp_base, sizeof(g_temp_base),
+               "/tmp/.xrdp/%s-XXXXXX", app_name);
+      snprintf(g_temp_base_org, sizeof(g_temp_base_org),
+               "/tmp/.xrdp/%s-XXXXXX", app_name);
       if (mkdtemp(g_temp_base) == 0)
       {
         printf("g_init: mkdtemp failed [%s]\n", g_temp_base);
@@ -1936,7 +1939,18 @@ g_fork(void)
 #if defined(_WIN32)
   return 0;
 #else
-  return fork();
+  int rv;
+
+  rv = fork();
+  if (rv == 0) /* child */
+  {
+    g_strncpy(g_temp_base, g_temp_base_org, 127);
+    if (mkdtemp(g_temp_base) == 0)
+    {
+      printf("g_fork: mkdtemp failed [%s]\n", g_temp_base);
+    }
+  }
+  return rv;
 #endif
 }
 
