@@ -238,11 +238,11 @@ main(int argc, char** argv)
         usage();
         return 0;
     }
-    g_init();
-    g_signal(2, proxy_shutdown); /* SIGINT */
-    g_signal(9, proxy_shutdown); /* SIGKILL */
-    g_signal(10, clear_counters);/* SIGUSR1*/
-    g_signal(15, proxy_shutdown);/* SIGTERM */
+    g_init("tcp_proxy");
+    g_signal_user_interrupt(proxy_shutdown); /* SIGINT */
+    g_signal_kill(proxy_shutdown); /* SIGKILL */
+    g_signal_usr1(clear_counters); /* SIGUSR1*/
+    g_signal_terminate(proxy_shutdown); /* SIGTERM */
     if (argc < 5)
     {
         while (!g_terminated)
