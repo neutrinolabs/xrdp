@@ -279,6 +279,7 @@ main(int argc, char** argv)
     g_writeln("Unknown Parameter");
     g_writeln("xrdp -h for help");
     g_writeln("");
+    g_deinit();
     g_exit(0);
   }
 
@@ -311,6 +312,7 @@ main(int argc, char** argv)
       }
       g_file_close(fd);
     }
+    g_deinit();
     g_exit(0);
   }
   if (startup_params->no_daemon)
@@ -329,6 +331,7 @@ main(int argc, char** argv)
     g_writeln("   -nodaemon: don't fork into background");
     g_writeln("   -kill: shut down xrdp");
     g_writeln("");
+    g_deinit();
     g_exit(0);
   }
   if (startup_params->version)
@@ -339,12 +342,14 @@ main(int argc, char** argv)
     g_writeln("See http://xrdp.sourceforge.net for more information.");
     g_writeln("Version %s",PACKAGE_VERSION);
     g_writeln("");
+    g_deinit();
     g_exit(0);
   }
   if (g_file_exist(pid_file)) /* xrdp.pid */
   {
     g_writeln("It looks like xrdp is allready running,");
     g_writeln("if not delete the xrdp.pid file and try again");
+    g_deinit();
     g_exit(0);
   }
   if (!no_daemon)
@@ -354,11 +359,13 @@ main(int argc, char** argv)
     if (fd == -1)
     {
       g_writeln("running in daemon mode with no access to pid files, quitting");
+      g_deinit();
       g_exit(0);
     }
     if (g_file_write(fd, "0", 1) == -1)
     {
       g_writeln("running in daemon mode with no access to pid files, quitting");
+      g_deinit();
       g_exit(0);
     }
     g_file_close(fd);
@@ -371,12 +378,14 @@ main(int argc, char** argv)
     if (pid == -1)
     {
       g_writeln("problem forking");
+      g_deinit();
       g_exit(1);
     }
     if (0 != pid)
     {
       g_writeln("process %d started ok", pid);
       /* exit, this is the main process */
+      g_deinit();
       g_exit(0);
     }
     g_sleep(1000);

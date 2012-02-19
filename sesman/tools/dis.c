@@ -49,7 +49,7 @@ int main(int argc, char** argv)
   dis = strtol(display + 1, &p, 10);
   memset(&sa, 0, sizeof(sa));
   sa.sun_family = AF_UNIX;
-  sprintf(sa.sun_path, "/tmp/xrdp_disconnect_display_%d", dis);
+  sprintf(sa.sun_path, "/tmp/.xrdp/xrdp_disconnect_display_%d", dis);
   if (access(sa.sun_path, F_OK) != 0)
   {
     printf("not in an xrdp session\n");

@@ -31,6 +31,10 @@
 
 #include "arch.h"
 
+int APP_CC
+g_rm_temp_dir(void);
+int APP_CC
+g_mk_temp_dir(const char* app_name);
 void APP_CC
 g_init(const char* app_name);
 void APP_CC
@@ -218,6 +222,8 @@ void APP_CC
 g_signal_terminate(void (*func)(int));
 void APP_CC
 g_signal_pipe(void (*func)(int));
+void APP_CC
+g_signal_usr1(void (*func)(int));
 int APP_CC
 g_fork(void);
 int APP_CC
