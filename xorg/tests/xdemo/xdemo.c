@@ -26,6 +26,8 @@
 #define SCROLL_JUMP         1   // scroll in increments of g_winHeight
 #define SCROLL_SMOOTH1      2   // scroll using XPutImage + XCopyArea
 #define SCROLL_SMOOTH2      3   // scroll using XPutImage only
+#define SCROLL_SMOOTH3      4   // scroll using XPutImage only
+#define SCROLL_SMOOTH4      5   // scroll using XPutImage only
 
 int parse_bmp(char *filename, struct pic_info *);
 int drawBMP(char *filename, int scroll_type);
@@ -206,7 +208,8 @@ usage()
     printf("         -g <WxH>                  geometry, default is 640x480\n");
     printf("         -c <count>                iteration count, default is 5000\n");
     printf("         -d <delay>                loop delay in micro seconds, default 1000\n");
-    printf("         -o <jump|smooth1|smooth2> define scrolling method\n");
+    printf("         -o <jump|smooth1|smooth2| define scrolling method\n");
+    printf("             smooth3|smooth4>\n");
     printf("         -z <proxy_app>            zero proxy counters for specified application\n\n");
 }
 
@@ -360,6 +363,12 @@ int main(int argc, char **argv)
             }
             else if (strcmp(optarg, "smooth2") == 0) {
                 scroll_type = SCROLL_SMOOTH2;
+            }
+            else if (strcmp(optarg, "smooth3") == 0) {
+                scroll_type = SCROLL_SMOOTH3;
+            }
+            else if (strcmp(optarg, "smooth4") == 0) {
+                scroll_type = SCROLL_SMOOTH4;
             }
             else {
                 fprintf(stderr, "\ninvalid scroll type specified\n\n");
@@ -535,9 +544,10 @@ int drawBMP(char *filename, int scroll_type)
         return 0;
     }
 
+    // copy image to pixelmap
+    XPutImage(g_disp, pixmap, g_gc, image, 0, 0, 0, 0, pic_info.width, pic_info.height);
+
     if (scroll_type == SCROLL_JUMP) {
-        // copy image to pixelmap
-        XPutImage(g_disp, pixmap, g_gc, image, 0, 0, 0, 0, pic_info.width, pic_info.height);
 
         if (pic_info.height <= g_winHeight) {
             // image too small - no scrolling required
@@ -583,6 +593,7 @@ int drawBMP(char *filename, int scroll_type)
     j = pic_info.height - g_winHeight;
 
     if (scroll_type == SCROLL_SMOOTH1) {
+        printf("running SCROLL_SMOOTH1\n");
         XFlush(g_disp);
         XPutImage(g_disp, g_win, g_gc, image, 0, 0, 0, 0, pic_info.width, pic_info.height);
         XFlush(g_disp);
@@ -598,6 +609,7 @@ int drawBMP(char *filename, int scroll_type)
     }
 
     if (scroll_type == SCROLL_SMOOTH2) {
+        printf("running SCROLL_SMOOTH2\n");
         XFlush(g_disp);
         for (i = 0; i < j; i++)
         {
@@ -606,6 +618,33 @@ int drawBMP(char *filename, int scroll_type)
             usleep(10000);
         }
     }
+    if (scroll_type == SCROLL_SMOOTH3) {
+        printf("running SCROLL_SMOOTH3\n");
+        XFlush(g_disp);
+        XCopyArea(g_disp, pixmap, g_win, g_gc, 0, 0, pic_info.width, pic_info.height, 0, 0);
+        XFlush(g_disp);
+        usleep(10000);
+        for (i = 0; i < j; i++)
+        {
+            XCopyArea(g_disp, g_win, g_win, g_gc, 0, 1, g_winWidth, g_winHeight - 1, 0, 0);
+            XCopyArea(g_disp, pixmap, g_win, g_gc, 0, g_winHeight + i, pic_info.width, 1, 0, g_winHeight -1);
+            XFlush(g_disp);
+            usleep(10000);
+        }
+        return 0;
+    }
+
+    if (scroll_type == SCROLL_SMOOTH4) {
+        printf("running SCROLL_SMOOTH4\n");
+        XFlush(g_disp);
+        for (i = 0; i < j; i++)
+        {
+            XCopyArea(g_disp, pixmap, g_win, g_gc, 0, i, pic_info.width, pic_info.height - i, 0, 0);
+            XFlush(g_disp);
+            usleep(10000);
+        }
+    }
+
     return 0;
 }
 
