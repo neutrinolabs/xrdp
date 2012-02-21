@@ -2,6 +2,9 @@
 
 xhost +
 
+# delete chache directory for testing
+rm -r .nx
+
 if ! [ -d .nx ]
 then
   mkdir .nx
