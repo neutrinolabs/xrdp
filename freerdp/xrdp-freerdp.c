@@ -157,6 +157,15 @@ lib_mod_event(struct mod* mod, int msg, long param1, long param2,
       //                                MOUSE_FLAG_BUTTON5 | MOUSE_FLAG_DOWN,
       //                                param1, param2);
       break;
+
+    case 200:
+      mod->inst->rdp_send_invalidate(mod->inst,
+                                     (param1 >> 16) & 0xffff,
+                                     param1 & 0xffff,
+                                     (param2 >> 16) & 0xffff,
+                                     param2 & 0xffff);
+      break;
+
   }
   LIB_DEBUG(mod, "out lib_mod_event");
   return 0;
