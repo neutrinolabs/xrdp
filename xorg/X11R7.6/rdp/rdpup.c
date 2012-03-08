@@ -33,9 +33,9 @@ static int g_sck_closed = 0;
 static int g_connected = 0;
 
 static int g_dis_listen_sck = 0;
-static int g_dis_sck = 0;
-static int g_dis_sck_closed = 0;
-static int g_dis_connected = 0;
+//static int g_dis_sck = 0;
+//static int g_dis_sck_closed = 0;
+//static int g_dis_connected = 0;
 
 static int g_begin = 0;
 static struct stream* g_out_s = 0;
@@ -285,7 +285,7 @@ process_screen_size_msg(int width, int height, int bpp)
   RRScreenSizePtr pSize;
   int mmwidth;
   int mmheight;
-  int error;
+  //int error;
 
   ErrorF("process_screen_size_msg: set width %d height %d bpp %d\n",
          width, height, bpp);
@@ -318,13 +318,14 @@ process_screen_size_msg(int width, int height, int bpp)
   RRSetCurrentConfig(g_pScreen, RR_Rotate_0, 0, pSize);
   if ((g_rdpScreen.width != width) || (g_rdpScreen.height != height))
   {
-    error = RRSetScreenConfig(g_pScreen, RR_Rotate_0, 0, pSize);
-    if (error == BadImplementation)
-    {
-      ErrorF("process_screen_size_msg: RRSetScreenConfig returned "
-             "BadImplementation\n");
-    }
+    //error = RRSetScreenConfig(g_pScreen, RR_Rotate_0, 0, pSize);
+    //if (error == BadImplementation)
+    //{
+    //  ErrorF("process_screen_size_msg: RRSetScreenConfig returned "
+    //         "BadImplementation\n");
+    //}
   }
+  return 0;
 }
 
 /******************************************************************************/

@@ -21,6 +21,7 @@
 
 # flex bison libxml2-dev intltool
 # xsltproc
+# xutils-dev python-libxml2
 
 download_file()
 {
@@ -193,6 +194,7 @@ make_it()
       patch -p1 < ../../$mod_name.patch
     fi
     # now configure
+    echo "executing ./configure --prefix=$PREFIX_DIR $mod_args"
     ./configure --prefix=$PREFIX_DIR $mod_args
     if [ $? -ne 0 ]; then
         echo "configuration failed for module $mn"
@@ -277,8 +279,11 @@ fi
 echo "using $PREFIX_DIR"
 
 export PKG_CONFIG_PATH=$PREFIX_DIR/lib/pkgconfig:$PREFIX_DIR/share/pkgconfig
-export PATH=$PREFIX_DIR/bin:$PATH
-export LD_LIBRARY_PATH=$PREFIX_DIR/lib
+
+# using this seems to cause more trouble than good
+#export PATH=$PREFIX_DIR/bin:$PATH
+#export LD_LIBRARY_PATH=$PREFIX_DIR/lib
+
 # really only needed for x84
 export CFLAGS=-fPIC
 
@@ -334,5 +339,19 @@ do
     make_it $mod_file $mod_dir "$mod_args"
 
 done < $data_file
+
+echo "build for X OK"
+
+X11RDPBASE=$PREFIX_DIR
+export X11RDPBASE
+
+cd rdp
+make
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "X11rdp make failed"
+  echo ""
+  exit 1
+fi
 
 echo "All done"

@@ -41,7 +41,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "scrnintstr.h"
 #include "servermd.h"
 #define PSZ 8
+
 //#include "cfb.h"
+
 #include "mibstore.h"
 #include "colormapst.h"
 #include "gcstruct.h"
@@ -59,6 +61,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "XKBstr.h"
 #include "inputstr.h"
 #include "randrstr.h"
+#include "mi.h"
+#include "fb.h"
+#include "micmap.h"
+#include "events.h"
 
 /* test to see if this is xorg source or xfree86 */
 #ifdef XORGSERVER
@@ -101,8 +107,10 @@ struct _rdpScreenInfoRec
   CreatePixmapProcPtr CreatePixmap;
   DestroyPixmapProcPtr DestroyPixmap;
   /* Window Procedures */
-  PaintWindowBackgroundProcPtr PaintWindowBackground;
-  PaintWindowBorderProcPtr PaintWindowBorder;
+
+  //PaintWindowBackgroundProcPtr PaintWindowBackground;
+  //PaintWindowBorderProcPtr PaintWindowBorder;
+
   CopyWindowProcPtr CopyWindow;
   ClearToBackgroundProcPtr ClearToBackground;
   ScreenWakeupHandlerProcPtr WakeupHandler;
@@ -175,7 +183,8 @@ g_tcp_listen(int sck);
 Bool
 rdpCloseScreen(int i, ScreenPtr pScreen);
 PixmapPtr
-rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth);
+rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
+                unsigned usage_hint);
 Bool
 rdpDestroyPixmap(PixmapPtr pPixmap);
 Bool
@@ -235,13 +244,14 @@ rdpCursorOffScreen(ScreenPtr* ppScreen, int* x, int* y);
 void
 rdpCrossScreen(ScreenPtr pScreen, Bool entering);
 Bool
-rdpSpriteRealizeCursor(ScreenPtr pScreen, CursorPtr pCursor);
+rdpSpriteRealizeCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs);
 Bool
-rdpSpriteUnrealizeCursor(ScreenPtr pScreen, CursorPtr pCursor);
+rdpSpriteUnrealizeCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs);
 void
-rdpSpriteSetCursor(ScreenPtr pScreen, CursorPtr pCursor, int x, int y);
+rdpSpriteSetCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs,
+                   int x, int y);
 void
-rdpSpriteMoveCursor(ScreenPtr pScreen, int x, int y);
+rdpSpriteMoveCursor(DeviceIntPtr pDev, ScreenPtr pScr, int x, int y);
 void
 PtrAddEvent(int buttonMask, int x, int y);
 void
@@ -282,6 +292,8 @@ int
 rdpup_draw_line(short x1, short y1, short x2, short y2);
 void
 rdpup_send_area(int x, int y, int w, int h);
+int
+rdpup_set_cursor(short x, short y, char* cur_data, char* cur_mask);
 
 #if defined(X_BYTE_ORDER)
 #  if X_BYTE_ORDER == X_LITTLE_ENDIAN

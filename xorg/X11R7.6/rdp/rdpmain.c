@@ -32,7 +32,10 @@ Sets up the  functions
 
 rdpScreenInfoRec g_rdpScreen; /* the one screen */
 ScreenPtr g_pScreen = 0;
-int g_rdpGCIndex = -1;
+
+//int g_rdpGCIndex = -1;
+DevPrivateKeyRec g_rdpGCIndex;
+
 /* set all these at once, use function set_bpp */
 int g_bpp = 16;
 int g_Bpp = 2;
@@ -60,7 +63,7 @@ static miPointerSpriteFuncRec g_rdpSpritePointerFuncs =
   rdpSpriteRealizeCursor,
   rdpSpriteUnrealizeCursor,
   rdpSpriteSetCursor,
-  rdpSpriteMoveCursor,
+  rdpSpriteMoveCursor
 };
 static miPointerScreenFuncRec g_rdpPointerCursorFuncs =
 {
@@ -73,7 +76,9 @@ static miPointerScreenFuncRec g_rdpPointerCursorFuncs =
 
 #define FB_GET_SCREEN_PIXMAP(s)    ((PixmapPtr) ((s)->devPrivate))
 
+#if 0
 static OsTimerPtr g_updateTimer = 0;
+#endif
 static XID g_wid = 0;
 
 static Bool
@@ -233,17 +238,17 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
     case 8:
       ret = fbScreenInit(pScreen, g_rdpScreen.pfbMemory,
                           g_rdpScreen.width, g_rdpScreen.height,
-                          dpix, dpiy, g_rdpScreen.paddedWidthInBytes);
+                          dpix, dpiy, g_rdpScreen.paddedWidthInBytes, 8);
       break;
     case 16:
       ret = fbScreenInit(pScreen, g_rdpScreen.pfbMemory,
                           g_rdpScreen.width, g_rdpScreen.height,
-                          dpix, dpiy, g_rdpScreen.paddedWidthInBytes / 2);
+                          dpix, dpiy, g_rdpScreen.paddedWidthInBytes / 2, 16);
       break;
     case 32:
       ret = fbScreenInit(pScreen, g_rdpScreen.pfbMemory,
                           g_rdpScreen.width, g_rdpScreen.height,
-                          dpix, dpiy, g_rdpScreen.paddedWidthInBytes / 4);
+                          dpix, dpiy, g_rdpScreen.paddedWidthInBytes / 4, 32);
       break;
     default:
       return 0;
@@ -276,10 +281,12 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
     fbPictureInit(pScreen, 0, 0);
   }
 
-  if (!AllocateGCPrivate(pScreen, g_rdpGCIndex, sizeof(rdpGCRec)))
+  //if (!miAllocateGCPrivate(pScreen, g_rdpGCIndex, sizeof(rdpGCRec)))
+  if (!dixRegisterPrivateKey(&g_rdpGCIndex, PRIVATE_GC, sizeof(rdpGCRec)))
   {
-    FatalError("rdpScreenInit: AllocateGCPrivate failed\n");
+    FatalError("rdpScreenInit: miAllocateGCPrivate failed\n");
   }
+
   /* Random screen procedures */
   g_rdpScreen.CloseScreen = pScreen->CloseScreen;
   /* GC procedures */
@@ -288,8 +295,8 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
   g_rdpScreen.CreatePixmap = pScreen->CreatePixmap;
   g_rdpScreen.DestroyPixmap = pScreen->DestroyPixmap;
   /* Window Procedures */
-  g_rdpScreen.PaintWindowBackground = pScreen->PaintWindowBackground;
-  g_rdpScreen.PaintWindowBorder = pScreen->PaintWindowBorder;
+  //g_rdpScreen.PaintWindowBackground = pScreen->PaintWindowBackground;
+  //g_rdpScreen.PaintWindowBorder = pScreen->PaintWindowBorder;
   g_rdpScreen.CopyWindow = pScreen->CopyWindow;
   g_rdpScreen.ClearToBackground = pScreen->ClearToBackground;
   /* Backing store procedures */
@@ -316,8 +323,8 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
   /* pScreen->CreatePixmap = rdpCreatePixmap; */
   /* pScreen->DestroyPixmap = rdpDestroyPixmap; */
   /* Window Procedures */
-  pScreen->PaintWindowBackground = rdpPaintWindowBackground;
-  pScreen->PaintWindowBorder = rdpPaintWindowBorder;
+  //pScreen->PaintWindowBackground = rdpPaintWindowBackground;
+  //pScreen->PaintWindowBorder = rdpPaintWindowBorder;
   pScreen->CopyWindow = rdpCopyWindow;
   pScreen->ClearToBackground = rdpClearToBackground;
   /* Backing store procedures */
@@ -342,7 +349,7 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
   }
   if (g_rdpScreen.bitsPerPixel == 1)
   {
-    ret = mfbCreateDefColormap(pScreen);
+    ret = fbCreateDefColormap(pScreen);
   }
   else
   {
@@ -472,11 +479,11 @@ InitOutput(ScreenInfo* screenInfo, int argc, char** argv)
   {
     screenInfo->formats[i] = g_formats[i];
   }
-  g_rdpGCIndex = AllocateGCPrivateIndex();
-  if (g_rdpGCIndex < 0)
-  {
-    FatalError("InitOutput: AllocateGCPrivateIndex failed\n");
-  }
+  //g_rdpGCIndex = miAllocateGCPrivateIndex();
+  //if (g_rdpGCIndex < 0)
+  //{
+  //  FatalError("InitOutput: miAllocateGCPrivateIndex failed\n");
+  //}
   if (!AddCallback(&ClientStateCallback, rdpClientStateChange, NULL))
   {
     rdpLog("InitOutput: AddCallback failed\n");
@@ -496,13 +503,18 @@ InitInput(int argc, char** argv)
   DeviceIntPtr p;
   DeviceIntPtr k;
 
-  k = AddInputDevice(rdpKeybdProc, 1);
-  p = AddInputDevice(rdpMouseProc, 1);
+  k = AddInputDevice(serverClient, rdpKeybdProc, 1);
+  p = AddInputDevice(serverClient, rdpMouseProc, 1);
   RegisterKeyboardDevice(k);
   RegisterPointerDevice(p);
+
+// TODO
+#if 0
   /* screenInfo must be globally defined */
   miRegisterPointerDevice(screenInfo.screens[0], p);
   mieqInit(k, p);
+#endif
+
 }
 
 /******************************************************************************/
@@ -523,7 +535,7 @@ ddxGiveUp(void)
 
 /******************************************************************************/
 Bool
-LegalModifier(unsigned int key, DevicePtr pDev)
+LegalModifier(unsigned int key, DeviceIntPtr pDev)
 {
   return 1; /* true */
 }
@@ -533,7 +545,7 @@ void
 ProcessInputEvents(void)
 {
   mieqProcessInputEvents();
-  miPointerUpdate();
+  //miPointerUpdate();
 }
 
 /******************************************************************************/
@@ -668,6 +680,7 @@ rdpRandRGetInfo(ScreenPtr pScreen, Rotation* pRotations)
   return TRUE;
 }
 
+#if 0
 /******************************************************************************/
 static CARD32
 rdpDeferredDrawCallback(OsTimerPtr timer, CARD32 now, pointer arg)
@@ -683,6 +696,7 @@ rdpDeferredDrawCallback(OsTimerPtr timer, CARD32 now, pointer arg)
   */
 return 0;
 }
+#endif
 
 /******************************************************************************/
 /* for lack of a better way, a window is created that covers a the area and
@@ -698,7 +712,7 @@ rdpInvalidateArea(ScreenPtr pScreen, int x, int y, int cx, int cy)
   Mask mask;
 
   DEBUG_OUT(("rdpInvalidateArea:\n"));
-  rootWindow = GetCurrentRootWindow();
+  rootWindow = 0; // GetCurrentRootWindow();
   if (rootWindow != 0)
   {
     mask = 0;
@@ -739,7 +753,6 @@ rdpRandRSetConfig(ScreenPtr pScreen, Rotation rotateKind, int rate,
   PixmapPtr screenPixmap;
   WindowPtr rootWindow;
   BoxRec box;
-  RegionRec temp;
 
   if ((pSize->width < 1) || (pSize->height < 1))
   {
@@ -782,7 +795,7 @@ rdpRandRSetConfig(ScreenPtr pScreen, Rotation rotateKind, int rate,
                screenPixmap->drawable.width, screenPixmap->drawable.height));
     /* memset(g_rdpScreen.pfbMemory, 0xff, 2048 * 2048 * 4); */
   }
-  rootWindow = GetCurrentRootWindow();
+  rootWindow = 0; // GetCurrentRootWindow();
   if (rootWindow != 0)
   {
     DEBUG_OUT(("rdpRandRSetConfig: rootWindow %p\n", (void*)rootWindow));
@@ -790,10 +803,10 @@ rdpRandRSetConfig(ScreenPtr pScreen, Rotation rotateKind, int rate,
     box.y1 = 0;
     box.x2 = pSize->width;
     box.y2 = pSize->height;
-    miRegionInit(&rootWindow->winSize, &box, 1);
-    miRegionInit(&rootWindow->borderSize, &box, 1);
-    miRegionReset(&rootWindow->borderClip, &box);
-    miRegionBreak(&rootWindow->clipList);
+    RegionInit(&rootWindow->winSize, &box, 1);
+    RegionInit(&rootWindow->borderSize, &box, 1);
+    RegionReset(&rootWindow->borderClip, &box);
+    RegionBreak(&rootWindow->clipList);
     rootWindow->drawable.width = pSize->width;
     rootWindow->drawable.height = pSize->height;
     ResizeChildrenWinSize(rootWindow, 0, 0, 0, 0);

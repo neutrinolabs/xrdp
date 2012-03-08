@@ -304,6 +304,7 @@ rdpKeybdProc(DeviceIntPtr pDevice, int onoff)
   KeySymsRec keySyms;
   CARD8 modMap[MAP_LENGTH];
   DevicePtr pDev;
+  XkbRMLVOSet set[MAP_LENGTH];
 
   DEBUG_OUT_INPUT(("rdpKeybdProc\n"));
   pDev = (DevicePtr)pDevice;
@@ -311,8 +312,7 @@ rdpKeybdProc(DeviceIntPtr pDevice, int onoff)
   {
     case DEVICE_INIT:
       KbdDeviceInit(pDevice, &keySyms, modMap);
-      InitKeyboardDeviceStruct(pDev, &keySyms, modMap,
-                               (BellProcPtr)rdpSendBell,
+      InitKeyboardDeviceStruct(pDevice, set, (BellProcPtr)rdpSendBell,
                                (KbdCtrlProcPtr)NoopDDA);
       break;
     case DEVICE_ON:
@@ -380,9 +380,19 @@ rdpMouseProc(DeviceIntPtr pDevice, int onoff)
       map[3] = 3;
       map[4] = 4;
       map[5] = 5;
-      InitPointerDeviceStruct(pDev, map, 5, miPointerGetMotionEvents,
-                              PtrDeviceControl,
-                              miPointerGetMotionBufferSize());
+      //InitPointerDeviceStruct(pDevice, map, 5, 0, miPointerGetMotionEvents,
+      //                        PtrDeviceControl,
+      //                        miPointerGetMotionBufferSize(), 2, 0);
+#if 0
+    DevicePtr /*device*/,
+    CARD8* /*map*/,
+    int /*numButtons*/,
+    Atom* /* btn_labels */,
+    PtrCtrlProcPtr /*controlProc*/,
+    int /*numMotionEvents*/,
+    int /*numAxes*/,
+    Atom* /* axes_labels */);
+#endif
       break;
     case DEVICE_ON:
       pDev->on = 1;
@@ -419,7 +429,7 @@ rdpCrossScreen(ScreenPtr pScreen, Bool entering)
 
 /******************************************************************************/
 Bool
-rdpSpriteRealizeCursor(ScreenPtr pScreen, CursorPtr pCursor)
+rdpSpriteRealizeCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs)
 {
   DEBUG_OUT_INPUT(("rdpSpriteRealizeCursor\n"));
   return 1;
@@ -427,7 +437,7 @@ rdpSpriteRealizeCursor(ScreenPtr pScreen, CursorPtr pCursor)
 
 /******************************************************************************/
 Bool
-rdpSpriteUnrealizeCursor(ScreenPtr pScreen, CursorPtr pCursor)
+rdpSpriteUnrealizeCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs)
 {
   DEBUG_OUT_INPUT(("hi rdpSpriteUnrealizeCursor\n"));
   return 1;
@@ -520,7 +530,8 @@ set_pixel_safe(char* data, int x, int y, int width, int height, int bpp,
 
 /******************************************************************************/
 void
-rdpSpriteSetCursor(ScreenPtr pScreen, CursorPtr pCursor, int x, int y)
+rdpSpriteSetCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs,
+                   int x, int y)
 {
   char cur_data[32 * (32 * 3)];
   char cur_mask[32 * (32 / 8)];
@@ -537,28 +548,28 @@ rdpSpriteSetCursor(ScreenPtr pScreen, CursorPtr pCursor, int x, int y)
   int fgcolor;
   int bgcolor;
 
-  if (pCursor == 0)
+  if (pCurs == 0)
   {
     return;
   }
-  if (pCursor->bits == 0)
+  if (pCurs->bits == 0)
   {
     return;
   }
-  w = pCursor->bits->width;
-  h = pCursor->bits->height;
+  w = pCurs->bits->width;
+  h = pCurs->bits->height;
   paddedRowBytes = PixmapBytePad(w, 1);
-  xhot = pCursor->bits->xhot;
-  yhot = pCursor->bits->yhot;
+  xhot = pCurs->bits->xhot;
+  yhot = pCurs->bits->yhot;
   /* ErrorF("xhot %d yhot %d\n", xhot, yhot); */
-  data = (char*)(pCursor->bits->source);
-  mask = (char*)(pCursor->bits->mask);
-  fgcolor = (((pCursor->foreRed >> 8) & 0xff) << 16) |
-            (((pCursor->foreGreen >> 8) & 0xff) << 8) |
-            ((pCursor->foreBlue >> 8) & 0xff);
-  bgcolor = (((pCursor->backRed >> 8) & 0xff) << 16) |
-            (((pCursor->backGreen >> 8) & 0xff) << 8) |
-            ((pCursor->backBlue >> 8) & 0xff);
+  data = (char*)(pCurs->bits->source);
+  mask = (char*)(pCurs->bits->mask);
+  fgcolor = (((pCurs->foreRed >> 8) & 0xff) << 16) |
+            (((pCurs->foreGreen >> 8) & 0xff) << 8) |
+            ((pCurs->foreBlue >> 8) & 0xff);
+  bgcolor = (((pCurs->backRed >> 8) & 0xff) << 16) |
+            (((pCurs->backGreen >> 8) & 0xff) << 8) |
+            ((pCurs->backBlue >> 8) & 0xff);
   memset(cur_data, 0, sizeof(cur_data));
   memset(cur_mask, 0, sizeof(cur_mask));
   for (j = 0; j < 32; j++)
@@ -582,7 +593,7 @@ rdpSpriteSetCursor(ScreenPtr pScreen, CursorPtr pCursor, int x, int y)
 
 /******************************************************************************/
 void
-rdpSpriteMoveCursor(ScreenPtr pScreen, int x, int y)
+rdpSpriteMoveCursor(DeviceIntPtr pDev, ScreenPtr pScr, int x, int y)
 {
   DEBUG_OUT_INPUT(("hi rdpSpriteMoveCursor\n"));
 }
@@ -591,29 +602,37 @@ rdpSpriteMoveCursor(ScreenPtr pScreen, int x, int y)
 void
 PtrAddEvent(int buttonMask, int x, int y)
 {
-  xEvent ev;
+  //xEvent ev;
   int i;
   unsigned long time;
+  //InternalEvent e;
+
+  //memset(&e, 0, sizeof(e));
 
   time = GetTimeInMillis();
-  miPointerAbsoluteCursor(x, y, time);
+  //todo PostSyntheticMotion();
+  //miPointerAbsoluteCursor(x, y, time);
   for (i = 0; i < 5; i++)
   {
     if ((buttonMask ^ g_old_button_mask) & (1 << i))
     {
       if (buttonMask & (1 << i))
       {
-        ev.u.u.type = ButtonPress;
-        ev.u.u.detail = i + 1;
-        ev.u.keyButtonPointer.time = time;
-        mieqEnqueue(&ev);
+        //e.header = ET_Internal;
+        //e.type = ET_ButtonPress;
+
+        //ev.u.u.type = ButtonPress;
+        //ev.u.u.detail = i + 1;
+        //ev.u.keyButtonPointer.time = time;
+        //mieqEnqueue(0, &ev); // todo
       }
       else
       {
-        ev.u.u.type = ButtonRelease;
-        ev.u.u.detail = i + 1;
-        ev.u.keyButtonPointer.time = time;
-        mieqEnqueue(&ev);
+        //ET_ButtonRelease
+        //ev.u.u.type = ButtonRelease;
+        //ev.u.u.detail = i + 1;
+        //ev.u.keyButtonPointer.time = time;
+        //mieqEnqueue(0, &ev); // todo
       }
     }
   }
@@ -635,7 +654,7 @@ check_keysa(void)
     ev.u.u.type = KeyRelease;
     ev.u.keyButtonPointer.time = time;
     ev.u.u.detail = g_ctrl_down;
-    mieqEnqueue(&ev);
+    //mieqEnqueue(&ev);
     g_ctrl_down = 0;
   }
   if (g_alt_down != 0)
@@ -644,7 +663,7 @@ check_keysa(void)
     ev.u.u.type = KeyRelease;
     ev.u.keyButtonPointer.time = time;
     ev.u.u.detail = g_alt_down;
-    mieqEnqueue(&ev);
+    //mieqEnqueue(&ev);
     g_alt_down = 0;
   }
   if (g_shift_down != 0)
@@ -653,7 +672,7 @@ check_keysa(void)
     ev.u.u.type = KeyRelease;
     ev.u.keyButtonPointer.time = time;
     ev.u.u.detail = g_shift_down;
-    mieqEnqueue(&ev);
+    //mieqEnqueue(&ev);
     g_shift_down = 0;
   }
 }
@@ -796,7 +815,7 @@ KbdAddEvent(int down, int param1, int param2, int param3, int param4)
   if (x_scancode > 0)
   {
     ev.u.u.detail = x_scancode;
-    mieqEnqueue(&ev);
+    //mieqEnqueue(&ev);
   }
 }
 
@@ -819,6 +838,7 @@ KbdSync(int param1)
   {
     return;
   }
+#if 0
   if ((!(keyc->state & 0x02)) != (!(param1 & 4))) /* caps lock */
   {
     KbdAddEvent(1, 58, 0, 58, 0);
@@ -834,4 +854,5 @@ KbdSync(int param1)
     KbdAddEvent(1, 70, 0, 70, 0);
     KbdAddEvent(0, 70, 49152, 70, 49152);
   }
+#endif
 }

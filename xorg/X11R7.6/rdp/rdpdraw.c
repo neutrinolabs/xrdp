@@ -33,7 +33,7 @@ Xserver drawing ops and funcs
 #endif
 
 extern rdpScreenInfoRec g_rdpScreen; /* from rdpmain.c */
-extern int g_rdpGCIndex; /* from rdpmain.c */
+extern DevPrivateKeyRec g_rdpGCIndex; /* from rdpmain.c */
 extern int g_Bpp; /* from rdpmain.c */
 extern ScreenPtr g_pScreen; /* from rdpmain.c */
 
@@ -80,21 +80,21 @@ rdp_get_clip(RegionPtr pRegion, DrawablePtr pDrawable, GCPtr pGC)
       {
         temp = &pWindow->clipList;
       }
-      if (miRegionNotEmpty(temp))
+      if (RegionNotEmpty(temp))
       {
         switch (pGC->clientClipType)
         {
           case CT_NONE:
             rv = 2;
-            miRegionCopy(pRegion, temp);
+            RegionCopy(pRegion, temp);
             break;
           case CT_REGION:
             rv = 2;
-            miRegionCopy(pRegion, pGC->clientClip);
-            miTranslateRegion(pRegion,
-                              pDrawable->x + pGC->clipOrg.x,
-                              pDrawable->y + pGC->clipOrg.y);
-            miIntersect(pRegion, pRegion, temp);
+            RegionCopy(pRegion, pGC->clientClip);
+            RegionTranslate(pRegion,
+                            pDrawable->x + pGC->clipOrg.x,
+                            pDrawable->y + pGC->clipOrg.y);
+            RegionIntersect(pRegion, pRegion, temp);
             break;
           default:
             rdpLog("unimp clip type %d\n", pGC->clientClipType);
@@ -106,7 +106,7 @@ rdp_get_clip(RegionPtr pRegion, DrawablePtr pDrawable, GCPtr pGC)
           box.y1 = 0;
           box.x2 = g_rdpScreen.width;
           box.y2 = g_rdpScreen.height;
-          if (miRectIn(pRegion, &box) == rgnIN)
+          if (RegionContainsRect(pRegion, &box) == rgnIN)
           {
             rv = 1;
           }
@@ -164,7 +164,7 @@ GetTextBoundingBox(DrawablePtr pDrawable, FontPtr font, int x, int y,
 /******************************************************************************/
 #define GC_FUNC_PROLOGUE(_pGC) \
 { \
-  priv = (rdpGCPtr)(_pGC->devPrivates[g_rdpGCIndex].ptr); \
+  priv = (rdpGCPtr)(dixGetPrivateAddr(&(_pGC->devPrivates), &g_rdpGCIndex)); \
   (_pGC)->funcs = priv->funcs; \
   if (priv->ops != 0) \
   { \
@@ -206,7 +206,7 @@ rdpValidateGC(GCPtr pGC, unsigned long changes, DrawablePtr d)
     {
       pRegion = &(((WindowPtr)d)->clipList);
     }
-    viewable = miRegionNotEmpty(pRegion);
+    viewable = RegionNotEmpty(pRegion);
   }
   priv->ops = 0;
   if (viewable)
@@ -291,7 +291,7 @@ rdpCopyClip(GCPtr dst, GCPtr src)
 /******************************************************************************/
 #define GC_OP_PROLOGUE(_pGC) \
 { \
-  priv = (rdpGCPtr)pGC->devPrivates[g_rdpGCIndex].ptr; \
+  priv = (rdpGCPtr)dixGetPrivateAddr(&(pGC->devPrivates), &g_rdpGCIndex); \
   oldFuncs = _pGC->funcs; \
   (_pGC)->funcs = priv->funcs; \
   (_pGC)->ops = priv->ops; \
@@ -320,12 +320,12 @@ rdpFillSpans(DrawablePtr pDrawable, GCPtr pGC, int nInit,
   DEBUG_OUT_OPS(("in rdpFillSpans\n"));
   GC_OP_PROLOGUE(pGC)
   pGC->ops->FillSpans(pDrawable, pGC, nInit, pptInit, pwidthInit, fSorted);
-  miRegionInit(&clip_reg, NullBox, 0);
+  RegionInit(&clip_reg, NullBox, 0);
   cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
   if (cd == 1)
   {
     rdpup_begin_update();
-    miRegionCopy(&clip_reg, &(((WindowPtr)pDrawable)->borderClip));
+    RegionCopy(&clip_reg, &(((WindowPtr)pDrawable)->borderClip));
     for (j = REGION_NUM_RECTS(&clip_reg) - 1; j >= 0; j--)
     {
       box = REGION_RECTS(&clip_reg)[j];
@@ -336,8 +336,8 @@ rdpFillSpans(DrawablePtr pDrawable, GCPtr pGC, int nInit,
   else if (cd == 2)
   {
     rdpup_begin_update();
-    miIntersect(&clip_reg, &clip_reg,
-                &(((WindowPtr)pDrawable)->borderClip));
+    RegionIntersect(&clip_reg, &clip_reg,
+                    &(((WindowPtr)pDrawable)->borderClip));
     for (j = REGION_NUM_RECTS(&clip_reg) - 1; j >= 0; j--)
     {
       box = REGION_RECTS(&clip_reg)[j];
@@ -345,7 +345,7 @@ rdpFillSpans(DrawablePtr pDrawable, GCPtr pGC, int nInit,
     }
     rdpup_end_update();
   }
-  miRegionUninit(&clip_reg);
+  RegionUninit(&clip_reg);
   GC_OP_EPILOGUE(pGC);
 }
 
@@ -364,12 +364,12 @@ rdpSetSpans(DrawablePtr pDrawable, GCPtr pGC, char* psrc,
   DEBUG_OUT_OPS(("in rdpSetSpans\n"));
   GC_OP_PROLOGUE(pGC);
   pGC->ops->SetSpans(pDrawable, pGC, psrc, ppt, pwidth, nspans, fSorted);
-  miRegionInit(&clip_reg, NullBox, 0);
+  RegionInit(&clip_reg, NullBox, 0);
   cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
   if (cd == 1)
   {
     rdpup_begin_update();
-    miRegionCopy(&clip_reg, &(((WindowPtr)pDrawable)->borderClip));
+    RegionCopy(&clip_reg, &(((WindowPtr)pDrawable)->borderClip));
     for (j = REGION_NUM_RECTS(&clip_reg) - 1; j >= 0; j--)
     {
       box = REGION_RECTS(&clip_reg)[j];
@@ -380,8 +380,8 @@ rdpSetSpans(DrawablePtr pDrawable, GCPtr pGC, char* psrc,
   else if (cd == 2)
   {
     rdpup_begin_update();
-    miIntersect(&clip_reg, &clip_reg,
-                &((WindowPtr)pDrawable)->borderClip);
+    RegionIntersect(&clip_reg, &clip_reg,
+                    &((WindowPtr)pDrawable)->borderClip);
     for (j = REGION_NUM_RECTS(&clip_reg) - 1; j >= 0; j--)
     {
       box = REGION_RECTS(&clip_reg)[j];
@@ -389,7 +389,7 @@ rdpSetSpans(DrawablePtr pDrawable, GCPtr pGC, char* psrc,
     }
     rdpup_end_update();
   }
-  miRegionUninit(&clip_reg);
+  RegionUninit(&clip_reg);
   GC_OP_EPILOGUE(pGC);
 }
 
@@ -409,7 +409,7 @@ rdpPutImage(DrawablePtr pDrawable, GCPtr pGC, int depth, int x, int y,
   GC_OP_PROLOGUE(pGC);
   pGC->ops->PutImage(pDrawable, pGC, depth, x, y, w, h, leftPad,
                      format, pBits);
-  miRegionInit(&clip_reg, NullBox, 0);
+  RegionInit(&clip_reg, NullBox, 0);
   cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
   if (cd == 1)
   {
@@ -429,7 +429,7 @@ rdpPutImage(DrawablePtr pDrawable, GCPtr pGC, int depth, int x, int y,
     rdpup_reset_clip();
     rdpup_end_update();
   }
-  miRegionUninit(&clip_reg);
+  RegionUninit(&clip_reg);
   GC_OP_EPILOGUE(pGC);
 }
 
@@ -455,7 +455,7 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
   DEBUG_OUT_OPS(("in rdpCopyArea\n"));
   GC_OP_PROLOGUE(pGC);
   rv = pGC->ops->CopyArea(pSrc, pDst, pGC, srcx, srcy, w, h, dstx, dsty);
-  miRegionInit(&clip_reg, NullBox, 0);
+  RegionInit(&clip_reg, NullBox, 0);
   cd = rdp_get_clip(&clip_reg, pDst, pGC);
   can_do_screen_blt = pSrc->type == DRAWABLE_WINDOW &&
                       ((WindowPtr)pSrc)->viewable &&
@@ -512,8 +512,8 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
         box.y1 = pDst->y + dsty;
         box.x2 = box.x1 + w;
         box.y2 = box.y1 + h;
-        miRegionInit(&box_reg, &box, 0);
-        miIntersect(&clip_reg, &clip_reg, &box_reg);
+        RegionInit(&box_reg, &box, 0);
+        RegionIntersect(&clip_reg, &clip_reg, &box_reg);
         num_clips = REGION_NUM_RECTS(&clip_reg);
         if (num_clips < 10)
         {
@@ -525,16 +525,16 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
         }
         else
         {
-          pbox = miRegionExtents(&clip_reg);
+          pbox = RegionExtents(&clip_reg);
           rdpup_send_area(pbox->x1, pbox->y1, pbox->x2 - pbox->x1,
                           pbox->y2 - pbox->y1);
         }
-        miRegionUninit(&box_reg);
+        RegionUninit(&box_reg);
       }
       rdpup_end_update();
     }
   }
-  miRegionUninit(&clip_reg);
+  RegionUninit(&clip_reg);
   GC_OP_EPILOGUE(pGC);
   return rv;
 }
@@ -555,7 +555,7 @@ rdpCopyPlane(DrawablePtr pSrcDrawable, DrawablePtr pDstDrawable,
   GC_OP_PROLOGUE(pGC);
   rv = pGC->ops->CopyPlane(pSrcDrawable, pDstDrawable, pGC, srcx, srcy,
                            width, height, dstx, dsty, bitPlane);
-  miRegionInit(&reg, NullBox, 0);
+  RegionInit(&reg, NullBox, 0);
   cd = rdp_get_clip(&reg, pDstDrawable, pGC);
   if (cd == 1)
   {
@@ -563,7 +563,7 @@ rdpCopyPlane(DrawablePtr pSrcDrawable, DrawablePtr pDstDrawable,
   else if (cd == 2)
   {
   }
-  miRegionUninit(&reg);
+  RegionUninit(&reg);
   GC_OP_EPILOGUE(pGC);
   return rv;
 }
@@ -630,7 +630,7 @@ rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
     /* todo, use this total_box */
   }
   pGC->ops->PolyPoint(pDrawable, pGC, mode, npt, in_pts);
-  miRegionInit(&clip_reg, NullBox, 0);
+  RegionInit(&clip_reg, NullBox, 0);
   cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
   if (cd == 1)
   {
@@ -669,7 +669,7 @@ rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
       rdpup_end_update();
     }
   }
-  miRegionUninit(&clip_reg);
+  RegionUninit(&clip_reg);
   if (pts != stack_pts)
   {
     g_free(pts);
@@ -708,7 +708,7 @@ rdpPolylines(DrawablePtr pDrawable, GCPtr pGC, int mode,
     }
   }
   pGC->ops->Polylines(pDrawable, pGC, mode, npt, pptInit);
-  miRegionInit(&clip_reg, NullBox, 0);
+  RegionInit(&clip_reg, NullBox, 0);
   cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
   if (cd == 1)
   {
@@ -777,7 +777,7 @@ rdpPolylines(DrawablePtr pDrawable, GCPtr pGC, int mode,
       rdpup_end_update();
     }
   }
-  miRegionUninit(&clip_reg);
+  RegionUninit(&clip_reg);
   g_free(ppts);
   GC_OP_EPILOGUE(pGC);
 }
@@ -810,7 +810,7 @@ rdpPolySegment(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment* pSegs)
     }
   }
   pGC->ops->PolySegment(pDrawable, pGC, nseg, pSegs);
-  miRegionInit(&clip_reg, NullBox, 0);
+  RegionInit(&clip_reg, NullBox, 0);
   cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
   if (cd == 1) /* no clip */
   {
@@ -851,7 +851,7 @@ rdpPolySegment(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment* pSegs)
     }
   }
   g_free(segs);
-  miRegionUninit(&clip_reg);
+  RegionUninit(&clip_reg);
   GC_OP_EPILOGUE(pGC);
 }
 
@@ -886,7 +886,7 @@ rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
     rect1[i] = rects[i];
   }
   pGC->ops->PolyRectangle(pDrawable, pGC, nrects, rects);
-  miRegionInit(&clip_reg, NullBox, 0);
+  RegionInit(&clip_reg, NullBox, 0);
   cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
   regRects = 0;
   if (cd != 0 && nrects > 0)
@@ -954,8 +954,8 @@ rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
   {
     if (regRects != 0)
     {
-      fill_reg = miRectsToRegion(nrects * 4, regRects, CT_NONE);
-      miIntersect(&clip_reg, &clip_reg, fill_reg);
+      fill_reg = RegionFromRects(nrects * 4, regRects, CT_NONE);
+      RegionIntersect(&clip_reg, &clip_reg, fill_reg);
       num_clips = REGION_NUM_RECTS(&clip_reg);
       if (num_clips > 0)
       {
@@ -981,10 +981,10 @@ rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
         }
         rdpup_end_update();
       }
-      miRegionDestroy(fill_reg);
+      RegionDestroy(fill_reg);
     }
   }
-  miRegionUninit(&clip_reg);
+  RegionUninit(&clip_reg);
   g_free(regRects);
   g_free(rect1);
   GC_OP_EPILOGUE(pGC);
@@ -1027,13 +1027,13 @@ rdpPolyArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc* parcs)
     }
   }
   pGC->ops->PolyArc(pDrawable, pGC, narcs, parcs);
-  miRegionInit(&clip_reg, NullBox, 0);
+  RegionInit(&clip_reg, NullBox, 0);
   cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
   if (cd == 1)
   {
     if (rects != 0)
     {
-      tmpRegion = miRectsToRegion(narcs, rects, CT_NONE);
+      tmpRegion = RegionFromRects(narcs, rects, CT_NONE);
       num_clips = REGION_NUM_RECTS(tmpRegion);
       if (num_clips > 0)
       {
@@ -1045,15 +1045,15 @@ rdpPolyArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc* parcs)
         }
         rdpup_end_update();
       }
-      miRegionDestroy(tmpRegion);
+      RegionDestroy(tmpRegion);
     }
   }
   else if (cd == 2)
   {
     if (rects != 0)
     {
-      tmpRegion = miRectsToRegion(narcs, rects, CT_NONE);
-      miIntersect(tmpRegion, tmpRegion, &clip_reg);
+      tmpRegion = RegionFromRects(narcs, rects, CT_NONE);
+      RegionIntersect(tmpRegion, tmpRegion, &clip_reg);
       num_clips = REGION_NUM_RECTS(tmpRegion);
       if (num_clips > 0)
       {
@@ -1065,10 +1065,10 @@ rdpPolyArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc* parcs)
         }
         rdpup_end_update();
       }
-      miRegionDestroy(tmpRegion);
+      RegionDestroy(tmpRegion);
     }
   }
-  miRegionUninit(&clip_reg);
+  RegionUninit(&clip_reg);
   g_free(rects);
   GC_OP_EPILOGUE(pGC);
 }
@@ -1096,7 +1096,7 @@ rdpFillPolygon(DrawablePtr pDrawable, GCPtr pGC,
   DEBUG_OUT_OPS(("in rdpFillPolygon\n"));
   GC_OP_PROLOGUE(pGC);
   pGC->ops->FillPolygon(pDrawable, pGC, shape, mode, count, pPts);
-  miRegionInit(&clip_reg, NullBox, 0);
+  RegionInit(&clip_reg, NullBox, 0);
   cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
   if (cd != 0)
   {
@@ -1143,8 +1143,8 @@ rdpFillPolygon(DrawablePtr pDrawable, GCPtr pGC,
   }
   else if (cd == 2)
   {
-    miRegionInit(&box_reg, &box, 0);
-    miIntersect(&clip_reg, &clip_reg, &box_reg);
+    RegionInit(&box_reg, &box, 0);
+    RegionIntersect(&clip_reg, &clip_reg, &box_reg);
     num_clips = REGION_NUM_RECTS(&clip_reg);
     if (num_clips > 0)
     {
@@ -1156,9 +1156,9 @@ rdpFillPolygon(DrawablePtr pDrawable, GCPtr pGC,
       }
       rdpup_end_update();
     }
-    miRegionUninit(&box_reg);
+    RegionUninit(&box_reg);
   }
-  miRegionUninit(&clip_reg);
+  RegionUninit(&clip_reg);
   GC_OP_EPILOGUE(pGC);
 }
 
@@ -1186,11 +1186,11 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
   {
     copy_of_rects[i] = prectInit[i];
   }
-  fill_reg = miRectsToRegion(nrectFill, copy_of_rects, CT_NONE);
+  fill_reg = RegionFromRects(nrectFill, copy_of_rects, CT_NONE);
   g_free(copy_of_rects);
-  miTranslateRegion(fill_reg, pDrawable->x, pDrawable->y);
+  RegionTranslate(fill_reg, pDrawable->x, pDrawable->y);
   pGC->ops->PolyFillRect(pDrawable, pGC, nrectFill, prectInit);
-  miRegionInit(&clip_reg, NullBox, 0);
+  RegionInit(&clip_reg, NullBox, 0);
   cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
   if (cd == 1) /* no clip */
   {
@@ -1225,7 +1225,7 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
   }
   else if (cd == 2) /* clip */
   {
-    miIntersect(&clip_reg, &clip_reg, fill_reg);
+    RegionIntersect(&clip_reg, &clip_reg, fill_reg);
     num_clips = REGION_NUM_RECTS(&clip_reg);
     if (num_clips > 0)
     {
@@ -1259,8 +1259,8 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
       rdpup_end_update();
     }
   }
-  miRegionUninit(&clip_reg);
-  miRegionDestroy(fill_reg);
+  RegionUninit(&clip_reg);
+  RegionDestroy(fill_reg);
   GC_OP_EPILOGUE(pGC);
 }
 
@@ -1301,13 +1301,13 @@ rdpPolyFillArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc* parcs)
     }
   }
   pGC->ops->PolyFillArc(pDrawable, pGC, narcs, parcs);
-  miRegionInit(&clip_reg, NullBox, 0);
+  RegionInit(&clip_reg, NullBox, 0);
   cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
   if (cd == 1)
   {
     if (rects != 0)
     {
-      tmpRegion = miRectsToRegion(narcs, rects, CT_NONE);
+      tmpRegion = RegionFromRects(narcs, rects, CT_NONE);
       num_clips = REGION_NUM_RECTS(tmpRegion);
       if (num_clips > 0)
       {
@@ -1319,15 +1319,15 @@ rdpPolyFillArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc* parcs)
         }
         rdpup_end_update();
       }
-      miRegionDestroy(tmpRegion);
+      RegionDestroy(tmpRegion);
     }
   }
   else if (cd == 2)
   {
     if (rects != 0)
     {
-      tmpRegion = miRectsToRegion(narcs, rects, CT_NONE);
-      miIntersect(tmpRegion, tmpRegion, &clip_reg);
+      tmpRegion = RegionFromRects(narcs, rects, CT_NONE);
+      RegionIntersect(tmpRegion, tmpRegion, &clip_reg);
       num_clips = REGION_NUM_RECTS(tmpRegion);
       if (num_clips > 0)
       {
@@ -1339,10 +1339,10 @@ rdpPolyFillArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc* parcs)
         }
         rdpup_end_update();
       }
-      miRegionDestroy(tmpRegion);
+      RegionDestroy(tmpRegion);
     }
   }
-  miRegionUninit(&clip_reg);
+  RegionUninit(&clip_reg);
   g_free(rects);
   GC_OP_EPILOGUE(pGC);
 }
@@ -1369,7 +1369,7 @@ rdpPolyText8(DrawablePtr pDrawable, GCPtr pGC,
     GetTextBoundingBox(pDrawable, pGC->font, x, y, count, &box);
   }
   rv = pGC->ops->PolyText8(pDrawable, pGC, x, y, count, chars);
-  miRegionInit(&reg, NullBox, 0);
+  RegionInit(&reg, NullBox, 0);
   if (count == 0)
   {
     cd = 0;
@@ -1386,8 +1386,8 @@ rdpPolyText8(DrawablePtr pDrawable, GCPtr pGC,
   }
   else if (cd == 2)
   {
-    miRegionInit(&reg1, &box, 0);
-    miIntersect(&reg, &reg, &reg1);
+    RegionInit(&reg1, &box, 0);
+    RegionIntersect(&reg, &reg, &reg1);
     num_clips = REGION_NUM_RECTS(&reg);
     if (num_clips > 0)
     {
@@ -1399,9 +1399,9 @@ rdpPolyText8(DrawablePtr pDrawable, GCPtr pGC,
       }
       rdpup_end_update();
     }
-    miRegionUninit(&reg1);
+    RegionUninit(&reg1);
   }
-  miRegionUninit(&reg);
+  RegionUninit(&reg);
   GC_OP_EPILOGUE(pGC);
   return rv;
 }
@@ -1428,7 +1428,7 @@ rdpPolyText16(DrawablePtr pDrawable, GCPtr pGC,
     GetTextBoundingBox(pDrawable, pGC->font, x, y, count, &box);
   }
   rv = pGC->ops->PolyText16(pDrawable, pGC, x, y, count, chars);
-  miRegionInit(&reg, NullBox, 0);
+  RegionInit(&reg, NullBox, 0);
   if (count == 0)
   {
     cd = 0;
@@ -1445,8 +1445,8 @@ rdpPolyText16(DrawablePtr pDrawable, GCPtr pGC,
   }
   else if (cd == 2)
   {
-    miRegionInit(&reg1, &box, 0);
-    miIntersect(&reg, &reg, &reg1);
+    RegionInit(&reg1, &box, 0);
+    RegionIntersect(&reg, &reg, &reg1);
     num_clips = REGION_NUM_RECTS(&reg);
     if (num_clips > 0)
     {
@@ -1458,9 +1458,9 @@ rdpPolyText16(DrawablePtr pDrawable, GCPtr pGC,
       }
       rdpup_end_update();
     }
-    miRegionUninit(&reg1);
+    RegionUninit(&reg1);
   }
-  miRegionUninit(&reg);
+  RegionUninit(&reg);
   GC_OP_EPILOGUE(pGC);
   return rv;
 }
@@ -1486,7 +1486,7 @@ rdpImageText8(DrawablePtr pDrawable, GCPtr pGC,
     GetTextBoundingBox(pDrawable, pGC->font, x, y, count, &box);
   }
   pGC->ops->ImageText8(pDrawable, pGC, x, y, count, chars);
-  miRegionInit(&clip_reg, NullBox, 0);
+  RegionInit(&clip_reg, NullBox, 0);
   if (count == 0)
   {
     cd = 0;
@@ -1503,8 +1503,8 @@ rdpImageText8(DrawablePtr pDrawable, GCPtr pGC,
   }
   else if (cd == 2)
   {
-    miRegionInit(&box_reg, &box, 0);
-    miIntersect(&clip_reg, &clip_reg, &box_reg);
+    RegionInit(&box_reg, &box, 0);
+    RegionIntersect(&clip_reg, &clip_reg, &box_reg);
     num_clips = REGION_NUM_RECTS(&clip_reg);
     if (num_clips > 0)
     {
@@ -1516,9 +1516,9 @@ rdpImageText8(DrawablePtr pDrawable, GCPtr pGC,
       }
       rdpup_end_update();
     }
-    miRegionUninit(&box_reg);
+    RegionUninit(&box_reg);
   }
-  miRegionUninit(&clip_reg);
+  RegionUninit(&clip_reg);
   GC_OP_EPILOGUE(pGC);
 }
 
@@ -1544,7 +1544,7 @@ rdpImageText16(DrawablePtr pDrawable, GCPtr pGC,
     GetTextBoundingBox(pDrawable, pGC->font, x, y, count, &box);
   }
   pGC->ops->ImageText16(pDrawable, pGC, x, y, count, chars);
-  miRegionInit(&clip_reg, NullBox, 0);
+  RegionInit(&clip_reg, NullBox, 0);
   if (count == 0)
   {
     cd = 0;
@@ -1561,8 +1561,8 @@ rdpImageText16(DrawablePtr pDrawable, GCPtr pGC,
   }
   else if (cd == 2)
   {
-    miRegionInit(&box_reg, &box, 0);
-    miIntersect(&clip_reg, &clip_reg, &box_reg);
+    RegionInit(&box_reg, &box, 0);
+    RegionIntersect(&clip_reg, &clip_reg, &box_reg);
     num_clips = REGION_NUM_RECTS(&clip_reg);
     if (num_clips > 0)
     {
@@ -1574,9 +1574,9 @@ rdpImageText16(DrawablePtr pDrawable, GCPtr pGC,
       }
       rdpup_end_update();
     }
-    miRegionUninit(&box_reg);
+    RegionUninit(&box_reg);
   }
-  miRegionUninit(&clip_reg);
+  RegionUninit(&clip_reg);
   GC_OP_EPILOGUE(pGC);
 }
 
@@ -1602,7 +1602,7 @@ rdpImageGlyphBlt(DrawablePtr pDrawable, GCPtr pGC,
     GetTextBoundingBox(pDrawable, pGC->font, x, y, nglyph, &box);
   }
   pGC->ops->ImageGlyphBlt(pDrawable, pGC, x, y, nglyph, ppci, pglyphBase);
-  miRegionInit(&reg, NullBox, 0);
+  RegionInit(&reg, NullBox, 0);
   if (nglyph == 0)
   {
     cd = 0;
@@ -1619,8 +1619,8 @@ rdpImageGlyphBlt(DrawablePtr pDrawable, GCPtr pGC,
   }
   else if (cd == 2)
   {
-    miRegionInit(&box_reg, &box, 0);
-    miIntersect(&reg, &reg, &box_reg);
+    RegionInit(&box_reg, &box, 0);
+    RegionIntersect(&reg, &reg, &box_reg);
     num_clips = REGION_NUM_RECTS(&reg);
     if (num_clips > 0)
     {
@@ -1632,9 +1632,9 @@ rdpImageGlyphBlt(DrawablePtr pDrawable, GCPtr pGC,
       }
       rdpup_end_update();
     }
-    miRegionUninit(&box_reg);
+    RegionUninit(&box_reg);
   }
-  miRegionUninit(&reg);
+  RegionUninit(&reg);
   GC_OP_EPILOGUE(pGC);
 }
 
@@ -1656,12 +1656,13 @@ rdpPolyGlyphBlt(DrawablePtr pDrawable, GCPtr pGC,
 
   DEBUG_OUT_OPS(("in rdpPolyGlyphBlt\n"));
   GC_OP_PROLOGUE(pGC);
+  memset(&box, 0, sizeof(box));
   if (nglyph != 0)
   {
     GetTextBoundingBox(pDrawable, pGC->font, x, y, nglyph, &box);
   }
   pGC->ops->PolyGlyphBlt(pDrawable, pGC, x, y, nglyph, ppci, pglyphBase);
-  miRegionInit(&reg, NullBox, 0);
+  RegionInit(&reg, NullBox, 0);
   if (nglyph == 0)
   {
     cd = 0;
@@ -1678,8 +1679,8 @@ rdpPolyGlyphBlt(DrawablePtr pDrawable, GCPtr pGC,
   }
   else if (cd == 2)
   {
-    miRegionInit(&box_reg, &box, 0);
-    miIntersect(&reg, &reg, &box_reg);
+    RegionInit(&box_reg, &box, 0);
+    RegionIntersect(&reg, &reg, &box_reg);
     num_clips = REGION_NUM_RECTS(&reg);
     if (num_clips > 0)
     {
@@ -1691,9 +1692,9 @@ rdpPolyGlyphBlt(DrawablePtr pDrawable, GCPtr pGC,
       }
       rdpup_end_update();
     }
-    miRegionUninit(&box_reg);
+    RegionUninit(&box_reg);
   }
-  miRegionUninit(&reg);
+  RegionUninit(&reg);
   GC_OP_EPILOGUE(pGC);
 }
 
@@ -1713,8 +1714,9 @@ rdpPushPixels(GCPtr pGC, PixmapPtr pBitMap, DrawablePtr pDst,
 
   DEBUG_OUT_OPS(("in rdpPushPixels\n"));
   GC_OP_PROLOGUE(pGC);
+  memset(&box, 0, sizeof(box));
   pGC->ops->PushPixels(pGC, pBitMap, pDst, w, h, x, y);
-  miRegionInit(&clip_reg, NullBox, 0);
+  RegionInit(&clip_reg, NullBox, 0);
   cd = rdp_get_clip(&clip_reg, pDst, pGC);
   if (cd == 1)
   {
@@ -1724,8 +1726,8 @@ rdpPushPixels(GCPtr pGC, PixmapPtr pBitMap, DrawablePtr pDst,
   }
   else if (cd == 2)
   {
-    miRegionInit(&box_reg, &box, 0);
-    miIntersect(&clip_reg, &clip_reg, &box_reg);
+    RegionInit(&box_reg, &box, 0);
+    RegionIntersect(&clip_reg, &clip_reg, &box_reg);
     num_clips = REGION_NUM_RECTS(&clip_reg);
     if (num_clips > 0)
     {
@@ -1737,9 +1739,9 @@ rdpPushPixels(GCPtr pGC, PixmapPtr pBitMap, DrawablePtr pDst,
       }
       rdpup_end_update();
     }
-    miRegionUninit(&box_reg);
+    RegionUninit(&box_reg);
   }
-  miRegionUninit(&clip_reg);
+  RegionUninit(&clip_reg);
   GC_OP_EPILOGUE(pGC);
 }
 
@@ -1750,8 +1752,8 @@ rdpCloseScreen(int i, ScreenPtr pScreen)
   DEBUG_OUT_OPS(("in rdpCloseScreen\n"));
   pScreen->CloseScreen = g_rdpScreen.CloseScreen;
   pScreen->CreateGC = g_rdpScreen.CreateGC;
-  pScreen->PaintWindowBackground = g_rdpScreen.PaintWindowBackground;
-  pScreen->PaintWindowBorder = g_rdpScreen.PaintWindowBorder;
+  //pScreen->PaintWindowBackground = g_rdpScreen.PaintWindowBackground;
+  //pScreen->PaintWindowBorder = g_rdpScreen.PaintWindowBorder;
   pScreen->CopyWindow = g_rdpScreen.CopyWindow;
   pScreen->ClearToBackground = g_rdpScreen.ClearToBackground;
   pScreen->RestoreAreas = g_rdpScreen.RestoreAreas;
@@ -1760,14 +1762,15 @@ rdpCloseScreen(int i, ScreenPtr pScreen)
 
 /******************************************************************************/
 PixmapPtr
-rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth)
+rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
+                unsigned usage_hint)
 {
   PixmapPtr rv;
 
   ErrorF("rdpCreatePixmap:\n");
   ErrorF("  in width %d height %d depth %d\n", width, height, depth);
   pScreen->CreatePixmap = g_rdpScreen.CreatePixmap;
-  rv = pScreen->CreatePixmap(pScreen, width, height, depth);
+  rv = pScreen->CreatePixmap(pScreen, width, height, depth, usage_hint);
   pScreen->CreatePixmap = rdpCreatePixmap;
   ErrorF("  out width %d height %d depth %d\n", rv->drawable.width,
     rv->drawable.height, rv->drawable.depth);
@@ -1799,9 +1802,9 @@ rdpCreateGC(GCPtr pGC)
 
   DEBUG_OUT_OPS(("in rdpCreateGC\n"));
   rv = 0;
-  if (g_rdpGCIndex != -1)
+  if (1) // g_rdpGCIndex != -1)
   {
-    priv = (rdpGCPtr)pGC->devPrivates[g_rdpGCIndex].ptr;
+    priv = (rdpGCPtr)dixGetPrivateAddr(&(pGC->devPrivates), &g_rdpGCIndex);
     g_pScreen->CreateGC = g_rdpScreen.CreateGC;
     rv = g_pScreen->CreateGC(pGC);
     if (rv)
@@ -1825,96 +1828,6 @@ rdpCreateGC(GCPtr pGC)
 
 /******************************************************************************/
 void
-rdpPaintWindowBackground(WindowPtr pWin, RegionPtr pRegion, int what)
-{
-  int j;
-  RegionRec reg;
-  BoxRec box;
-
-  DEBUG_OUT_OPS(("in rdpPaintWindowBackground\n"));
-  miRegionInit(&reg, NullBox, 0);
-  miRegionCopy(&reg, pRegion);
-  g_pScreen->PaintWindowBackground = g_rdpScreen.PaintWindowBackground;
-  g_pScreen->PaintWindowBackground(pWin, pRegion, what);
-  rdpup_begin_update();
-  if (what == PW_BACKGROUND && pWin->backgroundState == BackgroundPixel)
-  {
-    rdpup_set_fgcolor(pWin->background.pixel);
-    for (j = REGION_NUM_RECTS(&reg) - 1; j >= 0; j--)
-    {
-      box = REGION_RECTS(&reg)[j];
-      rdpup_fill_rect(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-    }
-  }
-  else if (what == PW_BORDER && pWin->borderIsPixel)
-  {
-    rdpup_set_fgcolor(pWin->border.pixel);
-    for (j = REGION_NUM_RECTS(&reg) - 1; j >= 0; j--)
-    {
-      box = REGION_RECTS(&reg)[j];
-      rdpup_fill_rect(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-    }
-  }
-  else
-  {
-    for (j = REGION_NUM_RECTS(&reg) - 1; j >= 0; j--)
-    {
-      box = REGION_RECTS(&reg)[j];
-      rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-    }
-  }
-  rdpup_end_update();
-  miRegionUninit(&reg);
-  g_pScreen->PaintWindowBackground = rdpPaintWindowBackground;
-}
-
-/******************************************************************************/
-void
-rdpPaintWindowBorder(WindowPtr pWin, RegionPtr pRegion, int what)
-{
-  int j;
-  RegionRec reg;
-  BoxRec box;
-
-  DEBUG_OUT_OPS(("in rdpPaintWindowBorder\n"));
-  miRegionInit(&reg, NullBox, 0);
-  miRegionCopy(&reg, pRegion);
-  g_pScreen->PaintWindowBackground = g_rdpScreen.PaintWindowBackground;
-  g_pScreen->PaintWindowBackground(pWin, pRegion, what);
-  rdpup_begin_update();
-  if (what == PW_BACKGROUND && pWin->backgroundState == BackgroundPixel)
-  {
-    rdpup_set_fgcolor(pWin->background.pixel);
-    for (j = REGION_NUM_RECTS(&reg) - 1; j >= 0; j--)
-    {
-      box = REGION_RECTS(&reg)[j];
-      rdpup_fill_rect(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-    }
-  }
-  else if (what == PW_BORDER && pWin->borderIsPixel)
-  {
-    rdpup_set_fgcolor(pWin->border.pixel);
-    for (j = REGION_NUM_RECTS(&reg) - 1; j >= 0; j--)
-    {
-      box = REGION_RECTS(&reg)[j];
-      rdpup_fill_rect(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-    }
-  }
-  else
-  {
-    for (j = REGION_NUM_RECTS(&reg) - 1; j >= 0; j--)
-    {
-      box = REGION_RECTS(&reg)[j];
-      rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-    }
-  }
-  rdpup_end_update();
-  miRegionUninit(&reg);
-  g_pScreen->PaintWindowBackground = rdpPaintWindowBackground;
-}
-
-/******************************************************************************/
-void
 rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
 {
   RegionRec reg;
@@ -1929,12 +1842,12 @@ rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
   BoxRec box2;
 
   DEBUG_OUT_OPS(("in rdpCopyWindow\n"));
-  miRegionInit(&reg, NullBox, 0);
-  miRegionCopy(&reg, pOldRegion);
+  RegionInit(&reg, NullBox, 0);
+  RegionCopy(&reg, pOldRegion);
   g_pScreen->CopyWindow = g_rdpScreen.CopyWindow;
   g_pScreen->CopyWindow(pWin, ptOldOrg, pOldRegion);
-  miRegionInit(&clip, NullBox, 0);
-  miRegionCopy(&clip, &pWin->borderClip);
+  RegionInit(&clip, NullBox, 0);
+  RegionCopy(&clip, &pWin->borderClip);
   dx = pWin->drawable.x - ptOldOrg.x;
   dy = pWin->drawable.y - ptOldOrg.y;
   rdpup_begin_update();
@@ -1973,8 +1886,8 @@ rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
   }
   rdpup_reset_clip();
   rdpup_end_update();
-  miRegionUninit(&reg);
-  miRegionUninit(&clip);
+  RegionUninit(&reg);
+  RegionUninit(&clip);
   g_pScreen->CopyWindow = rdpCopyWindow;
 }
 
@@ -2006,8 +1919,8 @@ rdpClearToBackground(WindowPtr pWin, int x, int y, int w, int h,
       box.x2 = box.x1 + pWin->drawable.width;
       box.y2 = box.y1 + pWin->drawable.height;
     }
-    miRegionInit(&reg, &box, 0);
-    miIntersect(&reg, &reg, &pWin->clipList);
+    RegionInit(&reg, &box, 0);
+    RegionIntersect(&reg, &reg, &pWin->clipList);
     rdpup_begin_update();
     for (j = REGION_NUM_RECTS(&reg) - 1; j >= 0; j--)
     {
@@ -2015,7 +1928,7 @@ rdpClearToBackground(WindowPtr pWin, int x, int y, int w, int h,
       rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
     }
     rdpup_end_update();
-    miRegionUninit(&reg);
+    RegionUninit(&reg);
   }
   g_pScreen->ClearToBackground = rdpClearToBackground;
 }
@@ -2030,8 +1943,8 @@ rdpRestoreAreas(WindowPtr pWin, RegionPtr prgnExposed)
   BoxRec box;
 
   DEBUG_OUT_OPS(("in rdpRestoreAreas\n"));
-  miRegionInit(&reg, NullBox, 0);
-  miRegionCopy(&reg, prgnExposed);
+  RegionInit(&reg, NullBox, 0);
+  RegionCopy(&reg, prgnExposed);
   g_pScreen->RestoreAreas = g_rdpScreen.RestoreAreas;
   rv = g_pScreen->RestoreAreas(pWin, prgnExposed);
   rdpup_begin_update();
@@ -2041,7 +1954,7 @@ rdpRestoreAreas(WindowPtr pWin, RegionPtr prgnExposed)
     rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
   }
   rdpup_end_update();
-  miRegionUninit(&reg);
+  RegionUninit(&reg);
   g_pScreen->RestoreAreas = rdpRestoreAreas;
   return rv;
 }
@@ -2078,9 +1991,9 @@ rdpUninstallColormap(ColormapPtr pmap)
   {
     if (pmap->mid != pmap->pScreen->defColormap)
     {
-      curpmap = (ColormapPtr)LookupIDByType(pmap->pScreen->defColormap,
-                                            RT_COLORMAP);
-      pmap->pScreen->InstallColormap(curpmap);
+      //curpmap = (ColormapPtr)LookupIDByType(pmap->pScreen->defColormap,
+      //                                      RT_COLORMAP);
+      //pmap->pScreen->InstallColormap(curpmap);
     }
   }
 }
@@ -2135,12 +2048,12 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
       box.y1 = p->y + yDst;
       box.x2 = box.x1 + width;
       box.y2 = box.y1 + height;
-      miRegionInit(&reg1, &box, 0);
-      miRegionInit(&reg2, NullBox, 0);
-      miRegionCopy(&reg2, pDst->clientClip);
-      miTranslateRegion(&reg2, p->x + pDst->clipOrigin.x,
+      RegionInit(&reg1, &box, 0);
+      RegionInit(&reg2, NullBox, 0);
+      RegionCopy(&reg2, pDst->clientClip);
+      RegionTranslate(&reg2, p->x + pDst->clipOrigin.x,
                         p->y + pDst->clipOrigin.y);
-      miIntersect(&reg1, &reg1, &reg2);
+      RegionIntersect(&reg1, &reg1, &reg2);
       num_clips = REGION_NUM_RECTS(&reg1);
       if (num_clips > 0)
       {
@@ -2152,8 +2065,8 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
         }
         rdpup_end_update();
       }
-      miRegionUninit(&reg1);
-      miRegionUninit(&reg2);
+      RegionUninit(&reg1);
+      RegionUninit(&reg2);
     }
     else
     {

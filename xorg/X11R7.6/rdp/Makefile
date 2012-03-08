@@ -4,28 +4,30 @@
 INCBASE = $(X11RDPBASE)/include
 LIBBASE = $(X11RDPBASE)/lib
 
-OBJS = rdpmain.o rdpdraw.o rdpinput.o rdpmisc.o rdpup.o miinitext.o fbcmap.o
+XSRCBASE = ../build_dir/xorg-server-1.9.3
 
-LIBS = ../../dbe/.libs/libdbe.a \
-	../../dix/.libs/libdix.a \
-	../../fb/.libs/libfb.a \
-	../../mfb/.libs/libmfb.a \
-	../../mi/.libs/libmi.a \
-	../../os/.libs/libos.a \
-	../../randr/.libs/librandr.a \
-	../../record/.libs/librecord.a \
-	../../render/.libs/librender.a \
-	../../xkb/.libs/libxkb.a \
-	../../XTrap/.libs/libxtrap.a \
-	../../Xext/.libs/libXext.a \
-	../../Xi/.libs/libXi.a \
-	../../GL/glx/.libs/libglx.a \
-	../../GL/mesa/.libs/libGLcore.a \
-	../../xfixes/.libs/libxfixes.a \
+OBJS = rdpmain.o rdpdraw.o rdpinput.o rdpmisc.o rdpup.o miinitext.o
+
+# fbcmap.o
+
+LIBS = $(XSRCBASE)/dbe/.libs/libdbe.a \
+	$(XSRCBASE)/dix/.libs/libdix.a \
+	$(XSRCBASE)/dix/.libs/libmain.a \
+	$(XSRCBASE)/fb/.libs/libfb.a \
+	$(XSRCBASE)/mi/.libs/libmi.a \
+	$(XSRCBASE)/os/.libs/libos.a \
+	$(XSRCBASE)/randr/.libs/librandr.a \
+	$(XSRCBASE)/record/.libs/librecord.a \
+	$(XSRCBASE)/render/.libs/librender.a \
+	$(XSRCBASE)/xkb/.libs/libxkb.a \
+	$(XSRCBASE)/Xext/.libs/libXext.a \
+	$(XSRCBASE)/Xi/.libs/libXi.a \
+	$(XSRCBASE)/glx/.libs/libglx.a \
+	$(XSRCBASE)/xfixes/.libs/libxfixes.a \
 	librdp.a \
-	-lfreetype -lz -lm -lXfont -lXau -lXdmcp
+	-lfreetype -lz -lm -lXfont -lXau -lXdmcp -lpixman-1
 
-CFLAGS = -O2 -fno-strength-reduce \
+CFLAGS = -O2 -Wall -fno-strength-reduce \
 	-I../../include \
 	-I../../cfb \
 	-I../../mfb \
@@ -80,8 +82,8 @@ X11rdp: $(OBJS)
 clean:
 	rm -f $(OBJS) librdp.a
 
-miinitext.o: ../../mi/miinitext.c
-	$(CC) $(CFLAGS) -c ../../mi/miinitext.c
+miinitext.o: ../build_dir/xorg-server-1.9.3/mi/miinitext.c
+	$(CC) $(CFLAGS) -I../build_dir/xorg-server-1.9.3/Xext -c ../build_dir/xorg-server-1.9.3/mi/miinitext.c
 
-fbcmap.o: ../../fb/fbcmap.c
-	$(CC) $(CFLAGS) -c ../../fb/fbcmap.c
+#fbcmap.o: ../../fb/fbcmap.c
+#	$(CC) $(CFLAGS) -c ../../fb/fbcmap.c
