@@ -46,7 +46,8 @@ download_file()
         cd ..
         return $status
     elif [ "$file" = "expat-2.0.1.tar.gz" ]; then
-        wget -cq http://surfnet.dl.sourceforge.net/project/expat/expat/2.0.1/expat-2.0.1.tar.gz
+        wget -cq http://server1.xrdp.org/xrdp/expat-2.0.1.tar.gz
+
         status=$?
         cd ..
         return $status
@@ -280,9 +281,7 @@ echo "using $PREFIX_DIR"
 
 export PKG_CONFIG_PATH=$PREFIX_DIR/lib/pkgconfig:$PREFIX_DIR/share/pkgconfig
 
-# using this seems to cause more trouble than good
-#export PATH=$PREFIX_DIR/bin:$PATH
-#export LD_LIBRARY_PATH=$PREFIX_DIR/lib
+export PATH=$PREFIX_DIR/bin:$PATH
 
 # really only needed for x84
 export CFLAGS=-fPIC
