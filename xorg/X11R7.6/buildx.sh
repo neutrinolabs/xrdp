@@ -349,7 +349,8 @@ make
 if [ $? -ne 0 ]; then
   echo ""
   echo "X11rdp make failed"
-  echo ""
+  echo "dropping you in dir, type exit to get out"
+  bash
   exit 1
 fi
 

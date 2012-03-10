@@ -30,6 +30,9 @@ Sets up the  functions
 #define DEBUG_OUT(arg) ErrorF arg
 #endif
 
+Bool noSecurityExtension = FALSE;
+Bool noXFree86BigfontExtension = FALSE;
+
 rdpScreenInfoRec g_rdpScreen; /* the one screen */
 ScreenPtr g_pScreen = 0;
 
@@ -349,11 +352,11 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
   }
   if (g_rdpScreen.bitsPerPixel == 1)
   {
-    ret = fbCreateDefColormap(pScreen);
+    //todo ret = fbCreateDefColormap(pScreen);
   }
   else
   {
-    ret = fbCreateDefColormap(pScreen);
+    //todo ret = fbCreateDefColormap(pScreen);
   }
   if (ret)
   {
@@ -586,6 +589,75 @@ ddxUseMsg(void)
 void
 OsVendorPreInit(void)
 {
+}
+
+/******************************************************************************/
+void
+CloseInput(void)
+{
+  ErrorF("CloseInput\n");
+}
+
+/******************************************************************************/
+void
+DDXRingBell(int volume, int pitch, int duration)
+{
+  ErrorF("DDXRingBell\n");
+}
+
+/******************************************************************************/
+void
+DeleteInputDeviceRequest(DeviceIntPtr dev)
+{
+  ErrorF("DeleteInputDeviceRequest\n");
+}
+
+/******************************************************************************/
+Bool
+fbInitializeColormap(ColormapPtr pmap)
+{
+  ErrorF("fbInitializeColormap\n");
+  return 1;
+}
+
+/******************************************************************************/
+void
+fbInstallColormap(ColormapPtr pmap)
+{
+  ErrorF("fbInstallColormap\n");
+}
+
+/******************************************************************************/
+void
+fbUninstallColormap(ColormapPtr pmap)
+{
+  ErrorF("fbUninstallColormap\n");
+}
+
+/******************************************************************************/
+int
+fbListInstalledColormaps(ScreenPtr pScreen, Colormap *pmaps)
+{
+  ErrorF("fbListInstalledColormaps\n");
+  return 1;
+}
+
+/******************************************************************************/
+void
+fbResolveColor(unsigned short *pred, unsigned short *pgreen,
+               unsigned short *pblue, VisualPtr pVisual)
+{
+  ErrorF("fbResolveColor\n");
+}
+
+/******************************************************************************/
+Bool
+fbInitVisuals(VisualPtr* visualp, DepthPtr* depthp, int* nvisualp,
+  int* ndepthp, int* rootDepthp, VisualID* defaultVisp, unsigned long sizes,
+  int bitsPerRGB)
+{
+  ErrorF("fbInitVisuals\n");
+  return 1;
 }
 
 /******************************************************************************/

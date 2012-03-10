@@ -25,7 +25,7 @@ LIBS = $(XSRCBASE)/dbe/.libs/libdbe.a \
 	$(XSRCBASE)/glx/.libs/libglx.a \
 	$(XSRCBASE)/xfixes/.libs/libxfixes.a \
 	librdp.a \
-	-lfreetype -lz -lm -lXfont -lXau -lXdmcp -lpixman-1
+	-lfreetype -lz -lm -lXfont -lXau -lXdmcp -lpixman-1 -lrt -ldl -lgcrypt
 
 CFLAGS = -O2 -Wall -fno-strength-reduce \
 	-I../../include \
@@ -44,19 +44,20 @@ CFLAGS = -O2 -Wall -fno-strength-reduce \
 	-I../xfree86/os-support \
 	-D_POSIX_C_SOURCE=199309L -D_SVID_SOURCE -D_REENTRANT \
 	-DGLX_USE_MESA -DXRECORD -D_GNU_SOURCE -DXAPPGROUP \
-	-DXCSECURITY -DTOGCUP -DSINGLEDEPTH -DXFree86Server \
+	-DTOGCUP -DSINGLEDEPTH -DXFree86Server \
 	-DDBE -DEVI -DXVMC -DFONTCACHE -DGCCUSESGAS -DSTATIC_COLOR \
 	-DAVOID_GLYPHBLT -DFUNCPROTO=15 -DNARROWPROTO -DDDXOSFATALERROR \
 	-DPART_NET -DDDXTIME -D_HAVE_XALLOC_DECLS \
 	\
 	-DXFIXES \
 	-DSMART_SCHEDULE -DSERVER_LOCK -DGLXEXT -DSHAPE -DRENDER -DRANDR \
-	-DBIGREQS -D_POSIX_SOURCE -D_BSD_SOURCE -DSCREENSAVER -DXF86BIGFONT \
+	-DBIGREQS -D_POSIX_SOURCE -D_BSD_SOURCE -DSCREENSAVER \
 	-DXCMISC -DXTEST -DXTRAP -DXV -DXSYNC -DMITMISC -DPANORAMIX \
 	-DDPMSExtension -DXvExtension -DXvMCExtension -DXResExtension \
 	-DMITSHM -DPIXPRIV -DNDEBUG -DDDXOSINIT -DXKB -DXINPUT
 
 # -pedantic
+# -DXCSECURITY -DXF86BIGFONT
 
 # these are defined in xorg-server.h
 # -D_XOPEN_SOURCE=500L
