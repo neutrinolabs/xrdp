@@ -80,7 +80,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #  endif
 #endif
 
-#define X11RDPVER "0.5.0"
+#define X11RDPVER "0.7.0"
 
 #define PixelDPI 100
 #define PixelToMM(_size) (((_size) * 254 + (PixelDPI) * 5) / ((PixelDPI) * 10))
@@ -243,6 +243,12 @@ Bool
 rdpCursorOffScreen(ScreenPtr* ppScreen, int* x, int* y);
 void
 rdpCrossScreen(ScreenPtr pScreen, Bool entering);
+void
+rdpPointerWarpCursor(DeviceIntPtr pDev, ScreenPtr pScr, int x, int y);
+void
+rdpPointerEnqueueEvent(DeviceIntPtr pDev, InternalEvent* event);
+void
+rdpPointerNewEventScreen(DeviceIntPtr pDev, ScreenPtr pScr, Bool fromDIX);
 Bool
 rdpSpriteRealizeCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs);
 Bool
@@ -252,6 +258,10 @@ rdpSpriteSetCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs,
                    int x, int y);
 void
 rdpSpriteMoveCursor(DeviceIntPtr pDev, ScreenPtr pScr, int x, int y);
+Bool
+rdpSpriteDeviceCursorInitialize(DeviceIntPtr pDev, ScreenPtr pScr);
+void
+rdpSpriteDeviceCursorCleanup(DeviceIntPtr pDev, ScreenPtr pScr);
 void
 PtrAddEvent(int buttonMask, int x, int y);
 void

@@ -428,6 +428,28 @@ rdpCrossScreen(ScreenPtr pScreen, Bool entering)
 }
 
 /******************************************************************************/
+void
+rdpPointerWarpCursor(DeviceIntPtr pDev, ScreenPtr pScr, int x, int y)
+{
+  ErrorF("rdpPointerWarpCursor:\n");
+  miPointerWarpCursor(pDev, pScr, x, y);
+}
+
+/******************************************************************************/
+void
+rdpPointerEnqueueEvent(DeviceIntPtr pDev, InternalEvent* event)
+{
+  ErrorF("rdpPointerEnqueueEvent:\n");
+}
+
+/******************************************************************************/
+void
+rdpPointerNewEventScreen(DeviceIntPtr pDev, ScreenPtr pScr, Bool fromDIX)
+{
+  ErrorF("rdpPointerNewEventScreen:\n");
+}
+
+/******************************************************************************/
 Bool
 rdpSpriteRealizeCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs)
 {
@@ -596,6 +618,21 @@ void
 rdpSpriteMoveCursor(DeviceIntPtr pDev, ScreenPtr pScr, int x, int y)
 {
   DEBUG_OUT_INPUT(("hi rdpSpriteMoveCursor\n"));
+}
+
+/******************************************************************************/
+Bool
+rdpSpriteDeviceCursorInitialize(DeviceIntPtr pDev, ScreenPtr pScr)
+{
+  ErrorF("rdpSpriteDeviceCursorInitialize:\n");
+  return 1;
+}
+
+/******************************************************************************/
+void
+rdpSpriteDeviceCursorCleanup(DeviceIntPtr pDev, ScreenPtr pScr)
+{
+  ErrorF("rdpSpriteDeviceCursorCleanup:\n");
 }
 
 /******************************************************************************/

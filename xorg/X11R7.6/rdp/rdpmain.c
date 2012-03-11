@@ -66,15 +66,18 @@ static miPointerSpriteFuncRec g_rdpSpritePointerFuncs =
   rdpSpriteRealizeCursor,
   rdpSpriteUnrealizeCursor,
   rdpSpriteSetCursor,
-  rdpSpriteMoveCursor
+  rdpSpriteMoveCursor,
+  rdpSpriteDeviceCursorInitialize,
+  rdpSpriteDeviceCursorCleanup
 };
 static miPointerScreenFuncRec g_rdpPointerCursorFuncs =
 {
   /* these are in rdpinput.c */
   rdpCursorOffScreen,
   rdpCrossScreen,
-  miPointerWarpCursor /* don't need to set last 2 funcs
-                         EnqueueEvent and NewEventScreen */
+  rdpPointerWarpCursor,
+  rdpPointerEnqueueEvent,
+  rdpPointerNewEventScreen
 };
 
 #define FB_GET_SCREEN_PIXMAP(s)    ((PixmapPtr) ((s)->devPrivate))
@@ -170,6 +173,21 @@ rdpWakeupHandler1(pointer blockData, int result, pointer pReadmask)
 }
 
 /******************************************************************************/
+static Bool
+rdpDeviceCursorInitialize(DeviceIntPtr pDev, ScreenPtr pScreen)
+{
+  ErrorF("rdpDeviceCursorInitializeProcPtr:\n");
+  return 1;
+}
+
+/******************************************************************************/
+static void
+rdpDeviceCursorCleanup(DeviceIntPtr pDev, ScreenPtr pScreen)
+{
+  ErrorF("rdpDeviceCursorCleanupProcPtr:\n");
+}
+
+/******************************************************************************/
 /* returns boolean, true if everything is ok */
 static Bool
 rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
@@ -199,7 +217,7 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
   ErrorF("\n");
   ErrorF("X11rdp, an X server for xrdp\n");
   ErrorF("Version %s\n", X11RDPVER);
-  ErrorF("Copyright (C) 2005-2008 Jay Sorg\n");
+  ErrorF("Copyright (C) 2005-2012 Jay Sorg\n");
   ErrorF("See http://xrdp.sf.net for information on xrdp.\n");
 #if defined(XORG_VERSION_CURRENT) && defined (XVENDORNAME)
   ErrorF("Underlying X server release %d, %s\n",
@@ -254,10 +272,12 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
                           dpix, dpiy, g_rdpScreen.paddedWidthInBytes / 4, 32);
       break;
     default:
+      ErrorF("rdpScreenInit: error\n");
       return 0;
   }
   if (!ret)
   {
+    ErrorF("rdpScreenInit: error\n");
     return 0;
   }
 
@@ -332,8 +352,12 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
   pScreen->ClearToBackground = rdpClearToBackground;
   /* Backing store procedures */
   pScreen->RestoreAreas = rdpRestoreAreas;
+
   miPointerInitialize(pScreen, &g_rdpSpritePointerFuncs,
                       &g_rdpPointerCursorFuncs, 1);
+
+  //pScreen->DeviceCursorInitialize = rdpDeviceCursorInitialize;
+  //pScreen->DeviceCursorCleanup = rdpDeviceCursorCleanup;
 
   vis_found = 0;
   vis = g_pScreen->visuals + (g_pScreen->numVisuals - 1);
@@ -352,11 +376,11 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
   }
   if (g_rdpScreen.bitsPerPixel == 1)
   {
-    //todo ret = fbCreateDefColormap(pScreen);
+    ret = fbCreateDefColormap(pScreen);
   }
   else
   {
-    //todo ret = fbCreateDefColormap(pScreen);
+    ret = fbCreateDefColormap(pScreen);
   }
   if (ret)
   {
@@ -376,6 +400,9 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
     pRRScrPriv->rrGetInfo = rdpRandRGetInfo;
     pRRScrPriv->rrSetConfig = rdpRandRSetConfig;
   }
+
+  ErrorF("rdpScreenInit: ret %d\n", ret);
+
   return ret;
 }
 
@@ -444,6 +471,7 @@ ddxInitGlobals(void)
 int
 XkbDDXSwitchScreen(DeviceIntPtr dev, KeyCode key, XkbAction* act)
 {
+  ErrorF("XkbDDXSwitchScreen:\n");
   return 1;
 }
 
@@ -451,6 +479,7 @@ XkbDDXSwitchScreen(DeviceIntPtr dev, KeyCode key, XkbAction* act)
 int
 XkbDDXPrivate(DeviceIntPtr dev, KeyCode key, XkbAction* act)
 {
+  ErrorF("XkbDDXPrivate:\n");
   return 0;
 }
 
@@ -458,6 +487,7 @@ XkbDDXPrivate(DeviceIntPtr dev, KeyCode key, XkbAction* act)
 int
 XkbDDXTerminateServer(DeviceIntPtr dev, KeyCode key, XkbAction* act)
 {
+  ErrorF("XkbDDXTerminateServer:\n");
   GiveUp(1);
   return 0;
 }
@@ -471,6 +501,7 @@ InitOutput(ScreenInfo* screenInfo, int argc, char** argv)
 {
   int i;
 
+  ErrorF("InitOutput:\n");
   g_initOutputCalled = 1;
   /* initialize pixmap formats */
   screenInfo->imageByteOrder = IMAGE_BYTE_ORDER;
@@ -497,6 +528,7 @@ InitOutput(ScreenInfo* screenInfo, int argc, char** argv)
   {
     FatalError("Couldn't add screen\n");
   }
+  ErrorF("InitOutput: out\n");
 }
 
 /******************************************************************************/
@@ -506,6 +538,7 @@ InitInput(int argc, char** argv)
   DeviceIntPtr p;
   DeviceIntPtr k;
 
+  ErrorF("InitInput:\n");
   k = AddInputDevice(serverClient, rdpKeybdProc, 1);
   p = AddInputDevice(serverClient, rdpMouseProc, 1);
   RegisterKeyboardDevice(k);
@@ -610,54 +643,6 @@ void
 DeleteInputDeviceRequest(DeviceIntPtr dev)
 {
   ErrorF("DeleteInputDeviceRequest\n");
-}
-
-/******************************************************************************/
-Bool
-fbInitializeColormap(ColormapPtr pmap)
-{
-  ErrorF("fbInitializeColormap\n");
-  return 1;
-}
-
-/******************************************************************************/
-void
-fbInstallColormap(ColormapPtr pmap)
-{
-  ErrorF("fbInstallColormap\n");
-}
-
-/******************************************************************************/
-void
-fbUninstallColormap(ColormapPtr pmap)
-{
-  ErrorF("fbUninstallColormap\n");
-}
-
-/******************************************************************************/
-int
-fbListInstalledColormaps(ScreenPtr pScreen, Colormap *pmaps)
-{
-  ErrorF("fbListInstalledColormaps\n");
-  return 1;
-}
-
-/******************************************************************************/
-void
-fbResolveColor(unsigned short *pred, unsigned short *pgreen,
-               unsigned short *pblue, VisualPtr pVisual)
-{
-  ErrorF("fbResolveColor\n");
-}
-
-/******************************************************************************/
-Bool
-fbInitVisuals(VisualPtr* visualp, DepthPtr* depthp, int* nvisualp,
-  int* ndepthp, int* rootDepthp, VisualID* defaultVisp, unsigned long sizes,
-  int bitsPerRGB)
-{
-  ErrorF("fbInitVisuals\n");
-  return 1;
 }
 
 /******************************************************************************/

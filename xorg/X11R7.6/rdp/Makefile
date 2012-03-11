@@ -6,7 +6,7 @@ LIBBASE = $(X11RDPBASE)/lib
 
 XSRCBASE = ../build_dir/xorg-server-1.9.3
 
-OBJS = rdpmain.o rdpdraw.o rdpinput.o rdpmisc.o rdpup.o miinitext.o
+OBJS = rdpmain.o rdpdraw.o rdpinput.o rdpmisc.o rdpup.o miinitext.o fbcmap.o
 
 # fbcmap.o
 
@@ -25,9 +25,9 @@ LIBS = $(XSRCBASE)/dbe/.libs/libdbe.a \
 	$(XSRCBASE)/glx/.libs/libglx.a \
 	$(XSRCBASE)/xfixes/.libs/libxfixes.a \
 	librdp.a \
-	-lfreetype -lz -lm -lXfont -lXau -lXdmcp -lpixman-1 -lrt -ldl -lgcrypt
+	-lfreetype -lz -lm -lXfont -lXau -lXdmcp -lpixman-1 -lrt -ldl -lcrypto
 
-CFLAGS = -O2 -Wall -fno-strength-reduce \
+CFLAGS = -g -Wall -fno-strength-reduce \
 	-I../../include \
 	-I../../cfb \
 	-I../../mfb \
@@ -44,7 +44,7 @@ CFLAGS = -O2 -Wall -fno-strength-reduce \
 	-I../xfree86/os-support \
 	-D_POSIX_C_SOURCE=199309L -D_SVID_SOURCE -D_REENTRANT \
 	-DGLX_USE_MESA -DXRECORD -D_GNU_SOURCE -DXAPPGROUP \
-	-DTOGCUP -DSINGLEDEPTH -DXFree86Server \
+	-DTOGCUP -DSINGLEDEPTH \
 	-DDBE -DEVI -DXVMC -DFONTCACHE -DGCCUSESGAS -DSTATIC_COLOR \
 	-DAVOID_GLYPHBLT -DFUNCPROTO=15 -DNARROWPROTO -DDDXOSFATALERROR \
 	-DPART_NET -DDDXTIME -D_HAVE_XALLOC_DECLS \
@@ -57,7 +57,7 @@ CFLAGS = -O2 -Wall -fno-strength-reduce \
 	-DMITSHM -DPIXPRIV -DNDEBUG -DDDXOSINIT -DXKB -DXINPUT
 
 # -pedantic
-# -DXCSECURITY -DXF86BIGFONT
+# -DXCSECURITY -DXF86BIGFONT -DXFree86Server
 
 # these are defined in xorg-server.h
 # -D_XOPEN_SOURCE=500L
@@ -86,5 +86,5 @@ clean:
 miinitext.o: ../build_dir/xorg-server-1.9.3/mi/miinitext.c
 	$(CC) $(CFLAGS) -I../build_dir/xorg-server-1.9.3/Xext -c ../build_dir/xorg-server-1.9.3/mi/miinitext.c
 
-#fbcmap.o: ../../fb/fbcmap.c
-#	$(CC) $(CFLAGS) -c ../../fb/fbcmap.c
+fbcmap.o: ../build_dir/xorg-server-1.9.3/fb/fbcmap.c
+	$(CC) $(CFLAGS) -c ../build_dir/xorg-server-1.9.3/fb/fbcmap.c
