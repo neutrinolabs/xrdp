@@ -437,6 +437,96 @@ g_tcp_listen(int sck)
   return listen(sck, 2);
 }
 
+/*****************************************************************************/
+/* returns boolean */
+int
+g_create_dir(const char* dirname)
+{
+#if defined(_WIN32)
+  return CreateDirectoryA(dirname, 0); // test this
+#else
+  return mkdir(dirname, (mode_t)-1) == 0;
+#endif
+}
+
+/*****************************************************************************/
+/* returns boolean, non zero if the directory exists */
+int
+g_directory_exist(const char* dirname)
+{
+#if defined(_WIN32)
+  return 0; // use GetFileAttributes and check return value
+            // is not -1 and FILE_ATTRIBUT_DIRECTORY bit is set
+#else
+  struct stat st;
+
+  if (stat(dirname, &st) == 0)
+  {
+    return S_ISDIR(st.st_mode);
+  }
+  else
+  {
+    return 0;
+  }
+#endif
+}
+
+/*****************************************************************************/
+/* returns error */
+int
+g_chmod_hex(const char* filename, int flags)
+{
+  int fl;
+
+  fl = 0;
+  fl |= (flags & 0x4000) ? S_ISUID : 0;
+  fl |= (flags & 0x2000) ? S_ISGID : 0;
+  fl |= (flags & 0x1000) ? S_ISVTX : 0;
+  fl |= (flags & 0x0400) ? S_IRUSR : 0;
+  fl |= (flags & 0x0200) ? S_IWUSR : 0;
+  fl |= (flags & 0x0100) ? S_IXUSR : 0;
+  fl |= (flags & 0x0040) ? S_IRGRP : 0;
+  fl |= (flags & 0x0020) ? S_IWGRP : 0;
+  fl |= (flags & 0x0010) ? S_IXGRP : 0;
+  fl |= (flags & 0x0004) ? S_IROTH : 0;
+  fl |= (flags & 0x0002) ? S_IWOTH : 0;
+  fl |= (flags & 0x0001) ? S_IXOTH : 0;
+  return chmod(filename, fl);
+}
+
+/* produce a hex dump */
+void
+hexdump(unsigned char* p, unsigned int len)
+{
+  unsigned char* line;
+  int i;
+  int thisline;
+  int offset;
+
+  offset = 0;
+  line = p;
+  while (offset < len)
+  {
+    ErrorF("%04x ", offset);
+    thisline = len - offset;
+    if (thisline > 16)
+      thisline = 16;
+
+    for (i = 0; i < thisline; i++)
+      ErrorF("%02x ", line[i]);
+
+    for (; i < 16; i++)
+      ErrorF("   ");
+
+    for (i = 0; i < thisline; i++)
+      ErrorF("%c", (line[i] >= 0x20 && line[i] < 0x7f) ? line[i] : '.');
+
+    ErrorF("\n");
+    offset += thisline;
+    line += thisline;
+  }
+}
+
 /*
   stub for XpClient* functions.
 */

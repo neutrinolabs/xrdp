@@ -28,9 +28,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <stdarg.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/param.h>
+#include <sys/stat.h>
 #include <netinet/tcp.h>
 #include <netinet/in.h>
 #include <netdb.h>
@@ -65,6 +67,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "fb.h"
 #include "micmap.h"
 #include "events.h"
+#include "exevents.h"
+#include "xserver-properties.h"
+#include "xkbsrv.h"
+
+//#include "colormapst.h"
 
 /* test to see if this is xorg source or xfree86 */
 #ifdef XORGSERVER
@@ -110,6 +117,9 @@ struct _rdpScreenInfoRec
 
   //PaintWindowBackgroundProcPtr PaintWindowBackground;
   //PaintWindowBorderProcPtr PaintWindowBorder;
+
+  CreateColormapProcPtr CreateColormap;
+  DestroyColormapProcPtr DestroyColormap;
 
   CopyWindowProcPtr CopyWindow;
   ClearToBackgroundProcPtr ClearToBackground;
@@ -178,6 +188,14 @@ int
 g_tcp_local_bind(int sck, char* port);
 int
 g_tcp_listen(int sck);
+int
+g_create_dir(const char* dirname);
+int
+g_directory_exist(const char* dirname);
+int
+g_chmod_hex(const char* filename, int flags);
+void
+hexdump(unsigned char *p, unsigned int len);
 
 /* rdpdraw.c */
 Bool

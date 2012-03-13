@@ -172,6 +172,7 @@ rdpWakeupHandler1(pointer blockData, int result, pointer pReadmask)
   rdpup_check();
 }
 
+#if 0
 /******************************************************************************/
 static Bool
 rdpDeviceCursorInitialize(DeviceIntPtr pDev, ScreenPtr pScreen)
@@ -186,6 +187,24 @@ rdpDeviceCursorCleanup(DeviceIntPtr pDev, ScreenPtr pScreen)
 {
   ErrorF("rdpDeviceCursorCleanupProcPtr:\n");
 }
+#endif
+
+#if 0
+/******************************************************************************/
+Bool
+rdpCreateColormap(ColormapPtr pCmap)
+{
+  ErrorF("rdpCreateColormap:\n");
+  return 1;
+}
+
+/******************************************************************************/
+static void
+rdpDestroyColormap(ColormapPtr pColormap)
+{
+  ErrorF("rdpDestroyColormap:\n");
+}
+#endif
 
 /******************************************************************************/
 /* returns boolean, true if everything is ok */
@@ -325,6 +344,10 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
   /* Backing store procedures */
   g_rdpScreen.RestoreAreas = pScreen->RestoreAreas;
   g_rdpScreen.WakeupHandler = pScreen->WakeupHandler;
+
+  g_rdpScreen.CreateColormap = pScreen->CreateColormap;
+  g_rdpScreen.DestroyColormap = pScreen->DestroyColormap;
+
   ps = GetPictureScreenIfSet(pScreen);
   if (ps)
   {
@@ -353,11 +376,18 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
   /* Backing store procedures */
   pScreen->RestoreAreas = rdpRestoreAreas;
 
+#if 0
+  pScreen->CreateColormap = rdpCreateColormap;
+  pScreen->DestroyColormap = rdpDestroyColormap;
+#endif
+
   miPointerInitialize(pScreen, &g_rdpSpritePointerFuncs,
                       &g_rdpPointerCursorFuncs, 1);
 
-  //pScreen->DeviceCursorInitialize = rdpDeviceCursorInitialize;
-  //pScreen->DeviceCursorCleanup = rdpDeviceCursorCleanup;
+#if 0
+  pScreen->DeviceCursorInitialize = rdpDeviceCursorInitialize;
+  pScreen->DeviceCursorCleanup = rdpDeviceCursorCleanup;
+#endif
 
   vis_found = 0;
   vis = g_pScreen->visuals + (g_pScreen->numVisuals - 1);
@@ -374,17 +404,22 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
     rdpLog("rdpScreenInit: couldn't find root visual\n");
     exit(1);
   }
-  if (g_rdpScreen.bitsPerPixel == 1)
+  ret = 1;
+  if (ret)
   {
     ret = fbCreateDefColormap(pScreen);
-  }
-  else
-  {
-    ret = fbCreateDefColormap(pScreen);
+    if (!ret)
+    {
+      ErrorF("rdpScreenInit: fbCreateDefColormap failed\n");
+    }
   }
   if (ret)
   {
     ret = rdpup_init();
+    if (!ret)
+    {
+      ErrorF("rdpScreenInit: rdpup_init failed\n");
+    }
   }
   if (ret)
   {
@@ -551,6 +586,8 @@ InitInput(int argc, char** argv)
   mieqInit(k, p);
 #endif
 
+  mieqInit();
+
 }
 
 /******************************************************************************/
@@ -559,6 +596,7 @@ ddxGiveUp(void)
 {
   char unixSocketName[64];
 
+  ErrorF("ddxGiveUp:\n");
   g_free(g_rdpScreen.pfbMemory);
   if (g_initOutputCalled)
   {

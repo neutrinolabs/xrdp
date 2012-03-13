@@ -282,7 +282,7 @@ rdpup_recv_msg(struct stream* s)
 static int
 process_screen_size_msg(int width, int height, int bpp)
 {
-  RRScreenSizePtr pSize;
+  //RRScreenSizePtr pSize;
   int mmwidth;
   int mmheight;
   //int error;
@@ -314,8 +314,8 @@ process_screen_size_msg(int width, int height, int bpp)
   }
   mmwidth = PixelToMM(width);
   mmheight = PixelToMM(height);
-  pSize = RRRegisterSize(g_pScreen, width, height, mmwidth, mmheight);
-  RRSetCurrentConfig(g_pScreen, RR_Rotate_0, 0, pSize);
+  //pSize = RRRegisterSize(g_pScreen, width, height, mmwidth, mmheight);
+  //RRSetCurrentConfig(g_pScreen, RR_Rotate_0, 0, pSize);
   if ((g_rdpScreen.width != width) || (g_rdpScreen.height != height))
   {
     //error = RRSetScreenConfig(g_pScreen, RR_Rotate_0, 0, pSize);
@@ -445,6 +445,15 @@ rdpup_init(void)
   char text[256];
   int i;
 
+  if (!g_directory_exist("/tmp/.xrdp"))
+  {
+    if (!g_create_dir("/tmp/.xrdp"))
+    {
+      ErrorF("rdpup_init: g_create_dir failed\n");
+      return 0;
+    }
+    g_chmod_hex("/tmp/.xrdp", 0x1777);
+  }
   i = atoi(display);
   if (i < 1)
   {

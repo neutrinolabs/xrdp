@@ -44,6 +44,8 @@ keyboard and mouse stuff
 #define DEBUG_OUT_INPUT(arg) ErrorF arg
 #endif
 
+extern ScreenPtr g_pScreen; /* in rdpmain.c */
+
 static DeviceIntPtr g_kbdDevice = 0;
 static int g_old_button_mask = 0;
 static int g_pause_spe = 0;
@@ -54,6 +56,9 @@ static int g_tab_down = 0;
 /* this is toggled every time num lock key is released, not like the
    above *_down vars */
 static int g_scroll_lock_down = 0;
+
+static DeviceIntPtr g_mouse = 0;
+static DeviceIntPtr g_keyboard = 0;
 
 #define MIN_KEY_CODE 8
 #define MAX_KEY_CODE 255
@@ -234,12 +239,14 @@ static KeySym g_kbdMap[] =
   NoSymbol,        NoSymbol
 };
 
+#if 0
 /******************************************************************************/
 static void
 rdpSendBell(void)
 {
   DEBUG_OUT_INPUT(("rdpSendBell\n"));
 }
+#endif
 
 /******************************************************************************/
 void
@@ -298,26 +305,49 @@ KbdDeviceOff(void)
 }
 
 /******************************************************************************/
+void
+rdpBell(int volume, DeviceIntPtr pDev, pointer ctrl, int cls)
+{
+  ErrorF("rdpBell:\n");
+}
+
+/******************************************************************************/
+void
+rdpChangeKeyboardControl(DeviceIntPtr pDev, KeybdCtrl* ctrl)
+{
+  ErrorF("rdpChangeKeyboardControl:\n");
+}
+
+/******************************************************************************/
 int
 rdpKeybdProc(DeviceIntPtr pDevice, int onoff)
 {
   KeySymsRec keySyms;
   CARD8 modMap[MAP_LENGTH];
   DevicePtr pDev;
-  XkbRMLVOSet set[MAP_LENGTH];
+  XkbRMLVOSet set;
 
   DEBUG_OUT_INPUT(("rdpKeybdProc\n"));
+#if 1
   pDev = (DevicePtr)pDevice;
   switch (onoff)
   {
     case DEVICE_INIT:
       KbdDeviceInit(pDevice, &keySyms, modMap);
-      InitKeyboardDeviceStruct(pDevice, set, (BellProcPtr)rdpSendBell,
-                               (KbdCtrlProcPtr)NoopDDA);
+      memset(&set, 0, sizeof(set));
+      set.rules = "base";
+      set.model = "pc104";
+      set.layout = "us";
+      set.variant = "";
+      set.options = "";
+      InitKeyboardDeviceStruct(pDevice, &set, rdpBell,
+                               rdpChangeKeyboardControl);
+      //XkbDDXChangeControls(pDevice, 0, 0);
       break;
     case DEVICE_ON:
       pDev->on = 1;
       KbdDeviceOn();
+      g_keyboard = pDevice;
       break;
     case DEVICE_OFF:
       pDev->on = 0;
@@ -330,6 +360,7 @@ rdpKeybdProc(DeviceIntPtr pDevice, int onoff)
       }
       break;
   }
+#endif
   return Success;
 }
 
@@ -362,41 +393,53 @@ PtrDeviceOff(void)
 }
 
 /******************************************************************************/
+static void
+rdpMouseCtrl(DeviceIntPtr pDevice, PtrCtrl* pCtrl)
+{
+  ErrorF("rdpMouseCtrl:\n");
+}
+
+/******************************************************************************/
 int
 rdpMouseProc(DeviceIntPtr pDevice, int onoff)
 {
   BYTE map[6];
   DevicePtr pDev;
+  Atom btn_labels[6];
+  Atom axes_labels[2];
 
   DEBUG_OUT_INPUT(("rdpMouseProc\n"));
   pDev = (DevicePtr)pDevice;
   switch (onoff)
   {
     case DEVICE_INIT:
-	      PtrDeviceInit();
+      PtrDeviceInit();
       map[0] = 0;
       map[1] = 1;
       map[2] = 2;
       map[3] = 3;
       map[4] = 4;
       map[5] = 5;
-      //InitPointerDeviceStruct(pDevice, map, 5, 0, miPointerGetMotionEvents,
-      //                        PtrDeviceControl,
-      //                        miPointerGetMotionBufferSize(), 2, 0);
-#if 0
-    DevicePtr /*device*/,
-    CARD8* /*map*/,
-    int /*numButtons*/,
-    Atom* /* btn_labels */,
-    PtrCtrlProcPtr /*controlProc*/,
-    int /*numMotionEvents*/,
-    int /*numAxes*/,
-    Atom* /* axes_labels */);
-#endif
+
+      btn_labels[0] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_LEFT);
+      btn_labels[1] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_MIDDLE);
+      btn_labels[2] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_RIGHT);
+      btn_labels[3] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_WHEEL_UP);
+      btn_labels[4] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_WHEEL_DOWN);
+
+      axes_labels[0] = XIGetKnownProperty(AXIS_LABEL_PROP_REL_X);
+      axes_labels[1] = XIGetKnownProperty(AXIS_LABEL_PROP_REL_Y);
+
+      InitPointerDeviceStruct(pDev, map, 5, btn_labels, rdpMouseCtrl,
+                              GetMotionHistorySize(), 2, axes_labels);
+
       break;
     case DEVICE_ON:
       pDev->on = 1;
       PtrDeviceOn(pDevice);
+
+      g_mouse = pDevice;
+
       break;
     case DEVICE_OFF:
       pDev->on = 0;
@@ -636,40 +679,90 @@ rdpSpriteDeviceCursorCleanup(DeviceIntPtr pDev, ScreenPtr pScr)
 }
 
 /******************************************************************************/
+static void
+rdpEnqueueMotion(int x, int y)
+{
+  int i;
+  int n;
+  int valuators[2];
+  EventListPtr rdp_events;
+  xEvent* pev;
+
+  miPointerSetPosition(g_mouse, &x, &y);
+  valuators[0] = x;
+  valuators[1] = y;
+
+  GetEventList(&rdp_events);
+  n = GetPointerEvents(rdp_events, g_mouse, MotionNotify, 0,
+                       POINTER_ABSOLUTE | POINTER_SCREEN,
+                       0, 2, valuators);
+  for (i = 0; i < n; i++)
+  {
+    pev = (rdp_events + i)->event;
+    mieqEnqueue(g_mouse, (InternalEvent*)pev);
+  }
+}
+
+/******************************************************************************/
+static void
+rdpEnqueueButton(int type, int buttons)
+{
+  int i;
+  int n;
+  EventListPtr rdp_events;
+  xEvent* pev;
+
+  i = GetEventList(&rdp_events);
+  n = GetPointerEvents(rdp_events, g_mouse, type, buttons, 0, 0, 0, 0);
+  for (i = 0; i < n; i++)
+  {
+    pev = (rdp_events + i)->event;
+    mieqEnqueue(g_mouse, (InternalEvent*)pev);
+  }
+}
+
+/******************************************************************************/
+static void
+rdpEnqueueKey(int type, int scancode)
+{
+  int i;
+  int n;
+  EventListPtr rdp_events;
+  xEvent* pev;
+
+  i = GetEventList(&rdp_events);
+  n = GetKeyboardEvents(rdp_events, g_keyboard, type, scancode);
+  for (i = 0; i < n; i++)
+  {
+    pev = (rdp_events + i)->event;
+    mieqEnqueue(g_keyboard, (InternalEvent*)pev);
+  }
+}
+
+/******************************************************************************/
 void
 PtrAddEvent(int buttonMask, int x, int y)
 {
-  //xEvent ev;
   int i;
-  unsigned long time;
-  //InternalEvent e;
+  int type;
+  int buttons;
 
-  //memset(&e, 0, sizeof(e));
-
-  time = GetTimeInMillis();
-  //todo PostSyntheticMotion();
-  //miPointerAbsoluteCursor(x, y, time);
+  rdpEnqueueMotion(x, y);
   for (i = 0; i < 5; i++)
   {
     if ((buttonMask ^ g_old_button_mask) & (1 << i))
     {
       if (buttonMask & (1 << i))
       {
-        //e.header = ET_Internal;
-        //e.type = ET_ButtonPress;
-
-        //ev.u.u.type = ButtonPress;
-        //ev.u.u.detail = i + 1;
-        //ev.u.keyButtonPointer.time = time;
-        //mieqEnqueue(0, &ev); // todo
+        type = ButtonPress;
+        buttons = i + 1;
+        rdpEnqueueButton(type, buttons);
       }
       else
       {
-        //ET_ButtonRelease
-        //ev.u.u.type = ButtonRelease;
-        //ev.u.u.detail = i + 1;
-        //ev.u.keyButtonPointer.time = time;
-        //mieqEnqueue(0, &ev); // todo
+        type = ButtonRelease;
+        buttons = i + 1;
+        rdpEnqueueButton(type, buttons);
       }
     }
   }
@@ -681,35 +774,19 @@ PtrAddEvent(int buttonMask, int x, int y)
 void
 check_keysa(void)
 {
-  xEvent ev;
-  unsigned long time;
-
-  time = GetTimeInMillis();
   if (g_ctrl_down != 0)
   {
-    memset(&ev, 0, sizeof(ev));
-    ev.u.u.type = KeyRelease;
-    ev.u.keyButtonPointer.time = time;
-    ev.u.u.detail = g_ctrl_down;
-    //mieqEnqueue(&ev);
+    rdpEnqueueKey(KeyRelease, g_ctrl_down);
     g_ctrl_down = 0;
   }
   if (g_alt_down != 0)
   {
-    memset(&ev, 0, sizeof(ev));
-    ev.u.u.type = KeyRelease;
-    ev.u.keyButtonPointer.time = time;
-    ev.u.u.detail = g_alt_down;
-    //mieqEnqueue(&ev);
+    rdpEnqueueKey(KeyRelease, g_alt_down);
     g_alt_down = 0;
   }
   if (g_shift_down != 0)
   {
-    memset(&ev, 0, sizeof(ev));
-    ev.u.u.type = KeyRelease;
-    ev.u.keyButtonPointer.time = time;
-    ev.u.u.detail = g_shift_down;
-    //mieqEnqueue(&ev);
+    rdpEnqueueKey(KeyRelease, g_shift_down);
     g_shift_down = 0;
   }
 }
@@ -718,17 +795,13 @@ check_keysa(void)
 void
 KbdAddEvent(int down, int param1, int param2, int param3, int param4)
 {
-  xEvent ev;
-  unsigned long time;
   int rdp_scancode;
   int x_scancode;
   int is_ext;
   int is_spe;
+  int type;
 
-  memset(&ev, 0, sizeof(ev));
-  ev.u.u.type = down ? KeyPress : KeyRelease;
-  time = GetTimeInMillis();
-  ev.u.keyButtonPointer.time = time;
+  type = down ? KeyPress : KeyRelease;
   rdp_scancode = param3;
   is_ext = param4 & 256; /* 0x100 */
   is_spe = param4 & 512; /* 0x200 */
@@ -851,8 +924,7 @@ KbdAddEvent(int down, int param1, int param2, int param3, int param4)
   }
   if (x_scancode > 0)
   {
-    ev.u.u.detail = x_scancode;
-    //mieqEnqueue(&ev);
+    rdpEnqueueKey(type, x_scancode);
   }
 }
 
@@ -864,32 +936,78 @@ KbdAddEvent(int down, int param1, int param2, int param3, int param4)
 void
 KbdSync(int param1)
 {
+
+#if 0
+
   KeyClassPtr keyc;
+  int mask;
+  int latches;
+  int status;
 
   if (g_kbdDevice == 0)
   {
     return;
   }
+
+  mask = 0;
+  latches = 0;
+
+  mask |= 1 << 1;
+  if (param1 & 4)
+  {
+    latches |= 1 << 1;
+  }
+  mask |= Mod1Mask;
+  if (param1 & 4)
+  {
+    latches |= Mod1Mask;
+  }
+
+  ErrorF("mask 0x%x latches 0x%x\n", mask, latches);
+
+  status = XkbLatchModifiers(g_keyboard, mask, latches);
+
+  ErrorF("status %d\n", status);
+
+#if 0
+
   keyc = g_kbdDevice->key;
   if (keyc == 0)
   {
     return;
   }
-#if 0
-  if ((!(keyc->state & 0x02)) != (!(param1 & 4))) /* caps lock */
+
+
+  ErrorF("0x%x mods 0x%x\n", param1, keyc->xkbInfo->state.mods);
+
+  hexdump(keyc->down, DOWN_LENGTH);
+
+  hexdump(keyc->modifierKeyCount, 32);
+
+  hexdump(keyc->xkbInfo, sizeof(struct _XkbSrvInfo));
+
+#if 1
+  //if ((!(keyc->xkbInfo->state & 0x02)) != (!(param1 & 4))) /* caps lock */
+  if (param1 & 4) /* caps lock */
   {
     KbdAddEvent(1, 58, 0, 58, 0);
     KbdAddEvent(0, 58, 49152, 58, 49152);
   }
-  if ((!(keyc->state & 0x10)) != (!(param1 & 2))) /* num lock */
+  //if ((!(keyc->state & 0x10)) != (!(param1 & 2))) /* num lock */
+  if (param1 & 2) /* num lock */
   {
     KbdAddEvent(1, 69, 0, 69, 0);
     KbdAddEvent(0, 69, 49152, 69, 49152);
   }
+#endif
   if ((!(g_scroll_lock_down)) != (!(param1 & 1))) /* scroll lock */
   {
     KbdAddEvent(1, 70, 0, 70, 0);
     KbdAddEvent(0, 70, 49152, 70, 49152);
   }
+
 #endif
+
+#endif
+
 }
