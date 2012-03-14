@@ -39,6 +39,9 @@ ScreenPtr g_pScreen = 0;
 //int g_rdpGCIndex = -1;
 DevPrivateKeyRec g_rdpGCIndex;
 
+DeviceIntPtr g_pointer = 0;
+DeviceIntPtr g_keyboard = 0;
+
 /* set all these at once, use function set_bpp */
 int g_bpp = 16;
 int g_Bpp = 2;
@@ -570,21 +573,15 @@ InitOutput(ScreenInfo* screenInfo, int argc, char** argv)
 void
 InitInput(int argc, char** argv)
 {
-  DeviceIntPtr p;
-  DeviceIntPtr k;
+  int rc;
 
   ErrorF("InitInput:\n");
-  k = AddInputDevice(serverClient, rdpKeybdProc, 1);
-  p = AddInputDevice(serverClient, rdpMouseProc, 1);
-  RegisterKeyboardDevice(k);
-  RegisterPointerDevice(p);
-
-// TODO
-#if 0
-  /* screenInfo must be globally defined */
-  miRegisterPointerDevice(screenInfo.screens[0], p);
-  mieqInit(k, p);
-#endif
+  rc = AllocDevicePair(serverClient, "X11rdp", &g_pointer, &g_keyboard,
+                       rdpMouseProc, rdpKeybdProc, 0);
+  if (rc != Success)
+  {
+    FatalError("Failed to init X11rdp default devices.\n");
+  }
 
   mieqInit();
 

@@ -39,7 +39,7 @@ rdpLog(char *format, ...)
   va_start(args, format);
   time(&clock);
   strftime(buf, 255, "%d/%m/%y %T ", localtime(&clock));
-  fprintf(stderr, buf);
+  fprintf(stderr, "%s", buf);
   vfprintf(stderr, format, args);
   fflush(stderr);
   va_end(args);
@@ -156,11 +156,7 @@ CloseInputDevice(DeviceIntPtr d, ClientPtr client)
 int
 g_tcp_recv(int sck, void* ptr, int len, int flags)
 {
-#if defined(_WIN32)
-  return recv(sck, (char*)ptr, len, flags);
-#else
   return recv(sck, ptr, len, flags);
-#endif
 }
 
 /*****************************************************************************/
@@ -172,44 +168,28 @@ g_tcp_close(int sck)
     return;
   }
   shutdown(sck, 2);
-#if defined(_WIN32)
-  closesocket(sck);
-#else
   close(sck);
-#endif
 }
 
 /*****************************************************************************/
 int
 g_tcp_last_error_would_block(int sck)
 {
-#if defined(_WIN32)
-  return WSAGetLastError() == WSAEWOULDBLOCK;
-#else
   return (errno == EWOULDBLOCK) || (errno == EINPROGRESS);
-#endif
 }
 
 /*****************************************************************************/
 void
 g_sleep(int msecs)
 {
-#if defined(_WIN32)
-  Sleep(msecs);
-#else
   usleep(msecs * 1000);
-#endif
 }
 
 /*****************************************************************************/
 int
 g_tcp_send(int sck, void* ptr, int len, int flags)
 {
-#if defined(_WIN32)
-  return send(sck, (char*)ptr, len, flags);
-#else
   return send(sck, ptr, len, flags);
-#endif
 }
 
 /*****************************************************************************/
@@ -218,7 +198,8 @@ g_malloc(int size, int zero)
 {
   char* rv;
 
-#ifdef _XSERVER64
+//#ifdef _XSERVER64
+#if 1
   /* I thought xalloc whould work here but I guess not, why, todo */
   rv = (char*)malloc(size);
 #else
@@ -240,7 +221,8 @@ g_free(void* ptr)
 {
   if (ptr != 0)
   {
-#ifdef _XSERVER64
+//#ifdef _XSERVER64
+#if 1
     /* I thought xfree whould work here but I guess not, why, todo */
     free(ptr);
 #else
@@ -269,12 +251,8 @@ g_tcp_socket(void)
 
   i = 1;
   rv = socket(PF_INET, SOCK_STREAM, 0);
-#if defined(_WIN32)
-  setsockopt(rv, IPPROTO_TCP, TCP_NODELAY, (char*)&i, sizeof(i));
-#else
   setsockopt(rv, IPPROTO_TCP, TCP_NODELAY, (void*)&i, sizeof(i));
   setsockopt(rv, SOL_SOCKET, SO_REUSEADDR, (void*)&i, sizeof(i));
-#endif
   return rv;
 }
 
@@ -282,11 +260,7 @@ g_tcp_socket(void)
 int
 g_tcp_local_socket_dgram(void)
 {
-#if defined(_WIN32)
-  return 0;
-#else
   return socket(AF_UNIX, SOCK_DGRAM, 0);
-#endif
 }
 
 /*****************************************************************************/
@@ -303,11 +277,7 @@ g_tcp_set_no_delay(int sck)
   int i;
 
   i = 1;
-#if defined(_WIN32)
-  setsockopt(sck, IPPROTO_TCP, TCP_NODELAY, (char*)&i, sizeof(i));
-#else
   setsockopt(sck, IPPROTO_TCP, TCP_NODELAY, (void*)&i, sizeof(i));
-#endif
   return 0;
 }
 
@@ -317,14 +287,9 @@ g_tcp_set_non_blocking(int sck)
 {
   unsigned long i;
 
-#if defined(_WIN32)
-  i = 1;
-  ioctlsocket(sck, FIONBIO, &i);
-#else
   i = fcntl(sck, F_GETFL);
   i = i | O_NONBLOCK;
   fcntl(sck, F_SETFL, i);
-#endif
   return 0;
 }
 
@@ -333,11 +298,7 @@ int
 g_tcp_accept(int sck)
 {
   struct sockaddr_in s;
-#if defined(_WIN32)
-  signed int i;
-#else
   unsigned int i;
-#endif
 
   i = sizeof(struct sockaddr_in);
   memset(&s, 0, i);
@@ -418,16 +379,12 @@ g_tcp_bind(int sck, char* port)
 int
 g_tcp_local_bind(int sck, char* port)
 {
-#if defined(_WIN32)
-  return -1;
-#else
   struct sockaddr_un s;
 
   memset(&s, 0, sizeof(struct sockaddr_un));
   s.sun_family = AF_UNIX;
   strcpy(s.sun_path, port);
   return bind(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_un));
-#endif
 }
 
 /*****************************************************************************/
@@ -442,11 +399,7 @@ g_tcp_listen(int sck)
 int
 g_create_dir(const char* dirname)
 {
-#if defined(_WIN32)
-  return CreateDirectoryA(dirname, 0); // test this
-#else
   return mkdir(dirname, (mode_t)-1) == 0;
-#endif
 }
 
 /*****************************************************************************/
@@ -454,10 +407,6 @@ g_create_dir(const char* dirname)
 int
 g_directory_exist(const char* dirname)
 {
-#if defined(_WIN32)
-  return 0; // use GetFileAttributes and check return value
-            // is not -1 and FILE_ATTRIBUT_DIRECTORY bit is set
-#else
   struct stat st;
 
   if (stat(dirname, &st) == 0)
@@ -468,7 +417,6 @@ g_directory_exist(const char* dirname)
   {
     return 0;
   }
-#endif
 }
 
 /*****************************************************************************/

@@ -28,10 +28,14 @@ LIBS = $(XSRCBASE)/dbe/.libs/libdbe.a \
 	$(XSRCBASE)/Xi/.libs/libXi.a \
 	$(XSRCBASE)/glx/.libs/libglx.a \
 	$(XSRCBASE)/xfixes/.libs/libxfixes.a \
-	librdp.a \
-	-lfreetype -lz -lm -lXfont -lXau -lXdmcp -lpixman-1 -lrt -ldl -lcrypto -lGL
+	$(XSRCBASE)/damageext/.libs/libdamageext.a \
+	$(XSRCBASE)/miext/damage/.libs/libdamage.a \
+	librdp.a
 
-CFLAGS = -g -Wall -fno-strength-reduce \
+LLIBS = -Wl,-rpath=$(LIBBASE) -lfreetype -lz -lm -lXfont -lXau \
+	-lXdmcp -lpixman-1 -lrt -ldl -lcrypto -lGL -lXdamage
+
+CFLAGS = -O2 -Wall -fno-strength-reduce \
 	-I../../include \
 	-I../../cfb \
 	-I../../mfb \
@@ -52,13 +56,15 @@ CFLAGS = -g -Wall -fno-strength-reduce \
 	-DDBE -DEVI -DXVMC -DFONTCACHE -DGCCUSESGAS -DSTATIC_COLOR \
 	-DAVOID_GLYPHBLT -DFUNCPROTO=15 -DNARROWPROTO -DDDXOSFATALERROR \
 	-DPART_NET -DDDXTIME -D_HAVE_XALLOC_DECLS \
-	\
+	-DDAMAGE \
 	-DXFIXES \
 	-DSMART_SCHEDULE -DSERVER_LOCK -DGLXEXT -DSHAPE -DRENDER -DRANDR \
 	-DBIGREQS -D_POSIX_SOURCE -D_BSD_SOURCE -DSCREENSAVER \
 	-DXCMISC -DXTEST -DXTRAP -DXV -DXSYNC -DMITMISC -DPANORAMIX \
 	-DDPMSExtension -DXvExtension -DXvMCExtension -DXResExtension \
 	-DMITSHM -DPIXPRIV -DNDEBUG -DDDXOSINIT -DXKB -DXINPUT
+
+#-DDAMAGE
 
 # -pedantic
 # -DXCSECURITY -DXF86BIGFONT
@@ -82,12 +88,12 @@ all: X11rdp
 X11rdp: $(OBJS)
 	$(AR) rvu librdp.a $(OBJS)
 	ranlib librdp.a
-	$(CC) $(LDFLAGS) -o X11rdp $(LIBS) $(LIBS)
+	$(CC) $(LDFLAGS) -o X11rdp $(LIBS) $(LIBS) $(LLIBS)
 
 clean:
 	rm -f $(OBJS) librdp.a
 
-miinitext.o: ../build_dir/xorg-server-1.9.3/mi/miinitext.c
+miinitext.o: ../build_dir/xorg-server-1.9.3/mi/miinitext.c Makefile
 	$(CC) $(CFLAGS) -I../build_dir/xorg-server-1.9.3/Xext -c ../build_dir/xorg-server-1.9.3/mi/miinitext.c
 
 fbcmap.o: ../build_dir/xorg-server-1.9.3/fb/fbcmap.c

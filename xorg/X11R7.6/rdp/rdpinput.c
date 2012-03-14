@@ -45,8 +45,9 @@ keyboard and mouse stuff
 #endif
 
 extern ScreenPtr g_pScreen; /* in rdpmain.c */
+extern DeviceIntPtr g_pointer; /* in rdpmain.c */
+extern DeviceIntPtr g_keyboard; /* in rdpmain.c */
 
-static DeviceIntPtr g_kbdDevice = 0;
 static int g_old_button_mask = 0;
 static int g_pause_spe = 0;
 static int g_ctrl_down = 0;
@@ -56,9 +57,6 @@ static int g_tab_down = 0;
 /* this is toggled every time num lock key is released, not like the
    above *_down vars */
 static int g_scroll_lock_down = 0;
-
-static DeviceIntPtr g_mouse = 0;
-static DeviceIntPtr g_keyboard = 0;
 
 #define MIN_KEY_CODE 8
 #define MAX_KEY_CODE 255
@@ -255,7 +253,6 @@ KbdDeviceInit(DeviceIntPtr pDevice, KeySymsPtr pKeySyms, CARD8* pModMap)
   int i;
 
   DEBUG_OUT_INPUT(("KbdDeviceInit\n"));
-  g_kbdDevice = pDevice;
   for (i = 0; i < MAP_LENGTH; i++)
   {
     pModMap[i] = NoSymbol;
@@ -328,7 +325,6 @@ rdpKeybdProc(DeviceIntPtr pDevice, int onoff)
   XkbRMLVOSet set;
 
   DEBUG_OUT_INPUT(("rdpKeybdProc\n"));
-#if 1
   pDev = (DevicePtr)pDevice;
   switch (onoff)
   {
@@ -347,7 +343,6 @@ rdpKeybdProc(DeviceIntPtr pDevice, int onoff)
     case DEVICE_ON:
       pDev->on = 1;
       KbdDeviceOn();
-      g_keyboard = pDevice;
       break;
     case DEVICE_OFF:
       pDev->on = 0;
@@ -360,7 +355,6 @@ rdpKeybdProc(DeviceIntPtr pDevice, int onoff)
       }
       break;
   }
-#endif
   return Success;
 }
 
@@ -437,9 +431,6 @@ rdpMouseProc(DeviceIntPtr pDevice, int onoff)
     case DEVICE_ON:
       pDev->on = 1;
       PtrDeviceOn(pDevice);
-
-      g_mouse = pDevice;
-
       break;
     case DEVICE_OFF:
       pDev->on = 0;
@@ -688,18 +679,18 @@ rdpEnqueueMotion(int x, int y)
   EventListPtr rdp_events;
   xEvent* pev;
 
-  miPointerSetPosition(g_mouse, &x, &y);
+  miPointerSetPosition(g_pointer, &x, &y);
   valuators[0] = x;
   valuators[1] = y;
 
   GetEventList(&rdp_events);
-  n = GetPointerEvents(rdp_events, g_mouse, MotionNotify, 0,
+  n = GetPointerEvents(rdp_events, g_pointer, MotionNotify, 0,
                        POINTER_ABSOLUTE | POINTER_SCREEN,
                        0, 2, valuators);
   for (i = 0; i < n; i++)
   {
     pev = (rdp_events + i)->event;
-    mieqEnqueue(g_mouse, (InternalEvent*)pev);
+    mieqEnqueue(g_pointer, (InternalEvent*)pev);
   }
 }
 
@@ -713,11 +704,11 @@ rdpEnqueueButton(int type, int buttons)
   xEvent* pev;
 
   i = GetEventList(&rdp_events);
-  n = GetPointerEvents(rdp_events, g_mouse, type, buttons, 0, 0, 0, 0);
+  n = GetPointerEvents(rdp_events, g_pointer, type, buttons, 0, 0, 0, 0);
   for (i = 0; i < n; i++)
   {
     pev = (rdp_events + i)->event;
-    mieqEnqueue(g_mouse, (InternalEvent*)pev);
+    mieqEnqueue(g_pointer, (InternalEvent*)pev);
   }
 }
 
@@ -768,7 +759,6 @@ PtrAddEvent(int buttonMask, int x, int y)
   }
   g_old_button_mask = buttonMask;
 }
-
 
 /******************************************************************************/
 void
@@ -930,84 +920,33 @@ KbdAddEvent(int down, int param1, int param2, int param3, int param4)
 
 /******************************************************************************/
 /* notes -
-     we should use defines or something for the keyc->state below
+     we should use defines or something for the
+     g_keyboard->key->xkbInfo->state below
      scroll lock doesn't seem to be a modifier in X
 */
 void
 KbdSync(int param1)
 {
+  int xkb_state;
 
-#if 0
-
-  KeyClassPtr keyc;
-  int mask;
-  int latches;
-  int status;
-
-  if (g_kbdDevice == 0)
+  xkb_state = XkbStateFieldFromRec(&(g_keyboard->key->xkbInfo->state));
+  if ((!(xkb_state & 0x02)) != (!(param1 & 4))) /* caps lock */
   {
-    return;
-  }
-
-  mask = 0;
-  latches = 0;
-
-  mask |= 1 << 1;
-  if (param1 & 4)
-  {
-    latches |= 1 << 1;
-  }
-  mask |= Mod1Mask;
-  if (param1 & 4)
-  {
-    latches |= Mod1Mask;
-  }
-
-  ErrorF("mask 0x%x latches 0x%x\n", mask, latches);
-
-  status = XkbLatchModifiers(g_keyboard, mask, latches);
-
-  ErrorF("status %d\n", status);
-
-#if 0
-
-  keyc = g_kbdDevice->key;
-  if (keyc == 0)
-  {
-    return;
-  }
-
-
-  ErrorF("0x%x mods 0x%x\n", param1, keyc->xkbInfo->state.mods);
-
-  hexdump(keyc->down, DOWN_LENGTH);
-
-  hexdump(keyc->modifierKeyCount, 32);
-
-  hexdump(keyc->xkbInfo, sizeof(struct _XkbSrvInfo));
-
-#if 1
-  //if ((!(keyc->xkbInfo->state & 0x02)) != (!(param1 & 4))) /* caps lock */
-  if (param1 & 4) /* caps lock */
-  {
+    ErrorF("KbdSync: toggling caps lock\n");
     KbdAddEvent(1, 58, 0, 58, 0);
     KbdAddEvent(0, 58, 49152, 58, 49152);
   }
-  //if ((!(keyc->state & 0x10)) != (!(param1 & 2))) /* num lock */
-  if (param1 & 2) /* num lock */
+
+  if ((!(xkb_state & 0x10)) != (!(param1 & 2))) /* num lock */
   {
+    ErrorF("KbdSync: toggling num lock\n");
     KbdAddEvent(1, 69, 0, 69, 0);
     KbdAddEvent(0, 69, 49152, 69, 49152);
   }
-#endif
   if ((!(g_scroll_lock_down)) != (!(param1 & 1))) /* scroll lock */
   {
+    ErrorF("KbdSync: toggling scroll lock\n");
     KbdAddEvent(1, 70, 0, 70, 0);
     KbdAddEvent(0, 70, 49152, 70, 49152);
   }
-
-#endif
-
-#endif
-
 }
