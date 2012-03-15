@@ -6,7 +6,8 @@ LIBBASE = $(X11RDPBASE)/lib
 
 XSRCBASE = ../build_dir/xorg-server-1.9.3
 
-OBJS = rdpmain.o rdpdraw.o rdpinput.o rdpmisc.o rdpup.o miinitext.o \
+OBJS = rdpmain.o rdpdraw.o rdpinput.o rdpmisc.o rdpup.o rdprandr.o \
+miinitext.o \
 fbcmap_mi.o
 
 # in Xorg 7.1, fbcmap.c was used but now it looks like fbcmap_mi.c should

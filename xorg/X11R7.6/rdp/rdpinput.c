@@ -920,8 +920,6 @@ KbdAddEvent(int down, int param1, int param2, int param3, int param4)
 
 /******************************************************************************/
 /* notes -
-     we should use defines or something for the
-     g_keyboard->key->xkbInfo->state below
      scroll lock doesn't seem to be a modifier in X
 */
 void

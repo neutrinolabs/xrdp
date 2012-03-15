@@ -23,6 +23,7 @@ Sets up the  functions
 */
 
 #include "rdp.h"
+#include "rdprandr.h"
 
 #if 1
 #define DEBUG_OUT(arg)
@@ -30,16 +31,19 @@ Sets up the  functions
 #define DEBUG_OUT(arg) ErrorF arg
 #endif
 
-Bool noSecurityExtension = FALSE;
-Bool noXFree86BigfontExtension = FALSE;
-
 rdpScreenInfoRec g_rdpScreen; /* the one screen */
 ScreenPtr g_pScreen = 0;
 
 DevPrivateKeyRec g_rdpGCIndex;
+DevPrivateKeyRec g_rdpWindowIndex;
+DevPrivateKeyRec g_rdpPixmapIndex;
 
+/* main mouse and keyboard devices */
 DeviceIntPtr g_pointer = 0;
 DeviceIntPtr g_keyboard = 0;
+
+Bool g_wrapWindow = 0;
+Bool g_wrapPixmap = 0;
 
 /* set all these at once, use function set_bpp */
 int g_bpp = 16;
@@ -81,19 +85,6 @@ static miPointerScreenFuncRec g_rdpPointerCursorFuncs =
   rdpPointerEnqueueEvent,
   rdpPointerNewEventScreen
 };
-
-#define FB_GET_SCREEN_PIXMAP(s)    ((PixmapPtr) ((s)->devPrivate))
-
-#if 0
-static OsTimerPtr g_updateTimer = 0;
-#endif
-static XID g_wid = 0;
-
-static Bool
-rdpRandRGetInfo(ScreenPtr pScreen, Rotation* pRotations);
-static Bool
-rdpRandRSetConfig(ScreenPtr pScreen, Rotation rotateKind, int rate,
-                  RRScreenSizePtr pSize);
 
 /******************************************************************************/
 /* returns error, zero is good */
@@ -327,7 +318,17 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
 
   if (!dixRegisterPrivateKey(&g_rdpGCIndex, PRIVATE_GC, sizeof(rdpGCRec)))
   {
-    FatalError("rdpScreenInit: miAllocateGCPrivate failed\n");
+    FatalError("rdpScreenInit: dixRegisterPrivateKey PRIVATE_GC failed\n");
+  }
+
+  if (!dixRegisterPrivateKey(&g_rdpWindowIndex, PRIVATE_WINDOW, sizeof(rdpWindowRec)))
+  {
+    FatalError("rdpScreenInit: dixRegisterPrivateKey PRIVATE_WINDOW failed\n");
+  }
+
+  if (!dixRegisterPrivateKey(&g_rdpPixmapIndex, PRIVATE_PIXMAP, sizeof(rdpPixmapRec)))
+  {
+    FatalError("rdpScreenInit: dixRegisterPrivateKey PRIVATE_PIXMAP failed\n");
   }
 
   /* Random screen procedures */
@@ -337,9 +338,13 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
   /* Pixmap procudures */
   g_rdpScreen.CreatePixmap = pScreen->CreatePixmap;
   g_rdpScreen.DestroyPixmap = pScreen->DestroyPixmap;
+
   /* Window Procedures */
+  g_rdpScreen.CreateWindow = pScreen->CreateWindow;
+  g_rdpScreen.DestroyWindow = pScreen->DestroyWindow;
   g_rdpScreen.CopyWindow = pScreen->CopyWindow;
   g_rdpScreen.ClearToBackground = pScreen->ClearToBackground;
+
   /* Backing store procedures */
   g_rdpScreen.RestoreAreas = pScreen->RestoreAreas;
   g_rdpScreen.WakeupHandler = pScreen->WakeupHandler;
@@ -364,12 +369,24 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
   pScreen->SaveScreen = rdpSaveScreen;
   /* GC procedures */
   pScreen->CreateGC = rdpCreateGC;
-  /* Pixmap procedures */
-  /* pScreen->CreatePixmap = rdpCreatePixmap; */
-  /* pScreen->DestroyPixmap = rdpDestroyPixmap; */
-  /* Window Procedures */
+
+  if (g_wrapPixmap)
+  {
+    /* Pixmap procedures */
+    pScreen->CreatePixmap = rdpCreatePixmap;
+    pScreen->DestroyPixmap = rdpDestroyPixmap;
+  }
+
+  if (g_wrapWindow)
+  {
+    /* Window Procedures */
+    pScreen->CreateWindow = rdpCreateWindow;
+    pScreen->DestroyWindow = rdpDestroyWindow;
+  }
+
   pScreen->CopyWindow = rdpCopyWindow;
   pScreen->ClearToBackground = rdpClearToBackground;
+
   /* Backing store procedures */
   pScreen->RestoreAreas = rdpRestoreAreas;
 
@@ -430,8 +447,23 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
   {
     pRRScrPriv = rrGetScrPriv(pScreen);
     ErrorF("pRRScrPriv %p\n", pRRScrPriv);
-    pRRScrPriv->rrGetInfo = rdpRandRGetInfo;
-    pRRScrPriv->rrSetConfig = rdpRandRSetConfig;
+
+    pRRScrPriv->rrSetConfig = rdpRRSetConfig;
+
+    pRRScrPriv->rrGetInfo = rdpRRGetInfo;
+
+    pRRScrPriv->rrScreenSetSize = rdpRRScreenSetSize;
+    pRRScrPriv->rrCrtcSet = rdpRRCrtcSet;
+    pRRScrPriv->rrCrtcGetGamma = rdpRRCrtcGetGamma;
+    pRRScrPriv->rrCrtcSetGamma = rdpRRCrtcSetGamma;
+    pRRScrPriv->rrOutputSetProperty = rdpRROutputSetProperty;
+    pRRScrPriv->rrOutputValidateMode = rdpRROutputValidateMode;
+    pRRScrPriv->rrModeDestroy = rdpRRModeDestroy;
+
+    pRRScrPriv->rrOutputGetProperty = rdpRROutputGetProperty;
+    pRRScrPriv->rrGetPanning = rdpRRGetPanning;
+    pRRScrPriv->rrSetPanning = rdpRRSetPanning;
+
   }
 
   ErrorF("rdpScreenInit: ret %d\n", ret);
@@ -667,232 +699,4 @@ void
 DeleteInputDeviceRequest(DeviceIntPtr dev)
 {
   ErrorF("DeleteInputDeviceRequest\n");
-}
-
-/******************************************************************************/
-/*
- * Answer queries about the RandR features supported.
-   1280x1024+0+0 359mm x 287mm
- */
-static Bool
-rdpRandRGetInfo(ScreenPtr pScreen, Rotation* pRotations)
-{
-  int n;
-  int width;
-  int height;
-  int mmwidth;
-  int mmheight;
-  Rotation rotateKind;
-  RRScreenSizePtr pSize;
-  rrScrPrivPtr pRRScrPriv;
-
-  ErrorF("rdpRandRGetInfo:\n");
-
-  pRRScrPriv = rrGetScrPriv(pScreen);
-
-  DEBUG_OUT(("rdpRandRGetInfo: nSizes %d\n", pRRScrPriv->nSizes));
-  for (n = 0; n < pRRScrPriv->nSizes; n++)
-  {
-    DEBUG_OUT(("rdpRandRGetInfo: width %d height %d\n",
-               pRRScrPriv->pSizes[n].width,
-               pRRScrPriv->pSizes[n].height));
-  }
-
-  /* Don't support rotations, yet */
-  *pRotations = RR_Rotate_0;
-
-  /* Bail if no depth has a visual associated with it */
-  for (n = 0; n < pScreen->numDepths; n++)
-  {
-    if (pScreen->allowedDepths[n].numVids)
-    {
-      break;
-    }
-  }
-  if (n == pScreen->numDepths)
-  {
-    return FALSE;
-  }
-
-  /* Only one allowed rotation for now */
-  rotateKind = RR_Rotate_0;
-
-  for (n = 0; n < pRRScrPriv->nSizes; n++)
-  {
-    RRRegisterSize(pScreen, pRRScrPriv->pSizes[n].width,
-                   pRRScrPriv->pSizes[n].height,
-                   pRRScrPriv->pSizes[n].mmWidth,
-                   pRRScrPriv->pSizes[n].mmHeight);
-  }
-  /*
-   * Register supported sizes.  This can be called many times, but
-   * we only support one size for now.
-   */
-
-#if 0
-  width = 800;
-  height = 600;
-  mmwidth = PixelToMM(width);
-  mmheight = PixelToMM(height);
-  RRRegisterSize(pScreen, width, height, mmwidth, mmheight);
-
-  width = 1024;
-  height = 768;
-  mmwidth = PixelToMM(width);
-  mmheight = PixelToMM(height);
-  RRRegisterSize(pScreen, width, height, mmwidth, mmheight);
-
-  width = 1280;
-  height = 1024;
-  mmwidth = PixelToMM(width);
-  mmheight = PixelToMM(height);
-  RRRegisterSize(pScreen, width, height, mmwidth, mmheight);
-#endif
-
-  width = g_rdpScreen.rdp_width;
-  height = g_rdpScreen.rdp_height;
-  mmwidth = PixelToMM(width);
-  mmheight = PixelToMM(height);
-  pSize = RRRegisterSize(pScreen, width, height, mmwidth, mmheight);
-
-  /* Tell RandR what the current config is */
-  RRSetCurrentConfig(pScreen, rotateKind, 0, pSize);
-
-  return TRUE;
-}
-
-#if 0
-/******************************************************************************/
-static CARD32
-rdpDeferredDrawCallback(OsTimerPtr timer, CARD32 now, pointer arg)
-{
-  WindowPtr pWin;
-
-  DEBUG_OUT(("rdpDeferredDrawCallback:\n"));
-  pWin = (WindowPtr)arg;
-  DeleteWindow(pWin, None);
-  /*
-  FreeResource(g_wid, RT_NONE);
-  g_wid = 0;
-  */
-return 0;
-}
-#endif
-
-/******************************************************************************/
-/* for lack of a better way, a window is created that covers a the area and
-   when its deleted, it's invalidated */
-static int
-rdpInvalidateArea(ScreenPtr pScreen, int x, int y, int cx, int cy)
-{
-  WindowPtr rootWindow;
-  WindowPtr pWin;
-  int result;
-  int attri;
-  XID attributes[4];
-  Mask mask;
-
-  DEBUG_OUT(("rdpInvalidateArea:\n"));
-  rootWindow = GetCurrentRootWindow(g_keyboard);
-  if (rootWindow != 0)
-  {
-    mask = 0;
-    attri = 0;
-    attributes[attri++] = pScreen->blackPixel;
-    mask |= CWBackPixel;
-    attributes[attri++] = xTrue;
-    mask |= CWOverrideRedirect;
-    if (g_wid == 0)
-    {
-      g_wid = FakeClientID(0);
-    }
-    pWin = CreateWindow(g_wid, rootWindow,
-                        x, y, cx, cy, 0, InputOutput, mask,
-                        attributes, 0, serverClient,
-                        wVisual(rootWindow), &result);
-    if (result == 0)
-    {
-      MapWindow(pWin, serverClient);
-      DeleteWindow(pWin, None);
-#if 0
-      g_updateTimer = TimerSet(g_updateTimer, 0, 50,
-                               rdpDeferredDrawCallback, pWin);
-#endif
-    }
-  }
-  return 0;
-}
-
-/******************************************************************************/
-/*
- * Respond to resize/rotate request from either X Server or X client app
- */
-static Bool
-rdpRandRSetConfig(ScreenPtr pScreen, Rotation rotateKind, int rate,
-                  RRScreenSizePtr pSize)
-{
-  PixmapPtr screenPixmap;
-  WindowPtr rootWindow;
-  BoxRec box;
-
-  ErrorF("rdpRandRSetConfig:\n");
-  if ((pSize->width < 1) || (pSize->height < 1))
-  {
-    ErrorF("rdpRandRSetConfig: error width %d height %d\n",
-           pSize->width, pSize->height);
-    return FALSE;
-  }
-  ErrorF("rdpRandRSetConfig: width %d height %d\n",
-         pSize->width, pSize->height);
-  g_rdpScreen.width = pSize->width;
-  g_rdpScreen.height = pSize->height;
-  g_rdpScreen.paddedWidthInBytes =
-    PixmapBytePad(g_rdpScreen.width, g_rdpScreen.depth);
-  g_rdpScreen.sizeInBytes =
-    g_rdpScreen.paddedWidthInBytes * g_rdpScreen.height;
-  pScreen->width = pSize->width;
-  pScreen->height = pSize->height;
-  DEBUG_OUT(("rdpRandRSetConfig: pScreen %dx%d pSize %dx%d\n",
-             pScreen->mmWidth, pScreen->mmHeight,
-             pSize->mmWidth, pSize->mmHeight));
-  pScreen->mmWidth = pSize->mmWidth;
-  pScreen->mmHeight = pSize->mmHeight;
-#if 0
-  g_free(g_rdpScreen.pfbMemory);
-  g_rdpScreen.pfbMemory = (char*)g_malloc(g_rdpScreen.sizeInBytes, 1);
-#endif
-  screenPixmap = FB_GET_SCREEN_PIXMAP(pScreen);
-  if (screenPixmap != 0)
-  {
-    DEBUG_OUT(("rdpRandRSetConfig: resizing screenPixmap [%p] to %dx%d, "
-               "currently at %dx%d\n",
-               (void*)screenPixmap, pSize->width, pSize->height,
-               screenPixmap->drawable.width, screenPixmap->drawable.height));
-    pScreen->ModifyPixmapHeader(screenPixmap,
-                                pSize->width, pSize->height,
-                                g_rdpScreen.depth, g_rdpScreen.bitsPerPixel,
-                                g_rdpScreen.paddedWidthInBytes,
-                                g_rdpScreen.pfbMemory);
-    DEBUG_OUT(("rdpRandRSetConfig: resized to %dx%d\n",
-               screenPixmap->drawable.width, screenPixmap->drawable.height));
-    /* memset(g_rdpScreen.pfbMemory, 0xff, 2048 * 2048 * 4); */
-  }
-  rootWindow = GetCurrentRootWindow(g_keyboard);
-  if (rootWindow != 0)
-  {
-    DEBUG_OUT(("rdpRandRSetConfig: rootWindow %p\n", (void*)rootWindow));
-    box.x1 = 0;
-    box.y1 = 0;
-    box.x2 = pSize->width;
-    box.y2 = pSize->height;
-    RegionInit(&rootWindow->winSize, &box, 1);
-    RegionInit(&rootWindow->borderSize, &box, 1);
-    RegionReset(&rootWindow->borderClip, &box);
-    RegionBreak(&rootWindow->clipList);
-    rootWindow->drawable.width = pSize->width;
-    rootWindow->drawable.height = pSize->height;
-    ResizeChildrenWinSize(rootWindow, 0, 0, 0, 0);
-  }
-  rdpInvalidateArea(g_pScreen, 0, 0, g_rdpScreen.width, g_rdpScreen.height);
-  return TRUE;
 }

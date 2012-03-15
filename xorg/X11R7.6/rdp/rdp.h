@@ -113,10 +113,10 @@ struct _rdpScreenInfoRec
   /* Pixmap procedures */
   CreatePixmapProcPtr CreatePixmap;
   DestroyPixmapProcPtr DestroyPixmap;
-  /* Window Procedures */
 
-  //PaintWindowBackgroundProcPtr PaintWindowBackground;
-  //PaintWindowBorderProcPtr PaintWindowBorder;
+  /* Window Procedures */
+  CreateWindowProcPtr CreateWindow;
+  DestroyWindowProcPtr DestroyWindow;
 
   CreateColormapProcPtr CreateColormap;
   DestroyColormapProcPtr DestroyColormap;
@@ -144,6 +144,26 @@ struct _rdpGCRec
 };
 typedef struct _rdpGCRec rdpGCRec;
 typedef rdpGCRec* rdpGCPtr;
+#define GETGCPRIV(_pGC) \
+(rdpGCPtr)dixGetPrivateAddr(&(_pGC->devPrivates), &g_rdpGCIndex)
+
+struct _rdpWindowRec
+{
+  int status;
+};
+typedef struct _rdpWindowRec rdpWindowRec;
+typedef rdpWindowRec* rdpWindowPtr;
+#define GETWINPRIV(_pWindow) \
+(rdpWindowPtr)dixGetPrivateAddr(&(_pWindow->devPrivates), &g_rdpWindowIndex)
+
+struct _rdpPixmapRec
+{
+  int status;
+};
+typedef struct _rdpPixmapRec rdpPixmapRec;
+typedef rdpPixmapRec* rdpPixmapPtr;
+#define GETPIXPRIV(_pPixmap) \
+(rdpPixmapPtr)dixGetPrivateAddr(&(_pPixmap->devPrivates), &g_rdpPixmapIndex)
 
 /* rdpmisc.c */
 void
@@ -200,19 +220,20 @@ hexdump(unsigned char *p, unsigned int len);
 /* rdpdraw.c */
 Bool
 rdpCloseScreen(int i, ScreenPtr pScreen);
+
 PixmapPtr
 rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
                 unsigned usage_hint);
 Bool
 rdpDestroyPixmap(PixmapPtr pPixmap);
+
 Bool
-rdpDestroyPixmap(PixmapPtr pPixmap);
+rdpCreateWindow(WindowPtr pWindow);
+Bool
+rdpDestroyWindow(WindowPtr pWindow);
+
 Bool
 rdpCreateGC(GCPtr pGC);
-void
-rdpPaintWindowBackground(WindowPtr pWin, RegionPtr pRegion, int what);
-void
-rdpPaintWindowBorder(WindowPtr pWin, RegionPtr pRegion, int what);
 void
 rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion);
 void

@@ -34,6 +34,8 @@ Xserver drawing ops and funcs
 
 extern rdpScreenInfoRec g_rdpScreen; /* from rdpmain.c */
 extern DevPrivateKeyRec g_rdpGCIndex; /* from rdpmain.c */
+extern DevPrivateKeyRec g_rdpWindowIndex; /* from rdpmain.c */
+extern DevPrivateKeyRec g_rdpPixmapIndex; /* from rdpmain.c */
 extern int g_Bpp; /* from rdpmain.c */
 extern ScreenPtr g_pScreen; /* from rdpmain.c */
 
@@ -1766,14 +1768,16 @@ rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
                 unsigned usage_hint)
 {
   PixmapPtr rv;
+  rdpPixmapRec* priv;
 
-  ErrorF("rdpCreatePixmap:\n");
-  ErrorF("  in width %d height %d depth %d\n", width, height, depth);
+  //ErrorF("rdpCreatePixmap:\n");
+  //ErrorF("  in width %d height %d depth %d\n", width, height, depth);
   pScreen->CreatePixmap = g_rdpScreen.CreatePixmap;
   rv = pScreen->CreatePixmap(pScreen, width, height, depth, usage_hint);
+  priv = GETPIXPRIV(rv);
   pScreen->CreatePixmap = rdpCreatePixmap;
-  ErrorF("  out width %d height %d depth %d\n", rv->drawable.width,
-    rv->drawable.height, rv->drawable.depth);
+  //ErrorF("  out width %d height %d depth %d\n", rv->drawable.width,
+  //  rv->drawable.height, rv->drawable.depth);
   return rv;
 }
 
@@ -1783,13 +1787,50 @@ rdpDestroyPixmap(PixmapPtr pPixmap)
 {
   Bool rv;
   ScreenPtr pScreen;
+  rdpPixmapRec* priv;
 
-  ErrorF("rdpDestroyPixmap:\n");
-  ErrorF("  refcnt %d\n", pPixmap->refcnt);
+  //ErrorF("rdpDestroyPixmap:\n");
+  priv = GETPIXPRIV(pPixmap);
+  //ErrorF("  refcnt %d\n", pPixmap->refcnt);
   pScreen = pPixmap->drawable.pScreen;
   pScreen->DestroyPixmap = g_rdpScreen.DestroyPixmap;
   rv = pScreen->DestroyPixmap(pPixmap);
   pScreen->DestroyPixmap = rdpDestroyPixmap;
+  return rv;
+}
+
+/******************************************************************************/
+Bool
+rdpCreateWindow(WindowPtr pWindow)
+{
+  ScreenPtr pScreen;
+  rdpWindowRec* priv;
+  Bool rv;
+
+  //ErrorF("rdpCreateWindow:\n");
+  priv = GETWINPRIV(pWindow);
+  //ErrorF("  %p status %d\n", priv, priv->status);
+  pScreen = pWindow->drawable.pScreen;
+  pScreen->CreateWindow = g_rdpScreen.CreateWindow;
+  rv = pScreen->CreateWindow(pWindow);
+  pScreen->CreateWindow = rdpCreateWindow;
+  return rv;
+}
+
+/******************************************************************************/
+Bool
+rdpDestroyWindow(WindowPtr pWindow)
+{
+  ScreenPtr pScreen;
+  rdpWindowRec* priv;
+  Bool rv;
+
+  //ErrorF("rdpDestroyWindow:\n");
+  priv = GETWINPRIV(pWindow);
+  pScreen = pWindow->drawable.pScreen;
+  pScreen->DestroyWindow = g_rdpScreen.DestroyWindow;
+  rv = pScreen->DestroyWindow(pWindow);
+  pScreen->DestroyWindow = rdpDestroyWindow;
   return rv;
 }
 
@@ -1801,28 +1842,20 @@ rdpCreateGC(GCPtr pGC)
   Bool rv;
 
   DEBUG_OUT_OPS(("in rdpCreateGC\n"));
-  rv = 0;
-  if (1) // g_rdpGCIndex != -1)
+  priv = GETGCPRIV(pGC);
+  g_pScreen->CreateGC = g_rdpScreen.CreateGC;
+  rv = g_pScreen->CreateGC(pGC);
+  if (rv)
   {
-    priv = (rdpGCPtr)dixGetPrivateAddr(&(pGC->devPrivates), &g_rdpGCIndex);
-    g_pScreen->CreateGC = g_rdpScreen.CreateGC;
-    rv = g_pScreen->CreateGC(pGC);
-    if (rv)
-    {
-      priv->funcs = pGC->funcs;
-      priv->ops = 0;
-      pGC->funcs = &g_rdpGCFuncs;
-    }
-    else
-    {
-      rdpLog("error in rdpCreateGC, CreateGC failed\n");
-    }
-    g_pScreen->CreateGC = rdpCreateGC;
+    priv->funcs = pGC->funcs;
+    priv->ops = 0;
+    pGC->funcs = &g_rdpGCFuncs;
   }
   else
   {
-    rdpLog("error in rdpCreateGC, g_rdpGCIndex is -1\n");
+    rdpLog("error in rdpCreateGC, CreateGC failed\n");
   }
+  g_pScreen->CreateGC = rdpCreateGC;
   return rv;
 }
 
