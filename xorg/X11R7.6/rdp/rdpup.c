@@ -51,6 +51,10 @@ extern int g_Bpp; /* from rdpmain.c */
 extern int g_Bpp_mask; /* from rdpmain.c */
 extern rdpScreenInfoRec g_rdpScreen; /* from rdpmain.c */
 
+/* true is to use unix domain socket */
+extern int g_use_uds; /* in rdpmain.c */
+extern char g_uds_data[]; /* in rdpmain.c */
+
 /*
 0 GXclear,        0
 1 GXnor,          DPon
@@ -457,26 +461,44 @@ rdpup_init(void)
   {
     return 0;
   }
-  g_sprintf(text, "62%2.2d", i);
   if (g_in_s == 0)
   {
     make_stream(g_in_s);
     init_stream(g_in_s, 8192);
   }
-  if (g_out_s == 0)
+    if (g_out_s == 0)
   {
     make_stream(g_out_s);
     init_stream(g_out_s, 8192 * g_Bpp + 100);
   }
-  if (g_listen_sck == 0)
+  if (g_use_uds)
   {
-    g_listen_sck = g_tcp_socket();
-    if (g_tcp_bind(g_listen_sck, text) != 0)
+    g_sprintf(g_uds_data, "/tmp/.xrdp/xrdp_display_%s", display);
+    if (g_listen_sck == 0)
     {
-      return 0;
+      g_listen_sck = g_tcp_local_socket_stream();
+      if (g_tcp_local_bind(g_listen_sck, g_uds_data) != 0)
+      {
+        ErrorF("rdpup_init: g_tcp_local_bind failed\n");
+        return 0;
+      }
+      g_tcp_listen(g_listen_sck);
+      AddEnabledDevice(g_listen_sck);
     }
-    g_tcp_listen(g_listen_sck);
-    AddEnabledDevice(g_listen_sck);
+  }
+  else
+  {
+    g_sprintf(text, "62%2.2d", i);
+    if (g_listen_sck == 0)
+    {
+      g_listen_sck = g_tcp_socket();
+      if (g_tcp_bind(g_listen_sck, text) != 0)
+      {
+        return 0;
+      }
+      g_tcp_listen(g_listen_sck);
+      AddEnabledDevice(g_listen_sck);
+    }
   }
   g_dis_listen_sck = g_tcp_local_socket_dgram();
   if (g_dis_listen_sck != 0)

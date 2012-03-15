@@ -45,6 +45,11 @@ DeviceIntPtr g_keyboard = 0;
 Bool g_wrapWindow = 0;
 Bool g_wrapPixmap = 0;
 
+/* if true, use a unix domain socket instead of a tcp socket */
+int g_use_uds = 0;
+char g_uds_data[256] = ""; /* data */
+char g_uds_cont[256] = ""; /* control */
+
 /* set all these at once, use function set_bpp */
 int g_bpp = 16;
 int g_Bpp = 2;
@@ -503,7 +508,7 @@ ddxProcessArgument(int argc, char** argv, int i)
     }
     return 2;
   }
-  if (strcmp (argv[i], "-depth") == 0)
+  if (strcmp(argv[i], "-depth") == 0)
   {
     if (i + 1 >= argc)
     {
@@ -515,6 +520,11 @@ ddxProcessArgument(int argc, char** argv, int i)
       UseMsg();
     }
     return 2;
+  }
+  if (strcmp(argv[i], "-uds") == 0)
+  {
+    g_use_uds = 1;
+    return 1;
   }
   return 0;
 }
@@ -613,7 +623,7 @@ InitInput(int argc, char** argv)
 void
 ddxGiveUp(void)
 {
-  char unixSocketName[64];
+  char unixSocketName[128];
 
   ErrorF("ddxGiveUp:\n");
   g_free(g_rdpScreen.pfbMemory);
@@ -623,6 +633,10 @@ ddxGiveUp(void)
     unlink(unixSocketName);
     sprintf(unixSocketName, "/tmp/.xrdp/xrdp_disconnect_display_%s", display);
     unlink(unixSocketName);
+    if(g_uds_data[0] != 0)
+    {
+      unlink(g_uds_data);
+    }
   }
 }
 
@@ -670,6 +684,7 @@ ddxUseMsg(void)
   ErrorF("X11rdp specific options\n");
   ErrorF("-geometry WxH          set framebuffer width & height\n");
   ErrorF("-depth D               set framebuffer depth\n");
+  ErrorF("-uds                   create and listen on /tmp/.xrdp/xrdp_display_x\n");
   ErrorF("\n");
   exit(1);
 }

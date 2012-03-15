@@ -80,7 +80,7 @@ rdpRRGetInfo(ScreenPtr pScreen, Rotation* pRotations)
 }
 
 /******************************************************************************/
-/* for lack of a better way, a window is created that covers a the area and
+/* for lack of a better way, a window is created that covers the area and
    when its deleted, it's invalidated */
 static int
 rdpInvalidateArea(ScreenPtr pScreen, int x, int y, int cx, int cy)

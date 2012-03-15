@@ -192,6 +192,8 @@ int
 g_tcp_socket(void);
 int
 g_tcp_local_socket_dgram(void);
+int
+g_tcp_local_socket_stream(void);
 void
 g_memcpy(void* d_ptr, const void* s_ptr, int size);
 int
