@@ -130,6 +130,7 @@ lib_mod_connect(struct mod* mod)
   int len;
   int i;
   int index;
+  int use_uds;
   struct stream* s;
   char con_port[256];
 
@@ -156,15 +157,34 @@ lib_mod_connect(struct mod* mod)
   }
   make_stream(s);
   g_sprintf(con_port, "%s", mod->port);
+  use_uds = 0;
+  if (con_port[0] == '/')
+  {
+    use_uds = 1;
+  }
   mod->sck_closed = 0;
   i = 0;
   while (1)
   {
-    mod->sck = g_tcp_socket();
+    if (use_uds)
+    {
+      mod->sck = g_tcp_local_socket();
+    }
+    else
+    {
+      mod->sck = g_tcp_socket();
+    }
     g_tcp_set_non_blocking(mod->sck);
     g_tcp_set_no_delay(mod->sck);
     mod->server_msg(mod, "connecting...", 0);
-    error = g_tcp_connect(mod->sck, mod->ip, con_port);
+    if (use_uds)
+    {
+      error = g_tcp_local_connect(mod->sck, con_port);
+    }
+    else
+    {
+      error = g_tcp_connect(mod->sck, mod->ip, con_port);
+    }
     if (error == -1)
     {
       if (g_tcp_last_error_would_block(mod->sck))

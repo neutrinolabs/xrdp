@@ -373,6 +373,7 @@ xrdp_mm_setup_mod2(struct xrdp_mm* self)
   int rv;
   int key_flags;
   int device_flags;
+  int use_uds;
 
   g_memset(text,0,sizeof(char) * 256);
   rv = 1;
@@ -396,7 +397,22 @@ xrdp_mm_setup_mod2(struct xrdp_mm* self)
       }
       else if (self->code == 10) /* X11rdp */
       {
-        g_snprintf(text, 255, "%d", 6200 + self->display);
+        use_uds = 1;
+        if (xrdp_mm_get_value(self, "ip", text, 255) == 0)
+        {
+          if (g_strcmp(text, "127.0.0.1") != 0)
+          {
+            use_uds = 0;
+          }
+        }
+        if (use_uds)
+        {
+          g_snprintf(text, 255, "/tmp/.xrdp/xrdp_display_%d", self->display);
+        }
+        else
+        {
+          g_snprintf(text, 255, "%d", 6200 + self->display);
+        }
       }
       else
       {
