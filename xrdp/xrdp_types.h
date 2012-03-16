@@ -191,6 +191,7 @@ struct xrdp_mm
   struct trans* chan_trans; /* connection to chansrv */
   int chan_trans_up; /* true once connected to chansrv */
   int delete_chan_trans; /* boolean set when done with channel connection */
+  int usechansrv; /* true if chansrvport is set in xrdp.ini or using sesman */
 };
 
 struct xrdp_key_info

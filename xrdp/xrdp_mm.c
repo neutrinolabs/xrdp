@@ -681,22 +681,73 @@ xrdp_mm_chan_send_init(struct xrdp_mm* self)
 }
 
 /*****************************************************************************/
+/* connect to chansrv */
+static int APP_CC
+xrdp_mm_connect_chansrv(struct xrdp_mm* self, char* ip, char* port)
+{
+  int index;
+
+  self->usechansrv = 1;
+
+  /* connect channel redir */
+  if ((ip == 0) || (strcmp(ip, "127.0.0.1") == 0) || (ip[0] == 0))
+  {
+    /* unix socket */
+    self->chan_trans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
+  }
+  else
+  {
+    /* tcp */
+    self->chan_trans = trans_create(TRANS_MODE_TCP, 8192, 8192);
+  }
+  self->chan_trans->trans_data_in = xrdp_mm_chan_data_in;
+  self->chan_trans->header_size = 8;
+  self->chan_trans->callback_data = self;
+  /* try to connect up to 4 times */
+  for (index = 0; index < 4; index++)
+  {
+    if (trans_connect(self->chan_trans, ip, port, 3000) == 0)
+    {
+      self->chan_trans_up = 1;
+      break;
+    }
+    g_sleep(1000);
+    g_writeln("xrdp_mm_connect_chansrv: connect failed "
+              "trying again...");
+  }
+  if (!(self->chan_trans_up))
+  {
+    g_writeln("xrdp_mm_connect_chansrv: error in trans_connect "
+              "chan");
+  }
+  if (self->chan_trans_up)
+  {
+    if (xrdp_mm_chan_send_init(self) != 0)
+    {
+      g_writeln("xrdp_mm_connect_chansrv: error in "
+                "xrdp_mm_chan_send_init");
+    }
+    else
+    {
+      g_writeln("xrdp_mm_connect_chansrv: chansrv connect successful");
+    }
+  }
+  return 0;
+}
+
+/*****************************************************************************/
 static int APP_CC
 xrdp_mm_process_login_response(struct xrdp_mm* self, struct stream* s)
 {
   int ok;
   int display;
   int rv;
-  int index;
   int uid;
   int gid;
   char text[256];
   char ip[256];
   char port[256];
 
-  g_memset(text,0,sizeof(char) * 256);
-  g_memset(ip,0,sizeof(char) * 256);
-  g_memset(port,0,sizeof(char) * 256);
   rv = 0;
   in_uint16_be(s, ok);
   in_uint16_be(s, display);
@@ -714,46 +765,15 @@ xrdp_mm_process_login_response(struct xrdp_mm* self, struct stream* s)
         xrdp_wm_set_login_mode(self->wm, 10);
         self->wm->dragging = 0;
         /* connect channel redir */
-        if (strcmp(ip, "127.0.0.1") == 0)
+        if ((ip == 0) || (strcmp(ip, "127.0.0.1") == 0) || (ip[0] == 0))
         {
-          /* unix socket */
-          self->chan_trans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
           g_snprintf(port, 255, "/tmp/.xrdp/xrdp_chansrv_socket_%d", 7200 + display);
         }
         else
         {
-          /* tcp */
-          self->chan_trans = trans_create(TRANS_MODE_TCP, 8192, 8192);
           g_snprintf(port, 255, "%d", 7200 + display);
         }
-        self->chan_trans->trans_data_in = xrdp_mm_chan_data_in;
-        self->chan_trans->header_size = 8;
-        self->chan_trans->callback_data = self;
-        /* try to connect up to 4 times */
-        for (index = 0; index < 4; index++)
-        {
-          if (trans_connect(self->chan_trans, ip, port, 3000) == 0)
-          {
-            self->chan_trans_up = 1;
-            break;
-          }
-          g_sleep(1000);
-          g_writeln("xrdp_mm_process_login_response: connect failed "
-                    "trying again...");
-        }
-        if (!(self->chan_trans_up))
-        {
-          g_writeln("xrdp_mm_process_login_response: error in trans_connect "
-                    "chan");
-        }
-        if (self->chan_trans_up)
-        {
-          if (xrdp_mm_chan_send_init(self) != 0)
-          {
-            g_writeln("xrdp_mm_process_login_response: error in "
-                      "xrdp_mm_chan_send_init");
-          }
-        }
+        xrdp_mm_connect_chansrv(self, ip, port);
       }
     }
   }
@@ -931,6 +951,7 @@ xrdp_mm_connect(struct xrdp_mm* self)
   char errstr[256];
   char text[256];
   char port[8];
+  char chansrvport[256];
 
   g_memset(ip,0,sizeof(char) * 256);
   g_memset(errstr,0,sizeof(char) * 256);
@@ -955,6 +976,11 @@ xrdp_mm_connect(struct xrdp_mm* self)
       {
         use_sesman = 1;
       }
+    }
+    else if (g_strcasecmp(name, "chansrvport") == 0)
+    {
+      g_strncpy(chansrvport, value, 255);
+      self->usechansrv = 1;
     }
   }
   if (use_sesman)
@@ -1015,6 +1041,13 @@ xrdp_mm_connect(struct xrdp_mm* self)
     }
   }
   self->sesman_controlled = use_sesman;
+
+  if ((self->wm->login_mode == 10) && (self->sesman_controlled == 0) &&
+      (self->usechansrv != 0))
+  {
+    /* if sesman controlled, this will connect later */
+    xrdp_mm_connect_chansrv(self, "", chansrvport);
+  }
 
   return rv;
 }
@@ -1502,7 +1535,7 @@ server_query_channel(struct xrdp_mod* mod, int index, char* channel_name,
   struct xrdp_wm* wm;
 
   wm = (struct xrdp_wm*)(mod->wm);
-  if (wm->mm->sesman_controlled)
+  if (wm->mm->usechansrv)
   {
     return 1;
   }
@@ -1518,7 +1551,7 @@ server_get_channel_id(struct xrdp_mod* mod, char* name)
   struct xrdp_wm* wm;
 
   wm = (struct xrdp_wm*)(mod->wm);
-  if (wm->mm->sesman_controlled)
+  if (wm->mm->usechansrv)
   {
     return -1;
   }
@@ -1534,7 +1567,7 @@ server_send_to_channel(struct xrdp_mod* mod, int channel_id,
   struct xrdp_wm* wm;
 
   wm = (struct xrdp_wm*)(mod->wm);
-  if (wm->mm->sesman_controlled)
+  if (wm->mm->usechansrv)
   {
     return 1;
   }
