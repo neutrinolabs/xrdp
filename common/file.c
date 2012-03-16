@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2004-2010 Jay Sorg
+   Copyright (c) 2004-2012 Jay Sorg
 
    Permission is hereby granted, free of charge, to any person obtaining a
    copy of this software and associated documentation files (the "Software"),
@@ -204,6 +204,7 @@ l_file_read_section(int fd, int max_file_size, const char* section,
   char text[512];
   char name[512];
   char value[512];
+  char* lvalue;
   char c;
   int in_it;
   int in_it_index;
@@ -242,7 +243,22 @@ l_file_read_section(int fd, int max_file_size, const char* section,
             {
               file_split_name_value(text, name, value);
               list_add_item(names, (tbus)g_strdup(name));
-              list_add_item(values, (tbus)g_strdup(value));
+              if (value[0] == '$')
+              {
+                lvalue = g_getenv(value + 1);
+                if (lvalue != 0)
+                {
+                  list_add_item(values, (tbus)g_strdup(lvalue));
+                }
+                else
+                {
+                  list_add_item(values, (tbus)g_strdup(""));
+                }
+              }
+              else
+              {
+                list_add_item(values, (tbus)g_strdup(value));
+              }
             }
           }
           free_stream(s);
