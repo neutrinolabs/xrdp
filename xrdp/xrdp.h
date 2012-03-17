@@ -91,7 +91,7 @@ xrdp_wm_send_palette(struct xrdp_wm* self);
 int APP_CC
 xrdp_wm_send_bell(struct xrdp_wm* self);
 int APP_CC
-xrdp_wm_load_static_colors(struct xrdp_wm* self);
+xrdp_wm_load_static_colors_plus(struct xrdp_wm* self, char* autorun_name);
 int APP_CC
 xrdp_wm_load_static_pointers(struct xrdp_wm* self);
 int APP_CC

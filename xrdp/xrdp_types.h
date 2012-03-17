@@ -266,6 +266,7 @@ struct xrdp_wm
   struct xrdp_mm* mm;
   struct xrdp_font* default_font;
   struct xrdp_keymap keymap;
+  int hide_log_window;
 };
 
 /* rdp process */

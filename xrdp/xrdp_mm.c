@@ -1522,7 +1522,7 @@ server_reset(struct xrdp_mod* mod, int width, int height, int bpp)
   xrdp_bitmap_resize(wm->screen, wm->client_info->width,
                      wm->client_info->height);
   /* load some stuff */
-  xrdp_wm_load_static_colors(wm);
+  xrdp_wm_load_static_colors_plus(wm, 0);
   xrdp_wm_load_static_pointers(wm);
   return 0;
 }

@@ -309,7 +309,7 @@ unsigned int xrdp_wm_htoi (const char *ptr)
 
 /*****************************************************************************/
 int APP_CC
-xrdp_wm_load_static_colors(struct xrdp_wm* self)
+xrdp_wm_load_static_colors_plus(struct xrdp_wm* self, char* autorun_name)
 {
   int bindex;
   int gindex;
@@ -321,6 +321,11 @@ xrdp_wm_load_static_colors(struct xrdp_wm* self)
   struct list* names;
   struct list* values;
   char cfg_file[256];
+
+  if (autorun_name != 0)
+  {
+    autorun_name[0] = 0;
+  }
 
   /* initialize with defaults */
   self->black      = HCOLOR(self->screen->bpp,0x000000);
@@ -394,6 +399,24 @@ xrdp_wm_load_static_colors(struct xrdp_wm* self)
             val = (char*)list_get_item(values, index);
             self->background = HCOLOR(self->screen->bpp,xrdp_wm_htoi(val));
           }
+          else if (g_strcasecmp(val, "autorun") == 0)
+          {
+            val = (char*)list_get_item(values, index);
+            if (autorun_name != 0)
+            {
+              g_strncpy(autorun_name, val, 255);
+            }
+          }
+          else if (g_strcasecmp(val, "hidelogwindow") == 0)
+          {
+            val = (char*)list_get_item(values, index);
+            if ((g_strcasecmp(val, "yes") == 0) ||
+                (g_strcasecmp(val, "1") == 0) ||
+                (g_strcasecmp(val, "true") == 0))
+            {
+              self->hide_log_window = 1;
+            }
+          }
         }
       }
     }
@@ -462,11 +485,12 @@ xrdp_wm_init(struct xrdp_wm* self)
   char* r;
   char section_name[256];
   char cfg_file[256];
+  char autorun_name[256];
 
-  xrdp_wm_load_static_colors(self);
+  xrdp_wm_load_static_colors_plus(self, autorun_name);
   xrdp_wm_load_static_pointers(self);
   self->screen->bg_color = self->background;
-  if (self->session->client_info->rdp_autologin)
+  if (self->session->client_info->rdp_autologin || (autorun_name[0] != 0))
   {
     g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
     fd = g_file_open(cfg_file); /* xrdp.ini */
@@ -479,17 +503,25 @@ xrdp_wm_init(struct xrdp_wm* self)
       g_strncpy(section_name, self->session->client_info->domain, 255);
       if (section_name[0] == 0)
       {
-        /* if no doamin is passed, use the first item in the xrdp.ini
-           file thats not named 'globals' */
-        file_read_sections(fd, names);
-        for (index = 0; index < names->count; index++)
+        if (autorun_name[0] == 0)
         {
-          q = (char*)list_get_item(names, index);
-          if (g_strncasecmp("globals", q, 8) != 0)
+          /* if no doamin is passed, and no autorun in xrdp.ini,
+             use the first item in the xrdp.ini
+             file thats not named 'globals' */
+          file_read_sections(fd, names);
+          for (index = 0; index < names->count; index++)
           {
-            g_strncpy(section_name, q, 255);
-            break;
+            q = (char*)list_get_item(names, index);
+            if (g_strncasecmp("globals", q, 8) != 0)
+            {
+              g_strncpy(section_name, q, 255);
+              break;
+            }
           }
+        }
+        else
+        {
+          g_strncpy(section_name, autorun_name, 255);
         }
       }
       list_clear(names);
@@ -1526,6 +1558,10 @@ xrdp_wm_log_msg(struct xrdp_wm* self, char* msg)
   int xoffset;
   int yoffset;
 
+  if (self->hide_log_window)
+  {
+    return 0;
+  }
   list_add_item(self->log, (long)g_strdup(msg));
   if (self->log_wnd == 0)
   {
