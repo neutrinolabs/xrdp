@@ -251,6 +251,7 @@ if [ $# -lt 1 ]; then
     echo "usage: build.sh <installation dir>"
     echo "usage: build.sh <clean>"
     echo "usage: build.sh default"
+    echo "usage: build.sh <installation dir> drop - set env and run bash in rdp dir"
     echo ""
     exit 1
 fi
@@ -346,9 +347,8 @@ export X11RDPBASE
 
 cd rdp
 make
-if [ $? -ne 0 ]; then
+if [ "$2" = "drop" ]; then
   echo ""
-  echo "X11rdp make failed"
   echo "dropping you in dir, type exit to get out"
   bash
   exit 1
