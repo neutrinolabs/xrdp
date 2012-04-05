@@ -117,6 +117,7 @@ struct xrdp_rdp
   int share_id;
   int mcs_channel;
   struct xrdp_client_info client_info;
+  void* mppc_enc;
 };
 
 /* state */

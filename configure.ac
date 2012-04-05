@@ -28,6 +28,8 @@ AC_ARG_ENABLE(freerdp1, AS_HELP_STRING([--enable-freerdp1],
               [freerdp1=true], [freerdp1=false])
 AM_CONDITIONAL(XRDP_FREERDP1, [test x$freerdp1 = xtrue])
 
+AM_CONDITIONAL(GOT_PREFIX, test "x${prefix}" != "xNONE"])
+
 # checking for openssl
 AC_CHECK_HEADER([openssl/rc4.h], [],
   [AC_MSG_ERROR([please install libssl-dev or openssl-devel])],

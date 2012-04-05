@@ -22,6 +22,10 @@
 
 #include "libxrdp.h"
 
+#if defined(XRDP_FREERDP1)
+#include <freerdp/codec/mppc_enc.h>
+#endif
+
 /* some compilers need unsigned char to avoid warnings */
 static tui8 g_unknown1[172] =
 { 0xff, 0x02, 0xb6, 0x00, 0x28, 0x00, 0x00, 0x00,
@@ -150,6 +154,9 @@ xrdp_rdp_create(struct xrdp_session* session, struct trans* trans)
   self->client_info.cache3_entries = 262;
   self->client_info.cache3_size = 4096;
   g_write_ip_address(trans->sck, self->client_info.client_ip);  /* load client ip info */
+#if defined(XRDP_FREERDP1)
+  self->mppc_enc = mppc_enc_new(PROTO_RDP_50);
+#endif
   DEBUG(("out xrdp_rdp_create"));
   return self;
 }
@@ -163,6 +170,9 @@ xrdp_rdp_delete(struct xrdp_rdp* self)
     return;
   }
   xrdp_sec_delete(self->sec_layer);
+#if defined(XRDP_FREERDP1)
+  mppc_enc_free((struct rdp_mppc_enc*)(self->mppc_enc));
+#endif
   g_free(self);
 }
 
@@ -278,21 +288,78 @@ int APP_CC
 xrdp_rdp_send_data(struct xrdp_rdp* self, struct stream* s,
                    int data_pdu_type)
 {
-  int len = 0;
+  int len;
+  int ctype;
+  int clen;
+  int dlen;
+  int pdulen;
+  int pdutype;
+  int tocomplen;
+  int iso_offset;
+  int mcs_offset;
+  int sec_offset;
+  int rdp_offset;
+  struct stream ls;
+  struct rdp_mppc_enc* mppc_enc;
 
   DEBUG(("in xrdp_rdp_send_data"));
   s_pop_layer(s, rdp_hdr);
-  len = s->end - s->p;
-  out_uint16_le(s, len);
-  out_uint16_le(s, 0x10 | RDP_PDU_DATA);
+  len = (int)(s->end - s->p);
+  pdutype = 0x10 | RDP_PDU_DATA;
+  pdulen = len;
+  dlen = len;
+  ctype = 0;
+  clen = len;
+  tocomplen = pdulen - 18;
+  if (self->client_info.rdp_compression && self->session->up_and_running)
+  {
+    mppc_enc = (struct rdp_mppc_enc*)(self->mppc_enc);
+    if (compress_rdp(mppc_enc, s->p + 18, tocomplen))
+    {
+      DEBUG(("mppc_encode ok flags 0x%x bytes_in_opb %d historyOffset %d "
+             "tocomplen %d", mppc_enc->flags, mppc_enc->bytes_in_opb,
+             mppc_enc->historyOffset, tocomplen));
+      if (mppc_enc->flags & RDP_MPPC_COMPRESSED)
+      {
+        clen = mppc_enc->bytes_in_opb + 18;
+        pdulen = clen;
+        ctype = mppc_enc->flags;
+        iso_offset = (int)(s->iso_hdr - s->data);
+        mcs_offset = (int)(s->mcs_hdr - s->data);
+        sec_offset = (int)(s->sec_hdr - s->data);
+        rdp_offset = (int)(s->rdp_hdr - s->data);
+
+        /* outputBuffer has 64 bytes preceding it */
+        ls.data = mppc_enc->outputBuffer - (rdp_offset + 18);
+        ls.p = ls.data + rdp_offset;
+        ls.end = ls.p + clen;
+        ls.size = clen;
+        ls.iso_hdr = ls.data + iso_offset;
+        ls.mcs_hdr = ls.data + mcs_offset;
+        ls.sec_hdr = ls.data + sec_offset;
+        ls.rdp_hdr = ls.data + rdp_offset;
+        ls.channel_hdr = 0;
+        ls.next_packet = 0;
+        s = &ls;
+      }
+    }
+    else
+    {
+      g_writeln("mppc_encode not ok");
+    }
+  }
+
+  out_uint16_le(s, pdulen);
+  out_uint16_le(s, pdutype);
   out_uint16_le(s, self->mcs_channel);
   out_uint32_le(s, self->share_id);
   out_uint8(s, 0);
   out_uint8(s, 1);
-  out_uint16_le(s, len - 14);
+  out_uint16_le(s, dlen);
   out_uint8(s, data_pdu_type);
-  out_uint8(s, 0);
-  out_uint16_le(s, 0);
+  out_uint8(s, ctype);
+  out_uint16_le(s, clen);
+
   if (xrdp_sec_send(self->sec_layer, s, MCS_GLOBAL_CHANNEL) != 0)
   {
     DEBUG(("out xrdp_rdp_send_data error"));
