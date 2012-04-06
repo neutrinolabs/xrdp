@@ -543,29 +543,65 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
 
 /******************************************************************************/
 static RegionPtr
-rdpCopyPlane(DrawablePtr pSrcDrawable, DrawablePtr pDstDrawable,
-             GCPtr pGC, int srcx, int srcy, int width, int height,
+rdpCopyPlane(DrawablePtr pSrc, DrawablePtr pDst,
+             GCPtr pGC, int srcx, int srcy, int w, int h,
              int dstx, int dsty, unsigned long bitPlane)
 {
   rdpGCPtr priv;
   RegionPtr rv;
-  RegionRec reg;
+  RegionRec clip_reg;
+  RegionRec box_reg;
   int cd;
+  int num_clips;
+  int j;
   GCFuncs* oldFuncs;
+  BoxRec box;
+  BoxPtr pbox;
 
   DEBUG_OUT_OPS(("in rdpCopyPlane\n"));
   GC_OP_PROLOGUE(pGC);
-  rv = pGC->ops->CopyPlane(pSrcDrawable, pDstDrawable, pGC, srcx, srcy,
-                           width, height, dstx, dsty, bitPlane);
-  RegionInit(&reg, NullBox, 0);
-  cd = rdp_get_clip(&reg, pDstDrawable, pGC);
+  rv = pGC->ops->CopyPlane(pSrc, pDst, pGC, srcx, srcy,
+                           w, h, dstx, dsty, bitPlane);
+  RegionInit(&clip_reg, NullBox, 0);
+  cd = rdp_get_clip(&clip_reg, pDst, pGC);
   if (cd == 1)
   {
+    rdpup_begin_update();
+    rdpup_send_area(pDst->x + dstx, pDst->y + dsty, w, h);
+    rdpup_end_update();
   }
   else if (cd == 2)
   {
+    num_clips = REGION_NUM_RECTS(&clip_reg);
+    if (num_clips > 0)
+    {
+      rdpup_begin_update();
+      box.x1 = pDst->x + dstx;
+      box.y1 = pDst->y + dsty;
+      box.x2 = box.x1 + w;
+      box.y2 = box.y1 + h;
+      RegionInit(&box_reg, &box, 0);
+      RegionIntersect(&clip_reg, &clip_reg, &box_reg);
+      num_clips = REGION_NUM_RECTS(&clip_reg);
+      if (num_clips < 10)
+      {
+        for (j = num_clips - 1; j >= 0; j--)
+        {
+          box = REGION_RECTS(&clip_reg)[j];
+          rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+        }
+      }
+      else
+      {
+        pbox = RegionExtents(&clip_reg);
+        rdpup_send_area(pbox->x1, pbox->y1, pbox->x2 - pbox->x1,
+                        pbox->y2 - pbox->y1);
+      }
+      RegionUninit(&box_reg);
+      rdpup_end_update();
+    }
   }
-  RegionUninit(&reg);
+  RegionUninit(&clip_reg);
   GC_OP_EPILOGUE(pGC);
   return rv;
 }

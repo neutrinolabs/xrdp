@@ -679,6 +679,14 @@ rdpEnqueueMotion(int x, int y)
   EventListPtr rdp_events;
   xEvent* pev;
 
+# if 0
+  if (x < 128)
+  {
+    rdpup_begin_update();
+    rdpup_send_area(0, 0, 1024, 768);
+    rdpup_end_update();
+  }
+#endif
   miPointerSetPosition(g_pointer, &x, &y);
   valuators[0] = x;
   valuators[1] = y;
