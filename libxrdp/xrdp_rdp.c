@@ -300,7 +300,9 @@ xrdp_rdp_send_data(struct xrdp_rdp* self, struct stream* s,
   int sec_offset;
   int rdp_offset;
   struct stream ls;
+#if defined(XRDP_FREERDP1)
   struct rdp_mppc_enc* mppc_enc;
+#endif
 
   DEBUG(("in xrdp_rdp_send_data"));
   s_pop_layer(s, rdp_hdr);
@@ -311,6 +313,7 @@ xrdp_rdp_send_data(struct xrdp_rdp* self, struct stream* s,
   ctype = 0;
   clen = len;
   tocomplen = pdulen - 18;
+#if defined(XRDP_FREERDP1)
   if (self->client_info.rdp_compression && self->session->up_and_running)
   {
     mppc_enc = (struct rdp_mppc_enc*)(self->mppc_enc);
@@ -348,7 +351,7 @@ xrdp_rdp_send_data(struct xrdp_rdp* self, struct stream* s,
       g_writeln("mppc_encode not ok");
     }
   }
-
+#endif
   out_uint16_le(s, pdulen);
   out_uint16_le(s, pdutype);
   out_uint16_le(s, self->mcs_channel);
