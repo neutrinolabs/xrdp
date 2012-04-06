@@ -347,6 +347,11 @@ export X11RDPBASE
 
 cd rdp
 make
+
+# this will copy the build X server with the other X server binaries
+strip X11rdp
+cp X11rdp $X11RDPBASE/bin
+
 if [ "$2" = "drop" ]; then
   echo ""
   echo "dropping you in dir, type exit to get out"
