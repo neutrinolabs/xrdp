@@ -16,6 +16,11 @@ EXTRA_DEFINES += -DXRDP_FREERDP1
 EXTRA_LIBS += -lfreerdp-codec
 endif
 
+if XRDP_JPEG
+EXTRA_DEFINES += -DXRDP_JPEG
+EXTRA_LIBS += -ljpeg
+endif
+
 if GOT_PREFIX
 EXTRA_INCLUDES += -I$(prefix)/include
 EXTRA_FLAGS += -L$(prefix)/lib -Wl,-rpath -Wl,$(prefix)/lib
@@ -44,7 +49,8 @@ libxrdp_la_SOURCES = \
   xrdp_rdp.c \
   xrdp_sec.c \
   xrdp_tcp.c \
-  xrdp_bitmap_compress.c
+  xrdp_bitmap_compress.c \
+  xrdp_jpeg_compress.c
 
 libxrdp_la_LDFLAGS = \
   $(EXTRA_FLAGS)

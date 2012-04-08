@@ -1829,6 +1829,26 @@ xrdp_orders_send_raw_bitmap2(struct xrdp_orders* self,
 }
 
 /*****************************************************************************/
+static int
+xrdp_orders_send_as_jpeg(struct xrdp_orders* self,
+                         int width, int height, int bpp)
+{
+  if (bpp != 24)
+  {
+    return 0;
+  }
+  if (self->rdp_layer->client_info.jpeg == 0)
+  {
+    return 0;
+  }
+  if (width * height < 64)
+  {
+    return 0;
+  }
+  return 1;
+}
+
+/*****************************************************************************/
 /* returns error */
 /* max size width * height * Bpp + 14 */
 int APP_CC
@@ -1843,6 +1863,7 @@ xrdp_orders_send_bitmap2(struct xrdp_orders* self,
   int i = 0;
   int lines_sending = 0;
   int e = 0;
+  int is_jpeg;
   struct stream* s = NULL;
   struct stream* temp_s = NULL;
   char* p = NULL;
@@ -1868,8 +1889,18 @@ xrdp_orders_send_bitmap2(struct xrdp_orders* self,
   init_stream(temp_s, 16384);
   p = s->p;
   i = height;
-  lines_sending = xrdp_bitmap_compress(data, width, height, s, bpp, 16384,
+  is_jpeg = 0;
+  if (xrdp_orders_send_as_jpeg(self, width, height, bpp))
+  {
+    lines_sending = xrdp_jpeg_compress(data, width, height, s, bpp, 16384,
                                        i - 1, temp_s, e);
+    is_jpeg = 1;
+  }
+  else
+  {
+    lines_sending = xrdp_bitmap_compress(data, width, height, s, bpp, 16384,
+                                         i - 1, temp_s, e);
+  }
   if (lines_sending != height)
   {
     free_stream(s);
@@ -1887,7 +1918,11 @@ height(%d)", lines_sending, height);
   len = (bufsize + 6) - 7; /* length after type minus 7 */
   out_uint16_le(self->out_s, len);
   i = (((Bpp + 2) << 3) & 0x38) | (cache_id & 7);
-  i = i | 0x400;
+  i = i | (0x08 << 7); /* CBR2_NO_BITMAP_COMPRESSION_HDR */
+  if (is_jpeg)
+  {
+    i = i | (0x80 << 7); /* unsed flag, jpeg hack */
+  }
   out_uint16_le(self->out_s, i); /* flags */
   out_uint8(self->out_s, RDP_ORDER_BMPCACHE2); /* type */
   out_uint8(self->out_s, width + e);

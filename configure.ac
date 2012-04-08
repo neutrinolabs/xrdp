@@ -27,6 +27,10 @@ AC_ARG_ENABLE(freerdp1, AS_HELP_STRING([--enable-freerdp1],
               [Build freerdp1 module (default: no)]),
               [freerdp1=true], [freerdp1=false])
 AM_CONDITIONAL(XRDP_FREERDP1, [test x$freerdp1 = xtrue])
+AC_ARG_ENABLE(jpeg, AS_HELP_STRING([--enable-jpeg],
+              [Build jpeg module (default: no)]),
+              [jpeg=true], [jpeg=false])
+AM_CONDITIONAL(XRDP_JPEG, [test x$jpeg = xtrue])
 
 AM_CONDITIONAL(GOT_PREFIX, test "x${prefix}" != "xNONE"])
 
@@ -46,6 +50,13 @@ then
 fi
 
 AS_IF( [test "x$enable_freerdp1" = "xyes"] , [PKG_CHECK_MODULES(FREERDP, freerdp >= 1.0.0)] )
+
+# checking for libjpeg 
+if ! test -z "$enable_jpeg"
+then
+  AC_CHECK_HEADER([jpeglib.h], [],
+    [AC_MSG_ERROR([please install libjpeg-dev or libjpeg-devel])])
+fi
 
 # checking for Xlib, Xfixes
 AC_CHECK_HEADER([X11/Xlib.h], [],

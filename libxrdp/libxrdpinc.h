@@ -65,6 +65,7 @@ struct xrdp_client_info
                            2 = arbitrary dimensions */
   char client_ip[256];
   int max_bpp;
+  int jpeg;
 };
 
 struct xrdp_brush

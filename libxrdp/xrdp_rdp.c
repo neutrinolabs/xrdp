@@ -735,7 +735,14 @@ xrdp_process_capset_bmpcache2(struct xrdp_rdp* self, struct stream* s,
 
   self->client_info.bitmap_cache_version = 2;
   Bpp = (self->client_info.bpp + 7) / 8;
-  in_uint16_le(s, i);
+  in_uint16_le(s, i); /* cache flags */
+#if defined(XRDP_JPEG)
+  if (i & 0x80)
+  {
+    g_writeln("xrdp_process_capset_bmpcache2: client supports jpeg");
+    self->client_info.jpeg = 1;
+  }
+#endif
   self->client_info.bitmap_cache_persist_enable = i;
   in_uint8s(s, 2); /* number of caches in set, 3 */
   in_uint32_le(s, i);
