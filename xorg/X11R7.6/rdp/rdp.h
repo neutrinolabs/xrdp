@@ -508,3 +508,13 @@ struct stream
 { \
   (s) = (struct stream*)g_malloc(sizeof(struct stream), 1); \
 }
+
+/******************************************************************************/
+#define free_stream(s) do \
+{ \
+  if ((s) != 0) \
+  { \
+    g_free((s)->data); \
+  } \
+  g_free((s)); \
+} while (0)

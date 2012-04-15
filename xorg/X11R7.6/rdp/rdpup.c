@@ -153,7 +153,7 @@ rdpup_send_msg(struct stream* s)
   rv = 1;
   if (s != 0)
   {
-    len = s->end - s->data;
+    len = (int)(s->end - s->data);
     if (len > s->size)
     {
       rdpLog("overrun error len %d count %d\n", len, g_count);
@@ -347,6 +347,64 @@ l_bound_by(int val, int low, int high)
 
 /******************************************************************************/
 static int
+rdpup_send_caps(void)
+{
+  struct stream* ls;
+  int len;
+  int rv;
+  int cap_count;
+  int cap_bytes;
+
+  make_stream(ls);
+  init_stream(ls, 8192);
+  s_push_layer(ls, iso_hdr, 8);
+
+  cap_count = 0;
+  cap_bytes = 0;
+
+#if 0
+  out_uint16_le(ls, 0);
+  out_uint16_le(ls, 4);
+  cap_count++;
+  cap_bytes += 4;
+
+  out_uint16_le(ls, 1);
+  out_uint16_le(ls, 4);
+  cap_count++;
+  cap_bytes += 4;
+#endif
+
+  s_mark_end(ls);
+  len = (int)(ls->end - ls->data);
+  s_pop_layer(ls, iso_hdr);
+  out_uint16_le(ls, 2); /* caps */
+  out_uint16_le(ls, cap_count); /* num caps */
+  out_uint32_le(ls, cap_bytes); /* caps len after header */
+
+  rv = rdpup_send(ls->data, len);
+  if (rv != 0)
+  {
+    ErrorF("rdpup_send_caps: rdpup_send failed\n");
+  }
+  free_stream(ls);
+  return rv;
+}
+
+/******************************************************************************/
+static int
+process_version_msg(int param1, int param2, int param3, int param4)
+{
+  ErrorF("process_version_msg: version %d %d %d %d\n", param1, param2,
+         param3, param4);
+  if ((param1 > 0) || (param2 > 0) || (param3 > 0) || (param4 > 0))
+  {
+    rdpup_send_caps();
+  }
+  return 0;
+}
+
+/******************************************************************************/
+static int
 rdpup_process_msg(struct stream* s)
 {
   int msg_type;
@@ -431,6 +489,9 @@ param4 %d\n", msg, param1, param2, param3, param4));
       case 300:
         process_screen_size_msg(param1, param2, param3);
         break;
+      case 301:
+        process_version_msg(param1, param2, param3, param4);
+        break;
     }
   }
   else
@@ -466,7 +527,7 @@ rdpup_init(void)
     make_stream(g_in_s);
     init_stream(g_in_s, 8192);
   }
-    if (g_out_s == 0)
+  if (g_out_s == 0)
   {
     make_stream(g_out_s);
     init_stream(g_out_s, 8192 * g_Bpp + 100);

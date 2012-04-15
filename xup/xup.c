@@ -223,6 +223,24 @@ lib_mod_connect(struct mod* mod)
   }
   if (error == 0)
   {
+    /* send version message */
+    init_stream(s, 8192);
+    s_push_layer(s, iso_hdr, 4);
+    out_uint16_le(s, 103);
+    out_uint32_le(s, 301);
+    out_uint32_le(s, 0);
+    out_uint32_le(s, 0);
+    out_uint32_le(s, 0);
+    out_uint32_le(s, 1);
+    s_mark_end(s);
+    len = (int)(s->end - s->data);
+    s_pop_layer(s, iso_hdr);
+    out_uint32_le(s, len);
+    lib_send(mod, s->data, len);
+  }
+  if (error == 0)
+  {
+    /* send screen size message */
     init_stream(s, 8192);
     s_push_layer(s, iso_hdr, 4);
     out_uint16_le(s, 103);
@@ -239,6 +257,7 @@ lib_mod_connect(struct mod* mod)
   }
   if (error == 0)
   {
+    /* send invalidate message */
     init_stream(s, 8192);
     s_push_layer(s, iso_hdr, 4);
     out_uint16_le(s, 103);
@@ -367,6 +386,7 @@ lib_mod_signal(struct mod* mod)
   int y1;
   int x2;
   int y2;
+  char* phold;
   char* bmpdata;
   char cur_data[32 * (32 * 3)];
   char cur_mask[32 * (32 / 8)];
@@ -475,6 +495,32 @@ lib_mod_signal(struct mod* mod)
           }
         }
       }
+    }
+    else if (type == 2) /* caps */
+    {
+      g_writeln("lib_mod_signal: type 2 len %d\n", len);
+      init_stream(s, len);
+      rv = lib_recv(mod, s->data, len);
+      if (rv == 0)
+      {
+        for (index = 0; index < num_orders; index++)
+        {
+          phold = s->p;
+          in_uint16_le(s, type);
+          in_uint16_le(s, len);
+          switch (type)
+          {
+            default:
+              g_writeln("lib_mod_signal: unknown cap type %d len %d", type, len);
+              break;
+          }
+          s->p = phold + len;
+        }
+      }
+    }
+    else
+    {
+      g_writeln("unknown type %d", type);
     }
   }
   free_stream(s);
