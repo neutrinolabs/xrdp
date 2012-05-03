@@ -730,7 +730,7 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec* self, struct stream* s)
     channel_item = (struct mcs_channel_item*)
              g_malloc(sizeof(struct mcs_channel_item), 1);
     in_uint8a(s, channel_item->name, 8);
-    in_uint32_be(s, channel_item->flags);
+    in_uint32_le(s, channel_item->flags);
     channel_item->chanid = MCS_GLOBAL_CHANNEL + (index + 1);
     list_add_item(self->mcs_layer->channel_list, (long)channel_item);
     DEBUG(("got channel flags %8.8x name %s", channel_item->flags,
