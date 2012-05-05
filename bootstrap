@@ -21,6 +21,13 @@ then
   exit 1
 fi
 
+which pkg-config
+if ! test $? -eq 0
+then
+  echo "error, install pkg-config"
+  exit 1
+fi
+
 touch configure.ac
 touch NEWS
 touch AUTHORS
