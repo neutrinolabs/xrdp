@@ -131,6 +131,10 @@ convert_bitmap(int in_bpp, int out_bpp, char* bmpdata,
     }
     return out;
   }
+  if ((in_bpp == 15) && (out_bpp == 15))
+  {
+    return bmpdata;
+  }
   if ((in_bpp == 16) && (out_bpp == 16))
   {
     return bmpdata;
@@ -238,6 +242,10 @@ convert_color(int in_bpp, int out_bpp, int in_color, int* palette)
     SPLITCOLOR15(red, green, blue, pixel);
     pixel = COLOR24BGR(red, green, blue);
     return pixel;
+  }
+  if ((in_bpp == 15) && (out_bpp == 15))
+  {
+    return in_color;
   }
   if ((in_bpp == 16) && (out_bpp == 16))
   {

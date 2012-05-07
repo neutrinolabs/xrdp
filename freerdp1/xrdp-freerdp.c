@@ -152,6 +152,10 @@ lxrdp_event(struct mod* mod, int msg, long param1, long param2,
     case 16: /* key up */
       mod->inst->input->KeyboardEvent(mod->inst->input, param4, param3);
       break;
+    case 17: /*Synchronize*/
+      LLOGLN(0, ("Synchronized event handled"));
+      mod->inst->input->SynchronizeEvent(mod->inst->input, 0);
+      break;
     case 100: /* mouse move */
       LLOGLN(10, ("mouse move %d %d", param1, param2));
       x = param1;
@@ -254,6 +258,9 @@ lxrdp_event(struct mod* mod, int msg, long param1, long param2,
           mod->chan_buf_valid += size;
           break;
       }
+      break;
+    default:
+      LLOGLN(0, ("Unhandled message type in eventhandler %d", msg));
       break;
   }
   return 0;
