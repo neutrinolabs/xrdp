@@ -139,22 +139,17 @@ lib_mod_event(struct mod* mod, int msg, long param1, long param2,
                                       param1, param2);
       break;
     case 107:
-      //mod->inst->rdp_send_input_mouse(mod->inst,
-      //                                MOUSE_FLAG_BUTTON4, param1, param2);
+      mod->inst->rdp_send_input_mouse(mod->inst,
+                                      PTRFLAGS_WHEEL | 0x0078, 0, 0);
       break;
     case 108:
-      //mod->inst->rdp_send_input_mouse(mod->inst,
-      //                                MOUSE_FLAG_BUTTON4 | MOUSE_FLAG_DOWN,
-      //                                param1, param2);
       break;
     case 109:
-      //mod->inst->rdp_send_input_mouse(mod->inst,
-      //                                MOUSE_FLAG_BUTTON5, param1, param2);
+      mod->inst->rdp_send_input_mouse(mod->inst,
+                                      PTRFLAGS_WHEEL |
+                                      PTRFLAGS_WHEEL_NEGATIVE | 0x0088, 0, 0);
       break;
     case 110:
-      //mod->inst->rdp_send_input_mouse(mod->inst,
-      //                                MOUSE_FLAG_BUTTON5 | MOUSE_FLAG_DOWN,
-      //                                param1, param2);
       break;
   }
   LIB_DEBUG(mod, "out lib_mod_event");

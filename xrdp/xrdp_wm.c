@@ -1475,10 +1475,16 @@ xrdp_wm_login_mode_changed(struct xrdp_wm* self)
   }
   else if (self->login_mode == 2)
   {
-    xrdp_wm_set_login_mode(self, 3); /* put the wm in connected mode */
-    xrdp_wm_delete_all_childs(self);
-    self->dragging = 0;
-    xrdp_mm_connect(self->mm);
+    if (xrdp_mm_connect(self->mm) == 0)
+    {
+      xrdp_wm_set_login_mode(self, 3); /* put the wm in connected mode */
+      xrdp_wm_delete_all_childs(self);
+      self->dragging = 0;
+    }
+    else
+    {
+      /* we do nothing on connect error so far */
+    }
   }
   else if (self->login_mode == 10)
   {
