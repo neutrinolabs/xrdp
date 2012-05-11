@@ -14,7 +14,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
    xrdp: A Remote Desktop Protocol server.
-   Copyright (C) Jay Sorg 2005-2010
+   Copyright (C) Jay Sorg 2005-2012
 
    libxup main header file
 
@@ -105,4 +105,5 @@ struct mod
   char port[256];
   tbus sck_obj;
   int shift_state;
+  int rfx;
 };

@@ -24,7 +24,7 @@
 struct xrdp_surface* APP_CC
 xrdp_surface_create(struct xrdp_session* session, struct xrdp_fastpath* fastpath)
 {
-  struct xrdp_surface *self;
+  struct xrdp_surface* self;
 
   self = (struct xrdp_surface*)g_malloc(sizeof(struct xrdp_surface), 1);
   self->session = session;
@@ -38,13 +38,15 @@ xrdp_surface_create(struct xrdp_session* session, struct xrdp_fastpath* fastpath
 void APP_CC
 xrdp_surface_delete(struct xrdp_surface* self)
 {
-  STREAM* s = (STREAM*)self->s;
-  RFX_CONTEXT* rfx_context = (RFX_CONTEXT*)self->rfx_context;
+  STREAM* s;
+  RFX_CONTEXT* rfx_context;
 
   if (self == 0)
   {
     return;
   }
+  s = (STREAM*)(self->s);
+  rfx_context = (RFX_CONTEXT*)(self->rfx_context);
   free_stream(self->out_s);
   stream_free(s);
   rfx_context_free(rfx_context);
@@ -59,13 +61,15 @@ xrdp_surface_reset(struct xrdp_surface* self)
   return 0;
 }
 
+/*****************************************************************************/
 int APP_CC
 xrdp_surface_init(struct xrdp_surface* self)
 {
   int width;
   int height;
-  RFX_CONTEXT* rfx_context = (RFX_CONTEXT*)self->rfx_context;
+  RFX_CONTEXT* rfx_context;
 
+  rfx_context = (RFX_CONTEXT*)(self->rfx_context);
   width = self->session->client_info->width;
   height= self->session->client_info->height;
 
@@ -91,15 +95,17 @@ xrdp_surface_send_surface_bits(struct xrdp_surface* self,int bpp, char* data,
   int j;
   int codecId;
   uint32 bitmapDataLength;
-  STREAM* s = (STREAM*)self->s;
-  RFX_CONTEXT* rfx_context = (RFX_CONTEXT*)self->rfx_context;
+  STREAM* s;
+  RFX_CONTEXT* rfx_context;
 
+  s = (STREAM*)(self->s);
+  rfx_context = (RFX_CONTEXT*)(self->rfx_context);
   if ((bpp == 24) || (bpp == 32))
   {
   }
   else
   {
-    g_writeln("bpp = %d is not supported\n",bpp);
+    g_writeln("bpp = %d is not supported\n", bpp);
     return 1;
   }
   Bpp = 4;
@@ -109,7 +115,7 @@ xrdp_surface_send_surface_bits(struct xrdp_surface* self,int bpp, char* data,
   rect.width  = cx;
   rect.height = cy;
 
-  init_stream(self->out_s,0);
+  init_stream(self->out_s, 0);
 
   stream_set_pos(s, 0);
   rfx_compose_message(rfx_context, s, &rect, 1, data, cx, cy, Bpp * cx);
@@ -142,7 +148,7 @@ xrdp_surface_send_surface_bits(struct xrdp_surface* self,int bpp, char* data,
 /*****************************************************************************/
 int APP_CC
 xrdp_surface_send_frame_marker(struct xrdp_surface* self,
-                               uint16 frameAction,uint32 frameId)
+                               uint16 frameAction, uint32 frameId)
 {
   init_stream(self->out_s, 0);
   out_uint16_le(self->out_s, CMDTYPE_FRAME_MARKER);

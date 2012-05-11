@@ -14,7 +14,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
    xrdp: A Remote Desktop Protocol server.
-   Copyright (C) Jay Sorg 2005-2010
+   Copyright (C) Jay Sorg 2005-2012
 
    libxup main file
 
@@ -248,7 +248,7 @@ lib_mod_connect(struct mod* mod)
     out_uint32_le(s, mod->width);
     out_uint32_le(s, mod->height);
     out_uint32_le(s, mod->bpp);
-    out_uint32_le(s, 0);
+    out_uint32_le(s, mod->rfx); /* send rfx flag */
     s_mark_end(s);
     len = (int)(s->end - s->data);
     s_pop_layer(s, iso_hdr);
@@ -556,6 +556,11 @@ lib_mod_set_param(struct mod* mod, char* name, char* value)
   else if (g_strcasecmp(name, "port") == 0)
   {
     g_strncpy(mod->port, value, 255);
+  }
+  else if (g_strcasecmp(name, "rfx") == 0)
+  {
+    mod->rfx = g_atoi(value);
+    g_writeln("mod->rfx = %d", mod->rfx);
   }
   return 0;
 }
