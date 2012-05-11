@@ -1,24 +1,23 @@
-/*
-   rdesktop: A Remote Desktop Protocol client.
-   Miscellaneous protocol constants
-   Copyright (C) Matthew Chapman 1999-2008
-
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-*/
-
-/* modified for xrdp */
+/**
+ * xrdp: A Remote Desktop Protocol server.
+ * Miscellaneous protocol constants
+ *
+ * Copyright (C) Matthew Chapman 1999-2008
+ * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Kevin Zhou 2012
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #if !defined(XRDP_CONSTANTS_H)
 #define XRDP_CONSTANTS_H
@@ -453,5 +452,89 @@
 #define WM_INVALIDATE  200
 
 #define CB_ITEMCHANGE  300
+
+#define  OSMAJORTYPE_UNSPECIFIED    0x0000
+#define  OSMAJORTYPE_WINDOWS        0x0001
+#define  OSMAJORTYPE_OS2            0x0002
+#define  OSMAJORTYPE_MACINTOSH      0x0003
+#define  OSMAJORTYPE_UNIX           0x0004
+
+#define  OSMINORTYPE_UNSPECIFIED      0x0000
+#define  OSMINORTYPE_WINDOWS_31X      0x0001
+#define  TS_OSMINORTYPE_WINDOWS_95    0x0002
+#define  TS_OSMINORTYPE_WINDOWS_NT    0x0003
+#define  TS_OSMINORTYPE_OS2_V21       0x0004
+
+#define  TS_OSMINORTYPE_POWER_PC          0x0005
+#define  TS_OSMINORTYPE_MACINTOSH         0x0006
+#define  TS_OSMINORTYPE_NATIVE_XSERVER    0x0007
+#define  TS_OSMINORTYPE_PSEUDO_XSERVER    0x0008
+
+#define  TS_CAPS_PROTOCOLVERSION       0x0200
+#define  FASTPATH_OUTPUT_SUPPORTED     0x0001
+#define  NO_BITMAP_COMPRESSION_HDR     0x0400
+#define  LONG_CREDENTIALS_SUPPORTED    0x0004
+#define  AUTORECONNECT_SUPPORTED       0x0008
+#define  ENC_SALTED_CHEKSUM            0x0010
+#define  NEGOTIATEORDERSUPPORT         0x0002
+#define  ZEROBOUNDSDELTASUPPORT        0x0008
+#define  COLORINDEXSUPPORT             0x0020
+#define  SOLIDPATTERNBRUSHONLY         0x0040
+#define  ORDERFLAGS_EXTRA_FLAGS        0x0080
+
+#define  INPUT_FLAG_SCANCODES       0x0001
+#define  INPUT_FLAG_MOUSEX          0x0004
+#define  INPUT_FLAG_FASTPATH_INPUT  0x0008
+#define  INPUT_FLAG_UNICODE         0x0010
+#define  INPUT_FLAG_FASTPATH_INPUT2 0x0020
+
+#define  COMPDESK_NOT_SUPPORTED      0x0000
+#define  COMPDESK_SUPPORTED          0x0001
+
+#define SURCMDS_SETSURFACEBITS      0x00000002
+#define SURCMDS_FRAMEMARKER         0x00000010
+#define SURCMDS_STREAMSUFRACEBITS   0x00000040
+
+/* CODEC_GUID_REMOTEFX 0x76772F12BD724463AFB3B73C9C6F7886 */
+#define CODEC_GUID_REMOTEFX \
+  "\x12\x2F\x77\x76\x72\xBD\x63\x44\xAF\xB3\xB7\x3C\x9C\x6F\x78\x86"
+
+#define RDP_CAPSET_SURFCMDS       0x1c
+#define RDP_CAPLEN_SURFCMDS       0x0c
+#define RDP_CAPSET_BMPCODECS      0x1d
+#define RDP_CAPLEN_BMPCODECS      0x1c
+#define RDP_CAPSET_COMPDESK       0x19
+#define RDP_CAPLEN_COMPDESK       0x06
+#define RDP_CAPSET_LPOINTER       0x27
+#define RDP_CAPLEN_LPOINTER       0x06
+
+#define FASTPATH_OUTPUT_ACTION_FASTPATH   0x0
+#define FASTPATH_OUTPUT_ACTION_X224       0x3
+
+#define FASTPATH_OUTPUT_SECURE_CHECKSUM   0x1
+#define FASTPATH_OUTPUT_ENCRYPTED         0x2
+
+#define FASTPATH_UPDATETYPE_ORDERS        0x0
+#define FASTPATH_UPDATETYPE_BITMAP        0x1
+#define FASTPATH_UPDATETYPE_PALETTE       0x2
+#define FASTPATH_UPDATETYPE_SYNCHRONIZE   0x3
+#define FASTPATH_UPDATETYPE_SURFCMDS      0x4
+#define FASTPATH_UPDATETYPE_PTR_NULL      0x5
+#define FASTPATH_UPDATETYPE_PTR_DEFAULT   0x6
+#define FASTPATH_UPDATETYPE_PTR_POSITION  0x8
+#define FASTPATH_UPDATETYPE_COLOR         0x9
+#define FASTPATH_UPDATETYPE_CACHED        0xA
+#define FASTPATH_UPDATETYPE_POINTER       0xB
+
+#define FASTPATH_FRAGMENT_SINGLE     0x0
+#define FASTPATH_FRAGMENT_LAST       0x1
+#define FASTPATH_FRAGMENT_FIRST      0x2
+#define FASTPATH_FRAGMENT_NEXT       0x3
+
+#define FASTPATH_MAX_PACKET_SIZE    0x3fff
+
+#define CMDTYPE_SET_SURFACE_BITS       0x0001
+#define CMDTYPE_FRAME_MARKER           0x0004
+#define CMDTYPE_STREAM_SURFACE_BITS    0x0006
 
 #endif
