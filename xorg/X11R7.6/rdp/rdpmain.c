@@ -486,8 +486,8 @@ ddxProcessArgument(int argc, char** argv, int i)
   if (g_firstTime)
   {
     memset(&g_rdpScreen, 0, sizeof(g_rdpScreen));
-    g_rdpScreen.width  = 800;
-    g_rdpScreen.height = 600;
+    g_rdpScreen.width  = 1024;
+    g_rdpScreen.height = 768;
     g_rdpScreen.depth = 24;
     set_bpp(24);
     g_rdpScreen.blackPixel = 1;

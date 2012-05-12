@@ -498,7 +498,7 @@ lib_mod_signal(struct mod* mod)
     }
     else if (type == 2) /* caps */
     {
-      g_writeln("lib_mod_signal: type 2 len %d\n", len);
+      g_writeln("lib_mod_signal: type 2 len %d", len);
       init_stream(s, len);
       rv = lib_recv(mod, s->data, len);
       if (rv == 0)
@@ -511,7 +511,8 @@ lib_mod_signal(struct mod* mod)
           switch (type)
           {
             default:
-              g_writeln("lib_mod_signal: unknown cap type %d len %d", type, len);
+              g_writeln("lib_mod_signal: unknown cap type %d len %d",
+                        type, len);
               break;
           }
           s->p = phold + len;
