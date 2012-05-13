@@ -361,6 +361,118 @@ lib_mod_event(struct mod* mod, int msg, tbus param1, tbus param2,
 
 /******************************************************************************/
 /* return error */
+static int
+lib_mod_process_orders(struct mod* mod, int type, struct stream* s)
+{
+  int rv;
+  int x;
+  int y;
+  int cx;
+  int cy;
+  int srcx;
+  int srcy;
+  int len_bmpdata;
+  int style;
+  int x1;
+  int y1;
+  int x2;
+  int y2;
+  int width;
+  int height;
+  int fgcolor;
+  int opcode;
+  char* bmpdata;
+  char cur_data[32 * (32 * 3)];
+  char cur_mask[32 * (32 / 8)];
+
+  rv = 0;
+  switch (type)
+  {
+    case 1: /* server_begin_update */
+      rv = mod->server_begin_update(mod);
+      break;
+    case 2: /* server_end_update */
+      rv = mod->server_end_update(mod);
+      break;
+    case 3: /* server_fill_rect */
+      in_sint16_le(s, x);
+      in_sint16_le(s, y);
+      in_uint16_le(s, cx);
+      in_uint16_le(s, cy);
+      rv = mod->server_fill_rect(mod, x, y, cx, cy);
+      break;
+    case 4: /* server_screen_blt */
+      in_sint16_le(s, x);
+      in_sint16_le(s, y);
+      in_uint16_le(s, cx);
+      in_uint16_le(s, cy);
+      in_sint16_le(s, srcx);
+      in_sint16_le(s, srcy);
+      rv = mod->server_screen_blt(mod, x, y, cx, cy, srcx, srcy);
+      break;
+    case 5: /* server_paint_rect */
+      in_sint16_le(s, x);
+      in_sint16_le(s, y);
+      in_uint16_le(s, cx);
+      in_uint16_le(s, cy);
+      in_uint32_le(s, len_bmpdata);
+      in_uint8p(s, bmpdata, len_bmpdata);
+      in_uint16_le(s, width);
+      in_uint16_le(s, height);
+      in_sint16_le(s, srcx);
+      in_sint16_le(s, srcy);
+      rv = mod->server_paint_rect(mod, x, y, cx, cy,
+                                  bmpdata, width, height,
+                                  srcx, srcy);
+      break;
+    case 10: /* server_set_clip */
+      in_sint16_le(s, x);
+      in_sint16_le(s, y);
+      in_uint16_le(s, cx);
+      in_uint16_le(s, cy);
+      rv = mod->server_set_clip(mod, x, y, cx, cy);
+      break;
+    case 11: /* server_reset_clip */
+      rv = mod->server_reset_clip(mod);
+      break;
+    case 12: /* server_set_fgcolor */
+      in_uint32_le(s, fgcolor);
+      rv = mod->server_set_fgcolor(mod, fgcolor);
+      break;
+    case 14:
+      in_uint16_le(s, opcode);
+      rv = mod->server_set_opcode(mod, opcode);
+      break;
+    case 17:
+      in_uint16_le(s, style);
+      in_uint16_le(s, width);
+      rv = mod->server_set_pen(mod, style, width);
+      break;
+    case 18:
+      in_sint16_le(s, x1);
+      in_sint16_le(s, y1);
+      in_sint16_le(s, x2);
+      in_sint16_le(s, y2);
+      rv = mod->server_draw_line(mod, x1, y1, x2, y2);
+      break;
+    case 19:
+      in_sint16_le(s, x);
+      in_sint16_le(s, y);
+      in_uint8a(s, cur_data, 32 * (32 * 3));
+      in_uint8a(s, cur_mask, 32 * (32 / 8));
+      rv = mod->server_set_cursor(mod, x, y, cur_data, cur_mask);
+      break;
+    default:
+      g_writeln("lib_mod_process_orders: unknown order type %d", type);
+      rv = 0;
+      break;
+  }
+  return rv;
+}
+
+
+/******************************************************************************/
+/* return error */
 int DEFAULT_CC
 lib_mod_signal(struct mod* mod)
 {
@@ -370,26 +482,7 @@ lib_mod_signal(struct mod* mod)
   int rv;
   int len;
   int type;
-  int x;
-  int y;
-  int cx;
-  int cy;
-  int fgcolor;
-  int opcode;
-  int width;
-  int height;
-  int srcx;
-  int srcy;
-  int len_bmpdata;
-  int style;
-  int x1;
-  int y1;
-  int x2;
-  int y2;
   char* phold;
-  char* bmpdata;
-  char cur_data[32 * (32 * 3)];
-  char cur_mask[32 * (32 / 8)];
 
   LIB_DEBUG(mod, "in lib_mod_signal");
   make_stream(s);
@@ -400,7 +493,7 @@ lib_mod_signal(struct mod* mod)
     in_uint16_le(s, type);
     in_uint16_le(s, num_orders);
     in_uint32_le(s, len);
-    if (type == 1)
+    if (type == 1) /* original order list */
     {
       init_stream(s, len);
       rv = lib_recv(mod, s->data, len);
@@ -409,86 +502,7 @@ lib_mod_signal(struct mod* mod)
         for (index = 0; index < num_orders; index++)
         {
           in_uint16_le(s, type);
-          switch (type)
-          {
-            case 1: /* server_begin_update */
-              rv = mod->server_begin_update(mod);
-              break;
-            case 2: /* server_end_update */
-              rv = mod->server_end_update(mod);
-              break;
-            case 3: /* server_fill_rect */
-              in_sint16_le(s, x);
-              in_sint16_le(s, y);
-              in_uint16_le(s, cx);
-              in_uint16_le(s, cy);
-              rv = mod->server_fill_rect(mod, x, y, cx, cy);
-              break;
-            case 4: /* server_screen_blt */
-              in_sint16_le(s, x);
-              in_sint16_le(s, y);
-              in_uint16_le(s, cx);
-              in_uint16_le(s, cy);
-              in_sint16_le(s, srcx);
-              in_sint16_le(s, srcy);
-              rv = mod->server_screen_blt(mod, x, y, cx, cy, srcx, srcy);
-              break;
-            case 5: /* server_paint_rect */
-              in_sint16_le(s, x);
-              in_sint16_le(s, y);
-              in_uint16_le(s, cx);
-              in_uint16_le(s, cy);
-              in_uint32_le(s, len_bmpdata);
-              in_uint8p(s, bmpdata, len_bmpdata);
-              in_uint16_le(s, width);
-              in_uint16_le(s, height);
-              in_sint16_le(s, srcx);
-              in_sint16_le(s, srcy);
-              rv = mod->server_paint_rect(mod, x, y, cx, cy,
-                                          bmpdata, width, height,
-                                          srcx, srcy);
-              break;
-            case 10: /* server_set_clip */
-              in_sint16_le(s, x);
-              in_sint16_le(s, y);
-              in_uint16_le(s, cx);
-              in_uint16_le(s, cy);
-              rv = mod->server_set_clip(mod, x, y, cx, cy);
-              break;
-            case 11: /* server_reset_clip */
-              rv = mod->server_reset_clip(mod);
-              break;
-            case 12: /* server_set_fgcolor */
-              in_uint32_le(s, fgcolor);
-              rv = mod->server_set_fgcolor(mod, fgcolor);
-              break;
-            case 14:
-              in_uint16_le(s, opcode);
-              rv = mod->server_set_opcode(mod, opcode);
-              break;
-            case 17:
-              in_uint16_le(s, style);
-              in_uint16_le(s, width);
-              rv = mod->server_set_pen(mod, style, width);
-              break;
-            case 18:
-              in_sint16_le(s, x1);
-              in_sint16_le(s, y1);
-              in_sint16_le(s, x2);
-              in_sint16_le(s, y2);
-              rv = mod->server_draw_line(mod, x1, y1, x2, y2);
-              break;
-            case 19:
-              in_sint16_le(s, x);
-              in_sint16_le(s, y);
-              in_uint8a(s, cur_data, 32 * (32 * 3));
-              in_uint8a(s, cur_mask, 32 * (32 / 8));
-              rv = mod->server_set_cursor(mod, x, y, cur_data, cur_mask);
-              break;
-            default:
-              rv = 1;
-              break;
-          }
+          rv = lib_mod_process_orders(mod, type, s);
           if (rv != 0)
           {
             break;
@@ -514,6 +528,26 @@ lib_mod_signal(struct mod* mod)
               g_writeln("lib_mod_signal: unknown cap type %d len %d",
                         type, len);
               break;
+          }
+          s->p = phold + len;
+        }
+      }
+    }
+    else if (type == 3) /* order list with len after type */
+    {
+      init_stream(s, len);
+      rv = lib_recv(mod, s->data, len);
+      if (rv == 0)
+      {
+        for (index = 0; index < num_orders; index++)
+        {
+          phold = s->p;
+          in_uint16_le(s, type);
+          in_uint16_le(s, len);
+          rv = lib_mod_process_orders(mod, type, s);
+          if (rv != 0)
+          {
+            break;
           }
           s->p = phold + len;
         }
