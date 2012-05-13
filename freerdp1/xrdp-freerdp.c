@@ -69,61 +69,59 @@ lxrdp_connect(struct mod* mod)
 
   if (!ok)
   {
-      LLOGLN(0, ("Failure to connect"));
-      if(connectErrorCode){
-          char buf[128];
-          if(connectErrorCode<ERRORSTART){
-              if(strerror_r(connectErrorCode,buf,128)!=0){                
-                  snprintf(buf,128,"Errorcode from connect : %d",connectErrorCode);     
-              }
-          }else{
-              switch(connectErrorCode){
-                  case PREECONNECTERROR:{
-                      snprintf(buf,128,"The error code from connect is PREECONNECTERROR");
-                      break ;
-                  }
-                  case UNDEFINEDCONNECTERROR:{
-                      snprintf(buf,128,"The error code from connect is UNDEFINEDCONNECTERROR");
-                      break ;
-                  }
-                  case POSTCONNECTERROR:{
-                      snprintf(buf,128,"The error code from connect is POSTCONNECTERROR");
-                      break ;
-                  }
-                  case DNSERROR:{
-                      snprintf(buf,128,"The DNS system generated an error");
-                      break ;
-                  }
-                  case DNSNAMENOTFOUND:{
-                      snprintf(buf,128,"The DNS system could not find the specified name");
-                      break ;
-                  }
-                  case CONNECTERROR:{
-                      snprintf(buf,128,"A general connect error was returned");
-                      break ;
-                  }
-                  case MCSCONNECTINITIALERROR:{
-                      snprintf(buf,128,"The error code from connect is MCSCONNECTINITIALERROR");
-                      break ;
-                  }
-                  case TLSCONNECTERROR:{
-                      snprintf(buf,128,"Error in TLS handshake");
-                      break ;
-                  }
-                  case AUTHENTICATIONERROR:{
-                      snprintf(buf,128,"Authentication error check your password and username");
-                      break ;
-                  }
-                  
-                  default:{
-                      snprintf(buf,128,"Unhandled Errorcode from connect : %d",connectErrorCode); 
-                      break ;
-                  }
-              }                    
-          }
-          mod->server_msg(mod,buf,0);
+    LLOGLN(0, ("Failure to connect"));
+#ifdef ERRORSTART
+    if (connectErrorCode != 0)
+    {
+      char buf[128];
+
+      if (connectErrorCode < ERRORSTART)
+      {
+        if (strerror_r(connectErrorCode, buf, 128) != 0)
+        {
+          snprintf(buf, 128, "Errorcode from connect : %d", connectErrorCode);
+        }
       }
-      return 1;
+      else
+      {
+        switch (connectErrorCode)
+        {
+          case PREECONNECTERROR:
+            snprintf(buf, 128, "The error code from connect is PREECONNECTERROR");
+            break;
+          case UNDEFINEDCONNECTERROR:
+            snprintf(buf, 128, "The error code from connect is UNDEFINEDCONNECTERROR");
+            break;
+          case POSTCONNECTERROR:
+            snprintf(buf, 128, "The error code from connect is POSTCONNECTERROR");
+            break;
+          case DNSERROR:
+            snprintf(buf, 128, "The DNS system generated an error");
+            break;
+          case DNSNAMENOTFOUND:
+            snprintf(buf, 128, "The DNS system could not find the specified name");
+            break;
+          case CONNECTERROR:
+            snprintf(buf, 128, "A general connect error was returned");
+            break;
+          case MCSCONNECTINITIALERROR:
+            snprintf(buf, 128, "The error code from connect is MCSCONNECTINITIALERROR");
+            break;
+          case TLSCONNECTERROR:
+            snprintf(buf, 128, "Error in TLS handshake");
+            break;
+          case AUTHENTICATIONERROR:
+            snprintf(buf, 128, "Authentication error check your password and username");
+            break;
+          default:
+            snprintf(buf, 128, "Unhandled Errorcode from connect : %d", connectErrorCode); 
+            break;
+        }
+      }
+      mod->server_msg(mod, buf, 0);
+    }
+#endif
+    return 1;
   }
   return 0;
 }
