@@ -73,6 +73,11 @@ xrdp_cache_delete(struct xrdp_cache* self)
       g_free(self->char_items[i][j].font_item.data);
     }
   }
+  for (i = 0; i < 2000; i++)
+  {
+    xrdp_bitmap_delete(self->os_bitmap_items[i].bitmap);
+  }
+
   g_free(self);
 }
 
@@ -531,4 +536,79 @@ xrdp_cache_add_brush(struct xrdp_cache* self,
                             self->brush_items[index].pattern, index);
   DEBUG(("adding brush at %d", index));
   return index;
+}
+
+/*****************************************************************************/
+/* returns index */
+int APP_CC
+xrdp_cache_add_os_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap,
+                         int id)
+{
+  int index;
+  struct xrdp_os_bitmap_item* bi;
+
+  if (id < 1)
+  {
+    return -1;
+  }
+  index = 0;
+  for (index = 0; index < 2000; index++)
+  {
+    bi = self->os_bitmap_items + index;
+    if (bi->bitmap == 0)
+    {
+      bi->id = id;
+      bi->bitmap = bitmap;
+      //g_writeln("xrdp_cache_add_os_bitmap: bitmap id 0x%x added at index %d", id, index);
+      return index;
+    }
+  }
+  g_writeln("xrdp_cache_add_os_bitmap: bitmap id 0x%x not added, full", id);
+  return -1;
+}
+
+/*****************************************************************************/
+/* returns index */
+int APP_CC
+xrdp_cache_remove_os_bitmap(struct xrdp_cache* self, int id)
+{
+  int index;
+  struct xrdp_os_bitmap_item* bi;
+
+  if (id < 1)
+  {
+    return -1;
+  }
+  for (index = 0; index < 2000; index++)
+  {
+    bi = self->os_bitmap_items + index;
+    if (bi->id == id)
+    {
+      xrdp_bitmap_delete(bi->bitmap);
+      g_memset(bi, 0, sizeof(struct xrdp_os_bitmap_item));
+      //g_writeln("xrdp_cache_remove_os_bitmap: bitmap id 0x%x removed from index %d", id, index);
+      return index;
+    }
+  }
+  return -1;
+}
+
+/*****************************************************************************/
+struct xrdp_os_bitmap_item* APP_CC
+xrdp_cache_get_os_bitmap(struct xrdp_cache* self, int id)
+{
+  int index;
+  struct xrdp_os_bitmap_item* bi;
+
+  for (index = 0; index < 2000; index++)
+  {
+    bi = self->os_bitmap_items + index;
+    if (bi->id == id)
+    {
+      //g_writeln("xrdp_cache_get_os_bitmap: bitmap id 0x%x found at index %d", id, index);
+      return bi;
+    }
+  }
+  g_writeln("xrdp_cache_get_os_bitmap: bitmap id 0x%x not found", id);
+  return 0;
 }

@@ -1965,3 +1965,45 @@ xrdp_orders_send_brush(struct xrdp_orders* self, int width, int height,
   out_uint8a(self->out_s, data, size);
   return 0;
 }
+
+/*****************************************************************************/
+/* returns error */
+/* send an off screen bitmap entry */
+int APP_CC
+xrdp_orders_send_create_os_surface(struct xrdp_orders* self, int id,
+                                   int width, int height)
+{
+  int order_flags;
+  int cache_id;
+
+  g_writeln("xrdp_orders_send_create_os_surface:");
+  xrdp_orders_check(self, 7);
+  self->order_count++;
+  order_flags = RDP_ORDER_SECONDARY;
+  order_flags |= 1 << 2; /* type RDP_ORDER_ALTSEC_CREATE_OFFSCR_BITMAP */
+  out_uint8(self->out_s, order_flags);
+  cache_id = id & 0x7fff;
+  out_uint16_le(self->out_s, cache_id);
+  out_uint16_le(self->out_s, width);
+  out_uint16_le(self->out_s, height);
+  return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+xrdp_orders_send_switch_os_surface(struct xrdp_orders* self, int id)
+{
+  int order_flags;
+  int cache_id;
+
+  g_writeln("xrdp_orders_send_switch_os_surface:");
+  xrdp_orders_check(self, 3);
+  self->order_count++;
+  order_flags = RDP_ORDER_SECONDARY;
+  order_flags |= 0 << 2; /* type RDP_ORDER_ALTSEC_SWITCH_SURFACE */
+  out_uint8(self->out_s, order_flags);
+  cache_id = id & 0xffff;
+  out_uint16_le(self->out_s, cache_id);
+  return 0;
+}

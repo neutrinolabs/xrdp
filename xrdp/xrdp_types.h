@@ -117,6 +117,12 @@ struct xrdp_bitmap_item
   struct xrdp_bitmap* bitmap;
 };
 
+struct xrdp_os_bitmap_item
+{
+  int id;
+  struct xrdp_bitmap* bitmap;
+};
+
 struct xrdp_char_item
 {
   int stamp;
@@ -169,6 +175,7 @@ struct xrdp_cache
   int pointer_cache_entries;
   int brush_stamp;
   struct xrdp_brush_item brush_items[64];
+  struct xrdp_os_bitmap_item os_bitmap_items[2000];
 };
 
 struct xrdp_mm

@@ -80,6 +80,13 @@ xrdp_cache_add_pointer_static(struct xrdp_cache* self,
 int APP_CC
 xrdp_cache_add_brush(struct xrdp_cache* self,
                      char* brush_item_data);
+int APP_CC
+xrdp_cache_add_os_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap,
+                         int id);
+int APP_CC
+xrdp_cache_remove_os_bitmap(struct xrdp_cache* self, int id);
+struct xrdp_os_bitmap_item* APP_CC
+xrdp_cache_get_os_bitmap(struct xrdp_cache* self, int id);
 
 /* xrdp_wm.c */
 struct xrdp_wm* APP_CC
