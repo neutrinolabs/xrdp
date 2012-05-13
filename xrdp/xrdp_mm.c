@@ -430,6 +430,10 @@ xrdp_mm_setup_mod2(struct xrdp_mm* self)
       list_add_item(self->login_values, (long)g_strdup(text));
     }
     /* always set these */
+
+    self->mod->mod_set_param(self->mod, "client_info",
+                             (char*)(self->wm->session->client_info));
+
     name = self->wm->session->client_info->hostname;
     self->mod->mod_set_param(self->mod, "hostname", name);
     g_snprintf(text, 255, "%d", self->wm->session->client_info->keylayout);

@@ -413,6 +413,7 @@ rdpup_process_msg(struct stream* s)
   int param2;
   int param3;
   int param4;
+  int bytes;
 
   in_uint16_le(s, msg_type);
   if (msg_type == 103)
@@ -494,9 +495,28 @@ param4 %d\n", msg, param1, param2, param3, param4));
         break;
     }
   }
+  else if (msg_type == 104)
+  {
+    in_uint32_le(s, bytes);
+    if (bytes > sizeof(g_rdpScreen.client_info))
+    {
+      bytes = sizeof(g_rdpScreen.client_info);
+    }
+    memcpy(&(g_rdpScreen.client_info), s->p - 4, bytes);
+    g_rdpScreen.client_info.size = bytes;
+    ErrorF("rdpup_process_msg: got client info bytes %d\n", bytes);
+    ErrorF("  jpeg support %d\n",
+           g_rdpScreen.client_info.jpeg);
+    ErrorF("  offscreen support %d\n",
+           g_rdpScreen.client_info.offscreen_support_level);
+    ErrorF("  offscreen size %d\n",
+           g_rdpScreen.client_info.offscreen_cache_size);
+    ErrorF("  offscreen entries %d\n",
+           g_rdpScreen.client_info.offscreen_cache_entries);
+  }
   else
   {
-    rdpLog("unknown message type in rdpup_process_msg\n");
+    rdpLog("unknown message type in rdpup_process_msg %d\n", msg_type);
   }
   return 0;
 }

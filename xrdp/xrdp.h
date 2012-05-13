@@ -37,6 +37,7 @@
 #include "list.h"
 #include "file.h"
 #include "file_loc.h"
+#include "xrdp_client_info.h"
 
 /* xrdp.c */
 long APP_CC

@@ -25,6 +25,7 @@
 #include "parse.h"
 #include "os_calls.h"
 #include "defines.h"
+#include "xrdp_client_info.h"
 
 #define CURRENT_MOD_VER 2
 
@@ -105,5 +106,5 @@ struct mod
   char port[256];
   tbus sck_obj;
   int shift_state;
-  int rfx;
+  struct xrdp_client_info client_info;
 };

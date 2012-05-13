@@ -157,6 +157,7 @@ xrdp_rdp_create(struct xrdp_session* session, struct trans* trans)
 #if defined(XRDP_FREERDP1)
   self->mppc_enc = mppc_enc_new(PROTO_RDP_50);
 #endif
+  self->client_info.size = sizeof(self->client_info);
   DEBUG(("out xrdp_rdp_create"));
   return self;
 }
@@ -796,6 +797,32 @@ xrdp_process_capset_brushcache(struct xrdp_rdp* self, struct stream* s,
 }
 
 /*****************************************************************************/
+static int APP_CC
+xrdp_process_offscreen_bmpcache(struct xrdp_rdp* self, struct stream* s,
+                                int len)
+{
+  int i32;
+
+  if (len - 4 < 8)
+  {
+    g_writeln("xrdp_process_offscreen_bmpcache: bad len");
+    return 1;
+  }
+  in_uint32_le(s, i32);
+  self->client_info.offscreen_support_level = i32;
+  in_uint16_le(s, i32);
+  self->client_info.offscreen_cache_size = i32 * 1024;
+  in_uint16_le(s, i32);
+  self->client_info.offscreen_cache_entries = i32;
+  g_writeln("xrdp_process_offscreen_bmpcache: support level %d "
+            "cache size %d MB cache entries %d",
+            self->client_info.offscreen_support_level,
+            self->client_info.offscreen_cache_size,
+            self->client_info.offscreen_cache_entries);
+  return 0;
+}
+
+/*****************************************************************************/
 int APP_CC
 xrdp_rdp_process_confirm_active(struct xrdp_rdp* self, struct stream* s)
 {
@@ -869,7 +896,8 @@ xrdp_rdp_process_confirm_active(struct xrdp_rdp* self, struct stream* s)
         DEBUG(("--16"));
         break;
       case 17: /* 17 */
-        DEBUG(("--16"));
+        DEBUG(("CAPSET_TYPE_OFFSCREEN_CACHE"));
+        xrdp_process_offscreen_bmpcache(self, s, len);
         break;
       case RDP_CAPSET_BMPCACHE2: /* 19 */
         DEBUG(("RDP_CAPSET_BMPCACHE2"));

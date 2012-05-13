@@ -23,50 +23,7 @@
 #ifndef LIBXRDPINC_H
 #define LIBXRDPINC_H
 
-struct xrdp_client_info
-{
-  int bpp;
-  int width;
-  int height;
-  /* bitmap cache info */
-  int cache1_entries;
-  int cache1_size;
-  int cache2_entries;
-  int cache2_size;
-  int cache3_entries;
-  int cache3_size;
-  int bitmap_cache_persist_enable; /* 0 or 2 */
-  int bitmap_cache_version; /* 0 = original version, 2 = v2 */
-  /* pointer info */
-  int pointer_cache_entries;
-  /* other */
-  int use_bitmap_comp;
-  int use_bitmap_cache;
-  int op1; /* use smaller bitmap header, non cache */
-  int op2; /* use smaller bitmap header in bitmap cache */
-  int desktop_cache;
-  int use_compact_packets; /* rdp5 smaller packets */
-  char hostname[32];
-  int build;
-  int keylayout;
-  char username[256];
-  char password[256];
-  char domain[256];
-  char program[256];
-  char directory[256];
-  int rdp_compression;
-  int rdp_autologin;
-  int crypt_level; /* 1, 2, 3 = low, medium, high */
-  int channel_code; /* 0 = no channels 1 = channels */
-  int sound_code; /* 1 = leave sound at server */
-  int is_mce;
-  int rdp5_performanceflags;
-  int brush_cache_code; /* 0 = no cache 1 = 8x8 standard cache
-                           2 = arbitrary dimensions */
-  char client_ip[256];
-  int max_bpp;
-  int jpeg;
-};
+/* struct xrdp_client_info moved to xrdp_client_info.h */
 
 struct xrdp_brush
 {

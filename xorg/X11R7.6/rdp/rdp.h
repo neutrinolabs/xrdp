@@ -70,6 +70,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "exevents.h"
 #include "xserver-properties.h"
 #include "xkbsrv.h"
+#include "../../../common/xrdp_client_info.h"
 
 //#include "colormapst.h"
 
@@ -133,6 +134,8 @@ struct _rdpScreenInfoRec
   int rdp_bpp;
   int rdp_Bpp;
   int rdp_Bpp_mask;
+
+  struct xrdp_client_info client_info;
 };
 typedef struct _rdpScreenInfoRec rdpScreenInfoRec;
 typedef rdpScreenInfoRec* rdpScreenInfoPtr;

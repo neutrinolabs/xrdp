@@ -248,7 +248,7 @@ lib_mod_connect(struct mod* mod)
     out_uint32_le(s, mod->width);
     out_uint32_le(s, mod->height);
     out_uint32_le(s, mod->bpp);
-    out_uint32_le(s, mod->rfx); /* send rfx flag */
+    out_uint32_le(s, 0);
     s_mark_end(s);
     len = (int)(s->end - s->data);
     s_pop_layer(s, iso_hdr);
@@ -473,6 +473,29 @@ lib_mod_process_orders(struct mod* mod, int type, struct stream* s)
 
 /******************************************************************************/
 /* return error */
+static int APP_CC
+lib_send_client_info(struct mod* mod)
+{
+  struct stream* s;
+  int len;
+
+  make_stream(s);
+  init_stream(s, 8192);
+  s_push_layer(s, iso_hdr, 4);
+  out_uint16_le(s, 104);
+  g_memcpy(s->p, &(mod->client_info), sizeof(mod->client_info));
+  s->p += sizeof(mod->client_info);
+  s_mark_end(s);
+  len = (int)(s->end - s->data);
+  s_pop_layer(s, iso_hdr);
+  out_uint32_le(s, len);
+  lib_send(mod, s->data, len);
+  free_stream(s);
+  return 0;
+}
+
+/******************************************************************************/
+/* return error */
 int DEFAULT_CC
 lib_mod_signal(struct mod* mod)
 {
@@ -531,6 +554,7 @@ lib_mod_signal(struct mod* mod)
           }
           s->p = phold + len;
         }
+        lib_send_client_info(mod);
       }
     }
     else if (type == 3) /* order list with len after type */
@@ -592,10 +616,9 @@ lib_mod_set_param(struct mod* mod, char* name, char* value)
   {
     g_strncpy(mod->port, value, 255);
   }
-  else if (g_strcasecmp(name, "rfx") == 0)
+  else if (g_strcasecmp(name, "client_info") == 0)
   {
-    mod->rfx = g_atoi(value);
-    g_writeln("mod->rfx = %d", mod->rfx);
+    g_memcpy(&(mod->client_info), value, sizeof(mod->client_info));
   }
   return 0;
 }
