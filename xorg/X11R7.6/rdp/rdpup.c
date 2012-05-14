@@ -159,7 +159,7 @@ rdpup_send_msg(struct stream* s)
       rdpLog("overrun error len %d count %d\n", len, g_count);
     }
     s_pop_layer(s, iso_hdr);
-    out_uint16_le(s, 1);
+    out_uint16_le(s, 3);
     out_uint16_le(s, g_count);
     out_uint32_le(s, len - 8);
     rv = rdpup_send(s->data, len);
@@ -671,7 +671,8 @@ rdpup_begin_update(void)
     }
     init_stream(g_out_s, 0);
     s_push_layer(g_out_s, iso_hdr, 8);
-    out_uint16_le(g_out_s, 1);
+    out_uint16_le(g_out_s, 1); /* begin update */
+    out_uint16_le(g_out_s, 4); /* size */
     DEBUG_OUT_UP(("begin %d\n", g_count));
     g_begin = 1;
     g_count = 1;
@@ -716,8 +717,9 @@ rdpup_fill_rect(short x, short y, int cx, int cy)
   if (g_connected)
   {
     DEBUG_OUT_UP(("  rdpup_fill_rect\n"));
-    rdpup_pre_check(10);
-    out_uint16_le(g_out_s, 3);
+    rdpup_pre_check(12);
+    out_uint16_le(g_out_s, 3); /* fill rect */
+    out_uint16_le(g_out_s, 12); /* size */
     g_count++;
     out_uint16_le(g_out_s, x);
     out_uint16_le(g_out_s, y);
@@ -734,8 +736,9 @@ rdpup_screen_blt(short x, short y, int cx, int cy, short srcx, short srcy)
   if (g_connected)
   {
     DEBUG_OUT_UP(("  rdpup_screen_blt\n"));
-    rdpup_pre_check(14);
-    out_uint16_le(g_out_s, 4);
+    rdpup_pre_check(16);
+    out_uint16_le(g_out_s, 4); /* screen blt */
+    out_uint16_le(g_out_s, 16); /* size */
     g_count++;
     out_uint16_le(g_out_s, x);
     out_uint16_le(g_out_s, y);
@@ -754,8 +757,9 @@ rdpup_set_clip(short x, short y, int cx, int cy)
   if (g_connected)
   {
     DEBUG_OUT_UP(("  rdpup_set_clip\n"));
-    rdpup_pre_check(10);
-    out_uint16_le(g_out_s, 10);
+    rdpup_pre_check(12);
+    out_uint16_le(g_out_s, 10); /* set clip */
+    out_uint16_le(g_out_s, 12); /* size */
     g_count++;
     out_uint16_le(g_out_s, x);
     out_uint16_le(g_out_s, y);
@@ -772,8 +776,9 @@ rdpup_reset_clip(void)
   if (g_connected)
   {
     DEBUG_OUT_UP(("  rdpup_reset_clip\n"));
-    rdpup_pre_check(2);
-    out_uint16_le(g_out_s, 11);
+    rdpup_pre_check(4);
+    out_uint16_le(g_out_s, 11); /* reset clip */
+    out_uint16_le(g_out_s, 4); /* size */
     g_count++;
   }
   return 0;
@@ -919,8 +924,9 @@ rdpup_set_fgcolor(int fgcolor)
   if (g_connected)
   {
     DEBUG_OUT_UP(("  rdpup_set_fgcolor\n"));
-    rdpup_pre_check(6);
-    out_uint16_le(g_out_s, 12);
+    rdpup_pre_check(8);
+    out_uint16_le(g_out_s, 12); /* set fgcolor */
+    out_uint16_le(g_out_s, 8); /* size */
     g_count++;
     fgcolor = fgcolor & g_Bpp_mask;
     fgcolor = convert_pixel(fgcolor) & g_rdpScreen.rdp_Bpp_mask;
@@ -936,8 +942,9 @@ rdpup_set_bgcolor(int bgcolor)
   if (g_connected)
   {
     DEBUG_OUT_UP(("  rdpup_set_bgcolor\n"));
-    rdpup_pre_check(6);
-    out_uint16_le(g_out_s, 13);
+    rdpup_pre_check(8);
+    out_uint16_le(g_out_s, 13); /* set bg color */
+    out_uint16_le(g_out_s, 8); /* size */
     g_count++;
     bgcolor = bgcolor & g_Bpp_mask;
     bgcolor = convert_pixel(bgcolor) & g_rdpScreen.rdp_Bpp_mask;
@@ -953,8 +960,9 @@ rdpup_set_opcode(int opcode)
   if (g_connected)
   {
     DEBUG_OUT_UP(("  rdpup_set_opcode\n"));
-    rdpup_pre_check(4);
-    out_uint16_le(g_out_s, 14);
+    rdpup_pre_check(6);
+    out_uint16_le(g_out_s, 14); /* set opcode */
+    out_uint16_le(g_out_s, 6); /* size */
     g_count++;
     out_uint16_le(g_out_s, g_rdp_opcodes[opcode & 0xf]);
   }
@@ -968,8 +976,9 @@ rdpup_set_pen(int style, int width)
   if (g_connected)
   {
     DEBUG_OUT_UP(("  rdpup_set_pen\n"));
-    rdpup_pre_check(6);
-    out_uint16_le(g_out_s, 17);
+    rdpup_pre_check(8);
+    out_uint16_le(g_out_s, 17); /* set pen */
+    out_uint16_le(g_out_s, 8); /* size */
     g_count++;
     out_uint16_le(g_out_s, style);
     out_uint16_le(g_out_s, width);
@@ -984,8 +993,9 @@ rdpup_draw_line(short x1, short y1, short x2, short y2)
   if (g_connected)
   {
     DEBUG_OUT_UP(("  rdpup_draw_line\n"));
-    rdpup_pre_check(10);
-    out_uint16_le(g_out_s, 18);
+    rdpup_pre_check(12);
+    out_uint16_le(g_out_s, 18); /* draw line */
+    out_uint16_le(g_out_s, 12); /* size */
     g_count++;
     out_uint16_le(g_out_s, x1);
     out_uint16_le(g_out_s, y1);
@@ -999,11 +1009,15 @@ rdpup_draw_line(short x1, short y1, short x2, short y2)
 int
 rdpup_set_cursor(short x, short y, char* cur_data, char* cur_mask)
 {
+  int size;
+
   if (g_connected)
   {
     DEBUG_OUT_UP(("  rdpup_set_cursor\n"));
-    rdpup_pre_check(6 + 32 * (32 * 3) + 32 * (32 / 8));
-    out_uint16_le(g_out_s, 19);
+    size = 8 + 32 * (32 * 3) + 32 * (32 / 8);
+    rdpup_pre_check(size);
+    out_uint16_le(g_out_s, 19); /* set cursor */
+    out_uint16_le(g_out_s, size); /* size */
     g_count++;
     x = MAX(0, x);
     x = MIN(31, x);
@@ -1106,6 +1120,7 @@ rdpup_send_area(int x, int y, int w, int h)
   int ly;
   int lh;
   int lw;
+  int size;
 
   if (x >= g_rdpScreen.width)
   {
@@ -1162,8 +1177,10 @@ rdpup_send_area(int x, int y, int w, int h)
         }
         else
         {
-          rdpup_pre_check(lw * lh * g_rdpScreen.rdp_Bpp + 42);
+          size = lw * lh * g_rdpScreen.rdp_Bpp + 24;
+          rdpup_pre_check(size);
           out_uint16_le(g_out_s, 5);
+          out_uint16_le(g_out_s, size);
           g_count++;
           out_uint16_le(g_out_s, lx);
           out_uint16_le(g_out_s, ly);
