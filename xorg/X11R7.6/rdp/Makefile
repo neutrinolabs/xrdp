@@ -7,6 +7,8 @@ LIBBASE = $(X11RDPBASE)/lib
 XSRCBASE = ../build_dir/xorg-server-1.9.3
 
 OBJS = rdpmain.o rdpdraw.o rdpinput.o rdpmisc.o rdpup.o rdprandr.o \
+rdpCopyArea.o rdpPolyFillRect.o rdpPutImage.o rdpPolyRectangle.o \
+rdpPolylines.o rdpPolySegment.o \
 miinitext.o \
 fbcmap_mi.o
 

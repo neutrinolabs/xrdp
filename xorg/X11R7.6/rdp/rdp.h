@@ -93,6 +93,16 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define PixelDPI 100
 #define PixelToMM(_size) (((_size) * 254 + (PixelDPI) * 5) / ((PixelDPI) * 10))
 
+struct image_data
+{
+  int width;
+  int height;
+  int bpp;
+  int Bpp;
+  int lineBytes;
+  char* pixels;
+};
+
 /* Per-screen (framebuffer) structure.  There is only one of these, since we
    don't allow the X server to have multiple screens. */
 struct _rdpScreenInfoRec
@@ -162,11 +172,17 @@ typedef rdpWindowRec* rdpWindowPtr;
 struct _rdpPixmapRec
 {
   int status;
+  int rdpid; /* unique id for xrdp */
+  int allocBytes;
+  int con_number;
 };
 typedef struct _rdpPixmapRec rdpPixmapRec;
 typedef rdpPixmapRec* rdpPixmapPtr;
 #define GETPIXPRIV(_pPixmap) \
 (rdpPixmapPtr)dixGetPrivateAddr(&(_pPixmap->devPrivates), &g_rdpPixmapIndex)
+
+#define XRDP_IS_OS(_priv) ((_priv->status != 0) && \
+  (_priv->con_number == g_con_number))
 
 /* rdpmisc.c */
 void
@@ -314,6 +330,10 @@ void
 KbdSync(int param1);
 
 /* rdpup.c */
+void
+rdpup_get_screen_image_rect(struct image_data* id);
+void
+rdpup_get_pixmap_image_rect(PixmapPtr pPixmap, struct image_data* id);
 int
 rdpup_init(void);
 int
@@ -345,9 +365,19 @@ rdpup_set_pen(int style, int width);
 int
 rdpup_draw_line(short x1, short y1, short x2, short y2);
 void
-rdpup_send_area(int x, int y, int w, int h);
+rdpup_send_area(struct image_data* id, int x, int y, int w, int h);
 int
 rdpup_set_cursor(short x, short y, char* cur_data, char* cur_mask);
+int
+rdpup_create_os_surface(int rdpid, int width, int height);
+int
+rdpup_switch_os_surface(int rdpid);
+int
+rdpup_delete_os_surface(int rdpid);
+
+void
+rdpup_paint_rect_os(int x, int y, int cx, int cy,
+                    int rdpid, int srcx, int srcy);
 
 #if defined(X_BYTE_ORDER)
 #  if X_BYTE_ORDER == X_LITTLE_ENDIAN

@@ -23,6 +23,14 @@ Xserver drawing ops and funcs
 
 #include "rdp.h"
 #include "gcops.h"
+#include "rdpdraw.h"
+
+#include "rdpCopyArea.h"
+#include "rdpPolyFillRect.h"
+#include "rdpPutImage.h"
+#include "rdpPolyRectangle.h"
+#include "rdpPolylines.h"
+#include "rdpPolySegment.h"
 
 #if 1
 #define DEBUG_OUT_FUNCS(arg)
@@ -41,13 +49,13 @@ extern ScreenPtr g_pScreen; /* from rdpmain.c */
 
 ColormapPtr g_rdpInstalledColormap;
 
-static GCFuncs g_rdpGCFuncs =
+GCFuncs g_rdpGCFuncs =
 {
   rdpValidateGC, rdpChangeGC, rdpCopyGC, rdpDestroyGC, rdpChangeClip,
   rdpDestroyClip, rdpCopyClip
 };
 
-static GCOps g_rdpGCOps =
+GCOps g_rdpGCOps =
 {
   rdpFillSpans, rdpSetSpans, rdpPutImage, rdpCopyArea, rdpCopyPlane,
   rdpPolyPoint, rdpPolylines, rdpPolySegment, rdpPolyRectangle,
@@ -60,7 +68,7 @@ static GCOps g_rdpGCOps =
 /* return 0, draw nothing */
 /* return 1, draw with no clip */
 /* return 2, draw using clip */
-static int
+int
 rdp_get_clip(RegionPtr pRegion, DrawablePtr pDrawable, GCPtr pGC)
 {
   WindowPtr pWindow;
@@ -331,7 +339,7 @@ rdpFillSpans(DrawablePtr pDrawable, GCPtr pGC, int nInit,
     for (j = REGION_NUM_RECTS(&clip_reg) - 1; j >= 0; j--)
     {
       box = REGION_RECTS(&clip_reg)[j];
-      rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+      rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
     }
     rdpup_end_update();
   }
@@ -343,7 +351,7 @@ rdpFillSpans(DrawablePtr pDrawable, GCPtr pGC, int nInit,
     for (j = REGION_NUM_RECTS(&clip_reg) - 1; j >= 0; j--)
     {
       box = REGION_RECTS(&clip_reg)[j];
-      rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+      rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
     }
     rdpup_end_update();
   }
@@ -375,7 +383,7 @@ rdpSetSpans(DrawablePtr pDrawable, GCPtr pGC, char* psrc,
     for (j = REGION_NUM_RECTS(&clip_reg) - 1; j >= 0; j--)
     {
       box = REGION_RECTS(&clip_reg)[j];
-      rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+      rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
     }
     rdpup_end_update();
   }
@@ -387,158 +395,12 @@ rdpSetSpans(DrawablePtr pDrawable, GCPtr pGC, char* psrc,
     for (j = REGION_NUM_RECTS(&clip_reg) - 1; j >= 0; j--)
     {
       box = REGION_RECTS(&clip_reg)[j];
-      rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+      rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
     }
     rdpup_end_update();
   }
   RegionUninit(&clip_reg);
   GC_OP_EPILOGUE(pGC);
-}
-
-/******************************************************************************/
-static void
-rdpPutImage(DrawablePtr pDrawable, GCPtr pGC, int depth, int x, int y,
-            int w, int h, int leftPad, int format, char* pBits)
-{
-  rdpGCPtr priv;
-  RegionRec clip_reg;
-  int cd;
-  int j;
-  GCFuncs* oldFuncs;
-  BoxRec box;
-
-  DEBUG_OUT_OPS(("in rdpPutImage\n"));
-  GC_OP_PROLOGUE(pGC);
-  pGC->ops->PutImage(pDrawable, pGC, depth, x, y, w, h, leftPad,
-                     format, pBits);
-  RegionInit(&clip_reg, NullBox, 0);
-  cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
-  if (cd == 1)
-  {
-    rdpup_begin_update();
-    rdpup_send_area(pDrawable->x + x, pDrawable->y + y, w, h);
-    rdpup_end_update();
-  }
-  else if (cd == 2)
-  {
-    rdpup_begin_update();
-    for (j = REGION_NUM_RECTS(&clip_reg) - 1; j >= 0; j--)
-    {
-      box = REGION_RECTS(&clip_reg)[j];
-      rdpup_set_clip(box.x1, box.y1, (box.x2 - box.x1), (box.y2 - box.y1));
-      rdpup_send_area(pDrawable->x + x, pDrawable->y + y, w, h);
-    }
-    rdpup_reset_clip();
-    rdpup_end_update();
-  }
-  RegionUninit(&clip_reg);
-  GC_OP_EPILOGUE(pGC);
-}
-
-/******************************************************************************/
-static RegionPtr
-rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
-            int srcx, int srcy, int w, int h, int dstx, int dsty)
-{
-  rdpGCPtr priv;
-  RegionPtr rv;
-  RegionRec clip_reg;
-  RegionRec box_reg;
-  int num_clips;
-  int cd;
-  int j;
-  int can_do_screen_blt;
-  int dx;
-  int dy;
-  BoxRec box;
-  BoxPtr pbox;
-  GCFuncs* oldFuncs;
-
-  DEBUG_OUT_OPS(("in rdpCopyArea\n"));
-  GC_OP_PROLOGUE(pGC);
-  rv = pGC->ops->CopyArea(pSrc, pDst, pGC, srcx, srcy, w, h, dstx, dsty);
-  RegionInit(&clip_reg, NullBox, 0);
-  cd = rdp_get_clip(&clip_reg, pDst, pGC);
-  can_do_screen_blt = pSrc->type == DRAWABLE_WINDOW &&
-                      ((WindowPtr)pSrc)->viewable &&
-                      pGC->alu == GXcopy;
-  if (cd == 1)
-  {
-    rdpup_begin_update();
-    if (can_do_screen_blt)
-    {
-      rdpup_screen_blt(pDst->x + dstx, pDst->y + dsty, w, h,
-                       pSrc->x + srcx, pSrc->y + srcy);
-    }
-    else
-    {
-      rdpup_send_area(pDst->x + dstx, pDst->y + dsty, w, h);
-    }
-    rdpup_end_update();
-  }
-  else if (cd == 2)
-  {
-    num_clips = REGION_NUM_RECTS(&clip_reg);
-    if (num_clips > 0)
-    {
-      rdpup_begin_update();
-      if (can_do_screen_blt)
-      {
-        dx = dstx - srcx;
-        dy = dsty - srcy;
-        if (dy < 0 || (dy == 0 && dx < 0))
-        {
-          for (j = 0; j < num_clips; j++)
-          {
-            box = REGION_RECTS(&clip_reg)[j];
-            rdpup_set_clip(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-            rdpup_screen_blt(pDst->x + dstx, pDst->y + dsty, w, h,
-                             pSrc->x + srcx, pSrc->y + srcy);
-          }
-        }
-        else
-        {
-          for (j = num_clips - 1; j >= 0; j--)
-          {
-            box = REGION_RECTS(&clip_reg)[j];
-            rdpup_set_clip(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-            rdpup_screen_blt(pDst->x + dstx, pDst->y + dsty, w, h,
-                             pSrc->x + srcx, pSrc->y + srcy);
-          }
-        }
-        rdpup_reset_clip();
-      }
-      else
-      {
-        box.x1 = pDst->x + dstx;
-        box.y1 = pDst->y + dsty;
-        box.x2 = box.x1 + w;
-        box.y2 = box.y1 + h;
-        RegionInit(&box_reg, &box, 0);
-        RegionIntersect(&clip_reg, &clip_reg, &box_reg);
-        num_clips = REGION_NUM_RECTS(&clip_reg);
-        if (num_clips < 10)
-        {
-          for (j = num_clips - 1; j >= 0; j--)
-          {
-            box = REGION_RECTS(&clip_reg)[j];
-            rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-          }
-        }
-        else
-        {
-          pbox = RegionExtents(&clip_reg);
-          rdpup_send_area(pbox->x1, pbox->y1, pbox->x2 - pbox->x1,
-                          pbox->y2 - pbox->y1);
-        }
-        RegionUninit(&box_reg);
-      }
-      rdpup_end_update();
-    }
-  }
-  RegionUninit(&clip_reg);
-  GC_OP_EPILOGUE(pGC);
-  return rv;
 }
 
 /******************************************************************************/
@@ -567,7 +429,7 @@ rdpCopyPlane(DrawablePtr pSrc, DrawablePtr pDst,
   if (cd == 1)
   {
     rdpup_begin_update();
-    rdpup_send_area(pDst->x + dstx, pDst->y + dsty, w, h);
+    rdpup_send_area(0, pDst->x + dstx, pDst->y + dsty, w, h);
     rdpup_end_update();
   }
   else if (cd == 2)
@@ -588,13 +450,13 @@ rdpCopyPlane(DrawablePtr pSrc, DrawablePtr pDst,
         for (j = num_clips - 1; j >= 0; j--)
         {
           box = REGION_RECTS(&clip_reg)[j];
-          rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+          rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
         }
       }
       else
       {
         pbox = RegionExtents(&clip_reg);
-        rdpup_send_area(pbox->x1, pbox->y1, pbox->x2 - pbox->x1,
+        rdpup_send_area(0, pbox->x1, pbox->y1, pbox->x2 - pbox->x1,
                         pbox->y2 - pbox->y1);
       }
       RegionUninit(&box_reg);
@@ -717,319 +579,6 @@ rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
 
 /******************************************************************************/
 static void
-rdpPolylines(DrawablePtr pDrawable, GCPtr pGC, int mode,
-             int npt, DDXPointPtr pptInit)
-{
-  rdpGCPtr priv;
-  RegionRec clip_reg;
-  int num_clips;
-  int cd;
-  int i;
-  int j;
-  int x1;
-  int y1;
-  int x2;
-  int y2;
-  GCFuncs* oldFuncs;
-  BoxRec box;
-  DDXPointPtr ppts;
-
-  DEBUG_OUT_OPS(("in rdpPolylines\n"));
-  GC_OP_PROLOGUE(pGC);
-  ppts = 0;
-  if (npt > 0)
-  {
-    ppts = (DDXPointPtr)g_malloc(sizeof(DDXPointRec) * npt, 0);
-    for (i = 0; i < npt; i++)
-    {
-      ppts[i] = pptInit[i];
-    }
-  }
-  pGC->ops->Polylines(pDrawable, pGC, mode, npt, pptInit);
-  RegionInit(&clip_reg, NullBox, 0);
-  cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
-  if (cd == 1)
-  {
-    if (ppts != 0)
-    {
-      rdpup_begin_update();
-      rdpup_set_fgcolor(pGC->fgPixel);
-      rdpup_set_opcode(pGC->alu);
-      rdpup_set_pen(0, pGC->lineWidth);
-      x1 = ppts[0].x + pDrawable->x;
-      y1 = ppts[0].y + pDrawable->y;
-      for (i = 1; i < npt; i++)
-      {
-        if (mode == CoordModeOrigin)
-        {
-          x2 = pDrawable->x + ppts[i].x;
-          y2 = pDrawable->y + ppts[i].y;
-        }
-        else
-        {
-          x2 = x1 + ppts[i].x;
-          y2 = y1 + ppts[i].y;
-        }
-        rdpup_draw_line(x1, y1, x2, y2);
-        x1 = x2;
-        y1 = y2;
-      }
-      rdpup_set_opcode(GXcopy);
-      rdpup_end_update();
-    }
-  }
-  else if (cd == 2)
-  {
-    num_clips = REGION_NUM_RECTS(&clip_reg);
-    if (ppts != 0 && num_clips > 0)
-    {
-      rdpup_begin_update();
-      rdpup_set_fgcolor(pGC->fgPixel);
-      rdpup_set_opcode(pGC->alu);
-      rdpup_set_pen(0, pGC->lineWidth);
-      for (j = num_clips - 1; j >= 0; j--)
-      {
-        box = REGION_RECTS(&clip_reg)[j];
-        rdpup_set_clip(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-        x1 = ppts[0].x + pDrawable->x;
-        y1 = ppts[0].y + pDrawable->y;
-        for (i = 1; i < npt; i++)
-        {
-          if (mode == CoordModeOrigin)
-          {
-            x2 = pDrawable->x + ppts[i].x;
-            y2 = pDrawable->y + ppts[i].y;
-          }
-          else
-          {
-            x2 = x1 + ppts[i].x;
-            y2 = y1 + ppts[i].y;
-          }
-          rdpup_draw_line(x1, y1, x2, y2);
-          x1 = x2;
-          y1 = y2;
-        }
-      }
-      rdpup_reset_clip();
-      rdpup_set_opcode(GXcopy);
-      rdpup_end_update();
-    }
-  }
-  RegionUninit(&clip_reg);
-  g_free(ppts);
-  GC_OP_EPILOGUE(pGC);
-}
-
-/******************************************************************************/
-static void
-rdpPolySegment(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment* pSegs)
-{
-  rdpGCPtr priv;
-  RegionRec clip_reg;
-  int cd;
-  int i;
-  int j;
-  GCFuncs* oldFuncs;
-  xSegment* segs;
-  BoxRec box;
-
-  DEBUG_OUT_OPS(("in rdpPolySegment\n"));
-  GC_OP_PROLOGUE(pGC);
-  segs = 0;
-  if (nseg) /* get the rects */
-  {
-    segs = (xSegment*)g_malloc(nseg * sizeof(xSegment), 0);
-    for (i = 0; i < nseg; i++)
-    {
-      segs[i].x1 = pSegs[i].x1 + pDrawable->x;
-      segs[i].y1 = pSegs[i].y1 + pDrawable->y;
-      segs[i].x2 = pSegs[i].x2 + pDrawable->x;
-      segs[i].y2 = pSegs[i].y2 + pDrawable->y;
-    }
-  }
-  pGC->ops->PolySegment(pDrawable, pGC, nseg, pSegs);
-  RegionInit(&clip_reg, NullBox, 0);
-  cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
-  if (cd == 1) /* no clip */
-  {
-    if (segs != 0)
-    {
-      rdpup_begin_update();
-      rdpup_set_fgcolor(pGC->fgPixel);
-      rdpup_set_opcode(pGC->alu);
-      rdpup_set_pen(0, pGC->lineWidth);
-      for (i = 0; i < nseg; i++)
-      {
-        rdpup_draw_line(segs[i].x1, segs[i].y1, segs[i].x2, segs[i].y2);
-      }
-      rdpup_set_opcode(GXcopy);
-      rdpup_end_update();
-    }
-  }
-  else if (cd == 2) /* clip */
-  {
-    if (segs != 0)
-    {
-      rdpup_begin_update();
-      rdpup_set_fgcolor(pGC->fgPixel);
-      rdpup_set_opcode(pGC->alu);
-      rdpup_set_pen(0, pGC->lineWidth);
-      for (j = REGION_NUM_RECTS(&clip_reg) - 1; j >= 0; j--)
-      {
-        box = REGION_RECTS(&clip_reg)[j];
-        rdpup_set_clip(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-        for (i = 0; i < nseg; i++)
-        {
-          rdpup_draw_line(segs[i].x1, segs[i].y1, segs[i].x2, segs[i].y2);
-        }
-      }
-      rdpup_reset_clip();
-      rdpup_set_opcode(GXcopy);
-      rdpup_end_update();
-    }
-  }
-  g_free(segs);
-  RegionUninit(&clip_reg);
-  GC_OP_EPILOGUE(pGC);
-}
-
-/******************************************************************************/
-/* tested with pGC->lineWidth = 0, 1, 2, 4 and opcodes 3 and 6 */
-static void
-rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
-                 xRectangle* rects)
-{
-  rdpGCPtr priv;
-  RegionRec clip_reg;
-  RegionPtr fill_reg;
-  int num_clips;
-  int cd;
-  int lw;
-  int i;
-  int j;
-  int up;
-  int down;
-  GCFuncs* oldFuncs;
-  xRectangle* regRects;
-  xRectangle* r;
-  xRectangle* rect1;
-  BoxRec box;
-
-  DEBUG_OUT_OPS(("in rdpPolyRectangle\n"));
-  GC_OP_PROLOGUE(pGC);
-  /* make a copy of rects */
-  rect1 = (xRectangle*)g_malloc(sizeof(xRectangle) * nrects, 0);
-  for (i = 0; i < nrects; i++)
-  {
-    rect1[i] = rects[i];
-  }
-  pGC->ops->PolyRectangle(pDrawable, pGC, nrects, rects);
-  RegionInit(&clip_reg, NullBox, 0);
-  cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
-  regRects = 0;
-  if (cd != 0 && nrects > 0)
-  {
-    regRects = (xRectangle*)g_malloc(nrects * 4 * sizeof(xRectangle), 0);
-    lw = pGC->lineWidth;
-    if (lw < 1)
-    {
-      lw = 1;
-    }
-    up = lw / 2;
-    down = 1 + (lw - 1) / 2;
-    for (i = 0; i < nrects; i++)
-    {
-      r = regRects + i * 4;
-      r->x = (rect1[i].x + pDrawable->x) - up;
-      r->y = (rect1[i].y + pDrawable->y) - up;
-      r->width = rect1[i].width + up + down;
-      r->height = lw;
-      r++;
-      r->x = (rect1[i].x + pDrawable->x) - up;
-      r->y = (rect1[i].y + pDrawable->y) + down;
-      r->width = lw;
-      r->height = MAX(rect1[i].height - (up + down), 0);
-      r++;
-      r->x = ((rect1[i].x + rect1[i].width) + pDrawable->x) - up;
-      r->y = (rect1[i].y + pDrawable->y) + down;
-      r->width = lw;
-      r->height = MAX(rect1[i].height - (up + down), 0);
-      r++;
-      r->x = (rect1[i].x + pDrawable->x) - up;
-      r->y = ((rect1[i].y + rect1[i].height) + pDrawable->y) - up;
-      r->width = rect1[i].width + up + down;
-      r->height = lw;
-    }
-  }
-  if (cd == 1)
-  {
-    if (regRects != 0)
-    {
-      rdpup_begin_update();
-      if (pGC->lineStyle == LineSolid)
-      {
-        rdpup_set_fgcolor(pGC->fgPixel);
-        rdpup_set_opcode(pGC->alu);
-        for (i = 0; i < nrects * 4; i++)
-        {
-          r = regRects + i;
-          rdpup_fill_rect(r->x, r->y, r->width, r->height);
-        }
-        rdpup_set_opcode(GXcopy);
-      }
-      else
-      {
-        for (i = 0; i < nrects * 4; i++)
-        {
-          r = regRects + i;
-          rdpup_send_area(r->x, r->y, r->width, r->height);
-        }
-      }
-      rdpup_end_update();
-    }
-  }
-  else if (cd == 2)
-  {
-    if (regRects != 0)
-    {
-      fill_reg = RegionFromRects(nrects * 4, regRects, CT_NONE);
-      RegionIntersect(&clip_reg, &clip_reg, fill_reg);
-      num_clips = REGION_NUM_RECTS(&clip_reg);
-      if (num_clips > 0)
-      {
-        rdpup_begin_update();
-        if (pGC->lineStyle == LineSolid)
-        {
-          rdpup_set_fgcolor(pGC->fgPixel);
-          rdpup_set_opcode(pGC->alu);
-          for (j = num_clips - 1; j >= 0; j--)
-          {
-            box = REGION_RECTS(&clip_reg)[j];
-            rdpup_fill_rect(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-          }
-          rdpup_set_opcode(GXcopy);
-        }
-        else
-        {
-          for (j = num_clips - 1; j >= 0; j--)
-          {
-            box = REGION_RECTS(&clip_reg)[j];
-            rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-          }
-        }
-        rdpup_end_update();
-      }
-      RegionDestroy(fill_reg);
-    }
-  }
-  RegionUninit(&clip_reg);
-  g_free(regRects);
-  g_free(rect1);
-  GC_OP_EPILOGUE(pGC);
-}
-
-/******************************************************************************/
-static void
 rdpPolyArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc* parcs)
 {
   rdpGCPtr priv;
@@ -1079,7 +628,7 @@ rdpPolyArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc* parcs)
         for (i = num_clips - 1; i >= 0; i--)
         {
           box = REGION_RECTS(tmpRegion)[i];
-          rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+          rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
         }
         rdpup_end_update();
       }
@@ -1099,7 +648,7 @@ rdpPolyArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc* parcs)
         for (i = num_clips - 1; i >= 0; i--)
         {
           box = REGION_RECTS(tmpRegion)[i];
-          rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+          rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
         }
         rdpup_end_update();
       }
@@ -1176,7 +725,7 @@ rdpFillPolygon(DrawablePtr pDrawable, GCPtr pGC,
   if (cd == 1)
   {
     rdpup_begin_update();
-    rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+    rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
     rdpup_end_update();
   }
   else if (cd == 2)
@@ -1190,115 +739,13 @@ rdpFillPolygon(DrawablePtr pDrawable, GCPtr pGC,
       for (j = num_clips - 1; j >= 0; j--)
       {
         box = REGION_RECTS(&clip_reg)[j];
-        rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+        rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
       }
       rdpup_end_update();
     }
     RegionUninit(&box_reg);
   }
   RegionUninit(&clip_reg);
-  GC_OP_EPILOGUE(pGC);
-}
-
-/******************************************************************************/
-static void
-rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
-                xRectangle* prectInit)
-{
-  int i;
-  int j;
-  int cd;
-  int num_clips;
-  xRectangle* copy_of_rects;
-  rdpGCPtr priv;
-  RegionRec clip_reg;
-  RegionPtr fill_reg;
-  BoxRec box;
-  GCFuncs* oldFuncs;
-
-  DEBUG_OUT_OPS(("in rdpPolyFillRect\n"));
-  GC_OP_PROLOGUE(pGC);
-  /* make a copy of rects */
-  copy_of_rects = (xRectangle*)g_malloc(sizeof(xRectangle) * nrectFill, 0);
-  for (i = 0; i < nrectFill; i++)
-  {
-    copy_of_rects[i] = prectInit[i];
-  }
-  fill_reg = RegionFromRects(nrectFill, copy_of_rects, CT_NONE);
-  g_free(copy_of_rects);
-  RegionTranslate(fill_reg, pDrawable->x, pDrawable->y);
-  pGC->ops->PolyFillRect(pDrawable, pGC, nrectFill, prectInit);
-  RegionInit(&clip_reg, NullBox, 0);
-  cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
-  if (cd == 1) /* no clip */
-  {
-    rdpup_begin_update();
-    if (pGC->fillStyle == 0 && /* solid fill */
-        (pGC->alu == GXclear ||
-         pGC->alu == GXset ||
-         pGC->alu == GXinvert ||
-         pGC->alu == GXnoop ||
-         pGC->alu == GXand ||
-         pGC->alu == GXcopy /*||
-         pGC->alu == GXxor*/)) /* todo, why dosen't xor work? */
-    {
-      rdpup_set_fgcolor(pGC->fgPixel);
-      rdpup_set_opcode(pGC->alu);
-      for (j = REGION_NUM_RECTS(fill_reg) - 1; j >= 0; j--)
-      {
-        box = REGION_RECTS(fill_reg)[j];
-        rdpup_fill_rect(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-      }
-      rdpup_set_opcode(GXcopy);
-    }
-    else /* non solid fill */
-    {
-      for (j = REGION_NUM_RECTS(fill_reg) - 1; j >= 0; j--)
-      {
-        box = REGION_RECTS(fill_reg)[j];
-        rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-      }
-    }
-    rdpup_end_update();
-  }
-  else if (cd == 2) /* clip */
-  {
-    RegionIntersect(&clip_reg, &clip_reg, fill_reg);
-    num_clips = REGION_NUM_RECTS(&clip_reg);
-    if (num_clips > 0)
-    {
-      rdpup_begin_update();
-      if (pGC->fillStyle == 0 && /* solid fill */
-          (pGC->alu == GXclear ||
-           pGC->alu == GXset ||
-           pGC->alu == GXinvert ||
-           pGC->alu == GXnoop ||
-           pGC->alu == GXand ||
-           pGC->alu == GXcopy /*||
-           pGC->alu == GXxor*/)) /* todo, why dosen't xor work? */
-      {
-        rdpup_set_fgcolor(pGC->fgPixel);
-        rdpup_set_opcode(pGC->alu);
-        for (j = num_clips - 1; j >= 0; j--)
-        {
-          box = REGION_RECTS(&clip_reg)[j];
-          rdpup_fill_rect(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-        }
-        rdpup_set_opcode(GXcopy);
-      }
-      else /* non solid fill */
-      {
-        for (j = num_clips - 1; j >= 0; j--)
-        {
-          box = REGION_RECTS(&clip_reg)[j];
-          rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-        }
-      }
-      rdpup_end_update();
-    }
-  }
-  RegionUninit(&clip_reg);
-  RegionDestroy(fill_reg);
   GC_OP_EPILOGUE(pGC);
 }
 
@@ -1353,7 +800,7 @@ rdpPolyFillArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc* parcs)
         for (i = num_clips - 1; i >= 0; i--)
         {
           box = REGION_RECTS(tmpRegion)[i];
-          rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+          rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
         }
         rdpup_end_update();
       }
@@ -1373,7 +820,7 @@ rdpPolyFillArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc* parcs)
         for (i = num_clips - 1; i >= 0; i--)
         {
           box = REGION_RECTS(tmpRegion)[i];
-          rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+          rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
         }
         rdpup_end_update();
       }
@@ -1419,7 +866,7 @@ rdpPolyText8(DrawablePtr pDrawable, GCPtr pGC,
   if (cd == 1)
   {
     rdpup_begin_update();
-    rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+    rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
     rdpup_end_update();
   }
   else if (cd == 2)
@@ -1433,7 +880,7 @@ rdpPolyText8(DrawablePtr pDrawable, GCPtr pGC,
       for (j = num_clips - 1; j >= 0; j--)
       {
         box = REGION_RECTS(&reg)[j];
-        rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+        rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
       }
       rdpup_end_update();
     }
@@ -1478,7 +925,7 @@ rdpPolyText16(DrawablePtr pDrawable, GCPtr pGC,
   if (cd == 1)
   {
     rdpup_begin_update();
-    rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+    rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
     rdpup_end_update();
   }
   else if (cd == 2)
@@ -1492,7 +939,7 @@ rdpPolyText16(DrawablePtr pDrawable, GCPtr pGC,
       for (j = num_clips - 1; j >= 0; j--)
       {
         box = REGION_RECTS(&reg)[j];
-        rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+        rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
       }
       rdpup_end_update();
     }
@@ -1536,7 +983,7 @@ rdpImageText8(DrawablePtr pDrawable, GCPtr pGC,
   if (cd == 1)
   {
     rdpup_begin_update();
-    rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+    rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
     rdpup_end_update();
   }
   else if (cd == 2)
@@ -1550,7 +997,7 @@ rdpImageText8(DrawablePtr pDrawable, GCPtr pGC,
       for (j = num_clips - 1; j >= 0; j--)
       {
         box = REGION_RECTS(&clip_reg)[j];
-        rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+        rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
       }
       rdpup_end_update();
     }
@@ -1594,7 +1041,7 @@ rdpImageText16(DrawablePtr pDrawable, GCPtr pGC,
   if (cd == 1)
   {
     rdpup_begin_update();
-    rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+    rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
     rdpup_end_update();
   }
   else if (cd == 2)
@@ -1608,7 +1055,7 @@ rdpImageText16(DrawablePtr pDrawable, GCPtr pGC,
       for (j = num_clips - 1; j >= 0; j--)
       {
         box = REGION_RECTS(&clip_reg)[j];
-        rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+        rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
       }
       rdpup_end_update();
     }
@@ -1652,7 +1099,7 @@ rdpImageGlyphBlt(DrawablePtr pDrawable, GCPtr pGC,
   if (cd == 1)
   {
     rdpup_begin_update();
-    rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+    rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
     rdpup_end_update();
   }
   else if (cd == 2)
@@ -1666,7 +1113,7 @@ rdpImageGlyphBlt(DrawablePtr pDrawable, GCPtr pGC,
       for (j = num_clips - 1; j >= 0; j--)
       {
         box = REGION_RECTS(&reg)[j];
-        rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+        rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
       }
       rdpup_end_update();
     }
@@ -1712,7 +1159,7 @@ rdpPolyGlyphBlt(DrawablePtr pDrawable, GCPtr pGC,
   if (cd == 1)
   {
     rdpup_begin_update();
-    rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+    rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
     rdpup_end_update();
   }
   else if (cd == 2)
@@ -1726,7 +1173,7 @@ rdpPolyGlyphBlt(DrawablePtr pDrawable, GCPtr pGC,
       for (j = num_clips - 1; j >= 0; j--)
       {
         box = REGION_RECTS(&reg)[j];
-        rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+        rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
       }
       rdpup_end_update();
     }
@@ -1759,7 +1206,7 @@ rdpPushPixels(GCPtr pGC, PixmapPtr pBitMap, DrawablePtr pDst,
   if (cd == 1)
   {
     rdpup_begin_update();
-    rdpup_send_area(x, y, w, h);
+    rdpup_send_area(0, x, y, w, h);
     rdpup_end_update();
   }
   else if (cd == 2)
@@ -1773,7 +1220,7 @@ rdpPushPixels(GCPtr pGC, PixmapPtr pBitMap, DrawablePtr pDst,
       for (j = num_clips - 1; j >= 0; j--)
       {
         box = REGION_RECTS(&clip_reg)[j];
-        rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+        rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
       }
       rdpup_end_update();
     }
@@ -1994,7 +1441,7 @@ rdpClearToBackground(WindowPtr pWin, int x, int y, int w, int h,
     for (j = REGION_NUM_RECTS(&reg) - 1; j >= 0; j--)
     {
       box = REGION_RECTS(&reg)[j];
-      rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+      rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
     }
     rdpup_end_update();
     RegionUninit(&reg);
@@ -2020,7 +1467,7 @@ rdpRestoreAreas(WindowPtr pWin, RegionPtr prgnExposed)
   for (j = REGION_NUM_RECTS(&reg) - 1; j >= 0; j--)
   {
     box = REGION_RECTS(&reg)[j];
-    rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+    rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
   }
   rdpup_end_update();
   RegionUninit(&reg);
@@ -2130,7 +1577,7 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
         for (j = num_clips - 1; j >= 0; j--)
         {
           box = REGION_RECTS(&reg1)[j];
-          rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+          rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
         }
         rdpup_end_update();
       }
@@ -2144,7 +1591,7 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
       box.x2 = box.x1 + width;
       box.y2 = box.y1 + height;
       rdpup_begin_update();
-      rdpup_send_area(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+      rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
       rdpup_end_update();
     }
   }

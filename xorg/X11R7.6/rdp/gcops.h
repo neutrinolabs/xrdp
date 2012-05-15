@@ -39,12 +39,6 @@ rdpFillSpans(DrawablePtr pDrawable, GCPtr pGC, int nInit,
 static void
 rdpSetSpans(DrawablePtr pDrawable, GCPtr pGC, char * psrc,
             DDXPointPtr ppt, int * pwidth, int nspans, int fSorted);
-static void
-rdpPutImage(DrawablePtr pDrawable, GCPtr pGC, int depth, int x, int y,
-            int w, int h, int leftPad, int format, char * pBits);
-static RegionPtr
-rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
-            int srcx, int srcy, int w, int h, int dstx, int dsty);
 static RegionPtr
 rdpCopyPlane(DrawablePtr pSrcDrawable, DrawablePtr pDstDrawable,
              GCPtr pGC, int srcx, int srcy, int width, int height,
@@ -53,22 +47,11 @@ static void
 rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
              int npt, DDXPointPtr pptInit);
 static void
-rdpPolylines(DrawablePtr pDrawable, GCPtr pGC, int mode,
-             int npt, DDXPointPtr pptInit);
-static void
-rdpPolySegment(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment * pSegs);
-static void
-rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
-                 xRectangle * pRects);
-static void
 rdpPolyArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc * parcs);
 static void
 rdpFillPolygon(DrawablePtr pDrawable, GCPtr pGC,
                int shape, int mode, int count,
                DDXPointPtr pPts);
-static void
-rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
-                xRectangle * prectInit);
 static void
 rdpPolyFillArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc * parcs);
 static int
