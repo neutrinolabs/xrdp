@@ -31,6 +31,9 @@ Xserver drawing ops and funcs
 #include "rdpPolyRectangle.h"
 #include "rdpPolylines.h"
 #include "rdpPolySegment.h"
+#include "rdpFillSpans.h"
+#include "rdpSetSpans.h"
+#include "rdpCopyPlane.h"
 
 #if 1
 #define DEBUG_OUT_FUNCS(arg)
@@ -313,159 +316,6 @@ rdpCopyClip(GCPtr dst, GCPtr src)
   priv->ops = (_pGC)->ops; \
   (_pGC)->funcs = oldFuncs; \
   (_pGC)->ops = &g_rdpGCOps; \
-}
-
-/******************************************************************************/
-static void
-rdpFillSpans(DrawablePtr pDrawable, GCPtr pGC, int nInit,
-             DDXPointPtr pptInit, int* pwidthInit, int fSorted)
-{
-  rdpGCPtr priv;
-  RegionRec clip_reg;
-  int cd;
-  int j;
-  GCFuncs* oldFuncs;
-  BoxRec box;
-
-  DEBUG_OUT_OPS(("in rdpFillSpans\n"));
-  GC_OP_PROLOGUE(pGC)
-  pGC->ops->FillSpans(pDrawable, pGC, nInit, pptInit, pwidthInit, fSorted);
-  RegionInit(&clip_reg, NullBox, 0);
-  cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
-  if (cd == 1)
-  {
-    rdpup_begin_update();
-    RegionCopy(&clip_reg, &(((WindowPtr)pDrawable)->borderClip));
-    for (j = REGION_NUM_RECTS(&clip_reg) - 1; j >= 0; j--)
-    {
-      box = REGION_RECTS(&clip_reg)[j];
-      rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-    }
-    rdpup_end_update();
-  }
-  else if (cd == 2)
-  {
-    rdpup_begin_update();
-    RegionIntersect(&clip_reg, &clip_reg,
-                    &(((WindowPtr)pDrawable)->borderClip));
-    for (j = REGION_NUM_RECTS(&clip_reg) - 1; j >= 0; j--)
-    {
-      box = REGION_RECTS(&clip_reg)[j];
-      rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-    }
-    rdpup_end_update();
-  }
-  RegionUninit(&clip_reg);
-  GC_OP_EPILOGUE(pGC);
-}
-
-/******************************************************************************/
-static void
-rdpSetSpans(DrawablePtr pDrawable, GCPtr pGC, char* psrc,
-            DDXPointPtr ppt, int* pwidth, int nspans, int fSorted)
-{
-  rdpGCPtr priv;
-  RegionRec clip_reg;
-  int cd;
-  int j;
-  GCFuncs* oldFuncs;
-  BoxRec box;
-
-  DEBUG_OUT_OPS(("in rdpSetSpans\n"));
-  GC_OP_PROLOGUE(pGC);
-  pGC->ops->SetSpans(pDrawable, pGC, psrc, ppt, pwidth, nspans, fSorted);
-  RegionInit(&clip_reg, NullBox, 0);
-  cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
-  if (cd == 1)
-  {
-    rdpup_begin_update();
-    RegionCopy(&clip_reg, &(((WindowPtr)pDrawable)->borderClip));
-    for (j = REGION_NUM_RECTS(&clip_reg) - 1; j >= 0; j--)
-    {
-      box = REGION_RECTS(&clip_reg)[j];
-      rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-    }
-    rdpup_end_update();
-  }
-  else if (cd == 2)
-  {
-    rdpup_begin_update();
-    RegionIntersect(&clip_reg, &clip_reg,
-                    &((WindowPtr)pDrawable)->borderClip);
-    for (j = REGION_NUM_RECTS(&clip_reg) - 1; j >= 0; j--)
-    {
-      box = REGION_RECTS(&clip_reg)[j];
-      rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-    }
-    rdpup_end_update();
-  }
-  RegionUninit(&clip_reg);
-  GC_OP_EPILOGUE(pGC);
-}
-
-/******************************************************************************/
-static RegionPtr
-rdpCopyPlane(DrawablePtr pSrc, DrawablePtr pDst,
-             GCPtr pGC, int srcx, int srcy, int w, int h,
-             int dstx, int dsty, unsigned long bitPlane)
-{
-  rdpGCPtr priv;
-  RegionPtr rv;
-  RegionRec clip_reg;
-  RegionRec box_reg;
-  int cd;
-  int num_clips;
-  int j;
-  GCFuncs* oldFuncs;
-  BoxRec box;
-  BoxPtr pbox;
-
-  DEBUG_OUT_OPS(("in rdpCopyPlane\n"));
-  GC_OP_PROLOGUE(pGC);
-  rv = pGC->ops->CopyPlane(pSrc, pDst, pGC, srcx, srcy,
-                           w, h, dstx, dsty, bitPlane);
-  RegionInit(&clip_reg, NullBox, 0);
-  cd = rdp_get_clip(&clip_reg, pDst, pGC);
-  if (cd == 1)
-  {
-    rdpup_begin_update();
-    rdpup_send_area(0, pDst->x + dstx, pDst->y + dsty, w, h);
-    rdpup_end_update();
-  }
-  else if (cd == 2)
-  {
-    num_clips = REGION_NUM_RECTS(&clip_reg);
-    if (num_clips > 0)
-    {
-      rdpup_begin_update();
-      box.x1 = pDst->x + dstx;
-      box.y1 = pDst->y + dsty;
-      box.x2 = box.x1 + w;
-      box.y2 = box.y1 + h;
-      RegionInit(&box_reg, &box, 0);
-      RegionIntersect(&clip_reg, &clip_reg, &box_reg);
-      num_clips = REGION_NUM_RECTS(&clip_reg);
-      if (num_clips < 10)
-      {
-        for (j = num_clips - 1; j >= 0; j--)
-        {
-          box = REGION_RECTS(&clip_reg)[j];
-          rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-        }
-      }
-      else
-      {
-        pbox = RegionExtents(&clip_reg);
-        rdpup_send_area(0, pbox->x1, pbox->y1, pbox->x2 - pbox->x1,
-                        pbox->y2 - pbox->y1);
-      }
-      RegionUninit(&box_reg);
-      rdpup_end_update();
-    }
-  }
-  RegionUninit(&clip_reg);
-  GC_OP_EPILOGUE(pGC);
-  return rv;
 }
 
 /******************************************************************************/

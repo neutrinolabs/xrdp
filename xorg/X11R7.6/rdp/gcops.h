@@ -33,12 +33,6 @@ static void
 rdpDestroyClip(GCPtr pGC);
 static void
 rdpCopyClip(GCPtr dst, GCPtr src);
-static void
-rdpFillSpans(DrawablePtr pDrawable, GCPtr pGC, int nInit,
-             DDXPointPtr pptInit, int * pwidthInit, int fSorted);
-static void
-rdpSetSpans(DrawablePtr pDrawable, GCPtr pGC, char * psrc,
-            DDXPointPtr ppt, int * pwidth, int nspans, int fSorted);
 static RegionPtr
 rdpCopyPlane(DrawablePtr pSrcDrawable, DrawablePtr pDstDrawable,
              GCPtr pGC, int srcx, int srcy, int width, int height,

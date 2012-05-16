@@ -8,7 +8,8 @@ XSRCBASE = ../build_dir/xorg-server-1.9.3
 
 OBJS = rdpmain.o rdpdraw.o rdpinput.o rdpmisc.o rdpup.o rdprandr.o \
 rdpCopyArea.o rdpPolyFillRect.o rdpPutImage.o rdpPolyRectangle.o \
-rdpPolylines.o rdpPolySegment.o \
+rdpPolylines.o rdpPolySegment.o rdpFillSpans.o rdpSetSpans.o \
+rdpCopyPlane.o \
 miinitext.o \
 fbcmap_mi.o
 
