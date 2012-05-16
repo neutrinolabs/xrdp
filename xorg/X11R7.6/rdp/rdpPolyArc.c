@@ -43,35 +43,59 @@ extern GCOps g_rdpGCOps; /* from rdpdraw.c */
 extern int g_con_number; /* in rdpup.c */
 
 /******************************************************************************/
-static void
-rdpFillSpansOrg(DrawablePtr pDrawable, GCPtr pGC, int nInit,
-                DDXPointPtr pptInit, int* pwidthInit, int fSorted)
+void
+rdpPolyArcOrg(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc* parcs)
 {
   rdpGCPtr priv;
   GCFuncs* oldFuncs;
 
   GC_OP_PROLOGUE(pGC);
-  pGC->ops->FillSpans(pDrawable, pGC, nInit, pptInit, pwidthInit, fSorted);
+  pGC->ops->PolyArc(pDrawable, pGC, narcs, parcs);
   GC_OP_EPILOGUE(pGC);
 }
 
 /******************************************************************************/
 void
-rdpFillSpans(DrawablePtr pDrawable, GCPtr pGC, int nInit,
-             DDXPointPtr pptInit, int* pwidthInit, int fSorted)
+rdpPolyArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc* parcs)
 {
   RegionRec clip_reg;
+  RegionPtr tmpRegion;
   int cd;
+  int lw;
+  int extra;
+  int i;
+  int num_clips;
   int got_id;
+  xRectangle* rects;
+  BoxRec box;
   struct image_data id;
   WindowPtr pDstWnd;
   PixmapPtr pDstPixmap;
   rdpPixmapRec* pDstPriv;
 
-  LLOGLN(0, ("rdpFillSpans: todo"));
+  LLOGLN(10, ("rdpPolyArc:"));
+
+  rects = 0;
+  if (narcs > 0)
+  {
+    rects = (xRectangle*)g_malloc(narcs * sizeof(xRectangle), 0);
+    lw = pGC->lineWidth;
+    if (lw == 0)
+    {
+      lw = 1;
+    }
+    extra = lw / 2;
+    for (i = 0; i < narcs; i++)
+    {
+      rects[i].x = (parcs[i].x - extra) + pDrawable->x;
+      rects[i].y = (parcs[i].y - extra) + pDrawable->y;
+      rects[i].width = parcs[i].width + lw;
+      rects[i].height = parcs[i].height + lw;
+    }
+  }
 
   /* do original call */
-  rdpFillSpansOrg(pDrawable, pGC, nInit, pptInit, pwidthInit, fSorted);
+  rdpPolyArcOrg(pDrawable, pGC, narcs, parcs);
 
   got_id = 0;
   if (pDrawable->type == DRAWABLE_PIXMAP)
@@ -99,16 +123,52 @@ rdpFillSpans(DrawablePtr pDrawable, GCPtr pGC, int nInit,
   }
   if (!got_id)
   {
+    g_free(rects);
     return;
   }
+
   RegionInit(&clip_reg, NullBox, 0);
   cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
   if (cd == 1)
   {
+    if (rects != 0)
+    {
+      tmpRegion = RegionFromRects(narcs, rects, CT_NONE);
+      num_clips = REGION_NUM_RECTS(tmpRegion);
+      if (num_clips > 0)
+      {
+        rdpup_begin_update();
+        for (i = num_clips - 1; i >= 0; i--)
+        {
+          box = REGION_RECTS(tmpRegion)[i];
+          rdpup_send_area(&id, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+        }
+        rdpup_end_update();
+      }
+      RegionDestroy(tmpRegion);
+    }
   }
   else if (cd == 2)
   {
+    if (rects != 0)
+    {
+      tmpRegion = RegionFromRects(narcs, rects, CT_NONE);
+      RegionIntersect(tmpRegion, tmpRegion, &clip_reg);
+      num_clips = REGION_NUM_RECTS(tmpRegion);
+      if (num_clips > 0)
+      {
+        rdpup_begin_update();
+        for (i = num_clips - 1; i >= 0; i--)
+        {
+          box = REGION_RECTS(tmpRegion)[i];
+          rdpup_send_area(&id, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+        }
+        rdpup_end_update();
+      }
+      RegionDestroy(tmpRegion);
+    }
   }
   RegionUninit(&clip_reg);
+  g_free(rects);
   rdpup_switch_os_surface(-1);
 }

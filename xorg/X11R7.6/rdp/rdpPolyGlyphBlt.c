@@ -43,35 +43,46 @@ extern GCOps g_rdpGCOps; /* from rdpdraw.c */
 extern int g_con_number; /* in rdpup.c */
 
 /******************************************************************************/
-static void
-rdpFillSpansOrg(DrawablePtr pDrawable, GCPtr pGC, int nInit,
-                DDXPointPtr pptInit, int* pwidthInit, int fSorted)
+void
+rdpPolyGlyphBltOrg(DrawablePtr pDrawable, GCPtr pGC,
+                   int x, int y, unsigned int nglyph,
+                   CharInfoPtr* ppci, pointer pglyphBase)
 {
   rdpGCPtr priv;
   GCFuncs* oldFuncs;
 
   GC_OP_PROLOGUE(pGC);
-  pGC->ops->FillSpans(pDrawable, pGC, nInit, pptInit, pwidthInit, fSorted);
+  pGC->ops->PolyGlyphBlt(pDrawable, pGC, x, y, nglyph, ppci, pglyphBase);
   GC_OP_EPILOGUE(pGC);
 }
 
 /******************************************************************************/
 void
-rdpFillSpans(DrawablePtr pDrawable, GCPtr pGC, int nInit,
-             DDXPointPtr pptInit, int* pwidthInit, int fSorted)
+rdpPolyGlyphBlt(DrawablePtr pDrawable, GCPtr pGC,
+                int x, int y, unsigned int nglyph,
+                CharInfoPtr* ppci, pointer pglyphBase)
 {
-  RegionRec clip_reg;
+  RegionRec reg;
+  RegionRec reg1;
+  int num_clips;
   int cd;
+  int j;
   int got_id;
+  BoxRec box;
   struct image_data id;
   WindowPtr pDstWnd;
   PixmapPtr pDstPixmap;
   rdpPixmapRec* pDstPriv;
 
-  LLOGLN(0, ("rdpFillSpans: todo"));
+  LLOGLN(10, ("rdpPolyGlyphBlt:"));
+
+  if (nglyph != 0)
+  {
+    GetTextBoundingBox(pDrawable, pGC->font, x, y, nglyph, &box);
+  }
 
   /* do original call */
-  rdpFillSpansOrg(pDrawable, pGC, nInit, pptInit, pwidthInit, fSorted);
+  rdpPolyGlyphBltOrg(pDrawable, pGC, x, y, nglyph, ppci, pglyphBase);
 
   got_id = 0;
   if (pDrawable->type == DRAWABLE_PIXMAP)
@@ -101,14 +112,40 @@ rdpFillSpans(DrawablePtr pDrawable, GCPtr pGC, int nInit,
   {
     return;
   }
-  RegionInit(&clip_reg, NullBox, 0);
-  cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
+
+  RegionInit(&reg, NullBox, 0);
+  if (nglyph == 0)
+  {
+    cd = 0;
+  }
+  else
+  {
+    cd = rdp_get_clip(&reg, pDrawable, pGC);
+  }
   if (cd == 1)
   {
+    rdpup_begin_update();
+    rdpup_send_area(&id, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+    rdpup_end_update();
   }
   else if (cd == 2)
   {
+    RegionInit(&reg1, &box, 0);
+    RegionIntersect(&reg, &reg, &reg1);
+    num_clips = REGION_NUM_RECTS(&reg);
+    if (num_clips > 0)
+    {
+      rdpup_begin_update();
+      for (j = num_clips - 1; j >= 0; j--)
+      {
+        box = REGION_RECTS(&reg)[j];
+        rdpup_send_area(&id, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+      }
+      rdpup_end_update();
+    }
+    RegionUninit(&reg1);
   }
-  RegionUninit(&clip_reg);
+  RegionUninit(&reg);
   rdpup_switch_os_surface(-1);
+  return;
 }

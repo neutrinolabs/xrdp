@@ -43,35 +43,85 @@ extern GCOps g_rdpGCOps; /* from rdpdraw.c */
 extern int g_con_number; /* in rdpup.c */
 
 /******************************************************************************/
-static void
-rdpFillSpansOrg(DrawablePtr pDrawable, GCPtr pGC, int nInit,
-                DDXPointPtr pptInit, int* pwidthInit, int fSorted)
+void
+rdpPolyPointOrg(DrawablePtr pDrawable, GCPtr pGC, int mode,
+                int npt, DDXPointPtr in_pts)
 {
   rdpGCPtr priv;
   GCFuncs* oldFuncs;
 
   GC_OP_PROLOGUE(pGC);
-  pGC->ops->FillSpans(pDrawable, pGC, nInit, pptInit, pwidthInit, fSorted);
+  pGC->ops->PolyPoint(pDrawable, pGC, mode, npt, in_pts);
   GC_OP_EPILOGUE(pGC);
 }
 
 /******************************************************************************/
 void
-rdpFillSpans(DrawablePtr pDrawable, GCPtr pGC, int nInit,
-             DDXPointPtr pptInit, int* pwidthInit, int fSorted)
+rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
+             int npt, DDXPointPtr in_pts)
 {
   RegionRec clip_reg;
+  int num_clips;
   int cd;
+  int x;
+  int y;
+  int i;
+  int j;
   int got_id;
+  BoxRec box;
+  BoxRec total_box;
+  DDXPointPtr pts;
+  DDXPointRec stack_pts[32];
   struct image_data id;
   WindowPtr pDstWnd;
   PixmapPtr pDstPixmap;
   rdpPixmapRec* pDstPriv;
 
-  LLOGLN(0, ("rdpFillSpans: todo"));
+  LLOGLN(10, ("rdpPolyPoint:"));
+
+  if (npt > 32)
+  {
+    pts = (DDXPointPtr)g_malloc(sizeof(DDXPointRec) * npt, 0);
+  }
+  else
+  {
+    pts = stack_pts;
+  }
+  for (i = 0; i < npt; i++)
+  {
+    pts[i].x = pDrawable->x + in_pts[i].x;
+    pts[i].y = pDrawable->y + in_pts[i].y;
+    if (i == 0)
+    {
+      total_box.x1 = pts[0].x;
+      total_box.y1 = pts[0].y;
+      total_box.x2 = pts[0].x;
+      total_box.y2 = pts[0].y;
+    }
+    else
+    {
+      if (pts[i].x < total_box.x1)
+      {
+        total_box.x1 = pts[i].x;
+      }
+      if (pts[i].y < total_box.y1)
+      {
+        total_box.y1 = pts[i].y;
+      }
+      if (pts[i].x > total_box.x2)
+      {
+        total_box.x2 = pts[i].x;
+      }
+      if (pts[i].y > total_box.y2)
+      {
+        total_box.y2 = pts[i].y;
+      }
+    }
+    /* todo, use this total_box */
+  }
 
   /* do original call */
-  rdpFillSpansOrg(pDrawable, pGC, nInit, pptInit, pwidthInit, fSorted);
+  rdpPolyPointOrg(pDrawable, pGC, mode, npt, in_pts);
 
   got_id = 0;
   if (pDrawable->type == DRAWABLE_PIXMAP)
@@ -101,14 +151,50 @@ rdpFillSpans(DrawablePtr pDrawable, GCPtr pGC, int nInit,
   {
     return;
   }
+
   RegionInit(&clip_reg, NullBox, 0);
   cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
   if (cd == 1)
   {
+    if (npt > 0)
+    {
+      rdpup_begin_update();
+      rdpup_set_fgcolor(pGC->fgPixel);
+      for (i = 0; i < npt; i++)
+      {
+        x = pts[i].x;
+        y = pts[i].y;
+        rdpup_fill_rect(x, y, 1, 1);
+      }
+      rdpup_end_update();
+    }
   }
   else if (cd == 2)
   {
+    num_clips = REGION_NUM_RECTS(&clip_reg);
+    if (npt > 0 && num_clips > 0)
+    {
+      rdpup_begin_update();
+      rdpup_set_fgcolor(pGC->fgPixel);
+      for (j = num_clips - 1; j >= 0; j--)
+      {
+        box = REGION_RECTS(&clip_reg)[j];
+        rdpup_set_clip(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+        for (i = 0; i < npt; i++)
+        {
+          x = pts[i].x;
+          y = pts[i].y;
+          rdpup_fill_rect(x, y, 1, 1);
+        }
+      }
+      rdpup_reset_clip();
+      rdpup_end_update();
+    }
   }
   RegionUninit(&clip_reg);
+  if (pts != stack_pts)
+  {
+    g_free(pts);
+  }
   rdpup_switch_os_surface(-1);
 }

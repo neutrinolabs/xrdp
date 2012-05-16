@@ -41,5 +41,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 int
 rdp_get_clip(RegionPtr pRegion, DrawablePtr pDrawable, GCPtr pGC);
+void
+GetTextBoundingBox(DrawablePtr pDrawable, FontPtr font, int x, int y,
+                   int n, BoxPtr pbox);
 
 #endif

@@ -19,20 +19,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
 
-static void
-rdpValidateGC(GCPtr pGC, unsigned long changes, DrawablePtr d);
-static void
-rdpChangeGC(GCPtr pGC, unsigned long mask);
-static void
-rdpCopyGC(GCPtr src, unsigned long mask, GCPtr dst);
-static void
-rdpDestroyGC(GCPtr pGC);
-static void
-rdpChangeClip(GCPtr pGC, int type, pointer pValue, int nrects);
-static void
-rdpDestroyClip(GCPtr pGC);
-static void
-rdpCopyClip(GCPtr dst, GCPtr src);
-static void
-rdpPushPixels(GCPtr pGC, PixmapPtr pBitMap, DrawablePtr pDst,
-              int w, int h, int x, int y);
+#ifndef __RDPPOLYFILLARC_H
+#define __RDPPOLYFILLARC_H
+
+void
+rdpPolyFillArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc* parcs);
+
+#endif
