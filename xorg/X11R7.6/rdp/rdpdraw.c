@@ -54,12 +54,19 @@ Xserver drawing ops and funcs
 #define DEBUG_OUT_OPS(arg) ErrorF arg
 #endif
 
+#define LOG_LEVEL 1
+#define LLOG(_level, _args) \
+  do { if (_level < LOG_LEVEL) { ErrorF _args ; } } while (0)
+#define LLOGLN(_level, _args) \
+  do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
+
 extern rdpScreenInfoRec g_rdpScreen; /* from rdpmain.c */
 extern DevPrivateKeyRec g_rdpGCIndex; /* from rdpmain.c */
 extern DevPrivateKeyRec g_rdpWindowIndex; /* from rdpmain.c */
 extern DevPrivateKeyRec g_rdpPixmapIndex; /* from rdpmain.c */
 extern int g_Bpp; /* from rdpmain.c */
 extern ScreenPtr g_pScreen; /* from rdpmain.c */
+extern Bool g_wrapPixmap; /* from rdpmain.c */
 
 ColormapPtr g_rdpInstalledColormap;
 
@@ -91,7 +98,34 @@ rdp_get_clip(RegionPtr pRegion, DrawablePtr pDrawable, GCPtr pGC)
   int rv;
 
   rv = 0;
-  if (pDrawable->type == DRAWABLE_WINDOW)
+  if (pDrawable->type == DRAWABLE_PIXMAP)
+  {
+    switch (pGC->clientClipType)
+    {
+      case CT_NONE:
+        rv = 1;
+        break;
+      case CT_REGION:
+        rv = 2;
+        RegionCopy(pRegion, pGC->clientClip);
+        break;
+      default:
+        rdpLog("unimp clip type %d\n", pGC->clientClipType);
+        break;
+    }
+    if (rv == 2) /* check if the clip is the entire pixmap */
+    {
+      box.x1 = 0;
+      box.y1 = 0;
+      box.x2 = pDrawable->width;
+      box.y2 = pDrawable->height;
+      if (RegionContainsRect(pRegion, &box) == rgnIN)
+      {
+        rv = 1;
+      }
+    }
+  }
+  else if (pDrawable->type == DRAWABLE_WINDOW)
   {
     pWindow = (WindowPtr)pDrawable;
     if (pWindow->viewable)
@@ -213,27 +247,34 @@ static void
 rdpValidateGC(GCPtr pGC, unsigned long changes, DrawablePtr d)
 {
   rdpGCRec* priv;
-  int viewable;
+  int wrap;
   RegionPtr pRegion;
 
-  DEBUG_OUT_FUNCS(("in rdpValidateGC\n"));
+  LLOGLN(10, ("rdpValidateGC:"));
   GC_FUNC_PROLOGUE(pGC);
   pGC->funcs->ValidateGC(pGC, changes, d);
-  viewable = d->type == DRAWABLE_WINDOW && ((WindowPtr)d)->viewable;
-  if (viewable)
+  if (g_wrapPixmap)
   {
-    if (pGC->subWindowMode == IncludeInferiors)
+    wrap = 1;
+  }
+  else
+  {
+    wrap = (d->type == DRAWABLE_WINDOW) && ((WindowPtr)d)->viewable;
+    if (wrap)
     {
-      pRegion = &(((WindowPtr)d)->borderClip);
+      if (pGC->subWindowMode == IncludeInferiors)
+      {
+        pRegion = &(((WindowPtr)d)->borderClip);
+      }
+      else
+      {
+        pRegion = &(((WindowPtr)d)->clipList);
+      }
+      wrap = RegionNotEmpty(pRegion);
     }
-    else
-    {
-      pRegion = &(((WindowPtr)d)->clipList);
-    }
-    viewable = RegionNotEmpty(pRegion);
   }
   priv->ops = 0;
-  if (viewable)
+  if (wrap)
   {
     priv->ops = pGC->ops;
   }
@@ -351,15 +392,17 @@ rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
 {
   PixmapPtr rv;
   rdpPixmapRec* priv;
+  int org_width;
 
-  //ErrorF("rdpCreatePixmap:\n");
-  //ErrorF("  in width %d height %d depth %d\n", width, height, depth);
+  org_width = width;
+  width = (width + 3) & ~3;
+  LLOGLN(10, ("rdpCreatePixmap: width %d org_width %d", width, org_width));
   pScreen->CreatePixmap = g_rdpScreen.CreatePixmap;
   rv = pScreen->CreatePixmap(pScreen, width, height, depth, usage_hint);
   priv = GETPIXPRIV(rv);
+  priv->status = 1;
   pScreen->CreatePixmap = rdpCreatePixmap;
-  //ErrorF("  out width %d height %d depth %d\n", rv->drawable.width,
-  //  rv->drawable.height, rv->drawable.depth);
+  pScreen->ModifyPixmapHeader(rv, org_width, 0, 0, 0, 0, 0);
   return rv;
 }
 

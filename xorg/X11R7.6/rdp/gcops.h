@@ -33,6 +33,3 @@ static void
 rdpDestroyClip(GCPtr pGC);
 static void
 rdpCopyClip(GCPtr dst, GCPtr src);
-static void
-rdpPushPixels(GCPtr pGC, PixmapPtr pBitMap, DrawablePtr pDst,
-              int w, int h, int x, int y);

@@ -43,7 +43,7 @@ DeviceIntPtr g_pointer = 0;
 DeviceIntPtr g_keyboard = 0;
 
 Bool g_wrapWindow = 0;
-Bool g_wrapPixmap = 0;
+Bool g_wrapPixmap = 1;
 
 /* if true, use a unix domain socket instead of a tcp socket */
 int g_use_uds = 0;
