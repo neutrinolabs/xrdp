@@ -136,6 +136,7 @@ struct _rdpScreenInfoRec
   ClearToBackgroundProcPtr ClearToBackground;
   ScreenWakeupHandlerProcPtr WakeupHandler;
   CompositeProcPtr Composite;
+  GlyphsProcPtr Glyphs;
   /* Backing store procedures */
   RestoreAreasProcPtr RestoreAreas;
 
@@ -292,6 +293,11 @@ void
 rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
              INT16 xSrc, INT16 ySrc, INT16 xMask, INT16 yMask, INT16 xDst,
              INT16 yDst, CARD16 width, CARD16 height);
+void
+rdpGlyphs(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
+          PictFormatPtr maskFormat,
+          INT16 xSrc, INT16 ySrc, int nlists, GlyphListPtr lists,
+          GlyphPtr* glyphs);
 
 
 /* rdpinput.c */
@@ -378,6 +384,8 @@ rdpup_delete_os_surface(int rdpid);
 void
 rdpup_paint_rect_os(int x, int y, int cx, int cy,
                     int rdpid, int srcx, int srcy);
+void
+rdpup_set_hints(int hints, int mask);
 
 #if defined(X_BYTE_ORDER)
 #  if X_BYTE_ORDER == X_LITTLE_ENDIAN

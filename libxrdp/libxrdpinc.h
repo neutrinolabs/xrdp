@@ -176,5 +176,10 @@ int DEFAULT_CC
 libxrdp_orders_send_brush(struct xrdp_session* session,
                           int width, int height, int bpp, int type,
                           int size, char* data, int cache_id);
+int EXPORT_CC
+libxrdp_orders_send_create_os_surface(struct xrdp_session* session, int id,
+                                      int width, int height);
+int EXPORT_CC
+libxrdp_orders_send_switch_os_surface(struct xrdp_session* session, int id);
 
 #endif

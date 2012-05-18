@@ -429,6 +429,7 @@
 #define WND_TYPE_COMBO   7
 #define WND_TYPE_SPECIAL 8
 #define WND_TYPE_LISTBOX 9
+#define WND_TYPE_OFFSCREEN 10
 
 /* button states */
 #define BUTTON_STATE_UP   0

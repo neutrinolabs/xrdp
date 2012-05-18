@@ -68,7 +68,14 @@ extern int g_Bpp; /* from rdpmain.c */
 extern ScreenPtr g_pScreen; /* from rdpmain.c */
 extern Bool g_wrapPixmap; /* from rdpmain.c */
 
+extern int g_con_number; /* in rdpup.c */
+extern int g_connected; /* in rdpup.c */
+
 ColormapPtr g_rdpInstalledColormap;
+
+static int g_pixmap_rdpid = 1;
+int g_pixmap_byte_total = 0;
+int g_pixmap_num_used = 0;
 
 GCFuncs g_rdpGCFuncs =
 {
@@ -395,14 +402,29 @@ rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
   int org_width;
 
   org_width = width;
+  /* width must be a multiple of 4 in rdp */
   width = (width + 3) & ~3;
   LLOGLN(10, ("rdpCreatePixmap: width %d org_width %d", width, org_width));
   pScreen->CreatePixmap = g_rdpScreen.CreatePixmap;
   rv = pScreen->CreatePixmap(pScreen, width, height, depth, usage_hint);
   priv = GETPIXPRIV(rv);
-  priv->status = 1;
-  pScreen->CreatePixmap = rdpCreatePixmap;
+  if ((g_rdpScreen.client_info.offscreen_support_level > 0) &&
+      (rv->drawable.depth == g_rdpScreen.depth) &&
+      (org_width > 1) && (height > 1) && g_connected)
+  {
+    priv->allocBytes = width * height * 4;
+    g_pixmap_byte_total += priv->allocBytes;
+    g_pixmap_num_used++;
+    priv->status = 1;
+    priv->rdpid = g_pixmap_rdpid;
+    g_pixmap_rdpid++;
+    priv->con_number = g_con_number;
+    rdpup_create_os_surface(priv->rdpid, width, height);
+    LLOGLN(0, ("rdpCreatePixmap: g_pixmap_byte_total %d g_pixmap_num_used %d",
+           g_pixmap_byte_total, g_pixmap_num_used));
+  }
   pScreen->ModifyPixmapHeader(rv, org_width, 0, 0, 0, 0, 0);
+  pScreen->CreatePixmap = rdpCreatePixmap;
   return rv;
 }
 
@@ -414,9 +436,22 @@ rdpDestroyPixmap(PixmapPtr pPixmap)
   ScreenPtr pScreen;
   rdpPixmapRec* priv;
 
-  //ErrorF("rdpDestroyPixmap:\n");
+  LLOGLN(10, ("rdpDestroyPixmap:"));
   priv = GETPIXPRIV(pPixmap);
-  //ErrorF("  refcnt %d\n", pPixmap->refcnt);
+  LLOGLN(10, ("status %d refcnt %d", priv->status, pPixmap->refcnt));
+  if (pPixmap->refcnt < 2)
+  {
+    if (XRDP_IS_OS(priv) && g_connected)
+    {
+      g_pixmap_byte_total -= priv->allocBytes;
+      g_pixmap_num_used--;
+      LLOGLN(0, ("rdpDestroyPixmap: id 0x%x "
+             "rdpid 0x%x g_pixmap_byte_total %d g_pixmap_num_used %d",
+             pPixmap->drawable.id, priv->rdpid,
+             g_pixmap_byte_total, g_pixmap_num_used));
+      rdpup_delete_os_surface(priv->rdpid);
+    }
+  }
   pScreen = pPixmap->drawable.pScreen;
   pScreen->DestroyPixmap = g_rdpScreen.DestroyPixmap;
   rv = pScreen->DestroyPixmap(pPixmap);
@@ -691,51 +726,119 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
   DrawablePtr p;
   int j;
   int num_clips;
+  int got_id;
+  WindowPtr pDstWnd;
+  PixmapPtr pDstPixmap;
+  rdpPixmapRec* pDstPriv;
+  struct image_data id;
 
-  DEBUG_OUT_OPS(("in rdpComposite\n"));
+  LLOGLN(10, ("rdpComposite:"));
   ps = GetPictureScreen(g_pScreen);
   ps->Composite = g_rdpScreen.Composite;
   ps->Composite(op, pSrc, pMask, pDst, xSrc, ySrc,
                 xMask, yMask, xDst, yDst, width, height);
+  ps->Composite = rdpComposite;
+
   p = pDst->pDrawable;
-  if (p->type == DRAWABLE_WINDOW)
+
+  got_id = 0;
+  if (p->type == DRAWABLE_PIXMAP)
   {
-    if (pDst->clientClipType == CT_REGION)
+    pDstPixmap = (PixmapPtr)p;
+    pDstPriv = GETPIXPRIV(pDstPixmap);
+    if (XRDP_IS_OS(pDstPriv))
     {
-      box.x1 = p->x + xDst;
-      box.y1 = p->y + yDst;
-      box.x2 = box.x1 + width;
-      box.y2 = box.y1 + height;
-      RegionInit(&reg1, &box, 0);
-      RegionInit(&reg2, NullBox, 0);
-      RegionCopy(&reg2, pDst->clientClip);
-      RegionTranslate(&reg2, p->x + pDst->clipOrigin.x,
-                        p->y + pDst->clipOrigin.y);
-      RegionIntersect(&reg1, &reg1, &reg2);
-      num_clips = REGION_NUM_RECTS(&reg1);
-      if (num_clips > 0)
-      {
-        rdpup_begin_update();
-        for (j = num_clips - 1; j >= 0; j--)
-        {
-          box = REGION_RECTS(&reg1)[j];
-          rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-        }
-        rdpup_end_update();
-      }
-      RegionUninit(&reg1);
-      RegionUninit(&reg2);
-    }
-    else
-    {
-      box.x1 = p->x + xDst;
-      box.y1 = p->y + yDst;
-      box.x2 = box.x1 + width;
-      box.y2 = box.y1 + height;
-      rdpup_begin_update();
-      rdpup_send_area(0, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-      rdpup_end_update();
+      rdpup_switch_os_surface(pDstPriv->rdpid);
+      rdpup_get_pixmap_image_rect(pDstPixmap, &id);
+      got_id = 1;
     }
   }
-  ps->Composite = rdpComposite;
+  else
+  {
+    if (p->type == DRAWABLE_WINDOW)
+    {
+      pDstWnd = (WindowPtr)p;
+      if (pDstWnd->viewable)
+      {
+        rdpup_get_screen_image_rect(&id);
+        got_id = 1;
+      }
+    }
+  }
+  if (!got_id)
+  {
+    return;
+  }
+
+  if (pDst->clientClipType == CT_REGION)
+  {
+    box.x1 = p->x + xDst;
+    box.y1 = p->y + yDst;
+    box.x2 = box.x1 + width;
+    box.y2 = box.y1 + height;
+    RegionInit(&reg1, &box, 0);
+    RegionInit(&reg2, NullBox, 0);
+    RegionCopy(&reg2, pDst->clientClip);
+    RegionTranslate(&reg2, p->x + pDst->clipOrigin.x,
+                      p->y + pDst->clipOrigin.y);
+    RegionIntersect(&reg1, &reg1, &reg2);
+    num_clips = REGION_NUM_RECTS(&reg1);
+    if (num_clips > 0)
+    {
+      rdpup_begin_update();
+      for (j = num_clips - 1; j >= 0; j--)
+      {
+        box = REGION_RECTS(&reg1)[j];
+        rdpup_send_area(&id, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+      }
+      rdpup_end_update();
+    }
+    RegionUninit(&reg1);
+    RegionUninit(&reg2);
+  }
+  else
+  {
+    box.x1 = p->x + xDst;
+    box.y1 = p->y + yDst;
+    box.x2 = box.x1 + width;
+    box.y2 = box.y1 + height;
+    rdpup_begin_update();
+    rdpup_send_area(&id, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+    rdpup_end_update();
+  }
+  rdpup_switch_os_surface(-1);
+}
+
+/******************************************************************************/
+void
+rdpGlyphs(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
+          PictFormatPtr maskFormat,
+          INT16 xSrc, INT16 ySrc, int nlists, GlyphListPtr lists,
+          GlyphPtr* glyphs)
+{
+  PictureScreenPtr ps;
+  int index;
+
+  LLOGLN(10, ("rdpGlyphs:"));
+  LLOGLN(10, ("rdpGlyphs: nlists %d len %d", nlists, lists->len));
+  if (g_rdpScreen.client_info.jpeg)
+  {
+    rdpup_set_hints(1, 1);
+  }
+  for (index = 0; index < lists->len; index++)
+  {
+    LLOGLN(10, ("  index %d size %d refcnt %d width %d height %d",
+           index, glyphs[index]->size, glyphs[index]->refcnt,
+           glyphs[index]->info.width, glyphs[index]->info.height));
+  }
+  ps = GetPictureScreen(g_pScreen);
+  ps->Glyphs = g_rdpScreen.Glyphs;
+  ps->Glyphs(op, pSrc, pDst, maskFormat, xSrc, ySrc,
+             nlists, lists, glyphs);
+  ps->Glyphs = rdpGlyphs;
+  if (g_rdpScreen.client_info.jpeg)
+  {
+    rdpup_set_hints(0, 1);
+  }
+  LLOGLN(10, ("rdpGlyphs: out"));
 }

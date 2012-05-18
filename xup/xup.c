@@ -377,6 +377,9 @@ lib_mod_process_orders(struct mod* mod, int type, struct stream* s)
   int y1;
   int x2;
   int y2;
+  int rdpid;
+  int hints;
+  int mask;
   int width;
   int height;
   int fgcolor;
@@ -461,6 +464,36 @@ lib_mod_process_orders(struct mod* mod, int type, struct stream* s)
       in_uint8a(s, cur_data, 32 * (32 * 3));
       in_uint8a(s, cur_mask, 32 * (32 / 8));
       rv = mod->server_set_cursor(mod, x, y, cur_data, cur_mask);
+      break;
+    case 20:
+      in_uint32_le(s, rdpid);
+      in_uint16_le(s, width);
+      in_uint16_le(s, height);
+      rv = mod->server_create_os_surface(mod, rdpid, width, height);
+      break;
+    case 21:
+      in_uint32_le(s, rdpid);
+      rv = mod->server_switch_os_surface(mod, rdpid);
+      break;
+    case 22:
+      in_uint32_le(s, rdpid);
+      rv = mod->server_delete_os_surface(mod, rdpid);
+      break;
+    case 23: /* server_paint_rect_os */
+      in_sint16_le(s, x);
+      in_sint16_le(s, y);
+      in_uint16_le(s, cx);
+      in_uint16_le(s, cy);
+      in_uint32_le(s, rdpid);
+      in_sint16_le(s, srcx);
+      in_sint16_le(s, srcy);
+      rv = mod->server_paint_rect_os(mod, x, y, cx, cy,
+                                     rdpid, srcx, srcy);
+      break;
+    case 24: /* server_set_hints */
+      in_uint32_le(s, hints);
+      in_uint32_le(s, mask);
+      rv = mod->server_set_hints(mod, hints, mask);
       break;
     default:
       g_writeln("lib_mod_process_orders: unknown order type %d", type);

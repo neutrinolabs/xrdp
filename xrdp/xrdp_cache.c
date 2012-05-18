@@ -73,6 +73,7 @@ xrdp_cache_delete(struct xrdp_cache* self)
       g_free(self->char_items[i][j].font_item.data);
     }
   }
+  /* free all the off screen bitmaps */
   for (i = 0; i < 2000; i++)
   {
     xrdp_bitmap_delete(self->os_bitmap_items[i].bitmap);
@@ -131,7 +132,8 @@ xrdp_cache_reset(struct xrdp_cache* self,
 /*****************************************************************************/
 /* returns cache id */
 int APP_CC
-xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap)
+xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap,
+                      int hints)
 {
   int i = 0;
   int j = 0;

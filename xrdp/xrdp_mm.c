@@ -351,6 +351,11 @@ xrdp_mm_setup_mod1(struct xrdp_mm* self)
       self->mod->server_query_channel = server_query_channel;
       self->mod->server_get_channel_id = server_get_channel_id;
       self->mod->server_send_to_channel = server_send_to_channel;
+      self->mod->server_create_os_surface = server_create_os_surface;
+      self->mod->server_switch_os_surface = server_switch_os_surface;
+      self->mod->server_delete_os_surface = server_delete_os_surface;
+      self->mod->server_paint_rect_os = server_paint_rect_os;
+      self->mod->server_set_hints = server_set_hints;
     }
   }
   /* id self->mod is null, there must be a problem */
@@ -1223,7 +1228,7 @@ server_fill_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy)
     return 0;
   }
   wm = (struct xrdp_wm*)(mod->wm);
-  xrdp_painter_fill_rect(p, wm->screen, x, y, cx, cy);
+  xrdp_painter_fill_rect(p, wm->target_surface, x, y, cx, cy);
   return 0;
 }
 
@@ -1242,7 +1247,7 @@ server_screen_blt(struct xrdp_mod* mod, int x, int y, int cx, int cy,
   }
   wm = (struct xrdp_wm*)(mod->wm);
   p->rop = 0xcc;
-  xrdp_painter_copy(p, wm->screen, wm->screen, x, y, cx, cy, srcx, srcy);
+  xrdp_painter_copy(p, wm->screen, wm->target_surface, x, y, cx, cy, srcx, srcy);
   return 0;
 }
 
@@ -1262,7 +1267,7 @@ server_paint_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy,
   }
   wm = (struct xrdp_wm*)(mod->wm);
   b = xrdp_bitmap_create_with_data(width, height, wm->screen->bpp, data, wm);
-  xrdp_painter_copy(p, b, wm->screen, x, y, cx, cy, srcx, srcy);
+  xrdp_painter_copy(p, b, wm->target_surface, x, y, cx, cy, srcx, srcy);
   xrdp_bitmap_delete(b);
   return 0;
 }
@@ -1453,7 +1458,7 @@ server_draw_line(struct xrdp_mod* mod, int x1, int y1, int x2, int y2)
     return 0;
   }
   wm = (struct xrdp_wm*)(mod->wm);
-  return xrdp_painter_line(p, wm->screen, x1, y1, x2, y2);
+  return xrdp_painter_line(p, wm->target_surface, x1, y1, x2, y2);
 }
 
 /*****************************************************************************/
@@ -1492,7 +1497,7 @@ server_draw_text(struct xrdp_mod* mod, int font,
     return 0;
   }
   wm = (struct xrdp_wm*)(mod->wm);
-  return xrdp_painter_draw_text2(p, wm->screen, font, flags,
+  return xrdp_painter_draw_text2(p, wm->target_surface, font, flags,
                                  mixmode, clip_left, clip_top,
                                  clip_right, clip_bottom,
                                  box_left, box_top,
@@ -1585,4 +1590,127 @@ server_send_to_channel(struct xrdp_mod* mod, int channel_id,
   }
   return libxrdp_send_to_channel(wm->session, channel_id, data, data_len,
                                  total_data_len, flags);
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_create_os_surface(struct xrdp_mod* mod, int id,
+                         int width, int height)
+{
+  struct xrdp_wm* wm;
+  struct xrdp_bitmap* bitmap;
+  int index;
+
+  //g_writeln("server_create_os_surface: id 0x%x, width %d height %d",
+  //          id, width, height);
+  wm = (struct xrdp_wm*)(mod->wm);
+  bitmap = xrdp_bitmap_create(width, height, wm->screen->bpp,
+                              WND_TYPE_OFFSCREEN, wm);
+  bitmap->id = id;
+  index = xrdp_cache_add_os_bitmap(wm->cache, bitmap, id);
+  if (index < 0)
+  {
+    g_writeln("server_create_os_surface: xrdp_cache_add_os_bitmap failed");
+    return 1;
+  }
+  bitmap->item_index = index;
+  return 0;
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_switch_os_surface(struct xrdp_mod* mod, int id)
+{
+  struct xrdp_wm* wm;
+  struct xrdp_os_bitmap_item* bi;
+
+  //g_writeln("server_switch_os_surface: id 0x%x", id);
+  wm = (struct xrdp_wm*)(mod->wm);
+  if (id == -1)
+  {
+    //g_writeln("server_switch_os_surface: setting target_surface to screen");
+    wm->target_surface = wm->screen;
+    return 0;
+  }
+  bi = xrdp_cache_get_os_bitmap(wm->cache, id);
+  if (bi != 0)
+  {
+    //g_writeln("server_switch_os_surface: setting target_surface to rdpid %d", id);
+    wm->target_surface = bi->bitmap;
+  }
+  else
+  {
+    g_writeln("server_switch_os_surface: error finding id 0x%x", id);
+  }
+  return 0;
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_delete_os_surface(struct xrdp_mod* mod, int id)
+{
+  struct xrdp_wm* wm;
+
+  //g_writeln("server_delete_os_surface: id 0x%x", id);
+  wm = (struct xrdp_wm*)(mod->wm);
+  if (wm->target_surface->type == WND_TYPE_OFFSCREEN)
+  {
+    if (wm->target_surface->id == id)
+    {
+      g_writeln("server_delete_os_surface: setting target_surface to screen");
+      wm->target_surface = wm->screen;
+    }
+  }
+  xrdp_cache_remove_os_bitmap(wm->cache, id);
+  return 0;
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_paint_rect_os(struct xrdp_mod* mod, int x, int y, int cx, int cy,
+                     int id, int srcx, int srcy)
+{
+  struct xrdp_wm* wm;
+  struct xrdp_bitmap* b;
+  struct xrdp_painter* p;
+  struct xrdp_os_bitmap_item* bi;
+
+  p = (struct xrdp_painter*)(mod->painter);
+  if (p == 0)
+  {
+    return 0;
+  }
+  wm = (struct xrdp_wm*)(mod->wm);
+  bi = xrdp_cache_get_os_bitmap(wm->cache, id);
+  if (bi != 0)
+  {
+    b = bi->bitmap;
+    xrdp_painter_copy(p, b, wm->target_surface, x, y, cx, cy, srcx, srcy);
+  }
+  else
+  {
+    g_writeln("server_paint_rect_os: error finding id 0x%x", id);
+  }
+  return 0;
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_set_hints(struct xrdp_mod* mod, int hints, int mask)
+{
+  struct xrdp_wm* wm;
+
+  wm = (struct xrdp_wm*)(mod->wm);
+  if (mask & 1)
+  {
+    if (hints & 1)
+    {
+      wm->hints |= 1;
+    }
+    else
+    {
+      wm->hints &= ~1;
+    }
+  }
+  return 0;
 }

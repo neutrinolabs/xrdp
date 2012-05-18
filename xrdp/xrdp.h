@@ -64,7 +64,8 @@ int APP_CC
 xrdp_cache_reset(struct xrdp_cache* self,
                  struct xrdp_client_info* client_info);
 int APP_CC
-xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap);
+xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap,
+                      int hints);
 int APP_CC
 xrdp_cache_add_palette(struct xrdp_cache* self, int* palette);
 int APP_CC
@@ -422,3 +423,15 @@ int DEFAULT_CC
 server_send_to_channel(struct xrdp_mod* mod, int channel_id,
                        char* data, int data_len,
                        int total_data_len, int flags);
+int DEFAULT_CC
+server_create_os_surface(struct xrdp_mod* mod, int id,
+                         int width, int height);
+int DEFAULT_CC
+server_switch_os_surface(struct xrdp_mod* mod, int id);
+int DEFAULT_CC
+server_delete_os_surface(struct xrdp_mod* mod, int id);
+int DEFAULT_CC
+server_paint_rect_os(struct xrdp_mod* mod, int x, int y, int cx, int cy,
+                     int id, int srcx, int srcy);
+int DEFAULT_CC
+server_set_hints(struct xrdp_mod* mod, int hints, int mask);

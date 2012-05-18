@@ -361,6 +361,8 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
   if (ps)
   {
     g_rdpScreen.Composite = ps->Composite;
+    g_rdpScreen.Glyphs = ps->Glyphs;
+
   }
   pScreen->blackPixel = g_rdpScreen.blackPixel;
   pScreen->whitePixel = g_rdpScreen.whitePixel;
@@ -370,6 +372,7 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
   if (ps)
   {
     ps->Composite = rdpComposite;
+    ps->Glyphs = rdpGlyphs;
   }
   pScreen->SaveScreen = rdpSaveScreen;
   /* GC procedures */

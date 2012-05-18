@@ -56,6 +56,8 @@ xrdp_wm_create(struct xrdp_process* owner,
   /* this will use built in keymap or load from file */
   get_keymaps(self->session->client_info->keylayout, &(self->keymap));
   xrdp_wm_set_login_mode(self, 0);
+  self->target_surface = self->screen;
+  self->current_surface_index = 0xffff; /* screen */
   return self;
 }
 

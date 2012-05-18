@@ -754,3 +754,20 @@ libxrdp_orders_send_brush(struct xrdp_session* session,
                                 width, height, bpp, type, size, data,
                                 cache_id);
 }
+
+/*****************************************************************************/
+int EXPORT_CC
+libxrdp_orders_send_create_os_surface(struct xrdp_session* session, int id,
+                                      int width, int height)
+{
+  return xrdp_orders_send_create_os_surface
+               ((struct xrdp_orders*)(session->orders), id, width, height);
+}
+
+/*****************************************************************************/
+int EXPORT_CC
+libxrdp_orders_send_switch_os_surface(struct xrdp_session* session, int id)
+{
+  return xrdp_orders_send_switch_os_surface
+                     ((struct xrdp_orders*)(session->orders), id);
+}

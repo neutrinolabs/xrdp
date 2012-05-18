@@ -1976,7 +1976,7 @@ xrdp_orders_send_create_os_surface(struct xrdp_orders* self, int id,
   int order_flags;
   int cache_id;
 
-  g_writeln("xrdp_orders_send_create_os_surface:");
+  //g_writeln("xrdp_orders_send_create_os_surface:");
   xrdp_orders_check(self, 7);
   self->order_count++;
   order_flags = RDP_ORDER_SECONDARY;
@@ -1997,7 +1997,7 @@ xrdp_orders_send_switch_os_surface(struct xrdp_orders* self, int id)
   int order_flags;
   int cache_id;
 
-  g_writeln("xrdp_orders_send_switch_os_surface:");
+  //g_writeln("xrdp_orders_send_switch_os_surface:");
   xrdp_orders_check(self, 3);
   self->order_count++;
   order_flags = RDP_ORDER_SECONDARY;
