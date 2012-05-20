@@ -49,15 +49,9 @@ xrdp_painter_delete(struct xrdp_painter* self)
 
 /*****************************************************************************/
 int APP_CC
-xrdp_painter_begin_update(struct xrdp_painter* self)
+wm_painter_set_target(struct xrdp_painter* self)
 {
   int surface_index;
-
-  if (self == 0)
-  {
-    return 0;
-  }
-  libxrdp_orders_init(self->session);
 
   if (self->wm->target_surface->type == WND_TYPE_SCREEN)
   {
@@ -75,8 +69,8 @@ xrdp_painter_begin_update(struct xrdp_painter* self)
       if (self->wm->target_surface->tab_stop == 0) /* tab_stop is hack */
       {
         libxrdp_orders_send_create_os_surface(self->session, surface_index,
-                                              self->wm->target_surface->width,
-                                              self->wm->target_surface->height);
+                               self->wm->target_surface->width,
+                               self->wm->target_surface->height);
         self->wm->target_surface->tab_stop = 1;
       }
       libxrdp_orders_send_switch_os_surface(self->session, surface_index);
@@ -87,6 +81,19 @@ xrdp_painter_begin_update(struct xrdp_painter* self)
   {
     g_writeln("xrdp_painter_begin_update: bad target_surface");
   }
+  return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+xrdp_painter_begin_update(struct xrdp_painter* self)
+{
+  if (self == 0)
+  {
+    return 0;
+  }
+  libxrdp_orders_init(self->session);
+  wm_painter_set_target(self);
   return 0;
 }
 
@@ -667,13 +674,13 @@ xrdp_painter_copy(struct xrdp_painter* self,
     region = xrdp_region_create(self->wm);
     if (dst->type != WND_TYPE_OFFSCREEN)
     {
-      g_writeln("off screen to screen");
+      //g_writeln("off screen to screen");
       xrdp_wm_get_vis_region(self->wm, dst, x, y, cx, cy,
                              region, self->clip_children);
     }
     else
     {
-      g_writeln("off screen to off screen");
+      //g_writeln("off screen to off screen");
       xrdp_region_add_rect(region, &clip_rect);
     }
     x += dx;

@@ -83,11 +83,11 @@ xrdp_cache_add_brush(struct xrdp_cache* self,
                      char* brush_item_data);
 int APP_CC
 xrdp_cache_add_os_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap,
-                         int id);
+                         int rdpindex);
 int APP_CC
-xrdp_cache_remove_os_bitmap(struct xrdp_cache* self, int id);
+xrdp_cache_remove_os_bitmap(struct xrdp_cache* self, int rdpindex);
 struct xrdp_os_bitmap_item* APP_CC
-xrdp_cache_get_os_bitmap(struct xrdp_cache* self, int id);
+xrdp_cache_get_os_bitmap(struct xrdp_cache* self, int rdpindex);
 
 /* xrdp_wm.c */
 struct xrdp_wm* APP_CC
@@ -239,6 +239,8 @@ struct xrdp_painter* APP_CC
 xrdp_painter_create(struct xrdp_wm* wm, struct xrdp_session* session);
 void APP_CC
 xrdp_painter_delete(struct xrdp_painter* self);
+int APP_CC
+wm_painter_set_target(struct xrdp_painter* self);
 int APP_CC
 xrdp_painter_begin_update(struct xrdp_painter* self);
 int APP_CC

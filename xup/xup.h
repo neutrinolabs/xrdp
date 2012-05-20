@@ -88,13 +88,13 @@ struct mod
                                 char* data, int data_len,
                                 int total_data_len, int flags);
   int (*server_bell_trigger)(struct mod* v);
-  int (*server_create_os_surface)(struct mod* v, int id,
+  int (*server_create_os_surface)(struct mod* v, int rdpindex,
                                   int width, int height);
-  int (*server_switch_os_surface)(struct mod* v, int id);
-  int (*server_delete_os_surface)(struct mod* v, int id);
+  int (*server_switch_os_surface)(struct mod* v, int rdpindex);
+  int (*server_delete_os_surface)(struct mod* v, int rdpindex);
   int (*server_paint_rect_os)(struct mod* v, int x, int y,
                               int cx, int cy,
-                              int id, int srcx, int srcy);
+                              int rdpindex, int srcx, int srcy);
   int (*server_set_hints)(struct mod* v, int hints, int mask);
   tbus server_dumby[100 - 30]; /* align, 100 minus the number of server
                                   functions above */

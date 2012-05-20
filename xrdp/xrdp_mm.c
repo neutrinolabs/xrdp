@@ -1594,81 +1594,99 @@ server_send_to_channel(struct xrdp_mod* mod, int channel_id,
 
 /*****************************************************************************/
 int DEFAULT_CC
-server_create_os_surface(struct xrdp_mod* mod, int id,
+server_create_os_surface(struct xrdp_mod* mod, int rdpindex,
                          int width, int height)
 {
   struct xrdp_wm* wm;
   struct xrdp_bitmap* bitmap;
-  int index;
+  int error;
 
-  //g_writeln("server_create_os_surface: id 0x%x, width %d height %d",
-  //          id, width, height);
   wm = (struct xrdp_wm*)(mod->wm);
   bitmap = xrdp_bitmap_create(width, height, wm->screen->bpp,
                               WND_TYPE_OFFSCREEN, wm);
-  bitmap->id = id;
-  index = xrdp_cache_add_os_bitmap(wm->cache, bitmap, id);
-  if (index < 0)
+  error = xrdp_cache_add_os_bitmap(wm->cache, bitmap, rdpindex);
+  if (error != 0)
   {
     g_writeln("server_create_os_surface: xrdp_cache_add_os_bitmap failed");
     return 1;
   }
-  bitmap->item_index = index;
+  bitmap->item_index = rdpindex;
+  bitmap->id = rdpindex;
   return 0;
 }
 
 /*****************************************************************************/
 int DEFAULT_CC
-server_switch_os_surface(struct xrdp_mod* mod, int id)
+server_switch_os_surface(struct xrdp_mod* mod, int rdpindex)
 {
   struct xrdp_wm* wm;
   struct xrdp_os_bitmap_item* bi;
+  struct xrdp_painter* p;
 
   //g_writeln("server_switch_os_surface: id 0x%x", id);
   wm = (struct xrdp_wm*)(mod->wm);
-  if (id == -1)
+  if (rdpindex == -1)
   {
     //g_writeln("server_switch_os_surface: setting target_surface to screen");
     wm->target_surface = wm->screen;
+    p = (struct xrdp_painter*)(mod->painter);
+    if (p != 0)
+    {
+      //g_writeln("setting target");
+      wm_painter_set_target(p);
+    }
     return 0;
   }
-  bi = xrdp_cache_get_os_bitmap(wm->cache, id);
+  bi = xrdp_cache_get_os_bitmap(wm->cache, rdpindex);
   if (bi != 0)
   {
     //g_writeln("server_switch_os_surface: setting target_surface to rdpid %d", id);
     wm->target_surface = bi->bitmap;
+    p = (struct xrdp_painter*)(mod->painter);
+    if (p != 0)
+    {
+      //g_writeln("setting target");
+      wm_painter_set_target(p);
+    }
   }
   else
   {
-    g_writeln("server_switch_os_surface: error finding id 0x%x", id);
+    g_writeln("server_switch_os_surface: error finding id %d", rdpindex);
   }
   return 0;
 }
 
 /*****************************************************************************/
 int DEFAULT_CC
-server_delete_os_surface(struct xrdp_mod* mod, int id)
+server_delete_os_surface(struct xrdp_mod* mod, int rdpindex)
 {
   struct xrdp_wm* wm;
+  struct xrdp_painter* p;
 
   //g_writeln("server_delete_os_surface: id 0x%x", id);
   wm = (struct xrdp_wm*)(mod->wm);
   if (wm->target_surface->type == WND_TYPE_OFFSCREEN)
   {
-    if (wm->target_surface->id == id)
+    if (wm->target_surface->id == rdpindex)
     {
       g_writeln("server_delete_os_surface: setting target_surface to screen");
       wm->target_surface = wm->screen;
+      p = (struct xrdp_painter*)(mod->painter);
+      if (p != 0)
+      {
+        //g_writeln("setting target");
+        wm_painter_set_target(p);
+      }
     }
   }
-  xrdp_cache_remove_os_bitmap(wm->cache, id);
+  xrdp_cache_remove_os_bitmap(wm->cache, rdpindex);
   return 0;
 }
 
 /*****************************************************************************/
 int DEFAULT_CC
 server_paint_rect_os(struct xrdp_mod* mod, int x, int y, int cx, int cy,
-                     int id, int srcx, int srcy)
+                     int rdpindex, int srcx, int srcy)
 {
   struct xrdp_wm* wm;
   struct xrdp_bitmap* b;
@@ -1681,7 +1699,7 @@ server_paint_rect_os(struct xrdp_mod* mod, int x, int y, int cx, int cy,
     return 0;
   }
   wm = (struct xrdp_wm*)(mod->wm);
-  bi = xrdp_cache_get_os_bitmap(wm->cache, id);
+  bi = xrdp_cache_get_os_bitmap(wm->cache, rdpindex);
   if (bi != 0)
   {
     b = bi->bitmap;
@@ -1689,7 +1707,7 @@ server_paint_rect_os(struct xrdp_mod* mod, int x, int y, int cx, int cy,
   }
   else
   {
-    g_writeln("server_paint_rect_os: error finding id 0x%x", id);
+    g_writeln("server_paint_rect_os: error finding id %d", rdpindex);
   }
   return 0;
 }

@@ -541,76 +541,49 @@ xrdp_cache_add_brush(struct xrdp_cache* self,
 }
 
 /*****************************************************************************/
-/* returns index */
+/* returns error */
 int APP_CC
 xrdp_cache_add_os_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap,
-                         int id)
+                         int rdpindex)
 {
-  int index;
   struct xrdp_os_bitmap_item* bi;
 
-  if (id < 1)
+  if ((rdpindex < 0) || (rdpindex >= 2000))
   {
-    return -1;
+    return 1;
   }
-  index = 0;
-  for (index = 0; index < 2000; index++)
-  {
-    bi = self->os_bitmap_items + index;
-    if (bi->bitmap == 0)
-    {
-      bi->id = id;
-      bi->bitmap = bitmap;
-      //g_writeln("xrdp_cache_add_os_bitmap: bitmap id 0x%x added at index %d", id, index);
-      return index;
-    }
-  }
-  g_writeln("xrdp_cache_add_os_bitmap: bitmap id 0x%x not added, full", id);
-  return -1;
+  bi = self->os_bitmap_items + rdpindex;
+  bi->bitmap = bitmap;
+  return 0;
 }
 
 /*****************************************************************************/
-/* returns index */
+/* returns error */
 int APP_CC
-xrdp_cache_remove_os_bitmap(struct xrdp_cache* self, int id)
+xrdp_cache_remove_os_bitmap(struct xrdp_cache* self, int rdpindex)
 {
-  int index;
   struct xrdp_os_bitmap_item* bi;
 
-  if (id < 1)
+  if ((rdpindex < 0) || (rdpindex >= 2000))
   {
-    return -1;
+    return 1;
   }
-  for (index = 0; index < 2000; index++)
-  {
-    bi = self->os_bitmap_items + index;
-    if (bi->id == id)
-    {
-      xrdp_bitmap_delete(bi->bitmap);
-      g_memset(bi, 0, sizeof(struct xrdp_os_bitmap_item));
-      //g_writeln("xrdp_cache_remove_os_bitmap: bitmap id 0x%x removed from index %d", id, index);
-      return index;
-    }
-  }
-  return -1;
+  bi = self->os_bitmap_items + rdpindex;
+  xrdp_bitmap_delete(bi->bitmap);
+  g_memset(bi, 0, sizeof(struct xrdp_os_bitmap_item));
+  return 0;
 }
 
 /*****************************************************************************/
 struct xrdp_os_bitmap_item* APP_CC
-xrdp_cache_get_os_bitmap(struct xrdp_cache* self, int id)
+xrdp_cache_get_os_bitmap(struct xrdp_cache* self, int rdpindex)
 {
-  int index;
   struct xrdp_os_bitmap_item* bi;
 
-  for (index = 0; index < 2000; index++)
+  if ((rdpindex < 0) || (rdpindex >= 2000))
   {
-    bi = self->os_bitmap_items + index;
-    if (bi->id == id)
-    {
-      //g_writeln("xrdp_cache_get_os_bitmap: bitmap id 0x%x found at index %d", id, index);
-      return bi;
-    }
+    return 0;
   }
-  g_writeln("xrdp_cache_get_os_bitmap: bitmap id 0x%x not found", id);
-  return 0;
+  bi = self->os_bitmap_items + rdpindex;
+  return bi;
 }

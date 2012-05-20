@@ -92,7 +92,7 @@ rdpPolyText16(DrawablePtr pDrawable, GCPtr pGC,
     pDstPriv = GETPIXPRIV(pDstPixmap);
     if (XRDP_IS_OS(pDstPriv))
     {
-      rdpup_switch_os_surface(pDstPriv->rdpid);
+      rdpup_switch_os_surface(pDstPriv->rdpindex);
       rdpup_get_pixmap_image_rect(pDstPixmap, &id);
       got_id = 1;
     }

@@ -68,14 +68,7 @@ extern int g_Bpp; /* from rdpmain.c */
 extern ScreenPtr g_pScreen; /* from rdpmain.c */
 extern Bool g_wrapPixmap; /* from rdpmain.c */
 
-extern int g_con_number; /* in rdpup.c */
-extern int g_connected; /* in rdpup.c */
-
 ColormapPtr g_rdpInstalledColormap;
-
-static int g_pixmap_rdpid = 1;
-int g_pixmap_byte_total = 0;
-int g_pixmap_num_used = 0;
 
 GCFuncs g_rdpGCFuncs =
 {
@@ -408,20 +401,17 @@ rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
   pScreen->CreatePixmap = g_rdpScreen.CreatePixmap;
   rv = pScreen->CreatePixmap(pScreen, width, height, depth, usage_hint);
   priv = GETPIXPRIV(rv);
-  if ((g_rdpScreen.client_info.offscreen_support_level > 0) &&
-      (rv->drawable.depth == g_rdpScreen.depth) &&
-      (org_width > 1) && (height > 1) && g_connected)
+  priv->rdpindex = -1;
+  if ((rv->drawable.depth == g_rdpScreen.depth) &&
+      (org_width > 1) && (height > 1))
   {
-    priv->allocBytes = width * height * 4;
-    g_pixmap_byte_total += priv->allocBytes;
-    g_pixmap_num_used++;
-    priv->status = 1;
-    priv->rdpid = g_pixmap_rdpid;
-    g_pixmap_rdpid++;
-    priv->con_number = g_con_number;
-    rdpup_create_os_surface(priv->rdpid, width, height);
-    LLOGLN(0, ("rdpCreatePixmap: g_pixmap_byte_total %d g_pixmap_num_used %d",
-           g_pixmap_byte_total, g_pixmap_num_used));
+    priv->allocBytes = width * height * g_Bpp;
+    priv->rdpindex = rdpup_add_os_bitmap(rv, priv);
+    if (priv->rdpindex >= 0)
+    {
+      priv->status = 1;
+      rdpup_create_os_surface(priv->rdpindex, width, height);
+    }
   }
   pScreen->ModifyPixmapHeader(rv, org_width, 0, 0, 0, 0, 0);
   pScreen->CreatePixmap = rdpCreatePixmap;
@@ -441,15 +431,10 @@ rdpDestroyPixmap(PixmapPtr pPixmap)
   LLOGLN(10, ("status %d refcnt %d", priv->status, pPixmap->refcnt));
   if (pPixmap->refcnt < 2)
   {
-    if (XRDP_IS_OS(priv) && g_connected)
+    if (XRDP_IS_OS(priv))
     {
-      g_pixmap_byte_total -= priv->allocBytes;
-      g_pixmap_num_used--;
-      LLOGLN(0, ("rdpDestroyPixmap: id 0x%x "
-             "rdpid 0x%x g_pixmap_byte_total %d g_pixmap_num_used %d",
-             pPixmap->drawable.id, priv->rdpid,
-             g_pixmap_byte_total, g_pixmap_num_used));
-      rdpup_delete_os_surface(priv->rdpid);
+      rdpup_remove_os_bitmap(priv->rdpindex);
+      rdpup_delete_os_surface(priv->rdpindex);
     }
   }
   pScreen = pPixmap->drawable.pScreen;
@@ -748,7 +733,7 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
     pDstPriv = GETPIXPRIV(pDstPixmap);
     if (XRDP_IS_OS(pDstPriv))
     {
-      rdpup_switch_os_surface(pDstPriv->rdpid);
+      rdpup_switch_os_surface(pDstPriv->rdpindex);
       rdpup_get_pixmap_image_rect(pDstPixmap, &id);
       got_id = 1;
     }
@@ -828,7 +813,7 @@ rdpGlyphs(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
   for (index = 0; index < lists->len; index++)
   {
     LLOGLN(10, ("  index %d size %d refcnt %d width %d height %d",
-           index, glyphs[index]->size, glyphs[index]->refcnt,
+           index, (int)(glyphs[index]->size), (int)(glyphs[index]->refcnt),
            glyphs[index]->info.width, glyphs[index]->info.height));
   }
   ps = GetPictureScreen(g_pScreen);

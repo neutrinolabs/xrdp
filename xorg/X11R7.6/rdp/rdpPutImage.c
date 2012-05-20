@@ -73,7 +73,7 @@ rdpPutImage(DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
   rdpPixmapRec* pDstPriv;
 
   LLOGLN(10, ("rdpPutImage:"));
-  LLOGLN(10, ("rdpPutImage: drawable id 0x%x", pDst->id));
+  LLOGLN(10, ("rdpPutImage: drawable id 0x%x", (int)(pDst->id)));
 
   /* do original call */
   rdpPutImageOrg(pDst, pGC, depth, x, y, w, h, leftPad, format, pBits);
@@ -84,7 +84,7 @@ rdpPutImage(DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
     pDstPriv = GETPIXPRIV(pDstPixmap);
     if (XRDP_IS_OS(pDstPriv))
     {
-      rdpup_switch_os_surface(pDstPriv->rdpid);
+      rdpup_switch_os_surface(pDstPriv->rdpindex);
       rdpup_get_pixmap_image_rect(pDstPixmap, &id);
       got_id = 1;
     }

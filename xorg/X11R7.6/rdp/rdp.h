@@ -173,7 +173,7 @@ typedef rdpWindowRec* rdpWindowPtr;
 struct _rdpPixmapRec
 {
   int status;
-  int rdpid; /* unique id for xrdp */
+  int rdpindex;
   int allocBytes;
   int con_number;
 };
@@ -182,8 +182,7 @@ typedef rdpPixmapRec* rdpPixmapPtr;
 #define GETPIXPRIV(_pPixmap) \
 (rdpPixmapPtr)dixGetPrivateAddr(&(_pPixmap->devPrivates), &g_rdpPixmapIndex)
 
-#define XRDP_IS_OS(_priv) ((_priv->status != 0) && \
-  (_priv->con_number == g_con_number))
+#define XRDP_IS_OS(_priv) (_priv->status != 0)
 
 /* rdpmisc.c */
 void
@@ -336,6 +335,10 @@ void
 KbdSync(int param1);
 
 /* rdpup.c */
+int
+rdpup_add_os_bitmap(PixmapPtr pixmap, rdpPixmapPtr priv);
+int
+rdpup_remove_os_bitmap(int rdpindex);
 void
 rdpup_get_screen_image_rect(struct image_data* id);
 void
@@ -375,15 +378,15 @@ rdpup_send_area(struct image_data* id, int x, int y, int w, int h);
 int
 rdpup_set_cursor(short x, short y, char* cur_data, char* cur_mask);
 int
-rdpup_create_os_surface(int rdpid, int width, int height);
+rdpup_create_os_surface(int rdpindexd, int width, int height);
 int
-rdpup_switch_os_surface(int rdpid);
+rdpup_switch_os_surface(int rdpindex);
 int
-rdpup_delete_os_surface(int rdpid);
+rdpup_delete_os_surface(int rdpindex);
 
 void
 rdpup_paint_rect_os(int x, int y, int cx, int cy,
-                    int rdpid, int srcx, int srcy);
+                    int rdpindex, int srcx, int srcy);
 void
 rdpup_set_hints(int hints, int mask);
 

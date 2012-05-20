@@ -38,9 +38,7 @@ int g_con_number = 0; /* increments for each connection */
 static int g_listen_sck = 0;
 static int g_sck = 0;
 static int g_sck_closed = 0;
-
-int g_connected = 0;
-
+static int g_connected = 0;
 static int g_dis_listen_sck = 0;
 //static int g_dis_sck = 0;
 //static int g_dis_sck_closed = 0;
@@ -55,7 +53,7 @@ static int g_cursor_y = 0;
 static OsTimerPtr g_timer = 0;
 static int g_scheduled = 0;
 static int g_count = 0;
-static int g_rdpid = -1;
+static int g_rdpindex = -1;
 
 extern ScreenPtr g_pScreen; /* from rdpmain.c */
 extern int g_Bpp; /* from rdpmain.c */
@@ -68,6 +66,21 @@ extern char g_uds_data[]; /* in rdpmain.c */
 
 extern int g_pixmap_byte_total; /* in rdpdraw.c */
 extern int g_pixmap_num_used; /* in rdpdraw.c */
+
+struct rdpup_os_bitmap
+{
+  int used;
+  PixmapPtr pixmap;
+  rdpPixmapPtr priv;
+  int stamp;
+};
+
+static struct rdpup_os_bitmap* g_os_bitmaps = 0;
+static int g_max_os_bitmaps = 0;
+static int g_os_bitmap_stamp = 0;
+
+int g_pixmap_byte_total = 0;
+int g_pixmap_num_used = 0;
 
 /*
 0 GXclear,        0
@@ -107,6 +120,86 @@ static int g_rdp_opcodes[16] =
   0x77, /* GXnand         0xe NOT src OR NOT dst */
   0xff  /* GXset          0xf 1 */
 };
+
+/*****************************************************************************/
+int
+rdpup_add_os_bitmap(PixmapPtr pixmap, rdpPixmapPtr priv)
+{
+  int index;
+  int rv;
+  int oldest;
+  int oldest_index;
+
+  if (!g_connected)
+  {
+    return -1;
+  }
+  rv = -1;
+  index = 0;
+  while (index < g_max_os_bitmaps)
+  {
+    if (g_os_bitmaps[index].used == 0)
+    {
+      g_os_bitmaps[index].used = 1;
+      g_os_bitmaps[index].pixmap = pixmap;
+      g_os_bitmaps[index].priv = priv;
+      g_os_bitmaps[index].stamp = g_os_bitmap_stamp;
+      g_os_bitmap_stamp++;
+      g_pixmap_num_used++;
+      rv = index;
+      break;
+    }
+    index++;
+  }
+  if (rv == -1)
+  {
+    /* find oldest */
+    oldest = 0x7fffffff;
+    oldest_index = 0;
+    index = 0;
+    while (index < g_max_os_bitmaps)
+    {
+      if (g_os_bitmaps[index].stamp < oldest)
+      {
+        oldest = g_os_bitmaps[index].stamp;
+        oldest_index = index;
+      }
+      index++;
+    }
+    LLOGLN(0, ("rdpup_add_os_bitmap: evicting old, oldest_index %d", oldest_index));
+    /* evict old */
+    g_os_bitmaps[oldest_index].priv->status = 0;
+    /* set new */
+    g_os_bitmaps[oldest_index].pixmap = pixmap;
+    g_os_bitmaps[oldest_index].priv = priv;
+    g_os_bitmaps[oldest_index].stamp = g_os_bitmap_stamp;
+    g_os_bitmap_stamp++;
+    rv = oldest_index;
+  }
+  LLOGLN(0, ("rdpup_add_os_bitmap: new bitmap index %d", rv));
+  LLOGLN(0, ("  g_pixmap_num_used %d", g_pixmap_num_used));
+  return rv;
+}
+
+/*****************************************************************************/
+int
+rdpup_remove_os_bitmap(int rdpindex)
+{
+  LLOGLN(0, ("rdpup_remove_os_bitmap: index %d", rdpindex));
+  if ((rdpindex < 0) && (rdpindex >= g_max_os_bitmaps))
+  {
+    return 1;
+  }
+  if (g_os_bitmaps[rdpindex].used)
+  {
+    g_os_bitmaps[rdpindex].used = 0;
+    g_os_bitmaps[rdpindex].pixmap = 0;
+    g_os_bitmaps[rdpindex].priv = 0;
+    g_pixmap_num_used--;
+  }
+  LLOGLN(0, ("  g_pixmap_num_used %d", g_pixmap_num_used));
+  return 0;
+}
 
 /*****************************************************************************/
 /* returns error */
@@ -250,8 +343,8 @@ rdpup_recv(char* data, int len)
         g_tcp_close(g_sck);
         g_sck = 0;
         g_sck_closed = 1;
-        g_pixmap_byte_total = 0;
-        g_pixmap_num_used = 0;
+        //g_pixmap_byte_total = 0;
+        //g_pixmap_num_used = 0;
         return 1;
       }
     }
@@ -262,8 +355,8 @@ rdpup_recv(char* data, int len)
       g_tcp_close(g_sck);
       g_sck = 0;
       g_sck_closed = 1;
-      g_pixmap_byte_total = 0;
-      g_pixmap_num_used = 0;
+      //g_pixmap_byte_total = 0;
+      //g_pixmap_num_used = 0;
       return 1;
     }
     else
@@ -540,6 +633,15 @@ param4 %d\n", msg, param1, param2, param3, param4));
            g_rdpScreen.client_info.offscreen_cache_size);
     ErrorF("  offscreen entries %d\n",
            g_rdpScreen.client_info.offscreen_cache_entries);
+    if (g_rdpScreen.client_info.offscreen_support_level > 0)
+    {
+      if (g_rdpScreen.client_info.offscreen_cache_entries > 0)
+      {
+        g_max_os_bitmaps = g_rdpScreen.client_info.offscreen_cache_entries;
+        g_os_bitmaps = (struct rdpup_os_bitmap*)
+               g_malloc(sizeof(struct rdpup_os_bitmap) * g_max_os_bitmaps, 1);
+      }
+    }
   }
   else
   {
@@ -1085,7 +1187,7 @@ rdpup_set_cursor(short x, short y, char* cur_data, char* cur_mask)
 
 /******************************************************************************/
 int
-rdpup_create_os_surface(int rdpid, int width, int height)
+rdpup_create_os_surface(int rdpindex, int width, int height)
 {
   LLOGLN(10, ("rdpup_create_os_surface:"));
   if (g_connected)
@@ -1095,7 +1197,7 @@ rdpup_create_os_surface(int rdpid, int width, int height)
     out_uint16_le(g_out_s, 20);
     out_uint16_le(g_out_s, 12);
     g_count++;
-    out_uint32_le(g_out_s, rdpid);
+    out_uint32_le(g_out_s, rdpindex);
     out_uint16_le(g_out_s, width);
     out_uint16_le(g_out_s, height);
   }
@@ -1104,53 +1206,40 @@ rdpup_create_os_surface(int rdpid, int width, int height)
 
 /******************************************************************************/
 int
-rdpup_switch_os_surface(int rdpid)
+rdpup_switch_os_surface(int rdpindex)
 {
   LLOGLN(10, ("rdpup_switch_os_surface:"));
   if (g_connected)
   {
-    if (g_rdpid == rdpid)
+    if (g_rdpindex == rdpindex)
     {
       return 0;
     }
-    g_rdpid = rdpid;
-    rdpup_send_pending(); // TODO: do we need this ?
-    // the protocol allows switch the surface anytime
-
-    LLOGLN(10, ("rdpup_switch_os_surface: rdpid %d", rdpid));
-
+    g_rdpindex = rdpindex;
+    LLOGLN(10, ("rdpup_switch_os_surface: rdpindex %d", rdpindex));
     /* switch surface */
+    rdpup_pre_check(8);
     out_uint16_le(g_out_s, 21);
     out_uint16_le(g_out_s, 8);
-    out_uint32_le(g_out_s, rdpid);
-
-    /* begin update */
-    out_uint16_le(g_out_s, 1);
-    out_uint16_le(g_out_s, 4);
-    g_begin = 1;
-    g_count = 2;
-
+    out_uint32_le(g_out_s, rdpindex);
+    g_count++;
   }
   return 0;
 }
 
 /******************************************************************************/
 int
-rdpup_delete_os_surface(int rdpid)
+rdpup_delete_os_surface(int rdpindex)
 {
-  LLOGLN(10, ("rdpup_delete_os_surface: rdpid %d", rdpid));
+  LLOGLN(10, ("rdpup_delete_os_surface: rdpindex %d", rdpindex));
   if (g_connected)
   {
-    LLOGLN(10, ("rdpup_delete_os_surface: rdpid %d", rdpid));
-    //if (g_current_surface == rdpid)
-    //{
-    //  g_current_surface = -1;
-    //}
+    LLOGLN(10, ("rdpup_delete_os_surface: rdpindex %d", rdpindex));
     rdpup_pre_check(8);
     out_uint16_le(g_out_s, 22);
     out_uint16_le(g_out_s, 8);
     g_count++;
-    out_uint32_le(g_out_s, rdpid);
+    out_uint32_le(g_out_s, rdpindex);
   }
   return 0;
 }
@@ -1341,7 +1430,7 @@ rdpup_send_area(struct image_data* id, int x, int y, int w, int h)
 /******************************************************************************/
 void
 rdpup_paint_rect_os(int x, int y, int cx, int cy,
-                    int rdpid, int srcx, int srcy)
+                    int rdpindex, int srcx, int srcy)
 {
   if (g_connected)
   {
@@ -1353,7 +1442,7 @@ rdpup_paint_rect_os(int x, int y, int cx, int cy,
     out_uint16_le(g_out_s, y);
     out_uint16_le(g_out_s, cx);
     out_uint16_le(g_out_s, cy);
-    out_uint32_le(g_out_s, rdpid);
+    out_uint32_le(g_out_s, rdpindex);
     out_uint16_le(g_out_s, srcx);
     out_uint16_le(g_out_s, srcy);
   }

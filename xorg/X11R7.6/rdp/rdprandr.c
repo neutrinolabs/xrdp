@@ -123,7 +123,7 @@ rdpRRScreenSetSize(ScreenPtr pScreen, CARD16 width, CARD16 height,
   BoxRec box;
 
   ErrorF("rdpRRScreenSetSize: width %d height %d mmWidth %d mmHeight %d\n",
-         width, height, mmWidth, mmHeight);
+         width, height, (int)mmWidth, (int)mmHeight);
 
   if ((width < 1) || (height < 1))
   {
