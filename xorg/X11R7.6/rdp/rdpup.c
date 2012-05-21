@@ -163,6 +163,10 @@ rdpup_add_os_bitmap(PixmapPtr pixmap, rdpPixmapPtr priv)
   {
     return -1;
   }
+  if (g_os_bitmaps == 0)
+  {
+    return -1;
+  }
   rv = -1;
   index = 0;
   while (index < g_max_os_bitmaps)
@@ -215,6 +219,10 @@ int
 rdpup_remove_os_bitmap(int rdpindex)
 {
   LLOGLN(0, ("rdpup_remove_os_bitmap: index %d", rdpindex));
+  if (g_os_bitmaps == 0)
+  {
+    return 1;
+  }
   if ((rdpindex < 0) && (rdpindex >= g_max_os_bitmaps))
   {
     return 1;
