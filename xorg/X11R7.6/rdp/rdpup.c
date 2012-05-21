@@ -64,9 +64,6 @@ extern rdpScreenInfoRec g_rdpScreen; /* from rdpmain.c */
 extern int g_use_uds; /* in rdpmain.c */
 extern char g_uds_data[]; /* in rdpmain.c */
 
-extern int g_pixmap_byte_total; /* in rdpdraw.c */
-extern int g_pixmap_num_used; /* in rdpdraw.c */
-
 struct rdpup_os_bitmap
 {
   int used;
@@ -79,8 +76,8 @@ static struct rdpup_os_bitmap* g_os_bitmaps = 0;
 static int g_max_os_bitmaps = 0;
 static int g_os_bitmap_stamp = 0;
 
-int g_pixmap_byte_total = 0;
-int g_pixmap_num_used = 0;
+static int g_pixmap_byte_total = 0;
+static int g_pixmap_num_used = 0;
 
 /*
 0 GXclear,        0
@@ -120,6 +117,38 @@ static int g_rdp_opcodes[16] =
   0x77, /* GXnand         0xe NOT src OR NOT dst */
   0xff  /* GXset          0xf 1 */
 };
+
+/*****************************************************************************/
+static int
+rdpup_disconnect(void)
+{
+  int index;
+
+  RemoveEnabledDevice(g_sck);
+  g_connected = 0;
+  g_tcp_close(g_sck);
+  g_sck = 0;
+  g_sck_closed = 1;
+  g_pixmap_byte_total = 0;
+  g_pixmap_num_used = 0;
+  if (g_max_os_bitmaps > 0)
+  {
+    for (index = 0; index < g_max_os_bitmaps; index++)
+    {
+      if (g_os_bitmaps[index].used)
+      {
+        if (g_os_bitmaps[index].priv != 0)
+        {
+          g_os_bitmaps[index].priv->status = 0;
+        }
+      }
+    }
+  }
+  g_max_os_bitmaps = 0;
+  g_free(g_os_bitmaps);
+  g_os_bitmaps = 0;
+  return 0;
+}
 
 /*****************************************************************************/
 int
@@ -224,21 +253,13 @@ rdpup_send(char* data, int len)
       }
       else
       {
-        RemoveEnabledDevice(g_sck);
-        g_connected = 0;
-        g_tcp_close(g_sck);
-        g_sck = 0;
-        g_sck_closed = 1;
+        rdpup_disconnect();
         return 1;
       }
     }
     else if (sent == 0)
     {
-      RemoveEnabledDevice(g_sck);
-      g_connected = 0;
-      g_tcp_close(g_sck);
-      g_sck = 0;
-      g_sck_closed = 1;
+      rdpup_disconnect();
       return 1;
     }
     else
@@ -338,25 +359,13 @@ rdpup_recv(char* data, int len)
       }
       else
       {
-        RemoveEnabledDevice(g_sck);
-        g_connected = 0;
-        g_tcp_close(g_sck);
-        g_sck = 0;
-        g_sck_closed = 1;
-        //g_pixmap_byte_total = 0;
-        //g_pixmap_num_used = 0;
+        rdpup_disconnect();
         return 1;
       }
     }
     else if (rcvd == 0)
     {
-      RemoveEnabledDevice(g_sck);
-      g_connected = 0;
-      g_tcp_close(g_sck);
-      g_sck = 0;
-      g_sck_closed = 1;
-      //g_pixmap_byte_total = 0;
-      //g_pixmap_num_used = 0;
+      rdpup_disconnect();
       return 1;
     }
     else
@@ -638,6 +647,7 @@ param4 %d\n", msg, param1, param2, param3, param4));
       if (g_rdpScreen.client_info.offscreen_cache_entries > 0)
       {
         g_max_os_bitmaps = g_rdpScreen.client_info.offscreen_cache_entries;
+        g_free(g_os_bitmaps);
         g_os_bitmaps = (struct rdpup_os_bitmap*)
                g_malloc(sizeof(struct rdpup_os_bitmap) * g_max_os_bitmaps, 1);
       }
@@ -771,11 +781,7 @@ rdpup_check(void)
       {
         /* should maybe ask is user wants to allow here with timeout */
         rdpLog("replacing connection, already got a connection\n");
-        RemoveEnabledDevice(g_sck);
-        g_connected = 0;
-        g_tcp_close(g_sck);
-        g_sck = 0;
-        g_sck_closed = 1;
+        rdpup_disconnect();
       }
       rdpLog("got a connection\n");
       g_sck = new_sck;
@@ -802,11 +808,7 @@ rdpup_check(void)
       if (g_sck != 0)
       {
         rdpLog("disconnecting session via user request\n");
-        RemoveEnabledDevice(g_sck);
-        g_connected = 0;
-        g_tcp_close(g_sck);
-        g_sck = 0;
-        g_sck_closed = 1;
+        rdpup_disconnect();
       }
     }
   }

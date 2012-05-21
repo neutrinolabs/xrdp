@@ -389,7 +389,8 @@ xrdp_orders_send_brush(struct xrdp_orders* self, int width, int height,
                        int bpp, int type, int size, char* data, int cache_id);
 int APP_CC
 xrdp_orders_send_create_os_surface(struct xrdp_orders* self, int id,
-                                   int width, int height);
+                                   int width, int height, int num_del_list,
+                                   int* del_list);
 int APP_CC
 xrdp_orders_send_switch_os_surface(struct xrdp_orders* self, int id);
 

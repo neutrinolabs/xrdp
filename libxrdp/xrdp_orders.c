@@ -1971,21 +1971,45 @@ xrdp_orders_send_brush(struct xrdp_orders* self, int width, int height,
 /* send an off screen bitmap entry */
 int APP_CC
 xrdp_orders_send_create_os_surface(struct xrdp_orders* self, int id,
-                                   int width, int height)
+                                   int width, int height, int num_del_list,
+                                   int* del_list)
 {
   int order_flags;
   int cache_id;
+  int flags;
+  int index;
+  int bytes;
 
-  //g_writeln("xrdp_orders_send_create_os_surface:");
-  xrdp_orders_check(self, 7);
+  bytes = 7;
+  if (num_del_list > 0)
+  {
+    bytes += 2;
+    bytes += num_del_list * 2;
+  }
+  xrdp_orders_check(self, bytes);
   self->order_count++;
   order_flags = RDP_ORDER_SECONDARY;
   order_flags |= 1 << 2; /* type RDP_ORDER_ALTSEC_CREATE_OFFSCR_BITMAP */
   out_uint8(self->out_s, order_flags);
   cache_id = id & 0x7fff;
-  out_uint16_le(self->out_s, cache_id);
+  flags = cache_id;
+  if (num_del_list > 0)
+  {
+    flags |= 0x8000;
+  }
+  out_uint16_le(self->out_s, flags);
   out_uint16_le(self->out_s, width);
   out_uint16_le(self->out_s, height);
+  if (num_del_list > 0)
+  {
+    /* delete list */
+    out_uint16_le(self->out_s, num_del_list);
+    for (index = 0; index < num_del_list; index++)
+    {
+      cache_id = del_list[index] & 0x7fff;
+      out_uint16_le(self->out_s, cache_id);
+    }
+  }
   return 0;
 }
 
@@ -1997,7 +2021,6 @@ xrdp_orders_send_switch_os_surface(struct xrdp_orders* self, int id)
   int order_flags;
   int cache_id;
 
-  //g_writeln("xrdp_orders_send_switch_os_surface:");
   xrdp_orders_check(self, 3);
   self->order_count++;
   order_flags = RDP_ORDER_SECONDARY;

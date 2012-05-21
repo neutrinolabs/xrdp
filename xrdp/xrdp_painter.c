@@ -70,7 +70,7 @@ wm_painter_set_target(struct xrdp_painter* self)
       {
         libxrdp_orders_send_create_os_surface(self->session, surface_index,
                                self->wm->target_surface->width,
-                               self->wm->target_surface->height);
+                               self->wm->target_surface->height, 0, 0);
         self->wm->target_surface->tab_stop = 1;
       }
       libxrdp_orders_send_switch_os_surface(self->session, surface_index);

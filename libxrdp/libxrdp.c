@@ -758,10 +758,12 @@ libxrdp_orders_send_brush(struct xrdp_session* session,
 /*****************************************************************************/
 int EXPORT_CC
 libxrdp_orders_send_create_os_surface(struct xrdp_session* session, int id,
-                                      int width, int height)
+                                      int width, int height, int num_del_list,
+                                      int* del_list)
 {
   return xrdp_orders_send_create_os_surface
-               ((struct xrdp_orders*)(session->orders), id, width, height);
+               ((struct xrdp_orders*)(session->orders), id, width, height,
+                num_del_list, del_list);
 }
 
 /*****************************************************************************/
