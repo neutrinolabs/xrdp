@@ -280,7 +280,8 @@ xrdp_cache_add_bitmap(struct xrdp_cache* self, struct xrdp_bitmap* bitmap,
     {
       libxrdp_orders_send_bitmap2(self->session, bitmap->width,
                                   bitmap->height, bitmap->bpp,
-                                  bitmap->data, cache_id, cache_idx);
+                                  bitmap->data, cache_id, cache_idx,
+                                  hints);
     }
     else
     {

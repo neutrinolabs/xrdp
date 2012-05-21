@@ -1831,8 +1831,12 @@ xrdp_orders_send_raw_bitmap2(struct xrdp_orders* self,
 /*****************************************************************************/
 static int
 xrdp_orders_send_as_jpeg(struct xrdp_orders* self,
-                         int width, int height, int bpp)
+                         int width, int height, int bpp, int hints)
 {
+  if (hints & 1)
+  {
+    return 0;
+  }
   if (bpp != 24)
   {
     return 0;
@@ -1854,7 +1858,7 @@ xrdp_orders_send_as_jpeg(struct xrdp_orders* self,
 int APP_CC
 xrdp_orders_send_bitmap2(struct xrdp_orders* self,
                          int width, int height, int bpp, char* data,
-                         int cache_id, int cache_idx)
+                         int cache_id, int cache_idx, int hints)
 {
   int order_flags = 0;
   int len = 0;
@@ -1890,7 +1894,7 @@ xrdp_orders_send_bitmap2(struct xrdp_orders* self,
   p = s->p;
   i = height;
   is_jpeg = 0;
-  if (xrdp_orders_send_as_jpeg(self, width, height, bpp))
+  if (xrdp_orders_send_as_jpeg(self, width, height, bpp, hints))
   {
     lines_sending = xrdp_jpeg_compress(data, width, height, s, bpp, 16384,
                                        i - 1, temp_s, e);
