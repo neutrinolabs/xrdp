@@ -1464,8 +1464,9 @@ rdpup_set_hints(int hints, int mask)
 {
   if (g_connected)
   {
-    rdpup_pre_check(6);
+    rdpup_pre_check(12);
     out_uint16_le(g_out_s, 24);
+    out_uint16_le(g_out_s, 12);
     g_count++;
     out_uint32_le(g_out_s, hints);
     out_uint32_le(g_out_s, mask);
