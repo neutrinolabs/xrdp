@@ -184,6 +184,7 @@ struct xrdp_cache
   int brush_stamp;
   struct xrdp_brush_item brush_items[64];
   struct xrdp_os_bitmap_item os_bitmap_items[2000];
+  struct list* xrdp_os_del_list;
 };
 
 struct xrdp_mm

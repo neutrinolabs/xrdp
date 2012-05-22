@@ -52,6 +52,8 @@ int APP_CC
 wm_painter_set_target(struct xrdp_painter* self)
 {
   int surface_index;
+  int index;
+  struct list* del_list;
 
   if (self->wm->target_surface->type == WND_TYPE_SCREEN)
   {
@@ -68,10 +70,15 @@ wm_painter_set_target(struct xrdp_painter* self)
     {
       if (self->wm->target_surface->tab_stop == 0) /* tab_stop is hack */
       {
+        del_list = self->wm->cache->xrdp_os_del_list;
+        index = list_index_of(del_list, surface_index);
+        list_remove_item(del_list, index);
         libxrdp_orders_send_create_os_surface(self->session, surface_index,
                                self->wm->target_surface->width,
-                               self->wm->target_surface->height, 0, 0);
+                               self->wm->target_surface->height,
+                               del_list);
         self->wm->target_surface->tab_stop = 1;
+        list_clear(del_list);
       }
       libxrdp_orders_send_switch_os_surface(self->session, surface_index);
       self->wm->current_surface_index = surface_index;

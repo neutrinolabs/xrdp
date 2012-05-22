@@ -1975,16 +1975,19 @@ xrdp_orders_send_brush(struct xrdp_orders* self, int width, int height,
 /* send an off screen bitmap entry */
 int APP_CC
 xrdp_orders_send_create_os_surface(struct xrdp_orders* self, int id,
-                                   int width, int height, int num_del_list,
-                                   int* del_list)
+                                   int width, int height,
+                                   struct list* del_list)
 {
   int order_flags;
   int cache_id;
   int flags;
   int index;
   int bytes;
+  int num_del_list;
 
   bytes = 7;
+  num_del_list = del_list->count;
+  g_writeln("xrdp_orders_send_create_os_surface: num_del_list %d", num_del_list);
   if (num_del_list > 0)
   {
     bytes += 2;
@@ -2010,7 +2013,7 @@ xrdp_orders_send_create_os_surface(struct xrdp_orders* self, int id,
     out_uint16_le(self->out_s, num_del_list);
     for (index = 0; index < num_del_list; index++)
     {
-      cache_id = del_list[index] & 0x7fff;
+      cache_id = list_get_item(del_list, index) & 0x7fff;
       out_uint16_le(self->out_s, cache_id);
     }
   }

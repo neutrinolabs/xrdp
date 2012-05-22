@@ -43,6 +43,7 @@ xrdp_cache_create(struct xrdp_wm* owner,
   self->bitmap_cache_persist_enable = client_info->bitmap_cache_persist_enable;
   self->bitmap_cache_version = client_info->bitmap_cache_version;
   self->pointer_cache_entries = client_info->pointer_cache_entries;
+  self->xrdp_os_del_list = list_create();
   return self;
 }
 
@@ -78,6 +79,7 @@ xrdp_cache_delete(struct xrdp_cache* self)
   {
     xrdp_bitmap_delete(self->os_bitmap_items[i].bitmap);
   }
+  list_delete(self->xrdp_os_del_list);
 
   g_free(self);
 }
@@ -564,12 +566,21 @@ int APP_CC
 xrdp_cache_remove_os_bitmap(struct xrdp_cache* self, int rdpindex)
 {
   struct xrdp_os_bitmap_item* bi;
+  int index;
 
   if ((rdpindex < 0) || (rdpindex >= 2000))
   {
     return 1;
   }
   bi = self->os_bitmap_items + rdpindex;
+  if (bi->bitmap->tab_stop)
+  {
+    index = list_index_of(self->xrdp_os_del_list, rdpindex);
+    if (index == -1)
+    {
+      list_add_item(self->xrdp_os_del_list, rdpindex);
+    }
+  }
   xrdp_bitmap_delete(bi->bitmap);
   g_memset(bi, 0, sizeof(struct xrdp_os_bitmap_item));
   return 0;
