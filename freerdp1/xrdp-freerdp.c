@@ -711,6 +711,32 @@ lfreerdp_cache_bitmap(rdpContext* context, CACHE_BITMAP_ORDER* cache_bitmap_orde
 }
 
 /******************************************************************************/
+/* Turn the bitmap upside down*/
+static void DEFAULT_CC
+lfreerdp_upsidedown(uint8* destination, CACHE_BITMAP_V2_ORDER* cache_bitmap_v2_order, int server_Bpp)
+{
+  tui8* src;
+  tui8* dst;
+  int line_bytes;
+  int j ;
+  if(destination==NULL)
+  {
+    LLOGLN(0, ("lfreerdp_upsidedown : destination pointer is NULL !!!"));
+    return ;
+  }
+    
+  line_bytes = server_Bpp * cache_bitmap_v2_order->bitmapWidth;
+  src = cache_bitmap_v2_order->bitmapDataStream;
+  dst = destination + ((cache_bitmap_v2_order->bitmapHeight) * line_bytes);
+  for (j = 0; j < cache_bitmap_v2_order->bitmapHeight; j++)
+  {
+    dst -= line_bytes;
+    g_memcpy(dst, src, line_bytes);
+    src += line_bytes;
+  }
+}
+
+/******************************************************************************/
 static void DEFAULT_CC
 lfreerdp_cache_bitmapV2(rdpContext* context,
                         CACHE_BITMAP_V2_ORDER* cache_bitmap_v2_order)
@@ -769,9 +795,11 @@ lfreerdp_cache_bitmapV2(rdpContext* context,
                       server_bpp, server_bpp);
   }
   else
-  {
-    g_memcpy(dst_data, cache_bitmap_v2_order->bitmapDataStream,
-             width * height * server_Bpp);
+  { 
+    /* Uncompressed bitmaps are upside down */  
+    lfreerdp_upsidedown(dst_data, cache_bitmap_v2_order,server_Bpp);
+    LLOGLN(10, ("lfreerdp_cache_bitmapV2:  upside down progressed"));
+    /* old: g_memcpy(dst_data, cache_bitmap_v2_order->bitmapDataStream,width * height * server_Bpp);*/
   }
   dst_data1 = convert_bitmap(server_bpp, client_bpp, dst_data,
                              width, height, mod->colormap);
