@@ -213,6 +213,10 @@ lxrdp_event(struct mod* mod, int msg, long param1, long param2,
       mod->inst->input->MouseEvent(mod->inst->input, flags, 0, 0);
     case 110:
       break;
+    case 200:
+      /* Currently there are no (?) invalidate API in freeRDP that can receive this request*/	
+      LLOGLN(0, ("Invalidate request sent from client - Ignored"));	
+      break ;
     case 0x5555:
       chanid = LOWORD(param1);
       flags = HIWORD(param1);
@@ -338,6 +342,11 @@ lxrdp_set_param(struct mod* mod, char* name, char* value)
   else if (g_strcmp(name, "password") == 0)
   {
     g_strncpy(mod->password, value, 255);
+  }
+  else if (g_strcmp(name, "client_info") == 0)
+  {
+    /* This is a Struct and cannot be printed in next else*/
+    LLOGLN(10, ("Client_info struct ignored"));
   }
   else
   {
@@ -1076,7 +1085,7 @@ lfreerdp_pointer_cached(rdpContext* context,
   struct mod* mod;
   int index;
 
-  LLOGLN(0, ("lfreerdp_pointer_cached:"));
+  LLOGLN(10, ("lfreerdp_pointer_cached:"));
   mod = ((struct mod_context*)context)->modi;
   index = pointer_cached->cacheIndex;
   mod->server_set_cursor(mod, mod->pointer_cache[index].hotx,
