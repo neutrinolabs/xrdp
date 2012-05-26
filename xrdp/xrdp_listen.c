@@ -28,17 +28,26 @@ static tbus g_process_sem = 0;
 static struct xrdp_process* g_process = 0;
 
 /*****************************************************************************/
-struct xrdp_listen* APP_CC
-xrdp_listen_create(void)
+static int
+xrdp_listen_create_pro_done(struct xrdp_listen* self)
 {
-  struct xrdp_listen* self;
   int pid;
   char text[256];
 
   pid = g_getpid();
-  self = (struct xrdp_listen*)g_malloc(sizeof(struct xrdp_listen), 1);
   g_snprintf(text, 255, "xrdp_%8.8x_listen_pro_done_event", pid);
   self->pro_done_event = g_create_wait_obj(text);
+  return 0;
+}
+
+/*****************************************************************************/
+struct xrdp_listen* APP_CC
+xrdp_listen_create(void)
+{
+  struct xrdp_listen* self;
+
+  self = (struct xrdp_listen*)g_malloc(sizeof(struct xrdp_listen), 1);
+  xrdp_listen_create_pro_done(self);
   self->process_list = list_create();
   if (g_process_sem == 0)
   {
@@ -185,7 +194,6 @@ static int APP_CC
 xrdp_listen_fork(struct xrdp_listen* self, struct trans* server_trans)
 {
   int pid;
-  char text[256];
   struct xrdp_process* process;
 
   pid = g_fork();
@@ -195,11 +203,9 @@ xrdp_listen_fork(struct xrdp_listen* self, struct trans* server_trans)
     /* recreate some main globals */
     xrdp_child_fork();
     /* recreate the process done wait object, not used in fork mode */
+    /* close, don't delete this */
     g_tcp_close((int)(self->pro_done_event));
-    pid = g_getpid();
-    g_snprintf(text, 255, "xrdp_%8.8x_listen_pro_done_event", pid);
-    self->pro_done_event = g_create_wait_obj(text);
-    self->process_list = list_create();
+    xrdp_listen_create_pro_done(self);
     /* delete listener, child need not listen */
     trans_delete(self->listen_trans);
     self->listen_trans = 0;
