@@ -159,8 +159,7 @@ xrdp_listen_create(void);
 void APP_CC
 xrdp_listen_delete(struct xrdp_listen* self);
 int APP_CC
-xrdp_listen_main_loop(struct xrdp_listen* self,
-                      struct xrdp_startup_params* startup_param);
+xrdp_listen_main_loop(struct xrdp_listen* self);
 
 /* xrdp_region.c */
 struct xrdp_region* APP_CC
@@ -384,6 +383,8 @@ int DEFAULT_CC
 server_msg(struct xrdp_mod* mod, char* msg, int code);
 int DEFAULT_CC
 server_is_term(struct xrdp_mod* mod);
+int APP_CC
+xrdp_child_fork(void);
 int DEFAULT_CC
 server_set_clip(struct xrdp_mod* mod, int x, int y, int cx, int cy);
 int DEFAULT_CC

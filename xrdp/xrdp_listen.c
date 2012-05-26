@@ -181,6 +181,44 @@ xrdp_listen_get_port_address(char* port, int port_bytes,
 }
 
 /*****************************************************************************/
+static int APP_CC
+xrdp_listen_fork(struct xrdp_listen* self, struct trans* server_trans)
+{
+  int pid;
+  char text[256];
+  struct xrdp_process* process;
+
+  pid = g_fork();
+  if (pid == 0)
+  {
+    /* child */
+    /* recreate some main globals */
+    xrdp_child_fork();
+    /* recreate the process done wait object, not used in fork mode */
+    g_tcp_close((int)(self->pro_done_event));
+    pid = g_getpid();
+    g_snprintf(text, 255, "xrdp_%8.8x_listen_pro_done_event", pid);
+    self->pro_done_event = g_create_wait_obj(text);
+    self->process_list = list_create();
+    /* delete listener, child need not listen */
+    trans_delete(self->listen_trans);
+    self->listen_trans = 0;
+    /* new connect instance */
+    process = xrdp_process_create(self, 0);
+    process->server_trans = server_trans;
+    g_process = process;
+    xrdp_process_run(0);
+    xrdp_process_delete(process);
+    /* mark this process to exit */
+    g_set_term(1);
+    return 0;
+  }
+  /* parent */
+  trans_delete(server_trans);
+  return 0;
+}
+
+/*****************************************************************************/
 /* a new connection is coming in */
 int DEFAULT_CC
 xrdp_listen_conn_in(struct trans* self, struct trans* new_self)
@@ -189,6 +227,10 @@ xrdp_listen_conn_in(struct trans* self, struct trans* new_self)
   struct xrdp_listen* lis;
 
   lis = (struct xrdp_listen*)(self->callback_data);
+  if (lis->startup_params->fork)
+  {
+    return xrdp_listen_fork(lis, new_self);
+  }
   process = xrdp_process_create(lis, lis->pro_done_event);
   if (xrdp_listen_add_pro(lis, process) == 0)
   {
@@ -208,8 +250,7 @@ xrdp_listen_conn_in(struct trans* self, struct trans* new_self)
 /*****************************************************************************/
 /* wait for incoming connections */
 int APP_CC
-xrdp_listen_main_loop(struct xrdp_listen* self,
-                      struct xrdp_startup_params* startup_param)
+xrdp_listen_main_loop(struct xrdp_listen* self)
 {
   int error;
   int robjs_count;
@@ -226,7 +267,7 @@ xrdp_listen_main_loop(struct xrdp_listen* self,
   self->status = 1;
   if (xrdp_listen_get_port_address(port, sizeof(port),
                                    address, sizeof(address),
-                                   startup_param) != 0)
+                                   self->startup_params) != 0)
   {
     g_writeln("xrdp_listen_main_loop: xrdp_listen_get_port failed");
     self->status = -1;
@@ -276,7 +317,7 @@ xrdp_listen_main_loop(struct xrdp_listen* self,
       }
       if (trans_check_wait_objs(self->listen_trans) != 0)
       {
-        break;  
+        break;
       }
     }
     /* stop listening */

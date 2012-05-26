@@ -310,6 +310,7 @@ struct xrdp_listen
   struct trans* listen_trans; /* in tcp listen mode */
   struct list* process_list;
   tbus pro_done_event;
+  struct xrdp_startup_params* startup_params;
 };
 
 /* region */
@@ -431,4 +432,5 @@ struct xrdp_startup_params
   int no_daemon;
   int help;
   int version;
+  int fork;
 };

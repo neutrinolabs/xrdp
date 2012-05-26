@@ -25,6 +25,7 @@
 static struct xrdp_listen* g_listen = 0;
 static long g_threadid = 0; /* main threadid */
 
+static int g_fork_not_thread = 0;
 static long g_sync_mutex = 0;
 static long g_sync1_mutex = 0;
 static tbus g_term_event = 0;
@@ -44,7 +45,12 @@ g_xrdp_sync(long (*sync_func)(long param1, long param2), long sync_param1,
   long sync_result;
   int sync_command;
 
-  if (tc_threadid_equal(tc_get_threadid(), g_threadid))
+  if (g_fork_not_thread)
+  {
+    /* always main thread, fork mode */
+    sync_result = sync_func(sync_param1, sync_param2);
+  }
+  else if (tc_threadid_equal(tc_get_threadid(), g_threadid))
   {
     /* this is the main thread, call the function directly */
     sync_result = sync_func(sync_param1, sync_param2);
@@ -86,6 +92,33 @@ xrdp_shutdown(int sig)
   {
     g_set_wait_obj(g_term_event);
   }
+}
+
+/*****************************************************************************/
+void DEFAULT_CC
+xrdp_child(int sig)
+{
+  g_writeln("xrdp_child");
+  g_waitchild();
+}
+
+/*****************************************************************************/
+/* called in child just after fork */
+int APP_CC
+xrdp_child_fork(void)
+{
+  int pid;
+  char text[256];
+
+  /* close, don't delete these */
+  g_tcp_close((int)g_term_event);
+  g_tcp_close((int)g_sync_event);
+  pid = g_getpid();
+  g_snprintf(text, 255, "xrdp_%8.8x_main_term", pid);
+  g_term_event = g_create_wait_obj(text);
+  g_snprintf(text, 255, "xrdp_%8.8x_main_sync", pid);
+  g_sync_event = g_create_wait_obj(text);
+  return 0;
 }
 
 /*****************************************************************************/
@@ -213,6 +246,13 @@ xrdp_process_params(int argc, char** argv,
                   startup_params->port);
       }
     }
+    else if ((g_strncasecmp(option, "-f", 255) == 0) ||
+             (g_strncasecmp(option, "--fork", 255) == 0))
+    {
+      startup_params->fork = 1;
+      g_fork_not_thread = 1;
+      g_writeln("running in fork mode");
+    }
     else
     {
       return 1;
@@ -327,9 +367,11 @@ main(int argc, char** argv)
     g_writeln("See http://xrdp.sourceforge.net for more information.");
     g_writeln("");
     g_writeln("Usage: xrdp [options]");
-    g_writeln("   -h: show help");
-    g_writeln("   -nodaemon: don't fork into background");
-    g_writeln("   -kill: shut down xrdp");
+    g_writeln("   --help: show help");
+    g_writeln("   --nodaemon: don't fork into background");
+    g_writeln("   --kill: shut down xrdp");
+    g_writeln("   --port: tcp listen port");
+    g_writeln("   --fork: fork on new connection");
     g_writeln("");
     g_deinit();
     g_exit(0);
@@ -421,6 +463,7 @@ main(int argc, char** argv)
   g_signal_kill(xrdp_shutdown); /* SIGKILL */
   g_signal_pipe(pipe_sig); /* SIGPIPE */
   g_signal_terminate(xrdp_shutdown); /* SIGTERM */
+  g_signal_child_stop(xrdp_child); /* SIGCHLD */
   g_sync_mutex = tc_mutex_create();
   g_sync1_mutex = tc_mutex_create();
   pid = g_getpid();
@@ -432,7 +475,8 @@ main(int argc, char** argv)
   {
     g_writeln("error creating g_term_event");
   }
-  xrdp_listen_main_loop(g_listen, startup_params);
+  g_listen->startup_params = startup_params;
+  xrdp_listen_main_loop(g_listen);
   xrdp_listen_delete(g_listen);
   tc_mutex_delete(g_sync_mutex);
   tc_mutex_delete(g_sync1_mutex);

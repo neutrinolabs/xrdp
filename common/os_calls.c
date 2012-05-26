@@ -415,7 +415,6 @@ g_tcp_close(int sck)
   {
     return;
   }
-  shutdown(sck, 2);
 #if defined(_WIN32)
   closesocket(sck);
 #else

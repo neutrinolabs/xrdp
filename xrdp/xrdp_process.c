@@ -187,6 +187,10 @@ xrdp_process_main_loop(struct xrdp_process* self)
     }
     libxrdp_disconnect(self->session);
   }
+  else
+  {
+    g_writeln("xrdp_process_main_loop: libxrdp_process_incomming failed");
+  }
   xrdp_process_mod_end(self);
   libxrdp_exit(self->session);
   self->session = 0;
