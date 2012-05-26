@@ -7,6 +7,14 @@ AM_INIT_AUTOMAKE([1.6 foreign])
 AC_PROG_CC
 AC_C_CONST
 AC_PROG_LIBTOOL
+AC_ARG_WITH([systemdsystemunitdir],
+        AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files]),
+        [], [with_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)])
+if test "x$with_systemdsystemunitdir" != xno; then
+        AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])
+fi
+AM_CONDITIONAL(HAVE_SYSTEMD, [test -n "$with_systemdsystemunitdir" -a "x$with_systemdsystemunitdir" != xno ])
+
 AC_ARG_ENABLE(nopam, AS_HELP_STRING([--enable-nopam],
               [Build no PAM support (default: no)]),
               [nopam=true], [nopam=false])
