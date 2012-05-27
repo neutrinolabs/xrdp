@@ -562,31 +562,33 @@ g_tcp_accept(int sck)
 
 /*****************************************************************************/
 void APP_CC
-g_write_ip_address(int rcv_sck, char* ip_address)
+g_write_ip_address(int rcv_sck, char* ip_address, int bytes)
 {
   struct sockaddr_in s;
   struct in_addr in;
   int len;
   int ip_port;
+  int ok;
 
-  memset(&s,0,sizeof(&s));
+  ok = 0;
+  memset(&s, 0, sizeof(s));
   len = sizeof(s);
-  getpeername(rcv_sck,(struct sockaddr*)&s, &len);
-
-  memset(&in,0,sizeof(in));
-  in.s_addr = s.sin_addr.s_addr;
-
-  ip_port = ntohs(s.sin_port);
-  
-  if (ip_port != 0)
+  if (getpeername(rcv_sck,(struct sockaddr*)&s, &len) == 0)
   {
-    sprintf(ip_address, "%s:%d - socket: %d", inet_ntoa(in), ip_port, rcv_sck);
+    memset(&in, 0, sizeof(in));
+    in.s_addr = s.sin_addr.s_addr;
+    ip_port = ntohs(s.sin_port);
+    if (ip_port != 0)
+    {
+      ok = 1;
+      snprintf(ip_address, bytes, "%s:%d - socket: %d", inet_ntoa(in),
+              ip_port, rcv_sck);
+    }
   }
-  else
+  if (!ok)
   {
-    sprintf(ip_address, "NULL:NULL - socket: %d", rcv_sck);
+    snprintf(ip_address, bytes, "NULL:NULL - socket: %d", rcv_sck);
   }
-
 }
 
 /*****************************************************************************/
@@ -993,6 +995,19 @@ g_delete_wait_obj(tbus obj)
   unlink(sa.sun_path);
   return 0;
 #endif
+}
+
+/*****************************************************************************/
+/* returns error */
+/* close but do not delete the wait obj, used after fork */
+int APP_CC
+g_close_wait_obj(tbus obj)
+{
+#ifdef _WIN32
+#else
+  close((int)obj);
+#endif
+  return 0;
 }
 
 /*****************************************************************************/

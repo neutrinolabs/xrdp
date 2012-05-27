@@ -104,7 +104,7 @@ g_tcp_can_recv(int sck, int millis);
 int APP_CC
 g_tcp_select(int sck1, int sck2);
 void APP_CC
-g_write_ip_address(int rcv_sck, char* ip_address);
+g_write_ip_address(int rcv_sck, char* ip_address, int bytes);
 void APP_CC
 g_sleep(int msecs);
 tbus APP_CC
@@ -121,6 +121,8 @@ int APP_CC
 g_is_wait_obj_set(tbus obj);
 int APP_CC
 g_delete_wait_obj(tbus obj);
+int APP_CC
+g_close_wait_obj(tbus obj);
 int APP_CC
 g_obj_wait(tbus* read_objs, int rcount, tbus* write_objs, int wcount,
            int mstimeout);

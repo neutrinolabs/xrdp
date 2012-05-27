@@ -204,7 +204,7 @@ xrdp_listen_fork(struct xrdp_listen* self, struct trans* server_trans)
     xrdp_child_fork();
     /* recreate the process done wait object, not used in fork mode */
     /* close, don't delete this */
-    g_tcp_close((int)(self->pro_done_event));
+    g_close_wait_obj(self->pro_done_event);
     xrdp_listen_create_pro_done(self);
     /* delete listener, child need not listen */
     trans_delete(self->listen_trans);

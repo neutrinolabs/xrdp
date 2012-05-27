@@ -111,8 +111,8 @@ xrdp_child_fork(void)
   char text[256];
 
   /* close, don't delete these */
-  g_tcp_close((int)g_term_event);
-  g_tcp_close((int)g_sync_event);
+  g_close_wait_obj(g_term_event);
+  g_close_wait_obj(g_sync_event);
   pid = g_getpid();
   g_snprintf(text, 255, "xrdp_%8.8x_main_term", pid);
   g_term_event = g_create_wait_obj(text);

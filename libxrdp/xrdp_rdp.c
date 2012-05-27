@@ -136,6 +136,7 @@ struct xrdp_rdp* APP_CC
 xrdp_rdp_create(struct xrdp_session* session, struct trans* trans)
 {
   struct xrdp_rdp* self = (struct xrdp_rdp *)NULL;
+  int bytes;
 
   DEBUG(("in xrdp_rdp_create"));
   self = (struct xrdp_rdp*)g_malloc(sizeof(struct xrdp_rdp), 1);
@@ -153,7 +154,9 @@ xrdp_rdp_create(struct xrdp_session* session, struct trans* trans)
   self->client_info.cache2_size = 1024;
   self->client_info.cache3_entries = 262;
   self->client_info.cache3_size = 4096;
-  g_write_ip_address(trans->sck, self->client_info.client_ip);  /* load client ip info */
+  /* load client ip info */
+  bytes = sizeof(self->client_info.client_ip) - 1;
+  g_write_ip_address(trans->sck, self->client_info.client_ip, bytes);
 #if defined(XRDP_FREERDP1)
   self->mppc_enc = mppc_enc_new(PROTO_RDP_50);
 #endif
