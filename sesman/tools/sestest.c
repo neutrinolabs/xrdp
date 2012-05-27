@@ -34,7 +34,7 @@ int main(int argc, char** argv)
   log.log_level=99;
   log.program_name=g_strdup("sestest");
   log.log_file=g_strdup("sestest.log");
-  log_start(&log);
+  log_start_from_param(&log);
   scp_init(&log);
 
   sock=g_tcp_socket();

@@ -43,7 +43,7 @@ scp_v0c_connect(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
   init_stream(c->in_s, c->in_s->size);
   init_stream(c->out_s, c->in_s->size);
 
-  LOG_DBG(s_log, "[v0:%d] starting connection", __LINE__);
+  LOG_DBG("[v0:%d] starting connection", __LINE__);
   g_tcp_set_non_blocking(c->in_sck);
   g_tcp_set_no_delay(c->in_sck);
   s_push_layer(c->out_s, channel_hdr, 8);
@@ -59,7 +59,7 @@ scp_v0c_connect(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
   }
   else
   {
-    log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);
+    log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);
     return SCP_CLIENT_STATE_INTERNAL_ERR;
   }
   sz = g_strlen(s->username);
@@ -83,27 +83,27 @@ scp_v0c_connect(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
 
   if (0!=scp_tcp_force_send(c->in_sck, c->out_s->data, c->out_s->end - c->out_s->data))
   {
-    log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);
+    log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);
     return SCP_CLIENT_STATE_NETWORK_ERR;
   }
 
   if (0!=scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))
   {
-    log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);
+    log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);
     return SCP_CLIENT_STATE_NETWORK_ERR;
   }
 
   in_uint32_be(c->in_s, version);
   if (0 != version)
   {
-    log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: version error", __LINE__);
+    log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: version error", __LINE__);
     return SCP_CLIENT_STATE_VERSION_ERR;
   }
 
   in_uint32_be(c->in_s, size);
   if (size < 14)
   {
-    log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: packet size error", __LINE__);
+    log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: packet size error", __LINE__);
     return SCP_CLIENT_STATE_SIZE_ERR;
   }
 
@@ -111,7 +111,7 @@ scp_v0c_connect(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
   init_stream(c->in_s, c->in_s->size);
   if (0!=scp_tcp_force_recv(c->in_sck, c->in_s->data, size - 8))
   {
-    log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);
+    log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);
     return SCP_CLIENT_STATE_NETWORK_ERR;
   }
 
@@ -119,7 +119,7 @@ scp_v0c_connect(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
   in_uint16_be(c->in_s, sz);
   if (3 != sz)
   {
-    log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: sequence error", __LINE__);
+    log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: sequence error", __LINE__);
     return SCP_CLIENT_STATE_SEQUENCE_ERR;
   }
 
@@ -127,14 +127,14 @@ scp_v0c_connect(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
   in_uint16_be(c->in_s, sz);
   if (1 != sz)
   {
-    log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: connection denied", __LINE__);
+    log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: connection denied", __LINE__);
     return SCP_CLIENT_STATE_CONNECTION_DENIED;
   }
 
   in_uint16_be(c->in_s, sz);
   s->display = sz;
 
-  LOG_DBG(s_log, "[v0:%d] connection terminated", __LINE__);
+  LOG_DBG("[v0:%d] connection terminated", __LINE__);
   return SCP_CLIENT_STATE_END;
 }
 
@@ -152,20 +152,20 @@ scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk)
 
   if (!skipVchk)
   {
-    LOG_DBG(s_log, "[v0:%d] starting connection", __LINE__);
+    LOG_DBG("[v0:%d] starting connection", __LINE__);
     if (0 == scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))
     {
       c->in_s->end = c->in_s->data + 8;
       in_uint32_be(c->in_s, version);
       if (version != 0)
       {
-        log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: version error", __LINE__);
+        log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: version error", __LINE__);
         return SCP_SERVER_STATE_VERSION_ERR;
       }
     }
     else
     {
-      log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);
+      log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);
       return SCP_SERVER_STATE_NETWORK_ERR;
     }
   }
@@ -175,7 +175,7 @@ scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk)
   init_stream(c->in_s, 8196);
   if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, size - 8))
   {
-    log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);
+    log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);
     return SCP_SERVER_STATE_NETWORK_ERR;
   }
   c->in_s->end = c->in_s->data + (size - 8);
@@ -187,7 +187,7 @@ scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk)
     session = scp_session_create();
     if (0 == session)
     {
-      log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);
+      log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);
       return SCP_SERVER_STATE_INTERNAL_ERR;
     }
 
@@ -208,7 +208,7 @@ scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk)
     if (0 != scp_session_set_username(session, buf))
     {
       scp_session_destroy(session);
-      log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: error setting username", __LINE__);
+      log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: error setting username", __LINE__);
       return SCP_SERVER_STATE_INTERNAL_ERR;
     }
 
@@ -219,7 +219,7 @@ scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk)
     if (0 != scp_session_set_password(session, buf))
     {
       scp_session_destroy(session);
-      log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: error setting password", __LINE__);
+      log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: error setting password", __LINE__);
       return SCP_SERVER_STATE_INTERNAL_ERR;
     }
 
@@ -279,7 +279,7 @@ scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk)
   }
   else
   {
-    log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: sequence error", __LINE__);
+    log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: sequence error", __LINE__);
     return SCP_SERVER_STATE_SEQUENCE_ERR;
   }
 
@@ -300,11 +300,11 @@ scp_v0s_allow_connection(struct SCP_CONNECTION* c, SCP_DISPLAY d)
 
   if (0 != scp_tcp_force_send(c->in_sck, c->out_s->data, c->out_s->end - c->out_s->data))
   {
-    log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);
+    log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);
     return SCP_SERVER_STATE_NETWORK_ERR;
   }
 
-  LOG_DBG(s_log, "[v0:%d] connection terminated (allowed)", __LINE__);
+  LOG_DBG("[v0:%d] connection terminated (allowed)", __LINE__);
   return SCP_SERVER_STATE_OK;
 }
 
@@ -321,10 +321,10 @@ scp_v0s_deny_connection(struct SCP_CONNECTION* c)
 
   if (0 != scp_tcp_force_send(c->in_sck, c->out_s->data, c->out_s->end - c->out_s->data))
   {
-    log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);
+    log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);
     return SCP_SERVER_STATE_NETWORK_ERR;
   }
 
-  LOG_DBG(s_log, "[v0:%d] connection terminated (denied)", __LINE__);
+  LOG_DBG("[v0:%d] connection terminated (denied)", __LINE__);
   return SCP_SERVER_STATE_OK;
 }

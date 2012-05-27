@@ -21,6 +21,7 @@
 */
 
 #include "xrdp.h"
+#include "log.h"
 
 /*****************************************************************************/
 /* all login help screen events go here */
@@ -403,14 +404,14 @@ xrdp_wm_login_fill_in_combo(struct xrdp_wm* self, struct xrdp_bitmap* b)
   fd = g_file_open(cfg_file); /* xrdp.ini */
   if (fd < 1)
   {
-    g_writeln("Could not read xrdp ini file %s", cfg_file);
+    log_message(LOG_LEVEL_ERROR,"Could not read xrdp ini file %s", cfg_file);
   }
   file_read_sections(fd, sections);
   for (i = 0; i < sections->count; i++)
   {
     p = (char*)list_get_item(sections, i);
     file_read_section(fd, p, section_names, section_values);
-    if (g_strncmp(p, "globals", 255) == 0)
+    if ((g_strncmp(p, "globals", 255) == 0) || (g_strncmp(p,"Logging",255) == 0))
     {
     }
     else

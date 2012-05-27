@@ -55,7 +55,7 @@ void APP_CC
 lock_chain_acquire(void)
 {
   /* lock the chain */
-  LOG_DBG(&(g_cfg->log), "lock_chain_acquire()");
+  LOG_DBG("lock_chain_acquire()");
   tc_mutex_lock(g_lock_chain);
 }
 
@@ -64,7 +64,7 @@ void APP_CC
 lock_chain_release(void)
 {
   /* unlock the chain */
-  LOG_DBG(&(g_cfg->log), "lock_chain_release()");
+  LOG_DBG("lock_chain_release()");
   tc_mutex_unlock(g_lock_chain);
 }
 
@@ -73,7 +73,7 @@ void APP_CC
 lock_socket_acquire(void)
 {
   /* lock socket variable */
-  LOG_DBG(&(g_cfg->log), "lock_socket_acquire()");
+  LOG_DBG("lock_socket_acquire()");
   tc_sem_dec(g_lock_socket);
 }
 
@@ -82,7 +82,7 @@ void APP_CC
 lock_socket_release(void)
 {
   /* unlock socket variable */
-  LOG_DBG(&(g_cfg->log), "lock_socket_release()");
+  LOG_DBG("lock_socket_release()");
   tc_sem_inc(g_lock_socket);
 }
 
@@ -91,7 +91,7 @@ void APP_CC
 lock_sync_acquire(void)
 {
   /* lock sync variable */
-  LOG_DBG(&(g_cfg->log), "lock_sync_acquire()");
+  LOG_DBG("lock_sync_acquire()");
   tc_mutex_lock(g_sync_mutex);
 }
 
@@ -100,7 +100,7 @@ void APP_CC
 lock_sync_release(void)
 {
   /* unlock socket variable */
-  LOG_DBG(&(g_cfg->log), "lock_sync_release()");
+  LOG_DBG("lock_sync_release()");
   tc_mutex_unlock(g_sync_mutex);
 }
 
@@ -109,7 +109,7 @@ void APP_CC
 lock_sync_sem_acquire(void)
 {
   /* dec sem */
-  LOG_DBG(&(g_cfg->log), "lock_sync_sem_acquire()");
+  LOG_DBG("lock_sync_sem_acquire()");
   tc_sem_dec(g_sync_sem);
 }
 
@@ -118,6 +118,6 @@ void APP_CC
 lock_sync_sem_release(void)
 {
   /* inc sem */
-  LOG_DBG(&(g_cfg->log), "lock_sync_sem_release()");
+  LOG_DBG("lock_sync_sem_release()");
   tc_sem_inc(g_sync_sem);
 }

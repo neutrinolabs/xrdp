@@ -45,12 +45,13 @@
 #define SESMAN_CFG_RDP_PARAMS        "X11rdp"
 #define SESMAN_CFG_VNC_PARAMS        "Xvnc"
 
+/*
 #define SESMAN_CFG_LOGGING           "Logging"
 #define SESMAN_CFG_LOG_FILE          "LogFile"
 #define SESMAN_CFG_LOG_LEVEL         "LogLevel"
 #define SESMAN_CFG_LOG_ENABLE_SYSLOG "EnableSyslog"
 #define SESMAN_CFG_LOG_SYSLOG_LEVEL  "SyslogLevel"
-
+*/
 #define SESMAN_CFG_SECURITY          "Security"
 #define SESMAN_CFG_SEC_LOGIN_RETRY   "MaxLoginRetry"
 #define SESMAN_CFG_SEC_ALLOW_ROOT    "AllowRootLogin"
@@ -186,7 +187,7 @@ struct config_sesman
    * @var log
    * @brief Log configuration struct
    */
-  struct log_config log;
+  //struct log_config log;
   /**
    * @var sec
    * @brief Security configuration options struct
