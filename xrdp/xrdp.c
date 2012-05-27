@@ -330,7 +330,7 @@ main(int argc, char** argv)
     }
     if (fd == -1)
     {
-      g_writeln("problem opening to xrdp.pid");
+      g_writeln("problem opening to xrdp.pid [%s]", pid_file);
       g_writeln("maybe its not running");
     }
     else
@@ -389,6 +389,10 @@ main(int argc, char** argv)
   }
   if (!no_daemon)
   {
+
+    /* make sure containing directory exists */
+    g_create_path(pid_file);
+
     /* make sure we can write to pid file */
     fd = g_file_open(pid_file); /* xrdp.pid */
     if (fd == -1)
@@ -424,16 +428,6 @@ main(int argc, char** argv)
       g_exit(0);
     }
     g_sleep(1000);
-    g_file_close(0);
-    g_file_close(1);
-    g_file_close(2);
-    g_file_open("/dev/null");
-    g_file_open("/dev/null");
-    g_file_open("/dev/null");
-    /* end of daemonizing code */
-  }
-  if (!no_daemon)
-  {
     /* write the pid to file */
     pid = g_getpid();
     fd = g_file_open(pid_file); /* xrdp.pid */
@@ -449,6 +443,14 @@ main(int argc, char** argv)
       g_file_write(fd, text, g_strlen(text));
       g_file_close(fd);
     }
+    g_sleep(1000);
+    g_file_close(0);
+    g_file_close(1);
+    g_file_close(2);
+    g_file_open("/dev/null");
+    g_file_open("/dev/null");
+    g_file_open("/dev/null");
+    /* end of daemonizing code */
   }
   g_threadid = tc_get_threadid();
   g_listen = xrdp_listen_create();
@@ -475,8 +477,12 @@ main(int argc, char** argv)
   tc_mutex_delete(g_sync1_mutex);
   g_delete_wait_obj(g_term_event);
   g_delete_wait_obj(g_sync_event);
-  /* delete the xrdp.pid file */
-  g_file_delete(pid_file);
+  /* only main process should delete pid file */
+  if ((!no_daemon) && (pid == g_getpid()))
+  {
+    /* delete the xrdp.pid file */
+    g_file_delete(pid_file);
+  }
   g_free(startup_params);
   g_deinit();
   return 0;

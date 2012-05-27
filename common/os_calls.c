@@ -1405,6 +1405,44 @@ g_create_dir(const char* dirname)
 }
 
 /*****************************************************************************/
+/* will try to create directories up to last / in name
+   example /tmp/a/b/c/readme.txt will try to create /tmp/a/b/c
+   returns boolean */
+int APP_CC
+g_create_path(const char* path)
+{
+  char* pp;
+  char* sp;
+  char* copypath;
+  int status;
+
+  status = 1;
+  copypath = g_strdup(path);
+  pp = copypath;
+  sp = strchr(pp, '/');
+  while (sp != 0)
+  {
+    if (sp != pp)
+    {
+      *sp = 0;
+      if (!g_directory_exist(copypath))
+      {
+        if (!g_create_dir(copypath))
+        {
+          status = 0;
+          break;
+        }
+      }
+      *sp = '/';
+    }
+    pp = sp + 1;
+    sp = strchr(pp, '/');
+  }
+  g_free(copypath);
+  return status;
+}
+
+/*****************************************************************************/
 /* returns boolean */
 int APP_CC
 g_remove_dir(const char* dirname)

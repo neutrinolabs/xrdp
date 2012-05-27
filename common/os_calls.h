@@ -161,6 +161,8 @@ g_directory_exist(const char* dirname);
 int APP_CC
 g_create_dir(const char* dirname);
 int APP_CC
+g_create_path(const char* path);
+int APP_CC
 g_remove_dir(const char* dirname);
 int APP_CC
 g_file_delete(const char* filename);
