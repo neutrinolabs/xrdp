@@ -174,6 +174,17 @@ xrdp_listen_get_port_address(char* port, int port_bytes,
             val = (char*)list_get_item(values, index);
             g_strncpy(address, val, address_bytes - 1);
           }
+          if (g_strcasecmp(val, "fork") == 0)
+          {
+            val = (char*)list_get_item(values, index);
+            if ((g_strcasecmp(val, "yes") == 0) ||
+                (g_strcasecmp(val, "on") == 0) ||
+                (g_strcasecmp(val, "true") == 0) ||
+                (g_atoi(val) != 0))
+            {
+              startup_param->fork = 1;
+            }
+          }
         }
       }
     }

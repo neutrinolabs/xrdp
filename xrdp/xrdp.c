@@ -25,7 +25,6 @@
 static struct xrdp_listen* g_listen = 0;
 static long g_threadid = 0; /* main threadid */
 
-static int g_fork_not_thread = 0;
 static long g_sync_mutex = 0;
 static long g_sync1_mutex = 0;
 static tbus g_term_event = 0;
@@ -45,14 +44,10 @@ g_xrdp_sync(long (*sync_func)(long param1, long param2), long sync_param1,
   long sync_result;
   int sync_command;
 
-  if (g_fork_not_thread)
-  {
-    /* always main thread, fork mode */
-    sync_result = sync_func(sync_param1, sync_param2);
-  }
-  else if (tc_threadid_equal(tc_get_threadid(), g_threadid))
+  if (tc_threadid_equal(tc_get_threadid(), g_threadid))
   {
     /* this is the main thread, call the function directly */
+    /* in fork mode, this always happens too */
     sync_result = sync_func(sync_param1, sync_param2);
   }
   else
@@ -98,7 +93,6 @@ xrdp_shutdown(int sig)
 void DEFAULT_CC
 xrdp_child(int sig)
 {
-  g_writeln("xrdp_child");
   g_waitchild();
 }
 
@@ -250,8 +244,7 @@ xrdp_process_params(int argc, char** argv,
              (g_strncasecmp(option, "--fork", 255) == 0))
     {
       startup_params->fork = 1;
-      g_fork_not_thread = 1;
-      g_writeln("running in fork mode");
+      g_writeln("--fork parameter found, ini override");
     }
     else
     {
