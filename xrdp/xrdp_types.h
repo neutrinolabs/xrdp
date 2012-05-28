@@ -395,12 +395,12 @@ struct xrdp_bitmap
 #define DEFAULT_ELEMENT_TOP   35
 #define DEFAULT_BUTTON_W      60
 #define DEFAULT_BUTTON_H      23
-#define DEFAULT_COMBO_W       140
+#define DEFAULT_COMBO_W       210
 #define DEFAULT_COMBO_H       21
-#define DEFAULT_EDIT_W        140
+#define DEFAULT_EDIT_W        210
 #define DEFAULT_EDIT_H        21
-#define DEFAULT_WND_LOGIN_W   400
-#define DEFAULT_WND_LOGIN_H   200
+#define DEFAULT_WND_LOGIN_W   500
+#define DEFAULT_WND_LOGIN_H   250
 #define DEFAULT_WND_HELP_W    340
 #define DEFAULT_WND_HELP_H    300
 #define DEFAULT_WND_LOG_W     400
