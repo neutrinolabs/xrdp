@@ -140,7 +140,7 @@ pipe_sig(int sig_num)
 
 /*****************************************************************************/
 void APP_CC
-g_loop(void)
+g_process_waiting_function(void)
 {
   tc_mutex_lock(g_sync_mutex);
   if (g_sync_command != 0)
