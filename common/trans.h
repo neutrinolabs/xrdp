@@ -64,7 +64,7 @@ trans_create(int mode, int in_size, int out_size);
 void APP_CC
 trans_delete(struct trans* self);
 int APP_CC
-trans_get_wait_objs(struct trans* self, tbus* objs, int* count, int* timeout);
+trans_get_wait_objs(struct trans* self, tbus* objs, int* count);
 int APP_CC
 trans_check_wait_objs(struct trans* self);
 int APP_CC

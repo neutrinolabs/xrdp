@@ -62,6 +62,7 @@ xrdp_mm_sync_load(long param1, long param2)
 static void APP_CC
 xrdp_mm_module_cleanup(struct xrdp_mm* self)
 {
+  g_writeln("xrdp_mm_module_cleanup");
   if (self->mod != 0)
   {
     if (self->mod_exit != 0)
@@ -72,7 +73,7 @@ xrdp_mm_module_cleanup(struct xrdp_mm* self)
   }
   if (self->mod_handle != 0)
   {
-    /* main thread unload */
+    /* Let the main thread unload the module.*/
     g_xrdp_sync(xrdp_mm_sync_unload, self->mod_handle, 0);
   }
   trans_delete(self->chan_trans);
@@ -280,6 +281,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm* self)
   }
   if (self->mod_handle == 0)
   {
+    /* Let the main thread load the lib,*/  
     self->mod_handle = g_xrdp_sync(xrdp_mm_sync_load, (long)lib, 0);
     if (self->mod_handle != 0)
     {
@@ -1084,11 +1086,11 @@ xrdp_mm_get_wait_objs(struct xrdp_mm* self,
   rv = 0;
   if ((self->sesman_trans != 0) && self->sesman_trans_up)
   {
-    trans_get_wait_objs(self->sesman_trans, read_objs, rcount, timeout);
+    trans_get_wait_objs(self->sesman_trans, read_objs, rcount);
   }
   if ((self->chan_trans != 0) && self->chan_trans_up)
   {
-    trans_get_wait_objs(self->chan_trans, read_objs, rcount, timeout);
+    trans_get_wait_objs(self->chan_trans, read_objs, rcount);
   }
   if (self->mod != 0)
   {

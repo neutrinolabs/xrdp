@@ -37,6 +37,10 @@ xrdp_listen_create_pro_done(struct xrdp_listen* self)
   pid = g_getpid();
   g_snprintf(text, 255, "xrdp_%8.8x_listen_pro_done_event", pid);
   self->pro_done_event = g_create_wait_obj(text);
+  if(self->pro_done_event == 0)
+  {
+    g_writeln("Failure creating pro_done_event");
+  }
   return 0;
 }
 
@@ -295,7 +299,7 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
   {
     self->listen_trans->trans_conn_in = xrdp_listen_conn_in;
     self->listen_trans->callback_data = self;
-    term_obj = g_get_term_event();
+    term_obj = g_get_term_event(); /*Global termination event */
     sync_obj = g_get_sync_event();
     done_obj = self->pro_done_event;
     cont = 1;
@@ -307,31 +311,33 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
       robjs[robjs_count++] = sync_obj;
       robjs[robjs_count++] = done_obj;
       timeout = -1;
-      if (trans_get_wait_objs(self->listen_trans, robjs, &robjs_count,
-                              &timeout) != 0)
+      if (trans_get_wait_objs(self->listen_trans, robjs, &robjs_count) != 0)
       {
+	g_writeln("Listening socket is in wrong state we terminate listener") ;
         break;
       }
-      /* wait */
+      /* wait - timeout -1 means wait indefinitely*/
       if (g_obj_wait(robjs, robjs_count, 0, 0, timeout) != 0)
       {
         /* error, should not get here */
         g_sleep(100);
       }
-      if (g_is_wait_obj_set(term_obj)) /* term */
+      if (g_is_wait_obj_set(term_obj)) /* termination called */
       {
         break;
       }
-      if (g_is_wait_obj_set(sync_obj)) /* sync */
+      if (g_is_wait_obj_set(sync_obj)) /* some function must be processed by this thread */
       {
         g_reset_wait_obj(sync_obj);
-        g_loop();
+        g_process_waiting_function(); /* run the function */
       }
       if (g_is_wait_obj_set(done_obj)) /* pro_done_event */
       {
-        g_reset_wait_obj(done_obj);
+        g_reset_wait_obj(done_obj); 
+	/* a process has died remove it from lists*/
         xrdp_listen_delete_done_pro(self);
       }
+      /* Run the callback when accept() returns a new socket*/
       if (trans_check_wait_objs(self->listen_trans) != 0)
       {
         break;
@@ -348,20 +354,21 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
       {
         break;
       }
+      timeout = -1;
       /* build the wait obj list */
       robjs_count = 0;
       robjs[robjs_count++] = sync_obj;
       robjs[robjs_count++] = done_obj;
-      /* wait */
-      if (g_obj_wait(robjs, robjs_count, 0, 0, -1) != 0)
+      /* wait - timeout -1 means wait indefinitely*/
+      if (g_obj_wait(robjs, robjs_count, 0, 0, timeout) != 0)
       {
         /* error, should not get here */
         g_sleep(100);
       }
-      if (g_is_wait_obj_set(sync_obj)) /* sync */
+      if (g_is_wait_obj_set(sync_obj)) /* some function must be processed by this thread */
       {
         g_reset_wait_obj(sync_obj);
-        g_loop();
+        g_process_waiting_function(); /* run the function that is waiting*/
       }
       if (g_is_wait_obj_set(done_obj)) /* pro_done_event */
       {

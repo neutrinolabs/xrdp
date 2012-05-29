@@ -1069,28 +1069,39 @@ g_obj_wait(tbus* read_objs, int rcount, tbus* write_objs, int wcount,
     ptime = &time;
   }
   FD_ZERO(&rfds);
-  FD_ZERO(&wfds);
-  for (i = 0; i < rcount; i++)
-  {
-    sck = (int)(read_objs[i]);
-    if (sck > 0) {
-      FD_SET(sck, &rfds);
-      if (sck > max)
-      {
-        max = sck;
+  FD_ZERO(&wfds);  
+  /*Find the highest descriptor number in read_obj */
+  if(read_objs!=NULL){
+    for (i = 0; i < rcount; i++)
+    {
+      sck = (int)(read_objs[i]);
+      if (sck > 0) {
+        FD_SET(sck, &rfds);
+        if (sck > max)
+        {
+	  max = sck; /*max holds the highest socket/descriptor number */ 
+        }
       }
     }
+  }else if(rcount>0){
+      g_writeln("Programming error read_objs is null");
+      return 1; /*error*/
   }
-  for (i = 0; i < wcount; i++)
-  {
-    sck = (int)(write_objs[i]);
-    if (sck > 0) {
-      FD_SET(sck, &wfds);
-      if (sck > max)
-      {
-        max = sck;
+  if(write_objs!=NULL){
+    for (i = 0; i < wcount; i++)
+    {
+      sck = (int)(write_objs[i]);
+      if (sck > 0) {
+        FD_SET(sck, &wfds);
+        if (sck > max)
+        {
+          max = sck; /*max holds the highest socket/descriptor number */ 
+        }
       }
     }
+  }else if(wcount>0){
+      g_writeln("Programming error write_objs is null");
+      return 1; /*error*/
   }
   res = select(max + 1, &rfds, &wfds, 0, ptime);
   if (res < 0)
@@ -1103,7 +1114,7 @@ g_obj_wait(tbus* read_objs, int rcount, tbus* write_objs, int wcount,
     {
       return 0;
     }
-    return 1;
+    return 1; /*error*/
   }
   return 0;
 #endif
