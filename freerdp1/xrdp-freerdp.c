@@ -1334,13 +1334,18 @@ mod_exit(struct mod* mod)
   {
     return 0;
   }
-
+  if(mod->inst == NULL)
+  {
+    LLOGLN(0, ("mod_exit - null pointer for inst:"));
+    return 0 ;
+  }
+  freerdp_disconnect(mod->inst);
   if ((mod->vmaj == 1) && (mod->vmin == 0) && (mod->vrev == 1))
   {
     /* this version has a bug with double free in freerdp_free */
   }
   else
-  {
+  {    
     freerdp_context_free(mod->inst);
   }
   freerdp_free(mod->inst);
