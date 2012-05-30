@@ -305,7 +305,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm* self)
       if (func == 0)
       {
         g_snprintf(text, 255, "error finding proc mod_exit in %s, not a valid "
-                              "xrdp backend", lib);
+                              "xrdp backend", lib);	
         xrdp_wm_log_msg(self->wm, text);
       }
       self->mod_exit = (int (*)(struct xrdp_mod*))func;
@@ -317,6 +317,8 @@ xrdp_mm_setup_mod1(struct xrdp_mm* self)
           g_writeln("loaded module '%s' ok, interface size %d, version %d", lib,
                     self->mod->size, self->mod->version);
         }
+      }else{
+	  g_writeln("no mod_init or mod_exit address found") ;
       }
     }
     else
@@ -324,6 +326,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm* self)
       g_snprintf(text, 255, "error loading %s specified in xrdp.ini, please "
                             "add a valid entry like lib=libxrdp-vnc.so or similar", lib);
       xrdp_wm_log_msg(self->wm, text);
+      return 1 ;
     }
     if (self->mod != 0)
     {
@@ -1043,20 +1046,25 @@ xrdp_mm_connect(struct xrdp_mm* self)
       if (xrdp_mm_setup_mod2(self) == 0)
       {
         xrdp_wm_set_login_mode(self->wm, 10);
+        rv = 0 ; /*sucess*/
       }
       else
       {
         /* connect error */
         g_snprintf(errstr, 255, "Failure to connect to: %s port: %s",
                    ip, port);
+        g_writeln(errstr);
         xrdp_wm_log_msg(self->wm, errstr);
         rv = 1 ; /* failure */
       }
+    }else{
+	g_writeln("Failure setting up module");
     }
     if (self->wm->login_mode != 10)
     {
       xrdp_wm_set_login_mode(self->wm, 11);
       xrdp_mm_module_cleanup(self);
+      rv = 1 ; /* failure */
     }
   }
   self->sesman_controlled = use_sesman;
@@ -1067,6 +1075,7 @@ xrdp_mm_connect(struct xrdp_mm* self)
     /* if sesman controlled, this will connect later */
     xrdp_mm_connect_chansrv(self, "", chansrvport);
   }
+  g_writeln("returnvalue from xrdp_mm_connect %d",rv);
 
   return rv;
 }

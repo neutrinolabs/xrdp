@@ -1579,7 +1579,32 @@ g_strdup(const char* in)
   }
   return p;
 }
+/*****************************************************************************/
+/* if in = 0, return 0 else return newly alloced copy of input string 
+ * if the input string is larger than maxlen the returned string will be 
+ * truncated. All strings returned will include null termination*/
+char* APP_CC
+g_strndup(const char* in, const unsigned int maxlen)
+{
+  int len;
+  char* p;
 
+  if (in == 0)
+  {
+    return 0;
+  }
+  len = g_strlen(in);
+  if(len>maxlen)
+  {
+     len = maxlen-1 ;        
+  }
+  p = (char*)g_malloc(len + 2, 0);
+  if (p != NULL) 
+  {
+    g_strncpy(p, in,len+1);
+  }
+  return p;
+}
 /*****************************************************************************/
 int APP_CC
 g_strcmp(const char* c1, const char* c2)

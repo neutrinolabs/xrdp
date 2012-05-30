@@ -1556,6 +1556,21 @@ xrdp_wm_log_wnd_notify(struct xrdp_bitmap* wnd,
   return 0;
 }
 
+ void add_string_to_logwindow(char *msg,struct list* log)
+ {
+     
+  char *new_part_message;
+  char *current_pointer = msg ;
+  int processedlen ; 
+  do{
+    new_part_message = g_strndup(current_pointer,LOG_WINDOW_CHAR_PER_LINE) ;   
+    g_writeln(new_part_message);
+    list_add_item(log, (long)new_part_message);
+    processedlen = processedlen + g_strlen(new_part_message);
+    current_pointer = current_pointer + g_strlen(new_part_message) ;
+  }while((processedlen<g_strlen(msg)) && (processedlen<DEFAULT_STRING_LEN));
+ }
+
 /*****************************************************************************/
 int APP_CC
 xrdp_wm_log_msg(struct xrdp_wm* self, char* msg)
@@ -1570,7 +1585,7 @@ xrdp_wm_log_msg(struct xrdp_wm* self, char* msg)
   {
     return 0;
   }
-  list_add_item(self->log, (long)g_strdup(msg));
+  add_string_to_logwindow(msg,self->log);  
   if (self->log_wnd == 0)
   {
     w = DEFAULT_WND_LOG_W;

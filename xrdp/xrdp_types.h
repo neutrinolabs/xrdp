@@ -19,6 +19,8 @@
    types
 
 */
+#define DEFAULT_STRING_LEN 255
+#define LOG_WINDOW_CHAR_PER_LINE 60
 
 /* lib */
 struct xrdp_mod
