@@ -261,7 +261,7 @@ xrdp_wm_show_edits(struct xrdp_wm* self, struct xrdp_bitmap* combo)
       if (g_strncmp("ask", value, 3) == 0)
       {
         /* label */
-        b = xrdp_bitmap_create(70, DEFAULT_EDIT_H, self->screen->bpp,
+        b = xrdp_bitmap_create(95, DEFAULT_EDIT_H, self->screen->bpp,
                                WND_TYPE_LABEL, self);
         list_insert_item(self->login_window->child_list, insert_index,
                               (long)b);
