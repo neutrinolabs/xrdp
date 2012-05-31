@@ -21,6 +21,7 @@
 */
 
 #include "xrdp.h"
+#define ACCESS
 
 /*****************************************************************************/
 struct xrdp_mm* APP_CC
@@ -103,6 +104,7 @@ xrdp_mm_delete(struct xrdp_mm* self)
 }
 
 /*****************************************************************************/
+/* Send login information to sesman */
 static int APP_CC
 xrdp_mm_send_login(struct xrdp_mm* self)
 {
@@ -200,6 +202,7 @@ xrdp_mm_send_login(struct xrdp_mm* self)
   s_mark_end(s);
 
   s_pop_layer(s, channel_hdr);
+  /* Version 0 of the protocol to sesman is currently used by XRDP */
   out_uint32_be(s, 0); /* version */
   index = (int)(s->end - s->data);
   out_uint32_be(s, index); /* size */
@@ -743,6 +746,17 @@ xrdp_mm_connect_chansrv(struct xrdp_mm* self, char* ip, char* port)
   return 0;
 }
 
+static void cleanup_sesman_connection(struct xrdp_mm* self)
+{
+  self->delete_sesman_trans = 1;
+  self->connected_state = 0;
+  if (self->wm->login_mode != 10)
+  {
+    xrdp_wm_set_login_mode(self->wm, 11);
+    xrdp_mm_module_cleanup(self);
+  }
+}
+
 /*****************************************************************************/
 static int APP_CC
 xrdp_mm_process_login_response(struct xrdp_mm* self, struct stream* s)
@@ -790,14 +804,7 @@ xrdp_mm_process_login_response(struct xrdp_mm* self, struct stream* s)
     xrdp_wm_log_msg(self->wm, "xrdp_mm_process_login_response: "
                               "login failed");
   }
-  self->delete_sesman_trans = 1;
-  self->connected_state = 0;
-  if (self->wm->login_mode != 10)
-  {
-    xrdp_wm_set_login_mode(self->wm, 11);
-    xrdp_mm_module_cleanup(self);
-  }
-
+  cleanup_sesman_connection(self); 
   return rv;
 }
 
@@ -902,6 +909,7 @@ xrdp_mm_process_channel_data(struct xrdp_mm* self, tbus param1, tbus param2,
 }
 
 /*****************************************************************************/
+/* This is the callback registered for sesman communication replies. */
 static int APP_CC
 xrdp_mm_sesman_data_in(struct trans* trans)
 {
@@ -930,17 +938,117 @@ xrdp_mm_sesman_data_in(struct trans* trans)
     in_uint16_be(s, code);
     switch (code)
     {
+      /* even when the request is denied the reply will hold 3 as the command. */	
       case 3:
         error = xrdp_mm_process_login_response(self, s);
         break;
       default:
-        g_writeln("xrdp_mm_sesman_data_in: unknown code %d", code);
+        xrdp_wm_log_msg(self->wm, "An undefined reply code was received from sesman");  
+        g_writeln("Fatal xrdp_mm_sesman_data_in: unknown cmd code %d", code);
+        cleanup_sesman_connection(self); 
         break;
     }
   }
 
   return error;
 }
+
+#ifdef ACCESS
+/*********************************************************************/
+/* return 0 on success */
+int access_control(char *username, char *password, char *srv){
+  int reply ;
+  int rec = 1 ; // failure     
+  struct stream* in_s;
+  struct stream* out_s; 
+  unsigned long version ;
+  unsigned short int dummy;
+  unsigned short int ok;
+  unsigned short int code;
+  unsigned long size ;
+  int index ;   
+  int socket = g_tcp_socket();
+  if (socket > 0) {    
+    /* we use a blocking socket here */
+    reply = g_tcp_connect(socket, srv, "3350");
+    if (reply == 0)
+    {
+      g_writeln("Connected to sesman user %s: password %s :srv %s",username, password, srv);
+      make_stream(in_s);
+      init_stream(in_s, 500);
+      make_stream(out_s);
+      init_stream(out_s, 500);	  
+      s_push_layer(out_s, channel_hdr, 8);	  
+      out_uint16_be(out_s, 4); /*0x04 means SCP_GW_AUTHENTICATION*/
+      index = g_strlen(username);
+      out_uint16_be(out_s, index);
+      out_uint8a(out_s, username, index);
+  
+      index = g_strlen(password);
+      out_uint16_be(out_s, index);
+      out_uint8a(out_s, password, index);	  
+      s_mark_end(out_s);
+      s_pop_layer(out_s, channel_hdr);
+      out_uint32_be(out_s, 0); /* version */
+      index = (int)(out_s->end - out_s->data);
+      out_uint32_be(out_s, index); /* size */
+      /* g_writeln("Number of data to send : %d",index); */
+      reply = g_tcp_send(socket, out_s->data, index, 0);      
+      free_stream(out_s);     
+      if (reply > 0)
+      {               
+        reply = g_tcp_recv(socket, in_s->end, 500, 0);
+        if (reply > 0) 
+        {
+          in_s->end =  in_s->end + reply ;
+          in_uint32_be(in_s, version);
+          /*g_writeln("Version number in reply from sesman: %d",version) ; */
+          in_uint32_be(in_s, size);
+          if((size==14) && (version==0))
+          {
+            in_uint16_be(in_s, code);
+            in_uint16_be(in_s, ok);
+            in_uint16_be(in_s, dummy);
+            if(code!=4)
+            {
+              g_writeln("Return cmd code is corrupt");
+            }
+            else
+            {
+              rec = ok; /* here we read the reply from the access control */
+			/* g_writeln("Valid reply received"); */
+            }
+          }
+          else
+          {
+            g_writeln("corrupt reply size or version from sesman: %d",size);
+          }
+        }
+        else
+        {
+          g_writeln("no data received from sesman");
+        }
+      }
+      else
+      {
+        g_writeln("no success sending to sesman");
+      }
+      free_stream(in_s);
+      g_tcp_close(socket);
+    }
+    else
+    {
+      g_writeln("failure connecting to socket sesman");
+    }        
+  }
+  else
+  {
+    g_writeln("failure creating socket");
+  }
+  //g_free(port);
+  return rec;
+}
+#endif
 
 /*****************************************************************************/
 int APP_CC
@@ -950,7 +1058,6 @@ xrdp_mm_connect(struct xrdp_mm* self)
   struct list* values;
   int index;
   int count;
-  int use_sesman;
   int ok;
   int rv;
   char* name;
@@ -960,14 +1067,22 @@ xrdp_mm_connect(struct xrdp_mm* self)
   char text[256];
   char port[8];
   char chansrvport[256];
-
+#ifdef ACCESS
+  int use_pam_auth = 0 ;
+  char pam_auth_sessionIP[256] ;
+  char pam_auth_password[256];
+  char pam_auth_username[256];
+  char username[256];
+  char password[256];
+  username[0] = 0;
+  password[0] = 0;
+#endif
   g_memset(ip, 0, sizeof(ip));
   g_memset(errstr, 0, sizeof(errstr));
   g_memset(text, 0, sizeof(text));
   g_memset(port, 0, sizeof(port));
   g_memset(chansrvport, 0, sizeof(chansrvport));
   rv = 0; /* success */
-  use_sesman = 0;
   names = self->login_names;
   values = self->login_values;
   count = names->count;
@@ -983,25 +1098,82 @@ xrdp_mm_connect(struct xrdp_mm* self)
     {
       if (g_strcasecmp(value, "-1") == 0)
       {
-        use_sesman = 1;
+        self->sesman_controlled = 1;
       }
     }
+#ifdef ACCESS    
+    else if (g_strcasecmp(name, "pamusername") == 0)
+    {
+      use_pam_auth = 1;         
+      g_strncpy(pam_auth_username, value, 255);        
+    }
+    else if (g_strcasecmp(name, "pamsessionmng") == 0)
+    {
+      g_strncpy(pam_auth_sessionIP, value, 255);                           
+    }
+    else if (g_strcasecmp(name, "pampassword") == 0)
+    {
+      g_strncpy(pam_auth_password, value, 255); 
+    }
+    else if (g_strcasecmp(name, "password") == 0)
+    {
+      g_strncpy(password, value, 255); 
+    } 
+    else if (g_strcasecmp(name, "username") == 0)
+    {
+      g_strncpy(username, value, 255); 
+    } 
+#endif
     else if (g_strcasecmp(name, "chansrvport") == 0)
     {
       g_strncpy(chansrvport, value, 255);
       self->usechansrv = 1;
     }
   }
-  if (use_sesman)
+#ifdef ACCESS  
+  if(use_pam_auth){
+    int reply;    
+    char replytxt[80];
+    char replymessage[4][80] = {"Ok","Sesman connect failure","User or password error","Privilege group error"};
+    xrdp_wm_log_msg(self->wm, "Please wait, we now perform access control...");
+    /* g_writeln("we use pam modules to check if we can approve this user"); */
+    if(!g_strncmp(pam_auth_username,"same",255))
+    {
+      g_writeln("pamusername copied from username - same: %s",username);
+      g_strncpy(pam_auth_username,username,255);	  
+    }
+    if(!g_strncmp(pam_auth_password,"same",255))
+    {
+      g_writeln("pam_auth_password copied from username - same: %s",password);
+      g_strncpy(pam_auth_password,password,255);
+    }
+    /* access_control return 0 on success */
+    reply = access_control(pam_auth_username, pam_auth_password, pam_auth_sessionIP);	
+    if(reply>=0 && reply<4)
+    {
+      g_sprintf(replytxt,"Reply from access control: %s",replymessage[reply]);
+    }
+    else
+    {
+      g_sprintf(replytxt,"Reply from access control undefined");
+    }
+    xrdp_wm_log_msg(self->wm,replytxt);
+    if(reply!=0)
+    {      
+      rv = 1 ;
+      return rv ;
+    }        
+  }    
+#endif
+  if (self->sesman_controlled)
   {
     ok = 0;
-    errstr[0] = 0;
     trans_delete(self->sesman_trans);
     self->sesman_trans = trans_create(TRANS_MODE_TCP, 8192, 8192);
     xrdp_mm_get_sesman_port(port, sizeof(port));
     g_snprintf(text, 255, "connecting to sesman ip %s port %s", ip, port);
     xrdp_wm_log_msg(self->wm, text);
-
+    /* xrdp_mm_sesman_data_in is the callback that is called when data arrives */
     self->sesman_trans->trans_data_in = xrdp_mm_sesman_data_in;
     self->sesman_trans->header_size = 8;
     self->sesman_trans->callback_data = self;
@@ -1027,6 +1199,8 @@ xrdp_mm_connect(struct xrdp_mm* self)
     }
     else
     {
+      g_snprintf(errstr, 255, "Failure to connect to sesman: %s port: %s",
+                   ip, port);	
       xrdp_wm_log_msg(self->wm, errstr);
       trans_delete(self->sesman_trans);
       self->sesman_trans = 0;
@@ -1045,8 +1219,7 @@ xrdp_mm_connect(struct xrdp_mm* self)
       else
       {
         /* connect error */
-        g_snprintf(errstr, 255, "Failure to connect to: %s port: %s",
-                   ip, port);
+        g_snprintf(errstr, 255, "Failure to connect to: %s",ip);
         xrdp_wm_log_msg(self->wm, errstr);
         rv = 1 ; /* failure */
       }
@@ -1057,7 +1230,6 @@ xrdp_mm_connect(struct xrdp_mm* self)
       xrdp_mm_module_cleanup(self);
     }
   }
-  self->sesman_controlled = use_sesman;
 
   if ((self->wm->login_mode == 10) && (self->sesman_controlled == 0) &&
       (self->usechansrv != 0))

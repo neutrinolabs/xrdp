@@ -21,7 +21,7 @@
 */
 
 #include "xrdp.h"
-
+#define ACCESS
 /*****************************************************************************/
 /* all login help screen events go here */
 static int DEFAULT_CC
@@ -302,7 +302,11 @@ xrdp_wm_show_edits(struct xrdp_wm* self, struct xrdp_bitmap* combo)
             username_set = 1;
           }
         }
+#ifdef ACCESS         
+        if ((g_strncmp(name, "password", 255) == 0) || (g_strncmp(name, "pampassword", 255) == 0))
+#else
         if (g_strncmp(name, "password", 255) == 0)
+#endif        
         {
           b->password_char = '*';
           if (username_set)

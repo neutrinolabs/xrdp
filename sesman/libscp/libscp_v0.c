@@ -277,6 +277,42 @@ scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk)
       }
     }
   }
+  if (code == SCP_GW_AUTHENTICATION)
+  {
+    /* g_writeln("Command is SCP_GW_AUTHENTICATION"); */
+    session = scp_session_create();
+    if (0 == session)
+    {
+      /* until syslog merge log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);*/
+      return SCP_SERVER_STATE_INTERNAL_ERR;
+    }
+
+    scp_session_set_version(session, version);   
+    scp_session_set_type(session, SCP_GW_AUTHENTICATION);    
+    /* reading username */
+    in_uint16_be(c->in_s, sz);
+    buf[sz]='\0';
+    in_uint8a(c->in_s, buf, sz);
+    /* g_writeln("Received user name: %s",buf); */
+    if (0 != scp_session_set_username(session, buf))
+    {
+      scp_session_destroy(session);
+      /* until syslog merge log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: error setting username", __LINE__);*/
+      return SCP_SERVER_STATE_INTERNAL_ERR;
+    }
+
+    /* reading password */
+    in_uint16_be(c->in_s, sz);
+    buf[sz]='\0';
+    in_uint8a(c->in_s, buf, sz);
+    /* g_writeln("Received password: %s",buf); */
+    if (0 != scp_session_set_password(session, buf))
+    {
+      scp_session_destroy(session);
+      /* until syslog merge log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: error setting password", __LINE__); */
+      return SCP_SERVER_STATE_INTERNAL_ERR;
+    }  
+  }
   else
   {
     log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: sequence error", __LINE__);
@@ -315,8 +351,8 @@ scp_v0s_deny_connection(struct SCP_CONNECTION* c)
   out_uint32_be(c->out_s, 0);  /* version */
   out_uint32_be(c->out_s, 14); /* size */
   out_uint16_be(c->out_s, 3);  /* cmd */
-  out_uint16_be(c->out_s, 0);  /* data */
-  out_uint16_be(c->out_s, 0);  /* data */
+  out_uint16_be(c->out_s, 0);  /* data = 0 - means NOT ok*/
+  out_uint16_be(c->out_s, 0);  /* reserved for display number*/
   s_mark_end(c->out_s);
 
   if (0 != scp_tcp_force_send(c->in_sck, c->out_s->data, c->out_s->end - c->out_s->data))
@@ -326,5 +362,28 @@ scp_v0s_deny_connection(struct SCP_CONNECTION* c)
   }
 
   LOG_DBG(s_log, "[v0:%d] connection terminated (denied)", __LINE__);
+  return SCP_SERVER_STATE_OK;
+}
+
+/******************************************************************************/
+enum SCP_SERVER_STATES_E
+scp_v0s_replyauthentication(struct SCP_CONNECTION* c, unsigned short int value)
+{
+  out_uint32_be(c->out_s, 0);  /* version */
+  out_uint32_be(c->out_s, 14); /* size */
+  /* cmd SCP_GW_AUTHENTICATION means authentication reply */
+  out_uint16_be(c->out_s, SCP_GW_AUTHENTICATION);
+  out_uint16_be(c->out_s, value);  /* reply code  */
+  out_uint16_be(c->out_s, 0);  /* dummy data */
+  s_mark_end(c->out_s);
+  
+  /* g_writeln("Total number of bytes that will be sent %d",c->out_s->end - c->out_s->data);*/
+  if (0 != scp_tcp_force_send(c->in_sck, c->out_s->data, c->out_s->end - c->out_s->data))
+  {
+    /* until syslog merge log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__); */
+    return SCP_SERVER_STATE_NETWORK_ERR;
+  }
+
+  /* until syslog merge LOG_DBG(s_log, "[v0:%d] connection terminated (scp_v0s_deny_authentication)", __LINE__);*/
   return SCP_SERVER_STATE_OK;
 }

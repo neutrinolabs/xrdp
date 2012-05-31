@@ -38,9 +38,28 @@ scp_v0_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
   struct session_item* s_item;
 
   data = auth_userpass(s->username, s->password);
-
-  if (data)
+  if(s->type==SCP_GW_AUTHENTICATION)
   {
+    /* this is just authentication in a gateway situation */
+    /* g_writeln("SCP_GW_AUTHENTICATION message received"); */
+      if(data){	 
+	  if (1 == access_login_allowed(s->username))
+	  {
+	      /* the user is member of the correct groups. */
+	      scp_v0s_replyauthentication(c,0);
+	      /* g_writeln("Connection allowed"); */
+	  }else{	      
+              scp_v0s_replyauthentication(c,3);
+	      /* g_writeln("user password ok, but group problem"); */
+	  }
+      }else{	  
+	  /* g_writeln("username or password error"); */
+          scp_v0s_replyauthentication(c,2);	  
+      }
+      auth_end(data);
+  }
+  else if (data)
+  {     
     s_item = session_get_bydata(s->username, s->width, s->height, s->bpp, s->type);
     if (s_item != 0)
     {
