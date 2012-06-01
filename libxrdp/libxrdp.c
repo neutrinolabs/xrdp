@@ -75,10 +75,12 @@ libxrdp_process_data(struct xrdp_session* session)
   int rv;
   int code;
   int term;
+  int dead_lock_counter;
 
   term = 0;
   cont = 1;
   rv = 0;
+  dead_lock_counter  = 0 ;
   while ((cont || !session->up_and_running) && !term)
   {
     if (session->is_term != 0)
@@ -102,6 +104,7 @@ libxrdp_process_data(struct xrdp_session* session)
         session->up_and_running = 0;
         break;
       case 0:
+        dead_lock_counter ++ ;  
         break;
       case RDP_PDU_CONFIRM_ACTIVE: /* 3 */
         xrdp_rdp_process_confirm_active((struct xrdp_rdp*)session->rdp,
@@ -118,7 +121,16 @@ libxrdp_process_data(struct xrdp_session* session)
         break;
       default:
         g_writeln("unknown in libxrdp_process_data");
+        dead_lock_counter ++ ;
         break;
+    }    
+    if(dead_lock_counter>100000)
+    {
+      /*This situation can happen and this is a workaround*/	
+      cont = 0 ;
+      g_writeln("Serious programming error we were locked in a deadly loop") ;
+      g_writeln("remaining :%d",session->s->end-session->s->next_packet);
+      session->s->next_packet = 0;
     }
     if (cont)
     {
@@ -616,7 +628,10 @@ libxrdp_reset(struct xrdp_session* session,
   }
   /* process till up and running */
   session->up_and_running = 0;
-  libxrdp_process_data(session);
+  if(libxrdp_process_data(session)!=0)
+  {
+    g_writeln("non handled error from libxrdp_process_data");    
+  }
   return 0;
 }
 
@@ -658,6 +673,11 @@ libxrdp_query_channel(struct xrdp_session* session, int index,
 
   rdp = (struct xrdp_rdp*)session->rdp;
   mcs = rdp->sec_layer->mcs_layer;
+  if(mcs->channel_list==NULL)
+  {
+    g_writeln("libxrdp_query_channel - No channel initialized");
+    return 1 ;
+  }
   count = mcs->channel_list->count;
   if (index < 0 || index >= count)
   {
@@ -668,6 +688,7 @@ libxrdp_query_channel(struct xrdp_session* session, int index,
   if (channel_item == 0)
   {
     /* this should not happen */
+    g_writeln("libxrdp_query_channel - channel item is 0"); 
     return 1;
   }
   if (channel_name != 0)
@@ -695,6 +716,11 @@ libxrdp_get_channel_id(struct xrdp_session* session, char* name)
 
   rdp = (struct xrdp_rdp*)session->rdp;
   mcs = rdp->sec_layer->mcs_layer;
+  if(mcs->channel_list==NULL)
+  {
+    g_writeln("libxrdp_get_channel_id No channel initialized");
+    return -1 ;
+  }
   count = mcs->channel_list->count;
   for (index = 0; index < count; index++)
   {
@@ -737,6 +763,7 @@ libxrdp_send_to_channel(struct xrdp_session* session, int channel_id,
   s_mark_end(s);
   if (xrdp_channel_send(chan, s, channel_id, total_data_len, flags) != 0)
   {
+    g_writeln("Debug - data NOT sent to channel");  
     free_stream(s);
     return 1;
   }

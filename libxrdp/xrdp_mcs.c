@@ -65,11 +65,15 @@ xrdp_mcs_delete(struct xrdp_mcs* self)
   }
   list_delete(self->channel_list);
   xrdp_iso_delete(self->iso_layer);
+  /* make sure we get null pointer exception if struct is used again. */
+  DEBUG(("xrdp_mcs_delete processed"))
+  g_memset(self,0,sizeof(struct xrdp_mcs)) ; 
   g_free(self);
 }
 
 /*****************************************************************************/
-/* returns error */
+/* This function sends channel join confirm*/
+/* returns error = 1 ok = 0*/
 static int APP_CC
 xrdp_mcs_send_cjcf(struct xrdp_mcs* self, int userid, int chanid)
 {
@@ -87,7 +91,7 @@ xrdp_mcs_send_cjcf(struct xrdp_mcs* self, int userid, int chanid)
   out_uint8(s, (MCS_CJCF << 2) | 2);
   out_uint8(s, 0);
   out_uint16_be(s, userid);
-  out_uint16_be(s, chanid);
+  out_uint16_be(s, chanid); /* TODO Explain why we send this two times */
   out_uint16_be(s, chanid);
   s_mark_end(s);
   if (xrdp_iso_send(self->iso_layer, s) != 0)
@@ -122,19 +126,30 @@ xrdp_mcs_recv(struct xrdp_mcs* self, struct stream* s, int* chan)
     }
     in_uint8(s, opcode);
     appid = opcode >> 2;
-    if (appid == MCS_DPUM)
+    if (appid == MCS_DPUM) /* Disconnect Provider Ultimatum */
     {
+      g_writeln("received Disconnect Provider Ultimatum");
       DEBUG(("  out xrdp_mcs_recv appid != MCS_DPUM"));
       return 1;
     }
     /* this is channels getting added from the client */
     if (appid == MCS_CJRQ)
     {
+      g_writeln("channel join request received");	
       in_uint16_be(s, userid);
       in_uint16_be(s, chanid);
-      DEBUG(("  adding channel %4.4x", chanid));
-      xrdp_mcs_send_cjcf(self, userid, chanid);
+      DEBUG(("xrdp_mcs_recv  adding channel %4.4x", chanid));
+      if(xrdp_mcs_send_cjcf(self, userid, chanid)!=0)
+      {
+	  g_writeln("Non handled error from xrdp_mcs_send_cjcf") ;
+      }
       continue;
+    }
+    if(appid==MCS_SDRQ || appid==MCS_SDIN)
+    {
+      break ;
+    }else{
+      g_writeln("Recieved an unhandled appid:%d",appid);
     }
     break;
   }

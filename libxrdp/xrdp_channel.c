@@ -35,7 +35,11 @@ static struct mcs_channel_item* APP_CC
 xrdp_channel_get_item(struct xrdp_channel* self, int channel_id)
 {
   struct mcs_channel_item* channel;
-
+  if(self->mcs_layer->channel_list==NULL)
+  {
+    g_writeln("xrdp_channel_get_item - No channel initialized");
+    return NULL ;
+  }
   channel = (struct mcs_channel_item*)
                list_get_item(self->mcs_layer->channel_list, channel_id);
   return channel;
@@ -62,6 +66,7 @@ xrdp_channel_delete(struct xrdp_channel* self)
   {
     return;
   }
+  memset(self,0,sizeof(struct xrdp_channel));
   g_free(self);
 }
 
@@ -88,8 +93,9 @@ xrdp_channel_send(struct xrdp_channel* self, struct stream* s, int channel_id,
   struct mcs_channel_item* channel;
 
   channel = xrdp_channel_get_item(self, channel_id);
-  if (channel == 0)
+  if (channel == NULL)
   {
+    g_writeln("xrdp_channel_send - no such channel");  
     return 1;
   }
   s_pop_layer(s, channel_hdr);
@@ -101,6 +107,7 @@ xrdp_channel_send(struct xrdp_channel* self, struct stream* s, int channel_id,
   out_uint32_le(s, flags);
   if (xrdp_sec_send(self->sec_layer, s, channel->chanid) != 0)
   {
+    g_writeln("xrdp_channel_send - failure sending data");  
     return 1;
   }
   return 0;
@@ -159,13 +166,14 @@ xrdp_channel_process(struct xrdp_channel* self, struct stream* s,
   int channel_id;
   struct mcs_channel_item* channel;
 
+
   /* this assumes that the channels are in order of chanid(mcs channel id)
      but they should be, see xrdp_sec_process_mcs_data_channels
      the first channel should be MCS_GLOBAL_CHANNEL + 1, second
      one should be MCS_GLOBAL_CHANNEL + 2, and so on */
   channel_id = (chanid - MCS_GLOBAL_CHANNEL) - 1;
   channel = xrdp_channel_get_item(self, channel_id);
-  if (channel == 0)
+  if (channel == NULL)
   {
     g_writeln("xrdp_channel_process, channel not found");
     return 1;

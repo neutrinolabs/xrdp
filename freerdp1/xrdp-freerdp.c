@@ -917,7 +917,7 @@ static void DEFAULT_CC
 lfreerdp_pointer_system(rdpContext* context,
                         POINTER_SYSTEM_UPDATE* pointer_system)
 {
-  LLOGLN(0, ("lfreerdp_pointer_system:"));
+  LLOGLN(0, ("lfreerdp_pointer_system: - no code here"));
 }
 
 /******************************************************************************/

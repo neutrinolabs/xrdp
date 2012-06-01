@@ -113,12 +113,24 @@ xrdp_rdp_read_config(struct xrdp_client_info* client_info)
       {
         client_info->crypt_level = 3;
       }
+      else
+      {
+        g_writeln("Warning: Your configured crypt level is"
+		  "undefined 'high' will be used");
+        client_info->crypt_level = 3;  
+      }	  
     }
     else if (g_strcasecmp(item, "channel_code") == 0)
     {
-      if (g_strcasecmp(value, "1") == 0)
+      if ((g_strcasecmp(value, "yes") == 0) ||
+          (g_strcasecmp(value, "1") == 0) ||
+          (g_strcasecmp(value, "true") == 0))      
       {
         client_info->channel_code = 1;
+      }
+      else
+      {
+        g_writeln("Info: All channels are disabled");
       }
     }
     else if (g_strcasecmp(item, "max_bpp") == 0)
@@ -223,7 +235,7 @@ xrdp_rdp_recv(struct xrdp_rdp* self, struct stream* s, int* code)
     {
       s->next_packet = 0;
       *code = -1;
-      DEBUG(("out xrdp_rdp_recv"));
+      DEBUG(("out (1) xrdp_rdp_recv"));
       return 0;
     }
     if (error != 0)
@@ -235,35 +247,43 @@ xrdp_rdp_recv(struct xrdp_rdp* self, struct stream* s, int* code)
     {
       if (chan > MCS_GLOBAL_CHANNEL)
       {
-        xrdp_channel_process(self->sec_layer->chan_layer, s, chan);
+        if(xrdp_channel_process(self->sec_layer->chan_layer, s, chan)!=0)
+        {
+          g_writeln("xrdp_channel_process returned unhandled error") ;
+        }
+      }else{
+        g_writeln("Wrong channel Id to be handled by xrdp_channel_process %d",chan);
       }
       s->next_packet = 0;
       *code = 0;
-      DEBUG(("out xrdp_rdp_recv"));
+      DEBUG(("out (2) xrdp_rdp_recv"));
       return 0;
     }
     s->next_packet = s->p;
   }
   else
   {
+    DEBUG(("xrdp_rdp_recv stream not touched"))
     s->p = s->next_packet;
   }
   if (!s_check_rem(s, 6))
   {
     s->next_packet = 0;
     *code = 0;
-    DEBUG(("out xrdp_rdp_recv"));
+    DEBUG(("out (3) xrdp_rdp_recv"));
     len = (int)(s->end - s->p);
     g_writeln("xrdp_rdp_recv: bad RDP packet, length [%d]", len);
     return 0;
+  }else{
+    in_uint16_le(s, len);
+    /*g_writeln("New len received : %d next packet: %d s_end: %d",len,s->next_packet,s->end); */
+    in_uint16_le(s, pdu_code);
+    *code = pdu_code & 0xf;
+    in_uint8s(s, 2); /* mcs user id */
+    s->next_packet += len;
+    DEBUG(("out (4) xrdp_rdp_recv"));
+    return 0;
   }
-  in_uint16_le(s, len);
-  in_uint16_le(s, pdu_code);
-  *code = pdu_code & 0xf;
-  in_uint8s(s, 2); /* mcs user id */
-  s->next_packet += len;
-  DEBUG(("out xrdp_rdp_recv"));
-  return 0;
 }
 
 /*****************************************************************************/
