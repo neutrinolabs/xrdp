@@ -452,7 +452,7 @@ rdpCreateWindow(WindowPtr pWindow)
   rdpWindowRec* priv;
   Bool rv;
 
-  //ErrorF("rdpCreateWindow:\n");
+  ErrorF("rdpCreateWindow:\n");
   priv = GETWINPRIV(pWindow);
   //ErrorF("  %p status %d\n", priv, priv->status);
   pScreen = pWindow->drawable.pScreen;
@@ -470,13 +470,96 @@ rdpDestroyWindow(WindowPtr pWindow)
   rdpWindowRec* priv;
   Bool rv;
 
-  //ErrorF("rdpDestroyWindow:\n");
+  ErrorF("rdpDestroyWindow:\n");
   priv = GETWINPRIV(pWindow);
   pScreen = pWindow->drawable.pScreen;
   pScreen->DestroyWindow = g_rdpScreen.DestroyWindow;
   rv = pScreen->DestroyWindow(pWindow);
   pScreen->DestroyWindow = rdpDestroyWindow;
   return rv;
+}
+
+/******************************************************************************/
+Bool
+rdpPositionWindow(WindowPtr pWindow, int x, int y)
+{
+  ScreenPtr pScreen;
+  rdpWindowRec* priv;
+  Bool rv;
+
+  ErrorF("rdpPositionWindow:\n");
+  priv = GETWINPRIV(pWindow);
+  pScreen = pWindow->drawable.pScreen;
+  pScreen->PositionWindow = g_rdpScreen.PositionWindow;
+  rv = pScreen->PositionWindow(pWindow, x, y);
+  pScreen->PositionWindow = rdpPositionWindow;
+  return rv;
+}
+
+/******************************************************************************/
+Bool
+rdpRealizeWindow(WindowPtr pWindow)
+{
+  ScreenPtr pScreen;
+  rdpWindowRec* priv;
+  Bool rv;
+
+  ErrorF("rdpRealizeWindow:\n");
+  priv = GETWINPRIV(pWindow);
+  pScreen = pWindow->drawable.pScreen;
+  pScreen->RealizeWindow = g_rdpScreen.RealizeWindow;
+  rv = pScreen->RealizeWindow(pWindow);
+  pScreen->RealizeWindow = rdpRealizeWindow;
+  return rv;
+}
+
+/******************************************************************************/
+Bool
+rdpUnrealizeWindow(WindowPtr pWindow)
+{
+  ScreenPtr pScreen;
+  rdpWindowRec* priv;
+  Bool rv;
+
+  ErrorF("rdpUnrealizeWindow:\n");
+  priv = GETWINPRIV(pWindow);
+  pScreen = pWindow->drawable.pScreen;
+  pScreen->UnrealizeWindow = g_rdpScreen.UnrealizeWindow;
+  rv = pScreen->UnrealizeWindow(pWindow);
+  pScreen->UnrealizeWindow = rdpUnrealizeWindow;
+  return rv;
+}
+
+/******************************************************************************/
+Bool
+rdpChangeWindowAttributes(WindowPtr pWindow, unsigned long mask)
+{
+  ScreenPtr pScreen;
+  rdpWindowRec* priv;
+  Bool rv;
+
+  ErrorF("rdpChangeWindowAttributes:\n");
+  priv = GETWINPRIV(pWindow);
+  pScreen = pWindow->drawable.pScreen;
+  pScreen->ChangeWindowAttributes = g_rdpScreen.ChangeWindowAttributes;
+  rv = pScreen->ChangeWindowAttributes(pWindow, mask);
+  pScreen->ChangeWindowAttributes = rdpChangeWindowAttributes;
+  return rv;
+}
+
+/******************************************************************************/
+void
+rdpWindowExposures(WindowPtr pWindow, RegionPtr pRegion, RegionPtr pBSRegion)
+{
+  ScreenPtr pScreen;
+  rdpWindowRec* priv;
+
+  ErrorF("rdpWindowExposures:\n");
+  priv = GETWINPRIV(pWindow);
+  pScreen = pWindow->drawable.pScreen;
+  pScreen->WindowExposures = g_rdpScreen.WindowExposures;
+  pScreen->WindowExposures(pWindow, pRegion, pBSRegion);
+  pScreen->WindowExposures = rdpWindowExposures;
 }
 
 /******************************************************************************/

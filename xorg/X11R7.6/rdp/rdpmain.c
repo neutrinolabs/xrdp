@@ -347,6 +347,11 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
   /* Window Procedures */
   g_rdpScreen.CreateWindow = pScreen->CreateWindow;
   g_rdpScreen.DestroyWindow = pScreen->DestroyWindow;
+  g_rdpScreen.ChangeWindowAttributes = pScreen->ChangeWindowAttributes;
+  g_rdpScreen.RealizeWindow = pScreen->RealizeWindow;
+  g_rdpScreen.UnrealizeWindow = pScreen->UnrealizeWindow;
+  g_rdpScreen.PositionWindow = pScreen->PositionWindow;
+  g_rdpScreen.WindowExposures = pScreen->WindowExposures;
   g_rdpScreen.CopyWindow = pScreen->CopyWindow;
   g_rdpScreen.ClearToBackground = pScreen->ClearToBackground;
 
@@ -390,6 +395,11 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
     /* Window Procedures */
     pScreen->CreateWindow = rdpCreateWindow;
     pScreen->DestroyWindow = rdpDestroyWindow;
+    pScreen->ChangeWindowAttributes = rdpChangeWindowAttributes;
+    pScreen->RealizeWindow = rdpRealizeWindow;
+    pScreen->UnrealizeWindow = rdpUnrealizeWindow;
+    pScreen->PositionWindow = rdpPositionWindow;
+    pScreen->WindowExposures = rdpWindowExposures;
   }
 
   pScreen->CopyWindow = rdpCopyWindow;
