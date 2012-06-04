@@ -1561,7 +1561,7 @@ xrdp_wm_log_wnd_notify(struct xrdp_bitmap* wnd,
      
   char *new_part_message;
   char *current_pointer = msg ;
-  int processedlen ; 
+  int processedlen = 0; 
   do{
     new_part_message = g_strndup(current_pointer,LOG_WINDOW_CHAR_PER_LINE) ;   
     g_writeln(new_part_message);
