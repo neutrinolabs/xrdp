@@ -42,7 +42,7 @@
  *
  */
 int DEFAULT_CC 
-scp_init(struct log_config* log);
+scp_init();
 
 #endif
 

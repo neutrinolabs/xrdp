@@ -252,6 +252,12 @@ int APP_CC
 g_exit(int exit_code);
 int APP_CC
 g_getpid(void);
+/**
+ * Returns the current thread ID
+ * @return 
+ */
+int APP_CC
+g_gettid(void);
 int APP_CC
 g_sigterm(int pid);
 int APP_CC

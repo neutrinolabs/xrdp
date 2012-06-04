@@ -29,6 +29,7 @@
 #include "list.h"
 #include "file.h"
 #include "file_loc.h"
+#include "log.h"
 
 static struct trans* g_lis_trans = 0;
 static struct trans* g_con_trans = 0;
@@ -107,7 +108,7 @@ send_init_response_message(void)
 {
   struct stream * s = (struct stream *)NULL;
 
-  LOG(1, ("send_init_response_message:"));
+  log_message(LOG_LEVEL_INFO,"send_init_response_message:");
   s = trans_get_out_s(g_con_trans, 8192);
   if (s == 0)
   {
@@ -128,7 +129,7 @@ send_channel_setup_response_message(void)
 {
   struct stream * s = (struct stream *)NULL;
 
-  LOG(10, ("send_channel_setup_response_message:"));
+  log_message(LOG_LEVEL_DEBUG,  "send_channel_setup_response_message:");
   s = trans_get_out_s(g_con_trans, 8192);
   if (s == 0)
   {
@@ -149,7 +150,7 @@ send_channel_data_response_message(void)
 {
   struct stream * s = (struct stream *)NULL;
 
-  LOG(10, ("send_channel_data_response_message:"));
+  log_message(LOG_LEVEL_DEBUG, "send_channel_data_response_message:");
   s = trans_get_out_s(g_con_trans, 8192);
   if (s == 0)
   {
@@ -168,7 +169,7 @@ send_channel_data_response_message(void)
 static int APP_CC
 process_message_init(struct stream* s)
 {
-  LOG(10, ("process_message_init:"));
+  log_message(LOG_LEVEL_DEBUG,"process_message_init:");
   return send_init_response_message();
 }
 
@@ -189,9 +190,9 @@ process_message_channel_setup(struct stream* s)
   g_cliprdr_chan_id = -1;
   g_rdpsnd_chan_id = -1;
   g_rdpdr_chan_id = -1;
-  LOG(10, ("process_message_channel_setup:"));
+  log_message(LOG_LEVEL_DEBUG, "process_message_channel_setup:");
   in_uint16_le(s, num_chans);
-  LOG(10, ("process_message_channel_setup: num_chans %d", num_chans));
+  log_message(LOG_LEVEL_DEBUG,"process_message_channel_setup: num_chans %d", num_chans);
   for (index = 0; index < num_chans; index++)
   {
     ci = &(g_chan_items[g_num_chan_items]);
@@ -199,8 +200,8 @@ process_message_channel_setup(struct stream* s)
     in_uint8a(s, ci->name, 8);
     in_uint16_le(s, ci->id);
     in_uint16_le(s, ci->flags);
-    LOG(10, ("process_message_channel_setup: chan name '%s' "
-             "id %d flags %8.8x", ci->name, ci->id, ci->flags));
+    log_message(LOG_LEVEL_DEBUG, "process_message_channel_setup: chan name '%s' "
+             "id %d flags %8.8x", ci->name, ci->id, ci->flags);
     if (g_strcasecmp(ci->name, "cliprdr") == 0)
     {
       g_cliprdr_index = g_num_chan_items;
@@ -249,8 +250,8 @@ process_message_channel_data(struct stream* s)
   in_uint16_le(s, chan_flags);
   in_uint16_le(s, length);
   in_uint32_le(s, total_length);
-  LOG(10, ("process_message_channel_data: chan_id %d "
-           "chan_flags %d", chan_id, chan_flags));
+  log_message(LOG_LEVEL_DEBUG,"process_message_channel_data: chan_id %d "
+           "chan_flags %d", chan_id, chan_flags);
   rv = send_channel_data_response_message();
   if (rv == 0)
   {
@@ -321,8 +322,8 @@ process_message(void)
         rv = process_message_channel_data_response(s);
         break;
       default:
-        LOG(0, ("process_message: error in process_message "
-                "unknown msg %d", id));
+        log_message(LOG_LEVEL_ERROR, "process_message: error in process_message ",
+                "unknown msg %d", id);
         break;
     }
     if (rv != 0)
@@ -354,7 +355,7 @@ my_trans_data_in(struct trans* trans)
   {
     return 1;
   }
-  LOG(10, ("my_trans_data_in:"));
+  log_message(LOG_LEVEL_DEBUG,"my_trans_data_in:");
   s = trans_get_in_s(trans);
   in_uint32_le(s, id);
   in_uint32_le(s, size);
@@ -387,7 +388,7 @@ my_trans_conn_in(struct trans* trans, struct trans* new_trans)
   {
     return 1;
   }
-  LOG(10, ("my_trans_conn_in:"));
+  log_message(LOG_LEVEL_DEBUG, "my_trans_conn_in:");
   g_con_trans = new_trans;
   g_con_trans->trans_data_in = my_trans_data_in;
   g_con_trans->header_size = 8;
@@ -422,7 +423,7 @@ setup_listen(void)
   error = trans_listen(g_lis_trans, port);
   if (error != 0)
   {
-    LOG(0, ("setup_listen: trans_listen failed for port %s", port));
+    log_message(LOG_LEVEL_ERROR, "setup_listen: trans_listen failed for port %s", port);
     return 1;
   }
   return 0;
@@ -438,7 +439,7 @@ channel_thread_loop(void* in_val)
   int error = 0;
   THREAD_RV rv = 0;
 
-  LOG(1, ("channel_thread_loop: thread start"));
+  log_message(LOG_LEVEL_INFO, "channel_thread_loop: thread start");
   rv = 0;
   error = setup_listen();
   if (error == 0)
@@ -452,7 +453,7 @@ channel_thread_loop(void* in_val)
     {
       if (g_is_wait_obj_set(g_term_event))
       {
-        LOG(0, ("channel_thread_loop: g_term_event set"));
+        log_message(LOG_LEVEL_INFO, "channel_thread_loop: g_term_event set");
         clipboard_deinit();
         sound_deinit();
         dev_redir_deinit();
@@ -462,15 +463,15 @@ channel_thread_loop(void* in_val)
       {
         if (trans_check_wait_objs(g_lis_trans) != 0)
         {
-          LOG(0, ("channel_thread_loop: trans_check_wait_objs error"));
+          log_message(LOG_LEVEL_INFO, "channel_thread_loop: trans_check_wait_objs error");
         }
       }
       if (g_con_trans != 0)
       {
         if (trans_check_wait_objs(g_con_trans) != 0)
         {
-          LOG(0, ("channel_thread_loop: "
-                  "trans_check_wait_objs error resetting"));
+          log_message(LOG_LEVEL_INFO, "channel_thread_loop: "
+                  "trans_check_wait_objs error resetting");
           clipboard_deinit();
           sound_deinit();
           dev_redir_deinit();
@@ -503,7 +504,7 @@ channel_thread_loop(void* in_val)
   g_lis_trans = 0;
   trans_delete(g_con_trans);
   g_con_trans = 0;
-  LOG(0, ("channel_thread_loop: thread stop"));
+  log_message(LOG_LEVEL_INFO, "channel_thread_loop: thread stop");
   g_set_wait_obj(g_thread_done_event);
   return rv;
 }
@@ -512,7 +513,7 @@ channel_thread_loop(void* in_val)
 void DEFAULT_CC
 term_signal_handler(int sig)
 {
-  LOG(1, ("term_signal_handler: got signal %d", sig));
+  log_message(LOG_LEVEL_INFO,"term_signal_handler: got signal %d", sig);
   g_set_wait_obj(g_term_event);
 }
 
@@ -520,7 +521,7 @@ term_signal_handler(int sig)
 void DEFAULT_CC
 nil_signal_handler(int sig)
 {
-  LOG(1, ("nil_signal_handler: got signal %d", sig));
+  log_message(LOG_LEVEL_INFO, "nil_signal_handler: got signal %d", sig);
   g_set_wait_obj(g_term_event);
 }
 
@@ -636,11 +637,31 @@ main(int argc, char** argv)
   int pid = 0;
   char text[256] = "";
   char* display_text = (char *)NULL;
+  enum logReturns error ;
+  char cfg_file[256];
 
   g_init("xrdp-chansrv"); /* os_calls */
   read_ini();
   pid = g_getpid();
-  LOG(1, ("main: app started pid %d(0x%8.8x)", pid, pid));
+  
+  /* starting logging subsystem */
+  g_snprintf(cfg_file, 255, "%s/sesman.ini", XRDP_CFG_PATH);
+  error = log_start(cfg_file,"XRDP-Chansrv");
+  if (error != LOG_STARTUP_OK)
+  {
+    char buf[256] ;  
+    switch (error)
+    {
+     case LOG_ERROR_MALLOC:
+        g_printf("error on malloc. cannot start logging. quitting.\n");
+        break;
+     case LOG_ERROR_FILE_OPEN:
+        g_printf("error opening log file [%s]. quitting.\n", getLogFile(buf,255));
+        break;
+    }
+    g_exit(1);
+  }
+  log_message(LOG_LEVEL_ALWAYS,"main: app started pid %d(0x%8.8x)", pid, pid);
 
   /*  set up signal handler  */
   g_signal_kill(term_signal_handler); /* SIGKILL */
@@ -648,14 +669,14 @@ main(int argc, char** argv)
   g_signal_user_interrupt(term_signal_handler); /* SIGINT */
   g_signal_pipe(nil_signal_handler); /* SIGPIPE */
   display_text = g_getenv("DISPLAY");
-  LOG(1, ("main: DISPLAY env var set to %s", display_text));
+  log_message(LOG_LEVEL_INFO, "main: DISPLAY env var set to %s", display_text);
   get_display_num_from_display(display_text);
   if (g_display_num == 0)
   {
-    LOG(0, ("main: error, display is zero"));
+    log_message(LOG_LEVEL_ERROR, "main: error, display is zero");
     return 1;
   }
-  LOG(1, ("main: using DISPLAY %d", g_display_num));
+  log_message(LOG_LEVEL_INFO,"main: using DISPLAY %d", g_display_num);
   g_snprintf(text, 255, "xrdp_chansrv_%8.8x_main_term", pid);
   g_term_event = g_create_wait_obj(text);
   g_snprintf(text, 255, "xrdp_chansrv_%8.8x_thread_done", pid);
@@ -665,7 +686,7 @@ main(int argc, char** argv)
   {
     if (g_obj_wait(&g_term_event, 1, 0, 0, 0) != 0)
     {
-      LOG(0, ("main: error, g_obj_wait failed"));
+      log_message(LOG_LEVEL_ERROR, "main: error, g_obj_wait failed");
       break;
     }
   }
@@ -674,13 +695,13 @@ main(int argc, char** argv)
     /* wait for thread to exit */
     if (g_obj_wait(&g_thread_done_event, 1, 0, 0, 0) != 0)
     {
-      LOG(0, ("main: error, g_obj_wait failed"));
+      log_message(LOG_LEVEL_ERROR, "main: error, g_obj_wait failed");
       break;
     }
   }
   /* cleanup */
   main_cleanup();
-  LOG(1, ("main: app exiting pid %d(0x%8.8x)", pid, pid));
+  log_message(LOG_LEVEL_INFO, "main: app exiting pid %d(0x%8.8x)", pid, pid);
   g_deinit();
   return 0;
 }
