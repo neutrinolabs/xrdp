@@ -29,28 +29,11 @@
 #include "list.h"
 #include "file.h"
 #include "sesman.h"
+#include "log.h"
 
 extern struct config_sesman* g_cfg; /* in sesman.c */
 
-/******************************************************************************/
-/**
- *
- * @brief Reads sesman configuration
- * @param s translates the strings "1", "true" and "yes" in 1 (true) and other strings in 0
- * @return 0 on success, 1 on failure
- *
- */
-static int APP_CC
-text2bool(char* s)
-{
-  if (0 == g_strcasecmp(s, "1") ||
-      0 == g_strcasecmp(s, "true") ||
-      0 == g_strcasecmp(s, "yes"))
-  {
-    return 1;
-  }
-  return 0;
-}
+
 
 /******************************************************************************/
 int DEFAULT_CC
@@ -66,16 +49,16 @@ config_read(struct config_sesman* cfg)
   fd = g_file_open(cfg_file);
   if (-1 == fd)
   {
-    if (g_cfg->log.fd >= 0)
-    {
+    //if (g_cfg->log.fd >= 0)
+    //{
       /* logging is already active */
-      log_message(&(g_cfg->log), LOG_LEVEL_ALWAYS, "error opening %s in \
+      log_message(LOG_LEVEL_ALWAYS, "error opening %s in \
                   config_read", cfg_file);
-    }
-    else
-    {
+    //}
+    //else
+    //{
       g_printf("error opening %s in config_read", cfg_file);
-    }
+    //}
     return 1;
   }
   g_memset(cfg, 0, sizeof(struct config_sesman));
@@ -95,7 +78,7 @@ config_read(struct config_sesman* cfg)
   config_read_rdp_params(fd, cfg, param_n, param_v);
 
   /* read logging config */
-  config_read_logging(fd, &(cfg->log), param_n, param_v);
+  // config_read_logging(fd, &(cfg->log), param_n, param_v);
 
   /* read security config */
   config_read_security(fd, &(cfg->sec), param_n, param_v);
@@ -190,7 +173,7 @@ config_read_globals(int file, struct config_sesman* cf, struct list* param_n,
   return 0;
 }
 
-/******************************************************************************/
+/******************************************************************************
 int DEFAULT_CC
 config_read_logging(int file, struct log_config* lc, struct list* param_n,
                     struct list* param_v)
@@ -201,7 +184,7 @@ config_read_logging(int file, struct log_config* lc, struct list* param_n,
   list_clear(param_v);
   list_clear(param_n);
 
-  /* setting defaults */
+  // setting defaults 
   lc->program_name = g_strdup("sesman");
   lc->log_file = 0;
   lc->fd = 0;
@@ -244,7 +227,7 @@ config_read_logging(int file, struct log_config* lc, struct list* param_n,
 
   return 0;
 }
-
+*/
 /******************************************************************************/
 int DEFAULT_CC
 config_read_security(int file, struct config_security* sc,

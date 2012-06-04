@@ -50,6 +50,39 @@ static tbus g_sync_data;
 static tui8 g_sync_type;
 static int g_sync_result;
 
+/**
+ * Creates a string consisting of all parameters that is hosted in the param list
+ * @param self
+ * @param outstr, allocate this buffer before you use this function
+ * @param len the allocated len for outstr
+ * @return 
+ */ 
+char* APP_CC
+dumpItemsToString(struct list* self, char *outstr, int len)
+{
+  g_memset(outstr,0,len);  
+  int index;
+  tbus item;
+  int totalLen= 0;
+
+  if (self->count == 0)
+  {
+    g_writeln("List is empty");
+  }
+  for (index = 0; index < self->count; index++)
+  {    
+    /* +1 = one space*/
+    totalLen = totalLen + g_strlen((char*)list_get_item(self, index))+1;
+    if(len>totalLen)
+    {
+        g_strcat(outstr,(char*)list_get_item(self, index));
+        g_strcat(outstr," ");
+    }    
+  }  
+  return outstr ;
+}
+
+
 /******************************************************************************/
 struct session_item* DEFAULT_CC
 session_get_bydata(char* name, int width, int height, int bpp, int type)
@@ -196,7 +229,7 @@ session_start_sessvc(int xpid, int wmpid, long data)
   /* new style waiting for clients */
   g_sprintf(wmpid_str, "%d", wmpid);
   g_sprintf(xpid_str, "%d",  xpid);
-  log_message(&(g_cfg->log), LOG_LEVEL_INFO,
+  log_message(LOG_LEVEL_INFO,
               "starting xrdp-sessvc - xpid=%s - wmpid=%s",
               xpid_str, wmpid_str);
 
@@ -215,19 +248,19 @@ session_start_sessvc(int xpid, int wmpid, long data)
   g_execvp(exe_path, ((char**)sessvc_params->items));
 
   /* should not get here */
-  log_message(&(g_cfg->log), LOG_LEVEL_ALWAYS,
+  log_message(LOG_LEVEL_ALWAYS,
               "error starting xrdp-sessvc - pid %d - xpid=%s - wmpid=%s",
               g_getpid(), xpid_str, wmpid_str);
 
   /* logging parameters */
   /* no problem calling strerror for thread safety: other threads
      are blocked */
-  log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "errno: %d, description: %s",
+  log_message(LOG_LEVEL_DEBUG, "errno: %d, description: %s",
               errno, g_get_strerror());
-  log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "execve parameter list:");
+  log_message(LOG_LEVEL_DEBUG, "execve parameter list:");
   for (i = 0; i < (sessvc_params->count); i++)
   {
-    log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "        argv[%d] = %s", i,
+    log_message(LOG_LEVEL_DEBUG, "        argv[%d] = %s", i,
                 (char*)list_get_item(sessvc_params, i));
   }
   list_delete(sessvc_params);
@@ -285,7 +318,7 @@ session_get_aval_display_from_chain(void)
     display++;
   }
   lock_chain_release();
-  log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "X server -- no display in range is available");
+  log_message(LOG_LEVEL_ERROR, "X server -- no display in range is available");
   return 0;
 }
 
@@ -303,7 +336,7 @@ wait_for_xserver(int display)
     i++;
     if (i > 40)
     {
-      log_message(&(g_cfg->log), LOG_LEVEL_ERROR,
+      log_message(LOG_LEVEL_ERROR,
                   "X server for display %d startup timeout",
                   display);
       break;
@@ -335,6 +368,7 @@ session_start_fork(int width, int height, int bpp, char* username,
   struct list * xserver_params = (struct list *)NULL;
   time_t ltime;
   struct tm stime;
+  char execvpparams[2048];
 
   /* initialize (zero out) local variables: */
   g_memset(&ltime,0,sizeof(time_t));
@@ -348,7 +382,7 @@ session_start_fork(int width, int height, int bpp, char* username,
   /* check to limit concurrent sessions */
   if (g_session_count >= g_cfg->sess.max_sessions)
   {
-    log_message(&(g_cfg->log), LOG_LEVEL_INFO, "max concurrent session limit "
+    log_message(LOG_LEVEL_INFO, "max concurrent session limit "
                 "exceeded. login for user %s denied", username);
     return 0;
   }
@@ -356,7 +390,7 @@ session_start_fork(int width, int height, int bpp, char* username,
   temp = (struct session_chain*)g_malloc(sizeof(struct session_chain), 0);
   if (temp == 0)
   {
-    log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "cannot create new chain "
+    log_message(LOG_LEVEL_ERROR, "cannot create new chain "
                 "element - user %s", username);
     return 0;
   }
@@ -364,7 +398,7 @@ session_start_fork(int width, int height, int bpp, char* username,
   if (temp->item == 0)
   {
     g_free(temp);
-    log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "cannot create new session "
+    log_message(LOG_LEVEL_ERROR, "cannot create new session "
                 "item - user %s", username);
     return 0;
   }
@@ -408,7 +442,7 @@ session_start_fork(int width, int height, int bpp, char* username,
           if (program[0] != 0)
           {
             g_execlp3(program, program, 0);
-            log_message(&(g_cfg->log), LOG_LEVEL_ALWAYS,
+            log_message(LOG_LEVEL_ALWAYS,
                         "error starting program %s for user %s - pid %d",
                         program, username, g_getpid());
           }
@@ -420,16 +454,16 @@ session_start_fork(int width, int height, int bpp, char* username,
           if (g_file_exist(text))
           {
             g_execlp3(text, g_cfg->user_wm, 0);
-            log_message(&(g_cfg->log), LOG_LEVEL_ALWAYS,"error starting user "
+            log_message(LOG_LEVEL_ALWAYS,"error starting user "
                         "wm for user %s - pid %d", username, g_getpid());
             /* logging parameters */
-            log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "errno: %d, "
+            log_message(LOG_LEVEL_DEBUG, "errno: %d, "
                         "description: %s", errno, g_get_strerror());
-            log_message(&(g_cfg->log), LOG_LEVEL_DEBUG,"execlp3 parameter "
+            log_message(LOG_LEVEL_DEBUG,"execlp3 parameter "
                         "list:");
-            log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "        argv[0] = %s",
+            log_message(LOG_LEVEL_DEBUG, "        argv[0] = %s",
                         text);
-            log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "        argv[1] = %s",
+            log_message(LOG_LEVEL_DEBUG, "        argv[1] = %s",
                         g_cfg->user_wm);
           }
         }
@@ -438,33 +472,33 @@ session_start_fork(int width, int height, int bpp, char* username,
         g_sprintf(text, "%s/%s", XRDP_CFG_PATH, g_cfg->default_wm);
         g_execlp3(text, g_cfg->default_wm, 0);
 
-        log_message(&(g_cfg->log), LOG_LEVEL_ALWAYS,"error starting default "
+        log_message( LOG_LEVEL_ALWAYS,"error starting default "
                     "wm for user %s - pid %d", username, g_getpid());
         /* logging parameters */
-        log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "errno: %d, description: "
+        log_message( LOG_LEVEL_DEBUG, "errno: %d, description: "
                     "%s", errno, g_get_strerror());
-        log_message(&(g_cfg->log), LOG_LEVEL_DEBUG,"execlp3 parameter list:");
-        log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "        argv[0] = %s",
+        log_message(LOG_LEVEL_DEBUG,"execlp3 parameter list:");
+        log_message(LOG_LEVEL_DEBUG, "        argv[0] = %s",
                     text);
-        log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "        argv[1] = %s",
+        log_message(LOG_LEVEL_DEBUG, "        argv[1] = %s",
                     g_cfg->default_wm);
 
         /* still a problem starting window manager just start xterm */
         g_execlp3("xterm", "xterm", 0);
 
         /* should not get here */
-        log_message(&(g_cfg->log), LOG_LEVEL_ALWAYS,"error starting xterm "
+        log_message(LOG_LEVEL_ALWAYS,"error starting xterm "
                     "for user %s - pid %d", username, g_getpid());
         /* logging parameters */
-        log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "errno: %d, description: "
+        log_message(LOG_LEVEL_DEBUG, "errno: %d, description: "
                     "%s", errno, g_get_strerror());
       }
       else
       {
-        log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "another Xserver is "
-                    "already active on display %d", display);
+        log_message(LOG_LEVEL_ERROR, "another Xserver might "
+                    "already be active on display %d - see log", display);
       }
-      log_message(&(g_cfg->log), LOG_LEVEL_DEBUG,"aborting connection...");
+      log_message(LOG_LEVEL_DEBUG,"aborting connection...");
       g_exit(0);
     }
     else /* parent (child sesman) */
@@ -499,6 +533,7 @@ session_start_fork(int width, int height, int bpp, char* username,
           /* make sure it ends with a zero */
           list_add_item(xserver_params, 0);
           pp1 = (char**)xserver_params->items;
+          log_message(LOG_LEVEL_INFO,"Xvnc start:%s",dumpItemsToString(xserver_params, execvpparams, 2048));
           g_execvp("Xvnc", pp1);
         }
         else if (type == SESMAN_SESSION_TYPE_XRDP)
@@ -521,28 +556,29 @@ session_start_fork(int width, int height, int bpp, char* username,
           /* make sure it ends with a zero */
           list_add_item(xserver_params, 0);
           pp1 = (char**)xserver_params->items;
+          log_message(LOG_LEVEL_INFO,"X11rdp start:%s",dumpItemsToString(xserver_params, execvpparams, 2048)); 
           g_execvp("X11rdp", pp1);
         }
         else
         {
-          log_message(&(g_cfg->log), LOG_LEVEL_ALWAYS, "bad session type - "
+          log_message(LOG_LEVEL_ALWAYS, "bad session type - "
                       "user %s - pid %d", username, g_getpid());
           g_exit(1);
         }
 
         /* should not get here */
-        log_message(&(g_cfg->log), LOG_LEVEL_ALWAYS, "error starting X server "
+        log_message(LOG_LEVEL_ALWAYS, "error starting X server "
                     "- user %s - pid %d", username, g_getpid());
 
         /* logging parameters */
-        log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "errno: %d, description: "
+        log_message(LOG_LEVEL_DEBUG, "errno: %d, description: "
                     "%s", errno, g_get_strerror());
-        log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "execve parameter list: "
+        log_message(LOG_LEVEL_DEBUG, "execve parameter list size: "
                     "%d", (xserver_params)->count);
 
         for (i=0; i<(xserver_params->count); i++)
         {
-          log_message(&(g_cfg->log), LOG_LEVEL_DEBUG, "        argv[%d] = %s",
+          log_message(LOG_LEVEL_DEBUG, "        argv[%d] = %s",
                       i, (char*)list_get_item(xserver_params, i));
         }
         list_delete(xserver_params);
@@ -656,7 +692,7 @@ session_kill(int pid)
   {
     if (tmp->item == 0)
     {
-      log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "session descriptor for "
+      log_message(LOG_LEVEL_ERROR, "session descriptor for "
                   "pid %d is null!", pid);
       if (prev == 0)
       {
@@ -676,7 +712,7 @@ session_kill(int pid)
     if (tmp->item->pid == pid)
     {
       /* deleting the session */
-      log_message(&(g_cfg->log), LOG_LEVEL_INFO, "++ terminated session:  username %s, display :%d.0, session_pid %d, ip %s", tmp->item->name, tmp->item->display, tmp->item->pid, tmp->item->client_ip);
+      log_message(LOG_LEVEL_INFO, "++ terminated session:  username %s, display :%d.0, session_pid %d, ip %s", tmp->item->name, tmp->item->display, tmp->item->pid, tmp->item->client_ip);
       g_free(tmp->item);
       if (prev == 0)
       {
@@ -720,7 +756,7 @@ session_sigkill_all()
   {
     if (tmp->item == 0)
     {
-      log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "found null session "
+      log_message(LOG_LEVEL_ERROR, "found null session "
                   "descriptor!");
     }
     else
@@ -746,7 +782,7 @@ session_get_bypid(int pid)
   dummy = g_malloc(sizeof(struct session_item), 1);
   if (0 == dummy)
   {
-    log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "internal error", pid);
+    log_message(LOG_LEVEL_ERROR, "internal error", pid);
     return 0;
   }
 
@@ -758,7 +794,7 @@ session_get_bypid(int pid)
   {
     if (tmp->item == 0)
     {
-      log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "session descriptor for "
+      log_message(LOG_LEVEL_ERROR, "session descriptor for "
                   "pid %d is null!", pid);
       /*THREAD-FIX release chain lock */
       lock_chain_release();
@@ -800,10 +836,10 @@ session_get_byuser(char* user, int* cnt, unsigned char flags)
   tmp = g_sessions;
   while (tmp != 0)
   {
-    LOG_DBG(&(g_cfg->log), "user: %s", user);
+    LOG_DBG("user: %s", user);
     if ((NULL == user) || (!g_strncasecmp(user, tmp->item->name, 256)))
     {
-      LOG_DBG(&(g_cfg->log), "session_get_byuser: status=%d, flags=%d, "
+      LOG_DBG("session_get_byuser: status=%d, flags=%d, "
               "result=%d", (tmp->item->status), flags,
               ((tmp->item->status) & flags));
       if ((tmp->item->status) & flags)

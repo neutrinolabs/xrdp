@@ -40,15 +40,15 @@ sig_sesman_shutdown(int sig)
 {
   char pid_file[256];
 
-  log_message(&(g_cfg->log), LOG_LEVEL_INFO, "shutting down sesman %d", 1);
+  log_message(LOG_LEVEL_INFO, "shutting down sesman %d", 1);
 
   if (g_getpid() != g_pid)
   {
-    LOG_DBG(&(g_cfg->log), "g_getpid() [%d] differs from g_pid [%d]", (g_getpid()), g_pid);
+    LOG_DBG("g_getpid() [%d] differs from g_pid [%d]", (g_getpid()), g_pid);
     return;
   }
 
-  LOG_DBG(&(g_cfg->log), " - getting signal %d pid %d", sig, g_getpid());
+  LOG_DBG(" - getting signal %d pid %d", sig, g_getpid());
 
   g_set_wait_obj(g_term_event);
 
@@ -66,51 +66,55 @@ sig_sesman_reload_cfg(int sig)
 {
   int error;
   struct config_sesman *cfg;
+  char cfg_file[256];
 
-  log_message(&(g_cfg->log), LOG_LEVEL_WARNING, "receiving SIGHUP %d", 1);
+  log_message(LOG_LEVEL_WARNING, "receiving SIGHUP %d", 1);
 
   if (g_getpid() != g_pid)
   {
-    LOG_DBG(&(g_cfg->log), "g_getpid() [%d] differs from g_pid [%d]", g_getpid(), g_pid);
+    LOG_DBG("g_getpid() [%d] differs from g_pid [%d]", g_getpid(), g_pid);
     return;
   }
 
   cfg = g_malloc(sizeof(struct config_sesman), 1);
   if (0 == cfg)
   {
-    log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "error creating new config:  - keeping old cfg");
+    log_message(LOG_LEVEL_ERROR, "error creating new config:  - keeping old cfg");
     return;
   }
 
   if (config_read(cfg) != 0)
   {
-    log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "error reading config - keeping old cfg");
+    log_message(LOG_LEVEL_ERROR, "error reading config - keeping old cfg");
     return;
   }
 
   /* stop logging subsystem */
-  log_end(&(g_cfg->log));
+  log_end();
 
   /* replace old config with new readed one */
   g_cfg = cfg;
+  
+  g_snprintf(cfg_file, 255, "%s/sesman.ini", XRDP_CFG_PATH);
 
   /* start again logging subsystem */
-  error = log_start(&(g_cfg->log));
+  error = log_start(cfg_file,"XRDP-sesman");
 
   if (error != LOG_STARTUP_OK)
   {
+    char buf[256];
     switch (error)
     {
       case LOG_ERROR_MALLOC:
         g_printf("error on malloc. cannot restart logging. log stops here, sorry.\n");
         break;
       case LOG_ERROR_FILE_OPEN:
-        g_printf("error reopening log file [%s]. log stops here, sorry.\n", g_cfg->log.log_file);
+        g_printf("error reopening log file [%s]. log stops here, sorry.\n", getLogFile(buf,255));
         break;
     }
   }
 
-  log_message(&(g_cfg->log), LOG_LEVEL_INFO, "configuration reloaded, log subsystem restarted");
+  log_message(LOG_LEVEL_INFO, "configuration reloaded, log subsystem restarted");
 }
 
 /******************************************************************************/
@@ -166,27 +170,27 @@ sig_handler_thread(void* arg)
       case SIGHUP:
         //reload cfg
 	//we must stop & restart logging, or copy logging cfg!!!!
-        LOG_DBG(&(g_cfg->log), "sesman received SIGHUP", 0);
+        LOG_DBG("sesman received SIGHUP", 0);
         //return 0;
         break;
       case SIGCHLD:
         /* a session died */
-        LOG_DBG(&(g_cfg->log), "sesman received SIGCHLD", 0);
+        LOG_DBG("sesman received SIGCHLD", 0);
         sig_sesman_session_end(SIGCHLD);
         break;
       case SIGINT:
         /* we die */
-        LOG_DBG(&(g_cfg->log), "sesman received SIGINT", 0);
+        LOG_DBG("sesman received SIGINT", 0);
         sig_sesman_shutdown(recv_signal);
         break;
       case SIGKILL:
         /* we die */
-        LOG_DBG(&(g_cfg->log), "sesman received SIGKILL", 0);
+        LOG_DBG("sesman received SIGKILL", 0);
         sig_sesman_shutdown(recv_signal);
         break;
       case SIGTERM:
         /* we die */
-        LOG_DBG(&(g_cfg->log), "sesman received SIGTERM", 0);
+        LOG_DBG("sesman received SIGTERM", 0);
         sig_sesman_shutdown(recv_signal);
         break;
     }

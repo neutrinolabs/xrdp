@@ -54,7 +54,7 @@ sesman_main_loop(void)
   tbus robjs[8];
 
   /*main program loop*/
-  log_message(&(g_cfg->log), LOG_LEVEL_INFO, "listening...");
+  log_message(LOG_LEVEL_INFO, "listening...");
   g_sck = g_tcp_socket();
   g_tcp_set_non_blocking(g_sck);
   error = scp_tcp_bind(g_sck, g_cfg->listen_address, g_cfg->listen_port);
@@ -103,7 +103,7 @@ sesman_main_loop(void)
           else
           {
             /* we've got a connection, so we pass it to scp code */
-            LOG_DBG(&(g_cfg->log), "new connection");
+            LOG_DBG("new connection");
             thread_scp_start(in_sck);
             /* todo, do we have to wait here ? */
           }
@@ -113,13 +113,13 @@ sesman_main_loop(void)
     }
     else
     {
-      log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "listen error %d (%s)",
+      log_message(LOG_LEVEL_ERROR, "listen error %d (%s)",
                   g_get_errno(), g_get_strerror());
     }
   }
   else
   {
-    log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "bind error on "
+    log_message(LOG_LEVEL_ERROR, "bind error on "
                 "port '%s': %d (%s)", g_cfg->listen_port,
                 g_get_errno(), g_get_strerror());
   }
@@ -131,12 +131,13 @@ int DEFAULT_CC
 main(int argc, char** argv)
 {
   int fd;
-  int error;
+  enum logReturns error;
   int daemon = 1;
   int pid;
   char pid_s[8];
   char text[256];
   char pid_file[256];
+  char cfg_file[256];
 
   g_init("xrdp-sesman");
   g_snprintf(pid_file, 255, "%s/xrdp-sesman.pid", XRDP_PID_PATH);
@@ -242,7 +243,7 @@ main(int argc, char** argv)
     g_deinit();
     g_exit(1);
   }
-  g_cfg->log.fd = -1; /* don't use logging before reading its config */
+  //g_cfg->log.fd = -1; /* don't use logging before reading its config */
   if (0 != config_read(g_cfg))
   {
     g_printf("error reading config: %s\nquitting.\n", g_get_strerror());
@@ -250,18 +251,21 @@ main(int argc, char** argv)
     g_exit(1);
   }
 
+  g_snprintf(cfg_file,255,"%s/sesman.ini",XRDP_CFG_PATH);
+  
   /* starting logging subsystem */
-  error = log_start(&(g_cfg->log));
+  error = log_start(cfg_file,"XRDP-sesman");
 
   if (error != LOG_STARTUP_OK)
   {
+    char buf[256] ;  
     switch (error)
     {
       case LOG_ERROR_MALLOC:
         g_printf("error on malloc. cannot start logging. quitting.\n");
         break;
       case LOG_ERROR_FILE_OPEN:
-        g_printf("error opening log file [%s]. quitting.\n", g_cfg->log.log_file);
+        g_printf("error opening log file [%s]. quitting.\n", getLogFile(buf,255));
         break;
     }
     g_deinit();
@@ -269,7 +273,7 @@ main(int argc, char** argv)
   }
 
   /* libscp initialization */
-  scp_init(&(g_cfg->log));
+  scp_init();
 
   if (daemon)
   {
@@ -317,10 +321,10 @@ main(int argc, char** argv)
     fd = g_file_open(pid_file);
     if (-1 == fd)
     {
-      log_message(&(g_cfg->log), LOG_LEVEL_ERROR,
+      log_message(LOG_LEVEL_ERROR,
                   "error opening pid file[%s]: %s",
                   pid_file, g_get_strerror());
-      log_end(&(g_cfg->log));
+      log_end();
       g_deinit();
       g_exit(1);
     }
@@ -330,7 +334,7 @@ main(int argc, char** argv)
   }
 
   /* start program main loop */
-  log_message(&(g_cfg->log), LOG_LEVEL_ALWAYS,
+  log_message(LOG_LEVEL_ALWAYS,
               "starting sesman with pid %d", g_pid);
 
   /* make sure the /tmp/.X11-unix directory exist */
@@ -358,7 +362,7 @@ main(int argc, char** argv)
 
   if (!daemon)
   {
-    log_end(&(g_cfg->log));
+    log_end();
   }
 
   g_deinit();

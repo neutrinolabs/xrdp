@@ -47,39 +47,39 @@ scp_v0_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
       display = s_item->display;
       if (0 != s->client_ip)
       {
-        log_message(&(g_cfg->log), LOG_LEVEL_INFO, "++ reconnected session: username %s, display :%d.0, session_pid %d, ip %s", s->username, display, s_item->pid, s->client_ip);
+        log_message( LOG_LEVEL_INFO, "++ reconnected session: username %s, display :%d.0, session_pid %d, ip %s", s->username, display, s_item->pid, s->client_ip);
       }
       else
       {
-        log_message(&(g_cfg->log), LOG_LEVEL_INFO, "++ reconnected session: username %s, display :%d.0, session_pid %d", s->username, display, s_item->pid);
+        log_message(LOG_LEVEL_INFO, "++ reconnected session: username %s, display :%d.0, session_pid %d", s->username, display, s_item->pid);
       }
       auth_end(data);
       /* don't set data to null here */
     }
     else
     {
-      LOG_DBG(&(g_cfg->log), "pre auth");
+      LOG_DBG("pre auth");
       if (1 == access_login_allowed(s->username))
       {
         if (0 != s->client_ip)
         {
-          log_message(&(g_cfg->log), LOG_LEVEL_INFO, "++ created session (access granted): username %s, ip %s", s->username, s->client_ip);
+          log_message(LOG_LEVEL_INFO, "++ created session (access granted): username %s, ip %s", s->username, s->client_ip);
         }
         else
         {
-          log_message(&(g_cfg->log), LOG_LEVEL_INFO, "++ created session (access granted): username %s", s->username);
+          log_message(LOG_LEVEL_INFO, "++ created session (access granted): username %s", s->username);
         }
 
         if (SCP_SESSION_TYPE_XVNC == s->type)
         {
-          log_message(&(g_cfg->log), LOG_LEVEL_INFO, "starting Xvnc session...");
+          log_message( LOG_LEVEL_INFO, "starting Xvnc session...");
           display = session_start(s->width, s->height, s->bpp, s->username,
                                   s->password, data, SESMAN_SESSION_TYPE_XVNC,
                                   s->domain, s->program, s->directory, s->client_ip);
         }
         else
         {
-          log_message(&(g_cfg->log), LOG_LEVEL_INFO, "starting X11rdp session...");
+          log_message(LOG_LEVEL_INFO, "starting X11rdp session...");
           display = session_start(s->width, s->height, s->bpp, s->username,
                                   s->password, data, SESMAN_SESSION_TYPE_XRDP,
                                   s->domain, s->program, s->directory, s->client_ip);
