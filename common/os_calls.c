@@ -2219,22 +2219,6 @@ g_getpid(void)
 }
 
 /*****************************************************************************/
-int APP_CC
-g_gettid(void)
-{
-#if defined(_WIN32)
-  return (int)GetCurrentThreadId();
-#else
-#if defined(__linux__)
-  /* This is Linux specific way of getting the thread id. 
-   * Function is not part of GLIB so therefore this syscall*/
-  return (int)syscall(__NR_gettid);
-#else
-  return (int)pthread_self();
-#endif
-#endif
-}
-/*****************************************************************************/
 /* does not work in win32 */
 int APP_CC
 g_sigterm(int pid)

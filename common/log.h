@@ -1,20 +1,24 @@
 /*
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2 of the License, or
-   (at your option) any later version.
+   Copyright (c) 2005-2012 Jay Sorg
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+   Permission is hereby granted, free of charge, to any person obtaining a
+   copy of this software and associated documentation files (the "Software"),
+   to deal in the Software without restriction, including without limitation
+   the rights to use, copy, modify, merge, publish, distribute, sublicense,
+   and/or sell copies of the Software, and to permit persons to whom the
+   Software is furnished to do so, subject to the following conditions:
 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+   The above copyright notice and this permission notice shall be included
+   in all copies or substantial portions of the Software.
 
-   xrdp: A Remote Desktop Protocol server.
-   Copyright (C) Jay Sorg 2005-2010
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+   OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+   DEALINGS IN THE SOFTWARE.
+
 */
 
 #ifndef LOG_H
@@ -28,7 +32,8 @@
 #define LOG_BUFFER_SIZE      1024
 
 /* logging levels */
-enum logLevels{
+enum logLevels
+{
   LOG_LEVEL_ALWAYS = 0,
   LOG_LEVEL_ERROR,
   LOG_LEVEL_WARNING,
@@ -37,7 +42,8 @@ enum logLevels{
 };
 
 /* startup return values */
-enum logReturns{
+enum logReturns
+{
   LOG_STARTUP_OK = 0,
   LOG_ERROR_MALLOC,
   LOG_ERROR_NULL_FILE,
@@ -57,11 +63,10 @@ enum logReturns{
 /*#define LOG_ENABLE_THREAD*/
 
 #ifdef DEBUG
-  #define LOG_DBG(args...) log_message(LOG_LEVEL_DEBUG, args);
+#define LOG_DBG(args...) log_message(LOG_LEVEL_DEBUG, args);
 #else
-  #define LOG_DBG(args...)
+#define LOG_DBG(args...)
 #endif
-
 
 struct log_config
 {
@@ -99,7 +104,7 @@ internal_log_end(struct log_config* l_cfg);
 
 /**
  * Converts a log level to a string
- * @param lvl, the loglevel 
+ * @param lvl, the loglevel
  * @param str pointer where the string will be stored.
  */
 void DEFAULT_CC
@@ -116,12 +121,12 @@ enum logLevels DEFAULT_CC
 internal_log_text2level(char* s);
 
 /**
- * A function that init our struct that holds all state and 
+ * A function that init our struct that holds all state and
  * also init its content.
  * @return  LOG_STARTUP_OK or LOG_ERROR_MALLOC
  */
 enum logReturns DEFAULT_CC
-internalInitAndAllocStruct();
+internalInitAndAllocStruct(void);
 
 /**
  * Read configuration from a file and store the values in lists.
@@ -130,51 +135,53 @@ internalInitAndAllocStruct();
  * @param param_n
  * @param param_v
  * @param applicationName, the application name used in the log events.
- * @return 
+ * @return
  */
 enum logReturns DEFAULT_CC
-internal_config_read_logging(int file, struct log_config* lc, struct list* param_n,
-                    struct list* param_v,const char *applicationName) ;
+internal_config_read_logging(int file, struct log_config* lc,
+                             struct list* param_n,
+                             struct list* param_v,
+                             const char *applicationName);
 /*End of internal functions*/
 #endif
 /**
- * This function initialize the log facilities according to the configuration 
+ * This function initialize the log facilities according to the configuration
  * file, that is described by the in parameter.
  * @param iniFile
  * @param applicationName, the name that is used in the log for the running application
  * @return LOG_STARTUP_OK on success
  */
-enum logReturns DEFAULT_CC 
-log_start(const char *iniFile, const char *applicationName) ;
+enum logReturns DEFAULT_CC
+log_start(const char* iniFile, const char* applicationName);
 
 /**
  * An alternative log_start where the caller gives the params directly.
  * @param iniParams
- * @return 
+ * @return
  */
 enum logReturns DEFAULT_CC
 log_start_from_param(const struct log_config *iniParams);
 /**
  * Function that terminates all logging
- * @return 
+ * @return
  */
-enum logReturns DEFAULT_CC 
-log_end() ;
+enum logReturns DEFAULT_CC
+log_end(void);
 
 /**
  * the log function that all files use to log an event.
  * @param lvl, the loglevel
  * @param msg, the logtext.
  * @param ...
- * @return 
+ * @return
  */
-enum logReturns DEFAULT_CC 
-log_message(const enum logLevels lvl, const char* msg, ...) ;
+enum logReturns DEFAULT_CC
+log_message(const enum logLevels lvl, const char* msg, ...);
 
 /**
  *
  * @brief Reads configuration
- * @param s translates the strings "1", "true" and "yes" in 1 (true) and 
+ * @param s translates the strings "1", "true" and "yes" in 1 (true) and
  * other strings in 0
  * @return 0 on success, 1 on failure
  *
@@ -185,8 +192,7 @@ int APP_CC text2bool(char* s);
  * This function returns the configured file name for the logfile
  * @param replybuf the buffer where the reply is stored
  * @param bufsize how big is the reply buffer.
- * @return 
+ * @return
  */
 char *getLogFile(char *replybuf, int bufsize);
 #endif
-
