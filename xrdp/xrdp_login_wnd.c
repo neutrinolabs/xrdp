@@ -224,6 +224,10 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap* wnd)
       xrdp_wm_set_login_mode(wm, 2);
     }
   }
+  else
+  {
+    log_message(LOG_LEVEL_ERROR,"Combo is 0 - potential programming error");
+  }
   return 0;
 }
 

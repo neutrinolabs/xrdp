@@ -1057,6 +1057,27 @@ int access_control(char *username, char *password, char *srv){
 #endif
 
 /*****************************************************************************/
+/* This routine clears all states to make sure that our next login will be
+ * as expected. If the user does not press ok on the log window and try to 
+ * connect again we must make sure that no previous information is stored.*/
+void cleanup_states(struct xrdp_mm* self)
+{
+  if(self != NULL)
+  {
+    self-> connected_state = 0; /* true if connected to sesman else false */
+    self-> sesman_trans = NULL; /* connection to sesman */
+    self-> sesman_trans_up = 0 ; /* true once connected to sesman */
+    self-> delete_sesman_trans = 0; /* boolean set when done with sesman connection */
+    self-> display = 0; /* 10 for :10.0, 11 for :11.0, etc */
+    self-> code = 0; /* 0 Xvnc session 10 X11rdp session */
+    self-> sesman_controlled = 0; /* true if this is a sesman session */
+    self-> chan_trans = NULL; /* connection to chansrv */
+    self-> chan_trans_up = 0; /* true once connected to chansrv */
+    self-> delete_chan_trans = 0; /* boolean set when done with channel connection */
+    self-> usechansrv = 0; /* true if chansrvport is set in xrdp.ini or using sesman */
+  }
+}
+/*****************************************************************************/
 int APP_CC
 xrdp_mm_connect(struct xrdp_mm* self)
 {
@@ -1083,6 +1104,8 @@ xrdp_mm_connect(struct xrdp_mm* self)
   username[0] = 0;
   password[0] = 0;
 #endif
+  /* make sure we start in correct state */
+  cleanup_states(self);
   g_memset(ip, 0, sizeof(ip));
   g_memset(errstr, 0, sizeof(errstr));
   g_memset(text, 0, sizeof(text));
