@@ -972,8 +972,7 @@ int access_control(char *username, char *password, char *srv){
     /* we use a blocking socket here */
     reply = g_tcp_connect(socket, srv, "3350");
     if (reply == 0)
-    {
-      g_writeln("Connected to sesman user %s: password %s :srv %s",username, password, srv);
+    {      
       make_stream(in_s);
       init_stream(in_s, 500);
       make_stream(out_s);
@@ -996,56 +995,63 @@ int access_control(char *username, char *password, char *srv){
       reply = g_tcp_send(socket, out_s->data, index, 0);      
       free_stream(out_s);     
       if (reply > 0)
-      {               
-        reply = g_tcp_recv(socket, in_s->end, 500, 0);
-        if (reply > 0) 
-        {
-          in_s->end =  in_s->end + reply ;
-          in_uint32_be(in_s, version);
-          /*g_writeln("Version number in reply from sesman: %d",version) ; */
-          in_uint32_be(in_s, size);
-          if((size==14) && (version==0))
+      {
+        /* We wait in 5 sec for a reply from sesman*/
+        if(g_tcp_can_recv(socket,5000)){
+          reply = g_tcp_recv(socket, in_s->end, 500, 0);
+          if (reply > 0)
           {
-            in_uint16_be(in_s, code);
-            in_uint16_be(in_s, ok);
-            in_uint16_be(in_s, dummy);
-            if(code!=4)
+            in_s->end =  in_s->end + reply ;
+            in_uint32_be(in_s, version);
+            /*g_writeln("Version number in reply from sesman: %d",version) ; */
+            in_uint32_be(in_s, size);
+            if((size==14) && (version==0))
             {
-              g_writeln("Return cmd code is corrupt");
+              in_uint16_be(in_s, code);
+              in_uint16_be(in_s, ok);
+              in_uint16_be(in_s, dummy);
+              if(code!=4)
+              {
+                log_message(LOG_LEVEL_ERROR,"Returned cmd code from "
+                  "sesman is corrupt");
+              }
+              else
+              {
+                rec = ok; /* here we read the reply from the access control */       
+              }
             }
             else
             {
-              rec = ok; /* here we read the reply from the access control */
-			/* g_writeln("Valid reply received"); */
+              log_message(LOG_LEVEL_ERROR,"Corrupt reply size or "
+                "version from sesman: %d",size);
             }
           }
           else
           {
-            g_writeln("corrupt reply size or version from sesman: %d",size);
+            log_message(LOG_LEVEL_ERROR,"No data received from sesman");
           }
         }
         else
         {
-          g_writeln("no data received from sesman");
+          log_message(LOG_LEVEL_ERROR,"Timeout when waiting for sesman");
         }
       }
       else
       {
-        g_writeln("no success sending to sesman");
+        log_message(LOG_LEVEL_ERROR,"No success sending to sesman");
       }
       free_stream(in_s);
       g_tcp_close(socket);
     }
     else
     {
-      g_writeln("failure connecting to socket sesman");
+      log_message(LOG_LEVEL_ERROR,"Failure connecting to socket sesman");
     }        
   }
   else
   {
-    g_writeln("failure creating socket");
-  }
-  //g_free(port);
+    log_message(LOG_LEVEL_ERROR,"Failure creating socket - for access control");
+  }  
   return rec;
 }
 #endif
@@ -1139,12 +1145,12 @@ xrdp_mm_connect(struct xrdp_mm* self)
     /* g_writeln("we use pam modules to check if we can approve this user"); */
     if(!g_strncmp(pam_auth_username,"same",255))
     {
-      g_writeln("pamusername copied from username - same: %s",username);
+      log_message(LOG_LEVEL_DEBUG,"pamusername copied from username - same: %s",username);
       g_strncpy(pam_auth_username,username,255);	  
     }
     if(!g_strncmp(pam_auth_password,"same",255))
     {
-      g_writeln("pam_auth_password copied from username - same: %s",password);
+      log_message(LOG_LEVEL_DEBUG,"pam_auth_password copied from username - same: %s",password);
       g_strncpy(pam_auth_password,password,255);
     }
     /* access_control return 0 on success */
@@ -1158,6 +1164,7 @@ xrdp_mm_connect(struct xrdp_mm* self)
       g_sprintf(replytxt,"Reply from access control undefined");
     }
     xrdp_wm_log_msg(self->wm,replytxt);
+    log_message(LOG_LEVEL_INFO,replytxt);
     if(reply!=0)
     {      
       rv = 1 ;

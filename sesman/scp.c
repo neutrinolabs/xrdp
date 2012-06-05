@@ -43,7 +43,7 @@ scp_process_start(void* sck)
   /* making a local copy of the socket (it's on the stack) */
   /* probably this is just paranoia                        */
   scon.in_sck = g_thread_sck;
-  LOG_DBG(&(g_cfg->log), "started scp thread on socket %d", scon.in_sck);
+  LOG_DBG("started scp thread on socket %d", scon.in_sck);
 
   /* unlocking g_thread_sck */
   lock_socket_release();
@@ -60,40 +60,40 @@ scp_process_start(void* sck)
       if (sdata->version == 0)
       {
         /* starts processing an scp v0 connection */
-        LOG_DBG(&(g_cfg->log), "accept ok, go on with scp v0\n",0);
+        LOG_DBG("accept ok, go on with scp v0\n",0);
         scp_v0_process(&scon, sdata);
       }
       else
       {
-        LOG_DBG(&(g_cfg->log), "accept ok, go on with scp v1\n",0);
-        /*LOG_DBG(&(g_cfg->log), "user: %s\npass: %s",sdata->username, sdata->password);*/
+        LOG_DBG("accept ok, go on with scp v1\n",0);
+        /*LOG_DBG("user: %s\npass: %s",sdata->username, sdata->password);*/
         scp_v1_process(&scon, sdata);
       }
       break;
     case SCP_SERVER_STATE_START_MANAGE:
       /* starting a management session */
-      log_message(&(g_cfg->log), LOG_LEVEL_WARNING,
+      log_message(LOG_LEVEL_WARNING,
         "starting a sesman management session...");
       scp_v1_mng_process(&scon, sdata);
       break;
     case SCP_SERVER_STATE_VERSION_ERR:
       /* an unknown scp version was requested, so we shut down the */
       /* connection (and log the fact)                             */
-      log_message(&(g_cfg->log), LOG_LEVEL_WARNING,
+      log_message(LOG_LEVEL_WARNING,
         "unknown protocol version specified. connection refused.");
       break;
     case SCP_SERVER_STATE_NETWORK_ERR:
-      log_message(&(g_cfg->log), LOG_LEVEL_WARNING, "libscp network error.");
+      log_message(LOG_LEVEL_WARNING, "libscp network error.");
       break;
     case SCP_SERVER_STATE_SEQUENCE_ERR:
-      log_message(&(g_cfg->log), LOG_LEVEL_WARNING, "libscp sequence error.");
+      log_message(LOG_LEVEL_WARNING, "libscp sequence error.");
       break;
     case SCP_SERVER_STATE_INTERNAL_ERR:
       /* internal error occurred (eg. malloc() error, ecc.) */
-      log_message(&(g_cfg->log), LOG_LEVEL_ERROR, "libscp internal error occurred.");
+      log_message(LOG_LEVEL_ERROR, "libscp internal error occurred.");
       break;
     default:
-      log_message(&(g_cfg->log), LOG_LEVEL_ALWAYS, "unknown return from scp_vXs_accept()");
+      log_message(LOG_LEVEL_ALWAYS, "unknown return from scp_vXs_accept()");
   }
   g_tcp_close(scon.in_sck);
   free_stream(scon.in_s);

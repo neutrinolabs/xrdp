@@ -21,6 +21,7 @@
 */
 
 #include "vnc.h"
+#include "log.h"
 
 /******************************************************************************/
 /* taken from vncauth.c */
@@ -63,6 +64,7 @@ lib_recv(struct vnc* v, char* data, int len)
       }
       else
       {
+        log_message(LOG_LEVEL_DEBUG,"VNC lib_recv return 1");  
         return 1;
       }
     }
@@ -199,12 +201,16 @@ lib_process_channel_data(struct vnc* v, int chanid, int flags, int size,
                                   length, 3);
         free_stream(out_s);
         break;
+      default:{
+          log_message(LOG_LEVEL_DEBUG,"VNC clip information unhandled");  
+          break;
+      }
     }
   }
   else
   {
-    g_writeln("lib_process_channel_data: unknown chanid %d v->clip_chanid %d",
-              chanid, v->clip_chanid);
+    log_message(LOG_LEVEL_DEBUG,"lib_process_channel_data: unknown chanid:",
+    "%d :(v->clip_chanid) %d",chanid,v->clip_chanid);
   }
   return 0;
 }
@@ -381,7 +387,7 @@ get_pixel_safe(char* data, int x, int y, int width, int height, int bpp)
   }
   else
   {
-    g_writeln("error in get_pixel_safe bpp %d", bpp);
+    log_message(LOG_LEVEL_ERROR,"error in get_pixel_safe bpp %d", bpp);
   }
   return 0;
 }
@@ -436,7 +442,7 @@ set_pixel_safe(char* data, int x, int y, int width, int height, int bpp,
   }
   else
   {
-    g_writeln("error in set_pixel_safe bpp %d", bpp);
+    log_message(LOG_LEVEL_ERROR,"error in set_pixel_safe bpp %d", bpp);
   }
 }
 
@@ -473,7 +479,7 @@ split_color(int pixel, int* r, int* g, int* b, int bpp, int* palette)
   }
   else
   {
-    g_writeln("error in split_color bpp %d", bpp);
+    log_message(LOG_LEVEL_ERROR,"error in split_color bpp %d", bpp);
   }
   return 0;
 }
@@ -488,7 +494,7 @@ make_color(int r, int g, int b, int bpp)
   }
   else
   {
-    g_writeln("error in make_color bpp %d", bpp);
+    log_message(LOG_LEVEL_ERROR,"error in make_color bpp %d", bpp);
   }
   return 0;
 }
@@ -629,7 +635,7 @@ lib_framebuffer_update(struct vnc* v)
       }
       else
       {
-        g_sprintf(text, "error in lib_framebuffer_update encoding = %8.8x",
+        g_sprintf(text, "VNC error in lib_framebuffer_update encoding = %8.8x",
                   encoding);
         v->server_msg(v, text, 1);
       }
@@ -784,18 +790,18 @@ lib_mod_signal(struct vnc* v)
     {
       error = lib_palette_update(v);
     }
-	else if (type == 2) /* bell */
+    else if (type == 2) /* bell */
     {
       error = lib_bell_trigger(v);
     }
     else if (type == 3) /* clipboard */
     {
-      g_writeln("got clip data");
+      log_message(LOG_LEVEL_DEBUG,"VNC got clip data");
       error = lib_clip_data(v);
     }
     else
     {
-      g_sprintf(text, "unknown in lib_mod_signal %d", type);
+      g_sprintf(text, "VNC unknown in lib_mod_signal %d", type);
       v->server_msg(v, text, 1);
     }
   }
@@ -847,19 +853,19 @@ lib_mod_connect(struct vnc* v)
   int i;
   int check_sec_result;
 
-  v->server_msg(v, "started connecting", 0);
+  v->server_msg(v, "VNC started connecting", 0);
   check_sec_result = 1;
   /* only support 8 and 16 bpp connections from rdp client */
   if ((v->server_bpp != 8) && (v->server_bpp != 15) &&
       (v->server_bpp != 16) && (v->server_bpp != 24))
   {
-    v->server_msg(v, "error - only supporting 8, 15, 16 and 24 bpp rdp \
+    v->server_msg(v, "VNC error - only supporting 8, 15, 16 and 24 bpp rdp \
 connections", 0);
     return 1;
   }
   if (g_strcmp(v->ip, "") == 0)
   {
-    v->server_msg(v, "error - no ip set", 0);
+    v->server_msg(v, "VNC error - no ip set", 0);
     return 1;
   }
   make_stream(s);
@@ -868,19 +874,19 @@ connections", 0);
   v->sck = g_tcp_socket();
   v->sck_obj = g_create_wait_obj_from_socket(v->sck, 0);
   v->sck_closed = 0;
-  g_sprintf(text, "connecting to %s %s", v->ip, con_port);
+  g_sprintf(text, "VNC connecting to %s %s", v->ip, con_port);
   v->server_msg(v, text, 0);
   error = g_tcp_connect(v->sck, v->ip, con_port);
   if (error == 0)
   {
-    v->server_msg(v, "tcp connected", 0);
+    v->server_msg(v, "VNC tcp connected", 0);
     g_tcp_set_non_blocking(v->sck);
     g_tcp_set_no_delay(v->sck);
     /* protocal version */
     init_stream(s, 8192);
     error = lib_recv(v, s->data, 12);
     if (error == 0)
-    {
+    {        
       error = lib_send(v, "RFB 003.003\n", 12);
     }
     /* sec type */
@@ -892,7 +898,7 @@ connections", 0);
     if (error == 0)
     {
       in_uint32_be(s, i);
-      g_sprintf(text, "security level is %d (1 = none, 2 = standard)", i);
+      g_sprintf(text, "VNC security level is %d (1 = none, 2 = standard)", i);
       v->server_msg(v, text, 0);
       if (i == 1) /* none */
       {
@@ -903,62 +909,89 @@ connections", 0);
         init_stream(s, 8192);
         error = lib_recv(v, s->data, 16);
         if (error == 0)
-        {
-          rfbEncryptBytes(s->data, v->password);
-          error = lib_send(v, s->data, 16);
-        }
+        {          
+          rfbEncryptBytes(s->data, v->password);          
+          error = lib_send(v, s->data, 16);          
+          check_sec_result = 1 ; // not needed
+        }        
       }
-      else
-      {
+      else if(i==0)
+      {        
+        log_message(LOG_LEVEL_DEBUG,"VNC Server will disconnect");  
         error = 1;
       }
+      else
+      { 
+        log_message(LOG_LEVEL_DEBUG,"VNC unsupported security level");  
+        error = 1;          
+      }
     }
+  }
+  if (error!=0)
+  {
+    log_message(LOG_LEVEL_DEBUG,"VNC Error after security negotiation");       
   }
   if (error == 0 && check_sec_result)
   {
     /* sec result */
-    init_stream(s, 8192);
-    error = lib_recv(v, s->data, 4);
+    init_stream(s, 8192);    
+    error = lib_recv(v, s->data, 4);    
     if (error == 0)
     {
       in_uint32_be(s, i);
       if (i != 0)
       {
-        v->server_msg(v, "password failed", 0);
+        v->server_msg(v, "VNC password failed", 0);
         error = 2;
       }
       else
       {
-        v->server_msg(v, "password ok", 0);
+        v->server_msg(v, "VNC password ok", 0);
       }
     }
   }
   if (error == 0)
   {
-    v->server_msg(v, "sending share flag", 0);
+    v->server_msg(v, "VNC sending share flag", 0);
     init_stream(s, 8192);
     s->data[0] = 1;
     error = lib_send(v, s->data, 1); /* share flag */
   }
+  else
+  { 
+    log_message(LOG_LEVEL_DEBUG,"VNC error before sending share flag");         
+  }
   if (error == 0)
   {
-    v->server_msg(v, "receiving server init", 0);
+    v->server_msg(v, "VNC receiving server init", 0);
     error = lib_recv(v, s->data, 4); /* server init */
+  }
+  else
+  { 
+    log_message(LOG_LEVEL_DEBUG,"VNC error before receiving server init");         
   }
   if (error == 0)
   {
     in_uint16_be(s, v->mod_width);
     in_uint16_be(s, v->mod_height);
     init_stream(pixel_format, 8192);
-    v->server_msg(v, "receiving pixel format", 0);
+    v->server_msg(v, "VNC receiving pixel format", 0);
     error = lib_recv(v, pixel_format->data, 16);
+  }
+  else
+  { 
+    log_message(LOG_LEVEL_DEBUG,"VNC error before receiving pixel format");         
   }
   if (error == 0)
   {
     v->mod_bpp = v->server_bpp;
     init_stream(s, 8192);
-    v->server_msg(v, "receiving name length", 0);
+    v->server_msg(v, "VNC receiving name length", 0);
     error = lib_recv(v, s->data, 4); /* name len */
+  }
+  else
+  { 
+    log_message(LOG_LEVEL_DEBUG,"VNC error before receiving name length");         
   }
   if (error == 0)
   {
@@ -969,11 +1002,15 @@ connections", 0);
     }
     else
     {
-      v->server_msg(v, "receiving name", 0);
+      v->server_msg(v, "VNC receiving name", 0);
       error = lib_recv(v, v->mod_name, i);
       v->mod_name[i] = 0;
     }
   }
+  else
+  { 
+    log_message(LOG_LEVEL_DEBUG,"VNC error before receiving name");         
+  }  
   /* should be connected */
   if (error == 0)
   {
@@ -1057,7 +1094,7 @@ connections", 0);
       out_uint8s(pixel_format, 3); /* pad */
     }
     out_uint8a(s, pixel_format->data, 16);
-    v->server_msg(v, "sending pixel format", 0);
+    v->server_msg(v, "VNC sending pixel format", 0);
     error = lib_send(v, s->data, 20);
   }
   if (error == 0)
@@ -1071,7 +1108,7 @@ connections", 0);
     out_uint32_be(s, 1); /* copy rect */
     out_uint32_be(s, 0xffffff11); /* cursor */
     out_uint32_be(s, 0xffffff21); /* desktop size */
-    v->server_msg(v, "sending encodings", 0);
+    v->server_msg(v, "VNC sending encodings", 0);
     error = lib_send(v, s->data, 4 + 4 * 4);
   }
   if (error == 0)
@@ -1088,14 +1125,14 @@ connections", 0);
     out_uint16_be(s, 0);
     out_uint16_be(s, v->mod_width);
     out_uint16_be(s, v->mod_height);
-    v->server_msg(v, "sending framebuffer update request", 0);
+    v->server_msg(v, "VNC sending framebuffer update request", 0);
     error = lib_send(v, s->data, 10);
   }
   if (error == 0)
   {
     if (v->server_bpp != v->mod_bpp)
     {
-      v->server_msg(v, "error - server bpp and client bpp do not match", 0);
+      v->server_msg(v, "VNC error - server bpp and client bpp do not match", 0);
       error = 1;
     }
   }
@@ -1107,20 +1144,20 @@ connections", 0);
     g_memset(cursor_data + (32 * (32 * 3) - 2 * 32 * 3), 0xff, 9);
     g_memset(cursor_data + (32 * (32 * 3) - 3 * 32 * 3), 0xff, 9);
     g_memset(cursor_mask, 0xff, 32 * (32 / 8));
-    v->server_msg(v, "sending cursor", 0);
+    v->server_msg(v, "VNC sending cursor", 0);
     error = v->server_set_cursor(v, 3, 3, cursor_data, cursor_mask);
   }
   free_stream(s);
   free_stream(pixel_format);
   if (error == 0)
   {
-    v->server_msg(v, "connection complete, connected ok", 0);
+    v->server_msg(v, "VNC connection complete, connected ok", 0);
     lib_open_clip_channel(v);
   }
   else
   {
-    v->server_msg(v, "error - problem connecting", 0);
-  }
+    v->server_msg(v, "VNC error - problem connecting", 0);
+  }  
   return error;
 }
 
@@ -1231,6 +1268,7 @@ mod_init(void)
 int EXPORT_CC
 mod_exit(struct vnc* v)
 {
+  log_message(LOG_LEVEL_DEBUG,"VNC mod_exit");
   if (v == 0)
   {
     return 0;

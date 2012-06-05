@@ -21,6 +21,7 @@
 */
 
 #include "xrdp.h"
+#include "log.h"
 
 static struct xrdp_listen* g_listen = 0;
 static long g_threadid = 0; /* main threadid */
@@ -261,6 +262,8 @@ main(int argc, char** argv)
 {
   int test;
   int host_be;
+  char cfg_file[256];
+  enum logReturns error;
   struct xrdp_startup_params* startup_params;
   int pid;
   int fd;
@@ -303,6 +306,25 @@ main(int argc, char** argv)
   {
     g_writeln("unusable tui64 size, must be 8");
     return 0;
+  }
+  g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
+
+  /* starting logging subsystem */
+  error = log_start(cfg_file,"XRDP");
+
+  if (error != LOG_STARTUP_OK)
+  {
+    char buf[256] ;  
+    switch (error)
+    {
+      case LOG_ERROR_MALLOC:
+        g_printf("error on malloc. cannot start logging. quitting.\n");
+        break;
+      case LOG_ERROR_FILE_OPEN:
+        g_printf("error opening log file [%s]. quitting.\n", getLogFile(buf,255));
+        break;
+    }
+    g_exit(1);
   }
 
   startup_params = (struct xrdp_startup_params*)

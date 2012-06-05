@@ -310,13 +310,13 @@ auth_account_disabled(struct spwd* stp)
 
   today=g_time1()/SECS_PER_DAY;
 
-  LOG_DBG(&(g_cfg->log), "last   %d",stp->sp_lstchg);
-  LOG_DBG(&(g_cfg->log), "min    %d",stp->sp_min);
-  LOG_DBG(&(g_cfg->log), "max    %d",stp->sp_max);
-  LOG_DBG(&(g_cfg->log), "inact  %d",stp->sp_inact);
-  LOG_DBG(&(g_cfg->log), "warn   %d",stp->sp_warn);
-  LOG_DBG(&(g_cfg->log), "expire %d",stp->sp_expire);
-  LOG_DBG(&(g_cfg->log), "today  %d",today);
+  LOG_DBG("last   %d",stp->sp_lstchg);
+  LOG_DBG("min    %d",stp->sp_min);
+  LOG_DBG("max    %d",stp->sp_max);
+  LOG_DBG("inact  %d",stp->sp_inact);
+  LOG_DBG("warn   %d",stp->sp_warn);
+  LOG_DBG("expire %d",stp->sp_expire);
+  LOG_DBG("today  %d",today);
 
   if ((stp->sp_expire != -1) && (today >= stp->sp_expire))
   {

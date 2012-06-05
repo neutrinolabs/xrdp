@@ -128,6 +128,11 @@ struct _rdpScreenInfoRec
   /* Window Procedures */
   CreateWindowProcPtr CreateWindow;
   DestroyWindowProcPtr DestroyWindow;
+  PositionWindowProcPtr PositionWindow;
+  RealizeWindowProcPtr RealizeWindow;
+  UnrealizeWindowProcPtr UnrealizeWindow;
+  ChangeWindowAttributesProcPtr ChangeWindowAttributes;
+  WindowExposuresProcPtr WindowExposures;
 
   CreateColormapProcPtr CreateColormap;
   DestroyColormapProcPtr DestroyColormap;
@@ -252,6 +257,16 @@ Bool
 rdpCreateWindow(WindowPtr pWindow);
 Bool
 rdpDestroyWindow(WindowPtr pWindow);
+Bool
+rdpPositionWindow(WindowPtr pWindow, int x, int y);
+Bool
+rdpRealizeWindow(WindowPtr pWindow);
+Bool
+rdpUnrealizeWindow(WindowPtr pWindow);
+Bool
+rdpChangeWindowAttributes(WindowPtr pWindow, unsigned long mask);
+void
+rdpWindowExposures(WindowPtr pWindow, RegionPtr pRegion, RegionPtr pBSRegion);
 
 Bool
 rdpCreateGC(GCPtr pGC);

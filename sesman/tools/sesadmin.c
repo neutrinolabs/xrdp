@@ -50,7 +50,7 @@ int main(int argc, char** argv)
   logging.log_file = g_strdup("xrdp-sesadmin.log");
   logging.log_level = LOG_LEVEL_DEBUG;
   logging.enable_syslog = 0;
-  log_start(&logging);
+  log_start_from_param(&logging);
 
   for (idx = 0; idx < argc; idx++)
   {
@@ -110,11 +110,11 @@ int main(int argc, char** argv)
   s = scp_session_create();
   c = scp_connection_create(sock);
 
-  LOG_DBG(&logging, "Connecting to %s:%s with user %s (%s)\n", serv, port, user, pass);
+  LOG_DBG("Connecting to %s:%s with user %s (%s)\n", serv, port, user, pass);
 
   if (0 != g_tcp_connect(sock, serv, port))
   {
-    LOG_DBG(&logging, "g_tcp_connect() error\n");
+    LOG_DBG("g_tcp_connect() error\n");
     return 1;
   }
 
@@ -127,7 +127,7 @@ int main(int argc, char** argv)
 
   if (SCP_CLIENT_STATE_OK != e)
   {
-    LOG_DBG(&logging,  "libscp error connecting: %s %d\n", s->errstr, (int)e);
+    LOG_DBG("libscp error connecting: %s %d\n", s->errstr, (int)e);
   }
 
   if (0 == g_strncmp(cmnd, "list", 5))

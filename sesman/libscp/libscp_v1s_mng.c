@@ -30,7 +30,7 @@
 
 #include "libscp_v1s_mng.h"
 
-extern struct log_config* s_log;
+//extern struct log_config* s_log;
 
 static enum SCP_SERVER_STATES_E
 _scp_v1s_mng_check_response(struct SCP_CONNECTION* c, struct SCP_SESSION* s);
@@ -259,7 +259,7 @@ scp_v1s_mng_list_sessions(struct SCP_CONNECTION* c, struct SCP_SESSION* s,
 
     if (0!=scp_tcp_force_send(c->in_sck, c->out_s->data, size))
     {
-      log_message(s_log, LOG_LEVEL_WARNING, "[v1s_mng:%d] connection aborted: network error", __LINE__);
+      log_message(LOG_LEVEL_WARNING, "[v1s_mng:%d] connection aborted: network error", __LINE__);
       return SCP_SERVER_STATE_NETWORK_ERR;
     }
   }
@@ -279,14 +279,14 @@ _scp_v1s_mng_check_response(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
   init_stream(c->in_s, c->in_s->size);
   if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))
   {
-    log_message(s_log, LOG_LEVEL_WARNING, "[v1s_mng:%d] connection aborted: network error", __LINE__);
+    log_message(LOG_LEVEL_WARNING, "[v1s_mng:%d] connection aborted: network error", __LINE__);
     return SCP_SERVER_STATE_NETWORK_ERR;
   }
 
   in_uint32_be(c->in_s, version);
   if (version != 1)
   {
-    log_message(s_log, LOG_LEVEL_WARNING, "[v1s_mng:%d] connection aborted: version error", __LINE__);
+    log_message(LOG_LEVEL_WARNING, "[v1s_mng:%d] connection aborted: version error", __LINE__);
     return SCP_SERVER_STATE_VERSION_ERR;
   }
 
@@ -296,21 +296,21 @@ _scp_v1s_mng_check_response(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
   /* read the rest of the packet */
   if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, size - 8))
   {
-    log_message(s_log, LOG_LEVEL_WARNING, "[v1s_mng:%d] connection aborted: network error", __LINE__);
+    log_message(LOG_LEVEL_WARNING, "[v1s_mng:%d] connection aborted: network error", __LINE__);
     return SCP_SERVER_STATE_NETWORK_ERR;
   }
 
   in_uint16_be(c->in_s, cmd);
   if (cmd != SCP_COMMAND_SET_MANAGE)
   {
-    log_message(s_log, LOG_LEVEL_WARNING, "[v1s_mng:%d] connection aborted: sequence error", __LINE__);
+    log_message(LOG_LEVEL_WARNING, "[v1s_mng:%d] connection aborted: sequence error", __LINE__);
     return SCP_SERVER_STATE_SEQUENCE_ERR;
   }
 
   in_uint16_be(c->in_s, cmd);
   if (cmd == SCP_CMD_MNG_LIST_REQ) /* request session list */
   {
-    log_message(s_log, LOG_LEVEL_INFO, "[v1s_mng:%d] request session list", __LINE__);
+    log_message(LOG_LEVEL_INFO, "[v1s_mng:%d] request session list", __LINE__);
     return SCP_SERVER_STATE_MNG_LISTREQ;
   }
   else if (cmd == SCP_CMD_MNG_ACTION) /* execute an action */
@@ -320,7 +320,7 @@ _scp_v1s_mng_check_response(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
     in_uint8a(c->in_s, buf, dim);
     scp_session_set_errstr(s, buf);*/
 
-    log_message(s_log, LOG_LEVEL_INFO, "[v1s_mng:%d] action request", __LINE__);
+    log_message(LOG_LEVEL_INFO, "[v1s_mng:%d] action request", __LINE__);
     return SCP_SERVER_STATE_MNG_ACTION;
   }
   /* else if (cmd == 20) / * password change * /
@@ -334,7 +334,7 @@ _scp_v1s_mng_check_response(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
     return SCP_SERVER_STATE_SESSION_LIST;
   }*/
 
-  log_message(s_log, LOG_LEVEL_WARNING, "[v1s_mng:%d] connection aborted: sequence error", __LINE__);
+  log_message(LOG_LEVEL_WARNING, "[v1s_mng:%d] connection aborted: sequence error", __LINE__);
   return SCP_SERVER_STATE_SEQUENCE_ERR;
 }
 

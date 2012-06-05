@@ -71,6 +71,10 @@
 extern char** environ;
 #endif
 
+#if defined(__linux__)
+#include <linux/unistd.h>
+#endif
+
 /* for solaris */
 #if !defined(PF_LOCAL)
 #define PF_LOCAL AF_UNIX

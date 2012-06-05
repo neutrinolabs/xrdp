@@ -22,6 +22,7 @@
 */
 
 #include "xrdp.h"
+#include "log.h"
 
 /* map for rdp to x11 scancodes
    code1 is regular scancode, code2 is extended scancode */
@@ -232,12 +233,17 @@ get_keymaps(int keylayout, struct xrdp_keymap* keymap)
       km_read_section(fd, "shiftcapslock", keymap->keys_shiftcapslock);
       if (g_memcmp(lkeymap, keymap, sizeof(struct xrdp_keymap)) != 0)
       {
-        g_writeln("local keymap file for 0x%4.4x found and dosen't match "
+        log_message(LOG_LEVEL_WARNING,
+                "local keymap file for 0x%4.4x found and dosen't match "
                   "built in keymap, using local keymap file", keylayout);
       }
       g_free(lkeymap);
       g_file_close(fd);
     }
+  }
+  else
+  {
+      log_message(LOG_LEVEL_WARNING,"File does not exist: %s",filename);
   }
   g_free(filename);
   return 0;
