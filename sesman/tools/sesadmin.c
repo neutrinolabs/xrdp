@@ -142,7 +142,7 @@ int main(int argc, char** argv)
   g_tcp_close(sock);
   scp_session_destroy(s);
   scp_connection_destroy(c);
-  log_end(&logging);
+  log_end();
 
   return 0;
 }
