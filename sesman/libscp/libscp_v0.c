@@ -283,7 +283,7 @@ scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk)
     session = scp_session_create();
     if (0 == session)
     {
-      /* until syslog merge log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);*/
+      /* until syslog merge log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error",      __LINE__);*/
       return SCP_SERVER_STATE_INTERNAL_ERR;
     }
 
@@ -297,7 +297,7 @@ scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk)
     if (0 != scp_session_set_username(session, buf))
     {
       scp_session_destroy(session);
-      /* until syslog merge log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: error setting username", __LINE__);*/
+      /* until syslog merge log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: error setting        username", __LINE__);*/
       return SCP_SERVER_STATE_INTERNAL_ERR;
     }
 
