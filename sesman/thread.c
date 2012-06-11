@@ -22,7 +22,7 @@
  * @file thread.c
  * @brief thread stuff...
  * @author Simone Fedele
- * 
+ *
  */
 
 #include "sesman.h"
@@ -100,13 +100,13 @@ thread_session_update_start(void)
   int ret;
   //starts the session update thread
   //that checks for idle time, destroys sessions, ecc...
-  
-#warning this thread should always request lock_fork before read or write 
+
+#warning this thread should always request lock_fork before read or write
 #warning (so we can Fork() In Peace)
   ret = pthread_create(&g_thread_updater, NULL, , "");
   pthread_detach(g_thread_updater);
 
-  if (ret==0) 
+  if (ret == 0)
   {
     log_message(&(g_cfg->log), LOG_LEVEL_INFO, "session update thread started successfully");
     return 0;
@@ -148,7 +148,7 @@ thread_scp_start(int skt)
   //ret = pthread_create(&th, NULL, scp_process_start, (void*) (&g_thread_sck));
   pthread_detach(th);
 
-  if (ret == 0) 
+  if (ret == 0)
   {
     log_message(LOG_LEVEL_INFO, "scp thread on sck %d started successfully", skt);
     return 0;
@@ -172,4 +172,3 @@ thread_scp_start(int skt)
 
   return 1;
 }
-

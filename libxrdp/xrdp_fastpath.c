@@ -76,7 +76,7 @@ xrdp_fastpath_send_update_pdu(struct xrdp_fastpath* self, tui8 updateCode,
 
   compression = 0;
   s_send = self->out_s;
-  maxLen = FASTPATH_MAX_PACKET_SIZE - 6 ; /* 6 bytes for header */
+  maxLen = FASTPATH_MAX_PACKET_SIZE - 6; /* 6 bytes for header */
   payloadLeft = (s->end - s->data);
   for (i = 0; payloadLeft > 0; i++)
   {
@@ -143,7 +143,7 @@ xrdp_fastpath_process_update(struct xrdp_fastpath* self, tui8 updateCode,
   }
 
   return 0;
-} 
+}
 
 /*****************************************************************************/
 int APP_CC
@@ -192,5 +192,5 @@ xrdp_fastpath_process_data(struct xrdp_fastpath* self, struct stream* s,
     return 1;
   }
   in_uint16_le(s, size);
-  return xrdp_fastpath_process_update(self, updateCode, size, s); 
+  return xrdp_fastpath_process_update(self, updateCode, size, s);
 }

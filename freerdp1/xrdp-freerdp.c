@@ -87,34 +87,41 @@ lxrdp_connect(struct mod* mod)
         switch (connectErrorCode)
         {
           case PREECONNECTERROR:
-            snprintf(buf, 128, "The error code from connect is PREECONNECTERROR");
+            snprintf(buf, 128, "The error code from connect is "
+                     "PREECONNECTERROR");
             break;
           case UNDEFINEDCONNECTERROR:
-            snprintf(buf, 128, "The error code from connect is UNDEFINEDCONNECTERROR");
+            snprintf(buf, 128, "The error code from connect is "
+                     "UNDEFINEDCONNECTERROR");
             break;
           case POSTCONNECTERROR:
-            snprintf(buf, 128, "The error code from connect is POSTCONNECTERROR");
+            snprintf(buf, 128, "The error code from connect is "
+                     "POSTCONNECTERROR");
             break;
           case DNSERROR:
             snprintf(buf, 128, "The DNS system generated an error");
             break;
           case DNSNAMENOTFOUND:
-            snprintf(buf, 128, "The DNS system could not find the specified name");
+            snprintf(buf, 128, "The DNS system could not find the "
+                     "specified name");
             break;
           case CONNECTERROR:
             snprintf(buf, 128, "A general connect error was returned");
             break;
           case MCSCONNECTINITIALERROR:
-            snprintf(buf, 128, "The error code from connect is MCSCONNECTINITIALERROR");
+            snprintf(buf, 128, "The error code from connect is "
+                     "MCSCONNECTINITIALERROR");
             break;
           case TLSCONNECTERROR:
             snprintf(buf, 128, "Error in TLS handshake");
             break;
           case AUTHENTICATIONERROR:
-            snprintf(buf, 128, "Authentication error check your password and username");
+            snprintf(buf, 128, "Authentication error check your password "
+                     "and username");
             break;
           default:
-            snprintf(buf, 128, "Unhandled Errorcode from connect : %d", connectErrorCode); 
+            snprintf(buf, 128, "Unhandled Errorcode from connect : %d",
+                     connectErrorCode);
             break;
         }
       }
@@ -233,7 +240,7 @@ lxrdp_event(struct mod* mod, int msg, long param1, long param2,
             {
               LLOGLN(0, ("update rectangle left: %d top: %d bottom: %d right: %d",
                 rectangle->left, rectangle->top, rectangle->bottom, rectangle->right));
-              mod->inst->update->RefreshRect(mod->inst->context, 1, rectangle); 
+              mod->inst->update->RefreshRect(mod->inst->context, 1, rectangle);
             }
             else
             {
@@ -766,13 +773,13 @@ lfreerdp_upsidedown(uint8* destination, CACHE_BITMAP_V2_ORDER* cache_bitmap_v2_o
   tui8* src;
   tui8* dst;
   int line_bytes;
-  int j ;
-  if(destination==NULL)
+  int j;
+
+  if (destination == NULL)
   {
-    LLOGLN(0, ("lfreerdp_upsidedown : destination pointer is NULL !!!"));
-    return ;
+    LLOGLN(0, ("lfreerdp_upsidedown: destination pointer is NULL !!!"));
+    return;
   }
-    
   line_bytes = server_Bpp * cache_bitmap_v2_order->bitmapWidth;
   src = cache_bitmap_v2_order->bitmapDataStream;
   dst = destination + ((cache_bitmap_v2_order->bitmapHeight) * line_bytes);
@@ -843,11 +850,10 @@ lfreerdp_cache_bitmapV2(rdpContext* context,
                       server_bpp, server_bpp);
   }
   else
-  { 
-    /* Uncompressed bitmaps are upside down */  
-    lfreerdp_upsidedown(dst_data, cache_bitmap_v2_order,server_Bpp);
+  {
+    /* Uncompressed bitmaps are upside down */
+    lfreerdp_upsidedown(dst_data, cache_bitmap_v2_order, server_Bpp);
     LLOGLN(10, ("lfreerdp_cache_bitmapV2:  upside down progressed"));
-    /* old: g_memcpy(dst_data, cache_bitmap_v2_order->bitmapDataStream,width * height * server_Bpp);*/
   }
   dst_data1 = convert_bitmap(server_bpp, client_bpp, dst_data,
                              width, height, mod->colormap);

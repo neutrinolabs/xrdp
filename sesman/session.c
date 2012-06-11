@@ -55,12 +55,12 @@ static int g_sync_result;
  * @param self
  * @param outstr, allocate this buffer before you use this function
  * @param len the allocated len for outstr
- * @return 
- */ 
+ * @return
+ */
 char* APP_CC
 dumpItemsToString(struct list* self, char *outstr, int len)
 {
-  g_memset(outstr,0,len);  
+  g_memset(outstr,0,len);
   int index;
   tbus item;
   int totalLen= 0;
@@ -70,15 +70,15 @@ dumpItemsToString(struct list* self, char *outstr, int len)
     g_writeln("List is empty");
   }
   for (index = 0; index < self->count; index++)
-  {    
+  {
     /* +1 = one space*/
     totalLen = totalLen + g_strlen((char*)list_get_item(self, index))+1;
     if(len>totalLen)
     {
         g_strcat(outstr,(char*)list_get_item(self, index));
         g_strcat(outstr," ");
-    }    
-  }  
+    }
+  }
   return outstr ;
 }
 
@@ -556,7 +556,7 @@ session_start_fork(int width, int height, int bpp, char* username,
           /* make sure it ends with a zero */
           list_add_item(xserver_params, 0);
           pp1 = (char**)xserver_params->items;
-          log_message(LOG_LEVEL_INFO,"X11rdp start:%s",dumpItemsToString(xserver_params, execvpparams, 2048)); 
+          log_message(LOG_LEVEL_INFO,"X11rdp start:%s",dumpItemsToString(xserver_params, execvpparams, 2048));
           g_execvp("X11rdp", pp1);
         }
         else
@@ -828,7 +828,7 @@ session_get_byuser(char* user, int* cnt, unsigned char flags)
   int count;
   int index;
 
-  count=0;
+  count = 0;
 
   /*THREAD-FIX require chain lock */
   lock_chain_acquire();
@@ -852,9 +852,9 @@ session_get_byuser(char* user, int* cnt, unsigned char flags)
     tmp=tmp->next;
   }
 
-  if (count==0)
+  if (count == 0)
   {
-    (*cnt)=0;
+    (*cnt) = 0;
     /*THREAD-FIX release chain lock */
     lock_chain_release();
     return 0;
@@ -862,9 +862,9 @@ session_get_byuser(char* user, int* cnt, unsigned char flags)
 
   /* malloc() an array of disconnected sessions */
   sess=g_malloc(count * sizeof(struct SCP_DISCONNECTED_SESSION),1);
-  if (sess==0)
+  if (sess == 0)
   {
-    (*cnt)=0;
+    (*cnt) = 0;
     /*THREAD-FIX release chain lock */
     lock_chain_release();
     return 0;

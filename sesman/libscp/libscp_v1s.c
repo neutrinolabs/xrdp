@@ -46,7 +46,7 @@ enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION* c, struct SCP_SES
   if (!skipVchk)
   {
 
-    if (0==scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))
+    if (0 == scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))
     {
       in_uint32_be(c->in_s, version);
       if (version != 1)

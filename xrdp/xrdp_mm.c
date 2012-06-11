@@ -1048,7 +1048,7 @@ xrdp_mm_connect(struct xrdp_mm* self)
         g_snprintf(errstr, 255, "Failure to connect to: %s port: %s",
                    ip, port);
         xrdp_wm_log_msg(self->wm, errstr);
-        rv = 1 ; /* failure */
+        rv = 1; /* failure */
       }
     }
     if (self->wm->login_mode != 10)

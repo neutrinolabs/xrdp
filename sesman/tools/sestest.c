@@ -206,7 +206,7 @@ menuSelect(tui32 choices)
 
   ret = scanf("%u", &sel);
 
-  while ((ret==0) || (sel > choices))
+  while ((ret == 0) || (sel > choices))
   {
     g_printf("invalid choice.");
     ret = scanf("%u", &sel);

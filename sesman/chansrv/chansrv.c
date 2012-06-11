@@ -527,20 +527,20 @@ nil_signal_handler(int sig)
 
 /*****************************************************************************/
 static int APP_CC
-get_display_num_from_display(char * display_text)
+get_display_num_from_display(char* display_text)
 {
-  int index = 0;
-  int mode = 0;
-  int host_index = 0;
-  int disp_index = 0;
-  int scre_index = 0;
-  char host[256] = "";
-  char disp[256] = "";
-  char scre[256] = "";
+  int index;
+  int mode;
+  int host_index;
+  int disp_index;
+  int scre_index;
+  char host[256];
+  char disp[256];
+  char scre[256];
 
-  g_memset(host,0,256);
-  g_memset(disp,0,256);
-  g_memset(scre,0,256);
+  g_memset(host, 0, 256);
+  g_memset(disp, 0, 256);
+  g_memset(scre, 0, 256);
 
   index = 0;
   host_index = 0;
@@ -637,28 +637,32 @@ main(int argc, char** argv)
   int pid = 0;
   char text[256] = "";
   char* display_text = (char *)NULL;
-  enum logReturns error ;
+  enum logReturns error;
   char cfg_file[256];
 
   g_init("xrdp-chansrv"); /* os_calls */
   read_ini();
   pid = g_getpid();
-  
+
   /* starting logging subsystem */
   g_snprintf(cfg_file, 255, "%s/sesman.ini", XRDP_CFG_PATH);
   error = log_start(cfg_file,"XRDP-Chansrv");
   if (error != LOG_STARTUP_OK)
   {
-    char buf[256] ;  
     switch (error)
     {
-     case LOG_ERROR_MALLOC:
-        g_printf("error on malloc. cannot start logging. quitting.\n");
+      case LOG_ERROR_MALLOC:
+        g_writeln("error on malloc. cannot start logging. quitting.");
         break;
-     case LOG_ERROR_FILE_OPEN:
-        g_printf("error opening log file [%s]. quitting.\n", getLogFile(buf,255));
+      case LOG_ERROR_FILE_OPEN:
+        g_writeln("error opening log file [%s]. quitting.",
+                 getLogFile(text, 255));
+        break;
+      default:
+        g_writeln("log_start error");
         break;
     }
+    g_deinit();
     g_exit(1);
   }
   log_message(LOG_LEVEL_ALWAYS,"main: app started pid %d(0x%8.8x)", pid, pid);

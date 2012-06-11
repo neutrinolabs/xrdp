@@ -302,13 +302,13 @@ auth_account_disabled(struct spwd* stp)
 {
   int today;
 
-  if (0==stp)
+  if (0 == stp)
   {
     /* if an invalid struct was passed we assume a disabled account */
     return 1;
   }
 
-  today=g_time1()/SECS_PER_DAY;
+  today = g_time1() / SECS_PER_DAY;
 
   LOG_DBG("last   %d",stp->sp_lstchg);
   LOG_DBG("min    %d",stp->sp_min);

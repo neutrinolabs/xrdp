@@ -207,7 +207,6 @@ static int APP_CC
 sound_process_training(struct stream* s, int size)
 {
   int time_diff;
-  char buf[256];
 
   print_got_here();
 
@@ -315,7 +314,6 @@ sound_init(void)
 {
   char port[256];
   int error;
-  pthread_t thread;
 
   print_got_here();
   LOG(0, ("sound_init:"));

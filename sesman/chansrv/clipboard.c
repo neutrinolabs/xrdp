@@ -30,6 +30,7 @@
 #include "os_calls.h"
 #include "chansrv.h"
 #include "log.h"
+#include "clipboard.h"
 
 static Atom g_clipboard_atom = 0;
 static Atom g_clip_property_atom = 0;
@@ -101,10 +102,12 @@ static Time APP_CC
 clipboard_get_server_time(void)
 {
   XEvent xevent;
+  unsigned char no_text[4];
 
   /* append nothing */
+  no_text[0] = 0;
   XChangeProperty(g_display, g_wnd, g_get_time_atom, XA_STRING, 8,
-                  PropModeAppend, "", 0);
+                  PropModeAppend, no_text, 0);
   /* wait for PropertyNotify */
   do
   {
@@ -280,7 +283,6 @@ clipboard_send_data_request(void)
   struct stream* s;
   int size;
   int rv;
-  int num_chars;
 
   log_message(LOG_LEVEL_DEBUG,"clipboard_send_data_request:");
   if (!g_got_format_announce)
@@ -492,8 +494,6 @@ static int APP_CC
 clipboard_process_format_announce(struct stream* s, int clip_msg_status,
                                   int clip_msg_len)
 {
-  Window owner;
-
   log_message(LOG_LEVEL_DEBUG,"clipboard_process_format_announce: CLIPRDR_FORMAT_ANNOUNCE");
   //g_hexdump(s->p, s->end - s->p);
   clipboard_send_format_ack();
@@ -532,13 +532,11 @@ static int APP_CC
 clipboard_process_data_response(struct stream* s, int clip_msg_status,
                                 int clip_msg_len)
 {
-  XEvent xev;
   XSelectionRequestEvent* lxev;
   twchar* wtext;
   twchar wchr;
   int len;
   int index;
-  int wtext_size;
   int data_in_len;
 
   log_message(LOG_LEVEL_DEBUG,"clipboard_process_data_response: CLIPRDR_DATA_RESPONSE");

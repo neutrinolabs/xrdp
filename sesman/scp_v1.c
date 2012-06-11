@@ -56,9 +56,11 @@ scp_v1_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
 
   while ((!data) && ((retries == 0) || (current_try > 0)))
   {
-    LOG_DBG("data %d - retry %d - currenttry %d - expr %d", data, retries, current_try, ((!data) && ((retries==0) || (current_try>0))));
+    LOG_DBG("data %d - retry %d - currenttry %d - expr %d",
+            data, retries, current_try,
+            ((!data) && ((retries == 0) || (current_try > 0))));
 
-    e=scp_v1s_request_password(c,s,"Wrong username and/or password");
+    e = scp_v1s_request_password(c, s, "Wrong username and/or password");
 
     switch (e)
     {
@@ -108,7 +110,7 @@ scp_v1_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
   {
     /* no disconnected sessions - start a new one */
     log_message(LOG_LEVEL_DEBUG,"No disconnected sessions for this user"
-            "- we create a new one");  
+            "- we create a new one");
     if (0 != s->client_ip)
     {
       log_message(LOG_LEVEL_INFO, "++ created session (access granted): username %s, ip %s", s->username, s->client_ip);
@@ -159,14 +161,14 @@ scp_v1_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
       case SCP_SERVER_STATE_OK:
         /* ok, reconnecting... */
         sitem=session_get_bypid(sid);
-        if (0==sitem)
+        if (0 == sitem)
         {
-          e=scp_v1s_connection_error(c, "Internal error");
+          e = scp_v1s_connection_error(c, "Internal error");
           log_message(LOG_LEVEL_INFO, "Cannot find session item on the chain");
         }
         else
         {
-          display=sitem->display;
+          display = sitem->display;
           /*e=scp_v1s_reconnect_session(c, sitem, display);*/
           e=scp_v1s_reconnect_session(c, display);
           if (0 != s->client_ip)
