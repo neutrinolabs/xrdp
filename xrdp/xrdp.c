@@ -314,16 +314,17 @@ main(int argc, char** argv)
 
   if (error != LOG_STARTUP_OK)
   {
-    char buf[256] ;  
     switch (error)
     {
       case LOG_ERROR_MALLOC:
-        g_printf("error on malloc. cannot start logging. quitting.\n");
+        g_writeln("error on malloc. cannot start logging. quitting.");
         break;
       case LOG_ERROR_FILE_OPEN:
-        g_printf("error opening log file [%s]. quitting.\n", getLogFile(buf,255));
+        g_writeln("error opening log file [%s]. quitting.",
+                 getLogFile(text, 255));
         break;
     }
+    g_deinit();
     g_exit(1);
   }
 

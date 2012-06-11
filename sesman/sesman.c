@@ -252,20 +252,20 @@ main(int argc, char** argv)
   }
 
   g_snprintf(cfg_file,255,"%s/sesman.ini",XRDP_CFG_PATH);
-  
+
   /* starting logging subsystem */
   error = log_start(cfg_file,"XRDP-sesman");
 
   if (error != LOG_STARTUP_OK)
   {
-    char buf[256] ;  
     switch (error)
     {
       case LOG_ERROR_MALLOC:
-        g_printf("error on malloc. cannot start logging. quitting.\n");
+        g_writeln("error on malloc. cannot start logging. quitting.");
         break;
       case LOG_ERROR_FILE_OPEN:
-        g_printf("error opening log file [%s]. quitting.\n", getLogFile(buf,255));
+        g_writeln("error opening log file [%s]. quitting.",
+                  getLogFile(text, 255));
         break;
     }
     g_deinit();
@@ -368,4 +368,3 @@ main(int argc, char** argv)
   g_deinit();
   return 0;
 }
-

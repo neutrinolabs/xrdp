@@ -313,6 +313,7 @@ internal_config_read_logging(int file, struct log_config* lc,
 {
   int i;
   char* buf;
+  char* temp_buf;
 
   list_clear(param_v);
   list_clear(param_n);
@@ -332,6 +333,16 @@ internal_config_read_logging(int file, struct log_config* lc,
     if (0 == g_strcasecmp(buf, SESMAN_CFG_LOG_FILE))
     {
       lc->log_file = g_strdup((char*)list_get_item(param_v, i));
+      if (lc->log_file != NULL)
+      {
+        if (lc->log_file[0] != '/')
+        {
+          temp_buf = (char*)g_malloc(512, 0);
+          g_snprintf(temp_buf, 511, "%s/%s", XRDP_LOG_PATH, lc->log_file);
+          g_free(lc->log_file);
+          lc->log_file = temp_buf;
+        }
+      }
     }
     if (0 == g_strcasecmp(buf, SESMAN_CFG_LOG_LEVEL))
     {
@@ -351,6 +362,9 @@ internal_config_read_logging(int file, struct log_config* lc,
   {
     lc->log_file = g_strdup("./sesman.log");
   }
+
+  /* try to create path if not exist */
+  g_create_path(lc->log_file);
 
   g_printf("logging configuration:\r\n");
   g_printf("\tLogFile:       %s\r\n", lc->log_file);
@@ -423,7 +437,8 @@ log_start_from_param(const struct log_config* iniParams)
     ret = internalInitAndAllocStruct();
     if (ret != LOG_STARTUP_OK)
     {
-        return ret;
+      g_writeln("internalInitAndAllocStruct failed");
+      return ret;
     }
     staticLogConfig->enable_syslog = iniParams->enable_syslog;
     staticLogConfig->fd = iniParams->fd;
