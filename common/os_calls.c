@@ -570,7 +570,11 @@ g_write_ip_address(int rcv_sck, char* ip_address, int bytes)
 {
   struct sockaddr_in s;
   struct in_addr in;
+#if defined(_WIN32)
   int len;
+#else
+  unsigned int len;
+#endif
   int ip_port;
   int ok;
 
@@ -1327,7 +1331,7 @@ g_mkdir(const char* dirname)
 
 /*****************************************************************************/
 /* gets the current working directory and puts up to maxlen chars in
-   dirname 
+   dirname
    always returns 0 */
 char* APP_CC
 g_get_current_dir(char* dirname, int maxlen)
