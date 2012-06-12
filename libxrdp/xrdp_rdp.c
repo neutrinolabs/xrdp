@@ -321,7 +321,7 @@ xrdp_rdp_send_data(struct xrdp_rdp* self, struct stream* s,
   if (self->client_info.rdp_compression && self->session->up_and_running)
   {
     mppc_enc = (struct rdp_mppc_enc*)(self->mppc_enc);
-    if (compress_rdp(mppc_enc, s->p + 18, tocomplen))
+    if (compress_rdp(mppc_enc, (tui8*)(s->p + 18), tocomplen))
     {
       DEBUG(("mppc_encode ok flags 0x%x bytes_in_opb %d historyOffset %d "
              "tocomplen %d", mppc_enc->flags, mppc_enc->bytes_in_opb,

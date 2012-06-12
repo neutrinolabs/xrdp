@@ -1987,7 +1987,6 @@ xrdp_orders_send_create_os_surface(struct xrdp_orders* self, int id,
 
   bytes = 7;
   num_del_list = del_list->count;
-  g_writeln("xrdp_orders_send_create_os_surface: num_del_list %d", num_del_list);
   if (num_del_list > 0)
   {
     bytes += 2;
