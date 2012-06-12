@@ -127,6 +127,7 @@ xrdp_painter_font_needed(struct xrdp_painter* self)
   return 0;
 }
 
+#if 0
 /*****************************************************************************/
 /* returns boolean, true if there is something to draw */
 static int APP_CC
@@ -178,6 +179,7 @@ xrdp_painter_clip_adj(struct xrdp_painter* self, int* x, int* y,
   *y = *y + dy;
   return 1;
 }
+#endif
 
 /*****************************************************************************/
 int APP_CC
@@ -200,6 +202,7 @@ xrdp_painter_clr_clip(struct xrdp_painter* self)
   return 0;
 }
 
+#if 0
 /*****************************************************************************/
 static int APP_CC
 xrdp_painter_rop(int rop, int src, int dst)
@@ -225,6 +228,7 @@ xrdp_painter_rop(int rop, int src, int dst)
   }
   return dst;
 }
+#endif
 
 /*****************************************************************************/
 int APP_CC

@@ -278,7 +278,6 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
   tbus robjs[8];
   tbus term_obj;
   tbus sync_obj;
-  tbus sck_obj;
   tbus done_obj;
 
   self->status = 1;

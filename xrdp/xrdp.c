@@ -310,7 +310,7 @@ main(int argc, char** argv)
   g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
 
   /* starting logging subsystem */
-  error = log_start(cfg_file,"XRDP");
+  error = log_start(cfg_file, "XRDP");
 
   if (error != LOG_STARTUP_OK)
   {
@@ -322,6 +322,9 @@ main(int argc, char** argv)
       case LOG_ERROR_FILE_OPEN:
         g_writeln("error opening log file [%s]. quitting.",
                  getLogFile(text, 255));
+        break;
+      default:
+        g_writeln("log_start error");
         break;
     }
     g_deinit();

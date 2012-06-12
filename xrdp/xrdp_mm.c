@@ -698,7 +698,7 @@ xrdp_mm_connect_chansrv(struct xrdp_mm* self, char* ip, char* port)
   self->usechansrv = 1;
 
   /* connect channel redir */
-  if ((ip == 0) || (strcmp(ip, "127.0.0.1") == 0) || (ip[0] == 0))
+  if ((ip == 0) || (g_strcmp(ip, "127.0.0.1") == 0) || (ip[0] == 0))
   {
     /* unix socket */
     self->chan_trans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
@@ -750,8 +750,6 @@ xrdp_mm_process_login_response(struct xrdp_mm* self, struct stream* s)
   int ok;
   int display;
   int rv;
-  int uid;
-  int gid;
   char text[256];
   char ip[256];
   char port[256];
@@ -773,7 +771,7 @@ xrdp_mm_process_login_response(struct xrdp_mm* self, struct stream* s)
         xrdp_wm_set_login_mode(self->wm, 10);
         self->wm->dragging = 0;
         /* connect channel redir */
-        if ((ip == 0) || (strcmp(ip, "127.0.0.1") == 0) || (ip[0] == 0))
+        if ((ip == 0) || (g_strcmp(ip, "127.0.0.1") == 0) || (ip[0] == 0))
         {
           g_snprintf(port, 255, "/tmp/.xrdp/xrdp_chansrv_socket_%d", 7200 + display);
         }
