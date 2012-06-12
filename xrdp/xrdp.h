@@ -52,7 +52,7 @@ g_get_term_event(void);
 tbus APP_CC
 g_get_sync_event(void);
 void APP_CC
-g_loop(void);
+g_process_waiting_function(void);
 
 /* xrdp_cache.c */
 struct xrdp_cache* APP_CC
