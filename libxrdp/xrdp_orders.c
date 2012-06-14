@@ -152,7 +152,7 @@ xrdp_orders_force_send(struct xrdp_orders* self)
 /* check if the current order will fit in packet size of 16384, if not */
 /* send what we got and init a new one */
 /* returns error */
-static int APP_CC
+int APP_CC
 xrdp_orders_check(struct xrdp_orders* self, int max_size)
 {
   int size;

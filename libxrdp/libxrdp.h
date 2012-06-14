@@ -325,6 +325,8 @@ xrdp_orders_send(struct xrdp_orders* self);
 int APP_CC
 xrdp_orders_force_send(struct xrdp_orders* self);
 int APP_CC
+xrdp_orders_check(struct xrdp_orders* self, int max_size);
+int APP_CC
 xrdp_orders_rect(struct xrdp_orders* self, int x, int y, int cx, int cy,
                  int color, struct xrdp_rect* rect);
 int APP_CC
