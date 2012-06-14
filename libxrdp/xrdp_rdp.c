@@ -620,6 +620,21 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp* self)
   out_uint8(s, 1);
   out_uint8s(s, 83);
 
+  /* Remote Programs Capability Set */
+  caps_count++;
+  out_uint16_le(s, 0x0017); /* CAPSETTYPE_RAIL */
+  out_uint16_le(s, 8);
+  out_uint32_le(s, 3); /* TS_RAIL_LEVEL_SUPPORTED
+                          TS_RAIL_LEVEL_DOCKED_LANGBAR_SUPPORTED */
+
+  /* Window List Capability Set */
+  caps_count++;
+  out_uint16_le(s, 0x0018); /* CAPSETTYPE_WINDOW */
+  out_uint16_le(s, 11);
+  out_uint32_le(s, 2); /* TS_WINDOW_LEVEL_SUPPORTED_EX */
+  out_uint8(s, 3); /* NumIconCaches */
+  out_uint16_le(s, 12); /* NumIconCacheEntries */
+
   out_uint8s(s, 4); /* pad */
 
   s_mark_end(s);
@@ -826,6 +841,49 @@ xrdp_process_offscreen_bmpcache(struct xrdp_rdp* self, struct stream* s,
 }
 
 /*****************************************************************************/
+static int APP_CC
+xrdp_process_capset_rail(struct xrdp_rdp* self, struct stream* s, int len)
+{
+  int i32;
+
+  if (len - 4 < 4)
+  {
+    g_writeln("xrdp_process_capset_rail: bad len");
+    return 1;
+  }
+  in_uint32_le(s, i32);
+  self->client_info.rail_support_level = i32;
+  g_writeln("xrdp_process_capset_rail: rail_support_level %d",
+            self->client_info.rail_support_level);
+  return 0;
+}
+
+/*****************************************************************************/
+static int APP_CC
+xrdp_process_capset_window(struct xrdp_rdp* self, struct stream* s, int len)
+{
+  int i32;
+
+  if (len - 4 < 7)
+  {
+    g_writeln("xrdp_process_capset_window: bad len");
+    return 1;
+  }
+  in_uint32_le(s, i32);
+  self->client_info.wnd_support_level = i32;
+  in_uint8(s, i32);
+  self->client_info.wnd_num_icon_caches = i32;
+  in_uint16_le(s, i32);
+  self->client_info.wnd_num_icon_cache_entries = i32;
+  g_writeln("xrdp_process_capset_window wnd_support_level %d "
+            "wnd_num_icon_caches %d wnd_num_icon_cache_entries %d",
+            self->client_info.wnd_support_level,
+            self->client_info.wnd_num_icon_caches,
+            self->client_info.wnd_num_icon_cache_entries);
+  return 0;
+}
+
+/*****************************************************************************/
 int APP_CC
 xrdp_rdp_process_confirm_active(struct xrdp_rdp* self, struct stream* s)
 {
@@ -914,6 +972,12 @@ xrdp_rdp_process_confirm_active(struct xrdp_rdp* self, struct stream* s)
         break;
       case 22: /* 22 */
         DEBUG(("--22"));
+        break;
+      case 0x0017: /* 23 CAPSETTYPE_RAIL */
+        xrdp_process_capset_rail(self, s, len);
+        break;
+      case 0x0018: /* 24 CAPSETTYPE_WINDOW */
+        xrdp_process_capset_window(self, s, len);
         break;
       case 26: /* 26 */
         DEBUG(("--26"));
