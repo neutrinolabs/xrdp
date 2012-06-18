@@ -178,6 +178,8 @@ char* APP_CC
 g_strcat(char* dest, const char* src);
 char* APP_CC
 g_strdup(const char* in);
+char* APP_CC
+g_strndup(const char* in, const unsigned int maxlen);
 int APP_CC
 g_strcmp(const char* c1, const char* c2);
 int APP_CC

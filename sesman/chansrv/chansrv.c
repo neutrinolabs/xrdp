@@ -448,7 +448,7 @@ channel_thread_loop(void* in_val)
     num_objs = 0;
     objs[num_objs] = g_term_event;
     num_objs++;
-    trans_get_wait_objs(g_lis_trans, objs, &num_objs, &timeout);
+    trans_get_wait_objs(g_lis_trans, objs, &num_objs);
     while (g_obj_wait(objs, num_objs, 0, 0, timeout) == 0)
     {
       if (g_is_wait_obj_set(g_term_event))
@@ -493,8 +493,8 @@ channel_thread_loop(void* in_val)
       num_objs = 0;
       objs[num_objs] = g_term_event;
       num_objs++;
-      trans_get_wait_objs(g_lis_trans, objs, &num_objs, &timeout);
-      trans_get_wait_objs(g_con_trans, objs, &num_objs, &timeout);
+      trans_get_wait_objs(g_lis_trans, objs, &num_objs);
+      trans_get_wait_objs(g_con_trans, objs, &num_objs);
       clipboard_get_wait_objs(objs, &num_objs, &timeout);
       sound_get_wait_objs(objs, &num_objs, &timeout);
       dev_redir_get_wait_objs(objs, &num_objs, &timeout);
