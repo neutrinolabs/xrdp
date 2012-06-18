@@ -42,6 +42,10 @@
 #define SCP_SESSION_TYPE_XVNC    0x00
 #define SCP_SESSION_TYPE_XRDP    0x01
 #define SCP_SESSION_TYPE_MANAGE  0x02
+/* SCP_GW_AUTHENTICATION can be used when XRDP + sesman act as a gateway
+ * XRDP sends this command to let sesman verify if the user is allowed 
+ * to use the gateway */
+#define SCP_GW_AUTHENTICATION    0x04
 
 #define SCP_ADDRESS_TYPE_IPV4 0x00
 #define SCP_ADDRESS_TYPE_IPV6 0x01
