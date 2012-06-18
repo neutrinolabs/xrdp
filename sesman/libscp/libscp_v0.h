@@ -73,5 +73,14 @@ scp_v0s_allow_connection(struct SCP_CONNECTION* c, SCP_DISPLAY d);
 enum SCP_SERVER_STATES_E 
 scp_v0s_deny_connection(struct SCP_CONNECTION* c);
 
+/**
+ * @brief send reply to an authentication request
+ * @param c connection descriptor
+ * @param value the reply code 0 means ok
+ * @return 
+ */
+enum SCP_SERVER_STATES_E
+scp_v0s_replyauthentication(struct SCP_CONNECTION* c, unsigned short int value);
+
 #endif
 
