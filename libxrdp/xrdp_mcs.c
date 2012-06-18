@@ -141,14 +141,16 @@ xrdp_mcs_recv(struct xrdp_mcs* self, struct stream* s, int* chan)
       DEBUG(("xrdp_mcs_recv  adding channel %4.4x", chanid));
       if(xrdp_mcs_send_cjcf(self, userid, chanid)!=0)
       {
-	  g_writeln("Non handled error from xrdp_mcs_send_cjcf") ;
+        g_writeln("Non handled error from xrdp_mcs_send_cjcf") ;
       }
       continue;
     }
     if(appid==MCS_SDRQ || appid==MCS_SDIN)
     {
       break ;
-    }else{
+    }
+    else
+    {
       g_writeln("Recieved an unhandled appid:%d",appid);
     }
     break;

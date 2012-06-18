@@ -66,7 +66,7 @@ xrdp_channel_delete(struct xrdp_channel* self)
   {
     return;
   }
-  memset(self,0,sizeof(struct xrdp_channel));
+  g_memset(self,0,sizeof(struct xrdp_channel));
   g_free(self);
 }
 

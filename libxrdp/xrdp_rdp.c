@@ -251,7 +251,9 @@ xrdp_rdp_recv(struct xrdp_rdp* self, struct stream* s, int* code)
         {
           g_writeln("xrdp_channel_process returned unhandled error") ;
         }
-      }else{
+      }
+      else
+      {
         g_writeln("Wrong channel Id to be handled by xrdp_channel_process %d",chan);
       }
       s->next_packet = 0;
@@ -274,7 +276,9 @@ xrdp_rdp_recv(struct xrdp_rdp* self, struct stream* s, int* code)
     len = (int)(s->end - s->p);
     g_writeln("xrdp_rdp_recv: bad RDP packet, length [%d]", len);
     return 0;
-  }else{
+  }
+  else
+  {
     in_uint16_le(s, len);
     /*g_writeln("New len received : %d next packet: %d s_end: %d",len,s->next_packet,s->end); */
     in_uint16_le(s, pdu_code);
