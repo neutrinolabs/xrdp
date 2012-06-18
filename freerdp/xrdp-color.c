@@ -186,6 +186,10 @@ convert_bitmap(int in_bpp, int out_bpp, char* bmpdata,
   if ((in_bpp == 32) && (out_bpp == 32))
   {
     return bmpdata;
+  }    
+  if ((in_bpp == 15) && (out_bpp == 15))
+  {
+    return bmpdata;
   }
   if ((in_bpp == 15) && (out_bpp == 15))
   {
@@ -266,6 +270,10 @@ convert_color(int in_bpp, int out_bpp, int in_color, int* palette)
     return in_color;
   }
   if ((in_bpp == 32) && (out_bpp == 32))
+  {
+    return in_color;
+  }  
+  if ((in_bpp == 15) && (out_bpp == 15))
   {
     return in_color;
   }
