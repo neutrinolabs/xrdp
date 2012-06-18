@@ -305,7 +305,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm* self)
       if (func == 0)
       {
         g_snprintf(text, 255, "error finding proc mod_exit in %s, not a valid "
-                              "xrdp backend", lib);	
+                              "xrdp backend", lib);
         xrdp_wm_log_msg(self->wm, text);
       }
       self->mod_exit = (int (*)(struct xrdp_mod*))func;
@@ -318,7 +318,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm* self)
                     self->mod->size, self->mod->version);
         }
       }else{
-	  g_writeln("no mod_init or mod_exit address found") ;
+        g_writeln("no mod_init or mod_exit address found");
       }
     }
     else
@@ -1058,7 +1058,7 @@ xrdp_mm_connect(struct xrdp_mm* self)
         rv = 1 ; /* failure */
       }
     }else{
-	g_writeln("Failure setting up module");
+      g_writeln("Failure setting up module");
     }
     if (self->wm->login_mode != 10)
     {

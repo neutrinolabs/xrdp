@@ -334,7 +334,7 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
       if (g_is_wait_obj_set(done_obj)) /* pro_done_event */
       {
         g_reset_wait_obj(done_obj); 
-	/* a process has died remove it from lists*/
+        /* a process has died remove it from lists*/
         xrdp_listen_delete_done_pro(self);
       }
       /* Run the callback when accept() returns a new socket*/
