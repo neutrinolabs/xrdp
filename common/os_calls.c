@@ -325,9 +325,11 @@ g_getchar(void)
 }
 
 /*****************************************************************************/
+/*Returns 0 on success*/
 int APP_CC
 g_tcp_set_no_delay(int sck)
 {
+  int ret = 1 ; /*error*/    
 #if defined(_WIN32)
   int option_value;
   int option_len;
@@ -345,11 +347,55 @@ g_tcp_set_no_delay(int sck)
     {
       option_value = 1;
       option_len = sizeof(option_value);
-      setsockopt(sck, IPPROTO_TCP, TCP_NODELAY, (char*)&option_value,
-                 option_len);
+      if(setsockopt(sck, IPPROTO_TCP, TCP_NODELAY, (char*)&option_value,
+                 option_len)==0)
+      {
+	  ret = 0 ; /* success */
+      }
     }
   }
-  return 0;
+  else
+  {   
+    g_writeln("Error getting tcp_nodelay");  
+  }
+  return ret;
+}
+
+/*****************************************************************************/
+/*Returns 0 on success*/
+int APP_CC
+g_tcp_set_keepalive(int sck)
+{
+  int ret = 1 ; /*error*/    
+#if defined(_WIN32)
+  int option_value;
+  int option_len;
+#else
+  int option_value;
+  unsigned int option_len;
+#endif
+
+  option_len = sizeof(option_value);
+  /* SOL_TCP IPPROTO_TCP */
+  if (getsockopt(sck, SOL_SOCKET, SO_KEEPALIVE, (char*)&option_value,
+                 &option_len) == 0)
+  {
+    if (option_value == 0)
+    {
+      option_value = 1;
+      option_len = sizeof(option_value);
+      if(setsockopt(sck, SOL_SOCKET, SO_KEEPALIVE, (char*)&option_value,
+                 option_len)==0)
+      {
+	  ret = 0 ; /* success */
+      }
+    }
+  }
+  else
+  {   
+    g_writeln("Error getting tcp_keepalive");  
+  }
+  return ret;
 }
 
 /*****************************************************************************/
