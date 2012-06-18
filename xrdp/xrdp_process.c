@@ -161,7 +161,7 @@ xrdp_process_main_loop(struct xrdp_process* self)
       robjs[robjs_count++] = self->self_term_event;
       xrdp_wm_get_wait_objs(self->wm, robjs, &robjs_count,
                             wobjs, &wobjs_count, &timeout);
-      trans_get_wait_objs(self->server_trans, robjs, &robjs_count, &timeout);
+      trans_get_wait_objs(self->server_trans, robjs, &robjs_count);
       /* wait */
       if (g_obj_wait(robjs, robjs_count, wobjs, wobjs_count, timeout) != 0)
       {

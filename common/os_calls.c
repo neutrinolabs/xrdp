@@ -1077,28 +1077,43 @@ g_obj_wait(tbus* read_objs, int rcount, tbus* write_objs, int wcount,
     ptime = &time;
   }
   FD_ZERO(&rfds);
-  FD_ZERO(&wfds);
-  for (i = 0; i < rcount; i++)
-  {
-    sck = (int)(read_objs[i]);
-    if (sck > 0) {
-      FD_SET(sck, &rfds);
-      if (sck > max)
-      {
-        max = sck;
+  FD_ZERO(&wfds);  
+  /*Find the highest descriptor number in read_obj */
+  if(read_objs!=NULL){
+    for (i = 0; i < rcount; i++)
+    {
+      sck = (int)(read_objs[i]);
+      if (sck > 0) {
+        FD_SET(sck, &rfds);
+        if (sck > max)
+        {
+          max = sck; /*max holds the highest socket/descriptor number */
+        }
       }
     }
   }
-  for (i = 0; i < wcount; i++)
+  else if(rcount>0)
   {
-    sck = (int)(write_objs[i]);
-    if (sck > 0) {
-      FD_SET(sck, &wfds);
-      if (sck > max)
-      {
-        max = sck;
+    g_writeln("Programming error read_objs is null");
+    return 1; /*error*/
+  }
+  if(write_objs!=NULL){
+    for (i = 0; i < wcount; i++)
+    {
+      sck = (int)(write_objs[i]);
+      if (sck > 0) {
+        FD_SET(sck, &wfds);
+        if (sck > max)
+        {
+          max = sck; /*max holds the highest socket/descriptor number */ 
+        }
       }
     }
+  }
+  else if(wcount>0)
+  {
+    g_writeln("Programming error write_objs is null");
+    return 1; /*error*/
   }
   res = select(max + 1, &rfds, &wfds, 0, ptime);
   if (res < 0)
@@ -1111,7 +1126,7 @@ g_obj_wait(tbus* read_objs, int rcount, tbus* write_objs, int wcount,
     {
       return 0;
     }
-    return 1;
+    return 1; /*error*/
   }
   return 0;
 #endif
@@ -1576,7 +1591,32 @@ g_strdup(const char* in)
   }
   return p;
 }
+/*****************************************************************************/
+/* if in = 0, return 0 else return newly alloced copy of input string 
+ * if the input string is larger than maxlen the returned string will be 
+ * truncated. All strings returned will include null termination*/
+char* APP_CC
+g_strndup(const char* in, const unsigned int maxlen)
+{
+  int len;
+  char* p;
 
+  if (in == 0)
+  {
+    return 0;
+  }
+  len = g_strlen(in);
+  if(len>maxlen)
+  {
+     len = maxlen-1 ;        
+  }
+  p = (char*)g_malloc(len + 2, 0);
+  if (p != NULL) 
+  {
+    g_strncpy(p, in,len+1);
+  }
+  return p;
+}
 /*****************************************************************************/
 int APP_CC
 g_strcmp(const char* c1, const char* c2)
