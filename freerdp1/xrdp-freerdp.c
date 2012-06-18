@@ -1337,6 +1337,7 @@ mod_exit(struct mod* mod)
   if(mod->inst == NULL)
   {
     LLOGLN(0, ("mod_exit - null pointer for inst:"));
+    g_free(mod);
     return 0 ;
   }
   freerdp_disconnect(mod->inst);
@@ -1345,7 +1346,7 @@ mod_exit(struct mod* mod)
     /* this version has a bug with double free in freerdp_free */
   }
   else
-  {    
+  {
     freerdp_context_free(mod->inst);
   }
   freerdp_free(mod->inst);
