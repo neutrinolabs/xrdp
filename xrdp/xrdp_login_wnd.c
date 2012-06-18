@@ -411,7 +411,9 @@ xrdp_wm_login_fill_in_combo(struct xrdp_wm* self, struct xrdp_bitmap* b)
   {
     p = (char*)list_get_item(sections, i);
     file_read_section(fd, p, section_names, section_values);
-    if ((g_strncmp(p, "globals", 255) == 0) || (g_strncmp(p,"Logging",255) == 0))
+    if ((g_strncmp(p, "globals", 255) == 0) 
+       ||(g_strncmp(p, "channels", 255) == 0)
+       ||(g_strncmp(p, "Logging", 255) == 0))
     {
     }
     else
