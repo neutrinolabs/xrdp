@@ -22,6 +22,9 @@
 #define DEFAULT_STRING_LEN 255
 #define LOG_WINDOW_CHAR_PER_LINE 60
 
+
+#define MAX_NR_CHANNELS 16
+#define MAX_CHANNEL_NAME 16
 /* lib */
 struct xrdp_mod
 {
@@ -288,6 +291,8 @@ struct xrdp_wm
   struct xrdp_bitmap* target_surface; /* either screen or os surface */
   int current_surface_index;
   int hints;
+  int allowedchannels[MAX_NR_CHANNELS];
+  int allowedinitialized ;
 };
 
 /* rdp process */

@@ -417,6 +417,8 @@ server_draw_text(struct xrdp_mod* mod, int font,
                  int x, int y, char* data, int data_len);
 int DEFAULT_CC
 server_reset(struct xrdp_mod* mod, int width, int height, int bpp);
+int DEFAULT_CC 
+is_channel_allowed(struct xrdp_wm* wm, int channel_id);
 int DEFAULT_CC
 server_query_channel(struct xrdp_mod* mod, int index, char* channel_name,
                      int* channel_flags);

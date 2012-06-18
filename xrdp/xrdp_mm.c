@@ -1552,9 +1552,158 @@ server_reset(struct xrdp_mod* mod, int width, int height, int bpp)
   xrdp_wm_load_static_pointers(wm);
   return 0;
 }
+/* read the channel section of the ini file into lists
+ * return 1 on success 0 on failure */
+int read_allowed_channel_names(struct list* names, struct list* values)
+{
+  int fd; 
+  int ret = 0 ;  
+  char cfg_file[256]; 
+  int pos;
+  g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
+  fd = g_file_open(cfg_file);
+  if (fd > 0)
+  {    
+    names->auto_free = 1;    
+    values->auto_free = 1;
+    pos = 0 ;
+    /* all values in this section can be valid channel names */
+    if (file_read_section(fd, "channels", names, values) == 0)
+    {
+      ret = 1 ;
+    }
+    else
+    {
+      g_writeln("Failure reading channel section of configuration") ;
+    }   
+    g_file_close(fd);
+    return ret ;
+  }
+}
+/* internal function return 1 if name is in list of channels 
+ * and if the value is allowed */
+int DEFAULT_CC is_name_in_lists(char *inName, struct list* names, struct list* values)
+{
+  int reply = 0 ; /*means not in the list*/
+  int index ;   
+  char* val;
+  char* name ;
+  for (index = 0; index < names->count; index++)
+  {
+    name = (char*)list_get_item(names, index);
+    if (name != 0)
+    {
+      /* ex rdpdr ;rdpsnd ; drdynvc ; cliprdr */
+      if(!g_strncmp(name,inName,MAX_CHANNEL_NAME)){          
+        val = (char*)list_get_item(values, index);
+        if ((g_strcasecmp(val, "yes") == 0) ||
+            (g_strcasecmp(val, "on") == 0) ||
+            (g_strcasecmp(val, "true") == 0) ||
+            (g_atoi(val) != 0))
+        {
+          reply = 1 ;		   
+        }
+        else
+        {
+          g_writeln("This channel is disabled: %s",name);
+        }
+        break ; /* stop loop - item found*/
+      }
+    }
+  }
+  return reply ;
+}
+/* internal function only used once per session
+ * creates the list of allowed channels and store the information 
+ * in wm struct */
+void init_channel_allowed(struct xrdp_wm* wm)
+{    
+  int error ;
+  int i ;  
+  char channelname[MAX_CHANNEL_NAME];    
+  int index = 0 ;
+  int allowindex = 0 ;
+  struct list* names;
+  struct list* values;    
+  /* first reset allowedchannels */
+  for(i = 0 ; i<MAX_NR_CHANNELS;i++)
+  {
+    /* 0 is a valid channel so we use -1 to mark the index as unused	*/
+    wm->allowedchannels[i] = -1 ; 
+  }
+  names = list_create();    
+  values = list_create();
+  if(read_allowed_channel_names(names,values)){
+    do{
+      /* libxrdp_query_channel return 1 on error*/
+      error = libxrdp_query_channel(wm->session, index, channelname,NULL);	
+      if(error==0){
+        /* examples of channel names: rdpdr ;rdpsnd ; drdynvc ; cliprdr */
+        if(is_name_in_lists(channelname,names,values)){  
+          g_writeln("The following channel is allowed: %s",channelname) ;
+          wm->allowedchannels[allowindex] = index ;
+          allowindex ++ ;
+          if(allowindex>=MAX_NR_CHANNELS)
+          {
+            g_writeln("Programming error in is_channel_allowed");
+            error = 1 ; /* end loop */
+          }
+        }
+        else
+        {
+          g_writeln("The following channel is not allowed: %s",channelname) ;
+        }
+        index ++ ;
+      }
+    }while((error==0) && (index<MAX_NR_CHANNELS)) ;
+  }
+  else
+  {
+    g_writeln("Error reading channel section in inifile") ;
+  }   
+  list_delete(names);
+  list_delete(values);       
+}
+/*****************************************************************************/
+/* This function returns 1 if the channelID is allowed by rule set
+ * returns 0 if not allowed */
+int DEFAULT_CC is_channel_allowed(struct xrdp_wm* wm, int channel_id)
+{    
+  int i ;  
+  int reply = 0 ; /* not allowed */
+  /* The first time each client is using this function we have to 
+   * define the list of allowed channels */
+  if(wm->allowedinitialized==0)
+  {
+   init_channel_allowed(wm);
+   g_writeln("allow channel list initialized");
+   wm->allowedinitialized = 1 ;
+  }
+  for(i = 0 ; i<MAX_NR_CHANNELS;i++)
+  {
+    if(channel_id == wm->allowedchannels[i])
+    {
+      /*g_writeln("Channel allowed: %d",channel_id);*/
+      reply = 1 ; /*channel allowed*/
+      break ;
+    }
+    else if(wm->allowedchannels[i]==-1)
+    {
+      /* We are in the unused space of the allowedchannels list 
+       * We can end the loop */
+      break ;
+    }
+  }
+  /*if(reply==0)
+  {
+    g_writeln("This channel is NOT allowed: %d",channel_id) ;
+  }*/
+  return reply ;   
+}
 
 /*****************************************************************************/
-int DEFAULT_CC
+/*return 0 if the index is not found*/
+int DEFAULT_CC 
 server_query_channel(struct xrdp_mod* mod, int index, char* channel_name,
                      int* channel_flags)
 {
@@ -1593,12 +1742,19 @@ server_send_to_channel(struct xrdp_mod* mod, int channel_id,
   struct xrdp_wm* wm;
 
   wm = (struct xrdp_wm*)(mod->wm);
-  if (wm->mm->usechansrv)
+  if(is_channel_allowed(wm,channel_id))
+  {  
+    if (wm->mm->usechansrv)
+    {
+      return 1;
+    }
+    return libxrdp_send_to_channel(wm->session, channel_id, data, data_len,
+                                 total_data_len, flags);
+  }
+  else
   {
     return 1;
   }
-  return libxrdp_send_to_channel(wm->session, channel_id, data, data_len,
-                                 total_data_len, flags);
 }
 
 /*****************************************************************************/
