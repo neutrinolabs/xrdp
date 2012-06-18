@@ -64,6 +64,8 @@ g_getchar(void);
 int APP_CC
 g_tcp_set_no_delay(int sck);
 int APP_CC
+g_tcp_set_keepalive(int sck);
+int APP_CC
 g_tcp_socket(void);
 int APP_CC
 g_tcp_local_socket(void);

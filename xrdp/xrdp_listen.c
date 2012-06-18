@@ -134,6 +134,7 @@ xrdp_process_run(void* in_val)
 static int
 xrdp_listen_get_port_address(char* port, int port_bytes,
                              char* address, int address_bytes,
+                             int *tcp_nodelay, int *tcp_keepalive,
                              struct xrdp_startup_params* startup_param)
 {
   int fd;
@@ -151,6 +152,8 @@ xrdp_listen_get_port_address(char* port, int port_bytes,
   /* see if port or address is in xrdp.ini file */
   g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
   fd = g_file_open(cfg_file);
+  *tcp_nodelay = 0 ;
+  *tcp_keepalive = 0 ;
   if (fd > 0)
   {
     names = list_create();
@@ -187,6 +190,28 @@ xrdp_listen_get_port_address(char* port, int port_bytes,
                 (g_atoi(val) != 0))
             {
               startup_param->fork = 1;
+            }
+          }
+          if (g_strcasecmp(val, "tcp_nodelay") == 0)
+          {
+            val = (char*)list_get_item(values, index);
+            if ((g_strcasecmp(val, "yes") == 0) ||
+                (g_strcasecmp(val, "on") == 0) ||
+                (g_strcasecmp(val, "true") == 0) ||
+                (g_atoi(val) != 0))
+            {
+              *tcp_nodelay = 1 ;
+            }
+          }
+          if (g_strcasecmp(val, "tcp_keepalive") == 0)
+          {
+            val = (char*)list_get_item(values, index);
+            if ((g_strcasecmp(val, "yes") == 0) ||
+                (g_strcasecmp(val, "on") == 0) ||
+                (g_strcasecmp(val, "true") == 0) ||
+                (g_atoi(val) != 0))
+            {
+              *tcp_keepalive = 1 ;
             }
           }
         }
@@ -283,19 +308,37 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
   tbus term_obj;
   tbus sync_obj;
   tbus done_obj;
+  int tcp_nodelay;
+  int tcp_keepalive;
 
   self->status = 1;
   if (xrdp_listen_get_port_address(port, sizeof(port),
                                    address, sizeof(address),
+                                   &tcp_nodelay, &tcp_keepalive,
                                    self->startup_params) != 0)
   {
     g_writeln("xrdp_listen_main_loop: xrdp_listen_get_port failed");
     self->status = -1;
     return 1;
   }
+  /*Create socket*/
   error = trans_listen_address(self->listen_trans, port, address);
   if (error == 0)
   {
+    if(tcp_nodelay)
+    {
+      if(g_tcp_set_no_delay(self->listen_trans->sck))
+      {
+        g_writeln("Error setting tcp_nodelay");
+      }
+    }
+    if(tcp_keepalive)
+    {
+      if(g_tcp_set_keepalive(self->listen_trans->sck))
+      {
+        g_writeln("Error setting tcp_keepalive");
+      }
+    }
     self->listen_trans->trans_conn_in = xrdp_listen_conn_in;
     self->listen_trans->callback_data = self;
     term_obj = g_get_term_event(); /*Global termination event */
