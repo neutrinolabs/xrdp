@@ -1744,7 +1744,7 @@ server_send_to_channel(struct xrdp_mod* mod, int channel_id,
   }
   else
   {
-    return 1 ;
+    return 1;
   }
 }
 

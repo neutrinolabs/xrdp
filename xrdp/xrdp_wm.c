@@ -1396,7 +1396,8 @@ xrdp_wm_process_channel_data(struct xrdp_wm* self,
   if (self->mm->mod != 0)
   {    
     chanid = LOWORD(param1);
-    if(is_channel_allowed(self, chanid)){
+    if(is_channel_allowed(self, chanid))
+    {
       if (self->mm->usechansrv)
       {
         rv = xrdp_mm_process_channel_data(self->mm, param1, param2,
