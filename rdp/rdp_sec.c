@@ -46,7 +46,15 @@ rdp_sec_create(struct rdp_rdp* owner)
   init_stream(self->server_mcs_data, 8192);
   self->mcs_layer = rdp_mcs_create(self, self->client_mcs_data,
                                    self->server_mcs_data);
+  if(self->decrypt_rc4_info!=NULL)
+  {
+    g_writeln("rdp_sec_create - decrypt_rc4_info already created !!!");
+  }
   self->decrypt_rc4_info = ssl_rc4_info_create();
+  if(self->encrypt_rc4_info!=NULL)
+  {
+    g_writeln("rdp_sec_create - encrypt_rc4_info already created !!!");
+  }
   self->encrypt_rc4_info = ssl_rc4_info_create();
   self->lic_layer = rdp_lic_create(self);
   return self;
