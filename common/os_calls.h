@@ -64,6 +64,8 @@ g_getchar(void);
 int APP_CC
 g_tcp_set_no_delay(int sck);
 int APP_CC
+g_tcp_set_keepalive(int sck);
+int APP_CC
 g_tcp_socket(void);
 int APP_CC
 g_tcp_local_socket(void);
@@ -178,6 +180,8 @@ char* APP_CC
 g_strcat(char* dest, const char* src);
 char* APP_CC
 g_strdup(const char* in);
+char* APP_CC
+g_strndup(const char* in, const unsigned int maxlen);
 int APP_CC
 g_strcmp(const char* c1, const char* c2);
 int APP_CC

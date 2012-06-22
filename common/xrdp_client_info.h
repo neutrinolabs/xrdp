@@ -74,6 +74,12 @@ struct xrdp_client_info
   int offscreen_cache_size;
   int offscreen_cache_entries;
   int rfx;
+  /* CAPSETTYPE_RAIL */
+  int rail_support_level;
+  /* CAPSETTYPE_WINDOW */
+  int wnd_support_level;
+  int wnd_num_icon_caches;
+  int wnd_num_icon_cache_entries;
 };
 
 #endif

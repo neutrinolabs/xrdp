@@ -148,9 +148,20 @@ xrdp_sec_create(struct xrdp_rdp* owner, struct trans* trans, int crypt_level,
       self->rc4_key_size = 2;
       self->crypt_level = 3;
       break;
+    default:
+      g_writeln("Fatal : Illegal crypt_level");
+      break ;
   }
   self->channel_code = channel_code;
+  if(self->decrypt_rc4_info!=NULL)
+  {
+    g_writeln("xrdp_sec_create - decrypt_rc4_info already created !!!");
+  }
   self->decrypt_rc4_info = ssl_rc4_info_create();
+  if(self->encrypt_rc4_info!=NULL)
+  {
+    g_writeln("xrdp_sec_create - encrypt_rc4_info already created !!!");
+  }
   self->encrypt_rc4_info = ssl_rc4_info_create();
   self->mcs_layer = xrdp_mcs_create(self, trans, &self->client_mcs_data,
                                     &self->server_mcs_data);
@@ -165,14 +176,17 @@ xrdp_sec_delete(struct xrdp_sec* self)
 {
   if (self == 0)
   {
+    g_writeln("xrdp_sec_delete:  indata is null");  
     return;
   }
   xrdp_channel_delete(self->chan_layer);
   xrdp_mcs_delete(self->mcs_layer);
-  ssl_rc4_info_delete(self->decrypt_rc4_info);
-  ssl_rc4_info_delete(self->encrypt_rc4_info);
+  ssl_rc4_info_delete(self->decrypt_rc4_info); /* TODO clear all data */
+  ssl_rc4_info_delete(self->encrypt_rc4_info); /* TODO clear all data */
   g_free(self->client_mcs_data.data);
   g_free(self->server_mcs_data.data);
+  /* Crypto information must always be cleared */
+  g_memset(self,0,sizeof(struct xrdp_sec));
   g_free(self);
 }
 
@@ -722,6 +736,7 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec* self, struct stream* s)
   /* this is an option set in xrdp.ini */
   if (self->channel_code != 1) /* are channels on? */
   {
+    g_writeln("Processing channel data from client - The channel is off");  
     return 0;
   }
   in_uint32_le(s, num_channels);

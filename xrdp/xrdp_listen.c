@@ -37,6 +37,10 @@ xrdp_listen_create_pro_done(struct xrdp_listen* self)
   pid = g_getpid();
   g_snprintf(text, 255, "xrdp_%8.8x_listen_pro_done_event", pid);
   self->pro_done_event = g_create_wait_obj(text);
+  if(self->pro_done_event == 0)
+  {
+    g_writeln("Failure creating pro_done_event");
+  }
   return 0;
 }
 
@@ -130,6 +134,7 @@ xrdp_process_run(void* in_val)
 static int
 xrdp_listen_get_port_address(char* port, int port_bytes,
                              char* address, int address_bytes,
+                             int *tcp_nodelay, int *tcp_keepalive,
                              struct xrdp_startup_params* startup_param)
 {
   int fd;
@@ -147,6 +152,8 @@ xrdp_listen_get_port_address(char* port, int port_bytes,
   /* see if port or address is in xrdp.ini file */
   g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
   fd = g_file_open(cfg_file);
+  *tcp_nodelay = 0 ;
+  *tcp_keepalive = 0 ;
   if (fd > 0)
   {
     names = list_create();
@@ -183,6 +190,28 @@ xrdp_listen_get_port_address(char* port, int port_bytes,
                 (g_atoi(val) != 0))
             {
               startup_param->fork = 1;
+            }
+          }
+          if (g_strcasecmp(val, "tcp_nodelay") == 0)
+          {
+            val = (char*)list_get_item(values, index);
+            if ((g_strcasecmp(val, "yes") == 0) ||
+                (g_strcasecmp(val, "on") == 0) ||
+                (g_strcasecmp(val, "true") == 0) ||
+                (g_atoi(val) != 0))
+            {
+              *tcp_nodelay = 1 ;
+            }
+          }
+          if (g_strcasecmp(val, "tcp_keepalive") == 0)
+          {
+            val = (char*)list_get_item(values, index);
+            if ((g_strcasecmp(val, "yes") == 0) ||
+                (g_strcasecmp(val, "on") == 0) ||
+                (g_strcasecmp(val, "true") == 0) ||
+                (g_atoi(val) != 0))
+            {
+              *tcp_keepalive = 1 ;
             }
           }
         }
@@ -279,22 +308,40 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
   tbus term_obj;
   tbus sync_obj;
   tbus done_obj;
+  int tcp_nodelay;
+  int tcp_keepalive;
 
   self->status = 1;
   if (xrdp_listen_get_port_address(port, sizeof(port),
                                    address, sizeof(address),
+                                   &tcp_nodelay, &tcp_keepalive,
                                    self->startup_params) != 0)
   {
     g_writeln("xrdp_listen_main_loop: xrdp_listen_get_port failed");
     self->status = -1;
     return 1;
   }
+  /*Create socket*/
   error = trans_listen_address(self->listen_trans, port, address);
   if (error == 0)
   {
+    if(tcp_nodelay)
+    {
+      if(g_tcp_set_no_delay(self->listen_trans->sck))
+      {
+        g_writeln("Error setting tcp_nodelay");
+      }
+    }
+    if(tcp_keepalive)
+    {
+      if(g_tcp_set_keepalive(self->listen_trans->sck))
+      {
+        g_writeln("Error setting tcp_keepalive");
+      }
+    }
     self->listen_trans->trans_conn_in = xrdp_listen_conn_in;
     self->listen_trans->callback_data = self;
-    term_obj = g_get_term_event();
+    term_obj = g_get_term_event(); /*Global termination event */
     sync_obj = g_get_sync_event();
     done_obj = self->pro_done_event;
     cont = 1;
@@ -306,31 +353,33 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
       robjs[robjs_count++] = sync_obj;
       robjs[robjs_count++] = done_obj;
       timeout = -1;
-      if (trans_get_wait_objs(self->listen_trans, robjs, &robjs_count,
-                              &timeout) != 0)
+      if (trans_get_wait_objs(self->listen_trans, robjs, &robjs_count) != 0)
       {
+	g_writeln("Listening socket is in wrong state we terminate listener") ;
         break;
       }
-      /* wait */
+      /* wait - timeout -1 means wait indefinitely*/
       if (g_obj_wait(robjs, robjs_count, 0, 0, timeout) != 0)
       {
         /* error, should not get here */
         g_sleep(100);
       }
-      if (g_is_wait_obj_set(term_obj)) /* term */
+      if (g_is_wait_obj_set(term_obj)) /* termination called */
       {
         break;
       }
-      if (g_is_wait_obj_set(sync_obj)) /* sync */
+      if (g_is_wait_obj_set(sync_obj)) /* some function must be processed by this thread */
       {
         g_reset_wait_obj(sync_obj);
-        g_loop();
+        g_process_waiting_function(); /* run the function */
       }
       if (g_is_wait_obj_set(done_obj)) /* pro_done_event */
       {
-        g_reset_wait_obj(done_obj);
+        g_reset_wait_obj(done_obj); 
+        /* a process has died remove it from lists*/
         xrdp_listen_delete_done_pro(self);
       }
+      /* Run the callback when accept() returns a new socket*/
       if (trans_check_wait_objs(self->listen_trans) != 0)
       {
         break;
@@ -347,20 +396,21 @@ xrdp_listen_main_loop(struct xrdp_listen* self)
       {
         break;
       }
+      timeout = -1;
       /* build the wait obj list */
       robjs_count = 0;
       robjs[robjs_count++] = sync_obj;
       robjs[robjs_count++] = done_obj;
-      /* wait */
-      if (g_obj_wait(robjs, robjs_count, 0, 0, -1) != 0)
+      /* wait - timeout -1 means wait indefinitely*/
+      if (g_obj_wait(robjs, robjs_count, 0, 0, timeout) != 0)
       {
         /* error, should not get here */
         g_sleep(100);
       }
-      if (g_is_wait_obj_set(sync_obj)) /* sync */
+      if (g_is_wait_obj_set(sync_obj)) /* some function must be processed by this thread */
       {
         g_reset_wait_obj(sync_obj);
-        g_loop();
+        g_process_waiting_function(); /* run the function that is waiting*/
       }
       if (g_is_wait_obj_set(done_obj)) /* pro_done_event */
       {

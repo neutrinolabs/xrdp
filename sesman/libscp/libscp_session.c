@@ -60,6 +60,9 @@ scp_session_set_type(struct SCP_SESSION* s, tui8 type)
     case SCP_SESSION_TYPE_XRDP:
       s->type = SCP_SESSION_TYPE_XRDP;
       break;
+    case SCP_GW_AUTHENTICATION:
+      s->type = SCP_GW_AUTHENTICATION;
+      break;
     case SCP_SESSION_TYPE_MANAGE:
       s->type = SCP_SESSION_TYPE_MANAGE;
       s->mng = (struct SCP_MNG_DATA*)g_malloc(sizeof(struct SCP_MNG_DATA), 1);

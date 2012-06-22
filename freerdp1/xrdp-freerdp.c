@@ -962,7 +962,7 @@ static void DEFAULT_CC
 lfreerdp_pointer_system(rdpContext* context,
                         POINTER_SYSTEM_UPDATE* pointer_system)
 {
-  LLOGLN(0, ("lfreerdp_pointer_system:"));
+  LLOGLN(0, ("lfreerdp_pointer_system: - no code here"));
 }
 
 /******************************************************************************/
@@ -1379,7 +1379,13 @@ mod_exit(struct mod* mod)
   {
     return 0;
   }
-
+  if(mod->inst == NULL)
+  {
+    LLOGLN(0, ("mod_exit - null pointer for inst:"));
+    g_free(mod);
+    return 0 ;
+  }
+  freerdp_disconnect(mod->inst);
   if ((mod->vmaj == 1) && (mod->vmin == 0) && (mod->vrev == 1))
   {
     /* this version has a bug with double free in freerdp_free */
