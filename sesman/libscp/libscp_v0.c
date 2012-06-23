@@ -277,7 +277,7 @@ scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk)
       }
     }
   }
-  if (code == SCP_GW_AUTHENTICATION)
+  else if (code == SCP_GW_AUTHENTICATION)
   {
     /* g_writeln("Command is SCP_GW_AUTHENTICATION"); */
     session = scp_session_create();
@@ -287,8 +287,8 @@ scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk)
       return SCP_SERVER_STATE_INTERNAL_ERR;
     }
 
-    scp_session_set_version(session, version);   
-    scp_session_set_type(session, SCP_GW_AUTHENTICATION);    
+    scp_session_set_version(session, version);
+    scp_session_set_type(session, SCP_GW_AUTHENTICATION);
     /* reading username */
     in_uint16_be(c->in_s, sz);
     buf[sz]='\0';
@@ -303,7 +303,7 @@ scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk)
 
     /* reading password */
     in_uint16_be(c->in_s, sz);
-    buf[sz]='\0';
+    buf[sz] = '\0';
     in_uint8a(c->in_s, buf, sz);
     /* g_writeln("Received password: %s",buf); */
     if (0 != scp_session_set_password(session, buf))
@@ -311,7 +311,7 @@ scp_v0s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk)
       scp_session_destroy(session);
       /* until syslog merge log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: error setting password", __LINE__); */
       return SCP_SERVER_STATE_INTERNAL_ERR;
-    }  
+    }
   }
   else
   {
@@ -376,7 +376,7 @@ scp_v0s_replyauthentication(struct SCP_CONNECTION* c, unsigned short int value)
   out_uint16_be(c->out_s, value);  /* reply code  */
   out_uint16_be(c->out_s, 0);  /* dummy data */
   s_mark_end(c->out_s);
-  
+
   /* g_writeln("Total number of bytes that will be sent %d",c->out_s->end - c->out_s->data);*/
   if (0 != scp_tcp_force_send(c->in_sck, c->out_s->data, c->out_s->end - c->out_s->data))
   {
