@@ -329,7 +329,7 @@ g_getchar(void)
 int APP_CC
 g_tcp_set_no_delay(int sck)
 {
-  int ret = 1 ; /*error*/    
+  int ret = 1; /* error */
 #if defined(_WIN32)
   int option_value;
   int option_len;
@@ -347,16 +347,16 @@ g_tcp_set_no_delay(int sck)
     {
       option_value = 1;
       option_len = sizeof(option_value);
-      if(setsockopt(sck, IPPROTO_TCP, TCP_NODELAY, (char*)&option_value,
-                 option_len)==0)
+      if (setsockopt(sck, IPPROTO_TCP, TCP_NODELAY, (char*)&option_value,
+                     option_len) == 0)
       {
-	  ret = 0 ; /* success */
+        ret = 0; /* success */
       }
     }
   }
   else
-  {   
-    g_writeln("Error getting tcp_nodelay");  
+  {
+    g_writeln("Error getting tcp_nodelay");
   }
   return ret;
 }
@@ -366,7 +366,7 @@ g_tcp_set_no_delay(int sck)
 int APP_CC
 g_tcp_set_keepalive(int sck)
 {
-  int ret = 1 ; /*error*/    
+  int ret = 1; /* error */
 #if defined(_WIN32)
   int option_value;
   int option_len;
@@ -384,16 +384,16 @@ g_tcp_set_keepalive(int sck)
     {
       option_value = 1;
       option_len = sizeof(option_value);
-      if(setsockopt(sck, SOL_SOCKET, SO_KEEPALIVE, (char*)&option_value,
-                 option_len)==0)
+      if (setsockopt(sck, SOL_SOCKET, SO_KEEPALIVE, (char*)&option_value,
+                     option_len) == 0)
       {
-	  ret = 0 ; /* success */
+        ret = 0; /* success */
       }
     }
   }
   else
-  {   
-    g_writeln("Error getting tcp_keepalive");  
+  {
+    g_writeln("Error getting tcp_keepalive");
   }
   return ret;
 }
@@ -1123,43 +1123,47 @@ g_obj_wait(tbus* read_objs, int rcount, tbus* write_objs, int wcount,
     ptime = &time;
   }
   FD_ZERO(&rfds);
-  FD_ZERO(&wfds);  
-  /*Find the highest descriptor number in read_obj */
-  if(read_objs!=NULL){
+  FD_ZERO(&wfds);
+  /* Find the highest descriptor number in read_obj */
+  if (read_objs!=NULL)
+  {
     for (i = 0; i < rcount; i++)
     {
       sck = (int)(read_objs[i]);
-      if (sck > 0) {
+      if (sck > 0)
+      {
         FD_SET(sck, &rfds);
         if (sck > max)
         {
-          max = sck; /*max holds the highest socket/descriptor number */
+          max = sck; /* max holds the highest socket/descriptor number */
         }
       }
     }
   }
-  else if(rcount>0)
+  else if (rcount>0)
   {
     g_writeln("Programming error read_objs is null");
-    return 1; /*error*/
+    return 1; /* error */
   }
-  if(write_objs!=NULL){
+  if (write_objs!=NULL)
+  {
     for (i = 0; i < wcount; i++)
     {
       sck = (int)(write_objs[i]);
-      if (sck > 0) {
+      if (sck > 0)
+      {
         FD_SET(sck, &wfds);
         if (sck > max)
         {
-          max = sck; /*max holds the highest socket/descriptor number */ 
+          max = sck; /* max holds the highest socket/descriptor number */
         }
       }
     }
   }
-  else if(wcount>0)
+  else if (wcount > 0)
   {
     g_writeln("Programming error write_objs is null");
-    return 1; /*error*/
+    return 1; /* error */
   }
   res = select(max + 1, &rfds, &wfds, 0, ptime);
   if (res < 0)
@@ -1172,7 +1176,7 @@ g_obj_wait(tbus* read_objs, int rcount, tbus* write_objs, int wcount,
     {
       return 0;
     }
-    return 1; /*error*/
+    return 1; /* error */
   }
   return 0;
 #endif
@@ -1632,14 +1636,15 @@ g_strdup(const char* in)
   }
   len = g_strlen(in);
   p = (char*)g_malloc(len + 1, 0);
-  if (p != NULL) {
+  if (p != NULL)
+  {
     g_strcpy(p, in);
   }
   return p;
 }
 /*****************************************************************************/
-/* if in = 0, return 0 else return newly alloced copy of input string 
- * if the input string is larger than maxlen the returned string will be 
+/* if in = 0, return 0 else return newly alloced copy of input string
+ * if the input string is larger than maxlen the returned string will be
  * truncated. All strings returned will include null termination*/
 char* APP_CC
 g_strndup(const char* in, const unsigned int maxlen)
@@ -1652,12 +1657,12 @@ g_strndup(const char* in, const unsigned int maxlen)
     return 0;
   }
   len = g_strlen(in);
-  if(len>maxlen)
+  if (len>maxlen)
   {
-     len = maxlen-1 ;        
+     len = maxlen - 1;
   }
   p = (char*)g_malloc(len + 2, 0);
-  if (p != NULL) 
+  if (p != NULL)
   {
     g_strncpy(p, in,len+1);
   }
