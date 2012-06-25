@@ -17,7 +17,7 @@
  */
 
 #include "libxrdp.h"
-#include "rail.h"
+#include "xrdp_rail.h"
 
 /* [MS-RDPERP]: Remote Desktop Protocol:
    Remote Programs Virtual Channel Extension

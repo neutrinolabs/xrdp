@@ -23,6 +23,8 @@
 #ifndef LIBXRDPINC_H
 #define LIBXRDPINC_H
 
+#include "xrdp_rail.h"
+
 /* struct xrdp_client_info moved to xrdp_client_info.h */
 
 struct xrdp_brush
@@ -176,11 +178,37 @@ int DEFAULT_CC
 libxrdp_orders_send_brush(struct xrdp_session* session,
                           int width, int height, int bpp, int type,
                           int size, char* data, int cache_id);
-int EXPORT_CC
+int DEFAULT_CC
 libxrdp_orders_send_create_os_surface(struct xrdp_session* session, int id,
                                       int width, int height,
                                       struct list* del_list);
-int EXPORT_CC
+int DEFAULT_CC
 libxrdp_orders_send_switch_os_surface(struct xrdp_session* session, int id);
+int DEFAULT_CC
+libxrdp_window_new_update(struct xrdp_session* session, int window_id,
+                          struct rail_window_state_order* window_state,
+                          int flags);
+int DEFAULT_CC
+libxrdp_window_delete(struct xrdp_session* session, int window_id);
+int DEFAULT_CC
+libxrdp_window_icon(struct xrdp_session* session, int window_id,
+                    int cache_entry, int cache_id,
+                    struct rail_icon_info* icon_info, int flags);
+int DEFAULT_CC
+libxrdp_window_cached_icon(struct xrdp_session* session, int window_id,
+                           int cache_entry, int cache_id,
+                           int flags);
+int DEFAULT_CC
+libxrdp_notify_new_update(struct xrdp_session* session,
+                          int window_id, int notify_id,
+                          struct rail_notify_state_order* notify_state,
+                          int flags);
+int DEFAULT_CC
+libxrdp_notify_delete(struct xrdp_session* session,
+                      int window_id, int notify_id);
+int DEFAULT_CC
+libxrdp_monitored_desktop(struct xrdp_session* session,
+                          struct rail_monitored_desktop_order* mdo,
+                          int flags);
 
 #endif

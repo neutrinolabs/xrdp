@@ -22,9 +22,15 @@
 #include "parse.h"
 #include "os_calls.h"
 #include "defines.h"
+#include "xrdp_rail.h"
+#include "xrdp_client_info.h"
 
 /* this is the freerdp main header */
 #include <freerdp/freerdp.h>
+#include <freerdp/rail.h>
+#include <freerdp/rail/rail.h>
+#include <freerdp/codec/bitmap.h>
+#include <freerdp/utils/memory.h>
 //#include "/home/jay/git/jsorg71/staging/include/freerdp/freerdp.h"
 
 struct bitmap_item
@@ -112,7 +118,38 @@ struct mod
                                 char* data, int data_len,
                                 int total_data_len, int flags);
   int (*server_bell_trigger)(struct mod* v);
-  long server_dumby[100 - 25]; /* align, 100 minus the number of server
+  /* off screen bitmaps */
+  int (*server_create_os_surface)(struct mod* v, int rdpindex,
+                                  int width, int height);
+  int (*server_switch_os_surface)(struct mod* v, int rdpindex);
+  int (*server_delete_os_surface)(struct mod* v, int rdpindex);
+  int (*server_paint_rect_os)(struct mod* mod, int x, int y,
+                              int cx, int cy,
+                              int rdpindex, int srcx, int srcy);
+  int (*server_set_hints)(struct mod* mod, int hints, int mask);
+  /* rail */
+  int (*server_window_new_update)(struct mod* mod, int window_id,
+                                  struct rail_window_state_order* window_state,
+                                  int flags);
+  int (*server_window_delete)(struct mod* mod, int window_id);
+  int (*server_window_icon)(struct mod* mod,
+                            int window_id, int cache_entry, int cache_id,
+                            struct rail_icon_info* icon_info,
+                            int flags);
+  int (*server_window_cached_icon)(struct mod* mod,
+                                   int window_id, int cache_entry,
+                                   int cache_id, int flags);
+  int (*server_notify_new_update)(struct mod* mod,
+                                  int window_id, int notify_id,
+                                  struct rail_notify_state_order* notify_state,
+                                  int flags);
+  int (*server_notify_delete)(struct mod* mod, int window_id,
+                              int notify_id);
+  int (*server_monitored_desktop)(struct mod* mod,
+                                  struct rail_monitored_desktop_order* mdo,
+                                  int flags);
+
+  long server_dumby[100 - 37]; /* align, 100 minus the number of server
                                   functions above */
   /* common */
   tbus handle; /* pointer to self as long */
@@ -132,6 +169,8 @@ struct mod
   int vrev;
   char username[256];
   char password[256];
+
+  struct xrdp_client_info client_info;
 
   struct rdp_freerdp* inst;
   struct bitmap_item bitmap_cache[4][4096];

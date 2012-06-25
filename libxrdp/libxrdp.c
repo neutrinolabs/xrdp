@@ -80,7 +80,7 @@ libxrdp_process_data(struct xrdp_session* session)
   term = 0;
   cont = 1;
   rv = 0;
-  dead_lock_counter  = 0 ;
+  dead_lock_counter = 0;
   while ((cont || !session->up_and_running) && !term)
   {
     if (session->is_term != 0)
@@ -91,7 +91,8 @@ libxrdp_process_data(struct xrdp_session* session)
       }
     }
     code = 0;
-    if (xrdp_rdp_recv((struct xrdp_rdp*)session->rdp, session->s, &code) != 0)
+    if (xrdp_rdp_recv((struct xrdp_rdp*)(session->rdp),
+                      session->s, &code) != 0)
     {
       rv = 1;
       break;
@@ -104,7 +105,7 @@ libxrdp_process_data(struct xrdp_session* session)
         session->up_and_running = 0;
         break;
       case 0:
-        dead_lock_counter ++ ;  
+        dead_lock_counter++;
         break;
       case RDP_PDU_CONFIRM_ACTIVE: /* 3 */
         xrdp_rdp_process_confirm_active((struct xrdp_rdp*)session->rdp,
@@ -121,13 +122,13 @@ libxrdp_process_data(struct xrdp_session* session)
         break;
       default:
         g_writeln("unknown in libxrdp_process_data");
-        dead_lock_counter ++ ;
+        dead_lock_counter++;
         break;
-    }    
-    if(dead_lock_counter>100000)
+    }
+    if (dead_lock_counter > 100000)
     {
-      /*This situation can happen and this is a workaround*/	
-      cont = 0 ;
+      /*This situation can happen and this is a workaround*/
+      cont = 0;
       g_writeln("Serious programming error we were locked in a deadly loop") ;
       g_writeln("remaining :%d",session->s->end-session->s->next_packet);
       session->s->next_packet = 0;
@@ -628,9 +629,9 @@ libxrdp_reset(struct xrdp_session* session,
   }
   /* process till up and running */
   session->up_and_running = 0;
-  if(libxrdp_process_data(session)!=0)
+  if (libxrdp_process_data(session) != 0)
   {
-    g_writeln("non handled error from libxrdp_process_data");    
+    g_writeln("non handled error from libxrdp_process_data");
   }
   return 0;
 }
@@ -673,7 +674,7 @@ libxrdp_query_channel(struct xrdp_session* session, int index,
 
   rdp = (struct xrdp_rdp*)session->rdp;
   mcs = rdp->sec_layer->mcs_layer;
-  if(mcs->channel_list==NULL)
+  if (mcs->channel_list == NULL)
   {
     g_writeln("libxrdp_query_channel - No channel initialized");
     return 1 ;
@@ -688,7 +689,7 @@ libxrdp_query_channel(struct xrdp_session* session, int index,
   if (channel_item == 0)
   {
     /* this should not happen */
-    g_writeln("libxrdp_query_channel - channel item is 0"); 
+    g_writeln("libxrdp_query_channel - channel item is 0");
     return 1;
   }
   if (channel_name != 0)
@@ -716,7 +717,7 @@ libxrdp_get_channel_id(struct xrdp_session* session, char* name)
 
   rdp = (struct xrdp_rdp*)session->rdp;
   mcs = rdp->sec_layer->mcs_layer;
-  if(mcs->channel_list==NULL)
+  if (mcs->channel_list == NULL)
   {
     g_writeln("libxrdp_get_channel_id No channel initialized");
     return -1 ;
@@ -763,7 +764,7 @@ libxrdp_send_to_channel(struct xrdp_session* session, int channel_id,
   s_mark_end(s);
   if (xrdp_channel_send(chan, s, channel_id, total_data_len, flags) != 0)
   {
-    g_writeln("Debug - data NOT sent to channel");  
+    g_writeln("Debug - data NOT sent to channel");
     free_stream(s);
     return 1;
   }
@@ -799,4 +800,90 @@ libxrdp_orders_send_switch_os_surface(struct xrdp_session* session, int id)
 {
   return xrdp_orders_send_switch_os_surface
                      ((struct xrdp_orders*)(session->orders), id);
+}
+
+/*****************************************************************************/
+int EXPORT_CC
+libxrdp_window_new_update(struct xrdp_session* session, int window_id,
+                          struct rail_window_state_order* window_state,
+                          int flags)
+{
+  struct xrdp_orders* orders;
+
+  orders = (struct xrdp_orders*)(session->orders);
+  return xrdp_orders_send_window_new_update(orders, window_id,
+                                            window_state, flags);
+}
+
+/*****************************************************************************/
+int EXPORT_CC
+libxrdp_window_delete(struct xrdp_session* session, int window_id)
+{
+  struct xrdp_orders* orders;
+
+  orders = (struct xrdp_orders*)(session->orders);
+  return xrdp_orders_send_window_delete(orders, window_id);
+}
+
+/*****************************************************************************/
+int EXPORT_CC
+libxrdp_window_icon(struct xrdp_session* session, int window_id,
+                    int cache_entry, int cache_id,
+                    struct rail_icon_info* icon_info, int flags)
+{
+  struct xrdp_orders* orders;
+
+  orders = (struct xrdp_orders*)(session->orders);
+  return xrdp_orders_send_window_icon(orders, window_id, cache_entry,
+                                      cache_id, icon_info, flags);
+}
+
+/*****************************************************************************/
+int EXPORT_CC
+libxrdp_window_cached_icon(struct xrdp_session* session, int window_id,
+                           int cache_entry, int cache_id,
+                           int flags)
+{
+  struct xrdp_orders* orders;
+
+  orders = (struct xrdp_orders*)(session->orders);
+  return xrdp_orders_send_window_cached_icon(orders, window_id, cache_entry,
+                                             cache_id, flags);
+}
+
+/*****************************************************************************/
+int EXPORT_CC
+libxrdp_notify_new_update(struct xrdp_session* session,
+                          int window_id, int notify_id,
+                          struct rail_notify_state_order* notify_state,
+                          int flags)
+{
+  struct xrdp_orders* orders;
+
+  orders = (struct xrdp_orders*)(session->orders);
+  return xrdp_orders_send_notify_new_update(orders, window_id, notify_id,
+                                            notify_state, flags);
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+libxrdp_notify_delete(struct xrdp_session* session,
+                      int window_id, int notify_id)
+{
+  struct xrdp_orders* orders;
+
+  orders = (struct xrdp_orders*)(session->orders);
+  return xrdp_orders_send_notify_delete(orders, window_id, notify_id);
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+libxrdp_monitored_desktop(struct xrdp_session* session,
+                          struct rail_monitored_desktop_order* mdo,
+                          int flags)
+{
+  struct xrdp_orders* orders;
+
+  orders = (struct xrdp_orders*)(session->orders);
+  return xrdp_orders_send_monitored_desktop(orders, mdo, flags);
 }

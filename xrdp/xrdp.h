@@ -417,7 +417,7 @@ server_draw_text(struct xrdp_mod* mod, int font,
                  int x, int y, char* data, int data_len);
 int DEFAULT_CC
 server_reset(struct xrdp_mod* mod, int width, int height, int bpp);
-int DEFAULT_CC 
+int DEFAULT_CC
 is_channel_allowed(struct xrdp_wm* wm, int channel_id);
 int DEFAULT_CC
 server_query_channel(struct xrdp_mod* mod, int index, char* channel_name,
@@ -440,3 +440,29 @@ server_paint_rect_os(struct xrdp_mod* mod, int x, int y, int cx, int cy,
                      int id, int srcx, int srcy);
 int DEFAULT_CC
 server_set_hints(struct xrdp_mod* mod, int hints, int mask);
+int DEFAULT_CC
+server_window_new_update(struct xrdp_mod* mod, int window_id,
+                         struct rail_window_state_order* window_state,
+                         int flags);
+int DEFAULT_CC
+server_window_delete(struct xrdp_mod* mod, int window_id);
+int DEFAULT_CC
+server_window_icon(struct xrdp_mod* mod, int window_id, int cache_entry,
+                   int cache_id, struct rail_icon_info* icon_info,
+                   int flags);
+int DEFAULT_CC
+server_window_cached_icon(struct xrdp_mod* mod,
+                          int window_id, int cache_entry,
+                          int cache_id, int flags);
+int DEFAULT_CC
+server_notify_new_update(struct xrdp_mod* mod,
+                         int window_id, int notify_id,
+                         struct rail_notify_state_order* notify_state,
+                         int flags);
+int DEFAULT_CC
+server_notify_delete(struct xrdp_mod* mod, int window_id,
+                     int notify_id);
+int DEFAULT_CC
+server_monitored_desktop(struct xrdp_mod* mod,
+                         struct rail_monitored_desktop_order* mdo,
+                         int flags);
