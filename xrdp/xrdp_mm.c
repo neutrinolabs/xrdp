@@ -365,6 +365,13 @@ xrdp_mm_setup_mod1(struct xrdp_mm* self)
       self->mod->server_delete_os_surface = server_delete_os_surface;
       self->mod->server_paint_rect_os = server_paint_rect_os;
       self->mod->server_set_hints = server_set_hints;
+      self->mod->server_window_new_update = server_window_new_update;
+      self->mod->server_window_delete = server_window_delete;
+      self->mod->server_window_icon = server_window_icon;
+      self->mod->server_window_cached_icon = server_window_cached_icon;
+      self->mod->server_notify_new_update = server_notify_new_update;
+      self->mod->server_notify_delete = server_notify_delete;
+      self->mod->server_monitored_desktop = server_monitored_desktop;
     }
   }
   /* id self->mod is null, there must be a problem */
