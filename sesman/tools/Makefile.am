@@ -32,13 +32,12 @@ xrdp_dis_SOURCES = \
   dis.c
 
 xrdp_sesrun_LDADD = \
-  $(top_srcdir)/common/libcommon.la
+  $(top_builddir)/common/libcommon.la
 
 xrdp_sestest_LDADD = \
-  $(top_srcdir)/common/libcommon.la \
-  $(top_srcdir)/sesman/libscp/libscp.la
+  $(top_builddir)/common/libcommon.la \
+  $(top_builddir)/sesman/libscp/libscp.la
 
 xrdp_sesadmin_LDADD = \
-  $(top_srcdir)/common/libcommon.la \
-  $(top_srcdir)/sesman/libscp/libscp.la
-
+  $(top_builddir)/common/libcommon.la \
+  $(top_builddir)/sesman/libscp/libscp.la

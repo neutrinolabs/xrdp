@@ -16,5 +16,5 @@ lib_LTLIBRARIES = \
 libxrdpfreerdp_la_SOURCES = xrdp-freerdp.c xrdp-color.c
 
 libxrdpfreerdp_la_LIBADD = \
-  $(top_srcdir)/common/libcommon.la \
+  $(top_builddir)/common/libcommon.la \
   $(FREERDP_LIBS)

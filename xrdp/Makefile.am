@@ -36,8 +36,8 @@ xrdp_SOURCES = \
   xrdp_wm.c
 
 xrdp_LDADD = \
-  $(top_srcdir)/common/libcommon.la \
-  $(top_srcdir)/libxrdp/libxrdp.la
+  $(top_builddir)/common/libcommon.la \
+  $(top_builddir)/libxrdp/libxrdp.la
 
 xrdpsysconfdir=$(sysconfdir)/xrdp
 

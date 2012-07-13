@@ -57,5 +57,5 @@ libxrdp_la_LDFLAGS = \
   $(EXTRA_FLAGS)
 
 libxrdp_la_LIBADD = \
-  $(top_srcdir)/common/libcommon.la \
+  $(top_builddir)/common/libcommon.la \
   $(EXTRA_LIBS)

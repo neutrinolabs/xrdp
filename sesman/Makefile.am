@@ -47,8 +47,8 @@ xrdp_sesman_SOURCES = \
   $(AUTH_C)
 
 xrdp_sesman_LDADD = \
-  $(top_srcdir)/common/libcommon.la \
-  $(top_srcdir)/sesman/libscp/libscp.la \
+  $(top_builddir)/common/libcommon.la \
+  $(top_builddir)/sesman/libscp/libscp.la \
   $(AUTH_LIB) \
   -lpthread
 

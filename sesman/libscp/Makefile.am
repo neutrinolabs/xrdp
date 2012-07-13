@@ -1,5 +1,5 @@
 EXTRA_DIST = libscp_connection.h libscp_commands.h libscp.h libscp_session.h libscp_types_mng.h libscp_v1c_mng.h libscp_vX.h libscp_commands_mng.h libscp_init.h libscp_tcp.h libscp_v0.h libscp_v1s.h libscp_lock.h \
-libscp_types.h libscp_v1c.h libscp_v1s_mng.h 
+libscp_types.h libscp_v1c.h libscp_v1s_mng.h
 
 AM_CFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
@@ -27,5 +27,5 @@ libscp_la_SOURCES = \
   libscp_vX.c
 
 libscp_la_LIBADD = \
-  $(top_srcdir)/common/libcommon.la \
+  $(top_builddir)/common/libcommon.la \
   -lpthread

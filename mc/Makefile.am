@@ -15,4 +15,4 @@ lib_LTLIBRARIES = \
 libmc_la_SOURCES = mc.c
 
 libmc_la_LIBADD = \
-  $(top_srcdir)/common/libcommon.la
+  $(top_builddir)/common/libcommon.la
