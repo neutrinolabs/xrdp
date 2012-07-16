@@ -49,6 +49,7 @@ static char* g_sync_client_ip;
 static tbus g_sync_data;
 static tui8 g_sync_type;
 static int g_sync_result;
+static int g_sync_cmd;
 
 /**
  * Creates a string consisting of all parameters that is hosted in the param list
@@ -628,6 +629,30 @@ session_start_fork(int width, int height, int bpp, char* username,
 }
 
 /******************************************************************************/
+/* called with the main thread */
+static int APP_CC
+session_reconnect_fork(int display, char* username)
+{
+  int pid;
+  char text[256];
+
+  pid = g_fork();
+  if (pid == -1)
+  {
+  }
+  else if (pid == 0)
+  {
+    env_set_user(username, 0, display);
+    g_sprintf(text, "%s/%s", XRDP_CFG_PATH, "reconnectwm.sh");
+    if (g_file_exist(text))
+    {
+      g_execlp3(text, g_cfg->default_wm, 0);
+    }
+  }
+  return display;
+}
+
+/******************************************************************************/
 /* called by a worker thread, ask the main thread to call session_sync_start
    and wait till done */
 int DEFAULT_CC
@@ -640,6 +665,7 @@ session_start(int width, int height, int bpp, char* username, char* password,
   /* lock mutex */
   lock_sync_acquire();
   /* set shared vars */
+  g_sync_cmd = 0;
   g_sync_width = width;
   g_sync_height = height;
   g_sync_bpp = bpp;
@@ -663,14 +689,44 @@ session_start(int width, int height, int bpp, char* username, char* password,
 }
 
 /******************************************************************************/
+/* called by a worker thread, ask the main thread to call session_sync_start
+   and wait till done */
+int DEFAULT_CC
+session_reconnect(int display, char* username)
+{
+  /* lock mutex */
+  lock_sync_acquire();
+  /* set shared vars */
+  g_sync_cmd = 1;
+  g_sync_width = display;
+  g_sync_username = username;
+  /* set event for main thread to see */
+  g_set_wait_obj(g_sync_event);
+  /* wait for main thread to get done */
+  lock_sync_sem_acquire();
+  /* unlock mutex */
+  lock_sync_release();
+  return 0;
+}
+
+/******************************************************************************/
 /* called with the main thread */
 int APP_CC
 session_sync_start(void)
 {
-  g_sync_result = session_start_fork(g_sync_width, g_sync_height, g_sync_bpp,
-                                     g_sync_username, g_sync_password,
-                                     g_sync_data, g_sync_type, g_sync_domain,
-                                     g_sync_program, g_sync_directory, g_sync_client_ip);
+  if (g_sync_cmd == 0)
+  {
+    g_sync_result = session_start_fork(g_sync_width, g_sync_height, g_sync_bpp,
+                                       g_sync_username, g_sync_password,
+                                       g_sync_data, g_sync_type, g_sync_domain,
+                                       g_sync_program, g_sync_directory,
+                                       g_sync_client_ip);
+  }
+  else
+  {
+    /* g_sync_width is really display */
+    g_sync_result = session_reconnect_fork(g_sync_width, g_sync_username);
+  }
   lock_sync_sem_release();
   return 0;
 }

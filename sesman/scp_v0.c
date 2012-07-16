@@ -88,6 +88,7 @@ scp_v0_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
                     "display :%d.0, session_pid %d", s->username, display,
                     s_item->pid);
       }
+      session_reconnect(display, s->username);
       auth_end(data);
       /* don't set data to null here */
     }
