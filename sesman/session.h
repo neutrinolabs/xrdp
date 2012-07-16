@@ -156,4 +156,3 @@ struct SCP_DISCONNECTED_SESSION*
 session_get_byuser(char* user, int* cnt, unsigned char flags);
 
 #endif
-

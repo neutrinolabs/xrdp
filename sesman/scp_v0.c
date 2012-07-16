@@ -38,52 +38,55 @@ scp_v0_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
   struct session_item* s_item;
 
   data = auth_userpass(s->username, s->password);
-  if(s->type==SCP_GW_AUTHENTICATION)
+  if (s->type == SCP_GW_AUTHENTICATION)
   {
     /* this is just authentication in a gateway situation */
     /* g_writeln("SCP_GW_AUTHENTICATION message received"); */
-    if(data)
+    if (data)
     {
-	    if (1 == access_login_allowed(s->username))
-	    {
-	      /* the user is member of the correct groups. */
-	      scp_v0s_replyauthentication(c,0);
-        log_message( LOG_LEVEL_INFO,"Access permitted for user: %s",
-          s->username);
-	      /* g_writeln("Connection allowed"); */
-	    }
+      if (1 == access_login_allowed(s->username))
+      {
+        /* the user is member of the correct groups. */
+        scp_v0s_replyauthentication(c, 0);
+        log_message(LOG_LEVEL_INFO, "Access permitted for user: %s",
+                    s->username);
+        /* g_writeln("Connection allowed"); */
+      }
       else
       {
         scp_v0s_replyauthentication(c,3);
-        log_message( LOG_LEVEL_INFO,"Username okey but group problem for user: %s",
-          s->username);
-	      /* g_writeln("user password ok, but group problem"); */
-	    }
+        log_message(LOG_LEVEL_INFO, "Username okey but group problem for "
+                    "user: %s", s->username);
+        /* g_writeln("user password ok, but group problem"); */
+      }
     }
     else
     {
-	    /* g_writeln("username or password error"); */
-      log_message( LOG_LEVEL_INFO,"Username or password error for user: %s",
-        s->username);
-      scp_v0s_replyauthentication(c,2);	  
+      /* g_writeln("username or password error"); */
+      log_message(LOG_LEVEL_INFO, "Username or password error for user: %s",
+                  s->username);
+      scp_v0s_replyauthentication(c, 2);
     }
     auth_end(data);
   }
   else if (data)
-  {     
-    s_item = session_get_bydata(s->username, s->width, s->height, s->bpp, s->type);
+  {
+    s_item = session_get_bydata(s->username, s->width, s->height,
+                                s->bpp, s->type);
     if (s_item != 0)
     {
       display = s_item->display;
       if (0 != s->client_ip)
       {
-        log_message( LOG_LEVEL_INFO, "++ reconnected session: username %s, display :%d.0, "
-          "session_pid %d, ip %s", s->username, display, s_item->pid, s->client_ip);
+        log_message( LOG_LEVEL_INFO, "++ reconnected session: username %s, "
+                    "display :%d.0, session_pid %d, ip %s",
+                    s->username, display, s_item->pid, s->client_ip);
       }
       else
       {
-        log_message(LOG_LEVEL_INFO, "++ reconnected session: username %s, display :%d.0, "
-          "session_pid %d", s->username, display, s_item->pid);
+        log_message(LOG_LEVEL_INFO, "++ reconnected session: username %s, "
+                    "display :%d.0, session_pid %d", s->username, display,
+                    s_item->pid);
       }
       auth_end(data);
       /* don't set data to null here */
@@ -109,14 +112,16 @@ scp_v0_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
           log_message( LOG_LEVEL_INFO, "starting Xvnc session...");
           display = session_start(s->width, s->height, s->bpp, s->username,
                                   s->password, data, SESMAN_SESSION_TYPE_XVNC,
-                                  s->domain, s->program, s->directory, s->client_ip);
+                                  s->domain, s->program, s->directory,
+                                  s->client_ip);
         }
         else
         {
           log_message(LOG_LEVEL_INFO, "starting X11rdp session...");
           display = session_start(s->width, s->height, s->bpp, s->username,
                                   s->password, data, SESMAN_SESSION_TYPE_XRDP,
-                                  s->domain, s->program, s->directory, s->client_ip);
+                                  s->domain, s->program, s->directory,
+                                  s->client_ip);
         }
       }
       else
@@ -139,4 +144,3 @@ scp_v0_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
     scp_v0s_deny_connection(c);
   }
 }
-
