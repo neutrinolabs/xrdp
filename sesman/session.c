@@ -643,11 +643,12 @@ session_reconnect_fork(int display, char* username)
   else if (pid == 0)
   {
     env_set_user(username, 0, display);
-    g_sprintf(text, "%s/%s", XRDP_CFG_PATH, "reconnectwm.sh");
+    g_snprintf(text, 255, "%s/%s", XRDP_CFG_PATH, "reconnectwm.sh");
     if (g_file_exist(text))
     {
       g_execlp3(text, g_cfg->default_wm, 0);
     }
+    g_exit(0);
   }
   return display;
 }
