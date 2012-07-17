@@ -95,19 +95,19 @@ xrdp_channel_send(struct xrdp_channel* self, struct stream* s, int channel_id,
   channel = xrdp_channel_get_item(self, channel_id);
   if (channel == NULL)
   {
-    g_writeln("xrdp_channel_send - no such channel");  
+    g_writeln("xrdp_channel_send - no such channel");
     return 1;
   }
   s_pop_layer(s, channel_hdr);
   out_uint32_le(s, total_data_len);
-  if (channel->flags & CHANNEL_OPTION_SHOW_PROTOCOL)
+  if (channel->flags & XR_CHANNEL_OPTION_SHOW_PROTOCOL)
   {
     flags |= CHANNEL_FLAG_SHOW_PROTOCOL;
   }
   out_uint32_le(s, flags);
   if (xrdp_sec_send(self->sec_layer, s, channel->chanid) != 0)
   {
-    g_writeln("xrdp_channel_send - failure sending data");  
+    g_writeln("xrdp_channel_send - failure sending data");
     return 1;
   }
   return 0;
