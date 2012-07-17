@@ -173,9 +173,9 @@ lib_mod_connect(struct mod* mod)
     else
     {
       mod->sck = g_tcp_socket();
+      g_tcp_set_non_blocking(mod->sck);
+      g_tcp_set_no_delay(mod->sck);
     }
-    g_tcp_set_non_blocking(mod->sck);
-    g_tcp_set_no_delay(mod->sck);
     mod->server_msg(mod, "connecting...", 0);
     if (use_uds)
     {
