@@ -80,8 +80,16 @@ struct xrdp_client_info
   int wnd_support_level;
   int wnd_num_icon_caches;
   int wnd_num_icon_cache_entries;
-  /* remotefx codec */
+  /* codecs */
   int rfx_codec_id;
+  int rfx_prop_len;
+  char rfx_prop[64];
+  int ns_codec_id;
+  int ns_prop_len;
+  char ns_prop[64];
+  int jpeg_codec_id;
+  int jpeg_prop_len;
+  char jpeg_prop[64];
 };
 
 #endif

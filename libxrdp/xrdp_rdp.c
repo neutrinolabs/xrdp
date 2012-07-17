@@ -684,8 +684,18 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp* self)
   /* Output bmpcodecs capability set */
   caps_count++;
   out_uint16_le(s, RDP_CAPSET_BMPCODECS);
-  out_uint16_le(s, 5);
-  out_uint8(s, 0); /* bitmapCodecCount (freerdp hack) TODO: list codecs here */
+  out_uint16_le(s, 302); /* cap len */
+  out_uint8(s, 2); /* bitmapCodecCount */
+  out_uint8a(s, XR_CODEC_GUID_NSCODEC, 16);
+  out_uint8(s, 1); /* codec id */
+  out_uint16_le(s, 3);
+  out_uint8(s, 0x01); /* fAllowDynamicFidelity */
+  out_uint8(s, 0x01); /* fAllowSubsampling */
+  out_uint8(s, 0x03); /* colorLossLevel */
+  out_uint8a(s, XR_CODEC_GUID_REMOTEFX, 16);
+  out_uint8(s, 0); /* codec id */
+  out_uint16_le(s, 256);
+  out_uint8s(s, 256);
 
   /* Output color cache capability set */
   caps_count++;
@@ -989,6 +999,48 @@ xrdp_process_capset_window(struct xrdp_rdp* self, struct stream* s, int len)
 }
 
 /*****************************************************************************/
+static int APP_CC
+xrdp_process_capset_codecs(struct xrdp_rdp* self, struct stream* s, int len)
+{
+  int codec_id;
+  int codec_count;
+  int index;
+  int codec_properties_length;
+  int i1;
+  char* codec_guid;
+  char* next_guid;
+
+  in_uint8(s, codec_count);
+  for (index = 0; index < codec_count; index++)
+  {
+    codec_guid = s->p;
+    in_uint8s(s, 16);
+    in_uint8(s, codec_id);
+    in_uint16_le(s, codec_properties_length);
+    next_guid = s->p + codec_properties_length;
+    if (g_memcmp(codec_guid, XR_CODEC_GUID_NSCODEC, 16) == 0)
+    {
+      g_writeln("xrdp_process_capset_codecs: nscodec codec id %d prop len %d",
+                codec_id, codec_properties_length);
+      self->client_info.ns_codec_id = codec_id;
+      i1 = MIN(64, codec_properties_length);
+      g_memcpy(self->client_info.ns_prop, s->p, i1);
+      self->client_info.ns_prop_len = i1;
+    }
+    else if (g_memcmp(codec_guid, XR_CODEC_GUID_REMOTEFX, 16) == 0)
+    {
+      g_writeln("xrdp_process_capset_codecs: rfx codec id %d prop len %d",
+                codec_id, codec_properties_length);
+      self->client_info.rfx_codec_id = codec_id;
+      i1 = MIN(64, codec_properties_length);
+      g_memcpy(self->client_info.rfx_prop, s->p, i1);
+      self->client_info.rfx_prop_len = i1;
+    }
+    s->p = next_guid;
+  }
+}
+
+/*****************************************************************************/
 int APP_CC
 xrdp_rdp_process_confirm_active(struct xrdp_rdp* self, struct stream* s)
 {
@@ -1086,6 +1138,9 @@ xrdp_rdp_process_confirm_active(struct xrdp_rdp* self, struct stream* s)
         break;
       case 26: /* 26 */
         DEBUG(("--26"));
+        break;
+      case RDP_CAPSET_BMPCODECS: /* 0x1d(29) */
+        xrdp_process_capset_codecs(self, s, len);
         break;
       default:
         g_writeln("unknown in xrdp_rdp_process_confirm_active %d", type);
