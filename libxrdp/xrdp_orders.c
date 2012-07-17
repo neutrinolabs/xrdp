@@ -22,6 +22,10 @@
 
 #include "libxrdp.h"
 
+#if defined(XRDP_FREERDP1)
+#include <freerdp/codec/rfx.h>
+#endif
+
 /*****************************************************************************/
 struct xrdp_orders* APP_CC
 xrdp_orders_create(struct xrdp_session* session, struct xrdp_rdp* rdp_layer)
@@ -1939,6 +1943,16 @@ height(%d)", lines_sending, height);
   out_uint8a(self->out_s, s->data, bufsize);
   free_stream(s);
   free_stream(temp_s);
+  return 0;
+}
+
+/*****************************************************************************/
+/*  secondary drawing order (bitmap v3) using remotefx compression */
+int APP_CC
+xrdp_orders_send_bitmap3(struct xrdp_orders* self,
+                         int width, int height, int bpp, char* data,
+                         int cache_id, int cache_idx, int hints)
+{
   return 0;
 }
 

@@ -119,6 +119,7 @@ struct xrdp_rdp
   int mcs_channel;
   struct xrdp_client_info client_info;
   void* mppc_enc;
+  void* rfx_enc;
 };
 
 /* state */
@@ -384,6 +385,10 @@ xrdp_orders_send_raw_bitmap2(struct xrdp_orders* self,
                              int cache_id, int cache_idx);
 int APP_CC
 xrdp_orders_send_bitmap2(struct xrdp_orders* self,
+                         int width, int height, int bpp, char* data,
+                         int cache_id, int cache_idx, int hints);
+int APP_CC
+xrdp_orders_send_bitmap3(struct xrdp_orders* self,
                          int width, int height, int bpp, char* data,
                          int cache_id, int cache_idx, int hints);
 int APP_CC

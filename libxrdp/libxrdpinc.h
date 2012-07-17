@@ -166,6 +166,10 @@ libxrdp_orders_send_bitmap2(struct xrdp_session* session,
                             int width, int height, int bpp, char* data,
                             int cache_id, int cache_idx, int hints);
 int DEFAULT_CC
+libxrdp_orders_send_bitmap3(struct xrdp_session* session,
+                            int width, int height, int bpp, char* data,
+                            int cache_id, int cache_idx, int hints);
+int DEFAULT_CC
 libxrdp_query_channel(struct xrdp_session* session, int index,
                       char* channel_name, int* channel_flags);
 int DEFAULT_CC

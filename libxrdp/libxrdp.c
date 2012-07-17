@@ -659,6 +659,17 @@ libxrdp_orders_send_bitmap2(struct xrdp_session* session,
 }
 
 /*****************************************************************************/
+int EXPORT_CC
+libxrdp_orders_send_bitmap3(struct xrdp_session* session,
+                            int width, int height, int bpp, char* data,
+                            int cache_id, int cache_idx, int hints)
+{
+  return xrdp_orders_send_bitmap3((struct xrdp_orders*)session->orders,
+                                  width, height, bpp, data,
+                                  cache_id, cache_idx, hints);
+}
+
+/*****************************************************************************/
 /* returns error */
 /* this function gets the channel name and its flags, index is zero
    based.  either channel_name or channel_flags can be passed in nil if
