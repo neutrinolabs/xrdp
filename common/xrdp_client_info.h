@@ -40,7 +40,7 @@ struct xrdp_client_info
   int cache3_entries;
   int cache3_size;
   int bitmap_cache_persist_enable; /* 0 or 2 */
-  int bitmap_cache_version; /* 0 = original version, 2 = v2 */
+  int bitmap_cache_version; /* 0 = original version, 2 = v2, 3 = v3 */
   /* pointer info */
   int pointer_cache_entries;
   /* other */
@@ -80,6 +80,8 @@ struct xrdp_client_info
   int wnd_support_level;
   int wnd_num_icon_caches;
   int wnd_num_icon_cache_entries;
+  /* remotefx codec */
+  int rfx_codec_id;
 };
 
 #endif

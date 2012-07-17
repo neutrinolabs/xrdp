@@ -425,6 +425,11 @@
 #define RDP_ORDER_BRUSHCACHE    7
 #define RDP_ORDER_BMPCACHE3     8
 
+/* orderSupportExFlags (2 bytes): A 16-bit, unsigned integer.
+   Extended order support flags. */
+#define XR_ORDERFLAGS_EX_CACHE_BITMAP_REV3_SUPPORT   0x0002
+#define XR_ORDERFLAGS_EX_ALTSEC_FRAME_MARKER_SUPPORT 0x0004
+
 /* drawable types */
 #define WND_TYPE_BITMAP  0
 #define WND_TYPE_WND     1
