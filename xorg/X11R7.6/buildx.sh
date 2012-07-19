@@ -6,13 +6,13 @@
 # Authors
 #       Jay Sorg Jay.Sorg@gmail.com
 #       Laxmikant Rashinkar LK.Rashinkar@gmail.com
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #       http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -281,11 +281,9 @@ fi
 echo "using $PREFIX_DIR"
 
 export PKG_CONFIG_PATH=$PREFIX_DIR/lib/pkgconfig:$PREFIX_DIR/share/pkgconfig
-
 export PATH=$PREFIX_DIR/bin:$PATH
-
-# really only needed for x84
-export CFLAGS=-fPIC
+export LDFLAGS=-Wl,-rpath=$PREFIX_DIR/lib
+export CFLAGS="-I$PREFIX_DIR/include -fPIC -O2"
 
 # prefix dir must exist...
 if [ ! -d $PREFIX_DIR ]; then
