@@ -76,7 +76,7 @@ auth_userpass(char *user, char *pass, int *errorcode)
 
         if (1 == auth_account_disabled(stp))
         {
-            log_message(&(g_cfg->log), LOG_LEVEL_INFO, "account %s is disabled", user);
+            log_message(LOG_LEVEL_INFO, "account %s is disabled", user);
             return 0;
         }
 
