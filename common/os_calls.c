@@ -352,6 +352,10 @@ g_tcp_set_no_delay(int sck)
       {
         ret = 0; /* success */
       }
+      else
+      {
+        g_writeln("Error setting tcp_nodelay");
+      }
     }
   }
   else
@@ -388,6 +392,10 @@ g_tcp_set_keepalive(int sck)
                      option_len) == 0)
       {
         ret = 0; /* success */
+      }
+      else
+      {
+        g_writeln("Error setting tcp_keepalive");
       }
     }
   }
