@@ -5,6 +5,8 @@
 #include "arch.h"
 #include "parse.h"
 
+#define XRDP_CHANNEL_LOG 0
+
 struct chan_item
 {
   int id;
@@ -27,5 +29,12 @@ main_cleanup(void);
     g_writeln _params ; \
   } \
 }
+
+#if XRDP_CHANNEL_LOG
+#include "log.h"
+#define LOGM(_args) do { log_message _args ; } while (0)
+#else
+#define LOGM(_args)
+#endif
 
 #endif
