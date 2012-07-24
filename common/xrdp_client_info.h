@@ -90,6 +90,7 @@ struct xrdp_client_info
   int jpeg_codec_id;
   int jpeg_prop_len;
   char jpeg_prop[64];
+  int v3_codec_id;
 };
 
 #endif

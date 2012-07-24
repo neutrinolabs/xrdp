@@ -148,9 +148,8 @@ jp_do_compress(char* data, int width, int height, int bpp, int quality,
 /*****************************************************************************/
 static int APP_CC
 jpeg_compress(char* in_data, int width, int height,
-              struct stream* s, int bpp, int byte_limit,
-              int start_line, struct stream* temp_s,
-              int e)
+              struct stream* s, struct stream* temp_s, int bpp,
+              int byte_limit, int e, int quality)
 {
   char* data;
   tui32* src32;
@@ -164,7 +163,7 @@ jpeg_compress(char* in_data, int width, int height,
   int i;
   int cdata_bytes;
 
-  data = g_malloc((width + e) * height * 3, 0);
+  data = temp_s->data;
   dst8 = data;
   if (bpp == 24)
   {
@@ -192,9 +191,8 @@ jpeg_compress(char* in_data, int width, int height,
     g_writeln("bpp wrong %d", bpp);
   }
   cdata_bytes = byte_limit;
-  jp_do_compress(data, width + e, height, 24, JP_QUALITY, s->p, &cdata_bytes);
+  jp_do_compress(data, width + e, height, 24, quality, s->p, &cdata_bytes);
   s->p += cdata_bytes;
-  g_free(data);
   return cdata_bytes;
 }
 
@@ -203,10 +201,10 @@ int APP_CC
 xrdp_jpeg_compress(char* in_data, int width, int height,
                    struct stream* s, int bpp, int byte_limit,
                    int start_line, struct stream* temp_s,
-                   int e)
+                   int e, int quality)
 {
-  jpeg_compress(in_data, width, height, s, bpp, byte_limit,
-                start_line, temp_s, e);
+  jpeg_compress(in_data, width, height, s, temp_s, bpp, byte_limit,
+                e, quality);
   return height;
 }
 

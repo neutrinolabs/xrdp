@@ -559,9 +559,13 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp* self)
   struct stream* s;
   int caps_count;
   int caps_size;
+  int codec_caps_count;
+  int codec_caps_size;
   char* caps_count_ptr;
   char* caps_size_ptr;
   char* caps_ptr;
+  char* codec_caps_count_ptr;
+  char* codec_caps_size_ptr;
 
   make_stream(s);
   init_stream(s, 8192);
@@ -684,25 +688,37 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp* self)
   /* Output bmpcodecs capability set */
   caps_count++;
   out_uint16_le(s, RDP_CAPSET_BMPCODECS);
-  out_uint16_le(s, 5 + 22 + 275 + 20); /* cap len */
-  out_uint8(s, 3); /* bitmapCodecCount */
+  codec_caps_size_ptr = s->p;
+  out_uint8s(s, 2); /* cap len set later */
+  codec_caps_count = 0;
+  codec_caps_count_ptr = s->p;
+  out_uint8s(s, 1); /* bitmapCodecCount set later */
   /* nscodec */
+  codec_caps_count++;
   out_uint8a(s, XR_CODEC_GUID_NSCODEC, 16);
-  out_uint8(s, 1); /* codec id */
+  out_uint8(s, 1); /* codec id, must be 1 */
   out_uint16_le(s, 3);
   out_uint8(s, 0x01); /* fAllowDynamicFidelity */
   out_uint8(s, 0x01); /* fAllowSubsampling */
   out_uint8(s, 0x03); /* colorLossLevel */
   /* remotefx */
+  codec_caps_count++;
   out_uint8a(s, XR_CODEC_GUID_REMOTEFX, 16);
-  out_uint8(s, 0); /* codec id */
+  out_uint8(s, 0); /* codec id, client sets */
   out_uint16_le(s, 256);
   out_uint8s(s, 256);
   /* jpeg */
+  codec_caps_count++;
   out_uint8a(s, XR_CODEC_GUID_JPEG, 16);
-  out_uint8(s, 2); /* codec id */
+  out_uint8(s, 0); /* codec id, client sets */
   out_uint16_le(s, 1); /* ext length */
   out_uint8(s, 75);
+  /* calculate and set size and count */
+  codec_caps_size = (int)(s->p - codec_caps_size_ptr);
+  codec_caps_size += 2; /* 2 bytes for RDP_CAPSET_BMPCODECS above */
+  codec_caps_size_ptr[0] = codec_caps_size;
+  codec_caps_size_ptr[1] = codec_caps_size >> 8;
+  codec_caps_count_ptr[0] = codec_caps_count;
 
   /* Output color cache capability set */
   caps_count++;
@@ -823,8 +839,7 @@ xrdp_process_capset_order(struct xrdp_rdp* self, struct stream* s,
   in_uint16_le(s, ex_flags); /* Ex flags */
   if (ex_flags & XR_ORDERFLAGS_EX_CACHE_BITMAP_REV3_SUPPORT)
   {
-    g_writeln("RDP_CAPSET_BMPCACHE3");
-    DEBUG(("RDP_CAPSET_BMPCACHE3"));
+    g_writeln("xrdp_process_capset_order: bitmap cache v3 supported");
     self->client_info.bitmap_cache_version |= 4;
   }
   in_uint8s(s, 4); /* Pad */
@@ -872,13 +887,6 @@ xrdp_process_capset_bmpcache2(struct xrdp_rdp* self, struct stream* s,
   self->client_info.bitmap_cache_version |= 2;
   Bpp = (self->client_info.bpp + 7) / 8;
   in_uint16_le(s, i); /* cache flags */
-#if defined(XRDP_JPEG)
-  if (i & 0x80)
-  {
-    g_writeln("xrdp_process_capset_bmpcache2: client supports jpeg");
-    self->client_info.jpeg = 1;
-  }
-#endif
   self->client_info.bitmap_cache_persist_enable = i;
   in_uint8s(s, 2); /* number of caches in set, 3 */
   in_uint32_le(s, i);
@@ -1028,6 +1036,7 @@ xrdp_process_capset_codecs(struct xrdp_rdp* self, struct stream* s, int len)
       i1 = MIN(64, codec_properties_length);
       g_memcpy(self->client_info.ns_prop, s->p, i1);
       self->client_info.ns_prop_len = i1;
+      self->client_info.v3_codec_id = codec_id;
     }
     else if (g_memcmp(codec_guid, XR_CODEC_GUID_REMOTEFX, 16) == 0)
     {
@@ -1037,6 +1046,7 @@ xrdp_process_capset_codecs(struct xrdp_rdp* self, struct stream* s, int len)
       i1 = MIN(64, codec_properties_length);
       g_memcpy(self->client_info.rfx_prop, s->p, i1);
       self->client_info.rfx_prop_len = i1;
+      self->client_info.v3_codec_id = codec_id;
     }
     else if (g_memcmp(codec_guid, XR_CODEC_GUID_JPEG, 16) == 0)
     {
@@ -1046,6 +1056,8 @@ xrdp_process_capset_codecs(struct xrdp_rdp* self, struct stream* s, int len)
       i1 = MIN(64, codec_properties_length);
       g_memcpy(self->client_info.jpeg_prop, s->p, i1);
       self->client_info.jpeg_prop_len = i1;
+      self->client_info.v3_codec_id = codec_id;
+      g_writeln("  jpeg quality %d", self->client_info.jpeg_prop[0]);
     }
     else
     {
