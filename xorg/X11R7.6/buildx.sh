@@ -27,6 +27,11 @@ download_file()
 {
     file=$1
 
+    # if we already have the file, don't re-download it
+       if [ -r downloads/$file ]; then
+         return 0
+       fi
+
     cd downloads
 
     echo "downloading file $file"
@@ -145,23 +150,15 @@ remove_modules()
     cd ..
 }
 
-make_it()
+extract_it()
 {
     mod_file=$1
     mod_name=$2
     mod_args=$3
 
-    count=`expr $count + 1`
-
-    # if a cookie with $mod_name exists...
-    if [ -e cookies/$mod_name ]; then
-        # ...package has already been built
+    if [ -e cookies/$mod_name.extracted ]; then
         return 0
     fi
-
-    echo ""
-    echo "*** processing module $mod_name ($count of $num_modules) ***"
-    echo ""
 
     # download file
     download_file $mod_file
@@ -202,17 +199,51 @@ make_it()
         exit 1
     fi
 
-    # make module
-    make
+    cd ../..
+
+    touch cookies/$mod_name.extracted
+}
+
+make_it()
+{
+    mod_file=$1
+    mod_name=$2
+    mod_args=$3
+
+    count=`expr $count + 1`
+
+    # if a cookie with $mod_name exists...
+    if [ -e cookies/$mod_name.installed ]; then
+        # ...package has already been installed
+        return 0
+    fi
+
+    echo ""
+    echo "*** processing module $mod_name ($count of $num_modules) ***"
+    echo ""
+
+    extract_it $mod_file $mod_name $mod_args
     if [ $? -ne 0 ]; then
         echo ""
-        echo "make failed for module $mod_name"
+        echo "extract failed for module $mod_name"
         echo ""
         exit 1
     fi
 
+    # make module
+    if [ ! -e cookies/$mod_name.made ]; then
+        (cd build_dir/$mod_name ; make)
+        if [ $? -ne 0 ]; then
+            echo ""
+            echo "make failed for module $mod_name"
+            echo ""
+            exit 1
+        fi
+        touch cookies/$mod_name.made
+    fi
+
     # install module
-    make install
+    (cd build_dir/$mod_name ; make install)
     if [ $? -ne 0 ]; then
         echo ""
         echo "make install failed for module $mod_name"
@@ -224,12 +255,11 @@ make_it()
     # so Mesa builds using this python version
     case "$mod_name" in
       *Python-2*)
-      ln -s python $PREFIX_DIR/bin/python2
+      (cd build_dir/$mod_name ; ln -s python $PREFIX_DIR/bin/python2)
       ;;
     esac
 
-    cd ../..
-    touch cookies/$mod_name
+    touch cookies/$mod_name.installed
     return 0
 }
 
@@ -345,6 +375,10 @@ export X11RDPBASE
 
 cd rdp
 make
+if [ $? -ne 0 ]; then
+    echo "error building rdp"
+    exit 1
+fi
 
 # this will copy the build X server with the other X server binaries
 strip X11rdp
