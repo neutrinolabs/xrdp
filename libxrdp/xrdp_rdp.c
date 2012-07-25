@@ -117,7 +117,7 @@ xrdp_rdp_read_config(struct xrdp_client_info* client_info)
       else
       {
         g_writeln("Warning: Your configured crypt level is"
-		  "undefined 'high' will be used");
+                  "undefined 'high' will be used");
         client_info->crypt_level = 3;
       }
     }
@@ -757,6 +757,12 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp* self)
   out_uint8(s, 3); /* NumIconCaches */
   out_uint16_le(s, 12); /* NumIconCacheEntries */
 
+  /* 6 - bitmap cache v3 codecid */
+  caps_count++;
+  out_uint16_le(s, 0x0006);
+  out_uint16_le(s, 5);
+  out_uint8(s, 0); /* client sets */
+
   out_uint8s(s, 4); /* pad */
 
   s_mark_end(s);
@@ -912,6 +918,20 @@ xrdp_process_capset_bmpcache2(struct xrdp_rdp* self, struct stream* s,
 }
 
 /*****************************************************************************/
+static int
+xrdp_process_capset_cache_v3_codec_id(struct xrdp_rdp* self, struct stream* s,
+                                      int len)
+{
+  int codec_id;
+
+  in_uint8(s, codec_id);
+  g_writeln("xrdp_process_capset_cache_v3_codec_id: cache_v3_codec_id %d",
+            codec_id);
+  self->client_info.v3_codec_id = codec_id;
+  return 0;
+}
+
+/*****************************************************************************/
 /* get the number of client cursor cache */
 static int APP_CC
 xrdp_process_capset_pointercache(struct xrdp_rdp* self, struct stream* s,
@@ -1036,7 +1056,6 @@ xrdp_process_capset_codecs(struct xrdp_rdp* self, struct stream* s, int len)
       i1 = MIN(64, codec_properties_length);
       g_memcpy(self->client_info.ns_prop, s->p, i1);
       self->client_info.ns_prop_len = i1;
-      self->client_info.v3_codec_id = codec_id;
     }
     else if (g_memcmp(codec_guid, XR_CODEC_GUID_REMOTEFX, 16) == 0)
     {
@@ -1046,7 +1065,6 @@ xrdp_process_capset_codecs(struct xrdp_rdp* self, struct stream* s, int len)
       i1 = MIN(64, codec_properties_length);
       g_memcpy(self->client_info.rfx_prop, s->p, i1);
       self->client_info.rfx_prop_len = i1;
-      self->client_info.v3_codec_id = codec_id;
     }
     else if (g_memcmp(codec_guid, XR_CODEC_GUID_JPEG, 16) == 0)
     {
@@ -1056,7 +1074,6 @@ xrdp_process_capset_codecs(struct xrdp_rdp* self, struct stream* s, int len)
       i1 = MIN(64, codec_properties_length);
       g_memcpy(self->client_info.jpeg_prop, s->p, i1);
       self->client_info.jpeg_prop_len = i1;
-      self->client_info.v3_codec_id = codec_id;
       g_writeln("  jpeg quality %d", self->client_info.jpeg_prop[0]);
     }
     else
@@ -1112,6 +1129,9 @@ xrdp_rdp_process_confirm_active(struct xrdp_rdp* self, struct stream* s)
         break;
       case RDP_CAPSET_CONTROL: /* 5 */
         DEBUG(("RDP_CAPSET_CONTROL"));
+        break;
+      case 6:
+        xrdp_process_capset_cache_v3_codec_id(self, s, len);
         break;
       case RDP_CAPSET_ACTIVATE: /* 7 */
         DEBUG(("RDP_CAPSET_ACTIVATE"));
