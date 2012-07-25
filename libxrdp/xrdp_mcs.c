@@ -67,7 +67,7 @@ xrdp_mcs_delete(struct xrdp_mcs* self)
   xrdp_iso_delete(self->iso_layer);
   /* make sure we get null pointer exception if struct is used again. */
   DEBUG(("xrdp_mcs_delete processed"))
-  g_memset(self,0,sizeof(struct xrdp_mcs)) ; 
+  g_memset(self,0,sizeof(struct xrdp_mcs)) ;
   g_free(self);
 }
 
@@ -135,7 +135,7 @@ xrdp_mcs_recv(struct xrdp_mcs* self, struct stream* s, int* chan)
     /* this is channels getting added from the client */
     if (appid == MCS_CJRQ)
     {
-      g_writeln("channel join request received");	
+      g_writeln("channel join request received");
       in_uint16_be(s, userid);
       in_uint16_be(s, chanid);
       DEBUG(("xrdp_mcs_recv  adding channel %4.4x", chanid));
