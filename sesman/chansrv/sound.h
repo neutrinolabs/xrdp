@@ -19,9 +19,6 @@
 #ifndef _SOUND_H_
 #define _SOUND_H_
 
-#include <sys/socket.h>
-#include <sys/un.h>
-
 #if defined(XRDP_SIMPLESOUND)
 #include <pulse/simple.h>
 #include <pulse/error.h>
@@ -41,29 +38,6 @@
                                  __FILE__, __func__, __LINE__);
 #else
 #define print_got_here()
-#endif
-
-/**
- * insert a uint32_t value into specified byte array
- *
- * @param    p    pointer to byte array
- * @param    v    value to insert into byte array
- */
-
-#if defined(B_ENDIAN) || defined(NEED_ALIGN)
-#define ins_uint32_le(p, v)           \
-{                                     \
-    *p++ = (unsigned char) v;         \
-    *p++ = (unsigned char) (v >> 8);  \
-    *p++ = (unsigned char) (v >> 16); \
-    *p++ = (unsigned char) (v >> 24); \
-}
-#else
-#define ins_uint32_le(p, v)           \
-{                                     \
-    *((uint32_t *) p) = v;            \
-    p += 4;                           \
-}
 #endif
 
 #define AUDIO_BUF_SIZE 2048
@@ -92,10 +66,5 @@ sound_check_wait_objs(void);
 int APP_CC
 sound_data_in(struct stream* s, int chan_id, int chan_flags,
               int length, int total_length);
-
-#if defined(XRDP_SIMPLESOUND)
-static void*
-read_raw_audio_data(void* arg);
-#endif
 
 #endif

@@ -1845,7 +1845,7 @@ void init_channel_allowed(struct xrdp_wm* wm)
   /* first reset allowedchannels */
   for (i = 0; i < MAX_NR_CHANNELS; i++)
   {
-    /* 0 is a valid channel so we use -1 to mark the index as unused	*/
+    /* 0 is a valid channel so we use -1 to mark the index as unused */
     wm->allowedchannels[i] = -1;
   }
   names = list_create();

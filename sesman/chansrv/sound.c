@@ -17,6 +17,7 @@
  */
 
 #include "sound.h"
+#include "thread_calls.h"
 
 extern int g_rdpsnd_chan_id;    /* in chansrv.c */
 extern int g_display_num;       /* in chansrv.c */
@@ -25,6 +26,11 @@ static struct trans *g_audio_l_trans = 0; // listener
 static struct trans *g_audio_c_trans = 0; // connection
 static int g_training_sent_time = 0;
 static int g_cBlockNo = 0;
+
+#if defined(XRDP_SIMPLESOUND)
+static void* DEFAULT_CC
+read_raw_audio_data(void* arg);
+#endif
 
 /*****************************************************************************/
 static int APP_CC
@@ -164,7 +170,7 @@ sound_send_wave_data(char* data, int data_bytes)
 
   /* part one of 2 PDU wave info */
 
-  LOG(3, ("sound_send_wave_data: sending %d bytes", data_bytes));
+  LOG(10, ("sound_send_wave_data: sending %d bytes", data_bytes));
 
   make_stream(s);
   init_stream(s, data_bytes);
@@ -177,7 +183,7 @@ sound_send_wave_data(char* data, int data_bytes)
   g_cBlockNo++;
   out_uint8(s, g_cBlockNo);
 
-  LOG(3, ("sound_send_wave_data: sending time %d, g_cBlockNo %d",
+  LOG(10, ("sound_send_wave_data: sending time %d, g_cBlockNo %d",
       time & 0xffff, g_cBlockNo & 0xff));
 
   out_uint8s(s, 3);
@@ -227,7 +233,7 @@ sound_process_wave_confirm(struct stream* s, int size)
   in_uint16_le(s, wTimeStamp);
   in_uint8(s, cConfirmedBlockNo);
 
-  LOG(3, ("sound_process_wave_confirm: wTimeStamp %d, cConfirmedBlockNo %d",
+  LOG(10, ("sound_process_wave_confirm: wTimeStamp %d, cConfirmedBlockNo %d",
       wTimeStamp, cConfirmedBlockNo));
 
   return 0;
@@ -330,9 +336,8 @@ sound_init(void)
 
 #if defined(XRDP_SIMPLESOUND)
 
-  // start thread to read raw audio data from pulseaudio device
-  pthread_create(&thread, 0, read_raw_audio_data, NULL);
-  pthread_detach(thread);
+  /* start thread to read raw audio data from pulseaudio device */
+  tc_thread_create(read_raw_audio_data, 0);
 
 #endif
 
@@ -434,113 +439,114 @@ sound_check_wait_objs(void)
 
 #if defined(XRDP_SIMPLESOUND)
 
+static int DEFAULT_CC
+sttrans_data_in(struct trans* self)
+{
+  LOG(0, ("sttrans_data_in:\n"));
+  return 0;
+}
+
 /**
  * read raw audio data from pulseaudio device and write it
  * to a unix domain socket on which trans server is listening
  */
 
-static void *
+static void* DEFAULT_CC
 read_raw_audio_data(void* arg)
 {
-  struct sockaddr_un serv_addr;
   pa_sample_spec samp_spec;
   pa_simple* simple = NULL;
-
   uint32_t bytes_read;
-  uint8_t audio_buf[AUDIO_BUF_SIZE + 8];
   char* cptr;
   int i;
   int error;
-  int skt_fd;
+  struct trans* strans;
+  char path[256];
+  struct stream* outs;
 
-  // create client socket
-  if ((skt_fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
+  strans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
+  if (strans == 0)
   {
-    LOG(0, ("read_raw_audio_data: error creating unix domain socket\n"));
-    return NULL;
+    LOG(0, ("read_raw_audio_data: trans_create failed\n"));
+    return 0;
+  }
+  strans->trans_data_in = sttrans_data_in;
+  g_snprintf(path, 255, "/tmp/xrdp_chansrv_audio_socket_%d", g_display_num);
+  if (trans_connect(strans, "", path, 100) != 0)
+  {
+    LOG(0, ("read_raw_audio_data: trans_connect failed\n"));
+    trans_delete(strans);
+    return 0;
   }
 
-  // setup server address and bind to it
-  memset(&serv_addr, 0, sizeof(struct sockaddr_un));
-  serv_addr.sun_family = AF_UNIX;
-  g_snprintf(serv_addr.sun_path, 255, "/tmp/xrdp_chansrv_audio_socket_%d", g_display_num);
-
-  if (connect(skt_fd, (struct sockaddr *) &serv_addr, sizeof(struct sockaddr_un)) < 0)
-  {
-      LOG(0, ("read_raw_audio_data: error connecting to server\n"));
-      close(skt_fd);
-      return NULL;
-  }
-
-  // setup audio format
+  /* setup audio format */
   samp_spec.format = PA_SAMPLE_S16LE;
   samp_spec.rate = 44100;
   samp_spec.channels = 2;
 
-  // if we are root, then for first 8 seconds connection to pulseaudo server
-  // fails; if we are non-root, then connection succeeds on first attempt;
-  // for now we have changed code to be non-root, but this may change in the
-  // future - so pretend we are root and try connecting to pulseaudio server
-  // for upto one minute
+  /* if we are root, then for first 8 seconds connection to pulseaudo server
+     fails; if we are non-root, then connection succeeds on first attempt;
+     for now we have changed code to be non-root, but this may change in the
+     future - so pretend we are root and try connecting to pulseaudio server
+     for upto one minute */
   for (i = 0; i < 60; i++)
   {
     simple = pa_simple_new(NULL, "xrdp", PA_STREAM_RECORD, NULL,
                            "record", &samp_spec, NULL, NULL, &error);
     if (simple)
     {
-      // connected to pulseaudio server
+      /* connected to pulseaudio server */
       LOG(0, ("read_raw_audio_data: connected to pulseaudio server\n"));
       break;
     }
     LOG(0, ("read_raw_audio_data: ERROR creating PulseAudio async interface\n"));
     LOG(0, ("read_raw_audio_data: %s\n", pa_strerror(error)));
-    sleep(1);
+    g_sleep(1000);
   }
 
   if (i == 60)
   {
-    // failed to connect to audio server
-    close(skt_fd);
+    /* failed to connect to audio server */
+    trans_delete(strans);
     return NULL;
   }
 
-  // insert header just once
-  cptr = audio_buf;
-  ins_uint32_le(cptr, 0);
-  ins_uint32_le(cptr, AUDIO_BUF_SIZE + 8);
+  /* insert header just once */
+  outs = trans_get_out_s(strans, 8192);
+  out_uint32_le(outs, 0);
+  out_uint32_le(outs, AUDIO_BUF_SIZE + 8);
+  cptr = outs->p;
+  out_uint8s(outs, AUDIO_BUF_SIZE);
+  s_mark_end(outs);
 
   while (1)
   {
-    // read a block of raw audio data...
-    if ((bytes_read = pa_simple_read(simple, cptr, AUDIO_BUF_SIZE, &error)) < 0)
+    /* read a block of raw audio data... */
+    g_memset(cptr, 0, 4);
+    bytes_read = pa_simple_read(simple, cptr, AUDIO_BUF_SIZE, &error);
+    if (bytes_read < 0)
     {
       LOG(0, ("read_raw_audio_data: ERROR reading from pulseaudio stream\n"));
       LOG(0, ("read_raw_audio_data: %s\n", pa_strerror(error)));
       break;
     }
-
-    // bug workaround:
-    // even when there is no audio data, pulseaudio is returning without
-    // errors but the data itself is zero; we use this zero data to
-    // determine that there is no audio data present
+    /* bug workaround:
+       even when there is no audio data, pulseaudio is returning without
+       errors but the data itself is zero; we use this zero data to
+       determine that there is no audio data present */
     if (*cptr == 0 && *(cptr + 1) == 0 && *(cptr + 2) == 0 && *(cptr + 3) == 0)
     {
-      usleep(10000);
+      g_sleep(10);
       continue;
     }
-
-    // ... and write it to a unix domain socket
-    if (write(skt_fd, audio_buf, AUDIO_BUF_SIZE + 8) < 0)
+    if (trans_force_write_s(strans, outs) != 0)
     {
       LOG(0, ("read_raw_audio_data: ERROR writing audio data to server\n"));
       break;
     }
   }
-
-done:
-
   pa_simple_free(simple);
-  close(skt_fd);
+  trans_delete(strans);
   return NULL;
 }
 

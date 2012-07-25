@@ -6,13 +6,13 @@
 # Authors
 #       Jay Sorg Jay.Sorg@gmail.com
 #       Laxmikant Rashinkar LK.Rashinkar@gmail.com
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #       http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,6 +26,11 @@
 download_file()
 {
     file=$1
+
+    # if we already have the file, don't re-download it
+       if [ -r downloads/$file ]; then
+         return 0
+       fi
 
     cd downloads
 
@@ -145,23 +150,15 @@ remove_modules()
     cd ..
 }
 
-make_it()
+extract_it()
 {
     mod_file=$1
     mod_name=$2
     mod_args=$3
 
-    count=`expr $count + 1`
-
-    # if a cookie with $mod_name exists...
-    if [ -e cookies/$mod_name ]; then
-        # ...package has already been built
+    if [ -e cookies/$mod_name.extracted ]; then
         return 0
     fi
-
-    echo ""
-    echo "*** processing module $mod_name ($count of $num_modules) ***"
-    echo ""
 
     # download file
     download_file $mod_file
@@ -202,17 +199,51 @@ make_it()
         exit 1
     fi
 
-    # make module
-    make
+    cd ../..
+
+    touch cookies/$mod_name.extracted
+}
+
+make_it()
+{
+    mod_file=$1
+    mod_name=$2
+    mod_args=$3
+
+    count=`expr $count + 1`
+
+    # if a cookie with $mod_name exists...
+    if [ -e cookies/$mod_name.installed ]; then
+        # ...package has already been installed
+        return 0
+    fi
+
+    echo ""
+    echo "*** processing module $mod_name ($count of $num_modules) ***"
+    echo ""
+
+    extract_it $mod_file $mod_name $mod_args
     if [ $? -ne 0 ]; then
         echo ""
-        echo "make failed for module $mod_name"
+        echo "extract failed for module $mod_name"
         echo ""
         exit 1
     fi
 
+    # make module
+    if [ ! -e cookies/$mod_name.made ]; then
+        (cd build_dir/$mod_name ; make)
+        if [ $? -ne 0 ]; then
+            echo ""
+            echo "make failed for module $mod_name"
+            echo ""
+            exit 1
+        fi
+        touch cookies/$mod_name.made
+    fi
+
     # install module
-    make install
+    (cd build_dir/$mod_name ; make install)
     if [ $? -ne 0 ]; then
         echo ""
         echo "make install failed for module $mod_name"
@@ -224,12 +255,11 @@ make_it()
     # so Mesa builds using this python version
     case "$mod_name" in
       *Python-2*)
-      ln -s python $PREFIX_DIR/bin/python2
+      (cd build_dir/$mod_name ; ln -s python $PREFIX_DIR/bin/python2)
       ;;
     esac
 
-    cd ../..
-    touch cookies/$mod_name
+    touch cookies/$mod_name.installed
     return 0
 }
 
@@ -281,11 +311,9 @@ fi
 echo "using $PREFIX_DIR"
 
 export PKG_CONFIG_PATH=$PREFIX_DIR/lib/pkgconfig:$PREFIX_DIR/share/pkgconfig
-
 export PATH=$PREFIX_DIR/bin:$PATH
-
-# really only needed for x84
-export CFLAGS=-fPIC
+export LDFLAGS=-Wl,-rpath=$PREFIX_DIR/lib
+export CFLAGS="-I$PREFIX_DIR/include -fPIC -O2"
 
 # prefix dir must exist...
 if [ ! -d $PREFIX_DIR ]; then
@@ -347,6 +375,10 @@ export X11RDPBASE
 
 cd rdp
 make
+if [ $? -ne 0 ]; then
+    echo "error building rdp"
+    exit 1
+fi
 
 # this will copy the build X server with the other X server binaries
 strip X11rdp

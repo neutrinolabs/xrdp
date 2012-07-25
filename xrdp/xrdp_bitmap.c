@@ -352,8 +352,8 @@ xrdp_bitmap_load(struct xrdp_bitmap* self, const char* filename, int* palette)
 
   if (!g_file_exist(filename))
   {
-    log_message(LOG_LEVEL_ERROR,
-	    "xrdp_bitmap_load: error bitmap file [%s] does not exist",filename);
+    log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: error bitmap file [%s] "
+                "does not exist", filename);
     return 1;
   }
   s = (struct stream *)NULL;
@@ -363,15 +363,15 @@ xrdp_bitmap_load(struct xrdp_bitmap* self, const char* filename, int* palette)
     /* read file type */
     if (g_file_read(fd, type1, 2) != 2)
     {
-      log_message(LOG_LEVEL_ERROR,
-	      "xrdp_bitmap_load: error bitmap file [%s] read error",filename);
+      log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: error bitmap file [%s] "
+                  "read error", filename);
       g_file_close(fd);
       return 1;
     }
     if ((type1[0] != 'B') || (type1[1] != 'M'))
     {
-      log_message(LOG_LEVEL_ERROR,
-	      "xrdp_bitmap_load: error bitmap file [%s] not BMP file", filename);
+      log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: error bitmap file [%s] "
+                  "not BMP file", filename);
       g_file_close(fd);
       return 1;
     }
@@ -398,8 +398,8 @@ xrdp_bitmap_load(struct xrdp_bitmap* self, const char* filename, int* palette)
     if ((header.bit_count != 4) && (header.bit_count != 8) &&
         (header.bit_count != 24))
     {
-      log_message(LOG_LEVEL_ERROR,
-	      "xrdp_bitmap_load: error bitmap file [%s] bad bpp %d",filename, header.bit_count);
+      log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: error bitmap file [%s] "
+                  "bad bpp %d", filename, header.bit_count);
       free_stream(s);
       g_file_close(fd);
       return 1;
@@ -417,8 +417,8 @@ xrdp_bitmap_load(struct xrdp_bitmap* self, const char* filename, int* palette)
         k = g_file_read(fd, s->data + i * size, size);
         if (k != size)
         {
-          log_message(LOG_LEVEL_ERROR,
-		  "xrdp_bitmap_load: error bitmap file [%s] read",filename);
+          log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: error bitmap "
+                      "file [%s] read", filename);
         }
       }
       for (i = 0; i < self->height; i++)
@@ -471,8 +471,8 @@ xrdp_bitmap_load(struct xrdp_bitmap* self, const char* filename, int* palette)
         k = g_file_read(fd, s->data + i * size, size);
         if (k != size)
         {
-          log_message(LOG_LEVEL_ERROR,
-		  "xrdp_bitmap_load: error bitmap file [%s] read", filename);
+          log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: error bitmap "
+                      "file [%s] read", filename);
         }
       }
       for (i = 0; i < self->height; i++)
@@ -521,8 +521,8 @@ xrdp_bitmap_load(struct xrdp_bitmap* self, const char* filename, int* palette)
         k = g_file_read(fd, s->data + i * size, size);
         if (k != size)
         {
-          log_message(LOG_LEVEL_ERROR,
-		  "xrdp_bitmap_load: error bitmap file [%s] read",filename);
+          log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: error bitmap "
+                      "file [%s] read", filename);
         }
       }
       for (i = 0; i < self->height; i++)
@@ -564,8 +564,8 @@ xrdp_bitmap_load(struct xrdp_bitmap* self, const char* filename, int* palette)
   }
   else
   {
-    log_message(LOG_LEVEL_ERROR,
-	    "xrdp_bitmap_load: error loading bitmap from file [%s]", filename);
+    log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: error loading bitmap "
+                "from file [%s]", filename);
     return 1;
   }
   return 0;
@@ -1305,7 +1305,7 @@ xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect)
     h = (h / 2) + 2;
     y = y + (h / 2) + 1;
     painter->fg_color = self->wm->black;
-    for (i=w; i>0; i=i-2) 
+    for (i=w; i>0; i=i-2)
     {
       xrdp_painter_fill_rect(painter, self, x, y, i, 1);
       y++;

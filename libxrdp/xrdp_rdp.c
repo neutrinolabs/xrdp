@@ -117,7 +117,7 @@ xrdp_rdp_read_config(struct xrdp_client_info* client_info)
       else
       {
         g_writeln("Warning: Your configured crypt level is"
-		  "undefined 'high' will be used");
+                  "undefined 'high' will be used");
         client_info->crypt_level = 3;
       }
     }
@@ -559,9 +559,13 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp* self)
   struct stream* s;
   int caps_count;
   int caps_size;
+  int codec_caps_count;
+  int codec_caps_size;
   char* caps_count_ptr;
   char* caps_size_ptr;
   char* caps_ptr;
+  char* codec_caps_count_ptr;
+  char* codec_caps_size_ptr;
 
   make_stream(s);
   init_stream(s, 8192);
@@ -684,18 +688,37 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp* self)
   /* Output bmpcodecs capability set */
   caps_count++;
   out_uint16_le(s, RDP_CAPSET_BMPCODECS);
-  out_uint16_le(s, 302); /* cap len */
-  out_uint8(s, 2); /* bitmapCodecCount */
+  codec_caps_size_ptr = s->p;
+  out_uint8s(s, 2); /* cap len set later */
+  codec_caps_count = 0;
+  codec_caps_count_ptr = s->p;
+  out_uint8s(s, 1); /* bitmapCodecCount set later */
+  /* nscodec */
+  codec_caps_count++;
   out_uint8a(s, XR_CODEC_GUID_NSCODEC, 16);
-  out_uint8(s, 1); /* codec id */
+  out_uint8(s, 1); /* codec id, must be 1 */
   out_uint16_le(s, 3);
   out_uint8(s, 0x01); /* fAllowDynamicFidelity */
   out_uint8(s, 0x01); /* fAllowSubsampling */
   out_uint8(s, 0x03); /* colorLossLevel */
+  /* remotefx */
+  codec_caps_count++;
   out_uint8a(s, XR_CODEC_GUID_REMOTEFX, 16);
-  out_uint8(s, 0); /* codec id */
+  out_uint8(s, 0); /* codec id, client sets */
   out_uint16_le(s, 256);
   out_uint8s(s, 256);
+  /* jpeg */
+  codec_caps_count++;
+  out_uint8a(s, XR_CODEC_GUID_JPEG, 16);
+  out_uint8(s, 0); /* codec id, client sets */
+  out_uint16_le(s, 1); /* ext length */
+  out_uint8(s, 75);
+  /* calculate and set size and count */
+  codec_caps_size = (int)(s->p - codec_caps_size_ptr);
+  codec_caps_size += 2; /* 2 bytes for RDP_CAPSET_BMPCODECS above */
+  codec_caps_size_ptr[0] = codec_caps_size;
+  codec_caps_size_ptr[1] = codec_caps_size >> 8;
+  codec_caps_count_ptr[0] = codec_caps_count;
 
   /* Output color cache capability set */
   caps_count++;
@@ -733,6 +756,12 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp* self)
   out_uint32_le(s, 2); /* TS_WINDOW_LEVEL_SUPPORTED_EX */
   out_uint8(s, 3); /* NumIconCaches */
   out_uint16_le(s, 12); /* NumIconCacheEntries */
+
+  /* 6 - bitmap cache v3 codecid */
+  caps_count++;
+  out_uint16_le(s, 0x0006);
+  out_uint16_le(s, 5);
+  out_uint8(s, 0); /* client sets */
 
   out_uint8s(s, 4); /* pad */
 
@@ -816,12 +845,8 @@ xrdp_process_capset_order(struct xrdp_rdp* self, struct stream* s,
   in_uint16_le(s, ex_flags); /* Ex flags */
   if (ex_flags & XR_ORDERFLAGS_EX_CACHE_BITMAP_REV3_SUPPORT)
   {
-    g_writeln("RDP_CAPSET_BMPCACHE3");
-    DEBUG(("RDP_CAPSET_BMPCACHE3"));
-    if (self->client_info.bitmap_cache_version < 3)
-    {
-      self->client_info.bitmap_cache_version = 3;
-    }
+    g_writeln("xrdp_process_capset_order: bitmap cache v3 supported");
+    self->client_info.bitmap_cache_version |= 4;
   }
   in_uint8s(s, 4); /* Pad */
 
@@ -839,6 +864,7 @@ static int APP_CC
 xrdp_process_capset_bmpcache(struct xrdp_rdp* self, struct stream* s,
                              int len)
 {
+  self->client_info.bitmap_cache_version |= 1;
   in_uint8s(s, 24);
   in_uint16_le(s, self->client_info.cache1_entries);
   in_uint16_le(s, self->client_info.cache1_size);
@@ -864,19 +890,9 @@ xrdp_process_capset_bmpcache2(struct xrdp_rdp* self, struct stream* s,
   int Bpp = 0;
   int i = 0;
 
-  if (self->client_info.bitmap_cache_version < 2)
-  {
-    self->client_info.bitmap_cache_version = 2;
-  }
+  self->client_info.bitmap_cache_version |= 2;
   Bpp = (self->client_info.bpp + 7) / 8;
   in_uint16_le(s, i); /* cache flags */
-#if defined(XRDP_JPEG)
-  if (i & 0x80)
-  {
-    g_writeln("xrdp_process_capset_bmpcache2: client supports jpeg");
-    self->client_info.jpeg = 1;
-  }
-#endif
   self->client_info.bitmap_cache_persist_enable = i;
   in_uint8s(s, 2); /* number of caches in set, 3 */
   in_uint32_le(s, i);
@@ -898,6 +914,20 @@ xrdp_process_capset_bmpcache2(struct xrdp_rdp* self, struct stream* s,
          self->client_info.cache2_size));
   DEBUG(("cache3 entries %d size %d", self->client_info.cache3_entries,
          self->client_info.cache3_size));
+  return 0;
+}
+
+/*****************************************************************************/
+static int
+xrdp_process_capset_cache_v3_codec_id(struct xrdp_rdp* self, struct stream* s,
+                                      int len)
+{
+  int codec_id;
+
+  in_uint8(s, codec_id);
+  g_writeln("xrdp_process_capset_cache_v3_codec_id: cache_v3_codec_id %d",
+            codec_id);
+  self->client_info.v3_codec_id = codec_id;
   return 0;
 }
 
@@ -1036,8 +1066,23 @@ xrdp_process_capset_codecs(struct xrdp_rdp* self, struct stream* s, int len)
       g_memcpy(self->client_info.rfx_prop, s->p, i1);
       self->client_info.rfx_prop_len = i1;
     }
+    else if (g_memcmp(codec_guid, XR_CODEC_GUID_JPEG, 16) == 0)
+    {
+      g_writeln("xrdp_process_capset_codecs: jpeg codec id %d prop len %d",
+                codec_id, codec_properties_length);
+      self->client_info.jpeg_codec_id = codec_id;
+      i1 = MIN(64, codec_properties_length);
+      g_memcpy(self->client_info.jpeg_prop, s->p, i1);
+      self->client_info.jpeg_prop_len = i1;
+      g_writeln("  jpeg quality %d", self->client_info.jpeg_prop[0]);
+    }
+    else
+    {
+      g_writeln("xrdp_process_capset_codecs: unknown codec id %d", codec_id);
+    }
     s->p = next_guid;
   }
+  return 0;
 }
 
 /*****************************************************************************/
@@ -1084,6 +1129,9 @@ xrdp_rdp_process_confirm_active(struct xrdp_rdp* self, struct stream* s)
         break;
       case RDP_CAPSET_CONTROL: /* 5 */
         DEBUG(("RDP_CAPSET_CONTROL"));
+        break;
+      case 6:
+        xrdp_process_capset_cache_v3_codec_id(self, s, len);
         break;
       case RDP_CAPSET_ACTIVATE: /* 7 */
         DEBUG(("RDP_CAPSET_ACTIVATE"));

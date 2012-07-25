@@ -50,7 +50,7 @@ g_xrdp_sync(long (*sync_func)(long param1, long param2), long sync_param1,
   long sync_result;
   int sync_command;
 
-  /* If the function is called from the main thread, the function can 
+  /* If the function is called from the main thread, the function can
    * be called directly. g_threadid= main thread ID*/
   if (tc_threadid_equal(tc_get_threadid(), g_threadid))
   {
@@ -61,33 +61,33 @@ g_xrdp_sync(long (*sync_func)(long param1, long param2), long sync_param1,
   }
   else
   {
-    /* All threads have to wait here until the main thread 
-     * process the function. g_process_waiting_function() is called 
-     * from the listening thread. g_process_waiting_function() process the function*/  
+    /* All threads have to wait here until the main thread
+     * process the function. g_process_waiting_function() is called
+     * from the listening thread. g_process_waiting_function() process the function*/
     tc_mutex_lock(g_sync1_mutex);
     tc_mutex_lock(g_sync_mutex);
     g_sync_param1 = sync_param1;
     g_sync_param2 = sync_param2;
     g_sync_func = sync_func;
-    /* set a value THREAD_WAITING so the g_process_waiting_function function 
+    /* set a value THREAD_WAITING so the g_process_waiting_function function
      * know if any function must be processed */
-    g_sync_command = THREAD_WAITING; 
+    g_sync_command = THREAD_WAITING;
     tc_mutex_unlock(g_sync_mutex);
-    /* set this event so that the main thread know if 
+    /* set this event so that the main thread know if
      * g_process_waiting_function() must be called */
-    g_set_wait_obj(g_sync_event); 
+    g_set_wait_obj(g_sync_event);
     do
     {
       g_sleep(100);
       tc_mutex_lock(g_sync_mutex);
-      /* load new value from global to see if the g_process_waiting_function() 
+      /* load new value from global to see if the g_process_waiting_function()
        * function has processed the function */
-      sync_command = g_sync_command; 
+      sync_command = g_sync_command;
       sync_result = g_sync_result;
       tc_mutex_unlock(g_sync_mutex);
     }
-    while (sync_command != 0); /* loop until g_process_waiting_function() 
-				* has processed the request*/
+    while (sync_command != 0); /* loop until g_process_waiting_function()
+                                * has processed the request */
     tc_mutex_unlock(g_sync1_mutex);
     /*g_writeln("g_xrdp_sync processed BY main thread -> continue");*/
   }
@@ -521,7 +521,7 @@ main(int argc, char** argv)
   {
     g_writeln("error creating g_sync_event");
   }
-  g_listen->startup_params = startup_params;  
+  g_listen->startup_params = startup_params;
   xrdp_listen_main_loop(g_listen);
   xrdp_listen_delete(g_listen);
   tc_mutex_delete(g_sync_mutex);

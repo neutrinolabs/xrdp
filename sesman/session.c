@@ -214,7 +214,7 @@ x_server_running(int display)
 
 /******************************************************************************/
 static void DEFAULT_CC
-session_start_sessvc(int xpid, int wmpid, long data)
+session_start_sessvc(int xpid, int wmpid, long data, char* username, int display)
 {
   struct list * sessvc_params = (struct list *)NULL;
   char wmpid_str[25];
@@ -244,6 +244,8 @@ session_start_sessvc(int xpid, int wmpid, long data)
   list_add_item(sessvc_params, (long)g_strdup(xpid_str));
   list_add_item(sessvc_params, (long)g_strdup(wmpid_str));
   list_add_item(sessvc_params, 0); /* mandatory */
+
+  env_set_user(username, 0, display);
 
   /* executing sessvc */
   g_execvp(exe_path, ((char**)sessvc_params->items));
@@ -593,7 +595,7 @@ session_start_fork(int width, int height, int bpp, char* username,
         g_snprintf(text, 255, ":%d.0", display);
         g_setenv("DISPLAY", text, 1);
         /* new style waiting for clients */
-        session_start_sessvc(xpid, wmpid, data);
+        session_start_sessvc(xpid, wmpid, data, username, display);
       }
     }
   }
