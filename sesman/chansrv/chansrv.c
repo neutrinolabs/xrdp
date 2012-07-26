@@ -28,6 +28,9 @@
 #include "list.h"
 #include "file.h"
 #include "file_loc.h"
+#include "log.h"
+#include "rail.h"
+#include "xcommon.h"
 
 static struct trans* g_lis_trans = 0;
 static struct trans* g_con_trans = 0;
@@ -36,6 +39,7 @@ static int g_num_chan_items = 0;
 static int g_cliprdr_index = -1;
 static int g_rdpsnd_index = -1;
 static int g_rdpdr_index = -1;
+static int g_rail_index = -1;
 
 static tbus g_term_event = 0;
 static tbus g_thread_done_event = 0;
@@ -46,17 +50,18 @@ int g_display_num = 0;
 int g_cliprdr_chan_id = -1; /* cliprdr */
 int g_rdpsnd_chan_id = -1; /* rdpsnd */
 int g_rdpdr_chan_id = -1; /* rdpdr */
+int g_rail_chan_id = -1; /* rail */
 
 /*****************************************************************************/
 /* returns error */
 int APP_CC
 send_channel_data(int chan_id, char* data, int size)
 {
-  struct stream * s = (struct stream *)NULL;
-  int chan_flags = 0;
-  int total_size = 0;
-  int sent = 0;
-  int rv = 0;
+  struct stream * s;
+  int chan_flags;
+  int total_size;
+  int sent;
+  int rv;
 
   s = trans_get_out_s(g_con_trans, 8192);
   if (s == 0)
@@ -176,18 +181,20 @@ process_message_init(struct stream* s)
 static int APP_CC
 process_message_channel_setup(struct stream* s)
 {
-  int num_chans = 0;
-  int index = 0;
-  int rv = 0;
-  struct chan_item* ci = (struct chan_item *)NULL;
+  int num_chans;
+  int index;
+  int rv;
+  struct chan_item* ci;
 
   g_num_chan_items = 0;
   g_cliprdr_index = -1;
   g_rdpsnd_index = -1;
   g_rdpdr_index = -1;
+  g_rail_index = -1;
   g_cliprdr_chan_id = -1;
   g_rdpsnd_chan_id = -1;
   g_rdpdr_chan_id = -1;
+  g_rail_chan_id = -1;
   LOGM((LOG_LEVEL_DEBUG, "process_message_channel_setup:"));
   in_uint16_le(s, num_chans);
   LOGM((LOG_LEVEL_DEBUG, "process_message_channel_setup: num_chans %d",
@@ -216,6 +223,11 @@ process_message_channel_setup(struct stream* s)
       g_rdpdr_index = g_num_chan_items;
       g_rdpdr_chan_id = ci->id;
     }
+    else if (g_strcasecmp(ci->name, "rail") == 0)
+    {
+      g_rail_index = g_num_chan_items;
+      g_rail_chan_id = ci->id;
+    }
     g_num_chan_items++;
   }
   rv = send_channel_setup_response_message();
@@ -230,6 +242,10 @@ process_message_channel_setup(struct stream* s)
   if (g_rdpdr_index >= 0)
   {
     dev_redir_init();
+  }
+  if (g_rail_index >= 0)
+  {
+    rail_init();
   }
   return rv;
 }
@@ -265,6 +281,10 @@ process_message_channel_data(struct stream* s)
     else if (chan_id == g_rdpdr_chan_id)
     {
       rv = dev_redir_data_in(s, chan_id, chan_flags, length, total_length);
+    }
+    else if (chan_id == g_rail_chan_id)
+    {
+      rv = rail_data_in(s, chan_id, chan_flags, length, total_length);
     }
   }
   return rv;
@@ -433,10 +453,10 @@ THREAD_RV THREAD_CC
 channel_thread_loop(void* in_val)
 {
   tbus objs[32];
-  int num_objs = 0;
-  int timeout = 0;
-  int error = 0;
-  THREAD_RV rv = 0;
+  int num_objs;
+  int timeout;
+  int error;
+  THREAD_RV rv;
 
   LOGM((LOG_LEVEL_INFO, "channel_thread_loop: thread start"));
   rv = 0;
@@ -456,6 +476,7 @@ channel_thread_loop(void* in_val)
         clipboard_deinit();
         sound_deinit();
         dev_redir_deinit();
+        rail_deinit();
         break;
       }
       if (g_lis_trans != 0)
@@ -475,6 +496,7 @@ channel_thread_loop(void* in_val)
           clipboard_deinit();
           sound_deinit();
           dev_redir_deinit();
+          rail_deinit();
           /* delete g_con_trans */
           trans_delete(g_con_trans);
           g_con_trans = 0;
@@ -486,7 +508,7 @@ channel_thread_loop(void* in_val)
           }
         }
       }
-      clipboard_check_wait_objs();
+      xcommon_check_wait_objs();
       sound_check_wait_objs();
       dev_redir_check_wait_objs();
       timeout = -1;
@@ -495,7 +517,7 @@ channel_thread_loop(void* in_val)
       num_objs++;
       trans_get_wait_objs(g_lis_trans, objs, &num_objs);
       trans_get_wait_objs(g_con_trans, objs, &num_objs);
-      clipboard_get_wait_objs(objs, &num_objs, &timeout);
+      xcommon_get_wait_objs(objs, &num_objs, &timeout);
       sound_get_wait_objs(objs, &num_objs, &timeout);
       dev_redir_get_wait_objs(objs, &num_objs, &timeout);
     }
@@ -595,15 +617,14 @@ main_cleanup(void)
 static int APP_CC
 read_ini(void)
 {
-  char filename[256] = "";
-  struct list* names = (struct list *)NULL;
-  struct list* values = (struct list *)NULL;
-  char* name  = (char *)NULL;
-  char* value = (char *)NULL;
-  int index = 0;
+  char filename[256];
+  struct list* names;
+  struct list* values;
+  char* name;
+  char* value;
+  int index;
 
-  g_memset(filename,0,(sizeof(char)*256));
-
+  g_memset(filename,0,(sizeof(char) * 256));
   names = list_create();
   names->auto_free = 1;
   values = list_create();

@@ -25,3 +25,36 @@
 #include "rail.h"
 #include "xcommon.h"
 #include "log.h"
+
+int g_rail_up = 0;
+
+/*****************************************************************************/
+int APP_CC
+rail_init(void)
+{
+  return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+rail_deinit(void)
+{
+  return 0;
+}
+
+/*****************************************************************************/
+/* data in from client ( client -> xrdp -> chansrv ) */
+int APP_CC
+rail_data_in(struct stream* s, int chan_id, int chan_flags, int length,
+             int total_length)
+{
+  return  0;
+}
+
+/*****************************************************************************/
+/* returns 0, event handled, 1 unhandled */
+int APP_CC
+rail_xevent(void* xevent)
+{
+  return 1;
+}

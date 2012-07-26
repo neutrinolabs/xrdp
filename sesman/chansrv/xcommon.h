@@ -23,9 +23,9 @@
 #include "parse.h"
 
 int APP_CC
-xcommon_init(void);
-int APP_CC
 xcommon_get_local_time(void);
+int APP_CC
+xcommon_init(void);
 int APP_CC
 xcommon_get_wait_objs(tbus* objs, int* count, int* timeout);
 int APP_CC

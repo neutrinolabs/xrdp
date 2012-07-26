@@ -30,6 +30,18 @@
 #include "chansrv.h"
 #include "clipboard.h"
 
+extern int g_cliprdr_chan_id;   /* in chansrv.c */
+
+extern Display* g_display;      /* in xcommon.c */
+extern int g_x_socket;          /* in xcommon.c */
+extern tbus g_x_wait_obj;       /* in xcommon.c */
+extern Screen* g_screen;        /* in xcommon.c */
+extern int g_screen_num;        /* in xcommon.c */
+
+int g_clip_up = 0;
+int g_waiting_for_data_response = 0;
+int g_waiting_for_data_response_time = 0;
+
 static Atom g_clipboard_atom = 0;
 static Atom g_clip_property_atom = 0;
 static Atom g_timestamp_atom = 0;
@@ -39,12 +51,7 @@ static Atom g_primary_atom = 0;
 static Atom g_secondary_atom = 0;
 static Atom g_get_time_atom = 0;
 static Atom g_utf8_atom = 0;
-static int g_x_socket = 0;
-static tbus g_x_wait_obj = 0;
-static int g_clip_up = 0;
 static Window g_wnd = 0;
-static Screen* g_screen = 0;
-static int g_screen_num = 0;
 static int g_xfixes_event_base = 0;
 
 static int g_last_clip_size = 0;
@@ -64,35 +71,6 @@ static int g_data_in_size = 0;
 static int g_data_in_time = 0;
 static int g_data_in_up_to_date = 0;
 static int g_got_format_announce = 0;
-static int g_waiting_for_data_response = 0;
-static int g_waiting_for_data_response_time = 0;
-
-static Display* g_display = 0;
-
-extern int g_cliprdr_chan_id; /* in chansrv.c */
-
-/*****************************************************************************/
-int DEFAULT_CC
-clipboard_error_handler(Display* dis, XErrorEvent* xer)
-{
-  char text[256];
-
-  XGetErrorText(dis, xer->error_code, text, 255);
-  LOGM((LOG_LEVEL_ERROR,"error [%s]", text));
-  return 0;
-}
-
-/*****************************************************************************/
-/* The X server had an internal error.  This is the last function called.
-   Do any cleanup that needs to be done on exit, like removing temporary files.
-   Don't worry about memory leaks */
-int DEFAULT_CC
-clipboard_fatal_handler(Display* dis)
-{
-  LOGM((LOG_LEVEL_ALWAYS, "fatal error, exiting"));
-  main_cleanup();
-  return 0;
-}
 
 /*****************************************************************************/
 /* this is one way to get the current time from the x server */
@@ -112,17 +90,6 @@ clipboard_get_server_time(void)
     XMaskEvent(g_display, PropertyChangeMask, &xevent);
   } while (xevent.type != PropertyNotify);
   return xevent.xproperty.time;
-}
-
-/*****************************************************************************/
-/* returns time in miliseconds
-   this is like g_time2 in os_calls, but not miliseconds since machine was
-   up, something else
-   this is a time value similar to what the xserver uses */
-static int APP_CC
-clipboard_get_local_time(void)
-{
-  return g_time3();
 }
 
 /*****************************************************************************/
@@ -146,26 +113,6 @@ clipboard_init(void)
   }
   clipboard_deinit();
   rv = 0;
-  /* setting the error handlers can cause problem when shutting down
-     chansrv on some xlibs */
-  //XSetErrorHandler(clipboard_error_handler);
-  //XSetIOErrorHandler(clipboard_fatal_handler);
-  g_display = XOpenDisplay(0);
-  if (g_display == 0)
-  {
-    LOGM((LOG_LEVEL_ERROR, "clipboard_init: XOpenDisplay failed"));
-    rv = 1;
-  }
-  if (rv == 0)
-  {
-    g_x_socket = XConnectionNumber(g_display);
-    if (g_x_socket == 0)
-    {
-      LOGM((LOG_LEVEL_ERROR, "clipboard_init: XConnectionNumber failed"));
-      rv = 2;
-    }
-    g_x_wait_obj = g_create_wait_obj_from_socket(g_x_socket, 0);
-  }
   if (rv == 0)
   {
     g_clipboard_atom = XInternAtom(g_display, "CLIPBOARD", False);
@@ -190,8 +137,6 @@ clipboard_init(void)
     st = XFixesQueryVersion(g_display, &ver_maj, &ver_min);
     LOGM((LOG_LEVEL_ERROR, "clipboard_init st %d, maj %d min %d", st,
           ver_maj, ver_min));
-    g_screen_num = DefaultScreen(g_display);
-    g_screen = ScreenOfDisplay(g_display, g_screen_num);
     g_clip_property_atom = XInternAtom(g_display, "XRDP_CLIP_PROPERTY_ATOM",
                                        False);
     g_get_time_atom = XInternAtom(g_display, "XRDP_GET_TIME_ATOM",
@@ -251,27 +196,16 @@ clipboard_init(void)
 int APP_CC
 clipboard_deinit(void)
 {
-  if (g_x_wait_obj != 0)
-  {
-    g_delete_wait_obj_from_socket(g_x_wait_obj);
-    g_x_wait_obj = 0;
-  }
   if (g_wnd != 0)
   {
     XDestroyWindow(g_display, g_wnd);
     g_wnd = 0;
   }
-  g_x_socket = 0;
   g_free(g_last_clip_data);
   g_last_clip_data = 0;
   g_last_clip_size = 0;
   free_stream(g_ins);
   g_ins = 0;
-  if (g_display != 0)
-  {
-    XCloseDisplay(g_display);
-    g_display = 0;
-  }
   g_clip_up = 0;
   return 0;
 }
@@ -584,7 +518,7 @@ clipboard_process_data_response(struct stream* s, int clip_msg_status,
     }
     g_data_in_size = len;
     g_wcstombs(g_data_in, wtext, len + 1);
-    g_data_in_time = clipboard_get_local_time();
+    g_data_in_time = xcommon_get_local_time();
     g_data_in_up_to_date = 1;
   }
   if (g_data_in != 0)
@@ -1032,7 +966,7 @@ clipboard_event_selection_request(XEvent* xevent)
       {
         clipboard_send_data_request();
         g_waiting_for_data_response = 1;
-        g_waiting_for_data_response_time = clipboard_get_local_time();
+        g_waiting_for_data_response_time = xcommon_get_local_time();
       }
       g_selection_request_event_count++;
       return 0;
@@ -1088,85 +1022,48 @@ clipboard_event_property_notify(XEvent* xevent)
 }
 
 /*****************************************************************************/
-/* returns error
-   this is called to get any wait objects for the main loop
-   timeout can be nil */
+/* returns 0, event handled, 1 unhandled */
 int APP_CC
-clipboard_get_wait_objs(tbus* objs, int* count, int* timeout)
+clipboard_xevent(void* xevent)
 {
-  int lcount;
-
-  if ((!g_clip_up) || (objs == 0) || (count == 0))
-  {
-    return 0;
-  }
-  lcount = *count;
-  objs[lcount] = g_x_wait_obj;
-  lcount++;
-  *count = lcount;
-  return 0;
-}
-
-/*****************************************************************************/
-int APP_CC
-clipboard_check_wait_objs(void)
-{
-  XEvent xevent;
-  int time_diff;
+  XEvent* lxevent;
 
   if (!g_clip_up)
   {
-    return 0;
+    return 1;
   }
-  if (g_is_wait_obj_set(g_x_wait_obj))
+  lxevent = (XEvent*)xevent;
+  switch (lxevent->type)
   {
-    if (XPending(g_display) < 1)
-    {
-      /* something is wrong, should not get here */
-      LOGM((LOG_LEVEL_ERROR, "clipboard_check_wait_objs: sck closed"));
-      return 0;
-    }
-    if (g_waiting_for_data_response)
-    {
-      time_diff = clipboard_get_local_time() -
-                  g_waiting_for_data_response_time;
-      if (time_diff > 1000)
+    case SelectionNotify:
+      clipboard_event_selection_notify(lxevent);
+      break;
+    case SelectionRequest:
+      clipboard_event_selection_request(lxevent);
+      break;
+    case SelectionClear:
+      clipboard_event_selection_clear(lxevent);
+      break;
+    case MappingNotify:
+      break;
+    case PropertyNotify:
+      clipboard_event_property_notify(lxevent);
+      break;
+    case UnmapNotify:
+      LOG(0, ("chansrv::clipboard_xevent: got UnmapNotify"));
+      break;
+    case ClientMessage:
+      LOG(0, ("chansrv::clipboard_xevent: got ClientMessage"));
+      break;
+    default:
+      if (lxevent->type == g_xfixes_event_base +
+                           XFixesSetSelectionOwnerNotify)
       {
-        LOGM((LOG_LEVEL_ERROR, "clipboard_check_wait_objs: warning, "
-              "waiting for data response too long"));
+        clipboard_event_selection_owner_notify(lxevent);
+        break;
       }
-    }
-    while (XPending(g_display) > 0)
-    {
-      XNextEvent(g_display, &xevent);
-      switch (xevent.type)
-      {
-        case SelectionNotify:
-          clipboard_event_selection_notify(&xevent);
-          break;
-        case SelectionRequest:
-          clipboard_event_selection_request(&xevent);
-          break;
-        case SelectionClear:
-          clipboard_event_selection_clear(&xevent);
-          break;
-        case MappingNotify:
-          break;
-        case PropertyNotify:
-          clipboard_event_property_notify(&xevent);
-          break;
-        default:
-          if (xevent.type == g_xfixes_event_base +
-                             XFixesSetSelectionOwnerNotify)
-          {
-            clipboard_event_selection_owner_notify(&xevent);
-            break;
-          }
-          LOGM((LOG_LEVEL_ERROR, "clipboard_check_wait_objs unknown type %d",
-                xevent.type));
-          break;
-      }
-    }
+      /* we didn't handle this message */
+      return 1;
   }
   return 0;
 }
