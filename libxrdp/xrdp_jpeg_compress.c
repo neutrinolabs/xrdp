@@ -215,7 +215,7 @@ int APP_CC
 xrdp_jpeg_compress(char* in_data, int width, int height,
                    struct stream* s, int bpp, int byte_limit,
                    int start_line, struct stream* temp_s,
-                   int e)
+                   int e, int quality)
 {
   return height;
 }
