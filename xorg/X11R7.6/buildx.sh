@@ -222,7 +222,7 @@ make_it()
     echo "*** processing module $mod_name ($count of $num_modules) ***"
     echo ""
 
-    extract_it $mod_file $mod_name $mod_args
+    extract_it $mod_file $mod_name "$mod_args"
     if [ $? -ne 0 ]; then
         echo ""
         echo "extract failed for module $mod_name"
