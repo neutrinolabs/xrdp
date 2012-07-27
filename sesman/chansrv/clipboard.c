@@ -29,6 +29,7 @@
 #include "os_calls.h"
 #include "chansrv.h"
 #include "clipboard.h"
+#include "xcommon.h"
 
 extern int g_cliprdr_chan_id;   /* in chansrv.c */
 
