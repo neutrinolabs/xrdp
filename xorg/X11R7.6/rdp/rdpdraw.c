@@ -889,10 +889,7 @@ rdpGlyphs(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
 
   LLOGLN(10, ("rdpGlyphs:"));
   LLOGLN(10, ("rdpGlyphs: nlists %d len %d", nlists, lists->len));
-  if (g_rdpScreen.client_info.jpeg)
-  {
-    rdpup_set_hints(1, 1);
-  }
+  rdpup_set_hints(1, 1);
   for (index = 0; index < lists->len; index++)
   {
     LLOGLN(10, ("  index %d size %d refcnt %d width %d height %d",
@@ -904,9 +901,6 @@ rdpGlyphs(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
   ps->Glyphs(op, pSrc, pDst, maskFormat, xSrc, ySrc,
              nlists, lists, glyphs);
   ps->Glyphs = rdpGlyphs;
-  if (g_rdpScreen.client_info.jpeg)
-  {
-    rdpup_set_hints(0, 1);
-  }
+  rdpup_set_hints(0, 1);
   LLOGLN(10, ("rdpGlyphs: out"));
 }
