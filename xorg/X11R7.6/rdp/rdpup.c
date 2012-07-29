@@ -199,7 +199,7 @@ rdpup_add_os_bitmap(PixmapPtr pixmap, rdpPixmapPtr priv)
       }
       index++;
     }
-    LLOGLN(0, ("rdpup_add_os_bitmap: evicting old, oldest_index %d", oldest_index));
+    LLOGLN(10, ("rdpup_add_os_bitmap: evicting old, oldest_index %d", oldest_index));
     /* evict old */
     g_os_bitmaps[oldest_index].priv->status = 0;
     /* set new */
@@ -209,8 +209,8 @@ rdpup_add_os_bitmap(PixmapPtr pixmap, rdpPixmapPtr priv)
     g_os_bitmap_stamp++;
     rv = oldest_index;
   }
-  LLOGLN(0, ("rdpup_add_os_bitmap: new bitmap index %d", rv));
-  LLOGLN(0, ("  g_pixmap_num_used %d", g_pixmap_num_used));
+  LLOGLN(10, ("rdpup_add_os_bitmap: new bitmap index %d", rv));
+  LLOGLN(10, ("  g_pixmap_num_used %d", g_pixmap_num_used));
   return rv;
 }
 
@@ -218,7 +218,7 @@ rdpup_add_os_bitmap(PixmapPtr pixmap, rdpPixmapPtr priv)
 int
 rdpup_remove_os_bitmap(int rdpindex)
 {
-  LLOGLN(0, ("rdpup_remove_os_bitmap: index %d", rdpindex));
+  LLOGLN(10, ("rdpup_remove_os_bitmap: index %d", rdpindex));
   if (g_os_bitmaps == 0)
   {
     return 1;
@@ -234,7 +234,7 @@ rdpup_remove_os_bitmap(int rdpindex)
     g_os_bitmaps[rdpindex].priv = 0;
     g_pixmap_num_used--;
   }
-  LLOGLN(0, ("  g_pixmap_num_used %d", g_pixmap_num_used));
+  LLOGLN(10, ("  g_pixmap_num_used %d", g_pixmap_num_used));
   return 0;
 }
 
