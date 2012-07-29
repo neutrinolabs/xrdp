@@ -704,6 +704,11 @@ main(int argc, char** argv)
     LOGM((LOG_LEVEL_ERROR, "main: error, display is zero"));
     return 1;
   }
+  if (xcommon_init() != 0)
+  {
+    LOGM((LOG_LEVEL_ERROR, "main: error, xcommon_init failed"));
+    return 1;
+  }
   LOGM((LOG_LEVEL_INFO, "main: using DISPLAY %d", g_display_num));
   g_snprintf(text, 255, "xrdp_chansrv_%8.8x_main_term", pid);
   g_term_event = g_create_wait_obj(text);
