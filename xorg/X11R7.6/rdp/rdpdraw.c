@@ -46,14 +46,6 @@ Xserver drawing ops and funcs
 #include "rdpPolyGlyphBlt.h"
 #include "rdpPushPixels.h"
 
-#if 1
-#define DEBUG_OUT_FUNCS(arg)
-#define DEBUG_OUT_OPS(arg)
-#else
-#define DEBUG_OUT_FUNCS(arg) ErrorF arg
-#define DEBUG_OUT_OPS(arg) ErrorF arg
-#endif
-
 #define LOG_LEVEL 1
 #define LLOG(_level, _args) \
   do { if (_level < LOG_LEVEL) { ErrorF _args ; } } while (0)
@@ -67,6 +59,8 @@ extern DevPrivateKeyRec g_rdpPixmapIndex; /* from rdpmain.c */
 extern int g_Bpp; /* from rdpmain.c */
 extern ScreenPtr g_pScreen; /* from rdpmain.c */
 extern Bool g_wrapPixmap; /* from rdpmain.c */
+extern WindowPtr g_invalidate_window; /* in rdpmain.c */
+extern int g_use_rail; /* in rdpmain.c */
 
 ColormapPtr g_rdpInstalledColormap;
 
@@ -287,7 +281,7 @@ rdpChangeGC(GCPtr pGC, unsigned long mask)
 {
   rdpGCRec* priv;
 
-  DEBUG_OUT_FUNCS(("in rdpChangeGC\n"));
+  LLOGLN(10, ("in rdpChangeGC"));
   GC_FUNC_PROLOGUE(pGC);
   pGC->funcs->ChangeGC(pGC, mask);
   GC_FUNC_EPILOGUE(pGC);
@@ -299,7 +293,7 @@ rdpCopyGC(GCPtr src, unsigned long mask, GCPtr dst)
 {
   rdpGCRec* priv;
 
-  DEBUG_OUT_FUNCS(("in rdpCopyGC\n"));
+  LLOGLN(10, ("in rdpCopyGC"));
   GC_FUNC_PROLOGUE(dst);
   dst->funcs->CopyGC(src, mask, dst);
   GC_FUNC_EPILOGUE(dst);
@@ -311,7 +305,7 @@ rdpDestroyGC(GCPtr pGC)
 {
   rdpGCRec* priv;
 
-  DEBUG_OUT_FUNCS(("in rdpDestroyGC\n"));
+  LLOGLN(10, ("in rdpDestroyGC"));
   GC_FUNC_PROLOGUE(pGC);
   pGC->funcs->DestroyGC(pGC);
   GC_FUNC_EPILOGUE(pGC);
@@ -323,7 +317,7 @@ rdpChangeClip(GCPtr pGC, int type, pointer pValue, int nrects)
 {
   rdpGCRec* priv;
 
-  DEBUG_OUT_FUNCS(("in rdpChangeClip\n"));
+  LLOGLN(0, ("in rdpChangeClip"));
   GC_FUNC_PROLOGUE(pGC);
   pGC->funcs->ChangeClip(pGC, type, pValue, nrects);
   GC_FUNC_EPILOGUE(pGC);
@@ -335,7 +329,7 @@ rdpDestroyClip(GCPtr pGC)
 {
   rdpGCRec* priv;
 
-  DEBUG_OUT_FUNCS(("in rdpDestroyClip\n"));
+  LLOGLN(10, ("in rdpDestroyClip"));
   GC_FUNC_PROLOGUE(pGC);
   pGC->funcs->DestroyClip(pGC);
   GC_FUNC_EPILOGUE(pGC);
@@ -347,7 +341,7 @@ rdpCopyClip(GCPtr dst, GCPtr src)
 {
   rdpGCRec* priv;
 
-  DEBUG_OUT_FUNCS(("in rdpCopyClip\n"));
+  LLOGLN(0, ("in rdpCopyClip"));
   GC_FUNC_PROLOGUE(dst);
   dst->funcs->CopyClip(dst, src);
   GC_FUNC_EPILOGUE(dst);
@@ -374,7 +368,7 @@ rdpCopyClip(GCPtr dst, GCPtr src)
 Bool
 rdpCloseScreen(int i, ScreenPtr pScreen)
 {
-  DEBUG_OUT_OPS(("in rdpCloseScreen\n"));
+  LLOGLN(10, ("in rdpCloseScreen"));
   pScreen->CloseScreen = g_rdpScreen.CloseScreen;
   pScreen->CreateGC = g_rdpScreen.CreateGC;
   //pScreen->PaintWindowBackground = g_rdpScreen.PaintWindowBackground;
@@ -452,13 +446,16 @@ rdpCreateWindow(WindowPtr pWindow)
   rdpWindowRec* priv;
   Bool rv;
 
-  ErrorF("rdpCreateWindow:\n");
+  LLOGLN(10, ("rdpCreateWindow:"));
   priv = GETWINPRIV(pWindow);
-  //ErrorF("  %p status %d\n", priv, priv->status);
+  LLOGLN(10, ("  %p status %d", priv, priv->status));
   pScreen = pWindow->drawable.pScreen;
   pScreen->CreateWindow = g_rdpScreen.CreateWindow;
   rv = pScreen->CreateWindow(pWindow);
   pScreen->CreateWindow = rdpCreateWindow;
+  if (g_use_rail)
+  {
+  }
   return rv;
 }
 
@@ -470,12 +467,15 @@ rdpDestroyWindow(WindowPtr pWindow)
   rdpWindowRec* priv;
   Bool rv;
 
-  ErrorF("rdpDestroyWindow:\n");
+  LLOGLN(10, ("rdpDestroyWindow:"));
   priv = GETWINPRIV(pWindow);
   pScreen = pWindow->drawable.pScreen;
   pScreen->DestroyWindow = g_rdpScreen.DestroyWindow;
   rv = pScreen->DestroyWindow(pWindow);
   pScreen->DestroyWindow = rdpDestroyWindow;
+  if (g_use_rail)
+  {
+  }
   return rv;
 }
 
@@ -487,12 +487,20 @@ rdpPositionWindow(WindowPtr pWindow, int x, int y)
   rdpWindowRec* priv;
   Bool rv;
 
-  ErrorF("rdpPositionWindow:\n");
+  LLOGLN(10, ("rdpPositionWindow:"));
   priv = GETWINPRIV(pWindow);
   pScreen = pWindow->drawable.pScreen;
   pScreen->PositionWindow = g_rdpScreen.PositionWindow;
   rv = pScreen->PositionWindow(pWindow, x, y);
   pScreen->PositionWindow = rdpPositionWindow;
+  if (g_use_rail)
+  {
+    if (priv->status == 1)
+    {
+      LLOGLN(10, ("rdpPositionWindow:"));
+      LLOGLN(10, ("  x %d y %d", x, y));
+    }
+  }
   return rv;
 }
 
@@ -504,12 +512,30 @@ rdpRealizeWindow(WindowPtr pWindow)
   rdpWindowRec* priv;
   Bool rv;
 
-  ErrorF("rdpRealizeWindow:\n");
+  LLOGLN(0, ("rdpRealizeWindow:"));
   priv = GETWINPRIV(pWindow);
   pScreen = pWindow->drawable.pScreen;
   pScreen->RealizeWindow = g_rdpScreen.RealizeWindow;
   rv = pScreen->RealizeWindow(pWindow);
   pScreen->RealizeWindow = rdpRealizeWindow;
+  if (g_use_rail)
+  {
+    if ((pWindow != g_invalidate_window) && (pWindow->parent != 0))
+    {
+      if (XR_IS_ROOT(pWindow->parent))
+      {
+        LLOGLN(10, ("rdpRealizeWindow:"));
+        LLOGLN(10, ("  pWindow %p id 0x%x pWindow->parent %p id 0x%x x %d "
+               "y %d width %d height %d",
+               pWindow, pWindow->drawable.id,
+               pWindow->parent, pWindow->parent->drawable.id,
+               pWindow->drawable.x, pWindow->drawable.y,
+               pWindow->drawable.width, pWindow->drawable.height));
+        priv->status = 1;
+        rdpup_create_window(pWindow, priv);
+      }
+    }
+  }
   return rv;
 }
 
@@ -521,12 +547,21 @@ rdpUnrealizeWindow(WindowPtr pWindow)
   rdpWindowRec* priv;
   Bool rv;
 
-  ErrorF("rdpUnrealizeWindow:\n");
+  LLOGLN(0, ("rdpUnrealizeWindow:"));
   priv = GETWINPRIV(pWindow);
   pScreen = pWindow->drawable.pScreen;
   pScreen->UnrealizeWindow = g_rdpScreen.UnrealizeWindow;
   rv = pScreen->UnrealizeWindow(pWindow);
   pScreen->UnrealizeWindow = rdpUnrealizeWindow;
+  if (g_use_rail)
+  {
+    if (priv->status == 1)
+    {
+      LLOGLN(10, ("rdpUnrealizeWindow:"));
+      priv->status = 0;
+      rdpup_delete_window(pWindow, priv);
+    }
+  }
   return rv;
 }
 
@@ -538,12 +573,15 @@ rdpChangeWindowAttributes(WindowPtr pWindow, unsigned long mask)
   rdpWindowRec* priv;
   Bool rv;
 
-  ErrorF("rdpChangeWindowAttributes:\n");
+  LLOGLN(10, ("rdpChangeWindowAttributes:"));
   priv = GETWINPRIV(pWindow);
   pScreen = pWindow->drawable.pScreen;
   pScreen->ChangeWindowAttributes = g_rdpScreen.ChangeWindowAttributes;
   rv = pScreen->ChangeWindowAttributes(pWindow, mask);
   pScreen->ChangeWindowAttributes = rdpChangeWindowAttributes;
+  if (g_use_rail)
+  {
+  }
   return rv;
 }
 
@@ -554,11 +592,14 @@ rdpWindowExposures(WindowPtr pWindow, RegionPtr pRegion, RegionPtr pBSRegion)
   ScreenPtr pScreen;
   rdpWindowRec* priv;
 
-  ErrorF("rdpWindowExposures:\n");
+  LLOGLN(10, ("rdpWindowExposures:"));
   priv = GETWINPRIV(pWindow);
   pScreen = pWindow->drawable.pScreen;
   pScreen->WindowExposures = g_rdpScreen.WindowExposures;
   pScreen->WindowExposures(pWindow, pRegion, pBSRegion);
+  if (g_use_rail)
+  {
+  }
   pScreen->WindowExposures = rdpWindowExposures;
 }
 
@@ -569,7 +610,7 @@ rdpCreateGC(GCPtr pGC)
   rdpGCRec* priv;
   Bool rv;
 
-  DEBUG_OUT_OPS(("in rdpCreateGC\n"));
+  LLOGLN(10, ("in rdpCreateGC\n"));
   priv = GETGCPRIV(pGC);
   g_pScreen->CreateGC = g_rdpScreen.CreateGC;
   rv = g_pScreen->CreateGC(pGC);
@@ -602,7 +643,7 @@ rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
   BoxRec box1;
   BoxRec box2;
 
-  DEBUG_OUT_OPS(("in rdpCopyWindow\n"));
+  LLOGLN(10, ("in rdpCopyWindow"));
   RegionInit(&reg, NullBox, 0);
   RegionCopy(&reg, pOldRegion);
   g_pScreen->CopyWindow = g_rdpScreen.CopyWindow;
@@ -661,7 +702,7 @@ rdpClearToBackground(WindowPtr pWin, int x, int y, int w, int h,
   BoxRec box;
   RegionRec reg;
 
-  DEBUG_OUT_OPS(("in rdpClearToBackground\n"));
+  LLOGLN(10, ("in rdpClearToBackground"));
   g_pScreen->ClearToBackground = g_rdpScreen.ClearToBackground;
   g_pScreen->ClearToBackground(pWin, x, y, w, h, generateExposures);
   if (!generateExposures)
@@ -703,7 +744,7 @@ rdpRestoreAreas(WindowPtr pWin, RegionPtr prgnExposed)
   int j;
   BoxRec box;
 
-  DEBUG_OUT_OPS(("in rdpRestoreAreas\n"));
+  LLOGLN(10, ("in rdpRestoreAreas"));
   RegionInit(&reg, NullBox, 0);
   RegionCopy(&reg, prgnExposed);
   g_pScreen->RestoreAreas = g_rdpScreen.RestoreAreas;

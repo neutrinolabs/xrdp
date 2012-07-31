@@ -34,6 +34,7 @@ extern rdpScreenInfoRec g_rdpScreen; /* from rdpmain.c */
 extern DeviceIntPtr g_pointer; /* in rdpmain.c */
 extern DeviceIntPtr g_keyboard; /* in rdpmain.c */
 extern ScreenPtr g_pScreen; /* in rdpmain.c */
+extern WindowPtr g_invalidate_window; /* in rdpmain.c */
 
 static XID g_wid = 0;
 
@@ -108,8 +109,10 @@ rdpInvalidateArea(ScreenPtr pScreen, int x, int y, int cx, int cy)
                       wVisual(pScreen->root), &result);
   if (result == 0)
   {
+    g_invalidate_window = pWin;
     MapWindow(pWin, serverClient);
     DeleteWindow(pWin, None);
+    g_invalidate_window = pWin; 
   }
   return 0;
 }

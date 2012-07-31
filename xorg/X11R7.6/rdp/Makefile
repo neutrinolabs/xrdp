@@ -57,6 +57,7 @@ CFLAGS = -O2 -Wall -fno-strength-reduce \
 	-I../../render \
 	-I../xfree86/common \
 	-I../xfree86/os-support \
+	-I../../../common \
 	-D_POSIX_C_SOURCE=199309L -D_SVID_SOURCE -D_REENTRANT \
 	-DGLX_USE_MESA -DXRECORD -D_GNU_SOURCE -DXAPPGROUP \
 	-DTOGCUP -DSINGLEDEPTH -DXFree86Server \

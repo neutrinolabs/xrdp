@@ -70,7 +70,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "exevents.h"
 #include "xserver-properties.h"
 #include "xkbsrv.h"
-#include "../../../common/xrdp_client_info.h"
+/* in xrdp/common */
+#include "xrdp_client_info.h"
+#include "xrdp_constants.h"
 
 //#include "colormapst.h"
 
@@ -174,6 +176,22 @@ typedef struct _rdpWindowRec rdpWindowRec;
 typedef rdpWindowRec* rdpWindowPtr;
 #define GETWINPRIV(_pWindow) \
 (rdpWindowPtr)dixGetPrivateAddr(&(_pWindow->devPrivates), &g_rdpWindowIndex)
+
+#define XR_IS_ROOT(_pWindow) ((_pWindow)->drawable.pScreen->root == (_pWindow))
+
+/* for tooltips */
+#define XR_STYLE_TOOLTIP (0x80000000)
+#define XR_EXT_STYLE_TOOLTIP (0x00000080 | 0x00000008)
+
+/* for normal desktop windows */
+/* WS_TILEDWINDOW (WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME |
+                   WS_MINIMIZEBOX | WS_MAXIMIZEBOX) */
+#define XR_STYLE_NORMAL (0x00C00000 | 0x00080000 | 0x00040000 | 0x00010000 | 0x00020000)
+#define XR_EXT_STYLE_NORMAL (0x00040000)
+
+/* for dialogs */
+#define XR_STYLE_DIALOG (0x80000000)
+#define XR_EXT_STYLE_DIALOG (0x00040000)
 
 struct _rdpPixmapRec
 {
@@ -404,6 +422,10 @@ rdpup_paint_rect_os(int x, int y, int cx, int cy,
                     int rdpindex, int srcx, int srcy);
 void
 rdpup_set_hints(int hints, int mask);
+void
+rdpup_create_window(WindowPtr pWindow, rdpWindowRec* priv);
+void
+rdpup_delete_window(WindowPtr pWindow, rdpWindowRec* priv);
 
 #if defined(X_BYTE_ORDER)
 #  if X_BYTE_ORDER == X_LITTLE_ENDIAN
