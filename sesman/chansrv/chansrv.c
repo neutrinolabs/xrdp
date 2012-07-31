@@ -52,6 +52,11 @@ int g_rdpsnd_chan_id = -1; /* rdpsnd */
 int g_rdpdr_chan_id = -1; /* rdpdr */
 int g_rail_chan_id = -1; /* rail */
 
+char* g_exec_name;
+tbus g_exec_event;
+tbus g_exec_mutex;
+tbus g_exec_sem;
+
 /*****************************************************************************/
 /* returns error */
 int APP_CC
@@ -544,7 +549,20 @@ void DEFAULT_CC
 nil_signal_handler(int sig)
 {
   LOGM((LOG_LEVEL_INFO, "nil_signal_handler: got signal %d", sig));
-  g_set_wait_obj(g_term_event);
+}
+
+/*****************************************************************************/
+void DEFAULT_CC
+child_signal_handler(int sig)
+{
+  int i1;
+
+  LOG(10, ("child_signal_handler:"));
+  do
+  {
+    i1 = g_waitchild();
+    LOG(10, ("  %d", i1));
+  } while (i1 >= 0);
 }
 
 /*****************************************************************************/
@@ -609,6 +627,8 @@ main_cleanup(void)
 {
   g_delete_wait_obj(g_term_event);
   g_delete_wait_obj(g_thread_done_event);
+  g_delete_wait_obj(g_exec_event);
+  tc_mutex_delete(g_exec_mutex);
   g_deinit(); /* os_calls */
   return 0;
 }
@@ -652,9 +672,34 @@ read_ini(void)
 }
 
 /*****************************************************************************/
+static int APP_CC
+run_exec(void)
+{
+  int pid;
+
+  LOG(10, ("run_exec:"));
+  pid = g_fork();
+  if (pid == 0)
+  {
+    trans_delete(g_con_trans);
+    g_close_wait_obj(g_term_event);
+    g_close_wait_obj(g_thread_done_event);
+    g_close_wait_obj(g_exec_event);
+    tc_mutex_delete(g_exec_mutex);
+    tc_sem_delete(g_exec_sem);
+    g_execlp3(g_exec_name, g_exec_name, 0);
+    g_exit(0);
+  }
+  tc_sem_inc(g_exec_sem);
+
+  return 0;
+}
+
+/*****************************************************************************/
 int DEFAULT_CC
 main(int argc, char** argv)
 {
+  tbus waiters[4];
   int pid = 0;
   char text[256] = "";
   char* display_text = (char *)NULL;
@@ -696,6 +741,7 @@ main(int argc, char** argv)
   g_signal_terminate(term_signal_handler); /* SIGTERM */
   g_signal_user_interrupt(term_signal_handler); /* SIGINT */
   g_signal_pipe(nil_signal_handler); /* SIGPIPE */
+  g_signal_child_stop(child_signal_handler); /* SIGCHLD */
   display_text = g_getenv("DISPLAY");
   LOGM((LOG_LEVEL_INFO, "main: DISPLAY env var set to %s", display_text));
   get_display_num_from_display(display_text);
@@ -709,13 +755,28 @@ main(int argc, char** argv)
   g_term_event = g_create_wait_obj(text);
   g_snprintf(text, 255, "xrdp_chansrv_%8.8x_thread_done", pid);
   g_thread_done_event = g_create_wait_obj(text);
+  g_snprintf(text, 255, "xrdp_chansrv_%8.8x_exec", pid);
+  g_exec_event = g_create_wait_obj(text);
+  g_exec_mutex = tc_mutex_create();
+  g_exec_sem = tc_sem_create(0);
   tc_thread_create(channel_thread_loop, 0);
   while (g_term_event > 0 && !g_is_wait_obj_set(g_term_event))
   {
-    if (g_obj_wait(&g_term_event, 1, 0, 0, 0) != 0)
+    waiters[0] = g_term_event;
+    waiters[1] = g_exec_event;
+    if (g_obj_wait(waiters, 2, 0, 0, 0) != 0)
     {
       LOGM((LOG_LEVEL_ERROR, "main: error, g_obj_wait failed"));
       break;
+    }
+    if (g_is_wait_obj_set(g_term_event))
+    {
+      break;
+    }
+    if (g_is_wait_obj_set(g_exec_event))
+    {
+      g_reset_wait_obj(g_exec_event);
+      run_exec();
     }
   }
   while (g_thread_done_event > 0 && !g_is_wait_obj_set(g_thread_done_event))

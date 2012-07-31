@@ -27,9 +27,14 @@
 #include "xcommon.h"
 #include "log.h"
 #include "os_calls.h"
+#include "thread_calls.h"
 
 extern int g_rail_chan_id;      /* in chansrv.c */
 extern int g_display_num;       /* in chansrv.c */
+extern char* g_exec_name;       /* in chansrv.c */
+extern tbus g_exec_event;       /* in chansrv.c */
+extern tbus g_exec_mutex;       /* in chansrv.c */
+extern tbus g_exec_sem;         /* in chansrv.c */
 
 extern Display* g_display;           /* in xcommon.c */
 extern Screen* g_screen;             /* in xcommon.c */
@@ -207,14 +212,75 @@ rail_deinit(void)
 }
 
 /*****************************************************************************/
+static char* APP_CC
+read_uni(struct stream* s, int num_chars)
+{
+  twchar* rchrs;
+  char* rv;
+  int index;
+  int lchars;
+
+  rchrs = 0;
+  rv = 0;
+  if (num_chars > 0)
+  {
+    rchrs = (twchar*)g_malloc((num_chars + 1) * sizeof(twchar), 0);
+    for (index = 0; index < num_chars; index++)
+    {
+      in_uint16_le(s, rchrs[index]);
+    }
+    rchrs[num_chars] = 0;
+    lchars = g_wcstombs(0, rchrs, 0);
+    if (lchars > 0)
+    {
+      rv = (char*)g_malloc((lchars + 1) * 4, 0);
+      g_wcstombs(rv, rchrs, lchars);
+      rv[lchars] = 0;
+    }
+  }
+  g_free(rchrs);
+  return rv;
+}
+
+/*****************************************************************************/
 static int APP_CC
 rail_process_exec(struct stream* s, int size)
 {
+  int pid;
   int flags;
+  int ExeOrFileLength;
+  int WorkingDirLength;
+  int ArgumentsLen;
+  char* ExeOrFile;
+  char* WorkingDir;
+  char* Arguments;
 
-  LOG(10, ("chansrv::rail_process_exec:"));
+  LOG(0, ("chansrv::rail_process_exec:"));
   in_uint16_le(s, flags);
-  LOG(10, ("  flags 0x%8.8x", flags));
+  in_uint16_le(s, ExeOrFileLength);
+  in_uint16_le(s, WorkingDirLength);
+  in_uint16_le(s, ArgumentsLen);
+  ExeOrFile = read_uni(s, ExeOrFileLength);
+  WorkingDir = read_uni(s, WorkingDirLength);
+  Arguments = read_uni(s, ArgumentsLen);
+  LOG(10, ("  flags 0x%8.8x ExeOrFileLength %d WorkingDirLength %d "
+      "ArgumentsLen %d ExeOrFile [%s] WorkingDir [%s] "
+      "Arguments [%s]", flags, ExeOrFileLength, WorkingDirLength,
+      ArgumentsLen, ExeOrFile, WorkingDir, Arguments));
+  if (g_strlen(ExeOrFile) > 0)
+  {
+    LOG(10, ("rail_process_exec: pre"));
+    /* ask main thread to fork */
+    tc_mutex_lock(g_exec_mutex);
+    g_exec_name = ExeOrFile;
+    g_set_wait_obj(g_exec_event);
+    tc_sem_dec(g_exec_sem);
+    tc_mutex_unlock(g_exec_mutex);
+    LOG(10, ("rail_process_exec: post"));
+  }
+  g_free(ExeOrFile);
+  g_free(WorkingDir);
+  g_free(Arguments);
   return 0;
 }
 
@@ -231,9 +297,9 @@ rail_process_activate(struct stream* s, int size)
   LOG(10, ("  window_id 0x%8.8x enabled %d", window_id, enabled));
   if (enabled)
   {
-    LOG(0, ("chansrv::rail_process_activate: calling XRaiseWindow 0x%8.8x", window_id));
+    LOG(10, ("chansrv::rail_process_activate: calling XRaiseWindow 0x%8.8x", window_id));
     XRaiseWindow(g_display, window_id);
-    LOG(0, ("chansrv::rail_process_activate: calling XSetInputFocus 0x%8.8x", window_id));
+    LOG(10, ("chansrv::rail_process_activate: calling XSetInputFocus 0x%8.8x", window_id));
     XSetInputFocus(g_display, window_id, RevertToParent, CurrentTime);
   }
   return 0;
@@ -354,13 +420,13 @@ rail_process_window_move(struct stream* s, int size)
   int right;
   int bottom;
 
-  LOG(0, ("chansrv::rail_process_window_move:"));
+  LOG(10, ("chansrv::rail_process_window_move:"));
   in_uint32_le(s, window_id);
   in_uint16_le(s, left);
   in_uint16_le(s, top);
   in_uint16_le(s, right);
   in_uint16_le(s, bottom);
-  LOG(0, ("  window_id 0x%8.8x left %d top %d right %d bottom %d width %d height %d",
+  LOG(10, ("  window_id 0x%8.8x left %d top %d right %d bottom %d width %d height %d",
       window_id, left, top, right, bottom, right - left, bottom - top));
   XMoveResizeWindow(g_display, window_id, left, top, right - left, bottom - top);
   return 0;
