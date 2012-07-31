@@ -26,6 +26,7 @@
 #include "os_calls.h"
 #include "defines.h"
 #include "xrdp_client_info.h"
+#include "xrdp_rail.h"
 
 #define CURRENT_MOD_VER 2
 
@@ -88,6 +89,7 @@ struct mod
                                 char* data, int data_len,
                                 int total_data_len, int flags);
   int (*server_bell_trigger)(struct mod* v);
+  /* off screen bitmaps */
   int (*server_create_os_surface)(struct mod* v, int rdpindex,
                                   int width, int height);
   int (*server_switch_os_surface)(struct mod* v, int rdpindex);
@@ -96,7 +98,28 @@ struct mod
                               int cx, int cy,
                               int rdpindex, int srcx, int srcy);
   int (*server_set_hints)(struct mod* v, int hints, int mask);
-  tbus server_dumby[100 - 30]; /* align, 100 minus the number of server
+  /* rail */
+  int (*server_window_new_update)(struct mod* v, int window_id,
+                                  struct rail_window_state_order* window_state,
+                                  int flags);
+  int (*server_window_delete)(struct mod* v, int window_id);
+  int (*server_window_icon)(struct mod* v,
+                            int window_id, int cache_entry, int cache_id,
+                            struct rail_icon_info* icon_info,
+                            int flags);
+  int (*server_window_cached_icon)(struct mod* v,
+                                   int window_id, int cache_entry,
+                                   int cache_id, int flags);
+  int (*server_notify_new_update)(struct mod* v,
+                                  int window_id, int notify_id,
+                                  struct rail_notify_state_order* notify_state,
+                                  int flags);
+  int (*server_notify_delete)(struct mod* v, int window_id,
+                              int notify_id);
+  int (*server_monitored_desktop)(struct mod* v,
+                                  struct rail_monitored_desktop_order* mdo,
+                                  int flags);
+  tbus server_dumby[100 - 37]; /* align, 100 minus the number of server
                                   functions above */
   /* common */
   tbus handle; /* pointer to self as long */
