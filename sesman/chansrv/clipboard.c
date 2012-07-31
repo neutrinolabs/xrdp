@@ -112,6 +112,7 @@ clipboard_init(void)
   {
     return 0;
   }
+  xcommon_init();
   clipboard_deinit();
   rv = 0;
   if (rv == 0)

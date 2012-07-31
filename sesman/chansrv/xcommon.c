@@ -47,9 +47,9 @@ xcommon_error_handler(Display* dis, XErrorEvent* xer)
   char text[256];
 
   XGetErrorText(dis, xer->error_code, text, 255);
-  log_message(LOG_LEVEL_ERROR, "X error [%s](%d) opcodes %d/%d\n "
-              "resource 0x%lx", text, xer->error_code,
-              xer->request_code, xer->minor_code, xer->resourceid);
+  LOGM((LOG_LEVEL_ERROR, "X error [%s](%d) opcodes %d/%d "
+       "resource 0x%lx", text, xer->error_code,
+       xer->request_code, xer->minor_code, xer->resourceid));
   return 0;
 }
 
@@ -81,15 +81,17 @@ xcommon_init(void)
 {
   if (g_display != 0)
   {
-    g_writeln("xcommon_init: xcommon_init already called");
+    LOG(10, ("xcommon_init: xcommon_init already called"));
     return 0;
   }
   g_display = XOpenDisplay(0);
   if (g_display == 0)
   {
-    log_message(LOG_LEVEL_ERROR, "xcommon_init: error, XOpenDisplay failed");
+    LOGM((LOG_LEVEL_ERROR, "xcommon_init: error, XOpenDisplay failed"));
     return 1;
   }
+
+  LOG(0, ("xcommon_init: connected to display ok"));
 
   /* setting the error handlers can cause problem when shutting down
      chansrv on some xlibs */
@@ -99,7 +101,7 @@ xcommon_init(void)
   g_x_socket = XConnectionNumber(g_display);
   if (g_x_socket == 0)
   {
-    log_message(LOG_LEVEL_ERROR, "xcommon_init: XConnectionNumber failed");
+    LOGM((LOG_LEVEL_ERROR, "xcommon_init: XConnectionNumber failed"));
     return 1;
   }
 
@@ -126,7 +128,7 @@ xcommon_get_wait_objs(tbus* objs, int* count, int* timeout)
 
   if (((!g_clip_up) && (!g_rail_up)) || (objs == 0) || (count == 0))
   {
-    g_writeln("xcommon_get_wait_objs: nothing to do");
+    LOG(10, ("xcommon_get_wait_objs: nothing to do"));
     return 0;
   }
   lcount = *count;
@@ -147,7 +149,7 @@ xcommon_check_wait_objs(void)
 
   if ((!g_clip_up) && (!g_rail_up))
   {
-    g_writeln("xcommon_check_wait_objs: nothing to do");
+    LOG(10, ("xcommon_check_wait_objs: nothing to do"));
     return 0;
   }
   if (g_is_wait_obj_set(g_x_wait_obj))
@@ -155,7 +157,7 @@ xcommon_check_wait_objs(void)
     if (XPending(g_display) < 1)
     {
       /* something is wrong, should not get here */
-      log_message(LOG_LEVEL_ERROR, "xcommon_check_wait_objs: sck closed");
+      LOGM((LOG_LEVEL_ERROR, "xcommon_check_wait_objs: sck closed"));
       return 0;
     }
     if (g_waiting_for_data_response)
@@ -164,8 +166,8 @@ xcommon_check_wait_objs(void)
                   g_waiting_for_data_response_time;
       if (time_diff > 1000)
       {
-        log_message(LOG_LEVEL_ERROR, "xcommon_check_wait_objs: warning, "
-                    "waiting for data response too long");
+        LOGM((LOG_LEVEL_ERROR, "xcommon_check_wait_objs: warning, "
+              "waiting for data response too long"));
       }
     }
     while (XPending(g_display) > 0)
@@ -177,7 +179,7 @@ xcommon_check_wait_objs(void)
       rail_rv = rail_xevent(&xevent);
       if ((clip_rv == 1) && (rail_rv == 1))
       {
-        LOG(0, ("xcommon_check_wait_objs unknown xevent type %d", xevent.type));
+        LOG(10, ("xcommon_check_wait_objs unknown xevent type %d", xevent.type));
       }
     }
   }

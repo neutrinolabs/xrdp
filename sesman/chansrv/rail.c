@@ -41,7 +41,6 @@ int g_rail_up = 0;
 
 /* for rail_is_another_wm_running */
 static int g_rail_running = 1;
-static int g_rail_managed = 0;
 
 /* Indicates a Client Execute PDU from client to server. */
 #define TS_RAIL_ORDER_EXEC 0x0001
@@ -170,8 +169,8 @@ rail_is_another_wm_running(void)
                EnterWindowMask | LeaveWindowMask);
   XSync(g_display, 0);
   XSetErrorHandler((XErrorHandler)old);
-  g_rail_managed = g_rail_running;
-  if (!g_rail_managed)
+  g_rail_up = g_rail_running;
+  if (!g_rail_up)
   {
     return 1;
   }
@@ -183,6 +182,7 @@ int APP_CC
 rail_init(void)
 {
   LOG(10, ("chansrv::rail_init:"));
+  xcommon_init();
   if (rail_is_another_wm_running())
   {
     log_message(LOG_LEVEL_ERROR, "rail_init: another window manager "
@@ -197,6 +197,12 @@ rail_init(void)
 int APP_CC
 rail_deinit(void)
 {
+  if (g_rail_up)
+  {
+    /* no longer window manager */
+    XSelectInput(g_display, g_root_window, 0);
+    g_rail_up = 0;
+  }
   return 0;
 }
 
@@ -251,7 +257,7 @@ rail_close_window(int window_id)
 {
   XEvent ce;
 
-  LOG(10, ("chansrv::rail_close_window:"));
+  LOG(0, ("chansrv::rail_close_window:"));
   g_memset(&ce, 0, sizeof(ce));
   ce.xclient.type = ClientMessage;
   ce.xclient.message_type = g_wm_protocols_atom;
