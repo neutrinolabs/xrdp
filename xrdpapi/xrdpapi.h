@@ -17,7 +17,8 @@
  * limitations under the License.
  */
 /*
-  xrdpapi header
+  xrdpapi header, do not use os_calls.h, arch.h or any xrdp internal headers
+  this file is included in 3rd party apps
 */
 
 #if !defined(XRDPAPI_H_)
@@ -25,6 +26,12 @@
 
 #define WTS_CURRENT_SERVER_HANDLE 0
 #define WTS_CURRENT_SESSION 0xffffffff
+
+typedef enum _WTS_VIRTUAL_CLASS
+{
+  WTSVirtualClientData,
+  WTSVirtualFileHandle
+} WTS_VIRTUAL_CLASS;
 
 /*
  Reference:
@@ -41,10 +48,15 @@ int
 WTSVirtualChannelWrite(void* hChannelHandle, const char* Buffer,
                        unsigned int Length, unsigned int* pBytesWritten);
 int
-WTSVirtualChannelRead(void* nChannelHandle, unsigned int TimeOut,
+WTSVirtualChannelRead(void* hChannelHandle, unsigned int TimeOut,
                       char* Buffer, unsigned int BufferSize,
                       unsigned int* pBytesRead);
 int
-WTSVirtualChannelClose(void* openHandle);
+WTSVirtualChannelClose(void* hChannelHandle);
+int
+WTSVirtualChannelQuery(void* hChannelHandle, WTS_VIRTUAL_CLASS WtsVirtualClass,
+                       void** ppBuffer, unsigned int* pBytesReturned);
+void
+WTSFreeMemory(void* pMemory);
 
 #endif /* XRDPAPI_H_ */
