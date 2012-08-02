@@ -63,7 +63,7 @@ fi
 
 AS_IF( [test "x$enable_freerdp1" = "xyes"] , [PKG_CHECK_MODULES(FREERDP, freerdp >= 1.0.0)] )
 
-# checking for libjpeg 
+# checking for libjpeg
 if ! test -z "$enable_jpeg"
 then
   AC_CHECK_HEADER([jpeglib.h], [],
@@ -109,6 +109,7 @@ AC_CONFIG_FILES([Makefile
                  instfiles/Makefile
                  instfiles/pam.d/Makefile
                  genkeymap/Makefile
+                 xrdpapi/Makefile
 ])
 #                 fontdump/Makefile
 #                 xrdp/cursors/Makefile

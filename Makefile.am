@@ -19,4 +19,5 @@ SUBDIRS = \
   keygen \
   docs \
   instfiles \
-  genkeymap
+  genkeymap \
+  xrdpapi
