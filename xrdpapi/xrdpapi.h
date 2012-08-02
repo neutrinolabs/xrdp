@@ -24,6 +24,10 @@
 #if !defined(XRDPAPI_H_)
 #define XRDPAPI_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define WTS_CURRENT_SERVER_HANDLE 0
 #define WTS_CURRENT_SESSION 0xffffffff
 
@@ -58,5 +62,9 @@ WTSVirtualChannelQuery(void* hChannelHandle, WTS_VIRTUAL_CLASS WtsVirtualClass,
                        void** ppBuffer, unsigned int* pBytesReturned);
 void
 WTSFreeMemory(void* pMemory);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* XRDPAPI_H_ */

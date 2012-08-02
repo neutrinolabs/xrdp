@@ -151,6 +151,7 @@ send_init(struct wts_obj* wts)
   char initmsg[64];
 
   memset(initmsg, 0, 64);
+  strncpy(initmsg, wts->name, 8);
   if (!can_send(wts->fd, 500))
   {
     return 1;
