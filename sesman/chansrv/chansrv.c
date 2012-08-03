@@ -34,6 +34,8 @@
 
 static struct trans* g_lis_trans = 0;
 static struct trans* g_con_trans = 0;
+static struct trans* g_api_lis_trans = 0;
+static struct trans* g_api_con_trans = 0;
 static struct chan_item g_chan_items[32];
 static int g_num_chan_items = 0;
 static int g_cliprdr_index = -1;
@@ -56,6 +58,14 @@ char* g_exec_name;
 tbus g_exec_event;
 tbus g_exec_mutex;
 tbus g_exec_sem;
+int g_exec_pid = 0;
+
+/* data in struct trans::callback_data */
+struct xrdp_api_data
+{
+  int chan_id;
+  char header[64];
+};
 
 /*****************************************************************************/
 /* returns error */
@@ -233,6 +243,10 @@ process_message_channel_setup(struct stream* s)
       g_rail_index = g_num_chan_items;
       g_rail_chan_id = ci->id;
     }
+    else
+    {
+      LOG(10, ("other %s", ci->name));
+    }
     g_num_chan_items++;
   }
   rv = send_channel_setup_response_message();
@@ -265,6 +279,7 @@ process_message_channel_data(struct stream* s)
   int rv = 0;
   int length = 0;
   int total_length = 0;
+  struct stream* ls;
 
   in_uint16_le(s, chan_id);
   in_uint16_le(s, chan_flags);
@@ -272,6 +287,7 @@ process_message_channel_data(struct stream* s)
   in_uint32_le(s, total_length);
   LOGM((LOG_LEVEL_DEBUG,"process_message_channel_data: chan_id %d "
         "chan_flags %d", chan_id, chan_flags));
+  LOG(10, ("process_message_channel_data"));
   rv = send_channel_data_response_message();
   if (rv == 0)
   {
@@ -290,6 +306,23 @@ process_message_channel_data(struct stream* s)
     else if (chan_id == g_rail_chan_id)
     {
       rv = rail_data_in(s, chan_id, chan_flags, length, total_length);
+    }
+    else if (chan_id == ((struct xrdp_api_data*)
+                         (g_api_con_trans->callback_data))->chan_id)
+    {
+      LOG(10, ("process_message_channel_data length %d total_length %d "
+          "chan_flags 0x%8.8x", length, total_length, chan_flags));
+      ls = g_api_con_trans->out_s;
+      if (chan_flags & 1) /* first */
+      {
+        init_stream(ls, total_length);
+      }
+      out_uint8a(ls, s->p, length);
+      if (chan_flags & 2) /* last */
+      {
+        s_mark_end(ls);
+        trans_force_write(g_api_con_trans);
+      }
     }
   }
   return rv;
@@ -391,6 +424,41 @@ my_trans_data_in(struct trans* trans)
 }
 
 /*****************************************************************************/
+/* returns error */
+int DEFAULT_CC
+my_api_trans_data_in(struct trans* trans)
+{
+  struct stream* s;
+  int error;
+  struct xrdp_api_data* ad;
+
+  LOG(10, ("my_api_trans_data_in:"));
+  if (trans == 0)
+  {
+    return 0;
+  }
+  if (trans != g_api_con_trans)
+  {
+    return 1;
+  }
+  LOGM((LOG_LEVEL_DEBUG, "my_api_trans_data_in:"));
+  s = trans_get_in_s(trans);
+  error = g_tcp_recv(trans->sck, s->data, 8192, 0);
+  if (error > 0)
+  {
+    LOG(10, ("my_api_trans_data_in: got data %d", error));
+    ad = (struct xrdp_api_data*)(trans->callback_data);
+    send_channel_data(ad->chan_id, s->data, error);
+  }
+  else
+  {
+    LOG(10, ("my_api_trans_data_in: g_tcp_recv failed, or disconnected"));
+    return 1;
+  }
+  return 0;
+}
+
+/*****************************************************************************/
 int DEFAULT_CC
 my_trans_conn_in(struct trans* trans, struct trans* new_trans)
 {
@@ -417,6 +485,71 @@ my_trans_conn_in(struct trans* trans, struct trans* new_trans)
   /* stop listening */
   trans_delete(g_lis_trans);
   g_lis_trans = 0;
+  return 0;
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+my_api_trans_conn_in(struct trans* trans, struct trans* new_trans)
+{
+  struct xrdp_api_data* ad;
+  int error;
+  int index;
+  int found;
+  struct stream* s;
+
+  if (trans == 0)
+  {
+    return 1;
+  }
+  if (trans != g_api_lis_trans)
+  {
+    return 1;
+  }
+  if (new_trans == 0)
+  {
+    return 1;
+  }
+  LOGM((LOG_LEVEL_DEBUG, "my_api_trans_conn_in:"));
+
+  LOG(10, ("my_api_trans_conn_in: got incoming"));
+
+  s = trans_get_in_s(new_trans);
+  s->end = s->data;
+  error = trans_force_read(new_trans, 64);
+  if (error != 0)
+  {
+    LOG(0, ("my_api_trans_conn_in: trans_force_read failed"));
+    trans_delete(new_trans);
+  }
+  s->end = s->data;
+
+  ad = (struct xrdp_api_data*)g_malloc(sizeof(struct xrdp_api_data), 1);
+
+  g_memcpy(ad->header, s->data, 64);
+
+  found = 0;
+  for (index = 0; index < g_num_chan_items; index++)
+  {
+    LOG(10, ("  %s %s", ad->header, g_chan_items[index].name));
+    if (g_strcasecmp(ad->header, g_chan_items[index].name) == 0)
+    {
+      LOG(10, ("my_api_trans_conn_in: found it at %d", index));
+      ad->chan_id = g_chan_items[index].id;
+      found = 1;
+      break;
+    }
+  }
+
+  LOG(10, ("my_api_trans_conn_in: found %d", found));
+
+  new_trans->callback_data = ad;
+
+  trans_delete(g_api_con_trans);
+  g_api_con_trans = new_trans;
+  g_api_con_trans->trans_data_in = my_api_trans_data_in;
+  g_api_con_trans->header_size = 0;
+
   return 0;
 }
 
@@ -454,6 +587,26 @@ setup_listen(void)
 }
 
 /*****************************************************************************/
+static int APP_CC
+setup_api_listen(void)
+{
+  char port[256];
+  int error = 0;
+
+  g_api_lis_trans = trans_create(2, 8192, 8192);
+  g_snprintf(port, 255, "/tmp/.xrdp/xrdpapi_%d", g_display_num);
+  g_api_lis_trans->trans_conn_in = my_api_trans_conn_in;
+  error = trans_listen(g_api_lis_trans, port);
+  if (error != 0)
+  {
+    LOGM((LOG_LEVEL_ERROR, "setup_api_listen: trans_listen failed for port %s",
+          port));
+    return 1;
+  }
+  return 0;
+}
+
+/*****************************************************************************/
 THREAD_RV THREAD_CC
 channel_thread_loop(void* in_val)
 {
@@ -465,6 +618,7 @@ channel_thread_loop(void* in_val)
 
   LOGM((LOG_LEVEL_INFO, "channel_thread_loop: thread start"));
   rv = 0;
+  setup_api_listen();
   error = setup_listen();
   if (error == 0)
   {
@@ -473,6 +627,7 @@ channel_thread_loop(void* in_val)
     objs[num_objs] = g_term_event;
     num_objs++;
     trans_get_wait_objs(g_lis_trans, objs, &num_objs);
+    trans_get_wait_objs(g_api_lis_trans, objs, &num_objs);
     while (g_obj_wait(objs, num_objs, 0, 0, timeout) == 0)
     {
       if (g_is_wait_obj_set(g_term_event))
@@ -513,6 +668,28 @@ channel_thread_loop(void* in_val)
           }
         }
       }
+      if (g_api_lis_trans != 0)
+      {
+        if (trans_check_wait_objs(g_api_lis_trans) != 0)
+        {
+          LOG(0, ("channel_thread_loop: trans_check_wait_objs failed"));
+        }
+      }
+
+      LOG(10, ("0 %p", g_api_con_trans));
+      if (g_api_con_trans != 0)
+      {
+        LOG(10, ("1 %p %d", g_api_con_trans, g_tcp_can_recv(g_api_con_trans->sck, 0)));
+        if (trans_check_wait_objs(g_api_con_trans) != 0)
+        {
+          LOG(10, ("channel_thread_loop: trans_check_wait_objs failed, "
+              "or disconnected"));
+          g_free(g_api_con_trans->callback_data);
+          trans_delete(g_api_con_trans);
+          g_api_con_trans = 0;
+        }
+      }
+
       xcommon_check_wait_objs();
       sound_check_wait_objs();
       dev_redir_check_wait_objs();
@@ -522,6 +699,8 @@ channel_thread_loop(void* in_val)
       num_objs++;
       trans_get_wait_objs(g_lis_trans, objs, &num_objs);
       trans_get_wait_objs(g_con_trans, objs, &num_objs);
+      trans_get_wait_objs(g_api_lis_trans, objs, &num_objs);
+      trans_get_wait_objs(g_api_con_trans, objs, &num_objs);
       xcommon_get_wait_objs(objs, &num_objs, &timeout);
       sound_get_wait_objs(objs, &num_objs, &timeout);
       dev_redir_get_wait_objs(objs, &num_objs, &timeout);
@@ -531,6 +710,10 @@ channel_thread_loop(void* in_val)
   g_lis_trans = 0;
   trans_delete(g_con_trans);
   g_con_trans = 0;
+  trans_delete(g_api_lis_trans);
+  g_api_lis_trans = 0;
+  trans_delete(g_api_con_trans);
+  g_api_con_trans = 0;
   LOGM((LOG_LEVEL_INFO, "channel_thread_loop: thread stop"));
   g_set_wait_obj(g_thread_done_event);
   return rv;
@@ -561,6 +744,11 @@ child_signal_handler(int sig)
   do
   {
     i1 = g_waitchild();
+    if (i1 == g_exec_pid)
+    {
+      LOG(0, ("child_signal_handler: found pid %d", i1));
+      //shutdownx();
+    }
     LOG(10, ("  %d", i1));
   } while (i1 >= 0);
 }
@@ -690,6 +878,7 @@ run_exec(void)
     g_execlp3(g_exec_name, g_exec_name, 0);
     g_exit(0);
   }
+  g_exec_pid = pid;
   tc_sem_inc(g_exec_sem);
 
   return 0;
