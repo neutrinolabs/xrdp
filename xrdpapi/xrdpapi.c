@@ -19,6 +19,12 @@
 
 /* do not use os_calls in here */
 
+#define LOG_LEVEL 1
+#define LLOG(_level, _args) \
+  do { if (_level < LOG_LEVEL) { ErrorF _args ; } } while (0)
+#define LLOGLN(_level, _args) \
+  do { if (_level < LOG_LEVEL) { printf _args ; printf("\n"); } } while (0)
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -152,6 +158,7 @@ send_init(struct wts_obj* wts)
 
   memset(initmsg, 0, 64);
   strncpy(initmsg, wts->name, 8);
+  LLOGLN(10, ("send_init: sending %s", initmsg));
   if (!can_send(wts->fd, 500))
   {
     return 1;
@@ -160,6 +167,7 @@ send_init(struct wts_obj* wts)
   {
     return 1;
   }
+  LLOGLN(10, ("send_init: send ok!"));
   return 0;
 }
 
@@ -177,6 +185,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId,
 
   if (SessionId != WTS_CURRENT_SESSION)
   {
+    LLOGLN(0, ("WTSVirtualChannelOpenEx: SessionId bad"));
     return 0;
   }
   wts = (struct wts_obj*)malloc(sizeof(struct wts_obj));
@@ -203,6 +212,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId,
     bytes = sizeof(struct sockaddr_un);
     if (connect(wts->fd, (struct sockaddr*)&s, bytes) == 0)
     {
+      LLOGLN(10, ("WTSVirtualChannelOpenEx: connected ok, name %s", pVirtualName));
       strncpy(wts->name, pVirtualName, 8);
       /* wait for connection to complete and send init */
       if (send_init(wts) == 0)
@@ -211,6 +221,10 @@ WTSVirtualChannelOpenEx(unsigned int SessionId,
         wts->status = 1;
       }
     }
+  }
+  else
+  {
+    LLOGLN(0, ("WTSVirtualChannelOpenEx: display is 0"));
   }
   return wts;
 }
