@@ -19,9 +19,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# flex bison libxml2-dev intltool
-# xsltproc
-# xutils-dev python-libxml2
+# debian packages needed
+# flex bison libxml2-dev intltool xsltproc xutils-dev python-libxml2 g++
 
 download_file()
 {
