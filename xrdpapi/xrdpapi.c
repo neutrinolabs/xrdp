@@ -45,6 +45,7 @@ struct wts_obj
   char name[8];
   char dname[128];
   int display_num;
+  int flags;
 };
 
 /*****************************************************************************/
@@ -158,6 +159,10 @@ send_init(struct wts_obj* wts)
 
   memset(initmsg, 0, 64);
   strncpy(initmsg, wts->name, 8);
+  initmsg[16] = (wts->flags >> 0) & 0xff;
+  initmsg[17] = (wts->flags >> 8) & 0xff;
+  initmsg[18] = (wts->flags >> 16) & 0xff;
+  initmsg[19] = (wts->flags >> 24) & 0xff;
   LLOGLN(10, ("send_init: sending %s", initmsg));
   if (!can_send(wts->fd, 500))
   {
@@ -191,6 +196,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId,
   wts = (struct wts_obj*)malloc(sizeof(struct wts_obj));
   memset(wts, 0, sizeof(struct wts_obj));
   wts->fd = -1;
+  wts->flags = flags;
   display_text = getenv("DISPLAY");
   if (display_text != 0)
   {
@@ -363,7 +369,7 @@ WTSVirtualChannelQuery(void* hChannelHandle, WTS_VIRTUAL_CLASS WtsVirtualClass,
     *ppBuffer = malloc(4);
     memcpy(*ppBuffer, &(wts->fd), 4);
   }
-  return 0;
+  return 1;
 }
 
 /*****************************************************************************/

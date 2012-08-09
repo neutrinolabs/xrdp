@@ -65,6 +65,7 @@ struct xrdp_api_data
 {
   int chan_id;
   char header[64];
+  int flags;
 };
 
 /*****************************************************************************/
@@ -535,16 +536,26 @@ my_api_trans_conn_in(struct trans* trans, struct trans* new_trans)
 
   g_memcpy(ad->header, s->data, 64);
 
+  ad->flags = GGET_UINT32(ad->header, 16);
+
   found = 0;
-  for (index = 0; index < g_num_chan_items; index++)
+  if (ad->flags | 1) /* WTS_CHANNEL_OPTION_DYNAMIC */
   {
-    LOG(10, ("  %s %s", ad->header, g_chan_items[index].name));
-    if (g_strcasecmp(ad->header, g_chan_items[index].name) == 0)
+    /* TODO */
+    found = 0;
+  }
+  else
+  {
+    for (index = 0; index < g_num_chan_items; index++)
     {
-      LOG(10, ("my_api_trans_conn_in: found it at %d", index));
-      ad->chan_id = g_chan_items[index].id;
-      found = 1;
-      break;
+      LOG(10, ("  %s %s", ad->header, g_chan_items[index].name));
+      if (g_strcasecmp(ad->header, g_chan_items[index].name) == 0)
+      {
+        LOG(10, ("my_api_trans_conn_in: found it at %d", index));
+        ad->chan_id = g_chan_items[index].id;
+        found = 1;
+        break;
+      }
     }
   }
   LOG(10, ("my_api_trans_conn_in: found %d", found));

@@ -16,20 +16,25 @@ int main()
 {
 
 	// Initialize the data for send/receive
+	void* hFile;
 	char* data;
 	char* data1;
 	data = (char*)malloc(DSIZE);
 	data1 = (char*)malloc(DSIZE);
+	int ret;
+	void* vcFileHandlePtr = NULL;
 	memset(data, 0xca, DSIZE);
 	memset(data1, 0, DSIZE);
+	unsigned int written = 0;
 
 	// Open the skel channel in current session
 
-	void* channel = WTSVirtualChannelOpenEx(WTS_CURRENT_SESSION, "skel", 0);
+	//void* channel = WTSVirtualChannelOpenEx(WTS_CURRENT_SESSION, "skel", 0);
+	void* channel = WTSVirtualChannelOpenEx(WTS_CURRENT_SESSION, "TSMF", WTS_CHANNEL_OPTION_DYNAMIC);
+	ret = WTSVirtualChannelQuery(channel, WTSVirtualFileHandle, vcFileHandlePtr, &written);
 
-	unsigned int written = 0;
 	// Write the data to the channel
-	int ret = WTSVirtualChannelWrite(channel, data, DSIZE, &written);
+	ret = WTSVirtualChannelWrite(channel, data, DSIZE, &written);
 	if (!ret)
 	{
 
