@@ -78,6 +78,10 @@ send_channel_data(int chan_id, char* data, int size)
   int sent;
   int rv;
 
+  if (chan_id == -1)
+  {
+    return 1;
+  }
   s = trans_get_out_s(g_con_trans, 8192);
   if (s == 0)
   {
@@ -448,7 +452,10 @@ my_api_trans_data_in(struct trans* trans)
   {
     LOG(10, ("my_api_trans_data_in: got data %d", error));
     ad = (struct xrdp_api_data*)(trans->callback_data);
-    send_channel_data(ad->chan_id, s->data, error);
+    if (send_channel_data(ad->chan_id, s->data, error) != 0)
+    {
+      LOG(0, ("my_api_trans_data_in: send_channel_data failed"));
+    }
   }
   else
   {
@@ -540,8 +547,11 @@ my_api_trans_conn_in(struct trans* trans, struct trans* new_trans)
       break;
     }
   }
-
   LOG(10, ("my_api_trans_conn_in: found %d", found));
+  if (!found)
+  {
+    ad->chan_id = -1;
+  }
 
   new_trans->callback_data = ad;
 
