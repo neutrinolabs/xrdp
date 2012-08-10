@@ -193,12 +193,31 @@ typedef rdpWindowRec* rdpWindowPtr;
 #define XR_STYLE_DIALOG (0x80000000)
 #define XR_EXT_STYLE_DIALOG (0x00040000)
 
+#define RDI_FILL 1
+#define RDI_IMGLL 2
+#define RDI_IMGLY 3
+
+struct rdp_draw_item
+{
+  int type;
+  int fg_color;
+  int bg_color;
+  int opcode;
+  RegionPtr reg;
+  struct rdp_draw_item* prev;
+  struct rdp_draw_item* next;
+};
+
 struct _rdpPixmapRec
 {
   int status;
   int rdpindex;
   int allocBytes;
   int con_number;
+  int is_dirty;
+  int pad;
+  struct rdp_draw_item* draw_item_head;
+  struct rdp_draw_item* draw_item_tail;
 };
 typedef struct _rdpPixmapRec rdpPixmapRec;
 typedef rdpPixmapRec* rdpPixmapPtr;
@@ -264,6 +283,22 @@ hexdump(unsigned char *p, unsigned int len);
 /* rdpdraw.c */
 Bool
 rdpCloseScreen(int i, ScreenPtr pScreen);
+
+
+int
+draw_item_add(rdpPixmapRec* priv, struct rdp_draw_item* di);
+int
+draw_item_remove(rdpPixmapRec* priv, struct rdp_draw_item* di);
+int
+draw_item_remove_all(rdpPixmapRec* priv);
+int
+draw_item_pack(rdpPixmapRec* priv);
+int
+draw_item_add_img_region(rdpPixmapRec* priv, RegionPtr reg, int type);
+int
+draw_item_add_fill_region(rdpPixmapRec* priv, RegionPtr reg, int color,
+                          int opcode);
+
 
 PixmapPtr
 rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
@@ -426,6 +461,8 @@ void
 rdpup_create_window(WindowPtr pWindow, rdpWindowRec* priv);
 void
 rdpup_delete_window(WindowPtr pWindow, rdpWindowRec* priv);
+int
+rdpup_check_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec* pDirtyPriv);
 
 #if defined(X_BYTE_ORDER)
 #  if X_BYTE_ORDER == X_LITTLE_ENDIAN

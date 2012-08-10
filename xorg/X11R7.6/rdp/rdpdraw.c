@@ -61,8 +61,11 @@ extern ScreenPtr g_pScreen; /* from rdpmain.c */
 extern Bool g_wrapPixmap; /* from rdpmain.c */
 extern WindowPtr g_invalidate_window; /* in rdpmain.c */
 extern int g_use_rail; /* in rdpmain.c */
+extern int g_do_dirty_os; /* in rdpmain.c */
 
 ColormapPtr g_rdpInstalledColormap;
+
+static int g_doing_font = 0;
 
 GCFuncs g_rdpGCFuncs =
 {
@@ -317,7 +320,7 @@ rdpChangeClip(GCPtr pGC, int type, pointer pValue, int nrects)
 {
   rdpGCRec* priv;
 
-  LLOGLN(0, ("in rdpChangeClip"));
+  LLOGLN(10, ("in rdpChangeClip"));
   GC_FUNC_PROLOGUE(pGC);
   pGC->funcs->ChangeClip(pGC, type, pValue, nrects);
   GC_FUNC_EPILOGUE(pGC);
@@ -380,6 +383,180 @@ rdpCloseScreen(int i, ScreenPtr pScreen)
 }
 
 /******************************************************************************/
+int
+draw_item_add(rdpPixmapRec* priv, struct rdp_draw_item* di)
+{
+  if (priv->draw_item_tail == 0)
+  {
+    priv->draw_item_tail = di;
+    priv->draw_item_head = di;
+  }
+  else
+  {
+    di->prev = priv->draw_item_tail;
+    priv->draw_item_tail->next = di;
+    priv->draw_item_tail = di;
+  }
+  return 0;
+}
+
+/******************************************************************************/
+int
+draw_item_remove(rdpPixmapRec* priv, struct rdp_draw_item* di)
+{
+  if (di->prev != 0)
+  {
+    di->prev->next = di->next;
+  }
+  if (di->next != 0)
+  {
+    di->next->prev = di->prev;
+  }
+  if (priv->draw_item_head == di)
+  {
+    priv->draw_item_head = di->next;
+  }
+  if (priv->draw_item_tail == di)
+  {
+    priv->draw_item_tail = di->prev;
+  }
+  RegionDestroy(di->reg);
+  free(di);
+  return 0;
+}
+
+/******************************************************************************/
+int
+draw_item_remove_all(rdpPixmapRec* priv)
+{
+  struct rdp_draw_item* di;
+
+  di = priv->draw_item_head;
+  while (di != 0)
+  {
+    draw_item_remove(priv, di);
+    di = priv->draw_item_head;
+  }
+  return 0;
+}
+
+/******************************************************************************/
+int
+draw_item_pack(rdpPixmapRec* priv)
+{
+  struct rdp_draw_item* di;
+  struct rdp_draw_item* di_prev;
+
+#if 1
+  /* look for repeating draw types */
+  if (priv->draw_item_head != 0)
+  {
+    if (priv->draw_item_head->next != 0)
+    {
+      di_prev = priv->draw_item_head;
+      di = priv->draw_item_head->next;
+      while (di != 0)
+      {
+        if ((di_prev->type == RDI_IMGLL) && (di->type == RDI_IMGLL))
+        {
+          LLOGLN(10, ("draw_item_pack: packing RDI_IMGLL"));
+          RegionUnion(di_prev->reg, di_prev->reg, di->reg);
+          draw_item_remove(priv, di);
+          di = di_prev->next;
+        }
+        else if ((di_prev->type == RDI_IMGLY) && (di->type == RDI_IMGLY))
+        {
+          LLOGLN(10, ("draw_item_pack: packing RDI_IMGLY"));
+          RegionUnion(di_prev->reg, di_prev->reg, di->reg);
+          draw_item_remove(priv, di);
+          di = di_prev->next;
+        }
+        else
+        {
+          di_prev = di;
+          di = di_prev->next;
+        }
+      }
+    }
+  }
+#endif
+#if 1
+  /* subtract regions */
+  if (priv->draw_item_tail != 0)
+  {
+    if (priv->draw_item_tail->prev != 0)
+    {
+      di = priv->draw_item_tail;
+      while (di->prev != 0)
+      {
+        di_prev = di->prev;
+        while (di_prev != 0)
+        {
+          /* D = M - S */
+          RegionSubtract(di_prev->reg, di_prev->reg, di->reg);
+          di_prev = di_prev->prev;
+        }
+        di = di->prev;
+      }
+    }
+  }
+#endif
+#if 1
+  /* remove draw items with empty regions */
+  di = priv->draw_item_head;
+  di_prev = 0;
+  while (di != 0)
+  {
+    if (!RegionNotEmpty(di->reg))
+    {
+      LLOGLN(10, ("draw_item_pack: removing empty item type %d", di->type));
+      draw_item_remove(priv, di);
+      di = di_prev == 0 ? priv->draw_item_head : di_prev->next;
+    }
+    else
+    {
+      di_prev = di;
+      di = di->next;
+    }
+  }
+#endif
+  return 0;
+}
+
+/******************************************************************************/
+int
+draw_item_add_img_region(rdpPixmapRec* priv, RegionPtr reg, int type)
+{
+  struct rdp_draw_item* di;
+
+  di = (struct rdp_draw_item*)malloc(sizeof(struct rdp_draw_item));
+  memset(di, 0, sizeof(struct rdp_draw_item));
+  di->type = type;
+  di->reg = RegionCreate(NullBox, 0);
+  RegionCopy(di->reg, reg);
+  draw_item_add(priv, di);
+  return 0;
+}
+
+/******************************************************************************/
+int
+draw_item_add_fill_region(rdpPixmapRec* priv, RegionPtr reg, int color,
+                          int opcode)
+{
+  struct rdp_draw_item* di;
+
+  di = (struct rdp_draw_item*)malloc(sizeof(struct rdp_draw_item));
+  memset(di, 0, sizeof(struct rdp_draw_item));
+  di->type = RDI_FILL;
+  di->fg_color = color;
+  di->opcode = opcode;
+  di->reg = RegionCreate(NullBox, 0);
+  RegionCopy(di->reg, reg);
+  draw_item_add(priv, di);
+  return 0;
+}
+
+/******************************************************************************/
 PixmapPtr
 rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
                 unsigned usage_hint)
@@ -391,12 +568,13 @@ rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
   org_width = width;
   /* width must be a multiple of 4 in rdp */
   width = (width + 3) & ~3;
-  LLOGLN(10, ("rdpCreatePixmap: width %d org_width %d", width, org_width));
+  LLOGLN(10, ("rdpCreatePixmap: width %d org_width %d depth %d screen depth %d",
+         width, org_width, depth, g_rdpScreen.depth));
   pScreen->CreatePixmap = g_rdpScreen.CreatePixmap;
   rv = pScreen->CreatePixmap(pScreen, width, height, depth, usage_hint);
   priv = GETPIXPRIV(rv);
   priv->rdpindex = -1;
-  if ((rv->drawable.depth == g_rdpScreen.depth) &&
+  if ((rv->drawable.depth >= g_rdpScreen.depth) &&
       (org_width > 1) && (height > 1))
   {
     priv->allocBytes = width * height * g_Bpp;
@@ -406,6 +584,8 @@ rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
       priv->status = 1;
       rdpup_create_os_surface(priv->rdpindex, width, height);
     }
+    //priv->reg_lossy = RegionCreate(NullBox, 0);
+    //priv->reg_lossless = RegionCreate(NullBox, 0);
   }
   pScreen->ModifyPixmapHeader(rv, org_width, 0, 0, 0, 0, 0);
   pScreen->CreatePixmap = rdpCreatePixmap;
@@ -429,6 +609,9 @@ rdpDestroyPixmap(PixmapPtr pPixmap)
     {
       rdpup_remove_os_bitmap(priv->rdpindex);
       rdpup_delete_os_surface(priv->rdpindex);
+      //RegionDestroy(priv->reg_lossy);
+      //RegionDestroy(priv->reg_lossless);
+      draw_item_remove_all(priv);
     }
   }
   pScreen = pPixmap->drawable.pScreen;
@@ -833,12 +1016,18 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
   RegionRec reg1;
   RegionRec reg2;
   DrawablePtr p;
+  int dirty_type;
   int j;
   int num_clips;
+  int post_process;
+  int reset_surface;
   int got_id;
+  int lx;
+  int ly;
   WindowPtr pDstWnd;
   PixmapPtr pDstPixmap;
   rdpPixmapRec* pDstPriv;
+  rdpPixmapRec* pDirtyPriv;
   struct image_data id;
 
   LLOGLN(10, ("rdpComposite:"));
@@ -850,6 +1039,10 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
 
   p = pDst->pDrawable;
 
+  dirty_type = 0;
+  pDirtyPriv = 0;
+  post_process = 0;
+  reset_surface = 0;
   got_id = 0;
   if (p->type == DRAWABLE_PIXMAP)
   {
@@ -857,9 +1050,23 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
     pDstPriv = GETPIXPRIV(pDstPixmap);
     if (XRDP_IS_OS(pDstPriv))
     {
-      rdpup_switch_os_surface(pDstPriv->rdpindex);
-      rdpup_get_pixmap_image_rect(pDstPixmap, &id);
-      got_id = 1;
+      post_process = 1;
+      if (g_do_dirty_os)
+      {
+        LLOGLN(10, ("rdpComposite: gettig dirty"));
+        pDstPriv->is_dirty = 1;
+        dirty_type = g_doing_font ? RDI_IMGLL : RDI_IMGLY;
+        pDirtyPriv = pDstPriv;
+
+      }
+      else
+      {
+        rdpup_switch_os_surface(pDstPriv->rdpindex);
+        reset_surface = 1;
+        rdpup_get_pixmap_image_rect(pDstPixmap, &id);
+        got_id = 1;
+        LLOGLN(10, ("rdpComposite: offscreen"));
+      }
     }
   }
   else
@@ -869,12 +1076,14 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
       pDstWnd = (WindowPtr)p;
       if (pDstWnd->viewable)
       {
+        post_process = 1;
         rdpup_get_screen_image_rect(&id);
         got_id = 1;
+        LLOGLN(10, ("rdpComposite: screen"));
       }
     }
   }
-  if (!got_id)
+  if (!post_process)
   {
     return;
   }
@@ -888,19 +1097,27 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
     RegionInit(&reg1, &box, 0);
     RegionInit(&reg2, NullBox, 0);
     RegionCopy(&reg2, pDst->clientClip);
-    RegionTranslate(&reg2, p->x + pDst->clipOrigin.x,
-                      p->y + pDst->clipOrigin.y);
+    lx = p->x + pDst->clipOrigin.x;
+    ly = p->y + pDst->clipOrigin.y;
+    RegionTranslate(&reg2, lx, ly);
     RegionIntersect(&reg1, &reg1, &reg2);
-    num_clips = REGION_NUM_RECTS(&reg1);
-    if (num_clips > 0)
+    if (dirty_type != 0)
     {
-      rdpup_begin_update();
-      for (j = num_clips - 1; j >= 0; j--)
+      draw_item_add_img_region(pDirtyPriv, &reg1, dirty_type);
+    }
+    else if (got_id)
+    {
+      num_clips = REGION_NUM_RECTS(&reg1);
+      if (num_clips > 0)
       {
-        box = REGION_RECTS(&reg1)[j];
-        rdpup_send_area(&id, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+        rdpup_begin_update();
+        for (j = num_clips - 1; j >= 0; j--)
+        {
+          box = REGION_RECTS(&reg1)[j];
+          rdpup_send_area(&id, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+        }
+        rdpup_end_update();
       }
-      rdpup_end_update();
     }
     RegionUninit(&reg1);
     RegionUninit(&reg2);
@@ -911,11 +1128,23 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
     box.y1 = p->y + yDst;
     box.x2 = box.x1 + width;
     box.y2 = box.y1 + height;
-    rdpup_begin_update();
-    rdpup_send_area(&id, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-    rdpup_end_update();
+    if (dirty_type != 0)
+    {
+      RegionInit(&reg1, &box, 0);
+      draw_item_add_img_region(pDirtyPriv, &reg1, dirty_type);
+      RegionUninit(&reg1);
+    }
+    else if (got_id)
+    {
+      rdpup_begin_update();
+      rdpup_send_area(&id, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+      rdpup_end_update();
+    }
   }
-  rdpup_switch_os_surface(-1);
+  if (reset_surface)
+  {
+    rdpup_switch_os_surface(-1);
+  }
 }
 
 /******************************************************************************/
@@ -931,6 +1160,7 @@ rdpGlyphs(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
   LLOGLN(10, ("rdpGlyphs:"));
   LLOGLN(10, ("rdpGlyphs: nlists %d len %d", nlists, lists->len));
   rdpup_set_hints(1, 1);
+  g_doing_font = 1;
   for (index = 0; index < lists->len; index++)
   {
     LLOGLN(10, ("  index %d size %d refcnt %d width %d height %d",
@@ -943,5 +1173,6 @@ rdpGlyphs(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
              nlists, lists, glyphs);
   ps->Glyphs = rdpGlyphs;
   rdpup_set_hints(0, 1);
+  g_doing_font = 0;
   LLOGLN(10, ("rdpGlyphs: out"));
 }

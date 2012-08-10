@@ -37,6 +37,7 @@ extern DevPrivateKeyRec g_rdpPixmapIndex; /* from rdpmain.c */
 extern int g_Bpp; /* from rdpmain.c */
 extern ScreenPtr g_pScreen; /* from rdpmain.c */
 extern Bool g_wrapPixmap; /* from rdpmain.c */
+extern int g_do_dirty_os; /* in rdpmain.c */
 
 extern GCOps g_rdpGCOps; /* from rdpdraw.c */
 
@@ -63,12 +64,16 @@ rdpPolySegment(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment* pSegs)
   int i;
   int j;
   int got_id;
+  int dirty_type;
+  int post_process;
+  int reset_surface;
   xSegment* segs;
   BoxRec box;
   struct image_data id;
   WindowPtr pDstWnd;
   PixmapPtr pDstPixmap;
   rdpPixmapRec* pDstPriv;
+  rdpPixmapRec* pDirtyPriv;
 
   LLOGLN(10, ("rdpPolySegment:"));
 
@@ -88,6 +93,10 @@ rdpPolySegment(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment* pSegs)
   /* do original call */
   rdpPolySegmentOrg(pDrawable, pGC, nseg, pSegs);
 
+  dirty_type = 0;
+  pDirtyPriv = 0;
+  post_process = 0;
+  reset_surface = 0;
   got_id = 0;
   if (pDrawable->type == DRAWABLE_PIXMAP)
   {
@@ -95,9 +104,21 @@ rdpPolySegment(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment* pSegs)
     pDstPriv = GETPIXPRIV(pDstPixmap);
     if (XRDP_IS_OS(pDstPriv))
     {
-      rdpup_switch_os_surface(pDstPriv->rdpindex);
-      rdpup_get_pixmap_image_rect(pDstPixmap, &id);
-      got_id = 1;
+      post_process = 1;
+      if (g_do_dirty_os)
+      {
+        LLOGLN(10, ("rdpPolySegment: gettig dirty"));
+        pDstPriv->is_dirty = 1;
+        pDirtyPriv = pDstPriv;
+        dirty_type = RDI_IMGLY;
+      }
+      else
+      {
+        rdpup_switch_os_surface(pDstPriv->rdpindex);
+        reset_surface = 1;
+        rdpup_get_pixmap_image_rect(pDstPixmap, &id);
+        got_id = 1;
+      }
     }
   }
   else
@@ -107,12 +128,13 @@ rdpPolySegment(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment* pSegs)
       pDstWnd = (WindowPtr)pDrawable;
       if (pDstWnd->viewable)
       {
+        post_process = 1;
         rdpup_get_screen_image_rect(&id);
         got_id = 1;
       }
     }
   }
-  if (!got_id)
+  if (!post_process)
   {
     g_free(segs);
     return;
@@ -124,41 +146,58 @@ rdpPolySegment(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment* pSegs)
   {
     if (segs != 0)
     {
-      rdpup_begin_update();
-      rdpup_set_fgcolor(pGC->fgPixel);
-      rdpup_set_opcode(pGC->alu);
-      rdpup_set_pen(0, pGC->lineWidth);
-      for (i = 0; i < nseg; i++)
+      if (dirty_type != 0)
       {
-        rdpup_draw_line(segs[i].x1, segs[i].y1, segs[i].x2, segs[i].y2);
+        /* TODO */
       }
-      rdpup_set_opcode(GXcopy);
-      rdpup_end_update();
+      else if (got_id)
+      {
+        rdpup_begin_update();
+        rdpup_set_fgcolor(pGC->fgPixel);
+        rdpup_set_opcode(pGC->alu);
+        rdpup_set_pen(0, pGC->lineWidth);
+        for (i = 0; i < nseg; i++)
+        {
+          rdpup_draw_line(segs[i].x1, segs[i].y1, segs[i].x2, segs[i].y2);
+        }
+        rdpup_set_opcode(GXcopy);
+        rdpup_end_update();
+      }
     }
   }
   else if (cd == 2) /* clip */
   {
     if (segs != 0)
     {
-      rdpup_begin_update();
-      rdpup_set_fgcolor(pGC->fgPixel);
-      rdpup_set_opcode(pGC->alu);
-      rdpup_set_pen(0, pGC->lineWidth);
-      for (j = REGION_NUM_RECTS(&clip_reg) - 1; j >= 0; j--)
+      if (dirty_type != 0)
       {
-        box = REGION_RECTS(&clip_reg)[j];
-        rdpup_set_clip(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-        for (i = 0; i < nseg; i++)
-        {
-          rdpup_draw_line(segs[i].x1, segs[i].y1, segs[i].x2, segs[i].y2);
-        }
+        /* TODO */
       }
-      rdpup_reset_clip();
-      rdpup_set_opcode(GXcopy);
-      rdpup_end_update();
+      else if (got_id)
+      {
+        rdpup_begin_update();
+        rdpup_set_fgcolor(pGC->fgPixel);
+        rdpup_set_opcode(pGC->alu);
+        rdpup_set_pen(0, pGC->lineWidth);
+        for (j = REGION_NUM_RECTS(&clip_reg) - 1; j >= 0; j--)
+        {
+          box = REGION_RECTS(&clip_reg)[j];
+          rdpup_set_clip(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+          for (i = 0; i < nseg; i++)
+          {
+            rdpup_draw_line(segs[i].x1, segs[i].y1, segs[i].x2, segs[i].y2);
+          }
+        }
+        rdpup_reset_clip();
+        rdpup_set_opcode(GXcopy);
+        rdpup_end_update();
+      }
     }
   }
   g_free(segs);
   RegionUninit(&clip_reg);
-  rdpup_switch_os_surface(-1);
+  if (reset_surface)
+  {
+    rdpup_switch_os_surface(-1);
+  }
 }

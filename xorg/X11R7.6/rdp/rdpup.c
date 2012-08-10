@@ -1590,3 +1590,79 @@ rdpup_delete_window(WindowPtr pWindow, rdpWindowRec* priv)
     out_uint32_le(g_out_s, pWindow->drawable.id); /* window_id */
   }
 }
+
+/******************************************************************************/
+int
+rdpup_check_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec* pDirtyPriv)
+{
+  int index;
+  int count;
+  BoxRec box;
+  struct image_data id;
+  struct rdp_draw_item* di;
+
+  if (pDirtyPriv == 0)
+  {
+    return 0;
+  }
+  if (pDirtyPriv->is_dirty == 0)
+  {
+    return 0;
+  }
+
+  /* update uses time / count */
+  g_os_bitmaps[pDirtyPriv->rdpindex].stamp = g_os_bitmap_stamp;
+  g_os_bitmap_stamp++;
+
+  LLOGLN(10, ("-----------------got dirty"));
+  rdpup_switch_os_surface(pDirtyPriv->rdpindex);
+  rdpup_get_pixmap_image_rect(pDirtyPixmap, &id);
+  rdpup_begin_update();
+  draw_item_pack(pDirtyPriv);
+  di = pDirtyPriv->draw_item_head;
+  while (di != 0)
+  {
+    LLOGLN(10, ("rdpup_check_dirty: type %d", di->type));
+    switch (di->type)
+    {
+      case RDI_FILL:
+        rdpup_set_fgcolor(di->fg_color);
+        rdpup_set_opcode(di->opcode);
+        count = REGION_NUM_RECTS(di->reg);
+        for (index = 0; index < count; index++)
+        {
+          box = REGION_RECTS(di->reg)[index];
+          LLOGLN(10, ("  RDI_FILL %d %d %d %d", box.x1, box.y1, box.x2, box.y2));
+          rdpup_fill_rect(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+        }
+        rdpup_set_opcode(GXcopy);
+        break;
+      case RDI_IMGLL:
+        rdpup_set_hints(1, 1);
+        count = REGION_NUM_RECTS(di->reg);
+        for (index = 0; index < count; index++)
+        {
+          box = REGION_RECTS(di->reg)[index];
+          LLOGLN(10, ("  RDI_IMGLL %d %d %d %d", box.x1, box.y1, box.x2, box.y2));
+          rdpup_send_area(&id, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+        }
+        rdpup_set_hints(0, 1);
+        break;
+      case RDI_IMGLY:
+        count = REGION_NUM_RECTS(di->reg);
+        for (index = 0; index < count; index++)
+        {
+          box = REGION_RECTS(di->reg)[index];
+          LLOGLN(10, ("  RDI_IMGLY %d %d %d %d", box.x1, box.y1, box.x2, box.y2));
+          rdpup_send_area(&id, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+        }
+        break;
+    }
+    di = di->next;
+  }
+  draw_item_remove_all(pDirtyPriv);
+  rdpup_end_update();
+  pDirtyPriv->is_dirty = 0;
+  rdpup_switch_os_surface(-1);
+  return 0;
+}

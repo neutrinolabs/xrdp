@@ -37,6 +37,7 @@ extern DevPrivateKeyRec g_rdpPixmapIndex; /* from rdpmain.c */
 extern int g_Bpp; /* from rdpmain.c */
 extern ScreenPtr g_pScreen; /* from rdpmain.c */
 extern Bool g_wrapPixmap; /* from rdpmain.c */
+extern int g_do_dirty_os; /* in rdpmain.c */
 
 extern GCOps g_rdpGCOps; /* from rdpdraw.c */
 
@@ -68,6 +69,9 @@ rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
   int i;
   int j;
   int got_id;
+  int dirty_type;
+  int post_process;
+  int reset_surface;
   BoxRec box;
   BoxRec total_box;
   DDXPointPtr pts;
@@ -76,6 +80,7 @@ rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
   WindowPtr pDstWnd;
   PixmapPtr pDstPixmap;
   rdpPixmapRec* pDstPriv;
+  rdpPixmapRec* pDirtyPriv;
 
   LLOGLN(10, ("rdpPolyPoint:"));
 
@@ -123,6 +128,10 @@ rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
   /* do original call */
   rdpPolyPointOrg(pDrawable, pGC, mode, npt, in_pts);
 
+  dirty_type = 0;
+  pDirtyPriv = 0;
+  post_process = 0;
+  reset_surface = 0;
   got_id = 0;
   if (pDrawable->type == DRAWABLE_PIXMAP)
   {
@@ -130,9 +139,21 @@ rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
     pDstPriv = GETPIXPRIV(pDstPixmap);
     if (XRDP_IS_OS(pDstPriv))
     {
-      rdpup_switch_os_surface(pDstPriv->rdpindex);
-      rdpup_get_pixmap_image_rect(pDstPixmap, &id);
-      got_id = 1;
+      post_process = 1;
+      if (g_do_dirty_os)
+      {
+        LLOGLN(10, ("rdpPolyPoint: gettig dirty"));
+        pDstPriv->is_dirty = 1;
+        pDirtyPriv = pDstPriv;
+        dirty_type = RDI_IMGLY;
+      }
+      else
+      {
+        rdpup_switch_os_surface(pDstPriv->rdpindex);
+        reset_surface = 1;
+        rdpup_get_pixmap_image_rect(pDstPixmap, &id);
+        got_id = 1;
+      }
     }
   }
   else
@@ -142,12 +163,13 @@ rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
       pDstWnd = (WindowPtr)pDrawable;
       if (pDstWnd->viewable)
       {
+        post_process = 1;
         rdpup_get_screen_image_rect(&id);
         got_id = 1;
       }
     }
   }
-  if (!got_id)
+  if (!post_process)
   {
     return;
   }
@@ -158,15 +180,22 @@ rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
   {
     if (npt > 0)
     {
-      rdpup_begin_update();
-      rdpup_set_fgcolor(pGC->fgPixel);
-      for (i = 0; i < npt; i++)
+      if (dirty_type != 0)
       {
-        x = pts[i].x;
-        y = pts[i].y;
-        rdpup_fill_rect(x, y, 1, 1);
+        /* TODO */
       }
-      rdpup_end_update();
+      else if (got_id)
+      {
+        rdpup_begin_update();
+        rdpup_set_fgcolor(pGC->fgPixel);
+        for (i = 0; i < npt; i++)
+        {
+          x = pts[i].x;
+          y = pts[i].y;
+          rdpup_fill_rect(x, y, 1, 1);
+        }
+        rdpup_end_update();
+      }
     }
   }
   else if (cd == 2)
@@ -174,21 +203,28 @@ rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
     num_clips = REGION_NUM_RECTS(&clip_reg);
     if (npt > 0 && num_clips > 0)
     {
-      rdpup_begin_update();
-      rdpup_set_fgcolor(pGC->fgPixel);
-      for (j = num_clips - 1; j >= 0; j--)
+      if (dirty_type != 0)
       {
-        box = REGION_RECTS(&clip_reg)[j];
-        rdpup_set_clip(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-        for (i = 0; i < npt; i++)
-        {
-          x = pts[i].x;
-          y = pts[i].y;
-          rdpup_fill_rect(x, y, 1, 1);
-        }
+        /* TODO */
       }
-      rdpup_reset_clip();
-      rdpup_end_update();
+      else if (got_id)
+      {
+        rdpup_begin_update();
+        rdpup_set_fgcolor(pGC->fgPixel);
+        for (j = num_clips - 1; j >= 0; j--)
+        {
+          box = REGION_RECTS(&clip_reg)[j];
+          rdpup_set_clip(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+          for (i = 0; i < npt; i++)
+          {
+            x = pts[i].x;
+            y = pts[i].y;
+            rdpup_fill_rect(x, y, 1, 1);
+          }
+        }
+        rdpup_reset_clip();
+        rdpup_end_update();
+      }
     }
   }
   RegionUninit(&clip_reg);
@@ -196,5 +232,8 @@ rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
   {
     g_free(pts);
   }
-  rdpup_switch_os_surface(-1);
+  if (reset_surface)
+  {
+    rdpup_switch_os_surface(-1);
+  }
 }
