@@ -58,6 +58,46 @@ rdpPolylinesOrg(DrawablePtr pDrawable, GCPtr pGC, int mode,
 
 /******************************************************************************/
 void
+RegionAroundSegs(RegionPtr reg, xSegment* segs, int nseg)
+{
+  int index;
+  BoxRec box;
+  RegionRec treg;
+
+  index = 0;
+  while (index < nseg)
+  {
+    if (segs[index].x1 < segs[index].x2)
+    {
+      box.x1 = segs[index].x1;
+      box.x2 = segs[index].x2;
+    }
+    else
+    {
+      box.x1 = segs[index].x2;
+      box.x2 = segs[index].x1;
+    }
+    box.x2++;
+    if (segs[index].y1 < segs[index].y2)
+    {
+      box.y1 = segs[index].y1;
+      box.y2 = segs[index].y2;
+    }
+    else
+    {
+      box.y1 = segs[index].y2;
+      box.y2 = segs[index].y1;
+    }
+    box.y2++;
+    RegionInit(&treg, &box, 0);
+    RegionUnion(reg, reg, &treg);
+    RegionUninit(&treg);
+    index++;
+  }
+}
+
+/******************************************************************************/
+void
 rdpPolylines(DrawablePtr pDrawable, GCPtr pGC, int mode,
              int npt, DDXPointPtr pptInit)
 {
@@ -66,32 +106,58 @@ rdpPolylines(DrawablePtr pDrawable, GCPtr pGC, int mode,
   int cd;
   int i;
   int j;
-  int x1;
-  int y1;
-  int x2;
-  int y2;
   int got_id;
   int dirty_type;
   int post_process;
   int reset_surface;
   BoxRec box;
-  DDXPointPtr ppts;
+  xSegment* segs;
+  int nseg;
   struct image_data id;
   WindowPtr pDstWnd;
   PixmapPtr pDstPixmap;
   rdpPixmapRec* pDstPriv;
   rdpPixmapRec* pDirtyPriv;
 
-  LLOGLN(10, ("rdpPolylines:"));
+  LLOGLN(0, ("rdpPolylines:"));
 
-  ppts = 0;
-  if (npt > 0)
+  /* convert lines to line segments */
+  nseg = npt - 1;
+  segs = 0;
+  if (npt > 1)
   {
-    ppts = (DDXPointPtr)g_malloc(sizeof(DDXPointRec) * npt, 0);
-    for (i = 0; i < npt; i++)
+    segs = (xSegment*)g_malloc(sizeof(xSegment) * npt - 1, 0);
+    segs[0].x1 = pptInit[0].x + pDrawable->x;
+    segs[0].y1 = pptInit[0].y + pDrawable->y;
+    if (mode == CoordModeOrigin)
     {
-      ppts[i] = pptInit[i];
+      segs[0].x2 = pptInit[1].x + pDrawable->x;
+      segs[0].y2 = pptInit[1].y + pDrawable->y;
     }
+    else
+    {
+      segs[0].x2 = segs[0].x1 + pptInit[1].x;
+      segs[0].y2 = segs[0].y1 + pptInit[1].y;
+    }
+    for (i = 2; i < npt; i++)
+    {
+      segs[i - 1].x1 = segs[i - 2].x2;
+      segs[i - 1].y1 = segs[i - 2].y2;
+      if (mode == CoordModeOrigin)
+      {
+        segs[i - 1].x2 = pptInit[i].x + pDrawable->x;
+        segs[i - 1].y2 = pptInit[i].x + pDrawable->x;
+      }
+      else
+      {
+        segs[i - 1].x2 = segs[i - 2].x2 + pptInit[i].x;
+        segs[i - 1].y2 = segs[i - 2].y2 + pptInit[i].y;
+      }
+    }
+  }
+  else
+  {
+    LLOGLN(10, ("rdpPolylines: weird npt [%d]", npt));
   }
 
   /* do original call */
@@ -114,7 +180,7 @@ rdpPolylines(DrawablePtr pDrawable, GCPtr pGC, int mode,
         LLOGLN(10, ("rdpPolylines: gettig dirty"));
         pDstPriv->is_dirty = 1;
         pDirtyPriv = pDstPriv;
-        dirty_type = RDI_IMGLL;
+        dirty_type = RDI_LINE;
       }
       else
       {
@@ -140,7 +206,7 @@ rdpPolylines(DrawablePtr pDrawable, GCPtr pGC, int mode,
   }
   if (!post_process)
   {
-    g_free(ppts);
+    g_free(segs);
     return;
   }
 
@@ -148,11 +214,15 @@ rdpPolylines(DrawablePtr pDrawable, GCPtr pGC, int mode,
   cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
   if (cd == 1)
   {
-    if (ppts != 0)
+    if (segs != 0)
     {
       if (dirty_type != 0)
       {
-        /* TODO */
+        RegionUninit(&clip_reg);
+        RegionInit(&clip_reg, NullBox, 0);
+        RegionAroundSegs(&clip_reg, segs, nseg);
+        draw_item_add_line_region(pDirtyPriv, &clip_reg, pGC->fgPixel,
+                                  pGC->alu, pGC->lineWidth, segs, nseg, 0);
       }
       else if (got_id)
       {
@@ -160,23 +230,9 @@ rdpPolylines(DrawablePtr pDrawable, GCPtr pGC, int mode,
         rdpup_set_fgcolor(pGC->fgPixel);
         rdpup_set_opcode(pGC->alu);
         rdpup_set_pen(0, pGC->lineWidth);
-        x1 = ppts[0].x + pDrawable->x;
-        y1 = ppts[0].y + pDrawable->y;
-        for (i = 1; i < npt; i++)
+        for (i = 0; i < nseg; i++)
         {
-          if (mode == CoordModeOrigin)
-          {
-            x2 = pDrawable->x + ppts[i].x;
-            y2 = pDrawable->y + ppts[i].y;
-          }
-          else
-          {
-            x2 = x1 + ppts[i].x;
-            y2 = y1 + ppts[i].y;
-          }
-          rdpup_draw_line(x1, y1, x2, y2);
-          x1 = x2;
-          y1 = y2;
+          rdpup_draw_line(segs[i].x1, segs[i].y1, segs[i].x2, segs[i].y2);
         }
         rdpup_set_opcode(GXcopy);
         rdpup_end_update();
@@ -186,11 +242,12 @@ rdpPolylines(DrawablePtr pDrawable, GCPtr pGC, int mode,
   else if (cd == 2)
   {
     num_clips = REGION_NUM_RECTS(&clip_reg);
-    if (ppts != 0 && num_clips > 0)
+    if (nseg != 0 && num_clips > 0)
     {
       if (dirty_type != 0)
       {
-        /* TODO */
+        draw_item_add_line_region(pDirtyPriv, &clip_reg, pGC->fgPixel,
+                                  pGC->alu, pGC->lineWidth, segs, nseg, 0);
       }
       else if (got_id)
       {
@@ -202,23 +259,9 @@ rdpPolylines(DrawablePtr pDrawable, GCPtr pGC, int mode,
         {
           box = REGION_RECTS(&clip_reg)[j];
           rdpup_set_clip(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-          x1 = ppts[0].x + pDrawable->x;
-          y1 = ppts[0].y + pDrawable->y;
-          for (i = 1; i < npt; i++)
+          for (i = 0; i < nseg; i++)
           {
-            if (mode == CoordModeOrigin)
-            {
-              x2 = pDrawable->x + ppts[i].x;
-              y2 = pDrawable->y + ppts[i].y;
-            }
-            else
-            {
-              x2 = x1 + ppts[i].x;
-              y2 = y1 + ppts[i].y;
-            }
-            rdpup_draw_line(x1, y1, x2, y2);
-            x1 = x2;
-            y1 = y2;
+            rdpup_draw_line(segs[i].x1, segs[i].y1, segs[i].x2, segs[i].y2);
           }
         }
         rdpup_reset_clip();
@@ -227,8 +270,8 @@ rdpPolylines(DrawablePtr pDrawable, GCPtr pGC, int mode,
       }
     }
   }
+  g_free(segs);
   RegionUninit(&clip_reg);
-  g_free(ppts);
   if (reset_surface)
   {
     rdpup_switch_os_surface(-1);

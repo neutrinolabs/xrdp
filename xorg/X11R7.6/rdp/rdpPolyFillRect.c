@@ -152,7 +152,7 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
       }
       else
       {
-        draw_item_add_img_region(pDirtyPriv, fill_reg, RDI_IMGLL);
+        draw_item_add_img_region(pDirtyPriv, fill_reg, GXcopy, RDI_IMGLL);
       }
     }
     else if (got_id)
@@ -210,7 +210,7 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
         }
         else
         {
-          draw_item_add_img_region(pDirtyPriv, &clip_reg, RDI_IMGLL);
+          draw_item_add_img_region(pDirtyPriv, &clip_reg, GXcopy, RDI_IMGLL);
         }
       }
       else if (got_id)

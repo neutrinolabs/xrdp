@@ -188,7 +188,17 @@ rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
     {
       if (dirty_type != 0)
       {
-        /* TODO */
+        fill_reg = RegionFromRects(nrects * 4, regRects, CT_NONE);
+        if (pGC->lineStyle == LineSolid)
+        {
+          draw_item_add_fill_region(pDirtyPriv, fill_reg, pGC->fgPixel,
+                                    pGC->alu);
+        }
+        else
+        {
+          draw_item_add_img_region(pDirtyPriv, fill_reg, GXcopy, dirty_type);
+        }
+        RegionDestroy(fill_reg);
       }
       else if (got_id)
       {
@@ -227,7 +237,15 @@ rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
       {
         if (dirty_type != 0)
         {
-          /* TODO */
+          if (pGC->lineStyle == LineSolid)
+          {
+            draw_item_add_fill_region(pDirtyPriv, &clip_reg, pGC->fgPixel,
+                                      pGC->alu);
+          }
+          else
+          {
+            draw_item_add_img_region(pDirtyPriv, &clip_reg, GXcopy, dirty_type);
+          }
         }
         else if (got_id)
         {

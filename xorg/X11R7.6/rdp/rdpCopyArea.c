@@ -241,11 +241,13 @@ rdpCopyAreaPixmapToWnd(PixmapPtr pSrcPixmap, rdpPixmapRec* pSrcPriv,
     if (num_clips > 0)
     {
       rdpup_begin_update();
+      LLOGLN(10, ("rdpCopyAreaPixmapToWnd: num_clips %d", num_clips));
       for (j = 0; j < num_clips; j++)
       {
         box = REGION_RECTS(&clip_reg)[j];
         LLOGLN(10, ("rdpCopyAreaPixmapToWnd: %d %d %d %d", box.x1, box.y1, box.x2, box.y2));
         rdpup_set_clip(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+        LLOGLN(10, ("rdpCopyAreaPixmapToWnd: %d %d", w, h));
         rdpup_paint_rect_os(ldstx, ldsty, w, h, pSrcPriv->rdpindex, lsrcx, lsrcy);
       }
       rdpup_reset_clip();
@@ -281,6 +283,7 @@ rdpCopyAreaPixmapToPixmap(PixmapPtr pSrcPixmap, rdpPixmapRec* pSrcPriv,
                       pGC, srcx, srcy, w, h, dstx, dsty);
   RegionInit(&clip_reg, NullBox, 0);
   cd = rdp_get_clip(&clip_reg, &(pDstPixmap->drawable), pGC);
+  LLOGLN(10, ("rdpCopyAreaPixmapToPixmap: cd %d", cd));
   ldstx = pDstPixmap->drawable.x + dstx;
   ldsty = pDstPixmap->drawable.y + dsty;
   lsrcx = pSrcPixmap->drawable.x + srcx;
@@ -290,6 +293,7 @@ rdpCopyAreaPixmapToPixmap(PixmapPtr pSrcPixmap, rdpPixmapRec* pSrcPriv,
     rdpup_switch_os_surface(pDstPriv->rdpindex);
     rdpup_begin_update();
     rdpup_paint_rect_os(ldstx, ldsty, w, h, pSrcPriv->rdpindex, lsrcx, lsrcy);
+    LLOGLN(10, ("%d %d %d %d %d %d", ldstx, ldsty, w, h, lsrcx, lsrcy));
     rdpup_end_update();
     rdpup_switch_os_surface(-1);
   }
@@ -300,11 +304,13 @@ rdpCopyAreaPixmapToPixmap(PixmapPtr pSrcPixmap, rdpPixmapRec* pSrcPriv,
     {
       rdpup_switch_os_surface(pDstPriv->rdpindex);
       rdpup_begin_update();
+      LLOGLN(10, ("rdpCopyAreaPixmapToPixmap: num_clips %d", num_clips));
       for (j = 0; j < num_clips; j++)
       {
         box = REGION_RECTS(&clip_reg)[j];
         rdpup_set_clip(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
         rdpup_paint_rect_os(ldstx, ldsty, w, h, pSrcPriv->rdpindex, lsrcx, lsrcy);
+        LLOGLN(10, ("%d %d %d %d %d %d", ldstx, ldsty, w, h, lsrcx, lsrcy));
       }
       rdpup_reset_clip();
       rdpup_end_update();

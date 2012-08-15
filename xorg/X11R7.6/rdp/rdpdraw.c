@@ -420,8 +420,15 @@ draw_item_remove(rdpPixmapRec* priv, struct rdp_draw_item* di)
   {
     priv->draw_item_tail = di->prev;
   }
+  if (di->type == RDI_LINE)
+  {
+    if (di->u.line.segs != 0)
+    {
+      free(di->u.line.segs);
+    }
+  }
   RegionDestroy(di->reg);
-  free(di);
+  g_free(di);
   return 0;
 }
 
@@ -489,12 +496,20 @@ draw_item_pack(rdpPixmapRec* priv)
       di = priv->draw_item_tail;
       while (di->prev != 0)
       {
-        di_prev = di->prev;
-        while (di_prev != 0)
+        /* skip subtract flag
+         * draw items like line can't be used to clear(subtract) previous
+         * draw items since they are not opaque
+         * eg they can not be the 'S' in 'D = M - S'
+         * the region for line draw items is the clip region */
+        if ((di->flags & 1) == 0)
         {
-          /* D = M - S */
-          RegionSubtract(di_prev->reg, di_prev->reg, di->reg);
-          di_prev = di_prev->prev;
+          di_prev = di->prev;
+          while (di_prev != 0)
+          {
+            /* D = M - S */
+            RegionSubtract(di_prev->reg, di_prev->reg, di->reg);
+            di_prev = di_prev->prev;
+          }
         }
         di = di->prev;
       }
@@ -525,15 +540,16 @@ draw_item_pack(rdpPixmapRec* priv)
 
 /******************************************************************************/
 int
-draw_item_add_img_region(rdpPixmapRec* priv, RegionPtr reg, int type)
+draw_item_add_img_region(rdpPixmapRec* priv, RegionPtr reg, int opcode,
+                         int type)
 {
   struct rdp_draw_item* di;
 
-  di = (struct rdp_draw_item*)malloc(sizeof(struct rdp_draw_item));
-  memset(di, 0, sizeof(struct rdp_draw_item));
+  di = (struct rdp_draw_item*)g_malloc(sizeof(struct rdp_draw_item), 1);
   di->type = type;
   di->reg = RegionCreate(NullBox, 0);
   RegionCopy(di->reg, reg);
+  di->u.img.opcode = opcode;
   draw_item_add(priv, di);
   return 0;
 }
@@ -545,12 +561,39 @@ draw_item_add_fill_region(rdpPixmapRec* priv, RegionPtr reg, int color,
 {
   struct rdp_draw_item* di;
 
-  di = (struct rdp_draw_item*)malloc(sizeof(struct rdp_draw_item));
-  memset(di, 0, sizeof(struct rdp_draw_item));
+  di = (struct rdp_draw_item*)g_malloc(sizeof(struct rdp_draw_item), 1);
   di->type = RDI_FILL;
-  di->fg_color = color;
-  di->opcode = opcode;
+  di->u.fill.fg_color = color;
+  di->u.fill.opcode = opcode;
   di->reg = RegionCreate(NullBox, 0);
+  RegionCopy(di->reg, reg);
+  draw_item_add(priv, di);
+  return 0;
+}
+
+/******************************************************************************/
+int
+draw_item_add_line_region(rdpPixmapRec* priv, RegionPtr reg, int color,
+                          int opcode, int width, xSegment* segs, int nseg,
+                          int is_segment)
+{
+  struct rdp_draw_item* di;
+
+  LLOGLN(10, ("draw_item_add_line_region:"));
+  di = (struct rdp_draw_item*)g_malloc(sizeof(struct rdp_draw_item), 1);
+  di->type = RDI_LINE;
+  di->u.line.fg_color = color;
+  di->u.line.opcode = opcode;
+  di->u.line.width = width;
+  di->u.line.segs = (xSegment*)g_malloc(sizeof(xSegment) * nseg, 1);
+  memcpy(di->u.line.segs, segs, sizeof(xSegment) * nseg);
+  di->u.line.nseg = nseg;
+  if (is_segment)
+  {
+    di->u.line.flags = 1;
+  }
+  di->reg = RegionCreate(NullBox, 0);
+  di->flags |= 1;
   RegionCopy(di->reg, reg);
   draw_item_add(priv, di);
   return 0;
@@ -584,13 +627,13 @@ rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
       priv->status = 1;
       rdpup_create_os_surface(priv->rdpindex, width, height);
     }
-    //priv->reg_lossy = RegionCreate(NullBox, 0);
-    //priv->reg_lossless = RegionCreate(NullBox, 0);
   }
   pScreen->ModifyPixmapHeader(rv, org_width, 0, 0, 0, 0, 0);
   pScreen->CreatePixmap = rdpCreatePixmap;
   return rv;
 }
+
+extern struct rdpup_os_bitmap* g_os_bitmaps;
 
 /******************************************************************************/
 Bool
@@ -609,8 +652,6 @@ rdpDestroyPixmap(PixmapPtr pPixmap)
     {
       rdpup_remove_os_bitmap(priv->rdpindex);
       rdpup_delete_os_surface(priv->rdpindex);
-      //RegionDestroy(priv->reg_lossy);
-      //RegionDestroy(priv->reg_lossless);
       draw_item_remove_all(priv);
     }
   }
@@ -1103,7 +1144,7 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
     RegionIntersect(&reg1, &reg1, &reg2);
     if (dirty_type != 0)
     {
-      draw_item_add_img_region(pDirtyPriv, &reg1, dirty_type);
+      draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type);
     }
     else if (got_id)
     {
@@ -1131,7 +1172,7 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
     if (dirty_type != 0)
     {
       RegionInit(&reg1, &box, 0);
-      draw_item_add_img_region(pDirtyPriv, &reg1, dirty_type);
+      draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type);
       RegionUninit(&reg1);
     }
     else if (got_id)

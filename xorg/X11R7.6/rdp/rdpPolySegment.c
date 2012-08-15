@@ -55,6 +55,10 @@ rdpPolySegmentOrg(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment* pSegs)
   GC_OP_EPILOGUE(pGC);
 }
 
+/* in rdpPolylines.c */
+void
+RegionAroundSegs(RegionPtr reg, xSegment* segs, int nsegs);
+
 /******************************************************************************/
 void
 rdpPolySegment(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment* pSegs)
@@ -75,7 +79,7 @@ rdpPolySegment(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment* pSegs)
   rdpPixmapRec* pDstPriv;
   rdpPixmapRec* pDirtyPriv;
 
-  LLOGLN(10, ("rdpPolySegment:"));
+  LLOGLN(10, ("rdpPolySegment: %d", nseg));
 
   segs = 0;
   if (nseg) /* get the rects */
@@ -142,13 +146,18 @@ rdpPolySegment(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment* pSegs)
 
   RegionInit(&clip_reg, NullBox, 0);
   cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
+  LLOGLN(10, ("rdpPolySegment: cd %d", cd));
   if (cd == 1) /* no clip */
   {
     if (segs != 0)
     {
       if (dirty_type != 0)
       {
-        /* TODO */
+        RegionUninit(&clip_reg);
+        RegionInit(&clip_reg, NullBox, 0);
+        RegionAroundSegs(&clip_reg, segs, nseg);
+        draw_item_add_line_region(pDirtyPriv, &clip_reg, pGC->fgPixel,
+                                  pGC->alu, pGC->lineWidth, segs, nseg, 1);
       }
       else if (got_id)
       {
@@ -171,7 +180,8 @@ rdpPolySegment(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment* pSegs)
     {
       if (dirty_type != 0)
       {
-        /* TODO */
+        draw_item_add_line_region(pDirtyPriv, &clip_reg, pGC->fgPixel,
+                                  pGC->alu, pGC->lineWidth, segs, nseg, 1);
       }
       else if (got_id)
       {
@@ -186,6 +196,8 @@ rdpPolySegment(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment* pSegs)
           for (i = 0; i < nseg; i++)
           {
             rdpup_draw_line(segs[i].x1, segs[i].y1, segs[i].x2, segs[i].y2);
+            LLOGLN(10, ("  %d %d %d %d", segs[i].x1, segs[i].y1,
+                   segs[i].x2, segs[i].y2));
           }
         }
         rdpup_reset_clip();

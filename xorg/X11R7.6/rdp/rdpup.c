@@ -215,7 +215,8 @@ rdpup_add_os_bitmap(PixmapPtr pixmap, rdpPixmapPtr priv)
 int
 rdpup_remove_os_bitmap(int rdpindex)
 {
-  LLOGLN(10, ("rdpup_remove_os_bitmap: index %d", rdpindex));
+  LLOGLN(10, ("rdpup_remove_os_bitmap: index %d stamp %d",
+         rdpindex, g_os_bitmaps[rdpindex].stamp));
   if (g_os_bitmaps == 0)
   {
     return 1;
@@ -1203,7 +1204,7 @@ rdpup_create_os_surface(int rdpindex, int width, int height)
   LLOGLN(10, ("rdpup_create_os_surface:"));
   if (g_connected)
   {
-    LLOGLN(10, ("  rdpup_create_os_surface"));
+    LLOGLN(10, ("  rdpup_create_os_surface width %d height %d", width, height));
     rdpup_pre_check(12);
     out_uint16_le(g_out_s, 20);
     out_uint16_le(g_out_s, 12);
@@ -1596,8 +1597,11 @@ int
 rdpup_check_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec* pDirtyPriv)
 {
   int index;
+  int clip_index;
   int count;
+  int num_clips;
   BoxRec box;
+  xSegment* seg;
   struct image_data id;
   struct rdp_draw_item* di;
 
@@ -1610,7 +1614,7 @@ rdpup_check_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec* pDirtyPriv)
     return 0;
   }
 
-  /* update uses time / count */
+  /* update use time / count */
   g_os_bitmaps[pDirtyPriv->rdpindex].stamp = g_os_bitmap_stamp;
   g_os_bitmap_stamp++;
 
@@ -1626,36 +1630,69 @@ rdpup_check_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec* pDirtyPriv)
     switch (di->type)
     {
       case RDI_FILL:
-        rdpup_set_fgcolor(di->fg_color);
-        rdpup_set_opcode(di->opcode);
+        rdpup_set_fgcolor(di->u.fill.fg_color);
+        rdpup_set_opcode(di->u.fill.opcode);
         count = REGION_NUM_RECTS(di->reg);
         for (index = 0; index < count; index++)
         {
           box = REGION_RECTS(di->reg)[index];
-          LLOGLN(10, ("  RDI_FILL %d %d %d %d", box.x1, box.y1, box.x2, box.y2));
+          LLOGLN(10, ("  RDI_FILL %d %d %d %d", box.x1, box.y1,
+                 box.x2, box.y2));
           rdpup_fill_rect(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
         }
         rdpup_set_opcode(GXcopy);
         break;
       case RDI_IMGLL:
         rdpup_set_hints(1, 1);
+        rdpup_set_opcode(di->u.img.opcode);
         count = REGION_NUM_RECTS(di->reg);
         for (index = 0; index < count; index++)
         {
           box = REGION_RECTS(di->reg)[index];
-          LLOGLN(10, ("  RDI_IMGLL %d %d %d %d", box.x1, box.y1, box.x2, box.y2));
-          rdpup_send_area(&id, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+          LLOGLN(10, ("  RDI_IMGLL %d %d %d %d", box.x1, box.y1,
+                 box.x2, box.y2));
+          rdpup_send_area(&id, box.x1, box.y1, box.x2 - box.x1,
+                          box.y2 - box.y1);
         }
+        rdpup_set_opcode(GXcopy);
         rdpup_set_hints(0, 1);
         break;
       case RDI_IMGLY:
+        rdpup_set_opcode(di->u.img.opcode);
         count = REGION_NUM_RECTS(di->reg);
         for (index = 0; index < count; index++)
         {
           box = REGION_RECTS(di->reg)[index];
-          LLOGLN(10, ("  RDI_IMGLY %d %d %d %d", box.x1, box.y1, box.x2, box.y2));
-          rdpup_send_area(&id, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+          LLOGLN(10, ("  RDI_IMGLY %d %d %d %d", box.x1, box.y1,
+                 box.x2, box.y2));
+          rdpup_send_area(&id, box.x1, box.y1, box.x2 - box.x1,
+                          box.y2 - box.y1);
         }
+        rdpup_set_opcode(GXcopy);
+        break;
+      case RDI_LINE:
+        LLOGLN(10, ("  RDI_LINE"));
+        num_clips = REGION_NUM_RECTS(di->reg);
+        if (num_clips > 0)
+        {
+          rdpup_set_fgcolor(di->u.line.fg_color);
+          rdpup_set_opcode(di->u.line.opcode);
+          rdpup_set_pen(0, di->u.line.width);
+          for (clip_index = num_clips - 1; clip_index >= 0; clip_index--)
+          {
+            box = REGION_RECTS(di->reg)[clip_index];
+            rdpup_set_clip(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+            for (index = 0; index < di->u.line.nseg; index++)
+            {
+              seg = di->u.line.segs + index;
+              LLOGLN(10, ("  RDI_LINE %d %d %d %d", seg->x1, seg->y1,
+                     seg->x2, seg->y2));
+              rdpup_draw_line(seg->x1, seg->y1, seg->x2, seg->y2);
+            }
+          }
+        }
+        rdpup_reset_clip();
+        rdpup_set_opcode(GXcopy);
         break;
     }
     di = di->next;
