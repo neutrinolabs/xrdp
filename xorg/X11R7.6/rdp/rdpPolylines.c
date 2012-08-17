@@ -58,46 +58,6 @@ rdpPolylinesOrg(DrawablePtr pDrawable, GCPtr pGC, int mode,
 
 /******************************************************************************/
 void
-RegionAroundSegs(RegionPtr reg, xSegment* segs, int nseg)
-{
-  int index;
-  BoxRec box;
-  RegionRec treg;
-
-  index = 0;
-  while (index < nseg)
-  {
-    if (segs[index].x1 < segs[index].x2)
-    {
-      box.x1 = segs[index].x1;
-      box.x2 = segs[index].x2;
-    }
-    else
-    {
-      box.x1 = segs[index].x2;
-      box.x2 = segs[index].x1;
-    }
-    box.x2++;
-    if (segs[index].y1 < segs[index].y2)
-    {
-      box.y1 = segs[index].y1;
-      box.y2 = segs[index].y2;
-    }
-    else
-    {
-      box.y1 = segs[index].y2;
-      box.y2 = segs[index].y1;
-    }
-    box.y2++;
-    RegionInit(&treg, &box, 0);
-    RegionUnion(reg, reg, &treg);
-    RegionUninit(&treg);
-    index++;
-  }
-}
-
-/******************************************************************************/
-void
 rdpPolylines(DrawablePtr pDrawable, GCPtr pGC, int mode,
              int npt, DDXPointPtr pptInit)
 {
@@ -119,46 +79,61 @@ rdpPolylines(DrawablePtr pDrawable, GCPtr pGC, int mode,
   rdpPixmapRec* pDstPriv;
   rdpPixmapRec* pDirtyPriv;
 
-  LLOGLN(0, ("rdpPolylines:"));
-
+  LLOGLN(10, ("rdpPolylines:"));
+  LLOGLN(10, ("  npt %d mode %d x %d y %d", npt, mode,
+         pDrawable->x, pDrawable->y));
+#if 0
+  LLOGLN(0, ("  points"));
+  for (i = 0; i < npt; i++)
+  {
+    LLOGLN(0, ("    %d %d", pptInit[i].x, pptInit[i].y));
+  }
+#endif
   /* convert lines to line segments */
   nseg = npt - 1;
   segs = 0;
   if (npt > 1)
   {
-    segs = (xSegment*)g_malloc(sizeof(xSegment) * npt - 1, 0);
+    segs = (xSegment*)g_malloc(sizeof(xSegment) * nseg, 0);
     segs[0].x1 = pptInit[0].x + pDrawable->x;
     segs[0].y1 = pptInit[0].y + pDrawable->y;
     if (mode == CoordModeOrigin)
     {
       segs[0].x2 = pptInit[1].x + pDrawable->x;
       segs[0].y2 = pptInit[1].y + pDrawable->y;
+      for (i = 2; i < npt; i++)
+      {
+        segs[i - 1].x1 = segs[i - 2].x2;
+        segs[i - 1].y1 = segs[i - 2].y2;
+        segs[i - 1].x2 = pptInit[i].x + pDrawable->x;
+        segs[i - 1].y2 = pptInit[i].y + pDrawable->y;
+      }
     }
     else
     {
       segs[0].x2 = segs[0].x1 + pptInit[1].x;
       segs[0].y2 = segs[0].y1 + pptInit[1].y;
-    }
-    for (i = 2; i < npt; i++)
-    {
-      segs[i - 1].x1 = segs[i - 2].x2;
-      segs[i - 1].y1 = segs[i - 2].y2;
-      if (mode == CoordModeOrigin)
+      for (i = 2; i < npt; i++)
       {
-        segs[i - 1].x2 = pptInit[i].x + pDrawable->x;
-        segs[i - 1].y2 = pptInit[i].x + pDrawable->x;
-      }
-      else
-      {
-        segs[i - 1].x2 = segs[i - 2].x2 + pptInit[i].x;
-        segs[i - 1].y2 = segs[i - 2].y2 + pptInit[i].y;
+        segs[i - 1].x1 = segs[i - 2].x2;
+        segs[i - 1].y1 = segs[i - 2].y2;
+        segs[i - 1].x2 = segs[i - 1].x1 + pptInit[i].x;
+        segs[i - 1].y2 = segs[i - 1].y1 + pptInit[i].y;
       }
     }
   }
   else
   {
-    LLOGLN(10, ("rdpPolylines: weird npt [%d]", npt));
+    LLOGLN(0, ("rdpPolylines: weird npt [%d]", npt));
   }
+#if 0
+  LLOGLN(0, ("  segments"));
+  for (i = 0; i < nseg; i++)
+  {
+    LLOGLN(0, ("    %d %d %d %d", segs[i].x1, segs[i].y1,
+           segs[i].x2, segs[i].y2));
+  }
+#endif
 
   /* do original call */
   rdpPolylinesOrg(pDrawable, pGC, mode, npt, pptInit);
@@ -180,7 +155,7 @@ rdpPolylines(DrawablePtr pDrawable, GCPtr pGC, int mode,
         LLOGLN(10, ("rdpPolylines: gettig dirty"));
         pDstPriv->is_dirty = 1;
         pDirtyPriv = pDstPriv;
-        dirty_type = RDI_LINE;
+        dirty_type = RDI_IMGLL;
       }
       else
       {

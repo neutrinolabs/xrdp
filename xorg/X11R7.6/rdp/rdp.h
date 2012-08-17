@@ -311,6 +311,8 @@ int
 g_chmod_hex(const char* filename, int flags);
 void
 hexdump(unsigned char *p, unsigned int len);
+void
+RegionAroundSegs(RegionPtr reg, xSegment* segs, int nseg);
 
 /* rdpdraw.c */
 Bool

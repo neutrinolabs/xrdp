@@ -62,6 +62,8 @@ rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
              int npt, DDXPointPtr in_pts)
 {
   RegionRec clip_reg;
+  RegionRec reg1;
+  RegionRec reg2;
   int num_clips;
   int cd;
   int x;
@@ -83,6 +85,7 @@ rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
   rdpPixmapRec* pDirtyPriv;
 
   LLOGLN(10, ("rdpPolyPoint:"));
+  LLOGLN(10, ("rdpPolyPoint:  npt %d", npt));
 
   if (npt > 32)
   {
@@ -145,7 +148,7 @@ rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
         LLOGLN(10, ("rdpPolyPoint: gettig dirty"));
         pDstPriv->is_dirty = 1;
         pDirtyPriv = pDstPriv;
-        dirty_type = RDI_IMGLY;
+        dirty_type = RDI_IMGLL;
       }
       else
       {
@@ -182,7 +185,20 @@ rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
     {
       if (dirty_type != 0)
       {
-        /* TODO */
+        RegionInit(&reg1, NullBox, 0);
+        for (i = 0; i < npt; i++)
+        {
+          box.x1 = pts[i].x;
+          box.y1 = pts[i].y;
+          box.x2 = box.x1 + 1;
+          box.y2 = box.y1 + 1;
+          RegionInit(&reg2, &box, 0);
+          RegionUnion(&reg1, &reg1, &reg2);
+          RegionUninit(&reg2);
+        }
+        draw_item_add_fill_region(pDirtyPriv, &reg1, pGC->fgPixel,
+                                  pGC->alu);
+        RegionUninit(&reg1);
       }
       else if (got_id)
       {
@@ -205,7 +221,21 @@ rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
     {
       if (dirty_type != 0)
       {
-        /* TODO */
+        RegionInit(&reg1, NullBox, 0);
+        for (i = 0; i < npt; i++)
+        {
+          box.x1 = pts[i].x;
+          box.y1 = pts[i].y;
+          box.x2 = box.x1 + 1;
+          box.y2 = box.y1 + 1;
+          RegionInit(&reg2, &box, 0);
+          RegionUnion(&reg1, &reg1, &reg2);
+          RegionUninit(&reg2);
+        }
+        RegionIntersect(&reg1, &reg1, &clip_reg);
+        draw_item_add_fill_region(pDirtyPriv, &reg1, pGC->fgPixel,
+                                  pGC->alu);
+        RegionUninit(&reg1);
       }
       else if (got_id)
       {

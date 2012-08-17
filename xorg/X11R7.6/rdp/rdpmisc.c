@@ -530,3 +530,43 @@ void
 FontCacheExtensionInit(INITARGS)
 {
 }
+
+/******************************************************************************/
+void
+RegionAroundSegs(RegionPtr reg, xSegment* segs, int nseg)
+{
+  int index;
+  BoxRec box;
+  RegionRec treg;
+
+  index = 0;
+  while (index < nseg)
+  {
+    if (segs[index].x1 < segs[index].x2)
+    {
+      box.x1 = segs[index].x1;
+      box.x2 = segs[index].x2;
+    }
+    else
+    {
+      box.x1 = segs[index].x2;
+      box.x2 = segs[index].x1;
+    }
+    box.x2++;
+    if (segs[index].y1 < segs[index].y2)
+    {
+      box.y1 = segs[index].y1;
+      box.y2 = segs[index].y2;
+    }
+    else
+    {
+      box.y1 = segs[index].y2;
+      box.y2 = segs[index].y1;
+    }
+    box.y2++;
+    RegionInit(&treg, &box, 0);
+    RegionUnion(reg, reg, &treg);
+    RegionUninit(&treg);
+    index++;
+  }
+}

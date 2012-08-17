@@ -87,6 +87,41 @@ rdpFillPolygon(DrawablePtr pDrawable, GCPtr pGC,
 
   LLOGLN(10, ("rdpFillPolygon:"));
 
+  box.x1 = 0;
+  box.y1 = 0;
+  box.x2 = 0;
+  box.y2 = 0;
+  if (count > 0)
+  {
+    maxx = pPts[0].x;
+    maxy = pPts[0].y;
+    minx = maxx;
+    miny = maxy;
+    for (i = 1; i < count; i++)
+    {
+      if (pPts[i].x > maxx)
+      {
+        maxx = pPts[i].x;
+      }
+      if (pPts[i].x < minx)
+      {
+        minx = pPts[i].x;
+      }
+      if (pPts[i].y > maxy)
+      {
+        maxy = pPts[i].y;
+      }
+      if (pPts[i].y < miny)
+      {
+        miny = pPts[i].y;
+      }
+    }
+    box.x1 = pDrawable->x + minx;
+    box.y1 = pDrawable->y + miny;
+    box.x2 = pDrawable->x + maxx + 1;
+    box.y2 = pDrawable->y + maxy + 1;
+  }
+
   /* do original call */
   rdpFillPolygonOrg(pDrawable, pGC, shape, mode, count, pPts);
 
@@ -107,7 +142,7 @@ rdpFillPolygon(DrawablePtr pDrawable, GCPtr pGC,
         LLOGLN(10, ("rdpFillPolygon: gettig dirty"));
         pDstPriv->is_dirty = 1;
         pDirtyPriv = pDstPriv;
-        dirty_type = RDI_IMGLY;
+        dirty_type = RDI_IMGLL;
       }
       else
       {
@@ -138,43 +173,6 @@ rdpFillPolygon(DrawablePtr pDrawable, GCPtr pGC,
 
   RegionInit(&clip_reg, NullBox, 0);
   cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
-  if (cd != 0)
-  {
-    box.x1 = 0;
-    box.y1 = 0;
-    box.x2 = 0;
-    box.y2 = 0;
-    if (count > 0)
-    {
-      maxx = pPts[0].x;
-      maxy = pPts[0].y;
-      minx = maxx;
-      miny = maxy;
-      for (i = 1; i < count; i++)
-      {
-        if (pPts[i].x > maxx)
-        {
-          maxx = pPts[i].x;
-        }
-        if (pPts[i].x < minx)
-        {
-          minx = pPts[i].x;
-        }
-        if (pPts[i].y > maxy)
-        {
-          maxy = pPts[i].y;
-        }
-        if (pPts[i].y < miny)
-        {
-          miny = pPts[i].y;
-        }
-        box.x1 = pDrawable->x + minx;
-        box.y1 = pDrawable->y + miny;
-        box.x2 = pDrawable->x + maxx + 1;
-        box.y2 = pDrawable->y + maxy + 1;
-      }
-    }
-  }
   if (cd == 1)
   {
     if (dirty_type != 0)

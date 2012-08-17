@@ -424,7 +424,7 @@ draw_item_remove(rdpPixmapRec* priv, struct rdp_draw_item* di)
   {
     if (di->u.line.segs != 0)
     {
-      free(di->u.line.segs);
+      g_free(di->u.line.segs);
     }
   }
   RegionDestroy(di->reg);
@@ -736,7 +736,7 @@ rdpRealizeWindow(WindowPtr pWindow)
   rdpWindowRec* priv;
   Bool rv;
 
-  LLOGLN(0, ("rdpRealizeWindow:"));
+  LLOGLN(10, ("rdpRealizeWindow:"));
   priv = GETWINPRIV(pWindow);
   pScreen = pWindow->drawable.pScreen;
   pScreen->RealizeWindow = g_rdpScreen.RealizeWindow;
@@ -771,7 +771,7 @@ rdpUnrealizeWindow(WindowPtr pWindow)
   rdpWindowRec* priv;
   Bool rv;
 
-  LLOGLN(0, ("rdpUnrealizeWindow:"));
+  LLOGLN(10, ("rdpUnrealizeWindow:"));
   priv = GETWINPRIV(pWindow);
   pScreen = pWindow->drawable.pScreen;
   pScreen->UnrealizeWindow = g_rdpScreen.UnrealizeWindow;

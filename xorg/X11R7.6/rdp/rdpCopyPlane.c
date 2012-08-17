@@ -86,11 +86,34 @@ rdpCopyPlane(DrawablePtr pSrc, DrawablePtr pDst,
   rdpPixmapRec* pDstPriv;
   rdpPixmapRec* pDirtyPriv;
 
+  PixmapPtr pSrcPixmap;
+  rdpPixmapRec* pSrcPriv;
+
   LLOGLN(10, ("rdpCopyPlane:"));
+
+  if (pSrc->type == DRAWABLE_PIXMAP)
+  {
+    pSrcPixmap = (PixmapPtr)pSrc;
+    pSrcPriv = GETPIXPRIV(pSrcPixmap);
+    if (XRDP_IS_OS(pSrcPriv))
+    {
+      rdpup_check_dirty(pSrcPixmap, pSrcPriv);
+    }
+  }
+  if (pDst->type == DRAWABLE_PIXMAP)
+  {
+    pDstPixmap = (PixmapPtr)pDst;
+    pDstPriv = GETPIXPRIV(pDstPixmap);
+    if (XRDP_IS_OS(pDstPriv))
+    {
+      rdpup_check_dirty(pDstPixmap, pDstPriv);
+    }
+  }
 
   /* do original call */
   rv = rdpCopyPlaneOrg(pSrc, pDst, pGC, srcx, srcy, w, h,
                        dstx, dsty, bitPlane);
+
   dirty_type = 0;
   pDirtyPriv = 0;
   post_process = 0;
@@ -108,7 +131,7 @@ rdpCopyPlane(DrawablePtr pSrc, DrawablePtr pDst,
         LLOGLN(10, ("rdpCopyPlane: gettig dirty"));
         pDstPriv->is_dirty = 1;
         pDirtyPriv = pDstPriv;
-        dirty_type = RDI_IMGLY;
+        dirty_type = RDI_IMGLL;
       }
       else
       {

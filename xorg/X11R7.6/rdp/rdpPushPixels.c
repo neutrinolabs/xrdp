@@ -78,12 +78,10 @@ rdpPushPixels(GCPtr pGC, PixmapPtr pBitMap, DrawablePtr pDst,
   rdpPixmapRec* pDstPriv;
   rdpPixmapRec* pDirtyPriv;
 
-  LLOGLN(0, ("rdpPushPixels:"));
+  LLOGLN(10, ("rdpPushPixels:"));
 
   /* do original call */
   rdpPushPixelsOrg(pGC, pBitMap, pDst, w, h, x, y);
-
-  //return;
 
   dirty_type = 0;
   pDirtyPriv = 0;

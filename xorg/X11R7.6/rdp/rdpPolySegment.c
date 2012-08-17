@@ -55,10 +55,6 @@ rdpPolySegmentOrg(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment* pSegs)
   GC_OP_EPILOGUE(pGC);
 }
 
-/* in rdpPolylines.c */
-void
-RegionAroundSegs(RegionPtr reg, xSegment* segs, int nsegs);
-
 /******************************************************************************/
 void
 rdpPolySegment(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment* pSegs)
@@ -79,7 +75,8 @@ rdpPolySegment(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment* pSegs)
   rdpPixmapRec* pDstPriv;
   rdpPixmapRec* pDirtyPriv;
 
-  LLOGLN(10, ("rdpPolySegment: %d", nseg));
+  LLOGLN(10, ("rdpPolySegment:"));
+  LLOGLN(10, ("  nseg %d", nseg));
 
   segs = 0;
   if (nseg) /* get the rects */
@@ -114,7 +111,7 @@ rdpPolySegment(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment* pSegs)
         LLOGLN(10, ("rdpPolySegment: gettig dirty"));
         pDstPriv->is_dirty = 1;
         pDirtyPriv = pDstPriv;
-        dirty_type = RDI_IMGLY;
+        dirty_type = RDI_IMGLL;
       }
       else
       {
