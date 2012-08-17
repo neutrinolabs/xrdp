@@ -1490,7 +1490,7 @@ rdpup_create_window(WindowPtr pWindow, rdpWindowRec* priv)
   int root_id;
   char title[256];
 
-  LLOGLN(0, ("rdpup_create_window: id 0x%8.8x", pWindow->drawable.id));
+  LLOGLN(10, ("rdpup_create_window: id 0x%8.8x", pWindow->drawable.id));
   if (g_connected)
   {
     root_id = pWindow->drawable.pScreen->root->drawable.id;
@@ -1581,7 +1581,7 @@ rdpup_create_window(WindowPtr pWindow, rdpWindowRec* priv)
 void
 rdpup_delete_window(WindowPtr pWindow, rdpWindowRec* priv)
 {
-  LLOGLN(0, ("rdpup_delete_window: id 0x%8.8x", pWindow->drawable.id));
+  LLOGLN(10, ("rdpup_delete_window: id 0x%8.8x", pWindow->drawable.id));
   if (g_connected)
   {
     rdpup_pre_check(8);
