@@ -20,7 +20,7 @@
 # limitations under the License.
 
 # debian packages needed
-# flex bison libxml2-dev intltool xsltproc xutils-dev python-libxml2 g++
+# flex bison libxml2-dev intltool xsltproc xutils-dev python-libxml2 g++ xutils
 
 download_file()
 {
