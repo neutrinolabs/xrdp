@@ -86,29 +86,7 @@ rdpCopyPlane(DrawablePtr pSrc, DrawablePtr pDst,
   rdpPixmapRec* pDstPriv;
   rdpPixmapRec* pDirtyPriv;
 
-  PixmapPtr pSrcPixmap;
-  rdpPixmapRec* pSrcPriv;
-
   LLOGLN(10, ("rdpCopyPlane:"));
-
-  if (pSrc->type == DRAWABLE_PIXMAP)
-  {
-    pSrcPixmap = (PixmapPtr)pSrc;
-    pSrcPriv = GETPIXPRIV(pSrcPixmap);
-    if (XRDP_IS_OS(pSrcPriv))
-    {
-      rdpup_check_dirty(pSrcPixmap, pSrcPriv);
-    }
-  }
-  if (pDst->type == DRAWABLE_PIXMAP)
-  {
-    pDstPixmap = (PixmapPtr)pDst;
-    pDstPriv = GETPIXPRIV(pDstPixmap);
-    if (XRDP_IS_OS(pDstPriv))
-    {
-      rdpup_check_dirty(pDstPixmap, pDstPriv);
-    }
-  }
 
   /* do original call */
   rv = rdpCopyPlaneOrg(pSrc, pDst, pGC, srcx, srcy, w, h,
@@ -200,7 +178,7 @@ rdpCopyPlane(DrawablePtr pSrc, DrawablePtr pDst,
         RegionUninit(&reg1);
         RegionUninit(&reg2);
       }
-      else
+      else if (got_id)
       {
         rdpup_begin_update();
         box.x1 = pDst->x + dstx;
