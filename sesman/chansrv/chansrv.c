@@ -69,59 +69,132 @@ struct xrdp_api_data
 };
 
 /*****************************************************************************/
+/* add data to chan_item, on its way to the client */
+/* returns error */
+static int APP_CC
+add_data_to_chan_item(struct chan_item* chan_item, char* data, int size)
+{
+  struct stream* s;
+  struct chan_out_data* cod;
+
+  make_stream(s);
+  init_stream(s, size);
+  g_memcpy(s->data, data, size);
+  s->end = s->data + size;
+  cod = (struct chan_out_data*)g_malloc(sizeof(struct chan_out_data), 1);
+  cod->s = s;
+  if (chan_item->tail == 0)
+  {
+    chan_item->tail = cod;
+    chan_item->head = cod;
+  }
+  else
+  {
+    chan_item->tail->next = cod;
+    chan_item->tail = cod;
+  }
+  return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+static int APP_CC
+send_data_from_chan_item(struct chan_item* chan_item)
+{
+  struct stream* s;
+  struct chan_out_data* cod;
+  int bytes_left;
+  int size;
+  int chan_flags;
+  int error;
+
+  if (chan_item->head == 0)
+  {
+    return 0;
+  }
+  cod = chan_item->head;
+  bytes_left = (int)(cod->s->end - cod->s->p);
+  size = MIN(1600, bytes_left);
+  chan_flags = 0;
+  if (cod->s->p == cod->s->data)
+  {
+    chan_flags |= 1; /* first */
+  }
+  if (cod->s->p + size >= cod->s->end)
+  {
+    chan_flags |= 2; /* last */
+  }
+  s = trans_get_out_s(g_con_trans, 8192);
+  out_uint32_le(s, 0); /* version */
+  out_uint32_le(s, 8 + 8 + 2 + 2 + 2 + 4 + size); /* size */
+  out_uint32_le(s, 8); /* msg id */
+  out_uint32_le(s, 8 + 2 + 2 + 2 + 4 + size); /* size */
+  out_uint16_le(s, chan_item->id);
+  out_uint16_le(s, chan_flags);
+  out_uint16_le(s, size);
+  out_uint32_le(s, cod->s->size);
+  out_uint8a(s, cod->s->p, size);
+  s_mark_end(s);
+  LOGM((LOG_LEVEL_DEBUG, "chansrv::send_channel_data: -- "
+        "size %d chan_flags 0x%8.8x", size, chan_flags));
+  error = trans_force_write(g_con_trans);
+  if (error != 0)
+  {
+    return 1;
+  }
+  cod->s->p += size;
+  if (cod->s->p >= cod->s->end)
+  {
+    free_stream(cod->s);
+    chan_item->head = chan_item->head->next;
+    if (chan_item->head == 0)
+    {
+      chan_item->tail = 0;
+    }
+    g_free(cod);
+  }
+  return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+static int APP_CC
+check_chan_items(void)
+{
+  int index;
+
+  for (index = 0; index < g_num_chan_items; index++)
+  {
+    if (g_chan_items[index].head != 0)
+    {
+      send_data_from_chan_item(g_chan_items + index);
+    }
+  }
+  return 0;
+}
+
+/*****************************************************************************/
 /* returns error */
 int APP_CC
 send_channel_data(int chan_id, char* data, int size)
 {
-  struct stream * s;
-  int chan_flags;
-  int total_size;
-  int sent;
-  int rv;
+  int index;
 
+  LOGM((LOG_LEVEL_DEBUG, "chansrv::send_channel_data: size %d", size));
   if (chan_id == -1)
   {
     return 1;
   }
-  s = trans_get_out_s(g_con_trans, 8192);
-  if (s == 0)
+  for (index = 0; index < g_num_chan_items; index++)
   {
-    return 1;
+    if (g_chan_items[index].id == chan_id)
+    {
+      add_data_to_chan_item(g_chan_items + index, data, size);
+      check_chan_items();
+      return 0;
+    }
   }
-  rv = 0;
-  sent = 0;
-  total_size = size;
-  while (sent < total_size)
-  {
-    size = MIN(1600, total_size - sent);
-    chan_flags = 0;
-    if (sent == 0)
-    {
-      chan_flags |= 1; /* first */
-    }
-    if (size + sent == total_size)
-    {
-      chan_flags |= 2; /* last */
-    }
-    out_uint32_le(s, 0); /* version */
-    out_uint32_le(s, 8 + 8 + 2 + 2 + 2 + 4 + size); /* size */
-    out_uint32_le(s, 8); /* msg id */
-    out_uint32_le(s, 8 + 2 + 2 + 2 + 4 + size); /* size */
-    out_uint16_le(s, chan_id);
-    out_uint16_le(s, chan_flags);
-    out_uint16_le(s, size);
-    out_uint32_le(s, total_size);
-    out_uint8a(s, data + sent, size);
-    s_mark_end(s);
-    rv = trans_force_write(g_con_trans);
-    if (rv != 0)
-    {
-      break;
-    }
-    sent += size;
-    s = trans_get_out_s(g_con_trans, 8192);
-  }
-  return rv;
+  return 1;
 }
 
 /*****************************************************************************/
@@ -131,7 +204,7 @@ send_init_response_message(void)
 {
   struct stream * s = (struct stream *)NULL;
 
-  LOGM((LOG_LEVEL_INFO,"send_init_response_message:"))
+  LOGM((LOG_LEVEL_INFO, "send_init_response_message:"));
   s = trans_get_out_s(g_con_trans, 8192);
   if (s == 0)
   {
@@ -339,6 +412,7 @@ static int APP_CC
 process_message_channel_data_response(struct stream* s)
 {
   LOG(10, ("process_message_channel_data_response:"));
+  check_chan_items();
   return 0;
 }
 
@@ -911,21 +985,41 @@ main(int argc, char** argv)
 {
   tbus waiters[4];
   int pid = 0;
-  char text[256] = "";
-  char* display_text = (char *)NULL;
-#if XRDP_CHANNEL_LOG
-  char cfg_file[256];
+  char text[256];
+  char* home_text;
+  char* display_text;
+  char log_file[256];
   enum logReturns error;
-#endif
+  struct log_config logconfig;
 
   g_init("xrdp-chansrv"); /* os_calls */
+
+  home_text = g_getenv("HOME");
+  if (home_text == 0)
+  {
+    g_writeln("error reading HOME environment variable");
+    g_deinit();
+    return 1;
+  }
+
   read_ini();
   pid = g_getpid();
 
-#if XRDP_CHANNEL_LOG
   /* starting logging subsystem */
-  g_snprintf(cfg_file, 255, "%s/sesman.ini", XRDP_CFG_PATH);
-  error = log_start(cfg_file,"XRDP-Chansrv");
+  g_memset(&logconfig, 0, sizeof(struct log_config));
+  logconfig.program_name = "XRDP-Chansrv";
+  g_snprintf(log_file, 255, "%s/xrdp-chansrv.log", home_text);
+  g_writeln("chansrv::main: using log file [%s]", log_file);
+  if (g_file_exist(log_file))
+  {
+    g_file_delete(log_file);
+  }
+  logconfig.log_file = log_file;
+  logconfig.fd = -1;
+  logconfig.log_level = LOG_LEVEL_ERROR;
+  logconfig.enable_syslog = 0;
+  logconfig.syslog_level = 0;
+  error = log_start_from_param(&logconfig);
   if (error != LOG_STARTUP_OK)
   {
     switch (error)
@@ -942,10 +1036,9 @@ main(int argc, char** argv)
         break;
     }
     g_deinit();
-    g_exit(1);
+    return 1;
   }
   LOGM((LOG_LEVEL_ALWAYS, "main: app started pid %d(0x%8.8x)", pid, pid));
-#endif
   /*  set up signal handler  */
   g_signal_kill(term_signal_handler); /* SIGKILL */
   g_signal_terminate(term_signal_handler); /* SIGTERM */
@@ -958,6 +1051,7 @@ main(int argc, char** argv)
   if (g_display_num == 0)
   {
     LOGM((LOG_LEVEL_ERROR, "main: error, display is zero"));
+    g_deinit();
     return 1;
   }
   LOGM((LOG_LEVEL_INFO, "main: using DISPLAY %d", g_display_num));

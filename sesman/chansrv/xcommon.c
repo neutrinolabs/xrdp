@@ -164,7 +164,7 @@ xcommon_check_wait_objs(void)
     {
       time_diff = xcommon_get_local_time() -
                   g_waiting_for_data_response_time;
-      if (time_diff > 1000)
+      if (time_diff > 10000)
       {
         LOGM((LOG_LEVEL_ERROR, "xcommon_check_wait_objs: warning, "
               "waiting for data response too long"));
