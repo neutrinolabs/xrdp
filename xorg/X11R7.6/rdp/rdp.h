@@ -70,7 +70,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "exevents.h"
 #include "xserver-properties.h"
 #include "xkbsrv.h"
-#include "../../../common/xrdp_client_info.h"
+/* in xrdp/common */
+#include "xrdp_client_info.h"
+#include "xrdp_constants.h"
 
 //#include "colormapst.h"
 
@@ -175,12 +177,79 @@ typedef rdpWindowRec* rdpWindowPtr;
 #define GETWINPRIV(_pWindow) \
 (rdpWindowPtr)dixGetPrivateAddr(&(_pWindow->devPrivates), &g_rdpWindowIndex)
 
+#define XR_IS_ROOT(_pWindow) ((_pWindow)->drawable.pScreen->root == (_pWindow))
+
+/* for tooltips */
+#define XR_STYLE_TOOLTIP (0x80000000)
+#define XR_EXT_STYLE_TOOLTIP (0x00000080 | 0x00000008)
+
+/* for normal desktop windows */
+/* WS_TILEDWINDOW (WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME |
+                   WS_MINIMIZEBOX | WS_MAXIMIZEBOX) */
+#define XR_STYLE_NORMAL (0x00C00000 | 0x00080000 | 0x00040000 | 0x00010000 | 0x00020000)
+#define XR_EXT_STYLE_NORMAL (0x00040000)
+
+/* for dialogs */
+#define XR_STYLE_DIALOG (0x80000000)
+#define XR_EXT_STYLE_DIALOG (0x00040000)
+
+#define RDI_FILL 1
+#define RDI_IMGLL 2 /* lossless */
+#define RDI_IMGLY 3 /* lossy */
+#define RDI_LINE 4
+
+struct urdp_draw_item_fill
+{
+  int opcode;
+  int fg_color;
+  int bg_color;
+  int pad0;
+};
+
+struct urdp_draw_item_img
+{
+  int opcode;
+  int pad0;
+};
+
+struct urdp_draw_item_line
+{
+  int opcode;
+  int fg_color;
+  int bg_color;
+  int width;
+  xSegment* segs;
+  int nseg;
+  int flags;
+};
+
+union urdp_draw_item
+{
+  struct urdp_draw_item_fill fill;
+  struct urdp_draw_item_img img;
+  struct urdp_draw_item_line line;
+};
+
+struct rdp_draw_item
+{
+  int type;
+  int flags;
+  struct rdp_draw_item* prev;
+  struct rdp_draw_item* next;
+  RegionPtr reg;
+  union urdp_draw_item u;
+};
+
 struct _rdpPixmapRec
 {
   int status;
   int rdpindex;
   int allocBytes;
   int con_number;
+  int is_dirty;
+  int pad0;
+  struct rdp_draw_item* draw_item_head;
+  struct rdp_draw_item* draw_item_tail;
 };
 typedef struct _rdpPixmapRec rdpPixmapRec;
 typedef rdpPixmapRec* rdpPixmapPtr;
@@ -242,10 +311,33 @@ int
 g_chmod_hex(const char* filename, int flags);
 void
 hexdump(unsigned char *p, unsigned int len);
+void
+RegionAroundSegs(RegionPtr reg, xSegment* segs, int nseg);
 
 /* rdpdraw.c */
 Bool
 rdpCloseScreen(int i, ScreenPtr pScreen);
+
+
+int
+draw_item_add(rdpPixmapRec* priv, struct rdp_draw_item* di);
+int
+draw_item_remove(rdpPixmapRec* priv, struct rdp_draw_item* di);
+int
+draw_item_remove_all(rdpPixmapRec* priv);
+int
+draw_item_pack(rdpPixmapRec* priv);
+int
+draw_item_add_img_region(rdpPixmapRec* priv, RegionPtr reg, int opcode,
+                         int type);
+int
+draw_item_add_fill_region(rdpPixmapRec* priv, RegionPtr reg, int color,
+                          int opcode);
+int
+draw_item_add_line_region(rdpPixmapRec* priv, RegionPtr reg, int color,
+                          int opcode, int width, xSegment* segs, int nsegs,
+                          int is_segment);
+
 
 PixmapPtr
 rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
@@ -404,6 +496,12 @@ rdpup_paint_rect_os(int x, int y, int cx, int cy,
                     int rdpindex, int srcx, int srcy);
 void
 rdpup_set_hints(int hints, int mask);
+void
+rdpup_create_window(WindowPtr pWindow, rdpWindowRec* priv);
+void
+rdpup_delete_window(WindowPtr pWindow, rdpWindowRec* priv);
+int
+rdpup_check_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec* pDirtyPriv);
 
 #if defined(X_BYTE_ORDER)
 #  if X_BYTE_ORDER == X_LITTLE_ENDIAN

@@ -19,9 +19,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# flex bison libxml2-dev intltool
-# xsltproc
-# xutils-dev python-libxml2
+# debian packages needed
+# flex bison libxml2-dev intltool xsltproc xutils-dev python-libxml2 g++ xutils
 
 download_file()
 {
@@ -222,7 +221,7 @@ make_it()
     echo "*** processing module $mod_name ($count of $num_modules) ***"
     echo ""
 
-    extract_it $mod_file $mod_name $mod_args
+    extract_it $mod_file $mod_name "$mod_args"
     if [ $? -ne 0 ]; then
         echo ""
         echo "extract failed for module $mod_name"

@@ -37,6 +37,7 @@ extern DevPrivateKeyRec g_rdpPixmapIndex; /* from rdpmain.c */
 extern int g_Bpp; /* from rdpmain.c */
 extern ScreenPtr g_pScreen; /* from rdpmain.c */
 extern Bool g_wrapPixmap; /* from rdpmain.c */
+extern int g_do_dirty_os; /* in rdpmain.c */
 
 extern GCOps g_rdpGCOps; /* from rdpdraw.c */
 
@@ -71,6 +72,9 @@ rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
   int up;
   int down;
   int got_id;
+  int dirty_type;
+  int post_process;
+  int reset_surface;
   xRectangle* regRects;
   xRectangle* r;
   xRectangle* rect1;
@@ -80,6 +84,7 @@ rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
   WindowPtr pDstWnd;
   PixmapPtr pDstPixmap;
   rdpPixmapRec* pDstPriv;
+  rdpPixmapRec* pDirtyPriv;
 
   LLOGLN(10, ("rdpPolyRectangle:"));
 
@@ -93,6 +98,10 @@ rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
   /* do original call */
   rdpPolyRectangleOrg(pDrawable, pGC, nrects, rects);
 
+  dirty_type = 0;
+  pDirtyPriv = 0;
+  post_process = 0;
+  reset_surface = 0;
   got_id = 0;
   if (pDrawable->type == DRAWABLE_PIXMAP)
   {
@@ -100,9 +109,21 @@ rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
     pDstPriv = GETPIXPRIV(pDstPixmap);
     if (XRDP_IS_OS(pDstPriv))
     {
-      rdpup_switch_os_surface(pDstPriv->rdpindex);
-      rdpup_get_pixmap_image_rect(pDstPixmap, &id);
-      got_id = 1;
+      post_process = 1;
+      if (g_do_dirty_os)
+      {
+        LLOGLN(10, ("rdpPolyRectangle: gettig dirty"));
+        pDstPriv->is_dirty = 1;
+        pDirtyPriv = pDstPriv;
+        dirty_type = RDI_IMGLL;
+      }
+      else
+      {
+        rdpup_switch_os_surface(pDstPriv->rdpindex);
+        reset_surface = 1;
+        rdpup_get_pixmap_image_rect(pDstPixmap, &id);
+        got_id = 1;
+      }
     }
   }
   else
@@ -112,12 +133,13 @@ rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
       pDstWnd = (WindowPtr)pDrawable;
       if (pDstWnd->viewable)
       {
+        post_process = 1;
         rdpup_get_screen_image_rect(&id);
         got_id = 1;
       }
     }
   }
-  if (!got_id)
+  if (!post_process)
   {
     g_free(rect1);
     return;
@@ -164,27 +186,44 @@ rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
   {
     if (regRects != 0)
     {
-      rdpup_begin_update();
-      if (pGC->lineStyle == LineSolid)
+      if (dirty_type != 0)
       {
-        rdpup_set_fgcolor(pGC->fgPixel);
-        rdpup_set_opcode(pGC->alu);
-        for (i = 0; i < nrects * 4; i++)
+        fill_reg = RegionFromRects(nrects * 4, regRects, CT_NONE);
+        if (pGC->lineStyle == LineSolid)
         {
-          r = regRects + i;
-          rdpup_fill_rect(r->x, r->y, r->width, r->height);
+          draw_item_add_fill_region(pDirtyPriv, fill_reg, pGC->fgPixel,
+                                    pGC->alu);
         }
-        rdpup_set_opcode(GXcopy);
+        else
+        {
+          draw_item_add_img_region(pDirtyPriv, fill_reg, GXcopy, dirty_type);
+        }
+        RegionDestroy(fill_reg);
       }
-      else
+      else if (got_id)
       {
-        for (i = 0; i < nrects * 4; i++)
+        rdpup_begin_update();
+        if (pGC->lineStyle == LineSolid)
         {
-          r = regRects + i;
-          rdpup_send_area(&id, r->x, r->y, r->width, r->height);
+          rdpup_set_fgcolor(pGC->fgPixel);
+          rdpup_set_opcode(pGC->alu);
+          for (i = 0; i < nrects * 4; i++)
+          {
+            r = regRects + i;
+            rdpup_fill_rect(r->x, r->y, r->width, r->height);
+          }
+          rdpup_set_opcode(GXcopy);
         }
+        else
+        {
+          for (i = 0; i < nrects * 4; i++)
+          {
+            r = regRects + i;
+            rdpup_send_area(&id, r->x, r->y, r->width, r->height);
+          }
+        }
+        rdpup_end_update();
       }
-      rdpup_end_update();
     }
   }
   else if (cd == 2)
@@ -196,27 +235,42 @@ rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
       num_clips = REGION_NUM_RECTS(&clip_reg);
       if (num_clips > 0)
       {
-        rdpup_begin_update();
-        if (pGC->lineStyle == LineSolid)
+        if (dirty_type != 0)
         {
-          rdpup_set_fgcolor(pGC->fgPixel);
-          rdpup_set_opcode(pGC->alu);
-          for (j = num_clips - 1; j >= 0; j--)
+          if (pGC->lineStyle == LineSolid)
           {
-            box = REGION_RECTS(&clip_reg)[j];
-            rdpup_fill_rect(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+            draw_item_add_fill_region(pDirtyPriv, &clip_reg, pGC->fgPixel,
+                                      pGC->alu);
           }
-          rdpup_set_opcode(GXcopy);
-        }
-        else
-        {
-          for (j = num_clips - 1; j >= 0; j--)
+          else
           {
-            box = REGION_RECTS(&clip_reg)[j];
-            rdpup_send_area(&id, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+            draw_item_add_img_region(pDirtyPriv, &clip_reg, GXcopy, dirty_type);
           }
         }
-        rdpup_end_update();
+        else if (got_id)
+        {
+          rdpup_begin_update();
+          if (pGC->lineStyle == LineSolid)
+          {
+            rdpup_set_fgcolor(pGC->fgPixel);
+            rdpup_set_opcode(pGC->alu);
+            for (j = num_clips - 1; j >= 0; j--)
+            {
+              box = REGION_RECTS(&clip_reg)[j];
+              rdpup_fill_rect(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+            }
+            rdpup_set_opcode(GXcopy);
+          }
+          else
+          {
+            for (j = num_clips - 1; j >= 0; j--)
+            {
+              box = REGION_RECTS(&clip_reg)[j];
+              rdpup_send_area(&id, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+            }
+          }
+          rdpup_end_update();
+        }
       }
       RegionDestroy(fill_reg);
     }
@@ -224,5 +278,8 @@ rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
   RegionUninit(&clip_reg);
   g_free(regRects);
   g_free(rect1);
-  rdpup_switch_os_surface(-1);
+  if (reset_surface)
+  {
+    rdpup_switch_os_surface(-1);
+  }
 }

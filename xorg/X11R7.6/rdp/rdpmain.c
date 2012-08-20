@@ -42,8 +42,15 @@ DevPrivateKeyRec g_rdpPixmapIndex;
 DeviceIntPtr g_pointer = 0;
 DeviceIntPtr g_keyboard = 0;
 
-Bool g_wrapWindow = 0;
+int g_can_do_pix_to_pix = 1;
+int g_do_dirty_os = 1; /* delay remoting off screen bitmaps */
+Bool g_wrapWindow = 1;
 Bool g_wrapPixmap = 1;
+
+/* if true, running in RemoteApp / RAIL mode */
+int g_use_rail = 0;
+
+WindowPtr g_invalidate_window = 0;
 
 /* if true, use a unix domain socket instead of a tcp socket */
 int g_use_uds = 0;

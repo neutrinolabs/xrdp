@@ -361,6 +361,95 @@ lib_mod_event(struct mod* mod, int msg, tbus param1, tbus param2,
 
 /******************************************************************************/
 /* return error */
+static int APP_CC
+process_server_window_new_update(struct mod* mod, struct stream* s)
+{
+  int flags;
+  int window_id;
+  int title_bytes;
+  int index;
+  int bytes;
+  int rv;
+  struct rail_window_state_order rwso;
+
+  g_memset(&rwso, 0, sizeof(rwso));
+  in_uint32_le(s, window_id);
+  in_uint32_le(s, rwso.owner_window_id);
+  in_uint32_le(s, rwso.style);
+  in_uint32_le(s, rwso.extended_style);
+  in_uint32_le(s, rwso.show_state);
+  in_uint16_le(s, title_bytes);
+  if (title_bytes > 0)
+  {
+    rwso.title_info = g_malloc(title_bytes + 1, 0);
+    in_uint8a(s, rwso.title_info, title_bytes);
+    rwso.title_info[title_bytes] = 0;
+  }
+  in_uint32_le(s, rwso.client_offset_x);
+  in_uint32_le(s, rwso.client_offset_y);
+  in_uint32_le(s, rwso.client_area_width);
+  in_uint32_le(s, rwso.client_area_height);
+  in_uint32_le(s, rwso.rp_content);
+  in_uint32_le(s, rwso.root_parent_handle);
+  in_uint32_le(s, rwso.window_offset_x);
+  in_uint32_le(s, rwso.window_offset_y);
+  in_uint32_le(s, rwso.window_client_delta_x);
+  in_uint32_le(s, rwso.window_client_delta_y);
+  in_uint32_le(s, rwso.window_width);
+  in_uint32_le(s, rwso.window_height);
+  in_uint16_le(s, rwso.num_window_rects);
+  if (rwso.num_window_rects > 0)
+  {
+    bytes = sizeof(struct rail_window_rect) * rwso.num_window_rects;
+    rwso.window_rects = (struct rail_window_rect*)g_malloc(bytes, 0);
+    for (index = 0; index < rwso.num_window_rects; index++)
+    {
+      in_uint16_le(s, rwso.window_rects[index].left);
+      in_uint16_le(s, rwso.window_rects[index].top);
+      in_uint16_le(s, rwso.window_rects[index].right);
+      in_uint16_le(s, rwso.window_rects[index].bottom);
+    }
+  }
+  in_uint32_le(s, rwso.visible_offset_x);
+  in_uint32_le(s, rwso.visible_offset_y);
+  in_uint16_le(s, rwso.num_visibility_rects);
+  if (rwso.num_visibility_rects > 0)
+  {
+    bytes = sizeof(struct rail_window_rect) * rwso.num_visibility_rects;
+    rwso.visibility_rects = (struct rail_window_rect*)g_malloc(bytes, 0);
+    for (index = 0; index < rwso.num_visibility_rects; index++)
+    {
+      in_uint16_le(s, rwso.visibility_rects[index].left);
+      in_uint16_le(s, rwso.visibility_rects[index].top);
+      in_uint16_le(s, rwso.visibility_rects[index].right);
+      in_uint16_le(s, rwso.visibility_rects[index].bottom);
+    }
+  }
+  in_uint32_le(s, flags);
+  mod->server_window_new_update(mod, window_id, &rwso, flags);
+  rv = 0;
+  g_free(rwso.title_info);
+  g_free(rwso.window_rects);
+  g_free(rwso.visibility_rects);
+  return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
+process_server_window_delete(struct mod* mod, struct stream* s)
+{
+  int window_id;
+  int rv;
+
+  in_uint32_le(s, window_id);
+  mod->server_window_delete(mod, window_id);
+  rv = 0;
+  return rv;
+}
+
+/******************************************************************************/
+/* return error */
 static int
 lib_mod_process_orders(struct mod* mod, int type, struct stream* s)
 {
@@ -494,6 +583,12 @@ lib_mod_process_orders(struct mod* mod, int type, struct stream* s)
       in_uint32_le(s, hints);
       in_uint32_le(s, mask);
       rv = mod->server_set_hints(mod, hints, mask);
+      break;
+    case 25: /* server_window_new_update */
+      rv = process_server_window_new_update(mod, s);
+      break;
+    case 26: /* server_window_delete */
+      rv = process_server_window_delete(mod, s);
       break;
     default:
       g_writeln("lib_mod_process_orders: unknown order type %d", type);

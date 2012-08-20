@@ -791,6 +791,25 @@ check_keysa(void)
 
 /******************************************************************************/
 void
+sendDownUpKeyEvent(int type, int x_scancode)
+{
+  /* if type is keydown, send keydown + keyup */
+  /* this allows us to ignore keyup events    */
+  if (type == KeyPress)
+  {
+    rdpEnqueueKey(KeyPress, x_scancode);
+    rdpEnqueueKey(KeyRelease, x_scancode);
+  }
+}
+
+/**
+ * @param down   - true for KeyDown events, false otherwise
+ * @param param1 - ASCII code of pressed key
+ * @param param2 -
+ * @param param3 - scancode of pressed key
+ * @param param4 -
+ ******************************************************************************/
+void
 KbdAddEvent(int down, int param1, int param2, int param3, int param4)
 {
   int rdp_scancode;
@@ -799,63 +818,75 @@ KbdAddEvent(int down, int param1, int param2, int param3, int param4)
   int is_spe;
   int type;
 
+#if 0
+  fprintf(stderr, "down=0x%x param1=0x%x param2=0x%x param3=0x%x "
+          "param4=0x%x\n", down, param1, param2, param3, param4);
+#endif
+
   type = down ? KeyPress : KeyRelease;
   rdp_scancode = param3;
   is_ext = param4 & 256; /* 0x100 */
   is_spe = param4 & 512; /* 0x200 */
   x_scancode = 0;
+
   switch (rdp_scancode)
   {
-    case 15: /* tab */
-      if (!down && !g_tab_down)
+    case 58: /* caps lock             */
+    case 42: /* left shift            */
+    case 54: /* right shift           */
+    case 70: /* scroll lock           */
+      x_scancode = rdp_scancode + MIN_KEY_CODE;
+      if (x_scancode > 0)
       {
-        check_keysa();
-        /* leave x_scancode 0 here, we don't want the tab key up */
+        rdpEnqueueKey(type, x_scancode);
+      }
+
+      break;
+
+    case 56: /* left - right alt button */
+      if (is_ext)
+      {
+        x_scancode = 113; /* right alt button */
       }
       else
       {
-        x_scancode = 23;
+        x_scancode = 64;  /* left alt button   */
       }
+
+      rdpEnqueueKey(type, x_scancode);
+      break;
+
+    case 15: /* tab */
+      if (!down && !g_tab_down)
+      {
+        check_keysa(); /* leave x_scancode 0 here, we don't want the tab key up */
+      }
+      else
+      {
+        sendDownUpKeyEvent(type, 23);
+      }
+
       g_tab_down = down;
       break;
-    case 28: /* Enter or Return */
-      x_scancode = is_ext ? 108 : 36;
-      break;
+
     case 29: /* left or right ctrl */
-      /* this is to handle special case with pause key sending
-         control first */
+      /* this is to handle special case with pause key sending control first */
       if (is_spe)
       {
         if (down)
         {
-          g_pause_spe = 1;
+            g_pause_spe = 1;
+            /* leave x_scancode 0 here, we don't want the control key down */
         }
-        /* leave x_scancode 0 here, we don't want the control key down */
       }
       else
       {
         x_scancode = is_ext ? 109 : 37;
         g_ctrl_down = down ? x_scancode : 0;
+        rdpEnqueueKey(type, x_scancode);
       }
       break;
-    case 42: /* left shift */
-      x_scancode = 50;
-      g_shift_down = down ? x_scancode : 0;
-      break;
-    case 53: /* / */
-      x_scancode = is_ext ? 112 : 61;
-      break;
-    case 54: /* right shift */
-      x_scancode = 62;
-      g_shift_down = down ? x_scancode : 0;
-      break;
-    case 55: /* * on KP or Print Screen */
-      x_scancode = is_ext ? 111 : 63;
-      break;
-    case 56: /* left or right alt */
-      x_scancode = is_ext ? 113 : 64;
-      g_alt_down = down ? x_scancode : 0;
-      break;
+
     case 69: /* Pause or Num Lock */
       if (g_pause_spe)
       {
@@ -867,62 +898,95 @@ KbdAddEvent(int down, int param1, int param2, int param3, int param4)
       }
       else
       {
-        x_scancode = g_ctrl_down ? 110 : 77;
+          x_scancode = g_ctrl_down ? 110 : 77;
       }
+      sendDownUpKeyEvent(type, x_scancode);
       break;
-    case 70: /* scroll lock */
-      x_scancode = 78;
-      if (!down)
-      {
-        g_scroll_lock_down = !g_scroll_lock_down;
-      }
+
+    case 28: /* Enter or Return */
+      x_scancode = is_ext ? 108 : 36;
+      sendDownUpKeyEvent(type, x_scancode);
       break;
+
+    case 53: /* / */
+      x_scancode = is_ext ? 112 : 61;
+      sendDownUpKeyEvent(type, x_scancode);
+      break;
+
+    case 55: /* * on KP or Print Screen */
+      x_scancode = is_ext ? 111 : 63;
+      sendDownUpKeyEvent(type, x_scancode);
+      break;
+
     case 71: /* 7 or Home */
       x_scancode = is_ext ? 97 : 79;
+      sendDownUpKeyEvent(type, x_scancode);
       break;
+
     case 72: /* 8 or Up */
       x_scancode = is_ext ? 98 : 80;
+      sendDownUpKeyEvent(type, x_scancode);
       break;
+
     case 73: /* 9 or PgUp */
       x_scancode = is_ext ? 99 : 81;
+      sendDownUpKeyEvent(type, x_scancode);
       break;
+
     case 75: /* 4 or Left */
       x_scancode = is_ext ? 100 : 83;
+      sendDownUpKeyEvent(type, x_scancode);
       break;
+
     case 77: /* 6 or Right */
       x_scancode = is_ext ? 102 : 85;
+      sendDownUpKeyEvent(type, x_scancode);
       break;
+
     case 79: /* 1 or End */
       x_scancode = is_ext ? 103 : 87;
+      sendDownUpKeyEvent(type, x_scancode);
       break;
+
     case 80: /* 2 or Down */
       x_scancode = is_ext ? 104 : 88;
+      sendDownUpKeyEvent(type, x_scancode);
       break;
+
     case 81: /* 3 or PgDn */
       x_scancode = is_ext ? 105 : 89;
+      sendDownUpKeyEvent(type, x_scancode);
       break;
+
     case 82: /* 0 or Insert */
       x_scancode = is_ext ? 106 : 90;
+      sendDownUpKeyEvent(type, x_scancode);
       break;
+
     case 83: /* . or Delete */
       x_scancode = is_ext ? 107 : 91;
+      sendDownUpKeyEvent(type, x_scancode);
       break;
+
     case 91: /* left win key */
-      x_scancode = 115;
+      rdpEnqueueKey(type, 115);
       break;
+
     case 92: /* right win key */
-      x_scancode = 116;
+      rdpEnqueueKey(type, 116);
       break;
+
     case 93: /* menu key */
-      x_scancode = 117;
+      rdpEnqueueKey(type, 117);
       break;
+
     default:
       x_scancode = rdp_scancode + MIN_KEY_CODE;
+      if (x_scancode > 0)
+      {
+        sendDownUpKeyEvent(type, x_scancode);
+      }
       break;
-  }
-  if (x_scancode > 0)
-  {
-    rdpEnqueueKey(type, x_scancode);
   }
 }
 

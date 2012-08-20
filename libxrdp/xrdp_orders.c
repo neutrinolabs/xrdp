@@ -1945,7 +1945,15 @@ xrdp_orders_send_as_rfx(struct xrdp_orders* self,
                         int width, int height, int bpp,
                         int hints)
 {
+  if (hints & 1)
+  {
+    return 0;
+  }
   if (bpp != 24)
+  {
+    return 0;
+  }
+  if (width * height < 64)
   {
     return 0;
   }

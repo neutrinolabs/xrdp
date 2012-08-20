@@ -68,7 +68,7 @@ rdpFillSpans(DrawablePtr pDrawable, GCPtr pGC, int nInit,
   PixmapPtr pDstPixmap;
   rdpPixmapRec* pDstPriv;
 
-  LLOGLN(0, ("rdpFillSpans: todo"));
+  LLOGLN(10, ("rdpFillSpans: todo"));
 
   /* do original call */
   rdpFillSpansOrg(pDrawable, pGC, nInit, pptInit, pwidthInit, fSorted);
