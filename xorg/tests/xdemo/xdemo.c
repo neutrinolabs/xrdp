@@ -192,12 +192,41 @@ int drawFont(int count, char *msg)
     return 0; // nothing to do
 }
 
+static void
+drawoffscreen(void)
+{
+    int depth;
+    Pixmap pixmap1;
+    Pixmap pixmap2;
+
+    printf("draw off screen, should see green rect\n");
+    depth = DefaultDepth(g_disp, DefaultScreen(g_disp));
+
+    /* blue */
+    pixmap1 = XCreatePixmap(g_disp, g_win, 64, 64, depth);
+    XSetForeground(g_disp, g_gc, 0x000000ff);
+    XFillRectangle(g_disp, pixmap1, g_gc, 0, 0, 64, 64);
+
+    /* green */
+    pixmap2 = XCreatePixmap(g_disp, g_win, 64, 64, depth);
+    XSetForeground(g_disp, g_gc, 0x0000ff00);
+    XFillRectangle(g_disp, pixmap2, g_gc, 0, 0, 64, 64);
+
+    /* copy green to blue */
+    XCopyArea(g_disp, pixmap2, pixmap1, g_gc, 0, 0, 64, 64, 0, 0);
+
+    /* put on screen */
+    XCopyArea(g_disp, pixmap1, g_win, g_gc, 0, 0, 64, 64, 128, 128);
+
+    XFreePixmap(g_disp, pixmap1);
+    XFreePixmap(g_disp, pixmap2);
+}
+
 /**
  * display a usage message
  */
-
-void
-usage()
+static void
+usage(void)
 {
     printf("usage: xdemo [-l] [-r] [-s] [-f <string>] [-i <image file>] [-g <WxH>] [-c <count>] [-o <scroll type>] [-d <delay>] -z\n");
     printf("         -l                        draw lines\n");
@@ -210,10 +239,12 @@ usage()
     printf("         -d <delay>                loop delay in micro seconds, default 1000\n");
     printf("         -o <jump|smooth1|smooth2| define scrolling method\n");
     printf("             smooth3|smooth4>\n");
-    printf("         -z <proxy_app>            zero proxy counters for specified application\n\n");
+    printf("         -z <proxy_app>            zero proxy counters for specified application\n");
+    printf("         -j                        offscreen to offscreen test\n\n");
 }
 
-int main(int argc, char **argv)
+int
+main(int argc, char** argv)
 {
     XEvent          evt;
     Colormap        colormap;
@@ -230,6 +261,7 @@ int main(int argc, char **argv)
     int             draw_stipples;
     int             draw_fonts;
     int             draw_image;
+    int             draw_offscreen;
     int             zero_counters;
     int             scroll_type;
     char            image_file[256];
@@ -245,6 +277,7 @@ int main(int argc, char **argv)
     draw_stipples = 1;
     draw_fonts = 1;
     draw_image = 1;
+    draw_offscreen = 1;
     g_delay_dur = 1000;
     scroll_type = SCROLL_SMOOTH1;
     zero_counters = 0;
@@ -253,10 +286,20 @@ int main(int argc, char **argv)
 
     // process cmd line args
     opterr = 0;
-    while ((opt = getopt(argc, argv, "lrsg:c:f:i:d:o:z:")) != -1)
+    while ((opt = getopt(argc, argv, "lrsjg:c:f:i:d:o:z:")) != -1)
     {
         switch (opt)
         {
+            
+        case 'j':
+            draw_lines = 0;
+            draw_rects = 0;
+            draw_stipples = 0;
+            draw_fonts = 0;
+            draw_image = 0;
+            draw_offscreen = 1;
+            break;
+        
         case 'g':
             if (sscanf(optarg, "%dx%d", &g_winWidth, &g_winHeight) != 2) {
                 fprintf(stderr, "\nerror: invalid geometry specified\n\n");
@@ -279,6 +322,7 @@ int main(int argc, char **argv)
             draw_stipples = 0;
             draw_fonts = 0;
             draw_image = 0;
+            draw_offscreen = 0;
             break;
 
         case 'r':
@@ -287,6 +331,7 @@ int main(int argc, char **argv)
             draw_stipples = 0;
             draw_fonts = 0;
             draw_image = 0;
+            draw_offscreen = 0;
             break;
 
         case 's':
@@ -295,6 +340,7 @@ int main(int argc, char **argv)
             draw_rects = 0;
             draw_fonts = 0;
             draw_image = 0;
+            draw_offscreen = 0;
             break;
 
         case 'f':
@@ -309,6 +355,7 @@ int main(int argc, char **argv)
             draw_rects = 0;
             draw_stipples = 0;
             draw_image = 0;
+            draw_offscreen = 0;
             break;
 
         case 'i':
@@ -323,6 +370,7 @@ int main(int argc, char **argv)
             draw_rects = 0;
             draw_stipples = 0;
             draw_fonts = 0;
+            draw_offscreen= 0;
             break;
 
         case 'h':
@@ -385,7 +433,7 @@ int main(int argc, char **argv)
 
     // must have at least one operation
     if ((!draw_lines) && (!draw_rects) && (!draw_stipples) &&
-        (!draw_fonts) && (!draw_image)) {
+        (!draw_fonts) && (!draw_image) && (!draw_offscreen)) {
         usage();
         return -1;
     }
@@ -490,20 +538,29 @@ int main(int argc, char **argv)
         drawBMP(image_file, scroll_type);
         printf("drew BMP in %d ms\n", time_elapsed_ms(tv));
     }
+    
+    if (draw_offscreen) {
+    }
 
     if (zero_counters) {
         signal_tcp_proxy(proxy_app);
     }
 
-    eventMask = ButtonPressMask|ButtonReleaseMask;
+    eventMask = ButtonPressMask | ButtonReleaseMask | KeyPressMask;
 
     XSelectInput(g_disp, g_win, eventMask);
 
     do
     {
         XNextEvent(g_disp, &evt); // calls XFlush()
+        if (evt.type == KeyPress) {
+            if (draw_offscreen) {
+                drawoffscreen();
+            }
+        }
+        
     }
-    while(evt.type != ButtonRelease);
+    while (evt.type != ButtonRelease);
 
     XDestroyWindow(g_disp, g_win);
     XCloseDisplay(g_disp);
