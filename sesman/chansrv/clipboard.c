@@ -95,14 +95,14 @@ static int g_want_image_data = 0;
 static XSelectionRequestEvent g_saved_selection_req_event;
 
 /* for clipboard INCR transfers */
-static Atom  g_incr_atom;
-static Atom  g_incr_atom_type;
-static Atom  g_incr_atom_target;
-static char* g_incr_data;
-static int   g_incr_data_size;
-static int   g_incr_in_progress = 0;
+static Atom g_incr_atom;
+static Atom g_incr_atom_type;
+static Atom g_incr_atom_target;
+static char* g_incr_data = 0;
+static int g_incr_data_size = 0;
+static int g_incr_in_progress = 0;
 
-static clipboard_format_id = CB_FORMAT_UNICODETEXT;
+static int clipboard_format_id = CB_FORMAT_UNICODETEXT;
 
 /*****************************************************************************/
 /* this is one way to get the current time from the x server */
@@ -176,10 +176,10 @@ clipboard_init(void)
   }
   if (rv == 0)
   {
-    LOGM((LOG_LEVEL_ERROR, "clipboard_init: g_xfixes_event_base %d",
+    LOGM((LOG_LEVEL_DEBUG, "clipboard_init: g_xfixes_event_base %d",
           g_xfixes_event_base));
     st = XFixesQueryVersion(g_display, &ver_maj, &ver_min);
-    LOGM((LOG_LEVEL_ERROR, "clipboard_init st %d, maj %d min %d", st,
+    LOGM((LOG_LEVEL_DEBUG, "clipboard_init st %d, maj %d min %d", st,
           ver_maj, ver_min));
     g_clip_property_atom = XInternAtom(g_display, "XRDP_CLIP_PROPERTY_ATOM",
                                        False);
@@ -194,6 +194,11 @@ clipboard_init(void)
 
     g_image_bmp_atom = XInternAtom(g_display, "image/bmp", False);
     g_incr_atom = XInternAtom(g_display, "INCR", False);
+    if (g_image_bmp_atom == None)
+    {
+      LOGM((LOG_LEVEL_ERROR, "clipboard_init: g_image_bmp_atom was "
+            "not allocated"));
+    }
 
     g_wnd = XCreateSimpleWindow(g_display, RootWindowOfScreen(g_screen),
                                 0, 0, 4, 4, 0, 0, 0);
@@ -327,10 +332,7 @@ clipboard_send_format_announce(tui32 format_id, char* format_name)
   struct stream* s;
   int size;
   int rv;
-  unsigned char format_buf[32];
 
-  g_memset(format_buf, 0, 32);
-  g_snprintf(format_buf, 31, "Native");
   make_stream(s);
   init_stream(s, 8192);
   out_uint16_le(s, 2); /* CLIPRDR_FORMAT_ANNOUNCE */
@@ -521,6 +523,9 @@ clipboard_refuse_selection(XSelectionRequestEvent* req)
 }
 
 /*****************************************************************************/
+/* sent by client or server when its local system clipboard is
+   updated with new clipboard data; contains Clipboard Format ID
+   and name pairs of new Clipboard Formats on the clipboard. */
 static int APP_CC
 clipboard_process_format_announce(struct stream* s, int clip_msg_status,
                                   int clip_msg_len)
@@ -540,6 +545,8 @@ clipboard_process_format_announce(struct stream* s, int clip_msg_status,
 }
 
 /*****************************************************************************/
+/* response to CB_FORMAT_LIST; used to indicate whether
+   processing of the Format List PDU was successful */
 static int APP_CC
 clipboard_prcoess_format_ack(struct stream* s, int clip_msg_status,
                              int clip_msg_len)
@@ -550,6 +557,8 @@ clipboard_prcoess_format_ack(struct stream* s, int clip_msg_status,
 }
 
 /*****************************************************************************/
+/* sent by recipient of CB_FORMAT_LIST; used to request data for one
+   of the formats that was listed in CB_FORMAT_LIST */
 static int APP_CC
 clipboard_process_data_request(struct stream* s, int clip_msg_status,
                                int clip_msg_len)
@@ -576,7 +585,6 @@ clipboard_process_data_response_for_image(struct stream * s,
   char cdata;
   int len;
   int index;
-  int data_in_len;
 
   LOGM((LOG_LEVEL_DEBUG, "clipboard_process_data_response_for_image: "
         "CLIPRDR_DATA_RESPONSE_FOR_IMAGE"));
@@ -600,7 +608,7 @@ clipboard_process_data_response_for_image(struct stream * s,
   }
   else
   {
-    return;
+    return 0;
   }
   while (s_check(s))
   {
@@ -783,7 +791,8 @@ clipboard_data_in(struct stream* s, int chan_id, int chan_flags, int length,
 /*****************************************************************************/
 /* this happens when a new app copies something to the clipboard
    'CLIPBOARD' Atom
-   typedef struct {
+   typedef struct
+   {
     int type;
     unsigned long serial;
     Bool send_event;
@@ -794,7 +803,7 @@ clipboard_data_in(struct stream* s, int chan_id, int chan_flags, int length,
     Atom selection;
     Time timestamp;
     Time selection_timestamp;
-} XFixesSelectionNotifyEvent; */
+   } XFixesSelectionNotifyEvent; */
 static int APP_CC
 clipboard_event_selection_owner_notify(XEvent* xevent)
 {
@@ -836,7 +845,10 @@ clipboard_get_window_property(Window wnd, Atom prop, Atom* type, int* fmt,
   XGetWindowProperty(g_display, g_wnd, prop, 0, 0, 0,
                      AnyPropertyType, &ltype, &lfmt, &ln_items,
                      &llen_after, &lxdata);
-  XFree(lxdata);
+  if (lxdata != 0)
+  {
+    XFree(lxdata);
+  }
   if (ltype == 0)
   {
     /* XGetWindowProperty failed */
@@ -845,13 +857,14 @@ clipboard_get_window_property(Window wnd, Atom prop, Atom* type, int* fmt,
 
   if (ltype == g_incr_atom)
   {
+    LOGM((LOG_LEVEL_DEBUG, "clipboard_event_property_notify: INCR start"));
     g_incr_in_progress = 1;
     g_incr_atom_type = prop;
     g_incr_data_size = 0;
     g_free(g_incr_data);
     g_incr_data = 0;
     XDeleteProperty(g_display, g_wnd, prop);
-    return;
+    return 0;
   }
 
   if (llen_after < 1)
@@ -867,20 +880,29 @@ clipboard_get_window_property(Window wnd, Atom prop, Atom* type, int* fmt,
   if (ltype == 0)
   {
     /* XGetWindowProperty failed */
-    XFree(lxdata);
+    if (lxdata != 0)
+    {
+      XFree(lxdata);
+    }
     return 1;
   }
   lxdata_size = (lfmt / 8) * ln_items;
   if (lxdata_size < 1)
   {
     /* should not happen */
-    XFree(lxdata);
+    if (lxdata != 0)
+    {
+      XFree(lxdata);
+    }
     return 2;
   }
   if (llen_after > 0)
   {
     /* should not happen */
-    XFree(lxdata);
+    if (lxdata != 0)
+    {
+      XFree(lxdata);
+    }
     return 3;
   }
   if (xdata != 0)
@@ -888,7 +910,10 @@ clipboard_get_window_property(Window wnd, Atom prop, Atom* type, int* fmt,
     *xdata = (char*)g_malloc(lxdata_size, 0);
     g_memcpy(*xdata, lxdata, lxdata_size);
   }
-  XFree(lxdata);
+  if (lxdata != 0)
+  {
+    XFree(lxdata);
+  }
   if (xdata_size != 0)
   {
     *xdata_size = lxdata_size;
@@ -937,10 +962,10 @@ clipboard_event_selection_notify(XEvent* xevent)
   int convert_to_bmp_image;
   int send_format_announce;
   int atom;
-  int* atoms;
+  Atom* atoms;
   Atom type;
   tui32 format_id;
-  unsigned char format_name[32];
+  char format_name[32];
 
   LOGM((LOG_LEVEL_DEBUG, "clipboard_event_selection_notify:"));
   data_size = 0;
@@ -948,7 +973,9 @@ clipboard_event_selection_notify(XEvent* xevent)
   fmt = 0;
   convert_to_string = 0;
   convert_to_utf8 = 0;
+  convert_to_bmp_image = 0;
   send_format_announce = 0;
+  format_id = 0;
   rv = 0;
   data = 0;
   type = 0;
@@ -985,9 +1012,10 @@ clipboard_event_selection_notify(XEvent* xevent)
     {
       if (lxevent->target == g_targets_atom)
       {
+        /* on a 64 bit machine, actual_format_return of 32 implies long */
         if ((type == XA_ATOM) && (fmt == 32))
         {
-          atoms = (int*)data;
+          atoms = (Atom*)data;
           for (index = 0; index < n_items; index++)
           {
             atom = atoms[index];
@@ -1026,6 +1054,7 @@ clipboard_event_selection_notify(XEvent* xevent)
         g_memcpy(g_last_clip_data, data, g_last_clip_size);
         g_last_clip_data[g_last_clip_size] = 0;
         send_format_announce = 1;
+        format_id = CB_FORMAT_UNICODETEXT;
       }
       else if (lxevent->target == XA_STRING)
       {
@@ -1124,7 +1153,6 @@ clipboard_event_selection_request(XEvent* xevent)
   int n_items;
   int xdata_size;
   char* xdata;
-  int i;
 
   lxev = (XSelectionRequestEvent*)xevent;
   LOGM((LOG_LEVEL_DEBUG, "clipboard_event_selection_request: g_wnd %d, "
@@ -1163,7 +1191,6 @@ clipboard_event_selection_request(XEvent* xevent)
     /* target, property pairs */
     LOGM((LOG_LEVEL_DEBUG, "clipboard_event_selection_request: "
           "g_multiple_atom"));
-#if 0
     if (clipboard_get_window_property(xev.xselection.requestor,
                                       xev.xselection.property,
                                       &type, &fmt, &n_items, &xdata,
@@ -1174,7 +1201,6 @@ clipboard_event_selection_request(XEvent* xevent)
       /* todo */
       g_free(xdata);
     }
-#endif
   }
   else if ((lxev->target == XA_STRING) || (lxev->target == g_utf8_atom))
   {
@@ -1204,6 +1230,18 @@ clipboard_event_selection_request(XEvent* xevent)
       g_selection_request_event_count++;
       return 0;
     }
+  }
+  else if (lxev->target == g_image_bmp_atom)
+  {
+    g_memcpy(&g_saved_selection_req_event, lxev,
+             sizeof(g_saved_selection_req_event));
+    g_last_clip_type = g_image_bmp_atom;
+    g_want_image_data = 1;
+    clipboard_format_id = CB_FORMAT_DIB;
+    clipboard_send_data_request();
+    g_waiting_for_data_response = 1;
+    g_waiting_for_data_response_time = clipboard_get_local_time();
+    return 0;
   }
   else
   {
@@ -1257,7 +1295,7 @@ clipboard_event_property_notify(XEvent* xevent)
   int format_in_bytes;
   int new_data_len;
   char* cptr;
-  unsigned char format_name[32];
+  char format_name[32];
 
   LOG(10, ("clipboard_check_wait_objs: PropertyNotify .window %d "
       ".state %d .atom %d", xevent->xproperty.window,
@@ -1276,11 +1314,13 @@ clipboard_event_property_notify(XEvent* xevent)
     }
     if (bytes_left <= 0)
     {
+      LOGM((LOG_LEVEL_DEBUG, "clipboard_event_property_notify: INCR done"));
       g_memset(format_name, 0, 32);
       /* clipboard INCR cycle has completed */
       g_incr_in_progress = 0;
       g_last_clip_size = g_incr_data_size;
       g_last_clip_data = g_incr_data;
+      g_incr_data = 0;
       g_last_clip_type = g_incr_atom_target;
       if (g_incr_atom_target == g_image_bmp_atom)
       {
@@ -1296,25 +1336,22 @@ clipboard_event_property_notify(XEvent* xevent)
                               &nitems_returned, &bytes_left, (unsigned char **) &data);
 
       format_in_bytes = actual_format_return / 8;
-      if (actual_format_return == 32 && sizeof(long) == 8)
+      if ((actual_format_return == 32) && (sizeof(long) == 8))
       {
         /* on a 64 bit machine, actual_format_return of 32 implies long */
         format_in_bytes = 8;
       }
       new_data_len = nitems_returned * format_in_bytes;
-#if 1
+      cptr = (char*)g_malloc(g_incr_data_size + new_data_len, 0);
+      g_memcpy(cptr, g_incr_data, g_incr_data_size);
       g_free(g_incr_data);
-      cptr = (char *) g_malloc(g_incr_data_size + new_data_len, 0);
-#else
-      cptr = (char *) realloc(g_incr_data, g_incr_data_size + new_data_len);
-#endif
       if (cptr == NULL)
       {
+        g_incr_data = 0;
         /* cannot add any more data */
         if (data != 0)
         {
           XFree(data);
-          data = 0;
         }
         XDeleteProperty(g_display, g_wnd, g_incr_atom_type);
         return 0;
@@ -1325,7 +1362,6 @@ clipboard_event_property_notify(XEvent* xevent)
       if (data)
       {
         XFree(data);
-        data = 0;
       }
       XDeleteProperty(g_display, g_wnd, g_incr_atom_type);
     }

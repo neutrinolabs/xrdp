@@ -21,14 +21,21 @@
 
 #include "arch.h"
 #include "parse.h"
+#include "log.h"
 
-#define XRDP_CHANNEL_LOG 0
+struct chan_out_data
+{
+  struct stream* s;
+  struct chan_out_data* next;
+};
 
 struct chan_item
 {
   int id;
   int flags;
   char name[16];
+  struct chan_out_data* head;
+  struct chan_out_data* tail;
 };
 
 int APP_CC
@@ -47,12 +54,7 @@ main_cleanup(void);
   } \
 }
 
-#if XRDP_CHANNEL_LOG
-#include "log.h"
 #define LOGM(_args) do { log_message _args ; } while (0)
-#else
-#define LOGM(_args)
-#endif
 
 #ifndef GSET_UINT8
 #define GSET_UINT8(_ptr, _offset, _data) \

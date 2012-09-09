@@ -5,6 +5,18 @@
 # chkconfig: 2345 11 89
 # description: starts xrdp
 
+### BEGIN INIT INFO
+# Provides: xrdp
+# Required-Start:
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: Start and stop xrdp
+# Description: starts xrdp
+### END INIT INFO
+
 SBINDIR=/usr/local/sbin
 LOG=/dev/null
 CFGDIR=/etc/xrdp
