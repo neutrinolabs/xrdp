@@ -197,6 +197,7 @@ typedef rdpWindowRec* rdpWindowPtr;
 #define RDI_IMGLL 2 /* lossless */
 #define RDI_IMGLY 3 /* lossy */
 #define RDI_LINE 4
+#define RDI_SCRBLT 5
 
 struct urdp_draw_item_fill
 {
@@ -223,11 +224,22 @@ struct urdp_draw_item_line
   int flags;
 };
 
+struct urdp_draw_item_scrblt
+{
+  int srcx;
+  int srcy;
+  int dstx;
+  int dsty;
+  int cx;
+  int cy;
+};
+
 union urdp_draw_item
 {
   struct urdp_draw_item_fill fill;
   struct urdp_draw_item_img img;
   struct urdp_draw_item_line line;
+  struct urdp_draw_item_scrblt scrblt;
 };
 
 struct rdp_draw_item
@@ -337,7 +349,10 @@ int
 draw_item_add_line_region(rdpPixmapRec* priv, RegionPtr reg, int color,
                           int opcode, int width, xSegment* segs, int nsegs,
                           int is_segment);
-
+int
+draw_item_add_srcblt_region(rdpPixmapRec* priv, RegionPtr reg,
+                            int srcx, int srcy, int dstx, int dsty,
+                            int cx, int cy);
 
 PixmapPtr
 rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
@@ -502,6 +517,11 @@ void
 rdpup_delete_window(WindowPtr pWindow, rdpWindowRec* priv);
 int
 rdpup_check_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec* pDirtyPriv);
+int
+rdpup_check_dirty_screen(rdpPixmapRec* pDirtyPriv);
+
+void
+rdpScheduleDeferredUpdate(void);
 
 #if defined(X_BYTE_ORDER)
 #  if X_BYTE_ORDER == X_LITTLE_ENDIAN
