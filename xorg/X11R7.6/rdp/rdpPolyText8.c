@@ -38,6 +38,8 @@ extern int g_Bpp; /* from rdpmain.c */
 extern ScreenPtr g_pScreen; /* from rdpmain.c */
 extern Bool g_wrapPixmap; /* from rdpmain.c */
 extern int g_do_dirty_os; /* in rdpmain.c */
+extern int g_do_dirty_ons; /* in rdpmain.c */
+extern rdpPixmapRec g_screenPriv; /* in rdpmain.c */
 
 extern GCOps g_rdpGCOps; /* from rdpdraw.c */
 
@@ -98,25 +100,22 @@ rdpPolyText8(DrawablePtr pDrawable, GCPtr pGC,
 
     if (pDrawable->type == DRAWABLE_PIXMAP)
     {
-        pDstPixmap = (PixmapPtr)pDrawable;
-        pDstPriv = GETPIXPRIV(pDstPixmap);
+        pDstWnd = (WindowPtr)pDrawable;
 
-        if (XRDP_IS_OS(pDstPriv))
+        if (pDstWnd->viewable)
         {
             post_process = 1;
 
-            if (g_do_dirty_os)
+            if (g_do_dirty_ons)
             {
-                LLOGLN(10, ("rdpPolyText8: gettig dirty"));
-                pDstPriv->is_dirty = 1;
-                pDirtyPriv = pDstPriv;
-                dirty_type = RDI_IMGLY;
+                LLOGLN(0, ("rdpPolyText8: gettig dirty"));
+                g_screenPriv.is_dirty = 1;
+                pDirtyPriv = &g_screenPriv;
+                dirty_type = RDI_IMGLL;
             }
             else
             {
-                rdpup_switch_os_surface(pDstPriv->rdpindex);
-                reset_surface = 1;
-                rdpup_get_pixmap_image_rect(pDstPixmap, &id);
+                rdpup_get_screen_image_rect(&id);
                 got_id = 1;
             }
         }

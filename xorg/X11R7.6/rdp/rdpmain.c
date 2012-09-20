@@ -44,8 +44,11 @@ DeviceIntPtr g_keyboard = 0;
 
 int g_can_do_pix_to_pix = 1;
 int g_do_dirty_os = 1; /* delay remoting off screen bitmaps */
+int g_do_dirty_ons = 0; /* delay remoting screen */
 Bool g_wrapWindow = 1;
 Bool g_wrapPixmap = 1;
+
+rdpPixmapRec g_screenPriv;
 
 /* if true, running in RemoteApp / RAIL mode */
 int g_use_rail = 0;
@@ -227,6 +230,7 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
     rrScrPrivPtr pRRScrPriv;
 
     g_pScreen = pScreen;
+    memset(&g_screenPriv, 0, sizeof(g_screenPriv));
 
     /*dpix = 75;
     dpiy = 75;*/

@@ -38,6 +38,8 @@ extern int g_Bpp; /* from rdpmain.c */
 extern ScreenPtr g_pScreen; /* from rdpmain.c */
 extern Bool g_wrapPixmap; /* from rdpmain.c */
 extern int g_do_dirty_os; /* in rdpmain.c */
+extern int g_do_dirty_ons; /* in rdpmain.c */
+extern rdpPixmapRec g_screenPriv; /* in rdpmain.c */
 
 extern GCOps g_rdpGCOps; /* from rdpdraw.c */
 
@@ -98,40 +100,25 @@ rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
 
     for (i = 0; i < npt; i++)
     {
-        pts[i].x = pDrawable->x + in_pts[i].x;
-        pts[i].y = pDrawable->y + in_pts[i].y;
+        pDstWnd = (WindowPtr)pDrawable;
 
-        if (i == 0)
+        if (pDstWnd->viewable)
         {
-            total_box.x1 = pts[0].x;
-            total_box.y1 = pts[0].y;
-            total_box.x2 = pts[0].x;
-            total_box.y2 = pts[0].y;
-        }
-        else
-        {
-            if (pts[i].x < total_box.x1)
-            {
-                total_box.x1 = pts[i].x;
-            }
+            post_process = 1;
 
-            if (pts[i].y < total_box.y1)
+            if (g_do_dirty_ons)
             {
-                total_box.y1 = pts[i].y;
+                LLOGLN(0, ("rdpPolyPoint: gettig dirty"));
+                g_screenPriv.is_dirty = 1;
+                pDirtyPriv = &g_screenPriv;
+                dirty_type = RDI_IMGLL;
             }
-
-            if (pts[i].x > total_box.x2)
+            else
             {
-                total_box.x2 = pts[i].x;
-            }
-
-            if (pts[i].y > total_box.y2)
-            {
-                total_box.y2 = pts[i].y;
+                rdpup_get_screen_image_rect(&id);
+                got_id = 1;
             }
         }
-
-        /* todo, use this total_box */
     }
 
     /* do original call */

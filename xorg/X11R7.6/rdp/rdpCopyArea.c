@@ -39,6 +39,8 @@ extern ScreenPtr g_pScreen; /* from rdpmain.c */
 extern Bool g_wrapPixmap; /* from rdpmain.c */
 extern int g_can_do_pix_to_pix; /* from rdpmain.c */
 extern int g_do_dirty_os; /* in rdpmain.c */
+extern int g_do_dirty_ons; /* in rdpmain.c */
+extern rdpPixmapRec g_screenPriv; /* in rdpmain.c */
 
 extern GCOps g_rdpGCOps; /* from rdpdraw.c */
 
@@ -375,99 +377,114 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
 
     if (pSrc->type == DRAWABLE_WINDOW)
     {
-        pSrcWnd = (WindowPtr)pSrc;
+        rdpup_check_dirty_screen(&g_screenPriv);
 
-        if (pSrcWnd->viewable)
+        if (pDst->type == DRAWABLE_WINDOW)
         {
-            if (pDst->type == DRAWABLE_WINDOW)
+            pDstWnd = (WindowPtr)pDst;
+
+            if (pDstWnd->viewable)
             {
-                pDstWnd = (WindowPtr)pDst;
+                can_do_screen_blt = pGC->alu == GXcopy;
 
-                if (pDstWnd->viewable)
+                if (can_do_screen_blt)
                 {
-                    can_do_screen_blt = pGC->alu == GXcopy;
-
-                    if (can_do_screen_blt)
-                    {
-                        return rdpCopyAreaWndToWnd(pSrcWnd, pDstWnd, pGC,
-                                                   srcx, srcy, w, h, dstx, dsty);
-                    }
+                    return rdpCopyAreaWndToWnd(pSrcWnd, pDstWnd, pGC,
+                                               srcx, srcy, w, h, dstx, dsty);
                 }
             }
-            else if (pDst->type == DRAWABLE_PIXMAP)
+        }
+        else if (pDst->type == DRAWABLE_PIXMAP)
+        {
+            pDstPixmap = (PixmapPtr)pDst;
+            pDstPriv = GETPIXPRIV(pDstPixmap);
+
+            if (XRDP_IS_OS(pDstPriv))
             {
-                pDstPixmap = (PixmapPtr)pDst;
-                pDstPriv = GETPIXPRIV(pDstPixmap);
-
-                if (XRDP_IS_OS(pDstPriv))
+                if (pDst->type == DRAWABLE_WINDOW)
                 {
-                    can_do_screen_blt = pGC->alu == GXcopy;
+                    pDstWnd = (WindowPtr)pDst;
 
-                    if (can_do_screen_blt)
+                    if (pDstWnd->viewable)
                     {
-                        rdpup_check_dirty(pDstPixmap, pDstPriv);
-                        return rdpCopyAreaWndToPixmap(pSrcWnd, pDstPixmap, pDstPriv, pGC,
-                                                      srcx, srcy, w, h, dstx, dsty);
+                        can_do_screen_blt = pGC->alu == GXcopy;
+
+                        if (can_do_screen_blt)
+                        {
+                            return rdpCopyAreaWndToWnd(pSrcWnd, pDstWnd, pGC,
+                                                       srcx, srcy, w, h, dstx, dsty);
+                        }
+                    }
+                }
+                else if (pDst->type == DRAWABLE_PIXMAP)
+                {
+                    pDstPixmap = (PixmapPtr)pDst;
+                    pDstPriv = GETPIXPRIV(pDstPixmap);
+
+                    if (XRDP_IS_OS(pDstPriv))
+                    {
+                        can_do_screen_blt = pGC->alu == GXcopy;
+
+                        if (can_do_screen_blt)
+                        {
+                            rdpup_check_dirty(pDstPixmap, pDstPriv);
+                            return rdpCopyAreaWndToPixmap(pSrcWnd, pDstPixmap, pDstPriv, pGC,
+                                                          srcx, srcy, w, h, dstx, dsty);
+                        }
                     }
                 }
             }
         }
-    }
 
-    if (pSrc->type == DRAWABLE_PIXMAP)
-    {
-        pSrcPixmap = (PixmapPtr)pSrc;
-        pSrcPriv = GETPIXPRIV(pSrcPixmap);
-
-        if (XRDP_IS_OS(pSrcPriv))
+        if (pSrc->type == DRAWABLE_PIXMAP)
         {
-            if (pDst->type == DRAWABLE_WINDOW)
-            {
-                pDstWnd = (WindowPtr)pDst;
+            pSrcPixmap = (PixmapPtr)pSrc;
+            pSrcPriv = GETPIXPRIV(pSrcPixmap);
 
-                if (pDstWnd->viewable)
-                {
-                    rdpup_check_dirty(pSrcPixmap, pSrcPriv);
-                    return rdpCopyAreaPixmapToWnd(pSrcPixmap, pSrcPriv, pDstWnd, pGC,
-                                                  srcx, srcy, w, h, dstx, dsty);
-                }
+            if (XRDP_IS_OS(pSrcPriv))
+            {
+                rdpup_check_dirty_screen(&g_screenPriv);
+                rdpup_check_dirty(pSrcPixmap, pSrcPriv);
+                return rdpCopyAreaPixmapToWnd(pSrcPixmap, pSrcPriv, pDstWnd, pGC,
+                                              srcx, srcy, w, h, dstx, dsty);
             }
-            else if (pDst->type == DRAWABLE_PIXMAP)
-            {
-                pDstPixmap = (PixmapPtr)pDst;
-                pDstPriv = GETPIXPRIV(pDstPixmap);
+        }
 
-                if (XRDP_IS_OS(pDstPriv))
+        /* do original call */
+        rv = rdpCopyAreaOrg(pSrc, pDst, pGC, srcx, srcy, w, h, dstx, dsty);
+
+        dirty_type = 0;
+        pDirtyPriv = 0;
+        post_process = 0;
+        reset_surface = 0;
+        got_id = 0;
+
+        if (pDst->type == DRAWABLE_PIXMAP)
+        {
+            pDstPixmap = (PixmapPtr)pDst;
+            pDstPriv = GETPIXPRIV(pDstPixmap);
+
+            if (XRDP_IS_OS(pDstPriv))
+            {
+                post_process = 1;
+
+                if (g_do_dirty_os)
                 {
-                    if (g_can_do_pix_to_pix)
-                    {
-                        rdpup_check_dirty(pSrcPixmap, pSrcPriv);
-                        rdpup_check_dirty(pDstPixmap, pDstPriv);
-                        return rdpCopyAreaPixmapToPixmap(pSrcPixmap, pSrcPriv,
-                                                         pDstPixmap, pDstPriv,
-                                                         pGC, srcx, srcy, w, h,
-                                                         dstx, dsty);
-                    }
+                    LLOGLN(10, ("rdpCopyArea: gettig dirty"));
+                    pDstPriv->is_dirty = 1;
+                    pDirtyPriv = pDstPriv;
+                    dirty_type = RDI_IMGLL;
+                }
+                else
+                {
+                    rdpup_switch_os_surface(pDstPriv->rdpindex);
+                    reset_surface = 1;
+                    rdpup_get_pixmap_image_rect(pDstPixmap, &id);
+                    got_id = 1;
                 }
             }
         }
-    }
-
-    /* do original call */
-    rv = rdpCopyAreaOrg(pSrc, pDst, pGC, srcx, srcy, w, h, dstx, dsty);
-
-    dirty_type = 0;
-    pDirtyPriv = 0;
-    post_process = 0;
-    reset_surface = 0;
-    got_id = 0;
-
-    if (pDst->type == DRAWABLE_PIXMAP)
-    {
-        pDstPixmap = (PixmapPtr)pDst;
-        pDstPriv = GETPIXPRIV(pDstPixmap);
-
-        if (XRDP_IS_OS(pDstPriv))
+        else
         {
             post_process = 1;
 
@@ -496,44 +513,31 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
             if (pDstWnd->viewable)
             {
                 post_process = 1;
-                rdpup_get_screen_image_rect(&id);
-                got_id = 1;
+
+                if (g_do_dirty_ons)
+                {
+                    LLOGLN(0, ("rdpCopyArea: gettig dirty"));
+                    g_screenPriv.is_dirty = 1;
+                    pDirtyPriv = &g_screenPriv;
+                    dirty_type = RDI_IMGLL;
+                }
+                else
+                {
+                    rdpup_get_screen_image_rect(&id);
+                    got_id = 1;
+                }
             }
         }
-    }
 
-    if (!post_process)
-    {
-        return rv;
-    }
-
-    RegionInit(&clip_reg, NullBox, 0);
-    cd = rdp_get_clip(&clip_reg, pDst, pGC);
-
-    if (cd == 1)
-    {
-        if (dirty_type != 0)
+        if (!post_process)
         {
-            box.x1 = pDst->x + dstx;
-            box.y1 = pDst->y + dsty;
-            box.x2 = box.x1 + w;
-            box.y2 = box.y1 + h;
-            RegionInit(&reg1, &box, 0);
-            draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type);
-            RegionUninit(&reg1);
+            return rv;
         }
-        else if (got_id)
-        {
-            rdpup_begin_update();
-            rdpup_send_area(&id, pDst->x + dstx, pDst->y + dsty, w, h);
-            rdpup_end_update();
-        }
-    }
-    else if (cd == 2)
-    {
-        num_clips = REGION_NUM_RECTS(&clip_reg);
 
-        if (num_clips > 0)
+        RegionInit(&clip_reg, NullBox, 0);
+        cd = rdp_get_clip(&clip_reg, pDst, pGC);
+
+        if (cd == 1)
         {
             if (dirty_type != 0)
             {
@@ -541,50 +545,73 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
                 box.y1 = pDst->y + dsty;
                 box.x2 = box.x1 + w;
                 box.y2 = box.y1 + h;
-                RegionInit(&box_reg, &box, 0);
-                RegionIntersect(&clip_reg, &clip_reg, &box_reg);
-                draw_item_add_img_region(pDirtyPriv, &clip_reg, GXcopy, dirty_type);
-                RegionUninit(&box_reg);
+                RegionInit(&reg1, &box, 0);
+                draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type);
+                RegionUninit(&reg1);
             }
             else if (got_id)
             {
                 rdpup_begin_update();
-                box.x1 = pDst->x + dstx;
-                box.y1 = pDst->y + dsty;
-                box.x2 = box.x1 + w;
-                box.y2 = box.y1 + h;
-                RegionInit(&box_reg, &box, 0);
-                RegionIntersect(&clip_reg, &clip_reg, &box_reg);
-                num_clips = REGION_NUM_RECTS(&clip_reg);
-
-                if (num_clips < 10)
-                {
-                    for (j = num_clips - 1; j >= 0; j--)
-                    {
-                        box = REGION_RECTS(&clip_reg)[j];
-                        rdpup_send_area(&id, box.x1, box.y1, box.x2 - box.x1,
-                                        box.y2 - box.y1);
-                    }
-                }
-                else
-                {
-                    pbox = RegionExtents(&clip_reg);
-                    rdpup_send_area(&id, pbox->x1, pbox->y1, pbox->x2 - pbox->x1,
-                                    pbox->y2 - pbox->y1);
-                }
-
-                RegionUninit(&box_reg);
+                rdpup_send_area(&id, pDst->x + dstx, pDst->y + dsty, w, h);
                 rdpup_end_update();
             }
         }
+        else if (cd == 2)
+        {
+            num_clips = REGION_NUM_RECTS(&clip_reg);
+
+            if (num_clips > 0)
+            {
+                if (dirty_type != 0)
+                {
+                    box.x1 = pDst->x + dstx;
+                    box.y1 = pDst->y + dsty;
+                    box.x2 = box.x1 + w;
+                    box.y2 = box.y1 + h;
+                    RegionInit(&box_reg, &box, 0);
+                    RegionIntersect(&clip_reg, &clip_reg, &box_reg);
+                    draw_item_add_img_region(pDirtyPriv, &clip_reg, GXcopy, dirty_type);
+                    RegionUninit(&box_reg);
+                }
+                else if (got_id)
+                {
+                    rdpup_begin_update();
+                    box.x1 = pDst->x + dstx;
+                    box.y1 = pDst->y + dsty;
+                    box.x2 = box.x1 + w;
+                    box.y2 = box.y1 + h;
+                    RegionInit(&box_reg, &box, 0);
+                    RegionIntersect(&clip_reg, &clip_reg, &box_reg);
+                    num_clips = REGION_NUM_RECTS(&clip_reg);
+
+                    if (num_clips < 10)
+                    {
+                        for (j = num_clips - 1; j >= 0; j--)
+                        {
+                            box = REGION_RECTS(&clip_reg)[j];
+                            rdpup_send_area(&id, box.x1, box.y1, box.x2 - box.x1,
+                                            box.y2 - box.y1);
+                        }
+                    }
+                    else
+                    {
+                        pbox = RegionExtents(&clip_reg);
+                        rdpup_send_area(&id, pbox->x1, pbox->y1, pbox->x2 - pbox->x1,
+                                        pbox->y2 - pbox->y1);
+                    }
+
+                    RegionUninit(&box_reg);
+                    rdpup_end_update();
+                }
+            }
+        }
+
+        RegionUninit(&clip_reg);
+
+        if (reset_surface)
+        {
+            rdpup_switch_os_surface(-1);
+        }
+
+        return rv;
     }
-
-    RegionUninit(&clip_reg);
-
-    if (reset_surface)
-    {
-        rdpup_switch_os_surface(-1);
-    }
-
-    return rv;
-}

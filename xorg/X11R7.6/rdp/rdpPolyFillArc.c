@@ -38,6 +38,8 @@ extern int g_Bpp; /* from rdpmain.c */
 extern ScreenPtr g_pScreen; /* from rdpmain.c */
 extern Bool g_wrapPixmap; /* from rdpmain.c */
 extern int g_do_dirty_os; /* in rdpmain.c */
+extern int g_do_dirty_ons; /* in rdpmain.c */
+extern rdpPixmapRec g_screenPriv; /* in rdpmain.c */
 
 extern GCOps g_rdpGCOps; /* from rdpdraw.c */
 
@@ -154,8 +156,25 @@ rdpPolyFillArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc *parcs)
 
     if (!post_process)
     {
-        g_free(rects);
-        return;
+        pDstWnd = (WindowPtr)pDrawable;
+
+        if (pDstWnd->viewable)
+        {
+            post_process = 1;
+
+            if (g_do_dirty_ons)
+            {
+                LLOGLN(0, ("rdpPolyFillArc: gettig dirty"));
+                g_screenPriv.is_dirty = 1;
+                pDirtyPriv = &g_screenPriv;
+                dirty_type = RDI_IMGLL;
+            }
+            else
+            {
+                rdpup_get_screen_image_rect(&id);
+                got_id = 1;
+            }
+        }
     }
 
     RegionInit(&clip_reg, NullBox, 0);
