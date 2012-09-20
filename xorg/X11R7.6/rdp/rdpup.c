@@ -1762,7 +1762,6 @@ rdpup_create_window(WindowPtr pWindow, rdpWindowRec *priv)
 
     out_uint32_le(g_out_s, flags); /* flags */
 }
-}
 
 /******************************************************************************/
 void
@@ -1895,23 +1894,20 @@ rdpup_check_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec *pDirtyPriv)
                 rdpup_reset_clip();
                 rdpup_set_opcode(GXcopy);
                 break;
+
+            case RDI_SCRBLT:
+                LLOGLN(10, ("  RDI_SCRBLT"));
+                break;
         }
 
-        rdpup_reset_clip();
-        rdpup_set_opcode(GXcopy);
-        break;
-    case RDI_SCRBLT:
-        LLOGLN(10, ("  RDI_SCRBLT"));
-        break;
+        di = di->next;
     }
 
-    di = di->next;
-}
-draw_item_remove_all(pDirtyPriv);
-rdpup_end_update();
-pDirtyPriv->is_dirty = 0;
-                       rdpup_switch_os_surface(-1);
-                       return 0;
+    draw_item_remove_all(pDirtyPriv);
+    rdpup_end_update();
+    pDirtyPriv->is_dirty = 0;
+    rdpup_switch_os_surface(-1);
+    return 0;
 }
 
                               /******************************************************************************/

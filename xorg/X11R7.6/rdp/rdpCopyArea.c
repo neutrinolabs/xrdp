@@ -615,3 +615,4 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
 
         return rv;
     }
+}

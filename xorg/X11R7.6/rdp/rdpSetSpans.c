@@ -163,3 +163,5 @@ rdpSetSpans(DrawablePtr pDrawable, GCPtr pGC, char *psrc,
             rdpup_switch_os_surface(-1);
         }
     }
+}
+

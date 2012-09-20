@@ -98,3 +98,5 @@ rdpFillSpans(DrawablePtr pDrawable, GCPtr pGC, int nInit,
         RegionUninit(&clip_reg);
         rdpup_switch_os_surface(-1);
     }
+}
+
