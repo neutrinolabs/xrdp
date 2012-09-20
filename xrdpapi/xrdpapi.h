@@ -16,10 +16,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 /*
-  xrdpapi header, do not use os_calls.h, arch.h or any xrdp internal headers
-  this file is included in 3rd party apps
-*/
+ * xrdpapi header, do not use os_calls.h, arch.h or any xrdp internal headers
+ * this file is included in 3rd party apps
+ */
 
 #if !defined(XRDPAPI_H_)
 #define XRDPAPI_H_

@@ -35,4 +35,4 @@ make install
 
 see file-loc.txt to see what files are installed where
 
-Jay
+Jay Sorg

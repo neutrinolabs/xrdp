@@ -1,6 +1,7 @@
 #!/bin/sh
 
-# build.sh: a script for building X11R7.6 X server for use with xrdp #
+# buildx.sh: a script for building X11R7.6 X server for use with xrdp
+#
 # Copyright 2011-2012 Jay Sorg Jay.Sorg@gmail.com
 #
 # Authors
@@ -26,7 +27,7 @@ download_file()
 {
     file=$1
 
-    # if we already have the file, don't re-download it
+    # if we already have the file, don't download it
        if [ -r downloads/$file ]; then
          return 0
        fi
@@ -277,10 +278,10 @@ count=0
 
 if [ $# -lt 1 ]; then
     echo ""
-    echo "usage: build.sh <installation dir>"
-    echo "usage: build.sh <clean>"
-    echo "usage: build.sh default"
-    echo "usage: build.sh <installation dir> drop - set env and run bash in rdp dir"
+    echo "usage: buildx.sh <installation dir>"
+    echo "usage: buildx.sh <clean>"
+    echo "usage: buildx.sh default"
+    echo "usage: buildx.sh <installation dir> drop - set env and run bash in rdp dir"
     echo ""
     exit 1
 fi

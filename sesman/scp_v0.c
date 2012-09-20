@@ -1,21 +1,20 @@
-/*
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-
-   xrdp: A Remote Desktop Protocol server.
-   Copyright (C) Jay Sorg 2005-2008
-*/
+/**
+ * xrdp: A Remote Desktop Protocol server.
+ *
+ * Copyright (C) Jay Sorg 2004-2012
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 /**
  *
@@ -27,121 +26,128 @@
 
 #include "sesman.h"
 
-extern struct config_sesman* g_cfg; /* in sesman.c */
+extern struct config_sesman *g_cfg; /* in sesman.c */
 
 /******************************************************************************/
 void DEFAULT_CC
-scp_v0_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
+scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
 {
-  int display = 0;
-  tbus data;
-  struct session_item* s_item;
+    int display = 0;
+    tbus data;
+    struct session_item *s_item;
 
-  data = auth_userpass(s->username, s->password);
-  if (s->type == SCP_GW_AUTHENTICATION)
-  {
-    /* this is just authentication in a gateway situation */
-    /* g_writeln("SCP_GW_AUTHENTICATION message received"); */
-    if (data)
+    data = auth_userpass(s->username, s->password);
+
+    if (s->type == SCP_GW_AUTHENTICATION)
     {
-      if (1 == access_login_allowed(s->username))
-      {
-        /* the user is member of the correct groups. */
-        scp_v0s_replyauthentication(c, 0);
-        log_message(LOG_LEVEL_INFO, "Access permitted for user: %s",
-                    s->username);
-        /* g_writeln("Connection allowed"); */
-      }
-      else
-      {
-        scp_v0s_replyauthentication(c,3);
-        log_message(LOG_LEVEL_INFO, "Username okey but group problem for "
-                    "user: %s", s->username);
-        /* g_writeln("user password ok, but group problem"); */
-      }
-    }
-    else
-    {
-      /* g_writeln("username or password error"); */
-      log_message(LOG_LEVEL_INFO, "Username or password error for user: %s",
-                  s->username);
-      scp_v0s_replyauthentication(c, 2);
-    }
-    auth_end(data);
-  }
-  else if (data)
-  {
-    s_item = session_get_bydata(s->username, s->width, s->height,
-                                s->bpp, s->type);
-    if (s_item != 0)
-    {
-      display = s_item->display;
-      if (0 != s->client_ip)
-      {
-        log_message( LOG_LEVEL_INFO, "++ reconnected session: username %s, "
-                    "display :%d.0, session_pid %d, ip %s",
-                    s->username, display, s_item->pid, s->client_ip);
-      }
-      else
-      {
-        log_message(LOG_LEVEL_INFO, "++ reconnected session: username %s, "
-                    "display :%d.0, session_pid %d", s->username, display,
-                    s_item->pid);
-      }
-      session_reconnect(display, s->username);
-      auth_end(data);
-      /* don't set data to null here */
-    }
-    else
-    {
-      LOG_DBG("pre auth");
-      if (1 == access_login_allowed(s->username))
-      {
-        if (0 != s->client_ip)
+        /* this is just authentication in a gateway situation */
+        /* g_writeln("SCP_GW_AUTHENTICATION message received"); */
+        if (data)
         {
-          log_message(LOG_LEVEL_INFO, "++ created session (access granted): "
-            "username %s, ip %s", s->username, s->client_ip);
+            if (1 == access_login_allowed(s->username))
+            {
+                /* the user is member of the correct groups. */
+                scp_v0s_replyauthentication(c, 0);
+                log_message(LOG_LEVEL_INFO, "Access permitted for user: %s",
+                            s->username);
+                /* g_writeln("Connection allowed"); */
+            }
+            else
+            {
+                scp_v0s_replyauthentication(c, 3);
+                log_message(LOG_LEVEL_INFO, "Username okey but group problem for "
+                            "user: %s", s->username);
+                /* g_writeln("user password ok, but group problem"); */
+            }
         }
         else
         {
-          log_message(LOG_LEVEL_INFO, "++ created session (access granted): "
-            "username %s", s->username);
+            /* g_writeln("username or password error"); */
+            log_message(LOG_LEVEL_INFO, "Username or password error for user: %s",
+                        s->username);
+            scp_v0s_replyauthentication(c, 2);
         }
 
-        if (SCP_SESSION_TYPE_XVNC == s->type)
+        auth_end(data);
+    }
+    else if (data)
+    {
+        s_item = session_get_bydata(s->username, s->width, s->height,
+                                    s->bpp, s->type);
+
+        if (s_item != 0)
         {
-          log_message( LOG_LEVEL_INFO, "starting Xvnc session...");
-          display = session_start(s->width, s->height, s->bpp, s->username,
-                                  s->password, data, SESMAN_SESSION_TYPE_XVNC,
-                                  s->domain, s->program, s->directory,
-                                  s->client_ip);
+            display = s_item->display;
+
+            if (0 != s->client_ip)
+            {
+                log_message( LOG_LEVEL_INFO, "++ reconnected session: username %s, "
+                             "display :%d.0, session_pid %d, ip %s",
+                             s->username, display, s_item->pid, s->client_ip);
+            }
+            else
+            {
+                log_message(LOG_LEVEL_INFO, "++ reconnected session: username %s, "
+                            "display :%d.0, session_pid %d", s->username, display,
+                            s_item->pid);
+            }
+
+            session_reconnect(display, s->username);
+            auth_end(data);
+            /* don't set data to null here */
         }
         else
         {
-          log_message(LOG_LEVEL_INFO, "starting X11rdp session...");
-          display = session_start(s->width, s->height, s->bpp, s->username,
-                                  s->password, data, SESMAN_SESSION_TYPE_XRDP,
-                                  s->domain, s->program, s->directory,
-                                  s->client_ip);
+            LOG_DBG("pre auth");
+
+            if (1 == access_login_allowed(s->username))
+            {
+                if (0 != s->client_ip)
+                {
+                    log_message(LOG_LEVEL_INFO, "++ created session (access granted): "
+                                "username %s, ip %s", s->username, s->client_ip);
+                }
+                else
+                {
+                    log_message(LOG_LEVEL_INFO, "++ created session (access granted): "
+                                "username %s", s->username);
+                }
+
+                if (SCP_SESSION_TYPE_XVNC == s->type)
+                {
+                    log_message( LOG_LEVEL_INFO, "starting Xvnc session...");
+                    display = session_start(s->width, s->height, s->bpp, s->username,
+                                            s->password, data, SESMAN_SESSION_TYPE_XVNC,
+                                            s->domain, s->program, s->directory,
+                                            s->client_ip);
+                }
+                else
+                {
+                    log_message(LOG_LEVEL_INFO, "starting X11rdp session...");
+                    display = session_start(s->width, s->height, s->bpp, s->username,
+                                            s->password, data, SESMAN_SESSION_TYPE_XRDP,
+                                            s->domain, s->program, s->directory,
+                                            s->client_ip);
+                }
+            }
+            else
+            {
+                display = 0;
+            }
         }
-      }
-      else
-      {
-        display = 0;
-      }
-    }
-    if (display == 0)
-    {
-      auth_end(data);
-      scp_v0s_deny_connection(c);
+
+        if (display == 0)
+        {
+            auth_end(data);
+            scp_v0s_deny_connection(c);
+        }
+        else
+        {
+            scp_v0s_allow_connection(c, display);
+        }
     }
     else
     {
-      scp_v0s_allow_connection(c, display);
+        scp_v0s_deny_connection(c);
     }
-  }
-  else
-  {
-    scp_v0s_deny_connection(c);
-  }
 }
