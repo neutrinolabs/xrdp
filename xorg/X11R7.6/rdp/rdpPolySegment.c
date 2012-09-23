@@ -138,33 +138,27 @@ rdpPolySegment(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment *pSegs)
             if (pDstWnd->viewable)
             {
                 post_process = 1;
-                rdpup_get_screen_image_rect(&id);
-                got_id = 1;
+
+                if (g_do_dirty_ons)
+                {
+                    LLOGLN(0, ("rdpPolySegment: gettig dirty"));
+                    g_screenPriv.is_dirty = 1;
+                    pDirtyPriv = &g_screenPriv;
+                    dirty_type = RDI_IMGLL;
+                }
+                else
+                {
+                    rdpup_get_screen_image_rect(&id);
+                    got_id = 1;
+                }
             }
         }
     }
 
     if (!post_process)
     {
-        pDstWnd = (WindowPtr)pDrawable;
-
-        if (pDstWnd->viewable)
-        {
-            post_process = 1;
-
-            if (g_do_dirty_ons)
-            {
-                LLOGLN(0, ("rdpPolySegment: gettig dirty"));
-                g_screenPriv.is_dirty = 1;
-                pDirtyPriv = &g_screenPriv;
-                dirty_type = RDI_IMGLL;
-            }
-            else
-            {
-                rdpup_get_screen_image_rect(&id);
-                got_id = 1;
-            }
-        }
+        g_free(segs);
+        return;
     }
 
     RegionInit(&clip_reg, NullBox, 0);

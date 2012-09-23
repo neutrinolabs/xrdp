@@ -1247,24 +1247,27 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
     }
     else
     {
-        pDstWnd = (WindowPtr)p;
-
-        if (pDstWnd->viewable)
+        if (p->type == DRAWABLE_WINDOW)
         {
-            post_process = 1;
+            pDstWnd = (WindowPtr)p;
 
-            if (g_do_dirty_ons)
+            if (pDstWnd->viewable)
             {
-                LLOGLN(0, ("rdpComposite: gettig dirty"));
-                g_screenPriv.is_dirty = 1;
-                pDirtyPriv = &g_screenPriv;
-                dirty_type = RDI_IMGLL;
-            }
-            else
-            {
-                rdpup_get_screen_image_rect(&id);
-                got_id = 1;
-                LLOGLN(10, ("rdpComposite: screen"));
+                post_process = 1;
+
+                if (g_do_dirty_ons)
+                {
+                    LLOGLN(0, ("rdpComposite: gettig dirty"));
+                    g_screenPriv.is_dirty = 1;
+                    pDirtyPriv = &g_screenPriv;
+                    dirty_type = RDI_IMGLL;
+                }
+                else
+                {
+                    rdpup_get_screen_image_rect(&id);
+                    got_id = 1;
+                    LLOGLN(10, ("rdpComposite: screen"));
+                }
             }
         }
     }

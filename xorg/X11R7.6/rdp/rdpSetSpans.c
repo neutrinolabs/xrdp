@@ -91,77 +91,70 @@ rdpSetSpans(DrawablePtr pDrawable, GCPtr pGC, char *psrc,
 
         if (XRDP_IS_OS(pDstPriv))
         {
-            pDstPixmap = (PixmapPtr)pDrawable;
-            pDstPriv = GETPIXPRIV(pDstPixmap);
+            post_process = 1;
 
-            if (XRDP_IS_OS(pDstPriv))
+            if (g_do_dirty_os)
             {
-                post_process = 1;
-
-                if (g_do_dirty_os)
-                {
-                    LLOGLN(10, ("rdpSetSpans: gettig dirty"));
-                    pDstPriv->is_dirty = 1;
-                    pDirtyPriv = pDstPriv;
-                    dirty_type = RDI_IMGLY;
-                }
-                else
-                {
-                    rdpup_switch_os_surface(pDstPriv->rdpindex);
-                    reset_surface = 1;
-                    rdpup_get_pixmap_image_rect(pDstPixmap, &id);
-                    got_id = 1;
-                }
+                LLOGLN(10, ("rdpSetSpans: gettig dirty"));
+                pDstPriv->is_dirty = 1;
+                pDirtyPriv = pDstPriv;
+                dirty_type = RDI_IMGLY;
             }
-        }
-        else
-        {
-            if (pDrawable->type == DRAWABLE_WINDOW)
+            else
             {
-                pDstWnd = (WindowPtr)pDrawable;
-
-                if (pDstWnd->viewable)
-                {
-                    post_process = 1;
-                    rdpup_get_screen_image_rect(&id);
-                    got_id = 1;
-                }
+                rdpup_switch_os_surface(pDstPriv->rdpindex);
+                reset_surface = 1;
+                rdpup_get_pixmap_image_rect(pDstPixmap, &id);
+                got_id = 1;
             }
-        }
-
-        if (!post_process)
-        {
-            return;
-        }
-
-        RegionInit(&clip_reg, NullBox, 0);
-        cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
-
-        if (cd == 1)
-        {
-            if (dirty_type != 0)
-            {
-            }
-            else if (got_id)
-            {
-            }
-        }
-        else if (cd == 2)
-        {
-            if (dirty_type != 0)
-            {
-            }
-            else if (got_id)
-            {
-            }
-        }
-
-        RegionUninit(&clip_reg);
-
-        if (reset_surface)
-        {
-            rdpup_switch_os_surface(-1);
         }
     }
-}
+    else
+    {
+        if (pDrawable->type == DRAWABLE_WINDOW)
+        {
+            pDstWnd = (WindowPtr)pDrawable;
 
+            if (pDstWnd->viewable)
+            {
+                post_process = 1;
+                rdpup_get_screen_image_rect(&id);
+                got_id = 1;
+            }
+        }
+    }
+
+    if (!post_process)
+    {
+        return;
+    }
+
+    RegionInit(&clip_reg, NullBox, 0);
+    cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
+
+    if (cd == 1)
+    {
+        if (dirty_type != 0)
+        {
+        }
+        else if (got_id)
+        {
+        }
+    }
+    else if (cd == 2)
+    {
+        if (dirty_type != 0)
+        {
+        }
+        else if (got_id)
+        {
+        }
+    }
+
+    RegionUninit(&clip_reg);
+
+    if (reset_surface)
+    {
+        rdpup_switch_os_surface(-1);
+    }
+}

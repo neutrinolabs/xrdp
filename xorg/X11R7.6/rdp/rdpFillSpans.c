@@ -82,21 +82,40 @@ rdpFillSpans(DrawablePtr pDrawable, GCPtr pGC, int nInit,
 
         if (XRDP_IS_OS(pDstPriv))
         {
-            return;
+            rdpup_switch_os_surface(pDstPriv->rdpindex);
+            rdpup_get_pixmap_image_rect(pDstPixmap, &id);
+            got_id = 1;
         }
-
-        RegionInit(&clip_reg, NullBox, 0);
-        cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
-
-        if (cd == 1)
-        {
-        }
-        else if (cd == 2)
-        {
-        }
-
-        RegionUninit(&clip_reg);
-        rdpup_switch_os_surface(-1);
     }
-}
+    else
+    {
+        if (pDrawable->type == DRAWABLE_WINDOW)
+        {
+            pDstWnd = (WindowPtr)pDrawable;
 
+            if (pDstWnd->viewable)
+            {
+                rdpup_get_screen_image_rect(&id);
+                got_id = 1;
+            }
+        }
+    }
+
+    if (!got_id)
+    {
+        return;
+    }
+
+    RegionInit(&clip_reg, NullBox, 0);
+    cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
+
+    if (cd == 1)
+    {
+    }
+    else if (cd == 2)
+    {
+    }
+
+    RegionUninit(&clip_reg);
+    rdpup_switch_os_surface(-1);
+}

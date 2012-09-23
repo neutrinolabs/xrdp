@@ -127,23 +127,26 @@ rdpCopyPlane(DrawablePtr pSrc, DrawablePtr pDst,
     }
     else
     {
-        pDstWnd = (WindowPtr)pDst;
-
-        if (pDstWnd->viewable)
+        if (pDst->type == DRAWABLE_WINDOW)
         {
-            post_process = 1;
+            pDstWnd = (WindowPtr)pDst;
 
-            if (g_do_dirty_ons)
+            if (pDstWnd->viewable)
             {
-                LLOGLN(0, ("rdpCopyPlane: gettig dirty"));
-                g_screenPriv.is_dirty = 1;
-                pDirtyPriv = &g_screenPriv;
-                dirty_type = RDI_IMGLL;
-            }
-            else
-            {
-                rdpup_get_screen_image_rect(&id);
-                got_id = 1;
+                post_process = 1;
+
+                if (g_do_dirty_ons)
+                {
+                    LLOGLN(0, ("rdpCopyPlane: gettig dirty"));
+                    g_screenPriv.is_dirty = 1;
+                    pDirtyPriv = &g_screenPriv;
+                    dirty_type = RDI_IMGLL;
+                }
+                else
+                {
+                    rdpup_get_screen_image_rect(&id);
+                    got_id = 1;
+                }
             }
         }
     }

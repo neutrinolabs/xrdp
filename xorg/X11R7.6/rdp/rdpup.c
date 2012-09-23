@@ -1685,82 +1685,92 @@ rdpup_create_window(WindowPtr pWindow, rdpWindowRec *priv)
 
     if (g_connected)
     {
-        style = XR_STYLE_NORMAL;
-        ext_style = XR_EXT_STYLE_NORMAL;
+        root_id = pWindow->drawable.pScreen->root->drawable.id;
+
+        if (pWindow->overrideRedirect)
+        {
+            style = XR_STYLE_TOOLTIP;
+            ext_style = XR_EXT_STYLE_TOOLTIP;
+        }
+        else
+        {
+            style = XR_STYLE_NORMAL;
+            ext_style = XR_EXT_STYLE_NORMAL;
+        }
+
+        flags = WINDOW_ORDER_TYPE_WINDOW | WINDOW_ORDER_STATE_NEW;
+        strcpy(title, "title");
+        title_bytes = strlen(title);
+
+        num_window_rects = 1;
+        num_visibility_rects = 1;
+
+        /* calculate bytes */
+        bytes = (2 + 2) + (5 * 4) + (2 + title_bytes) + (12 * 4) +
+                (2 + num_window_rects * 8) + (4 + 4) +
+                (2 + num_visibility_rects * 8) + 4;
+
+        rdpup_pre_check(bytes);
+        out_uint16_le(g_out_s, 25);
+        out_uint16_le(g_out_s, bytes);
+        g_count++;
+        out_uint32_le(g_out_s, pWindow->drawable.id); /* window_id */
+        out_uint32_le(g_out_s, pWindow->parent->drawable.id); /* owner_window_id */
+        flags |= WINDOW_ORDER_FIELD_OWNER;
+        out_uint32_le(g_out_s, style); /* style */
+        out_uint32_le(g_out_s, ext_style); /* extended_style */
+        flags |= WINDOW_ORDER_FIELD_STYLE;
+        out_uint32_le(g_out_s, 0); /* show_state */
+        flags |= WINDOW_ORDER_FIELD_SHOW;
+        out_uint16_le(g_out_s, title_bytes); /* title_info */
+        out_uint8a(g_out_s, title, title_bytes);
+        flags |= WINDOW_ORDER_FIELD_TITLE;
+        out_uint32_le(g_out_s, 0); /* client_offset_x */
+        out_uint32_le(g_out_s, 0); /* client_offset_y */
+        flags |= WINDOW_ORDER_FIELD_CLIENT_AREA_OFFSET;
+        out_uint32_le(g_out_s, pWindow->drawable.width); /* client_area_width */
+        out_uint32_le(g_out_s, pWindow->drawable.height); /* client_area_height */
+        flags |= WINDOW_ORDER_FIELD_CLIENT_AREA_SIZE;
+        out_uint32_le(g_out_s, 0); /* rp_content */
+        out_uint32_le(g_out_s, root_id); /* root_parent_handle */
+        flags |= WINDOW_ORDER_FIELD_ROOT_PARENT;
+        out_uint32_le(g_out_s, pWindow->drawable.x); /* window_offset_x */
+        out_uint32_le(g_out_s, pWindow->drawable.y); /* window_offset_y */
+        flags |= WINDOW_ORDER_FIELD_WND_OFFSET;
+        out_uint32_le(g_out_s, 0); /* window_client_delta_x */
+        out_uint32_le(g_out_s, 0); /* window_client_delta_y */
+        flags |= WINDOW_ORDER_FIELD_WND_CLIENT_DELTA;
+        out_uint32_le(g_out_s, pWindow->drawable.width); /* window_width */
+        out_uint32_le(g_out_s, pWindow->drawable.height); /* window_height */
+        flags |= WINDOW_ORDER_FIELD_WND_SIZE;
+        out_uint16_le(g_out_s, num_window_rects); /* num_window_rects */
+
+        for (index = 0; index < num_window_rects; index++)
+        {
+            out_uint16_le(g_out_s, 0); /* left */
+            out_uint16_le(g_out_s, 0); /* top */
+            out_uint16_le(g_out_s, pWindow->drawable.width); /* right */
+            out_uint16_le(g_out_s, pWindow->drawable.height); /* bottom */
+        }
+
+        flags |= WINDOW_ORDER_FIELD_WND_RECTS;
+        out_uint32_le(g_out_s, pWindow->drawable.x); /* visible_offset_x */
+        out_uint32_le(g_out_s, pWindow->drawable.y); /* visible_offset_y */
+        flags |= WINDOW_ORDER_FIELD_VIS_OFFSET;
+        out_uint16_le(g_out_s, num_visibility_rects); /* num_visibility_rects */
+
+        for (index = 0; index < num_visibility_rects; index++)
+        {
+            out_uint16_le(g_out_s, 0); /* left */
+            out_uint16_le(g_out_s, 0); /* top */
+            out_uint16_le(g_out_s, pWindow->drawable.width); /* right */
+            out_uint16_le(g_out_s, pWindow->drawable.height); /* bottom */
+        }
+
+        flags |= WINDOW_ORDER_FIELD_VISIBILITY;
+
+        out_uint32_le(g_out_s, flags); /* flags */
     }
-
-    flags = WINDOW_ORDER_TYPE_WINDOW | WINDOW_ORDER_STATE_NEW;
-    strcpy(title, "title");
-    title_bytes = strlen(title);
-
-    num_window_rects = 1;
-    num_visibility_rects = 1;
-
-    /* calculate bytes */
-    bytes = (2 + 2) + (5 * 4) + (2 + title_bytes) + (12 * 4) +
-            (2 + num_window_rects * 8) + (4 + 4) +
-            (2 + num_visibility_rects * 8) + 4;
-
-    rdpup_pre_check(bytes);
-    out_uint16_le(g_out_s, 25);
-    out_uint16_le(g_out_s, bytes);
-    g_count++;
-    out_uint32_le(g_out_s, pWindow->drawable.id); /* window_id */
-    out_uint32_le(g_out_s, pWindow->parent->drawable.id); /* owner_window_id */
-    flags |= WINDOW_ORDER_FIELD_OWNER;
-    out_uint32_le(g_out_s, style); /* style */
-    out_uint32_le(g_out_s, ext_style); /* extended_style */
-    flags |= WINDOW_ORDER_FIELD_STYLE;
-    out_uint32_le(g_out_s, 0); /* show_state */
-    flags |= WINDOW_ORDER_FIELD_SHOW;
-    out_uint16_le(g_out_s, title_bytes); /* title_info */
-    out_uint8a(g_out_s, title, title_bytes);
-    flags |= WINDOW_ORDER_FIELD_TITLE;
-    out_uint32_le(g_out_s, 0); /* client_offset_x */
-    out_uint32_le(g_out_s, 0); /* client_offset_y */
-    flags |= WINDOW_ORDER_FIELD_CLIENT_AREA_OFFSET;
-    out_uint32_le(g_out_s, pWindow->drawable.width); /* client_area_width */
-    out_uint32_le(g_out_s, pWindow->drawable.height); /* client_area_height */
-    flags |= WINDOW_ORDER_FIELD_CLIENT_AREA_SIZE;
-    out_uint32_le(g_out_s, 0); /* rp_content */
-    out_uint32_le(g_out_s, root_id); /* root_parent_handle */
-    flags |= WINDOW_ORDER_FIELD_ROOT_PARENT;
-    out_uint32_le(g_out_s, pWindow->drawable.x); /* window_offset_x */
-    out_uint32_le(g_out_s, pWindow->drawable.y); /* window_offset_y */
-    flags |= WINDOW_ORDER_FIELD_WND_OFFSET;
-    out_uint32_le(g_out_s, 0); /* window_client_delta_x */
-    out_uint32_le(g_out_s, 0); /* window_client_delta_y */
-    flags |= WINDOW_ORDER_FIELD_WND_CLIENT_DELTA;
-    out_uint32_le(g_out_s, pWindow->drawable.width); /* window_width */
-    out_uint32_le(g_out_s, pWindow->drawable.height); /* window_height */
-    flags |= WINDOW_ORDER_FIELD_WND_SIZE;
-    out_uint16_le(g_out_s, num_window_rects); /* num_window_rects */
-
-    for (index = 0; index < num_window_rects; index++)
-    {
-        out_uint16_le(g_out_s, 0); /* left */
-        out_uint16_le(g_out_s, 0); /* top */
-        out_uint16_le(g_out_s, pWindow->drawable.width); /* right */
-        out_uint16_le(g_out_s, pWindow->drawable.height); /* bottom */
-    }
-
-    flags |= WINDOW_ORDER_FIELD_WND_RECTS;
-    out_uint32_le(g_out_s, pWindow->drawable.x); /* visible_offset_x */
-    out_uint32_le(g_out_s, pWindow->drawable.y); /* visible_offset_y */
-    flags |= WINDOW_ORDER_FIELD_VIS_OFFSET;
-    out_uint16_le(g_out_s, num_visibility_rects); /* num_visibility_rects */
-
-    for (index = 0; index < num_visibility_rects; index++)
-    {
-        out_uint16_le(g_out_s, 0); /* left */
-        out_uint16_le(g_out_s, 0); /* top */
-        out_uint16_le(g_out_s, pWindow->drawable.width); /* right */
-        out_uint16_le(g_out_s, pWindow->drawable.height); /* bottom */
-    }
-
-    flags |= WINDOW_ORDER_FIELD_VISIBILITY;
-
-    out_uint32_le(g_out_s, flags); /* flags */
 }
 
 /******************************************************************************/
@@ -1894,7 +1904,6 @@ rdpup_check_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec *pDirtyPriv)
                 rdpup_reset_clip();
                 rdpup_set_opcode(GXcopy);
                 break;
-
             case RDI_SCRBLT:
                 LLOGLN(10, ("  RDI_SCRBLT"));
                 break;
@@ -1910,9 +1919,9 @@ rdpup_check_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec *pDirtyPriv)
     return 0;
 }
 
-                              /******************************************************************************/
-                              int
-                              rdpup_check_dirty_screen(rdpPixmapRec *pDirtyPriv)
+/******************************************************************************/
+int
+rdpup_check_dirty_screen(rdpPixmapRec *pDirtyPriv)
 {
     int index;
     int clip_index;

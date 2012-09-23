@@ -100,22 +100,25 @@ rdpPolyText16(DrawablePtr pDrawable, GCPtr pGC,
 
     if (pDrawable->type == DRAWABLE_PIXMAP)
     {
-        pDstWnd = (WindowPtr)pDrawable;
+        pDstPixmap = (PixmapPtr)pDrawable;
+        pDstPriv = GETPIXPRIV(pDstPixmap);
 
-        if (pDstWnd->viewable)
+        if (XRDP_IS_OS(pDstPriv))
         {
             post_process = 1;
 
-            if (g_do_dirty_ons)
+            if (g_do_dirty_os)
             {
-                LLOGLN(0, ("rdpPolyText16: gettig dirty"));
-                g_screenPriv.is_dirty = 1;
-                pDirtyPriv = &g_screenPriv;
-                dirty_type = RDI_IMGLL;
+                LLOGLN(10, ("rdpPolyText16: gettig dirty"));
+                pDstPriv->is_dirty = 1;
+                pDirtyPriv = pDstPriv;
+                dirty_type = RDI_IMGLY;
             }
             else
             {
-                rdpup_get_screen_image_rect(&id);
+                rdpup_switch_os_surface(pDstPriv->rdpindex);
+                reset_surface = 1;
+                rdpup_get_pixmap_image_rect(pDstPixmap, &id);
                 got_id = 1;
             }
         }
@@ -129,8 +132,19 @@ rdpPolyText16(DrawablePtr pDrawable, GCPtr pGC,
             if (pDstWnd->viewable)
             {
                 post_process = 1;
-                rdpup_get_screen_image_rect(&id);
-                got_id = 1;
+
+                if (g_do_dirty_ons)
+                {
+                    LLOGLN(0, ("rdpPolyText16: gettig dirty"));
+                    g_screenPriv.is_dirty = 1;
+                    pDirtyPriv = &g_screenPriv;
+                    dirty_type = RDI_IMGLL;
+                }
+                else
+                {
+                    rdpup_get_screen_image_rect(&id);
+                    got_id = 1;
+                }
             }
         }
     }

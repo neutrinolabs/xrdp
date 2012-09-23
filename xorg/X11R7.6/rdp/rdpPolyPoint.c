@@ -100,25 +100,40 @@ rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
 
     for (i = 0; i < npt; i++)
     {
-        pDstWnd = (WindowPtr)pDrawable;
+        pts[i].x = pDrawable->x + in_pts[i].x;
+        pts[i].y = pDrawable->y + in_pts[i].y;
 
-        if (pDstWnd->viewable)
+        if (i == 0)
         {
-            post_process = 1;
-
-            if (g_do_dirty_ons)
+            total_box.x1 = pts[0].x;
+            total_box.y1 = pts[0].y;
+            total_box.x2 = pts[0].x;
+            total_box.y2 = pts[0].y;
+        }
+        else
+        {
+            if (pts[i].x < total_box.x1)
             {
-                LLOGLN(0, ("rdpPolyPoint: gettig dirty"));
-                g_screenPriv.is_dirty = 1;
-                pDirtyPriv = &g_screenPriv;
-                dirty_type = RDI_IMGLL;
+                total_box.x1 = pts[i].x;
             }
-            else
+
+            if (pts[i].y < total_box.y1)
             {
-                rdpup_get_screen_image_rect(&id);
-                got_id = 1;
+                total_box.y1 = pts[i].y;
+            }
+
+            if (pts[i].x > total_box.x2)
+            {
+                total_box.x2 = pts[i].x;
+            }
+
+            if (pts[i].y > total_box.y2)
+            {
+                total_box.y2 = pts[i].y;
             }
         }
+
+        /* todo, use this total_box */
     }
 
     /* do original call */
@@ -164,8 +179,19 @@ rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
             if (pDstWnd->viewable)
             {
                 post_process = 1;
-                rdpup_get_screen_image_rect(&id);
-                got_id = 1;
+
+                if (g_do_dirty_ons)
+                {
+                    LLOGLN(0, ("rdpPolyPoint: gettig dirty"));
+                    g_screenPriv.is_dirty = 1;
+                    pDirtyPriv = &g_screenPriv;
+                    dirty_type = RDI_IMGLL;
+                }
+                else
+                {
+                    rdpup_get_screen_image_rect(&id);
+                    got_id = 1;
+                }
             }
         }
     }

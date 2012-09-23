@@ -93,42 +93,51 @@ rdpPushPixels(GCPtr pGC, PixmapPtr pBitMap, DrawablePtr pDst,
 
     if (pDst->type == DRAWABLE_PIXMAP)
     {
-        post_process = 1;
+        pDstPixmap = (PixmapPtr)pDst;
+        pDstPriv = GETPIXPRIV(pDstPixmap);
 
-        if (g_do_dirty_os)
+        if (XRDP_IS_OS(pDstPriv))
         {
-            LLOGLN(10, ("rdpPushPixels: gettig dirty"));
-            pDstPriv->is_dirty = 1;
-            pDirtyPriv = pDstPriv;
-            dirty_type = RDI_IMGLY;
-        }
-        else
-        {
-            rdpup_switch_os_surface(pDstPriv->rdpindex);
-            reset_surface = 1;
-            rdpup_get_pixmap_image_rect(pDstPixmap, &id);
-            got_id = 1;
+            post_process = 1;
+
+            if (g_do_dirty_os)
+            {
+                LLOGLN(10, ("rdpPushPixels: gettig dirty"));
+                pDstPriv->is_dirty = 1;
+                pDirtyPriv = pDstPriv;
+                dirty_type = RDI_IMGLY;
+            }
+            else
+            {
+                rdpup_switch_os_surface(pDstPriv->rdpindex);
+                reset_surface = 1;
+                rdpup_get_pixmap_image_rect(pDstPixmap, &id);
+                got_id = 1;
+            }
         }
     }
     else
     {
-        pDstWnd = (WindowPtr)pDst;
-
-        if (pDstWnd->viewable)
+        if (pDst->type == DRAWABLE_WINDOW)
         {
-            post_process = 1;
+            pDstWnd = (WindowPtr)pDst;
 
-            if (g_do_dirty_ons)
+            if (pDstWnd->viewable)
             {
-                LLOGLN(0, ("rdpPushPixels: gettig dirty"));
-                g_screenPriv.is_dirty = 1;
-                pDirtyPriv = &g_screenPriv;
-                dirty_type = RDI_IMGLL;
-            }
-            else
-            {
-                rdpup_get_screen_image_rect(&id);
-                got_id = 1;
+                post_process = 1;
+
+                if (g_do_dirty_ons)
+                {
+                    LLOGLN(0, ("rdpPushPixels: gettig dirty"));
+                    g_screenPriv.is_dirty = 1;
+                    pDirtyPriv = &g_screenPriv;
+                    dirty_type = RDI_IMGLL;
+                }
+                else
+                {
+                    rdpup_get_screen_image_rect(&id);
+                    got_id = 1;
+                }
             }
         }
     }

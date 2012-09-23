@@ -182,23 +182,26 @@ rdpPolylines(DrawablePtr pDrawable, GCPtr pGC, int mode,
     }
     else
     {
-        pDstWnd = (WindowPtr)pDrawable;
-
-        if (pDstWnd->viewable)
+        if (pDrawable->type == DRAWABLE_WINDOW)
         {
-            post_process = 1;
+            pDstWnd = (WindowPtr)pDrawable;
 
-            if (g_do_dirty_ons)
+            if (pDstWnd->viewable)
             {
-                LLOGLN(0, ("rdpPolylines: gettig dirty"));
-                g_screenPriv.is_dirty = 1;
-                pDirtyPriv = &g_screenPriv;
-                dirty_type = RDI_IMGLL;
-            }
-            else
-            {
-                rdpup_get_screen_image_rect(&id);
-                got_id = 1;
+                post_process = 1;
+
+                if (g_do_dirty_ons)
+                {
+                    LLOGLN(0, ("rdpPolylines: gettig dirty"));
+                    g_screenPriv.is_dirty = 1;
+                    pDirtyPriv = &g_screenPriv;
+                    dirty_type = RDI_IMGLL;
+                }
+                else
+                {
+                    rdpup_get_screen_image_rect(&id);
+                    got_id = 1;
+                }
             }
         }
     }
