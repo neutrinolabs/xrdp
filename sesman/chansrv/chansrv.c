@@ -2,6 +2,7 @@
  * xrdp: A Remote Desktop Protocol server.
  *
  * Copyright (C) Jay Sorg 2009-2012
+ * Copyright (C) Laxmikant Rashinkar 2009-2012
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,6 +43,10 @@ static int g_cliprdr_index = -1;
 static int g_rdpsnd_index = -1;
 static int g_rdpdr_index = -1;
 static int g_rail_index = -1;
+static int g_drdynvc_index = -1;
+
+/* state info for dynamic virtual channels */
+static struct xrdp_api_data *g_dvc_channels[MAX_DVC_CHANNELS];
 
 static tbus g_term_event = 0;
 static tbus g_thread_done_event = 0;
@@ -50,9 +55,10 @@ static int g_use_unix_socket = 0;
 
 int g_display_num = 0;
 int g_cliprdr_chan_id = -1; /* cliprdr */
-int g_rdpsnd_chan_id = -1; /* rdpsnd */
-int g_rdpdr_chan_id = -1; /* rdpdr */
-int g_rail_chan_id = -1; /* rail */
+int g_rdpsnd_chan_id = -1;  /* rdpsnd  */
+int g_rdpdr_chan_id = -1;   /* rdpdr   */
+int g_rail_chan_id = -1;    /* rail    */
+int g_drdynvc_chan_id = -1; /* drdynvc */
 
 char *g_exec_name;
 tbus g_exec_event;
@@ -60,13 +66,9 @@ tbus g_exec_mutex;
 tbus g_exec_sem;
 int g_exec_pid = 0;
 
-/* data in struct trans::callback_data */
-struct xrdp_api_data
-{
-    int chan_id;
-    char header[64];
-    int flags;
-};
+/* each time we create a DVC we need a unique DVC channel id */
+/* this variable gets bumped up once per DVC we create       */
+uint32_t g_dvc_chan_id = 100;
 
 /*****************************************************************************/
 /* add data to chan_item, on its way to the client */
@@ -310,6 +312,7 @@ process_message_channel_setup(struct stream *s)
     g_rdpsnd_chan_id = -1;
     g_rdpdr_chan_id = -1;
     g_rail_chan_id = -1;
+    g_drdynvc_chan_id = -1;
     LOGM((LOG_LEVEL_DEBUG, "process_message_channel_setup:"));
     in_uint16_le(s, num_chans);
     LOGM((LOG_LEVEL_DEBUG, "process_message_channel_setup: num_chans %d",
@@ -345,6 +348,11 @@ process_message_channel_setup(struct stream *s)
             g_rail_index = g_num_chan_items;
             g_rail_chan_id = ci->id;
         }
+        else if (g_strcasecmp(ci->name, "drdynvc") == 0)
+        {
+            g_drdynvc_index = g_num_chan_items; // LK_TODO use  this
+            g_drdynvc_chan_id = ci->id;         // LK_TODO use this
+        }
         else
         {
             LOG(10, ("other %s", ci->name));
@@ -373,6 +381,12 @@ process_message_channel_setup(struct stream *s)
     if (g_rail_index >= 0)
     {
         rail_init();
+    }
+
+    if (g_drdynvc_index >= 0)
+    {
+        memset(&g_dvc_channels[0], 0, sizeof(g_dvc_channels));
+        drdynvc_init();
     }
 
     return rv;
@@ -416,6 +430,10 @@ process_message_channel_data(struct stream *s)
         else if (chan_id == g_rail_chan_id)
         {
             rv = rail_data_in(s, chan_id, chan_flags, length, total_length);
+        }
+        else if (chan_id == g_drdynvc_chan_id)
+        {
+            rv = drdynvc_data_in(s, chan_id, chan_flags, length, total_length);
         }
         else if (chan_id == ((struct xrdp_api_data *)
                              (g_api_con_trans->callback_data))->chan_id)
@@ -550,13 +568,15 @@ my_trans_data_in(struct trans *trans)
     return error;
 }
 
-/*****************************************************************************/
-/* returns error */
+/*
+ * called when WTSVirtualChannelWrite() is invoked in xrdpapi.c
+ *
+ ******************************************************************************/
 int DEFAULT_CC
 my_api_trans_data_in(struct trans *trans)
 {
-    struct stream *s;
-    int error;
+    struct stream        *s;
+    int                   bytes_read;
     struct xrdp_api_data *ad;
 
     LOG(10, ("my_api_trans_data_in:"));
@@ -572,22 +592,44 @@ my_api_trans_data_in(struct trans *trans)
     }
 
     LOGM((LOG_LEVEL_DEBUG, "my_api_trans_data_in:"));
+
     s = trans_get_in_s(trans);
-    error = g_tcp_recv(trans->sck, s->data, 8192, 0);
+    bytes_read = g_tcp_recv(trans->sck, s->data, 8192, 0);
 
-    if (error > 0)
+    if (bytes_read > 0)
     {
-        LOG(10, ("my_api_trans_data_in: got data %d", error));
-        ad = (struct xrdp_api_data *)(trans->callback_data);
+        LOG(10, ("my_api_trans_data_in: got data %d", bytes_read));
+        ad = (struct xrdp_api_data *) trans->callback_data;
 
-        if (send_channel_data(ad->chan_id, s->data, error) != 0)
+        if (ad->dvc_chan_id < 0)
         {
-            LOG(0, ("my_api_trans_data_in: send_channel_data failed"));
+            /* writing data to a static virtual channel */
+            if (send_channel_data(ad->chan_id, s->data, bytes_read) != 0)
+            {
+                LOG(0, ("my_api_trans_data_in: send_channel_data failed"));
+            }
+        }
+        else
+        {
+            /* writing data to a dynamic virtual channel */
+            drdynvc_write_data(ad->dvc_chan_id, s->data, bytes_read);
         }
     }
     else
     {
-        LOG(10, ("my_api_trans_data_in: g_tcp_recv failed, or disconnected"));
+        ad = (struct xrdp_api_data *) trans->callback_data;
+        if ((ad != NULL) && (ad->dvc_chan_id > 0))
+        {
+            /* WTSVirtualChannelClose() was invoked, or connection dropped */
+            LOG(10, ("my_api_trans_data_in: g_tcp_recv failed or disconnected for DVC"));
+            ad->transp = NULL;
+            ad->is_connected = 0;
+            remove_struct_with_chan_id(ad->dvc_chan_id);
+        }
+        else
+        {
+            LOG(10, ("my_api_trans_data_in: g_tcp_recv failed or disconnected for SVC"));
+        }
         return 1;
     }
 
@@ -628,37 +670,30 @@ my_trans_conn_in(struct trans *trans, struct trans *new_trans)
     return 0;
 }
 
-/*****************************************************************************/
+/*
+ * called when WTSVirtualChannelOpenEx is invoked in xrdpapi.c
+ *
+ ******************************************************************************/
 int DEFAULT_CC
 my_api_trans_conn_in(struct trans *trans, struct trans *new_trans)
 {
     struct xrdp_api_data *ad;
-    int error;
-    int index;
-    int found;
-    struct stream *s;
+    struct stream        *s;
+    int                   error;
+    int                   index;
+    char                  chan_pri;
 
-    if (trans == 0)
-    {
-        return 1;
-    }
-
-    if (trans != g_api_lis_trans)
-    {
-        return 1;
-    }
-
-    if (new_trans == 0)
+    if ((trans == 0) || (trans != g_api_lis_trans) || (new_trans == 0))
     {
         return 1;
     }
 
     LOGM((LOG_LEVEL_DEBUG, "my_api_trans_conn_in:"));
-
     LOG(10, ("my_api_trans_conn_in: got incoming"));
 
     s = trans_get_in_s(new_trans);
     s->end = s->data;
+
     error = trans_force_read(new_trans, 64);
 
     if (error != 0)
@@ -669,21 +704,37 @@ my_api_trans_conn_in(struct trans *trans, struct trans *new_trans)
 
     s->end = s->data;
 
-    ad = (struct xrdp_api_data *)g_malloc(sizeof(struct xrdp_api_data), 1);
-
+    ad = (struct xrdp_api_data *) g_malloc(sizeof(struct xrdp_api_data), 1);
     g_memcpy(ad->header, s->data, 64);
 
     ad->flags = GGET_UINT32(ad->header, 16);
+    ad->chan_id = -1;
+    ad->dvc_chan_id = -1;
 
-    found = 0;
-
-    if (ad->flags | 1) /* WTS_CHANNEL_OPTION_DYNAMIC */
+    if (ad->flags > 0)
     {
-        /* TODO */
-        found = 0;
+        /* opening a dynamic virtual channel */
+
+        if ((index = find_empty_slot_in_dvc_channels()) < 0)
+        {
+            /* exceeded MAX_DVC_CHANNELS */
+            LOG(0, ("my_api_trans_conn_in: MAX_DVC_CHANNELS reached; giving up!"))
+            free(ad);
+            trans_delete(new_trans);
+            return 1;
+        }
+
+        g_dvc_channels[index] = ad;
+        chan_pri = 4 - ad->flags;
+        ad->dvc_chan_id = g_dvc_chan_id++;
+        ad->is_connected = 0;
+        ad->transp = new_trans;
+        drdynvc_send_open_channel_request(chan_pri, ad->dvc_chan_id, ad->header);
     }
     else
     {
+        /* opening a static virtual channel */
+
         for (index = 0; index < g_num_chan_items; index++)
         {
             LOG(10, ("  %s %s", ad->header, g_chan_items[index].name));
@@ -692,17 +743,9 @@ my_api_trans_conn_in(struct trans *trans, struct trans *new_trans)
             {
                 LOG(10, ("my_api_trans_conn_in: found it at %d", index));
                 ad->chan_id = g_chan_items[index].id;
-                found = 1;
                 break;
             }
         }
-    }
-
-    LOG(10, ("my_api_trans_conn_in: found %d", found));
-
-    if (!found)
-    {
-        ad->chan_id = -1;
     }
 
     new_trans->callback_data = ad;
@@ -759,7 +802,7 @@ setup_api_listen(void)
     char port[256];
     int error = 0;
 
-    g_api_lis_trans = trans_create(2, 8192, 8192);
+    g_api_lis_trans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
     g_snprintf(port, 255, "/tmp/.xrdp/xrdpapi_%d", g_display_num);
     g_api_lis_trans->trans_conn_in = my_api_trans_conn_in;
     error = trans_listen(g_api_lis_trans, port);
@@ -1205,4 +1248,69 @@ main(int argc, char **argv)
     LOGM((LOG_LEVEL_INFO, "main: app exiting pid %d(0x%8.8x)", pid, pid));
     g_deinit();
     return 0;
+}
+
+/*
+ * return unused slot in dvc_channels[]
+ *
+ * @return unused slot index on success, -1 on failure
+ ******************************************************************************/
+int APP_CC
+find_empty_slot_in_dvc_channels()
+{
+    int i;
+
+    for (i = 0; i < MAX_DVC_CHANNELS; i++)
+    {
+        if (g_dvc_channels[i] == NULL)
+        {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+/*
+ * return struct xrdp_api_data that contains specified dvc_chan_id
+ *
+ * @param  dvc_chan_id  channel id to look for
+ *
+ * @return xrdp_api_data struct containing dvc_chan_id or NULL on failure
+ ******************************************************************************/
+struct xrdp_api_data *APP_CC
+struct_from_dvc_chan_id(uint32_t dvc_chan_id)
+{
+    int i;
+
+    for (i = 0; i < MAX_DVC_CHANNELS; i++)
+    {
+        if (g_dvc_channels[i]->dvc_chan_id == dvc_chan_id)
+        {
+            return g_dvc_channels[i];
+        }
+    }
+
+    return NULL;
+}
+
+int
+remove_struct_with_chan_id(uint32_t dvc_chan_id)
+{
+    int i;
+
+    if (dvc_chan_id < 0)
+    {
+        return -1;
+    }
+
+    for (i = 0; i < MAX_DVC_CHANNELS; i++)
+    {
+        if (g_dvc_channels[i]->dvc_chan_id == dvc_chan_id)
+        {
+            g_dvc_channels[i] = NULL;
+            return 0;
+        }
+    }
+    return -1;
 }

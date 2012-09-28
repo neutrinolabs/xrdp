@@ -1,7 +1,8 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2012
+ * Copyright (C) Laxmikant Rashinkar 2012
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +15,20 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * sample program to demonstrate use of xrdpapi
+ *
  */
 
 /*
- * Basic test for virtual channel use
+ * build instructions:
+ *     gcc simple.c -o simple -L./.libs -lxrdpapi
  */
 
-// These headers are required for the windows terminal services calls.
+#ifdef __WIN32__
+#include <mstsapi.h>
+#endif
+
 #include "xrdpapi.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -28,92 +36,143 @@
 #include <string.h>
 #include <errno.h>
 
-#define DSIZE (1024 * 4)
+/* forward declarations */
+int run_echo_test();
+int run_tsmf_test();
 
-int main()
+int
+main(int argc, char **argv)
 {
-
-    // Initialize the data for send/receive
-    void *hFile;
-    char *data;
-    char *data1;
-    data = (char *)malloc(DSIZE);
-    data1 = (char *)malloc(DSIZE);
-    int ret;
-    void *vcFileHandlePtr = NULL;
-    memset(data, 0xca, DSIZE);
-    memset(data1, 0, DSIZE);
-    unsigned int written = 0;
-
-    // Open the skel channel in current session
-
-    //void* channel = WTSVirtualChannelOpenEx(WTS_CURRENT_SESSION, "skel", 0);
-    void *channel = WTSVirtualChannelOpenEx(WTS_CURRENT_SESSION, "TSMF", WTS_CHANNEL_OPTION_DYNAMIC);
-    ret = WTSVirtualChannelQuery(channel, WTSVirtualFileHandle, vcFileHandlePtr, &written);
-
-    // Write the data to the channel
-    ret = WTSVirtualChannelWrite(channel, data, DSIZE, &written);
-
-    if (!ret)
+    if (argc < 2)
     {
-
-        long err = errno;
-        printf("error 1 0x%8.8x\n", err);
-        usleep(100000);
+        printf("usage: simple <echo|tsmf>\n");
         return 1;
+    }
+
+    if (strcasecmp(argv[1], "echo") == 0)
+    {
+        return run_echo_test();
+    }
+    else if (strcasecmp(argv[1], "tsmf") == 0)
+    {
+        return run_tsmf_test();
     }
     else
     {
-        printf("Sent bytes!\n");
-    }
-
-    if (written != DSIZE)
-    {
-        long err = errno;
-        printf("error 2 0x%8.8x\n", err);
-        usleep(100000);
+        printf("usage: simple <echo|tsmf>\n");
         return 1;
     }
-    else
+}
+
+/**
+ * perform an ECHO test with a Microsoft Windows RDP client
+ *
+ * A Microsoft Windows RDP client echos data written
+ * to a dynamic virtual channel named ECHO
+ *
+ * NOTE: THIS TEST WILL FAIL IF CONNECTED FROM A NON
+ *       WINDOWS RDP CLIENT
+ *
+ * @return 0 on success, -1 on failure
+ */
+int
+run_echo_test()
+{
+    char    out_buf[8192];
+    char    in_buf[1700];
+    void   *channel;
+    int     bytes_left;
+    int     rv;
+    int     count;
+    int     pkt_count;
+    int     i;
+    int     bytes_written;
+    int     bytes_read;
+
+    unsigned char c;
+    unsigned char *rd_ptr;
+    unsigned char *wr_ptr;
+
+    /* fill out_buf[] with incremental values */
+    for (i = 0, c = 0; i < 8192; i++, c++)
     {
-        printf("Read bytes!\n");
+        out_buf[i] = c;
     }
 
-    ret = WTSVirtualChannelRead(channel, 100, data1, DSIZE, &written);
-
-    if (!ret)
+    /* open a virtual channel named ECHO */
+    channel = WTSVirtualChannelOpenEx(WTS_CURRENT_SESSION, "ECHO", WTS_CHANNEL_OPTION_DYNAMIC_PRI_LOW);
+    if (channel == NULL)
     {
-        long err = errno;
-        printf("error 3 0x%8.8x\n", err);
-        usleep(100000);
+        printf("###  WTSVirtualChannelOpenEx() failed!\n");
+        return -1;
+    }
+
+    bytes_left = 8192;
+    wr_ptr = out_buf;
+    rd_ptr = out_buf;
+    pkt_count = 1;
+
+    while (bytes_left > 0)
+    {
+        /* write data to virtual channel */
+        count = (bytes_left > 1700) ? 1700 : bytes_left;
+        rv = WTSVirtualChannelWrite(channel, wr_ptr, count, &bytes_written);
+        if ((rv == 0) || (bytes_written == 0))
+        {
+            printf("### WTSVirtualChannelWrite() failed\n");
+            return -1;
+        }
+
+        count = bytes_written;
+
+        while (count)
+        {
+            /* read back the echo */
+            rv = WTSVirtualChannelRead(channel, 5000, in_buf, count, &bytes_read);
+            if ((rv == 0) || (bytes_read == 0))
+            {
+                printf("### WTSVirtualChannelRead() failed\n");
+                return -1;
+            }
+
+            /* validate the echo */
+            for (i = 0; i < bytes_read; i++, rd_ptr++)
+            {
+                if (*rd_ptr != (unsigned char) in_buf[i])
+                {
+                    printf("### data mismatch: expected 0x%x got 0x%x\n",
+                           (unsigned char) *rd_ptr, (unsigned char) in_buf[i]);
+                    return -1;
+                }
+            }
+            count -= bytes_read;
+        }
+
+        bytes_left -= bytes_written;
+        wr_ptr += bytes_written;
+        printf("### pkt %d passed echo test\n", pkt_count++);
+    }
+
+	WTSVirtualChannelClose(channel);
+	return 0;
+}
+
+int
+run_tsmf_test()
+{
+	void *channel;
+
+    printf("this test not yet implemented!\n");
+    return 1;
+
+    /* open virtual channel */
+    channel = WTSVirtualChannelOpenEx(WTS_CURRENT_SESSION, "TSMF", WTS_CHANNEL_OPTION_DYNAMIC_PRI_LOW);
+    if (channel == NULL)
+    {
+        printf("###  WTSVirtualChannelOpenEx() failed!\n");
         return 1;
     }
 
-    if (written != DSIZE)
-    {
-        long err = errno;
-        printf("error 4 0x%8.8x\n", err);
-        usleep(100000);
-        return 1;
-    }
-    else
-    {
-        printf("Read bytes!\n");
-    }
-
-    ret = WTSVirtualChannelClose(channel);
-
-    if (memcmp(data, data1, DSIZE) == 0)
-    {
-    }
-    else
-    {
-        printf("error data no match\n");
-        return 1;
-    }
-
-    printf("Done!\n");
-
-    usleep(100000);
-    return 0;
+	WTSVirtualChannelClose(channel);
+	return 0;
 }
