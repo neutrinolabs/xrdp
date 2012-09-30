@@ -50,7 +50,7 @@ xrdp_sesman_LDADD = \
   $(top_builddir)/common/libcommon.la \
   $(top_builddir)/sesman/libscp/libscp.la \
   $(AUTH_LIB) \
-  -lpthread
+  -lutil -lpthread
 
 sesmansysconfdir=$(sysconfdir)/xrdp
 
