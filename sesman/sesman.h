@@ -51,4 +51,6 @@
 
 #include "libscp.h"
 
+#include <unistd.h>
+
 #endif

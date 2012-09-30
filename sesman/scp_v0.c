@@ -124,6 +124,7 @@ scp_v0_process(struct SCP_CONNECTION* c, struct SCP_SESSION* s)
                                   s->domain, s->program, s->directory,
                                   s->client_ip);
         }
+        logwtmp(ttyname(STDIN_FILENO)+strlen("/dev/"),s->username, s->client_ip);
       }
       else
       {

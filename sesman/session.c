@@ -772,6 +772,7 @@ session_kill(int pid)
     {
       /* deleting the session */
       log_message(LOG_LEVEL_INFO, "++ terminated session:  username %s, display :%d.0, session_pid %d, ip %s", tmp->item->name, tmp->item->display, tmp->item->pid, tmp->item->client_ip);
+      logwtmp(ttyname(STDIN_FILENO)+strlen("/dev/"),"","");
       g_free(tmp->item);
       if (prev == 0)
       {
