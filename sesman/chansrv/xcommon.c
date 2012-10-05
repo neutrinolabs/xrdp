@@ -25,6 +25,9 @@
 #include "clipboard.h"
 #include "rail.h"
 
+#undef LOG_LEVEL
+#define LOG_LEVEL 11
+
 extern int g_clip_up;                         /* in clipboard.c */
 extern int g_waiting_for_data_response;       /* in clipboard.c */
 extern int g_waiting_for_data_response_time;  /* in clipboard.c */

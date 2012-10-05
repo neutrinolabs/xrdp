@@ -328,6 +328,9 @@ process_message_channel_setup(struct stream *s)
         LOGM((LOG_LEVEL_DEBUG, "process_message_channel_setup: chan name '%s' "
               "id %d flags %8.8x", ci->name, ci->id, ci->flags));
 
+        g_writeln("process_message_channel_setup: chan name '%s' "
+                  "id %d flags %8.8x", ci->name, ci->id, ci->flags);
+
         if (g_strcasecmp(ci->name, "cliprdr") == 0)
         {
             g_cliprdr_index = g_num_chan_items;
@@ -385,7 +388,7 @@ process_message_channel_setup(struct stream *s)
 
     if (g_drdynvc_index >= 0)
     {
-        memset(&g_dvc_channels[0], 0, sizeof(g_dvc_channels));
+        g_memset(&g_dvc_channels[0], 0, sizeof(g_dvc_channels));
         drdynvc_init();
     }
 
@@ -719,7 +722,7 @@ my_api_trans_conn_in(struct trans *trans, struct trans *new_trans)
         {
             /* exceeded MAX_DVC_CHANNELS */
             LOG(0, ("my_api_trans_conn_in: MAX_DVC_CHANNELS reached; giving up!"))
-            free(ad);
+            g_free(ad);
             trans_delete(new_trans);
             return 1;
         }
