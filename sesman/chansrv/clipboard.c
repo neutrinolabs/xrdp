@@ -495,6 +495,7 @@ clipboard_send_format_announce(tui32 format_id, char *format_name)
     {
         if (format_id == CB_FORMAT_FILE)
         {
+            /* canned response for "file" */
             out_uint32_le(s, 0x0000c0bc);
             clipboard_out_unicode(s, "FileGroupDescriptorW", 21);
             out_uint32_le(s, 0x0000c0ba);
@@ -504,6 +505,7 @@ clipboard_send_format_announce(tui32 format_id, char *format_name)
         }
         else if (format_id == CB_FORMAT_DIB)
         {
+            /* canned response for "bitmap" */
             out_uint32_le(s, 0x0000c004);
             clipboard_out_unicode(s, "Native", 7);
             out_uint32_le(s, 0x00000003);
@@ -873,7 +875,8 @@ clipboard_process_data_response(struct stream *s, int clip_msg_status,
     if (g_want_image_data)
     {
         g_want_image_data = 0;
-        clipboard_process_data_response_for_image(s, clip_msg_status, clip_msg_len);
+        clipboard_process_data_response_for_image(s, clip_msg_status,
+                                                  clip_msg_len);
         return 0;
     }
 
@@ -942,8 +945,9 @@ clipboard_process_data_response(struct stream *s, int clip_msg_status,
             lxev = &(g_selection_request_event[index]);
             clipboard_provide_selection(lxev, lxev->target, 8, g_data_in,
                                         data_in_len);
-            LOGM((LOG_LEVEL_DEBUG, "clipboard_process_data_response: requestor %d "
-                  "data_in_len %d", lxev->requestor, data_in_len));
+            LOGM((LOG_LEVEL_DEBUG, "clipboard_process_data_response: "
+                  "requestor %d data_in_len %d",
+                  lxev->requestor, data_in_len));
         }
     }
 

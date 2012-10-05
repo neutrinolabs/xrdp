@@ -68,7 +68,7 @@ int g_exec_pid = 0;
 
 /* each time we create a DVC we need a unique DVC channel id */
 /* this variable gets bumped up once per DVC we create       */
-uint32_t g_dvc_chan_id = 100;
+tui32 g_dvc_chan_id = 100;
 
 /*****************************************************************************/
 /* add data to chan_item, on its way to the client */
@@ -1282,7 +1282,7 @@ find_empty_slot_in_dvc_channels()
  * @return xrdp_api_data struct containing dvc_chan_id or NULL on failure
  ******************************************************************************/
 struct xrdp_api_data *APP_CC
-struct_from_dvc_chan_id(uint32_t dvc_chan_id)
+struct_from_dvc_chan_id(tui32 dvc_chan_id)
 {
     int i;
 
@@ -1298,7 +1298,7 @@ struct_from_dvc_chan_id(uint32_t dvc_chan_id)
 }
 
 int
-remove_struct_with_chan_id(uint32_t dvc_chan_id)
+remove_struct_with_chan_id(tui32 dvc_chan_id)
 {
     int i;
 

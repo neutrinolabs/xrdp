@@ -52,6 +52,11 @@
 #define CB_FORMAT_GIF                   0xD013
 #define CB_FORMAT_FILE                  0xC0BC
 
+/* these are the supported general types */
+#define XRDP_CB_TEXT   1
+#define XRDP_CB_BITMAP 2
+#define XRDP_CB_FILE   3
+
 int APP_CC
 clipboard_init(void);
 int APP_CC
