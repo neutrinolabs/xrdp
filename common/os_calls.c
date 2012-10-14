@@ -1371,6 +1371,44 @@ g_file_open(const char *file_name)
 }
 
 /*****************************************************************************/
+/* returns -1 on error, else return handle or file descriptor */
+int APP_CC
+g_file_open_ex(const char *file_name, int aread, int awrite,
+               int acreate, int atrunc)
+{
+#if defined(_WIN32)
+    return -1;
+#else
+    int rv;
+    int flags;
+
+    flags = 0;
+    if (aread && awrite)
+    {
+        flags |= O_RDWR;
+    }
+    else if (aread)
+    {
+        flags |= O_RDONLY;
+    }
+    else if (awrite)
+    {
+        flags |= O_WRONLY;
+    }
+    if (acreate)
+    {
+        flags |= O_CREAT;
+    }
+    if (atrunc)
+    {
+        flags |= O_TRUNC;
+    }
+    rv =  open(file_name, flags, S_IRUSR | S_IWUSR);
+    return rv;
+#endif
+}
+
+/*****************************************************************************/
 /* returns error, always 0 */
 int APP_CC
 g_file_close(int fd)
