@@ -28,6 +28,7 @@ xrdp_chansrv_SOURCES = \
   chansrv.c \
   sound.c \
   clipboard.c \
+  clipboard_file.c \
   devredir.c \
   rail.c \
   xcommon.c \
