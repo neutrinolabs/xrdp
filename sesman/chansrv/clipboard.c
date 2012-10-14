@@ -56,7 +56,15 @@ xlsatoms - dump atoms
 
 #define LLOG_LEVEL 11
 #define LLOGLN(_level, _args) \
-  do { if (_level < LLOG_LEVEL) { g_writeln _args ; } } while (0)
+  do \
+  { \
+    if (_level < LLOG_LEVEL) \
+    { \
+      g_write("chansrv:clip [%10.10u]: ", g_time3()); \
+      g_writeln _args ; \
+    } \
+  } \
+  while (0)
 
 static char g_bmp_image_header[] =
 {
@@ -98,8 +106,9 @@ static int g_xfixes_event_base = 0;
 static int g_last_clip_size = 0;
 static char *g_last_clip_data = 0;
 static Atom g_last_clip_type = 0;
+static int g_last_xrdp_clip_type = 0;
+static Time g_last_clip_time = 0;
 
-static int g_in_file_copy = 0;
 static int g_got_selection = 0; /* boolean */
 static Time g_selection_time = 0;
 
@@ -126,8 +135,7 @@ static char *g_incr_data = 0;
 static int g_incr_data_size = 0;
 static int g_incr_in_progress = 0;
 
-static int g_clipboard_format_id = CB_FORMAT_UNICODETEXT;
-
+/* default version and flags */
 static int g_cliprdr_version = 2;
 static int g_cliprdr_flags = CB_USE_LONG_FORMAT_NAMES |
                              CB_STREAM_FILECLIP_ENABLED |
@@ -136,6 +144,17 @@ static int g_cliprdr_flags = CB_USE_LONG_FORMAT_NAMES |
 /* last recieved CLIPRDR_FORMAT_LIST(CLIPRDR_FORMAT_ANNOUNCE) */
 static int g_formatIds[16];
 static int g_num_formatIds = 0;
+
+struct cb_file_info
+{
+    char pathname[256];
+    char filename[256];
+    int flags;
+    int size;
+};
+
+static struct cb_file_info g_files[64];
+static int g_num_files = 0;
 
 /*****************************************************************************/
 /* this is one way to get the current time from the x server */
@@ -344,7 +363,7 @@ clipboard_deinit(void)
 
 /*****************************************************************************/
 static int APP_CC
-clipboard_send_data_request(void)
+clipboard_send_data_request(int format_id)
 {
     struct stream *s;
     int size;
@@ -362,10 +381,11 @@ clipboard_send_data_request(void)
     g_got_format_announce = 0;
     make_stream(s);
     init_stream(s, 8192);
-    out_uint16_le(s, 4); /* CLIPRDR_DATA_REQUEST */
+    out_uint16_le(s, CB_FORMAT_DATA_REQUEST); /* 4 CLIPRDR_DATA_REQUEST */
     out_uint16_le(s, 0); /* status */
     out_uint32_le(s, 4); /* length */
-    out_uint32_le(s, g_clipboard_format_id);
+    out_uint32_le(s, format_id);
+    out_uint32_le(s, 0);
     s_mark_end(s);
     size = (int)(s->end - s->data);
     LOGM((LOG_LEVEL_DEBUG, "clipboard_send_data_request: data out, sending "
@@ -476,54 +496,67 @@ static char windows_native_format[] =
 
 /*****************************************************************************/
 static int APP_CC
-clipboard_send_format_announce(tui32 format_id, char *format_name)
+clipboard_send_format_announce(int xrdp_clip_type)
 {
     struct stream *s;
     int size;
     int rv;
     char *holdp;
 
-    LLOGLN(10, ("clipboard_send_format_announce: format_id 0x%8.8x "
-                "format_name [%s]", format_id, format_name));
+    LLOGLN(10, ("clipboard_send_format_announce:"));
     make_stream(s);
     init_stream(s, 8192);
-    out_uint16_le(s, CB_FORMAT_LIST); /* CLIPRDR_FORMAT_ANNOUNCE */
+    out_uint16_le(s, CB_FORMAT_LIST); /* 2 CLIPRDR_FORMAT_ANNOUNCE */
     out_uint16_le(s, 0); /* status */
     holdp = s->p;
     out_uint32_le(s, 0); /* set later */
     if (g_cliprdr_flags & CB_USE_LONG_FORMAT_NAMES)
     {
-        if (format_id == CB_FORMAT_FILE)
+        switch (xrdp_clip_type)
         {
-            /* canned response for "file" */
-            out_uint32_le(s, 0x0000c0bc);
-            clipboard_out_unicode(s, "FileGroupDescriptorW", 21);
-            out_uint32_le(s, 0x0000c0ba);
-            clipboard_out_unicode(s, "FileContents", 13);
-            out_uint32_le(s, 0x0000c0c1);
-            clipboard_out_unicode(s, "DropEffect", 11);
-        }
-        else if (format_id == CB_FORMAT_DIB)
-        {
-            /* canned response for "bitmap" */
-            out_uint32_le(s, 0x0000c004);
-            clipboard_out_unicode(s, "Native", 7);
-            out_uint32_le(s, 0x00000003);
-            clipboard_out_unicode(s, "", 1);
-            out_uint32_le(s, 0x00000008);
-            clipboard_out_unicode(s, "", 1);
-            out_uint32_le(s, 0x00000011);
-            clipboard_out_unicode(s, "", 1);
-        }
-        else
-        {
-            out_uint32_le(s, format_id);
-            clipboard_out_unicode(s, format_name, g_mbstowcs(0, format_name, 0) + 1);
+            case XRDP_CB_FILE:
+                LLOGLN(10, ("clipboard_send_format_announce: XRDP_CB_FILE"));
+                /* canned response for "file" */
+                out_uint32_le(s, 0x0000c0bc);
+                clipboard_out_unicode(s, "FileGroupDescriptorW", 21);
+                out_uint32_le(s, 0x0000c0ba);
+                clipboard_out_unicode(s, "FileContents", 13);
+                out_uint32_le(s, 0x0000c0c1);
+                clipboard_out_unicode(s, "DropEffect", 11);
+                break;
+            case XRDP_CB_BITMAP:
+                LLOGLN(10, ("clipboard_send_format_announce: XRDP_CB_BITMAP"));
+                /* canned response for "bitmap" */
+                out_uint32_le(s, 0x0000c004);
+                clipboard_out_unicode(s, "Native", 7);
+                out_uint32_le(s, 0x00000003);
+                clipboard_out_unicode(s, "", 1);
+                out_uint32_le(s, 0x00000008);
+                clipboard_out_unicode(s, "", 1);
+                out_uint32_le(s, 0x00000011);
+                clipboard_out_unicode(s, "", 1);
+                break;
+            case XRDP_CB_TEXT:
+                LLOGLN(10, ("clipboard_send_format_announce: XRDP_CB_TEXT"));
+                /* canned response for "bitmap" */
+                out_uint32_le(s, 0x0000000d);
+                clipboard_out_unicode(s, "", 1);
+                out_uint32_le(s, 0x00000010);
+                clipboard_out_unicode(s, "", 1);
+                out_uint32_le(s, 0x00000001);
+                clipboard_out_unicode(s, "", 1);
+                out_uint32_le(s, 0x00000007);
+                clipboard_out_unicode(s, "", 1);
+                break;
+            default:
+                LLOGLN(10, ("clipboard_send_format_announce: unknown "
+                            "xrdp_clip_type %d", xrdp_clip_type));
+                break;
         }
     }
     else
     {
-        out_uint32_le(s, format_id);
+        out_uint32_le(s, g_last_clip_type);
         out_uint8p(s, windows_native_format, sizeof(windows_native_format));
     }
     size = (int)(s->p - holdp);
@@ -532,7 +565,7 @@ clipboard_send_format_announce(tui32 format_id, char *format_name)
     holdp[1] = (size >> 8) & 0xff;
     holdp[2] = (size >> 16) & 0xff;
     holdp[3] = (size >> 24) & 0xff;
-    out_uint8s(s, 4);
+    out_uint32_le(s, 0);
     s_mark_end(s);
     size = (int)(s->end - s->data);
     g_hexdump(s->data, size);
@@ -545,34 +578,23 @@ clipboard_send_format_announce(tui32 format_id, char *format_name)
 
 /*****************************************************************************/
 static int APP_CC
-clipboard_send_data_response_for_image(void)
+clipboard_send_data_response_for_image(char* data, int data_size)
 {
     struct stream *s;
     int size;
     int rv;
 
-    LOG(10, ("clipboard_send_data_response_for_image: g_last_clip_size %d\n",
-             g_last_clip_size));
+    LLOGLN(10, ("clipboard_send_data_response_for_image: data_size %d",
+                data_size));
     make_stream(s);
-    init_stream(s, 64 + g_last_clip_size);
-    out_uint16_le(s, 5); /* CLIPRDR_DATA_RESPONSE */
-    out_uint16_le(s, 1); /* status */
-    out_uint32_le(s, g_last_clip_size); /* length */
-
-    /* insert image data */
-    if (g_last_clip_type == g_image_bmp_atom)
-    {
-        /* do not insert first header */
-        out_uint8p(s, g_last_clip_data + 14, g_last_clip_size - 14);
-    }
-
-    out_uint16_le(s, 0); /* nil for string */
-    out_uint32_le(s, 0);
-    out_uint32_le(s, 0);
+    init_stream(s, 64 + data_size);
+    out_uint16_le(s, CB_FORMAT_DATA_RESPONSE); /* 5 CLIPRDR_DATA_RESPONSE */
+    out_uint16_le(s, CB_RESPONSE_OK); /* 1 status */
+    out_uint32_le(s, data_size); /* length */
+    out_uint8p(s, data, data_size);
     out_uint32_le(s, 0);
     s_mark_end(s);
     size = (int)(s->end - s->data);
-    /* HANGING HERE WHEN IMAGE DATA IS TOO BIG!!!! */
     rv = send_channel_data(g_cliprdr_chan_id, s->data, size);
     free_stream(s);
     return rv;
@@ -580,59 +602,236 @@ clipboard_send_data_response_for_image(void)
 
 /*****************************************************************************/
 static int APP_CC
-clipboard_send_data_response(void)
+clipboard_send_data_response_for_text(char* data, int data_size)
 {
     struct stream *s;
     int size;
     int rv;
     int num_chars;
 
-    LOG(10, ("clipboard_send_data_response:"));
-    num_chars = 0;
-
-    if (g_last_clip_data != 0)
+    LLOGLN(10, ("clipboard_send_data_response_for_text: data_size %d",
+                 data_size));
+    //g_hexdump(data, data_size);
+    num_chars = g_mbstowcs(0, data, 0);
+    if (num_chars < 0)
     {
-        if (g_last_clip_type == g_image_bmp_atom)
-        {
-            return clipboard_send_data_response_for_image();
-        }
-
-        if ((g_last_clip_type == XA_STRING) || (g_last_clip_type == g_utf8_atom))
-        {
-            num_chars = g_mbstowcs(0, g_last_clip_data, 0);
-
-            if (num_chars < 0)
-            {
-                LOGM((LOG_LEVEL_ERROR, "clipboard_send_data_response: bad string"));
-                num_chars = 0;
-            }
-        }
+        LOGM((LOG_LEVEL_ERROR, "clipboard_send_data_response_for_text: "
+             "bad string"));
+        num_chars = 0;
     }
-
-    LOG(10, ("clipboard_send_data_response: g_last_clip_size %d "
-             "num_chars %d", g_last_clip_size, num_chars));
+    LLOGLN(10, ("clipboard_send_data_response_for_text: data_size %d "
+                "num_chars %d", data_size, num_chars));
     make_stream(s);
     init_stream(s, 64 + num_chars * 2);
-    out_uint16_le(s, 5); /* CLIPRDR_DATA_RESPONSE */
-    out_uint16_le(s, 1); /* status */
+    out_uint16_le(s, CB_FORMAT_DATA_RESPONSE); /* 5 CLIPRDR_DATA_RESPONSE */
+    out_uint16_le(s, CB_RESPONSE_OK); /* 1 status */
     out_uint32_le(s, num_chars * 2 + 2); /* length */
-
-    if (clipboard_out_unicode(s, g_last_clip_data, num_chars) != num_chars * 2)
+    if (clipboard_out_unicode(s, data, num_chars) != num_chars * 2)
     {
-        LOGM((LOG_LEVEL_ERROR, "clipboard_send_data_response: error "
+        LOGM((LOG_LEVEL_ERROR, "clipboard_send_data_response_for_text: error "
               "clipboard_out_unicode didn't write right number of bytes"));
     }
-
     out_uint16_le(s, 0); /* nil for string */
     out_uint32_le(s, 0);
     s_mark_end(s);
     size = (int)(s->end - s->data);
-    LOGM((LOG_LEVEL_DEBUG, "clipboard_send_data_response: data out, sending "
-          "CLIPRDR_DATA_RESPONSE (clip_msg_id = 5) size %d num_chars %d",
-          size, num_chars));
+    LOGM((LOG_LEVEL_DEBUG, "clipboard_send_data_response_for_text: data out, "
+          "sending CLIPRDR_DATA_RESPONSE (clip_msg_id = 5) size %d "
+          "num_chars %d", size, num_chars));
     rv = send_channel_data(g_cliprdr_chan_id, s->data, size);
     free_stream(s);
     return rv;
+}
+
+/*****************************************************************************/
+static int APP_CC
+clipboard_get_file(char* file, int bytes)
+{
+    int sindex;
+    int pindex;
+    char full_fn[256];
+    char filename[256];
+    char pathname[256];
+
+    sindex = 0;
+    if (g_strncmp(file, "file:///", 8) == 0)
+    {
+        sindex = 7;
+    }
+    pindex = bytes;
+    while (pindex > sindex)
+    {
+        if (file[pindex] == '/')
+        {
+            break;
+        }
+        pindex--;
+    }
+    g_memset(pathname, 0, 256);
+    g_memset(filename, 0, 256);
+    g_memcpy(pathname, file + sindex, pindex - sindex);
+    if (pathname[0] == 0)
+    {
+        pathname[0] = '/';
+    }
+    g_memcpy(filename, file + pindex + 1, (bytes - 1) - pindex);
+    g_snprintf(full_fn, 255, "%s/%s", pathname, filename);
+    if (g_directory_exist(full_fn))
+    {
+        LLOGLN(0, ("clipboard_get_file: file [%s] is a directory, "
+                   "not supported", full_fn));
+        return 1;
+    }
+    if (!g_file_exist(full_fn))
+    {
+        LLOGLN(0, ("clipboard_get_file: file [%s] does not exist",
+                   full_fn));
+        return 1;
+    }
+    else
+    {
+        g_strcpy(g_files[g_num_files].filename, filename);
+        g_strcpy(g_files[g_num_files].pathname, pathname);
+        g_files[g_num_files].size = g_file_get_size(full_fn);
+        g_writeln("ok filename [%s] pathname [%s] size [%d]",
+                  g_files[g_num_files].filename,
+                  g_files[g_num_files].pathname,
+                  g_files[g_num_files].size);
+        g_num_files++;
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+static int APP_CC
+clipboard_get_files(char* files, int bytes)
+{
+    int index;
+    int file_index;
+    char file[512];
+
+    g_num_files = 0;
+    file_index = 0;
+    for (index = 0; index < bytes; index++)
+    {
+        if (files[index] == '\n' || files[index] == '\r')
+        {
+            if (file_index > 0)
+            {
+                if (clipboard_get_file(file, file_index) == 0)
+                {
+                }
+                file_index = 0;
+            }
+        }
+        else
+        {
+            file[file_index] = files[index];
+            file_index++;
+        }
+        if (g_num_files > 60)
+        {
+            break;
+        }
+    }
+    if (file_index > 0)
+    {
+        if (clipboard_get_file(file, file_index) == 0)
+        {
+        }
+    }
+    if (g_num_files < 1)
+    {
+        return 1;
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+static int APP_CC
+clipboard_send_data_response_for_file(char *data, int data_size)
+{
+    struct stream *s;
+    int size;
+    int rv;
+    int bytes_after_header;
+    int cItems;
+    int flags;
+    int index;
+    char fn[256];
+
+    LLOGLN(10, ("clipboard_send_data_response_for_file: g_last_clip_size %d",
+                 g_last_clip_size));
+    g_hexdump(data, data_size);
+    clipboard_get_files(data, data_size);
+    cItems = g_num_files;
+    bytes_after_header = cItems * 592 + 4;
+    make_stream(s);
+    init_stream(s, 64 + bytes_after_header);
+    out_uint16_le(s, CB_FORMAT_DATA_RESPONSE); /* 5 CLIPRDR_DATA_RESPONSE */
+    out_uint16_le(s, 1); // CB_RESPONSE_OK); /* 1 status */
+    out_uint32_le(s, bytes_after_header);
+    out_uint32_le(s, cItems);
+    for (index = 0; index < cItems; index++)
+    {
+        flags = CB_FD_ATTRIBUTES | CB_FD_FILESIZE | CB_FD_WRITESTIME | CB_FD_PROGRESSUI;
+        out_uint32_le(s, flags);
+        out_uint8s(s, 32); /* reserved1 */
+        flags = CB_FILE_ATTRIBUTE_ARCHIVE;
+        //flags = CB_FILE_ATTRIBUTE_NORMAL;
+        out_uint32_le(s, flags);
+        out_uint8s(s, 16); /* reserved2 */
+        /* file time */
+        out_uint32_le(s, 0x2c305d08);
+        out_uint32_le(s, 0x01ca55f3);
+        /* file size */
+        out_uint32_le(s, 0);
+        out_uint32_le(s, g_files[index].size);
+        g_writeln("jay size %d", g_files[index].size);
+        g_snprintf(fn, 255, "%s", g_files[index].filename);
+        clipboard_out_unicode(s, fn, 256);
+        out_uint8s(s, 8); /* pad */
+    }
+    out_uint32_le(s, 0);
+    s_mark_end(s);
+    size = (int)(s->end - s->data);
+    g_hexdump(s->data, size);
+    rv = send_channel_data(g_cliprdr_chan_id, s->data, size);
+    free_stream(s);
+    return rv;
+}
+
+/*****************************************************************************/
+static int APP_CC
+clipboard_send_data_response(int xrdp_clip_type, char *data, int data_size)
+{
+    LLOGLN(10, ("clipboard_send_data_response:"));
+    if (g_last_clip_data != 0)
+    {
+        if (g_last_xrdp_clip_type == XRDP_CB_FILE)
+        {
+            return clipboard_send_data_response_for_file(data, data_size);
+        }
+        else if (g_last_xrdp_clip_type == XRDP_CB_BITMAP)
+        {
+            return clipboard_send_data_response_for_image(data, data_size);
+        }
+        else if (g_last_xrdp_clip_type == XRDP_CB_TEXT)
+        {
+            return clipboard_send_data_response_for_text(data, data_size);
+        }
+        else
+        {
+            LLOGLN(0, ("clipboard_send_data_response: unknown "
+                       "g_last_xrdp_clip_type %d", g_last_xrdp_clip_type));
+        }
+    }
+    else
+    {
+        LLOGLN(0, ("clipboard_send_data_response: g_last_clip_data "
+                   "is nil"));
+    }
+    return 0;
 }
 
 /*****************************************************************************/
@@ -641,6 +840,7 @@ clipboard_set_selection_owner(void)
 {
     Window owner;
 
+    LLOGLN(10, ("clipboard_set_selection_owner:"));
     g_selection_time = clipboard_get_server_time();
     XSetSelectionOwner(g_display, g_clipboard_atom, g_wnd, g_selection_time);
     owner = XGetSelectionOwner(g_display, g_clipboard_atom);
@@ -778,17 +978,65 @@ clipboard_prcoess_format_ack(struct stream *s, int clip_msg_status,
 }
 
 /*****************************************************************************/
+static int
+clipboard_send_data_response_failed(void)
+{
+    struct stream *s;
+    int size;
+    int rv;
+
+    LLOGLN(10, ("clipboard_send_data_response_failed:"));
+    make_stream(s);
+    init_stream(s, 64);
+    out_uint16_le(s, CB_FORMAT_DATA_RESPONSE); /* 5 CLIPRDR_DATA_RESPONSE */
+    out_uint16_le(s, CB_RESPONSE_FAIL); /* 2 status */
+    out_uint32_le(s, 0);
+    s_mark_end(s);
+    size = (int)(s->end - s->data);
+    rv = send_channel_data(g_cliprdr_chan_id, s->data, size);
+    free_stream(s);
+    return rv;
+}
+
+/*****************************************************************************/
 /* sent by recipient of CB_FORMAT_LIST; used to request data for one
    of the formats that was listed in CB_FORMAT_LIST */
 static int APP_CC
 clipboard_process_data_request(struct stream *s, int clip_msg_status,
                                int clip_msg_len)
 {
+    int requestedFormatId;
+
     LOGM((LOG_LEVEL_DEBUG, "clipboard_process_data_request: "
           "CLIPRDR_DATA_REQUEST"));
     LLOGLN(10, ("clipboard_process_data_request:"));
     g_hexdump(s->p, s->end - s->p);
-    clipboard_send_data_response();
+    in_uint32_le(s, requestedFormatId);
+    switch (requestedFormatId)
+    {
+        case CB_FORMAT_FILE: /* 0xC0BC */
+            LLOGLN(10, ("clipboard_process_data_request: CB_FORMAT_FILE %d", g_last_clip_type));
+            XConvertSelection(g_display, g_clipboard_atom, g_last_clip_type,
+                              g_clip_property_atom, g_wnd, CurrentTime);
+            break;
+        case CB_FORMAT_DIB: /* 0x0008 */
+            LLOGLN(10, ("clipboard_process_data_request: CB_FORMAT_DIB"));
+            XConvertSelection(g_display, g_clipboard_atom, g_last_clip_type,
+                              g_clip_property_atom, g_wnd, CurrentTime);
+            break;
+        case CB_FORMAT_UNICODETEXT: /* 0x000D */
+            LLOGLN(10, ("clipboard_process_data_request: CB_FORMAT_UNICODETEXT"));
+            XConvertSelection(g_display, g_clipboard_atom, g_last_clip_type,
+                              g_clip_property_atom, g_wnd, CurrentTime);
+            break;
+        default:
+            LLOGLN(10, ("clipboard_process_data_request: unknown type %d",
+                        requestedFormatId));
+            clipboard_send_data_response_failed();
+            break;
+    }
+    //g_sleep(100); /* ? this seems to prevent case where XConvertSelection does not
+    //                   yeild a SelectionNotify */
     return 0;
 }
 
@@ -1005,6 +1253,119 @@ clipboard_process_clip_caps(struct stream *s, int clip_msg_status,
 }
 
 /*****************************************************************************/
+static int APP_CC
+clipboard_send_file_size(int streamId, int lindex)
+{
+    struct stream *s;
+    int size;
+    int rv;
+    int file_size;
+
+    file_size = g_files[lindex].size;
+    LLOGLN(10, ("clipboard_send_file_size: streamId %d file_size %d",
+                streamId, file_size));
+    make_stream(s);
+    init_stream(s, 8192);
+    out_uint16_le(s, CB_FILECONTENTS_RESPONSE); /* 9 */
+    out_uint16_le(s, CB_RESPONSE_OK); /* 1 status */
+    out_uint32_le(s, 12);
+    out_uint32_le(s, streamId);
+    out_uint32_le(s, file_size);
+    g_writeln("file_size %d", file_size);
+    out_uint32_le(s, 0);
+    out_uint32_le(s, 0);
+    s_mark_end(s);
+    size = (int)(s->end - s->data);
+    rv = send_channel_data(g_cliprdr_chan_id, s->data, size);
+    free_stream(s);
+    return rv;
+}
+
+/*****************************************************************************/
+static int APP_CC
+clipboard_send_file_data(int streamId, int lindex,
+                         int nPositionLow, int cbRequested)
+{
+    struct stream *s;
+    int size;
+    int rv;
+    int fd;
+    char full_fn[256];
+
+    LLOGLN(10, ("clipboard_send_file_data: streamId %d lindex %d "
+                "nPositionLow %d cbRequested %d", streamId, lindex,
+                nPositionLow, cbRequested));
+    g_snprintf(full_fn, 255, "%s/%s", g_files[lindex].pathname,
+               g_files[lindex].filename);
+    fd = g_file_open_ex(full_fn, 1, 0, 0, 0);
+    if (fd == -1)
+    {
+        LLOGLN(0, ("clipboard_send_file_data: file open [%s] failed",
+                   full_fn));
+        return 1;
+    }
+    g_file_seek(fd, nPositionLow);
+    make_stream(s);
+    init_stream(s, cbRequested + 64);
+    //g_memset(s->data + 12, 26, cbRequested);
+    size = g_file_read(fd, s->data + 12, cbRequested);
+    g_writeln("size %d", size);
+    if (size < 1)
+    {
+        LLOGLN(10, ("clipboard_send_file_data: read error, want %d got %d",
+                    cbRequested, size));
+        free_stream(s);
+        g_file_close(fd);
+        return 1;
+    }
+    out_uint16_le(s, CB_FILECONTENTS_RESPONSE); /* 9 */
+    out_uint16_le(s, CB_RESPONSE_OK); /* 1 status */
+    out_uint32_le(s, size + 4);
+    out_uint32_le(s, streamId);
+    s->p += size;
+    out_uint32_le(s, 0);
+    s_mark_end(s);
+    size = (int)(s->end - s->data);
+    rv = send_channel_data(g_cliprdr_chan_id, s->data, size);
+    free_stream(s);
+    g_file_close(fd);
+    return rv;
+}
+
+/*****************************************************************************/
+static int APP_CC
+clipboard_process_file_request(struct stream *s, int clip_msg_status,
+                               int clip_msg_len)
+{
+    int streamId;
+    int lindex;
+    int dwFlags;
+    int nPositionLow;
+    int nPositionHigh;
+    int cbRequested;
+    //int clipDataId;
+
+    LLOGLN(10, ("clipboard_process_file_request:"));
+    g_hexdump(s->p, clip_msg_len);
+    in_uint32_le(s, streamId);
+    in_uint32_le(s, lindex);
+    in_uint32_le(s, dwFlags);
+    in_uint32_le(s, nPositionLow);
+    in_uint32_le(s, nPositionHigh);
+    in_uint32_le(s, cbRequested);
+    //in_uint32_le(s, clipDataId); /* options, used when locking */
+    if (dwFlags & CB_FILECONTENTS_SIZE)
+    {
+        clipboard_send_file_size(streamId, lindex);
+    }
+    if (dwFlags & CB_FILECONTENTS_RANGE)
+    {
+        clipboard_send_file_data(streamId, lindex, nPositionLow, cbRequested);
+    }
+    return 0;
+}
+
+/*****************************************************************************/
 int APP_CC
 clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length,
                   int total_length)
@@ -1056,19 +1417,19 @@ clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length,
             /* sent by client or server when its local system clipboard is   */
             /* updated with new clipboard data; contains Clipboard Format ID */
             /* and name pairs of new Clipboard Formats on the clipboard.     */
-        case CB_FORMAT_LIST: /* CLIPRDR_FORMAT_ANNOUNCE */
+        case CB_FORMAT_LIST: /* 2 CLIPRDR_FORMAT_ANNOUNCE */
             rv = clipboard_process_format_announce(ls, clip_msg_status,
                                                    clip_msg_len);
             break;
             /* response to CB_FORMAT_LIST; used to indicate whether */
             /* processing of the Format List PDU was successful     */
-        case CB_FORMAT_LIST_RESPONSE: /* CLIPRDR_FORMAT_ACK */
+        case CB_FORMAT_LIST_RESPONSE: /* 3 CLIPRDR_FORMAT_ACK */
             rv = clipboard_prcoess_format_ack(ls, clip_msg_status,
                                               clip_msg_len);
             break;
             /* sent by recipient of CB_FORMAT_LIST; used to request data for one */
             /* of the formats that was listed in CB_FORMAT_LIST                  */
-        case CB_FORMAT_DATA_REQUEST: /* CLIPRDR_DATA_REQUEST */
+        case CB_FORMAT_DATA_REQUEST: /* 4 CLIPRDR_DATA_REQUEST */
             rv = clipboard_process_data_request(ls, clip_msg_status,
                                                 clip_msg_len);
             break;
@@ -1077,13 +1438,17 @@ clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length,
             /* successful; if processing was successful,                   */
             /* CB_FORMAT_DATA_RESPONSE includes contents of requested      */
             /* clipboard data.                                             */
-        case CB_FORMAT_DATA_RESPONSE: /* CLIPRDR_DATA_RESPONSE */
+        case CB_FORMAT_DATA_RESPONSE: /* 5 CLIPRDR_DATA_RESPONSE */
             rv = clipboard_process_data_response(ls, clip_msg_status,
                                                  clip_msg_len);
             break;
-        case CB_CLIP_CAPS:
+        case CB_CLIP_CAPS: /* 7 */
             rv = clipboard_process_clip_caps(ls, clip_msg_status,
                                              clip_msg_len);
+            break;
+        case CB_FILECONTENTS_REQUEST: /* 8 */
+            rv = clipboard_process_file_request(ls, clip_msg_status,
+                                                clip_msg_len);
             break;
         default:
             LLOGLN(0, ("clipboard_data_in: unknown clip_msg_id %d", clip_msg_id));
@@ -1118,6 +1483,9 @@ clipboard_event_selection_owner_notify(XEvent *xevent)
     XFixesSelectionNotifyEvent *lxevent;
 
     LLOGLN(0, ("clipboard_event_selection_owner_notify:"));
+
+    //return 0;
+
     lxevent = (XFixesSelectionNotifyEvent *)xevent;
     LOGM((LOG_LEVEL_DEBUG, "clipboard_event_selection_owner_notify: "
           "window %d subtype %d owner %d g_wnd %d",
@@ -1171,7 +1539,8 @@ clipboard_get_window_property(Window wnd, Atom prop, Atom *type, int *fmt,
 
     if (ltype == g_incr_atom)
     {
-        LOGM((LOG_LEVEL_DEBUG, "clipboard_event_property_notify: INCR start"));
+        LOGM((LOG_LEVEL_DEBUG, "clipboard_get_window_property: INCR start"));
+        LLOGLN(10, ("clipboard_get_window_property: INCR start"));
         g_incr_in_progress = 1;
         g_incr_atom_type = prop;
         g_incr_data_size = 0;
@@ -1286,32 +1655,29 @@ clipboard_event_selection_notify(XEvent *xevent)
     int fmt;
     int rv;
     int index;
-    int convert_to_string;
-    int convert_to_utf8;
-    int convert_to_bmp_image;
-    int convert_to_file;
+    int got_string;
+    int got_utf8;
+    int got_bmp_image;
+    int got_file;
     int send_format_announce;
     int atom;
     Atom *atoms;
     Atom type;
-    tui32 format_id;
-    char format_name[32];
 
+    LLOGLN(10, ("clipboard_event_selection_notify:"));
     LOGM((LOG_LEVEL_DEBUG, "clipboard_event_selection_notify:"));
     data_size = 0;
     n_items = 0;
     fmt = 0;
-    convert_to_string = 0;
-    convert_to_utf8 = 0;
-    convert_to_bmp_image = 0;
-    convert_to_file = 0;
+    got_string = 0;
+    got_utf8 = 0;
+    got_bmp_image = 0;
+    got_file = 0;
     send_format_announce = 0;
-    format_id = 0;
     rv = 0;
     data = 0;
     type = 0;
     lxevent = (XSelectionEvent *)xevent;
-    g_memset(format_name, 0, 32);
 
     if (lxevent->property == None)
     {
@@ -1352,7 +1718,6 @@ clipboard_event_selection_notify(XEvent *xevent)
                 if ((type == XA_ATOM) && (fmt == 32))
                 {
                     atoms = (Atom *)data;
-                    g_in_file_copy = 0;
                     for (index = 0; index < n_items; index++)
                     {
                         atom = atoms[index];
@@ -1362,20 +1727,20 @@ clipboard_event_selection_notify(XEvent *xevent)
                                     atom, XGetAtomName(g_display, atom)));
                         if (atom == g_utf8_atom)
                         {
-                            convert_to_utf8 = 1;
+                            got_utf8 = 1;
                         }
                         else if (atom == XA_STRING)
                         {
-                            convert_to_string = 1;
+                            got_string = 1;
                         }
                         else if (atom == g_image_bmp_atom)
                         {
-                            convert_to_bmp_image = 1;
+                            got_bmp_image = 1;
                         }
                         else if ((atom == g_file_atom1) || (atom == g_file_atom2))
                         {
                             LLOGLN(10, ("clipboard_event_selection_notify: file"));
-                            convert_to_file = 1;
+                            got_file = 1;
                         }
                         else
                         {
@@ -1392,54 +1757,64 @@ clipboard_event_selection_notify(XEvent *xevent)
             }
             else if (lxevent->target == g_utf8_atom)
             {
-                LLOGLN(10, ("here---------------------%d", g_in_file_copy));
                 LOGM((LOG_LEVEL_DEBUG, "clipboard_event_selection_notify: UTF8_STRING "
                       "data_size %d", data_size));
-                g_free(g_last_clip_data);
-                g_last_clip_data = 0;
-                g_last_clip_size = data_size;
-                g_last_clip_data = (char *) g_malloc(g_last_clip_size + 1, 0);
-                g_last_clip_type = g_utf8_atom;
-                g_memcpy(g_last_clip_data, data, g_last_clip_size);
-                g_last_clip_data[g_last_clip_size] = 0;
-                send_format_announce = 1;
-                if (g_in_file_copy)
+                LLOGLN(10, ("clipboard_event_selection_notify: UTF8_STRING "
+                            "data_size %d", data_size));
+                if ((!g_incr_in_progress) && (data_size > 0))
                 {
-                    format_id = CB_FORMAT_FILE;
-                    g_strcpy(format_name, "FileGroupDescriptorW");
-                }
-                else
-                {
-                    format_id = CB_FORMAT_UNICODETEXT;
+                    g_free(g_last_clip_data);
+                    g_last_clip_data = 0;
+                    g_last_clip_size = data_size;
+                    g_last_clip_data = (char *) g_malloc(g_last_clip_size + 1, 0);
+                    g_memcpy(g_last_clip_data, data, g_last_clip_size);
+                    g_last_clip_data[g_last_clip_size] = 0;
+                    if (g_last_xrdp_clip_type == XRDP_CB_FILE)
+                    {
+                        clipboard_send_data_response_for_file(g_last_clip_data,
+                                                              g_last_clip_size);
+                    }
+                    else
+                    {
+                        clipboard_send_data_response_for_text(g_last_clip_data,
+                                                              g_last_clip_size);
+                    }
                 }
             }
             else if (lxevent->target == XA_STRING)
             {
                 LOGM((LOG_LEVEL_DEBUG, "clipboard_event_selection_notify: XA_STRING "
                       "data_size %d", data_size));
-                g_free(g_last_clip_data);
-                g_last_clip_data = 0;
-                g_last_clip_size = data_size;
-                g_last_clip_data = (char *) g_malloc(g_last_clip_size + 1, 0);
-                g_last_clip_type = XA_STRING;
-                g_memcpy(g_last_clip_data, data, g_last_clip_size);
-                g_last_clip_data[g_last_clip_size] = 0;
-                send_format_announce = 1;
-                format_id = CB_FORMAT_UNICODETEXT;
+                LLOGLN(10, ("clipboard_event_selection_notify: XA_STRING "
+                            "data_size %d", data_size));
+                if ((!g_incr_in_progress) && (data_size > 0))
+                {
+                    g_free(g_last_clip_data);
+                    g_last_clip_data = 0;
+                    g_last_clip_size = data_size;
+                    g_last_clip_data = (char *) g_malloc(g_last_clip_size + 1, 0);
+                    g_memcpy(g_last_clip_data, data, g_last_clip_size);
+                    g_last_clip_data[g_last_clip_size] = 0;
+                    clipboard_send_data_response_for_text(g_last_clip_data,
+                                                          g_last_clip_size);
+                }
             }
             else if (lxevent->target == g_image_bmp_atom)
             {
                 LOGM((LOG_LEVEL_DEBUG, "clipboard_event_selection_notify: image/bmp "
                       "data_size %d", data_size));
-                g_free(g_last_clip_data);
-                g_last_clip_data = 0;
-                g_last_clip_size = data_size;
-                g_last_clip_data = (char *) g_malloc(data_size, 0);
-                g_last_clip_type = g_image_bmp_atom;
-                g_memcpy(g_last_clip_data, data, data_size);
-                send_format_announce = 1;
-                format_id = CB_FORMAT_DIB;
-                g_strcpy(format_name, "image/bmp");
+                LLOGLN(10, ("clipboard_event_selection_notify: image/bmp "
+                            "data_size %d", data_size));
+                if ((!g_incr_in_progress) && (data_size > 14))
+                {
+                    g_free(g_last_clip_data);
+                    g_last_clip_data = 0;
+                    g_last_clip_size = data_size;
+                    g_last_clip_data = (char *) g_malloc(data_size, 0);
+                    g_memcpy(g_last_clip_data, data, data_size);
+                    clipboard_send_data_response_for_image(g_last_clip_data + 14,
+                                                           g_last_clip_size - 14);
+                }
             }
             else
             {
@@ -1454,32 +1829,38 @@ clipboard_event_selection_notify(XEvent *xevent)
         }
     }
 
-    if (convert_to_file)
+    if (got_file)
     {
-        LLOGLN(10, ("convert_to_file and convert_to_utf8 set"));
-        XConvertSelection(g_display, g_clipboard_atom, g_utf8_atom,
-                          g_clip_property_atom, g_wnd, lxevent->time);
-        g_in_file_copy = 1;
+        g_last_clip_type = g_utf8_atom;
+        g_last_xrdp_clip_type = XRDP_CB_FILE;
+        g_last_clip_time = lxevent->time;
+        send_format_announce = 1;
     }
-    else if (convert_to_utf8)
+    else if (got_utf8)
     {
-        XConvertSelection(g_display, g_clipboard_atom, g_utf8_atom,
-                          g_clip_property_atom, g_wnd, lxevent->time);
+        g_last_clip_type = g_utf8_atom;
+        g_last_xrdp_clip_type = XRDP_CB_TEXT;
+        g_last_clip_time = lxevent->time;
+        send_format_announce = 1;
     }
-    else if (convert_to_string)
+    else if (got_string)
     {
-        XConvertSelection(g_display, g_clipboard_atom, XA_STRING,
-                          g_clip_property_atom, g_wnd, lxevent->time);
+        g_last_clip_type = XA_STRING;
+        g_last_xrdp_clip_type = XRDP_CB_TEXT;
+        g_last_clip_time = lxevent->time;
+        send_format_announce = 1;
     }
-    else if (convert_to_bmp_image)
+    else if (got_bmp_image)
     {
-        XConvertSelection(g_display, g_clipboard_atom, g_image_bmp_atom,
-                          g_clip_property_atom, g_wnd, lxevent->time);
+        g_last_clip_type = g_image_bmp_atom;
+        g_last_xrdp_clip_type = XRDP_CB_BITMAP;
+        g_last_clip_time = lxevent->time;
+        send_format_announce = 1;
     }
 
     if (send_format_announce)
     {
-        if (clipboard_send_format_announce(format_id, format_name) != 0)
+        if (clipboard_send_format_announce(g_last_xrdp_clip_type) != 0)
         {
             rv = 4;
         }
@@ -1581,7 +1962,6 @@ clipboard_event_selection_request(XEvent *xevent)
     {
         LOGM((LOG_LEVEL_DEBUG, "clipboard_event_selection_request: %s",
               XGetAtomName(g_display, lxev->target)));
-        g_clipboard_format_id = CB_FORMAT_UNICODETEXT;
 
         if (g_data_in_up_to_date)
         {
@@ -1601,7 +1981,7 @@ clipboard_event_selection_request(XEvent *xevent)
 
             if (g_selection_request_event_count == 0)
             {
-                clipboard_send_data_request();
+                clipboard_send_data_request(CB_FORMAT_UNICODETEXT);
                 g_waiting_for_data_response = 1;
                 g_waiting_for_data_response_time = xcommon_get_local_time();
             }
@@ -1615,9 +1995,9 @@ clipboard_event_selection_request(XEvent *xevent)
         g_memcpy(&g_saved_selection_req_event, lxev,
                  sizeof(g_saved_selection_req_event));
         g_last_clip_type = g_image_bmp_atom;
+        g_last_xrdp_clip_type = XRDP_CB_BITMAP;
         g_want_image_data = 1;
-        g_clipboard_format_id = CB_FORMAT_DIB;
-        clipboard_send_data_request();
+        clipboard_send_data_request(CB_FORMAT_DIB);
         g_waiting_for_data_response = 1;
         g_waiting_for_data_response_time = clipboard_get_local_time();
         return 0;
@@ -1677,9 +2057,9 @@ clipboard_event_property_notify(XEvent *xevent)
     int format_in_bytes;
     int new_data_len;
     char *cptr;
-    char format_name[32];
 
-    LOG(10, ("clipboard_check_wait_objs: PropertyNotify .window %d "
+    LLOGLN(10, ("clipboard_event_property_notify:"));
+    LOG(10, ("clipboard_event_property_notify: PropertyNotify .window %d "
              ".state %d .atom %d", xevent->xproperty.window,
              xevent->xproperty.state, xevent->xproperty.atom));
 
@@ -1700,7 +2080,6 @@ clipboard_event_property_notify(XEvent *xevent)
         if (bytes_left <= 0)
         {
             LOGM((LOG_LEVEL_DEBUG, "clipboard_event_property_notify: INCR done"));
-            g_memset(format_name, 0, 32);
             /* clipboard INCR cycle has completed */
             g_incr_in_progress = 0;
             g_last_clip_size = g_incr_data_size;
@@ -1710,8 +2089,26 @@ clipboard_event_property_notify(XEvent *xevent)
 
             if (g_incr_atom_target == g_image_bmp_atom)
             {
-                g_snprintf(format_name, 31, "image/bmp");
-                clipboard_send_format_announce(CB_FORMAT_DIB, format_name);
+                g_last_xrdp_clip_type = XRDP_CB_BITMAP;
+                //g_hexdump(g_last_clip_data, 64);
+                /* skip header */
+                clipboard_send_data_response(g_last_xrdp_clip_type,
+                                             g_last_clip_data + 14,
+                                             g_last_clip_size - 14);
+            }
+            else if ((g_incr_atom_target == XA_STRING) ||
+                     (g_incr_atom_target == g_utf8_atom))
+            {
+                g_last_xrdp_clip_type = XRDP_CB_TEXT;
+                clipboard_send_data_response(g_last_xrdp_clip_type,
+                                             g_last_clip_data,
+                                             g_last_clip_size);
+            }
+            else
+            {
+                LLOGLN(0, ("clipboard_event_property_notify: error unknown type %d",
+                           g_incr_atom_target));
+                clipboard_send_data_response_failed();
             }
 
             XDeleteProperty(g_display, g_wnd, g_incr_atom_type);
@@ -1808,6 +2205,18 @@ clipboard_xevent(void *xevent)
             {
                 LLOGLN(0, ("clipboard_xevent: got XFixesSetSelectionOwnerNotify"));
                 clipboard_event_selection_owner_notify(lxevent);
+                break;
+            }
+            if (lxevent->type == g_xfixes_event_base +
+                    XFixesSelectionWindowDestroyNotify)
+            {
+                LLOGLN(0, ("clipboard_xevent: got XFixesSelectionWindowDestroyNotify"));
+                break;
+            }
+            if (lxevent->type == g_xfixes_event_base +
+                    XFixesSelectionClientCloseNotify)
+            {
+                LLOGLN(0, ("clipboard_xevent: got XFixesSelectionClientCloseNotify"));
                 break;
             }
 
