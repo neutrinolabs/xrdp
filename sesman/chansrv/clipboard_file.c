@@ -173,14 +173,14 @@ clipboard_send_data_response_for_file(char *data, int data_size)
 
     LLOGLN(10, ("clipboard_send_data_response_for_file: g_last_clip_size %d",
                  g_last_clip_size));
-    g_hexdump(data, data_size);
+    //g_hexdump(data, data_size);
     clipboard_get_files(data, data_size);
     cItems = g_num_files;
     bytes_after_header = cItems * 592 + 4;
     make_stream(s);
     init_stream(s, 64 + bytes_after_header);
     out_uint16_le(s, CB_FORMAT_DATA_RESPONSE); /* 5 CLIPRDR_DATA_RESPONSE */
-    out_uint16_le(s, 1); // CB_RESPONSE_OK); /* 1 status */
+    out_uint16_le(s, CB_RESPONSE_OK); /* 1 status */
     out_uint32_le(s, bytes_after_header);
     out_uint32_le(s, cItems);
     for (index = 0; index < cItems; index++)
@@ -199,7 +199,7 @@ clipboard_send_data_response_for_file(char *data, int data_size)
         /* file size */
         out_uint32_le(s, 0);
         out_uint32_le(s, g_files[index].size);
-        g_writeln("jay size %d", g_files[index].size);
+        //g_writeln("jay size %d", g_files[index].size);
         g_snprintf(fn, 255, "%s", g_files[index].filename);
         clipboard_out_unicode(s, fn, 256);
         out_uint8s(s, 8); /* pad */
@@ -207,7 +207,7 @@ clipboard_send_data_response_for_file(char *data, int data_size)
     out_uint32_le(s, 0);
     s_mark_end(s);
     size = (int)(s->end - s->data);
-    g_hexdump(s->data, size);
+    //g_hexdump(s->data, size);
     rv = send_channel_data(g_cliprdr_chan_id, s->data, size);
     free_stream(s);
     return rv;
@@ -270,7 +270,7 @@ clipboard_send_file_data(int streamId, int lindex,
     init_stream(s, cbRequested + 64);
     //g_memset(s->data + 12, 26, cbRequested);
     size = g_file_read(fd, s->data + 12, cbRequested);
-    g_writeln("size %d", size);
+    //g_writeln("size %d", size);
     if (size < 1)
     {
         LLOGLN(10, ("clipboard_send_file_data: read error, want %d got %d",
@@ -307,7 +307,7 @@ clipboard_process_file_request(struct stream *s, int clip_msg_status,
     //int clipDataId;
 
     LLOGLN(10, ("clipboard_process_file_request:"));
-    g_hexdump(s->p, clip_msg_len);
+    //g_hexdump(s->p, clip_msg_len);
     in_uint32_le(s, streamId);
     in_uint32_le(s, lindex);
     in_uint32_le(s, dwFlags);
