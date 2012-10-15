@@ -644,30 +644,29 @@ static int APP_CC
 clipboard_send_data_response(int xrdp_clip_type, char *data, int data_size)
 {
     LLOGLN(10, ("clipboard_send_data_response:"));
-    if (g_last_clip_data != 0)
+    if (data != 0)
     {
-        if (g_last_xrdp_clip_type == XRDP_CB_FILE)
+        if (xrdp_clip_type == XRDP_CB_FILE)
         {
             return clipboard_send_data_response_for_file(data, data_size);
         }
-        else if (g_last_xrdp_clip_type == XRDP_CB_BITMAP)
+        else if (xrdp_clip_type == XRDP_CB_BITMAP)
         {
             return clipboard_send_data_response_for_image(data, data_size);
         }
-        else if (g_last_xrdp_clip_type == XRDP_CB_TEXT)
+        else if (xrdp_clip_type == XRDP_CB_TEXT)
         {
             return clipboard_send_data_response_for_text(data, data_size);
         }
         else
         {
             LLOGLN(0, ("clipboard_send_data_response: unknown "
-                       "g_last_xrdp_clip_type %d", g_last_xrdp_clip_type));
+                       "xrdp_clip_type %d", xrdp_clip_type));
         }
     }
     else
     {
-        LLOGLN(0, ("clipboard_send_data_response: g_last_clip_data "
-                   "is nil"));
+        LLOGLN(0, ("clipboard_send_data_response: data is nil"));
     }
     return 0;
 }
@@ -885,8 +884,8 @@ clipboard_process_data_request(struct stream *s, int clip_msg_status,
             {
                 LLOGLN(10, ("clipboard_process_data_request: CB_FORMAT_FILE, "
                             "sending last data tdiff %d", tdiff));
-                clipboard_send_data_response_for_file(g_last_clip_data,
-                                                      g_last_clip_size);
+                clipboard_send_data_response(XRDP_CB_FILE, g_last_clip_data,
+                                             g_last_clip_size);
             }
             else
             {
@@ -905,8 +904,8 @@ clipboard_process_data_request(struct stream *s, int clip_msg_status,
             {
                 LLOGLN(10, ("clipboard_process_data_request: CB_FORMAT_DIB, "
                             "sending last data tdiff %d", tdiff));
-                clipboard_send_data_response_for_image(g_last_clip_data,
-                                                       g_last_clip_size);
+                clipboard_send_data_response(XRDP_CB_BITMAP, g_last_clip_data,
+                                             g_last_clip_size);
             }
             else
             {
@@ -923,8 +922,8 @@ clipboard_process_data_request(struct stream *s, int clip_msg_status,
             {
                 LLOGLN(10, ("clipboard_process_data_request: CB_FORMAT_UNICODETEXT, "
                             "sending last data tdiff %d", tdiff));
-                clipboard_send_data_response_for_image(g_last_clip_data,
-                                                       g_last_clip_size);
+                clipboard_send_data_response(XRDP_CB_TEXT, g_last_clip_data,
+                                             g_last_clip_size);
             }
             else
             {
@@ -941,8 +940,6 @@ clipboard_process_data_request(struct stream *s, int clip_msg_status,
             clipboard_send_data_response_failed();
             break;
     }
-    //g_sleep(100); /* ? this seems to prevent case where XConvertSelection does not
-    //                   yeild a SelectionNotify */
     return 0;
 }
 
@@ -1373,7 +1370,15 @@ clipboard_get_window_property(Window wnd, Atom prop, Atom *type, int *fmt,
         return 1;
     }
 
-    lxdata_size = (lfmt / 8) * ln_items;
+    if (lfmt == 32)
+    {
+        /* 32 implies long */
+        lxdata_size = sizeof(long) * ln_items;
+    }
+    else
+    {
+        lxdata_size = (lfmt / 8) * ln_items;
+    }
 
     if (lxdata_size < 1)
     {
@@ -1460,7 +1465,7 @@ clipboard_event_selection_notify(XEvent *xevent)
     int got_bmp_image;
     int got_file;
     int send_format_announce;
-    int atom;
+    Atom atom;
     Atom *atoms;
     Atom type;
 
@@ -1523,7 +1528,7 @@ clipboard_event_selection_notify(XEvent *xevent)
         {
             if (lxevent->target == g_targets_atom)
             {
-                /* on a 64 bit machine, actual_format_return of 32 implies long */
+                /* 32 implies long */
                 if ((type == XA_ATOM) && (fmt == 32))
                 {
                     atoms = (Atom *)data;
@@ -1937,12 +1942,14 @@ clipboard_event_property_notify(XEvent *xevent)
                                     AnyPropertyType, &actual_type_return, &actual_format_return,
                                     &nitems_returned, &bytes_left, (unsigned char **) &data);
 
-            format_in_bytes = actual_format_return / 8;
-
-            if ((actual_format_return == 32) && (sizeof(long) == 8))
+            if (actual_format_return == 32)
             {
-                /* on a 64 bit machine, actual_format_return of 32 implies long */
-                format_in_bytes = 8;
+                /* 32 implies long */
+                format_in_bytes = sizeof(long);
+            }
+            else
+            {
+                format_in_bytes = actual_format_return / 8;
             }
 
             new_data_len = nitems_returned * format_in_bytes;
