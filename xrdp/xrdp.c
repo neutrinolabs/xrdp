@@ -507,9 +507,34 @@ main(int argc, char** argv)
   }
   if (g_file_exist(pid_file)) /* xrdp.pid */
   {
-    g_writeln("It looks like xrdp is allready running,");
-    g_writeln("if not delete the xrdp.pid file and try again");
-    g_exit(0);
+    int alive = 0;
+
+#if !defined(_WIN32)
+    /* read the xrdp.pid file */
+    fd = g_file_open(pid_file); /* xrdp.pid */
+    if (fd == -1)
+    {
+      g_writeln("failed to read xrdp.pid");
+    }
+    else
+    {
+      g_memset(text, 0, 32);
+      g_file_read(fd, text, 31);
+      pid = g_atoi(text);
+      if (pid > 0)
+      {
+        alive = kill(pid, 0);
+      }
+      g_file_close(fd);
+    }
+#endif
+
+    if (alive == 0)
+    {
+      g_writeln("It looks like xrdp is allready running,");
+      g_writeln("if not delete the xrdp.pid file and try again");
+      g_exit(0);
+    }
   }
   if (!no_daemon)
   {
