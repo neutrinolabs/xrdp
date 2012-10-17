@@ -509,7 +509,7 @@ g_write_ip_address(int rcv_sck, char* ip_address)
   in.s_addr = s.sin_addr.s_addr;
 
   ip_port = ntohs(s.sin_port);
-  
+
   if (ip_port != 0)
   {
     sprintf(ip_address, "%s:%d - socket: %d", inet_ntoa(in), ip_port, rcv_sck);
@@ -1210,7 +1210,7 @@ g_mkdir(const char* dirname)
 
 /*****************************************************************************/
 /* gets the current working directory and puts up to maxlen chars in
-   dirname 
+   dirname
    always returns 0 */
 char* APP_CC
 g_get_current_dir(char* dirname, int maxlen)
