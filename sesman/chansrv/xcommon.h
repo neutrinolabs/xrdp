@@ -22,6 +22,10 @@
 #include "arch.h"
 #include "parse.h"
 
+/* 32 implies long */
+#define FORMAT_TO_BYTES(_format) \
+    (_format) == 32 ? sizeof(long) : (_format) / 8
+
 int APP_CC
 xcommon_get_local_time(void);
 int APP_CC

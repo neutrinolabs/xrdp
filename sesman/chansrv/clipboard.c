@@ -131,11 +131,16 @@ static XSelectionRequestEvent g_saved_selection_req_event;
 
 /* for clipboard INCR transfers */
 static Atom g_incr_atom;
+static Atom g_incr_atom_property;
 static Atom g_incr_atom_type;
 static Atom g_incr_atom_target;
+static int g_incr_in_progress_c2s = 0; /* client to server */
+static int g_incr_in_progress_s2c = 0; /* server to client */
 static char *g_incr_data = 0;
 static int g_incr_data_size = 0;
-static int g_incr_in_progress = 0;
+static int g_incr_data_bytes_done = 0;
+/* xserver maximum request size in bytes */
+static int g_incr_max_req_size = 0;
 
 /* default version and flags */
 static int g_cliprdr_version = 2;
@@ -209,8 +214,8 @@ clipboard_init(void)
 
     xcommon_init();
     clipboard_deinit();
+    g_incr_max_req_size = XMaxRequestSize(g_display) * 4 - 24;
     rv = 0;
-
     if (rv == 0)
     {
         g_clipboard_atom = XInternAtom(g_display, "CLIPBOARD", False);
@@ -698,13 +703,16 @@ clipboard_provide_selection(XSelectionRequestEvent *req, Atom type, int format,
                             char *data, int length)
 {
     XEvent xev;
-    long val1;
+    long val1[2];
+    int bytes;
 
-    LLOGLN(0, ("clipboard_provide_selection: length %d", length));
-    if (length <= 16 * 1024 * 1024)
+    bytes = FORMAT_TO_BYTES(format);
+    bytes *= length;
+    LLOGLN(10, ("clipboard_provide_selection: bytes %d", bytes));
+    if (bytes < g_incr_max_req_size)
     {
         XChangeProperty(g_display, req->requestor, req->property,
-                        type, format, PropModeReplace, (tui8 *)data, length);
+                        type, format, PropModeReplace, (tui8 *)data, bytes);
         g_memset(&xev, 0, sizeof(xev));
         xev.xselection.type = SelectionNotify;
         xev.xselection.send_event = True;
@@ -718,11 +726,26 @@ clipboard_provide_selection(XSelectionRequestEvent *req, Atom type, int format,
     }
     else
     {
+        g_free(g_incr_data);
+        g_incr_data = (char *)g_malloc(bytes + 64, 0);
+        g_memcpy(g_incr_data, data, bytes);
+        g_incr_data_size = bytes;
+        g_incr_data_bytes_done = 0;
+        g_incr_atom_type = type;
+
         /* start the INCR process */
-        LLOGLN(0, ("clipboard_provide_selection: start INCR"));
-        val1 = 0;
+        LLOGLN(0, ("clipboard_provide_selection: start INCR property %s "
+                   "type %s", XGetAtomName(g_display, req->property),
+                   XGetAtomName(g_display, type)));
+        val1[0] = bytes;
+        val1[1] = 0;
         XChangeProperty(g_display, req->requestor, req->property,
-                        g_incr_atom, 32, PropModeReplace, (tui8 *)&val1, 1);
+                        g_incr_atom, 32, PropModeReplace, (tui8 *)val1, 1);
+        /* we need events from that other window */
+        XSelectInput(g_display, req->requestor, PropertyChangeMask);
+        g_incr_in_progress_s2c = 1;
+        g_incr_atom_property = req->property;
+
         g_memset(&xev, 0, sizeof(xev));
         xev.xselection.type = SelectionNotify;
         xev.xselection.send_event = True;
@@ -1328,25 +1351,6 @@ clipboard_get_window_property(Window wnd, Atom prop, Atom *type, int *fmt,
         return 1;
     }
 
-    if (ltype == g_incr_atom)
-    {
-        LOGM((LOG_LEVEL_DEBUG, "clipboard_get_window_property: INCR start"));
-        LLOGLN(10, ("clipboard_get_window_property: INCR start lfmt %d "
-                    "ln_items %d llen_after %d", lfmt, ln_items, llen_after));
-        g_incr_in_progress = 1;
-        g_incr_atom_type = prop;
-        g_incr_data_size = 0;
-        g_free(g_incr_data);
-        g_incr_data = 0;
-        /* this will start the incr process */
-        XDeleteProperty(g_display, g_wnd, prop);
-        if (type != 0)
-        {
-            *type = ltype;
-        }
-        return 0;
-    }
-
     if (llen_after < 1)
     {
         /* no data, ok */
@@ -1370,15 +1374,8 @@ clipboard_get_window_property(Window wnd, Atom prop, Atom *type, int *fmt,
         return 1;
     }
 
-    if (lfmt == 32)
-    {
-        /* 32 implies long */
-        lxdata_size = sizeof(long) * ln_items;
-    }
-    else
-    {
-        lxdata_size = (lfmt / 8) * ln_items;
-    }
+    lxdata_size = FORMAT_TO_BYTES(lfmt);
+    lxdata_size *= ln_items;
 
     if (lxdata_size < 1)
     {
@@ -1495,7 +1492,7 @@ clipboard_event_selection_notify(XEvent *xevent)
     {
         /* we need this if the call below turns out to be a
            clipboard INCR operation */
-        if (!g_incr_in_progress)
+        if (!g_incr_in_progress_c2s)
         {
             g_incr_atom_target = lxevent->target;
         }
@@ -1516,8 +1513,17 @@ clipboard_event_selection_notify(XEvent *xevent)
         {
             /* nothing more to do here, the data is comming in through
                PropertyNotify */
-            LLOGLN(0, ("clipboard_event_selection_notify: type is INCR"));
-
+            LLOGLN(0, ("clipboard_event_selection_notify: type is INCR "
+                       "data_size %d property name %s type %s", data_size,
+                       XGetAtomName(g_display, lxevent->property),
+                       XGetAtomName(g_display, lxevent->type)));
+            g_incr_in_progress_c2s = 1;
+            g_incr_atom_property = lxevent->property;
+            g_incr_data_size = 0;
+            g_free(g_incr_data);
+            g_incr_data = 0;
+            g_hexdump(data, sizeof(long));
+            g_free(data);
             return 0;
         }
     }
@@ -1575,7 +1581,7 @@ clipboard_event_selection_notify(XEvent *xevent)
                       "data_size %d", data_size));
                 LLOGLN(10, ("clipboard_event_selection_notify: UTF8_STRING "
                             "data_size %d", data_size));
-                if ((!g_incr_in_progress) && (data_size > 0))
+                if ((!g_incr_in_progress_c2s) && (data_size > 0))
                 {
                     g_free(g_last_clip_data);
                     g_last_clip_data = 0;
@@ -1601,7 +1607,7 @@ clipboard_event_selection_notify(XEvent *xevent)
                       "data_size %d", data_size));
                 LLOGLN(10, ("clipboard_event_selection_notify: XA_STRING "
                             "data_size %d", data_size));
-                if ((!g_incr_in_progress) && (data_size > 0))
+                if ((!g_incr_in_progress_c2s) && (data_size > 0))
                 {
                     g_free(g_last_clip_data);
                     g_last_clip_data = 0;
@@ -1619,7 +1625,7 @@ clipboard_event_selection_notify(XEvent *xevent)
                       "data_size %d", data_size));
                 LLOGLN(10, ("clipboard_event_selection_notify: image/bmp "
                             "data_size %d", data_size));
-                if ((!g_incr_in_progress) && (data_size > 14))
+                if ((!g_incr_in_progress_c2s) && (data_size > 14))
                 {
                     g_free(g_last_clip_data);
                     g_last_clip_data = 0;
@@ -1870,29 +1876,58 @@ clipboard_event_property_notify(XEvent *xevent)
     int rv;
     int format_in_bytes;
     int new_data_len;
+    int bytes;
     char *cptr;
 
-    LLOGLN(10, ("clipboard_event_property_notify:"));
+    LLOGLN(0, ("clipboard_event_property_notify:"));
     LOG(10, ("clipboard_event_property_notify: PropertyNotify .window %d "
              ".state %d .atom %d", xevent->xproperty.window,
              xevent->xproperty.state, xevent->xproperty.atom));
 
-    if (g_incr_in_progress &&
-            (xevent->xproperty.atom == g_incr_atom_type) &&
+    if (g_incr_in_progress_s2c &&
+            (xevent->xproperty.atom == g_incr_atom_property) &&
             (xevent->xproperty.state == PropertyDelete))
     {
+        LLOGLN(0, ("clipboard_event_property_notify: INCR PropertyDelete"));
         /* this is used for when copying a large clipboard to the other app,
            it will delete the property so we know to send the next one */
-        LLOGLN(10, ("clipboard_event_property_notify: INCR PropertyDelete"));
+
+        if ((g_incr_data == 0) || (g_incr_data_size < 1))
+        {
+            LLOGLN(0, ("clipboard_event_property_notify: INCR error"));
+            return 0;
+        }
+        data = (tui8 *)(g_incr_data + g_incr_data_bytes_done);
+        bytes = g_incr_data_size - g_incr_data_bytes_done;
+        if (bytes > g_incr_max_req_size)
+        {
+            bytes = g_incr_max_req_size;
+        }
+        g_incr_data_bytes_done += bytes;
+        LLOGLN(0, ("clipboard_event_property_notify: bytes %d", bytes));
+        XChangeProperty(xevent->xproperty.display, xevent->xproperty.window,
+                        xevent->xproperty.atom, g_incr_atom_type, 8,
+                        PropModeReplace, data, bytes);
+        if (bytes < 1)
+        {
+            LLOGLN(0, ("clipboard_event_property_notify: INCR done"));
+            g_incr_in_progress_s2c = 0;
+            /* we no longer need property notify */
+            XSelectInput(xevent->xproperty.display, xevent->xproperty.window,
+                         NoEventMask);
+            g_free(g_incr_data);
+            g_incr_data = 0;
+            g_incr_data_size = 0;
+        }
     }
-    if (g_incr_in_progress &&
-            (xevent->xproperty.atom == g_incr_atom_type) &&
+    if (g_incr_in_progress_c2s &&
+            (xevent->xproperty.atom == g_incr_atom_property) &&
             (xevent->xproperty.state == PropertyNewValue))
     {
         LLOGLN(10, ("clipboard_event_property_notify: INCR PropertyNewValue"));
-        rv = XGetWindowProperty(g_display, g_wnd, g_incr_atom_type, 0, 0, 0,
+        rv = XGetWindowProperty(g_display, g_wnd, g_incr_atom_property, 0, 0, 0,
                                 AnyPropertyType, &actual_type_return, &actual_format_return,
-                                &nitems_returned, &bytes_left, (unsigned char **) &data);
+                                &nitems_returned, &bytes_left, &data);
 
         if (data != 0)
         {
@@ -1904,7 +1939,7 @@ clipboard_event_property_notify(XEvent *xevent)
         {
             LOGM((LOG_LEVEL_DEBUG, "clipboard_event_property_notify: INCR done"));
             /* clipboard INCR cycle has completed */
-            g_incr_in_progress = 0;
+            g_incr_in_progress_c2s = 0;
             g_last_clip_size = g_incr_data_size;
             g_last_clip_data = g_incr_data;
             g_incr_data = 0;
@@ -1934,24 +1969,15 @@ clipboard_event_property_notify(XEvent *xevent)
                 clipboard_send_data_response_failed();
             }
 
-            XDeleteProperty(g_display, g_wnd, g_incr_atom_type);
+            XDeleteProperty(g_display, g_wnd, g_incr_atom_property);
         }
         else
         {
-            rv = XGetWindowProperty(g_display, g_wnd, g_incr_atom_type, 0, bytes_left, 0,
+            rv = XGetWindowProperty(g_display, g_wnd, g_incr_atom_property, 0, bytes_left, 0,
                                     AnyPropertyType, &actual_type_return, &actual_format_return,
-                                    &nitems_returned, &bytes_left, (unsigned char **) &data);
+                                    &nitems_returned, &bytes_left, &data);
 
-            if (actual_format_return == 32)
-            {
-                /* 32 implies long */
-                format_in_bytes = sizeof(long);
-            }
-            else
-            {
-                format_in_bytes = actual_format_return / 8;
-            }
-
+            format_in_bytes = FORMAT_TO_BYTES(actual_format_return);
             new_data_len = nitems_returned * format_in_bytes;
             cptr = (char *) g_malloc(g_incr_data_size + new_data_len, 0);
             g_memcpy(cptr, g_incr_data, g_incr_data_size);
@@ -1967,7 +1993,7 @@ clipboard_event_property_notify(XEvent *xevent)
                     XFree(data);
                 }
 
-                XDeleteProperty(g_display, g_wnd, g_incr_atom_type);
+                XDeleteProperty(g_display, g_wnd, g_incr_atom_property);
                 return 0;
             }
 
@@ -1981,7 +2007,7 @@ clipboard_event_property_notify(XEvent *xevent)
                 XFree(data);
             }
 
-            XDeleteProperty(g_display, g_wnd, g_incr_atom_type);
+            XDeleteProperty(g_display, g_wnd, g_incr_atom_property);
         }
     }
 
