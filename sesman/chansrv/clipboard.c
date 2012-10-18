@@ -129,18 +129,30 @@ static int g_got_format_announce = 0;
 static int g_want_image_data = 0;
 static XSelectionRequestEvent g_saved_selection_req_event;
 
+/* xserver maximum request size in bytes */
+static int g_incr_max_req_size = 0;
 /* for clipboard INCR transfers */
 static Atom g_incr_atom;
 static Atom g_incr_atom_property;
 static Atom g_incr_atom_type;
 static Atom g_incr_atom_target;
 static int g_incr_in_progress_c2s = 0; /* client to server */
-static int g_incr_in_progress_s2c = 0; /* server to client */
+//static int g_incr_in_progress_s2c = 0; /* server to client */
 static char *g_incr_data = 0;
 static int g_incr_data_size = 0;
 static int g_incr_data_bytes_done = 0;
-/* xserver maximum request size in bytes */
-static int g_incr_max_req_size = 0;
+
+struct clip_c2s /* client to server, pasting from mstsc to linux app */
+{
+    int incr_in_progress;
+    int incr_bytes_done;
+    int total_bytes;
+    char *data;
+    Atom type;
+    Atom property;
+    Atom target;
+    Window wnd;
+} g_clip_c2s;
 
 /* default version and flags */
 static int g_cliprdr_version = 2;
@@ -192,6 +204,22 @@ clipboard_get_local_time(void)
 }
 
 /*****************************************************************************/
+static int APP_CC
+clipboard_find_format_id(int format_id)
+{
+    int index;
+
+    for (index = 0; index < g_num_formatIds; index++)
+    {
+        if (g_formatIds[index] == format_id)
+        {
+            return index;
+        }
+    }
+    return -1;
+}
+
+/*****************************************************************************/
 /* returns error */
 int APP_CC
 clipboard_init(void)
@@ -215,6 +243,7 @@ clipboard_init(void)
     xcommon_init();
     clipboard_deinit();
     g_incr_max_req_size = XMaxRequestSize(g_display) * 4 - 24;
+    g_memset(&g_clip_c2s, 0, sizeof(g_clip_c2s));
     rv = 0;
     if (rv == 0)
     {
@@ -347,11 +376,15 @@ clipboard_init(void)
 int APP_CC
 clipboard_deinit(void)
 {
+    LLOGLN(10, ("clipboard_deinit:"));
     if (g_wnd != 0)
     {
         XDestroyWindow(g_display, g_wnd);
         g_wnd = 0;
     }
+
+    g_free(g_clip_c2s.data);
+    g_clip_c2s.data = 0;
 
     g_free(g_last_clip_data);
     g_last_clip_data = 0;
@@ -743,7 +776,7 @@ clipboard_provide_selection(XSelectionRequestEvent *req, Atom type, int format,
                         g_incr_atom, 32, PropModeReplace, (tui8 *)val1, 1);
         /* we need events from that other window */
         XSelectInput(g_display, req->requestor, PropertyChangeMask);
-        g_incr_in_progress_s2c = 1;
+        g_clip_c2s.incr_in_progress = 1;
         g_incr_atom_property = req->property;
 
         g_memset(&xev, 0, sizeof(xev));
@@ -1717,6 +1750,7 @@ clipboard_event_selection_request(XEvent *xevent)
     XEvent xev;
     Atom atom_buf[10];
     Atom type;
+    int atom_count;
     int fmt;
     int n_items;
     int xdata_size;
@@ -1748,9 +1782,16 @@ clipboard_event_selection_request(XEvent *xevent)
         atom_buf[2] = g_multiple_atom;
         atom_buf[3] = XA_STRING;
         atom_buf[4] = g_utf8_atom;
-        atom_buf[5] = g_image_bmp_atom;
-        atom_buf[6] = 0;
-        return clipboard_provide_selection(lxev, XA_ATOM, 32, (char *)atom_buf, 6);
+        atom_count = 5;
+        if (clipboard_find_format_id(CB_FORMAT_DIB) >= 0)
+        {
+            LLOGLN(10, ("  reporting image/bmp"));
+            atom_buf[atom_count] = g_image_bmp_atom;
+            atom_count++;
+        }
+        LLOGLN(10, ("  reporting %d formats", atom_count));
+        return clipboard_provide_selection(lxev, XA_ATOM, 32,
+                                           (char *)atom_buf, atom_count);
     }
     else if (lxev->target == g_timestamp_atom)
     {
@@ -1884,7 +1925,7 @@ clipboard_event_property_notify(XEvent *xevent)
              ".state %d .atom %d", xevent->xproperty.window,
              xevent->xproperty.state, xevent->xproperty.atom));
 
-    if (g_incr_in_progress_s2c &&
+    if (g_clip_c2s.incr_in_progress &&
             (xevent->xproperty.atom == g_incr_atom_property) &&
             (xevent->xproperty.state == PropertyDelete))
     {
@@ -1911,7 +1952,7 @@ clipboard_event_property_notify(XEvent *xevent)
         if (bytes < 1)
         {
             LLOGLN(0, ("clipboard_event_property_notify: INCR done"));
-            g_incr_in_progress_s2c = 0;
+            g_clip_c2s.incr_in_progress = 0;
             /* we no longer need property notify */
             XSelectInput(xevent->xproperty.display, xevent->xproperty.window,
                          NoEventMask);
