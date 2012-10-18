@@ -30,7 +30,8 @@ xrdp_chansrv_SOURCES = \
   clipboard.c \
   devredir.c \
   rail.c \
-  xcommon.c
+  xcommon.c \
+  drdynvc.c
 
 xrdp_chansrv_LDFLAGS = \
   $(EXTRA_FLAGS)

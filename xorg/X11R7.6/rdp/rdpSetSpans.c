@@ -73,7 +73,7 @@ rdpSetSpans(DrawablePtr pDrawable, GCPtr pGC, char* psrc,
   rdpPixmapRec* pDstPriv;
   rdpPixmapRec* pDirtyPriv;
 
-  LLOGLN(10, ("rdpSetSpans: todo"));
+  LLOGLN(0, ("rdpSetSpans: todo"));
 
   /* do original call */
   rdpSetSpansOrg(pDrawable, pGC, psrc, ppt, pwidth, nspans, fSorted);

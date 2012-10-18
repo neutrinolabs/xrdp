@@ -39,6 +39,8 @@ extern ScreenPtr g_pScreen; /* from rdpmain.c */
 extern Bool g_wrapPixmap; /* from rdpmain.c */
 extern int g_can_do_pix_to_pix; /* from rdpmain.c */
 extern int g_do_dirty_os; /* in rdpmain.c */
+extern int g_do_dirty_ons; /* in rdpmain.c */
+extern rdpPixmapRec g_screenPriv; /* in rdpmain.c */
 
 extern GCOps g_rdpGCOps; /* from rdpdraw.c */
 
@@ -358,6 +360,7 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
     pSrcWnd = (WindowPtr)pSrc;
     if (pSrcWnd->viewable)
     {
+      rdpup_check_dirty_screen(&g_screenPriv);
       if (pDst->type == DRAWABLE_WINDOW)
       {
         pDstWnd = (WindowPtr)pDst;
@@ -399,6 +402,7 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
         pDstWnd = (WindowPtr)pDst;
         if (pDstWnd->viewable)
         {
+          rdpup_check_dirty_screen(&g_screenPriv);
           rdpup_check_dirty(pSrcPixmap, pSrcPriv);
           return rdpCopyAreaPixmapToWnd(pSrcPixmap, pSrcPriv, pDstWnd, pGC,
                                         srcx, srcy, w, h, dstx, dsty);
@@ -463,8 +467,18 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
       if (pDstWnd->viewable)
       {
         post_process = 1;
-        rdpup_get_screen_image_rect(&id);
-        got_id = 1;
+        if (g_do_dirty_ons)
+        {
+          LLOGLN(0, ("rdpCopyArea: gettig dirty"));
+          g_screenPriv.is_dirty = 1;
+          pDirtyPriv = &g_screenPriv;
+          dirty_type = RDI_IMGLL;
+        }
+        else
+        {
+          rdpup_get_screen_image_rect(&id);
+          got_id = 1;
+        }
       }
     }
   }
