@@ -190,7 +190,7 @@ xrdp_rdp_detect_cpu(void)
 
   if (edx & (1 << 26))
   {
-    DEBUG("SSE2 detected");
+    DEBUG(("SSE2 detected"));
     cpu_opt |= CPU_SSE2;
   }
 
