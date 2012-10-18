@@ -192,9 +192,21 @@ xrdp_orders_check(struct xrdp_orders* self, int max_size)
     }
   }
   size = (int)(self->out_s->p - self->order_count_ptr);
-  if ((size < 0) || (size > max_packet_size))
+  if (size < 0)
   {
+    g_writeln("error in xrdp_orders_check, size too small, its %d", size);
     return 1;
+  }
+  if (size > max_packet_size)
+  {
+    // this suggests someone calls this function without passing the correct
+    // max_size so we end up putting more into the buffer than we indicate we might
+    g_writeln("error in xrdp_orders_check, size too big, its %d", size);
+// We where getting called with size allready greater than max_packet_size
+// Which I suspect was because the sending of text did not include the text length in its call
+// to check the buffer size. So attempt to send the data anyway.
+    // Lets write the data anyway, somewhere else may barf.
+//    return 1;
   }
   if ((size + max_size + 100) > max_packet_size)
   {
@@ -1377,7 +1389,7 @@ xrdp_orders_text(struct xrdp_orders* self,
   char* present_ptr = (char *)NULL;
   char* order_flags_ptr = (char *)NULL;
 
-  xrdp_orders_check(self, 100);
+  xrdp_orders_check(self, 44+data_len);
   self->order_count++;
   order_flags = RDP_ORDER_STANDARD;
   if (self->orders_state.last_order != RDP_ORDER_TEXT2)
