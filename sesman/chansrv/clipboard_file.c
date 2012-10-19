@@ -25,6 +25,7 @@
 #include "chansrv.h"
 #include "clipboard.h"
 #include "clipboard_file.h"
+#include "clipboard_common.h"
 #include "xcommon.h"
 
 #define LLOG_LEVEL 11
@@ -41,7 +42,8 @@
 
 extern int g_cliprdr_chan_id; /* in chansrv.c */
 
-extern int g_last_clip_size; /* in clipboard.c */
+extern struct clip_s2c g_clip_s2c; /* in clipboard.c */
+extern struct clip_c2s g_clip_c2s; /* in clipboard.c */
 
 struct cb_file_info
 {
@@ -159,6 +161,7 @@ clipboard_get_files(char *files, int bytes)
 }
 
 /*****************************************************************************/
+/* server to client */
 int APP_CC
 clipboard_send_data_response_for_file(char *data, int data_size)
 {
@@ -171,8 +174,8 @@ clipboard_send_data_response_for_file(char *data, int data_size)
     int index;
     char fn[256];
 
-    LLOGLN(10, ("clipboard_send_data_response_for_file: g_last_clip_size %d",
-                 g_last_clip_size));
+    LLOGLN(10, ("clipboard_send_data_response_for_file: data_size %d",
+                data_size));
     //g_hexdump(data, data_size);
     clipboard_get_files(data, data_size);
     cItems = g_num_files;
