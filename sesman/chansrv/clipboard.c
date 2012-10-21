@@ -86,8 +86,8 @@ extern Screen *g_screen;        /* in xcommon.c */
 extern int g_screen_num;        /* in xcommon.c */
 
 int g_clip_up = 0;
-int g_waiting_for_data_response = 0;
-int g_waiting_for_data_response_time = 0;
+//int g_waiting_for_data_response = 0;
+//int g_waiting_for_data_response_time = 0;
 
 static Atom g_clipboard_atom = 0;      /* CLIPBOARD */
 static Atom g_clip_property_atom = 0;  /* XRDP_CLIP_PROPERTY_ATOM */
@@ -111,14 +111,7 @@ static Time g_selection_time = 0;
 
 static struct stream *g_ins = 0;
 
-static char *g_data_in = 0;
-static int g_data_in_size = 0;
-static int g_data_in_time = 0;
-static int g_data_in_up_to_date = 0;
-static int g_got_format_announce = 0;
-
 /* for image data */
-static int g_want_image_data = 0;
 static XSelectionRequestEvent g_saved_selection_req_event;
 
 /* xserver maximum request size in bytes */
@@ -139,14 +132,6 @@ static int g_cliprdr_flags = CB_USE_LONG_FORMAT_NAMES |
 /* last recieved CLIPRDR_FORMAT_LIST(CLIPRDR_FORMAT_ANNOUNCE) */
 static int g_formatIds[16];
 static int g_num_formatIds = 0;
-
-static XSelectionRequestEvent g_selection_request_event[16];
-static int g_selection_request_event_count = 0;
-
-/* this is used because client will ask for the same thing more than
-   once in successiotn */
-int g_last_client_request_xrdp_clip_type = 0;
-unsigned int g_last_client_request_xrdp_clip_time = 0;
 
 /*****************************************************************************/
 /* this is one way to get the current time from the x server */
@@ -368,9 +353,6 @@ clipboard_deinit(void)
     g_free(g_clip_s2c.data);
     g_clip_s2c.data = 0;
 
-    //g_free(g_last_clip_data);
-    //g_last_clip_data = 0;
-    //g_last_clip_size = 0;
     free_stream(g_ins);
     g_ins = 0;
     g_clip_up = 0;
@@ -386,15 +368,6 @@ clipboard_send_data_request(int format_id)
     int rv;
 
     LOGM((LOG_LEVEL_DEBUG, "clipboard_send_data_request:"));
-
-    if (!g_got_format_announce)
-    {
-        LOGM((LOG_LEVEL_ERROR, "clipboard_send_data_request: error, "
-              "no format announce"));
-        return 0;
-    }
-
-    g_got_format_announce = 0;
     make_stream(s);
     init_stream(s, 8192);
     out_uint16_le(s, CB_FORMAT_DATA_REQUEST); /* 4 CLIPRDR_DATA_REQUEST */
@@ -753,11 +726,66 @@ clipboard_set_selection_owner(void)
 
 /*****************************************************************************/
 static int APP_CC
+clipboard_provide_selection_c2s(XSelectionRequestEvent *req, Atom type)
+{
+    XEvent xev;
+    long val1[2];
+
+    LLOGLN(0, ("clipboard_provide_selection_c2s: bytes %d",
+               g_clip_c2s.total_bytes));
+    if (g_clip_c2s.total_bytes < g_incr_max_req_size)
+    {
+        XChangeProperty(g_display, req->requestor, req->property,
+                        type, 8, PropModeReplace,
+                        (tui8 *)g_clip_c2s.data, g_clip_c2s.total_bytes);
+        g_memset(&xev, 0, sizeof(xev));
+        xev.xselection.type = SelectionNotify;
+        xev.xselection.send_event = True;
+        xev.xselection.display = req->display;
+        xev.xselection.requestor = req->requestor;
+        xev.xselection.selection = req->selection;
+        xev.xselection.target = req->target;
+        xev.xselection.property = req->property;
+        xev.xselection.time = req->time;
+        XSendEvent(g_display, req->requestor, False, NoEventMask, &xev);
+    }
+    else
+    {
+        /* start the INCR process */
+        g_clip_c2s.incr_in_progress = 1;
+        g_clip_c2s.incr_bytes_done = 0;
+        g_clip_c2s.type = type;
+        g_clip_c2s.property = req->property;
+        g_clip_c2s.window = req->requestor;
+        LLOGLN(0, ("clipboard_provide_selection_c2s: start INCR property %s "
+                   "type %s", XGetAtomName(g_display, req->property),
+                   XGetAtomName(g_display, type)));
+        val1[0] = g_clip_c2s.total_bytes;
+        val1[1] = 0;
+        XChangeProperty(g_display, req->requestor, req->property,
+                        g_incr_atom, 32, PropModeReplace, (tui8 *)val1, 1);
+        /* we need events from that other window */
+        XSelectInput(g_display, req->requestor, PropertyChangeMask);
+        g_memset(&xev, 0, sizeof(xev));
+        xev.xselection.type = SelectionNotify;
+        xev.xselection.send_event = True;
+        xev.xselection.display = req->display;
+        xev.xselection.requestor = req->requestor;
+        xev.xselection.selection = req->selection;
+        xev.xselection.target = req->target;
+        xev.xselection.property = req->property;
+        xev.xselection.time = req->time;
+        XSendEvent(g_display, req->requestor, False, NoEventMask, &xev);
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+static int APP_CC
 clipboard_provide_selection(XSelectionRequestEvent *req, Atom type, int format,
                             char *data, int length)
 {
     XEvent xev;
-    long val1[2];
     int bytes;
 
     bytes = FORMAT_TO_BYTES(format);
@@ -777,41 +805,9 @@ clipboard_provide_selection(XSelectionRequestEvent *req, Atom type, int format,
         xev.xselection.property = req->property;
         xev.xselection.time = req->time;
         XSendEvent(g_display, req->requestor, False, NoEventMask, &xev);
+        return 0;
     }
-    else
-    {
-        g_clip_c2s.incr_in_progress = 1;
-        g_clip_c2s.incr_bytes_done = 0;
-        g_clip_c2s.total_bytes = bytes;
-        g_free(g_clip_c2s.data);
-        g_clip_c2s.data = (char *)g_malloc(bytes + 64, 0);
-        g_memcpy(g_clip_c2s.data, data, bytes);
-        g_clip_c2s.type = type;
-        g_clip_c2s.property = req->property;
-        //g_clip_c2s.target = req->target;
-        g_clip_c2s.window = req->requestor;
-        /* start the INCR process */
-        LLOGLN(0, ("clipboard_provide_selection: start INCR property %s "
-                   "type %s", XGetAtomName(g_display, req->property),
-                   XGetAtomName(g_display, type)));
-        val1[0] = bytes;
-        val1[1] = 0;
-        XChangeProperty(g_display, req->requestor, req->property,
-                        g_incr_atom, 32, PropModeReplace, (tui8 *)val1, 1);
-        /* we need events from that other window */
-        XSelectInput(g_display, req->requestor, PropertyChangeMask);
-        g_memset(&xev, 0, sizeof(xev));
-        xev.xselection.type = SelectionNotify;
-        xev.xselection.send_event = True;
-        xev.xselection.display = req->display;
-        xev.xselection.requestor = req->requestor;
-        xev.xselection.selection = req->selection;
-        xev.xselection.target = req->target;
-        xev.xselection.property = req->property;
-        xev.xselection.time = req->time;
-        XSendEvent(g_display, req->requestor, False, NoEventMask, &xev);
-    }
-    return 0;
+    return 1;
 }
 
 /*****************************************************************************/
@@ -850,10 +846,7 @@ clipboard_process_format_announce(struct stream *s, int clip_msg_status,
     LOGM((LOG_LEVEL_DEBUG, "clipboard_process_format_announce: "
           "CLIPRDR_FORMAT_ANNOUNCE"));
     LLOGLN(10, ("clipboard_process_format_announce %d", clip_msg_len));
-    //g_hexdump(s->p, s->end - s->p);
     clipboard_send_format_ack();
-    g_got_format_announce = 1;
-    g_data_in_up_to_date = 0;
     desc[0] = 0;
     g_num_formatIds = 0;
     while (clip_msg_len > 3)
@@ -910,7 +903,6 @@ clipboard_prcoess_format_ack(struct stream *s, int clip_msg_status,
 {
     LOGM((LOG_LEVEL_DEBUG, "clipboard_prcoess_format_ack: CLIPRDR_FORMAT_ACK"));
     LLOGLN(10, ("clipboard_prcoess_format_ack:"));
-    //g_hexdump(s->p, s->end - s->p);
     return 0;
 }
 
@@ -936,7 +928,7 @@ clipboard_send_data_response_failed(void)
 }
 
 /*****************************************************************************/
-/* sent from client to server
+/* sent from server to client
  * sent by recipient of CB_FORMAT_LIST; used to request data for one
  * of the formats that was listed in CB_FORMAT_LIST */
 static int APP_CC
@@ -944,70 +936,58 @@ clipboard_process_data_request(struct stream *s, int clip_msg_status,
                                int clip_msg_len)
 {
     int requestedFormatId;
-    tui32 now;
-    tui32 tdiff;
 
     LOGM((LOG_LEVEL_DEBUG, "clipboard_process_data_request: "
           "CLIPRDR_DATA_REQUEST"));
-    LLOGLN(10, ("clipboard_process_data_request:"));
-    //g_hexdump(s->p, s->end - s->p);
-    now = xcommon_get_local_time();
-    tdiff = now - g_last_client_request_xrdp_clip_time;
+    LLOGLN(0, ("clipboard_process_data_request:"));
+    LLOGLN(0, ("  %d", g_clip_s2c.xrdp_clip_type));
     in_uint32_le(s, requestedFormatId);
     switch (requestedFormatId)
     {
         case CB_FORMAT_FILE: /* 0xC0BC */
-            if ((tdiff < 500) &&
-                (g_last_client_request_xrdp_clip_type == XRDP_CB_FILE))
+            if ((g_clip_s2c.xrdp_clip_type == XRDP_CB_FILE) && g_clip_s2c.converted)
             {
-                LLOGLN(10, ("clipboard_process_data_request: CB_FORMAT_FILE, "
-                            "sending last data tdiff %d", tdiff));
-                clipboard_send_data_response(XRDP_CB_FILE, g_clip_c2s.data,
-                                             g_clip_c2s.total_bytes);
+                LLOGLN(10, ("clipboard_process_data_request: CB_FORMAT_FILE"));
+                clipboard_send_data_response(XRDP_CB_FILE, g_clip_s2c.data,
+                                             g_clip_s2c.total_bytes);
             }
             else
             {
                 LLOGLN(10, ("clipboard_process_data_request: CB_FORMAT_FILE, "
-                            "calling XConvertSelection to g_utf8_atom "
-                            "tdiff %d", tdiff));
-                g_last_client_request_xrdp_clip_type = XRDP_CB_FILE;
-                g_last_client_request_xrdp_clip_time = now;
+                            "calling XConvertSelection to g_utf8_atom"));
+                g_clip_s2c.xrdp_clip_type = XRDP_CB_FILE;
                 XConvertSelection(g_display, g_clipboard_atom, g_utf8_atom,
                                   g_clip_property_atom, g_wnd, CurrentTime);
             }
             break;
         case CB_FORMAT_DIB: /* 0x0008 */
-            if ((tdiff < 500) &&
-                (g_last_client_request_xrdp_clip_type == XRDP_CB_BITMAP))
+            if ((g_clip_s2c.xrdp_clip_type == XRDP_CB_BITMAP) && g_clip_s2c.converted)
             {
-                LLOGLN(10, ("clipboard_process_data_request: CB_FORMAT_DIB, "
-                            "sending last data tdiff %d", tdiff));
-                clipboard_send_data_response(XRDP_CB_BITMAP, g_clip_c2s.data,
-                                             g_clip_c2s.total_bytes);
+                LLOGLN(10, ("clipboard_process_data_request: CB_FORMAT_DIB"));
+                clipboard_send_data_response(XRDP_CB_BITMAP, g_clip_s2c.data,
+                                             g_clip_s2c.total_bytes);
             }
             else
             {
                 LLOGLN(10, ("clipboard_process_data_request: CB_FORMAT_DIB, "
-                            "calling XConvertSelection to g_image_bmp_atom "
-                            "tdiff %d", tdiff));
+                            "calling XConvertSelection to g_image_bmp_atom"));
+                g_clip_s2c.xrdp_clip_type = XRDP_CB_BITMAP;
                 XConvertSelection(g_display, g_clipboard_atom, g_image_bmp_atom,
                                   g_clip_property_atom, g_wnd, CurrentTime);
             }
             break;
         case CB_FORMAT_UNICODETEXT: /* 0x000D */
-            if ((tdiff < 500) &&
-                (g_last_client_request_xrdp_clip_type == XRDP_CB_TEXT))
+            if ((g_clip_s2c.xrdp_clip_type == XRDP_CB_TEXT) && g_clip_s2c.converted)
             {
-                LLOGLN(10, ("clipboard_process_data_request: CB_FORMAT_UNICODETEXT, "
-                            "sending last data tdiff %d", tdiff));
-                clipboard_send_data_response(XRDP_CB_TEXT, g_clip_c2s.data,
-                                             g_clip_c2s.total_bytes);
+                LLOGLN(10, ("clipboard_process_data_request: CB_FORMAT_UNICODETEXT"));
+                clipboard_send_data_response(XRDP_CB_TEXT, g_clip_s2c.data,
+                                             g_clip_s2c.total_bytes);
             }
             else
             {
                 LLOGLN(10, ("clipboard_process_data_request: CB_FORMAT_UNICODETEXT, "
-                            "calling XConvertSelection to g_utf8_atom "
-                            "tdiff %d", tdiff));
+                            "calling XConvertSelection to g_utf8_atom"));
+                g_clip_s2c.xrdp_clip_type = XRDP_CB_TEXT;
                 XConvertSelection(g_display, g_clipboard_atom, g_utf8_atom,
                                   g_clip_property_atom, g_wnd, CurrentTime);
             }
@@ -1032,61 +1012,39 @@ clipboard_process_data_response_for_image(struct stream *s,
                                           int clip_msg_status,
                                           int clip_msg_len)
 {
-    XSelectionRequestEvent *lxev = &g_saved_selection_req_event;
-    char *cptr;
-    char cdata;
+    XSelectionRequestEvent *lxev;
     int len;
-    int index;
 
     LOGM((LOG_LEVEL_DEBUG, "clipboard_process_data_response_for_image: "
           "CLIPRDR_DATA_RESPONSE_FOR_IMAGE"));
-    g_waiting_for_data_response = 0;
+    lxev = &g_saved_selection_req_event;
     len = (int)(s->end - s->p);
-
     if (len < 1)
     {
         return 0;
     }
-
-    if (g_clip_c2s.type == g_image_bmp_atom)
-    {
-        /* space for inserting bmp image header */
-        len += 14;
-        cptr = (char *) g_malloc(len, 0);
-
-        if (cptr == 0)
-        {
-            return 0;
-        }
-
-        g_memcpy(cptr, g_bmp_image_header, 14);
-        index = 14;
-    }
-    else
+    if (g_clip_c2s.type != g_image_bmp_atom)
     {
         return 0;
     }
-
-    while (s_check(s))
+    g_free(g_clip_c2s.data);
+    g_clip_c2s.data = (char *) g_malloc(len + 14, 0);
+    if (g_clip_c2s.data == 0)
     {
-        in_uint8(s, cdata);
-        cptr[index++] = cdata;
+        g_clip_c2s.total_bytes = 0;
+        return 0;
     }
-
-    if (len >= 0)
-    {
-        g_data_in = cptr;
-        g_data_in_size = len;
-        g_data_in_time = clipboard_get_local_time();
-        g_data_in_up_to_date = 1;
-    }
+    g_clip_c2s.total_bytes = len;
+    g_memcpy(g_clip_c2s.data, g_bmp_image_header, 14);
+    in_uint8a(s, g_clip_c2s.data + 14, len);
     LLOGLN(10, ("clipboard_process_data_response_for_image: calling "
-                "clipboard_provide_selection with %d bytes", len));
-    clipboard_provide_selection(lxev, lxev->target, 8, cptr, len);
+                "clipboard_provide_selection_c2s"));
+    clipboard_provide_selection_c2s(lxev, lxev->target);
     return 0;
 }
 
 /*****************************************************************************/
+/* client to server */
 /* sent as a reply to CB_FORMAT_DATA_REQUEST; used to indicate whether
    processing of the CB_FORMAT_DATA_REQUEST was successful; if processing was
    successful, CB_FORMAT_DATA_RESPONSE includes contents of requested
@@ -1101,88 +1059,59 @@ clipboard_process_data_response(struct stream *s, int clip_msg_status,
     twchar wchr;
     int len;
     int index;
-    int data_in_len;
 
-    if (g_want_image_data)
+    LLOGLN(0, ("clipboard_process_data_response:"));
+    LLOGLN(0, ("  %d", g_clip_c2s.xrdp_clip_type));
+    lxev = &g_saved_selection_req_event;
+    if (g_clip_c2s.xrdp_clip_type == XRDP_CB_BITMAP)
     {
-        g_want_image_data = 0;
         clipboard_process_data_response_for_image(s, clip_msg_status,
                                                   clip_msg_len);
         return 0;
     }
-
     LOGM((LOG_LEVEL_DEBUG, "clipboard_process_data_response: "
           "CLIPRDR_DATA_RESPONSE"));
-    g_waiting_for_data_response = 0;
     len = (int)(s->end - s->p);
-
     if (len < 1)
     {
         return 0;
     }
-
-    //g_hexdump(s->p, len);
     wtext = (twchar *) g_malloc(((len / 2) + 1) * sizeof(twchar), 0);
-
     if (wtext == 0)
     {
         return 0;
     }
-
     index = 0;
-
     while (s_check(s))
     {
         in_uint16_le(s, wchr);
         wtext[index] = wchr;
-
         if (wchr == 0)
         {
             break;
         }
-
         index++;
     }
-
     wtext[index] = 0;
-    g_free(g_data_in);
-    g_data_in = 0;
-    g_data_in_size = 0;
-    g_data_in_time = 0;
+    g_free(g_clip_c2s.data);
+    g_clip_c2s.data = 0;
+    g_clip_c2s.total_bytes = 0;
     len = g_wcstombs(0, wtext, 0);
-
     if (len >= 0)
     {
-        g_data_in = (char *) g_malloc(len + 16, 0);
-
-        if (g_data_in == 0)
+        g_clip_c2s.data = (char *) g_malloc(len + 16, 0);
+        if (g_clip_c2s.data == 0)
         {
             g_free(wtext);
             return 0;
         }
-
-        g_data_in_size = len;
-        g_wcstombs(g_data_in, wtext, len + 1);
-        g_data_in_time = xcommon_get_local_time();
-        g_data_in_up_to_date = 1;
+        g_wcstombs(g_clip_c2s.data, wtext, len + 1);
     }
-
-    if (g_data_in != 0)
+    if (g_clip_c2s.data != 0)
     {
-        data_in_len = g_strlen(g_data_in);
-
-        for (index = 0; index < g_selection_request_event_count; index++)
-        {
-            lxev = &(g_selection_request_event[index]);
-            clipboard_provide_selection(lxev, lxev->target, 8, g_data_in,
-                                        data_in_len);
-            LOGM((LOG_LEVEL_DEBUG, "clipboard_process_data_response: "
-                  "requestor %d data_in_len %d",
-                  lxev->requestor, data_in_len));
-        }
+        g_clip_c2s.total_bytes = g_strlen(g_clip_c2s.data);
+        clipboard_provide_selection_c2s(lxev, lxev->target);
     }
-
-    g_selection_request_event_count = 0;
     g_free(wtext);
     return 0;
 }
@@ -1530,11 +1459,6 @@ clipboard_event_selection_notify(XEvent *xevent)
 
     if (rv == 0)
     {
-        //if (lxevent->property == g_incr_atom)
-        //{
-        //    XDeleteProperty(g_display, lxevent->requestor, lxevent->property);
-        //    return 0;
-        //}
         LLOGLN(0, ("clipboard_event_selection_notify: wnd %p prop %s", lxevent->requestor,
                    XGetAtomName(g_display, lxevent->property)));
         rv = clipboard_get_window_property(lxevent->requestor, lxevent->property,
@@ -1689,6 +1613,7 @@ clipboard_event_selection_notify(XEvent *xevent)
     {
         g_clip_s2c.type = g_utf8_atom;
         g_clip_s2c.xrdp_clip_type = XRDP_CB_FILE;
+        g_clip_s2c.converted = 0;
         g_clip_s2c.clip_time = lxevent->time;
         send_format_announce = 1;
     }
@@ -1696,6 +1621,7 @@ clipboard_event_selection_notify(XEvent *xevent)
     {
         g_clip_s2c.type = g_utf8_atom;
         g_clip_s2c.xrdp_clip_type = XRDP_CB_TEXT;
+        g_clip_s2c.converted = 0;
         g_clip_s2c.clip_time = lxevent->time;
         send_format_announce = 1;
     }
@@ -1703,6 +1629,7 @@ clipboard_event_selection_notify(XEvent *xevent)
     {
         g_clip_s2c.type = XA_STRING;
         g_clip_s2c.xrdp_clip_type = XRDP_CB_TEXT;
+        g_clip_s2c.converted = 0;
         g_clip_s2c.clip_time = lxevent->time;
         send_format_announce = 1;
     }
@@ -1710,6 +1637,7 @@ clipboard_event_selection_notify(XEvent *xevent)
     {
         g_clip_s2c.type = g_image_bmp_atom;
         g_clip_s2c.xrdp_clip_type = XRDP_CB_BITMAP;
+        g_clip_s2c.converted = 0;
         g_clip_s2c.clip_time = lxevent->time;
         send_format_announce = 1;
     }
@@ -1792,6 +1720,7 @@ clipboard_event_selection_request(XEvent *xevent)
             atom_buf[atom_count] = g_image_bmp_atom;
             atom_count++;
         }
+        atom_buf[atom_count] = 0;
         LLOGLN(10, ("  reporting %d formats", atom_count));
         return clipboard_provide_selection(lxev, XA_ATOM, 32,
                                            (char *)atom_buf, atom_count);
@@ -1803,7 +1732,8 @@ clipboard_event_selection_request(XEvent *xevent)
               "g_timestamp_atom"));
         atom_buf[0] = g_selection_time;
         atom_buf[1] = 0;
-        return clipboard_provide_selection(lxev, XA_INTEGER, 32, (char *)atom_buf, 1);
+        return clipboard_provide_selection(lxev, XA_INTEGER, 32,
+                                           (char *)atom_buf, 1);
     }
     else if (lxev->target == g_multiple_atom)
     {
@@ -1825,35 +1755,12 @@ clipboard_event_selection_request(XEvent *xevent)
     }
     else if ((lxev->target == XA_STRING) || (lxev->target == g_utf8_atom))
     {
-        LOGM((LOG_LEVEL_DEBUG, "clipboard_event_selection_request: %s",
-              XGetAtomName(g_display, lxev->target)));
-
-        if (g_data_in_up_to_date)
-        {
-            return clipboard_provide_selection(lxev, lxev->target, 8,
-                                               g_data_in, g_strlen(g_data_in));
-        }
-
-        if (g_selection_request_event_count > 10)
-        {
-            LOGM((LOG_LEVEL_ERROR, "clipboard_event_selection_request: error, "
-                  "too many requests"));
-        }
-        else
-        {
-            g_memcpy(&(g_selection_request_event[g_selection_request_event_count]),
-                     lxev, sizeof(g_selection_request_event[0]));
-
-            if (g_selection_request_event_count == 0)
-            {
-                clipboard_send_data_request(CB_FORMAT_UNICODETEXT);
-                g_waiting_for_data_response = 1;
-                g_waiting_for_data_response_time = xcommon_get_local_time();
-            }
-
-            g_selection_request_event_count++;
-            return 0;
-        }
+        g_memcpy(&g_saved_selection_req_event, lxev,
+                 sizeof(g_saved_selection_req_event));
+        g_clip_c2s.type = lxev->target;
+        g_clip_c2s.xrdp_clip_type = XRDP_CB_TEXT;
+        clipboard_send_data_request(CB_FORMAT_UNICODETEXT);
+        return 0;
     }
     else if (lxev->target == g_image_bmp_atom)
     {
@@ -1861,10 +1768,7 @@ clipboard_event_selection_request(XEvent *xevent)
                  sizeof(g_saved_selection_req_event));
         g_clip_c2s.type = g_image_bmp_atom;
         g_clip_c2s.xrdp_clip_type = XRDP_CB_BITMAP;
-        g_want_image_data = 1;
         clipboard_send_data_request(CB_FORMAT_DIB);
-        g_waiting_for_data_response = 1;
-        g_waiting_for_data_response_time = clipboard_get_local_time();
         return 0;
     }
     else
@@ -1961,9 +1865,6 @@ clipboard_event_property_notify(XEvent *xevent)
             /* we no longer need property notify */
             XSelectInput(xevent->xproperty.display, xevent->xproperty.window,
                          NoEventMask);
-            g_free(g_clip_c2s.data);
-            g_clip_c2s.data = 0;
-            g_clip_c2s.total_bytes = 0;
         }
     }
     if (g_clip_s2c.incr_in_progress &&

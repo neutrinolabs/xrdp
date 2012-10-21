@@ -91,6 +91,7 @@ struct clip_s2c /* server to client, pasting from linux app to mstsc */
     Atom type; /* UTF8_STRING, image/bmp, ... */
     Atom property; /* XRDP_CLIP_PROPERTY_ATOM, _QT_SELECTION, ... */
     int xrdp_clip_type; /* XRDP_CB_TEXT, XRDP_CB_BITMAP, XRDP_CB_FILE, ... */
+    int converted;
     Time clip_time;
 };
 

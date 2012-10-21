@@ -29,8 +29,6 @@
 #define LOG_LEVEL 11
 
 extern int g_clip_up;                         /* in clipboard.c */
-extern int g_waiting_for_data_response;       /* in clipboard.c */
-extern int g_waiting_for_data_response_time;  /* in clipboard.c */
 
 extern int g_rail_up;                         /* in rail.c */
 
@@ -150,7 +148,7 @@ int APP_CC
 xcommon_check_wait_objs(void)
 {
     XEvent xevent;
-    int time_diff;
+    //int time_diff;
     int clip_rv;
     int rail_rv;
 
@@ -168,19 +166,6 @@ xcommon_check_wait_objs(void)
             LOGM((LOG_LEVEL_ERROR, "xcommon_check_wait_objs: sck closed"));
             return 0;
         }
-
-        if (g_waiting_for_data_response)
-        {
-            time_diff = xcommon_get_local_time() -
-                        g_waiting_for_data_response_time;
-
-            if (time_diff > 10000)
-            {
-                LOGM((LOG_LEVEL_ERROR, "xcommon_check_wait_objs: warning, "
-                      "waiting for data response too long"));
-            }
-        }
-
         while (XPending(g_display) > 0)
         {
             g_memset(&xevent, 0, sizeof(xevent));
