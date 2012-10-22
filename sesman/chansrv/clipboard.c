@@ -86,8 +86,6 @@ extern Screen *g_screen;        /* in xcommon.c */
 extern int g_screen_num;        /* in xcommon.c */
 
 int g_clip_up = 0;
-//int g_waiting_for_data_response = 0;
-//int g_waiting_for_data_response_time = 0;
 
 static Atom g_clipboard_atom = 0;      /* CLIPBOARD */
 static Atom g_clip_property_atom = 0;  /* XRDP_CLIP_PROPERTY_ATOM */
@@ -882,7 +880,9 @@ clipboard_process_format_announce(struct stream *s, int clip_msg_status,
         }
     }
 
-    if (g_num_formatIds > 0)
+    if ((g_num_formatIds > 0) &&
+        (g_clip_c2s.incr_in_progress == 0) && /* don't interrupt incr */
+        (g_clip_s2c.incr_in_progress == 0))
     {
         if (clipboard_set_selection_owner() != 0)
         {
@@ -1281,11 +1281,8 @@ clipboard_event_selection_owner_notify(XEvent *xevent)
 {
     XFixesSelectionNotifyEvent *lxevent;
 
-    LLOGLN(0, ("clipboard_event_selection_owner_notify:"));
-
-    //return 0;
-
     lxevent = (XFixesSelectionNotifyEvent *)xevent;
+    LLOGLN(0, ("clipboard_event_selection_owner_notify: %p", lxevent->owner));
     LOGM((LOG_LEVEL_DEBUG, "clipboard_event_selection_owner_notify: "
           "window %d subtype %d owner %d g_wnd %d",
           lxevent->window, lxevent->subtype, lxevent->owner, g_wnd));
@@ -1300,8 +1297,11 @@ clipboard_event_selection_owner_notify(XEvent *xevent)
     }
 
     g_got_selection = 0;
-    XConvertSelection(g_display, g_clipboard_atom, g_targets_atom,
-                      g_clip_property_atom, g_wnd, lxevent->timestamp);
+    if (lxevent->owner != 0) /* nil owner comes when selection */
+    {                        /* window is closed */
+        XConvertSelection(g_display, g_clipboard_atom, g_targets_atom,
+                          g_clip_property_atom, g_wnd, lxevent->timestamp);
+    }
     return 0;
 }
 
@@ -1835,6 +1835,7 @@ clipboard_event_property_notify(XEvent *xevent)
                 XGetAtomName(g_display, xevent->xproperty.atom)));
 
     if (g_clip_c2s.incr_in_progress &&
+            (xevent->xproperty.window == g_clip_c2s.window) &&
             (xevent->xproperty.atom == g_clip_c2s.property) &&
             (xevent->xproperty.state == PropertyDelete))
     {
@@ -1868,6 +1869,7 @@ clipboard_event_property_notify(XEvent *xevent)
         }
     }
     if (g_clip_s2c.incr_in_progress &&
+            (xevent->xproperty.window == g_wnd) &&
             (xevent->xproperty.atom == g_clip_s2c.property) &&
             (xevent->xproperty.state == PropertyNewValue))
     {

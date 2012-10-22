@@ -58,13 +58,48 @@ static int g_num_files = 0;
 
 /*****************************************************************************/
 static int APP_CC
+clipboard_check_file(char *filename)
+{
+    char lfilename[256];
+    char jchr[8];
+    int lindex;
+    int index;
+
+    g_memset(lfilename, 0, 256);
+    lindex = 0;
+    index = 0;
+    while (filename[index] != 0)
+    {
+        if (filename[index] == '%')
+        {
+            jchr[0] = filename[index + 1];
+            jchr[1] = filename[index + 2];
+            jchr[2] = 0;
+            index += 3;
+            lfilename[lindex] = g_htoi(jchr);
+            lindex++;
+        }
+        else
+        {
+            lfilename[lindex] = filename[index];
+            lindex++;
+            index++;
+        }
+    }
+    LLOGLN(0, ("[%s] [%s]", filename, lfilename));
+    g_strcpy(filename, lfilename);
+    return 0;
+}
+
+/*****************************************************************************/
+static int APP_CC
 clipboard_get_file(char* file, int bytes)
 {
     int sindex;
     int pindex;
-    char full_fn[256];
-    char filename[256];
-    char pathname[256];
+    char full_fn[256]; /* /etc/xrdp/xrdp.ini */
+    char filename[256]; /* xrdp.ini */
+    char pathname[256]; /* /etc/xrdp */
 
     sindex = 0;
     if (g_strncmp(file, "file:///", 8) == 0)
@@ -88,6 +123,8 @@ clipboard_get_file(char* file, int bytes)
         pathname[0] = '/';
     }
     g_memcpy(filename, file + pindex + 1, (bytes - 1) - pindex);
+    /* this should replace %20 with space */
+    clipboard_check_file(filename);
     g_snprintf(full_fn, 255, "%s/%s", pathname, filename);
     if (g_directory_exist(full_fn))
     {
