@@ -50,7 +50,7 @@ struct xrdp_api_data
 
     /* for dynamic virtual channels */
     struct trans *transp;
-    tui32         dvc_chan_id;
+    int           dvc_chan_id;
     int           is_connected;
 };
 
