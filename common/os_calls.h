@@ -240,6 +240,8 @@ g_initgroups(const char* user, int gid);
 int APP_CC
 g_getuid(void);
 int APP_CC
+g_getgid(void);
+int APP_CC
 g_setuid(int pid);
 int APP_CC
 g_waitchild(void);
