@@ -16,6 +16,10 @@
  * limitations under the License.
  */
 
+#define XRDP_USE_FUSE 1
+
+#ifdef XRDP_USE_FUSE
+
 #define FUSE_USE_VERSION 26
 #define _FILE_OFFSET_BITS 64
 
@@ -439,3 +443,45 @@ fuse_deinit(void)
     }
     return 0;
 }
+
+#else
+
+#include "arch.h"
+
+/*****************************************************************************/
+int APP_CC
+fuse_get_wait_objs(tbus *objs, int *count, int *timeout)
+{
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+fuse_check_wait_objs(void)
+{
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+fuse_init(void)
+{
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+fuse_deinit(void)
+{
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+fuse_set_dir_item(int index, char *filename, int flags, char *data,
+                  int data_bytes, int ino)
+{
+    return 0;
+}
+
+#endif
