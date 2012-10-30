@@ -80,8 +80,12 @@
 #define CB_FD_WRITESTIME 0x00000020
 #define CB_FD_PROGRESSUI 0x00004000
 
-#define CB_FILE_ATTRIBUTE_ARCHIVE 0x00000020;
-#define CB_FILE_ATTRIBUTE_NORMAL  0x00000080;
+#define CB_FILE_ATTRIBUTE_READONLY  0x00000001
+#define CB_FILE_ATTRIBUTE_HIDDEN    0x00000002
+#define CB_FILE_ATTRIBUTE_SYSTEM    0x00000004
+#define CB_FILE_ATTRIBUTE_DIRECTORY 0x00000010
+#define CB_FILE_ATTRIBUTE_ARCHIVE   0x00000020
+#define CB_FILE_ATTRIBUTE_NORMAL    0x00000080
 
 struct clip_s2c /* server to client, pasting from linux app to mstsc */
 {
@@ -107,5 +111,10 @@ struct clip_c2s /* client to server, pasting from mstsc to linux app */
     int xrdp_clip_type; /* XRDP_CB_TEXT, XRDP_CB_BITMAP, XRDP_CB_FILE, ... */
     Time clip_time;
 };
+
+int APP_CC
+clipboard_out_unicode(struct stream *s, char *text, int num_chars);
+int APP_CC
+clipboard_in_unicode(struct stream *s, char *text, int *num_chars);
 
 #endif

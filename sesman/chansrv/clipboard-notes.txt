@@ -1,0 +1,63 @@
+LOG_LEVEL
+
+dolphin
+clipboard_event_selection_owner_notify:
+clipboard_event_selection_notify: 0x1f7 text/uri-list
+clipboard_event_selection_notify: 0x1f8 text/x-moz-url
+clipboard_event_selection_notify: 0x1f3 text/plain
+clipboard_event_selection_notify: 0xee UTF8_STRING
+clipboard_event_selection_notify: 0x1f STRING
+clipboard_event_selection_notify: 0x1a1 TEXT
+clipboard_event_selection_notify: 0x1a0 COMPOUND_TEXT
+clipboard_event_selection_notify: 0x1fa application/x-qiconlist
+clipboard_event_selection_notify: 0xec TARGETS
+clipboard_event_selection_notify: 0xed MULTIPLE
+clipboard_event_selection_notify: 0xeb TIMESTAMP
+clipboard_event_selection_notify: 0x183 SAVE_TARGETS
+
+thunar
+clipboard_event_selection_owner_notify:
+clipboard_event_selection_notify: 0xeb TIMESTAMP
+clipboard_event_selection_notify: 0xec TARGETS
+clipboard_event_selection_notify: 0xed MULTIPLE
+clipboard_event_selection_notify: 0x204 x-special/gnome-copied-files
+clipboard_event_selection_notify: 0xee UTF8_STRING
+clipboard_data_in:
+clipboard_data_in: 3
+
+pcmanfm
+clipboard_event_selection_owner_notify:
+clipboard_event_selection_notify: 0xeb TIMESTAMP
+clipboard_event_selection_notify: 0xec TARGETS
+clipboard_event_selection_notify: 0xed MULTIPLE
+clipboard_event_selection_notify: 0x1f7 text/uri-list
+clipboard_event_selection_notify: 0x204 x-special/gnome-copied-files
+clipboard_event_selection_notify: 0x1f9 application/x-kde-cutselection
+clipboard_event_selection_notify: 0xee UTF8_STRING
+
+CAJA
+clipboard_event_selection_notify: 0x141 TIMESTAMP
+clipboard_event_selection_notify: 0x130 TARGETS
+clipboard_event_selection_notify: 0x142 MULTIPLE
+clipboard_event_selection_notify: 0x143 x-special/mate-copied-files
+clipboard_event_selection_notify: 0x144 text/uri-list
+clipboard_event_selection_notify: 0x0 (null)
+clipboard_event_selection_notify: 0x25 WM_ICON_NAME
+clipboard_event_selection_notify: 0x47524154 (null)
+clipboard_event_selection_notify: 0x50000078 (null)
+clipboard_event_selection_notify: 0x0 (null)
+clipboard_event_selection_notify: 0x25 WM_ICON_NAME
+
+nautilus
+clipboard_event_selection_notify: 0x141 TIMESTAMP
+clipboard_event_selection_notify: 0x130 TARGETS
+clipboard_event_selection_notify: 0x142 MULTIPLE
+clipboard_event_selection_notify: 0x154 x-special/gnome-copied-files
+clipboard_event_selection_notify: 0x144 text/uri-list
+clipboard_event_selection_notify: 0xfb UTF8_STRING
+clipboard_event_selection_notify: 0x0 (null)
+clipboard_event_selection_notify: 0x25 WM_ICON_NAME
+clipboard_event_selection_notify: 0x47524154 (null)
+clipboard_event_selection_notify: 0x50000078 (null)
+clipboard_event_selection_notify: 0x0 (null)
+clipboard_event_selection_notify: 0x25 WM_ICON_NAME

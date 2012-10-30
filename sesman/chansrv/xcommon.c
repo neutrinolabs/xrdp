@@ -132,7 +132,7 @@ xcommon_get_wait_objs(tbus *objs, int *count, int *timeout)
 
     if (((!g_clip_up) && (!g_rail_up)) || (objs == 0) || (count == 0))
     {
-        LOG(10, ("xcommon_get_wait_objs: nothing to do"));
+        //LOG(10, ("xcommon_get_wait_objs: nothing to do"));
         return 0;
     }
 
@@ -154,7 +154,7 @@ xcommon_check_wait_objs(void)
 
     if ((!g_clip_up) && (!g_rail_up))
     {
-        LOG(10, ("xcommon_check_wait_objs: nothing to do"));
+        //LOG(10, ("xcommon_check_wait_objs: nothing to do"));
         return 0;
     }
 

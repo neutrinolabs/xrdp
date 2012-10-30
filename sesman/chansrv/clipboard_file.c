@@ -16,6 +16,12 @@
  * limitations under the License.
  */
 
+/* MS-RDPECLIP
+ * http://msdn.microsoft.com/en-us/library/cc241066%28prot.20%29.aspx
+ *
+ * CLIPRDR_FILEDESCRIPTOR
+ * http://msdn.microsoft.com/en-us/library/ff362447%28prot.20%29.aspx */
+
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/extensions/Xfixes.h>
@@ -27,6 +33,7 @@
 #include "clipboard_file.h"
 #include "clipboard_common.h"
 #include "xcommon.h"
+#include "chansrv_fuse.h"
 
 #define LLOG_LEVEL 11
 #define LLOGLN(_level, _args) \
@@ -45,18 +52,52 @@ extern int g_cliprdr_chan_id; /* in chansrv.c */
 extern struct clip_s2c g_clip_s2c; /* in clipboard.c */
 extern struct clip_c2s g_clip_c2s; /* in clipboard.c */
 
+extern struct file_item *g_file_items; /* in chansrv_fuse.c */
+extern int g_file_items_count;         /* in chansrv_fuse.c */
+
+
 struct cb_file_info
 {
     char pathname[256];
     char filename[256];
     int flags;
     int size;
+    tui64 time;
+};
+
+struct clip_file_desc /* CLIPRDR_FILEDESCRIPTOR */
+{
+    tui32 flags;
+    tui32 fileAttributes;
+    tui32 lastWriteTimeLow;
+    tui32 lastWriteTimeHigh;
+    tui32 fileSizeHigh;
+    tui32 fileSizeLow;
+    char cFileName[256];
 };
 
 static struct cb_file_info g_files[64];
 static int g_num_files = 0;
 
+/* number of seconds from 1 Jan. 1601 00:00 to 1 Jan 1970 00:00 UTC */
+#define CB_EPOCH_DIFF 11644473600LL
+
 /*****************************************************************************/
+static tui64 APP_CC
+timeval2wintime(struct timeval *tv)
+{
+    tui64 result;
+
+    result = CB_EPOCH_DIFF;
+    result += tv->tv_sec;
+    result *= 10000000LL;
+    result += tv->tv_usec * 10;
+    return result;
+}
+
+/*****************************************************************************/
+/* this will replace %20 or any hex with the space or correct char
+ * returns error */
 static int APP_CC
 clipboard_check_file(char *filename)
 {
@@ -97,11 +138,13 @@ clipboard_get_file(char* file, int bytes)
 {
     int sindex;
     int pindex;
+    int flags;
     char full_fn[256]; /* /etc/xrdp/xrdp.ini */
     char filename[256]; /* xrdp.ini */
     char pathname[256]; /* /etc/xrdp */
 
     sindex = 0;
+    flags = CB_FILE_ATTRIBUTE_ARCHIVE;
     if (g_strncmp(file, "file:///", 8) == 0)
     {
         sindex = 7;
@@ -130,6 +173,7 @@ clipboard_get_file(char* file, int bytes)
     {
         LLOGLN(0, ("clipboard_get_file: file [%s] is a directory, "
                    "not supported", full_fn));
+        flags |= CB_FILE_ATTRIBUTE_DIRECTORY;
         return 1;
     }
     if (!g_file_exist(full_fn))
@@ -143,6 +187,8 @@ clipboard_get_file(char* file, int bytes)
         g_strcpy(g_files[g_num_files].filename, filename);
         g_strcpy(g_files[g_num_files].pathname, pathname);
         g_files[g_num_files].size = g_file_get_size(full_fn);
+        g_files[g_num_files].flags = flags;
+        g_files[g_num_files].time = (g_time1() + CB_EPOCH_DIFF) * 10000000LL;
         g_writeln("ok filename [%s] pathname [%s] size [%d]",
                   g_files[g_num_files].filename,
                   g_files[g_num_files].pathname,
@@ -209,6 +255,7 @@ clipboard_send_data_response_for_file(char *data, int data_size)
     int cItems;
     int flags;
     int index;
+    tui32 ui32;
     char fn[256];
 
     LLOGLN(10, ("clipboard_send_data_response_for_file: data_size %d",
@@ -228,14 +275,17 @@ clipboard_send_data_response_for_file(char *data, int data_size)
         flags = CB_FD_ATTRIBUTES | CB_FD_FILESIZE | CB_FD_WRITESTIME | CB_FD_PROGRESSUI;
         out_uint32_le(s, flags);
         out_uint8s(s, 32); /* reserved1 */
-        flags = CB_FILE_ATTRIBUTE_ARCHIVE;
-        //flags = CB_FILE_ATTRIBUTE_NORMAL;
+        flags = g_files[index].flags;
         out_uint32_le(s, flags);
         out_uint8s(s, 16); /* reserved2 */
         /* file time */
         /* 100-nanoseconds intervals since 1 January 1601 */
-        out_uint32_le(s, 0x2c305d08); /* 25 October 2009, 21:17 */
-        out_uint32_le(s, 0x01ca55f3);
+        //out_uint32_le(s, 0x2c305d08); /* 25 October 2009, 21:17 */
+        //out_uint32_le(s, 0x01ca55f3);
+        ui32 = g_files[index].time & 0xffffffff;
+        out_uint32_le(s, ui32);
+        ui32 = g_files[index].time >> 32;
+        out_uint32_le(s, ui32);
         /* file size */
         out_uint32_le(s, 0);
         out_uint32_le(s, g_files[index].size);
@@ -362,6 +412,66 @@ clipboard_process_file_request(struct stream *s, int clip_msg_status,
     if (dwFlags & CB_FILECONTENTS_RANGE)
     {
         clipboard_send_file_data(streamId, lindex, nPositionLow, cbRequested);
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+/* read in CLIPRDR_FILEDESCRIPTOR */
+static int APP_CC
+clipboard_c2s_in_file_info(struct stream *s, struct clip_file_desc *cfd)
+{
+    int num_chars;
+    int ex_bytes;
+
+    in_uint32_le(s, cfd->flags);
+    in_uint8s(s, 32); /* reserved1 */
+    in_uint32_le(s, cfd->fileAttributes);
+    in_uint8s(s, 16); /* reserved2 */
+    in_uint32_le(s, cfd->lastWriteTimeLow);
+    in_uint32_le(s, cfd->lastWriteTimeHigh);
+    in_uint32_le(s, cfd->fileSizeHigh);
+    in_uint32_le(s, cfd->fileSizeLow);
+    num_chars = 256;
+    clipboard_in_unicode(s, cfd->cFileName, &num_chars);
+    ex_bytes = 512 - num_chars * 2;
+    ex_bytes -= 2;
+    in_uint8s(s, ex_bytes);
+    in_uint8s(s, 8); /* pad */
+    LLOGLN(10, ("clipboard_c2s_in_file_info:"));
+    LLOGLN(10, ("  flags 0x%8.8x", cfd->flags));
+    LLOGLN(10, ("  fileAttributes 0x%8.8x", cfd->fileAttributes));
+    LLOGLN(10, ("  lastWriteTime 0x%8.8x%8.8x", cfd->lastWriteTimeHigh,
+                cfd->lastWriteTimeLow));
+    LLOGLN(10, ("  fileSize 0x%8.8x%8.8x", cfd->fileSizeHigh,
+                cfd->fileSizeLow));
+    LLOGLN(10, ("  num_chars %d cFileName [%s]", num_chars, cfd->cFileName));
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+clipboard_c2s_in_files(struct stream *s)
+{
+    tui32 cItems;
+    struct clip_file_desc cfd;
+    int ino;
+    int index;
+
+    in_uint32_le(s, cItems);
+    g_file_items_count = cItems;
+    g_free(g_file_items);
+    g_file_items = g_malloc(sizeof(struct file_item) * g_file_items_count, 1);
+    LLOGLN(10, ("clipboard_c2s_in_files: cItems %d", cItems));
+    ino = 3;
+    index = 0;
+    while (cItems > 0)
+    {
+        clipboard_c2s_in_file_info(s, &cfd);
+        fuse_set_dir_item(index, cfd.cFileName, 0, "1\n", 2, ino);
+        index++;
+        ino++;
+        cItems--;
     }
     return 0;
 }

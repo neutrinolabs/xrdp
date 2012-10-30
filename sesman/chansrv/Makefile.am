@@ -32,10 +32,11 @@ xrdp_chansrv_SOURCES = \
   devredir.c \
   rail.c \
   xcommon.c \
-  drdynvc.c
+  drdynvc.c \
+  chansrv_fuse.c
 
 xrdp_chansrv_LDFLAGS = \
-  $(EXTRA_FLAGS)
+  $(EXTRA_FLAGS) -lfuse
 
 xrdp_chansrv_LDADD = \
   -L/usr/X11R6/lib \

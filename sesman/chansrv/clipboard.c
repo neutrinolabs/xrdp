@@ -55,6 +55,7 @@ xlsatoms - dump atoms
 #include "clipboard_file.h"
 #include "clipboard_common.h"
 #include "xcommon.h"
+#include "chansrv_fuse.h"
 
 #define LLOG_LEVEL 11
 #define LLOGLN(_level, _args) \
@@ -202,6 +203,7 @@ clipboard_init(void)
         return 0;
     }
 
+    fuse_init();
     xcommon_init();
     clipboard_deinit();
     g_incr_max_req_size = XMaxRequestSize(g_display) * 4 - 24;
@@ -346,6 +348,8 @@ clipboard_deinit(void)
         g_wnd = 0;
     }
 
+    fuse_deinit();
+
     g_free(g_clip_c2s.data);
     g_clip_c2s.data = 0;
     g_free(g_clip_s2c.data);
@@ -442,7 +446,7 @@ clipboard_out_unicode(struct stream *s, char *text, int num_chars)
 
 /*****************************************************************************/
 /* returns number of bytes read */
-static int APP_CC
+int APP_CC
 clipboard_in_unicode(struct stream *s, char *text, int *num_chars)
 {
     int index;
@@ -838,6 +842,7 @@ clipboard_process_format_announce(struct stream *s, int clip_msg_status,
     int formatId;
     int count;
     int bytes;
+    int got_file;
     char desc[256];
     char *holdp;
 
@@ -847,6 +852,7 @@ clipboard_process_format_announce(struct stream *s, int clip_msg_status,
     clipboard_send_format_ack();
     desc[0] = 0;
     g_num_formatIds = 0;
+    got_file = 0;
     while (clip_msg_len > 3)
     {
         in_uint32_le(s, formatId);
@@ -869,7 +875,7 @@ clipboard_process_format_announce(struct stream *s, int clip_msg_status,
             desc[15] = 0;
             clip_msg_len -= 32;
         }
-        LLOGLN(10, ("clipboard_process_format_announce: formatId 0x%8.8x "
+        LLOGLN(0, ("clipboard_process_format_announce: formatId 0x%8.8x "
                     "wszFormatName [%s] clip_msg_len %d", formatId, desc,
                     clip_msg_len));
         g_formatIds[g_num_formatIds] = formatId;
@@ -878,6 +884,18 @@ clipboard_process_format_announce(struct stream *s, int clip_msg_status,
         {
             LLOGLN(10, ("clipboard_process_format_announce: max formats"));
         }
+        if (formatId == 0x0000c0c8)
+        {
+            got_file = 1;
+        }
+    }
+
+    if (got_file)
+    {
+        LLOGLN(0, ("clipboard_process_format_announce: sending file list request"));
+        g_clip_c2s.xrdp_clip_type = XRDP_CB_FILE;
+        clipboard_send_data_request(0x0000c0c8);
+        return 0;
     }
 
     if ((g_num_formatIds > 0) &&
@@ -1067,6 +1085,13 @@ clipboard_process_data_response(struct stream *s, int clip_msg_status,
     {
         clipboard_process_data_response_for_image(s, clip_msg_status,
                                                   clip_msg_len);
+        return 0;
+    }
+    if (g_clip_c2s.xrdp_clip_type == XRDP_CB_FILE)
+    {
+        LLOGLN(0, ("  XRDP_CB_FILE"));
+        //g_hexdump(s->p, s->end - s->p);
+        clipboard_c2s_in_files(s);
         return 0;
     }
     LOGM((LOG_LEVEL_DEBUG, "clipboard_process_data_response: "

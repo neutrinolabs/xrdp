@@ -32,6 +32,7 @@
 #include "log.h"
 #include "rail.h"
 #include "xcommon.h"
+#include "chansrv_fuse.h"
 
 static struct trans *g_lis_trans = 0;
 static struct trans *g_con_trans = 0;
@@ -195,10 +196,13 @@ send_channel_data(int chan_id, char *data, int size)
 {
     int index;
 
+    //g_writeln("send_channel_data chan_id %d size %d", chan_id, size);
+
     LOGM((LOG_LEVEL_DEBUG, "chansrv::send_channel_data: size %d", size));
 
     if (chan_id == -1)
     {
+        g_writeln("send_channel_data: error, chan_id is -1");
         return 1;
     }
 
@@ -392,6 +396,8 @@ process_message_channel_setup(struct stream *s)
         drdynvc_init();
     }
 
+    fuse_init();
+
     return rv;
 }
 
@@ -582,6 +588,8 @@ my_api_trans_data_in(struct trans *trans)
     int                   bytes_read;
     struct xrdp_api_data *ad;
 
+    //g_writeln("my_api_trans_data_in:");
+
     LOG(10, ("my_api_trans_data_in:"));
 
     if (trans == 0)
@@ -597,7 +605,9 @@ my_api_trans_data_in(struct trans *trans)
     LOGM((LOG_LEVEL_DEBUG, "my_api_trans_data_in:"));
 
     s = trans_get_in_s(trans);
-    bytes_read = g_tcp_recv(trans->sck, s->data, 8192, 0);
+    bytes_read = g_tcp_recv(trans->sck, s->data, 8192 * 4, 0);
+
+    //g_writeln("bytes_read %d", bytes_read);
 
     if (bytes_read > 0)
     {
@@ -620,7 +630,7 @@ my_api_trans_data_in(struct trans *trans)
     }
     else
     {
-        ad = (struct xrdp_api_data *) trans->callback_data;
+        ad = (struct xrdp_api_data *) (trans->callback_data);
         if ((ad != NULL) && (ad->dvc_chan_id > 0))
         {
             /* WTSVirtualChannelClose() was invoked, or connection dropped */
@@ -686,6 +696,7 @@ my_api_trans_conn_in(struct trans *trans, struct trans *new_trans)
     int                   index;
     char                  chan_pri;
 
+    g_writeln("my_api_trans_conn_in:");
     if ((trans == 0) || (trans != g_api_lis_trans) || (new_trans == 0))
     {
         return 1;
@@ -805,7 +816,7 @@ setup_api_listen(void)
     char port[256];
     int error = 0;
 
-    g_api_lis_trans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
+    g_api_lis_trans = trans_create(TRANS_MODE_UNIX, 8192 * 4, 8192 * 4);
     g_snprintf(port, 255, "/tmp/.xrdp/xrdpapi_%d", g_display_num);
     g_api_lis_trans->trans_conn_in = my_api_trans_conn_in;
     error = trans_listen(g_api_lis_trans, port);
@@ -915,6 +926,7 @@ channel_thread_loop(void *in_val)
             xcommon_check_wait_objs();
             sound_check_wait_objs();
             dev_redir_check_wait_objs();
+            fuse_check_wait_objs();
             timeout = -1;
             num_objs = 0;
             objs[num_objs] = g_term_event;
@@ -926,6 +938,7 @@ channel_thread_loop(void *in_val)
             xcommon_get_wait_objs(objs, &num_objs, &timeout);
             sound_get_wait_objs(objs, &num_objs, &timeout);
             dev_redir_get_wait_objs(objs, &num_objs, &timeout);
+            fuse_get_wait_objs(objs, &num_objs, &timeout);
         }
     }
 
