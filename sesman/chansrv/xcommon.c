@@ -132,10 +132,8 @@ xcommon_get_wait_objs(tbus *objs, int *count, int *timeout)
 
     if (((!g_clip_up) && (!g_rail_up)) || (objs == 0) || (count == 0))
     {
-        //LOG(10, ("xcommon_get_wait_objs: nothing to do"));
         return 0;
     }
-
     lcount = *count;
     objs[lcount] = g_x_wait_obj;
     lcount++;
@@ -148,38 +146,24 @@ int APP_CC
 xcommon_check_wait_objs(void)
 {
     XEvent xevent;
-    //int time_diff;
     int clip_rv;
     int rail_rv;
 
     if ((!g_clip_up) && (!g_rail_up))
     {
-        //LOG(10, ("xcommon_check_wait_objs: nothing to do"));
         return 0;
     }
-
-    if (g_is_wait_obj_set(g_x_wait_obj))
+    while (XPending(g_display) > 0)
     {
-        if (XPending(g_display) < 1)
+        g_memset(&xevent, 0, sizeof(xevent));
+        XNextEvent(g_display, &xevent);
+        clip_rv = clipboard_xevent(&xevent);
+        rail_rv = rail_xevent(&xevent);
+        if ((clip_rv == 1) && (rail_rv == 1))
         {
-            /* something is wrong, should not get here */
-            LOGM((LOG_LEVEL_ERROR, "xcommon_check_wait_objs: sck closed"));
-            return 0;
-        }
-        while (XPending(g_display) > 0)
-        {
-            g_memset(&xevent, 0, sizeof(xevent));
-            XNextEvent(g_display, &xevent);
-
-            clip_rv = clipboard_xevent(&xevent);
-            rail_rv = rail_xevent(&xevent);
-
-            if ((clip_rv == 1) && (rail_rv == 1))
-            {
-                LOG(10, ("xcommon_check_wait_objs unknown xevent type %d", xevent.type));
-            }
+            LOG(10, ("xcommon_check_wait_objs unknown xevent type %d",
+                     xevent.type));
         }
     }
-
     return 0;
 }
