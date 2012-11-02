@@ -42,7 +42,7 @@
   { \
     if (_level < LLOG_LEVEL) \
     { \
-      g_write("chansrv:clip [%10.10u]: ", g_time3()); \
+      g_write("chansrv:fuse [%10.10u]: ", g_time3()); \
       g_writeln _args ; \
     } \
   } \
