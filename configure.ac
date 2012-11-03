@@ -43,6 +43,10 @@ AC_ARG_ENABLE(simplesound, AS_HELP_STRING([--enable-simplesound],
               [Build simple pulse audio interface (default: no)]),
               [simplesound=true], [simplesound=false])
 AM_CONDITIONAL(XRDP_SIMPLESOUND, [test x$simplesound = xtrue])
+AC_ARG_ENABLE(fuse, AS_HELP_STRING([--enable-fuse],
+              [Build fuse(clipboard file / drive redir) (default: no)]),
+              [fuse=true], [fuse=false])
+AM_CONDITIONAL(XRDP_FUSE, [test x$fuse = xtrue])
 
 AM_CONDITIONAL(GOT_PREFIX, test "x${prefix}" != "xNONE"])
 
@@ -68,6 +72,14 @@ if ! test -z "$enable_jpeg"
 then
   AC_CHECK_HEADER([jpeglib.h], [],
     [AC_MSG_ERROR([please install libjpeg-dev or libjpeg-devel])])
+fi
+
+# checking for fuse
+if ! test -z "$enable_fuse"
+then
+  AC_CHECK_HEADER([fuse.h], [],
+    [AC_MSG_ERROR([please install libfuse-dev or fuse-devel])],
+    [#define _FILE_OFFSET_BITS 64])
 fi
 
 # checking for libpulse libpulse-simple

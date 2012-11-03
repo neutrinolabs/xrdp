@@ -47,14 +47,13 @@
   } \
   while (0)
 
+struct file_item *g_file_items = 0;
+int g_file_items_count = 0;
+
 extern int g_cliprdr_chan_id; /* in chansrv.c */
 
 extern struct clip_s2c g_clip_s2c; /* in clipboard.c */
 extern struct clip_c2s g_clip_c2s; /* in clipboard.c */
-
-extern struct file_item *g_file_items; /* in chansrv_fuse.c */
-extern int g_file_items_count;         /* in chansrv_fuse.c */
-
 
 struct cb_file_info
 {

@@ -16,9 +16,7 @@
  * limitations under the License.
  */
 
-#define XRDP_USE_FUSE 1
-
-#ifdef XRDP_USE_FUSE
+#ifdef XRDP_FUSE
 
 #define FUSE_USE_VERSION 26
 #define _FILE_OFFSET_BITS 64
@@ -54,13 +52,12 @@ static char *g_mountpoint = 0;
 static tintptr g_bufsize = 0;
 static char *g_buffer = 0;
 static int g_fd = 0;
-
-struct file_item *g_file_items = 0;
-int g_file_items_count = 0;
-
 static time_t g_time = 0;
 static int g_uid = 0;
 static int g_gid = 0;
+
+extern struct file_item *g_file_items; /* in chansrv_file.c */
+extern int g_file_items_count;         /* in chansrv_file.c */
 
 struct dirbuf
 {
