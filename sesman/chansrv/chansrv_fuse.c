@@ -33,6 +33,7 @@
 #include "os_calls.h"
 #include "chansrv.h"
 #include "chansrv_fuse.h"
+#include "clipboard_file.h"
 
 #define LLOG_LEVEL 1
 #define LLOGLN(_level, _args) \
@@ -56,6 +57,9 @@ static time_t g_time = 0;
 static int g_uid = 0;
 static int g_gid = 0;
 
+/* used for file data request sent to client */
+static fuse_req_t g_req = 0;
+
 struct dirbuf
 {
     char *p;
@@ -66,6 +70,7 @@ struct dirbuf
 struct xfuse_file_info
 {
     int ino;
+    int lindex;
     char pathname[256];
     char filename[256];
     int flags;
@@ -252,8 +257,8 @@ dirbuf_add(fuse_req_t req, struct dirbuf *b, const char *name, fuse_ino_t ino)
     }
     g_memset(&stbuf, 0, sizeof(stbuf));
     stbuf.st_ino = ino;
-    fuse_add_direntry(req, b->p + oldsize, b->size - oldsize, name, &stbuf,
-                      b->size);
+    fuse_add_direntry(req, b->p + oldsize, b->size - oldsize, name,
+                      &stbuf, b->size);
 }
 
 #define lmin(x, y) ((x) < (y) ? (x) : (y))
@@ -331,11 +336,26 @@ xrdp_ll_read(fuse_req_t req, fuse_ino_t ino, size_t size,
              off_t off, struct fuse_file_info *fi)
 {
     char *data;
+    int stream_id;
+    struct xfuse_file_info *ffi;
 
     LLOGLN(0, ("xrdp_ll_read: %d %d %d", (int)ino, (int)off, (int)size));
+
+    ffi = fuse_find_file_info_by_ino(g_fuse_files, ino);
+    if (ffi != 0)
+    {
+        stream_id = 0;
+        clipboard_request_file_data(stream_id, ffi->lindex, off, size);
+        g_req = req;
+        /* reply later */
+        return;
+    }
+
+    LLOGLN(0, ("xrdp_ll_read: fuse_find_file_info_by_ino failed"));
     data = (char *)g_malloc(size, 1);
-    reply_buf_limited(req, data, size, off, size);
+    fuse_reply_buf(req, data, size);
     g_free(data);
+
 }
 
 /*****************************************************************************/
@@ -409,7 +429,7 @@ fuse_clear_clip_dir(void)
 /*****************************************************************************/
 /* returns error */
 int APP_CC
-fuse_add_clip_dir_item(char *filename, int flags, int size)
+fuse_add_clip_dir_item(char *filename, int flags, int size, int lindex)
 {
     struct xfuse_file_info *ffi;
     struct xfuse_file_info *ffi1;
@@ -422,6 +442,7 @@ fuse_add_clip_dir_item(char *filename, int flags, int size)
                g_malloc(sizeof(struct xfuse_file_info), 1);
         ffi1->flags = flags;
         ffi1->ino = g_ino++;
+        ffi1->lindex = lindex;
         ffi1->size = size;
         g_strncpy(ffi1->filename, filename, 255);
         g_fuse_files = ffi1;
@@ -435,6 +456,7 @@ fuse_add_clip_dir_item(char *filename, int flags, int size)
            g_malloc(sizeof(struct xfuse_file_info), 1);
     ffi1->flags = flags;
     ffi1->ino = g_ino++;
+    ffi1->lindex = lindex;
     ffi1->size = size;
     g_strncpy(ffi1->filename, filename, 255);
     ffi->next = ffi1;
@@ -549,6 +571,23 @@ fuse_deinit(void)
     return 0;
 }
 
+/*****************************************************************************/
+int APP_CC
+fuse_file_contents_size(int stream_id, int file_size)
+{
+    LLOGLN(0, ("fuse_file_contents_size: file_size %d", file_size));
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+fuse_file_contents_range(int stream_id, char *data, int data_bytes)
+{
+    LLOGLN(0, ("fuse_file_contents_range: data_bytes %d", data_bytes));
+    fuse_reply_buf(g_req, data, data_bytes);
+    return 0;
+}
+
 #else
 
 #include "arch.h"
@@ -590,7 +629,21 @@ fuse_clear_clip_dir(void)
 
 /*****************************************************************************/
 int APP_CC
-fuse_add_clip_dir_item(char *filename, int flags, int size)
+fuse_add_clip_dir_item(char *filename, int flags, int size, int lindex)
+{
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+fuse_file_contents_size(int stream_id, int file_size)
+{
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+fuse_file_contents_range(int stream_id, char *data, int data_bytes)
 {
     return 0;
 }

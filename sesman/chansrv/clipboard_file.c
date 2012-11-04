@@ -77,6 +77,7 @@ struct clip_file_desc /* CLIPRDR_FILEDESCRIPTOR */
 
 static struct cb_file_info g_files[64];
 static int g_num_files = 0;
+static int g_file_request_sent_type = 0;
 
 /* number of seconds from 1 Jan. 1601 00:00 to 1 Jan 1970 00:00 UTC */
 #define CB_EPOCH_DIFF 11644473600LL
@@ -336,7 +337,7 @@ clipboard_send_file_size(int streamId, int lindex)
 /*****************************************************************************/
 /* ask the client to send the file size */
 int APP_CC
-clipboard_request_file_size(int streamId, int lindex)
+clipboard_request_file_size(int stream_id, int lindex)
 {
     struct stream *s;
     int size;
@@ -345,12 +346,17 @@ clipboard_request_file_size(int streamId, int lindex)
 
     file_size = g_files[lindex].size;
     LLOGLN(10, ("clipboard_request_file_size:"));
+    if (g_file_request_sent_type != 0)
+    {
+        LLOGLN(0, ("clipboard_request_file_size: warning, still waiting "
+                   "for CB_FILECONTENTS_RESPONSE"));
+    }
     make_stream(s);
     init_stream(s, 8192);
     out_uint16_le(s, CB_FILECONTENTS_REQUEST); /* 8 */
     out_uint16_le(s, 0);
     out_uint32_le(s, 28);
-    out_uint32_le(s, streamId);
+    out_uint32_le(s, stream_id);
     out_uint32_le(s, lindex);
     out_uint32_le(s, CB_FILECONTENTS_SIZE);
     out_uint32_le(s, 0); /* nPositionLow */
@@ -362,6 +368,7 @@ clipboard_request_file_size(int streamId, int lindex)
     size = (int)(s->end - s->data);
     rv = send_channel_data(g_cliprdr_chan_id, s->data, size);
     free_stream(s);
+    g_file_request_sent_type = CB_FILECONTENTS_SIZE;
     return rv;
 }
 
@@ -418,6 +425,46 @@ clipboard_send_file_data(int streamId, int lindex,
 }
 
 /*****************************************************************************/
+/* ask the client to send the file size */
+int APP_CC
+clipboard_request_file_data(int stream_id, int lindex, int offset,
+                            int request_bytes)
+{
+    struct stream *s;
+    int size;
+    int rv;
+    int file_size;
+
+    file_size = g_files[lindex].size;
+    LLOGLN(10, ("clipboard_request_file_data:"));
+    if (g_file_request_sent_type != 0)
+    {
+        LLOGLN(0, ("clipboard_request_file_data: warning, still waiting "
+                   "for CB_FILECONTENTS_RESPONSE"));
+    }
+    make_stream(s);
+    init_stream(s, 8192);
+    out_uint16_le(s, CB_FILECONTENTS_REQUEST); /* 8 */
+    out_uint16_le(s, 0);
+    out_uint32_le(s, 28);
+    out_uint32_le(s, stream_id);
+    out_uint32_le(s, lindex);
+    out_uint32_le(s, CB_FILECONTENTS_RANGE);
+    out_uint32_le(s, offset); /* nPositionLow */
+    out_uint32_le(s, 0); /* nPositionHigh */
+    out_uint32_le(s, request_bytes); /* cbRequested */
+    out_uint32_le(s, 0); /* clipDataId */
+    out_uint32_le(s, 0);
+    s_mark_end(s);
+    size = (int)(s->end - s->data);
+    rv = send_channel_data(g_cliprdr_chan_id, s->data, size);
+    free_stream(s);
+    g_file_request_sent_type = CB_FILECONTENTS_RANGE;
+    return rv;
+}
+
+
+/*****************************************************************************/
 int APP_CC
 clipboard_process_file_request(struct stream *s, int clip_msg_status,
                                int clip_msg_len)
@@ -447,6 +494,35 @@ clipboard_process_file_request(struct stream *s, int clip_msg_status,
     {
         clipboard_send_file_data(streamId, lindex, nPositionLow, cbRequested);
     }
+    return 0;
+}
+
+/*****************************************************************************/
+/* server requested info about the file and this is the responce
+   it's either the file size or file data */
+int APP_CC
+clipboard_process_file_response(struct stream *s, int clip_msg_status,
+                                int clip_msg_len)
+{
+    int streamId;
+    int file_size;
+    char *data;
+
+    LLOGLN(0, ("clipboard_process_file_response:"));
+    if (g_file_request_sent_type == CB_FILECONTENTS_SIZE)
+    {
+        in_uint32_le(s, streamId);
+        in_uint32_le(s, file_size);
+        LLOGLN(0, ("clipboard_process_file_response: streamId %d "
+                   "file_size %d", streamId, file_size));
+        fuse_file_contents_size(streamId, file_size);
+    }
+    else if (g_file_request_sent_type == CB_FILECONTENTS_RANGE)
+    {
+        in_uint32_le(s, streamId);
+        fuse_file_contents_range(streamId, s->p, clip_msg_len - 4);
+    }
+    g_file_request_sent_type = 0;
     return 0;
 }
 
@@ -487,17 +563,17 @@ clipboard_c2s_in_file_info(struct stream *s, struct clip_file_desc *cfd)
 int APP_CC
 clipboard_c2s_in_files(struct stream *s)
 {
-    tui32 cItems;
+    int cItems;
+    int lindex;
     struct clip_file_desc cfd;
 
     in_uint32_le(s, cItems);
     fuse_clear_clip_dir();
     LLOGLN(0, ("clipboard_c2s_in_files: cItems %d", cItems));
-    while (cItems > 0)
+    for (lindex = 0; lindex < cItems; lindex++)
     {
         clipboard_c2s_in_file_info(s, &cfd);
-        fuse_add_clip_dir_item(cfd.cFileName, 0, cfd.fileSizeLow);
-        cItems--;
+        fuse_add_clip_dir_item(cfd.cFileName, 0, cfd.fileSizeLow, lindex);
     }
     return 0;
 }

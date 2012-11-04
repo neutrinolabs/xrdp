@@ -42,6 +42,76 @@ TIMESTAMP
 wininfo - show window info
 xlsatoms - dump atoms
 
+dolphin 1.4 KDE 4.4.5 copy one file
+text/uri-list
+text/x-moz-url
+text/plain
+UTF8_STRING
+STRING
+TEXT
+COMPOUND_TEXT
+application/x-qiconlist
+TARGETS
+MULTIPLE
+TIMESTAMP
+SAVE_TARGETS
+
+kolourpaint 4.4.5 KDE 4.4.5 copy image area
+application/x-kolourpaint-selection-400
+application/x-qt-image
+image/png
+image/bw
+image/eps
+image/epsf
+image/epsi
+image/pcx
+image/rgb
+image/rgba
+image/sgi
+image/tga
+image/bmp
+image/ico
+image/jp2
+image/jpeg
+image/jpg
+image/ppm
+PIXMAP
+image/tif
+image/tiff
+image/xbm
+image/xpm
+image/xv
+TARGETS
+MULTIPLE
+TIMESTAMP
+SAVE_TARGETS
+
+kate 3.4.5 KDE 4.4.5 copy text
+text/plain
+UTF8_STRING
+STRING
+TEXT
+COMPOUND_TEXT
+TARGETS
+MULTIPLE
+TIMESTAMP
+SAVE_TARGETS
+
+gimp 2.6.10 copy image area
+TIMESTAMP
+TARGETS
+MULTIPLE
+SAVE_TARGETS
+image/png
+image/bmp
+image/x-bmp
+image/x-MS-bmp
+image/tiff
+image/x-icon
+image/x-ico
+image/x-win-bitmap
+image/jpeg
+
 */
 
 #include <X11/Xlib.h>
@@ -1279,6 +1349,10 @@ clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length,
         case CB_FILECONTENTS_REQUEST: /* 8 */
             rv = clipboard_process_file_request(ls, clip_msg_status,
                                                 clip_msg_len);
+            break;
+        case CB_FILECONTENTS_RESPONSE: /* 9 */
+            rv = clipboard_process_file_response(ls, clip_msg_status,
+                                                 clip_msg_len);
             break;
         default:
             LLOGLN(0, ("clipboard_data_in: unknown clip_msg_id %d", clip_msg_id));

@@ -31,6 +31,9 @@ int APP_CC
 clipboard_c2s_in_files(struct stream *s);
 
 int APP_CC
-clipboard_request_file_size(int streamId, int lindex);
+clipboard_request_file_size(int stream_id, int lindex);
+int APP_CC
+clipboard_request_file_data(int stream_id, int lindex, int offset,
+                            int request_bytes);
 
 #endif
