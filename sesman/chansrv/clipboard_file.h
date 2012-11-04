@@ -30,4 +30,7 @@ clipboard_process_file_request(struct stream *s, int clip_msg_status,
 int APP_CC
 clipboard_c2s_in_files(struct stream *s);
 
+int APP_CC
+clipboard_request_file_size(int streamId, int lindex);
+
 #endif

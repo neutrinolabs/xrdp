@@ -56,9 +56,6 @@ static time_t g_time = 0;
 static int g_uid = 0;
 static int g_gid = 0;
 
-extern struct file_item *g_file_items; /* in chansrv_file.c */
-extern int g_file_items_count;         /* in chansrv_file.c */
-
 struct dirbuf
 {
     char *p;
@@ -66,42 +63,103 @@ struct dirbuf
     int alloc_bytes;
 };
 
+struct xfuse_file_info
+{
+    int ino;
+    char pathname[256];
+    char filename[256];
+    int flags;
+    int size;
+    tui64 time;
+    struct xfuse_file_info* child;
+    struct xfuse_file_info* parent;
+    struct xfuse_file_info* next;
+    struct xfuse_file_info* prev;
+};
+
+static struct xfuse_file_info *g_fuse_files = 0;
+static struct fuse_lowlevel_ops g_xrdp_ll_oper;
+static int g_ino = 2;
+
+/*****************************************************************************/
+static struct xfuse_file_info *APP_CC
+fuse_find_file_info_by_name(struct xfuse_file_info *ffi, const char *filename)
+{
+    struct xfuse_file_info *rv;
+    struct xfuse_file_info *rv1;
+
+    rv = ffi;
+    while (rv != 0)
+    {
+        if (g_strcmp(rv->filename, filename) == 0)
+        {
+            return rv;
+        }
+        if (rv->flags & 1)
+        {
+            rv1 = fuse_find_file_info_by_name(rv->child, filename);
+            if (rv1 != 0)
+            {
+                return rv1;
+            }
+        }
+        rv = rv->next;
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+static struct xfuse_file_info *APP_CC
+fuse_find_file_info_by_ino(struct xfuse_file_info *ffi, int ino)
+{
+    struct xfuse_file_info *rv;
+    struct xfuse_file_info *rv1;
+
+    rv = ffi;
+    while (rv != 0)
+    {
+        if (rv->ino == ino)
+        {
+            return rv;
+        }
+        if (rv->flags & 1)
+        {
+            rv1 = fuse_find_file_info_by_ino(rv->child, ino);
+            if (rv1 != 0)
+            {
+                return rv1;
+            }
+        }
+        rv = rv->next;
+    }
+    return 0;
+}
+
 /*****************************************************************************/
 static int APP_CC
-xrdp_stat(fuse_ino_t ino, struct stat *stbuf)
+xrdp_ffi2stat(struct xfuse_file_info *ffi, struct stat *stbuf)
 {
-    int index;
-
-    LLOGLN(10, ("xrdp_stat: ino %d", (int)ino));
-    stbuf->st_ino = ino;
-    switch (ino)
+    stbuf->st_ino = ffi->ino;
+    if (ffi->flags & 1)
     {
-        case 1: /* . */
-        case 2: /* .. */
-            stbuf->st_mode = S_IFDIR | 0755;
-            stbuf->st_nlink = 2;
-            stbuf->st_uid = g_uid;
-            stbuf->st_gid = g_gid;
-            stbuf->st_atime = g_time;
-            stbuf->st_mtime = g_time;
-            stbuf->st_ctime = g_time;
-            break;
-
-        default:
-            index = ino - 3;
-            if (index < 0 || index >= g_file_items_count)
-            {
-                return -1;
-            }
-            stbuf->st_mode = S_IFREG | 0444;
-            stbuf->st_nlink = 1;
-            stbuf->st_size = g_file_items[index].data_bytes;
-            stbuf->st_uid = g_uid;
-            stbuf->st_gid = g_gid;
-            stbuf->st_atime = g_time;
-            stbuf->st_mtime = g_time;
-            stbuf->st_ctime = g_time;
-            break;
+        stbuf->st_mode = S_IFDIR | 0755;
+        stbuf->st_nlink = 2;
+        stbuf->st_uid = g_uid;
+        stbuf->st_gid = g_gid;
+        stbuf->st_atime = g_time;
+        stbuf->st_mtime = g_time;
+        stbuf->st_ctime = g_time;
+    }
+    else
+    {
+        stbuf->st_mode = S_IFREG | 0444;
+        stbuf->st_nlink = 1;
+        stbuf->st_size = ffi->size;
+        stbuf->st_uid = g_uid;
+        stbuf->st_gid = g_gid;
+        stbuf->st_atime = g_time;
+        stbuf->st_mtime = g_time;
+        stbuf->st_ctime = g_time;
     }
     return 0;
 }
@@ -110,28 +168,27 @@ xrdp_stat(fuse_ino_t ino, struct stat *stbuf)
 static void DEFAULT_CC
 xrdp_ll_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
 {
+    struct xfuse_file_info *ffi;
     struct fuse_entry_param e;
-    int index;
 
-    LLOGLN(10, ("xrdp_ll_lookup: name %s", name));
+    LLOGLN(0, ("xrdp_ll_lookup: name %s", name));
     if (parent != 1)
     {
         fuse_reply_err(req, ENOENT);
     }
     else
     {
-        for (index = 0; index < g_file_items_count; index++)
+        ffi = fuse_find_file_info_by_name(g_fuse_files, name);
+        if (ffi != 0)
         {
-            if (g_strcmp(name, g_file_items[index].filename) == 0)
-            {
-                g_memset(&e, 0, sizeof(e));
-                e.ino = g_file_items[index].ino;
-                e.attr_timeout = 1.0;
-                e.entry_timeout = 1.0;
-                xrdp_stat(e.ino, &e.attr);
-                fuse_reply_entry(req, &e);
-                return;
-            }
+            LLOGLN(0, ("xrdp_ll_lookup: name %s ino %d", name, ffi->ino));
+            g_memset(&e, 0, sizeof(e));
+            e.ino = ffi->ino;
+            e.attr_timeout = 1.0;
+            e.entry_timeout = 1.0;
+            xrdp_ffi2stat(ffi, &e.attr);
+            fuse_reply_entry(req, &e);
+            return;
         }
     }
     fuse_reply_err(req, ENOENT);
@@ -142,9 +199,28 @@ static void DEFAULT_CC
 xrdp_ll_getattr(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 {
     struct stat stbuf;
+    struct xfuse_file_info *ffi;
 
+    LLOGLN(0, ("xrdp_ll_getattr: ino %d", ino));
     g_memset(&stbuf, 0, sizeof(stbuf));
-    if (xrdp_stat(ino, &stbuf) == -1)
+    if (ino == 1)
+    {
+        stbuf.st_mode = S_IFDIR | 0755;
+        stbuf.st_nlink = 2;
+        stbuf.st_uid = g_uid;
+        stbuf.st_gid = g_gid;
+        stbuf.st_atime = g_time;
+        stbuf.st_mtime = g_time;
+        stbuf.st_ctime = g_time;
+        fuse_reply_attr(req, &stbuf, 1.0);
+        return;
+    }
+    ffi = fuse_find_file_info_by_ino(g_fuse_files, ino);
+    if (ffi == 0)
+    {
+        fuse_reply_err(req, ENOENT);
+    }
+    else if (xrdp_ffi2stat(ffi, &stbuf) == -1)
     {
         fuse_reply_err(req, ENOENT);
     }
@@ -204,22 +280,25 @@ static void DEFAULT_CC
 xrdp_ll_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
                 off_t off, struct fuse_file_info *fi)
 {
+    struct xfuse_file_info *ffi;
     struct dirbuf b;
-    int index;
 
+    LLOGLN(0, ("xrdp_ll_readdir: ino %d", ino));
     if (ino != 1)
     {
         fuse_reply_err(req, ENOTDIR);
     }
     else
     {
+        ffi = g_fuse_files;
         g_memset(&b, 0, sizeof(b));
         dirbuf_add(req, &b, ".", 1);
-        dirbuf_add(req, &b, "..", 2);
-        for (index = 0; index < g_file_items_count; index++)
+        dirbuf_add(req, &b, "..", 1);
+        while (ffi != 0)
         {
-            dirbuf_add(req, &b, g_file_items[index].filename,
-                       g_file_items[index].ino);
+            LLOGLN(10, ("xrdp_ll_readdir: %s", ffi->filename));
+            dirbuf_add(req, &b, ffi->filename, ffi->ino);
+            ffi = ffi->next;
         }
         reply_buf_limited(req, b.p, b.size, off, size);
         g_free(b.p);
@@ -230,7 +309,7 @@ xrdp_ll_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
 static void DEFAULT_CC
 xrdp_ll_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 {
-    LLOGLN(10, ("xrdp_ll_open: ino %d", (int)ino));
+    LLOGLN(0, ("xrdp_ll_open: ino %d", (int)ino));
     if (ino == 1 || ino == 2)
     {
         fuse_reply_err(req, EISDIR);
@@ -242,6 +321,7 @@ xrdp_ll_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
     else
     {
         fuse_reply_open(req, fi);
+        clipboard_request_file_size(0, 0);
     }
 }
 
@@ -250,29 +330,13 @@ static void DEFAULT_CC
 xrdp_ll_read(fuse_req_t req, fuse_ino_t ino, size_t size,
              off_t off, struct fuse_file_info *fi)
 {
-    int index;
+    char *data;
 
-    LLOGLN(10, ("xrdp_ll_read: %d %d %d", (int)ino, (int)off, (int)size));
-    index = ino - 3;
-    if (index < 0 || index >= g_file_items_count)
-    {
-    }
-    else
-    {
-        reply_buf_limited(req, g_file_items[index].data,
-                          g_file_items[index].data_bytes,
-                          off, size);
-    }
+    LLOGLN(0, ("xrdp_ll_read: %d %d %d", (int)ino, (int)off, (int)size));
+    data = (char *)g_malloc(size, 1);
+    reply_buf_limited(req, data, size, off, size);
+    g_free(data);
 }
-
-static struct fuse_lowlevel_ops xrdp_ll_oper =
-{
-    .lookup         = xrdp_ll_lookup,
-    .getattr        = xrdp_ll_getattr,
-    .readdir        = xrdp_ll_readdir,
-    .open           = xrdp_ll_open,
-    .read           = xrdp_ll_read,
-};
 
 /*****************************************************************************/
 /* returns error */
@@ -296,8 +360,8 @@ fuse_init_lib(int argc, char **argv)
         fuse_opt_free_args(&args);
         return 1;
     }
-    g_se = fuse_lowlevel_new(&args, &xrdp_ll_oper,
-                             sizeof(xrdp_ll_oper), 0);
+    g_se = fuse_lowlevel_new(&args, &g_xrdp_ll_oper,
+                             sizeof(g_xrdp_ll_oper), 0);
     if (g_se == 0)
     {
         LLOGLN(0, ("fuse_init_lib: fuse_lowlevel_new failed"));
@@ -315,16 +379,65 @@ fuse_init_lib(int argc, char **argv)
 }
 
 /*****************************************************************************/
+static int APP_CC
+fuse_delete_dir_items(struct xfuse_file_info *ffi)
+{
+    struct xfuse_file_info *ffi1;
+
+    while (ffi != 0)
+    {
+        if (ffi->flags & 1)
+        {
+            fuse_delete_dir_items(ffi->child);
+        }
+        ffi1 = ffi;
+        ffi = ffi->next;
+        g_free(ffi1);
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+fuse_clear_clip_dir(void)
+{
+    fuse_delete_dir_items(g_fuse_files);
+    g_fuse_files = 0;
+    return 0;
+}
+
+/*****************************************************************************/
 /* returns error */
 int APP_CC
-fuse_set_dir_item(int index, char *filename, int flags, char *data,
-                  int data_bytes, int ino)
+fuse_add_clip_dir_item(char *filename, int flags, int size)
 {
-    g_strncpy(g_file_items[index].filename, filename, 255);
-    g_file_items[index].flags = flags;
-    g_memcpy(g_file_items[index].data, data, data_bytes);
-    g_file_items[index].data_bytes = data_bytes;
-    g_file_items[index].ino = ino;
+    struct xfuse_file_info *ffi;
+    struct xfuse_file_info *ffi1;
+
+    LLOGLN(0, ("fuse_add_clip_dir_item: adding %s", filename));
+    ffi = g_fuse_files;
+    if (ffi == 0)
+    {
+        ffi1 = (struct xfuse_file_info *)
+               g_malloc(sizeof(struct xfuse_file_info), 1);
+        ffi1->flags = flags;
+        ffi1->ino = g_ino++;
+        ffi1->size = size;
+        g_strncpy(ffi1->filename, filename, 255);
+        g_fuse_files = ffi1;
+        return 0;
+    }
+    while (ffi->next != 0)
+    {
+        ffi = ffi->next;
+    }
+    ffi1 = (struct xfuse_file_info *)
+           g_malloc(sizeof(struct xfuse_file_info), 1);
+    ffi1->flags = flags;
+    ffi1->ino = g_ino++;
+    ffi1->size = size;
+    g_strncpy(ffi1->filename, filename, 255);
+    ffi->next = ffi1;
     return 0;
 }
 
@@ -399,11 +512,12 @@ fuse_init(void)
     argv[1] = root_path;
     argv[2] = 0;
 
-    g_file_items = g_malloc(sizeof(struct file_item) * 3, 1);
-    fuse_set_dir_item(0, "File1", 0, "1\n", 2, 3);
-    fuse_set_dir_item(1, "File2", 0, "2\n", 2, 4);
-    fuse_set_dir_item(2, "File3", 0, "3\n", 2, 5);
-    g_file_items_count = 3;
+    g_memset(&g_xrdp_ll_oper, 0, sizeof(g_xrdp_ll_oper));
+    g_xrdp_ll_oper.lookup = xrdp_ll_lookup;
+    g_xrdp_ll_oper.getattr = xrdp_ll_getattr;
+    g_xrdp_ll_oper.readdir = xrdp_ll_readdir;
+    g_xrdp_ll_oper.open = xrdp_ll_open;
+    g_xrdp_ll_oper.read = xrdp_ll_read;
 
     return fuse_init_lib(2, argv);
 }
@@ -431,12 +545,6 @@ fuse_deinit(void)
     {
         g_free(g_buffer);
         g_buffer = 0;
-    }
-    if (g_file_items != 0)
-    {
-        g_free(g_file_items);
-        g_file_items = 0;
-        g_file_items_count = 0;
     }
     return 0;
 }
@@ -475,8 +583,14 @@ fuse_deinit(void)
 
 /*****************************************************************************/
 int APP_CC
-fuse_set_dir_item(int index, char *filename, int flags, char *data,
-                  int data_bytes, int ino)
+fuse_clear_clip_dir(void)
+{
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+fuse_add_clip_dir_item(char *filename, int flags, int size)
 {
     return 0;
 }

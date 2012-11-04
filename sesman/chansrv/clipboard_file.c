@@ -47,13 +47,13 @@
   } \
   while (0)
 
-struct file_item *g_file_items = 0;
-int g_file_items_count = 0;
-
 extern int g_cliprdr_chan_id; /* in chansrv.c */
 
 extern struct clip_s2c g_clip_s2c; /* in clipboard.c */
 extern struct clip_c2s g_clip_c2s; /* in clipboard.c */
+
+//extern struct file_item *g_file_items; /* in chansrv_fuse.c */
+//extern int g_file_items_count;         /* in chansrv_fuse.c */
 
 struct cb_file_info
 {
@@ -244,6 +244,7 @@ clipboard_get_files(char *files, int bytes)
 
 /*****************************************************************************/
 /* server to client */
+/* response to client asking for clipboard contents that is file list */
 int APP_CC
 clipboard_send_data_response_for_file(char *data, int data_size)
 {
@@ -303,6 +304,7 @@ clipboard_send_data_response_for_file(char *data, int data_size)
 }
 
 /*****************************************************************************/
+/* send the file size from server to the client */
 static int APP_CC
 clipboard_send_file_size(int streamId, int lindex)
 {
@@ -332,6 +334,39 @@ clipboard_send_file_size(int streamId, int lindex)
 }
 
 /*****************************************************************************/
+/* ask the client to send the file size */
+int APP_CC
+clipboard_request_file_size(int streamId, int lindex)
+{
+    struct stream *s;
+    int size;
+    int rv;
+    int file_size;
+
+    file_size = g_files[lindex].size;
+    LLOGLN(10, ("clipboard_request_file_size:"));
+    make_stream(s);
+    init_stream(s, 8192);
+    out_uint16_le(s, CB_FILECONTENTS_REQUEST); /* 8 */
+    out_uint16_le(s, 0);
+    out_uint32_le(s, 28);
+    out_uint32_le(s, streamId);
+    out_uint32_le(s, lindex);
+    out_uint32_le(s, CB_FILECONTENTS_SIZE);
+    out_uint32_le(s, 0); /* nPositionLow */
+    out_uint32_le(s, 0); /* nPositionHigh */
+    out_uint32_le(s, 0); /* cbRequested */
+    out_uint32_le(s, 0); /* clipDataId */
+    out_uint32_le(s, 0);
+    s_mark_end(s);
+    size = (int)(s->end - s->data);
+    rv = send_channel_data(g_cliprdr_chan_id, s->data, size);
+    free_stream(s);
+    return rv;
+}
+
+/*****************************************************************************/
+/* send a chunk of the file from server to client */
 static int APP_CC
 clipboard_send_file_data(int streamId, int lindex,
                          int nPositionLow, int cbRequested)
@@ -454,22 +489,14 @@ clipboard_c2s_in_files(struct stream *s)
 {
     tui32 cItems;
     struct clip_file_desc cfd;
-    int ino;
-    int index;
 
     in_uint32_le(s, cItems);
-    g_file_items_count = cItems;
-    g_free(g_file_items);
-    g_file_items = g_malloc(sizeof(struct file_item) * g_file_items_count, 1);
-    LLOGLN(10, ("clipboard_c2s_in_files: cItems %d", cItems));
-    ino = 3;
-    index = 0;
+    fuse_clear_clip_dir();
+    LLOGLN(0, ("clipboard_c2s_in_files: cItems %d", cItems));
     while (cItems > 0)
     {
         clipboard_c2s_in_file_info(s, &cfd);
-        fuse_set_dir_item(index, cfd.cFileName, 0, "1\n", 2, ino);
-        index++;
-        ino++;
+        fuse_add_clip_dir_item(cfd.cFileName, 0, cfd.fileSizeLow);
         cItems--;
     }
     return 0;

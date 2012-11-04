@@ -373,6 +373,7 @@ process_message_channel_setup(struct stream *s)
     if (g_cliprdr_index >= 0)
     {
         clipboard_init();
+        fuse_init();
     }
 
     if (g_rdpsnd_index >= 0)
@@ -395,8 +396,6 @@ process_message_channel_setup(struct stream *s)
         g_memset(&g_dvc_channels[0], 0, sizeof(g_dvc_channels));
         drdynvc_init();
     }
-
-    fuse_init();
 
     return rv;
 }

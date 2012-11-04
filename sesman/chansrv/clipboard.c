@@ -205,7 +205,6 @@ clipboard_init(void)
 
     fuse_init();
     xcommon_init();
-    clipboard_deinit();
     g_incr_max_req_size = XMaxRequestSize(g_display) * 4 - 24;
     g_memset(&g_clip_c2s, 0, sizeof(g_clip_c2s));
     g_memset(&g_clip_s2c, 0, sizeof(g_clip_s2c));
@@ -843,6 +842,7 @@ clipboard_process_format_announce(struct stream *s, int clip_msg_status,
     int count;
     int bytes;
     int got_file;
+    int file_format_id;
     char desc[256];
     char *holdp;
 
@@ -853,6 +853,7 @@ clipboard_process_format_announce(struct stream *s, int clip_msg_status,
     desc[0] = 0;
     g_num_formatIds = 0;
     got_file = 0;
+    file_format_id = 0;
     while (clip_msg_len > 3)
     {
         in_uint32_le(s, formatId);
@@ -884,9 +885,12 @@ clipboard_process_format_announce(struct stream *s, int clip_msg_status,
         {
             LLOGLN(10, ("clipboard_process_format_announce: max formats"));
         }
-        if (formatId == 0x0000c0c8)
+        //if (formatId == 0x0000c0c8)
+        //if (formatId == 0x0000c0ed)
+        if (g_strcmp(desc, "FileGroupDescriptorW") == 0)
         {
             got_file = 1;
+            file_format_id = formatId;
         }
     }
 
@@ -894,7 +898,9 @@ clipboard_process_format_announce(struct stream *s, int clip_msg_status,
     {
         LLOGLN(0, ("clipboard_process_format_announce: sending file list request"));
         g_clip_c2s.xrdp_clip_type = XRDP_CB_FILE;
-        clipboard_send_data_request(0x0000c0c8);
+        //clipboard_send_data_request(0x0000c0c8);
+        //clipboard_send_data_request(0x0000c0ed);
+        clipboard_send_data_request(file_format_id);
         return 0;
     }
 
