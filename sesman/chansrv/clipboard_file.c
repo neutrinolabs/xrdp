@@ -52,8 +52,7 @@ extern int g_cliprdr_chan_id; /* in chansrv.c */
 extern struct clip_s2c g_clip_s2c; /* in clipboard.c */
 extern struct clip_c2s g_clip_c2s; /* in clipboard.c */
 
-//extern struct file_item *g_file_items; /* in chansrv_fuse.c */
-//extern int g_file_items_count;         /* in chansrv_fuse.c */
+extern char g_fuse_root_path[]; /* in chansrv_fuse.c */
 
 struct cb_file_info
 {
@@ -62,17 +61,6 @@ struct cb_file_info
     int flags;
     int size;
     tui64 time;
-};
-
-struct clip_file_desc /* CLIPRDR_FILEDESCRIPTOR */
-{
-    tui32 flags;
-    tui32 fileAttributes;
-    tui32 lastWriteTimeLow;
-    tui32 lastWriteTimeHigh;
-    tui32 fileSizeHigh;
-    tui32 fileSizeLow;
-    char cFileName[256];
 };
 
 static struct cb_file_info g_files[64];
@@ -143,9 +131,23 @@ clipboard_get_file(char* file, int bytes)
     char filename[256]; /* xrdp.ini */
     char pathname[256]; /* /etc/xrdp */
 
+
+    /* x-special/gnome-copied-files */
+    if ((g_strncmp(file, "copy", 4) == 0) && (bytes == 4))
+    {
+        g_writeln("jay");
+        return 0;
+    }
+    if ((g_strncmp(file, "cut", 3) == 0) && (bytes == 3))
+    {
+        g_writeln("jay");
+        return 0;
+    }
     sindex = 0;
     flags = CB_FILE_ATTRIBUTE_ARCHIVE;
-    if (g_strncmp(file, "file:///", 8) == 0)
+    /* text/uri-list */
+    /* x-special/gnome-copied-files */
+    if (g_strncmp(file, "file://", 7) == 0)
     {
         sindex = 7;
     }
@@ -511,6 +513,7 @@ clipboard_process_file_response(struct stream *s, int clip_msg_status,
     LLOGLN(0, ("clipboard_process_file_response:"));
     if (g_file_request_sent_type == CB_FILECONTENTS_SIZE)
     {
+        g_file_request_sent_type = 0;
         in_uint32_le(s, streamId);
         in_uint32_le(s, file_size);
         LLOGLN(0, ("clipboard_process_file_response: streamId %d "
@@ -519,10 +522,15 @@ clipboard_process_file_response(struct stream *s, int clip_msg_status,
     }
     else if (g_file_request_sent_type == CB_FILECONTENTS_RANGE)
     {
+        g_file_request_sent_type = 0;
         in_uint32_le(s, streamId);
         fuse_file_contents_range(streamId, s->p, clip_msg_len - 4);
     }
-    g_file_request_sent_type = 0;
+    else
+    {
+        LLOGLN(0, ("clipboard_process_file_response: error"));
+        g_file_request_sent_type = 0;
+    }
     return 0;
 }
 
@@ -561,19 +569,44 @@ clipboard_c2s_in_file_info(struct stream *s, struct clip_file_desc *cfd)
 
 /*****************************************************************************/
 int APP_CC
-clipboard_c2s_in_files(struct stream *s)
+clipboard_c2s_in_files(struct stream *s, char *file_list)
 {
     int cItems;
     int lindex;
-    struct clip_file_desc cfd;
+    int str_len;
+    struct clip_file_desc *cfd;
+    char *ptr;
 
     in_uint32_le(s, cItems);
     fuse_clear_clip_dir();
     LLOGLN(0, ("clipboard_c2s_in_files: cItems %d", cItems));
+    cfd = (struct clip_file_desc *)
+          g_malloc(sizeof(struct clip_file_desc), 0);
+    ptr = file_list;
     for (lindex = 0; lindex < cItems; lindex++)
     {
-        clipboard_c2s_in_file_info(s, &cfd);
-        fuse_add_clip_dir_item(cfd.cFileName, 0, cfd.fileSizeLow, lindex);
+        g_memset(cfd, 0, sizeof(struct clip_file_desc));
+        clipboard_c2s_in_file_info(s, cfd);
+        fuse_add_clip_dir_item(cfd->cFileName, 0, cfd->fileSizeLow, lindex);
+
+        g_strcpy(ptr, "file://");
+        ptr += 7;
+
+        str_len = g_strlen(g_fuse_root_path);
+        g_strcpy(ptr, g_fuse_root_path);
+        ptr += str_len;
+
+        *ptr = '/';
+        ptr++;
+
+        str_len = g_strlen(cfd->cFileName);
+        g_strcpy(ptr, cfd->cFileName);
+        ptr += str_len;
+
+        *ptr = '\n';
+        ptr++;
     }
+    *ptr = 0;
+    g_free(cfd);
     return 0;
 }

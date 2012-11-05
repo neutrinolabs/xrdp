@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include "arch.h"
 #include "parse.h"
+#include "list.h"
 #include "os_calls.h"
 #include "chansrv.h"
 #include "chansrv_fuse.h"
@@ -47,6 +48,8 @@
   } \
   while (0)
 
+char g_fuse_root_path[256] = "";
+
 static struct fuse_chan *g_ch = 0;
 static struct fuse_session *g_se = 0;
 static char *g_mountpoint = 0;
@@ -58,7 +61,15 @@ static int g_uid = 0;
 static int g_gid = 0;
 
 /* used for file data request sent to client */
-static fuse_req_t g_req = 0;
+struct req_list_item
+{
+    fuse_req_t req;
+    int stream_id;
+    int lindex;
+    int off;
+    int size;
+};
+static struct list *g_req_list = 0;
 
 struct dirbuf
 {
@@ -223,6 +234,7 @@ xrdp_ll_getattr(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
     ffi = fuse_find_file_info_by_ino(g_fuse_files, ino);
     if (ffi == 0)
     {
+        LLOGLN(0, ("xrdp_ll_getattr: fuse_find_file_info_by_ino failed ino %d", ino));
         fuse_reply_err(req, ENOENT);
     }
     else if (xrdp_ffi2stat(ffi, &stbuf) == -1)
@@ -315,7 +327,7 @@ static void DEFAULT_CC
 xrdp_ll_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 {
     LLOGLN(0, ("xrdp_ll_open: ino %d", (int)ino));
-    if (ino == 1 || ino == 2)
+    if (ino == 1)
     {
         fuse_reply_err(req, EISDIR);
     }
@@ -326,7 +338,6 @@ xrdp_ll_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
     else
     {
         fuse_reply_open(req, fi);
-        clipboard_request_file_size(0, 0);
     }
 }
 
@@ -338,20 +349,30 @@ xrdp_ll_read(fuse_req_t req, fuse_ino_t ino, size_t size,
     char *data;
     int stream_id;
     struct xfuse_file_info *ffi;
+    struct req_list_item *rli;
 
     LLOGLN(0, ("xrdp_ll_read: %d %d %d", (int)ino, (int)off, (int)size));
-
     ffi = fuse_find_file_info_by_ino(g_fuse_files, ino);
     if (ffi != 0)
     {
-        stream_id = 0;
-        clipboard_request_file_data(stream_id, ffi->lindex, off, size);
-        g_req = req;
         /* reply later */
+        stream_id = 0;
+        rli = (struct req_list_item *)
+              g_malloc(sizeof(struct req_list_item), 1);
+        rli->req = req;
+        rli->stream_id = stream_id;
+        rli->lindex = ffi->lindex;
+        rli->off = off;
+        rli->size = size;
+        list_add_item(g_req_list, (tbus)rli);
+        if (g_req_list->count == 1)
+        {
+            clipboard_request_file_data(rli->stream_id, rli->lindex,
+                                        rli->off, rli->size);
+        }
         return;
     }
-
-    LLOGLN(0, ("xrdp_ll_read: fuse_find_file_info_by_ino failed"));
+    LLOGLN(0, ("xrdp_ll_read: fuse_find_file_info_by_ino failed ino %d", (int)ino));
     data = (char *)g_malloc(size, 1);
     fuse_reply_buf(req, data, size);
     g_free(data);
@@ -434,7 +455,7 @@ fuse_add_clip_dir_item(char *filename, int flags, int size, int lindex)
     struct xfuse_file_info *ffi;
     struct xfuse_file_info *ffi1;
 
-    LLOGLN(0, ("fuse_add_clip_dir_item: adding %s", filename));
+    LLOGLN(0, ("fuse_add_clip_dir_item: adding %s ino %d", filename, g_ino));
     ffi = g_fuse_files;
     if (ffi == 0)
     {
@@ -519,10 +540,9 @@ fuse_init(void)
 {
     char *param0 = "xrdp-chansrv";
     char *argv[4];
-    char root_path[256];
 
-    g_snprintf(root_path, 255, "%s/xrdp_client", g_getenv("HOME"));
-    LLOGLN(0, ("fuse_init: using root_path [%s]", root_path));
+    g_snprintf(g_fuse_root_path, 255, "%s/xrdp_client", g_getenv("HOME"));
+    LLOGLN(0, ("fuse_init: using root_path [%s]", g_fuse_root_path));
     if (g_ch != 0)
     {
         return 0;
@@ -531,7 +551,7 @@ fuse_init(void)
     g_uid = g_getuid();
     g_gid = g_getgid();
     argv[0] = param0;
-    argv[1] = root_path;
+    argv[1] = g_fuse_root_path;
     argv[2] = 0;
 
     g_memset(&g_xrdp_ll_oper, 0, sizeof(g_xrdp_ll_oper));
@@ -540,6 +560,9 @@ fuse_init(void)
     g_xrdp_ll_oper.readdir = xrdp_ll_readdir;
     g_xrdp_ll_oper.open = xrdp_ll_open;
     g_xrdp_ll_oper.read = xrdp_ll_read;
+
+    g_req_list = list_create();
+    g_req_list->auto_free = 1;
 
     return fuse_init_lib(2, argv);
 }
@@ -568,6 +591,11 @@ fuse_deinit(void)
         g_free(g_buffer);
         g_buffer = 0;
     }
+    if (g_req_list != 0)
+    {
+        list_delete(g_req_list);
+        g_req_list = 0;
+    }
     return 0;
 }
 
@@ -583,8 +611,33 @@ fuse_file_contents_size(int stream_id, int file_size)
 int APP_CC
 fuse_file_contents_range(int stream_id, char *data, int data_bytes)
 {
+    struct req_list_item *rli;
+
     LLOGLN(0, ("fuse_file_contents_range: data_bytes %d", data_bytes));
-    fuse_reply_buf(g_req, data, data_bytes);
+    rli = (struct req_list_item *)list_get_item(g_req_list, 0);
+    if (rli != 0)
+    {
+        fuse_reply_buf(rli->req, data, data_bytes);
+        list_remove_item(g_req_list, 0);
+        if (g_req_list->count > 0)
+        {
+            /* send next request */
+            rli = (struct req_list_item *)list_get_item(g_req_list, 0);
+            if (rli != 0)
+            {
+                clipboard_request_file_data(rli->stream_id, rli->lindex,
+                                            rli->off, rli->size);
+            }
+            else
+            {
+                LLOGLN(0, ("fuse_file_contents_range: error"));
+            }
+        }
+    }
+    else
+    {
+        LLOGLN(0, ("fuse_file_contents_range: error"));
+    }
     return 0;
 }
 

@@ -42,7 +42,21 @@ TIMESTAMP
 wininfo - show window info
 xlsatoms - dump atoms
 
-dolphin 1.4 KDE 4.4.5 copy one file
+dolphin 1.4 KDE 4.4.5 (debian 6) copy one file
+text/uri-list
+text/x-moz-url
+text/plain
+UTF8_STRING
+STRING
+TEXT
+COMPOUND_TEXT
+application/x-qiconlist
+TARGETS
+MULTIPLE
+TIMESTAMP
+SAVE_TARGETS
+
+dolphin 1.6.1 KDE 4.6.5 (kubuntu 11.04) copy one file
 text/uri-list
 text/x-moz-url
 text/plain
@@ -111,6 +125,34 @@ image/x-icon
 image/x-ico
 image/x-win-bitmap
 image/jpeg
+
+thunar 1.2.1 copy a file
+TIMESTAMP
+TARGETS
+MULTIPLE
+x-special/gnome-copied-files
+UTF8_STRING
+
+dolphin 1.6.1 KDE 4.6.5 (kubuntu 11.04) copy two files
+text/uri-list
+/home/jay/temp/jetstream1.txt
+/home/jay/temp/jpeg64x64.jpg
+0000 66 69 6c 65 3a 2f 2f 2f 68 6f 6d 65 2f 6a 61 79 file:///home/jay
+0010 2f 74 65 6d 70 2f 6a 65 74 73 74 72 65 61 6d 31 /temp/jetstream1
+0020 2e 74 78 74 0d 0a 66 69 6c 65 3a 2f 2f 2f 68 6f .txt..file:///ho
+0030 6d 65 2f 6a 61 79 2f 74 65 6d 70 2f 6a 70 65 67 me/jay/temp/jpeg
+0040 36 34 78 36 34 2e 6a 70 67                      64x64.jpg
+
+thunar 1.2.1 (kubuntu 11.04)  copy two files
+x-special/gnome-copied-files
+/home/jay/temp/jetstream1.txt
+/home/jay/temp/jpeg64x64.jpg
+0000 63 6f 70 79 0a 66 69 6c 65 3a 2f 2f 2f 68 6f 6d copy.file:///hom
+0010 65 2f 6a 61 79 2f 74 65 6d 70 2f 6a 65 74 73 74 e/jay/temp/jetst
+0020 72 65 61 6d 31 2e 74 78 74 0d 0a 66 69 6c 65 3a ream1.txt..file:
+0030 2f 2f 2f 68 6f 6d 65 2f 6a 61 79 2f 74 65 6d 70 ///home/jay/temp
+0040 2f 6a 70 65 67 36 34 78 36 34 2e 6a 70 67 0d 0a /jpeg64x64.jpg..
+
 
 */
 
@@ -201,6 +243,8 @@ static int g_cliprdr_flags = CB_USE_LONG_FORMAT_NAMES |
 /* last recieved CLIPRDR_FORMAT_LIST(CLIPRDR_FORMAT_ANNOUNCE) */
 static int g_formatIds[16];
 static int g_num_formatIds = 0;
+
+static int g_file_format_id = 0;
 
 /*****************************************************************************/
 /* this is one way to get the current time from the x server */
@@ -911,8 +955,6 @@ clipboard_process_format_announce(struct stream *s, int clip_msg_status,
     int formatId;
     int count;
     int bytes;
-    int got_file;
-    int file_format_id;
     char desc[256];
     char *holdp;
 
@@ -920,10 +962,12 @@ clipboard_process_format_announce(struct stream *s, int clip_msg_status,
           "CLIPRDR_FORMAT_ANNOUNCE"));
     LLOGLN(10, ("clipboard_process_format_announce %d", clip_msg_len));
     clipboard_send_format_ack();
+
+    fuse_clear_clip_dir();
+    g_clip_c2s.converted = 0;
+
     desc[0] = 0;
     g_num_formatIds = 0;
-    got_file = 0;
-    file_format_id = 0;
     while (clip_msg_len > 3)
     {
         in_uint32_le(s, formatId);
@@ -955,23 +999,13 @@ clipboard_process_format_announce(struct stream *s, int clip_msg_status,
         {
             LLOGLN(10, ("clipboard_process_format_announce: max formats"));
         }
-        //if (formatId == 0x0000c0c8)
-        //if (formatId == 0x0000c0ed)
+
+        /* format id for file copy copy seems to keep changing */
+        /* seen 0x0000c0c8, 0x0000c0ed */
         if (g_strcmp(desc, "FileGroupDescriptorW") == 0)
         {
-            got_file = 1;
-            file_format_id = formatId;
+            g_file_format_id = formatId;
         }
-    }
-
-    if (got_file)
-    {
-        LLOGLN(0, ("clipboard_process_format_announce: sending file list request"));
-        g_clip_c2s.xrdp_clip_type = XRDP_CB_FILE;
-        //clipboard_send_data_request(0x0000c0c8);
-        //clipboard_send_data_request(0x0000c0ed);
-        clipboard_send_data_request(file_format_id);
-        return 0;
     }
 
     if ((g_num_formatIds > 0) &&
@@ -1050,7 +1084,7 @@ clipboard_process_data_request(struct stream *s, int clip_msg_status,
                 LLOGLN(10, ("clipboard_process_data_request: CB_FORMAT_FILE, "
                             "calling XConvertSelection to g_utf8_atom"));
                 g_clip_s2c.xrdp_clip_type = XRDP_CB_FILE;
-                XConvertSelection(g_display, g_clipboard_atom, g_utf8_atom,
+                XConvertSelection(g_display, g_clipboard_atom, g_clip_s2c.type,
                                   g_clip_property_atom, g_wnd, CurrentTime);
             }
             break;
@@ -1155,8 +1189,8 @@ clipboard_process_data_response(struct stream *s, int clip_msg_status,
     int index;
 
     LLOGLN(0, ("clipboard_process_data_response:"));
-    LLOGLN(0, ("  %d", g_clip_c2s.xrdp_clip_type));
     lxev = &g_saved_selection_req_event;
+    g_clip_c2s.converted = 1;
     if (g_clip_c2s.xrdp_clip_type == XRDP_CB_BITMAP)
     {
         clipboard_process_data_response_for_image(s, clip_msg_status,
@@ -1165,9 +1199,25 @@ clipboard_process_data_response(struct stream *s, int clip_msg_status,
     }
     if (g_clip_c2s.xrdp_clip_type == XRDP_CB_FILE)
     {
-        LLOGLN(0, ("  XRDP_CB_FILE"));
-        //g_hexdump(s->p, s->end - s->p);
-        clipboard_c2s_in_files(s);
+        g_free(g_clip_c2s.data);
+        g_clip_c2s.data = (char *)g_malloc(1024 * 1024, 1);
+        /* text/uri-list */
+        if (g_clip_c2s.type == g_file_atom1)
+        {
+            clipboard_c2s_in_files(s, g_clip_c2s.data);
+        }
+        /* x-special/gnome-copied-files */
+        else if (g_clip_c2s.type == g_file_atom2)
+        {
+            g_strcpy(g_clip_c2s.data, "copy\n");
+            clipboard_c2s_in_files(s, g_clip_c2s.data + 5);
+        }
+        else
+        {
+            LLOGLN(0, ("clipboard_process_data_response: error"));
+        }
+        g_clip_c2s.total_bytes = g_strlen(g_clip_c2s.data);
+        clipboard_provide_selection_c2s(lxev, lxev->target);
         return 0;
     }
     LOGM((LOG_LEVEL_DEBUG, "clipboard_process_data_response: "
@@ -1279,7 +1329,7 @@ clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length,
     LOG(10, ("clipboard_data_in: chan_is %d "
              "chan_flags %d length %d total_length %d",
              chan_id, chan_flags, length, total_length));
-    LLOGLN(10, ("clipboard_data_in:"));
+    //LLOGLN(10, ("clipboard_data_in:"));
 
     if ((chan_flags & 3) == 3)
     {
@@ -1534,8 +1584,8 @@ clipboard_event_selection_notify(XEvent *xevent)
     int got_string;
     int got_utf8;
     int got_bmp_image;
-    int got_file;
     int send_format_announce;
+    Atom got_file_atom;
     Atom atom;
     Atom *atoms;
     Atom type;
@@ -1548,7 +1598,7 @@ clipboard_event_selection_notify(XEvent *xevent)
     got_string = 0;
     got_utf8 = 0;
     got_bmp_image = 0;
-    got_file = 0;
+    got_file_atom = 0;
     send_format_announce = 0;
     rv = 0;
     data = 0;
@@ -1575,6 +1625,7 @@ clipboard_event_selection_notify(XEvent *xevent)
                   "clipboard_get_window_property failed error %d", rv));
             return 0;
         }
+        //g_hexdump(data, data_size);
         XDeleteProperty(g_display, lxevent->requestor, lxevent->property);
         if (type == g_incr_atom)
         {
@@ -1590,7 +1641,7 @@ clipboard_event_selection_notify(XEvent *xevent)
             g_clip_s2c.total_bytes = 0;
             g_free(g_clip_s2c.data);
             g_clip_s2c.data = 0;
-            g_hexdump(data, sizeof(long));
+            //g_hexdump(data, sizeof(long));
             g_free(data);
             return 0;
         }
@@ -1628,7 +1679,7 @@ clipboard_event_selection_notify(XEvent *xevent)
                         else if ((atom == g_file_atom1) || (atom == g_file_atom2))
                         {
                             LLOGLN(10, ("clipboard_event_selection_notify: file"));
-                            got_file = 1;
+                            got_file_atom = atom;
                         }
                         else
                         {
@@ -1701,6 +1752,40 @@ clipboard_event_selection_notify(XEvent *xevent)
                                                            data_size - 14);
                 }
             }
+            else if (lxevent->target == g_file_atom1)
+            {
+                LOGM((LOG_LEVEL_DEBUG, "clipboard_event_selection_notify: text/uri-list "
+                      "data_size %d", data_size));
+                LLOGLN(10, ("clipboard_event_selection_notify: text/uri-list "
+                            "data_size %d", data_size));
+                if ((g_clip_s2c.incr_in_progress == 0) && (data_size > 0))
+                {
+                    g_free(g_clip_s2c.data);
+                    g_clip_s2c.total_bytes = data_size;
+                    g_clip_s2c.data = (char *) g_malloc(g_clip_s2c.total_bytes + 1, 0);
+                    g_memcpy(g_clip_s2c.data, data, g_clip_s2c.total_bytes);
+                    g_clip_s2c.data[g_clip_s2c.total_bytes] = 0;
+                    clipboard_send_data_response_for_file(g_clip_s2c.data,
+                                                          g_clip_s2c.total_bytes);
+                }
+            }
+            else if (lxevent->target == g_file_atom2)
+            {
+                LOGM((LOG_LEVEL_DEBUG, "clipboard_event_selection_notify: text/uri-list "
+                      "data_size %d", data_size));
+                LLOGLN(10, ("clipboard_event_selection_notify: text/uri-list "
+                            "data_size %d", data_size));
+                if ((g_clip_s2c.incr_in_progress == 0) && (data_size > 0))
+                {
+                    g_free(g_clip_s2c.data);
+                    g_clip_s2c.total_bytes = data_size;
+                    g_clip_s2c.data = (char *) g_malloc(g_clip_s2c.total_bytes + 1, 0);
+                    g_memcpy(g_clip_s2c.data, data, g_clip_s2c.total_bytes);
+                    g_clip_s2c.data[g_clip_s2c.total_bytes] = 0;
+                    clipboard_send_data_response_for_file(g_clip_s2c.data,
+                                                          g_clip_s2c.total_bytes);
+                }
+            }
             else
             {
                 LOGM((LOG_LEVEL_ERROR, "clipboard_event_selection_notify: "
@@ -1714,9 +1799,10 @@ clipboard_event_selection_notify(XEvent *xevent)
         }
     }
 
-    if (got_file)
+    if (got_file_atom != 0)
     {
-        g_clip_s2c.type = g_utf8_atom;
+        /* text/uri-list or x-special/gnome-copied-files */
+        g_clip_s2c.type = got_file_atom;
         g_clip_s2c.xrdp_clip_type = XRDP_CB_FILE;
         g_clip_s2c.converted = 0;
         g_clip_s2c.clip_time = lxevent->time;
@@ -1825,6 +1911,15 @@ clipboard_event_selection_request(XEvent *xevent)
             atom_buf[atom_count] = g_image_bmp_atom;
             atom_count++;
         }
+        if (clipboard_find_format_id(g_file_format_id) >= 0)
+        {
+            LLOGLN(10, ("  reporting text/uri-list"));
+            atom_buf[atom_count] = g_file_atom1;
+            atom_count++;
+            LLOGLN(10, ("  reporting x-special/gnome-copied-files"));
+            atom_buf[atom_count] = g_file_atom2;
+            atom_count++;
+        }
         atom_buf[atom_count] = 0;
         LLOGLN(10, ("  reporting %d formats", atom_count));
         return clipboard_provide_selection(lxev, XA_ATOM, 32,
@@ -1869,11 +1964,50 @@ clipboard_event_selection_request(XEvent *xevent)
     }
     else if (lxev->target == g_image_bmp_atom)
     {
+        LLOGLN(10, ("clipboard_event_selection_request: image/bmp"));
+        if ((g_clip_c2s.type == lxev->target) && g_clip_c2s.converted)
+        {
+            LLOGLN(10, ("clipboard_event_selection_request: -------------------------------------------"));
+            clipboard_provide_selection_c2s(lxev, lxev->target);
+            return 0;
+        }
         g_memcpy(&g_saved_selection_req_event, lxev,
                  sizeof(g_saved_selection_req_event));
         g_clip_c2s.type = g_image_bmp_atom;
         g_clip_c2s.xrdp_clip_type = XRDP_CB_BITMAP;
         clipboard_send_data_request(CB_FORMAT_DIB);
+        return 0;
+    }
+    else if (lxev->target == g_file_atom1)
+    {
+        LLOGLN(10, ("clipboard_event_selection_request: g_file_atom1"));
+        if ((g_clip_c2s.type == lxev->target) && g_clip_c2s.converted)
+        {
+            LLOGLN(10, ("clipboard_event_selection_request: -------------------------------------------"));
+            clipboard_provide_selection_c2s(lxev, lxev->target);
+            return 0;
+        }
+        g_memcpy(&g_saved_selection_req_event, lxev,
+                 sizeof(g_saved_selection_req_event));
+        g_clip_c2s.type = g_file_atom1;
+        g_clip_c2s.xrdp_clip_type = XRDP_CB_FILE;
+        clipboard_send_data_request(g_file_format_id);
+        return 0;
+    }
+    else if (lxev->target == g_file_atom2)
+    {
+        LLOGLN(10, ("clipboard_event_selection_request: g_file_atom2"));
+        if ((g_clip_c2s.type == lxev->target) && g_clip_c2s.converted)
+        {
+            LLOGLN(10, ("clipboard_event_selection_request: -------------------------------------------"));
+            clipboard_provide_selection_c2s(lxev, lxev->target);
+            return 0;
+        }
+        g_memcpy(&g_saved_selection_req_event, lxev,
+                 sizeof(g_saved_selection_req_event));
+        g_clip_c2s.type = g_file_atom2;
+        g_clip_c2s.xrdp_clip_type = XRDP_CB_FILE;
+        clipboard_send_data_request(g_file_format_id);
         return 0;
     }
     else
