@@ -645,6 +645,8 @@ fuse_file_contents_range(int stream_id, char *data, int data_bytes)
 
 #include "arch.h"
 
+char g_fuse_root_path[256] = "";
+
 /*****************************************************************************/
 int APP_CC
 fuse_get_wait_objs(tbus *objs, int *count, int *timeout)
