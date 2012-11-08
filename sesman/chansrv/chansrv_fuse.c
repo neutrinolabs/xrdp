@@ -168,7 +168,7 @@ xrdp_ffi2stat(struct xfuse_file_info *ffi, struct stat *stbuf)
     }
     else
     {
-        stbuf->st_mode = S_IFREG | 0444;
+        stbuf->st_mode = S_IFREG | 0664;
         stbuf->st_nlink = 1;
         stbuf->st_size = ffi->size;
         stbuf->st_uid = g_uid;
@@ -541,11 +541,20 @@ fuse_init(void)
     char *param0 = "xrdp-chansrv";
     char *argv[4];
 
-    g_snprintf(g_fuse_root_path, 255, "%s/xrdp_client", g_getenv("HOME"));
-    LLOGLN(0, ("fuse_init: using root_path [%s]", g_fuse_root_path));
     if (g_ch != 0)
     {
         return 0;
+    }
+    g_snprintf(g_fuse_root_path, 255, "%s/xrdp_client", g_getenv("HOME"));
+    LLOGLN(0, ("fuse_init: using root_path [%s]", g_fuse_root_path));
+    if (!g_directory_exist(g_fuse_root_path))
+    {
+        if (!g_create_dir(g_fuse_root_path))
+        {
+            LLOGLN(0, ("fuse_init: g_create_dir failed [%s]",
+                       g_fuse_root_path));
+            return 1;
+        }
     }
     g_time = g_time1();
     g_uid = g_getuid();
