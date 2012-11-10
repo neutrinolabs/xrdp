@@ -168,7 +168,7 @@ xrdp_ffi2stat(struct xfuse_file_info *ffi, struct stat *stbuf)
     }
     else
     {
-        stbuf->st_mode = S_IFREG | 0444;
+        stbuf->st_mode = S_IFREG | 0664;
         stbuf->st_nlink = 1;
         stbuf->st_size = ffi->size;
         stbuf->st_uid = g_uid;
@@ -187,7 +187,7 @@ xrdp_ll_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
     struct xfuse_file_info *ffi;
     struct fuse_entry_param e;
 
-    LLOGLN(0, ("xrdp_ll_lookup: name %s", name));
+    LLOGLN(10, ("xrdp_ll_lookup: name %s", name));
     if (parent != 1)
     {
         fuse_reply_err(req, ENOENT);
@@ -197,7 +197,7 @@ xrdp_ll_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
         ffi = fuse_find_file_info_by_name(g_fuse_files, name);
         if (ffi != 0)
         {
-            LLOGLN(0, ("xrdp_ll_lookup: name %s ino %d", name, ffi->ino));
+            LLOGLN(10, ("xrdp_ll_lookup: name %s ino %d", name, ffi->ino));
             g_memset(&e, 0, sizeof(e));
             e.ino = ffi->ino;
             e.attr_timeout = 1.0;
@@ -217,7 +217,7 @@ xrdp_ll_getattr(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
     struct stat stbuf;
     struct xfuse_file_info *ffi;
 
-    LLOGLN(0, ("xrdp_ll_getattr: ino %d", ino));
+    LLOGLN(10, ("xrdp_ll_getattr: ino %d", ino));
     g_memset(&stbuf, 0, sizeof(stbuf));
     if (ino == 1)
     {
@@ -300,7 +300,7 @@ xrdp_ll_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
     struct xfuse_file_info *ffi;
     struct dirbuf b;
 
-    LLOGLN(0, ("xrdp_ll_readdir: ino %d", ino));
+    LLOGLN(10, ("xrdp_ll_readdir: ino %d", ino));
     if (ino != 1)
     {
         fuse_reply_err(req, ENOTDIR);
@@ -326,7 +326,7 @@ xrdp_ll_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
 static void DEFAULT_CC
 xrdp_ll_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi)
 {
-    LLOGLN(0, ("xrdp_ll_open: ino %d", (int)ino));
+    LLOGLN(10, ("xrdp_ll_open: ino %d", (int)ino));
     if (ino == 1)
     {
         fuse_reply_err(req, EISDIR);
@@ -351,7 +351,7 @@ xrdp_ll_read(fuse_req_t req, fuse_ino_t ino, size_t size,
     struct xfuse_file_info *ffi;
     struct req_list_item *rli;
 
-    LLOGLN(0, ("xrdp_ll_read: %d %d %d", (int)ino, (int)off, (int)size));
+    LLOGLN(10, ("xrdp_ll_read: %d %d %d", (int)ino, (int)off, (int)size));
     ffi = fuse_find_file_info_by_ino(g_fuse_files, ino);
     if (ffi != 0)
     {
@@ -455,7 +455,7 @@ fuse_add_clip_dir_item(char *filename, int flags, int size, int lindex)
     struct xfuse_file_info *ffi;
     struct xfuse_file_info *ffi1;
 
-    LLOGLN(0, ("fuse_add_clip_dir_item: adding %s ino %d", filename, g_ino));
+    LLOGLN(10, ("fuse_add_clip_dir_item: adding %s ino %d", filename, g_ino));
     ffi = g_fuse_files;
     if (ffi == 0)
     {
@@ -541,11 +541,20 @@ fuse_init(void)
     char *param0 = "xrdp-chansrv";
     char *argv[4];
 
-    g_snprintf(g_fuse_root_path, 255, "%s/xrdp_client", g_getenv("HOME"));
-    LLOGLN(0, ("fuse_init: using root_path [%s]", g_fuse_root_path));
     if (g_ch != 0)
     {
         return 0;
+    }
+    g_snprintf(g_fuse_root_path, 255, "%s/xrdp_client", g_getenv("HOME"));
+    LLOGLN(0, ("fuse_init: using root_path [%s]", g_fuse_root_path));
+    if (!g_directory_exist(g_fuse_root_path))
+    {
+        if (!g_create_dir(g_fuse_root_path))
+        {
+            LLOGLN(0, ("fuse_init: g_create_dir failed [%s]",
+                       g_fuse_root_path));
+            return 1;
+        }
     }
     g_time = g_time1();
     g_uid = g_getuid();
@@ -603,7 +612,7 @@ fuse_deinit(void)
 int APP_CC
 fuse_file_contents_size(int stream_id, int file_size)
 {
-    LLOGLN(0, ("fuse_file_contents_size: file_size %d", file_size));
+    LLOGLN(10, ("fuse_file_contents_size: file_size %d", file_size));
     return 0;
 }
 
@@ -613,7 +622,7 @@ fuse_file_contents_range(int stream_id, char *data, int data_bytes)
 {
     struct req_list_item *rli;
 
-    LLOGLN(0, ("fuse_file_contents_range: data_bytes %d", data_bytes));
+    LLOGLN(10, ("fuse_file_contents_range: data_bytes %d", data_bytes));
     rli = (struct req_list_item *)list_get_item(g_req_list, 0);
     if (rli != 0)
     {
@@ -644,6 +653,8 @@ fuse_file_contents_range(int stream_id, char *data, int data_bytes)
 #else
 
 #include "arch.h"
+
+char g_fuse_root_path[256] = "";
 
 /*****************************************************************************/
 int APP_CC

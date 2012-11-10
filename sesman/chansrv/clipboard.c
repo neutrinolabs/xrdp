@@ -169,7 +169,7 @@ x-special/gnome-copied-files
 #include "xcommon.h"
 #include "chansrv_fuse.h"
 
-#define LLOG_LEVEL 11
+#define LLOG_LEVEL 1
 #define LLOGLN(_level, _args) \
   do \
   { \
@@ -824,7 +824,7 @@ clipboard_set_selection_owner(void)
 {
     Window owner;
 
-    LLOGLN(0, ("clipboard_set_selection_owner:"));
+    LLOGLN(10, ("clipboard_set_selection_owner:"));
     g_selection_time = clipboard_get_server_time();
     XSetSelectionOwner(g_display, g_clipboard_atom, g_wnd, g_selection_time);
     owner = XGetSelectionOwner(g_display, g_clipboard_atom);
@@ -846,8 +846,8 @@ clipboard_provide_selection_c2s(XSelectionRequestEvent *req, Atom type)
     XEvent xev;
     long val1[2];
 
-    LLOGLN(0, ("clipboard_provide_selection_c2s: bytes %d",
-               g_clip_c2s.total_bytes));
+    LLOGLN(10, ("clipboard_provide_selection_c2s: bytes %d",
+                g_clip_c2s.total_bytes));
     if (g_clip_c2s.total_bytes < g_incr_max_req_size)
     {
         XChangeProperty(g_display, req->requestor, req->property,
@@ -872,8 +872,8 @@ clipboard_provide_selection_c2s(XSelectionRequestEvent *req, Atom type)
         g_clip_c2s.type = type;
         g_clip_c2s.property = req->property;
         g_clip_c2s.window = req->requestor;
-        LLOGLN(0, ("clipboard_provide_selection_c2s: start INCR property %s "
-                   "type %s", XGetAtomName(g_display, req->property),
+        LLOGLN(10, ("clipboard_provide_selection_c2s: start INCR property %s "
+                    "type %s", XGetAtomName(g_display, req->property),
                    XGetAtomName(g_display, type)));
         val1[0] = g_clip_c2s.total_bytes;
         val1[1] = 0;
@@ -905,7 +905,7 @@ clipboard_provide_selection(XSelectionRequestEvent *req, Atom type, int format,
 
     bytes = FORMAT_TO_BYTES(format);
     bytes *= length;
-    LLOGLN(0, ("clipboard_provide_selection: bytes %d", bytes));
+    LLOGLN(10, ("clipboard_provide_selection: bytes %d", bytes));
     if (bytes < g_incr_max_req_size)
     {
         XChangeProperty(g_display, req->requestor, req->property,
@@ -990,7 +990,7 @@ clipboard_process_format_announce(struct stream *s, int clip_msg_status,
             desc[15] = 0;
             clip_msg_len -= 32;
         }
-        LLOGLN(0, ("clipboard_process_format_announce: formatId 0x%8.8x "
+        LLOGLN(10, ("clipboard_process_format_announce: formatId 0x%8.8x "
                     "wszFormatName [%s] clip_msg_len %d", formatId, desc,
                     clip_msg_len));
         g_formatIds[g_num_formatIds] = formatId;
@@ -1067,8 +1067,8 @@ clipboard_process_data_request(struct stream *s, int clip_msg_status,
 
     LOGM((LOG_LEVEL_DEBUG, "clipboard_process_data_request: "
           "CLIPRDR_DATA_REQUEST"));
-    LLOGLN(0, ("clipboard_process_data_request:"));
-    LLOGLN(0, ("  %d", g_clip_s2c.xrdp_clip_type));
+    LLOGLN(10, ("clipboard_process_data_request:"));
+    LLOGLN(10, ("  %d", g_clip_s2c.xrdp_clip_type));
     in_uint32_le(s, requestedFormatId);
     switch (requestedFormatId)
     {
@@ -1188,7 +1188,7 @@ clipboard_process_data_response(struct stream *s, int clip_msg_status,
     int len;
     int index;
 
-    LLOGLN(0, ("clipboard_process_data_response:"));
+    LLOGLN(10, ("clipboard_process_data_response:"));
     lxev = &g_saved_selection_req_event;
     g_clip_c2s.converted = 1;
     if (g_clip_c2s.xrdp_clip_type == XRDP_CB_BITMAP)
@@ -1329,7 +1329,7 @@ clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length,
     LOG(10, ("clipboard_data_in: chan_is %d "
              "chan_flags %d length %d total_length %d",
              chan_id, chan_flags, length, total_length));
-    //LLOGLN(10, ("clipboard_data_in:"));
+    LLOGLN(10, ("clipboard_data_in:"));
 
     if ((chan_flags & 3) == 3)
     {
@@ -1437,14 +1437,14 @@ clipboard_event_selection_owner_notify(XEvent *xevent)
     XFixesSelectionNotifyEvent *lxevent;
 
     lxevent = (XFixesSelectionNotifyEvent *)xevent;
-    LLOGLN(0, ("clipboard_event_selection_owner_notify: %p", lxevent->owner));
+    LLOGLN(10, ("clipboard_event_selection_owner_notify: %p", lxevent->owner));
     LOGM((LOG_LEVEL_DEBUG, "clipboard_event_selection_owner_notify: "
           "window %d subtype %d owner %d g_wnd %d",
           lxevent->window, lxevent->subtype, lxevent->owner, g_wnd));
 
     if (lxevent->owner == g_wnd)
     {
-        LLOGLN(0, ("clipboard_event_selection_owner_notify: matches g_wnd"));
+        LLOGLN(10, ("clipboard_event_selection_owner_notify: matches g_wnd"));
         LOGM((LOG_LEVEL_DEBUG, "clipboard_event_selection_owner_notify: skipping, "
               "onwer == g_wnd"));
         g_got_selection = 1;
@@ -1474,8 +1474,8 @@ clipboard_get_window_property(Window wnd, Atom prop, Atom *type, int *fmt,
     tui8 *lxdata;
     Atom ltype;
 
-    LLOGLN(0, ("clipboard_get_window_property:"));
-    LLOGLN(0, ("  prop %d name %s", prop, XGetAtomName(g_display, prop)));
+    LLOGLN(10, ("clipboard_get_window_property:"));
+    LLOGLN(10, ("  prop %d name %s", prop, XGetAtomName(g_display, prop)));
     lxdata = 0;
     ltype = 0;
     XGetWindowProperty(g_display, wnd, prop, 0, 0, 0,
@@ -1614,8 +1614,9 @@ clipboard_event_selection_notify(XEvent *xevent)
 
     if (rv == 0)
     {
-        LLOGLN(0, ("clipboard_event_selection_notify: wnd %p prop %s", lxevent->requestor,
-                   XGetAtomName(g_display, lxevent->property)));
+        LLOGLN(10, ("clipboard_event_selection_notify: wnd %p prop %s",
+                    lxevent->requestor,
+                    XGetAtomName(g_display, lxevent->property)));
         rv = clipboard_get_window_property(lxevent->requestor, lxevent->property,
                                            &type, &fmt,
                                            &n_items, &data, &data_size);
@@ -1631,10 +1632,10 @@ clipboard_event_selection_notify(XEvent *xevent)
         {
             /* nothing more to do here, the data is comming in through
                PropertyNotify */
-            LLOGLN(0, ("clipboard_event_selection_notify: type is INCR "
-                       "data_size %d property name %s type %s", data_size,
-                       XGetAtomName(g_display, lxevent->property),
-                       XGetAtomName(g_display, lxevent->type)));
+            LLOGLN(10, ("clipboard_event_selection_notify: type is INCR "
+                        "data_size %d property name %s type %s", data_size,
+                        XGetAtomName(g_display, lxevent->property),
+                        XGetAtomName(g_display, lxevent->type)));
             g_clip_s2c.incr_in_progress = 1;
             g_clip_s2c.property = lxevent->property;
             g_clip_s2c.type = lxevent->target;
@@ -2078,7 +2079,7 @@ clipboard_event_property_notify(XEvent *xevent)
             (xevent->xproperty.atom == g_clip_c2s.property) &&
             (xevent->xproperty.state == PropertyDelete))
     {
-        LLOGLN(0, ("clipboard_event_property_notify: INCR PropertyDelete"));
+        LLOGLN(10, ("clipboard_event_property_notify: INCR PropertyDelete"));
         /* this is used for when copying a large clipboard to the other app,
            it will delete the property so we know to send the next one */
 
@@ -2094,13 +2095,13 @@ clipboard_event_property_notify(XEvent *xevent)
             bytes = g_incr_max_req_size;
         }
         g_clip_c2s.incr_bytes_done += bytes;
-        LLOGLN(0, ("clipboard_event_property_notify: bytes %d", bytes));
+        LLOGLN(10, ("clipboard_event_property_notify: bytes %d", bytes));
         XChangeProperty(xevent->xproperty.display, xevent->xproperty.window,
                         xevent->xproperty.atom, g_clip_c2s.type, 8,
                         PropModeReplace, data, bytes);
         if (bytes < 1)
         {
-            LLOGLN(0, ("clipboard_event_property_notify: INCR done"));
+            LLOGLN(10, ("clipboard_event_property_notify: INCR done"));
             g_clip_c2s.incr_in_progress = 0;
             /* we no longer need property notify */
             XSelectInput(xevent->xproperty.display, xevent->xproperty.window,
@@ -2112,7 +2113,7 @@ clipboard_event_property_notify(XEvent *xevent)
             (xevent->xproperty.atom == g_clip_s2c.property) &&
             (xevent->xproperty.state == PropertyNewValue))
     {
-        LLOGLN(0, ("clipboard_event_property_notify: INCR PropertyNewValue"));
+        LLOGLN(10, ("clipboard_event_property_notify: INCR PropertyNewValue"));
         rv = XGetWindowProperty(g_display, g_wnd, g_clip_s2c.property, 0, 0, 0,
                                 AnyPropertyType, &actual_type_return, &actual_format_return,
                                 &nitems_returned, &bytes_left, &data);
@@ -2238,20 +2239,20 @@ clipboard_xevent(void *xevent)
             if (lxevent->type == g_xfixes_event_base +
                     XFixesSetSelectionOwnerNotify)
             {
-                LLOGLN(0, ("clipboard_xevent: got XFixesSetSelectionOwnerNotify"));
+                LLOGLN(10, ("clipboard_xevent: got XFixesSetSelectionOwnerNotify"));
                 clipboard_event_selection_owner_notify(lxevent);
                 break;
             }
             if (lxevent->type == g_xfixes_event_base +
                     XFixesSelectionWindowDestroyNotify)
             {
-                LLOGLN(0, ("clipboard_xevent: got XFixesSelectionWindowDestroyNotify"));
+                LLOGLN(10, ("clipboard_xevent: got XFixesSelectionWindowDestroyNotify"));
                 break;
             }
             if (lxevent->type == g_xfixes_event_base +
                     XFixesSelectionClientCloseNotify)
             {
-                LLOGLN(0, ("clipboard_xevent: got XFixesSelectionClientCloseNotify"));
+                LLOGLN(10, ("clipboard_xevent: got XFixesSelectionClientCloseNotify"));
                 break;
             }
 

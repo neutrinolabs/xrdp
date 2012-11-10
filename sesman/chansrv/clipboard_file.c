@@ -28,6 +28,7 @@
 #include "arch.h"
 #include "parse.h"
 #include "os_calls.h"
+#include "list.h"
 #include "chansrv.h"
 #include "clipboard.h"
 #include "clipboard_file.h"
@@ -35,7 +36,7 @@
 #include "xcommon.h"
 #include "chansrv_fuse.h"
 
-#define LLOG_LEVEL 11
+#define LLOG_LEVEL 1
 #define LLOGLN(_level, _args) \
   do \
   { \
@@ -63,8 +64,9 @@ struct cb_file_info
     tui64 time;
 };
 
-static struct cb_file_info g_files[64];
-static int g_num_files = 0;
+static struct list *g_files_list = 0;
+
+/* used when server is asking for file info from the client */
 static int g_file_request_sent_type = 0;
 
 /* number of seconds from 1 Jan. 1601 00:00 to 1 Jan 1970 00:00 UTC */
@@ -115,7 +117,7 @@ clipboard_check_file(char *filename)
             index++;
         }
     }
-    LLOGLN(0, ("[%s] [%s]", filename, lfilename));
+    LLOGLN(10, ("[%s] [%s]", filename, lfilename));
     g_strcpy(filename, lfilename);
     return 0;
 }
@@ -130,17 +132,15 @@ clipboard_get_file(char* file, int bytes)
     char full_fn[256]; /* /etc/xrdp/xrdp.ini */
     char filename[256]; /* xrdp.ini */
     char pathname[256]; /* /etc/xrdp */
-
+    struct cb_file_info *cfi;
 
     /* x-special/gnome-copied-files */
     if ((g_strncmp(file, "copy", 4) == 0) && (bytes == 4))
     {
-        g_writeln("jay");
         return 0;
     }
     if ((g_strncmp(file, "cut", 3) == 0) && (bytes == 3))
     {
-        g_writeln("jay");
         return 0;
     }
     sindex = 0;
@@ -186,16 +186,15 @@ clipboard_get_file(char* file, int bytes)
     }
     else
     {
-        g_strcpy(g_files[g_num_files].filename, filename);
-        g_strcpy(g_files[g_num_files].pathname, pathname);
-        g_files[g_num_files].size = g_file_get_size(full_fn);
-        g_files[g_num_files].flags = flags;
-        g_files[g_num_files].time = (g_time1() + CB_EPOCH_DIFF) * 10000000LL;
-        g_writeln("ok filename [%s] pathname [%s] size [%d]",
-                  g_files[g_num_files].filename,
-                  g_files[g_num_files].pathname,
-                  g_files[g_num_files].size);
-        g_num_files++;
+        cfi = (struct cb_file_info*)g_malloc(sizeof(struct cb_file_info), 1);
+        list_add_item(g_files_list, (tintptr)cfi);
+        g_strcpy(cfi->filename, filename);
+        g_strcpy(cfi->pathname, pathname);
+        cfi->size = g_file_get_size(full_fn);
+        cfi->flags = flags;
+        cfi->time = (g_time1() + CB_EPOCH_DIFF) * 10000000LL;
+        LLOGLN(10, ("ok filename [%s] pathname [%s] size [%d]",
+                    cfi->filename, cfi->pathname, cfi->size));
     }
     return 0;
 }
@@ -208,7 +207,6 @@ clipboard_get_files(char *files, int bytes)
     int file_index;
     char file[512];
 
-    g_num_files = 0;
     file_index = 0;
     for (index = 0; index < bytes; index++)
     {
@@ -227,10 +225,6 @@ clipboard_get_files(char *files, int bytes)
             file[file_index] = files[index];
             file_index++;
         }
-        if (g_num_files > 60)
-        {
-            break;
-        }
     }
     if (file_index > 0)
     {
@@ -238,7 +232,7 @@ clipboard_get_files(char *files, int bytes)
         {
         }
     }
-    if (g_num_files < 1)
+    if (g_files_list->count < 1)
     {
         return 1;
     }
@@ -260,12 +254,19 @@ clipboard_send_data_response_for_file(char *data, int data_size)
     int index;
     tui32 ui32;
     char fn[256];
+    struct cb_file_info *cfi;
 
     LLOGLN(10, ("clipboard_send_data_response_for_file: data_size %d",
                 data_size));
     //g_hexdump(data, data_size);
+    if (g_files_list == 0)
+    {
+        g_files_list = list_create();
+        g_files_list->auto_free = 1;
+    }
+    list_clear(g_files_list);
     clipboard_get_files(data, data_size);
-    cItems = g_num_files;
+    cItems = g_files_list->count;
     bytes_after_header = cItems * 592 + 4;
     make_stream(s);
     init_stream(s, 64 + bytes_after_header);
@@ -275,32 +276,31 @@ clipboard_send_data_response_for_file(char *data, int data_size)
     out_uint32_le(s, cItems);
     for (index = 0; index < cItems; index++)
     {
+        cfi = (struct cb_file_info *)list_get_item(g_files_list, index);
         flags = CB_FD_ATTRIBUTES | CB_FD_FILESIZE | CB_FD_WRITESTIME | CB_FD_PROGRESSUI;
         out_uint32_le(s, flags);
         out_uint8s(s, 32); /* reserved1 */
-        flags = g_files[index].flags;
+        flags = cfi->flags;
         out_uint32_le(s, flags);
         out_uint8s(s, 16); /* reserved2 */
         /* file time */
         /* 100-nanoseconds intervals since 1 January 1601 */
         //out_uint32_le(s, 0x2c305d08); /* 25 October 2009, 21:17 */
         //out_uint32_le(s, 0x01ca55f3);
-        ui32 = g_files[index].time & 0xffffffff;
+        ui32 = cfi->time & 0xffffffff;
         out_uint32_le(s, ui32);
-        ui32 = g_files[index].time >> 32;
+        ui32 = cfi->time >> 32;
         out_uint32_le(s, ui32);
         /* file size */
         out_uint32_le(s, 0);
-        out_uint32_le(s, g_files[index].size);
-        //g_writeln("jay size %d", g_files[index].size);
-        g_snprintf(fn, 255, "%s", g_files[index].filename);
+        out_uint32_le(s, cfi->size);
+        g_snprintf(fn, 255, "%s", cfi->filename);
         clipboard_out_unicode(s, fn, 256);
         out_uint8s(s, 8); /* pad */
     }
     out_uint32_le(s, 0);
     s_mark_end(s);
     size = (int)(s->end - s->data);
-    //g_hexdump(s->data, size);
     rv = send_channel_data(g_cliprdr_chan_id, s->data, size);
     free_stream(s);
     return rv;
@@ -315,8 +315,20 @@ clipboard_send_file_size(int streamId, int lindex)
     int size;
     int rv;
     int file_size;
+    struct cb_file_info *cfi;
 
-    file_size = g_files[lindex].size;
+    if (g_files_list == 0)
+    {
+        LLOGLN(10, ("clipboard_send_file_size: error g_files_list is nil"));
+        return 1;
+    }
+    cfi = (struct cb_file_info *)list_get_item(g_files_list, lindex);
+    if (cfi == 0)
+    {
+        LLOGLN(10, ("clipboard_send_file_size: error cfi is nil"));
+        return 1;
+    }
+    file_size = cfi->size;
     LLOGLN(10, ("clipboard_send_file_size: streamId %d file_size %d",
                 streamId, file_size));
     make_stream(s);
@@ -326,7 +338,6 @@ clipboard_send_file_size(int streamId, int lindex)
     out_uint32_le(s, 12);
     out_uint32_le(s, streamId);
     out_uint32_le(s, file_size);
-    g_writeln("file_size %d", file_size);
     out_uint32_le(s, 0);
     out_uint32_le(s, 0);
     s_mark_end(s);
@@ -344,9 +355,7 @@ clipboard_request_file_size(int stream_id, int lindex)
     struct stream *s;
     int size;
     int rv;
-    int file_size;
 
-    file_size = g_files[lindex].size;
     LLOGLN(10, ("clipboard_request_file_size:"));
     if (g_file_request_sent_type != 0)
     {
@@ -385,12 +394,23 @@ clipboard_send_file_data(int streamId, int lindex,
     int rv;
     int fd;
     char full_fn[256];
+    struct cb_file_info *cfi;
 
+    if (g_files_list == 0)
+    {
+        LLOGLN(10, ("clipboard_send_file_data: error g_files_list is nil"));
+        return 1;
+    }
+    cfi = (struct cb_file_info *)list_get_item(g_files_list, lindex);
+    if (cfi == 0)
+    {
+        LLOGLN(10, ("clipboard_send_file_data: error cfi is nil"));
+        return 1;
+    }
     LLOGLN(10, ("clipboard_send_file_data: streamId %d lindex %d "
                 "nPositionLow %d cbRequested %d", streamId, lindex,
                 nPositionLow, cbRequested));
-    g_snprintf(full_fn, 255, "%s/%s", g_files[lindex].pathname,
-               g_files[lindex].filename);
+    g_snprintf(full_fn, 255, "%s/%s", cfi->pathname, cfi->filename);
     fd = g_file_open_ex(full_fn, 1, 0, 0, 0);
     if (fd == -1)
     {
@@ -401,13 +421,11 @@ clipboard_send_file_data(int streamId, int lindex,
     g_file_seek(fd, nPositionLow);
     make_stream(s);
     init_stream(s, cbRequested + 64);
-    //g_memset(s->data + 12, 26, cbRequested);
     size = g_file_read(fd, s->data + 12, cbRequested);
-    //g_writeln("size %d", size);
     if (size < 1)
     {
-        LLOGLN(10, ("clipboard_send_file_data: read error, want %d got %d",
-                    cbRequested, size));
+        LLOGLN(0, ("clipboard_send_file_data: read error, want %d got %d",
+                   cbRequested, size));
         free_stream(s);
         g_file_close(fd);
         return 1;
@@ -435,9 +453,7 @@ clipboard_request_file_data(int stream_id, int lindex, int offset,
     struct stream *s;
     int size;
     int rv;
-    int file_size;
 
-    file_size = g_files[lindex].size;
     LLOGLN(10, ("clipboard_request_file_data:"));
     if (g_file_request_sent_type != 0)
     {
@@ -467,6 +483,7 @@ clipboard_request_file_data(int stream_id, int lindex, int offset,
 
 
 /*****************************************************************************/
+/* client is asking from info about a file */
 int APP_CC
 clipboard_process_file_request(struct stream *s, int clip_msg_status,
                                int clip_msg_len)
@@ -508,15 +525,14 @@ clipboard_process_file_response(struct stream *s, int clip_msg_status,
 {
     int streamId;
     int file_size;
-    char *data;
 
-    LLOGLN(0, ("clipboard_process_file_response:"));
+    LLOGLN(10, ("clipboard_process_file_response:"));
     if (g_file_request_sent_type == CB_FILECONTENTS_SIZE)
     {
         g_file_request_sent_type = 0;
         in_uint32_le(s, streamId);
         in_uint32_le(s, file_size);
-        LLOGLN(0, ("clipboard_process_file_response: streamId %d "
+        LLOGLN(10, ("clipboard_process_file_response: streamId %d "
                    "file_size %d", streamId, file_size));
         fuse_file_contents_size(streamId, file_size);
     }
@@ -579,7 +595,7 @@ clipboard_c2s_in_files(struct stream *s, char *file_list)
 
     in_uint32_le(s, cItems);
     fuse_clear_clip_dir();
-    LLOGLN(0, ("clipboard_c2s_in_files: cItems %d", cItems));
+    LLOGLN(10, ("clipboard_c2s_in_files: cItems %d", cItems));
     cfd = (struct clip_file_desc *)
           g_malloc(sizeof(struct clip_file_desc), 0);
     ptr = file_list;
@@ -587,6 +603,13 @@ clipboard_c2s_in_files(struct stream *s, char *file_list)
     {
         g_memset(cfd, 0, sizeof(struct clip_file_desc));
         clipboard_c2s_in_file_info(s, cfd);
+        if ((g_pos(cfd->cFileName, "\\") >= 0) ||
+            (cfd->fileAttributes & CB_FILE_ATTRIBUTE_DIRECTORY))
+        {
+            LLOGLN(0, ("clipboard_c2s_in_files: skipping directory not "
+                       "supported [%s]", cfd->cFileName));
+            continue;
+        }
         fuse_add_clip_dir_item(cfd->cFileName, 0, cfd->fileSizeLow, lindex);
 
         g_strcpy(ptr, "file://");
