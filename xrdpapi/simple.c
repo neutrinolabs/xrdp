@@ -101,6 +101,7 @@ run_echo_test()
 
     /* open a virtual channel named ECHO */
     channel = WTSVirtualChannelOpenEx(WTS_CURRENT_SESSION, "ECHO", WTS_CHANNEL_OPTION_DYNAMIC_PRI_LOW);
+
     if (channel == NULL)
     {
         printf("###  WTSVirtualChannelOpenEx() failed!\n");
@@ -117,6 +118,7 @@ run_echo_test()
         /* write data to virtual channel */
         count = (bytes_left > 1700) ? 1700 : bytes_left;
         rv = WTSVirtualChannelWrite(channel, wr_ptr, count, &bytes_written);
+
         if ((rv == 0) || (bytes_written == 0))
         {
             printf("### WTSVirtualChannelWrite() failed\n");
@@ -129,6 +131,7 @@ run_echo_test()
         {
             /* read back the echo */
             rv = WTSVirtualChannelRead(channel, 5000, in_buf, count, &bytes_read);
+
             if ((rv == 0) || (bytes_read == 0))
             {
                 printf("### WTSVirtualChannelRead() failed\n");
@@ -145,6 +148,7 @@ run_echo_test()
                     return -1;
                 }
             }
+
             count -= bytes_read;
         }
 
@@ -153,26 +157,27 @@ run_echo_test()
         printf("### pkt %d passed echo test\n", pkt_count++);
     }
 
-	WTSVirtualChannelClose(channel);
-	return 0;
+    WTSVirtualChannelClose(channel);
+    return 0;
 }
 
 int
 run_tsmf_test()
 {
-	void *channel;
+    void *channel;
 
     printf("this test not yet implemented!\n");
     return 1;
 
     /* open virtual channel */
     channel = WTSVirtualChannelOpenEx(WTS_CURRENT_SESSION, "TSMF", WTS_CHANNEL_OPTION_DYNAMIC_PRI_LOW);
+
     if (channel == NULL)
     {
         printf("###  WTSVirtualChannelOpenEx() failed!\n");
         return 1;
     }
 
-	WTSVirtualChannelClose(channel);
-	return 0;
+    WTSVirtualChannelClose(channel);
+    return 0;
 }

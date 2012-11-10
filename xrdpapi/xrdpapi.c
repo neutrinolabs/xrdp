@@ -152,57 +152,57 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     return wts;
 }
 
+/*
+ * write data to client connection
+ *
+ * @return 0 on success, -1 on error
 /*****************************************************************************/
 int
 WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
                        unsigned int Length, unsigned int *pBytesWritten)
 {
     struct wts_obj *wts;
-    int error;
-    int lerrno;
+    int             rv;
 
-    wts = (struct wts_obj *)hChannelHandle;
+    wts = (struct wts_obj *) hChannelHandle;
+
+    *pBytesWritten = 0;
 
     if (wts == 0)
     {
-        return 0;
+        LLOGLN(10, ("WTSVirtualChannelWrite: wts is NULL"));
+        return -1;
     }
 
     if (wts->status != 1)
     {
+        LLOGLN(10, ("WTSVirtualChannelWrite: wts->status != 1"));
+        return -1;
+    }
+
+    if (!can_send(wts->fd, 0))
+    {
+        return 0;    /* can't write now, ok to try again */
+    }
+
+    rv = send(wts->fd, Buffer, Length, 0);
+    LLOGLN(10, ("WTSVirtualChannelWrite: send() reted %d", rv));
+
+    if (rv >= 0)
+    {
+        /* success, but zero bytes may have been written */
+        *pBytesWritten = rv;
         return 0;
     }
 
-    if (can_send(wts->fd, 0))
+    /* error, but is it ok to try again? */
+    if ((rv == EWOULDBLOCK) || (rv == EAGAIN) || (rv == EINPROGRESS))
     {
-        error = send(wts->fd, Buffer, Length, 0);
-
-        if (error == -1)
-        {
-            lerrno = errno;
-
-            if ((lerrno == EWOULDBLOCK) || (lerrno == EAGAIN) ||
-                    (lerrno == EINPROGRESS))
-            {
-                *pBytesWritten = 0;
-                return 1;
-            }
-
-            return 0;
-        }
-        else if (error == 0)
-        {
-            return 0;
-        }
-        else if (error > 0)
-        {
-            *pBytesWritten = error;
-            return 1;
-        }
+        return 0;    /* failed to send, but should try again */
     }
 
-    *pBytesWritten = 0;
-    return 1;
+    /* fatal error */
+    return -1;
 }
 
 /*****************************************************************************/
@@ -241,6 +241,7 @@ WTSVirtualChannelRead(void *hChannelHandle, unsigned int TimeOut,
                 *pBytesRead = 0;
                 return 1;
             }
+
             return 0;
         }
         else if (rv == 0)

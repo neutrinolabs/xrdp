@@ -45,32 +45,33 @@ typedef enum _WTS_VIRTUAL_CLASS
 {
     WTSVirtualClientData,
     WTSVirtualFileHandle
-} WTS_VIRTUAL_CLASS;
+}
+WTS_VIRTUAL_CLASS;
 
 /*
  * Reference:
  * http://msdn.microsoft.com/en-us/library/windows/desktop/aa383464(v=vs.85).aspx
  */
 
-void* WTSVirtualChannelOpen(void* hServer, unsigned int SessionId,
-                            const char* pVirtualName);
+void *WTSVirtualChannelOpen(void *hServer, unsigned int SessionId,
+                            const char *pVirtualName);
 
-void* WTSVirtualChannelOpenEx(unsigned int SessionId,
-                              const char* pVirtualName, unsigned int flags);
+void *WTSVirtualChannelOpenEx(unsigned int SessionId,
+                                const char *pVirtualName, unsigned int flags);
 
-int WTSVirtualChannelWrite(void* hChannelHandle, const char* Buffer,
-                           unsigned int Length, unsigned int* pBytesWritten);
+int WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
+                            unsigned int Length, unsigned int *pBytesWritten);
 
-int WTSVirtualChannelRead(void* hChannelHandle, unsigned int TimeOut,
-                          char* Buffer, unsigned int BufferSize,
-                          unsigned int* pBytesRead);
+int WTSVirtualChannelRead(void *hChannelHandle, unsigned int TimeOut,
+                            char *Buffer, unsigned int BufferSize,
+                            unsigned int *pBytesRead);
 
-int WTSVirtualChannelClose(void* hChannelHandle);
+int WTSVirtualChannelClose(void *hChannelHandle);
 
-int WTSVirtualChannelQuery(void* hChannelHandle, WTS_VIRTUAL_CLASS WtsVirtualClass,
-                           void** ppBuffer, unsigned int* pBytesReturned);
+int WTSVirtualChannelQuery(void *hChannelHandle, WTS_VIRTUAL_CLASS WtsVirtualClass,
+                            void **ppBuffer, unsigned int *pBytesReturned);
 
-void WTSFreeMemory(void* pMemory);
+void WTSFreeMemory(void *pMemory);
 
 #ifdef __cplusplus
 }

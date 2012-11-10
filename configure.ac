@@ -122,6 +122,7 @@ AC_CONFIG_FILES([Makefile
                  instfiles/pam.d/Makefile
                  genkeymap/Makefile
                  xrdpapi/Makefile
+		 xrdpvr/Makefile
 ])
 #                 fontdump/Makefile
 #                 xrdp/cursors/Makefile
