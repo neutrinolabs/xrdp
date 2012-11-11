@@ -20,4 +20,5 @@ SUBDIRS = \
   docs \
   instfiles \
   genkeymap \
-  xrdpapi
+  xrdpapi \
+  xrdpvr

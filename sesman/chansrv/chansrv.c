@@ -695,7 +695,6 @@ my_api_trans_conn_in(struct trans *trans, struct trans *new_trans)
     int                   index;
     char                  chan_pri;
 
-    g_writeln("my_api_trans_conn_in:");
     if ((trans == 0) || (trans != g_api_lis_trans) || (new_trans == 0))
     {
         return 1;
@@ -750,7 +749,8 @@ my_api_trans_conn_in(struct trans *trans, struct trans *new_trans)
 
         for (index = 0; index < g_num_chan_items; index++)
         {
-            LOG(10, ("  %s %s", ad->header, g_chan_items[index].name));
+            LOG(10, ("my_api_trans_conn_in:  %s %s", ad->header,
+                    g_chan_items[index].name));
 
             if (g_strcasecmp(ad->header, g_chan_items[index].name) == 0)
             {
@@ -758,6 +758,10 @@ my_api_trans_conn_in(struct trans *trans, struct trans *new_trans)
                 ad->chan_id = g_chan_items[index].id;
                 break;
             }
+        }
+        if (index == g_num_chan_items)
+        {
+            g_writeln("did not find SVC named %s", ad->header);
         }
     }
 
