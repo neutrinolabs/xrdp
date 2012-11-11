@@ -47,6 +47,10 @@ AC_ARG_ENABLE(fuse, AS_HELP_STRING([--enable-fuse],
               [Build fuse(clipboard file / drive redir) (default: no)]),
               [fuse=true], [fuse=false])
 AM_CONDITIONAL(XRDP_FUSE, [test x$fuse = xtrue])
+AC_ARG_ENABLE(xrdpvr, AS_HELP_STRING([--enable-xrdpvr],
+              [Build xrdpvr module (default: no)]),
+              [xrdpvr=true], [xrdpvr=false])
+AM_CONDITIONAL(XRDP_XRDPVR, [test x$xrdpvr = xtrue])
 
 AM_CONDITIONAL(GOT_PREFIX, test "x${prefix}" != "xNONE"])
 
@@ -122,7 +126,7 @@ AC_CONFIG_FILES([Makefile
                  instfiles/pam.d/Makefile
                  genkeymap/Makefile
                  xrdpapi/Makefile
-		 xrdpvr/Makefile
+                 xrdpvr/Makefile
 ])
 #                 fontdump/Makefile
 #                 xrdp/cursors/Makefile
