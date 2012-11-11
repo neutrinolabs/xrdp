@@ -388,10 +388,15 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
             robjs[robjs_count++] = done_obj;
             timeout = -1;
 
-            if (trans_get_wait_objs(self->listen_trans, robjs, &robjs_count) != 0)
+            if (self->listen_trans != 0)
             {
-                g_writeln("Listening socket is in wrong state we terminate listener") ;
-                break;
+                if (trans_get_wait_objs(self->listen_trans, robjs,
+                                        &robjs_count) != 0)
+                {
+                    g_writeln("Listening socket is in wrong state we "
+                              "terminate listener");
+                    break;
+                }
             }
 
             /* wait - timeout -1 means wait indefinitely*/
@@ -406,7 +411,8 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
                 break;
             }
 
-            if (g_is_wait_obj_set(sync_obj)) /* some function must be processed by this thread */
+            /* some function must be processed by this thread */
+            if (g_is_wait_obj_set(sync_obj))
             {
                 g_reset_wait_obj(sync_obj);
                 g_process_waiting_function(); /* run the function */
@@ -452,7 +458,8 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
                 g_sleep(100);
             }
 
-            if (g_is_wait_obj_set(sync_obj)) /* some function must be processed by this thread */
+            /* some function must be processed by this thread */
+            if (g_is_wait_obj_set(sync_obj))
             {
                 g_reset_wait_obj(sync_obj);
                 g_process_waiting_function(); /* run the function that is waiting*/
