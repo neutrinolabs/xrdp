@@ -483,6 +483,8 @@ clipboard_send_data_request(int format_id)
     int rv;
 
     LOGM((LOG_LEVEL_DEBUG, "clipboard_send_data_request:"));
+    LLOGLN(0, ("clipboard_send_data_request: %d", format_id));
+    g_clip_c2s.in_request = 1;
     make_stream(s);
     init_stream(s, 8192);
     out_uint16_le(s, CB_FORMAT_DATA_REQUEST); /* 4 CLIPRDR_DATA_REQUEST */
@@ -1190,6 +1192,7 @@ clipboard_process_data_response(struct stream *s, int clip_msg_status,
 
     LLOGLN(10, ("clipboard_process_data_response:"));
     lxev = &g_saved_selection_req_event;
+    g_clip_c2s.in_request = 0;
     g_clip_c2s.converted = 1;
     if (g_clip_c2s.xrdp_clip_type == XRDP_CB_BITMAP)
     {
@@ -1316,6 +1319,96 @@ clipboard_process_clip_caps(struct stream *s, int clip_msg_status,
 }
 
 /*****************************************************************************/
+static int APP_CC
+jay_part(char *data, int data_bytes)
+{
+    XEvent xev;
+
+    g_writeln("jay_part: data_bytes %d", data_bytes);
+    XChangeProperty(g_display, g_clip_c2s.window,
+                    g_clip_c2s.property, g_clip_c2s.type, 8,
+                    PropModeReplace, (tui8 *)data, data_bytes);
+    while (1)
+    {
+        XWindowEvent(g_display, g_clip_c2s.window, PropertyChangeMask, &xev);
+        g_writeln("1 %d", xev.xproperty.state);
+        if ((xev.xproperty.state == PropertyDelete) &&
+            (xev.xproperty.atom == g_clip_c2s.property))
+        {
+            break;
+        }
+    }
+
+    return 0;
+}
+
+/*****************************************************************************/
+static int APP_CC
+jay_start(char *data, int data_bytes, int total_bytes)
+{
+    XEvent xev;
+    XSelectionRequestEvent *req;
+    long val1[2];
+    char *ldata;
+    int extra_bytes;
+
+    g_writeln("jay_start: data_bytes %d total_bytes %d", data_bytes, total_bytes);
+    req = &g_saved_selection_req_event;
+
+    extra_bytes = req->target == g_image_bmp_atom ? 14 : 0;
+    val1[0] = total_bytes + extra_bytes;
+    val1[1] = 0;
+
+    g_clip_c2s.incr_in_progress = 1;
+    g_clip_c2s.incr_bytes_done = 0;
+    g_clip_c2s.type = req->target;
+    g_clip_c2s.property = req->property;
+    g_clip_c2s.window = req->requestor;
+
+    XChangeProperty(g_display, req->requestor, req->property,
+                    g_incr_atom, 32, PropModeReplace, (tui8 *)val1, 1);
+    /* we need events from that other window */
+    XSelectInput(g_display, req->requestor, PropertyChangeMask);
+    g_memset(&xev, 0, sizeof(xev));
+    xev.xselection.type = SelectionNotify;
+    xev.xselection.send_event = True;
+    xev.xselection.display = req->display;
+    xev.xselection.requestor = req->requestor;
+    xev.xselection.selection = req->selection;
+    xev.xselection.target = req->target;
+    xev.xselection.property = req->property;
+    xev.xselection.time = req->time;
+    XSendEvent(g_display, req->requestor, False, NoEventMask, &xev);
+
+    while (1)
+    {
+        XWindowEvent(g_display, req->requestor, PropertyChangeMask, &xev);
+        g_writeln("2 %d", xev.xproperty.state);
+        if ((xev.xproperty.state == PropertyDelete) &&
+            (xev.xproperty.atom == req->property))
+        {
+            break;
+        }
+    }
+
+    if (req->target == g_image_bmp_atom)
+    {
+        ldata = (char *)g_malloc(data_bytes + 14, 0);
+        g_memcpy(ldata, g_bmp_image_header, 14);
+        g_memcpy(ldata + 14, data, data_bytes);
+        jay_part(ldata, data_bytes + 14);
+        g_hexdump(ldata, 64);
+        g_free(ldata);
+    }
+    else
+    {
+        jay_part(data, data_bytes);
+    }
+
+    return 0;
+}
+
+/*****************************************************************************/
 int APP_CC
 clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length,
                   int total_length)
@@ -1325,11 +1418,51 @@ clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length,
     int clip_msg_status;
     int rv;
     struct stream *ls;
+    char *holdp;
 
-    LOG(10, ("clipboard_data_in: chan_is %d "
-             "chan_flags %d length %d total_length %d",
-             chan_id, chan_flags, length, total_length));
-    LLOGLN(10, ("clipboard_data_in:"));
+    LLOGLN(0, ("clipboard_data_in: chan_id %d "
+            "chan_flags 0x%x length %d total_length %d "
+            "in_request %d",
+            chan_id, chan_flags, length, total_length,
+            g_clip_c2s.in_request));
+
+#if 0
+    if (g_clip_c2s.doing_response_ss)
+    {
+        jay_part(s->p, length);
+        if ((chan_flags & 3) == 2)
+        {
+            g_writeln("jay done");
+            g_clip_c2s.doing_response_ss = 0;
+            g_clip_c2s.in_request = 0;
+            g_clip_c2s.incr_in_progress = 0;
+            XSelectInput(g_display, g_clip_c2s.window, NoEventMask);
+        }
+        return 0;
+    }
+
+    if (g_clip_c2s.in_request)
+    {
+        if (total_length > 32 * 1024 && 1) // g_incr_max_req_size
+        {
+            if ((chan_flags & 3) == 1)
+            {
+                holdp = s->p;
+                in_uint16_le(s, clip_msg_id);
+                in_uint16_le(s, clip_msg_status);
+                in_uint32_le(s, clip_msg_len);
+                if (clip_msg_id == CB_FORMAT_DATA_RESPONSE)
+                {
+                    g_writeln("doing_response_ss");
+                    g_clip_c2s.doing_response_ss = 1;
+                    jay_start(s->p, length - 8, total_length - 8);
+                    return 0;
+                }
+                s->p = holdp;
+            }
+        }
+    }
+#endif
 
     if ((chan_flags & 3) == 3)
     {
@@ -1361,7 +1494,7 @@ clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length,
              clip_msg_id, clip_msg_status, clip_msg_len));
     rv = 0;
 
-    LLOGLN(10, ("clipboard_data_in: %d", clip_msg_id));
+    LLOGLN(0, ("clipboard_data_in: %d", clip_msg_id));
     switch (clip_msg_id)
     {
             /* sent by client or server when its local system clipboard is   */
@@ -2096,6 +2229,7 @@ clipboard_event_property_notify(XEvent *xevent)
         }
         g_clip_c2s.incr_bytes_done += bytes;
         LLOGLN(10, ("clipboard_event_property_notify: bytes %d", bytes));
+        //g_hexdump(data, 64);
         XChangeProperty(xevent->xproperty.display, xevent->xproperty.window,
                         xevent->xproperty.atom, g_clip_c2s.type, 8,
                         PropModeReplace, data, bytes);
