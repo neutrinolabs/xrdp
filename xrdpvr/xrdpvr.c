@@ -129,8 +129,6 @@ xrdpvr_deinit_player(void *channel, int stream_id)
 int
 xrdpvr_play_media(void *channel, int stream_id, char *filename)
 {
-    AVDictionary *p_audio_opt_dict = NULL;
-    AVDictionary *p_video_opt_dict = NULL;
     AVPacket      av_pkt;
 
     int video_index = -1;
@@ -208,7 +206,7 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
 
     /* open decoder for audio stream */
     if (avcodec_open2(g_psi.p_audio_codec_ctx, g_psi.p_audio_codec,
-                      &p_audio_opt_dict) < 0)
+                      NULL) < 0)
     {
         printf("ERROR: could not open audio decoder\n");
         return -1;
@@ -216,7 +214,7 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
 
     /* open decoder for video stream */
     if (avcodec_open2(g_psi.p_video_codec_ctx, g_psi.p_video_codec,
-                      &p_video_opt_dict) < 0)
+                      NULL) < 0)
     {
         printf("ERROR: could not open video decoder\n");
         return -1;
