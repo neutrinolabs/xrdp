@@ -23,8 +23,16 @@
 #ifndef __XRDPVR_H__
 #define __XRDPVR_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int xrdpvr_init_player(void *channel, int stream_id, char *filename);
 int xrdpvr_deinit_player(void *channel, int stream_id);
 int xrdpvr_play_media(void *channel, int stream_id, char *filename);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __XRDPVR_H__ */
