@@ -103,6 +103,7 @@ struct clip_c2s /* client to server, pasting from mstsc to linux app */
 {
     int incr_in_progress;
     int incr_bytes_done;
+    int read_bytes_done;
     int total_bytes;
     char *data;
     Atom type; /* UTF8_STRING, image/bmp, ... */

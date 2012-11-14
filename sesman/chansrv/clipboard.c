@@ -25,6 +25,9 @@
   Aug 05, 2012:
     Laxmikant Rashinkar (LK dot Rashinkar at gmail.com)
     added clipboard support for BMP images
+
+  http://msdn.microsoft.com/en-us/library/cc241066%28v=prot.20%29.aspx
+
 */
 
 /*
@@ -169,7 +172,7 @@ x-special/gnome-copied-files
 #include "xcommon.h"
 #include "chansrv_fuse.h"
 
-#define LLOG_LEVEL 1
+#define LLOG_LEVEL 11
 #define LLOGLN(_level, _args) \
   do \
   { \
@@ -1165,6 +1168,7 @@ clipboard_process_data_response_for_image(struct stream *s,
         return 0;
     }
     g_clip_c2s.total_bytes = len;
+    g_clip_c2s.read_bytes_done = g_clip_c2s.total_bytes;
     g_memcpy(g_clip_c2s.data, g_bmp_image_header, 14);
     in_uint8a(s, g_clip_c2s.data + 14, len);
     LLOGLN(10, ("clipboard_process_data_response_for_image: calling "
@@ -1193,7 +1197,6 @@ clipboard_process_data_response(struct stream *s, int clip_msg_status,
     LLOGLN(10, ("clipboard_process_data_response:"));
     lxev = &g_saved_selection_req_event;
     g_clip_c2s.in_request = 0;
-    g_clip_c2s.converted = 1;
     if (g_clip_c2s.xrdp_clip_type == XRDP_CB_BITMAP)
     {
         clipboard_process_data_response_for_image(s, clip_msg_status,
@@ -1220,6 +1223,7 @@ clipboard_process_data_response(struct stream *s, int clip_msg_status,
             LLOGLN(0, ("clipboard_process_data_response: error"));
         }
         g_clip_c2s.total_bytes = g_strlen(g_clip_c2s.data);
+        g_clip_c2s.read_bytes_done = g_clip_c2s.total_bytes;
         clipboard_provide_selection_c2s(lxev, lxev->target);
         return 0;
     }
@@ -1264,6 +1268,7 @@ clipboard_process_data_response(struct stream *s, int clip_msg_status,
     if (g_clip_c2s.data != 0)
     {
         g_clip_c2s.total_bytes = g_strlen(g_clip_c2s.data);
+        g_clip_c2s.read_bytes_done = g_clip_c2s.total_bytes;
         clipboard_provide_selection_c2s(lxev, lxev->target);
     }
     g_free(wtext);
@@ -1322,23 +1327,75 @@ clipboard_process_clip_caps(struct stream *s, int clip_msg_status,
 static int APP_CC
 jay_part(char *data, int data_bytes)
 {
-    XEvent xev;
-
-    g_writeln("jay_part: data_bytes %d", data_bytes);
+    //g_writeln("jay_part: data_bytes %d read_bytes_done %d "
+    //          "incr_bytes_done %d", data_bytes,
+    //          g_clip_c2s.read_bytes_done,
+    //          g_clip_c2s.incr_bytes_done);
+    /* copy to buffer */
+    g_memcpy(g_clip_c2s.data + g_clip_c2s.read_bytes_done, data, data_bytes);
+    g_clip_c2s.read_bytes_done += data_bytes;
+    if (g_clip_c2s.incr_in_progress)
+    {
+        //g_writeln("jay_part 1");
+        return 0;
+    }
+    if (g_clip_c2s.read_bytes_done <= g_clip_c2s.incr_bytes_done)
+    {
+        //g_writeln("jay_part 2");
+        return 0;
+    }
+    data = g_clip_c2s.data + g_clip_c2s.incr_bytes_done;
+    data_bytes = g_clip_c2s.read_bytes_done - g_clip_c2s.incr_bytes_done;
+    if (data_bytes > g_incr_max_req_size)
+    {
+        data_bytes = g_incr_max_req_size;
+    }
+    g_clip_c2s.incr_bytes_done += data_bytes;
+    //g_writeln("jay_part 3 %d", data_bytes);
     XChangeProperty(g_display, g_clip_c2s.window,
                     g_clip_c2s.property, g_clip_c2s.type, 8,
                     PropModeReplace, (tui8 *)data, data_bytes);
-    while (1)
-    {
-        XWindowEvent(g_display, g_clip_c2s.window, PropertyChangeMask, &xev);
-        g_writeln("1 %d", xev.xproperty.state);
-        if ((xev.xproperty.state == PropertyDelete) &&
-            (xev.xproperty.atom == g_clip_c2s.property))
-        {
-            break;
-        }
-    }
+    //g_hexdump(data, 64);
+    g_clip_c2s.incr_in_progress = 1;
+    //g_writeln("jay_part 3");
+    return 0;
+}
 
+/*****************************************************************************/
+static int APP_CC
+jay_end(void)
+{
+    char *data;
+    int data_bytes;
+
+    //g_writeln("jay_end:");
+    g_clip_c2s.doing_response_ss = 0;
+    g_clip_c2s.in_request = 0;
+
+    if (g_clip_c2s.incr_in_progress)
+    {
+        //g_writeln("jay_end 1");
+        return 0;
+    }
+    if (g_clip_c2s.read_bytes_done <= g_clip_c2s.incr_bytes_done)
+    {
+        //g_writeln("jay_end 2");
+        return 0;
+    }
+    data = g_clip_c2s.data + g_clip_c2s.incr_bytes_done;
+    data_bytes = g_clip_c2s.read_bytes_done - g_clip_c2s.incr_bytes_done;
+    if (data_bytes > g_incr_max_req_size)
+    {
+        data_bytes = g_incr_max_req_size;
+    }
+    //g_writeln("jay_end 3 %d", data_bytes);
+    g_clip_c2s.incr_bytes_done += data_bytes;
+    XChangeProperty(g_display, g_clip_c2s.window,
+                    g_clip_c2s.property, g_clip_c2s.type, 8,
+                    PropModeReplace, (tui8 *)data, data_bytes);
+    //g_hexdump(data, 64);
+    g_clip_c2s.incr_in_progress = 1;
+    //g_writeln("jay_end 3");
     return 0;
 }
 
@@ -1349,21 +1406,25 @@ jay_start(char *data, int data_bytes, int total_bytes)
     XEvent xev;
     XSelectionRequestEvent *req;
     long val1[2];
-    char *ldata;
     int extra_bytes;
 
-    g_writeln("jay_start: data_bytes %d total_bytes %d", data_bytes, total_bytes);
+    //g_writeln("jay_start: data_bytes %d total_bytes %d",
+    //          data_bytes, total_bytes);
     req = &g_saved_selection_req_event;
 
     extra_bytes = req->target == g_image_bmp_atom ? 14 : 0;
     val1[0] = total_bytes + extra_bytes;
     val1[1] = 0;
 
-    g_clip_c2s.incr_in_progress = 1;
+    g_clip_c2s.doing_response_ss = 1;
     g_clip_c2s.incr_bytes_done = 0;
+    g_clip_c2s.read_bytes_done = 0;
     g_clip_c2s.type = req->target;
     g_clip_c2s.property = req->property;
     g_clip_c2s.window = req->requestor;
+    g_free(g_clip_c2s.data);
+    g_clip_c2s.data = (char *)g_malloc(total_bytes + 64, 0);
+    g_clip_c2s.total_bytes = total_bytes;
 
     XChangeProperty(g_display, req->requestor, req->property,
                     g_incr_atom, 32, PropModeReplace, (tui8 *)val1, 1);
@@ -1380,30 +1441,15 @@ jay_start(char *data, int data_bytes, int total_bytes)
     xev.xselection.time = req->time;
     XSendEvent(g_display, req->requestor, False, NoEventMask, &xev);
 
-    while (1)
-    {
-        XWindowEvent(g_display, req->requestor, PropertyChangeMask, &xev);
-        g_writeln("2 %d", xev.xproperty.state);
-        if ((xev.xproperty.state == PropertyDelete) &&
-            (xev.xproperty.atom == req->property))
-        {
-            break;
-        }
-    }
-
     if (req->target == g_image_bmp_atom)
     {
-        ldata = (char *)g_malloc(data_bytes + 14, 0);
-        g_memcpy(ldata, g_bmp_image_header, 14);
-        g_memcpy(ldata + 14, data, data_bytes);
-        jay_part(ldata, data_bytes + 14);
-        g_hexdump(ldata, 64);
-        g_free(ldata);
+        g_memcpy(g_clip_c2s.data, g_bmp_image_header, 14);
+        g_clip_c2s.read_bytes_done = 14;
     }
-    else
-    {
-        jay_part(data, data_bytes);
-    }
+
+    g_clip_c2s.incr_in_progress = 1;
+
+    jay_part(data, data_bytes);
 
     return 0;
 }
@@ -1426,24 +1472,21 @@ clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length,
             chan_id, chan_flags, length, total_length,
             g_clip_c2s.in_request));
 
-#if 0
+#if 1
     if (g_clip_c2s.doing_response_ss)
     {
         jay_part(s->p, length);
         if ((chan_flags & 3) == 2)
         {
             g_writeln("jay done");
-            g_clip_c2s.doing_response_ss = 0;
-            g_clip_c2s.in_request = 0;
-            g_clip_c2s.incr_in_progress = 0;
-            XSelectInput(g_display, g_clip_c2s.window, NoEventMask);
+            jay_end();
         }
         return 0;
     }
 
     if (g_clip_c2s.in_request)
     {
-        if (total_length > 32 * 1024 && 1) // g_incr_max_req_size
+        //if (total_length > 32 * 1024 && 1) // g_incr_max_req_size
         {
             if ((chan_flags & 3) == 1)
             {
@@ -1453,8 +1496,9 @@ clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length,
                 in_uint32_le(s, clip_msg_len);
                 if (clip_msg_id == CB_FORMAT_DATA_RESPONSE)
                 {
-                    g_writeln("doing_response_ss");
-                    g_clip_c2s.doing_response_ss = 1;
+                    g_writeln("doing_response_ss: clip_msg_len %d length %d "
+                              "total_length %d",
+                              clip_msg_len, length, total_length);
                     jay_start(s->p, length - 8, total_length - 8);
                     return 0;
                 }
@@ -1489,6 +1533,7 @@ clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length,
     in_uint16_le(ls, clip_msg_id);
     in_uint16_le(ls, clip_msg_status);
     in_uint32_le(ls, clip_msg_len);
+
     LOG(10, ("clipboard_data_in: clip_msg_id %d "
              "clip_msg_status %d clip_msg_len %d",
              clip_msg_id, clip_msg_status, clip_msg_len));
@@ -2198,7 +2243,7 @@ clipboard_event_property_notify(XEvent *xevent)
     int rv;
     int format_in_bytes;
     int new_data_len;
-    int bytes;
+    int data_bytes;
     char *cptr;
 
     LLOGLN(10, ("clipboard_event_property_notify:"));
@@ -2222,24 +2267,35 @@ clipboard_event_property_notify(XEvent *xevent)
             return 0;
         }
         data = (tui8 *)(g_clip_c2s.data + g_clip_c2s.incr_bytes_done);
-        bytes = g_clip_c2s.total_bytes - g_clip_c2s.incr_bytes_done;
-        if (bytes > g_incr_max_req_size)
+        data_bytes = g_clip_c2s.read_bytes_done - g_clip_c2s.incr_bytes_done;
+        g_writeln("aa data %p bytes %d read_bytes_done %d "
+                  "incr_bytes_done %d", data, data_bytes,
+                  g_clip_c2s.read_bytes_done,g_clip_c2s.incr_bytes_done);
+        if ((data_bytes < 1) &&
+            (g_clip_c2s.read_bytes_done < g_clip_c2s.total_bytes))
         {
-            bytes = g_incr_max_req_size;
+            g_writeln("aa");
+            g_clip_c2s.incr_in_progress = 0;
+            return 0;
         }
-        g_clip_c2s.incr_bytes_done += bytes;
-        LLOGLN(10, ("clipboard_event_property_notify: bytes %d", bytes));
+        if (data_bytes > g_incr_max_req_size)
+        {
+            data_bytes = g_incr_max_req_size;
+        }
+        g_clip_c2s.incr_bytes_done += data_bytes;
+        LLOGLN(10, ("clipboard_event_property_notify: data_bytes %d", data_bytes));
         //g_hexdump(data, 64);
         XChangeProperty(xevent->xproperty.display, xevent->xproperty.window,
                         xevent->xproperty.atom, g_clip_c2s.type, 8,
-                        PropModeReplace, data, bytes);
-        if (bytes < 1)
+                        PropModeReplace, data, data_bytes);
+        if (data_bytes < 1)
         {
             LLOGLN(10, ("clipboard_event_property_notify: INCR done"));
             g_clip_c2s.incr_in_progress = 0;
             /* we no longer need property notify */
             XSelectInput(xevent->xproperty.display, xevent->xproperty.window,
                          NoEventMask);
+            g_clip_c2s.converted = 1;
         }
     }
     if (g_clip_s2c.incr_in_progress &&
