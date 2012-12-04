@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2012
+ * Copyright (C) Laxmikant Rashinkar 2012 LK.Rashinkar@gmail.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,72 @@
  * limitations under the License.
  */
 
-#if !defined(DRDYNVC_H)
-#define DRDYNVC_H
+#ifndef _DRDYNVC_H_
+#define _DRDYNVC_H_
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
 
 #include "arch.h"
-#include "parse.h"
+#include "chansrv.h"
+#include "xcommon.h"
+#include "log.h"
+#include "os_calls.h"
+#include "trans.h"
+
+/* move this to tsmf.c */
+#define TSMF_CHAN_ID 0x1000
+
+/* get number of bytes in stream before s->p */
+#define stream_length_before_p(s) (int) ((s)->p - (s)->data)
+
+/* get number of bytes in stream after s->p */
+#define stream_length_after_p(s) (int) ((s)->end - (s)->p)
+
+#define rewind_stream(s) do      \
+{                                \
+    (s)->p = (s)->data;          \
+    (s)->end = (s)->data;        \
+} while (0)
+
+/* max number of bytes we can send in one pkt */
+#define MAX_PDU_SIZE            1600
+
+/* commands used to manage dynamic virtual channels */
+#define CMD_DVC_OPEN_CHANNEL    0x10
+#define CMD_DVC_DATA_FIRST      0x20
+#define CMD_DVC_DATA            0x30
+#define CMD_DVC_CLOSE_CHANNEL   0x40
+#define CMD_DVC_CAPABILITY      0x50
+
+int APP_CC drdynvc_init(void);
+
+static int APP_CC drdynvc_send_capability_request(uint16_t version);
+static int APP_CC drdynvc_process_capability_response(struct stream* s,
+                                                      unsigned char cmd);
+
+int APP_CC drdynvc_send_open_channel_request(int chan_pri, unsigned int chan_id,
+                                             char *chan_name);
+
+static int APP_CC drdynvc_process_open_channel_response(struct stream *s,
+                                                        unsigned char cmd);
+
+int APP_CC drdynvc_send_close_channel_request(unsigned int chan_id);
+
+static int APP_CC drdynvc_process_close_channel_response(struct stream *s,
+                                                         unsigned char cmd);
+
+int APP_CC drdynvc_write_data(uint32_t chan_id, char *data, int data_size);
+
+int APP_CC drdynvc_data_in(struct stream* s, int chan_id, int chan_flags,
+                           int length, int total_length);
+
+static int APP_CC drdynvc_process_data_first(struct stream* s, unsigned char cmd);
+static int APP_CC drdynvc_process_data(struct stream* s, unsigned char cmd);
+
+static int APP_CC drdynvc_insert_uint_124(struct stream *s, uint32_t val);
+static int APP_CC drdynvc_get_chan_id(struct stream *s, char cmd, uint32_t *chan_id_p);
 
 #endif

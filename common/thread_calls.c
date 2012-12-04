@@ -1,27 +1,22 @@
-/*
-   Copyright (c) 2004-2010 Jay Sorg
-
-   Permission is hereby granted, free of charge, to any person obtaining a
-   copy of this software and associated documentation files (the "Software"),
-   to deal in the Software without restriction, including without limitation
-   the rights to use, copy, modify, merge, publish, distribute, sublicense,
-   and/or sell copies of the Software, and to permit persons to whom the
-   Software is furnished to do so, subject to the following conditions:
-
-   The above copyright notice and this permission notice shall be included
-   in all copies or substantial portions of the Software.
-
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-   OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-   DEALINGS IN THE SOFTWARE.
-
-   thread calls
-
-*/
+/**
+ * xrdp: A Remote Desktop Protocol server.
+ *
+ * Copyright (C) Jay Sorg 2004-2012
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * thread calls
+ */
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -38,33 +33,36 @@
 /* returns error */
 #if defined(_WIN32)
 int APP_CC
-tc_thread_create(unsigned long (__stdcall * start_routine)(void*), void* arg)
+tc_thread_create(unsigned long (__stdcall *start_routine)(void *), void *arg)
 {
-  int rv = 0;
-  DWORD thread_id = 0;
-  HANDLE thread = (HANDLE)0;
+    int rv = 0;
+    DWORD thread_id = 0;
+    HANDLE thread = (HANDLE)0;
 
-  /* CreateThread returns handle or zero on error */
-  thread = CreateThread(0, 0, start_routine, arg, 0, &thread_id);
-  rv = !thread;
-  CloseHandle(thread);
-  return rv;
+    /* CreateThread returns handle or zero on error */
+    thread = CreateThread(0, 0, start_routine, arg, 0, &thread_id);
+    rv = !thread;
+    CloseHandle(thread);
+    return rv;
 }
 #else
 int APP_CC
-tc_thread_create(void* (* start_routine)(void *), void* arg)
+tc_thread_create(void * (* start_routine)(void *), void *arg)
 {
-  int rv = 0;
-  pthread_t thread = (pthread_t)0;
+    int rv = 0;
+    pthread_t thread = (pthread_t)0;
 
-  g_memset(&thread, 0x00, sizeof(pthread_t));
+    g_memset(&thread, 0x00, sizeof(pthread_t));
 
-  /* pthread_create returns error */
-  rv = pthread_create(&thread, 0, start_routine, arg);
-  if (!rv) {
-    rv = pthread_detach(thread);
-  }
-  return rv;
+    /* pthread_create returns error */
+    rv = pthread_create(&thread, 0, start_routine, arg);
+
+    if (!rv)
+    {
+        rv = pthread_detach(thread);
+    }
+
+    return rv;
 }
 #endif
 
@@ -73,9 +71,9 @@ tbus APP_CC
 tc_get_threadid(void)
 {
 #if defined(_WIN32)
-  return (tbus)GetCurrentThreadId();
+    return (tbus)GetCurrentThreadId();
 #else
-  return (tbus)pthread_self();
+    return (tbus)pthread_self();
 #endif
 }
 
@@ -85,9 +83,9 @@ int APP_CC
 tc_threadid_equal(tbus tid1, tbus tid2)
 {
 #if defined(_WIN32)
-  return tid1 == tid2;
+    return tid1 == tid2;
 #else
-  return pthread_equal((pthread_t)tid1, (pthread_t)tid2);
+    return pthread_equal((pthread_t)tid1, (pthread_t)tid2);
 #endif
 }
 
@@ -96,13 +94,13 @@ tbus APP_CC
 tc_mutex_create(void)
 {
 #if defined(_WIN32)
-  return (tbus)CreateMutex(0, 0, 0);
+    return (tbus)CreateMutex(0, 0, 0);
 #else
-  pthread_mutex_t* lmutex;
+    pthread_mutex_t *lmutex;
 
-  lmutex = (pthread_mutex_t*)g_malloc(sizeof(pthread_mutex_t), 0);
-  pthread_mutex_init(lmutex, 0);
-  return (tbus)lmutex;
+    lmutex = (pthread_mutex_t *)g_malloc(sizeof(pthread_mutex_t), 0);
+    pthread_mutex_init(lmutex, 0);
+    return (tbus)lmutex;
 #endif
 }
 
@@ -111,13 +109,13 @@ void APP_CC
 tc_mutex_delete(tbus mutex)
 {
 #if defined(_WIN32)
-  CloseHandle((HANDLE)mutex);
+    CloseHandle((HANDLE)mutex);
 #else
-  pthread_mutex_t* lmutex;
+    pthread_mutex_t *lmutex;
 
-  lmutex = (pthread_mutex_t*)mutex;
-  pthread_mutex_destroy(lmutex);
-  g_free(lmutex);
+    lmutex = (pthread_mutex_t *)mutex;
+    pthread_mutex_destroy(lmutex);
+    g_free(lmutex);
 #endif
 }
 
@@ -126,11 +124,11 @@ int APP_CC
 tc_mutex_lock(tbus mutex)
 {
 #if defined(_WIN32)
-  WaitForSingleObject((HANDLE)mutex, INFINITE);
-  return 0;
+    WaitForSingleObject((HANDLE)mutex, INFINITE);
+    return 0;
 #else
-  pthread_mutex_lock((pthread_mutex_t*)mutex);
-  return 0;
+    pthread_mutex_lock((pthread_mutex_t *)mutex);
+    return 0;
 #endif
 }
 
@@ -138,15 +136,18 @@ tc_mutex_lock(tbus mutex)
 int APP_CC
 tc_mutex_unlock(tbus mutex)
 {
-  int rv = 0;
+    int rv = 0;
 #if defined(_WIN32)
-  ReleaseMutex((HANDLE)mutex);
+    ReleaseMutex((HANDLE)mutex);
 #else
-  if (mutex != 0) {
-    rv = pthread_mutex_unlock((pthread_mutex_t *)mutex);
-  }
+
+    if (mutex != 0)
+    {
+        rv = pthread_mutex_unlock((pthread_mutex_t *)mutex);
+    }
+
 #endif
-  return rv;
+    return rv;
 }
 
 /*****************************************************************************/
@@ -154,16 +155,16 @@ tbus APP_CC
 tc_sem_create(int init_count)
 {
 #if defined(_WIN32)
-  HANDLE sem;
+    HANDLE sem;
 
-  sem = CreateSemaphore(0, init_count, init_count + 10, 0);
-  return (tbus)sem;
+    sem = CreateSemaphore(0, init_count, init_count + 10, 0);
+    return (tbus)sem;
 #else
-  sem_t * sem = (sem_t *)NULL;
+    sem_t *sem = (sem_t *)NULL;
 
-  sem = (sem_t *)g_malloc(sizeof(sem_t), 0);
-  sem_init(sem, 0, init_count);
-  return (tbus)sem;
+    sem = (sem_t *)g_malloc(sizeof(sem_t), 0);
+    sem_init(sem, 0, init_count);
+    return (tbus)sem;
 #endif
 }
 
@@ -172,13 +173,13 @@ void APP_CC
 tc_sem_delete(tbus sem)
 {
 #if defined(_WIN32)
-  CloseHandle((HANDLE)sem);
+    CloseHandle((HANDLE)sem);
 #else
-  sem_t* lsem;
+    sem_t *lsem;
 
-  lsem = (sem_t*)sem;
-  sem_destroy(lsem);
-  g_free(lsem);
+    lsem = (sem_t *)sem;
+    sem_destroy(lsem);
+    g_free(lsem);
 #endif
 }
 
@@ -187,11 +188,11 @@ int APP_CC
 tc_sem_dec(tbus sem)
 {
 #if defined(_WIN32)
-  WaitForSingleObject((HANDLE)sem, INFINITE);
-  return 0;
+    WaitForSingleObject((HANDLE)sem, INFINITE);
+    return 0;
 #else
-  sem_wait((sem_t*)sem);
-  return 0;
+    sem_wait((sem_t *)sem);
+    return 0;
 #endif
 }
 
@@ -200,10 +201,10 @@ int APP_CC
 tc_sem_inc(tbus sem)
 {
 #if defined(_WIN32)
-  ReleaseSemaphore((HANDLE)sem, 1, 0);
-  return 0;
+    ReleaseSemaphore((HANDLE)sem, 1, 0);
+    return 0;
 #else
-  sem_post((sem_t*)sem);
-  return 0;
+    sem_post((sem_t *)sem);
+    return 0;
 #endif
 }

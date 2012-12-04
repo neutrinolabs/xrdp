@@ -72,33 +72,33 @@ static int g_initOutputCalled = 0;
 /* Common pixmap formats */
 static PixmapFormatRec g_formats[MAXFORMATS] =
 {
-  { 1, 1, BITMAP_SCANLINE_PAD },
-  { 4, 8, BITMAP_SCANLINE_PAD },
-  { 8, 8, BITMAP_SCANLINE_PAD },
-  { 15, 16, BITMAP_SCANLINE_PAD },
-  { 16, 16, BITMAP_SCANLINE_PAD },
-  { 24, 32, BITMAP_SCANLINE_PAD },
-  { 32, 32, BITMAP_SCANLINE_PAD },
+    { 1, 1, BITMAP_SCANLINE_PAD },
+    { 4, 8, BITMAP_SCANLINE_PAD },
+    { 8, 8, BITMAP_SCANLINE_PAD },
+    { 15, 16, BITMAP_SCANLINE_PAD },
+    { 16, 16, BITMAP_SCANLINE_PAD },
+    { 24, 32, BITMAP_SCANLINE_PAD },
+    { 32, 32, BITMAP_SCANLINE_PAD },
 };
 static int g_numFormats = 7;
 static miPointerSpriteFuncRec g_rdpSpritePointerFuncs =
 {
-  /* these are in rdpinput.c */
-  rdpSpriteRealizeCursor,
-  rdpSpriteUnrealizeCursor,
-  rdpSpriteSetCursor,
-  rdpSpriteMoveCursor,
-  rdpSpriteDeviceCursorInitialize,
-  rdpSpriteDeviceCursorCleanup
+    /* these are in rdpinput.c */
+    rdpSpriteRealizeCursor,
+    rdpSpriteUnrealizeCursor,
+    rdpSpriteSetCursor,
+    rdpSpriteMoveCursor,
+    rdpSpriteDeviceCursorInitialize,
+    rdpSpriteDeviceCursorCleanup
 };
 static miPointerScreenFuncRec g_rdpPointerCursorFuncs =
 {
-  /* these are in rdpinput.c */
-  rdpCursorOffScreen,
-  rdpCrossScreen,
-  rdpPointerWarpCursor,
-  rdpPointerEnqueueEvent,
-  rdpPointerNewEventScreen
+    /* these are in rdpinput.c */
+    rdpCursorOffScreen,
+    rdpCrossScreen,
+    rdpPointerWarpCursor,
+    rdpPointerEnqueueEvent,
+    rdpPointerNewEventScreen
 };
 
 /******************************************************************************/
@@ -106,55 +106,57 @@ static miPointerScreenFuncRec g_rdpPointerCursorFuncs =
 static int
 set_bpp(int bpp)
 {
-  int rv;
+    int rv;
 
-  rv = 0;
-  g_bpp = bpp;
-  if (g_bpp == 8)
-  {
-    g_Bpp = 1;
-    g_Bpp_mask = 0xff;
-    g_redBits = 3;
-    g_greenBits = 3;
-    g_blueBits = 2;
-  }
-  else if (g_bpp == 15)
-  {
-    g_Bpp = 2;
-    g_Bpp_mask = 0x7fff;
-    g_redBits = 5;
-    g_greenBits = 5;
-    g_blueBits = 5;
-  }
-  else if (g_bpp == 16)
-  {
-    g_Bpp = 2;
-    g_Bpp_mask = 0xffff;
-    g_redBits = 5;
-    g_greenBits = 6;
-    g_blueBits = 5;
-  }
-  else if (g_bpp == 24)
-  {
-    g_Bpp = 4;
-    g_Bpp_mask = 0xffffff;
-    g_redBits = 8;
-    g_greenBits = 8;
-    g_blueBits = 8;
-  }
-  else if (g_bpp == 32)
-  {
-    g_Bpp = 4;
-    g_Bpp_mask = 0xffffff;
-    g_redBits = 8;
-    g_greenBits = 8;
-    g_blueBits = 8;
-  }
-  else
-  {
-    rv = 1;
-  }
-  return rv;
+    rv = 0;
+    g_bpp = bpp;
+
+    if (g_bpp == 8)
+    {
+        g_Bpp = 1;
+        g_Bpp_mask = 0xff;
+        g_redBits = 3;
+        g_greenBits = 3;
+        g_blueBits = 2;
+    }
+    else if (g_bpp == 15)
+    {
+        g_Bpp = 2;
+        g_Bpp_mask = 0x7fff;
+        g_redBits = 5;
+        g_greenBits = 5;
+        g_blueBits = 5;
+    }
+    else if (g_bpp == 16)
+    {
+        g_Bpp = 2;
+        g_Bpp_mask = 0xffff;
+        g_redBits = 5;
+        g_greenBits = 6;
+        g_blueBits = 5;
+    }
+    else if (g_bpp == 24)
+    {
+        g_Bpp = 4;
+        g_Bpp_mask = 0xffffff;
+        g_redBits = 8;
+        g_greenBits = 8;
+        g_blueBits = 8;
+    }
+    else if (g_bpp == 32)
+    {
+        g_Bpp = 4;
+        g_Bpp_mask = 0xffffff;
+        g_redBits = 8;
+        g_greenBits = 8;
+        g_blueBits = 8;
+    }
+    else
+    {
+        rv = 1;
+    }
+
+    return rv;
 }
 
 /******************************************************************************/
@@ -162,9 +164,9 @@ static void
 rdpWakeupHandler(int i, pointer blockData, unsigned long err,
                  pointer pReadmask)
 {
-  g_pScreen->WakeupHandler = g_rdpScreen.WakeupHandler;
-  g_pScreen->WakeupHandler(i, blockData, err, pReadmask);
-  g_pScreen->WakeupHandler = rdpWakeupHandler;
+    g_pScreen->WakeupHandler = g_rdpScreen.WakeupHandler;
+    g_pScreen->WakeupHandler(i, blockData, err, pReadmask);
+    g_pScreen->WakeupHandler = rdpWakeupHandler;
 }
 
 /******************************************************************************/
@@ -177,7 +179,7 @@ rdpBlockHandler1(pointer blockData, OSTimePtr pTimeout, pointer pReadmask)
 static void
 rdpWakeupHandler1(pointer blockData, int result, pointer pReadmask)
 {
-  rdpup_check();
+    rdpup_check();
 }
 
 #if 0
@@ -185,15 +187,15 @@ rdpWakeupHandler1(pointer blockData, int result, pointer pReadmask)
 static Bool
 rdpDeviceCursorInitialize(DeviceIntPtr pDev, ScreenPtr pScreen)
 {
-  ErrorF("rdpDeviceCursorInitializeProcPtr:\n");
-  return 1;
+    ErrorF("rdpDeviceCursorInitializeProcPtr:\n");
+    return 1;
 }
 
 /******************************************************************************/
 static void
 rdpDeviceCursorCleanup(DeviceIntPtr pDev, ScreenPtr pScreen)
 {
-  ErrorF("rdpDeviceCursorCleanupProcPtr:\n");
+    ErrorF("rdpDeviceCursorCleanupProcPtr:\n");
 }
 #endif
 
@@ -202,302 +204,328 @@ rdpDeviceCursorCleanup(DeviceIntPtr pDev, ScreenPtr pScreen)
 Bool
 rdpCreateColormap(ColormapPtr pCmap)
 {
-  ErrorF("rdpCreateColormap:\n");
-  return 1;
+    ErrorF("rdpCreateColormap:\n");
+    return 1;
 }
 
 /******************************************************************************/
 static void
 rdpDestroyColormap(ColormapPtr pColormap)
 {
-  ErrorF("rdpDestroyColormap:\n");
+    ErrorF("rdpDestroyColormap:\n");
 }
 #endif
 
 /******************************************************************************/
 /* returns boolean, true if everything is ok */
 static Bool
-rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
+rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
 {
-  int dpix;
-  int dpiy;
-  int ret;
-  Bool vis_found;
-  VisualPtr vis;
-  PictureScreenPtr ps;
-  rrScrPrivPtr pRRScrPriv;
+    int dpix;
+    int dpiy;
+    int ret;
+    Bool vis_found;
+    VisualPtr vis;
+    PictureScreenPtr ps;
+    rrScrPrivPtr pRRScrPriv;
 
-  g_pScreen = pScreen;
-  memset(&g_screenPriv, 0, sizeof(g_screenPriv));
+    g_pScreen = pScreen;
+    memset(&g_screenPriv, 0, sizeof(g_screenPriv));
 
-  /*dpix = 75;
-  dpiy = 75;*/
-  dpix = PixelDPI;
-  dpiy = PixelDPI;
-  if (monitorResolution != 0)
-  {
-    dpix = monitorResolution;
-    dpiy = monitorResolution;
-  }
-  g_rdpScreen.paddedWidthInBytes = PixmapBytePad(g_rdpScreen.width,
-                                                 g_rdpScreen.depth);
-  g_rdpScreen.bitsPerPixel = rdpBitsPerPixel(g_rdpScreen.depth);
-  ErrorF("\n");
-  ErrorF("X11rdp, an X server for xrdp\n");
-  ErrorF("Version %s\n", X11RDPVER);
-  ErrorF("Copyright (C) 2005-2012 Jay Sorg\n");
-  ErrorF("See http://xrdp.sf.net for information on xrdp.\n");
+    /*dpix = 75;
+    dpiy = 75;*/
+    dpix = PixelDPI;
+    dpiy = PixelDPI;
+
+    if (monitorResolution != 0)
+    {
+        dpix = monitorResolution;
+        dpiy = monitorResolution;
+    }
+
+    g_rdpScreen.paddedWidthInBytes = PixmapBytePad(g_rdpScreen.width,
+                                     g_rdpScreen.depth);
+    g_rdpScreen.bitsPerPixel = rdpBitsPerPixel(g_rdpScreen.depth);
+    ErrorF("\n");
+    ErrorF("X11rdp, an X server for xrdp\n");
+    ErrorF("Version %s\n", X11RDPVER);
+    ErrorF("Copyright (C) 2005-2012 Jay Sorg\n");
+    ErrorF("See http://xrdp.sf.net for information on xrdp.\n");
 #if defined(XORG_VERSION_CURRENT) && defined (XVENDORNAME)
-  ErrorF("Underlying X server release %d, %s\n",
-         XORG_VERSION_CURRENT, XVENDORNAME);
+    ErrorF("Underlying X server release %d, %s\n",
+           XORG_VERSION_CURRENT, XVENDORNAME);
 #endif
 #if defined(XORG_RELEASE)
-  ErrorF("Xorg %s\n", XORG_RELEASE);
+    ErrorF("Xorg %s\n", XORG_RELEASE);
 #endif
-  ErrorF("Screen width %d height %d depth %d bpp %d\n", g_rdpScreen.width,
-         g_rdpScreen.height, g_rdpScreen.depth, g_rdpScreen.bitsPerPixel);
-  ErrorF("dpix %d dpiy %d\n", dpix, dpiy);
-  if (g_rdpScreen.pfbMemory == 0)
-  {
-    g_rdpScreen.sizeInBytes =
-           (g_rdpScreen.paddedWidthInBytes * g_rdpScreen.height);
-    ErrorF("buffer size %d\n", g_rdpScreen.sizeInBytes);
-    g_rdpScreen.pfbMemory = (char*)g_malloc(2048 * 2048 * 4, 1);
-  }
-  if (g_rdpScreen.pfbMemory == 0)
-  {
-    rdpLog("rdpScreenInit g_malloc failed\n");
-    return 0;
-  }
-  miClearVisualTypes();
-  if (defaultColorVisualClass == -1)
-  {
-    defaultColorVisualClass = TrueColor;
-  }
-  if (!miSetVisualTypes(g_rdpScreen.depth,
-                         miGetDefaultVisualMask(g_rdpScreen.depth),
-                         8, defaultColorVisualClass))
-  {
-    rdpLog("rdpScreenInit miSetVisualTypes failed\n");
-    return 0;
-  }
-  miSetPixmapDepths();
-  switch (g_rdpScreen.bitsPerPixel)
-  {
-    case 8:
-      ret = fbScreenInit(pScreen, g_rdpScreen.pfbMemory,
-                          g_rdpScreen.width, g_rdpScreen.height,
-                          dpix, dpiy, g_rdpScreen.paddedWidthInBytes, 8);
-      break;
-    case 16:
-      ret = fbScreenInit(pScreen, g_rdpScreen.pfbMemory,
-                          g_rdpScreen.width, g_rdpScreen.height,
-                          dpix, dpiy, g_rdpScreen.paddedWidthInBytes / 2, 16);
-      break;
-    case 32:
-      ret = fbScreenInit(pScreen, g_rdpScreen.pfbMemory,
-                          g_rdpScreen.width, g_rdpScreen.height,
-                          dpix, dpiy, g_rdpScreen.paddedWidthInBytes / 4, 32);
-      break;
-    default:
-      ErrorF("rdpScreenInit: error\n");
-      return 0;
-  }
-  if (!ret)
-  {
-    ErrorF("rdpScreenInit: error\n");
-    return 0;
-  }
+    ErrorF("Screen width %d height %d depth %d bpp %d\n", g_rdpScreen.width,
+           g_rdpScreen.height, g_rdpScreen.depth, g_rdpScreen.bitsPerPixel);
+    ErrorF("dpix %d dpiy %d\n", dpix, dpiy);
 
-  miInitializeBackingStore(pScreen);
-
-  /* this is for rgb, not bgr, just doing rgb for now */
-  vis = g_pScreen->visuals + (g_pScreen->numVisuals - 1);
-  while (vis >= pScreen->visuals)
-  {
-    if ((vis->class | DynamicClass) == DirectColor)
+    if (g_rdpScreen.pfbMemory == 0)
     {
-      vis->offsetBlue = 0;
-      vis->blueMask = (1 << g_blueBits) - 1;
-      vis->offsetGreen = g_blueBits;
-      vis->greenMask = ((1 << g_greenBits) - 1) << vis->offsetGreen;
-      vis->offsetRed = g_blueBits + g_greenBits;
-      vis->redMask = ((1 << g_redBits) - 1) << vis->offsetRed;
+        g_rdpScreen.sizeInBytes =
+            (g_rdpScreen.paddedWidthInBytes * g_rdpScreen.height);
+        ErrorF("buffer size %d\n", g_rdpScreen.sizeInBytes);
+        g_rdpScreen.pfbMemory = (char *)g_malloc(2048 * 2048 * 4, 1);
     }
-    vis--;
-  }
 
-  if (g_rdpScreen.bitsPerPixel > 4)
-  {
-    fbPictureInit(pScreen, 0, 0);
-  }
+    if (g_rdpScreen.pfbMemory == 0)
+    {
+        rdpLog("rdpScreenInit g_malloc failed\n");
+        return 0;
+    }
 
-  if (!dixRegisterPrivateKey(&g_rdpGCIndex, PRIVATE_GC, sizeof(rdpGCRec)))
-  {
-    FatalError("rdpScreenInit: dixRegisterPrivateKey PRIVATE_GC failed\n");
-  }
+    miClearVisualTypes();
 
-  if (!dixRegisterPrivateKey(&g_rdpWindowIndex, PRIVATE_WINDOW, sizeof(rdpWindowRec)))
-  {
-    FatalError("rdpScreenInit: dixRegisterPrivateKey PRIVATE_WINDOW failed\n");
-  }
+    if (defaultColorVisualClass == -1)
+    {
+        defaultColorVisualClass = TrueColor;
+    }
 
-  if (!dixRegisterPrivateKey(&g_rdpPixmapIndex, PRIVATE_PIXMAP, sizeof(rdpPixmapRec)))
-  {
-    FatalError("rdpScreenInit: dixRegisterPrivateKey PRIVATE_PIXMAP failed\n");
-  }
+    if (!miSetVisualTypes(g_rdpScreen.depth,
+                          miGetDefaultVisualMask(g_rdpScreen.depth),
+                          8, defaultColorVisualClass))
+    {
+        rdpLog("rdpScreenInit miSetVisualTypes failed\n");
+        return 0;
+    }
 
-  /* Random screen procedures */
-  g_rdpScreen.CloseScreen = pScreen->CloseScreen;
-  /* GC procedures */
-  g_rdpScreen.CreateGC = pScreen->CreateGC;
-  /* Pixmap procudures */
-  g_rdpScreen.CreatePixmap = pScreen->CreatePixmap;
-  g_rdpScreen.DestroyPixmap = pScreen->DestroyPixmap;
+    miSetPixmapDepths();
 
-  /* Window Procedures */
-  g_rdpScreen.CreateWindow = pScreen->CreateWindow;
-  g_rdpScreen.DestroyWindow = pScreen->DestroyWindow;
-  g_rdpScreen.ChangeWindowAttributes = pScreen->ChangeWindowAttributes;
-  g_rdpScreen.RealizeWindow = pScreen->RealizeWindow;
-  g_rdpScreen.UnrealizeWindow = pScreen->UnrealizeWindow;
-  g_rdpScreen.PositionWindow = pScreen->PositionWindow;
-  g_rdpScreen.WindowExposures = pScreen->WindowExposures;
-  g_rdpScreen.CopyWindow = pScreen->CopyWindow;
-  g_rdpScreen.ClearToBackground = pScreen->ClearToBackground;
+    switch (g_rdpScreen.bitsPerPixel)
+    {
+        case 8:
+            ret = fbScreenInit(pScreen, g_rdpScreen.pfbMemory,
+                               g_rdpScreen.width, g_rdpScreen.height,
+                               dpix, dpiy, g_rdpScreen.paddedWidthInBytes, 8);
+            break;
+        case 16:
+            ret = fbScreenInit(pScreen, g_rdpScreen.pfbMemory,
+                               g_rdpScreen.width, g_rdpScreen.height,
+                               dpix, dpiy, g_rdpScreen.paddedWidthInBytes / 2, 16);
+            break;
+        case 32:
+            ret = fbScreenInit(pScreen, g_rdpScreen.pfbMemory,
+                               g_rdpScreen.width, g_rdpScreen.height,
+                               dpix, dpiy, g_rdpScreen.paddedWidthInBytes / 4, 32);
+            break;
+        default:
+            ErrorF("rdpScreenInit: error\n");
+            return 0;
+    }
 
-  /* Backing store procedures */
-  g_rdpScreen.RestoreAreas = pScreen->RestoreAreas;
-  g_rdpScreen.WakeupHandler = pScreen->WakeupHandler;
+    if (!ret)
+    {
+        ErrorF("rdpScreenInit: error\n");
+        return 0;
+    }
 
-  g_rdpScreen.CreateColormap = pScreen->CreateColormap;
-  g_rdpScreen.DestroyColormap = pScreen->DestroyColormap;
+    miInitializeBackingStore(pScreen);
 
-  ps = GetPictureScreenIfSet(pScreen);
-  if (ps)
-  {
-    g_rdpScreen.Composite = ps->Composite;
-    g_rdpScreen.Glyphs = ps->Glyphs;
+    /* this is for rgb, not bgr, just doing rgb for now */
+    vis = g_pScreen->visuals + (g_pScreen->numVisuals - 1);
 
-  }
-  pScreen->blackPixel = g_rdpScreen.blackPixel;
-  pScreen->whitePixel = g_rdpScreen.whitePixel;
-  /* Random screen procedures */
-  pScreen->CloseScreen = rdpCloseScreen;
-  pScreen->WakeupHandler = rdpWakeupHandler;
-  if (ps)
-  {
-    ps->Composite = rdpComposite;
-    ps->Glyphs = rdpGlyphs;
-  }
-  pScreen->SaveScreen = rdpSaveScreen;
-  /* GC procedures */
-  pScreen->CreateGC = rdpCreateGC;
+    while (vis >= pScreen->visuals)
+    {
+        if ((vis->class | DynamicClass) == DirectColor)
+        {
+            vis->offsetBlue = 0;
+            vis->blueMask = (1 << g_blueBits) - 1;
+            vis->offsetGreen = g_blueBits;
+            vis->greenMask = ((1 << g_greenBits) - 1) << vis->offsetGreen;
+            vis->offsetRed = g_blueBits + g_greenBits;
+            vis->redMask = ((1 << g_redBits) - 1) << vis->offsetRed;
+        }
 
-  if (g_wrapPixmap)
-  {
-    /* Pixmap procedures */
-    pScreen->CreatePixmap = rdpCreatePixmap;
-    pScreen->DestroyPixmap = rdpDestroyPixmap;
-  }
+        vis--;
+    }
 
-  if (g_wrapWindow)
-  {
+    if (g_rdpScreen.bitsPerPixel > 4)
+    {
+        fbPictureInit(pScreen, 0, 0);
+    }
+
+    if (!dixRegisterPrivateKey(&g_rdpGCIndex, PRIVATE_GC, sizeof(rdpGCRec)))
+    {
+        FatalError("rdpScreenInit: dixRegisterPrivateKey PRIVATE_GC failed\n");
+    }
+
+    if (!dixRegisterPrivateKey(&g_rdpWindowIndex, PRIVATE_WINDOW, sizeof(rdpWindowRec)))
+    {
+        FatalError("rdpScreenInit: dixRegisterPrivateKey PRIVATE_WINDOW failed\n");
+    }
+
+    if (!dixRegisterPrivateKey(&g_rdpPixmapIndex, PRIVATE_PIXMAP, sizeof(rdpPixmapRec)))
+    {
+        FatalError("rdpScreenInit: dixRegisterPrivateKey PRIVATE_PIXMAP failed\n");
+    }
+
+    /* Random screen procedures */
+    g_rdpScreen.CloseScreen = pScreen->CloseScreen;
+    /* GC procedures */
+    g_rdpScreen.CreateGC = pScreen->CreateGC;
+    /* Pixmap procudures */
+    g_rdpScreen.CreatePixmap = pScreen->CreatePixmap;
+    g_rdpScreen.DestroyPixmap = pScreen->DestroyPixmap;
+
     /* Window Procedures */
-    pScreen->CreateWindow = rdpCreateWindow;
-    pScreen->DestroyWindow = rdpDestroyWindow;
-    pScreen->ChangeWindowAttributes = rdpChangeWindowAttributes;
-    pScreen->RealizeWindow = rdpRealizeWindow;
-    pScreen->UnrealizeWindow = rdpUnrealizeWindow;
-    pScreen->PositionWindow = rdpPositionWindow;
-    pScreen->WindowExposures = rdpWindowExposures;
-  }
+    g_rdpScreen.CreateWindow = pScreen->CreateWindow;
+    g_rdpScreen.DestroyWindow = pScreen->DestroyWindow;
+    g_rdpScreen.ChangeWindowAttributes = pScreen->ChangeWindowAttributes;
+    g_rdpScreen.RealizeWindow = pScreen->RealizeWindow;
+    g_rdpScreen.UnrealizeWindow = pScreen->UnrealizeWindow;
+    g_rdpScreen.PositionWindow = pScreen->PositionWindow;
+    g_rdpScreen.WindowExposures = pScreen->WindowExposures;
+    g_rdpScreen.CopyWindow = pScreen->CopyWindow;
+    g_rdpScreen.ClearToBackground = pScreen->ClearToBackground;
 
-  pScreen->CopyWindow = rdpCopyWindow;
-  pScreen->ClearToBackground = rdpClearToBackground;
+    /* Backing store procedures */
+    g_rdpScreen.RestoreAreas = pScreen->RestoreAreas;
+    g_rdpScreen.WakeupHandler = pScreen->WakeupHandler;
 
-  /* Backing store procedures */
-  pScreen->RestoreAreas = rdpRestoreAreas;
+    g_rdpScreen.CreateColormap = pScreen->CreateColormap;
+    g_rdpScreen.DestroyColormap = pScreen->DestroyColormap;
+
+    ps = GetPictureScreenIfSet(pScreen);
+
+    if (ps)
+    {
+        g_rdpScreen.Composite = ps->Composite;
+        g_rdpScreen.Glyphs = ps->Glyphs;
+
+    }
+
+    pScreen->blackPixel = g_rdpScreen.blackPixel;
+    pScreen->whitePixel = g_rdpScreen.whitePixel;
+    /* Random screen procedures */
+    pScreen->CloseScreen = rdpCloseScreen;
+    pScreen->WakeupHandler = rdpWakeupHandler;
+
+    if (ps)
+    {
+        ps->Composite = rdpComposite;
+        ps->Glyphs = rdpGlyphs;
+    }
+
+    pScreen->SaveScreen = rdpSaveScreen;
+    /* GC procedures */
+    pScreen->CreateGC = rdpCreateGC;
+
+    if (g_wrapPixmap)
+    {
+        /* Pixmap procedures */
+        pScreen->CreatePixmap = rdpCreatePixmap;
+        pScreen->DestroyPixmap = rdpDestroyPixmap;
+    }
+
+    if (g_wrapWindow)
+    {
+        /* Window Procedures */
+        pScreen->CreateWindow = rdpCreateWindow;
+        pScreen->DestroyWindow = rdpDestroyWindow;
+        pScreen->ChangeWindowAttributes = rdpChangeWindowAttributes;
+        pScreen->RealizeWindow = rdpRealizeWindow;
+        pScreen->UnrealizeWindow = rdpUnrealizeWindow;
+        pScreen->PositionWindow = rdpPositionWindow;
+        pScreen->WindowExposures = rdpWindowExposures;
+    }
+
+    pScreen->CopyWindow = rdpCopyWindow;
+    pScreen->ClearToBackground = rdpClearToBackground;
+
+    /* Backing store procedures */
+    pScreen->RestoreAreas = rdpRestoreAreas;
 
 #if 0
-  pScreen->CreateColormap = rdpCreateColormap;
-  pScreen->DestroyColormap = rdpDestroyColormap;
+    pScreen->CreateColormap = rdpCreateColormap;
+    pScreen->DestroyColormap = rdpDestroyColormap;
 #endif
 
-  miPointerInitialize(pScreen, &g_rdpSpritePointerFuncs,
-                      &g_rdpPointerCursorFuncs, 1);
+    miPointerInitialize(pScreen, &g_rdpSpritePointerFuncs,
+                        &g_rdpPointerCursorFuncs, 1);
 
 #if 0
-  pScreen->DeviceCursorInitialize = rdpDeviceCursorInitialize;
-  pScreen->DeviceCursorCleanup = rdpDeviceCursorCleanup;
+    pScreen->DeviceCursorInitialize = rdpDeviceCursorInitialize;
+    pScreen->DeviceCursorCleanup = rdpDeviceCursorCleanup;
 #endif
 
-  vis_found = 0;
-  vis = g_pScreen->visuals + (g_pScreen->numVisuals - 1);
-  while (vis >= pScreen->visuals)
-  {
-    if (vis->vid == pScreen->rootVisual)
+    vis_found = 0;
+    vis = g_pScreen->visuals + (g_pScreen->numVisuals - 1);
+
+    while (vis >= pScreen->visuals)
     {
-      vis_found = 1;
+        if (vis->vid == pScreen->rootVisual)
+        {
+            vis_found = 1;
+        }
+
+        vis--;
     }
-    vis--;
-  }
-  if (!vis_found)
-  {
-    rdpLog("rdpScreenInit: couldn't find root visual\n");
-    exit(1);
-  }
-  ret = 1;
-  if (ret)
-  {
-    ret = fbCreateDefColormap(pScreen);
-    if (!ret)
+
+    if (!vis_found)
     {
-      ErrorF("rdpScreenInit: fbCreateDefColormap failed\n");
+        rdpLog("rdpScreenInit: couldn't find root visual\n");
+        exit(1);
     }
-  }
-  if (ret)
-  {
-    ret = rdpup_init();
-    if (!ret)
+
+    ret = 1;
+
+    if (ret)
     {
-      ErrorF("rdpScreenInit: rdpup_init failed\n");
+        ret = fbCreateDefColormap(pScreen);
+
+        if (!ret)
+        {
+            ErrorF("rdpScreenInit: fbCreateDefColormap failed\n");
+        }
     }
-  }
-  if (ret)
-  {
-    RegisterBlockAndWakeupHandlers(rdpBlockHandler1, rdpWakeupHandler1, NULL);
-  }
-  if (!RRScreenInit(pScreen))
-  {
-    ErrorF("rdpmain.c: RRScreenInit: screen init failed\n");
-  }
-  else
-  {
-    pRRScrPriv = rrGetScrPriv(pScreen);
-    ErrorF("pRRScrPriv %p\n", pRRScrPriv);
 
-    pRRScrPriv->rrSetConfig = rdpRRSetConfig;
+    if (ret)
+    {
+        ret = rdpup_init();
 
-    pRRScrPriv->rrGetInfo = rdpRRGetInfo;
+        if (!ret)
+        {
+            ErrorF("rdpScreenInit: rdpup_init failed\n");
+        }
+    }
 
-    pRRScrPriv->rrScreenSetSize = rdpRRScreenSetSize;
-    pRRScrPriv->rrCrtcSet = rdpRRCrtcSet;
-    pRRScrPriv->rrCrtcGetGamma = rdpRRCrtcGetGamma;
-    pRRScrPriv->rrCrtcSetGamma = rdpRRCrtcSetGamma;
-    pRRScrPriv->rrOutputSetProperty = rdpRROutputSetProperty;
-    pRRScrPriv->rrOutputValidateMode = rdpRROutputValidateMode;
-    pRRScrPriv->rrModeDestroy = rdpRRModeDestroy;
+    if (ret)
+    {
+        RegisterBlockAndWakeupHandlers(rdpBlockHandler1, rdpWakeupHandler1, NULL);
+    }
 
-    pRRScrPriv->rrOutputGetProperty = rdpRROutputGetProperty;
-    pRRScrPriv->rrGetPanning = rdpRRGetPanning;
-    pRRScrPriv->rrSetPanning = rdpRRSetPanning;
+    if (!RRScreenInit(pScreen))
+    {
+        ErrorF("rdpmain.c: RRScreenInit: screen init failed\n");
+    }
+    else
+    {
+        pRRScrPriv = rrGetScrPriv(pScreen);
+        ErrorF("pRRScrPriv %p\n", pRRScrPriv);
 
-  }
+        pRRScrPriv->rrSetConfig = rdpRRSetConfig;
 
-  ErrorF("rdpScreenInit: ret %d\n", ret);
+        pRRScrPriv->rrGetInfo = rdpRRGetInfo;
 
-  return ret;
+        pRRScrPriv->rrScreenSetSize = rdpRRScreenSetSize;
+        pRRScrPriv->rrCrtcSet = rdpRRCrtcSet;
+        pRRScrPriv->rrCrtcGetGamma = rdpRRCrtcGetGamma;
+        pRRScrPriv->rrCrtcSetGamma = rdpRRCrtcSetGamma;
+        pRRScrPriv->rrOutputSetProperty = rdpRROutputSetProperty;
+        pRRScrPriv->rrOutputValidateMode = rdpRROutputValidateMode;
+        pRRScrPriv->rrModeDestroy = rdpRRModeDestroy;
+
+        pRRScrPriv->rrOutputGetProperty = rdpRROutputGetProperty;
+        pRRScrPriv->rrGetPanning = rdpRRGetPanning;
+        pRRScrPriv->rrSetPanning = rdpRRSetPanning;
+
+    }
+
+    ErrorF("rdpScreenInit: ret %d\n", ret);
+
+    return ret;
 }
 
 /******************************************************************************/
@@ -505,52 +533,61 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char** argv)
    returns the number or parameters processed
    if it dosen't apply to the rdp part, return 0 */
 int
-ddxProcessArgument(int argc, char** argv, int i)
+ddxProcessArgument(int argc, char **argv, int i)
 {
-  if (g_firstTime)
-  {
-    memset(&g_rdpScreen, 0, sizeof(g_rdpScreen));
-    g_rdpScreen.width  = 1024;
-    g_rdpScreen.height = 768;
-    g_rdpScreen.depth = 24;
-    set_bpp(24);
-    g_rdpScreen.blackPixel = 1;
-    g_firstTime = 0;
-    RRExtensionInit();
-  }
-  if (strcmp(argv[i], "-geometry") == 0)
-  {
-    if (i + 1 >= argc)
+    if (g_firstTime)
     {
-      UseMsg();
+        memset(&g_rdpScreen, 0, sizeof(g_rdpScreen));
+        g_rdpScreen.width  = 1024;
+        g_rdpScreen.height = 768;
+        g_rdpScreen.depth = 24;
+        set_bpp(24);
+        g_rdpScreen.blackPixel = 1;
+        g_firstTime = 0;
+        RRExtensionInit();
     }
-    if (sscanf(argv[i + 1], "%dx%d", &g_rdpScreen.width,
-               &g_rdpScreen.height) != 2)
+
+    if (strcmp(argv[i], "-geometry") == 0)
     {
-      ErrorF("Invalid geometry %s\n", argv[i + 1]);
-      UseMsg();
+        if (i + 1 >= argc)
+        {
+            UseMsg();
+        }
+
+        if (sscanf(argv[i + 1], "%dx%d", &g_rdpScreen.width,
+                   &g_rdpScreen.height) != 2)
+        {
+            ErrorF("Invalid geometry %s\n", argv[i + 1]);
+            UseMsg();
+        }
+
+        return 2;
     }
-    return 2;
-  }
-  if (strcmp(argv[i], "-depth") == 0)
-  {
-    if (i + 1 >= argc)
+
+    if (strcmp(argv[i], "-depth") == 0)
     {
-      UseMsg();
+        if (i + 1 >= argc)
+        {
+            UseMsg();
+        }
+
+        g_rdpScreen.depth = atoi(argv[i + 1]);
+
+        if (set_bpp(g_rdpScreen.depth) != 0)
+        {
+            UseMsg();
+        }
+
+        return 2;
     }
-    g_rdpScreen.depth = atoi(argv[i + 1]);
-    if (set_bpp(g_rdpScreen.depth) != 0)
+
+    if (strcmp(argv[i], "-uds") == 0)
     {
-      UseMsg();
+        g_use_uds = 1;
+        return 1;
     }
-    return 2;
-  }
-  if (strcmp(argv[i], "-uds") == 0)
-  {
-    g_use_uds = 1;
-    return 1;
-  }
-  return 0;
+
+    return 0;
 }
 
 /******************************************************************************/
@@ -568,27 +605,27 @@ ddxInitGlobals(void)
 
 /******************************************************************************/
 int
-XkbDDXSwitchScreen(DeviceIntPtr dev, KeyCode key, XkbAction* act)
+XkbDDXSwitchScreen(DeviceIntPtr dev, KeyCode key, XkbAction *act)
 {
-  ErrorF("XkbDDXSwitchScreen:\n");
-  return 1;
+    ErrorF("XkbDDXSwitchScreen:\n");
+    return 1;
 }
 
 /******************************************************************************/
 int
-XkbDDXPrivate(DeviceIntPtr dev, KeyCode key, XkbAction* act)
+XkbDDXPrivate(DeviceIntPtr dev, KeyCode key, XkbAction *act)
 {
-  ErrorF("XkbDDXPrivate:\n");
-  return 0;
+    ErrorF("XkbDDXPrivate:\n");
+    return 0;
 }
 
 /******************************************************************************/
 int
-XkbDDXTerminateServer(DeviceIntPtr dev, KeyCode key, XkbAction* act)
+XkbDDXTerminateServer(DeviceIntPtr dev, KeyCode key, XkbAction *act)
 {
-  ErrorF("XkbDDXTerminateServer:\n");
-  GiveUp(1);
-  return 0;
+    ErrorF("XkbDDXTerminateServer:\n");
+    GiveUp(1);
+    return 0;
 }
 
 /******************************************************************************/
@@ -596,50 +633,55 @@ XkbDDXTerminateServer(DeviceIntPtr dev, KeyCode key, XkbAction* act)
    AddScreen for each screen (but we only ever have one), and in turn this
    will call rdpScreenInit. */
 void
-InitOutput(ScreenInfo* screenInfo, int argc, char** argv)
+InitOutput(ScreenInfo *screenInfo, int argc, char **argv)
 {
-  int i;
+    int i;
 
-  ErrorF("InitOutput:\n");
-  g_initOutputCalled = 1;
-  /* initialize pixmap formats */
-  screenInfo->imageByteOrder = IMAGE_BYTE_ORDER;
-  screenInfo->bitmapScanlineUnit = BITMAP_SCANLINE_UNIT;
-  screenInfo->bitmapScanlinePad = BITMAP_SCANLINE_PAD;
-  screenInfo->bitmapBitOrder = BITMAP_BIT_ORDER;
-  screenInfo->numPixmapFormats = g_numFormats;
-  for (i = 0; i < g_numFormats; i++)
-  {
-    screenInfo->formats[i] = g_formats[i];
-  }
-  if (!AddCallback(&ClientStateCallback, rdpClientStateChange, NULL))
-  {
-    rdpLog("InitOutput: AddCallback failed\n");
-    return;
-  }
-  /* initialize screen */
-  if (AddScreen(rdpScreenInit, argc, argv) == -1)
-  {
-    FatalError("Couldn't add screen\n");
-  }
-  ErrorF("InitOutput: out\n");
+    ErrorF("InitOutput:\n");
+    g_initOutputCalled = 1;
+    /* initialize pixmap formats */
+    screenInfo->imageByteOrder = IMAGE_BYTE_ORDER;
+    screenInfo->bitmapScanlineUnit = BITMAP_SCANLINE_UNIT;
+    screenInfo->bitmapScanlinePad = BITMAP_SCANLINE_PAD;
+    screenInfo->bitmapBitOrder = BITMAP_BIT_ORDER;
+    screenInfo->numPixmapFormats = g_numFormats;
+
+    for (i = 0; i < g_numFormats; i++)
+    {
+        screenInfo->formats[i] = g_formats[i];
+    }
+
+    if (!AddCallback(&ClientStateCallback, rdpClientStateChange, NULL))
+    {
+        rdpLog("InitOutput: AddCallback failed\n");
+        return;
+    }
+
+    /* initialize screen */
+    if (AddScreen(rdpScreenInit, argc, argv) == -1)
+    {
+        FatalError("Couldn't add screen\n");
+    }
+
+    ErrorF("InitOutput: out\n");
 }
 
 /******************************************************************************/
 void
-InitInput(int argc, char** argv)
+InitInput(int argc, char **argv)
 {
-  int rc;
+    int rc;
 
-  ErrorF("InitInput:\n");
-  rc = AllocDevicePair(serverClient, "X11rdp", &g_pointer, &g_keyboard,
-                       rdpMouseProc, rdpKeybdProc, 0);
-  if (rc != Success)
-  {
-    FatalError("Failed to init X11rdp default devices.\n");
-  }
+    ErrorF("InitInput:\n");
+    rc = AllocDevicePair(serverClient, "X11rdp", &g_pointer, &g_keyboard,
+                         rdpMouseProc, rdpKeybdProc, 0);
 
-  mieqInit();
+    if (rc != Success)
+    {
+        FatalError("Failed to init X11rdp default devices.\n");
+    }
+
+    mieqInit();
 
 }
 
@@ -647,35 +689,37 @@ InitInput(int argc, char** argv)
 void
 ddxGiveUp(void)
 {
-  char unixSocketName[128];
+    char unixSocketName[128];
 
-  ErrorF("ddxGiveUp:\n");
-  g_free(g_rdpScreen.pfbMemory);
-  if (g_initOutputCalled)
-  {
-    sprintf(unixSocketName, "/tmp/.X11-unix/X%s", display);
-    unlink(unixSocketName);
-    sprintf(unixSocketName, "/tmp/.xrdp/xrdp_disconnect_display_%s", display);
-    unlink(unixSocketName);
-    if(g_uds_data[0] != 0)
+    ErrorF("ddxGiveUp:\n");
+    g_free(g_rdpScreen.pfbMemory);
+
+    if (g_initOutputCalled)
     {
-      unlink(g_uds_data);
+        sprintf(unixSocketName, "/tmp/.X11-unix/X%s", display);
+        unlink(unixSocketName);
+        sprintf(unixSocketName, "/tmp/.xrdp/xrdp_disconnect_display_%s", display);
+        unlink(unixSocketName);
+
+        if (g_uds_data[0] != 0)
+        {
+            unlink(g_uds_data);
+        }
     }
-  }
 }
 
 /******************************************************************************/
 Bool
 LegalModifier(unsigned int key, DeviceIntPtr pDev)
 {
-  return 1; /* true */
+    return 1; /* true */
 }
 
 /******************************************************************************/
 void
 ProcessInputEvents(void)
 {
-  mieqProcessInputEvents();
+    mieqProcessInputEvents();
 }
 
 /******************************************************************************/
@@ -690,7 +734,7 @@ rfbRootPropertyChange(PropertyPtr pProp)
 void
 AbortDDX(void)
 {
-  ddxGiveUp();
+    ddxGiveUp();
 }
 
 /******************************************************************************/
@@ -704,13 +748,13 @@ OsVendorFatalError(void)
 void
 ddxUseMsg(void)
 {
-  ErrorF("\n");
-  ErrorF("X11rdp specific options\n");
-  ErrorF("-geometry WxH          set framebuffer width & height\n");
-  ErrorF("-depth D               set framebuffer depth\n");
-  ErrorF("-uds                   create and listen on /tmp/.xrdp/xrdp_display_x\n");
-  ErrorF("\n");
-  exit(1);
+    ErrorF("\n");
+    ErrorF("X11rdp specific options\n");
+    ErrorF("-geometry WxH          set framebuffer width & height\n");
+    ErrorF("-depth D               set framebuffer depth\n");
+    ErrorF("-uds                   create and listen on /tmp/.xrdp/xrdp_display_x\n");
+    ErrorF("\n");
+    exit(1);
 }
 
 /******************************************************************************/
@@ -723,19 +767,19 @@ OsVendorPreInit(void)
 void
 CloseInput(void)
 {
-  ErrorF("CloseInput\n");
+    ErrorF("CloseInput\n");
 }
 
 /******************************************************************************/
 void
 DDXRingBell(int volume, int pitch, int duration)
 {
-  ErrorF("DDXRingBell\n");
+    ErrorF("DDXRingBell\n");
 }
 
 /******************************************************************************/
 void
 DeleteInputDeviceRequest(DeviceIntPtr dev)
 {
-  ErrorF("DeleteInputDeviceRequest\n");
+    ErrorF("DeleteInputDeviceRequest\n");
 }

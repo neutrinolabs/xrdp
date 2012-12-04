@@ -23,22 +23,6 @@
 #include "arch.h"
 #include "parse.h"
 
-#define CB_FORMAT_LIST           2
-#define CB_FORMAT_LIST_RESPONSE  3
-#define CB_FORMAT_DATA_REQUEST   4
-#define CB_FORMAT_DATA_RESPONSE  5
-
-/* Clipboard Formats */
-
-#define CB_FORMAT_RAW                   0x0000
-#define CB_FORMAT_TEXT                  0x0001
-#define CB_FORMAT_DIB                   0x0008
-#define CB_FORMAT_UNICODETEXT           0x000D
-#define CB_FORMAT_HTML                  0xD010
-#define CB_FORMAT_PNG                   0xD011
-#define CB_FORMAT_JPEG                  0xD012
-#define CB_FORMAT_GIF                   0xD013
-
 int APP_CC
 clipboard_init(void);
 int APP_CC

@@ -10,6 +10,11 @@ EXTRA_DEFINES += -DXRDP_SIMPLESOUND
 EXTRA_LIBS += -lpthread -lpulse -lpulse-simple
 endif
 
+if XRDP_FUSE
+EXTRA_DEFINES += -DXRDP_FUSE
+EXTRA_LIBS += -lfuse
+endif
+
 AM_CFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
@@ -28,10 +33,12 @@ xrdp_chansrv_SOURCES = \
   chansrv.c \
   sound.c \
   clipboard.c \
+  clipboard_file.c \
   devredir.c \
   rail.c \
   xcommon.c \
-  drdynvc.c
+  drdynvc.c \
+  chansrv_fuse.c
 
 xrdp_chansrv_LDFLAGS = \
   $(EXTRA_FLAGS)

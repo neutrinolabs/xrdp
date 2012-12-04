@@ -1,3 +1,21 @@
+/**
+ * xrdp: A Remote Desktop Protocol server.
+ *
+ * Copyright (C) Laxmikant Rashinkar 2004-2012
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -50,13 +68,15 @@ int parse_bmp(char *filename, struct pic_info *pic_info)
     struct bmp_hdr     bmp_hdr;
     struct dib_hdr     dib_hdr;
 
-    if ((fd = open(filename, O_RDONLY)) < 0) {
+    if ((fd = open(filename, O_RDONLY)) < 0)
+    {
         printf("error opeing %s\n", filename);
         return -1;
     }
 
     // read BMP magic...
-    if ((rval = read(fd, magic.magic, 2)) != 2) {
+    if ((rval = read(fd, magic.magic, 2)) != 2)
+    {
         fprintf(stderr, "error reading BMP signature from file %s\n", filename);
         return -1;
     }
@@ -64,44 +84,53 @@ int parse_bmp(char *filename, struct pic_info *pic_info)
     got_magic = 0;
 
     // ...and confirm that this is indeed a BMP file
-    if ((magic.magic[0] == 'B') && (magic.magic[1] == 'M')) {
+    if ((magic.magic[0] == 'B') && (magic.magic[1] == 'M'))
+    {
         // BM – Windows 3.1x, 95, NT, ... etc
         got_magic = 1;
     }
-    else if ((magic.magic[0] == 'B') && (magic.magic[1] == 'A')) {
+    else if ((magic.magic[0] == 'B') && (magic.magic[1] == 'A'))
+    {
         // BA – OS/2 struct Bitmap Array
         got_magic = 1;
     }
-    else if ((magic.magic[0] == 'C') && (magic.magic[1] == 'I')) {
+    else if ((magic.magic[0] == 'C') && (magic.magic[1] == 'I'))
+    {
         // CI – OS/2 struct Color Icon
         got_magic = 1;
     }
-    else if ((magic.magic[0] == 'C') && (magic.magic[1] == 'P')) {
+    else if ((magic.magic[0] == 'C') && (magic.magic[1] == 'P'))
+    {
         // CP – OS/2 const Color Pointer
         got_magic = 1;
     }
-    else if ((magic.magic[0] == 'I') && (magic.magic[1] == 'C')) {
+    else if ((magic.magic[0] == 'I') && (magic.magic[1] == 'C'))
+    {
         // IC – OS/2 struct Icon
         got_magic = 1;
     }
-    else if ((magic.magic[0] == 'P') && (magic.magic[1] == 'T')) {
+    else if ((magic.magic[0] == 'P') && (magic.magic[1] == 'T'))
+    {
         // PT – OS/2 Pointer
         got_magic = 1;
     }
 
-    if (!got_magic) {
+    if (!got_magic)
+    {
         fprintf(stderr, "%s is not a valid BMP file\n", filename);
         return -1;
     }
 
     // read BMP header
-    if ((rval = read(fd, &bmp_hdr, sizeof(bmp_hdr))) < sizeof(bmp_hdr)) {
+    if ((rval = read(fd, &bmp_hdr, sizeof(bmp_hdr))) < sizeof(bmp_hdr))
+    {
         fprintf(stderr, "error BMP header from file %s\n", filename);
         return -1;
     }
 
     // read DIB header
-    if ((rval = read(fd, &dib_hdr, sizeof(dib_hdr))) < sizeof(dib_hdr)) {
+    if ((rval = read(fd, &dib_hdr, sizeof(dib_hdr))) < sizeof(dib_hdr))
+    {
         fprintf(stderr, "error reading DIB header from file %s\n", filename);
         return -1;
     }
@@ -120,7 +149,8 @@ int parse_bmp(char *filename, struct pic_info *pic_info)
     printf("nimpcolors:    %d\n", dib_hdr.nimpcolors);
 #endif
 
-    if (dib_hdr.compress_type) {
+    if (dib_hdr.compress_type)
+    {
         printf("TODO: compressed images not yet supported\n");
         return -1;
     }
@@ -128,9 +158,11 @@ int parse_bmp(char *filename, struct pic_info *pic_info)
     pic_info->width = dib_hdr.width;
     pic_info->height = dib_hdr.height;
 
-    if (dib_hdr.bpp == 24) {
+    if (dib_hdr.bpp == 24)
+    {
         rval = parse_bmp_24(&bmp_hdr, &dib_hdr, fd, pic_info);
     }
+
     close(fd);
     return rval;
 }
@@ -189,6 +221,7 @@ int parse_bmp_24(
     for (i = 0; i < h; i ++)
     {
         cptr = ptr_file_data;
+
         for (j = 0; j < w; j++)
         {
             *ptr_mem_data++ = *cptr++; // blue value
@@ -196,6 +229,7 @@ int parse_bmp_24(
             *ptr_mem_data++ = *cptr++; // red value
             *ptr_mem_data++ = 0;       // alpha channel
         }
+
         ptr_file_data -= bpl;
     }
 

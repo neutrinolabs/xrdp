@@ -6,6 +6,12 @@ else
 FREERDPDIR =
 endif
 
+if XRDP_XRDPVR
+XRDPVRDIR = xrdpvr
+else
+XRDPVRDIR =
+endif
+
 SUBDIRS = \
   common \
   vnc \
@@ -20,4 +26,5 @@ SUBDIRS = \
   docs \
   instfiles \
   genkeymap \
-  xrdpapi
+  xrdpapi \
+  $(XRDPVRDIR)

@@ -26,34 +26,34 @@ extern int g_rdpdr_chan_id; /* in chansrv.c */
 int APP_CC
 dev_redir_init(void)
 {
-  return 0;
+    return 0;
 }
 
 /*****************************************************************************/
 int APP_CC
 dev_redir_deinit(void)
 {
-  return 0;
+    return 0;
 }
 
 /*****************************************************************************/
 int APP_CC
-dev_redir_data_in(struct stream* s, int chan_id, int chan_flags, int length,
+dev_redir_data_in(struct stream *s, int chan_id, int chan_flags, int length,
                   int total_length)
 {
-  return 0;
+    return 0;
 }
 
 /*****************************************************************************/
 int APP_CC
-dev_redir_get_wait_objs(tbus* objs, int* count, int* timeout)
+dev_redir_get_wait_objs(tbus *objs, int *count, int *timeout)
 {
-  return 0;
+    return 0;
 }
 
 /*****************************************************************************/
 int APP_CC
 dev_redir_check_wait_objs(void)
 {
-  return 0;
+    return 0;
 }

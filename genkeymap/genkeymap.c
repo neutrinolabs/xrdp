@@ -41,75 +41,87 @@
 
 int main(int argc, char **argv)
 {
-  const char* programname;
-  char text[256];
-  char* displayname = NULL;
-  char* outfname;
-  char* sections[5] = {"noshift", "shift", "altgr", "capslock", "shiftcapslock"};
-  int states[5] = {0, 1, 0x80, 2, 3};
-  int i;
-  int idx;
-  int char_count;
-  int nbytes = 0;
-  int unicode;
-  Display* dpy;
-  KeySym ks;
-  FILE* outf;
-  XKeyPressedEvent e;
-  wchar_t wtext[256];
+    const char *programname;
+    char text[256];
+    char *displayname = NULL;
+    char *outfname;
+    char *sections[5] = {"noshift", "shift", "altgr", "capslock", "shiftcapslock"};
+    int states[5] = {0, 1, 0x80, 2, 3};
+    int i;
+    int idx;
+    int char_count;
+    int nbytes = 0;
+    int unicode;
+    Display *dpy;
+    KeySym ks;
+    FILE *outf;
+    XKeyPressedEvent e;
+    wchar_t wtext[256];
 
-  setlocale(LC_CTYPE, "");
-  programname = argv[0];
-  if (argc != 2)
-  {
-    fprintf(stderr, "Usage: %s out_filename\n", programname);
-    fprintf(stderr, "Example: %s /etc/xrdp/km-0409.ini\n", programname);
-    return 1;
-  }
-  outfname = argv[1];
-  dpy = XOpenDisplay(displayname);
-  if (!dpy)
-  {
-    fprintf(stderr, "%s:  unable to open display '%s'\n",
-            programname, XDisplayName(displayname));
-    return 1;
-  }
-  outf = fopen(outfname, "w");
-  if (outf == NULL)
-  {
-    fprintf(stderr, "%s:  unable to create file '%s'\n", programname, outfname);
+    setlocale(LC_CTYPE, "");
+    programname = argv[0];
+
+    if (argc != 2)
+    {
+        fprintf(stderr, "Usage: %s out_filename\n", programname);
+        fprintf(stderr, "Example: %s /etc/xrdp/km-0409.ini\n", programname);
+        return 1;
+    }
+
+    outfname = argv[1];
+    dpy = XOpenDisplay(displayname);
+
+    if (!dpy)
+    {
+        fprintf(stderr, "%s:  unable to open display '%s'\n",
+                programname, XDisplayName(displayname));
+        return 1;
+    }
+
+    outf = fopen(outfname, "w");
+
+    if (outf == NULL)
+    {
+        fprintf(stderr, "%s:  unable to create file '%s'\n", programname, outfname);
+        XCloseDisplay(dpy);
+        return 1;
+    }
+
+    memset(&e, 0, sizeof(e));
+    e.type = KeyPress;
+    e.serial = 16;
+    e.send_event = True;
+    e.display = dpy;
+    e.same_screen = True;
+
+    for (idx = 0; idx < 5; idx++) /* Sections and states */
+    {
+        fprintf(outf, "[%s]\n", sections[idx]);
+        e.state = states[idx];
+
+        for (i = 8; i <= 137; i++) /* Keycodes */
+        {
+            e.keycode = i;
+            nbytes = XLookupString(&e, text, 255, &ks, NULL);
+            text[nbytes] = 0;
+            char_count = mbstowcs(wtext, text, 255);
+            unicode = 0;
+
+            if (char_count == 1)
+            {
+                unicode = wtext[0];
+            }
+
+            fprintf(outf, "Key%d=%d:%d\n", i, (int) ks, unicode);
+        }
+
+        if (idx != 4)
+        {
+            fprintf(outf, "\n");
+        }
+    }
+
     XCloseDisplay(dpy);
-    return 1;
-  }
-  memset(&e, 0, sizeof(e));
-  e.type = KeyPress;
-  e.serial = 16;
-  e.send_event = True;
-  e.display = dpy;
-  e.same_screen = True;
-  for (idx = 0; idx < 5; idx++) /* Sections and states */
-  {
-    fprintf(outf, "[%s]\n", sections[idx]);
-    e.state = states[idx];
-    for (i = 8; i <= 137; i++) /* Keycodes */
-    {
-      e.keycode = i;
-      nbytes = XLookupString(&e, text, 255, &ks, NULL);
-      text[nbytes] = 0;
-      char_count = mbstowcs(wtext, text, 255);
-      unicode = 0;
-      if (char_count == 1)
-      {
-        unicode = wtext[0];
-      }
-      fprintf(outf, "Key%d=%d:%d\n", i, (int) ks, unicode);
-    }
-    if (idx != 4)
-    {
-      fprintf(outf, "\n");
-    }
-  }
-  XCloseDisplay(dpy);
-  fclose(outf);
-  return 0;
+    fclose(outf);
+    return 0;
 }
