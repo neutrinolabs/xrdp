@@ -30,7 +30,7 @@
 #include <freerdp/rail.h>
 #include <freerdp/rail/rail.h>
 #include <freerdp/codec/bitmap.h>
-#include <freerdp/utils/memory.h>
+//#include <freerdp/utils/memory.h>
 //#include "/home/jay/git/jsorg71/staging/include/freerdp/freerdp.h"
 
 struct bitmap_item
