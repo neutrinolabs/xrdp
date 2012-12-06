@@ -51,7 +51,7 @@ lxrdp_start(struct mod *mod, int w, int h, int bpp)
     settings->DisableEncryption = 1; // settings->encryption = 1;
     settings->TlsSecurity = 1;
     settings->NlaSecurity = 0;
-    settings->NlaSecurity = 1;
+    settings->RdpSecurity = 1;
 
     return 0;
 }
