@@ -23,13 +23,24 @@
 #ifndef __XRDPVR_H__
 #define __XRDPVR_H__
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int xrdpvr_init_player(void *channel, int stream_id, char *filename);
-int xrdpvr_deinit_player(void *channel, int stream_id);
-int xrdpvr_play_media(void *channel, int stream_id, char *filename);
+int  xrdpvr_init_player(void *channel, int stream_id, char *filename);
+int  xrdpvr_deinit_player(void *channel, int stream_id);
+int  xrdpvr_play_media(void *channel, int stream_id, char *filename);
+int  xrdpvr_set_geometry(void *channel, int stream_id, int xpos, int ypos, int width, int height);
+int  xrdpvr_set_video_format(void *channel, uint32_t stream_id);
+int  xrdpvr_set_audio_format(void *channel, uint32_t stream_id);
+int  xrdpvr_send_video_data(void *channel, uint32_t stream_id, uint32_t data_len, uint8_t *data);
+int  xrdpvr_send_audio_data(void *channel, uint32_t stream_id, uint32_t data_len, uint8_t *data);
+int  xrdpvr_create_metadata_file(void *channel, char *filename);
+int  xrdpvr_play_frame(void *channel, int stream_id);
+void xrdpvr_get_media_duration(int64_t *start_time, int64_t *duration);
+int  xrdpvr_seek_media(int64_t pos, int backward);
 
 #ifdef __cplusplus
 }

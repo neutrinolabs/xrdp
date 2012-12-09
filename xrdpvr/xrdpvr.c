@@ -25,6 +25,8 @@
 
 /* globals */
 PLAYER_STATE_INFO g_psi;
+int g_video_index = -1;
+int g_audio_index = -1;
 
 /**
  * initialize the media player
@@ -129,10 +131,6 @@ xrdpvr_deinit_player(void *channel, int stream_id)
 int
 xrdpvr_play_media(void *channel, int stream_id, char *filename)
 {
-    AVPacket      av_pkt;
-
-    int video_index = -1;
-    int audio_index = -1;
     int i;
 
     /* register all available fileformats and codecs */
@@ -161,19 +159,19 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
     for (i = 0; i < g_psi.p_format_ctx->nb_streams; i++)
     {
         if (g_psi.p_format_ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO &&
-                video_index < 0)
+                g_video_index < 0)
         {
-            video_index = i;
+            g_video_index = i;
         }
 
         if (g_psi.p_format_ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO &&
-                audio_index < 0)
+                g_audio_index < 0)
         {
-            audio_index = i;
+            g_audio_index = i;
         }
     }
 
-    if ((audio_index < 0) && (video_index < 0))
+    if ((g_audio_index < 0) && (g_video_index < 0))
     {
         /* close file and return with error */
         printf("ERROR: no audio/video stream found in %s\n", filename);
@@ -181,12 +179,12 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
         return -1;
     }
 
-    g_psi.audio_stream_index = audio_index;
-    g_psi.video_stream_index = video_index;
+    g_psi.audio_stream_index = g_audio_index;
+    g_psi.video_stream_index = g_video_index;
 
     /* get pointers to codex contexts for both streams */
-    g_psi.p_audio_codec_ctx = g_psi.p_format_ctx->streams[audio_index]->codec;
-    g_psi.p_video_codec_ctx = g_psi.p_format_ctx->streams[video_index]->codec;
+    g_psi.p_audio_codec_ctx = g_psi.p_format_ctx->streams[g_audio_index]->codec;
+    g_psi.p_video_codec_ctx = g_psi.p_format_ctx->streams[g_video_index]->codec;
 
     /* find decoder for audio stream */
     g_psi.p_audio_codec = avcodec_find_decoder(g_psi.p_audio_codec_ctx->codec_id);
@@ -220,32 +218,99 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
         return -1;
     }
 
-    while (av_read_frame(g_psi.p_format_ctx, &av_pkt) >= 0)
-    {
-        if (av_pkt.stream_index == audio_index)
-        {
-            xrdpvr_send_audio_data(channel, stream_id, av_pkt.size, av_pkt.data);
-            usleep(1000 * 1);
-        }
-        else if (av_pkt.stream_index == video_index)
-        {
-            xrdpvr_send_video_data(channel, stream_id, av_pkt.size, av_pkt.data);
-            usleep(1000 * 40); // was 50
-        }
-    }
-
-    av_free_packet(&av_pkt);
-
     return 0;
 }
 
-/******************************************************************************
- *
- * code below this is local to this file and cannot be accessed externally;
- * this code communicates with the xrdpvr plugin in NeutrinoRDP;
- * NeutrinoRDP is a fork of FreeRDP 1.0.1
- *
- *****************************************************************************/
+int xrdpvr_play_frame(void *channel, int stream_id)
+{
+    AVPacket av_pkt;
+
+    printf("xrdpvr_play_frame: entered\n");
+
+    if (av_read_frame(g_psi.p_format_ctx, &av_pkt) < 0)
+    {
+        printf("xrdpvr_play_frame: av_read_frame failed\n");
+        return -1;
+    }
+
+    if (av_pkt.stream_index == g_audio_index)
+    {
+        xrdpvr_send_audio_data(channel, stream_id, av_pkt.size, av_pkt.data);
+        usleep(1000 * 1);
+    }
+    else if (av_pkt.stream_index == g_video_index)
+    {
+        xrdpvr_send_video_data(channel, stream_id, av_pkt.size, av_pkt.data);
+        usleep(1000 * 40); // was 50
+    }
+
+    av_free_packet(&av_pkt);
+    return 0;
+}
+
+int
+xrdpvr_seek_media(int64_t pos, int backward)
+{
+    int64_t seek_target;
+    int     seek_flag;
+
+    printf("xrdpvr_seek_media() entered\n");
+
+    seek_flag = (backward) ? AVSEEK_FLAG_BACKWARD : 0;
+
+    seek_target = av_rescale_q(pos * AV_TIME_BASE,
+                               AV_TIME_BASE_Q,
+                               g_psi.p_format_ctx->streams[g_video_index]->time_base);
+
+
+    if(av_seek_frame(g_psi.p_format_ctx, g_video_index, seek_target, seek_flag) < 0)
+    {
+        printf("media seek error\n");
+        return -1;
+    }
+    printf("xrdpvr_seek_media: success\n");
+    return 0;
+}
+
+void
+xrdpvr_get_media_duration(int64_t *start_time, int64_t *duration)
+{
+    *start_time = g_psi.p_format_ctx->start_time / AV_TIME_BASE;
+    *duration = g_psi.p_format_ctx->duration / AV_TIME_BASE;
+}
+
+int
+xrdpvr_set_geometry(void *channel, int stream_id, int xpos, int ypos, int width, int height)
+{
+    STREAM  *s;
+    char    *cptr;
+    int     rv;
+    int     len;
+
+printf("xrdpvr_set_geometry: entered; x=%d y=%d\n", xpos, ypos);
+
+    stream_new(s, MAX_PDU_SIZE);
+
+    stream_ins_u32_le(s, 0); /* number of bytes to follow */
+    stream_ins_u32_le(s, CMD_SET_GEOMETRY);
+    stream_ins_u32_le(s, stream_id);
+    stream_ins_u32_le(s, xpos);
+    stream_ins_u32_le(s, ypos);
+    stream_ins_u32_le(s, width);
+    stream_ins_u32_le(s, height);
+
+    /* insert number of bytes in stream */
+    len = stream_length(s) - 4;
+    cptr = s->p;
+    s->p = s->data;
+    stream_ins_u32_le(s, len);
+    s->p = cptr;
+
+    /* write data to virtual channel */
+    rv = xrdpvr_write_to_client(channel, s);
+    stream_free(s);
+    return rv;
+}
 
 /**
  * set video format
@@ -255,7 +320,7 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
  *
  * @return  0 on success, -1 on error
  *****************************************************************************/
-static int
+int
 xrdpvr_set_video_format(void *channel, uint32_t stream_id)
 {
     STREAM  *s;
@@ -290,7 +355,7 @@ xrdpvr_set_video_format(void *channel, uint32_t stream_id)
  *
  * @return  0 on success, -1 on error
  *****************************************************************************/
-static int
+int
 xrdpvr_set_audio_format(void *channel, uint32_t stream_id)
 {
     STREAM  *s;
@@ -327,7 +392,7 @@ xrdpvr_set_audio_format(void *channel, uint32_t stream_id)
  *
  * @return  0 on success, -1 on error
  *****************************************************************************/
-static int
+int
 xrdpvr_send_video_data(void *channel, uint32_t stream_id, uint32_t data_len, uint8_t *data)
 {
     STREAM  *s;
@@ -371,7 +436,7 @@ xrdpvr_send_video_data(void *channel, uint32_t stream_id, uint32_t data_len, uin
  *
  * @return  0 on success, -1 on error
  *****************************************************************************/
-static int
+int
 xrdpvr_send_audio_data(void *channel, uint32_t stream_id, uint32_t data_len, uint8_t *data)
 {
     STREAM  *s;
@@ -408,7 +473,7 @@ xrdpvr_send_audio_data(void *channel, uint32_t stream_id, uint32_t data_len, uin
  *
  * @return  0 on success, -1 on error
  *****************************************************************************/
-static int
+int
 xrdpvr_create_metadata_file(void *channel, char *filename)
 {
     STREAM  *s;
@@ -518,3 +583,4 @@ xrdpvr_write_to_client(void *channel, STREAM *s)
         usleep(1000 * 3);
     }
 }
+
