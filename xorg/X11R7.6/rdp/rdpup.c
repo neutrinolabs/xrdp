@@ -55,6 +55,7 @@ extern ScreenPtr g_pScreen; /* from rdpmain.c */
 extern int g_Bpp; /* from rdpmain.c */
 extern int g_Bpp_mask; /* from rdpmain.c */
 extern rdpScreenInfoRec g_rdpScreen; /* from rdpmain.c */
+extern int g_can_do_pix_to_pix; /* from rdpmain.c */
 extern int g_use_rail; /* from rdpmain.c */
 
 /* true is to use unix domain socket */
@@ -759,6 +760,16 @@ rdpup_process_msg(struct stream *s)
         {
             g_use_rail = 1;
             rdpup_send_rail();
+        }
+        if (g_rdpScreen.client_info.offscreen_cache_entries == 2000)
+        {
+            LLOGLN(0, ("  client can do offscreen to offscreen blits"));
+            g_can_do_pix_to_pix = 1;
+        }
+        else
+        {
+            LLOGLN(0, ("  client can not do offscreen to offscreen blits"));
+            g_can_do_pix_to_pix = 0;
         }
     }
     else
@@ -1681,7 +1692,8 @@ rdpup_create_window(WindowPtr pWindow, rdpWindowRec *priv)
     int root_id;
     char title[256];
 
-    LLOGLN(10, ("rdpup_create_window: id 0x%8.8x", pWindow->drawable.id));
+    LLOGLN(10, ("rdpup_create_window: id 0x%8.8x",
+           (int)(pWindow->drawable.id)));
 
     if (g_connected)
     {
@@ -1777,7 +1789,8 @@ rdpup_create_window(WindowPtr pWindow, rdpWindowRec *priv)
 void
 rdpup_delete_window(WindowPtr pWindow, rdpWindowRec *priv)
 {
-    LLOGLN(10, ("rdpup_delete_window: id 0x%8.8x", pWindow->drawable.id));
+    LLOGLN(10, ("rdpup_delete_window: id 0x%8.8x",
+           (int)(pWindow->drawable.id)));
 
     if (g_connected)
     {
