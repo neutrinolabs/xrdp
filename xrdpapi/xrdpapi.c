@@ -155,6 +155,31 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     return wts;
 }
 
+/*****************************************************************************/
+static int
+mysend(int sck, const void* adata, int bytes)
+{
+    int sent;
+    int error;
+    const char* data;
+
+    data = (char*)adata;
+    sent = 0;
+    while (sent < bytes)
+    {
+        if (can_send(sck, 100))
+        {
+            error = send(sck, data + sent, bytes - sent, MSG_NOSIGNAL);
+            if (error < 1)
+            {
+                return -1;
+            }
+            sent += error;
+        }
+    }
+    return sent;
+}
+
 /*
  * write data to client connection
  *
@@ -189,11 +214,12 @@ WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
         return 0;    /* can't write now, ok to try again */
     }
 
+    rv = 0;
     memcpy(header, g_xrdpapi_magic, 12);
     header[3] = Length;
-    if (send(wts->fd, header, 16, 0) == 16)
+    if (mysend(wts->fd, header, 16) == 16)
     {
-        rv = send(wts->fd, Buffer, Length, 0);
+        rv = mysend(wts->fd, Buffer, Length);
     }
     else
     {
@@ -201,7 +227,7 @@ WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
         return -1;
     }
 
-    LLOGLN(10, ("WTSVirtualChannelWrite: send() reted %d", rv));
+    LLOGLN(10, ("WTSVirtualChannelWrite: mysend() reted %d", rv));
 
     if (rv >= 0)
     {
