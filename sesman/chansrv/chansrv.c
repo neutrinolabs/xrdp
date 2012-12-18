@@ -54,6 +54,9 @@ static tbus g_thread_done_event = 0;
 
 static int g_use_unix_socket = 0;
 
+static char g_xrdpapi_magic[12] =
+{ 0x78, 0x32, 0x10, 0x67, 0x00, 0x92, 0x30, 0x56, 0xff, 0xd8, 0xa9, 0x1f };
+
 int g_display_num = 0;
 int g_cliprdr_chan_id = -1; /* cliprdr */
 int g_rdpsnd_chan_id = -1;  /* rdpsnd  */
@@ -585,6 +588,7 @@ my_api_trans_data_in(struct trans *trans)
 {
     struct stream        *s;
     int                   bytes_read;
+    int                   i32;
     struct xrdp_api_data *ad;
 
     //g_writeln("my_api_trans_data_in:");
@@ -604,7 +608,27 @@ my_api_trans_data_in(struct trans *trans)
     LOGM((LOG_LEVEL_DEBUG, "my_api_trans_data_in:"));
 
     s = trans_get_in_s(trans);
-    bytes_read = g_tcp_recv(trans->sck, s->data, 8192 * 4, 0);
+    bytes_read = g_tcp_recv(trans->sck, s->data, 16, 0);
+    if (bytes_read == 16)
+    {
+        if (g_memcmp(s->data, g_xrdpapi_magic, 12) == 0)
+        {
+            in_uint8s(s, 12);
+            in_uint32_le(s, bytes_read);
+            init_stream(s, bytes_read);
+            trans_force_read(trans, bytes_read);
+        }
+        else if (g_tcp_select(trans->sck, 0) & 1)
+        {
+            i32 = bytes_read;
+            bytes_read = g_tcp_recv(trans->sck, s->data + bytes_read,
+                                    8192 * 4 - bytes_read, 0);
+            if (bytes_read > 0)
+            {
+                bytes_read += i32;
+            }
+        }
+    }
 
     //g_writeln("bytes_read %d", bytes_read);
 

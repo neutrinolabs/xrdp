@@ -53,6 +53,9 @@ static int send_init(struct wts_obj *wts);
 static int can_send(int sck, int millis);
 static int can_recv(int sck, int millis);
 
+static char g_xrdpapi_magic[12] =
+{ 0x78, 0x32, 0x10, 0x67, 0x00, 0x92, 0x30, 0x56, 0xff, 0xd8, 0xa9, 0x1f };
+
 /*
  * Opens a handle to the server end of a specified virtual channel - this
  * call is deprecated - use WTSVirtualChannelOpenEx() instead
@@ -163,6 +166,7 @@ WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
 {
     struct wts_obj *wts;
     int             rv;
+    int             header[4];
 
     wts = (struct wts_obj *) hChannelHandle;
 
@@ -185,7 +189,18 @@ WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
         return 0;    /* can't write now, ok to try again */
     }
 
-    rv = send(wts->fd, Buffer, Length, 0);
+    memcpy(header, g_xrdpapi_magic, 12);
+    header[3] = Length;
+    if (send(wts->fd, header, 16, 0) == 16)
+    {
+        rv = send(wts->fd, Buffer, Length, 0);
+    }
+    else
+    {
+        LLOGLN(0, ("WTSVirtualChannelWrite: header write failed"));
+        return -1;
+    }
+
     LLOGLN(10, ("WTSVirtualChannelWrite: send() reted %d", rv));
 
     if (rv >= 0)
