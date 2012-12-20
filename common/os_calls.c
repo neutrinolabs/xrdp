@@ -314,6 +314,19 @@ g_hexdump(char *p, int len)
         line += thisline;
     }
 }
+/*****************************************************************************/
+int APP_CC
+g_string_to_boolean(const char* value)
+{
+    if ( (g_strcasecmp(value, "yes") == 0) ||
+         (g_strcasecmp(value, "true") == 0) ||
+         (g_strcasecmp(value, "on") == 0) ||
+         (g_atoi(value) != 0) )
+    {
+        return 1;
+    }
+    return 0;
+}
 
 /*****************************************************************************/
 void APP_CC
