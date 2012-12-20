@@ -87,21 +87,11 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
 
         if (g_strcasecmp(item, "bitmap_cache") == 0)
         {
-            if ((g_strcasecmp(value, "yes") == 0) ||
-                    (g_strcasecmp(value, "true") == 0) ||
-                    (g_strcasecmp(value, "1") == 0))
-            {
-                client_info->use_bitmap_cache = 1;
-            }
+            client_info->use_bitmap_cache = g_string_to_boolean(value);
         }
         else if (g_strcasecmp(item, "bitmap_compression") == 0)
         {
-            if (g_strcasecmp(value, "yes") == 0 ||
-                    g_strcasecmp(value, "true") == 0 ||
-                    g_strcasecmp(value, "1") == 0)
-            {
-                client_info->use_bitmap_comp = 1;
-            }
+            client_info->use_bitmap_comp = g_string_to_boolean(value);
         }
         else if (g_strcasecmp(item, "crypt_level") == 0)
         {
@@ -126,13 +116,8 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
         }
         else if (g_strcasecmp(item, "channel_code") == 0)
         {
-            if ((g_strcasecmp(value, "yes") == 0) ||
-                    (g_strcasecmp(value, "1") == 0) ||
-                    (g_strcasecmp(value, "true") == 0))
-            {
-                client_info->channel_code = 1;
-            }
-            else
+            client_info->channel_code = g_string_to_boolean(value);
+            if (!client_info->channel_code)
             {
                 g_writeln("Info: All channels are disabled");
             }

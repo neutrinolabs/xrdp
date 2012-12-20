@@ -444,13 +444,7 @@ xrdp_wm_load_static_colors_plus(struct xrdp_wm *self, char *autorun_name)
                     else if (g_strcasecmp(val, "hidelogwindow") == 0)
                     {
                         val = (char *)list_get_item(values, index);
-
-                        if ((g_strcasecmp(val, "yes") == 0) ||
-                                (g_strcasecmp(val, "1") == 0) ||
-                                (g_strcasecmp(val, "true") == 0))
-                        {
-                            self->hide_log_window = 1;
-                        }
+                        self->hide_log_window = g_string_to_boolean(val);
                     }
                 }
             }
