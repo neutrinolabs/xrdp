@@ -172,6 +172,8 @@ g_file_get_size(const char* filename);
 int APP_CC
 g_strlen(const char* text);
 char* APP_CC
+g_strchr(const char* text, int c);
+char* APP_CC
 g_strcpy(char* dest, const char* src);
 char* APP_CC
 g_strncpy(char* dest, const char* src, int len);

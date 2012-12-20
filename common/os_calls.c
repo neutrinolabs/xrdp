@@ -1751,6 +1751,19 @@ g_strlen(const char *text)
 }
 
 /*****************************************************************************/
+/* locates char in text */
+char* APP_CC
+g_strchr(const char* text, int c)
+{
+    if (text == NULL)
+    {
+        return 0;
+    }
+
+    return strchr(text,c);
+}
+
+/*****************************************************************************/
 /* returns dest */
 char *APP_CC
 g_strcpy(char *dest, const char *src)
