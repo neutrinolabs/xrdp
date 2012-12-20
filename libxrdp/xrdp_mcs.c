@@ -144,9 +144,9 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
         /* this is channels getting added from the client */
         if (appid == MCS_CJRQ)
         {
-            g_writeln("channel join request received");
             in_uint16_be(s, userid);
             in_uint16_be(s, chanid);
+            g_writeln("channel join request received %d:%d", userid, chanid);
             DEBUG(("xrdp_mcs_recv  adding channel %4.4x", chanid));
 
             if (xrdp_mcs_send_cjcf(self, userid, chanid) != 0)
