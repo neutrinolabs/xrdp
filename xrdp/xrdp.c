@@ -305,6 +305,12 @@ main(int argc, char **argv)
 
     g_init("xrdp");
     ssl_init();
+
+    for (test=0;test<argc; test++)
+    {
+        DEBUG(("Argument %i - %s",test,argv[test]));
+    }
+
     /* check compiled endian with actual endian */
     test = 1;
     host_be = !((int)(*(unsigned char *)(&test)));
