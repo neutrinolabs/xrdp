@@ -77,12 +77,14 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
     values = list_create();
     values->auto_free = 1;
     g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
+    DEBUG(("cfg_file %s", cfg_file));
     file_by_name_read_section(cfg_file, "globals", items, values);
 
     for (index = 0; index < items->count; index++)
     {
         item = (char *)list_get_item(items, index);
         value = (char *)list_get_item(values, index);
+        DEBUG(("item %s value %s", item, value));
 
         if (g_strcasecmp(item, "bitmap_cache") == 0)
         {
@@ -193,7 +195,7 @@ xrdp_rdp_detect_cpu(void)
 
     if (edx & (1 << 26))
     {
-        DEBUG("SSE2 detected");
+        DEBUG(("SSE2 detected"));
         cpu_opt |= CPU_SSE2;
     }
 
