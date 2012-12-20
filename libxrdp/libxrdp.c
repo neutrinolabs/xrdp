@@ -744,6 +744,7 @@ libxrdp_query_channel(struct xrdp_session *session, int index,
 
     if (index < 0 || index >= count)
     {
+        DEBUG(("libxrdp_query_channel - Channel out of range %d", index));
         return 1;
     }
 
@@ -760,6 +761,7 @@ libxrdp_query_channel(struct xrdp_session *session, int index,
     if (channel_name != 0)
     {
         g_strncpy(channel_name, channel_item->name, 8);
+        DEBUG(("libxrdp_query_channel - Channel %d name %s", index, channel_name));
     }
 
     if (channel_flags != 0)
