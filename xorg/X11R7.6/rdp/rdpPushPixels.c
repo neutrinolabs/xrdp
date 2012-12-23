@@ -96,7 +96,7 @@ rdpPushPixels(GCPtr pGC, PixmapPtr pBitMap, DrawablePtr pDst,
         pDstPixmap = (PixmapPtr)pDst;
         pDstPriv = GETPIXPRIV(pDstPixmap);
 
-        if (XRDP_IS_OS(pDstPriv))
+        if (xrdp_is_os(pDstPixmap, pDstPriv))
         {
             post_process = 1;
 

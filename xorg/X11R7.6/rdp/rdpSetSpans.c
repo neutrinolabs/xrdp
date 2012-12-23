@@ -89,7 +89,7 @@ rdpSetSpans(DrawablePtr pDrawable, GCPtr pGC, char *psrc,
         pDstPixmap = (PixmapPtr)pDrawable;
         pDstPriv = GETPIXPRIV(pDstPixmap);
 
-        if (XRDP_IS_OS(pDstPriv))
+        if (xrdp_is_os(pDstPixmap, pDstPriv))
         {
             post_process = 1;
 

@@ -98,7 +98,7 @@ rdpPutImage(DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
         pDstPixmap = (PixmapPtr)pDst;
         pDstPriv = GETPIXPRIV(pDstPixmap);
 
-        if (XRDP_IS_OS(pDstPriv))
+        if (xrdp_is_os(pDstPixmap, pDstPriv))
         {
             post_process = 1;
 

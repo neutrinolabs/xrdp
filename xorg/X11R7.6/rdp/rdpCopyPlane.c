@@ -105,7 +105,7 @@ rdpCopyPlane(DrawablePtr pSrc, DrawablePtr pDst,
         pDstPixmap = (PixmapPtr)pDst;
         pDstPriv = GETPIXPRIV(pDstPixmap);
 
-        if (XRDP_IS_OS(pDstPriv))
+        if (xrdp_is_os(pDstPixmap, pDstPriv))
         {
             post_process = 1;
 

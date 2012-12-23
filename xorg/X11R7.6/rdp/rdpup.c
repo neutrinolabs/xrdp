@@ -137,6 +137,7 @@ rdpup_disconnect(void)
     g_sck_closed = 1;
     g_pixmap_byte_total = 0;
     g_pixmap_num_used = 0;
+    g_rdpindex = -1;
 
     if (g_max_os_bitmaps > 0)
     {
@@ -1833,7 +1834,7 @@ rdpup_check_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec *pDirtyPriv)
     rdpup_switch_os_surface(pDirtyPriv->rdpindex);
     rdpup_get_pixmap_image_rect(pDirtyPixmap, &id);
     rdpup_begin_update();
-    draw_item_pack(pDirtyPriv);
+    draw_item_pack(pDirtyPixmap, pDirtyPriv);
     di = pDirtyPriv->draw_item_head;
 
     while (di != 0)
@@ -1958,7 +1959,7 @@ rdpup_check_dirty_screen(rdpPixmapRec *pDirtyPriv)
     LLOGLN(10, ("-----------------got dirty"));
     rdpup_get_screen_image_rect(&id);
     rdpup_begin_update();
-    draw_item_pack(pDirtyPriv);
+    draw_item_pack(0, pDirtyPriv);
     di = pDirtyPriv->draw_item_head;
 
     while (di != 0)

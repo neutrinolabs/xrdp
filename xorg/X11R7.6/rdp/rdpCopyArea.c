@@ -403,7 +403,7 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
                 pDstPixmap = (PixmapPtr)pDst;
                 pDstPriv = GETPIXPRIV(pDstPixmap);
 
-                if (XRDP_IS_OS(pDstPriv))
+                if (xrdp_is_os(pDstPixmap, pDstPriv))
                 {
                     can_do_screen_blt = pGC->alu == GXcopy;
 
@@ -423,7 +423,7 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
         pSrcPixmap = (PixmapPtr)pSrc;
         pSrcPriv = GETPIXPRIV(pSrcPixmap);
 
-        if (XRDP_IS_OS(pSrcPriv))
+        if (xrdp_is_os(pSrcPixmap, pSrcPriv))
         {
             if (pDst->type == DRAWABLE_WINDOW)
             {
@@ -442,7 +442,7 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
                 pDstPixmap = (PixmapPtr)pDst;
                 pDstPriv = GETPIXPRIV(pDstPixmap);
 
-                if (XRDP_IS_OS(pDstPriv))
+                if (xrdp_is_os(pDstPixmap, pDstPriv))
                 {
                     if (g_can_do_pix_to_pix)
                     {
@@ -472,7 +472,7 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
         pDstPixmap = (PixmapPtr)pDst;
         pDstPriv = GETPIXPRIV(pDstPixmap);
 
-        if (XRDP_IS_OS(pDstPriv))
+        if (xrdp_is_os(pDstPixmap, pDstPriv))
         {
             post_process = 1;
 
