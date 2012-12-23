@@ -2449,6 +2449,7 @@ xrdp_orders_send_create_os_surface(struct xrdp_orders *self, int id,
     order_flags |= 1 << 2; /* type RDP_ORDER_ALTSEC_CREATE_OFFSCR_BITMAP */
     out_uint8(self->out_s, order_flags);
     cache_id = id & 0x7fff;
+    LLOGLN(10, ("xrdp_orders_send_create_os_surface: cache_id %d", cache_id));
     flags = cache_id;
 
     if (num_del_list > 0)

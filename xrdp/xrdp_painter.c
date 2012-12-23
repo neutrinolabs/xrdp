@@ -708,6 +708,8 @@ xrdp_painter_copy(struct xrdp_painter *self,
     int dsty;
     int w;
     int h;
+    int index;
+    struct list *del_list;
 
     if (self == 0 || src == 0 || dst == 0)
     {
@@ -780,6 +782,22 @@ xrdp_painter_copy(struct xrdp_painter *self,
         palette_id = 0;
         cache_id = 255; // todo
         cache_idx = src->item_index; // todo
+
+        if (src->tab_stop == 0)
+        {
+            g_writeln("xrdp_painter_copy: warning src not created");
+            del_list = self->wm->cache->xrdp_os_del_list;
+            index = list_index_of(del_list, cache_idx);
+            list_remove_item(del_list, index);
+            libxrdp_orders_send_create_os_surface(self->session,
+                                                  cache_idx,
+                                                  src->width,
+                                                  src->height,
+                                                  del_list);
+            src->tab_stop = 1;
+            list_clear(del_list);
+        }
+
 
         k = 0;
 
