@@ -38,9 +38,12 @@ int  xrdpvr_set_audio_format(void *channel, uint32_t stream_id);
 int  xrdpvr_send_video_data(void *channel, uint32_t stream_id, uint32_t data_len, uint8_t *data);
 int  xrdpvr_send_audio_data(void *channel, uint32_t stream_id, uint32_t data_len, uint8_t *data);
 int  xrdpvr_create_metadata_file(void *channel, char *filename);
-int  xrdpvr_play_frame(void *channel, int stream_id);
+int  xrdpvr_play_frame(void *channel, int stream_id, int *vdoTimeout, int *audioTimeout);
 void xrdpvr_get_media_duration(int64_t *start_time, int64_t *duration);
 int  xrdpvr_seek_media(int64_t pos, int backward);
+int  xrdpvr_get_frame(void **av_pkt_ret, int *is_video_frame, int *delay_in_us);
+int  send_audio_pkt(void *channel, int stream_id, void *pkt_p);
+int  send_video_pkt(void *channel, int stream_id, void *pkt_p);
 
 #ifdef __cplusplus
 }

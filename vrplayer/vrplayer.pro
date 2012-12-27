@@ -11,13 +11,19 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp \
-    decoder.cpp \
-    decoderthread.cpp
+    playvideo.cpp \
+    mainwindow.cpp \
+    mediapacket.cpp \
+    playaudio.cpp \
+    demuxmedia.cpp \
+    ourinterface.cpp
 
 HEADERS  += mainwindow.h \
-    decoder.h \
-    decoderthread.h
+    mediapacket.h \
+    playvideo.h \
+    playaudio.h \
+    demuxmedia.h \
+    ourinterface.h
 
 FORMS    += mainwindow.ui
 

@@ -28,7 +28,6 @@
      <string>File</string>
     </property>
     <addaction name="actionOpen_Media_File"/>
-    <addaction name="actionPlay_Media"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
@@ -54,11 +53,6 @@
    </property>
    <property name="toolTip">
     <string>Exit application</string>
-   </property>
-  </action>
-  <action name="actionPlay_Media">
-   <property name="text">
-    <string>Play Media</string>
    </property>
   </action>
  </widget>

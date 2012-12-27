@@ -1,6 +1,14 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#ifdef __cplusplus
+#define __STDC_CONSTANT_MACROS
+#ifdef _STDINT_H
+#undef _STDINT_H
+#endif
+#include <stdint.h>
+#endif
+
 #include <QMainWindow>
 #include <QFileDialog>
 #include <QDebug>
@@ -14,12 +22,32 @@
 #include <QVBoxLayout>
 #include <QPushButton>
 #include <QSlider>
+#include <QTimer>
+#include <QPixmap>
+#include <QPainter>
 
+#include "xrdpapi.h"
+#include "xrdpvr.h"
 #include "decoder.h"
-#include "decoderthread.h"
+#include "ourinterface.h"
+#include "playvideo.h"
 
-namespace Ui {
-class MainWindow;
+/* ffmpeg related stuff */
+extern "C"
+{
+    #include <libavformat/avformat.h>
+    #include <libavcodec/avcodec.h>
+}
+
+#define VCR_PLAY        1
+#define VCR_PAUSE       2
+#define VCR_STOP        3
+#define VCR_REWIND      4
+#define VCR_POWER_OFF   5
+
+namespace Ui
+{
+    class MainWindow;
 }
 
 class MainWindow : public QMainWindow
@@ -30,20 +58,23 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
+signals:
+    void onGeometryChanged(int x, int y, int widht, int height);
+
+public slots:
+    void onSliderValueChanged(int value);
+
 private slots:
     void on_actionOpen_Media_File_triggered();
     void on_actionExit_triggered();
-    void on_actionPlay_Media_triggered();
-    void on_decoderError(QString title, QString msg);
-    void on_btnPlayClicked(bool flag);
-    void on_mediaDurationInSeconds(int duration);
-    void on_elapsedTime(int secs);
-    void on_sliderActionTriggered(int value);
-    void on_sliderValueChanged(int value);
 
-signals:
-    void on_geometryChanged(int x, int y, int widht, int height);
-    void on_mediaSeek(int value);
+    void onBtnPlayClicked(bool flag);
+    void onBtnRewindClicked(bool flag);
+    void onBtnStopClicked(bool flag);
+
+    void onMediaDurationInSeconds(int duration);
+    void onElapsedTime(int secs);
+    void onSliderActionTriggered(int value);
 
 protected:
     void resizeEvent(QResizeEvent *e);
@@ -53,10 +84,6 @@ protected:
 
 private:
     Ui::MainWindow *ui;
-
-    QString        filename;
-    Decoder       *decoder;
-    DecoderThread *decoderThread;
 
     /* for UI */
     QLabel        *lblCurrentPos;
@@ -73,10 +100,22 @@ private:
     QWidget       *window;
     bool           acceptSliderMove;
 
+    /* private stuff */
+    OurInterface  *interface;
+    PlayVideo     *playVideo;
+    QString        filename;
+    bool           oneTimeInitSuccess;
+    bool           remoteClientInited;
+    void          *channel;
+    int            stream_id;
+    int64_t        elapsedTime; /* elapsed time in usecs since play started */
+    int            vcrFlag;
+
     /* private methods */
     void setupUI();
     void openMediaFile();
     void getVdoGeometry(QRect *rect);
+    void clearDisplay();
 };
 
 #endif // MAINWINDOW_H

@@ -14,9 +14,14 @@
 #include <QString>
 #include <QRect>
 #include <QMutex>
+#include <QTimer>
+#include <QQueue>
 
 #include <xrdpapi.h>
 #include <xrdpvr.h>
+#include <mediapacket.h>
+#include <playvideo.h>
+#include <playaudio.h>
 
 /* ffmpeg related stuff */
 extern "C"
@@ -25,28 +30,34 @@ extern "C"
     #include <libavcodec/avcodec.h>
 }
 
-class DecoderThread : public QThread
+class DecoderThread : public QObject
 {
     Q_OBJECT
 
 public:
+    /* public methods */
     DecoderThread();
+
     void setFilename(QString filename);
+    void stopPlayer();
+    void pausePlayer();
+    void resumePlayer();
+    void oneTimeDeinit();
+    void close();
+    void run();
+    void startMediaPlay();
 
 public slots:
-    void on_geometryChanged(int x, int y, int width, int height);
     void on_mediaSeek(int value);
 
-protected:
-    void run();
-
 private:
-    typedef struct _VideoStateInfo
-    {
-        AVFormatContext *pFormatCtx;
-    } VideoStateInfo;
+    /* private variables */
+    QQueue<MediaPacket *> audioQueue;
+    QQueue<MediaPacket *> videoQueue;
 
-    VideoStateInfo *vsi;
+    QTimer         *videoTimer;
+    QTimer         *audioTimer;
+    QTimer         *pktTimer;
     QString         filename;
     void           *channel;
     int             stream_id;
@@ -55,14 +66,26 @@ private:
     QMutex          mutex;
     int64_t         la_seekPos;  /* locked access; must hold mutex */
 
-    int openVirtualChannel();
-    int closeVirtualChannel();
-    int sendMetadataFile();
-    int sendVideoFormat();
-    int sendAudioFormat();
-    int sendGeometry();
+    PlayVideo      *playVideo;
+    QThread        *playVideoThread;
+    PlayAudio      *playAudio;
+    QThread        *playAudioThread;
+
+    /* private functions */
+    int  sendMetadataFile();
+    int  sendAudioFormat();
+    int  sendVideoFormat();
+    int  sendGeometry();
+    void updateSlider();
+
+private slots:
+    /* private slots */
+    void audioTimerCallback();
+    void videoTimerCallback();
+    void pktTimerCallback();
 
 signals:
+    /* private signals */
     void on_progressUpdate(int percent);
     void on_decoderErrorMsg(QString title, QString msg);
     void on_mediaDurationInSeconds(int duration);

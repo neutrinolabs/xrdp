@@ -10,70 +10,56 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
+    /* connect to remote client */
+    interface = new OurInterface();
+    if (interface->oneTimeInit())
+    {
+        oneTimeInitSuccess = false;
+
+        /* connection to remote client failed; error msg has  */
+        /* already been displayed so it's ok to close app now */
+        QTimer::singleShot(1000, qApp, SLOT(quit()));
+    }
+
+    oneTimeInitSuccess = true;
+    remoteClientInited = false;
     ui->setupUi(this);
     acceptSliderMove = false;
-    decoderThread = new DecoderThread();
     setupUI();
+    vcrFlag = 0;
 
-/* LK_TODO */
-#if 0
-    decoder = new Decoder(this);
-    connect(this, SIGNAL(onGeometryChanged(int, int, int, int)),
-            decoder, SLOT(onGeometryChanged(int, int, int, int)));
-#endif
+    connect(this, SIGNAL(onGeometryChanged(int,int,int,int)),
+            interface, SLOT(onGeometryChanged(int,int,int,int)));
 
-    /* register for signals/slots with decoderThread */
-    connect(this, SIGNAL(on_geometryChanged(int,int,int,int)),
-            decoderThread, SLOT(on_geometryChanged(int,int,int,int)));
-
-    connect(decoderThread, SIGNAL(on_elapsedtime(int)),
-            this, SLOT(on_elapsedTime(int)));
-
-    connect(decoderThread, SIGNAL(on_decoderErrorMsg(QString, QString)),
-            this, SLOT(on_decoderError(QString, QString)));
-
-    connect(decoderThread, SIGNAL(on_mediaDurationInSeconds(int)),
-            this, SLOT(on_mediaDurationInSeconds(int)));
-
-    connect(this, SIGNAL(on_mediaSeek(int)), decoderThread, SLOT(on_mediaSeek(int)));
+    connect(interface, SIGNAL(onMediaDurationInSeconds(int)),
+            this, SLOT(onMediaDurationInSeconds(int)));
 }
 
 MainWindow::~MainWindow()
 {
-    delete ui;
+    if (oneTimeInitSuccess)
+        delete ui;
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    int rv;
-
-    rv = QMessageBox::question(this, "Closing application",
-                               "Do you really want to close vrplayer?",
-                               QMessageBox::Yes | QMessageBox::No);
-
-    if (rv == QMessageBox::No)
-    {
-        event->ignore();
-        return;
-    }
-    decoderThread->exit(0);
     event->accept();
 }
 
-void MainWindow::resizeEvent(QResizeEvent *e)
+void MainWindow::resizeEvent(QResizeEvent *)
 {
     QRect rect;
 
     getVdoGeometry(&rect);
-    emit on_geometryChanged(rect.x(), rect.y(), rect.width(), rect.height());
+    interface->sendGeometry(rect);
 }
 
-void MainWindow::moveEvent(QMoveEvent *e)
+void MainWindow::moveEvent(QMoveEvent *)
 {
     QRect rect;
 
     getVdoGeometry(&rect);
-    emit on_geometryChanged(rect.x(), rect.y(), rect.width(), rect.height());
+    interface->sendGeometry(rect);
 }
 
 void MainWindow::setupUI()
@@ -100,8 +86,8 @@ void MainWindow::setupUI()
     slider->setOrientation(Qt::Horizontal);
     slider->setMinimumHeight(20);
     slider->setMaximumHeight(20);
-    connect(slider, SIGNAL(actionTriggered(int)), this, SLOT(on_sliderActionTriggered(int)));
-    connect(slider, SIGNAL(valueChanged(int)), this, SLOT(on_sliderValueChanged(int)));
+    connect(slider, SIGNAL(actionTriggered(int)), this, SLOT(onSliderActionTriggered(int)));
+    connect(slider, SIGNAL(valueChanged(int)), this, SLOT(onSliderValueChanged(int)));
 
     /* setup label to display media duration */
     lblDuration = new QLabel("00:00:00");
@@ -115,19 +101,23 @@ void MainWindow::setupUI()
     hboxLayoutMiddle->addWidget(lblDuration);
 
     /* setup play button */
-    btnPlay = new QPushButton("P");
+    btnPlay = new QPushButton("Play");
     btnPlay->setMinimumHeight(40);
     btnPlay->setMaximumHeight(40);
     btnPlay->setMinimumWidth(40);
     btnPlay->setMaximumWidth(40);
-    connect(btnPlay, SIGNAL(clicked(bool)), this, SLOT(on_btnPlayClicked(bool)));
+    btnPlay->setCheckable(true);
+    connect(btnPlay, SIGNAL(clicked(bool)),
+            this, SLOT(onBtnPlayClicked(bool)));
 
     /* setup stop button */
-    btnStop = new QPushButton("S");
+    btnStop = new QPushButton("Stop");
     btnStop->setMinimumHeight(40);
     btnStop->setMaximumHeight(40);
     btnStop->setMinimumWidth(40);
     btnStop->setMaximumWidth(40);
+    connect(btnStop, SIGNAL(clicked(bool)),
+            this, SLOT(onBtnStopClicked(bool)));
 
     /* setup rewind button */
     btnRewind = new QPushButton("R");
@@ -135,12 +125,14 @@ void MainWindow::setupUI()
     btnRewind->setMaximumHeight(40);
     btnRewind->setMinimumWidth(40);
     btnRewind->setMaximumWidth(40);
+    connect(btnRewind, SIGNAL(clicked(bool)),
+            this, SLOT(onBtnRewindClicked(bool)));
 
     /* add buttons to bottom panel */
     hboxLayoutBottom = new QHBoxLayout;
     hboxLayoutBottom->addWidget(btnPlay);
     hboxLayoutBottom->addWidget(btnStop);
-    hboxLayoutBottom->addWidget(btnRewind);
+    //hboxLayoutBottom->addWidget(btnRewind);
     hboxLayoutBottom->addStretch();
 
     /* add all three layouts to one vertical layout */
@@ -171,7 +163,7 @@ void MainWindow::openMediaFile()
         filename = QFileDialog::getOpenFileName(this, "Select Media File",
                                                 filename);
     }
-    decoderThread->setFilename(filename);
+    interface->setFilename(filename);
 }
 
 void MainWindow::getVdoGeometry(QRect *rect)
@@ -187,48 +179,120 @@ void MainWindow::getVdoGeometry(QRect *rect)
     rect->setHeight(lblVideo->geometry().height());
 }
 
+void MainWindow::clearDisplay()
+{
+    QPixmap pixmap(100,100);
+    pixmap.fill(QColor(0x00, 0x00, 0x00));
+    QPainter painter(&pixmap);
+    painter.setBrush(QBrush(Qt::black));
+    lblVideo->setPixmap(pixmap);
+}
+
 /*******************************************************************************
  *                       actions and slots go here                             *
  ******************************************************************************/
 
 void MainWindow::on_actionOpen_Media_File_triggered()
 {
+    if (vcrFlag != 0)
+        onBtnStopClicked(false);
+
     openMediaFile();
+    if (filename.length() == 0)
+    {
+        /* cancel btn was clicked */
+        return;
+    }
+
+    if (remoteClientInited)
+    {
+        remoteClientInited = false;
+        interface->deInitRemoteClient();
+        interface->initRemoteClient();
+    }
+    else
+    {
+        interface->initRemoteClient();
+    }
+
+    playVideo = interface->getPlayVideoInstance();
+    if (playVideo)
+    {
+        connect(playVideo, SIGNAL(onElapsedtime(int)),
+                this, SLOT(onElapsedTime(int)));
+    }
+
+    remoteClientInited = true;
+    interface->playMedia();
+
+    if (vcrFlag != 0)
+    {
+        interface->setVcrOp(VCR_PLAY);
+        btnPlay->setText("Pause");
+        vcrFlag = VCR_PLAY;
+    }
 }
 
 void MainWindow::on_actionExit_triggered()
 {
-    /* TODO: confirm app exit */
+    clearDisplay();
     this->close();
 }
 
-void MainWindow::on_actionPlay_Media_triggered()
+void MainWindow::onBtnPlayClicked(bool)
 {
-    // LK_TODO do we need this? if yes, should be same as on_btnPlayClicked()
-#if 1
-    decoderThread->start();
-#else
-    if (!decoder)
-        return;
+    if (vcrFlag == 0)
+    {
+        /* first time play button has been clicked */
+        on_actionOpen_Media_File_triggered();
+        btnPlay->setText("Pause");
+        vcrFlag = VCR_PLAY;
+    }
+    else if (vcrFlag == VCR_PLAY)
+    {
+        /* btn clicked while in play mode - enter pause mode */
+        btnPlay->setText("Play");
+        interface->setVcrOp(VCR_PAUSE);
+        vcrFlag = VCR_PAUSE;
+    }
+    else if (vcrFlag == VCR_PAUSE)
+    {
+        /* btn clicked while in pause mode - enter play mode */
+        btnPlay->setText("Pause");
+        interface->setVcrOp(VCR_PLAY);
+        vcrFlag = VCR_PLAY;
+    }
 
-    decoder->init(filename);
-#endif
+    else if (vcrFlag == VCR_STOP)
+    {
+        /* btn clicked while stopped - enter play mode */
+        btnPlay->setText("Play");
+        interface->setVcrOp(VCR_PLAY);
+        vcrFlag = VCR_PLAY;
+    }
 }
 
-void MainWindow::on_decoderError(QString title, QString msg)
+void MainWindow::onBtnRewindClicked(bool)
 {
-    QMessageBox::information(this, title, msg);
+    if (playVideo)
+        playVideo->onMediaSeek(0);
 }
 
-void MainWindow::on_btnPlayClicked(bool flag)
+void MainWindow::onBtnStopClicked(bool)
 {
-    if (filename.length() == 0)
-        openMediaFile();
+    vcrFlag = VCR_STOP;
+    btnPlay->setText("Play");
+    interface->setVcrOp(VCR_STOP);
 
-    decoderThread->start();
+    /* reset slider */
+    slider->setSliderPosition(0);
+    lblCurrentPos->setText("00:00:00");
+
+    /* clear screen by filling it with black */
+    clearDisplay();
 }
 
-void MainWindow::on_mediaDurationInSeconds(int duration)
+void MainWindow::onMediaDurationInSeconds(int duration)
 {
     int  hours   = 0;
     int  minutes = 0;
@@ -239,6 +303,9 @@ void MainWindow::on_mediaDurationInSeconds(int duration)
     slider->setMinimum(0);
     slider->setMaximum(duration * 100); /* in hundredth of a sec */
     slider->setValue(0);
+    slider->setSliderPosition(0);
+    lblCurrentPos->setText("00:00:00");
+    qDebug() << "media_duration=" << duration << " in hundredth of a sec:" << duration * 100;
 
     /* convert from seconds to hours:minutes:seconds */
     hours = duration / 3600;
@@ -258,7 +325,7 @@ void MainWindow::on_mediaDurationInSeconds(int duration)
 /**
  * time elapsed in 1/100th sec units since play started
  ******************************************************************************/
-void MainWindow::on_elapsedTime(int val)
+void MainWindow::onElapsedTime(int val)
 {
     int  hours    = 0;
     int  minutes  = 0;
@@ -266,9 +333,18 @@ void MainWindow::on_elapsedTime(int val)
     int  duration = val / 100;
     char buf[20];
 
+    if (vcrFlag == VCR_STOP)
+    {
+        qDebug() << "onElapsedTime: not updating slider coz of VCR_STOP";
+        return;
+    }
+
     /* if slider bar is down, do not update */
     if (slider->isSliderDown())
+    {
+        qDebug() << "onElapsedTime: not updating slider coz slider is down";
         return;
+    }
 
     /* update progress bar */
     slider->setSliderPosition(val);
@@ -289,16 +365,17 @@ void MainWindow::on_elapsedTime(int val)
     lblCurrentPos->setText(QString(buf));
 }
 
-void MainWindow::on_sliderValueChanged(int value)
+void MainWindow::onSliderValueChanged(int value)
 {
     if (acceptSliderMove)
     {
         acceptSliderMove = false;
-        emit on_mediaSeek(value / 100);
+        if (playVideo)
+            playVideo->onMediaSeek(value / 100);
     }
 }
 
-void MainWindow::on_sliderActionTriggered(int action)
+void MainWindow::onSliderActionTriggered(int action)
 {
     switch (action)
     {
@@ -319,7 +396,7 @@ void MainWindow::on_sliderActionTriggered(int action)
 
 #if 1
 // LK_TODO delete this
-void MainWindow::mouseMoveEvent(QMouseEvent *e)
+void MainWindow::mouseMoveEvent(QMouseEvent *)
 {
     //qDebug() << "mouseMoveEvent: x=" << e->globalX() << "y=" << e->globalY();
 }

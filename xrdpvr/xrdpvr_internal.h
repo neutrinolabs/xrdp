@@ -187,6 +187,8 @@ typedef struct _player_state_info
 
     int              audio_stream_index;
     int              video_stream_index;
+    double           audioTimeout;
+    double           videoTimeout;
 
     /* LK_TODO delete this after we fix the problem */
     AVFrame         *frame;

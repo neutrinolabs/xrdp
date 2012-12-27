@@ -1,8 +1,17 @@
 #include "decoderthread.h"
 
+/*
+ * TODO:
+ *      o need to maintain aspect ratio while resizing
+ *      o clicking in the middle of the slider bar shuld move the slider to the middle
+ *      o need to be able to rewind the move when it is done playing
+ *      o need to be able to load another move and play it w/o restarting player
+ *      o pause button needs to work
+ *      o need images for btns
+ */
+
 DecoderThread::DecoderThread()
 {
-    vsi = NULL;
     channel = NULL;
     geometry.setX(0);
     geometry.setY(0);
@@ -10,16 +19,13 @@ DecoderThread::DecoderThread()
     geometry.setHeight(0);
     stream_id = 101;
     elapsedTime = 0;
-    la_seekPos = 0;
+    la_seekPos = -1;
+    videoTimer = NULL;
+    audioTimer = NULL;
 }
 
 void DecoderThread::run()
 {
-    int64_t start_time;
-    int64_t duration;
-
-    /* TODO what happens if we get called a 2nd time while we are still running */
-
     /* need a media file */
     if (filename.length() == 0)
     {
@@ -27,89 +33,72 @@ void DecoderThread::run()
                                 "Please select a media file to play");
         return;
     }
-
-    /* connect to remote client */
-    if (openVirtualChannel())
-        return;
-
-    vsi = (VideoStateInfo *) av_mallocz(sizeof(VideoStateInfo));
-    if (vsi == NULL)
-    {
-        emit on_decoderErrorMsg("Resource error",
-                                "Memory allocation failed, system out of memory");
-        return;
-    }
-
-    /* register all formats/codecs */
-    av_register_all();
-
-    if (sendMetadataFile())
-        return;
-
-    if (sendVideoFormat())
-        return;
-
-    if (sendAudioFormat())
-        return;
-
-    if (sendGeometry())
-        return;
-
-    xrdpvr_play_media(channel, 101, filename.toAscii().data());
-
-    xrdpvr_get_media_duration(&start_time, &duration);
-    emit on_mediaDurationInSeconds(duration);
-
-    qDebug() << "start_time=" << start_time << " duration=" << duration;
-
-    while (xrdpvr_play_frame(channel, 101) == 0)
-    {
-        if (elapsedTime == 0)
-            elapsedTime = av_gettime();
-
-        /* time elapsed in 1/100th sec units since play started */
-        emit on_elapsedtime((av_gettime() - elapsedTime) / 10000);
-
-        mutex.lock();
-        if (la_seekPos)
-        {
-            qDebug() << "seeking to" << la_seekPos;
-            xrdpvr_seek_media(la_seekPos, 0);
-            elapsedTime = av_gettime() - la_seekPos * 1000000;
-            la_seekPos = 0;
-        }
-        mutex.unlock();
-    }
-
-    /* perform clean up */
-    xrdpvr_deinit_player(channel, 101);
-
-    /* clean up resources */
-    closeVirtualChannel();
-    if (vsi)
-        av_free(vsi);
 }
 
-void DecoderThread::on_geometryChanged(int x, int y, int width, int height)
+void DecoderThread::startMediaPlay()
 {
-    geometry.setX(x);
-    geometry.setY(y);
-    geometry.setWidth(width);
-    geometry.setHeight(height);
+    MediaPacket *mediaPkt;
+    int          is_video_frame;
+    int          rv;
 
-#if 0
-    qDebug() << "decoderThread:signal" <<
-                "" << geometry.x() <<
-                "" << geometry.y() <<
-                "" << geometry.width() <<
-                "" << geometry.height();
-#endif
+    /* setup video timer; each time this timer fires, it sends        */
+    /* one video pkt to the client then resets the callback duration  */
+    videoTimer = new QTimer;
+    connect(videoTimer, SIGNAL(timeout()), this, SLOT(videoTimerCallback()));
+    //videoTimer->start(1500);
 
-    if (channel)
+    /* setup audio timer; does the same as above, but with audio pkts */
+    audioTimer = new QTimer;
+    connect(audioTimer, SIGNAL(timeout()), this, SLOT(audioTimerCallback()));
+    //audioTimer->start(500);
+
+    /* setup pktTimer; each time this timer fires, it reads AVPackets */
+    /* and puts them into audio/video Queues                          */
+    pktTimer = new QTimer;
+    connect(pktTimer, SIGNAL(timeout()), this, SLOT(pktTimerCallback()));
+
+    while (1)
     {
-        xrdpvr_set_geometry(channel, 101, geometry.x(), geometry.y(),
-                            geometry.width(), geometry.height());
-    }
+        /* fill the audio/video queues with initial data; thereafter  */
+        /* data will be filled by pktTimerCallback()                  */
+        if ((audioQueue.count() >= 3000) || (videoQueue.count() >= 3000))
+        {
+            //pktTimer->start(50);
+
+            //videoTimer->start(1500);
+            //audioTimer->start(500);
+
+            playVideo = new PlayVideo(NULL, &videoQueue, channel, 101);
+            playVideoThread = new QThread(this);
+            connect(playVideoThread, SIGNAL(started()), playVideo, SLOT(play()));
+            playVideo->moveToThread(playVideoThread);
+            playVideoThread->start();
+
+            playAudio = new PlayAudio(NULL, &audioQueue, channel, 101);
+            playAudioThread = new QThread(this);
+            connect(playAudioThread, SIGNAL(started()), playAudio, SLOT(play()));
+            playAudio->moveToThread(playAudioThread);
+            playAudioThread->start();
+
+            return;
+        }
+
+        mediaPkt = new MediaPacket;
+        rv = xrdpvr_get_frame(&mediaPkt->av_pkt,
+                              &is_video_frame,
+                              &mediaPkt->delay_in_us);
+        if (rv < 0)
+        {
+            /* looks like we reached end of file */
+            break;
+        }
+
+        if (is_video_frame)
+            videoQueue.enqueue(mediaPkt);
+        else
+            audioQueue.enqueue(mediaPkt);
+
+    } /* end while (1) */
 }
 
 void DecoderThread::on_mediaSeek(int value)
@@ -117,6 +106,15 @@ void DecoderThread::on_mediaSeek(int value)
     mutex.lock();
     la_seekPos = value;
     mutex.unlock();
+
+    qDebug() << "media seek value=" << value;
+
+    /* pktTimer stops at end of media; need to restart it */
+    if (!pktTimer->isActive())
+    {
+        updateSlider();
+        pktTimer->start(100);
+    }
 }
 
 void DecoderThread::setFilename(QString filename)
@@ -124,94 +122,125 @@ void DecoderThread::setFilename(QString filename)
     this->filename = filename;
 }
 
-/**
- * @brief Open a virtual connection to remote client
- *
- * @return 0 on success, -1 on failure
- ******************************************************************************/
-int DecoderThread::openVirtualChannel()
+void DecoderThread::stopPlayer()
 {
-    /* is channel already open? */
-    if (channel)
-        return -1;
-
-    /* open a virtual channel and connect to remote client */
-    channel = WTSVirtualChannelOpenEx(WTS_CURRENT_SESSION, "xrdpvr", 0);
-    if (channel == NULL)
-    {
-        emit on_decoderErrorMsg("Connection failure",
-                                "Error connecting to remote client");
-        return -1;
-    }
-    return 0;
+    pktTimer->stop();
+    audioQueue.clear();
+    videoQueue.clear();
 }
 
-int DecoderThread::closeVirtualChannel()
+void DecoderThread::pausePlayer()
 {
-    /* channel must be opened first */
-    if (!channel)
-        return -1;
-
-    WTSVirtualChannelClose(channel);
-    return 0;
+    pktTimer->stop();
 }
 
-/**
- * @brief this is a temp hack while we figure out how to set up the right
- *        context for avcodec_decode_video2() on the server side; the workaround
- *        is to send the first 1MB of the media file to the server end which
- *        reads this file and sets up its context
- *
- * @return 0 on success, -1 on failure
- ******************************************************************************/
-int DecoderThread::sendMetadataFile()
+void DecoderThread::resumePlayer()
 {
-    if (xrdpvr_create_metadata_file(channel, filename.toAscii().data()))
-    {
-        emit on_decoderErrorMsg("I/O Error",
-                                "An error occurred while sending data to remote client");
-        return -1;
-    }
-
-    return 0;
+    pktTimer->start(100);
 }
 
-int DecoderThread::sendVideoFormat()
+void DecoderThread::close()
 {
-    if (xrdpvr_set_video_format(channel, stream_id))
-    {
-        emit on_decoderErrorMsg("I/O Error",
-                                "Error sending video format to remote client");
-        return -1;
-    }
-
-    return 0;
 }
 
-int DecoderThread::sendAudioFormat()
+void DecoderThread::audioTimerCallback()
 {
-    if (xrdpvr_set_audio_format(channel, stream_id))
+    MediaPacket *pkt;
+    int          delayInMs;
+
+    if (audioQueue.isEmpty())
     {
-        emit on_decoderErrorMsg("I/O Error",
-                                "Error sending audio format to remote client");
-        return -1;
+        qDebug() << "audioTimerCallback: got empty";
+        audioTimer->setInterval(100);
+        return;
     }
 
-    return 0;
+    pkt = audioQueue.dequeue();
+    delayInMs = (int) ((float) pkt->delay_in_us / 1000.0);
+    send_audio_pkt(channel, 101, pkt->av_pkt);
+    delete pkt;
+
+    //qDebug() << "audioTimerCallback: delay :" << delayInMs;
+
+    audioTimer->setInterval(delayInMs);
 }
 
-int DecoderThread::sendGeometry()
+void DecoderThread::videoTimerCallback()
 {
-    int rv;
+    MediaPacket *pkt;
+    int          delayInMs;
 
-    rv = xrdpvr_set_geometry(channel, stream_id, geometry.x(), geometry.y(),
-                             geometry.width(), geometry.height());
-
-    if (rv)
+    if (videoQueue.isEmpty())
     {
-        emit on_decoderErrorMsg("I/O Error",
-                                "Error sending screen geometry to remote client");
-        return -1;
+        qDebug() << "videoTimerCallback: GOT EMPTY";
+        videoTimer->setInterval(100);
+        return;
     }
-    return 0;
+
+    pkt = videoQueue.dequeue();
+    delayInMs = (int) ((float) pkt->delay_in_us / 1000.0);
+    send_video_pkt(channel, 101, pkt->av_pkt);
+    delete pkt;
+    updateSlider();
+    //qDebug() << "videoTimerCallback: delay :" << delayInMs;
+    videoTimer->setInterval(delayInMs);
+}
+
+void DecoderThread::pktTimerCallback()
+{
+    MediaPacket *mediaPkt;
+    int          is_video_frame;
+    int          rv;
+
+    while (1)
+    {
+        qDebug() << "pktTimerCallback: audioCount=" <<  audioQueue.count() << "videoCount=" << videoQueue.count();
+#if 1
+        if ((audioQueue.count() >= 20) || (videoQueue.count() >= 20))
+            return;
+#else
+        if (videoQueue.count() >= 60)
+            return;
+#endif
+        mediaPkt = new MediaPacket;
+        rv = xrdpvr_get_frame(&mediaPkt->av_pkt,
+                              &is_video_frame,
+                              &mediaPkt->delay_in_us);
+        if (rv < 0)
+        {
+            /* looks like we reached end of file */
+            qDebug() << "###### looks like we reached EOF";
+            pktTimer->stop();
+            // LK_TODO set some flag so audio/video timer also stop when q is empty
+            return;
+        }
+
+        if (is_video_frame)
+            videoQueue.enqueue(mediaPkt);
+        else
+            audioQueue.enqueue(mediaPkt);
+    }
+}
+
+void DecoderThread::updateSlider()
+{
+    if (elapsedTime == 0)
+        elapsedTime = av_gettime();
+
+    /* time elapsed in 1/100th sec units since play started */
+    emit on_elapsedtime((av_gettime() - elapsedTime) / 10000);
+
+    mutex.lock();
+    if (la_seekPos >= 0)
+    {
+        qDebug() << "seeking to" << la_seekPos;
+        //audioTimer->stop();
+        //videoTimer->stop();
+        xrdpvr_seek_media(la_seekPos, 0);
+        elapsedTime = av_gettime() - la_seekPos * 1000000;
+        //audioTimer->start(10);
+        //videoTimer->start(10);
+        la_seekPos = -1;
+    }
+    mutex.unlock();
 }
