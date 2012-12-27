@@ -1932,6 +1932,7 @@ server_reset(struct xrdp_mod *mod, int width, int height, int bpp)
     xrdp_wm_load_static_pointers(wm);
     return 0;
 }
+
 /* read the channel section of the ini file into lists
  * return 1 on success 0 on failure */
 int read_allowed_channel_names(struct list *names, struct list *values)
@@ -1960,44 +1961,90 @@ int read_allowed_channel_names(struct list *names, struct list *values)
         }
 
         g_file_close(fd);
-        return ret;
     }
+    return ret;
 }
+
+#define CHANNEL_NAME_PREFIX "channel."
+/* update the channel lists from connection specific overrides
+ * return 1 on success 0 on failure */
+int update_allowed_channel_names(struct xrdp_wm *wm, struct list *names, struct list *values)
+{
+    int ret = 1;
+    int index;
+    int oldindex;
+    char *val;
+    char *name;
+    //wm->mm->login_names,wm->mm->login_values
+    for (index = 0; index < wm->mm->login_names->count; index++)
+    {
+        name = (char *)list_get_item(wm->mm->login_names, index);
+        if ( (name != 0) && (g_strncmp( name, CHANNEL_NAME_PREFIX, g_strlen(CHANNEL_NAME_PREFIX)) == 0 ) ) 
+        {
+            name += g_strlen(CHANNEL_NAME_PREFIX);
+            // locate and remove from list
+            oldindex = find_name_in_lists(name, names);
+            if (oldindex >= 0)
+            {
+                list_remove_item(names, oldindex);
+                list_remove_item(values, oldindex);
+            }
+            val = (char *)list_get_item(wm->mm->login_values, index);
+            // (re)add to lists
+            list_add_item(names, (tbus)g_strdup(name));
+            list_add_item(values, (tbus)g_strdup(val));
+        }
+    }
+    return ret;
+}
+
+/* internal function return -1 if name is not in list
+ * otherwise return the index 0->count-1*/
+int DEFAULT_CC
+find_name_in_lists(char *inName, struct list *names)
+{
+    int reply = -1; /*means not in the list*/
+    int index;
+    char *name;
+
+    for (index = 0; index < names->count; index++)
+    {
+        name = (char *)list_get_item(names, index);
+        if ( (name != 0) && g_strncmp(name, inName, MAX_CHANNEL_NAME))
+        {
+            reply = index;
+            break; /* stop loop - item found*/
+        }
+    }
+
+    return reply;
+}
+
 /* internal function return 1 if name is in list of channels
  * and if the value is allowed */
 int DEFAULT_CC
-is_name_in_lists(char *inName, struct list *names, struct list *values)
+is_channel_enabled(char *inName, struct list *names, struct list *values)
 {
     int reply = 0; /*means not in the list*/
     int index;
     char *val;
     char *name;
 
-    for (index = 0; index < names->count; index++)
+    index = find_name_in_lists(inName, names);
+    if ( index >= 0 )
     {
-        name = (char *)list_get_item(names, index);
+        val = (char *)list_get_item(values, index);
 
-        if (name != 0)
+        if ((g_strcasecmp(val, "yes") == 0) ||
+                (g_strcasecmp(val, "on") == 0) ||
+                (g_strcasecmp(val, "true") == 0) ||
+                (g_atoi(val) != 0))
         {
-            /* ex rdpdr ;rdpsnd ; drdynvc ; cliprdr */
-            if (!g_strncmp(name, inName, MAX_CHANNEL_NAME))
-            {
-                val = (char *)list_get_item(values, index);
-
-                if ((g_strcasecmp(val, "yes") == 0) ||
-                        (g_strcasecmp(val, "on") == 0) ||
-                        (g_strcasecmp(val, "true") == 0) ||
-                        (g_atoi(val) != 0))
-                {
-                    reply = 1;
-                }
-                else
-                {
-                    g_writeln("This channel is disabled: %s", name);
-                }
-
-                break; /* stop loop - item found*/
-            }
+            reply = 1;
+        }
+        else
+        {
+            g_writeln("This channel is disabled: %s", name);
         }
     }
 
@@ -2026,7 +2073,8 @@ void init_channel_allowed(struct xrdp_wm *wm)
     names = list_create();
     values = list_create();
 
-    if (read_allowed_channel_names(names, values))
+    if (   read_allowed_channel_names(names, values)
+        && update_allowed_channel_names(wm, names, values) )
     {
         do
         {
@@ -2036,9 +2084,9 @@ void init_channel_allowed(struct xrdp_wm *wm)
             if (error == 0)
             {
                 /* examples of channel names: rdpdr ; rdpsnd ; drdynvc ; cliprdr */
-                if (is_name_in_lists(channelname, names, values))
+                if (is_channel_enabled(channelname, names, values))
                 {
-                    g_writeln("The following channel is allowed: %s", channelname);
+                    g_writeln("The following channel is allowed: %s (%d)", channelname, index);
                     wm->allowedchannels[allowindex] = index;
                     allowindex++;
 
@@ -2050,7 +2098,7 @@ void init_channel_allowed(struct xrdp_wm *wm)
                 }
                 else
                 {
-                    g_writeln("The following channel is not allowed: %s", channelname);
+                    g_writeln("The following channel is not allowed: %s (%d)", channelname, index);
                 }
 
                 index++;

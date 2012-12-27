@@ -80,7 +80,7 @@ rdpFillSpans(DrawablePtr pDrawable, GCPtr pGC, int nInit,
         pDstPixmap = (PixmapPtr)pDrawable;
         pDstPriv = GETPIXPRIV(pDstPixmap);
 
-        if (XRDP_IS_OS(pDstPriv))
+        if (xrdp_is_os(pDstPixmap, pDstPriv))
         {
             rdpup_switch_os_surface(pDstPriv->rdpindex);
             rdpup_get_pixmap_image_rect(pDstPixmap, &id);

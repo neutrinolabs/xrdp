@@ -256,7 +256,6 @@ struct _rdpPixmapRec
 {
   int status;
   int rdpindex;
-  int allocBytes;
   int con_number;
   int is_dirty;
   int pad0;
@@ -338,7 +337,7 @@ draw_item_remove(rdpPixmapRec* priv, struct rdp_draw_item* di);
 int
 draw_item_remove_all(rdpPixmapRec* priv);
 int
-draw_item_pack(rdpPixmapRec* priv);
+draw_item_pack(PixmapPtr pix, rdpPixmapRec* priv);
 int
 draw_item_add_img_region(rdpPixmapRec* priv, RegionPtr reg, int opcode,
                          int type);
@@ -359,7 +358,8 @@ rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
                 unsigned usage_hint);
 Bool
 rdpDestroyPixmap(PixmapPtr pPixmap);
-
+int
+xrdp_is_os(PixmapPtr pix, rdpPixmapPtr priv);
 Bool
 rdpCreateWindow(WindowPtr pWindow);
 Bool
@@ -419,7 +419,6 @@ rdpGlyphs(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
           PictFormatPtr maskFormat,
           INT16 xSrc, INT16 ySrc, int nlists, GlyphListPtr lists,
           GlyphPtr* glyphs);
-
 
 /* rdpinput.c */
 int

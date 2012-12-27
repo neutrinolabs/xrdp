@@ -482,7 +482,7 @@ draw_item_remove_all(rdpPixmapRec *priv)
 
 /******************************************************************************/
 int
-draw_item_pack(rdpPixmapRec *priv)
+draw_item_pack(PixmapPtr pix, rdpPixmapRec *priv)
 {
     struct rdp_draw_item *di;
     struct rdp_draw_item *di_prev;
@@ -685,20 +685,6 @@ rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
     rv = pScreen->CreatePixmap(pScreen, width, height, depth, usage_hint);
     priv = GETPIXPRIV(rv);
     priv->rdpindex = -1;
-
-    if ((rv->drawable.depth >= g_rdpScreen.depth) &&
-            (org_width > 1) && (height > 1))
-    {
-        priv->allocBytes = width * height * g_Bpp;
-        priv->rdpindex = rdpup_add_os_bitmap(rv, priv);
-
-        if (priv->rdpindex >= 0)
-        {
-            priv->status = 1;
-            rdpup_create_os_surface(priv->rdpindex, width, height);
-        }
-    }
-
     pScreen->ModifyPixmapHeader(rv, org_width, 0, 0, 0, 0, 0);
     pScreen->CreatePixmap = rdpCreatePixmap;
     return rv;
@@ -733,6 +719,59 @@ rdpDestroyPixmap(PixmapPtr pPixmap)
     rv = pScreen->DestroyPixmap(pPixmap);
     pScreen->DestroyPixmap = rdpDestroyPixmap;
     return rv;
+}
+
+/*****************************************************************************/
+int
+xrdp_is_os(PixmapPtr pix, rdpPixmapPtr priv)
+{
+    RegionRec reg1;
+    BoxRec box;
+    int width;
+    int height;
+    struct image_data id;
+
+    if (priv->status == 0)
+    {
+        width = pix->drawable.width;
+        height = pix->drawable.height;
+        if ((pix->drawable.depth >= g_rdpScreen.depth) &&
+            (width > 1) && (height > 1))
+        {
+            width = (width + 3) & ~3;
+            priv->rdpindex = rdpup_add_os_bitmap(pix, priv);
+            if (priv->rdpindex >= 0)
+            {
+                priv->status = 1;
+                rdpup_create_os_surface(priv->rdpindex, width, height);
+                box.x1 = 0;
+                box.y1 = 0;
+                box.x2 = width;
+                box.y2 = height;
+                if (g_do_dirty_os)
+                {
+                    draw_item_remove_all(priv);
+                    RegionInit(&reg1, &box, 0);
+                    draw_item_add_img_region(priv, &reg1, GXcopy, RDI_IMGLL);
+                    RegionUninit(&reg1);
+                    priv->is_dirty = 1;
+                }
+                else
+                {
+                    rdpup_get_pixmap_image_rect(pix, &id);
+                    rdpup_switch_os_surface(priv->rdpindex);
+                    rdpup_begin_update();
+                    rdpup_send_area(&id, box.x1, box.y1, box.x2 - box.x1,
+                                    box.y2 - box.y1);
+                    rdpup_end_update();
+                    rdpup_switch_os_surface(-1);
+                }
+                return 1;
+            }
+        }
+        return 0;
+    }
+    return 1;
 }
 
 /******************************************************************************/
@@ -831,8 +870,8 @@ rdpRealizeWindow(WindowPtr pWindow)
                 LLOGLN(10, ("rdpRealizeWindow:"));
                 LLOGLN(10, ("  pWindow %p id 0x%x pWindow->parent %p id 0x%x x %d "
                             "y %d width %d height %d",
-                            pWindow, pWindow->drawable.id,
-                            pWindow->parent, pWindow->parent->drawable.id,
+                            pWindow, (int)(pWindow->drawable.id),
+                            pWindow->parent, (int)(pWindow->parent->drawable.id),
                             pWindow->drawable.x, pWindow->drawable.y,
                             pWindow->drawable.width, pWindow->drawable.height));
                 priv->status = 1;
@@ -1223,7 +1262,7 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
         pDstPixmap = (PixmapPtr)p;
         pDstPriv = GETPIXPRIV(pDstPixmap);
 
-        if (XRDP_IS_OS(pDstPriv))
+        if (xrdp_is_os(pDstPixmap, pDstPriv))
         {
             post_process = 1;
 

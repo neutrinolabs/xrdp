@@ -13,7 +13,7 @@ endif
 
 if XRDP_FREERDP1
 EXTRA_DEFINES += -DXRDP_FREERDP1
-EXTRA_LIBS += -lfreerdp-codec -lfreerdp-utils
+EXTRA_LIBS += $(FREERDP_LIBS)
 endif
 
 if XRDP_JPEG
