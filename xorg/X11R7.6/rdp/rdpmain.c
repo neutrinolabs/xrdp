@@ -55,6 +55,8 @@ rdpPixmapRec g_screenPriv;
 /* if true, running in RemoteApp / RAIL mode */
 int g_use_rail = 0;
 
+int g_con_number = 0; /* increments for each connection */
+
 WindowPtr g_invalidate_window = 0;
 
 /* if true, use a unix domain socket instead of a tcp socket */

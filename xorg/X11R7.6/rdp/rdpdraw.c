@@ -64,6 +64,7 @@ extern int g_use_rail; /* in rdpmain.c */
 extern int g_do_dirty_os; /* in rdpmain.c */
 extern int g_do_dirty_ons; /* in rdpmain.c */
 extern rdpPixmapRec g_screenPriv; /* in rdpmain.c */
+extern int g_con_number; /* in rdpmain.c */
 
 ColormapPtr g_rdpInstalledColormap;
 
@@ -685,6 +686,8 @@ rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
     rv = pScreen->CreatePixmap(pScreen, width, height, depth, usage_hint);
     priv = GETPIXPRIV(rv);
     priv->rdpindex = -1;
+    priv->con_number = g_con_number;
+    priv->kind_width = width;
     pScreen->ModifyPixmapHeader(rv, org_width, 0, 0, 0, 0, 0);
     pScreen->CreatePixmap = rdpCreatePixmap;
     return rv;
@@ -731,30 +734,35 @@ xrdp_is_os(PixmapPtr pix, rdpPixmapPtr priv)
     int height;
     struct image_data id;
 
-    if (priv->status == 0)
+    if (!XRDP_IS_OS(priv))
     {
         width = pix->drawable.width;
         height = pix->drawable.height;
         if ((pix->drawable.depth >= g_rdpScreen.depth) &&
-            (width > 1) && (height > 1))
+            (width > 1) && (height > 1) && (priv->kind_width > 0))
         {
-            width = (width + 3) & ~3;
+            LLOGLN(10, ("%d %d", priv->kind_width, pix->drawable.width));
             priv->rdpindex = rdpup_add_os_bitmap(pix, priv);
             if (priv->rdpindex >= 0)
             {
                 priv->status = 1;
-                rdpup_create_os_surface(priv->rdpindex, width, height);
+                rdpup_create_os_surface(priv->rdpindex,
+                                        priv->kind_width, height);
                 box.x1 = 0;
                 box.y1 = 0;
                 box.x2 = width;
                 box.y2 = height;
                 if (g_do_dirty_os)
                 {
-                    draw_item_remove_all(priv);
-                    RegionInit(&reg1, &box, 0);
-                    draw_item_add_img_region(priv, &reg1, GXcopy, RDI_IMGLL);
-                    RegionUninit(&reg1);
-                    priv->is_dirty = 1;
+                    if (priv->con_number != g_con_number)
+                    {
+                        draw_item_remove_all(priv);
+                        RegionInit(&reg1, &box, 0);
+                        draw_item_add_img_region(priv, &reg1, GXcopy, RDI_IMGLL);
+                        RegionUninit(&reg1);
+                        priv->is_dirty = 1;
+                        priv->con_number = g_con_number;
+                    }
                 }
                 else
                 {

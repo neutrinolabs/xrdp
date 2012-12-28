@@ -28,8 +28,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
-int g_con_number = 0; /* increments for each connection */
-
 static int g_listen_sck = 0;
 static int g_sck = 0;
 static int g_sck_closed = 0;
@@ -63,6 +61,7 @@ extern int g_use_uds; /* in rdpmain.c */
 extern char g_uds_data[]; /* in rdpmain.c */
 extern int g_do_dirty_ons; /* in rdpmain.c */
 extern rdpPixmapRec g_screenPriv; /* in rdpmain.c */
+extern int g_con_number; /* in rdpmain.c */
 
 struct rdpup_os_bitmap
 {
