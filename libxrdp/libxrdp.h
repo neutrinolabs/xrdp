@@ -116,7 +116,7 @@ struct xrdp_rdp
   int share_id;
   int mcs_channel;
   struct xrdp_client_info client_info;
-  void* mppc_enc;
+  struct xrdp_mppc_enc* mppc_enc;
   void* rfx_enc;
 };
 
@@ -212,6 +212,31 @@ struct xrdp_orders
   int order_level; /* inc for every call to xrdp_orders_init */
   struct xrdp_orders_state orders_state;
 };
+
+#define PROTO_RDP_40 1
+#define PROTO_RDP_50 2
+
+struct xrdp_mppc_enc
+{
+  int    protocol_type;    /* PROTO_RDP_40, PROTO_RDP_50 etc */
+  char  *historyBuffer;    /* contains uncompressed data */
+  char  *outputBuffer;     /* contains compressed data */
+  char  *outputBufferPlus;
+  int    historyOffset;    /* next free slot in historyBuffer */
+  int    buf_len;          /* length of historyBuffer, protocol dependant */
+  int    bytes_in_opb;     /* compressed bytes available in outputBuffer */
+  int    flags;            /* PACKET_COMPRESSED, PACKET_AT_FRONT, PACKET_FLUSHED etc */
+  int    flagsHold;
+  int    first_pkt;        /* this is the first pkt passing through enc */
+  tui16 *hash_table;
+};
+
+int APP_CC
+compress_rdp(struct xrdp_mppc_enc *enc, tui8 *srcData, int len);
+struct xrdp_mppc_enc * APP_CC
+mppc_enc_new(int protocol_type);
+void APP_CC
+mppc_enc_free(struct xrdp_mppc_enc *enc);
 
 /* xrdp_tcp.c */
 struct xrdp_tcp* APP_CC

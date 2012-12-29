@@ -21,7 +21,6 @@
 #include "libxrdp.h"
 
 #if defined(XRDP_FREERDP1)
-#include <freerdp/codec/mppc_enc.h>
 #include <freerdp/codec/rfx.h>
 #endif
 
@@ -229,8 +228,8 @@ xrdp_rdp_create(struct xrdp_session *session, struct trans *trans)
     /* load client ip info */
     bytes = sizeof(self->client_info.client_ip) - 1;
     g_write_ip_address(trans->sck, self->client_info.client_ip, bytes);
-#if defined(XRDP_FREERDP1)
     self->mppc_enc = mppc_enc_new(PROTO_RDP_50);
+#if defined(XRDP_FREERDP1)
     self->rfx_enc = rfx_context_new();
     rfx_context_set_cpu_opt(self->rfx_enc, xrdp_rdp_detect_cpu());
 #endif
@@ -249,8 +248,8 @@ xrdp_rdp_delete(struct xrdp_rdp *self)
     }
 
     xrdp_sec_delete(self->sec_layer);
+    mppc_enc_free(self->mppc_enc);
 #if defined(XRDP_FREERDP1)
-    mppc_enc_free((struct rdp_mppc_enc *)(self->mppc_enc));
     rfx_context_free((RFX_CONTEXT *)(self->rfx_enc));
 #endif
     g_free(self);
@@ -403,9 +402,7 @@ xrdp_rdp_send_data(struct xrdp_rdp *self, struct stream *s,
     int sec_offset;
     int rdp_offset;
     struct stream ls;
-#if defined(XRDP_FREERDP1)
-    struct rdp_mppc_enc *mppc_enc;
-#endif
+    struct xrdp_mppc_enc *mppc_enc;
 
     DEBUG(("in xrdp_rdp_send_data"));
     s_pop_layer(s, rdp_hdr);
@@ -416,12 +413,10 @@ xrdp_rdp_send_data(struct xrdp_rdp *self, struct stream *s,
     ctype = 0;
     clen = len;
     tocomplen = pdulen - 18;
-#if defined(XRDP_FREERDP1)
 
     if (self->client_info.rdp_compression && self->session->up_and_running)
     {
-        mppc_enc = (struct rdp_mppc_enc *)(self->mppc_enc);
-
+        mppc_enc = self->mppc_enc;
         if (compress_rdp(mppc_enc, (tui8 *)(s->p + 18), tocomplen))
         {
             DEBUG(("mppc_encode ok flags 0x%x bytes_in_opb %d historyOffset %d "
@@ -458,7 +453,6 @@ xrdp_rdp_send_data(struct xrdp_rdp *self, struct stream *s,
         }
     }
 
-#endif
     out_uint16_le(s, pdulen);
     out_uint16_le(s, pdutype);
     out_uint16_le(s, self->mcs_channel);
