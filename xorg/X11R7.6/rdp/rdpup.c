@@ -219,6 +219,7 @@ rdpup_add_os_bitmap(PixmapPtr pixmap, rdpPixmapPtr priv)
         LLOGLN(10, ("rdpup_add_os_bitmap: evicting old, oldest_index %d", oldest_index));
         /* evict old */
         g_os_bitmaps[oldest_index].priv->status = 0;
+        g_os_bitmaps[oldest_index].priv->con_number = 0;
         /* set new */
         g_os_bitmaps[oldest_index].pixmap = pixmap;
         g_os_bitmaps[oldest_index].priv = priv;

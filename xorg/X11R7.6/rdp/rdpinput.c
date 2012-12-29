@@ -830,11 +830,14 @@ check_keysa(void)
 void
 sendDownUpKeyEvent(int type, int x_scancode)
 {
-    /* if type is keydown, send keydown + keyup */
-    /* this allows us to ignore keyup events    */
+    /* if type is keydown, send keyup + keydown */
     if (type == KeyPress)
     {
+        rdpEnqueueKey(KeyRelease, x_scancode);
         rdpEnqueueKey(KeyPress, x_scancode);
+    }
+    else
+    {
         rdpEnqueueKey(KeyRelease, x_scancode);
     }
 }
