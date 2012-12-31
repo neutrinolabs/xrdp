@@ -18,10 +18,12 @@ MainWindow::MainWindow(QWidget *parent) :
 
         /* connection to remote client failed; error msg has  */
         /* already been displayed so it's ok to close app now */
-        QTimer::singleShot(1000, qApp, SLOT(quit()));
+        QTimer::singleShot(1000, this, SLOT(close()));
     }
-
-    oneTimeInitSuccess = true;
+    else
+    {
+        oneTimeInitSuccess = true;
+    }
     remoteClientInited = false;
     ui->setupUi(this);
     acceptSliderMove = false;
@@ -37,12 +39,16 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
-    if (oneTimeInitSuccess)
-        delete ui;
+    delete ui;
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
+    if (!oneTimeInitSuccess)
+    {
+        QMessageBox::warning(this, "Closing application",
+                "This is not an xrdp session with xrdpvr");
+    }
     event->accept();
 }
 
@@ -155,7 +161,8 @@ void MainWindow::openMediaFile()
     {
         /* no previous selection - open user's home folder TODO */
         // TODO filename = QFileDialog::getOpenFileName(this, "Select Media File", "/");
-        filename = QFileDialog::getOpenFileName(this, "Select Media File", "/home/lk/vbox_share");
+        filename = QFileDialog::getOpenFileName(this, "Select Media File",
+                                                QDir::currentPath());
     }
     else
     {
