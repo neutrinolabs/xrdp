@@ -31,6 +31,9 @@ FORMS    += mainwindow.ui
 INCLUDEPATH += ../xrdpvr
 INCLUDEPATH += ../xrdpapi
 
+LIBS += -Wl,-rpath
+LIBS += -Wl,/usr/local/lib/xrdp
+
 LIBS += -L../xrdpvr/.libs -lxrdpvr
 LIBS += -L../xrdpapi/.libs -lxrdpapi
 LIBS += -L/usr/lib/x86_64-linux-gnu -lavformat -lavcodec -lavutil
