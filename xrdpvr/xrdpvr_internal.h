@@ -26,7 +26,29 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <fcntl.h>
+#include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
+
+#if LIBAVCODEC_VERSION_MAJOR == 52 && LIBAVCODEC_VERSION_MINOR == 20
+#define DISTRO_DEBIAN6
+#endif
+
+#if LIBAVCODEC_VERSION_MAJOR == 52 && LIBAVCODEC_VERSION_MINOR == 72
+#define DISTRO_UBUNTU1104
+#endif
+
+#if LIBAVCODEC_VERSION_MAJOR == 53 && LIBAVCODEC_VERSION_MINOR == 35
+#define DISTRO_UBUNTU1204
+#endif
+
+#if !defined(DISTRO_DEBIAN6) && !defined(DISTRO_UBUNTU1104) && !defined(DISTRO_UBUNTU1204)
+#warning unsupported distro
+#endif
+
+#ifdef DISTRO_UBUNTU1204
+#define CODEC_TYPE_VIDEO AVMEDIA_TYPE_VIDEO
+#define CODEC_TYPE_AUDIO AVMEDIA_TYPE_AUDIO
+#endif
 
 #define MAX_BUFSIZE (1024 * 1024 * 8)
 
