@@ -175,15 +175,21 @@ void MainWindow::openMediaFile()
 
 void MainWindow::getVdoGeometry(QRect *rect)
 {
-    int x = geometry().x() + lblVideo->geometry().x();
+    int x;
+    int y;
+    int width;
+    int height;
+    QPoint pt;
 
-    int y = pos().y() + lblVideo->geometry().y() +
-            ui->mainToolBar->geometry().height() * 4 + 10;
-
+    pt = lblVideo->mapToGlobal(QPoint(0, 0));
+    x = pt.x();
+    y = pt.y();
+    width = lblVideo->width();
+    height = lblVideo->height();
     rect->setX(x);
     rect->setY(y);
-    rect->setWidth(lblVideo->geometry().width());
-    rect->setHeight(lblVideo->geometry().height());
+    rect->setWidth(width);
+    rect->setHeight(height);
 }
 
 void MainWindow::clearDisplay()
