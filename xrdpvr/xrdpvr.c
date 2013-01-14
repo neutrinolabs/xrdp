@@ -95,7 +95,8 @@ xrdpvr_deinit_player(void *channel, int stream_id)
     av_free(g_psi.frame);
     avcodec_close(g_psi.p_audio_codec_ctx);
     avcodec_close(g_psi.p_video_codec_ctx);
-    avformat_close_input(&g_psi.p_format_ctx);
+    //avformat_close_input(&g_psi.p_format_ctx);
+    av_close_input_file(g_psi.p_format_ctx);
 
     /* do remote cleanup */
 
@@ -141,14 +142,16 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
     av_register_all();
 
     /* open media file - this will read just the header */
-    if (avformat_open_input(&g_psi.p_format_ctx, filename, NULL, NULL))
+    //if (avformat_open_input(&g_psi.p_format_ctx, filename, NULL, NULL))
+    if (av_open_input_file(&g_psi.p_format_ctx, filename, NULL, 0, NULL))
     {
         printf("ERROR opening %s\n", filename);
         return -1;
     }
 
     /* now get the real stream info */
-    if (avformat_find_stream_info(g_psi.p_format_ctx, NULL) < 0)
+    //if (avformat_find_stream_info(g_psi.p_format_ctx, NULL) < 0)
+    if (av_find_stream_info(g_psi.p_format_ctx) < 0)
     {
         printf("ERRRO reading stream info\n");
         return -1;
@@ -179,7 +182,8 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
     {
         /* close file and return with error */
         printf("ERROR: no audio/video stream found in %s\n", filename);
-        avformat_close_input(&g_psi.p_format_ctx);
+        //avformat_close_input(&g_psi.p_format_ctx);
+        av_close_input_file(g_psi.p_format_ctx);
         return -1;
     }
 
@@ -207,16 +211,18 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
     }
 
     /* open decoder for audio stream */
-    if (avcodec_open2(g_psi.p_audio_codec_ctx, g_psi.p_audio_codec,
-                      NULL) < 0)
+    //if (avcodec_open2(g_psi.p_audio_codec_ctx, g_psi.p_audio_codec,
+    //                  NULL) < 0)
+    if (avcodec_open(g_psi.p_audio_codec_ctx, g_psi.p_audio_codec) < 0)
     {
         printf("ERROR: could not open audio decoder\n");
         return -1;
     }
 
     /* open decoder for video stream */
-    if (avcodec_open2(g_psi.p_video_codec_ctx, g_psi.p_video_codec,
-                      NULL) < 0)
+    //if (avcodec_open2(g_psi.p_video_codec_ctx, g_psi.p_video_codec,
+    //                  NULL) < 0)
+    if (avcodec_open(g_psi.p_video_codec_ctx, g_psi.p_video_codec) < 0)
     {
         printf("ERROR: could not open video decoder\n");
         return -1;
