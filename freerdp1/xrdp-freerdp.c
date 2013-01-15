@@ -17,6 +17,8 @@
  * limitations under the License.
  */
 
+#include <freerdp/settings.h>
+#include <X11/Xlib.h>
 #include "xrdp-freerdp.h"
 #include "xrdp-color.h"
 #include "xrdp_rail.h"
@@ -39,6 +41,18 @@ struct mod_context
 };
 typedef struct mod_context modContext;
 
+void verifyColorMap(struct mod *mod)
+{
+    int i ;
+    for( i = 0 ;i<255 ; i++)
+    {
+	if(mod->colormap[i]!=0)
+	{
+	    return ;
+	}
+    }
+    LLOGLN(0, ("The colormap is all NULL\n"));
+}
 /*****************************************************************************/
 /* return error */
 static int DEFAULT_CC
@@ -158,7 +172,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
     int lchid;
     char *data;
 
-    LLOGLN(10, ("lxrdp_event: msg %d", msg));
+    LLOGLN(12, ("lxrdp_event: msg %d", msg));
 
     switch (msg)
     {
@@ -169,53 +183,53 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             mod->inst->input->KeyboardEvent(mod->inst->input, param4, param3);
             break;
         case 17: /*Synchronize*/
-            LLOGLN(0, ("Synchronized event handled"));
+            LLOGLN(11, ("Synchronized event handled"));
             mod->inst->input->SynchronizeEvent(mod->inst->input, 0);
             break;
         case 100: /* mouse move */
-            LLOGLN(10, ("mouse move %d %d", param1, param2));
+            LLOGLN(12, ("mouse move %d %d", param1, param2));
             x = param1;
             y = param2;
             flags = PTR_FLAGS_MOVE;
             mod->inst->input->MouseEvent(mod->inst->input, flags, x, y);
             break;
         case 101: /* left button up */
-            LLOGLN(10, ("left button up %d %d", param1, param2));
+            LLOGLN(12, ("left button up %d %d", param1, param2));
             x = param1;
             y = param2;
             flags = PTR_FLAGS_BUTTON1;
             mod->inst->input->MouseEvent(mod->inst->input, flags, x, y);
             break;
         case 102: /* left button down */
-            LLOGLN(10, ("left button down %d %d", param1, param2));
+            LLOGLN(12, ("left button down %d %d", param1, param2));
             x = param1;
             y = param2;
             flags = PTR_FLAGS_BUTTON1 | PTR_FLAGS_DOWN;
             mod->inst->input->MouseEvent(mod->inst->input, flags, x, y);
             break;
         case 103: /* right button up */
-            LLOGLN(10, ("right button up %d %d", param1, param2));
+            LLOGLN(12, ("right button up %d %d", param1, param2));
             x = param1;
             y = param2;
             flags = PTR_FLAGS_BUTTON2;
             mod->inst->input->MouseEvent(mod->inst->input, flags, x, y);
             break;
         case 104: /* right button down */
-            LLOGLN(10, ("right button down %d %d", param1, param2));
+            LLOGLN(12, ("right button down %d %d", param1, param2));
             x = param1;
             y = param2;
             flags = PTR_FLAGS_BUTTON2 | PTR_FLAGS_DOWN;
             mod->inst->input->MouseEvent(mod->inst->input, flags, x, y);
             break;
         case 105: /* middle button up */
-            LLOGLN(10, ("middle button up %d %d", param1, param2));
+            LLOGLN(12, ("middle button up %d %d", param1, param2));
             x = param1;
             y = param2;
             flags = PTR_FLAGS_BUTTON3;
             mod->inst->input->MouseEvent(mod->inst->input, flags, x, y);
             break;
         case 106: /* middle button down */
-            LLOGLN(10, ("middle button down %d %d", param1, param2));
+            LLOGLN(12, ("middle button down %d %d", param1, param2));
             x = param1;
             y = param2;
             flags = PTR_FLAGS_BUTTON3 | PTR_FLAGS_DOWN;
@@ -232,7 +246,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
         case 110:
             break;
         case 200:
-            LLOGLN(10, ("Invalidate request sent from client"));
+            LLOGLN(12, ("Invalidate request sent from client"));
             RECTANGLE_16 *rectangle = (RECTANGLE_16 *) g_malloc(sizeof(RECTANGLE_16), 0);
             /* The parameters are coded as follows param1 = MAKELONG(y, x), param2 =MAKELONG(h, w)
              * #define MAKELONG(lo, hi) ((((hi) & 0xffff) << 16) | ((lo) & 0xffff))
@@ -282,7 +296,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             size = (int)param2;
             data = (char *)param3;
             total_size = (int)param4;
-            LLOGLN(10, ("lxrdp_event: client to server flags %d", flags));
+            LLOGLN(12, ("lxrdp_event: client to server flags %d", flags));
 
             if ((chanid < 0) || (chanid >= mod->inst->settings->ChannelDefArraySize))
             {
@@ -428,7 +442,7 @@ lxrdp_set_param(struct mod *mod, char *name, char *value)
 static int DEFAULT_CC
 lxrdp_session_change(struct mod *mod, int a, int b)
 {
-    LLOGLN(10, ("lxrdp_session_change:"));
+    LLOGLN(0, ("lxrdp_session_change: - no code here"));
     return 0;
 }
 
@@ -441,7 +455,7 @@ lxrdp_get_wait_objs(struct mod *mod, tbus *read_objs, int *rcount,
     void **wfds;
     BOOL ok;
 
-    LLOGLN(10, ("lxrdp_get_wait_objs:"));
+    LLOGLN(12, ("lxrdp_get_wait_objs:"));
     rfds = (void **)read_objs;
     wfds = (void **)write_objs;
     ok = freerdp_get_fds(mod->inst, rfds, rcount, wfds, wcount);
@@ -461,7 +475,7 @@ lxrdp_check_wait_objs(struct mod *mod)
 {
     BOOL ok;
 
-    LLOGLN(10, ("lxrdp_check_wait_objs:"));
+    LLOGLN(12, ("lxrdp_check_wait_objs:"));
     ok = freerdp_check_fds(mod->inst);
 
     if (!ok)
@@ -550,7 +564,7 @@ lfreerdp_bitmap_update(rdpContext *context, BITMAP_UPDATE *bitmap)
 
     for (index = 0; index < bitmap->number; index++)
     {
-        bd = bitmap->rectangles + index;
+        bd = &bitmap->rectangles[index];
         cx = (bd->destRight - bd->destLeft) + 1;
         cy = (bd->destBottom - bd->destTop) + 1;
         line_bytes = server_Bpp * bd->width;
@@ -558,12 +572,16 @@ lfreerdp_bitmap_update(rdpContext *context, BITMAP_UPDATE *bitmap)
 
         if (bd->compressed)
         {
-            bitmap_decompress(bd->bitmapDataStream, (tui8 *)dst_data, bd->width,
-                              bd->height, bd->bitmapLength, server_bpp, server_bpp);
+	    LLOGLN(20,("decompress size : %d",bd->bitmapLength));
+            if(!bitmap_decompress(bd->bitmapDataStream, (tui8 *)dst_data, bd->width,
+                              bd->height, bd->bitmapLength, server_bpp, server_bpp)){
+		LLOGLN(0,("Failure to decompress the bitmap"));
+	    }
         }
         else
         {
             /* bitmap is upside down */
+            LLOGLN(10,("bitmap upside down"));
             src = (char *)(bd->bitmapDataStream);
             dst = dst_data + bd->height * line_bytes;
 
@@ -627,6 +645,10 @@ lfreerdp_pat_blt(rdpContext *context, PATBLT_ORDER *patblt)
     bgcolor = convert_color(server_bpp, client_bpp,
                             patblt->backColor, mod->colormap);
 
+    if(fgcolor==bgcolor)
+    {
+        LLOGLN(0, ("Warning same color on both bg and fg"));
+    }
     mod->server_set_mixmode(mod, 1);
     mod->server_set_opcode(mod, patblt->bRop);
     mod->server_set_fgcolor(mod, fgcolor);
@@ -800,7 +822,7 @@ lfreerdp_line_to(rdpContext *context, LINE_TO_ORDER *line_to)
 static void DEFAULT_CC
 lfreerdp_cache_bitmap(rdpContext *context, CACHE_BITMAP_ORDER *cache_bitmap_order)
 {
-    LLOGLN(10, ("lfreerdp_cache_bitmap:"));
+    LLOGLN(0, ("lfreerdp_cache_bitmap: - no code here"));
 }
 
 /******************************************************************************/
@@ -862,6 +884,7 @@ lfreerdp_cache_bitmapV2(rdpContext *context,
 
     if (flags & 0x10) /* CBR2_DO_NOT_CACHE */
     {
+        LLOGLN(0, ("lfreerdp_cache_bitmapV2: CBR2_DO_NOT_CACHE"));
         idx = 4096 - 1;
     }
 
@@ -1010,7 +1033,7 @@ static void DEFAULT_CC
 lfreerdp_pointer_position(rdpContext *context,
                           POINTER_POSITION_UPDATE *pointer_position)
 {
-    LLOGLN(0, ("lfreerdp_pointer_position:"));
+    LLOGLN(0, ("lfreerdp_pointer_position: - no code here"));
 }
 
 /******************************************************************************/
@@ -1018,7 +1041,7 @@ static void DEFAULT_CC
 lfreerdp_pointer_system(rdpContext *context,
                         POINTER_SYSTEM_UPDATE *pointer_system)
 {
-    LLOGLN(0, ("lfreerdp_pointer_system: - no code here"));
+    LLOGLN(0, ("lfreerdp_pointer_system: - no code here type value = %d",pointer_system->type));    
 }
 
 /******************************************************************************/
@@ -1026,7 +1049,7 @@ static void DEFAULT_CC
 lfreerdp_pointer_color(rdpContext *context,
                        POINTER_COLOR_UPDATE *pointer_color)
 {
-    LLOGLN(0, ("lfreerdp_pointer_color:"));
+    LLOGLN(0, ("lfreerdp_pointer_color: - no code here"));
 }
 
 /******************************************************************************/
@@ -1131,18 +1154,22 @@ lfreerdp_pointer_new(rdpContext *context,
     tui8 *src;
 
     mod = ((struct mod_context *)context)->modi;
-    LLOGLN(0, ("lfreerdp_pointer_new:"));
-    LLOGLN(0, ("  bpp %d", pointer_new->xorBpp));
-    LLOGLN(0, ("  width %d height %d", pointer_new->colorPtrAttr.width,
+    LLOGLN(20, ("lfreerdp_pointer_new:"));
+    LLOGLN(20, ("  bpp %d", pointer_new->xorBpp));
+    LLOGLN(20, ("  width %d height %d", pointer_new->colorPtrAttr.width,
                pointer_new->colorPtrAttr.height));
 
-    LLOGLN(0, ("  lengthXorMask %d lengthAndMask %d",
+    LLOGLN(20, ("  lengthXorMask %d lengthAndMask %d",
                pointer_new->colorPtrAttr.lengthXorMask,
                pointer_new->colorPtrAttr.lengthAndMask));
 
     index = pointer_new->colorPtrAttr.cacheIndex;
-
-    if (pointer_new->xorBpp == 1 &&
+    if(index>=32){
+	LLOGLN(0,("pointer index too big"));
+        return ;
+    }
+    // In this fix we remove the xorBpp check, even if the mouse pointers are not correct we can use them.
+    else if ( // pointer_new->xorBpp == 1 && 
             pointer_new->colorPtrAttr.width == 32 &&
             pointer_new->colorPtrAttr.height == 32 &&
             index < 32)
@@ -1165,15 +1192,15 @@ lfreerdp_pointer_new(rdpContext *context,
         //memcpy(mod->pointer_cache[index].mask,
         //    pointer_new->colorPtrAttr.andMaskData, 32 * 32 / 8);
 
-        mod->server_set_cursor(mod, mod->pointer_cache[index].hotx,
+        mod->server_set_pointer(mod, mod->pointer_cache[index].hotx,
                                mod->pointer_cache[index].hoty, mod->pointer_cache[index].data,
                                mod->pointer_cache[index].mask);
     }
     else
     {
-        LLOGLN(0, ("lfreerdp_pointer_new: error bpp %d width %d height %d",
+        LLOGLN(0, ("lfreerdp_pointer_new: error bpp %d width %d height %d index: %d",
                    pointer_new->xorBpp, pointer_new->colorPtrAttr.width,
-                   pointer_new->colorPtrAttr.height));
+                   pointer_new->colorPtrAttr.height,index));
     }
 
     free(pointer_new->colorPtrAttr.xorMaskData);
@@ -1191,12 +1218,66 @@ lfreerdp_pointer_cached(rdpContext *context,
     struct mod *mod;
     int index;
 
-    LLOGLN(10, ("lfreerdp_pointer_cached:"));
     mod = ((struct mod_context *)context)->modi;
     index = pointer_cached->cacheIndex;
-    mod->server_set_cursor(mod, mod->pointer_cache[index].hotx,
+    LLOGLN(10, ("lfreerdp_pointer_cached:%d", index));
+    mod->server_set_pointer(mod, mod->pointer_cache[index].hotx,
                            mod->pointer_cache[index].hoty, mod->pointer_cache[index].data,
                            mod->pointer_cache[index].mask);
+}
+
+static void DEFAULT_CC lfreerdp_polygon_cb(rdpContext* context, POLYGON_CB_ORDER* polygon_cb)
+{
+    LLOGLN(0, ("lfreerdp_polygon_sc called:- not supported!!!!!!!!!!!!!!!!!!!!"));    
+}
+
+static void DEFAULT_CC lfreerdp_polygon_sc(rdpContext* context, POLYGON_SC_ORDER* polygon_sc)
+{
+    struct mod *mod;
+    int i, npoints;
+    XPoint points[4];
+    int fgcolor;
+    int server_bpp, client_bpp;    
+    
+    mod = ((struct mod_context *)context)->modi;
+    LLOGLN(10, ("lfreerdp_polygon_sc :%d(points) %d(color) %d(fillmode) %d(bRop) %d(cbData) %d(x) %d(y)", polygon_sc->numPoints,polygon_sc->brushColor,polygon_sc->fillMode,polygon_sc->bRop2,polygon_sc->cbData,polygon_sc->xStart,polygon_sc->yStart));
+    if(polygon_sc->numPoints==3){	
+	server_bpp = mod->inst->settings->ColorDepth;
+	client_bpp = mod->bpp;
+
+	points[0].x = polygon_sc->xStart;
+	points[0].y = polygon_sc->yStart;
+
+	for (i = 0; i < polygon_sc->numPoints; i++)
+	{
+		points[i + 1].x = polygon_sc->points[i].x;
+		points[i + 1].y = polygon_sc->points[i].y;
+	}	
+	fgcolor = convert_color(server_bpp, client_bpp,
+                            polygon_sc->brushColor, mod->colormap);
+   
+	mod->server_set_opcode(mod, polygon_sc->bRop2);
+	mod->server_set_bgcolor(mod, 255);
+	mod->server_set_fgcolor(mod, fgcolor);    
+	mod->server_set_pen(mod, 1, 1); // style, width	
+	// TODO replace with correct brush; this is a workaround
+	// This workaround handles the text cursor in microsoft word.
+	mod->server_draw_line(mod,polygon_sc->xStart,polygon_sc->yStart,polygon_sc->xStart,polygon_sc->yStart+points[2].y);
+//	mod->server_fill_rect(mod, points[0].x, points[0].y,
+//                         points[0].x-points[3].x, points[0].y-points[2].y);
+//      mod->server_set_brush(mod,); // howto use this on our indata??
+	mod->server_set_opcode(mod, 0xcc);
+    }else{
+	LLOGLN(0, ("Not handled number of points in lfreerdp_polygon_sc"));
+    }    
+   
+}
+
+static void DEFAULT_CC lfreerdp_syncronize(rdpContext* context)
+{
+    struct mod *mod;
+    mod = ((struct mod_context *)context)->modi;    
+    LLOGLN(0, ("lfreerdp_synchronize received - not handled"));
 }
 
 /******************************************************************************/
@@ -1213,6 +1294,7 @@ lfreerdp_pre_connect(freerdp *instance)
 
     LLOGLN(0, ("lfreerdp_pre_connect:"));
     mod = ((struct mod_context *)(instance->context))->modi;
+    verifyColorMap(mod);
     num_chans = 0;
     index = 0;
     error = mod->server_query_channel(mod, index, ch_name, &ch_flags);
@@ -1235,6 +1317,7 @@ lfreerdp_pre_connect(freerdp *instance)
     // TODO
     // instance->settings->offscreen_bitmap_cache = false;
     instance->settings->OffscreenSupportLevel = 0;  
+    instance->settings->DrawNineGridEnabled = 0 ;
 
     // TODO
     //instance->settings->glyph_cache = true;
@@ -1262,31 +1345,40 @@ lfreerdp_pre_connect(freerdp *instance)
     instance->settings->BitmapCacheV2CellInfo[4].numEntries = 0; // 2048;
     instance->settings->BitmapCacheV2CellInfo[4].persistent = FALSE;
 
+    // instance->settings->BitmapCacheV3Enabled = FALSE; 
     instance->settings->OrderSupport[NEG_MULTIDSTBLT_INDEX] = FALSE;
     instance->settings->OrderSupport[NEG_MULTIPATBLT_INDEX] = FALSE;
     instance->settings->OrderSupport[NEG_MULTISCRBLT_INDEX] = FALSE;
     instance->settings->OrderSupport[NEG_MULTIOPAQUERECT_INDEX] = FALSE;
     instance->settings->OrderSupport[NEG_POLYLINE_INDEX] = FALSE;
-
+    
     instance->settings->Username = g_strdup(mod->username);
     instance->settings->Password = g_strdup(mod->password);
 
     if (mod->client_info.rail_support_level > 0)
     {
+        LLOGLN(0, ("Railsupport !!!!!!!!!!!!!!!!!!"));
         instance->settings->RemoteApplicationMode = TRUE;
         instance->settings->RemoteAppLanguageBarSupported = TRUE;
         instance->settings->Workarea = TRUE;
         instance->settings->PerformanceFlags = PERF_DISABLE_WALLPAPER | PERF_DISABLE_FULLWINDOWDRAG;
     }
-
+    else
+    {
+	LLOGLN(10, ("Special PerformanceFlags changed"));
+	instance->settings->PerformanceFlags = PERF_DISABLE_WALLPAPER | PERF_DISABLE_FULLWINDOWDRAG | PERF_DISABLE_MENUANIMATIONS | PERF_DISABLE_THEMING ; // | PERF_DISABLE_CURSOR_SHADOW | PERF_DISABLE_CURSORSETTINGS ;
+    }
+    instance->settings->CompressionEnabled = FALSE ;
+    instance->settings->IgnoreCertificate = TRUE ;    
+    
     // here
-    //instance->settings->rdp_version = 4;
+    //instance->settings->RdpVersion = 4;
 
     instance->update->BeginPaint = lfreerdp_begin_paint;
     instance->update->EndPaint = lfreerdp_end_paint;
     instance->update->SetBounds = lfreerdp_set_bounds;
     instance->update->BitmapUpdate = lfreerdp_bitmap_update;
-
+    instance->update->Synchronize = lfreerdp_syncronize ;
     instance->update->primary->DstBlt = lfreerdp_dst_blt;
     instance->update->primary->PatBlt = lfreerdp_pat_blt;
     instance->update->primary->ScrBlt = lfreerdp_scr_blt;
@@ -1294,7 +1386,8 @@ lfreerdp_pre_connect(freerdp *instance)
     instance->update->primary->MemBlt = lfreerdp_mem_blt;
     instance->update->primary->GlyphIndex = lfreerdp_glyph_index;
     instance->update->primary->LineTo = lfreerdp_line_to;
-
+    instance->update->primary->PolygonSC = lfreerdp_polygon_sc ;
+    instance->update->primary->PolygonCB = lfreerdp_polygon_cb;
     instance->update->secondary->CacheBitmap = lfreerdp_cache_bitmap;
     instance->update->secondary->CacheBitmapV2 = lfreerdp_cache_bitmapV2;
     instance->update->secondary->CacheGlyph = lfreerdp_cache_glyph;
@@ -1613,7 +1706,7 @@ lfreerdp_context_new(freerdp *instance, rdpContext *context)
 static void DEFAULT_CC
 lfreerdp_context_free(freerdp *instance, rdpContext *context)
 {
-    LLOGLN(0, ("lfreerdp_context_free:"));
+    LLOGLN(0, ("lfreerdp_context_free: - no code here"));
 }
 
 /******************************************************************************/
@@ -1662,7 +1755,7 @@ static BOOL DEFAULT_CC
 lfreerdp_authenticate(freerdp *instance, char **username,
                       char **password, char **domain)
 {
-    LLOGLN(0, ("lfreerdp_authenticate:"));
+    LLOGLN(0, ("lfreerdp_authenticate: - no code here"));
     return TRUE;
 }
 
@@ -1671,7 +1764,7 @@ static BOOL DEFAULT_CC
 lfreerdp_verify_certificate(freerdp *instance, char *subject, char *issuer,
                             char *fingerprint)
 {
-    LLOGLN(0, ("lfreerdp_verify_certificate:"));
+    LLOGLN(0, ("lfreerdp_verify_certificate: - no code here"));
     return TRUE;
 }
 
@@ -1714,7 +1807,7 @@ mod_init(void)
 
     lcon = (modContext *)(mod->inst->context);
     lcon->modi = mod;
-    LLOGLN(10, ("mod_init: mod %p", mod));
+    LLOGLN(10, ("mod_init: mod %p", mod));    
 
     return mod;
 }
