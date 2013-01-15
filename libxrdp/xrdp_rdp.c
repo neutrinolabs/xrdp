@@ -103,6 +103,15 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
                 client_info->use_bitmap_comp = 1;
             }
         }
+        else if (g_strcasecmp(item, "bulk_compression") == 0)
+        {
+            if (g_strcasecmp(value, "yes") == 0 ||
+                    g_strcasecmp(value, "true") == 0 ||
+                    g_strcasecmp(value, "1") == 0)
+            {
+                client_info->use_bulk_comp = 1;
+            }
+        }
         else if (g_strcasecmp(item, "crypt_level") == 0)
         {
             if (g_strcasecmp(value, "low") == 0)

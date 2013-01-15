@@ -385,8 +385,16 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     if (flags & RDP_COMPRESSION)
     {
-        self->rdp_layer->client_info.rdp_compression = 1;
         DEBUG(("flag RDP_COMPRESSION found"));
+        if (self->rdp_layer->client_info.use_bulk_comp)
+        {
+            DEBUG(("flag RDP_COMPRESSION set"));
+            self->rdp_layer->client_info.rdp_compression = 1;
+        }
+        else
+        {
+            DEBUG(("flag RDP_COMPRESSION not set"));
+        }
     }
 
     in_uint16_le(s, len_domain);
