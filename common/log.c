@@ -424,9 +424,10 @@ internalInitAndAllocStruct(void)
 int APP_CC
 text2bool(char *s)
 {
-    if (0 == g_strcasecmp(s, "1") ||
-            0 == g_strcasecmp(s, "true") ||
-            0 == g_strcasecmp(s, "yes"))
+    if ( (g_atoi(s) != 0) ||
+         (0 == g_strcasecmp(s, "true")) ||
+         (0 == g_strcasecmp(s, "on")) ||
+         (0 == g_strcasecmp(s, "yes")))
     {
         return 1;
     }
