@@ -51,6 +51,8 @@ void DEFAULT_CC
 g_write(const char* format, ...);
 void APP_CC
 g_hexdump(char* p, int len);
+int APP_CC
+g_string_to_boolean(const char* p);
 void APP_CC
 g_memset(void* ptr, int val, int size);
 void APP_CC
