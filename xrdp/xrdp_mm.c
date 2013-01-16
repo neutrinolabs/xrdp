@@ -17,10 +17,12 @@
  *
  * module manager
  */
-
+#define ACCESS
 #include "xrdp.h"
 #include "log.h"
-#define ACCESS
+#ifdef ACCESS
+#include "security/_pam_types.h"
+#endif
 
 /*****************************************************************************/
 struct xrdp_mm *APP_CC
@@ -187,9 +189,17 @@ xrdp_mm_send_login(struct xrdp_mm *self)
     }
 
     /* send domain */
-    index = g_strlen(self->wm->client_info->domain);
-    out_uint16_be(s, index);
-    out_uint8a(s, self->wm->client_info->domain, index);
+    if(self->wm->client_info->domain[0]!='_')
+    {
+        index = g_strlen(self->wm->client_info->domain);
+        out_uint16_be(s, index);
+        out_uint8a(s, self->wm->client_info->domain, index);
+    }
+    else
+    {
+        out_uint16_be(s, 0);
+        /* out_uint8a(s, "", 0); */
+    }
 
     /* send program / shell */
     index = g_strlen(self->wm->client_info->program);
@@ -1060,12 +1070,12 @@ xrdp_mm_sesman_data_in(struct trans *trans)
 int access_control(char *username, char *password, char *srv)
 {
     int reply;
-    int rec = 1; // failure
+    int rec = 32+1; /* 32 is reserved for PAM failures this means connect failure */
     struct stream *in_s;
     struct stream *out_s;
     unsigned long version;
     unsigned short int dummy;
-    unsigned short int ok;
+    unsigned short int pAM_errorcode;
     unsigned short int code;
     unsigned long size;
     int index;
@@ -1117,17 +1127,17 @@ int access_control(char *username, char *password, char *srv)
                         if ((size == 14) && (version == 0))
                         {
                             in_uint16_be(in_s, code);
-                            in_uint16_be(in_s, ok);
+                            in_uint16_be(in_s, pAM_errorcode); /* this variable holds the PAM error code if the variable is >32 it is a "invented" code */
                             in_uint16_be(in_s, dummy);
 
-                            if (code != 4)
+                            if (code != 4) /*0x04 means SCP_GW_AUTHENTICATION*/
                             {
                                 log_message(LOG_LEVEL_ERROR, "Returned cmd code from "
                                             "sesman is corrupt");
                             }
                             else
                             {
-                                rec = ok; /* here we read the reply from the access control */
+                                rec = pAM_errorcode; /* here we read the reply from the access control */
                             }
                         }
                         else
@@ -1189,6 +1199,82 @@ void cleanup_states(struct xrdp_mm *self)
         self-> usechansrv = 0; /* true if chansrvport is set in xrdp.ini or using sesman */
     }
 }
+#ifdef ACCESS
+const char *getPAMError(const int pamError)
+{      
+    switch(pamError){
+	case PAM_SUCCESS:
+	return "Success";    
+	case PAM_OPEN_ERR:
+	    return "dlopen() failure";
+	case PAM_SYMBOL_ERR:
+	    return "Symbol not found";
+	case PAM_SERVICE_ERR:
+	    return "Error in service module";
+	case PAM_SYSTEM_ERR:
+	    return "System error";
+	case PAM_BUF_ERR:
+	    return "Memory buffer error";
+	case PAM_PERM_DENIED:
+	    return "Permission denied";
+	case PAM_AUTH_ERR:
+	    return "Authentication failure";
+	case PAM_CRED_INSUFFICIENT:
+	    return "Insufficient credentials to access authentication data";
+	case PAM_AUTHINFO_UNAVAIL:
+	    return "Authentication service cannot retrieve authentication info.";
+	case PAM_USER_UNKNOWN:
+	    return "User not known to the underlying authentication module";
+	case PAM_MAXTRIES:
+	    return "Have exhasted maximum number of retries for service.";
+	case PAM_NEW_AUTHTOK_REQD:
+	    return "Authentication token is no longer valid; new one required.";
+	case PAM_ACCT_EXPIRED:
+	    return "User account has expired";    
+	case PAM_CRED_UNAVAIL:
+	    return "Authentication service cannot retrieve user credentials";
+	case PAM_CRED_EXPIRED:
+	    return "User credentials expired";
+	case PAM_CRED_ERR:
+	    return "Failure setting user credentials";
+	case PAM_NO_MODULE_DATA:
+	    return "No module specific data is present";
+	case PAM_BAD_ITEM:
+	    return "Bad item passed to pam_*_item()";
+	case PAM_CONV_ERR:
+	    return "Conversation error";
+	case PAM_AUTHTOK_ERR:
+	    return "Authentication token manipulation error";   
+	case PAM_AUTHTOK_LOCK_BUSY:
+	    return "Authentication token lock busy";
+	case PAM_AUTHTOK_DISABLE_AGING:
+	    return "Authentication token aging disabled";
+	case PAM_TRY_AGAIN:
+	    return "Failed preliminary check by password service";
+	case PAM_IGNORE:
+	    return "Please ignore underlying account module";
+	case PAM_MODULE_UNKNOWN:
+	    return "Module is unknown";
+	case PAM_AUTHTOK_EXPIRED:
+	    return "Authentication token expired";
+	case PAM_CONV_AGAIN:
+	    return "Conversation is waiting for event";
+	case PAM_INCOMPLETE:
+	    return "Application needs to call libpam again";    
+	case 32+1:
+	    return "Error connecting to PAM";	
+	case 32+3:
+	    return "Username okey but group problem";
+	default:{
+	    char replytxt[80];	
+	    g_sprintf(replytxt,"Not defined PAM error:%d",pamError);
+	    return replytxt ;
+	}
+	
+    }
+    
+}
+#endif
 /*****************************************************************************/
 int APP_CC
 xrdp_mm_connect(struct xrdp_mm *self)
@@ -1282,7 +1368,6 @@ xrdp_mm_connect(struct xrdp_mm *self)
     {
         int reply;
         char replytxt[80];
-        char replymessage[4][80] = {"Ok", "Sesman connect failure", "User or password error", "Privilege group error"};
         xrdp_wm_log_msg(self->wm, "Please wait, we now perform access control...");
 
         /* g_writeln("we use pam modules to check if we can approve this user"); */
@@ -1300,15 +1385,8 @@ xrdp_mm_connect(struct xrdp_mm *self)
 
         /* access_control return 0 on success */
         reply = access_control(pam_auth_username, pam_auth_password, pam_auth_sessionIP);
-
-        if (reply >= 0 && reply < 4)
-        {
-            g_sprintf(replytxt, "Reply from access control: %s", replymessage[reply]);
-        }
-        else
-        {
-            g_sprintf(replytxt, "Reply from access control undefined");
-        }
+       
+        g_sprintf(replytxt, "Reply from access control: %s", getPAMError(reply));
 
         xrdp_wm_log_msg(self->wm, replytxt);
         log_message(LOG_LEVEL_INFO, replytxt);

@@ -540,7 +540,12 @@ xrdp_wm_init(struct xrdp_wm *self)
             names->auto_free = 1;
             values = list_create();
             values->auto_free = 1;
-            g_strncpy(section_name, self->session->client_info->domain, 255);
+	    /* domain names that starts with '_' are reserved for IP/DNS to simplify 
+	     * for the user in a gateway setup */
+	    if(self->session->client_info->domain[0]!='_')
+	    {
+		g_strncpy(section_name, self->session->client_info->domain, 255);
+	    }
 
             if (section_name[0] == 0)
             {
