@@ -22,76 +22,81 @@ PlayVideo::PlayVideo(QObject *parent,
 void PlayVideo::play()
 {
     MediaPacket *pkt;
+    int usl;
 
     while (1)
     {
         vcrMutex.lock();
         switch (vcrFlag)
         {
-        case VCR_PLAY:
-            vcrFlag = 0;
-            vcrMutex.unlock();
-            if (pausedTime)
-            {
-                elapsedTime = av_gettime() - pausedTime;
-                pausedTime = 0;
-            }
-            isStopped = false;
-            continue;
-            break;
-
-        case VCR_PAUSE:
-            vcrMutex.unlock();
-            if (!pausedTime)
-            {
-                /* save amount of video played so far */
-                pausedTime = av_gettime() - elapsedTime;
-            }
-            usleep(1000 * 100);
-            isStopped = false;
-            continue;
-            break;
-
-        case VCR_STOP:
-            vcrMutex.unlock();
-            if (isStopped)
-            {
-                usleep(1000 * 100);
+            case VCR_PLAY:
+                vcrFlag = 0;
+                vcrMutex.unlock();
+                if (pausedTime)
+                {
+                    elapsedTime = av_gettime() - pausedTime;
+                    pausedTime = 0;
+                }
+                isStopped = false;
                 continue;
-            }
-            clearVideoQ();
-            elapsedTime = 0;
-            pausedTime = 0;
-            la_seekPos = -1;
-            xrdpvr_seek_media(0, 0);
-            isStopped = true;
-            continue;
-            break;
+                break;
 
-        default:
-            vcrMutex.unlock();
-            goto label1;
-            break;
+            case VCR_PAUSE:
+                vcrMutex.unlock();
+                if (!pausedTime)
+                {
+                    /* save amount of video played so far */
+                    pausedTime = av_gettime() - elapsedTime;
+                }
+                usleep(1000 * 100);
+                isStopped = false;
+                continue;
+                break;
+
+            case VCR_STOP:
+                vcrMutex.unlock();
+                if (isStopped)
+                {
+                    usleep(1000 * 100);
+                    continue;
+                }
+                clearVideoQ();
+                elapsedTime = 0;
+                pausedTime = 0;
+                la_seekPos = -1;
+                xrdpvr_seek_media(0, 0);
+                isStopped = true;
+                continue;
+                break;
+
+            default:
+                vcrMutex.unlock();
+                goto label1;
+                break;
         }
 
 label1:
 
         if (videoQueue->isEmpty())
         {
-            qDebug() << "PlayVideo::play: GOT EMPTY";
-            usleep(1000 * 100);
             continue;
         }
-
         pkt = videoQueue->dequeue();
         sendMutex->lock();
         send_video_pkt(channel, stream_id, pkt->av_pkt);
         sendMutex->unlock();
+        usl = pkt->delay_in_us;
+        if (usl < 0)
+        {
+            usl = 0;
+        }
+        if (usl > 100 * 1000)
+        {
+            usl = 100 * 1000;
+        }
+        usleep(usl);
         delete pkt;
-        usleep(pkt->delay_in_us);
-
         updateMediaPos();
-
         if (elapsedTime == 0)
             elapsedTime = av_gettime();
 

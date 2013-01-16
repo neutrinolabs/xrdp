@@ -312,6 +312,8 @@ void MainWindow::onMediaDurationInSeconds(int duration)
     int  secs    = 0;
     char buf[20];
 
+//return;
+
     /* setup progress bar */
     slider->setMinimum(0);
     slider->setMaximum(duration * 100); /* in hundredth of a sec */

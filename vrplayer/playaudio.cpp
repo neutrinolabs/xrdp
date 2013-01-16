@@ -62,8 +62,8 @@ label1:
         sendMutex->lock();
         send_audio_pkt(channel, stream_id, pkt->av_pkt);
         sendMutex->unlock();
-        delete pkt;
         usleep(pkt->delay_in_us);
+        delete pkt;
     }
 }
 
