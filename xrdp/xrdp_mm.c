@@ -2010,7 +2010,7 @@ find_name_in_lists(char *inName, struct list *names)
     for (index = 0; index < names->count; index++)
     {
         name = (char *)list_get_item(names, index);
-        if ( (name != 0) && g_strncmp(name, inName, MAX_CHANNEL_NAME))
+        if ( (name != 0) && (g_strncmp(name, inName, MAX_CHANNEL_NAME) == 0) )
         {
             reply = index;
             break; /* stop loop - item found*/
