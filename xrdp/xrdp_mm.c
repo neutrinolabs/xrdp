@@ -2034,15 +2034,8 @@ is_channel_enabled(char *inName, struct list *names, struct list *values)
     if ( index >= 0 )
     {
         val = (char *)list_get_item(values, index);
-
-        if ((g_strcasecmp(val, "yes") == 0) ||
-                (g_strcasecmp(val, "on") == 0) ||
-                (g_strcasecmp(val, "true") == 0) ||
-                (g_atoi(val) != 0))
-        {
-            reply = 1;
-        }
-        else
+        reply = text2bool(val);
+        if (reply == 0)
         {
             g_writeln("This channel is disabled: %s", name);
         }
