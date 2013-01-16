@@ -19,6 +19,7 @@
  */
 
 #include "libxrdp.h"
+#include "log.h"
 
 #if defined(XRDP_FREERDP1)
 #include <freerdp/codec/rfx.h>
@@ -87,30 +88,15 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
 
         if (g_strcasecmp(item, "bitmap_cache") == 0)
         {
-            if ((g_strcasecmp(value, "yes") == 0) ||
-                    (g_strcasecmp(value, "true") == 0) ||
-                    (g_strcasecmp(value, "1") == 0))
-            {
-                client_info->use_bitmap_cache = 1;
-            }
+            client_info->use_bitmap_cache = text2bool(value);
         }
         else if (g_strcasecmp(item, "bitmap_compression") == 0)
         {
-            if (g_strcasecmp(value, "yes") == 0 ||
-                    g_strcasecmp(value, "true") == 0 ||
-                    g_strcasecmp(value, "1") == 0)
-            {
-                client_info->use_bitmap_comp = 1;
-            }
+            client_info->use_bitmap_comp = text2bool(value);
         }
         else if (g_strcasecmp(item, "bulk_compression") == 0)
         {
-            if (g_strcasecmp(value, "yes") == 0 ||
-                    g_strcasecmp(value, "true") == 0 ||
-                    g_strcasecmp(value, "1") == 0)
-            {
-                client_info->use_bulk_comp = 1;
-            }
+            client_info->use_bulk_comp = text2bool(value);
         }
         else if (g_strcasecmp(item, "crypt_level") == 0)
         {
@@ -135,13 +121,8 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
         }
         else if (g_strcasecmp(item, "channel_code") == 0)
         {
-            if ((g_strcasecmp(value, "yes") == 0) ||
-                    (g_strcasecmp(value, "1") == 0) ||
-                    (g_strcasecmp(value, "true") == 0))
-            {
-                client_info->channel_code = 1;
-            }
-            else
+            client_info->channel_code = text2bool(value);
+            if (client_info->channel_code == 0)
             {
                 g_writeln("Info: All channels are disabled");
             }
