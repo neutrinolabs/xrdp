@@ -19,6 +19,7 @@
  */
 
 #include "xrdp.h"
+#include "log.h"
 
 /* 'g_process' is protected by the semaphore 'g_process_sem'.  One thread sets
    g_process and waits for the other to process it */
@@ -198,40 +199,19 @@ xrdp_listen_get_port_address(char *port, int port_bytes,
                     if (g_strcasecmp(val, "fork") == 0)
                     {
                         val = (char *)list_get_item(values, index);
-
-                        if ((g_strcasecmp(val, "yes") == 0) ||
-                                (g_strcasecmp(val, "on") == 0) ||
-                                (g_strcasecmp(val, "true") == 0) ||
-                                (g_atoi(val) != 0))
-                        {
-                            startup_param->fork = 1;
-                        }
+                        startup_param->fork = text2bool(val);
                     }
 
                     if (g_strcasecmp(val, "tcp_nodelay") == 0)
                     {
                         val = (char *)list_get_item(values, index);
-
-                        if ((g_strcasecmp(val, "yes") == 0) ||
-                                (g_strcasecmp(val, "on") == 0) ||
-                                (g_strcasecmp(val, "true") == 0) ||
-                                (g_atoi(val) != 0))
-                        {
-                            *tcp_nodelay = 1 ;
-                        }
+                        *tcp_nodelay = text2bool(val);
                     }
 
                     if (g_strcasecmp(val, "tcp_keepalive") == 0)
                     {
                         val = (char *)list_get_item(values, index);
-
-                        if ((g_strcasecmp(val, "yes") == 0) ||
-                                (g_strcasecmp(val, "on") == 0) ||
-                                (g_strcasecmp(val, "true") == 0) ||
-                                (g_atoi(val) != 0))
-                        {
-                            *tcp_keepalive = 1 ;
-                        }
+                        *tcp_keepalive = text2bool(val);
                     }
                 }
             }
