@@ -98,6 +98,10 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
         {
             client_info->use_bulk_comp = text2bool(value);
         }
+        else if (g_strcasecmp(item, "fix_mouse_pointer_sprites") == 0)
+        {
+            client_info->fix_mouse_pointer_sprites = text2bool(value);
+        }
         else if (g_strcasecmp(item, "crypt_level") == 0)
         {
             if (g_strcasecmp(value, "low") == 0)
