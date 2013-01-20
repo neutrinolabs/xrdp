@@ -87,6 +87,7 @@ struct xrdp_client_info
   char jpeg_prop[64];
   int v3_codec_id;
   int use_bulk_comp;
+  int fix_mouse_pointer_sprites;
 };
 
 #endif

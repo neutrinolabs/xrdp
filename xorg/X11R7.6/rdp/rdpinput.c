@@ -37,6 +37,7 @@ keyboard and mouse stuff
 /* this should be fixed in rdesktop */
 
 #include "rdp.h"
+#include "cursors.h"
 
 #if 1
 #define DEBUG_OUT_INPUT(arg)
@@ -47,6 +48,7 @@ keyboard and mouse stuff
 extern ScreenPtr g_pScreen; /* in rdpmain.c */
 extern DeviceIntPtr g_pointer; /* in rdpmain.c */
 extern DeviceIntPtr g_keyboard; /* in rdpmain.c */
+extern rdpScreenInfoRec g_rdpScreen; /* from rdpmain.c */
 
 static int g_old_button_mask = 0;
 static int g_pause_spe = 0;
@@ -57,6 +59,7 @@ static int g_tab_down = 0;
 /* this is toggled every time num lock key is released, not like the
    above *_down vars */
 static int g_scroll_lock_down = 0;
+static int g_initialized_mouse_pointer_cache = 0;
 
 #define MIN_KEY_CODE 8
 #define MAX_KEY_CODE 255
@@ -81,43 +84,6 @@ static int g_scroll_lock_down = 0;
 
 #define N_PREDEFINED_KEYS \
     (sizeof(g_kbdMap) / (sizeof(KeySym) * GLYPHS_PER_KEY))
-
-/* Copied from Xvnc/lib/font/util/utilbitmap.c */
-static unsigned char g_reverse_byte[0x100] =
-{
-    0x00, 0x80, 0x40, 0xc0, 0x20, 0xa0, 0x60, 0xe0,
-    0x10, 0x90, 0x50, 0xd0, 0x30, 0xb0, 0x70, 0xf0,
-    0x08, 0x88, 0x48, 0xc8, 0x28, 0xa8, 0x68, 0xe8,
-    0x18, 0x98, 0x58, 0xd8, 0x38, 0xb8, 0x78, 0xf8,
-    0x04, 0x84, 0x44, 0xc4, 0x24, 0xa4, 0x64, 0xe4,
-    0x14, 0x94, 0x54, 0xd4, 0x34, 0xb4, 0x74, 0xf4,
-    0x0c, 0x8c, 0x4c, 0xcc, 0x2c, 0xac, 0x6c, 0xec,
-    0x1c, 0x9c, 0x5c, 0xdc, 0x3c, 0xbc, 0x7c, 0xfc,
-    0x02, 0x82, 0x42, 0xc2, 0x22, 0xa2, 0x62, 0xe2,
-    0x12, 0x92, 0x52, 0xd2, 0x32, 0xb2, 0x72, 0xf2,
-    0x0a, 0x8a, 0x4a, 0xca, 0x2a, 0xaa, 0x6a, 0xea,
-    0x1a, 0x9a, 0x5a, 0xda, 0x3a, 0xba, 0x7a, 0xfa,
-    0x06, 0x86, 0x46, 0xc6, 0x26, 0xa6, 0x66, 0xe6,
-    0x16, 0x96, 0x56, 0xd6, 0x36, 0xb6, 0x76, 0xf6,
-    0x0e, 0x8e, 0x4e, 0xce, 0x2e, 0xae, 0x6e, 0xee,
-    0x1e, 0x9e, 0x5e, 0xde, 0x3e, 0xbe, 0x7e, 0xfe,
-    0x01, 0x81, 0x41, 0xc1, 0x21, 0xa1, 0x61, 0xe1,
-    0x11, 0x91, 0x51, 0xd1, 0x31, 0xb1, 0x71, 0xf1,
-    0x09, 0x89, 0x49, 0xc9, 0x29, 0xa9, 0x69, 0xe9,
-    0x19, 0x99, 0x59, 0xd9, 0x39, 0xb9, 0x79, 0xf9,
-    0x05, 0x85, 0x45, 0xc5, 0x25, 0xa5, 0x65, 0xe5,
-    0x15, 0x95, 0x55, 0xd5, 0x35, 0xb5, 0x75, 0xf5,
-    0x0d, 0x8d, 0x4d, 0xcd, 0x2d, 0xad, 0x6d, 0xed,
-    0x1d, 0x9d, 0x5d, 0xdd, 0x3d, 0xbd, 0x7d, 0xfd,
-    0x03, 0x83, 0x43, 0xc3, 0x23, 0xa3, 0x63, 0xe3,
-    0x13, 0x93, 0x53, 0xd3, 0x33, 0xb3, 0x73, 0xf3,
-    0x0b, 0x8b, 0x4b, 0xcb, 0x2b, 0xab, 0x6b, 0xeb,
-    0x1b, 0x9b, 0x5b, 0xdb, 0x3b, 0xbb, 0x7b, 0xfb,
-    0x07, 0x87, 0x47, 0xc7, 0x27, 0xa7, 0x67, 0xe7,
-    0x17, 0x97, 0x57, 0xd7, 0x37, 0xb7, 0x77, 0xf7,
-    0x0f, 0x8f, 0x4f, 0xcf, 0x2f, 0xaf, 0x6f, 0xef,
-    0x1f, 0x9f, 0x5f, 0xdf, 0x3f, 0xbf, 0x7f, 0xff
-};
 
 static KeySym g_kbdMap[] =
 {
@@ -514,96 +480,168 @@ rdpSpriteUnrealizeCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs)
 
 /******************************************************************************/
 int
-get_pixel_safe(char *data, int x, int y, int width, int height, int bpp)
+rdpGetBit(unsigned char *line, int x)
 {
-    int start;
-    int shift;
-    int c;
+    unsigned char mask;
 
-    if (x < 0)
+    if (screenInfo.bitmapBitOrder == LSBFirst)
     {
-        return 0;
+        mask = (1 << (x & 7));
     }
-
-    if (y < 0)
+    else
     {
-        return 0;
+        mask = (0x80 >> (x & 7));
     }
-
-    if (x >= width)
+    line += (x >> 3);
+    if (*line & mask)
     {
-        return 0;
+        return 1;
     }
-
-    if (y >= height)
-    {
-        return 0;
-    }
-
-    if (bpp == 1)
-    {
-        width = (width + 7) / 8;
-        start = (y * width) + x / 8;
-        shift = x % 8;
-        c = (unsigned char)(data[start]);
-#if (X_BYTE_ORDER == X_LITTLE_ENDIAN)
-        return (g_reverse_byte[c] & (0x80 >> shift)) != 0;
-#else
-        return (c & (0x80 >> shift)) != 0;
-#endif
-    }
-
     return 0;
 }
 
 /******************************************************************************/
 void
-set_pixel_safe(char *data, int x, int y, int width, int height, int bpp,
-               int pixel)
+rdpSetBit(unsigned char *line, int x)
 {
-    int start;
-    int shift;
+    unsigned char mask = (0x80 >> (x & 7));
+    line += (x >> 3);
+    *line |= mask;
+}
 
-    if (x < 0)
+/******************************************************************************/
+void
+rdpDrawPredefinedCursor(const char * shape, int x, int y, int w, int h, int fgcolor, int bgcolor,
+                        char * cur_data, char * cur_mask)
+{
+    int color = -1;
+    if (x < w && y < h)
     {
-        return;
-    }
-
-    if (y < 0)
-    {
-        return;
-    }
-
-    if (x >= width)
-    {
-        return;
-    }
-
-    if (y >= height)
-    {
-        return;
-    }
-
-    if (bpp == 1)
-    {
-        width = (width + 7) / 8;
-        start = (y * width) + x / 8;
-        shift = x % 8;
-
-        if (pixel & 1)
+        char c = shape[x + y * w];
+        if (c == 'F')
         {
-            data[start] = data[start] | (0x80 >> shift);
+            color = fgcolor;
         }
-        else
+        else if (c == 'B')
         {
-            data[start] = data[start] & ~(0x80 >> shift);
+            color = bgcolor;
         }
     }
-    else if (bpp == 24)
+
+    if (color != -1)
     {
-        *(data + (3 * (y * width + x)) + 0) = pixel >> 0;
-        *(data + (3 * (y * width + x)) + 1) = pixel >> 8;
-        *(data + (3 * (y * width + x)) + 2) = pixel >> 16;
+        char *dst = cur_data + (3 * (((31 - y) << 5) + x));
+        dst[0] = color >> 16;
+        dst[1] = color >> 8;
+        dst[2] = color;
+    }
+    else
+    {
+        rdpSetBit((unsigned char *) cur_mask, ((31 - y) << 5) + x);
+    }
+}
+
+/******************************************************************************/
+void
+rdpInitializeMousePointerCache(const int fgcolor, const int bgcolor)
+{
+    int x, y;
+
+    for (y = 0; y < 32; y++)
+    {
+        for (x = 0; x < 32; x++)
+        {
+            rdpDrawPredefinedCursor(shape_2382, x, y, 24, 24, fgcolor, bgcolor, data_2382, mask_2382);
+            rdpDrawPredefinedCursor(shape_1103, x, y, 24, 24, fgcolor, bgcolor, data_1103, mask_1103);
+            rdpDrawPredefinedCursor(shape_3307, x, y, 24, 24, fgcolor, bgcolor, data_3307, mask_3307);
+            rdpDrawPredefinedCursor(shape_2926, x, y, 24, 24, fgcolor, bgcolor, data_2926, mask_2926);
+            rdpDrawPredefinedCursor(shape_3153, x, y, 24, 24, fgcolor, bgcolor, data_3153, mask_3153);
+            rdpDrawPredefinedCursor(shape_3373, x, y, 24, 24, fgcolor, bgcolor, data_3373, mask_3373);
+            rdpDrawPredefinedCursor(shape_3794, x, y, 24, 24, fgcolor, bgcolor, data_3794, mask_3794);
+            rdpDrawPredefinedCursor(shape_2905, x, y, 24, 24, fgcolor, bgcolor, data_2905, mask_2905);
+            rdpDrawPredefinedCursor(shape_3063, x, y, 24, 24, fgcolor, bgcolor, data_3063, mask_3063);
+            rdpDrawPredefinedCursor(shape_2711, x, y, 24, 24, fgcolor, bgcolor, data_2711, mask_2711);
+            rdpDrawPredefinedCursor(shape_4223, x, y, 24, 24, fgcolor, bgcolor, data_4223, mask_4223);
+            rdpDrawPredefinedCursor(shape_3128, x, y, 24, 24, fgcolor, bgcolor, data_3128, mask_3128);
+            rdpDrawPredefinedCursor(shape_3484, x, y, 24, 24, fgcolor, bgcolor, data_3484, mask_3484);
+            rdpDrawPredefinedCursor(shape_1268, x, y, 24, 24, fgcolor, bgcolor, data_1268, mask_1268);
+            rdpDrawPredefinedCursor(shape_3728, x, y, 24, 24, fgcolor, bgcolor, data_3728, mask_3728);
+            rdpDrawPredefinedCursor(shape_4838, x, y, 24, 24, fgcolor, bgcolor, data_4838, mask_4838);
+            rdpDrawPredefinedCursor(shape_5185, x, y, 24, 24, fgcolor, bgcolor, data_5185, mask_5185);
+            rdpDrawPredefinedCursor(shape_4976, x, y, 24, 24, fgcolor, bgcolor, data_4976, mask_4976);
+            rdpDrawPredefinedCursor(shape_4877, x, y, 24, 24, fgcolor, bgcolor, data_4877, mask_4877);
+            rdpDrawPredefinedCursor(shape_5008, x, y, 24, 24, fgcolor, bgcolor, data_5008, mask_5008);
+            rdpDrawPredefinedCursor(shape_5180, x, y, 24, 24, fgcolor, bgcolor, data_5180, mask_5180);
+            rdpDrawPredefinedCursor(shape_5068, x, y, 24, 24, fgcolor, bgcolor, data_5068, mask_5068);
+            rdpDrawPredefinedCursor(shape_4866, x, y, 24, 24, fgcolor, bgcolor, data_4866, mask_4866);
+            rdpDrawPredefinedCursor(shape_3501, x, y, 24, 24, fgcolor, bgcolor, data_3501, mask_3501);
+            rdpDrawPredefinedCursor(shape_1848, x, y, 24, 24, fgcolor, bgcolor, data_1848, mask_1848);
+            rdpDrawPredefinedCursor(shape_2760, x, y, 24, 24, fgcolor, bgcolor, data_2760, mask_2760);
+            rdpDrawPredefinedCursor(shape_2949, x, y, 24, 24, fgcolor, bgcolor, data_2949, mask_2949);
+            rdpDrawPredefinedCursor(shape_1662, x, y, 24, 24, fgcolor, bgcolor, data_1662, mask_1662);
+            rdpDrawPredefinedCursor(shape_1721, x, y, 24, 24, fgcolor, bgcolor, data_1721, mask_1721);
+            rdpDrawPredefinedCursor(shape_3007, x, y, 24, 24, fgcolor, bgcolor, data_3007, mask_3007);
+            rdpDrawPredefinedCursor(shape_4045, x, y, 24, 24, fgcolor, bgcolor, data_4045, mask_4045);
+            rdpDrawPredefinedCursor(shape_4153, x, y, 24, 24, fgcolor, bgcolor, data_4153, mask_4153);
+            rdpDrawPredefinedCursor(shape_4483, x, y, 24, 24, fgcolor, bgcolor, data_4483, mask_4483);
+
+            rdpDrawPredefinedCursor(shape_5144, x, y, 25, 25, fgcolor, bgcolor, data_5144, mask_5144);
+            rdpDrawPredefinedCursor(shape_5150, x, y, 25, 25, fgcolor, bgcolor, data_5150, mask_5150);
+
+            rdpDrawPredefinedCursor(shape_5583, x, y, 29, 29, fgcolor, bgcolor, data_5583, mask_5583);
+
+            rdpDrawPredefinedCursor(shape_2494, x, y, 32, 32, fgcolor, bgcolor, data_2494, mask_2494);
+        }
+    }
+    ErrorF("Initialized mouse pointer cache\n");
+}
+
+/******************************************************************************/
+void
+getCachedMousePointerSprite(const int id, char **data, char **mask)
+{
+    switch (id)
+    {
+        case 2382: CACHED_MP_DATA(data_2382, mask_2382);
+        case 1103: CACHED_MP_DATA(data_1103, mask_1103);
+        case 3307: CACHED_MP_DATA(data_3307, mask_3307);
+        case 2926: CACHED_MP_DATA(data_2926, mask_2926);
+        case 3153: CACHED_MP_DATA(data_3153, mask_3153);
+        case 3373: CACHED_MP_DATA(data_3373, mask_3373);
+        case 3794: CACHED_MP_DATA(data_3794, mask_3794);
+        case 2905: CACHED_MP_DATA(data_2905, mask_2905);
+        case 3063: CACHED_MP_DATA(data_3063, mask_3063);
+        case 2711: CACHED_MP_DATA(data_2711, mask_2711);
+        case 4223: CACHED_MP_DATA(data_4223, mask_4223);
+        case 3128: CACHED_MP_DATA(data_3128, mask_3128);
+        case 3484: CACHED_MP_DATA(data_3484, mask_3484);
+        case 1268: CACHED_MP_DATA(data_1268, mask_1268);
+        case 2494: CACHED_MP_DATA(data_2494, mask_2494);
+        case 3728: CACHED_MP_DATA(data_3728, mask_3728);
+        case 4838: CACHED_MP_DATA(data_4838, mask_4838);
+        case 5185: CACHED_MP_DATA(data_5185, mask_5185);
+        case 4976: CACHED_MP_DATA(data_4976, mask_4976);
+        case 4877: CACHED_MP_DATA(data_4877, mask_4877);
+        case 5008: CACHED_MP_DATA(data_5008, mask_5008);
+        case 5180: CACHED_MP_DATA(data_5180, mask_5180);
+        case 5068: CACHED_MP_DATA(data_5068, mask_5068);
+        case 4866: CACHED_MP_DATA(data_4866, mask_4866);
+        case 3501: CACHED_MP_DATA(data_3501, mask_3501);
+        case 1848: CACHED_MP_DATA(data_1848, mask_1848);
+        case 2760: CACHED_MP_DATA(data_2760, mask_2760);
+        case 2949: CACHED_MP_DATA(data_2949, mask_2949);
+        case 1662: CACHED_MP_DATA(data_1662, mask_1662);
+        case 1721: CACHED_MP_DATA(data_1721, mask_1721);
+        case 3007: CACHED_MP_DATA(data_3007, mask_3007);
+        case 4045: CACHED_MP_DATA(data_4045, mask_4045);
+        case 4153: CACHED_MP_DATA(data_4153, mask_4153);
+        case 4483: CACHED_MP_DATA(data_4483, mask_4483);
+        case 5144: CACHED_MP_DATA(data_5144, mask_5144);
+        case 5150: CACHED_MP_DATA(data_5150, mask_5150);
+        case 5583: CACHED_MP_DATA(data_5583, mask_5583);
+        default:
+            *data = NULL;
+            *mask = NULL;
     }
 }
 
@@ -614,64 +652,90 @@ rdpSpriteSetCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs,
 {
     char cur_data[32 * (32 * 3)];
     char cur_mask[32 * (32 / 8)];
+    char *pmask = NULL;
+    char *pdata = NULL;
     char *mask;
     char *data;
     int i;
     int j;
     int w;
     int h;
-    int p;
     int xhot;
     int yhot;
     int paddedRowBytes;
     int fgcolor;
     int bgcolor;
 
-    if (pCurs == 0)
-    {
-        return;
-    }
-
-    if (pCurs->bits == 0)
+    if (pCurs == 0 || pCurs->bits == 0)
     {
         return;
     }
 
     w = pCurs->bits->width;
     h = pCurs->bits->height;
-    paddedRowBytes = PixmapBytePad(w, 1);
     xhot = pCurs->bits->xhot;
     yhot = pCurs->bits->yhot;
-    /* ErrorF("xhot %d yhot %d\n", xhot, yhot); */
-    data = (char *)(pCurs->bits->source);
-    mask = (char *)(pCurs->bits->mask);
-    fgcolor = (((pCurs->foreRed >> 8) & 0xff) << 16) |
-              (((pCurs->foreGreen >> 8) & 0xff) << 8) |
+    paddedRowBytes = PixmapBytePad(w, 1);
+    data = (char *) pCurs->bits->source;
+    mask = (char *) pCurs->bits->mask;
+
+    fgcolor = ((pCurs->foreRed & 0xff00) << 8) |
+              ((pCurs->foreGreen & 0xff00)) |
               ((pCurs->foreBlue >> 8) & 0xff);
-    bgcolor = (((pCurs->backRed >> 8) & 0xff) << 16) |
-              (((pCurs->backGreen >> 8) & 0xff) << 8) |
+    bgcolor = ((pCurs->backRed & 0xff00) << 8) |
+              ((pCurs->backGreen & 0xff00)) |
               ((pCurs->backBlue >> 8) & 0xff);
-    memset(cur_data, 0, sizeof(cur_data));
-    memset(cur_mask, 0, sizeof(cur_mask));
 
-    for (j = 0; j < 32; j++)
+    unsigned int id = 0;
+    for (i = 0; i < w * paddedRowBytes; i++)
     {
-        for (i = 0; i < 32; i++)
-        {
-            p = get_pixel_safe(mask, i, j, paddedRowBytes * 8, h, 1);
-            set_pixel_safe(cur_mask, i, 31 - j, 32, 32, 1, !p);
+        id += (unsigned char) data[i];
+    }
 
-            if (p != 0)
+    if (g_rdpScreen.client_info.fix_mouse_pointer_sprites)
+    {
+        if (!g_initialized_mouse_pointer_cache)
+        {
+            rdpInitializeMousePointerCache(fgcolor, bgcolor);
+            g_initialized_mouse_pointer_cache = 1;
+        }
+        getCachedMousePointerSprite(id, &pdata, &pmask);
+    }
+
+    if (pdata == NULL || pmask == NULL)
+    {
+        pdata = cur_data;
+        pmask = cur_mask;
+
+        memset(cur_data, 0, sizeof(cur_data));
+        memset(cur_mask, 0, sizeof(cur_mask));
+
+        for (j = 0; j < 32; j++)
+        {
+            for (i = 0; i < 32; i++)
             {
-                p = get_pixel_safe(data, i, j, paddedRowBytes * 8, h, 1);
-                p = p ? fgcolor : bgcolor;
-                set_pixel_safe(cur_data, i, 31 - j, 32, 32, 24, p);
+                if (i < w && j < h && rdpGetBit((unsigned char *) mask, i))
+                {
+                    int bitSet = rdpGetBit((unsigned char *) data, i);
+                    int color = bitSet ? fgcolor : bgcolor;
+
+                    char *dst = cur_data + (3 * (((31 - j) << 5) + i));
+                    dst[0] = color >> 16;
+                    dst[1] = color >> 8;
+                    dst[2] = color;
+                }
+                else
+                {
+                    rdpSetBit((unsigned char *) cur_mask, ((31 - j) << 5) + i);
+                }
             }
+            mask += paddedRowBytes;
+            data += paddedRowBytes;
         }
     }
 
     rdpup_begin_update();
-    rdpup_set_cursor(xhot, yhot, cur_data, cur_mask);
+    rdpup_set_cursor(xhot, yhot, pdata, pmask);
     rdpup_end_update();
 }
 
