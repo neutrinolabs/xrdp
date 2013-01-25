@@ -123,13 +123,15 @@ extract_it()
 
     # if pkg has not yet been extracted, do so now
     if [ ! -d $mod_name ]; then
-        if echo $mod_file | grep -q tar.bz2
+        case "$mod_file" in
+        *.tar.bz2) comp=j ;;
+        *.tar.gz) comp=z ;;
+        *.tar.xz) comp=J ;;
+        *.tar) comp= ;;
+        *) echo "unknown compressed module $mod_name" ; exit 1 ;;
+        esac
+        if ! tar x${comp}f ../downloads/$mod_file > /dev/null
         then
-            tar xjf ../downloads/$mod_file > /dev/null 2>&1
-        else
-            tar xzf ../downloads/$mod_file > /dev/null 2>&1
-        fi
-        if [ $? -ne 0 ]; then
             echo "error extracting module $mod_name"
             exit 1
         fi
