@@ -68,11 +68,7 @@ download_file()
     *)
         url=$download_url/$file ;;
     esac
-    cd downloads
-    wget -cq "url"
-    status=$?
-    cd ..
-    return $status
+    wget -cqP downloads "url"
 }
 
 remove_modules()
@@ -89,16 +85,12 @@ remove_modules()
         exit 0
     fi
 
-    cd build_dir
-
     while IFS=: read mod_file mod_dir mod_args
     do
-        if [ -d $mod_dir ]; then
-            rm -rf $mod_dir
+        if [ -d build_dir/$mod_dir ]; then
+            rm -rf build_dir/$mod_dir
         fi
     done < ../$data_file
-
-    cd ..
 }
 
 extract_it()
@@ -187,7 +179,7 @@ make_it()
 
     # make module
     if [ ! -e cookies/$mod_name.made ]; then
-        if ! (cd build_dir/$mod_name ; make)
+        if ! make -C build_dir/$mod_name
         then
             echo ""
             echo "make failed for module $mod_name"
@@ -198,7 +190,7 @@ make_it()
     fi
 
     # install module
-    if ! (cd build_dir/$mod_name ; make install)
+    if ! make -C build_dir/$mod_name install
     then
         echo ""
         echo "make install failed for module $mod_name"
@@ -210,7 +202,7 @@ make_it()
     # so Mesa builds using this python version
     case "$mod_name" in
     *Python-2*)
-        (cd build_dir/$mod_name ; ln -s python $PREFIX_DIR/bin/python2)
+        ln -s python build_dir/$mod_name/$PREFIX_DIR/bin/python2
         ;;
     esac
 
@@ -324,8 +316,7 @@ echo "build for X OK"
 X11RDPBASE=$PREFIX_DIR
 export X11RDPBASE
 
-cd rdp
-if ! make
+if ! make -C rdp
 then
     echo "error building rdp"
     exit 1
