@@ -1,19 +1,18 @@
 .TH "xrdp" "8" "0.1.0" "xrdp team" ""
 .SH "NAME"
-.LP 
 \fBxrdp\fR \- a Remote Desktop Protocol (RDP) server
+
 .SH "SYNTAX"
-.LP 
 xrdp [ \-\-nodaemon | \-\-kill | \-\-help ]
+
 .SH "DESCRIPTION"
-.LP 
 \fBxrdp\fR is a Remote Desktop Protocol (RDP) Server.
 .br 
 Unlike Windows NT/2000/2003 server, \fBxrdp\fR will not display a Windows desktop but an X window desktop to the user.
 
 It can also be used as a VNC\->RDP bridge.
+
 .SH "OPTIONS"
-.LP 
 .TP 
 \fB\-n\fR, \fB\-\-nodaemon\fR 
 Starts \fBxrdp\fR in foreground instead of starting it as a daemon.
@@ -23,8 +22,8 @@ Kills running \fBxrdp\fR daemon.
 .TP 
 \fB\-h\fR, \fB\-\-help\fR
 Output help information and exit.
+
 .SH "FILES"
-.LP 
 ${XRDP_BIN_DIR}/xrdp
 .br 
 ${XRDP_CFG_DIR}/xrdp.ini
@@ -32,13 +31,13 @@ ${XRDP_CFG_DIR}/xrdp.ini
 ${XRDP_LOG_DIR}/xrdp.log
 .br 
 ${XRDP_PID_DIR}/xrdp.pid
+
 .SH "AUTHORS"
-.LP 
 Jay Sorg <jsorg71@users.sourceforge.net>
 .br 
 Simone Fedele <ilsimo@users.sourceforge.net>
+
 .SH "SEE ALSO"
-.LP 
 .BR xrdp.ini (5),
 .BR sesman (8),
 .BR sesman.ini (5),

@@ -1,19 +1,17 @@
 .TH "sesman" "8" "0.1.0" "xrdp team" ""
 .SH "NAME"
-.LP 
 \fBsesman\fR \- \fBxrdp\fR(8) session manager
+
 .SH "SYNTAX"
-.LP 
 .B sesman
 .RB [ \-\-nodaemon | \-\-kill | \-\-help ]
 
 .SH "DESCRIPTION"
-.LP 
 \fBsesman\fR is \fBxrdp\fR(8) session manager. 
 .br 
 It manages user sessions by authenticating the user and starting the appropriate Xserver
+
 .SH "OPTIONS"
-.LP 
 .TP 
 \fB\-n\fR, \fB\-\-nodaemon\fR 
 Starts \fBsesman\fR in foreground instead of starting it as a daemon.
@@ -23,8 +21,8 @@ Kills running \fBsesman\fR daemon.
 .TP 
 \fB\-h\fR, \fB\-\-help\fR
 Output help information and exit.
+
 .SH "FILES"
-.LP 
 ${SESMAN_BIN_DIR}/sesman
 .br 
 ${SESMAN_BIN_DIR}/sesrun
@@ -34,13 +32,13 @@ ${SESMAN_CFG_DIR}/sesman.ini
 ${SESMAN_LOG_DIR}/sesman.log
 .br 
 ${SESMAN_PID_DIR}/sesman.pid
+
 .SH "AUTHORS"
-.LP 
 Jay Sorg <jsorg71@users.sourceforge.net>
 .br 
 Simone Fedele <ilsimo@users.sourceforge.net>
+
 .SH "SEE ALSO"
-.LP 
 .BR sesman.ini (5),
 .BR sesrun (8),
 .BR xrdp (8),

@@ -1,10 +1,9 @@
 .\" 
 .TH "sesman.ini" "5" "0.1.0" "xrdp team" ""
 .SH "NAME"
-.LP 
 \fBsesman.ini\fR \- Configuration file for \fBsesman\fR(8)
+
 .SH "DESCRIPTION"
-.LP 
 This is the man page for \fBsesman.ini\fR, \fBsesman\fR(8) configuration file.
 It is composed by a number of sections, each one composed by a section name, enclosed by square brackets, folowed by a list of \fI<parameter>\fR=\fI<value>\fR lines.
 
@@ -29,49 +28,38 @@ All options and values (except for file names and paths) are case insensitive, a
 For any of the following parameter, if it's specified more than one time the last entry encountered will be used. 
 
 \fBNOTE\fR: if any of these options is specified outside its section, it will be \fIignored\fR.
-.SH "GLOBALS"
-.LP 
 
-.TP 
+.SH "GLOBALS"
 The options to be specified in the \fB[globals]\fR section are the following:
-.br 
 
 .TP 
 \fBListenAddress\fR=\fIip address\fR
 Specifies sesman listening address. Default is 0.0.0.0 (all interfaces)
-.br 
 
 .TP 
 \fBListenPort\fR=\fIport number\fR
 Specifies sesman listening port. Default is 3350
-.br 
 
 .TP 
 \fBEnableUserWindowManager\fR=\fI[0|1]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables user specific window manager, that is, anyone can define it's own script executed by sesman when starting a new session, specified by \fBUserWindowManager\fR
-.br 
 
 .TP 
 \fBUserWindowManager\fR=\fIstartwm.sh\fR
 This option specifies the script run by sesman when starting a session and per\-user window manager is enabled.
 .br 
 The path is relative to user's HOME directory
-.br 
 
 .TP 
 \fBDefaultWindowManager\fR=\fI${SESMAN_BIN_DIR}/startwm.sh\fR
 This contains full path to the default window manager startup script used by sesman to start a session
-.SH "LOGGING"
-.LP 
 
-.TP 
+.SH "LOGGING"
 The following parameters can be used in the \fB[logging]\fR section:
-.br 
 
 .TP 
 \fBLogFile\fR=\fI${SESMAN_LOG_DIR}/sesman.log\fR
 This options contains the path to logfile. It can be either absolute or relative, and the default is \fI${SESMAN_LOG_DIR}/sesman.log\fR
-.br 
 
 .TP 
 \fBLogLevel\fR=\fIlevel\fR
@@ -86,41 +74,33 @@ This option can have one of the following values:
 \fBINFO\fR or \fB3\fR \- Logs errors, warnings and informational messages
 
 \fBDEBUG\fR or \fB4\fR \- Log everything. If \fBsesman\fR is compiled in debug mode, this options will output many more low\-level message, useful for developers
-.br 
 
 .TP 
 \fBEnableSyslog\fR=\fI[0|1]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables logging to syslog. Otherwise syslog is disabled.
-.br 
 
 .TP 
 \fBSyslogLevel\fR=\fIlevel\fR
 This option sets the logging level for syslog. It can have the same values of \fBLogLevel\fR. If \fBSyslogLevel\fR is greater than \fBLogLevel\fR, its value is lowered to that of \fBLogLevel\fR.
-.SH "SESSIONS"
-.LP 
 
-.TP 
+.SH "SESSIONS"
 The following parameters can be used in the \fB[Sessions]\fR section:
-.br 
 
 .TP 
 \fBX11DisplayOffset\fR=\fI<number>\fR
 Specifies the first X display number available for \fBsesman\fP(8).  This prevents sesman from interfering with real X11 servers.  The default is 10.
-.br
 
 .TP
 \fBMaxSessions\fR=\fI<number>\fR
 Sets the maximum number of simultaneous session on terminal server.
 .br 
 If unset or set to \fI0\fR, unlimited session are allowed.
-.br 
 
 .TP 
 \fBKillDisconnected\fR=\fI[0|1]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR, every session will be killed when the user disconnects.
 .br 
 \fI\-this option is currently ignored!\-\fR
-.br 
 
 .TP 
 \fBIdleTimeLimit\fR=\fI<number>\fR
@@ -129,7 +109,6 @@ Sets the the time limit before an idle session is disconnected.
 If set to \fI0\fR, automatic disconnection is disabled.
 .br 
 \fI\-this option is currently ignored!\-\fR
-.br 
 
 .TP 
 \fBDisconnectedTimeLimit\fR=\fI<number>\fR
@@ -138,87 +117,64 @@ Sets the the time limit before a disconnected session is killed.
 If set to \fI0\fR, automatic killing is disabled.
 .br 
 \fI\-this option is currently ignored!\-\fR
-.br 
-.SH "SECURITY"
-.LP 
 
-.TP 
+.SH "SECURITY"
 The following parameters can be used in the \fB[Sessions]\fR section:
-.br 
 
 .TP 
 \fBAllowRootLogin\fR=\fI[0|1]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR enables root login on the terminal server
-.br 
 
 .TP 
 \fBMaxLoginRetry\fR=\fI[0|1]\fR
 The number of login attempts that are allowed on terminal server. If set to \fI0\fR, unlimited attempts are allowed. The default value for this field is \fI3\fR.
-.br 
 
 .TP 
 \fBTerminalServerUsers\fR=\fItsusers\fR
 Only the users belonging to the group \fItsusers\fR are allowed to login on terminal server.
 .br 
 If unset or set to an invalid or non\-existent group, login for all users is enabled.
-.br 
 
 .TP 
 \fBTerminalServerAdmins\fR=\fItsadmins\fR
 Sets the group which a user shall belong to have session management rights.
 .br 
 \fI\-this option is currently ignored!\-\fR
-.br 
+
 .SH "EXAMPLES"
-.LP 
 This is an example \fBsesman.ini\fR:
 
+.nf
 [Globals]
-.br 
 ListenAddress=127.0.0.1
-.br 
 ListenPort=3350
-.br 
 EnableUserWindowManager=1
-.br 
 UserWindowManager=startwm.sh
-.br 
 DefaultWindowManager=startwm.sh
 
 [Logging]
-.br 
 LogFile=/usr/local/xrdp/sesman.log
-.br 
 LogLevel=DEBUG
-.br 
 EnableSyslog=0
-.br 
 SyslogLevel=DEBUG
 
 [Sessions]
-.br 
 MaxSessions=10
-.br 
 KillDisconnected=0
-.br 
 IdleTimeLimit=0
-.br 
 DisconnectedTimeLimit=0
 
 [Security]
-.br 
 AllowRootLogin=1
-.br 
 MaxLoginRetry=3
-.br 
 TerminalServerUsers=tsusers
-.br 
 TerminalServerAdmins=tsadmins
+.fi
+
 .SH "FILES"
-.LP 
 ${SESMAN_CFG_DIR}/sesman.ini
+
 .SH "SEE ALSO"
-.LP 
 .BR sesman (8),
 .BR sesrun (8),
 .BR xrdp (8),
