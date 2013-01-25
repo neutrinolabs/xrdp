@@ -1,4 +1,5 @@
 man_MANS = \
+  xrdp-dis.1 \
   sesman.ini.5 \
   xrdp.ini.5 \
   xrdp.8 \
