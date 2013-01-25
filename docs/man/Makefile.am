@@ -7,4 +7,7 @@ man_MANS = \
   xrdp-sesman.8 \
   xrdp-sesrun.8
 
-EXTRA_DIST = $(man_MANS)
+noinst_man_MANS = \
+  xrdp-xcon.8
+
+EXTRA_DIST = $(man_MANS) $(noinst_man_MANS)
