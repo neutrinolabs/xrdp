@@ -51,62 +51,62 @@ download_file()
         cd ..
         return $status
     elif [ "$file" = "freetype-2.4.6.tar.bz2" ]; then
-        wget -cq http://download.savannah.gnu.org/releases/freetype/freetype-2.4.6.tar.bz2
+        wget -cq http://download.savannah.gnu.org/releases/freetype/$file
         status=$?
         cd ..
         return $status
     elif [ "$file" = "xkeyboard-config-2.0.tar.bz2" ]; then
-        wget -cq http://www.x.org/releases/individual/data/xkeyboard-config/xkeyboard-config-2.0.tar.bz2
+        wget -cq http://www.x.org/releases/individual/data/xkeyboard-config/$file
         status=$?
         cd ..
         return $status
     elif [ "$file" = "makedepend-1.0.3.tar.bz2" ]; then
-        wget -cq http://xorg.freedesktop.org/releases/individual/util/makedepend-1.0.3.tar.bz2
+        wget -cq http://xorg.freedesktop.org/releases/individual/util/$file
         status=$?
         cd ..
         return $status
     elif [ "$file" = "libxml2-sources-2.7.8.tar.gz" ]; then
-        wget -cq ftp://ftp.xmlsoft.org/libxml2/libxml2-sources-2.7.8.tar.gz
+        wget -cq ftp://ftp.xmlsoft.org/libxml2/$file
         status=$?
         cd ..
         return $status
     elif [ "$file" = "Python-2.5.tar.bz2" ]; then
-        wget -cq http://www.python.org/ftp/python/2.5/Python-2.5.tar.bz2
+        wget -cq http://www.python.org/ftp/python/2.5/$file
         status=$?
         cd ..
         return $status
     elif [ "$file" = "Python-2.7.tar.bz2" ]; then
-        wget -cq http://www.python.org/ftp/python/2.7/Python-2.7.tar.bz2
+        wget -cq http://www.python.org/ftp/python/2.7/$file
         status=$?
         cd ..
         return $status
     elif [ "$file" = "expat-2.0.1.tar.gz" ]; then
-        wget -cq http://server1.xrdp.org/xrdp/expat-2.0.1.tar.gz
+        wget -cq http://server1.xrdp.org/xrdp/$file
         status=$?
         cd ..
         return $status
     elif [ "$file" = "cairo-1.8.8.tar.gz" ]; then
-        wget -cq http://server1.xrdp.org/xrdp/cairo-1.8.8.tar.gz
+        wget -cq http://server1.xrdp.org/xrdp/$file
         status=$?
         cd ..
         return $status
     elif [ "$file" = "libpng-1.2.46.tar.gz" ]; then
-        wget -cq http://server1.xrdp.org/xrdp/libpng-1.2.46.tar.gz
+        wget -cq http://server1.xrdp.org/xrdp/$file
         status=$?
         cd ..
         return $status
     elif [ "$file" = "intltool-0.41.1.tar.gz" ]; then
-        wget -cq http://launchpad.net/intltool/trunk/0.41.1/+download/intltool-0.41.1.tar.gz
+        wget -cq http://launchpad.net/intltool/trunk/0.41.1/+download/$file
         status=$?
         cd ..
         return $status
     elif [ "$file" = "libxslt-1.1.26.tar.gz" ]; then
-        wget -cq ftp://xmlsoft.org/libxslt/libxslt-1.1.26.tar.gz
+        wget -cq ftp://xmlsoft.org/libxslt/$file
         status=$?
         cd ..
         return $status
     elif [ "$file" = "fontconfig-2.8.0.tar.gz" ]; then
-        wget -cq http://server1.xrdp.org/xrdp/fontconfig-2.8.0.tar.gz
+        wget -cq http://server1.xrdp.org/xrdp/$file
         status=$?
         cd ..
         return $status
