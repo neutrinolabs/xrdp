@@ -111,8 +111,8 @@ extract_it()
     fi
 
     # download file
-    download_file $mod_file
-    if [ $? -ne 0 ]; then
+    if ! download_file $mod_file
+    then
         echo ""
         echo "failed to download $mod_file - aborting build"
         echo ""
@@ -123,8 +123,8 @@ extract_it()
 
     # if pkg has not yet been extracted, do so now
     if [ ! -d $mod_name ]; then
-        echo $mod_file | grep -q tar.bz2
-        if [ $? -eq 0 ]; then
+        if echo $mod_file | grep -q tar.bz2
+        then
             tar xjf ../downloads/$mod_file > /dev/null 2>&1
         else
             tar xzf ../downloads/$mod_file > /dev/null 2>&1
@@ -143,8 +143,8 @@ extract_it()
     fi
     # now configure
     echo "executing ./configure --prefix=$PREFIX_DIR $mod_args"
-    ./configure --prefix=$PREFIX_DIR $mod_args
-    if [ $? -ne 0 ]; then
+    if ! ./configure --prefix=$PREFIX_DIR $mod_args
+    then
         echo "configuration failed for module $mn"
         exit 1
     fi
@@ -172,8 +172,8 @@ make_it()
     echo "*** processing module $mod_name ($count of $num_modules) ***"
     echo ""
 
-    extract_it $mod_file $mod_name "$mod_args"
-    if [ $? -ne 0 ]; then
+    if ! extract_it $mod_file $mod_name "$mod_args"
+    then
         echo ""
         echo "extract failed for module $mod_name"
         echo ""
@@ -182,8 +182,8 @@ make_it()
 
     # make module
     if [ ! -e cookies/$mod_name.made ]; then
-        (cd build_dir/$mod_name ; make)
-        if [ $? -ne 0 ]; then
+        if ! (cd build_dir/$mod_name ; make)
+        then
             echo ""
             echo "make failed for module $mod_name"
             echo ""
@@ -193,8 +193,8 @@ make_it()
     fi
 
     # install module
-    (cd build_dir/$mod_name ; make install)
-    if [ $? -ne 0 ]; then
+    if ! (cd build_dir/$mod_name ; make install)
+    then
         echo ""
         echo "make install failed for module $mod_name"
         echo ""
@@ -251,8 +251,8 @@ fi
 
 if ! test -d $PREFIX_DIR; then
     echo "dir does not exit, creating [$PREFIX_DIR]"
-    mkdir $PREFIX_DIR
-    if ! test $? -eq 0; then
+    if ! mkdir $PREFIX_DIR
+    then
         echo "mkdir failed [$PREFIX_DIR]"
         exit 0
     fi
@@ -267,8 +267,8 @@ export CFLAGS="-I$PREFIX_DIR/include -fPIC -O2"
 
 # prefix dir must exist...
 if [ ! -d $PREFIX_DIR ]; then
-    mkdir -p $PREFIX_DIR
-    if [ $? -ne 0 ]; then
+    if ! mkdir -p $PREFIX_DIR
+    then
         echo "$PREFIX_DIR does not exist; failed to create it - cannot continue"
         exit 1
     fi
@@ -282,8 +282,8 @@ fi
 
 # create a downloads dir
 if [ ! -d downloads ]; then
-    mkdir downloads
-    if [ $? -ne 0 ]; then
+    if ! mkdir downloads
+    then
         echo "error creating downloads directory"
         exit 1
     fi
@@ -291,8 +291,8 @@ fi
 
 # this is where we do the actual build
 if [ ! -d build_dir ]; then
-    mkdir build_dir
-    if [ $? -ne 0 ]; then
+    if ! mkdir build_dir
+    then
         echo "error creating build_dir directory"
         exit 1
     fi
@@ -300,8 +300,8 @@ fi
 
 # this is where we store cookie files
 if [ ! -d cookies ]; then
-    mkdir cookies
-    if [ $? -ne 0 ]; then
+    if ! mkdir cookies
+    then
         echo "error creating cookies directory"
         exit 1
     fi
@@ -320,8 +320,8 @@ X11RDPBASE=$PREFIX_DIR
 export X11RDPBASE
 
 cd rdp
-make
-if [ $? -ne 0 ]; then
+if ! make
+then
     echo "error building rdp"
     exit 1
 fi
