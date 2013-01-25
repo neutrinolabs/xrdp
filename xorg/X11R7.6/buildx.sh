@@ -28,9 +28,9 @@ download_file()
     file=$1
 
     # if we already have the file, don't download it
-       if [ -r downloads/$file ]; then
-         return 0
-       fi
+    if [ -r downloads/$file ]; then
+        return 0
+    fi
 
     cd downloads
 
@@ -183,7 +183,7 @@ extract_it()
     cd $mod_name
     # check for patches
     if [ -e ../../$mod_name.patch ]; then
-      patch -p1 < ../../$mod_name.patch
+        patch -p1 < ../../$mod_name.patch
     fi
     # now configure
     echo "executing ./configure --prefix=$PREFIX_DIR $mod_args"
@@ -248,9 +248,9 @@ make_it()
     # special case after installing python make this sym link
     # so Mesa builds using this python version
     case "$mod_name" in
-      *Python-2*)
-      (cd build_dir/$mod_name ; ln -s python $PREFIX_DIR/bin/python2)
-      ;;
+    *Python-2*)
+        (cd build_dir/$mod_name ; ln -s python $PREFIX_DIR/bin/python2)
+        ;;
     esac
 
     touch cookies/$mod_name.installed
@@ -379,10 +379,10 @@ strip X11rdp
 cp X11rdp $X11RDPBASE/bin
 
 if [ "$2" = "drop" ]; then
-  echo ""
-  echo "dropping you in dir, type exit to get out"
-  bash
-  exit 1
+    echo ""
+    echo "dropping you in dir, type exit to get out"
+    bash
+    exit 1
 fi
 
 echo "All done"
