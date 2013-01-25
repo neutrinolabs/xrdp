@@ -1,23 +1,23 @@
-.TH "sesman" "8" "0.1.0" "xrdp team" ""
+.TH "xrdp\-sesman" "8" "0.1.0" "xrdp team" ""
 .SH "NAME"
-\fBsesman\fR \- \fBxrdp\fR(8) session manager
+xrdp\-sesman \- \fBxrdp\fR(8) session manager
 
 .SH "SYNTAX"
-.B sesman
+.B xrdp\-sesman
 .RB [ \-\-nodaemon | \-\-kill | \-\-help ]
 
 .SH "DESCRIPTION"
-\fBsesman\fR is \fBxrdp\fR(8) session manager. 
+\fBxrdp\-sesman\fR is \fBxrdp\fR(8) session manager.
 .br 
 It manages user sessions by authenticating the user and starting the appropriate Xserver
 
 .SH "OPTIONS"
 .TP 
 \fB\-n\fR, \fB\-\-nodaemon\fR 
-Starts \fBsesman\fR in foreground instead of starting it as a daemon.
+Starts \fBxrdp\-sesman\fR in foreground instead of starting it as a daemon.
 .TP 
 \fB\-k\fR, \fB\-\-kill\fR
-Kills running \fBsesman\fR daemon.
+Kills running \fBxrdp\-sesman\fR daemon.
 .TP 
 \fB\-h\fR, \fB\-\-help\fR
 Output help information and exit.
@@ -40,7 +40,7 @@ Simone Fedele <ilsimo@users.sourceforge.net>
 
 .SH "SEE ALSO"
 .BR sesman.ini (5),
-.BR sesrun (8),
+.BR xrdp\-sesrun (8),
 .BR xrdp (8),
 .BR xrdp.ini (5)
 
