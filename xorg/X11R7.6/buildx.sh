@@ -50,12 +50,6 @@ download_file()
         status=$?
         cd ..
         return $status
-    elif [ "$file" = "expat-2.0.1.tar.gz" ]; then
-        wget -cq http://server1.xrdp.org/xrdp/expat-2.0.1.tar.gz
-
-        status=$?
-        cd ..
-        return $status
     elif [ "$file" = "freetype-2.4.6.tar.bz2" ]; then
         wget -cq http://download.savannah.gnu.org/releases/freetype/freetype-2.4.6.tar.bz2
         status=$?
