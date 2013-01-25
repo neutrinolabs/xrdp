@@ -90,9 +90,8 @@ remove_modules()
 
     cd build_dir
 
-    while read line
+    while IFS=: read mod_file mod_dir mod_args
     do
-        mod_dir=`echo $line | cut -d':' -f2`
         if [ -d $mod_dir ]; then
             rm -rf $mod_dir
         fi
@@ -308,15 +307,11 @@ if [ ! -d cookies ]; then
     fi
 fi
 
-while read line
+while IFS=: read mod_file mod_dir mod_args
 do
-    mod_file=`echo $line | cut -d':' -f1`
-    mod_dir=`echo $line | cut -d':' -f2`
-    mod_args=`echo $line | cut -d':' -f3`
     mod_args=`eval echo $mod_args`
 
     make_it $mod_file $mod_dir "$mod_args"
-
 done < $data_file
 
 echo "build for X OK"
