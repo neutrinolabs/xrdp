@@ -25,6 +25,7 @@
 
 download_file()
 {
+    local file url status
     file=$1
 
     # if we already have the file, don't download it
@@ -32,90 +33,46 @@ download_file()
         return 0
     fi
 
-    cd downloads
-
     echo "downloading file $file"
-    if [ "$file" = "pixman-0.15.20.tar.bz2" ]; then
-        wget -cq http://ftp.x.org/pub/individual/lib/$file
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "libdrm-2.4.26.tar.bz2" ]; then
-        wget -cq http://dri.freedesktop.org/libdrm/$file
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "MesaLib-7.10.3.tar.bz2" ]; then
-        wget -cq ftp://ftp.freedesktop.org/pub/mesa/7.10.3/$file
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "freetype-2.4.6.tar.bz2" ]; then
-        wget -cq http://download.savannah.gnu.org/releases/freetype/$file
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "xkeyboard-config-2.0.tar.bz2" ]; then
-        wget -cq http://www.x.org/releases/individual/data/xkeyboard-config/$file
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "makedepend-1.0.3.tar.bz2" ]; then
-        wget -cq http://xorg.freedesktop.org/releases/individual/util/$file
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "libxml2-sources-2.7.8.tar.gz" ]; then
-        wget -cq ftp://ftp.xmlsoft.org/libxml2/$file
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "Python-2.5.tar.bz2" ]; then
-        wget -cq http://www.python.org/ftp/python/2.5/$file
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "Python-2.7.tar.bz2" ]; then
-        wget -cq http://www.python.org/ftp/python/2.7/$file
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "expat-2.0.1.tar.gz" ]; then
-        wget -cq http://server1.xrdp.org/xrdp/$file
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "cairo-1.8.8.tar.gz" ]; then
-        wget -cq http://server1.xrdp.org/xrdp/$file
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "libpng-1.2.46.tar.gz" ]; then
-        wget -cq http://server1.xrdp.org/xrdp/$file
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "intltool-0.41.1.tar.gz" ]; then
-        wget -cq http://launchpad.net/intltool/trunk/0.41.1/+download/$file
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "libxslt-1.1.26.tar.gz" ]; then
-        wget -cq ftp://xmlsoft.org/libxslt/$file
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "fontconfig-2.8.0.tar.gz" ]; then
-        wget -cq http://server1.xrdp.org/xrdp/$file
-        status=$?
-        cd ..
-        return $status
-    else
-        wget -cq $download_url/$file
-        status=$?
-        cd ..
-        return $status
-    fi
+    case "$file" in
+    pixman-0.15.20.tar.bz2)
+        url=http://ftp.x.org/pub/individual/lib/$file ;;
+    libdrm-2.4.26.tar.bz2)
+        url=http://dri.freedesktop.org/libdrm/$file ;;
+    MesaLib-7.10.3.tar.bz2)
+        url=ftp://ftp.freedesktop.org/pub/mesa/7.10.3/$file ;;
+    freetype-2.4.6.tar.bz2)
+        url=http://download.savannah.gnu.org/releases/freetype/$file ;;
+    xkeyboard-config-2.0.tar.bz2)
+        url=http://www.x.org/releases/individual/data/xkeyboard-config/$file ;;
+    makedepend-1.0.3.tar.bz2)
+        url=http://xorg.freedesktop.org/releases/individual/util/$file ;;
+    libxml2-sources-2.7.8.tar.gz)
+        url=ftp://ftp.xmlsoft.org/libxml2/$file ;;
+    Python-2.5.tar.bz2)
+        url=http://www.python.org/ftp/python/2.5/$file ;;
+    Python-2.7.tar.bz2)
+        url=http://www.python.org/ftp/python/2.7/$file ;;
+    expat-2.0.1.tar.gz)
+        url=http://server1.xrdp.org/xrdp/$file ;;
+    cairo-1.8.8.tar.gz)
+        url=http://server1.xrdp.org/xrdp/$file ;;
+    libpng-1.2.46.tar.gz)
+        url=http://server1.xrdp.org/xrdp/$file ;;
+    intltool-0.41.1.tar.gz)
+        url=http://launchpad.net/intltool/trunk/0.41.1/+download/$file ;;
+    libxslt-1.1.26.tar.gz)
+        url=ftp://xmlsoft.org/libxslt/$file ;;
+    fontconfig-2.8.0.tar.gz)
+        url=http://server1.xrdp.org/xrdp/$file ;;
+    *)
+        url=$download_url/$file ;;
+    esac
+    cd downloads
+    wget -cq "url"
+    status=$?
+    cd ..
+    return $status
 }
 
 remove_modules()
