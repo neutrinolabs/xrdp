@@ -549,7 +549,9 @@ xrdp_wm_init(struct xrdp_wm *self)
                     {
                         q = (char *)list_get_item(names, index);
 
-                        if (g_strncasecmp("globals", q, 8) != 0)
+                        if ((g_strncasecmp("globals", q, 8) != 0)
+                                && (g_strncasecmp("channels", q, 9) != 0)
+                                && (g_strncasecmp("Logging", q, 8) != 0))
                         {
                             g_strncpy(section_name, q, 255);
                             break;
