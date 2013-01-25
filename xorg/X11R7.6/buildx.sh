@@ -77,6 +77,7 @@ download_file()
 
 remove_modules()
 {
+    local mod_file mod_dir mod_args
     if [ -d cookies ]; then
         rm cookies/*
     fi
@@ -102,6 +103,7 @@ remove_modules()
 
 extract_it()
 {
+    local mod_file mod_name mod_args comp
     mod_file=$1
     mod_name=$2
     mod_args=$3
@@ -158,6 +160,7 @@ extract_it()
 
 make_it()
 {
+    local mod_file mod_name mod_args
     mod_file=$1
     mod_name=$2
     mod_args=$3
