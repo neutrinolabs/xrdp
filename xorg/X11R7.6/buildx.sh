@@ -147,7 +147,7 @@ extract_it()
     echo "executing ./configure --prefix=$PREFIX_DIR $mod_args"
     if ! ./configure --prefix=$PREFIX_DIR $mod_args
     then
-        echo "configuration failed for module $mn"
+        echo "configuration failed for module $mod_name"
         exit 1
     fi
 
@@ -252,7 +252,7 @@ else
 fi
 
 if ! test -d $PREFIX_DIR; then
-    echo "dir does not exit, creating [$PREFIX_DIR]"
+    echo "dir does not exist, creating [$PREFIX_DIR]"
     if ! mkdir $PREFIX_DIR
     then
         echo "mkdir failed [$PREFIX_DIR]"
