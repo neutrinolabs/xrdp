@@ -3,6 +3,7 @@ man_MANS = \
   sesman.ini.5 \
   xrdp.ini.5 \
   xrdp.8 \
+  xrdp-genkeymap.8 \
   xrdp-keygen.8 \
   xrdp-sesadmin.8 \
   xrdp-sesman.8 \
