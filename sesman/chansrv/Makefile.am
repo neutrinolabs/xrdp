@@ -1,4 +1,14 @@
-EXTRA_DIST = chansrv.h clipboard.h devredir.h sound.h
+EXTRA_DIST = \
+  chansrv.h \
+  chansrv_fuse.h \
+  clipboard.h \
+  clipboard_common.h \
+  clipboard_file.h \
+  devredir.h \
+  drdynvc.h \
+  rail.h \
+  sound.h \
+  xcommon.h
 
 EXTRA_DEFINES =
 EXTRA_INCLUDES =
