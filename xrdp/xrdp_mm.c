@@ -1204,7 +1204,7 @@ const char *getPAMError(const int pamError)
 {      
     switch(pamError){
 	case PAM_SUCCESS:
-	return "Success";    
+	    return "Success";    
 	case PAM_OPEN_ERR:
 	    return "dlopen() failure";
 	case PAM_SYMBOL_ERR:
@@ -1269,6 +1269,58 @@ const char *getPAMError(const int pamError)
 	    char replytxt[80];	
 	    g_sprintf(replytxt,"Not defined PAM error:%d",pamError);
 	    return replytxt ;
+	}
+	
+    }
+    
+}
+
+const char *getPAMAdditionalErrorInfo(const int pamError,struct xrdp_mm *self)
+{      
+    switch(pamError){
+	case PAM_SUCCESS:
+	    return NULL;    
+	case PAM_OPEN_ERR:	    
+	case PAM_SYMBOL_ERR:	    
+	case PAM_SERVICE_ERR:	    
+	case PAM_SYSTEM_ERR:	    
+	case PAM_BUF_ERR:	    
+	case PAM_PERM_DENIED:	    
+	case PAM_AUTH_ERR:	    
+	case PAM_CRED_INSUFFICIENT:	    
+	case PAM_AUTHINFO_UNAVAIL:	    
+	case PAM_USER_UNKNOWN:
+	case PAM_CRED_UNAVAIL:
+	case PAM_CRED_ERR:	    
+	case PAM_NO_MODULE_DATA:	    
+	case PAM_BAD_ITEM:	    
+	case PAM_CONV_ERR:	    
+	case PAM_AUTHTOK_ERR:	     
+	case PAM_AUTHTOK_LOCK_BUSY:	    
+	case PAM_AUTHTOK_DISABLE_AGING:	    
+	case PAM_TRY_AGAIN:	    
+	case PAM_IGNORE:	    
+	case PAM_MODULE_UNKNOWN:	    
+	case PAM_CONV_AGAIN:
+	case PAM_INCOMPLETE:	       
+	case _PAM_RETURN_VALUES+1:	    
+	case _PAM_RETURN_VALUES+3:	    
+            return NULL;
+	case PAM_MAXTRIES:	    
+	case PAM_NEW_AUTHTOK_REQD:	    
+	case PAM_ACCT_EXPIRED:	 
+	case PAM_CRED_EXPIRED:	
+	case PAM_AUTHTOK_EXPIRED:	
+	    if(self->wm->pamerrortxt[0])
+	    {		
+	        return self->wm->pamerrortxt;
+	    }
+	    else
+	    {
+		return "Authentication error - Verify that user/password is valid ";
+	    }
+	default:{	   
+	    return "No expected error" ;
 	}
 	
     }
@@ -1368,6 +1420,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
     {
         int reply;
         char replytxt[80];
+        char *additionalError;
         xrdp_wm_log_msg(self->wm, "Please wait, we now perform access control...");
 
         /* g_writeln("we use pam modules to check if we can approve this user"); */
@@ -1390,6 +1443,14 @@ xrdp_mm_connect(struct xrdp_mm *self)
 
         xrdp_wm_log_msg(self->wm, replytxt);
         log_message(LOG_LEVEL_INFO, replytxt);
+        additionalError = getPAMAdditionalErrorInfo(reply,self);
+        if(additionalError)
+        {
+            if(additionalError[0])
+            {
+                xrdp_wm_log_msg(self->wm,additionalError);
+            }
+        }
 
         if (reply != 0)
         {

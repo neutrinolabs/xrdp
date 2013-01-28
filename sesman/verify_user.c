@@ -48,7 +48,7 @@ auth_account_disabled(struct spwd *stp);
 /******************************************************************************/
 /* returns boolean */
 long DEFAULT_CC
-auth_userpass(char *user, char *pass)
+auth_userpass(char *user, char *pass, int *errorcode)
 {
     char salt[13] = "$1$";
     char hash[35] = "";

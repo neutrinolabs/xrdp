@@ -316,6 +316,7 @@ struct xrdp_wm
   int hints;
   int allowedchannels[MAX_NR_CHANNELS];
   int allowedinitialized ;
+  char pamerrortxt[256];
 };
 
 /* rdp process */
