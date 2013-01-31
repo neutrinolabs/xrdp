@@ -572,11 +572,11 @@ lfreerdp_bitmap_update(rdpContext *context, BITMAP_UPDATE *bitmap)
 
         if (bd->compressed)
         {
-	    LLOGLN(20,("decompress size : %d",bd->bitmapLength));
+            LLOGLN(20,("decompress size : %d",bd->bitmapLength));
             if(!bitmap_decompress(bd->bitmapDataStream, (tui8 *)dst_data, bd->width,
                               bd->height, bd->bitmapLength, server_bpp, server_bpp)){
-		LLOGLN(0,("Failure to decompress the bitmap"));
-	    }
+                LLOGLN(0,("Failure to decompress the bitmap"));
+            }
         }
         else
         {
@@ -1164,11 +1164,14 @@ lfreerdp_pointer_new(rdpContext *context,
                pointer_new->colorPtrAttr.lengthAndMask));
 
     index = pointer_new->colorPtrAttr.cacheIndex;
-    if(index>=32){
-	LLOGLN(0,("pointer index too big"));
+    if(index>=32)
+    {
+        LLOGLN(0,("pointer index too big"));
         return ;
     }
-    // In this fix we remove the xorBpp check, even if the mouse pointers are not correct we can use them.
+    // In this fix we remove the xorBpp check, even if 
+    // the mouse pointers are not correct we can use them.
+    // Configure your destination not to use windows Aero as pointer scheme
     else if ( // pointer_new->xorBpp == 1 && 
             pointer_new->colorPtrAttr.width == 32 &&
             pointer_new->colorPtrAttr.height == 32 &&
@@ -1241,36 +1244,38 @@ static void DEFAULT_CC lfreerdp_polygon_sc(rdpContext* context, POLYGON_SC_ORDER
     
     mod = ((struct mod_context *)context)->modi;
     LLOGLN(10, ("lfreerdp_polygon_sc :%d(points) %d(color) %d(fillmode) %d(bRop) %d(cbData) %d(x) %d(y)", polygon_sc->numPoints,polygon_sc->brushColor,polygon_sc->fillMode,polygon_sc->bRop2,polygon_sc->cbData,polygon_sc->xStart,polygon_sc->yStart));
-    if(polygon_sc->numPoints==3){	
-	server_bpp = mod->inst->settings->ColorDepth;
-	client_bpp = mod->bpp;
+    if(polygon_sc->numPoints==3)
+    {
+        server_bpp = mod->inst->settings->ColorDepth;	
+        client_bpp = mod->bpp;
 
-	points[0].x = polygon_sc->xStart;
-	points[0].y = polygon_sc->yStart;
+        points[0].x = polygon_sc->xStart;
+        points[0].y = polygon_sc->yStart;
 
-	for (i = 0; i < polygon_sc->numPoints; i++)
-	{
-		points[i + 1].x = polygon_sc->points[i].x;
-		points[i + 1].y = polygon_sc->points[i].y;
-	}	
-	fgcolor = convert_color(server_bpp, client_bpp,
+        for (i = 0; i < polygon_sc->numPoints; i++)
+        {
+            points[i + 1].x = polygon_sc->points[i].x;
+            points[i + 1].y = polygon_sc->points[i].y;
+        }
+        fgcolor = convert_color(server_bpp, client_bpp,
                             polygon_sc->brushColor, mod->colormap);
    
-	mod->server_set_opcode(mod, polygon_sc->bRop2);
-	mod->server_set_bgcolor(mod, 255);
-	mod->server_set_fgcolor(mod, fgcolor);    
-	mod->server_set_pen(mod, 1, 1); // style, width	
-	// TODO replace with correct brush; this is a workaround
-	// This workaround handles the text cursor in microsoft word.
-	mod->server_draw_line(mod,polygon_sc->xStart,polygon_sc->yStart,polygon_sc->xStart,polygon_sc->yStart+points[2].y);
+        mod->server_set_opcode(mod, polygon_sc->bRop2);
+        mod->server_set_bgcolor(mod, 255);
+        mod->server_set_fgcolor(mod, fgcolor);
+        mod->server_set_pen(mod, 1, 1); // style, width
+        // TODO replace with correct brush; this is a workaround
+        // This workaround handles the text cursor in microsoft word.
+        mod->server_draw_line(mod,polygon_sc->xStart,polygon_sc->yStart,polygon_sc->xStart,polygon_sc->yStart+points[2].y);
 //	mod->server_fill_rect(mod, points[0].x, points[0].y,
 //                         points[0].x-points[3].x, points[0].y-points[2].y);
 //      mod->server_set_brush(mod,); // howto use this on our indata??
-	mod->server_set_opcode(mod, 0xcc);
-    }else{
-	LLOGLN(0, ("Not handled number of points in lfreerdp_polygon_sc"));
-    }    
-   
+        mod->server_set_opcode(mod, 0xcc);
+    }
+    else
+    {
+        LLOGLN(0, ("Not handled number of points in lfreerdp_polygon_sc"));
+    }   
 }
 
 static void DEFAULT_CC lfreerdp_syncronize(rdpContext* context)
@@ -1351,7 +1356,7 @@ lfreerdp_pre_connect(freerdp *instance)
     instance->settings->OrderSupport[NEG_MULTISCRBLT_INDEX] = FALSE;
     instance->settings->OrderSupport[NEG_MULTIOPAQUERECT_INDEX] = FALSE;
     instance->settings->OrderSupport[NEG_POLYLINE_INDEX] = FALSE;
-    
+
     instance->settings->Username = g_strdup(mod->username);
     instance->settings->Password = g_strdup(mod->password);
 
@@ -1365,8 +1370,8 @@ lfreerdp_pre_connect(freerdp *instance)
     }
     else
     {
-	LLOGLN(10, ("Special PerformanceFlags changed"));
-	instance->settings->PerformanceFlags = PERF_DISABLE_WALLPAPER | PERF_DISABLE_FULLWINDOWDRAG | PERF_DISABLE_MENUANIMATIONS | PERF_DISABLE_THEMING ; // | PERF_DISABLE_CURSOR_SHADOW | PERF_DISABLE_CURSORSETTINGS ;
+        LLOGLN(10, ("Special PerformanceFlags changed"));
+        instance->settings->PerformanceFlags = PERF_DISABLE_WALLPAPER | PERF_DISABLE_FULLWINDOWDRAG | PERF_DISABLE_MENUANIMATIONS | PERF_DISABLE_THEMING ; // | PERF_DISABLE_CURSOR_SHADOW | PERF_DISABLE_CURSORSETTINGS ;
     }
     instance->settings->CompressionEnabled = FALSE ;
     instance->settings->IgnoreCertificate = TRUE ;    
