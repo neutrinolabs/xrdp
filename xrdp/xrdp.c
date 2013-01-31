@@ -177,7 +177,7 @@ void DEFAULT_CC
 pipe_sig(int sig_num)
 {
     /* do nothing */
-    g_writeln("got SIGPIPE(%d)", sig_num);
+    g_writeln("got XRDP SIGPIPE(%d)", sig_num);
 }
 
 /*****************************************************************************/
