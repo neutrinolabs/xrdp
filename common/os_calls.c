@@ -503,7 +503,7 @@ g_tcp_close(int sck)
 #if defined(_WIN32)
     closesocket(sck);
 #else
-    g_write_ip_address(sck,ip,256);
+    g_write_ip_address(sck,ip,255);
     log_message(LOG_LEVEL_INFO,"An established connection closed to endpoint: %s", ip);
     close(sck);
 #endif
@@ -654,7 +654,7 @@ g_tcp_accept(int sck)
     ret = accept(sck, (struct sockaddr *)&s, &i);
     if(ret>0)
     {
-        snprintf(ipAddr,256,"A connection received from: %s port %d"
+        snprintf(ipAddr,255,"A connection received from: %s port %d"
         ,inet_ntoa(s.sin_addr),ntohs(s.sin_port));
         log_message(LOG_LEVEL_INFO,ipAddr);
     }
