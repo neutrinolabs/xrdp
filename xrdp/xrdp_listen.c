@@ -39,7 +39,7 @@ xrdp_listen_create_pro_done(struct xrdp_listen *self)
 
     if (self->pro_done_event == 0)
     {
-        g_writeln("Failure creating pro_done_event");
+        log_message(LOG_LEVEL_ERROR,"Failure creating pro_done_event");
     }
 
     return 0;
@@ -64,7 +64,7 @@ xrdp_listen_create(void)
 
     if (self->listen_trans == 0)
     {
-        g_writeln("xrdp_listen_create: trans_create failed");
+        log_message(LOG_LEVEL_ERROR,"xrdp_listen_create: trans_create failed");
     }
 
     return self;
@@ -326,7 +326,7 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
                                      &tcp_nodelay, &tcp_keepalive,
                                      self->startup_params) != 0)
     {
-        g_writeln("xrdp_listen_main_loop: xrdp_listen_get_port failed");
+        log_message(LOG_LEVEL_ERROR,"xrdp_listen_main_loop: xrdp_listen_get_port failed");
         self->status = -1;
         return 1;
     }
@@ -340,7 +340,7 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
         {
             if (g_tcp_set_no_delay(self->listen_trans->sck))
             {
-                g_writeln("Error setting tcp_nodelay");
+                log_message(LOG_LEVEL_ERROR,"Error setting tcp_nodelay");
             }
         }
 
@@ -348,7 +348,7 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
         {
             if (g_tcp_set_keepalive(self->listen_trans->sck))
             {
-                g_writeln("Error setting tcp_keepalive");
+                log_message(LOG_LEVEL_ERROR,"Error setting tcp_keepalive");
             }
         }
 
@@ -373,7 +373,7 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
                 if (trans_get_wait_objs(self->listen_trans, robjs,
                                         &robjs_count) != 0)
                 {
-                    g_writeln("Listening socket is in wrong state we "
+                    log_message(LOG_LEVEL_ERROR,"Listening socket is in wrong state we "
                               "terminate listener");
                     break;
                 }
@@ -454,7 +454,7 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
     }
     else
     {
-        g_writeln("xrdp_listen_main_loop: listen error, possible port "
+        log_message(LOG_LEVEL_ERROR,"xrdp_listen_main_loop: listen error, possible port "
                   "already in use");
     }
 
