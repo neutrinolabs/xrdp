@@ -286,13 +286,18 @@ config_read_security(int file, struct config_security *sc,
                 sc->ts_admins = gid;
             }
         }
+        if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_ALWAYSGROUPCHECK))
+        {
+            sc->ts_always_group_check = text2bool((char *)list_get_item(param_v, i));
+        }	
     }
 
     /* printing security config */
     g_printf("security configuration:\r\n");
     g_printf("\tAllowRootLogin:       %i\r\n", sc->allow_root);
     g_printf("\tMaxLoginRetry:        %i\r\n", sc->login_retry);
-
+    g_printf("\tAlwaysGroupCheck:     %i\r\n", sc->ts_always_group_check);
+    
     if (sc->ts_users_enable)
     {
         g_printf("\tTSUsersGroup:         %i\r\n", sc->ts_users);

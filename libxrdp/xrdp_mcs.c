@@ -819,6 +819,25 @@ xrdp_mcs_send(struct xrdp_mcs *self, struct stream *s, int chan)
     return 0;
 }
 
+/**
+ * Internal help function to close the socket
+ * @param self
+ */
+void close_rdp_socket(struct xrdp_mcs *self)
+{
+    if(self->iso_layer->tcp_layer)
+    {
+        if(self->iso_layer->tcp_layer->trans)
+        {	    
+            g_tcp_close(self->iso_layer->tcp_layer->trans->sck);	    
+            self->iso_layer->tcp_layer->trans->sck = 0 ;
+            g_writeln("xrdp_mcs_disconnect - socket closed");
+            return ;
+        }
+    }
+    g_writeln("Failed to close socket");
+}
+
 /*****************************************************************************/
 /* returns error */
 int APP_CC
@@ -833,7 +852,8 @@ xrdp_mcs_disconnect(struct xrdp_mcs *self)
     if (xrdp_iso_init(self->iso_layer, s) != 0)
     {
         free_stream(s);
-        DEBUG(("  out xrdp_mcs_disconnect error"));
+        close_rdp_socket(self);
+        DEBUG(("  out xrdp_mcs_disconnect error - 1"));
         return 1;
     }
 
@@ -844,11 +864,13 @@ xrdp_mcs_disconnect(struct xrdp_mcs *self)
     if (xrdp_iso_send(self->iso_layer, s) != 0)
     {
         free_stream(s);
-        DEBUG(("  out xrdp_mcs_disconnect error"));
+        close_rdp_socket(self);
+        DEBUG(("  out xrdp_mcs_disconnect error - 2"));
         return 1;
     }
 
     free_stream(s);
-    DEBUG(("  out xrdp_mcs_disconnect"));
+    close_rdp_socket(self);
+    DEBUG(("xrdp_mcs_disconnect - close sent"));
     return 0;
 }

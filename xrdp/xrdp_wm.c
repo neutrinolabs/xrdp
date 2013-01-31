@@ -446,6 +446,11 @@ xrdp_wm_load_static_colors_plus(struct xrdp_wm *self, char *autorun_name)
                         val = (char *)list_get_item(values, index);
                         self->hide_log_window = text2bool(val);
                     }
+                    else if (g_strcasecmp(val, "pamerrortxt") == 0)
+                    {
+                        val = (char *)list_get_item(values, index);
+                        g_strncpy(self->pamerrortxt,val,255);
+                    }
                 }
             }
         }
@@ -534,7 +539,12 @@ xrdp_wm_init(struct xrdp_wm *self)
             names->auto_free = 1;
             values = list_create();
             values->auto_free = 1;
-            g_strncpy(section_name, self->session->client_info->domain, 255);
+	    /* domain names that starts with '_' are reserved for IP/DNS to simplify 
+	     * for the user in a gateway setup */
+	    if(self->session->client_info->domain[0]!='_')
+	    {
+		g_strncpy(section_name, self->session->client_info->domain, 255);
+	    }
 
             if (section_name[0] == 0)
             {
