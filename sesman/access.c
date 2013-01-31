@@ -42,7 +42,7 @@ access_login_allowed(char *user)
         return 0;
     }
 
-    if (0 == g_cfg->sec.ts_users_enable)
+    if ((0 == g_cfg->sec.ts_users_enable) && (0==g_cfg->sec.ts_always_group_check))
     {
         LOG_DBG("Terminal Server Users group is disabled, allowing authentication",
                 1);
@@ -57,7 +57,7 @@ access_login_allowed(char *user)
 
     if (g_cfg->sec.ts_users == gid)
     {
-        LOG_DBG("ts_users is user's primary group");
+        log_message(LOG_LEVEL_DEBUG,"ts_users is user's primary group");
         return 1;
     }
 

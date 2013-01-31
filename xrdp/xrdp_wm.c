@@ -455,7 +455,7 @@ xrdp_wm_load_static_colors_plus(struct xrdp_wm *self, char *autorun_name)
                     else if (g_strcasecmp(val, "pamerrortxt") == 0)
                     {
                         val = (char *)list_get_item(values, index);
-                        g_strncpy(self->pamerrortxt,val,256);
+                        g_strncpy(self->pamerrortxt,val,255);
                     }
                 }
             }
