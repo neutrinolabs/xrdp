@@ -617,7 +617,7 @@ log_message(const enum logLevels lvl, const char *msg, ...)
     if (lvl <= staticLogConfig->log_level)
     {
         /* log to console */
-        g_printf(buff);
+        g_printf("%s", buff);
 
         /* log to application logfile */
 #ifdef LOG_ENABLE_THREAD

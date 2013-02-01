@@ -2174,8 +2174,7 @@ is_channel_enabled(char *inName, struct list *names, struct list *values)
 {
     int reply = 0; /*means not in the list*/
     int index;
-    char *val;
-    char *name;
+    char *val;    
 
     index = find_name_in_lists(inName, names);
     if ( index >= 0 )
@@ -2184,9 +2183,13 @@ is_channel_enabled(char *inName, struct list *names, struct list *values)
         reply = text2bool(val);
         if (reply == 0)
         {
-            log_message(LOG_LEVEL_INFO,"This channel is disabled: %s", name);
+            log_message(LOG_LEVEL_INFO,"This channel is disabled: %s", inName);
         }
     }
+    else
+    {
+        log_message(LOG_LEVEL_INFO,"This channel is disabled (not in List): %s", inName);
+    }	
 
     return reply;
 }
@@ -2212,7 +2215,8 @@ void init_channel_allowed(struct xrdp_wm *wm)
 
     names = list_create();
     values = list_create();
-
+    /* You can override the list of allowed channels individually for each 
+     * session type. */
     if (   read_allowed_channel_names(names, values)
         && update_allowed_channel_names(wm, names, values) )
     {
@@ -2226,13 +2230,13 @@ void init_channel_allowed(struct xrdp_wm *wm)
                 /* examples of channel names: rdpdr ; rdpsnd ; drdynvc ; cliprdr */
                 if (is_channel_enabled(channelname, names, values))
                 {
-                    g_writeln("The following channel is allowed: %s (%d)", channelname, index);
+                    log_message(LOG_LEVEL_INFO,"The following channel is allowed: %s (%d)", channelname, index);
                     wm->allowedchannels[allowindex] = index;
                     allowindex++;
 
                     if (allowindex >= MAX_NR_CHANNELS)
                     {
-                        g_writeln("Programming error in is_channel_allowed");
+                        log_message(LOG_LEVEL_ALWAYS,"Programming error in is_channel_allowed");
                         error = 1; /* end loop */
                     }
                 }
@@ -2268,7 +2272,7 @@ int DEFAULT_CC is_channel_allowed(struct xrdp_wm *wm, int channel_id)
     if (wm->allowedinitialized == 0)
     {
         init_channel_allowed(wm);
-        g_writeln("allow channel list initialized");
+        log_message(LOG_LEVEL_DEBUG,"The allow channel list now initialized for this session");
         wm->allowedinitialized = 1;
     }
 
@@ -2287,11 +2291,7 @@ int DEFAULT_CC is_channel_allowed(struct xrdp_wm *wm, int channel_id)
             break;
         }
     }
-
-    /*if (reply == 0)
-    {
-      g_writeln("This channel is NOT allowed: %d",channel_id) ;
-    }*/
+    
     return reply;
 }
 
