@@ -157,7 +157,7 @@ lxrdp_connect(struct mod *mod)
     }
     else
     {
-	log_message(LOG_LEVEL_INFO,"freerdp_connect returned Success to destination :%s:%d",mod->inst->settings->ServerHostname,mod->inst->settings->ServerPort);
+        log_message(LOG_LEVEL_INFO,"freerdp_connect returned Success to destination :%s:%d",mod->inst->settings->ServerHostname,mod->inst->settings->ServerPort);
     }	
 
     return 0;
