@@ -22,6 +22,7 @@
 #include "xrdp-freerdp.h"
 #include "xrdp-color.h"
 #include "xrdp_rail.h"
+#include "log.h"
 
 #ifdef XRDP_DEBUG
 #define LOG_LEVEL 99
@@ -146,13 +147,18 @@ lxrdp_connect(struct mod *mod)
                         break;
                 }
             }
-
+            log_message(LOG_LEVEL_INFO,buf);
             mod->server_msg(mod, buf, 0);
         }
 
 #endif
+        log_message(LOG_LEVEL_INFO,"freerdp_connect Failed to destination :%s:%d",mod->inst->settings->ServerHostname,mod->inst->settings->ServerPort);   
         return 1;
     }
+    else
+    {
+	log_message(LOG_LEVEL_INFO,"freerdp_connect returned Success to destination :%s:%d",mod->inst->settings->ServerHostname,mod->inst->settings->ServerPort);
+    }	
 
     return 0;
 }
