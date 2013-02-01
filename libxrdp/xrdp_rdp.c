@@ -114,17 +114,17 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
             }
             else
             {
-                g_writeln("Warning: Your configured crypt level is"
+                log_message(LOG_LEVEL_ALWAYS,"Warning: Your configured crypt level is"
                           "undefined 'high' will be used");
                 client_info->crypt_level = 3;
             }
         }
-        else if (g_strcasecmp(item, "channel_code") == 0)
+        else if (g_strcasecmp(item, "allow_channels") == 0)
         {
             client_info->channel_code = text2bool(value);
             if (client_info->channel_code == 0)
             {
-                g_writeln("Info: All channels are disabled");
+                log_message(LOG_LEVEL_DEBUG,"Info - All channels are disabled");
             }
         }
         else if (g_strcasecmp(item, "max_bpp") == 0)

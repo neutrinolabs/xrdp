@@ -19,6 +19,7 @@
  */
 
 #include "libxrdp.h"
+#include "log.h"
 
 /* some compilers need unsigned char to avoid warnings */
 static tui8 g_pad_54[40] =
@@ -1056,7 +1057,7 @@ xrdp_sec_incoming(struct xrdp_sec *self)
     if (file_by_name_read_section(key_file, "keys", items, values) != 0)
     {
         /* this is a show stopper */
-        g_writeln("xrdp_sec_incoming: error reading %s file", key_file);
+        log_message(LOG_LEVEL_ALWAYS,"XRDP cannot read file: %s (check permissions)", key_file);
         list_delete(items);
         list_delete(values);
         return 1;
