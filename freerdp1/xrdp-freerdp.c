@@ -1332,8 +1332,10 @@ lfreerdp_pre_connect(freerdp *instance)
 
     // TODO
     //instance->settings->glyph_cache = true;
-    instance->settings->GlyphSupportLevel = GLYPH_SUPPORT_FULL;
-    instance->settings->OrderSupport[NEG_GLYPH_INDEX_INDEX] = TRUE;
+//    instance->settings->GlyphSupportLevel = GLYPH_SUPPORT_FULL;
+//    instance->settings->OrderSupport[NEG_GLYPH_INDEX_INDEX] = TRUE;
+    instance->settings->GlyphSupportLevel = GLYPH_SUPPORT_NONE;
+    instance->settings->OrderSupport[NEG_GLYPH_INDEX_INDEX] = FALSE;
     instance->settings->OrderSupport[NEG_FAST_GLYPH_INDEX] = FALSE;
     instance->settings->OrderSupport[NEG_FAST_INDEX_INDEX] = FALSE;
     instance->settings->OrderSupport[NEG_SCRBLT_INDEX] = TRUE;
