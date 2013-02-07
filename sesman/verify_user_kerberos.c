@@ -396,7 +396,7 @@ cleanup:
 /******************************************************************************/
 /* returns boolean */
 int DEFAULT_CC
-auth_userpass(char *user, char *pass)
+auth_userpass(char *user, char *pass, int *errorcode)
 {
     struct k_opts opts;
     struct k5_data k5;

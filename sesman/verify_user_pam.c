@@ -98,9 +98,11 @@ get_service_name(char *service_name)
 }
 
 /******************************************************************************/
-/* returns long, zero is no go */
+/* returns long, zero is no go 
+ Stores the detailed error code in the errorcode variable*/
+
 long DEFAULT_CC
-auth_userpass(char *user, char *pass)
+auth_userpass(char *user, char *pass, int *errorcode)
 {
     int error;
     struct t_auth_info *auth_info;
@@ -116,6 +118,9 @@ auth_userpass(char *user, char *pass)
 
     if (error != PAM_SUCCESS)
     {
+	if(errorcode!=NULL){
+		*errorcode = error ;
+	}
         g_printf("pam_start failed: %s\r\n", pam_strerror(auth_info->ph, error));
         g_free(auth_info);
         return 0;
@@ -125,16 +130,27 @@ auth_userpass(char *user, char *pass)
 
     if (error != PAM_SUCCESS)
     {
+	if(errorcode!=NULL){
+		*errorcode = error ;
+	}
         g_printf("pam_authenticate failed: %s\r\n",
                  pam_strerror(auth_info->ph, error));
         g_free(auth_info);
         return 0;
     }
-
+    /* From man page:  
+       The pam_acct_mgmt function is used to determine if the users account is
+       valid. It checks for authentication token and account expiration and
+       verifies access restrictions. It is typically called after the user has
+       been authenticated.
+     */
     error = pam_acct_mgmt(auth_info->ph, 0);
 
     if (error != PAM_SUCCESS)
     {
+	if(errorcode!=NULL){
+		*errorcode = error ;
+	}
         g_printf("pam_acct_mgmt failed: %s\r\n",
                  pam_strerror(auth_info->ph, error));
         g_free(auth_info);

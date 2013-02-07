@@ -19,6 +19,7 @@
  */
 
 #include "xrdp.h"
+#include "log.h"
 
 /*****************************************************************************/
 struct xrdp_cache *APP_CC
@@ -224,7 +225,7 @@ xrdp_cache_add_bitmap(struct xrdp_cache *self, struct xrdp_bitmap *bitmap,
     }
     else
     {
-        g_writeln("error in xrdp_cache_add_bitmap, too big(%d)", bmp_size);
+        log_message(LOG_LEVEL_ERROR,"error in xrdp_cache_add_bitmap, too big(%d)", bmp_size);
     }
 
     /* look for oldest */

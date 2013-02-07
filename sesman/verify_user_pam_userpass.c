@@ -34,7 +34,7 @@
 /******************************************************************************/
 /* returns boolean */
 int DEFAULT_CC
-auth_userpass(char *user, char *pass)
+auth_userpass(char *user, char *pass, int *errorcode)
 {
     pam_handle_t *pamh;
     pam_userpass_t userpass;

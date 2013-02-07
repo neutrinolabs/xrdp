@@ -41,7 +41,7 @@ typedef int (*ttrans_conn_in)(struct trans* self, struct trans* new_self);
 
 struct trans
 {
-  tbus sck;
+  tbus sck; /* socket handle */
   int mode; /* 1 tcp, 2 unix socket */
   int status;
   int type1; /* 1 listener 2 server 3 client */

@@ -17,10 +17,12 @@
  *
  * module manager
  */
-
+#define ACCESS
 #include "xrdp.h"
 #include "log.h"
-#define ACCESS
+#ifdef ACCESS
+#include "security/_pam_types.h"
+#endif
 
 /*****************************************************************************/
 struct xrdp_mm *APP_CC
@@ -62,7 +64,7 @@ xrdp_mm_sync_load(long param1, long param2)
 static void APP_CC
 xrdp_mm_module_cleanup(struct xrdp_mm *self)
 {
-    g_writeln("xrdp_mm_module_cleanup");
+    log_message(LOG_LEVEL_DEBUG,"xrdp_mm_module_cleanup");
 
     if (self->mod != 0)
     {
@@ -187,9 +189,17 @@ xrdp_mm_send_login(struct xrdp_mm *self)
     }
 
     /* send domain */
-    index = g_strlen(self->wm->client_info->domain);
-    out_uint16_be(s, index);
-    out_uint8a(s, self->wm->client_info->domain, index);
+    if(self->wm->client_info->domain[0]!='_')
+    {
+        index = g_strlen(self->wm->client_info->domain);
+        out_uint16_be(s, index);
+        out_uint8a(s, self->wm->client_info->domain, index);
+    }
+    else
+    {
+        out_uint16_be(s, 0);
+        /* out_uint8a(s, "", 0); */
+    }
 
     /* send program / shell */
     index = g_strlen(self->wm->client_info->program);
@@ -315,6 +325,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
                 g_snprintf(text, 255, "error finding proc mod_init in %s, not a valid "
                            "xrdp backend", lib);
                 xrdp_wm_log_msg(self->wm, text);
+                log_message(LOG_LEVEL_ERROR,text);
             }
 
             self->mod_init = (struct xrdp_mod * ( *)(void))func;
@@ -330,6 +341,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
                 g_snprintf(text, 255, "error finding proc mod_exit in %s, not a valid "
                            "xrdp backend", lib);
                 xrdp_wm_log_msg(self->wm, text);
+                log_message(LOG_LEVEL_ERROR,text);
             }
 
             self->mod_exit = (int ( *)(struct xrdp_mod *))func;
@@ -346,7 +358,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             }
             else
             {
-                g_writeln("no mod_init or mod_exit address found");
+                log_message(LOG_LEVEL_ERROR,"no mod_init or mod_exit address found");
             }
         }
         else
@@ -354,6 +366,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             g_snprintf(text, 255, "error loading %s specified in xrdp.ini, please "
                        "add a valid entry like lib=libxrdp-vnc.so or similar", lib);
             xrdp_wm_log_msg(self->wm, text);
+            log_message(LOG_LEVEL_ERROR,text);
             return 1;
         }
 
@@ -693,7 +706,7 @@ xrdp_mm_chan_process_msg(struct xrdp_mm *self, struct trans *trans,
                 rv = xrdp_mm_trans_process_channel_data(self, trans);
                 break;
             default:
-                g_writeln("xrdp_mm_chan_process_msg: unknown id %d", id);
+                log_message(LOG_LEVEL_ERROR,"xrdp_mm_chan_process_msg: unknown id %d", id);
                 break;
         }
 
@@ -802,26 +815,27 @@ xrdp_mm_connect_chansrv(struct xrdp_mm *self, char *ip, char *port)
         }
 
         g_sleep(1000);
-        g_writeln("xrdp_mm_connect_chansrv: connect failed "
+        log_message(LOG_LEVEL_ERROR,"xrdp_mm_connect_chansrv: connect failed "
                   "trying again...");
     }
 
     if (!(self->chan_trans_up))
     {
-        g_writeln("xrdp_mm_connect_chansrv: error in trans_connect "
-                  "chan");
+        log_message(LOG_LEVEL_ERROR,"xrdp_mm_connect_chansrv: error in"
+		"trans_connect chan");
     }
 
     if (self->chan_trans_up)
     {
         if (xrdp_mm_chan_send_init(self) != 0)
         {
-            g_writeln("xrdp_mm_connect_chansrv: error in "
+            log_message(LOG_LEVEL_ERROR,"xrdp_mm_connect_chansrv: error in "
                       "xrdp_mm_chan_send_init");
         }
         else
         {
-            g_writeln("xrdp_mm_connect_chansrv: chansrv connect successful");
+            log_message(LOG_LEVEL_DEBUG,"xrdp_mm_connect_chansrv: chansrv"
+		    "connect successful");
         }
     }
 
@@ -887,6 +901,8 @@ xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
     else
     {
         xrdp_wm_log_msg(self->wm, "xrdp_mm_process_login_response: "
+                        "login failed");
+        log_message(LOG_LEVEL_INFO,"xrdp_mm_process_login_response: "
                         "login failed");
     }
 
@@ -983,7 +999,7 @@ xrdp_mm_process_channel_data(struct xrdp_mm *self, tbus param1, tbus param2,
 
             if (total_length < length)
             {
-                g_writeln("WARNING in xrdp_mm_process_channel_data(): total_len < length");
+                log_message(LOG_LEVEL_DEBUG,"WARNING in xrdp_mm_process_channel_data(): total_len < length");
                 total_length = length;
             }
 
@@ -1045,7 +1061,7 @@ xrdp_mm_sesman_data_in(struct trans *trans)
                 break;
             default:
                 xrdp_wm_log_msg(self->wm, "An undefined reply code was received from sesman");
-                g_writeln("Fatal xrdp_mm_sesman_data_in: unknown cmd code %d", code);
+                log_message(LOG_LEVEL_ERROR,"Fatal xrdp_mm_sesman_data_in: unknown cmd code %d", code);
                 cleanup_sesman_connection(self);
                 break;
         }
@@ -1060,12 +1076,12 @@ xrdp_mm_sesman_data_in(struct trans *trans)
 int access_control(char *username, char *password, char *srv)
 {
     int reply;
-    int rec = 1; // failure
+    int rec = 32+1; /* 32 is reserved for PAM failures this means connect failure */
     struct stream *in_s;
     struct stream *out_s;
     unsigned long version;
     unsigned short int dummy;
-    unsigned short int ok;
+    unsigned short int pAM_errorcode;
     unsigned short int code;
     unsigned long size;
     int index;
@@ -1117,17 +1133,17 @@ int access_control(char *username, char *password, char *srv)
                         if ((size == 14) && (version == 0))
                         {
                             in_uint16_be(in_s, code);
-                            in_uint16_be(in_s, ok);
+                            in_uint16_be(in_s, pAM_errorcode); /* this variable holds the PAM error code if the variable is >32 it is a "invented" code */
                             in_uint16_be(in_s, dummy);
 
-                            if (code != 4)
+                            if (code != 4) /*0x04 means SCP_GW_AUTHENTICATION*/
                             {
                                 log_message(LOG_LEVEL_ERROR, "Returned cmd code from "
                                             "sesman is corrupt");
                             }
                             else
                             {
-                                rec = ok; /* here we read the reply from the access control */
+                                rec = pAM_errorcode; /* here we read the reply from the access control */
                             }
                         }
                         else
@@ -1189,6 +1205,134 @@ void cleanup_states(struct xrdp_mm *self)
         self-> usechansrv = 0; /* true if chansrvport is set in xrdp.ini or using sesman */
     }
 }
+#ifdef ACCESS
+const char *getPAMError(const int pamError)
+{      
+    switch(pamError){
+	case PAM_SUCCESS:
+	    return "Success";    
+	case PAM_OPEN_ERR:
+	    return "dlopen() failure";
+	case PAM_SYMBOL_ERR:
+	    return "Symbol not found";
+	case PAM_SERVICE_ERR:
+	    return "Error in service module";
+	case PAM_SYSTEM_ERR:
+	    return "System error";
+	case PAM_BUF_ERR:
+	    return "Memory buffer error";
+	case PAM_PERM_DENIED:
+	    return "Permission denied";
+	case PAM_AUTH_ERR:
+	    return "Authentication failure";
+	case PAM_CRED_INSUFFICIENT:
+	    return "Insufficient credentials to access authentication data";
+	case PAM_AUTHINFO_UNAVAIL:
+	    return "Authentication service cannot retrieve authentication info.";
+	case PAM_USER_UNKNOWN:
+	    return "User not known to the underlying authentication module";
+	case PAM_MAXTRIES:
+	    return "Have exhasted maximum number of retries for service.";
+	case PAM_NEW_AUTHTOK_REQD:
+	    return "Authentication token is no longer valid; new one required.";
+	case PAM_ACCT_EXPIRED:
+	    return "User account has expired";    
+	case PAM_CRED_UNAVAIL:
+	    return "Authentication service cannot retrieve user credentials";
+	case PAM_CRED_EXPIRED:
+	    return "User credentials expired";
+	case PAM_CRED_ERR:
+	    return "Failure setting user credentials";
+	case PAM_NO_MODULE_DATA:
+	    return "No module specific data is present";
+	case PAM_BAD_ITEM:
+	    return "Bad item passed to pam_*_item()";
+	case PAM_CONV_ERR:
+	    return "Conversation error";
+	case PAM_AUTHTOK_ERR:
+	    return "Authentication token manipulation error";   
+	case PAM_AUTHTOK_LOCK_BUSY:
+	    return "Authentication token lock busy";
+	case PAM_AUTHTOK_DISABLE_AGING:
+	    return "Authentication token aging disabled";
+	case PAM_TRY_AGAIN:
+	    return "Failed preliminary check by password service";
+	case PAM_IGNORE:
+	    return "Please ignore underlying account module";
+	case PAM_MODULE_UNKNOWN:
+	    return "Module is unknown";
+	case PAM_AUTHTOK_EXPIRED:
+	    return "Authentication token expired";
+	case PAM_CONV_AGAIN:
+	    return "Conversation is waiting for event";
+	case PAM_INCOMPLETE:
+	    return "Application needs to call libpam again";    
+	case 32+1:
+	    return "Error connecting to PAM";	
+	case 32+3:
+	    return "Username okey but group problem";
+	default:{
+	    char replytxt[80];	
+	    g_sprintf(replytxt,"Not defined PAM error:%d",pamError);
+	    return replytxt ;
+	}
+	
+    }
+    
+}
+
+const char *getPAMAdditionalErrorInfo(const int pamError,struct xrdp_mm *self)
+{      
+    switch(pamError){
+	case PAM_SUCCESS:
+	    return NULL;    
+	case PAM_OPEN_ERR:	    
+	case PAM_SYMBOL_ERR:	    
+	case PAM_SERVICE_ERR:	    
+	case PAM_SYSTEM_ERR:	    
+	case PAM_BUF_ERR:	    
+	case PAM_PERM_DENIED:	    
+	case PAM_AUTH_ERR:	    
+	case PAM_CRED_INSUFFICIENT:	    
+	case PAM_AUTHINFO_UNAVAIL:	    
+	case PAM_USER_UNKNOWN:
+	case PAM_CRED_UNAVAIL:
+	case PAM_CRED_ERR:	    
+	case PAM_NO_MODULE_DATA:	    
+	case PAM_BAD_ITEM:	    
+	case PAM_CONV_ERR:	    
+	case PAM_AUTHTOK_ERR:	     
+	case PAM_AUTHTOK_LOCK_BUSY:	    
+	case PAM_AUTHTOK_DISABLE_AGING:	    
+	case PAM_TRY_AGAIN:	    
+	case PAM_IGNORE:	    
+	case PAM_MODULE_UNKNOWN:	    
+	case PAM_CONV_AGAIN:
+	case PAM_INCOMPLETE:	       
+	case _PAM_RETURN_VALUES+1:	    
+	case _PAM_RETURN_VALUES+3:	    
+            return NULL;
+	case PAM_MAXTRIES:	    
+	case PAM_NEW_AUTHTOK_REQD:	    
+	case PAM_ACCT_EXPIRED:	 
+	case PAM_CRED_EXPIRED:	
+	case PAM_AUTHTOK_EXPIRED:	
+	    if(self->wm->pamerrortxt[0])
+	    {		
+	        return self->wm->pamerrortxt;
+	    }
+	    else
+	    {
+		return "Authentication error - Verify that user/password is valid ";
+	    }
+	default:{	   
+	    return "No expected error" ;
+	}
+	
+    }
+    
+}
+#endif
 /*****************************************************************************/
 int APP_CC
 xrdp_mm_connect(struct xrdp_mm *self)
@@ -1282,7 +1426,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
     {
         int reply;
         char replytxt[80];
-        char replymessage[4][80] = {"Ok", "Sesman connect failure", "User or password error", "Privilege group error"};
+        char *additionalError;
         xrdp_wm_log_msg(self->wm, "Please wait, we now perform access control...");
 
         /* g_writeln("we use pam modules to check if we can approve this user"); */
@@ -1300,18 +1444,19 @@ xrdp_mm_connect(struct xrdp_mm *self)
 
         /* access_control return 0 on success */
         reply = access_control(pam_auth_username, pam_auth_password, pam_auth_sessionIP);
-
-        if (reply >= 0 && reply < 4)
-        {
-            g_sprintf(replytxt, "Reply from access control: %s", replymessage[reply]);
-        }
-        else
-        {
-            g_sprintf(replytxt, "Reply from access control undefined");
-        }
+       
+        g_sprintf(replytxt, "Reply from access control: %s", getPAMError(reply));
 
         xrdp_wm_log_msg(self->wm, replytxt);
         log_message(LOG_LEVEL_INFO, replytxt);
+        additionalError = getPAMAdditionalErrorInfo(reply,self);
+        if(additionalError)
+        {
+            if(additionalError[0])
+            {
+                xrdp_wm_log_msg(self->wm,additionalError);
+            }
+        }
 
         if (reply != 0)
         {
@@ -1362,6 +1507,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
             g_snprintf(errstr, 255, "Failure to connect to sesman: %s port: %s",
                        ip, port);
             xrdp_wm_log_msg(self->wm, errstr);
+            log_message(LOG_LEVEL_ERROR,errstr);
             trans_delete(self->sesman_trans);
             self->sesman_trans = 0;
             self->sesman_trans_up = 0;
@@ -1381,13 +1527,14 @@ xrdp_mm_connect(struct xrdp_mm *self)
             {
                 /* connect error */
                 g_snprintf(errstr, 255, "Failure to connect to: %s", ip);
+                log_message(LOG_LEVEL_ERROR,errstr);
                 xrdp_wm_log_msg(self->wm, errstr);
                 rv = 1; /* failure */
             }
         }
         else
         {
-            g_writeln("Failure setting up module");
+            log_message(LOG_LEVEL_ERROR,"Failure setting up module");
         }
 
         if (self->wm->login_mode != 10)
@@ -1405,7 +1552,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
         xrdp_mm_connect_chansrv(self, "", chansrvport);
     }
 
-    g_writeln("returnvalue from xrdp_mm_connect %d", rv);
+    log_message(LOG_LEVEL_DEBUG,"returnvalue from xrdp_mm_connect %d", rv);
 
     return rv;
 }
@@ -1957,7 +2104,7 @@ int read_allowed_channel_names(struct list *names, struct list *values)
         }
         else
         {
-            g_writeln("Failure reading channel section of configuration");
+            log_message(LOG_LEVEL_ERROR,"Failure reading channel section of configuration");
         }
 
         g_file_close(fd);
@@ -2027,8 +2174,7 @@ is_channel_enabled(char *inName, struct list *names, struct list *values)
 {
     int reply = 0; /*means not in the list*/
     int index;
-    char *val;
-    char *name;
+    char *val;    
 
     index = find_name_in_lists(inName, names);
     if ( index >= 0 )
@@ -2037,9 +2183,13 @@ is_channel_enabled(char *inName, struct list *names, struct list *values)
         reply = text2bool(val);
         if (reply == 0)
         {
-            g_writeln("This channel is disabled: %s", name);
+            log_message(LOG_LEVEL_INFO,"This channel is disabled: %s", inName);
         }
     }
+    else
+    {
+        log_message(LOG_LEVEL_INFO,"This channel is disabled (not in List): %s", inName);
+    }	
 
     return reply;
 }
@@ -2065,7 +2215,8 @@ void init_channel_allowed(struct xrdp_wm *wm)
 
     names = list_create();
     values = list_create();
-
+    /* You can override the list of allowed channels individually for each 
+     * session type. */
     if (   read_allowed_channel_names(names, values)
         && update_allowed_channel_names(wm, names, values) )
     {
@@ -2079,19 +2230,19 @@ void init_channel_allowed(struct xrdp_wm *wm)
                 /* examples of channel names: rdpdr ; rdpsnd ; drdynvc ; cliprdr */
                 if (is_channel_enabled(channelname, names, values))
                 {
-                    g_writeln("The following channel is allowed: %s (%d)", channelname, index);
+                    log_message(LOG_LEVEL_INFO,"The following channel is allowed: %s (%d)", channelname, index);
                     wm->allowedchannels[allowindex] = index;
                     allowindex++;
 
                     if (allowindex >= MAX_NR_CHANNELS)
                     {
-                        g_writeln("Programming error in is_channel_allowed");
+                        log_message(LOG_LEVEL_ALWAYS,"Programming error in is_channel_allowed");
                         error = 1; /* end loop */
                     }
                 }
                 else
                 {
-                    g_writeln("The following channel is not allowed: %s (%d)", channelname, index);
+                    log_message(LOG_LEVEL_INFO,"The following channel is not allowed: %s (%d)", channelname, index);
                 }
 
                 index++;
@@ -2101,7 +2252,7 @@ void init_channel_allowed(struct xrdp_wm *wm)
     }
     else
     {
-        g_writeln("Error reading channel section in inifile");
+        log_message(LOG_LEVEL_ERROR,"Error reading channel section in inifile");
     }
 
     list_delete(names);
@@ -2121,7 +2272,7 @@ int DEFAULT_CC is_channel_allowed(struct xrdp_wm *wm, int channel_id)
     if (wm->allowedinitialized == 0)
     {
         init_channel_allowed(wm);
-        g_writeln("allow channel list initialized");
+        log_message(LOG_LEVEL_DEBUG,"The allow channel list now initialized for this session");
         wm->allowedinitialized = 1;
     }
 
@@ -2140,11 +2291,7 @@ int DEFAULT_CC is_channel_allowed(struct xrdp_wm *wm, int channel_id)
             break;
         }
     }
-
-    /*if (reply == 0)
-    {
-      g_writeln("This channel is NOT allowed: %d",channel_id) ;
-    }*/
+    
     return reply;
 }
 
@@ -2226,7 +2373,7 @@ server_create_os_surface(struct xrdp_mod *mod, int rdpindex,
 
     if (error != 0)
     {
-        g_writeln("server_create_os_surface: xrdp_cache_add_os_bitmap failed");
+        log_message(LOG_LEVEL_ERROR,"server_create_os_surface: xrdp_cache_add_os_bitmap failed");
         return 1;
     }
 
@@ -2277,7 +2424,7 @@ server_switch_os_surface(struct xrdp_mod *mod, int rdpindex)
     }
     else
     {
-        g_writeln("server_switch_os_surface: error finding id %d", rdpindex);
+        log_message(LOG_LEVEL_ERROR,"server_switch_os_surface: error finding id %d", rdpindex);
     }
 
     return 0;
@@ -2340,7 +2487,7 @@ server_paint_rect_os(struct xrdp_mod *mod, int x, int y, int cx, int cy,
     }
     else
     {
-        g_writeln("server_paint_rect_os: error finding id %d", rdpindex);
+        log_message(LOG_LEVEL_ERROR,"server_paint_rect_os: error finding id %d", rdpindex);
     }
 
     return 0;
