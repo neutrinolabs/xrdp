@@ -163,7 +163,7 @@ mysend(int sck, const void* adata, int bytes)
     int error;
     const char* data;
 
-    data = (char*)adata;
+    data = (const char*)adata;
     sent = 0;
     while (sent < bytes)
     {
