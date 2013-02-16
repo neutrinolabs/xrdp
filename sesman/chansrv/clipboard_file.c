@@ -593,7 +593,17 @@ clipboard_c2s_in_files(struct stream *s, char *file_list)
     struct clip_file_desc *cfd;
     char *ptr;
 
+    if (!s_check_rem(s, 4))
+    {
+        LLOGLN(0, ("clipboard_c2s_in_files: parse error"));
+        return 1;
+    }
     in_uint32_le(s, cItems);
+    if (cItems > 64 * 1024) /* sanity check */
+    {
+        LLOGLN(0, ("clipboard_c2s_in_files: error cItems %d too big", cItems));
+        return 1;
+    }
     fuse_clear_clip_dir();
     LLOGLN(10, ("clipboard_c2s_in_files: cItems %d", cItems));
     cfd = (struct clip_file_desc *)

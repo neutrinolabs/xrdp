@@ -247,7 +247,7 @@ static int g_cliprdr_flags = CB_USE_LONG_FORMAT_NAMES |
 static int g_formatIds[16];
 static int g_num_formatIds = 0;
 
-static int g_file_format_id = 0;
+static int g_file_format_id = -1;
 
 /*****************************************************************************/
 /* this is one way to get the current time from the x server */
