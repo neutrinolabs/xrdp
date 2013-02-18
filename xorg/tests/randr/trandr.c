@@ -28,32 +28,105 @@
 #include <signal.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/extensions/Xrandr.h>
 
-Display *g_disp = 0;
-Window g_win = 0;
-int g_winWidth = 50;
-int g_winHeight = 50;
+static int
+process_randr(Display *disp, Window win, int event_base, XEvent *ev)
+{
+    XRRScreenChangeNotifyEvent *rr_screen_change_notify;
+
+    switch (ev->type - event_base)
+    {
+        case RRScreenChangeNotify:
+            rr_screen_change_notify = (XRRScreenChangeNotifyEvent *) ev;
+            printf("RRScreenChangeNotify: width %d height %d\n",
+                   rr_screen_change_notify->width,
+                   rr_screen_change_notify->height);
+            break;
+    }
+    return 0;
+}
 
 int
 main(int argc, char **argv)
 {
     XEvent ev;
+    Display *disp;
+    Window win;
+    Window root_window;
+    Screen *screen;
     int screenNumber;
+    int eventMask;
     int white;
     int black;
+    int event_base;
+    int error_base;
+    int ver_maj;
+    int ver_min;
+    int cont;
 
-    g_disp = XOpenDisplay(0);
+    disp = XOpenDisplay(0);
+    screenNumber = DefaultScreen(disp);
+    white = WhitePixel(disp, screenNumber);
+    black = BlackPixel(disp, screenNumber);
 
-    screenNumber = DefaultScreen(g_disp);
-    white = WhitePixel(g_disp, screenNumber);
-    black = BlackPixel(g_disp, screenNumber);
+    screen = ScreenOfDisplay(disp, screenNumber);
+    root_window = RootWindowOfScreen(screen);
 
-    g_win = XCreateSimpleWindow(g_disp, DefaultRootWindow(g_disp),
-                                50, 50, g_winWidth, g_winHeight,
-                                0, black, white);
-    while (1)
+    eventMask = StructureNotifyMask;
+    XSelectInput(disp, root_window, eventMask);
+
+    win = XCreateSimpleWindow(disp, root_window, 50, 50, 250, 250,
+                              0, black, white);
+
+    XMapWindow(disp, win);
+    eventMask = StructureNotifyMask | VisibilityChangeMask;
+    XSelectInput(disp, win, eventMask);
+
+    eventMask = KeyPressMask | KeyReleaseMask | ButtonPressMask |
+                ButtonReleaseMask | VisibilityChangeMask |
+                FocusChangeMask | StructureNotifyMask |
+                PointerMotionMask | ExposureMask | PropertyChangeMask;
+    XSelectInput(disp, win, eventMask);
+
+    if (!XRRQueryExtension(disp, &event_base, &error_base))
     {
-        XNextEvent(g_disp, &ev)
+        printf("error randr\n");
+        return 1;
+    }
+    XRRQueryVersion(disp, &ver_maj, &ver_min);
+    printf("randr version %d %d\n", ver_maj, ver_min);
+
+    XRRSelectInput(disp, win, RRScreenChangeNotifyMask);
+
+    cont = 1;
+    while (cont)
+    {
+        printf("loop\n");
+        XNextEvent(disp, &ev);
+        switch (ev.type)
+        {
+            case ButtonPress:
+                cont = 0;
+                break;
+            case ClientMessage:
+                printf("ClientMessage\n");
+                break;
+            case ConfigureNotify:
+                if (ev.xconfigure.window == root_window)
+                {
+                    printf("ConfigureNotify for root window\n");
+                }
+                break;
+            default:
+                if ((ev.type >= event_base) &&
+                    (ev.type < event_base + RRNumberEvents))
+                {
+                    printf("randr\n");
+                    process_randr(disp, win, event_base, &ev);
+                }
+                break;
+        }
     }
 
     return 0;
