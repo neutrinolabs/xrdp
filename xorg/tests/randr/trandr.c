@@ -59,13 +59,18 @@ main(int argc, char **argv)
     int eventMask;
     int white;
     int black;
-    int event_base;
-    int error_base;
+    int rr_event_base;
+    int rr_error_base;
     int ver_maj;
     int ver_min;
     int cont;
 
     disp = XOpenDisplay(0);
+    if (disp == 0)
+    {
+        printf("error opening display\n");
+        return 1;
+    }
     screenNumber = DefaultScreen(disp);
     white = WhitePixel(disp, screenNumber);
     black = BlackPixel(disp, screenNumber);
@@ -89,7 +94,7 @@ main(int argc, char **argv)
                 PointerMotionMask | ExposureMask | PropertyChangeMask;
     XSelectInput(disp, win, eventMask);
 
-    if (!XRRQueryExtension(disp, &event_base, &error_base))
+    if (!XRRQueryExtension(disp, &rr_event_base, &rr_error_base))
     {
         printf("error randr\n");
         return 1;
@@ -102,7 +107,6 @@ main(int argc, char **argv)
     cont = 1;
     while (cont)
     {
-        printf("loop\n");
         XNextEvent(disp, &ev);
         switch (ev.type)
         {
@@ -119,11 +123,11 @@ main(int argc, char **argv)
                 }
                 break;
             default:
-                if ((ev.type >= event_base) &&
-                    (ev.type < event_base + RRNumberEvents))
+                if ((ev.type >= rr_event_base) &&
+                    (ev.type < rr_event_base + RRNumberEvents))
                 {
                     printf("randr\n");
-                    process_randr(disp, win, event_base, &ev);
+                    process_randr(disp, win, rr_event_base, &ev);
                 }
                 break;
         }
