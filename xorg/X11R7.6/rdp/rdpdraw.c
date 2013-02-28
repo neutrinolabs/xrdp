@@ -1242,8 +1242,6 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
     int post_process;
     int reset_surface;
     int got_id;
-    int lx;
-    int ly;
     WindowPtr pDstWnd;
     PixmapPtr pDstPixmap;
     rdpPixmapRec *pDstPriv;
@@ -1324,7 +1322,7 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
         return;
     }
 
-    if (pDst->clientClipType == CT_REGION)
+    if (pDst->pCompositeClip != 0)
     {
         box.x1 = p->x + xDst;
         box.y1 = p->y + yDst;
@@ -1332,10 +1330,7 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
         box.y2 = box.y1 + height;
         RegionInit(&reg1, &box, 0);
         RegionInit(&reg2, NullBox, 0);
-        RegionCopy(&reg2, pDst->clientClip);
-        lx = p->x + pDst->clipOrigin.x;
-        ly = p->y + pDst->clipOrigin.y;
-        RegionTranslate(&reg2, lx, ly);
+        RegionCopy(&reg2, pDst->pCompositeClip);
         RegionIntersect(&reg1, &reg1, &reg2);
 
         if (dirty_type != 0)
