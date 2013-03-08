@@ -534,13 +534,13 @@ clipboard_process_file_response(struct stream *s, int clip_msg_status,
         in_uint32_le(s, file_size);
         LLOGLN(10, ("clipboard_process_file_response: streamId %d "
                    "file_size %d", streamId, file_size));
-        fuse_file_contents_size(streamId, file_size);
+        xfuse_file_contents_size(streamId, file_size);
     }
     else if (g_file_request_sent_type == CB_FILECONTENTS_RANGE)
     {
         g_file_request_sent_type = 0;
         in_uint32_le(s, streamId);
-        fuse_file_contents_range(streamId, s->p, clip_msg_len - 4);
+        xfuse_file_contents_range(streamId, s->p, clip_msg_len - 4);
     }
     else
     {
@@ -604,7 +604,7 @@ clipboard_c2s_in_files(struct stream *s, char *file_list)
         LLOGLN(0, ("clipboard_c2s_in_files: error cItems %d too big", cItems));
         return 1;
     }
-    fuse_clear_clip_dir();
+    xfuse_clear_clip_dir();
     LLOGLN(10, ("clipboard_c2s_in_files: cItems %d", cItems));
     cfd = (struct clip_file_desc *)
           g_malloc(sizeof(struct clip_file_desc), 0);
@@ -620,7 +620,7 @@ clipboard_c2s_in_files(struct stream *s, char *file_list)
                        "supported [%s]", cfd->cFileName));
             continue;
         }
-        fuse_add_clip_dir_item(cfd->cFileName, 0, cfd->fileSizeLow, lindex);
+        xfuse_add_clip_dir_item(cfd->cFileName, 0, cfd->fileSizeLow, lindex);
 
         g_strcpy(ptr, "file://");
         ptr += 7;

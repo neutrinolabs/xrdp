@@ -320,7 +320,7 @@ clipboard_init(void)
         return 0;
     }
 
-    fuse_init();
+    xfuse_init();
     xcommon_init();
     g_incr_max_req_size = XMaxRequestSize(g_display) * 4 - 24;
     g_memset(&g_clip_c2s, 0, sizeof(g_clip_c2s));
@@ -464,7 +464,7 @@ clipboard_deinit(void)
         g_wnd = 0;
     }
 
-    fuse_deinit();
+    xfuse_deinit();
 
     g_free(g_clip_c2s.data);
     g_clip_c2s.data = 0;
@@ -968,7 +968,7 @@ clipboard_process_format_announce(struct stream *s, int clip_msg_status,
     LLOGLN(10, ("clipboard_process_format_announce %d", clip_msg_len));
     clipboard_send_format_ack();
 
-    fuse_clear_clip_dir();
+    xfuse_clear_clip_dir();
     g_clip_c2s.converted = 0;
 
     desc[0] = 0;

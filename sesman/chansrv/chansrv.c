@@ -376,7 +376,7 @@ process_message_channel_setup(struct stream *s)
     if (g_cliprdr_index >= 0)
     {
         clipboard_init();
-        fuse_init();
+        xfuse_init();
     }
 
     if (g_rdpsnd_index >= 0)
@@ -387,6 +387,7 @@ process_message_channel_setup(struct stream *s)
     if (g_rdpdr_index >= 0)
     {
         dev_redir_init();
+        xfuse_init();
     }
 
     if (g_rail_index >= 0)
@@ -953,7 +954,7 @@ channel_thread_loop(void *in_val)
             xcommon_check_wait_objs();
             sound_check_wait_objs();
             dev_redir_check_wait_objs();
-            fuse_check_wait_objs();
+            xfuse_check_wait_objs();
             timeout = -1;
             num_objs = 0;
             objs[num_objs] = g_term_event;
@@ -965,8 +966,8 @@ channel_thread_loop(void *in_val)
             xcommon_get_wait_objs(objs, &num_objs, &timeout);
             sound_get_wait_objs(objs, &num_objs, &timeout);
             dev_redir_get_wait_objs(objs, &num_objs, &timeout);
-            fuse_get_wait_objs(objs, &num_objs, &timeout);
-        }
+            xfuse_get_wait_objs(objs, &num_objs, &timeout);
+        } /* end while (g_obj_wait(objs, num_objs, 0, 0, timeout) == 0) */
     }
 
     trans_delete(g_lis_trans);
