@@ -69,6 +69,11 @@ then
   fi
 fi
 
+if test "x$enable_nopam" = "xyes"
+then
+  AC_DEFINE([USE_NOPAM],1,[Disable PAM])
+fi
+
 AS_IF( [test "x$enable_freerdp1" = "xyes"] , [PKG_CHECK_MODULES(FREERDP, freerdp >= 1.0.0)] )
 
 # checking for libjpeg
