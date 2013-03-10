@@ -14,6 +14,7 @@ AM_CFLAGS = \
   $(EXTRA_DEFINES)
 
 INCLUDES = \
+  -I$(top_builddir) \
   -I$(top_srcdir)/common \
   -I$(top_srcdir)/libxrdp
 

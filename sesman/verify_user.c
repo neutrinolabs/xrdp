@@ -50,12 +50,9 @@ auth_account_disabled(struct spwd *stp);
 long DEFAULT_CC
 auth_userpass(char *user, char *pass, int *errorcode)
 {
-    char salt[13] = "$1$";
-    char hash[35] = "";
-    char *encr = 0;
+    const char *encr;
     struct passwd *spw;
     struct spwd *stp;
-    int saltcnt = 0;
 
     spw = getpwnam(user);
 
@@ -76,50 +73,19 @@ auth_userpass(char *user, char *pass, int *errorcode)
 
         if (1 == auth_account_disabled(stp))
         {
-            log_message(&(g_cfg->log), LOG_LEVEL_INFO, "account %s is disabled", user);
+            log_message(LOG_LEVEL_INFO, "account %s is disabled", user);
             return 0;
         }
 
-        g_strncpy(hash, stp->sp_pwdp, 34);
+        encr = stp->sp_pwdp;
     }
     else
     {
         /* old system with only passwd */
-        g_strncpy(hash, spw->pw_passwd, 34);
+        encr = spw->pw_passwd;
     }
 
-    hash[34] = '\0';
-
-    if (g_strncmp(hash, "$1$", 3) == 0)
-    {
-        /* gnu style crypt(); */
-        saltcnt = 3;
-
-        while ((hash[saltcnt] != '$') && (saltcnt < 11))
-        {
-            salt[saltcnt] = hash[saltcnt];
-            saltcnt++;
-        }
-
-        salt[saltcnt] = '$';
-        salt[saltcnt + 1] = '\0';
-    }
-    else
-    {
-        /* classic two char salt */
-        salt[0] = hash[0];
-        salt[1] = hash[1];
-        salt[2] = '\0';
-    }
-
-    encr = crypt(pass, salt);
-
-    if (g_strncmp(encr, hash, 34) != 0)
-    {
-        return 0;
-    }
-
-    return 1;
+    return (strcmp(encr, crypt(pass, encr)) == 0);
 }
 
 /******************************************************************************/
