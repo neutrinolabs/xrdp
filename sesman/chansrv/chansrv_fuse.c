@@ -53,7 +53,12 @@ char g_fuse_root_path[256] = "";
 **                                                                           **
 ******************************************************************************/
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "arch.h"
+#include "chansrv_fuse.h"
 
 /* dummy calls when XRDP_FUSE is not defined */
 int xfuse_init()                {}
@@ -64,6 +69,12 @@ int xfuse_clear_clip_dir(void)  {}
 int xfuse_file_contents_range(int stream_id, char *data, int data_bytes)     {}
 int xfuse_file_contents_size(int stream_id, int file_size)                   {}
 int xfuse_add_clip_dir_item(char *filename, int flags, int size, int lindex) {}
+int xfuse_create_share(tui32 device_id, char *dirname)                       {}
+void xfuse_devredir_cb_open_file(void *vp, tui32 DeviceId, tui32 FileId)     {}
+void xfuse_devredir_cb_write_file(void *vp, char *buf, size_t length)        {}
+void xfuse_devredir_cb_read_file(void *vp, char *buf, size_t length)         {}
+void xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode)         {}
+void xfuse_devredir_cb_enum_dir_done(void *vp, tui32 IoStatus)               {}
 
 #else
 
