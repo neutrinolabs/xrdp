@@ -825,7 +825,7 @@ xrdp_mm_connect_chansrv(struct xrdp_mm *self, char *ip, char *port)
     if (!(self->chan_trans_up))
     {
         log_message(LOG_LEVEL_ERROR,"xrdp_mm_connect_chansrv: error in"
-		"trans_connect chan");
+                    "trans_connect chan");
     }
 
     if (self->chan_trans_up)
@@ -838,7 +838,7 @@ xrdp_mm_connect_chansrv(struct xrdp_mm *self, char *ip, char *port)
         else
         {
             log_message(LOG_LEVEL_DEBUG,"xrdp_mm_connect_chansrv: chansrv"
-		    "connect successful");
+                        "connect successful");
         }
     }
 
@@ -1077,7 +1077,8 @@ xrdp_mm_sesman_data_in(struct trans *trans)
 #ifndef USE_NOPAM
 /*********************************************************************/
 /* return 0 on success */
-int access_control(char *username, char *password, char *srv)
+static int APP_CC
+access_control(char *username, char *password, char *srv)
 {
     int reply;
     int rec = 32+1; /* 32 is reserved for PAM failures this means connect failure */
@@ -1193,7 +1194,8 @@ int access_control(char *username, char *password, char *srv)
 /* This routine clears all states to make sure that our next login will be
  * as expected. If the user does not press ok on the log window and try to
  * connect again we must make sure that no previous information is stored.*/
-void cleanup_states(struct xrdp_mm *self)
+static void APP_CC
+cleanup_states(struct xrdp_mm *self)
 {
     if (self != NULL)
     {
@@ -1210,133 +1212,131 @@ void cleanup_states(struct xrdp_mm *self)
         self-> usechansrv = 0; /* true if chansrvport is set in xrdp.ini or using sesman */
     }
 }
+
 #ifdef ACCESS
 #ifndef USE_NOPAM
-const char *getPAMError(const int pamError)
-{      
-    switch(pamError){
-	case PAM_SUCCESS:
-	    return "Success";    
-	case PAM_OPEN_ERR:
-	    return "dlopen() failure";
-	case PAM_SYMBOL_ERR:
-	    return "Symbol not found";
-	case PAM_SERVICE_ERR:
-	    return "Error in service module";
-	case PAM_SYSTEM_ERR:
-	    return "System error";
-	case PAM_BUF_ERR:
-	    return "Memory buffer error";
-	case PAM_PERM_DENIED:
-	    return "Permission denied";
-	case PAM_AUTH_ERR:
-	    return "Authentication failure";
-	case PAM_CRED_INSUFFICIENT:
-	    return "Insufficient credentials to access authentication data";
-	case PAM_AUTHINFO_UNAVAIL:
-	    return "Authentication service cannot retrieve authentication info.";
-	case PAM_USER_UNKNOWN:
-	    return "User not known to the underlying authentication module";
-	case PAM_MAXTRIES:
-	    return "Have exhasted maximum number of retries for service.";
-	case PAM_NEW_AUTHTOK_REQD:
-	    return "Authentication token is no longer valid; new one required.";
-	case PAM_ACCT_EXPIRED:
-	    return "User account has expired";    
-	case PAM_CRED_UNAVAIL:
-	    return "Authentication service cannot retrieve user credentials";
-	case PAM_CRED_EXPIRED:
-	    return "User credentials expired";
-	case PAM_CRED_ERR:
-	    return "Failure setting user credentials";
-	case PAM_NO_MODULE_DATA:
-	    return "No module specific data is present";
-	case PAM_BAD_ITEM:
-	    return "Bad item passed to pam_*_item()";
-	case PAM_CONV_ERR:
-	    return "Conversation error";
-	case PAM_AUTHTOK_ERR:
-	    return "Authentication token manipulation error";   
-	case PAM_AUTHTOK_LOCK_BUSY:
-	    return "Authentication token lock busy";
-	case PAM_AUTHTOK_DISABLE_AGING:
-	    return "Authentication token aging disabled";
-	case PAM_TRY_AGAIN:
-	    return "Failed preliminary check by password service";
-	case PAM_IGNORE:
-	    return "Please ignore underlying account module";
-	case PAM_MODULE_UNKNOWN:
-	    return "Module is unknown";
-	case PAM_AUTHTOK_EXPIRED:
-	    return "Authentication token expired";
-	case PAM_CONV_AGAIN:
-	    return "Conversation is waiting for event";
-	case PAM_INCOMPLETE:
-	    return "Application needs to call libpam again";    
-	case 32+1:
-	    return "Error connecting to PAM";	
-	case 32+3:
-	    return "Username okey but group problem";
-	default:{
-	    char replytxt[80];	
-	    g_sprintf(replytxt,"Not defined PAM error:%d",pamError);
-	    return replytxt ;
-	}
-	
+static const char * APP_CC
+getPAMError(const int pamError, char *text, int text_bytes)
+{
+    switch (pamError)
+    {
+        case PAM_SUCCESS:
+            return "Success";
+        case PAM_OPEN_ERR:
+            return "dlopen() failure";
+        case PAM_SYMBOL_ERR:
+            return "Symbol not found";
+        case PAM_SERVICE_ERR:
+            return "Error in service module";
+        case PAM_SYSTEM_ERR:
+            return "System error";
+        case PAM_BUF_ERR:
+            return "Memory buffer error";
+        case PAM_PERM_DENIED:
+            return "Permission denied";
+        case PAM_AUTH_ERR:
+            return "Authentication failure";
+        case PAM_CRED_INSUFFICIENT:
+            return "Insufficient credentials to access authentication data";
+        case PAM_AUTHINFO_UNAVAIL:
+            return "Authentication service cannot retrieve authentication info.";
+        case PAM_USER_UNKNOWN:
+            return "User not known to the underlying authentication module";
+        case PAM_MAXTRIES:
+            return "Have exhasted maximum number of retries for service.";
+        case PAM_NEW_AUTHTOK_REQD:
+            return "Authentication token is no longer valid; new one required.";
+        case PAM_ACCT_EXPIRED:
+            return "User account has expired";
+        case PAM_CRED_UNAVAIL:
+            return "Authentication service cannot retrieve user credentials";
+        case PAM_CRED_EXPIRED:
+            return "User credentials expired";
+        case PAM_CRED_ERR:
+            return "Failure setting user credentials";
+        case PAM_NO_MODULE_DATA:
+            return "No module specific data is present";
+        case PAM_BAD_ITEM:
+            return "Bad item passed to pam_*_item()";
+        case PAM_CONV_ERR:
+            return "Conversation error";
+        case PAM_AUTHTOK_ERR:
+            return "Authentication token manipulation error";
+        case PAM_AUTHTOK_LOCK_BUSY:
+            return "Authentication token lock busy";
+        case PAM_AUTHTOK_DISABLE_AGING:
+            return "Authentication token aging disabled";
+        case PAM_TRY_AGAIN:
+            return "Failed preliminary check by password service";
+        case PAM_IGNORE:
+            return "Please ignore underlying account module";
+        case PAM_MODULE_UNKNOWN:
+            return "Module is unknown";
+        case PAM_AUTHTOK_EXPIRED:
+            return "Authentication token expired";
+        case PAM_CONV_AGAIN:
+            return "Conversation is waiting for event";
+        case PAM_INCOMPLETE:
+            return "Application needs to call libpam again";
+        case 32 + 1:
+            return "Error connecting to PAM";
+        case 32 + 3:
+            return "Username okey but group problem";
+        default:
+            g_snprintf(text, text_bytes, "Not defined PAM error:%d", pamError);
+            return text;
     }
-    
 }
 
-const char *getPAMAdditionalErrorInfo(const int pamError,struct xrdp_mm *self)
-{      
-    switch(pamError){
-	case PAM_SUCCESS:
-	    return NULL;    
-	case PAM_OPEN_ERR:	    
-	case PAM_SYMBOL_ERR:	    
-	case PAM_SERVICE_ERR:	    
-	case PAM_SYSTEM_ERR:	    
-	case PAM_BUF_ERR:	    
-	case PAM_PERM_DENIED:	    
-	case PAM_AUTH_ERR:	    
-	case PAM_CRED_INSUFFICIENT:	    
-	case PAM_AUTHINFO_UNAVAIL:	    
-	case PAM_USER_UNKNOWN:
-	case PAM_CRED_UNAVAIL:
-	case PAM_CRED_ERR:	    
-	case PAM_NO_MODULE_DATA:	    
-	case PAM_BAD_ITEM:	    
-	case PAM_CONV_ERR:	    
-	case PAM_AUTHTOK_ERR:	     
-	case PAM_AUTHTOK_LOCK_BUSY:	    
-	case PAM_AUTHTOK_DISABLE_AGING:	    
-	case PAM_TRY_AGAIN:	    
-	case PAM_IGNORE:	    
-	case PAM_MODULE_UNKNOWN:	    
-	case PAM_CONV_AGAIN:
-	case PAM_INCOMPLETE:	       
-	case _PAM_RETURN_VALUES+1:	    
-	case _PAM_RETURN_VALUES+3:	    
+static const char * APP_CC
+getPAMAdditionalErrorInfo(const int pamError, struct xrdp_mm *self)
+{
+    switch (pamError)
+    {
+        case PAM_SUCCESS:
             return NULL;
-	case PAM_MAXTRIES:	    
-	case PAM_NEW_AUTHTOK_REQD:	    
-	case PAM_ACCT_EXPIRED:	 
-	case PAM_CRED_EXPIRED:	
-	case PAM_AUTHTOK_EXPIRED:	
-	    if(self->wm->pamerrortxt[0])
-	    {		
-	        return self->wm->pamerrortxt;
-	    }
-	    else
-	    {
-		return "Authentication error - Verify that user/password is valid ";
-	    }
-	default:{	   
-	    return "No expected error" ;
-	}
-	
+        case PAM_OPEN_ERR:
+        case PAM_SYMBOL_ERR:
+        case PAM_SERVICE_ERR:
+        case PAM_SYSTEM_ERR:
+        case PAM_BUF_ERR:
+        case PAM_PERM_DENIED:
+        case PAM_AUTH_ERR:
+        case PAM_CRED_INSUFFICIENT:
+        case PAM_AUTHINFO_UNAVAIL:
+        case PAM_USER_UNKNOWN:
+        case PAM_CRED_UNAVAIL:
+        case PAM_CRED_ERR:
+        case PAM_NO_MODULE_DATA:
+        case PAM_BAD_ITEM:
+        case PAM_CONV_ERR:
+        case PAM_AUTHTOK_ERR:
+        case PAM_AUTHTOK_LOCK_BUSY:
+        case PAM_AUTHTOK_DISABLE_AGING:
+        case PAM_TRY_AGAIN:
+        case PAM_IGNORE:
+        case PAM_MODULE_UNKNOWN:
+        case PAM_CONV_AGAIN:
+        case PAM_INCOMPLETE:
+        case _PAM_RETURN_VALUES + 1:
+        case _PAM_RETURN_VALUES + 3:
+            return NULL;
+        case PAM_MAXTRIES:
+        case PAM_NEW_AUTHTOK_REQD:
+        case PAM_ACCT_EXPIRED:
+        case PAM_CRED_EXPIRED:
+        case PAM_AUTHTOK_EXPIRED:
+            if (self->wm->pamerrortxt[0])
+            {
+                return self->wm->pamerrortxt;
+            }
+            else
+            {
+                return "Authentication error - Verify that user/password is valid";
+            }
+        default:
+            return "No expected error";
     }
-    
 }
 #endif
 #endif
@@ -1436,8 +1436,9 @@ xrdp_mm_connect(struct xrdp_mm *self)
     if (use_pam_auth)
     {
         int reply;
-        char replytxt[80];
-        char *additionalError;
+        char replytxt[128];
+        char pam_error[128];
+        const char *additionalError;
         xrdp_wm_log_msg(self->wm, "Please wait, we now perform access control...");
 
         /* g_writeln("we use pam modules to check if we can approve this user"); */
@@ -1455,17 +1456,19 @@ xrdp_mm_connect(struct xrdp_mm *self)
 
         /* access_control return 0 on success */
         reply = access_control(pam_auth_username, pam_auth_password, pam_auth_sessionIP);
-       
-        g_sprintf(replytxt, "Reply from access control: %s", getPAMError(reply));
+
+        g_sprintf(replytxt, "Reply from access control: %s",
+                  getPAMError(reply, pam_error, 127));
 
         xrdp_wm_log_msg(self->wm, replytxt);
         log_message(LOG_LEVEL_INFO, replytxt);
-        additionalError = getPAMAdditionalErrorInfo(reply,self);
-        if(additionalError)
+        additionalError = getPAMAdditionalErrorInfo(reply, self);
+        if (additionalError)
         {
-            if(additionalError[0])
+            g_snprintf(replytxt, 127, "%s", additionalError);
+            if (replytxt[0])
             {
-                xrdp_wm_log_msg(self->wm,additionalError);
+                xrdp_wm_log_msg(self->wm, replytxt);
             }
         }
 
@@ -2123,39 +2126,6 @@ int read_allowed_channel_names(struct list *names, struct list *values)
     return ret;
 }
 
-#define CHANNEL_NAME_PREFIX "channel."
-/* update the channel lists from connection specific overrides
- * return 1 on success 0 on failure */
-int update_allowed_channel_names(struct xrdp_wm *wm, struct list *names, struct list *values)
-{
-    int ret = 1;
-    int index;
-    int oldindex;
-    char *val;
-    char *name;
-    //wm->mm->login_names,wm->mm->login_values
-    for (index = 0; index < wm->mm->login_names->count; index++)
-    {
-        name = (char *)list_get_item(wm->mm->login_names, index);
-        if ( (name != 0) && (g_strncmp( name, CHANNEL_NAME_PREFIX, g_strlen(CHANNEL_NAME_PREFIX)) == 0 ) ) 
-        {
-            name += g_strlen(CHANNEL_NAME_PREFIX);
-            // locate and remove from list
-            oldindex = find_name_in_lists(name, names);
-            if (oldindex >= 0)
-            {
-                list_remove_item(names, oldindex);
-                list_remove_item(values, oldindex);
-            }
-            val = (char *)list_get_item(wm->mm->login_values, index);
-            // (re)add to lists
-            list_add_item(names, (tbus)g_strdup(name));
-            list_add_item(values, (tbus)g_strdup(val));
-        }
-    }
-    return ret;
-}
-
 /* internal function return -1 if name is not in list
  * otherwise return the index 0->count-1*/
 int DEFAULT_CC
@@ -2178,6 +2148,39 @@ find_name_in_lists(char *inName, struct list *names)
     return reply;
 }
 
+#define CHANNEL_NAME_PREFIX "channel."
+/* update the channel lists from connection specific overrides
+ * return 1 on success 0 on failure */
+int update_allowed_channel_names(struct xrdp_wm *wm, struct list *names, struct list *values)
+{
+    int ret = 1;
+    int index;
+    int oldindex;
+    char *val;
+    char *name;
+    //wm->mm->login_names,wm->mm->login_values
+    for (index = 0; index < wm->mm->login_names->count; index++)
+    {
+        name = (char *)list_get_item(wm->mm->login_names, index);
+        if ( (name != 0) && (g_strncmp( name, CHANNEL_NAME_PREFIX, g_strlen(CHANNEL_NAME_PREFIX)) == 0 ) )
+        {
+            name += g_strlen(CHANNEL_NAME_PREFIX);
+            // locate and remove from list
+            oldindex = find_name_in_lists(name, names);
+            if (oldindex >= 0)
+            {
+                list_remove_item(names, oldindex);
+                list_remove_item(values, oldindex);
+            }
+            val = (char *)list_get_item(wm->mm->login_values, index);
+            // (re)add to lists
+            list_add_item(names, (tbus)g_strdup(name));
+            list_add_item(values, (tbus)g_strdup(val));
+        }
+    }
+    return ret;
+}
+
 /* internal function return 1 if name is in list of channels
  * and if the value is allowed */
 int DEFAULT_CC
@@ -2185,7 +2188,7 @@ is_channel_enabled(char *inName, struct list *names, struct list *values)
 {
     int reply = 0; /*means not in the list*/
     int index;
-    char *val;    
+    char *val;
 
     index = find_name_in_lists(inName, names);
     if ( index >= 0 )
@@ -2200,7 +2203,7 @@ is_channel_enabled(char *inName, struct list *names, struct list *values)
     else
     {
         log_message(LOG_LEVEL_INFO,"This channel is disabled (not in List): %s", inName);
-    }	
+    }
 
     return reply;
 }
@@ -2226,7 +2229,7 @@ void init_channel_allowed(struct xrdp_wm *wm)
 
     names = list_create();
     values = list_create();
-    /* You can override the list of allowed channels individually for each 
+    /* You can override the list of allowed channels individually for each
      * session type. */
     if (   read_allowed_channel_names(names, values)
         && update_allowed_channel_names(wm, names, values) )
@@ -2302,7 +2305,7 @@ int DEFAULT_CC is_channel_allowed(struct xrdp_wm *wm, int channel_id)
             break;
         }
     }
-    
+
     return reply;
 }
 
