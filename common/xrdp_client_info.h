@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -87,6 +87,7 @@ struct xrdp_client_info
   char jpeg_prop[64];
   int v3_codec_id;
   int use_bulk_comp;
+  int pointer_flags; /* 0 color, 1 new */
 };
 
 #endif
