@@ -170,8 +170,9 @@ struct xrdp_pointer_item
   int stamp;
   int x; /* hotspot */
   int y;
-  char data[32 * 32 * 3];
+  char data[32 * 32 * 4];
   char mask[32 * 32 / 8];
+  int bpp;
 };
 
 struct xrdp_brush_item

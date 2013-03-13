@@ -126,6 +126,7 @@
 #define RDP_POINTER_MOVE               3
 #define RDP_POINTER_COLOR              6
 #define RDP_POINTER_CACHED             7
+#define RDP_POINTER_POINTER            8
 
 #define RDP_NULL_POINTER               0
 #define RDP_DEFAULT_POINTER            0x7F00
