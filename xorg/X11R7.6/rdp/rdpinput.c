@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2012 Jay Sorg
+Copyright 2005-2013 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -671,7 +671,7 @@ rdpSpriteSetCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs,
     }
 
     rdpup_begin_update();
-    rdpup_set_cursor(xhot, yhot, cur_data, cur_mask);
+    rdpup_set_cursor_ex(xhot, yhot, cur_data, cur_mask, 0);
     rdpup_end_update();
 }
 

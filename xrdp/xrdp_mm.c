@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -383,6 +383,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             self->mod->server_screen_blt = server_screen_blt;
             self->mod->server_paint_rect = server_paint_rect;
             self->mod->server_set_pointer = server_set_pointer;
+            self->mod->server_set_pointer_ex = server_set_pointer_ex;
             self->mod->server_palette = server_palette;
             self->mod->server_msg = server_msg;
             self->mod->server_is_term = server_is_term;
@@ -1802,7 +1803,19 @@ server_set_pointer(struct xrdp_mod *mod, int x, int y,
     struct xrdp_wm *wm;
 
     wm = (struct xrdp_wm *)(mod->wm);
-    xrdp_wm_pointer(wm, data, mask, x, y);
+    xrdp_wm_pointer(wm, data, mask, x, y, 0);
+    return 0;
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_set_pointer_ex(struct xrdp_mod *mod, int x, int y,
+                      char *data, char *mask, int bpp)
+{
+    struct xrdp_wm *wm;
+
+    wm = (struct xrdp_wm *)(mod->wm);
+    xrdp_wm_pointer(wm, data, mask, x, y, bpp);
     return 0;
 }
 
