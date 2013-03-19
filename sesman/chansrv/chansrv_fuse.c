@@ -74,6 +74,8 @@ void xfuse_devredir_cb_write_file(void *vp, char *buf, size_t length)        {}
 void xfuse_devredir_cb_read_file(void *vp, char *buf, size_t length)         {}
 void xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode)         {}
 void xfuse_devredir_cb_enum_dir_done(void *vp, tui32 IoStatus)               {}
+void xfuse_devredir_cb_rmdir_or_file(void *vp, tui32 IoStatus)               {}
+void xfuse_devredir_cb_file_close(void *vp)                                  {}
 
 #else
 
