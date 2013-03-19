@@ -35,7 +35,23 @@ download_file()
     cd downloads
 
     echo "downloading file $file"
-    if [ "$file" = "pixman-0.15.20.tar.bz2" ]; then
+
+    if [ "$file" = "libpthread-stubs-0.3.tar.bz2" ]; then
+        wget -cq http://xcb.freedesktop.org/dist/$file
+        status=$?
+        cd ..
+        return $status
+    elif [ "$file" = "libxcb-1.7.tar.bz2" ]; then
+        wget -cq http://xcb.freedesktop.org/dist/$file
+        status=$?
+        cd ..
+        return $status
+    elif [ "$file" = "xcb-proto-1.6.tar.bz2" ]; then
+        wget -cq http://xcb.freedesktop.org/dist/$file
+        status=$?
+        cd ..
+        return $status
+    elif [ "$file" = "pixman-0.15.20.tar.bz2" ]; then
         wget -cq http://ftp.x.org/pub/individual/lib/$file
         status=$?
         cd ..

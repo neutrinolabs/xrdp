@@ -126,7 +126,7 @@ int APP_CC
 xrdp_wm_pu(struct xrdp_wm* self, struct xrdp_bitmap* control);
 int APP_CC
 xrdp_wm_send_pointer(struct xrdp_wm* self, int cache_idx,
-                     char* data, char* mask, int x, int y);
+                     char* data, char* mask, int x, int y, int bpp);
 int APP_CC
 xrdp_wm_pointer(struct xrdp_wm* self, char* data, char* mask, int x, int y);
 int

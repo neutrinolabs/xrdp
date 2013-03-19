@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -958,11 +958,26 @@ xrdp_process_capset_pointercache(struct xrdp_rdp *self, struct stream *s,
                                  int len)
 {
     int i;
+    int colorPointerFlag;
 
-    in_uint8s(s, 2); /* color pointer */
+    in_uint16_le(s, colorPointerFlag);
+    self->client_info.pointer_flags = colorPointerFlag;
     in_uint16_le(s, i);
     i = MIN(i, 32);
     self->client_info.pointer_cache_entries = i;
+    if (colorPointerFlag & 1)
+    {
+        g_writeln("xrdp_process_capset_pointercache: client supports "
+                  "new(color) cursor");
+        in_uint16_le(s, i);
+        i = MIN(i, 32);
+        self->client_info.pointer_cache_entries = i;
+    }
+    else
+    {
+        g_writeln("xrdp_process_capset_pointercache: client does not support "
+                  "new(color) cursor");
+    }
     return 0;
 }
 

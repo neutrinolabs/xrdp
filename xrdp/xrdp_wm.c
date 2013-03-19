@@ -292,9 +292,10 @@ xrdp_wm_load_pointer(struct xrdp_wm *self, char *file_name, char *data,
 /*****************************************************************************/
 int APP_CC
 xrdp_wm_send_pointer(struct xrdp_wm *self, int cache_idx,
-                     char *data, char *mask, int x, int y)
+                     char *data, char *mask, int x, int y, int bpp)
 {
-    return libxrdp_send_pointer(self->session, cache_idx, data, mask, x, y);
+    return libxrdp_send_pointer(self->session, cache_idx, data, mask,
+                                x, y, bpp);
 }
 
 /*****************************************************************************/
@@ -541,13 +542,13 @@ xrdp_wm_init(struct xrdp_wm *self)
             names->auto_free = 1;
             values = list_create();
             values->auto_free = 1;
-	    /* domain names that starts with '_' are reserved for IP/DNS to simplify 
-	     * for the user in a gateway setup */
-	    if(self->session->client_info->domain[0]!='_')
-	    {
-		g_strncpy(section_name, self->session->client_info->domain, 255);
-	    }
-
+            /* domain names that starts with '_' are reserved for IP/DNS to
+             * simplify for the user in a gateway setup */
+            if (self->session->client_info->domain[0] != '_')
+            {
+                g_strncpy(section_name, self->session->client_info->domain,
+                          255);
+            }
             if (section_name[0] == 0)
             {
                 if (autorun_name[0] == 0)

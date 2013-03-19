@@ -475,9 +475,10 @@ xrdp_cache_add_pointer(struct xrdp_cache *self,
         if (self->pointer_items[i].x == pointer_item->x &&
                 self->pointer_items[i].y == pointer_item->y &&
                 g_memcmp(self->pointer_items[i].data,
-                         pointer_item->data, 32 * 32 * 3) == 0 &&
+                         pointer_item->data, 32 * 32 * 4) == 0 &&
                 g_memcmp(self->pointer_items[i].mask,
-                         pointer_item->mask, 32 * 32 / 8) == 0)
+                         pointer_item->mask, 32 * 32 / 8) == 0 &&
+                self->pointer_items[i].bpp == pointer_item->bpp)
         {
             self->pointer_items[i].stamp = self->pointer_stamp;
             xrdp_wm_set_pointer(self->wm, i);
@@ -511,7 +512,8 @@ xrdp_cache_add_pointer(struct xrdp_cache *self,
                          self->pointer_items[index].data,
                          self->pointer_items[index].mask,
                          self->pointer_items[index].x,
-                         self->pointer_items[index].y);
+                         self->pointer_items[index].y,
+                         self->pointer_items[index].bpp);
     self->wm->current_pointer = index;
     DEBUG(("adding pointer at %d", index));
     return index;
@@ -541,7 +543,8 @@ xrdp_cache_add_pointer_static(struct xrdp_cache *self,
                          self->pointer_items[index].data,
                          self->pointer_items[index].mask,
                          self->pointer_items[index].x,
-                         self->pointer_items[index].y);
+                         self->pointer_items[index].y,
+                         self->pointer_items[index].bpp);
     self->wm->current_pointer = index;
     DEBUG(("adding pointer at %d", index));
     return index;

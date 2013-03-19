@@ -417,44 +417,103 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
 /*****************************************************************************/
 int EXPORT_CC
 libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
-                     char *data, char *mask, int x, int y)
+                     char *data, char *mask, int x, int y, int bpp)
 {
     struct stream *s;
     char *p;
+    tui16 *p16;
+    tui32 *p32;
     int i;
     int j;
+    int data_bytes;
 
     DEBUG(("libxrdp_send_pointer sending cursor"));
+    /* error check */
+    if ((session->client_info->pointer_flags & 1) == 0)
+    {
+        if (bpp != 0)
+        {
+            g_writeln("libxrdp_send_pointer: error");
+            return 1;
+        }
+    }
+    if ((bpp != 0) && (bpp == 15) && (bpp != 16) &&
+        (bpp != 24) && (bpp != 32))
+    {
+        g_writeln("libxrdp_send_pointer: error");
+        return 1;
+    }
     make_stream(s);
     init_stream(s, 8192);
     xrdp_rdp_init_data((struct xrdp_rdp *)session->rdp, s);
-    out_uint16_le(s, RDP_POINTER_COLOR);
-    out_uint16_le(s, 0); /* pad */
+    if (bpp == 0)
+    {
+        out_uint16_le(s, RDP_POINTER_COLOR);
+        out_uint16_le(s, 0); /* pad */
+        data_bytes = 3072;
+    }
+    else
+    {
+        out_uint16_le(s, RDP_POINTER_POINTER);
+        out_uint16_le(s, 0); /* pad */
+        out_uint16_le(s, bpp);
+        data_bytes = ((bpp + 7) / 8) * 32 * 32;
+    }
     out_uint16_le(s, cache_idx); /* cache_idx */
     out_uint16_le(s, x);
     out_uint16_le(s, y);
     out_uint16_le(s, 32);
     out_uint16_le(s, 32);
     out_uint16_le(s, 128);
-    out_uint16_le(s, 3072);
-    p = data;
+    out_uint16_le(s, data_bytes);
 
-    for (i = 0; i < 32; i++)
+    switch (bpp)
     {
-        for (j = 0; j < 32; j++)
-        {
-            out_uint8(s, *p);
-            p++;
-            out_uint8(s, *p);
-            p++;
-            out_uint8(s, *p);
-            p++;
-        }
+        case 15:
+        case 16:
+            p16 = (tui16 *) data;
+            for (i = 0; i < 32; i++)
+            {
+                for (j = 0; j < 32; j++)
+                {
+                    out_uint16_le(s, *p16);
+                    p16++;
+                }
+            }
+            break;
+        case 0:
+        case 24:
+            p = data;
+            for (i = 0; i < 32; i++)
+            {
+                for (j = 0; j < 32; j++)
+                {
+                    out_uint8(s, *p);
+                    p++;
+                    out_uint8(s, *p);
+                    p++;
+                    out_uint8(s, *p);
+                    p++;
+                }
+            }
+            break;
+        case 32:
+            p32 = (tui32 *) data;
+            for (i = 0; i < 32; i++)
+            {
+                for (j = 0; j < 32; j++)
+                {
+                    out_uint32_le(s, *p32);
+                    p32++;
+                }
+            }
+            break;
     }
 
     out_uint8a(s, mask, 128); /* mask */
     s_mark_end(s);
-    xrdp_rdp_send_data((struct xrdp_rdp *)session->rdp, s, RDP_DATA_PDU_POINTER);
+    xrdp_rdp_send_data((struct xrdp_rdp *)(session->rdp), s,
+                       RDP_DATA_PDU_POINTER);
     free_stream(s);
     return 0;
 }
