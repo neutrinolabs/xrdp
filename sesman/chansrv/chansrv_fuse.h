@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Laxmikant Rashinkar 2013
+ * Copyright (C) Laxmikant Rashinkar 2013 LK.Rashinkar@gmail.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ struct xrdp_inode
     tui32           mode;          /* File mode.                    */
     tui32           nlink;         /* symbolic link count.          */
     tui32           nentries;      /* number of entries in a dir    */
+    tui32           nopen;         /* number of simultaneous opens  */
     tui32           uid;           /* User ID of the file's owner.  */
     tui32           gid;           /* Group ID of the file's group. */
     size_t          size;          /* Size of file, in bytes.       */
@@ -51,10 +52,12 @@ int xfuse_file_contents_range(int stream_id, char *data, int data_bytes);
 int xfuse_file_contents_size(int stream_id, int file_size);
 int xfuse_add_clip_dir_item(char *filename, int flags, int size, int lindex);
 
-/* functions that are inovked from devredir */
+/* functions that are invoked from devredir */
 void xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode);
 void xfuse_devredir_cb_enum_dir_done(void *vp, tui32 IoStatus);
 void xfuse_devredir_cb_open_file(void *vp, tui32 DeviceId, tui32 FileId);
 void xfuse_devredir_cb_read_file(void *vp, char *buf, size_t length);
+void xfuse_devredir_cb_rmdir_or_file(void *vp, tui32 IoStatus);
+void xfuse_devredir_cb_file_close(void *vp);
 
 #endif

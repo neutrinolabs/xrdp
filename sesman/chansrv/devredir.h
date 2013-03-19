@@ -18,6 +18,8 @@
  * limitations under the License.
  */
 
+// LK_TODO dev_redir_xxx should become devredir_xxx
+
 #if !defined(DEVREDIR_H)
 #define DEVREDIR_H
 
@@ -126,11 +128,16 @@ int  dev_redir_string_ends_with(char *string, char c);
 void dev_redir_insert_rdpdr_header(struct stream *s, tui16 Component,
                                    tui16 PacketId);
 
+void devredir_proc_cid_rmdir_or_file(IRP *irp, tui32 IoStatus);
+void devredir_proc_cid_rmdir_or_file_resp(IRP *irp, tui32 IoStatus);
+
 /* called from FUSE module */
 int dev_redir_get_dir_listing(void *fusep, tui32 device_id, char *path);
 
 int dev_redir_file_open(void *fusep, tui32 device_id, char *path,
                         int mode, int type);
+
+int devredir_file_close(void *fusep, tui32 device_id, tui32 file_id);
 
 int dev_redir_file_read(void *fusep, tui32 device_id, tui32 FileId,
                         tui32 Length, tui64 Offset);
@@ -141,7 +148,7 @@ int dev_redir_file_read(void *fusep, tui32 device_id, tui32 FileId,
 #define LOG_DEBUG   2
 
 #ifndef LOG_LEVEL
-#define LOG_LEVEL   LOG_ERROR
+#define LOG_LEVEL   LOG_DEBUG
 #endif
 
 #define log_error(_params...)                           \
@@ -276,9 +283,13 @@ int send_channel_data(int chan_id, char *data, int size);
  * CreateOptions Mask [MS-SMB2] section 2.2.13 SMB2 CREATE Request
  */
 
-#define CO_FILE_DIRECTORY_FILE          0x00000001
-#define CO_FILE_WRITE_THROUGH           0x00000002
-#define CO_FILE_SYNCHRONOUS_IO_NONALERT 0x00000020
+enum CREATE_OPTIONS
+{
+    CO_FILE_DIRECTORY_FILE          = 0x00000001,
+    CO_FILE_WRITE_THROUGH           = 0x00000002,
+    CO_FILE_SYNCHRONOUS_IO_NONALERT = 0x00000020,
+    CO_FILE_DELETE_ON_CLOSE         = 0x00001000
+};
 
 /*
  * CreateDispositions Mask [MS-SMB2] section 2.2.13
@@ -324,31 +335,37 @@ int send_channel_data(int chan_id, char *data, int size);
 #define NT_STATUS_UNSUCCESSFUL          0xC0000001
 
 /*
+ * File system ioctl codes
+ * MS-FSCC section 2.3 FSCTL Structures
+ */
+#define FSCTL_DELETE_OBJECT_ID          0x900a0
+
+
+/*
  * CompletionID types, used in IRPs to indicate I/O operation
  */
 
-enum
+enum COMPLETION_ID
 {
     CID_CREATE_DIR_REQ = 1,
     CID_CREATE_OPEN_REQ,
     CID_READ,
     CID_WRITE,
     CID_DIRECTORY_CONTROL,
-    CID_CLOSE
+    CID_CLOSE,
+    CID_FILE_CLOSE,
+    CID_RMDIR_OR_FILE,
+    CID_RMDIR_OR_FILE_RESP
 };
 
-#if 0
-#define CID_CLOSE                       0x0002
-#define CID_READ                        0x0003
-#define CID_WRITE                       0x0004
-#define CID_DEVICE_CONTROL              0x0005
-#define CID_QUERY_VOLUME_INFORMATION    0x0006
-#define CID_SET_VOLUME_INFORMATION      0x0007
-#define CID_QUERY_INFORMATION           0x0008
-#define CID_SET_INFORMATION             0x0009
-#define CID_DIRECTORY_CONTROL           0x000a
-#define CID_LOCK_CONTROL                0x000b
-#endif
+enum FS_INFORMATION_CLASS
+{
+    FileBasicInformation       = 0x00000004, /* set atime, mtime, ctime etc */
+    FileEndOfFileInformation   = 0x00000014, /* set EOF info                */
+    FileDispositionInformation = 0x0000000D, /* mark a file for deletion    */
+    FileRenameInformation      = 0x0000000A, /* rename a file               */
+    FileAllocationInformation  = 0x00000013  /* set file allocation size    */
+};
 
 /*
  * constants for drive dir query

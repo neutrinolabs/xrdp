@@ -663,6 +663,7 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
     switch (irp->completion_type)
     {
         case CID_CREATE_DIR_REQ:
+            log_debug("got CID_CREATE_DIR_REQ");
             if (IoStatus != NT_STATUS_SUCCESS)
             {
                 /* we were trying to create a request to enumerate a dir */
@@ -693,12 +694,14 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
             break;
 
         case CID_READ:
+            log_debug("got CID_READ");
             stream_rd_u32_le(s, Length);
             fuse_data = dev_redir_fuse_data_dequeue(irp);
             xfuse_devredir_cb_read_file(fuse_data->data_ptr, s->p, Length);
             break;
 
         case CID_WRITE:
+            log_debug("got CID_WRITE");
             stream_rd_u32_le(s, Length);
             fuse_data = dev_redir_fuse_data_dequeue(irp);
             xfuse_devredir_cb_write_file(fuse_data->data_ptr, s->p, Length);
@@ -709,11 +712,30 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
             dev_redir_irp_delete(irp);
             break;
 
+        case CID_FILE_CLOSE:
+            log_debug("got CID_FILE_CLOSE");
+            fuse_data = dev_redir_fuse_data_dequeue(irp);
+            xfuse_devredir_cb_file_close(fuse_data->data_ptr);
+            dev_redir_irp_delete(irp);
+            break;
+
         case CID_DIRECTORY_CONTROL:
             log_debug("got CID_DIRECTORY_CONTROL");
 
             dev_redir_proc_query_dir_response(irp, s, DeviceId,
                                               CompletionId, IoStatus);
+            break;
+
+        case CID_RMDIR_OR_FILE:
+            log_debug("got CID_RMDIR_OR_FILE");
+            stream_rd_u32_le(s, irp->FileId);
+            devredir_proc_cid_rmdir_or_file(irp, IoStatus);
+            return;
+            break;
+
+        case CID_RMDIR_OR_FILE_RESP:
+            log_debug("got CID_RMDIR_OR_FILE_RESP");
+            devredir_proc_cid_rmdir_or_file_resp(irp, IoStatus);
             break;
 
         default:
@@ -930,6 +952,65 @@ int dev_redir_file_open(void *fusep, tui32 device_id, char *path,
         CreateDisposition = CD_FILE_OPEN;
     }
 #endif
+    rval = dev_redir_send_drive_create_request(device_id, path,
+                                               DesiredAccess, CreateOptions,
+                                               CreateDisposition,
+                                               irp->completion_id);
+
+    return rval;
+}
+
+int devredir_file_close(void *fusep, tui32 device_id, tui32 file_id)
+{
+    IRP *irp;
+
+    if ((irp = dev_redir_irp_new()) == NULL)
+        return -1;
+
+    irp->completion_id = g_completion_id++;
+    irp->completion_type = CID_FILE_CLOSE;
+    irp->device_id = device_id;
+    dev_redir_fuse_data_enqueue(irp, fusep);
+
+    return dev_redir_send_drive_close_request(RDPDR_CTYP_CORE,
+                                              PAKID_CORE_DEVICE_IOREQUEST,
+                                              device_id,
+                                              file_id,
+                                              irp->completion_id,
+                                              IRP_MJ_CLOSE,
+                                              0, 32);
+}
+
+/**
+ * Remove (delete) a directory
+ *****************************************************************************/
+
+int devredir_rmdir_or_file(void *fusep, tui32 device_id, char *path, int mode)
+{
+    tui32  DesiredAccess;
+    tui32  CreateOptions;
+    tui32  CreateDisposition;
+    int    rval;
+    IRP   *irp;
+
+    if ((irp = dev_redir_irp_new()) == NULL)
+        return -1;
+
+    irp->completion_id = g_completion_id++;
+    irp->completion_type = CID_RMDIR_OR_FILE;
+    irp->device_id = device_id;
+    strcpy(irp->pathname, path);
+    dev_redir_fuse_data_enqueue(irp, fusep);
+
+    // LK_TODO
+    //DesiredAccess = DA_DELETE | DA_FILE_READ_DATA | DA_FILE_WRITE_DATA | DA_SYNCHRONIZE;
+    DesiredAccess = DA_DELETE | DA_FILE_READ_ATTRIBUTES | DA_SYNCHRONIZE;
+
+    CreateOptions = CO_FILE_DELETE_ON_CLOSE | CO_FILE_DIRECTORY_FILE |
+                    CO_FILE_SYNCHRONOUS_IO_NONALERT;
+
+    CreateDisposition = CD_FILE_OPEN; // WAS 1
+
     rval = dev_redir_send_drive_create_request(device_id, path,
                                                DesiredAccess, CreateOptions,
                                                CreateDisposition,
@@ -1327,4 +1408,66 @@ void dev_redir_insert_rdpdr_header(struct stream *s, tui16 Component,
 {
     stream_wr_u16_le(s, Component);
     stream_wr_u16_le(s, PacketId);
+}
+
+void devredir_proc_cid_rmdir_or_file(IRP *irp, tui32 IoStatus)
+{
+    struct stream *s;
+    int            bytes;
+
+    if (IoStatus != NT_STATUS_SUCCESS)
+    {
+        FUSE_DATA *fuse_data = dev_redir_fuse_data_dequeue(irp);
+        if (fuse_data)
+        {
+            xfuse_devredir_cb_rmdir_or_file(fuse_data->data_ptr, IoStatus);
+            free(fuse_data);
+        }
+        dev_redir_irp_delete(irp);
+        return;
+    }
+
+    stream_new(s, 1024);
+
+    irp->completion_type = CID_RMDIR_OR_FILE_RESP;
+    dev_redir_insert_dev_io_req_header(s, irp->device_id, irp->FileId,
+                                       irp->completion_id,
+                                       IRP_MJ_SET_INFORMATION, 0);
+
+    stream_wr_u32_le(s, FileDispositionInformation);
+    stream_wr_u32_le(s, 0); /* length is zero */
+    stream_seek(s, 24);     /* padding        */
+
+    /* send to client */
+    bytes = stream_len(s);
+    send_channel_data(g_rdpdr_chan_id, s->data, bytes);
+    stream_free(s);
+
+    return;
+}
+
+void devredir_proc_cid_rmdir_or_file_resp(IRP *irp, tui32 IoStatus)
+{
+    FUSE_DATA *fuse_data;
+
+    fuse_data = dev_redir_fuse_data_dequeue(irp);
+    if (fuse_data)
+    {
+        xfuse_devredir_cb_rmdir_or_file(fuse_data->data_ptr, IoStatus);
+        free(fuse_data);
+    }
+
+    if (IoStatus != NT_STATUS_SUCCESS)
+    {
+        dev_redir_irp_delete(irp);
+        return;
+    }
+
+    irp->completion_type = CID_CLOSE;
+    dev_redir_send_drive_close_request(RDPDR_CTYP_CORE,
+                                       PAKID_CORE_DEVICE_IOREQUEST,
+                                       irp->device_id,
+                                       irp->FileId,
+                                       irp->completion_id,
+                                       IRP_MJ_CLOSE, 0, 32);
 }
