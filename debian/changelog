@@ -1,0 +1,11 @@
+xrdp (0.7.0-1) unstable; urgency=low
+
+  * Initial release 
+
+ -- Angulo Solido <packaging@angulosolido.pt>  Wed, 20 Mar 2013 19:46:06 +0100
+
+xrdp (0.6.0-1) unstable; urgency=low
+
+  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+
+ -- Angulo Solido <packaging@angulosolido.pt>  Mon, 22 Aug 2011 19:46:06 +0100
