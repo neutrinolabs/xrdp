@@ -28,3 +28,4 @@ startscript_DATA = \
 # must be tab below
 install-data-hook:
 	chmod 755 $(DESTDIR)$(sysconfdir)/xrdp/xrdp.sh
+	chmod 755 $(DESTDIR)$(sysconfdir)/init.d/xrdp
