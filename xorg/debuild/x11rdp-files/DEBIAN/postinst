@@ -1,6 +1,6 @@
 #!/bin/bash
 
-X11DIR=/opt/X11rdp
+X11DIR=DUMMYDIRINFO
 
 # make the /usr/bin/X11rdp symbolic link if it doesn't exist...
 if [ ! -e /usr/bin/X11rdp ]

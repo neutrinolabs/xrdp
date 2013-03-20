@@ -12,7 +12,8 @@ DESTDIR=$PACKDIR/opt
 NAME=x11rdp
 
 sed -i -e  "s/DUMMYVERINFO/$VERSION-$RELEASE/"  $PACKDIR/DEBIAN/control
-sed -i -e  "s/DUMMYDIRINFO/$SRCDIR/"  $PACKDIR/DEBIAN/postinst
+# need a different delimiter, since it has a path
+sed -i -e  "s,DUMMYDIRINFO,$SRCDIR,"  $PACKDIR/DEBIAN/postinst
 
 mkdir -p $DESTDIR
 cp -Rf $SRCDIR $DESTDIR
@@ -21,4 +22,4 @@ dpkg-deb --build $PACKDIR $PKGDEST/${NAME}_$VERSION-$RELEASE.deb
 # revert to initial state
 rm -rf $DESTDIR
 sed -i -e  "s/$VERSION-$RELEASE/DUMMYVERINFO/"  $PACKDIR/DEBIAN/control
-sed -i -e  "s/$SRCDIR/DUMMYDIRINFO/"  $PACKDIR/DEBIAN/postinst
+sed -i -e  "s,$SRCDIR,DUMMYDIRINFO,"  $PACKDIR/DEBIAN/postinst
