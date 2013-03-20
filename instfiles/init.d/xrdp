@@ -14,7 +14,9 @@
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 DAEMON=/usr/sbin/xrdp
 PIDDIR=/var/run/xrdp
-USERID=xrdp
+#USERID=xrdp
+# for now X11rdp sessions require root - should be fixed in the future
+USERID=root
 RSAKEYS=/etc/xrdp/rsakeys.ini
 NAME=xrdp
 DESC=xrdp
