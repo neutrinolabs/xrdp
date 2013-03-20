@@ -8,14 +8,14 @@ fi
 XRDP="xrdp"
 CHOWN="/bin/chown"
 ADDUSER="/usr/sbin/adduser"
+SESMANLOG="/var/log/xrdp-sesman.log"
 
 [ -d /var/run/xrdp ] || mkdir -p /var/run/xrdp
 $ADDUSER --system --disabled-password --disabled-login --home /var/run/xrdp \
          --no-create-home --quiet --group $XRDP
 
-$CHOWN -R $XRDP:$XRDP /etc/xrdp
-touch /var/log/sesman.log
-$CHOWN -R $XRDP:$XRDP /var/log/sesman.log
+touch $SESMANLOG
+$CHOWN $XRDP:$XRDP $SESMANLOG
 
 
 #DEBHELPER#
