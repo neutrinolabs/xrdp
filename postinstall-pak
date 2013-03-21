@@ -9,7 +9,6 @@ XRDP="xrdp"
 ADDUSER="/usr/sbin/adduser"
 XRDPLOG="/var/log/xrdp-sesman.log"
 SESMANLOG="/var/log/xrdp-sesman.log"
-RSAKEYS="/etc/xrdp/rsakeys.ini"
 
 [ -d /var/run/xrdp ] || mkdir -p /var/run/xrdp
 $ADDUSER --system --disabled-password --disabled-login --home /var/run/xrdp \
@@ -18,7 +17,5 @@ $ADDUSER --system --disabled-password --disabled-login --home /var/run/xrdp \
 touch $SESMANLOG $XRDPLOG
 chown $XRDP:$XRDP $SESMANLOG
 chown $XRDP:$XRDP $XRDPLOG
-chgrp $XRDP $RSAKEYS
-chmod g+r $RSAKEYS
 
 #DEBHELPER#
