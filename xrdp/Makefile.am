@@ -56,6 +56,3 @@ xrdppkgdata_DATA = \
   cursor0.cur \
   cursor1.cur
 
-# must be tab below
-install-data-hook:
-	chmod 600 $(DESTDIR)$(sysconfdir)/xrdp/rsakeys.ini
