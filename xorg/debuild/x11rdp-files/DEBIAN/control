@@ -2,6 +2,6 @@ Package: x11rdp
 Version: DUMMYVERINFO
 Section: unknown
 Priority: optional
-Architecture: all
+Architecture: DUMMYARCHINFO
 Maintainer: Angulo Solido <packaging@angulosolido.pt>
 Description: X11rdp backend for the xrdp remote access server
