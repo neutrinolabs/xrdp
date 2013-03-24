@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -489,6 +489,29 @@ process_server_window_delete(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
+static int APP_CC
+process_server_set_pointer_ex(struct mod *mod, struct stream *s)
+{
+    int rv;
+    int x;
+    int y;
+    int bpp;
+    int Bpp;
+    char cur_data[32 * (32 * 4)];
+    char cur_mask[32 * (32 / 8)];
+
+    in_sint16_le(s, x);
+    in_sint16_le(s, y);
+    in_uint16_le(s, bpp);
+    Bpp = (bpp == 0) ? 3 : (bpp + 7) / 8;
+    in_uint8a(s, cur_data, 32 * (32 * Bpp));
+    in_uint8a(s, cur_mask, 32 * (32 / 8));
+    rv = mod->server_set_cursor_ex(mod, x, y, cur_data, cur_mask, bpp);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
 static int
 lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
 {
@@ -629,6 +652,9 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
             break;
         case 26: /* server_window_delete */
             rv = process_server_window_delete(mod, s);
+            break;
+        case 51: /* server_set_pointer_ex */
+            rv = process_server_set_pointer_ex(mod, s);
             break;
         default:
             g_writeln("lib_mod_process_orders: unknown order type %d", type);

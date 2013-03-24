@@ -504,10 +504,11 @@ xrdp_cache_add_pointer(struct xrdp_cache *self,
     self->pointer_items[index].x = pointer_item->x;
     self->pointer_items[index].y = pointer_item->y;
     g_memcpy(self->pointer_items[index].data,
-             pointer_item->data, 32 * 32 * 3);
+             pointer_item->data, 32 * 32 * 4);
     g_memcpy(self->pointer_items[index].mask,
              pointer_item->mask, 32 * 32 / 8);
     self->pointer_items[index].stamp = self->pointer_stamp;
+    self->pointer_items[index].bpp = pointer_item->bpp;
     xrdp_wm_send_pointer(self->wm, index,
                          self->pointer_items[index].data,
                          self->pointer_items[index].mask,
@@ -535,10 +536,11 @@ xrdp_cache_add_pointer_static(struct xrdp_cache *self,
     self->pointer_items[index].x = pointer_item->x;
     self->pointer_items[index].y = pointer_item->y;
     g_memcpy(self->pointer_items[index].data,
-             pointer_item->data, 32 * 32 * 3);
+             pointer_item->data, 32 * 32 * 4);
     g_memcpy(self->pointer_items[index].mask,
              pointer_item->mask, 32 * 32 / 8);
     self->pointer_items[index].stamp = self->pointer_stamp;
+    self->pointer_items[index].bpp = pointer_item->bpp;
     xrdp_wm_send_pointer(self->wm, index,
                          self->pointer_items[index].data,
                          self->pointer_items[index].mask,

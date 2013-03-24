@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2012 Jay Sorg
+Copyright 2005-2013 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -1359,6 +1359,36 @@ rdpup_set_cursor(short x, short y, char *cur_data, char *cur_mask)
         out_uint16_le(g_out_s, x);
         out_uint16_le(g_out_s, y);
         out_uint8a(g_out_s, cur_data, 32 * (32 * 3));
+        out_uint8a(g_out_s, cur_mask, 32 * (32 / 8));
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpup_set_cursor_ex(short x, short y, char *cur_data, char *cur_mask, int bpp)
+{
+    int size;
+    int Bpp;
+
+    if (g_connected)
+    {
+        LLOGLN(10, ("  rdpup_set_cursor_ex"));
+        Bpp = (bpp == 0) ? 3 : (bpp + 7) / 8;
+        size = 10 + 32 * (32 * Bpp) + 32 * (32 / 8);
+        rdpup_pre_check(size);
+        out_uint16_le(g_out_s, 51); /* set cursor ex */
+        out_uint16_le(g_out_s, size); /* size */
+        g_count++;
+        x = MAX(0, x);
+        x = MIN(31, x);
+        y = MAX(0, y);
+        y = MIN(31, y);
+        out_uint16_le(g_out_s, x);
+        out_uint16_le(g_out_s, y);
+        out_uint16_le(g_out_s, bpp);
+        out_uint8a(g_out_s, cur_data, 32 * (32 * Bpp));
         out_uint8a(g_out_s, cur_mask, 32 * (32 / 8));
     }
 

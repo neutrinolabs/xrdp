@@ -128,7 +128,8 @@ int APP_CC
 xrdp_wm_send_pointer(struct xrdp_wm* self, int cache_idx,
                      char* data, char* mask, int x, int y, int bpp);
 int APP_CC
-xrdp_wm_pointer(struct xrdp_wm* self, char* data, char* mask, int x, int y);
+xrdp_wm_pointer(struct xrdp_wm* self, char* data, char* mask, int x, int y,
+                int bpp);
 int
 callback(long id, int msg, long param1, long param2, long param3, long param4);
 int APP_CC
@@ -375,6 +376,9 @@ server_paint_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy,
 int DEFAULT_CC
 server_set_pointer(struct xrdp_mod* mod, int x, int y,
                    char* data, char* mask);
+int DEFAULT_CC
+server_set_pointer_ex(struct xrdp_mod* mod, int x, int y,
+                      char* data, char* mask, int bpp);
 int DEFAULT_CC
 server_palette(struct xrdp_mod* mod, int* palette);
 int DEFAULT_CC

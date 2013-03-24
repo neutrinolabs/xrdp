@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2012 Jay Sorg
+Copyright 2005-2013 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -499,6 +499,8 @@ void
 rdpup_send_area(struct image_data* id, int x, int y, int w, int h);
 int
 rdpup_set_cursor(short x, short y, char* cur_data, char* cur_mask);
+int
+rdpup_set_cursor_ex(short x, short y, char *cur_data, char *cur_mask, int bpp);
 int
 rdpup_create_os_surface(int rdpindexd, int width, int height);
 int

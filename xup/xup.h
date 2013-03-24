@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -117,7 +117,10 @@ struct mod
   int (*server_monitored_desktop)(struct mod* v,
                                   struct rail_monitored_desktop_order* mdo,
                                   int flags);
-  tbus server_dumby[100 - 37]; /* align, 100 minus the number of server
+  int (*server_set_cursor_ex)(struct mod* v, int x, int y, char* data,
+                              char* mask, int bpp);
+
+  tbus server_dumby[100 - 38]; /* align, 100 minus the number of server
                                   functions above */
   /* common */
   tbus handle; /* pointer to self as long */

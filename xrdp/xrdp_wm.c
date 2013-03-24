@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -180,14 +180,22 @@ xrdp_wm_get_pixel(char *data, int x, int y, int width, int bpp)
 
 /*****************************************************************************/
 int APP_CC
-xrdp_wm_pointer(struct xrdp_wm *self, char *data, char *mask, int x, int y)
+xrdp_wm_pointer(struct xrdp_wm *self, char *data, char *mask, int x, int y,
+                int bpp)
 {
+    int bytes;
     struct xrdp_pointer_item pointer_item;
 
+    if (bpp == 0)
+    {
+        bpp = 24;
+    }
+    bytes = ((bpp + 7) / 8) * 32 * 32;
     g_memset(&pointer_item, 0, sizeof(struct xrdp_pointer_item));
     pointer_item.x = x;
     pointer_item.y = y;
-    g_memcpy(pointer_item.data, data, 32 * 32 * 3);
+    pointer_item.bpp = bpp;
+    g_memcpy(pointer_item.data, data, bytes);
     g_memcpy(pointer_item.mask, mask, 32 * 32 / 8);
     self->screen->pointer = xrdp_cache_add_pointer(self->cache, &pointer_item);
     return 0;
