@@ -3,7 +3,7 @@
  *
  * xrdp device redirection - we mainly use it for drive redirection
  *
- * Copyright (C) Laxmikant Rashinkar 2013
+ * Copyright (C) Laxmikant Rashinkar 2013 LK.Rashinkar@gmail.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,8 +53,8 @@ struct irp
     tui32      completion_id;       /* unique number                     */
     char       completion_type;     /* describes I/O type                */
     tui32      FileId;              /* RDP client provided unique number */
-    //void      *fusep;               /* opaque FUSE info                  */
     char       pathname[256];       /* absolute pathname                 */
+    char       gen_buf[1024];       /* for general use                   */
     tui32      device_id;           /* identifies remote device          */
     FUSE_DATA *fd_head;             /* point to first FUSE opaque object */
     FUSE_DATA *fd_tail;             /* point to last FUSE opaque object  */
@@ -131,12 +131,14 @@ void dev_redir_insert_rdpdr_header(struct stream *s, tui16 Component,
 
 void devredir_proc_cid_rmdir_or_file(IRP *irp, tui32 IoStatus);
 void devredir_proc_cid_rmdir_or_file_resp(IRP *irp, tui32 IoStatus);
+void devredir_proc_cid_rename_file(IRP *irp, tui32 IoStatus);
+void devredir_proc_cid_rename_file_resp(IRP *irp, tui32 IoStatus);
 
 /* called from FUSE module */
 int dev_redir_get_dir_listing(void *fusep, tui32 device_id, char *path);
 
 int dev_redir_file_open(void *fusep, tui32 device_id, char *path,
-                        int mode, int type);
+                        int mode, int type, char *gen_buf);
 
 int devredir_file_close(void *fusep, tui32 device_id, tui32 file_id);
 
@@ -149,7 +151,7 @@ int dev_redir_file_read(void *fusep, tui32 device_id, tui32 FileId,
 #define LOG_DEBUG   2
 
 #ifndef LOG_LEVEL
-#define LOG_LEVEL   LOG_DEBUG
+#define LOG_LEVEL   LOG_ERROR
 #endif
 
 #define log_error(_params...)                           \
@@ -356,7 +358,9 @@ enum COMPLETION_ID
     CID_CLOSE,
     CID_FILE_CLOSE,
     CID_RMDIR_OR_FILE,
-    CID_RMDIR_OR_FILE_RESP
+    CID_RMDIR_OR_FILE_RESP,
+    CID_RENAME_FILE,
+    CID_RENAME_FILE_RESP
 };
 
 enum FS_INFORMATION_CLASS
@@ -406,5 +410,7 @@ enum FS_INFORMATION_CLASS
 /* Linux   time starts on Jan 1, 1970 */
 #define EPOCH_DIFF 11644473600LL
 #define WINDOWS_TO_LINUX_TIME(_t) ((_t) / 10000000) - EPOCH_DIFF;
+
+#define OP_RENAME_FILE                  0x01
 
 #endif

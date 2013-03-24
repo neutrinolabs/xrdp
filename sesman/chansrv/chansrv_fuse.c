@@ -30,11 +30,10 @@
  *      o copying over an existing file does not work
  *      o are we calling close?
  *      o need to keep track of open files, reqd during rename
+ *      o need to use dir notification for changed files and update xrdp fs
  *      o fuse ops to support
  *          o rename (mv)
  *          o touch does not work
- *          o mknod (may not be required if create is correctly implemented)
- *          o symlink
  *          o keep track of lookup_count
  *          o chmod must work
  *          o cat >> file is not working
@@ -75,6 +74,7 @@ void xfuse_devredir_cb_read_file(void *vp, char *buf, size_t length)         {}
 void xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode)         {}
 void xfuse_devredir_cb_enum_dir_done(void *vp, tui32 IoStatus)               {}
 void xfuse_devredir_cb_rmdir_or_file(void *vp, tui32 IoStatus)               {}
+void xfuse_devredir_cb_rename_file(void *vp, tui32 IoStatus)                 {}
 void xfuse_devredir_cb_file_close(void *vp)                                  {}
 
 #else
@@ -115,7 +115,7 @@ void xfuse_devredir_cb_file_close(void *vp)                                  {}
 #define LOG_ERROR   0
 #define LOG_INFO    1
 #define LOG_DEBUG   2
-#define LOG_LEVEL   LOG_DEBUG
+#define LOG_LEVEL   LOG_ERROR
 
 #define log_error(_params...)                           \
 {                                                       \
@@ -144,6 +144,8 @@ void xfuse_devredir_cb_file_close(void *vp)                                  {}
     }                                                   \
 }
 
+#define OP_RENAME_FILE  0x01
+
 /* the xrdp file system in memory */
 struct xrdp_fs
 {
@@ -168,8 +170,10 @@ struct xfuse_info
     struct fuse_file_info *fi;
     fuse_req_t             req;
     fuse_ino_t             inode;
+    fuse_ino_t             new_inode;
     int                    invoke_fuse;
     char                   name[1024];
+    char                   new_name[1024];
     tui32                  device_id;
     int                    reply_type;
     int                    mode;
@@ -221,12 +225,15 @@ static struct xrdp_inode * xfuse_create_file_in_xrdp_fs(tui32 device_id,
                                                         int type);
 
 static int xfuse_does_file_exist(int parent, char *name);
+static int xfuse_delete_file(int parent, char *name);
+static int xfuse_delete_file_with_xinode(XRDP_INODE *xinode);
+static int xfuse_delete_dir_with_xinode(XRDP_INODE *xinode);
 
 /* forward declarations for calls we make into devredir */
 int dev_redir_get_dir_listing(void *fusep, tui32 device_id, char *path);
 
 int dev_redir_file_open(void *fusep, tui32 device_id, char *path,
-                        int mode, int type);
+                        int mode, int type, char *gen_buf);
 
 int dev_redir_file_read(void *fusep, tui32 device_id, tui32 FileId,
                         tui32 Length, tui64 Offset);
@@ -256,6 +263,10 @@ static void xfuse_cb_rmdir(fuse_req_t req, fuse_ino_t parent,
 
 static void xfuse_cb_unlink(fuse_req_t req, fuse_ino_t parent,
                             const char *name);
+
+static void xfuse_cb_rename(fuse_req_t req,
+                            fuse_ino_t old_parent, const char *old_name,
+                            fuse_ino_t new_parent, const char *new_name);
 
 /* this is not a callback, but it is used by the above two functions */
 static void xfuse_remove_dir_or_file(fuse_req_t req, fuse_ino_t parent,
@@ -370,6 +381,7 @@ int xfuse_init()
     g_xfuse_ops.mkdir   = xfuse_cb_mkdir;
     g_xfuse_ops.rmdir   = xfuse_cb_rmdir;
     g_xfuse_ops.unlink  = xfuse_cb_unlink;
+    g_xfuse_ops.rename  = xfuse_cb_rename;
     g_xfuse_ops.open    = xfuse_cb_open;
     g_xfuse_ops.flush   = xfuse_cb_flush;
     g_xfuse_ops.read    = xfuse_cb_read;
@@ -1104,6 +1116,56 @@ static int xfuse_does_file_exist(int parent, char *name)
     return 0;
 }
 
+static int xfuse_delete_file(int parent, char *name)
+{
+    return -1;
+}
+
+static int xfuse_delete_file_with_xinode(XRDP_INODE *xinode)
+{
+    /* make sure it is not a dir */
+    if ((xinode == NULL) || (xinode->mode & S_IFDIR))
+        return -1;
+
+    g_xrdp_fs.inode_table[xinode->parent_inode]->nentries--;
+    g_xrdp_fs.inode_table[xinode->inode] = NULL;
+    free(xinode);
+
+    return 0;
+}
+
+static int xfuse_delete_dir_with_xinode(XRDP_INODE *xinode)
+{
+    XRDP_INODE *xip;
+    int         i;
+
+    /* make sure it is not a file */
+    if ((xinode == NULL) || (xinode->mode & S_IFREG))
+        return -1;
+
+    for (i = FIRST_INODE; i < g_xrdp_fs.num_entries; i++)
+    {
+        if ((xip = g_xrdp_fs.inode_table[i]) == NULL)
+            continue;
+
+        /* look for child inodes */
+        if (xip->parent_inode == xinode->inode)
+        {
+            /* got one, delete it */
+            g_xrdp_fs.inode_table[xip->inode] = NULL;
+            free(xip);
+        }
+    }
+
+    /* our parent will have one less dir */
+    g_xrdp_fs.inode_table[xinode->parent_inode]->nentries--;
+
+    g_xrdp_fs.inode_table[xinode->inode] = NULL;
+    free(xinode);
+
+    return 0;
+}
+
 /******************************************************************************
 **                                                                           **
 **                         callbacks for devredir                            **
@@ -1416,6 +1478,64 @@ void xfuse_devredir_cb_rmdir_or_file(void *vp, tui32 IoStatus)
     /* update parent */
     xinode = g_xrdp_fs.inode_table[fip->inode];
     xinode->nentries--;
+
+    fuse_reply_err(fip->req, 0);
+    free(fip);
+}
+
+void xfuse_devredir_cb_rename_file(void *vp, tui32 IoStatus)
+{
+    XFUSE_INFO   *fip;
+    XRDP_INODE   *old_xinode;
+    XRDP_INODE   *new_xinode;
+
+    fip = (XFUSE_INFO *) vp;
+    if (fip == NULL)
+        return;
+
+    if (IoStatus != 0)
+    {
+        fuse_reply_err(fip->req, EEXIST);
+        free(fip);
+        return;
+    }
+
+    /*
+     * update xrdp file system
+     */
+
+    /* if destination dir/file exists, delete it */
+    if (xfuse_does_file_exist(fip->new_inode, fip->new_name))
+    {
+        new_xinode = xfuse_get_inode_from_pinode_name(fip->new_inode,
+                                                      fip->new_name);
+
+        if (new_xinode->mode & S_IFREG)
+            xfuse_delete_file_with_xinode(new_xinode);
+        else
+            xfuse_delete_dir_with_xinode(new_xinode);
+
+        new_xinode = NULL;
+    }
+
+    old_xinode = xfuse_get_inode_from_pinode_name(fip->inode, fip->name);
+    if (old_xinode == NULL)
+    {
+        fuse_reply_err(fip->req, EBADF);
+        free(fip);
+        return;
+    }
+
+    old_xinode->parent_inode = fip->new_inode;
+    strcpy(old_xinode->name, fip->new_name);
+
+    if (fip->inode != fip->new_inode)
+    {
+        /* file has been moved to a different dir */
+        old_xinode->is_synced = 1;
+        g_xrdp_fs.inode_table[fip->inode]->nentries--;
+        g_xrdp_fs.inode_table[fip->new_inode]->nentries++;
+    }
 
     fuse_reply_err(fip->req, 0);
     free(fip);
@@ -1864,6 +1984,142 @@ static void xfuse_remove_dir_or_file(fuse_req_t req, fuse_ino_t parent,
     }
 }
 
+static void xfuse_cb_rename(fuse_req_t req,
+                            fuse_ino_t old_parent, const char *old_name,
+                            fuse_ino_t new_parent, const char *new_name)
+{
+    XRDP_INODE *old_xinode;
+    XFUSE_INFO *fip;
+    tui32       new_device_id;
+    char       *cptr;
+    char        old_full_path[1024];
+    char        new_full_path[1024];
+    char       *cp;
+
+    tui32 device_id;
+
+    log_debug("entered: old_parent=%d old_name=%s new_parent=%d new_name=%s",
+              old_parent, old_name, new_parent, new_name);
+    xfuse_dump_fs();
+
+    /* is old_parent inode valid? */
+    if (!xfuse_is_inode_valid(old_parent))
+    {
+        log_error("inode %d is not valid", old_parent);
+        fuse_reply_err(req, EINVAL);
+        return;
+    }
+
+    /* is new_parent inode valid? */
+    if (!xfuse_is_inode_valid(new_parent))
+    {
+        log_error("inode %d is not valid", new_parent);
+        fuse_reply_err(req, EINVAL);
+        return;
+    }
+
+    if ((old_name == NULL) || (strlen(old_name) == 0))
+    {
+        fuse_reply_err(req, EINVAL);
+        return;
+    }
+
+    if ((new_name == NULL) || (strlen(new_name) == 0))
+    {
+        fuse_reply_err(req, EINVAL);
+        return;
+    }
+
+    old_xinode = xfuse_get_inode_from_pinode_name(old_parent, old_name);
+    if (old_xinode  == NULL)
+    {
+        log_error("did not find file with pinode=%d name=%s",
+                  old_parent, old_name);
+        fuse_reply_err(req, EBADF);
+        return;
+    }
+
+    /* if file is open, cannot rename */
+    if (old_xinode->nopen != 0)
+    {
+        fuse_reply_err(req, EBUSY);
+        return;
+    }
+
+    /* rename across file systems not yet supported */
+    new_device_id = xfuse_get_device_id_for_inode(new_parent, new_full_path);
+    strcat(new_full_path, "/");
+    strcat(new_full_path, new_name);
+
+    if (new_device_id != old_xinode->device_id)
+    {
+        log_error("rename across file systems not supported");
+        fuse_reply_err(req, EINVAL);
+        return;
+    }
+
+    if (old_xinode->device_id == 0)
+    {
+        /* specified file is a local resource */
+        log_debug("LK_TODO: this is still a TODO");
+        fuse_reply_err(req, EINVAL);
+        return;
+    }
+
+    /* resource is on a redirected share */
+
+    device_id = old_xinode->device_id;
+
+    xfuse_get_device_id_for_inode(old_parent, old_full_path);
+    strcat(old_full_path, "/");
+    strcat(old_full_path, old_name);
+
+    if ((fip = calloc(1, sizeof(XFUSE_INFO))) == NULL)
+    {
+        log_error("system out of memory");
+        fuse_reply_err(req, ENOMEM);
+        return;
+    }
+
+    fip->req = req;
+    fip->inode = old_parent;
+    fip->new_inode = new_parent;
+    strncpy(fip->name, old_name, 1024);
+    strncpy(fip->new_name, new_name, 1024);
+    fip->name[1023] = 0;
+    fip->new_name[1023] = 0;
+    fip->invoke_fuse = 1;
+    fip->device_id = device_id;
+
+    if ((cp = strchr(new_full_path, '/')) == NULL)
+        cp = "\\";
+
+    /* we want path minus 'root node of the share' */
+    if ((cptr = strchr(old_full_path, '/')) == NULL)
+    {
+        /* get dev_redir to open the remote file */
+        if (dev_redir_file_open((void *) fip, device_id, "\\",
+                                O_RDWR, S_IFREG | OP_RENAME_FILE, cp))
+        {
+            log_error("failed to send dev_redir_file_open() cmd");
+            fuse_reply_err(req, EREMOTEIO);
+            free(fip);
+            return;
+        }
+    }
+    else
+    {
+        if (dev_redir_file_open((void *) fip, device_id, cptr,
+                                O_RDWR, S_IFREG | OP_RENAME_FILE, cp))
+        {
+            log_error("failed to send dev_redir_file_open() cmd");
+            fuse_reply_err(req, EREMOTEIO);
+            free(fip);
+            return;
+        }
+    }
+}
+
 /**
  * Create a directory or file
  *
@@ -1943,7 +2199,8 @@ static void xfuse_create_dir_or_file(fuse_req_t req, fuse_ino_t parent,
     if ((cptr = strchr(full_path, '/')) == NULL)
     {
        /* get dev_redir to open the remote file */
-       if (dev_redir_file_open((void *) fip, device_id, "\\", O_CREAT, type))
+       if (dev_redir_file_open((void *) fip, device_id, "\\",
+                               O_CREAT, type, NULL))
        {
            log_error("failed to send dev_redir_open_file() cmd");
            fuse_reply_err(req, EREMOTEIO);
@@ -1951,7 +2208,8 @@ static void xfuse_create_dir_or_file(fuse_req_t req, fuse_ino_t parent,
     }
     else
     {
-       if (dev_redir_file_open((void *) fip, device_id, cptr, O_CREAT, type))
+       if (dev_redir_file_open((void *) fip, device_id, cptr,
+                               O_CREAT, type, NULL))
        {
            log_error("failed to send dev_redir_get_dir_listing() cmd");
            fuse_reply_err(req, EREMOTEIO);
@@ -2021,7 +2279,7 @@ static void xfuse_cb_open(fuse_req_t req, fuse_ino_t ino,
         {
             /* get dev_redir to open the remote file */
             if (dev_redir_file_open((void *) fip, device_id, "\\",
-                                    fi->flags, S_IFREG))
+                                    fi->flags, S_IFREG, NULL))
             {
                 log_error("failed to send dev_redir_open_file() cmd");
                 fuse_reply_err(req, EREMOTEIO);
@@ -2030,7 +2288,7 @@ static void xfuse_cb_open(fuse_req_t req, fuse_ino_t ino,
         else
         {
             if (dev_redir_file_open((void *) fip, device_id, cptr,
-                                    fi->flags, S_IFREG))
+                                    fi->flags, S_IFREG, NULL))
             {
                 log_error("failed to send dev_redir_get_dir_listing() cmd");
                 fuse_reply_err(req, EREMOTEIO);

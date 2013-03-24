@@ -58,6 +58,7 @@ void xfuse_devredir_cb_enum_dir_done(void *vp, tui32 IoStatus);
 void xfuse_devredir_cb_open_file(void *vp, tui32 DeviceId, tui32 FileId);
 void xfuse_devredir_cb_read_file(void *vp, char *buf, size_t length);
 void xfuse_devredir_cb_rmdir_or_file(void *vp, tui32 IoStatus);
+void xfuse_devredir_cb_rename_file(void *vp, tui32 IoStatus);
 void xfuse_devredir_cb_file_close(void *vp);
 
 #endif
