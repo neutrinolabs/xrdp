@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2009-2012
+ * Copyright (C) Jay Sorg 2009-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -330,6 +330,8 @@ sound_trans_audio_conn_in(struct trans *trans, struct trans *new_trans)
     return 0;
 }
 
+#define CHANSRV_PORT_STR "/tmp/.xrdp/xrdp_chansrv_audio_socket_%d"
+
 /*****************************************************************************/
 int APP_CC
 sound_init(void)
@@ -342,7 +344,7 @@ sound_init(void)
 
     sound_send_server_formats();
     g_audio_l_trans = trans_create(2, 128 * 1024, 8192);
-    g_snprintf(port, 255, "/tmp/.xrdp/xrdp_chansrv_audio_socket_%d", g_display_num);
+    g_snprintf(port, 255, CHANSRV_PORT_STR, g_display_num);
     g_audio_l_trans->trans_conn_in = sound_trans_audio_conn_in;
     error = trans_listen(g_audio_l_trans, port);
 

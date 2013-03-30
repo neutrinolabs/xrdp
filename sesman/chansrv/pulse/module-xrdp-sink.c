@@ -18,13 +18,7 @@
  */
 
 /*
-  To stop its respawning habit, open /etc/pulse/client.conf, change
-  autospawn = yes to autospawn = no, and set daemon-binary to /bin/true.
-  Make sure these lines are uncommented, like this:
-
-autospawn = no
-daemon-binary = /bin/true 
-
+ * see pulse-notes.txt
 */
 
 #ifdef HAVE_CONFIG_H
@@ -79,9 +73,9 @@ PA_MODULE_USAGE(
         "channels=<number of channels> "
         "channel_map=<channel map>");
 
-//#define DEFAULT_FILE_NAME "fifo_output"
 #define DEFAULT_SINK_NAME "xrdp"
 #define BLOCK_USEC (PA_USEC_PER_SEC * 2)
+#define CHANSRV_PORT_STR "/tmp/.xrdp/xrdp_chansrv_audio_socket_%d"
 
 struct userdata {
     pa_core *core;
@@ -110,26 +104,29 @@ static const char* const valid_modargs[] = {
     NULL
 };
 
-static int sink_process_msg(pa_msgobject *o, int code, void *data, int64_t offset, pa_memchunk *chunk) {
+static int sink_process_msg(pa_msgobject *o, int code, void *data,
+                            int64_t offset, pa_memchunk *chunk) {
 
     struct userdata *u = PA_SINK(o)->userdata;
+    pa_usec_t now;
+
+    //pa_log("sink_process_msg: code %d", code);
 
     switch (code) {
         case PA_SINK_MESSAGE_SET_STATE:
 
-            if (PA_PTR_TO_UINT(data) == PA_SINK_RUNNING)
+            if (PA_PTR_TO_UINT(data) == PA_SINK_RUNNING) {
                 u->timestamp = pa_rtclock_now();
+            }
 
             break;
 
-        case PA_SINK_MESSAGE_GET_LATENCY: {
-            pa_usec_t now;
+        case PA_SINK_MESSAGE_GET_LATENCY:
 
             now = pa_rtclock_now();
             *((pa_usec_t*) data) = u->timestamp > now ? u->timestamp - now : 0ULL;
 
             return 0;
-        }
     }
 
     return pa_sink_process_msg(o, code, data, offset, chunk);
@@ -194,19 +191,69 @@ struct header
     int bytes;
 };
 
+static int get_display_num_from_display(char *display_text) {
+    int index;
+    int mode;
+    int host_index;
+    int disp_index;
+    int scre_index;
+    int display_num;
+    char host[256];
+    char disp[256];
+    char scre[256];
+
+    memset(host, 0, 256);
+    memset(disp, 0, 256);
+    memset(scre, 0, 256);
+
+    index = 0;
+    host_index = 0;
+    disp_index = 0;
+    scre_index = 0;
+    mode = 0;
+
+    while (display_text[index] != 0) {
+        if (display_text[index] == ':') {
+            mode = 1;
+        } else if (display_text[index] == '.') {
+            mode = 2;
+        } else if (mode == 0) {
+            host[host_index] = display_text[index];
+            host_index++;
+        } else if (mode == 1) {
+            disp[disp_index] = display_text[index];
+            disp_index++;
+        } else if (mode == 2) {
+            scre[scre_index] = display_text[index];
+            scre_index++;
+        }
+        index++;
+    }
+
+    host[host_index] = 0;
+    disp[disp_index] = 0;
+    scre[scre_index] = 0;
+    display_num = atoi(disp);
+    return display_num;
+}
+
 static int data_send(struct userdata *u) {
     char *data;
     int bytes;
     int sent;
+    int display_num;
     struct header h;
 
     if (u->fd == 0) {
         int fd = socket(PF_LOCAL, SOCK_STREAM, 0);
         struct sockaddr_un s = { 0 };
         s.sun_family = AF_UNIX;
-        strcpy(s.sun_path, "/tmp/.xrdp/xrdp_chansrv_audio_socket_10");
-        if (connect(fd, (struct sockaddr *)&s, sizeof(struct sockaddr_un)) != 0) {
-            pa_log("Connected failed");
+        display_num = get_display_num_from_display(getenv("DISPLAY"));
+        bytes = sizeof(s.sun_path) - 1;
+        snprintf(s.sun_path, bytes, CHANSRV_PORT_STR, display_num);
+        if (connect(fd, (struct sockaddr *)&s,
+                    sizeof(struct sockaddr_un)) != 0) {
+            //pa_log("Connected failed");
             close(fd);
             return 0;
         }
@@ -224,8 +271,7 @@ static int data_send(struct userdata *u) {
         close(u->fd);
         u->fd = 0;
         return 0;
-    }
-    else {
+    } else {
         pa_log("data_send: sent header ok bytes %d", bytes);
     }
 
@@ -240,7 +286,7 @@ static int data_send(struct userdata *u) {
         u->fd = 0;
         return 0;
     }
- 
+
     u->memchunk.index += sent;
     u->memchunk.length -= sent;
 
@@ -254,16 +300,16 @@ static int data_send(struct userdata *u) {
 
 static void process_render(struct userdata *u, pa_usec_t now) {
 
-    pa_log("%d", u->memchunk.length);
+    //pa_log("%d", u->memchunk.length);
 
-    pa_log("a");
+    //pa_log("a");
 
-    if (u->memchunk.length <= 0)
+    //if (u->memchunk.length <= 0)
         pa_sink_render(u->sink, 8192, &u->memchunk);
 
-    pa_log("b");
-    data_send(u);
-    pa_log("c");
+    //pa_log("b");
+    //data_send(u);
+    //pa_log("c");
 
 }
 
@@ -384,7 +430,11 @@ int pa__init(pa_module*m) {
 
     pa_memchunk_reset(&u->memchunk);
 
+#if defined(PA_CHECK_VERSION) && (PA_CHECK_VERSION(0, 9, 22))
     if (!(u->thread = pa_thread_new("xrdp-sink", thread_func, u))) {
+#else
+    if (!(u->thread = pa_thread_new(thread_func, u))) {
+#endif
         pa_log("Failed to create thread.");
         goto fail;
     }
