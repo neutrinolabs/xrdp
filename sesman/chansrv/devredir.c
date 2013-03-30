@@ -675,6 +675,7 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
                                                 IoStatus);
                 free(fuse_data);
             }
+            dev_redir_irp_delete(irp);
             return;
         }
 
@@ -691,6 +692,8 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
         fuse_data = dev_redir_fuse_data_dequeue(irp);
         xfuse_devredir_cb_open_file(fuse_data->data_ptr,
                                     DeviceId, irp->FileId);
+        if (irp->type == S_IFDIR)
+            dev_redir_irp_delete(irp);
         break;
 
     case CID_READ:
@@ -709,6 +712,8 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
 
     case CID_CLOSE:
         log_debug("got CID_CLOSE");
+        log_debug("deleting irp with completion_id=%d comp_type=%d",
+                  irp->completion_id, irp->completion_type);
         dev_redir_irp_delete(irp);
         break;
 
@@ -947,6 +952,7 @@ int dev_redir_file_open(void *fusep, tui32 device_id, char *path,
         {
             log_debug("creating dir");
             CreateOptions = CO_FILE_DIRECTORY_FILE | CO_FILE_SYNCHRONOUS_IO_NONALERT;
+            irp->type = S_IFDIR;
         }
         else
         {
@@ -980,14 +986,23 @@ int dev_redir_file_open(void *fusep, tui32 device_id, char *path,
     return rval;
 }
 
-int devredir_file_close(void *fusep, tui32 device_id, tui32 file_id)
+int devredir_file_close(void *fusep, tui32 device_id, tui32 FileId)
 {
     IRP *irp;
 
+#if 0
     if ((irp = dev_redir_irp_new()) == NULL)
         return -1;
 
     irp->completion_id = g_completion_id++;
+#else
+    if ((irp = dev_redir_irp_find_by_fileid(FileId)) == NULL)
+    {
+        log_error("no IRP found with FileId = %d", FileId);
+        xfuse_devredir_cb_read_file(fusep, NULL, 0);
+        return -1;
+    }
+#endif
     irp->completion_type = CID_FILE_CLOSE;
     irp->device_id = device_id;
     dev_redir_fuse_data_enqueue(irp, fusep);
@@ -995,7 +1010,7 @@ int devredir_file_close(void *fusep, tui32 device_id, tui32 file_id)
     return dev_redir_send_drive_close_request(RDPDR_CTYP_CORE,
                                               PAKID_CORE_DEVICE_IOREQUEST,
                                               device_id,
-                                              file_id,
+                                              FileId,
                                               irp->completion_id,
                                               IRP_MJ_CLOSE,
                                               0, 32);
@@ -1216,6 +1231,8 @@ IRP * dev_redir_irp_new()
     IRP *irp;
     IRP *irp_last;
 
+    log_debug("=== entered");
+
     /* create new IRP */
     if ((irp = calloc(1, sizeof(IRP))) == NULL)
     {
@@ -1247,6 +1264,9 @@ IRP * dev_redir_irp_new()
 int dev_redir_irp_delete(IRP *irp)
 {
     IRP *lirp = g_irp_head;
+
+    log_debug("=== entered; completion_id=%d type=%d",
+              irp->completion_id, irp->completion_type);
 
     if ((irp == NULL) || (lirp == NULL))
         return -1;

@@ -55,6 +55,7 @@ struct irp
     tui32      FileId;              /* RDP client provided unique number */
     char       pathname[256];       /* absolute pathname                 */
     char       gen_buf[1024];       /* for general use                   */
+    int        type;
     tui32      device_id;           /* identifies remote device          */
     FUSE_DATA *fd_head;             /* point to first FUSE opaque object */
     FUSE_DATA *fd_tail;             /* point to last FUSE opaque object  */
@@ -351,10 +352,10 @@ enum CREATE_OPTIONS
 enum COMPLETION_ID
 {
     CID_CREATE_DIR_REQ = 1,
+    CID_DIRECTORY_CONTROL,
     CID_CREATE_OPEN_REQ,
     CID_READ,
     CID_WRITE,
-    CID_DIRECTORY_CONTROL,
     CID_CLOSE,
     CID_FILE_CLOSE,
     CID_RMDIR_OR_FILE,
