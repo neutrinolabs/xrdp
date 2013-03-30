@@ -86,6 +86,9 @@ struct xrdp_client_info
   int jpeg_prop_len;
   char jpeg_prop[64];
   int v3_codec_id;
+  int rfx_min_pixel;
+  char orders[32];
+  int order_flags_ex;
   int use_bulk_comp;
   int pointer_flags; /* 0 color, 1 new */
 };

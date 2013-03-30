@@ -829,6 +829,7 @@ xrdp_process_capset_order(struct xrdp_rdp *self, struct stream *s,
     int i;
     char order_caps[32];
     int ex_flags;
+    int cap_flags;
 
     DEBUG(("order capabilities"));
     in_uint8s(s, 20); /* Terminal desc, pad */
@@ -837,8 +838,9 @@ xrdp_process_capset_order(struct xrdp_rdp *self, struct stream *s,
     in_uint8s(s, 2); /* Pad */
     in_uint8s(s, 2); /* Max order level */
     in_uint8s(s, 2); /* Number of fonts */
-    in_uint8s(s, 2); /* Capability flags */
+    in_uint16_le(s, cap_flags); /* Capability flags */
     in_uint8a(s, order_caps, 32); /* Orders supported */
+    g_memcpy(self->client_info.orders, order_caps, 32);
     DEBUG(("dest blt-0 %d", order_caps[0]));
     DEBUG(("pat blt-1 %d", order_caps[1]));
     DEBUG(("screen blt-2 %d", order_caps[2]));
@@ -862,12 +864,15 @@ xrdp_process_capset_order(struct xrdp_rdp *self, struct stream *s,
     /* read extended order support flags */
     in_uint16_le(s, ex_flags); /* Ex flags */
 
-    if (ex_flags & XR_ORDERFLAGS_EX_CACHE_BITMAP_REV3_SUPPORT)
+    if (cap_flags & 0x80) /* ORDER_FLAGS_EXTRA_SUPPORT */
     {
-        g_writeln("xrdp_process_capset_order: bitmap cache v3 supported");
-        self->client_info.bitmap_cache_version |= 4;
+        self->client_info.order_flags_ex = ex_flags;
+        if (ex_flags & XR_ORDERFLAGS_EX_CACHE_BITMAP_REV3_SUPPORT)
+        {
+            g_writeln("xrdp_process_capset_order: bitmap cache v3 supported");
+            self->client_info.bitmap_cache_version |= 4;
+        }
     }
-
     in_uint8s(s, 4); /* Pad */
 
     in_uint32_le(s, i); /* desktop cache size, usually 0x38400 */
