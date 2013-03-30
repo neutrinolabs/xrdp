@@ -167,7 +167,7 @@ sound_send_wave_data(char *data, int data_bytes)
 
     print_got_here();
 
-    if ((data_bytes < 4) || (data_bytes > 32 * 1024))
+    if ((data_bytes < 4) || (data_bytes > 128 * 1024))
     {
         LOG(0, ("sound_send_wave_data: bad data_bytes %d", data_bytes));
     }
@@ -249,7 +249,7 @@ process_pcm_message(int id, int size, struct stream *s)
 {
     print_got_here();
 
-    sound_send_wave_data(s->p, size);
+    //sound_send_wave_data(s->p, size);
     return 0;
 }
 
@@ -277,11 +277,12 @@ sound_trans_audio_data_in(struct trans *trans)
     in_uint32_le(s, id);
     in_uint32_le(s, size);
 
-    if ((id != 0) || (size > 32 * 1024 + 8) || (size < 1))
+    if ((id != 0) || (size > 128 * 1024 + 8) || (size < 8))
     {
         LOG(0, ("sound_trans_audio_data_in: bad message id %d size %d", id, size));
         return 1;
     }
+    LOG(0, ("sound_trans_audio_data_in: good message id %d size %d", id, size));
 
     error = trans_force_read(trans, size - 8);
 
@@ -298,6 +299,7 @@ sound_trans_audio_data_in(struct trans *trans)
 static int DEFAULT_CC
 sound_trans_audio_conn_in(struct trans *trans, struct trans *new_trans)
 {
+    LOG(0, ("sound_trans_audio_conn_in:"));
     print_got_here();
 
     if (trans == 0)
@@ -339,8 +341,8 @@ sound_init(void)
     LOG(0, ("sound_init:"));
 
     sound_send_server_formats();
-    g_audio_l_trans = trans_create(2, 33 * 1024, 8192);
-    g_snprintf(port, 255, "/tmp/xrdp_chansrv_audio_socket_%d", g_display_num);
+    g_audio_l_trans = trans_create(2, 128 * 1024, 8192);
+    g_snprintf(port, 255, "/tmp/.xrdp/xrdp_chansrv_audio_socket_%d", g_display_num);
     g_audio_l_trans->trans_conn_in = sound_trans_audio_conn_in;
     error = trans_listen(g_audio_l_trans, port);
 
@@ -374,7 +376,7 @@ sound_deinit(void)
     if (g_audio_c_trans != 0)
     {
         trans_delete(g_audio_c_trans);
-        g_audio_l_trans = 0;
+        g_audio_c_trans = 0;
     }
 
     return 0;
