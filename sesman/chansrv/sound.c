@@ -249,7 +249,7 @@ process_pcm_message(int id, int size, struct stream *s)
 {
     print_got_here();
 
-    //sound_send_wave_data(s->p, size);
+    sound_send_wave_data(s->p, size);
     return 0;
 }
 
@@ -282,7 +282,7 @@ sound_trans_audio_data_in(struct trans *trans)
         LOG(0, ("sound_trans_audio_data_in: bad message id %d size %d", id, size));
         return 1;
     }
-    LOG(0, ("sound_trans_audio_data_in: good message id %d size %d", id, size));
+    LOG(10, ("sound_trans_audio_data_in: good message id %d size %d", id, size));
 
     error = trans_force_read(trans, size - 8);
 

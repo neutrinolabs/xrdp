@@ -8,7 +8,7 @@ pulseaudio --version
 
 To build xrdp pulse sink,
 get the pulse source that most closely matches your version on
-your machine.  Get the source from 
+your machine.  Get the source from
 http://freedesktop.org/software/pulseaudio/releases/
 run ./configure after extracting.  I don't think you need to build it.
 edit Makefile to point to your pulse source directory.
@@ -22,5 +22,6 @@ PA always respawning
   Make sure these lines are uncommented, like this:
 
 autospawn = no
-daemon-binary = /bin/true 
+daemon-binary = /bin/true
 
+xfreerdp -a 24 -z --plugin rdpsnd --data alsa:hw:0,0 -- 127.0.0.1
