@@ -25,3 +25,32 @@ autospawn = no
 daemon-binary = /bin/true
 
 xfreerdp -a 24 -z --plugin rdpsnd --data alsa:hw:0,0 -- 127.0.0.1
+
+
+to get ./configure on pulse source to run
+apt-get install libsndfile1-dev
+apt-get install libspeex-dev
+apt-get install libspeexdsp-dev
+
+alsamixer
+apt-get install alsa-utils
+
+/etc/asound.conf
+---------------------------------
+pcm.pulse {
+    type pulse
+}
+
+ctl.pulse {
+    type pulse
+}
+
+pcm.!default {
+    type pulse
+}
+
+ctl.!default {
+    type pulse
+}
+---------------------------------
+
