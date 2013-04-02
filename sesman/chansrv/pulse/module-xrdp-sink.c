@@ -262,7 +262,6 @@ static int data_send(struct userdata *u, pa_memchunk *chunk) {
     char *data;
     int bytes;
     int sent;
-    int display_num;
     int fd;
     struct header h;
     struct sockaddr_un s;
@@ -276,9 +275,8 @@ static int data_send(struct userdata *u, pa_memchunk *chunk) {
         fd = socket(PF_LOCAL, SOCK_STREAM, 0);
         memset(&s, 0, sizeof(s));
         s.sun_family = AF_UNIX;
-        display_num = get_display_num_from_display(getenv("DISPLAY"));
         bytes = sizeof(s.sun_path) - 1;
-        snprintf(s.sun_path, bytes, CHANSRV_PORT_STR, display_num);
+        snprintf(s.sun_path, bytes, CHANSRV_PORT_STR, u->display_num);
         pa_log("trying to conenct to %s", s.sun_path);
         if (connect(fd, (struct sockaddr *)&s,
                     sizeof(struct sockaddr_un)) != 0) {
@@ -296,15 +294,11 @@ static int data_send(struct userdata *u, pa_memchunk *chunk) {
     //pa_log("bytes %d", bytes);
 
     /* from rewind */
-    if (u->skip_bytes > 0)
-    {
-        if (bytes > u->skip_bytes)
-        {
+    if (u->skip_bytes > 0) {
+        if (bytes > u->skip_bytes) {
             bytes -= u->skip_bytes;
             u->skip_bytes = 0;
-        }
-        else
-        {
+        } else  {
             u->skip_bytes -= bytes;
             return bytes;
         }

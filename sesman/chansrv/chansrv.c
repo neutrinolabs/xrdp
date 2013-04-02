@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2009-2012
+ * Copyright (C) Jay Sorg 2009-2013
  * Copyright (C) Laxmikant Rashinkar 2009-2012
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,6 +45,7 @@ static int g_rdpsnd_index = -1;
 static int g_rdpdr_index = -1;
 static int g_rail_index = -1;
 static int g_drdynvc_index = -1;
+static int g_sent = 0; /* if sent data to xrdp, waiting response */
 
 /* state info for dynamic virtual channels */
 static struct xrdp_api_data *g_dvc_channels[MAX_DVC_CHANNELS];
@@ -149,6 +150,7 @@ send_data_from_chan_item(struct chan_item *chan_item)
     s_mark_end(s);
     LOGM((LOG_LEVEL_DEBUG, "chansrv::send_channel_data: -- "
           "size %d chan_flags 0x%8.8x", size, chan_flags));
+    g_sent = 1;
     error = trans_force_write(g_con_trans);
 
     if (error != 0)
@@ -214,7 +216,10 @@ send_channel_data(int chan_id, char *data, int size)
         if (g_chan_items[index].id == chan_id)
         {
             add_data_to_chan_item(g_chan_items + index, data, size);
-            check_chan_items();
+            if (g_sent == 0)
+            {
+                check_chan_items();
+            }
             return 0;
         }
     }
@@ -478,6 +483,7 @@ static int APP_CC
 process_message_channel_data_response(struct stream *s)
 {
     LOG(10, ("process_message_channel_data_response:"));
+    g_sent = 0;
     check_chan_items();
     return 0;
 }
