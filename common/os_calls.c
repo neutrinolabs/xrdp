@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -427,29 +427,42 @@ g_tcp_set_keepalive(int sck)
 
 /*****************************************************************************/
 /* returns a newly created socket or -1 on error */
+/* in win32 a socket is an unsigned int, in linux, its an int */
 int APP_CC
 g_tcp_socket(void)
 {
-#if defined(_WIN32)
     int rv;
     int option_value;
+#if defined(_WIN32)
     int option_len;
 #else
-    int rv;
-    int option_value;
     unsigned int option_len;
 #endif
 
-    /* in win32 a socket is an unsigned int, in linux, its an int */
-    rv = (int)socket(PF_INET, SOCK_STREAM, 0);
-
+#if defined(XRDP_ENABLE_IPv6)
+    rv = (int)socket(AF_INET6, SOCK_STREAM, 0);
+#else
+    rv = (int)socket(AF_INET, SOCK_STREAM, 0);
+#endif
     if (rv < 0)
     {
         return -1;
     }
-
+#if defined(XRDP_ENABLE_IPv6)
     option_len = sizeof(option_value);
-
+    if (getsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&option_value,
+                   &option_len) == 0)
+    {
+        if (option_value != 0)
+        {
+            option_value = 0;
+            option_len = sizeof(option_value);
+            setsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&option_value,
+                       option_len);
+        }
+    }
+#endif
+    option_len = sizeof(option_value);
     if (getsockopt(rv, SOL_SOCKET, SO_REUSEADDR, (char *)&option_value,
                    &option_len) == 0)
     {
@@ -494,17 +507,18 @@ g_tcp_local_socket(void)
 void APP_CC
 g_tcp_close(int sck)
 {
-    char ip[256] ;
+    char ip[256];
+
     if (sck == 0)
     {
         return;
     }
-
 #if defined(_WIN32)
     closesocket(sck);
 #else
-    g_write_ip_address(sck,ip,255);
-    log_message(LOG_LEVEL_INFO,"An established connection closed to endpoint: %s", ip);
+    g_write_ip_address(sck, ip, 255);
+    log_message(LOG_LEVEL_INFO, "An established connection closed to "
+                "endpoint: %s", ip);
     close(sck);
 #endif
 }
