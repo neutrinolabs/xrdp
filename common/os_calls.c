@@ -528,34 +528,47 @@ g_tcp_close(int sck)
 int APP_CC
 g_tcp_connect(int sck, const char *address, const char *port)
 {
-    struct sockaddr_in s;
-    struct hostent *h;
+    int res = 0;
+    struct addrinfo p;
+    struct addrinfo *h = (struct addrinfo *)NULL;
+    struct addrinfo *rp = (struct addrinfo *)NULL;
 
-    g_memset(&s, 0, sizeof(struct sockaddr_in));
-    s.sin_family = AF_INET;
-    s.sin_port = htons((tui16)atoi(port));
-    s.sin_addr.s_addr = inet_addr(address);
+    /* initialize (zero out) local variables: */
+    g_memset(&p, 0, sizeof(struct addrinfo));
 
-    if (s.sin_addr.s_addr == INADDR_NONE)
+   /* in IPv6-enabled environments, set the AI_V4MAPPED
+    * flag in ai_flags and specify ai_family=AF_INET6 in
+    * order to ensure that getaddrinfo() returns any
+    * available IPv4-mapped addresses in case the target
+    * host does not have a true IPv6 address:
+    */
+#ifdef _XRDP_ENABLE_IPv6_
+    p.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED;
+    p.ai_family = AF_INET6;
+#else
+    p.ai_flags = AI_ADDRCONFIG;
+    p.ai_family = AF_INET;
+#endif
+    p.ai_socktype = SOCK_STREAM;
+    p.ai_protocol = IPPROTO_TCP;
+    res = getaddrinfo(address, port, &p, &h);
+    if (res > -1)
     {
-        h = gethostbyname(address);
-
-        if (h != 0)
+        if (h != NULL)
         {
-            if (h->h_name != 0)
+            for (rp = h; rp != NULL; rp = rp->ai_next)
             {
-                if (h->h_addr_list != 0)
+                rp = h;
+                res = connect(sck, (struct sockaddr *)(rp->ai_addr),
+                              rp->ai_addrlen);
+                if (res != -1)
                 {
-                    if ((*(h->h_addr_list)) != 0)
-                    {
-                        s.sin_addr.s_addr = *((int *)(*(h->h_addr_list)));
-                    }
+                    break; /* Success */
                 }
             }
         }
     }
-
-    return connect(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_in));
+    return res;
 }
 
 /*****************************************************************************/
@@ -593,22 +606,63 @@ g_tcp_set_non_blocking(int sck)
 }
 
 /*****************************************************************************/
+/* return boolean */
+static int APP_CC
+address_match(const char *address, struct addrinfo *j)
+{
+    if ((address == 0) || (strcmp(address, "0.0.0.0") == 0))
+    {
+        return 1;
+    }
+    /* TODO: check address */
+    return 1;
+}
+
+/*****************************************************************************/
+/* returns error, zero is good */
+static int APP_CC
+g_tcp_bind_flags(int sck, const char *port, const char *address, int flags)
+{
+    int res;
+    int error;
+    struct addrinfo hints;
+    struct addrinfo *i;
+
+    res = -1;
+    g_memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_flags = flags;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+    error = getaddrinfo(NULL, port, &hints, &i);
+    if (error == 0)
+    {
+        while ((i != 0) && (res < 0))
+        {
+            if (address_match(address, i))
+            {
+                res = bind(sck, (struct sockaddr *)(i->ai_addr), i->ai_addrlen);
+            }
+            i = i->ai_next;
+        }
+    }
+    return res;
+}
+
+/*****************************************************************************/
 /* returns error, zero is good */
 int APP_CC
-g_tcp_bind(int sck, char *port)
+g_tcp_bind(int sck, const char *port)
 {
-    struct sockaddr_in s;
+    int flags;
 
-    memset(&s, 0, sizeof(struct sockaddr_in));
-    s.sin_family = AF_INET;
-    s.sin_port = htons((tui16)atoi(port));
-    s.sin_addr.s_addr = INADDR_ANY;
-    return bind(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_in));
+    flags = AI_ADDRCONFIG | AI_PASSIVE;
+    return g_tcp_bind_flags(sck, port, 0, flags);
 }
 
 /*****************************************************************************/
 int APP_CC
-g_tcp_local_bind(int sck, char *port)
+g_tcp_local_bind(int sck, const char *port)
 {
 #if defined(_WIN32)
     return -1;
@@ -625,21 +679,12 @@ g_tcp_local_bind(int sck, char *port)
 /*****************************************************************************/
 /* returns error, zero is good */
 int APP_CC
-g_tcp_bind_address(int sck, char *port, const char *address)
+g_tcp_bind_address(int sck, const char *port, const char *address)
 {
-    struct sockaddr_in s;
+    int flags;
 
-    memset(&s, 0, sizeof(struct sockaddr_in));
-    s.sin_family = AF_INET;
-    s.sin_port = htons((tui16)atoi(port));
-    s.sin_addr.s_addr = INADDR_ANY;
-
-    if (inet_aton(address, &s.sin_addr) < 0)
-    {
-        return -1; /* bad address */
-    }
-
-    return bind(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_in));
+    flags = AI_ADDRCONFIG | AI_PASSIVE;
+    return g_tcp_bind_flags(sck, port, address, flags);
 }
 
 /*****************************************************************************/
