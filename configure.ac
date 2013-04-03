@@ -69,6 +69,11 @@ then
   fi
 fi
 
+AC_CHECK_MEMBER([struct in6_addr.s6_addr],
+                [],
+                [AC_DEFINE(NO_ARPA_INET_H_IP6, 1, [for IPv6])],
+                [#include <arpa/inet.h>])
+
 if test "x$enable_nopam" = "xyes"
 then
   AC_DEFINE([USE_NOPAM],1,[Disable PAM])
