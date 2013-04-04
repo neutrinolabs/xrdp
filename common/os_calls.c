@@ -542,16 +542,24 @@ g_tcp_connect(int sck, const char *address, const char *port)
     * available IPv4-mapped addresses in case the target
     * host does not have a true IPv6 address:
     */
+    p.ai_socktype = SOCK_STREAM;
+    p.ai_protocol = IPPROTO_TCP;
 #if !defined(NO_ARPA_INET_H_IP6)
     p.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED;
     p.ai_family = AF_INET6;
+    if (g_strcmp(address, "127.0.0.1") == 0)
+    {
+        res = getaddrinfo("::1", port, &p, &h);
+    }
+    else
+    {
+        res = getaddrinfo(address, port, &p, &h);
+    }
 #else
     p.ai_flags = AI_ADDRCONFIG;
     p.ai_family = AF_INET;
-#endif
-    p.ai_socktype = SOCK_STREAM;
-    p.ai_protocol = IPPROTO_TCP;
     res = getaddrinfo(address, port, &p, &h);
+#endif
     if (res > -1)
     {
         if (h != NULL)
