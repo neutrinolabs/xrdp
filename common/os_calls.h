@@ -196,7 +196,7 @@ g_atoi(const char* str);
 int APP_CC
 g_htoi(char* str);
 int APP_CC
-g_pos(char* str, const char* to_find);
+g_pos(const char* str, const char* to_find);
 int APP_CC
 g_mbstowcs(twchar* dest, const char* src, int n);
 int APP_CC

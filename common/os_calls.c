@@ -610,12 +610,65 @@ g_tcp_set_non_blocking(int sck)
 static int APP_CC
 address_match(const char *address, struct addrinfo *j)
 {
-    if ((address == 0) || (strcmp(address, "0.0.0.0") == 0))
+    struct sockaddr_in *ipv4_in;
+    struct sockaddr_in6 *ipv6_in;
+
+    if (address == 0)
     {
         return 1;
     }
-    /* TODO: check address */
-    return 1;
+    if (address[0] == 0)
+    {
+        return 1;
+    }
+    if (g_strcmp(address, "0.0.0.0") == 0)
+    {
+        return 1;
+    }
+    if ((g_strcmp(address, "127.0.0.1") == 0) ||
+        (g_strcmp(address, "::1") == 0) ||
+        (g_strcmp(address, "localhost") == 0))
+    {
+        if (j->ai_addr != 0)
+        {
+            if (j->ai_addr->sa_family == AF_INET)
+            {
+                ipv4_in = (struct sockaddr_in *) (j->ai_addr);
+                if (inet_pton(AF_INET, "127.0.0.1", &(ipv4_in->sin_addr)))
+                {
+                    return 1;
+                }
+            }
+            if (j->ai_addr->sa_family == AF_INET6)
+            {
+                ipv6_in = (struct sockaddr_in6 *) (j->ai_addr);
+                if (inet_pton(AF_INET6, "::1", &(ipv6_in->sin6_addr)))
+                {
+                    return 1;
+                }
+            }
+        }
+    }
+    if (j->ai_addr != 0)
+    {
+        if (j->ai_addr->sa_family == AF_INET)
+        {
+            ipv4_in = (struct sockaddr_in *) (j->ai_addr);
+            if (inet_pton(AF_INET, address, &(ipv4_in->sin_addr)))
+            {
+                return 1;
+            }
+        }
+        if (j->ai_addr->sa_family == AF_INET6)
+        {
+            ipv6_in = (struct sockaddr_in6 *) (j->ai_addr);
+            if (inet_pton(AF_INET6, address, &(ipv6_in->sin6_addr)))
+            {
+                return 1;
+            }
+        }
+    }
+    return 0;
 }
 
 /*****************************************************************************/
@@ -641,7 +694,7 @@ g_tcp_bind_flags(int sck, const char *port, const char *address, int flags)
         {
             if (address_match(address, i))
             {
-                res = bind(sck, (struct sockaddr *)(i->ai_addr), i->ai_addrlen);
+                res = bind(sck, i->ai_addr, i->ai_addrlen);
             }
             i = i->ai_next;
         }
@@ -2076,7 +2129,7 @@ g_htoi(char *str)
 
 /*****************************************************************************/
 int APP_CC
-g_pos(char *str, const char *to_find)
+g_pos(const char *str, const char *to_find)
 {
     char *pp;
 
