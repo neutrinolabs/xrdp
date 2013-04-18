@@ -1,4 +1,4 @@
-EXTRA_DIST = xrdp.ini rsakeys.ini ad24b.bmp ad256.bmp xrdp24b.bmp xrdp256.bmp sans-10.fv1 cursor0.cur cursor1.cur xrdp.h xrdp_types.h
+EXTRA_DIST = xrdp.ini ad24b.bmp ad256.bmp xrdp24b.bmp xrdp256.bmp sans-10.fv1 cursor0.cur cursor1.cur xrdp.h xrdp_types.h
 
 if XRDP_DEBUG
 EXTRA_DEFINES = -DXRDP_DEBUG
@@ -43,8 +43,7 @@ xrdp_LDADD = \
 xrdpsysconfdir=$(sysconfdir)/xrdp
 
 xrdpsysconf_DATA = \
-  xrdp.ini \
-  rsakeys.ini
+  xrdp.ini 
 
 xrdppkgdatadir=$(datadir)/xrdp
 
@@ -57,6 +56,3 @@ xrdppkgdata_DATA = \
   cursor0.cur \
   cursor1.cur
 
-# must be tab below
-install-data-hook:
-	chmod 600 $(DESTDIR)$(sysconfdir)/xrdp/rsakeys.ini

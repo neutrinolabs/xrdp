@@ -27,5 +27,9 @@ setxkbmap -model pc104 -layout ru
 setxkbmap -model pc104 -layout se
 ./xrdp-genkeymap ../instfiles/km-041d.ini
 
+# Portuguese -PT 'pt-pt' 0x0816
+setxkbmap -model pc104 -layout pt
+./xrdp-genkeymap ../instfiles/km-0816.ini
+
 # set back to en-us
 setxkbmap -model pc104 -layout us
