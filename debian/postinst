@@ -1,0 +1,26 @@
+#!/bin/sh -e
+
+if ! ([ "$1" = "configure" ] || [ "$1" = "reconfigure" ]); then
+  exit 0
+fi
+
+
+XRDP="xrdp"
+CHOWN="/bin/chown"
+ADDUSER="/usr/sbin/adduser"
+
+[ -d /var/run/xrdp ] || mkdir -p /var/run/xrdp
+$ADDUSER --system --disabled-password --disabled-login --home /var/run/xrdp \
+         --no-create-home --quiet --group $XRDP
+
+$CHOWN -R $XRDP:$XRDP /etc/xrdp
+
+if [ "$1" = "configure" ]; then
+    if dpkg --compare-versions "$2" lt '0.4.0~dfsg-7'; then
+        # We remove old keys
+	[ -f /etc/xrdp/rsakeys.ini ] && rm /etc/xrdp/rsakeys.ini
+    fi
+fi
+
+
+#DEBHELPER#

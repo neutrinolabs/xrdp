@@ -1,0 +1,25 @@
+Index: xrdp-0.7.0/common/os_calls.c
+===================================================================
+--- xrdp-0.7.0.orig/common/os_calls.c	2013-02-07 22:30:45.151156662 +0100
++++ xrdp-0.7.0/common/os_calls.c	2013-02-07 22:30:48.011156535 +0100
+@@ -537,8 +537,20 @@
+                         s.sin_addr.s_addr = *((int *)(*(h->h_addr_list)));
+                     }
+                 }
++                else
++                {
++                    g_writeln("Host address list empty.");
++                }
++            }
++            else
++            {
++                g_writeln("Host name not solved.");
+             }
+         }
++        else
++        {
++            g_writeln("Hostname not found.");
++	}
+     }
+ 
+     return connect(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_in));

@@ -1,0 +1,8 @@
+#!/bin/sh
+
+set -e
+
+# If we are upgrading, we notify init.d script that we are upgrading
+[ "$1" = "upgrade" ] && export XRDP_UPGRADE=yes
+
+#DEBHELPER#

@@ -1,0 +1,1988 @@
+Index: xrdp-0.7.0/common/os_calls.c
+===================================================================
+--- xrdp-0.7.0.orig/common/os_calls.c	2013-02-07 22:30:45.151156662 +0100
++++ xrdp-0.7.0/common/os_calls.c	2013-02-07 22:30:48.011156535 +0100
+@@ -537,8 +537,20 @@
+                         s.sin_addr.s_addr = *((int *)(*(h->h_addr_list)));
+                     }
+                 }
++                else
++                {
++                    g_writeln("Host address list empty.");
++                }
++            }
++            else
++            {
++                g_writeln("Host name not solved.");
+             }
+         }
++        else
++        {
++            g_writeln("Hostname not found.");
++	}
+     }
+ 
+     return connect(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_in));
+Index: xrdp-0.7.0/xorg/X11R7.6/rdp/Makefile
+===================================================================
+--- xrdp-0.7.0.orig/xorg/X11R7.6/rdp/Makefile	2013-02-07 22:30:45.151156662 +0100
++++ xrdp-0.7.0/xorg/X11R7.6/rdp/Makefile	2013-02-07 22:30:48.011156535 +0100
+@@ -1,11 +1,13 @@
+ 
+ #X11RDPBASE is an environment variable that needs to be set
+ 
++XSRCBASE = ../../../../xorg-server-1.12.4
++
++X11RDPBASE = $(XSRCBASE)/build-main
++
+ INCBASE = $(X11RDPBASE)/include
+ LIBBASE = $(X11RDPBASE)/lib
+ 
+-XSRCBASE = ../build_dir/xorg-server-1.9.3
+-
+ OBJS = rdpmain.o rdpdraw.o rdpinput.o rdpmisc.o rdpup.o rdprandr.o \
+ rdpCopyArea.o rdpPolyFillRect.o rdpPutImage.o rdpPolyRectangle.o \
+ rdpPolylines.o rdpPolySegment.o rdpFillSpans.o rdpSetSpans.o \
+@@ -21,38 +23,57 @@
+ #fbcmap_mi.o
+ #fbcmap.o
+ 
+-LIBS = $(XSRCBASE)/dbe/.libs/libdbe.a \
+-	$(XSRCBASE)/dix/.libs/libdix.a \
+-	$(XSRCBASE)/dix/.libs/libmain.a \
+-	$(XSRCBASE)/fb/.libs/libfb.a \
+-	$(XSRCBASE)/mi/.libs/libmi.a \
+-	$(XSRCBASE)/os/.libs/libos.a \
+-	$(XSRCBASE)/randr/.libs/librandr.a \
+-	$(XSRCBASE)/record/.libs/librecord.a \
+-	$(XSRCBASE)/render/.libs/librender.a \
+-	$(XSRCBASE)/xkb/.libs/libxkb.a \
+-	$(XSRCBASE)/Xext/.libs/libXext.a \
+-	$(XSRCBASE)/Xi/.libs/libXi.a \
+-	$(XSRCBASE)/glx/.libs/libglx.a \
+-	$(XSRCBASE)/xfixes/.libs/libxfixes.a \
+-	$(XSRCBASE)/damageext/.libs/libdamageext.a \
+-	$(XSRCBASE)/miext/damage/.libs/libdamage.a \
+-	librdp.a
++LIBS = $(X11RDPBASE)/composite/.libs/libcomposite.a \
++       $(X11RDPBASE)/config/.libs/libconfig.a \
++       $(X11RDPBASE)/damageext/.libs/libdamageext.a \
++       $(X11RDPBASE)/dbe/.libs/libdbe.a \
++       $(X11RDPBASE)/dix/.libs/libdix.a \
++       $(X11RDPBASE)/dix/.libs/libmain.a \
++       $(X11RDPBASE)/exa/.libs/libexa.a \
++       $(X11RDPBASE)/fb/.libs/libfb.a \
++       $(X11RDPBASE)/glx/.libs/libglx.a \
++       $(X11RDPBASE)/glx/.libs/libglxdri.a \
++       $(X11RDPBASE)/miext/cw/.libs/libcw.a \
++       $(X11RDPBASE)/miext/damage/.libs/libdamage.a \
++       $(X11RDPBASE)/miext/shadow/.libs/libshadow.a \
++       $(X11RDPBASE)/mi/.libs/libmi.a \
++       $(X11RDPBASE)/os/.libs/libos.a \
++       $(X11RDPBASE)/randr/.libs/librandr.a \
++       $(X11RDPBASE)/record/.libs/librecord.a \
++       $(X11RDPBASE)/render/.libs/librender.a \
++       $(X11RDPBASE)/xkb/.libs/libxkb.a \
++       $(X11RDPBASE)/Xext/.libs/libXextbuiltin.a \
++       $(X11RDPBASE)/Xext/.libs/libXext.a \
++       $(X11RDPBASE)/Xext/.libs/libXextmodule.a \
++       $(X11RDPBASE)/xfixes/.libs/libxfixes.a \
++       $(X11RDPBASE)/Xi/.libs/libXi.a \
++       $(X11RDPBASE)/xkb/.libs/libxkb.a \
++       $(X11RDPBASE)/miext/sync/.libs/libsync.a \
++        librdp.a
+ 
+ LLIBS = -Wl,-rpath=$(LIBBASE) -lfreetype -lz -lm -lXfont -lXau \
+-	-lXdmcp -lpixman-1 -lrt -ldl -lcrypto -lGL -lXdamage
++        -lXdmcp -lpixman-1 -lrt -ldl -lcrypto -lGL -lXdamage -lgcrypt
+ 
+ CFLAGS = -O2 -Wall -fno-strength-reduce \
++	-march=native -g \
+ 	-I../../include \
+ 	-I../../cfb \
+ 	-I../../mfb \
+ 	-I../../mi \
++	-I$(XSRCBASE)/include \
++	-I$(XSRCBASE)/Xext \
++	-I$(XSRCBASE)/mi \
++	-I$(XSRCBASE)/render \
++	-I$(XSRCBASE)/randr \
++	-I$(XSRCBASE)/fb \
++	-I/usr/include/pixman-1 \
+ 	-I$(INCBASE) \
+ 	-I$(INCBASE)/X11 \
+ 	-I$(INCBASE)/X11/fonts \
+ 	-I$(INCBASE)/X11/extensions \
+ 	-I$(INCBASE)/xorg \
+ 	-I$(INCBASE)/pixman-1 \
++	-I../xrdp/common \
+ 	-I../../os \
+ 	-I../../render \
+ 	-I../xfree86/common \
+@@ -70,7 +91,8 @@
+ 	-DBIGREQS -D_POSIX_SOURCE -D_BSD_SOURCE -DSCREENSAVER \
+ 	-DXCMISC -DXTEST -DXTRAP -DXV -DXSYNC -DMITMISC -DPANORAMIX \
+ 	-DDPMSExtension -DXvExtension -DXvMCExtension -DXResExtension \
+-	-DMITSHM -DPIXPRIV -DNDEBUG -DDDXOSINIT -DXKB -DXINPUT
++	-DMITSHM -DPIXPRIV -DNDEBUG -DDDXOSINIT -DXKB -DXINPUT \
++	-DHAVE_STRNDUP -DSECURITY -DCOMPOSITE
+ 
+ #-DDAMAGE
+ 
+@@ -89,7 +111,7 @@
+ # these are not needed I think
+ # -Dlinux -D__i386__
+ 
+-LDFLAGS = -L$(LIBBASE) -Wl,-rpath,$(LIBBASE)
++#LDFLAGS = -L$(LIBBASE) -Wl,-rpath,$(LIBBASE)
+ 
+ all: X11rdp
+ 
+@@ -101,11 +123,11 @@
+ clean:
+ 	rm -f $(OBJS) librdp.a
+ 
+-miinitext.o: ../build_dir/xorg-server-1.9.3/mi/miinitext.c Makefile
+-	$(CC) $(CFLAGS) -I../build_dir/xorg-server-1.9.3/Xext -c ../build_dir/xorg-server-1.9.3/mi/miinitext.c
++miinitext.o: $(XSRCBASE)/mi/miinitext.c Makefile
++	$(CC) $(CFLAGS) -I$(XSRCBASE)/Xext -c $(XSRCBASE)/mi/miinitext.c
+ 
+-fbcmap.o: ../build_dir/xorg-server-1.9.3/fb/fbcmap.c
+-	$(CC) $(CFLAGS) -c ../build_dir/xorg-server-1.9.3/fb/fbcmap.c
++fbcmap.o: $(XSRCBASE)/fb/fbcmap.c
++	$(CC) $(CFLAGS) -c $(XSRCBASE)/fb/fbcmap.c
+ 
+-fbcmap_mi.o: ../build_dir/xorg-server-1.9.3/fb/fbcmap_mi.c
+-	$(CC) $(CFLAGS) -c ../build_dir/xorg-server-1.9.3/fb/fbcmap_mi.c
++fbcmap_mi.o: $(XSRCBASE)/fb/fbcmap_mi.c
++	$(CC) $(CFLAGS) -c $(XSRCBASE)/fb/fbcmap_mi.c
+Index: xrdp-0.7.0/xorg/X11R7.6/rdp/rdp.h
+===================================================================
+--- xrdp-0.7.0.orig/xorg/X11R7.6/rdp/rdp.h	2013-02-07 22:30:45.151156662 +0100
++++ xrdp-0.7.0/xorg/X11R7.6/rdp/rdp.h	2013-02-07 22:30:48.015156535 +0100
+@@ -23,6 +23,7 @@
+ #define __arm32__
+ #endif
+ 
++#include <X11/Xfuncproto.h>
+ #include "xorg-server.h"
+ #include <stdio.h>
+ #include <stdarg.h>
+@@ -36,10 +37,10 @@
+ #include <netinet/tcp.h>
+ #include <netinet/in.h>
+ #include <netdb.h>
+-#include "X.h"
++#include <X11/X.h>
+ #define NEED_EVENTS
+-#include "Xproto.h"
+-#include "Xos.h"
++#include <X11/Xproto.h>
++#include <X11/Xos.h>
+ #include "scrnintstr.h"
+ #include "servermd.h"
+ #define PSZ 8
+@@ -53,20 +54,21 @@
+ #include "mipointer.h"
+ #include "dixstruct.h"
+ #include "propertyst.h"
+-#include "Xatom.h"
++#include <X11/Xatom.h>
+ #include "dix.h"
+ #include "X11/keysym.h"
+ #include "dixfontstr.h"
+-#include "fontstruct.h"
++#include <X11/fonts/fontstruct.h>
+ #include "cursorstr.h"
+ #include "picturestr.h"
+-#include "XKBstr.h"
++#include <X11/extensions/XKBstr.h>
+ #include "inputstr.h"
+ #include "randrstr.h"
+ #include "mi.h"
+ #include "fb.h"
+ #include "micmap.h"
+ #include "events.h"
++#include "eventstr.h"
+ #include "exevents.h"
+ #include "xserver-properties.h"
+ #include "xkbsrv.h"
+@@ -145,7 +147,7 @@
+   CompositeProcPtr Composite;
+   GlyphsProcPtr Glyphs;
+   /* Backing store procedures */
+-  RestoreAreasProcPtr RestoreAreas;
++  //RestoreAreasProcPtr RestoreAreas;
+ 
+   int rdp_width;
+   int rdp_height;
+@@ -441,6 +443,8 @@
+ Bool
+ rdpSpriteUnrealizeCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs);
+ void
++rdpInitializeMousePointerCache();
++void
+ rdpSpriteSetCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs,
+                    int x, int y);
+ void
+@@ -450,7 +454,7 @@
+ void
+ rdpSpriteDeviceCursorCleanup(DeviceIntPtr pDev, ScreenPtr pScr);
+ void
+-PtrAddEvent(int buttonMask, int x, int y);
++PtrAddEvent(int buttonMask, int mode, double x, double y);
+ void
+ KbdAddEvent(int down, int param1, int param2, int param3, int param4);
+ void
+Index: xrdp-0.7.0/xorg/X11R7.6/rdp/rdpdraw.c
+===================================================================
+--- xrdp-0.7.0.orig/xorg/X11R7.6/rdp/rdpdraw.c	2013-02-07 22:30:45.151156662 +0100
++++ xrdp-0.7.0/xorg/X11R7.6/rdp/rdpdraw.c	2013-02-07 22:30:48.015156535 +0100
+@@ -399,7 +399,7 @@
+     //pScreen->PaintWindowBorder = g_rdpScreen.PaintWindowBorder;
+     pScreen->CopyWindow = g_rdpScreen.CopyWindow;
+     pScreen->ClearToBackground = g_rdpScreen.ClearToBackground;
+-    pScreen->RestoreAreas = g_rdpScreen.RestoreAreas;
++    //pScreen->RestoreAreas = g_rdpScreen.RestoreAreas;
+     return 1;
+ }
+ 
+@@ -1135,8 +1135,8 @@
+     LLOGLN(0, ("in rdpRestoreAreas"));
+     RegionInit(&reg, NullBox, 0);
+     RegionCopy(&reg, prgnExposed);
+-    g_pScreen->RestoreAreas = g_rdpScreen.RestoreAreas;
+-    rv = g_pScreen->RestoreAreas(pWin, prgnExposed);
++    //g_pScreen->RestoreAreas = g_rdpScreen.RestoreAreas;
++    //rv = g_pScreen->RestoreAreas(pWin, prgnExposed);
+ 
+     if (g_do_dirty_ons)
+     {
+@@ -1156,8 +1156,9 @@
+     }
+ 
+     RegionUninit(&reg);
+-    g_pScreen->RestoreAreas = rdpRestoreAreas;
+-    return rv;
++    //g_pScreen->RestoreAreas = rdpRestoreAreas;
++    //return rv;
++    return prgnExposed;
+ }
+ 
+ /******************************************************************************/
+Index: xrdp-0.7.0/xorg/X11R7.6/rdp/rdpinput.c
+===================================================================
+--- xrdp-0.7.0.orig/xorg/X11R7.6/rdp/rdpinput.c	2013-02-07 22:30:45.151156662 +0100
++++ xrdp-0.7.0/xorg/X11R7.6/rdp/rdpinput.c	2013-02-07 22:30:48.015156535 +0100
+@@ -37,6 +37,7 @@
+ /* this should be fixed in rdesktop */
+ 
+ #include "rdp.h"
++#include "cursors.h"
+ 
+ #if 1
+ #define DEBUG_OUT_INPUT(arg)
+@@ -44,9 +45,12 @@
+ #define DEBUG_OUT_INPUT(arg) ErrorF arg
+ #endif
+ 
++#define RECORD_UNDEF_MOUSE_POINTER
++
+ extern ScreenPtr g_pScreen; /* in rdpmain.c */
+ extern DeviceIntPtr g_pointer; /* in rdpmain.c */
+ extern DeviceIntPtr g_keyboard; /* in rdpmain.c */
++extern rdpScreenInfoRec g_rdpScreen; /* from rdpmain.c */
+ 
+ static int g_old_button_mask = 0;
+ static int g_pause_spe = 0;
+@@ -57,6 +61,7 @@
+ /* this is toggled every time num lock key is released, not like the
+    above *_down vars */
+ static int g_scroll_lock_down = 0;
++static int g_initialized_mouse_pointer_cache = 0;
+ 
+ #define MIN_KEY_CODE 8
+ #define MAX_KEY_CODE 255
+@@ -552,6 +557,11 @@
+         return (c & (0x80 >> shift)) != 0;
+ #endif
+     }
++    else if (bpp == 24)
++    {
++    uint32_t *pixel = (uint32_t *) data;
++        return pixel[y * width + x];
++    }
+ 
+     return 0;
+ }
+@@ -594,16 +604,165 @@
+         {
+             data[start] = data[start] | (0x80 >> shift);
+         }
+-        else
++    }
++    else if (bpp == 24)
++    {
++    char *dst = data + (3 * (y * width + x));
++    dst[0] = pixel >> 0;
++    dst[1] = pixel >> 8;
++    dst[2] = pixel >> 16;
++    }
++}
++
++int
++GetBit(unsigned char *line, int x)
++{
++    unsigned char mask;
++
++    if (screenInfo.bitmapBitOrder == LSBFirst)
++        mask = (1 << (x & 7));
++    else
++        mask = (0x80 >> (x & 7));
++    /* XXX assumes byte order is host byte order */
++    line += (x >> 3);
++    if (*line & mask)
++        return 1;
++    return 0;
++}
++
++/******************************************************************************/
++void
++rdpDrawPredefinedCursor(const char * shape, int x, int y, int w, int h, int fgcolor, int bgcolor,
++                        char * cur_data, char * cur_mask)
++{
++    int color = -1;
++    if (x < w && y < h)
++    {
++        char c = shape[x + y * w];
++        if (c == 'F')
++        {
++            color = fgcolor;
++        }
++        else if (c == 'B')
+         {
+-            data[start] = data[start] & ~(0x80 >> shift);
++            color = bgcolor;
+         }
+     }
+-    else if (bpp == 24)
++
++    if (color != -1)
++    {
++        char *dst = cur_data + (3 * ((31 - y) * 32 + x));
++        dst[0] = color >> 16;
++        dst[1] = color >> 8;
++        dst[2] = color;
++    }
++    else
++    {
++        set_pixel_safe(cur_mask, x, 31 - y, 32, 32, 1, 1);
++    }
++}
++
++/******************************************************************************/
++void
++rdpInitializeMousePointerCache(const int fgcolor, const int bgcolor)
++{
++    int x, y;
++
++    for (y = 0; y < 32; y++)
++    {
++        for (x = 0; x < 32; x++)
++        {
++            rdpDrawPredefinedCursor(shape_2382, x, y, 24, 24, fgcolor, bgcolor, data_2382, mask_2382);
++            rdpDrawPredefinedCursor(shape_1103, x, y, 24, 24, fgcolor, bgcolor, data_1103, mask_1103);
++            rdpDrawPredefinedCursor(shape_3307, x, y, 24, 24, fgcolor, bgcolor, data_3307, mask_3307);
++            rdpDrawPredefinedCursor(shape_2926, x, y, 24, 24, fgcolor, bgcolor, data_2926, mask_2926);
++            rdpDrawPredefinedCursor(shape_3153, x, y, 24, 24, fgcolor, bgcolor, data_3153, mask_3153);
++            rdpDrawPredefinedCursor(shape_3373, x, y, 24, 24, fgcolor, bgcolor, data_3373, mask_3373);
++            rdpDrawPredefinedCursor(shape_3794, x, y, 24, 24, fgcolor, bgcolor, data_3794, mask_3794);
++            rdpDrawPredefinedCursor(shape_2905, x, y, 24, 24, fgcolor, bgcolor, data_2905, mask_2905);
++            rdpDrawPredefinedCursor(shape_3063, x, y, 24, 24, fgcolor, bgcolor, data_3063, mask_3063);
++            rdpDrawPredefinedCursor(shape_2711, x, y, 24, 24, fgcolor, bgcolor, data_2711, mask_2711);
++            rdpDrawPredefinedCursor(shape_4223, x, y, 24, 24, fgcolor, bgcolor, data_4223, mask_4223);
++            rdpDrawPredefinedCursor(shape_3128, x, y, 24, 24, fgcolor, bgcolor, data_3128, mask_3128);
++            rdpDrawPredefinedCursor(shape_3484, x, y, 24, 24, fgcolor, bgcolor, data_3484, mask_3484);
++            rdpDrawPredefinedCursor(shape_1268, x, y, 24, 24, fgcolor, bgcolor, data_1268, mask_1268);
++            rdpDrawPredefinedCursor(shape_3728, x, y, 24, 24, fgcolor, bgcolor, data_3728, mask_3728);
++            rdpDrawPredefinedCursor(shape_4838, x, y, 24, 24, fgcolor, bgcolor, data_4838, mask_4838);
++            rdpDrawPredefinedCursor(shape_5185, x, y, 24, 24, fgcolor, bgcolor, data_5185, mask_5185);
++            rdpDrawPredefinedCursor(shape_4976, x, y, 24, 24, fgcolor, bgcolor, data_4976, mask_4976);
++            rdpDrawPredefinedCursor(shape_4877, x, y, 24, 24, fgcolor, bgcolor, data_4877, mask_4877);
++            rdpDrawPredefinedCursor(shape_5008, x, y, 24, 24, fgcolor, bgcolor, data_5008, mask_5008);
++            rdpDrawPredefinedCursor(shape_5180, x, y, 24, 24, fgcolor, bgcolor, data_5180, mask_5180);
++            rdpDrawPredefinedCursor(shape_5068, x, y, 24, 24, fgcolor, bgcolor, data_5068, mask_5068);
++            rdpDrawPredefinedCursor(shape_4866, x, y, 24, 24, fgcolor, bgcolor, data_4866, mask_4866);
++            rdpDrawPredefinedCursor(shape_3501, x, y, 24, 24, fgcolor, bgcolor, data_3501, mask_3501);
++            rdpDrawPredefinedCursor(shape_1848, x, y, 24, 24, fgcolor, bgcolor, data_1848, mask_1848);
++            rdpDrawPredefinedCursor(shape_2760, x, y, 24, 24, fgcolor, bgcolor, data_2760, mask_2760);
++            rdpDrawPredefinedCursor(shape_2949, x, y, 24, 24, fgcolor, bgcolor, data_2949, mask_2949);
++            rdpDrawPredefinedCursor(shape_1662, x, y, 24, 24, fgcolor, bgcolor, data_1662, mask_1662);
++            rdpDrawPredefinedCursor(shape_1721, x, y, 24, 24, fgcolor, bgcolor, data_1721, mask_1721);
++            rdpDrawPredefinedCursor(shape_3007, x, y, 24, 24, fgcolor, bgcolor, data_3007, mask_3007);
++            rdpDrawPredefinedCursor(shape_4045, x, y, 24, 24, fgcolor, bgcolor, data_4045, mask_4045);
++            rdpDrawPredefinedCursor(shape_4153, x, y, 24, 24, fgcolor, bgcolor, data_4153, mask_4153);
++            rdpDrawPredefinedCursor(shape_4483, x, y, 24, 24, fgcolor, bgcolor, data_4483, mask_4483);
++
++            rdpDrawPredefinedCursor(shape_5144, x, y, 25, 25, fgcolor, bgcolor, data_5144, mask_5144);
++            rdpDrawPredefinedCursor(shape_5150, x, y, 25, 25, fgcolor, bgcolor, data_5150, mask_5150);
++
++            rdpDrawPredefinedCursor(shape_5583, x, y, 29, 29, fgcolor, bgcolor, data_5583, mask_5583);
++
++            rdpDrawPredefinedCursor(shape_2494, x, y, 32, 32, fgcolor, bgcolor, data_2494, mask_2494);
++        }
++    }
++    ErrorF("Initialized mouse pointer cache\n");
++}
++
++/******************************************************************************/
++void
++getCachedMousePointerSprite(const int id, char **data, char **mask)
++{
++    switch (id)
+     {
+-        *(data + (3 * (y * width + x)) + 0) = pixel >> 0;
+-        *(data + (3 * (y * width + x)) + 1) = pixel >> 8;
+-        *(data + (3 * (y * width + x)) + 2) = pixel >> 16;
++        case 2382: CACHED_MP_DATA(data_2382, mask_2382);
++        case 1103: CACHED_MP_DATA(data_1103, mask_1103);
++        case 3307: CACHED_MP_DATA(data_3307, mask_3307);
++        case 2926: CACHED_MP_DATA(data_2926, mask_2926);
++        case 3153: CACHED_MP_DATA(data_3153, mask_3153);
++        case 3373: CACHED_MP_DATA(data_3373, mask_3373);
++        case 3794: CACHED_MP_DATA(data_3794, mask_3794);
++        case 2905: CACHED_MP_DATA(data_2905, mask_2905);
++        case 3063: CACHED_MP_DATA(data_3063, mask_3063);
++        case 2711: CACHED_MP_DATA(data_2711, mask_2711);
++        case 4223: CACHED_MP_DATA(data_4223, mask_4223);
++        case 3128: CACHED_MP_DATA(data_3128, mask_3128);
++        case 3484: CACHED_MP_DATA(data_3484, mask_3484);
++        case 1268: CACHED_MP_DATA(data_1268, mask_1268);
++        case 2494: CACHED_MP_DATA(data_2494, mask_2494);
++        case 3728: CACHED_MP_DATA(data_3728, mask_3728);
++        case 4838: CACHED_MP_DATA(data_4838, mask_4838);
++        case 5185: CACHED_MP_DATA(data_5185, mask_5185);
++        case 4976: CACHED_MP_DATA(data_4976, mask_4976);
++        case 4877: CACHED_MP_DATA(data_4877, mask_4877);
++        case 5008: CACHED_MP_DATA(data_5008, mask_5008);
++        case 5180: CACHED_MP_DATA(data_5180, mask_5180);
++        case 5068: CACHED_MP_DATA(data_5068, mask_5068);
++        case 4866: CACHED_MP_DATA(data_4866, mask_4866);
++        case 3501: CACHED_MP_DATA(data_3501, mask_3501);
++        case 1848: CACHED_MP_DATA(data_1848, mask_1848);
++        case 2760: CACHED_MP_DATA(data_2760, mask_2760);
++        case 2949: CACHED_MP_DATA(data_2949, mask_2949);
++        case 1662: CACHED_MP_DATA(data_1662, mask_1662);
++        case 1721: CACHED_MP_DATA(data_1721, mask_1721);
++        case 3007: CACHED_MP_DATA(data_3007, mask_3007);
++        case 4045: CACHED_MP_DATA(data_4045, mask_4045);
++        case 4153: CACHED_MP_DATA(data_4153, mask_4153);
++        case 4483: CACHED_MP_DATA(data_4483, mask_4483);
++        case 5144: CACHED_MP_DATA(data_5144, mask_5144);
++        case 5150: CACHED_MP_DATA(data_5150, mask_5150);
++        case 5583: CACHED_MP_DATA(data_5583, mask_5583);
++        default:
++            *data = NULL;
++            *mask = NULL;
+     }
+ }
+ 
+@@ -614,64 +773,115 @@
+ {
+     char cur_data[32 * (32 * 3)];
+     char cur_mask[32 * (32 / 8)];
++    char *pmask = NULL;
++    char *pdata = NULL;
+     char *mask;
+     char *data;
+     int i;
+     int j;
+     int w;
+     int h;
+-    int p;
+     int xhot;
+     int yhot;
+     int paddedRowBytes;
+     int fgcolor;
+     int bgcolor;
+ 
+-    if (pCurs == 0)
+-    {
+-        return;
+-    }
+-
+-    if (pCurs->bits == 0)
++    if (pCurs == 0 || pCurs->bits == 0)
+     {
+         return;
+     }
+ 
+     w = pCurs->bits->width;
+     h = pCurs->bits->height;
+-    paddedRowBytes = PixmapBytePad(w, 1);
+     xhot = pCurs->bits->xhot;
+     yhot = pCurs->bits->yhot;
+-    /* ErrorF("xhot %d yhot %d\n", xhot, yhot); */
+-    data = (char *)(pCurs->bits->source);
+-    mask = (char *)(pCurs->bits->mask);
+-    fgcolor = (((pCurs->foreRed >> 8) & 0xff) << 16) |
+-              (((pCurs->foreGreen >> 8) & 0xff) << 8) |
++    paddedRowBytes = PixmapBytePad(w, 1);
++    data = (char *) pCurs->bits->source;
++    mask = (char *) pCurs->bits->mask;
++
++    fgcolor = ((pCurs->foreRed & 0xff00) << 8) |
++              ((pCurs->foreGreen & 0xff00)) |
+               ((pCurs->foreBlue >> 8) & 0xff);
+-    bgcolor = (((pCurs->backRed >> 8) & 0xff) << 16) |
+-              (((pCurs->backGreen >> 8) & 0xff) << 8) |
++    bgcolor = ((pCurs->backRed & 0xff00) << 8) |
++              ((pCurs->backGreen & 0xff00)) |
+               ((pCurs->backBlue >> 8) & 0xff);
+-    memset(cur_data, 0, sizeof(cur_data));
+-    memset(cur_mask, 0, sizeof(cur_mask));
+ 
+-    for (j = 0; j < 32; j++)
++    unsigned int id = 0;
++    for (i = 0; i < w * paddedRowBytes; i++)
++    {
++        id += (unsigned char) data[i];
++    }
++
++    if (g_rdpScreen.client_info.fix_mouse_pointer_sprites)
+     {
+-        for (i = 0; i < 32; i++)
++        if (!g_initialized_mouse_pointer_cache)
+         {
+-            p = get_pixel_safe(mask, i, j, paddedRowBytes * 8, h, 1);
+-            set_pixel_safe(cur_mask, i, 31 - j, 32, 32, 1, !p);
++            rdpInitializeMousePointerCache(fgcolor, bgcolor);
++            g_initialized_mouse_pointer_cache = 1;
++        }
++        getCachedMousePointerSprite(id, &pdata, &pmask);
++    }
++
++    if (pdata == NULL || pmask == NULL)
++    {
++        pdata = cur_data;
++        pmask = cur_mask;
++
++        memset(cur_data, 0, sizeof(cur_data));
++        memset(cur_mask, 0, sizeof(cur_mask));
++
++#ifdef RECORD_UNDEF_MOUSE_POINTER
++        char buf[100];
++        int l = sprintf(buf, "const char *shape_%d = \\\n\"", id);
++        int fd = open("/tmp/cursor", O_RDWR | O_APPEND);
++        write(fd, buf, l);
++#endif
+ 
+-            if (p != 0)
++        for (j = 0; j < 32; j++)
++        {
++            for (i = 0; i < 32; i++)
+             {
+-                p = get_pixel_safe(data, i, j, paddedRowBytes * 8, h, 1);
+-                p = p ? fgcolor : bgcolor;
+-                set_pixel_safe(cur_data, i, 31 - j, 32, 32, 24, p);
++                int argb;
++                if (i < w && j < h && GetBit((unsigned char *) mask, i))
++                {
++                    int bitSet = GetBit((unsigned char *) data, i);
++                    argb = bitSet ? fgcolor : bgcolor;
++
++                    char *dst = cur_data + (3 * ((31 - j) * 32 + i));
++                    dst[0] = argb >> 16;
++                    dst[1] = argb >> 8;
++                    dst[2] = argb;
++
++#ifdef RECORD_UNDEF_MOUSE_POINTER
++                    write(fd, bitSet ? "F" : "B", 1);
++#endif
++                }
++                else
++                {
++                    set_pixel_safe(cur_mask, i, 31 - j, 32, 32, 1, 1);
++#ifdef RECORD_UNDEF_MOUSE_POINTER
++                    if (i < w)
++                    {
++                        write(fd, " ", 1);
++                    }
++#endif
++                }
+             }
++#ifdef RECORD_UNDEF_MOUSE_POINTER
++            write(fd, "\" \\\n\"", 5);
++#endif
++            mask += paddedRowBytes;
++            data += paddedRowBytes;
+         }
++#ifdef RECORD_UNDEF_MOUSE_POINTER
++        write(fd, "\n", 1);
++        close(fd);
++#endif
+     }
+ 
+     rdpup_begin_update();
+-    rdpup_set_cursor(xhot, yhot, cur_data, cur_mask);
++    rdpup_set_cursor(xhot, yhot, pdata, pmask);
+     rdpup_end_update();
+ }
+ 
+@@ -699,13 +909,12 @@
+ 
+ /******************************************************************************/
+ static void
+-rdpEnqueueMotion(int x, int y)
++rdpEnqueueMotion(int mode, double x, double y)
+ {
+     int i;
+     int n;
+-    int valuators[2];
+-    EventListPtr rdp_events;
+-    xEvent *pev;
++    InternalEvent* rdp_events;
++    ValuatorMask *mask = valuator_mask_new(2);
+ 
+ # if 0
+ 
+@@ -717,20 +926,21 @@
+     }
+ 
+ #endif
+-    miPointerSetPosition(g_pointer, &x, &y);
+-    valuators[0] = x;
+-    valuators[1] = y;
++    miPointerSetPosition(g_pointer, mode, &x, &y);
++    valuator_mask_set_double(mask, 0, x);
++    valuator_mask_set_double(mask, 1, y);
+ 
+-    GetEventList(&rdp_events);
++    rdp_events = InitEventList(GetMaximumEventsNum() + 1);
+     n = GetPointerEvents(rdp_events, g_pointer, MotionNotify, 0,
+-                         POINTER_ABSOLUTE | POINTER_SCREEN,
+-                         0, 2, valuators);
++                         POINTER_ABSOLUTE | POINTER_SCREEN, mask);
+ 
+     for (i = 0; i < n; i++)
+     {
+-        pev = (rdp_events + i)->event;
+-        mieqEnqueue(g_pointer, (InternalEvent *)pev);
++        mieqEnqueue(g_pointer, &rdp_events[i]);
+     }
++
++    valuator_mask_free(&mask);
++    FreeEventList(rdp_events, GetMaximumEventsNum());
+ }
+ 
+ /******************************************************************************/
+@@ -739,17 +949,17 @@
+ {
+     int i;
+     int n;
+-    EventListPtr rdp_events;
+-    xEvent *pev;
++    InternalEvent* rdp_events;
+ 
+-    i = GetEventList(&rdp_events);
+-    n = GetPointerEvents(rdp_events, g_pointer, type, buttons, 0, 0, 0, 0);
++    rdp_events = InitEventList(GetMaximumEventsNum() + 1);
++    n = GetPointerEvents(rdp_events, g_pointer, type, buttons, 0, NULL);
+ 
+     for (i = 0; i < n; i++)
+     {
+-        pev = (rdp_events + i)->event;
+-        mieqEnqueue(g_pointer, (InternalEvent *)pev);
++        mieqEnqueue(g_pointer, &rdp_events[i]);
+     }
++
++    FreeEventList(rdp_events, GetMaximumEventsNum());
+ }
+ 
+ /******************************************************************************/
+@@ -758,28 +968,28 @@
+ {
+     int i;
+     int n;
+-    EventListPtr rdp_events;
+-    xEvent *pev;
++    InternalEvent* rdp_events;
+ 
+-    i = GetEventList(&rdp_events);
+-    n = GetKeyboardEvents(rdp_events, g_keyboard, type, scancode);
++    rdp_events = InitEventList(GetMaximumEventsNum() + 1);
++    n = GetKeyboardEvents(rdp_events, g_keyboard, type, scancode, NULL);
+ 
+     for (i = 0; i < n; i++)
+     {
+-        pev = (rdp_events + i)->event;
+-        mieqEnqueue(g_keyboard, (InternalEvent *)pev);
++        mieqEnqueue(g_keyboard, &rdp_events[i]);
+     }
++
++    FreeEventList(rdp_events, GetMaximumEventsNum());
+ }
+ 
+ /******************************************************************************/
+ void
+-PtrAddEvent(int buttonMask, int x, int y)
++PtrAddEvent(int buttonMask, int mode, double x, double y)
+ {
+     int i;
+     int type;
+     int buttons;
+ 
+-    rdpEnqueueMotion(x, y);
++    rdpEnqueueMotion(mode, x, y);
+ 
+     for (i = 0; i < 5; i++)
+     {
+Index: xrdp-0.7.0/xorg/X11R7.6/rdp/rdpmain.c
+===================================================================
+--- xrdp-0.7.0.orig/xorg/X11R7.6/rdp/rdpmain.c	2013-02-07 22:30:45.151156662 +0100
++++ xrdp-0.7.0/xorg/X11R7.6/rdp/rdpmain.c	2013-02-07 22:30:48.015156535 +0100
+@@ -385,7 +385,7 @@
+     g_rdpScreen.ClearToBackground = pScreen->ClearToBackground;
+ 
+     /* Backing store procedures */
+-    g_rdpScreen.RestoreAreas = pScreen->RestoreAreas;
++    //g_rdpScreen.RestoreAreas = pScreen->RestoreAreas;
+     g_rdpScreen.WakeupHandler = pScreen->WakeupHandler;
+ 
+     g_rdpScreen.CreateColormap = pScreen->CreateColormap;
+@@ -439,7 +439,7 @@
+     pScreen->ClearToBackground = rdpClearToBackground;
+ 
+     /* Backing store procedures */
+-    pScreen->RestoreAreas = rdpRestoreAreas;
++    //pScreen->RestoreAreas = rdpRestoreAreas;
+ 
+ #if 0
+     pScreen->CreateColormap = rdpCreateColormap;
+@@ -691,7 +691,7 @@
+ 
+ /******************************************************************************/
+ void
+-ddxGiveUp(void)
++ddxGiveUp(enum ExitCode error)
+ {
+     char unixSocketName[128];
+ 
+@@ -736,9 +736,9 @@
+ 
+ /******************************************************************************/
+ void
+-AbortDDX(void)
++AbortDDX(enum ExitCode error)
+ {
+-    ddxGiveUp();
++    ddxGiveUp(error);
+ }
+ 
+ /******************************************************************************/
+Index: xrdp-0.7.0/xorg/X11R7.6/rdp/rdpup.c
+===================================================================
+--- xrdp-0.7.0.orig/xorg/X11R7.6/rdp/rdpup.c	2013-02-07 22:30:45.151156662 +0100
++++ xrdp-0.7.0/xorg/X11R7.6/rdp/rdpup.c	2013-02-07 22:30:48.015156535 +0100
+@@ -670,47 +670,47 @@
+                    past the width or height */
+                 g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
+                 g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
+-                PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
++                PtrAddEvent(g_button_mask, Absolute, g_cursor_x, g_cursor_y);
+                 break;
+             case 101:
+                 g_button_mask = g_button_mask & (~1);
+-                PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
++                PtrAddEvent(g_button_mask, Absolute, g_cursor_x, g_cursor_y);
+                 break;
+             case 102:
+                 g_button_mask = g_button_mask | 1;
+-                PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
++                PtrAddEvent(g_button_mask, Absolute, g_cursor_x, g_cursor_y);
+                 break;
+             case 103:
+                 g_button_mask = g_button_mask & (~4);
+-                PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
++                PtrAddEvent(g_button_mask, Absolute, g_cursor_x, g_cursor_y);
+                 break;
+             case 104:
+                 g_button_mask = g_button_mask | 4;
+-                PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
++                PtrAddEvent(g_button_mask, Absolute, g_cursor_x, g_cursor_y);
+                 break;
+             case 105:
+                 g_button_mask = g_button_mask & (~2);
+-                PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
++                PtrAddEvent(g_button_mask, Absolute, g_cursor_x, g_cursor_y);
+                 break;
+             case 106:
+                 g_button_mask = g_button_mask | 2;
+-                PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
++                PtrAddEvent(g_button_mask, Absolute, g_cursor_x, g_cursor_y);
+                 break;
+             case 107:
+                 g_button_mask = g_button_mask & (~8);
+-                PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
++                PtrAddEvent(g_button_mask, Absolute, g_cursor_x, g_cursor_y);
+                 break;
+             case 108:
+                 g_button_mask = g_button_mask | 8;
+-                PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
++                PtrAddEvent(g_button_mask, Absolute, g_cursor_x, g_cursor_y);
+                 break;
+             case 109:
+                 g_button_mask = g_button_mask & (~16);
+-                PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
++                PtrAddEvent(g_button_mask, Absolute, g_cursor_x, g_cursor_y);
+                 break;
+             case 110:
+                 g_button_mask = g_button_mask | 16;
+-                PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
++                PtrAddEvent(g_button_mask, Absolute, g_cursor_x, g_cursor_y);
+                 break;
+             case 200:
+                 rdpup_begin_update();
+Index: xrdp-0.7.0/xup/xup.c
+===================================================================
+--- xrdp-0.7.0.orig/xup/xup.c	2013-02-07 22:30:45.151156662 +0100
++++ xrdp-0.7.0/xup/xup.c	2013-02-07 22:30:48.015156535 +0100
+@@ -19,6 +19,11 @@
+  */
+ 
+ #include "xup.h"
++#include "log.h"
++#include <stdlib.h>
++#include <errno.h>
++#include <unistd.h>
++#include <sys/types.h>
+ 
+ /******************************************************************************/
+ /* returns error */
+@@ -180,10 +185,12 @@
+     {
+         if (use_uds)
+         {
++            mod->server_msg(mod, "Use local sockets", 0);
+             mod->sck = g_tcp_local_socket();
+         }
+         else
+         {
++            mod->server_msg(mod, "Use tcp sockets", 0);
+             mod->sck = g_tcp_socket();
+             g_tcp_set_non_blocking(mod->sck);
+             g_tcp_set_no_delay(mod->sck);
+@@ -202,6 +209,7 @@
+ 
+         if (error == -1)
+         {
++            log_message(LOG_LEVEL_INFO, "Error during connect err=%d on sck=%d and port=%s for uid=%d", errno,  mod->sck, con_port, getuid());
+             if (g_tcp_last_error_would_block(mod->sck))
+             {
+                 error = 0;
+Index: xrdp-0.7.0/common/xrdp_client_info.h
+===================================================================
+--- xrdp-0.7.0.orig/common/xrdp_client_info.h	2013-02-07 22:30:45.151156662 +0100
++++ xrdp-0.7.0/common/xrdp_client_info.h	2013-02-07 22:30:48.015156535 +0100
+@@ -87,6 +87,7 @@
+   char jpeg_prop[64];
+   int v3_codec_id;
+   int use_bulk_comp;
++  int fix_mouse_pointer_sprites;
+ };
+ 
+ #endif
+Index: xrdp-0.7.0/libxrdp/xrdp_rdp.c
+===================================================================
+--- xrdp-0.7.0.orig/libxrdp/xrdp_rdp.c	2013-02-07 22:30:45.151156662 +0100
++++ xrdp-0.7.0/libxrdp/xrdp_rdp.c	2013-02-07 22:30:48.019156535 +0100
+@@ -98,6 +98,15 @@
+         {
+             client_info->use_bulk_comp = text2bool(value);
+         }
++        else if (g_strcasecmp(item, "fix_mouse_pointer_sprites") == 0)
++        {
++            if (g_strcasecmp(value, "yes") == 0 ||
++                    g_strcasecmp(value, "true") == 0 ||
++                    g_strcasecmp(value, "1") == 0)
++            {
++                client_info->fix_mouse_pointer_sprites = 1;
++            }
++        }
+         else if (g_strcasecmp(item, "crypt_level") == 0)
+         {
+             if (g_strcasecmp(value, "low") == 0)
+Index: xrdp-0.7.0/xorg/X11R7.6/rdp/cursors.h
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ xrdp-0.7.0/xorg/X11R7.6/rdp/cursors.h	2013-02-07 22:30:48.019156535 +0100
+@@ -0,0 +1,1057 @@
++
++#ifndef _CURSORS_H
++#define _CURSORS_H
++
++#define CACHED_MP_DATA(d, m) *data = d; *mask = m; break;
++
++char data_2382[32 * (32 * 3)];
++char mask_2382[32 * (32 / 8)];
++const char *shape_2382 = \
++"                        " \
++"                        " \
++"      B                 " \
++"      BB                " \
++"      BFB               " \
++"      BFFB              " \
++"      BFFFB             " \
++"      BFFFFB            " \
++"      BFFFFFB           " \
++"      BFFFFFFB          " \
++"      BFFFFFFFB         " \
++"      BFFFFFFFFB        " \
++"      BFFFFFFFFFB       " \
++"      BFFFFFFFFFFB      " \
++"      BFFFFFFBBBBBB     " \
++"      BFFFBFFB          " \
++"      BFFBBFFB          " \
++"      BFFB BFFB         " \
++"      BFB  BFFB         " \
++"      BB    BFFB        " \
++"      B     BBBB        " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_1103[32 * (32 * 3)];
++char mask_1103[32 * (32 / 8)];
++const char *shape_1103 = \
++"                        " \
++"                        " \
++"                        " \
++"                        " \
++"         BBBBBBB        " \
++"         BFFFFFB        " \
++"         BBBFBBB        " \
++"           BFB          " \
++"           BFB          " \
++"           BFB          " \
++"           BFB          " \
++"           BFB          " \
++"           BFB          " \
++"           BFB          " \
++"           BFB          " \
++"           BFB          " \
++"           BFB          " \
++"         BBBFBBB        " \
++"         BFFFFFB        " \
++"         BBBBBBB        " \
++"                        " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_3307[32 * (32 * 3)];
++char mask_3307[32 * (32 / 8)];
++const char *shape_3307 = \
++"                        " \
++"                        " \
++"                        " \
++"   BBBBBBBBBBBBBBBBB    " \
++"   BFFFFFFFFFFFFFFFB    " \
++"   BFFFFFFFFFFFFFFFB    " \
++"   BFFBBBBBBBBBBBBBB    " \
++"   BFFB                 " \
++"   BFFB BBBBBBBBBBB     " \
++"   BFFB BFFFFFFFFB      " \
++"   BFFB BFFFFFFFB       " \
++"   BFFB BFFFFFFB        " \
++"   BFFB BFFFFFB         " \
++"   BFFB BFFFFFFB        " \
++"   BFFB BFFFBFFFB       " \
++"   BFFB BFFB BFFFB      " \
++"   BFFB BFB   BFFFB     " \
++"   BFFB BB     BFFFB    " \
++"   BBBB B       BFB     " \
++"                 B      " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_2926[32 * (32 * 3)];
++char mask_2926[32 * (32 / 8)];
++const char *shape_2926 = \
++"                        " \
++"                        " \
++"                        " \
++"     BBBBBBBBBBBBBBB    " \
++"    BFFFFFFFFFFFFFFFB   " \
++"    BFFFFFFFFFFFFFFFB   " \
++"    BBBBBBBBBBBBBBBBB   " \
++"          BFFFB         " \
++"         BFFFFFB        " \
++"        BFFFFFFFB       " \
++"       BFFFFFFFFFB      " \
++"      BFFFFFFFFFFFB     " \
++"     BBBBBBFFFBBBBBB    " \
++"          BFFFB         " \
++"          BFFFB         " \
++"          BFFFB         " \
++"          BFFFB         " \
++"          BFFFB         " \
++"          BFFFB         " \
++"          BFFFB         " \
++"          BBBBB         " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_3153[32 * (32 * 3)];
++char mask_3153[32 * (32 / 8)];
++const char *shape_3153 = \
++"                        " \
++"                        " \
++"                        " \
++"   BBBBBBBBBBBBBBBBB    " \
++"   BFFFFFFFFFFFFFFFB    " \
++"   BFFFFFFFFFFFFFFFB    " \
++"   BBBBBBBBBBBBBBFFB    " \
++"                BFFB    " \
++"    BBBBBBBBBBB BFFB    " \
++"     BFFFFFFFFB BFFB    " \
++"      BFFFFFFFB BFFB    " \
++"       BFFFFFFB BFFB    " \
++"        BFFFFFB BFFB    " \
++"       BFFFFFFB BFFB    " \
++"      BFFFBFFFB BFFB    " \
++"     BFFFB BFFB BFFB    " \
++"    BFFFB   BFB BFFB    " \
++"   BFFFB     BB BFFB    " \
++"    BFB       B BBBB    " \
++"     B                  " \
++"                        " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_3373[32 * (32 * 3)];
++char mask_3373[32 * (32 / 8)];
++const char *shape_3373 = \
++"                        " \
++"                        " \
++"                        " \
++"                        " \
++"    BBBB                " \
++"    BFFB     B          " \
++"    BFFB    BB          " \
++"    BFFB   BFB          " \
++"    BFFB  BFFB          " \
++"    BFFB BFFFB          " \
++"    BFFBBFFFFBBBBBBBB   " \
++"    BFFBFFFFFFFFFFFFFB  " \
++"    BFFFFFFFFFFFFFFFFB  " \
++"    BFFBFFFFFFFFFFFFFB  " \
++"    BFFBBFFFFBBBBBBBB   " \
++"    BFFB BFFFB          " \
++"    BFFB  BFFB          " \
++"    BFFB   BFB          " \
++"    BFFB    BB          " \
++"    BFFB     B          " \
++"    BBBB                " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_3794[32 * (32 * 3)];
++char mask_3794[32 * (32 / 8)];
++const char *shape_3794 = \
++"                        " \
++"                        " \
++"                        " \
++"                        " \
++"                  B     " \
++"    BBBB B       BFB    " \
++"    BFFB BB     BFFFB   " \
++"    BFFB BFB   BFFFB    " \
++"    BFFB BFFB BFFFB     " \
++"    BFFB BFFFBFFFB      " \
++"    BFFB BFFFFFFB       " \
++"    BFFB BFFFFFB        " \
++"    BFFB BFFFFFFB       " \
++"    BFFB BFFFFFFFB      " \
++"    BFFB BFFFFFFFFB     " \
++"    BFFB BBBBBBBBBBB    " \
++"    BFFB                " \
++"    BFFBBBBBBBBBBBBBB   " \
++"    BFFFFFFFFFFFFFFFB   " \
++"    BFFFFFFFFFFFFFFFB   " \
++"    BBBBBBBBBBBBBBBBB   " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_2905[32 * (32 * 3)];
++char mask_2905[32 * (32 / 8)];
++const char *shape_2905 = \
++"                        " \
++"                        " \
++"          BBBBB         " \
++"          BFFFB         " \
++"          BFFFB         " \
++"          BFFFB         " \
++"          BFFFB         " \
++"          BFFFB         " \
++"          BFFFB         " \
++"          BFFFB         " \
++"     BBBBBBFFFBBBBBB    " \
++"      BFFFFFFFFFFFB     " \
++"       BFFFFFFFFFB      " \
++"        BFFFFFFFB       " \
++"         BFFFFFB        " \
++"          BFFFB         " \
++"    BBBBBBBBBBBBBBBBB   " \
++"    BFFFFFFFFFFFFFFFB   " \
++"    BFFFFFFFFFFFFFFFB   " \
++"     BBBBBBBBBBBBBBB    " \
++"                        " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_3063[32 * (32 * 3)];
++char mask_3063[32 * (32 / 8)];
++const char *shape_3063 = \
++"                        " \
++"                        " \
++"                        " \
++"                        " \
++"      B                 " \
++"     BFB       B BBBB   " \
++"    BFFFB     BB BFFB   " \
++"     BFFFB   BFB BFFB   " \
++"      BFFFB BFFB BFFB   " \
++"       BFFFBFFFB BFFB   " \
++"        BFFFFFFB BFFB   " \
++"         BFFFFFB BFFB   " \
++"        BFFFFFFB BFFB   " \
++"       BFFFFFFFB BFFB   " \
++"      BFFFFFFFFB BFFB   " \
++"     BBBBBBBBBBB BFFB   " \
++"                 BFFB   " \
++"    BBBBBBBBBBBBBBFFB   " \
++"    BFFFFFFFFFFFFFFFB   " \
++"    BFFFFFFFFFFFFFFFB   " \
++"    BBBBBBBBBBBBBBBBB   " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_2711[32 * (32 * 3)];
++char mask_2711[32 * (32 / 8)];
++const char *shape_2711 = \
++"                        " \
++"                        " \
++"                        " \
++"                        " \
++"                 BBBB   " \
++"           B     BFFB   " \
++"           BB    BFFB   " \
++"           BFB   BFFB   " \
++"           BFFB  BFFB   " \
++"           BFFFB BFFB   " \
++"    BBBBBBBBFFFFBBFFB   " \
++"   BFFFFFFFFFFFFFBFFB   " \
++"   BFFFFFFFFFFFFFFFFB   " \
++"   BFFFFFFFFFFFFFBFFB   " \
++"    BBBBBBBBFFFFBBFFB   " \
++"           BFFFB BFFB   " \
++"           BFFB  BFFB   " \
++"           BFB   BFFB   " \
++"           BB    BFFB   " \
++"           B     BFFB   " \
++"                 BBBB   " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_3128[32 * (32 * 3)];
++char mask_3128[32 * (32 / 8)];
++const char *shape_3128 = \
++"                        " \
++"                        " \
++"                        " \
++"                        " \
++"        B               " \
++"       BB      B        " \
++"      BBB      BB       " \
++"     BBFB      BFB      " \
++"    BBFFB      BFFB     " \
++"   BBFFFBBBBBBBBFFFB    " \
++"  BBFFFFFFFFFFFFFFFFB   " \
++"  BFFFFFFFFFFFFFFFFFFB  " \
++"  BBFFFFFFFFFFFFFFFFB   " \
++"   BFFFFFBBBBBBBFFFB    " \
++"    BBFFB      BFFB     " \
++"     BFFB      BFB      " \
++"      BBB      BB       " \
++"       BB      B        " \
++"        B               " \
++"                        " \
++"                        " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_3484[32 * (32 * 3)];
++char mask_3484[32 * (32 / 8)];
++const char *shape_3484 = \
++"                        " \
++"                        " \
++"                B       " \
++"               BB       " \
++"              BFB       " \
++"             BFFB       " \
++"            BFFFB       " \
++"           BFFFFB       " \
++"          BFFFFFB       " \
++"         BFFFFFFB       " \
++"        BFFFFFFFB       " \
++"       BFFFFFFFFB       " \
++"      BFFFFFFFFFB       " \
++"     BFFFFFFFFFFB       " \
++"     BBBBBBFFFFFB       " \
++"         BFFFFFFB       " \
++"         BFFFBFFB       " \
++"         BFFFBFFB       " \
++"        BFFFB BFB       " \
++"       BFFFB   BB       " \
++"        BFB     B       " \
++"         B              " \
++"                        " \
++"                        ";
++
++char data_1268[32 * (32 * 3)];
++char mask_1268[32 * (32 / 8)];
++const char *shape_1268 = \
++"                        " \
++"         BBBB           " \
++"         BFFB           " \
++"         BFFB           " \
++"         BFFB           " \
++"         BFFB           " \
++"         BFFB           " \
++"         BFFB           " \
++"         BFFB           " \
++" BBBBBBBBBFFBBBBBBBBB   " \
++" BFFFFFFFFFFFFFFFFFFB   " \
++" BFFFFFFFFFFFFFFFFFFB   " \
++" BBBBBBBBBFFBBBBBBBBB   " \
++"         BFFB           " \
++"         BFFB           " \
++"         BFFB           " \
++"         BFFB           " \
++"         BFFB           " \
++"         BFFB           " \
++"         BFFB           " \
++"         BBBB           " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_2494[32 * (32 * 3)];
++char mask_2494[32 * (32 / 8)];
++const char *shape_2494 = \
++"                                " \
++"                                " \
++"   FF                           " \
++"   FBF                          " \
++"   FBBF                         " \
++"   FBBBF                        " \
++"   FBBBBF                       " \
++"   FBBBBBF                      " \
++"   FBBBBBBF                     " \
++"   FBBBBBBBF                    " \
++"   FBBBBBBBBF                   " \
++"   FBBBBBBBBBF                  " \
++"   FBBBBBFFFFFF                 " \
++"   FBBBFBBF                     " \
++"   FBBFFBBF                     " \
++"   FBF FBBF                     " \
++"   FF   FBBF                    " \
++"        FBBF                 B F" \
++"        FFFF                B F " \
++"                           B F  " \
++"                          B F   " \
++"                         B F    " \
++"                  B F   B F     " \
++"                   B F B F      " \
++"                    B F F       " \
++"                     B F        " \
++"                    B B F       " \
++"                   B F B F      " \
++"                  B F   B F     " \
++"                 B F     B F    " \
++"                B F       B F   " \
++"                                ";
++
++char data_4223[32 * (32 * 3)];
++char mask_4223[32 * (32 / 8)];
++const char *shape_4223 = \
++"                        " \
++"                        " \
++"                        " \
++"                        " \
++"                        " \
++"                        " \
++"          BBB           " \
++"        BBBFFBBB        " \
++"       BFFBFFBFFB       " \
++"       BFFBFFBFFBB      " \
++"     BBBFFFFFFFFBFBB    " \
++"     BFBFFFFFFFFFFFB    " \
++"    BFFBFFFFFFFFFFFB    " \
++"    BFFFFFFFFFFFFFFB    " \
++"    BFFFFFFFFFFFFFFB    " \
++"    BFFFFFFFFFFFFFFB    " \
++"    BFFFFFFFFFFFFFFB    " \
++"     BFFFFFFFFFFFFFB    " \
++"     FBBBBBBBBBBBBB     " \
++"                        " \
++"                        " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_3728[32 * (32 * 3)];
++char mask_3728[32 * (32 / 8)];
++const char *shape_3728 = \
++"                        " \
++"                        " \
++"                        " \
++"        BB              " \
++"       BFFB             " \
++"       BFFB             " \
++"       BFFB             " \
++"       BFFB             " \
++"       BFFBFBBBBB       " \
++"       BFFFFFBFFBB      " \
++"     BBBFFFFFFFFBFBB    " \
++"     BFBFFFFFFFFFFFB    " \
++"    BFFBFFFFFFFFFFFB    " \
++"    BFFBFFFFFFFFFFFB    " \
++"    BFFFFFFFFFFFFFFB    " \
++"    BFFFFFFFFFFFFFFB    " \
++"    BFFFFFFFFFFFFFFB    " \
++"    BFFFFFFFFFFFFFFB    " \
++"     BBBBBBBBBBBBBB     " \
++"                        " \
++"                        " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_4838[32 * (32 * 3)];
++char mask_4838[32 * (32 / 8)];
++const char *shape_4838 = \
++"                        " \
++"                        " \
++"                        " \
++"        BBBBBBBB        " \
++"       BBFBFBFBBB       " \
++"      BBFBFBFBFFBB      " \
++"     BBFBFBBBFBFBFB     " \
++"    BBFBFBFBFBFBFFFB    " \
++"   BBFBFBBBBBFBBBFFBB   " \
++"   BFFFFFBFBFBFBFFFBB   " \
++"   BFFFFBFBFBFBFBFFFB   " \
++"   BFFFBFFFFFFFBFBFFB   " \
++"   BFFBFBFFFFFBBBFFFB   " \
++"   BFFFFFFFFFBFFFFFFB   " \
++"   BFFFFFFFBBFBBFFFFB   " \
++"   BFFFFFFFBBFFBFFFFB   " \
++"    BFFFFFFBBFFFFFFB    " \
++"     BFFFFFBFFFFFFB     " \
++"      BFFFFFFFFFFB      " \
++"       BFFFFFFFFB       " \
++"        BBBBBBBB        " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_5185[32 * (32 * 3)];
++char mask_5185[32 * (32 / 8)];
++const char *shape_5185 = \
++"                        " \
++"                        " \
++"                        " \
++"        BBBBBBBB        " \
++"       BBFBFBFBBB       " \
++"      BBFBFBFBFFFB      " \
++"     BBFBFBBBFBFBFB     " \
++"    BBFBFBFBFBFBFFFB    " \
++"   BBFBFBBBBBFBBBFFBB   " \
++"   BFFFFFBFBFBFBFFFBB   " \
++"   BBFFFBFBFBFBFBFFFB   " \
++"   BFFFFFFFFFFFBFBFFB   " \
++"   BFFFFBFFFFFBBBFFFB   " \
++"   BFFFFFBFFFFFFFFFFB   " \
++"   BBFFFBBBFBFBFFFFFB   " \
++"   BFFFFBBFBBFFBFFFBB   " \
++"    BFFFBFFBBFFFFFBB    " \
++"     BFFFFFBFFFFFFB     " \
++"      BFFFFFFFFFFB      " \
++"       BFBFFFFFBB       " \
++"        BBBBBBBB        " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_4976[32 * (32 * 3)];
++char mask_4976[32 * (32 / 8)];
++const char *shape_4976 = \
++"                        " \
++"                        " \
++"                        " \
++"        BBBBBBBB        " \
++"       BBFBFBFBBB       " \
++"      BBFBFBFBFFFB      " \
++"     BBFBFBBBFBFBFB     " \
++"    BBFBFBFBFBFBFFFB    " \
++"   BFFBFBFBBBFBBBFFBB   " \
++"   BFFFFFBFBFBFBFFFBB   " \
++"   BBFFFBFBFBFBFBFFFB   " \
++"   BFFFBBBFFFFFBFFFFB   " \
++"   BFFBBBBFFFFBFBFFFB   " \
++"   BFFFFFBFFFBFFFFFFB   " \
++"   BBFFFBBBFBFBFFFFFB   " \
++"   BFFFFBBFBFFFBFFFBB   " \
++"    BFFFBFFBBFFFFFBB    " \
++"     BFFFFFBFFFFFFB     " \
++"      BFFFFFFFFFFB      " \
++"       BFBFFFFFFB       " \
++"        BBBBBBBB        " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_4877[32 * (32 * 3)];
++char mask_4877[32 * (32 / 8)];
++const char *shape_4877 = \
++"                        " \
++"                        " \
++"                        " \
++"        BBBBBBBB        " \
++"       BBFBFBFBBB       " \
++"      BBFBFBFBFFFB      " \
++"     BBFBFBBBFBFBFB     " \
++"    BBFBFBFBFBFBFFFB    " \
++"   BBFBBBBBBBFBBBFFBB   " \
++"   BFFFFBBFBFBFBFFFBB   " \
++"   BBFFFBBBFBFBFBFFFB   " \
++"   BFFFBFBFFFFFBFFFFB   " \
++"   BFFBBBBFFFFBFBFFFB   " \
++"   BFFFFFBFFFFFFFFFFB   " \
++"   BBFFFBBBFBFBFFFFFB   " \
++"   BFFFFFBFBFFFBFFFB    " \
++"    BFFFBFFBBFFFFFBB    " \
++"     BFFFFFBFFFFFFB     " \
++"      BFFFFFFFFFFB      " \
++"       BFFFFFFFFB       " \
++"        BBBBBBBB        " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_5008[32 * (32 * 3)];
++char mask_5008[32 * (32 / 8)];
++const char *shape_5008 = \
++"                        " \
++"                        " \
++"                        " \
++"        BBBBBBBB        " \
++"       BBFBFBFBBB       " \
++"      BBFBFBFBFFFB      " \
++"     BBFBFBBBFBFBFB     " \
++"    BBFBFBFBBBFBFFFB    " \
++"   BBFBBBBBBBFBFBFFBB   " \
++"   BFFFFFBFBFBFBFFFBB   " \
++"   BBFFFBBBFBFBFBFFFB   " \
++"   BFFFBFBFFFFFBFFFFB   " \
++"   BFFBBBFFFFFBFBFFFB   " \
++"   BFFFFFBFFFFFFFFFFB   " \
++"   BBFFFBBBFBFBFFFFFB   " \
++"   BFFFFFBFBFFFBFFFFB   " \
++"    BFFFBFFFBFFFFFFB    " \
++"     BFFFFFFFFFFFFB     " \
++"      BFFFFFFFFFFB      " \
++"       BFFFFFFFFB       " \
++"        BBBBBBBB        " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_5180[32 * (32 * 3)];
++char mask_5180[32 * (32 / 8)];
++const char *shape_5180 = \
++"                        " \
++"                        " \
++"                        " \
++"        BBBBBBBB        " \
++"       BBFBFBFBBB       " \
++"      BBFBFBFBFFFB      " \
++"     BBFBFBBBFBFBFB     " \
++"    BBFBFBFBBBFBFFFB    " \
++"   BBFBFBBBBBFBBBFFBB   " \
++"   BFFFFFBFBFBBBFFFBB   " \
++"   BBFFFBBBFBBBFBFFFB   " \
++"   BFFFBFBFFFFFFFFFFB   " \
++"   BFFBBBFFFFFBFBFFFB   " \
++"   BFFFFFFFFFFFFFFFFB   " \
++"   BBFFFBFBFBFBFFFFFB   " \
++"   BFFFFFBFFFFFFFFFFB   " \
++"    BFFFBFFFBFFFFFFB    " \
++"     BFFFFFFFFFFFFB     " \
++"      BFFFFFFFFFFB      " \
++"       BFFFFFFFFB       " \
++"        BBBBBBBB        " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_5068[32 * (32 * 3)];
++char mask_5068[32 * (32 / 8)];
++const char *shape_5068 = \
++"                        " \
++"                        " \
++"                        " \
++"        BBBBBBBB        " \
++"       BBFBFBFBBB       " \
++"      BBFBFBFBFFFB      " \
++"     BBFBFBBBFBFBFB     " \
++"    BBFBFBFBBBFBFFFB    " \
++"   BBFBFBBBBBFBBBFFBB   " \
++"   BFFFFFBFBFBBBFFFBB   " \
++"   BBFFFBBBFBBBFBFFFB   " \
++"   BFFFBFBFFFFFBBBFFB   " \
++"   BFFBFBFFFFFBBBFFFB   " \
++"   BFFFFFFFFFFFFFFFFB   " \
++"   BBFFFBFBFFFBFFFFFB   " \
++"   BFFFFFFFFFFFFFFFFB   " \
++"    BFFFFFFFFFFFFFFB    " \
++"     BFFFFFFFFFFFFB     " \
++"      BFFFFFFFFFFB      " \
++"       BFFFFFFFFB       " \
++"        BBBBBBBB        " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_4866[32 * (32 * 3)];
++char mask_4866[32 * (32 / 8)];
++const char *shape_4866 = \
++"                        " \
++"                        " \
++"                        " \
++"        BBBBBBBB        " \
++"       FBFBFBFBBB       " \
++"      BBFBFBFBFFFB      " \
++"     BBFBFBBBFBFBFB     " \
++"    BBFBFBFBBBFBFFFB    " \
++"   BBFBFBBBBBFBBBFFBB   " \
++"   BFFFFFBFBFBFBFFFBB   " \
++"   BBFFFBFBFBFBFBFFFB   " \
++"   BFFFBFBFFFFFBBBFFB   " \
++"   BFFBFBFFFFFBBBFFFB   " \
++"   BFFFFFFFFFBFFFFFFB   " \
++"   BBFFFBFFFFBBBFFFFB   " \
++"   BFFFFFFFFFFFBFFFBB   " \
++"    BFFFFFFFFFFFFFBB    " \
++"     BFFFFFFFFFFFFB     " \
++"      BFFFFFFFFFFB      " \
++"       BFFFFFFFFB       " \
++"        BBBBBBBB        " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_3501[32 * (32 * 3)];
++char mask_3501[32 * (32 / 8)];
++const char *shape_3501 = \
++"                        " \
++"                        " \
++"          BBBB          " \
++"        BBFFFFBB        " \
++"       BFFFFFFFFB       " \
++"      BFFFFFFFFFFB      " \
++"      BFFFBBBFFFFB      " \
++"     BFFFB   BFFFB      " \
++"     BFFFB   BFFFB      " \
++"     BBBBB   BFFFB      " \
++"            BFFFB       " \
++"           BFFFB        " \
++"          BFFFBB        " \
++"          BFFFFB        " \
++"         BFFFFB         " \
++"      BBBBFFFBBBB       " \
++"      BFFFFFFFFFB       " \
++"       BFFFFFFFB        " \
++"        BFFFFBB         " \
++"         BFFFB          " \
++"          BBB           " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_1848[32 * (32 * 3)];
++char mask_1848[32 * (32 / 8)];
++const char *shape_1848 = \
++"                        " \
++"           B            " \
++"          BFB           " \
++"         BFFFB          " \
++"        BFFFFFB         " \
++"       BFFFFFFFB        " \
++"      BFFFFFFFFFB       " \
++"     BBBBBFFFBBBBB      " \
++"         BFFFB          " \
++"         BFFFB          " \
++"         BFFFB          " \
++"         BFFFB          " \
++"         BFFFB          " \
++"         BFFFB          " \
++"    BBBBBBFFFBBBBBB     " \
++"     BFFFFFFFFFFFB      " \
++"      BFFFFFFFFFB       " \
++"       BFFFFFFFB        " \
++"        BFFFFFB         " \
++"         BFFFB          " \
++"          BBB           " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_2760[32 * (32 * 3)];
++char mask_2760[32 * (32 / 8)];
++const char *shape_2760 = \
++"                        " \
++"                        " \
++"                        " \
++"       BBB              " \
++"     BBFBFBB            " \
++"    BBFFFFFB            " \
++"   BBBFFFFFFB           " \
++"   BFBFFFFFFFB          " \
++"   BFFFFFFFFFB          " \
++"   BFFFFFFFFFB          " \
++"   BBFFFFFFFFB          " \
++"     BBBBBBBB   FFFF    " \
++"                FBBF    " \
++"                FBBF    " \
++"             FFFFBBFFFF " \
++"             FBBBBBBBBF " \
++"             FBBBBBBBBF " \
++"             FFFFBBFFFF " \
++"                FBBF    " \
++"                FBBF    " \
++"                FFFF    " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_5150[32 * (32 * 3)];
++char mask_5150[32 * (32 / 8)];
++const char *shape_5150 = \
++"                         " \
++"                         " \
++"                         " \
++"       BBB               " \
++"     BBFBFBB             " \
++"     BFFFFFB             " \
++"    BBFFFFFFB            " \
++"   BFBFFFFFFFB           " \
++"   BFFFFFFFFFB           " \
++"   BFFFFFFFFFB           " \
++"    BFFFFFFFFBBBBBBBBBBF " \
++"     BBBBBBBBBFBFFFFBBBF " \
++"           FBFBBFBBFBBBF " \
++"           BBBFBFBFFFBBF " \
++"           BBFFFFBBFFFFF " \
++"           BFFBBBBBBBBFF " \
++"           BBFBBBBBBBBFF " \
++"           BBFFFFBFFFFFF " \
++"           BBBBBFBBFBBBF " \
++"           BBBBBFBFFFBFF " \
++"           BBBBBFFFFBBBF " \
++"           BBBBBBBFBFBFF " \
++"           BBBBBBBBBBBBF " \
++"           BBBBBBBBBBBFF " \
++"                         ";
++
++char data_5583[32 * (32 * 3)];
++char mask_5583[32 * (32 / 8)];
++const char *shape_5583 = \
++"                             " \
++"                             " \
++"                             " \
++"                             " \
++"                             " \
++"                             " \
++"          BBB                " \
++"       BBBFFFBBB             " \
++"      BFFFFFBFFB             " \
++"      BFFFFFFFFBBB           " \
++"    BBBFFFFFFFFFFFB          " \
++"   BFFBFFFFFFFFFFFB          " \
++"   BFFBFFFFFFFFFFFBBBBBBBBBF " \
++"   BFFFFFFFFFFFFFFBBFBBBBBBF " \
++"   BFFFFFFBFFFBFFFBFBBBBBBBF " \
++"   BFFFFFFFFFFFFFFBFFBBBBBBF " \
++"    BFFFFFFFFFFFFFBFBBBBBBBF " \
++"     BFFFFFFFFFFFBFFFBBBBBBF " \
++"     BBBBBBBBBBBBBBFBBBBBBBF " \
++"               FFFFBFBFBBBFF " \
++"               BBBBBBBBBBBBF " \
++"               BBBBBBBFBFBFF " \
++"               BBBBBBBBFBBBF " \
++"               BBBBBBBFBFBFF " \
++"               BBBBBBBBBBBBF " \
++"               BBBBBBBBBBBFF " \
++"                             " \
++"                             " \
++"                             ";
++
++char data_5144[32 * (32 * 3)];
++char mask_5144[32 * (32 / 8)];
++const char *shape_5144 = \
++"                         " \
++"                         " \
++"                         " \
++"       BFB               " \
++"     BBFBFB              " \
++"     BFFFFFB             " \
++"    BBFFFFFFB            " \
++"   BFBFFFFFFFB           " \
++"   BFFFFFFFFFB           " \
++"   BFFFFFFFFFB           " \
++"    BFFFFFFFFBBBBBBBBBBF " \
++"     BBBBBBBBBFBBBBBBBBF " \
++"           BBFBBBBBBBBBF " \
++"           BBFFFFFFFFBBF " \
++"           BBFBBBBBBFBBF " \
++"           BBFBBBBBBFBBF " \
++"           BBFBBBFFFFBBF " \
++"           BBFBBFBFFFBFF " \
++"           BBFBBFBBBFFBF " \
++"           BBFFBFFFBFFFF " \
++"           BBFFFFFFFFFBF " \
++"           BBBBBBBFFFBFF " \
++"           BBBBBBBBBBBBF " \
++"           BBBBBBBBBBBBF " \
++"                         ";
++
++char data_2949[32 * (32 * 3)];
++char mask_2949[32 * (32 / 8)];
++const char *shape_2949 = \
++"                        " \
++"                        " \
++"      F                 " \
++"      FF                " \
++"      FBF               " \
++"      FBBF              " \
++"      FBBBF             " \
++"      FBBBBF            " \
++"      FBBBBBF           " \
++"      FBBBBBBF          " \
++"      FBBBBBBBF         " \
++"      FBBBBBBBBF        " \
++"      FBBBBBBBBBF       " \
++"      FBBBBBBBBBBF      " \
++"      FBBBBBFFFFFF      " \
++"      FBBBFBBF          " \
++"      FBBFFBBF          " \
++"      FBBF FBBF         " \
++"      FBF  FBBF         " \
++"      FF    FBBF        " \
++"      F     FFFF        " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_1662[32 * (32 * 3)];
++char mask_1662[32 * (32 / 8)];
++const char *shape_1662 = \
++"                        " \
++"                        " \
++"                        " \
++"                        " \
++"         FFFFFFF        " \
++"         FBBBBBF        " \
++"         FFFBFFF        " \
++"           FBF          " \
++"           FBF          " \
++"           FBF          " \
++"           FBF          " \
++"           FBF          " \
++"           FBF          " \
++"           FBF          " \
++"           FBF          " \
++"           FBF          " \
++"           FBF          " \
++"         FFFBFFF        " \
++"         FBBBBBF        " \
++"         FFFFFFF        " \
++"                        " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_1721[32 * (32 * 3)];
++char mask_1721[32 * (32 / 8)];
++const char *shape_1721 = \
++"                        " \
++"                        " \
++"                        " \
++"                        " \
++"                 FFFF   " \
++"           F     FBBF   " \
++"           FF    FBBF   " \
++"           FBF   FBBF   " \
++"           FBBF  FBBF   " \
++"           FBBBF FBBF   " \
++"    FFFFFFFFBBBBFFBBF   " \
++"   FFBBBBBBBBBBBFFBBF   " \
++"   FBBBBBBBBBBBBBFBBF   " \
++"   FFBBBBBBBBBBBFFBBF   " \
++"    FFFFFFFFBBBBFFBBF   " \
++"           FBBBF FBBF   " \
++"           FBBF  FBBF   " \
++"           FBF   FBBF   " \
++"           FF    FBBF   " \
++"           F     FBBF   " \
++"                 FFFF   " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_3007[32 * (32 * 3)];
++char mask_3007[32 * (32 / 8)];
++const char *shape_3007 = \
++"                        " \
++"                        " \
++"                        " \
++"       FFF              " \
++"       FBBF             " \
++"       FBBF             " \
++"       FBBF             " \
++"       FBBFFF           " \
++"       FBBFBBFFFF       " \
++"       FBBFBFFFBFF      " \
++"     FFFBBBBBFBBBBBF    " \
++"     FFFBBBBBBBBFBBF    " \
++"    FBBFBBBBBBBBBBBF    " \
++"    FBBFBBFBBBBBFBBF    " \
++"    FBBBBFBBBFBFBBBF    " \
++"    FBBBBBBBBBBBBBBF    " \
++"    FBBBBBBBBBBBBBBF    " \
++"    FBBBBBBBBBBBBBBF    " \
++"    FFFFFFFFFFFFFFF     " \
++"                        " \
++"                        " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_4045[32 * (32 * 3)];
++char mask_4045[32 * (32 / 8)];
++const char *shape_4045 = \
++"                        " \
++"                        " \
++"     B                  " \
++"     BB                 " \
++"     BBB                " \
++"     BFFB               " \
++"     BFFFB              " \
++"     BFFFB B BBB        " \
++"     BFFFFBFBFFFBB      " \
++"     BFFFFFFFBFFFFB     " \
++"     BFFFFBFBBBFBFBB    " \
++"     BFFFFFBFBFBFBFB    " \
++"     BFFFFBFBBBBBFFFB   " \
++"     BFFFFFBFFFBFBFFB   " \
++"     BFFFFBFBFFBBBBFB   " \
++"     BFFFFFFFBFBFFFFB   " \
++"     BFFBFFFFBBBBFFFB   " \
++"     BFBBFFFFBBFFFFB    " \
++"     BB  BFFFFBFFFB     " \
++"     B    BBFFFFFB      " \
++"           BBBBBB       " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_4153[32 * (32 * 3)];
++char mask_4153[32 * (32 / 8)];
++const char *shape_4153 = \
++"                        " \
++"                        " \
++"     B                  " \
++"     BB                 " \
++"     BFB                " \
++"     BFFB               " \
++"     BFFFB              " \
++"     BFFFB B BBB        " \
++"     BFFFFBFBFFFBB      " \
++"     BFFFFFFFBFFFFB     " \
++"     BFFFFBFBBBFBFBB    " \
++"     BFFFFFBFBFBFBFB    " \
++"     BFFFFBFBFBBBFFFB   " \
++"     BFFFFFFFFFBFBFFB   " \
++"     BFFFFBFBFFBBBBFB   " \
++"     BFFFFFBBBFBFFFFB   " \
++"     BFFBFBBBBBFBFFFB   " \
++"     BFBBFFBFBBFFFFB    " \
++"     BB  BFFFFBFFFB     " \
++"     B    BBFFFFFB      " \
++"           BBBBBB       " \
++"                        " \
++"                        " \
++"                        ";
++
++char data_4483[32 * (32 * 3)];
++char mask_4483[32 * (32 / 8)];
++const char *shape_4483 = \
++"                        " \
++"                        " \
++"     B                  " \
++"     BB                 " \
++"     BFB                " \
++"     BFFB               " \
++"     BFFBB              " \
++"     BFFFB B BBB        " \
++"     BFFFFBFBFFFBB      " \
++"     BFFFFFFFBFFFFB     " \
++"     BFFFFBFBFBFBFBB    " \
++"     BFFFFFBFBFBFBFB    " \
++"     BFFFFBFBFBFBFFFB   " \
++"     BFFFBBBFFFBFBFFB   " \
++"     BFFFBBBBFFFBFBFB   " \
++"     BFFFFFBBBFBFFFFB   " \
++"     BFFBFBBBBBFBFFFB   " \
++"     BFBBFFBFBFFFFFB    " \
++"     BB  BFFFFBFFFB     " \
++"     B    BBFFFFFB      " \
++"           BBBBBB       " \
++"                        " \
++"                        " \
++"                        ";
++
++#endif
+Index: xrdp-0.7.0/xrdp/xrdp.ini
+===================================================================
+--- xrdp-0.7.0.orig/xrdp/xrdp.ini	2013-02-07 22:30:45.151156662 +0100
++++ xrdp-0.7.0/xrdp/xrdp.ini	2013-02-07 22:30:48.019156535 +0100
+@@ -25,6 +25,7 @@
+ #autorun=xrdp1
+ #hidelogwindow=yes
+ #bulk_compression=yes
++fix_mouse_pointer_sprites=yes
+ # You can set the PAM error text in a gateway setup (MAX 256 chars)
+ #pamerrortxt=change your password according to policy at http://url
+ 

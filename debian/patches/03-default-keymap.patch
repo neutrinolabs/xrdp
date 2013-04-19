@@ -1,0 +1,20 @@
+Ensure that the default keymap is US english if there is a problem locating one.
+
+Index: xrdp-0.7.0/xrdp/lang.c
+===================================================================
+--- xrdp-0.7.0.orig/xrdp/lang.c	2013-02-07 22:21:30.163181406 +0100
++++ xrdp-0.7.0/xrdp/lang.c	2013-02-07 22:25:47.771169921 +0100
+@@ -256,6 +256,13 @@
+             g_file_close(fd);
+         }
+     }
++    else if (keylayout != 0x409)
++    {
++      g_free(filename);
++      g_writeln("keymap for 0x%4.4x was not found. Falling back to 0x0409 instead",
++	      keylayout);
++      return get_keymaps(0x409, keymap);
++    }
+     else
+     {
+         log_message(LOG_LEVEL_WARNING, "File does not exist: %s", filename);

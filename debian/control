@@ -1,0 +1,24 @@
+Source: xrdp
+Section: net
+Priority: optional
+Maintainer: Vincent Bernat <bernat@debian.org>
+Build-Depends: debhelper (>= 7.0.50~), libssl-dev, libpam0g-dev,
+	       autoconf (>= 2.59), automake (>= 1.6), libtool,
+	       libx11-dev, libxfixes-dev
+Standards-Version: 3.9.2
+Homepage: http://xrdp.sourceforge.net
+Vcs-Browser: http://git.debian.org/?p=collab-maint/xrdp.git
+Vcs-Git: git://git.debian.org/git/collab-maint/xrdp.git
+
+Package: xrdp
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, adduser
+Recommends: vnc4server | tightvncserver | vnc-server
+Replaces: x11rdp-xorg71
+Description: Remote Desktop Protocol (RDP) server
+ Based on research work by the rdesktop project, xrdp uses the Remote
+ Desktop Protocol to present a graphical login to a remote client.
+ xrdp can connect to a VNC server or another RDP server.
+ .
+ Microsoft Windows users can connect to a system running xrdp without
+ installing additional software.

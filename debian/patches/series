@@ -1,0 +1,9 @@
+01-quiet_start.patch
+#02-unix-socks-in-var-run.patch
+03-default-keymap.patch
+20-startup-messages.patch
+21-xserver-1.12.4.patch
+#22-fix-rgb-order-uncompressed.patch
+23_disable_offscreen_bitmaps.patch
+30-mouse-pointer-fix.patch
+#99_ing_x11rdp_fixes.patch
