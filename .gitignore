@@ -36,3 +36,5 @@ xrdp-sessvc
 xrdp-sestest
 xrdp-dis
 xrdp/xrdp
+debian/*.debhelper*
+debian/*.substvars*

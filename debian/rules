@@ -13,6 +13,7 @@ override_dh_auto_configure:
 override_dh_clean:
 	dh_clean
 	(cd xorg/X11R7.6/rdp && make clean)
+	rm -f sesman/tools/xrdp-xcon xorg/X11R7.6/rdp/X11rdp xorg/X11R7.6/rdp/librdp.a
 
 override_dh_auto_build:
 	dh_auto_build
