@@ -1,5 +1,7 @@
---- a/xorg/X11R7.6/rdp/rdp.h
-+++ b/xorg/X11R7.6/rdp/rdp.h
+Index: xrdp-bartw72/xorg/X11R7.6/rdp/rdp.h
+===================================================================
+--- xrdp-bartw72.orig/xorg/X11R7.6/rdp/rdp.h	2013-04-19 09:46:20.000000000 +0200
++++ xrdp-bartw72/xorg/X11R7.6/rdp/rdp.h	2013-04-19 09:46:20.000000000 +0200
 @@ -443,6 +443,8 @@
  Bool
  rdpSpriteUnrealizeCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs);
@@ -9,8 +11,10 @@
  rdpSpriteSetCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs,
                     int x, int y);
  void
---- a/xorg/X11R7.6/rdp/rdpinput.c
-+++ b/xorg/X11R7.6/rdp/rdpinput.c
+Index: xrdp-bartw72/xorg/X11R7.6/rdp/rdpinput.c
+===================================================================
+--- xrdp-bartw72.orig/xorg/X11R7.6/rdp/rdpinput.c	2013-04-19 09:46:20.000000000 +0200
++++ xrdp-bartw72/xorg/X11R7.6/rdp/rdpinput.c	2013-04-19 09:50:54.186093431 +0200
 @@ -37,6 +37,7 @@
  /* this should be fixed in rdesktop */
  
@@ -36,45 +40,72 @@
  
  #define MIN_KEY_CODE 8
  #define MAX_KEY_CODE 255
-@@ -84,6 +88,7 @@
+@@ -83,43 +87,6 @@
+ #define N_PREDEFINED_KEYS \
      (sizeof(g_kbdMap) / (sizeof(KeySym) * GLYPHS_PER_KEY))
  
- /* Copied from Xvnc/lib/font/util/utilbitmap.c */
-+/*
- static unsigned char g_reverse_byte[0x100] =
- {
-     0x00, 0x80, 0x40, 0xc0, 0x20, 0xa0, 0x60, 0xe0,
-@@ -119,6 +124,7 @@
-     0x0f, 0x8f, 0x4f, 0xcf, 0x2f, 0xaf, 0x6f, 0xef,
-     0x1f, 0x9f, 0x5f, 0xdf, 0x3f, 0xbf, 0x7f, 0xff
- };
-+*/
- 
+-/* Copied from Xvnc/lib/font/util/utilbitmap.c */
+-static unsigned char g_reverse_byte[0x100] =
+-{
+-    0x00, 0x80, 0x40, 0xc0, 0x20, 0xa0, 0x60, 0xe0,
+-    0x10, 0x90, 0x50, 0xd0, 0x30, 0xb0, 0x70, 0xf0,
+-    0x08, 0x88, 0x48, 0xc8, 0x28, 0xa8, 0x68, 0xe8,
+-    0x18, 0x98, 0x58, 0xd8, 0x38, 0xb8, 0x78, 0xf8,
+-    0x04, 0x84, 0x44, 0xc4, 0x24, 0xa4, 0x64, 0xe4,
+-    0x14, 0x94, 0x54, 0xd4, 0x34, 0xb4, 0x74, 0xf4,
+-    0x0c, 0x8c, 0x4c, 0xcc, 0x2c, 0xac, 0x6c, 0xec,
+-    0x1c, 0x9c, 0x5c, 0xdc, 0x3c, 0xbc, 0x7c, 0xfc,
+-    0x02, 0x82, 0x42, 0xc2, 0x22, 0xa2, 0x62, 0xe2,
+-    0x12, 0x92, 0x52, 0xd2, 0x32, 0xb2, 0x72, 0xf2,
+-    0x0a, 0x8a, 0x4a, 0xca, 0x2a, 0xaa, 0x6a, 0xea,
+-    0x1a, 0x9a, 0x5a, 0xda, 0x3a, 0xba, 0x7a, 0xfa,
+-    0x06, 0x86, 0x46, 0xc6, 0x26, 0xa6, 0x66, 0xe6,
+-    0x16, 0x96, 0x56, 0xd6, 0x36, 0xb6, 0x76, 0xf6,
+-    0x0e, 0x8e, 0x4e, 0xce, 0x2e, 0xae, 0x6e, 0xee,
+-    0x1e, 0x9e, 0x5e, 0xde, 0x3e, 0xbe, 0x7e, 0xfe,
+-    0x01, 0x81, 0x41, 0xc1, 0x21, 0xa1, 0x61, 0xe1,
+-    0x11, 0x91, 0x51, 0xd1, 0x31, 0xb1, 0x71, 0xf1,
+-    0x09, 0x89, 0x49, 0xc9, 0x29, 0xa9, 0x69, 0xe9,
+-    0x19, 0x99, 0x59, 0xd9, 0x39, 0xb9, 0x79, 0xf9,
+-    0x05, 0x85, 0x45, 0xc5, 0x25, 0xa5, 0x65, 0xe5,
+-    0x15, 0x95, 0x55, 0xd5, 0x35, 0xb5, 0x75, 0xf5,
+-    0x0d, 0x8d, 0x4d, 0xcd, 0x2d, 0xad, 0x6d, 0xed,
+-    0x1d, 0x9d, 0x5d, 0xdd, 0x3d, 0xbd, 0x7d, 0xfd,
+-    0x03, 0x83, 0x43, 0xc3, 0x23, 0xa3, 0x63, 0xe3,
+-    0x13, 0x93, 0x53, 0xd3, 0x33, 0xb3, 0x73, 0xf3,
+-    0x0b, 0x8b, 0x4b, 0xcb, 0x2b, 0xab, 0x6b, 0xeb,
+-    0x1b, 0x9b, 0x5b, 0xdb, 0x3b, 0xbb, 0x7b, 0xfb,
+-    0x07, 0x87, 0x47, 0xc7, 0x27, 0xa7, 0x67, 0xe7,
+-    0x17, 0x97, 0x57, 0xd7, 0x37, 0xb7, 0x77, 0xf7,
+-    0x0f, 0x8f, 0x4f, 0xcf, 0x2f, 0xaf, 0x6f, 0xef,
+-    0x1f, 0x9f, 0x5f, 0xdf, 0x3f, 0xbf, 0x7f, 0xff
+-};
+-
  static KeySym g_kbdMap[] =
  {
-@@ -549,7 +555,8 @@
+     NoSymbol,        NoSymbol,        /* 8 */
+@@ -549,7 +516,7 @@
          shift = x % 8;
          c = (unsigned char)(data[start]);
  #if (X_BYTE_ORDER == X_LITTLE_ENDIAN)
 -        return (g_reverse_byte[c] & (0x80 >> shift)) != 0;
-+        return (c & (1 << (x & 7))) != 0;
-+        //return (g_reverse_byte[c] & (0x80 >> shift)) != 0;
++        return (c & (1 << shift)) != 0;
  #else
          return (c & (0x80 >> shift)) != 0;
  #endif
-@@ -559,6 +566,11 @@
+@@ -559,6 +526,11 @@
          src32 = (unsigned int*)data;
          return src32[y * width + x];
      }
 +    else if (bpp == 24)
 +    {
-+    uint32_t *pixel = (uint32_t *) data;
++        uint32_t *pixel = (uint32_t *) data;
 +        return pixel[y * width + x];
 +    }
  
      return 0;
  }
-@@ -570,7 +582,6 @@
+@@ -570,7 +542,6 @@
  {
      int start;
      int shift;
@@ -82,7 +113,7 @@
  
      if (x < 0)
      {
-@@ -602,21 +613,165 @@
+@@ -602,21 +573,165 @@
          {
              data[start] = data[start] | (0x80 >> shift);
          }
@@ -90,10 +121,10 @@
 +    }
 +    else if (bpp == 24)
 +    {
-+    char *dst = data + (3 * (y * width + x));
-+    dst[0] = pixel >> 0;
-+    dst[1] = pixel >> 8;
-+    dst[2] = pixel >> 16;
++        char *dst = data + (3 * (y * width + x));
++        dst[0] = pixel >> 0;
++        dst[1] = pixel >> 8;
++        dst[2] = pixel >> 16;
 +    }
 +}
 +
@@ -158,9 +189,7 @@
 +    int x, y;
 +
 +    for (y = 0; y < 32; y++)
-     {
--        dst32 = (unsigned int*)data;
--        dst32[y * width + x] = pixel;
++    {
 +        for (x = 0; x < 32; x++)
 +        {
 +            rdpDrawPredefinedCursor(shape_2382, x, y, 24, 24, fgcolor, bgcolor, data_2382, mask_2382);
@@ -213,7 +242,9 @@
 +getCachedMousePointerSprite(const int id, char **data, char **mask)
 +{
 +    switch (id)
-+    {
+     {
+-        dst32 = (unsigned int*)data;
+-        dst32[y * width + x] = pixel;
 +        case 2382: CACHED_MP_DATA(data_2382, mask_2382);
 +        case 1103: CACHED_MP_DATA(data_1103, mask_1103);
 +        case 3307: CACHED_MP_DATA(data_3307, mask_3307);
@@ -257,7 +288,7 @@
      }
  }
  
-@@ -627,13 +782,14 @@
+@@ -627,13 +742,14 @@
  {
      char cur_data[32 * (32 * 4)];
      char cur_mask[32 * (32 / 8)];
@@ -273,7 +304,7 @@
      int xhot;
      int yhot;
      int paddedRowBytes;
-@@ -641,12 +797,7 @@
+@@ -641,12 +757,7 @@
      int bgcolor;
      int bpp;
  
@@ -287,7 +318,7 @@
      {
          return;
      }
-@@ -654,7 +805,8 @@
+@@ -654,7 +765,8 @@
      w = pCurs->bits->width;
      h = pCurs->bits->height;
      if ((pCurs->bits->argb != 0) &&
@@ -297,7 +328,7 @@
      {
          bpp = 32;
          paddedRowBytes = PixmapBytePad(w, 32);
-@@ -668,7 +820,7 @@
+@@ -668,7 +780,7 @@
          {
              for (i = 0; i < 32; i++)
              {
@@ -306,7 +337,7 @@
                  set_pixel_safe(cur_data, i, 31 - j, 32, 32, 32, p);
              }
          }
-@@ -676,39 +828,103 @@
+@@ -676,39 +788,103 @@
      else
      {
          bpp = 0;
@@ -356,11 +387,11 @@
 +        {
 +            pdata = cur_data;
 +            pmask = cur_mask;
- 
--                if (p != 0)
++
 +            memset(cur_data, 0, sizeof(cur_data));
 +            memset(cur_mask, 0, sizeof(cur_mask));
-+
+ 
+-                if (p != 0)
 +#ifdef RECORD_UNDEF_MOUSE_POINTER
 +            char buf[100];
 +            int l = sprintf(buf, "const char *shape_%d = \\\n\"", id);
@@ -428,8 +459,10 @@
      rdpup_end_update();
  }
  
---- a/common/xrdp_client_info.h
-+++ b/common/xrdp_client_info.h
+Index: xrdp-bartw72/common/xrdp_client_info.h
+===================================================================
+--- xrdp-bartw72.orig/common/xrdp_client_info.h	2013-04-19 09:05:39.278214474 +0200
++++ xrdp-bartw72/common/xrdp_client_info.h	2013-04-19 09:46:20.000000000 +0200
 @@ -91,6 +91,7 @@
    int order_flags_ex;
    int use_bulk_comp;
@@ -438,8 +471,10 @@
  };
  
  #endif
---- a/libxrdp/xrdp_rdp.c
-+++ b/libxrdp/xrdp_rdp.c
+Index: xrdp-bartw72/libxrdp/xrdp_rdp.c
+===================================================================
+--- xrdp-bartw72.orig/libxrdp/xrdp_rdp.c	2013-04-19 09:46:20.000000000 +0200
++++ xrdp-bartw72/libxrdp/xrdp_rdp.c	2013-04-19 09:46:20.000000000 +0200
 @@ -98,6 +98,15 @@
          {
              client_info->use_bulk_comp = text2bool(value);
@@ -456,8 +491,10 @@
          else if (g_strcasecmp(item, "crypt_level") == 0)
          {
              if (g_strcasecmp(value, "low") == 0)
---- /dev/null
-+++ b/xorg/X11R7.6/rdp/cursors.h
+Index: xrdp-bartw72/xorg/X11R7.6/rdp/cursors.h
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ xrdp-bartw72/xorg/X11R7.6/rdp/cursors.h	2013-04-19 09:46:20.000000000 +0200
 @@ -0,0 +1,1057 @@
 +
 +#ifndef _CURSORS_H
@@ -1516,8 +1553,10 @@
 +"                        ";
 +
 +#endif
---- a/xrdp/xrdp.ini
-+++ b/xrdp/xrdp.ini
+Index: xrdp-bartw72/xrdp/xrdp.ini
+===================================================================
+--- xrdp-bartw72.orig/xrdp/xrdp.ini	2013-04-19 09:05:39.286214473 +0200
++++ xrdp-bartw72/xrdp/xrdp.ini	2013-04-19 09:46:20.000000000 +0200
 @@ -25,6 +25,7 @@
  #autorun=xrdp1
  #hidelogwindow=yes
