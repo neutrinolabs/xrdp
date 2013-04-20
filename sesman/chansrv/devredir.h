@@ -37,6 +37,8 @@
 #include "log.h"
 #include "chansrv_fuse.h"
 
+#define USE_SHORT_NAMES_IN_DIR_LISTING
+
 typedef struct fuse_data FUSE_DATA;
 struct fuse_data
 {
@@ -123,6 +125,7 @@ void dev_redir_insert_dev_io_req_header(struct stream *s,
                                         tui32 MajorFunction,
                                         tui32 MinorFunction);
 
+void devredir_cvt_slash(char *path);
 void devredir_cvt_to_unicode(char *unicode, char *path);
 void devredir_cvt_from_unicode_len(char *path, char *unicode, int len);
 int  dev_redir_string_ends_with(char *string, char c);

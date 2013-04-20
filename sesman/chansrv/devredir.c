@@ -381,7 +381,7 @@ int dev_redir_send_drive_create_request(tui32 device_id, char *path,
     int            bytes;
     int            len;
 
-    log_debug("LK_TODO: DesiredAccess=0x%x CreateDisposition=0x%x CreateOptions=0x%x",
+    log_debug("DesiredAccess=0x%x CreateDisposition=0x%x CreateOptions=0x%x",
               DesiredAccess, CreateDisposition, CreateOptions);
 
     /* to store path as unicode */
@@ -482,7 +482,11 @@ void dev_redir_send_drive_dir_request(IRP *irp, tui32 device_id,
                                        IRP_MJ_DIRECTORY_CONTROL,
                                        IRP_MN_QUERY_DIRECTORY);
 
+#ifdef USE_SHORT_NAMES_IN_DIR_LISTING
+    stream_wr_u32_le(s, FileBothDirectoryInformation); /* FsInformationClass */
+#else
     stream_wr_u32_le(s, FileDirectoryInformation);  /* FsInformationClass */
+#endif
     stream_wr_u8(s, InitialQuery);                  /* InitialQuery       */
 
     if (!InitialQuery)
@@ -651,8 +655,7 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
 
     /* LK_TODO need to check for IoStatus */
 
-    log_debug("entered: IoStatus=0x%x CompletionId=%d",
-              IoStatus, CompletionId);
+    log_debug("entered: IoStatus=0x%x CompletionId=%d", IoStatus, CompletionId);
 
     if ((irp = dev_redir_irp_find(CompletionId)) == NULL)
     {
@@ -682,6 +685,7 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
         stream_rd_u32_le(s, irp->FileId);
         log_debug("got CID_CREATE_DIR_REQ IoStatus=0x%x FileId=%d",
                   IoStatus, irp->FileId);
+
         dev_redir_send_drive_dir_request(irp, DeviceId, 1, irp->pathname);
         break;
 
@@ -788,6 +792,12 @@ void dev_redir_proc_query_dir_response(IRP *irp,
     tui32 FileNameLength;
     tui32 status;
 
+#ifdef USE_SHORT_NAMES_IN_DIR_LISTING
+    tui32 EaSize;
+    tui8  ShortNameLength;
+    tui8  Reserved;
+#endif
+
     char  filename[256];
     int   i = 0;
 
@@ -828,18 +838,30 @@ void dev_redir_proc_query_dir_response(IRP *irp,
         stream_rd_u32_le(s_in, FileAttributes);
         stream_rd_u32_le(s_in, FileNameLength);
 
+#ifdef USE_SHORT_NAMES_IN_DIR_LISTING
+        stream_rd_u32_le(s_in, EaSize);
+        stream_rd_u8(s_in, ShortNameLength);
+        stream_rd_u8(s_in, Reserved);
+        stream_seek(s_in, 23);  /* ShortName in Unicode */
+#endif
         devredir_cvt_from_unicode_len(filename, s_in->p, FileNameLength);
 
+#ifdef USE_SHORT_NAMES_IN_DIR_LISTING
+        i += 70 + 23 + FileNameLength;
+#else
         i += 64 + FileNameLength;
-
-        log_debug("NextEntryOffset:   0x%x", NextEntryOffset);
-        log_debug("CreationTime:      0x%llx", CreationTime);
-        log_debug("LastAccessTime:    0x%llx", LastAccessTime);
-        log_debug("LastWriteTime:     0x%llx", LastWriteTime);
-        log_debug("ChangeTime:        0x%llx", ChangeTime);
-        log_debug("EndOfFile:         %lld", EndOfFile);
-        log_debug("FileAttributes:    0x%x", FileAttributes);
-        log_debug("FileNameLength:    0x%x", FileNameLength);
+#endif
+        //log_debug("NextEntryOffset:   0x%x", NextEntryOffset);
+        //log_debug("CreationTime:      0x%llx", CreationTime);
+        //log_debug("LastAccessTime:    0x%llx", LastAccessTime);
+        //log_debug("LastWriteTime:     0x%llx", LastWriteTime);
+        //log_debug("ChangeTime:        0x%llx", ChangeTime);
+        //log_debug("EndOfFile:         %lld", EndOfFile);
+        //log_debug("FileAttributes:    0x%x", FileAttributes);
+#ifdef USE_SHORT_NAMES_IN_DIR_LISTING
+        //log_debug("ShortNameLength:   %d", ShortNameLength);
+#endif
+        //log_debug("FileNameLength:    %d", FileNameLength);
         log_debug("FileName:          %s", filename);
 
         if ((xinode = calloc(1, sizeof(struct xrdp_inode))) == NULL)
@@ -886,6 +908,9 @@ int dev_redir_get_dir_listing(void *fusep, tui32 device_id, char *path)
     if ((irp = dev_redir_irp_new()) == NULL)
         return -1;
 
+    /* cvt / to windows compatible \ */
+    devredir_cvt_slash(path);
+
     irp->completion_id = g_completion_id++;
     irp->completion_type = CID_CREATE_DIR_REQ;
     irp->device_id = device_id;
@@ -895,6 +920,7 @@ int dev_redir_get_dir_listing(void *fusep, tui32 device_id, char *path)
     DesiredAccess = DA_FILE_READ_DATA | DA_SYNCHRONIZE;
     CreateOptions = CO_FILE_DIRECTORY_FILE | CO_FILE_SYNCHRONOUS_IO_NONALERT;
     CreateDisposition = CD_FILE_OPEN;
+
     rval = dev_redir_send_drive_create_request(device_id, path,
                                                DesiredAccess, CreateOptions,
                                                CreateDisposition,
@@ -905,7 +931,6 @@ int dev_redir_get_dir_listing(void *fusep, tui32 device_id, char *path)
     /* when we get a respone to dev_redir_send_drive_create_request(), we    */
     /* call dev_redir_send_drive_dir_request(), which needs the following    */
     /* at the end of the path argument                                       */
-
     if (dev_redir_string_ends_with(irp->pathname, '\\'))
         strcat(irp->pathname, "*");
     else
@@ -964,7 +989,7 @@ int dev_redir_file_open(void *fusep, tui32 device_id, char *path,
     }
     else //if (mode & O_RDWR)
     {
-        log_debug("LK_TODO: open file in O_RDWR");
+        log_debug("open file in O_RDWR");
         DesiredAccess = DA_FILE_READ_DATA | DA_FILE_WRITE_DATA | DA_SYNCHRONIZE;
         CreateOptions = CO_FILE_SYNCHRONOUS_IO_NONALERT;
         CreateDisposition = CD_FILE_OPEN; // WAS 1
@@ -972,7 +997,7 @@ int dev_redir_file_open(void *fusep, tui32 device_id, char *path,
 #if 0
     else
     {
-        log_debug("LK_TODO: open file in O_RDONLY");
+        log_debug("open file in O_RDONLY");
         DesiredAccess = DA_FILE_READ_DATA | DA_SYNCHRONIZE;
         CreateOptions = CO_FILE_SYNCHRONOUS_IO_NONALERT;
         CreateDisposition = CD_FILE_OPEN;
@@ -1406,6 +1431,22 @@ void dev_redir_insert_dev_io_req_header(struct stream *s,
     stream_wr_u32_le(s, CompletionId);
     stream_wr_u32_le(s, MajorFunction);
     stream_wr_u32_le(s, MinorFunction);
+}
+
+/**
+ * Convert / to windows compatible \
+ *****************************************************************************/
+
+void devredir_cvt_slash(char *path)
+{
+    char *cptr = path;
+
+    while (*cptr != 0)
+    {
+        if (*cptr == '/')
+            *cptr = '\\';
+        cptr++;
+    }
 }
 
 void devredir_cvt_to_unicode(char *unicode, char *path)
