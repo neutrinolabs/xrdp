@@ -1,0 +1,18 @@
+#!/bin/bash
+
+X11DIR=DUMMYDIRINFO
+
+# make the /usr/bin/X11rdp symbolic link if it doesn't exist...
+if [ ! -e /usr/bin/X11rdp ]
+then
+    if [ -e $X11DIR/bin/X11rdp ]
+    then
+        ln -s $X11DIR/bin/X11rdp /usr/bin/X11rdp
+    else
+        clear
+        echo "There was a problem... the $X11DIR/bin/X11rdp binary could not be found. Did the compilation complete?"
+        echo "Stopped. Please investigate what went wrong."
+        exit
+    fi
+fi
+

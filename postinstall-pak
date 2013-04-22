@@ -1,0 +1,21 @@
+#!/bin/sh -e
+
+if ! ([ "$1" = "configure" ] || [ "$1" = "reconfigure" ]); then
+  exit 0
+fi
+
+
+XRDP="xrdp"
+ADDUSER="/usr/sbin/adduser"
+XRDPLOG="/var/log/xrdp-sesman.log"
+SESMANLOG="/var/log/xrdp-sesman.log"
+
+[ -d /var/run/xrdp ] || mkdir -p /var/run/xrdp
+$ADDUSER --system --disabled-password --disabled-login --home /var/run/xrdp \
+         --no-create-home --quiet --group $XRDP
+
+touch $SESMANLOG $XRDPLOG
+chown $XRDP:$XRDP $SESMANLOG
+chown $XRDP:$XRDP $XRDPLOG
+
+#DEBHELPER#

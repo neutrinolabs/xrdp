@@ -1,0 +1,5 @@
+# Do we need to start sesman ?
+SESMAN_START=yes
+# Do we restart xrdp on upgrade ? If not set to no, any xrdp session will
+# be shutdown on upgrade.
+# RESTART_ON_UPGRADE=no

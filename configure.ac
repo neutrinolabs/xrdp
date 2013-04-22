@@ -134,6 +134,8 @@ AC_CONFIG_FILES([Makefile
                  docs/man/Makefile
                  instfiles/Makefile
                  instfiles/pam.d/Makefile
+		 instfiles/init.d/Makefile
+		 instfiles/default/Makefile
                  genkeymap/Makefile
                  xrdpapi/Makefile
                  xrdpvr/Makefile
