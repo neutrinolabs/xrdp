@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -427,29 +427,42 @@ g_tcp_set_keepalive(int sck)
 
 /*****************************************************************************/
 /* returns a newly created socket or -1 on error */
+/* in win32 a socket is an unsigned int, in linux, its an int */
 int APP_CC
 g_tcp_socket(void)
 {
-#if defined(_WIN32)
     int rv;
     int option_value;
+#if defined(_WIN32)
     int option_len;
 #else
-    int rv;
-    int option_value;
     unsigned int option_len;
 #endif
 
-    /* in win32 a socket is an unsigned int, in linux, its an int */
-    rv = (int)socket(PF_INET, SOCK_STREAM, 0);
-
+#if !defined(NO_ARPA_INET_H_IP6)
+    rv = (int)socket(AF_INET6, SOCK_STREAM, 0);
+#else
+    rv = (int)socket(AF_INET, SOCK_STREAM, 0);
+#endif
     if (rv < 0)
     {
         return -1;
     }
-
+#if !defined(NO_ARPA_INET_H_IP6)
     option_len = sizeof(option_value);
-
+    if (getsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&option_value,
+                   &option_len) == 0)
+    {
+        if (option_value != 0)
+        {
+            option_value = 0;
+            option_len = sizeof(option_value);
+            setsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&option_value,
+                       option_len);
+        }
+    }
+#endif
+    option_len = sizeof(option_value);
     if (getsockopt(rv, SOL_SOCKET, SO_REUSEADDR, (char *)&option_value,
                    &option_len) == 0)
     {
@@ -494,17 +507,18 @@ g_tcp_local_socket(void)
 void APP_CC
 g_tcp_close(int sck)
 {
-    char ip[256] ;
+    char ip[256];
+
     if (sck == 0)
     {
         return;
     }
-
 #if defined(_WIN32)
     closesocket(sck);
 #else
-    g_write_ip_address(sck,ip,255);
-    log_message(LOG_LEVEL_INFO,"An established connection closed to endpoint: %s", ip);
+    g_write_ip_address(sck, ip, 255);
+    log_message(LOG_LEVEL_INFO, "An established connection closed to "
+                "endpoint: %s", ip);
     close(sck);
 #endif
 }
@@ -514,34 +528,55 @@ g_tcp_close(int sck)
 int APP_CC
 g_tcp_connect(int sck, const char *address, const char *port)
 {
-    struct sockaddr_in s;
-    struct hostent *h;
+    int res = 0;
+    struct addrinfo p;
+    struct addrinfo *h = (struct addrinfo *)NULL;
+    struct addrinfo *rp = (struct addrinfo *)NULL;
 
-    g_memset(&s, 0, sizeof(struct sockaddr_in));
-    s.sin_family = AF_INET;
-    s.sin_port = htons((tui16)atoi(port));
-    s.sin_addr.s_addr = inet_addr(address);
+    /* initialize (zero out) local variables: */
+    g_memset(&p, 0, sizeof(struct addrinfo));
 
-    if (s.sin_addr.s_addr == INADDR_NONE)
+   /* in IPv6-enabled environments, set the AI_V4MAPPED
+    * flag in ai_flags and specify ai_family=AF_INET6 in
+    * order to ensure that getaddrinfo() returns any
+    * available IPv4-mapped addresses in case the target
+    * host does not have a true IPv6 address:
+    */
+    p.ai_socktype = SOCK_STREAM;
+    p.ai_protocol = IPPROTO_TCP;
+#if !defined(NO_ARPA_INET_H_IP6)
+    p.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED;
+    p.ai_family = AF_INET6;
+    if (g_strcmp(address, "127.0.0.1") == 0)
     {
-        h = gethostbyname(address);
-
-        if (h != 0)
+        res = getaddrinfo("::1", port, &p, &h);
+    }
+    else
+    {
+        res = getaddrinfo(address, port, &p, &h);
+    }
+#else
+    p.ai_flags = AI_ADDRCONFIG;
+    p.ai_family = AF_INET;
+    res = getaddrinfo(address, port, &p, &h);
+#endif
+    if (res > -1)
+    {
+        if (h != NULL)
         {
-            if (h->h_name != 0)
+            for (rp = h; rp != NULL; rp = rp->ai_next)
             {
-                if (h->h_addr_list != 0)
+                rp = h;
+                res = connect(sck, (struct sockaddr *)(rp->ai_addr),
+                              rp->ai_addrlen);
+                if (res != -1)
                 {
-                    if ((*(h->h_addr_list)) != 0)
-                    {
-                        s.sin_addr.s_addr = *((int *)(*(h->h_addr_list)));
-                    }
+                    break; /* Success */
                 }
             }
         }
     }
-
-    return connect(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_in));
+    return res;
 }
 
 /*****************************************************************************/
@@ -579,22 +614,116 @@ g_tcp_set_non_blocking(int sck)
 }
 
 /*****************************************************************************/
+/* return boolean */
+static int APP_CC
+address_match(const char *address, struct addrinfo *j)
+{
+    struct sockaddr_in *ipv4_in;
+    struct sockaddr_in6 *ipv6_in;
+
+    if (address == 0)
+    {
+        return 1;
+    }
+    if (address[0] == 0)
+    {
+        return 1;
+    }
+    if (g_strcmp(address, "0.0.0.0") == 0)
+    {
+        return 1;
+    }
+    if ((g_strcmp(address, "127.0.0.1") == 0) ||
+        (g_strcmp(address, "::1") == 0) ||
+        (g_strcmp(address, "localhost") == 0))
+    {
+        if (j->ai_addr != 0)
+        {
+            if (j->ai_addr->sa_family == AF_INET)
+            {
+                ipv4_in = (struct sockaddr_in *) (j->ai_addr);
+                if (inet_pton(AF_INET, "127.0.0.1", &(ipv4_in->sin_addr)))
+                {
+                    return 1;
+                }
+            }
+            if (j->ai_addr->sa_family == AF_INET6)
+            {
+                ipv6_in = (struct sockaddr_in6 *) (j->ai_addr);
+                if (inet_pton(AF_INET6, "::1", &(ipv6_in->sin6_addr)))
+                {
+                    return 1;
+                }
+            }
+        }
+    }
+    if (j->ai_addr != 0)
+    {
+        if (j->ai_addr->sa_family == AF_INET)
+        {
+            ipv4_in = (struct sockaddr_in *) (j->ai_addr);
+            if (inet_pton(AF_INET, address, &(ipv4_in->sin_addr)))
+            {
+                return 1;
+            }
+        }
+        if (j->ai_addr->sa_family == AF_INET6)
+        {
+            ipv6_in = (struct sockaddr_in6 *) (j->ai_addr);
+            if (inet_pton(AF_INET6, address, &(ipv6_in->sin6_addr)))
+            {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error, zero is good */
+static int APP_CC
+g_tcp_bind_flags(int sck, const char *port, const char *address, int flags)
+{
+    int res;
+    int error;
+    struct addrinfo hints;
+    struct addrinfo *i;
+
+    res = -1;
+    g_memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_flags = flags;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+    error = getaddrinfo(NULL, port, &hints, &i);
+    if (error == 0)
+    {
+        while ((i != 0) && (res < 0))
+        {
+            if (address_match(address, i))
+            {
+                res = bind(sck, i->ai_addr, i->ai_addrlen);
+            }
+            i = i->ai_next;
+        }
+    }
+    return res;
+}
+
+/*****************************************************************************/
 /* returns error, zero is good */
 int APP_CC
-g_tcp_bind(int sck, char *port)
+g_tcp_bind(int sck, const char *port)
 {
-    struct sockaddr_in s;
+    int flags;
 
-    memset(&s, 0, sizeof(struct sockaddr_in));
-    s.sin_family = AF_INET;
-    s.sin_port = htons((tui16)atoi(port));
-    s.sin_addr.s_addr = INADDR_ANY;
-    return bind(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_in));
+    flags = AI_ADDRCONFIG | AI_PASSIVE;
+    return g_tcp_bind_flags(sck, port, 0, flags);
 }
 
 /*****************************************************************************/
 int APP_CC
-g_tcp_local_bind(int sck, char *port)
+g_tcp_local_bind(int sck, const char *port)
 {
 #if defined(_WIN32)
     return -1;
@@ -611,21 +740,12 @@ g_tcp_local_bind(int sck, char *port)
 /*****************************************************************************/
 /* returns error, zero is good */
 int APP_CC
-g_tcp_bind_address(int sck, char *port, const char *address)
+g_tcp_bind_address(int sck, const char *port, const char *address)
 {
-    struct sockaddr_in s;
+    int flags;
 
-    memset(&s, 0, sizeof(struct sockaddr_in));
-    s.sin_family = AF_INET;
-    s.sin_port = htons((tui16)atoi(port));
-    s.sin_addr.s_addr = INADDR_ANY;
-
-    if (inet_aton(address, &s.sin_addr) < 0)
-    {
-        return -1; /* bad address */
-    }
-
-    return bind(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_in));
+    flags = AI_ADDRCONFIG | AI_PASSIVE;
+    return g_tcp_bind_flags(sck, port, address, flags);
 }
 
 /*****************************************************************************/
@@ -2017,7 +2137,7 @@ g_htoi(char *str)
 
 /*****************************************************************************/
 int APP_CC
-g_pos(char *str, const char *to_find)
+g_pos(const char *str, const char *to_find)
 {
     char *pp;
 

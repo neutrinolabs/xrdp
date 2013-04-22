@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -78,11 +78,11 @@ g_tcp_force_recv(int sck, char* data, int len);
 int APP_CC
 g_tcp_set_non_blocking(int sck);
 int APP_CC
-g_tcp_bind(int sck, char* port);
+g_tcp_bind(int sck, const char *port);
 int APP_CC
-g_tcp_local_bind(int sck, char* port);
+g_tcp_local_bind(int sck, const char* port);
 int APP_CC
-g_tcp_bind_address(int sck, char* port, const char* address);
+g_tcp_bind_address(int sck, const char* port, const char* address);
 int APP_CC
 g_tcp_listen(int sck);
 int APP_CC
@@ -196,7 +196,7 @@ g_atoi(const char* str);
 int APP_CC
 g_htoi(char* str);
 int APP_CC
-g_pos(char* str, const char* to_find);
+g_pos(const char* str, const char* to_find);
 int APP_CC
 g_mbstowcs(twchar* dest, const char* src, int n);
 int APP_CC
