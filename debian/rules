@@ -6,9 +6,10 @@
 
 override_dh_auto_configure:
 	./bootstrap
-	./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var --enable-jpeg --enable-simplesound --enable-fuse --enable-xrdpvr CFLAGS="-g -O3 -march=native"
+	#./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var --enable-jpeg --enable-simplesound --enable-fuse --enable-xrdpvr CFLAGS="-g -O3 -march=native"
+	./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var CFLAGS="-g -O3 -march=native"
 	find -name Makefile | while read i; do sed -e 's#\(XRDP_PID_PATH.*/run\)#\1/xrdp#g' -i "$$i"; done
-	[ -d ../xorg-server-1.12.4 ] || (XRDP=`pwd`; cd .. && apt-get source xorg-server && cd xorg-server-1.12.4 && patch < $XRDP/debian/patches/xorg-optimize.patch && ./debian/rules binary)
+	[ -d ../xorg-server-1.12.4 ] || (XRDP=`pwd`; cd .. && apt-get source xorg-server && cd xorg-server-1.12.4 && patch -p0 < $$XRDP/debian/patches/xorg-optimize.patch && ./debian/rules binary)
 
 override_dh_clean:
 	dh_clean
