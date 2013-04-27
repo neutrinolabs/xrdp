@@ -38,6 +38,7 @@ struct xrdp_inode
     tui32           device_id;     /* for file system redirection   */
     char            is_synced;     /* dir struct has been read from */
                                    /* remote device, done just once */
+    int             lindex;        /* used in clipboard operations  */
 };
 typedef struct xrdp_inode XRDP_INODE; // LK_TODO use this instead of using struct xrdp_inode
 
