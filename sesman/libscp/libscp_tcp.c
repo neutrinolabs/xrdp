@@ -26,12 +26,6 @@
 
 #include "libscp_tcp.h"
 
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <stdlib.h>
-#include <string.h>
-
 extern struct log_config *s_log;
 
 /*****************************************************************************/
@@ -124,11 +118,5 @@ scp_tcp_force_send(int sck, char *data, int len)
 int DEFAULT_CC
 scp_tcp_bind(int sck, char *addr, char *port)
 {
-    struct sockaddr_in s;
-
-    memset(&s, 0, sizeof(struct sockaddr_in));
-    s.sin_family = AF_INET;
-    s.sin_port = htons(atoi(port));
-    s.sin_addr.s_addr = inet_addr(addr);
-    return bind(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_in));
+    return g_tcp_bind_address(sck, port, addr);
 }
