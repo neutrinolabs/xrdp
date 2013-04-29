@@ -1024,7 +1024,6 @@ int devredir_file_close(void *fusep, tui32 device_id, tui32 FileId)
     if ((irp = dev_redir_irp_find_by_fileid(FileId)) == NULL)
     {
         log_error("no IRP found with FileId = %d", FileId);
-        xfuse_devredir_cb_read_file(fusep, NULL, 0);
         return -1;
     }
 #endif

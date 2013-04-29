@@ -53,7 +53,7 @@ extern int g_cliprdr_chan_id; /* in chansrv.c */
 extern struct clip_s2c g_clip_s2c; /* in clipboard.c */
 extern struct clip_c2s g_clip_c2s; /* in clipboard.c */
 
-extern char g_fuse_root_path[]; /* in chansrv_fuse.c */
+extern char g_fuse_clipboard_path[];
 
 struct cb_file_info
 {
@@ -454,7 +454,9 @@ clipboard_request_file_data(int stream_id, int lindex, int offset,
     int size;
     int rv;
 
-    LLOGLN(10, ("clipboard_request_file_data:"));
+    LLOGLN(10, ("clipboard_request_file_data: stream_id=%d lindex=%d off=%d request_bytes=%d",
+               stream_id, lindex, offset, request_bytes));
+
     if (g_file_request_sent_type != 0)
     {
         LLOGLN(0, ("clipboard_request_file_data: warning, still waiting "
@@ -625,8 +627,8 @@ clipboard_c2s_in_files(struct stream *s, char *file_list)
         g_strcpy(ptr, "file://");
         ptr += 7;
 
-        str_len = g_strlen(g_fuse_root_path);
-        g_strcpy(ptr, g_fuse_root_path);
+        str_len = g_strlen(g_fuse_clipboard_path);
+        g_strcpy(ptr, g_fuse_clipboard_path);
         ptr += str_len;
 
         *ptr = '/';
