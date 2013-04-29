@@ -213,6 +213,31 @@ sound_send_wave_data(char *data, int data_bytes)
 }
 
 /*****************************************************************************/
+static int
+sound_send_close(void)
+{
+    struct stream *s;
+    int bytes;
+    char *size_ptr;
+
+    print_got_here();
+
+    make_stream(s);
+    init_stream(s, 8182);
+    out_uint16_le(s, SNDC_CLOSE);
+    size_ptr = s->p;
+    out_uint16_le(s, 0); /* size, set later */
+    s_mark_end(s);
+    bytes = (int)((s->end - s->data) - 4);
+    size_ptr[0] = bytes;
+    size_ptr[1] = bytes >> 8;
+    bytes = (int)(s->end - s->data);
+    send_channel_data(g_rdpsnd_chan_id, s->data, bytes);
+    free_stream(s);
+    return 0;
+}
+
+/*****************************************************************************/
 static int APP_CC
 sound_process_training(struct stream *s, int size)
 {
@@ -249,7 +274,18 @@ process_pcm_message(int id, int size, struct stream *s)
 {
     print_got_here();
 
-    sound_send_wave_data(s->p, size);
+    switch (id)
+    {
+        case 0:
+            sound_send_wave_data(s->p, size);
+            break;
+        case 1:
+            sound_send_close();
+            break;
+        default:
+            LOG(0, ("process_pcm_message: unknown id %d", id));
+            break;
+    }
     return 0;
 }
 
@@ -277,7 +313,7 @@ sound_trans_audio_data_in(struct trans *trans)
     in_uint32_le(s, id);
     in_uint32_le(s, size);
 
-    if ((id != 0) || (size > 128 * 1024 + 8) || (size < 8))
+    if ((id & 3) || (size > 128 * 1024 + 8) || (size < 8))
     {
         LOG(0, ("sound_trans_audio_data_in: bad message id %d size %d", id, size));
         return 1;
