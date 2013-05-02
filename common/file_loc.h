@@ -37,4 +37,8 @@
 #define XRDP_SHARE_PATH "/usr/local/share/xrdp"
 #endif
 
+#if !defined(XRDP_LIB_PATH)
+#define XRDP_LIB_PATH "/usr/local/lib/xrdp"
+#endif
+
 #endif
