@@ -313,7 +313,7 @@ sound_trans_audio_data_in(struct trans *trans)
     in_uint32_le(s, id);
     in_uint32_le(s, size);
 
-    if ((id & 3) || (size > 128 * 1024 + 8) || (size < 8))
+    if ((id & ~3) || (size > 128 * 1024 + 8) || (size < 8))
     {
         LOG(0, ("sound_trans_audio_data_in: bad message id %d size %d", id, size));
         return 1;
