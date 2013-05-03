@@ -308,7 +308,7 @@ struct stream
  * @param _s opaque handle to the new stream
  * @param _l length of new stream
  ******************************************************************************/
-#define stream_new(_s, _l)   \
+#define xstream_new(_s, _l)   \
 do                           \
 {                            \
     make_stream((_s));       \
@@ -320,25 +320,25 @@ do                           \
  *
  * @param _s opaque handle returned by stream_new()
  *****************************************************************************/
-#define stream_free(_s) free_stream(_s)
+#define xstream_free(_s) free_stream(_s)
 
-#define stream_rd_u8(_s, _var)       in_uint8(_s, _var)
-#define stream_rd_u16_le(_s, _var)   in_uint16_le(_s, _var)
-#define stream_rd_u32_le(_s, _var)   in_uint32_le(_s, _var)
+#define xstream_rd_u8(_s, _var)       in_uint8(_s, _var)
+#define xstream_rd_u16_le(_s, _var)   in_uint16_le(_s, _var)
+#define xstream_rd_u32_le(_s, _var)   in_uint32_le(_s, _var)
 
-#define stream_rd_s8_le(_s, _var)    in_sint8(_s, _var)
-#define stream_rd_s16_le(_s, _var)   in_sint16_le(_s, _var)
-#define stream_rd_s32_le(_s, _var)   TODO
+#define xstream_rd_s8_le(_s, _var)    in_sint8(_s, _var)
+#define xstream_rd_s16_le(_s, _var)   in_sint16_le(_s, _var)
+#define xstream_rd_s32_le(_s, _var)   TODO
 
-#define stream_wr_u8(_s, _var)       out_uint8(_s, _var)
-#define stream_wr_u16_le(_s, _var)   out_uint16_le(_s, _var)
-#define stream_wr_u32_le(_s, _var)   out_uint32_le(_s, _var)
+#define xstream_wr_u8(_s, _var)       out_uint8(_s, _var)
+#define xstream_wr_u16_le(_s, _var)   out_uint16_le(_s, _var)
+#define xstream_wr_u32_le(_s, _var)   out_uint32_le(_s, _var)
 
-#define stream_wr_s8(_s, _var)       TODO
-#define stream_wr_s16_le(_s, _var)   TODO
-#define stream_wr_s32_le(_s, _var)   TODO
+#define xstream_wr_s8(_s, _var)       TODO
+#define xstream_wr_s16_le(_s, _var)   TODO
+#define xstream_wr_s32_le(_s, _var)   TODO
 
-#define stream_rd_u64_le(_s, _v)                              \
+#define xstream_rd_u64_le(_s, _v)                              \
 do                                                            \
 {                                                             \
     _v =                                                      \
@@ -353,7 +353,7 @@ do                                                            \
     _s->p += 8;                                               \
 } while (0)
 
-#define stream_wr_u64_le(_s, _v)                                            \
+#define xstream_wr_u64_le(_s, _v)                                            \
 do                                                                          \
 {                                                                           \
     *(((unsigned char *) _s->p) + 0) = (unsigned char) ((_v >>  0) & 0xff); \
@@ -368,36 +368,36 @@ do                                                                          \
 } while (0)
 
 /* copy data into stream */
-#define stream_copyin(_s, _dest, _len)    \
+#define xstream_copyin(_s, _dest, _len)    \
 do                                        \
 {                                         \
-    memcpy((_s)->p, (_dest), (_len));     \
+    g_memcpy((_s)->p, (_dest), (_len));     \
     (_s)->p += (_len);                    \
 } while (0)
 
 /* copy data out of stream */
-#define stream_copyout(_dest, _s, _len)   \
+#define xstream_copyout(_dest, _s, _len)   \
 {                                         \
 do                                        \
-    memcpy((_dest), (_s)->p, (_len));     \
+    g_memcpy((_dest), (_s)->p, (_len));     \
     (_s)->p += (_len);                    \
 } while (0)
 
-#define stream_rd_string(_dest, _s, _len) \
+#define xstream_rd_string(_dest, _s, _len) \
 do                                        \
 {                                         \
-    memcpy((_dest), (_s)->p, (_len));     \
+    g_memcpy((_dest), (_s)->p, (_len));     \
     (_s)->p += (_len);                    \
 } while (0)
 
-#define stream_wr_string(_s, _src, _len)  \
+#define xstream_wr_string(_s, _src, _len)  \
 do                                        \
 {                                         \
-    memcpy((_s)->p, (_src), (_len));      \
+    g_memcpy((_s)->p, (_src), (_len));      \
     (_s)->p += (_len);                    \
 } while (0)
 
-#define stream_len(_s)               (int) ((_s)->p - (_s)->data)
-#define stream_seek(_s, _len)        (_s)->p += (_len)
+#define xstream_len(_s)               (int) ((_s)->p - (_s)->data)
+#define xstream_seek(_s, _len)        (_s)->p += (_len)
 
 #endif

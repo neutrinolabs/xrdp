@@ -23,6 +23,6 @@ lib_LTLIBRARIES = \
 
 libxrdpneutrinordp_la_SOURCES = xrdp-neutrinordp.c xrdp-color.c
 
-libxrdpneutrinodp_la_LIBADD = \
+libxrdpneutrinordp_la_LIBADD = \
   $(top_builddir)/common/libcommon.la \
   $(FREERDP_LIBS)

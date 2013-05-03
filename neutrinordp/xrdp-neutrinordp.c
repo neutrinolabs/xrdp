@@ -42,18 +42,22 @@ struct mod_context
 };
 typedef struct mod_context modContext;
 
-void verifyColorMap(struct mod *mod)
+/*****************************************************************************/
+static void
+verifyColorMap(struct mod *mod)
 {
-    int i ;
-    for( i = 0 ;i<255 ; i++)
+    int i;
+
+    for(i = 0; i < 255; i++)
     {
-	if(mod->colormap[i]!=0)
-	{
-	    return ;
-	}
+        if (mod->colormap[i] != 0)
+        {
+            return ;
+        }
     }
-    LLOGLN(0, ("The colormap is all NULL\n"));
+    LLOGLN(0, ("The colormap is all NULL"));
 }
+
 /*****************************************************************************/
 /* return error */
 static int DEFAULT_CC
@@ -63,15 +67,15 @@ lxrdp_start(struct mod *mod, int w, int h, int bpp)
 
     LLOGLN(10, ("lxrdp_start: w %d h %d bpp %d", w, h, bpp));
     settings = mod->inst->settings;
-    settings->DesktopWidth = w;
-    settings->DesktopHeight = h;
-    settings->ColorDepth = bpp;
+    settings->width = w;
+    settings->height = h;
+    settings->color_depth = bpp;
     mod->bpp = bpp;
-    // TODO what does this really become
-    settings->DisableEncryption = 1; // settings->encryption = 1;
-    settings->TlsSecurity = 1;
-    settings->NlaSecurity = 0;
-    settings->RdpSecurity = 1;
+
+    settings->encryption = 1;
+    settings->tls_security = 1;
+    settings->nla_security = 0;
+    settings->rdp_security = 1;
 
     return 0;
 }
@@ -81,7 +85,7 @@ lxrdp_start(struct mod *mod, int w, int h, int bpp)
 static int DEFAULT_CC
 lxrdp_connect(struct mod *mod)
 {
-    BOOL ok;
+    boolean ok;
 
     LLOGLN(10, ("lxrdp_connect:"));
 
@@ -152,12 +156,18 @@ lxrdp_connect(struct mod *mod)
         }
 
 #endif
-        log_message(LOG_LEVEL_INFO,"freerdp_connect Failed to destination :%s:%d",mod->inst->settings->ServerHostname,mod->inst->settings->ServerPort);
+        log_message(LOG_LEVEL_INFO, "freerdp_connect Failed to "
+                    "destination :%s:%d",
+                    mod->inst->settings->hostname,
+                    mod->inst->settings->port);
         return 1;
     }
     else
     {
-        log_message(LOG_LEVEL_INFO,"freerdp_connect returned Success to destination :%s:%d",mod->inst->settings->ServerHostname,mod->inst->settings->ServerPort);
+        log_message(LOG_LEVEL_INFO, "freerdp_connect returned Success to "
+                    "destination :%s:%d",
+                    mod->inst->settings->hostname,
+                    mod->inst->settings->port);
     }
 
     return 0;
@@ -262,7 +272,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             rectangle->right = (((param2 >> 16) & 0xffff) + rectangle->left) - 1;
             rectangle->bottom = ((param2 & 0xffff) + rectangle->top) - 1;
 
-            if (mod->inst->settings->RefreshRect)
+            if (mod->inst->settings->refresh_rect)
             {
                 if (mod->inst->update != NULL)
                 {
@@ -304,13 +314,13 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             total_size = (int)param4;
             LLOGLN(12, ("lxrdp_event: client to server flags %d", flags));
 
-            if ((chanid < 0) || (chanid >= mod->inst->settings->ChannelDefArraySize))
+            if ((chanid < 0) || (chanid >= mod->inst->settings->num_channels))
             {
                 LLOGLN(0, ("lxrdp_event: error chanid %d", chanid));
                 break;
             }
 
-            lchid = mod->inst->settings->ChannelDefArray[chanid].ChannelId;
+            lchid = mod->inst->settings->channels[chanid].channel_id;
 
             switch (flags & 3)
             {
@@ -400,18 +410,16 @@ lxrdp_set_param(struct mod *mod, char *name, char *value)
     LLOGLN(10, ("lxrdp_set_param: name [%s] value [%s]", name, value));
     settings = mod->inst->settings;
 
-    LLOGLN(10, ("%p %d", settings->ServerHostname, settings->DisableEncryption));
-
     if (g_strcmp(name, "hostname") == 0)
     {
     }
     else if (g_strcmp(name, "ip") == 0)
     {
-        settings->ServerHostname = g_strdup(value);
+        settings->hostname = g_strdup(value);
     }
     else if (g_strcmp(name, "port") == 0)
     {
-        settings->ServerPort = g_atoi(value);
+        settings->port = g_atoi(value);
     }
     else if (g_strcmp(name, "keylayout") == 0)
     {
@@ -459,7 +467,7 @@ lxrdp_get_wait_objs(struct mod *mod, tbus *read_objs, int *rcount,
 {
     void **rfds;
     void **wfds;
-    BOOL ok;
+    boolean ok;
 
     LLOGLN(12, ("lxrdp_get_wait_objs:"));
     rfds = (void **)read_objs;
@@ -479,7 +487,7 @@ lxrdp_get_wait_objs(struct mod *mod, tbus *read_objs, int *rcount,
 static int DEFAULT_CC
 lxrdp_check_wait_objs(struct mod *mod)
 {
-    BOOL ok;
+    boolean ok;
 
     LLOGLN(12, ("lxrdp_check_wait_objs:"));
     ok = freerdp_check_fds(mod->inst);
@@ -564,7 +572,7 @@ lfreerdp_bitmap_update(rdpContext *context, BITMAP_UPDATE *bitmap)
     mod = ((struct mod_context *)context)->modi;
     LLOGLN(10, ("lfreerdp_bitmap_update: %d %d", bitmap->number, bitmap->count));
 
-    server_bpp = mod->inst->settings->ColorDepth;
+    server_bpp = mod->inst->settings->color_depth;
     server_Bpp = (server_bpp + 7) / 8;
     client_bpp = mod->bpp;
 
@@ -642,7 +650,7 @@ lfreerdp_pat_blt(rdpContext *context, PATBLT_ORDER *patblt)
     mod = ((struct mod_context *)context)->modi;
     LLOGLN(10, ("lfreerdp_pat_blt:"));
 
-    server_bpp = mod->inst->settings->ColorDepth;
+    server_bpp = mod->inst->settings->color_depth;
     client_bpp = mod->bpp;
     LLOGLN(0, ("lfreerdp_pat_blt: bpp %d %d", server_bpp, client_bpp));
 
@@ -714,7 +722,7 @@ lfreerdp_opaque_rect(rdpContext *context, OPAQUE_RECT_ORDER *opaque_rect)
 
     mod = ((struct mod_context *)context)->modi;
     LLOGLN(10, ("lfreerdp_opaque_rect:"));
-    server_bpp = mod->inst->settings->ColorDepth;
+    server_bpp = mod->inst->settings->color_depth;
     client_bpp = mod->bpp;
     fgcolor = convert_color(server_bpp, client_bpp,
                             opaque_rect->color, mod->colormap);
@@ -779,7 +787,7 @@ lfreerdp_glyph_index(rdpContext *context, GLYPH_INDEX_ORDER *glyph_index)
 
     mod = ((struct mod_context *)context)->modi;
     LLOGLN(10, ("lfreerdp_glyph_index:"));
-    server_bpp = mod->inst->settings->ColorDepth;
+    server_bpp = mod->inst->settings->color_depth;
     client_bpp = mod->bpp;
     fgcolor = convert_color(server_bpp, client_bpp,
                             glyph_index->foreColor, mod->colormap);
@@ -810,7 +818,7 @@ lfreerdp_line_to(rdpContext *context, LINE_TO_ORDER *line_to)
     mod = ((struct mod_context *)context)->modi;
     LLOGLN(10, ("lfreerdp_line_to:"));
     mod->server_set_opcode(mod, line_to->bRop2);
-    server_bpp = mod->inst->settings->ColorDepth;
+    server_bpp = mod->inst->settings->color_depth;
     client_bpp = mod->bpp;
     fgcolor = convert_color(server_bpp, client_bpp,
                             line_to->penColor, mod->colormap);
@@ -834,7 +842,7 @@ lfreerdp_cache_bitmap(rdpContext *context, CACHE_BITMAP_ORDER *cache_bitmap_orde
 /******************************************************************************/
 /* Turn the bitmap upside down*/
 static void DEFAULT_CC
-lfreerdp_upsidedown(UINT8 *destination, CACHE_BITMAP_V2_ORDER *cache_bitmap_v2_order, int server_Bpp)
+lfreerdp_upsidedown(uint8* destination, CACHE_BITMAP_V2_ORDER* cache_bitmap_v2_order, int server_Bpp)
 {
     tui8 *src;
     tui8 *dst;
@@ -906,7 +914,7 @@ lfreerdp_cache_bitmapV2(rdpContext *context,
         return;
     }
 
-    server_bpp = mod->inst->settings->ColorDepth;
+    server_bpp = mod->inst->settings->color_depth;
     server_Bpp = (server_bpp + 7) / 8;
     client_bpp = mod->bpp;
 
@@ -1231,8 +1239,9 @@ lfreerdp_pointer_cached(rdpContext *context,
     index = pointer_cached->cacheIndex;
     LLOGLN(10, ("lfreerdp_pointer_cached:%d", index));
     mod->server_set_pointer(mod, mod->pointer_cache[index].hotx,
-                           mod->pointer_cache[index].hoty, mod->pointer_cache[index].data,
-                           mod->pointer_cache[index].mask);
+                            mod->pointer_cache[index].hoty,
+                            mod->pointer_cache[index].data,
+                            mod->pointer_cache[index].mask);
 }
 
 static void DEFAULT_CC lfreerdp_polygon_cb(rdpContext* context, POLYGON_CB_ORDER* polygon_cb)
@@ -1249,22 +1258,27 @@ static void DEFAULT_CC lfreerdp_polygon_sc(rdpContext* context, POLYGON_SC_ORDER
     int server_bpp, client_bpp;
 
     mod = ((struct mod_context *)context)->modi;
-    LLOGLN(10, ("lfreerdp_polygon_sc :%d(points) %d(color) %d(fillmode) %d(bRop) %d(cbData) %d(x) %d(y)", polygon_sc->numPoints,polygon_sc->brushColor,polygon_sc->fillMode,polygon_sc->bRop2,polygon_sc->cbData,polygon_sc->xStart,polygon_sc->yStart));
-    if(polygon_sc->numPoints==3)
+    LLOGLN(10, ("lfreerdp_polygon_sc :%d(points) %d(color) %d(fillmode) "
+           "%d(bRop) %d(cbData) %d(x) %d(y)",
+           polygon_sc->nDeltaEntries, polygon_sc->brushColor,
+           polygon_sc->fillMode, polygon_sc->bRop2,
+           polygon_sc->cbData, polygon_sc->xStart,
+           polygon_sc->yStart));
+    if (polygon_sc->nDeltaEntries == 3)
     {
-        server_bpp = mod->inst->settings->ColorDepth;
+        server_bpp = mod->inst->settings->color_depth;
         client_bpp = mod->bpp;
 
         points[0].x = polygon_sc->xStart;
         points[0].y = polygon_sc->yStart;
 
-        for (i = 0; i < polygon_sc->numPoints; i++)
+        for (i = 0; i < polygon_sc->nDeltaEntries; i++)
         {
-            points[i + 1].x = polygon_sc->points[i].x;
-            points[i + 1].y = polygon_sc->points[i].y;
+            points[i + 1].x = 0; // polygon_sc->points[i].x;
+            points[i + 1].y = 0; // polygon_sc->points[i].y;
         }
         fgcolor = convert_color(server_bpp, client_bpp,
-                            polygon_sc->brushColor, mod->colormap);
+                                polygon_sc->brushColor, mod->colormap);
 
         mod->server_set_opcode(mod, polygon_sc->bRop2);
         mod->server_set_bgcolor(mod, 255);
@@ -1273,7 +1287,7 @@ static void DEFAULT_CC lfreerdp_polygon_sc(rdpContext* context, POLYGON_SC_ORDER
         // TODO replace with correct brush; this is a workaround
         // This workaround handles the text cursor in microsoft word.
         mod->server_draw_line(mod,polygon_sc->xStart,polygon_sc->yStart,polygon_sc->xStart,polygon_sc->yStart+points[2].y);
-//	mod->server_fill_rect(mod, points[0].x, points[0].y,
+//        mod->server_fill_rect(mod, points[0].x, points[0].y,
 //                         points[0].x-points[3].x, points[0].y-points[2].y);
 //      mod->server_set_brush(mod,); // howto use this on our indata??
         mod->server_set_opcode(mod, 0xcc);
@@ -1292,7 +1306,7 @@ static void DEFAULT_CC lfreerdp_syncronize(rdpContext* context)
 }
 
 /******************************************************************************/
-static BOOL DEFAULT_CC
+static boolean DEFAULT_CC
 lfreerdp_pre_connect(freerdp *instance)
 {
     struct mod *mod;
@@ -1315,72 +1329,72 @@ lfreerdp_pre_connect(freerdp *instance)
         num_chans++;
         LLOGLN(10, ("lfreerdp_pre_connect: got channel [%s], flags [0x%8.8x]",
                     ch_name, ch_flags));
-        dst_ch_name = instance->settings->ChannelDefArray[index].Name;
+        dst_ch_name = instance->settings->channels[index].name;
         g_memset(dst_ch_name, 0, 8);
         g_snprintf(dst_ch_name, 8, "%s", ch_name);
-        instance->settings->ChannelDefArray[index].options = ch_flags;
+        instance->settings->channels[index].options = ch_flags;
         index++;
         error = mod->server_query_channel(mod, index, ch_name, &ch_flags);
     }
 
-    instance->settings->ChannelCount = num_chans;
+    instance->settings->num_channels = num_chans;
 
-    // TODO
-    // instance->settings->offscreen_bitmap_cache = false;
-    instance->settings->OffscreenSupportLevel = 0;
-    instance->settings->DrawNineGridEnabled = 0 ;
+    instance->settings->offscreen_bitmap_cache = 0;
+    instance->settings->draw_nine_grid = 0;
 
-    // TODO
-    //instance->settings->glyph_cache = true;
-    instance->settings->GlyphSupportLevel = GLYPH_SUPPORT_FULL;
-    instance->settings->OrderSupport[NEG_GLYPH_INDEX_INDEX] = TRUE;
-    instance->settings->OrderSupport[NEG_FAST_GLYPH_INDEX] = FALSE;
-    instance->settings->OrderSupport[NEG_FAST_INDEX_INDEX] = FALSE;
-    instance->settings->OrderSupport[NEG_SCRBLT_INDEX] = TRUE;
-    instance->settings->OrderSupport[NEG_SAVEBITMAP_INDEX] = FALSE;
+    instance->settings->glyph_cache = true;
+    instance->settings->glyphSupportLevel = GLYPH_SUPPORT_FULL;
+    instance->settings->order_support[NEG_GLYPH_INDEX_INDEX] = 1;
+    instance->settings->order_support[NEG_FAST_GLYPH_INDEX] = 0;
+    instance->settings->order_support[NEG_FAST_INDEX_INDEX] = 0;
+    instance->settings->order_support[NEG_SCRBLT_INDEX] = 1;
+    instance->settings->order_support[NEG_SAVEBITMAP_INDEX] = 0;
 
-    instance->settings->BitmapCacheEnabled = TRUE;
-    instance->settings->OrderSupport[NEG_MEMBLT_INDEX] = TRUE;
-    instance->settings->OrderSupport[NEG_MEMBLT_V2_INDEX] = TRUE;
-    instance->settings->OrderSupport[NEG_MEM3BLT_INDEX] = FALSE;
-    instance->settings->OrderSupport[NEG_MEM3BLT_V2_INDEX] = FALSE;
-    instance->settings->BitmapCacheV2NumCells = 3; // 5;
-    instance->settings->BitmapCacheV2CellInfo[0].numEntries = 0x78; // 600;
-    instance->settings->BitmapCacheV2CellInfo[0].persistent = FALSE;
-    instance->settings->BitmapCacheV2CellInfo[1].numEntries = 0x78; // 600;
-    instance->settings->BitmapCacheV2CellInfo[1].persistent = FALSE;
-    instance->settings->BitmapCacheV2CellInfo[2].numEntries = 0x150; // 2048;
-    instance->settings->BitmapCacheV2CellInfo[2].persistent = FALSE;
-    instance->settings->BitmapCacheV2CellInfo[3].numEntries = 0; // 4096;
-    instance->settings->BitmapCacheV2CellInfo[3].persistent = FALSE;
-    instance->settings->BitmapCacheV2CellInfo[4].numEntries = 0; // 2048;
-    instance->settings->BitmapCacheV2CellInfo[4].persistent = FALSE;
+    instance->settings->bitmap_cache = 1;
+    instance->settings->order_support[NEG_MEMBLT_INDEX] = 1;
+    instance->settings->order_support[NEG_MEMBLT_V2_INDEX] = 1;
+    instance->settings->order_support[NEG_MEM3BLT_INDEX] = 0;
+    instance->settings->order_support[NEG_MEM3BLT_V2_INDEX] = 0;
+    instance->settings->bitmapCacheV2NumCells = 3; // 5;
+    instance->settings->bitmapCacheV2CellInfo[0].numEntries = 0x78; // 600;
+    instance->settings->bitmapCacheV2CellInfo[0].persistent = 0;
+    instance->settings->bitmapCacheV2CellInfo[1].numEntries = 0x78; // 600;
+    instance->settings->bitmapCacheV2CellInfo[1].persistent = 0;
+    instance->settings->bitmapCacheV2CellInfo[2].numEntries = 0x150; // 2048;
+    instance->settings->bitmapCacheV2CellInfo[2].persistent = 0;
+    instance->settings->bitmapCacheV2CellInfo[3].numEntries = 0; // 4096;
+    instance->settings->bitmapCacheV2CellInfo[3].persistent = 0;
+    instance->settings->bitmapCacheV2CellInfo[4].numEntries = 0; // 2048;
+    instance->settings->bitmapCacheV2CellInfo[4].persistent = 0;
 
     // instance->settings->BitmapCacheV3Enabled = FALSE;
-    instance->settings->OrderSupport[NEG_MULTIDSTBLT_INDEX] = FALSE;
-    instance->settings->OrderSupport[NEG_MULTIPATBLT_INDEX] = FALSE;
-    instance->settings->OrderSupport[NEG_MULTISCRBLT_INDEX] = FALSE;
-    instance->settings->OrderSupport[NEG_MULTIOPAQUERECT_INDEX] = FALSE;
-    instance->settings->OrderSupport[NEG_POLYLINE_INDEX] = FALSE;
+    instance->settings->order_support[NEG_MULTIDSTBLT_INDEX] = 0;
+    instance->settings->order_support[NEG_MULTIPATBLT_INDEX] = 0;
+    instance->settings->order_support[NEG_MULTISCRBLT_INDEX] = 0;
+    instance->settings->order_support[NEG_MULTIOPAQUERECT_INDEX] = 0;
+    instance->settings->order_support[NEG_POLYLINE_INDEX] = 0;
 
-    instance->settings->Username = g_strdup(mod->username);
-    instance->settings->Password = g_strdup(mod->password);
+    instance->settings->username = g_strdup(mod->username);
+    instance->settings->password = g_strdup(mod->password);
 
     if (mod->client_info.rail_support_level > 0)
     {
         LLOGLN(0, ("Railsupport !!!!!!!!!!!!!!!!!!"));
-        instance->settings->RemoteApplicationMode = TRUE;
-        instance->settings->RemoteAppLanguageBarSupported = TRUE;
-        instance->settings->Workarea = TRUE;
-        instance->settings->PerformanceFlags = PERF_DISABLE_WALLPAPER | PERF_DISABLE_FULLWINDOWDRAG;
+        instance->settings->remote_app = 1;
+        instance->settings->rail_langbar_supported = 1;
+        instance->settings->workarea = 1;
+        instance->settings->performance_flags = PERF_DISABLE_WALLPAPER | PERF_DISABLE_FULLWINDOWDRAG;
     }
     else
     {
         LLOGLN(10, ("Special PerformanceFlags changed"));
-        instance->settings->PerformanceFlags = PERF_DISABLE_WALLPAPER | PERF_DISABLE_FULLWINDOWDRAG | PERF_DISABLE_MENUANIMATIONS | PERF_DISABLE_THEMING ; // | PERF_DISABLE_CURSOR_SHADOW | PERF_DISABLE_CURSORSETTINGS ;
+        instance->settings->performance_flags = PERF_DISABLE_WALLPAPER |
+                PERF_DISABLE_FULLWINDOWDRAG | PERF_DISABLE_MENUANIMATIONS |
+                PERF_DISABLE_THEMING;
+                // | PERF_DISABLE_CURSOR_SHADOW | PERF_DISABLE_CURSORSETTINGS;
     }
-    instance->settings->CompressionEnabled = FALSE ;
-    instance->settings->IgnoreCertificate = TRUE ;
+    instance->settings->compression = 0;
+    instance->settings->ignore_certificate = 1;
 
     // here
     //instance->settings->RdpVersion = 4;
@@ -1413,14 +1427,14 @@ lfreerdp_pre_connect(freerdp *instance)
     if ((mod->username[0] != 0) && (mod->password[0] != 0))
     {
         /* since we have username and password, we can try nla */
-        instance->settings->NlaSecurity = 1;
+        instance->settings->nla_security = 1;
     }
     else
     {
-        instance->settings->NlaSecurity = 0;
+        instance->settings->nla_security = 0;
     }
 
-    return TRUE;
+    return 1;
 }
 
 /*****************************************************************************/
@@ -1683,7 +1697,7 @@ lrail_NonMonitoredDesktop(rdpContext *context, WINDOW_ORDER_INFO *orderInfo)
 }
 
 /******************************************************************************/
-static BOOL DEFAULT_CC
+static boolean DEFAULT_CC
 lfreerdp_post_connect(freerdp *instance)
 {
     struct mod *mod;
@@ -1703,7 +1717,7 @@ lfreerdp_post_connect(freerdp *instance)
     mod->inst->update->window->MonitoredDesktop = lrail_MonitoredDesktop;
     mod->inst->update->window->NonMonitoredDesktop = lrail_NonMonitoredDesktop;
 
-    return TRUE;
+    return 1;
 }
 
 /******************************************************************************/
@@ -1722,7 +1736,7 @@ lfreerdp_context_free(freerdp *instance, rdpContext *context)
 
 /******************************************************************************/
 static int DEFAULT_CC
-lfreerdp_receive_channel_data(freerdp *instance, int channelId, UINT8 *data,
+lfreerdp_receive_channel_data(freerdp *instance, int channelId, uint8 *data,
                               int size, int flags, int total_size)
 {
     struct mod *mod;
@@ -1733,9 +1747,9 @@ lfreerdp_receive_channel_data(freerdp *instance, int channelId, UINT8 *data,
     mod = ((struct mod_context *)(instance->context))->modi;
     lchid = -1;
 
-    for (index = 0; index < instance->settings->ChannelDefArraySize; index++)
+    for (index = 0; index < instance->settings->num_channels; index++)
     {
-        if (instance->settings->ChannelDefArray[index].ChannelId == channelId)
+        if (instance->settings->channels[index].channel_id == channelId)
         {
             lchid = index;
             break;
@@ -1762,21 +1776,21 @@ lfreerdp_receive_channel_data(freerdp *instance, int channelId, UINT8 *data,
 }
 
 /******************************************************************************/
-static BOOL DEFAULT_CC
+static boolean DEFAULT_CC
 lfreerdp_authenticate(freerdp *instance, char **username,
                       char **password, char **domain)
 {
     LLOGLN(0, ("lfreerdp_authenticate: - no code here"));
-    return TRUE;
+    return 1;
 }
 
 /******************************************************************************/
-static BOOL DEFAULT_CC
+static boolean DEFAULT_CC
 lfreerdp_verify_certificate(freerdp *instance, char *subject, char *issuer,
                             char *fingerprint)
 {
     LLOGLN(0, ("lfreerdp_verify_certificate: - no code here"));
-    return TRUE;
+    return 1;
 }
 
 /******************************************************************************/
