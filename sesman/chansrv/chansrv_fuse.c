@@ -1942,7 +1942,7 @@ void xfuse_devredir_cb_file_close(void *vp)
         xinode->nopen--;
 
     if ((xinode->nopen == 0) && fip->fi && fip->fi->fh)
-        free((char *) fip->fi->fh);
+        free((char *) (tintptr) (fip->fi->fh));
 
     fuse_reply_err(fip->req, 0);
 }
@@ -2645,7 +2645,7 @@ static void xfuse_cb_flush(fuse_req_t req, fuse_ino_t ino, struct
                            fuse_file_info *fi)
 {
     XFUSE_INFO   *fip    = NULL;
-    XFUSE_HANDLE *handle = (XFUSE_HANDLE *) fi->fh;
+    XFUSE_HANDLE *handle = (XFUSE_HANDLE *) (tintptr) (fi->fh);
 
     if (!xfuse_is_inode_valid(ino))
     {

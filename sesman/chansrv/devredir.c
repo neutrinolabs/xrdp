@@ -83,20 +83,20 @@ dev_redir_init(void)
     }
 
     /* setup stream */
-    stream_new(s, 1024);
+    xstream_new(s, 1024);
 
     /* initiate drive redirection protocol by sending Server Announce Req  */
-    stream_wr_u16_le(s, RDPDR_CTYP_CORE);
-    stream_wr_u16_le(s, PAKID_CORE_SERVER_ANNOUNCE);
-    stream_wr_u16_le(s, 0x0001);  /* server major ver                      */
-    stream_wr_u16_le(s, 0x000C);  /* server minor ver  - pretend 2 b Win 7 */
-    stream_wr_u32_le(s, u.clientID); /* unique ClientID                    */
+    xstream_wr_u16_le(s, RDPDR_CTYP_CORE);
+    xstream_wr_u16_le(s, PAKID_CORE_SERVER_ANNOUNCE);
+    xstream_wr_u16_le(s, 0x0001);  /* server major ver                      */
+    xstream_wr_u16_le(s, 0x000C);  /* server minor ver  - pretend 2 b Win 7 */
+    xstream_wr_u32_le(s, u.clientID); /* unique ClientID                    */
 
     /* send data to client */
-    bytes = stream_len(s);
+    bytes = xstream_len(s);
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
 
-    stream_free(s);
+    xstream_free(s);
     return 0;
 }
 
@@ -135,9 +135,9 @@ dev_redir_data_in(struct stream *s, int chan_id, int chan_flags, int length,
     {
         /* is this is the first packet? */
         if (chan_flags & 1)
-            stream_new(g_input_stream, total_length);
+            xstream_new(g_input_stream, total_length);
 
-        stream_copyin(g_input_stream, s->p, length);
+        xstream_copyin(g_input_stream, s->p, length);
 
         /* in last packet, chan_flags & 0x02 will be true */
         if ((chan_flags & 2) == 0)
@@ -148,8 +148,8 @@ dev_redir_data_in(struct stream *s, int chan_id, int chan_flags, int length,
     }
 
     /* read header from incoming data */
-    stream_rd_u16_le(ls, comp_type);
-    stream_rd_u16_le(ls, pktID);
+    xstream_rd_u16_le(ls, comp_type);
+    xstream_rd_u16_le(ls, pktID);
 
     /* for now we only handle core type, not printers */
     if (comp_type != RDPDR_CTYP_CORE)
@@ -165,9 +165,9 @@ dev_redir_data_in(struct stream *s, int chan_id, int chan_flags, int length,
     switch (pktID)
     {
         case PAKID_CORE_CLIENTID_CONFIRM:
-            stream_seek(ls, 2);  /* major version, we ignore it */
-            stream_rd_u16_le(ls, minor_ver);
-            stream_rd_u32_le(ls, g_clientID);
+            xstream_seek(ls, 2);  /* major version, we ignore it */
+            xstream_rd_u16_le(ls, minor_ver);
+            xstream_rd_u32_le(ls, g_clientID);
 
             g_client_rdp_version = minor_ver;
 
@@ -223,7 +223,7 @@ done:
 
     if (g_input_stream)
     {
-        stream_free(g_input_stream);
+        xstream_free(g_input_stream);
         g_input_stream = NULL;
     }
 
@@ -253,59 +253,59 @@ void dev_redir_send_server_core_cap_req()
     struct stream *s;
     int            bytes;
 
-    stream_new(s, 1024);
+    xstream_new(s, 1024);
 
     /* setup header */
-    stream_wr_u16_le(s, RDPDR_CTYP_CORE);
-    stream_wr_u16_le(s, PAKID_CORE_SERVER_CAPABILITY);
+    xstream_wr_u16_le(s, RDPDR_CTYP_CORE);
+    xstream_wr_u16_le(s, PAKID_CORE_SERVER_CAPABILITY);
 
-    stream_wr_u16_le(s, 5);                /* num of caps we are sending     */
-    stream_wr_u16_le(s, 0x0000);           /* padding                        */
+    xstream_wr_u16_le(s, 5);                /* num of caps we are sending     */
+    xstream_wr_u16_le(s, 0x0000);           /* padding                        */
 
     /* setup general capability */
-    stream_wr_u16_le(s, CAP_GENERAL_TYPE); /* CapabilityType                 */
-    stream_wr_u16_le(s, 44);               /* CapabilityLength - len of this */
-                                           /* CAPABILITY_SET in bytes, inc   */
-                                           /* the header                     */
-    stream_wr_u32_le(s, 2);                /* Version                        */
-    stream_wr_u32_le(s, 2);                /* O.S type                       */
-    stream_wr_u32_le(s, 0);                /* O.S version                    */
-    stream_wr_u16_le(s, 1);                /* protocol major version         */
-    stream_wr_u16_le(s, g_client_rdp_version); /* protocol minor version     */
-    stream_wr_u32_le(s, 0xffff);           /* I/O code 1                     */
-    stream_wr_u32_le(s, 0);                /* I/O code 2                     */
-    stream_wr_u32_le(s, 7);                /* Extended PDU                   */
-    stream_wr_u32_le(s, 0);                /* extra flags 1                  */
-    stream_wr_u32_le(s, 0);                /* extra flags 2                  */
-    stream_wr_u32_le(s, 2);                /* special type device cap        */
+    xstream_wr_u16_le(s, CAP_GENERAL_TYPE); /* CapabilityType                 */
+    xstream_wr_u16_le(s, 44);               /* CapabilityLength - len of this */
+                                            /* CAPABILITY_SET in bytes, inc   */
+                                            /* the header                     */
+    xstream_wr_u32_le(s, 2);                /* Version                        */
+    xstream_wr_u32_le(s, 2);                /* O.S type                       */
+    xstream_wr_u32_le(s, 0);                /* O.S version                    */
+    xstream_wr_u16_le(s, 1);                /* protocol major version         */
+    xstream_wr_u16_le(s, g_client_rdp_version); /* protocol minor version     */
+    xstream_wr_u32_le(s, 0xffff);           /* I/O code 1                     */
+    xstream_wr_u32_le(s, 0);                /* I/O code 2                     */
+    xstream_wr_u32_le(s, 7);                /* Extended PDU                   */
+    xstream_wr_u32_le(s, 0);                /* extra flags 1                  */
+    xstream_wr_u32_le(s, 0);                /* extra flags 2                  */
+    xstream_wr_u32_le(s, 2);                /* special type device cap        */
 
     /* setup printer capability */
-    stream_wr_u16_le(s, CAP_PRINTER_TYPE);
-    stream_wr_u16_le(s, 8);
-    stream_wr_u32_le(s, 1);
+    xstream_wr_u16_le(s, CAP_PRINTER_TYPE);
+    xstream_wr_u16_le(s, 8);
+    xstream_wr_u32_le(s, 1);
 
     /* setup serial port capability */
-    stream_wr_u16_le(s, CAP_PORT_TYPE);
-    stream_wr_u16_le(s, 8);
-    stream_wr_u32_le(s, 1);
+    xstream_wr_u16_le(s, CAP_PORT_TYPE);
+    xstream_wr_u16_le(s, 8);
+    xstream_wr_u32_le(s, 1);
 
     /* setup file system capability */
-    stream_wr_u16_le(s, CAP_DRIVE_TYPE);   /* CapabilityType                 */
-    stream_wr_u16_le(s, 8);                /* CapabilityLength - len of this */
+    xstream_wr_u16_le(s, CAP_DRIVE_TYPE);   /* CapabilityType                 */
+    xstream_wr_u16_le(s, 8);                /* CapabilityLength - len of this */
                                            /* CAPABILITY_SET in bytes, inc   */
                                            /* the header                     */
-    stream_wr_u32_le(s, 2);                /* Version                        */
+    xstream_wr_u32_le(s, 2);                /* Version                        */
 
     /* setup smart card capability */
-    stream_wr_u16_le(s, CAP_SMARTCARD_TYPE);
-    stream_wr_u16_le(s, 8);
-    stream_wr_u32_le(s, 1);
+    xstream_wr_u16_le(s, CAP_SMARTCARD_TYPE);
+    xstream_wr_u16_le(s, 8);
+    xstream_wr_u32_le(s, 1);
 
     /* send to client */
-    bytes = stream_len(s);
+    bytes = xstream_len(s);
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
 
-    stream_free(s);
+    xstream_free(s);
 }
 
 void dev_redir_send_server_clientID_confirm()
@@ -313,20 +313,20 @@ void dev_redir_send_server_clientID_confirm()
     struct stream *s;
     int            bytes;
 
-    stream_new(s, 1024);
+    xstream_new(s, 1024);
 
     /* setup stream */
-    stream_wr_u16_le(s, RDPDR_CTYP_CORE);
-    stream_wr_u16_le(s, PAKID_CORE_CLIENTID_CONFIRM);
-    stream_wr_u16_le(s, 0x0001);
-    stream_wr_u16_le(s, g_client_rdp_version);
-    stream_wr_u32_le(s, g_clientID);
+    xstream_wr_u16_le(s, RDPDR_CTYP_CORE);
+    xstream_wr_u16_le(s, PAKID_CORE_CLIENTID_CONFIRM);
+    xstream_wr_u16_le(s, 0x0001);
+    xstream_wr_u16_le(s, g_client_rdp_version);
+    xstream_wr_u32_le(s, g_clientID);
 
     /* send to client */
-    bytes = stream_len(s);
+    bytes = xstream_len(s);
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
 
-    stream_free(s);
+    xstream_free(s);
 }
 
 void dev_redir_send_server_user_logged_on()
@@ -334,17 +334,17 @@ void dev_redir_send_server_user_logged_on()
     struct stream *s;
     int            bytes;
 
-    stream_new(s, 1024);
+    xstream_new(s, 1024);
 
     /* setup stream */
-    stream_wr_u16_le(s, RDPDR_CTYP_CORE);
-    stream_wr_u16_le(s, PAKID_CORE_USER_LOGGEDON);
+    xstream_wr_u16_le(s, RDPDR_CTYP_CORE);
+    xstream_wr_u16_le(s, PAKID_CORE_USER_LOGGEDON);
 
     /* send to client */
-    bytes = stream_len(s);
+    bytes = xstream_len(s);
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
 
-    stream_free(s);
+    xstream_free(s);
 }
 
 void dev_redir_send_server_device_announce_resp(tui32 device_id)
@@ -352,19 +352,19 @@ void dev_redir_send_server_device_announce_resp(tui32 device_id)
     struct stream *s;
     int            bytes;
 
-    stream_new(s, 1024);
+    xstream_new(s, 1024);
 
     /* setup stream */
-    stream_wr_u16_le(s, RDPDR_CTYP_CORE);
-    stream_wr_u16_le(s, PAKID_CORE_DEVICE_REPLY);
-    stream_wr_u32_le(s, device_id);
-    stream_wr_u32_le(s, 0); /* ResultCode */
+    xstream_wr_u16_le(s, RDPDR_CTYP_CORE);
+    xstream_wr_u16_le(s, PAKID_CORE_DEVICE_REPLY);
+    xstream_wr_u32_le(s, device_id);
+    xstream_wr_u32_le(s, 0); /* ResultCode */
 
     /* send to client */
-    bytes = stream_len(s);
+    bytes = xstream_len(s);
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
 
-    stream_free(s);
+    xstream_free(s);
 }
 
 /**
@@ -387,7 +387,7 @@ int dev_redir_send_drive_create_request(tui32 device_id, char *path,
     /* to store path as unicode */
     len = strlen(path) * 2 + 2;
 
-    stream_new(s, 1024 + len);
+    xstream_new(s, 1024 + len);
 
     dev_redir_insert_dev_io_req_header(s,
                                        device_id,
@@ -396,22 +396,22 @@ int dev_redir_send_drive_create_request(tui32 device_id, char *path,
                                        IRP_MJ_CREATE,
                                        0);
 
-    stream_wr_u32_le(s, DesiredAccess);     /* DesiredAccess   */
-    stream_wr_u32_le(s, 0);                 /* AllocationSize high unused */
-    stream_wr_u32_le(s, 0);                 /* AllocationSize low  unused */
-    stream_wr_u32_le(s, 0);                 /* FileAttributes             */
-    stream_wr_u32_le(s, 0);                 /* SharedAccess               */
-    stream_wr_u32_le(s, CreateDisposition); /* CreateDisposition          */
-    stream_wr_u32_le(s, CreateOptions);     /* CreateOptions              */
-    stream_wr_u32_le(s, len);               /* PathLength                 */
+    xstream_wr_u32_le(s, DesiredAccess);     /* DesiredAccess   */
+    xstream_wr_u32_le(s, 0);                 /* AllocationSize high unused */
+    xstream_wr_u32_le(s, 0);                 /* AllocationSize low  unused */
+    xstream_wr_u32_le(s, 0);                 /* FileAttributes             */
+    xstream_wr_u32_le(s, 0);                 /* SharedAccess               */
+    xstream_wr_u32_le(s, CreateDisposition); /* CreateDisposition          */
+    xstream_wr_u32_le(s, CreateOptions);     /* CreateOptions              */
+    xstream_wr_u32_le(s, len);               /* PathLength                 */
     devredir_cvt_to_unicode(s->p, path);    /* path in unicode            */
-    stream_seek(s, len);
+    xstream_seek(s, len);
 
     /* send to client */
-    bytes = stream_len(s);
+    bytes = xstream_len(s);
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
 
-    stream_free(s);
+    xstream_free(s);
     return 0;
 }
 
@@ -430,19 +430,19 @@ int dev_redir_send_drive_close_request(tui16 Component, tui16 PacketId,
     struct stream *s;
     int            bytes;
 
-    stream_new(s, 1024);
+    xstream_new(s, 1024);
 
     dev_redir_insert_dev_io_req_header(s, DeviceId, FileId, CompletionId,
                                        MajorFunction, MinorFunc);
 
     if (pad_len)
-        stream_seek(s, pad_len);
+        xstream_seek(s, pad_len);
 
     /* send to client */
-    bytes = stream_len(s);
+    bytes = xstream_len(s);
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
 
-    stream_free(s);
+    xstream_free(s);
     return 0;
 }
 
@@ -472,7 +472,7 @@ void dev_redir_send_drive_dir_request(IRP *irp, tui32 device_id,
         devredir_cvt_to_unicode(upath, Path);
     }
 
-    stream_new(s, 1024 + path_len);
+    xstream_new(s, 1024 + path_len);
 
     irp->completion_type = CID_DIRECTORY_CONTROL;
     dev_redir_insert_dev_io_req_header(s,
@@ -483,29 +483,29 @@ void dev_redir_send_drive_dir_request(IRP *irp, tui32 device_id,
                                        IRP_MN_QUERY_DIRECTORY);
 
 #ifdef USE_SHORT_NAMES_IN_DIR_LISTING
-    stream_wr_u32_le(s, FileBothDirectoryInformation); /* FsInformationClass */
+    xstream_wr_u32_le(s, FileBothDirectoryInformation); /* FsInformationClass */
 #else
-    stream_wr_u32_le(s, FileDirectoryInformation);  /* FsInformationClass */
+    xstream_wr_u32_le(s, FileDirectoryInformation);  /* FsInformationClass */
 #endif
-    stream_wr_u8(s, InitialQuery);                  /* InitialQuery       */
+    xstream_wr_u8(s, InitialQuery);                  /* InitialQuery       */
 
     if (!InitialQuery)
     {
-        stream_wr_u32_le(s, 0);                     /* PathLength         */
-        stream_seek(s, 23);
+        xstream_wr_u32_le(s, 0);                     /* PathLength         */
+        xstream_seek(s, 23);
     }
     else
     {
-        stream_wr_u32_le(s, path_len);              /* PathLength         */
-        stream_seek(s, 23);                         /* Padding            */
-        stream_wr_string(s, upath, path_len);
+        xstream_wr_u32_le(s, path_len);              /* PathLength         */
+        xstream_seek(s, 23);                         /* Padding            */
+        xstream_wr_string(s, upath, path_len);
     }
 
     /* send to client */
-    bytes = stream_len(s);
+    bytes = xstream_len(s);
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
 
-    stream_free(s);
+    xstream_free(s);
 }
 
 /******************************************************************************
@@ -525,14 +525,14 @@ void dev_redir_proc_client_core_cap_resp(struct stream *s)
     tui16 cap_len;
     tui32 cap_version;
 
-    stream_rd_u16_le(s, num_caps);
-    stream_seek(s, 2);  /* padding */
+    xstream_rd_u16_le(s, num_caps);
+    xstream_seek(s, 2);  /* padding */
 
     for (i = 0; i < num_caps; i++)
     {
-        stream_rd_u16_le(s, cap_type);
-        stream_rd_u16_le(s, cap_len);
-        stream_rd_u32_le(s, cap_version);
+        xstream_rd_u16_le(s, cap_type);
+        xstream_rd_u16_le(s, cap_len);
+        xstream_rd_u32_le(s, cap_version);
 
         /* remove header length and version */
         cap_len -= 8;
@@ -541,19 +541,19 @@ void dev_redir_proc_client_core_cap_resp(struct stream *s)
         {
             case CAP_GENERAL_TYPE:
                 log_debug("got CAP_GENERAL_TYPE");
-                stream_seek(s, cap_len);
+                xstream_seek(s, cap_len);
                 break;
 
             case CAP_PRINTER_TYPE:
                 log_debug("got CAP_PRINTER_TYPE");
                 g_is_printer_redir_supported = 1;
-                stream_seek(s, cap_len);
+                xstream_seek(s, cap_len);
                 break;
 
             case CAP_PORT_TYPE:
                 log_debug("got CAP_PORT_TYPE");
                 g_is_port_redir_supported = 1;
-                stream_seek(s, cap_len);
+                xstream_seek(s, cap_len);
                 break;
 
             case CAP_DRIVE_TYPE:
@@ -561,13 +561,13 @@ void dev_redir_proc_client_core_cap_resp(struct stream *s)
                 g_is_drive_redir_supported = 1;
                 if (cap_version == 2)
                     g_drive_redir_version = 2;
-                stream_seek(s, cap_len);
+                xstream_seek(s, cap_len);
                 break;
 
             case CAP_SMARTCARD_TYPE:
                 log_debug("got CAP_SMARTCARD_TYPE");
                 g_is_smartcard_redir_supported = 1;
-                stream_seek(s, cap_len);
+                xstream_seek(s, cap_len);
                 break;
         }
     }
@@ -582,14 +582,14 @@ void dev_redir_proc_client_devlist_announce_req(struct stream *s)
     tui32 device_data_len;
 
     /* get number of devices being announced */
-    stream_rd_u32_le(s, device_count);
+    xstream_rd_u32_le(s, device_count);
 
     log_debug("num of devices announced: %d", device_count);
 
     for (i = 0; i < device_count; i++)
     {
-        stream_rd_u32_le(s, device_type);
-        stream_rd_u32_le(s, g_device_id); /* LK_TODO need to support */
+        xstream_rd_u32_le(s, device_type);
+        xstream_rd_u32_le(s, g_device_id); /* LK_TODO need to support */
                                           /* multiple drives         */
 
         switch (device_type)
@@ -608,11 +608,11 @@ void dev_redir_proc_client_devlist_announce_req(struct stream *s)
                 /* see section 2.2.1.3 of the protocol documentation   */
 
                 /* get device data len */
-                stream_rd_u32_le(s, device_data_len);
+                xstream_rd_u32_le(s, device_data_len);
                 if (device_data_len)
                 {
-                    stream_rd_string(g_full_name_for_filesystem, s,
-                                     device_data_len);
+                    xstream_rd_string(g_full_name_for_filesystem, s,
+                                      device_data_len);
                 }
 
                 log_debug("device_type=FILE_SYSTEM device_id=0x%x dosname=%s "
@@ -649,9 +649,9 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
     tui32      IoStatus;
     tui32      Length;
 
-    stream_rd_u32_le(s, DeviceId);
-    stream_rd_u32_le(s, CompletionId);
-    stream_rd_u32_le(s, IoStatus);
+    xstream_rd_u32_le(s, DeviceId);
+    xstream_rd_u32_le(s, CompletionId);
+    xstream_rd_u32_le(s, IoStatus);
 
     /* LK_TODO need to check for IoStatus */
 
@@ -682,7 +682,7 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
             return;
         }
 
-        stream_rd_u32_le(s, irp->FileId);
+        xstream_rd_u32_le(s, irp->FileId);
         log_debug("got CID_CREATE_DIR_REQ IoStatus=0x%x FileId=%d",
                   IoStatus, irp->FileId);
 
@@ -690,7 +690,7 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
         break;
 
     case CID_CREATE_OPEN_REQ:
-        stream_rd_u32_le(s, irp->FileId);
+        xstream_rd_u32_le(s, irp->FileId);
         log_debug("got CID_CREATE_OPEN_REQ IoStatus=0x%x FileId=%d",
                   IoStatus, irp->FileId);
         fuse_data = dev_redir_fuse_data_dequeue(irp);
@@ -702,14 +702,14 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
 
     case CID_READ:
         log_debug("got CID_READ");
-        stream_rd_u32_le(s, Length);
+        xstream_rd_u32_le(s, Length);
         fuse_data = dev_redir_fuse_data_dequeue(irp);
         xfuse_devredir_cb_read_file(fuse_data->data_ptr, s->p, Length);
         break;
 
     case CID_WRITE:
         log_debug("got CID_WRITE");
-        stream_rd_u32_le(s, Length);
+        xstream_rd_u32_le(s, Length);
         fuse_data = dev_redir_fuse_data_dequeue(irp);
         xfuse_devredir_cb_write_file(fuse_data->data_ptr, s->p, Length);
         break;
@@ -737,7 +737,7 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
 
     case CID_RMDIR_OR_FILE:
         log_debug("got CID_RMDIR_OR_FILE");
-        stream_rd_u32_le(s, irp->FileId);
+        xstream_rd_u32_le(s, irp->FileId);
         devredir_proc_cid_rmdir_or_file(irp, IoStatus);
         return;
         break;
@@ -749,7 +749,7 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
 
     case CID_RENAME_FILE:
         log_debug("got CID_RENAME_FILE");
-        stream_rd_u32_le(s, irp->FileId);
+        xstream_rd_u32_le(s, irp->FileId);
         devredir_proc_cid_rename_file(irp, IoStatus);
         return;
         break;
@@ -801,7 +801,7 @@ void dev_redir_proc_query_dir_response(IRP *irp,
     char  filename[256];
     int   i = 0;
 
-    stream_rd_u32_le(s_in, Length);
+    xstream_rd_u32_le(s_in, Length);
 
     if ((IoStatus == NT_STATUS_UNSUCCESSFUL) ||
         (IoStatus == STATUS_NO_MORE_FILES))
@@ -827,22 +827,22 @@ void dev_redir_proc_query_dir_response(IRP *irp,
     {
         log_debug("processing FILE_DIRECTORY_INFORMATION structs");
 
-        stream_rd_u32_le(s_in, NextEntryOffset);
-        stream_seek(s_in, 4);  /* FileIndex */
-        stream_rd_u64_le(s_in, CreationTime);
-        stream_rd_u64_le(s_in, LastAccessTime);
-        stream_rd_u64_le(s_in, LastWriteTime);
-        stream_rd_u64_le(s_in, ChangeTime);
-        stream_rd_u64_le(s_in, EndOfFile);
-        stream_seek(s_in, 8);  /* AllocationSize */
-        stream_rd_u32_le(s_in, FileAttributes);
-        stream_rd_u32_le(s_in, FileNameLength);
+        xstream_rd_u32_le(s_in, NextEntryOffset);
+        xstream_seek(s_in, 4);  /* FileIndex */
+        xstream_rd_u64_le(s_in, CreationTime);
+        xstream_rd_u64_le(s_in, LastAccessTime);
+        xstream_rd_u64_le(s_in, LastWriteTime);
+        xstream_rd_u64_le(s_in, ChangeTime);
+        xstream_rd_u64_le(s_in, EndOfFile);
+        xstream_seek(s_in, 8);  /* AllocationSize */
+        xstream_rd_u32_le(s_in, FileAttributes);
+        xstream_rd_u32_le(s_in, FileNameLength);
 
 #ifdef USE_SHORT_NAMES_IN_DIR_LISTING
-        stream_rd_u32_le(s_in, EaSize);
-        stream_rd_u8(s_in, ShortNameLength);
-        stream_rd_u8(s_in, Reserved);
-        stream_seek(s_in, 23);  /* ShortName in Unicode */
+        xstream_rd_u32_le(s_in, EaSize);
+        xstream_rd_u8(s_in, ShortNameLength);
+        xstream_rd_u8(s_in, Reserved);
+        xstream_seek(s_in, 23);  /* ShortName in Unicode */
 #endif
         devredir_cvt_from_unicode_len(filename, s_in->p, FileNameLength);
 
@@ -1091,7 +1091,7 @@ int dev_redir_file_read(void *fusep, tui32 DeviceId, tui32 FileId,
     IRP           *irp;
     int            bytes;
 
-    stream_new(s, 1024);
+    xstream_new(s, 1024);
 
     if ((irp = dev_redir_irp_find_by_fileid(FileId)) == NULL)
     {
@@ -1109,14 +1109,14 @@ int dev_redir_file_read(void *fusep, tui32 DeviceId, tui32 FileId,
                                        IRP_MJ_READ,
                                        0);
 
-    stream_wr_u32_le(s, Length);
-    stream_wr_u64_le(s, Offset);
-    stream_seek(s, 20);
+    xstream_wr_u32_le(s, Length);
+    xstream_wr_u64_le(s, Offset);
+    xstream_seek(s, 20);
 
     /* send to client */
-    bytes = stream_len(s);
+    bytes = xstream_len(s);
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
-    stream_free(s);
+    xstream_free(s);
 
     return 0;
 }
@@ -1128,7 +1128,7 @@ int dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
     IRP           *irp;
     int            bytes;
 
-    stream_new(s, 1024 + Length);
+    xstream_new(s, 1024 + Length);
 
     if ((irp = dev_redir_irp_find_by_fileid(FileId)) == NULL)
     {
@@ -1146,17 +1146,17 @@ int dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
                                        IRP_MJ_WRITE,
                                        0);
 
-    stream_wr_u32_le(s, Length);
-    stream_wr_u64_le(s, Offset);
-    stream_seek(s, 20); /* padding */
+    xstream_wr_u32_le(s, Length);
+    xstream_wr_u64_le(s, Offset);
+    xstream_seek(s, 20); /* padding */
 
     /* now insert real data */
-    stream_copyin(s, buf, Length);
+    xstream_copyin(s, buf, Length);
 
     /* send to client */
-    bytes = stream_len(s);
+    bytes = xstream_len(s);
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
-    stream_free(s);
+    xstream_free(s);
 
     return 0;
 }
@@ -1423,13 +1423,13 @@ void dev_redir_insert_dev_io_req_header(struct stream *s,
                                         tui32 MinorFunction)
 {
     /* setup DR_DEVICE_IOREQUEST header */
-    stream_wr_u16_le(s, RDPDR_CTYP_CORE);
-    stream_wr_u16_le(s, PAKID_CORE_DEVICE_IOREQUEST);
-    stream_wr_u32_le(s, DeviceId);
-    stream_wr_u32_le(s, FileId);
-    stream_wr_u32_le(s, CompletionId);
-    stream_wr_u32_le(s, MajorFunction);
-    stream_wr_u32_le(s, MinorFunction);
+    xstream_wr_u16_le(s, RDPDR_CTYP_CORE);
+    xstream_wr_u16_le(s, PAKID_CORE_DEVICE_IOREQUEST);
+    xstream_wr_u32_le(s, DeviceId);
+    xstream_wr_u32_le(s, FileId);
+    xstream_wr_u32_le(s, CompletionId);
+    xstream_wr_u32_le(s, MajorFunction);
+    xstream_wr_u32_le(s, MinorFunction);
 }
 
 /**
@@ -1486,8 +1486,8 @@ int dev_redir_string_ends_with(char *string, char c)
 void dev_redir_insert_rdpdr_header(struct stream *s, tui16 Component,
                                    tui16 PacketId)
 {
-    stream_wr_u16_le(s, Component);
-    stream_wr_u16_le(s, PacketId);
+    xstream_wr_u16_le(s, Component);
+    xstream_wr_u16_le(s, PacketId);
 }
 
 void devredir_proc_cid_rmdir_or_file(IRP *irp, tui32 IoStatus)
@@ -1507,21 +1507,21 @@ void devredir_proc_cid_rmdir_or_file(IRP *irp, tui32 IoStatus)
         return;
     }
 
-    stream_new(s, 1024);
+    xstream_new(s, 1024);
 
     irp->completion_type = CID_RMDIR_OR_FILE_RESP;
     dev_redir_insert_dev_io_req_header(s, irp->device_id, irp->FileId,
                                        irp->completion_id,
                                        IRP_MJ_SET_INFORMATION, 0);
 
-    stream_wr_u32_le(s, FileDispositionInformation);
-    stream_wr_u32_le(s, 0); /* length is zero */
-    stream_seek(s, 24);     /* padding        */
+    xstream_wr_u32_le(s, FileDispositionInformation);
+    xstream_wr_u32_le(s, 0); /* length is zero */
+    xstream_seek(s, 24);     /* padding        */
 
     /* send to client */
-    bytes = stream_len(s);
+    bytes = xstream_len(s);
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
-    stream_free(s);
+    xstream_free(s);
 
     return;
 }
@@ -1572,7 +1572,7 @@ void devredir_proc_cid_rename_file(IRP *irp, tui32 IoStatus)
         return;
     }
 
-    stream_new(s, 1024);
+    xstream_new(s, 1024);
 
     irp->completion_type = CID_RENAME_FILE_RESP;
     dev_redir_insert_dev_io_req_header(s, irp->device_id, irp->FileId,
@@ -1582,21 +1582,21 @@ void devredir_proc_cid_rename_file(IRP *irp, tui32 IoStatus)
     flen = strlen(irp->gen_buf) * 2 + 2;
     sblen = 6 + flen;
 
-    stream_wr_u32_le(s, FileRenameInformation);
-    stream_wr_u32_le(s, sblen);     /* Length          */
-    stream_seek(s, 24);             /* padding         */
-    stream_wr_u8(s, 1);             /* ReplaceIfExists */
-    stream_wr_u8(s, 0);             /* RootDirectory   */
-    stream_wr_u32_le(s, flen);      /* FileNameLength  */
+    xstream_wr_u32_le(s, FileRenameInformation);
+    xstream_wr_u32_le(s, sblen);     /* Length          */
+    xstream_seek(s, 24);             /* padding         */
+    xstream_wr_u8(s, 1);             /* ReplaceIfExists */
+    xstream_wr_u8(s, 0);             /* RootDirectory   */
+    xstream_wr_u32_le(s, flen);      /* FileNameLength  */
 
     /* filename in unicode */
     devredir_cvt_to_unicode(s->p, irp->gen_buf);
-    stream_seek(s, flen);
+    xstream_seek(s, flen);
 
     /* send to client */
-    bytes = stream_len(s);
+    bytes = xstream_len(s);
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
-    stream_free(s);
+    xstream_free(s);
 
     return;
 }
