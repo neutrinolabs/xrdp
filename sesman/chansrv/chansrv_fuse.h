@@ -22,23 +22,24 @@
 /* a file or dir entry in the xrdp file system */
 struct xrdp_inode
 {
-    tui32           parent_inode;  /* Parent serial number.         */
-    tui32           inode;         /* File serial number.           */
-    tui32           mode;          /* File mode.                    */
-    tui32           nlink;         /* symbolic link count.          */
-    tui32           nentries;      /* number of entries in a dir    */
-    tui32           nopen;         /* number of simultaneous opens  */
-    tui32           uid;           /* User ID of the file's owner.  */
-    tui32           gid;           /* Group ID of the file's group. */
-    size_t          size;          /* Size of file, in bytes.       */
-    time_t          atime;         /* Time of last access.          */
-    time_t          mtime;         /* Time of last modification.    */
-    time_t          ctime;         /* Time of last status change.   */
-    char            name[256];     /* Dir or filename               */
-    tui32           device_id;     /* for file system redirection   */
-    char            is_synced;     /* dir struct has been read from */
-                                   /* remote device, done just once */
-    int             lindex;        /* used in clipboard operations  */
+    tui32           parent_inode;    /* Parent serial number.             */
+    tui32           inode;           /* File serial number.               */
+    tui32           mode;            /* File mode.                        */
+    tui32           nlink;           /* symbolic link count.              */
+    tui32           nentries;        /* number of entries in a dir        */
+    tui32           nopen;           /* number of simultaneous opens      */
+    tui32           uid;             /* User ID of the file's owner.      */
+    tui32           gid;             /* Group ID of the file's group.     */
+    size_t          size;            /* Size of file, in bytes.           */
+    time_t          atime;           /* Time of last access.              */
+    time_t          mtime;           /* Time of last modification.        */
+    time_t          ctime;           /* Time of last status change.       */
+    char            name[256];       /* Dir or filename                   */
+    tui32           device_id;       /* for file system redirection       */
+    char            is_synced;       /* dir struct has been read from     */
+                                     /* remote device, done just once     */
+    int             lindex;          /* used in clipboard operations      */
+    int             is_loc_resource; /* this is not a redirected resource */
 };
 typedef struct xrdp_inode XRDP_INODE; // LK_TODO use this instead of using struct xrdp_inode
 

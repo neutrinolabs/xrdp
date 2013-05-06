@@ -400,7 +400,7 @@ int dev_redir_send_drive_create_request(tui32 device_id, char *path,
     stream_wr_u32_le(s, 0);                 /* AllocationSize high unused */
     stream_wr_u32_le(s, 0);                 /* AllocationSize low  unused */
     stream_wr_u32_le(s, 0);                 /* FileAttributes             */
-    stream_wr_u32_le(s, 0);                 /* SharedAccess               */
+    stream_wr_u32_le(s, 3);                 /* SharedAccess LK_TODO       */
     stream_wr_u32_le(s, CreateDisposition); /* CreateDisposition          */
     stream_wr_u32_le(s, CreateOptions);     /* CreateOptions              */
     stream_wr_u32_le(s, len);               /* PathLength                 */
@@ -443,6 +443,7 @@ int dev_redir_send_drive_close_request(tui16 Component, tui16 PacketId,
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
 
     stream_free(s);
+    log_debug("sent close request; expect CID_FILE_CLOSE");
     return 0;
 }
 
@@ -905,6 +906,8 @@ int dev_redir_get_dir_listing(void *fusep, tui32 device_id, char *path)
     int    rval;
     IRP   *irp;
 
+    log_debug("fusep=%p", fusep);
+
     if ((irp = dev_redir_irp_new()) == NULL)
         return -1;
 
@@ -971,7 +974,7 @@ int dev_redir_file_open(void *fusep, tui32 device_id, char *path,
     if (mode & O_CREAT)
     {
         log_debug("open file in O_CREAT");
-        DesiredAccess = DA_FILE_READ_DATA | DA_FILE_WRITE_DATA | DA_SYNCHRONIZE;
+        DesiredAccess = 0x0016019f; /* got this value from windows */
 
         if (type & S_IFDIR)
         {
@@ -982,27 +985,27 @@ int dev_redir_file_open(void *fusep, tui32 device_id, char *path,
         else
         {
             log_debug("creating file");
-            CreateOptions = CO_FILE_SYNCHRONOUS_IO_NONALERT;
+            CreateOptions = 0x44; /* got this value from windows */
         }
 
-        CreateDisposition = CD_FILE_CREATE;
+        //CreateDisposition = CD_FILE_CREATE;
+        CreateDisposition  = 0x02; /* got this value from windows */
     }
     else //if (mode & O_RDWR)
     {
         log_debug("open file in O_RDWR");
+#if 1
         DesiredAccess = DA_FILE_READ_DATA | DA_FILE_WRITE_DATA | DA_SYNCHRONIZE;
         CreateOptions = CO_FILE_SYNCHRONOUS_IO_NONALERT;
         CreateDisposition = CD_FILE_OPEN; // WAS 1
-    }
-#if 0
-    else
-    {
-        log_debug("open file in O_RDONLY");
-        DesiredAccess = DA_FILE_READ_DATA | DA_SYNCHRONIZE;
-        CreateOptions = CO_FILE_SYNCHRONOUS_IO_NONALERT;
-        CreateDisposition = CD_FILE_OPEN;
-    }
+#else
+        /* got this value from windows */
+        DesiredAccess = 0x00120089;
+        CreateOptions = 0x20060;
+        CreateDisposition = 0x01;
 #endif
+    }
+
     rval = dev_redir_send_drive_create_request(device_id, path,
                                                DesiredAccess, CreateOptions,
                                                CreateDisposition,
@@ -1014,6 +1017,8 @@ int dev_redir_file_open(void *fusep, tui32 device_id, char *path,
 int devredir_file_close(void *fusep, tui32 device_id, tui32 FileId)
 {
     IRP *irp;
+
+    log_debug("entered");
 
 #if 0
     if ((irp = dev_redir_irp_new()) == NULL)
@@ -1041,7 +1046,7 @@ int devredir_file_close(void *fusep, tui32 device_id, tui32 FileId)
 }
 
 /**
- * Remove (delete) a directory
+ * Remove (delete) a directory or file
  *****************************************************************************/
 
 int devredir_rmdir_or_file(void *fusep, tui32 device_id, char *path, int mode)
@@ -1061,14 +1066,15 @@ int devredir_rmdir_or_file(void *fusep, tui32 device_id, char *path, int mode)
     strcpy(irp->pathname, path);
     dev_redir_fuse_data_enqueue(irp, fusep);
 
-    // LK_TODO
-    //DesiredAccess = DA_DELETE | DA_FILE_READ_DATA | DA_FILE_WRITE_DATA | DA_SYNCHRONIZE;
-    DesiredAccess = DA_DELETE | DA_FILE_READ_ATTRIBUTES | DA_SYNCHRONIZE;
+    //DesiredAccess = DA_DELETE | DA_FILE_READ_ATTRIBUTES | DA_SYNCHRONIZE;
+    DesiredAccess = 0x00100080; /* got this value from windows */
 
-    CreateOptions = CO_FILE_DELETE_ON_CLOSE | CO_FILE_DIRECTORY_FILE |
-                    CO_FILE_SYNCHRONOUS_IO_NONALERT;
+    //CreateOptions = CO_FILE_DELETE_ON_CLOSE | CO_FILE_DIRECTORY_FILE |
+    //                CO_FILE_SYNCHRONOUS_IO_NONALERT;
+    CreateOptions = 0x020; /* got this value from windows */
 
-    CreateDisposition = CD_FILE_OPEN; // WAS 1
+    //CreateDisposition = CD_FILE_OPEN; // WAS 1
+    CreateDisposition = 0x01; /* got this value from windows */
 
     rval = dev_redir_send_drive_create_request(device_id, path,
                                                DesiredAccess, CreateOptions,
@@ -1127,6 +1133,9 @@ int dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
     struct stream *s;
     IRP           *irp;
     int            bytes;
+
+    log_debug("DeviceId=%d FileId=%d Length=%d Offset=%lld",
+              DeviceId, FileId, Length, Offset);
 
     stream_new(s, 1024 + Length);
 
@@ -1562,6 +1571,8 @@ void devredir_proc_cid_rename_file(IRP *irp, tui32 IoStatus)
 
     if (IoStatus != NT_STATUS_SUCCESS)
     {
+        log_debug("rename returned with IoStatus=0x%x", IoStatus);
+
         FUSE_DATA *fuse_data = dev_redir_fuse_data_dequeue(irp);
         if (fuse_data)
         {
@@ -1604,6 +1615,8 @@ void devredir_proc_cid_rename_file(IRP *irp, tui32 IoStatus)
 void devredir_proc_cid_rename_file_resp(IRP *irp, tui32 IoStatus)
 {
     FUSE_DATA *fuse_data;
+
+    log_debug("entered");
 
     fuse_data = dev_redir_fuse_data_dequeue(irp);
     if (fuse_data)
