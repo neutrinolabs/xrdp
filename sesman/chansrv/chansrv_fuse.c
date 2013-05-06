@@ -1619,7 +1619,7 @@ done:
 #endif
 
     if (!fip)
-        log_error("fip is NULL");
+        printf("###### %s : %s : %d: fip is NULL\n", __FILE__, __func__, __LINE__);
 
     if (fip)
         free(fip);
@@ -1826,13 +1826,9 @@ void xfuse_devredir_cb_write_file(void *vp, char *buf, size_t length)
     XRDP_INODE   *xinode;
     XFUSE_INFO   *fip;
 
-    log_debug("entered: length=%lld", (long long) length);
-
     fip = (XFUSE_INFO *) vp;
     if (fip == NULL)
         return;
-
-    log_debug("letting FUSE know that we wrote %lld bytes", (long long) length);
 
     fuse_reply_write(fip->req, length);
 
@@ -1893,7 +1889,6 @@ void xfuse_devredir_cb_rename_file(void *vp, tui32 IoStatus)
 
     if (IoStatus != 0)
     {
-        log_debug("rename failed with IoStatus=0x%x", IoStatus);
         fuse_reply_err(fip->req, EEXIST);
         free(fip);
         return;
@@ -1920,7 +1915,6 @@ void xfuse_devredir_cb_rename_file(void *vp, tui32 IoStatus)
     old_xinode = xfuse_get_inode_from_pinode_name(fip->inode, fip->name);
     if (old_xinode == NULL)
     {
-        log_debug("rename failed");
         fuse_reply_err(fip->req, EBADF);
         free(fip);
         return;
@@ -1960,7 +1954,7 @@ void xfuse_devredir_cb_file_close(void *vp)
 
     if ((xinode->nopen == 0) && fip->fi && fip->fi->fh)
     {
-        free((char *) fip->fi->fh);
+        free((char *) (tintptr) (fip->fi->fh));
         fip->fi->fh = NULL;
     }
 
@@ -2680,7 +2674,7 @@ static void xfuse_cb_flush(fuse_req_t req, fuse_ino_t ino, struct
                            fuse_file_info *fi)
 {
     XFUSE_INFO   *fip    = NULL;
-    XFUSE_HANDLE *handle = (XFUSE_HANDLE *) fi->fh;
+    XFUSE_HANDLE *handle = (XFUSE_HANDLE *) (tintptr) (fi->fh);
 
     log_debug("ino=%d", (int) ino);
 

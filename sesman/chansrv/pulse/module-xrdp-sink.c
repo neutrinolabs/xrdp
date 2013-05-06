@@ -108,6 +108,8 @@ static const char* const valid_modargs[] = {
     NULL
 };
 
+static int close_send(struct userdata *u);
+
 static int sink_process_msg(pa_msgobject *o, int code, void *data,
                             int64_t offset, pa_memchunk *chunk) {
 
@@ -141,6 +143,7 @@ static int sink_process_msg(pa_msgobject *o, int code, void *data,
                 u->timestamp = pa_rtclock_now();
             } else {
                 pa_log("sink_process_msg: not running");
+                close_send(u);
             }
             break;
 
@@ -328,6 +331,28 @@ static int data_send(struct userdata *u, pa_memchunk *chunk) {
     }
 
     return sent;
+}
+
+static int close_send(struct userdata *u) {
+    struct header h;
+
+    pa_log("close_send:");
+    if (u->fd == 0) {
+        return 0;
+    }
+
+    h.code = 1;
+    h.bytes = 8;
+    if (send(u->fd, &h, 8, 0) != 8) {
+        pa_log("close_send: send failed");
+        close(u->fd);
+        u->fd = 0;
+        return 0;
+    } else {
+        //pa_log("close_send: sent header ok");
+    }
+
+    return 8;
 }
 
 static void process_render(struct userdata *u, pa_usec_t now) {
