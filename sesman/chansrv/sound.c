@@ -18,6 +18,7 @@
 
 #include "sound.h"
 #include "thread_calls.h"
+#include "defines.h"
 
 extern int g_rdpsnd_chan_id;    /* in chansrv.c */
 extern int g_display_num;       /* in chansrv.c */
@@ -26,6 +27,10 @@ static struct trans *g_audio_l_trans = 0; // listener
 static struct trans *g_audio_c_trans = 0; // connection
 static int g_training_sent_time = 0;
 static int g_cBlockNo = 0;
+
+#define BBUF_SIZE (1024 * 8)
+char g_buffer[BBUF_SIZE];
+int g_buf_index = 0;
 
 #if defined(XRDP_SIMPLESOUND)
 static void *DEFAULT_CC
@@ -158,7 +163,7 @@ sound_process_formats(struct stream *s, int size)
 
 /*****************************************************************************/
 static int
-sound_send_wave_data(char *data, int data_bytes)
+sound_send_wave_data_chunk(char *data, int data_bytes)
 {
     struct stream *s;
     int bytes;
@@ -169,15 +174,15 @@ sound_send_wave_data(char *data, int data_bytes)
 
     if ((data_bytes < 4) || (data_bytes > 128 * 1024))
     {
-        LOG(0, ("sound_send_wave_data: bad data_bytes %d", data_bytes));
+        LOG(0, ("sound_send_wave_data_chunk: bad data_bytes %d", data_bytes));
     }
 
     /* part one of 2 PDU wave info */
 
-    LOG(10, ("sound_send_wave_data: sending %d bytes", data_bytes));
+    LOG(10, ("sound_send_wave_data_chunk: sending %d bytes", data_bytes));
 
     make_stream(s);
-    init_stream(s, data_bytes);
+    init_stream(s, 16 + data_bytes); /* some extra space */
     out_uint16_le(s, SNDC_WAVE);
     size_ptr = s->p;
     out_uint16_le(s, 0); /* size, set later */
@@ -187,7 +192,7 @@ sound_send_wave_data(char *data, int data_bytes)
     g_cBlockNo++;
     out_uint8(s, g_cBlockNo);
 
-    LOG(10, ("sound_send_wave_data: sending time %d, g_cBlockNo %d",
+    LOG(10, ("sound_send_wave_data_chunk: sending time %d, g_cBlockNo %d",
              time & 0xffff, g_cBlockNo & 0xff));
 
     out_uint8s(s, 3);
@@ -201,14 +206,48 @@ sound_send_wave_data(char *data, int data_bytes)
     bytes = (int)(s->end - s->data);
     send_channel_data(g_rdpsnd_chan_id, s->data, bytes);
 
-    /* part two of 2 PDU wave info */
+    /* part two of 2 PDU wave info
+       even is zero, we have to send this */
     init_stream(s, data_bytes);
     out_uint32_le(s, 0);
     out_uint8a(s, data + 4, data_bytes - 4);
     s_mark_end(s);
     bytes = (int)(s->end - s->data);
     send_channel_data(g_rdpsnd_chan_id, s->data, bytes);
+
     free_stream(s);
+    return 0;
+}
+
+/*****************************************************************************/
+static int
+sound_send_wave_data(char *data, int data_bytes)
+{
+    int space_left;
+    int chunk_bytes;
+    int data_index;
+
+    LOG(10, ("sound_send_wave_data: sending %d bytes", data_bytes));
+    data_index = 0;
+    while (data_bytes > 0)
+    {
+        space_left = BBUF_SIZE - g_buf_index;
+        chunk_bytes = MIN(space_left, data_bytes);
+        if (chunk_bytes < 1)
+        {
+            LOG(10, ("sound_send_wave_data: error"));
+            break;
+        }
+        g_memcpy(g_buffer + g_buf_index, data + data_index, chunk_bytes);
+        g_buf_index += chunk_bytes;
+        if (g_buf_index >= BBUF_SIZE)
+        {
+            sound_send_wave_data_chunk(g_buffer, BBUF_SIZE);
+            g_buf_index = 0;
+        }
+        data_bytes -= chunk_bytes;
+        data_index += chunk_bytes;
+    }
     return 0;
 }
 
@@ -220,7 +259,12 @@ sound_send_close(void)
     int bytes;
     char *size_ptr;
 
+    LOG(10, ("sound_send_close:"));
     print_got_here();
+
+    /* send any left over data */
+    sound_send_wave_data_chunk(g_buffer, g_buf_index);
+    g_buf_index = 0;
 
     make_stream(s);
     init_stream(s, 8182);
