@@ -3,7 +3,6 @@ if [ -r /etc/default/locale ]; then
   . /etc/default/locale
   export LANG LANGUAGE
 fi
-. /etc/X11/Xsession
 
 # debian
 if [ -r /etc/X11/Xsession ]; then
