@@ -524,7 +524,7 @@ draw_item_pack(PixmapPtr pix, rdpPixmapRec *priv)
     }
 
 #endif
-#if 1
+#if 0
 
     /* subtract regions */
     if (priv->draw_item_tail != 0)
@@ -559,6 +559,7 @@ draw_item_pack(PixmapPtr pix, rdpPixmapRec *priv)
 
 #endif
 #if 1
+
     /* remove draw items with empty regions */
     di = priv->draw_item_head;
     di_prev = 0;
