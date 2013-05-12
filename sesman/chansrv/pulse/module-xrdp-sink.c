@@ -74,7 +74,8 @@ PA_MODULE_USAGE(
         "channel_map=<channel map>");
 
 #define DEFAULT_SINK_NAME "xrdp"
-#define BLOCK_USEC (PA_USEC_PER_SEC * 2)
+#define BLOCK_USEC 30000
+//#define BLOCK_USEC (PA_USEC_PER_SEC * 2)
 #define CHANSRV_PORT_STR "/tmp/.xrdp/xrdp_chansrv_audio_socket_%d"
 
 struct userdata {
@@ -117,7 +118,7 @@ static int sink_process_msg(pa_msgobject *o, int code, void *data,
     pa_usec_t now;
     long lat;
 
-    //pa_log("sink_process_msg: code %d", code);
+    pa_log_debug("sink_process_msg: code %d", code);
 
     switch (code) {
 
@@ -130,7 +131,7 @@ static int sink_process_msg(pa_msgobject *o, int code, void *data,
         case PA_SINK_MESSAGE_GET_LATENCY: /* 7 */
             now = pa_rtclock_now();
             lat = u->timestamp > now ? u->timestamp - now : 0ULL;
-            //pa_log("sink_process_msg: lat %ld", lat);
+            pa_log_debug("sink_process_msg: lat %ld", lat);
             *((pa_usec_t*) data) = lat;
             return 0;
 
@@ -159,11 +160,14 @@ static void sink_update_requested_latency_cb(pa_sink *s) {
     pa_sink_assert_ref(s);
     pa_assert_se(u = s->userdata);
 
-    u->block_usec = pa_sink_get_requested_latency_within_thread(s);
+    u->block_usec = BLOCK_USEC;
+    //u->block_usec = pa_sink_get_requested_latency_within_thread(s);
+    pa_log("1 block_usec %d", u->block_usec);
 
     u->got_max_latency = 0;
     if (u->block_usec == (pa_usec_t) -1) {
         u->block_usec = s->thread_info.max_latency;
+        pa_log("2 block_usec %d", u->block_usec);
         u->got_max_latency = 1;
     }
 
@@ -226,6 +230,9 @@ static int get_display_num_from_display(char *display_text) {
     char disp[256];
     char scre[256];
 
+    if (display_text == NULL) {
+        return 0;
+    }
     memset(host, 0, 256);
     memset(disp, 0, 256);
     memset(scre, 0, 256);
@@ -280,11 +287,11 @@ static int data_send(struct userdata *u, pa_memchunk *chunk) {
         s.sun_family = AF_UNIX;
         bytes = sizeof(s.sun_path) - 1;
         snprintf(s.sun_path, bytes, CHANSRV_PORT_STR, u->display_num);
-        pa_log("trying to conenct to %s", s.sun_path);
+        pa_log_debug("trying to conenct to %s", s.sun_path);
         if (connect(fd, (struct sockaddr *)&s,
                     sizeof(struct sockaddr_un)) != 0) {
             u->failed_connect_time = pa_rtclock_now();
-            pa_log("Connected failed");
+            pa_log_debug("Connected failed");
             close(fd);
             return 0;
         }
@@ -294,7 +301,7 @@ static int data_send(struct userdata *u, pa_memchunk *chunk) {
     }
 
     bytes = chunk->length;
-    //pa_log("bytes %d", bytes);
+    pa_log_debug("bytes %d", bytes);
 
     /* from rewind */
     if (u->skip_bytes > 0) {
@@ -315,7 +322,7 @@ static int data_send(struct userdata *u, pa_memchunk *chunk) {
         u->fd = 0;
         return 0;
     } else {
-        //pa_log("data_send: sent header ok bytes %d", bytes);
+        pa_log_debug("data_send: sent header ok bytes %d", bytes);
     }
 
     data = (char*)pa_memblock_acquire(chunk->memblock);
@@ -340,7 +347,6 @@ static int close_send(struct userdata *u) {
     if (u->fd == 0) {
         return 0;
     }
-
     h.code = 1;
     h.bytes = 8;
     if (send(u->fd, &h, 8, 0) != 8) {
@@ -349,36 +355,24 @@ static int close_send(struct userdata *u) {
         u->fd = 0;
         return 0;
     } else {
-        //pa_log("close_send: sent header ok");
+        pa_log_debug("close_send: sent header ok");
     }
-
     return 8;
 }
 
 static void process_render(struct userdata *u, pa_usec_t now) {
     pa_memchunk chunk;
     int request_bytes;
-    //int index;
 
     pa_assert(u);
-
     if (u->got_max_latency) {
         return;
     }
-
-    //index = 0;
+    pa_log_debug("process_render: u->block_usec %d", u->block_usec);
     while (u->timestamp < now + u->block_usec) {
-        //index++;
-        //if (index > 3) {
-            /* used when u->block_usec and
-               u->sink->thread_info.max_request get big
-               using got_max_latency now */
-        //    return;
-        //}
         request_bytes = u->sink->thread_info.max_request;
         request_bytes = MIN(request_bytes, 16 * 1024);
         pa_sink_render(u->sink, request_bytes, &chunk);
-        //pa_log("bytes %d index %d", chunk.length, index);
         data_send(u, &chunk);
         pa_memblock_unref(chunk.memblock);
         u->timestamp += pa_bytes_to_usec(chunk.length, &u->sink->sample_spec);
@@ -414,6 +408,7 @@ static void thread_func(void *userdata) {
             }
 
             if (u->timestamp <= now) {
+                pa_log_debug("thread_func: calling process_render");
                 process_render(u, now);
             }
 
@@ -507,6 +502,7 @@ int pa__init(pa_module*m) {
     pa_sink_set_rtpoll(u->sink, u->rtpoll);
 
     u->block_usec = BLOCK_USEC;
+    pa_log("3 block_usec %d", u->block_usec);
     nbytes = pa_usec_to_bytes(u->block_usec, &u->sink->sample_spec);
     pa_sink_set_max_rewind(u->sink, nbytes);
     pa_sink_set_max_request(u->sink, nbytes);
