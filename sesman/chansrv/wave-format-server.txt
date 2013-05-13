@@ -1,0 +1,466 @@
+
+
+Example wave formats from some servers
+
+see MMREG.H for defines
+
+Windows 7 SP1
+
+example wave data sizes coming from server 8820
+
+wFormatTag=1 nChannels=2 nSamplesPerSec=44100 nAvgBytesPerSec=176400 nBlockAlign=4 wBitsPerSample=16 cbSize=0
+
+#define  WAVE_FORMAT_ALAW       0x0006  /*  Microsoft Corporation  */
+wFormatTag=6 nChannels=2 nSamplesPerSec=44100 nAvgBytesPerSec=88200 nBlockAlign=2 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_MULAW      0x0007  /*  Microsoft Corporation  */
+wFormatTag=7 nChannels=2 nSamplesPerSec=44100 nAvgBytesPerSec=88200 nBlockAlign=2 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_ADPCM      0x0002  /*  Microsoft Corporation  */
+wFormatTag=2 nChannels=2 nSamplesPerSec=44100 nAvgBytesPerSec=44359 nBlockAlign=2048 wBitsPerSample=4 cbSize=32
+    0000 f4 07 07 00 00 01 00 00 00 02 00 ff 00 00 00 00 ................
+    0010 c0 00 40 00 f0 00 00 00 cc 01 30 ff 88 01 18 ff ..@.......0.....
+
+#define  WAVE_FORMAT_DVI_ADPCM  0x0011  /*  Intel Corporation  */
+wFormatTag=17 nChannels=2 nSamplesPerSec=44100 nAvgBytesPerSec=44251 nBlockAlign=2048 wBitsPerSample=4 cbSize=2
+    0000 f9 07                                           ..
+
+#define  WAVE_FORMAT_ALAW       0x0006  /*  Microsoft Corporation  */
+wFormatTag=6 nChannels=2 nSamplesPerSec=22050 nAvgBytesPerSec=44100 nBlockAlign=2 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_ALAW       0x0006  /*  Microsoft Corporation  */
+wFormatTag=6 nChannels=1 nSamplesPerSec=44100 nAvgBytesPerSec=44100 nBlockAlign=1 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_MULAW      0x0007  /*  Microsoft Corporation  */
+wFormatTag=7 nChannels=2 nSamplesPerSec=22050 nAvgBytesPerSec=44100 nBlockAlign=2 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_MULAW      0x0007  /*  Microsoft Corporation  */
+wFormatTag=7 nChannels=1 nSamplesPerSec=44100 nAvgBytesPerSec=44100 nBlockAlign=1 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_ADPCM      0x0002  /*  Microsoft Corporation  */
+wFormatTag=2 nChannels=2 nSamplesPerSec=22050 nAvgBytesPerSec=22311 nBlockAlign=1024 wBitsPerSample=4 cbSize=32
+    0000 f4 03 07 00 00 01 00 00 00 02 00 ff 00 00 00 00 ................
+    0010 c0 00 40 00 f0 00 00 00 cc 01 30 ff 88 01 18 ff ..@.......0.....
+
+#define  WAVE_FORMAT_DVI_ADPCM  0x0011  /*  Intel Corporation  */
+wFormatTag=17 nChannels=2 nSamplesPerSec=22050 nAvgBytesPerSec=22201 nBlockAlign=1024 wBitsPerSample=4 cbSize=2
+    0000 f9 03                                           ..
+
+#define  WAVE_FORMAT_ADPCM      0x0002  /*  Microsoft Corporation  */
+wFormatTag=2 nChannels=1 nSamplesPerSec=44100 nAvgBytesPerSec=22179 nBlockAlign=1024 wBitsPerSample=4 cbSize=32
+    0000 f4 07 07 00 00 01 00 00 00 02 00 ff 00 00 00 00 ................
+    0010 c0 00 40 00 f0 00 00 00 cc 01 30 ff 88 01 18 ff ..@.......0.....
+
+#define  WAVE_FORMAT_DVI_ADPCM  0x0011  /*  Intel Corporation  */
+wFormatTag=17 nChannels=1 nSamplesPerSec=44100 nAvgBytesPerSec=22125 nBlockAlign=1024 wBitsPerSample=4 cbSize=2
+    0000 f9 07                                           ..
+
+#define  WAVE_FORMAT_ALAW       0x0006  /*  Microsoft Corporation  */
+wFormatTag=6 nChannels=2 nSamplesPerSec=11025 nAvgBytesPerSec=22050 nBlockAlign=2 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_ALAW       0x0006  /*  Microsoft Corporation  */
+wFormatTag=6 nChannels=1 nSamplesPerSec=22050 nAvgBytesPerSec=22050 nBlockAlign=1 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_MULAW      0x0007  /*  Microsoft Corporation  */
+wFormatTag=7 nChannels=2 nSamplesPerSec=11025 nAvgBytesPerSec=22050 nBlockAlign=2 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_MULAW      0x0007  /*  Microsoft Corporation  */
+wFormatTag=7 nChannels=1 nSamplesPerSec=22050 nAvgBytesPerSec=22050 nBlockAlign=1 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_ALAW       0x0006  /*  Microsoft Corporation  */
+wFormatTag=6 nChannels=2 nSamplesPerSec=8000 nAvgBytesPerSec=16000 nBlockAlign=2 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_MULAW      0x0007  /*  Microsoft Corporation  */
+wFormatTag=7 nChannels=2 nSamplesPerSec=8000 nAvgBytesPerSec=16000 nBlockAlign=2 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_ADPCM      0x0002  /*  Microsoft Corporation  */
+wFormatTag=2 nChannels=2 nSamplesPerSec=11025 nAvgBytesPerSec=11289 nBlockAlign=512 wBitsPerSample=4 cbSize=32
+    0000 f4 01 07 00 00 01 00 00 00 02 00 ff 00 00 00 00 ................
+    0010 c0 00 40 00 f0 00 00 00 cc 01 30 ff 88 01 18 ff ..@.......0.....
+
+#define  WAVE_FORMAT_DVI_ADPCM  0x0011  /*  Intel Corporation  */
+wFormatTag=17 nChannels=2 nSamplesPerSec=11025 nAvgBytesPerSec=11177 nBlockAlign=512 wBitsPerSample=4 cbSize=2
+    0000 f9 01                                           ..
+
+#define  WAVE_FORMAT_ADPCM      0x0002  /*  Microsoft Corporation  */
+wFormatTag=2 nChannels=1 nSamplesPerSec=22050 nAvgBytesPerSec=11155 nBlockAlign=512 wBitsPerSample=4 cbSize=32
+    0000 f4 03 07 00 00 01 00 00 00 02 00 ff 00 00 00 00 ................
+    0010 c0 00 40 00 f0 00 00 00 cc 01 30 ff 88 01 18 ff ..@.......0.....
+
+#define  WAVE_FORMAT_DVI_ADPCM  0x0011  /*  Intel Corporation  */
+wFormatTag=17 nChannels=1 nSamplesPerSec=22050 nAvgBytesPerSec=11100 nBlockAlign=512 wBitsPerSample=4 cbSize=2
+    0000 f9 03                                           ..
+
+#define  WAVE_FORMAT_ALAW       0x0006  /*  Microsoft Corporation  */
+wFormatTag=6 nChannels=1 nSamplesPerSec=11025 nAvgBytesPerSec=11025 nBlockAlign=1 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_MULAW      0x0007  /*  Microsoft Corporation  */
+wFormatTag=7 nChannels=1 nSamplesPerSec=11025 nAvgBytesPerSec=11025 nBlockAlign=1 wBitsPerSample=8 cbSize=0
+
+wFormatTag=49 nChannels=1 nSamplesPerSec=44100 nAvgBytesPerSec=8957 nBlockAlign=65 wBitsPerSample=0 cbSize=2
+    0000 40 01                                           @.
+
+#define  WAVE_FORMAT_ADPCM      0x0002  /*  Microsoft Corporation  */
+wFormatTag=2 nChannels=2 nSamplesPerSec=8000 nAvgBytesPerSec=8192 nBlockAlign=512 wBitsPerSample=4 cbSize=32
+    0000 f4 01 07 00 00 01 00 00 00 02 00 ff 00 00 00 00 ................
+    0010 c0 00 40 00 f0 00 00 00 cc 01 30 ff 88 01 18 ff ..@.......0.....
+
+#define  WAVE_FORMAT_DVI_ADPCM  0x0011  /*  Intel Corporation  */
+wFormatTag=17 nChannels=2 nSamplesPerSec=8000 nAvgBytesPerSec=8110 nBlockAlign=512 wBitsPerSample=4 cbSize=2
+    0000 f9 01                                           ..
+
+#define  WAVE_FORMAT_ALAW       0x0006  /*  Microsoft Corporation  */
+wFormatTag=6 nChannels=1 nSamplesPerSec=8000 nAvgBytesPerSec=8000 nBlockAlign=1 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_MULAW      0x0007  /*  Microsoft Corporation  */
+wFormatTag=7 nChannels=1 nSamplesPerSec=8000 nAvgBytesPerSec=8000 nBlockAlign=1 wBitsPerSample=8 cbSize=0
+
+wFormatTag=2 nChannels=1 nSamplesPerSec=11025 nAvgBytesPerSec=5644 nBlockAlign=256 wBitsPerSample=4 cbSize=32
+    0000 f4 01 07 00 00 01 00 00 00 02 00 ff 00 00 00 00 ................
+    0010 c0 00 40 00 f0 00 00 00 cc 01 30 ff 88 01 18 ff ..@.......0.....
+
+wFormatTag=17 nChannels=1 nSamplesPerSec=11025 nAvgBytesPerSec=5588 nBlockAlign=256 wBitsPerSample=4 cbSize=2
+    0000 f9 01                                           ..
+
+#define  WAVE_FORMAT_GSM610     0x0031  /*  Microsoft Corporation  */
+wFormatTag=49 nChannels=1 nSamplesPerSec=22050 nAvgBytesPerSec=4478 nBlockAlign=65 wBitsPerSample=0 cbSize=2
+    0000 40 01                                           @.
+
+#define  WAVE_FORMAT_ADPCM      0x0002  /*  Microsoft Corporation  */
+wFormatTag=2 nChannels=1 nSamplesPerSec=8000 nAvgBytesPerSec=4096 nBlockAlign=256 wBitsPerSample=4 cbSize=32
+    0000 f4 01 07 00 00 01 00 00 00 02 00 ff 00 00 00 00 ................
+    0010 c0 00 40 00 f0 00 00 00 cc 01 30 ff 88 01 18 ff ..@.......0.....
+
+#define  WAVE_FORMAT_DVI_ADPCM  0x0011  /*  Intel Corporation  */
+wFormatTag=17 nChannels=1 nSamplesPerSec=8000 nAvgBytesPerSec=4055 nBlockAlign=256 wBitsPerSample=4 cbSize=2
+    0000 f9 01                                           ..
+
+#define  WAVE_FORMAT_GSM610     0x0031  /*  Microsoft Corporation  */
+wFormatTag=49 nChannels=1 nSamplesPerSec=11025 nAvgBytesPerSec=2239 nBlockAlign=65 wBitsPerSample=0 cbSize=2
+    0000 40 01                                           @.
+
+#define  WAVE_FORMAT_GSM610     0x0031  /*  Microsoft Corporation  */
+wFormatTag=49 nChannels=1 nSamplesPerSec=8000 nAvgBytesPerSec=1625 nBlockAlign=65 wBitsPerSample=0 cbSize=2
+    0000 40 01                                           @.
+
+
+
+
+Windows XP SP3
+
+example wave data sizes coming from server 32512, 16256
+
+wFormatTag=1 nChannels=2 nSamplesPerSec=22050 nAvgBytesPerSec=88200 nBlockAlign=4 wBitsPerSample=16 cbSize=0
+
+#define  WAVE_FORMAT_ALAW       0x0006  /*  Microsoft Corporation  */
+wFormatTag=6 nChannels=2 nSamplesPerSec=22050 nAvgBytesPerSec=44100 nBlockAlign=2 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_MULAW      0x0007  /*  Microsoft Corporation  */
+wFormatTag=7 nChannels=2 nSamplesPerSec=22050 nAvgBytesPerSec=44100 nBlockAlign=2 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_ADPCM      0x0002  /*  Microsoft Corporation  */
+wFormatTag=2 nChannels=2 nSamplesPerSec=22050 nAvgBytesPerSec=22311 nBlockAlign=1024 wBitsPerSample=4 cbSize=32
+0000 f4 03 07 00 00 01 00 00 00 02 00 ff 00 00 00 00 ................
+0010 c0 00 40 00 f0 00 00 00 cc 01 30 ff 88 01 18 ff ..@.......0.....
+
+#define  WAVE_FORMAT_DVI_ADPCM  0x0011  /*  Intel Corporation  */
+wFormatTag=17 nChannels=2 nSamplesPerSec=22050 nAvgBytesPerSec=22201 nBlockAlign=1024 wBitsPerSample=4 cbSize=2
+0000 f9 03                                           ..
+
+#define  WAVE_FORMAT_ALAW       0x0006  /*  Microsoft Corporation  */
+wFormatTag=6 nChannels=2 nSamplesPerSec=11025 nAvgBytesPerSec=22050 nBlockAlign=2 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_ALAW       0x0006  /*  Microsoft Corporation  */
+wFormatTag=6 nChannels=1 nSamplesPerSec=22050 nAvgBytesPerSec=22050 nBlockAlign=1 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_MULAW      0x0007  /*  Microsoft Corporation  */
+wFormatTag=7 nChannels=2 nSamplesPerSec=11025 nAvgBytesPerSec=22050 nBlockAlign=2 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_MULAW      0x0007  /*  Microsoft Corporation  */
+wFormatTag=7 nChannels=1 nSamplesPerSec=22050 nAvgBytesPerSec=22050 nBlockAlign=1 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_ALAW       0x0006  /*  Microsoft Corporation  */
+wFormatTag=6 nChannels=2 nSamplesPerSec=8000 nAvgBytesPerSec=16000 nBlockAlign=2 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_MULAW      0x0007  /*  Microsoft Corporation  */
+wFormatTag=7 nChannels=2 nSamplesPerSec=8000 nAvgBytesPerSec=16000 nBlockAlign=2 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_ADPCM      0x0002  /*  Microsoft Corporation  */
+wFormatTag=2 nChannels=2 nSamplesPerSec=11025 nAvgBytesPerSec=11289 nBlockAlign=512 wBitsPerSample=4 cbSize=32
+0000 f4 01 07 00 00 01 00 00 00 02 00 ff 00 00 00 00 ................
+0010 c0 00 40 00 f0 00 00 00 cc 01 30 ff 88 01 18 ff ..@.......0.....
+
+#define  WAVE_FORMAT_DVI_ADPCM  0x0011  /*  Intel Corporation  */
+wFormatTag=17 nChannels=2 nSamplesPerSec=11025 nAvgBytesPerSec=11177 nBlockAlign=512 wBitsPerSample=4 cbSize=2
+0000 f9 01                                           ..
+
+#define  WAVE_FORMAT_ADPCM      0x0002  /*  Microsoft Corporation  */
+wFormatTag=2 nChannels=1 nSamplesPerSec=22050 nAvgBytesPerSec=11155 nBlockAlign=512 wBitsPerSample=4 cbSize=32
+0000 f4 03 07 00 00 01 00 00 00 02 00 ff 00 00 00 00 ................
+0010 c0 00 40 00 f0 00 00 00 cc 01 30 ff 88 01 18 ff ..@.......0.....
+
+#define  WAVE_FORMAT_DVI_ADPCM  0x0011  /*  Intel Corporation  */
+wFormatTag=17 nChannels=1 nSamplesPerSec=22050 nAvgBytesPerSec=11100 nBlockAlign=512 wBitsPerSample=4 cbSize=2
+0000 f9 03                                           ..
+
+#define  WAVE_FORMAT_ALAW       0x0006  /*  Microsoft Corporation  */
+wFormatTag=6 nChannels=1 nSamplesPerSec=11025 nAvgBytesPerSec=11025 nBlockAlign=1 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_MULAW      0x0007  /*  Microsoft Corporation  */
+wFormatTag=7 nChannels=1 nSamplesPerSec=11025 nAvgBytesPerSec=11025 nBlockAlign=1 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_ADPCM      0x0002  /*  Microsoft Corporation  */
+wFormatTag=2 nChannels=2 nSamplesPerSec=8000 nAvgBytesPerSec=8192 nBlockAlign=512 wBitsPerSample=4 cbSize=32
+0000 f4 01 07 00 00 01 00 00 00 02 00 ff 00 00 00 00 ................
+0010 c0 00 40 00 f0 00 00 00 cc 01 30 ff 88 01 18 ff ..@.......0.....
+
+#define  WAVE_FORMAT_DVI_ADPCM  0x0011  /*  Intel Corporation  */
+wFormatTag=17 nChannels=2 nSamplesPerSec=8000 nAvgBytesPerSec=8110 nBlockAlign=512 wBitsPerSample=4 cbSize=2
+0000 f9 01                                           ..
+
+#define  WAVE_FORMAT_ALAW       0x0006  /*  Microsoft Corporation  */
+wFormatTag=6 nChannels=1 nSamplesPerSec=8000 nAvgBytesPerSec=8000 nBlockAlign=1 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_MULAW      0x0007  /*  Microsoft Corporation  */
+wFormatTag=7 nChannels=1 nSamplesPerSec=8000 nAvgBytesPerSec=8000 nBlockAlign=1 wBitsPerSample=8 cbSize=0
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=2 nSamplesPerSec=22050 nAvgBytesPerSec=7000 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 b6 00 01 00 71 05             ..........q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=2 nSamplesPerSec=16000 nAvgBytesPerSec=7000 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 fc 00 01 00 71 05             ..........q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=2 nSamplesPerSec=22050 nAvgBytesPerSec=6000 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 9c 00 01 00 71 05             ..........q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=2 nSamplesPerSec=16000 nAvgBytesPerSec=6000 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 d8 00 01 00 71 05             ..........q.
+
+#define  WAVE_FORMAT_ADPCM      0x0002  /*  Microsoft Corporation  */
+wFormatTag=2 nChannels=1 nSamplesPerSec=11025 nAvgBytesPerSec=5644 nBlockAlign=256 wBitsPerSample=4 cbSize=32
+0000 f4 01 07 00 00 01 00 00 00 02 00 ff 00 00 00 00 ................
+0010 c0 00 40 00 f0 00 00 00 cc 01 30 ff 88 01 18 ff ..@.......0.....
+
+#define  WAVE_FORMAT_DVI_ADPCM  0x0011  /*  Intel Corporation  */
+wFormatTag=17 nChannels=1 nSamplesPerSec=11025 nAvgBytesPerSec=5588 nBlockAlign=256 wBitsPerSample=4 cbSize=2
+0000 f9 01                                           ..
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=2 nSamplesPerSec=22050 nAvgBytesPerSec=5000 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 82 00 01 00 71 05             ..........q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=2 nSamplesPerSec=16000 nAvgBytesPerSec=5000 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 b4 00 01 00 71 05             ..........q.
+
+#define  WAVE_FORMAT_GSM610     0x0031  /*  Microsoft Corporation  */
+wFormatTag=49 nChannels=1 nSamplesPerSec=22050 nAvgBytesPerSec=4478 nBlockAlign=65 wBitsPerSample=0 cbSize=2
+0000 40 01                                           @.
+
+#define  WAVE_FORMAT_ADPCM      0x0002  /*  Microsoft Corporation  */
+wFormatTag=2 nChannels=1 nSamplesPerSec=8000 nAvgBytesPerSec=4096 nBlockAlign=256 wBitsPerSample=4 cbSize=32
+0000 f4 01 07 00 00 01 00 00 00 02 00 ff 00 00 00 00 ................
+0010 c0 00 40 00 f0 00 00 00 cc 01 30 ff 88 01 18 ff ..@.......0.....
+
+#define  WAVE_FORMAT_DVI_ADPCM  0x0011  /*  Intel Corporation  */
+wFormatTag=17 nChannels=1 nSamplesPerSec=8000 nAvgBytesPerSec=4055 nBlockAlign=256 wBitsPerSample=4 cbSize=2
+0000 f9 01                                           ..
+
+?
+wFormatTag=353 nChannels=2 nSamplesPerSec=22050 nAvgBytesPerSec=4005 nBlockAlign=186 wBitsPerSample=16 cbSize=47
+0000 00 04 00 00 01 00 ba 00 00 00 46 36 44 43 39 38 ..........F6DC98
+0010 33 30 2d 42 43 37 39 2d 31 31 64 32 2d 41 39 44 30-BC79-11d2-A9D
+0020 30 2d 30 30 36 30 39 37 39 32 36 30 33 36 00    0-006097926036.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=2 nSamplesPerSec=16000 nAvgBytesPerSec=4000 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 90 00 01 00 71 05             ..........q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=2 nSamplesPerSec=12000 nAvgBytesPerSec=4000 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 c0 00 01 00 71 05             ..........q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=2 nSamplesPerSec=11025 nAvgBytesPerSec=4000 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 d0 00 01 00 71 05             ..........q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=2 nSamplesPerSec=8000 nAvgBytesPerSec=4000 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 20 01 01 00 71 05             ...... ...q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=1 nSamplesPerSec=22050 nAvgBytesPerSec=4000 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 68 00 01 00 71 05             ......h...q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=1 nSamplesPerSec=16000 nAvgBytesPerSec=4000 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 90 00 01 00 71 05             ..........q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=2 nSamplesPerSec=12000 nAvgBytesPerSec=3000 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 90 00 01 00 71 05             ..........q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=2 nSamplesPerSec=11025 nAvgBytesPerSec=3000 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 9c 00 01 00 71 05             ..........q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=2 nSamplesPerSec=8000 nAvgBytesPerSec=3000 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 d8 00 01 00 71 05             ..........q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=1 nSamplesPerSec=22050 nAvgBytesPerSec=3000 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 4e 00 01 00 71 05             ......N...q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=1 nSamplesPerSec=16000 nAvgBytesPerSec=3000 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 6c 00 01 00 71 05             ......l...q.
+
+?
+wFormatTag=353 nChannels=1 nSamplesPerSec=22050 nAvgBytesPerSec=2519 nBlockAlign=117 wBitsPerSample=16 cbSize=47
+0000 00 04 00 00 00 00 75 00 00 00 46 36 44 43 39 38 ......u...F6DC98
+0010 33 30 2d 42 43 37 39 2d 31 31 64 32 2d 41 39 44 30-BC79-11d2-A9D
+0020 30 2d 30 30 36 30 39 37 39 32 36 30 33 36 00    0-006097926036.
+
+?
+wFormatTag=353 nChannels=2 nSamplesPerSec=22050 nAvgBytesPerSec=2519 nBlockAlign=117 wBitsPerSample=16 cbSize=47
+0000 00 04 00 00 00 00 75 00 00 00 46 36 44 43 39 38 ......u...F6DC98
+0010 33 30 2d 42 43 37 39 2d 31 31 64 32 2d 41 39 44 30-BC79-11d2-A9D
+0020 30 2d 30 30 36 30 39 37 39 32 36 30 33 36 00    0-006097926036.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=2 nSamplesPerSec=12000 nAvgBytesPerSec=2500 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 f0 00 02 00 71 05             ..........q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=2 nSamplesPerSec=11025 nAvgBytesPerSec=2500 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 04 01 02 00 71 05             ..........q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=2 nSamplesPerSec=8000 nAvgBytesPerSec=2500 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 68 01 02 00 71 05             ......h...q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=1 nSamplesPerSec=16000 nAvgBytesPerSec=2500 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 b4 00 02 00 71 05             ..........q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=1 nSamplesPerSec=12000 nAvgBytesPerSec=2500 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 f0 00 02 00 71 05             ..........q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=1 nSamplesPerSec=11025 nAvgBytesPerSec=2500 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 04 01 02 00 71 05             ..........q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=2 nSamplesPerSec=12000 nAvgBytesPerSec=2250 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 b0 01 04 00 71 05             ..........q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=2 nSamplesPerSec=11025 nAvgBytesPerSec=2250 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 d4 01 04 00 71 05             ..........q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=2 nSamplesPerSec=8000 nAvgBytesPerSec=2250 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 88 02 04 00 71 05             ..........q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=1 nSamplesPerSec=16000 nAvgBytesPerSec=2250 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 44 01 04 00 71 05             ......D...q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=1 nSamplesPerSec=12000 nAvgBytesPerSec=2250 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 b0 01 04 00 71 05             ..........q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=1 nSamplesPerSec=11025 nAvgBytesPerSec=2250 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 d4 01 04 00 71 05             ..........q.
+
+#define  WAVE_FORMAT_GSM610     0x0031  /*  Microsoft Corporation  */
+wFormatTag=49 nChannels=1 nSamplesPerSec=11025 nAvgBytesPerSec=2239 nBlockAlign=65 wBitsPerSample=0 cbSize=2
+0000 40 01                                           @.
+
+?
+wFormatTag=353 nChannels=1 nSamplesPerSec=16000 nAvgBytesPerSec=2000 nBlockAlign=64 wBitsPerSample=16 cbSize=47
+0000 00 02 00 00 00 00 40 00 00 00 46 36 44 43 39 38 ......@...F6DC98
+0010 33 30 2d 42 43 37 39 2d 31 31 64 32 2d 41 39 44 30-BC79-11d2-A9D
+0020 30 2d 30 30 36 30 39 37 39 32 36 30 33 36 00    0-006097926036.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=1 nSamplesPerSec=16000 nAvgBytesPerSec=2000 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 48 00 01 00 71 05             ......H...q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=1 nSamplesPerSec=12000 nAvgBytesPerSec=2000 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 60 00 01 00 71 05             ......`...q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=1 nSamplesPerSec=11025 nAvgBytesPerSec=2000 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 68 00 01 00 71 05             ......h...q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=1 nSamplesPerSec=8000 nAvgBytesPerSec=2000 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 90 00 01 00 71 05             ..........q.
+
+#define  WAVE_FORMAT_GSM610     0x0031  /*  Microsoft Corporation  */
+wFormatTag=49 nChannels=1 nSamplesPerSec=8000 nAvgBytesPerSec=1625 nBlockAlign=65 wBitsPerSample=0 cbSize=2
+0000 40 01                                           @.
+
+?
+wFormatTag=353 nChannels=2 nSamplesPerSec=8000 nAvgBytesPerSec=1500 nBlockAlign=96 wBitsPerSample=16 cbSize=47
+0000 00 02 00 00 00 00 60 00 00 00 46 36 44 43 39 38 ......`...F6DC98
+0010 33 30 2d 42 43 37 39 2d 31 31 64 32 2d 41 39 44 30-BC79-11d2-A9D
+0020 30 2d 30 30 36 30 39 37 39 32 36 30 33 36 00    0-006097926036.
+
+?
+wFormatTag=353 nChannels=1 nSamplesPerSec=11025 nAvgBytesPerSec=1249 nBlockAlign=58 wBitsPerSample=16 cbSize=47
+0000 00 02 00 00 00 00 3a 00 00 00 46 36 44 43 39 38 ......:...F6DC98
+0010 33 30 2d 42 43 37 39 2d 31 31 64 32 2d 41 39 44 30-BC79-11d2-A9D
+0020 30 2d 30 30 36 30 39 37 39 32 36 30 33 36 00    0-006097926036.
+
+#define  WAVE_FORMAT_DSPGROUP_TRUESPEECH        0x0022  /*  DSP Group, Inc  */
+wFormatTag=34 nChannels=1 nSamplesPerSec=8000 nAvgBytesPerSec=1067 nBlockAlign=32 wBitsPerSample=1 cbSize=32
+0000 01 00 f0 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+0010 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+
+?
+wFormatTag=353 nChannels=1 nSamplesPerSec=11025 nAvgBytesPerSec=1012 nBlockAlign=47 wBitsPerSample=16 cbSize=47
+0000 00 02 00 00 00 00 2f 00 00 00 46 36 44 43 39 38 ....../...F6DC98
+0010 33 30 2d 42 43 37 39 2d 31 31 64 32 2d 41 39 44 30-BC79-11d2-A9D
+0020 30 2d 30 30 36 30 39 37 39 32 36 30 33 36 00    0-006097926036.
+
+?
+wFormatTag=353 nChannels=1 nSamplesPerSec=8000 nAvgBytesPerSec=1000 nBlockAlign=64 wBitsPerSample=16 cbSize=47
+0000 00 02 00 00 00 00 40 00 00 00 46 36 44 43 39 38 ......@...F6DC98
+0010 33 30 2d 42 43 37 39 2d 31 31 64 32 2d 41 39 44 30-BC79-11d2-A9D
+0020 30 2d 30 30 36 30 39 37 39 32 36 30 33 36 00    0-006097926036.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=1 nSamplesPerSec=12000 nAvgBytesPerSec=1000 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 30 00 01 00 71 05             ......0...q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=1 nSamplesPerSec=11025 nAvgBytesPerSec=1000 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 34 00 01 00 71 05             ......4...q.
+
+#define  WAVE_FORMAT_MPEGLAYER3 0x0055  /*  ISO/MPEG Layer3 Format Tag */
+wFormatTag=85 nChannels=1 nSamplesPerSec=8000 nAvgBytesPerSec=1000 nBlockAlign=1 wBitsPerSample=0 cbSize=12
+0000 01 00 02 00 00 00 48 00 01 00 71 05             ......H...q.
+
+?
+wFormatTag=66 nChannels=1 nSamplesPerSec=8000 nAvgBytesPerSec=800 nBlockAlign=24 wBitsPerSample=0 cbSize=10
+0000 02 00 ce 9a 32 f7 a2 ae de ac                   ....2.....
+
+?
+wFormatTag=353 nChannels=1 nSamplesPerSec=8000 nAvgBytesPerSec=750 nBlockAlign=48 wBitsPerSample=16 cbSize=47
+0000 00 02 00 00 00 00 30 00 00 00 46 36 44 43 39 38 ......0...F6DC98
+0010 33 30 2d 42 43 37 39 2d 31 31 64 32 2d 41 39 44 30-BC79-11d2-A9D
+0020 30 2d 30 30 36 30 39 37 39 32 36 30 33 36 00    0-006097926036.
+
+?
+wFormatTag=66 nChannels=1 nSamplesPerSec=8000 nAvgBytesPerSec=666 nBlockAlign=20 wBitsPerSample=0 cbSize=10
+0000 03 00 ce 9a 32 f7 a2 ae de ac                   ....2.....

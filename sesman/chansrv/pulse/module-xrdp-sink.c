@@ -141,6 +141,7 @@ static int sink_process_msg(pa_msgobject *o, int code, void *data,
         case PA_SINK_MESSAGE_SET_STATE: /* 9 */
             if (PA_PTR_TO_UINT(data) == PA_SINK_RUNNING) /* 0 */ {
                 pa_log("sink_process_msg: running");
+
                 u->timestamp = pa_rtclock_now();
             } else {
                 pa_log("sink_process_msg: not running");

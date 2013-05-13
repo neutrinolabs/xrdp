@@ -30,18 +30,6 @@
 #include "chansrv.h"
 #include "trans.h"
 
-#define _DEBUG_RDPSND
-
-#ifdef DEBUG_RDPSND
-#include <stdio.h>
-#define print_got_here() printf("****** got here: %s : %s : %d\n", \
-                                 __FILE__, __func__, __LINE__);
-#else
-#define print_got_here()
-#endif
-
-#define AUDIO_BUF_SIZE 2048
-
 #define SNDC_CLOSE          0x01
 #define SNDC_WAVE           0x02
 #define SNDC_SETVOLUME      0x03
