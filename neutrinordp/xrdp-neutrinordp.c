@@ -181,6 +181,8 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
 {
     int x;
     int y;
+    int cx;
+    int cy;
     int flags;
     int size;
     int total_size;
@@ -262,49 +264,12 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
         case 110:
             break;
         case 200:
-            LLOGLN(12, ("Invalidate request sent from client"));
-            RECTANGLE_16 *rectangle = (RECTANGLE_16 *) g_malloc(sizeof(RECTANGLE_16), 0);
-            /* The parameters are coded as follows param1 = MAKELONG(y, x), param2 =MAKELONG(h, w)
-             * #define MAKELONG(lo, hi) ((((hi) & 0xffff) << 16) | ((lo) & 0xffff))
-             */
-            rectangle->left = (param1 >> 16) & 0xffff;
-            rectangle->top = param1 & 0xffff;
-            rectangle->right = (((param2 >> 16) & 0xffff) + rectangle->left) - 1;
-            rectangle->bottom = ((param2 & 0xffff) + rectangle->top) - 1;
-
-            if (mod->inst->settings->refresh_rect)
-            {
-                if (mod->inst->update != NULL)
-                {
-                    if (mod->inst->update->RefreshRect != NULL)
-                    {
-                        if (mod->inst->context != NULL)
-                        {
-                            LLOGLN(0, ("update rectangle left: %d top: %d bottom: %d right: %d",
-                                       rectangle->left, rectangle->top, rectangle->bottom, rectangle->right));
-                            mod->inst->update->RefreshRect(mod->inst->context, 1, rectangle);
-                        }
-                        else
-                        {
-                            LLOGLN(0, ("Invalidate request -The context is null"));
-                        }
-                    }
-                    else
-                    {
-                        LLOGLN(0, ("Invalidate request - RefreshRect is Null"));
-                    }
-                }
-                else
-                {
-                    LLOGLN(0, ("Invalidate request -the update pointer is null"));
-                }
-            }
-            else
-            {
-                LLOGLN(0, ("Invalidate request - warning - update rectangle is disabled"));
-            }
-
-            g_free(rectangle);
+            LLOGLN(10, ("Invalidate request sent from client"));
+            x = (param1 >> 16) & 0xffff;
+            y = (param1 >> 0) & 0xffff;
+            cx = (param2 >> 16) & 0xffff;
+            cy = (param2 >> 0) & 0xffff;
+            mod->inst->SendInvalidate(mod->inst, -1, x, y, cx, cy);
             break;
         case 0x5555:
             chanid = LOWORD(param1);
