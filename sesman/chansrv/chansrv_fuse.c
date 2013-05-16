@@ -116,7 +116,7 @@ void xfuse_devredir_cb_file_close(void *vp)                                  {}
 #define LOG_ERROR   0
 #define LOG_INFO    1
 #define LOG_DEBUG   2
-#define LOG_LEVEL   LOG_ERROR
+#define LOG_LEVEL   LOG_DEBUG
 
 #define log_error(_params...)                           \
 {                                                       \
