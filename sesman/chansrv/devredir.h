@@ -23,58 +23,13 @@
 #if !defined(DEVREDIR_H)
 #define DEVREDIR_H
 
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <string.h>
-
-#include "arch.h"
-#include "parse.h"
-#include "os_calls.h"
-#include "log.h"
-#include "chansrv_fuse.h"
+#include "irp.h"
 
 #define USE_SHORT_NAMES_IN_DIR_LISTING
-
-typedef struct fuse_data FUSE_DATA;
-struct fuse_data
-{
-    void      *data_ptr;
-    FUSE_DATA *next;
-};
-
-/* An I/O Resource Packet to track dev_dir I/O calls */
-
-typedef struct irp IRP;
-
-struct irp
-{
-    tui32      completion_id;       /* unique number                     */
-    char       completion_type;     /* describes I/O type                */
-    tui32      FileId;              /* RDP client provided unique number */
-    char       pathname[256];       /* absolute pathname                 */
-    char       gen_buf[1024];       /* for general use                   */
-    int        type;
-    tui32      device_id;           /* identifies remote device          */
-    FUSE_DATA *fd_head;             /* point to first FUSE opaque object */
-    FUSE_DATA *fd_tail;             /* point to last FUSE opaque object  */
-    IRP       *next;                /* point to next IRP                 */
-    IRP       *prev;                /* point to previous IRP             */
-};
 
 void *dev_redir_fuse_data_peek(IRP *irp);
 void *dev_redir_fuse_data_dequeue(IRP *irp);
 int   dev_redir_fuse_data_enqueue(IRP *irp, void *vp);
-
-IRP * dev_redir_irp_new();
-IRP * dev_redir_irp_find(tui32 completion_id);
-IRP * dev_redir_irp_find_by_fileid(tui32 FileId);
-IRP * dev_redir_irp_get_last();
-int   dev_redir_irp_delete(IRP *irp);
-void  dev_redir_irp_dump();
 
 int APP_CC dev_redir_init(void);
 int APP_CC dev_redir_deinit(void);
@@ -88,7 +43,7 @@ int APP_CC dev_redir_check_wait_objs(void);
 void dev_redir_send_server_core_cap_req();
 void dev_redir_send_server_clientID_confirm();
 void dev_redir_send_server_user_logged_on();
-void dev_redir_send_server_device_announce_resp(tui32 device_id);
+void devredir_send_server_device_announce_resp(tui32 device_id);
 
 void dev_redir_send_drive_dir_request(IRP *irp, tui32 device_id,
                                       tui32 InitialQuery, char *Path);
@@ -107,7 +62,7 @@ int dev_redir_send_drive_close_request(tui16 Component, tui16 PacketId,
                                        tui32 MinorFunc,
                                        int pad_len);
 
-void dev_redir_proc_client_devlist_announce_req(struct stream *s);
+void devredir_proc_client_devlist_announce_req(struct stream *s);
 void dev_redir_proc_client_core_cap_resp(struct stream *s);
 void dev_redir_proc_device_iocompletion(struct stream *s);
 
@@ -118,20 +73,20 @@ void dev_redir_proc_query_dir_response(IRP *irp,
                                        tui32 IoStatus);
 
 /* misc stuff */
-void dev_redir_insert_dev_io_req_header(struct stream *s,
-                                        tui32 DeviceId,
-                                        tui32 FileId,
-                                        tui32 CompletionId,
-                                        tui32 MajorFunction,
-                                        tui32 MinorFunction);
+void devredir_insert_DeviceIoRequest(struct stream *s,
+                                     tui32 DeviceId,
+                                     tui32 FileId,
+                                     tui32 CompletionId,
+                                     tui32 MajorFunction,
+                                     tui32 MinorFunction);
 
 void devredir_cvt_slash(char *path);
 void devredir_cvt_to_unicode(char *unicode, char *path);
 void devredir_cvt_from_unicode_len(char *path, char *unicode, int len);
 int  dev_redir_string_ends_with(char *string, char c);
 
-void dev_redir_insert_rdpdr_header(struct stream *s, tui16 Component,
-                                   tui16 PacketId);
+void devredir_insert_RDPDR_header(struct stream *s, tui16 Component,
+                                  tui16 PacketId);
 
 void devredir_proc_cid_rmdir_or_file(IRP *irp, tui32 IoStatus);
 void devredir_proc_cid_rmdir_or_file_resp(IRP *irp, tui32 IoStatus);
@@ -148,42 +103,6 @@ int devredir_file_close(void *fusep, tui32 device_id, tui32 file_id);
 
 int dev_redir_file_read(void *fusep, tui32 device_id, tui32 FileId,
                         tui32 Length, tui64 Offset);
-
-/* module based logging */
-#define LOG_ERROR   0
-#define LOG_INFO    1
-#define LOG_DEBUG   2
-
-#ifndef LOG_LEVEL
-#define LOG_LEVEL   LOG_ERROR
-#endif
-
-#define log_error(_params...)                           \
-{                                                       \
-    g_write("[%10.10u]: DEV_REDIR  %s: %d : ERROR: ",   \
-            g_time3(), __func__, __LINE__);             \
-    g_writeln (_params);                                \
-}
-
-#define log_info(_params...)                            \
-{                                                       \
-    if (LOG_INFO <= LOG_LEVEL)                         \
-    {                                                   \
-        g_write("[%10.10u]: DEV_REDIR  %s: %d : ",      \
-                g_time3(), __func__, __LINE__);         \
-        g_writeln (_params);                            \
-    }                                                   \
-}
-
-#define log_debug(_params...)                           \
-{                                                       \
-    if (LOG_DEBUG <= LOG_LEVEL)                        \
-    {                                                   \
-        g_write("[%10.10u]: DEV_REDIR  %s: %d : ",      \
-                g_time3(), __func__, __LINE__);         \
-        g_writeln (_params);                            \
-    }                                                   \
-}
 
 int send_channel_data(int chan_id, char *data, int size);
 

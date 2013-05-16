@@ -368,18 +368,18 @@ do                                                                          \
 } while (0)
 
 /* copy data into stream */
-#define xstream_copyin(_s, _dest, _len)    \
+#define xstream_copyin(_s, _dest, _len)   \
 do                                        \
 {                                         \
-    g_memcpy((_s)->p, (_dest), (_len));     \
+    g_memcpy((_s)->p, (_dest), (_len));   \
     (_s)->p += (_len);                    \
 } while (0)
 
 /* copy data out of stream */
-#define xstream_copyout(_dest, _s, _len)   \
-{                                         \
+#define xstream_copyout(_dest, _s, _len)  \
 do                                        \
-    g_memcpy((_dest), (_s)->p, (_len));     \
+{                                         \
+    g_memcpy((_dest), (_s)->p, (_len));   \
     (_s)->p += (_len);                    \
 } while (0)
 
