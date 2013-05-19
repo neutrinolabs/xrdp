@@ -116,7 +116,7 @@ void xfuse_devredir_cb_file_close(void *vp)                                  {}
 #define LOG_ERROR   0
 #define LOG_INFO    1
 #define LOG_DEBUG   2
-#define LOG_LEVEL   LOG_DEBUG
+#define LOG_LEVEL   LOG_ERROR
 
 #define log_error(_params...)                           \
 {                                                       \
@@ -308,8 +308,8 @@ static void xfuse_create_dir_or_file(fuse_req_t req, fuse_ino_t parent,
 static void xfuse_cb_open(fuse_req_t req, fuse_ino_t ino,
                           struct fuse_file_info *fi);
 
-static void xfuse_cb_flush(fuse_req_t req, fuse_ino_t ino, struct
-                           fuse_file_info *fi);
+static void xfuse_cb_release(fuse_req_t req, fuse_ino_t ino, struct
+                             fuse_file_info *fi);
 
 static void xfuse_cb_read(fuse_req_t req, fuse_ino_t ino, size_t size,
                           off_t off, struct fuse_file_info *fi);
@@ -378,19 +378,19 @@ int xfuse_init()
 
     /* setup FUSE callbacks */
     g_memset(&g_xfuse_ops, 0, sizeof(g_xfuse_ops));
-    g_xfuse_ops.lookup  = xfuse_cb_lookup;
-    g_xfuse_ops.readdir = xfuse_cb_readdir;
-    g_xfuse_ops.mkdir   = xfuse_cb_mkdir;
-    g_xfuse_ops.rmdir   = xfuse_cb_rmdir;
-    g_xfuse_ops.unlink  = xfuse_cb_unlink;
-    g_xfuse_ops.rename  = xfuse_cb_rename;
-    g_xfuse_ops.open    = xfuse_cb_open;
-    g_xfuse_ops.flush   = xfuse_cb_flush;
-    g_xfuse_ops.read    = xfuse_cb_read;
-    g_xfuse_ops.write   = xfuse_cb_write;
-    g_xfuse_ops.create  = xfuse_cb_create;
-    g_xfuse_ops.getattr = xfuse_cb_getattr;
-    g_xfuse_ops.setattr = xfuse_cb_setattr;
+    g_xfuse_ops.lookup    = xfuse_cb_lookup;
+    g_xfuse_ops.readdir   = xfuse_cb_readdir;
+    g_xfuse_ops.mkdir     = xfuse_cb_mkdir;
+    g_xfuse_ops.rmdir     = xfuse_cb_rmdir;
+    g_xfuse_ops.unlink    = xfuse_cb_unlink;
+    g_xfuse_ops.rename    = xfuse_cb_rename;
+    g_xfuse_ops.open      = xfuse_cb_open;
+    g_xfuse_ops.release   = xfuse_cb_release;
+    g_xfuse_ops.read      = xfuse_cb_read;
+    g_xfuse_ops.write     = xfuse_cb_write;
+    g_xfuse_ops.create    = xfuse_cb_create;
+    g_xfuse_ops.getattr   = xfuse_cb_getattr;
+    g_xfuse_ops.setattr   = xfuse_cb_setattr;
 
     fuse_opt_add_arg(&args, "xrdp-chansrv");
     fuse_opt_add_arg(&args, g_fuse_root_path);
@@ -1723,6 +1723,9 @@ void xfuse_devredir_cb_open_file(void *vp, tui32 DeviceId, tui32 FileId)
         goto done;
     }
 
+    log_debug("+++ XFUSE_INFO=%p XFUSE_INFO->fi=%p DeviceId=%d FileId=%d",
+              fip, fip->fi, DeviceId, FileId);
+
     if (fip->fi != NULL)
     {
         if ((fh = calloc(1, sizeof(XFUSE_HANDLE))) == NULL)
@@ -1739,6 +1742,8 @@ void xfuse_devredir_cb_open_file(void *vp, tui32 DeviceId, tui32 FileId)
         fh->FileId = FileId;
 
         fip->fi->fh = (uint64_t) ((long) fh);
+        log_debug("+++ XFUSE_INFO=%p XFUSE_INFO->fi=%p XFUSE_INFO->fi->fh=%p",
+                  fip, fip->fi, fip->fi->fh);
     }
 
     if (fip->invoke_fuse)
@@ -1793,6 +1798,9 @@ void xfuse_devredir_cb_open_file(void *vp, tui32 DeviceId, tui32 FileId)
             e.attr.st_ctime = xinode->ctime;
             e.generation = 1;
 
+            /* update open count */
+            xinode->nopen++;
+
             if (fip->mode == S_IFDIR)
                 fuse_reply_entry(fip->req, &e);
             else
@@ -1829,6 +1837,9 @@ void xfuse_devredir_cb_write_file(void *vp, char *buf, size_t length)
     fip = (XFUSE_INFO *) vp;
     if (fip == NULL)
         return;
+
+    log_debug("+++ XFUSE_INFO=%p, XFUSE_INFO->fi=%p XFUSE_INFO->fi->fh=%p",
+              fip, fip->fi, fip->fi->fh);
 
     fuse_reply_write(fip->req, length);
 
@@ -1944,6 +1955,9 @@ void xfuse_devredir_cb_file_close(void *vp)
     if (fip == NULL)
         return;
 
+    log_debug("+++ XFUSE_INFO=%p XFUSE_INFO->fi=%p XFUSE_INFO->fi->fh=%p",
+              fip, fip->fi, fip->fi->fh);
+
     if ((xinode = g_xrdp_fs.inode_table[fip->inode]) == NULL)
         fuse_reply_err(fip->req, EBADF);
 
@@ -1952,11 +1966,17 @@ void xfuse_devredir_cb_file_close(void *vp)
     if (xinode->nopen > 0)
         xinode->nopen--;
 
+    /* LK_TODO */
+#if 0
     if ((xinode->nopen == 0) && fip->fi && fip->fi->fh)
     {
+        printf("LK_TODO: ################################ fi=%p fi->fh=%p\n",
+               fip->fi, fip->fi->fh);
+
         free((char *) (tintptr) (fip->fi->fh));
         fip->fi->fh = NULL;
     }
+#endif
 
     fuse_reply_err(fip->req, 0);
 }
@@ -2562,6 +2582,8 @@ static void xfuse_create_dir_or_file(fuse_req_t req, fuse_ino_t parent,
     strncpy(fip->name, name, 1024);
     fip->name[1023] = 0;
 
+    log_debug("+++ created XFUSE_INFO=%p XFUSE_INFO->fi=%p", fip, fip->fi);
+
     /* LK_TODO need to handle open permissions */
 
     /* we want path minus 'root node of the share' */
@@ -2642,6 +2664,9 @@ static void xfuse_cb_open(fuse_req_t req, fuse_ino_t ino,
     fip->invoke_fuse = 1;
     fip->device_id = device_id;
     fip->fi = fi;
+
+    log_debug("LK_TODO: fip->fi = %p", fip->fi);
+
     strncpy(fip->name, full_path, 1024);
     fip->name[1023] = 0;
     fip->reply_type = RT_FUSE_REPLY_OPEN;
@@ -2670,13 +2695,14 @@ static void xfuse_cb_open(fuse_req_t req, fuse_ino_t ino,
     }
 }
 
-static void xfuse_cb_flush(fuse_req_t req, fuse_ino_t ino, struct
-                           fuse_file_info *fi)
+static void xfuse_cb_release(fuse_req_t req, fuse_ino_t ino, struct
+                             fuse_file_info *fi)
 {
     XFUSE_INFO   *fip    = NULL;
     XFUSE_HANDLE *handle = (XFUSE_HANDLE *) (tintptr) (fi->fh);
+    tui32         FileId;
 
-    log_debug("ino=%d", (int) ino);
+    log_debug("entered: ino=%d fi=%p fi->fh=%p", (int) ino, fi, fi->fh);
 
     if (!xfuse_is_inode_valid(ino))
     {
@@ -2695,6 +2721,16 @@ static void xfuse_cb_flush(fuse_req_t req, fuse_ino_t ino, struct
 
     /* specified file resides on redirected share */
 
+    log_debug("nopen=%d", xinode->nopen);
+
+    /* if file is not opened, just return */
+    if (xinode->nopen == 0)
+    {
+        log_debug("cannot close because file not opened");
+        fuse_reply_err(req, 0);
+        return;
+    }
+
     if ((fip = calloc(1, sizeof(XFUSE_INFO))) == NULL)
     {
         log_error("system out of memory");
@@ -2707,6 +2743,13 @@ static void xfuse_cb_flush(fuse_req_t req, fuse_ino_t ino, struct
     fip->invoke_fuse = 1;
     fip->device_id = handle->DeviceId;
     fip->fi = fi;
+
+    log_debug(" +++ created XFUSE_INFO=%p XFUSE_INFO->fi=%p XFUSE_INFO->fi->fh=%p",
+              fip, fip->fi, fip->fi->fh);
+
+    FileId = handle->FileId;
+    free(handle);
+    fip->fi->fh = NULL;
 
     if (devredir_file_close((void *) fip, fip->device_id, handle->FileId))
     {
@@ -2823,11 +2866,15 @@ static void xfuse_cb_write(fuse_req_t req, fuse_ino_t ino, const char *buf,
         fuse_reply_err(req, ENOMEM);
         return;
     }
+
     fusep->req = req;
     fusep->inode = ino;
     fusep->invoke_fuse = 1;
     fusep->device_id = fh->DeviceId;
     fusep->fi = fi;
+
+    log_debug("+++ created XFUSE_INFO=%p XFUSE_INFO->fi=%p XFUSE_INFO->fi->fh=%p",
+              fusep, fusep->fi, fusep->fi->fh);
 
     dev_redir_file_write(fusep, fh->DeviceId, fh->FileId, buf, size, off);
     log_debug("exiting");
@@ -2843,7 +2890,8 @@ static void xfuse_cb_create(fuse_req_t req, fuse_ino_t parent,
 static void xfuse_cb_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
                              int to_set, struct fuse_file_info *fi)
 {
-    XRDP_INODE        *xinode;
+    XRDP_INODE   *xinode;
+    struct stat  st;
 
     log_debug("entered to_set=0x%x", to_set);
 
@@ -2906,7 +2954,17 @@ static void xfuse_cb_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
         log_debug("FUSE_SET_ATTR_MTIME_NOW");
     }
 
-    fuse_reply_attr(req, attr, 1.0); /* LK_TODO just faking for now */
+    memset(&st, 0, sizeof(st));
+    st.st_ino   = xinode->inode;
+    st.st_mode  = xinode->mode;
+    st.st_size  = xinode->size;
+    st.st_uid   = xinode->uid;
+    st.st_gid   = xinode->gid;
+    st.st_atime = xinode->atime;
+    st.st_mtime = xinode->mtime;
+    st.st_ctime = xinode->ctime;
+
+    fuse_reply_attr(req, &st, 1.0); /* LK_TODO just faking for now */
 }
 
 #endif /* end else #ifndef XRDP_FUSE */

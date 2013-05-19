@@ -31,7 +31,7 @@
 #define LOG_DEBUG   2
 
 #ifndef LOG_LEVEL
-#define LOG_LEVEL   LOG_DEBUG
+#define LOG_LEVEL   LOG_ERROR
 #endif
 
 #define log_error(_params...)                           \
@@ -95,6 +95,7 @@ IRP * devredir_irp_new()
         irp->prev = irp_last;
     }
 
+    log_debug("new IRP=%p", irp);
     return irp;
 }
 
@@ -108,11 +109,11 @@ int devredir_irp_delete(IRP *irp)
 {
     IRP *lirp = g_irp_head;
 
-    log_debug("=== entered; completion_id=%d type=%d",
-              irp->CompletionId, irp->completion_type);
-
     if ((irp == NULL) || (lirp == NULL))
         return -1;
+
+    log_debug("irp=%p completion_id=%d type=%d",
+              irp, irp->CompletionId, irp->completion_type);
 
     devredir_irp_dump(); // LK_TODO
 
@@ -173,11 +174,15 @@ IRP *devredir_irp_find(tui32 completion_id)
     while (irp)
     {
         if (irp->CompletionId == completion_id)
+        {
+            log_debug("returning irp=%p", irp);
             return irp;
+        }
 
         irp = irp->next;
     }
 
+    log_debug("returning irp=NULL");
     return NULL;
 }
 
@@ -188,11 +193,15 @@ IRP * devredir_irp_find_by_fileid(tui32 FileId)
     while (irp)
     {
         if (irp->FileId == FileId)
+        {
+            log_debug("returning irp=%p", irp);
             return irp;
+        }
 
         irp = irp->next;
     }
 
+    log_debug("returning irp=NULL");
     return NULL;
 }
 
@@ -212,6 +221,7 @@ IRP * devredir_irp_get_last()
         irp = irp->next;
     }
 
+    log_debug("returning irp=%p", irp);
     return irp;
 }
 

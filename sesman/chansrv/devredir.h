@@ -27,9 +27,9 @@
 
 #define USE_SHORT_NAMES_IN_DIR_LISTING
 
-void *dev_redir_fuse_data_peek(IRP *irp);
-void *dev_redir_fuse_data_dequeue(IRP *irp);
-int   dev_redir_fuse_data_enqueue(IRP *irp, void *vp);
+void *devredir_fuse_data_peek(IRP *irp);
+void *devredir_fuse_data_dequeue(IRP *irp);
+int   devredir_fuse_data_enqueue(IRP *irp, void *vp);
 
 int APP_CC dev_redir_init(void);
 int APP_CC dev_redir_deinit(void);

@@ -56,7 +56,7 @@
 #define LOG_DEBUG   2
 
 #ifndef LOG_LEVEL
-#define LOG_LEVEL   LOG_DEBUG
+#define LOG_LEVEL   LOG_ERROR
 #endif
 
 #define log_error(_params...)                           \
@@ -742,7 +742,7 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
         {
             /* we were trying to create a request to enumerate a dir */
             /* that does not exist; let FUSE know                    */
-            fuse_data = dev_redir_fuse_data_dequeue(irp);
+            fuse_data = devredir_fuse_data_dequeue(irp);
             if (fuse_data)
             {
                 xfuse_devredir_cb_enum_dir_done(fuse_data->data_ptr,
@@ -764,7 +764,7 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
         xstream_rd_u32_le(s, irp->FileId);
         log_debug("got CID_CREATE_OPEN_REQ IoStatus=0x%x FileId=%d",
                   IoStatus, irp->FileId);
-        fuse_data = dev_redir_fuse_data_dequeue(irp);
+        fuse_data = devredir_fuse_data_dequeue(irp);
         xfuse_devredir_cb_open_file(fuse_data->data_ptr,
                                     DeviceId, irp->FileId);
         if (irp->type == S_IFDIR)
@@ -774,14 +774,14 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
     case CID_READ:
         log_debug("got CID_READ");
         xstream_rd_u32_le(s, Length);
-        fuse_data = dev_redir_fuse_data_dequeue(irp);
+        fuse_data = devredir_fuse_data_dequeue(irp);
         xfuse_devredir_cb_read_file(fuse_data->data_ptr, s->p, Length);
         break;
 
     case CID_WRITE:
         log_debug("got CID_WRITE");
         xstream_rd_u32_le(s, Length);
-        fuse_data = dev_redir_fuse_data_dequeue(irp);
+        fuse_data = devredir_fuse_data_dequeue(irp);
         xfuse_devredir_cb_write_file(fuse_data->data_ptr, s->p, Length);
         break;
 
@@ -794,7 +794,7 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
 
     case CID_FILE_CLOSE:
         log_debug("got CID_FILE_CLOSE");
-        fuse_data = dev_redir_fuse_data_dequeue(irp);
+        fuse_data = devredir_fuse_data_dequeue(irp);
         xfuse_devredir_cb_file_close(fuse_data->data_ptr);
         devredir_irp_delete(irp);
         break;
@@ -840,7 +840,10 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
 done:
 
     if (fuse_data)
+    {
+        log_debug("free FUSE_DATA=%p", fuse_data);
         free(fuse_data);
+    }
 
     log_debug("exiting");
 }
@@ -880,7 +883,7 @@ void dev_redir_proc_query_dir_response(IRP *irp,
         (IoStatus == STATUS_NO_MORE_FILES))
     {
         status = (IoStatus == STATUS_NO_MORE_FILES) ? 0 : IoStatus;
-        fuse_data = dev_redir_fuse_data_dequeue(irp);
+        fuse_data = devredir_fuse_data_dequeue(irp);
         xfuse_devredir_cb_enum_dir_done(fuse_data->data_ptr, status);
         irp->completion_type = CID_CLOSE;
         dev_redir_send_drive_close_request(RDPDR_CTYP_CORE,
@@ -940,7 +943,7 @@ void dev_redir_proc_query_dir_response(IRP *irp,
         if ((xinode = calloc(1, sizeof(struct xrdp_inode))) == NULL)
         {
             log_error("system out of memory");
-            fuse_data = dev_redir_fuse_data_peek(irp);
+            fuse_data = devredir_fuse_data_peek(irp);
             xfuse_devredir_cb_enum_dir(fuse_data->data_ptr, NULL);
             return;
         }
@@ -953,7 +956,7 @@ void dev_redir_proc_query_dir_response(IRP *irp,
         xinode->ctime = WINDOWS_TO_LINUX_TIME(CreationTime);
 
         /* add this entry to xrdp file system */
-        fuse_data = dev_redir_fuse_data_peek(irp);
+        fuse_data = devredir_fuse_data_peek(irp);
         xfuse_devredir_cb_enum_dir(fuse_data->data_ptr, xinode);
     }
 
@@ -990,7 +993,7 @@ int dev_redir_get_dir_listing(void *fusep, tui32 device_id, char *path)
     irp->completion_type = CID_CREATE_DIR_REQ;
     irp->DeviceId = device_id;
     strcpy(irp->pathname, path);
-    dev_redir_fuse_data_enqueue(irp, fusep);
+    devredir_fuse_data_enqueue(irp, fusep);
 
     DesiredAccess = DA_FILE_READ_DATA | DA_SYNCHRONIZE;
     CreateOptions = CO_FILE_DIRECTORY_FILE | CO_FILE_SYNCHRONOUS_IO_NONALERT;
@@ -1041,7 +1044,7 @@ int dev_redir_file_open(void *fusep, tui32 device_id, char *path,
     irp->CompletionId = g_completion_id++;
     irp->DeviceId = device_id;
     strcpy(irp->pathname, path);
-    dev_redir_fuse_data_enqueue(irp, fusep);
+    devredir_fuse_data_enqueue(irp, fusep);
 
     if (mode & O_CREAT)
     {
@@ -1090,7 +1093,8 @@ int devredir_file_close(void *fusep, tui32 device_id, tui32 FileId)
 {
     IRP *irp;
 
-    log_debug("entered");
+    log_debug("entered: fusep=%p device_id=%d FileId=%d",
+              fusep, device_id, FileId);
 
 #if 0
     if ((irp = devredir_irp_new()) == NULL)
@@ -1106,7 +1110,7 @@ int devredir_file_close(void *fusep, tui32 device_id, tui32 FileId)
 #endif
     irp->completion_type = CID_FILE_CLOSE;
     irp->DeviceId = device_id;
-    dev_redir_fuse_data_enqueue(irp, fusep);
+    devredir_fuse_data_enqueue(irp, fusep);
 
     return dev_redir_send_drive_close_request(RDPDR_CTYP_CORE,
                                               PAKID_CORE_DEVICE_IOREQUEST,
@@ -1136,7 +1140,7 @@ int devredir_rmdir_or_file(void *fusep, tui32 device_id, char *path, int mode)
     irp->completion_type = CID_RMDIR_OR_FILE;
     irp->DeviceId = device_id;
     strcpy(irp->pathname, path);
-    dev_redir_fuse_data_enqueue(irp, fusep);
+    devredir_fuse_data_enqueue(irp, fusep);
 
     //DesiredAccess = DA_DELETE | DA_FILE_READ_ATTRIBUTES | DA_SYNCHRONIZE;
     DesiredAccess = 0x00100080; /* got this value from windows */
@@ -1179,7 +1183,7 @@ int dev_redir_file_read(void *fusep, tui32 DeviceId, tui32 FileId,
     }
 
     irp->completion_type = CID_READ;
-    dev_redir_fuse_data_enqueue(irp, fusep);
+    devredir_fuse_data_enqueue(irp, fusep);
     devredir_insert_DeviceIoRequest(s,
                                     DeviceId,
                                     FileId,
@@ -1219,7 +1223,7 @@ int dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
     }
 
     irp->completion_type = CID_WRITE;
-    dev_redir_fuse_data_enqueue(irp, fusep);
+    devredir_fuse_data_enqueue(irp, fusep);
     devredir_insert_DeviceIoRequest(s,
                                     DeviceId,
                                     FileId,
@@ -1252,8 +1256,9 @@ int dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
  * @return FUSE_DATA on success, or NULL on failure
  *****************************************************************************/
 
-void *dev_redir_fuse_data_peek(IRP *irp)
+void *devredir_fuse_data_peek(IRP *irp)
 {
+    log_debug("returning %p", irp->fd_head);
     return irp->fd_head;
 }
 
@@ -1263,12 +1268,15 @@ void *dev_redir_fuse_data_peek(IRP *irp)
  * @return FUSE_DATA on success, NULL on failure
  *****************************************************************************/
 
-void *dev_redir_fuse_data_dequeue(IRP *irp)
+void *devredir_fuse_data_dequeue(IRP *irp)
 {
     FUSE_DATA *head;
 
     if ((irp == NULL) || (irp->fd_head == NULL))
+    {
+        log_debug("+++ returning NULL");
         return NULL;
+    }
 
     if (irp->fd_head->next == NULL)
     {
@@ -1276,13 +1284,16 @@ void *dev_redir_fuse_data_dequeue(IRP *irp)
         head = irp->fd_head;
         irp->fd_head = NULL;
         irp->fd_tail = NULL;
+        log_debug("+++ returning FUSE_DATA=%p containing FUSE_INFO=%p",
+                  head, head->data_ptr);
         return head;
     }
 
     /* more than one element in queue */
     head = irp->fd_head;
     irp->fd_head = head->next;
-
+    log_debug("+++ returning FUSE_DATA=%p containing FUSE_INFO=%p",
+              head, head->data_ptr);
     return head;
 }
 
@@ -1292,7 +1303,7 @@ void *dev_redir_fuse_data_dequeue(IRP *irp)
  * @return 0 on success, -1 on failure
  *****************************************************************************/
 
-int dev_redir_fuse_data_enqueue(IRP *irp, void *vp)
+int devredir_fuse_data_enqueue(IRP *irp, void *vp)
 {
     FUSE_DATA *fd;
     FUSE_DATA *tail;
@@ -1311,6 +1322,8 @@ int dev_redir_fuse_data_enqueue(IRP *irp, void *vp)
         /* queue is empty, insert at head */
         irp->fd_head = fd;
         irp->fd_tail = fd;
+        log_debug("+++ inserted FUSE_DATA=%p containing FUSE_INFO=%p at head",
+                  fd, vp);
         return 0;
     }
 
@@ -1318,6 +1331,8 @@ int dev_redir_fuse_data_enqueue(IRP *irp, void *vp)
     tail = irp->fd_tail;
     tail->next = fd;
     irp->fd_tail = fd;
+    log_debug("+++ inserted FUSE_DATA=%p containing FUSE_INFO=%p at tail",
+              fd, vp);
     return 0;
 }
 
@@ -1407,7 +1422,7 @@ void devredir_proc_cid_rmdir_or_file(IRP *irp, tui32 IoStatus)
 
     if (IoStatus != NT_STATUS_SUCCESS)
     {
-        FUSE_DATA *fuse_data = dev_redir_fuse_data_dequeue(irp);
+        FUSE_DATA *fuse_data = devredir_fuse_data_dequeue(irp);
         if (fuse_data)
         {
             xfuse_devredir_cb_rmdir_or_file(fuse_data->data_ptr, IoStatus);
@@ -1440,7 +1455,7 @@ void devredir_proc_cid_rmdir_or_file_resp(IRP *irp, tui32 IoStatus)
 {
     FUSE_DATA *fuse_data;
 
-    fuse_data = dev_redir_fuse_data_dequeue(irp);
+    fuse_data = devredir_fuse_data_dequeue(irp);
     if (fuse_data)
     {
         xfuse_devredir_cb_rmdir_or_file(fuse_data->data_ptr, IoStatus);
@@ -1474,7 +1489,7 @@ void devredir_proc_cid_rename_file(IRP *irp, tui32 IoStatus)
     {
         log_debug("rename returned with IoStatus=0x%x", IoStatus);
 
-        FUSE_DATA *fuse_data = dev_redir_fuse_data_dequeue(irp);
+        FUSE_DATA *fuse_data = devredir_fuse_data_dequeue(irp);
         if (fuse_data)
         {
             xfuse_devredir_cb_rename_file(fuse_data->data_ptr, IoStatus);
@@ -1519,7 +1534,7 @@ void devredir_proc_cid_rename_file_resp(IRP *irp, tui32 IoStatus)
 
     log_debug("entered");
 
-    fuse_data = dev_redir_fuse_data_dequeue(irp);
+    fuse_data = devredir_fuse_data_dequeue(irp);
     if (fuse_data)
     {
         xfuse_devredir_cb_rename_file(fuse_data->data_ptr, IoStatus);
