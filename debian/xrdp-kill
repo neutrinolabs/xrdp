@@ -10,30 +10,38 @@ compatiblePrograms=( nautilus kdeinit kded4 pulseaudio trackerd )
 
 # Attempt to get a program pid
 for index in ${compatiblePrograms[@]}; do
-	PIDS=$(pidof -s ${index})
+	PIDS=$(pidof ${index})
 	for PID in ${PIDS}
 	do
+		echo Evaluating PID $PID
 		if [[ "${PID}" != "" ]]; then
+			OWNER=`stat -c %U /proc/${PID}/environ`
+			if [ "${OWNER}" != "${USER}" ] ; then
+				echo Process ${PID} is owned by ${OWNER}, so continue
+				continue
+			fi
+
 			DISPLAY=$(tr '\0' '\n' < /proc/${PID}/environ | grep "DISPLAY" | cut -d "=" -f 2-)
 			DISP=$(echo ${DISPLAY} | cut -f 1 -d "." | cut -c 2-)
 
-			DNO=`stat -c %U /tmp/.X${DISP}-lock`
-			if [ "${DNO}" != "${USER}" ] ; then
-				echo It is not allowed to kill a session from another user, namely ${DNO}, skipping this one
-			else
-				if [ "${DISP}" -ge 10 ] && [ "${DISP}" -le 99 ] ; then
+			if [ "${DISP}" -ge 10 ] && [ "${DISP}" -le 99 ] ; then
+				DNO=`stat -c %U /tmp/.X${DISP}-lock`
+				if [ "${DNO}" != "${USER}" ] ; then
+					echo It is not allowed to kill a session from another user, namely ${DNO}, skipping this one
+				else
 					export DISPLAY
 					break
 				fi
 			fi
 			DISPLAY=""
 		fi
-		if [ "${DISPLAY}" != "" ] ; then
-			# valid display, so a valid session
-			break
-		fi
 		PID=""
 	done
+	if [ "${DISPLAY}" != "" ] ; then
+		# valid display, so a valid session
+		echo Found display ${DISPLAY} for PID ${PID}
+		break
+	fi
 done
 
 if [[ "${PID}" == "" ]]; then
