@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# Start with reaping the old sessions
+echo Reap dead xrdp sessions first
+xrdp-cleanup
+
+echo Kill all existing sessions which are left
+for X in $(ls /tmp/.X??-lock)
+do
+	OWNER=`stat -c %U ${X}`
+	echo Attempting to stop server with lock held on ${X} owned by ${OWNER}
+	(su ${OWNER} -c xrdp-kill)
+done

@@ -2,6 +2,10 @@
 
 set -e
 
+if [ -x /usr/sbin/xrdp-killall ] ; then
+	/usr/sbin/xrdp-killall
+fi
+
 # If we are upgrading, we notify init.d script that we are upgrading
 [ "$1" = "upgrade" ] && export XRDP_UPGRADE=yes
 
