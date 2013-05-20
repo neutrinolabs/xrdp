@@ -1,5 +1,10 @@
 #!/bin/sh
 
+if [ "`id -u`" != "0" ] ; then
+	echo Only root can execute this.
+	exit 1
+fi
+
 # Start with reaping the old sessions
 echo Reap dead xrdp sessions first
 xrdp-cleanup
