@@ -739,7 +739,8 @@ xrdp_is_os(PixmapPtr pix, rdpPixmapPtr priv)
     {
         width = pix->drawable.width;
         height = pix->drawable.height;
-        if ((pix->drawable.depth >= g_rdpScreen.depth) &&
+        if ((pix->usage_hint == 0) &&
+            (pix->drawable.depth >= g_rdpScreen.depth) &&
             (width > 1) && (height > 1) && (priv->kind_width > 0))
         {
             LLOGLN(10, ("%d %d", priv->kind_width, pix->drawable.width));
