@@ -1,7 +1,8 @@
 /**
- * xrdp: A Remote Desktop Protocol server.
+ * FreeRDP: A Remote Desktop Protocol Server
+ * freerdp wrapper
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright 2011-2012 Jay Sorg
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,31 +15,15 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
- * default file locations for log, config, etc
  */
 
-#if !defined(FILE_LOC_H)
-#define FILE_LOC_H
+#ifndef __XRDP_COLOR_H
+#define __XRDP_COLOR_H
 
-#if !defined(XRDP_CFG_PATH)
-#define XRDP_CFG_PATH "/etc/xrdp"
-#endif
-
-#if !defined(XRDP_PID_PATH)
-#define XRDP_PID_PATH "/var/run"
-#endif
-
-#if !defined(XRDP_SBIN_PATH)
-#define XRDP_SBIN_PATH "/usr/local/sbin"
-#endif
-
-#if !defined(XRDP_SHARE_PATH)
-#define XRDP_SHARE_PATH "/usr/local/share/xrdp"
-#endif
-
-#if !defined(XRDP_LIB_PATH)
-#define XRDP_LIB_PATH "/usr/local/lib/xrdp"
-#endif
+char* APP_CC
+convert_bitmap(int in_bpp, int out_bpp, char* bmpdata,
+               int width, int height, int* palette);
+int APP_CC
+convert_color(int in_bpp, int out_bpp, int in_color, int* palette);
 
 #endif

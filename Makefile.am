@@ -6,6 +6,12 @@ else
 FREERDPDIR =
 endif
 
+if XRDP_NEUTRINORDP
+NEUTRINORDPDIR = neutrinordp
+else
+NEUTRINORDPDIR =
+endif
+
 if XRDP_XRDPVR
 XRDPVRDIR = xrdpvr
 else
@@ -19,6 +25,7 @@ SUBDIRS = \
   xup \
   mc \
   $(FREERDPDIR) \
+  $(NEUTRINORDPDIR) \
   libxrdp \
   xrdp \
   sesman \

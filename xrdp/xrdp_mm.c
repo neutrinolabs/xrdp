@@ -17,6 +17,7 @@
  *
  * module manager
  */
+
 #include <config_ac.h>
 #define ACCESS
 #include "xrdp.h"
@@ -148,13 +149,10 @@ xrdp_mm_send_login(struct xrdp_mm *self)
         {
             password = value;
         }
-        else if (g_strcasecmp(name, "lib") == 0)
+        else if (g_strcasecmp(name, "code") == 0)
         {
-            if ((g_strcasecmp(value, "libxup.so") == 0) ||
-                    (g_strcasecmp(value, "xup.dll") == 0))
-            {
-                self->code = 10;
-            }
+            /* this code is either 0 for Xvnc or 10 for X11rdp */
+            self->code = g_atoi(value);
         }
         else if (g_strcasecmp(name, "xserverbpp") == 0)
         {
@@ -311,8 +309,9 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
 
     if (self->mod_handle == 0)
     {
+        g_snprintf(text, 255, "%s/%s", XRDP_LIB_PATH, lib);
         /* Let the main thread load the lib,*/
-        self->mod_handle = g_xrdp_sync(xrdp_mm_sync_load, (long)lib, 0);
+        self->mod_handle = g_xrdp_sync(xrdp_mm_sync_load, (tintptr)text, 0);
 
         if (self->mod_handle != 0)
         {

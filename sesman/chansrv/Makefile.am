@@ -35,10 +35,12 @@ xrdp_chansrv_SOURCES = \
   clipboard.c \
   clipboard_file.c \
   devredir.c \
+  smartcard.c \
   rail.c \
   xcommon.c \
   drdynvc.c \
-  chansrv_fuse.c
+  chansrv_fuse.c \
+  irp.c
 
 xrdp_chansrv_LDFLAGS = \
   $(EXTRA_FLAGS)

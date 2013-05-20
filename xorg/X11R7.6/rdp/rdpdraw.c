@@ -524,7 +524,7 @@ draw_item_pack(PixmapPtr pix, rdpPixmapRec *priv)
     }
 
 #endif
-#if 1
+#if 0
 
     /* subtract regions */
     if (priv->draw_item_tail != 0)
@@ -559,6 +559,7 @@ draw_item_pack(PixmapPtr pix, rdpPixmapRec *priv)
 
 #endif
 #if 1
+
     /* remove draw items with empty regions */
     di = priv->draw_item_head;
     di_prev = 0;
@@ -738,7 +739,8 @@ xrdp_is_os(PixmapPtr pix, rdpPixmapPtr priv)
     {
         width = pix->drawable.width;
         height = pix->drawable.height;
-        if ((pix->drawable.depth >= g_rdpScreen.depth) &&
+        if ((pix->usage_hint == 0) &&
+            (pix->drawable.depth >= g_rdpScreen.depth) &&
             (width > 1) && (height > 1) && (priv->kind_width > 0))
         {
             LLOGLN(10, ("%d %d", priv->kind_width, pix->drawable.width));

@@ -18,33 +18,30 @@
 
 /*
  * TODO
- *      o need to support sym links
  *      o when creating dir/file, ensure it does not already exist
- *      o enable changing metadata for files/folders (time, owner, mode etc)
  *      o do not allow dirs to be created in ino==1 except for .clipbard and share mounts
- *      o xrdp_fs needs to grow dynamically - currently it is fixed at 1k or 4k
  *      o fix the HACK where I have to use my own buf instead of g_buffer
  *        this is in func xfuse_check_wait_objs()
  *      o if fuse mount point is already mounted, I get segfault
  *      o in open, check for modes such as O_TRUNC, O_APPEND
  *      o copying over an existing file does not work
- *      o need to keep track of open files, reqd during rename
- *      o need to use dir notification for changed files and update xrdp fs
- *      o copying over an existing file does not work
  *      o after a dir is created, the device cannot be unmounted on the client side
  *        so something is holding it up
+ *      o in thunar, when I move a file by dragging to another folder, the file
+ *        is getting copied instead of being moved
+ *      o unable to edit files in vi
  *      o fuse ops to support
  *          o touch does not work
- *          o keep track of lookup_count
  *          o chmod must work
  *          o cat >> file is not working
  *
  */
 
-// LK_TODO #define USE_SYNC_FLAG
+//#define USE_SYNC_FLAG
 
 /* FUSE mount point */
 char g_fuse_root_path[256] = "";
+char g_fuse_clipboard_path[256] = ""; /* for clipboard use */
 
 #ifndef XRDP_FUSE
 
@@ -104,6 +101,7 @@ void xfuse_devredir_cb_file_close(void *vp)                                  {}
 #include "arch.h"
 #include "os_calls.h"
 #include "chansrv_fuse.h"
+#include "list.h"
 
 #define min(x, y) ((x) < (y) ? (x) : (y))
 
@@ -139,7 +137,7 @@ void xfuse_devredir_cb_file_close(void *vp)                                  {}
 
 #define log_debug(_params...)                           \
 {                                                       \
-    if (LOG_DEBUG <= LOG_LEVEL)                        \
+    if (LOG_DEBUG <= LOG_LEVEL)                         \
     {                                                   \
         g_write("[%10.10u]: FUSE       %s: %d : ",      \
                 g_time3(), __func__, __LINE__);         \
@@ -164,6 +162,13 @@ struct dirbuf
     size_t size;
 };
 
+struct dirbuf1
+{
+    char buf[4096];
+    int  bytes_in_buf;
+    int  first_time;
+};
+
 /* FUSE reply types */
 #define RT_FUSE_REPLY_OPEN      1
 #define RT_FUSE_REPLY_CREATE    2
@@ -181,6 +186,9 @@ struct xfuse_info
     int                    reply_type;
     int                    mode;
     int                    type;
+    size_t                 size;
+    off_t                  off;
+    struct dirbuf1         dirbuf1;
 };
 typedef struct xfuse_info XFUSE_INFO;
 
@@ -188,11 +196,21 @@ struct xfuse_handle
 {
     tui32 DeviceId;
     tui32 FileId;
+    int   is_loc_resource; /* this is not a redirected resource */
 };
 typedef struct xfuse_handle XFUSE_HANDLE;
 
-/* globals */
+/* used for file data request sent to client */
+struct req_list_item
+{
+    fuse_req_t req;
+    int stream_id;
+    int lindex;
+    int off;
+    int size;
+};
 
+static struct list *g_req_list = 0;
 static struct xrdp_fs g_xrdp_fs;             /* an inst of xrdp file system */
 static char *g_mount_point = 0;              /* our FUSE mount point        */
 static struct fuse_lowlevel_ops g_xfuse_ops; /* setup FUSE callbacks        */
@@ -227,10 +245,13 @@ static struct xrdp_inode * xfuse_create_file_in_xrdp_fs(tui32 device_id,
                                                         int pinode, char *name,
                                                         int type);
 
-static int xfuse_does_file_exist(int parent, char *name);
-static int xfuse_delete_file(int parent, char *name);
-static int xfuse_delete_file_with_xinode(XRDP_INODE *xinode);
-static int xfuse_delete_dir_with_xinode(XRDP_INODE *xinode);
+static int  xfuse_does_file_exist(int parent, char *name);
+static int  xfuse_delete_file(int parent, char *name);
+static int  xfuse_delete_file_with_xinode(XRDP_INODE *xinode);
+static int  xfuse_delete_dir_with_xinode(XRDP_INODE *xinode);
+static void xfuse_update_xrdpfs_size();
+static void xfuse_enum_dir(fuse_req_t req, fuse_ino_t ino, size_t size,
+                           off_t off, struct fuse_file_info *fi);
 
 /* forward declarations for calls we make into devredir */
 int dev_redir_get_dir_listing(void *fusep, tui32 device_id, char *path);
@@ -244,6 +265,8 @@ int dev_redir_file_read(void *fusep, tui32 device_id, tui32 FileId,
 int dev_redir_file_write(void *fusep, tui32 device_id, tui32 FileId,
                          const char *buf, tui32 Length, tui64 Offset);
 
+int devredir_file_close(void *fusep, tui32 device_id, tui32 FileId);
+
 /* forward declarations for FUSE callbacks */
 static void xfuse_cb_lookup(fuse_req_t req, fuse_ino_t parent,
                             const char *name);
@@ -253,6 +276,9 @@ static void xfuse_cb_getattr(fuse_req_t req, fuse_ino_t ino,
 
 /* this is not a callback, but its's used by xfuse_cb_readdir() */
 static void xfuse_dirbuf_add(fuse_req_t req, struct dirbuf *b,
+                             const char *name, fuse_ino_t ino);
+
+static int xfuse_dirbuf_add1(fuse_req_t req, struct dirbuf1 *b,
                              const char *name, fuse_ino_t ino);
 
 static void xfuse_cb_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
@@ -282,8 +308,8 @@ static void xfuse_create_dir_or_file(fuse_req_t req, fuse_ino_t parent,
 static void xfuse_cb_open(fuse_req_t req, fuse_ino_t ino,
                           struct fuse_file_info *fi);
 
-static void xfuse_cb_flush(fuse_req_t req, fuse_ino_t ino, struct
-                           fuse_file_info *fi);
+static void xfuse_cb_release(fuse_req_t req, fuse_ino_t ino, struct
+                             fuse_file_info *fi);
 
 static void xfuse_cb_read(fuse_req_t req, fuse_ino_t ino, size_t size,
                           off_t off, struct fuse_file_info *fi);
@@ -295,36 +321,9 @@ static void xfuse_cb_create(fuse_req_t req, fuse_ino_t parent,
                             const char *name, mode_t mode,
                             struct fuse_file_info *fi);
 
-// LK_TODO may not need to be implemented
-#if 0
-static void xfuse_cb_statfs(fuse_req_t req, fuse_ino_t ino);
-
-static void xfuse_cb_setxattr(fuse_req_t req, fuse_ino_t ino, const char *name,
-                     const char *value, size_t size, int flags);
-
-static void xfuse_cb_getxattr(fuse_req_t req, fuse_ino_t ino, const char *name,
-                     size_t size);
-
-static void xfuse_cb_listxattr(fuse_req_t req, fuse_ino_t ino, size_t size);
-
-static void xfuse_cb_access(fuse_req_t req, fuse_ino_t ino, int mask);
-
-static void xfuse_cb_getlk(fuse_req_t req, fuse_ino_t ino,
-                           struct fuse_file_info *fi, struct flock *lock);
-
-static void xfuse_cb_setlk(fuse_req_t req, fuse_ino_t ino,
-                           struct fuse_file_info *fi, struct flock *lock,
-                           int sleep);
-
-static void xfuse_cb_ioctl(fuse_req_t req, fuse_ino_t ino, int cmd, void *arg,
-                           struct fuse_file_info *fi, unsigned flags,
-                           const void *in_buf, size_t in_bufsz,
-                           size_t out_bufsz);
-
-static void xfuse_cb_poll(fuse_req_t req, fuse_ino_t ino,
-                          struct fuse_file_info *fi,
-                          struct fuse_pollhandle *ph);
-#endif
+/* clipboard calls */
+int clipboard_request_file_data(int stream_id, int lindex, int offset,
+                                int request_bytes);
 
 static void xfuse_cb_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
                              int to_set, struct fuse_file_info *fi);
@@ -344,7 +343,6 @@ static void xfuse_cb_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 int xfuse_init()
 {
     struct fuse_args args = FUSE_ARGS_INIT(0, NULL);
-    char   opt[1024];
 
     /* if already inited, just return */
     if (g_xfuse_inited)
@@ -361,6 +359,7 @@ int xfuse_init()
 
     /* define FUSE mount point to ~/xrdp_client */
     g_snprintf(g_fuse_root_path, 255, "%s/xrdp_client", g_getenv("HOME"));
+    g_snprintf(g_fuse_clipboard_path, 255, "%s/.clipboard", g_fuse_root_path);
 
     /* if FUSE mount point does not exist, create it */
     if (!g_directory_exist(g_fuse_root_path))
@@ -379,38 +378,22 @@ int xfuse_init()
 
     /* setup FUSE callbacks */
     g_memset(&g_xfuse_ops, 0, sizeof(g_xfuse_ops));
-    g_xfuse_ops.lookup  = xfuse_cb_lookup;
-    g_xfuse_ops.readdir = xfuse_cb_readdir;
-    g_xfuse_ops.mkdir   = xfuse_cb_mkdir;
-    g_xfuse_ops.rmdir   = xfuse_cb_rmdir;
-    g_xfuse_ops.unlink  = xfuse_cb_unlink;
-    g_xfuse_ops.rename  = xfuse_cb_rename;
-    g_xfuse_ops.open    = xfuse_cb_open;
-    g_xfuse_ops.flush   = xfuse_cb_flush;
-    g_xfuse_ops.read    = xfuse_cb_read;
-    g_xfuse_ops.write   = xfuse_cb_write;
-    g_xfuse_ops.create  = xfuse_cb_create;
-    g_xfuse_ops.getattr = xfuse_cb_getattr;
-    g_xfuse_ops.setattr = xfuse_cb_setattr;
-
-#if 0
-    g_xfuse_ops.statfs  = xfuse_cb_statfs;
-    g_xfuse_ops.listxattr  = xfuse_cb_listxattr;
-    g_xfuse_ops.getlk = xfuse_cb_getlk;
-    g_xfuse_ops.setlk = xfuse_cb_setlk;
-    g_xfuse_ops.ioctl = xfuse_cb_ioctl;
-    g_xfuse_ops.poll = xfuse_cb_poll;
-    g_xfuse_ops.access = xfuse_cb_access;
-    g_xfuse_ops.setxattr  = xfuse_cb_setxattr;
-    g_xfuse_ops.getxattr  = xfuse_cb_getxattr;
-#endif
+    g_xfuse_ops.lookup    = xfuse_cb_lookup;
+    g_xfuse_ops.readdir   = xfuse_cb_readdir;
+    g_xfuse_ops.mkdir     = xfuse_cb_mkdir;
+    g_xfuse_ops.rmdir     = xfuse_cb_rmdir;
+    g_xfuse_ops.unlink    = xfuse_cb_unlink;
+    g_xfuse_ops.rename    = xfuse_cb_rename;
+    g_xfuse_ops.open      = xfuse_cb_open;
+    g_xfuse_ops.release   = xfuse_cb_release;
+    g_xfuse_ops.read      = xfuse_cb_read;
+    g_xfuse_ops.write     = xfuse_cb_write;
+    g_xfuse_ops.create    = xfuse_cb_create;
+    g_xfuse_ops.getattr   = xfuse_cb_getattr;
+    g_xfuse_ops.setattr   = xfuse_cb_setattr;
 
     fuse_opt_add_arg(&args, "xrdp-chansrv");
     fuse_opt_add_arg(&args, g_fuse_root_path);
-#if 0
-    sprintf(opt, "-o uid=%d,gid=%d", g_getuid(), g_getgid());
-    fuse_opt_add_arg(&args, opt);
-#endif
 
     if (xfuse_init_lib(&args))
     {
@@ -449,6 +432,12 @@ int xfuse_deinit()
     {
         g_free(g_buffer);
         g_buffer = 0;
+    }
+
+    if (g_req_list != 0)
+    {
+        list_delete(g_req_list);
+        g_req_list = 0;
     }
 
     g_xfuse_inited = 0;
@@ -533,11 +522,11 @@ int xfuse_get_wait_objs(tbus *objs, int *count, int *timeout)
 
 int xfuse_create_share(tui32 device_id, char *dirname)
 {
-    /* LK_TODO need to specify parent dir, mode */
-
+#if 0
     XFUSE_INFO  *fip;
+#endif
     XRDP_INODE  *xinode;
-    tui32        saved_inode;
+    /* tui32        saved_inode; */
 
     if (dirname == NULL || strlen(dirname) == 0)
         return -1;
@@ -545,12 +534,6 @@ int xfuse_create_share(tui32 device_id, char *dirname)
     if ((xinode = calloc(1, sizeof(struct xrdp_inode))) == NULL)
     {
         log_debug("calloc() failed");
-        return -1;
-    }
-
-    if ((fip = calloc(1, sizeof(XFUSE_INFO))) == NULL)
-    {
-        log_error("system out of memory");
         return -1;
     }
 
@@ -569,7 +552,7 @@ int xfuse_create_share(tui32 device_id, char *dirname)
     xinode->device_id = device_id;
 
     g_xrdp_fs.num_entries++;
-    saved_inode = xinode->inode;
+    /* saved_inode = xinode->inode; */
 
     /* insert it in xrdp fs */
     g_xrdp_fs.inode_table[xinode->inode] = xinode;
@@ -582,14 +565,127 @@ int xfuse_create_share(tui32 device_id, char *dirname)
         return -1;
     xinode->nentries++;
 
+#if 0
+    if ((fip = calloc(1, sizeof(XFUSE_INFO))) == NULL)
+    {
+        log_error("system out of memory");
+        return -1;
+    }
+
      /* enumerate root dir, do not call FUSE when done */
     fip->req = NULL;
-    fip->inode = 1; // LK_TODO saved_inode;
+    fip->inode = 1; /* TODO saved_inode; */
     strncpy(fip->name, dirname, 1024);
     fip->name[1023] = 0;
     fip->device_id = device_id;
 
     dev_redir_get_dir_listing((void *) fip, device_id, "\\");
+#endif
+
+    return 0;
+}
+
+/**
+ * Clear all clipboard entries in xrdp_fs
+ *
+ * This function is called by clipboard code
+ *
+ * @return 0 on success, -1 on failure
+ *****************************************************************************/
+
+int xfuse_clear_clip_dir(void)
+{
+    int         i;
+    XRDP_INODE *xinode;
+    XRDP_INODE *xip;
+
+    log_debug("entered");
+
+    /* xinode for .clipboard */
+    xip = g_xrdp_fs.inode_table[2];
+
+    for (i = FIRST_INODE; i < g_xrdp_fs.num_entries; i++)
+    {
+        if ((xinode = g_xrdp_fs.inode_table[i]) == NULL)
+            continue;
+
+        if (xinode->parent_inode == 2)
+        {
+            g_xrdp_fs.inode_table[i] = NULL;
+            free(xinode);
+            xip->nentries--;
+        }
+    }
+
+    return 0;
+}
+
+/**
+ * Return clipboard data to fuse
+ *
+ * @return 0 on success, -1 on failure
+ *****************************************************************************/
+
+int xfuse_file_contents_range(int stream_id, char *data, int data_bytes)
+{
+    log_debug("entered: stream_id=%d data_bytes=%d", stream_id, data_bytes);
+
+    struct req_list_item *rli;
+
+    if ((rli = (struct req_list_item *) list_get_item(g_req_list, 0)) == NULL)
+    {
+        log_error("range error!");
+        return -1;
+    }
+
+    log_debug("lindex=%d off=%d size=%d", rli->lindex, rli->off, rli->size);
+
+    fuse_reply_buf(rli->req, data, data_bytes);
+
+    list_remove_item(g_req_list, 0);
+    if (g_req_list->count <= 0)
+    {
+        log_debug("completed all requests");
+        return 0;
+    }
+
+    /* send next request */
+    rli = (struct req_list_item *) list_get_item(g_req_list, 0);
+    if (rli == NULL)
+    {
+        log_error("range error!");
+        return -1;
+    }
+
+    log_debug("requesting clipboard file data");
+
+    clipboard_request_file_data(rli->stream_id, rli->lindex,
+                                    rli->off, rli->size);
+
+    return 0;
+}
+
+/**
+ * Create a file in .clipboard dir
+ *
+ * This function is called by clipboard code
+ *
+ * @return 0 on success, -1 on failure
+ *****************************************************************************/
+
+int xfuse_add_clip_dir_item(char *filename, int flags, int size, int lindex)
+{
+    log_debug("entered: filename=%s flags=%d size=%d lindex=%d",
+              filename, flags, size, lindex);
+
+    /* add entry to xrdp_fs */
+    XRDP_INODE *xinode = xfuse_create_file_in_xrdp_fs(0,    /* device id    */
+                                                      2,    /* parent inode */
+                                                      filename,
+                                                      S_IFREG);
+    xinode->size = size;
+    xinode->lindex = lindex;
+    xinode->is_loc_resource = 1;
 
     return 0;
 }
@@ -600,42 +696,10 @@ int xfuse_create_share(tui32 device_id, char *dirname)
  * @return 0 on success, -1 on failure
  *****************************************************************************/
 
-int xfuse_clear_clip_dir(void)
-{
-    return 0; // CLIPBOARD_TODO
-}
-
-/**
- *
- *
- * @return 0 on success, -1 on failure
- *****************************************************************************/
-
-int xfuse_file_contents_range(int stream_id, char *data, int data_bytes)
-{
-    return 0; // CLIPBOARD_TODO
-}
-
-/**
- *
- *
- * @return 0 on success, -1 on failure
- *****************************************************************************/
-
-int xfuse_add_clip_dir_item(char *filename, int flags, int size, int lindex)
-{
-    return 0; // CLIPBOARD_TODO
-}
-
-/**
- *
- *
- * @return 0 on success, -1 on failure
- *****************************************************************************/
-
 int xfuse_file_contents_size(int stream_id, int file_size)
 {
-    return 0; // CLIPBOARD_TODO
+    log_debug("entered: stream_id=%d file_size=%d", stream_id, file_size);
+    return 0;
 }
 
 /*****************************************************************************
@@ -652,14 +716,6 @@ int xfuse_file_contents_size(int stream_id, int file_size)
 
 static int xfuse_init_lib(struct fuse_args *args)
 {
-    // LK_TODO
-    {
-        int i;
-
-        for (i = 0; i < args->argc; i++)
-            log_debug("+++++++++++++ argc=%d argv=%s", i, args->argv[i]);
-    }
-
     if (fuse_parse_cmdline(args, &g_mount_point, 0, 0) < 0)
     {
         log_error("fuse_parse_cmdline() failed");
@@ -690,6 +746,9 @@ static int xfuse_init_lib(struct fuse_args *args)
 
     g_buffer = calloc(g_bufsize, 1);
     g_fd = fuse_chan_fd(g_ch);
+
+    g_req_list = list_create();
+    g_req_list->auto_free = 1;
 
     return 0;
 }
@@ -775,7 +834,7 @@ static int xfuse_init_xrdp_fs()
     g_xrdp_fs.inode_table[2] = xino;
     xino->parent_inode = 1;
     xino->inode = 2;
-    xino->nentries = 1;
+    xino->nentries = 0;
     xino->mode = S_IFDIR | 0755;
     xino->uid = getuid();
     xino->gid = getgid();
@@ -783,9 +842,10 @@ static int xfuse_init_xrdp_fs()
     xino->atime = time(0);
     xino->mtime = time(0);
     xino->ctime = time(0);
+    xino->is_loc_resource = 1;
     strcpy(xino->name, ".clipboard");
 
-    g_xrdp_fs.max_entries = 1024;
+    g_xrdp_fs.max_entries = 4096;
     g_xrdp_fs.num_entries = 3;
     g_xrdp_fs.next_node = 3;
 
@@ -865,6 +925,7 @@ static void xfuse_create_file(fuse_req_t req, fuse_ino_t parent,
 
     /* insert it in xrdp fs */
     g_xrdp_fs.inode_table[xinode->inode] = xinode;
+    xfuse_update_xrdpfs_size();
     log_debug("inserted new dir at inode_table[%d]", (int) xinode->inode);
 
     xfuse_dump_fs();
@@ -903,9 +964,9 @@ static void xfuse_dump_fs()
         if ((xinode = g_xrdp_fs.inode_table[i]) == NULL)
             continue;
 
-        log_debug("pinode=%d inode=%d nentries=%d dev_id=%d is_synced=%d name=%s",
+        log_debug("pinode=%d inode=%d nentries=%d nopen=%d is_synced=%d name=%s",
                   (int) xinode->parent_inode, (int) xinode->inode,
-                  xinode->nentries, xinode->device_id, xinode->is_synced,
+                  xinode->nentries, xinode->nopen, xinode->is_synced,
                   xinode->name);
     }
     log_debug("");
@@ -1061,10 +1122,8 @@ static struct xrdp_inode * xfuse_create_file_in_xrdp_fs(tui32 device_id,
         return NULL;
     }
 
-    log_debug("S_IFDIR=0x%x S_IFREG=0x%x type=0x%x", S_IFDIR, S_IFREG, type);
-
     xinode->parent_inode = pinode;
-    xinode->inode = g_xrdp_fs.next_node++; /* TODO should be thread safe */
+    xinode->inode = g_xrdp_fs.next_node++;
     xinode->nlink = 1;
     xinode->uid = getuid();
     xinode->gid = getgid();
@@ -1087,13 +1146,14 @@ static struct xrdp_inode * xfuse_create_file_in_xrdp_fs(tui32 device_id,
     }
 
     g_xrdp_fs.inode_table[xinode->inode] = xinode;
-    g_xrdp_fs.num_entries++; /* TODO should be thread safe */
+    g_xrdp_fs.num_entries++;
 
     /* bump up lookup count in parent dir */
     xinodep = g_xrdp_fs.inode_table[pinode];
     xinodep->nentries++;
+    xfuse_update_xrdpfs_size();
 
-    log_debug("LK_TODO: incremented nentries; parent=%d nentries=%d",
+    log_debug("incremented nentries; parent=%d nentries=%d",
               pinode, xinodep->nentries);
 
     /* LK_TODO */
@@ -1181,6 +1241,85 @@ static int xfuse_delete_dir_with_xinode(XRDP_INODE *xinode)
     return 0;
 }
 
+static void xfuse_update_xrdpfs_size()
+{
+    void *vp;
+    int diff;
+
+    diff = g_xrdp_fs.max_entries - g_xrdp_fs.num_entries;
+    if (diff > 100)
+        return;
+
+    /* extend memory */
+    vp = realloc(g_xrdp_fs.inode_table,
+                 (g_xrdp_fs.max_entries + 100) * sizeof(struct xrdp_inode *));
+
+    if (vp == NULL)
+    {
+        log_error("system out of memory");
+        return;
+    }
+
+    /* zero newly added memory */
+    memset(vp + g_xrdp_fs.max_entries * sizeof(struct xrdp_inode *),
+           0,
+           100 * sizeof(struct xrdp_inode *));
+
+    g_xrdp_fs.max_entries += 100;
+    g_xrdp_fs.inode_table = vp;
+}
+
+static void xfuse_enum_dir(fuse_req_t req, fuse_ino_t ino, size_t size,
+                           off_t off, struct fuse_file_info *fi)
+{
+    XRDP_INODE    *xinode;
+    XRDP_INODE    *xinode1;
+    struct dirbuf  b;
+    int            first_time = 1;
+    int            i;
+
+    memset(&b, 0, sizeof(struct dirbuf));
+
+    for (i = FIRST_INODE; i < g_xrdp_fs.num_entries; i++)
+    {
+        if ((xinode = g_xrdp_fs.inode_table[i]) == NULL)
+            continue;
+
+        /* match parent inode */
+        if (xinode->parent_inode != ino)
+            continue;
+
+        if (first_time)
+        {
+            first_time = 0;
+            if (ino == 1)
+            {
+                xfuse_dirbuf_add(req, &b, ".", 1);
+                xfuse_dirbuf_add(req, &b, "..", 1);
+            }
+            else
+            {
+                xinode1 = g_xrdp_fs.inode_table[ino];
+                xfuse_dirbuf_add(req, &b, ".", ino);
+                xfuse_dirbuf_add(req, &b, "..", xinode1->parent_inode);
+            }
+        }
+
+        xfuse_dirbuf_add(req, &b, xinode->name, xinode->inode);
+    }
+
+    if (!first_time)
+    {
+        if (off < b.size)
+            fuse_reply_buf(req, b.p + off, min(b.size - off, size));
+        else
+            fuse_reply_buf(req, NULL, 0);
+    }
+
+    if (b.p)
+        free(b.p);
+}
+
 /******************************************************************************
 **                                                                           **
 **                         callbacks for devredir                            **
@@ -1191,10 +1330,138 @@ static int xfuse_delete_dir_with_xinode(XRDP_INODE *xinode)
  * Add a file or directory to xrdp file system
  *****************************************************************************/
 
+/* LK_TODO delete this after testing */
+#if 0
+void ___xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode)
+{
+    XFUSE_INFO    *fip = (XFUSE_INFO *) vp;
+    XRDP_INODE    *xip = NULL;
+
+    log_debug("<<<<<< entered");
+
+    if ((fip == NULL) || (xinode == NULL))
+    {
+        log_error("fip or xinode are NULL");
+        printf("RASH_TODO: fip or xinode are NULL - leaving\n");
+        return;
+    }
+
+    log_debug("req=%p", fip->req);
+
+    /* do we have a valid inode? */
+    if (!xfuse_is_inode_valid(fip->inode))
+    {
+        log_error("inode %d is not valid", fip->inode);
+        printf("RASH_TODO: inode %d is not valid - leaving\n", (tui32) fip->inode);
+        return;
+    }
+
+    /* if filename is . or .. don't add it */
+    if ((strcmp(xinode->name, ".") == 0) || (strcmp(xinode->name, "..") == 0))
+    {
+        free(xinode);
+        printf("RASH_TODO: not adding ./.. - leaving\n");
+        return;
+    }
+
+// LK_TODO
+#if 0
+    /* we have a parent inode and a dir name; what we need is the xinode */
+    /* that matches the parent inode and the dir name                    */
+    target_inode = xfuse_get_inode_from_pinode_name(fip->inode, fip->name);
+    if (target_inode == 0)
+    {
+        log_debug("did not find entry with inode=%d name=%s",
+                  fip->inode, fip->name);
+        return;
+    }
+#endif
+
+    if ((xip = xfuse_get_inode_from_pinode_name(fip->inode, xinode->name)) != NULL)
+    {
+        log_debug("inode=%d name=%s already exists in xrdp_fs; not adding it",
+                  fip->inode, xinode->name);
+        free(xinode);
+        xinode = xip;
+        goto update_fuse;
+    }
+
+    xinode->parent_inode = fip->inode;
+    xinode->inode = g_xrdp_fs.next_node++;
+    xinode->uid = getuid();
+    xinode->gid = getgid();
+    xinode->device_id = fip->device_id;
+
+    g_xrdp_fs.num_entries++;
+
+    /* insert it in xrdp fs and update lookup count */
+    g_xrdp_fs.inode_table[xinode->inode] = xinode;
+    g_xrdp_fs.inode_table[fip->inode]->nentries;
+    xfuse_update_xrdpfs_size();
+
+update_fuse:
+
+#if 1
+    /* let FUSE know about this entry */
+    if (fip->invoke_fuse)
+    {
+        struct dirbuf b;
+
+        memset(&b, 0, sizeof(struct dirbuf));
+
+        /* RASH_TODO if we are not using dirbuf, change this code */
+        if (fip->dirbuf == NULL)
+        {
+            fip->dirbuf = calloc(1, sizeof(struct dirbuf));
+            xfuse_dirbuf_add(fip->req, &b, ".", xinode->inode);
+            xfuse_dirbuf_add(fip->req, &b, "..", xinode->parent_inode);
+        }
+
+        xfuse_dirbuf_add(fip->req, &b, xinode->name, xinode->inode);
+
+        if (fip->off < b.size)
+        {
+            printf("RASH_TODO: xfuse_devredir_cb_enum_dir(): req=%p off=%d\n",
+                   fip->req, (tui32) fip->off);
+
+            printf("RASH_TODO: xfuse_devredir_cb_enum_dir(): dumping req b4\n\n");
+            g_hexdump((char *) fip->req, 128);
+
+            printf("RASH_TODO: xfuse_devredir_cb_enum_dir(): dumping buf b4\n\n");
+            g_hexdump(b.p, b.size);
+
+            printf("RASH_TODO: xfuse_devredir_cb_enum_dir(): calling fuse\n");
+
+            fuse_reply_buf(fip->req, b.p, b.size);
+
+            printf("RASH_TODO: xfuse_devredir_cb_enum_dir(): calling fuse...done\n");
+
+            printf("RASH_TODO: xfuse_devredir_cb_enum_dir(): dumping req aft\n\n");
+            g_hexdump((char *) fip->req, 128);
+
+            printf("RASH_TODO: xfuse_devredir_cb_enum_dir(): dumping buf aft\n\n");
+            g_hexdump(b.p, b.size);
+        }
+        else
+        {
+            printf("RASH_TODO: xfuse_devredir_cb_enum_dir(): calling fuse with NULL\n");
+            fuse_reply_buf(fip->req, NULL, 0);
+            printf("RASH_TODO: xfuse_devredir_cb_enum_dir(): calling fuse with NULL...done\n");
+        }
+
+        log_debug("added inode=%d name=%s to FUSE", (tui32) xinode->inode, xinode->name);
+    }
+#endif
+
+    log_debug("leaving");
+    printf("RASH_TODO: xfuse_devredir_cb_enum_dir(): leaving\n");
+}
+#endif
+
 void xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode)
 {
-    XFUSE_INFO  *fip = (XFUSE_INFO *) vp;
-    XRDP_INODE  *target_inode;
+    XFUSE_INFO    *fip = (XFUSE_INFO *) vp;
+    XRDP_INODE    *xip = NULL;
 
     if ((fip == NULL) || (xinode == NULL))
     {
@@ -1202,15 +1469,13 @@ void xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode)
         return;
     }
 
-/* LK_TODO */
-#if 0
-    /* do we have a valid inode? */
+    log_debug("fip->req=%p", fip->req);
+
     if (!xfuse_is_inode_valid(fip->inode))
     {
         log_error("inode %d is not valid", fip->inode);
         return;
     }
-#endif
 
     /* if filename is . or .. don't add it */
     if ((strcmp(xinode->name, ".") == 0) || (strcmp(xinode->name, "..") == 0))
@@ -1219,19 +1484,16 @@ void xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode)
         return;
     }
 
-    /* we have a parent inode and a dir name; what we need is the xinode */
-    /* that matches the parent inode and the dir name                    */
-    target_inode = xfuse_get_inode_from_pinode_name(fip->inode, fip->name);
-    if (target_inode == 0)
-        return;
-
-    if (xfuse_does_file_exist(target_inode->inode, xinode->name))
+    if ((xip = xfuse_get_inode_from_pinode_name(fip->inode, xinode->name)) != NULL)
     {
+        log_debug("inode=%d name=%s already exists in xrdp_fs; not adding it",
+                  fip->inode, xinode->name);
         free(xinode);
+        xinode = xip;
         return;
     }
 
-    xinode->parent_inode = target_inode->inode;
+    xinode->parent_inode = fip->inode;
     xinode->inode = g_xrdp_fs.next_node++;
     xinode->uid = getuid();
     xinode->gid = getgid();
@@ -1239,15 +1501,10 @@ void xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode)
 
     g_xrdp_fs.num_entries++;
 
-    /* insert it in xrdp fs */
+    /* insert it in xrdp fs and update lookup count */
     g_xrdp_fs.inode_table[xinode->inode] = xinode;
-
-    /* bump up lookup count */
-    xinode = g_xrdp_fs.inode_table[target_inode->inode];
-    xinode->nentries++;
-
-    log_debug("added %s to pinode=%d, nentries=%d target_inode->inode=%d",
-              fip->name, fip->inode, xinode->nentries, target_inode->inode);
+    g_xrdp_fs.inode_table[fip->inode]->nentries++; /* this was missing */
+    xfuse_update_xrdpfs_size();
 }
 
 /**
@@ -1255,11 +1512,128 @@ void xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode)
 
 void xfuse_devredir_cb_enum_dir_done(void *vp, tui32 IoStatus)
 {
+    log_debug(">>>>>> vp=%p IoStatus=0x%x", vp, IoStatus);
+
+    if (vp == NULL)
+        return;
+
+    XRDP_INODE     *xinode;
+    XRDP_INODE     *ti;
+    struct dirbuf1   b;
+    int             i;
+    int             first_time = 1;
+
+    XFUSE_INFO *fip = (XFUSE_INFO *) vp;
+
+    if (fip == NULL)
+    {
+        log_debug("fip is NULL");
+        goto done;
+    }
+
+    log_debug("fip->req=%p", fip->req);
+
+    if (IoStatus != 0)
+    {
+        /* command failed */
+        if (fip->invoke_fuse)
+            fuse_reply_err(fip->req, ENOENT);
+        goto done;
+    }
+
+    /* do we have a valid inode? */
+    if (!xfuse_is_inode_valid(fip->inode))
+    {
+        log_error("inode %d is not valid", fip->inode);
+        if (fip->invoke_fuse)
+            fuse_reply_err(fip->req, EBADF);
+        goto done;
+    }
+#if 0
+    memset(&b, 0, sizeof(struct dirbuf));
+#else
+    b.bytes_in_buf = 0;
+#endif
+    for (i = FIRST_INODE; i < g_xrdp_fs.num_entries; i++)
+    {
+        if ((xinode = g_xrdp_fs.inode_table[i]) == NULL)
+            continue;
+
+        /* match parent inode */
+        if (xinode->parent_inode != fip->inode)
+            continue;
+
+        xinode->is_synced = 1;
+
+        if (first_time)
+        {
+            first_time = 0;
+            ti = g_xrdp_fs.inode_table[fip->inode];
+#if 0
+            xfuse_dirbuf_add(fip->req, &b, ".", fip->inode);
+            xfuse_dirbuf_add(fip->req, &b, "..", ti->parent_inode);
+#else
+            xfuse_dirbuf_add1(fip->req, &b, ".", fip->inode);
+            xfuse_dirbuf_add1(fip->req, &b, "..", ti->parent_inode);
+#endif
+        }
+#if 0
+        xfuse_dirbuf_add(fip->req, &b, xinode->name, xinode->inode);
+#else
+        xfuse_dirbuf_add1(fip->req, &b, xinode->name, xinode->inode);
+#endif
+    }
+
+    if ((first_time == 0) && (fip->invoke_fuse))
+    {
+        if (fip->off < b.bytes_in_buf)
+        {
+#if 0
+            fuse_reply_buf(fip->req, b.p + fip->off,
+                           min(b.size - fip->off, fip->size));
+#else
+            log_debug("calling fuse_reply_buf() with data...");
+            fuse_reply_buf(fip->req, b.buf, b.bytes_in_buf);
+            log_debug("calling fuse_reply_buf() with data...done");
+#endif
+        }
+        else
+        {
+            log_debug("calling fuse_reply_buf() with NULL...");
+            fuse_reply_buf(fip->req, NULL, 0);
+            log_debug("calling fuse_reply_buf() with NULL...done");
+        }
+    }
+    else
+    {
+        log_debug("calling fuse_reply_err()...");
+        fuse_reply_err(fip->req, ENOENT);
+        log_debug("calling fuse_reply_err()...done");
+    }
+
+done:
+
+#if 0
+    if (b.p)
+        free(b.p);
+#endif
+
+    if (!fip)
+        printf("###### %s : %s : %d: fip is NULL\n", __FILE__, __func__, __LINE__);
+
+    if (fip)
+        free(fip);
+}
+
+void xfuse_devredir_cb_enum_dir_done_TODO(void *vp, tui32 IoStatus)
+{
     struct xrdp_inode       *xinode;
     struct fuse_entry_param  e;
     int                      i;
 
     XFUSE_INFO *fip = (XFUSE_INFO *) vp;
+
+    printf("--------- xfuse_devredir_cb_enum_dir_done() entered\n");
 
     xfuse_dump_fs();
 
@@ -1349,6 +1723,9 @@ void xfuse_devredir_cb_open_file(void *vp, tui32 DeviceId, tui32 FileId)
         goto done;
     }
 
+    log_debug("+++ XFUSE_INFO=%p XFUSE_INFO->fi=%p DeviceId=%d FileId=%d",
+              fip, fip->fi, DeviceId, FileId);
+
     if (fip->fi != NULL)
     {
         if ((fh = calloc(1, sizeof(XFUSE_HANDLE))) == NULL)
@@ -1365,6 +1742,8 @@ void xfuse_devredir_cb_open_file(void *vp, tui32 DeviceId, tui32 FileId)
         fh->FileId = FileId;
 
         fip->fi->fh = (uint64_t) ((long) fh);
+        log_debug("+++ XFUSE_INFO=%p XFUSE_INFO->fi=%p XFUSE_INFO->fi->fh=%p",
+                  fip, fip->fi, fip->fi->fh);
     }
 
     if (fip->invoke_fuse)
@@ -1420,9 +1799,14 @@ void xfuse_devredir_cb_open_file(void *vp, tui32 DeviceId, tui32 FileId)
             e.generation = 1;
 
             if (fip->mode == S_IFDIR)
+            {
                 fuse_reply_entry(fip->req, &e);
+            }
             else
+            {
+                xinode->nopen++;
                 fuse_reply_create(fip->req, &e, fip->fi);
+            }
         }
         else
         {
@@ -1437,7 +1821,6 @@ done:
 
 void xfuse_devredir_cb_read_file(void *vp, char *buf, size_t length)
 {
-    XFUSE_HANDLE *fh;
     XFUSE_INFO   *fip;
 
     fip = (XFUSE_INFO *) vp;
@@ -1451,12 +1834,14 @@ void xfuse_devredir_cb_read_file(void *vp, char *buf, size_t length)
 void xfuse_devredir_cb_write_file(void *vp, char *buf, size_t length)
 {
     XRDP_INODE   *xinode;
-    XFUSE_HANDLE *fh;
     XFUSE_INFO   *fip;
 
     fip = (XFUSE_INFO *) vp;
     if (fip == NULL)
         return;
+
+    log_debug("+++ XFUSE_INFO=%p, XFUSE_INFO->fi=%p XFUSE_INFO->fi->fh=%p",
+              fip, fip->fi, fip->fi->fh);
 
     fuse_reply_write(fip->req, length);
 
@@ -1572,16 +1957,31 @@ void xfuse_devredir_cb_file_close(void *vp)
     if (fip == NULL)
         return;
 
+    log_debug("+++ XFUSE_INFO=%p XFUSE_INFO->fi=%p XFUSE_INFO->fi->fh=%p",
+              fip, fip->fi, fip->fi->fh);
+
     if ((xinode = g_xrdp_fs.inode_table[fip->inode]) == NULL)
+    {
         fuse_reply_err(fip->req, EBADF);
+        return;
+    }
 
     log_debug("before: inode=%d nopen=%d", xinode->inode, xinode->nopen);
 
     if (xinode->nopen > 0)
         xinode->nopen--;
 
+    /* LK_TODO */
+#if 0
     if ((xinode->nopen == 0) && fip->fi && fip->fi->fh)
-        free((char *) fip->fi->fh);
+    {
+        printf("LK_TODO: ################################ fi=%p fi->fh=%p\n",
+               fip->fi, fip->fi->fh);
+
+        free((char *) (tintptr) (fip->fi->fh));
+        fip->fi->fh = NULL;
+    }
+#endif
 
     fuse_reply_err(fip->req, 0);
 }
@@ -1599,15 +1999,10 @@ void xfuse_devredir_cb_file_close(void *vp)
 
 static void xfuse_cb_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
 {
-    XFUSE_INFO              *fip;
     XRDP_INODE              *xinode;
     struct fuse_entry_param  e;
-    tui32                    device_id;
-    char                     full_path[4096];
-    char                    *cptr;
 
-    log_debug("ENTERED: looking for parent=%d name=%s", (int) parent, name);
-
+    log_debug("looking for parent=%d name=%s", (int) parent, name);
     xfuse_dump_fs();
 
     if (!xfuse_is_inode_valid(parent))
@@ -1617,104 +2012,33 @@ static void xfuse_cb_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
         return;
     }
 
-    if ((xinode = xfuse_get_inode_from_pinode_name(parent, name)) != NULL)
+    xinode = xfuse_get_inode_from_pinode_name(parent, name);
+    if (xinode == NULL)
     {
-        log_debug("LK_TODO: got match: device_id=%d", xinode->device_id);
-
-        /* got a full match; if this dir is located on a remote device */
-        /* and is not synced, do a remote look up                      */
-#ifdef USE_SYNC_FLAG
-        if ((xinode->device_id != 0) && (!xinode->is_synced))
-            goto do_remote_lookup;
-#else
-        if (xinode->device_id != 0)
-            goto do_remote_lookup;
-#endif
-        memset(&e, 0, sizeof(e));
-        e.ino = xinode->inode;
-        e.attr_timeout = XFUSE_ATTR_TIMEOUT;
-        e.entry_timeout = XFUSE_ENTRY_TIMEOUT;
-        e.attr.st_ino = xinode->inode;
-		e.attr.st_mode = xinode->mode;
-		e.attr.st_nlink = xinode->nlink;
-        e.attr.st_uid = xinode->uid;
-        e.attr.st_gid = xinode->gid;
-		e.attr.st_size = xinode->size;
-        e.attr.st_atime = xinode->atime;
-        e.attr.st_mtime = xinode->mtime;
-        e.attr.st_ctime = xinode->ctime;
-        e.generation = 1;
-
-        fuse_reply_entry(req, &e);
-        log_debug("found entry in xrdp fs; returning");
-        return;
-    }
-    else
-    {
-        log_debug("xinode is NULL for parent=%d name=%s", (int) parent, name);
-    }
-
-do_remote_lookup:
-
-    /* if ino belongs to a redirected share, pass the call to devredir;      */
-    /* when done, devredir will invoke xfuse_devredir_cb_enum_dir_done(...)  */
-    strcpy(full_path, name);
-    log_debug("LK_TODO: full_path=%s name=%s", full_path, name);
-    device_id = xfuse_get_device_id_for_inode((tui32) parent, full_path);
-    log_debug("device_id=%d", device_id);
-    if (device_id != 0)
-    {
-        log_debug("did not find entry; redirecting call to dev_redir");
-
-        if ((fip = calloc(1, sizeof(XFUSE_INFO))) == NULL)
-        {
-            log_error("system out of memory");
-            fuse_reply_err(req, ENOMEM);
-            return;
-        }
-        fip->req = req;
-        fip->inode = parent;
-        strncpy(fip->name, name, 1024);
-        fip->name[1023] = 0;
-        fip->invoke_fuse = 1;
-        fip->device_id = device_id;
-
-        if (parent != 1)
-        {
-            strcat(full_path, "/");
-            strcat(full_path, name);
-        }
-
-        /* we want path minus 'root node of the share' */
-        if ((cptr = strchr(full_path, '/')) == NULL)
-        {
-            /* enumerate root dir */
-            if (dev_redir_get_dir_listing((void *) fip, device_id, "\\"))
-            {
-                log_error("failed to send dev_redir_get_dir_listing() cmd");
-                fuse_reply_buf(req, NULL, 0);
-            }
-            else
-            {
-                log_debug("dev_redir_get_dir_listing() called");
-            }
-
-        }
-        else
-        {
-            if (dev_redir_get_dir_listing((void *) fip, device_id, cptr))
-            {
-                log_error("failed to send dev_redir_get_dir_listing() cmd");
-                fuse_reply_buf(req, NULL, 0);
-            }
-        }
-
-        log_debug("cmd sent; reting");
+        log_debug("did not find entry for parent=%d name=%s", parent, name);
+        fuse_reply_err(req, ENOENT);
         return;
     }
 
-    log_debug("parent=%d name=%s not found", (int) parent, name);
-    fuse_reply_err(req, ENOENT);
+    memset(&e, 0, sizeof(e));
+    e.ino = xinode->inode;
+    e.attr_timeout = XFUSE_ATTR_TIMEOUT;
+    e.entry_timeout = XFUSE_ENTRY_TIMEOUT;
+    e.attr.st_ino = xinode->inode;
+    e.attr.st_mode = xinode->mode;
+    e.attr.st_nlink = xinode->nlink;
+    e.attr.st_uid = xinode->uid;
+    e.attr.st_gid = xinode->gid;
+    e.attr.st_size = xinode->size;
+    e.attr.st_atime = xinode->atime;
+    e.attr.st_mtime = xinode->mtime;
+    e.attr.st_ctime = xinode->ctime;
+    e.generation = 1;
+
+    fuse_reply_entry(req, &e);
+    log_debug("found entry for parent=%d name=%s uid=%d gid=%d",
+              parent, name, xinode->uid, xinode->gid);
+    return;
 }
 
 /**
@@ -1729,7 +2053,7 @@ static void xfuse_cb_getattr(fuse_req_t req, fuse_ino_t ino,
 
     (void) fi;
 
-    log_debug("ino=%d", (int) ino);
+    log_debug("req=%p ino=%d", req, (int) ino);
 
     /* if ino is not valid, just return */
     if (!xfuse_is_inode_valid(ino))
@@ -1740,7 +2064,6 @@ static void xfuse_cb_getattr(fuse_req_t req, fuse_ino_t ino,
     }
 
     xino = g_xrdp_fs.inode_table[ino];
-    xfuse_dump_xrdp_inode(xino);
 
     memset(&stbuf, 0, sizeof(stbuf));
 	stbuf.st_ino = ino;
@@ -1749,6 +2072,7 @@ static void xfuse_cb_getattr(fuse_req_t req, fuse_ino_t ino,
     stbuf.st_size = xino->size;
 
     fuse_reply_attr(req, &stbuf, 1.0);
+    log_debug("exiting");
 }
 
 /**
@@ -1772,6 +2096,34 @@ static void xfuse_dirbuf_add(fuse_req_t req, struct dirbuf *b,
                       b->size);
 }
 
+static int xfuse_dirbuf_add1(fuse_req_t req, struct dirbuf1 *b,
+                             const char *name, fuse_ino_t ino)
+{
+    struct stat  stbuf;
+    int          len;
+
+    len = fuse_add_direntry(req, NULL, 0, name, NULL, 0);
+    if (b->bytes_in_buf + len > 4096)
+    {
+        log_debug("not adding entry because dirbuf overflow would occur");
+        return -1;
+    }
+
+    memset(&stbuf, 0, sizeof(stbuf));
+    stbuf.st_ino = ino;
+
+    fuse_add_direntry(req,
+                      &b->buf[b->bytes_in_buf], /* index where new entry will be added to buf */
+                      4096 - len,               /* remaining size of buf */
+                      name,                     /* name of entry */
+                      &stbuf,                   /* file attributes */
+                      b->bytes_in_buf + len     /* offset of next entry */
+                     );
+
+    b->bytes_in_buf += len;
+    return 0;
+}
+
 /**
  *
  *****************************************************************************/
@@ -1779,13 +2131,13 @@ static void xfuse_dirbuf_add(fuse_req_t req, struct dirbuf *b,
 static void xfuse_cb_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
                              off_t off, struct fuse_file_info *fi)
 {
-    struct xrdp_inode *xinode;
-    struct dirbuf      b;
-    int                i;
+    XRDP_INODE *xinode;
+    XFUSE_INFO *fip;
+    tui32       device_id;
+    char        full_path[4096];
+    char       *cptr;
 
-    (void) fi;
-
-    log_debug("looking for dir with inode=%d", ino);
+    log_debug("req=%p inode=%d size=%d offset=%d", req, ino, size, off);
 
     if (!xfuse_is_inode_valid(ino))
     {
@@ -1794,35 +2146,80 @@ static void xfuse_cb_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
         return;
     }
 
-    /* does this dir have any entries? */
-    xinode = g_xrdp_fs.inode_table[ino];
-    memset(&b, 0, sizeof(b));
     if (ino == 1)
     {
-        xfuse_dirbuf_add(req, &b, ".", 1);
-        xfuse_dirbuf_add(req, &b, "..", 1);
+        /* special case; enumerate top level dir */
+        log_debug("enumerating top level dir");
+        xfuse_enum_dir(req, ino, size, off, fi);
+        return;
+    }
+
+    xinode = g_xrdp_fs.inode_table[ino];
+    if (xinode->is_loc_resource)
+    {
+        /* enumerate local resources */
+        xfuse_enum_dir(req, ino, size, off, fi);
+        return;
+    }
+
+    /* enumerate resources on a remote device */
+
+#ifdef USE_SYNC_FLAG
+    if (xinode->is_synced)
+    {
+        xfuse_enum_dir(req, ino, size, off, fi);
+        return;
     }
     else
     {
-        xfuse_dirbuf_add(req, &b, ".", xinode->inode);
-        xfuse_dirbuf_add(req, &b, "..", xinode->parent_inode);
+        goto do_remote_lookup;
     }
+#endif
 
-    for (i = FIRST_INODE; i < g_xrdp_fs.num_entries; i++)
+do_remote_lookup:
+
+    log_debug("did not find entry; redirecting call to dev_redir");
+    device_id = xfuse_get_device_id_for_inode((tui32) ino, full_path);
+    log_debug("dev_id=%d ino=%d full_path=%s", device_id, ino, full_path);
+
+    if ((fip = calloc(1, sizeof(XFUSE_INFO))) == NULL)
     {
-        if ((xinode = g_xrdp_fs.inode_table[i]) == NULL)
-            continue;
-
-        if (xinode->parent_inode == ino)
-            xfuse_dirbuf_add(req, &b, xinode->name, xinode->inode);
+        log_error("system out of memory");
+        fuse_reply_err(req, ENOMEM);
+        return;
     }
 
-    if (off < b.size)
-        fuse_reply_buf(req, b.p + off, min(b.size - off, size));
-    else
-        fuse_reply_buf(req, NULL, 0);
+    fip->req = req;
+    fip->inode = ino;
+    fip->size = size;
+    fip->off = off;
+    fip->fi = fi;
+    fip->dirbuf1.first_time = 1;
+    fip->dirbuf1.bytes_in_buf = 0;
 
-    free(b.p);
+    fip->invoke_fuse = 1;
+    fip->device_id = device_id;
+
+    log_debug("fip->req=%p", fip->req);
+
+    /* we want path minus 'root node of the share' */
+    if ((cptr = strchr(full_path, '/')) == NULL)
+    {
+        /* enumerate root dir */
+        if (dev_redir_get_dir_listing((void *) fip, device_id, "\\"))
+        {
+            log_error("failed to send dev_redir_get_dir_listing() cmd");
+            fuse_reply_buf(req, NULL, 0);
+        }
+    }
+    else
+    {
+        if (dev_redir_get_dir_listing((void *) fip, device_id, cptr))
+        {
+            log_error("failed to send dev_redir_get_dir_listing() cmd");
+            fuse_reply_buf(req, NULL, 0);
+        }
+    }
 }
 
 /**
@@ -1834,6 +2231,8 @@ static void xfuse_cb_mkdir(fuse_req_t req, fuse_ino_t parent,
 {
     XRDP_INODE               *xinode;
     struct fuse_entry_param   e;
+
+    log_debug("entered: parent_inode=%d name=%s", (int) parent, name);
 
     if ((xinode = xfuse_get_inode_from_pinode_name(parent, name)) != NULL)
     {
@@ -1920,17 +2319,21 @@ static void xfuse_remove_dir_or_file(fuse_req_t req, fuse_ino_t parent,
         fuse_reply_err(req, ENOTEMPTY);
         return;
     }
-    else if ((type == 2) && (xinode->nopen != 0))
+    else if (type == 2)
     {
-        log_debug("cannot unlink; open count is %d", xinode->nopen);
-        fuse_reply_err(req, EBUSY);
-        return;
+        if ((xinode->nopen > 1) || ((xinode->nopen == 1) &&
+                                    (xinode->close_in_progress == 0)))
+        {
+            log_debug("cannot unlink; open count is %d", xinode->nopen);
+            fuse_reply_err(req, EBUSY);
+            return;
+        }
     }
 
     strcat(full_path, "/");
     strcat(full_path, name);
 
-    if (device_id == 0)
+    if (xinode->is_loc_resource)
     {
         /* specified file is a local resource */
         //XFUSE_HANDLE *fh;
@@ -2055,7 +2458,7 @@ static void xfuse_cb_rename(fuse_req_t req,
         return;
     }
 
-    if (old_xinode->device_id == 0)
+    if (old_xinode->is_loc_resource)
     {
         /* specified file is a local resource */
         log_debug("LK_TODO: this is still a TODO");
@@ -2132,14 +2535,15 @@ static void xfuse_create_dir_or_file(fuse_req_t req, fuse_ino_t parent,
                                      const char *name, mode_t mode,
                                      struct fuse_file_info *fi, int type)
 {
-    XFUSE_INFO        *fip;    // LK_TODO use only XFUSE_INFO instead of struct
+    XFUSE_INFO        *fip;
     char              *cptr;
     char               full_path[1024];
     tui32              device_id;
 
     full_path[0] = 0;
 
-    log_debug("entered: type = %s", (type == S_IFDIR) ? "dir" : "file");
+    log_debug("entered: parent_ino=%d name=%s type=%s",
+              (int) parent, name, (type == S_IFDIR) ? "dir" : "file");
 
     /* name must be valid */
     if ((name == NULL) || (strlen(name) == 0))
@@ -2150,7 +2554,7 @@ static void xfuse_create_dir_or_file(fuse_req_t req, fuse_ino_t parent,
     }
 
     /* is parent inode valid? */
-    if (!xfuse_is_inode_valid(parent))
+    if ((parent == 1) || (!xfuse_is_inode_valid(parent)))
     {
         log_error("inode %d is not valid", parent);
         fuse_reply_err(req, EBADF);
@@ -2161,7 +2565,8 @@ static void xfuse_create_dir_or_file(fuse_req_t req, fuse_ino_t parent,
     strcat(full_path, "/");
     strcat(full_path, name);
 
-    if (device_id == 0)
+    XRDP_INODE *xinode = g_xrdp_fs.inode_table[parent];
+    if (xinode->is_loc_resource)
     {
         /* specified file is a local resource */
         //XFUSE_HANDLE *fh;
@@ -2189,6 +2594,8 @@ static void xfuse_create_dir_or_file(fuse_req_t req, fuse_ino_t parent,
     fip->reply_type = RT_FUSE_REPLY_CREATE;
     strncpy(fip->name, name, 1024);
     fip->name[1023] = 0;
+
+    log_debug("+++ created XFUSE_INFO=%p XFUSE_INFO->fi=%p", fip, fip->fi);
 
     /* LK_TODO need to handle open permissions */
 
@@ -2227,6 +2634,8 @@ static void xfuse_cb_open(fuse_req_t req, fuse_ino_t ino,
     char               full_path[4096];
     tui32              device_id;
 
+    log_debug("entered: ino=%d", (int) ino);
+
     if (!xfuse_is_inode_valid(ino))
     {
         log_error("inode %d is not valid", ino);
@@ -2244,64 +2653,69 @@ static void xfuse_cb_open(fuse_req_t req, fuse_ino_t ino,
     }
 
     device_id = xfuse_get_device_id_for_inode((tui32) ino, full_path);
-    if (device_id)
+
+    if (xinode->is_loc_resource)
     {
-         /* specified file resides on redirected share */
+        /* specified file is a local resource */
+        XFUSE_HANDLE *fh = calloc(1, sizeof(XFUSE_HANDLE));
+        fh->is_loc_resource = 1;
+        fi->fh = (uint64_t) ((long) fh);
+        fuse_reply_open(req, fi);
+        return;
+    }
 
-        if ((fip = calloc(1, sizeof(XFUSE_INFO))) == NULL)
-        {
-            log_error("system out of memory");
-            fuse_reply_err(req, ENOMEM);
-            return;
-        }
+    /* specified file resides on redirected share */
+    if ((fip = calloc(1, sizeof(XFUSE_INFO))) == NULL)
+    {
+       log_error("system out of memory");
+       fuse_reply_err(req, ENOMEM);
+       return;
+    }
 
-        fip->req = req;
-        fip->inode = ino;
-        fip->invoke_fuse = 1;
-        fip->device_id = device_id;
-        fip->fi = fi;
-        strncpy(fip->name, full_path, 1024);
-        fip->name[1023] = 0;
-        fip->reply_type = RT_FUSE_REPLY_OPEN;
+    fip->req = req;
+    fip->inode = ino;
+    fip->invoke_fuse = 1;
+    fip->device_id = device_id;
+    fip->fi = fi;
 
-        /* LK_TODO need to handle open permissions */
+    log_debug("LK_TODO: fip->fi = %p", fip->fi);
 
-        /* we want path minus 'root node of the share' */
-        if ((cptr = strchr(full_path, '/')) == NULL)
-        {
-            /* get dev_redir to open the remote file */
-            if (dev_redir_file_open((void *) fip, device_id, "\\",
-                                    fi->flags, S_IFREG, NULL))
-            {
-                log_error("failed to send dev_redir_open_file() cmd");
-                fuse_reply_err(req, EREMOTEIO);
-            }
-        }
-        else
-        {
-            if (dev_redir_file_open((void *) fip, device_id, cptr,
-                                    fi->flags, S_IFREG, NULL))
-            {
-                log_error("failed to send dev_redir_get_dir_listing() cmd");
-                fuse_reply_err(req, EREMOTEIO);
-            }
-        }
+    strncpy(fip->name, full_path, 1024);
+    fip->name[1023] = 0;
+    fip->reply_type = RT_FUSE_REPLY_OPEN;
+
+    /* LK_TODO need to handle open permissions */
+
+    /* we want path minus 'root node of the share' */
+    if ((cptr = strchr(full_path, '/')) == NULL)
+    {
+       /* get dev_redir to open the remote file */
+       if (dev_redir_file_open((void *) fip, device_id, "\\",
+                               fi->flags, S_IFREG, NULL))
+       {
+           log_error("failed to send dev_redir_open_file() cmd");
+           fuse_reply_err(req, EREMOTEIO);
+       }
     }
     else
     {
-        /* specified file is a local resource */
-        //XFUSE_HANDLE *fh;
-
-        log_debug("LK_TODO: this is still a TODO");
-        fuse_reply_err(req, EINVAL);
+       if (dev_redir_file_open((void *) fip, device_id, cptr,
+                               fi->flags, S_IFREG, NULL))
+       {
+           log_error("failed to send dev_redir_get_dir_listing() cmd");
+           fuse_reply_err(req, EREMOTEIO);
+       }
     }
 }
 
-static void xfuse_cb_flush(fuse_req_t req, fuse_ino_t ino, struct
-                           fuse_file_info *fi)
+static void xfuse_cb_release(fuse_req_t req, fuse_ino_t ino, struct
+                             fuse_file_info *fi)
 {
     XFUSE_INFO   *fip    = NULL;
-    XFUSE_HANDLE *handle = (XFUSE_HANDLE *) fi->fh;
+    XFUSE_HANDLE *handle = (XFUSE_HANDLE *) (tintptr) (fi->fh);
+    tui32         FileId;
+
+    log_debug("entered: ino=%d fi=%p fi->fh=%p", (int) ino, fi, fi->fh);
 
     if (!xfuse_is_inode_valid(ino))
     {
@@ -2310,15 +2724,25 @@ static void xfuse_cb_flush(fuse_req_t req, fuse_ino_t ino, struct
         return;
     }
 
-    if (handle->DeviceId == 0)
+    XRDP_INODE *xinode = g_xrdp_fs.inode_table[ino];
+    if (xinode->is_loc_resource)
     {
         /* specified file is a local resource */
-        log_debug("LK_TODO: this is still a TODO");
-        fuse_reply_err(req, EBADF);
+        fuse_reply_err(req, 0);
         return;
     }
 
     /* specified file resides on redirected share */
+
+    log_debug("nopen=%d", xinode->nopen);
+
+    /* if file is not opened, just return */
+    if (xinode->nopen == 0)
+    {
+        log_debug("cannot close because file not opened");
+        fuse_reply_err(req, 0);
+        return;
+    }
 
     if ((fip = calloc(1, sizeof(XFUSE_INFO))) == NULL)
     {
@@ -2333,6 +2757,14 @@ static void xfuse_cb_flush(fuse_req_t req, fuse_ino_t ino, struct
     fip->device_id = handle->DeviceId;
     fip->fi = fi;
 
+    log_debug(" +++ created XFUSE_INFO=%p XFUSE_INFO->fi=%p XFUSE_INFO->fi->fh=%p",
+              fip, fip->fi, fip->fi->fh);
+
+    FileId = handle->FileId;
+    free(handle);
+    fip->fi->fh = NULL;
+    xinode->close_in_progress = 1;
+
     if (devredir_file_close((void *) fip, fip->device_id, handle->FileId))
     {
         log_error("failed to send devredir_close_file() cmd");
@@ -2346,11 +2778,13 @@ static void xfuse_cb_flush(fuse_req_t req, fuse_ino_t ino, struct
 static void xfuse_cb_read(fuse_req_t req, fuse_ino_t ino, size_t size,
                           off_t off, struct fuse_file_info *fi)
 {
-    XFUSE_HANDLE *fh;
-    XFUSE_INFO   *fusep;
-    long          handle;
+    XFUSE_HANDLE          *fh;
+    XFUSE_INFO            *fusep;
+    XRDP_INODE            *xinode;
+    struct req_list_item  *rli;
+    long                   handle;
 
-    log_debug("want_bytes %d bytes at off %d", size, off);
+    log_debug("want_bytes %ld bytes at off %ld", size, off);
 
     if (fi->fh == 0)
     {
@@ -2361,10 +2795,38 @@ static void xfuse_cb_read(fuse_req_t req, fuse_ino_t ino, size_t size,
     handle = fi->fh;
     fh = (XFUSE_HANDLE *) handle;
 
-    if (fh->DeviceId == 0)
+    if (fh->is_loc_resource)
     {
         /* target file is in .clipboard dir */
-        log_debug(">>>>>>>>>>>>>>>>> THIS IS STILL A TODO!");
+
+        log_debug("target file is in .clipboard dir");
+
+        if ((xinode = g_xrdp_fs.inode_table[ino]) == NULL)
+        {
+            log_error("ino does not exist in xrdp_fs");
+            fuse_reply_buf(req, 0, 0);
+            return;
+        }
+
+        rli = (struct req_list_item *)
+                g_malloc(sizeof(struct req_list_item), 1);
+
+        rli->stream_id = 0;
+        rli->req = req;
+        rli->lindex = xinode->lindex;
+        rli->off = off;
+        rli->size = size;
+        list_add_item(g_req_list, (tbus) rli);
+
+        if (g_req_list->count == 1)
+        {
+            log_debug("requesting clipboard file data lindex = %d off = %d size = %d",
+                      rli->lindex, (int) off, (int) size);
+
+            clipboard_request_file_data(rli->stream_id, rli->lindex,
+                                        (int) off, (int) size);
+        }
+
         return;
     }
 
@@ -2403,7 +2865,7 @@ static void xfuse_cb_write(fuse_req_t req, fuse_ino_t ino, const char *buf,
     handle = fi->fh;
     fh = (XFUSE_HANDLE *) handle;
 
-    if (fh->DeviceId == 0)
+    if (fh->is_loc_resource)
     {
         /* target file is in .clipboard dir */
         log_debug(">>>>>>>>>>>>>>>>> THIS IS STILL A TODO!");
@@ -2418,11 +2880,15 @@ static void xfuse_cb_write(fuse_req_t req, fuse_ino_t ino, const char *buf,
         fuse_reply_err(req, ENOMEM);
         return;
     }
+
     fusep->req = req;
     fusep->inode = ino;
     fusep->invoke_fuse = 1;
     fusep->device_id = fh->DeviceId;
     fusep->fi = fi;
+
+    log_debug("+++ created XFUSE_INFO=%p XFUSE_INFO->fi=%p XFUSE_INFO->fi->fh=%p",
+              fusep, fusep->fi, fusep->fi->fh);
 
     dev_redir_file_write(fusep, fh->DeviceId, fh->FileId, buf, size, off);
     log_debug("exiting");
@@ -2432,91 +2898,19 @@ static void xfuse_cb_create(fuse_req_t req, fuse_ino_t parent,
                             const char *name, mode_t mode,
                             struct fuse_file_info *fi)
 {
+    log_debug("entered: parent_inode=%d, name=%s fi=%p",
+              (int) parent, name, fi);
+
     xfuse_create_dir_or_file(req, parent, name, mode, fi, S_IFREG);
 }
-
-// LK_TODO may not need to implement the following funcs
-
-#if 0
-static void xfuse_cb_statfs(fuse_req_t req, fuse_ino_t ino)
-{
-    log_debug(">>>>>>>>>>>>>>>> LK_TODO: entered");
-    fuse_reply_err(req, ENOMEM);
-}
-
-static void xfuse_cb_setxattr(fuse_req_t req, fuse_ino_t ino, const char *name,
-                     const char *value, size_t size, int flags)
-{
-    log_debug(">>>>>>>>>>>>>>>> LK_TODO: entered");
-    fuse_reply_err(req, ENOMEM);
-
-}
-
-static void xfuse_cb_getxattr(fuse_req_t req, fuse_ino_t ino, const char *name,
-                     size_t size)
-{
-    log_debug(">>>>>>>>>>>>>>>> LK_TODO: entered");
-    fuse_reply_err(req, ENOMEM);
-
-}
-
-static void xfuse_cb_listxattr(fuse_req_t req, fuse_ino_t ino, size_t size)
-{
-    log_debug(">>>>>>>>>>>>>>>> LK_TODO: entered");
-    fuse_reply_err(req, ENOMEM);
-
-}
-
-static void xfuse_cb_access(fuse_req_t req, fuse_ino_t ino, int mask)
-{
-    log_debug(">>>>>>>>>>>>>>>> LK_TODO: entered");
-    fuse_reply_err(req, ENOMEM);
-
-}
-
-static void xfuse_cb_getlk(fuse_req_t req, fuse_ino_t ino,
-                           struct fuse_file_info *fi, struct flock *lock)
-{
-    log_debug(">>>>>>>>>>>>>>>> LK_TODO: entered");
-    fuse_reply_err(req, ENOMEM);
-
-}
-
-static void xfuse_cb_setlk(fuse_req_t req, fuse_ino_t ino,
-                           struct fuse_file_info *fi, struct flock *lock,
-                           int sleep)
-{
-    log_debug(">>>>>>>>>>>>>>>> LK_TODO: entered");
-    fuse_reply_err(req, ENOMEM);
-
-}
-
-static void xfuse_cb_ioctl(fuse_req_t req, fuse_ino_t ino, int cmd, void *arg,
-                           struct fuse_file_info *fi, unsigned flags,
-                           const void *in_buf, size_t in_bufsz,
-                           size_t out_bufsz)
-{
-    log_debug(">>>>>>>>>>>>>>>> LK_TODO: entered");
-    fuse_reply_err(req, ENOMEM);
-
-}
-
-static void xfuse_cb_poll(fuse_req_t req, fuse_ino_t ino,
-                          struct fuse_file_info *fi,
-                          struct fuse_pollhandle *ph)
-{
-    log_debug(">>>>>>>>>>>>>>>> LK_TODO: entered");
-    fuse_reply_err(req, ENOMEM);
-
-}
-#endif
 
 static void xfuse_cb_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
                              int to_set, struct fuse_file_info *fi)
 {
-    XRDP_INODE        *xinode;
+    XRDP_INODE   *xinode;
+    struct stat  st;
 
-    log_debug(">>>>>>>>>>>>>>>> LK_TODO: entered to_set=0x%x", to_set);
+    log_debug("entered to_set=0x%x", to_set);
 
     if (!xfuse_is_inode_valid(ino))
     {
@@ -2530,20 +2924,20 @@ static void xfuse_cb_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
     if (to_set & FUSE_SET_ATTR_MODE)
     {
         xinode->mode = attr->st_mode;
-        log_debug(">>>>>>>>>>>>>>>> LK_TODO: FUSE_SET_ATTR_MODE");
+        log_debug("FUSE_SET_ATTR_MODE");
 
     }
 
     if (to_set & FUSE_SET_ATTR_UID)
     {
         xinode->uid = attr->st_uid;
-        log_debug(">>>>>>>>>>>>>>>> LK_TODO: FUSE_SET_ATTR_UID");
+        log_debug("FUSE_SET_ATTR_UID");
     }
 
     if (to_set & FUSE_SET_ATTR_GID)
     {
         xinode->gid = attr->st_gid;
-        log_debug(">>>>>>>>>>>>>>>> LK_TODO: FUSE_SET_ATTR_GID");
+        log_debug("FUSE_SET_ATTR_GID");
     }
 
     if (to_set & FUSE_SET_ATTR_SIZE)
@@ -2556,28 +2950,38 @@ static void xfuse_cb_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
     if (to_set & FUSE_SET_ATTR_ATIME)
     {
         xinode->atime = attr->st_atime;
-        log_debug(">>>>>>>>>>>>>>>> LK_TODO: FUSE_SET_ATTR_ATIME");
+        log_debug("FUSE_SET_ATTR_ATIME");
     }
 
     if (to_set & FUSE_SET_ATTR_MTIME)
     {
         xinode->mtime = attr->st_mtime;
-        log_debug(">>>>>>>>>>>>>>>> LK_TODO: FUSE_SET_ATTR_MTIME");
+        log_debug("FUSE_SET_ATTR_MTIME");
     }
 
     if (to_set & FUSE_SET_ATTR_ATIME_NOW)
     {
         xinode->atime = attr->st_atime;
-        log_debug(">>>>>>>>>>>>>>>> LK_TODO: FUSE_SET_ATTR_ATIME_NOW");
+        log_debug("FUSE_SET_ATTR_ATIME_NOW");
     }
 
     if (to_set & FUSE_SET_ATTR_MTIME_NOW)
     {
         xinode->mtime = attr->st_mtime;
-        log_debug(">>>>>>>>>>>>>>>> LK_TODO: FUSE_SET_ATTR_MTIME_NOW");
+        log_debug("FUSE_SET_ATTR_MTIME_NOW");
     }
 
-    fuse_reply_attr(req, attr, 1.0); /* LK_TODO just faking for now */
+    memset(&st, 0, sizeof(st));
+    st.st_ino   = xinode->inode;
+    st.st_mode  = xinode->mode;
+    st.st_size  = xinode->size;
+    st.st_uid   = xinode->uid;
+    st.st_gid   = xinode->gid;
+    st.st_atime = xinode->atime;
+    st.st_mtime = xinode->mtime;
+    st.st_ctime = xinode->ctime;
+
+    fuse_reply_attr(req, &st, 1.0); /* LK_TODO just faking for now */
 }
 
 #endif /* end else #ifndef XRDP_FUSE */
