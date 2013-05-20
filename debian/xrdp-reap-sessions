@@ -1,13 +1,18 @@
-#!/bin/sh
+#!/bin/bash
 
 if [ "`id -u`" != "0" ] ; then
 	echo Only root can execute this.
 	exit 1
 fi
 
-for f in `ls -1 /tmp/.xrdp/xrdp*_??`
+if [ ! -d /tmp/.xrdp ] ; then
+	echo No xrdp running, holding no sockets in /tmp/.xrdp
+	exit 1
+fi
+
+for f in `ls -1 /tmp/.xrdp/xrdp*_?? 2>/dev/null`
 do
-	DN=${f:${#line}-2}
+	DN=${f: -2}
 	if [ ! -f /tmp/.X${DN}-lock ] ; then
 		echo Reaping display ${DN} since it holds no /tmp/.X${DN}-lock
 		rm -rf \
