@@ -1,7 +1,7 @@
 xrdp (0.7.0-1.1) unstable; urgency=low
 
   * Version bump to 0.7.0 until commit f10d789b8acca565c67d4446a325cb4b1b54e7a5
-  * Using xserver-xord-1.12.4-6
+  * Using xorg-xserver-1.12.4-6
 
  -- Warmerdam, B. (Bart) <Bart.Warmerdam@mail.ing.nl>  Thu, 25 Apr 2013 18:02:57 +0100
 
