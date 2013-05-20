@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [ "${DISPLAY}" != "" ] || [ "${DBUS_SESSION_BUS_ADDRESS}" != "" ] ; then
+	echo You should not connect from an existing X sesion to kill your xrdp session.
+	echo To kill your current session use eg gnome-session-quit directly
+	exit 1
+fi
+
 compatiblePrograms=( nautilus kdeinit kded4 pulseaudio trackerd )
 
 # Attempt to get a program pid
@@ -32,4 +38,6 @@ else
 	exit 1
 fi
 
-gnome-session-quit --logout --no-prompt
+if [ -x /usr/bin/gnome-session-quit ] ; then
+	gnome-session-quit --logout --no-prompt
+fi
