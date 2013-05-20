@@ -26,6 +26,7 @@ override_dh_install:
 	install -m 755 debian/xrdp-cleanup debian/xrdp/usr/bin
 	install -m 755 debian/xrdp-kill debian/xrdp/usr/bin
 	install -m 744 debian/xrdp-killall debian/xrdp/usr/sbin
+	install -m 744 debian/xrdp-reap-sessions debian/xrdp/usr/sbin
 
 override_dh_makeshlibs:
 	dh_makeshlibs -a -n

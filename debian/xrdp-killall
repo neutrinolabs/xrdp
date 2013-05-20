@@ -7,9 +7,11 @@ fi
 
 # Start with reaping the old sessions
 echo Reap dead xrdp sessions first
-xrdp-cleanup
+if [ -x /usr/sbin/xrdp-reap-sessions ] ; then
+	/usr/sbin/xrdp-reap-sessions
+fi
 
-echo Kill all existing sessions which are left
+echo Kill all existing active sessions which are left
 for X in $(ls /tmp/.X??-lock)
 do
 	OWNER=`stat -c %U ${X}`

@@ -1,14 +1,5 @@
 #!/bin/sh
 
-for f in `ls -1 /tmp/.xrdp/xrdp*_??`
-do
-	DN=${f:${#line}-2}
-	if [ ! -f /tmp/.X${DN}-lock ] ; then
-		echo Reaping display ${DN} since it holds no /tmp/.X${DN}-lock
-		rm -rf \
-			/tmp/.xrdp/xrdpapi_${DN} \
-			/tmp/.xrdp/xrdp_chansrv_audio_socket_${DN} \
-			/tmp/.xrdp/xrdp_disconnect_display_${DN} \
-			/tmp/.xrdp/xrdp_display_${DN}
-	fi
-done
+if [ -x /usr/sbin/xrdp-reap-sessions ] ; then
+	/usr/sbin/xrdp-reap-sessions
+fi
