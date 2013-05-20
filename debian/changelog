@@ -1,6 +1,9 @@
-xrdp (0.7.0-1.2) UNRELEASED; urgency=low
+xrdp (0.7.0-1.2) ingunstable; urgency=low
 
   * Version bump to 0.7.0 until commit bc2c50602e8370875c7c02299dbec09e8300797d
+  * Added cron for daily reap of dead xrdp session which hold no /tmp/.X??-lock
+  * Added script to kill a user session which hangs
+  * Added script to remove a user session which was killed
 
  -- Warmerdam, B. (Bart) <Bart.Warmerdam@mail.ing.nl>  Mon, 20 May 2013 11:48:43 +0200
 
