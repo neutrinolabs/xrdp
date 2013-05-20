@@ -10,16 +10,30 @@ compatiblePrograms=( nautilus kdeinit kded4 pulseaudio trackerd )
 
 # Attempt to get a program pid
 for index in ${compatiblePrograms[@]}; do
-	PID=$(pidof -s ${index})
-	if [[ "${PID}" != "" ]]; then
-		DISPLAY=$(tr '\0' '\n' < /proc/${PID}/environ | grep "DISPLAY" | cut -d "=" -f 2-)
-		DISP=$(echo ${DISPLAY} | cut -f 1 -d "." | cut -c 2-)
-		if [ "${DISP}" -ge 10 ] && [ "${DISP}" -le 99 ] ; then
-			export DISPLAY
+	PIDS=$(pidof -s ${index})
+	for PID in ${PIDS}
+	do
+		if [[ "${PID}" != "" ]]; then
+			DISPLAY=$(tr '\0' '\n' < /proc/${PID}/environ | grep "DISPLAY" | cut -d "=" -f 2-)
+			DISP=$(echo ${DISPLAY} | cut -f 1 -d "." | cut -c 2-)
+
+			DNO=`stat -c %U /tmp/.X${DISP}-lock`
+			if [ "${DNO}" != "${USER}" ] ; then
+				echo It is not allowed to kill a session from another user, namely ${DNO}, skipping this one
+			else
+				if [ "${DISP}" -ge 10 ] && [ "${DISP}" -le 99 ] ; then
+					export DISPLAY
+					break
+				fi
+			fi
+			DISPLAY=""
+		fi
+		if [ "${DISPLAY}" != "" ] ; then
+			# valid display, so a valid session
 			break
 		fi
-	fi
-	PID=""
+		PID=""
+	done
 done
 
 if [[ "${PID}" == "" ]]; then
