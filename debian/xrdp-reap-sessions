@@ -10,7 +10,7 @@ if [ ! -d /tmp/.xrdp ] ; then
 	exit 1
 fi
 
-for f in `ls -1 /tmp/.xrdp/xrdp*_?? 2>/dev/null`
+for f in $(ls /tmp/.X??-lock 2>/dev/null)
 do
 	DN=${f: -2}
 	if [ ! -f /tmp/.X${DN}-lock ] ; then

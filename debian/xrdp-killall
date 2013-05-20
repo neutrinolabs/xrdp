@@ -12,7 +12,7 @@ if [ -x /usr/sbin/xrdp-reap-sessions ] ; then
 fi
 
 echo Kill all existing active sessions which are left
-for X in $(ls /tmp/.X??-lock)
+for X in $(ls /tmp/.X??-lock 2>/dev/null)
 do
 	OWNER=`stat -c %U ${X}`
 	echo Attempting to stop server with lock held on ${X} owned by ${OWNER}
