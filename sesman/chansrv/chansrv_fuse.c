@@ -1798,13 +1798,15 @@ void xfuse_devredir_cb_open_file(void *vp, tui32 DeviceId, tui32 FileId)
             e.attr.st_ctime = xinode->ctime;
             e.generation = 1;
 
-            /* update open count */
-            xinode->nopen++;
-
             if (fip->mode == S_IFDIR)
+            {
                 fuse_reply_entry(fip->req, &e);
+            }
             else
+            {
+                xinode->nopen++;
                 fuse_reply_create(fip->req, &e, fip->fi);
+            }
         }
         else
         {
@@ -1959,7 +1961,10 @@ void xfuse_devredir_cb_file_close(void *vp)
               fip, fip->fi, fip->fi->fh);
 
     if ((xinode = g_xrdp_fs.inode_table[fip->inode]) == NULL)
+    {
         fuse_reply_err(fip->req, EBADF);
+        return;
+    }
 
     log_debug("before: inode=%d nopen=%d", xinode->inode, xinode->nopen);
 
@@ -2031,7 +2036,8 @@ static void xfuse_cb_lookup(fuse_req_t req, fuse_ino_t parent, const char *name)
     e.generation = 1;
 
     fuse_reply_entry(req, &e);
-    log_debug("found entry for parent=%d name=%s", parent, name);
+    log_debug("found entry for parent=%d name=%s uid=%d gid=%d",
+              parent, name, xinode->uid, xinode->gid);
     return;
 }
 
@@ -2226,6 +2232,8 @@ static void xfuse_cb_mkdir(fuse_req_t req, fuse_ino_t parent,
     XRDP_INODE               *xinode;
     struct fuse_entry_param   e;
 
+    log_debug("entered: parent_inode=%d name=%s", (int) parent, name);
+
     if ((xinode = xfuse_get_inode_from_pinode_name(parent, name)) != NULL)
     {
         /* dir already exists, just return it */
@@ -2311,11 +2319,15 @@ static void xfuse_remove_dir_or_file(fuse_req_t req, fuse_ino_t parent,
         fuse_reply_err(req, ENOTEMPTY);
         return;
     }
-    else if ((type == 2) && (xinode->nopen != 0))
+    else if (type == 2)
     {
-        log_debug("cannot unlink; open count is %d", xinode->nopen);
-        fuse_reply_err(req, EBUSY);
-        return;
+        if ((xinode->nopen > 1) || ((xinode->nopen == 1) &&
+                                    (xinode->close_in_progress == 0)))
+        {
+            log_debug("cannot unlink; open count is %d", xinode->nopen);
+            fuse_reply_err(req, EBUSY);
+            return;
+        }
     }
 
     strcat(full_path, "/");
@@ -2530,7 +2542,8 @@ static void xfuse_create_dir_or_file(fuse_req_t req, fuse_ino_t parent,
 
     full_path[0] = 0;
 
-    log_debug("entered: type = %s", (type == S_IFDIR) ? "dir" : "file");
+    log_debug("entered: parent_ino=%d name=%s type=%s",
+              (int) parent, name, (type == S_IFDIR) ? "dir" : "file");
 
     /* name must be valid */
     if ((name == NULL) || (strlen(name) == 0))
@@ -2541,7 +2554,7 @@ static void xfuse_create_dir_or_file(fuse_req_t req, fuse_ino_t parent,
     }
 
     /* is parent inode valid? */
-    if (!xfuse_is_inode_valid(parent))
+    if ((parent == 1) || (!xfuse_is_inode_valid(parent)))
     {
         log_error("inode %d is not valid", parent);
         fuse_reply_err(req, EBADF);
@@ -2750,6 +2763,7 @@ static void xfuse_cb_release(fuse_req_t req, fuse_ino_t ino, struct
     FileId = handle->FileId;
     free(handle);
     fip->fi->fh = NULL;
+    xinode->close_in_progress = 1;
 
     if (devredir_file_close((void *) fip, fip->device_id, handle->FileId))
     {
@@ -2884,6 +2898,9 @@ static void xfuse_cb_create(fuse_req_t req, fuse_ino_t parent,
                             const char *name, mode_t mode,
                             struct fuse_file_info *fi)
 {
+    log_debug("entered: parent_inode=%d, name=%s fi=%p",
+              (int) parent, name, fi);
+
     xfuse_create_dir_or_file(req, parent, name, mode, fi, S_IFREG);
 }
 
