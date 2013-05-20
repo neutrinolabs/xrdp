@@ -11,6 +11,31 @@ if [ "${DN}" != "" ] && [ -d /tmp/.xrdp ] && [ "$DN" -ge 10 ] && [ "$DN" -le 99 
 			exit -1
 		fi
 
+		DISPLAYS=""
+		PIDS=$(pidof gnome-session)
+		for PID in $(ls -1 /tmp/.ICE-unix/ 2>/dev/null)
+		do
+			if [ "${PID}" != "" ] && [ "${PIDS}" != "" ] ; then
+				RV=`echo "${PIDS}" | grep "${PID}"`
+				if [ $? -eq 0 ] ; then
+					if [ "`stat -c %U /proc/${PID}/environ`" == "${USER}" ] ; then
+						DISPLAY=$(tr '\0' '\n' < /proc/${PID}/environ | grep "DISPLAY" | cut -d "=" -f 2- | cut -f 1 -d "." | cut -c 2-)
+						if [ "${DISPLAY}" -ge 10 ] && [ "${DISPLAY}" -le 99 ] ; then
+							DISPLAYS="${DISPLAYS} ${DISPLAY} "
+						fi
+					fi
+				fi
+			fi
+		done
+
+		if [ "${DISPLAYS}" != "" ] ; then
+			RV=`echo "${DISPLAYS}" | grep " ${DN} "`
+			if [ $? -eq 0 ] ; then
+				echo "Cannot cleanup an active session"
+				exit 1
+			fi
+		fi
+
 		echo Start removing session for display $DN
 
 		rm -ri \
@@ -27,5 +52,5 @@ if [ "${DN}" != "" ] && [ -d /tmp/.xrdp ] && [ "$DN" -ge 10 ] && [ "$DN" -le 99 
 		echo Not a valid display since there is no /tmp/.X${DN}-lock lock file
 	fi
 else
-	echo Display should be between 10 and 99, not ${DN}
+	echo Display should be between 10 and 99, not \"${DN}\"
 fi
