@@ -1,3 +1,9 @@
+xrdp (0.7.0-1.2) UNRELEASED; urgency=low
+
+  * Version bump to 0.7.0 until commit bc2c50602e8370875c7c02299dbec09e8300797d
+
+ -- Warmerdam, B. (Bart) <Bart.Warmerdam@mail.ing.nl>  Mon, 20 May 2013 11:48:43 +0200
+
 xrdp (0.7.0-1.1) unstable; urgency=low
 
   * Version bump to 0.7.0 until commit f10d789b8acca565c67d4446a325cb4b1b54e7a5

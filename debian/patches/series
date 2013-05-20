@@ -5,5 +5,5 @@
 21-xserver-1.12.4.patch
 23_disable_offscreen_bitmaps.patch
 30-mouse-pointer-fix.patch
-#99_ing_x11rdp_fixes.patch
 31-sesman-more-sessions.patch
+#99_ing_x11rdp_fixes.patch
