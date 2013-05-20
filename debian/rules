@@ -24,6 +24,7 @@ override_dh_install:
 	dh_install
 	install -m 755 xorg/X11R7.6/rdp/X11rdp debian/xrdp/usr/bin
 	install -m 755 debian/xrdp-cleanup debian/xrdp/usr/bin
+	install -m 755 debian/xrdp-kill debian/xrdp/usr/bin
 
 override_dh_makeshlibs:
 	dh_makeshlibs -a -n
