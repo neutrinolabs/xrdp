@@ -321,6 +321,9 @@ static void xfuse_cb_create(fuse_req_t req, fuse_ino_t parent,
                             const char *name, mode_t mode,
                             struct fuse_file_info *fi);
 
+static void xfuse_cb_fsync(fuse_req_t req, fuse_ino_t ino, int datasync,
+                           struct fuse_file_info *fi);
+
 /* clipboard calls */
 int clipboard_request_file_data(int stream_id, int lindex, int offset,
                                 int request_bytes);
@@ -389,6 +392,7 @@ int xfuse_init()
     g_xfuse_ops.read      = xfuse_cb_read;
     g_xfuse_ops.write     = xfuse_cb_write;
     g_xfuse_ops.create    = xfuse_cb_create;
+    //g_xfuse_ops.fsync     = xfuse_cb_fsync; /* LK_TODO delete this */
     g_xfuse_ops.getattr   = xfuse_cb_getattr;
     g_xfuse_ops.setattr   = xfuse_cb_setattr;
 
@@ -1824,8 +1828,11 @@ void xfuse_devredir_cb_read_file(void *vp, char *buf, size_t length)
     XFUSE_INFO   *fip;
 
     fip = (XFUSE_INFO *) vp;
-    if (fip == NULL)
+    if ((fip == NULL) || (fip->req == NULL))
+    {
+        log_error("fip for fip->req is NULL");
         return;
+    }
 
     fuse_reply_buf(fip->req, buf, length);
     free(fip);
@@ -1837,8 +1844,11 @@ void xfuse_devredir_cb_write_file(void *vp, char *buf, size_t length)
     XFUSE_INFO   *fip;
 
     fip = (XFUSE_INFO *) vp;
-    if (fip == NULL)
+    if ((fip == NULL) || (fip->req == NULL) || (fip->fi == NULL))
+    {
+        log_error("fip, fip->req or fip->fi is NULL");
         return;
+    }
 
     log_debug("+++ XFUSE_INFO=%p, XFUSE_INFO->fi=%p XFUSE_INFO->fi->fh=%p",
               fip, fip->fi, fip->fi->fh);
@@ -1955,13 +1965,23 @@ void xfuse_devredir_cb_file_close(void *vp)
 
     fip = (XFUSE_INFO *) vp;
     if (fip == NULL)
+    {
+        log_error("fip is NULL");
         return;
+    }
+
+    if (fip->fi == NULL)
+    {
+        log_error("fip->fi is NULL");
+        return;
+    }
 
     log_debug("+++ XFUSE_INFO=%p XFUSE_INFO->fi=%p XFUSE_INFO->fi->fh=%p",
               fip, fip->fi, fip->fi->fh);
 
     if ((xinode = g_xrdp_fs.inode_table[fip->inode]) == NULL)
     {
+        log_debug("inode_table[%d] is NULL", fip->inode);
         fuse_reply_err(fip->req, EBADF);
         return;
     }
@@ -2665,6 +2685,7 @@ static void xfuse_cb_open(fuse_req_t req, fuse_ino_t ino,
     }
 
     /* specified file resides on redirected share */
+
     if ((fip = calloc(1, sizeof(XFUSE_INFO))) == NULL)
     {
        log_error("system out of memory");
@@ -2847,6 +2868,9 @@ static void xfuse_cb_read(fuse_req_t req, fuse_ino_t ino, size_t size,
     dev_redir_file_read(fusep, fh->DeviceId, fh->FileId, size, off);
 }
 
+/**
+ *****************************************************************************/
+
 static void xfuse_cb_write(fuse_req_t req, fuse_ino_t ino, const char *buf,
                            size_t size, off_t off, struct fuse_file_info *fi)
 {
@@ -2854,10 +2878,12 @@ static void xfuse_cb_write(fuse_req_t req, fuse_ino_t ino, const char *buf,
     XFUSE_INFO   *fusep;
     long          handle;
 
-    log_debug("write %d bytes at off %d", size, off);
+    log_debug("write %d bytes at off %d to inode=%d",
+              (int) size, (int) off, (int) ino);
 
     if (fi->fh == 0)
     {
+        log_error("file handle fi->fh is NULL");
         fuse_reply_err(req, EINVAL);
         return;
     }
@@ -2868,7 +2894,7 @@ static void xfuse_cb_write(fuse_req_t req, fuse_ino_t ino, const char *buf,
     if (fh->is_loc_resource)
     {
         /* target file is in .clipboard dir */
-        log_debug(">>>>>>>>>>>>>>>>> THIS IS STILL A TODO!");
+        log_debug("THIS IS STILL A TODO!");
         return;
     }
 
@@ -2894,6 +2920,9 @@ static void xfuse_cb_write(fuse_req_t req, fuse_ino_t ino, const char *buf,
     log_debug("exiting");
 }
 
+/**
+ *****************************************************************************/
+
 static void xfuse_cb_create(fuse_req_t req, fuse_ino_t parent,
                             const char *name, mode_t mode,
                             struct fuse_file_info *fi)
@@ -2903,6 +2932,20 @@ static void xfuse_cb_create(fuse_req_t req, fuse_ino_t parent,
 
     xfuse_create_dir_or_file(req, parent, name, mode, fi, S_IFREG);
 }
+
+/**
+ *****************************************************************************/
+
+static void xfuse_cb_fsync(fuse_req_t req, fuse_ino_t ino, int datasync,
+                           struct fuse_file_info *fi)
+{
+    log_debug("#################### entered: ino=%d datasync=%d", (int) ino, datasync);
+    log_debug("function not required");
+    fuse_reply_err(req, EINVAL);
+}
+
+/**
+ *****************************************************************************/
 
 static void xfuse_cb_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
                              int to_set, struct fuse_file_info *fi)

@@ -775,6 +775,8 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
         log_debug("got CID_READ");
         xstream_rd_u32_le(s, Length);
         fuse_data = devredir_fuse_data_dequeue(irp);
+        if (fuse_data == NULL)
+            log_error("fuse_data is NULL");
         xfuse_devredir_cb_read_file(fuse_data->data_ptr, s->p, Length);
         break;
 
@@ -1066,16 +1068,20 @@ int dev_redir_file_open(void *fusep, tui32 device_id, char *path,
         //CreateDisposition = CD_FILE_CREATE;
         CreateDisposition  = 0x02; /* got this value from windows */
     }
-    else //if (mode & O_RDWR)
+    else
     {
         log_debug("open file in O_RDWR");
 #if 1
-        DesiredAccess = DA_FILE_READ_DATA | DA_FILE_WRITE_DATA | DA_SYNCHRONIZE;
+        /* without the 0x00000010 rdesktop opens files in */
+        /* O_RDONLY instead of O_RDWR mode                */
+        DesiredAccess = DA_FILE_READ_DATA | DA_FILE_WRITE_DATA | DA_SYNCHRONIZE | 0x00000010;
         CreateOptions = CO_FILE_SYNCHRONOUS_IO_NONALERT;
         CreateDisposition = CD_FILE_OPEN; // WAS 1
 #else
-        /* got this value from windows */
-        DesiredAccess = 0x00120089;
+        /* got this value from windows; the 0x00000010 was added by LK; */
+        /* without this rdesktop opens files in O_RDONLY instead of     */
+        /* O_RDWR mode                                                  */
+        DesiredAccess = 0x00120089 | 0x00000010;
         CreateOptions = 0x20060;
         CreateDisposition = 0x01;
 #endif
