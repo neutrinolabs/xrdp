@@ -33,6 +33,7 @@
 extern tbus g_sync_event;
 extern unsigned char g_fixedkey[8];
 extern struct config_sesman *g_cfg; /* in sesman.c */
+extern int g_sck; /* in sesman.c */
 extern int g_thread_sck; /* in thread.c */
 struct session_chain *g_sessions;
 int g_session_count;
@@ -450,6 +451,7 @@ session_start_fork(int width, int height, int bpp, char *username,
     }
     else if (pid == 0) /* child sesman */
     {
+        g_tcp_close(g_sck);
         g_tcp_close(g_thread_sck);
         auth_start_session(data, display);
         g_sprintf(geometry, "%dx%d", width, height);
