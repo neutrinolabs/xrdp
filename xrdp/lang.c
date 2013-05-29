@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,9 +71,9 @@ get_key_info_from_scan_code(int device_flags, int scan_code, int *keys,
     int ext;
     int index;
 
-    ext = device_flags &KBD_FLAG_EXT;  /* 0x0100 */
+    ext = device_flags & KBD_FLAG_EXT;  /* 0x0100 */
     shift = keys[42] || keys[54];
-    altgr = keys[56] &KBD_FLAG_EXT;  /* right alt */
+    altgr = keys[56] & KBD_FLAG_EXT;  /* right alt */
     rv = 0;
     scan_code = scan_code & 0x7f;
     index = ext ? g_map[scan_code].code2 : g_map[scan_code].code1;
