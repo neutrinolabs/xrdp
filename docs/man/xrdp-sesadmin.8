@@ -1,0 +1,57 @@
+.TH "xrdp-sesadmin" "8" "0.7.0" "xrdp team"
+.SH NAME
+xrdp\-sesadmin \- console XRDP sessions administration tool
+
+.SH SYNOPSIS
+.B xrdp\-sesadmin
+.RI [ options ]
+.BI -c= command
+
+.SH DESCRIPTION
+This manual page documents briefly the
+.B xrdp\-sesadmin
+command.
+.PP
+\fBxrdp\-sesadmin\fP is a console program to administer running XRDP sessions.
+
+.SH OPTIONS
+A summary of options is included below.
+.TP
+.BI \-u= username
+\fIUsername\fP for authentication on the server.
+Defaults to \fBroot\fP.
+
+.TP
+.BI \-p= password
+The \fIpassword\fP to authenticate with.
+The default is to ask for the password interactively.
+
+.TP
+.BI \-s= server
+The host address of the \fIserver\fP to connect to.
+Defaults to \fBlocalhost\fP.
+
+.TP
+.BI \-i= port
+The TCP \fIport\fP number to connect to.
+Defaults to \fB3350\fP.
+
+.TP
+.BI \-c= command
+Specifies the \fIcommand\fP to execute on the server.
+Valid commands are:
+.RS 4
+.TP
+.B list
+List currently active sessions.
+.TP
+.BI kill: sid
+Kills the session specified the given \fIsession id\fP.
+(not yet implemented).
+.RE
+
+.SH FILES
+xrdp\-sesadmin.log
+
+.SH SEE ALSO
+.BR xrdp (8).
