@@ -100,6 +100,35 @@ IRP * devredir_irp_new()
 }
 
 /**
+ * Clone specified IRP
+ *
+ * @return new IRP or NULL on error
+ *****************************************************************************/
+
+IRP * devredir_irp_clone(IRP *irp)
+{
+    IRP *new_irp;
+    IRP *prev;
+    IRP *next;
+
+    if ((new_irp = devredir_irp_new()) == NULL)
+        return NULL;
+
+    /* save link pointers */
+    prev = new_irp->prev;
+    next = new_irp->next;
+
+    /* copy all members */
+    memcpy(new_irp, irp, sizeof(IRP));
+
+    /* restore link pointers */
+    new_irp->prev = prev;
+    new_irp->next = next;
+
+    return new_irp;
+}
+
+/**
  * Delete specified IRP from linked list
  *
  * @return 0 on success, -1 on failure

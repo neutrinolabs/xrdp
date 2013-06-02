@@ -775,16 +775,24 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
         log_debug("got CID_READ");
         xstream_rd_u32_le(s, Length);
         fuse_data = devredir_fuse_data_dequeue(irp);
+
         if (fuse_data == NULL)
             log_error("fuse_data is NULL");
+
         xfuse_devredir_cb_read_file(fuse_data->data_ptr, s->p, Length);
+        devredir_irp_delete(irp);
         break;
 
     case CID_WRITE:
         log_debug("got CID_WRITE");
         xstream_rd_u32_le(s, Length);
         fuse_data = devredir_fuse_data_dequeue(irp);
+
+        if (fuse_data == NULL)
+            log_error("fuse_data is NULL");
+
         xfuse_devredir_cb_write_file(fuse_data->data_ptr, s->p, Length);
+        devredir_irp_delete(irp);
         break;
 
     case CID_CLOSE:
@@ -1172,11 +1180,12 @@ int devredir_rmdir_or_file(void *fusep, tui32 device_id, char *path, int mode)
  * @return 0 on success, -1 on failure
  *****************************************************************************/
 
-int dev_redir_file_read(void *fusep, tui32 DeviceId, tui32 FileId,
+int devredir_file_read(void *fusep, tui32 DeviceId, tui32 FileId,
                         tui32 Length, tui64 Offset)
 {
     struct stream *s;
     IRP           *irp;
+    IRP           *new_irp;
     int            bytes;
 
     xstream_new(s, 1024);
@@ -1188,12 +1197,22 @@ int dev_redir_file_read(void *fusep, tui32 DeviceId, tui32 FileId,
         return -1;
     }
 
-    irp->completion_type = CID_READ;
-    devredir_fuse_data_enqueue(irp, fusep);
+    /* create a new IRP for this request */
+    if ((new_irp = devredir_irp_clone(irp)) == NULL)
+    {
+        /* system out of memory */
+        xfuse_devredir_cb_read_file(fusep, NULL, 0);
+        return -1;
+    }
+    new_irp->FileId = 0;
+    new_irp->completion_type = CID_READ;
+    new_irp->CompletionId = g_completion_id++;
+    devredir_fuse_data_enqueue(new_irp, fusep);
+
     devredir_insert_DeviceIoRequest(s,
                                     DeviceId,
                                     FileId,
-                                    irp->CompletionId,
+                                    new_irp->CompletionId,
                                     IRP_MJ_READ,
                                     0);
 
@@ -1214,6 +1233,7 @@ int dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
 {
     struct stream *s;
     IRP           *irp;
+    IRP           *new_irp;
     int            bytes;
 
     log_debug("DeviceId=%d FileId=%d Length=%d Offset=%lld",
@@ -1228,12 +1248,22 @@ int dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
         return -1;
     }
 
-    irp->completion_type = CID_WRITE;
-    devredir_fuse_data_enqueue(irp, fusep);
+    /* create a new IRP for this request */
+    if ((new_irp = devredir_irp_clone(irp)) == NULL)
+    {
+        /* system out of memory */
+        xfuse_devredir_cb_write_file(fusep, NULL, 0);
+        return -1;
+    }
+    new_irp->FileId = 0;
+    new_irp->completion_type = CID_WRITE;
+    new_irp->CompletionId = g_completion_id++;
+    devredir_fuse_data_enqueue(new_irp, fusep);
+
     devredir_insert_DeviceIoRequest(s,
                                     DeviceId,
                                     FileId,
-                                    irp->CompletionId,
+                                    new_irp->CompletionId,
                                     IRP_MJ_WRITE,
                                     0);
 
