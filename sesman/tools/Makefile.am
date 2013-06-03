@@ -13,9 +13,11 @@ INCLUDES = \
 
 bin_PROGRAMS = \
   xrdp-sesrun \
-  xrdp-sestest \
   xrdp-sesadmin \
-  xrdp-dis \
+  xrdp-dis
+
+noinst_PROGRAMS = \
+  xrdp-sestest \
   xrdp-xcon
 
 xrdp_sesrun_SOURCES = \
