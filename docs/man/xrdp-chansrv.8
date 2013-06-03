@@ -1,0 +1,46 @@
+.TH "xrdp\-chansrv" "8" "0.7.0" "xrdp team" ""
+.SH "NAME"
+\fBxrdp\-chansrv\fR \- \fBxrdp\fR channel server
+
+.SH "SYNTAX"
+.B xrdp\-chansrv
+
+.SH "DESCRIPTION"
+\fBxrdp\-chansrv\fR is the \fBxrdp\fR(8) channel server, which manages the Remote Desktop Protocol (RDP) sub-channels.
+This program is only forked internally by \fBxrdp\-sesman\fP(8).
+.br
+Currently \fBxrdp\-chansrv\fP knows about the following channels:
+.RE 8
+.TP
+.B cliprdr
+Clipboard Redirection
+.TP
+.B rdpsnd
+Remote Desktop Protocol Sound
+.TP
+.B rdpdr
+Remote Desktop Protocol Device Redirection
+.TP
+.B rail
+Remote Applications Integrated Locally
+.TP
+.B drdynvc
+Dynamic Virtual Channel
+.RS
+
+.SH FILES
+.TP
+.I /tmp/.xrdp/xrdp_chansrv_socket_*
+UNIX socket used by external programs to implement channels.
+.TP
+.I /tmp/.xrdp/xrdp_api_*
+UNIX socket used by \fBxrdp\-chansrv\fP to communicate with \fBxrdp\-sesman\fP.
+.TP
+.I $HOME/xrdp-chansrv.log
+Log file used by \fBxrdp\-chansrv\fP(8).
+
+.SH "SEE ALSO"
+.BR xrdp\-sesman (8),
+.BR sesman.ini (5).
+
+for more info on \fBxrdp\fR see http://xrdp.sf.net

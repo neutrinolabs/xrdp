@@ -1,0 +1,67 @@
+.TH "xrdp\-genkeymap" "8" "0.1.0" "xrdp team" ""
+.de URL
+. \\$2 \(laURL: \\$1 \(ra\\$3
+..
+.if \n[.g] .mso www.tmac
+
+.SH "NAME"
+\fBxrdp\-genkeymap\fR \- key map generator for XRDP
+
+.SH "SYNTAX"
+.B xrdp\-genkeymap
+.I file
+
+.SH "DESCRIPTION"
+\fBxrdp\-genkeymap\fR extracts the key map used by the currently running X session to generated a mapping from Remote Desktop Protocol (RDP) key codes to X keysyms and Unicode code points.
+
+.SH OPTIONS
+.TP
+.I outfile
+The key map information is stored in the file named \fIoutfile\fP.
+
+.SH "FILES"
+.TP
+.I /etc/xrdp/km-XXXX.ini
+Files containing the keyboard mapping for language \fIXXXX\fP, which is a 4 digit hexadecimal number identifying the country and language code.
+.RS 8
+.TP
+.B 0405
+cs czech
+.TP
+.B 0407
+de german
+.TP
+.B 0409
+en-us us english
+.TP
+.B 040c
+fr french
+.TP
+.B 0410
+it italy
+.TP
+.B 0416
+br Portuguese (Brazil)
+.TP
+.B 0419
+ru russian
+.TP
+.B 041d
+se swedish
+.TP
+.B 0809
+en-uk uk english
+.RE
+
+.SH "AUTHORS"
+Jay Sorg <jsorg71@users.sourceforge.net>
+.br
+Simone Fedele <ilsimo@users.sourceforge.net>
+
+.SH "SEE ALSO"
+.BR xrdp (8),
+.BR setxkbmap (1),
+.BR unicode (7),
+.URL "https://github.com/FreeRDP/FreeRDP/wiki/Keyboard" "Description of Keyboard Input mapping" .
+
+for more info on \fBxrdp\fR see http://xrdp.sf.net

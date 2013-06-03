@@ -439,7 +439,7 @@ g_tcp_socket(void)
     unsigned int option_len;
 #endif
 
-#if !defined(NO_ARPA_INET_H_IP6)
+#if 0 && !defined(NO_ARPA_INET_H_IP6)
     rv = (int)socket(AF_INET6, SOCK_STREAM, 0);
 #else
     rv = (int)socket(AF_INET, SOCK_STREAM, 0);
@@ -448,7 +448,7 @@ g_tcp_socket(void)
     {
         return -1;
     }
-#if !defined(NO_ARPA_INET_H_IP6)
+#if 0 && !defined(NO_ARPA_INET_H_IP6)
     option_len = sizeof(option_value);
     if (getsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&option_value,
                    &option_len) == 0)
@@ -525,6 +525,7 @@ g_tcp_close(int sck)
 
 /*****************************************************************************/
 /* returns error, zero is good */
+#if 0
 int APP_CC
 g_tcp_connect(int sck, const char *address, const char *port)
 {
@@ -578,6 +579,37 @@ g_tcp_connect(int sck, const char *address, const char *port)
     }
     return res;
 }
+#else
+int APP_CC
+g_tcp_connect(int sck, const char* address, const char* port)
+{
+  struct sockaddr_in s;
+  struct hostent* h;
+
+  g_memset(&s, 0, sizeof(struct sockaddr_in));
+  s.sin_family = AF_INET;
+  s.sin_port = htons((tui16)atoi(port));
+  s.sin_addr.s_addr = inet_addr(address);
+  if (s.sin_addr.s_addr == INADDR_NONE)
+  {
+    h = gethostbyname(address);
+    if (h != 0)
+    {
+      if (h->h_name != 0)
+      {
+        if (h->h_addr_list != 0)
+        {
+          if ((*(h->h_addr_list)) != 0)
+          {
+            s.sin_addr.s_addr = *((int*)(*(h->h_addr_list)));
+          }
+        }
+      }
+    }
+  }
+  return connect(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
+}
+#endif
 
 /*****************************************************************************/
 /* returns error, zero is good */
@@ -613,6 +645,7 @@ g_tcp_set_non_blocking(int sck)
     return 0;
 }
 
+#if 0
 /*****************************************************************************/
 /* return boolean */
 static int APP_CC
@@ -678,7 +711,9 @@ address_match(const char *address, struct addrinfo *j)
     }
     return 0;
 }
+#endif
 
+#if 0
 /*****************************************************************************/
 /* returns error, zero is good */
 static int APP_CC
@@ -720,6 +755,19 @@ g_tcp_bind(int sck, const char *port)
     flags = AI_ADDRCONFIG | AI_PASSIVE;
     return g_tcp_bind_flags(sck, port, 0, flags);
 }
+#else
+int APP_CC
+g_tcp_bind(int sck, const char* port)
+{
+  struct sockaddr_in s;
+
+  memset(&s, 0, sizeof(struct sockaddr_in));
+  s.sin_family = AF_INET;
+  s.sin_port = htons((tui16)atoi(port));
+  s.sin_addr.s_addr = INADDR_ANY;
+  return bind(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
+}
+#endif
 
 /*****************************************************************************/
 int APP_CC
@@ -737,6 +785,7 @@ g_tcp_local_bind(int sck, const char *port)
 #endif
 }
 
+#if 0
 /*****************************************************************************/
 /* returns error, zero is good */
 int APP_CC
@@ -747,6 +796,23 @@ g_tcp_bind_address(int sck, const char *port, const char *address)
     flags = AI_ADDRCONFIG | AI_PASSIVE;
     return g_tcp_bind_flags(sck, port, address, flags);
 }
+#else
+int APP_CC
+g_tcp_bind_address(int sck, const char* port, const char* address)
+{
+  struct sockaddr_in s;
+
+  memset(&s, 0, sizeof(struct sockaddr_in));
+  s.sin_family = AF_INET;
+  s.sin_port = htons((tui16)atoi(port));
+  s.sin_addr.s_addr = INADDR_ANY;
+  if (inet_aton(address, &s.sin_addr) < 0)
+  {
+    return -1; /* bad address */
+  }
+  return bind(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
+}
+#endif
 
 /*****************************************************************************/
 /* returns error, zero is good */

@@ -1,4 +1,14 @@
-EXTRA_DIST = chansrv.h clipboard.h devredir.h sound.h
+EXTRA_DIST = \
+  chansrv.h \
+  chansrv_fuse.h \
+  clipboard.h \
+  clipboard_common.h \
+  clipboard_file.h \
+  devredir.h \
+  drdynvc.h \
+  rail.h \
+  sound.h \
+  xcommon.h
 
 EXTRA_DEFINES =
 EXTRA_INCLUDES =
@@ -35,10 +45,12 @@ xrdp_chansrv_SOURCES = \
   clipboard.c \
   clipboard_file.c \
   devredir.c \
+  smartcard.c \
   rail.c \
   xcommon.c \
   drdynvc.c \
-  chansrv_fuse.c
+  chansrv_fuse.c \
+  irp.c
 
 xrdp_chansrv_LDFLAGS = \
   $(EXTRA_FLAGS)

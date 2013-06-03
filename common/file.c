@@ -242,8 +242,19 @@ l_file_read_section(int fd, int max_file_size, const char *section,
 
         for (index = 0; index < len; index++)
         {
+            if (!s_check_rem(s, 1))
+            {
+                break;
+            }
             in_uint8(s, c);
-
+            if ((c == '#') || (c == ';'))
+            {
+                file_read_line(s, text);
+                in_it = 0;
+                in_it_index = 0;
+                g_memset(text, 0, 512);
+                continue;
+            }
             if (c == '[')
             {
                 in_it = 1;
@@ -253,7 +264,6 @@ l_file_read_section(int fd, int max_file_size, const char *section,
                 if (g_strcasecmp(section, text) == 0)
                 {
                     file_read_line(s, text);
-
                     while (file_read_line(s, text) == 0)
                     {
                         if (g_strlen(text) > 0)
@@ -296,7 +306,6 @@ l_file_read_section(int fd, int max_file_size, const char *section,
             }
         }
     }
-
     free_stream(s);
     return 1;
 }

@@ -1,0 +1,4 @@
+#%PAM-1.0
+auth       required     pam_unix.so shadow nullok
+auth       required     pam_env.so readenv=1
+account    required     pam_unix.so

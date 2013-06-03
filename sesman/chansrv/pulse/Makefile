@@ -1,8 +1,9 @@
 
 
-PULSE_DIR=/home/jay/temp/pulseaudio-0.9.21
+#PULSE_DIR=/home/jay/temp/pulseaudio-0.9.21
 #PULSE_DIR=/home/jay/pulseaudio-0.9.22
 #PULSE_DIR=/home/jay/pulseaudio-0.9.21
+PULSE_DIR=/home/jay/pulseaudio-2.0
 
 OBJS = module-xrdp-sink.o
 
