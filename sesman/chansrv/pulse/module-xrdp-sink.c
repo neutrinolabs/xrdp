@@ -47,7 +47,6 @@
 #include <pulse/rtclock.h>
 #include <pulse/timeval.h>
 #include <pulse/xmalloc.h>
-//#include <pulse/i18n.h>
 
 #include <pulsecore/core-error.h>
 #include <pulsecore/sink.h>
@@ -168,7 +167,7 @@ static void sink_update_requested_latency_cb(pa_sink *s) {
     u->got_max_latency = 0;
     if (u->block_usec == (pa_usec_t) -1) {
         u->block_usec = s->thread_info.max_latency;
-        pa_log("2 block_usec %d", u->block_usec);
+        pa_log_debug("2 block_usec %d", u->block_usec);
         u->got_max_latency = 1;
     }
 
@@ -503,7 +502,7 @@ int pa__init(pa_module*m) {
     pa_sink_set_rtpoll(u->sink, u->rtpoll);
 
     u->block_usec = BLOCK_USEC;
-    pa_log("3 block_usec %d", u->block_usec);
+    pa_log_debug("3 block_usec %d", u->block_usec);
     nbytes = pa_usec_to_bytes(u->block_usec, &u->sink->sample_spec);
     pa_sink_set_max_rewind(u->sink, nbytes);
     pa_sink_set_max_request(u->sink, nbytes);
