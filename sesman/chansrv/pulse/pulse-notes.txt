@@ -70,3 +70,10 @@ load-module module-xrdp-sink
 load-module module-native-protocol-unix
 #load-module module-udev-detect tsched=0
 ---------------------------------
+
+To see a list of sinks
+pacmd list-sinks
+
+To manually load a sink
+pactl load-module module-xrdp-sink.so sink_name=test
+
