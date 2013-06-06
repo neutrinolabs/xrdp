@@ -1,0 +1,20 @@
+
+this is /etc/apt/sources.list
+I added the deb-src line
+
+----------------------
+deb http://packages.linuxmint.com/ maya main upstream import
+deb http://archive.ubuntu.com/ubuntu/ precise main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu/ precise-updates main restricted universe multiverse
+deb-src http://archive.ubuntu.com/ubuntu/ precise-updates main restricted universe multiverse
+deb http://security.ubuntu.com/ubuntu/ precise-security main restricted universe multiverse
+deb http://archive.canonical.com/ubuntu/ precise partner
+deb http://packages.medibuntu.org/ precise free non-free
+
+#deb http://archive.getdeb.net/ubuntu precise-getdeb apps
+#deb http://archive.getdeb.net/ubuntu precise-getdeb games
+deb http://drbl.sourceforge.net/drbl-core drbl stable
+----------------------
+
+apt-get install dpkg-dev
+apt-get build-dep pulseaudio
