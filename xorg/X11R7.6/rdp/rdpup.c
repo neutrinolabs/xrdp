@@ -772,6 +772,14 @@ rdpup_process_msg(struct stream *s)
             LLOGLN(0, ("  client can not do offscreen to offscreen blits"));
             g_can_do_pix_to_pix = 0;
         }
+        if (g_rdpScreen.client_info.pointer_flags & 1)
+        {
+            LLOGLN(0, ("  client can do new(color) cursor"));
+        }
+        else
+        {
+            LLOGLN(0, ("  client can not do new(color) cursor"));
+        }
     }
     else
     {

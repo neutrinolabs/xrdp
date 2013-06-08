@@ -259,7 +259,7 @@ int dev_redir_get_dir_listing(void *fusep, tui32 device_id, char *path);
 int dev_redir_file_open(void *fusep, tui32 device_id, char *path,
                         int mode, int type, char *gen_buf);
 
-int dev_redir_file_read(void *fusep, tui32 device_id, tui32 FileId,
+int devredir_file_read(void *fusep, tui32 device_id, tui32 FileId,
                         tui32 Length, tui64 Offset);
 
 int dev_redir_file_write(void *fusep, tui32 device_id, tui32 FileId,
@@ -2865,7 +2865,7 @@ static void xfuse_cb_read(fuse_req_t req, fuse_ino_t ino, size_t size,
     fusep->device_id = fh->DeviceId;
     fusep->fi = fi;
 
-    dev_redir_file_read(fusep, fh->DeviceId, fh->FileId, size, off);
+    devredir_file_read(fusep, fh->DeviceId, fh->FileId, size, off);
 }
 
 /**

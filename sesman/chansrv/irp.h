@@ -55,6 +55,7 @@ struct irp
 };
 
 IRP * devredir_irp_new();
+IRP * devredir_irp_clone(IRP *irp);
 int   devredir_irp_delete(IRP *irp);
 IRP * devredir_irp_find(tui32 completion_id);
 IRP * devredir_irp_find_by_fileid(tui32 FileId);
