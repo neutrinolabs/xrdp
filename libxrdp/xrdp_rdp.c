@@ -131,6 +131,10 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
         {
             client_info->max_bpp = g_atoi(value);
         }
+        else if (g_strcasecmp(item, "new_cursors") == 0)
+        {
+            client_info->pointer_flags = text2bool(value) == 0 ? 2 : 0;
+        }
     }
 
     list_delete(items);
