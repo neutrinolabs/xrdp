@@ -968,7 +968,9 @@ xrdp_process_capset_pointercache(struct xrdp_rdp *self, struct stream *s,
 {
     int i;
     int colorPointerFlag;
+    int no_new_cursor;
 
+    no_new_cursor = self->client_info.pointer_flags & 2;
     in_uint16_le(s, colorPointerFlag);
     self->client_info.pointer_flags = colorPointerFlag;
     in_uint16_le(s, i);
@@ -986,6 +988,12 @@ xrdp_process_capset_pointercache(struct xrdp_rdp *self, struct stream *s,
     {
         g_writeln("xrdp_process_capset_pointercache: client does not support "
                   "new(color) cursor");
+    }
+    if (no_new_cursor)
+    {
+        g_writeln("xrdp_process_capset_pointercache: new(color) cursor is "
+                  "disabled by config");
+        self->client_info.pointer_flags = 0;
     }
     return 0;
 }
