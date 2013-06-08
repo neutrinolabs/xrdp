@@ -131,6 +131,10 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
         {
             client_info->max_bpp = g_atoi(value);
         }
+        else if (g_strcasecmp(item, "new_cursors") == 0)
+        {
+            client_info->pointer_flags = text2bool(value) == 0 ? 2 : 0;
+        }
     }
 
     list_delete(items);
@@ -964,7 +968,9 @@ xrdp_process_capset_pointercache(struct xrdp_rdp *self, struct stream *s,
 {
     int i;
     int colorPointerFlag;
+    int no_new_cursor;
 
+    no_new_cursor = self->client_info.pointer_flags & 2;
     in_uint16_le(s, colorPointerFlag);
     self->client_info.pointer_flags = colorPointerFlag;
     in_uint16_le(s, i);
@@ -982,6 +988,12 @@ xrdp_process_capset_pointercache(struct xrdp_rdp *self, struct stream *s,
     {
         g_writeln("xrdp_process_capset_pointercache: client does not support "
                   "new(color) cursor");
+    }
+    if (no_new_cursor)
+    {
+        g_writeln("xrdp_process_capset_pointercache: new(color) cursor is "
+                  "disabled by config");
+        self->client_info.pointer_flags = 0;
     }
     return 0;
 }

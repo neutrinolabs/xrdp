@@ -437,7 +437,8 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
     {
         if (bpp != 24)
         {
-            g_writeln("libxrdp_send_pointer: error");
+            g_writeln("libxrdp_send_pointer: error client does not support "
+                      "new cursors and bpp is %d", bpp);
             return 1;
         }
     }
