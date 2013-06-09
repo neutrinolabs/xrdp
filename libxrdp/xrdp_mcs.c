@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -829,8 +829,8 @@ void close_rdp_socket(struct xrdp_mcs *self)
     if(self->iso_layer->tcp_layer)
     {
         if(self->iso_layer->tcp_layer->trans)
-        {	    
-            g_tcp_close(self->iso_layer->tcp_layer->trans->sck);	    
+        {
+            g_tcp_close(self->iso_layer->tcp_layer->trans->sck);
             self->iso_layer->tcp_layer->trans->sck = 0 ;
             g_writeln("xrdp_mcs_disconnect - socket closed");
             return ;

@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -437,7 +437,8 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
     {
         if (bpp != 24)
         {
-            g_writeln("libxrdp_send_pointer: error");
+            g_writeln("libxrdp_send_pointer: error client does not support "
+                      "new cursors and bpp is %d", bpp);
             return 1;
         }
     }
