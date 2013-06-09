@@ -432,8 +432,8 @@ int dev_redir_send_drive_create_request(tui32 device_id, char *path,
     log_debug("DesiredAccess=0x%x CreateDisposition=0x%x CreateOptions=0x%x",
               DesiredAccess, CreateDisposition, CreateOptions);
 
-    /* to store path as unicode */
-    len = strlen(path) * 2 + 2;
+    /* path in unicode needs this much space */
+    len = ((g_mbstowcs(NULL, path, 0) * sizeof(twchar)) / 2) + 2;
 
     xstream_new(s, 1024 + len);
 
@@ -517,7 +517,8 @@ void dev_redir_send_drive_dir_request(IRP *irp, tui32 device_id,
         if (Path == NULL)
             return;
 
-        path_len = strlen(Path) * 2 + 2;
+        /* Path in unicode needs this much space */
+        path_len = ((g_mbstowcs(NULL, Path, 0) * sizeof(twchar)) / 2) + 2;
         devredir_cvt_to_unicode(upath, Path);
     }
 
@@ -717,8 +718,6 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
     xstream_rd_u32_le(s, CompletionId);
     xstream_rd_u32_le(s, IoStatus);
 
-    /* LK_TODO need to check for IoStatus */
-
     log_debug("entered: IoStatus=0x%x CompletionId=%d", IoStatus, CompletionId);
 
     if ((irp = devredir_irp_find(CompletionId)) == NULL)
@@ -762,12 +761,14 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
 
     case CID_CREATE_OPEN_REQ:
         xstream_rd_u32_le(s, irp->FileId);
+
         log_debug("got CID_CREATE_OPEN_REQ IoStatus=0x%x FileId=%d",
                   IoStatus, irp->FileId);
+
         fuse_data = devredir_fuse_data_dequeue(irp);
-        xfuse_devredir_cb_open_file(fuse_data->data_ptr,
+        xfuse_devredir_cb_open_file(fuse_data->data_ptr, IoStatus,
                                     DeviceId, irp->FileId);
-        if (irp->type == S_IFDIR)
+        if ((irp->type == S_IFDIR) || (IoStatus != NT_STATUS_SUCCESS))
             devredir_irp_delete(irp);
         break;
 
@@ -1411,29 +1412,64 @@ void devredir_cvt_slash(char *path)
 
 void devredir_cvt_to_unicode(char *unicode, char *path)
 {
-    int len = strlen(path);
-    int i;
-    int j = 0;
+    char *dest;
+    char *src;
+    int   rv;
+    int   i;
 
-    for (i = 0; i < len; i++)
+    rv = g_mbstowcs((twchar *) unicode, path, strlen(path));
+
+    /* unicode is typically 4 bytes, but microsoft only uses 2 bytes */
+
+    src  = unicode + sizeof(twchar); /* skip 1st unicode char        */
+    dest = unicode + 2;              /* first char already in  place */
+
+    for (i = 1; i < rv; i++)
     {
-        unicode[j++] = path[i];
-        unicode[j++] = 0x00;
+        *dest++ = *src++;
+        *dest++ = *src++;
+        src += 2;
     }
-    unicode[j++] = 0x00;
-    unicode[j++] = 0x00;
+
+    *dest++ = 0;
+    *dest++ = 0;
 }
 
 void devredir_cvt_from_unicode_len(char *path, char *unicode, int len)
 {
-    int i;
-    int j;
+    char *dest;
+    char *dest_saved;
+    char *src;
+    int   rv;
+    int   i;
+    int   bytes_to_alloc;
+    int   max_bytes;
 
-    for (i = 0, j = 0; i < len; i += 2)
+    bytes_to_alloc = (((len / 2) * sizeof(twchar)) + sizeof(twchar));
+
+    src = unicode;
+    dest = g_malloc(bytes_to_alloc, 1);
+    dest_saved = dest;
+
+    for (i = 0; i < len; i += 2)
     {
-        path[j++] = unicode[i];
+        *dest++ = *src++;
+        *dest++ = *src++;
+        dest += 2;
     }
-    path[j] = 0;
+    *dest++ = 0;
+    *dest++ = 0;
+    *dest++ = 0;
+    *dest++ = 0;
+
+    max_bytes = wcstombs(NULL, (wchar_t *) dest_saved, 0);
+    if (max_bytes > 0)
+    {
+        rv = wcstombs(path, (wchar_t *) dest_saved, max_bytes);
+        path[max_bytes] = 0;
+    }
+
+    g_free(dest_saved);
 }
 
 int dev_redir_string_ends_with(char *string, char c)
@@ -1518,7 +1554,7 @@ void devredir_proc_cid_rename_file(IRP *irp, tui32 IoStatus)
     struct stream *s;
     int            bytes;
     int            sblen; /* SetBuffer length */
-    int            flen;  /*FileNameLength    */
+    int            flen;  /* FileNameLength   */
 
 
     if (IoStatus != NT_STATUS_SUCCESS)
@@ -1535,25 +1571,26 @@ void devredir_proc_cid_rename_file(IRP *irp, tui32 IoStatus)
         return;
     }
 
-    xstream_new(s, 1024);
+    /* Path in unicode needs this much space */
+    flen = ((g_mbstowcs(NULL, irp->gen_buf, 0) * sizeof(twchar)) / 2) + 2;
+    sblen = 6 + flen;
+
+    xstream_new(s, 1024 + flen);
 
     irp->completion_type = CID_RENAME_FILE_RESP;
     devredir_insert_DeviceIoRequest(s, irp->DeviceId, irp->FileId,
                                     irp->CompletionId,
                                     IRP_MJ_SET_INFORMATION, 0);
 
-    flen = strlen(irp->gen_buf) * 2 + 2;
-    sblen = 6 + flen;
-
     xstream_wr_u32_le(s, FileRenameInformation);
-    xstream_wr_u32_le(s, sblen);     /* Length          */
-    xstream_seek(s, 24);             /* padding         */
-    xstream_wr_u8(s, 1);             /* ReplaceIfExists */
-    xstream_wr_u8(s, 0);             /* RootDirectory   */
-    xstream_wr_u32_le(s, flen);      /* FileNameLength  */
+    xstream_wr_u32_le(s, sblen);     /* number of bytes after padding */
+    xstream_seek(s, 24);             /* padding                       */
+    xstream_wr_u8(s, 1);             /* ReplaceIfExists               */
+    xstream_wr_u8(s, 0);             /* RootDirectory                 */
+    xstream_wr_u32_le(s, flen);      /* FileNameLength                */
 
     /* filename in unicode */
-    devredir_cvt_to_unicode(s->p, irp->gen_buf);
+    devredir_cvt_to_unicode(s->p, irp->gen_buf); /* UNICODE_TODO */
     xstream_seek(s, flen);
 
     /* send to client */
