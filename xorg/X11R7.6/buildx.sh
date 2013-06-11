@@ -2,7 +2,7 @@
 
 # buildx.sh: a script for building X11R7.6 X server for use with xrdp
 #
-# Copyright 2011-2012 Jay Sorg Jay.Sorg@gmail.com
+# Copyright 2011-2013 Jay Sorg Jay.Sorg@gmail.com
 #
 # Authors
 #       Jay Sorg Jay.Sorg@gmail.com
@@ -34,6 +34,8 @@ download_file()
     fi
 
     echo "downloading file $file"
+
+    cd downloads
 
     if [ "$file" = "libpthread-stubs-0.3.tar.bz2" ]; then
         wget -cq http://xcb.freedesktop.org/dist/$file
@@ -391,6 +393,7 @@ then
 fi
 
 # this will copy the build X server with the other X server binaries
+cd rdp
 strip X11rdp
 cp X11rdp $X11RDPBASE/bin
 

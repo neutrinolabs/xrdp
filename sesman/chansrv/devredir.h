@@ -101,7 +101,7 @@ int dev_redir_file_open(void *fusep, tui32 device_id, char *path,
 
 int devredir_file_close(void *fusep, tui32 device_id, tui32 file_id);
 
-int dev_redir_file_read(void *fusep, tui32 device_id, tui32 FileId,
+int devredir_file_read(void *fusep, tui32 device_id, tui32 FileId,
                         tui32 Length, tui64 Offset);
 
 int send_channel_data(int chan_id, char *data, int size);
