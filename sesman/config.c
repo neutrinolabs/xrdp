@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -289,7 +289,7 @@ config_read_security(int file, struct config_security *sc,
         if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_ALWAYSGROUPCHECK))
         {
             sc->ts_always_group_check = text2bool((char *)list_get_item(param_v, i));
-        }	
+        }
     }
 
     /* printing security config */
@@ -297,7 +297,7 @@ config_read_security(int file, struct config_security *sc,
     g_printf("\tAllowRootLogin:       %i\r\n", sc->allow_root);
     g_printf("\tMaxLoginRetry:        %i\r\n", sc->login_retry);
     g_printf("\tAlwaysGroupCheck:     %i\r\n", sc->ts_always_group_check);
-    
+
     if (sc->ts_users_enable)
     {
         g_printf("\tTSUsersGroup:         %i\r\n", sc->ts_users);

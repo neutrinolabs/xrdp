@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -104,6 +104,7 @@ env_set_user(char *username, char *passwd_file, int display)
             g_set_current_dir(pw_dir);
             g_sprintf(text, ":%d.0", display);
             g_setenv("DISPLAY", text, 1);
+            g_setenv("LANG", "en_US.UTF-8", 1);
 
             if (passwd_file != 0)
             {

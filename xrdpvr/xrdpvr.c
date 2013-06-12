@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Laxmikant Rashinkar 2012 LK.Rashinkar@gmail.com
+ * Copyright (C) Laxmikant Rashinkar 2012-2013 LK.Rashinkar@gmail.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
