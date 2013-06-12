@@ -2,8 +2,8 @@
  * FreeRDP: A Remote Desktop Protocol Implementation
  * Implements Microsoft Point to Point Compression (MPPC) protocol
  *
- * Copyright 2012 Laxmikant Rashinkar <LK.Rashinkar@gmail.com>
- * Copyright 2012 Jay Sorg <jay.sorg@gmail.com>
+ * Copyright 2012-2013 Laxmikant Rashinkar <LK.Rashinkar@gmail.com>
+ * Copyright 2012-2013 Jay Sorg <jay.sorg@gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.

@@ -52,8 +52,9 @@ download_file()
         status=$?
         cd ..
         return $status
-    elif [ "$file" = "pixman-0.15.20.tar.bz2" ]; then
-        wget -cq http://ftp.x.org/pub/individual/lib/$file
+# note pixman updated
+    elif [ "$file" = "pixman-0.30.0.tar.bz2" ]; then
+        wget -cq http://xorg.freedesktop.org/archive/individual/lib/$file
         status=$?
         cd ..
         return $status
