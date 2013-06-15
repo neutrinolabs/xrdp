@@ -29,7 +29,11 @@ XVideo extension
 
 #include <fourcc.h>
 
+extern rdpScreenInfoRec g_rdpScreen; /* from rdpmain.c */
+
 static DevPrivateKey g_XvScreenKey;
+static char g_xv_adaptor_name[] = "xrdp XVideo adaptor";
+static char g_xv_encoding_name[] = "XV_IMAGE";
 
 #define GET_XV_SCREEN(pScreen) \
     ((XvScreenPtr)dixLookupPrivate(&(pScreen)->devPrivates, g_XvScreenKey))
@@ -359,10 +363,11 @@ rdpXvInitAdaptors(ScreenPtr pScreen)
 
     pAdaptor = malloc(sizeof(XvAdaptorRec));
     memset(pAdaptor, 0, sizeof(XvAdaptorRec));
-    pAdaptor->type = XvInputMask | XvImageMask | XvVideoMask | XvStillMask;
+    pAdaptor->type = XvInputMask | XvOutputMask | XvImageMask |
+                     XvVideoMask | XvStillMask;
     pAdaptor->pScreen = pScreen;
 
-    pAdaptor->name = "xrdp XVideo adaptor";
+    pAdaptor->name = g_xv_adaptor_name;
 
     pAdaptor->nEncodings = T_NUM_ENCODINGS;
     pAdaptor->pEncodings = g_encodings;
@@ -394,15 +399,15 @@ rdpXvInitAdaptors(ScreenPtr pScreen)
     memset(g_encodings, 0, sizeof(g_encodings));
     g_encodings[0].id = FakeClientID(0);
     g_encodings[0].pScreen = pScreen;
-    g_encodings[0].name = "XV_IMAGE";
+    g_encodings[0].name = g_xv_encoding_name;
     g_encodings[0].width = 2046;
     g_encodings[0].height = 2046;
     g_encodings[0].rate.numerator = 1;
     g_encodings[0].rate.denominator = 1;
 
     memset(g_formats, 0, sizeof(g_formats));
-    g_formats[0].depth = 24;
-    g_formats[0].visual = TrueColor;
+    g_formats[0].depth = g_rdpScreen.depth;
+    g_formats[0].visual = pScreen->rootVisual;
 
     memset(g_ports, 0, sizeof(g_ports));
     g_ports[0].id = FakeClientID(0);
