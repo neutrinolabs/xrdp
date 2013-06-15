@@ -43,6 +43,7 @@ public:
 
     void onMediaSeek(int value);
     void setVcrOp(int op);
+    void onMediaRestarted();
 
 public slots:
     void play();

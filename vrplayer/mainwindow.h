@@ -80,7 +80,6 @@ protected:
     void resizeEvent(QResizeEvent *e);
     void closeEvent(QCloseEvent *e);
     void moveEvent(QMoveEvent *e);
-    void mouseMoveEvent(QMouseEvent *e);
 
 private:
     Ui::MainWindow *ui;
