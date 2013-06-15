@@ -10,7 +10,7 @@ damageproto-1.2.1.tar.bz2                       :  damageproto-1.2.1            
 makedepend-1.0.3.tar.bz2                        :  makedepend-1.0.3                         :
 libxml2-sources-2.7.8.tar.gz                    :  libxml2-2.7.8                            :
 libpng-1.2.46.tar.gz                            :  libpng-1.2.46                            :
-pixman-0.15.20.tar.bz2                          :  pixman-0.15.20                           : --disable-gtk
+pixman-0.30.0.tar.bz2                           :  pixman-0.30.0                            : --disable-gtk
 freetype-2.4.6.tar.bz2                          :  freetype-2.4.6                           :
 fontconfig-2.8.0.tar.gz                         :  fontconfig-2.8.0                         :
 cairo-1.8.8.tar.gz                              :  cairo-1.8.8                              :
