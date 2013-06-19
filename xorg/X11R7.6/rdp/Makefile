@@ -4,6 +4,7 @@
 INCBASE = $(X11RDPBASE)/include
 LIBBASE = $(X11RDPBASE)/lib
 
+INSTALL = /usr/bin/install -c
 XSRCBASE = ../build_dir/xorg-server-1.9.3
 
 OBJS = rdpmain.o rdpdraw.o rdpinput.o rdpmisc.o rdpup.o rdprandr.o \
@@ -109,3 +110,6 @@ fbcmap.o: ../build_dir/xorg-server-1.9.3/fb/fbcmap.c
 
 fbcmap_mi.o: ../build_dir/xorg-server-1.9.3/fb/fbcmap_mi.c
 	$(CC) $(CFLAGS) -c ../build_dir/xorg-server-1.9.3/fb/fbcmap_mi.c
+
+install: all
+       $(INSTALL) X11rdp $(X11RDPBASE)/bin/X11rdp
