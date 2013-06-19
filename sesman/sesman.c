@@ -202,6 +202,7 @@ main(int argc, char **argv)
             return 1;
         }
 
+        g_memset(pid_s, 0, sizeof(pid_s));
         error = g_file_read(fd, pid_s, 7);
 
         if (-1 == error)
