@@ -23,7 +23,7 @@ noinst_PROGRAMS = \
 xrdp_sesrun_SOURCES = \
   sesrun.c \
   tcp.c \
-  config.c
+  ../config.c
 
 xrdp_sestest_SOURCES = \
   sestest.c
