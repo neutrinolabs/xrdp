@@ -88,7 +88,9 @@ void DemuxMedia::startDemuxing()
         {
             /* looks like we reached end of file */
             delete mediaPkt;
+            playVideo->onMediaRestarted();
             usleep(1000 * 100);
+            xrdpvr_seek_media(0, 0);
             continue;
         }
 

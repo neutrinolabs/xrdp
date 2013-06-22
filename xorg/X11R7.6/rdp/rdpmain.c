@@ -527,6 +527,8 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
 
     }
 
+    //rdpXvInit(pScreen);
+
     ErrorF("rdpScreenInit: ret %d\n", ret);
 
     return ret;

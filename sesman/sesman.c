@@ -143,7 +143,7 @@ main(int argc, char **argv)
     enum logReturns error;
     int daemon = 1;
     int pid;
-    char pid_s[8];
+    char pid_s[32];
     char text[256];
     char pid_file[256];
     char cfg_file[256];
@@ -202,7 +202,8 @@ main(int argc, char **argv)
             return 1;
         }
 
-        error = g_file_read(fd, pid_s, 7);
+        g_memset(pid_s, 0, sizeof(pid_s));
+        error = g_file_read(fd, pid_s, 31);
 
         if (-1 == error)
         {
