@@ -53,7 +53,7 @@ void OurInterface::initRemoteClient()
     xrdpvr_play_media(channel, 101, filename.toAscii().data());
 
     xrdpvr_get_media_duration(&start_time, &duration);
-    qDebug() << "ourInterface:initRemoteClient: emit onMediaDurationInSecs: dur=" << duration;
+    //qDebug() << "ourInterface:initRemoteClient: emit onMediaDurationInSecs: dur=" << duration;
     emit onMediaDurationInSeconds(duration);
 
     /* LK_TODO this needs to be undone in deinitRemoteClient() */
@@ -180,15 +180,13 @@ void OurInterface::onGeometryChanged(int x, int y, int width, int height)
     savedGeometry.setWidth(width);
     savedGeometry.setHeight(height);
 
-#if 1
+#if 0
     qDebug() << "OurInterface:signal" <<
                 "" << savedGeometry.x() <<
                 "" << savedGeometry.y() <<
                 "" << savedGeometry.width() <<
                 "" << savedGeometry.height();
 #endif
-
-    qDebug() << "setting geometry:channel=" << channel;
 
     if (channel)
     {

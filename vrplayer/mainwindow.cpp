@@ -275,7 +275,6 @@ void MainWindow::onBtnPlayClicked(bool)
         interface->setVcrOp(VCR_PLAY);
         vcrFlag = VCR_PLAY;
     }
-
     else if (vcrFlag == VCR_STOP)
     {
         /* btn clicked while stopped - enter play mode */
@@ -312,15 +311,13 @@ void MainWindow::onMediaDurationInSeconds(int duration)
     int  secs    = 0;
     char buf[20];
 
-//return;
-
     /* setup progress bar */
     slider->setMinimum(0);
     slider->setMaximum(duration * 100); /* in hundredth of a sec */
     slider->setValue(0);
     slider->setSliderPosition(0);
     lblCurrentPos->setText("00:00:00");
-    qDebug() << "media_duration=" << duration << " in hundredth of a sec:" << duration * 100;
+    //qDebug() << "media_duration=" << duration << " in hundredth of a sec:" << duration * 100;
 
     /* convert from seconds to hours:minutes:seconds */
     hours = duration / 3600;
@@ -345,26 +342,24 @@ void MainWindow::onElapsedTime(int val)
     int  hours    = 0;
     int  minutes  = 0;
     int  secs     = 0;
-    int  duration = val / 100;
+    int  duration = 0;
     char buf[20];
 
     if (vcrFlag == VCR_STOP)
-    {
-        qDebug() << "onElapsedTime: not updating slider coz of VCR_STOP";
         return;
-    }
 
     /* if slider bar is down, do not update */
     if (slider->isSliderDown())
-    {
-        qDebug() << "onElapsedTime: not updating slider coz slider is down";
         return;
-    }
 
     /* update progress bar */
+    if (val >= slider->maximum())
+        val = 0;
+
     slider->setSliderPosition(val);
 
     /* convert from seconds to hours:minutes:seconds */
+    duration = val / 100;
     hours = duration / 3600;
     if (hours)
         duration -= (hours * 3600);
@@ -409,10 +404,3 @@ void MainWindow::onSliderActionTriggered(int action)
     }
 }
 
-#if 1
-// LK_TODO delete this
-void MainWindow::mouseMoveEvent(QMouseEvent *)
-{
-    //qDebug() << "mouseMoveEvent: x=" << e->globalX() << "y=" << e->globalY();
-}
-#endif

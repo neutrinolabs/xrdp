@@ -35,6 +35,7 @@ extern "C"
 class DemuxMedia : public QObject
 {
     Q_OBJECT
+
 public:
     explicit DemuxMedia(QObject *parent = 0, QQueue<MediaPacket *> *audioQueue = 0,
                         QQueue<MediaPacket *> *videoQueue = 0, void *channel = 0, int stream_id = 101);
@@ -60,6 +61,9 @@ private:
     QMutex                 sendMutex;
 
     void startAudioVideoThreads();
+
+signals:
+    void onMediaRestarted();
 };
 
 #endif // DEMUXMEDIA_H
