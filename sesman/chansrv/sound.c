@@ -302,6 +302,7 @@ sound_send_wave_data_chunk(char *data, int data_bytes)
     if ((data_bytes < 4) || (data_bytes > 128 * 1024))
     {
         LOG(0, ("sound_send_wave_data_chunk: bad data_bytes %d", data_bytes));
+        return 0;
     }
 
     /* part one of 2 PDU wave info */
