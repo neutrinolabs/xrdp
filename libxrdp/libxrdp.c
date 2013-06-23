@@ -19,6 +19,7 @@
  */
 
 #include "libxrdp.h"
+#include "xrdp_orders_rail.h"
 
 /******************************************************************************/
 struct xrdp_session *EXPORT_CC
