@@ -1490,9 +1490,11 @@ clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length,
     struct stream *ls;
     char *holdp;
 
-    if (! g_clip_up) {
-        LOG(10, ("aborting clipboard_data_in - clipboard has not been initialized"));
-        // we return 0 here to indicate no protocol problem occured
+    if (!g_clip_up)
+    {
+        LOG(10, ("aborting clipboard_data_in - clipboard has not "
+            "been initialized"));
+        /* we return 0 here to indicate no protocol problem occured */
         return 0;
     }
 
