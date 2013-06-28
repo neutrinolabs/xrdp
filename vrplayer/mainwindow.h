@@ -25,6 +25,8 @@
 #include <QTimer>
 #include <QPixmap>
 #include <QPainter>
+#include <QFile>
+#include <QTimer>
 
 #include "xrdpapi.h"
 #include "xrdpvr.h"
@@ -75,6 +77,7 @@ private slots:
     void onMediaDurationInSeconds(int duration);
     void onElapsedTime(int secs);
     void onSliderActionTriggered(int value);
+    void onMoveCompleted();
 
 protected:
     void resizeEvent(QResizeEvent *e);
@@ -98,6 +101,7 @@ private:
     QSlider       *slider;
     QWidget       *window;
     bool           acceptSliderMove;
+    QTimer        *moveResizeTimer;
 
     /* private stuff */
     OurInterface  *interface;
@@ -109,6 +113,7 @@ private:
     int            stream_id;
     int64_t        elapsedTime; /* elapsed time in usecs since play started */
     int            vcrFlag;
+    bool           gotMediaOnCmdline;
 
     /* private methods */
     void setupUI();

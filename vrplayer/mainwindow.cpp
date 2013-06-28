@@ -4,12 +4,18 @@
 /*
  * TODO
  *      o should we use tick marks in QSlider?
+ *      o check for memory leaks
+ *      o double click should make it full screen
+ *      o when opening files, pause video
  */
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
+    gotMediaOnCmdline = false;
+    moveResizeTimer = NULL;
+
     /* connect to remote client */
     interface = new OurInterface();
     if (interface->oneTimeInit())
@@ -35,16 +41,42 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(interface, SIGNAL(onMediaDurationInSeconds(int)),
             this, SLOT(onMediaDurationInSeconds(int)));
+
+    /* if media file is specified on cmd line, use it */
+    QStringList args = QApplication::arguments();
+    if (args.count() > 1)
+    {
+        if (QFile::exists(args.at(1)))
+        {
+            interface->setFilename(args.at(1));
+            filename = args.at(1);
+            gotMediaOnCmdline = true;
+            on_actionOpen_Media_File_triggered();
+        }
+        else
+        {
+            QMessageBox::warning(this, "Invalid media file specified",
+                                 "\nThe media file\n\n" + args.at(1) +
+                                 "\n\ndoes not exist");
+        }
+    }
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+
+    if (moveResizeTimer)
+        delete moveResizeTimer;
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    if (!oneTimeInitSuccess)
+    if (oneTimeInitSuccess)
+    {
+        interface->deInitRemoteClient();
+    }
+    else
     {
         QMessageBox::warning(this, "Closing application",
                 "This is not an xrdp session with xrdpvr");
@@ -54,18 +86,50 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
 void MainWindow::resizeEvent(QResizeEvent *)
 {
-    QRect rect;
+    if (vcrFlag != VCR_PLAY)
+    {
+        QRect rect;
 
-    getVdoGeometry(&rect);
-    interface->sendGeometry(rect);
+        getVdoGeometry(&rect);
+        interface->sendGeometry(rect);
+        return;
+    }
+
+    interface->setVcrOp(VCR_PAUSE);
+    vcrFlag = VCR_PAUSE;
+
+    if (!moveResizeTimer)
+    {
+        moveResizeTimer = new QTimer;
+        connect(moveResizeTimer, SIGNAL(timeout()),
+                this, SLOT(onMoveCompleted()));
+    }
+    lblVideo->setStyleSheet("QLabel { background-color : black; color : blue; }");
+    moveResizeTimer->start(1000);
 }
 
 void MainWindow::moveEvent(QMoveEvent *)
 {
-    QRect rect;
+    if (vcrFlag != VCR_PLAY)
+    {
+        QRect rect;
 
-    getVdoGeometry(&rect);
-    interface->sendGeometry(rect);
+        getVdoGeometry(&rect);
+        interface->sendGeometry(rect);
+        return;
+    }
+
+    interface->setVcrOp(VCR_PAUSE);
+    vcrFlag = VCR_PAUSE;
+
+    if (!moveResizeTimer)
+    {
+        moveResizeTimer = new QTimer;
+        connect(moveResizeTimer, SIGNAL(timeout()),
+                this, SLOT(onMoveCompleted()));
+    }
+    lblVideo->setStyleSheet("QLabel { background-color : black; color : blue; }");
+    moveResizeTimer->start(1000);
 }
 
 void MainWindow::setupUI()
@@ -208,9 +272,14 @@ void MainWindow::clearDisplay()
 void MainWindow::on_actionOpen_Media_File_triggered()
 {
     if (vcrFlag != 0)
-        onBtnStopClicked(false);
+        onBtnStopClicked(true);
 
-    openMediaFile();
+    /* if media was specified on cmd line, use it just once */
+    if (gotMediaOnCmdline)
+        gotMediaOnCmdline = false;
+    else
+        openMediaFile();
+
     if (filename.length() == 0)
     {
         /* cancel btn was clicked */
@@ -238,7 +307,7 @@ void MainWindow::on_actionOpen_Media_File_triggered()
     remoteClientInited = true;
     interface->playMedia();
 
-    if (vcrFlag != 0)
+    //if (vcrFlag != 0)
     {
         interface->setVcrOp(VCR_PLAY);
         btnPlay->setText("Pause");
@@ -404,3 +473,13 @@ void MainWindow::onSliderActionTriggered(int action)
     }
 }
 
+void MainWindow::onMoveCompleted()
+{
+    QRect rect;
+
+    getVdoGeometry(&rect);
+    interface->sendGeometry(rect);
+
+    interface->setVcrOp(VCR_PLAY);
+    vcrFlag = VCR_PLAY;
+}
