@@ -1490,6 +1490,14 @@ clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length,
     struct stream *ls;
     char *holdp;
 
+    if (!g_clip_up)
+    {
+        LOG(10, ("aborting clipboard_data_in - clipboard has not "
+            "been initialized"));
+        /* we return 0 here to indicate no protocol problem occured */
+        return 0;
+    }
+
     LLOGLN(10, ("clipboard_data_in: chan_id %d "
             "chan_flags 0x%x length %d total_length %d "
             "in_request %d g_ins->size %d",

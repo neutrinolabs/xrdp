@@ -314,6 +314,8 @@ process_message_channel_setup(struct stream *s)
     int index;
     int rv;
     struct chan_item *ci;
+    struct chan_out_data *cod;
+    struct chan_out_data *old_cod;
 
     g_num_chan_items = 0;
     g_cliprdr_index = -1;
@@ -336,6 +338,25 @@ process_message_channel_setup(struct stream *s)
         g_memset(ci->name, 0, sizeof(ci->name));
         in_uint8a(s, ci->name, 8);
         in_uint16_le(s, ci->id);
+        /* there might be leftover data from last session after reconnecting
+           so free it */
+        if (ci->head != 0)
+        {
+            cod = ci->head;
+            while (1)
+            {
+                free_stream(cod->s);
+                old_cod = cod;
+                cod = cod->next;
+                g_free(old_cod);
+                if (ci->tail == old_cod)
+                {
+                    break;
+                }
+            }
+        }
+        ci->head = 0;
+        ci->tail = 0;
         in_uint16_le(s, ci->flags);
         LOGM((LOG_LEVEL_DEBUG, "process_message_channel_setup: chan name '%s' "
               "id %d flags %8.8x", ci->name, ci->id, ci->flags));
@@ -386,6 +407,8 @@ process_message_channel_setup(struct stream *s)
 
     if (g_rdpsnd_index >= 0)
     {
+        /* gets reset to 1 by next send_data_from_chan_item */
+        g_sent = 0; /* wait for response! */
         sound_init();
     }
 

@@ -53,8 +53,9 @@ struct pointer_item
 {
   int hotx;
   int hoty;
-  char data[32 * 32 * 3];
+  char data[32 * 32 * 4];
   char mask[32 * 32 / 8];
+  int bpp;
 };
 
 #define CURRENT_MOD_VER 2
@@ -148,6 +149,8 @@ struct mod
   int (*server_monitored_desktop)(struct mod* mod,
                                   struct rail_monitored_desktop_order* mdo,
                                   int flags);
+  int (*server_set_pointer_ex)(struct mod* mod, int x, int y, char* data,
+                               char* mask, int bpp);
 
   long server_dumby[100 - 37]; /* align, 100 minus the number of server
                                   functions above */
