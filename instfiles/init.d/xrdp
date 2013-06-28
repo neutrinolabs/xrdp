@@ -15,7 +15,9 @@
 ### END INIT INFO
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-DAEMON=/usr/sbin/xrdp
+BASE=/usr/sbin
+DAEMON=${BASE}/xrdp
+SDAEMON=${BASE}/xrdp-sesman
 PIDDIR=/var/run/xrdp/
 SESMAN_START=yes
 #USERID=xrdp
@@ -97,7 +99,7 @@ case "$1" in
 	if [ "$SESMAN_START" = "yes" ] ; then
             log_progress_msg "sesman"
             start-stop-daemon --start --quiet --oknodo --pidfile $PIDDIR/xrdp-sesman.pid \
-	       --exec /usr/sbin/xrdp-sesman >/dev/null
+	       --exec $SDAEMON >/dev/null
             value=$?
             [ $value -gt 0 ] && exitval=$value
         fi
@@ -117,9 +119,9 @@ case "$1" in
         exitval=0
         log_daemon_msg "Stopping RDP Session manager " 
         log_progress_msg "sesman"
-        if pidofproc -p  $PIDDIR/xrdp-sesman.pid /usr/sbin/xrdp-sesman  > /dev/null; then
+        if pidofproc -p  $PIDDIR/xrdp-sesman.pid $SDAEMON  > /dev/null; then
             start-stop-daemon --stop --quiet --oknodo --pidfile $PIDDIR/xrdp-sesman.pid \
-                --chuid $USERID:$USERID --exec /usr/sbin/xrdp-sesman
+                --chuid $USERID:$USERID --exec $SDAEMON
             exitval=$?
         else
             log_progress_msg "apparently not running"
@@ -164,7 +166,7 @@ case "$1" in
         fi
 	if [ "$SESMAN_START" = "yes" ] ; then
             log_daemon_msg "Checking status of RDP Session Manager" "sesman"
-            if pidofproc -p  $PIDDIR/xrdp-sesman.pid /usr/sbin/xrdp-sesman  > /dev/null; then
+            if pidofproc -p  $PIDDIR/xrdp-sesman.pid $SDAEMON  > /dev/null; then
                 log_progress_msg "running"
                 log_end_msg 0
             else
