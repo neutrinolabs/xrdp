@@ -3,9 +3,19 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define ALIGN_BY 1024
+#define ALIGN_BY 32
 #define ALIGN_BY_M1 (ALIGN_BY - 1)
 #define ALIGN(_in) (((_in) + ALIGN_BY_M1) & (~ALIGN_BY_M1))
+
+#define LLOG_LEVEL 1
+#define LLOGLN(_log_level, _params) \
+do { \
+  if (_log_level < LLOG_LEVEL) \
+  { \
+    printf _params ; \
+    printf ("\n") ; \
+  } \
+} while (0)
 
 struct mem_item
 {
@@ -24,6 +34,7 @@ struct mem_info
   struct mem_item* free_tail;
   struct mem_item* used_head;
   struct mem_item* used_tail;
+  int total_bytes;
 };
 
 /*****************************************************************************/
@@ -198,6 +209,28 @@ libmem_add_free_item(struct mem_info* self, unsigned int addr, int bytes)
   {
     if (mi->addr > addr)
     {
+      if (mi->prev != 0)
+      {
+        if (mi->prev->addr + mi->prev->bytes == addr)
+        {
+          /* don't need to add, just make prev bigger */
+          mi->prev->bytes += bytes;
+          if (mi->prev->addr + mi->prev->bytes == mi->addr)
+          {
+            /* here we can remove one */
+            mi->prev->bytes += mi->bytes;
+            libmem_free_mem_item(self, mi);
+          }
+          return 0;
+        }
+      }
+      if (addr + bytes == mi->addr)
+      {
+        /* don't need to add here either */
+        mi->addr = addr;
+        mi->bytes += bytes;
+        return 0;
+      }
       /* add before */
       new_mi = (struct mem_item*)malloc(sizeof(struct mem_item));
       memset(new_mi, 0, sizeof(struct mem_item));
@@ -235,72 +268,34 @@ libmem_add_free_item(struct mem_info* self, unsigned int addr, int bytes)
 
 /*****************************************************************************/
 static int
-libmem_pack_free(struct mem_info* self)
-{
-  struct mem_item* mi;
-  int cont;
-
-  cont = 1;
-  while (cont)
-  {
-    cont = 0;
-    mi = self->free_head;
-    while (mi != 0)
-    {
-      /* combine */
-      if (mi->next != 0)
-      {
-        if (mi->addr + mi->bytes == mi->next->addr)
-        {
-          mi->bytes += mi->next->bytes;
-          cont = 1;
-          libmem_free_mem_item(self, mi->next);
-        }
-      }
-      /* remove empties */
-      if (mi->bytes == 0)
-      {
-        cont = 1;
-        libmem_free_mem_item(self, mi);
-        mi = self->free_head;
-        continue;
-      }
-      mi = mi->next;
-    }
-  }
-  return 0;
-}
-
-/*****************************************************************************/
-static int
 libmem_print(struct mem_info* self)
 {
   struct mem_item* mi;
 
-  printf("libmem_print:\n");
-  printf("  used_head %p\n", self->used_head);
-  printf("  used_tail %p\n", self->used_tail);
+  LLOGLN(0, ("libmem_print:"));
+  LLOGLN(0, ("  used_head %p", self->used_head));
+  LLOGLN(0, ("  used_tail %p", self->used_tail));
   mi = self->used_head;
   if (mi != 0)
   {
-    printf("  used list\n");
+    LLOGLN(0, ("  used list"));
     while (mi != 0)
     {
-      printf("    ptr %p prev %p next %p addr 0x%8.8x bytes %d\n",
-             mi, mi->prev, mi->next, mi->addr, mi->bytes);
+      LLOGLN(0, ("    ptr %p prev %p next %p addr 0x%8.8x bytes %d",
+             mi, mi->prev, mi->next, mi->addr, mi->bytes));
       mi = mi->next;
     }
   }
-  printf("  free_head %p\n", self->free_head);
-  printf("  free_tail %p\n", self->free_tail);
+  LLOGLN(0, ("  free_head %p", self->free_head));
+  LLOGLN(0, ("  free_tail %p", self->free_tail));
   mi = self->free_head;
   if (mi != 0)
   {
-    printf("  free list\n");
+    LLOGLN(0, ("  free list"));
     while (mi != 0)
     {
-      printf("    ptr %p prev %p next %p addr 0x%8.8x bytes %d\n",
-             mi, mi->prev, mi->next, mi->addr, mi->bytes);
+      LLOGLN(0, ("    ptr %p prev %p next %p addr 0x%8.8x bytes %d",
+             mi, mi->prev, mi->next, mi->addr, mi->bytes));
       mi = mi->next;
     }
   }
@@ -322,42 +317,26 @@ libmem_alloc(void* obj, int bytes)
   bytes = ALIGN(bytes);
   self = (struct mem_info*)obj;
   addr = 0;
-  if (bytes > 16 * 1024)
+  mi = self->free_head;
+  while (mi != 0)
   {
-    /* big blocks */
-    mi = self->free_tail;
-    while (mi != 0)
+    if (bytes <= mi->bytes)
     {
-      if (bytes <= mi->bytes)
+      addr = mi->addr;
+      mi->bytes -= bytes;
+      mi->addr += bytes;
+      if (mi->bytes < 1)
       {
-        addr = mi->addr;
-        mi->bytes -= bytes;
-        mi->addr += bytes;
-        break;
+        libmem_free_mem_item(self, mi);
       }
-      mi = mi->prev;
+      break;
     }
-  }
-  else
-  {
-    /* small blocks */
-    mi = self->free_head;
-    while (mi != 0)
-    {
-      if (bytes <= mi->bytes)
-      {
-        addr = mi->addr;
-        mi->bytes -= bytes;
-        mi->addr += bytes;
-        break;
-      }
-      mi = mi->next;
-    }
+    mi = mi->next;
   }
   if (addr != 0)
   {
+    self->total_bytes += bytes;
     libmem_add_used_item(self, addr, bytes);
-    libmem_pack_free(self);
     if (self->flags & 1)
     {
       libmem_print(self);
@@ -365,7 +344,7 @@ libmem_alloc(void* obj, int bytes)
   }
   else
   {
-    printf("libmem_alloc: error\n");
+    LLOGLN(0, ("libmem_alloc: error"));
   }
   return addr;
 }
@@ -382,23 +361,23 @@ libmem_free(void* obj, unsigned int addr)
     return 0;
   }
   self = (struct mem_info*)obj;
-  mi = self->used_head;
+  mi = self->used_tail;
   while (mi != 0)
   {
     if (mi->addr == addr)
     {
+      self->total_bytes -= mi->bytes;
       libmem_add_free_item(self, mi->addr, mi->bytes);
       libmem_free_mem_item(self, mi);
-      libmem_pack_free(self);
       if (self->flags & 1)
       {
         libmem_print(self);
       }
       return 0;
     }
-    mi = mi->next;
+    mi = mi->prev;
   }
-  printf("libmem_free: error\n");
+  LLOGLN(0, ("libmem_free: error"));
   return 1;
 }
 
