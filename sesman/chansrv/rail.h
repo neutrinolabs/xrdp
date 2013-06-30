@@ -19,6 +19,7 @@
 #ifndef _RAIL_H_
 #define _RAIL_H_
 
+#include "../../common/rail.h"
 #include "arch.h"
 #include "parse.h"
 
