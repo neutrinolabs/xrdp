@@ -28,6 +28,7 @@
 #include "log.h"
 #include "os_calls.h"
 #include "thread_calls.h"
+#include "list.h"
 
 extern int g_rail_chan_id;      /* in chansrv.c */
 extern int g_display_num;       /* in chansrv.c */
@@ -49,6 +50,8 @@ int g_rail_up = 0;
 
 /* for rail_is_another_wm_running */
 static int g_rail_running = 1;
+/* list of valid rail windows */
+static struct list* g_window_list = 0;
 
 /* Indicates a Client Execute PDU from client to server. */
 #define TS_RAIL_ORDER_EXEC 0x0001
@@ -219,7 +222,8 @@ rail_init(void)
         log_message(LOG_LEVEL_ERROR, "rail_init: another window manager "
                     "is running");
     }
-
+    list_delete(g_window_list);
+    g_window_list = list_create();
     rail_send_init();
     g_rail_up = 1;
     return 0;
@@ -231,6 +235,8 @@ rail_deinit(void)
 {
     if (g_rail_up)
     {
+        list_delete(g_window_list);
+        g_window_list = 0;
         /* no longer window manager */
         XSelectInput(g_display, g_root_window, 0);
         g_rail_up = 0;
@@ -1051,6 +1057,7 @@ rail_xevent(void *xevent)
     XEvent *lxevent;
     XWindowChanges xwc;
     int rv;
+    int index;
     XWindowAttributes wnd_attributes;
     char* prop_name;
 
@@ -1105,17 +1112,18 @@ rail_xevent(void *xevent)
             XSelectInput(g_display, lxevent->xcreatewindow.window,
                          PropertyChangeMask | StructureNotifyMask);
             rail_win_set_state(lxevent->xcreatewindow.window, 0x0); /* WithdrawnState */
+            list_add_item(g_window_list, lxevent->xcreatewindow.window);
             rv = 0;
             break;
 
         case DestroyNotify:
             LOG(10, ("  got DestroyNotify 0x%8.8x", lxevent->xdestroywindow.window));
-            /*
-             * FIXME The destroy msg may be sent from a non-rail window. Ideally,
-             *       this will be handled by client, but we better have to maintain
-             *       a list of managed rail windows here.
-             */
-            rail_destroy_window(lxevent->xdestroywindow.window);
+            index = list_index_of(g_window_list, lxevent->xdestroywindow.window);
+            if (index >= 0)
+            {
+                rail_destroy_window(lxevent->xdestroywindow.window);
+                list_remove_item(g_window_list, index);
+            }
             v = 0;
             break;
             
