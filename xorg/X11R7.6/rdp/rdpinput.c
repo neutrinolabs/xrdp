@@ -916,9 +916,13 @@ KbdAddEvent(int down, int param1, int param2, int param3, int param4)
 
             if (x_scancode > 0)
             {
+                /* left or right shift */
+                if ((rdp_scancode == 42) || (rdp_scancode == 54))
+                {
+                    g_shift_down = down ? x_scancode : 0;
+                }
                 rdpEnqueueKey(type, x_scancode);
             }
-
             break;
 
         case 56: /* left - right alt button */
@@ -932,6 +936,7 @@ KbdAddEvent(int down, int param1, int param2, int param3, int param4)
                 x_scancode = 64;  /* left alt button   */
             }
 
+            g_alt_down = down ? x_scancode : 0;
             rdpEnqueueKey(type, x_scancode);
             break;
 
