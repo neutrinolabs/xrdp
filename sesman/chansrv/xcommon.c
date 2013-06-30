@@ -42,6 +42,7 @@ Atom g_wm_delete_window_atom = 0;
 Atom g_wm_protocols_atom = 0;
 Atom g_utf8_string = 0;
 Atom g_net_wm_name = 0;
+Atom g_wm_state = 0;
 
 /*****************************************************************************/
 static int DEFAULT_CC
@@ -119,9 +120,10 @@ xcommon_init(void)
 
     g_wm_delete_window_atom = XInternAtom(g_display, "WM_DELETE_WINDOW", 0);
     g_wm_protocols_atom = XInternAtom(g_display, "WM_PROTOCOLS", 0);
-    g_utf8_string = XInternAtom(g_display, "UTF8_STRIING", 0);
+    g_utf8_string = XInternAtom(g_display, "UTF8_STRING", 0);
     g_net_wm_name = XInternAtom(g_display, "_NET_WM_NAME", 0);
-
+    g_wm_state = XInternAtom(g_display, "WM_STATE", 0);
+    
     return 0;
 }
 

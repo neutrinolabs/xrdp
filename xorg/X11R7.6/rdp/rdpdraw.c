@@ -824,8 +824,10 @@ rdpDestroyWindow(WindowPtr pWindow)
 
     if (g_use_rail)
     {
+#ifdef XRDP_WM_RDPUP
         LLOGLN(10, ("  rdpup_delete_window"));
         rdpup_delete_window(pWindow, priv);
+#endif
     }
 
     return rv;
@@ -887,7 +889,9 @@ rdpRealizeWindow(WindowPtr pWindow)
                             pWindow->drawable.x, pWindow->drawable.y,
                             pWindow->drawable.width, pWindow->drawable.height));
                 priv->status = 1;
+#ifdef XRDP_WM_RDPUP
                 rdpup_create_window(pWindow, priv);
+#endif
             }
         }
     }
@@ -917,6 +921,7 @@ rdpUnrealizeWindow(WindowPtr pWindow)
             LLOGLN(10, ("rdpUnrealizeWindow:"));
             priv->status = 0;
             if (pWindow->overrideRedirect) {
+#ifdef XRDP_WM_RDPUP
                 /*
                  * Popups are unmapped by X server, so probably
                  * they will be mapped again. Thereby we should
@@ -925,6 +930,7 @@ rdpUnrealizeWindow(WindowPtr pWindow)
                  */
                 LLOGLN(10, ("  rdpup_show_window"));
                 rdpup_show_window(pWindow, priv, 0x0); /* 0x0 - do not show the window */
+#endif
             }
         }
     }
