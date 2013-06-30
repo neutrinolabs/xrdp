@@ -528,19 +528,6 @@ process_message_channel_data(struct stream *s)
 /*****************************************************************************/
 /* returns error */
 static int APP_CC
-process_message_channel_rail_title_request(struct stream* s)
-{
-    int window_id;
-    LOG(10, ("process_message_channel_rail_title_request:"));
-    
-    in_uint32_le(s, window_id);
-    rail_request_title(window_id);
-    return 0;
-}
-
-/*****************************************************************************/
-/* returns error */
-static int APP_CC
 process_message_channel_data_response(struct stream *s)
 {
     LOG(10, ("process_message_channel_data_response:"));
@@ -594,9 +581,6 @@ process_message(void)
                 break;
             case 7: /* channel data response */
                 rv = process_message_channel_data_response(s);
-                break;
-            case 9:
-                rv = process_message_channel_rail_title_request(s);
                 break;
             default:
                 LOGM((LOG_LEVEL_ERROR, "process_message: error in process_message ",

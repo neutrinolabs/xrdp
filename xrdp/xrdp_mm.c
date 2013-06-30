@@ -676,28 +676,157 @@ xrdp_mm_trans_process_channel_data(struct xrdp_mm *self, struct trans *trans)
 }
 
 /*****************************************************************************/
-/* returns error */
+/* returns error
+   process rail create window order */
 static int APP_CC
-xrdp_mm_trans_send_channel_rail_title_request(struct xrdp_mm* self,
-                                              int window_id)
+xrdp_mm_process_rail_create_window(struct xrdp_mm* self, struct stream* s)
 {
-    struct stream* s;
+    int flags;
+    int window_id;
+    int title_bytes;
+    int index;
+    int bytes;
+    int rv;
+    struct rail_window_state_order rwso;
     
-    s = trans_get_out_s(self->chan_trans, 8192);
-    g_writeln("xrdp_mm_trans_send_channel_rail_title_request: 0x%8.8x",
-              window_id);
+    g_memset(&rwso, 0, sizeof(rwso));
+    in_uint32_le(s, window_id);
     
-    if (s == 0)
+    g_writeln("xrdp_mm_process_rail_create_window: 0x%8.8x", window_id);
+    
+    in_uint32_le(s, rwso.owner_window_id);
+    in_uint32_le(s, rwso.style);
+    in_uint32_le(s, rwso.extended_style);
+    in_uint32_le(s, rwso.show_state);
+    in_uint16_le(s, title_bytes);
+    if (title_bytes > 0)
     {
-        return 1;
+        rwso.title_info = g_malloc(title_bytes + 1, 0);
+        in_uint8a(s, rwso.title_info, title_bytes);
+        rwso.title_info[title_bytes] = 0;
     }
-    out_uint32_le(s, 0); /* version */
-    out_uint32_le(s, 8 + 8 + 4); /* size */
-    out_uint32_le(s, 9); /* msg id */
-    out_uint32_le(s, 8 + 4); /* size */
-    out_uint32_le(s, window_id);
-    s_mark_end(s);
-    return trans_force_write(self->chan_trans);
+    in_uint32_le(s, rwso.client_offset_x);
+    in_uint32_le(s, rwso.client_offset_y);
+    in_uint32_le(s, rwso.client_area_width);
+    in_uint32_le(s, rwso.client_area_height);
+    in_uint32_le(s, rwso.rp_content);
+    in_uint32_le(s, rwso.root_parent_handle);
+    in_uint32_le(s, rwso.window_offset_x);
+    in_uint32_le(s, rwso.window_offset_y);
+    in_uint32_le(s, rwso.window_client_delta_x);
+    in_uint32_le(s, rwso.window_client_delta_y);
+    in_uint32_le(s, rwso.window_width);
+    in_uint32_le(s, rwso.window_height);
+    in_uint16_le(s, rwso.num_window_rects);
+    if (rwso.num_window_rects > 0)
+    {
+        bytes = sizeof(struct rail_window_rect) * rwso.num_window_rects;
+        rwso.window_rects = (struct rail_window_rect*)g_malloc(bytes, 0);
+        for (index = 0; index < rwso.num_window_rects; index++)
+        {
+            in_uint16_le(s, rwso.window_rects[index].left);
+            in_uint16_le(s, rwso.window_rects[index].top);
+            in_uint16_le(s, rwso.window_rects[index].right);
+            in_uint16_le(s, rwso.window_rects[index].bottom);
+        }
+    }
+    in_uint32_le(s, rwso.visible_offset_x);
+    in_uint32_le(s, rwso.visible_offset_y);
+    in_uint16_le(s, rwso.num_visibility_rects);
+    if (rwso.num_visibility_rects > 0)
+    {
+        bytes = sizeof(struct rail_window_rect) * rwso.num_visibility_rects;
+        rwso.visibility_rects = (struct rail_window_rect*)g_malloc(bytes, 0);
+        for (index = 0; index < rwso.num_visibility_rects; index++)
+        {
+            in_uint16_le(s, rwso.visibility_rects[index].left);
+            in_uint16_le(s, rwso.visibility_rects[index].top);
+            in_uint16_le(s, rwso.visibility_rects[index].right);
+            in_uint16_le(s, rwso.visibility_rects[index].bottom);
+        }
+    }
+    in_uint32_le(s, flags);
+    rv = libxrdp_orders_init(self->wm->session);
+    rv = libxrdp_window_new_update(self->wm->session, window_id, &rwso, flags);
+    rv = libxrdp_orders_send(self->wm->session);
+    g_free(rwso.title_info);
+    g_free(rwso.window_rects);
+    g_free(rwso.visibility_rects);
+    return rv;
+}
+
+/*****************************************************************************/
+/* returns error
+   process rail destroy window order */
+static int APP_CC
+xrdp_mm_process_rail_destroy_window(struct xrdp_mm* self, struct stream* s)
+{
+    int window_id;
+    int rv;
+    
+    in_uint32_le(s, window_id);
+    g_writeln("xrdp_mm_process_rail_destroy_window 0x%8.8x", window_id);
+    rv = libxrdp_orders_init(self->wm->session);
+    rv = libxrdp_window_delete(self->wm->session, window_id);
+    rv = libxrdp_orders_send(self->wm->session);
+    return rv;
+}
+
+/*****************************************************************************/
+/* returns error
+   process rail update window (show state) order */
+static int APP_CC
+xrdp_mm_process_rail_show_window(struct xrdp_mm* self, struct stream* s)
+{
+    int window_id;
+    int rv;
+    int flags;
+    struct rail_window_state_order rwso;
+    
+    g_memset(&rwso, 0, sizeof(rwso));
+    in_uint32_le(s, window_id);
+    in_uint32_le(s, flags);
+    in_uint32_le(s, rwso.show_state);
+    g_writeln("xrdp_mm_process_rail_show_window 0x%8.8x %x", window_id,
+              rwso.show_state);
+    rv = libxrdp_orders_init(self->wm->session);
+    rv = libxrdp_window_new_update(self->wm->session, window_id, &rwso, flags);
+    rv = libxrdp_orders_send(self->wm->session);
+    return rv;
+}
+
+/*****************************************************************************/
+/* returns error
+   process rail update window (title) order */
+static int APP_CC
+xrdp_mm_process_rail_update_window_text(struct xrdp_mm* self, struct stream* s)
+{
+    int size;
+    int flags;
+    int rv = 0;
+    int window_id;
+    struct rail_window_state_order rwso;
+    
+    g_writeln("xrdp_mm_process_rail_update_window_text:");
+    
+    in_uint32_le(s, window_id);
+    in_uint32_le(s, flags);
+    g_writeln("  update window title info: 0x%8.8x", window_id);
+    
+    g_memset(&rwso, 0, sizeof(rwso));
+    in_uint32_le(s, size); /* title size */
+    rwso.title_info = g_malloc(size + 1, 0);
+    in_uint8a(s, rwso.title_info, size);
+    rwso.title_info[size] = 0;
+    g_writeln("  set window title %s size %d 0x%8.8x", rwso.title_info, size, flags);
+    rv = libxrdp_orders_init(self->wm->session);
+    rv = libxrdp_window_new_update(self->wm->session, window_id, &rwso, flags);
+    rv = libxrdp_orders_send(self->wm->session);
+    g_writeln("  set window title %s %d", rwso.title_info, rv);
+    
+    g_free(rwso.title_info);
+
+    return rv;
 }
 
 /*****************************************************************************/
@@ -707,14 +836,9 @@ static int APP_CC
 xrdp_mm_process_rail_drawing_orders(struct xrdp_mm* self, struct trans* trans)
 {
     struct stream* s;
-    int size;
     int order_type;
-    int window_id;
-    int flags;
     int rv = 0;
     struct rail_window_state_order rwso;
-    
-    g_writeln("xrdp_mm_process_rail_drawing_orders:");
     
     s = trans_get_in_s(trans);
     if (s == 0)
@@ -725,27 +849,23 @@ xrdp_mm_process_rail_drawing_orders(struct xrdp_mm* self, struct trans* trans)
     
     switch(order_type)
     {
-        case 2: /* update title info */
-            in_uint32_le(s, window_id);
-            g_writeln("  update window title info: 0x%8.8x", window_id);
-            
-            g_memset(&rwso, 0, sizeof(rwso));
-            in_uint32_le(s, size); /* title size */
-            rwso.title_info = g_malloc(size + 1, 0);
-            in_uint8a(s, rwso.title_info, size);
-            rwso.title_info[size] = 0;
-            flags = WINDOW_ORDER_FIELD_TITLE;
-            rv = libxrdp_orders_init(self->wm->session);
-            rv = libxrdp_window_new_update(self->wm->session, window_id, &rwso, flags);
-            rv = libxrdp_orders_send(self->wm->session);
-            g_writeln("  set window title %s %d", rwso.title_info, rv);
-            g_free(rwso.title_info);
+        case 2: /* create_window */
+            xrdp_mm_process_rail_create_window(self, s);
+            break;
+        case 4: /* destroy_window */
+            xrdp_mm_process_rail_destroy_window(self, s);
+            break;
+        case 6: /* show_window */
+            rv = xrdp_mm_process_rail_show_window(self, s);
+            break;
+        case 8: /* update title info */
+            rv = xrdp_mm_process_rail_update_window_text(self, s);
             break;
         default:
             break;
     }
     
-    return 0;
+    return rv;
 }
 
 /*****************************************************************************/
@@ -2627,12 +2747,6 @@ server_window_new_update(struct xrdp_mod *mod, int window_id,
     struct xrdp_wm *wm;
 
     wm = (struct xrdp_wm *)(mod->wm);
-    if ((flags & WINDOW_ORDER_STATE_NEW) &&
-        !(window_state->style & 0x80000000))
-    {
-        /* requesting title info / icon info */
-        xrdp_mm_trans_send_channel_rail_title_request(wm->mm, window_id);
-    }
     return libxrdp_window_new_update(wm->session, window_id,
                                      window_state, flags);
 }

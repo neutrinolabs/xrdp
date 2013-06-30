@@ -760,7 +760,9 @@ rdpup_process_msg(struct stream *s)
         if (g_rdpScreen.client_info.rail_support_level > 0)
         {
             g_use_rail = 1;
+#ifdef XRDP_WM_RDPUP
             rdpup_send_rail();
+#endif
         }
         if (g_rdpScreen.client_info.offscreen_cache_entries == 2000)
         {
