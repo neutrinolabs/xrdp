@@ -41,6 +41,8 @@ extern Screen *g_screen;             /* in xcommon.c */
 extern Window g_root_window;         /* in xcommon.c */
 extern Atom g_wm_delete_window_atom; /* in xcommon.c */
 extern Atom g_wm_protocols_atom;     /* in xcommon.c */
+extern Atom g_utf8_string;           /* in xcommon.c */
+extern Atom g_net_wm_name;           /* in xcommon.c */
 
 int g_rail_up = 0;
 
@@ -270,6 +272,25 @@ rail_process_exec(struct stream *s, int size)
     return 0;
 }
 
+/******************************************************************************/
+static int APP_CC
+rail_close_window(int window_id)
+{
+    XEvent ce;
+    
+    LOG(0, ("chansrv::rail_close_window:"));
+    g_memset(&ce, 0, sizeof(ce));
+    ce.xclient.type = ClientMessage;
+    ce.xclient.message_type = g_wm_protocols_atom;
+    ce.xclient.display = g_display;
+    ce.xclient.window = window_id;
+    ce.xclient.format = 32;
+    ce.xclient.data.l[0] = g_wm_delete_window_atom;
+    ce.xclient.data.l[1] = CurrentTime;
+    XSendEvent(g_display, window_id, False, NoEventMask, &ce);
+    return 0;
+}
+
 /*****************************************************************************/
 static int APP_CC
 rail_process_activate(struct stream *s, int size)
@@ -288,8 +309,15 @@ rail_process_activate(struct stream *s, int size)
         XRaiseWindow(g_display, window_id);
         LOG(10, ("chansrv::rail_process_activate: calling XSetInputFocus 0x%8.8x", window_id));
         XSetInputFocus(g_display, window_id, RevertToParent, CurrentTime);
-    }
+    } else {
+        XWindowAttributes window_attributes;
+        XGetWindowAttributes(g_display, window_id, &window_attributes);
 
+        if (window_attributes.override_redirect) {
+            LOG(10, ("  dismiss popup window 0x%8.8x", window_id));
+            rail_close_window(window_id);
+        }
+    }
     return 0;
 }
 
@@ -307,21 +335,25 @@ rail_process_system_param(struct stream *s, int size)
 
 /******************************************************************************/
 static int APP_CC
-rail_close_window(int window_id)
+rail_minmax_window(int window_id, int max)
 {
-    XEvent ce;
+    LOG(10, ("chansrv::rail_minmax_window 0x%8.8x:", window_id));
+    if (max)
+    {
+        
+    } else {
+        XUnmapWindow(g_display, window_id);
+        LOG(10, ("  XUnmapWindow"));
+    }
+}
 
-    LOG(0, ("chansrv::rail_close_window:"));
-    g_memset(&ce, 0, sizeof(ce));
-    ce.xclient.type = ClientMessage;
-    ce.xclient.message_type = g_wm_protocols_atom;
-    ce.xclient.display = g_display;
-    ce.xclient.window = window_id;
-    ce.xclient.format = 32;
-    ce.xclient.data.l[0] = g_wm_delete_window_atom;
-    ce.xclient.data.l[1] = CurrentTime;
-    XSendEvent(g_display, window_id, False, NoEventMask, &ce);
-    return 0;
+/*****************************************************************************/
+static int APP_CC
+rail_restore_window(int window_id)
+{
+    LOG(10, ("chansrv::rail_restore_window 0x%8.8x:", window_id));
+    LOG(10, ("  XMapWindow"));
+    XMapWindow(g_display, window_id);
 }
 
 /*****************************************************************************/
@@ -345,6 +377,7 @@ rail_process_system_command(struct stream *s, int size)
             break;
         case SC_MINIMIZE:
             LOG(10, ("  window_id 0x%8.8x SC_MINIMIZE", window_id));
+            rail_minmax_window(window_id, 0);
             break;
         case SC_MAXIMIZE:
             LOG(10, ("  window_id 0x%8.8x SC_MAXIMIZE", window_id));
@@ -358,6 +391,7 @@ rail_process_system_command(struct stream *s, int size)
             break;
         case SC_RESTORE:
             LOG(10, ("  window_id 0x%8.8x SC_RESTORE", window_id));
+            rail_restore_window(window_id);
             break;
         case SC_DEFAULT:
             LOG(10, ("  window_id 0x%8.8x SC_DEFAULT", window_id));
@@ -589,6 +623,89 @@ rail_data_in(struct stream *s, int chan_id, int chan_flags, int length,
 }
 
 /*****************************************************************************/
+int APP_CC
+rail_get_property(Display *display, Window target, Atom type, Atom property,
+                  unsigned char** data, unsigned long* count) {
+    Atom atom_return;
+    int size;
+    unsigned long nitems, bytes_left;
+    
+    int ret = XGetWindowProperty(display, target, property,
+                                 0l, 1l, False,
+                                 type, &atom_return, &size,
+                                 &nitems, &bytes_left, data);
+    if (ret != Success || nitems < 1)
+    {
+        return 0;
+    }
+    
+    if (bytes_left != 0)
+    {
+        XFree(*data);
+        unsigned long remain = ((size / 8) * nitems) + bytes_left;
+        ret = XGetWindowProperty(g_display, target,
+                                 property, 0l, remain, False,
+                                 type, &atom_return, &size,
+                                 &nitems, &bytes_left, data);
+        if (ret != Success)
+        {
+            return 1;
+        }
+    }
+    
+    *count = nitems;
+    return 0;
+}
+
+/*****************************************************************************/
+const int APP_CC
+rail_send_win_text(Display *disp, Window win) {
+    unsigned char *data = 0;
+    unsigned long nitems = 0;
+    struct stream* s;
+    
+    rail_get_property(disp, win, g_utf8_string, g_net_wm_name,
+                      &data, &nitems);
+    if (nitems == 0)
+    {
+        /* _NET_WM_NAME isn't set, use WM_NAME (XFetchName) instead */
+        XFetchName(disp, win, (char **)&data);
+    }
+    
+    if (data)
+    {
+        int i = 0;
+        for (;;i++)
+        {
+            if (data[i] == '\0')
+            {
+                break;
+            }
+        }
+        LOG(10, ("rail_send_win_text: 0x%8.8x text 0x%x size %d", win, data, i));
+        make_stream(s);
+        init_stream(s, 1024);
+        
+        out_uint32_le(s, 2); /* update title info */
+        out_uint32_le(s, win); /* window id */
+        out_uint32_le(s, i); /* title size */
+        out_uint8a(s, data, i); /* title */
+        s_mark_end(s);
+        send_rail_drawing_orders(s->data, (int)(s->end - s->data));
+        free_stream(s);
+        XFree(data);
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+rail_request_title(int window_id)
+{
+    return rail_send_win_text(g_display, (Window)window_id);
+}
+
+/*****************************************************************************/
 /* returns 0, event handled, 1 unhandled */
 int APP_CC
 rail_xevent(void *xevent)
@@ -596,6 +713,14 @@ rail_xevent(void *xevent)
     XEvent *lxevent;
     XWindowChanges xwc;
     int rv;
+    int nchildren_return = 0;
+    Window root_return;
+    Window parent_return;
+    Window *children_return;
+    Window wreturn;
+    int revert_to;
+    XWindowAttributes wnd_attributes;
+    char* prop_name;
 
     LOG(10, ("chansrv::rail_xevent:"));
 
@@ -609,6 +734,17 @@ rail_xevent(void *xevent)
 
     switch (lxevent->type)
     {
+        case PropertyNotify:
+            prop_name = XGetAtomName(g_display, lxevent->xproperty.atom);
+            LOG(10, ("  got PropertyNotify window_id 0x%8.8x %s",
+                     lxevent->xproperty.window, prop_name));
+            if (strcmp(prop_name, "WM_NAME") == 0 ||
+                strcmp(prop_name, "_NEW_WM_NAME") == 0)
+            {
+                rail_send_win_text(g_display, lxevent->xproperty.window);
+                rv = 0;
+            }
+            break;
         case ConfigureRequest:
             LOG(10, ("  got ConfigureRequest window_id 0x%8.8x", lxevent->xconfigurerequest.window));
             g_memset(&xwc, 0, sizeof(xwc));
@@ -626,6 +762,13 @@ rail_xevent(void *xevent)
             rv = 0;
             break;
 
+        case CreateNotify:
+            LOG(10, ("  got CreateNotify"));
+            XSelectInput(g_display, lxevent->xcreatewindow.window,
+                         PropertyChangeMask | StructureNotifyMask);
+            v = 0;
+            break;
+            
         case MapRequest:
             LOG(10, ("  got MapRequest"));
             XMapWindow(g_display, lxevent->xmaprequest.window);

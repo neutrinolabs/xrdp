@@ -1772,7 +1772,7 @@ rdpup_create_window(WindowPtr pWindow, rdpWindowRec *priv)
         out_uint32_le(g_out_s, style); /* style */
         out_uint32_le(g_out_s, ext_style); /* extended_style */
         flags |= WINDOW_ORDER_FIELD_STYLE;
-        out_uint32_le(g_out_s, 0); /* show_state */
+        out_uint32_le(g_out_s, 0x05); /* show_state */
         flags |= WINDOW_ORDER_FIELD_SHOW;
         out_uint16_le(g_out_s, title_bytes); /* title_info */
         out_uint8a(g_out_s, title, title_bytes);
@@ -1839,6 +1839,27 @@ rdpup_delete_window(WindowPtr pWindow, rdpWindowRec *priv)
         out_uint16_le(g_out_s, 8);
         g_count++;
         out_uint32_le(g_out_s, pWindow->drawable.id); /* window_id */
+    }
+}
+
+/******************************************************************************/
+void
+rdpup_show_window(WindowPtr pWindow, rdpWindowRec* priv, int showState)
+{
+    LLOGLN(10, ("rdpup_show_window: id 0x%8.8x state 0x%x", pWindow->drawable.id,
+                showState));
+    if (g_connected)
+    {
+        int flags = WINDOW_ORDER_TYPE_WINDOW;
+        
+        rdpup_pre_check(16);
+        out_uint16_le(g_out_s, 27);
+        out_uint16_le(g_out_s, 16);
+        g_count++;
+        out_uint32_le(g_out_s, pWindow->drawable.id);
+        flags |= WINDOW_ORDER_FIELD_SHOW;
+        out_uint32_le(g_out_s, flags);
+        out_uint32_le(g_out_s, showState);
     }
 }
 

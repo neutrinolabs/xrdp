@@ -852,6 +852,8 @@ rdpDestroyWindow(WindowPtr pWindow)
 
     if (g_use_rail)
     {
+        LLOGLN(10, ("  rdpup_delete_window"));
+        rdpup_delete_window(pWindow, priv);
     }
 
     return rv;
@@ -942,7 +944,16 @@ rdpUnrealizeWindow(WindowPtr pWindow)
         {
             LLOGLN(10, ("rdpUnrealizeWindow:"));
             priv->status = 0;
-            rdpup_delete_window(pWindow, priv);
+            if (pWindow->overrideRedirect) {
+                /*
+                 * Popups are unmapped by X server, so probably
+                 * they will be mapped again. Thereby we should
+                 * just hide those popups instead of destroying
+                 * them.
+                 */
+                LLOGLN(10, ("  rdpup_show_window"));
+                rdpup_show_window(pWindow, priv, 0x0); /* 0x0 - do not show the window */
+            }
         }
     }
 
