@@ -476,6 +476,25 @@ process_server_window_new_update(struct mod *mod, struct stream *s)
 /******************************************************************************/
 /* return error */
 static int APP_CC
+process_server_window_show(struct mod* mod, struct stream* s)
+{
+    int window_id;
+    int rv;
+    int flags;
+    struct rail_window_state_order rwso;
+    
+    g_memset(&rwso, 0, sizeof(rwso));
+    in_uint32_le(s, window_id);
+    in_uint32_le(s, flags);
+    in_uint32_le(s, rwso.show_state);
+    mod->server_window_new_update(mod, window_id, &rwso, flags);
+    rv = 0;
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
 process_server_window_delete(struct mod *mod, struct stream *s)
 {
     int window_id;
@@ -657,6 +676,9 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
             break;
         case 26: /* server_window_delete */
             rv = process_server_window_delete(mod, s);
+            break;
+        case 27: /* server_window_new_update - show */
+            rv = process_server_window_show(mod, s);
             break;
         case 51: /* server_set_pointer_ex */
             rv = process_server_set_pointer_ex(mod, s);

@@ -676,6 +676,79 @@ xrdp_mm_trans_process_channel_data(struct xrdp_mm *self, struct trans *trans)
 }
 
 /*****************************************************************************/
+/* returns error */
+static int APP_CC
+xrdp_mm_trans_send_channel_rail_title_request(struct xrdp_mm* self,
+                                              int window_id)
+{
+    struct stream* s;
+    
+    s = trans_get_out_s(self->chan_trans, 8192);
+    g_writeln("xrdp_mm_trans_send_channel_rail_title_request: 0x%8.8x",
+              window_id);
+    
+    if (s == 0)
+    {
+        return 1;
+    }
+    out_uint32_le(s, 0); /* version */
+    out_uint32_le(s, 8 + 8 + 4); /* size */
+    out_uint32_le(s, 9); /* msg id */
+    out_uint32_le(s, 8 + 4); /* size */
+    out_uint32_le(s, window_id);
+    s_mark_end(s);
+    return trans_force_write(self->chan_trans);
+}
+
+/*****************************************************************************/
+/* returns error
+   process alternate secondary drawing orders for rail channel */
+static int APP_CC
+xrdp_mm_process_rail_drawing_orders(struct xrdp_mm* self, struct trans* trans)
+{
+    struct stream* s;
+    int size;
+    int order_type;
+    int window_id;
+    int flags;
+    int rv = 0;
+    struct rail_window_state_order rwso;
+    
+    g_writeln("xrdp_mm_process_rail_drawing_orders:");
+    
+    s = trans_get_in_s(trans);
+    if (s == 0)
+    {
+        return 1;
+    }
+    in_uint32_le(s, order_type);
+    
+    switch(order_type)
+    {
+        case 2: /* update title info */
+            in_uint32_le(s, window_id);
+            g_writeln("  update window title info: 0x%8.8x", window_id);
+            
+            g_memset(&rwso, 0, sizeof(rwso));
+            in_uint32_le(s, size); /* title size */
+            rwso.title_info = g_malloc(size + 1, 0);
+            in_uint8a(s, rwso.title_info, size);
+            rwso.title_info[size] = 0;
+            flags = WINDOW_ORDER_FIELD_TITLE;
+            rv = libxrdp_orders_init(self->wm->session);
+            rv = libxrdp_window_new_update(self->wm->session, window_id, &rwso, flags);
+            rv = libxrdp_orders_send(self->wm->session);
+            g_writeln("  set window title %s %d", rwso.title_info, rv);
+            g_free(rwso.title_info);
+            break;
+        default:
+            break;
+    }
+    
+    return 0;
+}
+
+/*****************************************************************************/
 /* returns error
    process a message for the channel handler */
 static int APP_CC
@@ -707,6 +780,9 @@ xrdp_mm_chan_process_msg(struct xrdp_mm *self, struct trans *trans,
                 break;
             case 8: /* channel data */
                 rv = xrdp_mm_trans_process_channel_data(self, trans);
+                break;
+            case 10: /* rail alternate secondary drawing orders */
+                rv = xrdp_mm_process_rail_drawing_orders(self, trans);
                 break;
             default:
                 log_message(LOG_LEVEL_ERROR,"xrdp_mm_chan_process_msg: unknown id %d", id);
@@ -2551,6 +2627,12 @@ server_window_new_update(struct xrdp_mod *mod, int window_id,
     struct xrdp_wm *wm;
 
     wm = (struct xrdp_wm *)(mod->wm);
+    if ((flags & WINDOW_ORDER_STATE_NEW) &&
+        !(window_state->style & 0x80000000))
+    {
+        /* requesting title info / icon info */
+        xrdp_mm_trans_send_channel_rail_title_request(wm->mm, window_id);
+    }
     return libxrdp_window_new_update(wm->session, window_id,
                                      window_state, flags);
 }

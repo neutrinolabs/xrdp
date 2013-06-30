@@ -230,6 +230,31 @@ send_channel_data(int chan_id, char *data, int size)
 
 /*****************************************************************************/
 /* returns error */
+int APP_CC
+send_rail_drawing_orders(char* data, int size)
+{
+    LOGM((LOG_LEVEL_DEBUG, "chansrv::send_rail_drawing_orders: size %d", size));
+    
+    struct stream* s;
+    int error;
+    
+    s = trans_get_out_s(g_con_trans, 8192);
+    out_uint32_le(s, 0); /* version */
+    out_uint32_le(s, 8 + 8 + size); /* size */
+    out_uint32_le(s, 10); /* msg id */
+    out_uint32_le(s, 8 + size); /* size */
+    out_uint8a(s, data, size);
+    s_mark_end(s);
+    error = trans_force_write(g_con_trans);
+    if (error != 0)
+    {
+        return 1;
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
 static int APP_CC
 send_init_response_message(void)
 {
@@ -504,6 +529,19 @@ process_message_channel_data(struct stream *s)
 /*****************************************************************************/
 /* returns error */
 static int APP_CC
+process_message_channel_rail_title_request(struct stream* s)
+{
+    int window_id;
+    LOG(10, ("process_message_channel_rail_title_request:"));
+    
+    in_uint32_le(s, window_id);
+    rail_request_title(window_id);
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+static int APP_CC
 process_message_channel_data_response(struct stream *s)
 {
     LOG(10, ("process_message_channel_data_response:"));
@@ -557,6 +595,9 @@ process_message(void)
                 break;
             case 7: /* channel data response */
                 rv = process_message_channel_data_response(s);
+                break;
+            case 9:
+                rv = process_message_channel_rail_title_request(s);
                 break;
             default:
                 LOGM((LOG_LEVEL_ERROR, "process_message: error in process_message ",
