@@ -57,31 +57,11 @@
 #define CMD_DVC_CAPABILITY      0x50
 
 int APP_CC drdynvc_init(void);
-
-static int APP_CC drdynvc_send_capability_request(uint16_t version);
-static int APP_CC drdynvc_process_capability_response(struct stream* s,
-                                                      unsigned char cmd);
-
 int APP_CC drdynvc_send_open_channel_request(int chan_pri, unsigned int chan_id,
                                              char *chan_name);
-
-static int APP_CC drdynvc_process_open_channel_response(struct stream *s,
-                                                        unsigned char cmd);
-
 int APP_CC drdynvc_send_close_channel_request(unsigned int chan_id);
-
-static int APP_CC drdynvc_process_close_channel_response(struct stream *s,
-                                                         unsigned char cmd);
-
 int APP_CC drdynvc_write_data(uint32_t chan_id, char *data, int data_size);
-
 int APP_CC drdynvc_data_in(struct stream* s, int chan_id, int chan_flags,
                            int length, int total_length);
-
-static int APP_CC drdynvc_process_data_first(struct stream* s, unsigned char cmd);
-static int APP_CC drdynvc_process_data(struct stream* s, unsigned char cmd);
-
-static int APP_CC drdynvc_insert_uint_124(struct stream *s, uint32_t val);
-static int APP_CC drdynvc_get_chan_id(struct stream *s, char cmd, uint32_t *chan_id_p);
 
 #endif

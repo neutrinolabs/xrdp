@@ -194,8 +194,6 @@ sound_process_format(int aindex, int wFormatTag, int nChannels,
                      int nBlockAlign, int wBitsPerSample,
                      int cbSize, char *data)
 {
-    int lindex;
-
     LOG(0, ("sound_process_format:"));
     LOG(0, ("  wFormatTag %d", wFormatTag));
     LOG(0, ("  nChannels %d", nChannels));
