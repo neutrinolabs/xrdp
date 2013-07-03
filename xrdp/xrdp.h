@@ -468,3 +468,7 @@ int DEFAULT_CC
 server_monitored_desktop(struct xrdp_mod* mod,
                          struct rail_monitored_desktop_order* mdo,
                          int flags);
+int DEFAULT_CC
+server_add_char_alpha(struct xrdp_mod* mod, int font, int charactor,
+                      int offset, int baseline,
+                      int width, int height, char* data);

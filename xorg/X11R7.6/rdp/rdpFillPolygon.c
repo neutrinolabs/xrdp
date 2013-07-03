@@ -203,7 +203,7 @@ rdpFillPolygon(DrawablePtr pDrawable, GCPtr pGC,
         if (dirty_type != 0)
         {
             RegionInit(&reg1, &box, 0);
-            draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type);
+            draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type, TAG_FILLPOLYGON);
             RegionUninit(&reg1);
         }
         else if (got_id)
@@ -223,7 +223,7 @@ rdpFillPolygon(DrawablePtr pDrawable, GCPtr pGC,
         {
             if (dirty_type != 0)
             {
-                draw_item_add_img_region(pDirtyPriv, &clip_reg, GXcopy, dirty_type);
+                draw_item_add_img_region(pDirtyPriv, &clip_reg, GXcopy, dirty_type, TAG_FILLPOLYGON);
             }
             else if (got_id)
             {

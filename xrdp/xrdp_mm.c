@@ -413,6 +413,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             self->mod->server_notify_new_update = server_notify_new_update;
             self->mod->server_notify_delete = server_notify_delete;
             self->mod->server_monitored_desktop = server_monitored_desktop;
+            self->mod->server_add_char_alpha = server_add_char_alpha;
         }
     }
 
@@ -2293,6 +2294,7 @@ server_add_char(struct xrdp_mod *mod, int font, int charactor,
     fi.height = height;
     fi.incby = 0;
     fi.data = data;
+    fi.bpp = 1;
     return libxrdp_orders_send_font(((struct xrdp_wm *)mod->wm)->session,
                                     &fi, font, charactor);
 }
@@ -2890,3 +2892,23 @@ server_monitored_desktop(struct xrdp_mod *mod,
     wm = (struct xrdp_wm *)(mod->wm);
     return libxrdp_monitored_desktop(wm->session, mdo, flags);
 }
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_add_char_alpha(struct xrdp_mod* mod, int font, int charactor,
+                      int offset, int baseline,
+                      int width, int height, char* data)
+{
+    struct xrdp_font_char fi;
+
+    fi.offset = offset;
+    fi.baseline = baseline;
+    fi.width = width;
+    fi.height = height;
+    fi.incby = 0;
+    fi.data = data;
+    fi.bpp = 8;
+    return libxrdp_orders_send_font(((struct xrdp_wm*)mod->wm)->session,
+                                    &fi, font, charactor);
+}
+

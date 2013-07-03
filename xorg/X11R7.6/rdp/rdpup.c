@@ -21,6 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "rdp.h"
 #include "xrdp_rail.h"
+#include "rdpglyph.h"
 
 #define LOG_LEVEL 1
 #define LLOG(_level, _args) \
@@ -941,6 +942,7 @@ rdpup_check(void)
             g_sck_closed = 0;
             g_begin = 0;
             g_con_number++;
+            rdpGlyphInit();
             AddEnabledDevice(g_sck);
         }
     }
@@ -1876,6 +1878,8 @@ rdpup_check_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec *pDirtyPriv)
     xSegment *seg;
     struct image_data id;
     struct rdp_draw_item *di;
+    struct rdp_text* rtext;
+    struct rdp_text* trtext;
 
     if (pDirtyPriv == 0)
     {
@@ -1981,6 +1985,37 @@ rdpup_check_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec *pDirtyPriv)
                 break;
             case RDI_SCRBLT:
                 LLOGLN(10, ("  RDI_SCRBLT"));
+                break;
+            case RDI_TEXT:
+                LLOGLN(10, ("  RDI_TEXT"));
+                num_clips = REGION_NUM_RECTS(di->reg);
+                if (num_clips > 0)
+                {
+                    LLOGLN(10, ("  num_clips %d", num_clips));
+                    rdpup_set_fgcolor(di->u.text.fg_color);
+                    rdpup_set_opcode(di->u.text.opcode);
+                    rtext = di->u.text.rtext;
+                    trtext = rtext;
+                    while (trtext != 0)
+                    {
+                        rdp_text_chars_to_data(trtext);
+                        for (clip_index = num_clips - 1; clip_index >= 0; clip_index--)
+                        {
+                            box = REGION_RECTS(di->reg)[clip_index];
+                            rdpup_set_clip(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+                            LLOGLN(10, ("  %d %d %d %d", box.x1, box.y1, box.x2, box.y2));
+                            box = RegionExtents(trtext->reg)[0];
+                            rdpup_draw_text(trtext->font, trtext->flags, trtext->mixmode,
+                                            box.x1, box.y1, box.x2, box.y2,
+                                            //box.x1, box.y1, box.x2, box.y2,
+                                            0, 0, 0, 0,
+                                            trtext->x, trtext->y, trtext->data, trtext->data_bytes);
+                        }
+                        trtext = trtext->next;
+                    }
+                }
+                rdpup_reset_clip();
+                rdpup_set_opcode(GXcopy);
                 break;
         }
 
@@ -2117,3 +2152,87 @@ rdpup_check_dirty_screen(rdpPixmapRec *pDirtyPriv)
     pDirtyPriv->is_dirty = 0;
     return 0;
 }
+
+/******************************************************************************/
+int
+rdpup_add_char(int font, int charactor, short x, short y, int cx, int cy,
+               char* bmpdata, int bmpdata_bytes)
+{
+    if (g_connected)
+    {
+        LLOGLN(10, ("  rdpup_add_char"));
+        rdpup_pre_check(18 + bmpdata_bytes);
+        out_uint16_le(g_out_s, 28); /* add char */
+        out_uint16_le(g_out_s, 18 + bmpdata_bytes); /* size */
+        g_count++;
+        out_uint16_le(g_out_s, font);
+        out_uint16_le(g_out_s, charactor);
+        out_uint16_le(g_out_s, x);
+        out_uint16_le(g_out_s, y);
+        out_uint16_le(g_out_s, cx);
+        out_uint16_le(g_out_s, cy);
+        out_uint16_le(g_out_s, bmpdata_bytes);
+        out_uint8a(g_out_s, bmpdata, bmpdata_bytes);
+    }
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpup_add_char_alpha(int font, int charactor, short x, short y, int cx, int cy,
+                     char* bmpdata, int bmpdata_bytes)
+{
+    if (g_connected)
+    {
+        LLOGLN(10, ("  rdpup_add_char_alpha"));
+        rdpup_pre_check(18 + bmpdata_bytes);
+        out_uint16_le(g_out_s, 29); /* add char alpha */
+        out_uint16_le(g_out_s, 18 + bmpdata_bytes); /* size */
+        g_count++;
+        out_uint16_le(g_out_s, font);
+        out_uint16_le(g_out_s, charactor);
+        out_uint16_le(g_out_s, x);
+        out_uint16_le(g_out_s, y);
+        out_uint16_le(g_out_s, cx);
+        out_uint16_le(g_out_s, cy);
+        out_uint16_le(g_out_s, bmpdata_bytes);
+        out_uint8a(g_out_s, bmpdata, bmpdata_bytes);
+    }
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpup_draw_text(int font, int flags, int mixmode,
+                short clip_left, short clip_top,
+                short clip_right, short clip_bottom,
+                short box_left, short box_top,
+                short box_right, short box_bottom, short x, short y,
+                char* data, int data_bytes)
+{
+    if (g_connected)
+    {
+        LLOGLN(10, ("  rdpup_draw_text"));
+        rdpup_pre_check(32 + data_bytes);
+        out_uint16_le(g_out_s, 30); /* draw text */
+        out_uint16_le(g_out_s, 32 + data_bytes); /* size */
+        g_count++;
+        out_uint16_le(g_out_s, font);
+        out_uint16_le(g_out_s, flags);
+        out_uint16_le(g_out_s, mixmode);
+        out_uint16_le(g_out_s, clip_left);
+        out_uint16_le(g_out_s, clip_top);
+        out_uint16_le(g_out_s, clip_right);
+        out_uint16_le(g_out_s, clip_bottom);
+        out_uint16_le(g_out_s, box_left);
+        out_uint16_le(g_out_s, box_top);
+        out_uint16_le(g_out_s, box_right);
+        out_uint16_le(g_out_s, box_bottom);
+        out_uint16_le(g_out_s, x);
+        out_uint16_le(g_out_s, y);
+        out_uint16_le(g_out_s, data_bytes);
+        out_uint8a(g_out_s, data, data_bytes);
+    }
+    return 0;
+}
+
