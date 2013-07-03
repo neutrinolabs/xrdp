@@ -58,6 +58,7 @@ static int g_tab_down = 0;
 /* this is toggled every time num lock key is released, not like the
    above *_down vars */
 static int g_scroll_lock_down = 0;
+static OsTimerPtr g_kbtimer = 0;
 
 #define MIN_KEY_CODE 8
 #define MAX_KEY_CODE 255
@@ -315,10 +316,57 @@ rdpBell(int volume, DeviceIntPtr pDev, pointer ctrl, int cls)
 }
 
 /******************************************************************************/
+static CARD32
+rdpInDeferredUpdateCallback(OsTimerPtr timer, CARD32 now, pointer arg)
+{
+    //ErrorF("rdpInDeferredUpdateCallback:\n");
+
+    /* our keyboard device */
+    XkbSetRepeatKeys(g_keyboard, -1, AutoRepeatModeOff);
+    /* the main one for the server */
+    XkbSetRepeatKeys(inputInfo.keyboard, -1, AutoRepeatModeOff);
+
+    return 0;
+}
+
+/******************************************************************************/
 void
 rdpChangeKeyboardControl(DeviceIntPtr pDev, KeybdCtrl *ctrl)
 {
+    XkbControlsPtr ctrls;
+
     ErrorF("rdpChangeKeyboardControl:\n");
+    ctrls = 0;
+    if (pDev != 0)
+    {
+        if (pDev->key != 0)
+        {
+            if (pDev->key->xkbInfo != 0)
+            {
+                if (pDev->key->xkbInfo->desc != 0)
+                {
+                    if (pDev->key->xkbInfo->desc->ctrls != 0)
+                    {
+                        ctrls = pDev->key->xkbInfo->desc->ctrls;
+                    }
+                }
+            }
+        }
+    }
+    if (ctrls != 0)
+    {
+        if (ctrls->enabled_ctrls & XkbRepeatKeysMask)
+        {
+            //ErrorF("rdpChangeKeyboardControl: autoRepeat on\n");
+            /* schedual to turn off the autorepeat after 100 ms so any app
+             * polling it will be happy it's on */
+            g_kbtimer = TimerSet(g_kbtimer, 0, 100, rdpInDeferredUpdateCallback, 0);\
+        }
+        else
+        {
+            //ErrorF("rdpChangeKeyboardControl: autoRepeat off\n");
+        }
+    }
 }
 
 /******************************************************************************/
