@@ -22,6 +22,7 @@
 #define LOG_WINDOW_CHAR_PER_LINE 60
 
 #include "xrdp_rail.h"
+#include "xrdp_constants.h"
 
 #define MAX_NR_CHANNELS 16
 #define MAX_CHANNEL_NAME 16
@@ -185,6 +186,9 @@ struct xrdp_brush_item
   char pattern[8];
 };
 
+/* moved to xrdp_constants.h
+#define XRDP_BITMAP_CACHE_ENTRIES 2048 */
+
 /* differnce caches */
 struct xrdp_cache
 {
@@ -195,7 +199,7 @@ struct xrdp_cache
   struct xrdp_palette_item palette_items[6];
   /* bitmap */
   int bitmap_stamp;
-  struct xrdp_bitmap_item bitmap_items[3][2000];
+  struct xrdp_bitmap_item bitmap_items[3][XRDP_BITMAP_CACHE_ENTRIES];
   int use_bitmap_comp;
   int cache1_entries;
   int cache1_size;
