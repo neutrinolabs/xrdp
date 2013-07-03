@@ -13,7 +13,7 @@ rdpPolylines.o rdpPolySegment.o rdpFillSpans.o rdpSetSpans.o \
 rdpCopyPlane.o rdpPolyPoint.o rdpPolyArc.o rdpFillPolygon.o \
 rdpPolyFillArc.o rdpPolyText8.o rdpPolyText16.o \
 rdpImageText8.o rdpImageText16.o rdpImageGlyphBlt.o rdpPolyGlyphBlt.o \
-rdpPushPixels.o rdpxv.o \
+rdpPushPixels.o rdpxv.o rdpglyph.o \
 miinitext.o \
 fbcmap_mi.o
 

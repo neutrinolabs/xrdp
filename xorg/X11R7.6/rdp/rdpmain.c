@@ -24,6 +24,7 @@ Sets up the  functions
 
 #include "rdp.h"
 #include "rdprandr.h"
+#include "rdpglyph.h"
 
 #if 1
 #define DEBUG_OUT(arg)
@@ -47,6 +48,8 @@ int g_can_do_pix_to_pix = 0;
 
 int g_do_dirty_os = 1; /* delay remoting off screen bitmaps */
 int g_do_dirty_ons = 0; /* delay remoting screen */
+int g_do_glyph_cache = 1;
+int g_do_alpha_glyphs = 1;
 Bool g_wrapWindow = 1;
 Bool g_wrapPixmap = 1;
 
@@ -396,6 +399,8 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
 
     if (ps)
     {
+        g_rdpScreen.CreatePicture = ps->CreatePicture;
+        g_rdpScreen.DestroyPicture = ps->DestroyPicture;
         g_rdpScreen.Composite = ps->Composite;
         g_rdpScreen.Glyphs = ps->Glyphs;
 
@@ -409,6 +414,8 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
 
     if (ps)
     {
+        ps->CreatePicture = rdpCreatePicture;
+        ps->DestroyPicture = rdpDestroyPicture;
         ps->Composite = rdpComposite;
         ps->Glyphs = rdpGlyphs;
     }
@@ -528,6 +535,8 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
 
     }
 
+    rdpGlyphInit();
+    
     //rdpXvInit(pScreen);
 
     ErrorF("rdpScreenInit: ret %d\n", ret);

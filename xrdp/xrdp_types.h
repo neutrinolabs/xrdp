@@ -118,8 +118,11 @@ struct xrdp_mod
                                   int flags);
   int (*server_set_pointer_ex)(struct xrdp_mod* v, int x, int y, char* data,
                                char* mask, int bpp);
+  int (*server_add_char_alpha)(struct xrdp_mod* mod, int font, int charactor,
+                               int offset, int baseline,
+                               int width, int height, char* data);
 
-  long server_dumby[100 - 38]; /* align, 100 minus the number of server
+  long server_dumby[100 - 39]; /* align, 100 minus the number of server
                                   functions above */
   /* common */
   long handle; /* pointer to self as int */
