@@ -114,7 +114,9 @@ struct _rdpScreenInfoRec
   int height;
   int depth;
   int bitsPerPixel;
-  int sizeInBytes;
+  int sizeInBytes; /* size of current used frame buffer */
+  int sizeInBytesAlloc; /* size of current alloc frame buffer,
+                           always >= sizeInBytes */
   char* pfbMemory;
   Pixel blackPixel;
   Pixel whitePixel;
