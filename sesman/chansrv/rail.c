@@ -324,6 +324,94 @@ rail_process_exec(struct stream *s, int size)
     return 0;
 }
 
+/*****************************************************************************/
+static void APP_CC
+rail_simulate_mouse_click(int button)
+{
+    /*
+     * The below code can be referenced from:
+     * http://www.linuxquestions.org/questions/programming-9/simulating-a-mouse-click-594576/#post2936738
+     */
+    XEvent event;
+    g_memset(&event, 0x00, sizeof(event));
+    
+    event.type = ButtonPress;
+    event.xbutton.button = button;
+    event.xbutton.same_screen = True;
+    
+    XQueryPointer(g_display, g_root_window, &event.xbutton.root,
+                  &event.xbutton.window, &event.xbutton.x_root,
+                  &event.xbutton.y_root, &event.xbutton.x,
+                  &event.xbutton.y, &event.xbutton.state);
+    
+    event.xbutton.subwindow = event.xbutton.window;
+    
+    while(event.xbutton.subwindow)
+    {
+        event.xbutton.window = event.xbutton.subwindow;
+        
+        XQueryPointer(g_display, event.xbutton.window, &event.xbutton.root,
+                      &event.xbutton.subwindow, &event.xbutton.x_root,
+                      &event.xbutton.y_root, &event.xbutton.x,
+                      &event.xbutton.y, &event.xbutton.state);
+    }
+    
+    if(XSendEvent(g_display, PointerWindow, True, 0xfff, &event) == 0)
+    {
+        LOG(0, ("  error sending mouse event"));
+    }
+    
+    XFlush(g_display);
+    
+    usleep(100000);
+    
+    event.type = ButtonRelease;
+    event.xbutton.state = 0x100;
+    
+    if(XSendEvent(g_display, PointerWindow, True, 0xfff, &event) == 0)
+    {
+        LOG(0, ("  error sending mouse event"));
+    }
+    
+    XFlush(g_display);
+}
+
+/******************************************************************************/
+static int APP_CC
+rail_win_popdown(int window_id)
+{
+    int rv = 0;
+    unsigned int i;
+    unsigned int nchild;
+    Window r;
+    Window p;
+    Window* children;
+    
+    /*
+     * Check the tree of current existing X windows and dismiss
+     * the managed rail popups by simulating a mouse click, so
+     * that the requested window can be closed properly.
+     */
+    
+    XQueryTree(g_display, g_root_window, &r, &p, &children, &nchild);
+    for (i = 0; i < nchild; i++)
+    {
+        XWindowAttributes window_attributes;
+        XGetWindowAttributes(g_display, children[i], &window_attributes);
+        if (window_attributes.override_redirect &&
+            window_attributes.map_state == IsViewable &&
+            list_index_of(g_window_list, children[i]) >= 0) {
+            LOG(0, ("  dismiss pop up 0x%8.8x", children[i]));
+            rail_simulate_mouse_click(Button1);
+            rv = 1;
+            break;
+        }
+    }
+    
+    XFree(children);
+    return rv;
+}
+
 /******************************************************************************/
 static int APP_CC
 rail_close_window(int window_id)
@@ -331,6 +419,11 @@ rail_close_window(int window_id)
     XEvent ce;
     
     LOG(0, ("chansrv::rail_close_window:"));
+    
+    if (rail_win_popdown(window_id))
+    {
+        return 0;
+    }
     
     /* don't receive UnmapNotify for closing window */
     XSelectInput(g_display, window_id, PropertyChangeMask);
@@ -344,6 +437,7 @@ rail_close_window(int window_id)
     ce.xclient.data.l[0] = g_wm_delete_window_atom;
     ce.xclient.data.l[1] = CurrentTime;
     XSendEvent(g_display, window_id, False, NoEventMask, &ce);
+
     return 0;
 }
 
@@ -353,14 +447,22 @@ rail_process_activate(struct stream *s, int size)
 {
     int window_id;
     int enabled;
+    XWindowAttributes window_attributes;
 
     LOG(10, ("chansrv::rail_process_activate:"));
     in_uint32_le(s, window_id);
     in_uint8(s, enabled);
     LOG(10, ("  window_id 0x%8.8x enabled %d", window_id, enabled));
 
+    XGetWindowAttributes(g_display, window_id, &window_attributes);
+    
     if (enabled)
     {
+        if (window_attributes.map_state != IsViewable)
+        {
+            /* In case that window is unmapped upon minimization and not yet mapped*/
+            XMapWindow(g_display, window_id);
+        }
         LOG(10, ("chansrv::rail_process_activate: calling XRaiseWindow 0x%8.8x", window_id));
         XRaiseWindow(g_display, window_id);
         LOG(10, ("chansrv::rail_process_activate: calling XSetInputFocus 0x%8.8x", window_id));
@@ -374,8 +476,6 @@ rail_process_activate(struct stream *s, int size)
         if (window_attributes.override_redirect) {
             LOG(10, ("  dismiss popup window 0x%8.8x", window_id));
             XUnmapWindow(g_display, window_id);
-            //rail_win_set_state(window_id, 0x3);
-            //rail_show_window(window_id, 0x0);
         }
     }
     return 0;
@@ -574,12 +674,19 @@ rail_minmax_window(int window_id, int max)
 static int APP_CC
 rail_restore_window(int window_id)
 {
+    XWindowAttributes window_attributes;
+    
     LOG(10, ("chansrv::rail_restore_window 0x%8.8x:", window_id));
-    XMapWindow(g_display, window_id);
+    XGetWindowAttributes(g_display, window_id, &window_attributes);
+    if (window_attributes.map_state != IsViewable)
+    {
+        XMapWindow(g_display, window_id);
+    }
     LOG(10, ("chansrv::rail_process_activate: calling XRaiseWindow 0x%8.8x", window_id));
     XRaiseWindow(g_display, window_id);
     LOG(10, ("chansrv::rail_process_activate: calling XSetInputFocus 0x%8.8x", window_id));
     XSetInputFocus(g_display, window_id, RevertToParent, CurrentTime);
+    
     return 0;
 }
 
@@ -939,7 +1046,8 @@ rail_create_window(Window window_id, Window parent_id)
     int i = 0;
 
     int flags;
-    int state;
+    int index;
+    Window transient_for = 0;
     struct stream* s;
 
     LOG(10, ("chansrv::rail_create_window 0x%8.8x", window_id));
@@ -951,8 +1059,8 @@ rail_create_window(Window window_id, Window parent_id)
     LOG(10, ("  x %d y %d width %d height %d border_width %d", x, y, width,
              height, border));
 
-    state = rail_win_get_state(window_id);
-    if ((state == 0) || (state == -1))
+    index = list_index_of(g_window_list, window_id);
+    if (index == -1)
     {
         LOG(10, ("  create new window"));
         flags = WINDOW_ORDER_TYPE_WINDOW | WINDOW_ORDER_STATE_NEW;
@@ -966,10 +1074,18 @@ rail_create_window(Window window_id, Window parent_id)
 
     title_size = rail_win_get_text(window_id, &title_bytes);
 
+    XGetTransientForHint(g_display, window_id, &transient_for);
+    
     if (attributes.override_redirect)
     {
         style = RAIL_STYLE_TOOLTIP;
         ext_style = RAIL_EXT_STYLE_TOOLTIP;
+    }
+    else if (transient_for > 0)
+    {
+        style = RAIL_STYLE_DIALOG;
+        ext_style = RAIL_EXT_STYLE_DIALOG;
+        parent_id = transient_for;
     }
     else
     {
@@ -1052,6 +1168,94 @@ rail_create_window(Window window_id, Window parent_id)
 /*****************************************************************************/
 /* returns 0, event handled, 1 unhandled */
 int APP_CC
+rail_configure_window(XConfigureEvent *config)
+{
+    int x;
+    int y;
+    tui32 width;
+    tui32 height;
+    int num_window_rects = 1;
+    int num_visibility_rects = 1;
+    int i = 0;
+    int flags;
+    int index;
+    int window_id;
+    
+    struct stream* s;
+    
+    window_id = config->window;
+    
+    LOG(10, ("chansrv::rail_configure_window 0x%8.8x", window_id));
+    
+    
+    LOG(10, ("  x %d y %d width %d height %d border_width %d", config->x,
+             config->y, config->width, config->height, config->border_width));
+    
+    index = list_index_of(g_window_list, window_id);
+    if (index == -1)
+    {
+        /* window isn't mapped yet */
+        return;
+    }
+    
+    flags = WINDOW_ORDER_TYPE_WINDOW;
+    
+    make_stream(s);
+    init_stream(s, 1024);
+    
+    out_uint32_le(s, 10); /* configure_window */
+    out_uint32_le(s, window_id); /* window_id */
+    
+    out_uint32_le(s, 0); /* client_offset_x */
+    out_uint32_le(s, 0); /* client_offset_y */
+    flags |= WINDOW_ORDER_FIELD_CLIENT_AREA_OFFSET;
+    out_uint32_le(s, config->width); /* client_area_width */
+    out_uint32_le(s, config->height); /* client_area_height */
+    flags |= WINDOW_ORDER_FIELD_CLIENT_AREA_SIZE;
+    out_uint32_le(s, 0); /* rp_content */
+    out_uint32_le(s, g_root_window); /* root_parent_handle */
+    flags |= WINDOW_ORDER_FIELD_ROOT_PARENT;
+    out_uint32_le(s, config->x); /* window_offset_x */
+    out_uint32_le(s, config->y); /* window_offset_y */
+    flags |= WINDOW_ORDER_FIELD_WND_OFFSET;
+    out_uint32_le(s, 0); /* window_client_delta_x */
+    out_uint32_le(s, 0); /* window_client_delta_y */
+    flags |= WINDOW_ORDER_FIELD_WND_CLIENT_DELTA;
+    out_uint32_le(s, config->width); /* window_width */
+    out_uint32_le(s, config->height); /* window_height */
+    flags |= WINDOW_ORDER_FIELD_WND_SIZE;
+    out_uint16_le(s, num_window_rects); /* num_window_rects */
+    for (i = 0; i < num_window_rects; i++)
+    {
+        out_uint16_le(s, 0); /* left */
+        out_uint16_le(s, 0); /* top */
+        out_uint16_le(s, config->width); /* right */
+        out_uint16_le(s, config->height); /* bottom */
+    }
+    flags |= WINDOW_ORDER_FIELD_WND_RECTS;
+    out_uint32_le(s, config->x); /* visible_offset_x */
+    out_uint32_le(s, config->y); /* visible_offset_y */
+    flags |= WINDOW_ORDER_FIELD_VIS_OFFSET;
+    out_uint16_le(s, num_visibility_rects); /* num_visibility_rects */
+    for (i = 0; i < num_visibility_rects; i++)
+    {
+        out_uint16_le(s, 0); /* left */
+        out_uint16_le(s, 0); /* top */
+        out_uint16_le(s, config->width); /* right */
+        out_uint16_le(s, config->height); /* bottom */
+    }
+    flags |= WINDOW_ORDER_FIELD_VISIBILITY;
+    out_uint32_le(s, flags); /*flags*/
+    
+    s_mark_end(s);
+    send_rail_drawing_orders(s->data, (int)(s->end - s->data));
+    free_stream(s);
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns 0, event handled, 1 unhandled */
+int APP_CC
 rail_xevent(void *xevent)
 {
     XEvent *lxevent;
@@ -1109,11 +1313,6 @@ rail_xevent(void *xevent)
 
         case CreateNotify:
             LOG(10, (" got CreateNotify 0x%8.8x", lxevent->xcreatewindow.window));
-            XSelectInput(g_display, lxevent->xcreatewindow.window,
-                         PropertyChangeMask | StructureNotifyMask);
-            rail_win_set_state(lxevent->xcreatewindow.window, 0x0); /* WithdrawnState */
-            list_add_item(g_window_list, lxevent->xcreatewindow.window);
-            rv = 0;
             break;
 
         case DestroyNotify:
@@ -1129,8 +1328,9 @@ rail_xevent(void *xevent)
             
         case MapRequest:
             LOG(10, ("  got MapRequest 0x%8.8x", lxevent->xmaprequest.window));
+            XSelectInput(g_display, lxevent->xmaprequest.window,
+                         PropertyChangeMask | StructureNotifyMask);
             XMapWindow(g_display, lxevent->xmaprequest.window);
-            rv = 0;
             break;
 
         case MapNotify:
@@ -1141,9 +1341,9 @@ rail_xevent(void *xevent)
                 if (wnd_attributes.map_state == IsViewable)
                 {
                     rail_create_window(lxevent->xmap.window, lxevent->xmap.event);
-                    rail_win_set_state(lxevent->xmap.window, 0x1); /* NormalState */
                     if (!wnd_attributes.override_redirect)
                     {
+                        rail_win_set_state(lxevent->xmap.window, 0x1); /* NormalState */
                         rail_win_send_text(lxevent->xmap.window);
                     }
                     rv = 0;
@@ -1153,19 +1353,19 @@ rail_xevent(void *xevent)
 
         case UnmapNotify:
             LOG(10, ("  got UnmapNotify 0x%8.8x", lxevent->xunmap.event));
-            if (lxevent->xunmap.window == lxevent->xunmap.event &&
+            if (lxevent->xunmap.window != lxevent->xunmap.event &&
                 is_window_valid_child_of_root(lxevent->xunmap.window))
             {
                 int state = rail_win_get_state(lxevent->xunmap.window);
+                index = list_index_of(g_window_list, lxevent->xunmap.window);
                 LOG(10, ("  window 0x%8.8x is unmapped", lxevent->xunmap.window));
-                if (state != -1 && state != 0x3)
+                if (index >= 0)
                 {
-                    LOG(10, ("  trying to dismiss popup"));
                     XGetWindowAttributes(g_display, lxevent->xunmap.window, &wnd_attributes);
                     if (wnd_attributes.override_redirect)
                     {
+                        LOG(10, ("  hide popup"));
                         rail_show_window(lxevent->xunmap.window, 0x0);
-                        rail_win_set_state(lxevent->xunmap.window, 0x3);
                         rv = 0;
                     }
                 }
@@ -1173,7 +1373,16 @@ rail_xevent(void *xevent)
             break;
 
         case ConfigureNotify:
-            LOG(10, ("  got ConfigureNotify"));
+            LOG(10, ("  got ConfigureNotify 0x%8.8x event 0x%8.8x", lxevent->xconfigure.window,
+                     lxevent->xconfigure.event));
+#if 0
+            if (lxevent->xconfigure.window != lxevent->xconfigure.event &&
+                !lxevent->xconfigure.override_redirect)
+            {
+                rail_configure_window(&lxevent->xconfigure);
+                rv = 0;
+            }
+#endif
             break;
 
         case FocusIn:
