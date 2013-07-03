@@ -271,7 +271,7 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
         g_rdpScreen.sizeInBytes =
             (g_rdpScreen.paddedWidthInBytes * g_rdpScreen.height);
         ErrorF("buffer size %d\n", g_rdpScreen.sizeInBytes);
-        g_rdpScreen.pfbMemory = (char *)g_malloc(2048 * 2048 * 4, 1);
+        g_rdpScreen.pfbMemory = (char *)g_malloc(g_rdpScreen.sizeInBytes, 1);
     }
 
     if (g_rdpScreen.pfbMemory == 0)
