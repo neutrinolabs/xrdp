@@ -156,6 +156,8 @@ rdpRRScreenSetSize(ScreenPtr pScreen, CARD16 width, CARD16 height,
         ErrorF("  resizing screenPixmap [%p] to %dx%d, currently at %dx%d\n",
                (void *)screenPixmap, width, height,
                screenPixmap->drawable.width, screenPixmap->drawable.height);
+        g_free(g_rdpScreen.pfbMemory);
+        g_rdpScreen.pfbMemory = g_malloc(g_rdpScreen.sizeInBytes, 1);
         pScreen->ModifyPixmapHeader(screenPixmap, width, height,
                                     g_rdpScreen.depth, g_rdpScreen.bitsPerPixel,
                                     g_rdpScreen.paddedWidthInBytes,
