@@ -19,9 +19,15 @@
 /*
    window manager info
    http://www.freedesktop.org/wiki/Specifications/wm-spec
+
+   rail
+   [MS-RDPERP]: Remote Desktop Protocol:
+   Remote Programs Virtual Channel Extension
+   http://msdn.microsoft.com/en-us/library/cc242568(v=prot.20).aspx
 */
 
 #include <X11/Xlib.h>
+#include <X11/Xatom.h>
 #include "chansrv.h"
 #include "rail.h"
 #include "xcommon.h"
@@ -46,12 +52,31 @@ extern Atom g_utf8_string;           /* in xcommon.c */
 extern Atom g_net_wm_name;           /* in xcommon.c */
 extern Atom g_wm_state;              /* in xcommon.c */
 
+static Atom g_rwd_atom = 0;
+
 int g_rail_up = 0;
 
 /* for rail_is_another_wm_running */
 static int g_rail_running = 1;
 /* list of valid rail windows */
 static struct list* g_window_list = 0;
+
+/* used in valid field of struct rail_window_data */
+#define RWD_X       (1 << 0)
+#define RWD_Y       (1 << 1)
+#define RWD_WIDTH   (1 << 2)
+#define RWD_HEIGHT  (1 << 3)
+#define RWD_TITLE   (1 << 4)
+
+struct rail_window_data
+{
+    int valid; /* bits for which fields are valid */
+    int x;
+    int y;
+    int width;
+    int height;
+    char title[64]; /* first 64 bytes of title for compare */
+};
 
 /* Indicates a Client Execute PDU from client to server. */
 #define TS_RAIL_ORDER_EXEC 0x0001
@@ -124,6 +149,70 @@ static int APP_CC rail_create_window(Window window_id, Window parent_id);
 static int APP_CC rail_win_set_state(Window win, unsigned long state);
 static int APP_CC rail_show_window(Window window_id, int show_state);
 static int APP_CC rail_win_send_text(Window win);
+
+/*****************************************************************************/
+static struct rail_window_data* APP_CC
+rail_get_window_data(Window window)
+{
+    int bytes;
+    Atom actual_type_return;
+    int actual_format_return;
+    unsigned long nitems_return;
+    unsigned long bytes_after_return;
+    unsigned char* prop_return;
+    struct rail_window_data* rv;
+
+    LOG(10, ("chansrv::rail_get_window_data:"));
+    rv = 0;
+    actual_type_return = 0;
+    actual_format_return = 0;
+    nitems_return = 0;
+    prop_return = 0;
+    bytes = sizeof(struct rail_window_data);
+    XGetWindowProperty(g_display, window, g_rwd_atom, 0, bytes, 0,
+                       XA_STRING, &actual_type_return,
+                       &actual_format_return, &nitems_return,
+                       &bytes_after_return, &prop_return);
+    if (prop_return == 0)
+    {
+        return 0;
+    }
+    if (nitems_return == bytes)
+    {
+        rv = (struct rail_window_data*)prop_return;
+    }
+    return rv;
+}
+
+/*****************************************************************************/
+static int APP_CC
+rail_set_window_data(Window window, struct rail_window_data* rwd)
+{
+    int bytes;
+
+    bytes = sizeof(struct rail_window_data);
+    XChangeProperty(g_display, window, g_rwd_atom, XA_STRING, 8,
+                    PropModeReplace, (unsigned char*)rwd, bytes);
+    return 0;
+}
+
+/*****************************************************************************/
+/* get the rail window data, if not exist, try to create it and return */
+static struct rail_window_data* APP_CC
+rail_get_window_data_safe(Window window)
+{
+    struct rail_window_data* rv;
+    
+    rv = rail_get_window_data(window);
+    if (rv != 0)
+    {
+        return rv;
+    }
+    rv = g_malloc(sizeof(struct rail_window_data), 1);
+    rail_set_window_data(window, rv);
+    g_free(rv);
+    return rail_get_window_data(window);
+}
 
 /******************************************************************************/
 static int APP_CC
@@ -226,6 +315,7 @@ rail_init(void)
     g_window_list = list_create();
     rail_send_init();
     g_rail_up = 1;
+    g_rwd_atom = XInternAtom(g_display, "XRDP_RAIL_WINDOW_DATA", 0);
     return 0;
 }
 
@@ -363,7 +453,7 @@ rail_simulate_mouse_click(int button)
     
     XFlush(g_display);
     
-    usleep(100000);
+    g_sleep(100);
     
     event.type = ButtonRelease;
     event.xbutton.state = 0x100;
@@ -777,16 +867,30 @@ rail_process_window_move(struct stream *s, int size)
     int top;
     int right;
     int bottom;
+    tsi16 si16;
+    struct rail_window_data* rwd;
 
     LOG(10, ("chansrv::rail_process_window_move:"));
     in_uint32_le(s, window_id);
-    in_uint16_le(s, left);
-    in_uint16_le(s, top);
-    in_uint16_le(s, right);
-    in_uint16_le(s, bottom);
+    in_uint16_le(s, si16);
+    left = si16;
+    in_uint16_le(s, si16);
+    top = si16;
+    in_uint16_le(s, si16);
+    right = si16;
+    in_uint16_le(s, si16);
+    bottom = si16;
     LOG(10, ("  window_id 0x%8.8x left %d top %d right %d bottom %d width %d height %d",
              window_id, left, top, right, bottom, right - left, bottom - top));
     XMoveResizeWindow(g_display, window_id, left, top, right - left, bottom - top);
+    rwd = (struct rail_window_data*)
+    g_malloc(sizeof(struct rail_window_data), 1);
+    rwd->x = left;
+    rwd->y = top;
+    rwd->width = right - left;
+    rwd->height = bottom - top;
+    rail_set_window_data(window_id, rwd);
+    g_free(rwd);
     return 0;
 }
 
@@ -799,13 +903,16 @@ rail_process_local_move_size(struct stream *s, int size)
     int move_size_type;
     int pos_x;
     int pos_y;
+    tsi16 si16;
 
     LOG(10, ("chansrv::rail_process_local_move_size:"));
     in_uint32_le(s, window_id);
     in_uint16_le(s, is_move_size_start);
     in_uint16_le(s, move_size_type);
-    in_uint16_le(s, pos_x);
-    in_uint16_le(s, pos_y);
+    in_uint16_le(s, si16);
+    pos_x = si16;
+    in_uint16_le(s, si16);
+    pos_y = si16;
     LOG(10, ("  window_id 0x%8.8x is_move_size_start %d move_size_type %d "
              "pos_x %d pos_y %d", window_id, is_move_size_start, move_size_type,
              pos_x, pos_y));
@@ -840,11 +947,14 @@ rail_process_sys_menu(struct stream *s, int size)
     int window_id;
     int left;
     int top;
+    tsi16 si16;
 
     LOG(10, ("chansrv::rail_process_sys_menu:"));
     in_uint32_le(s, window_id);
-    in_uint16_le(s, left);
-    in_uint16_le(s, top);
+    in_uint16_le(s, si16);
+    left = si16;
+    in_uint16_le(s, si16);
+    top = si16;
     LOG(10, ("  window_id 0x%8.8x left %d top %d", window_id, left, top));
     return 0;
 }
@@ -959,14 +1069,37 @@ rail_data_in(struct stream *s, int chan_id, int chan_flags, int length,
 /*****************************************************************************/
 /* returns 0, event handled, 1 unhandled */
 static int APP_CC
-rail_win_send_text(Window win) {
+rail_win_send_text(Window win)
+{
     char* data = 0;
     struct stream* s;
     int len = 0;
     int flags;
+    struct rail_window_data* rwd;
     
     len = rail_win_get_text(win, &data);
-    
+    rwd = rail_get_window_data_safe(win);
+    if (rwd != 0)
+    {
+        if (data != 0)
+        {
+            if (rwd->valid & RWD_TITLE)
+            {
+                if (g_strncmp(rwd->title, data, 63) == 0)
+                {
+                    LOG(0, ("chansrv::rail_win_send_text: skipping, title not changed"));
+                    XFree(data);
+                    XFree(rwd);
+                    return 0;
+                }
+            }
+        }
+    }
+    else
+    {
+        LOG(0, ("chansrv::rail_win_send_text: error rail_get_window_data_safe failed"));
+        return 1;
+    }
     if (data && len > 0) {
         LOG(10, ("chansrv::rail_win_send_text: 0x%8.8x text %s length %d",
                  win, data, len));
@@ -982,7 +1115,12 @@ rail_win_send_text(Window win) {
         send_rail_drawing_orders(s->data, (int)(s->end - s->data));
         free_stream(s);
         XFree(data);
+        /* update rail window data */
+        rwd->valid |= RWD_TITLE;
+        g_strncpy(rwd->title, data, 63);
+        rail_set_window_data(win, rwd);
     }
+    XFree(rwd);
     return 0;
 }
 
@@ -1048,10 +1186,17 @@ rail_create_window(Window window_id, Window parent_id)
     int flags;
     int index;
     Window transient_for = 0;
+    struct rail_window_data* rwd;
     struct stream* s;
 
     LOG(10, ("chansrv::rail_create_window 0x%8.8x", window_id));
 
+    rwd = rail_get_window_data_safe(window_id);
+    if (rwd == 0)
+    {
+        LOG(0, ("chansrv::rail_create_window: error rail_get_window_data_safe failed"));
+        return 0;
+    }
     XGetGeometry(g_display, window_id, &root, &x, &y, &width, &height,
                  &border, &depth);
     XGetWindowAttributes(g_display, window_id, &attributes);
@@ -1109,11 +1254,15 @@ rail_create_window(Window window_id, Window parent_id)
     {
         out_uint16_le(s, title_size); /* title_size */
         out_uint8a(s, title_bytes, title_size); /* title */
+        rwd->valid |= RWD_TITLE;
+        g_strncpy(rwd->title, title_bytes, 63);
     }
     else
     {
         out_uint16_le(s, 5); /* title_size */
         out_uint8a(s, "title", 5); /* title */
+        rwd->valid |= RWD_TITLE;
+        rwd->title[0] = 0;
     }
     LOG(10, ("  set title info %d", title_size));
     flags |= WINDOW_ORDER_FIELD_TITLE;
@@ -1162,6 +1311,201 @@ rail_create_window(Window window_id, Window parent_id)
     send_rail_drawing_orders(s->data, (int)(s->end - s->data));
     free_stream(s);
     XFree(title_bytes);
+    rail_set_window_data(window_id, rwd);
+    XFree(rwd);
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns 0, event handled, 1 unhandled */
+int APP_CC
+rail_configure_request_window(XConfigureRequestEvent* config)
+{
+    int num_window_rects = 1;
+    int num_visibility_rects = 1;
+    int i = 0;
+    int flags;
+    int index;
+    int window_id;
+    int mask;
+    int resized = 0;
+    struct rail_window_data* rwd;
+    
+    struct stream* s;
+    
+    window_id = config->window;
+    mask = config->value_mask;
+    LOG(10, ("chansrv::rail_configure_request_window: mask %d", mask));
+    rwd = rail_get_window_data(window_id);
+    if (rwd == 0)
+    {
+        rwd = (struct rail_window_data*)g_malloc(sizeof(struct rail_window_data), 1);
+        rwd->x = config->x;
+        rwd->y = config->y;
+        rwd->width = config->width;
+        rwd->height = config->height;
+        rwd->valid |= RWD_X | RWD_Y | RWD_WIDTH | RWD_HEIGHT;
+        rail_set_window_data(window_id, rwd);
+        g_free(rwd);
+        return 0;
+    }
+    if (!resized)
+    {
+        if (mask & CWX)
+        {
+            if (rwd->valid & RWD_X)
+            {
+                if (rwd->x != config->x)
+                {
+                    resized = 1;
+                    rwd->x = config->x;
+                }
+            }
+            else
+            {
+                resized = 1;
+                rwd->x = config->x;
+                rwd->valid |= RWD_X;
+            }
+        }
+    }
+    if (!resized)
+    {
+        if (mask & CWY)
+        {
+            if (rwd->valid & RWD_Y)
+            {
+                if (rwd->y != config->y)
+                {
+                    resized = 1;
+                    rwd->y = config->y;
+                }
+            }
+            else
+            {
+                resized = 1;
+                rwd->y = config->y;
+                rwd->valid |= RWD_Y;
+            }
+        }
+    }
+    if (!resized)
+    {
+        if (mask & CWWidth)
+        {
+            if (rwd->valid & RWD_WIDTH)
+            {
+                if (rwd->width != config->width)
+                {
+                    resized = 1;
+                    rwd->width = config->width;
+                }
+            }
+            else
+            {
+                resized = 1;
+                rwd->width = config->width;
+                rwd->valid |= RWD_WIDTH;
+            }
+        }
+    }
+    if (!resized)
+    {
+        if (mask & CWHeight)
+        {
+            if (rwd->valid & RWD_HEIGHT)
+            {
+                if (rwd->height != config->height)
+                {
+                    resized = 1;
+                    rwd->height = config->height;
+                }
+            }
+            else
+            {
+                resized = 1;
+                rwd->height = config->height;
+                rwd->valid |= RWD_HEIGHT;
+            }
+        }
+    }
+    if (resized)
+    {
+        rail_set_window_data(window_id, rwd);
+        XFree(rwd);
+    }
+    else
+    {
+        XFree(rwd);
+        return 0;
+    }
+    
+    LOG(10, ("chansrv::rail_configure_request_window: 0x%8.8x", window_id));
+    
+    
+    LOG(10, ("  x %d y %d width %d height %d border_width %d", config->x,
+             config->y, config->width, config->height, config->border_width));
+    
+    index = list_index_of(g_window_list, window_id);
+    if (index == -1)
+    {
+        /* window isn't mapped yet */
+        LOG(0, ("chansrv::rail_configure_request_window: window not mapped"));
+        return 0;
+    }
+    
+    flags = WINDOW_ORDER_TYPE_WINDOW;
+    
+    make_stream(s);
+    init_stream(s, 1024);
+    
+    out_uint32_le(s, 10); /* configure_window */
+    out_uint32_le(s, window_id); /* window_id */
+    
+    out_uint32_le(s, 0); /* client_offset_x */
+    out_uint32_le(s, 0); /* client_offset_y */
+    flags |= WINDOW_ORDER_FIELD_CLIENT_AREA_OFFSET;
+    out_uint32_le(s, config->width); /* client_area_width */
+    out_uint32_le(s, config->height); /* client_area_height */
+    flags |= WINDOW_ORDER_FIELD_CLIENT_AREA_SIZE;
+    out_uint32_le(s, 0); /* rp_content */
+    out_uint32_le(s, g_root_window); /* root_parent_handle */
+    flags |= WINDOW_ORDER_FIELD_ROOT_PARENT;
+    out_uint32_le(s, config->x); /* window_offset_x */
+    out_uint32_le(s, config->y); /* window_offset_y */
+    flags |= WINDOW_ORDER_FIELD_WND_OFFSET;
+    out_uint32_le(s, 0); /* window_client_delta_x */
+    out_uint32_le(s, 0); /* window_client_delta_y */
+    flags |= WINDOW_ORDER_FIELD_WND_CLIENT_DELTA;
+    out_uint32_le(s, config->width); /* window_width */
+    out_uint32_le(s, config->height); /* window_height */
+    flags |= WINDOW_ORDER_FIELD_WND_SIZE;
+    out_uint16_le(s, num_window_rects); /* num_window_rects */
+    for (i = 0; i < num_window_rects; i++)
+    {
+        out_uint16_le(s, 0); /* left */
+        out_uint16_le(s, 0); /* top */
+        out_uint16_le(s, config->width); /* right */
+        out_uint16_le(s, config->height); /* bottom */
+    }
+    flags |= WINDOW_ORDER_FIELD_WND_RECTS;
+    out_uint32_le(s, config->x); /* visible_offset_x */
+    out_uint32_le(s, config->y); /* visible_offset_y */
+    flags |= WINDOW_ORDER_FIELD_VIS_OFFSET;
+    out_uint16_le(s, num_visibility_rects); /* num_visibility_rects */
+    for (i = 0; i < num_visibility_rects; i++)
+    {
+        out_uint16_le(s, 0); /* left */
+        out_uint16_le(s, 0); /* top */
+        out_uint16_le(s, config->width); /* right */
+        out_uint16_le(s, config->height); /* bottom */
+    }
+    flags |= WINDOW_ORDER_FIELD_VISIBILITY;
+    out_uint32_le(s, flags); /*flags*/
+    
+    s_mark_end(s);
+    send_rail_drawing_orders(s->data, (int)(s->end - s->data));
+    free_stream(s);
     return 0;
 }
 
@@ -1170,10 +1514,6 @@ rail_create_window(Window window_id, Window parent_id)
 int APP_CC
 rail_configure_window(XConfigureEvent *config)
 {
-    int x;
-    int y;
-    tui32 width;
-    tui32 height;
     int num_window_rects = 1;
     int num_visibility_rects = 1;
     int i = 0;
@@ -1195,7 +1535,7 @@ rail_configure_window(XConfigureEvent *config)
     if (index == -1)
     {
         /* window isn't mapped yet */
-        return;
+        return 0;
     }
     
     flags = WINDOW_ORDER_TYPE_WINDOW;
@@ -1259,6 +1599,7 @@ int APP_CC
 rail_xevent(void *xevent)
 {
     XEvent *lxevent;
+    XEvent lastevent;
     XWindowChanges xwc;
     int rv;
     int index;
@@ -1308,6 +1649,7 @@ rail_xevent(void *xevent)
                              lxevent->xconfigurerequest.window,
                              lxevent->xconfigurerequest.value_mask,
                              &xwc);
+            rail_configure_request_window(&(lxevent->xconfigurerequest));
             rv = 0;
             break;
 
@@ -1375,13 +1717,25 @@ rail_xevent(void *xevent)
         case ConfigureNotify:
             LOG(10, ("  got ConfigureNotify 0x%8.8x event 0x%8.8x", lxevent->xconfigure.window,
                      lxevent->xconfigure.event));
-#if 0
-            if (lxevent->xconfigure.window != lxevent->xconfigure.event &&
-                !lxevent->xconfigure.override_redirect)
+            rv = 0;
+            if (lxevent->xconfigure.event != lxevent->xconfigure.window ||
+                lxevent->xconfigure.override_redirect)
             {
-                rail_configure_window(&lxevent->xconfigure);
-                rv = 0;
+                break;
             }
+            /* skip dup ConfigureNotify */
+            while (XCheckTypedWindowEvent(g_display,
+                                          lxevent->xconfigure.window,
+                                          ConfigureNotify, &lastevent))
+            {
+                if (lastevent.xconfigure.event == lastevent.xconfigure.window &&
+                    lxevent->xconfigure.override_redirect == 0)
+                {
+                    lxevent = &lastevent;
+                }
+            }
+#if 0
+            rail_configure_window(&(lxevent->xconfigure));
 #endif
             break;
 
