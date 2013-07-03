@@ -145,7 +145,7 @@ struct rail_window_data
 #define RAIL_EXT_STYLE_DIALOG (0x00040000)
 
 static int APP_CC rail_win_get_state(Window win);
-static int APP_CC rail_create_window(Window window_id, Window parent_id);
+static int APP_CC rail_create_window(Window window_id, Window owner_id);
 static int APP_CC rail_win_set_state(Window win, unsigned long state);
 static int APP_CC rail_show_window(Window window_id, int show_state);
 static int APP_CC rail_win_send_text(Window win);
@@ -538,6 +538,7 @@ rail_process_activate(struct stream *s, int size)
     int window_id;
     int enabled;
     XWindowAttributes window_attributes;
+    Window transient_for = 0;
 
     LOG(10, ("chansrv::rail_process_activate:"));
     in_uint32_le(s, window_id);
@@ -552,6 +553,12 @@ rail_process_activate(struct stream *s, int size)
         {
             /* In case that window is unmapped upon minimization and not yet mapped*/
             XMapWindow(g_display, window_id);
+        }
+        XGetTransientForHint(g_display, window_id, &transient_for);
+        if (transient_for > 0)
+        {
+            // Owner window should be raised up as well
+            XRaiseWindow(g_display, transient_for);
         }
         LOG(10, ("chansrv::rail_process_activate: calling XRaiseWindow 0x%8.8x", window_id));
         XRaiseWindow(g_display, window_id);
@@ -1165,7 +1172,7 @@ rail_show_window(Window window_id, int show_state)
 
 /*****************************************************************************/
 static int APP_CC
-rail_create_window(Window window_id, Window parent_id)
+rail_create_window(Window window_id, Window owner_id)
 {
     int x;
     int y;
@@ -1230,7 +1237,7 @@ rail_create_window(Window window_id, Window parent_id)
     {
         style = RAIL_STYLE_DIALOG;
         ext_style = RAIL_EXT_STYLE_DIALOG;
-        parent_id = transient_for;
+        owner_id = transient_for;
     }
     else
     {
@@ -1243,7 +1250,7 @@ rail_create_window(Window window_id, Window parent_id)
     
     out_uint32_le(s, 2); /* create_window */
     out_uint32_le(s, window_id); /* window_id */
-    out_uint32_le(s, parent_id); /* owner_window_id */
+    out_uint32_le(s, owner_id); /* owner_window_id */
     flags |= WINDOW_ORDER_FIELD_OWNER;
     out_uint32_le(s, style); /* style */
     out_uint32_le(s, ext_style); /* extended_style */
@@ -1703,6 +1710,7 @@ rail_xevent(void *xevent)
                 LOG(10, ("  window 0x%8.8x is unmapped", lxevent->xunmap.window));
                 if (index >= 0)
                 {
+#if 0
                     XGetWindowAttributes(g_display, lxevent->xunmap.window, &wnd_attributes);
                     if (wnd_attributes.override_redirect)
                     {
@@ -1710,6 +1718,10 @@ rail_xevent(void *xevent)
                         rail_show_window(lxevent->xunmap.window, 0x0);
                         rv = 0;
                     }
+#else
+                    rail_show_window(lxevent->xunmap.window, 0x0);
+                    rv = 0;
+#endif
                 }
             }
             break;
