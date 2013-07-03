@@ -757,6 +757,73 @@ xrdp_mm_process_rail_create_window(struct xrdp_mm* self, struct stream* s)
 
 /*****************************************************************************/
 /* returns error
+   process rail configure window order */
+static int APP_CC
+xrdp_mm_process_rail_configure_window(struct xrdp_mm* self, struct stream* s)
+{
+    int flags;
+    int window_id;
+    int index;
+    int bytes;
+    int rv;
+    struct rail_window_state_order rwso;
+    
+    g_memset(&rwso, 0, sizeof(rwso));
+    in_uint32_le(s, window_id);
+    
+    g_writeln("xrdp_mm_process_rail_configure_window: 0x%8.8x", window_id);
+    
+    in_uint32_le(s, rwso.client_offset_x);
+    in_uint32_le(s, rwso.client_offset_y);
+    in_uint32_le(s, rwso.client_area_width);
+    in_uint32_le(s, rwso.client_area_height);
+    in_uint32_le(s, rwso.rp_content);
+    in_uint32_le(s, rwso.root_parent_handle);
+    in_uint32_le(s, rwso.window_offset_x);
+    in_uint32_le(s, rwso.window_offset_y);
+    in_uint32_le(s, rwso.window_client_delta_x);
+    in_uint32_le(s, rwso.window_client_delta_y);
+    in_uint32_le(s, rwso.window_width);
+    in_uint32_le(s, rwso.window_height);
+    in_uint16_le(s, rwso.num_window_rects);
+    if (rwso.num_window_rects > 0)
+    {
+        bytes = sizeof(struct rail_window_rect) * rwso.num_window_rects;
+        rwso.window_rects = (struct rail_window_rect*)g_malloc(bytes, 0);
+        for (index = 0; index < rwso.num_window_rects; index++)
+        {
+            in_uint16_le(s, rwso.window_rects[index].left);
+            in_uint16_le(s, rwso.window_rects[index].top);
+            in_uint16_le(s, rwso.window_rects[index].right);
+            in_uint16_le(s, rwso.window_rects[index].bottom);
+        }
+    }
+    in_uint32_le(s, rwso.visible_offset_x);
+    in_uint32_le(s, rwso.visible_offset_y);
+    in_uint16_le(s, rwso.num_visibility_rects);
+    if (rwso.num_visibility_rects > 0)
+    {
+        bytes = sizeof(struct rail_window_rect) * rwso.num_visibility_rects;
+        rwso.visibility_rects = (struct rail_window_rect*)g_malloc(bytes, 0);
+        for (index = 0; index < rwso.num_visibility_rects; index++)
+        {
+            in_uint16_le(s, rwso.visibility_rects[index].left);
+            in_uint16_le(s, rwso.visibility_rects[index].top);
+            in_uint16_le(s, rwso.visibility_rects[index].right);
+            in_uint16_le(s, rwso.visibility_rects[index].bottom);
+        }
+    }
+    in_uint32_le(s, flags);
+    rv = libxrdp_orders_init(self->wm->session);
+    rv = libxrdp_window_new_update(self->wm->session, window_id, &rwso, flags);
+    rv = libxrdp_orders_send(self->wm->session);
+    g_free(rwso.window_rects);
+    g_free(rwso.visibility_rects);
+    return rv;
+}
+
+/*****************************************************************************/
+/* returns error
    process rail destroy window order */
 static int APP_CC
 xrdp_mm_process_rail_destroy_window(struct xrdp_mm* self, struct stream* s)
