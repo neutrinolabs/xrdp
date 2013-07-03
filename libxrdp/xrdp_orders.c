@@ -47,6 +47,11 @@ xrdp_orders_create(struct xrdp_session *session, struct xrdp_rdp *rdp_layer)
     init_stream(self->out_s, 16384);
     self->orders_state.clip_right = 1; /* silly rdp right clip */
     self->orders_state.clip_bottom = 1; /* silly rdp bottom clip */
+    self->rfx_min_pixel = rdp_layer->client_info.rfx_min_pixel;
+    if (self->rfx_min_pixel == 0)
+    {
+        self->rfx_min_pixel = 64 * 32;
+    }
     return self;
 }
 
@@ -2241,7 +2246,9 @@ xrdp_orders_send_as_rfx(struct xrdp_orders *self,
         return 0;
     }
 
-    if (width * height < 64)
+    LLOGLN(10, ("width %d height %d rfx_min_pixel %d", width, height,
+                self->rfx_min_pixel));
+    if (width * height < self->rfx_min_pixel)
     {
         return 0;
     }

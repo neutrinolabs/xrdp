@@ -487,6 +487,7 @@ draw_item_pack(PixmapPtr pix, rdpPixmapRec *priv)
 {
     struct rdp_draw_item *di;
     struct rdp_draw_item *di_prev;
+    RegionRec treg;
 
 #if 1
 
@@ -500,19 +501,17 @@ draw_item_pack(PixmapPtr pix, rdpPixmapRec *priv)
 
             while (di != 0)
             {
-                if ((di_prev->type == RDI_IMGLL) && (di->type == RDI_IMGLL))
+                if ((di_prev->type == RDI_IMGLL || di_prev->type == RDI_IMGLY ||
+                     di_prev->type == RDI_FILL) &&
+                    (di->type == RDI_IMGLL || di->type == RDI_IMGLY ||
+                     di->type == RDI_FILL))
                 {
-                    LLOGLN(10, ("draw_item_pack: packing RDI_IMGLL"));
+                    LLOGLN(10, ("draw_item_pack: packing RDI_IMGLL / RDI_IMGLY / "
+                                "RDI_FILL"));
                     RegionUnion(di_prev->reg, di_prev->reg, di->reg);
                     draw_item_remove(priv, di);
                     di = di_prev->next;
-                }
-                else if ((di_prev->type == RDI_IMGLY) && (di->type == RDI_IMGLY))
-                {
-                    LLOGLN(10, ("draw_item_pack: packing RDI_IMGLY"));
-                    RegionUnion(di_prev->reg, di_prev->reg, di->reg);
-                    draw_item_remove(priv, di);
-                    di = di_prev->next;
+                    di_prev->type = RDI_IMGLL;
                 }
                 else
                 {
@@ -547,7 +546,14 @@ draw_item_pack(PixmapPtr pix, rdpPixmapRec *priv)
                     while (di_prev != 0)
                     {
                         /* D = M - S */
-                        RegionSubtract(di_prev->reg, di_prev->reg, di->reg);
+                        RegionInit(&treg, NullBox, 0);
+                        RegionSubtract(&treg, di_prev->reg, di->reg);
+                        if (!RegionNotEmpty(&treg))
+                        {
+                            /* copy empty region so this draw item will get removed below */
+                            RegionCopy(di_prev->reg, &treg);
+                        }
+                        RegionUninit(&treg);
                         di_prev = di_prev->prev;
                     }
                 }

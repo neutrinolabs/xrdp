@@ -131,6 +131,10 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
         {
             client_info->max_bpp = g_atoi(value);
         }
+        else if (g_strcasecmp(item, "rfx_min_pixel") == 0)
+        {
+            client_info->rfx_min_pixel = g_atoi(value);
+        }
         else if (g_strcasecmp(item, "new_cursors") == 0)
         {
             client_info->pointer_flags = text2bool(value) == 0 ? 2 : 0;
@@ -925,16 +929,16 @@ xrdp_process_capset_bmpcache2(struct xrdp_rdp *self, struct stream *s,
     self->client_info.bitmap_cache_persist_enable = i;
     in_uint8s(s, 2); /* number of caches in set, 3 */
     in_uint32_le(s, i);
-    i = MIN(i, 2000);
+    i = MIN(i, XRDP_BITMAP_CACHE_ENTRIES);
     self->client_info.cache1_entries = i;
     self->client_info.cache1_size = 256 * Bpp;
     in_uint32_le(s, i);
-    i = MIN(i, 2000);
+    i = MIN(i, XRDP_BITMAP_CACHE_ENTRIES);
     self->client_info.cache2_entries = i;
     self->client_info.cache2_size = 1024 * Bpp;
     in_uint32_le(s, i);
     i = i & 0x7fffffff;
-    i = MIN(i, 2000);
+    i = MIN(i, XRDP_BITMAP_CACHE_ENTRIES);
     self->client_info.cache3_entries = i;
     self->client_info.cache3_size = 4096 * Bpp;
     DEBUG(("cache1 entries %d size %d", self->client_info.cache1_entries,

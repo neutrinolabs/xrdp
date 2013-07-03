@@ -211,6 +211,7 @@ struct xrdp_orders
   int order_count;
   int order_level; /* inc for every call to xrdp_orders_init */
   struct xrdp_orders_state orders_state;
+  int rfx_min_pixel;
 };
 
 #define PROTO_RDP_40 1
