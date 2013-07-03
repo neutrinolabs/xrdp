@@ -221,7 +221,7 @@ rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
                 }
                 else
                 {
-                    draw_item_add_img_region(pDirtyPriv, fill_reg, GXcopy, dirty_type, 4);
+                    draw_item_add_img_region(pDirtyPriv, fill_reg, GXcopy, dirty_type, TAG_POLYRECTANGLE);
                 }
 
                 RegionDestroy(fill_reg);
@@ -275,7 +275,7 @@ rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
                     }
                     else
                     {
-                        draw_item_add_img_region(pDirtyPriv, &clip_reg, GXcopy, dirty_type, 4);
+                        draw_item_add_img_region(pDirtyPriv, &clip_reg, GXcopy, dirty_type, TAG_POLYRECTANGLE);
                     }
                 }
                 else if (got_id)

@@ -119,8 +119,11 @@ struct mod
                                   int flags);
   int (*server_set_cursor_ex)(struct mod* v, int x, int y, char* data,
                               char* mask, int bpp);
+  int (*server_add_char_alpha)(struct mod* v, int font, int charactor,
+                               int offset, int baseline,
+                               int width, int height, char* data);
 
-  tbus server_dumby[100 - 38]; /* align, 100 minus the number of server
+  tbus server_dumby[100 - 39]; /* align, 100 minus the number of server
                                   functions above */
   /* common */
   tbus handle; /* pointer to self as long */

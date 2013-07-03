@@ -555,6 +555,18 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
     int fgcolor;
     int bgcolor;
     int opcode;
+    int charactor;
+    int font;
+    int flags;
+    int mixmode;
+    int clip_left;
+    int clip_top;
+    int clip_right;
+    int clip_bottom;
+    int box_left;
+    int box_top;
+    int box_right;
+    int box_bottom;
     char *bmpdata;
     char cur_data[32 * (32 * 3)];
     char cur_mask[32 * (32 / 8)];
@@ -679,6 +691,48 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
             break;
         case 27: /* server_window_new_update - show */
             rv = process_server_window_show(mod, s);
+            break;
+        case 28: /* server_add_char */
+            in_uint16_le(s, font);
+            in_uint16_le(s, charactor);
+            in_sint16_le(s, x);
+            in_sint16_le(s, y);
+            in_uint16_le(s, cx);
+            in_uint16_le(s, cy);
+            in_uint16_le(s, len_bmpdata);
+            in_uint8p(s, bmpdata, len_bmpdata);
+            rv = mod->server_add_char(mod, font, charactor, x, y, cx, cy, bmpdata);
+            break;
+        case 29: /* server_add_char_alpha */
+            in_uint16_le(s, font);
+            in_uint16_le(s, charactor);
+            in_sint16_le(s, x);
+            in_sint16_le(s, y);
+            in_uint16_le(s, cx);
+            in_uint16_le(s, cy);
+            in_uint16_le(s, len_bmpdata);
+            in_uint8p(s, bmpdata, len_bmpdata);
+            rv = mod->server_add_char_alpha(mod, font, charactor, x, y, cx, cy, bmpdata);
+            break;
+        case 30: /* server_draw_text */
+            in_uint16_le(s, font);
+            in_uint16_le(s, flags);
+            in_uint16_le(s, mixmode);
+            in_sint16_le(s, clip_left);
+            in_sint16_le(s, clip_top);
+            in_sint16_le(s, clip_right);
+            in_sint16_le(s, clip_bottom);
+            in_sint16_le(s, box_left);
+            in_sint16_le(s, box_top);
+            in_sint16_le(s, box_right);
+            in_sint16_le(s, box_bottom);
+            in_sint16_le(s, x);
+            in_sint16_le(s, y);
+            in_uint16_le(s, len_bmpdata);
+            in_uint8p(s, bmpdata, len_bmpdata);
+            rv = mod->server_draw_text(mod, font, flags, mixmode, clip_left, clip_top,
+                                       clip_right, clip_bottom, box_left, box_top,
+                                       box_right, box_bottom, x, y, bmpdata, len_bmpdata);
             break;
         case 51: /* server_set_pointer_ex */
             rv = process_server_set_pointer_ex(mod, s);

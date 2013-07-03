@@ -40,13 +40,15 @@ struct xrdp_pen
   int color;
 };
 
+/* 2.2.2.2.1.2.5.1 Cache Glyph Data (TS_CACHE_GLYPH_DATA) */
 struct xrdp_font_char
 {
-  int offset;
-  int baseline;
-  int width;
-  int height;
+  int offset;    /* x */
+  int baseline;  /* y */
+  int width;     /* cx */
+  int height;    /* cy */
   int incby;
+  int bpp;
   char* data;
 };
 

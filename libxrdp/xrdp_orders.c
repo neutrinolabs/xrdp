@@ -2020,15 +2020,25 @@ xrdp_orders_send_font(struct xrdp_orders *self,
     int order_flags = 0;
     int datasize = 0;
     int len = 0;
+    int flags;
 
-    datasize = FONT_DATASIZE(font_char);
+    if (font_char->bpp == 8) /* alpha font */
+    {
+        datasize = ((font_char->width + 3) & ~3) * font_char->height;
+        flags = 8 | 0x4000;
+    }
+    else
+    {
+        datasize = FONT_DATASIZE(font_char);
+        flags = 8;
+    }
     xrdp_orders_check(self, datasize + 18);
     self->order_count++;
     order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
     out_uint8(self->out_s, order_flags);
     len = (datasize + 12) - 7; /* length after type minus 7 */
     out_uint16_le(self->out_s, len);
-    out_uint16_le(self->out_s, 8); /* flags */
+    out_uint16_le(self->out_s, flags);
     out_uint8(self->out_s, RDP_ORDER_FONTCACHE); /* type */
     out_uint8(self->out_s, font_index);
     out_uint8(self->out_s, 1); /* num of chars */

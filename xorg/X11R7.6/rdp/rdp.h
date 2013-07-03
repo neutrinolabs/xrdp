@@ -95,6 +95,23 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define PixelDPI 100
 #define PixelToMM(_size) (((_size) * 254 + (PixelDPI) * 5) / ((PixelDPI) * 10))
 
+#define TAG_COMPOSITE     0
+#define TAG_COPYAREA      1
+#define TAG_POLYFILLRECT  2
+#define TAG_PUTIMAGE      3
+#define TAG_POLYRECTANGLE 4
+#define TAG_COPYPLANE     5
+#define TAG_POLYARC       6
+#define TAG_FILLPOLYGON   7
+#define TAG_POLYFILLARC   8
+#define TAG_IMAGETEXT8    9
+#define TAG_POLYTEXT8     10
+#define TAG_POLYTEXT16    11
+#define TAG_IMAGETEXT16   12
+#define TAG_IMAGEGLYPHBLT 13
+#define TAG_POLYGLYPHBLT  14
+#define TAG_PUSHPIXELS    15
+
 struct image_data
 {
   int width;
@@ -144,6 +161,8 @@ struct _rdpScreenInfoRec
   CopyWindowProcPtr CopyWindow;
   ClearToBackgroundProcPtr ClearToBackground;
   ScreenWakeupHandlerProcPtr WakeupHandler;
+  CreatePictureProcPtr CreatePicture;
+  DestroyPictureProcPtr DestroyPicture;
   CompositeProcPtr Composite;
   GlyphsProcPtr Glyphs;
   /* Backing store procedures */
@@ -200,6 +219,7 @@ typedef rdpWindowRec* rdpWindowPtr;
 #define RDI_IMGLY 3 /* lossy */
 #define RDI_LINE 4
 #define RDI_SCRBLT 5
+define RDI_TEXT 6
 
 struct urdp_draw_item_fill
 {
@@ -236,6 +256,13 @@ struct urdp_draw_item_scrblt
   int cy;
 };
 
+struct urdp_draw_item_text
+{
+  int opcode;
+  int fg_color;
+  struct rdp_text* rtext; /* in rdpglyph.h */
+};
+
 union urdp_draw_item
 {
   struct urdp_draw_item_fill fill;
@@ -246,7 +273,7 @@ union urdp_draw_item
 
 struct rdp_draw_item
 {
-  int type;
+  int type; /* RDI_FILL, RDI_IMGLL, ... */
   int flags;
   struct rdp_draw_item* prev;
   struct rdp_draw_item* next;
@@ -327,6 +354,8 @@ void
 hexdump(unsigned char *p, unsigned int len);
 void
 RegionAroundSegs(RegionPtr reg, xSegment* segs, int nseg);
+int
+get_crc(char* data, int data_bytes);
 
 /* rdpdraw.c */
 Bool
@@ -355,6 +384,9 @@ int
 draw_item_add_srcblt_region(rdpPixmapRec* priv, RegionPtr reg,
                             int srcx, int srcy, int dstx, int dsty,
                             int cx, int cy);
+int
+draw_item_add_text_region(rdpPixmapRec* priv, RegionPtr reg, int color,
+                          int opcode, struct rdp_text* rtext);
 
 PixmapPtr
 rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
@@ -413,6 +445,10 @@ rdpDisplayCursor(ScreenPtr pScreen, CursorPtr pCursor);
 void
 rdpRecolorCursor(ScreenPtr pScreen, CursorPtr pCursor,
                  Bool displayed);
+int
+rdpCreatePicture(PicturePtr pPicture);
+void
+rdpDestroyPicture(PicturePtr pPicture);
 void
 rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
              INT16 xSrc, INT16 ySrc, INT16 xMask, INT16 yMask, INT16 xDst,
@@ -523,6 +559,19 @@ int
 rdpup_check_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec* pDirtyPriv);
 int
 rdpup_check_dirty_screen(rdpPixmapRec* pDirtyPriv);
+int
+rdpup_add_char(int font, int charactor, short x, short y, int cx, int cy,
+               char* bmpdata, int bmpdata_bytes);
+int
+rdpup_add_char_alpha(int font, int charactor, short x, short y, int cx, int cy,
+                     char* bmpdata, int bmpdata_bytes);
+int
+rdpup_draw_text(int font, int flags, int mixmode,
+                short clip_left, short clip_top,
+                short clip_right, short clip_bottom,
+                short box_left, short box_top,
+                short box_right, short box_bottom, short x, short y,
+                char* data, int data_bytes);
 
 void
 rdpScheduleDeferredUpdate(void);

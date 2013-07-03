@@ -45,6 +45,7 @@ Xserver drawing ops and funcs
 #include "rdpImageGlyphBlt.h"
 #include "rdpPolyGlyphBlt.h"
 #include "rdpPushPixels.h"
+#include "rdpglyph.h"
 
 #define LOG_LEVEL 1
 #define LLOG(_level, _args) \
@@ -65,6 +66,7 @@ extern int g_do_dirty_os; /* in rdpmain.c */
 extern int g_do_dirty_ons; /* in rdpmain.c */
 extern rdpPixmapRec g_screenPriv; /* in rdpmain.c */
 extern int g_con_number; /* in rdpmain.c */
+extern int g_do_glyph_cache; /* in rdpmain.c */
 
 ColormapPtr g_rdpInstalledColormap;
 
@@ -458,6 +460,11 @@ draw_item_remove(rdpPixmapRec *priv, struct rdp_draw_item *di)
             g_free(di->u.line.segs);
         }
     }
+    
+    if (di->type == RDI_TEXT)
+    {
+        delete_rdp_text(di->u.text.rtext);
+    }
 
     RegionDestroy(di->reg);
     g_free(di);
@@ -483,12 +490,75 @@ draw_item_remove_all(rdpPixmapRec *priv)
 
 /******************************************************************************/
 int
+region_get_pixel_count(RegionPtr reg)
+{
+    int index;
+    int count;
+    int pixels;
+    int width;
+    int height;
+    BoxRec box;
+    
+    pixels = 0;
+    count = REGION_NUM_RECTS(reg);
+    for (index = 0; index < count; index++)
+    {
+        box = REGION_RECTS(reg)[index];
+        width = box.x2 - box.x1;
+        height = box.y2 - box.y1;
+        pixels += width * height;
+    }
+    return pixels;
+}
+
+/******************************************************************************/
+int
+region_in_region(RegionPtr reg_small, int sreg_pcount, RegionPtr reg_big)
+{
+    int rv;
+    RegionRec reg;
+    
+    rv = 0;
+    RegionInit(&reg, NullBox, 0);
+    RegionIntersect(&reg, reg_small, reg_big);
+    if (sreg_pcount == -1)
+    {
+        sreg_pcount = region_get_pixel_count(reg_small);
+    }
+    if (region_get_pixel_count(&reg) == sreg_pcount)
+    {
+        rv = 1;
+    }
+    RegionUninit(&reg);
+    return rv;
+}
+
+/******************************************************************************/
+int
 draw_item_pack(PixmapPtr pix, rdpPixmapRec *priv)
 {
     struct rdp_draw_item *di;
     struct rdp_draw_item *di_prev;
     RegionRec treg;
+    BoxRec box;
 
+#if 1
+    box.x1 = 0;
+    box.x2 = pix->drawable.width;
+    box.y1 = 0;
+    box.y2 = pix->drawable.height;
+    RegionInit(&treg, &box, 0);
+    di = priv->draw_item_head;
+    di_prev = 0;
+    while (di != 0)
+    {
+        RegionIntersect(di->reg, di->reg, &treg);
+        di_prev = di;
+        di = di->next;
+    }
+    RegionUninit(&treg);
+#endif
+    
 #if 1
 
     /* look for repeating draw types */
@@ -501,17 +571,19 @@ draw_item_pack(PixmapPtr pix, rdpPixmapRec *priv)
 
             while (di != 0)
             {
-                if ((di_prev->type == RDI_IMGLL || di_prev->type == RDI_IMGLY ||
-                     di_prev->type == RDI_FILL) &&
-                    (di->type == RDI_IMGLL || di->type == RDI_IMGLY ||
-                     di->type == RDI_FILL))
+                if ((di_prev->type == RDI_IMGLL) && (di->type == RDI_IMGLL))
                 {
-                    LLOGLN(10, ("draw_item_pack: packing RDI_IMGLL / RDI_IMGLY / "
-                                "RDI_FILL"));
+                    LLOGLN(10, ("draw_item_pack: packing RDI_IMGLL"));
                     RegionUnion(di_prev->reg, di_prev->reg, di->reg);
                     draw_item_remove(priv, di);
                     di = di_prev->next;
-                    di_prev->type = RDI_IMGLL;
+                }
+                else if ((di_prev->type == RDI_IMGLY) && (di->type == RDI_IMGLY))
+                {
+                    LLOGLN(10, ("draw_item_pack: packing RDI_IMGLY"));
+                    RegionUnion(di_prev->reg, di_prev->reg, di->reg);
+                    draw_item_remove(priv, di);
+                    di = di_prev->next;
                 }
                 else
                 {
@@ -545,15 +617,11 @@ draw_item_pack(PixmapPtr pix, rdpPixmapRec *priv)
 
                     while (di_prev != 0)
                     {
-                        /* D = M - S */
-                        RegionInit(&treg, NullBox, 0);
-                        RegionSubtract(&treg, di_prev->reg, di->reg);
-                        if (!RegionNotEmpty(&treg))
+                        if (region_in_region(di_prev->reg, -1, di->reg))
                         {
-                            /* copy empty region so this draw item will get removed below */
-                            RegionCopy(di_prev->reg, &treg);
+                            /* empty region so this draw item will get removed below */
+                            RegionEmpty(di_prev->reg);
                         }
-                        RegionUninit(&treg);
                         di_prev = di_prev->prev;
                     }
                 }
@@ -692,6 +760,25 @@ draw_item_add_srcblt_region(rdpPixmapRec *priv, RegionPtr reg,
     di->u.scrblt.dsty = dsty;
     di->u.scrblt.cx = cx;
     di->u.scrblt.cy = cy;
+    di->reg = RegionCreate(NullBox, 0);
+    RegionCopy(di->reg, reg);
+    draw_item_add(priv, di);
+    return 0;
+}
+
+/******************************************************************************/
+int
+draw_item_add_text_region(rdpPixmapRec* priv, RegionPtr reg, int color,
+                          int opcode, struct rdp_text* rtext)
+{
+    struct rdp_draw_item* di;
+
+    LLOGLN(10, ("draw_item_add_text_region:"));
+    di = (struct rdp_draw_item*)g_malloc(sizeof(struct rdp_draw_item), 1);
+    di->type = RDI_TEXT;
+    di->u.text.fg_color = color;
+    di->u.text.opcode = opcode;
+    di->u.text.rtext = rtext;
     di->reg = RegionCreate(NullBox, 0);
     RegionCopy(di->reg, reg);
     draw_item_add(priv, di);
@@ -1299,7 +1386,57 @@ rdpSaveScreen(ScreenPtr pScreen, int on)
 }
 
 /******************************************************************************/
-/* it looks like all the antialias draws go through here */
+int
+rdpCreatePicture(PicturePtr pPicture)
+{
+    PictureScreenPtr ps;
+    int rv;
+
+    LLOGLN(10, ("rdpCreatePicture:"));
+    ps = GetPictureScreen(g_pScreen);
+    ps->CreatePicture = g_rdpScreen.CreatePicture;
+    rv = ps->CreatePicture(pPicture);
+    ps->CreatePicture = rdpCreatePicture;
+    return rv;
+}
+
+/******************************************************************************/
+void
+rdpDestroyPicture(PicturePtr pPicture)
+{
+    PictureScreenPtr ps;
+
+    LLOGLN(10, ("rdpDestroyPicture:"));
+    ps = GetPictureScreen(g_pScreen);
+    ps->DestroyPicture = g_rdpScreen.DestroyPicture;
+    ps->DestroyPicture(pPicture);
+    ps->DestroyPicture = rdpDestroyPicture;
+}
+
+/******************************************************************************/
+/* it looks like all the antialias draws go through here
+ op is one of the following
+ #define PictOpMinimum       0
+ #define PictOpClear         0
+ #define PictOpSrc           1
+ #define PictOpDst           2
+ #define PictOpOver          3
+ #define PictOpOverReverse   4
+ #define PictOpIn            5
+ #define PictOpInReverse     6
+ #define PictOpOut           7
+ #define PictOpOutReverse    8
+ #define PictOpAtop          9
+ #define PictOpAtopReverse   10
+ #define PictOpXor           11
+ #define PictOpAdd           12
+ #define PictOpSaturate      13
+ #define PictOpMaximum       13
+ 
+ see for porter duff
+ http://www.svgopen.org/2005/papers/abstractsvgopen/
+ 
+ */
 void
 rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
              INT16 xSrc, INT16 ySrc, INT16 xMask, INT16 yMask, INT16 xDst,
@@ -1323,12 +1460,20 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
     struct image_data id;
 
     LLOGLN(10, ("rdpComposite:"));
+    
     ps = GetPictureScreen(g_pScreen);
     ps->Composite = g_rdpScreen.Composite;
     ps->Composite(op, pSrc, pMask, pDst, xSrc, ySrc,
                   xMask, yMask, xDst, yDst, width, height);
     ps->Composite = rdpComposite;
 
+    if (g_doing_font == 2)
+    {
+        return;
+    }
+
+    LLOGLN(10, ("rdpComposite: op %d %p %p %p w %d h %d", op, pSrc, pMask, pDst, width, height));
+    
     p = pDst->pDrawable;
 
     dirty_type = 0;
@@ -1409,7 +1554,7 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
 
         if (dirty_type != 0)
         {
-            draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type, 0);
+            draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type, TAG_COMPOSITE);
         }
         else if (got_id)
         {
@@ -1442,7 +1587,7 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
         if (dirty_type != 0)
         {
             RegionInit(&reg1, &box, 0);
-            draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type, 0);
+            draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type, TAG_COMPOSITE);
             RegionUninit(&reg1);
         }
         else if (got_id)
@@ -1467,26 +1612,31 @@ rdpGlyphs(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
           GlyphPtr *glyphs)
 {
     PictureScreenPtr ps;
-    int index;
 
-    LLOGLN(10, ("rdpGlyphs:"));
-    LLOGLN(10, ("rdpGlyphs: nlists %d len %d", nlists, lists->len));
-    rdpup_set_hints(1, 1);
-    g_doing_font = 1;
+    LLOGLN(10, ("rdpGlyphs: op %d xSrc %d ySrc %d", op, xSrc, ySrc));
 
-    for (index = 0; index < lists->len; index++)
+    if (g_do_glyph_cache)
     {
-        LLOGLN(10, ("  index %d size %d refcnt %d width %d height %d",
-                    index, (int)(glyphs[index]->size), (int)(glyphs[index]->refcnt),
-                    glyphs[index]->info.width, glyphs[index]->info.height));
+        g_doing_font = 2;
+        ps = GetPictureScreen(g_pScreen);
+        ps->Glyphs = g_rdpScreen.Glyphs;
+        ps->Glyphs(op, pSrc, pDst, maskFormat, xSrc, ySrc,
+                   nlists, lists, glyphs);
+        ps->Glyphs = rdpGlyphs;
+        rdpGlypht(op, pSrc, pDst, maskFormat, xSrc, ySrc, nlists, lists, glyphs);
+    }
+    else
+    {
+        g_doing_font = 1;
+        rdpup_set_hints(1, 1);
+        ps = GetPictureScreen(g_pScreen);
+        ps->Glyphs = g_rdpScreen.Glyphs;
+        ps->Glyphs(op, pSrc, pDst, maskFormat, xSrc, ySrc,
+                   nlists, lists, glyphs);
+        ps->Glyphs = rdpGlyphs;
+        rdpup_set_hints(0, 1);
     }
 
-    ps = GetPictureScreen(g_pScreen);
-    ps->Glyphs = g_rdpScreen.Glyphs;
-    ps->Glyphs(op, pSrc, pDst, maskFormat, xSrc, ySrc,
-               nlists, lists, glyphs);
-    ps->Glyphs = rdpGlyphs;
-    rdpup_set_hints(0, 1);
     g_doing_font = 0;
     LLOGLN(10, ("rdpGlyphs: out"));
 }

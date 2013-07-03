@@ -185,7 +185,7 @@ rdpPolyFillArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc *parcs)
             {
                 if (dirty_type != 0)
                 {
-                    draw_item_add_img_region(pDirtyPriv, tmpRegion, GXcopy, dirty_type, 8);
+                    draw_item_add_img_region(pDirtyPriv, tmpRegion, GXcopy, dirty_type, TAG_POLYFILLARC);
                 }
                 else if (got_id)
                 {
@@ -217,7 +217,7 @@ rdpPolyFillArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc *parcs)
             {
                 if (dirty_type != 0)
                 {
-                    draw_item_add_img_region(pDirtyPriv, tmpRegion, GXcopy, dirty_type, 8);
+                    draw_item_add_img_region(pDirtyPriv, tmpRegion, GXcopy, dirty_type, TAG_POLYFILLARC);
                 }
                 else if (got_id)
                 {
