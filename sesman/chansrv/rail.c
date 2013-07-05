@@ -1135,6 +1135,8 @@ rail_win_send_text(Window win)
 static int APP_CC
 rail_destroy_window(Window window_id)
 {
+    struct stream *s;
+    
     LOG(10, ("chansrv::rail_destroy_window 0x%8.8x", window_id));
     make_stream(s);
     init_stream(s, 1024);
@@ -1672,7 +1674,7 @@ rail_xevent(void *xevent)
                 rail_destroy_window(lxevent->xdestroywindow.window);
                 list_remove_item(g_window_list, index);
             }
-            v = 0;
+            rv = 0;
             break;
             
         case MapRequest:
