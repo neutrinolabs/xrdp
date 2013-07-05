@@ -92,6 +92,26 @@ set_mono_pixel(char* data, int x, int y, int width, int pixel)
     }
 }
 
+/*****************************************************************************/
+static int
+lget_pixel(char* data, int x, int y, int depth, int stride_bytes)
+{
+    int start;
+    int shift;
+    
+    if (depth == 1)
+    {
+        start = (y * stride_bytes) + x / 8;
+        shift = x % 8;
+        return (data[start] & (0x01 << shift)) ? 0xff : 0;
+    }
+    else if (depth == 8)
+    {
+        return data[y * stride_bytes + x];
+    }
+    return 0;
+}
+
 /******************************************************************************/
 static int
 glyph_get_data(ScreenPtr pScreen, GlyphPtr glyph, struct rdp_font_char* rfd)
@@ -100,11 +120,11 @@ glyph_get_data(ScreenPtr pScreen, GlyphPtr glyph, struct rdp_font_char* rfd)
     int j;
     int src_xoff;
     int src_yoff;
-    int stride_bytes;
+    int src_stride_bytes;
+    int dst_stride_bytes;
     int hh;
     int ww;
-    int ss;
-    int depth;
+    int src_depth;
     unsigned char pixel;
     PicturePtr pPicture;
     pixman_image_t *src;
@@ -122,49 +142,43 @@ glyph_get_data(ScreenPtr pScreen, GlyphPtr glyph, struct rdp_font_char* rfd)
         return 0;
     }
     
-    depth = pixman_image_get_depth(src);
-    stride_bytes = pixman_image_get_stride(src);
-    ww = pixman_image_get_width(src);
-    hh = pixman_image_get_height(src);
-    ss = (glyph->info.width + 3) & ~3;
-    if ((ww != glyph->info.width) || (hh != glyph->info.height) ||
-        (depth != 8) || (stride_bytes != ss))
-    {
-        LLOGLN(10, ("glyph_get_data: error w %d w %d h %d h %d "
-                    "stride %d stride %d depth %d", ww,
-                    glyph->info.width, hh, glyph->info.height,
-                    stride_bytes, ss, depth));
-        free_pixman_pict(pPicture, src);
-        return 0;
-    }
-    
+    src_stride_bytes = pixman_image_get_stride(src);
     if (g_do_alpha_glyphs)
     {
-        rfd->data_bytes = glyph->info.height * stride_bytes;
+        dst_stride_bytes = (glyph->info.width + 3) & ~3;
         rfd->bpp = 8;
     }
     else
     {
-        rfd->data_bytes = (((glyph->info.height *
-                             ((glyph->info.width + 7) / 8)) + 3) & ~3);
+        dst_stride_bytes = (((glyph->info.width + 7) / 8) + 3) & ~3;
         rfd->bpp = 1;
     }
+    src_depth = pixman_image_get_depth(src);
+    ww = pixman_image_get_width(src);
+    hh = pixman_image_get_height(src);
+    if ((ww != glyph->info.width) || (hh != glyph->info.height) ||
+        ((src_depth != 1) && (src_depth != 8)))
+    {
+        LLOGLN(0, ("glyph_get_data: bad glyph"));
+        free_pixman_pict(pPicture, src);
+        return 0;
+    }
+    rfd->data_bytes = glyph->info.height * dst_stride_bytes;
     rfd->data = (char*)g_malloc(rfd->data_bytes, 1);
     rfd->offset = -glyph->info.x;
     rfd->baseline = -glyph->info.y;
     rfd->width = glyph->info.width;
     rfd->height = glyph->info.height;
-    
     pi32 = pixman_image_get_data(src);
     pi8 = (char*)pi32;
     for (j = 0; j < rfd->height; j++)
     {
         for (i = 0; i < rfd->width; i++)
         {
-            pixel = pi8[j * stride_bytes + i];
+            pixel = lget_pixel(pi8, i, j, src_depth, src_stride_bytes);
             if (g_do_alpha_glyphs)
             {
-                rfd->data[j * stride_bytes + i] = pixel;
+                rfd->data[j * dst_stride_bytes + i] = pixel;
             }
             else
             {
