@@ -29,3 +29,4 @@ startscript_DATA = \
 install-data-hook:
 	chmod 755 $(DESTDIR)$(sysconfdir)/xrdp/xrdp.sh
 	chmod 755 $(DESTDIR)$(sysconfdir)/init.d/xrdp
+	sed -i 's|__BASE__|$(prefix)|' $(sysconfdir)/init.d/xrdp;
