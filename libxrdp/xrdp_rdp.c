@@ -679,38 +679,38 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp *self)
     out_uint16_le(s, 0x2f); /* Number of fonts */
     out_uint16_le(s, 0x22); /* Capability flags */
     /* caps */
-    out_uint8(s, 1); /* dest blt */
-    out_uint8(s, 1); /* pat blt */
-    out_uint8(s, 1); /* screen blt */
-    out_uint8(s, 1); /* mem blt */
-    out_uint8(s, 0); /* tri blt */
-    out_uint8(s, 0); /* unused */
-    out_uint8(s, 0); /* unused */
-    out_uint8(s, 0); /* nine grid */
-    out_uint8(s, 1); /* line to */
-    out_uint8(s, 0); /* multi nine grid */
-    out_uint8(s, 1); /* rect */
-    out_uint8(s, 0); /* desk save */
-    out_uint8(s, 0); /* unused */
-    out_uint8(s, 0); /* unused */
-    out_uint8(s, 0); /* unused */
-    out_uint8(s, 0); /* multi dest blt */
-    out_uint8(s, 0); /* multi pat blt */
-    out_uint8(s, 0); /* multi screen blt */
-    out_uint8(s, 1); /* multi rect */
-    out_uint8(s, 0); /* fast index */
-    out_uint8(s, 0); /* polygonSC ([MS-RDPEGDI], 2.2.2.2.1.1.2.16) */
-    out_uint8(s, 0); /* polygonCB ([MS-RDPEGDI], 2.2.2.2.1.1.2.17) */
-    out_uint8(s, 0); /* polyline */
-    out_uint8(s, 0); /* unused */
-    out_uint8(s, 0); /* fast glyph */
-    out_uint8(s, 0); /* ellipse */
-    out_uint8(s, 0); /* ellipse */
-    out_uint8(s, 0); /* ? */
-    out_uint8(s, 0); /* unused */
-    out_uint8(s, 0); /* unused */
-    out_uint8(s, 0); /* unused */
-    out_uint8(s, 0); /* unused */
+    out_uint8(s, 1); /* NEG_DSTBLT_INDEX                0x00 0 */
+    out_uint8(s, 1); /* NEG_PATBLT_INDEX                0x01 1 */
+    out_uint8(s, 1); /* NEG_SCRBLT_INDEX                0x02 2 */
+    out_uint8(s, 1); /* NEG_MEMBLT_INDEX                0x03 3 */
+    out_uint8(s, 0); /* NEG_MEM3BLT_INDEX               0x04 4 */
+    out_uint8(s, 0); /* NEG_ATEXTOUT_INDEX              0x05 5 */
+    out_uint8(s, 0); /* NEG_AEXTTEXTOUT_INDEX           0x06 6 */
+    out_uint8(s, 0); /* NEG_DRAWNINEGRID_INDEX          0x07 7 */
+    out_uint8(s, 1); /* NEG_LINETO_INDEX                0x08 8 */
+    out_uint8(s, 0); /* NEG_MULTI_DRAWNINEGRID_INDEX    0x09 9 */
+    out_uint8(s, 1); /* NEG_OPAQUE_RECT_INDEX           0x0A 10 */
+    out_uint8(s, 0); /* NEG_SAVEBITMAP_INDEX            0x0B 11 */
+    out_uint8(s, 0); /* NEG_WTEXTOUT_INDEX              0x0C 12 */
+    out_uint8(s, 0); /* NEG_MEMBLT_V2_INDEX             0x0D 13 */
+    out_uint8(s, 0); /* NEG_MEM3BLT_V2_INDEX            0x0E 14 */
+    out_uint8(s, 0); /* NEG_MULTIDSTBLT_INDEX           0x0F 15 */
+    out_uint8(s, 0); /* NEG_MULTIPATBLT_INDEX           0x10 16 */
+    out_uint8(s, 0); /* NEG_MULTISCRBLT_INDEX           0x11 17 */
+    out_uint8(s, 1); /* NEG_MULTIOPAQUERECT_INDEX       0x12 18 */
+    out_uint8(s, 0); /* NEG_FAST_INDEX_INDEX            0x13 19 */
+    out_uint8(s, 0); /* NEG_POLYGON_SC_INDEX            0x14 20 */
+    out_uint8(s, 0); /* NEG_POLYGON_CB_INDEX            0x15 21 */
+    out_uint8(s, 0); /* NEG_POLYLINE_INDEX              0x16 22 */
+    out_uint8(s, 0); /* unused                          0x17 23 */
+    out_uint8(s, 0); /* NEG_FAST_GLYPH_INDEX            0x18 24 */
+    out_uint8(s, 0); /* NEG_ELLIPSE_SC_INDEX            0x19 25 */
+    out_uint8(s, 0); /* NEG_ELLIPSE_CB_INDEX            0x1A 26 */
+    out_uint8(s, 1); /* NEG_GLYPH_INDEX_INDEX           0x1B 27 */
+    out_uint8(s, 0); /* NEG_GLYPH_WEXTTEXTOUT_INDEX     0x1C 28 */
+    out_uint8(s, 0); /* NEG_GLYPH_WLONGTEXTOUT_INDEX    0x1D 29 */
+    out_uint8(s, 0); /* NEG_GLYPH_WLONGEXTTEXTOUT_INDEX 0x1E 30 */
+    out_uint8(s, 0); /* unused                          0x1F 31 */
     out_uint16_le(s, 0x6a1);
     /* declare support of bitmap cache rev3 */
     out_uint16_le(s, XR_ORDERFLAGS_EX_CACHE_BITMAP_REV3_SUPPORT);

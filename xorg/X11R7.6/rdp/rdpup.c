@@ -54,6 +54,7 @@ extern ScreenPtr g_pScreen; /* from rdpmain.c */
 extern int g_Bpp; /* from rdpmain.c */
 extern int g_Bpp_mask; /* from rdpmain.c */
 extern rdpScreenInfoRec g_rdpScreen; /* from rdpmain.c */
+extern int g_do_glyph_cache; /* from rdpmain.c */
 extern int g_can_do_pix_to_pix; /* from rdpmain.c */
 extern int g_use_rail; /* from rdpmain.c */
 
@@ -157,6 +158,7 @@ rdpup_disconnect(void)
     g_free(g_os_bitmaps);
     g_os_bitmaps = 0;
     g_use_rail = 0;
+    g_do_glyph_cache = 0;
     return 0;
 }
 
@@ -764,6 +766,11 @@ rdpup_process_msg(struct stream *s)
 #ifdef XRDP_WM_RDPUP
             rdpup_send_rail();
 #endif
+        }
+        if (g_rdpScreen.client_info.orders[0x1b])   /* 27 NEG_GLYPH_INDEX_INDEX */
+        {
+            LLOGLN(0, ("  using glyph cache"));
+            g_do_glyph_cache = 1;
         }
         if (g_rdpScreen.client_info.offscreen_cache_entries == 2000)
         {

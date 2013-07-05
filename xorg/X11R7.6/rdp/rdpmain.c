@@ -48,7 +48,7 @@ int g_can_do_pix_to_pix = 0;
 
 int g_do_dirty_os = 1; /* delay remoting off screen bitmaps */
 int g_do_dirty_ons = 0; /* delay remoting screen */
-int g_do_glyph_cache = 1;
+int g_do_glyph_cache = 0;
 int g_do_alpha_glyphs = 1;
 Bool g_wrapWindow = 1;
 Bool g_wrapPixmap = 1;
