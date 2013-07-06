@@ -269,6 +269,7 @@ union urdp_draw_item
   struct urdp_draw_item_img img;
   struct urdp_draw_item_line line;
   struct urdp_draw_item_scrblt scrblt;
+  struct urdp_draw_item_text text;
 };
 
 struct rdp_draw_item
