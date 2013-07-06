@@ -219,7 +219,7 @@ typedef rdpWindowRec* rdpWindowPtr;
 #define RDI_IMGLY 3 /* lossy */
 #define RDI_LINE 4
 #define RDI_SCRBLT 5
-define RDI_TEXT 6
+#define RDI_TEXT 6
 
 struct urdp_draw_item_fill
 {
