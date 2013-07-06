@@ -75,6 +75,143 @@ int g_exec_pid = 0;
 /* this variable gets bumped up once per DVC we create       */
 tui32 g_dvc_chan_id = 100;
 
+struct timeout_obj
+{
+    tui32 mstime;
+    void* data;
+    void (*callback)(void* data);
+    struct timeout_obj* next;
+};
+
+static struct timeout_obj* g_timeout_head = 0;
+static struct timeout_obj* g_timeout_tail = 0;
+
+/*****************************************************************************/
+int APP_CC
+add_timeout(int msoffset, void (*callback)(void* data), void* data)
+{
+    struct timeout_obj* tobj;
+    tui32 now;
+    
+    LOG(10, ("add_timeout:"));
+    now = g_time3();
+    tobj = g_malloc(sizeof(struct timeout_obj), 1);
+    tobj->mstime = now + msoffset;
+    tobj->callback = callback;
+    tobj->data = data;
+    if (g_timeout_tail == 0)
+    {
+        g_timeout_head = tobj;
+        g_timeout_tail = tobj;
+    }
+    else
+    {
+        g_timeout_tail->next = tobj;
+        g_timeout_tail = tobj;
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+static int APP_CC
+get_timeout(int* timeout)
+{
+    struct timeout_obj* tobj;
+    tui32 now;
+    int ltimeout;
+    
+    LOG(10, ("get_timeout:"));
+    ltimeout = *timeout;
+    if (ltimeout < 1)
+    {
+        ltimeout = 0;
+    }
+    tobj = g_timeout_head;
+    if (tobj != 0)
+    {
+        now = g_time3();
+        while (tobj != 0)
+        {
+            LOG(10, ("  now %u tobj->mstime %u", now, tobj->mstime));
+            if (now < tobj->mstime)
+            {
+                ltimeout = tobj->mstime - now;
+            }
+            tobj = tobj->next;
+        }
+    }
+    if (ltimeout > 0)
+    {
+        LOG(10, ("  ltimeout %d", ltimeout));
+        if (*timeout < 1)
+        {
+            *timeout = ltimeout;
+        }
+        else
+        {
+            if (*timeout > ltimeout)
+            {
+                *timeout = ltimeout;
+            }
+        }
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+static int APP_CC
+check_timeout(void)
+{
+    struct timeout_obj* tobj;
+    struct timeout_obj* last_tobj;
+    struct timeout_obj* temp_tobj;
+    int count;
+    tui32 now;
+    
+    LOG(10, ("check_timeout:"));
+    count = 0;
+    tobj = g_timeout_head;
+    if (tobj != 0)
+    {
+        last_tobj = 0;
+        while (tobj != 0)
+        {
+            count++;
+            now = g_time3();
+            if (now >= tobj->mstime)
+            {
+                tobj->callback(tobj->data);
+                if (last_tobj == 0)
+                {
+                    g_timeout_head = tobj->next;
+                    if (g_timeout_head == 0)
+                    {
+                        g_timeout_tail = 0;
+                    }
+                }
+                else
+                {
+                    last_tobj->next = tobj->next;
+                    if (g_timeout_tail == tobj)
+                    {
+                        g_timeout_tail = last_tobj;
+                    }
+                }
+                temp_tobj = tobj;
+                tobj = tobj->next;
+                g_free(temp_tobj);
+            }
+            else
+            {
+                last_tobj = tobj;
+                tobj = tobj->next;
+            }
+        }
+    }
+    LOG(10, ("  count %d", count));
+    return 0;
+}
+
 /*****************************************************************************/
 /* add data to chan_item, on its way to the client */
 /* returns error */
@@ -939,6 +1076,7 @@ channel_thread_loop(void *in_val)
 
         while (g_obj_wait(objs, num_objs, 0, 0, timeout) == 0)
         {
+            check_timeout();
             if (g_is_wait_obj_set(g_term_event))
             {
                 LOGM((LOG_LEVEL_INFO, "channel_thread_loop: g_term_event set"));
@@ -1021,6 +1159,7 @@ channel_thread_loop(void *in_val)
             sound_get_wait_objs(objs, &num_objs, &timeout);
             dev_redir_get_wait_objs(objs, &num_objs, &timeout);
             xfuse_get_wait_objs(objs, &num_objs, &timeout);
+            get_timeout(&timeout);
         } /* end while (g_obj_wait(objs, num_objs, 0, 0, timeout) == 0) */
     }
 
