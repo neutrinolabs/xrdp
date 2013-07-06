@@ -61,6 +61,10 @@ static int g_rail_running = 1;
 /* list of valid rail windows */
 static struct list* g_window_list = 0;
 
+static int g_got_focus = 0;
+static int g_focus_counter = 0;
+static Window g_focus_win = 0;
+
 /* used in valid field of struct rail_window_data */
 #define RWD_X       (1 << 0)
 #define RWD_Y       (1 << 1)
@@ -149,6 +153,24 @@ static int APP_CC rail_create_window(Window window_id, Window owner_id);
 static int APP_CC rail_win_set_state(Window win, unsigned long state);
 static int APP_CC rail_show_window(Window window_id, int show_state);
 static int APP_CC rail_win_send_text(Window win);
+
+/*****************************************************************************/
+static int APP_CC
+rail_send_key_esc(int window_id)
+{
+    XEvent event;
+
+    g_memset(&event, 0, sizeof(event));
+    event.type = KeyPress;
+    event.xkey.same_screen = True;
+    event.xkey.root = g_root_window;
+    event.xkey.window = window_id;
+    event.xkey.keycode = 9;
+    XSendEvent(g_display, window_id, True, 0xfff, &event);
+    event.type = KeyRelease;
+    XSendEvent(g_display, window_id, True, 0xfff, &event);
+    return 0;
+}
 
 /*****************************************************************************/
 static struct rail_window_data* APP_CC
@@ -414,87 +436,35 @@ rail_process_exec(struct stream *s, int size)
     return 0;
 }
 
-/*****************************************************************************/
-static void APP_CC
-rail_simulate_mouse_click(int button)
-{
-    /*
-     * The below code can be referenced from:
-     * http://www.linuxquestions.org/questions/programming-9/simulating-a-mouse-click-594576/#post2936738
-     */
-    XEvent event;
-    g_memset(&event, 0x00, sizeof(event));
-    
-    event.type = ButtonPress;
-    event.xbutton.button = button;
-    event.xbutton.same_screen = True;
-    
-    XQueryPointer(g_display, g_root_window, &event.xbutton.root,
-                  &event.xbutton.window, &event.xbutton.x_root,
-                  &event.xbutton.y_root, &event.xbutton.x,
-                  &event.xbutton.y, &event.xbutton.state);
-    
-    event.xbutton.subwindow = event.xbutton.window;
-    
-    while(event.xbutton.subwindow)
-    {
-        event.xbutton.window = event.xbutton.subwindow;
-        
-        XQueryPointer(g_display, event.xbutton.window, &event.xbutton.root,
-                      &event.xbutton.subwindow, &event.xbutton.x_root,
-                      &event.xbutton.y_root, &event.xbutton.x,
-                      &event.xbutton.y, &event.xbutton.state);
-    }
-    
-    if(XSendEvent(g_display, PointerWindow, True, 0xfff, &event) == 0)
-    {
-        LOG(0, ("  error sending mouse event"));
-    }
-    
-    XFlush(g_display);
-    
-    g_sleep(100);
-    
-    event.type = ButtonRelease;
-    event.xbutton.state = 0x100;
-    
-    if(XSendEvent(g_display, PointerWindow, True, 0xfff, &event) == 0)
-    {
-        LOG(0, ("  error sending mouse event"));
-    }
-    
-    XFlush(g_display);
-}
-
 /******************************************************************************/
 static int APP_CC
-rail_win_popdown(int window_id)
+rail_win_popdown(void)
 {
     int rv = 0;
-    unsigned int i;
+    int i;
     unsigned int nchild;
     Window r;
     Window p;
     Window* children;
+    XWindowAttributes window_attributes;
     
     /*
      * Check the tree of current existing X windows and dismiss
-     * the managed rail popups by simulating a mouse click, so
+     * the managed rail popups by simulating a esc key, so
      * that the requested window can be closed properly.
      */
     
     XQueryTree(g_display, g_root_window, &r, &p, &children, &nchild);
-    for (i = 0; i < nchild; i++)
+    for (i = nchild - 1; i >= 0; i--)
     {
-        XWindowAttributes window_attributes;
         XGetWindowAttributes(g_display, children[i], &window_attributes);
         if (window_attributes.override_redirect &&
             window_attributes.map_state == IsViewable &&
-            list_index_of(g_window_list, children[i]) >= 0) {
-            LOG(0, ("  dismiss pop up 0x%8.8x", children[i]));
-            rail_simulate_mouse_click(Button1);
+            list_index_of(g_window_list, children[i]) >= 0)
+        {
+            LOG(10, ("  dismiss pop up 0x%8.8x", children[i]));
+            rail_send_key_esc(children[i]);
             rv = 1;
-            break;
         }
     }
     
@@ -510,13 +480,7 @@ rail_close_window(int window_id)
     
     LOG(0, ("chansrv::rail_close_window:"));
     
-    if (rail_win_popdown(window_id))
-    {
-        return 0;
-    }
-    
-    /* don't receive UnmapNotify for closing window */
-    XSelectInput(g_display, window_id, PropertyChangeMask);
+    rail_win_popdown();
     
     g_memset(&ce, 0, sizeof(ce));
     ce.xclient.type = ClientMessage;
@@ -532,6 +496,18 @@ rail_close_window(int window_id)
 }
 
 /*****************************************************************************/
+void DEFAULT_CC
+my_timoeut(void* data)
+{
+    LOG(10, ("my_timoeut: g_got_focus %d", g_got_focus));
+    if (g_focus_counter == (int)(long)data)
+    {
+        LOG(10, ("my_timoeut: g_focus_counter %d", g_focus_counter));
+        rail_win_popdown();
+    }
+}
+
+/*****************************************************************************/
 static int APP_CC
 rail_process_activate(struct stream *s, int size)
 {
@@ -543,22 +519,37 @@ rail_process_activate(struct stream *s, int size)
     LOG(10, ("chansrv::rail_process_activate:"));
     in_uint32_le(s, window_id);
     in_uint8(s, enabled);
+    g_focus_counter++;
+    g_got_focus = enabled;
     LOG(10, ("  window_id 0x%8.8x enabled %d", window_id, enabled));
 
     XGetWindowAttributes(g_display, window_id, &window_attributes);
     
     if (enabled)
     {
-        if (window_attributes.map_state != IsViewable)
+        if (g_focus_win == window_id)
         {
             /* In case that window is unmapped upon minimization and not yet mapped*/
             XMapWindow(g_display, window_id);
         }
-        XGetTransientForHint(g_display, window_id, &transient_for);
-        if (transient_for > 0)
+        else
         {
-            // Owner window should be raised up as well
-            XRaiseWindow(g_display, transient_for);
+            rail_win_popdown();
+            if (window_attributes.map_state != IsViewable)
+            {
+                /* In case that window is unmapped upon minimization and not yet mapped */
+                XMapWindow(g_display, window_id);
+            }
+            XGetTransientForHint(g_display, window_id, &transient_for);
+            if (transient_for > 0)
+            {
+                /* Owner window should be raised up as well */
+                XRaiseWindow(g_display, transient_for);
+            }
+            LOG(10, ("chansrv::rail_process_activate: calling XRaiseWindow 0x%8.8x", window_id));
+            XRaiseWindow(g_display, window_id);
+            LOG(10, ("chansrv::rail_process_activate: calling XSetInputFocus 0x%8.8x", window_id));
+            XSetInputFocus(g_display, window_id, RevertToParent, CurrentTime);
         }
         LOG(10, ("chansrv::rail_process_activate: calling XRaiseWindow 0x%8.8x", window_id));
         XRaiseWindow(g_display, window_id);
@@ -570,10 +561,7 @@ rail_process_activate(struct stream *s, int size)
 
         LOG(10, ("  window attributes: override_redirect %d",
                  window_attributes.override_redirect));
-        if (window_attributes.override_redirect) {
-            LOG(10, ("  dismiss popup window 0x%8.8x", window_id));
-            XUnmapWindow(g_display, window_id);
-        }
+        add_timeout(200, my_timoeut, (void*)(long)g_focus_counter);
     }
     return 0;
 }
@@ -1094,7 +1082,7 @@ rail_win_send_text(Window win)
             {
                 if (g_strncmp(rwd->title, data, 63) == 0)
                 {
-                    LOG(0, ("chansrv::rail_win_send_text: skipping, title not changed"));
+                    LOG(10, ("chansrv::rail_win_send_text: skipping, title not changed"));
                     XFree(data);
                     XFree(rwd);
                     return 0;
@@ -1665,6 +1653,10 @@ rail_xevent(void *xevent)
         case CreateNotify:
             LOG(10, (" got CreateNotify window 0x%8.8x parent 0x%8.8x",
                      lxevent->xcreatewindow.window, lxevent->xcreatewindow.parent));
+            XSelectInput(g_display, lxevent->xcreatewindow.window,
+                         PropertyChangeMask | StructureNotifyMask |
+                         FocusChangeMask |
+                         EnterWindowMask | LeaveWindowMask);
             break;
 
         case DestroyNotify:
@@ -1680,8 +1672,6 @@ rail_xevent(void *xevent)
             
         case MapRequest:
             LOG(10, ("  got MapRequest window 0x%8.8x", lxevent->xmaprequest.window));
-            XSelectInput(g_display, lxevent->xmaprequest.window,
-                         PropertyChangeMask | StructureNotifyMask);
             XMapWindow(g_display, lxevent->xmaprequest.window);
             break;
 
@@ -1709,23 +1699,12 @@ rail_xevent(void *xevent)
             if (lxevent->xunmap.window != lxevent->xunmap.event &&
                 is_window_valid_child_of_root(lxevent->xunmap.window))
             {
-                int state = rail_win_get_state(lxevent->xunmap.window);
                 index = list_index_of(g_window_list, lxevent->xunmap.window);
                 LOG(10, ("  window 0x%8.8x is unmapped", lxevent->xunmap.window));
                 if (index >= 0)
                 {
-#if 0
-                    XGetWindowAttributes(g_display, lxevent->xunmap.window, &wnd_attributes);
-                    if (wnd_attributes.override_redirect)
-                    {
-                        LOG(10, ("  hide popup"));
-                        rail_show_window(lxevent->xunmap.window, 0x0);
-                        rv = 0;
-                    }
-#else
                     rail_show_window(lxevent->xunmap.window, 0x0);
                     rv = 0;
-#endif
                 }
             }
             break;
@@ -1757,6 +1736,7 @@ rail_xevent(void *xevent)
 
         case FocusIn:
             LOG(10, ("  got FocusIn"));
+            g_focus_win = lxevent->xfocus.window;
             break;
 
         case ButtonPress:
