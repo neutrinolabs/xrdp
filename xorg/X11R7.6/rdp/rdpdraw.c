@@ -780,7 +780,8 @@ draw_item_pack(PixmapPtr pix, rdpPixmapRec *priv)
                         }
                         else
                         {
-                            if (region_in_region(di->reg, -1, di_prev->reg))
+                            if ((di->type == RDI_TEXT) &&
+                                region_interect_at_all(di->reg, di_prev->reg))
                             {
                                 break;
                             }
@@ -1746,6 +1747,32 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
 }
 
 /******************************************************************************/
+/* make sure no glyph is too big */
+/* returns boolean */
+static int
+rdpGlyphCheck(int nlist, GlyphListPtr list, GlyphPtr* glyphs)
+{
+    int n;
+    GlyphPtr glyph;
+
+    while (nlist--)
+    {
+        n = list->len;
+        list++;
+        while (n--)
+        {
+            glyph = *glyphs++;
+            if ((glyph->info.width * glyph->info.height) > 8192)
+            {
+                LLOGLN(10, ("rdpGlyphCheck: too big"));
+                return 0;
+            }
+        }
+    }
+    return 1;
+}
+
+/******************************************************************************/
 void
 rdpGlyphs(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
           PictFormatPtr maskFormat,
@@ -1756,7 +1783,7 @@ rdpGlyphs(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
 
     LLOGLN(10, ("rdpGlyphs: op %d xSrc %d ySrc %d maskFormat %p", op, xSrc, ySrc, maskFormat));
 
-    if (g_do_glyph_cache)
+    if (g_do_glyph_cache && rdpGlyphCheck(nlists, lists, glyphs))
     {
         g_doing_font = 2;
         ps = GetPictureScreen(g_pScreen);
