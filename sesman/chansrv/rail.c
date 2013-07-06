@@ -1663,7 +1663,8 @@ rail_xevent(void *xevent)
             break;
 
         case CreateNotify:
-            LOG(10, (" got CreateNotify 0x%8.8x", lxevent->xcreatewindow.window));
+            LOG(10, (" got CreateNotify window 0x%8.8x parent 0x%8.8x",
+                     lxevent->xcreatewindow.window, lxevent->xcreatewindow.parent));
             break;
 
         case DestroyNotify:
@@ -1678,14 +1679,15 @@ rail_xevent(void *xevent)
             break;
             
         case MapRequest:
-            LOG(10, ("  got MapRequest 0x%8.8x", lxevent->xmaprequest.window));
+            LOG(10, ("  got MapRequest window 0x%8.8x", lxevent->xmaprequest.window));
             XSelectInput(g_display, lxevent->xmaprequest.window,
                          PropertyChangeMask | StructureNotifyMask);
             XMapWindow(g_display, lxevent->xmaprequest.window);
             break;
 
         case MapNotify:
-            LOG(10, ("  got MapNotify 0x%8.8x", lxevent->xmap.event));
+            LOG(10, ("  got MapNotify window 0x%8.8x event 0x%8.8x",
+                     lxevent->xmap.window, lxevent->xmap.event));
             if (lxevent->xmap.window != lxevent->xmap.event)
             {
                 XGetWindowAttributes(g_display, lxevent->xmap.window, &wnd_attributes);
@@ -1769,6 +1771,24 @@ rail_xevent(void *xevent)
             LOG(10, ("  got LeaveNotify"));
             break;
 
+        case ReparentNotify:
+            LOG(10, ("  got ReparentNotify window 0x%8.8x parent 0x%8.8x "
+                     "event 0x%8.8x x %d y %d overrider redirect %d",
+                     lxevent->xreparent.window, lxevent->xreparent.parent,
+                     lxevent->xreparent.event, lxevent->xreparent.x,
+                     lxevent->xreparent.y, lxevent->xreparent.override_redirect));
+
+            if (lxevent->xreparent.parent != g_root_window)
+            {
+                index = list_index_of(g_window_list, lxevent->xreparent.window);
+                if (index >= 0)
+                {
+                    rail_destroy_window(lxevent->xreparent.window);
+                    list_remove_item(g_window_list, index);
+                }
+            }
+            rv = 0;
+            break;
     }
 
     return rv;
