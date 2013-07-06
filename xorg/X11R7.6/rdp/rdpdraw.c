@@ -555,7 +555,7 @@ remove_empties(rdpPixmapRec* priv)
     {
         if (!RegionNotEmpty(di->reg))
         {
-            LLOGLN(0, ("remove_empties: removing empty item type %d", di->type));
+            LLOGLN(10, ("remove_empties: removing empty item type %d", di->type));
             draw_item_remove(priv, di);
             di = di_prev == 0 ? priv->draw_item_head : di_prev->next;
             rv++;
