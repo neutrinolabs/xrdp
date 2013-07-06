@@ -680,6 +680,8 @@ rdpup_process_msg(struct stream *s)
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
             case 102:
+                g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
+                g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
                 g_button_mask = g_button_mask | 1;
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
@@ -688,6 +690,8 @@ rdpup_process_msg(struct stream *s)
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
             case 104:
+                g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
+                g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
                 g_button_mask = g_button_mask | 4;
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
@@ -696,6 +700,8 @@ rdpup_process_msg(struct stream *s)
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
             case 106:
+                g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
+                g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
                 g_button_mask = g_button_mask | 2;
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
@@ -704,6 +710,8 @@ rdpup_process_msg(struct stream *s)
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
             case 108:
+                g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
+                g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
                 g_button_mask = g_button_mask | 8;
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
@@ -712,6 +720,8 @@ rdpup_process_msg(struct stream *s)
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
             case 110:
+                g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
+                g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
                 g_button_mask = g_button_mask | 16;
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
