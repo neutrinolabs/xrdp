@@ -1118,6 +1118,14 @@ KbdAddEvent(int down, int param1, int param2, int param3, int param4)
             rdpEnqueueKey(type, 117);
             break;
 
+        case 89: /* left meta */
+            rdpEnqueueKey(type, 156);
+            break;
+
+        case 90: /* right meta */
+            rdpEnqueueKey(type, 156);
+            break;
+        
         default:
             x_scancode = rdp_scancode + MIN_KEY_CODE;
 
