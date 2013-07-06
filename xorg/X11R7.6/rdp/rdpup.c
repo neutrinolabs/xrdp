@@ -769,8 +769,11 @@ rdpup_process_msg(struct stream *s)
         }
         if (g_rdpScreen.client_info.orders[0x1b])   /* 27 NEG_GLYPH_INDEX_INDEX */
         {
-            LLOGLN(0, ("  using glyph cache"));
             g_do_glyph_cache = 1;
+        }
+        if (g_do_glyph_cache)
+        {
+            LLOGLN(0, ("  using glyph cache"));
         }
         if (g_rdpScreen.client_info.offscreen_cache_entries == 2000)
         {
