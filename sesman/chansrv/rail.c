@@ -1333,6 +1333,18 @@ rail_configure_request_window(XConfigureRequestEvent* config)
     window_id = config->window;
     mask = config->value_mask;
     LOG(10, ("chansrv::rail_configure_request_window: mask %d", mask));
+    if (mask & CWStackMode)
+    {
+        LOG(10, ("chansrv::rail_configure_request_window: CWStackMode "
+                 "detail 0x%8.8x above 0x%8.8x", config->detail, config->above));
+        if (config->detail == Above)
+        {
+            LOG(10, ("chansrv::rail_configure_request_window: bring to front "
+                     "window_id 0x%8.8x", window_id));
+            /* 0x05 - Show the window in its current size and position. */
+            rail_show_window(window_id, 5);
+        }
+    }
     rwd = rail_get_window_data(window_id);
     if (rwd == 0)
     {
