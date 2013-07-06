@@ -512,6 +512,7 @@ region_get_pixel_count(RegionPtr reg)
 }
 
 /******************************************************************************/
+/* returns boolean */
 int
 region_in_region(RegionPtr reg_small, int sreg_pcount, RegionPtr reg_big)
 {
@@ -525,7 +526,101 @@ region_in_region(RegionPtr reg_small, int sreg_pcount, RegionPtr reg_big)
     {
         sreg_pcount = region_get_pixel_count(reg_small);
     }
+    if (sreg_pcount == 0)
+    {
+        /* empty region not even in */
+        return 0;
+    }
     if (region_get_pixel_count(&reg) == sreg_pcount)
+    {
+        rv = 1;
+    }
+    RegionUninit(&reg);
+    return rv;
+}
+
+/******************************************************************************/
+static int
+remove_empties(rdpPixmapRec* priv)
+{
+    struct rdp_draw_item* di;
+    struct rdp_draw_item* di_prev;
+    int rv;
+    
+    rv = 0;
+    /* remove draw items with empty regions */
+    di = priv->draw_item_head;
+    di_prev = 0;
+    while (di != 0)
+    {
+        if (!RegionNotEmpty(di->reg))
+        {
+            LLOGLN(0, ("remove_empties: removing empty item type %d", di->type));
+            draw_item_remove(priv, di);
+            di = di_prev == 0 ? priv->draw_item_head : di_prev->next;
+            rv++;
+        }
+        else
+        {
+            di_prev = di;
+            di = di->next;
+        }
+    }
+    return rv;
+}
+
+/******************************************************************************/
+static int
+dump_draw_list(rdpPixmapRec* priv)
+{
+    struct rdp_draw_item* di;
+    int index;
+    int count;
+    BoxRec box;
+    
+    LLOGLN(0, ("dump_draw_list:"));
+    di = priv->draw_item_head;
+    while (di != 0)
+    {
+        LLOGLN(0, ("  type %d", di->type));
+        count = REGION_NUM_RECTS(di->reg);
+        if (count == 0)
+        {
+            LLOGLN(0, ("  empty region"));
+        }
+        else
+        {
+            box = RegionExtents(di->reg)[0];
+            LLOGLN(0, ("  region list follows extents x1 %d y1 %d x2 %d y2 %d",
+                       box.x1, box.y1, box.x2, box.y2));
+            for (index = 0; index < count; index++)
+            {
+                box = REGION_RECTS(di->reg)[index];
+                LLOGLN(0, ("    index %d x1 %d y1 %d x2 %d y2 %d",
+                           index, box.x1, box.y1, box.x2, box.y2));
+            }
+        }
+        di = di->next;
+    }
+    return 0;
+}
+
+/******************************************************************************/
+/* returns boolean */
+static int
+region_interect_at_all(RegionPtr reg_small, RegionPtr reg_big)
+{
+    int rv;
+    RegionRec reg;
+    
+    if (!RegionNotEmpty(reg_small))
+    {
+        return 0;
+    }
+    rv = 0;
+    RegionInit(&reg, NullBox, 0);
+    RegionIntersect(&reg, reg_big, reg_big);
+    if (RegionNotEmpty(&reg))
     {
         rv = 1;
     }
@@ -557,6 +652,7 @@ draw_item_pack(PixmapPtr pix, rdpPixmapRec *priv)
         di = di->next;
     }
     RegionUninit(&treg);
+    remove_empties(priv);
 #endif
     
 #if 1
@@ -593,10 +689,37 @@ draw_item_pack(PixmapPtr pix, rdpPixmapRec *priv)
             }
         }
     }
-
+    remove_empties(priv);
 #endif
-#if 0
 
+#if 0
+    if (priv->draw_item_tail != 0)
+    {
+        if (priv->draw_item_tail->prev != 0)
+        {
+            di = priv->draw_item_tail;
+            while (di->prev != 0)
+            {
+                di_prev = di->prev;
+                while (di_prev != 0)
+                {
+                    if ((di->type == RDI_TEXT) && (di_prev->type == RDI_IMGLY))
+                    {
+                        if (region_interect_at_all(di->reg, di_prev->reg))
+                        {
+                            di_prev->type = RDI_IMGLL;
+                        }
+                    }
+                    di_prev = di_prev->prev;
+                }
+                di = di->prev;
+            }
+        }
+    }
+    remove_empties(priv);
+#endif
+
+#if 0
     /* subtract regions */
     if (priv->draw_item_tail != 0)
     {
@@ -630,30 +753,48 @@ draw_item_pack(PixmapPtr pix, rdpPixmapRec *priv)
             }
         }
     }
-
+    remove_empties(priv);
 #endif
+    
 #if 1
-
-    /* remove draw items with empty regions */
-    di = priv->draw_item_head;
-    di_prev = 0;
-
-    while (di != 0)
+    if (priv->draw_item_tail != 0)
     {
-        if (!RegionNotEmpty(di->reg))
+        if (priv->draw_item_tail->prev != 0)
         {
-            LLOGLN(10, ("draw_item_pack: removing empty item type %d", di->type));
-            draw_item_remove(priv, di);
-            di = di_prev == 0 ? priv->draw_item_head : di_prev->next;
-        }
-        else
-        {
-            di_prev = di;
-            di = di->next;
+            di = priv->draw_item_tail;
+            while (di->prev != 0)
+            {
+                di_prev = di->prev;
+                while (di_prev != 0)
+                {
+                    if ((di_prev->flags & 1) == 0)
+                    {
+                        if ((di_prev->type == RDI_IMGLY) || (di_prev->type == RDI_IMGLL))
+                        {
+                            if ((di->type == RDI_TEXT) &&
+                                region_interect_at_all(di->reg, di_prev->reg))
+                            {
+                                RegionSubtract(di->reg, di->reg, di_prev->reg);
+                                di_prev->type = RDI_IMGLL;
+                            }
+                        }
+                        else
+                        {
+                            if (region_in_region(di->reg, -1, di_prev->reg))
+                            {
+                                break;
+                            }
+                        }
+                    }
+                    di_prev = di_prev->prev;
+                }
+                di = di->prev;
+            }
         }
     }
-
+    remove_empties(priv);
 #endif
+    
     return 0;
 }
 
@@ -1586,7 +1727,7 @@ rdpGlyphs(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
 {
     PictureScreenPtr ps;
 
-    LLOGLN(10, ("rdpGlyphs: op %d xSrc %d ySrc %d", op, xSrc, ySrc));
+    LLOGLN(10, ("rdpGlyphs: op %d xSrc %d ySrc %d maskFormat %p", op, xSrc, ySrc, maskFormat));
 
     if (g_do_glyph_cache)
     {
