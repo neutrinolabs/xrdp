@@ -239,7 +239,7 @@ xrdp_cache_add_bitmap(struct xrdp_cache *self, struct xrdp_bitmap *bitmap,
     }
     else
     {
-        log_message(LOG_LEVEL_ERROR,"error in xrdp_cache_add_bitmap, too big(%d)", bmp_size);
+        log_message(LOG_LEVEL_ERROR,"error in xrdp_cache_add_bitmap, too big(%d) bpp %d", bmp_size, bitmap->bpp);
     }
 
     /* look for oldest */

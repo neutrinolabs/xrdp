@@ -197,6 +197,28 @@ struct xrdp_orders_state
   int text_y;
   int text_len;
   char* text_data;
+
+  int com_blt_srcidx;    /* RDP_ORDER_COMPOSITE */  /* 2 */
+  int com_blt_srcformat;                            /* 2 */
+  int com_blt_srcwidth;                             /* 2 */
+  int com_blt_srcrepeat;                            /* 1 */
+  int com_blt_srctransform[10];                     /* 40 */
+  int com_blt_mskflags;                             /* 1 */
+  int com_blt_mskidx;                               /* 2 */
+  int com_blt_mskformat;                            /* 2 */
+  int com_blt_mskwidth;                             /* 2 */
+  int com_blt_mskrepeat;                            /* 1 */
+  int com_blt_op;                                   /* 1 */
+  int com_blt_srcx;                                 /* 2 */
+  int com_blt_srcy;                                 /* 2 */
+  int com_blt_mskx;                                 /* 2 */
+  int com_blt_msky;                                 /* 2 */
+  int com_blt_dstx;                                 /* 2 */
+  int com_blt_dsty;                                 /* 2 */
+  int com_blt_width;                                /* 2 */
+  int com_blt_height;                               /* 2 */
+  int com_blt_dstformat;                            /* 2 */
+    
 };
 
 /* orders */
@@ -378,6 +400,15 @@ xrdp_orders_mem_blt(struct xrdp_orders* self, int cache_id,
                     int color_table, int x, int y, int cx, int cy,
                     int rop, int srcx, int srcy,
                     int cache_idx, struct xrdp_rect* rect);
+int APP_CC
+xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx,
+                          int srcformat, int srcwidth,
+                          int srcrepeat, int* srctransform, int mskflags,
+                          int mskidx, int mskformat, int mskwidth,
+                          int mskrepeat, int op, int srcx, int srcy,
+                          int mskx, int msky, int dstx, int dsty,
+                          int width, int height, int dstformat,
+                          struct xrdp_rect* rect);
 int APP_CC
 xrdp_orders_text(struct xrdp_orders* self,
                  int font, int flags, int mixmode,
