@@ -544,6 +544,7 @@ rdpGlyphu(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
         pDstPriv = GETPIXPRIV(pDstPixmap);
         if (XRDP_IS_OS(pDstPriv))
         {
+            rdpup_check_dirty(pDstPixmap, pDstPriv);
             post_process = 1;
             if (g_do_dirty_os)
             {

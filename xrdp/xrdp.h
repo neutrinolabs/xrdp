@@ -283,6 +283,20 @@ xrdp_painter_copy(struct xrdp_painter* self,
                   int x, int y, int cx, int cy,
                   int srcx, int srcy);
 int APP_CC
+xrdp_painter_composite(struct xrdp_painter* self,
+                       struct xrdp_bitmap* src,
+                       int srcformat,
+                       int srcwidth,
+                       int srcrepeat,
+                       struct xrdp_bitmap* dst,
+                       int* srctransform,
+                       int mskflags,
+                       struct xrdp_bitmap* msk,
+                       int mskformat, int mskwidth, int mskrepeat, int op,
+                       int srcx, int srcy, int mskx, int msky,
+                       int dstx, int dsty, int width, int height,
+                       int dstformat);
+int APP_CC
 xrdp_painter_line(struct xrdp_painter* self,
                   struct xrdp_bitmap* bitmap,
                   int x1, int y1, int x2, int y2);
@@ -374,6 +388,16 @@ int DEFAULT_CC
 server_paint_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy,
                   char* data, int width, int height, int srcx, int srcy);
 int DEFAULT_CC
+server_paint_rect_bpp(struct xrdp_mod* mod, int x, int y, int cx, int cy,
+                      char* data, int width, int height, int srcx, int srcy,
+                      int bpp);
+int DEFAULT_CC
+server_composite(struct xrdp_mod* mod, int srcidx, int srcformat, int srcwidth,
+                 int srcrepeat, int* srctransform, int mskflags, int mskidx,
+                 int mskformat, int mskwidth, int mskrepeat, int op,
+                 int srcx, int srcy, int mskx, int msky,
+                 int dstx, int dsty, int width, int height, int dstformat);
+int DEFAULT_CC
 server_set_pointer(struct xrdp_mod* mod, int x, int y,
                    char* data, char* mask);
 int DEFAULT_CC
@@ -433,6 +457,9 @@ server_send_to_channel(struct xrdp_mod* mod, int channel_id,
 int DEFAULT_CC
 server_create_os_surface(struct xrdp_mod* mod, int id,
                          int width, int height);
+int DEFAULT_CC
+server_create_os_surface_bpp(struct xrdp_mod* mod, int id,
+                             int width, int height, int bpp);
 int DEFAULT_CC
 server_switch_os_surface(struct xrdp_mod* mod, int id);
 int DEFAULT_CC
