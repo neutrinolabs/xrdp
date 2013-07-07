@@ -281,13 +281,19 @@ struct rdp_draw_item
   union urdp_draw_item u;
 };
 
+#define XRDP_USE_COUNT_THRESHOLD 1
+
 struct _rdpPixmapRec
 {
   int status;
   int rdpindex;
   int con_number;
   int is_dirty;
-  int pad0;
+  int is_alpha_dirty_not;
+  /* number of times used in a remote operation
+     if this gets above XRDP_USE_COUNT_THRESHOLD
+     then we force remote the pixmap */
+  int use_count;
   int kind_width;
   struct rdp_draw_item* draw_item_head;
   struct rdp_draw_item* draw_item_tail;
@@ -445,6 +451,14 @@ rdpDisplayCursor(ScreenPtr pScreen, CursorPtr pCursor);
 void
 rdpRecolorCursor(ScreenPtr pScreen, CursorPtr pCursor,
                  Bool displayed);
+
+/* rdpglyph.c */
+void
+rdpGlyphs(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
+          PictFormatPtr maskFormat, INT16 xSrc, INT16 ySrc,
+          int nlists, GlyphListPtr lists, GlyphPtr* glyphs);
+
+/* rdpComposite.c */
 int
 rdpCreatePicture(PicturePtr pPicture);
 void
@@ -542,6 +556,8 @@ rdpup_set_cursor_ex(short x, short y, char *cur_data, char *cur_mask, int bpp);
 int
 rdpup_create_os_surface(int rdpindexd, int width, int height);
 int
+rdpup_create_os_surface_bpp(int rdpindexd, int width, int height, int bpp);
+int
 rdpup_switch_os_surface(int rdpindex);
 int
 rdpup_delete_os_surface(int rdpindex);
@@ -558,6 +574,8 @@ rdpup_delete_window(WindowPtr pWindow, rdpWindowRec* priv);
 int
 rdpup_check_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec* pDirtyPriv);
 int
+rdpup_check_alpha_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec* pDirtyPriv);
+int
 rdpup_check_dirty_screen(rdpPixmapRec* pDirtyPriv);
 int
 rdpup_add_char(int font, int charactor, short x, short y, int cx, int cy,
@@ -572,6 +590,13 @@ rdpup_draw_text(int font, int flags, int mixmode,
                 short box_left, short box_top,
                 short box_right, short box_bottom, short x, short y,
                 char* data, int data_bytes);
+int
+rdpup_composite(short srcidx, int srcformat, short srcwidth, CARD8 srcrepeat,
+                PictTransform* srctransform, CARD8 mskflags,
+                short mskidx, int mskformat, short mskwidth, CARD8 mskrepeat,
+                CARD8 op, short srcx, short srcy, short mskx, short msky,
+                short dstx, short dsty, short width, short height,
+                int dstformat);
 
 void
 rdpScheduleDeferredUpdate(void);
@@ -668,6 +693,13 @@ struct stream
 { \
   out_uint8p((s), (v), (n)); \
 }
+
+/******************************************************************************/
+#define out_uint8s(s, n) do \
+{ \
+  memset((s)->p, 0, (n)); \
+  (s)->p += (n); \
+} while (0)
 
 /******************************************************************************/
 #if defined(B_ENDIAN) || defined(NEED_ALIGN)

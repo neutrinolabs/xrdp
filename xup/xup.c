@@ -541,12 +541,17 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
     int cy;
     int srcx;
     int srcy;
+    int mskx;
+    int msky;
+    int dstx;
+    int dsty;
     int len_bmpdata;
     int style;
     int x1;
     int y1;
     int x2;
     int y2;
+    int bpp;
     int rdpid;
     int hints;
     int mask;
@@ -566,6 +571,18 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
     int box_top;
     int box_right;
     int box_bottom;
+    int srcrepeat;
+    int srcidx;
+    int srcformat;
+    int srcwidth;
+    int mskflags;
+    int mskidx;
+    int mskformat;
+    int mskwidth;
+    int mskrepeat;
+    int dstformat;
+    int op;
+    int transform[10];
     char *bmpdata;
     char cur_data[32 * (32 * 3)];
     char cur_mask[32 * (32 / 8)];
@@ -728,6 +745,56 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
             rv = mod->server_draw_text(mod, font, flags, mixmode, clip_left, clip_top,
                                        clip_right, clip_bottom, box_left, box_top,
                                        box_right, box_bottom, x, y, bmpdata, len_bmpdata);
+            break;
+        case 31: /* server_create_os_surface_bpp */
+            in_uint32_le(s, rdpid);
+            in_uint16_le(s, width);
+            in_uint16_le(s, height);
+            in_uint8(s, bpp);
+            rv = mod->server_create_os_surface_bpp(mod, rdpid, width, height, bpp);
+            break;
+        case 32: /* server_paint_rect_bpp */
+            in_sint16_le(s, x);
+            in_sint16_le(s, y);
+            in_uint16_le(s, cx);
+            in_uint16_le(s, cy);
+            in_uint32_le(s, len_bmpdata);
+            in_uint8p(s, bmpdata, len_bmpdata);
+            in_uint16_le(s, width);
+            in_uint16_le(s, height);
+            in_sint16_le(s, srcx);
+            in_sint16_le(s, srcy);
+            in_uint8(s, bpp);
+            rv = mod->server_paint_rect_bpp(mod, x, y, cx, cy,
+                                            bmpdata, width, height,
+                                            srcx, srcy, bpp);
+            break;
+        case 33:
+            in_uint16_le(s, srcidx);
+            in_uint32_le(s, srcformat);
+            in_uint16_le(s, srcwidth);
+            in_uint8(s, srcrepeat);
+            g_memcpy(transform, s->p, 40);
+            in_uint8s(s, 40);
+            in_uint8(s, mskflags);
+            in_uint16_le(s, mskidx);
+            in_uint32_le(s, mskformat);
+            in_uint16_le(s, mskwidth);
+            in_uint8(s, mskrepeat);
+            in_uint8(s, op);
+            in_sint16_le(s, srcx);
+            in_sint16_le(s, srcy);
+            in_sint16_le(s, mskx);
+            in_sint16_le(s, msky);
+            in_sint16_le(s, dstx);
+            in_sint16_le(s, dsty);
+            in_uint16_le(s, width);
+            in_uint16_le(s, height);
+            in_uint32_le(s, dstformat);
+            rv = mod->server_composite(mod, srcidx, srcformat, srcwidth, srcrepeat,
+                                       transform, mskflags, mskidx, mskformat,
+                                       mskwidth, mskrepeat, op, srcx, srcy, mskx, msky,
+                                       dstx, dsty, width, height, dstformat);
             break;
         case 51: /* server_set_pointer_ex */
             rv = process_server_set_pointer_ex(mod, s);

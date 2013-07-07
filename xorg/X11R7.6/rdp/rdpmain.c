@@ -48,8 +48,9 @@ int g_can_do_pix_to_pix = 0;
 
 int g_do_dirty_os = 1; /* delay remoting off screen bitmaps */
 int g_do_dirty_ons = 0; /* delay remoting screen */
-int g_do_glyph_cache = 0;
+int g_do_glyph_cache = 0; /* rdpup.c may set this */
 int g_do_alpha_glyphs = 1;
+int g_do_composite = 0; /* rdpup.c may set this */
 Bool g_wrapWindow = 1;
 Bool g_wrapPixmap = 1;
 
@@ -61,6 +62,7 @@ int g_use_rail = 0;
 int g_con_number = 0; /* increments for each connection */
 
 WindowPtr g_invalidate_window = 0;
+int g_doing_font = 0;
 
 /* if true, use a unix domain socket instead of a tcp socket */
 int g_use_uds = 0;
