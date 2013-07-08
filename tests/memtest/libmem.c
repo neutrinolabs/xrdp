@@ -389,6 +389,7 @@ libmem_set_flags(void* obj, int flags)
 
   self = (struct mem_info*)obj;
   self->flags |= flags;
+  return 0;
 }
 
 /*****************************************************************************/
@@ -399,4 +400,5 @@ libmem_clear_flags(void* obj, int flags)
 
   self = (struct mem_info*)obj;
   self->flags &= ~flags;
+  return 0;
 }

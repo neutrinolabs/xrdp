@@ -112,4 +112,4 @@ fbcmap_mi.o: ../build_dir/xorg-server-1.9.3/fb/fbcmap_mi.c
 	$(CC) $(CFLAGS) -c ../build_dir/xorg-server-1.9.3/fb/fbcmap_mi.c
 
 install: all
-       $(INSTALL) X11rdp $(X11RDPBASE)/bin/X11rdp
+	$(INSTALL) X11rdp $(X11RDPBASE)/bin/X11rdp
