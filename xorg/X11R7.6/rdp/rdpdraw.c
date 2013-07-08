@@ -1090,66 +1090,6 @@ xrdp_is_os(PixmapPtr pix, rdpPixmapPtr priv)
     return 1;
 }
 
-/*****************************************************************************/
-int
-xrdp_is_os(PixmapPtr pix, rdpPixmapPtr priv)
-{
-    RegionRec reg1;
-    BoxRec box;
-    int width;
-    int height;
-    struct image_data id;
-
-    if (!XRDP_IS_OS(priv))
-    {
-        width = pix->drawable.width;
-        height = pix->drawable.height;
-        if ((pix->usage_hint == 0) &&
-            (pix->drawable.depth >= g_rdpScreen.depth) &&
-            (width > 0) && (height > 0) && (priv->kind_width > 0) &&
-            (priv->is_scratch == 0))
-        {
-            LLOGLN(10, ("%d %d", priv->kind_width, pix->drawable.width));
-            priv->rdpindex = rdpup_add_os_bitmap(pix, priv);
-            if (priv->rdpindex >= 0)
-            {
-                priv->status = 1;
-                rdpup_create_os_surface(priv->rdpindex,
-                                        priv->kind_width, height);
-                box.x1 = 0;
-                box.y1 = 0;
-                box.x2 = width;
-                box.y2 = height;
-                if (g_do_dirty_os)
-                {
-                    if (priv->con_number != g_con_number)
-                    {
-                        draw_item_remove_all(priv);
-                        RegionInit(&reg1, &box, 0);
-                        draw_item_add_img_region(priv, &reg1, GXcopy, RDI_IMGLL, 16);
-                        RegionUninit(&reg1);
-                        priv->is_dirty = 1;
-                        priv->con_number = g_con_number;
-                    }
-                }
-                else
-                {
-                    rdpup_get_pixmap_image_rect(pix, &id);
-                    rdpup_switch_os_surface(priv->rdpindex);
-                    rdpup_begin_update();
-                    rdpup_send_area(&id, box.x1, box.y1, box.x2 - box.x1,
-                                    box.y2 - box.y1);
-                    rdpup_end_update();
-                    rdpup_switch_os_surface(-1);
-                }
-                return 1;
-            }
-        }
-        return 0;
-    }
-    return 1;
-}
-
 /******************************************************************************/
 Bool
 rdpCreateWindow(WindowPtr pWindow)

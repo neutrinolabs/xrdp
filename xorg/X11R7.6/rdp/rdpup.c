@@ -1508,7 +1508,7 @@ rdpup_create_os_surface_bpp(int rdpindex, int width, int height, int bpp)
         out_uint32_le(g_out_s, rdpindex);
         out_uint16_le(g_out_s, width);
         out_uint16_le(g_out_s, height);
-        out_uint8(g_out_s, bpp);
+        out_uint8s(g_out_s, bpp);
     }
     return 0;
 }
@@ -1858,7 +1858,7 @@ rdpup_send_alpha_area(struct image_data* id, int x, int y, int w, int h)
                 out_uint16_le(g_out_s, lh);
                 out_uint16_le(g_out_s, 0);
                 out_uint16_le(g_out_s, 0);
-                out_uint8(g_out_s, 8);
+                out_uint8s(g_out_s, 8);
                 lx += 64;
             }
             ly += 64;
@@ -2466,7 +2466,7 @@ rdpup_composite(short srcidx, int srcformat, short srcwidth, CARD8 srcrepeat,
         out_uint16_le(g_out_s, srcidx);
         out_uint32_le(g_out_s, srcformat);
         out_uint16_le(g_out_s, srcwidth);
-        out_uint8(g_out_s, srcrepeat);
+        out_uint8s(g_out_s, srcrepeat);
         if (srctransform == 0)
         {
             out_uint8s(g_out_s, 10 * 4);
@@ -2484,12 +2484,12 @@ rdpup_composite(short srcidx, int srcformat, short srcwidth, CARD8 srcrepeat,
             out_uint32_le(g_out_s, srctransform->matrix[2][1]);
             out_uint32_le(g_out_s, srctransform->matrix[2][2]);
         }
-        out_uint8(g_out_s, mskflags);
+        out_uint8s(g_out_s, mskflags);
         out_uint16_le(g_out_s, mskidx);
         out_uint32_le(g_out_s, mskformat);
         out_uint16_le(g_out_s, mskwidth);
-        out_uint8(g_out_s, mskrepeat);
-        out_uint8(g_out_s, op);
+        out_uint8s(g_out_s, mskrepeat);
+        out_uint8s(g_out_s, op);
         out_uint16_le(g_out_s, srcx);
         out_uint16_le(g_out_s, srcy);
         out_uint16_le(g_out_s, mskx);
