@@ -625,8 +625,16 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp *self)
     out_uint16_le(s, 0x200); /* Protocol version */
     out_uint16_le(s, 0); /* pad */
     out_uint16_le(s, 0); /* Compression types */
-    //out_uint16_le(s, 0); /* pad use 0x40d for rdp packets, 0 for not */
-    out_uint16_le(s, 0x40d); /* pad use 0x40d for rdp packets, 0 for not */
+    /* NO_BITMAP_COMPRESSION_HDR 0x0400
+       FASTPATH_OUTPUT_SUPPORTED 0x0001 */
+    if (self->client_info.use_fast_path & 1)
+    {
+        out_uint16_le(s, 0x401);
+    }
+    else
+    {
+        out_uint16_le(s, 0x400);
+    }
     out_uint16_le(s, 0); /* Update capability */
     out_uint16_le(s, 0); /* Remote unshare capability */
     out_uint16_le(s, 0); /* Compression level */
@@ -761,7 +769,17 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp *self)
     caps_count++;
     out_uint16_le(s, RDP_CAPSET_INPUT); /* 13(0xd) */
     out_uint16_le(s, RDP_CAPLEN_INPUT); /* 88(0x58) */
-    out_uint8(s, 1);
+    if (self->client_info.use_fast_path & 2)
+    {
+        /* INPUT_FLAG_SCANCODES 0x0001
+           INPUT_FLAG_FASTPATH_INPUT 0x0008
+           INPUT_FLAG_FASTPATH_INPUT2 0x0020 */
+        out_uint8(s, 1 | 8 | 0x20);
+    }
+    else
+    {
+        out_uint8(s, 1);
+    }
     out_uint8s(s, 83);
 
     /* Remote Programs Capability Set */
