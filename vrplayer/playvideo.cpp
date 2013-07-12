@@ -1,3 +1,6 @@
+
+#include <unistd.h>
+
 #include "playvideo.h"
 #include <QDebug>
 

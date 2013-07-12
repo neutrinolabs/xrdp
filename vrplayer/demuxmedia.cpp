@@ -1,3 +1,6 @@
+
+#include <unistd.h>
+
 #include "demuxmedia.h"
 
 DemuxMedia::DemuxMedia(QObject *parent, QQueue<MediaPacket *> *audioQueue,

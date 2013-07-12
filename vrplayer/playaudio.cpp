@@ -1,3 +1,6 @@
+
+#include <unistd.h>
+
 #include "playaudio.h"
 #include <QDebug>
 
