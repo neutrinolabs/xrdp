@@ -20,6 +20,12 @@
 
 #include "xup.h"
 
+#define LOG_LEVEL 1
+#define LLOG(_level, _args) \
+    do { if (_level < LOG_LEVEL) { g_write _args ; } } while (0)
+#define LLOGLN(_level, _args) \
+    do { if (_level < LOG_LEVEL) { g_writeln _args ; } } while (0)
+
 /******************************************************************************/
 /* returns error */
 int DEFAULT_CC

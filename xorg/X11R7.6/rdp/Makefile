@@ -43,7 +43,7 @@ LIBS = $(XSRCBASE)/dbe/.libs/libdbe.a \
 LLIBS = -Wl,-rpath=$(LIBBASE) -lfreetype -lz -lm -lXfont -lXau \
 	-lXdmcp -lpixman-1 -lrt -ldl -lcrypto -lGL -lXdamage
 
-CFLAGS = -O2 -Wall -fno-strength-reduce \
+CFLAGS = -g -O2 -Wall -fno-strength-reduce \
 	-I../../include \
 	-I../../cfb \
 	-I../../mfb \
