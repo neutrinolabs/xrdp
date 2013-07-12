@@ -819,7 +819,8 @@ rdpGlyphs(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
 {
     PictureScreenPtr ps;
 
-    LLOGLN(0, ("rdpGlyphs: op %d xSrc %d ySrc %d maskFormat %p", op, xSrc, ySrc, maskFormat));
+    LLOGLN(10, ("rdpGlyphs: op %d xSrc %d ySrc %d maskFormat %p",
+           op, xSrc, ySrc, maskFormat));
 
     if (g_do_glyph_cache && rdpGlyphCheck(nlists, lists, glyphs))
     {
@@ -843,7 +844,7 @@ rdpGlyphs(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
         rdpup_set_hints(0, 1);
     }
     g_doing_font = 0;
-    LLOGLN(0, ("rdpGlyphs: out"));
+    LLOGLN(10, ("rdpGlyphs: out"));
 }
 
 /******************************************************************************/
