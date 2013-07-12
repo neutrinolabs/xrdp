@@ -52,6 +52,11 @@
 extern DevPrivateKeyRec g_rdpPixmapIndex; /* from rdpmain.c */
 extern int g_do_dirty_os; /* in rdpmain.c */
 extern int g_do_alpha_glyphs; /* in rdpmain.c */
+extern int g_do_glyph_cache; /* in rdpmain.c */
+extern int g_doing_font; /* in rdpmain.c */
+extern ScreenPtr g_pScreen; /* in rdpmain.c */
+extern rdpScreenInfoRec g_rdpScreen; /* in rdpmain.c */
+
 
 #define LOG_LEVEL 1
 #define LLOG(_level, _args) \
@@ -763,7 +768,7 @@ GlyphExtents(int nlist, GlyphListPtr list, GlyphPtr* glyphs, BoxPtr extents)
 }
 
 /******************************************************************************/
-void
+static void
 rdpGlypht(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
           PictFormatPtr maskFormat, INT16 xSrc, INT16 ySrc,
           int nlists, GlyphListPtr lists, GlyphPtr* glyphs)
@@ -777,6 +782,68 @@ rdpGlypht(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
     }
     rdpGlyphu(op, pSrc, pDst, maskFormat, xSrc, ySrc, nlists, lists,
               glyphs, &extents);
+}
+
+/******************************************************************************/
+/* make sure no glyph is too big */
+/* returns boolean */
+static int
+rdpGlyphCheck(int nlist, GlyphListPtr list, GlyphPtr* glyphs)
+{
+    int n;
+    GlyphPtr glyph;
+
+    while (nlist--)
+    {
+        n = list->len;
+        list++;
+        while (n--)
+        {
+            glyph = *glyphs++;
+            if ((glyph->info.width * glyph->info.height) > 8192)
+            {
+                LLOGLN(10, ("rdpGlyphCheck: too big"));
+                return 0;
+            }
+        }
+    }
+    return 1;
+}
+
+/******************************************************************************/
+void
+rdpGlyphs(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
+          PictFormatPtr maskFormat,
+          INT16 xSrc, INT16 ySrc, int nlists, GlyphListPtr lists,
+          GlyphPtr* glyphs)
+{
+    PictureScreenPtr ps;
+
+    LLOGLN(0, ("rdpGlyphs: op %d xSrc %d ySrc %d maskFormat %p", op, xSrc, ySrc, maskFormat));
+
+    if (g_do_glyph_cache && rdpGlyphCheck(nlists, lists, glyphs))
+    {
+        g_doing_font = 2;
+        rdpGlypht(op, pSrc, pDst, maskFormat, xSrc, ySrc, nlists, lists, glyphs);
+        ps = GetPictureScreen(g_pScreen);
+        ps->Glyphs = g_rdpScreen.Glyphs;
+        ps->Glyphs(op, pSrc, pDst, maskFormat, xSrc, ySrc,
+                   nlists, lists, glyphs);
+        ps->Glyphs = rdpGlyphs;
+    }
+    else
+    {
+        g_doing_font = 1;
+        rdpup_set_hints(1, 1);
+        ps = GetPictureScreen(g_pScreen);
+        ps->Glyphs = g_rdpScreen.Glyphs;
+        ps->Glyphs(op, pSrc, pDst, maskFormat, xSrc, ySrc,
+                   nlists, lists, glyphs);
+        ps->Glyphs = rdpGlyphs;
+        rdpup_set_hints(0, 1);
+    }
+    g_doing_font = 0;
+    LLOGLN(0, ("rdpGlyphs: out"));
 }
 
 /******************************************************************************/
