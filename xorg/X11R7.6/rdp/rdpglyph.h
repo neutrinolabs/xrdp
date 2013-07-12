@@ -1,5 +1,5 @@
 /*
-Copyright 2012 Jay Sorg
+Copyright 2012-2013 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -55,7 +55,7 @@ int
 rdp_text_chars_to_data(struct rdp_text* rtext);
 
 void
-rdpGlypht(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
+rdpGlyphs(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
           PictFormatPtr maskFormat, INT16 xSrc, INT16 ySrc,
           int nlists, GlyphListPtr lists, GlyphPtr* glyphs);
 int
