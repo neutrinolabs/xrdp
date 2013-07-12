@@ -1,0 +1,17 @@
+
+OBJS = xrdpdev.o
+
+CFLAGS = -O2 -Wall -I/usr/include/xorg -I/usr/include/pixman-1
+
+LDFLAGS =
+
+LIBS =
+
+all: xrdpdev_drv.so
+
+xrdpdev_drv.so: $(OBJS) Makefile
+	$(CC) -shared -o xrdpdev_drv.so $(LDFLAGS) $(OBJS) $(LIBS)
+
+clean:
+	rm -f $(OBJS) xrdpdev_drv.so
+
