@@ -455,10 +455,7 @@ rdpRecolorCursor(ScreenPtr pScreen, CursorPtr pCursor,
                  Bool displayed);
 
 /* rdpglyph.c */
-void
-rdpGlyphs(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
-          PictFormatPtr maskFormat, INT16 xSrc, INT16 ySrc,
-          int nlists, GlyphListPtr lists, GlyphPtr* glyphs);
+/* look in rdpglyph.h */
 
 /* rdpComposite.c */
 int
@@ -469,11 +466,6 @@ void
 rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
              INT16 xSrc, INT16 ySrc, INT16 xMask, INT16 yMask, INT16 xDst,
              INT16 yDst, CARD16 width, CARD16 height);
-void
-rdpGlyphs(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
-          PictFormatPtr maskFormat,
-          INT16 xSrc, INT16 ySrc, int nlists, GlyphListPtr lists,
-          GlyphPtr* glyphs);
 
 /* rdpinput.c */
 int
@@ -668,6 +660,13 @@ struct stream
   (s)->p += 2; \
 }
 #endif
+
+/******************************************************************************/
+#define out_uint8(s, v) \
+{ \
+  *((s)->p) = (unsigned char)((v) >> 0); \
+  (s)->p++; \
+}
 
 /******************************************************************************/
 #define init_stream(s, v) \
