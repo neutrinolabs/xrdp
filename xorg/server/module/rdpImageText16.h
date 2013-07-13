@@ -17,21 +17,13 @@ OPEN GROUP BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
 AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-This is the main modules file
-
 */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#ifndef __RDPIMAGETEXT16_H
+#define __RDPIMAGETEXT16_H
 
-/* this should be before all X11 .h files */
-#include <xorg-server.h>
+void
+rdpImageText16(DrawablePtr pDrawable, GCPtr pGC,
+               int x, int y, int count, unsigned short* chars);
 
-/* all driver need this */
-#include <xf86.h>
-#include <xf86_OSproc.h>
-#include <mipointer.h>
-
-#include <xorg-server.h>
-
+#endif
