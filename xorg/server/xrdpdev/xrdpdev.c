@@ -534,7 +534,7 @@ Setup(pointer module, pointer opts, int *errmaj, int *errmin)
 }
 
 /* <drivername>ModuleData */
-_X_EXPORT XF86ModuleData rdpModuleData =
+_X_EXPORT XF86ModuleData xrdpdevModuleData =
 {
     &g_VersRec,
     Setup,

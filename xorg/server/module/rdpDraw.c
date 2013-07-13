@@ -39,8 +39,16 @@ misc draw calls
 
 #include "rdp.h"
 
+#define XRDP_DRIVER_NAME "XRDPDEV"
+#define XRDP_NAME "XRDPDEV"
+#define XRDP_VERSION 1000
+
+#define PACKAGE_VERSION_MAJOR 1
+#define PACKAGE_VERSION_MINOR 0
+#define PACKAGE_VERSION_PATCHLEVEL 0
+
 /******************************************************************************/
-#define LLOG_LEVEL 1
+#define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
@@ -57,7 +65,7 @@ rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
     dev = XRDPPTR(pScrn);
     pScreen->CreatePixmap = dev->CreatePixmap;
     rv = pScreen->CreatePixmap(pScreen, 0, 0, 0, 0);
-    pScreen->CreatePixmap = XVivCreatePixmap;
+    pScreen->CreatePixmap = rdpCreatePixmap;
     return rv;
 }
 
@@ -76,7 +84,7 @@ rdpDestroyPixmap(PixmapPtr pPixmap)
   dev = XRDPPTR(pScrn);
   pScreen->DestroyPixmap = dev->DestroyPixmap;
   rv = pScreen->DestroyPixmap(pPixmap);
-  pScreen->DestroyPixmap = XVivDestroyPixmap;
+  pScreen->DestroyPixmap = rdpDestroyPixmap;
   return rv;
 }
 
@@ -115,3 +123,38 @@ rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
     dev->pScreen->CopyWindow(pWin, ptOldOrg, pOldRegion);
     dev->pScreen->CopyWindow = rdpCopyWindow;
 }
+
+/*****************************************************************************/
+static pointer
+RDPSetup(pointer Module, pointer Options, int *ErrorMajor, int *ErrorMinor)
+{
+    static int initialised = 0;
+
+    LLOGLN(0, ("RDPSetup:"));
+    if (!initialised)
+    {
+        initialised = 1;
+        //xf86AddModuleInfo(&THINC, Module);
+        //LoaderRefSymLists(cursorSymbols, NULL);
+    }
+    return (pointer) 1;
+}
+
+static MODULESETUPPROTO(RDPSetup);
+static XF86ModuleVersionInfo RDPVersRec =
+{
+    XRDP_DRIVER_NAME,
+    MODULEVENDORSTRING,
+    MODINFOSTRING1,
+    MODINFOSTRING2,
+    XORG_VERSION_CURRENT,
+    PACKAGE_VERSION_MAJOR,
+    PACKAGE_VERSION_MINOR,
+    PACKAGE_VERSION_PATCHLEVEL,
+    ABI_CLASS_VIDEODRV,
+    ABI_VIDEODRV_VERSION,
+    0,
+    { 0, 0, 0, 0 }
+};
+
+XF86ModuleData xorgxrdpModuleData = { &RDPVersRec, RDPSetup, NULL };
