@@ -5,7 +5,7 @@ rdpPolyRectangle.o rdpPolyArc.o rdpFillPolygon.o rdpPolyFillRect.o \
 rdpPolyFillArc.o rdpPolyText8.o rdpPolyText16.o rdpImageText8.o \
 rdpImageText16.o rdpImageGlyphBlt.o rdpPolyGlyphBlt.o rdpPushPixels.o
 
-CFLAGS = -O2 -Wall -I/usr/include/xorg -I/usr/include/pixman-1
+CFLAGS = -O2 -Wall -fPIC -I/usr/include/xorg -I/usr/include/pixman-1
 
 LDFLAGS =
 

@@ -1,7 +1,7 @@
 
 OBJS = xrdpdev.o
 
-CFLAGS = -O2 -Wall -I/usr/include/xorg -I/usr/include/pixman-1 -I../module
+CFLAGS = -O2 -Wall -fPIC -I/usr/include/xorg -I/usr/include/pixman-1 -I../module
 
 LDFLAGS =
 
@@ -14,4 +14,3 @@ xrdpdev_drv.so: $(OBJS) Makefile
 
 clean:
 	rm -f $(OBJS) xrdpdev_drv.so
-
