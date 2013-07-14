@@ -39,14 +39,6 @@ misc draw calls
 
 #include "rdp.h"
 
-#define XRDP_DRIVER_NAME "XRDPDEV"
-#define XRDP_NAME "XRDPDEV"
-#define XRDP_VERSION 1000
-
-#define PACKAGE_VERSION_MAJOR 1
-#define PACKAGE_VERSION_MINOR 0
-#define PACKAGE_VERSION_PATCHLEVEL 0
-
 /******************************************************************************/
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
@@ -126,36 +118,3 @@ rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
     dev->pScreen->CopyWindow(pWin, ptOldOrg, pOldRegion);
     dev->pScreen->CopyWindow = rdpCopyWindow;
 }
-
-/*****************************************************************************/
-static pointer
-RDPSetup(pointer Module, pointer Options, int *ErrorMajor, int *ErrorMinor)
-{
-    static int initialised = 0;
-
-    LLOGLN(0, ("RDPSetup:"));
-    if (!initialised)
-    {
-        initialised = 1;
-    }
-    return (pointer) 1;
-}
-
-static MODULESETUPPROTO(RDPSetup);
-static XF86ModuleVersionInfo RDPVersRec =
-{
-    XRDP_DRIVER_NAME,
-    MODULEVENDORSTRING,
-    MODINFOSTRING1,
-    MODINFOSTRING2,
-    XORG_VERSION_CURRENT,
-    PACKAGE_VERSION_MAJOR,
-    PACKAGE_VERSION_MINOR,
-    PACKAGE_VERSION_PATCHLEVEL,
-    ABI_CLASS_VIDEODRV,
-    ABI_VIDEODRV_VERSION,
-    0,
-    { 0, 0, 0, 0 }
-};
-
-XF86ModuleData xorgxrdpModuleData = { &RDPVersRec, RDPSetup, NULL };

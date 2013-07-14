@@ -10,6 +10,9 @@ copy xorg.conf into it
 copy xrdpdev_drv.so to /usr/lib/xorg/modules/drivers
 copy libxorgxrdp.so to /usr/lib/xorg/modules
 
+copy xrdpmouse_drv.so to /usr/lib/xorg/modules/input
+copy xrdpkeyb_drv.so to /usr/lib/xorg/modules/input
+
 strat xserver like this
 Xorg -modulepath /usr/lib/xorg/modules -config xrdp/xorg.conf -logfile /tmp/Xjay.log -novtswitch -sharevts -noreset -nohwaccess -ac :10
 

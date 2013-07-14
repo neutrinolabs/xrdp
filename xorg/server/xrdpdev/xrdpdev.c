@@ -531,9 +531,9 @@ _X_EXPORT DriverRec g_DriverRec =
 
 /*****************************************************************************/
 static pointer
-Setup(pointer module, pointer opts, int *errmaj, int *errmin)
+xrdpdevSetup(pointer module, pointer opts, int *errmaj, int *errmin)
 {
-    LLOGLN(0, ("Setup:"));
+    LLOGLN(0, ("xrdpdevSetup:"));
     if (!g_setup_done)
     {
         g_setup_done = 1;
@@ -554,6 +554,6 @@ Setup(pointer module, pointer opts, int *errmaj, int *errmin)
 _X_EXPORT XF86ModuleData xrdpdevModuleData =
 {
     &g_VersRec,
-    Setup,
+    xrdpdevSetup,
     0
 };
