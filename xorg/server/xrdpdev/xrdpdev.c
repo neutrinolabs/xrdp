@@ -41,6 +41,7 @@ This is the main driver file
 #include "rdpPri.h"
 #include "rdpDraw.h"
 #include "rdpGC.h"
+#include "rdpCursor.h"
 
 #define XRDP_DRIVER_NAME "XRDPDEV"
 #define XRDP_NAME "XRDPDEV"
@@ -143,6 +144,8 @@ rdpPreInit(ScrnInfoPtr pScrn, int flags)
     {
         return 0;
     }
+
+    rdpPrivateInit();
 
     rdpAllocRec(pScrn);
     dev = XRDPPTR(pScrn);
@@ -254,24 +257,22 @@ rdpPreInit(ScrnInfoPtr pScrn, int flags)
     return 1;
 }
 
-#if 0
 static miPointerSpriteFuncRec g_rdpSpritePointerFuncs =
 {
-    /* these are in viv_cur.c */
+    /* these are in rdpCursor.c */
     rdpSpriteRealizeCursor,
     rdpSpriteUnrealizeCursor,
     rdpSpriteSetCursor,
     rdpSpriteMoveCursor,
-    rdpDeviceCursorInitialize,
-    rdpDeviceCursorCleanup
+    rdpSpriteDeviceCursorInitialize,
+    rdpSpriteDeviceCursorCleanup
 };
-#endif
 
 /******************************************************************************/
 static Bool
 rdpSaveScreen(ScreenPtr pScreen, int on)
 {
-    LLOGLN(10, ("rdpSaveScreen:"));
+    LLOGLN(0, ("rdpSaveScreen:"));
     return 1;
 }
 
@@ -284,10 +285,10 @@ rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     VisualPtr vis;
     int vis_found;
 
-    rdpPrivateInit();
-
     pScrn = xf86Screens[scrnIndex];
     dev = XRDPPTR(pScrn);
+
+    dev->pScreen = pScreen;
 
     miClearVisualTypes();
     miSetVisualTypes(pScrn->depth, miGetDefaultVisualMask(pScrn->depth),
@@ -295,7 +296,7 @@ rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     miSetPixmapDepths();
     LLOGLN(0, ("rdpScreenInit: virtualX %d virtualY %d",
            pScrn->virtualX, pScrn->virtualY));
-    dev->ptr = malloc(1024 * 768 * 4);
+    dev->ptr = malloc(dev->width * dev->height * 4);
     if (!fbScreenInit(pScreen, dev->ptr, pScrn->virtualX, pScrn->virtualY,
                       pScrn->xDpi, pScrn->yDpi, pScrn->displayWidth,
                       pScrn->bitsPerPixel))
@@ -331,10 +332,16 @@ rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     xf86SetBlackWhitePixels(pScreen);
     xf86SetBackingStore(pScreen);
 
+#if 1
     /* hardware cursor */
-    //dev->pCursorFuncs = xf86GetPointerScreenFuncs();
-    //miPointerInitialize(pScreen, &g_rdpSpritePointerFuncs,
-    //                    dev->pCursorFuncs, 0);
+    dev->pCursorFuncs = xf86GetPointerScreenFuncs();
+    miPointerInitialize(pScreen, &g_rdpSpritePointerFuncs,
+                        dev->pCursorFuncs, 0);
+#else
+    /* software cursor */
+    dev->pCursorFuncs = xf86GetPointerScreenFuncs();
+    miDCInitialize(pScreen, dev->pCursorFuncs);
+#endif
 
     fbCreateDefColormap(pScreen);
 
@@ -358,7 +365,7 @@ rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     }
 
     dev->privateKeyRecGC = rdpAllocateGCPrivate(pScreen, sizeof(rdpGCRec));
-    dev->privateKeyRecPixmap =rdpAllocatePixmapPrivate(pScreen, sizeof(rdpPixmapRec));
+    dev->privateKeyRecPixmap = rdpAllocatePixmapPrivate(pScreen, sizeof(rdpPixmapRec));
 
     dev->CopyWindow = pScreen->CopyWindow;
     pScreen->CopyWindow = rdpCopyWindow;
@@ -488,8 +495,18 @@ rdpAvailableOptions(int chipid, int busid)
 static Bool
 rdpDriverFunc(ScrnInfoPtr pScrn, xorgDriverFuncOp op, pointer ptr)
 {
-    LLOGLN(0, ("rdpDriverFunc:"));
-    return 0;
+    xorgHWFlags *flags;
+    int rv;
+
+    rv = 0;
+    LLOGLN(0, ("rdpDriverFunc: op %d", (int)op));
+    if (op == GET_REQUIRED_HW_INTERFACES)
+    {
+        flags = (xorgHWFlags *) ptr;
+        *flags = HW_SKIP_CONSOLE;
+        rv = 1;
+    }
+    return rv;
 }
 
 /*****************************************************************************/
