@@ -491,6 +491,10 @@ rdpAvailableOptions(int chipid, int busid)
     return 0;
 }
 
+#ifndef HW_SKIP_CONSOLE
+#define HW_SKIP_CONSOLE 4
+#endif
+
 /*****************************************************************************/
 static Bool
 rdpDriverFunc(ScrnInfoPtr pScrn, xorgDriverFuncOp op, pointer ptr)
