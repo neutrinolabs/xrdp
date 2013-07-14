@@ -132,6 +132,7 @@ rdpValidateGC(GCPtr pGC, unsigned long changes, DrawablePtr d)
     LLOGLN(10, ("rdpValidateGC:"));
     GC_FUNC_PROLOGUE(pGC);
     pGC->funcs->ValidateGC(pGC, changes, d);
+    priv->ops = pGC->ops;
     GC_FUNC_EPILOGUE(pGC);
 }
 

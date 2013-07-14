@@ -61,10 +61,12 @@ rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
     rdpPtr dev;
     PixmapPtr rv;
 
+    LLOGLN(10, ("rdpCreatePixmap: width %d height %d depth %d",
+           width, height, depth));
     pScrn = xf86Screens[pScreen->myNum];
     dev = XRDPPTR(pScrn);
     pScreen->CreatePixmap = dev->CreatePixmap;
-    rv = pScreen->CreatePixmap(pScreen, 0, 0, 0, 0);
+    rv = pScreen->CreatePixmap(pScreen, width, height, depth, usage_hint);
     pScreen->CreatePixmap = rdpCreatePixmap;
     return rv;
 }
@@ -73,19 +75,19 @@ rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
 Bool
 rdpDestroyPixmap(PixmapPtr pPixmap)
 {
-  Bool rv;
-  ScreenPtr pScreen;
-  rdpPtr dev;
-  ScrnInfoPtr pScrn;
+    Bool rv;
+    ScreenPtr pScreen;
+    rdpPtr dev;
+    ScrnInfoPtr pScrn;
 
-  LLOGLN(10, ("rdpDestroyPixmap: refcnt %d", pPixmap->refcnt));
-  pScreen = pPixmap->drawable.pScreen;
-  pScrn = xf86Screens[pScreen->myNum];
-  dev = XRDPPTR(pScrn);
-  pScreen->DestroyPixmap = dev->DestroyPixmap;
-  rv = pScreen->DestroyPixmap(pPixmap);
-  pScreen->DestroyPixmap = rdpDestroyPixmap;
-  return rv;
+    LLOGLN(10, ("rdpDestroyPixmap: refcnt %d", pPixmap->refcnt));
+    pScreen = pPixmap->drawable.pScreen;
+    pScrn = xf86Screens[pScreen->myNum];
+    dev = XRDPPTR(pScrn);
+    pScreen->DestroyPixmap = dev->DestroyPixmap;
+    rv = pScreen->DestroyPixmap(pPixmap);
+    pScreen->DestroyPixmap = rdpDestroyPixmap;
+    return rv;
 }
 
 /******************************************************************************/
@@ -93,19 +95,20 @@ Bool
 rdpModifyPixmapHeader(PixmapPtr pPixmap, int width, int height, int depth,
                       int bitsPerPixel, int devKind, pointer pPixData)
 {
-  Bool rv;
-  ScreenPtr pScreen;
-  rdpPtr dev;
-  ScrnInfoPtr pScrn;
+    Bool rv;
+    ScreenPtr pScreen;
+    rdpPtr dev;
+    ScrnInfoPtr pScrn;
 
-  pScreen = pPixmap->drawable.pScreen;
-  pScrn = xf86Screens[pScreen->myNum];
-  dev = XRDPPTR(pScrn);
-  pScreen->ModifyPixmapHeader = dev->ModifyPixmapHeader;
-  rv = pScreen->ModifyPixmapHeader(pPixmap, width, height, depth, bitsPerPixel,
-                                   devKind, pPixData);
-  pScreen->ModifyPixmapHeader = rdpModifyPixmapHeader;
-  return rv;
+    LLOGLN(10, ("rdpModifyPixmapHeader:"));
+    pScreen = pPixmap->drawable.pScreen;
+    pScrn = xf86Screens[pScreen->myNum];
+    dev = XRDPPTR(pScrn);
+    pScreen->ModifyPixmapHeader = dev->ModifyPixmapHeader;
+    rv = pScreen->ModifyPixmapHeader(pPixmap, width, height, depth, bitsPerPixel,
+                                     devKind, pPixData);
+    pScreen->ModifyPixmapHeader = rdpModifyPixmapHeader;
+    return rv;
 }
 
 /*****************************************************************************/
@@ -134,8 +137,6 @@ RDPSetup(pointer Module, pointer Options, int *ErrorMajor, int *ErrorMinor)
     if (!initialised)
     {
         initialised = 1;
-        //xf86AddModuleInfo(&THINC, Module);
-        //LoaderRefSymLists(cursorSymbols, NULL);
     }
     return (pointer) 1;
 }

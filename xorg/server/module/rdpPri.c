@@ -39,51 +39,135 @@ to deal with privates changing in xorg versions
 
 #include "rdpPri.h"
 
+/* not sure if these versions are right */
+#if XORG_VERSION_CURRENT < (((1) * 10000000) + ((5) * 100000) + ((1) * 1000) + 0)
+#define FBDEV_PRI 1
+#elif XORG_VERSION_CURRENT < (((1) * 10000000) + ((7) * 100000) + ((7) * 1000) + 1)
+#define FBDEV_PRI 2
+#else
+#define FBDEV_PRI 3
+#endif
+
+#define PTR2INT(_ptr) ((int)    ((long) ((void*) (_ptr))))
+#define INT2PTR(_int) ((void *) ((long) ((int)   (_int))))
+
+#if FBDEV_PRI == 3
+static DevPrivateKeyRec g_privateKeyRecGC;
+static DevPrivateKeyRec g_privateKeyRecPixmap;
+static DevPrivateKeyRec g_privateKeyRecWindow;
+#elif FBDEV_PRI == 2
+static int g_privateKeyRecGC = 0;
+static int g_privateKeyRecPixmap = 0;
+static int g_privateKeyRecWindow = 0;
+#endif
+
 /*****************************************************************************/
 rdpDevPrivateKey
 rdpAllocateGCPrivate(ScreenPtr pScreen, int bytes)
 {
-    return 0;
+    rdpDevPrivateKey rv;
+
+#if FBDEV_PRI == 1
+    rv = INT2PTR(AllocateGCPrivateIndex());
+    AllocateGCPrivate(pScreen, PTR2INT(rv), bytes);
+#elif FBDEV_PRI == 2
+    dixRequestPrivate(&g_privateKeyRecGC, bytes);
+    rv = &g_privateKeyRecGC;
+#else
+    dixRegisterPrivateKey(&g_privateKeyRecGC, PRIVATE_GC, bytes);
+    rv = &g_privateKeyRecGC;
+#endif
+    return rv;
 }
 
 /*****************************************************************************/
 rdpDevPrivateKey
 rdpAllocatePixmapPrivate(ScreenPtr pScreen, int bytes)
 {
-    return 0;
+    rdpDevPrivateKey rv;
+
+#if FBDEV_PRI == 1
+    rv = INT2PTR(AllocatePixmapPrivateIndex());
+    AllocatePixmapPrivate(pScreen, PTR2INT(rv), bytes);
+#elif FBDEV_PRI == 2
+    dixRequestPrivate(&g_privateKeyRecPixmap, bytes);
+    rv = &g_privateKeyRecPixmap;
+#else
+    dixRegisterPrivateKey(&g_privateKeyRecPixmap, PRIVATE_PIXMAP, bytes);
+    rv = &g_privateKeyRecPixmap;
+#endif
+    return rv;
 }
 
 /*****************************************************************************/
 rdpDevPrivateKey
 rdpAllocateWindowPrivate(ScreenPtr pScreen, int bytes)
 {
-    return 0;
+    rdpDevPrivateKey rv;
+
+#if FBDEV_PRI == 1
+    rv = INT2PTR(AllocateWindowPrivateIndex());
+    AllocateWindowPrivate(pScreen, PTR2INT(rv), bytes);
+#elif FBDEV_PRI == 2
+    dixRequestPrivate(&g_privateKeyRecWindow, bytes);
+    rv = &g_privateKeyRecWindow;
+#else
+    dixRegisterPrivateKey(&g_privateKeyRecWindow, PRIVATE_WINDOW, bytes);
+    rv = &g_privateKeyRecWindow;
+#endif
+    return rv;
 }
 
 /*****************************************************************************/
-void*
+void *
 rdpGetGCPrivate(GCPtr pGC, rdpDevPrivateKey key)
 {
-    return 0;
+    void *rv;
+
+#if FBDEV_PRI == 1
+    rv = pGC->devPrivates[PTR2INT(key)].ptr;
+#else
+    rv = dixLookupPrivate(&(pGC->devPrivates), key);
+#endif
+    return rv;
 }
 
 /*****************************************************************************/
-void*
+void *
 rdpGetPixmapPrivate(PixmapPtr pPixmap, rdpDevPrivateKey key)
 {
-    return 0;
+    void *rv;
+
+#if FBDEV_PRI == 1
+    rv = pPixmap->devPrivates[PTR2INT(key)].ptr;
+#else
+    rv = dixLookupPrivate(&(pPixmap->devPrivates), key);
+#endif
+    return rv;
 }
 
 /*****************************************************************************/
-void*
+void *
 rdpGetWindowPrivate(WindowPtr pWindow, rdpDevPrivateKey key)
 {
-    return 0;
+    void *rv;
+
+#if FBDEV_PRI == 1
+    rv = pWindow->devPrivates[PTR2INT(key)].ptr;
+#else
+    rv = dixLookupPrivate(&(pWindow->devPrivates), key);
+#endif
+    return rv;
 }
 
 /*****************************************************************************/
 int
 rdpPrivateInit(void)
 {
+#if FBDEV_PRI == 3
+    memset(&g_privateKeyRecGC, 0, sizeof(g_privateKeyRecGC));
+    memset(&g_privateKeyRecWindow, 0, sizeof(g_privateKeyRecWindow));
+    memset(&g_privateKeyRecPixmap, 0, sizeof(g_privateKeyRecPixmap));
+#endif
     return 0;
 }

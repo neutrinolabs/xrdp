@@ -25,6 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <xorg-server.h>
 #include <scrnintstr.h>
 #include <gcstruct.h>
+#include <mipointer.h>
 
 #include "rdpPri.h"
 
@@ -45,6 +46,8 @@ struct _rdpRec
     CreatePixmapProcPtr CreatePixmap;
     DestroyPixmapProcPtr DestroyPixmap;
     ModifyPixmapHeaderProcPtr ModifyPixmapHeader;
+
+    miPointerScreenFuncPtr pCursorFuncs;
 
 };
 typedef struct _rdpRec rdpRec;
