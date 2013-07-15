@@ -59,6 +59,16 @@ struct mcs_channel_item
   int chanid;
 };
 
+/* used in mcs - client monitor data */
+struct mcs_monitor_item
+{
+	int x;
+	int y;
+	int width;
+	int height;
+	int is_primary;
+};
+
 /* mcs */
 struct xrdp_mcs
 {
@@ -69,6 +79,7 @@ struct xrdp_mcs
   struct stream* client_mcs_data;
   struct stream* server_mcs_data;
   struct list* channel_list;
+  struct list* monitor_list;
 };
 
 /* sec */
@@ -99,6 +110,7 @@ struct xrdp_sec
   char pub_sig[64];
   char pri_exp[64];
   int channel_code;
+  int multimon;
 };
 
 /* channel */
@@ -285,7 +297,7 @@ xrdp_mcs_disconnect(struct xrdp_mcs* self);
 /* xrdp_sec.c */
 struct xrdp_sec* APP_CC
 xrdp_sec_create(struct xrdp_rdp* owner, struct trans* trans, int crypt_level,
-                int channel_code);
+                int channel_code, int multimon);
 void APP_CC
 xrdp_sec_delete(struct xrdp_sec* self);
 int APP_CC

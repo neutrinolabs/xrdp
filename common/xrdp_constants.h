@@ -25,8 +25,8 @@
 /* TCP port for Remote Desktop Protocol */
 #define TCP_PORT_RDP                   3389
 
-#define ISO_PDU_CR                     0xE0 /* Connection Request */
-#define ISO_PDU_CC                     0xD0 /* Connection Confirm */
+#define ISO_PDU_CR                     0xE0 /* X.224 Connection Request */
+#define ISO_PDU_CC                     0xD0 /* X.224 Connection Confirm */
 #define ISO_PDU_DR                     0x80 /* Disconnect Request */
 #define ISO_PDU_DT                     0xF0 /* Data */
 #define ISO_PDU_ER                     0x70 /* Error */
@@ -72,6 +72,7 @@
 #define SEC_TAG_CLI_CRYPT              0xc002
 #define SEC_TAG_CLI_CHANNELS           0xc003
 #define SEC_TAG_CLI_4                  0xc004
+#define SEC_TAG_CLI_MONITOR			   0xc005
 
 #define SEC_TAG_PUBKEY                 0x0006
 #define SEC_TAG_KEYSIG                 0x0008

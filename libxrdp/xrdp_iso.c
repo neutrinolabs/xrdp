@@ -86,7 +86,7 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code)
     }
     else
     {
-        in_uint8s(s, 5);
+        in_uint8s(s, 13);
     }
 
     return 0;
@@ -126,14 +126,20 @@ xrdp_iso_send_msg(struct xrdp_iso *self, struct stream *s, int code)
         return 1;
     }
 
-    out_uint8(s, 3);
-    out_uint8(s, 0);
-    out_uint16_be(s, 11); /* length */
-    out_uint8(s, 6);
+    /* TPKT HEADER */
+    out_uint8(s, 3);	/* version */
+    out_uint8(s, 0);	/* RESERVED */
+    out_uint16_be(s, 19); /* length */
+    /* ISO LAYER */
+    out_uint8(s, 14); /* length */
     out_uint8(s, code);
     out_uint16_le(s, 0);
-    out_uint16_le(s, 0);
+    out_uint16_le(s, 4660);
     out_uint8(s, 0);
+    out_uint8(s, 2); /* TYPE_RDP_NEG_RSP */
+    out_uint8(s, 1); /* flags */
+    out_uint16_le(s, 8); /* length */
+    out_uint32_le(s, 0); /* selectedProtocol: 0 = RDP , 1 = TLS , 2 = CREDSSP */
     s_mark_end(s);
 
     if (xrdp_tcp_send(self->tcp_layer, s) != 0)

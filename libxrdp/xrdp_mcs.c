@@ -364,6 +364,7 @@ xrdp_mcs_recv_edrq(struct xrdp_mcs *self)
     int opcode;
     struct stream *s;
 
+    DEBUG(("    in xrdp_mcs_recv_edrq"));
     make_stream(s);
     init_stream(s, 8192);
 
@@ -396,6 +397,7 @@ xrdp_mcs_recv_edrq(struct xrdp_mcs *self)
     }
 
     free_stream(s);
+    DEBUG(("    out xrdp_mcs_recv_edrq"));
     return 0;
 }
 
@@ -407,6 +409,7 @@ xrdp_mcs_recv_aurq(struct xrdp_mcs *self)
     int opcode;
     struct stream *s;
 
+    DEBUG(("    in xrdp_mcs_recv_aurq"));
     make_stream(s);
     init_stream(s, 8192);
 
@@ -436,6 +439,7 @@ xrdp_mcs_recv_aurq(struct xrdp_mcs *self)
     }
 
     free_stream(s);
+    DEBUG(("    out xrdp_mcs_recv_aurq"));
     return 0;
 }
 

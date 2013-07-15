@@ -138,7 +138,7 @@ hex_str_to_bin(char *in, char *out, int out_len)
 /*****************************************************************************/
 struct xrdp_sec *APP_CC
 xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans, int crypt_level,
-                int channel_code)
+                int channel_code, int multimon)
 {
     struct xrdp_sec *self;
 
@@ -168,6 +168,7 @@ xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans, int crypt_level,
     }
 
     self->channel_code = channel_code;
+    self->multimon = multimon;
 
     if (self->decrypt_rc4_info != NULL)
     {
@@ -465,7 +466,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         unicode_in(s, len_ip - 2, tmpdata, 255);
         in_uint16_le(s, len_dll);
         unicode_in(s, len_dll - 2, tmpdata, 255);
-        in_uint32_le(s, tzone);                             /* len of timetone */
+        in_uint32_le(s, tzone);                             /* len of timezone */
         in_uint8s(s, 62);                                   /* skip */
         in_uint8s(s, 22);                                   /* skip misc. */
         in_uint8s(s, 62);                                   /* skip */
@@ -850,7 +851,48 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
 
     return 0;
 }
+/*****************************************************************************/
+/* reads the client monitors data, in order to send it to X11rdp */
+static int APP_CC
+xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
+{
+	int index;
+	int monitorCount;
+	int flags;
+	struct mcs_monitor_item *monitor_item;
 
+    DEBUG(("processing monitors data, allow_multimon is %d", self->multimon));
+
+    /* this is an option set in xrdp.ini */
+    if (self->multimon != 1) /* is multi-monitors allowed ? */
+    {
+        g_writeln("Processing monitor data from client - Multimon is not allowed");
+        return 0;
+    }
+
+    in_uint32_le(s, flags); /* flags */
+    DEBUG(("xrdp_sec_process_mcs_data_monitors: monitor flags is %s", flags));
+
+    in_uint32_le(s, monitorCount);
+    DEBUG(("xrdp_sec_process_mcs_data_monitors: monitor count is %s", monitorCount));
+
+    for (index = 0; index < monitorCount; index++)
+    {
+    	monitor_item = (struct mcs_monitor_item *)
+                       g_malloc(sizeof(struct mcs_monitor_item), 1);
+    	in_uint32_le(s, monitor_item->x);
+        in_uint32_le(s, monitor_item->y);
+        in_uint32_le(s, monitor_item->width);
+        in_uint32_le(s, monitor_item->height);
+        in_uint32_le(s, monitor_item->is_primary);
+
+        list_add_item(self->mcs_layer->monitor_list, (long)monitor_item);
+        DEBUG(("got monitor: flags %8.8x is primary? %s", monitor_item->height,
+        		monitor_item->is_primary));
+    }
+
+    return 0;
+}
 /*****************************************************************************/
 /* process client mcs data, we need some things in here to create the server
    mcs data */
@@ -891,6 +933,10 @@ xrdp_sec_process_mcs_data(struct xrdp_sec *self)
                 xrdp_sec_process_mcs_data_channels(self, s);
                 break;
             case SEC_TAG_CLI_4:
+                break;
+            case SEC_TAG_CLI_MONITOR:
+            	DEBUG((" 			in CS_MONITOR !!!"));
+            	xrdp_sec_process_mcs_data_monitors(self, s);
                 break;
             default:
                 g_writeln("error unknown xrdp_sec_process_mcs_data tag %d size %d",
