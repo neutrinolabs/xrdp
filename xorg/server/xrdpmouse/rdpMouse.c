@@ -178,8 +178,6 @@ rdpMouseSetDeviceValuators(struct _InputInfoRec *local,
 static int
 rdpmousePreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
 {
-    //MouseDevPtr pMse;
-
     LLOGLN(0, ("rdpmousePreInit: drv %p info %p, flags 0x%x",
            drv, info, flags));
     info->device_control = rdpMouseControl;
@@ -187,17 +185,7 @@ rdpmousePreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
     info->control_proc = rdpMouseControlProc;
     info->switch_mode = rdpMouseSwitchMode;
     info->set_device_valuators = rdpMouseSetDeviceValuators;
-    //info->fd = -1;
-    //LLOGLN(0, ("%p", info->dev));
-    //LLOGLN(0, ("rdpmousePreInit: info->flags 0x%x", info->flags));
-    //info->flags |= 0x40 | 0x08 | 0x02 | 0x10;;
-    //LLOGLN(0, ("rdpmousePreInit: info->flags 0x%x", info->flags));
-    //LLOGLN(0, ("rdpmousePreInit: %s %s %s", info->type_name, info->name, info->driver));
     info->type_name = "Mouse";
-    //info->driver = "xrdpmouse";
-
-    //xf86AddEnabledDevice(info);
-
     return 0;
 }
 
