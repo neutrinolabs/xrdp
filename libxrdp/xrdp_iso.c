@@ -126,16 +126,17 @@ xrdp_iso_send_msg(struct xrdp_iso *self, struct stream *s, int code)
         return 1;
     }
 
-    /* TPKT HEADER */
+    /* TPKT HEADER - 4 bytes */
     out_uint8(s, 3);	/* version */
     out_uint8(s, 0);	/* RESERVED */
     out_uint16_be(s, 19); /* length */
-    /* ISO LAYER */
+    /* ISO LAYER - X.224  - 7 bytes*/
     out_uint8(s, 14); /* length */
-    out_uint8(s, code);
-    out_uint16_le(s, 0);
-    out_uint16_le(s, 4660);
+    out_uint8(s, code); /* SHOULD BE 0xd for CC */
+    out_uint16_be(s, 0);
+    out_uint16_be(s, 0x1234);
     out_uint8(s, 0);
+    /* RDP_NEG_RSP - 8 bytes*/
     out_uint8(s, 2); /* TYPE_RDP_NEG_RSP */
     out_uint8(s, 1); /* flags */
     out_uint16_le(s, 8); /* length */

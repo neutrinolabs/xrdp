@@ -880,10 +880,10 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
     {
     	monitor_item = (struct mcs_monitor_item *)
                        g_malloc(sizeof(struct mcs_monitor_item), 1);
-    	in_uint32_le(s, monitor_item->x);
-        in_uint32_le(s, monitor_item->y);
-        in_uint32_le(s, monitor_item->width);
-        in_uint32_le(s, monitor_item->height);
+    	in_uint32_le(s, monitor_item->x); //TODO: change to signed 32 bit int.
+        in_uint32_le(s, monitor_item->y); //TODO: change to signed 32 bit int.
+        in_uint32_le(s, monitor_item->width); //TODO: change to signed 32 bit int.
+        in_uint32_le(s, monitor_item->height); //TODO: change to signed 32 bit int.
         in_uint32_le(s, monitor_item->is_primary);
 
         list_add_item(self->mcs_layer->monitor_list, (long)monitor_item);
