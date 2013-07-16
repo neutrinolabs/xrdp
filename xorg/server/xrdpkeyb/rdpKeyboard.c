@@ -205,23 +205,17 @@ static KeySym g_kbdMap[] =
 static void
 rdpEnqueueKey(int type, int scancode)
 {
-    int i;
-    int n;
-    EventListPtr rdp_events;
-    xEvent *pev;
-
-    i = GetEventList(&rdp_events);
-    LLOGLN(0, ("rdpEnqueueKey: i %d g_keyboard %p %p", i, g_keyboard, rdp_events));
-    n = GetKeyboardEvents(rdp_events, g_keyboard, type, scancode);
-    LLOGLN(0, ("rdpEnqueueKey: n %d", n));
-    for (i = 0; i < n; i++)
+    if (type == KeyPress)
     {
-        pev = (rdp_events + i)->event;
-        mieqEnqueue(g_keyboard, (InternalEvent *)pev);
+        xf86PostKeyboardEvent(g_keyboard, scancode, 1);
+    }
+    else
+    {
+        xf86PostKeyboardEvent(g_keyboard, scancode, 0);
     }
 }
 
-#if 0
+#if 1
 /******************************************************************************/
 static CARD32
 rdpDeferredUpdateCallback(OsTimerPtr timer, CARD32 now, pointer arg)
@@ -231,8 +225,8 @@ rdpDeferredUpdateCallback(OsTimerPtr timer, CARD32 now, pointer arg)
     rdpEnqueueKey(KeyPress, 115);
     rdpEnqueueKey(KeyRelease, 115);
 
-    //xf86PostKeyboardEvent(g_keyboard, 9, 1);
-    //xf86PostKeyboardEvent(g_keyboard, 9, 0);
+    //xf86PostKeyboardEvent(g_keyboard, 115, 1);
+    //xf86PostKeyboardEvent(g_keyboard, 115, 0);
 
     g_timer = TimerSet(g_timer, 0, 1000, rdpDeferredUpdateCallback, 0);
     return 0;
@@ -241,13 +235,13 @@ rdpDeferredUpdateCallback(OsTimerPtr timer, CARD32 now, pointer arg)
 
 /******************************************************************************/
 void
-rdpKeybDeviceInit(DeviceIntPtr pDevice, KeySymsPtr pKeySyms, CARD8 *pModMap)
+rdpkeybDeviceInit(DeviceIntPtr pDevice, KeySymsPtr pKeySyms, CARD8 *pModMap)
 {
     int i;
 
-    LLOGLN(0, ("rdpKeybDeviceInit:"));
+    LLOGLN(0, ("rdpkeybDeviceInit:"));
     LLOGLN(10, ("  MAP_LENGTH %d GLYPHS_PER_KEY %d N_PREDEFINED_KEYS %d",
-           MAP_LENGTH, GLYPHS_PER_KEY, N_PREDEFINED_KEYS));
+           MAP_LENGTH, GLYPHS_PER_KEY, (int) N_PREDEFINED_KEYS));
 
     for (i = 0; i < MAP_LENGTH; i++)
     {
@@ -271,7 +265,7 @@ rdpKeybDeviceInit(DeviceIntPtr pDevice, KeySymsPtr pKeySyms, CARD8 *pModMap)
     pKeySyms->map = (KeySym *)malloc(i);
     if (pKeySyms->map == 0)
     {
-        LLOGLN(0, ("rdpKeybDeviceInit: malloc failed"));
+        LLOGLN(0, ("rdpkeybDeviceInit: malloc failed"));
         exit(1);
     }
     else
@@ -292,76 +286,106 @@ rdpKeybDeviceInit(DeviceIntPtr pDevice, KeySymsPtr pKeySyms, CARD8 *pModMap)
 
 /******************************************************************************/
 static void
-rdpKeybDeviceOn(void)
+rdpkeybDeviceOn(void)
 {
-    LLOGLN(0, ("rdpKeybDeviceOn:"));
+    LLOGLN(0, ("rdpkeybDeviceOn:"));
 }
 
 /******************************************************************************/
 static void
-rdpKeybDeviceOff(void)
+rdpkeybDeviceOff(void)
 {
-    LLOGLN(0, ("rdpKeybDeviceOff:"));
+    LLOGLN(0, ("rdpkeybDeviceOff:"));
 }
 
 /******************************************************************************/
 static void
-rdpKeybBell(int volume, DeviceIntPtr pDev, pointer ctrl, int cls)
+rdpkeybBell(int volume, DeviceIntPtr pDev, pointer ctrl, int cls)
 {
-    LLOGLN(0, ("rdpKeybBell:"));
+    LLOGLN(0, ("rdpkeybBell:"));
 }
 
 /******************************************************************************/
 static void
-rdpKeybChangeKeyboardControl(DeviceIntPtr pDev, KeybdCtrl *ctrl)
+rdpkeybChangeKeyboardControl(DeviceIntPtr pDev, KeybdCtrl *ctrl)
 {
-    LLOGLN(0, ("rdpKeybChangeKeyboardControl:"));
+    LLOGLN(0, ("rdpkeybChangeKeyboardControl:"));
 }
 
 /******************************************************************************/
 static int
-rdpKeybControl(DeviceIntPtr device, int what)
+rdpkeybControl(DeviceIntPtr device, int what)
 {
     KeySymsRec keySyms;
     CARD8 modMap[MAP_LENGTH];
     DevicePtr pDev;
     XkbRMLVOSet set;
 
-    LLOGLN(0, ("rdpKeybControl: what %d", what));
+    LLOGLN(0, ("rdpkeybControl: what %d", what));
     pDev = (DevicePtr)device;
 
     switch (what)
     {
         case DEVICE_INIT:
-            rdpKeybDeviceInit(device, &keySyms, modMap);
+            rdpkeybDeviceInit(device, &keySyms, modMap);
             memset(&set, 0, sizeof(set));
             set.rules = "base";
             set.model = "pc104";
             set.layout = "us";
             set.variant = "";
             set.options = "";
-            InitKeyboardDeviceStruct(device, &set, rdpKeybBell,
-                                     rdpKeybChangeKeyboardControl);
+            InitKeyboardDeviceStruct(device, &set, rdpkeybBell,
+                                     rdpkeybChangeKeyboardControl);
             g_keyboard = device;
-            //g_timer = TimerSet(g_timer, 0, 1000, rdpDeferredUpdateCallback, 0);
+            g_timer = TimerSet(g_timer, 0, 1000, rdpDeferredUpdateCallback, 0);
             break;
         case DEVICE_ON:
             pDev->on = 1;
-            rdpKeybDeviceOn();
+            rdpkeybDeviceOn();
             break;
         case DEVICE_OFF:
             pDev->on = 0;
-            rdpKeybDeviceOff();
+            rdpkeybDeviceOff();
             break;
         case DEVICE_CLOSE:
             if (pDev->on)
             {
-                rdpKeybDeviceOff();
+                rdpkeybDeviceOff();
             }
             break;
     }
     return Success;
 }
+
+#if XORG_VERSION_CURRENT < (((1) * 10000000) + ((9) * 100000) + ((0) * 1000) + 1)
+
+/* debian 6
+   ubuntu 10.04 */
+
+/******************************************************************************/
+static InputInfoPtr
+rdpkeybPreInit(InputDriverPtr drv, IDevPtr dev, int flags)
+{
+    InputInfoPtr info;
+
+    LLOGLN(0, ("rdpkeybPreInit: drv %p dev %p, flags 0x%x",
+           drv, dev, flags));
+    info = xf86AllocateInput(drv, 0);
+    info->name = dev->identifier;
+    info->device_control = rdpkeybControl;
+    info->flags = XI86_CONFIGURED | XI86_ALWAYS_CORE | XI86_SEND_DRAG_EVENTS |
+                  XI86_CORE_KEYBOARD | XI86_KEYBOARD_CAPABLE;
+    info->type_name = "Keyboard";
+    info->fd = -1;
+    info->conf_idev = dev;
+
+    return info;
+}
+
+#else
+
+/* debian 7
+   ubuntu 12.04 */
 
 /******************************************************************************/
 static int
@@ -369,11 +393,13 @@ rdpkeybPreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
 {
     LLOGLN(0, ("rdpkeybPreInit: drv %p info %p, flags 0x%x",
            drv, info, flags));
-    info->device_control = rdpKeybControl;
+    info->device_control = rdpkeybControl;
     info->type_name = "Keyboard";
 
     return 0;
 }
+
+#endif
 
 /******************************************************************************/
 static void

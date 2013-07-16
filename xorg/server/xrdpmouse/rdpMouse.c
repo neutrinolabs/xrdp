@@ -58,48 +58,48 @@ xrdp mouse module
 
 /******************************************************************************/
 static void
-rdpMouseDeviceInit(void)
+rdpmouseDeviceInit(void)
 {
-    LLOGLN(0, ("rdpMouseDeviceInit:"));
+    LLOGLN(0, ("rdpmouseDeviceInit:"));
 }
 
 /******************************************************************************/
 static void
-rdpMouseDeviceOn(DeviceIntPtr pDev)
+rdpmouseDeviceOn(DeviceIntPtr pDev)
 {
-    LLOGLN(0, ("rdpMouseDeviceOn:"));
+    LLOGLN(0, ("rdpmouseDeviceOn:"));
 }
 
 /******************************************************************************/
 static void
-rdpMouseDeviceOff(void)
+rdpmouseDeviceOff(void)
 {
-    LLOGLN(0, ("rdpMouseDeviceOff:"));
+    LLOGLN(0, ("rdpmouseDeviceOff:"));
 }
 
 /******************************************************************************/
 static void
-rdpMouseCtrl(DeviceIntPtr pDevice, PtrCtrl *pCtrl)
+rdpmouseCtrl(DeviceIntPtr pDevice, PtrCtrl *pCtrl)
 {
-    LLOGLN(0, ("rdpMouseCtrl:"));
+    LLOGLN(0, ("rdpmouseCtrl:"));
 }
 
 /******************************************************************************/
 static int
-rdpMouseControl(DeviceIntPtr device, int what)
+rdpmouseControl(DeviceIntPtr device, int what)
 {
     BYTE map[6];
     DevicePtr pDev;
     Atom btn_labels[6];
     Atom axes_labels[2];
 
-    LLOGLN(0, ("rdpMouseControl: what %d", what));
+    LLOGLN(0, ("rdpmouseControl: what %d", what));
     pDev = (DevicePtr)device;
 
     switch (what)
     {
         case DEVICE_INIT:
-            rdpMouseDeviceInit();
+            rdpmouseDeviceInit();
             map[0] = 0;
             map[1] = 1;
             map[2] = 2;
@@ -116,23 +116,23 @@ rdpMouseControl(DeviceIntPtr device, int what)
             axes_labels[0] = XIGetKnownProperty(AXIS_LABEL_PROP_REL_X);
             axes_labels[1] = XIGetKnownProperty(AXIS_LABEL_PROP_REL_Y);
 
-            InitPointerDeviceStruct(pDev, map, 5, btn_labels, rdpMouseCtrl,
+            InitPointerDeviceStruct(pDev, map, 5, btn_labels, rdpmouseCtrl,
                                     GetMotionHistorySize(), 2, axes_labels);
 
             break;
         case DEVICE_ON:
             pDev->on = 1;
-            rdpMouseDeviceOn(device);
+            rdpmouseDeviceOn(device);
             break;
         case DEVICE_OFF:
             pDev->on = 0;
-            rdpMouseDeviceOff();
+            rdpmouseDeviceOff();
             break;
         case DEVICE_CLOSE:
 
             if (pDev->on)
             {
-                rdpMouseDeviceOff();
+                rdpmouseDeviceOff();
             }
 
             break;
@@ -141,38 +141,35 @@ rdpMouseControl(DeviceIntPtr device, int what)
     return Success;
 }
 
-/******************************************************************************/
-static void
-rdpMouseReadInput(struct _InputInfoRec *local)
-{
-    LLOGLN(0, ("rdpMouseReadInput:"));
-}
+#if XORG_VERSION_CURRENT < (((1) * 10000000) + ((9) * 100000) + ((0) * 1000) + 1)
+
+/* debian 6
+   ubuntu 10.04 */
 
 /******************************************************************************/
-static int
-rdpMouseControlProc(struct _InputInfoRec *local, xDeviceCtl *control)
+static InputInfoPtr
+rdpmousePreInit(InputDriverPtr drv, IDevPtr dev, int flags)
 {
-    LLOGLN(0, ("rdpMouseControlProc:"));
-    return 0;
+    InputInfoPtr info;
+
+    LLOGLN(0, ("rdpmousePreInit: drv %p dev %p, flags 0x%x",
+           drv, dev, flags));
+    info = xf86AllocateInput(drv, 0);
+    info->name = dev->identifier;
+    info->device_control = rdpmouseControl;
+    info->flags = XI86_CONFIGURED | XI86_ALWAYS_CORE | XI86_SEND_DRAG_EVENTS |
+                  XI86_CORE_POINTER | XI86_POINTER_CAPABLE;
+    info->type_name = "Mouse";
+    info->fd = -1;
+    info->conf_idev = dev;
+
+    return info;
 }
 
-/******************************************************************************/
-static int
-rdpMouseSwitchMode(ClientPtr client, DeviceIntPtr dev, int mode)
-{
-    LLOGLN(0, ("rdpMouseSwitchMode:"));
-    return 0;
-}
+#else
 
-/******************************************************************************/
-static int
-rdpMouseSetDeviceValuators(struct _InputInfoRec *local,
-                           int *valuators, int first_valuator,
-                           int num_valuators)
-{
-    LLOGLN(0, ("rdpMouseSetDeviceValuators:"));
-    return 0;
-}
+/* debian 7
+   ubuntu 12.04 */
 
 /******************************************************************************/
 static int
@@ -180,14 +177,12 @@ rdpmousePreInit(InputDriverPtr drv, InputInfoPtr info, int flags)
 {
     LLOGLN(0, ("rdpmousePreInit: drv %p info %p, flags 0x%x",
            drv, info, flags));
-    info->device_control = rdpMouseControl;
-    info->read_input = rdpMouseReadInput;
-    info->control_proc = rdpMouseControlProc;
-    info->switch_mode = rdpMouseSwitchMode;
-    info->set_device_valuators = rdpMouseSetDeviceValuators;
+    info->device_control = rdpmouseControl;
     info->type_name = "Mouse";
     return 0;
 }
+
+#endif
 
 /******************************************************************************/
 static void
