@@ -4,7 +4,7 @@ rdpCopyArea.o rdpCopyPlane.o rdpPolyPoint.o rdpPolylines.o rdpPolySegment.o \
 rdpPolyRectangle.o rdpPolyArc.o rdpFillPolygon.o rdpPolyFillRect.o \
 rdpPolyFillArc.o rdpPolyText8.o rdpPolyText16.o rdpImageText8.o \
 rdpImageText16.o rdpImageGlyphBlt.o rdpPolyGlyphBlt.o rdpPushPixels.o \
-rdpCursor.o rdpMain.o
+rdpCursor.o rdpMain.o rdpRandR.o
 
 CFLAGS = -g -O2 -Wall -fPIC -I/usr/include/xorg -I/usr/include/pixman-1
 

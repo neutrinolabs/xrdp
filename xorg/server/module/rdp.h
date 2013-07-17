@@ -26,13 +26,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <scrnintstr.h>
 #include <gcstruct.h>
 #include <mipointer.h>
+#include <randrstr.h>
 
 #include "rdpPri.h"
 
 /* move this to common header */
 struct _rdpRec
 {
-    char data[1024];
     int width;
     int height;
     int num_modes;
@@ -48,6 +48,20 @@ struct _rdpRec
     ModifyPixmapHeaderProcPtr ModifyPixmapHeader;
 
     miPointerScreenFuncPtr pCursorFuncs;
+
+    /* RandR */
+    RRSetConfigProcPtr rrSetConfig;
+    RRGetInfoProcPtr rrGetInfo;
+    RRScreenSetSizeProcPtr rrScreenSetSize;
+    RRCrtcSetProcPtr rrCrtcSet;
+    RRCrtcSetGammaProcPtr rrCrtcSetGamma;
+    RRCrtcGetGammaProcPtr rrCrtcGetGamma;
+    RROutputSetPropertyProcPtr rrOutputSetProperty;
+    RROutputValidateModeProcPtr rrOutputValidateMode;
+    RRModeDestroyProcPtr rrModeDestroy;
+    RROutputGetPropertyProcPtr rrOutputGetProperty;
+    RRGetPanningProcPtr rrGetPanning;
+    RRSetPanningProcPtr rrSetPanning;
 
 };
 typedef struct _rdpRec rdpRec;

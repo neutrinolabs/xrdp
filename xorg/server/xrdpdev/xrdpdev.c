@@ -36,12 +36,14 @@ This is the main driver file
 #include <fb.h>
 #include <micmap.h>
 #include <mi.h>
+#include <randrstr.h>
 
 #include "rdp.h"
 #include "rdpPri.h"
 #include "rdpDraw.h"
 #include "rdpGC.h"
 #include "rdpCursor.h"
+#include "rdpRandR.h"
 
 #define XRDP_DRIVER_NAME "XRDPDEV"
 #define XRDP_NAME "XRDPDEV"
@@ -74,6 +76,7 @@ int g_blueOffset = 0;
 int g_blueBits = 8;
 
 static int g_setup_done = 0;
+static OsTimerPtr g_timer = 0;
 
 /* Supported "chipsets" */
 static SymTabRec g_Chipsets[] =
@@ -276,6 +279,55 @@ rdpSaveScreen(ScreenPtr pScreen, int on)
     return 1;
 }
 
+/******************************************************************************/
+static CARD32
+rdpDeferredRandR(OsTimerPtr timer, CARD32 now, pointer arg)
+{
+    ScreenPtr pScreen;
+    rrScrPrivPtr pRRScrPriv;
+    ScrnInfoPtr pScrn;
+    rdpPtr dev;
+
+    pScreen = (ScreenPtr) arg;
+    pScrn = xf86Screens[pScreen->myNum];
+    dev = XRDPPTR(pScrn);
+    LLOGLN(10, ("rdpDeferredRandR:"));
+    pRRScrPriv = rrGetScrPriv(pScreen);
+    if (pRRScrPriv == 0)
+    {
+        LLOGLN(0, ("rdpDeferredRandR: rrGetScrPriv failed"));
+        return 1;
+    }
+
+    dev->rrSetConfig          = pRRScrPriv->rrSetConfig;
+    dev->rrGetInfo            = pRRScrPriv->rrGetInfo;
+    dev->rrScreenSetSize      = pRRScrPriv->rrScreenSetSize;
+    dev->rrCrtcSet            = pRRScrPriv->rrCrtcSet;
+    dev->rrCrtcSetGamma       = pRRScrPriv->rrCrtcSetGamma;
+    dev->rrCrtcGetGamma       = pRRScrPriv->rrCrtcGetGamma;
+    dev->rrOutputSetProperty  = pRRScrPriv->rrOutputSetProperty;
+    dev->rrOutputValidateMode = pRRScrPriv->rrOutputValidateMode;
+    dev->rrModeDestroy        = pRRScrPriv->rrModeDestroy;
+    dev->rrOutputGetProperty  = pRRScrPriv->rrOutputGetProperty;
+    dev->rrGetPanning         = pRRScrPriv->rrGetPanning;
+    dev->rrSetPanning         = pRRScrPriv->rrSetPanning;
+
+    pRRScrPriv->rrSetConfig          = rdpRRSetConfig;
+    pRRScrPriv->rrGetInfo            = rdpRRGetInfo;
+    pRRScrPriv->rrScreenSetSize      = rdpRRScreenSetSize;
+    pRRScrPriv->rrCrtcSet            = rdpRRCrtcSet;
+    pRRScrPriv->rrCrtcSetGamma       = rdpRRCrtcSetGamma;
+    pRRScrPriv->rrCrtcGetGamma       = rdpRRCrtcGetGamma;
+    pRRScrPriv->rrOutputSetProperty  = rdpRROutputSetProperty;
+    pRRScrPriv->rrOutputValidateMode = rdpRROutputValidateMode;
+    pRRScrPriv->rrModeDestroy        = rdpRRModeDestroy;
+    pRRScrPriv->rrOutputGetProperty  = rdpRROutputGetProperty;
+    pRRScrPriv->rrGetPanning         = rdpRRGetPanning;
+    pRRScrPriv->rrSetPanning         = rdpRRSetPanning;
+
+    return 0;
+}
+
 /*****************************************************************************/
 static Bool
 rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
@@ -381,6 +433,8 @@ rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 
     dev->ModifyPixmapHeader = pScreen->ModifyPixmapHeader;
     pScreen->ModifyPixmapHeader = rdpModifyPixmapHeader;
+
+    g_timer = TimerSet(g_timer, 0, 10, rdpDeferredRandR, pScreen);
 
     LLOGLN(0, ("rdpScreenInit: out"));
     return 1;
