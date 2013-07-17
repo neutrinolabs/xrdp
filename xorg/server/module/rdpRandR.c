@@ -39,16 +39,36 @@ RandR draw calls
 
 #include "rdp.h"
 
+#define PixelDPI 100
+#define PixelToMM(_size) (((_size) * 254 + (PixelDPI) * 5) / ((PixelDPI) * 10))
+
 /******************************************************************************/
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
 /******************************************************************************/
+static WindowPtr
+rdpGetRootWindowPtr(ScreenPtr pScreen)
+{
+    /* in globals.c */
+    return WindowTable[pScreen->myNum];
+}
+
+/******************************************************************************/
 Bool
 rdpRRRegisterSize(ScreenPtr pScreen, int width, int height)
 {
-    LLOGLN(0, ("rdpRRRegisterSize:"));
+    int mmwidth;
+    int mmheight;
+    RRScreenSizePtr pSize;
+
+    LLOGLN(0, ("rdpRRRegisterSize: width %d height %d", width, height));
+    mmwidth = PixelToMM(width);
+    mmheight = PixelToMM(height);
+    pSize = RRRegisterSize(pScreen, width, height, mmwidth, mmheight);
+    /* Tell RandR what the current config is */
+    RRSetCurrentConfig(pScreen, RR_Rotate_0, 0, pSize);
     return TRUE;
 }
 
@@ -65,7 +85,18 @@ rdpRRSetConfig(ScreenPtr pScreen, Rotation rotateKind, int rate,
 Bool
 rdpRRGetInfo(ScreenPtr pScreen, Rotation *pRotations)
 {
+    int width;
+    int height;
+    ScrnInfoPtr pScrn;
+    rdpPtr dev;
+
     LLOGLN(0, ("rdpRRGetInfo:"));
+    pScrn = xf86Screens[pScreen->myNum];
+    dev = XRDPPTR(pScrn);
+    *pRotations = RR_Rotate_0;
+    width = dev->width;
+    height = dev->height;
+    rdpRRRegisterSize(pScreen, width, height);
     return TRUE;
 }
 
@@ -74,7 +105,63 @@ Bool
 rdpRRScreenSetSize(ScreenPtr pScreen, CARD16 width, CARD16 height,
                    CARD32 mmWidth, CARD32 mmHeight)
 {
-    LLOGLN(0, ("rdpRRScreenSetSize:"));
+    WindowPtr root;
+    PixmapPtr screenPixmap;
+    BoxRec box;
+    ScrnInfoPtr pScrn;
+    rdpPtr dev;
+
+    LLOGLN(0, ("rdpRRScreenSetSize: width %d height %d mmWidth %d mmHeight %d",
+           width, height, (int)mmWidth, (int)mmHeight));
+    pScrn = xf86Screens[pScreen->myNum];
+    dev = XRDPPTR(pScrn);
+    root = rdpGetRootWindowPtr(pScreen);
+
+    if ((width < 1) || (height < 1))
+    {
+        LLOGLN(10, ("  error width %d height %d", width, height));
+        return FALSE;
+    }
+
+    dev->width = width;
+    dev->height = height;
+    dev->paddedWidthInBytes = PixmapBytePad(dev->width, dev->depth);
+    dev->sizeInBytes = dev->paddedWidthInBytes * dev->height;
+    pScreen->width = width;
+    pScreen->height = height;
+    pScreen->mmWidth = mmWidth;
+    pScreen->mmHeight = mmHeight;
+
+    screenPixmap = pScreen->GetScreenPixmap(pScreen);
+
+    if (screenPixmap != 0)
+    {
+        LLOGLN(0, ("  resizing screenPixmap [%p] to %dx%d, "
+               "currently at %dx%d", (void *)screenPixmap, width, height,
+               screenPixmap->drawable.width, screenPixmap->drawable.height));
+        pScreen->ModifyPixmapHeader(screenPixmap, width, height,
+                                    dev->depth, dev->bitsPerPixel,
+                                    dev->paddedWidthInBytes,
+                                    dev->pfbMemory);
+        LLOGLN(0, ("  pixmap resized to %dx%d",
+               screenPixmap->drawable.width, screenPixmap->drawable.height));
+    }
+
+    LLOGLN(10, ("  root window %p", (void *)root));
+    box.x1 = 0;
+    box.y1 = 0;
+    box.x2 = width;
+    box.y2 = height;
+    REGION_INIT(pScreen, &root->winSize, &box, 1);
+    REGION_INIT(pScreen, &root->borderSize, &box, 1);
+    REGION_RESET(pScreen, &root->borderClip, &box);
+    REGION_BREAK(pScreen, &root->clipList);
+    root->drawable.width = width;
+    root->drawable.height = height;
+    ResizeChildrenWinSize(root, 0, 0, 0, 0);
+    RRGetInfo(pScreen, 1);
+    //rdpInvalidateArea(g_pScreen, 0, 0, dev->width, dev->height);
+    LLOGLN(0, ("  screen resized to %dx%d", pScreen->width, pScreen->height));
     return TRUE;
 }
 
@@ -100,7 +187,21 @@ rdpRRCrtcSetGamma(ScreenPtr pScreen, RRCrtcPtr crtc)
 Bool
 rdpRRCrtcGetGamma(ScreenPtr pScreen, RRCrtcPtr crtc)
 {
-    LLOGLN(0, ("rdpRRCrtcGetGamma:"));
+    LLOGLN(0, ("rdpRRCrtcGetGamma: %p %p %p", crtc->gammaRed,
+           crtc->gammaBlue, crtc->gammaGreen));
+    crtc->gammaSize = 1;
+    if (crtc->gammaRed == NULL)
+    {
+        crtc->gammaRed = xnfcalloc(2, 16);
+    }
+    if (crtc->gammaBlue == NULL)
+    {
+        crtc->gammaBlue = xnfcalloc(2, 16);
+    }
+    if (crtc->gammaGreen == NULL)
+    {
+        crtc->gammaGreen = xnfcalloc(2, 16);
+    }
     return TRUE;
 }
 
@@ -139,16 +240,46 @@ rdpRROutputGetProperty(ScreenPtr pScreen, RROutputPtr output, Atom property)
 
 /******************************************************************************/
 Bool
-rdpRRGetPanning(ScreenPtr pScrn, RRCrtcPtr crtc, BoxPtr totalArea,
+rdpRRGetPanning(ScreenPtr pScreen, RRCrtcPtr crtc, BoxPtr totalArea,
                 BoxPtr trackingArea, INT16 *border)
 {
+    ScrnInfoPtr pScrn;
+    rdpPtr dev;
+
     LLOGLN(0, ("rdpRRGetPanning:"));
+    pScrn = xf86Screens[pScreen->myNum];
+    dev = XRDPPTR(pScrn);
+
+    if (totalArea != 0)
+    {
+        totalArea->x1 = 0;
+        totalArea->y1 = 0;
+        totalArea->x2 = dev->width;
+        totalArea->y2 = dev->height;
+    }
+
+    if (trackingArea != 0)
+    {
+        trackingArea->x1 = 0;
+        trackingArea->y1 = 0;
+        trackingArea->x2 = dev->width;
+        trackingArea->y2 = dev->height;
+    }
+
+    if (border != 0)
+    {
+        border[0] = 0;
+        border[1] = 0;
+        border[2] = 0;
+        border[3] = 0;
+    }
+
     return TRUE;
 }
 
 /******************************************************************************/
 Bool
-rdpRRSetPanning(ScreenPtr pScrn, RRCrtcPtr crtc, BoxPtr totalArea,
+rdpRRSetPanning(ScreenPtr pScreen, RRCrtcPtr crtc, BoxPtr totalArea,
                 BoxPtr trackingArea, INT16 *border)
 {
     LLOGLN(0, ("rdpRRSetPanning:"));

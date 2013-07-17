@@ -348,8 +348,15 @@ rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     miSetPixmapDepths();
     LLOGLN(0, ("rdpScreenInit: virtualX %d virtualY %d",
            pScrn->virtualX, pScrn->virtualY));
-    dev->ptr = malloc(dev->width * dev->height * 4);
-    if (!fbScreenInit(pScreen, dev->ptr, pScrn->virtualX, pScrn->virtualY,
+
+    dev->depth = 24;
+    dev->paddedWidthInBytes = PixmapBytePad(dev->width, dev->depth);
+    dev->bitsPerPixel = 32;
+    dev->sizeInBytes = dev->paddedWidthInBytes * dev->height;
+    LLOGLN(0, ("pfbMemory bytes %d", dev->sizeInBytes));
+    dev->pfbMemory = (char *) malloc(dev->sizeInBytes);
+    if (!fbScreenInit(pScreen, dev->pfbMemory,
+                      pScrn->virtualX, pScrn->virtualY,
                       pScrn->xDpi, pScrn->yDpi, pScrn->displayWidth,
                       pScrn->bitsPerPixel))
     {

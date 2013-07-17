@@ -35,8 +35,12 @@ struct _rdpRec
 {
     int width;
     int height;
+    int depth;
+    int paddedWidthInBytes;
+    int sizeInBytes;
     int num_modes;
-    char *ptr;
+    int bitsPerPixel;
+    char *pfbMemory;
     ScreenPtr pScreen;
     rdpDevPrivateKey privateKeyRecGC;
     rdpDevPrivateKey privateKeyRecPixmap;
