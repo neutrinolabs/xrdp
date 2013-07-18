@@ -38,22 +38,12 @@ RandR draw calls
 #include <mi.h>
 
 #include "rdp.h"
-
-#define PixelDPI 100
-#define PixelToMM(_size) (((_size) * 254 + (PixelDPI) * 5) / ((PixelDPI) * 10))
+#include "rdpDraw.h"
 
 /******************************************************************************/
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
-
-/******************************************************************************/
-static WindowPtr
-rdpGetRootWindowPtr(ScreenPtr pScreen)
-{
-    /* in globals.c */
-    return WindowTable[pScreen->myNum];
-}
 
 /******************************************************************************/
 Bool
@@ -139,6 +129,8 @@ rdpRRScreenSetSize(ScreenPtr pScreen, CARD16 width, CARD16 height,
         LLOGLN(0, ("  resizing screenPixmap [%p] to %dx%d, "
                "currently at %dx%d", (void *)screenPixmap, width, height,
                screenPixmap->drawable.width, screenPixmap->drawable.height));
+        free(dev->pfbMemory);
+        dev->pfbMemory = (char *) malloc(dev->sizeInBytes);
         pScreen->ModifyPixmapHeader(screenPixmap, width, height,
                                     dev->depth, dev->bitsPerPixel,
                                     dev->paddedWidthInBytes,

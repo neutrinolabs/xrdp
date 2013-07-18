@@ -62,5 +62,11 @@ rdpModifyPixmapHeader(PixmapPtr pPixmap, int width, int height, int depth,
                       int bitsPerPixel, int devKind, pointer pPixData);
 void
 rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion);
+Bool
+rdpCloseScreen(int index, ScreenPtr pScreen);
+WindowPtr
+rdpGetRootWindowPtr(ScreenPtr pScreen);
+int
+rdpBitsPerPixel(int depth);
 
 #endif

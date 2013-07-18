@@ -30,6 +30,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "rdpPri.h"
 
+#define PixelDPI 100
+#define PixelToMM(_size) (((_size) * 254 + (PixelDPI) * 5) / ((PixelDPI) * 10))
+
 /* move this to common header */
 struct _rdpRec
 {
@@ -50,6 +53,7 @@ struct _rdpRec
     CreatePixmapProcPtr CreatePixmap;
     DestroyPixmapProcPtr DestroyPixmap;
     ModifyPixmapHeaderProcPtr ModifyPixmapHeader;
+    CloseScreenProcPtr CloseScreen;
 
     miPointerScreenFuncPtr pCursorFuncs;
 

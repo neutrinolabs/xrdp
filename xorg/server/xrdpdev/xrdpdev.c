@@ -280,6 +280,32 @@ rdpSaveScreen(ScreenPtr pScreen, int on)
 }
 
 /******************************************************************************/
+static Bool
+rdpResizeSession(rdpPtr dev, int width, int height)
+{
+    int mmwidth;
+    int mmheight;
+    RRScreenSizePtr pSize;
+    Bool ok;
+
+    LLOGLN(0, ("rdpResizeSession: width %d height %d", width, height));
+    mmwidth = PixelToMM(width);
+    mmheight = PixelToMM(height);
+
+    pSize = RRRegisterSize(dev->pScreen, width, height, mmwidth, mmheight);
+    RRSetCurrentConfig(dev->pScreen, RR_Rotate_0, 0, pSize);
+
+    ok = 1;
+    if ((dev->width != width) || (dev->height != height))
+    {
+        LLOGLN(0, ("  calling RRScreenSizeSet"));
+        ok = RRScreenSizeSet(dev->pScreen, width, height, mmwidth, mmheight);
+        LLOGLN(0, ("  RRScreenSizeSet ok=[%d]", ok));
+    }
+    return ok;
+}
+
+/******************************************************************************/
 static CARD32
 rdpDeferredRandR(OsTimerPtr timer, CARD32 now, pointer arg)
 {
@@ -287,6 +313,9 @@ rdpDeferredRandR(OsTimerPtr timer, CARD32 now, pointer arg)
     rrScrPrivPtr pRRScrPriv;
     ScrnInfoPtr pScrn;
     rdpPtr dev;
+    char *envvar;
+    int width;
+    int height;
 
     pScreen = (ScreenPtr) arg;
     pScrn = xf86Screens[pScreen->myNum];
@@ -325,6 +354,26 @@ rdpDeferredRandR(OsTimerPtr timer, CARD32 now, pointer arg)
     pRRScrPriv->rrGetPanning         = rdpRRGetPanning;
     pRRScrPriv->rrSetPanning         = rdpRRSetPanning;
 
+    rdpResizeSession(dev, dev->width, dev->height);
+
+    envvar = getenv("XRDP_START_WIDTH");
+    if (envvar != 0)
+    {
+        width = atoi(envvar);
+        if ((width >= 16) && (width < 8192))
+        {
+            envvar = getenv("XRDP_START_HEIGHT");
+            if (envvar != 0)
+            {
+                height = atoi(envvar);
+                if ((height >= 16) && (height < 8192))
+                {
+                    rdpResizeSession(dev, width, height);
+                }
+            }
+        }
+    }
+
     return 0;
 }
 
@@ -346,14 +395,14 @@ rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     miSetVisualTypes(pScrn->depth, miGetDefaultVisualMask(pScrn->depth),
                     pScrn->rgbBits, TrueColor);
     miSetPixmapDepths();
-    LLOGLN(0, ("rdpScreenInit: virtualX %d virtualY %d",
-           pScrn->virtualX, pScrn->virtualY));
+    LLOGLN(0, ("rdpScreenInit: virtualX %d virtualY %d rgbBits %d depth %d",
+           pScrn->virtualX, pScrn->virtualY, pScrn->rgbBits, pScrn->depth));
 
-    dev->depth = 24;
+    dev->depth = pScrn->depth;
     dev->paddedWidthInBytes = PixmapBytePad(dev->width, dev->depth);
-    dev->bitsPerPixel = 32;
+    dev->bitsPerPixel = rdpBitsPerPixel(dev->depth);
     dev->sizeInBytes = dev->paddedWidthInBytes * dev->height;
-    LLOGLN(0, ("pfbMemory bytes %d", dev->sizeInBytes));
+    LLOGLN(0, ("rdpScreenInit: pfbMemory bytes %d", dev->sizeInBytes));
     dev->pfbMemory = (char *) malloc(dev->sizeInBytes);
     if (!fbScreenInit(pScreen, dev->pfbMemory,
                       pScrn->virtualX, pScrn->virtualY,

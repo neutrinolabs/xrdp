@@ -118,3 +118,53 @@ rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
     dev->pScreen->CopyWindow(pWin, ptOldOrg, pOldRegion);
     dev->pScreen->CopyWindow = rdpCopyWindow;
 }
+
+/*****************************************************************************/
+Bool
+rdpCloseScreen(int index, ScreenPtr pScreen)
+{
+    ScrnInfoPtr pScrn;
+    rdpPtr dev;
+    Bool rv;
+
+    LLOGLN(0, ("rdpCloseScreen:"));
+    pScrn = xf86Screens[pScreen->myNum];
+    dev = XRDPPTR(pScrn);
+    dev->pScreen->CloseScreen = dev->CloseScreen;
+    rv = dev->pScreen->CloseScreen(index, pScreen);
+    dev->pScreen->CloseScreen = rdpCloseScreen;
+    return rv;
+}
+
+/******************************************************************************/
+WindowPtr
+rdpGetRootWindowPtr(ScreenPtr pScreen)
+{
+#if XORG_VERSION_CURRENT < (((1) * 10000000) + ((9) * 100000) + ((0) * 1000) + 0)
+    return WindowTable[pScreen->myNum]; /* in globals.c */
+#else
+    return pScreen->root;
+#endif
+}
+
+/******************************************************************************/
+int
+rdpBitsPerPixel(int depth)
+{
+    if (depth == 1)
+    {
+        return 1;
+    }
+    else if (depth <= 8)
+    {
+        return 8;
+    }
+    else if (depth <= 16)
+    {
+        return 16;
+    }
+    else
+    {
+        return 32;
+    }
+}
