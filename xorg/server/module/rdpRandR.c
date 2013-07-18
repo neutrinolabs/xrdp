@@ -97,25 +97,20 @@ rdpRRScreenSetSize(ScreenPtr pScreen, CARD16 width, CARD16 height,
 {
     WindowPtr root;
     PixmapPtr screenPixmap;
-    PixmapPtr rootWindowPixmap;
     BoxRec box;
     ScrnInfoPtr pScrn;
     rdpPtr dev;
-    char *oldpfbMemory;
 
     LLOGLN(0, ("rdpRRScreenSetSize: width %d height %d mmWidth %d mmHeight %d",
            width, height, (int)mmWidth, (int)mmHeight));
-
     pScrn = xf86Screens[pScreen->myNum];
     dev = XRDPPTR(pScrn);
     root = rdpGetRootWindowPtr(pScreen);
-
     if ((width < 1) || (height < 1))
     {
         LLOGLN(10, ("  error width %d height %d", width, height));
         return FALSE;
     }
-
     dev->width = width;
     dev->height = height;
     dev->paddedWidthInBytes = PixmapBytePad(dev->width, dev->depth);
@@ -124,13 +119,9 @@ rdpRRScreenSetSize(ScreenPtr pScreen, CARD16 width, CARD16 height,
     pScreen->height = height;
     pScreen->mmWidth = mmWidth;
     pScreen->mmHeight = mmHeight;
-
     screenPixmap = pScreen->GetScreenPixmap(pScreen);
-    rootWindowPixmap = pScreen->GetWindowPixmap(root);
-
-    oldpfbMemory = dev->pfbMemory;
+    free(dev->pfbMemory);
     dev->pfbMemory = (char *) malloc(dev->sizeInBytes);
-
     if (screenPixmap != 0)
     {
         pScreen->ModifyPixmapHeader(screenPixmap, width, height,
@@ -138,17 +129,6 @@ rdpRRScreenSetSize(ScreenPtr pScreen, CARD16 width, CARD16 height,
                                     dev->paddedWidthInBytes,
                                     dev->pfbMemory);
     }
-
-    if (rootWindowPixmap != 0)
-    {
-        pScreen->ModifyPixmapHeader(rootWindowPixmap, width, height,
-                                    -1, -1,
-                                    dev->paddedWidthInBytes,
-                                    dev->pfbMemory);
-    }
-
-    free(oldpfbMemory);
-
     box.x1 = 0;
     box.y1 = 0;
     box.x2 = width;
@@ -162,10 +142,8 @@ rdpRRScreenSetSize(ScreenPtr pScreen, CARD16 width, CARD16 height,
     ResizeChildrenWinSize(root, 0, 0, 0, 0);
     RRGetInfo(pScreen, 1);
     LLOGLN(0, ("  screen resized to %dx%d", pScreen->width, pScreen->height));
-
     xf86EnableDisableFBAccess(pScreen->myNum, 0);
     xf86EnableDisableFBAccess(pScreen->myNum, 1);
-
     return TRUE;
 }
 
