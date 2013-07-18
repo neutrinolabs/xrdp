@@ -97,12 +97,15 @@ rdpRRScreenSetSize(ScreenPtr pScreen, CARD16 width, CARD16 height,
 {
     WindowPtr root;
     PixmapPtr screenPixmap;
+    PixmapPtr rootWindowPixmap;
     BoxRec box;
     ScrnInfoPtr pScrn;
     rdpPtr dev;
+    char *oldpfbMemory;
 
     LLOGLN(0, ("rdpRRScreenSetSize: width %d height %d mmWidth %d mmHeight %d",
            width, height, (int)mmWidth, (int)mmHeight));
+
     pScrn = xf86Screens[pScreen->myNum];
     dev = XRDPPTR(pScrn);
     root = rdpGetRootWindowPtr(pScreen);
@@ -123,23 +126,29 @@ rdpRRScreenSetSize(ScreenPtr pScreen, CARD16 width, CARD16 height,
     pScreen->mmHeight = mmHeight;
 
     screenPixmap = pScreen->GetScreenPixmap(pScreen);
+    rootWindowPixmap = pScreen->GetWindowPixmap(root);
+
+    oldpfbMemory = dev->pfbMemory;
+    dev->pfbMemory = (char *) malloc(dev->sizeInBytes);
 
     if (screenPixmap != 0)
     {
-        LLOGLN(0, ("  resizing screenPixmap [%p] to %dx%d, "
-               "currently at %dx%d", (void *)screenPixmap, width, height,
-               screenPixmap->drawable.width, screenPixmap->drawable.height));
-        free(dev->pfbMemory);
-        dev->pfbMemory = (char *) malloc(dev->sizeInBytes);
         pScreen->ModifyPixmapHeader(screenPixmap, width, height,
-                                    dev->depth, dev->bitsPerPixel,
+                                    -1, -1,
                                     dev->paddedWidthInBytes,
                                     dev->pfbMemory);
-        LLOGLN(0, ("  pixmap resized to %dx%d",
-               screenPixmap->drawable.width, screenPixmap->drawable.height));
     }
 
-    LLOGLN(10, ("  root window %p", (void *)root));
+    if (rootWindowPixmap != 0)
+    {
+        pScreen->ModifyPixmapHeader(rootWindowPixmap, width, height,
+                                    -1, -1,
+                                    dev->paddedWidthInBytes,
+                                    dev->pfbMemory);
+    }
+
+    free(oldpfbMemory);
+
     box.x1 = 0;
     box.y1 = 0;
     box.x2 = width;
@@ -152,8 +161,11 @@ rdpRRScreenSetSize(ScreenPtr pScreen, CARD16 width, CARD16 height,
     root->drawable.height = height;
     ResizeChildrenWinSize(root, 0, 0, 0, 0);
     RRGetInfo(pScreen, 1);
-    //rdpInvalidateArea(g_pScreen, 0, 0, dev->width, dev->height);
     LLOGLN(0, ("  screen resized to %dx%d", pScreen->width, pScreen->height));
+
+    xf86EnableDisableFBAccess(pScreen->myNum, 0);
+    xf86EnableDisableFBAccess(pScreen->myNum, 1);
+
     return TRUE;
 }
 
