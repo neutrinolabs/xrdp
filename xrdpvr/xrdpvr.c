@@ -92,11 +92,27 @@ xrdpvr_deinit_player(void *channel, int stream_id)
     }
 
     /* do local clean up */
-    av_free(g_psi.frame);
-    avcodec_close(g_psi.p_audio_codec_ctx);
-    avcodec_close(g_psi.p_video_codec_ctx);
+    if (g_psi.frame != 0)
+    {
+        av_free(g_psi.frame);
+        g_psi.frame = 0;
+    }
+    if (g_psi.p_audio_codec_ctx != 0)
+    {
+        avcodec_close(g_psi.p_audio_codec_ctx);
+        g_psi.p_audio_codec_ctx = 0;
+    }
+    if (g_psi.p_video_codec_ctx != 0)
+    {
+        avcodec_close(g_psi.p_video_codec_ctx);
+        g_psi.p_video_codec_ctx = 0;
+    }
     //avformat_close_input(&g_psi.p_format_ctx);
-    av_close_input_file(g_psi.p_format_ctx);
+    if (g_psi.p_format_ctx != 0)
+    {
+        av_close_input_file(g_psi.p_format_ctx);
+        g_psi.p_format_ctx = 0;
+    }
 
     /* do remote cleanup */
 
