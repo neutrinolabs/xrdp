@@ -338,7 +338,7 @@ do                           \
 #define xstream_wr_s16_le(_s, _var)   TODO
 #define xstream_wr_s32_le(_s, _var)   TODO
 
-#define xstream_rd_u64_le(_s, _v)                              \
+#define xstream_rd_u64_le(_s, _v)                             \
 do                                                            \
 {                                                             \
     _v =                                                      \
@@ -353,7 +353,7 @@ do                                                            \
     _s->p += 8;                                               \
 } while (0)
 
-#define xstream_wr_u64_le(_s, _v)                                            \
+#define xstream_wr_u64_le(_s, _v)                                           \
 do                                                                          \
 {                                                                           \
     *(((unsigned char *) _s->p) + 0) = (unsigned char) ((_v >>  0) & 0xff); \
@@ -384,16 +384,16 @@ do                                        \
 } while (0)
 
 #define xstream_rd_string(_dest, _s, _len) \
-do                                        \
-{                                         \
-    g_memcpy((_dest), (_s)->p, (_len));     \
-    (_s)->p += (_len);                    \
+do                                         \
+{                                          \
+    g_memcpy((_dest), (_s)->p, (_len));    \
+    (_s)->p += (_len);                     \
 } while (0)
 
-#define xstream_wr_string(_s, _src, _len)  \
+#define xstream_wr_string(_s, _src, _len) \
 do                                        \
 {                                         \
-    g_memcpy((_s)->p, (_src), (_len));      \
+    g_memcpy((_s)->p, (_src), (_len));    \
     (_s)->p += (_len);                    \
 } while (0)
 
