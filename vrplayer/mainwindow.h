@@ -79,6 +79,8 @@ private slots:
     void onSliderActionTriggered(int value);
     void onMoveCompleted();
 
+    void on_actionAbout_triggered();
+
 protected:
     void resizeEvent(QResizeEvent *e);
     void closeEvent(QCloseEvent *e);

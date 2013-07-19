@@ -483,3 +483,13 @@ void MainWindow::onMoveCompleted()
     interface->setVcrOp(VCR_PLAY);
     vcrFlag = VCR_PLAY;
 }
+
+void MainWindow::on_actionAbout_triggered()
+{
+    QMessageBox msgBox;
+
+    msgBox.setText("VRPlayer version 1.2");
+    msgBox.setStandardButtons(QMessageBox::Ok);
+    msgBox.setDefaultButton(QMessageBox::Ok);
+    msgBox.exec();
+}
