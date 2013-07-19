@@ -750,3 +750,38 @@ xrdpvr_write_to_client(void *channel, STREAM *s)
         usleep(1000 * 3);
     }
 }
+
+/**
+ * write set volume to a xrdpvr client
+ *
+ * @param  channel  opaque handle returned by WTSVirtualChannelOpenEx
+ * @param  volume   volume 0x0000 to 0xffff
+ *
+ * @return 0 on success, -1 on failure
+ ******************************************************************************/
+int
+send_volume(void *channel, int volume)
+{
+    STREAM  *s;
+    char    *cptr;
+    int     rv;
+    int     len;
+
+    stream_new(s, MAX_BUFSIZE);
+
+    stream_ins_u32_le(s, 0); /* number of bytes to follow */
+    stream_ins_u32_le(s, CMD_SET_VOLUME);
+    stream_ins_u32_le(s, volume);
+
+    /* insert number of bytes in stream */
+    len = stream_length(s) - 4;
+    cptr = s->p;
+    s->p = s->data;
+    stream_ins_u32_le(s, len);
+    s->p = cptr;
+
+    /* write data to virtual channel */
+    rv = xrdpvr_write_to_client(channel, s);
+    stream_free(s);
+    return rv;
+}
