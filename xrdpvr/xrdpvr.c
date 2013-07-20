@@ -760,7 +760,7 @@ xrdpvr_write_to_client(void *channel, STREAM *s)
  * @return 0 on success, -1 on failure
  ******************************************************************************/
 int
-send_volume(void *channel, int volume)
+xrdpvr_set_volume(void *channel, int volume)
 {
     STREAM  *s;
     char    *cptr;
