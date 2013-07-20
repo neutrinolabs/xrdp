@@ -25,12 +25,15 @@
 #include <QTimer>
 #include <QPixmap>
 #include <QPainter>
+#include <QFile>
+#include <QTimer>
 
 #include "xrdpapi.h"
 #include "xrdpvr.h"
 #include "decoder.h"
 #include "ourinterface.h"
 #include "playvideo.h"
+#include "dlgabout.h"
 
 /* ffmpeg related stuff */
 extern "C"
@@ -75,6 +78,11 @@ private slots:
     void onMediaDurationInSeconds(int duration);
     void onElapsedTime(int secs);
     void onSliderActionTriggered(int value);
+    void onMoveCompleted();
+
+    void on_actionAbout_triggered();
+
+    void onVolSliderValueChanged(int value);
 
 protected:
     void resizeEvent(QResizeEvent *e);
@@ -96,8 +104,10 @@ private:
     QPushButton   *btnStop;
     QPushButton   *btnRewind;
     QSlider       *slider;
+    QSlider       *volSlider;
     QWidget       *window;
     bool           acceptSliderMove;
+    QTimer        *moveResizeTimer;
 
     /* private stuff */
     OurInterface  *interface;
@@ -109,6 +119,7 @@ private:
     int            stream_id;
     int64_t        elapsedTime; /* elapsed time in usecs since play started */
     int            vcrFlag;
+    bool           gotMediaOnCmdline;
 
     /* private methods */
     void setupUI();
