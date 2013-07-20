@@ -132,8 +132,22 @@ void MainWindow::moveEvent(QMoveEvent *)
     moveResizeTimer->start(1000);
 }
 
+void MainWindow::onVolSliderValueChanged(int value)
+{
+    int volume;
+    
+    volume = (value * 0xffff) / 100;
+    if (interface != 0)
+    {
+        interface->setVolume(volume);
+    }
+    qDebug() << "vol = " << volume;
+}
+
 void MainWindow::setupUI()
 {
+    this->setWindowTitle("vrplayer");
+
     /* setup area to display video */
     lblVideo = new QLabel();
     lblVideo->setMinimumWidth(320);
@@ -198,10 +212,26 @@ void MainWindow::setupUI()
     connect(btnRewind, SIGNAL(clicked(bool)),
             this, SLOT(onBtnRewindClicked(bool)));
 
+    /* setup volume control slider */
+    volSlider = new QSlider();
+    volSlider->setOrientation(Qt::Horizontal);
+    volSlider->setMinimumWidth(100);
+    volSlider->setMaximumWidth(100);
+    volSlider->setMinimum(0);
+    volSlider->setMaximum(100);
+    volSlider->setValue(20);
+    volSlider->setTickPosition(QSlider::TicksAbove);
+    volSlider->setTickInterval(10);
+
+    connect(volSlider, SIGNAL(valueChanged(int)),
+            this, SLOT(onVolSliderValueChanged(int)));
+
     /* add buttons to bottom panel */
     hboxLayoutBottom = new QHBoxLayout;
     hboxLayoutBottom->addWidget(btnPlay);
     hboxLayoutBottom->addWidget(btnStop);
+    hboxLayoutBottom->addWidget(volSlider);
+
     //hboxLayoutBottom->addWidget(btnRewind);
     hboxLayoutBottom->addStretch();
 
@@ -482,14 +512,21 @@ void MainWindow::onMoveCompleted()
 
     interface->setVcrOp(VCR_PLAY);
     vcrFlag = VCR_PLAY;
+    moveResizeTimer->stop();
 }
 
 void MainWindow::on_actionAbout_triggered()
 {
+#if 0
     QMessageBox msgBox;
 
     msgBox.setText("VRPlayer version 1.2");
     msgBox.setStandardButtons(QMessageBox::Ok);
     msgBox.setDefaultButton(QMessageBox::Ok);
     msgBox.exec();
+#else
+    DlgAbout *dlgabt = new DlgAbout(this);
+    dlgabt->exec();
+
+#endif
 }

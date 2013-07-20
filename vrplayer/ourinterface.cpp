@@ -215,3 +215,15 @@ void OurInterface::setVcrOp(int op)
     if (demuxMedia)
         demuxMedia->setVcrOp(op);
 }
+
+int OurInterface::setVolume(int volume)
+{
+    printf("OurInterface::setVolume\n");
+    if (xrdpvr_set_volume(channel, volume))
+    {
+        emit on_ErrorMsg("I/O Error",
+                         "Error sending volume to remote client");
+        return -1;
+    }
+    return 0;
+}

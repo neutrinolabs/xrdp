@@ -33,6 +33,7 @@
 #include "decoder.h"
 #include "ourinterface.h"
 #include "playvideo.h"
+#include "dlgabout.h"
 
 /* ffmpeg related stuff */
 extern "C"
@@ -81,6 +82,8 @@ private slots:
 
     void on_actionAbout_triggered();
 
+    void onVolSliderValueChanged(int value);
+
 protected:
     void resizeEvent(QResizeEvent *e);
     void closeEvent(QCloseEvent *e);
@@ -101,6 +104,7 @@ private:
     QPushButton   *btnStop;
     QPushButton   *btnRewind;
     QSlider       *slider;
+    QSlider       *volSlider;
     QWidget       *window;
     bool           acceptSliderMove;
     QTimer        *moveResizeTimer;

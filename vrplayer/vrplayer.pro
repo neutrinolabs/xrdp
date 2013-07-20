@@ -16,16 +16,19 @@ SOURCES += main.cpp\
     mediapacket.cpp \
     playaudio.cpp \
     demuxmedia.cpp \
-    ourinterface.cpp
+    ourinterface.cpp \
+    dlgabout.cpp
 
 HEADERS  += mainwindow.h \
     mediapacket.h \
     playvideo.h \
     playaudio.h \
     demuxmedia.h \
-    ourinterface.h
+    ourinterface.h \
+    dlgabout.h
 
-FORMS    += mainwindow.ui
+FORMS    += mainwindow.ui \
+    dlgabout.ui
 
 # added by LK
 INCLUDEPATH += ../xrdpvr
