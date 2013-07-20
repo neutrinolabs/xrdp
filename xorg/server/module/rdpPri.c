@@ -38,6 +38,7 @@ to deal with privates changing in xorg versions
 #include <mi.h>
 
 #include "rdpPri.h"
+#include "rdpMisc.h"
 
 #if XORG_VERSION_CURRENT < (((1) * 10000000) + ((5) * 100000) + ((0) * 1000) + 0)
 /* 1.1, 1.2, 1.3, 1.4 */
@@ -167,9 +168,9 @@ int
 rdpPrivateInit(void)
 {
 #if XRDP_PRI == 3
-    memset(&g_privateKeyRecGC, 0, sizeof(g_privateKeyRecGC));
-    memset(&g_privateKeyRecWindow, 0, sizeof(g_privateKeyRecWindow));
-    memset(&g_privateKeyRecPixmap, 0, sizeof(g_privateKeyRecPixmap));
+    g_memset(&g_privateKeyRecGC, 0, sizeof(g_privateKeyRecGC));
+    g_memset(&g_privateKeyRecWindow, 0, sizeof(g_privateKeyRecWindow));
+    g_memset(&g_privateKeyRecPixmap, 0, sizeof(g_privateKeyRecPixmap));
 #endif
     return 0;
 }

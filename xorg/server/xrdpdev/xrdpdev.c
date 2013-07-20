@@ -44,6 +44,7 @@ This is the main driver file
 #include "rdpGC.h"
 #include "rdpCursor.h"
 #include "rdpRandR.h"
+#include "rdpMisc.h"
 
 #define XRDP_DRIVER_NAME "XRDPDEV"
 #define XRDP_NAME "XRDPDEV"
@@ -108,10 +109,11 @@ rdpAllocRec(ScrnInfoPtr pScrn)
     LLOGLN(10, ("rdpAllocRec:"));
     if (pScrn->driverPrivate != 0)
     {
-        return 1;
+        return TRUE;
     }
+    /* xnfcalloc exits if alloc failed */
     pScrn->driverPrivate = xnfcalloc(sizeof(rdpRec), 1);
-    return 1;
+    return TRUE;
 }
 
 /*****************************************************************************/
@@ -141,11 +143,11 @@ rdpPreInit(ScrnInfoPtr pScrn, int flags)
     LLOGLN(0, ("rdpPreInit:"));
     if (flags & PROBE_DETECT)
     {
-        return 0;
+        return FALSE;
     }
     if (pScrn->numEntities != 1)
     {
-        return 0;
+        return FALSE;
     }
 
     rdpPrivateInit();
@@ -179,35 +181,35 @@ rdpPreInit(ScrnInfoPtr pScrn, int flags)
     {
         LLOGLN(0, ("rdpPreInit: xf86SetDepthBpp failed"));
         rdpFreeRec(pScrn);
-        return 0;
+        return FALSE;
     }
     xf86PrintDepthBpp(pScrn);
-    memset(&zeros1, 0, sizeof(zeros1));
+    g_memset(&zeros1, 0, sizeof(zeros1));
     if (!xf86SetWeight(pScrn, zeros1, zeros1))
     {
         LLOGLN(0, ("rdpPreInit: xf86SetWeight failed"));
         rdpFreeRec(pScrn);
-        return 0;
+        return FALSE;
     }
-    memset(&zeros2, 0, sizeof(zeros2));
+    g_memset(&zeros2, 0, sizeof(zeros2));
     if (!xf86SetGamma(pScrn, zeros2))
     {
         LLOGLN(0, ("rdpPreInit: xf86SetGamma failed"));
         rdpFreeRec(pScrn);
-        return 0;
+        return FALSE;
     }
     if (!xf86SetDefaultVisual(pScrn, -1))
     {
         LLOGLN(0, ("rdpPreInit: xf86SetDefaultVisual failed"));
         rdpFreeRec(pScrn);
-        return 0;
+        return FALSE;
     }
     xf86SetDpi(pScrn, 0, 0);
     if (0 == pScrn->display->modes)
     {
         LLOGLN(0, ("rdpPreInit: modes error"));
         rdpFreeRec(pScrn);
-        return 0;
+        return FALSE;
     }
 
     pScrn->virtualX = pScrn->display->virtualX;
@@ -255,11 +257,12 @@ rdpPreInit(ScrnInfoPtr pScrn, int flags)
     {
         LLOGLN(0, ("rdpPreInit: could not find screen resolution %dx%d",
                dev->width, dev->height));
-        return 0;
+        return FALSE;
     }
-    return 1;
+    return TRUE;
 }
 
+/******************************************************************************/
 static miPointerSpriteFuncRec g_rdpSpritePointerFuncs =
 {
     /* these are in rdpCursor.c */
@@ -276,7 +279,7 @@ static Bool
 rdpSaveScreen(ScreenPtr pScreen, int on)
 {
     LLOGLN(0, ("rdpSaveScreen:"));
-    return 1;
+    return TRUE;
 }
 
 /******************************************************************************/
@@ -295,7 +298,7 @@ rdpResizeSession(rdpPtr dev, int width, int height)
     pSize = RRRegisterSize(dev->pScreen, width, height, mmwidth, mmheight);
     RRSetCurrentConfig(dev->pScreen, RR_Rotate_0, 0, pSize);
 
-    ok = 1;
+    ok = TRUE;
     if ((dev->width != width) || (dev->height != height))
     {
         LLOGLN(0, ("  calling RRScreenSizeSet"));
@@ -306,6 +309,7 @@ rdpResizeSession(rdpPtr dev, int width, int height)
 }
 
 /******************************************************************************/
+/* returns error */
 static CARD32
 rdpDeferredRandR(OsTimerPtr timer, CARD32 now, pointer arg)
 {
@@ -384,7 +388,7 @@ rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     ScrnInfoPtr pScrn;
     rdpPtr dev;
     VisualPtr vis;
-    int vis_found;
+    Bool vis_found;
 
     pScrn = xf86Screens[scrnIndex];
     dev = XRDPPTR(pScrn);
@@ -403,14 +407,14 @@ rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     dev->bitsPerPixel = rdpBitsPerPixel(dev->depth);
     dev->sizeInBytes = dev->paddedWidthInBytes * dev->height;
     LLOGLN(0, ("rdpScreenInit: pfbMemory bytes %d", dev->sizeInBytes));
-    dev->pfbMemory = (char *) malloc(dev->sizeInBytes);
+    dev->pfbMemory = (char *) g_malloc(dev->sizeInBytes, 1);
     if (!fbScreenInit(pScreen, dev->pfbMemory,
                       pScrn->virtualX, pScrn->virtualY,
                       pScrn->xDpi, pScrn->yDpi, pScrn->displayWidth,
                       pScrn->bitsPerPixel))
     {
         LLOGLN(0, ("rdpScreenInit: fbScreenInit failed"));
-        return 0;
+        return FALSE;
     }
     miInitializeBackingStore(pScreen);
 
@@ -456,20 +460,20 @@ rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     /* must assign this one */
     pScreen->SaveScreen = rdpSaveScreen;
 
-    vis_found = 0;
+    vis_found = FALSE;
     vis = pScreen->visuals + (pScreen->numVisuals - 1);
     while (vis >= pScreen->visuals)
     {
         if (vis->vid == pScreen->rootVisual)
         {
-            vis_found = 1;
+            vis_found = TRUE;
         }
         vis--;
     }
     if (!vis_found)
     {
         LLOGLN(0, ("rdpScreenInit: no root visual"));
-        return 0;
+        return FALSE;
     }
 
     dev->privateKeyRecGC = rdpAllocateGCPrivate(pScreen, sizeof(rdpGCRec));
@@ -493,7 +497,7 @@ rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     g_timer = TimerSet(g_timer, 0, 10, rdpDeferredRandR, pScreen);
 
     LLOGLN(0, ("rdpScreenInit: out"));
-    return 1;
+    return TRUE;
 }
 
 /*****************************************************************************/
@@ -501,7 +505,7 @@ static Bool
 rdpSwitchMode(int a, DisplayModePtr b, int c)
 {
     LLOGLN(0, ("rdpSwitchMode:"));
-    return 1;
+    return TRUE;
 }
 
 /*****************************************************************************/
@@ -516,7 +520,7 @@ static Bool
 rdpEnterVT(int a, int b)
 {
     LLOGLN(0, ("rdpEnterVT:"));
-    return 1;
+    return TRUE;
 }
 
 /*****************************************************************************/
@@ -548,24 +552,24 @@ rdpProbe(DriverPtr drv, int flags)
     LLOGLN(0, ("rdpProbe:"));
     if (flags & PROBE_DETECT)
     {
-        return 0;
+        return FALSE;
     }
     /* fbScreenInit, fbPictureInit, ... */
     if (!xf86LoadDrvSubModule(drv, "fb"))
     {
         LLOGLN(0, ("rdpProbe: xf86LoadDrvSubModule for fb failed"));
-        return 0;
+        return FALSE;
     }
 
     num_dev_sections = xf86MatchDevice(XRDP_DRIVER_NAME, &dev_sections);
     if (num_dev_sections <= 0)
     {
         LLOGLN(0, ("rdpProbe: xf86MatchDevice failed"));
-        return 0;
+        return FALSE;
     }
 
     pscrn = 0;
-    found_screen = 0;
+    found_screen = FALSE;
     for (i = 0; i < num_dev_sections; i++)
     {
         entity = xf86ClaimFbSlot(drv, 0, dev_sections[i], 1);
@@ -612,13 +616,13 @@ rdpDriverFunc(ScrnInfoPtr pScrn, xorgDriverFuncOp op, pointer ptr)
     xorgHWFlags *flags;
     int rv;
 
-    rv = 0;
+    rv = FALSE;
     LLOGLN(0, ("rdpDriverFunc: op %d", (int)op));
     if (op == GET_REQUIRED_HW_INTERFACES)
     {
         flags = (xorgHWFlags *) ptr;
         *flags = HW_SKIP_CONSOLE;
-        rv = 1;
+        rv = TRUE;
     }
     return rv;
 }
@@ -631,6 +635,7 @@ rdpIdentify(int flags)
     xf86PrintChipsets(XRDP_NAME, "driver for xrdp", g_Chipsets);
 }
 
+/*****************************************************************************/
 _X_EXPORT DriverRec g_DriverRec =
 {
     XRDP_VERSION,

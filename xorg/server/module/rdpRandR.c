@@ -39,6 +39,8 @@ RandR draw calls
 
 #include "rdp.h"
 #include "rdpDraw.h"
+#include "rdpReg.h"
+#include "rdpMisc.h"
 
 /******************************************************************************/
 #define LOG_LEVEL 1
@@ -120,8 +122,8 @@ rdpRRScreenSetSize(ScreenPtr pScreen, CARD16 width, CARD16 height,
     pScreen->mmWidth = mmWidth;
     pScreen->mmHeight = mmHeight;
     screenPixmap = pScreen->GetScreenPixmap(pScreen);
-    free(dev->pfbMemory);
-    dev->pfbMemory = (char *) malloc(dev->sizeInBytes);
+    g_free(dev->pfbMemory);
+    dev->pfbMemory = (char *) g_malloc(dev->sizeInBytes, 1);
     if (screenPixmap != 0)
     {
         pScreen->ModifyPixmapHeader(screenPixmap, width, height,
@@ -133,10 +135,10 @@ rdpRRScreenSetSize(ScreenPtr pScreen, CARD16 width, CARD16 height,
     box.y1 = 0;
     box.x2 = width;
     box.y2 = height;
-    REGION_INIT(pScreen, &root->winSize, &box, 1);
-    REGION_INIT(pScreen, &root->borderSize, &box, 1);
-    REGION_RESET(pScreen, &root->borderClip, &box);
-    REGION_BREAK(pScreen, &root->clipList);
+    rdpRegionInit(&root->winSize, &box, 1);
+    rdpRegionInit(&root->borderSize, &box, 1);
+    rdpRegionReset(&root->borderClip, &box);
+    rdpRegionBreak(&root->clipList);
     root->drawable.width = width;
     root->drawable.height = height;
     ResizeChildrenWinSize(root, 0, 0, 0, 0);

@@ -66,7 +66,5 @@ Bool
 rdpCloseScreen(int index, ScreenPtr pScreen);
 WindowPtr
 rdpGetRootWindowPtr(ScreenPtr pScreen);
-int
-rdpBitsPerPixel(int depth);
 
 #endif
