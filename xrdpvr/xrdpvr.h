@@ -44,6 +44,7 @@ int  xrdpvr_seek_media(int64_t pos, int backward);
 int  xrdpvr_get_frame(void **av_pkt_ret, int *is_video_frame, int *delay_in_us);
 int  send_audio_pkt(void *channel, int stream_id, void *pkt_p);
 int  send_video_pkt(void *channel, int stream_id, void *pkt_p);
+int  xrdpvr_set_volume(void *channel, int volume);
 
 #ifdef __cplusplus
 }

@@ -61,6 +61,7 @@
 #define CMD_WRITE_META_DATA         7
 #define CMD_DEINIT_XRDPVR           8
 #define CMD_SET_GEOMETRY            9
+#define CMD_SET_VOLUME              10
 
 /* max number of bytes we can send in one pkt */
 #define MAX_PDU_SIZE                1600
