@@ -69,8 +69,29 @@ Bool
 rdpRRSetConfig(ScreenPtr pScreen, Rotation rotateKind, int rate,
                RRScreenSizePtr pSize)
 {
+    ScrnInfoPtr pScrn;
+    rdpPtr dev;
+    rrScrPrivPtr pRRScrPriv;
+    Bool rv;
+
     LLOGLN(0, ("rdpRRSetConfig:"));
-    return TRUE;
+    rv = TRUE;
+    pScrn = xf86Screens[pScreen->myNum];
+    dev = XRDPPTR(pScrn);
+#if 0
+    pRRScrPriv = rrGetScrPriv(pScreen);
+    if (pRRScrPriv != 0)
+    {
+        if (dev->rrSetConfig != 0)
+        {
+            LLOGLN(0, ("rdpRRSetConfig: here"));
+            pRRScrPriv->rrSetConfig = dev->rrSetConfig;
+            rv = pRRScrPriv->rrSetConfig(pScreen, rotateKind, rate, pSize);
+            pRRScrPriv->rrSetConfig = rdpRRSetConfig;
+        }
+    }
+#endif
+    return rv;
 }
 
 /******************************************************************************/
@@ -81,15 +102,32 @@ rdpRRGetInfo(ScreenPtr pScreen, Rotation *pRotations)
     int height;
     ScrnInfoPtr pScrn;
     rdpPtr dev;
+    rrScrPrivPtr pRRScrPriv;
+    Bool rv;
 
     LLOGLN(0, ("rdpRRGetInfo:"));
+    rv = TRUE;
     pScrn = xf86Screens[pScreen->myNum];
     dev = XRDPPTR(pScrn);
+#if 0
+    pRRScrPriv = rrGetScrPriv(pScreen);
+    if (pRRScrPriv != 0)
+    {
+        if (dev->rrGetInfo != 0)
+        {
+            LLOGLN(0, ("rdpRRGetInfo: here"));
+            pRRScrPriv->rrGetInfo = dev->rrGetInfo;
+            rv = pRRScrPriv->rrGetInfo(pScreen, pRotations);
+            pRRScrPriv->rrGetInfo = rdpRRGetInfo;
+        }
+    }
+#else
     *pRotations = RR_Rotate_0;
     width = dev->width;
     height = dev->height;
     rdpRRRegisterSize(pScreen, width, height);
-    return TRUE;
+#endif
+    return rv;
 }
 
 /******************************************************************************/
@@ -144,8 +182,9 @@ rdpRRScreenSetSize(ScreenPtr pScreen, CARD16 width, CARD16 height,
     ResizeChildrenWinSize(root, 0, 0, 0, 0);
     RRGetInfo(pScreen, 1);
     LLOGLN(0, ("  screen resized to %dx%d", pScreen->width, pScreen->height));
-    xf86EnableDisableFBAccess(pScreen->myNum, 0);
-    xf86EnableDisableFBAccess(pScreen->myNum, 1);
+    RRScreenSizeNotify(pScreen);
+    xf86EnableDisableFBAccess(pScreen->myNum, FALSE);
+    xf86EnableDisableFBAccess(pScreen->myNum, TRUE);
     return TRUE;
 }
 
@@ -171,20 +210,20 @@ rdpRRCrtcSetGamma(ScreenPtr pScreen, RRCrtcPtr crtc)
 Bool
 rdpRRCrtcGetGamma(ScreenPtr pScreen, RRCrtcPtr crtc)
 {
-    LLOGLN(0, ("rdpRRCrtcGetGamma: %p %p %p", crtc->gammaRed,
+    LLOGLN(0, ("rdpRRCrtcGetGamma: %p %p %p %p", crtc, crtc->gammaRed,
            crtc->gammaBlue, crtc->gammaGreen));
     crtc->gammaSize = 1;
     if (crtc->gammaRed == NULL)
     {
-        crtc->gammaRed = xnfcalloc(2, 16);
+        crtc->gammaRed = g_malloc(32, 1);
     }
     if (crtc->gammaBlue == NULL)
     {
-        crtc->gammaBlue = xnfcalloc(2, 16);
+        crtc->gammaBlue = g_malloc(32, 1);
     }
     if (crtc->gammaGreen == NULL)
     {
-        crtc->gammaGreen = xnfcalloc(2, 16);
+        crtc->gammaGreen = g_malloc(32, 1);
     }
     return TRUE;
 }
@@ -230,7 +269,7 @@ rdpRRGetPanning(ScreenPtr pScreen, RRCrtcPtr crtc, BoxPtr totalArea,
     ScrnInfoPtr pScrn;
     rdpPtr dev;
 
-    LLOGLN(0, ("rdpRRGetPanning:"));
+    LLOGLN(0, ("rdpRRGetPanning: %p", crtc));
     pScrn = xf86Screens[pScreen->myNum];
     dev = XRDPPTR(pScrn);
 
@@ -257,7 +296,6 @@ rdpRRGetPanning(ScreenPtr pScreen, RRCrtcPtr crtc, BoxPtr totalArea,
         border[2] = 0;
         border[3] = 0;
     }
-
     return TRUE;
 }
 

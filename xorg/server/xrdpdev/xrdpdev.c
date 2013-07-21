@@ -345,6 +345,19 @@ rdpDeferredRandR(OsTimerPtr timer, CARD32 now, pointer arg)
     dev->rrGetPanning         = pRRScrPriv->rrGetPanning;
     dev->rrSetPanning         = pRRScrPriv->rrSetPanning;
 
+    LLOGLN(10, ("  rrSetConfig = %p", dev->rrSetConfig));
+    LLOGLN(10, ("  rrGetInfo = %p", dev->rrGetInfo));
+    LLOGLN(10, ("  rrScreenSetSize = %p", dev->rrScreenSetSize));
+    LLOGLN(10, ("  rrCrtcSet = %p", dev->rrCrtcSet));
+    LLOGLN(10, ("  rrCrtcSetGamma = %p", dev->rrCrtcSetGamma));
+    LLOGLN(10, ("  rrCrtcGetGamma = %p", dev->rrCrtcGetGamma));
+    LLOGLN(10, ("  rrOutputSetProperty = %p", dev->rrOutputSetProperty));
+    LLOGLN(10, ("  rrOutputValidateMode = %p", dev->rrOutputValidateMode));
+    LLOGLN(10, ("  rrModeDestroy = %p", dev->rrModeDestroy));
+    LLOGLN(10, ("  rrOutputGetProperty = %p", dev->rrOutputGetProperty));
+    LLOGLN(10, ("  rrGetPanning = %p", dev->rrGetPanning));
+    LLOGLN(10, ("  rrSetPanning = %p", dev->rrSetPanning));
+
     pRRScrPriv->rrSetConfig          = rdpRRSetConfig;
     pRRScrPriv->rrGetInfo            = rdpRRGetInfo;
     pRRScrPriv->rrScreenSetSize      = rdpRRScreenSetSize;

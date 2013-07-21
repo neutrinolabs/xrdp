@@ -43,6 +43,9 @@ xrdp keyboard module
 
 #include "rdp.h"
 
+/* if 1, a keystroke is done every minute, down, then up */
+#define XRDPKB_TEST 0
+
 /******************************************************************************/
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
@@ -207,15 +210,17 @@ rdpEnqueueKey(int type, int scancode)
 {
     if (type == KeyPress)
     {
-        xf86PostKeyboardEvent(g_keyboard, scancode, 1);
+        /* need this cause rdp and X11 repeats are different */
+        xf86PostKeyboardEvent(g_keyboard, scancode, FALSE);
+        xf86PostKeyboardEvent(g_keyboard, scancode, TRUE);
     }
     else
     {
-        xf86PostKeyboardEvent(g_keyboard, scancode, 0);
+        xf86PostKeyboardEvent(g_keyboard, scancode, FALSE);
     }
 }
 
-#if 1
+#if XRDPKB_TEST
 /******************************************************************************/
 static CARD32
 rdpDeferredUpdateCallback(OsTimerPtr timer, CARD32 now, pointer arg)
@@ -224,9 +229,6 @@ rdpDeferredUpdateCallback(OsTimerPtr timer, CARD32 now, pointer arg)
 
     rdpEnqueueKey(KeyPress, 115);
     rdpEnqueueKey(KeyRelease, 115);
-
-    //xf86PostKeyboardEvent(g_keyboard, 115, 1);
-    //xf86PostKeyboardEvent(g_keyboard, 115, 0);
 
     g_timer = TimerSet(g_timer, 0, 1000, rdpDeferredUpdateCallback, 0);
     return 0;
@@ -337,7 +339,9 @@ rdpkeybControl(DeviceIntPtr device, int what)
             InitKeyboardDeviceStruct(device, &set, rdpkeybBell,
                                      rdpkeybChangeKeyboardControl);
             g_keyboard = device;
+#if XRDPKB_TEST
             g_timer = TimerSet(g_timer, 0, 1000, rdpDeferredUpdateCallback, 0);
+#endif
             break;
         case DEVICE_ON:
             pDev->on = 1;
