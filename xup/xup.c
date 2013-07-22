@@ -534,6 +534,7 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
     int width;
     int height;
     int fgcolor;
+    int bgcolor;
     int opcode;
     char *bmpdata;
     char cur_data[32 * (32 * 3)];
@@ -593,6 +594,10 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
         case 12: /* server_set_fgcolor */
             in_uint32_le(s, fgcolor);
             rv = mod->server_set_fgcolor(mod, fgcolor);
+            break;
+        case 13: /* server_set_bgcolor */
+            in_uint32_le(s, bgcolor);
+            rv = mod->server_set_bgcolor(mod, bgcolor);
             break;
         case 14:
             in_uint16_le(s, opcode);

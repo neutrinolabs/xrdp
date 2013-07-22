@@ -140,8 +140,8 @@ static void scard_send_EstablishContext(IRP *irp);
 static void scard_send_ListReaders(IRP *irp, int wide);
 static struct stream *scard_make_new_ioctl(IRP *irp, tui32 ioctl);
 static int  scard_add_new_device(tui32 device_id);
-static int  scard_get_free_slot();
-static void scard_release_resources();
+static int  scard_get_free_slot(void);
+static void scard_release_resources(void);
 
 /******************************************************************************
 **                          non static functions                             **
@@ -488,7 +488,7 @@ static int scard_add_new_device(tui32 device_id)
  * @return index of first unused entry in smartcards or -1 if smartcards is full
  *****************************************************************************/
 
-static int scard_get_free_slot()
+static int scard_get_free_slot(void)
 {
     int i;
 
@@ -509,7 +509,7 @@ static int scard_get_free_slot()
  * Release resources prior to shutting down
  *****************************************************************************/
 
-static void scard_release_resources()
+static void scard_release_resources(void)
 {
     int i;
 

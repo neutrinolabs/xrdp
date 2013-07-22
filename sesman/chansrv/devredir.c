@@ -296,7 +296,7 @@ dev_redir_check_wait_objs(void)
  * @brief let client know our capabilities
  *****************************************************************************/
 
-void dev_redir_send_server_core_cap_req()
+void dev_redir_send_server_core_cap_req(void)
 {
     struct stream *s;
     int            bytes;
@@ -340,8 +340,8 @@ void dev_redir_send_server_core_cap_req()
     /* setup file system capability */
     xstream_wr_u16_le(s, CAP_DRIVE_TYPE);   /* CapabilityType                 */
     xstream_wr_u16_le(s, 8);                /* CapabilityLength - len of this */
-                                           /* CAPABILITY_SET in bytes, inc   */
-                                           /* the header                     */
+                                            /* CAPABILITY_SET in bytes, inc   */
+                                            /* the header                     */
     xstream_wr_u32_le(s, 2);                /* Version                        */
 
     /* setup smart card capability */
@@ -356,7 +356,7 @@ void dev_redir_send_server_core_cap_req()
     xstream_free(s);
 }
 
-void dev_redir_send_server_clientID_confirm()
+void dev_redir_send_server_clientID_confirm(void)
 {
     struct stream *s;
     int            bytes;
@@ -377,7 +377,7 @@ void dev_redir_send_server_clientID_confirm()
     xstream_free(s);
 }
 
-void dev_redir_send_server_user_logged_on()
+void dev_redir_send_server_user_logged_on(void)
 {
     struct stream *s;
     int            bytes;

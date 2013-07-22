@@ -273,17 +273,6 @@ clipboard_get_server_time(void)
 }
 
 /*****************************************************************************/
-/* returns time in miliseconds
-   this is like g_time2 in os_calls, but not miliseconds since machine was
-   up, something else
-   this is a time value similar to what the xserver uses */
-static int APP_CC
-clipboard_get_local_time(void)
-{
-    return g_time3();
-}
-
-/*****************************************************************************/
 static int APP_CC
 clipboard_find_format_id(int format_id)
 {

@@ -119,7 +119,7 @@ IRP * devredir_irp_clone(IRP *irp)
     next = new_irp->next;
 
     /* copy all members */
-    memcpy(new_irp, irp, sizeof(IRP));
+    g_memcpy(new_irp, irp, sizeof(IRP));
 
     /* restore link pointers */
     new_irp->prev = prev;

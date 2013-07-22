@@ -33,6 +33,7 @@
 #include "rail.h"
 #include "xcommon.h"
 #include "chansrv_fuse.h"
+#include "drdynvc.h"
 
 static struct trans *g_lis_trans = 0;
 static struct trans *g_con_trans = 0;

@@ -59,15 +59,15 @@ char g_fuse_clipboard_path[256] = ""; /* for clipboard use */
 #include "chansrv_fuse.h"
 
 /* dummy calls when XRDP_FUSE is not defined */
-int xfuse_init()                {}
-int xfuse_deinit()              {}
-int xfuse_check_wait_objs(void) {}
-int xfuse_get_wait_objs(tbus *objs, int *count, int *timeout) {}
-int xfuse_clear_clip_dir(void)  {}
-int xfuse_file_contents_range(int stream_id, char *data, int data_bytes)     {}
-int xfuse_file_contents_size(int stream_id, int file_size)                   {}
-int xfuse_add_clip_dir_item(char *filename, int flags, int size, int lindex) {}
-int xfuse_create_share(tui32 device_id, char *dirname)                       {}
+int xfuse_init()                { return 0; }
+int xfuse_deinit()              { return 0; }
+int xfuse_check_wait_objs(void) { return 0; }
+int xfuse_get_wait_objs(tbus *objs, int *count, int *timeout) { return 0; }
+int xfuse_clear_clip_dir(void)  { return 0; }
+int xfuse_file_contents_range(int stream_id, char *data, int data_bytes)     { return 0; }
+int xfuse_file_contents_size(int stream_id, int file_size)                   { return 0; }
+int xfuse_add_clip_dir_item(char *filename, int flags, int size, int lindex) { return 0; }
+int xfuse_create_share(tui32 device_id, char *dirname)                       { return 0; }
 void xfuse_devredir_cb_open_file(void *vp, tui32 IoStatus, tui32 DeviceId, tui32 FileId)     {}
 void xfuse_devredir_cb_write_file(void *vp, char *buf, size_t length)        {}
 void xfuse_devredir_cb_read_file(void *vp, char *buf, size_t length)         {}
