@@ -52,14 +52,6 @@ do { \
 
 extern GCOps g_rdpGCOps; /* in rdpGC.c */
 
-PixmapPtr
-rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
-                unsigned usage_hint);
-Bool
-rdpDestroyPixmap(PixmapPtr pPixmap);
-Bool
-rdpModifyPixmapHeader(PixmapPtr pPixmap, int width, int height, int depth,
-                      int bitsPerPixel, int devKind, pointer pPixData);
 void
 rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion);
 Bool

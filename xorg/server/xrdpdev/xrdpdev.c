@@ -47,6 +47,7 @@ This is the main driver file
 #include "rdpMisc.h"
 #include "rdpComposite.h"
 #include "rdpGlyphs.h"
+#include "rdpPixmap.h"
 
 #define XRDP_DRIVER_NAME "XRDPDEV"
 #define XRDP_NAME "XRDPDEV"
@@ -413,7 +414,7 @@ rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 
     miClearVisualTypes();
     miSetVisualTypes(pScrn->depth, miGetDefaultVisualMask(pScrn->depth),
-                    pScrn->rgbBits, TrueColor);
+                     pScrn->rgbBits, TrueColor);
     miSetPixmapDepths();
     LLOGLN(0, ("rdpScreenInit: virtualX %d virtualY %d rgbBits %d depth %d",
            pScrn->virtualX, pScrn->virtualY, pScrn->rgbBits, pScrn->depth));
