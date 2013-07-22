@@ -27,7 +27,7 @@
 #ifdef XRDP_DEBUG
 #define LOG_LEVEL 99
 #else
-#define LOG_LEVEL 0
+#define LOG_LEVEL 1
 #endif
 
 #define LLOG(_level, _args) \
@@ -617,14 +617,19 @@ lfreerdp_pat_blt(rdpContext *context, PATBLT_ORDER *patblt)
 
     server_bpp = mod->inst->settings->color_depth;
     client_bpp = mod->bpp;
-    LLOGLN(0, ("lfreerdp_pat_blt: bpp %d %d", server_bpp, client_bpp));
+    LLOGLN(10, ("lfreerdp_pat_blt: bpp %d %d", server_bpp, client_bpp));
 
     fgcolor = convert_color(server_bpp, client_bpp,
                             patblt->foreColor, mod->colormap);
     bgcolor = convert_color(server_bpp, client_bpp,
                             patblt->backColor, mod->colormap);
 
-    if(fgcolor==bgcolor)
+    LLOGLN(10, ("lfreerdp_pat_blt: nLeftRect %d nTopRect %d "
+           "nWidth %d nHeight %d fgcolor 0x%8.8x bgcolor 0x%8.8x",
+           patblt->nLeftRect, patblt->nTopRect,
+           patblt->nWidth, patblt->nHeight, fgcolor, bgcolor));
+
+    if (fgcolor == bgcolor)
     {
         LLOGLN(0, ("Warning same color on both bg and fg"));
     }
@@ -691,6 +696,10 @@ lfreerdp_opaque_rect(rdpContext *context, OPAQUE_RECT_ORDER *opaque_rect)
     client_bpp = mod->bpp;
     fgcolor = convert_color(server_bpp, client_bpp,
                             opaque_rect->color, mod->colormap);
+    LLOGLN(10, ("lfreerdp_opaque_rect: nLeftRect %d nTopRect %d "
+           "nWidth %d nHeight %d fgcolor 0x%8.8x",
+           opaque_rect->nLeftRect, opaque_rect->nTopRect,
+           opaque_rect->nWidth, opaque_rect->nHeight, fgcolor));
     mod->server_set_fgcolor(mod, fgcolor);
     mod->server_fill_rect(mod, opaque_rect->nLeftRect, opaque_rect->nTopRect,
                           opaque_rect->nWidth, opaque_rect->nHeight);
@@ -749,6 +758,10 @@ lfreerdp_glyph_index(rdpContext *context, GLYPH_INDEX_ORDER *glyph_index)
     int client_bpp;
     int fgcolor;
     int bgcolor;
+    int opLeft;
+    int opTop;
+    int opRight;
+    int opBottom;
 
     mod = ((struct mod_context *)context)->modi;
     LLOGLN(10, ("lfreerdp_glyph_index:"));
@@ -758,14 +771,39 @@ lfreerdp_glyph_index(rdpContext *context, GLYPH_INDEX_ORDER *glyph_index)
                             glyph_index->foreColor, mod->colormap);
     bgcolor = convert_color(server_bpp, client_bpp,
                             glyph_index->backColor, mod->colormap);
+    LLOGLN(10, ("lfreerdp_glyph_index: "
+           "bkLeft %d bkTop %d width %d height %d "
+           "opLeft %d opTop %d width %d height %d "
+           "cbData %d fgcolor 0x%8.8x bgcolor 0x%8.8x fOpRedundant %d",
+           glyph_index->bkLeft, glyph_index->bkTop,
+           glyph_index->bkRight - glyph_index->bkLeft,
+           glyph_index->bkBottom - glyph_index->bkTop,
+           glyph_index->opLeft, glyph_index->opTop,
+           glyph_index->opRight - glyph_index->opLeft,
+           glyph_index->opBottom - glyph_index->opTop,
+           glyph_index->cbData, fgcolor, bgcolor, glyph_index->fOpRedundant));
     mod->server_set_bgcolor(mod, fgcolor);
     mod->server_set_fgcolor(mod, bgcolor);
+    opLeft = glyph_index->opLeft;
+    opTop = glyph_index->opTop;
+    opRight = glyph_index->opRight;
+    opBottom = glyph_index->opBottom;
+#if 1
+    /* workarounds for freerdp not using fOpRedundant in
+       glyph.c::update_gdi_glyph_index */
+    if (glyph_index->fOpRedundant)
+    {
+        opLeft = glyph_index->bkLeft;
+        opTop = glyph_index->bkTop;
+        opRight = glyph_index->bkRight;
+        opBottom =glyph_index->bkBottom;
+    }
+#endif
     mod->server_draw_text(mod, glyph_index->cacheId, glyph_index->flAccel,
                           glyph_index->fOpRedundant,
                           glyph_index->bkLeft, glyph_index->bkTop,
                           glyph_index->bkRight, glyph_index->bkBottom,
-                          glyph_index->opLeft, glyph_index->opTop,
-                          glyph_index->opRight, glyph_index->opBottom,
+                          opLeft, opTop, opRight, opBottom,
                           glyph_index->x, glyph_index->y,
                           (char *)(glyph_index->data), glyph_index->cbData);
 }
@@ -863,7 +901,7 @@ lfreerdp_cache_bitmapV2(rdpContext *context,
 
     if (flags & 0x10) /* CBR2_DO_NOT_CACHE */
     {
-        LLOGLN(0, ("lfreerdp_cache_bitmapV2: CBR2_DO_NOT_CACHE"));
+        LLOGLN(10, ("lfreerdp_cache_bitmapV2: CBR2_DO_NOT_CACHE"));
         idx = 4096 - 1;
     }
 
@@ -1049,6 +1087,13 @@ lfreerdp_get_pixel(void *bits, int width, int height, int bpp,
         pixel = (src8[start] & (0x80 >> shift)) != 0;
         return pixel ? 0xffffff : 0;
     }
+    else if (bpp == 32)
+    {
+        src8 = (tui8 *)bits;
+        src8 += y * delta + x * 4;
+        pixel = ((int*)(src8))[0];
+        return pixel;
+    }
     else
     {
         LLOGLN(0, ("lfreerdp_get_pixel: unknown bpp %d", bpp));
@@ -1088,6 +1133,12 @@ lfreerdp_set_pixel(int pixel, void *bits, int width, int height, int bpp,
         dst8[0] = (pixel >> 0) & 0xff;
         dst8[1] = (pixel >> 8) & 0xff;
         dst8[2] = (pixel >> 16) & 0xff;
+    }
+    else if (bpp == 32)
+    {
+        dst8 = (tui8 *)bits;
+        dst8 += y * delta + x * 4;
+        ((int*)(dst8))[0] = pixel;
     }
     else
     {
@@ -1129,6 +1180,8 @@ lfreerdp_pointer_new(rdpContext *context,
 {
     struct mod *mod;
     int index;
+    int bytes_per_pixel;
+    int bits_per_pixel;
     tui8 *dst;
     tui8 *src;
 
@@ -1143,40 +1196,47 @@ lfreerdp_pointer_new(rdpContext *context,
                pointer_new->colorPtrAttr.lengthAndMask));
 
     index = pointer_new->colorPtrAttr.cacheIndex;
-    if(index>=32)
+    if (index >= 32)
     {
-        LLOGLN(0,("pointer index too big"));
+        LLOGLN(0, ("lfreerdp_pointer_new: pointer index too big"));
         return ;
     }
-    // In this fix we remove the xorBpp check, even if
-    // the mouse pointers are not correct we can use them.
-    // Configure your destination not to use windows Aero as pointer scheme
-    else if ( // pointer_new->xorBpp == 1 &&
-            pointer_new->colorPtrAttr.width == 32 &&
-            pointer_new->colorPtrAttr.height == 32 &&
-            index < 32)
+    if (pointer_new->xorBpp == 1 &&
+        pointer_new->colorPtrAttr.width == 32 &&
+        pointer_new->colorPtrAttr.height == 32)
     {
+        LLOGLN(10, ("lfreerdp_pointer_new:"));
         mod->pointer_cache[index].hotx = pointer_new->colorPtrAttr.xPos;
         mod->pointer_cache[index].hoty = pointer_new->colorPtrAttr.yPos;
-
+        mod->pointer_cache[index].bpp = 0;
         dst = (tui8 *)(mod->pointer_cache[index].data);
         dst += 32 * 32 * 3 - 32 * 3;
         src = pointer_new->colorPtrAttr.xorMaskData;
         lfreerdp_convert_color_image(dst, 32, 32, 24, 32 * -3,
                                      src, 32, 32, 1, 32 / 8);
-
         dst = (tui8 *)(mod->pointer_cache[index].mask);
         dst += ( 32 * 32 / 8) - (32 / 8);
         src = pointer_new->colorPtrAttr.andMaskData;
         lfreerdp_convert_color_image(dst, 32, 32, 1, 32 / -8,
                                      src, 32, 32, 1, 32 / 8);
-
-        //memcpy(mod->pointer_cache[index].mask,
-        //    pointer_new->colorPtrAttr.andMaskData, 32 * 32 / 8);
-
-        mod->server_set_pointer(mod, mod->pointer_cache[index].hotx,
-                               mod->pointer_cache[index].hoty, mod->pointer_cache[index].data,
-                               mod->pointer_cache[index].mask);
+    }
+    else if(pointer_new->xorBpp >= 8 &&
+            pointer_new->colorPtrAttr.width == 32 &&
+            pointer_new->colorPtrAttr.height == 32)
+    {
+        bytes_per_pixel = (pointer_new->xorBpp + 7) / 8;
+        bits_per_pixel = pointer_new->xorBpp;
+        LLOGLN(10, ("lfreerdp_pointer_new: bpp %d Bpp %d", bits_per_pixel,
+               bytes_per_pixel));
+        mod->pointer_cache[index].hotx = pointer_new->colorPtrAttr.xPos;
+        mod->pointer_cache[index].hoty = pointer_new->colorPtrAttr.yPos;
+        mod->pointer_cache[index].bpp = bits_per_pixel;
+        memcpy(mod->pointer_cache[index].data,
+               pointer_new->colorPtrAttr.xorMaskData,
+               32 * 32 * bytes_per_pixel);
+        memcpy(mod->pointer_cache[index].mask,
+               pointer_new->colorPtrAttr.andMaskData,
+               32 * (32 / 8));
     }
     else
     {
@@ -1184,6 +1244,12 @@ lfreerdp_pointer_new(rdpContext *context,
                    pointer_new->xorBpp, pointer_new->colorPtrAttr.width,
                    pointer_new->colorPtrAttr.height,index));
     }
+
+    mod->server_set_pointer_ex(mod, mod->pointer_cache[index].hotx,
+                               mod->pointer_cache[index].hoty,
+                               mod->pointer_cache[index].data,
+                               mod->pointer_cache[index].mask,
+                               mod->pointer_cache[index].bpp);
 
     free(pointer_new->colorPtrAttr.xorMaskData);
     pointer_new->colorPtrAttr.xorMaskData = 0;
@@ -1203,10 +1269,11 @@ lfreerdp_pointer_cached(rdpContext *context,
     mod = ((struct mod_context *)context)->modi;
     index = pointer_cached->cacheIndex;
     LLOGLN(10, ("lfreerdp_pointer_cached:%d", index));
-    mod->server_set_pointer(mod, mod->pointer_cache[index].hotx,
-                            mod->pointer_cache[index].hoty,
-                            mod->pointer_cache[index].data,
-                            mod->pointer_cache[index].mask);
+    mod->server_set_pointer_ex(mod, mod->pointer_cache[index].hotx,
+                               mod->pointer_cache[index].hoty,
+                               mod->pointer_cache[index].data,
+                               mod->pointer_cache[index].mask,
+                               mod->pointer_cache[index].bpp);
 }
 
 static void DEFAULT_CC lfreerdp_polygon_cb(rdpContext* context, POLYGON_CB_ORDER* polygon_cb)
@@ -1308,6 +1375,7 @@ lfreerdp_pre_connect(freerdp *instance)
     instance->settings->draw_nine_grid = 0;
 
     instance->settings->glyph_cache = true;
+    /* GLYPH_SUPPORT_FULL and GLYPH_SUPPORT_PARTIAL seem to be the same */
     instance->settings->glyphSupportLevel = GLYPH_SUPPORT_FULL;
     instance->settings->order_support[NEG_GLYPH_INDEX_INDEX] = 1;
     instance->settings->order_support[NEG_FAST_GLYPH_INDEX] = 0;

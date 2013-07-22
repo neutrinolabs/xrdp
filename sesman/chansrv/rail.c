@@ -101,33 +101,6 @@ static int g_rail_running = 1;
 /* Perform the default action of the window's system menu. */
 #define SC_DEFAULT 0xF160
 
-/******************************************************************************/
-static int APP_CC
-is_window_valid_child_of_root(unsigned int window_id)
-{
-    int found;
-    unsigned int i;
-    unsigned int nchild;
-    Window r;
-    Window p;
-    Window *children;
-
-    found = 0;
-    XQueryTree(g_display, g_root_window, &r, &p, &children, &nchild);
-
-    for (i = 0; i < nchild; i++)
-    {
-        if (window_id == children[i])
-        {
-            found = 1;
-            break;
-        }
-    }
-
-    XFree(children);
-    return found;
-}
-
 /*****************************************************************************/
 static int APP_CC
 rail_send_init(void)
@@ -258,7 +231,6 @@ read_uni(struct stream *s, int num_chars)
 static int APP_CC
 rail_process_exec(struct stream *s, int size)
 {
-    int pid;
     int flags;
     int ExeOrFileLength;
     int WorkingDirLength;
@@ -624,13 +596,6 @@ rail_xevent(void *xevent)
     XEvent *lxevent;
     XWindowChanges xwc;
     int rv;
-    int nchildren_return = 0;
-    Window root_return;
-    Window parent_return;
-    Window *children_return;
-    Window wreturn;
-    int revert_to;
-    XWindowAttributes wnd_attributes;
 
     LOG(10, ("chansrv::rail_xevent:"));
 

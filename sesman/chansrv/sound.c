@@ -194,8 +194,6 @@ sound_process_format(int aindex, int wFormatTag, int nChannels,
                      int nBlockAlign, int wBitsPerSample,
                      int cbSize, char *data)
 {
-    int lindex;
-
     LOG(0, ("sound_process_format:"));
     LOG(0, ("  wFormatTag %d", wFormatTag));
     LOG(0, ("  nChannels %d", nChannels));
@@ -706,7 +704,7 @@ read_raw_audio_data(void *arg)
     }
 
     strans->trans_data_in = sttrans_data_in;
-    g_snprintf(path, 255, "/tmp/xrdp_chansrv_audio_socket_%d", g_display_num);
+    g_snprintf(path, 255, CHANSRV_PORT_STR, g_display_num);
 
     if (trans_connect(strans, "", path, 100) != 0)
     {

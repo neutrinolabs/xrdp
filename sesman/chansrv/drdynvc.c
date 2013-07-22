@@ -21,6 +21,18 @@
 int g_drdynvc_chan_id;
 int g_drdynvc_inited = 0;
 
+static int APP_CC drdynvc_send_capability_request(uint16_t version);
+static int APP_CC drdynvc_process_capability_response(struct stream* s,
+                                                      unsigned char cmd);
+static int APP_CC drdynvc_process_open_channel_response(struct stream *s,
+                                                        unsigned char cmd);
+static int APP_CC drdynvc_process_close_channel_response(struct stream *s,
+                                                         unsigned char cmd);
+static int APP_CC drdynvc_process_data_first(struct stream* s, unsigned char cmd);
+static int APP_CC drdynvc_process_data(struct stream* s, unsigned char cmd);
+static int APP_CC drdynvc_insert_uint_124(struct stream *s, uint32_t val);
+static int APP_CC drdynvc_get_chan_id(struct stream *s, char cmd, uint32_t *chan_id_p);
+
 /**
  * bring up dynamic virtual channel
  *
