@@ -45,6 +45,8 @@ This is the main driver file
 #include "rdpCursor.h"
 #include "rdpRandR.h"
 #include "rdpMisc.h"
+#include "rdpComposite.h"
+#include "rdpGlyphs.h"
 
 #define XRDP_DRIVER_NAME "XRDPDEV"
 #define XRDP_NAME "XRDPDEV"
@@ -402,6 +404,7 @@ rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     rdpPtr dev;
     VisualPtr vis;
     Bool vis_found;
+    PictureScreenPtr ps;
 
     pScrn = xf86Screens[scrnIndex];
     dev = XRDPPTR(pScrn);
@@ -506,6 +509,17 @@ rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 
     dev->ModifyPixmapHeader = pScreen->ModifyPixmapHeader;
     pScreen->ModifyPixmapHeader = rdpModifyPixmapHeader;
+
+    ps = GetPictureScreenIfSet(pScreen);
+    if (ps != 0)
+    {
+        /* composite */
+        dev->Composite = ps->Composite;
+        ps->Composite = rdpComposite;
+        /* glyphs */
+        dev->Glyphs = ps->Glyphs;
+        ps->Glyphs = rdpGlyphs;
+    }
 
     g_timer = TimerSet(g_timer, 0, 10, rdpDeferredRandR, pScreen);
 

@@ -27,7 +27,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
 /******************************************************************************/
-RegionPtr
+static RegionPtr
 rdpCopyPlaneOrg(DrawablePtr pSrc, DrawablePtr pDst,
                 GCPtr pGC, int srcx, int srcy, int w, int h,
                 int dstx, int dsty, unsigned long bitPlane)

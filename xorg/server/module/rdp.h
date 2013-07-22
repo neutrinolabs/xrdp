@@ -54,6 +54,8 @@ struct _rdpRec
     DestroyPixmapProcPtr DestroyPixmap;
     ModifyPixmapHeaderProcPtr ModifyPixmapHeader;
     CloseScreenProcPtr CloseScreen;
+    CompositeProcPtr Composite;
+    GlyphsProcPtr Glyphs;
 
     miPointerScreenFuncPtr pCursorFuncs;
 
