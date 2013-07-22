@@ -124,7 +124,9 @@ main(int argc, char **argv)
             case ConfigureNotify:
                 if (ev.xconfigure.window == root_window)
                 {
-                    printf("ConfigureNotify for root window width %d height %d\n",
+                    XRRUpdateConfiguration(&ev);
+                    printf("ConfigureNotify for root window "
+                           "width %d height %d\n",
                            ev.xconfigure.width, ev.xconfigure.height);
                 }
                 break;
