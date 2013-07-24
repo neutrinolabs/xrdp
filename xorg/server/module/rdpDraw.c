@@ -39,6 +39,10 @@ misc draw calls
 
 #include "rdp.h"
 
+#define LOG_LEVEL 1
+#define LLOGLN(_level, _args) \
+    do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
+
 /*****************************************************************************/
 void
 rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)

@@ -153,8 +153,6 @@ rdpPreInit(ScrnInfoPtr pScrn, int flags)
         return FALSE;
     }
 
-    rdpPrivateInit();
-
     rdpAllocRec(pScrn);
     dev = XRDPPTR(pScrn);
 

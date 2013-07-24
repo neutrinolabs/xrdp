@@ -63,6 +63,8 @@ xorgxrdpSetup(pointer Module, pointer Options, int *ErrorMajor, int *ErrorMinor)
     {
         g_initialised = 1;
     }
+    rdpInputInit();
+    rdpPrivateInit();
     return (pointer) 1;
 }
 

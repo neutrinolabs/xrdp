@@ -39,12 +39,28 @@ xrdp keyboard module
 #include <micmap.h>
 #include <mi.h>
 
+#include <xkbsrv.h>
+
 #include "X11/keysym.h"
 
 #include "rdp.h"
+#include "rdpInput.h"
+
+static int g_pause_spe = 0;
+static int g_ctrl_down = 0;
+static int g_alt_down = 0;
+static int g_shift_down = 0;
+static int g_tab_down = 0;
+/* this is toggled every time num lock key is released, not like the
+   above *_down vars */
+static int g_scroll_lock_down = 0;
 
 /* if 1, a keystroke is done every minute, down, then up */
 #define XRDPKB_TEST 0
+
+#if XRDPKB_TEST
+static OsTimerPtr g_timer = 0;
+#endif
 
 /******************************************************************************/
 #define LOG_LEVEL 1
@@ -84,7 +100,6 @@ xrdp keyboard module
     (sizeof(g_kbdMap) / (sizeof(KeySym) * GLYPHS_PER_KEY))
 
 static DeviceIntPtr g_keyboard = 0;
-static OsTimerPtr g_timer = 0;
 
 static KeySym g_kbdMap[] =
 {
@@ -129,7 +144,7 @@ static KeySym g_kbdMap[] =
     XK_L,            NoSymbol,
     XK_semicolon,    XK_colon,
     XK_apostrophe,   XK_quotedbl,
-    XK_grave,    XK_asciitilde,
+    XK_grave,        XK_asciitilde,
     XK_Shift_L,      NoSymbol,        /* 50 */
     XK_backslash,    XK_bar,
     XK_Z,            NoSymbol,
@@ -210,14 +225,296 @@ rdpEnqueueKey(int type, int scancode)
 {
     if (type == KeyPress)
     {
-        /* need this cause rdp and X11 repeats are different */
-        xf86PostKeyboardEvent(g_keyboard, scancode, FALSE);
         xf86PostKeyboardEvent(g_keyboard, scancode, TRUE);
     }
     else
     {
         xf86PostKeyboardEvent(g_keyboard, scancode, FALSE);
     }
+}
+
+/******************************************************************************/
+static void
+sendDownUpKeyEvent(int type, int x_scancode)
+{
+    /* need this cause rdp and X11 repeats are different */
+    /* if type is keydown, send keyup + keydown */
+    if (type == KeyPress)
+    {
+        rdpEnqueueKey(KeyRelease, x_scancode);
+        rdpEnqueueKey(KeyPress, x_scancode);
+    }
+    else
+    {
+        rdpEnqueueKey(KeyRelease, x_scancode);
+    }
+}
+
+/******************************************************************************/
+static void
+check_keysa(void)
+{
+    if (g_ctrl_down != 0)
+    {
+        rdpEnqueueKey(KeyRelease, g_ctrl_down);
+        g_ctrl_down = 0;
+    }
+
+    if (g_alt_down != 0)
+    {
+        rdpEnqueueKey(KeyRelease, g_alt_down);
+        g_alt_down = 0;
+    }
+
+    if (g_shift_down != 0)
+    {
+        rdpEnqueueKey(KeyRelease, g_shift_down);
+        g_shift_down = 0;
+    }
+}
+
+/**
+ * @param down   - true for KeyDown events, false otherwise
+ * @param param1 - ASCII code of pressed key
+ * @param param2 -
+ * @param param3 - scancode of pressed key
+ * @param param4 -
+ ******************************************************************************/
+static void
+KbdAddEvent(int down, int param1, int param2, int param3, int param4)
+{
+    int rdp_scancode;
+    int x_scancode;
+    int is_ext;
+    int is_spe;
+    int type;
+
+    type = down ? KeyPress : KeyRelease;
+    rdp_scancode = param3;
+    is_ext = param4 & 256; /* 0x100 */
+    is_spe = param4 & 512; /* 0x200 */
+    x_scancode = 0;
+
+    switch (rdp_scancode)
+    {
+        case 58: /* caps lock             */
+        case 42: /* left shift            */
+        case 54: /* right shift           */
+        case 70: /* scroll lock           */
+            x_scancode = rdp_scancode + MIN_KEY_CODE;
+
+            if (x_scancode > 0)
+            {
+                rdpEnqueueKey(type, x_scancode);
+            }
+
+            break;
+
+        case 56: /* left - right alt button */
+
+            if (is_ext)
+            {
+                x_scancode = 113; /* right alt button */
+            }
+            else
+            {
+                x_scancode = 64;  /* left alt button   */
+            }
+
+            rdpEnqueueKey(type, x_scancode);
+            break;
+
+        case 15: /* tab */
+
+            if (!down && !g_tab_down)
+            {
+                check_keysa(); /* leave x_scancode 0 here, we don't want the tab key up */
+            }
+            else
+            {
+                sendDownUpKeyEvent(type, 23);
+            }
+
+            g_tab_down = down;
+            break;
+
+        case 29: /* left or right ctrl */
+
+            /* this is to handle special case with pause key sending control first */
+            if (is_spe)
+            {
+                if (down)
+                {
+                    g_pause_spe = 1;
+                    /* leave x_scancode 0 here, we don't want the control key down */
+                }
+            }
+            else
+            {
+                x_scancode = is_ext ? 109 : 37;
+                g_ctrl_down = down ? x_scancode : 0;
+                rdpEnqueueKey(type, x_scancode);
+            }
+
+            break;
+
+        case 69: /* Pause or Num Lock */
+
+            if (g_pause_spe)
+            {
+                x_scancode = 110;
+
+                if (!down)
+                {
+                    g_pause_spe = 0;
+                }
+            }
+            else
+            {
+                x_scancode = g_ctrl_down ? 110 : 77;
+            }
+
+            sendDownUpKeyEvent(type, x_scancode);
+            break;
+
+        case 28: /* Enter or Return */
+            x_scancode = is_ext ? 108 : 36;
+            sendDownUpKeyEvent(type, x_scancode);
+            break;
+
+        case 53: /* / */
+            x_scancode = is_ext ? 112 : 61;
+            sendDownUpKeyEvent(type, x_scancode);
+            break;
+
+        case 55: /* * on KP or Print Screen */
+            x_scancode = is_ext ? 111 : 63;
+            sendDownUpKeyEvent(type, x_scancode);
+            break;
+
+        case 71: /* 7 or Home */
+            x_scancode = is_ext ? 97 : 79;
+            sendDownUpKeyEvent(type, x_scancode);
+            break;
+
+        case 72: /* 8 or Up */
+            x_scancode = is_ext ? 98 : 80;
+            sendDownUpKeyEvent(type, x_scancode);
+            break;
+
+        case 73: /* 9 or PgUp */
+            x_scancode = is_ext ? 99 : 81;
+            sendDownUpKeyEvent(type, x_scancode);
+            break;
+
+        case 75: /* 4 or Left */
+            x_scancode = is_ext ? 100 : 83;
+            sendDownUpKeyEvent(type, x_scancode);
+            break;
+
+        case 77: /* 6 or Right */
+            x_scancode = is_ext ? 102 : 85;
+            sendDownUpKeyEvent(type, x_scancode);
+            break;
+
+        case 79: /* 1 or End */
+            x_scancode = is_ext ? 103 : 87;
+            sendDownUpKeyEvent(type, x_scancode);
+            break;
+
+        case 80: /* 2 or Down */
+            x_scancode = is_ext ? 104 : 88;
+            sendDownUpKeyEvent(type, x_scancode);
+            break;
+
+        case 81: /* 3 or PgDn */
+            x_scancode = is_ext ? 105 : 89;
+            sendDownUpKeyEvent(type, x_scancode);
+            break;
+
+        case 82: /* 0 or Insert */
+            x_scancode = is_ext ? 106 : 90;
+            sendDownUpKeyEvent(type, x_scancode);
+            break;
+
+        case 83: /* . or Delete */
+            x_scancode = is_ext ? 107 : 91;
+            sendDownUpKeyEvent(type, x_scancode);
+            break;
+
+        case 91: /* left win key */
+            rdpEnqueueKey(type, 115);
+            break;
+
+        case 92: /* right win key */
+            rdpEnqueueKey(type, 116);
+            break;
+
+        case 93: /* menu key */
+            rdpEnqueueKey(type, 117);
+            break;
+
+        default:
+            x_scancode = rdp_scancode + MIN_KEY_CODE;
+
+            if (x_scancode > 0)
+            {
+                sendDownUpKeyEvent(type, x_scancode);
+            }
+
+            break;
+    }
+}
+
+/******************************************************************************/
+/* notes -
+     scroll lock doesn't seem to be a modifier in X
+*/
+static void
+KbdSync(int param1)
+{
+    int xkb_state;
+
+    xkb_state = XkbStateFieldFromRec(&(g_keyboard->key->xkbInfo->state));
+
+    if ((!(xkb_state & 0x02)) != (!(param1 & 4))) /* caps lock */
+    {
+        LLOGLN(0, ("KbdSync: toggling caps lock"));
+        KbdAddEvent(1, 58, 0, 58, 0);
+        KbdAddEvent(0, 58, 49152, 58, 49152);
+    }
+
+    if ((!(xkb_state & 0x10)) != (!(param1 & 2))) /* num lock */
+    {
+        LLOGLN(0, ("KbdSync: toggling num lock"));
+        KbdAddEvent(1, 69, 0, 69, 0);
+        KbdAddEvent(0, 69, 49152, 69, 49152);
+    }
+
+    if ((!(g_scroll_lock_down)) != (!(param1 & 1))) /* scroll lock */
+    {
+        LLOGLN(0, ("KbdSync: toggling scroll lock"));
+        KbdAddEvent(1, 70, 0, 70, 0);
+        KbdAddEvent(0, 70, 49152, 70, 49152);
+    }
+}
+
+/******************************************************************************/
+static int
+rdpInputKeyboard(int msg, long param1, long param2, long param3, long param4)
+{
+    LLOGLN(0, ("rdpInputKeyboard:"));
+    switch (msg)
+    {
+        case 15: /* key down */
+        case 16: /* key up */
+            KbdAddEvent(msg == 15, param1, param2, param3, param4);
+            break;
+        case 17: /* from RDP_INPUT_SYNCHRONIZE */
+            KbdSync(param1);
+            break;
+    }
+    return 0;
 }
 
 #if XRDPKB_TEST
@@ -339,6 +636,7 @@ rdpkeybControl(DeviceIntPtr device, int what)
             InitKeyboardDeviceStruct(device, &set, rdpkeybBell,
                                      rdpkeybChangeKeyboardControl);
             g_keyboard = device;
+            rdpRegisterInputCallback(0, rdpInputKeyboard);
 #if XRDPKB_TEST
             g_timer = TimerSet(g_timer, 0, 1000, rdpDeferredUpdateCallback, 0);
 #endif

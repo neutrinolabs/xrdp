@@ -46,8 +46,8 @@ composite(alpha blending) calls
 static void
 rdpCompositeOrg(PictureScreenPtr ps, rdpPtr dev,
                 CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
-                INT16 xSrc, INT16 ySrc, INT16 xMask, INT16 yMask, INT16 xDst,
-                INT16 yDst, CARD16 width, CARD16 height)
+                INT16 xSrc, INT16 ySrc, INT16 xMask, INT16 yMask,
+                INT16 xDst, INT16 yDst, CARD16 width, CARD16 height)
 {
     ps->Composite = dev->Composite;
     ps->Composite(op, pSrc, pMask, pDst, xSrc, ySrc, xMask, yMask,
@@ -71,6 +71,6 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
     pScrn = xf86Screens[pScreen->myNum];
     dev = XRDPPTR(pScrn);
     ps = GetPictureScreen(pScreen);
-    rdpCompositeOrg(ps, dev, op, pSrc, pMask, pDst, xSrc, ySrc, xMask, yMask,
-                    xDst, yDst, width, height);
+    rdpCompositeOrg(ps, dev, op, pSrc, pMask, pDst, xSrc, ySrc,
+                    xMask, yMask, xDst, yDst, width, height);
 }
