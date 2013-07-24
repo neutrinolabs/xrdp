@@ -494,7 +494,8 @@ KbdSync(int param1)
 
 /******************************************************************************/
 static int
-rdpInputKeyboard(int msg, long param1, long param2, long param3, long param4)
+rdpInputKeyboard(rdpPtr dev, int msg, long param1, long param2,
+                 long param3, long param4)
 {
     LLOGLN(0, ("rdpInputKeyboard:"));
     switch (msg)

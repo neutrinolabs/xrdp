@@ -87,24 +87,26 @@ rdpUnregisterInputCallback(rdpInputEventProcPtr proc)
 
 /******************************************************************************/
 int
-rdpInputKeyboardEvent(int msg, long param1, long param2,
+rdpInputKeyboardEvent(rdpPtr dev, int msg,
+                      long param1, long param2,
                       long param3, long param4)
 {
     if (g_input_proc[0].proc != 0)
     {
-        return g_input_proc[0].proc(msg, param1, param2, param3, param4);
+        return g_input_proc[0].proc(dev, msg, param1, param2, param3, param4);
     }
     return 0;
 }
 
 /******************************************************************************/
 int
-rdpInputMouseEvent(int msg, long param1, long param2,
+rdpInputMouseEvent(rdpPtr dev, int msg,
+                   long param1, long param2,
                    long param3, long param4)
 {
     if (g_input_proc[1].proc != 0)
     {
-        return g_input_proc[1].proc(msg, param1, param2, param3, param4);
+        return g_input_proc[1].proc(dev, msg, param1, param2, param3, param4);
     }
     return 0;
 }

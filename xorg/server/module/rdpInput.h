@@ -24,7 +24,8 @@ input
 #ifndef _RDPINPUT_H
 #define _RDPINPUT_H
 
-typedef int (*rdpInputEventProcPtr)(int msg, long param1, long param2,
+typedef int (*rdpInputEventProcPtr)(rdpPtr dev, int msg,
+                                    long param1, long param2,
                                     long param3, long param4);
 
 int
@@ -32,10 +33,12 @@ rdpRegisterInputCallback(int type, rdpInputEventProcPtr proc);
 int
 rdpUnregisterInputCallback(rdpInputEventProcPtr proc);
 int
-rdpInputKeyboardEvent(int msg, long param1, long param2,
+rdpInputKeyboardEvent(rdpPtr dev, int msg,
+                      long param1, long param2,
                       long param3, long param4);
 int
-rdpInputMouseEvent(int msg, long param1, long param2,
+rdpInputMouseEvent(rdpPtr dev, int msg,
+                   long param1, long param2,
                    long param3, long param4);
 int
 rdpInputInit(void);

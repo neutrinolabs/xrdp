@@ -42,6 +42,7 @@ xrdp mouse module
 #include <xserver-properties.h>
 
 #include "rdp.h"
+#include "rdpInput.h"
 
 /******************************************************************************/
 #define LOG_LEVEL 1
@@ -55,6 +56,14 @@ xrdp mouse module
 #define PACKAGE_VERSION_MAJOR 1
 #define PACKAGE_VERSION_MINOR 0
 #define PACKAGE_VERSION_PATCHLEVEL 0
+
+static DeviceIntPtr g_pointer = 0;
+
+static int g_cursor_x = 0;
+static int g_cursor_y = 0;
+
+static int g_old_button_mask = 0;
+static int g_button_mask = 0;
 
 /******************************************************************************/
 static void
@@ -82,6 +91,161 @@ static void
 rdpmouseCtrl(DeviceIntPtr pDevice, PtrCtrl *pCtrl)
 {
     LLOGLN(0, ("rdpmouseCtrl:"));
+}
+
+/******************************************************************************/
+static int
+l_bound_by(int val, int low, int high)
+{
+    if (val > high)
+    {
+        val = high;
+    }
+
+    if (val < low)
+    {
+        val = low;
+    }
+
+    return val;
+}
+
+/******************************************************************************/
+static void
+rdpEnqueueMotion(int x, int y)
+{
+    int i;
+    int n;
+    int valuators[2];
+    EventListPtr rdp_events;
+    xEvent *pev;
+
+    miPointerSetPosition(g_pointer, &x, &y);
+    valuators[0] = x;
+    valuators[1] = y;
+
+    GetEventList(&rdp_events);
+    n = GetPointerEvents(rdp_events, g_pointer, MotionNotify, 0,
+                         POINTER_ABSOLUTE | POINTER_SCREEN,
+                         0, 2, valuators);
+
+    for (i = 0; i < n; i++)
+    {
+        pev = (rdp_events + i)->event;
+        mieqEnqueue(g_pointer, (InternalEvent *)pev);
+    }
+}
+
+/******************************************************************************/
+static void
+rdpEnqueueButton(int type, int buttons)
+{
+    int i;
+    int n;
+    EventListPtr rdp_events;
+    xEvent *pev;
+
+    i = GetEventList(&rdp_events);
+    n = GetPointerEvents(rdp_events, g_pointer, type, buttons, 0, 0, 0, 0);
+
+    for (i = 0; i < n; i++)
+    {
+        pev = (rdp_events + i)->event;
+        mieqEnqueue(g_pointer, (InternalEvent *)pev);
+    }
+}
+
+/******************************************************************************/
+void
+PtrAddEvent(int buttonMask, int x, int y)
+{
+    int i;
+    int type;
+    int buttons;
+
+    rdpEnqueueMotion(x, y);
+
+    for (i = 0; i < 5; i++)
+    {
+        if ((buttonMask ^ g_old_button_mask) & (1 << i))
+        {
+            if (buttonMask & (1 << i))
+            {
+                type = ButtonPress;
+                buttons = i + 1;
+                rdpEnqueueButton(type, buttons);
+            }
+            else
+            {
+                type = ButtonRelease;
+                buttons = i + 1;
+                rdpEnqueueButton(type, buttons);
+            }
+        }
+    }
+
+    g_old_button_mask = buttonMask;
+}
+
+/******************************************************************************/
+static int
+rdpInputMouse(rdpPtr dev, int msg,
+              long param1, long param2,
+              long param3, long param4)
+{
+    LLOGLN(0, ("rdpInputMouse:"));
+
+    switch (msg)
+    {
+        case 100:
+            /* without the minus 2, strange things happen when dragging
+               past the width or height */
+            g_cursor_x = l_bound_by(param1, 0, dev->width - 2);
+            g_cursor_y = l_bound_by(param2, 0, dev->height - 2);
+            PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+            break;
+        case 101:
+            g_button_mask = g_button_mask & (~1);
+            PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+            break;
+        case 102:
+            g_button_mask = g_button_mask | 1;
+            PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+            break;
+        case 103:
+            g_button_mask = g_button_mask & (~4);
+            PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+            break;
+        case 104:
+            g_button_mask = g_button_mask | 4;
+            PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+            break;
+        case 105:
+            g_button_mask = g_button_mask & (~2);
+            PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+            break;
+        case 106:
+            g_button_mask = g_button_mask | 2;
+            PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+            break;
+        case 107:
+            g_button_mask = g_button_mask & (~8);
+            PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+            break;
+        case 108:
+            g_button_mask = g_button_mask | 8;
+            PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+            break;
+        case 109:
+            g_button_mask = g_button_mask & (~16);
+            PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+            break;
+        case 110:
+            g_button_mask = g_button_mask | 16;
+            PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+            break;
+    }
+    return 0;
 }
 
 /******************************************************************************/
@@ -118,7 +282,8 @@ rdpmouseControl(DeviceIntPtr device, int what)
 
             InitPointerDeviceStruct(pDev, map, 5, btn_labels, rdpmouseCtrl,
                                     GetMotionHistorySize(), 2, axes_labels);
-
+            g_pointer = device;
+            rdpRegisterInputCallback(1, rdpInputMouse);
             break;
         case DEVICE_ON:
             pDev->on = 1;
