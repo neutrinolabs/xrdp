@@ -55,13 +55,6 @@ static int g_tab_down = 0;
    above *_down vars */
 static int g_scroll_lock_down = 0;
 
-/* if 1, a keystroke is done every minute, down, then up */
-#define XRDPKB_TEST 0
-
-#if XRDPKB_TEST
-static OsTimerPtr g_timer = 0;
-#endif
-
 /******************************************************************************/
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
@@ -517,21 +510,6 @@ rdpInputKeyboard(int msg, long param1, long param2, long param3, long param4)
     return 0;
 }
 
-#if XRDPKB_TEST
-/******************************************************************************/
-static CARD32
-rdpDeferredUpdateCallback(OsTimerPtr timer, CARD32 now, pointer arg)
-{
-    LLOGLN(0, ("rdpDeferredUpdateCallback:"));
-
-    rdpEnqueueKey(KeyPress, 115);
-    rdpEnqueueKey(KeyRelease, 115);
-
-    g_timer = TimerSet(g_timer, 0, 1000, rdpDeferredUpdateCallback, 0);
-    return 0;
-}
-#endif
-
 /******************************************************************************/
 void
 rdpkeybDeviceInit(DeviceIntPtr pDevice, KeySymsPtr pKeySyms, CARD8 *pModMap)
@@ -637,9 +615,6 @@ rdpkeybControl(DeviceIntPtr device, int what)
                                      rdpkeybChangeKeyboardControl);
             g_keyboard = device;
             rdpRegisterInputCallback(0, rdpInputKeyboard);
-#if XRDPKB_TEST
-            g_timer = TimerSet(g_timer, 0, 1000, rdpDeferredUpdateCallback, 0);
-#endif
             break;
         case DEVICE_ON:
             pDev->on = 1;

@@ -37,5 +37,7 @@ rdpInputKeyboardEvent(int msg, long param1, long param2,
 int
 rdpInputMouseEvent(int msg, long param1, long param2,
                    long param3, long param4);
+int
+rdpInputInit(void);
 
 #endif

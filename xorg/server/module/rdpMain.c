@@ -38,6 +38,7 @@ rdp module main
 #include <mi.h>
 
 #include "rdp.h"
+#include "rdpInput.h"
 
 /******************************************************************************/
 #define LOG_LEVEL 1

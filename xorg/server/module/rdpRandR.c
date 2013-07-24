@@ -69,29 +69,8 @@ Bool
 rdpRRSetConfig(ScreenPtr pScreen, Rotation rotateKind, int rate,
                RRScreenSizePtr pSize)
 {
-    ScrnInfoPtr pScrn;
-    rdpPtr dev;
-    rrScrPrivPtr pRRScrPriv;
-    Bool rv;
-
     LLOGLN(0, ("rdpRRSetConfig:"));
-    rv = TRUE;
-    pScrn = xf86Screens[pScreen->myNum];
-    dev = XRDPPTR(pScrn);
-#if 0
-    pRRScrPriv = rrGetScrPriv(pScreen);
-    if (pRRScrPriv != 0)
-    {
-        if (dev->rrSetConfig != 0)
-        {
-            LLOGLN(0, ("rdpRRSetConfig: here"));
-            pRRScrPriv->rrSetConfig = dev->rrSetConfig;
-            rv = pRRScrPriv->rrSetConfig(pScreen, rotateKind, rate, pSize);
-            pRRScrPriv->rrSetConfig = rdpRRSetConfig;
-        }
-    }
-#endif
-    return rv;
+    return TRUE;
 }
 
 /******************************************************************************/
@@ -102,32 +81,15 @@ rdpRRGetInfo(ScreenPtr pScreen, Rotation *pRotations)
     int height;
     ScrnInfoPtr pScrn;
     rdpPtr dev;
-    rrScrPrivPtr pRRScrPriv;
-    Bool rv;
 
     LLOGLN(0, ("rdpRRGetInfo:"));
-    rv = TRUE;
     pScrn = xf86Screens[pScreen->myNum];
     dev = XRDPPTR(pScrn);
-#if 0
-    pRRScrPriv = rrGetScrPriv(pScreen);
-    if (pRRScrPriv != 0)
-    {
-        if (dev->rrGetInfo != 0)
-        {
-            LLOGLN(0, ("rdpRRGetInfo: here"));
-            pRRScrPriv->rrGetInfo = dev->rrGetInfo;
-            rv = pRRScrPriv->rrGetInfo(pScreen, pRotations);
-            pRRScrPriv->rrGetInfo = rdpRRGetInfo;
-        }
-    }
-#else
     *pRotations = RR_Rotate_0;
     width = dev->width;
     height = dev->height;
     rdpRRRegisterSize(pScreen, width, height);
-#endif
-    return rv;
+    return TRUE;
 }
 
 /******************************************************************************/

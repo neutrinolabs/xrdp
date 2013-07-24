@@ -515,7 +515,9 @@ void dev_redir_send_drive_dir_request(IRP *irp, tui32 device_id,
     if (InitialQuery)
     {
         if (Path == NULL)
+        {
             return;
+        }
 
         /* Path in unicode needs this much space */
         path_len = ((g_mbstowcs(NULL, Path, 0) * sizeof(twchar)) / 2) + 2;
@@ -704,7 +706,8 @@ void devredir_proc_client_devlist_announce_req(struct stream *s)
     }
 }
 
-void dev_redir_proc_device_iocompletion(struct stream *s)
+void APP_CC
+dev_redir_proc_device_iocompletion(struct stream *s)
 {
     FUSE_DATA *fuse_data = NULL;
     IRP       *irp       = NULL;
@@ -859,11 +862,12 @@ done:
     log_debug("exiting");
 }
 
-void dev_redir_proc_query_dir_response(IRP *irp,
-                                       struct stream *s_in,
-                                       tui32 DeviceId,
-                                       tui32 CompletionId,
-                                       tui32 IoStatus)
+void APP_CC
+dev_redir_proc_query_dir_response(IRP *irp,
+                                  struct stream *s_in,
+                                  tui32 DeviceId,
+                                  tui32 CompletionId,
+                                  tui32 IoStatus)
 {
     FUSE_DATA  *fuse_data = NULL;
     XRDP_INODE *xinode    = NULL;
@@ -984,7 +988,8 @@ void dev_redir_proc_query_dir_response(IRP *irp,
  * @return 0 on success, -1 on failure
  *****************************************************************************/
 
-int dev_redir_get_dir_listing(void *fusep, tui32 device_id, char *path)
+int APP_CC
+dev_redir_get_dir_listing(void *fusep, tui32 device_id, char *path)
 {
     tui32  DesiredAccess;
     tui32  CreateOptions;
@@ -1028,8 +1033,9 @@ int dev_redir_get_dir_listing(void *fusep, tui32 device_id, char *path)
     return rval;
 }
 
-int dev_redir_file_open(void *fusep, tui32 device_id, char *path,
-                        int mode, int type, char *gen_buf)
+int APP_CC
+dev_redir_file_open(void *fusep, tui32 device_id, char *path,
+                    int mode, int type, char *gen_buf)
 {
     tui32  DesiredAccess;
     tui32  CreateOptions;
@@ -1140,7 +1146,8 @@ int devredir_file_close(void *fusep, tui32 device_id, tui32 FileId)
  * Remove (delete) a directory or file
  *****************************************************************************/
 
-int devredir_rmdir_or_file(void *fusep, tui32 device_id, char *path, int mode)
+int APP_CC
+devredir_rmdir_or_file(void *fusep, tui32 device_id, char *path, int mode)
 {
     tui32  DesiredAccess;
     tui32  CreateOptions;
@@ -1181,8 +1188,9 @@ int devredir_rmdir_or_file(void *fusep, tui32 device_id, char *path, int mode)
  * @return 0 on success, -1 on failure
  *****************************************************************************/
 
-int devredir_file_read(void *fusep, tui32 DeviceId, tui32 FileId,
-                        tui32 Length, tui64 Offset)
+int APP_CC
+devredir_file_read(void *fusep, tui32 DeviceId, tui32 FileId,
+                   tui32 Length, tui64 Offset)
 {
     struct stream *s;
     IRP           *irp;
@@ -1229,8 +1237,9 @@ int devredir_file_read(void *fusep, tui32 DeviceId, tui32 FileId,
     return 0;
 }
 
-int dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
-                         const char *buf, tui32 Length, tui64 Offset)
+int APP_CC
+dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
+                     const char *buf, tui32 Length, tui64 Offset)
 {
     struct stream *s;
     IRP           *irp;
@@ -1293,7 +1302,8 @@ int dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
  * @return FUSE_DATA on success, or NULL on failure
  *****************************************************************************/
 
-void *devredir_fuse_data_peek(IRP *irp)
+void * APP_CC
+devredir_fuse_data_peek(IRP *irp)
 {
     log_debug("returning %p", irp->fd_head);
     return irp->fd_head;
@@ -1305,7 +1315,8 @@ void *devredir_fuse_data_peek(IRP *irp)
  * @return FUSE_DATA on success, NULL on failure
  *****************************************************************************/
 
-void *devredir_fuse_data_dequeue(IRP *irp)
+void * APP_CC
+devredir_fuse_data_dequeue(IRP *irp)
 {
     FUSE_DATA *head;
 
@@ -1340,7 +1351,8 @@ void *devredir_fuse_data_dequeue(IRP *irp)
  * @return 0 on success, -1 on failure
  *****************************************************************************/
 
-int devredir_fuse_data_enqueue(IRP *irp, void *vp)
+int APP_CC
+devredir_fuse_data_enqueue(IRP *irp, void *vp)
 {
     FUSE_DATA *fd;
     FUSE_DATA *tail;
@@ -1377,12 +1389,13 @@ int devredir_fuse_data_enqueue(IRP *irp, void *vp)
 **                           miscellaneous stuff                             **
 ******************************************************************************/
 
-void devredir_insert_DeviceIoRequest(struct stream *s,
-                                     tui32 DeviceId,
-                                     tui32 FileId,
-                                     tui32 CompletionId,
-                                     tui32 MajorFunction,
-                                     tui32 MinorFunction)
+void APP_CC
+devredir_insert_DeviceIoRequest(struct stream *s,
+                                tui32 DeviceId,
+                                tui32 FileId,
+                                tui32 CompletionId,
+                                tui32 MajorFunction,
+                                tui32 MinorFunction)
 {
     /* setup DR_DEVICE_IOREQUEST header */
     xstream_wr_u16_le(s, RDPDR_CTYP_CORE);
@@ -1398,7 +1411,8 @@ void devredir_insert_DeviceIoRequest(struct stream *s,
  * Convert / to windows compatible \
  *****************************************************************************/
 
-void devredir_cvt_slash(char *path)
+void APP_CC
+devredir_cvt_slash(char *path)
 {
     char *cptr = path;
 
@@ -1410,7 +1424,8 @@ void devredir_cvt_slash(char *path)
     }
 }
 
-void devredir_cvt_to_unicode(char *unicode, char *path)
+void APP_CC
+devredir_cvt_to_unicode(char *unicode, char *path)
 {
     char *dest;
     char *src;
@@ -1435,7 +1450,8 @@ void devredir_cvt_to_unicode(char *unicode, char *path)
     *dest++ = 0;
 }
 
-void devredir_cvt_from_unicode_len(char *path, char *unicode, int len)
+void APP_CC
+devredir_cvt_from_unicode_len(char *path, char *unicode, int len)
 {
     char *dest;
     char *dest_saved;
@@ -1472,7 +1488,8 @@ void devredir_cvt_from_unicode_len(char *path, char *unicode, int len)
     g_free(dest_saved);
 }
 
-int dev_redir_string_ends_with(char *string, char c)
+int APP_CC
+dev_redir_string_ends_with(char *string, char c)
 {
     int len;
 
@@ -1480,14 +1497,16 @@ int dev_redir_string_ends_with(char *string, char c)
     return (string[len - 1] == c) ? 1 : 0;
 }
 
-void devredir_insert_RDPDR_header(struct stream *s, tui16 Component,
-                                   tui16 PacketId)
+void APP_CC
+devredir_insert_RDPDR_header(struct stream *s, tui16 Component,
+                             tui16 PacketId)
 {
     xstream_wr_u16_le(s, Component);
     xstream_wr_u16_le(s, PacketId);
 }
 
-void devredir_proc_cid_rmdir_or_file(IRP *irp, tui32 IoStatus)
+void APP_CC
+devredir_proc_cid_rmdir_or_file(IRP *irp, tui32 IoStatus)
 {
     struct stream *s;
     int            bytes;
@@ -1523,7 +1542,8 @@ void devredir_proc_cid_rmdir_or_file(IRP *irp, tui32 IoStatus)
     return;
 }
 
-void devredir_proc_cid_rmdir_or_file_resp(IRP *irp, tui32 IoStatus)
+void APP_CC
+devredir_proc_cid_rmdir_or_file_resp(IRP *irp, tui32 IoStatus)
 {
     FUSE_DATA *fuse_data;
 
@@ -1549,7 +1569,8 @@ void devredir_proc_cid_rmdir_or_file_resp(IRP *irp, tui32 IoStatus)
                                        IRP_MJ_CLOSE, 0, 32);
 }
 
-void devredir_proc_cid_rename_file(IRP *irp, tui32 IoStatus)
+void APP_CC
+devredir_proc_cid_rename_file(IRP *irp, tui32 IoStatus)
 {
     struct stream *s;
     int            bytes;
@@ -1601,7 +1622,8 @@ void devredir_proc_cid_rename_file(IRP *irp, tui32 IoStatus)
     return;
 }
 
-void devredir_proc_cid_rename_file_resp(IRP *irp, tui32 IoStatus)
+void APP_CC
+devredir_proc_cid_rename_file_resp(IRP *irp, tui32 IoStatus)
 {
     FUSE_DATA *fuse_data;
 

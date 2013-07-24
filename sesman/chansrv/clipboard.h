@@ -1,8 +1,8 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2009-2012
- * Copyright (C) Laxmikant Rashinkar 2012
+ * Copyright (C) Jay Sorg 2009-2013
+ * Copyright (C) Laxmikant Rashinkar 2012-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,14 +23,9 @@
 #include "arch.h"
 #include "parse.h"
 
-int APP_CC
-clipboard_init(void);
-int APP_CC
-clipboard_deinit(void);
-int APP_CC
-clipboard_data_in(struct stream* s, int chan_id, int chan_flags, int length,
-                  int total_length);
-int APP_CC
-clipboard_xevent(void* xevent);
+int APP_CC clipboard_init(void);
+int APP_CC clipboard_deinit(void);
+int APP_CC clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length, int total_length);
+int APP_CC clipboard_xevent(void *xevent);
 
 #endif
