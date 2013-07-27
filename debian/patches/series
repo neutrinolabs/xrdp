@@ -7,3 +7,5 @@
 30-mouse-pointer-fix.patch
 31-sesman-more-sessions.patch
 #99_ing_x11rdp_fixes.patch
+32_fix_fourcc.patch
+33_fix_instfiles.patch

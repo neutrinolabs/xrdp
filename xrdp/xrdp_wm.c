@@ -460,7 +460,7 @@ xrdp_wm_load_static_colors_plus(struct xrdp_wm *self, char *autorun_name)
                     else if (g_strcasecmp(val, "pamerrortxt") == 0)
                     {
                         val = (char *)list_get_item(values, index);
-                        g_strncpy(self->pamerrortxt,val,255);
+                        g_strncpy(self->pamerrortxt, val, 255);
                     }
                 }
             }
@@ -563,14 +563,17 @@ xrdp_wm_init(struct xrdp_wm *self)
                 {
                     /* if no doamin is passed, and no autorun in xrdp.ini,
                        use the first item in the xrdp.ini
-                       file thats not named 'globals' */
+                       file thats not named
+                       'globals' or 'Logging' or 'channels' */
+                    /* TODO: change this and have a 'autologin'
+                       line in globals section */
                     file_read_sections(fd, names);
-
                     for (index = 0; index < names->count; index++)
                     {
                         q = (char *)list_get_item(names, index);
-
-                        if (g_strncasecmp("globals", q, 8) != 0)
+                        if ((g_strncasecmp("globals", q, 8) != 0) &&
+                            (g_strncasecmp("Logging", q, 8) != 0) &&
+                            (g_strncasecmp("channels", q, 9) != 0))
                         {
                             g_strncpy(section_name, q, 255);
                             break;

@@ -1,0 +1,8 @@
+--- a/instfiles/Makefile.am
++++ b/instfiles/Makefile.am
+@@ -29,4 +29,4 @@
+ install-data-hook:
+ 	chmod 755 $(DESTDIR)$(sysconfdir)/xrdp/xrdp.sh
+ 	chmod 755 $(DESTDIR)$(sysconfdir)/init.d/xrdp
+-	sed -i 's|__BASE__|$(prefix)|' $(sysconfdir)/init.d/xrdp;
++	sed -i 's|__BASE__|$(prefix)|' $(DESTDIR)$(sysconfdir)/init.d/xrdp;

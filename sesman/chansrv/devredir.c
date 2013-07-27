@@ -296,7 +296,7 @@ dev_redir_check_wait_objs(void)
  * @brief let client know our capabilities
  *****************************************************************************/
 
-void dev_redir_send_server_core_cap_req()
+void dev_redir_send_server_core_cap_req(void)
 {
     struct stream *s;
     int            bytes;
@@ -340,8 +340,8 @@ void dev_redir_send_server_core_cap_req()
     /* setup file system capability */
     xstream_wr_u16_le(s, CAP_DRIVE_TYPE);   /* CapabilityType                 */
     xstream_wr_u16_le(s, 8);                /* CapabilityLength - len of this */
-                                           /* CAPABILITY_SET in bytes, inc   */
-                                           /* the header                     */
+                                            /* CAPABILITY_SET in bytes, inc   */
+                                            /* the header                     */
     xstream_wr_u32_le(s, 2);                /* Version                        */
 
     /* setup smart card capability */
@@ -356,7 +356,7 @@ void dev_redir_send_server_core_cap_req()
     xstream_free(s);
 }
 
-void dev_redir_send_server_clientID_confirm()
+void dev_redir_send_server_clientID_confirm(void)
 {
     struct stream *s;
     int            bytes;
@@ -377,7 +377,7 @@ void dev_redir_send_server_clientID_confirm()
     xstream_free(s);
 }
 
-void dev_redir_send_server_user_logged_on()
+void dev_redir_send_server_user_logged_on(void)
 {
     struct stream *s;
     int            bytes;
@@ -432,8 +432,8 @@ int dev_redir_send_drive_create_request(tui32 device_id, char *path,
     log_debug("DesiredAccess=0x%x CreateDisposition=0x%x CreateOptions=0x%x",
               DesiredAccess, CreateDisposition, CreateOptions);
 
-    /* to store path as unicode */
-    len = strlen(path) * 2 + 2;
+    /* path in unicode needs this much space */
+    len = ((g_mbstowcs(NULL, path, 0) * sizeof(twchar)) / 2) + 2;
 
     xstream_new(s, 1024 + len);
 
@@ -517,7 +517,8 @@ void dev_redir_send_drive_dir_request(IRP *irp, tui32 device_id,
         if (Path == NULL)
             return;
 
-        path_len = strlen(Path) * 2 + 2;
+        /* Path in unicode needs this much space */
+        path_len = ((g_mbstowcs(NULL, Path, 0) * sizeof(twchar)) / 2) + 2;
         devredir_cvt_to_unicode(upath, Path);
     }
 
@@ -717,8 +718,6 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
     xstream_rd_u32_le(s, CompletionId);
     xstream_rd_u32_le(s, IoStatus);
 
-    /* LK_TODO need to check for IoStatus */
-
     log_debug("entered: IoStatus=0x%x CompletionId=%d", IoStatus, CompletionId);
 
     if ((irp = devredir_irp_find(CompletionId)) == NULL)
@@ -762,12 +761,14 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
 
     case CID_CREATE_OPEN_REQ:
         xstream_rd_u32_le(s, irp->FileId);
+
         log_debug("got CID_CREATE_OPEN_REQ IoStatus=0x%x FileId=%d",
                   IoStatus, irp->FileId);
+
         fuse_data = devredir_fuse_data_dequeue(irp);
-        xfuse_devredir_cb_open_file(fuse_data->data_ptr,
+        xfuse_devredir_cb_open_file(fuse_data->data_ptr, IoStatus,
                                     DeviceId, irp->FileId);
-        if (irp->type == S_IFDIR)
+        if ((irp->type == S_IFDIR) || (IoStatus != NT_STATUS_SUCCESS))
             devredir_irp_delete(irp);
         break;
 
@@ -775,14 +776,24 @@ void dev_redir_proc_device_iocompletion(struct stream *s)
         log_debug("got CID_READ");
         xstream_rd_u32_le(s, Length);
         fuse_data = devredir_fuse_data_dequeue(irp);
+
+        if (fuse_data == NULL)
+            log_error("fuse_data is NULL");
+
         xfuse_devredir_cb_read_file(fuse_data->data_ptr, s->p, Length);
+        devredir_irp_delete(irp);
         break;
 
     case CID_WRITE:
         log_debug("got CID_WRITE");
         xstream_rd_u32_le(s, Length);
         fuse_data = devredir_fuse_data_dequeue(irp);
+
+        if (fuse_data == NULL)
+            log_error("fuse_data is NULL");
+
         xfuse_devredir_cb_write_file(fuse_data->data_ptr, s->p, Length);
+        devredir_irp_delete(irp);
         break;
 
     case CID_CLOSE:
@@ -1066,16 +1077,20 @@ int dev_redir_file_open(void *fusep, tui32 device_id, char *path,
         //CreateDisposition = CD_FILE_CREATE;
         CreateDisposition  = 0x02; /* got this value from windows */
     }
-    else //if (mode & O_RDWR)
+    else
     {
         log_debug("open file in O_RDWR");
 #if 1
-        DesiredAccess = DA_FILE_READ_DATA | DA_FILE_WRITE_DATA | DA_SYNCHRONIZE;
+        /* without the 0x00000010 rdesktop opens files in */
+        /* O_RDONLY instead of O_RDWR mode                */
+        DesiredAccess = DA_FILE_READ_DATA | DA_FILE_WRITE_DATA | DA_SYNCHRONIZE | 0x00000010;
         CreateOptions = CO_FILE_SYNCHRONOUS_IO_NONALERT;
         CreateDisposition = CD_FILE_OPEN; // WAS 1
 #else
-        /* got this value from windows */
-        DesiredAccess = 0x00120089;
+        /* got this value from windows; the 0x00000010 was added by LK; */
+        /* without this rdesktop opens files in O_RDONLY instead of     */
+        /* O_RDWR mode                                                  */
+        DesiredAccess = 0x00120089 | 0x00000010;
         CreateOptions = 0x20060;
         CreateDisposition = 0x01;
 #endif
@@ -1166,11 +1181,12 @@ int devredir_rmdir_or_file(void *fusep, tui32 device_id, char *path, int mode)
  * @return 0 on success, -1 on failure
  *****************************************************************************/
 
-int dev_redir_file_read(void *fusep, tui32 DeviceId, tui32 FileId,
+int devredir_file_read(void *fusep, tui32 DeviceId, tui32 FileId,
                         tui32 Length, tui64 Offset)
 {
     struct stream *s;
     IRP           *irp;
+    IRP           *new_irp;
     int            bytes;
 
     xstream_new(s, 1024);
@@ -1182,12 +1198,22 @@ int dev_redir_file_read(void *fusep, tui32 DeviceId, tui32 FileId,
         return -1;
     }
 
-    irp->completion_type = CID_READ;
-    devredir_fuse_data_enqueue(irp, fusep);
+    /* create a new IRP for this request */
+    if ((new_irp = devredir_irp_clone(irp)) == NULL)
+    {
+        /* system out of memory */
+        xfuse_devredir_cb_read_file(fusep, NULL, 0);
+        return -1;
+    }
+    new_irp->FileId = 0;
+    new_irp->completion_type = CID_READ;
+    new_irp->CompletionId = g_completion_id++;
+    devredir_fuse_data_enqueue(new_irp, fusep);
+
     devredir_insert_DeviceIoRequest(s,
                                     DeviceId,
                                     FileId,
-                                    irp->CompletionId,
+                                    new_irp->CompletionId,
                                     IRP_MJ_READ,
                                     0);
 
@@ -1208,6 +1234,7 @@ int dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
 {
     struct stream *s;
     IRP           *irp;
+    IRP           *new_irp;
     int            bytes;
 
     log_debug("DeviceId=%d FileId=%d Length=%d Offset=%lld",
@@ -1222,12 +1249,22 @@ int dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
         return -1;
     }
 
-    irp->completion_type = CID_WRITE;
-    devredir_fuse_data_enqueue(irp, fusep);
+    /* create a new IRP for this request */
+    if ((new_irp = devredir_irp_clone(irp)) == NULL)
+    {
+        /* system out of memory */
+        xfuse_devredir_cb_write_file(fusep, NULL, 0);
+        return -1;
+    }
+    new_irp->FileId = 0;
+    new_irp->completion_type = CID_WRITE;
+    new_irp->CompletionId = g_completion_id++;
+    devredir_fuse_data_enqueue(new_irp, fusep);
+
     devredir_insert_DeviceIoRequest(s,
                                     DeviceId,
                                     FileId,
-                                    irp->CompletionId,
+                                    new_irp->CompletionId,
                                     IRP_MJ_WRITE,
                                     0);
 
@@ -1375,29 +1412,64 @@ void devredir_cvt_slash(char *path)
 
 void devredir_cvt_to_unicode(char *unicode, char *path)
 {
-    int len = strlen(path);
-    int i;
-    int j = 0;
+    char *dest;
+    char *src;
+    int   rv;
+    int   i;
 
-    for (i = 0; i < len; i++)
+    rv = g_mbstowcs((twchar *) unicode, path, strlen(path));
+
+    /* unicode is typically 4 bytes, but microsoft only uses 2 bytes */
+
+    src  = unicode + sizeof(twchar); /* skip 1st unicode char        */
+    dest = unicode + 2;              /* first char already in  place */
+
+    for (i = 1; i < rv; i++)
     {
-        unicode[j++] = path[i];
-        unicode[j++] = 0x00;
+        *dest++ = *src++;
+        *dest++ = *src++;
+        src += 2;
     }
-    unicode[j++] = 0x00;
-    unicode[j++] = 0x00;
+
+    *dest++ = 0;
+    *dest++ = 0;
 }
 
 void devredir_cvt_from_unicode_len(char *path, char *unicode, int len)
 {
-    int i;
-    int j;
+    char *dest;
+    char *dest_saved;
+    char *src;
+    int   rv;
+    int   i;
+    int   bytes_to_alloc;
+    int   max_bytes;
 
-    for (i = 0, j = 0; i < len; i += 2)
+    bytes_to_alloc = (((len / 2) * sizeof(twchar)) + sizeof(twchar));
+
+    src = unicode;
+    dest = g_malloc(bytes_to_alloc, 1);
+    dest_saved = dest;
+
+    for (i = 0; i < len; i += 2)
     {
-        path[j++] = unicode[i];
+        *dest++ = *src++;
+        *dest++ = *src++;
+        dest += 2;
     }
-    path[j] = 0;
+    *dest++ = 0;
+    *dest++ = 0;
+    *dest++ = 0;
+    *dest++ = 0;
+
+    max_bytes = wcstombs(NULL, (wchar_t *) dest_saved, 0);
+    if (max_bytes > 0)
+    {
+        rv = wcstombs(path, (wchar_t *) dest_saved, max_bytes);
+        path[max_bytes] = 0;
+    }
+
+    g_free(dest_saved);
 }
 
 int dev_redir_string_ends_with(char *string, char c)
@@ -1482,7 +1554,7 @@ void devredir_proc_cid_rename_file(IRP *irp, tui32 IoStatus)
     struct stream *s;
     int            bytes;
     int            sblen; /* SetBuffer length */
-    int            flen;  /*FileNameLength    */
+    int            flen;  /* FileNameLength   */
 
 
     if (IoStatus != NT_STATUS_SUCCESS)
@@ -1499,25 +1571,26 @@ void devredir_proc_cid_rename_file(IRP *irp, tui32 IoStatus)
         return;
     }
 
-    xstream_new(s, 1024);
+    /* Path in unicode needs this much space */
+    flen = ((g_mbstowcs(NULL, irp->gen_buf, 0) * sizeof(twchar)) / 2) + 2;
+    sblen = 6 + flen;
+
+    xstream_new(s, 1024 + flen);
 
     irp->completion_type = CID_RENAME_FILE_RESP;
     devredir_insert_DeviceIoRequest(s, irp->DeviceId, irp->FileId,
                                     irp->CompletionId,
                                     IRP_MJ_SET_INFORMATION, 0);
 
-    flen = strlen(irp->gen_buf) * 2 + 2;
-    sblen = 6 + flen;
-
     xstream_wr_u32_le(s, FileRenameInformation);
-    xstream_wr_u32_le(s, sblen);     /* Length          */
-    xstream_seek(s, 24);             /* padding         */
-    xstream_wr_u8(s, 1);             /* ReplaceIfExists */
-    xstream_wr_u8(s, 0);             /* RootDirectory   */
-    xstream_wr_u32_le(s, flen);      /* FileNameLength  */
+    xstream_wr_u32_le(s, sblen);     /* number of bytes after padding */
+    xstream_seek(s, 24);             /* padding                       */
+    xstream_wr_u8(s, 1);             /* ReplaceIfExists               */
+    xstream_wr_u8(s, 0);             /* RootDirectory                 */
+    xstream_wr_u32_le(s, flen);      /* FileNameLength                */
 
     /* filename in unicode */
-    devredir_cvt_to_unicode(s->p, irp->gen_buf);
+    devredir_cvt_to_unicode(s->p, irp->gen_buf); /* UNICODE_TODO */
     xstream_seek(s, flen);
 
     /* send to client */

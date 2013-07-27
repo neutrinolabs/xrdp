@@ -1,8 +1,6 @@
-Index: xrdp-0.7.0/libxrdp/xrdp_rdp.c
-===================================================================
---- xrdp-0.7.0.orig/libxrdp/xrdp_rdp.c	2013-04-14 19:44:51.832287308 +0200
-+++ xrdp-0.7.0/libxrdp/xrdp_rdp.c	2013-04-14 19:45:08.336288266 +0200
-@@ -1212,7 +1212,7 @@
+--- a/libxrdp/xrdp_rdp.c
++++ b/libxrdp/xrdp_rdp.c
+@@ -1242,7 +1242,7 @@
                  break;
              case 17: /* 17 */
                  DEBUG(("CAPSET_TYPE_OFFSCREEN_CACHE"));

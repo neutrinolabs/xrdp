@@ -1,3 +1,6 @@
+
+#include <unistd.h>
+
 #include "playvideo.h"
 #include <QDebug>
 
@@ -105,6 +108,11 @@ label1:
     }
 }
 
+void PlayVideo::onMediaRestarted()
+{
+    elapsedTime = av_gettime();
+}
+
 void PlayVideo::onMediaSeek(int value)
 {
     posMutex.lock();
@@ -125,7 +133,7 @@ void PlayVideo::updateMediaPos()
     posMutex.lock();
     if (la_seekPos >= 0)
     {
-        qDebug() << "seeking to" << la_seekPos;
+        //qDebug() << "seeking to" << la_seekPos;
         xrdpvr_seek_media(la_seekPos, 0);
         elapsedTime = av_gettime() - la_seekPos * 1000000;
         la_seekPos = -1;
@@ -164,7 +172,7 @@ void DecoderThread::updateSlider()
     mutex.lock();
     if (la_seekPos >= 0)
     {
-        qDebug() << "seeking to" << la_seekPos;
+        //qDebug() << "seeking to" << la_seekPos;
         //audioTimer->stop();
         //videoTimer->stop();
         xrdpvr_seek_media(la_seekPos, 0);

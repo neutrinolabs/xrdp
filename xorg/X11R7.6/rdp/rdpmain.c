@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2012 Jay Sorg
+Copyright 2005-2013 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -526,6 +526,8 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
         pRRScrPriv->rrSetPanning = rdpRRSetPanning;
 
     }
+
+    //rdpXvInit(pScreen);
 
     ErrorF("rdpScreenInit: ret %d\n", ret);
 

@@ -1,3 +1,9 @@
+xrdp (0.7.0-1.2) UNRELEASED; urgency=low
+
+  * Merge new set of patches from upstream
+
+ -- Warmerdam, B. (Bart) <Bart.Warmerdam@mail.ing.nl>  Sat, 27 Jul 2013 09:19:32 +0200
+
 xrdp (0.7.0-1.2) ingunstable; urgency=low
 
   * Version bump to 0.7.0 until commit bc2c50602e8370875c7c02299dbec09e8300797d

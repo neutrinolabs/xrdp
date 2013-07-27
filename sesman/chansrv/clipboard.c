@@ -273,17 +273,6 @@ clipboard_get_server_time(void)
 }
 
 /*****************************************************************************/
-/* returns time in miliseconds
-   this is like g_time2 in os_calls, but not miliseconds since machine was
-   up, something else
-   this is a time value similar to what the xserver uses */
-static int APP_CC
-clipboard_get_local_time(void)
-{
-    return g_time3();
-}
-
-/*****************************************************************************/
 static int APP_CC
 clipboard_find_format_id(int format_id)
 {
@@ -1489,6 +1478,14 @@ clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length,
     int rv;
     struct stream *ls;
     char *holdp;
+
+    if (!g_clip_up)
+    {
+        LOG(10, ("aborting clipboard_data_in - clipboard has not "
+            "been initialized"));
+        /* we return 0 here to indicate no protocol problem occured */
+        return 0;
+    }
 
     LLOGLN(10, ("clipboard_data_in: chan_id %d "
             "chan_flags 0x%x length %d total_length %d "

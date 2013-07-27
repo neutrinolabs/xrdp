@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Laxmikant Rashinkar 2012 LK.Rashinkar@gmail.com
+ * Copyright (C) Laxmikant Rashinkar 2012-2013 LK.Rashinkar@gmail.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,6 +61,7 @@
 #define CMD_WRITE_META_DATA         7
 #define CMD_DEINIT_XRDPVR           8
 #define CMD_SET_GEOMETRY            9
+#define CMD_SET_VOLUME              10
 
 /* max number of bytes we can send in one pkt */
 #define MAX_PDU_SIZE                1600

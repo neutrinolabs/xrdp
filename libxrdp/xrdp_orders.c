@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -212,14 +212,17 @@ xrdp_orders_check(struct xrdp_orders *self, int max_size)
     }
     if (size > max_packet_size)
     {
-        // this suggests someone calls this function without passing the correct
-        // max_size so we end up putting more into the buffer than we indicate we can
+        /* this suggests someone calls this function without passing the
+           correct max_size so we end up putting more into the buffer
+           than we indicate we can */
         g_writeln("error in xrdp_orders_check, size too big, its %d", size);
-        // We where getting called with size allready greater than max_packet_size
-        // Which I suspect was because the sending of text did not include the text len
-        // to check the buffer size. So attempt to send the data anyway.
-        // Lets write the data anyway, somewhere else may barf.
-        //    return 1;
+        /* We where getting called with size already greater than
+           max_packet_size
+           Which I suspect was because the sending of text did not include
+           the text len to check the buffer size. So attempt to send the data
+           anyway.
+           Lets write the data anyway, somewhere else may barf. */
+        /*    return 1; */
     }
 
     if ((size + max_size + 100) > max_packet_size)
@@ -363,7 +366,8 @@ xrdp_orders_out_bounds(struct xrdp_orders *self, struct xrdp_rect *rect)
     /* right */
     if (bounds_flags & 0x04)
     {
-        out_uint16_le(self->out_s, rect->right - 1); /* silly rdp right clip */
+        /* silly rdp right clip */
+        out_uint16_le(self->out_s, rect->right - 1);
     }
     else if (bounds_flags & 0x40)
     {
@@ -375,7 +379,8 @@ xrdp_orders_out_bounds(struct xrdp_orders *self, struct xrdp_rect *rect)
     /* bottom */
     if (bounds_flags & 0x08)
     {
-        out_uint16_le(self->out_s, rect->bottom - 1); /* silly rdp bottom clip */
+        /* silly rdp bottom clip */
+        out_uint16_le(self->out_s, rect->bottom - 1);
     }
     else if (bounds_flags & 0x80)
     {
@@ -1184,8 +1189,8 @@ xrdp_orders_line(struct xrdp_orders *self, int mix_mode,
 
     g_memset(&blank_pen, 0, sizeof(struct xrdp_pen));
 
-    /* if mix mode or rop are out of range, mstsc build 6000+ will parse the orders
-       wrong */
+    /* if mix mode or rop are out of range, mstsc build 6000+ will parse the
+       orders wrong */
     if ((mix_mode < 1) || (mix_mode > 2)) /* TRANSPARENT(1) or OPAQUE(2) */
     {
         mix_mode = 1;
@@ -2336,8 +2341,8 @@ xrdp_orders_send_bitmap3(struct xrdp_orders *self,
         rfx_compose_message(context, fr_s, &rect, 1, (tui8 *)data, width,
                             height, width * 4);
         bufsize = stream_get_length(fr_s);
-        xrdp_orders_out_v3(self, cache_id, cache_idx, (char *)(fr_s->data), bufsize,
-                           width, height, bpp, ci->v3_codec_id);
+        xrdp_orders_out_v3(self, cache_id, cache_idx, (char *)(fr_s->data),
+                           bufsize, width, height, bpp, ci->v3_codec_id);
         stream_detach(fr_s);
         stream_free(fr_s);
         free_stream(xr_s);

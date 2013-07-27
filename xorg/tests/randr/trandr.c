@@ -31,17 +31,22 @@
 #include <X11/extensions/Xrandr.h>
 
 static int
-process_randr(Display *disp, Window win, int event_base, XEvent *ev)
+process_randr(Display *disp, Screen *screen, int screenNumber, Window win,
+              int event_base, XEvent *ev)
 {
     XRRScreenChangeNotifyEvent *rr_screen_change_notify;
 
     switch (ev->type - event_base)
     {
         case RRScreenChangeNotify:
+            XRRUpdateConfiguration(ev);
             rr_screen_change_notify = (XRRScreenChangeNotifyEvent *) ev;
             printf("RRScreenChangeNotify: width %d height %d\n",
                    rr_screen_change_notify->width,
                    rr_screen_change_notify->height);
+            printf("DisplayWidth %d DisplayHeight %d\n",
+                   DisplayWidth(disp, screenNumber),
+                   DisplayHeight(disp, screenNumber));
             break;
     }
     return 0;
@@ -119,7 +124,9 @@ main(int argc, char **argv)
             case ConfigureNotify:
                 if (ev.xconfigure.window == root_window)
                 {
-                    printf("ConfigureNotify for root window width %d height %d\n",
+                    XRRUpdateConfiguration(&ev);
+                    printf("ConfigureNotify for root window "
+                           "width %d height %d\n",
                            ev.xconfigure.width, ev.xconfigure.height);
                 }
                 break;
@@ -128,7 +135,8 @@ main(int argc, char **argv)
                     (ev.type < rr_event_base + RRNumberEvents))
                 {
                     printf("randr\n");
-                    process_randr(disp, win, rr_event_base, &ev);
+                    process_randr(disp, screen, screenNumber, win,
+                                  rr_event_base, &ev);
                 }
                 break;
         }

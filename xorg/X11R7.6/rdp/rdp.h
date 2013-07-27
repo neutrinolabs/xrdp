@@ -525,6 +525,9 @@ rdpup_check_dirty_screen(rdpPixmapRec* pDirtyPriv);
 void
 rdpScheduleDeferredUpdate(void);
 
+int
+rdpXvInit(ScreenPtr pScreen);
+
 #if defined(X_BYTE_ORDER)
 #  if X_BYTE_ORDER == X_LITTLE_ENDIAN
 #    define L_ENDIAN

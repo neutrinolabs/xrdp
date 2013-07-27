@@ -1,0 +1,11 @@
+--- a/xorg/X11R7.6/rdp/rdpxv.c
++++ b/xorg/X11R7.6/rdp/rdpxv.c
+@@ -27,7 +27,7 @@
+ #include <X11/extensions/Xvproto.h>
+ #include "xvdix.h"
+ 
+-#include <fourcc.h>
++#include <xorg/fourcc.h>
+ 
+ extern rdpScreenInfoRec g_rdpScreen; /* from rdpmain.c */
+ 

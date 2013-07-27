@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Laxmikant Rashinkar 2012 LK.Rashinkar@gmail.com
+ * Copyright (C) Laxmikant Rashinkar 2012-2013 LK.Rashinkar@gmail.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -92,11 +92,27 @@ xrdpvr_deinit_player(void *channel, int stream_id)
     }
 
     /* do local clean up */
-    av_free(g_psi.frame);
-    avcodec_close(g_psi.p_audio_codec_ctx);
-    avcodec_close(g_psi.p_video_codec_ctx);
+    if (g_psi.frame != 0)
+    {
+        av_free(g_psi.frame);
+        g_psi.frame = 0;
+    }
+    if (g_psi.p_audio_codec_ctx != 0)
+    {
+        avcodec_close(g_psi.p_audio_codec_ctx);
+        g_psi.p_audio_codec_ctx = 0;
+    }
+    if (g_psi.p_video_codec_ctx != 0)
+    {
+        avcodec_close(g_psi.p_video_codec_ctx);
+        g_psi.p_video_codec_ctx = 0;
+    }
     //avformat_close_input(&g_psi.p_format_ctx);
-    av_close_input_file(g_psi.p_format_ctx);
+    if (g_psi.p_format_ctx != 0)
+    {
+        av_close_input_file(g_psi.p_format_ctx);
+        g_psi.p_format_ctx = 0;
+    }
 
     /* do remote cleanup */
 
@@ -733,4 +749,39 @@ xrdpvr_write_to_client(void *channel, STREAM *s)
 
         usleep(1000 * 3);
     }
+}
+
+/**
+ * write set volume to a xrdpvr client
+ *
+ * @param  channel  opaque handle returned by WTSVirtualChannelOpenEx
+ * @param  volume   volume 0x0000 to 0xffff
+ *
+ * @return 0 on success, -1 on failure
+ ******************************************************************************/
+int
+xrdpvr_set_volume(void *channel, int volume)
+{
+    STREAM  *s;
+    char    *cptr;
+    int     rv;
+    int     len;
+
+    stream_new(s, MAX_BUFSIZE);
+
+    stream_ins_u32_le(s, 0); /* number of bytes to follow */
+    stream_ins_u32_le(s, CMD_SET_VOLUME);
+    stream_ins_u32_le(s, volume);
+
+    /* insert number of bytes in stream */
+    len = stream_length(s) - 4;
+    cptr = s->p;
+    s->p = s->data;
+    stream_ins_u32_le(s, len);
+    s->p = cptr;
+
+    /* write data to virtual channel */
+    rv = xrdpvr_write_to_client(channel, s);
+    stream_free(s);
+    return rv;
 }

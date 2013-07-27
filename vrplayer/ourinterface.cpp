@@ -53,7 +53,7 @@ void OurInterface::initRemoteClient()
     xrdpvr_play_media(channel, 101, filename.toAscii().data());
 
     xrdpvr_get_media_duration(&start_time, &duration);
-    qDebug() << "ourInterface:initRemoteClient: emit onMediaDurationInSecs: dur=" << duration;
+    //qDebug() << "ourInterface:initRemoteClient: emit onMediaDurationInSecs: dur=" << duration;
     emit onMediaDurationInSeconds(duration);
 
     /* LK_TODO this needs to be undone in deinitRemoteClient() */
@@ -180,15 +180,13 @@ void OurInterface::onGeometryChanged(int x, int y, int width, int height)
     savedGeometry.setWidth(width);
     savedGeometry.setHeight(height);
 
-#if 1
+#if 0
     qDebug() << "OurInterface:signal" <<
                 "" << savedGeometry.x() <<
                 "" << savedGeometry.y() <<
                 "" << savedGeometry.width() <<
                 "" << savedGeometry.height();
 #endif
-
-    qDebug() << "setting geometry:channel=" << channel;
 
     if (channel)
     {
@@ -216,4 +214,16 @@ void OurInterface::setVcrOp(int op)
 {
     if (demuxMedia)
         demuxMedia->setVcrOp(op);
+}
+
+int OurInterface::setVolume(int volume)
+{
+    printf("OurInterface::setVolume\n");
+    if (xrdpvr_set_volume(channel, volume))
+    {
+        emit on_ErrorMsg("I/O Error",
+                         "Error sending volume to remote client");
+        return -1;
+    }
+    return 0;
 }

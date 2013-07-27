@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
  */
 
 #include "libxrdp.h"
+#include "xrdp_orders_rail.h"
 
 /******************************************************************************/
 struct xrdp_session *EXPORT_CC
@@ -428,17 +429,21 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
     int data_bytes;
 
     DEBUG(("libxrdp_send_pointer sending cursor"));
+    if (bpp == 0)
+    {
+        bpp = 24;
+    }
     /* error check */
     if ((session->client_info->pointer_flags & 1) == 0)
     {
-        if (bpp != 0)
+        if (bpp != 24)
         {
-            g_writeln("libxrdp_send_pointer: error");
+            g_writeln("libxrdp_send_pointer: error client does not support "
+                      "new cursors and bpp is %d", bpp);
             return 1;
         }
     }
-    if ((bpp != 0) && (bpp == 15) && (bpp != 16) &&
-        (bpp != 24) && (bpp != 32))
+    if ((bpp == 15) && (bpp != 16) && (bpp != 24) && (bpp != 32))
     {
         g_writeln("libxrdp_send_pointer: error");
         return 1;
@@ -446,7 +451,7 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
     make_stream(s);
     init_stream(s, 8192);
     xrdp_rdp_init_data((struct xrdp_rdp *)session->rdp, s);
-    if (bpp == 0)
+    if ((session->client_info->pointer_flags & 1) == 0)
     {
         out_uint16_le(s, RDP_POINTER_COLOR);
         out_uint16_le(s, 0); /* pad */
@@ -481,7 +486,6 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
                 }
             }
             break;
-        case 0:
         case 24:
             p = data;
             for (i = 0; i < 32; i++)

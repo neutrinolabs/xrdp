@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -98,7 +98,7 @@ get_service_name(char *service_name)
 }
 
 /******************************************************************************/
-/* returns long, zero is no go 
+/* returns long, zero is no go
  Stores the detailed error code in the errorcode variable*/
 
 long DEFAULT_CC
@@ -138,7 +138,7 @@ auth_userpass(char *user, char *pass, int *errorcode)
         g_free(auth_info);
         return 0;
     }
-    /* From man page:  
+    /* From man page:
        The pam_acct_mgmt function is used to determine if the users account is
        valid. It checks for authentication token and account expiration and
        verifies access restrictions. It is typically called after the user has

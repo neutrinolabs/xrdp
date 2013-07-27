@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,8 @@
 extern tbus g_sync_event;
 extern unsigned char g_fixedkey[8];
 extern struct config_sesman *g_cfg; /* in sesman.c */
+extern int g_sck; /* in sesman.c */
+extern int g_thread_sck; /* in thread.c */
 struct session_chain *g_sessions;
 int g_session_count;
 
@@ -449,6 +451,8 @@ session_start_fork(int width, int height, int bpp, char *username,
     }
     else if (pid == 0) /* child sesman */
     {
+        g_tcp_close(g_sck);
+        g_tcp_close(g_thread_sck);
         auth_start_session(data, display);
         g_sprintf(geometry, "%dx%d", width, height);
         g_sprintf(depth, "%d", bpp);

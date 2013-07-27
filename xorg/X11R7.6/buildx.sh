@@ -2,7 +2,7 @@
 
 # buildx.sh: a script for building X11R7.6 X server for use with xrdp
 #
-# Copyright 2011-2012 Jay Sorg Jay.Sorg@gmail.com
+# Copyright 2011-2013 Jay Sorg Jay.Sorg@gmail.com
 #
 # Authors
 #       Jay Sorg Jay.Sorg@gmail.com
@@ -25,16 +25,17 @@
 
 download_file()
 {
+    local file url status
     file=$1
 
     # if we already have the file, don't download it
-       if [ -r downloads/$file ]; then
-         return 0
-       fi
-
-    cd downloads
+    if [ -r downloads/$file ]; then
+        return 0
+    fi
 
     echo "downloading file $file"
+
+    cd downloads
 
     if [ "$file" = "libpthread-stubs-0.3.tar.bz2" ]; then
         wget -cq http://xcb.freedesktop.org/dist/$file
@@ -51,8 +52,9 @@ download_file()
         status=$?
         cd ..
         return $status
-    elif [ "$file" = "pixman-0.15.20.tar.bz2" ]; then
-        wget -cq http://ftp.x.org/pub/individual/lib/$file
+# note pixman updated
+    elif [ "$file" = "pixman-0.30.0.tar.bz2" ]; then
+        wget -cq http://xorg.freedesktop.org/archive/individual/lib/$file
         status=$?
         cd ..
         return $status
@@ -142,6 +144,7 @@ download_file()
 
 remove_modules()
 {
+    local mod_file mod_dir mod_args
     if [ -d cookies ]; then
         rm cookies/*
     fi
@@ -153,21 +156,17 @@ remove_modules()
         exit 0
     fi
 
-    cd build_dir
-
-    while read line
+    while IFS=: read mod_file mod_dir mod_args
     do
-        mod_dir=`echo $line | cut -d':' -f2`
-        if [ -d $mod_dir ]; then
-            rm -rf $mod_dir
+        if [ -d build_dir/$mod_dir ]; then
+            rm -rf build_dir/$mod_dir
         fi
     done < ../$data_file
-
-    cd ..
 }
 
 extract_it()
 {
+    local mod_file mod_name mod_args comp
     mod_file=$1
     mod_name=$2
     mod_args=$3
@@ -177,8 +176,8 @@ extract_it()
     fi
 
     # download file
-    download_file $mod_file
-    if [ $? -ne 0 ]; then
+    if ! download_file $mod_file
+    then
         echo ""
         echo "failed to download $mod_file - aborting build"
         echo ""
@@ -189,13 +188,15 @@ extract_it()
 
     # if pkg has not yet been extracted, do so now
     if [ ! -d $mod_name ]; then
-        echo $mod_file | grep -q tar.bz2
-        if [ $? -eq 0 ]; then
-            tar xjf ../downloads/$mod_file > /dev/null 2>&1
-        else
-            tar xzf ../downloads/$mod_file > /dev/null 2>&1
-        fi
-        if [ $? -ne 0 ]; then
+        case "$mod_file" in
+        *.tar.bz2) comp=j ;;
+        *.tar.gz) comp=z ;;
+        *.tar.xz) comp=J ;;
+        *.tar) comp= ;;
+        *) echo "unknown compressed module $mod_name" ; exit 1 ;;
+        esac
+        if ! tar x${comp}f ../downloads/$mod_file > /dev/null
+        then
             echo "error extracting module $mod_name"
             exit 1
         fi
@@ -205,13 +206,13 @@ extract_it()
     cd $mod_name
     # check for patches
     if [ -e ../../$mod_name.patch ]; then
-      patch -p1 < ../../$mod_name.patch
+        patch -p1 < ../../$mod_name.patch
     fi
     # now configure
     echo "executing ./configure --prefix=$PREFIX_DIR $mod_args"
-    ./configure --prefix=$PREFIX_DIR $mod_args
-    if [ $? -ne 0 ]; then
-        echo "configuration failed for module $mn"
+    if ! ./configure --prefix=$PREFIX_DIR $mod_args
+    then
+        echo "configuration failed for module $mod_name"
         exit 1
     fi
 
@@ -222,6 +223,7 @@ extract_it()
 
 make_it()
 {
+    local mod_file mod_name mod_args
     mod_file=$1
     mod_name=$2
     mod_args=$3
@@ -238,8 +240,8 @@ make_it()
     echo "*** processing module $mod_name ($count of $num_modules) ***"
     echo ""
 
-    extract_it $mod_file $mod_name "$mod_args"
-    if [ $? -ne 0 ]; then
+    if ! extract_it $mod_file $mod_name "$mod_args"
+    then
         echo ""
         echo "extract failed for module $mod_name"
         echo ""
@@ -248,8 +250,8 @@ make_it()
 
     # make module
     if [ ! -e cookies/$mod_name.made ]; then
-        (cd build_dir/$mod_name ; make)
-        if [ $? -ne 0 ]; then
+        if ! make -C build_dir/$mod_name
+        then
             echo ""
             echo "make failed for module $mod_name"
             echo ""
@@ -259,8 +261,8 @@ make_it()
     fi
 
     # install module
-    (cd build_dir/$mod_name ; make install)
-    if [ $? -ne 0 ]; then
+    if ! make -C build_dir/$mod_name install
+    then
         echo ""
         echo "make install failed for module $mod_name"
         echo ""
@@ -270,9 +272,9 @@ make_it()
     # special case after installing python make this sym link
     # so Mesa builds using this python version
     case "$mod_name" in
-      *Python-2*)
-      (cd build_dir/$mod_name ; ln -s python $PREFIX_DIR/bin/python2)
-      ;;
+    *Python-2*)
+        ln -s python build_dir/$mod_name/$PREFIX_DIR/bin/python2
+        ;;
     esac
 
     touch cookies/$mod_name.installed
@@ -316,9 +318,9 @@ else
 fi
 
 if ! test -d $PREFIX_DIR; then
-    echo "dir does not exit, creating [$PREFIX_DIR]"
-    mkdir $PREFIX_DIR
-    if ! test $? -eq 0; then
+    echo "dir does not exist, creating [$PREFIX_DIR]"
+    if ! mkdir $PREFIX_DIR
+    then
         echo "mkdir failed [$PREFIX_DIR]"
         exit 0
     fi
@@ -333,8 +335,8 @@ export CFLAGS="-I$PREFIX_DIR/include -fPIC -O2"
 
 # prefix dir must exist...
 if [ ! -d $PREFIX_DIR ]; then
-    mkdir -p $PREFIX_DIR
-    if [ $? -ne 0 ]; then
+    if ! mkdir -p $PREFIX_DIR
+    then
         echo "$PREFIX_DIR does not exist; failed to create it - cannot continue"
         exit 1
     fi
@@ -348,8 +350,8 @@ fi
 
 # create a downloads dir
 if [ ! -d downloads ]; then
-    mkdir downloads
-    if [ $? -ne 0 ]; then
+    if ! mkdir downloads
+    then
         echo "error creating downloads directory"
         exit 1
     fi
@@ -357,8 +359,8 @@ fi
 
 # this is where we do the actual build
 if [ ! -d build_dir ]; then
-    mkdir build_dir
-    if [ $? -ne 0 ]; then
+    if ! mkdir build_dir
+    then
         echo "error creating build_dir directory"
         exit 1
     fi
@@ -366,22 +368,18 @@ fi
 
 # this is where we store cookie files
 if [ ! -d cookies ]; then
-    mkdir cookies
-    if [ $? -ne 0 ]; then
+    if ! mkdir cookies
+    then
         echo "error creating cookies directory"
         exit 1
     fi
 fi
 
-while read line
+while IFS=: read mod_file mod_dir mod_args
 do
-    mod_file=`echo $line | cut -d':' -f1`
-    mod_dir=`echo $line | cut -d':' -f2`
-    mod_args=`echo $line | cut -d':' -f3`
     mod_args=`eval echo $mod_args`
 
     make_it $mod_file $mod_dir "$mod_args"
-
 done < $data_file
 
 echo "build for X OK"
@@ -389,22 +387,22 @@ echo "build for X OK"
 X11RDPBASE=$PREFIX_DIR
 export X11RDPBASE
 
-cd rdp
-make
-if [ $? -ne 0 ]; then
+if ! make -C rdp
+then
     echo "error building rdp"
     exit 1
 fi
 
 # this will copy the build X server with the other X server binaries
+cd rdp
 strip X11rdp
 cp X11rdp $X11RDPBASE/bin
 
 if [ "$2" = "drop" ]; then
-  echo ""
-  echo "dropping you in dir, type exit to get out"
-  bash
-  exit 1
+    echo ""
+    echo "dropping you in dir, type exit to get out"
+    bash
+    exit 1
 fi
 
 echo "All done"

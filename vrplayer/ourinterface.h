@@ -42,6 +42,7 @@ public:
     void playMedia();
     PlayVideo *getPlayVideoInstance();
     void setVcrOp(int op);
+    int setVolume(int volume);
 
 public slots:
     void onGeometryChanged(int x, int y, int width, int height);

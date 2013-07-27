@@ -1,24 +1,17 @@
-Index: xrdp-0.7.0/xorg/X11R7.6/rdp/Makefile
-===================================================================
---- xrdp-0.7.0.orig/xorg/X11R7.6/rdp/Makefile	2013-03-29 18:18:24.000000000 +0100
-+++ xrdp-0.7.0/xorg/X11R7.6/rdp/Makefile	2013-04-01 15:11:28.627658942 +0200
-@@ -1,11 +1,13 @@
+--- a/xorg/X11R7.6/rdp/Makefile
++++ b/xorg/X11R7.6/rdp/Makefile
+@@ -5,7 +5,9 @@
+ LIBBASE = $(X11RDPBASE)/lib
  
- #X11RDPBASE is an environment variable that needs to be set
- 
+ INSTALL = /usr/bin/install -c
+-XSRCBASE = ../build_dir/xorg-server-1.9.3
 +XSRCBASE = ../../../../xorg-server-1.12.4
 +
 +X11RDPBASE = $(XSRCBASE)/build-main
-+
- INCBASE = $(X11RDPBASE)/include
- LIBBASE = $(X11RDPBASE)/lib
  
--XSRCBASE = ../build_dir/xorg-server-1.9.3
--
  OBJS = rdpmain.o rdpdraw.o rdpinput.o rdpmisc.o rdpup.o rdprandr.o \
  rdpCopyArea.o rdpPolyFillRect.o rdpPutImage.o rdpPolyRectangle.o \
- rdpPolylines.o rdpPolySegment.o rdpFillSpans.o rdpSetSpans.o \
-@@ -21,38 +23,57 @@
+@@ -22,38 +24,57 @@
  #fbcmap_mi.o
  #fbcmap.o
  
@@ -94,7 +87,7 @@ Index: xrdp-0.7.0/xorg/X11R7.6/rdp/Makefile
  	-I../../os \
  	-I../../render \
  	-I../xfree86/common \
-@@ -70,7 +91,8 @@
+@@ -71,7 +92,8 @@
  	-DBIGREQS -D_POSIX_SOURCE -D_BSD_SOURCE -DSCREENSAVER \
  	-DXCMISC -DXTEST -DXTRAP -DXV -DXSYNC -DMITMISC -DPANORAMIX \
  	-DDPMSExtension -DXvExtension -DXvMCExtension -DXResExtension \
@@ -104,7 +97,7 @@ Index: xrdp-0.7.0/xorg/X11R7.6/rdp/Makefile
  
  #-DDAMAGE
  
-@@ -89,7 +111,7 @@
+@@ -90,7 +112,7 @@
  # these are not needed I think
  # -Dlinux -D__i386__
  
@@ -113,7 +106,7 @@ Index: xrdp-0.7.0/xorg/X11R7.6/rdp/Makefile
  
  all: X11rdp
  
-@@ -101,11 +123,11 @@
+@@ -102,14 +124,14 @@
  clean:
  	rm -f $(OBJS) librdp.a
  
@@ -122,19 +115,18 @@ Index: xrdp-0.7.0/xorg/X11R7.6/rdp/Makefile
 +miinitext.o: $(XSRCBASE)/mi/miinitext.c Makefile
 +	$(CC) $(CFLAGS) -I$(XSRCBASE)/Xext -c $(XSRCBASE)/mi/miinitext.c
  
--fbcmap.o: ../build_dir/xorg-server-1.9.3/fb/fbcmap.c
--	$(CC) $(CFLAGS) -c ../build_dir/xorg-server-1.9.3/fb/fbcmap.c
-+fbcmap.o: $(XSRCBASE)/fb/fbcmap.c
-+	$(CC) $(CFLAGS) -c $(XSRCBASE)/fb/fbcmap.c
+ fbcmap.o: ../build_dir/xorg-server-1.9.3/fb/fbcmap.c
+ 	$(CC) $(CFLAGS) -c ../build_dir/xorg-server-1.9.3/fb/fbcmap.c
  
 -fbcmap_mi.o: ../build_dir/xorg-server-1.9.3/fb/fbcmap_mi.c
 -	$(CC) $(CFLAGS) -c ../build_dir/xorg-server-1.9.3/fb/fbcmap_mi.c
 +fbcmap_mi.o: $(XSRCBASE)/fb/fbcmap_mi.c
 +	$(CC) $(CFLAGS) -c $(XSRCBASE)/fb/fbcmap_mi.c
-Index: xrdp-0.7.0/xorg/X11R7.6/rdp/rdp.h
-===================================================================
---- xrdp-0.7.0.orig/xorg/X11R7.6/rdp/rdp.h	2013-04-01 14:51:11.000000000 +0200
-+++ xrdp-0.7.0/xorg/X11R7.6/rdp/rdp.h	2013-04-01 15:11:28.627658942 +0200
+ 
+ install: all
+ 	$(INSTALL) X11rdp $(X11RDPBASE)/bin/X11rdp
+--- a/xorg/X11R7.6/rdp/rdp.h
++++ b/xorg/X11R7.6/rdp/rdp.h
 @@ -23,6 +23,7 @@
  #define __arm32__
  #endif
@@ -191,7 +183,7 @@ Index: xrdp-0.7.0/xorg/X11R7.6/rdp/rdp.h
  
    int rdp_width;
    int rdp_height;
-@@ -450,7 +454,7 @@
+@@ -450,7 +452,7 @@
  void
  rdpSpriteDeviceCursorCleanup(DeviceIntPtr pDev, ScreenPtr pScr);
  void
@@ -200,10 +192,8 @@ Index: xrdp-0.7.0/xorg/X11R7.6/rdp/rdp.h
  void
  KbdAddEvent(int down, int param1, int param2, int param3, int param4);
  void
-Index: xrdp-0.7.0/xorg/X11R7.6/rdp/rdpdraw.c
-===================================================================
---- xrdp-0.7.0.orig/xorg/X11R7.6/rdp/rdpdraw.c	2013-03-25 19:58:04.000000000 +0100
-+++ xrdp-0.7.0/xorg/X11R7.6/rdp/rdpdraw.c	2013-04-01 15:11:28.627658942 +0200
+--- a/xorg/X11R7.6/rdp/rdpdraw.c
++++ b/xorg/X11R7.6/rdp/rdpdraw.c
 @@ -399,7 +399,7 @@
      //pScreen->PaintWindowBorder = g_rdpScreen.PaintWindowBorder;
      pScreen->CopyWindow = g_rdpScreen.CopyWindow;
@@ -213,7 +203,7 @@ Index: xrdp-0.7.0/xorg/X11R7.6/rdp/rdpdraw.c
      return 1;
  }
  
-@@ -1135,8 +1135,8 @@
+@@ -1137,8 +1137,8 @@
      LLOGLN(0, ("in rdpRestoreAreas"));
      RegionInit(&reg, NullBox, 0);
      RegionCopy(&reg, prgnExposed);
@@ -224,7 +214,7 @@ Index: xrdp-0.7.0/xorg/X11R7.6/rdp/rdpdraw.c
  
      if (g_do_dirty_ons)
      {
-@@ -1156,8 +1156,9 @@
+@@ -1158,8 +1158,9 @@
      }
  
      RegionUninit(&reg);
@@ -236,10 +226,8 @@ Index: xrdp-0.7.0/xorg/X11R7.6/rdp/rdpdraw.c
  }
  
  /******************************************************************************/
-Index: xrdp-0.7.0/xorg/X11R7.6/rdp/rdpinput.c
-===================================================================
---- xrdp-0.7.0.orig/xorg/X11R7.6/rdp/rdpinput.c	2013-04-01 14:51:11.000000000 +0200
-+++ xrdp-0.7.0/xorg/X11R7.6/rdp/rdpinput.c	2013-04-01 15:11:28.631658943 +0200
+--- a/xorg/X11R7.6/rdp/rdpinput.c
++++ b/xorg/X11R7.6/rdp/rdpinput.c
 @@ -736,13 +736,12 @@
  
  /******************************************************************************/
@@ -348,10 +336,8 @@ Index: xrdp-0.7.0/xorg/X11R7.6/rdp/rdpinput.c
  
      for (i = 0; i < 5; i++)
      {
-Index: xrdp-0.7.0/xorg/X11R7.6/rdp/rdpmain.c
-===================================================================
---- xrdp-0.7.0.orig/xorg/X11R7.6/rdp/rdpmain.c	2013-03-25 19:58:04.000000000 +0100
-+++ xrdp-0.7.0/xorg/X11R7.6/rdp/rdpmain.c	2013-04-01 15:11:28.631658943 +0200
+--- a/xorg/X11R7.6/rdp/rdpmain.c
++++ b/xorg/X11R7.6/rdp/rdpmain.c
 @@ -385,7 +385,7 @@
      g_rdpScreen.ClearToBackground = pScreen->ClearToBackground;
  
@@ -370,7 +356,7 @@ Index: xrdp-0.7.0/xorg/X11R7.6/rdp/rdpmain.c
  
  #if 0
      pScreen->CreateColormap = rdpCreateColormap;
-@@ -691,7 +691,7 @@
+@@ -693,7 +693,7 @@
  
  /******************************************************************************/
  void
@@ -379,7 +365,7 @@ Index: xrdp-0.7.0/xorg/X11R7.6/rdp/rdpmain.c
  {
      char unixSocketName[128];
  
-@@ -736,9 +736,9 @@
+@@ -738,9 +738,9 @@
  
  /******************************************************************************/
  void
@@ -391,10 +377,8 @@ Index: xrdp-0.7.0/xorg/X11R7.6/rdp/rdpmain.c
  }
  
  /******************************************************************************/
-Index: xrdp-0.7.0/xorg/X11R7.6/rdp/rdpup.c
-===================================================================
---- xrdp-0.7.0.orig/xorg/X11R7.6/rdp/rdpup.c	2013-04-01 14:51:11.000000000 +0200
-+++ xrdp-0.7.0/xorg/X11R7.6/rdp/rdpup.c	2013-04-01 15:11:28.631658943 +0200
+--- a/xorg/X11R7.6/rdp/rdpup.c
++++ b/xorg/X11R7.6/rdp/rdpup.c
 @@ -670,47 +670,47 @@
                     past the width or height */
                  g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
@@ -454,10 +438,8 @@ Index: xrdp-0.7.0/xorg/X11R7.6/rdp/rdpup.c
                  break;
              case 200:
                  rdpup_begin_update();
-Index: xrdp-0.7.0/xup/xup.c
-===================================================================
---- xrdp-0.7.0.orig/xup/xup.c	2013-04-01 14:51:11.000000000 +0200
-+++ xrdp-0.7.0/xup/xup.c	2013-04-01 15:11:28.631658943 +0200
+--- a/xup/xup.c
++++ b/xup/xup.c
 @@ -19,6 +19,11 @@
   */
  

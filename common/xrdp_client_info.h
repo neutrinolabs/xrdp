@@ -90,7 +90,8 @@ struct xrdp_client_info
   char orders[32];
   int order_flags_ex;
   int use_bulk_comp;
-  int pointer_flags; /* 0 color, 1 new */
+  int pointer_flags; /* 0 color, 1 new, 2 no new */
+  int use_fast_path;
 };
 
 #endif
