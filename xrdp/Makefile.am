@@ -1,9 +1,18 @@
 EXTRA_DIST = xrdp.ini ad24b.bmp ad256.bmp xrdp24b.bmp xrdp256.bmp sans-10.fv1 cursor0.cur cursor1.cur xrdp.h xrdp_types.h
 
+EXTRA_INCLUDES =
+EXTRA_LIBS =
+EXTRA_FLAGS =
+
 if XRDP_DEBUG
 EXTRA_DEFINES = -DXRDP_DEBUG
 else
 EXTRA_DEFINES = -DXRDP_NODEBUG
+endif
+
+if GOT_PREFIX
+EXTRA_INCLUDES += -I$(prefix)/include
+EXTRA_FLAGS += -L$(prefix)/lib -Wl,-rpath -Wl,$(prefix)/lib
 endif
 
 AM_CFLAGS = \
@@ -17,7 +26,8 @@ AM_CFLAGS = \
 INCLUDES = \
   -I$(top_builddir) \
   -I$(top_srcdir)/common \
-  -I$(top_srcdir)/libxrdp
+  -I$(top_srcdir)/libxrdp \
+  $(EXTRA_INCLUDES)
 
 sbin_PROGRAMS = \
   xrdp
@@ -40,6 +50,9 @@ xrdp_SOURCES = \
 xrdp_LDADD = \
   $(top_builddir)/common/libcommon.la \
   $(top_builddir)/libxrdp/libxrdp.la
+
+xrdp_LDFLAGS = \
+  $(EXTRA_FLAGS)
 
 xrdpsysconfdir=$(sysconfdir)/xrdp
 
