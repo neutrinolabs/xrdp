@@ -1059,7 +1059,8 @@ rdpup_screen_blt(short x, short y, int cx, int cy, short srcx, short srcy)
 {
     if (g_connected)
     {
-        LLOGLN(10, ("  rdpup_screen_blt"));
+        LLOGLN(10, ("  rdpup_screen_blt x %d y %d cx %d cy %d srcx %d srcy %d",
+               x, y, cx, cy, srcx, srcy));
         rdpup_pre_check(16);
         out_uint16_le(g_out_s, 4); /* screen blt */
         out_uint16_le(g_out_s, 16); /* size */

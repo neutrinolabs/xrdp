@@ -161,7 +161,7 @@ rdpPutImage(DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
             box.x2 = box.x1 + w;
             box.y2 = box.y1 + h;
             RegionInit(&reg1, &box, 0);
-            draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type);
+            draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type, 3);
             RegionUninit(&reg1);
         }
         else if (got_id)
@@ -183,7 +183,7 @@ rdpPutImage(DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
             RegionInit(&reg2, NullBox, 0);
             RegionCopy(&reg2, &clip_reg);
             RegionIntersect(&reg1, &reg1, &reg2);
-            draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type);
+            draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type, 3);
             RegionUninit(&reg1);
             RegionUninit(&reg2);
         }

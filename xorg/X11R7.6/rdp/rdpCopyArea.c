@@ -537,7 +537,7 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
             box.x2 = box.x1 + w;
             box.y2 = box.y1 + h;
             RegionInit(&reg1, &box, 0);
-            draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type);
+            draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type, 1);
             RegionUninit(&reg1);
         }
         else if (got_id)
@@ -561,7 +561,7 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
                 box.y2 = box.y1 + h;
                 RegionInit(&box_reg, &box, 0);
                 RegionIntersect(&clip_reg, &clip_reg, &box_reg);
-                draw_item_add_img_region(pDirtyPriv, &clip_reg, GXcopy, dirty_type);
+                draw_item_add_img_region(pDirtyPriv, &clip_reg, GXcopy, dirty_type, 1);
                 RegionUninit(&box_reg);
             }
             else if (got_id)
