@@ -41,8 +41,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 void
 rdpPolyArcOrg(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc *parcs)
 {
-    rdpGCPtr priv;
-    GCFuncs *oldFuncs;
+    GC_OP_VARS;
 
     GC_OP_PROLOGUE(pGC);
     pGC->ops->PolyArc(pDrawable, pGC, narcs, parcs);

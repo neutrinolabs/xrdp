@@ -42,8 +42,7 @@ static void
 rdpPolyRectangleOrg(DrawablePtr pDrawable, GCPtr pGC, int nrects,
                     xRectangle *rects)
 {
-    rdpGCPtr priv;
-    GCFuncs *oldFuncs;
+    GC_OP_VARS;
 
     GC_OP_PROLOGUE(pGC);
     pGC->ops->PolyRectangle(pDrawable, pGC, nrects, rects);

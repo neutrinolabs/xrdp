@@ -42,8 +42,7 @@ static void
 rdpPutImageOrg(DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
                int w, int h, int leftPad, int format, char *pBits)
 {
-    rdpGCPtr priv;
-    GCFuncs *oldFuncs;
+    GC_OP_VARS;
 
     GC_OP_PROLOGUE(pGC);
     pGC->ops->PutImage(pDst, pGC, depth, x, y, w, h, leftPad,

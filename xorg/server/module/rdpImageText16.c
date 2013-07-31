@@ -42,8 +42,7 @@ void
 rdpImageText16Org(DrawablePtr pDrawable, GCPtr pGC,
                   int x, int y, int count, unsigned short *chars)
 {
-    rdpGCPtr priv;
-    GCFuncs *oldFuncs;
+    GC_OP_VARS;
 
     GC_OP_PROLOGUE(pGC);
     pGC->ops->ImageText16(pDrawable, pGC, x, y, count, chars);

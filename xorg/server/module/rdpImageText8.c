@@ -42,8 +42,7 @@ void
 rdpImageText8Org(DrawablePtr pDrawable, GCPtr pGC,
                  int x, int y, int count, char *chars)
 {
-    rdpGCPtr priv;
-    GCFuncs *oldFuncs;
+    GC_OP_VARS;
 
     GC_OP_PROLOGUE(pGC);
     pGC->ops->ImageText8(pDrawable, pGC, x, y, count, chars);

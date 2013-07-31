@@ -44,8 +44,7 @@ void
 rdpSetSpansOrg(DrawablePtr pDrawable, GCPtr pGC, char *psrc,
                DDXPointPtr ppt, int *pwidth, int nspans, int fSorted)
 {
-    rdpGCPtr priv;
-    GCFuncs *oldFuncs;
+    GC_OP_VARS;
 
     GC_OP_PROLOGUE(pGC);
     pGC->ops->SetSpans(pDrawable, pGC, psrc, ppt, pwidth, nspans, fSorted);

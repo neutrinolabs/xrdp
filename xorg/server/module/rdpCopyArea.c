@@ -42,8 +42,7 @@ static RegionPtr
 rdpCopyAreaOrg(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
                int srcx, int srcy, int w, int h, int dstx, int dsty)
 {
-    rdpGCPtr priv;
-    GCFuncs *oldFuncs;
+    GC_OP_VARS;
     RegionPtr rv;
 
     GC_OP_PROLOGUE(pGC);

@@ -42,8 +42,7 @@ void
 rdpPushPixelsOrg(GCPtr pGC, PixmapPtr pBitMap, DrawablePtr pDst,
                  int w, int h, int x, int y)
 {
-    rdpGCPtr priv;
-    GCFuncs *oldFuncs;
+    GC_OP_VARS;
 
     GC_OP_PROLOGUE(pGC);
     pGC->ops->PushPixels(pGC, pBitMap, pDst, w, h, x, y);

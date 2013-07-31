@@ -42,8 +42,7 @@ void
 rdpPolyPointOrg(DrawablePtr pDrawable, GCPtr pGC, int mode,
                 int npt, DDXPointPtr in_pts)
 {
-    rdpGCPtr priv;
-    GCFuncs *oldFuncs;
+    GC_OP_VARS;
 
     GC_OP_PROLOGUE(pGC);
     pGC->ops->PolyPoint(pDrawable, pGC, mode, npt, in_pts);

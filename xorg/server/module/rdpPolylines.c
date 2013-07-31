@@ -42,8 +42,7 @@ static void
 rdpPolylinesOrg(DrawablePtr pDrawable, GCPtr pGC, int mode,
                 int npt, DDXPointPtr pptInit)
 {
-    rdpGCPtr priv;
-    GCFuncs *oldFuncs;
+    GC_OP_VARS;
 
     GC_OP_PROLOGUE(pGC);
     pGC->ops->Polylines(pDrawable, pGC, mode, npt, pptInit);

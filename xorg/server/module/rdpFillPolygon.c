@@ -43,8 +43,7 @@ rdpFillPolygonOrg(DrawablePtr pDrawable, GCPtr pGC,
                   int shape, int mode, int count,
                   DDXPointPtr pPts)
 {
-    rdpGCPtr priv;
-    GCFuncs *oldFuncs;
+    GC_OP_VARS;
 
     GC_OP_PROLOGUE(pGC);
     pGC->ops->FillPolygon(pDrawable, pGC, shape, mode, count, pPts);

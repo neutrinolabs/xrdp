@@ -36,6 +36,7 @@ composite(alpha blending) calls
 
 #include "rdp.h"
 #include "rdpComposite.h"
+#include "rdpDraw.h"
 
 /******************************************************************************/
 #define LOG_LEVEL 1
@@ -63,13 +64,11 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
 {
     ScreenPtr pScreen;
     rdpPtr dev;
-    ScrnInfoPtr pScrn;
     PictureScreenPtr ps;
 
     LLOGLN(10, ("rdpComposite:"));
     pScreen = pSrc->pDrawable->pScreen;
-    pScrn = xf86Screens[pScreen->myNum];
-    dev = XRDPPTR(pScrn);
+    dev = rdpGetDevFromScreen(pScreen);
     ps = GetPictureScreen(pScreen);
     rdpCompositeOrg(ps, dev, op, pSrc, pMask, pDst, xSrc, ySrc,
                     xMask, yMask, xDst, yDst, width, height);

@@ -42,8 +42,7 @@ static void
 rdpFillSpansOrg(DrawablePtr pDrawable, GCPtr pGC, int nInit,
                 DDXPointPtr pptInit, int *pwidthInit, int fSorted)
 {
-    rdpGCPtr priv;
-    GCFuncs *oldFuncs;
+    GC_OP_VARS;
 
     GC_OP_PROLOGUE(pGC);
     pGC->ops->FillSpans(pDrawable, pGC, nInit, pptInit, pwidthInit, fSorted);

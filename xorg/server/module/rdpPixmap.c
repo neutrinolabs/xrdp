@@ -33,6 +33,7 @@ pixmap calls
 #include <xf86_OSproc.h>
 
 #include "rdp.h"
+#include "rdpDraw.h"
 
 /******************************************************************************/
 #define LOG_LEVEL 1
@@ -44,14 +45,12 @@ PixmapPtr
 rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
                 unsigned usage_hint)
 {
-    ScrnInfoPtr pScrn;
     rdpPtr dev;
     PixmapPtr rv;
 
     LLOGLN(10, ("rdpCreatePixmap: width %d height %d depth %d",
            width, height, depth));
-    pScrn = xf86Screens[pScreen->myNum];
-    dev = XRDPPTR(pScrn);
+    dev = rdpGetDevFromScreen(pScreen);
     pScreen->CreatePixmap = dev->CreatePixmap;
     rv = pScreen->CreatePixmap(pScreen, width, height, depth, usage_hint);
     pScreen->CreatePixmap = rdpCreatePixmap;
@@ -65,12 +64,10 @@ rdpDestroyPixmap(PixmapPtr pPixmap)
     Bool rv;
     ScreenPtr pScreen;
     rdpPtr dev;
-    ScrnInfoPtr pScrn;
 
     LLOGLN(10, ("rdpDestroyPixmap: refcnt %d", pPixmap->refcnt));
     pScreen = pPixmap->drawable.pScreen;
-    pScrn = xf86Screens[pScreen->myNum];
-    dev = XRDPPTR(pScrn);
+    dev = rdpGetDevFromScreen(pScreen);
     pScreen->DestroyPixmap = dev->DestroyPixmap;
     rv = pScreen->DestroyPixmap(pPixmap);
     pScreen->DestroyPixmap = rdpDestroyPixmap;
@@ -85,12 +82,10 @@ rdpModifyPixmapHeader(PixmapPtr pPixmap, int width, int height, int depth,
     Bool rv;
     ScreenPtr pScreen;
     rdpPtr dev;
-    ScrnInfoPtr pScrn;
 
     LLOGLN(10, ("rdpModifyPixmapHeader:"));
     pScreen = pPixmap->drawable.pScreen;
-    pScrn = xf86Screens[pScreen->myNum];
-    dev = XRDPPTR(pScrn);
+    dev = rdpGetDevFromScreen(pScreen);
     pScreen->ModifyPixmapHeader = dev->ModifyPixmapHeader;
     rv = pScreen->ModifyPixmapHeader(pPixmap, width, height, depth, bitsPerPixel,
                                      devKind, pPixData);

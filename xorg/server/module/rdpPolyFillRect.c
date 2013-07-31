@@ -42,8 +42,7 @@ static void
 rdpPolyFillRectOrg(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
                    xRectangle *prectInit)
 {
-    rdpGCPtr priv;
-    GCFuncs *oldFuncs;
+    GC_OP_VARS;
 
     GC_OP_PROLOGUE(pGC);
     pGC->ops->PolyFillRect(pDrawable, pGC, nrectFill, prectInit);

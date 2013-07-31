@@ -37,6 +37,7 @@ gylph(font) calls
 
 #include "rdp.h"
 #include "rdpGlyphs.h"
+#include "rdpDraw.h"
 
 /******************************************************************************/
 #define LOG_LEVEL 1
@@ -66,13 +67,11 @@ rdpGlyphs(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
 {
     ScreenPtr pScreen;
     rdpPtr dev;
-    ScrnInfoPtr pScrn;
     PictureScreenPtr ps;
 
     LLOGLN(10, ("rdpGlyphs:"));
     pScreen = pSrc->pDrawable->pScreen;
-    pScrn = xf86Screens[pScreen->myNum];
-    dev = XRDPPTR(pScrn);
+    dev = rdpGetDevFromScreen(pScreen);
     ps = GetPictureScreen(pScreen);
     rdpGlyphsOrg(ps, dev, op, pSrc, pDst, maskFormat, xSrc, ySrc,
                  nlists, lists, glyphs);

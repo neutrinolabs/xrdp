@@ -79,12 +79,10 @@ rdpRRGetInfo(ScreenPtr pScreen, Rotation *pRotations)
 {
     int width;
     int height;
-    ScrnInfoPtr pScrn;
     rdpPtr dev;
 
     LLOGLN(0, ("rdpRRGetInfo:"));
-    pScrn = xf86Screens[pScreen->myNum];
-    dev = XRDPPTR(pScrn);
+    dev = rdpGetDevFromScreen(pScreen);
     *pRotations = RR_Rotate_0;
     width = dev->width;
     height = dev->height;
@@ -100,13 +98,11 @@ rdpRRScreenSetSize(ScreenPtr pScreen, CARD16 width, CARD16 height,
     WindowPtr root;
     PixmapPtr screenPixmap;
     BoxRec box;
-    ScrnInfoPtr pScrn;
     rdpPtr dev;
 
     LLOGLN(0, ("rdpRRScreenSetSize: width %d height %d mmWidth %d mmHeight %d",
            width, height, (int)mmWidth, (int)mmHeight));
-    pScrn = xf86Screens[pScreen->myNum];
-    dev = XRDPPTR(pScrn);
+    dev = rdpGetDevFromScreen(pScreen);
     root = rdpGetRootWindowPtr(pScreen);
     if ((width < 1) || (height < 1))
     {
@@ -228,12 +224,10 @@ Bool
 rdpRRGetPanning(ScreenPtr pScreen, RRCrtcPtr crtc, BoxPtr totalArea,
                 BoxPtr trackingArea, INT16 *border)
 {
-    ScrnInfoPtr pScrn;
     rdpPtr dev;
 
     LLOGLN(0, ("rdpRRGetPanning: %p", crtc));
-    pScrn = xf86Screens[pScreen->myNum];
-    dev = XRDPPTR(pScrn);
+    dev = rdpGetDevFromScreen(pScreen);
 
     if (totalArea != 0)
     {

@@ -42,9 +42,8 @@ int
 rdpPolyText16Org(DrawablePtr pDrawable, GCPtr pGC,
                  int x, int y, int count, unsigned short *chars)
 {
+    GC_OP_VARS;
     int rv;
-    rdpGCPtr priv;
-    GCFuncs *oldFuncs;
 
     GC_OP_PROLOGUE(pGC);
     rv = pGC->ops->PolyText16(pDrawable, pGC, x, y, count, chars);

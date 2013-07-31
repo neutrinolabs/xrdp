@@ -43,9 +43,8 @@ rdpCopyPlaneOrg(DrawablePtr pSrc, DrawablePtr pDst,
                 GCPtr pGC, int srcx, int srcy, int w, int h,
                 int dstx, int dsty, unsigned long bitPlane)
 {
+    GC_OP_VARS;
     RegionPtr rv;
-    rdpGCPtr priv;
-    GCFuncs *oldFuncs;
 
     GC_OP_PROLOGUE(pGC);
     rv = pGC->ops->CopyPlane(pSrc, pDst, pGC, srcx, srcy,

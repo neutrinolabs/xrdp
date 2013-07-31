@@ -316,15 +316,13 @@ rdpDeferredRandR(OsTimerPtr timer, CARD32 now, pointer arg)
 {
     ScreenPtr pScreen;
     rrScrPrivPtr pRRScrPriv;
-    ScrnInfoPtr pScrn;
     rdpPtr dev;
     char *envvar;
     int width;
     int height;
 
     pScreen = (ScreenPtr) arg;
-    pScrn = xf86Screens[pScreen->myNum];
-    dev = XRDPPTR(pScrn);
+    dev = rdpGetDevFromScreen(pScreen);
     LLOGLN(10, ("rdpDeferredRandR:"));
     pRRScrPriv = rrGetScrPriv(pScreen);
     if (pRRScrPriv == 0)

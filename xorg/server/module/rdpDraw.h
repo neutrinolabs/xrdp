@@ -28,14 +28,12 @@ misc draw calls
 #include <xf86.h>
 
 /******************************************************************************/
+#define GC_OP_VARS rdpPtr dev; rdpGCPtr priv; GCFuncs *oldFuncs
+
+/******************************************************************************/
 #define GC_OP_PROLOGUE(_pGC) \
 do { \
-    rdpPtr dev; \
-    ScreenPtr pScreen; \
-    ScrnInfoPtr pScrn; \
-    pScreen = (_pGC)->pScreen; \
-    pScrn = xf86Screens[pScreen->myNum]; \
-    dev = XRDPPTR(pScrn); \
+    dev = rdpGetDevFromScreen((_pGC)->pScreen); \
     priv = (rdpGCPtr)rdpGetGCPrivate(_pGC, dev->privateKeyRecGC); \
     oldFuncs = (_pGC)->funcs; \
     (_pGC)->funcs = priv->funcs; \
@@ -58,5 +56,7 @@ Bool
 rdpCloseScreen(int index, ScreenPtr pScreen);
 WindowPtr
 rdpGetRootWindowPtr(ScreenPtr pScreen);
+rdpPtr
+rdpGetDevFromScreen(ScreenPtr pScreen);
 
 #endif

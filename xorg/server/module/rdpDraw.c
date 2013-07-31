@@ -38,6 +38,7 @@ misc draw calls
 #include <mi.h>
 
 #include "rdp.h"
+#include "rdpDraw.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
@@ -47,13 +48,11 @@ misc draw calls
 void
 rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
 {
-    ScrnInfoPtr pScrn;
     ScreenPtr pScreen;
     rdpPtr dev;
 
     pScreen = pWin->drawable.pScreen;
-    pScrn = xf86Screens[pScreen->myNum];
-    dev = XRDPPTR(pScrn);
+    dev = rdpGetDevFromScreen(pScreen);
     dev->pScreen->CopyWindow = dev->CopyWindow;
     dev->pScreen->CopyWindow(pWin, ptOldOrg, pOldRegion);
     dev->pScreen->CopyWindow = rdpCopyWindow;
@@ -63,13 +62,11 @@ rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
 Bool
 rdpCloseScreen(int index, ScreenPtr pScreen)
 {
-    ScrnInfoPtr pScrn;
     rdpPtr dev;
     Bool rv;
 
     LLOGLN(0, ("rdpCloseScreen:"));
-    pScrn = xf86Screens[pScreen->myNum];
-    dev = XRDPPTR(pScrn);
+    dev = rdpGetDevFromScreen(pScreen);
     dev->pScreen->CloseScreen = dev->CloseScreen;
     rv = dev->pScreen->CloseScreen(index, pScreen);
     dev->pScreen->CloseScreen = rdpCloseScreen;
@@ -85,4 +82,16 @@ rdpGetRootWindowPtr(ScreenPtr pScreen)
 #else
     return pScreen->root;
 #endif
+}
+
+/******************************************************************************/
+rdpPtr
+rdpGetDevFromScreen(ScreenPtr pScreen)
+{
+    ScrnInfoPtr pScrn;
+    rdpPtr dev;
+
+    pScrn = xf86Screens[pScreen->myNum];
+    dev = XRDPPTR(pScrn);
+    return dev;
 }
