@@ -114,45 +114,18 @@ l_bound_by(int val, int low, int high)
 static void
 rdpEnqueueMotion(int x, int y)
 {
-    int i;
-    int n;
     int valuators[2];
-    EventListPtr rdp_events;
-    xEvent *pev;
 
-    miPointerSetPosition(g_pointer, &x, &y);
     valuators[0] = x;
     valuators[1] = y;
-
-    GetEventList(&rdp_events);
-    n = GetPointerEvents(rdp_events, g_pointer, MotionNotify, 0,
-                         POINTER_ABSOLUTE | POINTER_SCREEN,
-                         0, 2, valuators);
-
-    for (i = 0; i < n; i++)
-    {
-        pev = (rdp_events + i)->event;
-        mieqEnqueue(g_pointer, (InternalEvent *)pev);
-    }
+    xf86PostMotionEvent(g_pointer, TRUE, 0, 2, valuators);
 }
 
 /******************************************************************************/
 static void
 rdpEnqueueButton(int type, int buttons)
 {
-    int i;
-    int n;
-    EventListPtr rdp_events;
-    xEvent *pev;
-
-    i = GetEventList(&rdp_events);
-    n = GetPointerEvents(rdp_events, g_pointer, type, buttons, 0, 0, 0, 0);
-
-    for (i = 0; i < n; i++)
-    {
-        pev = (rdp_events + i)->event;
-        mieqEnqueue(g_pointer, (InternalEvent *)pev);
-    }
+    xf86PostButtonEvent(g_pointer, FALSE, buttons, type, 0, 0);
 }
 
 /******************************************************************************/
