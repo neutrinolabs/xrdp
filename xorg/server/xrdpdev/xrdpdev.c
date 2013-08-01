@@ -48,6 +48,7 @@ This is the main driver file
 #include "rdpComposite.h"
 #include "rdpGlyphs.h"
 #include "rdpPixmap.h"
+#include "rdpClientCon.h"
 
 #define XRDP_DRIVER_NAME "XRDPDEV"
 #define XRDP_NAME "XRDPDEV"
@@ -393,6 +394,19 @@ rdpDeferredRandR(OsTimerPtr timer, CARD32 now, pointer arg)
     return 0;
 }
 
+/******************************************************************************/
+static void
+rdpBlockHandler1(pointer blockData, OSTimePtr pTimeout, pointer pReadmask)
+{
+}
+
+/******************************************************************************/
+static void
+rdpWakeupHandler1(pointer blockData, int result, pointer pReadmask)
+{
+    rdpClientConCheck((ScreenPtr)blockData);
+}
+
 /*****************************************************************************/
 static Bool
 rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
@@ -517,6 +531,8 @@ rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
         dev->Glyphs = ps->Glyphs;
         ps->Glyphs = rdpGlyphs;
     }
+
+    RegisterBlockAndWakeupHandlers(rdpBlockHandler1, rdpWakeupHandler1, pScreen);
 
     g_timer = TimerSet(g_timer, 0, 10, rdpDeferredRandR, pScreen);
 

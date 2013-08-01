@@ -33,6 +33,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define PixelDPI 100
 #define PixelToMM(_size) (((_size) * 254 + (PixelDPI) * 5) / ((PixelDPI) * 10))
 
+#define RDPMIN(_val1, _val2) ((_val1) < (_val2) ? (_val1) : (_val2))
+#define RDPMAX(_val1, _val2) ((_val1) < (_val2) ? (_val2) : (_val1))
+
+/* defined in rdpClientCon.h */
+typedef struct _rdpClientCon rdpClientCon;
+
 /* move this to common header */
 struct _rdpRec
 {
@@ -73,6 +79,8 @@ struct _rdpRec
     RRGetPanningProcPtr rrGetPanning;
     RRSetPanningProcPtr rrSetPanning;
 
+    int listen_sck;
+    rdpClientCon *clientCon;
 };
 typedef struct _rdpRec rdpRec;
 typedef struct _rdpRec * rdpPtr;
