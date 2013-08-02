@@ -111,7 +111,9 @@ struct _rdpRec
     RRSetPanningProcPtr rrSetPanning;
 
     int listen_sck;
-    rdpClientCon *clientCon;
+    char uds_data[256];
+    rdpClientCon *clientConHead;
+    rdpClientCon *clientConTail;
 };
 typedef struct _rdpRec rdpRec;
 typedef struct _rdpRec * rdpPtr;

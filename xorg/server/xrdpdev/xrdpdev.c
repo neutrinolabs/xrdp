@@ -536,6 +536,11 @@ rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 
     g_timer = TimerSet(g_timer, 0, 10, rdpDeferredRandR, pScreen);
 
+    if (rdpClientConInit(dev) != 0)
+    {
+        LLOGLN(0, ("rdpScreenInit: rdpClientConInit failed"));
+    }
+
     LLOGLN(0, ("rdpScreenInit: out"));
     return TRUE;
 }

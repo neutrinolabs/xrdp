@@ -47,7 +47,24 @@ Client connection to xrdp
 static int
 rdpClientConGotConnection(ScreenPtr pScreen, rdpPtr dev)
 {
+    rdpClientCon *clientCon;
+
     LLOGLN(0, ("rdpClientConGotConnection:"));
+    clientCon = (rdpClientCon *) g_malloc(sizeof(rdpClientCon), 1);
+    make_stream(clientCon->in_s);
+    init_stream(clientCon->in_s, 8192);
+    make_stream(clientCon->out_s);
+    init_stream(clientCon->out_s, 8192 * 4 + 100);
+    if (dev->clientConTail == NULL)
+    {
+        dev->clientConHead = clientCon;
+        dev->clientConTail = clientCon;
+    }
+    else
+    {
+        dev->clientConTail->next = clientCon;
+        dev->clientConTail = clientCon;
+    }
     return 0;
 }
 
@@ -102,7 +119,7 @@ rdpClientConCheck(ScreenPtr pScreen)
         FD_SET(LTOUI32(dev->listen_sck), &rfds);
         max = RDPMAX(dev->listen_sck, max);
     }
-    clientCon = dev->clientCon;
+    clientCon = dev->clientConHead;
     while (clientCon != NULL)
     {
         if (clientCon->sck > 0)
@@ -145,7 +162,7 @@ rdpClientConCheck(ScreenPtr pScreen)
             rdpClientConGotConnection(pScreen, dev);
         }
     }
-    clientCon = dev->clientCon;
+    clientCon = dev->clientConHead;
     while (clientCon != NULL)
     {
         if (clientCon->sck > 0)
@@ -170,6 +187,48 @@ rdpClientConCheck(ScreenPtr pScreen)
             }
         }
         clientCon = clientCon->next;
+    }
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpClientConInit(rdpPtr dev)
+{
+    char text[256];
+    int i;
+
+    if (!g_directory_exist("/tmp/.xrdp"))
+    {
+        if (!g_create_dir("/tmp/.xrdp"))
+        {
+            if (!g_directory_exist("/tmp/.xrdp"))
+            {
+                LLOGLN(0, ("rdpup_init: g_create_dir failed"));
+                return 0;
+            }
+        }
+
+        g_chmod_hex("/tmp/.xrdp", 0x1777);
+    }
+
+    i = atoi(display);
+
+    if (i < 1)
+    {
+        return 0;
+    }
+    g_sprintf(dev->uds_data, "/tmp/.xrdp/xrdp_display_%s", display);
+    if (dev->listen_sck == 0)
+    {
+        dev->listen_sck = g_tcp_local_socket_stream();
+        if (g_tcp_local_bind(dev->listen_sck, dev->uds_data) != 0)
+        {
+            LLOGLN(0, ("rdpClientConInit: g_tcp_local_bind failed"));
+            return 1;
+        }
+        g_tcp_listen(dev->listen_sck);
+        AddEnabledDevice(dev->listen_sck);
     }
     return 0;
 }

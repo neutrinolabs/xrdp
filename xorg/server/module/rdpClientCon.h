@@ -29,10 +29,14 @@ struct _rdpClientCon
     int sck;
     int sckControlListener;
     int sckControl;
+    struct stream *out_s;
+    struct stream *in_s;
     struct _rdpClientCon *next;
 };
 
 int
 rdpClientConCheck(ScreenPtr pScreen);
+int
+rdpClientConInit(rdpPtr dev);
 
 #endif
