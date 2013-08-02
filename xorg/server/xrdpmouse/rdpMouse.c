@@ -43,6 +43,7 @@ xrdp mouse module
 
 #include "rdp.h"
 #include "rdpInput.h"
+#include "rdpDraw.h"
 
 /******************************************************************************/
 #define LOG_LEVEL 1
@@ -56,14 +57,6 @@ xrdp mouse module
 #define PACKAGE_VERSION_MAJOR 1
 #define PACKAGE_VERSION_MINOR 0
 #define PACKAGE_VERSION_PATCHLEVEL 0
-
-static DeviceIntPtr g_pointer = 0;
-
-static int g_cursor_x = 0;
-static int g_cursor_y = 0;
-
-static int g_old_button_mask = 0;
-static int g_button_mask = 0;
 
 /******************************************************************************/
 static void
@@ -97,67 +90,58 @@ rdpmouseCtrl(DeviceIntPtr pDevice, PtrCtrl *pCtrl)
 static int
 l_bound_by(int val, int low, int high)
 {
-    if (val > high)
-    {
-        val = high;
-    }
-
-    if (val < low)
-    {
-        val = low;
-    }
-
+    val = RDPCLAMP(val, low, high);
     return val;
 }
 
 /******************************************************************************/
 static void
-rdpEnqueueMotion(int x, int y)
+rdpEnqueueMotion(DeviceIntPtr device, int x, int y)
 {
     int valuators[2];
 
     valuators[0] = x;
     valuators[1] = y;
-    xf86PostMotionEvent(g_pointer, TRUE, 0, 2, valuators);
+    xf86PostMotionEvent(device, TRUE, 0, 2, valuators);
 }
 
 /******************************************************************************/
 static void
-rdpEnqueueButton(int type, int buttons)
+rdpEnqueueButton(DeviceIntPtr device, int type, int buttons)
 {
-    xf86PostButtonEvent(g_pointer, FALSE, buttons, type, 0, 0);
+    xf86PostButtonEvent(device, FALSE, buttons, type, 0, 0);
 }
 
 /******************************************************************************/
-void
-PtrAddEvent(int buttonMask, int x, int y)
+static void
+PtrAddEvent(rdpPointer *pointer)
 {
     int i;
     int type;
     int buttons;
 
-    rdpEnqueueMotion(x, y);
+    rdpEnqueueMotion(pointer->device, pointer->cursor_x, pointer->cursor_y);
 
     for (i = 0; i < 5; i++)
     {
-        if ((buttonMask ^ g_old_button_mask) & (1 << i))
+        if ((pointer->button_mask ^ pointer->old_button_mask) & (1 << i))
         {
-            if (buttonMask & (1 << i))
+            if (pointer->button_mask & (1 << i))
             {
                 type = ButtonPress;
                 buttons = i + 1;
-                rdpEnqueueButton(type, buttons);
+                rdpEnqueueButton(pointer->device, type, buttons);
             }
             else
             {
                 type = ButtonRelease;
                 buttons = i + 1;
-                rdpEnqueueButton(type, buttons);
+                rdpEnqueueButton(pointer->device, type, buttons);
             }
         }
     }
 
-    g_old_button_mask = buttonMask;
+    pointer->old_button_mask = pointer->button_mask;
 }
 
 /******************************************************************************/
@@ -166,56 +150,58 @@ rdpInputMouse(rdpPtr dev, int msg,
               long param1, long param2,
               long param3, long param4)
 {
-    LLOGLN(0, ("rdpInputMouse:"));
+    rdpPointer *pointer;
 
+    LLOGLN(0, ("rdpInputMouse:"));
+    pointer = &(dev->pointer);
     switch (msg)
     {
         case 100:
             /* without the minus 2, strange things happen when dragging
                past the width or height */
-            g_cursor_x = l_bound_by(param1, 0, dev->width - 2);
-            g_cursor_y = l_bound_by(param2, 0, dev->height - 2);
-            PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+            pointer->cursor_x = l_bound_by(param1, 0, dev->width - 2);
+            pointer->cursor_y = l_bound_by(param2, 0, dev->height - 2);
+            PtrAddEvent(pointer);
             break;
         case 101:
-            g_button_mask = g_button_mask & (~1);
-            PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+            pointer->button_mask = pointer->button_mask & (~1);
+            PtrAddEvent(pointer);
             break;
         case 102:
-            g_button_mask = g_button_mask | 1;
-            PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+            pointer->button_mask = pointer->button_mask | 1;
+            PtrAddEvent(pointer);
             break;
         case 103:
-            g_button_mask = g_button_mask & (~4);
-            PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+            pointer->button_mask = pointer->button_mask & (~4);
+            PtrAddEvent(pointer);
             break;
         case 104:
-            g_button_mask = g_button_mask | 4;
-            PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+            pointer->button_mask = pointer->button_mask | 4;
+            PtrAddEvent(pointer);
             break;
         case 105:
-            g_button_mask = g_button_mask & (~2);
-            PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+            pointer->button_mask = pointer->button_mask & (~2);
+            PtrAddEvent(pointer);
             break;
         case 106:
-            g_button_mask = g_button_mask | 2;
-            PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+            pointer->button_mask = pointer->button_mask | 2;
+            PtrAddEvent(pointer);
             break;
         case 107:
-            g_button_mask = g_button_mask & (~8);
-            PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+            pointer->button_mask = pointer->button_mask & (~8);
+            PtrAddEvent(pointer);
             break;
         case 108:
-            g_button_mask = g_button_mask | 8;
-            PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+            pointer->button_mask = pointer->button_mask | 8;
+            PtrAddEvent(pointer);
             break;
         case 109:
-            g_button_mask = g_button_mask & (~16);
-            PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+            pointer->button_mask = pointer->button_mask & (~16);
+            PtrAddEvent(pointer);
             break;
         case 110:
-            g_button_mask = g_button_mask | 16;
-            PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+            pointer->button_mask = pointer->button_mask | 16;
+            PtrAddEvent(pointer);
             break;
     }
     return 0;
@@ -229,6 +215,7 @@ rdpmouseControl(DeviceIntPtr device, int what)
     DevicePtr pDev;
     Atom btn_labels[6];
     Atom axes_labels[2];
+    rdpPtr dev;
 
     LLOGLN(0, ("rdpmouseControl: what %d", what));
     pDev = (DevicePtr)device;
@@ -255,7 +242,8 @@ rdpmouseControl(DeviceIntPtr device, int what)
 
             InitPointerDeviceStruct(pDev, map, 5, btn_labels, rdpmouseCtrl,
                                     GetMotionHistorySize(), 2, axes_labels);
-            g_pointer = device;
+            dev = rdpGetDevFromScreen(NULL);
+            dev->pointer.device = device;
             rdpRegisterInputCallback(1, rdpInputMouse);
             break;
         case DEVICE_ON:

@@ -35,9 +35,35 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #define RDPMIN(_val1, _val2) ((_val1) < (_val2) ? (_val1) : (_val2))
 #define RDPMAX(_val1, _val2) ((_val1) < (_val2) ? (_val2) : (_val1))
+#define RDPCLAMP(_val, _lo, _hi) \
+  (_val) < (_lo) ? (_lo) : (_val) > (_hi) ? (_hi) : (_val)
 
 /* defined in rdpClientCon.h */
 typedef struct _rdpClientCon rdpClientCon;
+
+struct _rdpPointer
+{
+    int cursor_x;
+    int cursor_y;
+    int old_button_mask;
+    int button_mask;
+    DeviceIntPtr device;
+};
+typedef struct _rdpPointer rdpPointer;
+
+struct _rdpKeyboard
+{
+    int pause_spe;
+    int ctrl_down;
+    int alt_down;
+    int shift_down;
+    int tab_down;
+    /* this is toggled every time num lock key is released, not like the
+       above *_down vars */
+    int scroll_lock_down;
+    DeviceIntPtr device;
+};
+typedef struct _rdpKeyboard rdpKeyboard;
 
 /* move this to common header */
 struct _rdpRec
@@ -63,7 +89,12 @@ struct _rdpRec
     CompositeProcPtr Composite;
     GlyphsProcPtr Glyphs;
 
+    /* keyboard and mouse */
     miPointerScreenFuncPtr pCursorFuncs;
+    /* mouse */
+    rdpPointer pointer;
+    /* keyboard */
+    rdpKeyboard keyboard;
 
     /* RandR */
     RRSetConfigProcPtr rrSetConfig;

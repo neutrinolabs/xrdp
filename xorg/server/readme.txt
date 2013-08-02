@@ -44,3 +44,6 @@ sudo mknod -m 666 /dev/vc/7 c 7 7
 ----input
       xrdpkeyb_drv.so
       xrdpmouse_drv.so
+
+dpkg -S /usr/lib/xorg/modules/extensions/libglx.so
+xserver-xorg-core

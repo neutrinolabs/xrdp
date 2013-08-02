@@ -91,7 +91,14 @@ rdpGetDevFromScreen(ScreenPtr pScreen)
     ScrnInfoPtr pScrn;
     rdpPtr dev;
 
-    pScrn = xf86Screens[pScreen->myNum];
+    if (pScreen == NULL)
+    {
+        pScrn = xf86Screens[0];
+    }
+    else
+    {
+        pScrn = xf86Screens[pScreen->myNum];
+    }
     dev = XRDPPTR(pScrn);
     return dev;
 }
