@@ -697,19 +697,19 @@ static InputDriverRec rdpkeyb =
 };
 
 /******************************************************************************/
-static void
-rdpkeybUnplug(pointer p)
-{
-    LLOGLN(0, ("rdpkeybUnplug:"));
-}
-
-/******************************************************************************/
 static pointer
 rdpkeybPlug(pointer module, pointer options, int *errmaj, int *errmin)
 {
     LLOGLN(0, ("rdpkeybPlug:"));
     xf86AddInputDriver(&rdpkeyb, module, 0);
     return module;
+}
+
+/******************************************************************************/
+static void
+rdpkeybUnplug(pointer p)
+{
+    LLOGLN(0, ("rdpkeybUnplug:"));
 }
 
 /******************************************************************************/
@@ -730,7 +730,7 @@ static XF86ModuleVersionInfo rdpkeybVersionRec =
 };
 
 /******************************************************************************/
-XF86ModuleData xrdpkeybModuleData =
+_X_EXPORT XF86ModuleData xrdpkeybModuleData =
 {
     &rdpkeybVersionRec,
     rdpkeybPlug,

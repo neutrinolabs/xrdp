@@ -38,5 +38,7 @@ int
 rdpClientConCheck(ScreenPtr pScreen);
 int
 rdpClientConInit(rdpPtr dev);
+int
+rdpClientConDeinit(rdpPtr dev);
 
 #endif

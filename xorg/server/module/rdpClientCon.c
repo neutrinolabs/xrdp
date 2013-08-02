@@ -195,7 +195,6 @@ rdpClientConCheck(ScreenPtr pScreen)
 int
 rdpClientConInit(rdpPtr dev)
 {
-    char text[256];
     int i;
 
     if (!g_directory_exist("/tmp/.xrdp"))
@@ -208,19 +207,18 @@ rdpClientConInit(rdpPtr dev)
                 return 0;
             }
         }
-
         g_chmod_hex("/tmp/.xrdp", 0x1777);
     }
-
     i = atoi(display);
-
     if (i < 1)
     {
+        LLOGLN(0, ("rdpClientConInit: can not run at display < 1"));
         return 0;
     }
     g_sprintf(dev->uds_data, "/tmp/.xrdp/xrdp_display_%s", display);
     if (dev->listen_sck == 0)
     {
+        unlink(dev->uds_data);
         dev->listen_sck = g_tcp_local_socket_stream();
         if (g_tcp_local_bind(dev->listen_sck, dev->uds_data) != 0)
         {
@@ -229,6 +227,19 @@ rdpClientConInit(rdpPtr dev)
         }
         g_tcp_listen(dev->listen_sck);
         AddEnabledDevice(dev->listen_sck);
+    }
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpClientConDeinit(rdpPtr dev)
+{
+    LLOGLN(0, ("rdpClientConDeinit:"));
+    if (dev->listen_sck != 0)
+    {
+        close(dev->listen_sck);
+        unlink(dev->uds_data);
     }
     return 0;
 }

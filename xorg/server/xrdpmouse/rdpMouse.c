@@ -331,19 +331,19 @@ static InputDriverRec rdpmouse =
 };
 
 /******************************************************************************/
-static void
-rdpmouseUnplug(pointer p)
-{
-    LLOGLN(0, ("rdpmouseUnplug:"));
-}
-
-/******************************************************************************/
 static pointer
 rdpmousePlug(pointer module, pointer options, int *errmaj, int *errmin)
 {
     LLOGLN(0, ("rdpmousePlug:"));
     xf86AddInputDriver(&rdpmouse, module, 0);
     return module;
+}
+
+/******************************************************************************/
+static void
+rdpmouseUnplug(pointer p)
+{
+    LLOGLN(0, ("rdpmouseUnplug:"));
 }
 
 /******************************************************************************/
@@ -364,7 +364,7 @@ static XF86ModuleVersionInfo rdpmouseVersionRec =
 };
 
 /******************************************************************************/
-XF86ModuleData xrdpmouseModuleData =
+_X_EXPORT XF86ModuleData xrdpmouseModuleData =
 {
     &rdpmouseVersionRec,
     rdpmousePlug,

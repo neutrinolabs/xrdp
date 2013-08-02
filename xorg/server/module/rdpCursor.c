@@ -38,6 +38,7 @@ cursor
 #include <mi.h>
 
 #include "rdp.h"
+#include "rdpMain.h"
 
 /******************************************************************************/
 #define LOG_LEVEL 1
@@ -49,7 +50,7 @@ Bool
 rdpSpriteRealizeCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs)
 {
     LLOGLN(0, ("rdpSpriteRealizeCursor:"));
-    return 1;
+    return TRUE;
 }
 
 /******************************************************************************/
@@ -57,7 +58,7 @@ Bool
 rdpSpriteUnrealizeCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs)
 {
     LLOGLN(0, ("rdpSpriteUnrealizeCursor:"));
-    return 1;
+    return TRUE;
 }
 
 /******************************************************************************/
@@ -80,7 +81,7 @@ Bool
 rdpSpriteDeviceCursorInitialize(DeviceIntPtr pDev, ScreenPtr pScr)
 {
     LLOGLN(0, ("rdpSpriteDeviceCursorInitialize:"));
-    return 1;
+    return TRUE;
 }
 
 /******************************************************************************/
@@ -88,4 +89,5 @@ void
 rdpSpriteDeviceCursorCleanup(DeviceIntPtr pDev, ScreenPtr pScr)
 {
     LLOGLN(0, ("rdpSpriteDeviceCursorCleanup:"));
+    xorgxrdpDownDown(pScr);
 }

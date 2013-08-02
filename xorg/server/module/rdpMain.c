@@ -39,6 +39,8 @@ rdp module main
 
 #include "rdp.h"
 #include "rdpInput.h"
+#include "rdpDraw.h"
+#include "rdpClientCon.h"
 
 /******************************************************************************/
 #define LOG_LEVEL 1
@@ -53,20 +55,41 @@ rdp module main
 #define PACKAGE_VERSION_MINOR 0
 #define PACKAGE_VERSION_PATCHLEVEL 0
 
-static int g_initialised = 0;
+static Bool g_initialised = FALSE;
 
 /*****************************************************************************/
 static pointer
-xorgxrdpSetup(pointer Module, pointer Options, int *ErrorMajor, int *ErrorMinor)
+xorgxrdpSetup(pointer Module, pointer Options,
+              int *ErrorMajor, int *ErrorMinor)
 {
     LLOGLN(0, ("xorgxrdpSetup:"));
     if (!g_initialised)
     {
-        g_initialised = 1;
+        g_initialised = TRUE;
     }
     rdpInputInit();
     rdpPrivateInit();
     return (pointer) 1;
+}
+
+/*****************************************************************************/
+static void
+xorgxrdpTearDown(pointer Module)
+{
+    LLOGLN(0, ("xorgxrdpTearDown:"));
+}
+
+/*****************************************************************************/
+void
+xorgxrdpDownDown(ScreenPtr pScreen)
+{
+    LLOGLN(0, ("xorgxrdpDownDown:"));
+    if (g_initialised)
+    {
+        g_initialised = FALSE;
+        LLOGLN(0, ("xorgxrdpDownDown: 1"));
+        rdpClientConDeinit(rdpGetDevFromScreen(pScreen));
+    }
 }
 
 static MODULESETUPPROTO(xorgxrdpSetup);
@@ -86,4 +109,9 @@ static XF86ModuleVersionInfo RDPVersRec =
     { 0, 0, 0, 0 }
 };
 
-XF86ModuleData xorgxrdpModuleData = { &RDPVersRec, xorgxrdpSetup, NULL };
+_X_EXPORT XF86ModuleData xorgxrdpModuleData =
+{
+    &RDPVersRec,
+    xorgxrdpSetup,
+    xorgxrdpTearDown
+};

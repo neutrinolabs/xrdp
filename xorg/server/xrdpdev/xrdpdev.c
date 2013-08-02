@@ -714,10 +714,17 @@ xrdpdevSetup(pointer module, pointer opts, int *errmaj, int *errmin)
     }
 }
 
+/*****************************************************************************/
+static void
+xrdpdevTearDown(pointer Module)
+{
+    LLOGLN(0, ("xrdpdevTearDown:"));
+}
+
 /* <drivername>ModuleData */
 _X_EXPORT XF86ModuleData xrdpdevModuleData =
 {
     &g_VersRec,
     xrdpdevSetup,
-    0
+    xrdpdevTearDown
 };
