@@ -92,6 +92,7 @@ struct xrdp_client_info
   int use_bulk_comp;
   int pointer_flags; /* 0 color, 1 new, 2 no new */
   int use_fast_path;
+  int require_credentials; /* when true, credentials *must* be passed on cmd line */
 };
 
 #endif
