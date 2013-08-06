@@ -22,7 +22,7 @@
  * this will act like pcsc daemon
  */
 
-#define PCSC_STANDIN 0
+#define PCSC_STANDIN 1
 
 #include "os_calls.h"
 #include "smartcard.h"
@@ -56,20 +56,23 @@ struct version_struct
 };
 typedef struct version_struct version_struct;
 
-typedef struct rxSharedSegment
+struct rxSharedSegment
 {
     tui32 mtype; /** one of the \c pcsc_adm_commands */
     tui32 user_id;
     tui32 group_id;
     tui32 command; /** one of the \c pcsc_msg_commands */
     tui64 date;
-    unsigned char key[PCSCLITE_MSG_KEY_LEN]; /* 16 bytes */
+    tui8 key[PCSCLITE_MSG_KEY_LEN]; /* 16 bytes */
     union _u
     {
-        unsigned char data[PCSCLITE_MAX_MESSAGE_SIZE];
+        tui8 data[PCSCLITE_MAX_MESSAGE_SIZE];
         struct version_struct veStr;
     } u;
-} sharedSegmentMsg, *psharedSegmentMsg;
+};
+typedef struct rxSharedSegment sharedSegmentMsg, *psharedSegmentMsg;
+
+#define RXSHAREDSEGMENT_BYTES 2088
 
 extern int g_display_num; /* in chansrv.c */
 
@@ -122,19 +125,35 @@ scard_pcsc_check_wait_objs(void)
 /*****************************************************************************/
 /* returns error */
 int APP_CC
+scard_process_version(psharedSegmentMsg msg)
+{
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
 scard_process_msg(struct stream *s)
 {
-    psharedSegmentMsg msg;
+    sharedSegmentMsg msg;
+    int rv;
 
+    g_memset(&msg, 0, sizeof(msg));
+    in_uint32_le(s, msg.mtype);
+    in_uint32_le(s, msg.user_id);
+    in_uint32_le(s, msg.group_id);
+    in_uint32_le(s, msg.command);
+    in_uint64_le(s, msg.date);
     LLOGLN(0, ("scard_process_msg: mtype 0x%2.2x command 0x%2.2x",
-           msg->mtype, msg->command));
-    msg = (psharedSegmentMsg)(s->p);
-    switch (msg->mtype)
+           msg.mtype, msg.command));
+    rv = 0;
+    switch (msg.mtype)
     {
         case 0xF8: /* CMD_VERSION */
+            rv = scard_process_version(&msg);
             break;
     }
-    return 0;
+    return rv;
 }
 
 /*****************************************************************************/
@@ -187,7 +206,7 @@ my_pcsc_trans_conn_in(struct trans *trans, struct trans *new_trans)
 
     g_con = new_trans;
     g_con->trans_data_in = my_pcsc_trans_data_in;
-    g_con->header_size = sizeof(sharedSegmentMsg);
+    g_con->header_size = RXSHAREDSEGMENT_BYTES;
     LLOGLN(0, ("my_pcsc_trans_conn_in: sizeof sharedSegmentMsg is %d",
            sizeof(sharedSegmentMsg)));
 
