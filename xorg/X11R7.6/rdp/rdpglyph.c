@@ -386,6 +386,10 @@ get_color(PicturePtr pPicture)
         return 0;
     }
     pi32 = pixman_image_get_data(src);
+    if (pi32 == 0)
+    {
+        return 0;
+    }
     rv = *pi32;
     LLOGLN(10, ("get_color: 0x%8.8x width %d height %d ", rv,
                 pixman_image_get_width(src),
