@@ -781,7 +781,7 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp *self)
        INPUT_FLAG_FASTPATH_INPUT2 0x0020 */
     flags = 0x0001 | 0x0004;
     if (self->client_info.use_fast_path & 2)
-        flags |= 0x0008 | 0x0020
+        flags |= 0x0008 | 0x0020;
     out_uint16_le(s, flags);
     out_uint8s(s, 82);
 

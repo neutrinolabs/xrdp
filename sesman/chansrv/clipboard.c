@@ -249,6 +249,8 @@ static int g_num_formatIds = 0;
 
 static int g_file_format_id = -1;
 
+static char g_last_atom_name[256] = "";
+
 /*****************************************************************************/
 static char* APP_CC
 get_atom_text(Atom atom)

@@ -1545,7 +1545,6 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
     }
 
     if (device_flags & 0x200) /* PTRFLAGS_WHEEL */
-            device_flags == 0x0278)
     {
         if (device_flags & 0x100) /* PTRFLAGS_WHEEL_NEGATIVE */
         {
