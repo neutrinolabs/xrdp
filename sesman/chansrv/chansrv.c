@@ -72,6 +72,8 @@ tbus g_exec_mutex;
 tbus g_exec_sem;
 int g_exec_pid = 0;
 
+#define ARRAYSIZE(x) (sizeof(x)/sizeof(*(x)))
+
 /* each time we create a DVC we need a unique DVC channel id */
 /* this variable gets bumped up once per DVC we create       */
 tui32 g_dvc_chan_id = 100;
@@ -1328,6 +1330,47 @@ read_ini(void)
 }
 
 /*****************************************************************************/
+static char* APP_CC
+get_log_path()
+{
+    char* log_path = 0;
+
+    log_path = g_getenv("CHANSRV_LOG_PATH");
+    if (log_path == 0)
+    {
+        log_path = g_getenv("HOME");
+    }
+    return log_path;
+}
+
+/*****************************************************************************/
+static unsigned int APP_CC
+get_log_level(const char* level_str, unsigned int default_level)
+{
+    static const char* levels[] = {
+        "LOG_LEVEL_ALWAYS",
+        "LOG_LEVEL_ERROR",
+        "LOG_LEVEL_WARNING",
+        "LOG_LEVEL_INFO",
+        "LOG_LEVEL_DEBUG"
+    };
+    unsigned int i;
+    
+    if (level_str == NULL || level_str[0] == 0)
+    {
+        return default_level;
+    }
+    for (i = 0; i < ARRAYSIZE(levels); ++i)
+    {
+        if (g_strcasecmp(levels[i], level_str) == 0)
+        {
+            return i;
+        }
+    }
+    return default_level;
+}
+
+/*****************************************************************************/
 static int APP_CC
 run_exec(void)
 {
@@ -1361,19 +1404,19 @@ main(int argc, char **argv)
     tbus waiters[4];
     int pid = 0;
     char text[256];
-    char *home_text;
+    char* log_path;
     char *display_text;
     char log_file[256];
     enum logReturns error;
     struct log_config logconfig;
+    unsigned int log_level;
 
     g_init("xrdp-chansrv"); /* os_calls */
 
-    home_text = g_getenv("HOME");
-
-    if (home_text == 0)
+    log_path = get_log_path();
+    if (log_path == 0)
     {
-        g_writeln("error reading HOME environment variable");
+        g_writeln("error reading CHANSRV_LOG_PATH and HOME environment variable");
         g_deinit();
         return 1;
     }
@@ -1381,10 +1424,12 @@ main(int argc, char **argv)
     read_ini();
     pid = g_getpid();
 
+    log_level = get_log_level(g_getenv("CHANSRV_LOG_LEVEL"), LOG_LEVEL_ERROR);
+    
     /* starting logging subsystem */
     g_memset(&logconfig, 0, sizeof(struct log_config));
     logconfig.program_name = "XRDP-Chansrv";
-    g_snprintf(log_file, 255, "%s/xrdp-chansrv.log", home_text);
+    g_snprintf(log_file, 255, "%s/xrdp-chansrv.log", log_path);
     g_writeln("chansrv::main: using log file [%s]", log_file);
 
     if (g_file_exist(log_file))
@@ -1394,7 +1439,7 @@ main(int argc, char **argv)
 
     logconfig.log_file = log_file;
     logconfig.fd = -1;
-    logconfig.log_level = LOG_LEVEL_ERROR;
+    logconfig.log_level = log_level;
     logconfig.enable_syslog = 0;
     logconfig.syslog_level = 0;
     error = log_start_from_param(&logconfig);

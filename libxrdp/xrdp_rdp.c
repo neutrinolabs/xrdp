@@ -590,6 +590,7 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp *self)
     int caps_size;
     int codec_caps_count;
     int codec_caps_size;
+    int flags;
     char *caps_count_ptr;
     char *caps_size_ptr;
     char *caps_ptr;
@@ -777,18 +778,16 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp *self)
     caps_count++;
     out_uint16_le(s, RDP_CAPSET_INPUT); /* 13(0xd) */
     out_uint16_le(s, RDP_CAPLEN_INPUT); /* 88(0x58) */
+
+    /* INPUT_FLAG_SCANCODES 0x0001
+       INPUT_FLAG_MOUSEX 0x0004
+       INPUT_FLAG_FASTPATH_INPUT 0x0008
+       INPUT_FLAG_FASTPATH_INPUT2 0x0020 */
+    flags = 0x0001 | 0x0004;
     if (self->client_info.use_fast_path & 2)
-    {
-        /* INPUT_FLAG_SCANCODES 0x0001
-           INPUT_FLAG_FASTPATH_INPUT 0x0008
-           INPUT_FLAG_FASTPATH_INPUT2 0x0020 */
-        out_uint8(s, 1 | 8 | 0x20);
-    }
-    else
-    {
-        out_uint8(s, 1);
-    }
-    out_uint8s(s, 83);
+        flags |= 0x0008 | 0x0020
+    out_uint16_le(s, flags);
+    out_uint8s(s, 82);
 
     /* Remote Programs Capability Set */
     caps_count++;
@@ -1320,15 +1319,16 @@ xrdp_rdp_process_data_input(struct xrdp_rdp *self, struct stream *s)
         in_uint16_le(s, device_flags);
         in_sint16_le(s, param1);
         in_sint16_le(s, param2);
-        DEBUG(("xrdp_rdp_process_data_input event %4.4x flags %4.4x param1 %d \
-param2 %d time %d", msg_type, device_flags, param1, param2, time));
+        DEBUG(("xrdp_rdp_process_data_input event %4.4x flags %4.4x param1 %d "
+               "param2 %d time %d", msg_type, device_flags, param1, param2, time));
 
         if (self->session->callback != 0)
         {
             /* msg_type can be
                RDP_INPUT_SYNCHRONIZE - 0
                RDP_INPUT_SCANCODE - 4
-               RDP_INPUT_MOUSE - 0x8001 */
+               RDP_INPUT_MOUSE - 0x8001
+               RDP_INPUT_MOUSEX - 0x8002 */
             /* call to xrdp_wm.c : callback */
             self->session->callback(self->session->id, msg_type, param1, param2,
                                     device_flags, time);

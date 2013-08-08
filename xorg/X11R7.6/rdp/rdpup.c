@@ -648,6 +648,14 @@ rdpup_send_rail(void)
     return 0;
 }
 
+#define XR_BUTTON1 1
+#define XR_BUTTON2 2
+#define XR_BUTTON3 4
+#define XR_BUTTON4 8
+#define XR_BUTTON5 16
+#define XR_BUTTON6 32
+#define XR_BUTTON7 64
+
 /******************************************************************************/
 static int
 rdpup_process_msg(struct stream *s)
@@ -689,54 +697,74 @@ rdpup_process_msg(struct stream *s)
                 g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 101:
-                g_button_mask = g_button_mask & (~1);
+            case 101: /* left button up */
+                g_button_mask = g_button_mask & (~XR_BUTTON1);
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 102:
+            case 102: /* left button down */
                 g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
                 g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
-                g_button_mask = g_button_mask | 1;
+                g_button_mask = g_button_mask | XR_BUTTON1;
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 103:
-                g_button_mask = g_button_mask & (~4);
+            case 103: /* right button up */
+                g_button_mask = g_button_mask & (~XR_BUTTON3);
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 104:
+            case 104: /* right button down */
                 g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
                 g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
-                g_button_mask = g_button_mask | 4;
+                g_button_mask = g_button_mask | XR_BUTTON3;
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 105:
-                g_button_mask = g_button_mask & (~2);
+            case 105: /* middle button down */
+                g_button_mask = g_button_mask & (~XR_BUTTON2);
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 106:
+            case 106: /* middle button up */
                 g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
                 g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
-                g_button_mask = g_button_mask | 2;
+                g_button_mask = g_button_mask | XR_BUTTON2;
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 107:
-                g_button_mask = g_button_mask & (~8);
+            case 107: /* button 4 up */
+                g_button_mask = g_button_mask & (~XR_BUTTON4);
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 108:
+            case 108: /* button 4 down */
                 g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
                 g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
-                g_button_mask = g_button_mask | 8;
+                g_button_mask = g_button_mask | XR_BUTTON4;
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 109:
-                g_button_mask = g_button_mask & (~16);
+            case 109: /* button 5 up */
+                g_button_mask = g_button_mask & (~XR_BUTTON5);
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 110:
+            case 110: /* button 5 down */
                 g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
                 g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
-                g_button_mask = g_button_mask | 16;
+                g_button_mask = g_button_mask | XR_BUTTON5;
+                PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+                break;
+            case 111: /* button 6 up */
+                g_button_mask = g_button_mask & (~XR_BUTTON6);
+                PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+                break;
+            case 112: /* button 6 down */
+                g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
+                g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
+                g_button_mask = g_button_mask | XR_BUTTON6;
+                PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+                break;
+            case 113: /* button 7 up */
+                g_button_mask = g_button_mask & (~XR_BUTTON7);
+                PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+                break;
+            case 114: /* button 7 down */
+                g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
+                g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
+                g_button_mask = g_button_mask | XR_BUTTON7;
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
             case 200:

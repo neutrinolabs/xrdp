@@ -278,6 +278,37 @@ static int g_num_formatIds = 0;
 static int g_file_format_id = -1;
 
 /*****************************************************************************/
+static char* APP_CC
+get_atom_text(Atom atom)
+{
+    char* name;
+    int failed;
+
+    failed = 0;
+    /* sanity check */
+    if ((atom < 1) || (atom > 512))
+    {
+        failed = 1;
+    }
+    if (!failed)
+    {
+        name = get_atom_text(atom);
+        if (name == 0)
+        {
+            failed = 1;
+        }
+    }
+    if (failed)
+    {
+        g_snprintf(g_last_atom_name, 255, "unknown atom 0x%8.8x", (int)atom);
+        return g_last_atom_name;
+    }
+    g_strncpy(g_last_atom_name, name, 255);
+    XFree(name);
+    return g_last_atom_name;
+}
+
+/*****************************************************************************/
 /* this is one way to get the current time from the x server */
 static Time APP_CC
 clipboard_get_server_time(void)
@@ -894,9 +925,9 @@ clipboard_provide_selection_c2s(XSelectionRequestEvent *req, Atom type)
         g_clip_c2s.type = type;
         g_clip_c2s.property = req->property;
         g_clip_c2s.window = req->requestor;
-        log_debug("clipboard_provide_selection_c2s: start INCR property %s "
-                    "type %s", XGetAtomName(g_display, req->property),
-                   XGetAtomName(g_display, type));
+        LLOGLN(10, ("clipboard_provide_selection_c2s: start INCR property %s "
+                    "type %s", get_atom_text(req->property),
+                   get_atom_text(type)));
         val1[0] = g_clip_c2s.total_bytes;
         val1[1] = 0;
         XChangeProperty(g_display, req->requestor, req->property,
@@ -1696,8 +1727,8 @@ clipboard_get_window_property(Window wnd, Atom prop, Atom *type, int *fmt,
     tui8 *lxdata;
     Atom ltype;
 
-    log_debug("clipboard_get_window_property:");
-    log_debug("  prop %d name %s", prop, XGetAtomName(g_display, prop));
+    LLOGLN(10, ("clipboard_get_window_property:"));
+    LLOGLN(10, ("  prop %d name %s", prop, get_atom_text(prop)));
     lxdata = 0;
     ltype = 0;
     XGetWindowProperty(g_display, wnd, prop, 0, 0, 0,
@@ -1837,7 +1868,7 @@ clipboard_event_selection_notify(XEvent *xevent)
     {
         log_debug("clipboard_event_selection_notify: wnd %p prop %s",
                     lxevent->requestor,
-                    XGetAtomName(g_display, lxevent->property));
+                    get_atom_text(lxevent->property)));
         rv = clipboard_get_window_property(lxevent->requestor, lxevent->property,
                                            &type, &fmt,
                                            &n_items, &data, &data_size);
@@ -1855,8 +1886,8 @@ clipboard_event_selection_notify(XEvent *xevent)
                PropertyNotify */
             log_debug("clipboard_event_selection_notify: type is INCR "
                         "data_size %d property name %s type %s", data_size,
-                        XGetAtomName(g_display, lxevent->property),
-                        XGetAtomName(g_display, lxevent->type));
+                        get_atom_text(lxevent->property),
+                        get_atom_text(lxevent->type)));
             g_clip_s2c.incr_in_progress = 1;
             g_clip_s2c.property = lxevent->property;
             g_clip_s2c.type = lxevent->target;
@@ -1882,10 +1913,10 @@ clipboard_event_selection_notify(XEvent *xevent)
                     for (index = 0; index < n_items; index++)
                     {
                         atom = atoms[index];
-                        log_debug("clipboard_event_selection_notify: %d %s %d",
-                              atom, XGetAtomName(g_display, atom), XA_STRING);
-                        log_debug("clipboard_event_selection_notify: 0x%x %s",
-                                    atom, XGetAtomName(g_display, atom));
+                        LOGM((LOG_LEVEL_DEBUG, "clipboard_event_selection_notify: %d %s %d",
+                              atom, get_atom_text(atom), XA_STRING));
+                        LLOGLN(10, ("clipboard_event_selection_notify: 0x%x %s",
+                                    atom, get_atom_text(atom)));
                         if (atom == g_utf8_atom)
                         {
                             got_utf8 = 1;
@@ -2091,7 +2122,6 @@ static int APP_CC
 clipboard_event_selection_request(XEvent *xevent)
 {
     XSelectionRequestEvent *lxev;
-    XEvent xev;
     Atom atom_buf[10];
     Atom type;
     int atom_count;
@@ -2105,8 +2135,8 @@ clipboard_event_selection_request(XEvent *xevent)
     log_debug("clipboard_event_selection_request: g_wnd %d, "
           ".requestor %d .owner %d .selection %d '%s' .target %d .property %d",
           g_wnd, lxev->requestor, lxev->owner, lxev->selection,
-          XGetAtomName(g_display, lxev->selection),
-          lxev->target, lxev->property);
+          get_atom_text(lxev->selection),
+          lxev->target, lxev->property));
 
     if (lxev->property == None)
     {
@@ -2164,8 +2194,7 @@ clipboard_event_selection_request(XEvent *xevent)
               "g_multiple_atom");
 
         xdata = 0;
-        if (clipboard_get_window_property(xev.xselection.requestor,
-                                          xev.xselection.property,
+        if (clipboard_get_window_property(lxev->requestor, lxev->property,
                                           &type, &fmt, &n_items, &xdata,
                                           &xdata_size) == 0)
         {
@@ -2234,10 +2263,10 @@ clipboard_event_selection_request(XEvent *xevent)
     }
     else
     {
-        log_debug("clipboard_event_selection_request: unknown "
-                    "target %s", XGetAtomName(g_display, lxev->target));
-        log_error("clipboard_event_selection_request: unknown "
-              "target %s", XGetAtomName(g_display, lxev->target));
+        LLOGLN(10, ("clipboard_event_selection_request: unknown "
+                    "target %s", get_atom_text(lxev->target)));
+        LOGM((LOG_LEVEL_ERROR, "clipboard_event_selection_request: unknown "
+              "target %s", get_atom_text(lxev->target)));
     }
 
     clipboard_refuse_selection(lxev);
@@ -2293,7 +2322,7 @@ clipboard_event_property_notify(XEvent *xevent)
     log_debug("clipboard_event_property_notify: PropertyNotify .window %d "
                 ".state %d .atom %d %s", xevent->xproperty.window,
                 xevent->xproperty.state, xevent->xproperty.atom,
-                XGetAtomName(g_display, xevent->xproperty.atom));
+                get_atom_text(xevent->xproperty.atom)));
 
     if (g_clip_c2s.incr_in_progress &&
             (xevent->xproperty.window == g_clip_c2s.window) &&
