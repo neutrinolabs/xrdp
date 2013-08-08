@@ -455,9 +455,9 @@ rdpMouseCtrl(DeviceIntPtr pDevice, PtrCtrl *pCtrl)
 int
 rdpMouseProc(DeviceIntPtr pDevice, int onoff)
 {
-    BYTE map[6];
+    BYTE map[8];
     DevicePtr pDev;
-    Atom btn_labels[6];
+    Atom btn_labels[8];
     Atom axes_labels[2];
 
     DEBUG_OUT_INPUT(("rdpMouseProc\n"));
@@ -473,17 +473,21 @@ rdpMouseProc(DeviceIntPtr pDevice, int onoff)
             map[3] = 3;
             map[4] = 4;
             map[5] = 5;
+            map[6] = 6;
+            map[7] = 7;
 
             btn_labels[0] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_LEFT);
             btn_labels[1] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_MIDDLE);
             btn_labels[2] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_RIGHT);
             btn_labels[3] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_WHEEL_UP);
             btn_labels[4] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_WHEEL_DOWN);
+            btn_labels[5] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_HWHEEL_LEFT);
+            btn_labels[6] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_HWHEEL_RIGHT);
 
             axes_labels[0] = XIGetKnownProperty(AXIS_LABEL_PROP_REL_X);
             axes_labels[1] = XIGetKnownProperty(AXIS_LABEL_PROP_REL_Y);
 
-            InitPointerDeviceStruct(pDev, map, 5, btn_labels, rdpMouseCtrl,
+            InitPointerDeviceStruct(pDev, map, 7, btn_labels, rdpMouseCtrl,
                                     GetMotionHistorySize(), 2, axes_labels);
 
             break;
@@ -866,7 +870,7 @@ PtrAddEvent(int buttonMask, int x, int y)
 
     rdpEnqueueMotion(x, y);
 
-    for (i = 0; i < 5; i++)
+    for (i = 0; i < 7; i++)
     {
         if ((buttonMask ^ g_old_button_mask) & (1 << i))
         {
