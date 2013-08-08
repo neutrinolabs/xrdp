@@ -69,6 +69,8 @@ static Window g_focus_win = 0;
 
 static int g_xrr_event_base = 0; /* non zero means we got extension */
 
+static Cursor g_default_cursor = 0;
+
 /* used in valid field of struct rail_window_data */
 #define RWD_X       (1 << 0)
 #define RWD_Y       (1 << 1)
