@@ -125,6 +125,13 @@ void xfuse_devredir_cb_file_close(void *vp)                                  {}
     g_writeln (_params);                                \
 }
 
+#define log_always(_params...)                          \
+{                                                       \
+    g_write("[%10.10u]: FUSE       %s: %d : ALWAYS: ",  \
+            g_time3(), __func__, __LINE__);             \
+    g_writeln (_params);                                \
+}
+
 #define log_info(_params...)                            \
 {                                                       \
     if (LOG_INFO <= LOG_LEVEL)                          \
@@ -249,6 +256,7 @@ static int  xfuse_does_file_exist(int parent, char *name);
 static int  xfuse_delete_file(int parent, char *name);
 static int  xfuse_delete_file_with_xinode(XRDP_INODE *xinode);
 static int  xfuse_delete_dir_with_xinode(XRDP_INODE *xinode);
+static int  xfuse_recursive_delete_dir_with_xinode(XRDP_INODE *xinode);
 static void xfuse_update_xrdpfs_size();
 static void xfuse_enum_dir(fuse_req_t req, fuse_ino_t ino, size_t size,
                            off_t off, struct fuse_file_info *fi);
@@ -330,6 +338,10 @@ int clipboard_request_file_data(int stream_id, int lindex, int offset,
 
 static void xfuse_cb_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
                              int to_set, struct fuse_file_info *fi);
+
+/* misc calls */
+static void xfuse_mark_as_stale(int pinode);
+static void xfuse_delete_stale_entries(int pinode);
 
 /*****************************************************************************
 **                                                                          **
@@ -1245,6 +1257,52 @@ static int xfuse_delete_dir_with_xinode(XRDP_INODE *xinode)
     return 0;
 }
 
+/**
+ * Recursively delete dir with specified inode
+ *****************************************************************************/
+
+static int xfuse_recursive_delete_dir_with_xinode(XRDP_INODE *xinode)
+{
+    XRDP_INODE *xip;
+    int         i;
+
+    /* make sure it is not a file */
+    if ((xinode == NULL) || (xinode->mode & S_IFREG))
+        return -1;
+
+    for (i = FIRST_INODE; i < g_xrdp_fs.num_entries; i++)
+    {
+        if ((xip = g_xrdp_fs.inode_table[i]) == NULL)
+            continue;
+
+        /* look for child inodes */
+        if (xip->parent_inode == xinode->inode)
+        {
+            /* got one */
+            if (xip->mode & S_IFREG)
+            {
+                /* regular file */
+                g_xrdp_fs.inode_table[xip->parent_inode]->nentries--;
+                g_xrdp_fs.inode_table[xip->inode] = NULL;
+                free(xip);
+            }
+            else
+            {
+                /* got another dir */
+                xfuse_recursive_delete_dir_with_xinode(xip);
+            }
+        }
+    }
+
+    /* our parent will have one less dir */
+    g_xrdp_fs.inode_table[xinode->parent_inode]->nentries--;
+
+    g_xrdp_fs.inode_table[xinode->inode] = NULL;
+    free(xinode);
+
+    return 0;
+}
+
 static void xfuse_update_xrdpfs_size()
 {
     void *vp;
@@ -1365,7 +1423,7 @@ void xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode)
         log_debug("inode=%d name=%s already exists in xrdp_fs; not adding it",
                   fip->inode, xinode->name);
         free(xinode);
-        xinode = xip;
+        xip->stale = 0;
         return;
     }
 
@@ -1407,8 +1465,6 @@ void xfuse_devredir_cb_enum_dir_done(void *vp, tui32 IoStatus)
         goto done;
     }
 
-    log_debug("fip->req=%p", fip->req);
-
     if (IoStatus != 0)
     {
         /* command failed */
@@ -1425,6 +1481,9 @@ void xfuse_devredir_cb_enum_dir_done(void *vp, tui32 IoStatus)
             fuse_reply_err(fip->req, EBADF);
         goto done;
     }
+
+    xfuse_delete_stale_entries(fip->inode);
+
 #if 0
     memset(&b, 0, sizeof(struct dirbuf));
 #else
@@ -1556,11 +1615,11 @@ void xfuse_devredir_cb_enum_dir_done_TODO(void *vp, tui32 IoStatus)
         e.attr_timeout = XFUSE_ATTR_TIMEOUT;
         e.entry_timeout = XFUSE_ENTRY_TIMEOUT;
         e.attr.st_ino = xinode->inode;
-		e.attr.st_mode = xinode->mode;
-		e.attr.st_nlink = xinode->nlink;
+        e.attr.st_mode = xinode->mode;
+        e.attr.st_nlink = xinode->nlink;
         e.attr.st_uid = xinode->uid;
         e.attr.st_gid = xinode->gid;
-		e.attr.st_size = xinode->size;
+        e.attr.st_size = xinode->size;
         e.attr.st_atime = xinode->atime;
         e.attr.st_mtime = xinode->mtime;
         e.attr.st_ctime = xinode->ctime;
@@ -1984,7 +2043,7 @@ static void xfuse_cb_getattr(fuse_req_t req, fuse_ino_t ino,
     xino = g_xrdp_fs.inode_table[ino];
 
     memset(&stbuf, 0, sizeof(stbuf));
-	stbuf.st_ino = ino;
+    stbuf.st_ino = ino;
     stbuf.st_mode = xino->mode;
     stbuf.st_nlink = xino->nlink;
     stbuf.st_size = xino->size;
@@ -2096,7 +2155,10 @@ static void xfuse_cb_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
 
 do_remote_lookup:
 
+    xfuse_mark_as_stale((int) ino);
+
     log_debug("did not find entry; redirecting call to dev_redir");
+
     device_id = xfuse_get_device_id_for_inode((tui32) ino, full_path);
     log_debug("dev_id=%d ino=%d full_path=%s", device_id, ino, full_path);
 
@@ -2923,6 +2985,75 @@ static void xfuse_cb_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
     st.st_ctime = xinode->ctime;
 
     fuse_reply_attr(req, &st, 1.0); /* LK_TODO just faking for now */
+}
+
+/******************************************************************************
+ *                           miscellaneous functions
+ *****************************************************************************/
+
+/**
+ * Mark all files with matching parent inode as stale
+ *
+ * @param  pinode  the parent inode
+ *****************************************************************************/
+
+static void
+xfuse_mark_as_stale(int pinode)
+{
+    int          i;
+    XRDP_INODE  *xinode;
+
+    if ((pinode < FIRST_INODE) || (pinode >=  g_xrdp_fs.num_entries))
+        return;
+
+    for (i = FIRST_INODE; i < g_xrdp_fs.num_entries; i++)
+    {
+        if ((xinode = g_xrdp_fs.inode_table[i]) == NULL)
+            continue;
+
+        /* match parent inode */
+        if (xinode->parent_inode != pinode)
+            continue;
+
+        /* got a match */
+        xinode->stale = 1;
+    }
+}
+
+/**
+ * Delete all files with matching parent inode that are marked as stale
+ *
+ * @param  pinode  the parent inode
+ *****************************************************************************/
+
+static void
+xfuse_delete_stale_entries(int pinode)
+{
+    int          i;
+    XRDP_INODE  *xinode;
+
+    if ((pinode < FIRST_INODE) || (pinode >=  g_xrdp_fs.num_entries))
+        return;
+
+    for (i = FIRST_INODE; i < g_xrdp_fs.num_entries; i++)
+    {
+        if ((xinode = g_xrdp_fs.inode_table[i]) == NULL)
+            continue;
+
+        /* match parent inode */
+        if (xinode->parent_inode != pinode)
+            continue;
+
+        /* got a match, but is it stale? */
+        if (!xinode->stale)
+            continue;
+
+        /* ok to delete */
+        if (xinode->mode & S_IFREG)
+            xfuse_delete_file_with_xinode(xinode);
+        else
+            xfuse_recursive_delete_dir_with_xinode(xinode);
+    }
 }
 
 #endif /* end else #ifndef XRDP_FUSE */

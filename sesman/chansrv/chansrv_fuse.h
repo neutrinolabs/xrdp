@@ -41,6 +41,7 @@ struct xrdp_inode
     int             lindex;            /* used in clipboard operations      */
     int             is_loc_resource;   /* this is not a redirected resource */
     int             close_in_progress; /* close cmd sent to client          */
+    int             stale;             /* mark file as stale, ok to remove  */
 };
 typedef struct xrdp_inode XRDP_INODE; // LK_TODO use this instead of using struct xrdp_inode
 
