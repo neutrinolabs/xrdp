@@ -296,6 +296,7 @@ struct _rdpPixmapRec
      then we force remote the pixmap */
   int use_count;
   int kind_width;
+  int is_scratch;
   struct rdp_draw_item* draw_item_head;
   struct rdp_draw_item* draw_item_tail;
 };

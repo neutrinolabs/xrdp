@@ -487,17 +487,6 @@ check_drawables(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
 #endif
         }
     }
-    if (rv != 0)
-    {
-        /* TODO: figure out why source XRGB does not work
-           skipping for now because they rarely happen
-           happens when drawing Firefox open file dialog, the button icons */
-        if (PIXMAN_FORMAT_A(pSrc->format) == 0)
-        {
-            rv = 0;
-            LLOGLN(10, ("check_drawables: src format"));
-        }
-    }
     if (rv == 0)
     {
         LLOGLN(10, ("check_drawables: can not remote [%s]", g_com_fail_strings[fail_reason]));

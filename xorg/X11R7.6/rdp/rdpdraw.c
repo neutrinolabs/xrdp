@@ -992,6 +992,11 @@ rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
     priv->con_number = g_con_number;
     priv->kind_width = width;
     pScreen->ModifyPixmapHeader(rv, org_width, 0, 0, 0, 0, 0);
+    if ((org_width == 0) && (height == 0))
+    {
+        LLOGLN(10, ("rdpCreatePixmap: setting is_scratch"));
+        priv->is_scratch = 1;
+    }
     return rv;
 }
 
@@ -1036,6 +1041,10 @@ xrdp_is_os(PixmapPtr pix, rdpPixmapPtr priv)
     int height;
     struct image_data id;
     
+    if (g_wrapPixmap == 0)
+    {
+        return 0;
+    }
     if (priv->status == 0)
     {
         width = pix->drawable.width;
@@ -1043,7 +1052,8 @@ xrdp_is_os(PixmapPtr pix, rdpPixmapPtr priv)
         if ((pix->usage_hint == 0) &&
             (pix->drawable.depth >= g_rdpScreen.depth) &&
             (width > 0) && (height > 0) &&
-            (priv->use_count > XRDP_USE_COUNT_THRESHOLD))
+            (priv->use_count > XRDP_USE_COUNT_THRESHOLD) &&
+            (priv->is_scratch == 0))
         {
             width = (width + 3) & ~3;
             priv->rdpindex = rdpup_add_os_bitmap(pix, priv);
@@ -1076,9 +1086,17 @@ xrdp_is_os(PixmapPtr pix, rdpPixmapPtr priv)
                 priv->use_count++;
                 return 1;
             }
+            else
+            {
+                LLOGLN(10, ("xrdp_is_os: rdpup_add_os_bitmap failed"));
+            }
         }
         priv->use_count++;
         return 0;
+    }
+    else
+    {
+        LLOGLN(10, ("xrdp_is_os: ok"));
     }
     priv->use_count++;
     return 1;
@@ -1542,4 +1560,3 @@ rdpSaveScreen(ScreenPtr pScreen, int on)
 {
     return 1;
 }
-
