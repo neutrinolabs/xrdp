@@ -46,6 +46,7 @@ xrdp_chansrv_SOURCES = \
   clipboard_file.c \
   devredir.c \
   smartcard.c \
+  smartcard_pcsc.c \
   rail.c \
   xcommon.c \
   drdynvc.c \

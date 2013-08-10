@@ -120,13 +120,15 @@ dev_redir_init(void)
     /* get a random number that will act as a unique clientID */
     if ((fd = open("/dev/urandom", O_RDONLY)))
     {
-        read(fd, u.buf, 4);
+        if (read(fd, u.buf, 4) != 4)
+        {
+        }
         close(fd);
     }
     else
     {
         /* /dev/urandom did not work - use address of struct s */
-        tui64 u64 = (tui64) &s;
+        tui64 u64 = (tui64) (tintptr) &s;
         u.clientID = (tui32) u64;
     }
 
@@ -152,6 +154,7 @@ dev_redir_init(void)
 int APP_CC
 dev_redir_deinit(void)
 {
+    scard_deinit();
     return 0;
 }
 
@@ -282,6 +285,10 @@ done:
 int APP_CC
 dev_redir_get_wait_objs(tbus *objs, int *count, int *timeout)
 {
+    if (g_is_smartcard_redir_supported)
+    {
+        return scard_get_wait_objs(objs, count, timeout);
+    }
     return 0;
 }
 
@@ -289,6 +296,10 @@ dev_redir_get_wait_objs(tbus *objs, int *count, int *timeout)
 int APP_CC
 dev_redir_check_wait_objs(void)
 {
+    if (g_is_smartcard_redir_supported)
+    {
+        return scard_check_wait_objs();
+    }
     return 0;
 }
 
@@ -619,6 +630,7 @@ void dev_redir_proc_client_core_cap_resp(struct stream *s)
             case CAP_SMARTCARD_TYPE:
                 log_debug("got CAP_SMARTCARD_TYPE");
                 g_is_smartcard_redir_supported = 1;
+                scard_init();
                 xstream_seek(s, cap_len);
                 break;
         }

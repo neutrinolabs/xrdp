@@ -26,6 +26,7 @@
 #include "log.h"
 #include "irp.h"
 #include "devredir.h"
+#include "smartcard_pcsc.h"
 
 /*
  * TODO
@@ -536,3 +537,37 @@ scard_release_resources(void)
 /**
  *
  *****************************************************************************/
+int APP_CC
+scard_get_wait_objs(tbus *objs, int *count, int *timeout)
+{
+    return scard_pcsc_get_wait_objs(objs, count, timeout);
+}
+
+/**
+ *
+ *****************************************************************************/
+int APP_CC
+scard_check_wait_objs(void)
+{
+    return scard_pcsc_check_wait_objs();
+}
+
+/**
+ *
+ *****************************************************************************/
+int APP_CC
+scard_init(void)
+{
+    log_debug("init")
+    return scard_pcsc_init();
+}
+
+/**
+ *
+ *****************************************************************************/
+int APP_CC
+scard_deinit(void)
+{
+    log_debug("deinit")
+    return scard_pcsc_deinit();
+}
