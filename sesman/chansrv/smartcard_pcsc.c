@@ -33,17 +33,45 @@
 
 #if PCSC_STANDIN
 
-#define LLOG_LEVEL 11
-#define LLOGLN(_level, _args) \
-  do \
-  { \
-    if (_level < LLOG_LEVEL) \
-    { \
-      g_write("chansrv:smartcard [%10.10u]: ", g_time3()); \
-      g_writeln _args ; \
-    } \
-  } \
-  while (0)
+/* module based logging */
+#define LOG_ERROR   0
+#define LOG_INFO    1
+#define LOG_DEBUG   2
+#define LOG_LEVEL   LOG_ERROR
+
+#define log_error(_params...)                           \
+{                                                       \
+    g_write("[%10.10u]: PCSC       %s: %d : ERROR: ",   \
+            g_time3(), __func__, __LINE__);             \
+    g_writeln (_params);                                \
+}
+
+#define log_always(_params...)                          \
+{                                                       \
+    g_write("[%10.10u]: PCSC       %s: %d : ALWAYS: ",  \
+            g_time3(), __func__, __LINE__);             \
+    g_writeln (_params);                                \
+}
+
+#define log_info(_params...)                            \
+{                                                       \
+    if (LOG_INFO <= LOG_LEVEL)                          \
+    {                                                   \
+        g_write("[%10.10u]: PCSC       %s: %d : ",      \
+                g_time3(), __func__, __LINE__);         \
+        g_writeln (_params);                            \
+    }                                                   \
+}
+
+#define log_debug(_params...)                           \
+{                                                       \
+    if (LOG_DEBUG <= LOG_LEVEL)                         \
+    {                                                   \
+        g_write("[%10.10u]: PCSC       %s: %d : ",      \
+                g_time3(), __func__, __LINE__);         \
+        g_writeln (_params);                            \
+    }                                                   \
+}
 
 #define PCSCLITE_MSG_KEY_LEN 16
 #define PCSCLITE_MAX_MESSAGE_SIZE 2048
@@ -94,7 +122,8 @@ static char g_pcsc_directory[256] = "";
 int APP_CC
 scard_pcsc_get_wait_objs(tbus *objs, int *count, int *timeout)
 {
-    LLOGLN(0, ("scard_pcsc_get_wait_objs"));
+    log_debug("scard_pcsc_get_wait_objs");
+
     if (g_lis != 0)
     {
         trans_get_wait_objs(g_lis, objs, count);
@@ -110,7 +139,8 @@ scard_pcsc_get_wait_objs(tbus *objs, int *count, int *timeout)
 int APP_CC
 scard_pcsc_check_wait_objs(void)
 {
-    LLOGLN(0, ("scard_pcsc_check_wait_objs"));
+    log_debug("scard_pcsc_check_wait_objs");
+
     if (g_lis != 0)
     {
         trans_check_wait_objs(g_lis);
@@ -144,8 +174,10 @@ scard_process_msg(struct stream *s)
     in_uint32_le(s, msg.group_id);
     in_uint32_le(s, msg.command);
     in_uint64_le(s, msg.date);
-    LLOGLN(0, ("scard_process_msg: mtype 0x%2.2x command 0x%2.2x",
-           msg.mtype, msg.command));
+
+    log_debug("scard_process_msg: mtype 0x%2.2x command 0x%2.2x",
+           msg.mtype, msg.command);
+
     rv = 0;
     switch (msg.mtype)
     {
@@ -166,7 +198,8 @@ my_pcsc_trans_data_in(struct trans *trans)
     int size;
     int error;
 
-    LLOGLN(0, ("my_pcsc_trans_data_in:"));
+    log_debug("my_pcsc_trans_data_in:");
+
     if (trans == 0)
     {
         return 0;
@@ -187,7 +220,7 @@ my_pcsc_trans_data_in(struct trans *trans)
 int DEFAULT_CC
 my_pcsc_trans_conn_in(struct trans *trans, struct trans *new_trans)
 {
-    LLOGLN(0, ("my_pcsc_trans_conn_in:"));
+    log_debug("my_pcsc_trans_conn_in:");
 
     if (trans == 0)
     {
@@ -207,8 +240,9 @@ my_pcsc_trans_conn_in(struct trans *trans, struct trans *new_trans)
     g_con = new_trans;
     g_con->trans_data_in = my_pcsc_trans_data_in;
     g_con->header_size = RXSHAREDSEGMENT_BYTES;
-    LLOGLN(0, ("my_pcsc_trans_conn_in: sizeof sharedSegmentMsg is %d",
-           sizeof(sharedSegmentMsg)));
+
+    log_debug("my_pcsc_trans_conn_in: sizeof sharedSegmentMsg is %d",
+           sizeof(sharedSegmentMsg));
 
     return 0;
 }
@@ -220,7 +254,8 @@ scard_pcsc_init(void)
     char port[256];
     int error;
 
-    LLOGLN(0, ("scard_pcsc_init:"));
+    log_debug("scard_pcsc_init:");
+
     if (g_lis == 0)
     {
         g_lis = trans_create(2, 8192, 8192);
@@ -229,12 +264,12 @@ scard_pcsc_init(void)
         {
             if (g_remove_dir(g_pcsc_directory) != 0)
             {
-                LLOGLN(0, ("scard_pcsc_init: g_remove_dir failed"));
+                log_error("scard_pcsc_init: g_remove_dir failed");
             }
         }
         if (g_create_dir(g_pcsc_directory) != 0)
         {
-            LLOGLN(0, ("scard_pcsc_init: g_create_dir failed"));
+            log_error("scard_pcsc_init: g_create_dir failed");
         }
         g_chmod_hex(g_pcsc_directory, 0x1777);
         g_snprintf(port, 255, "%s/pcscd.comm", g_pcsc_directory);
@@ -242,8 +277,8 @@ scard_pcsc_init(void)
         error = trans_listen(g_lis, port);
         if (error != 0)
         {
-            LLOGLN(0, ("scard_pcsc_init: trans_listen failed for port %s",
-                   port));
+            log_error("scard_pcsc_init: trans_listen failed for port %s",
+                   port);
             return 1;
         }
     }
@@ -254,14 +289,15 @@ scard_pcsc_init(void)
 int APP_CC
 scard_pcsc_deinit(void)
 {
-    LLOGLN(0, ("scard_pcsc_deinit:"));
+    log_debug("scard_pcsc_deinit:");
+
     if (g_lis != 0)
     {
         trans_delete(g_lis);
         g_lis = 0;
         if (g_remove_dir(g_pcsc_directory) != 0)
         {
-            LLOGLN(0, ("scard_pcsc_deinit: g_remove_dir failed"));
+            log_error("scard_pcsc_deinit: g_remove_dir failed");
         }
         g_pcsc_directory[0] = 0;
     }

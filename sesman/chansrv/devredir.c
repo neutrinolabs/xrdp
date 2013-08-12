@@ -1005,7 +1005,7 @@ dev_redir_get_dir_listing(void *fusep, tui32 device_id, char *path)
 {
     tui32  DesiredAccess;
     tui32  CreateOptions;
-    tui32 CreateDisposition;
+    tui32  CreateDisposition;
     int    rval;
     IRP   *irp;
 
