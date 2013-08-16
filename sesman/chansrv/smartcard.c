@@ -26,6 +26,7 @@
 #include "log.h"
 #include "irp.h"
 #include "devredir.h"
+#include "smartcard_pcsc.h"
 
 /*
  * TODO
@@ -147,7 +148,8 @@ static void scard_release_resources(void);
 **                          non static functions                             **
 ******************************************************************************/
 
-void scard_device_announce(tui32 device_id)
+void APP_CC
+scard_device_announce(tui32 device_id)
 {
     IRP *irp;
 
@@ -187,9 +189,10 @@ void scard_device_announce(tui32 device_id)
 **                       callbacks into this module                          **
 ******************************************************************************/
 
-void scard_handle_EstablishContext_Return(struct stream *s, IRP *irp,
-                                          tui32 DeviceId, tui32 CompletionId,
-                                          tui32 IoStatus)
+void APP_CC
+scard_handle_EstablishContext_Return(struct stream *s, IRP *irp,
+                                     tui32 DeviceId, tui32 CompletionId,
+                                     tui32 IoStatus)
 {
     tui32      len;
     int        tmp;
@@ -243,9 +246,10 @@ void scard_handle_EstablishContext_Return(struct stream *s, IRP *irp,
     log_debug("leaving");
 }
 
-void scard_handle_ListReaders_Return(struct stream *s, IRP *irp,
-                                     tui32 DeviceId, tui32 CompletionId,
-                                     tui32 IoStatus)
+void APP_CC
+scard_handle_ListReaders_Return(struct stream *s, IRP *irp,
+                                tui32 DeviceId, tui32 CompletionId,
+                                tui32 IoStatus)
 {
     tui32 len;
 
@@ -283,7 +287,8 @@ void scard_handle_ListReaders_Return(struct stream *s, IRP *irp,
  *
  *****************************************************************************/
 
-static void scard_send_EstablishContext(IRP *irp)
+static void APP_CC
+scard_send_EstablishContext(IRP *irp)
 {
     struct stream *s;
     int            bytes;
@@ -311,7 +316,8 @@ static void scard_send_EstablishContext(IRP *irp)
  *
  *****************************************************************************/
 
-static void scard_send_ListReaders(IRP *irp, int wide)
+static void APP_CC
+scard_send_ListReaders(IRP *irp, int wide)
 {
     /* see [MS-RDPESC] 2.2.2.4 */
 
@@ -405,7 +411,8 @@ static void scard_send_ListReaders(IRP *irp, int wide)
  * @return stream with IOCTL inserted in it, NULL on error
  *****************************************************************************/
 
-static struct stream *scard_make_new_ioctl(IRP *irp, tui32 ioctl)
+static struct stream * APP_CC
+scard_make_new_ioctl(IRP *irp, tui32 ioctl)
 {
     /*
      * format of device control request
@@ -462,7 +469,8 @@ static struct stream *scard_make_new_ioctl(IRP *irp, tui32 ioctl)
  * @return index into smartcards[] on success, -1 on failure
  *****************************************************************************/
 
-static int scard_add_new_device(tui32 device_id)
+static int APP_CC
+scard_add_new_device(tui32 device_id)
 {
     int        index;
     SMARTCARD *sc;
@@ -485,10 +493,12 @@ static int scard_add_new_device(tui32 device_id)
 /**
  * Find first unused entry in smartcards
  *
- * @return index of first unused entry in smartcards or -1 if smartcards is full
+ * @return index of first unused entry in smartcards or -1 if smartcards
+ * is full
  *****************************************************************************/
 
-static int scard_get_free_slot(void)
+static int APP_CC
+scard_get_free_slot(void)
 {
     int i;
 
@@ -509,7 +519,8 @@ static int scard_get_free_slot(void)
  * Release resources prior to shutting down
  *****************************************************************************/
 
-static void scard_release_resources(void)
+static void APP_CC
+scard_release_resources(void)
 {
     int i;
 
@@ -526,3 +537,37 @@ static void scard_release_resources(void)
 /**
  *
  *****************************************************************************/
+int APP_CC
+scard_get_wait_objs(tbus *objs, int *count, int *timeout)
+{
+    return scard_pcsc_get_wait_objs(objs, count, timeout);
+}
+
+/**
+ *
+ *****************************************************************************/
+int APP_CC
+scard_check_wait_objs(void)
+{
+    return scard_pcsc_check_wait_objs();
+}
+
+/**
+ *
+ *****************************************************************************/
+int APP_CC
+scard_init(void)
+{
+    log_debug("init")
+    return scard_pcsc_init();
+}
+
+/**
+ *
+ *****************************************************************************/
+int APP_CC
+scard_deinit(void)
+{
+    log_debug("deinit")
+    return scard_pcsc_deinit();
+}

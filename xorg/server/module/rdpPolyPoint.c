@@ -19,6 +19,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+/* this should be before all X11 .h files */
+#include <xorg-server.h>
+
+/* all driver need this */
+#include <xf86.h>
+#include <xf86_OSproc.h>
+
 #include "rdp.h"
 #include "rdpDraw.h"
 
@@ -31,8 +42,7 @@ void
 rdpPolyPointOrg(DrawablePtr pDrawable, GCPtr pGC, int mode,
                 int npt, DDXPointPtr in_pts)
 {
-    rdpGCPtr priv;
-    GCFuncs *oldFuncs;
+    GC_OP_VARS;
 
     GC_OP_PROLOGUE(pGC);
     pGC->ops->PolyPoint(pDrawable, pGC, mode, npt, in_pts);

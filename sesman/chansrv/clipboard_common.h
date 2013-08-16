@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2012
+ * Copyright (C) Jay Sorg 2012-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -127,9 +127,7 @@ struct clip_file_desc /* CLIPRDR_FILEDESCRIPTOR */
     char cFileName[256];
 };
 
-int APP_CC
-clipboard_out_unicode(struct stream *s, char *text, int num_chars);
-int APP_CC
-clipboard_in_unicode(struct stream *s, char *text, int *num_chars);
+int APP_CC clipboard_out_unicode(struct stream *s, char *text, int num_chars);
+int APP_CC clipboard_in_unicode(struct stream *s, char *text, int *num_chars);
 
 #endif

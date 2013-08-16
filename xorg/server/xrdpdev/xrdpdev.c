@@ -47,6 +47,8 @@ This is the main driver file
 #include "rdpMisc.h"
 #include "rdpComposite.h"
 #include "rdpGlyphs.h"
+#include "rdpPixmap.h"
+#include "rdpClientCon.h"
 
 #define XRDP_DRIVER_NAME "XRDPDEV"
 #define XRDP_NAME "XRDPDEV"
@@ -151,8 +153,6 @@ rdpPreInit(ScrnInfoPtr pScrn, int flags)
     {
         return FALSE;
     }
-
-    rdpPrivateInit();
 
     rdpAllocRec(pScrn);
     dev = XRDPPTR(pScrn);
@@ -305,7 +305,7 @@ rdpResizeSession(rdpPtr dev, int width, int height)
     {
         LLOGLN(0, ("  calling RRScreenSizeSet"));
         ok = RRScreenSizeSet(dev->pScreen, width, height, mmwidth, mmheight);
-        LLOGLN(0, ("  RRScreenSizeSet ok=[%d]", ok));
+        LLOGLN(0, ("  RRScreenSizeSet ok %d", ok));
     }
     return ok;
 }
@@ -317,15 +317,13 @@ rdpDeferredRandR(OsTimerPtr timer, CARD32 now, pointer arg)
 {
     ScreenPtr pScreen;
     rrScrPrivPtr pRRScrPriv;
-    ScrnInfoPtr pScrn;
     rdpPtr dev;
     char *envvar;
     int width;
     int height;
 
     pScreen = (ScreenPtr) arg;
-    pScrn = xf86Screens[pScreen->myNum];
-    dev = XRDPPTR(pScrn);
+    dev = rdpGetDevFromScreen(pScreen);
     LLOGLN(10, ("rdpDeferredRandR:"));
     pRRScrPriv = rrGetScrPriv(pScreen);
     if (pRRScrPriv == 0)
@@ -396,6 +394,19 @@ rdpDeferredRandR(OsTimerPtr timer, CARD32 now, pointer arg)
     return 0;
 }
 
+/******************************************************************************/
+static void
+rdpBlockHandler1(pointer blockData, OSTimePtr pTimeout, pointer pReadmask)
+{
+}
+
+/******************************************************************************/
+static void
+rdpWakeupHandler1(pointer blockData, int result, pointer pReadmask)
+{
+    rdpClientConCheck((ScreenPtr)blockData);
+}
+
 /*****************************************************************************/
 static Bool
 rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
@@ -413,7 +424,7 @@ rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 
     miClearVisualTypes();
     miSetVisualTypes(pScrn->depth, miGetDefaultVisualMask(pScrn->depth),
-                    pScrn->rgbBits, TrueColor);
+                     pScrn->rgbBits, TrueColor);
     miSetPixmapDepths();
     LLOGLN(0, ("rdpScreenInit: virtualX %d virtualY %d rgbBits %d depth %d",
            pScrn->virtualX, pScrn->virtualY, pScrn->rgbBits, pScrn->depth));
@@ -521,7 +532,14 @@ rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
         ps->Glyphs = rdpGlyphs;
     }
 
+    RegisterBlockAndWakeupHandlers(rdpBlockHandler1, rdpWakeupHandler1, pScreen);
+
     g_timer = TimerSet(g_timer, 0, 10, rdpDeferredRandR, pScreen);
+
+    if (rdpClientConInit(dev) != 0)
+    {
+        LLOGLN(0, ("rdpScreenInit: rdpClientConInit failed"));
+    }
 
     LLOGLN(0, ("rdpScreenInit: out"));
     return TRUE;
@@ -696,10 +714,17 @@ xrdpdevSetup(pointer module, pointer opts, int *errmaj, int *errmin)
     }
 }
 
+/*****************************************************************************/
+static void
+xrdpdevTearDown(pointer Module)
+{
+    LLOGLN(0, ("xrdpdevTearDown:"));
+}
+
 /* <drivername>ModuleData */
 _X_EXPORT XF86ModuleData xrdpdevModuleData =
 {
     &g_VersRec,
     xrdpdevSetup,
-    0
+    xrdpdevTearDown
 };

@@ -184,6 +184,31 @@ struct stream
 #endif
 
 /******************************************************************************/
+#if defined(B_ENDIAN) || defined(NEED_ALIGN)
+#define in_uint64_le(s, v) do \
+{ \
+  (v) = (tui64) \
+    ( \
+      (((tui64)(*((unsigned char*)((s)->p + 0)))) << 0) | \
+      (((tui64)(*((unsigned char*)((s)->p + 1)))) << 8) | \
+      (((tui64)(*((unsigned char*)((s)->p + 2)))) << 16) | \
+      (((tui64)(*((unsigned char*)((s)->p + 3)))) << 24) | \
+      (((tui64)(*((unsigned char*)((s)->p + 4)))) << 32) | \
+      (((tui64)(*((unsigned char*)((s)->p + 5)))) << 40) | \
+      (((tui64)(*((unsigned char*)((s)->p + 6)))) << 48) | \
+      (((tui64)(*((unsigned char*)((s)->p + 7)))) << 56) \
+    ); \
+  (s)->p += 8; \
+} while (0)
+#else
+#define in_uint64_le(s, v) do \
+{ \
+  (v) = *((tui64*)((s)->p)); \
+  (s)->p += 8; \
+} while (0)
+#endif
+
+/******************************************************************************/
 #define in_uint32_be(s, v) do \
 { \
   (v) = *((unsigned char*)((s)->p)); \

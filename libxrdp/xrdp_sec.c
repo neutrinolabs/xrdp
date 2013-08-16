@@ -451,6 +451,8 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
     else
     {
         in_uint8s(s, len_password + 2);
+        if (self->rdp_layer->client_info.require_credentials)
+            return 1; /* credentials on cmd line is mandatory */
     }
 
     unicode_in(s, len_program, self->rdp_layer->client_info.program, 255);
