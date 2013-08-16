@@ -375,7 +375,7 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
     WindowPtr pDstWnd;
     WindowPtr pSrcWnd;
 
-    LLOGLN(10, ("rdpCopyArea:"));
+    LLOGLN(10, ("rdpCopyArea: x %d y %d w %d h %d", dstx, dsty, w, h));
 
     if (pSrc->type == DRAWABLE_WINDOW)
     {
@@ -415,6 +415,10 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
                         return rdpCopyAreaWndToPixmap(pSrcWnd, pDstPixmap, pDstPriv, pGC,
                                                       srcx, srcy, w, h, dstx, dsty);
                     }
+                }
+                else
+                {
+                    LLOGLN(10, ("rdpCopyArea: 1"));
                 }
             }
         }
@@ -456,7 +460,15 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
                                                          dstx, dsty);
                     }
                 }
+                else
+                {
+                    LLOGLN(10, ("rdpCopyArea: 4"));
+                }
             }
+        }
+        else
+        {
+            LLOGLN(10, ("rdpCopyArea: 2"));
         }
     }
 
@@ -493,6 +505,10 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
                 got_id = 1;
             }
         }
+        else
+        {
+            LLOGLN(10, ("rdpCopyArea: 3"));
+        }
     }
     else
     {
@@ -506,7 +522,7 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
 
                 if (g_do_dirty_ons)
                 {
-                    LLOGLN(0, ("rdpCopyArea: gettig dirty"));
+                    LLOGLN(10, ("rdpCopyArea: gettig dirty"));
                     g_screenPriv.is_dirty = 1;
                     pDirtyPriv = &g_screenPriv;
                     dirty_type = RDI_IMGLL;
@@ -537,7 +553,7 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
             box.x2 = box.x1 + w;
             box.y2 = box.y1 + h;
             RegionInit(&reg1, &box, 0);
-            draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type);
+            draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type, 1);
             RegionUninit(&reg1);
         }
         else if (got_id)
@@ -561,7 +577,7 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
                 box.y2 = box.y1 + h;
                 RegionInit(&box_reg, &box, 0);
                 RegionIntersect(&clip_reg, &clip_reg, &box_reg);
-                draw_item_add_img_region(pDirtyPriv, &clip_reg, GXcopy, dirty_type);
+                draw_item_add_img_region(pDirtyPriv, &clip_reg, GXcopy, dirty_type, 1);
                 RegionUninit(&box_reg);
             }
             else if (got_id)

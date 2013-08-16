@@ -19,6 +19,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+/* this should be before all X11 .h files */
+#include <xorg-server.h>
+
+/* all driver need this */
+#include <xf86.h>
+#include <xf86_OSproc.h>
+
 #include "rdp.h"
 #include "rdpDraw.h"
 
@@ -31,8 +42,7 @@ void
 rdpImageText8Org(DrawablePtr pDrawable, GCPtr pGC,
                  int x, int y, int count, char *chars)
 {
-    rdpGCPtr priv;
-    GCFuncs *oldFuncs;
+    GC_OP_VARS;
 
     GC_OP_PROLOGUE(pGC);
     pGC->ops->ImageText8(pDrawable, pGC, x, y, count, chars);

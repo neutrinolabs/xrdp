@@ -57,7 +57,7 @@ struct xrdp_api_data
 int APP_CC send_channel_data(int chan_id, char *data, int size);
 int APP_CC main_cleanup(void);
 int APP_CC find_empty_slot_in_dvc_channels();
-struct xrdp_api_data *APP_CC struct_from_dvc_chan_id(tui32 dvc_chan_id);
+struct xrdp_api_data * APP_CC struct_from_dvc_chan_id(tui32 dvc_chan_id);
 int remove_struct_with_chan_id(tui32 dvc_chan_id);
 
 #define LOG_LEVEL 5

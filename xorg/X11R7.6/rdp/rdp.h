@@ -258,7 +258,7 @@ struct _rdpPixmapRec
   int rdpindex;
   int con_number;
   int is_dirty;
-  int pad0;
+  int is_scratch;
   int kind_width;
   struct rdp_draw_item* draw_item_head;
   struct rdp_draw_item* draw_item_tail;
@@ -341,7 +341,7 @@ int
 draw_item_pack(PixmapPtr pix, rdpPixmapRec* priv);
 int
 draw_item_add_img_region(rdpPixmapRec* priv, RegionPtr reg, int opcode,
-                         int type);
+                         int type, int code);
 int
 draw_item_add_fill_region(rdpPixmapRec* priv, RegionPtr reg, int color,
                           int opcode);

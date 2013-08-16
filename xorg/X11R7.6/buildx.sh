@@ -33,113 +33,14 @@ download_file()
         return 0
     fi
 
-    echo "downloading file $file"
+    echo "downloading file $download_url/$file"
 
     cd downloads
 
-    if [ "$file" = "libpthread-stubs-0.3.tar.bz2" ]; then
-        wget -cq http://xcb.freedesktop.org/dist/$file
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "libxcb-1.7.tar.bz2" ]; then
-        wget -cq http://xcb.freedesktop.org/dist/$file
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "xcb-proto-1.6.tar.bz2" ]; then
-        wget -cq http://xcb.freedesktop.org/dist/$file
-        status=$?
-        cd ..
-        return $status
-# note pixman updated
-    elif [ "$file" = "pixman-0.30.0.tar.bz2" ]; then
-        wget -cq http://xorg.freedesktop.org/archive/individual/lib/$file
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "libdrm-2.4.26.tar.bz2" ]; then
-        wget -cq http://dri.freedesktop.org/libdrm/$file
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "MesaLib-7.10.3.tar.bz2" ]; then
-        wget -cq ftp://ftp.freedesktop.org/pub/mesa/7.10.3/$file
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "expat-2.0.1.tar.gz" ]; then
-        wget -cq http://server1.xrdp.org/xrdp/expat-2.0.1.tar.gz
-
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "freetype-2.4.6.tar.bz2" ]; then
-        wget -cq http://download.savannah.gnu.org/releases/freetype/freetype-2.4.6.tar.bz2
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "xkeyboard-config-2.0.tar.bz2" ]; then
-        wget -cq http://www.x.org/releases/individual/data/xkeyboard-config/xkeyboard-config-2.0.tar.bz2
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "makedepend-1.0.3.tar.bz2" ]; then
-        wget -cq http://xorg.freedesktop.org/releases/individual/util/makedepend-1.0.3.tar.bz2
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "libxml2-sources-2.7.8.tar.gz" ]; then
-        wget -cq ftp://ftp.xmlsoft.org/libxml2/libxml2-sources-2.7.8.tar.gz
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "Python-2.5.tar.bz2" ]; then
-        wget -cq http://www.python.org/ftp/python/2.5/Python-2.5.tar.bz2
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "Python-2.7.tar.bz2" ]; then
-        wget -cq http://www.python.org/ftp/python/2.7/Python-2.7.tar.bz2
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "expat-2.0.1.tar.gz" ]; then
-        wget -cq http://server1.xrdp.org/xrdp/expat-2.0.1.tar.gz
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "cairo-1.8.8.tar.gz" ]; then
-        wget -cq http://server1.xrdp.org/xrdp/cairo-1.8.8.tar.gz
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "libpng-1.2.46.tar.gz" ]; then
-        wget -cq http://server1.xrdp.org/xrdp/libpng-1.2.46.tar.gz
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "intltool-0.41.1.tar.gz" ]; then
-        wget -cq http://launchpad.net/intltool/trunk/0.41.1/+download/intltool-0.41.1.tar.gz
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "libxslt-1.1.26.tar.gz" ]; then
-        wget -cq ftp://xmlsoft.org/libxslt/libxslt-1.1.26.tar.gz
-        status=$?
-        cd ..
-        return $status
-    elif [ "$file" = "fontconfig-2.8.0.tar.gz" ]; then
-        wget -cq http://server1.xrdp.org/xrdp/fontconfig-2.8.0.tar.gz
-        status=$?
-        cd ..
-        return $status
-    else
-        wget -cq $download_url/$file
-        status=$?
-        cd ..
-        return $status
-    fi
+    wget -cq $download_url/$file
+    status=$?
+    cd ..
+    return $status
 }
 
 remove_modules()
@@ -285,7 +186,9 @@ make_it()
 data_file=x11_file_list.txt
 
 # this is the default download location for most modules
-download_url=http://www.x.org/releases/X11R7.6/src/everything
+# changed now to server1.xrdp.org
+# was www.x.org/releases/X11R7.6/src/everything
+download_url=http://server1.xrdp.org/xrdp/X11R7.6
 
 num_modules=`cat $data_file | wc -l`
 count=0

@@ -42,6 +42,8 @@ xrdp mouse module
 #include <xserver-properties.h>
 
 #include "rdp.h"
+#include "rdpInput.h"
+#include "rdpDraw.h"
 
 /******************************************************************************/
 #define LOG_LEVEL 1
@@ -86,12 +88,134 @@ rdpmouseCtrl(DeviceIntPtr pDevice, PtrCtrl *pCtrl)
 
 /******************************************************************************/
 static int
+l_bound_by(int val, int low, int high)
+{
+    val = RDPCLAMP(val, low, high);
+    return val;
+}
+
+/******************************************************************************/
+static void
+rdpEnqueueMotion(DeviceIntPtr device, int x, int y)
+{
+    int valuators[2];
+
+    valuators[0] = x;
+    valuators[1] = y;
+    xf86PostMotionEvent(device, TRUE, 0, 2, valuators);
+}
+
+/******************************************************************************/
+static void
+rdpEnqueueButton(DeviceIntPtr device, int type, int buttons)
+{
+    xf86PostButtonEvent(device, FALSE, buttons, type, 0, 0);
+}
+
+/******************************************************************************/
+static void
+PtrAddEvent(rdpPointer *pointer)
+{
+    int i;
+    int type;
+    int buttons;
+
+    rdpEnqueueMotion(pointer->device, pointer->cursor_x, pointer->cursor_y);
+
+    for (i = 0; i < 5; i++)
+    {
+        if ((pointer->button_mask ^ pointer->old_button_mask) & (1 << i))
+        {
+            if (pointer->button_mask & (1 << i))
+            {
+                type = ButtonPress;
+                buttons = i + 1;
+                rdpEnqueueButton(pointer->device, type, buttons);
+            }
+            else
+            {
+                type = ButtonRelease;
+                buttons = i + 1;
+                rdpEnqueueButton(pointer->device, type, buttons);
+            }
+        }
+    }
+
+    pointer->old_button_mask = pointer->button_mask;
+}
+
+/******************************************************************************/
+static int
+rdpInputMouse(rdpPtr dev, int msg,
+              long param1, long param2,
+              long param3, long param4)
+{
+    rdpPointer *pointer;
+
+    LLOGLN(0, ("rdpInputMouse:"));
+    pointer = &(dev->pointer);
+    switch (msg)
+    {
+        case 100:
+            /* without the minus 2, strange things happen when dragging
+               past the width or height */
+            pointer->cursor_x = l_bound_by(param1, 0, dev->width - 2);
+            pointer->cursor_y = l_bound_by(param2, 0, dev->height - 2);
+            PtrAddEvent(pointer);
+            break;
+        case 101:
+            pointer->button_mask = pointer->button_mask & (~1);
+            PtrAddEvent(pointer);
+            break;
+        case 102:
+            pointer->button_mask = pointer->button_mask | 1;
+            PtrAddEvent(pointer);
+            break;
+        case 103:
+            pointer->button_mask = pointer->button_mask & (~4);
+            PtrAddEvent(pointer);
+            break;
+        case 104:
+            pointer->button_mask = pointer->button_mask | 4;
+            PtrAddEvent(pointer);
+            break;
+        case 105:
+            pointer->button_mask = pointer->button_mask & (~2);
+            PtrAddEvent(pointer);
+            break;
+        case 106:
+            pointer->button_mask = pointer->button_mask | 2;
+            PtrAddEvent(pointer);
+            break;
+        case 107:
+            pointer->button_mask = pointer->button_mask & (~8);
+            PtrAddEvent(pointer);
+            break;
+        case 108:
+            pointer->button_mask = pointer->button_mask | 8;
+            PtrAddEvent(pointer);
+            break;
+        case 109:
+            pointer->button_mask = pointer->button_mask & (~16);
+            PtrAddEvent(pointer);
+            break;
+        case 110:
+            pointer->button_mask = pointer->button_mask | 16;
+            PtrAddEvent(pointer);
+            break;
+    }
+    return 0;
+}
+
+/******************************************************************************/
+static int
 rdpmouseControl(DeviceIntPtr device, int what)
 {
     BYTE map[6];
     DevicePtr pDev;
     Atom btn_labels[6];
     Atom axes_labels[2];
+    rdpPtr dev;
 
     LLOGLN(0, ("rdpmouseControl: what %d", what));
     pDev = (DevicePtr)device;
@@ -118,7 +242,9 @@ rdpmouseControl(DeviceIntPtr device, int what)
 
             InitPointerDeviceStruct(pDev, map, 5, btn_labels, rdpmouseCtrl,
                                     GetMotionHistorySize(), 2, axes_labels);
-
+            dev = rdpGetDevFromScreen(NULL);
+            dev->pointer.device = device;
+            rdpRegisterInputCallback(1, rdpInputMouse);
             break;
         case DEVICE_ON:
             pDev->on = 1;
@@ -205,19 +331,19 @@ static InputDriverRec rdpmouse =
 };
 
 /******************************************************************************/
-static void
-rdpmouseUnplug(pointer p)
-{
-    LLOGLN(0, ("rdpmouseUnplug:"));
-}
-
-/******************************************************************************/
 static pointer
 rdpmousePlug(pointer module, pointer options, int *errmaj, int *errmin)
 {
     LLOGLN(0, ("rdpmousePlug:"));
     xf86AddInputDriver(&rdpmouse, module, 0);
     return module;
+}
+
+/******************************************************************************/
+static void
+rdpmouseUnplug(pointer p)
+{
+    LLOGLN(0, ("rdpmouseUnplug:"));
 }
 
 /******************************************************************************/
@@ -238,7 +364,7 @@ static XF86ModuleVersionInfo rdpmouseVersionRec =
 };
 
 /******************************************************************************/
-XF86ModuleData xrdpmouseModuleData =
+_X_EXPORT XF86ModuleData xrdpmouseModuleData =
 {
     &rdpmouseVersionRec,
     rdpmousePlug,

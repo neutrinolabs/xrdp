@@ -58,6 +58,7 @@ GC related calls
 #include "rdpImageGlyphBlt.h"
 #include "rdpPolyGlyphBlt.h"
 #include "rdpPushPixels.h"
+#include "rdpDraw.h"
 
 /******************************************************************************/
 #define LOG_LEVEL 1
@@ -65,14 +66,12 @@ GC related calls
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
 /******************************************************************************/
+#define GC_FUNC_VARS rdpPtr dev; rdpGCPtr priv;
+
+/******************************************************************************/
 #define GC_FUNC_PROLOGUE(_pGC) \
     do { \
-        rdpPtr dev; \
-        ScreenPtr pScreen; \
-        ScrnInfoPtr pScrn; \
-        pScreen = _pGC->pScreen; \
-        pScrn = xf86Screens[pScreen->myNum]; \
-        dev = XRDPPTR(pScrn); \
+        dev = rdpGetDevFromScreen((_pGC)->pScreen); \
         priv = (rdpGCPtr)rdpGetGCPrivate(_pGC, dev->privateKeyRecGC); \
         (_pGC)->funcs = priv->funcs; \
         if (priv->ops != 0) \
@@ -127,7 +126,7 @@ GCOps g_rdpGCOps =
 static void
 rdpValidateGC(GCPtr pGC, unsigned long changes, DrawablePtr d)
 {
-    rdpGCRec *priv;
+    GC_FUNC_VARS;
 
     LLOGLN(10, ("rdpValidateGC:"));
     GC_FUNC_PROLOGUE(pGC);
@@ -140,7 +139,7 @@ rdpValidateGC(GCPtr pGC, unsigned long changes, DrawablePtr d)
 static void
 rdpChangeGC(GCPtr pGC, unsigned long mask)
 {
-    rdpGCRec *priv;
+    GC_FUNC_VARS;
 
     LLOGLN(10, ("rdpChangeGC:"));
     GC_FUNC_PROLOGUE(pGC);
@@ -152,7 +151,7 @@ rdpChangeGC(GCPtr pGC, unsigned long mask)
 static void
 rdpCopyGC(GCPtr src, unsigned long mask, GCPtr dst)
 {
-    rdpGCRec *priv;
+    GC_FUNC_VARS;
 
     LLOGLN(10, ("rdpCopyGC:"));
     GC_FUNC_PROLOGUE(dst);
@@ -164,7 +163,7 @@ rdpCopyGC(GCPtr src, unsigned long mask, GCPtr dst)
 static void
 rdpDestroyGC(GCPtr pGC)
 {
-    rdpGCRec *priv;
+    GC_FUNC_VARS;
 
     LLOGLN(10, ("rdpDestroyGC:"));
     GC_FUNC_PROLOGUE(pGC);
@@ -176,7 +175,7 @@ rdpDestroyGC(GCPtr pGC)
 static void
 rdpChangeClip(GCPtr pGC, int type, pointer pValue, int nrects)
 {
-    rdpGCRec *priv;
+    GC_FUNC_VARS;
 
     LLOGLN(10, ("rdpChangeClip:"));
     GC_FUNC_PROLOGUE(pGC);
@@ -188,7 +187,7 @@ rdpChangeClip(GCPtr pGC, int type, pointer pValue, int nrects)
 static void
 rdpDestroyClip(GCPtr pGC)
 {
-    rdpGCRec *priv;
+    GC_FUNC_VARS;
 
     LLOGLN(10, ("rdpDestroyClip:"));
     GC_FUNC_PROLOGUE(pGC);
@@ -200,7 +199,7 @@ rdpDestroyClip(GCPtr pGC)
 static void
 rdpCopyClip(GCPtr dst, GCPtr src)
 {
-    rdpGCRec *priv;
+    GC_FUNC_VARS;
 
     LLOGLN(10, ("rdpCopyClip:"));
     GC_FUNC_PROLOGUE(dst);
@@ -215,13 +214,11 @@ rdpCreateGC(GCPtr pGC)
     Bool rv;
     rdpPtr dev;
     ScreenPtr pScreen;
-    ScrnInfoPtr pScrn;
     rdpGCPtr priv;
 
     LLOGLN(10, ("rdpCreateGC:"));
     pScreen = pGC->pScreen;
-    pScrn = xf86Screens[pScreen->myNum];
-    dev = XRDPPTR(pScrn);
+    dev = rdpGetDevFromScreen(pScreen);
     priv = (rdpGCPtr)rdpGetGCPrivate(pGC, dev->privateKeyRecGC);
     pScreen->CreateGC = dev->CreateGC;
     rv = pScreen->CreateGC(pGC);

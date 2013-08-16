@@ -105,6 +105,7 @@ env_set_user(char *username, char *passwd_file, int display)
             g_sprintf(text, ":%d.0", display);
             g_setenv("DISPLAY", text, 1);
             g_setenv("LANG", "en_US.UTF-8", 1);
+            g_setenv("XRDP_SESSION", "1", 1);
 
             if (passwd_file != 0)
             {

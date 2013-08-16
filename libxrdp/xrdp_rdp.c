@@ -135,6 +135,10 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
         {
             client_info->pointer_flags = text2bool(value) == 0 ? 2 : 0;
         }
+        else if (g_strcasecmp(item, "require_credentials") == 0)
+        {
+            client_info->require_credentials = text2bool(value);
+        }
     }
 
     list_delete(items);
