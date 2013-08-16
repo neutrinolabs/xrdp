@@ -258,7 +258,7 @@ struct _rdpPixmapRec
   int rdpindex;
   int con_number;
   int is_dirty;
-  int pad0;
+  int is_scratch;
   int kind_width;
   struct rdp_draw_item* draw_item_head;
   struct rdp_draw_item* draw_item_tail;

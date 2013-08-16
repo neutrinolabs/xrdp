@@ -970,7 +970,7 @@ rdpup_check(void)
 int
 rdpup_begin_update(void)
 {
-    LLOGLN(10, ("rdpup_begin_update"));
+    LLOGLN(10, ("rdpup_begin_update:"));
 
     if (g_connected)
     {
@@ -978,7 +978,6 @@ rdpup_begin_update(void)
         {
             return 0;
         }
-
         init_stream(g_out_s, 0);
         s_push_layer(g_out_s, iso_hdr, 8);
         out_uint16_le(g_out_s, 1); /* begin update */
@@ -1001,6 +1000,7 @@ rdpup_end_update(void)
     {
         if (g_do_dirty_ons)
         {
+            /* in this mode, end update is only called in check dirty */
             rdpup_send_pending();
         }
         else
@@ -1869,7 +1869,7 @@ rdpup_check_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec *pDirtyPriv)
     g_os_bitmaps[pDirtyPriv->rdpindex].stamp = g_os_bitmap_stamp;
     g_os_bitmap_stamp++;
 
-    LLOGLN(10, ("-----------------got dirty"));
+    LLOGLN(10, ("rdpup_check_dirty: got dirty"));
     rdpup_switch_os_surface(pDirtyPriv->rdpindex);
     rdpup_get_pixmap_image_rect(pDirtyPixmap, &id);
     rdpup_begin_update();
@@ -1995,7 +1995,7 @@ rdpup_check_dirty_screen(rdpPixmapRec *pDirtyPriv)
         return 0;
     }
 
-    LLOGLN(10, ("-----------------got dirty"));
+    LLOGLN(10, ("rdpup_check_dirty_screen: got dirty"));
     rdpup_get_screen_image_rect(&id);
     rdpup_begin_update();
     draw_item_pack(0, pDirtyPriv);

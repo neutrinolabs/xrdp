@@ -714,6 +714,10 @@ rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
     priv->kind_width = width;
     pScreen->ModifyPixmapHeader(rv, org_width, 0, 0, 0, 0, 0);
     pScreen->CreatePixmap = rdpCreatePixmap;
+    if (org_width == 0 && height == 0)
+    {
+        priv->is_scratch = 1;
+    }
     return rv;
 }
 
@@ -764,7 +768,8 @@ xrdp_is_os(PixmapPtr pix, rdpPixmapPtr priv)
         height = pix->drawable.height;
         if ((pix->usage_hint == 0) &&
             (pix->drawable.depth >= g_rdpScreen.depth) &&
-            (width > 1) && (height > 1) && (priv->kind_width > 0))
+            (width > 0) && (height > 0) && (priv->kind_width > 0) &&
+            (priv->is_scratch == 0))
         {
             LLOGLN(10, ("%d %d", priv->kind_width, pix->drawable.width));
             priv->rdpindex = rdpup_add_os_bitmap(pix, priv);
@@ -1018,6 +1023,7 @@ void
 rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
 {
     RegionRec reg;
+    RegionRec reg1;
     RegionRec clip;
     int dx;
     int dy;
@@ -1032,8 +1038,6 @@ rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
     LLOGLN(10, ("in rdpCopyWindow"));
     RegionInit(&reg, NullBox, 0);
     RegionCopy(&reg, pOldRegion);
-    g_pScreen->CopyWindow = g_rdpScreen.CopyWindow;
-    g_pScreen->CopyWindow(pWin, ptOldOrg, pOldRegion);
     RegionInit(&clip, NullBox, 0);
     RegionCopy(&clip, &pWin->borderClip);
     dx = pWin->drawable.x - ptOldOrg.x;
@@ -1041,78 +1045,76 @@ rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
 
     if (g_do_dirty_ons)
     {
-        LLOGLN(0, ("rdpCopyWindow: gettig dirty TODO"));
-        //draw_item_add_srcblt_region
+        rdpup_check_dirty_screen(&g_screenPriv);
+    }
+    rdpup_begin_update();
+    num_clip_rects = REGION_NUM_RECTS(&clip);
+    num_reg_rects = REGION_NUM_RECTS(&reg);
+    LLOGLN(10, ("rdpCopyWindow: num_clip_rects %d num_reg_rects %d",
+           num_clip_rects, num_reg_rects));
+
+    /* when there is a huge list of screen copies, just send as bitmap
+       firefox dragging test does this */
+    if ((num_clip_rects > 16) && (num_reg_rects > 16))
+    {
+        box3 = RegionExtents(&reg);
+        rdpup_send_area(0, box3->x1, box3->y1,
+                        box3->x2 - box3->x1,
+                        box3->y2 - box3->y1);
     }
     else
     {
-        rdpup_begin_update();
-        num_clip_rects = REGION_NUM_RECTS(&clip);
-        num_reg_rects = REGION_NUM_RECTS(&reg);
-        LLOGLN(10, ("rdpCopyWindow: num_clip_rects %d num_reg_rects %d",
-               num_clip_rects, num_reg_rects));
 
-        /* when there is a huge list of screen copies, just send as bitmap
-           firefox dragging test does this */
-        if ((num_clip_rects > 16) && (num_reg_rects > 16))
+        /* should maybe sort the rects instead of checking dy < 0 */
+        /* If we can depend on the rects going from top to bottom, left
+        to right we are ok */
+        if (dy < 0 || (dy == 0 && dx < 0))
         {
-            box3 = RegionExtents(&reg);
-            rdpup_send_area(0, box3->x1, box3->y1,
-                            box3->x2 - box3->x1,
-                            box3->y2 - box3->y1);
+            for (j = 0; j < num_clip_rects; j++)
+            {
+                box1 = REGION_RECTS(&clip)[j];
+                rdpup_set_clip(box1.x1, box1.y1,
+                               box1.x2 - box1.x1,
+                               box1.y2 - box1.y1);
+
+                for (i = 0; i < num_reg_rects; i++)
+                {
+                    box2 = REGION_RECTS(&reg)[i];
+                    rdpup_screen_blt(box2.x1 + dx, box2.y1 + dy,
+                                     box2.x2 - box2.x1,
+                                     box2.y2 - box2.y1,
+                                     box2.x1, box2.y1);
+                }
+            }
         }
         else
         {
-
-            /* should maybe sort the rects instead of checking dy < 0 */
-            /* If we can depend on the rects going from top to bottom, left
-            to right we are ok */
-            if (dy < 0 || (dy == 0 && dx < 0))
+            for (j = num_clip_rects - 1; j >= 0; j--)
             {
-                for (j = 0; j < num_clip_rects; j++)
-                {
-                    box1 = REGION_RECTS(&clip)[j];
-                    rdpup_set_clip(box1.x1, box1.y1,
-                                   box1.x2 - box1.x1,
-                                   box1.y2 - box1.y1);
+                box1 = REGION_RECTS(&clip)[j];
+                rdpup_set_clip(box1.x1, box1.y1,
+                               box1.x2 - box1.x1,
+                               box1.y2 - box1.y1);
 
-                    for (i = 0; i < num_reg_rects; i++)
-                    {
-                        box2 = REGION_RECTS(&reg)[i];
-                        rdpup_screen_blt(box2.x1 + dx, box2.y1 + dy,
-                                         box2.x2 - box2.x1,
-                                         box2.y2 - box2.y1,
-                                         box2.x1, box2.y1);
-                    }
-                }
-            }
-            else
-            {
-                for (j = num_clip_rects - 1; j >= 0; j--)
+                for (i = num_reg_rects - 1; i >= 0; i--)
                 {
-                    box1 = REGION_RECTS(&clip)[j];
-                    rdpup_set_clip(box1.x1, box1.y1,
-                                   box1.x2 - box1.x1,
-                                   box1.y2 - box1.y1);
-
-                    for (i = num_reg_rects - 1; i >= 0; i--)
-                    {
-                        box2 = REGION_RECTS(&reg)[i];
-                        rdpup_screen_blt(box2.x1 + dx, box2.y1 + dy,
-                                         box2.x2 - box2.x1,
-                                         box2.y2 - box2.y1,
-                                         box2.x1, box2.y1);
-                    }
+                    box2 = REGION_RECTS(&reg)[i];
+                    rdpup_screen_blt(box2.x1 + dx, box2.y1 + dy,
+                                     box2.x2 - box2.x1,
+                                     box2.y2 - box2.y1,
+                                     box2.x1, box2.y1);
                 }
             }
         }
-
-        rdpup_reset_clip();
-        rdpup_end_update();
     }
+
+    rdpup_reset_clip();
+    rdpup_end_update();
 
     RegionUninit(&reg);
     RegionUninit(&clip);
+    g_pScreen->CopyWindow = g_rdpScreen.CopyWindow;
+    g_pScreen->CopyWindow(pWin, ptOldOrg, pOldRegion);
     g_pScreen->CopyWindow = rdpCopyWindow;
 }
 
@@ -1351,7 +1353,7 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
 
                 if (g_do_dirty_ons)
                 {
-                    LLOGLN(0, ("rdpComposite: gettig dirty"));
+                    LLOGLN(10, ("rdpComposite: gettig dirty"));
                     g_screenPriv.is_dirty = 1;
                     pDirtyPriv = &g_screenPriv;
                     dirty_type = RDI_IMGLL;

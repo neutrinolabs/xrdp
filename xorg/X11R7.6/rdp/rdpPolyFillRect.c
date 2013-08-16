@@ -98,8 +98,25 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
     {
         pDstPixmap = (PixmapPtr)pDrawable;
         pDstPriv = GETPIXPRIV(pDstPixmap);
+        if (pDstPixmap->devPrivate.ptr == g_rdpScreen.pfbMemory)
+        {
+            /* treat like root window */
+            post_process = 1;
 
-        if (xrdp_is_os(pDstPixmap, pDstPriv))
+            if (g_do_dirty_ons)
+            {
+                LLOGLN(10, ("rdpPolyFillRect: gettig dirty"));
+                g_screenPriv.is_dirty = 1;
+                pDirtyPriv = &g_screenPriv;
+                dirty_type = RDI_IMGLL;
+            }
+            else
+            {
+                rdpup_get_screen_image_rect(&id);
+                got_id = 1;
+            }
+        }
+        else if (xrdp_is_os(pDstPixmap, pDstPriv))
         {
             post_process = 1;
 
@@ -131,7 +148,7 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
 
                 if (g_do_dirty_ons)
                 {
-                    LLOGLN(0, ("rdpPolyFillRect: gettig dirty"));
+                    LLOGLN(10, ("rdpPolyFillRect: gettig dirty"));
                     g_screenPriv.is_dirty = 1;
                     pDirtyPriv = &g_screenPriv;
                     dirty_type = RDI_IMGLL;
@@ -148,12 +165,14 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
     if (!post_process)
     {
         RegionDestroy(fill_reg);
+        LLOGLN(10, ("rdpPolyFillRect: out, post_process not set"));
         return;
     }
 
     RegionTranslate(fill_reg, pDrawable->x, pDrawable->y);
     RegionInit(&clip_reg, NullBox, 0);
     cd = rdp_get_clip(&clip_reg, pDrawable, pGC);
+    LLOGLN(10, ("rdpPolyFillRect: cd %d", cd));
 
     if (cd == 1) /* no clip */
     {
@@ -166,7 +185,7 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
                      pGC->alu == GXnoop ||
                      pGC->alu == GXand ||
                      pGC->alu == GXcopy /*||
-           pGC->alu == GXxor*/)) /* todo, why dosen't xor work? */
+                     pGC->alu == GXxor*/)) /* todo, why dosen't xor work? */
             {
                 draw_item_add_fill_region(pDirtyPriv, fill_reg, pGC->fgPixel,
                                           pGC->alu);
@@ -187,7 +206,7 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
                      pGC->alu == GXnoop ||
                      pGC->alu == GXand ||
                      pGC->alu == GXcopy /*||
-           pGC->alu == GXxor*/)) /* todo, why dosen't xor work? */
+                     pGC->alu == GXxor*/)) /* todo, why dosen't xor work? */
             {
                 rdpup_set_fgcolor(pGC->fgPixel);
                 rdpup_set_opcode(pGC->alu);
@@ -229,19 +248,23 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
                          pGC->alu == GXnoop ||
                          pGC->alu == GXand ||
                          pGC->alu == GXcopy /*||
-             pGC->alu == GXxor*/)) /* todo, why dosen't xor work? */
+                         pGC->alu == GXxor*/)) /* todo, why dosen't xor work? */
                 {
+                    LLOGLN(10, ("rdpPolyFillRect: 3"));
                     draw_item_add_fill_region(pDirtyPriv, &clip_reg, pGC->fgPixel,
                                               pGC->alu);
                 }
                 else
                 {
+                    LLOGLN(10, ("rdpPolyFillRect: 4"));
                     draw_item_add_img_region(pDirtyPriv, &clip_reg, GXcopy, RDI_IMGLL, 2);
                 }
             }
             else if (got_id)
             {
                 rdpup_begin_update();
+
+                 LLOGLN(10, ("2 %x", pGC->fgPixel));
 
                 if (pGC->fillStyle == 0 && /* solid fill */
                         (pGC->alu == GXclear ||
@@ -250,7 +273,7 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
                          pGC->alu == GXnoop ||
                          pGC->alu == GXand ||
                          pGC->alu == GXcopy /*||
-             pGC->alu == GXxor*/)) /* todo, why dosen't xor work? */
+                         pGC->alu == GXxor*/)) /* todo, why dosen't xor work? */
                 {
                     rdpup_set_fgcolor(pGC->fgPixel);
                     rdpup_set_opcode(pGC->alu);

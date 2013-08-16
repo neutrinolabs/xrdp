@@ -132,7 +132,7 @@ rdpImageText16(DrawablePtr pDrawable, GCPtr pGC,
 
                 if (g_do_dirty_ons)
                 {
-                    LLOGLN(0, ("rdpImageText16: gettig dirty"));
+                    LLOGLN(10, ("rdpImageText16: gettig dirty"));
                     g_screenPriv.is_dirty = 1;
                     pDirtyPriv = &g_screenPriv;
                     dirty_type = RDI_IMGLL;
