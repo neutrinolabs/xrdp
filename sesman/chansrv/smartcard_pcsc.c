@@ -24,6 +24,7 @@
 
 #define PCSC_STANDIN 1
 
+#include "chansrv.h"
 #include "os_calls.h"
 #include "smartcard.h"
 #include "log.h"
@@ -258,7 +259,8 @@ scard_pcsc_init(void)
 
     if (g_lis == 0)
     {
-        g_lis = trans_create(2, 8192, 8192);
+        g_lis = trans_create(TRANS_MODE_UNIX, 8192, 8192);
+        g_lis->is_term = g_is_term;
         g_snprintf(g_pcsc_directory, 255, "/tmp/.xrdp/pcsc%d", g_display_num);
         if (g_directory_exist(g_pcsc_directory))
         {

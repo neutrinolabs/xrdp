@@ -66,6 +66,10 @@ xrdp_listen_create(void)
     {
         log_message(LOG_LEVEL_ERROR,"xrdp_listen_create: trans_create failed");
     }
+    else
+    {
+        self->listen_trans->is_term = g_is_term;
+    }
 
     return self;
 }

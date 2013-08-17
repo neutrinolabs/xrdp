@@ -797,11 +797,13 @@ xrdp_mm_connect_chansrv(struct xrdp_mm *self, char *ip, char *port)
     {
         /* unix socket */
         self->chan_trans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
+        self->chan_trans->is_term = g_is_term;
     }
     else
     {
         /* tcp */
         self->chan_trans = trans_create(TRANS_MODE_TCP, 8192, 8192);
+        self->chan_trans->is_term = g_is_term;
     }
 
     self->chan_trans->trans_data_in = xrdp_mm_chan_data_in;
@@ -1486,6 +1488,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
         ok = 0;
         trans_delete(self->sesman_trans);
         self->sesman_trans = trans_create(TRANS_MODE_TCP, 8192, 8192);
+        self->sesman_trans->is_term = g_is_term;
         xrdp_mm_get_sesman_port(port, sizeof(port));
         g_snprintf(text, 255, "connecting to sesman ip %s port %s", ip, port);
         xrdp_wm_log_msg(self->wm, text);

@@ -41,7 +41,7 @@
 long APP_CC
 g_xrdp_sync(long (*sync_func)(long param1, long param2), long sync_param1,
             long sync_param2);
-int APP_CC
+int DEFAULT_CC
 g_is_term(void);
 void APP_CC
 g_set_term(int in_val);
