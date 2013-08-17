@@ -44,6 +44,12 @@ keyboard and mouse stuff
 #define DEBUG_OUT_INPUT(arg) ErrorF arg
 #endif
 
+#define LOG_LEVEL 1
+#define LLOG(_level, _args) \
+    do { if (_level < LOG_LEVEL) { ErrorF _args ; } } while (0)
+#define LLOGLN(_level, _args) \
+    do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
+
 extern ScreenPtr g_pScreen; /* in rdpmain.c */
 extern DeviceIntPtr g_pointer; /* in rdpmain.c */
 extern DeviceIntPtr g_keyboard; /* in rdpmain.c */
@@ -58,6 +64,12 @@ static int g_tab_down = 0;
 /* this is toggled every time num lock key is released, not like the
    above *_down vars */
 static int g_scroll_lock_down = 0;
+
+static OsTimerPtr g_timer = 0;
+static int g_x = 0;
+static int g_y = 0;
+static int g_timer_schedualed = 0;
+static int g_delay_motion = 1;
 
 #define MIN_KEY_CODE 8
 #define MAX_KEY_CODE 255
@@ -779,6 +791,7 @@ rdpEnqueueButton(int type, int buttons)
     EventListPtr rdp_events;
     xEvent *pev;
 
+    LLOGLN(10, ("rdpEnqueueButton:"));
     i = GetEventList(&rdp_events);
     n = GetPointerEvents(rdp_events, g_pointer, type, buttons, 0, 0, 0, 0);
 
@@ -809,35 +822,65 @@ rdpEnqueueKey(int type, int scancode)
 }
 
 /******************************************************************************/
+static CARD32
+rdpDeferredInputCallback(OsTimerPtr timer, CARD32 now, pointer arg)
+{
+    LLOGLN(10, ("rdpDeferredInputCallback"));
+    g_timer_schedualed = 0;
+    rdpEnqueueMotion(g_x, g_y);
+    return 0;
+}
+
+/******************************************************************************/
 void
 PtrAddEvent(int buttonMask, int x, int y)
 {
     int i;
     int type;
     int buttons;
+    int send_now;
 
-    rdpEnqueueMotion(x, y);
-
-    for (i = 0; i < 5; i++)
+    LLOGLN(10, ("PtrAddEvent:"));
+    send_now = (buttonMask ^ g_old_button_mask) || (g_delay_motion == 0);
+    LLOGLN(10, ("PtrAddEvent: send_now %d", send_now));
+    if (send_now)
     {
-        if ((buttonMask ^ g_old_button_mask) & (1 << i))
+        if (g_timer_schedualed)
         {
-            if (buttonMask & (1 << i))
+            g_timer_schedualed = 0;
+            TimerCancel(g_timer);
+        }
+        rdpEnqueueMotion(x, y);
+        for (i = 0; i < 5; i++)
+        {
+            if ((buttonMask ^ g_old_button_mask) & (1 << i))
             {
-                type = ButtonPress;
-                buttons = i + 1;
-                rdpEnqueueButton(type, buttons);
-            }
-            else
-            {
-                type = ButtonRelease;
-                buttons = i + 1;
-                rdpEnqueueButton(type, buttons);
+                if (buttonMask & (1 << i))
+                {
+                    type = ButtonPress;
+                    buttons = i + 1;
+                    rdpEnqueueButton(type, buttons);
+                }
+                else
+                {
+                    type = ButtonRelease;
+                    buttons = i + 1;
+                    rdpEnqueueButton(type, buttons);
+                }
             }
         }
+        g_old_button_mask = buttonMask;
     }
-
-    g_old_button_mask = buttonMask;
+    else
+    {
+        g_x = x;
+        g_y = y;
+        if (!g_timer_schedualed)
+        {
+            g_timer_schedualed = 1;
+            g_timer = TimerSet(g_timer, 0, 60, rdpDeferredInputCallback, 0);
+        }
+    }
 }
 
 /******************************************************************************/
