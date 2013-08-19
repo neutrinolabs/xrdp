@@ -22,11 +22,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "rdp.h"
 #include "xrdp_rail.h"
 
+#include <sys/ipc.h>
+#include <sys/shm.h>
+
 #define LOG_LEVEL 1
 #define LLOG(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; } } while (0)
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
+
+static int g_use_shmem = 1;
+static int g_shmemid = 0;
+static char *g_shmemptr = 0;
+static int g_shmem_lineBytes = 0;
+static RegionPtr g_shm_reg = 0;
 
 static int g_listen_sck = 0;
 static int g_sck = 0;
@@ -466,6 +475,34 @@ rdpup_recv_msg(struct stream *s)
     return rv;
 }
 
+/*****************************************************************************/
+/* wait 'millis' milliseconds for the socket to be able to receive */
+/* returns boolean */
+static int
+sck_can_recv(int sck, int millis)
+{
+    fd_set rfds;
+    struct timeval time;
+    int rv;
+
+    time.tv_sec = millis / 1000;
+    time.tv_usec = (millis * 1000) % 1000000;
+    FD_ZERO(&rfds);
+
+    if (sck > 0)
+    {
+        FD_SET(((unsigned int)sck), &rfds);
+        rv = select(sck + 1, &rfds, 0, 0, &time);
+
+        if (rv > 0)
+        {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 /******************************************************************************/
 /*
     this from miScreenInit
@@ -478,6 +515,7 @@ process_screen_size_msg(int width, int height, int bpp)
     RRScreenSizePtr pSize;
     int mmwidth;
     int mmheight;
+    int bytes;
     Bool ok;
 
     LLOGLN(0, ("process_screen_size_msg: set width %d height %d bpp %d",
@@ -505,6 +543,28 @@ process_screen_size_msg(int width, int height, int bpp)
     {
         g_rdpScreen.rdp_Bpp = 4;
         g_rdpScreen.rdp_Bpp_mask = 0xffffff;
+    }
+
+    if (g_use_shmem)
+    {
+        if (g_shmemptr != 0)
+        {
+            shmdt(g_shmemptr);
+        }
+        bytes = g_rdpScreen.rdp_width * g_rdpScreen.rdp_height *
+                g_rdpScreen.rdp_Bpp;
+        g_shmemid = shmget(IPC_PRIVATE, bytes, IPC_CREAT | 0777);
+        g_shmemptr = shmat(g_shmemid, 0, 0);
+        shmctl(g_shmemid, IPC_RMID, NULL);
+        LLOGLN(0, ("process_screen_size_msg: g_shmemid %d g_shmemptr %p",
+               g_shmemid, g_shmemptr));
+        g_shmem_lineBytes = g_rdpScreen.rdp_Bpp * g_rdpScreen.rdp_width;
+
+        if (g_shm_reg != 0)
+        {
+            RegionDestroy(g_shm_reg);
+        }
+        g_shm_reg = RegionCreate(NullBox, 0);
     }
 
     mmwidth = PixelToMM(width);
@@ -643,6 +703,13 @@ rdpup_process_msg(struct stream *s)
     int param4;
     int bytes;
     int i1;
+    int flags;
+    int x;
+    int y;
+    int cx;
+    int cy;
+    RegionRec reg;
+    BoxRec box;
 
     in_uint16_le(s, msg_type);
 
@@ -781,6 +848,27 @@ rdpup_process_msg(struct stream *s)
             LLOGLN(0, ("  client can not do new(color) cursor"));
         }
     }
+    else if (msg_type == 105)
+    {
+        LLOGLN(10, ("rdpup_process_msg: got msg 105"));
+        in_uint32_le(s, flags);
+        in_uint32_le(s, x);
+        in_uint32_le(s, y);
+        in_uint32_le(s, cx);
+        in_uint32_le(s, cy);
+        LLOGLN(10, ("  %d %d %d %d", x, y, cx ,cy));
+
+        box.x1 = x;
+        box.y1 = y;
+        box.x2 = box.x1 + cx;
+        box.y2 = box.y1 + cy;
+
+        RegionInit(&reg, &box, 0);
+        LLOGLN(10, ("< %d %d %d %d", box.x1, box.y1, box.x2, box.y2));
+        RegionSubtract(g_shm_reg, g_shm_reg, &reg);
+        RegionUninit(&reg);
+
+    }
     else
     {
         rdpLog("unknown message type in rdpup_process_msg %d\n", msg_type);
@@ -799,6 +887,10 @@ rdpup_get_screen_image_rect(struct image_data *id)
     id->Bpp = g_rdpScreen.rdp_Bpp;
     id->lineBytes = g_rdpScreen.paddedWidthInBytes;
     id->pixels = g_rdpScreen.pfbMemory;
+    id->shmem_pixels = g_shmemptr;
+    id->shmem_id = g_shmemid;
+    id->shmem_offset = 0;
+    id->shmem_lineBytes = g_shmem_lineBytes;
 }
 
 /******************************************************************************/
@@ -811,6 +903,10 @@ rdpup_get_pixmap_image_rect(PixmapPtr pPixmap, struct image_data *id)
     id->Bpp = g_rdpScreen.rdp_Bpp;
     id->lineBytes = pPixmap->devKind;
     id->pixels = (char *)(pPixmap->devPrivate.ptr);
+    id->shmem_pixels = 0;
+    id->shmem_id = 0;
+    id->shmem_offset = 0;
+    id->shmem_lineBytes = 0;
 }
 
 /******************************************************************************/
@@ -1559,11 +1655,13 @@ get_single_color(struct image_data *id, int x, int y, int w, int h)
 }
 
 /******************************************************************************/
-/* split the bitmap up into 64 x 64 pixel areas */
+/* split the bitmap up into 64 x 64 pixel areas
+   or send using shared memory */
 void
 rdpup_send_area(struct image_data *id, int x, int y, int w, int h)
 {
     char *s;
+    char *d;
     int i;
     int single_color;
     int lx;
@@ -1571,7 +1669,10 @@ rdpup_send_area(struct image_data *id, int x, int y, int w, int h)
     int lh;
     int lw;
     int size;
+    int safety;
     struct image_data lid;
+    BoxRec box;
+    RegionRec reg;
 
     LLOGLN(10, ("rdpup_send_area: id %p x %d y %d w %d h %d", id, x, y, w, h));
 
@@ -1628,8 +1729,68 @@ rdpup_send_area(struct image_data *id, int x, int y, int w, int h)
     if (g_connected && g_begin)
     {
         LLOGLN(10, ("  rdpup_send_area"));
-        ly = y;
 
+        if (id->shmem_pixels != 0)
+        {
+            box.x1 = x;
+            box.y1 = y;
+            box.x2 = box.x1 + w;
+            box.y2 = box.y1 + h;
+            safety = 0;
+            while (RegionContainsRect(g_shm_reg, &box))
+            {
+                rdpup_end_update();
+                rdpup_begin_update();
+                safety++;
+                if (safety > 100)
+                {
+                    break;
+                }
+                if (sck_can_recv(g_sck, 100))
+                {
+                    if (rdpup_recv_msg(g_in_s) == 0)
+                    {
+                        rdpup_process_msg(g_in_s);
+                    }
+                }
+            }
+            s = id->pixels;
+            s += y * id->lineBytes;
+            s += x * g_Bpp;
+            d = id->shmem_pixels + id->shmem_offset;
+            d += y * id->shmem_lineBytes;
+            d += x * g_rdpScreen.rdp_Bpp;
+            ly = y;
+            while (ly < y + h)
+            {
+                convert_pixels(s, d, w);
+                s += id->lineBytes;
+                d += id->shmem_lineBytes;
+                ly += 1;
+            }
+            size = 32;
+            rdpup_pre_check(size);
+            out_uint16_le(g_out_s, 60);
+            out_uint16_le(g_out_s, size);
+            g_count++;
+            out_uint16_le(g_out_s, x);
+            out_uint16_le(g_out_s, y);
+            out_uint16_le(g_out_s, w);
+            out_uint16_le(g_out_s, h);
+            out_uint32_le(g_out_s, 0);
+            out_uint32_le(g_out_s, id->shmem_id);
+            out_uint32_le(g_out_s, id->shmem_offset);
+            out_uint16_le(g_out_s, id->width);
+            out_uint16_le(g_out_s, id->height);
+            out_uint16_le(g_out_s, x);
+            out_uint16_le(g_out_s, y);
+            RegionInit(&reg, &box, 0);
+            RegionUnion(g_shm_reg, g_shm_reg, &reg);
+            RegionUninit(&reg);
+            return;
+        }
+
+        ly = y;
         while (ly < y + h)
         {
             lx = x;

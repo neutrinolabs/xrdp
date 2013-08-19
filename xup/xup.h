@@ -139,4 +139,6 @@ struct mod
   tbus sck_obj;
   int shift_state;
   struct xrdp_client_info client_info;
+  int screen_shmem_id;
+  char *screen_shmem_pixels;
 };

@@ -103,6 +103,10 @@ struct image_data
   int Bpp;
   int lineBytes;
   char* pixels;
+  char* shmem_pixels;
+  int shmem_id;
+  int shmem_offset;
+  int shmem_lineBytes;
 };
 
 /* Per-screen (framebuffer) structure.  There is only one of these, since we
