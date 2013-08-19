@@ -2091,6 +2091,25 @@ xrdp_orders_send_raw_bitmap2(struct xrdp_orders *self,
     i = cache_idx & 0xff;
     out_uint8(self->out_s, i);
 
+    if (1 && Bpp == 3)
+    {
+        for (i = height - 1; i >= 0; i--)
+        {
+            for (j = 0; j < width; j++)
+            {
+                pixel = GETPIXEL32(data, j, i, width);
+                out_uint8(self->out_s, pixel);
+                out_uint8(self->out_s, pixel >> 8);
+                out_uint8(self->out_s, pixel >> 16);
+            }
+            for (j = 0; j < e; j++)
+            {
+                out_uint8s(self->out_s, Bpp);
+            }
+        }
+    }
+    else
+    {
     for (i = height - 1; i >= 0; i--)
     {
         for (j = 0; j < width; j++)
@@ -2119,6 +2138,7 @@ xrdp_orders_send_raw_bitmap2(struct xrdp_orders *self,
         {
             out_uint8s(self->out_s, Bpp);
         }
+    }
     }
 
     return 0;
