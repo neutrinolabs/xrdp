@@ -927,9 +927,9 @@ clipboard_provide_selection_c2s(XSelectionRequestEvent *req, Atom type)
         g_clip_c2s.type = type;
         g_clip_c2s.property = req->property;
         g_clip_c2s.window = req->requestor;
-        LLOGLN(10, ("clipboard_provide_selection_c2s: start INCR property %s "
+        log_debug("clipboard_provide_selection_c2s: start INCR property %s "
                     "type %s", get_atom_text(req->property),
-                   get_atom_text(type)));
+                   get_atom_text(type));
         val1[0] = g_clip_c2s.total_bytes;
         val1[1] = 0;
         XChangeProperty(g_display, req->requestor, req->property,
@@ -1729,8 +1729,8 @@ clipboard_get_window_property(Window wnd, Atom prop, Atom *type, int *fmt,
     tui8 *lxdata;
     Atom ltype;
 
-    LLOGLN(10, ("clipboard_get_window_property:"));
-    LLOGLN(10, ("  prop %d name %s", prop, get_atom_text(prop)));
+    log_debug("clipboard_get_window_property:");
+    log_debug("  prop %d name %s", prop, get_atom_text(prop));
     lxdata = 0;
     ltype = 0;
     XGetWindowProperty(g_display, wnd, prop, 0, 0, 0,
@@ -1917,8 +1917,8 @@ clipboard_event_selection_notify(XEvent *xevent)
                         atom = atoms[index];
                         LOGM((LOG_LEVEL_DEBUG, "clipboard_event_selection_notify: %d %s %d",
                               atom, get_atom_text(atom), XA_STRING));
-                        LLOGLN(10, ("clipboard_event_selection_notify: 0x%x %s",
-                                    atom, get_atom_text(atom)));
+                        log_debug("clipboard_event_selection_notify: 0x%x %s",
+                                    atom, get_atom_text(atom));
                         if (atom == g_utf8_atom)
                         {
                             got_utf8 = 1;
@@ -2265,8 +2265,8 @@ clipboard_event_selection_request(XEvent *xevent)
     }
     else
     {
-        LLOGLN(10, ("clipboard_event_selection_request: unknown "
-                    "target %s", get_atom_text(lxev->target)));
+        log_debug("clipboard_event_selection_request: unknown "
+                    "target %s", get_atom_text(lxev->target));
         LOGM((LOG_LEVEL_ERROR, "clipboard_event_selection_request: unknown "
               "target %s", get_atom_text(lxev->target)));
     }
