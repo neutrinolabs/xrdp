@@ -1870,7 +1870,7 @@ clipboard_event_selection_notify(XEvent *xevent)
     {
         log_debug("clipboard_event_selection_notify: wnd %p prop %s",
                     lxevent->requestor,
-                    get_atom_text(lxevent->property)));
+                    get_atom_text(lxevent->property));
         rv = clipboard_get_window_property(lxevent->requestor, lxevent->property,
                                            &type, &fmt,
                                            &n_items, &data, &data_size);
@@ -1889,7 +1889,7 @@ clipboard_event_selection_notify(XEvent *xevent)
             log_debug("clipboard_event_selection_notify: type is INCR "
                         "data_size %d property name %s type %s", data_size,
                         get_atom_text(lxevent->property),
-                        get_atom_text(lxevent->type)));
+                        get_atom_text(lxevent->type));
             g_clip_s2c.incr_in_progress = 1;
             g_clip_s2c.property = lxevent->property;
             g_clip_s2c.type = lxevent->target;
@@ -2138,7 +2138,7 @@ clipboard_event_selection_request(XEvent *xevent)
           ".requestor %d .owner %d .selection %d '%s' .target %d .property %d",
           g_wnd, lxev->requestor, lxev->owner, lxev->selection,
           get_atom_text(lxev->selection),
-          lxev->target, lxev->property));
+          lxev->target, lxev->property);
 
     if (lxev->property == None)
     {
@@ -2324,7 +2324,7 @@ clipboard_event_property_notify(XEvent *xevent)
     log_debug("clipboard_event_property_notify: PropertyNotify .window %d "
                 ".state %d .atom %d %s", xevent->xproperty.window,
                 xevent->xproperty.state, xevent->xproperty.atom,
-                get_atom_text(xevent->xproperty.atom)));
+                get_atom_text(xevent->xproperty.atom));
 
     if (g_clip_c2s.incr_in_progress &&
             (xevent->xproperty.window == g_clip_c2s.window) &&
