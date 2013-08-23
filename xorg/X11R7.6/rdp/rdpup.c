@@ -22,8 +22,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "rdp.h"
 #include "xrdp_rail.h"
 
+#include <signal.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <sys/types.h>
 
 #define LOG_LEVEL 1
 #define LLOG(_level, _args) \
@@ -31,7 +33,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
-static int g_use_shmem = 1;
+static int g_use_shmem = 1; /* turns on or off */
 static int g_shmemid = 0;
 static char *g_shmemptr = 0;
 static int g_shmem_lineBytes = 0;
@@ -132,11 +134,66 @@ static int g_rdp_opcodes[16] =
     0xff  /* GXset          0xf 1 */
 };
 
+static int g_do_kill_disconnected = 0; /* turn on or off */
+static OsTimerPtr g_dis_timer = 0;
+static int g_disconnect_scheduled = 0;
+static CARD32 g_disconnect_timeout = 60 * 1000; /* 60 seconds */
+static CARD32 g_disconnect_time = 0; /* time of disconnect */
+
+/******************************************************************************/
+static CARD32
+rdpDeferredDisconnectCallback(OsTimerPtr timer, CARD32 now, pointer arg)
+{
+    CARD32 lnow;
+
+    LLOGLN(10, ("rdpDeferredDisconnectCallback"));
+    if (g_connected)
+    {
+        /* this should not happen */
+        LLOGLN(0, ("rdpDeferredDisconnectCallback: connected"));
+        if (g_dis_timer != 0)
+        {
+            LLOGLN(0, ("rdpDeferredDisconnectCallback: canceling g_dis_timer"));
+            TimerCancel(g_dis_timer);
+            TimerFree(g_dis_timer);
+            g_dis_timer = 0;
+        }
+        g_disconnect_scheduled = 0;
+        return 0;
+    }
+    else
+    {
+        LLOGLN(10, ("rdpDeferredDisconnectCallback: not connected"));
+    }
+    lnow = GetTimeInMillis();
+    if (lnow - g_disconnect_time > g_disconnect_timeout)
+    {
+        LLOGLN(0, ("rdpDeferredDisconnectCallback: exit X11rdp"));
+        kill(getpid(), SIGTERM);
+        return 0;
+    }
+    g_dis_timer = TimerSet(g_dis_timer, 0, 1000 * 10,
+                           rdpDeferredDisconnectCallback, 0);
+    return 0;
+}
+
 /*****************************************************************************/
 static int
 rdpup_disconnect(void)
 {
     int index;
+
+    if (g_do_kill_disconnected)
+    {
+        if (!g_disconnect_scheduled)
+        {
+            LLOGLN(0, ("rdpup_disconnect: starting g_dis_timer"));
+            g_dis_timer = TimerSet(g_dis_timer, 0, 1000 * 10,
+                                   rdpDeferredDisconnectCallback, 0);
+            g_disconnect_scheduled = 1;
+        }
+        g_disconnect_time = GetTimeInMillis();
+    }
 
     RemoveEnabledDevice(g_sck);
     g_connected = 0;
@@ -1036,6 +1093,16 @@ rdpup_check(void)
             g_begin = 0;
             g_con_number++;
             AddEnabledDevice(g_sck);
+
+            if (g_dis_timer != 0)
+            {
+                LLOGLN(0, ("rdpup_check: canceling g_dis_timer"));
+                TimerCancel(g_dis_timer);
+                TimerFree(g_dis_timer);
+                g_dis_timer = 0;
+            }
+            g_disconnect_scheduled = 0;
+
         }
     }
 
@@ -1732,6 +1799,7 @@ rdpup_send_area(struct image_data *id, int x, int y, int w, int h)
 
         if (id->shmem_pixels != 0)
         {
+            LLOGLN(10, ("rdpup_send_area: using shmem"));
             box.x1 = x;
             box.y1 = y;
             box.x2 = box.x1 + w;

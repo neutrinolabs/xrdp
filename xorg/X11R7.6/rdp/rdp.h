@@ -256,6 +256,8 @@ struct rdp_draw_item
   union urdp_draw_item u;
 };
 
+#define XRDP_USE_COUNT_THRESHOLD 1
+
 struct _rdpPixmapRec
 {
   int status;
@@ -264,6 +266,10 @@ struct _rdpPixmapRec
   int is_dirty;
   int is_scratch;
   int kind_width;
+  /* number of times used in a remote operation
+     if this gets above XRDP_USE_COUNT_THRESHOLD
+     then we force remote the pixmap */
+  int use_count;
   struct rdp_draw_item* draw_item_head;
   struct rdp_draw_item* draw_item_tail;
 };

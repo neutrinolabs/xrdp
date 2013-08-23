@@ -69,7 +69,7 @@ static OsTimerPtr g_timer = 0;
 static int g_x = 0;
 static int g_y = 0;
 static int g_timer_schedualed = 0;
-static int g_delay_motion = 1;
+static int g_delay_motion = 1; /* turn on or off */
 
 #define MIN_KEY_CODE 8
 #define MAX_KEY_CODE 255
@@ -756,12 +756,13 @@ rdpEnqueueMotion(int x, int y)
     EventListPtr rdp_events;
     xEvent *pev;
 
+    LLOGLN(10, ("rdpEnqueueMotion: x %d y %d", x, y));
 # if 0
 
     if (x < 128)
     {
         rdpup_begin_update();
-        rdpup_send_area(0, 0, 1024, 768);
+        rdpup_send_area(0, 0, 0, 1024, 768);
         rdpup_end_update();
     }
 
@@ -825,7 +826,7 @@ rdpEnqueueKey(int type, int scancode)
 static CARD32
 rdpDeferredInputCallback(OsTimerPtr timer, CARD32 now, pointer arg)
 {
-    LLOGLN(10, ("rdpDeferredInputCallback"));
+    LLOGLN(10, ("rdpDeferredInputCallback:"));
     g_timer_schedualed = 0;
     rdpEnqueueMotion(g_x, g_y);
     return 0;
@@ -840,9 +841,10 @@ PtrAddEvent(int buttonMask, int x, int y)
     int buttons;
     int send_now;
 
-    LLOGLN(10, ("PtrAddEvent:"));
+    LLOGLN(10, ("PtrAddEvent: x %d y %d", x, y));
     send_now = (buttonMask ^ g_old_button_mask) || (g_delay_motion == 0);
-    LLOGLN(10, ("PtrAddEvent: send_now %d", send_now));
+    LLOGLN(10, ("PtrAddEvent: send_now %d g_timer_schedualed %d",
+           send_now, g_timer_schedualed));
     if (send_now)
     {
         if (g_timer_schedualed)
