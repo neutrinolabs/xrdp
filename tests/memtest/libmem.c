@@ -402,3 +402,13 @@ libmem_clear_flags(void* obj, int flags)
   self->flags &= ~flags;
   return 0;
 }
+
+/*****************************************************************************/
+int
+libmem_get_alloced_bytes(void* obj)
+{
+  struct mem_info* self;
+
+  self = (struct mem_info*)obj;
+  return self->total_bytes;
+}
