@@ -20,7 +20,7 @@
 
 #include "libxrdp.h"
 
-#if defined(XRDP_FREERDP1)
+#if defined(XRDP_NEUTRINORDP)
 #include <freerdp/codec/rfx.h>
 #endif
 
@@ -2248,7 +2248,7 @@ xrdp_orders_send_as_jpeg(struct xrdp_orders *self,
     return 1;
 }
 
-#if defined(XRDP_FREERDP1)
+#if defined(XRDP_NEUTRINORDP)
 /*****************************************************************************/
 /*  secondary drawing order (bitmap v3) using remotefx compression */
 static int APP_CC
@@ -2326,7 +2326,7 @@ xrdp_orders_send_bitmap3(struct xrdp_orders *self,
     struct stream *xr_s; /* xrdp stream */
     struct stream *temp_s; /* xrdp stream */
     struct xrdp_client_info *ci;
-#if defined(XRDP_FREERDP1)
+#if defined(XRDP_NEUTRINORDP)
     STREAM *fr_s; /* FreeRDP stream */
     RFX_CONTEXT *context;
     RFX_RECT rect;
@@ -2341,7 +2341,7 @@ xrdp_orders_send_bitmap3(struct xrdp_orders *self,
 
     if (ci->v3_codec_id == ci->rfx_codec_id)
     {
-#if defined(XRDP_FREERDP1)
+#if defined(XRDP_NEUTRINORDP)
 
         if (!xrdp_orders_send_as_rfx(self, width, height, bpp, hints))
         {
