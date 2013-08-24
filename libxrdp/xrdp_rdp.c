@@ -21,7 +21,7 @@
 #include "libxrdp.h"
 #include "log.h"
 
-#if defined(XRDP_FREERDP1)
+#if defined(XRDP_NEUTRINORDP)
 #include <freerdp/codec/rfx.h>
 #endif
 
@@ -146,7 +146,7 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
     return 0;
 }
 
-#if defined(XRDP_FREERDP1)
+#if defined(XRDP_NEUTRINORDP)
 /*****************************************************************************/
 static void
 cpuid(tui32 info, tui32 *eax, tui32 *ebx, tui32 *ecx, tui32 *edx)
@@ -227,7 +227,7 @@ xrdp_rdp_create(struct xrdp_session *session, struct trans *trans)
     bytes = sizeof(self->client_info.client_ip) - 1;
     g_write_ip_address(trans->sck, self->client_info.client_ip, bytes);
     self->mppc_enc = mppc_enc_new(PROTO_RDP_50);
-#if defined(XRDP_FREERDP1)
+#if defined(XRDP_NEUTRINORDP)
     self->rfx_enc = rfx_context_new();
     rfx_context_set_cpu_opt(self->rfx_enc, xrdp_rdp_detect_cpu());
 #endif
@@ -247,7 +247,7 @@ xrdp_rdp_delete(struct xrdp_rdp *self)
 
     xrdp_sec_delete(self->sec_layer);
     mppc_enc_free(self->mppc_enc);
-#if defined(XRDP_FREERDP1)
+#if defined(XRDP_NEUTRINORDP)
     rfx_context_free((RFX_CONTEXT *)(self->rfx_enc));
 #endif
     g_free(self);
