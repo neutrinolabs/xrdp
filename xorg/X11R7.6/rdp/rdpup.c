@@ -971,6 +971,7 @@ int
 rdpup_init(void)
 {
     char text[256];
+    char *ptext;
     int i;
 
     if (!g_directory_exist("/tmp/.xrdp"))
@@ -1054,6 +1055,28 @@ rdpup_init(void)
             rdpLog("g_tcp_local_bind failed [%s]\n", text);
         }
     }
+
+    ptext = getenv("XRDP_SESMAN_MAX_IDLE_TIME");
+    if (ptext != 0)
+    {
+    }
+    ptext = getenv("XRDP_SESMAN_MAX_DISC_TIME");
+    if (ptext != 0)
+    {
+        g_disconnect_timeout = atoi(ptext);
+    }
+    ptext = getenv("XRDP_SESMAN_KILL_DISCONNECTED");
+    if (ptext != 0)
+    {
+        g_do_kill_disconnected = atoi(ptext);
+    }
+
+    if (g_disconnect_timeout == 0)
+    {
+        g_do_kill_disconnected = 0;
+    }
+    rdpLog("kill disconencted [%d] timeout [%d]\n", g_do_kill_disconnected,
+           g_disconnect_timeout);
 
     return 1;
 }

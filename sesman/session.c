@@ -559,6 +559,13 @@ session_start_fork(int width, int height, int bpp, char *username,
                 env_set_user(username, passwd_file, display);
                 env_check_password_file(passwd_file, password);
 
+                g_snprintf(text, 255, "%d", g_cfg->sess.max_idle_time);
+                g_setenv("XRDP_SESMAN_MAX_IDLE_TIME", text, 1);
+                g_snprintf(text, 255, "%d", g_cfg->sess.max_disc_time);
+                g_setenv("XRDP_SESMAN_MAX_DISC_TIME", text, 1);
+                g_snprintf(text, 255, "%d", g_cfg->sess.kill_disconnected);
+                g_setenv("XRDP_SESMAN_KILL_DISCONNECTED", text, 1);
+
                 if (type == SESMAN_SESSION_TYPE_XVNC)
                 {
                     xserver_params = list_create();
