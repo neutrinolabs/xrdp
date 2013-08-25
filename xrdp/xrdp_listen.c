@@ -203,19 +203,19 @@ xrdp_listen_get_port_address(char *port, int port_bytes,
                     if (g_strcasecmp(val, "fork") == 0)
                     {
                         val = (char *)list_get_item(values, index);
-                        startup_param->fork = text2bool(val);
+                        startup_param->fork = g_text2bool(val);
                     }
 
                     if (g_strcasecmp(val, "tcp_nodelay") == 0)
                     {
                         val = (char *)list_get_item(values, index);
-                        *tcp_nodelay = text2bool(val);
+                        *tcp_nodelay = g_text2bool(val);
                     }
 
                     if (g_strcasecmp(val, "tcp_keepalive") == 0)
                     {
                         val = (char *)list_get_item(values, index);
-                        *tcp_keepalive = text2bool(val);
+                        *tcp_keepalive = g_text2bool(val);
                     }
                 }
             }

@@ -130,7 +130,7 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
         }
         else if (0 == g_strcasecmp(buf, SESMAN_CFG_ENABLE_USERWM))
         {
-            cf->enable_user_wm = text2bool((char *)list_get_item(param_v, i));
+            cf->enable_user_wm = g_text2bool((char *)list_get_item(param_v, i));
         }
         else if (0 == g_strcasecmp(buf, SESMAN_CFG_PORT))
         {
@@ -212,7 +212,7 @@ config_read_logging(int file, struct log_config* lc, struct list* param_n,
     }
     if (0 == g_strcasecmp(buf, SESMAN_CFG_LOG_ENABLE_SYSLOG))
     {
-      lc->enable_syslog = text2bool((char*)list_get_item(param_v, i));
+      lc->enable_syslog = g_text2bool((char*)list_get_item(param_v, i));
     }
     if (0 == g_strcasecmp(buf, SESMAN_CFG_LOG_SYSLOG_LEVEL))
     {
@@ -261,7 +261,7 @@ config_read_security(int file, struct config_security *sc,
 
         if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_ALLOW_ROOT))
         {
-            sc->allow_root = text2bool((char *)list_get_item(param_v, i));
+            sc->allow_root = g_text2bool((char *)list_get_item(param_v, i));
         }
 
         if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_LOGIN_RETRY))
@@ -288,7 +288,7 @@ config_read_security(int file, struct config_security *sc,
         }
         if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_ALWAYSGROUPCHECK))
         {
-            sc->ts_always_group_check = text2bool((char *)list_get_item(param_v, i));
+            sc->ts_always_group_check = g_text2bool((char *)list_get_item(param_v, i));
         }
     }
 
@@ -355,7 +355,7 @@ config_read_sessions(int file, struct config_sessions *se, struct list *param_n,
 
         if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_KILL_DISC))
         {
-            se->kill_disconnected = text2bool((char *)list_get_item(param_v, i));
+            se->kill_disconnected = g_text2bool((char *)list_get_item(param_v, i));
         }
 
         if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_IDLE_LIMIT))

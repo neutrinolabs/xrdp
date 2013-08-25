@@ -88,15 +88,15 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
 
         if (g_strcasecmp(item, "bitmap_cache") == 0)
         {
-            client_info->use_bitmap_cache = text2bool(value);
+            client_info->use_bitmap_cache = g_text2bool(value);
         }
         else if (g_strcasecmp(item, "bitmap_compression") == 0)
         {
-            client_info->use_bitmap_comp = text2bool(value);
+            client_info->use_bitmap_comp = g_text2bool(value);
         }
         else if (g_strcasecmp(item, "bulk_compression") == 0)
         {
-            client_info->use_bulk_comp = text2bool(value);
+            client_info->use_bulk_comp = g_text2bool(value);
         }
         else if (g_strcasecmp(item, "crypt_level") == 0)
         {
@@ -121,7 +121,7 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
         }
         else if (g_strcasecmp(item, "allow_channels") == 0)
         {
-            client_info->channel_code = text2bool(value);
+            client_info->channel_code = g_text2bool(value);
             if (client_info->channel_code == 0)
             {
                 log_message(LOG_LEVEL_DEBUG,"Info - All channels are disabled");
@@ -133,11 +133,11 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
         }
         else if (g_strcasecmp(item, "new_cursors") == 0)
         {
-            client_info->pointer_flags = text2bool(value) == 0 ? 2 : 0;
+            client_info->pointer_flags = g_text2bool(value) == 0 ? 2 : 0;
         }
         else if (g_strcasecmp(item, "require_credentials") == 0)
         {
-            client_info->require_credentials = text2bool(value);
+            client_info->require_credentials = g_text2bool(value);
         }
     }
 

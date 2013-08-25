@@ -2209,7 +2209,7 @@ is_channel_enabled(char *inName, struct list *names, struct list *values)
     if ( index >= 0 )
     {
         val = (char *)list_get_item(values, index);
-        reply = text2bool(val);
+        reply = g_text2bool(val);
         if (reply == 0)
         {
             log_message(LOG_LEVEL_INFO,"This channel is disabled: %s", inName);
