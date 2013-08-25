@@ -137,14 +137,14 @@ static int g_rdp_opcodes[16] =
 static int g_do_kill_disconnected = 0; /* turn on or off */
 static OsTimerPtr g_dis_timer = 0;
 static int g_disconnect_scheduled = 0;
-static CARD32 g_disconnect_timeout = 60 * 1000; /* 60 seconds */
-static CARD32 g_disconnect_time = 0; /* time of disconnect */
+static CARD32 g_disconnect_timeout_s = 60; /* 60 seconds */
+static CARD32 g_disconnect_time_ms = 0; /* time of disconnect in milliseconds */
 
 /******************************************************************************/
 static CARD32
 rdpDeferredDisconnectCallback(OsTimerPtr timer, CARD32 now, pointer arg)
 {
-    CARD32 lnow;
+    CARD32 lnow_ms;
 
     LLOGLN(10, ("rdpDeferredDisconnectCallback"));
     if (g_connected)
@@ -165,8 +165,8 @@ rdpDeferredDisconnectCallback(OsTimerPtr timer, CARD32 now, pointer arg)
     {
         LLOGLN(10, ("rdpDeferredDisconnectCallback: not connected"));
     }
-    lnow = GetTimeInMillis();
-    if (lnow - g_disconnect_time > g_disconnect_timeout)
+    lnow_ms = GetTimeInMillis();
+    if (lnow_ms - g_disconnect_time_ms > g_disconnect_timeout_s * 1000)
     {
         LLOGLN(0, ("rdpDeferredDisconnectCallback: exit X11rdp"));
         kill(getpid(), SIGTERM);
@@ -192,7 +192,7 @@ rdpup_disconnect(void)
                                    rdpDeferredDisconnectCallback, 0);
             g_disconnect_scheduled = 1;
         }
-        g_disconnect_time = GetTimeInMillis();
+        g_disconnect_time_ms = GetTimeInMillis();
     }
 
     RemoveEnabledDevice(g_sck);
@@ -1063,20 +1063,31 @@ rdpup_init(void)
     ptext = getenv("XRDP_SESMAN_MAX_DISC_TIME");
     if (ptext != 0)
     {
-        g_disconnect_timeout = atoi(ptext);
+        i = atoi(ptext);
+        if (i > 0)
+        {
+            g_do_kill_disconnected = 1;
+            g_disconnect_timeout_s = atoi(ptext);
+        }
     }
     ptext = getenv("XRDP_SESMAN_KILL_DISCONNECTED");
     if (ptext != 0)
     {
-        g_do_kill_disconnected = atoi(ptext);
+        i = atoi(ptext);
+        if (i != 0)
+        {
+            g_do_kill_disconnected = 1;
+            g_disconnect_timeout_s = 0;
+        }
     }
 
-    if (g_disconnect_timeout == 0)
+    if (g_do_kill_disconnected && (g_disconnect_timeout_s < 60))
     {
-        g_do_kill_disconnected = 0;
+        g_disconnect_timeout_s = 60;
     }
-    rdpLog("kill disconencted [%d] timeout [%d]\n", g_do_kill_disconnected,
-           g_disconnect_timeout);
+
+    rdpLog("kill disconencted [%d] timeout [%d] sec\n", g_do_kill_disconnected,
+           g_disconnect_timeout_s);
 
     return 1;
 }

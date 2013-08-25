@@ -98,9 +98,8 @@ If unset or set to \fI0\fR, unlimited session are allowed.
 
 .TP 
 \fBKillDisconnected\fR=\fI[0|1]\fR
-If set to \fB1\fR, \fBtrue\fR or \fByes\fR, every session will be killed when the user disconnects.
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR, every session will be killed within 60 seconds when the user disconnects.
 .br 
-\fI\-this option is currently ignored!\-\fR
 
 .TP 
 \fBIdleTimeLimit\fR=\fI<number>\fR
@@ -112,11 +111,10 @@ If set to \fI0\fR, automatic disconnection is disabled.
 
 .TP 
 \fBDisconnectedTimeLimit\fR=\fI<number>\fR
-Sets the the time limit before a disconnected session is killed.
+Sets the the time(in seconds) limit before a disconnected session is killed.
 .br 
 If set to \fI0\fR, automatic killing is disabled.
 .br 
-\fI\-this option is currently ignored!\-\fR
 
 .SH "SECURITY"
 The following parameters can be used in the \fB[Sessions]\fR section:
