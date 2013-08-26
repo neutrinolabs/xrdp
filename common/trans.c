@@ -142,6 +142,7 @@ trans_check_wait_objs(struct trans *self)
                     in_trans->sck = in_sck;
                     in_trans->type1 = TRANS_TYPE_SERVER;
                     in_trans->status = TRANS_STATUS_UP;
+                    in_trans->is_term = self->is_term;
 
                     if (self->trans_conn_in(self, in_trans) != 0)
                     {
@@ -226,9 +227,18 @@ trans_force_read_s(struct trans *self, struct stream *in_s, int size)
         {
             if (g_tcp_last_error_would_block(self->sck))
             {
-                if (!g_tcp_can_recv(self->sck, 10))
+                if (!g_tcp_can_recv(self->sck, 100))
                 {
                     /* check for term here */
+                    if (self->is_term != 0)
+                    {
+                        if (self->is_term())
+                        {
+                            /* term */
+                            self->status = TRANS_STATUS_DOWN;
+                            return 1;
+                        }
+                    }
                 }
             }
             else
@@ -285,9 +295,18 @@ trans_force_write_s(struct trans *self, struct stream *out_s)
         {
             if (g_tcp_last_error_would_block(self->sck))
             {
-                if (!g_tcp_can_send(self->sck, 10))
+                if (!g_tcp_can_send(self->sck, 100))
                 {
                     /* check for term here */
+                    if (self->is_term != 0)
+                    {
+                        if (self->is_term())
+                        {
+                            /* term */
+                            self->status = TRANS_STATUS_DOWN;
+                            return 1;
+                        }
+                    }
                 }
             }
             else

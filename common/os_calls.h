@@ -152,5 +152,6 @@ int APP_CC      g_check_user_in_group(const char* username, int gid, int* ok);
 int APP_CC      g_time1(void);
 int APP_CC      g_time2(void);
 int APP_CC      g_time3(void);
+int APP_CC      g_text2bool(const char *s);
 
 #endif

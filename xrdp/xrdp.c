@@ -138,7 +138,7 @@ xrdp_child_fork(void)
 }
 
 /*****************************************************************************/
-int APP_CC
+int DEFAULT_CC
 g_is_term(void)
 {
     return g_is_wait_obj_set(g_term_event);

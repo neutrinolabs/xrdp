@@ -363,7 +363,7 @@ internal_config_read_logging(int file, struct log_config *lc,
 
         if (0 == g_strcasecmp(buf, SESMAN_CFG_LOG_ENABLE_SYSLOG))
         {
-            lc->enable_syslog = text2bool((char *)list_get_item(param_v, i));
+            lc->enable_syslog = g_text2bool((char *)list_get_item(param_v, i));
         }
 
         if (0 == g_strcasecmp(buf, SESMAN_CFG_LOG_SYSLOG_LEVEL))
@@ -412,28 +412,6 @@ internalInitAndAllocStruct(void)
 /*
  * Here below the public functions
  */
-
-
-/**
- *
- * @brief Reads sesman configuration
- * @param s translates the strings "1", "true" and "yes" in 1 (true) and other strings in 0
- * @return 0 on false, 1 on 1,true, yes
- *
- */
-int APP_CC
-text2bool(char *s)
-{
-    if ( (g_atoi(s) != 0) ||
-         (0 == g_strcasecmp(s, "true")) ||
-         (0 == g_strcasecmp(s, "on")) ||
-         (0 == g_strcasecmp(s, "yes")))
-    {
-        return 1;
-    }
-
-    return 0;
-}
 
 enum logReturns DEFAULT_CC
 log_start_from_param(const struct log_config *iniParams)

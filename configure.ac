@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script
 
 AC_PREREQ(2.59)
-AC_INIT([xrdp], [0.6.0], [xrdp-devel@lists.sourceforge.net])
+AC_INIT([xrdp], [0.7.0], [xrdp-devel@lists.sourceforge.net])
 AC_CONFIG_HEADERS(config_ac.h:config_ac-h.in)
 AM_INIT_AUTOMAKE([1.6 foreign])
 AC_PROG_CC
@@ -31,10 +31,6 @@ AC_ARG_ENABLE(xrdpdebug, AS_HELP_STRING([--enable-xrdpdebug],
               [Build debug (default: no)]),
               [xrdpdebug=true], [xrdpdebug=false])
 AM_CONDITIONAL(XRDP_DEBUG, [test x$xrdpdebug = xtrue])
-AC_ARG_ENABLE(freerdp1, AS_HELP_STRING([--enable-freerdp1],
-              [Build freerdp1 module (default: no)]),
-              [freerdp1=true], [freerdp1=false])
-AM_CONDITIONAL(XRDP_FREERDP1, [test x$freerdp1 = xtrue])
 AC_ARG_ENABLE(neutrinordp, AS_HELP_STRING([--enable-neutrinordp],
               [Build neutrinordp module (default: no)]),
               [neutrinordp=true], [neutrinordp=false])
@@ -83,8 +79,6 @@ then
   AC_DEFINE([USE_NOPAM],1,[Disable PAM])
 fi
 
-AS_IF( [test "x$enable_freerdp1" = "xyes"] , [PKG_CHECK_MODULES(FREERDP, freerdp >= 1.0.0)] )
-
 AS_IF( [test "x$enable_neutrinordp" = "xyes"] , [PKG_CHECK_MODULES(FREERDP, freerdp >= 1.0.0)] )
 
 # checking for libjpeg
@@ -128,7 +122,6 @@ AC_CONFIG_FILES([Makefile
                  libxrdp/Makefile
                  xup/Makefile
                  mc/Makefile
-                 freerdp1/Makefile
                  neutrinordp/Makefile
                  xrdp/Makefile
                  sesman/Makefile
@@ -141,8 +134,8 @@ AC_CONFIG_FILES([Makefile
                  docs/man/Makefile
                  instfiles/Makefile
                  instfiles/pam.d/Makefile
-		 instfiles/init.d/Makefile
-		 instfiles/default/Makefile
+				 instfiles/init.d/Makefile
+				 instfiles/default/Makefile
                  genkeymap/Makefile
                  xrdpapi/Makefile
                  xrdpvr/Makefile

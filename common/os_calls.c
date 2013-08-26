@@ -2935,3 +2935,18 @@ g_time3(void)
     return (tp.tv_sec * 1000) + (tp.tv_usec / 1000);
 #endif
 }
+
+/*****************************************************************************/
+/* returns boolean */
+int APP_CC
+g_text2bool(const char *s)
+{
+    if ( (g_atoi(s) != 0) ||
+         (0 == g_strcasecmp(s, "true")) ||
+         (0 == g_strcasecmp(s, "on")) ||
+         (0 == g_strcasecmp(s, "yes")))
+    {
+        return 1;
+    }
+    return 0;
+}

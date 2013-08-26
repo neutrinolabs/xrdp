@@ -38,6 +38,7 @@ struct trans; /* forward declaration */
 
 typedef int (*ttrans_data_in)(struct trans* self);
 typedef int (*ttrans_conn_in)(struct trans* self, struct trans* new_self);
+typedef int (*tis_term)(void);
 
 struct trans
 {
@@ -52,6 +53,7 @@ struct trans
   struct stream* in_s;
   struct stream* out_s;
   char* listen_filename;
+  tis_term is_term; /* used to test for exit */
 };
 
 struct trans* APP_CC

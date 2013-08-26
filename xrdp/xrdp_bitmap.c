@@ -821,6 +821,8 @@ xrdp_bitmap_copy_box_with_crc(struct xrdp_bitmap *self,
     unsigned char *d8 = (unsigned char *)NULL;
     unsigned short *s16 = (unsigned short *)NULL;
     unsigned short *d16 = (unsigned short *)NULL;
+    unsigned int *s32;
+    unsigned int *d32;
 
     if (self == 0)
     {
@@ -864,16 +866,65 @@ xrdp_bitmap_copy_box_with_crc(struct xrdp_bitmap *self,
 
     if (self->bpp == 24)
     {
+        s32 = ((unsigned int *)(self->data)) + (self->width * y + x);
+        d32 = ((unsigned int *)(dest->data)) + (dest->width * desty + destx);
+        incs = self->width - cx;
+        incd = dest->width - cx;
+
         for (i = 0; i < cy; i++)
         {
-            for (j = 0; j < cx; j++)
+            j = 0;
+            while (j < cx - 4)
             {
-                pixel = GETPIXEL32(self->data, j + x, i + y, self->width);
+                pixel = *s32;
                 CRC_PASS(pixel, crc);
                 CRC_PASS(pixel >> 8, crc);
                 CRC_PASS(pixel >> 16, crc);
-                SETPIXEL32(dest->data, j + destx, i + desty, dest->width, pixel);
+                *d32 = pixel;
+                s32++;
+                d32++;
+
+                pixel = *s32;
+                CRC_PASS(pixel, crc);
+                CRC_PASS(pixel >> 8, crc);
+                CRC_PASS(pixel >> 16, crc);
+                *d32 = pixel;
+                s32++;
+                d32++;
+
+                pixel = *s32;
+                CRC_PASS(pixel, crc);
+                CRC_PASS(pixel >> 8, crc);
+                CRC_PASS(pixel >> 16, crc);
+                *d32 = pixel;
+                s32++;
+                d32++;
+
+                pixel = *s32;
+                CRC_PASS(pixel, crc);
+                CRC_PASS(pixel >> 8, crc);
+                CRC_PASS(pixel >> 16, crc);
+                *d32 = pixel;
+                s32++;
+                d32++;
+
+                j += 4;
             }
+            while (j < cx)
+            {
+                pixel = *s32;
+                CRC_PASS(pixel, crc);
+                CRC_PASS(pixel >> 8, crc);
+                CRC_PASS(pixel >> 16, crc);
+                *d32 = pixel;
+                s32++;
+                d32++;
+
+                j += 1;
+            }
+
+            s32 += incs;
+            d32 += incd;
         }
     }
     else if (self->bpp == 15 || self->bpp == 16)

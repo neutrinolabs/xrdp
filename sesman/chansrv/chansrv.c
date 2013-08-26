@@ -77,6 +77,13 @@ int g_exec_pid = 0;
 tui32 g_dvc_chan_id = 100;
 
 /*****************************************************************************/
+int DEFAULT_CC
+g_is_term(void)
+{
+    return g_is_wait_obj_set(g_term_event);
+}
+
+/*****************************************************************************/
 /* add data to chan_item, on its way to the client */
 /* returns error */
 static int APP_CC
@@ -844,13 +851,15 @@ setup_listen(void)
 
     if (g_use_unix_socket)
     {
-        g_lis_trans = trans_create(2, 8192, 8192);
+        g_lis_trans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
+        g_lis_trans->is_term = g_is_term;
         g_snprintf(port, 255, "/tmp/.xrdp/xrdp_chansrv_socket_%d",
                    7200 + g_display_num);
     }
     else
     {
-        g_lis_trans = trans_create(1, 8192, 8192);
+        g_lis_trans = trans_create(TRANS_MODE_TCP, 8192, 8192);
+        g_lis_trans->is_term = g_is_term;
         g_snprintf(port, 255, "%d", 7200 + g_display_num);
     }
 
@@ -875,6 +884,7 @@ setup_api_listen(void)
     int error = 0;
 
     g_api_lis_trans = trans_create(TRANS_MODE_UNIX, 8192 * 4, 8192 * 4);
+    g_api_lis_trans->is_term = g_is_term;
     g_snprintf(port, 255, "/tmp/.xrdp/xrdpapi_%d", g_display_num);
     g_api_lis_trans->trans_conn_in = my_api_trans_conn_in;
     error = trans_listen(g_api_lis_trans, port);

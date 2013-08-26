@@ -14,5 +14,7 @@ int
 libmem_set_flags(void* obj, int flags);
 int
 libmem_clear_flags(void* obj, int flags);
+int
+libmem_get_alloced_bytes(void* obj);
 
 #endif

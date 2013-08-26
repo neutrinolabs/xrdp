@@ -54,6 +54,9 @@ struct xrdp_api_data
     int           is_connected;
 };
 
+int DEFAULT_CC
+g_is_term(void);
+
 int APP_CC send_channel_data(int chan_id, char *data, int size);
 int APP_CC main_cleanup(void);
 int APP_CC find_empty_slot_in_dvc_channels();

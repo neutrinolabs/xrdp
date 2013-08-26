@@ -20,6 +20,9 @@
 
 #include "xup.h"
 
+#include <sys/ipc.h>
+#include <sys/shm.h>
+
 /******************************************************************************/
 /* returns error */
 int DEFAULT_CC
@@ -512,7 +515,33 @@ process_server_set_pointer_ex(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int
+static int APP_CC
+send_paint_rect_ack(struct mod *mod, int flags, int x, int y, int cx, int cy)
+{
+    int len;
+    struct stream *s;
+
+    make_stream(s);
+    init_stream(s, 8192);
+    s_push_layer(s, iso_hdr, 4);
+    out_uint16_le(s, 105);
+    out_uint32_le(s, flags);
+    out_uint32_le(s, x);
+    out_uint32_le(s, y);
+    out_uint32_le(s, cx);
+    out_uint32_le(s, cy);
+    s_mark_end(s);
+    len = (int)(s->end - s->data);
+    s_pop_layer(s, iso_hdr);
+    out_uint32_le(s, len);
+    lib_send(mod, s->data, len);
+    free_stream(s);
+    return 0;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
 lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
 {
     int rv;
@@ -536,6 +565,9 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
     int fgcolor;
     int bgcolor;
     int opcode;
+    int flags;
+    int shmem_id;
+    int shmem_offset;
     char *bmpdata;
     char cur_data[32 * (32 * 3)];
     char cur_mask[32 * (32 / 8)];
@@ -661,6 +693,44 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
         case 51: /* server_set_pointer_ex */
             rv = process_server_set_pointer_ex(mod, s);
             break;
+        case 60: /* server_paint_rect_shmem */
+            in_sint16_le(s, x);
+            in_sint16_le(s, y);
+            in_uint16_le(s, cx);
+            in_uint16_le(s, cy);
+            in_uint32_le(s, flags);
+            in_uint32_le(s, shmem_id);
+            in_uint32_le(s, shmem_offset);
+            in_uint16_le(s, width);
+            in_uint16_le(s, height);
+            in_sint16_le(s, srcx);
+            in_sint16_le(s, srcy);
+            bmpdata = 0;
+            if (flags == 0) /* screen */
+            {
+                if (mod->screen_shmem_id == 0)
+                {
+                    mod->screen_shmem_id = shmem_id;
+                    mod->screen_shmem_pixels = shmat(mod->screen_shmem_id, 0, 0);
+                }
+                if (mod->screen_shmem_pixels != 0)
+                {
+                    bmpdata = mod->screen_shmem_pixels + shmem_offset;
+                }
+            }
+            if (bmpdata != 0)
+            {
+                rv = mod->server_paint_rect(mod, x, y, cx, cy,
+                                            bmpdata, width, height,
+                                            srcx, srcy);
+            }
+            else
+            {
+                rv = 1;
+            }
+            send_paint_rect_ack(mod, flags, x, y, cx, cy);
+            break;
+
         default:
             g_writeln("lib_mod_process_orders: unknown order type %d", type);
             rv = 0;

@@ -804,11 +804,14 @@ xrdp_is_os(PixmapPtr pix, rdpPixmapPtr priv)
                     rdpup_end_update();
                     rdpup_switch_os_surface(-1);
                 }
+                priv->use_count++;
                 return 1;
             }
         }
+        priv->use_count++;
         return 0;
     }
+    priv->use_count++;
     return 1;
 }
 
@@ -1035,7 +1038,9 @@ rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
     BoxRec box2;
     BoxPtr box3;
 
-    LLOGLN(10, ("in rdpCopyWindow"));
+    LLOGLN(10, ("rdpCopyWindow:"));
+    LLOGLN(10, ("rdpCopyWindow: new x %d new y %d old x %d old y %d",
+           pWin->drawable.x, pWin->drawable.y, ptOldOrg.x, ptOldOrg.y));
     RegionInit(&reg, NullBox, 0);
     RegionCopy(&reg, pOldRegion);
     RegionInit(&clip, NullBox, 0);
@@ -1047,18 +1052,28 @@ rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
     {
         rdpup_check_dirty_screen(&g_screenPriv);
     }
-    rdpup_begin_update();
+
+    g_pScreen->CopyWindow = g_rdpScreen.CopyWindow;
+    g_pScreen->CopyWindow(pWin, ptOldOrg, pOldRegion);
+    g_pScreen->CopyWindow = rdpCopyWindow;
+
     num_clip_rects = REGION_NUM_RECTS(&clip);
     num_reg_rects = REGION_NUM_RECTS(&reg);
     LLOGLN(10, ("rdpCopyWindow: num_clip_rects %d num_reg_rects %d",
            num_clip_rects, num_reg_rects));
+
+    if ((num_clip_rects == 0) || (num_reg_rects == 0))
+    {
+        return;
+    }
+    rdpup_begin_update();
 
     /* when there is a huge list of screen copies, just send as bitmap
        firefox dragging test does this */
     if ((num_clip_rects > 16) && (num_reg_rects > 16))
     {
         box3 = RegionExtents(&reg);
-        rdpup_send_area(0, box3->x1, box3->y1,
+        rdpup_send_area(10, box3->x1 + dx, box3->y1 + dy,
                         box3->x2 - box3->x1,
                         box3->y2 - box3->y1);
     }
@@ -1073,6 +1088,8 @@ rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
             for (j = 0; j < num_clip_rects; j++)
             {
                 box1 = REGION_RECTS(&clip)[j];
+                LLOGLN(10, ("clip x %d y %d w %d h %d", box1.x1, box1.y1,
+                       box1.x2 - box1.x1, box1.y2 - box1.y1));
                 rdpup_set_clip(box1.x1, box1.y1,
                                box1.x2 - box1.x1,
                                box1.y2 - box1.y1);
@@ -1080,6 +1097,8 @@ rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
                 for (i = 0; i < num_reg_rects; i++)
                 {
                     box2 = REGION_RECTS(&reg)[i];
+                    LLOGLN(10, ("reg  x %d y %d w %d h %d", box2.x1, box2.y1,
+                           box2.x2 - box2.x1, box2.y2 - box2.y1));
                     rdpup_screen_blt(box2.x1 + dx, box2.y1 + dy,
                                      box2.x2 - box2.x1,
                                      box2.y2 - box2.y1,
@@ -1092,6 +1111,8 @@ rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
             for (j = num_clip_rects - 1; j >= 0; j--)
             {
                 box1 = REGION_RECTS(&clip)[j];
+                LLOGLN(10, ("clip x %d y %d w %d h %d", box1.x1, box1.y1,
+                       box1.x2 - box1.x1, box1.y2 - box1.y1));
                 rdpup_set_clip(box1.x1, box1.y1,
                                box1.x2 - box1.x1,
                                box1.y2 - box1.y1);
@@ -1099,6 +1120,8 @@ rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
                 for (i = num_reg_rects - 1; i >= 0; i--)
                 {
                     box2 = REGION_RECTS(&reg)[i];
+                    LLOGLN(10, ("reg  x %d y %d w %d h %d", box2.x1, box2.y1,
+                           box2.x2 - box2.x1, box2.y2 - box2.y1));
                     rdpup_screen_blt(box2.x1 + dx, box2.y1 + dy,
                                      box2.x2 - box2.x1,
                                      box2.y2 - box2.y1,
@@ -1113,9 +1136,6 @@ rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
 
     RegionUninit(&reg);
     RegionUninit(&clip);
-    g_pScreen->CopyWindow = g_rdpScreen.CopyWindow;
-    g_pScreen->CopyWindow(pWin, ptOldOrg, pOldRegion);
-    g_pScreen->CopyWindow = rdpCopyWindow;
 }
 
 /******************************************************************************/

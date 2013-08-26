@@ -551,7 +551,8 @@ sound_init(void)
     LOG(0, ("sound_init:"));
 
     sound_send_server_formats();
-    g_audio_l_trans = trans_create(2, 128 * 1024, 8192);
+    g_audio_l_trans = trans_create(TRANS_MODE_UNIX, 128 * 1024, 8192);
+    g_audio_l_trans->is_term = g_is_term;
     g_snprintf(port, 255, CHANSRV_PORT_STR, g_display_num);
     g_audio_l_trans->trans_conn_in = sound_trans_audio_conn_in;
     error = trans_listen(g_audio_l_trans, port);
