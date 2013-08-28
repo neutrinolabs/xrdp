@@ -109,7 +109,7 @@ rdpPolyText16(DrawablePtr pDrawable, GCPtr pGC,
 
             if (g_do_dirty_os)
             {
-                LLOGLN(10, ("rdpPolyText16: gettig dirty"));
+                LLOGLN(10, ("rdpPolyText16: getting dirty"));
                 pDstPriv->is_dirty = 1;
                 pDirtyPriv = pDstPriv;
                 dirty_type = RDI_IMGLY;
@@ -135,7 +135,7 @@ rdpPolyText16(DrawablePtr pDrawable, GCPtr pGC,
 
                 if (g_do_dirty_ons)
                 {
-                    LLOGLN(0, ("rdpPolyText16: gettig dirty"));
+                    LLOGLN(10, ("rdpPolyText16: getting dirty"));
                     g_screenPriv.is_dirty = 1;
                     pDirtyPriv = &g_screenPriv;
                     dirty_type = RDI_IMGLL;

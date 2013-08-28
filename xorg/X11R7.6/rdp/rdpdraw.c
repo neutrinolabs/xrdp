@@ -482,14 +482,66 @@ draw_item_remove_all(rdpPixmapRec *priv)
 }
 
 /******************************************************************************/
+static int
+remove_empties(rdpPixmapRec* priv)
+{
+    struct rdp_draw_item* di;
+    struct rdp_draw_item* di_prev;
+    int rv;
+
+    rv = 0;
+    /* remove draw items with empty regions */
+    di = priv->draw_item_head;
+    di_prev = 0;
+    while (di != 0)
+    {
+        if (!RegionNotEmpty(di->reg))
+        {
+            LLOGLN(10, ("remove_empties: removing empty item type %d", di->type));
+            draw_item_remove(priv, di);
+            di = di_prev == 0 ? priv->draw_item_head : di_prev->next;
+            rv++;
+        }
+        else
+        {
+            di_prev = di;
+            di = di->next;
+        }
+    }
+    return rv;
+}
+
+/******************************************************************************/
 int
 draw_item_pack(PixmapPtr pix, rdpPixmapRec *priv)
 {
     struct rdp_draw_item *di;
     struct rdp_draw_item *di_prev;
+    BoxRec box;
+    RegionRec treg;
 
 #if 1
+    if (pix != 0)
+    {
+        box.x1 = 0;
+        box.x2 = pix->drawable.width;
+        box.y1 = 0;
+        box.y2 = pix->drawable.height;
+        RegionInit(&treg, &box, 0);
+        di = priv->draw_item_head;
+        di_prev = 0;
+        while (di != 0)
+        {
+            RegionIntersect(di->reg, di->reg, &treg);
+            di_prev = di;
+            di = di->next;
+        }
+        RegionUninit(&treg);
+        remove_empties(priv);
+    }
+#endif
 
+#if 1
     /* look for repeating draw types */
     if (priv->draw_item_head != 0)
     {
@@ -522,10 +574,10 @@ draw_item_pack(PixmapPtr pix, rdpPixmapRec *priv)
             }
         }
     }
-
+    remove_empties(priv);
 #endif
-#if 0
 
+#if 0
     /* subtract regions */
     if (priv->draw_item_tail != 0)
     {
@@ -556,30 +608,9 @@ draw_item_pack(PixmapPtr pix, rdpPixmapRec *priv)
             }
         }
     }
-
+    remove_empties(priv);
 #endif
-#if 1
 
-    /* remove draw items with empty regions */
-    di = priv->draw_item_head;
-    di_prev = 0;
-
-    while (di != 0)
-    {
-        if (!RegionNotEmpty(di->reg))
-        {
-            LLOGLN(10, ("draw_item_pack: removing empty item type %d", di->type));
-            draw_item_remove(priv, di);
-            di = di_prev == 0 ? priv->draw_item_head : di_prev->next;
-        }
-        else
-        {
-            di_prev = di;
-            di = di->next;
-        }
-    }
-
-#endif
     return 0;
 }
 
@@ -1345,7 +1376,7 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
 
             if (g_do_dirty_os)
             {
-                LLOGLN(10, ("rdpComposite: gettig dirty"));
+                LLOGLN(10, ("rdpComposite: getting dirty"));
                 pDstPriv->is_dirty = 1;
                 dirty_type = g_doing_font ? RDI_IMGLL : RDI_IMGLY;
                 pDirtyPriv = pDstPriv;
@@ -1373,7 +1404,7 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
 
                 if (g_do_dirty_ons)
                 {
-                    LLOGLN(10, ("rdpComposite: gettig dirty"));
+                    LLOGLN(10, ("rdpComposite: getting dirty"));
                     g_screenPriv.is_dirty = 1;
                     pDirtyPriv = &g_screenPriv;
                     dirty_type = RDI_IMGLL;
