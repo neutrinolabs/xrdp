@@ -2501,6 +2501,17 @@ g_signal_child_stop(void (*func)(int))
 }
 
 /*****************************************************************************/
+
+void APP_CC
+g_signal_segfault(void (*func)(int))
+{
+#if defined(_WIN32)
+#else
+    signal(SIGSEGV, func);
+#endif
+}
+
+/*****************************************************************************/
 /* does not work in win32 */
 void APP_CC
 g_signal_hang_up(void (*func)(int))

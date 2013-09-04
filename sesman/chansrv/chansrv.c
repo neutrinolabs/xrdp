@@ -1044,7 +1044,7 @@ child_signal_handler(int sig)
 {
     int i1;
 
-    LOG(10, ("child_signal_handler:"));
+    LOG(0, ("child_signal_handler:"));
 
     do
     {
@@ -1059,6 +1059,14 @@ child_signal_handler(int sig)
         LOG(10, ("  %d", i1));
     }
     while (i1 >= 0);
+}
+
+void DEFAULT_CC
+segfault_signal_handler(int sig)
+{
+    LOG(0, ("segfault_signal_handler: entered......."));
+    xfuse_deinit();
+    exit(0);
 }
 
 /*****************************************************************************/
@@ -1272,6 +1280,8 @@ main(int argc, char **argv)
     g_signal_user_interrupt(term_signal_handler); /* SIGINT */
     g_signal_pipe(nil_signal_handler); /* SIGPIPE */
     g_signal_child_stop(child_signal_handler); /* SIGCHLD */
+    g_signal_segfault(segfault_signal_handler);
+
     display_text = g_getenv("DISPLAY");
     LOGM((LOG_LEVEL_INFO, "main: DISPLAY env var set to %s", display_text));
     get_display_num_from_display(display_text);
