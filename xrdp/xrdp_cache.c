@@ -137,8 +137,9 @@ xrdp_cache_reset(struct xrdp_cache *self,
 }
 
 #define COMPARE_WITH_CRC(_b1, _b2) \
-  _b1 != 0 && _b2 != 0 && _b1->crc == _b2->crc && _b1->bpp == _b2->bpp && \
-  _b1->width == _b1->width && _b1->height == _b2->height
+ ((_b1 != 0) && (_b2 != 0) && (_b1->crc == _b2->crc) && \
+  (_b1->bpp == _b2->bpp) && \
+  (_b1->width == _b2->width) && (_b1->height == _b2->height))
 
 /*****************************************************************************/
 /* returns cache id */
@@ -174,8 +175,6 @@ xrdp_cache_add_bitmap(struct xrdp_cache *self, struct xrdp_bitmap *bitmap,
         for (j = 0; j < self->cache1_entries; j++)
         {
 #ifdef USE_CRC
-
-            //if (xrdp_bitmap_compare_with_crc(self->bitmap_items[i][j].bitmap, bitmap))
             if (COMPARE_WITH_CRC(self->bitmap_items[i][j].bitmap, bitmap))
 #else
             if (xrdp_bitmap_compare(self->bitmap_items[i][j].bitmap, bitmap))
@@ -195,8 +194,6 @@ xrdp_cache_add_bitmap(struct xrdp_cache *self, struct xrdp_bitmap *bitmap,
         for (j = 0; j < self->cache2_entries; j++)
         {
 #ifdef USE_CRC
-
-            //if (xrdp_bitmap_compare_with_crc(self->bitmap_items[i][j].bitmap, bitmap))
             if (COMPARE_WITH_CRC(self->bitmap_items[i][j].bitmap, bitmap))
 #else
             if (xrdp_bitmap_compare(self->bitmap_items[i][j].bitmap, bitmap))
@@ -216,8 +213,6 @@ xrdp_cache_add_bitmap(struct xrdp_cache *self, struct xrdp_bitmap *bitmap,
         for (j = 0; j < self->cache3_entries; j++)
         {
 #ifdef USE_CRC
-
-            //if (xrdp_bitmap_compare_with_crc(self->bitmap_items[i][j].bitmap, bitmap))
             if (COMPARE_WITH_CRC(self->bitmap_items[i][j].bitmap, bitmap))
 #else
             if (xrdp_bitmap_compare(self->bitmap_items[i][j].bitmap, bitmap))
