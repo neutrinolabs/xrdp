@@ -341,6 +341,11 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs* self)
     free_stream(s);
     return 1;
   }
+  if (!s_check_rem(s, len))
+  {
+    free_stream(s);
+    return 1;
+  }
   /* make a copy of client mcs data */
   init_stream(self->client_mcs_data, len);
   out_uint8a(self->client_mcs_data, s->p, len);
