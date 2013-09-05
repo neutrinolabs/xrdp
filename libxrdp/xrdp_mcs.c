@@ -120,6 +120,10 @@ xrdp_mcs_recv(struct xrdp_mcs* self, struct stream* s, int* chan)
       DEBUG(("  out xrdp_mcs_recv xrdp_iso_recv returned non zero"));
       return 1;
     }
+    if (!s_check_rem(s, 1))
+    {
+      return 1;
+    }
     in_uint8(s, opcode);
     appid = opcode >> 2;
     if (appid == MCS_DPUM)
@@ -130,6 +134,10 @@ xrdp_mcs_recv(struct xrdp_mcs* self, struct stream* s, int* chan)
     /* this is channels getting added from the client */
     if (appid == MCS_CJRQ)
     {
+      if (!s_check_rem(s, 4))
+      {
+        return 1;
+      }
       in_uint16_be(s, userid);
       in_uint16_be(s, chanid);
       DEBUG(("  adding channel %4.4x", chanid));
@@ -143,12 +151,20 @@ xrdp_mcs_recv(struct xrdp_mcs* self, struct stream* s, int* chan)
     DEBUG(("  out xrdp_mcs_recv err got 0x%x need MCS_SDRQ", appid));
     return 1;
   }
+  if (!s_check_rem(s, 6))
+  {
+    return 1;
+  }
   in_uint8s(s, 2);
   in_uint16_be(s, *chan);
   in_uint8s(s, 1);
   in_uint8(s, len);
   if (len & 0x80)
   {
+    if (!s_check_rem(s, 1))
+    {
+      return 1;
+    }
     in_uint8s(s, 1);
   }
   DEBUG(("  out xrdp_mcs_recv"));
@@ -167,13 +183,25 @@ xrdp_mcs_ber_parse_header(struct xrdp_mcs* self, struct stream* s,
 
   if (tag_val > 0xff)
   {
+    if (!s_check_rem(s, 2))
+    {
+      return 1;
+    }
     in_uint16_be(s, tag);
   }
   else
   {
+    if (!s_check_rem(s, 1))
+    {
+      return 1;
+    }
     in_uint8(s, tag);
   }
   if (tag != tag_val)
+  {
+    return 1;
+  }
+  if (!s_check_rem(s, 1))
   {
     return 1;
   }
@@ -184,6 +212,10 @@ xrdp_mcs_ber_parse_header(struct xrdp_mcs* self, struct stream* s,
     *len = 0;
     while (l > 0)
     {
+      if (!s_check_rem(s, 1))
+      {
+        return 1;
+      }
       in_uint8(s, i);
       *len = (*len << 8) | i;
       l--;
@@ -214,6 +246,10 @@ xrdp_mcs_parse_domain_params(struct xrdp_mcs* self, struct stream* s)
   {
     return 1;
   }
+  if (!s_check_rem(s, len))
+  {
+    return 1;
+  }
   in_uint8s(s, len);
   if (s_check(s))
   {
@@ -234,7 +270,7 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs* self)
   struct stream* s;
 
   make_stream(s);
-  init_stream(s, 8192);
+  init_stream(s, 16 * 1024);
   if (xrdp_iso_recv(self->iso_layer, s) != 0)
   {
     free_stream(s);
@@ -283,6 +319,11 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs* self)
     free_stream(s);
     return 1;
   }
+  if ((len <= 0) || (len > 16 * 1024))
+  {
+    free_stream(s);
+    return 1;
+  }
   /* make a copy of client mcs data */
   init_stream(self->client_mcs_data, len);
   out_uint8a(self->client_mcs_data, s->p, len);
@@ -315,8 +356,18 @@ xrdp_mcs_recv_edrq(struct xrdp_mcs* self)
     free_stream(s);
     return 1;
   }
+  if (!s_check_rem(s, 1))
+  {
+    free_stream(s);
+    return 1;
+  }
   in_uint8(s, opcode);
   if ((opcode >> 2) != MCS_EDRQ)
+  {
+    free_stream(s);
+    return 1;
+  }
+  if (!s_check_rem(s, 4))
   {
     free_stream(s);
     return 1;
@@ -325,6 +376,11 @@ xrdp_mcs_recv_edrq(struct xrdp_mcs* self)
   in_uint8s(s, 2);
   if (opcode & 2)
   {
+    if (!s_check_rem(s, 2))
+    {
+      free_stream(s);
+      return 1;
+    }
     in_uint16_be(s, self->userid);
   }
   if (!(s_check_end(s)))
@@ -351,6 +407,11 @@ xrdp_mcs_recv_aurq(struct xrdp_mcs* self)
     free_stream(s);
     return 1;
   }
+  if (!s_check_rem(s, 1))
+  {
+    free_stream(s);
+    return 1;
+  }
   in_uint8(s, opcode);
   if ((opcode >> 2) != MCS_AURQ)
   {
@@ -359,6 +420,11 @@ xrdp_mcs_recv_aurq(struct xrdp_mcs* self)
   }
   if (opcode & 2)
   {
+    if (!s_check_rem(s, 2))
+    {
+      free_stream(s);
+      return 1;
+    }
     in_uint16_be(s, self->userid);
   }
   if (!(s_check_end(s)))
@@ -416,8 +482,18 @@ xrdp_mcs_recv_cjrq(struct xrdp_mcs* self)
     free_stream(s);
     return 1;
   }
+  if (!s_check_rem(s, 1))
+  {
+    free_stream(s);
+    return 1;
+  }
   in_uint8(s, opcode);
   if ((opcode >> 2) != MCS_CJRQ)
+  {
+    free_stream(s);
+    return 1;
+  }
+  if (!s_check_rem(s, 4))
   {
     free_stream(s);
     return 1;
@@ -425,6 +501,11 @@ xrdp_mcs_recv_cjrq(struct xrdp_mcs* self)
   in_uint8s(s, 4);
   if (opcode & 2)
   {
+    if (!s_check_rem(s, 2))
+    {
+      free_stream(s);
+      return 1;
+    }
     in_uint8s(s, 2);
   }
   if (!(s_check_end(s)))
