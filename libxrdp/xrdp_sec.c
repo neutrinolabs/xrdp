@@ -739,15 +739,27 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec* self, struct stream* s)
     g_writeln("Processing channel data from client - The channel is off");  
     return 0;
   }
+  if (!s_check_rem(s, 4))
+  {
+    return 1;
+  }
   in_uint32_le(s, num_channels);
+  if (num_channels > 256)
+  {
+    return 1;
+  }
   for (index = 0; index < num_channels; index++)
   {
     channel_item = (struct mcs_channel_item*)
              g_malloc(sizeof(struct mcs_channel_item), 1);
+    if (!s_check_rem(s, 12))
+    {
+      return 1;
+    }
     in_uint8a(s, channel_item->name, 8);
     in_uint32_le(s, channel_item->flags);
     channel_item->chanid = MCS_GLOBAL_CHANNEL + (index + 1);
-    list_add_item(self->mcs_layer->channel_list, (long)channel_item);
+    list_add_item(self->mcs_layer->channel_list, (tintptr)channel_item);
     DEBUG(("got channel flags %8.8x name %s", channel_item->flags,
            channel_item->name));
   }
@@ -765,10 +777,14 @@ xrdp_sec_process_mcs_data(struct xrdp_sec* self)
   int tag = 0;
   int size = 0;
 
-  s = &self->client_mcs_data;
+  s = &(self->client_mcs_data);
   /* set p to beginning */
   s->p = s->data;
   /* skip header */
+  if (!s_check_rem(s, 23))
+  {
+    return 1;
+  }
   in_uint8s(s, 23);
   while (s_check_rem(s, 4))
   {
@@ -893,7 +909,7 @@ xrdp_sec_out_mcs_data(struct xrdp_sec* self)
 
 /*****************************************************************************/
 /* process the mcs client data we received from the mcs layer */
-static void APP_CC
+static int APP_CC
 xrdp_sec_in_mcs_data(struct xrdp_sec* self)
 {
   struct stream* s = (struct stream *)NULL;
@@ -905,12 +921,20 @@ xrdp_sec_in_mcs_data(struct xrdp_sec* self)
   s = &(self->client_mcs_data);
   /* get hostname, its unicode */
   s->p = s->data;
+  if (!s_check_rem(s, 47))
+  {
+    return 1;
+  }
   in_uint8s(s, 47);
   g_memset(client_info->hostname, 0, 32);
   c = 1;
   index = 0;
   while (index < 16 && c != 0)
   {
+    if (!s_check_rem(s, 2))
+    {
+      return 1;
+    }
     in_uint8(s, c);
     in_uint8s(s, 1);
     client_info->hostname[index] = c;
@@ -918,13 +942,22 @@ xrdp_sec_in_mcs_data(struct xrdp_sec* self)
   }
   /* get build */
   s->p = s->data;
+  if (!s_check_rem(s, 43 + 4))
+  {
+    return 1;
+  }
   in_uint8s(s, 43);
   in_uint32_le(s, client_info->build);
   /* get keylayout */
   s->p = s->data;
+  if (!s_check_rem(s, 39 + 4))
+  {
+    return 1;
+  }
   in_uint8s(s, 39);
   in_uint32_le(s, client_info->keylayout);
   s->p = s->data;
+  return 0;
 }
 
 /*****************************************************************************/
@@ -991,7 +1024,10 @@ xrdp_sec_incoming(struct xrdp_sec* self)
             (int)(self->server_mcs_data.end - self->server_mcs_data.data));
 #endif
   DEBUG((" out xrdp_sec_incoming"));
-  xrdp_sec_in_mcs_data(self);
+  if (xrdp_sec_in_mcs_data(self) != 0)
+  {
+    return 1;
+  }
   return 0;
 }
 
