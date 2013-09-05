@@ -16,5 +16,19 @@ deb http://packages.medibuntu.org/ precise free non-free
 deb http://drbl.sourceforge.net/drbl-core drbl stable
 ----------------------
 
-apt-get install dpkg-dev
-apt-get build-dep pulseaudio
+do all this in a new directory
+
+root
+sudo apt-get install dpkg-dev
+
+non root
+apt-get source pulseaudio
+
+root
+sudo apt-get build-dep pulseaudio
+
+cd pulseaudio-1.1
+
+non root
+dpkg-buildpackage -rfakeroot -uc -b
+
