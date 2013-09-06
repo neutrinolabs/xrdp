@@ -789,7 +789,10 @@ xrdp_sec_process_mcs_data(struct xrdp_sec* self)
       case SEC_TAG_CLI_CRYPT:
         break;
       case SEC_TAG_CLI_CHANNELS:
-        xrdp_sec_process_mcs_data_channels(self, s);
+        if (xrdp_sec_process_mcs_data_channels(self, s) != 0)
+        {
+          return 1;
+        }
         break;
       case SEC_TAG_CLI_4:
         break;
