@@ -729,7 +729,7 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec* self, struct stream* s)
     return 1;
   }
   in_uint32_le(s, num_channels);
-  if (num_channels > 256)
+  if (num_channels > 31)
   {
     return 1;
   }
