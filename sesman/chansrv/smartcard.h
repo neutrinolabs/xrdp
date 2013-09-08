@@ -26,6 +26,7 @@
 
 #include "parse.h"
 #include "irp.h"
+#include "trans.h"
 
 /* forward declarations */
 void scard_device_announce(tui32 device_id);
@@ -47,5 +48,10 @@ int APP_CC
 scard_init(void);
 int APP_CC
 scard_deinit(void);
+
+int APP_CC
+scard_send_irp_establish_context(struct trans *con, int scope);
+int APP_CC
+scard_send_irp_list_readers(struct trans *con);
 
 #endif /* end #ifndef _SMARTCARD_C */

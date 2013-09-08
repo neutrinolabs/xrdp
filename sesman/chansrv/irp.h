@@ -52,6 +52,7 @@ struct irp
 
     void     (*callback)(struct stream *s, IRP *irp, tui32 DeviceId,
                          tui32 CompletionId, tui32 IoStatus);
+    void      *user_data;
 };
 
 IRP * APP_CC devredir_irp_new(void);

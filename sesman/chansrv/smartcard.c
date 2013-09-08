@@ -137,12 +137,57 @@ extern tui32 g_completion_id;
 extern int g_rdpdr_chan_id;    /* in chansrv.c */
 
 /* forward declarations specific to this file */
-static void scard_send_EstablishContext(IRP *irp);
+static void scard_send_EstablishContext(IRP *irp, int scope);
 static void scard_send_ListReaders(IRP *irp, int wide);
 static struct stream *scard_make_new_ioctl(IRP *irp, tui32 ioctl);
 static int  scard_add_new_device(tui32 device_id);
 static int  scard_get_free_slot(void);
 static void scard_release_resources(void);
+
+static tui32 g_device_id = 0;
+static int g_scard_index = 0;
+
+/*****************************************************************************/
+int APP_CC
+scard_send_irp_establish_context(struct trans *con, int scope)
+{
+    IRP *irp;
+
+    if ((irp = devredir_irp_new()) == NULL)
+    {
+        log_error("system out of memory");
+        return 1;
+    }
+    irp->scard_index = g_scard_index;
+    irp->CompletionId = g_completion_id++;
+    irp->DeviceId = g_device_id;
+    irp->callback = scard_handle_EstablishContext_Return;
+    irp->user_data = con;
+    scard_send_EstablishContext(irp, scope);
+    log_debug("leaving");
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+scard_send_irp_list_readers(struct trans *con)
+{
+    IRP *irp;
+
+    if ((irp = devredir_irp_new()) == NULL)
+    {
+        log_error("system out of memory");
+        return 1;
+    }
+    irp->scard_index = g_scard_index;
+    irp->CompletionId = g_completion_id++;
+    irp->DeviceId = g_device_id;
+    irp->callback = scard_handle_ListReaders_Return;
+    irp->user_data = con;
+    scard_send_ListReaders(irp, 1);
+    log_debug("leaving");
+    return 0;
+}
 
 /******************************************************************************
 **                          non static functions                             **
@@ -151,38 +196,24 @@ static void scard_release_resources(void);
 void APP_CC
 scard_device_announce(tui32 device_id)
 {
-    IRP *irp;
-
     log_debug("entered: device_id=%d", device_id);
-
-    if (!g_smartcards_inited)
+    if (g_smartcards_inited)
     {
-        g_memset(&smartcards, 0, sizeof(smartcards));
-        g_smartcards_inited = 1;
-    }
-
-    if ((irp = devredir_irp_new()) == NULL)
-    {
-        log_error("system out of memory");
         return;
     }
-
-    irp->scard_index = scard_add_new_device(device_id);
-    if (irp->scard_index < 0)
+    g_memset(&smartcards, 0, sizeof(smartcards));
+    g_smartcards_inited = 1;
+    g_device_id = device_id;
+    g_scard_index = scard_add_new_device(device_id);
+    if (g_scard_index < 0)
     {
-        log_debug("NOT adding smartcard with DeviceId=%d to list", device_id);
-        devredir_irp_delete(irp);
-        return;
+        log_debug("scard_add_new_device failed with DeviceId=%d", g_device_id);
     }
-
-    log_debug("added smartcard with DeviceId=%d to list", device_id);
-
-    irp->CompletionId = g_completion_id++;
-    irp->DeviceId = device_id;
-    irp->callback = scard_handle_EstablishContext_Return;
-
-    scard_send_EstablishContext(irp);
-    log_debug("leaving");
+    else
+    {
+        log_debug("added smartcard with DeviceId=%d to list", g_device_id);
+    }
+    //scard_send_establish_context();
 }
 
 /******************************************************************************
@@ -239,13 +270,19 @@ scard_handle_EstablishContext_Return(struct stream *s, IRP *irp,
         g_hexdump(sc->Context, sc->Context_len);
     }
 
-    irp->callback = scard_handle_ListReaders_Return;
-    scard_send_ListReaders(irp, 1);
+    //irp->callback = scard_handle_ListReaders_Return;
+    //scard_send_ListReaders(irp, 1);
+
+    scard_function_establish_context_return((struct trans *) (irp->user_data),
+                                            ((int*)(sc->Context))[0]);
+
+    devredir_irp_delete(irp);
 
     /* LK_TODO need to delete IRP */
     log_debug("leaving");
 }
 
+/******************************************************************************/
 void APP_CC
 scard_handle_ListReaders_Return(struct stream *s, IRP *irp,
                                 tui32 DeviceId, tui32 CompletionId,
@@ -272,9 +309,12 @@ scard_handle_ListReaders_Return(struct stream *s, IRP *irp,
     /* get OutputBufferLen */
     xstream_rd_u32_le(s, len);
 
+    scard_function_get_readers_state_return((struct trans *) (irp->user_data),
+                                            s, len);
+
     /* LK_TODO */
-    log_debug("dumping %d bytes", len);
-    g_hexdump(s->p, len);
+    //log_debug("dumping %d bytes", len);
+    //g_hexdump(s->p, len);
 
     log_debug("leaving");
 }
@@ -288,17 +328,20 @@ scard_handle_ListReaders_Return(struct stream *s, IRP *irp,
  *****************************************************************************/
 
 static void APP_CC
-scard_send_EstablishContext(IRP *irp)
+scard_send_EstablishContext(IRP *irp, int scope)
 {
     struct stream *s;
     int            bytes;
 
     if ((s = scard_make_new_ioctl(irp, SCARD_IOCTL_ESTABLISH_CONTEXT)) == NULL)
+    {
+        log_error("scard_make_new_ioctl failed");
         return;
+    }
 
     xstream_wr_u32_le(s, 0x08);               /* len                      */
     xstream_wr_u32_le(s, 0);                  /* unused                   */
-    xstream_wr_u32_le(s, SCARD_SCOPE_SYSTEM); /* Ioctl specific data      */
+    xstream_wr_u32_le(s, scope);              /* Ioctl specific data      */
     xstream_wr_u32_le(s, 0);                  /* don't know what this is, */
                                               /* but Win7 is sending it   */
     /* get stream len */
@@ -476,7 +519,10 @@ scard_add_new_device(tui32 device_id)
     SMARTCARD *sc;
 
     if ((index = scard_get_free_slot()) < 0)
+    {
+        log_error("scard_get_free_slot failed");
         return -1;
+    }
 
     if ((sc = g_malloc(sizeof(SMARTCARD), 1)) == NULL)
     {
