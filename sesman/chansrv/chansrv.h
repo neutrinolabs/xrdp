@@ -1,8 +1,8 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2009-2012
- * Copyright (C) Laxmikant Rashinkar 2009-2012
+ * Copyright (C) Jay Sorg 2009-2013
+ * Copyright (C) Laxmikant Rashinkar 2009-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,6 +59,7 @@ g_is_term(void);
 
 int APP_CC send_channel_data(int chan_id, char *data, int size);
 int APP_CC main_cleanup(void);
+int APP_CC add_timeout(int msoffset, void (*callback)(void* data), void* data);
 int APP_CC find_empty_slot_in_dvc_channels();
 struct xrdp_api_data * APP_CC struct_from_dvc_chan_id(tui32 dvc_chan_id);
 int remove_struct_with_chan_id(tui32 dvc_chan_id);
