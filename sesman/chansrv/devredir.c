@@ -68,7 +68,7 @@
 
 #define log_info(_params...)                            \
 {                                                       \
-    if (LOG_INFO <= LOG_LEVEL)                         \
+    if (LOG_INFO <= LOG_LEVEL)                          \
     {                                                   \
         g_write("[%10.10u]: DEV_REDIR  %s: %d : ",      \
                 g_time3(), __func__, __LINE__);         \
@@ -78,7 +78,7 @@
 
 #define log_debug(_params...)                           \
 {                                                       \
-    if (LOG_DEBUG <= LOG_LEVEL)                        \
+    if (LOG_DEBUG <= LOG_LEVEL)                         \
     {                                                   \
         g_write("[%10.10u]: DEV_REDIR  %s: %d : ",      \
                 g_time3(), __func__, __LINE__);         \

@@ -195,15 +195,15 @@ scard_function_establish_context_return(struct trans *con, int context)
 /*****************************************************************************/
 /* returns error */
 int APP_CC
-scard_proess_release_context(struct stream *in_s)
+scard_process_release_context(struct stream *in_s)
 {
     struct release_struct in_rs;
     struct release_struct out_rs;
     struct stream *out_s;
 
-    LLOGLN(0, ("scard_proess_release_context:"));
+    LLOGLN(0, ("scard_process_release_context:"));
     in_uint8a(in_s, &in_rs, sizeof(in_rs));
-    LLOGLN(0, ("scard_proess_release_context: hContext %d", in_rs.hContext));
+    LLOGLN(0, ("scard_process_release_context: hContext %d", in_rs.hContext));
     out_rs.hContext = in_rs.hContext;
     out_rs.rv = SCARD_S_SUCCESS;
     out_s = trans_get_out_s(g_con, 8192);
@@ -248,13 +248,32 @@ scard_process_get_readers_state(struct stream *in_s)
 /*****************************************************************************/
 /* returns error */
 int APP_CC
-scard_function_get_readers_state_return(struct trans *con,
-                                        struct stream *in_s,
-                                        int len)
+scard_function_list_readers_return(struct trans *con,
+                                   struct stream *in_s,
+                                   int len)
 {
     struct stream *out_s;
 
     g_hexdump(in_s->p, len);
+
+    g_strcpy(g_reader_states[0].readerName, "ACS AET65 00 00");
+    g_reader_states[0].readerState = 0x14;
+    g_reader_states[0].cardProtocol = 3;
+
+    g_reader_states[0].cardAtrLength = 10;
+    g_reader_states[0].cardAtr[0] = 0x3B;
+    g_reader_states[0].cardAtr[1] = 0x95;
+    g_reader_states[0].cardAtr[2] = 0x95;
+    g_reader_states[0].cardAtr[3] = 0x40;
+    g_reader_states[0].cardAtr[4] = 0xFF;
+    g_reader_states[0].cardAtr[5] = 0xD0;
+    g_reader_states[0].cardAtr[6] = 0x00;
+    g_reader_states[0].cardAtr[7] = 0x54;
+    g_reader_states[0].cardAtr[8] = 0x01;
+    g_reader_states[0].cardAtr[9] = 0x32;
+
+    //g_reader_states[0].eventCounter++;
+    
     out_s = trans_get_out_s(con, 8192);
     out_uint8a(out_s, g_reader_states, sizeof(g_reader_states));
     s_mark_end(out_s);
@@ -352,8 +371,65 @@ scard_process_msg(struct trans *con, struct stream *in_s, int command)
             break;
         case 0x02: /* SCARD_RELEASE_CONTEXT */
             LLOGLN(0, ("scard_process_msg: SCARD_RELEASE_CONTEXT"));
-            rv = scard_proess_release_context(in_s);
+            rv = scard_process_release_context(in_s);
             break;
+
+        case 0x03: /* SCARD_LIST_READERS */
+            LLOGLN(0, ("scard_process_msg: SCARD_LIST_READERS"));
+            break;
+
+        case 0x04: /* SCARD_CONNECT */
+            LLOGLN(0, ("scard_process_msg: SCARD_CONNECT"));
+            break;
+
+        case 0x05: /* SCARD_RECONNECT */
+            LLOGLN(0, ("scard_process_msg: SCARD_RECONNECT"));
+            break;
+
+        case 0x06: /* SCARD_DISCONNECT */
+            LLOGLN(0, ("scard_process_msg: SCARD_DISCONNECT"));
+            break;
+
+        case 0x07: /* SCARD_BEGIN_TRANSACTION */
+            LLOGLN(0, ("scard_process_msg: SCARD_BEGIN_TRANSACTION"));
+            break;
+
+        case 0x08: /* SCARD_END_TRANSACTION */
+            LLOGLN(0, ("scard_process_msg: SCARD_END_TRANSACTION"));
+            break;
+
+        case 0x09: /* SCARD_TRANSMIT */
+            LLOGLN(0, ("scard_process_msg: SCARD_TRANSMIT"));
+            break;
+
+        case 0x0A: /* SCARD_CONTROL */
+            LLOGLN(0, ("scard_process_msg: SCARD_CONTROL"));
+            break;
+
+        case 0x0B: /* SCARD_STATUS */
+            LLOGLN(0, ("scard_process_msg: SCARD_STATUS"));
+            break;
+
+        case 0x0C: /* SCARD_GET_STATUS_CHANGE */
+            LLOGLN(0, ("scard_process_msg: SCARD_GET_STATUS_CHANGE"));
+            break;
+
+        case 0x0D: /* SCARD_CANCEL */
+            LLOGLN(0, ("scard_process_msg: SCARD_CANCEL"));
+            break;
+
+        case 0x0E: /* SCARD_CANCEL_TRANSACTION */
+            LLOGLN(0, ("scard_process_msg: SCARD_CANCEL_TRANSACTION"));
+            break;
+
+        case 0x0F: /* SCARD_GET_ATTRIB */
+            LLOGLN(0, ("scard_process_msg: SCARD_GET_ATTRIB"));
+            break;
+
+        case 0x10: /* SCARD_SET_ATTRIB */
+            LLOGLN(0, ("scard_process_msg: SCARD_SET_ATTRIB"));
+            break;
+
         case 0x11: /* CMD_VERSION */
             LLOGLN(0, ("scard_process_msg: CMD_VERSION"));
             rv = scard_process_version(con, in_s);

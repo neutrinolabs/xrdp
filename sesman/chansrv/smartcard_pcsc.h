@@ -36,7 +36,8 @@ scard_pcsc_deinit(void);
 int APP_CC
 scard_function_establish_context_return(struct trans *con, int context);
 int APP_CC
-scard_function_get_readers_state_return(struct trans *con, struct stream *in_s,
-                                        int len);
+scard_function_list_readers_return(struct trans *con,
+                                   struct stream *in_s,
+                                   int len);
 
 #endif /* end #ifndef _SMARTCARD_PCSC_H */

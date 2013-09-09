@@ -309,8 +309,8 @@ scard_handle_ListReaders_Return(struct stream *s, IRP *irp,
     /* get OutputBufferLen */
     xstream_rd_u32_le(s, len);
 
-    scard_function_get_readers_state_return((struct trans *) (irp->user_data),
-                                            s, len);
+    scard_function_list_readers_return((struct trans *) (irp->user_data),
+                                       s, len);
 
     /* LK_TODO */
     //log_debug("dumping %d bytes", len);
@@ -389,22 +389,22 @@ scard_send_ListReaders(IRP *irp, int wide)
     xstream_copyin(s, sc->Context, sc->Context_len);
 
     xstream_wr_u32_le(s, 36); /* length of mszGroups */
-    xstream_wr_u16_le(s, 0x0053);
-    xstream_wr_u16_le(s, 0x0043);
-    xstream_wr_u16_le(s, 0x0061);
-    xstream_wr_u16_le(s, 0x0072);
-    xstream_wr_u16_le(s, 0x0064);
-    xstream_wr_u16_le(s, 0x0024);
-    xstream_wr_u16_le(s, 0x0041);
-    xstream_wr_u16_le(s, 0x006c);
-    xstream_wr_u16_le(s, 0x006c);
-    xstream_wr_u16_le(s, 0x0052);
-    xstream_wr_u16_le(s, 0x0065);
-    xstream_wr_u16_le(s, 0x0061);
-    xstream_wr_u16_le(s, 0x0064);
-    xstream_wr_u16_le(s, 0x0065);
-    xstream_wr_u16_le(s, 0x0072);
-    xstream_wr_u16_le(s, 0x0073);
+    xstream_wr_u16_le(s, 0x0053); /* S */
+    xstream_wr_u16_le(s, 0x0043); /* C */
+    xstream_wr_u16_le(s, 0x0061); /* a */
+    xstream_wr_u16_le(s, 0x0072); /* r */
+    xstream_wr_u16_le(s, 0x0064); /* d */
+    xstream_wr_u16_le(s, 0x0024); /* $ */
+    xstream_wr_u16_le(s, 0x0041); /* A */
+    xstream_wr_u16_le(s, 0x006c); /* l */
+    xstream_wr_u16_le(s, 0x006c); /* l */
+    xstream_wr_u16_le(s, 0x0052); /* R */
+    xstream_wr_u16_le(s, 0x0065); /* e */
+    xstream_wr_u16_le(s, 0x0061); /* a */
+    xstream_wr_u16_le(s, 0x0064); /* d */
+    xstream_wr_u16_le(s, 0x0065); /* e */
+    xstream_wr_u16_le(s, 0x0072); /* r */
+    xstream_wr_u16_le(s, 0x0073); /* s */
 
     xstream_wr_u32_le(s, 0x00);
 
@@ -419,16 +419,16 @@ scard_send_ListReaders(IRP *irp, int wide)
     xstream_free(s);
 
     /*
-    scard_device_control: dumping 120 bytes of data
-    0000 00 08 00 00 58 00 00 00 2c 00 09 00 00 00 00 00 ....X...,.......
-    0010 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
-    0020 01 10 08 00 cc cc cc cc 48 00 00 00 00 00 00 00 ........H.......
-    0030 04 00 00 00 00 00 02 00 24 00 00 00 04 00 02 00 ........$.......
-    0040 00 00 00 00 ff ff ff ff 04 00 00 00 84 db 03 01 ................
-    0050 24 00 00 00 53 00 43 00 61 00 72 00 64 00 24 00 $...S.C.a.r.d.$.
-    0060 41 00 6c 00 6c 00 52 00 65 00 61 00 64 00 65 00 A.l.l.R.e.a.d.e.
-    0070 72 00 73 00 00 00 00 00                         r.s.....
-    scard_device_control: output_len=2048 input_len=88 ioctl_code=0x9002c
+        scard_device_control: dumping 120 bytes of data
+        0000 00 08 00 00 58 00 00 00 2c 00 09 00 00 00 00 00 ....X...,.......
+        0010 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+        0020 01 10 08 00 cc cc cc cc 48 00 00 00 00 00 00 00 ........H.......
+        0030 04 00 00 00 00 00 02 00 24 00 00 00 04 00 02 00 ........$.......
+        0040 00 00 00 00 ff ff ff ff 04 00 00 00 84 db 03 01 ................
+        0050 24 00 00 00 53 00 43 00 61 00 72 00 64 00 24 00 $...S.C.a.r.d.$.
+        0060 41 00 6c 00 6c 00 52 00 65 00 61 00 64 00 65 00 A.l.l.R.e.a.d.e.
+        0070 72 00 73 00 00 00 00 00                         r.s.....
+        scard_device_control: output_len=2048 input_len=88 ioctl_code=0x9002c
     */
 
     /*
