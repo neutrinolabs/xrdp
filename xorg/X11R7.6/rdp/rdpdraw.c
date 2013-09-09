@@ -739,13 +739,12 @@ rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
                 width, org_width, depth, g_rdpScreen.depth));
     pScreen->CreatePixmap = g_rdpScreen.CreatePixmap;
     rv = pScreen->CreatePixmap(pScreen, width, height, depth, usage_hint);
+    pScreen->CreatePixmap = rdpCreatePixmap;
     priv = GETPIXPRIV(rv);
     priv->rdpindex = -1;
-    priv->con_number = g_con_number;
     priv->kind_width = width;
     pScreen->ModifyPixmapHeader(rv, org_width, 0, 0, 0, 0, 0);
-    pScreen->CreatePixmap = rdpCreatePixmap;
-    if (org_width == 0 && height == 0)
+    if ((org_width == 0) && (height == 0))
     {
         priv->is_scratch = 1;
     }
@@ -793,14 +792,19 @@ xrdp_is_os(PixmapPtr pix, rdpPixmapPtr priv)
     int height;
     struct image_data id;
 
-    if (!XRDP_IS_OS(priv))
+    if (XRDP_IS_OS(priv))
+    {
+        /* update time stamp */
+        rdpup_update_os_use(priv->rdpindex);
+    }
+    else
     {
         width = pix->drawable.width;
         height = pix->drawable.height;
         if ((pix->usage_hint == 0) &&
             (pix->drawable.depth >= g_rdpScreen.depth) &&
             (width > 0) && (height > 0) && (priv->kind_width > 0) &&
-            (priv->is_scratch == 0))
+            (priv->is_scratch == 0) && (priv->use_count >= 0))
         {
             LLOGLN(10, ("%d %d", priv->kind_width, pix->drawable.width));
             priv->rdpindex = rdpup_add_os_bitmap(pix, priv);
@@ -815,8 +819,12 @@ xrdp_is_os(PixmapPtr pix, rdpPixmapPtr priv)
                 box.y2 = height;
                 if (g_do_dirty_os)
                 {
+                    LLOGLN(10, ("xrdp_is_os: priv->con_number %d g_con_number %d",
+                           priv->con_number, g_con_number));
+                    LLOGLN(10, ("xrdp_is_os: priv->use_count %d", priv->use_count));
                     if (priv->con_number != g_con_number)
                     {
+                        LLOGLN(10, ("xrdp_is_os: queuing invalidating all"));
                         draw_item_remove_all(priv);
                         RegionInit(&reg1, &box, 0);
                         draw_item_add_img_region(priv, &reg1, GXcopy, RDI_IMGLL, 16);
@@ -1350,7 +1358,7 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
     rdpPixmapRec *pDirtyPriv;
     struct image_data id;
 
-    LLOGLN(10, ("rdpComposite:"));
+    LLOGLN(10, ("rdpComposite: op %d width %d height %d", op, width, height));
     ps = GetPictureScreen(g_pScreen);
     ps->Composite = g_rdpScreen.Composite;
     ps->Composite(op, pSrc, pMask, pDst, xSrc, ySrc,
@@ -1423,6 +1431,8 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
     {
         return;
     }
+
+    LLOGLN(10, ("rdpComposite: post_process"));
 
     if (pDst->pCompositeClip != 0)
     {

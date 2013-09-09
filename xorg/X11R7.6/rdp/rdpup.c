@@ -39,6 +39,9 @@ static char *g_shmemptr = 0;
 static int g_shmem_lineBytes = 0;
 static RegionPtr g_shm_reg = 0;
 
+static int g_rect_id_ack = 0;
+static int g_rect_id = 0;
+
 static int g_listen_sck = 0;
 static int g_sck = 0;
 static int g_sck_closed = 0;
@@ -82,9 +85,11 @@ struct rdpup_os_bitmap
     int stamp;
 };
 
+#define MAX_OS_BYTES (16 * 1024 * 1024)
 static struct rdpup_os_bitmap *g_os_bitmaps = 0;
 static int g_max_os_bitmaps = 0;
 static int g_os_bitmap_stamp = 0;
+static int g_os_bitmap_alloc_size = 0;
 
 static int g_pixmap_byte_total = 0;
 static int g_pixmap_num_used = 0;
@@ -217,6 +222,7 @@ rdpup_disconnect(void)
             }
         }
     }
+    g_os_bitmap_alloc_size = 0;
 
     g_max_os_bitmaps = 0;
     g_free(g_os_bitmaps);
@@ -233,6 +239,7 @@ rdpup_add_os_bitmap(PixmapPtr pixmap, rdpPixmapPtr priv)
     int rv;
     int oldest;
     int oldest_index;
+    int this_bytes;
 
     if (!g_connected)
     {
@@ -244,6 +251,17 @@ rdpup_add_os_bitmap(PixmapPtr pixmap, rdpPixmapPtr priv)
         return -1;
     }
 
+    this_bytes = pixmap->devKind * pixmap->drawable.height;
+    if (this_bytes > MAX_OS_BYTES)
+    {
+        LLOGLN(10, ("rdpup_add_os_bitmap: error, too big this_bytes %d "
+              "width %d height %d", this_bytes,
+              pixmap->drawable.height, pixmap->drawable.height));
+        return -1;
+    }
+
+    oldest = 0x7fffffff;
+    oldest_index = -1;
     rv = -1;
     index = 0;
 
@@ -260,42 +278,77 @@ rdpup_add_os_bitmap(PixmapPtr pixmap, rdpPixmapPtr priv)
             rv = index;
             break;
         }
-
-        index++;
-    }
-
-    if (rv == -1)
-    {
-        /* find oldest */
-        oldest = 0x7fffffff;
-        oldest_index = 0;
-        index = 0;
-
-        while (index < g_max_os_bitmaps)
+        else
         {
             if (g_os_bitmaps[index].stamp < oldest)
             {
                 oldest = g_os_bitmaps[index].stamp;
                 oldest_index = index;
             }
-
-            index++;
         }
-
-        LLOGLN(10, ("rdpup_add_os_bitmap: evicting old, oldest_index %d", oldest_index));
-        /* evict old */
-        g_os_bitmaps[oldest_index].priv->status = 0;
-        g_os_bitmaps[oldest_index].priv->con_number = 0;
-        /* set new */
-        g_os_bitmaps[oldest_index].pixmap = pixmap;
-        g_os_bitmaps[oldest_index].priv = priv;
-        g_os_bitmaps[oldest_index].stamp = g_os_bitmap_stamp;
-        g_os_bitmap_stamp++;
-        rv = oldest_index;
+        index++;
     }
 
+    if (rv == -1)
+    {
+        if (oldest_index == -1)
+        {
+            LLOGLN(0, ("rdpup_add_os_bitmap: error"));
+        }
+        else
+        {
+            rdpup_remove_os_bitmap(oldest_index);
+            g_os_bitmaps[index].used = 1;
+            g_os_bitmaps[index].pixmap = pixmap;
+            g_os_bitmaps[index].priv = priv;
+            g_os_bitmaps[index].stamp = g_os_bitmap_stamp;
+            g_os_bitmap_stamp++;
+            g_pixmap_num_used++;
+            rv = oldest_index;
+        }
+    }
+
+    if (rv < 0)
+    {
+        return rv;
+    }
+
+    g_os_bitmap_alloc_size += this_bytes;
+    LLOGLN(10, ("rdpup_add_os_bitmap: this_bytes %d g_os_bitmap_alloc_size %d",
+           this_bytes, g_os_bitmap_alloc_size));
+    while (g_os_bitmap_alloc_size > MAX_OS_BYTES)
+    {
+        LLOGLN(10, ("rdpup_add_os_bitmap: must delete g_pixmap_num_used %d",
+               g_pixmap_num_used));
+        /* find oldest */
+        oldest = 0x7fffffff;
+        oldest_index = -1;
+        index = 0;
+        while (index < g_max_os_bitmaps)
+        {
+            if (g_os_bitmaps[index].used && g_os_bitmaps[index].stamp < oldest)
+            {
+                oldest = g_os_bitmaps[index].stamp;
+                oldest_index = index;
+            }
+            index++;
+        }
+        if (oldest_index == -1)
+        {
+            LLOGLN(0, ("rdpup_add_os_bitmap: error 1"));
+            break;
+        }
+        if (oldest_index == rv)
+        {
+            LLOGLN(0, ("rdpup_add_os_bitmap: error 2"));
+            break;
+        }
+        rdpup_remove_os_bitmap(oldest_index);
+        rdpup_delete_os_surface(oldest_index);
+    }
     LLOGLN(10, ("rdpup_add_os_bitmap: new bitmap index %d", rv));
-    LLOGLN(10, ("  g_pixmap_num_used %d", g_pixmap_num_used));
+    LLOGLN(10, ("rdpup_add_os_bitmap: g_pixmap_num_used %d "
+           "g_os_bitmap_stamp 0x%8.8x", g_pixmap_num_used, g_os_bitmap_stamp));
     return rv;
 }
 
@@ -303,8 +356,12 @@ rdpup_add_os_bitmap(PixmapPtr pixmap, rdpPixmapPtr priv)
 int
 rdpup_remove_os_bitmap(int rdpindex)
 {
+    PixmapPtr pixmap;
+    rdpPixmapPtr priv;
+    int this_bytes;
+
     LLOGLN(10, ("rdpup_remove_os_bitmap: index %d stamp %d",
-                rdpindex, g_os_bitmaps[rdpindex].stamp));
+           rdpindex, g_os_bitmaps[rdpindex].stamp));
 
     if (g_os_bitmaps == 0)
     {
@@ -318,15 +375,65 @@ rdpup_remove_os_bitmap(int rdpindex)
 
     if (g_os_bitmaps[rdpindex].used)
     {
+        pixmap = g_os_bitmaps[rdpindex].pixmap;
+        priv = g_os_bitmaps[rdpindex].priv;
+        draw_item_remove_all(priv);
+        this_bytes = pixmap->devKind * pixmap->drawable.height;
+        g_os_bitmap_alloc_size -= this_bytes;
+        LLOGLN(10, ("rdpup_remove_os_bitmap: this_bytes %d "
+               "g_os_bitmap_alloc_size %d", this_bytes,
+               g_os_bitmap_alloc_size));
         g_os_bitmaps[rdpindex].used = 0;
         g_os_bitmaps[rdpindex].pixmap = 0;
         g_os_bitmaps[rdpindex].priv = 0;
         g_pixmap_num_used--;
+        priv->status = 0;
+        priv->con_number = 0;
+        priv->use_count = 0;
+    }
+    else
+    {
+        LLOGLN(0, ("rdpup_remove_os_bitmap: error"));
     }
 
     LLOGLN(10, ("  g_pixmap_num_used %d", g_pixmap_num_used));
     return 0;
 }
+
+/*****************************************************************************/
+int
+rdpup_update_os_use(int rdpindex)
+{
+    PixmapPtr pixmap;
+    rdpPixmapPtr priv;
+    int this_bytes;
+
+    LLOGLN(10, ("rdpup_update_use: index %d stamp %d",
+           rdpindex, g_os_bitmaps[rdpindex].stamp));
+
+    if (g_os_bitmaps == 0)
+    {
+        return 1;
+    }
+
+    if ((rdpindex < 0) && (rdpindex >= g_max_os_bitmaps))
+    {
+        return 1;
+    }
+
+    if (g_os_bitmaps[rdpindex].used)
+    {
+        g_os_bitmaps[rdpindex].stamp = g_os_bitmap_stamp;
+        g_os_bitmap_stamp++;
+    }
+    else
+    {
+        LLOGLN(0, ("rdpup_update_use: error rdpindex %d", rdpindex));
+    }
+
+    return 0;
+}
+
 
 /*****************************************************************************/
 /* returns error */
@@ -433,7 +540,14 @@ rdpDeferredUpdateCallback(OsTimerPtr timer, CARD32 now, pointer arg)
 
     if (g_do_dirty_ons)
     {
-        rdpup_check_dirty_screen(&g_screenPriv);
+        if (g_rect_id == g_rect_id_ack)
+        {
+            rdpup_check_dirty_screen(&g_screenPriv);
+        }
+        else
+        {
+            LLOGLN(0, ("rdpDeferredUpdateCallback: skipping"));
+        }
     }
     else
     {
@@ -909,11 +1023,13 @@ rdpup_process_msg(struct stream *s)
     {
         LLOGLN(10, ("rdpup_process_msg: got msg 105"));
         in_uint32_le(s, flags);
+        in_uint32_le(s, g_rect_id_ack);
         in_uint32_le(s, x);
         in_uint32_le(s, y);
         in_uint32_le(s, cx);
         in_uint32_le(s, cy);
         LLOGLN(10, ("  %d %d %d %d", x, y, cx ,cy));
+        LLOGLN(10, ("  rect_id %d rect_id_ack %d", g_rect_id, g_rect_id_ack));
 
         box.x1 = x;
         box.y1 = y;
@@ -926,6 +1042,8 @@ rdpup_process_msg(struct stream *s)
         RegionUninit(&reg);
 
     }
+
+
     else
     {
         rdpLog("unknown message type in rdpup_process_msg %d\n", msg_type);
@@ -1870,7 +1988,7 @@ rdpup_send_area(struct image_data *id, int x, int y, int w, int h)
                 d += id->shmem_lineBytes;
                 ly += 1;
             }
-            size = 32;
+            size = 36;
             rdpup_pre_check(size);
             out_uint16_le(g_out_s, 60);
             out_uint16_le(g_out_s, size);
@@ -1880,6 +1998,8 @@ rdpup_send_area(struct image_data *id, int x, int y, int w, int h)
             out_uint16_le(g_out_s, w);
             out_uint16_le(g_out_s, h);
             out_uint32_le(g_out_s, 0);
+            g_rect_id++;
+            out_uint32_le(g_out_s, g_rect_id);
             out_uint32_le(g_out_s, id->shmem_id);
             out_uint32_le(g_out_s, id->shmem_offset);
             out_uint16_le(g_out_s, id->width);
@@ -2128,10 +2248,6 @@ rdpup_check_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec *pDirtyPriv)
         return 0;
     }
 
-    /* update use time / count */
-    g_os_bitmaps[pDirtyPriv->rdpindex].stamp = g_os_bitmap_stamp;
-    g_os_bitmap_stamp++;
-
     LLOGLN(10, ("rdpup_check_dirty: got dirty"));
     rdpup_switch_os_surface(pDirtyPriv->rdpindex);
     rdpup_get_pixmap_image_rect(pDirtyPixmap, &id);
@@ -2293,8 +2409,8 @@ rdpup_check_dirty_screen(rdpPixmapRec *pDirtyPriv)
                 for (index = 0; index < count; index++)
                 {
                     box = REGION_RECTS(di->reg)[index];
-                    LLOGLN(10, ("  RDI_IMGLL %d %d %d %d", box.x1, box.y1,
-                                box.x2, box.y2));
+                    LLOGLN(10, ("  RDI_IMGLL x %d y %d w %d h %d", box.x1, box.y1,
+                                box.x2 - box.x1, box.y2 - box.y1));
                     rdpup_send_area(&id, box.x1, box.y1, box.x2 - box.x1,
                                     box.y2 - box.y1);
                 }
