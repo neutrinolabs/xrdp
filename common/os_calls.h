@@ -125,6 +125,7 @@ int APP_CC      g_get_errno(void);
 int APP_CC      g_execvp(const char* p1, char* args[]);
 int APP_CC      g_execlp3(const char* a1, const char* a2, const char* a3);
 void APP_CC     g_signal_child_stop(void (*func)(int));
+void APP_CC     g_signal_segfault(void (*func)(int));
 void APP_CC     g_signal_hang_up(void (*func)(int));
 void APP_CC     g_signal_user_interrupt(void (*func)(int));
 void APP_CC     g_signal_kill(void (*func)(int));
