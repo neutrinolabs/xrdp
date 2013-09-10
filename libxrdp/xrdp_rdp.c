@@ -915,13 +915,27 @@ static int APP_CC
 xrdp_process_capset_bmpcache(struct xrdp_rdp *self, struct stream *s,
                              int len)
 {
+    int i;
+
     self->client_info.bitmap_cache_version |= 1;
     in_uint8s(s, 24);
-    in_uint16_le(s, self->client_info.cache1_entries);
+    /* cache 1 */
+    in_uint16_le(s, i);
+    i = MIN(i, XRDP_MAX_BITMAP_CACHE_IDX);
+    i = MAX(i, 0);
+    self->client_info.cache1_entries = i;
     in_uint16_le(s, self->client_info.cache1_size);
-    in_uint16_le(s, self->client_info.cache2_entries);
+    /* cache 2 */
+    in_uint16_le(s, i);
+    i = MIN(i, XRDP_MAX_BITMAP_CACHE_IDX);
+    i = MAX(i, 0);
+    self->client_info.cache2_entries = i;
     in_uint16_le(s, self->client_info.cache2_size);
-    in_uint16_le(s, self->client_info.cache3_entries);
+    /* caceh 3 */
+    in_uint16_le(s, i);
+    i = MIN(i, XRDP_MAX_BITMAP_CACHE_IDX);
+    i = MAX(i, 0);
+    self->client_info.cache3_entries = i;
     in_uint16_le(s, self->client_info.cache3_size);
     DEBUG(("cache1 entries %d size %d", self->client_info.cache1_entries,
            self->client_info.cache1_size));
@@ -947,16 +961,19 @@ xrdp_process_capset_bmpcache2(struct xrdp_rdp *self, struct stream *s,
     self->client_info.bitmap_cache_persist_enable = i;
     in_uint8s(s, 2); /* number of caches in set, 3 */
     in_uint32_le(s, i);
-    i = MIN(i, 2000);
+    i = MIN(i, XRDP_MAX_BITMAP_CACHE_IDX);
+    i = MAX(i, 0);
     self->client_info.cache1_entries = i;
     self->client_info.cache1_size = 256 * Bpp;
     in_uint32_le(s, i);
-    i = MIN(i, 2000);
+    i = MIN(i, XRDP_MAX_BITMAP_CACHE_IDX);
+    i = MAX(i, 0);
     self->client_info.cache2_entries = i;
     self->client_info.cache2_size = 1024 * Bpp;
     in_uint32_le(s, i);
     i = i & 0x7fffffff;
-    i = MIN(i, 2000);
+    i = MIN(i, XRDP_MAX_BITMAP_CACHE_IDX);
+    i = MAX(i, 0);
     self->client_info.cache3_entries = i;
     self->client_info.cache3_size = 4096 * Bpp;
     DEBUG(("cache1 entries %d size %d", self->client_info.cache1_entries,
