@@ -454,4 +454,7 @@
 
 #define CB_ITEMCHANGE  300
 
+#define XRDP_MAX_BITMAP_CACHE_ID  3
+#define XRDP_MAX_BITMAP_CACHE_IDX 2000
+
 #endif
