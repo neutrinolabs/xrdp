@@ -1322,12 +1322,20 @@ xrdp_rdp_process_data_input(struct xrdp_rdp *self, struct stream *s)
     int param2;
     int time;
 
+    if (!s_check_rem(s, 4))
+    {
+        return 1;
+    }
     in_uint16_le(s, num_events);
     in_uint8s(s, 2); /* pad */
     DEBUG(("in xrdp_rdp_process_data_input %d events", num_events));
 
     for (index = 0; index < num_events; index++)
     {
+        if (!s_check_rem(s, 12))
+        {
+            return 1;
+        }
         in_uint32_le(s, time);
         in_uint16_le(s, msg_type);
         in_uint16_le(s, device_flags);
