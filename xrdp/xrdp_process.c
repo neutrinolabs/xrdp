@@ -187,6 +187,12 @@ xrdp_process_main_loop(struct xrdp_process* self)
     }
     libxrdp_disconnect(self->session);
   }
+  else
+  {
+    /* this will try to send a disconnect,
+       maybe should check that connection got far enough */
+    libxrdp_disconnect(self->session);
+  }
   xrdp_process_mod_end(self);
   libxrdp_exit(self->session);
   self->session = 0;
