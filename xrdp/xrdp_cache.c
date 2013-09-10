@@ -34,12 +34,22 @@ xrdp_cache_create(struct xrdp_wm* owner,
   self->wm = owner;
   self->session = session;
   self->use_bitmap_comp = client_info->use_bitmap_comp;
-  self->cache1_entries = client_info->cache1_entries;
+
+  self->cache1_entries = MIN(XRDP_MAX_BITMAP_CACHE_IDX,
+                             client_info->cache1_entries);
+  self->cache1_entries = MAX(self->cache1_entries, 0);
   self->cache1_size = client_info->cache1_size;
-  self->cache2_entries = client_info->cache2_entries;
+
+  self->cache2_entries = MIN(XRDP_MAX_BITMAP_CACHE_IDX,
+                             client_info->cache2_entries);
+  self->cache2_entries = MAX(self->cache2_entries, 0);
   self->cache2_size = client_info->cache2_size;
-  self->cache3_entries = client_info->cache3_entries;
+
+  self->cache3_entries = MIN(XRDP_MAX_BITMAP_CACHE_IDX,
+                             client_info->cache3_entries);
+  self->cache3_entries = MAX(self->cache3_entries, 0);
   self->cache3_size = client_info->cache3_size;
+
   self->bitmap_cache_persist_enable = client_info->bitmap_cache_persist_enable;
   self->bitmap_cache_version = client_info->bitmap_cache_version;
   self->pointer_cache_entries = client_info->pointer_cache_entries;
