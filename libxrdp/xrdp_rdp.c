@@ -514,6 +514,11 @@ xrdp_rdp_parse_client_mcs_data(struct xrdp_rdp *self)
 
     p = &(self->sec_layer->client_mcs_data);
     p->p = p->data;
+    if (!s_check_rem(p, 31 + 2 + 2 + 120 + 2))
+    {
+        g_writeln("xrdp_rdp_parse_client_mcs_data: error");
+        return 1;
+    }
     in_uint8s(p, 31);
     in_uint16_le(p, self->client_info.width);
     in_uint16_le(p, self->client_info.height);
@@ -524,6 +529,10 @@ xrdp_rdp_parse_client_mcs_data(struct xrdp_rdp *self)
     switch (i)
     {
         case 0xca01:
+            if (!s_check_rem(p, 6 + 1))
+            {
+                return 1;
+            }
             in_uint8s(p, 6);
             in_uint8(p, i);
 
@@ -837,6 +846,11 @@ xrdp_process_capset_general(struct xrdp_rdp *self, struct stream *s,
 {
     int i;
 
+    if (len < 10 + 2)
+    {
+        g_writeln("xrdp_process_capset_general: error");
+        return 1;
+    }
     in_uint8s(s, 10);
     in_uint16_le(s, i);
     /* use_compact_packets is pretty much 'use rdp5' */
@@ -858,6 +872,11 @@ xrdp_process_capset_order(struct xrdp_rdp *self, struct stream *s,
     int cap_flags;
 
     DEBUG(("order capabilities"));
+    if (len < 20 + 2 + 2 + 2 + 2 + 2 + 2 + 32 + 2 + 2 + 4 + 4 + 4 + 4)
+    {
+        g_writeln("xrdp_process_capset_order: error");
+        return 1;
+    }
     in_uint8s(s, 20); /* Terminal desc, pad */
     in_uint8s(s, 2); /* Cache X granularity */
     in_uint8s(s, 2); /* Cache Y granularity */
@@ -917,6 +936,11 @@ xrdp_process_capset_bmpcache(struct xrdp_rdp *self, struct stream *s,
 {
     int i;
 
+    if (len < 24 + 2 + 2 + 2 + 2 + 2 + 2)
+    {
+        g_writeln("xrdp_process_capset_bmpcache: error");
+        return 1;
+    }
     self->client_info.bitmap_cache_version |= 1;
     in_uint8s(s, 24);
     /* cache 1 */
@@ -955,6 +979,11 @@ xrdp_process_capset_bmpcache2(struct xrdp_rdp *self, struct stream *s,
     int Bpp = 0;
     int i = 0;
 
+    if (len < 2 + 2 + 4 + 4 + 4)
+    {
+        g_writeln("xrdp_process_capset_bmpcache2: error");
+        return 1;
+    }
     self->client_info.bitmap_cache_version |= 2;
     Bpp = (self->client_info.bpp + 7) / 8;
     in_uint16_le(s, i); /* cache flags */
@@ -992,6 +1021,11 @@ xrdp_process_capset_cache_v3_codec_id(struct xrdp_rdp *self, struct stream *s,
 {
     int codec_id;
 
+    if (len < 1)
+    {
+        g_writeln("xrdp_process_capset_cache_v3_codec_id: error");
+        return 1;
+    }
     in_uint8(s, codec_id);
     g_writeln("xrdp_process_capset_cache_v3_codec_id: cache_v3_codec_id %d",
               codec_id);
@@ -1009,6 +1043,11 @@ xrdp_process_capset_pointercache(struct xrdp_rdp *self, struct stream *s,
     int colorPointerFlag;
     int no_new_cursor;
 
+    if (len < 2 + 2 + 2)
+    {
+        g_writeln("xrdp_process_capset_pointercache: error");
+        return 1;
+    }
     no_new_cursor = self->client_info.pointer_flags & 2;
     in_uint16_le(s, colorPointerFlag);
     self->client_info.pointer_flags = colorPointerFlag;
@@ -1045,6 +1084,11 @@ xrdp_process_capset_brushcache(struct xrdp_rdp *self, struct stream *s,
 {
     int code;
 
+    if (len < 4)
+    {
+        g_writeln("xrdp_process_capset_brushcache: error");
+        return 1;
+    }
     in_uint32_le(s, code);
     self->client_info.brush_cache_code = code;
     return 0;
@@ -1057,12 +1101,11 @@ xrdp_process_offscreen_bmpcache(struct xrdp_rdp *self, struct stream *s,
 {
     int i32;
 
-    if (len - 4 < 8)
+    if (len < 4 + 2 + 2)
     {
-        g_writeln("xrdp_process_offscreen_bmpcache: bad len");
+        g_writeln("xrdp_process_offscreen_bmpcache: error");
         return 1;
     }
-
     in_uint32_le(s, i32);
     self->client_info.offscreen_support_level = i32;
     in_uint16_le(s, i32);
@@ -1083,12 +1126,11 @@ xrdp_process_capset_rail(struct xrdp_rdp *self, struct stream *s, int len)
 {
     int i32;
 
-    if (len - 4 < 4)
+    if (len < 4)
     {
-        g_writeln("xrdp_process_capset_rail: bad len");
+        g_writeln("xrdp_process_capset_rail: error");
         return 1;
     }
-
     in_uint32_le(s, i32);
     self->client_info.rail_support_level = i32;
     g_writeln("xrdp_process_capset_rail: rail_support_level %d",
@@ -1102,12 +1144,11 @@ xrdp_process_capset_window(struct xrdp_rdp *self, struct stream *s, int len)
 {
     int i32;
 
-    if (len - 4 < 7)
+    if (len < 4 + 1 + 2)
     {
-        g_writeln("xrdp_process_capset_window: bad len");
+        g_writeln("xrdp_process_capset_window: error");
         return 1;
     }
-
     in_uint32_le(s, i32);
     self->client_info.wnd_support_level = i32;
     in_uint8(s, i32);
@@ -1134,14 +1175,32 @@ xrdp_process_capset_codecs(struct xrdp_rdp *self, struct stream *s, int len)
     char *codec_guid;
     char *next_guid;
 
+    if (len < 1)
+    {
+        g_writeln("xrdp_process_capset_codecs: error");
+        return 1;
+    }
     in_uint8(s, codec_count);
+    len--;
 
     for (index = 0; index < codec_count; index++)
     {
         codec_guid = s->p;
+        if (len < 16 + 1 + 2)
+        {
+            g_writeln("xrdp_process_capset_codecs: error");
+            return 1;
+        }
         in_uint8s(s, 16);
         in_uint8(s, codec_id);
         in_uint16_le(s, codec_properties_length);
+        len -= 16 + 1 + 2;
+        if (len < codec_properties_length)
+        {
+            g_writeln("xrdp_process_capset_codecs: error");
+            return 1;
+        }
+        len -= codec_properties_length;
         next_guid = s->p + codec_properties_length;
 
         if (g_memcmp(codec_guid, XR_CODEC_GUID_NSCODEC, 16) == 0)
@@ -1207,9 +1266,19 @@ xrdp_rdp_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
     for (index = 0; index < num_caps; index++)
     {
         p = s->p;
+        if (!s_check_rem(s, 4))
+        {
+            g_writeln("xrdp_rdp_process_confirm_active: error 1");
+            return 1;
+        }
         in_uint16_le(s, type);
         in_uint16_le(s, len);
-
+        if ((len < 4) || !s_check_rem(s, len - 4))
+        {
+            g_writeln("xrdp_rdp_process_confirm_active: error len %d", len, s->end - s->p);
+            return 1;
+        }
+        len -= 4;
         switch (type)
         {
             case RDP_CAPSET_GENERAL: /* 1 */
@@ -1295,7 +1364,7 @@ xrdp_rdp_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
                 break;
         }
 
-        s->p = p + len;
+        s->p = p + len + 4;
     }
 
     DEBUG(("out xrdp_rdp_process_confirm_active"));

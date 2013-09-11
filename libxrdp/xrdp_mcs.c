@@ -291,7 +291,7 @@ xrdp_mcs_parse_domain_params(struct xrdp_mcs *self, struct stream *s)
         return 1;
     }
 
-    if (!s_check_rem(s, len))
+    if ((len < 0) || !s_check_rem(s, len))
     {
         return 1;
     }
@@ -337,9 +337,21 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
         return 1;
     }
 
+    if ((len < 0) || !s_check_rem(s, len))
+    {
+        free_stream(s);
+        return 1;
+    }
+
     in_uint8s(s, len);
 
     if (xrdp_mcs_ber_parse_header(self, s, BER_TAG_OCTET_STRING, &len) != 0)
+    {
+        free_stream(s);
+        return 1;
+    }
+
+    if ((len < 0) || !s_check_rem(s, len))
     {
         free_stream(s);
         return 1;
@@ -353,6 +365,12 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
         return 1;
     }
 
+    if ((len < 0) || !s_check_rem(s, len))
+    {
+        free_stream(s);
+        return 1;
+    }
+
     in_uint8s(s, len);
 
     if (xrdp_mcs_parse_domain_params(self, s) != 0)
@@ -379,6 +397,7 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
         return 1;
     }
 
+    /* mcs data can not be zero length */
     if ((len <= 0) || (len > 16 * 1024))
     {
         free_stream(s);
@@ -596,6 +615,11 @@ xrdp_mcs_recv_cjrq(struct xrdp_mcs *self)
 
     if (opcode & 2)
     {
+        if (!s_check_rem(s, 2))
+        {
+            free_stream(s);
+            return 1;
+        }
         in_uint8s(s, 2);
     }
 
