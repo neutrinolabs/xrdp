@@ -221,8 +221,12 @@ trans_force_read_s(struct trans *self, struct stream *in_s, int size)
 
     while (size > 0)
     {
+        /* make sure stream has room */
+        if ((in_s->end + size) > (in_s->data + in_s->size))
+        {
+            return 1;
+        }
         rcvd = g_tcp_recv(self->sck, in_s->end, size, 0);
-
         if (rcvd == -1)
         {
             if (g_tcp_last_error_would_block(self->sck))

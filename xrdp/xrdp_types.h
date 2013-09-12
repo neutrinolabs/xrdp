@@ -195,7 +195,8 @@ struct xrdp_cache
   struct xrdp_palette_item palette_items[6];
   /* bitmap */
   int bitmap_stamp;
-  struct xrdp_bitmap_item bitmap_items[3][2000];
+  struct xrdp_bitmap_item bitmap_items[XRDP_MAX_BITMAP_CACHE_ID]
+                                      [XRDP_MAX_BITMAP_CACHE_IDX];
   int use_bitmap_comp;
   int cache1_entries;
   int cache1_size;
