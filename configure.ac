@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script
 
 AC_PREREQ(2.59)
-AC_INIT([xrdp], [0.6.0], [xrdp-devel@lists.sourceforge.net])
+AC_INIT([xrdp], [0.6.1], [xrdp-devel@lists.sourceforge.net])
 AM_CONFIG_HEADER(config_ac.h:config_ac-h.in)
 AM_INIT_AUTOMAKE([1.6 foreign])
 AC_PROG_CC

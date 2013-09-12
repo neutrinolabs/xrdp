@@ -1,5 +1,5 @@
 
-xrdp 0.6.0
+xrdp 0.6.1
 
 Credits
   This project is very much dependent on rdesktop and the work of Matt Chapman
