@@ -28,30 +28,23 @@
 #include "irp.h"
 #include "trans.h"
 
-/* forward declarations */
+typedef struct reader_state
+{
+    char   reader_name[128];
+    tui32  current_state;
+    tui32  event_state;
+    tui32  atr_len; /* number of bytes in atr[] */
+    tui8   atr[36];
+} READER_STATE;
+
 void scard_device_announce(tui32 device_id);
+int  APP_CC scard_get_wait_objs(tbus *objs, int *count, int *timeout);
+int  APP_CC scard_check_wait_objs(void);
+int  APP_CC scard_init(void);
+int  APP_CC scard_deinit(void);
+int  APP_CC scard_send_irp_establish_context(struct trans *con, int scope);
+int  APP_CC scard_send_irp_list_readers(struct trans *con);
 
-/* callbacks into this module */
-void scard_handle_EstablishContext_Return(struct stream *s, IRP *irp,
-                                          tui32 DeviceId, tui32 CompletionId,
-                                          tui32 IoStatus);
-
-void scard_handle_ListReaders_Return(struct stream *s, IRP *irp,
-                                     tui32 DeviceId, tui32 CompletionId,
-                                     tui32 IoStatus);
-
-int APP_CC
-scard_get_wait_objs(tbus *objs, int *count, int *timeout);
-int APP_CC
-scard_check_wait_objs(void);
-int APP_CC
-scard_init(void);
-int APP_CC
-scard_deinit(void);
-
-int APP_CC
-scard_send_irp_establish_context(struct trans *con, int scope);
-int APP_CC
-scard_send_irp_list_readers(struct trans *con);
-
+int  APP_CC scard_send_irp_get_status_change(struct trans *con, int wide, tui32 timeout,
+                                             tui32 num_readers, READER_STATE* rsa);
 #endif /* end #ifndef _SMARTCARD_C */

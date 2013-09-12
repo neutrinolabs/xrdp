@@ -273,7 +273,7 @@ scard_function_list_readers_return(struct trans *con,
     g_reader_states[0].cardAtr[9] = 0x32;
 
     //g_reader_states[0].eventCounter++;
-    
+
     out_s = trans_get_out_s(con, 8192);
     out_uint8a(out_s, g_reader_states, sizeof(g_reader_states));
     s_mark_end(out_s);
