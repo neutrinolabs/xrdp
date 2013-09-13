@@ -106,7 +106,8 @@ do                                                      \
 #define SCARD_IOCTL_GET_STATUS_CHANGE_A      0x000900A0 /* GetStatusChangeA     */
 #define SCARD_IOCTL_GET_STATUS_CHANGE_W      0x000900A4 /* GetStatusChangeW     */
 #define SCARD_IOCTL_CANCEL                   0x000900A8 /* Cancel               */
-#define SCARD_IOCTL_CONNECT                  0x000900AC /* ConnectA             */
+#define SCARD_IOCTL_CONNECT_A                0x000900AC /* ConnectA             */
+#define SCARD_IOCTL_CONNECT_W                0x000900B0 /* ConnectW             */
 #define SCARD_IOCTL_RECONNECT                0x000900B4 /* Reconnect            */
 #define SCARD_IOCTL_DISCONNECT               0x000900B8 /* Disconnect           */
 #define SCARD_IOCTL_BEGIN_TRANSACTION        0x000900BC /* BeginTransaction     */
@@ -155,8 +156,11 @@ static int  scard_get_free_slot(void);
 static void scard_release_resources(void);
 static void scard_send_EstablishContext(IRP* irp, int scope);
 static void scard_send_ListReaders(IRP* irp, int wide);
+
 static void scard_send_GetStatusChange(IRP* irp, int wide, tui32 timeout,
                                        tui32 num_readers, READER_STATE* rsa);
+
+static void scard_send_Connect(IRP* irp, int wide, READER_STATE* rs);
 
 /******************************************************************************
 **                    local callbacks into this module                       **
@@ -174,6 +178,9 @@ static void scard_handle_GetStatusChange_Return(struct stream *s, IRP *irp,
                                                 tui32 DeviceId, tui32 CompletionId,
                                                 tui32 IoStatus);
 
+static void scard_handle_Connect_Return(struct stream *s, IRP *irp,
+                                        tui32 DeviceId, tui32 CompletionId,
+                                        tui32 IoStatus);
 
 /******************************************************************************
 **                                                                           **
@@ -323,6 +330,36 @@ scard_send_irp_get_status_change(struct trans *con, int wide, tui32 timeout,
 
     /* send IRP to client */
     scard_send_GetStatusChange(irp, wide, timeout, num_readers, rsa);
+
+    return 0;
+}
+
+/**
+ * Open a connection to the smart card located in the reader
+ *
+ * @param  con   connection to client
+ * @param  wide  TRUE if unicode string
+ *****************************************************************************/
+int APP_CC
+scard_send_irp_connect(struct trans *con, int wide, READER_STATE* rs)
+{
+    IRP *irp;
+
+    /* setup up IRP */
+    if ((irp = devredir_irp_new()) == NULL)
+    {
+        log_error("system out of memory");
+        return 1;
+    }
+
+    irp->scard_index = g_scard_index;
+    irp->CompletionId = g_completion_id++;
+    irp->DeviceId = g_device_id;
+    irp->callback = scard_handle_Connect_Return;
+    irp->user_data = con;
+
+    /* send IRP to client */
+    scard_send_Connect(irp, wide, rs);
 
     return 0;
 }
@@ -668,6 +705,75 @@ scard_send_GetStatusChange(IRP* irp, int wide, tui32 timeout,
     xstream_free(s);
 }
 
+/**
+ * Send connect command
+ *
+ * @param  irp  I/O resource pkt
+ * @param  wide TRUE if unicode string
+ * @param  rs   reader state
+ *****************************************************************************/
+static void scard_send_Connect(IRP* irp, int wide, READER_STATE* rs)
+{
+    /* see [MS-RDPESC] 2.2.2.13 for ASCII     */
+    /* see [MS-RDPESC] 2.2.2.14 for Wide char */
+
+    SMARTCARD*     sc;
+    struct stream* s;
+    tui32          ioctl;
+    int            bytes;
+    int            len;
+
+    if ((sc = smartcards[irp->scard_index]) == NULL)
+    {
+        log_error("smartcards[%d] is NULL", irp->scard_index);
+        return;
+    }
+
+    ioctl = (wide > 0) ? SCARD_IOCTL_CONNECT_A :
+                         SCARD_IOCTL_CONNECT_W;
+
+    if ((s = scard_make_new_ioctl(irp, ioctl)) == NULL)
+        return;
+
+    /*
+     * command format
+     *
+     * ......
+     *       20 bytes    padding
+     * u32    4 bytes    len 8, LE, v1
+     * u32    4 bytes    filler
+     *       20 bytes    unused (s->p is currently pointed here)
+     * u32    4 bytes    dwShareMode
+     * u32    4 bytes    dwPreferredProtocol
+     *       xx bytes    reader name
+     * u32    4 bytes    context length (len)
+     *      len bytes    context
+     */
+
+    xstream_seek(s, 20);
+    xstream_wr_u32_le(s, rs->shared_mode_flag);
+    xstream_wr_u32_le(s, rs->preferred_protocol);
+
+    /* insert reader name */
+    /* LK_TODO need to handle unicode */
+    len = strlen(rs->reader_name);
+    xstream_copyin(s, rs->reader_name, len);
+
+    /* insert context */
+    xstream_wr_u32_le(s, sc->Context_len);
+    xstream_copyin(s, sc->Context, sc->Context_len);
+
+    /* get stream len */
+    bytes = xstream_len(s);
+
+    /* InputBufferLength is number of bytes AFTER 20 byte padding */
+    *(s->data + 28) = bytes - 56;
+
+    /* send to client */
+    send_channel_data(g_rdpdr_chan_id, s->data, bytes);
+    xstream_free(s);
+}
+
 /******************************************************************************
 **                                                                           **
 **                    local callbacks into this module                       **
@@ -796,6 +902,38 @@ scard_handle_GetStatusChange_Return(struct stream *s, IRP *irp,
     if (IoStatus != 0)
     {
         log_error("failed to get status change - device not usable");
+        /* LK_TODO delete irp and smartcard entry */
+        return;
+    }
+
+    /* get OutputBufferLen */
+    xstream_rd_u32_le(s, len);
+
+    log_debug("leaving");
+}
+
+/**
+ *
+ *****************************************************************************/
+static void
+scard_handle_Connect_Return(struct stream *s, IRP *irp,
+                            tui32 DeviceId, tui32 CompletionId,
+                            tui32 IoStatus)
+{
+    tui32 len;
+
+    log_debug("entered");
+
+    /* sanity check */
+    if ((DeviceId != irp->DeviceId) || (CompletionId != irp->CompletionId))
+    {
+        log_error("DeviceId/CompletionId do not match those in IRP");
+        return;
+    }
+
+    if (IoStatus != 0)
+    {
+        log_error("failed to connect - device not usable");
         /* LK_TODO delete irp and smartcard entry */
         return;
     }
