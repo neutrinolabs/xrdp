@@ -31,6 +31,7 @@
 #include "irp.h"
 #include "devredir.h"
 #include "trans.h"
+#include "chansrv.h"
 
 #if PCSC_STANDIN
 
@@ -40,7 +41,7 @@
   { \
     if (_level < LLOG_LEVEL) \
     { \
-      g_write("chansrv:smartcard [%10.10u]: ", g_time3()); \
+      g_write("chansrv:smartcard_pcsc [%10.10u]: ", g_time3()); \
       g_writeln _args ; \
     } \
   } \
@@ -95,8 +96,12 @@ struct pubReaderStatesList
 
 #define PCSCLITE_MAX_READERS_CONTEXTS 16
 
+static int g_num_readers = 0;
+/* pcsc list */
 static struct pubReaderStatesList
-                   g_reader_states[PCSCLITE_MAX_READERS_CONTEXTS];
+                    g_pcsc_reader_states[PCSCLITE_MAX_READERS_CONTEXTS];
+/* rdp list */
+static READER_STATE g_xrdp_reader_states[PCSCLITE_MAX_READERS_CONTEXTS];
 
 struct wait_reader_state_change
 {
@@ -104,8 +109,11 @@ struct wait_reader_state_change
     tui32 rv;
 };
 
-#define XRDP_PCSC_STATE_NONE               0
-#define XRDP_PCSC_STATE_GOT_RSC            1
+#define XRDP_PCSC_STATE_NONE              0
+#define XRDP_PCSC_STATE_GOT_RSC          (1 << 0) /* read state change */
+#define XRDP_PCSC_STATE_GOT_EC           (1 << 1) /* establish context */
+#define XRDP_PCSC_STATE_GOT_LR           (1 << 2) /* list readers */
+#define XRDP_PCSC_STATE_GOT_RC           (1 << 3) /* release context */
 
 static int g_xrdp_pcsc_state = XRDP_PCSC_STATE_NONE;
 
@@ -166,6 +174,12 @@ scard_process_establish_context(struct trans *con, struct stream *in_s)
     struct establish_struct in_es;
 
     LLOGLN(0, ("scard_process_establish_context:"));
+    if (g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_EC)
+    {
+        LLOGLN(0, ("scard_process_establish_context: opps"));
+        return 1;
+    }
+    g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_EC;
     in_uint8a(in_s, &in_es, sizeof(in_es));
     LLOGLN(0, ("scard_process_establish_context: dwScope 0x%8.8x",
            in_es.dwScope));
@@ -183,6 +197,12 @@ scard_function_establish_context_return(struct trans *con, int context)
 
     LLOGLN(0, ("scard_function_establish_context_return: context %d",
            context));
+    if ((g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_EC) == 0)
+    {
+        LLOGLN(0, ("scard_function_establish_context_return: opps"));
+        return 1;
+    }
+    g_xrdp_pcsc_state &= ~XRDP_PCSC_STATE_GOT_EC;
     out_es.dwScope = 0;
     out_es.hContext = context;
     out_es.rv = SCARD_S_SUCCESS;
@@ -204,6 +224,9 @@ scard_process_release_context(struct stream *in_s)
     LLOGLN(0, ("scard_process_release_context:"));
     in_uint8a(in_s, &in_rs, sizeof(in_rs));
     LLOGLN(0, ("scard_process_release_context: hContext %d", in_rs.hContext));
+
+    /* TODO: use XRDP_PCSC_STATE_GOT_RC */
+
     out_rs.hContext = in_rs.hContext;
     out_rs.rv = SCARD_S_SUCCESS;
     out_s = trans_get_out_s(g_con, 8192);
@@ -238,10 +261,26 @@ scard_process_version(struct trans *con, struct stream *in_s)
 /*****************************************************************************/
 /* returns error */
 int APP_CC
-scard_process_get_readers_state(struct stream *in_s)
+scard_process_get_readers_state(struct trans *con, struct stream *in_s)
 {
+    //struct stream *out_s;
+
     LLOGLN(0, ("scard_process_get_readers_state:"));
-    scard_send_irp_list_readers(g_con);
+
+    //out_s = trans_get_out_s(con, 8192);
+    //out_uint8a(out_s, g_pcsc_reader_states, sizeof(g_pcsc_reader_states));
+    //s_mark_end(out_s);
+    //return trans_force_write(con);
+
+    if (g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_LR)
+    {
+        LLOGLN(0, ("scard_process_get_readers_state: opps"));
+        return 1;
+    }
+    g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_LR;
+
+    scard_send_irp_list_readers(con);
+
     return 0;
 }
 
@@ -253,9 +292,55 @@ scard_function_list_readers_return(struct trans *con,
                                    int len)
 {
     struct stream *out_s;
+    int            chr;
+    int            readers;
+    int            rn_index;
+    char           reader_name[100];
 
     g_hexdump(in_s->p, len);
 
+    if ((g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_LR) == 0)
+    {
+        LLOGLN(0, ("scard_function_list_readers_return: opps"));
+        return 1;
+    }
+    g_xrdp_pcsc_state &= ~XRDP_PCSC_STATE_GOT_LR;
+
+    in_uint8s(in_s, 28);
+    len -= 28;
+    in_uint32_le(in_s, len);
+    g_writeln("len %d", len);
+    rn_index = 0;
+    readers = 1;
+    while (len > 0)
+    {
+        in_uint16_le(in_s, chr);
+        len -= 2;
+        if (chr == 0)
+        {
+            if (reader_name[0] != 0)
+            {
+                g_writeln("1 %s", reader_name);
+                readers++;
+            }
+            reader_name[0] = 0;
+            rn_index = 0;
+        }
+        else
+        {
+            reader_name[rn_index] = chr;
+            rn_index++;
+        }
+    }
+    if (rn_index > 0)
+    {
+        if (reader_name[0] != 0)
+        {
+            g_writeln("2 %s", reader_name);
+            readers++;
+        }
+    }
+#if 0
     g_strcpy(g_reader_states[0].readerName, "ACS AET65 00 00");
     g_reader_states[0].readerState = 0x14;
     g_reader_states[0].cardProtocol = 3;
@@ -278,6 +363,8 @@ scard_function_list_readers_return(struct trans *con,
     out_uint8a(out_s, g_reader_states, sizeof(g_reader_states));
     s_mark_end(out_s);
     return trans_force_write(con);
+#endif
+    return 0;
 }
 
 /*****************************************************************************/
@@ -314,20 +401,44 @@ scard_process_read_state_change(struct trans *con, struct stream *in_s)
 {
     struct wait_reader_state_change in_rsc;
     struct stream *out_s;
+    int index;
 
     LLOGLN(0, ("scard_process_read_state_change:"));
     in_uint8a(in_s, &in_rsc, sizeof(in_rsc));
+    if (g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_RSC)
+    {
+        LLOGLN(0, ("scard_process_read_state_change: opps"));
+        return 0;
+    }
+
+#if 0
+    for (index = 0; index < 16; index++)
+    {
+        //g_memcpy(rd[index].reader_name, g_pcsc_reader_states[index].readerName, 99);
+        g_strncpy(rd[index].reader_name, "Gemalto PC Twin Reader 00 00", 99);
+        rd[index].current_state = g_pcsc_reader_states[index].readerState;
+        rd[index].event_state = g_pcsc_reader_states[index].eventCounter;
+        rd[index].atr_len = g_pcsc_reader_states[index].cardAtrLength;
+        g_memcpy(rd[index].atr, g_pcsc_reader_states[index].cardAtr, 33);
+    }
+#endif
+
     g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_RSC;
+    scard_send_irp_get_status_change(con, 1, in_rsc.timeOut, g_num_readers,
+                                     g_xrdp_reader_states);
+
     LLOGLN(0, ("scard_process_read_state_change: timeout %d rv %d",
            in_rsc.timeOut, in_rsc.rv));
+
     add_timeout(in_rsc.timeOut, scard_read_state_chage_timeout, con);
+
     return 0;
 }
 
 /*****************************************************************************/
 /* returns error */
 int APP_CC
-scard_process_stop_read_state_change(struct stream *in_s)
+scard_process_stop_read_state_change(struct trans *con, struct stream *in_s)
 {
     struct wait_reader_state_change in_rsc;
     struct wait_reader_state_change out_rsc;
@@ -339,19 +450,67 @@ scard_process_stop_read_state_change(struct stream *in_s)
            in_rsc.timeOut, in_rsc.rv));
     if (g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_RSC)
     {
-        out_s = trans_get_out_s(g_con, 8192);
+        out_s = trans_get_out_s(con, 8192);
         out_rsc.timeOut = in_rsc.timeOut;
         out_rsc.rv = SCARD_S_SUCCESS;
         out_uint8a(out_s, &out_rsc, sizeof(out_rsc));
         g_xrdp_pcsc_state &= ~XRDP_PCSC_STATE_GOT_RSC;
         s_mark_end(out_s);
-        return trans_force_write(g_con);
+        return trans_force_write(con);
     }
     else
     {
          LLOGLN(0, ("scard_process_stop_read_state_change: already stopped"));
     }
     return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+scard_function_get_status_change_return(struct trans *con,
+                                        struct stream *in_s,
+                                        int len)
+{
+    struct stream *out_s;
+    int num_readers;
+    int index;
+    int current_state;
+    int event_state;
+    int atr_len;
+    char atr[36];
+
+    LLOGLN(0, ("scard_function_get_status_change_return:"));
+
+    //g_hexdump(in_s->p, len);
+
+    in_uint8s(in_s, 28);
+    in_uint32_le(in_s, num_readers);
+    LLOGLN(0, ("  num_reader %d", num_readers));
+
+    g_num_readers = num_readers;
+
+    for (index = 0; index < num_readers; index++)
+    {
+        in_uint32_le(in_s, current_state);
+        in_uint32_le(in_s, event_state);
+        in_uint32_le(in_s, atr_len);
+        in_uint8a(in_s, atr, 36);
+        LLOGLN(0, ("  current_state 0x%8.8x event_state 0x%8.8x "
+               "atr_len 0x%8.8x", current_state, event_state, atr_len));
+        g_xrdp_reader_states[index].current_state = current_state;
+        g_xrdp_reader_states[index].event_state = event_state;
+        g_xrdp_reader_states[index].atr_len = atr_len;
+        g_memcpy(g_xrdp_reader_states[index].atr, atr, 36);
+        
+    }
+    //out_s = trans_get_out_s(con, 8192);
+    //out_uint8a(out_s, g_reader_states, sizeof(g_reader_states));
+    //s_mark_end(out_s);
+    //return trans_force_write(con);
+
+    return 0;
+
 }
 
 /*****************************************************************************/
@@ -436,7 +595,7 @@ scard_process_msg(struct trans *con, struct stream *in_s, int command)
             break;
         case 0x12: /* CMD_GET_READERS_STATE */
             LLOGLN(0, ("scard_process_msg: CMD_GET_READERS_STATE"));
-            rv = scard_process_get_readers_state(in_s);
+            rv = scard_process_get_readers_state(con, in_s);
             break;
         case 0x13: /* CMD_WAIT_READER_STATE_CHANGE */
             LLOGLN(0, ("scard_process_msg: CMD_WAIT_READER_STATE_CHANGE"));
@@ -444,7 +603,7 @@ scard_process_msg(struct trans *con, struct stream *in_s, int command)
             break;
         case 0x14: /* CMD_STOP_WAITING_READER_STATE_CHANGE */
             LLOGLN(0, ("scard_process_msg: CMD_STOP_WAITING_READER_STATE_CHANGE"));
-            rv = scard_process_stop_read_state_change(in_s);
+            rv = scard_process_stop_read_state_change(con, in_s);
             break;
         default:
             LLOGLN(0, ("scard_process_msg: unknown mtype 0x%4.4x", command));
@@ -531,7 +690,8 @@ scard_pcsc_init(void)
     int index;
 
     LLOGLN(0, ("scard_pcsc_init:"));
-    g_memset(g_reader_states, 0, sizeof(g_reader_states));
+    g_memset(g_pcsc_reader_states, 0, sizeof(g_pcsc_reader_states));
+    g_memset(g_xrdp_reader_states, 0, sizeof(g_xrdp_reader_states));
     if (g_lis == 0)
     {
         g_lis = trans_create(2, 8192, 8192);

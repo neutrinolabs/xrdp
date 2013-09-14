@@ -644,6 +644,9 @@ scard_send_GetStatusChange(IRP* irp, int wide, tui32 timeout,
     int            bytes;
     int            i;
     int            len;
+    int            num_chars;
+    int            index;
+    twchar         w_reader_name[100];
 
     if ((sc = smartcards[irp->scard_index]) == NULL)
     {
@@ -672,26 +675,45 @@ scard_send_GetStatusChange(IRP* irp, int wide, tui32 timeout,
     for (i = 0; i < num_readers; i++)
     {
         rs = &rsa[i];
-
         xstream_wr_u32_le(s, 0);        /* unused */
         xstream_wr_u32_le(s, rs->current_state);
         xstream_wr_u32_le(s, rs->event_state);
         xstream_wr_u32_le(s, rs->atr_len);
-        xstream_copyin(s, rs->atr, rs->atr_len);
-        xstream_wr_u32_le(s, 0);        /* unused */
+        xstream_copyin(s, rs->atr, 33);
+        out_uint8s(s, 3);
     }
 
-    /* insert card reader names */
-    for (i = 0; i < num_readers; i++)
+    if (wide)
     {
-        rs = &rsa[i];
-        len = strlen(rs->reader_name);
-
-        xstream_wr_u32_le(s, 0);        /* unused */
-        xstream_wr_u32_le(s, 0);        /* unused */
-        xstream_wr_u32_le(s, len);
-        xstream_copyin(s, rs->reader_name, len);
-        xstream_wr_u32_le(s, 0);        /* null terminate */
+        /* insert card reader names */
+        for (i = 0; i < num_readers; i++)
+        {
+            rs = &rsa[i];
+            num_chars = g_mbstowcs(w_reader_name, rs->reader_name, 99);
+            xstream_wr_u32_le(s, 0);        /* unused */
+            xstream_wr_u32_le(s, 0);        /* unused */
+            xstream_wr_u32_le(s, num_chars);
+            for (index = 0; index < num_chars; index++)
+            {
+                xstream_wr_u16_le(s, w_reader_name[index]);
+            }
+        }
+    }
+    else
+    {
+        /* insert card reader names */
+        for (i = 0; i < num_readers; i++)
+        {
+            rs = &rsa[i];
+            num_chars = g_mbstowcs(w_reader_name, rs->reader_name, 99);
+            xstream_wr_u32_le(s, 0);        /* unused */
+            xstream_wr_u32_le(s, 0);        /* unused */
+            xstream_wr_u32_le(s, num_chars);
+            for (index = 0; index < num_chars; index++)
+            {
+                xstream_wr_u8(s, w_reader_name[index]);
+            }
+        }
     }
 
     /* get stream len */
