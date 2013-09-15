@@ -74,11 +74,16 @@ int  APP_CC scard_check_wait_objs(void);
 int  APP_CC scard_init(void);
 int  APP_CC scard_deinit(void);
 int  APP_CC scard_send_irp_establish_context(struct trans *con, int scope);
+int  APP_CC scard_send_release_context(struct trans *con);
 int  APP_CC scard_send_irp_list_readers(struct trans *con);
 
 int  APP_CC scard_send_irp_get_status_change(struct trans *con, int wide, tui32 timeout,
                                              tui32 num_readers, READER_STATE* rsa);
 
 int  APP_CC scard_send_irp_connect(struct trans *con, int wide, READER_STATE* rs);
+int  APP_CC scard_send_begin_transaction(struct trans *con, tui32 sc_handle);
+int  APP_CC scard_send_end_transaction(struct trans *con, tui32 sc_handle);
+int  APP_CC scard_send_status(struct trans *con, int wide, tui32 sc_handle);
+int  APP_CC scard_send_disconnect(struct trans *con, tui32 sc_handle);
 
 #endif /* end #ifndef _SMARTCARD_C */

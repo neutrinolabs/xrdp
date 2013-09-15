@@ -113,7 +113,8 @@ do                                                      \
 #define SCARD_IOCTL_BEGIN_TRANSACTION        0x000900BC /* BeginTransaction     */
 #define SCARD_IOCTL_END_TRANSACTION          0x000900C0 /* EndTransaction       */
 #define SCARD_IOCTL_STATE                    0x000900C4 /* State                */
-#define SCARD_IOCTL_STATUS                   0x000900C8 /* StatusA              */
+#define SCARD_IOCTL_STATUS_A                 0x000900C8 /* StatusA              */
+#define SCARD_IOCTL_STATUS_W                 0x000900CC /* StatusW              */
 #define SCARD_IOCTL_TRANSMIT                 0x000900D0 /* Transmit             */
 #define SCARD_IOCTL_CONTROL                  0x000900D4 /* Control              */
 #define SCARD_IOCTL_GETATTRIB                0x000900D8 /* GetAttrib            */
@@ -125,6 +126,12 @@ do                                                      \
 #define SCARD_SCOPE_USER                     0x00000000
 #define SCARD_SCOPE_TERMINAL                 0x00000001
 #define SCARD_SCOPE_SYSTEM                   0x00000002
+
+/* disposition - action to take on card */
+#define SCARD_LEAVE_CARD                     0x00000000
+#define SCARD_RESET_CARD                     0x00000001
+#define SCARD_UNPOWER_CARD                   0x00000002
+#define SCARD_EJECT_CARD                     0x00000003
 
 #define MAX_SMARTCARDS                       16
 
@@ -155,12 +162,17 @@ static int  scard_add_new_device(tui32 device_id);
 static int  scard_get_free_slot(void);
 static void scard_release_resources(void);
 static void scard_send_EstablishContext(IRP* irp, int scope);
+static void scard_send_ReleaseContext(IRP* irp);
 static void scard_send_ListReaders(IRP* irp, int wide);
 
 static void scard_send_GetStatusChange(IRP* irp, int wide, tui32 timeout,
                                        tui32 num_readers, READER_STATE* rsa);
 
 static void scard_send_Connect(IRP* irp, int wide, READER_STATE* rs);
+static void scard_send_BeginTransaction(IRP* irp, tui32 sc_handle);
+static void scard_send_EndTransaction(IRP* irp, tui32 sc_handle);
+static void scard_send_Status(IRP* irp, int wide, tui32 sc_handle);
+static void scard_send_Disconnect(IRP* irp, tui32 sc_handle);
 
 /******************************************************************************
 **                    local callbacks into this module                       **
@@ -169,6 +181,10 @@ static void scard_send_Connect(IRP* irp, int wide, READER_STATE* rs);
 static void scard_handle_EstablishContext_Return(struct stream *s, IRP *irp,
                                                  tui32 DeviceId, tui32 CompletionId,
                                                  tui32 IoStatus);
+
+static void scard_handle_ReleaseContext_Return(struct stream *s, IRP *irp,
+                                               tui32 DeviceId, tui32 CompletionId,
+                                               tui32 IoStatus);
 
 static void scard_handle_ListReaders_Return(struct stream *s, IRP *irp,
                                             tui32 DeviceId, tui32 CompletionId,
@@ -181,6 +197,22 @@ static void scard_handle_GetStatusChange_Return(struct stream *s, IRP *irp,
 static void scard_handle_Connect_Return(struct stream *s, IRP *irp,
                                         tui32 DeviceId, tui32 CompletionId,
                                         tui32 IoStatus);
+
+static void scard_handle_BeginTransaction_Return(struct stream *s, IRP *irp,
+                                                 tui32 DeviceId, tui32 CompletionId,
+                                                 tui32 IoStatus);
+
+static void scard_handle_EndTransaction_Return(struct stream *s, IRP *irp,
+                                               tui32 DeviceId, tui32 CompletionId,
+                                               tui32 IoStatus);
+
+static void scard_handle_Status_Return(struct stream *s, IRP *irp,
+                                       tui32 DeviceId, tui32 CompletionId,
+                                       tui32 IoStatus);
+
+static void scard_handle_Disconnect_Return(struct stream *s, IRP *irp,
+                                           tui32 DeviceId, tui32 CompletionId,
+                                           tui32 IoStatus);
 
 /******************************************************************************
 **                                                                           **
@@ -275,6 +307,33 @@ scard_send_irp_establish_context(struct trans *con, int scope)
 }
 
 /**
+ * Release a previously established Smart Card context
+ *****************************************************************************/
+int
+APP_CC scard_send_release_context(struct trans *con)
+{
+    IRP *irp;
+
+    /* setup up IRP */
+    if ((irp = devredir_irp_new()) == NULL)
+    {
+        log_error("system out of memory");
+        return 1;
+    }
+
+    irp->scard_index = g_scard_index;
+    irp->CompletionId = g_completion_id++;
+    irp->DeviceId = g_device_id;
+    irp->callback = scard_handle_ReleaseContext_Return;
+    irp->user_data = con;
+
+    /* send IRP to client */
+    scard_send_ReleaseContext(irp);
+
+    return 0;
+}
+
+/**
  *
  *****************************************************************************/
 int APP_CC
@@ -360,6 +419,127 @@ scard_send_irp_connect(struct trans *con, int wide, READER_STATE* rs)
 
     /* send IRP to client */
     scard_send_Connect(irp, wide, rs);
+
+    return 0;
+}
+
+/**
+ * Lock smart card reader for exclusive access for specified smart
+ * card reader handle.
+ *
+ * @param  con   connection to client
+ *****************************************************************************/
+int
+APP_CC scard_send_begin_transaction(struct trans *con, tui32 sc_handle)
+{
+    IRP *irp;
+
+    /* setup up IRP */
+    if ((irp = devredir_irp_new()) == NULL)
+    {
+        log_error("system out of memory");
+        return 1;
+    }
+
+    irp->scard_index = g_scard_index;
+    irp->CompletionId = g_completion_id++;
+    irp->DeviceId = g_device_id;
+    irp->callback = scard_handle_BeginTransaction_Return;
+    irp->user_data = con;
+
+    /* send IRP to client */
+    scard_send_BeginTransaction(irp, sc_handle);
+
+    return 0;
+}
+
+/**
+ * Release a smart card reader after being locked by a previously
+ * successful call to Begin Transaction
+ *
+ * @param  con        connection to client
+ * @param  sc_handle  handle to smartcard
+ *****************************************************************************/
+int
+APP_CC scard_send_end_transaction(struct trans *con, tui32 sc_handle)
+{
+    IRP *irp;
+
+    /* setup up IRP */
+    if ((irp = devredir_irp_new()) == NULL)
+    {
+        log_error("system out of memory");
+        return 1;
+    }
+
+    irp->scard_index = g_scard_index;
+    irp->CompletionId = g_completion_id++;
+    irp->DeviceId = g_device_id;
+    irp->callback = scard_handle_EndTransaction_Return;
+    irp->user_data = con;
+
+    /* send IRP to client */
+    scard_send_EndTransaction(irp, sc_handle);
+
+    return 0;
+}
+
+/**
+ * Get the status of a connection for a valid smart card reader handle
+ *
+ * @param  con   connection to client
+ * @param  wide  TRUE if unicode string
+ *****************************************************************************/
+int
+APP_CC scard_send_status(struct trans *con, int wide, tui32 sc_handle)
+{
+    IRP *irp;
+
+    /* setup up IRP */
+    if ((irp = devredir_irp_new()) == NULL)
+    {
+        log_error("system out of memory");
+        return 1;
+    }
+
+    irp->scard_index = g_scard_index;
+    irp->CompletionId = g_completion_id++;
+    irp->DeviceId = g_device_id;
+    irp->callback = scard_handle_Status_Return;
+    irp->user_data = con;
+
+    /* send IRP to client */
+    scard_send_Status(irp, wide, sc_handle);
+
+    return 0;
+}
+
+/**
+ * Release a smart card reader handle that was acquired in ConnectA/ConnectW
+ *
+ * @param  con        connection to client
+ * @param  sc_handle  handle to smartcard
+ *****************************************************************************/
+int
+APP_CC scard_send_disconnect(struct trans *con, tui32 sc_handle)
+{
+    IRP *irp;
+
+    /* setup up IRP */
+    if ((irp = devredir_irp_new()) == NULL)
+    {
+        log_error("system out of memory");
+        return 1;
+    }
+
+    irp->scard_index = g_scard_index;
+    irp->CompletionId = g_completion_id++;
+    irp->DeviceId = g_device_id;
+    irp->callback = scard_handle_Disconnect_Return;
+    irp->user_data = con;
+
+    /* send IRP to client */
+    scard_send_Disconnect(irp, sc_handle);
 
     return 0;
 }
@@ -533,6 +713,58 @@ scard_send_EstablishContext(IRP *irp, int scope)
 }
 
 /**
+ * Release a previously established Smart Card context
+ *****************************************************************************/
+static void
+scard_send_ReleaseContext(IRP* irp)
+{
+    /* see [MS-RDPESC] 3.1.4.2 */
+
+    SMARTCARD*     sc;
+    struct stream* s;
+    int            bytes;
+
+    if ((sc = smartcards[irp->scard_index]) == NULL)
+    {
+        log_error("smartcards[%d] is NULL", irp->scard_index);
+        return;
+    }
+
+    if ((s = scard_make_new_ioctl(irp, SCARD_IOCTL_RELEASE_CONTEXT)) == NULL)
+        return;
+
+    /*
+     * command format
+     *
+     * ......
+     *       20 bytes    padding
+     * u32    4 bytes    len 8, LE, v1
+     * u32    4 bytes    filler
+     *        4 bytes    len - don't know what this is, zero for now
+     *       12 bytes    unused
+     * u32    4 bytes    context len
+     *        4 bytes    context
+     */
+
+    xstream_wr_u32_le(s, 0);
+    xstream_seek(s, 12);
+
+    /* insert context */
+    xstream_wr_u32_le(s, sc->Context_len);
+    xstream_copyin(s, sc->Context, sc->Context_len);
+
+    /* get stream len */
+    bytes = xstream_len(s);
+
+    /* InputBufferLength is number of bytes AFTER 20 byte padding */
+    *(s->data + 28) = bytes - 56;
+
+    /* send to client */
+    send_channel_data(g_rdpdr_chan_id, s->data, bytes);
+    xstream_free(s);
+}
+
+/**
  *
  *****************************************************************************/
 static void APP_CC
@@ -551,8 +783,8 @@ scard_send_ListReaders(IRP *irp, int wide)
         return;
     }
 
-    ioctl = (wide > 0) ? SCARD_IOCTL_LIST_READERS_W :
-                         SCARD_IOCTL_LIST_READERS_A;
+    ioctl = (wide) ? SCARD_IOCTL_LIST_READERS_W :
+                     SCARD_IOCTL_LIST_READERS_A;
 
     if ((s = scard_make_new_ioctl(irp, ioctl)) == NULL)
         return;
@@ -654,8 +886,8 @@ scard_send_GetStatusChange(IRP* irp, int wide, tui32 timeout,
         return;
     }
 
-    ioctl = (wide > 0) ? SCARD_IOCTL_GET_STATUS_CHANGE_W :
-                         SCARD_IOCTL_GET_STATUS_CHANGE_A;
+    ioctl = (wide) ? SCARD_IOCTL_GET_STATUS_CHANGE_W :
+                     SCARD_IOCTL_GET_STATUS_CHANGE_A;
 
     if ((s = scard_make_new_ioctl(irp, ioctl)) == NULL)
         return;
@@ -744,6 +976,9 @@ static void scard_send_Connect(IRP* irp, int wide, READER_STATE* rs)
     tui32          ioctl;
     int            bytes;
     int            len;
+    int            num_chars;
+    int            index;
+    twchar         w_reader_name[100];
 
     if ((sc = smartcards[irp->scard_index]) == NULL)
     {
@@ -751,8 +986,8 @@ static void scard_send_Connect(IRP* irp, int wide, READER_STATE* rs)
         return;
     }
 
-    ioctl = (wide > 0) ? SCARD_IOCTL_CONNECT_A :
-                         SCARD_IOCTL_CONNECT_W;
+    ioctl = (wide) ? SCARD_IOCTL_CONNECT_W :
+                     SCARD_IOCTL_CONNECT_A;
 
     if ((s = scard_make_new_ioctl(irp, ioctl)) == NULL)
         return;
@@ -764,7 +999,7 @@ static void scard_send_Connect(IRP* irp, int wide, READER_STATE* rs)
      *       20 bytes    padding
      * u32    4 bytes    len 8, LE, v1
      * u32    4 bytes    filler
-     *       20 bytes    unused (s->p is currently pointed here)
+     *       20 bytes    unused (s->p currently pointed here at unused[0])
      * u32    4 bytes    dwShareMode
      * u32    4 bytes    dwPreferredProtocol
      *       xx bytes    reader name
@@ -777,13 +1012,260 @@ static void scard_send_Connect(IRP* irp, int wide, READER_STATE* rs)
     xstream_wr_u32_le(s, rs->preferred_protocol);
 
     /* insert reader name */
-    /* LK_TODO need to handle unicode */
-    len = strlen(rs->reader_name);
-    xstream_copyin(s, rs->reader_name, len);
+    num_chars = g_mbstowcs(w_reader_name, rs->reader_name, 99);
+    xstream_wr_u32_le(s, num_chars);
+    if (wide)
+    {
+        for (index = 0; index < num_chars; index++)
+            xstream_wr_u16_le(s, w_reader_name[index]);
+    }
+    else
+    {
+        for (index = 0; index < num_chars; index++)
+            xstream_wr_u8(s, w_reader_name[index]);
+    }
 
     /* insert context */
     xstream_wr_u32_le(s, sc->Context_len);
     xstream_copyin(s, sc->Context, sc->Context_len);
+
+    /* get stream len */
+    bytes = xstream_len(s);
+
+    /* InputBufferLength is number of bytes AFTER 20 byte padding */
+    *(s->data + 28) = bytes - 56;
+
+    /* send to client */
+    send_channel_data(g_rdpdr_chan_id, s->data, bytes);
+    xstream_free(s);
+}
+
+/**
+ * Lock smart card reader for exclusive access for specified smart
+ * card reader handle.
+ *
+ * @param  con   connection to client
+ *****************************************************************************/
+static void
+scard_send_BeginTransaction(IRP* irp, tui32 sc_handle)
+{
+    /* see [MS-RDPESC] 4.9 */
+
+    SMARTCARD*     sc;
+    struct stream* s;
+    int            bytes;
+
+    if ((sc = smartcards[irp->scard_index]) == NULL)
+    {
+        log_error("smartcards[%d] is NULL", irp->scard_index);
+        return;
+    }
+
+    if ((s = scard_make_new_ioctl(irp, SCARD_IOCTL_BEGIN_TRANSACTION)) == NULL)
+        return;
+
+    /*
+     * command format
+     *
+     * ......
+     *       20 bytes    padding
+     * u32    4 bytes    len 8, LE, v1
+     * u32    4 bytes    filler
+     *       36 bytes    unused (s->p currently pointed here at unused[0])
+     * u32    4 bytes    len of sc_handle
+     *        4 bytes    sc_handle
+     */
+
+    xstream_seek(s, 36);
+
+    /* insert handle */
+    xstream_wr_u32_le(s, 4);
+    xstream_wr_u32_le(s, sc_handle);
+
+    /* get stream len */
+    bytes = xstream_len(s);
+
+    /* InputBufferLength is number of bytes AFTER 20 byte padding */
+    *(s->data + 28) = bytes - 56;
+
+    /* send to client */
+    send_channel_data(g_rdpdr_chan_id, s->data, bytes);
+    xstream_free(s);
+}
+
+/**
+ * Release a smart card reader after being locked by a previously
+ * successful call to Begin Transaction
+ *
+ * @param  con        connection to client
+ * @param  sc_handle  handle to smartcard
+ *****************************************************************************/
+static void
+scard_send_EndTransaction(IRP* irp, tui32 sc_handle)
+{
+    /* see [MS-RDPESC] 3.1.4.32 */
+
+    SMARTCARD*     sc;
+    struct stream* s;
+    int            bytes;
+
+    if ((sc = smartcards[irp->scard_index]) == NULL)
+    {
+        log_error("smartcards[%d] is NULL", irp->scard_index);
+        return;
+    }
+
+    if ((s = scard_make_new_ioctl(irp, SCARD_IOCTL_END_TRANSACTION)) == NULL)
+        return;
+
+    /*
+     * command format
+     *
+     * ......
+     *       20 bytes    padding
+     * u32    4 bytes    len 8, LE, v1
+     * u32    4 bytes    filler
+     *       24 bytes    unused (s->p currently pointed here at unused[0])
+     * u32    4 bytes    disposition
+     *        8 unused
+     * u32    4 bytes    length of sc_handle
+     *        4 bytes    sc_handle
+     */
+
+    xstream_seek(s, 24);
+    xstream_wr_u32_le(s, SCARD_LEAVE_CARD);
+    xstream_seek(s, 8);
+
+    /* insert handle */
+    xstream_wr_u32_le(s, 4);
+    xstream_wr_u32_le(s, sc_handle);
+
+    /* get stream len */
+    bytes = xstream_len(s);
+
+    /* InputBufferLength is number of bytes AFTER 20 byte padding */
+    *(s->data + 28) = bytes - 56;
+
+    /* send to client */
+    send_channel_data(g_rdpdr_chan_id, s->data, bytes);
+    xstream_free(s);
+}
+
+/**
+ * Get the status of a connection for a valid smart card reader handle
+ *
+ * @param  con   connection to client
+ * @param  wide  TRUE if unicode string
+ *****************************************************************************/
+static void
+scard_send_Status(IRP* irp, int wide, tui32 sc_handle)
+{
+    /* see [MS-RDPESC] 2.2.2.18 */
+
+    SMARTCARD*     sc;
+    struct stream* s;
+    int            bytes;
+    tui32          ioctl;
+
+    if ((sc = smartcards[irp->scard_index]) == NULL)
+    {
+        log_error("smartcards[%d] is NULL", irp->scard_index);
+        return;
+    }
+
+    ioctl = (wide) ? SCARD_IOCTL_CONNECT_W :
+                     SCARD_IOCTL_CONNECT_A;
+
+    if ((s = scard_make_new_ioctl(irp, ioctl)) == NULL)
+        return;
+
+    /*
+     * command format
+     *
+     * ......
+     *       20 bytes    padding
+     * u32    4 bytes    len 8, LE, v1
+     * u32    4 bytes    filler
+     *       28 bytes    unused (s->p currently pointed here at unused[0])
+     * u32    4 bytes    reader len
+     * u32    4 bytes    ATR len
+     *        8 bytes    unused
+     * u32    4 bytes    len of sc_handle
+     *        4 bytes    sc_handle
+     *        4 bytes    unused
+     */
+
+    xstream_seek(s, 28);
+    xstream_wr_u32_le(s, -1); /* readerLen, see [MS-RDPESC] 4.11 */
+    xstream_wr_u32_le(s, 36); /* atrLen,    see [MS-RDPESC] 4.11 */
+    xstream_seek(s, 8);
+
+    /* insert sc_handle */
+    xstream_wr_u32_le(s, 4);
+    xstream_wr_u32_le(s, sc_handle);
+
+    xstream_wr_u32_le(s, 0);
+
+    /* get stream len */
+    bytes = xstream_len(s);
+
+    /* InputBufferLength is number of bytes AFTER 20 byte padding */
+    *(s->data + 28) = bytes - 56;
+
+    /* send to client */
+    send_channel_data(g_rdpdr_chan_id, s->data, bytes);
+    xstream_free(s);
+}
+
+/**
+ * Release a smart card reader handle that was acquired in ConnectA/ConnectW
+ *
+ * @param  con        connection to client
+ * @param  sc_handle  handle to smartcard
+ *****************************************************************************/
+static void
+scard_send_Disconnect(IRP* irp, tui32 sc_handle)
+{
+    /* see [MS-RDPESC] 3.1.4.30 */
+
+    SMARTCARD*     sc;
+    struct stream* s;
+    int            bytes;
+
+    if ((sc = smartcards[irp->scard_index]) == NULL)
+    {
+        log_error("smartcards[%d] is NULL", irp->scard_index);
+        return;
+    }
+
+    if ((s = scard_make_new_ioctl(irp, SCARD_IOCTL_DISCONNECT)) == NULL)
+        return;
+
+    /*
+     * command format
+     *
+     * ......
+     *       20 bytes    padding
+     * u32    4 bytes    len 8, LE, v1
+     * u32    4 bytes    filler
+     *       24 bytes    unused (s->p currently pointed here at unused[0])
+     * u32    4 bytes    disposition
+     * u32    4 bytes    context len
+     *        4 bytes    context
+     * u32    4 bytes    length of sc_handle
+     *        4 bytes    sc_handle
+     */
+
+    xstream_seek(s, 24);
+    xstream_wr_u32_le(s, SCARD_RESET_CARD);
+
+    /* insert context */
+    xstream_wr_u32_le(s, sc->Context_len);
+    xstream_copyin(s, sc->Context, sc->Context_len);
+
+    /* insert handle */
+    xstream_wr_u32_le(s, 4);
+    xstream_wr_u32_le(s, sc_handle);
 
     /* get stream len */
     bytes = xstream_len(s);
@@ -865,6 +1347,38 @@ scard_handle_EstablishContext_Return(struct stream *s, IRP *irp,
     devredir_irp_delete(irp);
 
     /* LK_TODO need to delete IRP */
+    log_debug("leaving");
+}
+
+/**
+ *
+ *****************************************************************************/
+static void
+scard_handle_ReleaseContext_Return(struct stream *s, IRP *irp,
+                                   tui32 DeviceId, tui32 CompletionId,
+                                   tui32 IoStatus)
+{
+    tui32 len;
+
+    log_debug("entered");
+
+    /* sanity check */
+    if ((DeviceId != irp->DeviceId) || (CompletionId != irp->CompletionId))
+    {
+        log_error("DeviceId/CompletionId do not match those in IRP");
+        return;
+    }
+
+    if (IoStatus != 0)
+    {
+        log_error("ReleaseContext failed, device not usable");
+        /* LK_TODO delete irp and smartcard entry */
+        return;
+    }
+
+    /* get OutputBufferLen */
+    xstream_rd_u32_le(s, len);
+
     log_debug("leaving");
 }
 
@@ -956,6 +1470,134 @@ scard_handle_Connect_Return(struct stream *s, IRP *irp,
     if (IoStatus != 0)
     {
         log_error("failed to connect - device not usable");
+        /* LK_TODO delete irp and smartcard entry */
+        return;
+    }
+
+    /* get OutputBufferLen */
+    xstream_rd_u32_le(s, len);
+
+    log_debug("leaving");
+}
+
+/**
+ *
+ *****************************************************************************/
+static void
+scard_handle_BeginTransaction_Return(struct stream *s, IRP *irp,
+                                     tui32 DeviceId, tui32 CompletionId,
+                                     tui32 IoStatus)
+{
+    tui32 len;
+
+    log_debug("entered");
+
+    /* sanity check */
+    if ((DeviceId != irp->DeviceId) || (CompletionId != irp->CompletionId))
+    {
+        log_error("DeviceId/CompletionId do not match those in IRP");
+        return;
+    }
+
+    if (IoStatus != 0)
+    {
+        log_error("BeginTransaction failed, device not usable");
+        /* LK_TODO delete irp and smartcard entry */
+        return;
+    }
+
+    /* get OutputBufferLen */
+    xstream_rd_u32_le(s, len);
+
+    log_debug("leaving");
+}
+
+/**
+ *
+ *****************************************************************************/
+static void
+scard_handle_EndTransaction_Return(struct stream *s, IRP *irp,
+                                   tui32 DeviceId, tui32 CompletionId,
+                                   tui32 IoStatus)
+{
+    tui32 len;
+
+    log_debug("entered");
+
+    /* sanity check */
+    if ((DeviceId != irp->DeviceId) || (CompletionId != irp->CompletionId))
+    {
+        log_error("DeviceId/CompletionId do not match those in IRP");
+        return;
+    }
+
+    if (IoStatus != 0)
+    {
+        log_error("EndTransaction failed, device not usable");
+        /* LK_TODO delete irp and smartcard entry */
+        return;
+    }
+
+    /* get OutputBufferLen */
+    xstream_rd_u32_le(s, len);
+
+    log_debug("leaving");
+}
+
+/**
+ *
+ *****************************************************************************/
+static void
+scard_handle_Status_Return(struct stream *s, IRP *irp,
+                           tui32 DeviceId, tui32 CompletionId,
+                           tui32 IoStatus)
+{
+    tui32 len;
+
+    log_debug("entered");
+
+    /* sanity check */
+    if ((DeviceId != irp->DeviceId) || (CompletionId != irp->CompletionId))
+    {
+        log_error("DeviceId/CompletionId do not match those in IRP");
+        return;
+    }
+
+    if (IoStatus != 0)
+    {
+        log_error("StatusCall failed, device not usable");
+        /* LK_TODO delete irp and smartcard entry */
+        return;
+    }
+
+    /* get OutputBufferLen */
+    xstream_rd_u32_le(s, len);
+
+    log_debug("leaving");
+}
+
+/**
+ *
+ *****************************************************************************/
+static void
+scard_handle_Disconnect_Return(struct stream *s, IRP *irp,
+                               tui32 DeviceId, tui32 CompletionId,
+                               tui32 IoStatus)
+{
+    tui32 len;
+
+    log_debug("entered");
+
+    /* sanity check */
+    if ((DeviceId != irp->DeviceId) || (CompletionId != irp->CompletionId))
+    {
+        log_error("DeviceId/CompletionId do not match those in IRP");
+        return;
+    }
+
+    if (IoStatus != 0)
+    {
+        log_error("Disconnect failed, device not usable");
         /* LK_TODO delete irp and smartcard entry */
         return;
     }
