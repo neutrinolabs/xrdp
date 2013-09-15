@@ -23,6 +23,9 @@
  * pcsc lib and daemon write struct on unix domain socket for communication
  */
 
+#define JAY_TODO_CONTEXT    0
+#define JAY_TODO_WIDE       1
+
 #define PCSC_STANDIN 1
 
 #include "os_calls.h"
@@ -190,7 +193,7 @@ scard_process_establish_context(struct trans *con, struct stream *in_s)
 /*****************************************************************************/
 /* returns error */
 int APP_CC
-scard_function_establish_context_return(struct trans *con, int context)
+scard_function_establish_context_return(struct trans *con, tui32 context)
 {
     struct establish_struct out_es;
     struct stream *out_s;
@@ -279,7 +282,7 @@ scard_process_get_readers_state(struct trans *con, struct stream *in_s)
     }
     g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_LR;
 
-    scard_send_irp_list_readers(con);
+    scard_send_irp_list_readers(con, JAY_TODO_CONTEXT, JAY_TODO_WIDE);
 
     return 0;
 }
@@ -424,7 +427,7 @@ scard_process_read_state_change(struct trans *con, struct stream *in_s)
 #endif
 
     g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_RSC;
-    scard_send_irp_get_status_change(con, 1, in_rsc.timeOut, g_num_readers,
+    scard_send_irp_get_status_change(con, JAY_TODO_CONTEXT, 1, in_rsc.timeOut, g_num_readers,
                                      g_xrdp_reader_states);
 
     LLOGLN(0, ("scard_process_read_state_change: timeout %d rv %d",
@@ -502,7 +505,7 @@ scard_function_get_status_change_return(struct trans *con,
         g_xrdp_reader_states[index].event_state = event_state;
         g_xrdp_reader_states[index].atr_len = atr_len;
         g_memcpy(g_xrdp_reader_states[index].atr, atr, 36);
-        
+
     }
     //out_s = trans_get_out_s(con, 8192);
     //out_uint8a(out_s, g_reader_states, sizeof(g_reader_states));
