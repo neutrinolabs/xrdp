@@ -74,7 +74,7 @@ int  APP_CC scard_check_wait_objs(void);
 int  APP_CC scard_init(void);
 int  APP_CC scard_deinit(void);
 int  APP_CC scard_send_irp_establish_context(struct trans *con, int scope);
-int  APP_CC scard_send_release_context(struct trans *con, tui32 context);
+int  APP_CC scard_send_irp_release_context(struct trans *con, tui32 context);
 int  APP_CC scard_send_irp_list_readers(struct trans *con, tui32 context, int wide);
 
 int  APP_CC scard_send_irp_get_status_change(struct trans *con, tui32 context,
