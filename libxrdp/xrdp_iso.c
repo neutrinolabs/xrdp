@@ -62,6 +62,9 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code)
         return 1;
     }
 
+    // print CR packet hex dump
+    g_hexdump(s->p, 19);
+
     in_uint8(s, ver);
 
     if (ver != 3)
@@ -86,7 +89,7 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code)
     }
     else
     {
-        in_uint8s(s, 13);
+        in_uint8s(s, 5+8);
     }
 
     return 0;
@@ -119,7 +122,7 @@ xrdp_iso_recv(struct xrdp_iso *self, struct stream *s)
 
 /*****************************************************************************/
 static int APP_CC
-xrdp_iso_send_msg(struct xrdp_iso *self, struct stream *s, int code)
+xrdp_iso_send_msg(struct xrdp_iso *self, struct stream *s, int code, int negostate)
 {
     if (xrdp_tcp_init(self->tcp_layer, s) != 0)
     {
@@ -137,11 +140,23 @@ xrdp_iso_send_msg(struct xrdp_iso *self, struct stream *s, int code)
     out_uint16_be(s, 0x1234);
     out_uint8(s, 0);
     /* RDP_NEG_RSP - 8 bytes*/
-    out_uint8(s, 2); /* TYPE_RDP_NEG_RSP */
-    out_uint8(s, 1); /* flags */
-    out_uint16_le(s, 8); /* length */
-    out_uint32_le(s, 0); /* selectedProtocol: 0 = RDP , 1 = TLS , 2 = CREDSSP */
-    s_mark_end(s);
+    switch (negostate)
+    {
+		case RDP_NEG_FAILURE:
+			out_uint8(s, RDP_NEG_FAILURE); /* RDP_NEG_FAILURE */
+			out_uint8(s, 0); /* no flags available */
+			out_uint16_le(s, 8); /* fixed length */
+			out_uint32_le(s, SSL_NOT_ALLOWED_BY_SERVER); /* failure code */
+			break;
+		case RDP_NEG_RSP:
+			out_uint8(s, RDP_NEG_RSP); /* TYPE_RDP_NEG_RSP */
+			out_uint8(s, EXTENDED_CLIENT_DATA_SUPPORTED); /* flags */
+			out_uint16_le(s, 8); /* fixed length */
+			out_uint32_le(s, PROTOCOL_RDP); /* selected protocol */
+			break;
+    }
+
+	s_mark_end(s);
 
     if (xrdp_tcp_send(self->tcp_layer, s) != 0)
     {
@@ -157,8 +172,9 @@ int APP_CC
 xrdp_iso_incoming(struct xrdp_iso *self)
 {
     int code;
+    int negostate;
     struct stream *s;
-
+//todo: negostate init and change
     make_stream(s);
     init_stream(s, 8192);
     DEBUG(("   in xrdp_iso_incoming"));
@@ -175,7 +191,15 @@ xrdp_iso_incoming(struct xrdp_iso *self)
         return 1;
     }
 
-    if (xrdp_iso_send_msg(self, s, ISO_PDU_CC) != 0)
+    //RDP Negotiate Security Layer
+
+/*    if (xrdp_nego_init(self, s, ISO_PDU_CC,init) != 0)
+    {
+        free_stream(s);
+        return 1;
+    }*/
+
+    if (xrdp_iso_send_msg(self, s, ISO_PDU_CC, negostate) != 0)
     {
         free_stream(s);
         return 1;

@@ -31,6 +31,29 @@
 #define ISO_PDU_DT                     0xF0 /* Data */
 #define ISO_PDU_ER                     0x70 /* Error */
 
+
+/* RDP Security Negotiation codes */
+#define RDP_NEG_REQ					   0x01
+#define RDP_NEG_RSP					   0x02
+#define RDP_NEG_FAILURE				   0x03
+/* Protocol types codes */
+#define PROTOCOL_RDP				   0x0
+#define PROTOCOL_SSL				   0x1
+#define PROTOCOL_HYBRID    			   0x2
+#define PROTOCOL_HYBRID_EX			   0x8
+/* Negotiation packet flags */
+#define EXTENDED_CLIENT_DATA_SUPPORTED 0x1
+#define DYNVC_GFX_PROTOCOL_SUPPORTED   0x2
+#define RDP_NEGRSP_RESERVED			   0x4
+/* Failure Codes */
+#define SSL_REQUIRED_BY_SERVER			0x1
+#define SSL_NOT_ALLOWED_BY_SERVER		0x2
+#define SSL_CERT_NOT_ON_SERVER			0x3
+#define INCONSISTENT_FLAGS				0x4
+#define HYBRID_REQUIRED_BY_SERVER		0x5
+#define SSL_WITH_USER_AUTH_REQUIRED_BY_SERVER	0x6
+
+
 /* MCS PDU codes */
 #define MCS_EDRQ                       1  /* Erect Domain Request */
 #define MCS_DPUM                       8  /* Disconnect Provider Ultimatum */
