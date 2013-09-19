@@ -211,6 +211,7 @@ struct xrdp_orders
   int order_count;
   int order_level; /* inc for every call to xrdp_orders_init */
   struct xrdp_orders_state orders_state;
+  void* jpeg_han;
 };
 
 #define PROTO_RDP_40 1
@@ -431,10 +432,14 @@ xrdp_bitmap_compress(char* in_data, int width, int height,
                      int start_line, struct stream* temp_s,
                      int e);
 int APP_CC
-xrdp_jpeg_compress(char* in_data, int width, int height,
+xrdp_jpeg_compress(void *handle, char* in_data, int width, int height,
                    struct stream* s, int bpp, int byte_limit,
                    int start_line, struct stream* temp_s,
                    int e, int quality);
+void *APP_CC
+xrdp_jpeg_init(void);
+int APP_CC
+xrdp_jpeg_deinit(void *handle);
 
 /* xrdp_channel.c */
 struct xrdp_channel* APP_CC

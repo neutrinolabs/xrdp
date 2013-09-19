@@ -29,11 +29,9 @@
 #include <string.h>
 #include <turbojpeg.h>
 
-static tjhandle g_tj_han = 0; /* turbojpeg handle */
-
 /*****************************************************************************/
 int APP_CC
-xrdp_jpeg_compress(char *in_data, int width, int height,
+xrdp_jpeg_compress(void *handle, char *in_data, int width, int height,
                    struct stream *s, int bpp, int byte_limit,
                    int start_line, struct stream *temp_s,
                    int e, int quality)
@@ -48,16 +46,19 @@ xrdp_jpeg_compress(char *in_data, int width, int height,
     unsigned char *src_buf;
     unsigned char *dst_buf;
     char *temp_buf;
+    tjhandle tj_han;
 
     if (bpp != 24)
     {
-        g_writeln("bpp wrong %d", bpp);
+        g_writeln("xrdp_jpeg_compress: bpp wrong %d", bpp);
         return height;
     }
-    if (g_tj_han == 0)
+    if (handle == 0)
     {
-        g_tj_han = tjInitCompress();
+        g_writeln("xrdp_jpeg_compress: handle is nil");
+        return height;
     }
+    tj_han = (tjhandle) handle;
     cdata_bytes = byte_limit;
     src_buf = (unsigned char *) in_data;
     dst_buf = (unsigned char *) (s->p);
@@ -89,13 +90,37 @@ xrdp_jpeg_compress(char *in_data, int width, int height,
         src_buf = (unsigned char *) temp_buf;
     }
     dst_buf = (unsigned char*)(s->p);
-    error = tjCompress(g_tj_han, src_buf, width + e, (width + e) * 4, height,
+    error = tjCompress(tj_han, src_buf, width + e, (width + e) * 4, height,
                        TJPF_XBGR, dst_buf, &cdata_bytes,
                        TJSAMP_420, quality, 0);
-    //g_writeln("error %d %d %d %d", error, width, e, height);
     s->p += cdata_bytes;
     g_free(temp_buf);
     return height;
+}
+
+/*****************************************************************************/
+void *APP_CC
+xrdp_jpeg_init(void)
+{
+    tjhandle tj_han;
+
+    tj_han = tjInitCompress();
+    return tj_han;
+}
+
+/*****************************************************************************/
+int APP_CC
+xrdp_jpeg_deinit(void *handle)
+{
+    tjhandle tj_han;
+
+    if (handle == 0)
+    {
+        return 0;
+    }
+    tj_han = (tjhandle) handle;
+    tjDestroy(tj_han);
+    return 0;
 }
 
 #elif defined(XRDP_JPEG)
@@ -285,7 +310,7 @@ jpeg_compress(char *in_data, int width, int height,
 
 /*****************************************************************************/
 int APP_CC
-xrdp_jpeg_compress(char *in_data, int width, int height,
+xrdp_jpeg_compress(void *handle, char *in_data, int width, int height,
                    struct stream *s, int bpp, int byte_limit,
                    int start_line, struct stream *temp_s,
                    int e, int quality)
@@ -295,16 +320,44 @@ xrdp_jpeg_compress(char *in_data, int width, int height,
     return height;
 }
 
+/*****************************************************************************/
+void *APP_CC
+xrdp_jpeg_init(void)
+{
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+xrdp_jpeg_deinit(void *handle)
+{
+    return 0;
+}
+
 #else
 
 /*****************************************************************************/
 int APP_CC
-xrdp_jpeg_compress(char *in_data, int width, int height,
+xrdp_jpeg_compress(void *handle, char *in_data, int width, int height,
                    struct stream *s, int bpp, int byte_limit,
                    int start_line, struct stream *temp_s,
                    int e, int quality)
 {
     return height;
+}
+
+/*****************************************************************************/
+void *APP_CC
+xrdp_jpeg_init(void)
+{
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+xrdp_jpeg_deinit(void *handle)
+{
+    return 0;
 }
 
 #endif
