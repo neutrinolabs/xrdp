@@ -55,6 +55,7 @@ typedef struct _SCARD_IO_REQUEST
 #define SCARD_ESTABLISH_CONTEXT 0x01
 #define SCARD_RELEASE_CONTEXT   0x02
 #define SCARD_LIST_READERS      0x03
+#define SCARD_CONNECT           0x04
 #define SCARD_GET_STATUS_CHANGE 0x0C
 
 #define SCARD_S_SUCCESS 0x00000000
@@ -78,6 +79,9 @@ typedef struct _SCARD_IO_REQUEST
 static int g_sck = -1; /* unix domain socket */
 
 static pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/* for pcsc_stringify_error */
+static char g_error_str[512];
 
 /*****************************************************************************/
 static int
@@ -152,6 +156,11 @@ connect_to_chansrv(void)
     struct sockaddr_un saddr;
     struct sockaddr *psaddr;
 
+    if (g_sck != -1)
+    {
+        /* already connected */
+        return 0;
+    }
     xrdp_session = getenv("XRDP_SESSION");
     if (xrdp_session == NULL)
     {
@@ -180,34 +189,31 @@ connect_to_chansrv(void)
         LLOGLN(0, ("connect_to_chansrv: error, display not > 9 %d", dis));
         return 1;
     }
+    g_sck = socket(PF_LOCAL, SOCK_STREAM, 0);
     if (g_sck == -1)
     {
-        g_sck = socket(PF_LOCAL, SOCK_STREAM, 0);
-        if (g_sck == -1)
-        {
-            LLOGLN(0, ("connect_to_chansrv: error, socket failed"));
-            return 1;
-        }
-        memset(&saddr, 0, sizeof(struct sockaddr_un));
-        saddr.sun_family = AF_UNIX;
-        bytes = sizeof(saddr.sun_path);
-        snprintf(saddr.sun_path, bytes, "%s/.pcsc%d/pcscd.comm", home_str, dis);
-        saddr.sun_path[bytes - 1] = 0;
-        LLOGLN(0, ("connect_to_chansrv: connecting to %s", saddr.sun_path));
-        psaddr = (struct sockaddr *) &saddr;
-        bytes = sizeof(struct sockaddr_un);
-        error = connect(g_sck, psaddr, bytes);
-        if (error == 0)
-        {
-        }
-        else
-        {
-            perror("connect_to_chansrv");
-            close(g_sck);
-            g_sck = -1;
-            LLOGLN(0, ("connect_to_chansrv: error, open %s", saddr.sun_path));
-            return 1;
-        }
+        LLOGLN(0, ("connect_to_chansrv: error, socket failed"));
+        return 1;
+    }
+    memset(&saddr, 0, sizeof(struct sockaddr_un));
+    saddr.sun_family = AF_UNIX;
+    bytes = sizeof(saddr.sun_path);
+    snprintf(saddr.sun_path, bytes, "%s/.pcsc%d/pcscd.comm", home_str, dis);
+    saddr.sun_path[bytes - 1] = 0;
+    LLOGLN(0, ("connect_to_chansrv: connecting to %s", saddr.sun_path));
+    psaddr = (struct sockaddr *) &saddr;
+    bytes = sizeof(struct sockaddr_un);
+    error = connect(g_sck, psaddr, bytes);
+    if (error == 0)
+    {
+    }
+    else
+    {
+        perror("connect_to_chansrv");
+        close(g_sck);
+        g_sck = -1;
+        LLOGLN(0, ("connect_to_chansrv: error, open %s", saddr.sun_path));
+        return 1;
     }
     return 0;
 }
@@ -369,6 +375,12 @@ SCardConnect(SCARDCONTEXT hContext, LPCSTR szReader, DWORD dwShareMode,
              DWORD dwPreferredProtocols, LPSCARDHANDLE phCard,
              LPDWORD pdwActiveProtocol)
 {
+    char msg[256];
+    int code;
+    int bytes;
+    int status;
+    int offset;
+
     LLOGLN(0, ("SCardConnect:"));
     if (g_sck == -1)
     {
@@ -376,8 +388,47 @@ SCardConnect(SCARDCONTEXT hContext, LPCSTR szReader, DWORD dwShareMode,
         return SCARD_F_INTERNAL_ERROR;
     }
     pthread_mutex_lock(&g_mutex);
+    offset = 0;
+    SET_UINT32(msg, offset, hContext);
+    offset += 4;
+    bytes = strlen(szReader);
+    if (bytes > 99)
+    {
+        LLOGLN(0, ("SCardConnect: error, name too long"));
+        return SCARD_F_INTERNAL_ERROR;
+    }
+    memcpy(msg + offset, szReader, bytes);
+    memset(msg + bytes, 0, 100 - bytes);
+    offset += 100;
+    SET_UINT32(msg, offset, dwShareMode);
+    offset += 4;
+    SET_UINT32(msg, offset, dwPreferredProtocols);
+    offset += 4;
+    if (send_message(SCARD_CONNECT, msg, offset) != 0)
+    {
+        LLOGLN(0, ("SCardConnect: error, send_message"));
+        pthread_mutex_unlock(&g_mutex);
+        return SCARD_F_INTERNAL_ERROR;
+    }
+    bytes = 256;
+    if (get_message(&code, msg, &bytes) != 0)
+    {
+        LLOGLN(0, ("SCardConnect: error, get_message"));
+        pthread_mutex_unlock(&g_mutex);
+        return SCARD_F_INTERNAL_ERROR;
+    }
+    if (code != SCARD_RELEASE_CONTEXT)
+    {
+        LLOGLN(0, ("SCardConnect: error, bad code"));
+        pthread_mutex_unlock(&g_mutex);
+        return SCARD_F_INTERNAL_ERROR;
+    }
     pthread_mutex_unlock(&g_mutex);
-    return SCARD_S_SUCCESS;
+    *phCard = GET_UINT32(msg, 0);
+    *pdwActiveProtocol = GET_UINT32(msg, 4);
+    status = GET_UINT32(msg, 8);
+    LLOGLN(10, ("SCardReleaseContext: got status 0x%8.8x", status));
+    return status;
 }
 
 /*****************************************************************************/
@@ -745,8 +796,6 @@ SCardSetAttrib(SCARDHANDLE hCard, DWORD dwAttrId, LPCBYTE pbAttr,
     pthread_mutex_unlock(&g_mutex);
     return SCARD_S_SUCCESS;
 }
-
-static char g_error_str[512];
 
 /*****************************************************************************/
 char *

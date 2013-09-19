@@ -55,6 +55,7 @@
 #define XRDP_PCSC_STATE_GOT_LR           (1 << 1) /* list readers */
 #define XRDP_PCSC_STATE_GOT_RC           (1 << 2) /* release context */
 #define XRDP_PCSC_STATE_GOT_GSC          (1 << 3) /* get status change */
+#define XRDP_PCSC_STATE_GOT_C            (1 << 4) /* connect */
 
 /* TODO: put this in con */
 static int g_xrdp_pcsc_state = XRDP_PCSC_STATE_NONE;
@@ -123,7 +124,7 @@ scard_process_establish_context(struct trans *con, struct stream *in_s)
     g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_EC;
     in_uint32_le(in_s, dwScope);
     LLOGLN(0, ("scard_process_establish_context: dwScope 0x%8.8x", dwScope));
-    scard_send_irp_establish_context(con, dwScope);
+    scard_send_establish_context(con, dwScope);
     return 0;
 }
 
@@ -183,7 +184,7 @@ scard_process_release_context(struct trans *con, struct stream *in_s)
     g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_RC;
     in_uint32_le(in_s, hContext);
     LLOGLN(0, ("scard_process_release_context: hContext 0x%8.8x", hContext));
-    scard_send_irp_release_context(con, hContext);
+    scard_send_release_context(con, hContext);
     return 0;
 }
 
@@ -232,7 +233,7 @@ scard_process_list_readers(struct trans *con, struct stream *in_s)
     g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_LR;
     in_uint32_le(in_s, hContext);
     LLOGLN(0, ("scard_process_list_readers: dwScope 0x%8.8x", hContext));
-    scard_send_irp_list_readers(con, hContext, 1);
+    scard_send_list_readers(con, hContext, 1);
     return 0;
 }
 
@@ -321,6 +322,34 @@ scard_function_list_readers_return(struct trans *con,
 /*****************************************************************************/
 /* returns error */
 int APP_CC
+scard_process_connect(struct trans *con, struct stream *in_s)
+{
+    int hContext;
+    char szReader[100];
+    READER_STATE rs;
+
+    LLOGLN(0, ("scard_process_connect:"));
+    if (g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_C)
+    {
+        LLOGLN(0, ("scard_process_connect: opps"));
+        return 1;
+    }
+    g_memset(&rs, 0, sizeof(rs));
+    g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_C;
+    in_uint32_le(in_s, hContext);
+    in_uint8a(in_s, szReader, 100);
+    in_uint32_le(in_s, rs.shared_mode_flag);
+    in_uint32_le(in_s, rs.preferred_protocol);
+    LLOGLN(0, ("scard_process_connect: dwShareMode 0x%8.8x "
+           "dwPreferredProtocols 0x%8.8x", rs.shared_mode_flag,
+           rs.preferred_protocol));
+    scard_send_connect(con, hContext, 1, &rs);
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
 scard_process_get_status_change(struct trans *con, struct stream *in_s)
 {
     int index;
@@ -367,7 +396,7 @@ scard_process_get_status_change(struct trans *con, struct stream *in_s)
 
     g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_GSC;
 
-    scard_send_irp_get_status_change(con, hContext, 1, dwTimeout, cReaders, rsa);
+    scard_send_get_status_change(con, hContext, 1, dwTimeout, cReaders, rsa);
 
     g_free(rsa);
 
@@ -453,6 +482,7 @@ scard_process_msg(struct trans *con, struct stream *in_s, int command)
 
         case 0x04: /* SCARD_CONNECT */
             LLOGLN(0, ("scard_process_msg: SCARD_CONNECT"));
+            rv = scard_process_connect(con, in_s);
             break;
 
         case 0x05: /* SCARD_RECONNECT */

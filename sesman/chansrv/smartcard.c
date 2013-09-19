@@ -285,7 +285,7 @@ scard_deinit(void)
  *
  *****************************************************************************/
 int APP_CC
-scard_send_irp_establish_context(struct trans *con, int scope)
+scard_send_establish_context(struct trans *con, int scope)
 {
     IRP *irp;
 
@@ -312,7 +312,7 @@ scard_send_irp_establish_context(struct trans *con, int scope)
  * Release a previously established Smart Card context
  *****************************************************************************/
 int APP_CC
-scard_send_irp_release_context(struct trans *con, tui32 context)
+scard_send_release_context(struct trans *con, tui32 context)
 {
     IRP *irp;
 
@@ -339,7 +339,7 @@ scard_send_irp_release_context(struct trans *con, tui32 context)
  *
  *****************************************************************************/
 int APP_CC
-scard_send_irp_list_readers(struct trans *con, tui32 context, int wide)
+scard_send_list_readers(struct trans *con, tui32 context, int wide)
 {
     IRP *irp;
 
@@ -371,9 +371,9 @@ scard_send_irp_list_readers(struct trans *con, tui32 context, int wide)
  * @param  rsa          array of READER_STATEs
  *****************************************************************************/
 int APP_CC
-scard_send_irp_get_status_change(struct trans *con, tui32 context, int wide,
-                                 tui32 timeout, tui32 num_readers,
-                                 READER_STATE* rsa)
+scard_send_get_status_change(struct trans *con, tui32 context, int wide,
+                             tui32 timeout, tui32 num_readers,
+                             READER_STATE* rsa)
 {
     IRP *irp;
 
@@ -403,8 +403,8 @@ scard_send_irp_get_status_change(struct trans *con, tui32 context, int wide,
  * @param  wide  TRUE if unicode string
  *****************************************************************************/
 int APP_CC
-scard_send_irp_connect(struct trans *con, tui32 context, int wide,
-                       READER_STATE* rs)
+scard_send_connect(struct trans *con, tui32 context, int wide,
+                   READER_STATE* rs)
 {
     IRP *irp;
 
