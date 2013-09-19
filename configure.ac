@@ -39,6 +39,10 @@ AC_ARG_ENABLE(jpeg, AS_HELP_STRING([--enable-jpeg],
               [Build jpeg module (default: no)]),
               [jpeg=true], [jpeg=false])
 AM_CONDITIONAL(XRDP_JPEG, [test x$jpeg = xtrue])
+AC_ARG_ENABLE(tjpeg, AS_HELP_STRING([--enable-tjpeg],
+              [Build turbo jpeg module(assumes /opt/libjpeg-turbo) (default: no)]),
+              [tjpeg=true], [tjpeg=false])
+AM_CONDITIONAL(XRDP_TJPEG, [test x$tjpeg = xtrue])
 AC_ARG_ENABLE(simplesound, AS_HELP_STRING([--enable-simplesound],
               [Build simple pulse audio interface (default: no)]),
               [simplesound=true], [simplesound=false])

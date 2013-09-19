@@ -108,7 +108,8 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
                 LLOGLN(10, ("rdpPolyFillRect: getting dirty"));
                 g_screenPriv.is_dirty = 1;
                 pDirtyPriv = &g_screenPriv;
-                dirty_type = RDI_IMGLL;
+                dirty_type = (FillTiled == pGC->fillStyle) ?
+                                    RDI_IMGLY : RDI_IMGLL;
             }
             else
             {
@@ -125,7 +126,8 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
                 LLOGLN(10, ("rdpPolyFillRect: getting dirty"));
                 pDstPriv->is_dirty = 1;
                 pDirtyPriv = pDstPriv;
-                dirty_type = RDI_FILL;
+                dirty_type = (FillTiled == pGC->fillStyle) ?
+                                    RDI_IMGLY : RDI_IMGLL;
             }
             else
             {
@@ -151,7 +153,8 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
                     LLOGLN(10, ("rdpPolyFillRect: getting dirty"));
                     g_screenPriv.is_dirty = 1;
                     pDirtyPriv = &g_screenPriv;
-                    dirty_type = RDI_IMGLL;
+                    dirty_type = (FillTiled == pGC->fillStyle) ?
+                                        RDI_IMGLY : RDI_IMGLL;
                 }
                 else
                 {
@@ -192,7 +195,8 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
             }
             else
             {
-                draw_item_add_img_region(pDirtyPriv, fill_reg, GXcopy, RDI_IMGLL, 2);
+                draw_item_add_img_region(pDirtyPriv, fill_reg, GXcopy,
+                                         dirty_type, 2);
             }
         }
         else if (got_id)
@@ -214,7 +218,8 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
                 for (j = REGION_NUM_RECTS(fill_reg) - 1; j >= 0; j--)
                 {
                     box = REGION_RECTS(fill_reg)[j];
-                    rdpup_fill_rect(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+                    rdpup_fill_rect(box.x1, box.y1,
+                                    box.x2 - box.x1, box.y2 - box.y1);
                 }
 
                 rdpup_set_opcode(GXcopy);
@@ -251,13 +256,15 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
                          pGC->alu == GXxor*/)) /* todo, why dosen't xor work? */
                 {
                     LLOGLN(10, ("rdpPolyFillRect: 3"));
-                    draw_item_add_fill_region(pDirtyPriv, &clip_reg, pGC->fgPixel,
+                    draw_item_add_fill_region(pDirtyPriv, &clip_reg,
+                                              pGC->fgPixel,
                                               pGC->alu);
                 }
                 else
                 {
                     LLOGLN(10, ("rdpPolyFillRect: 4"));
-                    draw_item_add_img_region(pDirtyPriv, &clip_reg, GXcopy, RDI_IMGLL, 2);
+                    draw_item_add_img_region(pDirtyPriv, &clip_reg, GXcopy,
+                                             dirty_type, 2);
                 }
             }
             else if (got_id)
@@ -281,7 +288,8 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
                     for (j = num_clips - 1; j >= 0; j--)
                     {
                         box = REGION_RECTS(&clip_reg)[j];
-                        rdpup_fill_rect(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+                        rdpup_fill_rect(box.x1, box.y1,
+                                        box.x2 - box.x1, box.y2 - box.y1);
                     }
 
                     rdpup_set_opcode(GXcopy);
@@ -291,7 +299,8 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
                     for (j = num_clips - 1; j >= 0; j--)
                     {
                         box = REGION_RECTS(&clip_reg)[j];
-                        rdpup_send_area(&id, box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+                        rdpup_send_area(&id, box.x1, box.y1,
+                                        box.x2 - box.x1, box.y2 - box.y1);
                     }
                 }
 

@@ -20,7 +20,87 @@
 
 #include "libxrdp.h"
 
-#if defined(XRDP_JPEG)
+#if defined(XRDP_TJPEG)
+
+/* turbo jpeg */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <turbojpeg.h>
+
+static tjhandle g_tj_han = 0; /* turbojpeg handle */
+
+/*****************************************************************************/
+int APP_CC
+xrdp_jpeg_compress(char *in_data, int width, int height,
+                   struct stream *s, int bpp, int byte_limit,
+                   int start_line, struct stream *temp_s,
+                   int e, int quality)
+{
+    int error;
+    int i;
+    int j;
+    unsigned int pixel;
+    unsigned int *src32;
+    unsigned int *dst32;
+    unsigned long cdata_bytes;
+    unsigned char *src_buf;
+    unsigned char *dst_buf;
+    char *temp_buf;
+
+    if (bpp != 24)
+    {
+        g_writeln("bpp wrong %d", bpp);
+        return height;
+    }
+    if (g_tj_han == 0)
+    {
+        g_tj_han = tjInitCompress();
+    }
+    cdata_bytes = byte_limit;
+    src_buf = (unsigned char *) in_data;
+    dst_buf = (unsigned char *) (s->p);
+    temp_buf = 0;
+    if (e == 0)
+    {
+        src_buf = (unsigned char*)in_data;
+    }
+    else
+    {
+        temp_buf = (char *) g_malloc((width + e) * height * 4, 0);
+        dst32 = (unsigned int *) temp_buf;
+        src32 = (unsigned int *) in_data;
+        for (j = 0; j < height; j++)
+        {
+            for (i = 0; i < width; i++)
+            {
+                pixel = *src32;
+                src32++;
+                *dst32 = pixel;
+                dst32++;
+            }
+            for (i = 0; i < e; i++)
+            {
+                *dst32 = pixel;
+                dst32++;
+            }
+        }
+        src_buf = (unsigned char *) temp_buf;
+    }
+    dst_buf = (unsigned char*)(s->p);
+    error = tjCompress(g_tj_han, src_buf, width + e, (width + e) * 4, height,
+                       TJPF_XBGR, dst_buf, &cdata_bytes,
+                       TJSAMP_420, quality, 0);
+    //g_writeln("error %d %d %d %d", error, width, e, height);
+    s->p += cdata_bytes;
+    g_free(temp_buf);
+    return height;
+}
+
+#elif defined(XRDP_JPEG)
+
+/* libjpeg */
 
 #include <stdio.h>
 #include <stdlib.h>

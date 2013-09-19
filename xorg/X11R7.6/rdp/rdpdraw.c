@@ -827,7 +827,7 @@ xrdp_is_os(PixmapPtr pix, rdpPixmapPtr priv)
                         LLOGLN(10, ("xrdp_is_os: queuing invalidating all"));
                         draw_item_remove_all(priv);
                         RegionInit(&reg1, &box, 0);
-                        draw_item_add_img_region(priv, &reg1, GXcopy, RDI_IMGLL, 16);
+                        draw_item_add_img_region(priv, &reg1, GXcopy, RDI_IMGLY, 16);
                         RegionUninit(&reg1);
                         priv->is_dirty = 1;
                         priv->con_number = g_con_number;
@@ -1212,7 +1212,7 @@ rdpClearToBackground(WindowPtr pWin, int x, int y, int w, int h,
 
         if (g_do_dirty_ons)
         {
-            draw_item_add_img_region(&g_screenPriv, &reg, GXcopy, RDI_IMGLL, 16);
+            draw_item_add_img_region(&g_screenPriv, &reg, GXcopy, RDI_IMGLY, 16);
         }
         else
         {
@@ -1250,7 +1250,7 @@ rdpRestoreAreas(WindowPtr pWin, RegionPtr prgnExposed)
 
     if (g_do_dirty_ons)
     {
-        draw_item_add_img_region(&g_screenPriv, &reg, GXcopy, RDI_IMGLL, 16);
+        draw_item_add_img_region(&g_screenPriv, &reg, GXcopy, RDI_IMGLY, 16);
     }
     else
     {
@@ -1415,7 +1415,7 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
                     LLOGLN(10, ("rdpComposite: getting dirty"));
                     g_screenPriv.is_dirty = 1;
                     pDirtyPriv = &g_screenPriv;
-                    dirty_type = RDI_IMGLL;
+                    dirty_type = g_doing_font ? RDI_IMGLL : RDI_IMGLY;
                 }
                 else
                 {
