@@ -1,5 +1,7 @@
---- a/xorg/X11R7.6/rdp/rdp.h
-+++ b/xorg/X11R7.6/rdp/rdp.h
+Index: xrdp-bartw72/xorg/X11R7.6/rdp/rdp.h
+===================================================================
+--- xrdp-bartw72.orig/xorg/X11R7.6/rdp/rdp.h	2013-09-21 19:27:54.861672261 +0200
++++ xrdp-bartw72/xorg/X11R7.6/rdp/rdp.h	2013-09-21 19:27:54.857672099 +0200
 @@ -443,6 +443,8 @@
  Bool
  rdpSpriteUnrealizeCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs);
@@ -9,8 +11,10 @@
  rdpSpriteSetCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs,
                     int x, int y);
  void
---- a/xorg/X11R7.6/rdp/rdpinput.c
-+++ b/xorg/X11R7.6/rdp/rdpinput.c
+Index: xrdp-bartw72/xorg/X11R7.6/rdp/rdpinput.c
+===================================================================
+--- xrdp-bartw72.orig/xorg/X11R7.6/rdp/rdpinput.c	2013-09-21 19:27:54.861672261 +0200
++++ xrdp-bartw72/xorg/X11R7.6/rdp/rdpinput.c	2013-09-21 19:27:54.857672099 +0200
 @@ -37,6 +37,7 @@
  /* this should be fixed in rdesktop */
  
@@ -455,18 +459,22 @@
      rdpup_end_update();
  }
  
---- a/common/xrdp_client_info.h
-+++ b/common/xrdp_client_info.h
-@@ -92,6 +92,7 @@
-   int use_bulk_comp;
+Index: xrdp-bartw72/common/xrdp_client_info.h
+===================================================================
+--- xrdp-bartw72.orig/common/xrdp_client_info.h	2013-09-21 19:27:54.861672261 +0200
++++ xrdp-bartw72/common/xrdp_client_info.h	2013-09-21 19:28:21.810763476 +0200
+@@ -93,6 +93,7 @@
    int pointer_flags; /* 0 color, 1 new, 2 no new */
    int use_fast_path;
+   int require_credentials; /* when true, credentials *must* be passed on cmd line */
 +  int fix_mouse_pointer_sprites;
  };
  
  #endif
---- a/libxrdp/xrdp_rdp.c
-+++ b/libxrdp/xrdp_rdp.c
+Index: xrdp-bartw72/libxrdp/xrdp_rdp.c
+===================================================================
+--- xrdp-bartw72.orig/libxrdp/xrdp_rdp.c	2013-09-21 19:27:54.861672261 +0200
++++ xrdp-bartw72/libxrdp/xrdp_rdp.c	2013-09-21 19:27:54.857672099 +0200
 @@ -98,6 +98,15 @@
          {
              client_info->use_bulk_comp = text2bool(value);
@@ -483,8 +491,10 @@
          else if (g_strcasecmp(item, "crypt_level") == 0)
          {
              if (g_strcasecmp(value, "low") == 0)
---- /dev/null
-+++ b/xorg/X11R7.6/rdp/cursors.h
+Index: xrdp-bartw72/xorg/X11R7.6/rdp/cursors.h
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ xrdp-bartw72/xorg/X11R7.6/rdp/cursors.h	2013-09-21 19:27:54.861672261 +0200
 @@ -0,0 +1,1057 @@
 +
 +#ifndef _CURSORS_H
@@ -1543,11 +1553,13 @@
 +"                        ";
 +
 +#endif
---- a/xrdp/xrdp.ini
-+++ b/xrdp/xrdp.ini
-@@ -25,6 +25,7 @@
- #autorun=xrdp1
- #hidelogwindow=yes
+Index: xrdp-bartw72/xrdp/xrdp.ini
+===================================================================
+--- xrdp-bartw72.orig/xrdp/xrdp.ini	2013-09-21 19:27:54.861672261 +0200
++++ xrdp-bartw72/xrdp/xrdp.ini	2013-09-21 19:27:54.861672261 +0200
+@@ -29,6 +29,7 @@
+ # require_credentials=yes
+ 
  #bulk_compression=yes
 +fix_mouse_pointer_sprites=yes
  # You can set the PAM error text in a gateway setup (MAX 256 chars)

@@ -9,3 +9,4 @@
 #99_ing_x11rdp_fixes.patch
 32_fix_fourcc.patch
 33_fix_instfiles.patch
+35_automake.patch

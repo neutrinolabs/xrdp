@@ -1,11 +1,11 @@
---- debian/rules	2012-12-27 11:49:06.331734783 +0100
-+++ debian/rules	2012-12-27 11:38:44.983681877 +0100
-@@ -19,7 +19,7 @@
- # we don't have a good way to check for dpkg-dev version, so use presence of
- # buildflags.mk as a substitute.
- ifneq (,$(wildcard /usr/share/dpkg/buildflags.mk))
--vars = $(shell DEB_BUILD_MAINT_OPTIONS="hardening=+pie" DEB_LDFLAGS_MAINT_APPEND="-Wl,-Bsymbolic" DEB_CPPFLAGS_MAINT_APPEND="-DPRE_RELEASE=0" dpkg-buildflags --export=configure)
-+vars = $(shell DEB_BUILD_MAINT_OPTIONS="hardening=+pie" DEB_CFLAGS_MAINT_APPEND="-march=native" DEB_LDFLAGS_MAINT_APPEND="-Wl,-Bsymbolic" DEB_CPPFLAGS_MAINT_APPEND="-DPRE_RELEASE=0" dpkg-buildflags --export=configure)
- else
- CFLAGS = -Wall -g
- ifneq (,$(filter noopt,$(DEB_BUILD_OPTIONS)))
+--- debian/rules.orig	2013-09-21 19:43:42.594447400 +0200
++++ debian/rules	2013-09-21 19:45:27.953129268 +0200
+@@ -70,7 +70,7 @@
+ 	config_backend += --disable-config-udev --disable-config-hal
+ endif
+ 
+-vars = $(shell DEB_BUILD_MAINT_OPTIONS="hardening=+pie" DEB_LDFLAGS_MAINT_APPEND="-Wl,-Bsymbolic" DEB_CPPFLAGS_MAINT_APPEND="-DPRE_RELEASE=0 $(cppflags)" dpkg-buildflags --export=configure) LIBS="$(libs)"
++vars = $(shell DEB_BUILD_MAINT_OPTIONS="hardening=+pie" DEB_CFLAGS_MAINT_APPEND="-march=native" DEB_LDFLAGS_MAINT_APPEND="-Wl,-Bsymbolic" DEB_CPPFLAGS_MAINT_APPEND="-DPRE_RELEASE=0" dpkg-buildflags --export=configure) LIBS="$(libs)"
+ 
+ ifneq (,$(filter nocheck, $(DEB_BUILD_OPTIONS)))
+ 	config_tests = --disable-unit-tests
