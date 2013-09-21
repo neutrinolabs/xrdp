@@ -1,4 +1,4 @@
---- debian/rules.orig	2013-09-21 22:22:18.068755250 +0200
+--- debian/rules	2013-09-21 22:22:18.068755250 +0200
 +++ debian/rules	2013-09-21 22:15:05.909128970 +0200
 @@ -70,7 +70,7 @@
  	config_backend += --disable-config-udev --disable-config-hal

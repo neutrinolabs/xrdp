@@ -1,5 +1,7 @@
---- a/instfiles/Makefile.am
-+++ b/instfiles/Makefile.am
+Index: xrdp-bartw72/instfiles/Makefile.am
+===================================================================
+--- xrdp-bartw72.orig/instfiles/Makefile.am	2013-09-21 20:20:52.432096442 +0200
++++ xrdp-bartw72/instfiles/Makefile.am	2013-09-21 22:25:21.000000000 +0200
 @@ -29,4 +29,4 @@
  install-data-hook:
  	chmod 755 $(DESTDIR)$(sysconfdir)/xrdp/xrdp.sh
