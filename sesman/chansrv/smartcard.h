@@ -43,6 +43,11 @@
 #define SCARD_PROTOCOL_DEFAULT      0x80000000
 #define SCARD_PROTOCOL_OPTIMAL      0x00000000
 
+/* initialization type */
+#define SCARD_LEAVE_CARD            0x00000000 /* do not do anything      */
+#define SCARD_RESET_CARD            0x00000001 /* reset smart card        */
+#define SCARD_UNPOWER_CARD          0x00000002 /* turn off and reset card */
+
 typedef struct reader_state
 {
     char   reader_name[128];
@@ -66,6 +71,12 @@ typedef struct reader_state
      */
     tui32  preferred_protocol;
 
+    /*
+     * initialization type, must be one of the initialization type
+     * defined above
+     */
+    tui32  init_type;
+
 } READER_STATE;
 
 void scard_device_announce(tui32 device_id);
@@ -75,15 +86,32 @@ int  APP_CC scard_init(void);
 int  APP_CC scard_deinit(void);
 int  APP_CC scard_send_establish_context(struct trans *con, int scope);
 int  APP_CC scard_send_release_context(struct trans *con, tui32 context);
+int  APP_CC scard_send_is_valid_context(struct trans *con, tui32 context);
 int  APP_CC scard_send_list_readers(struct trans *con, tui32 context, int wide);
+
 int  APP_CC scard_send_get_status_change(struct trans *con, tui32 context,
                                          int wide, tui32 timeout,
                                          tui32 num_readers, READER_STATE* rsa);
+
 int  APP_CC scard_send_connect(struct trans *con, tui32 context, int wide,
                                READER_STATE* rs);
+
+int  APP_CC scard_send_reconnect(struct trans *con, tui32 context,
+                                 tui32 sc_handle, READER_STATE* rs);
+
 int  APP_CC scard_send_begin_transaction(struct trans *con, tui32 sc_handle);
 int  APP_CC scard_send_end_transaction(struct trans *con, tui32 sc_handle);
 int  APP_CC scard_send_status(struct trans *con, int wide, tui32 sc_handle);
 int  APP_CC scard_send_disconnect(struct trans *con, tui32 context, tui32 sc_handle);
 
+/*
+ SCardReconnect
+ SCardTransmit
+ SCardControl
+ SCardListReaderGroups
+ not needed: SCardFreeMemory
+ SCardCancel
+ SCardGetAttrib
+ SCardSetAttrib
+ */
 #endif /* end #ifndef _SMARTCARD_C */

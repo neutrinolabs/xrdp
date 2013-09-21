@@ -32,6 +32,8 @@
 /*
  * TODO
  *
+ * o ensure that all wide calls are handled correctly
+ *
  * o need to query client for build number and determine whether we should use
  *   SCREDIR_VERSION_XP or SCREDIR_VERSION_LONGHORN
  *
@@ -161,6 +163,7 @@ static int  APP_CC scard_get_free_slot(void);
 static void APP_CC scard_release_resources(void);
 static void APP_CC scard_send_EstablishContext(IRP* irp, int scope);
 static void APP_CC scard_send_ReleaseContext(IRP* irp, tui32 context);
+static void APP_CC scard_send_IsContextValid(IRP* irp, tui32 context);
 static void APP_CC scard_send_ListReaders(IRP* irp, tui32 context, int wide);
 
 static void APP_CC scard_send_GetStatusChange(IRP* irp, tui32 context, int wide,
@@ -169,6 +172,9 @@ static void APP_CC scard_send_GetStatusChange(IRP* irp, tui32 context, int wide,
 
 static void APP_CC scard_send_Connect(IRP* irp, tui32 context, int wide,
                                       READER_STATE* rs);
+
+static void APP_CC scard_send_Reconnect(IRP* irp, tui32 context,
+                                        tui32 sc_handle, READER_STATE* rs);
 
 static void APP_CC scard_send_BeginTransaction(IRP* irp, tui32 sc_handle);
 static void APP_CC scard_send_EndTransaction(IRP* irp, tui32 sc_handle);
@@ -188,6 +194,11 @@ static void APP_CC scard_handle_ReleaseContext_Return(struct stream *s, IRP *irp
                                                tui32 DeviceId, tui32 CompletionId,
                                                tui32 IoStatus);
 
+
+static void APP_CC scard_handle_IsContextValid_Return(struct stream *s, IRP *irp,
+                                            tui32 DeviceId, tui32 CompletionId,
+                                            tui32 IoStatus);
+
 static void APP_CC scard_handle_ListReaders_Return(struct stream *s, IRP *irp,
                                             tui32 DeviceId, tui32 CompletionId,
                                             tui32 IoStatus);
@@ -199,6 +210,10 @@ static void APP_CC scard_handle_GetStatusChange_Return(struct stream *s, IRP *ir
 static void APP_CC scard_handle_Connect_Return(struct stream *s, IRP *irp,
                                         tui32 DeviceId, tui32 CompletionId,
                                         tui32 IoStatus);
+
+static void APP_CC scard_handle_Reconnect_Return(struct stream *s, IRP *irp,
+                                                 tui32 DeviceId, tui32 CompletionId,
+                                                 tui32 IoStatus);
 
 static void APP_CC scard_handle_BeginTransaction_Return(struct stream *s, IRP *irp,
                                                  tui32 DeviceId, tui32 CompletionId,
@@ -336,6 +351,33 @@ scard_send_release_context(struct trans *con, tui32 context)
 }
 
 /**
+ * Checks if a previously established context is still valid
+ *****************************************************************************/
+int APP_CC
+scard_send_is_valid_context(struct trans *con, tui32 context)
+{
+    IRP *irp;
+
+    /* setup up IRP */
+    if ((irp = devredir_irp_new()) == NULL)
+    {
+        log_error("system out of memory");
+        return 1;
+    }
+
+    irp->scard_index = g_scard_index;
+    irp->CompletionId = g_completion_id++;
+    irp->DeviceId = g_device_id;
+    irp->callback = scard_handle_IsContextValid_Return;
+    irp->user_data = con;
+
+    /* send IRP to client */
+    scard_send_IsContextValid(irp, context);
+
+    return 0;
+}
+
+/**
  *
  *****************************************************************************/
 int APP_CC
@@ -423,6 +465,42 @@ scard_send_connect(struct trans *con, tui32 context, int wide,
 
     /* send IRP to client */
     scard_send_Connect(irp, context, wide, rs);
+
+    return 0;
+}
+
+/**
+ * The reconnect method re-establishes a smart card reader handle. On success,
+ * the handle is valid once again.
+ *
+ * @param  con        connection to client
+ * @param  sc_handle  handle to device
+ * @param  rs         reader state where following fields are set
+ *                        rs.shared_mode_flag
+ *                        rs.preferred_protocol
+ *                        rs.init_type
+ *****************************************************************************/
+int APP_CC
+scard_send_reconnect(struct trans *con, tui32 context, tui32 sc_handle,
+                     READER_STATE* rs)
+{
+    IRP *irp;
+
+    /* setup up IRP */
+    if ((irp = devredir_irp_new()) == NULL)
+    {
+        log_error("system out of memory");
+        return 1;
+    }
+
+    irp->scard_index = g_scard_index;
+    irp->CompletionId = g_completion_id++;
+    irp->DeviceId = g_device_id;
+    irp->callback = scard_handle_Reconnect_Return;
+    irp->user_data = con;
+
+    /* send IRP to client */
+    scard_send_Reconnect(irp, context, sc_handle, rs);
 
     return 0;
 }
@@ -769,6 +847,56 @@ scard_send_ReleaseContext(IRP* irp, tui32 context)
 }
 
 /**
+ * Checks if a previously established context is still valid
+ *****************************************************************************/
+static void APP_CC
+scard_send_IsContextValid(IRP* irp, tui32 context)
+{
+    /* see [MS-RDPESC] 3.1.4.3 */
+
+    SMARTCARD*     sc;
+    struct stream* s;
+    int            bytes;
+
+    if ((sc = smartcards[irp->scard_index]) == NULL)
+    {
+        log_error("smartcards[%d] is NULL", irp->scard_index);
+        return;
+    }
+
+    if ((s = scard_make_new_ioctl(irp, SCARD_IOCTL_IS_VALID_CONTEXT)) == NULL)
+        return;
+
+    /*
+     * command format
+     *
+     * ......
+     *       20 bytes    padding
+     * u32    4 bytes    len 8, LE, v1
+     * u32    4 bytes    filler
+     *       16 bytes    unused (s->p currently pointed here at unused[0])
+     * u32    4 bytes    context len
+     * u32    4 bytes    context
+     */
+
+    xstream_wr_u32_le(s, 16);
+
+    /* insert context */
+    xstream_wr_u32_le(s, 4);
+    xstream_wr_u32_le(s, context);
+
+    /* get stream len */
+    bytes = xstream_len(s);
+
+    /* InputBufferLength is number of bytes AFTER 20 byte padding */
+    *(s->data + 28) = bytes - 56;
+
+    /* send to client */
+    send_channel_data(g_rdpdr_chan_id, s->data, bytes);
+    xstream_free(s);
+}
+
+/**
  *
  *****************************************************************************/
 static void APP_CC
@@ -1054,6 +1182,73 @@ scard_send_Connect(IRP* irp, tui32 context, int wide, READER_STATE* rs)
     /* insert context */
     xstream_wr_u32_le(s, 4);
     xstream_wr_u32_le(s, context);
+
+    /* get stream len */
+    bytes = xstream_len(s);
+
+    /* InputBufferLength is number of bytes AFTER 20 byte padding */
+    *(s->data + 28) = bytes - 56;
+
+    /* send to client */
+    send_channel_data(g_rdpdr_chan_id, s->data, bytes);
+    xstream_free(s);
+}
+
+/**
+ * The reconnect method re-establishes a smart card reader handle. On success,
+ * the handle is valid once again.
+ *
+ * @param  con        connection to client
+ * @param  sc_handle  handle to device
+ * @param  rs         reader state where following fields are set
+ *                        rs.shared_mode_flag
+ *                        rs.preferred_protocol
+ *                        rs.init_type
+ *****************************************************************************/
+static void APP_CC
+scard_send_Reconnect(IRP* irp, tui32 context, tui32 sc_handle, READER_STATE* rs)
+{
+    /* see [MS-RDPESC] 2.2.2.15 */
+    /* see [MS-RDPESC] 3.1.4.36 */
+
+    SMARTCARD*     sc;
+    struct stream* s;
+    int            bytes;
+
+    if ((sc = smartcards[irp->scard_index]) == NULL)
+    {
+        log_error("smartcards[%d] is NULL", irp->scard_index);
+        return;
+    }
+
+    if ((s = scard_make_new_ioctl(irp, SCARD_IOCTL_RECONNECT)) == NULL)
+        return;
+
+    /*
+     * command format
+     *
+     * ......
+     *       20 bytes    padding
+     * u32    4 bytes    len 8, LE, v1
+     * u32    4 bytes    filler
+     *       24 bytes    unused (s->p currently pointed here at unused[0])
+     * u32    4 bytes    dwShareMode
+     * u32    4 bytes    dwPreferredProtocol
+     * u32    4 bytes    dwInitialization
+     * u32    4 bytes    context length
+     * u32    4 bytes    context
+     * u32    4 bytes    handle length
+     * u32    4 bytes    handle
+     */
+
+    xstream_seek(s, 24);
+    xstream_wr_u32_le(s, rs->shared_mode_flag);
+    xstream_wr_u32_le(s, rs->preferred_protocol);
+    xstream_wr_u32_le(s, rs->init_type);
+    xstream_wr_u32_le(s, 4);
+    xstream_wr_u32_le(s, context);
+    xstream_wr_u32_le(s, 4);
+    xstream_wr_u32_le(s, sc_handle);
 
     /* get stream len */
     bytes = xstream_len(s);
@@ -1374,6 +1569,34 @@ scard_handle_ReleaseContext_Return(struct stream *s, IRP *irp,
     log_debug("leaving");
 }
 
+static void APP_CC scard_handle_IsContextValid_Return(struct stream *s, IRP *irp,
+                                            tui32 DeviceId, tui32 CompletionId,
+                                            tui32 IoStatus)
+{
+    tui32 len;
+
+    log_debug("entered");
+
+    /* sanity check */
+    if ((DeviceId != irp->DeviceId) || (CompletionId != irp->CompletionId))
+    {
+        log_error("DeviceId/CompletionId do not match those in IRP");
+        return;
+    }
+
+    if (IoStatus != 0)
+    {
+        log_error("Error checking context validity");
+        /* LK_TODO delete irp and smartcard entry */
+        return;
+    }
+
+    /* get OutputBufferLen */
+    xstream_rd_u32_le(s, len);
+
+    log_debug("leaving");
+}
+
 /**
  *
  *****************************************************************************/
@@ -1460,6 +1683,38 @@ scard_handle_Connect_Return(struct stream *s, IRP *irp,
     if (IoStatus != 0)
     {
         log_error("failed to connect - device not usable");
+        /* LK_TODO delete irp and smartcard entry */
+        return;
+    }
+
+    /* get OutputBufferLen */
+    xstream_rd_u32_le(s, len);
+
+    log_debug("leaving");
+}
+
+/**
+ *
+ *****************************************************************************/
+static void APP_CC
+scard_handle_Reconnect_Return(struct stream *s, IRP *irp,
+                              tui32 DeviceId, tui32 CompletionId,
+                              tui32 IoStatus)
+{
+    tui32 len;
+
+    log_debug("entered");
+
+    /* sanity check */
+    if ((DeviceId != irp->DeviceId) || (CompletionId != irp->CompletionId))
+    {
+        log_error("DeviceId/CompletionId do not match those in IRP");
+        return;
+    }
+
+    if (IoStatus != 0)
+    {
+        log_error("failed to reconnect");
         /* LK_TODO delete irp and smartcard entry */
         return;
     }
