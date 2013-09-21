@@ -1,5 +1,5 @@
---- debian/rules.orig	2013-09-21 19:43:42.594447400 +0200
-+++ debian/rules	2013-09-21 19:45:27.953129268 +0200
+--- debian/rules.orig	2013-09-21 22:22:18.068755250 +0200
++++ debian/rules	2013-09-21 22:15:05.909128970 +0200
 @@ -70,7 +70,7 @@
  	config_backend += --disable-config-udev --disable-config-hal
  endif
@@ -9,3 +9,12 @@
  
  ifneq (,$(filter nocheck, $(DEB_BUILD_OPTIONS)))
  	config_tests = --disable-unit-tests
+@@ -190,7 +190,7 @@
+ 	dh_testdir
+ 	mkdir -p build-$*
+ 	cd build-$* && \
+-	../configure \
++	CC=gcc-4.6 ../configure \
+ 	  --prefix=/usr \
+ 	  --mandir=\$${prefix}/share/man \
+ 	  --infodir=\$${prefix}/share/info \
