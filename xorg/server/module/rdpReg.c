@@ -20,6 +20,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 to deal with regions changing in xorg versions
 
 */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

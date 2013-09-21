@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2013 Jay Sorg
+Copyright 2013 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -17,8 +17,6 @@ OPEN GROUP BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
 AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-cursor
-
 */
 
 #include <stdio.h>
@@ -32,62 +30,92 @@ cursor
 #include <xf86.h>
 #include <xf86_OSproc.h>
 
-#include <mipointer.h>
-#include <fb.h>
-#include <micmap.h>
-#include <mi.h>
-
 #include "rdp.h"
-#include "rdpMain.h"
+#include "rdpDraw.h"
+#include "rdpInput.h"
+#include "rdpMisc.h"
 
-/******************************************************************************/
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
-/******************************************************************************/
-Bool
-rdpSpriteRealizeCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs)
+#define MAX_INPUT_PROC 4
+
+struct input_proc_list
 {
-    LLOGLN(0, ("rdpSpriteRealizeCursor:"));
-    return TRUE;
+    int type;
+    rdpInputEventProcPtr proc;
+};
+
+static struct input_proc_list g_input_proc[MAX_INPUT_PROC];
+
+/******************************************************************************/
+int
+rdpRegisterInputCallback(int type, rdpInputEventProcPtr proc)
+{
+    if (type == 0)
+    {
+        g_input_proc[0].proc = proc;
+    }
+    else if (type == 1)
+    {
+        g_input_proc[1].proc = proc;
+    }
+    else
+    {
+        return 1;
+    }
+    return 0;
 }
 
 /******************************************************************************/
-Bool
-rdpSpriteUnrealizeCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs)
+int
+rdpUnregisterInputCallback(rdpInputEventProcPtr proc)
 {
-    LLOGLN(0, ("rdpSpriteUnrealizeCursor:"));
-    return TRUE;
+    int index;
+
+    for (index = 0; index < MAX_INPUT_PROC; index++)
+    {
+        if (g_input_proc[index].proc == proc)
+        {
+            g_input_proc[index].proc = 0;
+            return 0;
+        }
+    }
+    return 1;
 }
 
 /******************************************************************************/
-void
-rdpSpriteSetCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs,
-                   int x, int y)
+int
+rdpInputKeyboardEvent(rdpPtr dev, int msg,
+                      long param1, long param2,
+                      long param3, long param4)
 {
-    LLOGLN(0, ("rdpSpriteSetCursor:"));
+    if (g_input_proc[0].proc != 0)
+    {
+        return g_input_proc[0].proc(dev, msg, param1, param2, param3, param4);
+    }
+    return 0;
 }
 
 /******************************************************************************/
-void
-rdpSpriteMoveCursor(DeviceIntPtr pDev, ScreenPtr pScr, int x, int y)
+int
+rdpInputMouseEvent(rdpPtr dev, int msg,
+                   long param1, long param2,
+                   long param3, long param4)
 {
-    LLOGLN(0, ("rdpSpriteMoveCursor:"));
+    if (g_input_proc[1].proc != 0)
+    {
+        return g_input_proc[1].proc(dev, msg, param1, param2, param3, param4);
+    }
+    return 0;
 }
 
 /******************************************************************************/
-Bool
-rdpSpriteDeviceCursorInitialize(DeviceIntPtr pDev, ScreenPtr pScr)
+/* called when module loads */
+int
+rdpInputInit(void)
 {
-    LLOGLN(0, ("rdpSpriteDeviceCursorInitialize:"));
-    return TRUE;
-}
-
-/******************************************************************************/
-void
-rdpSpriteDeviceCursorCleanup(DeviceIntPtr pDev, ScreenPtr pScr)
-{
-    LLOGLN(0, ("rdpSpriteDeviceCursorCleanup:"));
-    xorgxrdpDownDown(pScr);
+    g_memset(g_input_proc, 0, sizeof(g_input_proc));
+    return 0;
 }

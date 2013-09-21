@@ -39,4 +39,13 @@ void scard_handle_ListReaders_Return(struct stream *s, IRP *irp,
                                      tui32 DeviceId, tui32 CompletionId,
                                      tui32 IoStatus);
 
+int APP_CC
+scard_get_wait_objs(tbus *objs, int *count, int *timeout);
+int APP_CC
+scard_check_wait_objs(void);
+int APP_CC
+scard_init(void);
+int APP_CC
+scard_deinit(void);
+
 #endif /* end #ifndef _SMARTCARD_C */

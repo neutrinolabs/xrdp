@@ -141,7 +141,7 @@ rdpPolySegment(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment *pSegs)
 
                 if (g_do_dirty_ons)
                 {
-                    LLOGLN(0, ("rdpPolySegment: gettig dirty"));
+                    LLOGLN(10, ("rdpPolySegment: gettig dirty"));
                     g_screenPriv.is_dirty = 1;
                     pDirtyPriv = &g_screenPriv;
                     dirty_type = RDI_IMGLL;
