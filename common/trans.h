@@ -54,6 +54,7 @@ struct trans
   struct stream* out_s;
   char* listen_filename;
   tis_term is_term; /* used to test for exit */
+  int in_write;
 };
 
 struct trans* APP_CC
@@ -72,6 +73,8 @@ int APP_CC
 trans_force_read(struct trans* self, int size);
 int APP_CC
 trans_force_write(struct trans* self);
+int APP_CC
+trans_write_check(struct trans* self, int timeout);
 int APP_CC
 trans_connect(struct trans* self, const char* server, const char* port,
               int timeout);

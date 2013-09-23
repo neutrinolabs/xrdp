@@ -291,6 +291,7 @@ trans_force_write_s(struct trans *self, struct stream *out_s)
     size = (int)(out_s->end - out_s->data);
     total = 0;
 
+    self->in_write = 1;
     while (total < size)
     {
         sent = g_tcp_send(self->sck, out_s->data + total, size - total, 0);
@@ -308,6 +309,7 @@ trans_force_write_s(struct trans *self, struct stream *out_s)
                         {
                             /* term */
                             self->status = TRANS_STATUS_DOWN;
+                            self->in_write = 0;
                             return 1;
                         }
                     }
@@ -317,6 +319,7 @@ trans_force_write_s(struct trans *self, struct stream *out_s)
             {
                 /* error */
                 self->status = TRANS_STATUS_DOWN;
+                self->in_write = 0;
                 return 1;
             }
         }
@@ -324,6 +327,7 @@ trans_force_write_s(struct trans *self, struct stream *out_s)
         {
             /* error */
             self->status = TRANS_STATUS_DOWN;
+            self->in_write = 0;
             return 1;
         }
         else
@@ -331,6 +335,7 @@ trans_force_write_s(struct trans *self, struct stream *out_s)
             total = total + sent;
         }
     }
+    self->in_write = 0;
 
     return 0;
 }
@@ -340,6 +345,84 @@ int APP_CC
 trans_force_write(struct trans *self)
 {
     return trans_force_write_s(self, self->out_s);
+}
+
+/*****************************************************************************/
+int APP_CC
+trans_write_check(struct trans* self, int timeout)
+{
+    int size;
+    int total;
+    int sent;
+    int error;
+    tbus robjs[1];
+    tbus wobjs[1];
+    struct stream *out_s;
+
+    if (self->status != TRANS_STATUS_UP)
+    {
+        return 1;
+    }
+
+    out_s = self->out_s;
+
+    size = (int)(out_s->end - out_s->data);
+    total = 0;
+
+    self->in_write = 1;
+    while (total < size)
+    {
+        robjs[0] = self->sck;
+        wobjs[0] = self->sck;
+        error = g_obj_wait(robjs, 1, wobjs, 1, timeout);
+        if (error != 0)
+        {
+            /* error */
+            self->status = TRANS_STATUS_DOWN;
+            self->in_write = 0;
+            return 1;
+        }
+
+        if (!g_tcp_can_send(self->sck, 0))
+        {
+            trans_check_wait_objs(self);
+            continue;
+        }
+
+        sent = g_tcp_send(self->sck, out_s->data + total, size - total, 0);
+
+        if (sent == -1)
+        {
+            if (g_tcp_last_error_would_block(self->sck))
+            {
+                if (!g_tcp_can_send(self->sck, 10))
+                {
+                    /* check for term here */
+                }
+            }
+            else
+            {
+                /* error */
+                self->status = TRANS_STATUS_DOWN;
+                self->in_write = 0;
+                return 1;
+            }
+        }
+        else if (sent == 0)
+        {
+            /* error */
+            self->status = TRANS_STATUS_DOWN;
+            self->in_write = 0;
+            return 1;
+        }
+        else
+        {
+            total = total + sent;
+        }
+    }
+    self->in_write = 0;
+
+    return 0;
 }
 
 /*****************************************************************************/

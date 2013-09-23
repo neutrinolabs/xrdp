@@ -293,10 +293,20 @@ send_data_from_chan_item(struct chan_item *chan_item)
     out_uint32_le(s, cod->s->size);
     out_uint8a(s, cod->s->p, size);
     s_mark_end(s);
-    LOGM((LOG_LEVEL_DEBUG, "chansrv::send_channel_data: -- "
+    LOGM((LOG_LEVEL_DEBUG, "chansrv::send_data_from_chan_item: -- "
           "size %d chan_flags 0x%8.8x", size, chan_flags));
     g_sent = 1;
-    error = trans_force_write(g_con_trans);
+    if (g_con_trans->in_write)
+    {
+        g_writeln("chansrv::send_data_from_chan_item: error, "
+                  "write while in_write");
+        error = 1;
+    }
+    else
+    {
+        /* write but check for read if blocked */
+        error = trans_write_check(g_con_trans, -1);
+    }
 
     if (error != 0)
     {
