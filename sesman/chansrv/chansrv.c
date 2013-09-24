@@ -296,18 +296,8 @@ send_data_from_chan_item(struct chan_item *chan_item)
     LOGM((LOG_LEVEL_DEBUG, "chansrv::send_data_from_chan_item: -- "
           "size %d chan_flags 0x%8.8x", size, chan_flags));
     g_sent = 1;
-    if (g_con_trans->in_write)
-    {
-        g_writeln("chansrv::send_data_from_chan_item: error, "
-                  "write while in_write");
-        error = 1;
-    }
-    else
-    {
-        /* write but check for read if blocked */
-        error = trans_write_check(g_con_trans, -1);
-    }
 
+    error = trans_write_copy(g_con_trans);
     if (error != 0)
     {
         return 1;
@@ -402,7 +392,7 @@ send_init_response_message(void)
     out_uint32_le(s, 2); /* msg id */
     out_uint32_le(s, 8); /* size */
     s_mark_end(s);
-    return trans_force_write(g_con_trans);
+    return trans_write_copy(g_con_trans);
 }
 
 /*****************************************************************************/
@@ -425,7 +415,7 @@ send_channel_setup_response_message(void)
     out_uint32_le(s, 4); /* msg id */
     out_uint32_le(s, 8); /* size */
     s_mark_end(s);
-    return trans_force_write(g_con_trans);
+    return trans_write_copy(g_con_trans);
 }
 
 /*****************************************************************************/
@@ -448,7 +438,7 @@ send_channel_data_response_message(void)
     out_uint32_le(s, 6); /* msg id */
     out_uint32_le(s, 8); /* size */
     s_mark_end(s);
-    return trans_force_write(g_con_trans);
+    return trans_write_copy(g_con_trans);
 }
 
 /*****************************************************************************/
@@ -647,7 +637,7 @@ process_message_channel_data(struct stream *s)
             if (chan_flags & 2) /* last */
             {
                 s_mark_end(ls);
-                trans_force_write(g_api_con_trans);
+                trans_write_copy(g_api_con_trans);
             }
         }
     }
@@ -1051,7 +1041,9 @@ THREAD_RV THREAD_CC
 channel_thread_loop(void *in_val)
 {
     tbus objs[32];
+    tbus wobjs[32];
     int num_objs;
+    int num_wobjs;
     int timeout;
     int error;
     THREAD_RV rv;
@@ -1065,12 +1057,13 @@ channel_thread_loop(void *in_val)
     {
         timeout = -1;
         num_objs = 0;
+        num_wobjs = 0;
         objs[num_objs] = g_term_event;
         num_objs++;
         trans_get_wait_objs(g_lis_trans, objs, &num_objs);
         trans_get_wait_objs(g_api_lis_trans, objs, &num_objs);
 
-        while (g_obj_wait(objs, num_objs, 0, 0, timeout) == 0)
+        while (g_obj_wait(objs, num_objs, wobjs, num_wobjs, timeout) == 0)
         {
             check_timeout();
             if (g_is_wait_obj_set(g_term_event))
@@ -1145,10 +1138,12 @@ channel_thread_loop(void *in_val)
             xfuse_check_wait_objs();
             timeout = -1;
             num_objs = 0;
+            num_wobjs = 0;
             objs[num_objs] = g_term_event;
             num_objs++;
             trans_get_wait_objs(g_lis_trans, objs, &num_objs);
-            trans_get_wait_objs(g_con_trans, objs, &num_objs);
+            trans_get_wait_objs_rw(g_con_trans, objs, &num_objs,
+                                   wobjs, &num_wobjs);
             trans_get_wait_objs(g_api_lis_trans, objs, &num_objs);
             trans_get_wait_objs(g_api_con_trans, objs, &num_objs);
             xcommon_get_wait_objs(objs, &num_objs, &timeout);
