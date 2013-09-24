@@ -1163,6 +1163,8 @@ scard_send_Connect(IRP* irp, tui32 context, int wide, READER_STATE* rs)
 
     /* insert reader name */
     num_chars = g_mbstowcs(w_reader_name, rs->reader_name, 99);
+    xstream_wr_u32_le(s, 0);
+    xstream_wr_u32_le(s, 0);
     xstream_wr_u32_le(s, num_chars);
     if (wide)
     {
@@ -1178,6 +1180,7 @@ scard_send_Connect(IRP* irp, tui32 context, int wide, READER_STATE* rs)
             xstream_wr_u8(s, w_reader_name[index]);
         }
     }
+    align_s(s, 4);
 
     /* insert context */
     xstream_wr_u32_le(s, 4);
@@ -1670,6 +1673,7 @@ scard_handle_Connect_Return(struct stream *s, IRP *irp,
                             tui32 IoStatus)
 {
     tui32 len;
+    struct trans *con;
 
     log_debug("entered");
 
@@ -1689,7 +1693,9 @@ scard_handle_Connect_Return(struct stream *s, IRP *irp,
 
     /* get OutputBufferLen */
     xstream_rd_u32_le(s, len);
-
+    con = (struct trans *) (irp->user_data);
+    scard_function_connect_return(con, s, len);
+    devredir_irp_delete(irp);
     log_debug("leaving");
 }
 
