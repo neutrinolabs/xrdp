@@ -454,6 +454,7 @@ trans_write_copy(struct trans *self)
     init_stream(wait_s, size);
     out_uint8a(wait_s, out_s->data, size);
     s_mark_end(wait_s);
+    wait_s->p = wait_s->data;
     if (self->wait_s == 0)
     {
         self->wait_s = wait_s;
