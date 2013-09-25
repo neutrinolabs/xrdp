@@ -769,9 +769,11 @@ rdpDestroyPixmap(PixmapPtr pPixmap)
     {
         if (XRDP_IS_OS(priv))
         {
-            rdpup_remove_os_bitmap(priv->rdpindex);
-            rdpup_delete_os_surface(priv->rdpindex);
-            draw_item_remove_all(priv);
+            if (priv->rdpindex >= 0)
+            {
+                rdpup_remove_os_bitmap(priv->rdpindex);
+                rdpup_delete_os_surface(priv->rdpindex);
+            }
         }
     }
 
@@ -1112,7 +1114,7 @@ rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
     if ((num_clip_rects > 16) && (num_reg_rects > 16))
     {
         box3 = RegionExtents(&reg);
-        rdpup_send_area(10, box3->x1 + dx, box3->y1 + dy,
+        rdpup_send_area(0, box3->x1 + dx, box3->y1 + dy,
                         box3->x2 - box3->x1,
                         box3->y2 - box3->y1);
     }
