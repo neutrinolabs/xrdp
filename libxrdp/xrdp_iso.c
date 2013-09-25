@@ -2,6 +2,7 @@
  * xrdp: A Remote Desktop Protocol server.
  *
  * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Idan Freiberg 2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,6 +51,43 @@ xrdp_iso_delete(struct xrdp_iso *self)
 /*****************************************************************************/
 /* returns error */
 static int APP_CC
+xrdp_iso_recv_rdpnegreq(struct xrdp_iso *self, struct stream *s, int *requestedProtocol)
+{
+    int type;
+    int flags;
+    int len;
+
+    *requestedProtocol = 0;
+
+    in_uint8(s, type);
+    if (type != RDP_NEG_REQ)
+    {
+        return 1;
+    }
+
+    in_uint8(s, flags);
+    if (type != 0x0)
+    {
+        return 1;
+    }
+
+    in_uint16_be(s, len);
+    if (len != 0x8) // fixed length
+    {
+        return 1;
+    }
+
+    in_uint32_be(s, *requestedProtocol);
+    if (requestedProtocol != PROTOCOL_RDP || PROTOCOL_SSL || PROTOCOL_HYBRID || PROTOCOL_HYBRID_EX)
+    {
+        return 1;
+    }
+
+    return 0;
+}
+/*****************************************************************************/
+/* returns error */
+static int APP_CC
 xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code)
 {
     int ver;
@@ -62,9 +100,6 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code)
         return 1;
     }
 
-    // print CR packet hex dump
-    g_hexdump(s->p, 19);
-
     in_uint8(s, ver);
 
     if (ver != 3)
@@ -74,6 +109,9 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code)
 
     in_uint8s(s, 1);
     in_uint16_be(s, len);
+
+    // print CR packet hex dump
+    g_hexdump(s->p, len);
 
     if (xrdp_tcp_recv(self->tcp_layer, s, len - 4) != 0)
     {
@@ -89,12 +127,11 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code)
     }
     else
     {
-        in_uint8s(s, 5+8);
+        in_uint8s(s, 5);
     }
 
     return 0;
 }
-
 /*****************************************************************************/
 /* returns error */
 int APP_CC
@@ -122,7 +159,7 @@ xrdp_iso_recv(struct xrdp_iso *self, struct stream *s)
 
 /*****************************************************************************/
 static int APP_CC
-xrdp_iso_send_msg(struct xrdp_iso *self, struct stream *s, int code, int negostate)
+xrdp_iso_send_rdpnegrsp(struct xrdp_iso *self, struct stream *s, int code, int selectedProtocol)
 {
     if (xrdp_tcp_init(self->tcp_layer, s) != 0)
     {
@@ -135,27 +172,15 @@ xrdp_iso_send_msg(struct xrdp_iso *self, struct stream *s, int code, int negosta
     out_uint16_be(s, 19); /* length */
     /* ISO LAYER - X.224  - 7 bytes*/
     out_uint8(s, 14); /* length */
-    out_uint8(s, code); /* SHOULD BE 0xd for CC */
+    out_uint8(s, code); /* SHOULD BE 0xD for CC */
     out_uint16_be(s, 0);
     out_uint16_be(s, 0x1234);
     out_uint8(s, 0);
     /* RDP_NEG_RSP - 8 bytes*/
-    switch (negostate)
-    {
-		case RDP_NEG_FAILURE:
-			out_uint8(s, RDP_NEG_FAILURE); /* RDP_NEG_FAILURE */
-			out_uint8(s, 0); /* no flags available */
-			out_uint16_le(s, 8); /* fixed length */
-			out_uint32_le(s, SSL_NOT_ALLOWED_BY_SERVER); /* failure code */
-			break;
-		case RDP_NEG_RSP:
-			out_uint8(s, RDP_NEG_RSP); /* TYPE_RDP_NEG_RSP */
-			out_uint8(s, EXTENDED_CLIENT_DATA_SUPPORTED); /* flags */
-			out_uint16_le(s, 8); /* fixed length */
-			out_uint32_le(s, PROTOCOL_RDP); /* selected protocol */
-			break;
-    }
-
+	out_uint8(s, RDP_NEG_RSP);
+	out_uint8(s, EXTENDED_CLIENT_DATA_SUPPORTED); /* flags */
+	out_uint16_le(s, 8); /* fixed length */
+	out_uint32_le(s, selectedProtocol); /* selected protocol */
 	s_mark_end(s);
 
     if (xrdp_tcp_send(self->tcp_layer, s) != 0)
@@ -165,16 +190,71 @@ xrdp_iso_send_msg(struct xrdp_iso *self, struct stream *s, int code, int negosta
 
     return 0;
 }
+/*****************************************************************************/
+static int APP_CC
+xrdp_iso_send_rdpnegfailure(struct xrdp_iso *self, struct stream *s, int code, int failureCode)
+{
+    if (xrdp_tcp_init(self->tcp_layer, s) != 0)
+    {
+        return 1;
+    }
 
+    /* TPKT HEADER - 4 bytes */
+    out_uint8(s, 3);	/* version */
+    out_uint8(s, 0);	/* RESERVED */
+    out_uint16_be(s, 19); /* length */
+    /* ISO LAYER - X.224  - 7 bytes*/
+    out_uint8(s, 14); /* length */
+    out_uint8(s, code); /* SHOULD BE 0xD for CC */
+    out_uint16_be(s, 0);
+    out_uint16_be(s, 0x1234);
+    out_uint8(s, 0);
+    /* RDP_NEG_FAILURE - 8 bytes*/
+	out_uint8(s, RDP_NEG_FAILURE);
+	out_uint8(s, 0); /* no flags available */
+	out_uint16_le(s, 8); /* fixed length */
+	out_uint32_le(s, failureCode); /* failure code */
+	s_mark_end(s);
+
+    if (xrdp_tcp_send(self->tcp_layer, s) != 0)
+    {
+        return 1;
+    }
+
+    return 0;
+}
+/*****************************************************************************/
+static int APP_CC
+xrdp_iso_proccess_nego(struct xrdp_iso *self, struct stream *s, int requstedProtocol)
+{
+	//TODO: negotiation logic here.
+	if (requstedProtocol != PROTOCOL_RDP) {
+	    // Send RDP_NEG_Failure back to client
+	    if (xrdp_iso_send_rdpnegfailure(self, s, ISO_PDU_CC, SSL_NOT_ALLOWED_BY_SERVER) != 0)
+	    {
+	        free_stream(s);
+	        return 1;
+	    }
+	} else {
+	    // Send RDP_NEG_RSP back to client
+	    if (xrdp_iso_send_rdpnegrsp(self, s, ISO_PDU_CC, PROTOCOL_RDP) != 0)
+	    {
+	        free_stream(s);
+	        return 1;
+	    }
+	}
+
+    return 0;
+}
 /*****************************************************************************/
 /* returns error */
 int APP_CC
 xrdp_iso_incoming(struct xrdp_iso *self)
 {
     int code;
-    int negostate;
+    int requestedProtocol;
+    int selectedProtocol;
     struct stream *s;
-//todo: negostate init and change
     make_stream(s);
     init_stream(s, 8192);
     DEBUG(("   in xrdp_iso_incoming"));
@@ -191,19 +271,20 @@ xrdp_iso_incoming(struct xrdp_iso *self)
         return 1;
     }
 
-    //RDP Negotiate Security Layer
-
-/*    if (xrdp_nego_init(self, s, ISO_PDU_CC,init) != 0)
-    {
-        free_stream(s);
-        return 1;
-    }*/
-
-    if (xrdp_iso_send_msg(self, s, ISO_PDU_CC, negostate) != 0)
+    // Receive RDP_NEG_REQ data
+    if (xrdp_iso_recv_rdpnegreq(self, s, &requestedProtocol) != 0)
     {
         free_stream(s);
         return 1;
     }
+
+    // Process negotiation request, should return protocol type.
+    if (xrdp_iso_proccess_nego(self, s, requestedProtocol) != 0)
+    {
+        free_stream(s);
+        return 1;
+    }
+
 
     DEBUG(("   out xrdp_iso_incoming"));
     free_stream(s);
