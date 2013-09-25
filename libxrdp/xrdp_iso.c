@@ -59,30 +59,39 @@ xrdp_iso_recv_rdpnegreq(struct xrdp_iso *self, struct stream *s, int *requestedP
 
     *requestedProtocol = 0;
 
+    DEBUG(("     in xrdp_iso_recv_rdpnegreq"));
+
     in_uint8(s, type);
     if (type != RDP_NEG_REQ)
     {
+        DEBUG(("       xrdp_iso_recv_rdpnegreq: type: %x",type));
         return 1;
     }
 
     in_uint8(s, flags);
-    if (type != 0x0)
+    if (flags != 0x0)
     {
+        DEBUG(("       xrdp_iso_recv_rdpnegreq: flags: %x",flags));
         return 1;
     }
 
-    in_uint16_be(s, len);
-    if (len != 0x8) // fixed length
+    in_uint16_le(s, len);
+    if (len != 8) // fixed length
     {
+        DEBUG(("       xrdp_iso_recv_rdpnegreq: length: %x",len));
         return 1;
     }
 
-    in_uint32_be(s, *requestedProtocol);
-    if (requestedProtocol != PROTOCOL_RDP || PROTOCOL_SSL || PROTOCOL_HYBRID || PROTOCOL_HYBRID_EX)
-    {
-        return 1;
-    }
+    in_uint32_le(s, *requestedProtocol);
 
+    //TODO: think of protocol verification logic
+//    if (requestedProtocol != PROTOCOL_RDP || PROTOCOL_SSL || PROTOCOL_HYBRID || PROTOCOL_HYBRID_EX)
+//    {
+//        DEBUG(("       xrdp_iso_recv_rdpnegreq: wrong requestedProtocol: %x",requestedProtocol));
+//        return 1;
+//    }
+
+    DEBUG(("     out xrdp_iso_recv_rdpnegreq"));
     return 0;
 }
 /*****************************************************************************/
