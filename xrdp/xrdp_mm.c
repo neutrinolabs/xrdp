@@ -2439,7 +2439,7 @@ server_switch_os_surface(struct xrdp_mod *mod, int rdpindex)
 
     bi = xrdp_cache_get_os_bitmap(wm->cache, rdpindex);
 
-    if (bi != 0)
+    if ((bi != 0) && (bi->bitmap != 0))
     {
         //g_writeln("server_switch_os_surface: setting target_surface to rdpid %d", id);
         wm->target_surface = bi->bitmap;

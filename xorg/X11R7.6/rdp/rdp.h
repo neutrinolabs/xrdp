@@ -471,6 +471,8 @@ int
 rdpup_add_os_bitmap(PixmapPtr pixmap, rdpPixmapPtr priv);
 int
 rdpup_remove_os_bitmap(int rdpindex);
+int
+rdpup_update_os_use(int rdpindex);
 void
 rdpup_get_screen_image_rect(struct image_data* id);
 void

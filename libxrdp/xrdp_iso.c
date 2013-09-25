@@ -72,7 +72,17 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code)
     in_uint8s(s, 1);
     in_uint16_be(s, len);
 
+    if (len < 4)
+    {
+        return 1;
+    }
+
     if (xrdp_tcp_recv(self->tcp_layer, s, len - 4) != 0)
+    {
+        return 1;
+    }
+
+    if (!s_check_rem(s, 2))
     {
         return 1;
     }
@@ -82,10 +92,18 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code)
 
     if (*code == ISO_PDU_DT)
     {
+        if (!s_check_rem(s, 1))
+        {
+            return 1;
+        }
         in_uint8s(s, 1);
     }
     else
     {
+        if (!s_check_rem(s, 5))
+        {
+            return 1;
+        }
         in_uint8s(s, 5);
     }
 

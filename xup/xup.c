@@ -516,7 +516,8 @@ process_server_set_pointer_ex(struct mod *mod, struct stream *s)
 /******************************************************************************/
 /* return error */
 static int APP_CC
-send_paint_rect_ack(struct mod *mod, int flags, int x, int y, int cx, int cy)
+send_paint_rect_ack(struct mod *mod, int flags, int x, int y, int cx, int cy,
+                    int frame_id)
 {
     int len;
     struct stream *s;
@@ -526,6 +527,7 @@ send_paint_rect_ack(struct mod *mod, int flags, int x, int y, int cx, int cy)
     s_push_layer(s, iso_hdr, 4);
     out_uint16_le(s, 105);
     out_uint32_le(s, flags);
+    out_uint32_le(s, frame_id);
     out_uint32_le(s, x);
     out_uint32_le(s, y);
     out_uint32_le(s, cx);
@@ -568,6 +570,7 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
     int flags;
     int shmem_id;
     int shmem_offset;
+    int frame_id;
     char *bmpdata;
     char cur_data[32 * (32 * 3)];
     char cur_mask[32 * (32 / 8)];
@@ -699,6 +702,7 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
             in_uint16_le(s, cx);
             in_uint16_le(s, cy);
             in_uint32_le(s, flags);
+            in_uint32_le(s, frame_id);
             in_uint32_le(s, shmem_id);
             in_uint32_le(s, shmem_offset);
             in_uint16_le(s, width);
@@ -728,7 +732,7 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
             {
                 rv = 1;
             }
-            send_paint_rect_ack(mod, flags, x, y, cx, cy);
+            send_paint_rect_ack(mod, flags, x, y, cx, cy, frame_id);
             break;
 
         default:

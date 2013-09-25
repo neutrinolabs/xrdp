@@ -331,12 +331,20 @@ unicode_in(struct stream *s, int uni_len, char *dst, int dst_len)
             break;
         }
 
+        if (!s_check_rem(s, 2))
+        {
+            return 1;
+        }
         in_uint8(s, dst[dst_index]);
         in_uint8s(s, 1);
         dst_index++;
         src_index += 2;
     }
 
+    if (!s_check_rem(s, 2))
+    {
+        return 1;
+    }
     in_uint8s(s, 2);
     return 0;
 }
@@ -359,6 +367,10 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     /* initialize (zero out) local variables */
     g_memset(tmpdata, 0, sizeof(char) * 256);
+    if (!s_check_rem(s, 8))
+    {
+        return 1;
+    }
     in_uint8s(s, 4);
     in_uint32_le(s, flags);
     DEBUG(("in xrdp_sec_process_logon_info flags $%x", flags));
@@ -398,6 +410,10 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         }
     }
 
+    if (!s_check_rem(s, 2))
+    {
+        return 1;
+    }
     in_uint16_le(s, len_domain);
 
     if (len_domain > 511)
@@ -406,6 +422,10 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         return 1;
     }
 
+    if (!s_check_rem(s, 2))
+    {
+        return 1;
+    }
     in_uint16_le(s, len_user);
 
     if (len_user > 511)
@@ -414,6 +434,10 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         return 1;
     }
 
+    if (!s_check_rem(s, 2))
+    {
+        return 1;
+    }
     in_uint16_le(s, len_password);
 
     if (len_password > 511)
@@ -422,6 +446,10 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         return 1;
     }
 
+    if (!s_check_rem(s, 2))
+    {
+        return 1;
+    }
     in_uint16_le(s, len_program);
 
     if (len_program > 511)
@@ -430,6 +458,10 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         return 1;
     }
 
+    if (!s_check_rem(s, 2))
+    {
+        return 1;
+    }
     in_uint16_le(s, len_directory);
 
     if (len_directory > 511)
@@ -438,35 +470,75 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         return 1;
     }
 
-    unicode_in(s, len_domain, self->rdp_layer->client_info.domain, 255);
+    if (unicode_in(s, len_domain, self->rdp_layer->client_info.domain, 255) != 0)
+    {
+        return 1;
+    }
     DEBUG(("domain %s", self->rdp_layer->client_info.domain));
-    unicode_in(s, len_user, self->rdp_layer->client_info.username, 255);
+    if (unicode_in(s, len_user, self->rdp_layer->client_info.username, 255) != 0)
+    {
+        return 1;
+    }
     DEBUG(("username %s", self->rdp_layer->client_info.username));
 
     if (flags & RDP_LOGON_AUTO)
     {
-        unicode_in(s, len_password, self->rdp_layer->client_info.password, 255);
+        if (unicode_in(s, len_password, self->rdp_layer->client_info.password, 255) != 0)
+        {
+            return 1;
+        }
         DEBUG(("flag RDP_LOGON_AUTO found"));
     }
     else
     {
+        if (!s_check_rem(s, len_password + 2))
+        {
+            return 1;
+        }
         in_uint8s(s, len_password + 2);
         if (self->rdp_layer->client_info.require_credentials)
+        {
+            g_writeln("xrdp_sec_process_logon_info: credentials on cmd line is mandatory");
             return 1; /* credentials on cmd line is mandatory */
+        }
     }
 
-    unicode_in(s, len_program, self->rdp_layer->client_info.program, 255);
+    if (unicode_in(s, len_program, self->rdp_layer->client_info.program, 255) != 0)
+    {
+        return 1;
+    }
     DEBUG(("program %s", self->rdp_layer->client_info.program));
-    unicode_in(s, len_directory, self->rdp_layer->client_info.directory, 255);
+    if (unicode_in(s, len_directory, self->rdp_layer->client_info.directory, 255) != 0)
+    {
+        return 1;
+    }
     DEBUG(("directory %s", self->rdp_layer->client_info.directory));
 
     if (flags & RDP_LOGON_BLOB)
     {
+        if (!s_check_rem(s, 4))
+        {
+            return 1;
+        }
         in_uint8s(s, 2);                                    /* unknown */
         in_uint16_le(s, len_ip);
-        unicode_in(s, len_ip - 2, tmpdata, 255);
+        if (unicode_in(s, len_ip - 2, tmpdata, 255) != 0)
+        {
+            return 1;
+        }
+        if (!s_check_rem(s, 2))
+        {
+            return 1;
+        }
         in_uint16_le(s, len_dll);
-        unicode_in(s, len_dll - 2, tmpdata, 255);
+        if (unicode_in(s, len_dll - 2, tmpdata, 255) != 0)
+        {
+            return 1;
+        }
+        if (!s_check_rem(s, 4 + 62 + 22 + 62 + 26 + 4))
+        {
+            return 1;
+        }
         in_uint32_le(s, tzone);                             /* len of timetone */
         in_uint8s(s, 62);                                   /* skip */
         in_uint8s(s, 22);                                   /* skip misc. */
@@ -676,17 +748,29 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
         return 1;
     }
 
+    if (!s_check_rem(s, 4))
+    {
+        return 1;
+    }
     in_uint32_le(s, flags);
     DEBUG((" in xrdp_sec_recv flags $%x", flags));
 
     if (flags & SEC_ENCRYPT) /* 0x08 */
     {
+        if (!s_check_rem(s, 8))
+        {
+            return 1;
+        }
         in_uint8s(s, 8); /* signature */
         xrdp_sec_decrypt(self, s->p, (int)(s->end - s->p));
     }
 
     if (flags & SEC_CLIENT_RANDOM) /* 0x01 */
     {
+        if (!s_check_rem(s, 4 + 64))
+        {
+            return 1;
+        }
         in_uint32_le(s, len);
         in_uint8a(s, self->client_crypt_random, 64);
         xrdp_sec_rsa_op(self->client_random, self->client_crypt_random,
@@ -836,16 +920,30 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
         return 0;
     }
 
+    if (!s_check_rem(s, 4))
+    {
+        return 1;
+    }
+
     in_uint32_le(s, num_channels);
+
+    if (num_channels > 31)
+    {
+        return 1;
+    }
 
     for (index = 0; index < num_channels; index++)
     {
         channel_item = (struct mcs_channel_item *)
                        g_malloc(sizeof(struct mcs_channel_item), 1);
+        if (!s_check_rem(s, 12))
+        {
+            return 1;
+        }
         in_uint8a(s, channel_item->name, 8);
         in_uint32_le(s, channel_item->flags);
         channel_item->chanid = MCS_GLOBAL_CHANNEL + (index + 1);
-        list_add_item(self->mcs_layer->channel_list, (long)channel_item);
+        list_add_item(self->mcs_layer->channel_list, (tintptr)channel_item);
         DEBUG(("got channel flags %8.8x name %s", channel_item->flags,
                channel_item->name));
     }
@@ -864,10 +962,14 @@ xrdp_sec_process_mcs_data(struct xrdp_sec *self)
     int tag = 0;
     int size = 0;
 
-    s = &self->client_mcs_data;
+    s = &(self->client_mcs_data);
     /* set p to beginning */
     s->p = s->data;
     /* skip header */
+    if (!s_check_rem(s, 23))
+    {
+        return 1;
+    }
     in_uint8s(s, 23);
 
     while (s_check_rem(s, 4))
@@ -890,7 +992,10 @@ xrdp_sec_process_mcs_data(struct xrdp_sec *self)
             case SEC_TAG_CLI_CRYPT:
                 break;
             case SEC_TAG_CLI_CHANNELS:
-                xrdp_sec_process_mcs_data_channels(self, s);
+                if (xrdp_sec_process_mcs_data_channels(self, s) != 0)
+                {
+                    return 1;
+                }
                 break;
             case SEC_TAG_CLI_4:
                 break;
@@ -999,7 +1104,7 @@ xrdp_sec_out_mcs_data(struct xrdp_sec *self)
 
 /*****************************************************************************/
 /* process the mcs client data we received from the mcs layer */
-static void APP_CC
+static int APP_CC
 xrdp_sec_in_mcs_data(struct xrdp_sec *self)
 {
     struct stream *s = (struct stream *)NULL;
@@ -1011,6 +1116,10 @@ xrdp_sec_in_mcs_data(struct xrdp_sec *self)
     s = &(self->client_mcs_data);
     /* get hostname, its unicode */
     s->p = s->data;
+    if (!s_check_rem(s, 47))
+    {
+        return 1;
+    }
     in_uint8s(s, 47);
     g_memset(client_info->hostname, 0, 32);
     c = 1;
@@ -1018,6 +1127,10 @@ xrdp_sec_in_mcs_data(struct xrdp_sec *self)
 
     while (index < 16 && c != 0)
     {
+        if (!s_check_rem(s, 2))
+        {
+            return 1;
+        }
         in_uint8(s, c);
         in_uint8s(s, 1);
         client_info->hostname[index] = c;
@@ -1026,13 +1139,22 @@ xrdp_sec_in_mcs_data(struct xrdp_sec *self)
 
     /* get build */
     s->p = s->data;
+    if (!s_check_rem(s, 43 + 4))
+    {
+        return 1;
+    }
     in_uint8s(s, 43);
     in_uint32_le(s, client_info->build);
     /* get keylayout */
     s->p = s->data;
+    if (!s_check_rem(s, 39 + 4))
+    {
+        return 1;
+    }
     in_uint8s(s, 39);
     in_uint32_le(s, client_info->keylayout);
     s->p = s->data;
+    return 0;
 }
 
 /*****************************************************************************/
@@ -1105,7 +1227,10 @@ xrdp_sec_incoming(struct xrdp_sec *self)
               (int)(self->server_mcs_data.end - self->server_mcs_data.data));
 #endif
     DEBUG((" out xrdp_sec_incoming"));
-    xrdp_sec_in_mcs_data(self);
+    if (xrdp_sec_in_mcs_data(self) != 0)
+    {
+        return 1;
+    }
     return 0;
 }
 

@@ -587,53 +587,50 @@ void dev_redir_proc_client_core_cap_resp(struct stream *s)
     tui16 cap_type;
     tui16 cap_len;
     tui32 cap_version;
+    char* holdp;
 
     xstream_rd_u16_le(s, num_caps);
     xstream_seek(s, 2);  /* padding */
 
     for (i = 0; i < num_caps; i++)
     {
+        holdp = s->p;
         xstream_rd_u16_le(s, cap_type);
         xstream_rd_u16_le(s, cap_len);
         xstream_rd_u32_le(s, cap_version);
-
-        /* remove header length and version */
-        cap_len -= 8;
 
         switch (cap_type)
         {
             case CAP_GENERAL_TYPE:
                 log_debug("got CAP_GENERAL_TYPE");
-                xstream_seek(s, cap_len);
                 break;
 
             case CAP_PRINTER_TYPE:
                 log_debug("got CAP_PRINTER_TYPE");
                 g_is_printer_redir_supported = 1;
-                xstream_seek(s, cap_len);
                 break;
 
             case CAP_PORT_TYPE:
                 log_debug("got CAP_PORT_TYPE");
                 g_is_port_redir_supported = 1;
-                xstream_seek(s, cap_len);
                 break;
 
             case CAP_DRIVE_TYPE:
                 log_debug("got CAP_DRIVE_TYPE");
                 g_is_drive_redir_supported = 1;
                 if (cap_version == 2)
+                {
                     g_drive_redir_version = 2;
-                xstream_seek(s, cap_len);
+                }
                 break;
 
             case CAP_SMARTCARD_TYPE:
                 log_debug("got CAP_SMARTCARD_TYPE");
                 g_is_smartcard_redir_supported = 1;
                 scard_init();
-                xstream_seek(s, cap_len);
                 break;
         }
+        s->p = holdp + cap_len;
     }
 }
 

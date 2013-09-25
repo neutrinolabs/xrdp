@@ -47,6 +47,7 @@ xrdp_orders_create(struct xrdp_session *session, struct xrdp_rdp *rdp_layer)
     init_stream(self->out_s, 16384);
     self->orders_state.clip_right = 1; /* silly rdp right clip */
     self->orders_state.clip_bottom = 1; /* silly rdp bottom clip */
+    self->jpeg_han = xrdp_jpeg_init();
     return self;
 }
 
@@ -59,6 +60,7 @@ xrdp_orders_delete(struct xrdp_orders *self)
         return;
     }
 
+    xrdp_jpeg_deinit(self->jpeg_han);
     free_stream(self->out_s);
     g_free(self->orders_state.text_data);
     g_free(self);
@@ -2394,7 +2396,7 @@ xrdp_orders_send_bitmap3(struct xrdp_orders *self,
         make_stream(temp_s);
         init_stream(temp_s, 16384);
         quality = ci->jpeg_prop[0];
-        xrdp_jpeg_compress(data, width, height, xr_s, bpp, 16384,
+        xrdp_jpeg_compress(self->jpeg_han, data, width, height, xr_s, bpp, 16384,
                            height - 1, temp_s, e, quality);
         s_mark_end(xr_s);
         bufsize = (int)(xr_s->end - xr_s->data);

@@ -135,7 +135,7 @@ rdpPutImage(DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
                     LLOGLN(10, ("rdpPutImage: getting dirty"));
                     g_screenPriv.is_dirty = 1;
                     pDirtyPriv = &g_screenPriv;
-                    dirty_type = RDI_IMGLL;
+                    dirty_type = RDI_IMGLY;
                 }
                 else
                 {
