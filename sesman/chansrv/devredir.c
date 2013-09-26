@@ -1098,7 +1098,11 @@ dev_redir_file_open(void *fusep, tui32 device_id, char *path,
 #if 1
         /* without the 0x00000010 rdesktop opens files in */
         /* O_RDONLY instead of O_RDWR mode                */
-        DesiredAccess = DA_FILE_READ_DATA | DA_FILE_WRITE_DATA | DA_SYNCHRONIZE | 0x00000010;
+        if (mode & O_RDWR)
+            DesiredAccess = DA_FILE_READ_DATA | DA_FILE_WRITE_DATA | DA_SYNCHRONIZE | 0x00000010;
+        else
+            DesiredAccess = DA_FILE_READ_DATA | DA_SYNCHRONIZE;
+
         CreateOptions = CO_FILE_SYNCHRONOUS_IO_NONALERT;
         CreateDisposition = CD_FILE_OPEN; // WAS 1
 #else

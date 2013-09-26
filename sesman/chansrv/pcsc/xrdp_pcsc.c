@@ -52,11 +52,22 @@ typedef struct _SCARD_IO_REQUEST
 #define LLOGLN(_level, _args) \
   do { if (_level < LLOG_LEVEL) { printf _args ; printf("\n"); } } while (0)
 
-#define SCARD_ESTABLISH_CONTEXT 0x01
-#define SCARD_RELEASE_CONTEXT   0x02
-#define SCARD_LIST_READERS      0x03
-#define SCARD_CONNECT           0x04
-#define SCARD_GET_STATUS_CHANGE 0x0C
+#define SCARD_ESTABLISH_CONTEXT  0x01
+#define SCARD_RELEASE_CONTEXT    0x02
+#define SCARD_LIST_READERS       0x03
+#define SCARD_CONNECT            0x04
+#define SCARD_RECONNECT          0x05
+#define SCARD_DISCONNECT         0x06
+#define SCARD_BEGIN_TRANSACTION  0x07
+#define SCARD_END_TRANSACTION    0x08
+#define SCARD_TRANSMIT           0x09
+#define SCARD_CONTROL            0x0A
+#define SCARD_STATUS             0x0B
+#define SCARD_GET_STATUS_CHANGE  0x0C
+#define SCARD_CANCEL             0x0D
+#define SCARD_CANCEL_TRANSACTION 0x0E
+#define SCARD_GET_ATTRIB         0x0F
+#define SCARD_SET_ATTRIB         0x10
 
 #define SCARD_S_SUCCESS 0x00000000
 #define SCARD_F_INTERNAL_ERROR ((LONG)0x80100001)
@@ -417,7 +428,7 @@ SCardConnect(SCARDCONTEXT hContext, LPCSTR szReader, DWORD dwShareMode,
         pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
-    if (code != SCARD_RELEASE_CONTEXT)
+    if (code != SCARD_CONNECT)
     {
         LLOGLN(0, ("SCardConnect: error, bad code"));
         pthread_mutex_unlock(&g_mutex);
@@ -467,6 +478,11 @@ SCardDisconnect(SCARDHANDLE hCard, DWORD dwDisposition)
 PCSC_API LONG
 SCardBeginTransaction(SCARDHANDLE hCard)
 {
+    char msg[256];
+    int code;
+    int bytes;
+    int status;
+
     LLOGLN(0, ("SCardBeginTransaction:"));
     if (g_sck == -1)
     {
@@ -474,8 +490,30 @@ SCardBeginTransaction(SCARDHANDLE hCard)
         return SCARD_F_INTERNAL_ERROR;
     }
     pthread_mutex_lock(&g_mutex);
+    SET_UINT32(msg, 0, hCard);
+    if (send_message(SCARD_BEGIN_TRANSACTION, msg, 4) != 0)
+    {
+        LLOGLN(0, ("SCardBeginTransaction: error, send_message"));
+        pthread_mutex_unlock(&g_mutex);
+        return SCARD_F_INTERNAL_ERROR;
+    }
+    bytes = 256;
+    if (get_message(&code, msg, &bytes) != 0)
+    {
+        LLOGLN(0, ("SCardBeginTransaction: error, get_message"));
+        pthread_mutex_unlock(&g_mutex);
+        return SCARD_F_INTERNAL_ERROR;
+    }
+    if ((code != SCARD_BEGIN_TRANSACTION) || (bytes != 4))
+    {
+        LLOGLN(0, ("SCardBeginTransaction: error, bad code"));
+        pthread_mutex_unlock(&g_mutex);
+        return SCARD_F_INTERNAL_ERROR;
+    }
     pthread_mutex_unlock(&g_mutex);
-    return SCARD_S_SUCCESS;
+    status = GET_UINT32(msg, 0);
+    LLOGLN(10, ("SCardBeginTransaction: got status 0x%8.8x", status));
+    return status;
 }
 
 /*****************************************************************************/

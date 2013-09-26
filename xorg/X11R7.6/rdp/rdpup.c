@@ -85,6 +85,7 @@ struct rdpup_os_bitmap
     int stamp;
 };
 
+#define USE_MAX_OS_BYTES 1
 #define MAX_OS_BYTES (16 * 1024 * 1024)
 static struct rdpup_os_bitmap *g_os_bitmaps = 0;
 static int g_max_os_bitmaps = 0;
@@ -232,6 +233,7 @@ rdpup_disconnect(void)
 }
 
 /*****************************************************************************/
+/* returns -1 on error */
 int
 rdpup_add_os_bitmap(PixmapPtr pixmap, rdpPixmapPtr priv)
 {
@@ -241,13 +243,16 @@ rdpup_add_os_bitmap(PixmapPtr pixmap, rdpPixmapPtr priv)
     int oldest_index;
     int this_bytes;
 
+    LLOGLN(10, ("rdpup_add_os_bitmap:"));
     if (!g_connected)
     {
+        LLOGLN(10, ("rdpup_add_os_bitmap: test error 1"));
         return -1;
     }
 
     if (g_os_bitmaps == 0)
     {
+        LLOGLN(10, ("rdpup_add_os_bitmap: test error 2"));
         return -1;
     }
 
@@ -255,8 +260,8 @@ rdpup_add_os_bitmap(PixmapPtr pixmap, rdpPixmapPtr priv)
     if (this_bytes > MAX_OS_BYTES)
     {
         LLOGLN(10, ("rdpup_add_os_bitmap: error, too big this_bytes %d "
-              "width %d height %d", this_bytes,
-              pixmap->drawable.height, pixmap->drawable.height));
+               "width %d height %d", this_bytes,
+               pixmap->drawable.height, pixmap->drawable.height));
         return -1;
     }
 
@@ -297,11 +302,14 @@ rdpup_add_os_bitmap(PixmapPtr pixmap, rdpPixmapPtr priv)
         }
         else
         {
+            LLOGLN(10, ("rdpup_add_os_bitmap: too many pixmaps removing "
+                   "oldest_index %d", oldest_index));
             rdpup_remove_os_bitmap(oldest_index);
-            g_os_bitmaps[index].used = 1;
-            g_os_bitmaps[index].pixmap = pixmap;
-            g_os_bitmaps[index].priv = priv;
-            g_os_bitmaps[index].stamp = g_os_bitmap_stamp;
+            rdpup_delete_os_surface(oldest_index);
+            g_os_bitmaps[oldest_index].used = 1;
+            g_os_bitmaps[oldest_index].pixmap = pixmap;
+            g_os_bitmaps[oldest_index].priv = priv;
+            g_os_bitmaps[oldest_index].stamp = g_os_bitmap_stamp;
             g_os_bitmap_stamp++;
             g_pixmap_num_used++;
             rv = oldest_index;
@@ -310,12 +318,14 @@ rdpup_add_os_bitmap(PixmapPtr pixmap, rdpPixmapPtr priv)
 
     if (rv < 0)
     {
+        LLOGLN(10, ("rdpup_add_os_bitmap: test error 3"));
         return rv;
     }
 
     g_os_bitmap_alloc_size += this_bytes;
     LLOGLN(10, ("rdpup_add_os_bitmap: this_bytes %d g_os_bitmap_alloc_size %d",
            this_bytes, g_os_bitmap_alloc_size));
+#if USE_MAX_OS_BYTES
     while (g_os_bitmap_alloc_size > MAX_OS_BYTES)
     {
         LLOGLN(10, ("rdpup_add_os_bitmap: must delete g_pixmap_num_used %d",
@@ -326,7 +336,7 @@ rdpup_add_os_bitmap(PixmapPtr pixmap, rdpPixmapPtr priv)
         index = 0;
         while (index < g_max_os_bitmaps)
         {
-            if (g_os_bitmaps[index].used && g_os_bitmaps[index].stamp < oldest)
+            if (g_os_bitmaps[index].used && (g_os_bitmaps[index].stamp < oldest))
             {
                 oldest = g_os_bitmaps[index].stamp;
                 oldest_index = index;
@@ -346,6 +356,7 @@ rdpup_add_os_bitmap(PixmapPtr pixmap, rdpPixmapPtr priv)
         rdpup_remove_os_bitmap(oldest_index);
         rdpup_delete_os_surface(oldest_index);
     }
+#endif
     LLOGLN(10, ("rdpup_add_os_bitmap: new bitmap index %d", rv));
     LLOGLN(10, ("rdpup_add_os_bitmap: g_pixmap_num_used %d "
            "g_os_bitmap_stamp 0x%8.8x", g_pixmap_num_used, g_os_bitmap_stamp));
@@ -365,11 +376,13 @@ rdpup_remove_os_bitmap(int rdpindex)
 
     if (g_os_bitmaps == 0)
     {
+        LLOGLN(10, ("rdpup_remove_os_bitmap: test error 1"));
         return 1;
     }
 
     if ((rdpindex < 0) && (rdpindex >= g_max_os_bitmaps))
     {
+        LLOGLN(10, ("rdpup_remove_os_bitmap: test error 2"));
         return 1;
     }
 
@@ -396,7 +409,8 @@ rdpup_remove_os_bitmap(int rdpindex)
         LLOGLN(0, ("rdpup_remove_os_bitmap: error"));
     }
 
-    LLOGLN(10, ("  g_pixmap_num_used %d", g_pixmap_num_used));
+    LLOGLN(10, ("rdpup_remove_os_bitmap: g_pixmap_num_used %d",
+           g_pixmap_num_used));
     return 0;
 }
 
@@ -404,10 +418,6 @@ rdpup_remove_os_bitmap(int rdpindex)
 int
 rdpup_update_os_use(int rdpindex)
 {
-    PixmapPtr pixmap;
-    rdpPixmapPtr priv;
-    int this_bytes;
-
     LLOGLN(10, ("rdpup_update_use: index %d stamp %d",
            rdpindex, g_os_bitmaps[rdpindex].stamp));
 
