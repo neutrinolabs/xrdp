@@ -83,9 +83,9 @@ xrdp_cache_delete(struct xrdp_cache *self)
     }
 
     /* free all the cached bitmaps */
-    for (i = 0; i < 3; i++)
+    for (i = 0; i < XRDP_MAX_BITMAP_CACHE_ID; i++)
     {
-        for (j = 0; j < XRDP_BITMAP_CACHE_ENTRIES; j++)
+        for (j = 0; j < XRDP_MAX_BITMAP_CACHE_IDX; j++)
         {
             xrdp_bitmap_delete(self->bitmap_items[i][j].bitmap);
         }
@@ -122,9 +122,9 @@ xrdp_cache_reset(struct xrdp_cache *self,
     int j;
 
     /* free all the cached bitmaps */
-    for (i = 0; i < 3; i++)
+    for (i = 0; i < XRDP_MAX_BITMAP_CACHE_ID; i++)
     {
-        for (j = 0; j < XRDP_BITMAP_CACHE_ENTRIES; j++)
+        for (j = 0; j < XRDP_MAX_BITMAP_CACHE_IDX; j++)
         {
             xrdp_bitmap_delete(self->bitmap_items[i][j].bitmap);
         }
