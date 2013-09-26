@@ -489,36 +489,6 @@ draw_item_remove_all(rdpPixmapRec *priv)
 }
 
 /******************************************************************************/
-static int
-remove_empties(rdpPixmapRec* priv)
-{
-    struct rdp_draw_item* di;
-    struct rdp_draw_item* di_prev;
-    int rv;
-
-    rv = 0;
-    /* remove draw items with empty regions */
-    di = priv->draw_item_head;
-    di_prev = 0;
-    while (di != 0)
-    {
-        if (!RegionNotEmpty(di->reg))
-        {
-            LLOGLN(10, ("remove_empties: removing empty item type %d", di->type));
-            draw_item_remove(priv, di);
-            di = di_prev == 0 ? priv->draw_item_head : di_prev->next;
-            rv++;
-        }
-        else
-        {
-            di_prev = di;
-            di = di->next;
-        }
-    }
-    return rv;
-}
-
-/******************************************************************************/
 int
 region_get_pixel_count(RegionPtr reg)
 {
