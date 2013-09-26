@@ -40,13 +40,15 @@ struct xrdp_pen
   int color;
 };
 
+/* 2.2.2.2.1.2.5.1 Cache Glyph Data (TS_CACHE_GLYPH_DATA) */
 struct xrdp_font_char
 {
-  int offset;
-  int baseline;
-  int width;
-  int height;
+  int offset;    /* x */
+  int baseline;  /* y */
+  int width;     /* cx */
+  int height;    /* cy */
   int incby;
+  int bpp;
   char* data;
 };
 
@@ -127,6 +129,16 @@ libxrdp_orders_mem_blt(struct xrdp_session* session, int cache_id,
                        int color_table, int x, int y, int cx, int cy,
                        int rop, int srcx, int srcy,
                        int cache_idx, struct xrdp_rect* rect);
+int DEFAULT_CC
+libxrdp_orders_composite_blt(struct xrdp_session* session, int srcidx,
+                             int srcformat, int srcwidth, int srcrepeat,
+                             int* srctransform, int mskflags,
+                             int mskidx, int mskformat, int mskwidth,
+                             int mskrepeat, int op, int srcx, int srcy,
+                             int mskx, int msky, int dstx, int dsty,
+                             int width, int height, int dstformat,
+                             struct xrdp_rect* rect);
+
 int DEFAULT_CC
 libxrdp_orders_text(struct xrdp_session* session,
                     int font, int flags, int mixmode,

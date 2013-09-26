@@ -21,6 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "rdp.h"
 #include "xrdp_rail.h"
+#include "rdpglyph.h"
 
 #include <signal.h>
 #include <sys/ipc.h>
@@ -67,8 +68,10 @@ extern ScreenPtr g_pScreen; /* from rdpmain.c */
 extern int g_Bpp; /* from rdpmain.c */
 extern int g_Bpp_mask; /* from rdpmain.c */
 extern rdpScreenInfoRec g_rdpScreen; /* from rdpmain.c */
+extern int g_do_glyph_cache; /* from rdpmain.c */
 extern int g_can_do_pix_to_pix; /* from rdpmain.c */
 extern int g_use_rail; /* from rdpmain.c */
+extern int g_do_composite; /* from rdpmain.c */
 
 /* true is to use unix domain socket */
 extern int g_use_uds; /* in rdpmain.c */
@@ -189,6 +192,7 @@ rdpup_disconnect(void)
 {
     int index;
 
+    LLOGLN(0, ("rdpup_disconnect:"));
     if (g_do_kill_disconnected)
     {
         if (!g_disconnect_scheduled)
@@ -229,6 +233,8 @@ rdpup_disconnect(void)
     g_free(g_os_bitmaps);
     g_os_bitmaps = 0;
     g_use_rail = 0;
+    g_do_glyph_cache = 0;
+    g_do_composite = 0;
     return 0;
 }
 
@@ -471,12 +477,14 @@ rdpup_send(char *data, int len)
             }
             else
             {
+                LLOGLN(0, ("rdpup_send: g_tcp_send failed(returned -1)"));
                 rdpup_disconnect();
                 return 1;
             }
         }
         else if (sent == 0)
         {
+            LLOGLN(0, ("rdpup_send: g_tcp_send failed(returned zero)"));
             rdpup_disconnect();
             return 1;
         }
@@ -527,6 +535,9 @@ rdpup_send_msg(struct stream *s)
 static int
 rdpup_send_pending(void)
 {
+    int rv;
+    
+    rv = 0;
     if (g_connected && g_begin)
     {
         LLOGLN(10, ("end %d", g_count));
@@ -534,12 +545,16 @@ rdpup_send_pending(void)
         out_uint16_le(g_out_s, 4);
         g_count++;
         s_mark_end(g_out_s);
-        rdpup_send_msg(g_out_s);
+        if (rdpup_send_msg(g_out_s) != 0)
+        {
+            LLOGLN(0, ("rdpup_send_pending: rdpup_send_msg failed"));
+            rv = 1;
+        }
     }
 
     g_count = 0;
     g_begin = 0;
-    return 0;
+    return rv;
 }
 
 /******************************************************************************/
@@ -603,12 +618,14 @@ rdpup_recv(char *data, int len)
             }
             else
             {
+                LLOGLN(0, ("rdpup_recv: g_tcp_recv failed(returned -1)"));
                 rdpup_disconnect();
                 return 1;
             }
         }
         else if (rcvd == 0)
         {
+            LLOGLN(0, ("rdpup_recv: g_tcp_recv failed(returned 0)"));
             rdpup_disconnect();
             return 1;
         }
@@ -872,6 +889,14 @@ rdpup_send_rail(void)
     return 0;
 }
 
+#define XR_BUTTON1 1
+#define XR_BUTTON2 2
+#define XR_BUTTON3 4
+#define XR_BUTTON4 8
+#define XR_BUTTON5 16
+#define XR_BUTTON6 32
+#define XR_BUTTON7 64
+
 /******************************************************************************/
 static int
 rdpup_process_msg(struct stream *s)
@@ -920,44 +945,74 @@ rdpup_process_msg(struct stream *s)
                 g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 101:
-                g_button_mask = g_button_mask & (~1);
+            case 101: /* left button up */
+                g_button_mask = g_button_mask & (~XR_BUTTON1);
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 102:
-                g_button_mask = g_button_mask | 1;
+            case 102: /* left button down */
+                g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
+                g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
+                g_button_mask = g_button_mask | XR_BUTTON1;
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 103:
-                g_button_mask = g_button_mask & (~4);
+            case 103: /* right button up */
+                g_button_mask = g_button_mask & (~XR_BUTTON3);
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 104:
-                g_button_mask = g_button_mask | 4;
+            case 104: /* right button down */
+                g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
+                g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
+                g_button_mask = g_button_mask | XR_BUTTON3;
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 105:
-                g_button_mask = g_button_mask & (~2);
+            case 105: /* middle button down */
+                g_button_mask = g_button_mask & (~XR_BUTTON2);
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 106:
-                g_button_mask = g_button_mask | 2;
+            case 106: /* middle button up */
+                g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
+                g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
+                g_button_mask = g_button_mask | XR_BUTTON2;
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 107:
-                g_button_mask = g_button_mask & (~8);
+            case 107: /* button 4 up */
+                g_button_mask = g_button_mask & (~XR_BUTTON4);
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 108:
-                g_button_mask = g_button_mask | 8;
+            case 108: /* button 4 down */
+                g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
+                g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
+                g_button_mask = g_button_mask | XR_BUTTON4;
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 109:
-                g_button_mask = g_button_mask & (~16);
+            case 109: /* button 5 up */
+                g_button_mask = g_button_mask & (~XR_BUTTON5);
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 110:
-                g_button_mask = g_button_mask | 16;
+            case 110: /* button 5 down */
+                g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
+                g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
+                g_button_mask = g_button_mask | XR_BUTTON5;
+                PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+                break;
+            case 111: /* button 6 up */
+                g_button_mask = g_button_mask & (~XR_BUTTON6);
+                PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+                break;
+            case 112: /* button 6 down */
+                g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
+                g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
+                g_button_mask = g_button_mask | XR_BUTTON6;
+                PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+                break;
+            case 113: /* button 7 up */
+                g_button_mask = g_button_mask & (~XR_BUTTON7);
+                PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+                break;
+            case 114: /* button 7 down */
+                g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
+                g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
+                g_button_mask = g_button_mask | XR_BUTTON7;
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
             case 200:
@@ -1008,8 +1063,27 @@ rdpup_process_msg(struct stream *s)
         if (g_rdpScreen.client_info.rail_support_level > 0)
         {
             g_use_rail = 1;
+#ifdef XRDP_WM_RDPUP
             rdpup_send_rail();
+#endif
         }
+        if (g_rdpScreen.client_info.orders[0x1b])   /* 27 NEG_GLYPH_INDEX_INDEX */
+        {
+            g_do_glyph_cache = 1;
+        }
+        if (g_rdpScreen.client_info.order_flags_ex & 0x100)
+        {
+            g_do_composite = 1;
+        }
+        if (g_do_glyph_cache)
+        {
+            LLOGLN(0, ("  using glyph cache"));
+        }
+        if (g_do_composite)
+        {
+            LLOGLN(0, ("  using client composite"));
+        }
+        LLOGLN(10, ("order_flags_ex 0x%x", g_rdpScreen.client_info.order_flags_ex));
         if (g_rdpScreen.client_info.offscreen_cache_entries == 2000)
         {
             LLOGLN(0, ("  client can do offscreen to offscreen blits"));
@@ -1254,6 +1328,7 @@ rdpup_check(void)
             g_sck_closed = 0;
             g_begin = 0;
             g_con_number++;
+            rdpGlyphInit();
             AddEnabledDevice(g_sck);
 
             if (g_dis_timer != 0)
@@ -1341,6 +1416,9 @@ rdpup_end_update(void)
 int
 rdpup_pre_check(int in_size)
 {
+    int rv;
+    
+    rv = 0;
     if (!g_begin)
     {
         rdpup_begin_update();
@@ -1349,13 +1427,17 @@ rdpup_pre_check(int in_size)
     if ((g_out_s->p - g_out_s->data) > (g_out_s->size - (in_size + 20)))
     {
         s_mark_end(g_out_s);
-        rdpup_send_msg(g_out_s);
+        if (rdpup_send_msg(g_out_s) != 0)
+        {
+            LLOGLN(0, ("rdpup_pre_check: rdpup_send_msg failed"));
+            rv = 1;
+        }
         g_count = 0;
         init_stream(g_out_s, 0);
         s_push_layer(g_out_s, iso_hdr, 8);
     }
 
-    return 0;
+    return rv;
 }
 
 /******************************************************************************/
@@ -1581,6 +1663,25 @@ convert_pixels(void *src, void *dst, int num_pixels)
 
 /******************************************************************************/
 int
+alpha_pixels(void* src, void* dst, int num_pixels)
+{
+  unsigned int* src32;
+  unsigned char* dst8;
+  int index;
+
+  src32 = (unsigned int*)src;
+  dst8 = (unsigned char*)dst;
+  for (index = 0; index < num_pixels; index++)
+  {
+    *dst8 = (*src32) >> 24;
+    dst8++;
+    src32++;
+  }
+  return 0;
+}
+
+/******************************************************************************/
+int
 rdpup_set_fgcolor(int fgcolor)
 {
     if (g_connected)
@@ -1747,6 +1848,26 @@ rdpup_create_os_surface(int rdpindex, int width, int height)
         out_uint16_le(g_out_s, height);
     }
 
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpup_create_os_surface_bpp(int rdpindex, int width, int height, int bpp)
+{
+    LLOGLN(10, ("rdpup_create_os_surface_bpp:"));
+    if (g_connected)
+    {
+        LLOGLN(10, ("  width %d height %d bpp %d", width, height, bpp));
+        rdpup_pre_check(13);
+        out_uint16_le(g_out_s, 31);
+        out_uint16_le(g_out_s, 13);
+        g_count++;
+        out_uint32_le(g_out_s, rdpindex);
+        out_uint16_le(g_out_s, width);
+        out_uint16_le(g_out_s, height);
+        out_uint8(g_out_s, bpp);
+    }
     return 0;
 }
 
@@ -2023,7 +2144,7 @@ rdpup_send_area(struct image_data *id, int x, int y, int w, int h)
         }
 
         ly = y;
-        while (ly < y + h)
+        while ((ly < y + h) && g_connected)
         {
             lx = x;
 
@@ -2069,6 +2190,103 @@ rdpup_send_area(struct image_data *id, int x, int y, int w, int h)
                 lx += 64;
             }
 
+            ly += 64;
+        }
+    }
+}
+
+/******************************************************************************/
+/* split the bitmap up into 64 x 64 pixel areas */
+void
+rdpup_send_alpha_area(struct image_data* id, int x, int y, int w, int h)
+{
+    char* s;
+    int i;
+    int lx;
+    int ly;
+    int lh;
+    int lw;
+    int size;
+    struct image_data lid;
+    
+    LLOGLN(10, ("rdpup_send_alpha_area: id %p x %d y %d w %d h %d",
+                id, x, y, w, h));
+    if (id == 0)
+    {
+        rdpup_get_screen_image_rect(&lid);
+        id = &lid;
+    }
+    
+    if (x >= id->width)
+    {
+        return;
+    }
+    if (y >= id->height)
+    {
+        return;
+    }
+    if (x < 0)
+    {
+        w += x;
+        x = 0;
+    }
+    if (y < 0)
+    {
+        h += y;
+        y = 0;
+    }
+    if (w <= 0)
+    {
+        return;
+    }
+    if (h <= 0)
+    {
+        return;
+    }
+    if (x + w > id->width)
+    {
+        w = id->width - x;
+    }
+    if (y + h > id->height)
+    {
+        h = id->height - y;
+    }
+    LLOGLN(10, ("%d", w * h));
+    if (g_connected && g_begin)
+    {
+        LLOGLN(10, ("  rdpup_send_area"));
+        ly = y;
+        while ((ly < y + h) && g_connected)
+        {
+            lx = x;
+            while ((lx < x + w) && g_connected)
+            {
+                lw = MIN(64, (x + w) - lx);
+                lh = MIN(64, (y + h) - ly);
+                size = lw * lh + 25;
+                rdpup_pre_check(size);
+                out_uint16_le(g_out_s, 32); /* server_paint_rect_bpp */
+                out_uint16_le(g_out_s, size);
+                g_count++;
+                out_uint16_le(g_out_s, lx);
+                out_uint16_le(g_out_s, ly);
+                out_uint16_le(g_out_s, lw);
+                out_uint16_le(g_out_s, lh);
+                out_uint32_le(g_out_s, lw * lh);
+                for (i = 0; i < lh; i++)
+                {
+                    s = (id->pixels +
+                         ((ly + i) * id->lineBytes) + (lx * g_Bpp));
+                    alpha_pixels(s, g_out_s->p, lw);
+                    g_out_s->p += lw;
+                }
+                out_uint16_le(g_out_s, lw);
+                out_uint16_le(g_out_s, lh);
+                out_uint16_le(g_out_s, 0);
+                out_uint16_le(g_out_s, 0);
+                out_uint8(g_out_s, 8);
+                lx += 64;
+            }
             ly += 64;
         }
     }
@@ -2165,7 +2383,7 @@ rdpup_create_window(WindowPtr pWindow, rdpWindowRec *priv)
         out_uint32_le(g_out_s, style); /* style */
         out_uint32_le(g_out_s, ext_style); /* extended_style */
         flags |= WINDOW_ORDER_FIELD_STYLE;
-        out_uint32_le(g_out_s, 0); /* show_state */
+        out_uint32_le(g_out_s, 0x05); /* show_state */
         flags |= WINDOW_ORDER_FIELD_SHOW;
         out_uint16_le(g_out_s, title_bytes); /* title_info */
         out_uint8a(g_out_s, title, title_bytes);
@@ -2236,6 +2454,27 @@ rdpup_delete_window(WindowPtr pWindow, rdpWindowRec *priv)
 }
 
 /******************************************************************************/
+void
+rdpup_show_window(WindowPtr pWindow, rdpWindowRec* priv, int showState)
+{
+    LLOGLN(10, ("rdpup_show_window: id 0x%8.8x state 0x%x", pWindow->drawable.id,
+                showState));
+    if (g_connected)
+    {
+        int flags = WINDOW_ORDER_TYPE_WINDOW;
+        
+        rdpup_pre_check(16);
+        out_uint16_le(g_out_s, 27);
+        out_uint16_le(g_out_s, 16);
+        g_count++;
+        out_uint32_le(g_out_s, pWindow->drawable.id);
+        flags |= WINDOW_ORDER_FIELD_SHOW;
+        out_uint32_le(g_out_s, flags);
+        out_uint32_le(g_out_s, showState);
+    }
+}
+
+/******************************************************************************/
 int
 rdpup_check_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec *pDirtyPriv)
 {
@@ -2247,6 +2486,8 @@ rdpup_check_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec *pDirtyPriv)
     xSegment *seg;
     struct image_data id;
     struct rdp_draw_item *di;
+    struct rdp_text* rtext;
+    struct rdp_text* trtext;
 
     if (pDirtyPriv == 0)
     {
@@ -2348,6 +2589,37 @@ rdpup_check_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec *pDirtyPriv)
                 break;
             case RDI_SCRBLT:
                 LLOGLN(10, ("  RDI_SCRBLT"));
+                break;
+            case RDI_TEXT:
+                LLOGLN(10, ("  RDI_TEXT"));
+                num_clips = REGION_NUM_RECTS(di->reg);
+                if (num_clips > 0)
+                {
+                    LLOGLN(10, ("  num_clips %d", num_clips));
+                    rdpup_set_fgcolor(di->u.text.fg_color);
+                    rdpup_set_opcode(di->u.text.opcode);
+                    rtext = di->u.text.rtext;
+                    trtext = rtext;
+                    while (trtext != 0)
+                    {
+                        rdp_text_chars_to_data(trtext);
+                        for (clip_index = num_clips - 1; clip_index >= 0; clip_index--)
+                        {
+                            box = REGION_RECTS(di->reg)[clip_index];
+                            rdpup_set_clip(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+                            LLOGLN(10, ("  %d %d %d %d", box.x1, box.y1, box.x2, box.y2));
+                            box = RegionExtents(trtext->reg)[0];
+                            rdpup_draw_text(trtext->font, trtext->flags, trtext->mixmode,
+                                            box.x1, box.y1, box.x2, box.y2,
+                                            //box.x1, box.y1, box.x2, box.y2,
+                                            0, 0, 0, 0,
+                                            trtext->x, trtext->y, trtext->data, trtext->data_bytes);
+                        }
+                        trtext = trtext->next;
+                    }
+                }
+                rdpup_reset_clip();
+                rdpup_set_opcode(GXcopy);
                 break;
         }
 
@@ -2482,5 +2754,173 @@ rdpup_check_dirty_screen(rdpPixmapRec *pDirtyPriv)
     draw_item_remove_all(pDirtyPriv);
     rdpup_end_update();
     pDirtyPriv->is_dirty = 0;
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpup_check_alpha_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec* pDirtyPriv)
+{
+    struct image_data id;
+    
+    LLOGLN(10, ("rdpup_check_alpha_dirty: width %d height %d",
+                pDirtyPixmap->drawable.width, pDirtyPixmap->drawable.height));
+    if (pDirtyPriv == 0)
+    {
+        return 0;
+    }
+    LLOGLN(10, ("rdpup_check_alpha_dirty: is_alpha_dirty_not %d",
+                pDirtyPriv->is_alpha_dirty_not));
+    if (pDirtyPriv->is_alpha_dirty_not)
+    {
+        return 0;
+    }
+    pDirtyPriv->is_alpha_dirty_not = 1;
+    rdpup_switch_os_surface(pDirtyPriv->rdpindex);
+    rdpup_get_pixmap_image_rect(pDirtyPixmap, &id);
+    rdpup_begin_update();
+    rdpup_send_alpha_area(&id, 0, 0, pDirtyPixmap->drawable.width,
+                          pDirtyPixmap->drawable.height);
+    rdpup_end_update();
+    rdpup_switch_os_surface(-1);
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpup_add_char(int font, int charactor, short x, short y, int cx, int cy,
+               char* bmpdata, int bmpdata_bytes)
+{
+    if (g_connected)
+    {
+        LLOGLN(10, ("  rdpup_add_char"));
+        rdpup_pre_check(18 + bmpdata_bytes);
+        out_uint16_le(g_out_s, 28); /* add char */
+        out_uint16_le(g_out_s, 18 + bmpdata_bytes); /* size */
+        g_count++;
+        out_uint16_le(g_out_s, font);
+        out_uint16_le(g_out_s, charactor);
+        out_uint16_le(g_out_s, x);
+        out_uint16_le(g_out_s, y);
+        out_uint16_le(g_out_s, cx);
+        out_uint16_le(g_out_s, cy);
+        out_uint16_le(g_out_s, bmpdata_bytes);
+        out_uint8a(g_out_s, bmpdata, bmpdata_bytes);
+    }
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpup_add_char_alpha(int font, int charactor, short x, short y, int cx, int cy,
+                     char* bmpdata, int bmpdata_bytes)
+{
+    if (g_connected)
+    {
+        LLOGLN(10, ("  rdpup_add_char_alpha"));
+        rdpup_pre_check(18 + bmpdata_bytes);
+        out_uint16_le(g_out_s, 29); /* add char alpha */
+        out_uint16_le(g_out_s, 18 + bmpdata_bytes); /* size */
+        g_count++;
+        out_uint16_le(g_out_s, font);
+        out_uint16_le(g_out_s, charactor);
+        out_uint16_le(g_out_s, x);
+        out_uint16_le(g_out_s, y);
+        out_uint16_le(g_out_s, cx);
+        out_uint16_le(g_out_s, cy);
+        out_uint16_le(g_out_s, bmpdata_bytes);
+        out_uint8a(g_out_s, bmpdata, bmpdata_bytes);
+    }
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpup_draw_text(int font, int flags, int mixmode,
+                short clip_left, short clip_top,
+                short clip_right, short clip_bottom,
+                short box_left, short box_top,
+                short box_right, short box_bottom, short x, short y,
+                char* data, int data_bytes)
+{
+    if (g_connected)
+    {
+        LLOGLN(10, ("  rdpup_draw_text"));
+        rdpup_pre_check(32 + data_bytes);
+        out_uint16_le(g_out_s, 30); /* draw text */
+        out_uint16_le(g_out_s, 32 + data_bytes); /* size */
+        g_count++;
+        out_uint16_le(g_out_s, font);
+        out_uint16_le(g_out_s, flags);
+        out_uint16_le(g_out_s, mixmode);
+        out_uint16_le(g_out_s, clip_left);
+        out_uint16_le(g_out_s, clip_top);
+        out_uint16_le(g_out_s, clip_right);
+        out_uint16_le(g_out_s, clip_bottom);
+        out_uint16_le(g_out_s, box_left);
+        out_uint16_le(g_out_s, box_top);
+        out_uint16_le(g_out_s, box_right);
+        out_uint16_le(g_out_s, box_bottom);
+        out_uint16_le(g_out_s, x);
+        out_uint16_le(g_out_s, y);
+        out_uint16_le(g_out_s, data_bytes);
+        out_uint8a(g_out_s, data, data_bytes);
+    }
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpup_composite(short srcidx, int srcformat, short srcwidth, CARD8 srcrepeat,
+                PictTransform* srctransform, CARD8 mskflags,
+                short mskidx, int mskformat, short mskwidth, CARD8 mskrepeat,
+                CARD8 op, short srcx, short srcy, short mskx, short msky,
+                short dstx, short dsty, short width, short height,
+                int dstformat)
+{
+    if (g_connected)
+    {
+        LLOGLN(10, ("  rdpup_composite"));
+        rdpup_pre_check(84);
+        out_uint16_le(g_out_s, 33);
+        out_uint16_le(g_out_s, 84); /* size */
+        g_count++;
+        out_uint16_le(g_out_s, srcidx);
+        out_uint32_le(g_out_s, srcformat);
+        out_uint16_le(g_out_s, srcwidth);
+        out_uint8(g_out_s, srcrepeat);
+        if (srctransform == 0)
+        {
+            out_uint8s(g_out_s, 10 * 4);
+        }
+        else
+        {
+            out_uint32_le(g_out_s, 1);
+            out_uint32_le(g_out_s, srctransform->matrix[0][0]);
+            out_uint32_le(g_out_s, srctransform->matrix[0][1]);
+            out_uint32_le(g_out_s, srctransform->matrix[0][2]);
+            out_uint32_le(g_out_s, srctransform->matrix[1][0]);
+            out_uint32_le(g_out_s, srctransform->matrix[1][1]);
+            out_uint32_le(g_out_s, srctransform->matrix[1][2]);
+            out_uint32_le(g_out_s, srctransform->matrix[2][0]);
+            out_uint32_le(g_out_s, srctransform->matrix[2][1]);
+            out_uint32_le(g_out_s, srctransform->matrix[2][2]);
+        }
+        out_uint8(g_out_s, mskflags);
+        out_uint16_le(g_out_s, mskidx);
+        out_uint32_le(g_out_s, mskformat);
+        out_uint16_le(g_out_s, mskwidth);
+        out_uint8(g_out_s, mskrepeat);
+        out_uint8(g_out_s, op);
+        out_uint16_le(g_out_s, srcx);
+        out_uint16_le(g_out_s, srcy);
+        out_uint16_le(g_out_s, mskx);
+        out_uint16_le(g_out_s, msky);
+        out_uint16_le(g_out_s, dstx);
+        out_uint16_le(g_out_s, dsty);
+        out_uint16_le(g_out_s, width);
+        out_uint16_le(g_out_s, height);
+        out_uint32_le(g_out_s, dstformat);
+    }
     return 0;
 }

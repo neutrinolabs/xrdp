@@ -64,6 +64,7 @@ static int g_tab_down = 0;
 /* this is toggled every time num lock key is released, not like the
    above *_down vars */
 static int g_scroll_lock_down = 0;
+static OsTimerPtr g_kbtimer = 0;
 
 static OsTimerPtr g_timer = 0;
 static int g_x = 0;
@@ -327,10 +328,57 @@ rdpBell(int volume, DeviceIntPtr pDev, pointer ctrl, int cls)
 }
 
 /******************************************************************************/
+static CARD32
+rdpInDeferredUpdateCallback(OsTimerPtr timer, CARD32 now, pointer arg)
+{
+    //ErrorF("rdpInDeferredUpdateCallback:\n");
+
+    /* our keyboard device */
+    XkbSetRepeatKeys(g_keyboard, -1, AutoRepeatModeOff);
+    /* the main one for the server */
+    XkbSetRepeatKeys(inputInfo.keyboard, -1, AutoRepeatModeOff);
+
+    return 0;
+}
+
+/******************************************************************************/
 void
 rdpChangeKeyboardControl(DeviceIntPtr pDev, KeybdCtrl *ctrl)
 {
+    XkbControlsPtr ctrls;
+
     ErrorF("rdpChangeKeyboardControl:\n");
+    ctrls = 0;
+    if (pDev != 0)
+    {
+        if (pDev->key != 0)
+        {
+            if (pDev->key->xkbInfo != 0)
+            {
+                if (pDev->key->xkbInfo->desc != 0)
+                {
+                    if (pDev->key->xkbInfo->desc->ctrls != 0)
+                    {
+                        ctrls = pDev->key->xkbInfo->desc->ctrls;
+                    }
+                }
+            }
+        }
+    }
+    if (ctrls != 0)
+    {
+        if (ctrls->enabled_ctrls & XkbRepeatKeysMask)
+        {
+            //ErrorF("rdpChangeKeyboardControl: autoRepeat on\n");
+            /* schedual to turn off the autorepeat after 100 ms so any app
+             * polling it will be happy it's on */
+            g_kbtimer = TimerSet(g_kbtimer, 0, 100, rdpInDeferredUpdateCallback, 0);\
+        }
+        else
+        {
+            //ErrorF("rdpChangeKeyboardControl: autoRepeat off\n");
+        }
+    }
 }
 
 /******************************************************************************/
@@ -419,9 +467,9 @@ rdpMouseCtrl(DeviceIntPtr pDevice, PtrCtrl *pCtrl)
 int
 rdpMouseProc(DeviceIntPtr pDevice, int onoff)
 {
-    BYTE map[6];
+    BYTE map[8];
     DevicePtr pDev;
-    Atom btn_labels[6];
+    Atom btn_labels[8];
     Atom axes_labels[2];
 
     DEBUG_OUT_INPUT(("rdpMouseProc\n"));
@@ -437,17 +485,21 @@ rdpMouseProc(DeviceIntPtr pDevice, int onoff)
             map[3] = 3;
             map[4] = 4;
             map[5] = 5;
+            map[6] = 6;
+            map[7] = 7;
 
             btn_labels[0] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_LEFT);
             btn_labels[1] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_MIDDLE);
             btn_labels[2] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_RIGHT);
             btn_labels[3] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_WHEEL_UP);
             btn_labels[4] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_WHEEL_DOWN);
+            btn_labels[5] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_HWHEEL_LEFT);
+            btn_labels[6] = XIGetKnownProperty(BTN_LABEL_PROP_BTN_HWHEEL_RIGHT);
 
             axes_labels[0] = XIGetKnownProperty(AXIS_LABEL_PROP_REL_X);
             axes_labels[1] = XIGetKnownProperty(AXIS_LABEL_PROP_REL_Y);
 
-            InitPointerDeviceStruct(pDev, map, 5, btn_labels, rdpMouseCtrl,
+            InitPointerDeviceStruct(pDev, map, 7, btn_labels, rdpMouseCtrl,
                                     GetMotionHistorySize(), 2, axes_labels);
 
             break;
@@ -961,9 +1013,13 @@ KbdAddEvent(int down, int param1, int param2, int param3, int param4)
 
             if (x_scancode > 0)
             {
+                /* left or right shift */
+                if ((rdp_scancode == 42) || (rdp_scancode == 54))
+                {
+                    g_shift_down = down ? x_scancode : 0;
+                }
                 rdpEnqueueKey(type, x_scancode);
             }
-
             break;
 
         case 56: /* left - right alt button */
@@ -977,6 +1033,7 @@ KbdAddEvent(int down, int param1, int param2, int param3, int param4)
                 x_scancode = 64;  /* left alt button   */
             }
 
+            g_alt_down = down ? x_scancode : 0;
             rdpEnqueueKey(type, x_scancode);
             break;
 
@@ -1110,6 +1167,14 @@ KbdAddEvent(int down, int param1, int param2, int param3, int param4)
             rdpEnqueueKey(type, 117);
             break;
 
+        case 89: /* left meta */
+            rdpEnqueueKey(type, 156);
+            break;
+
+        case 90: /* right meta */
+            rdpEnqueueKey(type, 156);
+            break;
+        
         default:
             x_scancode = rdp_scancode + MIN_KEY_CODE;
 

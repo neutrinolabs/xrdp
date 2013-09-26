@@ -413,6 +413,10 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             self->mod->server_notify_new_update = server_notify_new_update;
             self->mod->server_notify_delete = server_notify_delete;
             self->mod->server_monitored_desktop = server_monitored_desktop;
+            self->mod->server_add_char_alpha = server_add_char_alpha;
+            self->mod->server_create_os_surface_bpp = server_create_os_surface_bpp;
+            self->mod->server_paint_rect_bpp = server_paint_rect_bpp;
+            self->mod->server_composite = server_composite;
         }
     }
 
@@ -677,6 +681,265 @@ xrdp_mm_trans_process_channel_data(struct xrdp_mm *self, struct trans *trans)
 
 /*****************************************************************************/
 /* returns error
+   process rail create window order */
+static int APP_CC
+xrdp_mm_process_rail_create_window(struct xrdp_mm* self, struct stream* s)
+{
+    int flags;
+    int window_id;
+    int title_bytes;
+    int index;
+    int bytes;
+    int rv;
+    struct rail_window_state_order rwso;
+    
+    g_memset(&rwso, 0, sizeof(rwso));
+    in_uint32_le(s, window_id);
+    
+    g_writeln("xrdp_mm_process_rail_create_window: 0x%8.8x", window_id);
+    
+    in_uint32_le(s, rwso.owner_window_id);
+    in_uint32_le(s, rwso.style);
+    in_uint32_le(s, rwso.extended_style);
+    in_uint32_le(s, rwso.show_state);
+    in_uint16_le(s, title_bytes);
+    if (title_bytes > 0)
+    {
+        rwso.title_info = g_malloc(title_bytes + 1, 0);
+        in_uint8a(s, rwso.title_info, title_bytes);
+        rwso.title_info[title_bytes] = 0;
+    }
+    in_uint32_le(s, rwso.client_offset_x);
+    in_uint32_le(s, rwso.client_offset_y);
+    in_uint32_le(s, rwso.client_area_width);
+    in_uint32_le(s, rwso.client_area_height);
+    in_uint32_le(s, rwso.rp_content);
+    in_uint32_le(s, rwso.root_parent_handle);
+    in_uint32_le(s, rwso.window_offset_x);
+    in_uint32_le(s, rwso.window_offset_y);
+    in_uint32_le(s, rwso.window_client_delta_x);
+    in_uint32_le(s, rwso.window_client_delta_y);
+    in_uint32_le(s, rwso.window_width);
+    in_uint32_le(s, rwso.window_height);
+    in_uint16_le(s, rwso.num_window_rects);
+    if (rwso.num_window_rects > 0)
+    {
+        bytes = sizeof(struct rail_window_rect) * rwso.num_window_rects;
+        rwso.window_rects = (struct rail_window_rect*)g_malloc(bytes, 0);
+        for (index = 0; index < rwso.num_window_rects; index++)
+        {
+            in_uint16_le(s, rwso.window_rects[index].left);
+            in_uint16_le(s, rwso.window_rects[index].top);
+            in_uint16_le(s, rwso.window_rects[index].right);
+            in_uint16_le(s, rwso.window_rects[index].bottom);
+        }
+    }
+    in_uint32_le(s, rwso.visible_offset_x);
+    in_uint32_le(s, rwso.visible_offset_y);
+    in_uint16_le(s, rwso.num_visibility_rects);
+    if (rwso.num_visibility_rects > 0)
+    {
+        bytes = sizeof(struct rail_window_rect) * rwso.num_visibility_rects;
+        rwso.visibility_rects = (struct rail_window_rect*)g_malloc(bytes, 0);
+        for (index = 0; index < rwso.num_visibility_rects; index++)
+        {
+            in_uint16_le(s, rwso.visibility_rects[index].left);
+            in_uint16_le(s, rwso.visibility_rects[index].top);
+            in_uint16_le(s, rwso.visibility_rects[index].right);
+            in_uint16_le(s, rwso.visibility_rects[index].bottom);
+        }
+    }
+    in_uint32_le(s, flags);
+    rv = libxrdp_orders_init(self->wm->session);
+    rv = libxrdp_window_new_update(self->wm->session, window_id, &rwso, flags);
+    rv = libxrdp_orders_send(self->wm->session);
+    g_free(rwso.title_info);
+    g_free(rwso.window_rects);
+    g_free(rwso.visibility_rects);
+    return rv;
+}
+
+/*****************************************************************************/
+/* returns error
+   process rail configure window order */
+static int APP_CC
+xrdp_mm_process_rail_configure_window(struct xrdp_mm* self, struct stream* s)
+{
+    int flags;
+    int window_id;
+    int index;
+    int bytes;
+    int rv;
+    struct rail_window_state_order rwso;
+    
+    g_memset(&rwso, 0, sizeof(rwso));
+    in_uint32_le(s, window_id);
+    
+    g_writeln("xrdp_mm_process_rail_configure_window: 0x%8.8x", window_id);
+    
+    in_uint32_le(s, rwso.client_offset_x);
+    in_uint32_le(s, rwso.client_offset_y);
+    in_uint32_le(s, rwso.client_area_width);
+    in_uint32_le(s, rwso.client_area_height);
+    in_uint32_le(s, rwso.rp_content);
+    in_uint32_le(s, rwso.root_parent_handle);
+    in_uint32_le(s, rwso.window_offset_x);
+    in_uint32_le(s, rwso.window_offset_y);
+    in_uint32_le(s, rwso.window_client_delta_x);
+    in_uint32_le(s, rwso.window_client_delta_y);
+    in_uint32_le(s, rwso.window_width);
+    in_uint32_le(s, rwso.window_height);
+    in_uint16_le(s, rwso.num_window_rects);
+    if (rwso.num_window_rects > 0)
+    {
+        bytes = sizeof(struct rail_window_rect) * rwso.num_window_rects;
+        rwso.window_rects = (struct rail_window_rect*)g_malloc(bytes, 0);
+        for (index = 0; index < rwso.num_window_rects; index++)
+        {
+            in_uint16_le(s, rwso.window_rects[index].left);
+            in_uint16_le(s, rwso.window_rects[index].top);
+            in_uint16_le(s, rwso.window_rects[index].right);
+            in_uint16_le(s, rwso.window_rects[index].bottom);
+        }
+    }
+    in_uint32_le(s, rwso.visible_offset_x);
+    in_uint32_le(s, rwso.visible_offset_y);
+    in_uint16_le(s, rwso.num_visibility_rects);
+    if (rwso.num_visibility_rects > 0)
+    {
+        bytes = sizeof(struct rail_window_rect) * rwso.num_visibility_rects;
+        rwso.visibility_rects = (struct rail_window_rect*)g_malloc(bytes, 0);
+        for (index = 0; index < rwso.num_visibility_rects; index++)
+        {
+            in_uint16_le(s, rwso.visibility_rects[index].left);
+            in_uint16_le(s, rwso.visibility_rects[index].top);
+            in_uint16_le(s, rwso.visibility_rects[index].right);
+            in_uint16_le(s, rwso.visibility_rects[index].bottom);
+        }
+    }
+    in_uint32_le(s, flags);
+    rv = libxrdp_orders_init(self->wm->session);
+    rv = libxrdp_window_new_update(self->wm->session, window_id, &rwso, flags);
+    rv = libxrdp_orders_send(self->wm->session);
+    g_free(rwso.window_rects);
+    g_free(rwso.visibility_rects);
+    return rv;
+}
+
+/*****************************************************************************/
+/* returns error
+   process rail destroy window order */
+static int APP_CC
+xrdp_mm_process_rail_destroy_window(struct xrdp_mm* self, struct stream* s)
+{
+    int window_id;
+    int rv;
+    
+    in_uint32_le(s, window_id);
+    g_writeln("xrdp_mm_process_rail_destroy_window 0x%8.8x", window_id);
+    rv = libxrdp_orders_init(self->wm->session);
+    rv = libxrdp_window_delete(self->wm->session, window_id);
+    rv = libxrdp_orders_send(self->wm->session);
+    return rv;
+}
+
+/*****************************************************************************/
+/* returns error
+   process rail update window (show state) order */
+static int APP_CC
+xrdp_mm_process_rail_show_window(struct xrdp_mm* self, struct stream* s)
+{
+    int window_id;
+    int rv;
+    int flags;
+    struct rail_window_state_order rwso;
+    
+    g_memset(&rwso, 0, sizeof(rwso));
+    in_uint32_le(s, window_id);
+    in_uint32_le(s, flags);
+    in_uint32_le(s, rwso.show_state);
+    g_writeln("xrdp_mm_process_rail_show_window 0x%8.8x %x", window_id,
+              rwso.show_state);
+    rv = libxrdp_orders_init(self->wm->session);
+    rv = libxrdp_window_new_update(self->wm->session, window_id, &rwso, flags);
+    rv = libxrdp_orders_send(self->wm->session);
+    return rv;
+}
+
+/*****************************************************************************/
+/* returns error
+   process rail update window (title) order */
+static int APP_CC
+xrdp_mm_process_rail_update_window_text(struct xrdp_mm* self, struct stream* s)
+{
+    int size;
+    int flags;
+    int rv = 0;
+    int window_id;
+    struct rail_window_state_order rwso;
+    
+    g_writeln("xrdp_mm_process_rail_update_window_text:");
+    
+    in_uint32_le(s, window_id);
+    in_uint32_le(s, flags);
+    g_writeln("  update window title info: 0x%8.8x", window_id);
+    
+    g_memset(&rwso, 0, sizeof(rwso));
+    in_uint32_le(s, size); /* title size */
+    rwso.title_info = g_malloc(size + 1, 0);
+    in_uint8a(s, rwso.title_info, size);
+    rwso.title_info[size] = 0;
+    g_writeln("  set window title %s size %d 0x%8.8x", rwso.title_info, size, flags);
+    rv = libxrdp_orders_init(self->wm->session);
+    rv = libxrdp_window_new_update(self->wm->session, window_id, &rwso, flags);
+    rv = libxrdp_orders_send(self->wm->session);
+    g_writeln("  set window title %s %d", rwso.title_info, rv);
+    
+    g_free(rwso.title_info);
+
+    return rv;
+}
+
+/*****************************************************************************/
+/* returns error
+   process alternate secondary drawing orders for rail channel */
+static int APP_CC
+xrdp_mm_process_rail_drawing_orders(struct xrdp_mm* self, struct trans* trans)
+{
+    struct stream* s;
+    int order_type;
+    int rv = 0;
+    
+    s = trans_get_in_s(trans);
+    if (s == 0)
+    {
+        return 1;
+    }
+    in_uint32_le(s, order_type);
+    
+    switch(order_type)
+    {
+        case 2: /* create_window */
+            xrdp_mm_process_rail_create_window(self, s);
+            break;
+        case 4: /* destroy_window */
+            xrdp_mm_process_rail_destroy_window(self, s);
+            break;
+        case 6: /* show_window */
+            rv = xrdp_mm_process_rail_show_window(self, s);
+            break;
+        case 8: /* update title info */
+            rv = xrdp_mm_process_rail_update_window_text(self, s);
+            break;
+        default:
+            break;
+    }
+    
+    return rv;
+}
+
+/*****************************************************************************/
+/* returns error
    process a message for the channel handler */
 static int APP_CC
 xrdp_mm_chan_process_msg(struct xrdp_mm *self, struct trans *trans,
@@ -707,6 +970,9 @@ xrdp_mm_chan_process_msg(struct xrdp_mm *self, struct trans *trans,
                 break;
             case 8: /* channel data */
                 rv = xrdp_mm_trans_process_channel_data(self, trans);
+                break;
+            case 10: /* rail alternate secondary drawing orders */
+                rv = xrdp_mm_process_rail_drawing_orders(self, trans);
                 break;
             default:
                 log_message(LOG_LEVEL_ERROR,"xrdp_mm_chan_process_msg: unknown id %d", id);
@@ -793,7 +1059,7 @@ xrdp_mm_connect_chansrv(struct xrdp_mm *self, char *ip, char *port)
     self->usechansrv = 1;
 
     /* connect channel redir */
-    if ((ip == 0) || (g_strcmp(ip, "127.0.0.1") == 0) || (ip[0] == 0))
+    if ((g_strcmp(ip, "127.0.0.1") == 0) || (ip[0] == 0))
     {
         /* unix socket */
         self->chan_trans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
@@ -1799,6 +2065,79 @@ server_paint_rect(struct xrdp_mod *mod, int x, int y, int cx, int cy,
 
 /*****************************************************************************/
 int DEFAULT_CC
+server_paint_rect_bpp(struct xrdp_mod* mod, int x, int y, int cx, int cy,
+                      char* data, int width, int height, int srcx, int srcy,
+                      int bpp)
+{
+    struct xrdp_wm* wm;
+    struct xrdp_bitmap* b;
+    struct xrdp_painter* p;
+    
+    p = (struct xrdp_painter*)(mod->painter);
+    if (p == 0)
+    {
+        return 0;
+    }
+    wm = (struct xrdp_wm*)(mod->wm);
+    b = xrdp_bitmap_create_with_data(width, height, bpp, data, wm);
+    xrdp_painter_copy(p, b, wm->target_surface, x, y, cx, cy, srcx, srcy);
+    xrdp_bitmap_delete(b);
+    return 0;
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_composite(struct xrdp_mod* mod, int srcidx, int srcformat,
+                 int srcwidth, int srcrepeat, int* srctransform,
+                 int mskflags, int mskidx, int mskformat, int mskwidth,
+                 int mskrepeat, int op, int srcx, int srcy,
+                 int mskx, int msky, int dstx, int dsty,
+                 int width, int height, int dstformat)
+{
+    struct xrdp_wm* wm;
+    struct xrdp_bitmap* b;
+    struct xrdp_bitmap* msk;
+    struct xrdp_painter* p;
+    struct xrdp_os_bitmap_item* bi;
+    
+    p = (struct xrdp_painter*)(mod->painter);
+    if (p == 0)
+    {
+        return 0;
+    }
+    wm = (struct xrdp_wm*)(mod->wm);
+    b = 0;
+    msk = 0;
+    bi = xrdp_cache_get_os_bitmap(wm->cache, srcidx);
+    if (bi != 0)
+    {
+        b = bi->bitmap;
+    }
+    if (mskflags & 1)
+    {
+        bi = xrdp_cache_get_os_bitmap(wm->cache, mskidx);
+        if (bi != 0)
+        {
+            msk = bi->bitmap;
+        }
+    }
+    if (b != 0)
+    {
+        xrdp_painter_composite(p, b, srcformat, srcwidth, srcrepeat,
+                               wm->target_surface, srctransform,
+                               mskflags, msk, mskformat, mskwidth, mskrepeat,
+                               op, srcx, srcy, mskx, msky, dstx, dsty,
+                               width, height, dstformat);
+    }
+    else
+    {
+        g_writeln("server_composite: error finding id %d or %d", srcidx, mskidx);
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
 server_set_pointer(struct xrdp_mod *mod, int x, int y,
                    char *data, char *mask)
 {
@@ -2033,6 +2372,7 @@ server_add_char(struct xrdp_mod *mod, int font, int charactor,
     fi.height = height;
     fi.incby = 0;
     fi.data = data;
+    fi.bpp = 1;
     return libxrdp_orders_send_font(((struct xrdp_wm *)mod->wm)->session,
                                     &fi, font, charactor);
 }
@@ -2413,6 +2753,29 @@ server_create_os_surface(struct xrdp_mod *mod, int rdpindex,
 
 /*****************************************************************************/
 int DEFAULT_CC
+server_create_os_surface_bpp(struct xrdp_mod* mod, int rdpindex,
+                             int width, int height, int bpp)
+{
+    struct xrdp_wm* wm;
+    struct xrdp_bitmap* bitmap;
+    int error;
+    
+    wm = (struct xrdp_wm*)(mod->wm);
+    bitmap = xrdp_bitmap_create(width, height, bpp,
+                                WND_TYPE_OFFSCREEN, wm);
+    error = xrdp_cache_add_os_bitmap(wm->cache, bitmap, rdpindex);
+    if (error != 0)
+    {
+        g_writeln("server_create_os_surface_bpp: xrdp_cache_add_os_bitmap failed");
+        return 1;
+    }
+    bitmap->item_index = rdpindex;
+    bitmap->id = rdpindex;
+    return 0;
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
 server_switch_os_surface(struct xrdp_mod *mod, int rdpindex)
 {
     struct xrdp_wm *wm;
@@ -2630,3 +2993,23 @@ server_monitored_desktop(struct xrdp_mod *mod,
     wm = (struct xrdp_wm *)(mod->wm);
     return libxrdp_monitored_desktop(wm->session, mdo, flags);
 }
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_add_char_alpha(struct xrdp_mod* mod, int font, int charactor,
+                      int offset, int baseline,
+                      int width, int height, char* data)
+{
+    struct xrdp_font_char fi;
+
+    fi.offset = offset;
+    fi.baseline = baseline;
+    fi.width = width;
+    fi.height = height;
+    fi.incby = 0;
+    fi.data = data;
+    fi.bpp = 8;
+    return libxrdp_orders_send_font(((struct xrdp_wm*)mod->wm)->session,
+                                    &fi, font, charactor);
+}
+

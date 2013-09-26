@@ -196,7 +196,7 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
             else
             {
                 draw_item_add_img_region(pDirtyPriv, fill_reg, GXcopy,
-                                         dirty_type, 2);
+                                         dirty_type, TAG_POLYFILLRECT);
             }
         }
         else if (got_id)
@@ -264,7 +264,7 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
                 {
                     LLOGLN(10, ("rdpPolyFillRect: 4"));
                     draw_item_add_img_region(pDirtyPriv, &clip_reg, GXcopy,
-                                             dirty_type, 2);
+                                             dirty_type, TAG_POLYFILLRECT);
                 }
             }
             else if (got_id)

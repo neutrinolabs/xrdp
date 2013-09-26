@@ -131,6 +131,10 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
         {
             client_info->max_bpp = g_atoi(value);
         }
+        else if (g_strcasecmp(item, "rfx_min_pixel") == 0)
+        {
+            client_info->rfx_min_pixel = g_atoi(value);
+        }
         else if (g_strcasecmp(item, "new_cursors") == 0)
         {
             client_info->pointer_flags = g_text2bool(value) == 0 ? 2 : 0;
@@ -595,6 +599,7 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp *self)
     int caps_size;
     int codec_caps_count;
     int codec_caps_size;
+    int flags;
     char *caps_count_ptr;
     char *caps_size_ptr;
     char *caps_ptr;
@@ -688,38 +693,38 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp *self)
     out_uint16_le(s, 0x2f); /* Number of fonts */
     out_uint16_le(s, 0x22); /* Capability flags */
     /* caps */
-    out_uint8(s, 1); /* dest blt */
-    out_uint8(s, 1); /* pat blt */
-    out_uint8(s, 1); /* screen blt */
-    out_uint8(s, 1); /* mem blt */
-    out_uint8(s, 0); /* tri blt */
-    out_uint8(s, 0); /* unused */
-    out_uint8(s, 0); /* unused */
-    out_uint8(s, 0); /* nine grid */
-    out_uint8(s, 1); /* line to */
-    out_uint8(s, 0); /* multi nine grid */
-    out_uint8(s, 1); /* rect */
-    out_uint8(s, 0); /* desk save */
-    out_uint8(s, 0); /* unused */
-    out_uint8(s, 0); /* unused */
-    out_uint8(s, 0); /* unused */
-    out_uint8(s, 0); /* multi dest blt */
-    out_uint8(s, 0); /* multi pat blt */
-    out_uint8(s, 0); /* multi screen blt */
-    out_uint8(s, 1); /* multi rect */
-    out_uint8(s, 0); /* fast index */
-    out_uint8(s, 0); /* polygonSC ([MS-RDPEGDI], 2.2.2.2.1.1.2.16) */
-    out_uint8(s, 0); /* polygonCB ([MS-RDPEGDI], 2.2.2.2.1.1.2.17) */
-    out_uint8(s, 0); /* polyline */
-    out_uint8(s, 0); /* unused */
-    out_uint8(s, 0); /* fast glyph */
-    out_uint8(s, 0); /* ellipse */
-    out_uint8(s, 0); /* ellipse */
-    out_uint8(s, 0); /* ? */
-    out_uint8(s, 0); /* unused */
-    out_uint8(s, 0); /* unused */
-    out_uint8(s, 0); /* unused */
-    out_uint8(s, 0); /* unused */
+    out_uint8(s, 1); /* NEG_DSTBLT_INDEX                0x00 0 */
+    out_uint8(s, 1); /* NEG_PATBLT_INDEX                0x01 1 */
+    out_uint8(s, 1); /* NEG_SCRBLT_INDEX                0x02 2 */
+    out_uint8(s, 1); /* NEG_MEMBLT_INDEX                0x03 3 */
+    out_uint8(s, 0); /* NEG_MEM3BLT_INDEX               0x04 4 */
+    out_uint8(s, 0); /* NEG_ATEXTOUT_INDEX              0x05 5 */
+    out_uint8(s, 0); /* NEG_AEXTTEXTOUT_INDEX           0x06 6 */
+    out_uint8(s, 0); /* NEG_DRAWNINEGRID_INDEX          0x07 7 */
+    out_uint8(s, 1); /* NEG_LINETO_INDEX                0x08 8 */
+    out_uint8(s, 0); /* NEG_MULTI_DRAWNINEGRID_INDEX    0x09 9 */
+    out_uint8(s, 1); /* NEG_OPAQUE_RECT_INDEX           0x0A 10 */
+    out_uint8(s, 0); /* NEG_SAVEBITMAP_INDEX            0x0B 11 */
+    out_uint8(s, 0); /* NEG_WTEXTOUT_INDEX              0x0C 12 */
+    out_uint8(s, 0); /* NEG_MEMBLT_V2_INDEX             0x0D 13 */
+    out_uint8(s, 0); /* NEG_MEM3BLT_V2_INDEX            0x0E 14 */
+    out_uint8(s, 0); /* NEG_MULTIDSTBLT_INDEX           0x0F 15 */
+    out_uint8(s, 0); /* NEG_MULTIPATBLT_INDEX           0x10 16 */
+    out_uint8(s, 0); /* NEG_MULTISCRBLT_INDEX           0x11 17 */
+    out_uint8(s, 1); /* NEG_MULTIOPAQUERECT_INDEX       0x12 18 */
+    out_uint8(s, 0); /* NEG_FAST_INDEX_INDEX            0x13 19 */
+    out_uint8(s, 0); /* NEG_POLYGON_SC_INDEX            0x14 20 */
+    out_uint8(s, 0); /* NEG_POLYGON_CB_INDEX            0x15 21 */
+    out_uint8(s, 0); /* NEG_POLYLINE_INDEX              0x16 22 */
+    out_uint8(s, 0); /* unused                          0x17 23 */
+    out_uint8(s, 0); /* NEG_FAST_GLYPH_INDEX            0x18 24 */
+    out_uint8(s, 0); /* NEG_ELLIPSE_SC_INDEX            0x19 25 */
+    out_uint8(s, 0); /* NEG_ELLIPSE_CB_INDEX            0x1A 26 */
+    out_uint8(s, 1); /* NEG_GLYPH_INDEX_INDEX           0x1B 27 */
+    out_uint8(s, 0); /* NEG_GLYPH_WEXTTEXTOUT_INDEX     0x1C 28 */
+    out_uint8(s, 0); /* NEG_GLYPH_WLONGTEXTOUT_INDEX    0x1D 29 */
+    out_uint8(s, 0); /* NEG_GLYPH_WLONGEXTTEXTOUT_INDEX 0x1E 30 */
+    out_uint8(s, 0); /* unused                          0x1F 31 */
     out_uint16_le(s, 0x6a1);
     /* declare support of bitmap cache rev3 */
     out_uint16_le(s, XR_ORDERFLAGS_EX_CACHE_BITMAP_REV3_SUPPORT);
@@ -782,18 +787,16 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp *self)
     caps_count++;
     out_uint16_le(s, RDP_CAPSET_INPUT); /* 13(0xd) */
     out_uint16_le(s, RDP_CAPLEN_INPUT); /* 88(0x58) */
+
+    /* INPUT_FLAG_SCANCODES 0x0001
+       INPUT_FLAG_MOUSEX 0x0004
+       INPUT_FLAG_FASTPATH_INPUT 0x0008
+       INPUT_FLAG_FASTPATH_INPUT2 0x0020 */
+    flags = 0x0001 | 0x0004;
     if (self->client_info.use_fast_path & 2)
-    {
-        /* INPUT_FLAG_SCANCODES 0x0001
-           INPUT_FLAG_FASTPATH_INPUT 0x0008
-           INPUT_FLAG_FASTPATH_INPUT2 0x0020 */
-        out_uint8(s, 1 | 8 | 0x20);
-    }
-    else
-    {
-        out_uint8(s, 1);
-    }
-    out_uint8s(s, 83);
+        flags |= 0x0008 | 0x0020;
+    out_uint16_le(s, flags);
+    out_uint8s(s, 82);
 
     /* Remote Programs Capability Set */
     caps_count++;
@@ -1410,15 +1413,16 @@ xrdp_rdp_process_data_input(struct xrdp_rdp *self, struct stream *s)
         in_uint16_le(s, device_flags);
         in_sint16_le(s, param1);
         in_sint16_le(s, param2);
-        DEBUG(("xrdp_rdp_process_data_input event %4.4x flags %4.4x param1 %d \
-param2 %d time %d", msg_type, device_flags, param1, param2, time));
+        DEBUG(("xrdp_rdp_process_data_input event %4.4x flags %4.4x param1 %d "
+               "param2 %d time %d", msg_type, device_flags, param1, param2, time));
 
         if (self->session->callback != 0)
         {
             /* msg_type can be
                RDP_INPUT_SYNCHRONIZE - 0
                RDP_INPUT_SCANCODE - 4
-               RDP_INPUT_MOUSE - 0x8001 */
+               RDP_INPUT_MOUSE - 0x8001
+               RDP_INPUT_MOUSEX - 0x8002 */
             /* call to xrdp_wm.c : callback */
             self->session->callback(self->session->id, msg_type, param1, param2,
                                     device_flags, time);

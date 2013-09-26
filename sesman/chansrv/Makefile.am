@@ -61,5 +61,5 @@ xrdp_chansrv_LDFLAGS = \
 xrdp_chansrv_LDADD = \
   -L/usr/X11R6/lib \
   $(top_builddir)/common/libcommon.la \
-  -lX11 -lXfixes \
+  -lX11 -lXfixes -lXrandr \
   $(EXTRA_LIBS)

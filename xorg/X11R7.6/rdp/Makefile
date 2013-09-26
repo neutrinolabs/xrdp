@@ -13,7 +13,7 @@ rdpPolylines.o rdpPolySegment.o rdpFillSpans.o rdpSetSpans.o \
 rdpCopyPlane.o rdpPolyPoint.o rdpPolyArc.o rdpFillPolygon.o \
 rdpPolyFillArc.o rdpPolyText8.o rdpPolyText16.o \
 rdpImageText8.o rdpImageText16.o rdpImageGlyphBlt.o rdpPolyGlyphBlt.o \
-rdpPushPixels.o rdpxv.o \
+rdpPushPixels.o rdpxv.o rdpglyph.o rdpComposite.o \
 miinitext.o \
 fbcmap_mi.o
 
@@ -43,7 +43,7 @@ LIBS = $(XSRCBASE)/dbe/.libs/libdbe.a \
 LLIBS = -Wl,-rpath=$(LIBBASE) -lfreetype -lz -lm -lXfont -lXau \
 	-lXdmcp -lpixman-1 -lrt -ldl -lcrypto -lGL -lXdamage
 
-CFLAGS = -O2 -Wall -fno-strength-reduce \
+CFLAGS = -g -O2 -Wall -fno-strength-reduce \
 	-I../../include \
 	-I../../cfb \
 	-I../../mfb \

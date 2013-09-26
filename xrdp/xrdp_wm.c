@@ -401,7 +401,7 @@ xrdp_wm_load_static_colors_plus(struct xrdp_wm *self, char *autorun_name)
                     if (g_strcasecmp(val, "black") == 0)
                     {
                         val = (char *)list_get_item(values, index);
-                        self->black = HCOLOR(self->screen->bpp, xrdp_wm_htoi(val));
+                        self->black = HCOLOR(self->screen->bpp,xrdp_wm_htoi(val));
                     }
                     else if (g_strcasecmp(val, "grey") == 0)
                     {
@@ -1221,6 +1221,22 @@ xrdp_wm_mouse_click(struct xrdp_wm *self, int x, int y, int but, int down)
                     self->mm->mod->mod_event(self->mm->mod, WM_BUTTON5UP,
                                              self->mouse_x, self->mouse_y, 0, 0);
                 }
+                if (but == 6 && down)
+                {
+                    self->mm->mod->mod_event(self->mm->mod, WM_BUTTON6DOWN, x, y, 0, 0);
+                }
+                else if (but == 6 && !down)
+                {
+                    self->mm->mod->mod_event(self->mm->mod, WM_BUTTON6UP, x, y, 0, 0);
+                }
+                if (but == 7 && down)
+                {
+                    self->mm->mod->mod_event(self->mm->mod, WM_BUTTON7DOWN, x, y, 0, 0);
+                }
+                else if (but == 7 && !down)
+                {
+                    self->mm->mod->mod_event(self->mm->mod, WM_BUTTON7UP, x, y, 0, 0);
+                }
             }
         }
     }
@@ -1528,18 +1544,48 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
         }
     }
 
-    if (device_flags == MOUSE_FLAG_BUTTON4 || /* 0x0280 */
-            device_flags == 0x0278)
+    if (device_flags & 0x200) /* PTRFLAGS_WHEEL */
     {
-        xrdp_wm_mouse_click(self, 0, 0, 4, 0);
+        if (device_flags & 0x100) /* PTRFLAGS_WHEEL_NEGATIVE */
+        {
+            xrdp_wm_mouse_click(self, 0, 0, 5, 0);
+        }
+        else
+        {
+            xrdp_wm_mouse_click(self, 0, 0, 4, 0);
+        }
     }
 
-    if (device_flags == MOUSE_FLAG_BUTTON5 || /* 0x0380 */
-            device_flags == 0x0388)
-    {
-        xrdp_wm_mouse_click(self, 0, 0, 5, 0);
-    }
+    return 0;
+}
 
+/*****************************************************************************/
+static int APP_CC
+xrdp_wm_process_input_mousex(struct xrdp_wm* self, int device_flags,
+                             int x, int y)
+{
+    if (device_flags & 0x8000) /* PTRXFLAGS_DOWN */
+    {
+        if (device_flags & 0x0001) /* PTRXFLAGS_BUTTON1 */
+        {
+            xrdp_wm_mouse_click(self, x, y, 6, 1);
+        }
+        else if (device_flags & 0x0002) /* PTRXFLAGS_BUTTON2 */
+        {
+            xrdp_wm_mouse_click(self, x, y, 7, 1);
+        }
+    }
+    else
+    {
+        if (device_flags & 0x0001) /* PTRXFLAGS_BUTTON1 */
+        {
+            xrdp_wm_mouse_click(self, x, y, 6, 0);
+        }
+        else if (device_flags & 0x0002) /* PTRXFLAGS_BUTTON2 */
+        {
+            xrdp_wm_mouse_click(self, x, y, 7, 0);
+        }
+    }
     return 0;
 }
 
@@ -1615,6 +1661,9 @@ callback(long id, int msg, long param1, long param2, long param3, long param4)
             break;
         case 0x8001: /* RDP_INPUT_MOUSE */
             rv = xrdp_wm_process_input_mouse(wm, param3, param1, param2);
+            break;
+        case 0x8002: /* RDP_INPUT_MOUSEX (INPUT_EVENT_MOUSEX) */
+            rv = xrdp_wm_process_input_mousex(wm, param3, param1, param2);
             break;
         case 0x4444: /* invalidate, this is not from RDP_DATA_PDU_INPUT */
             /* like the rest, its from RDP_PDU_DATA with code 33 */

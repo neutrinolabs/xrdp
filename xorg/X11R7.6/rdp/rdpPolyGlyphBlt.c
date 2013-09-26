@@ -169,7 +169,7 @@ rdpPolyGlyphBlt(DrawablePtr pDrawable, GCPtr pGC,
         if (dirty_type != 0)
         {
             RegionInit(&reg1, &box, 0);
-            draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type, 14);
+            draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type, TAG_POLYGLYPHBLT);
             RegionUninit(&reg1);
         }
         else if (got_id)
@@ -189,7 +189,7 @@ rdpPolyGlyphBlt(DrawablePtr pDrawable, GCPtr pGC,
         {
             if (dirty_type != 0)
             {
-                draw_item_add_img_region(pDirtyPriv, &reg, GXcopy, dirty_type, 14);
+                draw_item_add_img_region(pDirtyPriv, &reg, GXcopy, dirty_type, TAG_POLYGLYPHBLT);
             }
             else if (got_id)
             {

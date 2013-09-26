@@ -53,7 +53,8 @@ struct mod
   int (*server_screen_blt)(struct mod* v, int x, int y, int cx, int cy,
                            int srcx, int srcy);
   int (*server_paint_rect)(struct mod* v, int x, int y, int cx, int cy,
-                           char* data, int width, int height, int srcx, int srcy);
+                           char* data, int width, int height,
+                           int srcx, int srcy);
   int (*server_set_cursor)(struct mod* v, int x, int y, char* data, char* mask);
   int (*server_palette)(struct mod* v, int* palette);
   int (*server_msg)(struct mod* v, char* msg, int code);
@@ -119,8 +120,21 @@ struct mod
                                   int flags);
   int (*server_set_cursor_ex)(struct mod* v, int x, int y, char* data,
                               char* mask, int bpp);
+  int (*server_add_char_alpha)(struct mod* v, int font, int charactor,
+                               int offset, int baseline,
+                               int width, int height, char* data);
+  int (*server_create_os_surface_bpp)(struct mod* v, int rdpindex,
+                                      int width, int height, int bpp);
+  int (*server_paint_rect_bpp)(struct mod* v, int x, int y, int cx, int cy,
+                               char* data, int width, int height,
+                               int srcx, int srcy, int bpp);
+  int (*server_composite)(struct mod* v, int srcidx, int srcformat, int srcwidth,
+                          int srcrepeat, int* srctransform, int mskflags, int mskidx,
+                          int mskformat, int mskwidth, int mskrepeat, int op,
+                          int srcx, int srcy, int mskx, int msky,
+                          int dstx, int dsty, int width, int height, int dstformat);
 
-  tbus server_dumby[100 - 38]; /* align, 100 minus the number of server
+  tbus server_dumby[100 - 42]; /* align, 100 minus the number of server
                                   functions above */
   /* common */
   tbus handle; /* pointer to self as long */

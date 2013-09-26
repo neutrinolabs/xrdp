@@ -24,6 +24,7 @@ Sets up the  functions
 
 #include "rdp.h"
 #include "rdprandr.h"
+#include "rdpglyph.h"
 
 #if 1
 #define DEBUG_OUT(arg)
@@ -46,7 +47,10 @@ DeviceIntPtr g_keyboard = 0;
 int g_can_do_pix_to_pix = 0;
 
 int g_do_dirty_os = 1; /* delay remoting off screen bitmaps */
-int g_do_dirty_ons = 1; /* delay remoting screen */
+int g_do_dirty_ons = 0; /* delay remoting screen */
+int g_do_glyph_cache = 0; /* rdpup.c may set this */
+int g_do_alpha_glyphs = 1;
+int g_do_composite = 0; /* rdpup.c may set this */
 Bool g_wrapWindow = 1;
 Bool g_wrapPixmap = 1;
 
@@ -60,6 +64,7 @@ int g_use_rail = 0;
 int g_con_number = 0; /* increments for each connection */
 
 WindowPtr g_invalidate_window = 0;
+int g_doing_font = 0;
 
 /* if true, use a unix domain socket instead of a tcp socket */
 int g_use_uds = 0;
@@ -273,7 +278,8 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
         g_rdpScreen.sizeInBytes =
             (g_rdpScreen.paddedWidthInBytes * g_rdpScreen.height);
         ErrorF("buffer size %d\n", g_rdpScreen.sizeInBytes);
-        g_rdpScreen.pfbMemory = (char *)g_malloc(2048 * 2048 * 4, 1);
+        g_rdpScreen.pfbMemory = (char *)g_malloc(g_rdpScreen.sizeInBytes, 1);
+        g_rdpScreen.sizeInBytesAlloc = g_rdpScreen.sizeInBytes;
     }
 
     if (g_rdpScreen.pfbMemory == 0)
@@ -397,6 +403,8 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
 
     if (ps)
     {
+        g_rdpScreen.CreatePicture = ps->CreatePicture;
+        g_rdpScreen.DestroyPicture = ps->DestroyPicture;
         g_rdpScreen.Composite = ps->Composite;
         g_rdpScreen.Glyphs = ps->Glyphs;
 
@@ -410,6 +418,8 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
 
     if (ps)
     {
+        ps->CreatePicture = rdpCreatePicture;
+        ps->DestroyPicture = rdpDestroyPicture;
         ps->Composite = rdpComposite;
         ps->Glyphs = rdpGlyphs;
     }
@@ -529,6 +539,8 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
 
     }
 
+    rdpGlyphInit();
+    
     //rdpXvInit(pScreen);
 
     ErrorF("rdpScreenInit: ret %d\n", ret);

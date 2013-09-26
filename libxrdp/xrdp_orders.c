@@ -48,6 +48,11 @@ xrdp_orders_create(struct xrdp_session *session, struct xrdp_rdp *rdp_layer)
     self->orders_state.clip_right = 1; /* silly rdp right clip */
     self->orders_state.clip_bottom = 1; /* silly rdp bottom clip */
     self->jpeg_han = xrdp_jpeg_init();
+    self->rfx_min_pixel = rdp_layer->client_info.rfx_min_pixel;
+    if (self->rfx_min_pixel == 0)
+    {
+        self->rfx_min_pixel = 64 * 32;
+    }
     return self;
 }
 
@@ -1594,6 +1599,332 @@ xrdp_orders_mem_blt(struct xrdp_orders *self, int cache_id,
 /*****************************************************************************/
 /* returns error */
 int APP_CC
+xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
+                          int srcwidth, int srcrepeat, int* srctransform,
+                          int mskflags, int mskidx, int mskformat,
+                          int mskwidth, int mskrepeat, int op,
+                          int srcx, int srcy, int mskx, int msky,
+                          int dstx, int dsty, int width, int height,
+                          int dstformat,
+                          struct xrdp_rect* rect)
+{
+    int order_flags;
+    int vals[20];
+    int present;
+    char* present_ptr;
+    char* order_flags_ptr;
+    
+    xrdp_orders_check(self, 80);
+    self->order_count++;
+    order_flags = RDP_ORDER_STANDARD;
+    if (self->orders_state.last_order != RDP_ORDER_COMPOSITE)
+    {
+        order_flags |= RDP_ORDER_CHANGE;
+    }
+    self->orders_state.last_order = RDP_ORDER_COMPOSITE;
+    if (rect != 0)
+    {
+        /* if clip is present, still check if its needed */
+        if (dstx < rect->left || dsty < rect->top ||
+            dstx + width > rect->right || dsty + height > rect->bottom)
+        {
+            order_flags |= RDP_ORDER_BOUNDS;
+            if (xrdp_orders_last_bounds(self, rect))
+            {
+                
+                order_flags |= RDP_ORDER_LASTBOUNDS;
+                
+            }
+        }
+    }
+    vals[0] = srcx;
+    vals[1] = self->orders_state.com_blt_srcx;
+    vals[2] = srcy;
+    vals[3] = self->orders_state.com_blt_srcy;
+    vals[4] = mskx;
+    vals[5] = self->orders_state.com_blt_mskx;
+    vals[6] = msky;
+    vals[7] = self->orders_state.com_blt_msky;
+    vals[8] = dstx;
+    vals[9] = self->orders_state.com_blt_dstx;
+    vals[10] = dsty;
+    vals[11] = self->orders_state.com_blt_dsty;
+    vals[12] = width;
+    vals[13] = self->orders_state.com_blt_width;
+    vals[14] = height;
+    vals[15] = self->orders_state.com_blt_height;
+    vals[16] = srcwidth;
+    vals[17] = self->orders_state.com_blt_srcwidth;
+    vals[18] = mskwidth;
+    vals[19] = self->orders_state.com_blt_mskwidth;
+    if (xrdp_orders_send_delta(self, vals, 20))
+    {
+        order_flags |= RDP_ORDER_DELTA;
+    }
+    /* order_flags, set later, 1 byte */
+    order_flags_ptr = self->out_s->p;
+    out_uint8s(self->out_s, 1);
+    if (order_flags & RDP_ORDER_CHANGE)
+    {
+        out_uint8(self->out_s, self->orders_state.last_order);
+    }
+    present = 0;
+    /* present, set later, 3 bytes */
+    present_ptr = self->out_s->p;
+    out_uint8s(self->out_s, 3);
+    if ((order_flags & RDP_ORDER_BOUNDS) &&
+        !(order_flags & RDP_ORDER_LASTBOUNDS))
+    {
+        xrdp_orders_out_bounds(self, rect);
+    }
+    
+    if (srcidx != self->orders_state.com_blt_srcidx)
+    {
+        present |= 0x000001;
+        out_uint16_le(self->out_s, srcidx);
+        self->orders_state.com_blt_srcidx = srcidx;
+    }
+    
+    if (srcformat != self->orders_state.com_blt_srcformat)
+    {
+        present |= 0x000002;
+        out_uint32_le(self->out_s, srcformat);
+        self->orders_state.com_blt_srcformat = srcformat;
+    }
+    
+    if (srcwidth != self->orders_state.com_blt_srcwidth)
+    {
+        present |= 0x000004;
+        if (order_flags & RDP_ORDER_DELTA)
+        {
+            out_uint8(self->out_s, srcwidth - self->orders_state.com_blt_srcwidth);
+        }
+        else
+        {
+            out_uint16_le(self->out_s, srcwidth);
+        }
+        self->orders_state.com_blt_srcwidth = srcwidth;
+    }
+    
+    if (srcrepeat != self->orders_state.com_blt_srcrepeat)
+    {
+        present |= 0x000008;
+        out_uint8(self->out_s, srcrepeat);
+        self->orders_state.com_blt_srcrepeat = srcrepeat;
+    }
+    
+    if (srctransform != 0)
+    {
+        if (srctransform[0] != self->orders_state.com_blt_srctransform[0])
+        {
+            present |= 0x000010;
+            out_uint32_le(self->out_s, srctransform[0]);
+            self->orders_state.com_blt_srctransform[0] = srctransform[0];
+        }
+        if (g_memcmp(&(srctransform[1]),
+                     &(self->orders_state.com_blt_srctransform[1]),
+                     36) != 0)
+        {
+            present |= 0x000020;
+            out_uint32_le(self->out_s, srctransform[1]);
+            out_uint32_le(self->out_s, srctransform[2]);
+            out_uint32_le(self->out_s, srctransform[3]);
+            out_uint32_le(self->out_s, srctransform[4]);
+            out_uint32_le(self->out_s, srctransform[5]);
+            out_uint32_le(self->out_s, srctransform[6]);
+            out_uint32_le(self->out_s, srctransform[7]);
+            out_uint32_le(self->out_s, srctransform[8]);
+            out_uint32_le(self->out_s, srctransform[9]);
+        }
+    }
+    else
+    {
+        if (self->orders_state.com_blt_srctransform[0] != 0)
+        {
+            present |= 0x000010;
+            out_uint32_le(self->out_s, 0);
+            self->orders_state.com_blt_srctransform[0] = 0;
+        }
+    }
+    
+    if (mskflags != self->orders_state.com_blt_mskflags)
+    {
+        present |= 0x000040;
+        out_uint8(self->out_s, mskflags);
+        self->orders_state.com_blt_mskflags = mskflags;
+    }
+    
+    if (mskidx != self->orders_state.com_blt_mskidx)
+    {
+        present |= 0x000080;
+        out_uint16_le(self->out_s, mskidx);
+        self->orders_state.com_blt_mskidx = mskidx;
+    }
+    
+    if (mskformat != self->orders_state.com_blt_mskformat)
+    {
+        present |= 0x000100;
+        out_uint32_le(self->out_s, mskformat);
+        self->orders_state.com_blt_mskformat = mskformat;
+    }
+
+    if (mskwidth != self->orders_state.com_blt_mskwidth)
+    {
+        present |= 0x000200;
+        if (order_flags & RDP_ORDER_DELTA)
+        {
+            out_uint8(self->out_s, mskwidth - self->orders_state.com_blt_mskwidth);
+        }
+        else
+        {
+            out_uint16_le(self->out_s, mskwidth);
+        }
+        self->orders_state.com_blt_mskwidth = mskwidth;
+    }
+    
+    if (mskrepeat != self->orders_state.com_blt_mskrepeat)
+    {
+        present |= 0x000400;
+        out_uint8(self->out_s, mskrepeat);
+        self->orders_state.com_blt_mskrepeat = mskrepeat;
+    }
+    
+    if (op != self->orders_state.com_blt_op)
+    {
+        present |= 0x000800;
+        out_uint8(self->out_s, op);
+        self->orders_state.com_blt_op = op;
+    }
+    
+    if (srcx != self->orders_state.com_blt_srcx)
+    {
+        present |= 0x001000;
+        if (order_flags & RDP_ORDER_DELTA)
+        {
+            out_uint8(self->out_s, srcx - self->orders_state.com_blt_srcx);
+        }
+        else
+        {
+            out_uint16_le(self->out_s, srcx);
+        }
+        self->orders_state.com_blt_srcx = srcx;
+    }
+    
+    if (srcy != self->orders_state.com_blt_srcy)
+    {
+        present |= 0x002000;
+        if (order_flags & RDP_ORDER_DELTA)
+        {
+            out_uint8(self->out_s, srcy - self->orders_state.com_blt_srcy);
+        }
+        else
+        {
+            out_uint16_le(self->out_s, srcy);
+        }
+        self->orders_state.com_blt_srcy = srcy;
+    }
+    
+    if (mskx != self->orders_state.com_blt_mskx)
+    {
+        present |= 0x004000;
+        if (order_flags & RDP_ORDER_DELTA)
+        {
+            out_uint8(self->out_s, mskx - self->orders_state.com_blt_mskx);
+        }
+        else
+        {
+            out_uint16_le(self->out_s, mskx);
+        }
+        self->orders_state.com_blt_mskx = mskx;
+    }
+    
+    if (msky != self->orders_state.com_blt_msky)
+    {
+        present |= 0x008000;
+        if (order_flags & RDP_ORDER_DELTA)
+        {
+            out_uint8(self->out_s, msky - self->orders_state.com_blt_msky);
+        }
+        else
+        {
+            out_uint16_le(self->out_s, msky);
+        }
+        self->orders_state.com_blt_msky = msky;
+    }
+    
+    if (dstx != self->orders_state.com_blt_dstx)
+    {
+        present |= 0x010000;
+        if (order_flags & RDP_ORDER_DELTA)
+        {
+            out_uint8(self->out_s, dstx - self->orders_state.com_blt_dstx);
+        }
+        else
+        {
+            out_uint16_le(self->out_s, dstx);
+        }
+        self->orders_state.com_blt_dstx = dstx;
+    }
+    
+    if (dsty != self->orders_state.com_blt_dsty)
+    {
+        present |= 0x020000;
+        if (order_flags & RDP_ORDER_DELTA)
+        {
+            out_uint8(self->out_s, dsty - self->orders_state.com_blt_dsty);
+        }
+        else
+        {
+            out_uint16_le(self->out_s, dsty);
+        }
+        self->orders_state.com_blt_dsty = dsty;
+    }
+    
+    if (width != self->orders_state.com_blt_width)
+    {
+        present |= 0x040000;
+        if (order_flags & RDP_ORDER_DELTA)
+        {
+            out_uint8(self->out_s, width - self->orders_state.com_blt_width);
+        }
+        else
+        {
+            out_uint16_le(self->out_s, width);
+        }
+        self->orders_state.com_blt_width = width;
+    }
+    
+    if (height != self->orders_state.com_blt_height)
+    {
+        present |= 0x080000;
+        if (order_flags & RDP_ORDER_DELTA)
+        {
+            out_uint8(self->out_s, height - self->orders_state.com_blt_height);
+        }
+        else
+        {
+            out_uint16_le(self->out_s, height);
+        }
+        self->orders_state.com_blt_height = height;
+    }
+
+    if (dstformat != self->orders_state.com_blt_dstformat)
+    {
+        present |= 0x100000;
+        out_uint32_le(self->out_s, dstformat);
+        self->orders_state.com_blt_dstformat = dstformat;
+    }
+    
+    xrdp_order_pack_small_or_tiny(self, order_flags_ptr, order_flags,
+                                  
+                                  present_ptr, present, 3);
+    
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
 xrdp_orders_text(struct xrdp_orders *self,
                  int font, int flags, int mixmode,
                  int fg_color, int bg_color,
@@ -2017,15 +2348,25 @@ xrdp_orders_send_font(struct xrdp_orders *self,
     int order_flags = 0;
     int datasize = 0;
     int len = 0;
+    int flags;
 
-    datasize = FONT_DATASIZE(font_char);
+    if (font_char->bpp == 8) /* alpha font */
+    {
+        datasize = ((font_char->width + 3) & ~3) * font_char->height;
+        flags = 8 | 0x4000;
+    }
+    else
+    {
+        datasize = FONT_DATASIZE(font_char);
+        flags = 8;
+    }
     xrdp_orders_check(self, datasize + 18);
     self->order_count++;
     order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
     out_uint8(self->out_s, order_flags);
     len = (datasize + 12) - 7; /* length after type minus 7 */
     out_uint16_le(self->out_s, len);
-    out_uint16_le(self->out_s, 8); /* flags */
+    out_uint16_le(self->out_s, flags);
     out_uint8(self->out_s, RDP_ORDER_FONTCACHE); /* type */
     out_uint8(self->out_s, font_index);
     out_uint8(self->out_s, 1); /* num of chars */
@@ -2268,7 +2609,9 @@ xrdp_orders_send_as_rfx(struct xrdp_orders *self,
         return 0;
     }
 
-    if (width * height < 64)
+    LLOGLN(10, ("width %d height %d rfx_min_pixel %d", width, height,
+                self->rfx_min_pixel));
+    if (width * height < self->rfx_min_pixel)
     {
         return 0;
     }
