@@ -63,19 +63,37 @@ typedef struct reader_state
      *  SCARD_SHARE_DIRECT     app demands direct control of smart card, hence
      *                         it is not available to other readers
      */
-    tui32  shared_mode_flag;
+    tui32  dwShareMode;
 
     /*
      * This field MUST have a value from Table A which is logically
      * OR'ed with a value from Table B.
      */
-    tui32  preferred_protocol;
+    tui32  dwPreferredProtocols;
 
     /*
      * initialization type, must be one of the initialization type
      * defined above
      */
     tui32  init_type;
+
+    /* required by scard_send_transmit(), scard_send_control() */
+    tui32 map0;
+    tui32 map1;
+    tui32 map2;
+    tui32 map3;
+    tui32 map4;
+    tui32 map5;
+    tui32 map6;
+
+    tui32 dwProtocol;
+    tui32 cbPciLength;
+    tui32 cbSendLength;
+    tui32 cbRecvLength;
+    tui32 dwControlCode;
+    tui32 cbOutBufferSize;
+    tui32 dwAttribId;
+    tui32 dwAttrLen;
 
 } READER_STATE;
 
@@ -104,14 +122,22 @@ int  APP_CC scard_send_end_transaction(struct trans *con, tui32 sc_handle);
 int  APP_CC scard_send_status(struct trans *con, int wide, tui32 sc_handle);
 int  APP_CC scard_send_disconnect(struct trans *con, tui32 context, tui32 sc_handle);
 
+int  APP_CC scard_send_transmit(struct trans *con, tui32 sc_handle,
+                                READER_STATE* rs);
+
+int  APP_CC scard_send_control(struct trans *con, tui32 context, tui32 sc_handle,
+                               READER_STATE* rs);
+
+int  APP_CC scard_send_cancel(struct trans *con, tui32 context);
+
+int  APP_CC scard_send_get_attrib(struct trans *con, tui32 sc_handle,
+                                  READER_STATE* rs);
+
 /*
- SCardReconnect
- SCardTransmit
- SCardControl
- SCardListReaderGroups
- not needed: SCardFreeMemory
- SCardCancel
- SCardGetAttrib
- SCardSetAttrib
+ * Notes:
+ *      SCardTransmit - partially done
+ *      SCardControl - partially done
+ *      SCardListReaderGroups - not supported
+ *      SCardSetAttrib - not supported
  */
 #endif /* end #ifndef _SMARTCARD_C */

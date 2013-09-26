@@ -338,11 +338,11 @@ scard_process_connect(struct trans *con, struct stream *in_s)
     g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_C;
     in_uint32_le(in_s, hContext);
     in_uint8a(in_s, szReader, 100);
-    in_uint32_le(in_s, rs.shared_mode_flag);
-    in_uint32_le(in_s, rs.preferred_protocol);
+    in_uint32_le(in_s, rs.dwShareMode);
+    in_uint32_le(in_s, rs.dwPreferredProtocols);
     LLOGLN(0, ("scard_process_connect: dwShareMode 0x%8.8x "
-           "dwPreferredProtocols 0x%8.8x", rs.shared_mode_flag,
-           rs.preferred_protocol));
+           "dwPreferredProtocols 0x%8.8x", rs.dwShareMode,
+           rs.dwPreferredProtocols));
     scard_send_connect(con, hContext, 1, &rs);
     return 0;
 }
