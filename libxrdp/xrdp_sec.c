@@ -984,13 +984,14 @@ xrdp_sec_out_mcs_data(struct xrdp_sec *self)
     out_uint8(s, 0x63); /* c */
     out_uint8(s, 0x44); /* D */
     out_uint8(s, 0x6e); /* n */
-    out_uint16_be(s, 0x80fc + (num_channels_even * 2));
+    out_uint16_be(s, 0x80fc + (num_channels_even * 2) + 4);
     out_uint16_le(s, SEC_TAG_SRV_INFO);
-    out_uint16_le(s, 8); /* len */
+    out_uint16_le(s, 12); /* len */
     out_uint8(s, 4); /* 4 = rdp5 1 = rdp4 */
     out_uint8(s, 0);
     out_uint8(s, 8);
     out_uint8(s, 0);
+    out_uint32_le(s, PROTOCOL_RDP); /* clientReqeustedProtocol */ //TODO: pass it through sec_layer->selectedProtocol
     out_uint16_le(s, SEC_TAG_SRV_CHANNELS);
     out_uint16_le(s, 8 + (num_channels_even * 2)); /* len */
     out_uint16_le(s, MCS_GLOBAL_CHANNEL); /* 1003, 0x03eb main channel */

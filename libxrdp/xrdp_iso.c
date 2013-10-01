@@ -119,9 +119,6 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code)
     in_uint8s(s, 1);
     in_uint16_be(s, len);
 
-    // print CR packet hex dump
-    g_hexdump(s->p, len);
-
     if (xrdp_tcp_recv(self->tcp_layer, s, len - 4) != 0)
     {
         return 1;
