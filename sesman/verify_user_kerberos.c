@@ -431,6 +431,14 @@ auth_start_session(void)
 }
 
 /******************************************************************************/
+/* returns error */
+int DEFAULT_CC
+auth_stop_session(long in_val)
+{
+    return 0;
+}
+
+/******************************************************************************/
 int DEFAULT_CC
 auth_end(void)
 {

@@ -62,11 +62,11 @@ static int g_sync_cmd;
 char *APP_CC
 dumpItemsToString(struct list *self, char *outstr, int len)
 {
-    g_memset(outstr, 0, len);
     int index;
     tbus item;
     int totalLen = 0;
 
+    g_memset(outstr, 0, len);
     if (self->count == 0)
     {
         g_writeln("List is empty");
@@ -385,6 +385,7 @@ session_start_fork(int width, int height, int bpp, char *username,
     int display = 0;
     int pid = 0;
     int wmpid = 0;
+    int pampid = 0;
     int xpid = 0;
     int i = 0;
     char geometry[32];
@@ -453,99 +454,105 @@ session_start_fork(int width, int height, int bpp, char *username,
     {
         g_tcp_close(g_sck);
         g_tcp_close(g_thread_sck);
-        auth_start_session(data, display);
         g_sprintf(geometry, "%dx%d", width, height);
         g_sprintf(depth, "%d", bpp);
         g_sprintf(screen, ":%d", display);
         wmpid = g_fork();
-
         if (wmpid == -1)
         {
         }
         else if (wmpid == 0) /* child (child sesman) xserver */
         {
             wait_for_xserver(display);
-            env_set_user(username, 0, display);
-
-            if (x_server_running(display))
+            auth_start_session(data, display);
+            pampid = g_fork();
+            if (pampid == -1)
             {
-                auth_set_env(data);
-
-                if (directory != 0)
+            }
+            else if (pampid == 0) /* child: X11/client */
+            {
+                env_set_user(username, 0, display);
+                if (x_server_running(display))
                 {
-                    if (directory[0] != 0)
+                    auth_set_env(data);
+                    if (directory != 0)
                     {
-                        g_set_current_dir(directory);
+                        if (directory[0] != 0)
+                        {
+                            g_set_current_dir(directory);
+                        }
                     }
+                    if (program != 0)
+                    {
+                        if (program[0] != 0)
+                        {
+                            g_execlp3(program, program, 0);
+                            log_message(LOG_LEVEL_ALWAYS,
+                                        "error starting program %s for user %s - pid %d",
+                                        program, username, g_getpid());
+                        }
+                    }
+                    /* try to execute user window manager if enabled */
+                    if (g_cfg->enable_user_wm)
+                    {
+                        g_sprintf(text, "%s/%s", g_getenv("HOME"), g_cfg->user_wm);
+                        if (g_file_exist(text))
+                        {
+                            g_execlp3(text, g_cfg->user_wm, 0);
+                            log_message(LOG_LEVEL_ALWAYS, "error starting user "
+                                        "wm for user %s - pid %d", username, g_getpid());
+                            /* logging parameters */
+                            log_message(LOG_LEVEL_DEBUG, "errno: %d, "
+                                        "description: %s", errno, g_get_strerror());
+                            log_message(LOG_LEVEL_DEBUG, "execlp3 parameter "
+                                        "list:");
+                            log_message(LOG_LEVEL_DEBUG, "        argv[0] = %s",
+                                        text);
+                            log_message(LOG_LEVEL_DEBUG, "        argv[1] = %s",
+                                        g_cfg->user_wm);
+                        }
+                    }
+                    /* if we're here something happened to g_execlp3
+                       so we try running the default window manager */
+                    g_sprintf(text, "%s/%s", XRDP_CFG_PATH, g_cfg->default_wm);
+                    g_execlp3(text, g_cfg->default_wm, 0);
+
+                    log_message(LOG_LEVEL_ALWAYS, "error starting default "
+                                 "wm for user %s - pid %d", username, g_getpid());
+                    /* logging parameters */
+                    log_message(LOG_LEVEL_DEBUG, "errno: %d, description: "
+                                "%s", errno, g_get_strerror());
+                    log_message(LOG_LEVEL_DEBUG, "execlp3 parameter list:");
+                    log_message(LOG_LEVEL_DEBUG, "        argv[0] = %s",
+                                text);
+                    log_message(LOG_LEVEL_DEBUG, "        argv[1] = %s",
+                                g_cfg->default_wm);
+
+                    /* still a problem starting window manager just start xterm */
+                    g_execlp3("xterm", "xterm", 0);
+
+                    /* should not get here */
+                    log_message(LOG_LEVEL_ALWAYS, "error starting xterm "
+                                "for user %s - pid %d", username, g_getpid());
+                    /* logging parameters */
+                    log_message(LOG_LEVEL_DEBUG, "errno: %d, description: "
+                                "%s", errno, g_get_strerror());
+                }
+                else
+                {
+                    log_message(LOG_LEVEL_ERROR, "another Xserver might "
+                                "already be active on display %d - see log", display);
                 }
 
-                if (program != 0)
-                {
-                    if (program[0] != 0)
-                    {
-                        g_execlp3(program, program, 0);
-                        log_message(LOG_LEVEL_ALWAYS,
-                                    "error starting program %s for user %s - pid %d",
-                                    program, username, g_getpid());
-                    }
-                }
-
-                /* try to execute user window manager if enabled */
-                if (g_cfg->enable_user_wm)
-                {
-                    g_sprintf(text, "%s/%s", g_getenv("HOME"), g_cfg->user_wm);
-
-                    if (g_file_exist(text))
-                    {
-                        g_execlp3(text, g_cfg->user_wm, 0);
-                        log_message(LOG_LEVEL_ALWAYS, "error starting user "
-                                    "wm for user %s - pid %d", username, g_getpid());
-                        /* logging parameters */
-                        log_message(LOG_LEVEL_DEBUG, "errno: %d, "
-                                    "description: %s", errno, g_get_strerror());
-                        log_message(LOG_LEVEL_DEBUG, "execlp3 parameter "
-                                    "list:");
-                        log_message(LOG_LEVEL_DEBUG, "        argv[0] = %s",
-                                    text);
-                        log_message(LOG_LEVEL_DEBUG, "        argv[1] = %s",
-                                    g_cfg->user_wm);
-                    }
-                }
-
-                /* if we're here something happened to g_execlp3
-                   so we try running the default window manager */
-                g_sprintf(text, "%s/%s", XRDP_CFG_PATH, g_cfg->default_wm);
-                g_execlp3(text, g_cfg->default_wm, 0);
-
-                log_message( LOG_LEVEL_ALWAYS, "error starting default "
-                             "wm for user %s - pid %d", username, g_getpid());
-                /* logging parameters */
-                log_message( LOG_LEVEL_DEBUG, "errno: %d, description: "
-                             "%s", errno, g_get_strerror());
-                log_message(LOG_LEVEL_DEBUG, "execlp3 parameter list:");
-                log_message(LOG_LEVEL_DEBUG, "        argv[0] = %s",
-                            text);
-                log_message(LOG_LEVEL_DEBUG, "        argv[1] = %s",
-                            g_cfg->default_wm);
-
-                /* still a problem starting window manager just start xterm */
-                g_execlp3("xterm", "xterm", 0);
-
-                /* should not get here */
-                log_message(LOG_LEVEL_ALWAYS, "error starting xterm "
-                            "for user %s - pid %d", username, g_getpid());
-                /* logging parameters */
-                log_message(LOG_LEVEL_DEBUG, "errno: %d, description: "
-                            "%s", errno, g_get_strerror());
+                log_message(LOG_LEVEL_DEBUG, "aborting connection...");
+                g_exit(0);
             }
             else
             {
-                log_message(LOG_LEVEL_ERROR, "another Xserver might "
-                            "already be active on display %d - see log", display);
+                g_waitpid(pampid);
+                auth_stop_session(data);
+                g_exit(0);
             }
-
-            log_message(LOG_LEVEL_DEBUG, "aborting connection...");
-            g_exit(0);
         }
         else /* parent (child sesman) */
         {

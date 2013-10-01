@@ -203,6 +203,26 @@ auth_start_session(long in_val, int in_display)
 
 /******************************************************************************/
 /* returns error */
+int DEFAULT_CC
+auth_stop_session(long in_val)
+{
+    struct t_auth_info *auth_info;
+    int error;
+
+    auth_info = (struct t_auth_info *)in_val;
+    error = pam_close_session(auth_info->ph, 0);
+    if (error != PAM_SUCCESS)
+    {
+        g_printf("pam_close_session failed: %s\r\n",
+                 pam_strerror(auth_info->ph, error));
+        return 1;
+    }
+    auth_info->session_opened = 0;
+    return 0;
+}
+
+/******************************************************************************/
+/* returns error */
 /* cleanup */
 int DEFAULT_CC
 auth_end(long in_val)

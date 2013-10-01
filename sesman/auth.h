@@ -57,6 +57,16 @@ auth_start_session(long in_val, int in_display);
  *
  */
 int DEFAULT_CC
+auth_stop_session(long in_val);
+
+/**
+ *
+ * @brief FIXME
+ * @param in_val
+ * @return 0 on success, 1 on failure
+ *
+ */
+int DEFAULT_CC
 auth_end(long in_val);
 
 /**
