@@ -1113,8 +1113,8 @@ rdpup_process_msg(struct stream *s)
         in_uint32_le(s, y);
         in_uint32_le(s, cx);
         in_uint32_le(s, cy);
-        LLOGLN(10, ("  %d %d %d %d", x, y, cx ,cy));
-        LLOGLN(10, ("  rect_id %d rect_id_ack %d", g_rect_id, g_rect_id_ack));
+        LLOGLN(10, ("rdpup_process_msg: %d %d %d %d", x, y, cx ,cy));
+        LLOGLN(10, ("rdpup_process_msg: rect_id %d rect_id_ack %d", g_rect_id, g_rect_id_ack));
 
         box.x1 = x;
         box.y1 = y;
@@ -1122,7 +1122,7 @@ rdpup_process_msg(struct stream *s)
         box.y2 = box.y1 + cy;
 
         RegionInit(&reg, &box, 0);
-        LLOGLN(10, ("< %d %d %d %d", box.x1, box.y1, box.x2, box.y2));
+        LLOGLN(10, ("rdpup_process_msg: %d %d %d %d", box.x1, box.y1, box.x2, box.y2));
         RegionSubtract(g_shm_reg, g_shm_reg, &reg);
         RegionUninit(&reg);
 
@@ -2088,14 +2088,17 @@ rdpup_send_area(struct image_data *id, int x, int y, int w, int h)
             box.y1 = y;
             box.x2 = box.x1 + w;
             box.y2 = box.y1 + h;
+            LLOGLN(10, ("rdpup_send_area: 1 x %d y %d w %d h %d", x, y, w, h));
             safety = 0;
             while (RegionContainsRect(g_shm_reg, &box))
             {
-                rdpup_end_update();
+                /* instread of rdpup_end_update, call rdpup_send_pending */
+                rdpup_send_pending();
                 rdpup_begin_update();
                 safety++;
                 if (safety > 100)
                 {
+                    LLOGLN(0, ("rdpup_send_area: shmem timeout"));
                     break;
                 }
                 if (sck_can_recv(g_sck, 100))
@@ -2125,6 +2128,7 @@ rdpup_send_area(struct image_data *id, int x, int y, int w, int h)
             out_uint16_le(g_out_s, 60);
             out_uint16_le(g_out_s, size);
             g_count++;
+            LLOGLN(10, ("rdpup_send_area: 2 x %d y %d w %d h %d", x, y, w, h));
             out_uint16_le(g_out_s, x);
             out_uint16_le(g_out_s, y);
             out_uint16_le(g_out_s, w);

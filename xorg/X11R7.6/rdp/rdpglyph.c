@@ -826,6 +826,8 @@ rdpGlyphs(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
     LLOGLN(10, ("rdpGlyphs: op %d xSrc %d ySrc %d maskFormat %p",
            op, xSrc, ySrc, maskFormat));
 
+    LLOGLN(10, ("rdpGlyphs: g_do_glyph_cache %d", g_do_glyph_cache));
+
     if (g_do_glyph_cache && rdpGlyphCheck(nlists, lists, glyphs))
     {
         g_doing_font = 2;

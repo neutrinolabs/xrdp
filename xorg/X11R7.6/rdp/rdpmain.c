@@ -47,7 +47,7 @@ DeviceIntPtr g_keyboard = 0;
 int g_can_do_pix_to_pix = 0;
 
 int g_do_dirty_os = 1; /* delay remoting off screen bitmaps */
-int g_do_dirty_ons = 0; /* delay remoting screen */
+int g_do_dirty_ons = 1; /* delay remoting screen */
 int g_do_glyph_cache = 0; /* rdpup.c may set this */
 int g_do_alpha_glyphs = 1;
 int g_do_composite = 0; /* rdpup.c may set this */

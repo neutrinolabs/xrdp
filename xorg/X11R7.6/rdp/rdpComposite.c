@@ -39,6 +39,8 @@ extern ScreenPtr g_pScreen; /* from rdpmain.c */
 extern Bool g_wrapPixmap; /* from rdpmain.c */
 extern int g_can_do_pix_to_pix; /* from rdpmain.c */
 extern int g_do_dirty_os; /* in rdpmain.c */
+extern int g_do_dirty_ons; /* in rdpmain.c */
+extern rdpPixmapRec g_screenPriv; /* in rdpmain.c */
 extern int g_do_glyph_cache; /* in rdpmain.c */
 extern int g_doing_font; /* in rdpmain.c */
 extern int g_do_composite; /* in rdpmain.c */
@@ -766,9 +768,18 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
             if (pDstWnd->viewable)
             {
                 post_process = 1;
-                rdpup_get_screen_image_rect(&id);
-                got_id = 1;
-                LLOGLN(10, ("rdpComposite: screen"));
+                if (g_do_dirty_ons)
+                {
+                    LLOGLN(10, ("rdpComposite: getting dirty"));
+                    g_screenPriv.is_dirty = 1;
+                    pDirtyPriv = &g_screenPriv;
+                    dirty_type = g_doing_font ? RDI_IMGLL : RDI_IMGLY;
+                }
+                else
+                {
+                    rdpup_get_screen_image_rect(&id);
+                    got_id = 1;
+                }
             }
         }
     }
