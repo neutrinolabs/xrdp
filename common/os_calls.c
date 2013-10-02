@@ -493,6 +493,96 @@ g_tcp_socket(void)
 }
 
 /*****************************************************************************/
+/* returns error */
+int APP_CC
+g_sck_set_send_buffer_bytes(int sck, int bytes)
+{
+    int option_value;
+#if defined(_WIN32)
+    int option_len;
+#else
+    unsigned int option_len;
+#endif
+
+    option_value = bytes;
+    option_len = sizeof(option_value);
+    if (setsockopt(sck, SOL_SOCKET, SO_SNDBUF, (char *)&option_value,
+                   option_len) != 0)
+    {
+        return 1;
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+g_sck_get_send_buffer_bytes(int sck, int *bytes)
+{
+    int option_value;
+#if defined(_WIN32)
+    int option_len;
+#else
+    unsigned int option_len;
+#endif
+
+    option_value = 0;
+    option_len = sizeof(option_value);
+    if (getsockopt(sck, SOL_SOCKET, SO_SNDBUF, (char *)&option_value,
+                   &option_len) != 0)
+    {
+        return 1;
+    }
+    *bytes = option_value;
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+g_sck_set_recv_buffer_bytes(int sck, int bytes)
+{
+    int option_value;
+#if defined(_WIN32)
+    int option_len;
+#else
+    unsigned int option_len;
+#endif
+
+    option_value = bytes;
+    option_len = sizeof(option_value);
+    if (setsockopt(sck, SOL_SOCKET, SO_RCVBUF, (char *)&option_value,
+                   option_len) != 0)
+    {
+        return 1;
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+g_sck_get_recv_buffer_bytes(int sck, int *bytes)
+{
+    int option_value;
+#if defined(_WIN32)
+    int option_len;
+#else
+    unsigned int option_len;
+#endif
+
+    option_value = 0;
+    option_len = sizeof(option_value);
+    if (getsockopt(sck, SOL_SOCKET, SO_RCVBUF, (char *)&option_value,
+                   &option_len) != 0)
+    {
+        return 1;
+    }
+    *bytes = option_value;
+    return 0;
+}
+
+/*****************************************************************************/
 int APP_CC
 g_tcp_local_socket(void)
 {

@@ -489,4 +489,6 @@ struct xrdp_startup_params
   int help;
   int version;
   int fork;
+  int send_buffer_bytes;
+  int recv_buffer_bytes;
 };
