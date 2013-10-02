@@ -970,6 +970,41 @@ g_tcp_accept(int sck)
 }
 
 /*****************************************************************************/
+int APP_CC
+g_sck_accept(int sck, char *addr, int addr_bytes, char *port, int port_bytes)
+{
+    int ret;
+    char ipAddr[256];
+    struct sockaddr_in s;
+#if defined(_WIN32)
+    signed int i;
+#else
+    unsigned int i;
+#endif
+
+    i = sizeof(struct sockaddr_in);
+    memset(&s, 0, i);
+    ret = accept(sck, (struct sockaddr *)&s, &i);
+    if (ret > 0)
+    {
+        g_snprintf(ipAddr, 255, "A connection received from: %s port %d",
+                   inet_ntoa(s.sin_addr), ntohs(s.sin_port));
+        log_message(LOG_LEVEL_INFO,ipAddr);
+        if (s.sin_family == AF_INET)
+        {
+            g_snprintf(addr, addr_bytes, "%s", inet_ntoa(s.sin_addr));
+            g_snprintf(port, port_bytes, "%d", ntohs(s.sin_port));
+        }
+        if (s.sin_family == AF_UNIX)
+        {
+            g_strncpy(addr, "", addr_bytes - 1);
+            g_strncpy(port, "", port_bytes - 1);
+        }
+    }
+    return ret;
+}
+
+/*****************************************************************************/
 void APP_CC
 g_write_ip_address(int rcv_sck, char *ip_address, int bytes)
 {

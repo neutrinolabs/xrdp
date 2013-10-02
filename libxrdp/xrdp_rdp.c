@@ -587,6 +587,14 @@ xrdp_rdp_incoming(struct xrdp_rdp *self)
                         MCS_USERCHANNEL_BASE;
     xrdp_rdp_parse_client_mcs_data(self);
     DEBUG(("out xrdp_rdp_incoming mcs channel %d", self->mcs_channel));
+
+    g_strncpy(self->client_info.client_addr,
+              self->sec_layer->mcs_layer->iso_layer->tcp_layer->trans->addr,
+              sizeof(self->client_info.client_addr) - 1);
+    g_strncpy(self->client_info.client_port,
+              self->sec_layer->mcs_layer->iso_layer->tcp_layer->trans->port,
+              sizeof(self->client_info.client_port) - 1);
+
     return 0;
 }
 

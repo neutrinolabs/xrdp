@@ -197,7 +197,8 @@ trans_check_wait_objs(struct trans *self)
     {
         if (g_tcp_can_recv(self->sck, 0))
         {
-            in_sck = g_tcp_accept(self->sck);
+            in_sck = g_sck_accept(self->sck, self->addr, sizeof(self->addr),
+                                  self->port, sizeof(self->port));
 
             if (in_sck == -1)
             {
@@ -223,6 +224,8 @@ trans_check_wait_objs(struct trans *self)
                     in_trans->type1 = TRANS_TYPE_SERVER;
                     in_trans->status = TRANS_STATUS_UP;
                     in_trans->is_term = self->is_term;
+                    g_strncpy(in_trans->addr, self->addr, sizeof(self->addr) - 1);
+                    g_strncpy(in_trans->port, self->port, sizeof(self->port) - 1);
 
                     if (self->trans_conn_in(self, in_trans) != 0)
                     {
@@ -466,7 +469,7 @@ trans_write_copy(struct trans *self)
         {
             temp_s = (struct stream *) (temp_s->next_packet);
         }
-        temp_s->next_packet = wait_s;
+        temp_s->next_packet = (char *) wait_s;
     }
     return 0;
 }

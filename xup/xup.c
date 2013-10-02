@@ -149,8 +149,12 @@ lib_mod_log_peer(struct mod *mod)
     my_pid = g_getpid();
     if (g_sck_get_peer_cred(mod->sck, &pid, &uid, &gid) == 0)
     {
-        log_message(LOG_LEVEL_INFO, "lib_mod_log_peer: xrdp pid %d connected "
-                    "to X11rdp pid %d", my_pid, pid);
+        log_message(LOG_LEVEL_INFO, "lib_mod_log_peer: xrdp_pid=%d connected "
+                    "to X11rdp_pid=%d X11rdp_uid=%d X11rdp_gid=%d "
+                    "client_ip=%s client_port=%s",
+                    my_pid, pid, uid, gid,
+                    mod->client_info.client_addr,
+                    mod->client_info.client_port);
     }
     else
     {

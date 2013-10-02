@@ -62,6 +62,8 @@ int APP_CC      g_tcp_local_bind(int sck, const char* port);
 int APP_CC      g_tcp_bind_address(int sck, const char* port, const char* address);
 int APP_CC      g_tcp_listen(int sck);
 int APP_CC      g_tcp_accept(int sck);
+int APP_CC      g_sck_accept(int sck, char *addr, int addr_bytes,
+                             char *port, int port_bytes);
 int APP_CC      g_tcp_recv(int sck, void* ptr, int len, int flags);
 int APP_CC      g_tcp_send(int sck, const void* ptr, int len, int flags);
 int APP_CC      g_tcp_last_error_would_block(int sck);
