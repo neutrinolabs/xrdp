@@ -19,6 +19,7 @@
  */
 
 #include "xup.h"
+#include "log.h"
 
 #include <sys/ipc.h>
 #include <sys/shm.h>
@@ -145,15 +146,16 @@ lib_mod_log_peer(struct mod *mod)
     int uid;
     int gid;
 
-    my_pid = g_get_pid();
+    my_pid = g_getpid();
     if (g_sck_get_peer_cred(mod->sck, &pid, &uid, &gid) == 0)
     {
-        g_writeln("lib_mod_connect: xrdp pid %d", my_pid);
-        g_writeln("  X11rdp pid %d, uid %d gid %d", pid, uid, gid);
+        log_message(LOG_LEVEL_INFO, "lib_mod_log_peer: xrdp pid %d connected "
+                    "to X11rdp pid %d", my_pid, pid);
     }
     else
     {
-        g_writeln("lib_mod_connect: g_sck_get_peer_cred failed");
+        log_message(LOG_LEVEL_ERROR, "lib_mod_log_peer: g_sck_get_peer_cred "
+                    "failed");
     }
     return 0;
 }
