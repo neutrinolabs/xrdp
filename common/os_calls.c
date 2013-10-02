@@ -504,6 +504,38 @@ g_tcp_local_socket(void)
 }
 
 /*****************************************************************************/
+int APP_CC
+g_sck_get_peer_cred(int sck, int *pid, int *uid, int *gid)
+{
+    int ucred_length;
+    struct myucred
+    {
+        pid_t pid;
+        uid_t uid;
+        gid_t gid;
+    } credentials;
+
+    ucred_length = sizeof(credentials);
+    if (getsockopt(sck, SOL_SOCKET, SO_PEERCRED, &credentials, &ucred_length))
+    {
+        return 1;
+    }
+    if (pid != 0)
+    {
+        *pid = credentials.pid;
+    }
+    if (uid != 0)
+    {
+        *uid = credentials.uid;
+    }
+    if (gid != 0)
+    {
+        *gid = credentials.gid;
+    }
+    return 0;
+}
+
+/*****************************************************************************/
 void APP_CC
 g_tcp_close(int sck)
 {

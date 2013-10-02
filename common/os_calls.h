@@ -46,6 +46,7 @@ int APP_CC      g_tcp_set_no_delay(int sck);
 int APP_CC      g_tcp_set_keepalive(int sck);
 int APP_CC      g_tcp_socket(void);
 int APP_CC      g_tcp_local_socket(void);
+int APP_CC      g_sck_get_peer_cred(int sck, int *pid, int *uid, int *gid);
 void APP_CC     g_tcp_close(int sck);
 int APP_CC      g_tcp_connect(int sck, const char* address, const char* port);
 int APP_CC      g_tcp_local_connect(int sck, const char* port);

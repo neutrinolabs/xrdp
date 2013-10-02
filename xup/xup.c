@@ -137,6 +137,28 @@ lib_mod_start(struct mod *mod, int w, int h, int bpp)
 }
 
 /******************************************************************************/
+static int APP_CC
+lib_mod_log_peer(struct mod *mod)
+{
+    int my_pid;
+    int pid;
+    int uid;
+    int gid;
+
+    my_pid = g_get_pid();
+    if (g_sck_get_peer_cred(mod->sck, &pid, &uid, &gid) == 0)
+    {
+        g_writeln("lib_mod_connect: xrdp pid %d", my_pid);
+        g_writeln("  X11rdp pid %d, uid %d gid %d", pid, uid, gid);
+    }
+    else
+    {
+        g_writeln("lib_mod_connect: g_sck_get_peer_cred failed");
+    }
+    return 0;
+}
+
+/******************************************************************************/
 /* return error */
 int DEFAULT_CC
 lib_mod_connect(struct mod *mod)
@@ -250,6 +272,14 @@ lib_mod_connect(struct mod *mod)
         }
 
         g_sleep(250);
+    }
+
+    if (error == 0)
+    {
+        if (use_uds)
+        {
+            lib_mod_log_peer(mod);
+        }
     }
 
     if (error == 0)
