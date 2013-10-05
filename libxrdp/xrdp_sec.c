@@ -890,8 +890,8 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
         in_uint32_le(s, monitor_item->bottom);
         in_uint32_le(s, monitor_item->is_primary);
         list_add_item(self->mcs_layer->monitor_list, (long)monitor_item);
-        DEBUG(("got monitor: x: %d, y: %d, width: %d, height: %d, is primary: %d",
-        		monitor_item->x, monitor_item->y, monitor_item->width, monitor_item->height, monitor_item->is_primary));
+        DEBUG(("got monitor: left: %d, top: %d, right: %d, bottom: %d, is primary: %d",
+        		monitor_item->left, monitor_item->top, monitor_item->right, monitor_item->bottom, monitor_item->is_primary));
     }
 
     return 0;
