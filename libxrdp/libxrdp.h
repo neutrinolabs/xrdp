@@ -49,6 +49,8 @@ struct xrdp_iso
 {
   struct xrdp_mcs* mcs_layer; /* owner */
   struct xrdp_tcp* tcp_layer;
+  int requestedProtocol;
+  int selectedProtocol;
 };
 
 /* used in mcs */
@@ -62,10 +64,10 @@ struct mcs_channel_item
 /* used in mcs - client monitor data */
 struct mcs_monitor_item
 {
-	int x;
-	int y;
-	int width;
-	int height;
+	int left;
+	int top;
+	int right;
+	int bottom;
 	int is_primary;
 };
 

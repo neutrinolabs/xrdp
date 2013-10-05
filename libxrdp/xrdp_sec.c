@@ -852,7 +852,7 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
     return 0;
 }
 /*****************************************************************************/
-/* reads the client monitors data, in order to send it to X11rdp */
+/* reads the client monitors data */
 static int APP_CC
 xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
 {
@@ -862,33 +862,36 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
 	struct mcs_monitor_item *monitor_item;
 
     DEBUG(("processing monitors data, allow_multimon is %d", self->multimon));
-
     /* this is an option set in xrdp.ini */
-    if (self->multimon != 1) /* is multi-monitors allowed ? */
+    if (self->multimon != 1) /* are multi-monitors allowed ? */
     {
-        g_writeln("Processing monitor data from client - Multimon is not allowed");
+    	DEBUG(("[INFO] xrdp_sec_process_mcs_data_monitors: multimon is not allowed, skipping"));
         return 0;
     }
-
     in_uint32_le(s, flags); /* flags */
-    DEBUG(("xrdp_sec_process_mcs_data_monitors: monitor flags is %s", flags));
-
+    //verify flags - must be 0x0
+    if (flags != 0){
+    	DEBUG(("[ERROR] xrdp_sec_process_mcs_data_monitors: flags MUST be zero, detected: %d", flags));
+    	return 0;
+    }
     in_uint32_le(s, monitorCount);
-    DEBUG(("xrdp_sec_process_mcs_data_monitors: monitor count is %s", monitorCount));
-
+    //verify monitorCount - max 16
+    if (monitorCount > 16){
+    	DEBUG(("[ERROR] xrdp_sec_process_mcs_data_monitors: max allowed monitors is 16, detected: %d", monitorCount));
+    	return 0;
+    }
     for (index = 0; index < monitorCount; index++)
     {
     	monitor_item = (struct mcs_monitor_item *)
                        g_malloc(sizeof(struct mcs_monitor_item), 1);
-    	in_uint32_le(s, monitor_item->x); //TODO: change to signed 32 bit int.
-        in_uint32_le(s, monitor_item->y); //TODO: change to signed 32 bit int.
-        in_uint32_le(s, monitor_item->width); //TODO: change to signed 32 bit int.
-        in_uint32_le(s, monitor_item->height); //TODO: change to signed 32 bit int.
+    	in_uint32_le(s, monitor_item->left);
+        in_uint32_le(s, monitor_item->top);
+        in_uint32_le(s, monitor_item->right);
+        in_uint32_le(s, monitor_item->bottom);
         in_uint32_le(s, monitor_item->is_primary);
-
         list_add_item(self->mcs_layer->monitor_list, (long)monitor_item);
-        DEBUG(("got monitor: flags %8.8x is primary? %s", monitor_item->height,
-        		monitor_item->is_primary));
+        DEBUG(("got monitor: x: %d, y: %d, width: %d, height: %d, is primary: %d",
+        		monitor_item->x, monitor_item->y, monitor_item->width, monitor_item->height, monitor_item->is_primary));
     }
 
     return 0;
@@ -935,7 +938,6 @@ xrdp_sec_process_mcs_data(struct xrdp_sec *self)
             case SEC_TAG_CLI_4:
                 break;
             case SEC_TAG_CLI_MONITOR:
-            	DEBUG((" 			in CS_MONITOR !!!"));
             	xrdp_sec_process_mcs_data_monitors(self, s);
                 break;
             default:
