@@ -127,6 +127,14 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
                 log_message(LOG_LEVEL_DEBUG,"Info - All channels are disabled");
             }
         }
+        else if (g_strcasecmp(item, "allow_multimon") == 0)
+                {
+                    client_info->multimon = text2bool(value);
+                    if (client_info->multimon == 0)
+                    {
+                        log_message(LOG_LEVEL_DEBUG,"Info - Multi monitor server support disabled");
+                    }
+                }
         else if (g_strcasecmp(item, "max_bpp") == 0)
         {
             client_info->max_bpp = g_atoi(value);
@@ -219,7 +227,7 @@ xrdp_rdp_create(struct xrdp_session *session, struct trans *trans)
     xrdp_rdp_read_config(&self->client_info);
     /* create sec layer */
     self->sec_layer = xrdp_sec_create(self, trans, self->client_info.crypt_level,
-                                      self->client_info.channel_code);
+                                      self->client_info.channel_code, self->client_info.multimon);
     /* default 8 bit v1 color bitmap cache entries and size */
     self->client_info.cache1_entries = 600;
     self->client_info.cache1_size = 256;

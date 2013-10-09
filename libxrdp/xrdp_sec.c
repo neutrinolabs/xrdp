@@ -138,7 +138,7 @@ hex_str_to_bin(char *in, char *out, int out_len)
 /*****************************************************************************/
 struct xrdp_sec *APP_CC
 xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans, int crypt_level,
-                int channel_code)
+                int channel_code, int multimon)
 {
     struct xrdp_sec *self;
 
@@ -168,6 +168,7 @@ xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans, int crypt_level,
     }
 
     self->channel_code = channel_code;
+    self->multimon = multimon;
 
     if (self->decrypt_rc4_info != NULL)
     {
@@ -950,7 +951,51 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
 
     return 0;
 }
+/*****************************************************************************/
+/* reads the client monitors data */
+static int APP_CC
+xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
+{
+	int index;
+	int monitorCount;
+	int flags;
+	struct mcs_monitor_item *monitor_item;
 
+    DEBUG(("processing monitors data, allow_multimon is %d", self->multimon));
+    /* this is an option set in xrdp.ini */
+    if (self->multimon != 1) /* are multi-monitors allowed ? */
+    {
+    	DEBUG(("[INFO] xrdp_sec_process_mcs_data_monitors: multimon is not allowed, skipping"));
+        return 0;
+    }
+    in_uint32_le(s, flags); /* flags */
+    //verify flags - must be 0x0
+    if (flags != 0){
+    	DEBUG(("[ERROR] xrdp_sec_process_mcs_data_monitors: flags MUST be zero, detected: %d", flags));
+    	return 0;
+    }
+    in_uint32_le(s, monitorCount);
+    //verify monitorCount - max 16
+    if (monitorCount > 16){
+    	DEBUG(("[ERROR] xrdp_sec_process_mcs_data_monitors: max allowed monitors is 16, detected: %d", monitorCount));
+    	return 0;
+    }
+    for (index = 0; index < monitorCount; index++)
+    {
+    	monitor_item = (struct mcs_monitor_item *)
+                       g_malloc(sizeof(struct mcs_monitor_item), 1);
+    	in_uint32_le(s, monitor_item->left);
+        in_uint32_le(s, monitor_item->top);
+        in_uint32_le(s, monitor_item->right);
+        in_uint32_le(s, monitor_item->bottom);
+        in_uint32_le(s, monitor_item->is_primary);
+        list_add_item(self->mcs_layer->monitor_list, (long)monitor_item);
+        DEBUG(("got monitor: left: %d, top: %d, right: %d, bottom: %d, is primary: %d",
+        		monitor_item->left, monitor_item->top, monitor_item->right, monitor_item->bottom, monitor_item->is_primary));
+    }
+
+    return 0;
+}
 /*****************************************************************************/
 /* process client mcs data, we need some things in here to create the server
    mcs data */
@@ -999,6 +1044,9 @@ xrdp_sec_process_mcs_data(struct xrdp_sec *self)
                 break;
             case SEC_TAG_CLI_4:
                 break;
+            case SEC_TAG_CLI_MONITOR:
+            	xrdp_sec_process_mcs_data_monitors(self, s);
+                break;
             default:
                 g_writeln("error unknown xrdp_sec_process_mcs_data tag %d size %d",
                           tag, size);
@@ -1045,13 +1093,28 @@ xrdp_sec_out_mcs_data(struct xrdp_sec *self)
     out_uint8(s, 0x63); /* c */
     out_uint8(s, 0x44); /* D */
     out_uint8(s, 0x6e); /* n */
-    out_uint16_be(s, 0x80fc + (num_channels_even * 2));
+    if (self->mcs_layer->iso_layer->selectedProtocol != -1) { // Check for RDPNEGDATA availability
+    	out_uint16_be(s, 0x80fc + (num_channels_even * 2) + 4);
+    }
+    else
+    {
+    	out_uint16_be(s, 0x80fc + (num_channels_even * 2));
+    }
     out_uint16_le(s, SEC_TAG_SRV_INFO);
-    out_uint16_le(s, 8); /* len */
+    if (self->mcs_layer->iso_layer->selectedProtocol != -1) {
+    	out_uint16_le(s, 12); /* len */
+    }
+    else
+    {
+    	out_uint16_le(s, 8); /* len */
+    }
     out_uint8(s, 4); /* 4 = rdp5 1 = rdp4 */
     out_uint8(s, 0);
     out_uint8(s, 8);
     out_uint8(s, 0);
+    if (self->mcs_layer->iso_layer->selectedProtocol != -1) {
+    	out_uint32_le(s, self->mcs_layer->iso_layer->selectedProtocol); /* clientReqeustedProtocol */
+    }
     out_uint16_le(s, SEC_TAG_SRV_CHANNELS);
     out_uint16_le(s, 8 + (num_channels_even * 2)); /* len */
     out_uint16_le(s, MCS_GLOBAL_CHANNEL); /* 1003, 0x03eb main channel */

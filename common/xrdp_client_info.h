@@ -38,6 +38,7 @@ struct xrdp_client_info
   int bitmap_cache_version; /* ored 1 = original version, 2 = v2, 4 = v3 */
   /* pointer info */
   int pointer_cache_entries;
+  int pointer_flags; /* 0 color, 1 new, 2 no new */
   /* other */
   int use_bitmap_comp;
   int use_bitmap_cache;
@@ -69,6 +70,9 @@ struct xrdp_client_info
   int offscreen_cache_size;
   int offscreen_cache_entries;
   int rfx;
+  int nego_sec_layer; /* 0, 1, 2 = RDP security layer, TLS , Negotiate */
+  int multimon; /* 0 = deny , 1 = allow */
+
   /* CAPSETTYPE_RAIL */
   int rail_support_level;
   /* CAPSETTYPE_WINDOW */
@@ -90,7 +94,6 @@ struct xrdp_client_info
   char orders[32];
   int order_flags_ex;
   int use_bulk_comp;
-  int pointer_flags; /* 0 color, 1 new, 2 no new */
   int use_fast_path;
   int require_credentials; /* when true, credentials *must* be passed on cmd line */
   char client_addr[256];
