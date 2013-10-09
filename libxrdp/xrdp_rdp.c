@@ -129,7 +129,7 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
         }
         else if (g_strcasecmp(item, "allow_multimon") == 0)
                 {
-                    client_info->multimon = text2bool(value);
+                    client_info->multimon = g_text2bool(value);
                     if (client_info->multimon == 0)
                     {
                         log_message(LOG_LEVEL_DEBUG,"Info - Multi monitor server support disabled");
