@@ -61,13 +61,6 @@ xrdp_iso_recv_rdpnegreq(struct xrdp_iso *self, struct stream *s)
 
     DEBUG(("     in xrdp_iso_recv_rdpnegreq"));
 
-    in_uint8(s, type);
-    if (type != RDP_NEG_REQ)
-    {
-        DEBUG(("       xrdp_iso_recv_rdpnegreq: type: %x",type));
-        return 1;
-    }
-
     in_uint8(s, flags);
     if (flags != 0x0)
     {
@@ -120,7 +113,7 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code, int *len)
     in_uint8s(s, 1);
     in_uint16_be(s, plen);
 
-    if (len < 4)
+    if (plen < 4)
     {
         return 1;
     }
@@ -189,15 +182,16 @@ xrdp_iso_send_rdpnegrsp(struct xrdp_iso *self, struct stream *s, int code)
 {
     int send_rdpnegdata;
 
-	if (xrdp_tcp_init(self->tcp_layer, s) != 0)
+    if (xrdp_tcp_init(self->tcp_layer, s) != 0)
     {
         return 1;
     }
 
     /* TPKT HEADER - 4 bytes */
-    out_uint8(s, 3);	/* version */
-    out_uint8(s, 0);	/* RESERVED */
-    if (self->selectedProtocol != -1) {
+    out_uint8(s, 3);    /* version */
+    out_uint8(s, 0);    /* RESERVED */
+    if (self->selectedProtocol != -1)
+    {
         out_uint16_be(s, 19); /* length */ //rdp negotiation happens.
     }
     else
@@ -205,7 +199,8 @@ xrdp_iso_send_rdpnegrsp(struct xrdp_iso *self, struct stream *s, int code)
         out_uint16_be(s, 11); /* length */ //rdp negotiation doesn't happen.
     }
     /* ISO LAYER - X.224  - 7 bytes*/
-    if (self->selectedProtocol != -1) {
+    if (self->selectedProtocol != -1)
+    {
         out_uint8(s, 14); /* length */
     }
     else
@@ -216,15 +211,16 @@ xrdp_iso_send_rdpnegrsp(struct xrdp_iso *self, struct stream *s, int code)
     out_uint16_be(s, 0);
     out_uint16_be(s, 0x1234);
     out_uint8(s, 0);
-    if (self->selectedProtocol != -1) {
+    if (self->selectedProtocol != -1)
+    {
         /* RDP_NEG_RSP - 8 bytes*/
-    	out_uint8(s, RDP_NEG_RSP);
-    	out_uint8(s, EXTENDED_CLIENT_DATA_SUPPORTED); /* flags */
-    	out_uint16_le(s, 8); /* fixed length */
-    	out_uint32_le(s, self->selectedProtocol); /* selected protocol */
+        out_uint8(s, RDP_NEG_RSP);
+        out_uint8(s, EXTENDED_CLIENT_DATA_SUPPORTED); /* flags */
+        out_uint16_le(s, 8); /* fixed length */
+        out_uint32_le(s, self->selectedProtocol); /* selected protocol */
     }
 
-	s_mark_end(s);
+    s_mark_end(s);
 
     if (xrdp_tcp_send(self->tcp_layer, s) != 0)
     {
@@ -243,8 +239,8 @@ xrdp_iso_send_rdpnegfailure(struct xrdp_iso *self, struct stream *s, int code, i
     }
 
     /* TPKT HEADER - 4 bytes */
-    out_uint8(s, 3);	/* version */
-    out_uint8(s, 0);	/* RESERVED */
+    out_uint8(s, 3);    /* version */
+    out_uint8(s, 0);    /* RESERVED */
     out_uint16_be(s, 19); /* length */
     /* ISO LAYER - X.224  - 7 bytes*/
     out_uint8(s, 14); /* length */
@@ -253,11 +249,11 @@ xrdp_iso_send_rdpnegfailure(struct xrdp_iso *self, struct stream *s, int code, i
     out_uint16_be(s, 0x1234);
     out_uint8(s, 0);
     /* RDP_NEG_FAILURE - 8 bytes*/
-	out_uint8(s, RDP_NEG_FAILURE);
-	out_uint8(s, 0); /* no flags available */
-	out_uint16_le(s, 8); /* fixed length */
-	out_uint32_le(s, failureCode); /* failure code */
-	s_mark_end(s);
+    out_uint8(s, RDP_NEG_FAILURE);
+    out_uint8(s, 0); /* no flags available */
+    out_uint16_le(s, 8); /* fixed length */
+    out_uint32_le(s, failureCode); /* failure code */
+    s_mark_end(s);
 
     if (xrdp_tcp_send(self->tcp_layer, s) != 0)
     {
@@ -268,28 +264,41 @@ xrdp_iso_send_rdpnegfailure(struct xrdp_iso *self, struct stream *s, int code, i
 }
 /*****************************************************************************/
 static int APP_CC
-xrdp_iso_proccess_nego(struct xrdp_iso *self, struct stream *s)
+xrdp_iso_send_nego(struct xrdp_iso *self)
 {
-	//TODO: negotiation logic here.
-	if (self->requestedProtocol != PROTOCOL_RDP) {
-	    // Send RDP_NEG_FAILURE back to client
-	    if (xrdp_iso_send_rdpnegfailure(self, s, ISO_PDU_CC, SSL_NOT_ALLOWED_BY_SERVER) != 0)
-	    {
-	        free_stream(s);
-	        return 1;
-	    }
-	} else {
-		self->selectedProtocol = PROTOCOL_RDP;
-	    // Send RDP_NEG_RSP back to client
-	    if (xrdp_iso_send_rdpnegrsp(self, s, ISO_PDU_CC) != 0)
-	    {
-	        free_stream(s);
-	        return 1;
-	    }
-	}
+    struct stream *s;
 
+    make_stream(s);
+    init_stream(s, 8192);
+
+    //TODO: negotiation logic here.
+    if (self->requestedProtocol != PROTOCOL_RDP)
+    {
+        // Send RDP_NEG_FAILURE back to client
+        if (xrdp_iso_send_rdpnegfailure(self, s, ISO_PDU_CC,
+                                        SSL_NOT_ALLOWED_BY_SERVER) != 0)
+        {
+            free_stream(s);
+            return 1;
+        }
+    }
+    else
+    {
+        self->selectedProtocol = PROTOCOL_RDP;
+        // Send RDP_NEG_RSP back to client
+        if (xrdp_iso_send_rdpnegrsp(self, s, ISO_PDU_CC) != 0)
+        {
+            free_stream(s);
+            return 1;
+        }
+    }
+    free_stream(s);
     return 0;
 }
+
+#define TYPE_RDP_NEG_REQ 1
+#define TYPE_RDP_CORRELATION_INFO 6
+
 /*****************************************************************************/
 /* returns error */
 int APP_CC
@@ -299,7 +308,13 @@ xrdp_iso_incoming(struct xrdp_iso *self)
     int len;
     int requestedProtocol;
     int selectedProtocol;
+    int got_nego;
+    int cookie_index;
+    int cc_type;
+    char text[256];
+    char *pend;
     struct stream *s;
+
     make_stream(s);
     init_stream(s, 8192);
     DEBUG(("   in xrdp_iso_incoming"));
@@ -317,28 +332,66 @@ xrdp_iso_incoming(struct xrdp_iso *self)
         return 1;
     }
 
-    if (len > 6) {
-        // Receive RDP_NEG_REQ data
-        if (xrdp_iso_recv_rdpnegreq(self, s) != 0)
+    got_nego = 0;
+    pend = s->p + len;
+    g_hexdump(s->p, len);
+    cookie_index = 0;
+    while (s->p < pend)
+    {
+        in_uint8(s, cc_type);
+        //g_writeln("cc_type %x", cc_type);
+        switch (cc_type)
         {
-            free_stream(s);
-            return 1;
+            case 0:
+                break;
+            case TYPE_RDP_NEG_REQ: /* rdpNegReq 1 */
+                g_writeln("xrdp_iso_incoming: TYPE_RDP_NEG_REQ");
+                if (xrdp_iso_recv_rdpnegreq(self, s) != 0)
+                {
+                    free_stream(s);
+                    return 1;
+                }
+                got_nego = 1;
+                break;
+            case TYPE_RDP_CORRELATION_INFO: /* rdpCorrelationInfo 6 */
+                g_writeln("xrdp_iso_incoming: TYPE_RDP_CORRELATION_INFO");
+                in_uint8s(s, 1 + 2 + 16 + 16);
+                break;
+            case 'C': /* Cookie */
+                /* fall through */
+            default: /* routingToken */
+                g_writeln("xrdp_iso_incoming: cookie or token");
+                while (s->p < pend)
+                {
+                    text[cookie_index] = cc_type;
+                    cookie_index++;
+                    if ((s->p[0] == 0x0D) && (s->p[1] == 0x0A))
+                    {
+                        in_uint8s(s, 2);
+                        text[cookie_index] = 0;
+                        cookie_index = 0;
+                        break;
+                    }
+                    in_uint8(s, cc_type);
+                }
+                g_writeln("%s", text);
+                break;
         }
-        // Process negotiation request, should return protocol type.
-        if (xrdp_iso_proccess_nego(self, s) != 0)
-        {
-            free_stream(s);
-            return 1;
-        }
-    }
-    else if (len == 6) {
-    	self->selectedProtocol = -1; //we are not doing negotiation
-    	xrdp_iso_send_rdpnegrsp(self, s, ISO_PDU_CC);
-    }
-    else {
-    	DEBUG(("   error in xrdp_iso_incoming: unknown length detected"));
     }
 
+    if (got_nego)
+    {
+        if (xrdp_iso_send_nego(self) != 0)
+        {
+            free_stream(s);
+            return 1;
+        }
+    }
+    else
+    {
+        self->selectedProtocol = -1; //we are not doing negotiation
+        xrdp_iso_send_rdpnegrsp(self, s, ISO_PDU_CC);
+    }
 
     DEBUG(("   out xrdp_iso_incoming"));
     free_stream(s);
@@ -364,7 +417,7 @@ xrdp_iso_send(struct xrdp_iso *self, struct stream *s)
 
     DEBUG(("   in xrdp_iso_send"));
     s_pop_layer(s, iso_hdr);
-    len = s->end - s->p;
+    len = (int)(s->end - s->p);
     out_uint8(s, 3);
     out_uint8(s, 0);
     out_uint16_be(s, len);
