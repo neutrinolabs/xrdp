@@ -176,24 +176,18 @@ xrdp_iso_send_rdpnegrsp(struct xrdp_iso *self, struct stream *s, int code)
         return 1;
     }
 
-	//check for RDPNEGDATA
-	send_rdpnegdata = 1;
-	if (self->selectedProtocol == -1) {
-		send_rdpnegdata = 0;
-	}
-
     /* TPKT HEADER - 4 bytes */
     out_uint8(s, 3);	/* version */
     out_uint8(s, 0);	/* RESERVED */
-    if (send_rdpnegdata == 1) {
-        out_uint16_be(s, 19); /* length */
+    if (self->selectedProtocol != -1) {
+        out_uint16_be(s, 19); /* length */ //rdp negotiation happens.
     }
     else
     {
-        out_uint16_be(s, 11); /* length */
+        out_uint16_be(s, 11); /* length */ //rdp negotiation doesn't happen.
     }
     /* ISO LAYER - X.224  - 7 bytes*/
-    if (send_rdpnegdata == 1) {
+    if (self->selectedProtocol != -1) {
         out_uint8(s, 14); /* length */
     }
     else
@@ -204,7 +198,7 @@ xrdp_iso_send_rdpnegrsp(struct xrdp_iso *self, struct stream *s, int code)
     out_uint16_be(s, 0);
     out_uint16_be(s, 0x1234);
     out_uint8(s, 0);
-    if (send_rdpnegdata == 1) {
+    if (self->selectedProtocol != -1) {
         /* RDP_NEG_RSP - 8 bytes*/
     	out_uint8(s, RDP_NEG_RSP);
     	out_uint8(s, EXTENDED_CLIENT_DATA_SUPPORTED); /* flags */
