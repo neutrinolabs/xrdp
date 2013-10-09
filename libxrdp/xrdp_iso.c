@@ -51,13 +51,13 @@ xrdp_iso_delete(struct xrdp_iso *self)
 /*****************************************************************************/
 /* returns error */
 static int APP_CC
-xrdp_iso_recv_rdpnegreq(struct xrdp_iso *self, struct stream *s, int *requestedProtocol)
+xrdp_iso_recv_rdpnegreq(struct xrdp_iso *self, struct stream *s)
 {
     int type;
     int flags;
     int len;
 
-    *requestedProtocol = 0;
+    self->requestedProtocol = 0;
 
     DEBUG(("     in xrdp_iso_recv_rdpnegreq"));
 
@@ -82,7 +82,7 @@ xrdp_iso_recv_rdpnegreq(struct xrdp_iso *self, struct stream *s, int *requestedP
         return 1;
     }
 
-    in_uint32_le(s, *requestedProtocol);
+    in_uint32_le(s, self->requestedProtocol);
 
     //TODO: think of protocol verification logic
 //    if (requestedProtocol != PROTOCOL_RDP || PROTOCOL_SSL || PROTOCOL_HYBRID || PROTOCOL_HYBRID_EX)
@@ -167,7 +167,7 @@ xrdp_iso_recv(struct xrdp_iso *self, struct stream *s)
 
 /*****************************************************************************/
 static int APP_CC
-xrdp_iso_send_rdpnegrsp(struct xrdp_iso *self, struct stream *s, int code, int selectedProtocol)
+xrdp_iso_send_rdpnegrsp(struct xrdp_iso *self, struct stream *s, int code)
 {
     int send_rdpnegdata;
 
@@ -178,7 +178,7 @@ xrdp_iso_send_rdpnegrsp(struct xrdp_iso *self, struct stream *s, int code, int s
 
 	//check for RDPNEGDATA
 	send_rdpnegdata = 1;
-	if (selectedProtocol == -1) {
+	if (self->selectedProtocol == -1) {
 		send_rdpnegdata = 0;
 	}
 
@@ -209,7 +209,7 @@ xrdp_iso_send_rdpnegrsp(struct xrdp_iso *self, struct stream *s, int code, int s
     	out_uint8(s, RDP_NEG_RSP);
     	out_uint8(s, EXTENDED_CLIENT_DATA_SUPPORTED); /* flags */
     	out_uint16_le(s, 8); /* fixed length */
-    	out_uint32_le(s, selectedProtocol); /* selected protocol */
+    	out_uint32_le(s, self->selectedProtocol); /* selected protocol */
     }
 
 	s_mark_end(s);
@@ -256,10 +256,10 @@ xrdp_iso_send_rdpnegfailure(struct xrdp_iso *self, struct stream *s, int code, i
 }
 /*****************************************************************************/
 static int APP_CC
-xrdp_iso_proccess_nego(struct xrdp_iso *self, struct stream *s, int requstedProtocol)
+xrdp_iso_proccess_nego(struct xrdp_iso *self, struct stream *s)
 {
 	//TODO: negotiation logic here.
-	if (requstedProtocol != PROTOCOL_RDP) {
+	if (self->requestedProtocol != PROTOCOL_RDP) {
 	    // Send RDP_NEG_FAILURE back to client
 	    if (xrdp_iso_send_rdpnegfailure(self, s, ISO_PDU_CC, SSL_NOT_ALLOWED_BY_SERVER) != 0)
 	    {
@@ -267,8 +267,9 @@ xrdp_iso_proccess_nego(struct xrdp_iso *self, struct stream *s, int requstedProt
 	        return 1;
 	    }
 	} else {
+		self->selectedProtocol = PROTOCOL_RDP;
 	    // Send RDP_NEG_RSP back to client
-	    if (xrdp_iso_send_rdpnegrsp(self, s, ISO_PDU_CC, PROTOCOL_RDP) != 0)
+	    if (xrdp_iso_send_rdpnegrsp(self, s, ISO_PDU_CC) != 0)
 	    {
 	        free_stream(s);
 	        return 1;
@@ -306,20 +307,21 @@ xrdp_iso_incoming(struct xrdp_iso *self)
 
     if (len > 6) {
         // Receive RDP_NEG_REQ data
-        if (xrdp_iso_recv_rdpnegreq(self, s, &requestedProtocol) != 0)
+        if (xrdp_iso_recv_rdpnegreq(self, s) != 0)
         {
             free_stream(s);
             return 1;
         }
         // Process negotiation request, should return protocol type.
-        if (xrdp_iso_proccess_nego(self, s, requestedProtocol) != 0)
+        if (xrdp_iso_proccess_nego(self, s) != 0)
         {
             free_stream(s);
             return 1;
         }
     }
     else if (len == 6) {
-    	xrdp_iso_send_rdpnegrsp(self, s, ISO_PDU_CC, -1);
+    	self->selectedProtocol = -1; //we are not doing negotiation
+    	xrdp_iso_send_rdpnegrsp(self, s, ISO_PDU_CC);
     }
     else {
     	DEBUG(("   error in xrdp_iso_incoming: unknown length detected"));
