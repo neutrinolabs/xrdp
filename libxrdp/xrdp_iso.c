@@ -53,11 +53,8 @@ xrdp_iso_delete(struct xrdp_iso *self)
 static int APP_CC
 xrdp_iso_recv_rdpnegreq(struct xrdp_iso *self, struct stream *s)
 {
-    int type;
     int flags;
     int len;
-
-    self->requestedProtocol = 0;
 
     DEBUG(("     in xrdp_iso_recv_rdpnegreq"));
 
@@ -180,8 +177,6 @@ xrdp_iso_recv(struct xrdp_iso *self, struct stream *s)
 static int APP_CC
 xrdp_iso_send_rdpnegrsp(struct xrdp_iso *self, struct stream *s, int code)
 {
-    int send_rdpnegdata;
-
     if (xrdp_tcp_init(self->tcp_layer, s) != 0)
     {
         return 1;
@@ -262,6 +257,7 @@ xrdp_iso_send_rdpnegfailure(struct xrdp_iso *self, struct stream *s, int code, i
 
     return 0;
 }
+
 /*****************************************************************************/
 static int APP_CC
 xrdp_iso_send_nego(struct xrdp_iso *self)
@@ -296,9 +292,6 @@ xrdp_iso_send_nego(struct xrdp_iso *self)
     return 0;
 }
 
-#define TYPE_RDP_NEG_REQ 1
-#define TYPE_RDP_CORRELATION_INFO 6
-
 /*****************************************************************************/
 /* returns error */
 int APP_CC
@@ -306,9 +299,6 @@ xrdp_iso_incoming(struct xrdp_iso *self)
 {
     int code;
     int len;
-    int requestedProtocol;
-    int selectedProtocol;
-    int got_nego;
     int cookie_index;
     int cc_type;
     char text[256];
@@ -332,35 +322,30 @@ xrdp_iso_incoming(struct xrdp_iso *self)
         return 1;
     }
 
-    got_nego = 0;
+    self->selectedProtocol = -1;
+    self->requestedProtocol = PROTOCOL_RDP;
+
     pend = s->p + len;
-    g_hexdump(s->p, len);
     cookie_index = 0;
     while (s->p < pend)
     {
         in_uint8(s, cc_type);
-        //g_writeln("cc_type %x", cc_type);
         switch (cc_type)
         {
-            case 0:
+            default:
                 break;
-            case TYPE_RDP_NEG_REQ: /* rdpNegReq 1 */
-                g_writeln("xrdp_iso_incoming: TYPE_RDP_NEG_REQ");
+            case RDP_NEG_REQ: /* rdpNegReq 1 */
                 if (xrdp_iso_recv_rdpnegreq(self, s) != 0)
                 {
                     free_stream(s);
                     return 1;
                 }
-                got_nego = 1;
                 break;
-            case TYPE_RDP_CORRELATION_INFO: /* rdpCorrelationInfo 6 */
-                g_writeln("xrdp_iso_incoming: TYPE_RDP_CORRELATION_INFO");
+            case RDP_CORRELATION_INFO: /* rdpCorrelationInfo 6 */
+                // TODO
                 in_uint8s(s, 1 + 2 + 16 + 16);
                 break;
-            case 'C': /* Cookie */
-                /* fall through */
-            default: /* routingToken */
-                g_writeln("xrdp_iso_incoming: cookie or token");
+            case 'C': /* Cookie routingToken */
                 while (s->p < pend)
                 {
                     text[cookie_index] = cc_type;
@@ -374,23 +359,14 @@ xrdp_iso_incoming(struct xrdp_iso *self)
                     }
                     in_uint8(s, cc_type);
                 }
-                g_writeln("%s", text);
                 break;
         }
     }
 
-    if (got_nego)
+    if (xrdp_iso_send_nego(self) != 0)
     {
-        if (xrdp_iso_send_nego(self) != 0)
-        {
-            free_stream(s);
-            return 1;
-        }
-    }
-    else
-    {
-        self->selectedProtocol = -1; //we are not doing negotiation
-        xrdp_iso_send_rdpnegrsp(self, s, ISO_PDU_CC);
+        free_stream(s);
+        return 1;
     }
 
     DEBUG(("   out xrdp_iso_incoming"));
