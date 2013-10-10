@@ -316,7 +316,7 @@ xrdp_iso_incoming(struct xrdp_iso *self)
         return 1;
     }
 
-    if (code != ISO_PDU_CR)
+    if ((code != ISO_PDU_CR) || (len < 6))
     {
         free_stream(s);
         return 1;
@@ -325,7 +325,7 @@ xrdp_iso_incoming(struct xrdp_iso *self)
     self->selectedProtocol = -1;
     self->requestedProtocol = PROTOCOL_RDP;
 
-    pend = s->p + len;
+    pend = s->p + (len - 6);
     cookie_index = 0;
     while (s->p < pend)
     {
