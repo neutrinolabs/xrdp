@@ -177,7 +177,8 @@ static void APP_CC scard_send_Reconnect(IRP* irp, tui32 context,
                                         tui32 sc_handle, READER_STATE* rs);
 
 static void APP_CC scard_send_BeginTransaction(IRP* irp, tui32 sc_handle);
-static void APP_CC scard_send_EndTransaction(IRP* irp, tui32 sc_handle);
+static void APP_CC scard_send_EndTransaction(IRP* irp, tui32 sc_handle,
+                                             tui32 dwDisposition);
 static void APP_CC scard_send_Status(IRP* irp, int wide, tui32 sc_handle);
 
 static void APP_CC scard_send_Disconnect(IRP* irp, tui32 context,
@@ -577,7 +578,8 @@ scard_send_begin_transaction(struct trans *con, tui32 sc_handle)
  * @param  sc_handle  handle to smartcard
  *****************************************************************************/
 int APP_CC
-scard_send_end_transaction(struct trans *con, tui32 sc_handle)
+scard_send_end_transaction(struct trans *con, tui32 sc_handle,
+                           tui32 dwDisposition)
 {
     IRP *irp;
 
@@ -595,7 +597,7 @@ scard_send_end_transaction(struct trans *con, tui32 sc_handle)
     irp->user_data = con;
 
     /* send IRP to client */
-    scard_send_EndTransaction(irp, sc_handle);
+    scard_send_EndTransaction(irp, sc_handle, dwDisposition);
 
     return 0;
 }
@@ -1469,12 +1471,12 @@ scard_send_BeginTransaction(IRP *irp, tui32 sc_handle)
  * @param  sc_handle  handle to smartcard
  *****************************************************************************/
 static void APP_CC
-scard_send_EndTransaction(IRP *irp, tui32 sc_handle)
+scard_send_EndTransaction(IRP *irp, tui32 sc_handle, tui32 dwDisposition)
 {
     /* see [MS-RDPESC] 3.1.4.32 */
 
-    SMARTCARD*     sc;
-    struct stream* s;
+    SMARTCARD     *sc;
+    struct stream *s;
     int            bytes;
 
     if ((sc = smartcards[irp->scard_index]) == NULL)
@@ -1501,7 +1503,7 @@ scard_send_EndTransaction(IRP *irp, tui32 sc_handle)
      */
 
     xstream_seek(s, 24);
-    xstream_wr_u32_le(s, SCARD_LEAVE_CARD);
+    xstream_wr_u32_le(s, dwDisposition);
     xstream_seek(s, 8);
 
     /* insert handle */
@@ -1790,7 +1792,8 @@ scard_send_Control(IRP* irp, tui32 context, tui32 sc_handle, READER_STATE* rs)
 /**
  * Cancel any outstanding calls
  *****************************************************************************/
-static int APP_CC scard_send_Cancel(IRP* irp, tui32 context)
+static int APP_CC
+scard_send_Cancel(IRP* irp, tui32 context)
 {
     /* see [MS-RDPESC] 3.1.4.27 */
 
@@ -2081,9 +2084,11 @@ scard_handle_Connect_Return(struct stream *s, IRP *irp,
 
     /* get OutputBufferLen */
     xstream_rd_u32_le(s, len);
+
     con = (struct trans *) (irp->user_data);
     scard_function_connect_return(con, s, len);
     devredir_irp_delete(irp);
+
     log_debug("leaving");
 }
 
@@ -2128,6 +2133,7 @@ scard_handle_BeginTransaction_Return(struct stream *s, IRP *irp,
                                      tui32 IoStatus)
 {
     tui32 len;
+    struct trans *con;
 
     log_debug("entered");
 
@@ -2147,6 +2153,10 @@ scard_handle_BeginTransaction_Return(struct stream *s, IRP *irp,
 
     /* get OutputBufferLen */
     xstream_rd_u32_le(s, len);
+
+    con = (struct trans *) (irp->user_data);
+    scard_function_begin_transaction_return(con, s, len);
+    devredir_irp_delete(irp);
 
     log_debug("leaving");
 }

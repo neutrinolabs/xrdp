@@ -520,6 +520,11 @@ SCardBeginTransaction(SCARDHANDLE hCard)
 PCSC_API LONG
 SCardEndTransaction(SCARDHANDLE hCard, DWORD dwDisposition)
 {
+    char msg[256];
+    int code;
+    int bytes;
+    int status;
+
     LLOGLN(0, ("SCardEndTransaction:"));
     if (g_sck == -1)
     {
@@ -527,8 +532,31 @@ SCardEndTransaction(SCARDHANDLE hCard, DWORD dwDisposition)
         return SCARD_F_INTERNAL_ERROR;
     }
     pthread_mutex_lock(&g_mutex);
+    SET_UINT32(msg, 0, hCard);
+    SET_UINT32(msg, 4, dwDisposition);
+    if (send_message(SCARD_BEGIN_TRANSACTION, msg, 8) != 0)
+    {
+        LLOGLN(0, ("SCardEndTransaction: error, send_message"));
+        pthread_mutex_unlock(&g_mutex);
+        return SCARD_F_INTERNAL_ERROR;
+    }
+    bytes = 256;
+    if (get_message(&code, msg, &bytes) != 0)
+    {
+        LLOGLN(0, ("SCardEndTransaction: error, get_message"));
+        pthread_mutex_unlock(&g_mutex);
+        return SCARD_F_INTERNAL_ERROR;
+    }
+    if ((code != SCARD_BEGIN_TRANSACTION) || (bytes != 4))
+    {
+        LLOGLN(0, ("SCardEndTransaction: error, bad code"));
+        pthread_mutex_unlock(&g_mutex);
+        return SCARD_F_INTERNAL_ERROR;
+    }
     pthread_mutex_unlock(&g_mutex);
-    return SCARD_S_SUCCESS;
+    status = GET_UINT32(msg, 0);
+    LLOGLN(10, ("SCardEndTransaction: got status 0x%8.8x", status));
+    return status;
 }
 
 /*****************************************************************************/
@@ -652,6 +680,9 @@ SCardControl(SCARDHANDLE hCard, DWORD dwControlCode, LPCVOID pbSendBuffer,
         LLOGLN(0, ("SCardControl: error, not connected"));
         return SCARD_F_INTERNAL_ERROR;
     }
+    LLOGLN(0, ("SCardControl: dwControlCode %d", dwControlCode));
+    LLOGLN(0, ("SCardControl: cbSendLength %d", cbSendLength));
+    LLOGLN(0, ("SCardControl: cbRecvLength %d", cbRecvLength));
     pthread_mutex_lock(&g_mutex);
     pthread_mutex_unlock(&g_mutex);
     return SCARD_S_SUCCESS;
@@ -664,13 +695,55 @@ SCardTransmit(SCARDHANDLE hCard, const SCARD_IO_REQUEST *pioSendPci,
               SCARD_IO_REQUEST *pioRecvPci, LPBYTE pbRecvBuffer,
               LPDWORD pcbRecvLength)
 {
+    char *msg;
+    int bytes;
+    int code;
+    int offset;
+    int status;
+
     LLOGLN(0, ("SCardTransmit:"));
     if (g_sck == -1)
     {
         LLOGLN(0, ("SCardTransmit: error, not connected"));
         return SCARD_F_INTERNAL_ERROR;
     }
+    LLOGLN(0, ("SCardTransmit: cbSendLength %d", cbSendLength));
+
+    msg = (char *) malloc(8192);
+    SET_UINT32(msg, 0, hCard);
+    SET_UINT32(msg, 4, pioSendPci->dwProtocol);
+    SET_UINT32(msg, 8, pioSendPci->cbPciLength);
+    SET_UINT32(msg, 12, cbSendLength);
+    offset = 16;
+    memcpy(msg + 16, pbSendBuffer, cbSendLength);
+    offset += cbSendLength;
+    SET_UINT32(msg, offset, *pcbRecvLength);
+    offset += 4;
     pthread_mutex_lock(&g_mutex);
+
+    if (send_message(SCARD_TRANSMIT, msg, offset) != 0)
+    {
+        LLOGLN(0, ("SCardTransmit: error, send_message"));
+        free(msg);
+        pthread_mutex_unlock(&g_mutex);
+        return SCARD_F_INTERNAL_ERROR;
+    }
+    bytes = 8192;
+    if (get_message(&code, msg, &bytes) != 0)
+    {
+        LLOGLN(0, ("SCardTransmit: error, get_message"));
+        free(msg);
+        pthread_mutex_unlock(&g_mutex);
+        return SCARD_F_INTERNAL_ERROR;
+    }
+    if (code != SCARD_TRANSMIT)
+    {
+        LLOGLN(0, ("SCardTransmit: error, bad code"));
+        free(msg);
+        pthread_mutex_unlock(&g_mutex);
+        return SCARD_F_INTERNAL_ERROR;
+    }
+
     pthread_mutex_unlock(&g_mutex);
     return SCARD_S_SUCCESS;
 }

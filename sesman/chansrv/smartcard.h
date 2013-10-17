@@ -118,7 +118,8 @@ int  APP_CC scard_send_reconnect(struct trans *con, tui32 context,
                                  tui32 sc_handle, READER_STATE* rs);
 
 int  APP_CC scard_send_begin_transaction(struct trans *con, tui32 sc_handle);
-int  APP_CC scard_send_end_transaction(struct trans *con, tui32 sc_handle);
+int  APP_CC scard_send_end_transaction(struct trans *con, tui32 sc_handle,
+                                       tui32 dwDisposition);
 int  APP_CC scard_send_status(struct trans *con, int wide, tui32 sc_handle);
 int  APP_CC scard_send_disconnect(struct trans *con, tui32 context, tui32 sc_handle);
 
