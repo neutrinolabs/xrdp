@@ -207,6 +207,7 @@ xrdp_orders_check(struct xrdp_orders *self, int max_size)
         }
         else
         {
+            xrdp_orders_init(self);
             return 0;
         }
     }
@@ -469,7 +470,10 @@ xrdp_orders_rect(struct xrdp_orders *self, int x, int y, int cx, int cy,
     char *present_ptr;
     char *order_flags_ptr;
 
-    xrdp_orders_check(self, 23);
+    if (xrdp_orders_check(self, 23) != 0)
+    {
+        return 1;
+    }
     self->order_count++;
     order_flags = RDP_ORDER_STANDARD;
 
@@ -637,7 +641,10 @@ xrdp_orders_screen_blt(struct xrdp_orders *self, int x, int y,
     char *present_ptr = (char *)NULL;
     char *order_flags_ptr = (char *)NULL;
 
-    xrdp_orders_check(self, 25);
+    if (xrdp_orders_check(self, 25) != 0)
+    {
+        return 1;
+    }
     self->order_count++;
     order_flags = RDP_ORDER_STANDARD;
 
@@ -826,7 +833,10 @@ xrdp_orders_pat_blt(struct xrdp_orders *self, int x, int y,
     char *order_flags_ptr;
     struct xrdp_brush blank_brush;
 
-    xrdp_orders_check(self, 39);
+    if (xrdp_orders_check(self, 39) != 0)
+    {
+        return 1;
+    }
     self->order_count++;
     order_flags = RDP_ORDER_STANDARD;
 
@@ -1040,7 +1050,10 @@ xrdp_orders_dest_blt(struct xrdp_orders *self, int x, int y,
     char *present_ptr;
     char *order_flags_ptr;
 
-    xrdp_orders_check(self, 21);
+    if (xrdp_orders_check(self, 21) != 0)
+    {
+        return 1;
+    }
     self->order_count++;
     order_flags = RDP_ORDER_STANDARD;
 
@@ -1208,7 +1221,10 @@ xrdp_orders_line(struct xrdp_orders *self, int mix_mode,
         rop = 0x0d; /* R2_COPYPEN */
     }
 
-    xrdp_orders_check(self, 32);
+    if (xrdp_orders_check(self, 32) != 0)
+    {
+        return 1;
+    }
     self->order_count++;
     order_flags = RDP_ORDER_STANDARD;
 
@@ -1407,7 +1423,10 @@ xrdp_orders_mem_blt(struct xrdp_orders *self, int cache_id,
     char *present_ptr = (char *)NULL;
     char *order_flags_ptr = (char *)NULL;
 
-    xrdp_orders_check(self, 30);
+    if (xrdp_orders_check(self, 30) != 0)
+    {
+        return 1;
+    }
     self->order_count++;
     order_flags = RDP_ORDER_STANDARD;
 
@@ -1614,7 +1633,10 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
     char* present_ptr;
     char* order_flags_ptr;
     
-    xrdp_orders_check(self, 80);
+    if (xrdp_orders_check(self, 80) != 0)
+    {
+        return 1;
+    }
     self->order_count++;
     order_flags = RDP_ORDER_STANDARD;
     if (self->orders_state.last_order != RDP_ORDER_COMPOSITE)
@@ -1940,8 +1962,10 @@ xrdp_orders_text(struct xrdp_orders *self,
     char *present_ptr = (char *)NULL;
     char *order_flags_ptr = (char *)NULL;
 
-    //xrdp_orders_check(self, 100);
-    xrdp_orders_check(self, 44+data_len);
+    if (xrdp_orders_check(self, 44 + data_len) != 0)
+    {
+        return 1;
+    }
     self->order_count++;
     order_flags = RDP_ORDER_STANDARD;
 
@@ -2127,7 +2151,10 @@ xrdp_orders_send_palette(struct xrdp_orders *self, int *palette,
     int len;
     int i;
 
-    xrdp_orders_check(self, 2000);
+    if (xrdp_orders_check(self, 2000) != 0)
+    {
+        return 1;
+    }
     self->order_count++;
     order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
     out_uint8(self->out_s, order_flags);
@@ -2187,7 +2214,10 @@ xrdp_orders_send_raw_bitmap(struct xrdp_orders *self,
 
     Bpp = (bpp + 7) / 8;
     bufsize = (width + e) * height * Bpp;
-    xrdp_orders_check(self, bufsize + 16);
+    if (xrdp_orders_check(self, bufsize + 16) != 0)
+    {
+        return 1;
+    }
     self->order_count++;
     order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
     out_uint8(self->out_s, order_flags);
@@ -2294,7 +2324,10 @@ height(%d)", lines_sending, height);
 
     bufsize = (int)(s->p - p);
     Bpp = (bpp + 7) / 8;
-    xrdp_orders_check(self, bufsize + 16);
+    if (xrdp_orders_check(self, bufsize + 16) != 0)
+    {
+        return 1;
+    }
     self->order_count++;
     order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
     out_uint8(self->out_s, order_flags);
@@ -2360,7 +2393,10 @@ xrdp_orders_send_font(struct xrdp_orders *self,
         datasize = FONT_DATASIZE(font_char);
         flags = 8;
     }
-    xrdp_orders_check(self, datasize + 18);
+    if (xrdp_orders_check(self, datasize + 18) != 0)
+    {
+        return 1;
+    }
     self->order_count++;
     order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
     out_uint8(self->out_s, order_flags);
@@ -2417,7 +2453,10 @@ xrdp_orders_send_raw_bitmap2(struct xrdp_orders *self,
 
     Bpp = (bpp + 7) / 8;
     bufsize = (width + e) * height * Bpp;
-    xrdp_orders_check(self, bufsize + 14);
+    if (xrdp_orders_check(self, bufsize + 14) != 0)
+    {
+        return 1;
+    }
     self->order_count++;
     order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
     out_uint8(self->out_s, order_flags);
@@ -2545,7 +2584,10 @@ height(%d)", lines_sending, height);
 
     bufsize = (int)(s->p - p);
     Bpp = (bpp + 7) / 8;
-    xrdp_orders_check(self, bufsize + 14);
+    if (xrdp_orders_check(self, bufsize + 14) != 0)
+    {
+        return 1;
+    }
     self->order_count++;
     order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
     out_uint8(self->out_s, order_flags);
@@ -2632,7 +2674,10 @@ xrdp_orders_out_v3(struct xrdp_orders *self, int cache_id, int cache_idx,
     int i;
 
     Bpp = (bpp + 7) / 8;
-    xrdp_orders_check(self, bufsize + 30);
+    if (xrdp_orders_check(self, bufsize + 30) != 0)
+    {
+        return 1;
+    }
     self->order_count++;
     order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
     out_uint8(self->out_s, order_flags);
@@ -2771,7 +2816,10 @@ xrdp_orders_send_brush(struct xrdp_orders *self, int width, int height,
     int order_flags = 0;
     int len = 0;
 
-    xrdp_orders_check(self, size + 12);
+    if (xrdp_orders_check(self, size + 12) != 0)
+    {
+        return 1;
+    }
     self->order_count++;
     order_flags = RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY;
     out_uint8(self->out_s, order_flags);
@@ -2813,7 +2861,10 @@ xrdp_orders_send_create_os_surface(struct xrdp_orders *self, int id,
         bytes += num_del_list * 2;
     }
 
-    xrdp_orders_check(self, bytes);
+    if (xrdp_orders_check(self, bytes) != 0)
+    {
+        return 1;
+    }
     self->order_count++;
     order_flags = RDP_ORDER_SECONDARY;
     order_flags |= 1 << 2; /* type RDP_ORDER_ALTSEC_CREATE_OFFSCR_BITMAP */
@@ -2854,7 +2905,10 @@ xrdp_orders_send_switch_os_surface(struct xrdp_orders *self, int id)
     int order_flags;
     int cache_id;
 
-    xrdp_orders_check(self, 3);
+    if (xrdp_orders_check(self, 3) != 0)
+    {
+        return 1;
+    }
     self->order_count++;
     order_flags = RDP_ORDER_SECONDARY;
     order_flags |= 0 << 2; /* type RDP_ORDER_ALTSEC_SWITCH_SURFACE */
