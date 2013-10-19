@@ -182,13 +182,17 @@ static void APP_CC scard_send_EndTransaction(IRP* irp, tui32 sc_handle,
 static void APP_CC scard_send_Status(IRP* irp, int wide, tui32 sc_handle);
 
 static void APP_CC scard_send_Disconnect(IRP* irp, tui32 context,
-                                         tui32 sc_handle);
+                                         tui32 sc_handle, int dwDisposition);
 
 static int  APP_CC scard_send_Transmit(IRP* irp, tui32 sc_handle,
-                                       READER_STATE* rs);
+                                       char *send_data, int send_bytes,
+                                       int recv_bytes,
+                                       struct xrdp_scard_io_request *send_ior,
+                                       struct xrdp_scard_io_request *recv_ior);
 
 static int APP_CC scard_send_Control(IRP* irp, tui32 context, tui32 sc_handle,
-                                     READER_STATE* rs);
+                                     char *send_data, int send_bytes,
+                                     int recv_bytes, int control_code);
 
 static int APP_CC scard_send_Cancel(IRP* irp, tui32 context);
 
@@ -639,7 +643,8 @@ scard_send_status(struct trans *con, int wide, tui32 sc_handle)
  * @param  sc_handle  handle to smartcard
  *****************************************************************************/
 int APP_CC
-scard_send_disconnect(struct trans *con, tui32 context, tui32 sc_handle)
+scard_send_disconnect(struct trans *con, tui32 context, tui32 sc_handle,
+                      int dwDisposition)
 {
     IRP *irp;
 
@@ -657,7 +662,7 @@ scard_send_disconnect(struct trans *con, tui32 context, tui32 sc_handle)
     irp->user_data = con;
 
     /* send IRP to client */
-    scard_send_Disconnect(irp, context, sc_handle);
+    scard_send_Disconnect(irp, context, sc_handle, dwDisposition);
 
     return 0;
 }
@@ -667,7 +672,10 @@ scard_send_disconnect(struct trans *con, tui32 context, tui32 sc_handle)
  * associated with a valid context.
  *****************************************************************************/
 int APP_CC
-scard_send_transmit(struct trans *con, tui32 sc_handle, READER_STATE* rs)
+scard_send_transmit(struct trans *con, tui32 sc_handle,
+                    char *send_data, int send_bytes, int recv_bytes,
+                    struct xrdp_scard_io_request *send_ior,
+                    struct xrdp_scard_io_request *recv_ior)
 {
     IRP *irp;
 
@@ -685,7 +693,8 @@ scard_send_transmit(struct trans *con, tui32 sc_handle, READER_STATE* rs)
     irp->user_data = con;
 
     /* send IRP to client */
-    scard_send_Transmit(irp, sc_handle, rs);
+    scard_send_Transmit(irp, sc_handle, send_data, send_bytes, recv_bytes,
+                        send_ior, recv_ior);
 
     return 0;
 }
@@ -695,7 +704,8 @@ scard_send_transmit(struct trans *con, tui32 sc_handle, READER_STATE* rs)
  *****************************************************************************/
 int APP_CC
 scard_send_control(struct trans *con, tui32 context, tui32 sc_handle,
-                   READER_STATE* rs)
+                   char *send_data, int send_bytes,
+                   int recv_bytes, int control_code)
 {
     IRP *irp;
 
@@ -713,7 +723,8 @@ scard_send_control(struct trans *con, tui32 context, tui32 sc_handle,
     irp->user_data = con;
 
     /* send IRP to client */
-    scard_send_Control(irp, context, sc_handle, rs);
+    scard_send_Control(irp, context, sc_handle, send_data,
+                       send_bytes, recv_bytes, control_code);
 
     return 0;
 }
@@ -1594,7 +1605,8 @@ scard_send_Status(IRP *irp, int wide, tui32 sc_handle)
  * @param  sc_handle  handle to smartcard
  *****************************************************************************/
 static void APP_CC
-scard_send_Disconnect(IRP *irp, tui32 context, tui32 sc_handle)
+scard_send_Disconnect(IRP *irp, tui32 context, tui32 sc_handle,
+                      int dwDisposition)
 {
     /* see [MS-RDPESC] 3.1.4.30 */
 
@@ -1627,7 +1639,7 @@ scard_send_Disconnect(IRP *irp, tui32 context, tui32 sc_handle)
      */
 
     xstream_seek(s, 24);
-    xstream_wr_u32_le(s, SCARD_RESET_CARD);
+    xstream_wr_u32_le(s, dwDisposition);
 
     /* insert context */
     xstream_wr_u32_le(s, 4);
@@ -1653,13 +1665,17 @@ scard_send_Disconnect(IRP *irp, tui32 context, tui32 sc_handle)
  * associated with a valid context.
  *****************************************************************************/
 static int APP_CC
-scard_send_Transmit(IRP* irp, tui32 sc_handle, READER_STATE* rs)
+scard_send_Transmit(IRP* irp, tui32 sc_handle, char *send_data,
+                    int send_bytes, int recv_bytes,
+                    struct xrdp_scard_io_request *send_ior,
+                    struct xrdp_scard_io_request *recv_ior)
 {
     /* see [MS-RDPESC] 2.2.2.19 */
 
     SMARTCARD*     sc;
     struct stream* s;
     int            bytes;
+    int            val;
 
     if ((sc = smartcards[irp->scard_index]) == NULL)
     {
@@ -1669,6 +1685,12 @@ scard_send_Transmit(IRP* irp, tui32 sc_handle, READER_STATE* rs)
 
     if ((s = scard_make_new_ioctl(irp, SCARD_IOCTL_TRANSMIT)) == NULL)
         return;
+
+    log_debug("send_bytes %d recv_bytes %d send dwProtocol %d cbPciLength %d "
+              "extra_bytes %d recv dwProtocol %d cbPciLength %d", send_bytes,
+              recv_bytes, send_ior->dwProtocol, send_ior->cbPciLength,
+              send_ior->extra_bytes, recv_ior->dwProtocol, recv_ior->cbPciLength,
+              recv_ior->extra_bytes);
 
     /*
      * command format
@@ -1695,20 +1717,47 @@ scard_send_Transmit(IRP* irp, tui32 sc_handle, READER_STATE* rs)
      */
 
     xstream_seek(s, 12);
-    xstream_wr_u32_le(s, rs->map0);
+    xstream_wr_u32_le(s, 0); // map0
     xstream_seek(s, 4);
-    xstream_wr_u32_le(s, rs->map1);
-    xstream_wr_u32_le(s, rs->dwProtocol);
-    xstream_wr_u32_le(s, rs->cbPciLength);
-    xstream_wr_u32_le(s, rs->map2);
-    xstream_wr_u32_le(s, rs->cbSendLength);
-    xstream_wr_u32_le(s, rs->map3);
-    xstream_wr_u32_le(s, rs->map4);
-    xstream_wr_u32_le(s, rs->map5);
-    xstream_wr_u32_le(s, rs->map6);
-    xstream_wr_u32_le(s, rs->cbRecvLength);
+    xstream_wr_u32_le(s, 0); // map1
+    xstream_wr_u32_le(s, send_ior->dwProtocol);
+    xstream_wr_u32_le(s, send_ior->cbPciLength);
+    val = send_ior->extra_bytes > 0 ? 1 : 0;
+    xstream_wr_u32_le(s, val); // map2
+    xstream_wr_u32_le(s, send_bytes);
+    val = send_bytes > 0 ? 1 : 0;
+    xstream_wr_u32_le(s, val); // map3
+    val = recv_ior->cbPciLength > 0 ? 1 : 0;
+    xstream_wr_u32_le(s, val); // map 4
+    xstream_wr_u32_le(s, 0); // map5
+    xstream_wr_u32_le(s, recv_bytes);
     xstream_wr_u32_le(s, 4);
     xstream_wr_u32_le(s, sc_handle);
+
+    if (send_ior->extra_bytes > 0)
+    {
+        xstream_wr_u32_le(s, send_ior->extra_bytes);
+        out_uint8a(s, send_ior->extra_data, send_ior->extra_bytes);
+    }
+
+    if (send_bytes > 0)
+    {
+        xstream_wr_u32_le(s, send_bytes);
+        out_uint8a(s, send_data, send_bytes);
+    }
+
+    if (recv_ior->cbPciLength > 0)
+    {
+        xstream_wr_u32_le(s, recv_ior->dwProtocol);
+        xstream_wr_u32_le(s, recv_ior->cbPciLength);
+        val = recv_ior->extra_bytes > 0 ? 1 : 0;
+        xstream_wr_u32_le(s, val);
+        if (val)
+        {
+            xstream_wr_u32_le(s, recv_ior->extra_bytes);
+            out_uint8a(s, recv_ior->extra_data, recv_ior->extra_bytes);
+        }
+    }
 
     /* get stream len */
     bytes = xstream_len(s);
@@ -1725,13 +1774,15 @@ scard_send_Transmit(IRP* irp, tui32 sc_handle, READER_STATE* rs)
  * Communicate directly with the smart card reader
  *****************************************************************************/
 static int APP_CC
-scard_send_Control(IRP* irp, tui32 context, tui32 sc_handle, READER_STATE* rs)
+scard_send_Control(IRP* irp, tui32 context, tui32 sc_handle, char *send_data,
+                   int send_bytes, int recv_bytes, int control_code)
 {
     /* see [MS-RDPESC] 2.2.2.19 */
 
     SMARTCARD*     sc;
     struct stream* s;
     int            bytes;
+    int            val;
 
     if ((sc = smartcards[irp->scard_index]) == NULL)
     {
@@ -1765,18 +1816,29 @@ scard_send_Control(IRP* irp, tui32 context, tui32 sc_handle, READER_STATE* rs)
      */
 
     xstream_seek(s, 12);
-    xstream_wr_u32_le(s, rs->map0);
+    xstream_wr_u32_le(s, 0); // map0
+    xstream_seek(s, 4);
+    xstream_wr_u32_le(s, 0); // map1
+
+    xstream_wr_u32_le(s, control_code);
+
+    xstream_wr_u32_le(s, send_bytes);
+
+    val = send_bytes > 0 ? 1 : 0;
+    xstream_wr_u32_le(s, val); // map2
+
     xstream_wr_u32_le(s, 0);
-    xstream_wr_u32_le(s, rs->map1);
-    xstream_wr_u32_le(s, rs->dwControlCode);
-    xstream_wr_u32_le(s, rs->cbRecvLength);
-    xstream_wr_u32_le(s, rs->map2);
-    xstream_wr_u32_le(s, 0);
-    xstream_wr_u32_le(s, rs->cbOutBufferSize);
+    xstream_wr_u32_le(s, recv_bytes);
     xstream_wr_u32_le(s, 4);
     xstream_wr_u32_le(s, context);
     xstream_wr_u32_le(s, 4);
     xstream_wr_u32_le(s, sc_handle);
+
+    if (send_bytes > 0)
+    {
+        xstream_wr_u32_le(s, send_bytes);
+        out_uint8a(s, send_data, send_bytes);
+    }
 
     /* get stream len */
     bytes = xstream_len(s);
@@ -2170,6 +2232,7 @@ scard_handle_EndTransaction_Return(struct stream *s, IRP *irp,
                                    tui32 IoStatus)
 {
     tui32 len;
+    struct trans *con;
 
     log_debug("entered");
 
@@ -2189,6 +2252,10 @@ scard_handle_EndTransaction_Return(struct stream *s, IRP *irp,
 
     /* get OutputBufferLen */
     xstream_rd_u32_le(s, len);
+
+    con = (struct trans *) (irp->user_data);
+    scard_function_end_transaction_return(con, s, len);
+    devredir_irp_delete(irp);
 
     log_debug("leaving");
 }
@@ -2234,6 +2301,7 @@ scard_handle_Disconnect_Return(struct stream *s, IRP *irp,
                                tui32 IoStatus)
 {
     tui32 len;
+    struct trans *con;
 
     log_debug("entered");
 
@@ -2254,6 +2322,10 @@ scard_handle_Disconnect_Return(struct stream *s, IRP *irp,
     /* get OutputBufferLen */
     xstream_rd_u32_le(s, len);
 
+    con = (struct trans *) (irp->user_data);
+    scard_function_disconnect_return(con, s, len);
+    devredir_irp_delete(irp);
+
     log_debug("leaving");
 }
 
@@ -2265,6 +2337,7 @@ scard_handle_Transmit_Return(struct stream *s, IRP *irp, tui32 DeviceId,
                              tui32 CompletionId, tui32 IoStatus)
 {
     tui32 len;
+    struct trans *con;
 
     log_debug("entered");
 
@@ -2285,6 +2358,10 @@ scard_handle_Transmit_Return(struct stream *s, IRP *irp, tui32 DeviceId,
     /* get OutputBufferLen */
     xstream_rd_u32_le(s, len);
 
+    con = (struct trans *) (irp->user_data);
+    scard_function_transmit_return(con, s, len);
+    devredir_irp_delete(irp);
+
     log_debug("leaving");
 }
 
@@ -2296,6 +2373,7 @@ scard_handle_Control_Return(struct stream *s, IRP *irp, tui32 DeviceId,
                             tui32 CompletionId,tui32 IoStatus)
 {
     tui32 len;
+    struct trans *con;
 
     log_debug("entered");
 
@@ -2315,6 +2393,10 @@ scard_handle_Control_Return(struct stream *s, IRP *irp, tui32 DeviceId,
 
     /* get OutputBufferLen */
     xstream_rd_u32_le(s, len);
+
+    con = (struct trans *) (irp->user_data);
+    scard_function_control_return(con, s, len);
+    devredir_irp_delete(irp);
 
     log_debug("leaving");
 }

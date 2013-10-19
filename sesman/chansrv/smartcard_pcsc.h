@@ -38,6 +38,14 @@ int APP_CC scard_function_list_readers_return(struct trans *con,
                                               struct stream *in_s,
                                               int len);
 
+int APP_CC scard_function_transmit_return(struct trans *con,
+                                          struct stream *in_s,
+                                          int len);
+
+int APP_CC scard_function_control_return(struct trans *con,
+                                         struct stream *in_s,
+                                         int len);
+
 int APP_CC scard_function_get_status_change_return(struct trans *con,
                                                    struct stream *in_s,
                                                    int len);

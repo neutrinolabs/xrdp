@@ -393,12 +393,13 @@ SCardConnect(SCARDCONTEXT hContext, LPCSTR szReader, DWORD dwShareMode,
     int offset;
 
     LLOGLN(0, ("SCardConnect:"));
+    LLOGLN(0, ("SCardConnect: hContext %p szReader %s dwShareMode %d dwPreferredProtocols %d",
+           hContext, szReader, dwShareMode, dwPreferredProtocols));
     if (g_sck == -1)
     {
         LLOGLN(0, ("SCardConnect: error, not connected"));
         return SCARD_F_INTERNAL_ERROR;
     }
-    pthread_mutex_lock(&g_mutex);
     offset = 0;
     SET_UINT32(msg, offset, hContext);
     offset += 4;
@@ -409,12 +410,13 @@ SCardConnect(SCARDCONTEXT hContext, LPCSTR szReader, DWORD dwShareMode,
         return SCARD_F_INTERNAL_ERROR;
     }
     memcpy(msg + offset, szReader, bytes);
-    memset(msg + bytes, 0, 100 - bytes);
+    memset(msg + offset + bytes, 0, 100 - bytes);
     offset += 100;
     SET_UINT32(msg, offset, dwShareMode);
     offset += 4;
     SET_UINT32(msg, offset, dwPreferredProtocols);
     offset += 4;
+    pthread_mutex_lock(&g_mutex);
     if (send_message(SCARD_CONNECT, msg, offset) != 0)
     {
         LLOGLN(0, ("SCardConnect: error, send_message"));
@@ -463,6 +465,11 @@ SCardReconnect(SCARDHANDLE hCard, DWORD dwShareMode,
 PCSC_API LONG
 SCardDisconnect(SCARDHANDLE hCard, DWORD dwDisposition)
 {
+    char msg[256];
+    int code;
+    int bytes;
+    int status;
+
     LLOGLN(0, ("SCardDisconnect:"));
     if (g_sck == -1)
     {
@@ -470,8 +477,31 @@ SCardDisconnect(SCARDHANDLE hCard, DWORD dwDisposition)
         return SCARD_F_INTERNAL_ERROR;
     }
     pthread_mutex_lock(&g_mutex);
+    SET_UINT32(msg, 0, hCard);
+    SET_UINT32(msg, 4, dwDisposition);
+    if (send_message(SCARD_DISCONNECT, msg, 8) != 0)
+    {
+        LLOGLN(0, ("SCardDisconnect: error, send_message"));
+        pthread_mutex_unlock(&g_mutex);
+        return SCARD_F_INTERNAL_ERROR;
+    }
+    bytes = 256;
+    if (get_message(&code, msg, &bytes) != 0)
+    {
+        LLOGLN(0, ("SCardDisconnect: error, get_message"));
+        pthread_mutex_unlock(&g_mutex);
+        return SCARD_F_INTERNAL_ERROR;
+    }
+    if ((code != SCARD_DISCONNECT) || (bytes != 4))
+    {
+        LLOGLN(0, ("SCardDisconnect: error, bad code"));
+        pthread_mutex_unlock(&g_mutex);
+        return SCARD_F_INTERNAL_ERROR;
+    }
     pthread_mutex_unlock(&g_mutex);
-    return SCARD_S_SUCCESS;
+    status = GET_UINT32(msg, 0);
+    LLOGLN(10, ("SCardDisconnect: got status 0x%8.8x", status));
+    return status;
 }
 
 /*****************************************************************************/
@@ -534,7 +564,7 @@ SCardEndTransaction(SCARDHANDLE hCard, DWORD dwDisposition)
     pthread_mutex_lock(&g_mutex);
     SET_UINT32(msg, 0, hCard);
     SET_UINT32(msg, 4, dwDisposition);
-    if (send_message(SCARD_BEGIN_TRANSACTION, msg, 8) != 0)
+    if (send_message(SCARD_END_TRANSACTION, msg, 8) != 0)
     {
         LLOGLN(0, ("SCardEndTransaction: error, send_message"));
         pthread_mutex_unlock(&g_mutex);
@@ -547,7 +577,7 @@ SCardEndTransaction(SCARDHANDLE hCard, DWORD dwDisposition)
         pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
-    if ((code != SCARD_BEGIN_TRANSACTION) || (bytes != 4))
+    if ((code != SCARD_END_TRANSACTION) || (bytes != 4))
     {
         LLOGLN(0, ("SCardEndTransaction: error, bad code"));
         pthread_mutex_unlock(&g_mutex);
@@ -674,6 +704,12 @@ SCardControl(SCARDHANDLE hCard, DWORD dwControlCode, LPCVOID pbSendBuffer,
              DWORD cbSendLength, LPVOID pbRecvBuffer, DWORD cbRecvLength,
              LPDWORD lpBytesReturned)
 {
+    char *msg;
+    int bytes;
+    int code;
+    int offset;
+    int status = 0;
+
     LLOGLN(0, ("SCardControl:"));
     if (g_sck == -1)
     {
@@ -683,9 +719,50 @@ SCardControl(SCARDHANDLE hCard, DWORD dwControlCode, LPCVOID pbSendBuffer,
     LLOGLN(0, ("SCardControl: dwControlCode %d", dwControlCode));
     LLOGLN(0, ("SCardControl: cbSendLength %d", cbSendLength));
     LLOGLN(0, ("SCardControl: cbRecvLength %d", cbRecvLength));
+    msg = (char *) malloc(8192);
+    offset = 0;
+    SET_UINT32(msg, offset, hCard);
+    offset += 4;
+    SET_UINT32(msg, offset, dwControlCode);
+    offset += 4;
+    SET_UINT32(msg, offset, cbSendLength);
+    offset += 4;
+    memcpy(msg + offset, pbSendBuffer, cbSendLength);
+    offset += cbSendLength;
+    SET_UINT32(msg, offset, cbRecvLength);
+    offset += 4;
     pthread_mutex_lock(&g_mutex);
+    if (send_message(SCARD_CONTROL, msg, offset) != 0)
+    {
+        LLOGLN(0, ("SCardControl: error, send_message"));
+        free(msg);
+        pthread_mutex_unlock(&g_mutex);
+        return SCARD_F_INTERNAL_ERROR;
+    }
+    bytes = 8192;
+    if (get_message(&code, msg, &bytes) != 0)
+    {
+        LLOGLN(0, ("SCardControl: error, get_message"));
+        free(msg);
+        pthread_mutex_unlock(&g_mutex);
+        return SCARD_F_INTERNAL_ERROR;
+    }
+    if (code != SCARD_CONTROL)
+    {
+        LLOGLN(0, ("SCardControl: error, bad code"));
+        free(msg);
+        pthread_mutex_unlock(&g_mutex);
+        return SCARD_F_INTERNAL_ERROR;
+    }
     pthread_mutex_unlock(&g_mutex);
-    return SCARD_S_SUCCESS;
+    offset = 0;
+    *lpBytesReturned = GET_UINT32(msg, offset);
+    offset += 4;
+    memcpy(pbRecvBuffer, msg + offset, *lpBytesReturned);
+    offset += *lpBytesReturned;
+    status = GET_UINT32(msg, offset);
+    free(msg);
+    return status;
 }
 
 /*****************************************************************************/
@@ -700,6 +777,7 @@ SCardTransmit(SCARDHANDLE hCard, const SCARD_IO_REQUEST *pioSendPci,
     int code;
     int offset;
     int status;
+    int extra_len;
 
     LLOGLN(0, ("SCardTransmit:"));
     if (g_sck == -1)
@@ -708,19 +786,55 @@ SCardTransmit(SCARDHANDLE hCard, const SCARD_IO_REQUEST *pioSendPci,
         return SCARD_F_INTERNAL_ERROR;
     }
     LLOGLN(0, ("SCardTransmit: cbSendLength %d", cbSendLength));
-
+    LLOGLN(0, ("SCardTransmit: pioRecvPci %p", pioRecvPci));
+    if (pioRecvPci != 0)
+    {
+        LLOGLN(0, ("SCardTransmit: pioRecvPci->dwProtocol %d",
+               (int)pioRecvPci->dwProtocol));
+        LLOGLN(0, ("SCardTransmit: pioRecvPci->cbPciLength %d",
+               (int)pioRecvPci->cbPciLength));
+    }
     msg = (char *) malloc(8192);
-    SET_UINT32(msg, 0, hCard);
-    SET_UINT32(msg, 4, pioSendPci->dwProtocol);
-    SET_UINT32(msg, 8, pioSendPci->cbPciLength);
-    SET_UINT32(msg, 12, cbSendLength);
-    offset = 16;
-    memcpy(msg + 16, pbSendBuffer, cbSendLength);
+    offset = 0;
+    SET_UINT32(msg, offset, hCard);
+    offset += 4;
+    SET_UINT32(msg, offset, pioSendPci->dwProtocol);
+    offset += 4;
+    SET_UINT32(msg, offset, pioSendPci->cbPciLength);
+    offset += 4;
+    extra_len = pioSendPci->cbPciLength - 8;
+    SET_UINT32(msg, offset, extra_len);
+    offset += 4;
+    memcpy(msg + offset, pioSendPci + 1, extra_len);
+    offset += extra_len;
+    SET_UINT32(msg, offset, cbSendLength);
+    offset += 4;
+    memcpy(msg + offset, pbSendBuffer, cbSendLength);
     offset += cbSendLength;
+    if ((pioRecvPci == 0) || (pioRecvPci->cbPciLength < 8))
+    {
+        SET_UINT32(msg, offset, 0); /* dwProtocol */
+        offset += 4;
+        SET_UINT32(msg, offset, 0); /* cbPciLength */
+        offset += 4;
+        SET_UINT32(msg, offset, 0); /* extra_len */
+        offset += 4;
+    }
+    else
+    {
+        SET_UINT32(msg, offset, pioRecvPci->dwProtocol);
+        offset += 4;
+        SET_UINT32(msg, offset, pioRecvPci->cbPciLength);
+        offset += 4;
+        extra_len = pioRecvPci->cbPciLength - 8;
+        SET_UINT32(msg, offset, extra_len);
+        offset += 4;
+        memcpy(msg + offset, pioRecvPci + 1, extra_len);
+        offset += extra_len;
+    }
     SET_UINT32(msg, offset, *pcbRecvLength);
     offset += 4;
     pthread_mutex_lock(&g_mutex);
-
     if (send_message(SCARD_TRANSMIT, msg, offset) != 0)
     {
         LLOGLN(0, ("SCardTransmit: error, send_message"));
@@ -743,9 +857,33 @@ SCardTransmit(SCARDHANDLE hCard, const SCARD_IO_REQUEST *pioSendPci,
         pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
-
     pthread_mutex_unlock(&g_mutex);
-    return SCARD_S_SUCCESS;
+    offset = 0;
+    if (pioRecvPci == 0)
+    {
+        offset += 8;
+        extra_len = GET_UINT32(msg, offset);
+        offset += 4;
+        offset += extra_len;
+    }
+    else
+    {
+        pioRecvPci->dwProtocol = GET_UINT32(msg, offset);
+        offset += 4;
+        pioRecvPci->cbPciLength = GET_UINT32(msg, offset);
+        offset += 4;
+        extra_len = GET_UINT32(msg, offset);
+        offset += 4;
+        offset += extra_len;
+    }
+    *pcbRecvLength = GET_UINT32(msg, offset);
+    offset += 4;
+    LLOGLN(0, ("SCardTransmit: cbRecvLength %d", *pcbRecvLength));
+    memcpy(pbRecvBuffer, msg + offset, *pcbRecvLength);
+    offset += *pcbRecvLength;
+    status = GET_UINT32(msg, offset);
+    free(msg);
+    return status;
 }
 
 /*****************************************************************************/

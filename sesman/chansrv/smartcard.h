@@ -48,6 +48,14 @@
 #define SCARD_RESET_CARD            0x00000001 /* reset smart card        */
 #define SCARD_UNPOWER_CARD          0x00000002 /* turn off and reset card */
 
+struct xrdp_scard_io_request
+{
+    tui32 dwProtocol;
+    tui32 cbPciLength;
+    int extra_bytes;
+    char *extra_data;
+};
+
 typedef struct reader_state
 {
     char   reader_name[128];
@@ -121,13 +129,17 @@ int  APP_CC scard_send_begin_transaction(struct trans *con, tui32 sc_handle);
 int  APP_CC scard_send_end_transaction(struct trans *con, tui32 sc_handle,
                                        tui32 dwDisposition);
 int  APP_CC scard_send_status(struct trans *con, int wide, tui32 sc_handle);
-int  APP_CC scard_send_disconnect(struct trans *con, tui32 context, tui32 sc_handle);
+int  APP_CC scard_send_disconnect(struct trans *con, tui32 context,
+                                  tui32 sc_handle, int dwDisposition);
 
 int  APP_CC scard_send_transmit(struct trans *con, tui32 sc_handle,
-                                READER_STATE* rs);
+                                char *send_data, int send_bytes, int recv_bytes,
+                                struct xrdp_scard_io_request *send_ior,
+                                struct xrdp_scard_io_request *recv_ior);
 
 int  APP_CC scard_send_control(struct trans *con, tui32 context, tui32 sc_handle,
-                               READER_STATE* rs);
+                               char *send_data, int send_bytes,
+                               int recv_bytes, int control_code);
 
 int  APP_CC scard_send_cancel(struct trans *con, tui32 context);
 

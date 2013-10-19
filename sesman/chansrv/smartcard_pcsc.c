@@ -60,6 +60,7 @@
 #define XRDP_PCSC_STATE_GOT_ET           (1 << 6) /* end transaction */
 #define XRDP_PCSC_STATE_GOT_TR           (1 << 7) /* transmit */
 #define XRDP_PCSC_STATE_GOT_CO           (1 << 8) /* control */
+#define XRDP_PCSC_STATE_GOT_D            (1 << 9) /* disconnect */
 
 /* TODO: put this in con */
 static int g_xrdp_pcsc_state = XRDP_PCSC_STATE_NONE;
@@ -329,7 +330,6 @@ int APP_CC
 scard_process_connect(struct trans *con, struct stream *in_s)
 {
     int hContext;
-    char szReader[100];
     READER_STATE rs;
 
     LLOGLN(0, ("scard_process_connect:"));
@@ -341,11 +341,11 @@ scard_process_connect(struct trans *con, struct stream *in_s)
     g_memset(&rs, 0, sizeof(rs));
     g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_C;
     in_uint32_le(in_s, hContext);
-    in_uint8a(in_s, szReader, 100);
+    in_uint8a(in_s, rs.reader_name, 100);
     in_uint32_le(in_s, rs.dwShareMode);
     in_uint32_le(in_s, rs.dwPreferredProtocols);
-    LLOGLN(0, ("scard_process_connect: dwShareMode 0x%8.8x "
-           "dwPreferredProtocols 0x%8.8x", rs.dwShareMode,
+    LLOGLN(0, ("scard_process_connect: rs.reader_name %s dwShareMode 0x%8.8x "
+           "dwPreferredProtocols 0x%8.8x", rs.reader_name, rs.dwShareMode,
            rs.dwPreferredProtocols));
     scard_send_connect(con, hContext, 1, &rs);
     return 0;
@@ -371,8 +371,9 @@ scard_function_connect_return(struct trans *con,
     g_xrdp_pcsc_state &= ~XRDP_PCSC_STATE_GOT_C;
     in_uint8s(in_s, 36);
     in_uint32_le(in_s, dwActiveProtocol);
-    in_uint8s(in_s, 36);
+    in_uint8s(in_s, 4);
     in_uint32_le(in_s, hCard);
+    LLOGLN(0, ("scard_function_connect_return: hCard %d dwActiveProtocol %d", hCard, dwActiveProtocol));
     out_s = trans_get_out_s(con, 8192);
     s_push_layer(out_s, iso_hdr, 8);
     out_uint32_le(out_s, hCard);
@@ -383,6 +384,66 @@ scard_function_connect_return(struct trans *con,
     s_pop_layer(out_s, iso_hdr);
     out_uint32_le(out_s, bytes - 8);
     out_uint32_le(out_s, 0x04); /* SCARD_CONNECT 0x04 */
+    return trans_force_write(con);
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+scard_process_disconnect(struct trans *con, struct stream *in_s)
+{
+    int hContext;
+    int hCard;
+    int dwDisposition;
+
+    LLOGLN(0, ("scard_process_disconnect:"));
+    if (g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_D)
+    {
+        LLOGLN(0, ("scard_process_disconnect: opps"));
+        return 1;
+    }
+    g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_D;
+    in_uint32_le(in_s, hCard);
+    in_uint32_le(in_s, dwDisposition);
+
+    hContext = 1;
+
+    scard_send_disconnect(con, hContext, hCard, dwDisposition);
+
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+scard_function_disconnect_return(struct trans *con,
+                                 struct stream *in_s,
+                                 int len)
+{
+    int dwActiveProtocol;
+    int hCard;
+    int bytes;
+    struct stream *out_s;
+
+    g_hexdump(in_s->p, len);
+    if ((g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_D) == 0)
+    {
+        LLOGLN(0, ("scard_function_connect_return: opps"));
+        return 1;
+    }
+    g_xrdp_pcsc_state &= ~XRDP_PCSC_STATE_GOT_D;
+    in_uint8s(in_s, 36);
+    in_uint32_le(in_s, dwActiveProtocol);
+    in_uint8s(in_s, 4);
+    in_uint32_le(in_s, hCard);
+    LLOGLN(0, ("scard_function_connect_return: hCard %d dwActiveProtocol %d", hCard, dwActiveProtocol));
+    out_s = trans_get_out_s(con, 8192);
+    s_push_layer(out_s, iso_hdr, 8);
+    out_uint32_le(out_s, 0); /* SCARD_S_SUCCESS status */
+    s_mark_end(out_s);
+    bytes = (int) (out_s->end - out_s->data);
+    s_pop_layer(out_s, iso_hdr);
+    out_uint32_le(out_s, bytes - 8);
+    out_uint32_le(out_s, 0x06); /* SCARD_DISCONNECT 0x06 */
     return trans_force_write(con);
 }
 
@@ -492,7 +553,11 @@ int APP_CC
 scard_process_transmit(struct trans *con, struct stream *in_s)
 {
     int hCard;
-    READER_STATE rs;
+    int recv_bytes;
+    int send_bytes;
+    char *send_data;
+    struct xrdp_scard_io_request send_ior;
+    struct xrdp_scard_io_request recv_ior;
 
     LLOGLN(0, ("scard_process_transmit:"));
     if (g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_TR)
@@ -502,21 +567,26 @@ scard_process_transmit(struct trans *con, struct stream *in_s)
     }
     g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_TR;
     LLOGLN(0, ("scard_process_transmit:"));
-
-    // todo
-    g_memset(&rs, 0, sizeof(rs));
-
     in_uint32_le(in_s, hCard);
-    in_uint32_le(in_s, rs.dwProtocol);
-    in_uint32_le(in_s, rs.cbPciLength);
-    in_uint32_le(in_s, rs.cbSendLength);
-    LLOGLN(0, ("scard_process_transmit: dwProtocol %d cbPciLength %d "
-          "cbSendLength %d", rs.dwProtocol, rs.cbPciLength, rs.cbSendLength));
-    g_hexdump(in_s->p, rs.cbSendLength);
-    in_uint8s(in_s, rs.cbSendLength);
-    in_uint32_le(in_s, rs.cbRecvLength);
-    LLOGLN(0, ("scard_process_transmit: cbRecvLength %d", rs.cbRecvLength));
-
+    in_uint32_le(in_s, send_ior.dwProtocol);
+    in_uint32_le(in_s, send_ior.cbPciLength);
+    in_uint32_le(in_s, send_ior.extra_bytes);
+    in_uint8p(in_s, send_ior.extra_data, send_ior.extra_bytes);
+    in_uint32_le(in_s, send_bytes);
+    in_uint8p(in_s, send_data, send_bytes);
+    in_uint32_le(in_s, recv_ior.dwProtocol);
+    in_uint32_le(in_s, recv_ior.cbPciLength);
+    in_uint32_le(in_s, recv_ior.extra_bytes);
+    in_uint8p(in_s, recv_ior.extra_data, recv_ior.extra_bytes);
+    in_uint32_le(in_s, recv_bytes);
+    LLOGLN(0, ("scard_process_transmit: send dwProtocol %d cbPciLength %d "
+           "recv dwProtocol %d cbPciLength %d send_bytes %d ",
+           send_ior.dwProtocol, send_ior.cbPciLength, recv_ior.dwProtocol,
+           recv_ior.cbPciLength, send_bytes));
+    g_hexdump(in_s->p, send_bytes);
+    LLOGLN(0, ("scard_process_transmit: recv_bytes %d", recv_bytes));
+    scard_send_transmit(con, hCard, send_data, send_bytes, recv_bytes,
+                        &send_ior, &recv_ior);
     return 0;
 }
 
@@ -529,7 +599,13 @@ scard_function_transmit_return(struct trans *con,
 {
     struct stream *out_s;
     int bytes;
+    int val;
+    int got_recv_pci;
+    int cbRecvLength;
+    struct xrdp_scard_io_request recv_ior;
+    char *recvBuf;
 
+    LLOGLN(0, ("scard_function_transmit_return:"));
     g_hexdump(in_s->p, len);
     if ((g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_TR) == 0)
     {
@@ -538,9 +614,41 @@ scard_function_transmit_return(struct trans *con,
     }
     g_xrdp_pcsc_state &= ~XRDP_PCSC_STATE_GOT_TR;
 
-    // todo
-
-    return 0;
+    in_uint8s(in_s, 20);
+    in_uint32_le(in_s, val);
+    g_memset(&recv_ior, 0, sizeof(recv_ior));
+    got_recv_pci = 0;
+    if (val != 0)
+    {
+        /* pioRecvPci */
+        got_recv_pci = 1;
+        LLOGLN(0, ("scard_function_transmit_return: pioRecvPci not zero!"));
+    }
+    in_uint8s(in_s, 4);
+    in_uint32_le(in_s, val);
+    cbRecvLength = 0;
+    recvBuf = 0;
+    if (val != 0)
+    {
+        in_uint32_le(in_s, cbRecvLength);
+        in_uint8p(in_s, recvBuf, cbRecvLength);
+    }
+    LLOGLN(0, ("scard_function_transmit_return: cbRecvLength %d", cbRecvLength));
+    out_s = trans_get_out_s(con, 8192);
+    s_push_layer(out_s, iso_hdr, 8);
+    out_uint32_le(out_s, recv_ior.dwProtocol);
+    out_uint32_le(out_s, recv_ior.cbPciLength);
+    out_uint32_le(out_s, recv_ior.extra_bytes);
+    out_uint8a(out_s, recv_ior.extra_data, recv_ior.extra_bytes);
+    out_uint32_le(out_s, cbRecvLength);
+    out_uint8a(out_s, recvBuf, cbRecvLength);
+    out_uint32_le(out_s, 0); /* SCARD_S_SUCCESS status */
+    s_mark_end(out_s);
+    bytes = (int) (out_s->end - out_s->data);
+    s_pop_layer(out_s, iso_hdr);
+    out_uint32_le(out_s, bytes - 8);
+    out_uint32_le(out_s, 0x09); /* SCARD_TRANSMIT 0x09 */
+    return trans_force_write(con);
 }
 
 /*****************************************************************************/
@@ -548,6 +656,13 @@ scard_function_transmit_return(struct trans *con,
 int APP_CC
 scard_process_control(struct trans *con, struct stream *in_s)
 {
+    tui32 context;
+    int hCard;
+    int send_bytes;
+    int recv_bytes;
+    int control_code;
+    char *send_data;
+
     LLOGLN(0, ("scard_process_control:"));
     if (g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_CO)
     {
@@ -557,7 +672,16 @@ scard_process_control(struct trans *con, struct stream *in_s)
     g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_CO;
     LLOGLN(0, ("scard_process_control:"));
 
-    // todo
+    in_uint32_le(in_s, hCard);
+    in_uint32_le(in_s, control_code);
+    in_uint32_le(in_s, send_bytes);
+    in_uint8p(in_s, send_data, send_bytes);
+    in_uint32_le(in_s, recv_bytes);
+
+    context = 1;
+
+    scard_send_control(con, context, hCard, send_data, send_bytes, recv_bytes,
+                       control_code);
 
     return 0;
 }
@@ -571,6 +695,8 @@ scard_function_control_return(struct trans *con,
 {
     struct stream *out_s;
     int bytes;
+    int cbRecvLength;
+    char *recvBuf;
 
     g_hexdump(in_s->p, len);
     if ((g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_CO) == 0)
@@ -580,9 +706,22 @@ scard_function_control_return(struct trans *con,
     }
     g_xrdp_pcsc_state &= ~XRDP_PCSC_STATE_GOT_CO;
 
-    // todo
+    in_uint8s(in_s, 28);
+    in_uint32_le(in_s, cbRecvLength);
+    in_uint8p(in_s, recvBuf, cbRecvLength);
 
-    return 0;
+    LLOGLN(0, ("scard_function_control_return: cbRecvLength %d", cbRecvLength));
+    out_s = trans_get_out_s(con, 8192);
+    s_push_layer(out_s, iso_hdr, 8);
+    out_uint32_le(out_s, cbRecvLength);
+    out_uint8a(out_s, recvBuf, cbRecvLength);
+    out_uint32_le(out_s, 0); /* SCARD_S_SUCCESS status */
+    s_mark_end(out_s);
+    bytes = (int) (out_s->end - out_s->data);
+    s_pop_layer(out_s, iso_hdr);
+    out_uint32_le(out_s, bytes - 8);
+    out_uint32_le(out_s, 0x0A); /* SCARD_CONTROL 0x0A */
+    return trans_force_write(con);
 }
 
 /*****************************************************************************/
@@ -729,6 +868,7 @@ scard_process_msg(struct trans *con, struct stream *in_s, int command)
 
         case 0x06: /* SCARD_DISCONNECT */
             LLOGLN(0, ("scard_process_msg: SCARD_DISCONNECT"));
+            rv = scard_process_disconnect(con, in_s);
             break;
 
         case 0x07: /* SCARD_BEGIN_TRANSACTION */
