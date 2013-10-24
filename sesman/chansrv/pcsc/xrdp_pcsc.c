@@ -48,6 +48,14 @@ typedef struct _SCARD_IO_REQUEST
     unsigned long cbPciLength;
 } SCARD_IO_REQUEST, *PSCARD_IO_REQUEST, *LPSCARD_IO_REQUEST;
 
+#define SCARD_PROTOCOL_T0       0x0001 /**< T=0 active protocol. */
+#define SCARD_PROTOCOL_T1       0x0002 /**< T=1 active protocol. */
+#define SCARD_PROTOCOL_RAW      0x0004 /**< Raw active protocol. */
+
+SCARD_IO_REQUEST g_rgSCardRawPci = { SCARD_PROTOCOL_T0,  8 };
+SCARD_IO_REQUEST g_rgSCardT1Pci  = { SCARD_PROTOCOL_T1,  8 };
+SCARD_IO_REQUEST g_rgSCardT0Pci  = { SCARD_PROTOCOL_RAW, 8 };
+
 #define LLOG_LEVEL 5
 #define LLOGLN(_level, _args) \
   do { if (_level < LLOG_LEVEL) { printf _args ; printf("\n"); } } while (0)
@@ -1131,6 +1139,7 @@ SCardSetAttrib(SCARDHANDLE hCard, DWORD dwAttrId, LPCBYTE pbAttr,
 char *
 pcsc_stringify_error(const long code)
 {
+    LLOGLN(10, ("pcsc_stringify_error: %d", code));
     switch (code)
     {
         case SCARD_S_SUCCESS:
