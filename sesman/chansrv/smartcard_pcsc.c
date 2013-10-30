@@ -38,7 +38,7 @@
 
 #if PCSC_STANDIN
 
-#define LLOG_LEVEL 11
+#define LLOG_LEVEL 1
 #define LLOGLN(_level, _args) \
   do \
   { \
@@ -57,6 +57,11 @@
 #define XRDP_PCSC_STATE_GOT_GSC          (1 << 3) /* get status change */
 #define XRDP_PCSC_STATE_GOT_C            (1 << 4) /* connect */
 #define XRDP_PCSC_STATE_GOT_BT           (1 << 5) /* begin transaction */
+#define XRDP_PCSC_STATE_GOT_ET           (1 << 6) /* end transaction */
+#define XRDP_PCSC_STATE_GOT_TR           (1 << 7) /* transmit */
+#define XRDP_PCSC_STATE_GOT_CO           (1 << 8) /* control */
+#define XRDP_PCSC_STATE_GOT_D            (1 << 9) /* disconnect */
+#define XRDP_PCSC_STATE_GOT_ST           (1 << 10) /* get status */
 
 /* TODO: put this in con */
 static int g_xrdp_pcsc_state = XRDP_PCSC_STATE_NONE;
@@ -69,8 +74,10 @@ struct pcsc_client
     struct trans *con;
 };
 
+#if 0
 static struct pcsc_client *g_head = 0;
 static struct pcsc_client *g_tail = 0;
+#endif
 
 static struct trans *g_lis = 0;
 static struct trans *g_con = 0; /* todo, remove this */
@@ -81,7 +88,7 @@ static int g_pub_file_fd = 0;
 int APP_CC
 scard_pcsc_get_wait_objs(tbus *objs, int *count, int *timeout)
 {
-    LLOGLN(0, ("scard_pcsc_get_wait_objs"));
+    LLOGLN(10, ("scard_pcsc_get_wait_objs"));
     if (g_lis != 0)
     {
         trans_get_wait_objs(g_lis, objs, count);
@@ -97,7 +104,7 @@ scard_pcsc_get_wait_objs(tbus *objs, int *count, int *timeout)
 int APP_CC
 scard_pcsc_check_wait_objs(void)
 {
-    LLOGLN(0, ("scard_pcsc_check_wait_objs"));
+    LLOGLN(10, ("scard_pcsc_check_wait_objs"));
     if (g_lis != 0)
     {
         trans_check_wait_objs(g_lis);
@@ -116,7 +123,7 @@ scard_process_establish_context(struct trans *con, struct stream *in_s)
 {
     int dwScope;
 
-    LLOGLN(0, ("scard_process_establish_context:"));
+    LLOGLN(10, ("scard_process_establish_context:"));
     if (g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_EC)
     {
         LLOGLN(0, ("scard_process_establish_context: opps"));
@@ -124,7 +131,7 @@ scard_process_establish_context(struct trans *con, struct stream *in_s)
     }
     g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_EC;
     in_uint32_le(in_s, dwScope);
-    LLOGLN(0, ("scard_process_establish_context: dwScope 0x%8.8x", dwScope));
+    LLOGLN(10, ("scard_process_establish_context: dwScope 0x%8.8x", dwScope));
     scard_send_establish_context(con, dwScope);
     return 0;
 }
@@ -141,7 +148,7 @@ scard_function_establish_context_return(struct trans *con,
     tui32 context_len;
     struct stream *out_s;
 
-    LLOGLN(0, ("scard_function_establish_context_return:"));
+    LLOGLN(10, ("scard_function_establish_context_return:"));
     if ((g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_EC) == 0)
     {
         LLOGLN(0, ("scard_function_establish_context_return: opps"));
@@ -156,7 +163,7 @@ scard_function_establish_context_return(struct trans *con,
         return 1;
     }
     in_uint32_le(in_s, context);
-    LLOGLN(0, ("scard_function_establish_context_return: context 0x%8.8x", context));
+    LLOGLN(10, ("scard_function_establish_context_return: context 0x%8.8x", context));
     out_s = trans_get_out_s(con, 8192);
     s_push_layer(out_s, iso_hdr, 8);
     out_uint32_le(out_s, context);
@@ -176,7 +183,7 @@ scard_process_release_context(struct trans *con, struct stream *in_s)
 {
     int hContext;
 
-    LLOGLN(0, ("scard_process_release_context:"));
+    LLOGLN(10, ("scard_process_release_context:"));
     if (g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_RC)
     {
         LLOGLN(0, ("scard_process_establish_context: opps"));
@@ -184,7 +191,7 @@ scard_process_release_context(struct trans *con, struct stream *in_s)
     }
     g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_RC;
     in_uint32_le(in_s, hContext);
-    LLOGLN(0, ("scard_process_release_context: hContext 0x%8.8x", hContext));
+    LLOGLN(10, ("scard_process_release_context: hContext 0x%8.8x", hContext));
     scard_send_release_context(con, hContext);
     return 0;
 }
@@ -198,9 +205,8 @@ scard_function_release_context_return(struct trans *con,
 {
     int bytes;
     struct stream *out_s;
-    tui32 context;
 
-    LLOGLN(0, ("scard_function_release_context_return:"));
+    LLOGLN(10, ("scard_function_release_context_return:"));
     if ((g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_RC) == 0)
     {
         LLOGLN(0, ("scard_function_release_context_return: opps"));
@@ -225,7 +231,7 @@ scard_process_list_readers(struct trans *con, struct stream *in_s)
 {
     int hContext;
 
-    LLOGLN(0, ("scard_process_list_readers:"));
+    LLOGLN(10, ("scard_process_list_readers:"));
     if (g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_LR)
     {
         LLOGLN(0, ("scard_process_list_readers: opps"));
@@ -233,7 +239,7 @@ scard_process_list_readers(struct trans *con, struct stream *in_s)
     }
     g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_LR;
     in_uint32_le(in_s, hContext);
-    LLOGLN(0, ("scard_process_list_readers: dwScope 0x%8.8x", hContext));
+    LLOGLN(10, ("scard_process_list_readers: dwScope 0x%8.8x", hContext));
     scard_send_list_readers(con, hContext, 1);
     return 0;
 }
@@ -254,10 +260,10 @@ scard_function_list_readers_return(struct trans *con,
     char           lreader_name[16][100];
 
     LLOGLN(10, ("scard_function_list_readers_return:"));
-    g_hexdump(in_s->p, len);
+    //g_hexdump(in_s->p, len);
     if ((g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_LR) == 0)
     {
-        LLOGLN(10, ("scard_function_list_readers_return: opps"));
+        LLOGLN(0, ("scard_function_list_readers_return: opps"));
         return 1;
     }
     g_xrdp_pcsc_state &= ~XRDP_PCSC_STATE_GOT_LR;
@@ -267,7 +273,7 @@ scard_function_list_readers_return(struct trans *con,
     in_uint8s(in_s, 28);
     len -= 28;
     in_uint32_le(in_s, len);
-    g_writeln("len %d", len);
+    //g_writeln("len %d", len);
     rn_index = 0;
     readers = 0;
     while (len > 0)
@@ -279,7 +285,7 @@ scard_function_list_readers_return(struct trans *con,
             if (reader_name[0] != 0)
             {
                 g_wcstombs(lreader_name[readers], reader_name, 99);
-                g_writeln("1 %s", lreader_name[readers]);
+                //g_writeln("1 %s", lreader_name[readers]);
                 g_memset(reader_name, 0, sizeof(reader_name));
                 readers++;
             }
@@ -297,7 +303,7 @@ scard_function_list_readers_return(struct trans *con,
         if (reader_name[0] != 0)
         {
             g_wcstombs(lreader_name[readers], reader_name, 99);
-            g_writeln("2 %s", lreader_name[readers]);
+            //g_writeln("2 %s", lreader_name[readers]);
             g_memset(reader_name, 0, sizeof(reader_name));
             readers++;
         }
@@ -308,7 +314,7 @@ scard_function_list_readers_return(struct trans *con,
     out_uint32_le(out_s, readers);
     for (index = 0; index < readers; index++)
     {
-        g_writeln("3 - %s", lreader_name[index]);
+        //g_writeln("3 - %s", lreader_name[index]);
         out_uint8a(out_s, lreader_name[index], 100);
     }
     out_uint32_le(out_s, 0); /* SCARD_S_SUCCESS status */
@@ -326,10 +332,9 @@ int APP_CC
 scard_process_connect(struct trans *con, struct stream *in_s)
 {
     int hContext;
-    char szReader[100];
     READER_STATE rs;
 
-    LLOGLN(0, ("scard_process_connect:"));
+    LLOGLN(10, ("scard_process_connect:"));
     if (g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_C)
     {
         LLOGLN(0, ("scard_process_connect: opps"));
@@ -338,11 +343,11 @@ scard_process_connect(struct trans *con, struct stream *in_s)
     g_memset(&rs, 0, sizeof(rs));
     g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_C;
     in_uint32_le(in_s, hContext);
-    in_uint8a(in_s, szReader, 100);
+    in_uint8a(in_s, rs.reader_name, 100);
     in_uint32_le(in_s, rs.dwShareMode);
     in_uint32_le(in_s, rs.dwPreferredProtocols);
-    LLOGLN(0, ("scard_process_connect: dwShareMode 0x%8.8x "
-           "dwPreferredProtocols 0x%8.8x", rs.dwShareMode,
+    LLOGLN(10, ("scard_process_connect: rs.reader_name %s dwShareMode 0x%8.8x "
+           "dwPreferredProtocols 0x%8.8x", rs.reader_name, rs.dwShareMode,
            rs.dwPreferredProtocols));
     scard_send_connect(con, hContext, 1, &rs);
     return 0;
@@ -359,7 +364,7 @@ scard_function_connect_return(struct trans *con,
     int bytes;
     struct stream *out_s;
 
-    g_hexdump(in_s->p, len);
+    //g_hexdump(in_s->p, len);
     if ((g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_C) == 0)
     {
         LLOGLN(0, ("scard_function_connect_return: opps"));
@@ -368,8 +373,9 @@ scard_function_connect_return(struct trans *con,
     g_xrdp_pcsc_state &= ~XRDP_PCSC_STATE_GOT_C;
     in_uint8s(in_s, 36);
     in_uint32_le(in_s, dwActiveProtocol);
-    in_uint8s(in_s, 36);
+    in_uint8s(in_s, 4);
     in_uint32_le(in_s, hCard);
+    LLOGLN(10, ("scard_function_connect_return: hCard %d dwActiveProtocol %d", hCard, dwActiveProtocol));
     out_s = trans_get_out_s(con, 8192);
     s_push_layer(out_s, iso_hdr, 8);
     out_uint32_le(out_s, hCard);
@@ -386,11 +392,71 @@ scard_function_connect_return(struct trans *con,
 /*****************************************************************************/
 /* returns error */
 int APP_CC
+scard_process_disconnect(struct trans *con, struct stream *in_s)
+{
+    int hContext;
+    int hCard;
+    int dwDisposition;
+
+    LLOGLN(10, ("scard_process_disconnect:"));
+    if (g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_D)
+    {
+        LLOGLN(0, ("scard_process_disconnect: opps"));
+        return 1;
+    }
+    g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_D;
+    in_uint32_le(in_s, hCard);
+    in_uint32_le(in_s, dwDisposition);
+
+    hContext = 1;
+
+    scard_send_disconnect(con, hContext, hCard, dwDisposition);
+
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+scard_function_disconnect_return(struct trans *con,
+                                 struct stream *in_s,
+                                 int len)
+{
+    int dwActiveProtocol;
+    int hCard;
+    int bytes;
+    struct stream *out_s;
+
+    //g_hexdump(in_s->p, len);
+    if ((g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_D) == 0)
+    {
+        LLOGLN(0, ("scard_function_connect_return: opps"));
+        return 1;
+    }
+    g_xrdp_pcsc_state &= ~XRDP_PCSC_STATE_GOT_D;
+    in_uint8s(in_s, 36);
+    in_uint32_le(in_s, dwActiveProtocol);
+    in_uint8s(in_s, 4);
+    in_uint32_le(in_s, hCard);
+    LLOGLN(10, ("scard_function_connect_return: hCard %d dwActiveProtocol %d", hCard, dwActiveProtocol));
+    out_s = trans_get_out_s(con, 8192);
+    s_push_layer(out_s, iso_hdr, 8);
+    out_uint32_le(out_s, 0); /* SCARD_S_SUCCESS status */
+    s_mark_end(out_s);
+    bytes = (int) (out_s->end - out_s->data);
+    s_pop_layer(out_s, iso_hdr);
+    out_uint32_le(out_s, bytes - 8);
+    out_uint32_le(out_s, 0x06); /* SCARD_DISCONNECT 0x06 */
+    return trans_force_write(con);
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
 scard_process_begin_transaction(struct trans *con, struct stream *in_s)
 {
     int hCard;
 
-    LLOGLN(0, ("scard_process_begin_transaction:"));
+    LLOGLN(10, ("scard_process_begin_transaction:"));
     if (g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_BT)
     {
         LLOGLN(0, ("scard_process_begin_transaction: opps"));
@@ -398,9 +464,393 @@ scard_process_begin_transaction(struct trans *con, struct stream *in_s)
     }
     g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_BT;
     in_uint32_le(in_s, hCard);
-    LLOGLN(0, ("scard_process_begin_transaction: hCard 0x%8.8x", hCard));
+    LLOGLN(10, ("scard_process_begin_transaction: hCard 0x%8.8x", hCard));
     scard_send_begin_transaction(con, hCard);
     return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+scard_function_begin_transaction_return(struct trans *con,
+                                        struct stream *in_s,
+                                        int len)
+{
+    struct stream *out_s;
+    int bytes;
+
+    //g_hexdump(in_s->p, len);
+    if ((g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_BT) == 0)
+    {
+        LLOGLN(0, ("scard_function_begin_transaction_return: opps"));
+        return 1;
+    }
+    g_xrdp_pcsc_state &= ~XRDP_PCSC_STATE_GOT_BT;
+
+    out_s = trans_get_out_s(con, 8192);
+    s_push_layer(out_s, iso_hdr, 8);
+    out_uint32_le(out_s, 0); /* SCARD_S_SUCCESS status */
+    s_mark_end(out_s);
+    bytes = (int) (out_s->end - out_s->data);
+    s_pop_layer(out_s, iso_hdr);
+    out_uint32_le(out_s, bytes - 8);
+    out_uint32_le(out_s, 0x07); /* SCARD_BEGIN_TRANSACTION 0x07 */
+    return trans_force_write(con);
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+scard_process_end_transaction(struct trans *con, struct stream *in_s)
+{
+    int hCard;
+    int dwDisposition;
+
+    LLOGLN(10, ("scard_process_end_transaction:"));
+    if (g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_ET)
+    {
+        LLOGLN(0, ("scard_process_end_transaction: opps"));
+        return 1;
+    }
+    g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_ET;
+    in_uint32_le(in_s, hCard);
+    in_uint32_le(in_s, dwDisposition);
+    LLOGLN(10, ("scard_process_end_transaction: hCard 0x%8.8x", hCard));
+    scard_send_end_transaction(con, hCard, dwDisposition);
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+scard_function_end_transaction_return(struct trans *con,
+                                      struct stream *in_s,
+                                      int len)
+{
+    struct stream *out_s;
+    int bytes;
+
+    //g_hexdump(in_s->p, len);
+    if ((g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_ET) == 0)
+    {
+        LLOGLN(0, ("scard_function_end_transaction_return: opps"));
+        return 1;
+    }
+    g_xrdp_pcsc_state &= ~XRDP_PCSC_STATE_GOT_ET;
+
+    out_s = trans_get_out_s(con, 8192);
+    s_push_layer(out_s, iso_hdr, 8);
+    out_uint32_le(out_s, 0); /* SCARD_S_SUCCESS status */
+    s_mark_end(out_s);
+    bytes = (int) (out_s->end - out_s->data);
+    s_pop_layer(out_s, iso_hdr);
+    out_uint32_le(out_s, bytes - 8);
+    out_uint32_le(out_s, 0x08); /* SCARD_END_TRANSACTION 0x08 */
+    return trans_force_write(con);
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+scard_function_cancel_return(struct trans *con,
+                             struct stream *in_s,
+                             int len)
+{
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+scard_function_get_attrib_return(struct trans *con,
+                                 struct stream *in_s,
+                                 int len)
+{
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+scard_process_transmit(struct trans *con, struct stream *in_s)
+{
+    int hCard;
+    int recv_bytes;
+    int send_bytes;
+    char *send_data;
+    struct xrdp_scard_io_request send_ior;
+    struct xrdp_scard_io_request recv_ior;
+
+    LLOGLN(10, ("scard_process_transmit:"));
+    if (g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_TR)
+    {
+        LLOGLN(0, ("scard_process_transmit: opps"));
+        return 1;
+    }
+    g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_TR;
+    LLOGLN(10, ("scard_process_transmit:"));
+    in_uint32_le(in_s, hCard);
+    in_uint32_le(in_s, send_ior.dwProtocol);
+    in_uint32_le(in_s, send_ior.cbPciLength);
+    in_uint32_le(in_s, send_ior.extra_bytes);
+    in_uint8p(in_s, send_ior.extra_data, send_ior.extra_bytes);
+    in_uint32_le(in_s, send_bytes);
+    in_uint8p(in_s, send_data, send_bytes);
+    in_uint32_le(in_s, recv_ior.dwProtocol);
+    in_uint32_le(in_s, recv_ior.cbPciLength);
+    in_uint32_le(in_s, recv_ior.extra_bytes);
+    in_uint8p(in_s, recv_ior.extra_data, recv_ior.extra_bytes);
+    in_uint32_le(in_s, recv_bytes);
+    LLOGLN(10, ("scard_process_transmit: send dwProtocol %d cbPciLength %d "
+           "recv dwProtocol %d cbPciLength %d send_bytes %d ",
+           send_ior.dwProtocol, send_ior.cbPciLength, recv_ior.dwProtocol,
+           recv_ior.cbPciLength, send_bytes));
+    //g_hexdump(in_s->p, send_bytes);
+    LLOGLN(10, ("scard_process_transmit: recv_bytes %d", recv_bytes));
+    scard_send_transmit(con, hCard, send_data, send_bytes, recv_bytes,
+                        &send_ior, &recv_ior);
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+scard_function_transmit_return(struct trans *con,
+                               struct stream *in_s,
+                               int len)
+{
+    struct stream *out_s;
+    int bytes;
+    int val;
+    int cbRecvLength;
+    struct xrdp_scard_io_request recv_ior;
+    char *recvBuf;
+
+    LLOGLN(10, ("scard_function_transmit_return:"));
+    //g_hexdump(in_s->p, len);
+    if ((g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_TR) == 0)
+    {
+        LLOGLN(0, ("scard_function_transmit_return: opps"));
+        return 1;
+    }
+    g_xrdp_pcsc_state &= ~XRDP_PCSC_STATE_GOT_TR;
+
+    in_uint8s(in_s, 20);
+    in_uint32_le(in_s, val);
+    g_memset(&recv_ior, 0, sizeof(recv_ior));
+    if (val != 0)
+    {
+        /* pioRecvPci */
+        LLOGLN(0, ("scard_function_transmit_return: pioRecvPci not zero!"));
+    }
+    in_uint8s(in_s, 4);
+    in_uint32_le(in_s, val);
+    cbRecvLength = 0;
+    recvBuf = 0;
+    if (val != 0)
+    {
+        in_uint32_le(in_s, cbRecvLength);
+        in_uint8p(in_s, recvBuf, cbRecvLength);
+    }
+    LLOGLN(10, ("scard_function_transmit_return: cbRecvLength %d", cbRecvLength));
+    out_s = trans_get_out_s(con, 8192);
+    s_push_layer(out_s, iso_hdr, 8);
+    out_uint32_le(out_s, recv_ior.dwProtocol);
+    out_uint32_le(out_s, recv_ior.cbPciLength);
+    out_uint32_le(out_s, recv_ior.extra_bytes);
+    out_uint8a(out_s, recv_ior.extra_data, recv_ior.extra_bytes);
+    out_uint32_le(out_s, cbRecvLength);
+    out_uint8a(out_s, recvBuf, cbRecvLength);
+    out_uint32_le(out_s, 0); /* SCARD_S_SUCCESS status */
+    s_mark_end(out_s);
+    bytes = (int) (out_s->end - out_s->data);
+    s_pop_layer(out_s, iso_hdr);
+    out_uint32_le(out_s, bytes - 8);
+    out_uint32_le(out_s, 0x09); /* SCARD_TRANSMIT 0x09 */
+    return trans_force_write(con);
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+scard_process_control(struct trans *con, struct stream *in_s)
+{
+    tui32 context;
+    int hCard;
+    int send_bytes;
+    int recv_bytes;
+    int control_code;
+    char *send_data;
+
+    LLOGLN(10, ("scard_process_control:"));
+    if (g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_CO)
+    {
+        LLOGLN(0, ("scard_process_control: opps"));
+        return 1;
+    }
+    g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_CO;
+    LLOGLN(10, ("scard_process_control:"));
+
+    in_uint32_le(in_s, hCard);
+    in_uint32_le(in_s, control_code);
+    in_uint32_le(in_s, send_bytes);
+    in_uint8p(in_s, send_data, send_bytes);
+    in_uint32_le(in_s, recv_bytes);
+
+    context = 1;
+
+    scard_send_control(con, context, hCard, send_data, send_bytes, recv_bytes,
+                       control_code);
+
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+scard_function_control_return(struct trans *con,
+                              struct stream *in_s,
+                              int len)
+{
+    struct stream *out_s;
+    int bytes;
+    int cbRecvLength;
+    char *recvBuf;
+
+    //g_hexdump(in_s->p, len);
+    if ((g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_CO) == 0)
+    {
+        LLOGLN(0, ("scard_function_control_return: opps"));
+        return 1;
+    }
+    g_xrdp_pcsc_state &= ~XRDP_PCSC_STATE_GOT_CO;
+
+    in_uint8s(in_s, 28);
+    in_uint32_le(in_s, cbRecvLength);
+    in_uint8p(in_s, recvBuf, cbRecvLength);
+
+    LLOGLN(10, ("scard_function_control_return: cbRecvLength %d", cbRecvLength));
+    out_s = trans_get_out_s(con, 8192);
+    s_push_layer(out_s, iso_hdr, 8);
+    out_uint32_le(out_s, cbRecvLength);
+    out_uint8a(out_s, recvBuf, cbRecvLength);
+    out_uint32_le(out_s, 0); /* SCARD_S_SUCCESS status */
+    s_mark_end(out_s);
+    bytes = (int) (out_s->end - out_s->data);
+    s_pop_layer(out_s, iso_hdr);
+    out_uint32_le(out_s, bytes - 8);
+    out_uint32_le(out_s, 0x0A); /* SCARD_CONTROL 0x0A */
+    return trans_force_write(con);
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+scard_process_status(struct trans *con, struct stream *in_s)
+{
+    int hCard;
+    int cchReaderLen;
+    int cbAtrLen;
+
+    LLOGLN(10, ("scard_process_status:"));
+    if (g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_ST)
+    {
+        LLOGLN(0, ("scard_process_status: opps"));
+        return 1;
+    }
+    g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_ST;
+
+    in_uint32_le(in_s, hCard);
+    in_uint32_le(in_s, cchReaderLen);
+    in_uint32_le(in_s, cbAtrLen);
+
+    scard_send_status(con, 1, hCard, cchReaderLen, cbAtrLen);
+
+    return 0;
+}
+
+#define MS_SCARD_UNKNOWN    0
+#define MS_SCARD_ABSENT     1
+#define MS_SCARD_PRESENT    2
+#define MS_SCARD_SWALLOWED  3
+#define MS_SCARD_POWERED    4
+#define MS_SCARD_NEGOTIABLE 5
+#define MS_SCARD_SPECIFIC   6
+
+#define PC_SCARD_UNKNOWN    0x0001 /**< Unknown state */
+#define PC_SCARD_ABSENT     0x0002 /**< Card is absent */
+#define PC_SCARD_PRESENT    0x0004 /**< Card is present */
+#define PC_SCARD_SWALLOWED  0x0008 /**< Card not powered */
+#define PC_SCARD_POWERED    0x0010 /**< Card is powered */
+#define PC_SCARD_NEGOTIABLE 0x0020 /**< Ready for PTS */
+#define PC_SCARD_SPECIFIC   0x0040 /**< PTS has been set */
+
+static int g_ms2pc[] = { PC_SCARD_UNKNOWN, PC_SCARD_ABSENT,
+                         PC_SCARD_PRESENT, PC_SCARD_SWALLOWED,
+                         PC_SCARD_POWERED, PC_SCARD_NEGOTIABLE,
+                         PC_SCARD_SPECIFIC };
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+scard_function_status_return(struct trans *con,
+                             struct stream *in_s,
+                             int len)
+{
+    struct stream *out_s;
+    int index;
+    int bytes;
+    int dwReaderLen;
+    int dwState;
+    int dwProtocol;
+    int dwAtrLen;
+    char attr[32];
+    twchar reader_name[100];
+    char lreader_name[100];
+
+    //g_hexdump(in_s->p, len);
+    if ((g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_ST) == 0)
+    {
+        LLOGLN(0, ("scard_function_status_return: opps"));
+        return 1;
+    }
+    g_xrdp_pcsc_state &= ~XRDP_PCSC_STATE_GOT_ST;
+    in_uint8s(in_s, 20);
+    in_uint32_le(in_s, dwReaderLen);
+    in_uint8s(in_s, 4);
+    in_uint32_le(in_s, dwState);
+    dwState = g_ms2pc[dwState % 6];
+    in_uint32_le(in_s, dwProtocol);
+    in_uint8a(in_s, attr, 32);
+    in_uint32_le(in_s, dwAtrLen);
+    in_uint32_le(in_s, dwReaderLen);
+    dwReaderLen /= 2;
+    g_memset(reader_name, 0, sizeof(reader_name));
+    g_memset(lreader_name, 0, sizeof(lreader_name));
+    for (index = 0; index < dwReaderLen; index++)
+    {
+        in_uint16_le(in_s, reader_name[index]);
+    }
+    g_wcstombs(lreader_name, reader_name, 99);
+    LLOGLN(10, ("scard_function_status_return: dwAtrLen %d dwReaderLen %d "
+           "dwProtocol %d dwState %d name %s",
+           dwAtrLen, dwReaderLen, dwProtocol, dwState, lreader_name));
+    out_s = trans_get_out_s(con, 8192);
+    s_push_layer(out_s, iso_hdr, 8);
+    dwReaderLen = g_strlen(lreader_name);
+    out_uint32_le(out_s, dwReaderLen);
+    out_uint8a(out_s, lreader_name, dwReaderLen);
+    out_uint32_le(out_s, dwState);
+    out_uint32_le(out_s, dwProtocol);
+    out_uint32_le(out_s, dwAtrLen);
+    out_uint8a(out_s, attr, dwAtrLen);
+    out_uint32_le(out_s, 0); /* SCARD_S_SUCCESS status */
+    s_mark_end(out_s);
+    bytes = (int) (out_s->end - out_s->data);
+    s_pop_layer(out_s, iso_hdr);
+    out_uint32_le(out_s, bytes - 8);
+    out_uint32_le(out_s, 0x0B); /* SCARD_STATUS 0x0B */
+    return trans_force_write(con);
 }
 
 /*****************************************************************************/
@@ -414,7 +864,7 @@ scard_process_get_status_change(struct trans *con, struct stream *in_s)
     int cReaders;
     READER_STATE *rsa;
 
-    LLOGLN(0, ("scard_process_get_status_change:"));
+    LLOGLN(10, ("scard_process_get_status_change:"));
     if (g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_GSC)
     {
         LLOGLN(0, ("scard_process_get_status_change: opps"));
@@ -447,7 +897,7 @@ scard_process_get_status_change(struct trans *con, struct stream *in_s)
         in_uint8a(in_s, rsa[index].atr, 36);
     }
 
-    LLOGLN(0, ("scard_process_get_status_change: hContext 0x%8.8x dwTimeout "
+    LLOGLN(10, ("scard_process_get_status_change: hContext 0x%8.8x dwTimeout "
            "%d cReaders %d", hContext, dwTimeout, cReaders));
 
     g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_GSC;
@@ -474,8 +924,8 @@ scard_function_get_status_change_return(struct trans *con,
     tui8 atr[36];
     struct stream *out_s;
 
-    LLOGLN(0, ("scard_function_get_status_change_return:"));
-    g_hexdump(in_s->p, len);
+    LLOGLN(10, ("scard_function_get_status_change_return:"));
+    //g_hexdump(in_s->p, len);
     if ((g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_GSC) == 0)
     {
         LLOGLN(0, ("scard_function_establish_context_return: opps"));
@@ -514,30 +964,49 @@ scard_function_get_status_change_return(struct trans *con,
 /*****************************************************************************/
 /* returns error */
 int APP_CC
+scard_function_is_context_valid_return(struct trans *con,
+                                       struct stream *in_s,
+                                       int len)
+{
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC scard_function_reconnect_return(struct trans *con,
+                                           struct stream *in_s,
+                                           int len)
+{
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
 scard_process_msg(struct trans *con, struct stream *in_s, int command)
 {
     int rv;
 
-    LLOGLN(0, ("scard_process_msg: command 0x%4.4x", command));
+    LLOGLN(10, ("scard_process_msg: command 0x%4.4x", command));
     rv = 0;
     switch (command)
     {
         case 0x01: /* SCARD_ESTABLISH_CONTEXT */
-            LLOGLN(0, ("scard_process_msg: SCARD_ESTABLISH_CONTEXT"));
+            LLOGLN(10, ("scard_process_msg: SCARD_ESTABLISH_CONTEXT"));
             rv = scard_process_establish_context(con, in_s);
             break;
         case 0x02: /* SCARD_RELEASE_CONTEXT */
-            LLOGLN(0, ("scard_process_msg: SCARD_RELEASE_CONTEXT"));
+            LLOGLN(10, ("scard_process_msg: SCARD_RELEASE_CONTEXT"));
             rv = scard_process_release_context(con, in_s);
             break;
 
         case 0x03: /* SCARD_LIST_READERS */
-            LLOGLN(0, ("scard_process_msg: SCARD_LIST_READERS"));
+            LLOGLN(10, ("scard_process_msg: SCARD_LIST_READERS"));
             rv = scard_process_list_readers(con, in_s);
             break;
 
         case 0x04: /* SCARD_CONNECT */
-            LLOGLN(0, ("scard_process_msg: SCARD_CONNECT"));
+            LLOGLN(10, ("scard_process_msg: SCARD_CONNECT"));
             rv = scard_process_connect(con, in_s);
             break;
 
@@ -546,32 +1015,37 @@ scard_process_msg(struct trans *con, struct stream *in_s, int command)
             break;
 
         case 0x06: /* SCARD_DISCONNECT */
-            LLOGLN(0, ("scard_process_msg: SCARD_DISCONNECT"));
+            LLOGLN(10, ("scard_process_msg: SCARD_DISCONNECT"));
+            rv = scard_process_disconnect(con, in_s);
             break;
 
         case 0x07: /* SCARD_BEGIN_TRANSACTION */
-            LLOGLN(0, ("scard_process_msg: SCARD_BEGIN_TRANSACTION"));
+            LLOGLN(10, ("scard_process_msg: SCARD_BEGIN_TRANSACTION"));
             rv = scard_process_begin_transaction(con, in_s);
             break;
 
         case 0x08: /* SCARD_END_TRANSACTION */
-            LLOGLN(0, ("scard_process_msg: SCARD_END_TRANSACTION"));
+            LLOGLN(10, ("scard_process_msg: SCARD_END_TRANSACTION"));
+            rv = scard_process_end_transaction(con, in_s);
             break;
 
         case 0x09: /* SCARD_TRANSMIT */
-            LLOGLN(0, ("scard_process_msg: SCARD_TRANSMIT"));
+            LLOGLN(10, ("scard_process_msg: SCARD_TRANSMIT"));
+            rv = scard_process_transmit(con, in_s);
             break;
 
         case 0x0A: /* SCARD_CONTROL */
-            LLOGLN(0, ("scard_process_msg: SCARD_CONTROL"));
+            LLOGLN(10, ("scard_process_msg: SCARD_CONTROL"));
+            rv = scard_process_control(con, in_s);
             break;
 
         case 0x0B: /* SCARD_STATUS */
-            LLOGLN(0, ("scard_process_msg: SCARD_STATUS"));
+            LLOGLN(10, ("scard_process_msg: SCARD_STATUS"));
+            rv = scard_process_status(con, in_s);
             break;
 
         case 0x0C: /* SCARD_GET_STATUS_CHANGE */
-            LLOGLN(0, ("scard_process_msg: SCARD_GET_STATUS_CHANGE"));
+            LLOGLN(10, ("scard_process_msg: SCARD_GET_STATUS_CHANGE"));
             rv = scard_process_get_status_change(con, in_s);
             break;
 
@@ -605,12 +1079,11 @@ int DEFAULT_CC
 my_pcsc_trans_data_in(struct trans *trans)
 {
     struct stream *s;
-    int id;
     int size;
     int command;
     int error;
 
-    LLOGLN(0, ("my_pcsc_trans_data_in:"));
+    LLOGLN(10, ("my_pcsc_trans_data_in:"));
     if (trans == 0)
     {
         return 0;
@@ -622,7 +1095,7 @@ my_pcsc_trans_data_in(struct trans *trans)
     s = trans_get_in_s(trans);
     in_uint32_le(s, size);
     in_uint32_le(s, command);
-    LLOGLN(0, ("my_pcsc_trans_data_in: size %d command %d", size, command));
+    LLOGLN(10, ("my_pcsc_trans_data_in: size %d command %d", size, command));
     error = trans_force_read(trans, size);
     if (error == 0)
     {
@@ -636,7 +1109,7 @@ my_pcsc_trans_data_in(struct trans *trans)
 int DEFAULT_CC
 my_pcsc_trans_conn_in(struct trans *trans, struct trans *new_trans)
 {
-    LLOGLN(0, ("my_pcsc_trans_conn_in:"));
+    LLOGLN(10, ("my_pcsc_trans_conn_in:"));
 
     if (trans == 0)
     {
@@ -655,13 +1128,7 @@ my_pcsc_trans_conn_in(struct trans *trans, struct trans *new_trans)
 
     g_con = new_trans;
     g_con->trans_data_in = my_pcsc_trans_data_in;
-#if 1
     g_con->header_size = 8;
-#else
-    g_con->header_size = RXSHAREDSEGMENT_BYTES;
-    LLOGLN(0, ("my_pcsc_trans_conn_in: sizeof sharedSegmentMsg is %d",
-           sizeof(sharedSegmentMsg)));
-#endif
     return 0;
 }
 
@@ -673,7 +1140,6 @@ scard_pcsc_init(void)
     char *home;
     int disp;
     int error;
-    int index;
 
     LLOGLN(0, ("scard_pcsc_init:"));
     if (g_lis == 0)

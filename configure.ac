@@ -92,6 +92,11 @@ then
     [AC_MSG_ERROR([please install libjpeg-dev or libjpeg-devel])])
 fi
 
+if ! test -z "$enable_xrdpdebug"
+then
+  CFLAGS="-g -O0"
+fi
+
 # checking for fuse
 if ! test -z "$enable_fuse"
 then

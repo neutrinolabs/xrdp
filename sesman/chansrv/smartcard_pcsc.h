@@ -38,11 +38,52 @@ int APP_CC scard_function_list_readers_return(struct trans *con,
                                               struct stream *in_s,
                                               int len);
 
+int APP_CC scard_function_transmit_return(struct trans *con,
+                                          struct stream *in_s,
+                                          int len);
+
+int APP_CC scard_function_control_return(struct trans *con,
+                                         struct stream *in_s,
+                                         int len);
+
 int APP_CC scard_function_get_status_change_return(struct trans *con,
                                                    struct stream *in_s,
                                                    int len);
+
 int APP_CC scard_function_connect_return(struct trans *con,
                                          struct stream *in_s,
                                          int len);
+
+int APP_CC scard_function_status_return(struct trans *con,
+                                        struct stream *in_s,
+                                        int len);
+
+int APP_CC scard_function_begin_transaction_return(struct trans *con,
+                                                   struct stream *in_s,
+                                                   int len);
+
+int APP_CC scard_function_end_transaction_return(struct trans *con,
+                                                 struct stream *in_s,
+                                                 int len);
+
+int APP_CC scard_function_is_context_valid_return(struct trans *con,
+                                                  struct stream *in_s,
+                                                  int len);
+
+int APP_CC scard_function_reconnect_return(struct trans *con,
+                                           struct stream *in_s,
+                                           int len);
+
+int APP_CC scard_function_disconnect_return(struct trans *con,
+                                            struct stream *in_s,
+                                            int len);
+
+int APP_CC scard_function_cancel_return(struct trans *con,
+                                        struct stream *in_s,
+                                        int len);
+
+int APP_CC scard_function_get_attrib_return(struct trans *con,
+                                            struct stream *in_s,
+                                            int len);
 
 #endif /* end #ifndef _SMARTCARD_PCSC_H */
