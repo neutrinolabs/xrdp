@@ -71,7 +71,6 @@ struct xrdp_mcs
   struct stream* client_mcs_data;
   struct stream* server_mcs_data;
   struct list* channel_list;
-  struct list* monitor_list;
 };
 
 /* sec */
