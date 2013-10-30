@@ -21,6 +21,15 @@
 #if !defined(XRDP_CLIENT_INFO_H)
 #define XRDP_CLIENT_INFO_H
 
+struct monitor_info
+{
+  int left;
+  int top;
+  int right;
+  int bottom;
+  int is_primary;
+};
+
 struct xrdp_client_info
 {
   int size; /* bytes for this structure */
@@ -38,7 +47,6 @@ struct xrdp_client_info
   int bitmap_cache_version; /* ored 1 = original version, 2 = v2, 4 = v3 */
   /* pointer info */
   int pointer_cache_entries;
-  int pointer_flags; /* 0 color, 1 new, 2 no new */
   /* other */
   int use_bitmap_comp;
   int use_bitmap_cache;
@@ -70,8 +78,6 @@ struct xrdp_client_info
   int offscreen_cache_size;
   int offscreen_cache_entries;
   int rfx;
-  int nego_sec_layer; /* 0, 1, 2 = RDP security layer, TLS , Negotiate */
-  int multimon; /* 0 = deny , 1 = allow */
 
   /* CAPSETTYPE_RAIL */
   int rail_support_level;
@@ -95,9 +101,14 @@ struct xrdp_client_info
   int order_flags_ex;
   int use_bulk_comp;
   int use_fast_path;
+  int pointer_flags; /* 0 color, 1 new, 2 no new */
   int require_credentials; /* when true, credentials *must* be passed on cmd line */
   char client_addr[256];
   char client_port[256];
+
+  int nego_sec_layer; /* 0, 1, 2 = RDP security layer, TLS , Negotiate */
+  int multimon; /* 0 = deny , 1 = allow */
+  struct monitor_info minfo[16]; /* client monitor data */
 };
 
 #endif

@@ -61,16 +61,6 @@ struct mcs_channel_item
   int chanid;
 };
 
-/* used in mcs - client monitor data */
-struct mcs_monitor_item
-{
-	int left;
-	int top;
-	int right;
-	int bottom;
-	int is_primary;
-};
-
 /* mcs */
 struct xrdp_mcs
 {
