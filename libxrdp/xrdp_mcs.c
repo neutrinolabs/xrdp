@@ -38,7 +38,6 @@ xrdp_mcs_create(struct xrdp_sec *owner, struct trans *trans,
     self->server_mcs_data = server_mcs_data;
     self->iso_layer = xrdp_iso_create(self, trans);
     self->channel_list = list_create();
-    self->monitor_list = list_create();
     DEBUG(("  out xrdp_mcs_create"));
     return self;
 }
@@ -48,7 +47,6 @@ void APP_CC
 xrdp_mcs_delete(struct xrdp_mcs *self)
 {
     struct mcs_channel_item *channel_item;
-    struct mcs_monitor_item *monitor_item;
     int index;
     int count;
 
@@ -68,18 +66,6 @@ xrdp_mcs_delete(struct xrdp_mcs *self)
     }
 
     list_delete(self->channel_list);
-
-    /* here we have to free the monitor items and anything in them */
-    count = self->monitor_list->count;
-
-    for (index = count - 1; index >= 0; index--)
-    {
-        monitor_item = (struct mcs_monitor_item *)
-                       list_get_item(self->monitor_list, index);
-        g_free(monitor_item);
-    }
-
-    list_delete(self->monitor_list);
 
     xrdp_iso_delete(self->iso_layer);
     /* make sure we get null pointer exception if struct is used again. */

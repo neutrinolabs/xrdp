@@ -21,6 +21,15 @@
 #if !defined(XRDP_CLIENT_INFO_H)
 #define XRDP_CLIENT_INFO_H
 
+struct monitor_info
+{
+  int left;
+  int top;
+  int right;
+  int bottom;
+  int is_primary;
+};
+
 struct xrdp_client_info
 {
   int size; /* bytes for this structure */
@@ -99,7 +108,7 @@ struct xrdp_client_info
 
   int nego_sec_layer; /* 0, 1, 2 = RDP security layer, TLS , Negotiate */
   int multimon; /* 0 = deny , 1 = allow */
-
+  struct monitor_info minfo[16]; /* client monitor data */
 };
 
 #endif

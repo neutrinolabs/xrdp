@@ -959,7 +959,9 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
     int index;
     int monitorCount;
     int flags;
-    struct mcs_monitor_item *monitor_item;
+    struct xrdp_client_info *client_info = (struct xrdp_client_info *)NULL;
+
+    client_info = &(self->rdp_layer->client_info);
 
     DEBUG(("processing monitors data, allow_multimon is %d", self->multimon));
     /* this is an option set in xrdp.ini */
@@ -975,7 +977,7 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
     {
         DEBUG(("[ERROR] xrdp_sec_process_mcs_data_monitors: flags MUST be "
                "zero, detected: %d", flags));
-        return 0;
+        return 1;
     }
     in_uint32_le(s, monitorCount);
     //verify monitorCount - max 16
@@ -983,24 +985,23 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
     {
         DEBUG(("[ERROR] xrdp_sec_process_mcs_data_monitors: max allowed "
                "monitors is 16, detected: %d", monitorCount));
-        return 0;
-    }
-    for (index = 0; index < monitorCount; index++)
-    {
-        monitor_item = (struct mcs_monitor_item *)
-                       g_malloc(sizeof(struct mcs_monitor_item), 1);
-        in_uint32_le(s, monitor_item->left);
-        in_uint32_le(s, monitor_item->top);
-        in_uint32_le(s, monitor_item->right);
-        in_uint32_le(s, monitor_item->bottom);
-        in_uint32_le(s, monitor_item->is_primary);
-        list_add_item(self->mcs_layer->monitor_list, (long)monitor_item);
-        DEBUG(("got monitor: left: %d, top: %d, right: %d, bottom: %d, is "
-               "primary: %d", monitor_item->left, monitor_item->top,
-               monitor_item->right, monitor_item->bottom,
-               monitor_item->is_primary));
+        return 1;
     }
 
+    g_writeln("monitorCount= %d", monitorCount); // for debugging only
+
+    /* Add client_monitor_data to client_info struct, will later pass to X11rdp */
+    for (index = 0; index < monitorCount; index++)
+    {
+        in_uint32_le(s, client_info->minfo->left);
+        in_uint32_le(s, client_info->minfo->top);
+        in_uint32_le(s, client_info->minfo->right);
+        in_uint32_le(s, client_info->minfo->bottom);
+        in_uint32_le(s, client_info->minfo->is_primary);
+
+        g_writeln("got a monitor: left= %d, top= %d, right= %d, bottom= %d, is_primary?= %d", client_info->minfo->left,
+            client_info->minfo->top, client_info->minfo->right, client_info->minfo->bottom, client_info->minfo->is_primary);
+    }
     return 0;
 }
 /*****************************************************************************/
@@ -1052,7 +1053,10 @@ xrdp_sec_process_mcs_data(struct xrdp_sec *self)
             case SEC_TAG_CLI_4:
                 break;
             case SEC_TAG_CLI_MONITOR:
-                xrdp_sec_process_mcs_data_monitors(self, s);
+                if (xrdp_sec_process_mcs_data_monitors(self, s) != 0)
+                {
+                    return 1;
+                }
                 break;
             default:
                 g_writeln("error unknown xrdp_sec_process_mcs_data tag %d size %d",
@@ -1210,7 +1214,6 @@ xrdp_sec_in_mcs_data(struct xrdp_sec *self)
         client_info->hostname[index] = c;
         index++;
     }
-
     /* get build */
     s->p = s->data;
     if (!s_check_rem(s, 43 + 4))
