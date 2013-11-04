@@ -540,7 +540,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         {
             return 1;
         }
-        in_uint32_le(s, tzone);                             /* len of timetone */
+        in_uint32_le(s, tzone);                             /* len of timezone */
         in_uint8s(s, 62);                                   /* skip */
         in_uint8s(s, 22);                                   /* skip misc. */
         in_uint8s(s, 62);                                   /* skip */
@@ -993,14 +993,14 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
     /* Add client_monitor_data to client_info struct, will later pass to X11rdp */
     for (index = 0; index < monitorCount; index++)
     {
-        in_uint32_le(s, client_info->minfo->left);
-        in_uint32_le(s, client_info->minfo->top);
-        in_uint32_le(s, client_info->minfo->right);
-        in_uint32_le(s, client_info->minfo->bottom);
-        in_uint32_le(s, client_info->minfo->is_primary);
+        in_uint32_le(s, client_info->minfo[index].left);
+        in_uint32_le(s, client_info->minfo[index].top);
+        in_uint32_le(s, client_info->minfo[index].right);
+        in_uint32_le(s, client_info->minfo[index].bottom);
+        in_uint32_le(s, client_info->minfo[index].is_primary);
 
-        g_writeln("got a monitor: left= %d, top= %d, right= %d, bottom= %d, is_primary?= %d", client_info->minfo->left,
-            client_info->minfo->top, client_info->minfo->right, client_info->minfo->bottom, client_info->minfo->is_primary);
+        g_writeln("got a monitor: left= %d, top= %d, right= %d, bottom= %d, is_primary?= %d", client_info->minfo[index].left,
+            client_info->minfo[index].top, client_info->minfo[index].right, client_info->minfo[index].bottom, client_info->minfo[index].is_primary);
     }
     return 0;
 }
