@@ -149,6 +149,8 @@ static int g_disconnect_scheduled = 0;
 static CARD32 g_disconnect_timeout_s = 60; /* 60 seconds */
 static CARD32 g_disconnect_time_ms = 0; /* time of disconnect in milliseconds */
 
+static int g_do_multimon = 0; /* multimon - turn on or off */
+
 /******************************************************************************/
 static CARD32
 rdpDeferredDisconnectCallback(OsTimerPtr timer, CARD32 now, pointer arg)
@@ -1102,6 +1104,17 @@ rdpup_process_msg(struct stream *s)
         else
         {
             LLOGLN(0, ("  client can not do new(color) cursor"));
+        }
+        if (g_rdpScreen.client_info.monitorCount > 0)
+        {
+            LLOGLN(0, ("  client can do multimon"));
+            LLOGLN(0, ("  client monitor data, monitorCount= %d", g_rdpScreen.client_info.monitorCount));
+            g_do_multimon = 1;
+        }
+        else
+        {
+            LLOGLN(0, ("  client can not do multimon"));
+            g_do_multimon = 0;
         }
     }
     else if (msg_type == 105)
