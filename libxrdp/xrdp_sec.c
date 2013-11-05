@@ -990,6 +990,8 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
 
     g_writeln("monitorCount= %d", monitorCount); // for debugging only
 
+    client_info->monitorCount = monitorCount;
+
     /* Add client_monitor_data to client_info struct, will later pass to X11rdp */
     for (index = 0; index < monitorCount; index++)
     {
