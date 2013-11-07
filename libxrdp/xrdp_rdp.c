@@ -433,29 +433,26 @@ xrdp_rdp_send_data(struct xrdp_rdp *self, struct stream *s,
                    "tocomplen %d", mppc_enc->flags, mppc_enc->bytes_in_opb,
                    mppc_enc->historyOffset, tocomplen));
 
-            if (mppc_enc->flags & RDP_MPPC_COMPRESSED)
-            {
-                clen = mppc_enc->bytes_in_opb + 18;
-                pdulen = clen;
-                ctype = mppc_enc->flags;
-                iso_offset = (int)(s->iso_hdr - s->data);
-                mcs_offset = (int)(s->mcs_hdr - s->data);
-                sec_offset = (int)(s->sec_hdr - s->data);
-                rdp_offset = (int)(s->rdp_hdr - s->data);
+            clen = mppc_enc->bytes_in_opb + 18;
+            pdulen = clen;
+            ctype = mppc_enc->flags;
+            iso_offset = (int)(s->iso_hdr - s->data);
+            mcs_offset = (int)(s->mcs_hdr - s->data);
+            sec_offset = (int)(s->sec_hdr - s->data);
+            rdp_offset = (int)(s->rdp_hdr - s->data);
 
-                /* outputBuffer has 64 bytes preceding it */
-                ls.data = mppc_enc->outputBuffer - (rdp_offset + 18);
-                ls.p = ls.data + rdp_offset;
-                ls.end = ls.p + clen;
-                ls.size = clen;
-                ls.iso_hdr = ls.data + iso_offset;
-                ls.mcs_hdr = ls.data + mcs_offset;
-                ls.sec_hdr = ls.data + sec_offset;
-                ls.rdp_hdr = ls.data + rdp_offset;
-                ls.channel_hdr = 0;
-                ls.next_packet = 0;
-                s = &ls;
-            }
+            /* outputBuffer has 64 bytes preceding it */
+            ls.data = mppc_enc->outputBuffer - (rdp_offset + 18);
+            ls.p = ls.data + rdp_offset;
+            ls.end = ls.p + clen;
+            ls.size = clen;
+            ls.iso_hdr = ls.data + iso_offset;
+            ls.mcs_hdr = ls.data + mcs_offset;
+            ls.sec_hdr = ls.data + sec_offset;
+            ls.rdp_hdr = ls.data + rdp_offset;
+            ls.channel_hdr = 0;
+            ls.next_packet = 0;
+            s = &ls;
         }
         else
         {

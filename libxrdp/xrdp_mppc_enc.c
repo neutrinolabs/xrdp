@@ -573,18 +573,21 @@ compress_rdp_5(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
     outputBuffer = enc->outputBuffer;
     g_memset(outputBuffer, 0, len);
     enc->flags = PACKET_COMPR_TYPE_64K;
+
     if (enc->first_pkt)
     {
         enc->first_pkt = 0;
         enc->flagsHold |= PACKET_AT_FRONT;
     }
 
-    if ((enc->historyOffset + len) > enc->buf_len)
+    if ((enc->historyOffset + len) >= enc->buf_len)
     {
         /* historyBuffer cannot hold srcData - rewind it */
         enc->historyOffset = 0;
-        enc->flagsHold |= PACKET_AT_FRONT;
         g_memset(hash_table, 0, enc->buf_len * 2);
+        g_memset(enc->historyBuffer, 0, enc->buf_len); // added
+        enc->first_pkt = 0;
+        enc->flagsHold |= PACKET_AT_FRONT;
     }
 
     /* point to next free byte in historyBuffer */
@@ -602,7 +605,7 @@ compress_rdp_5(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
     /* first 2 bytes,because minimum LoM is 3                           */
     if (historyOffset == 0)
     {
-        /* encode first two bytes are literals */
+        /* encode first two bytes as literals */
         for (x = 0; x < 2; x++)
         {
             data = *(historyPointer + x);
@@ -974,8 +977,14 @@ compress_rdp_5(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
         /* give up */
         enc->historyOffset = 0;
         g_memset(hash_table, 0, enc->buf_len * 2);
+        g_memset(enc->historyBuffer, 0, enc->buf_len);
         enc->flagsHold |= PACKET_FLUSHED;
         enc->first_pkt = 1;
+
+        g_memcpy(enc->outputBuffer, srcData, len);
+        enc->bytes_in_opb = len;
+        enc->flags = 0x81;
+
         return 1;
     }
     else if (opb_index + 1 > len)
@@ -984,8 +993,14 @@ compress_rdp_5(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
         /* give up */
         enc->historyOffset = 0;
         g_memset(hash_table, 0, enc->buf_len * 2);
+        g_memset(enc->historyBuffer, 0, enc->buf_len);
         enc->flagsHold |= PACKET_FLUSHED;
         enc->first_pkt = 1;
+
+        g_memcpy(enc->outputBuffer, srcData, len);
+        enc->bytes_in_opb = len;
+        enc->flags = 0x81;
+
         return 1;
     }
 
@@ -1000,8 +1015,14 @@ compress_rdp_5(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
         /* give up */
         enc->historyOffset = 0;
         g_memset(hash_table, 0, enc->buf_len * 2);
+        g_memset(enc->historyBuffer, 0, enc->buf_len);
         enc->flagsHold |= PACKET_FLUSHED;
         enc->first_pkt = 1;
+
+        g_memcpy(enc->outputBuffer, srcData, len);
+        enc->bytes_in_opb = len;
+        enc->flags = 0x81;
+
         return 1;
     }
     enc->flags |= PACKET_COMPRESSED;
@@ -1010,6 +1031,8 @@ compress_rdp_5(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
     enc->flags |= enc->flagsHold;
     enc->flagsHold = 0;
     DLOG(("\n"));
+
+    //g_writeln("compression ratio: %f", (float) len / (float) enc->bytes_in_opb);
 
     return 1;
 }
