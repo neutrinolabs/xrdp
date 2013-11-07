@@ -217,6 +217,8 @@ typedef struct _player_state_info
     AVFrame         *frame;
     AVPacket        avpkt;
 
+    AVBitStreamFilterContext *bsfc;
+
 } PLAYER_STATE_INFO;
 
 static int xrdpvr_write_to_client(void *channel, STREAM *s);
