@@ -155,6 +155,7 @@ void DecoderThread::audioTimerCallback()
         return;
     }
 
+    printf("audio2\n");
     pkt = audioQueue.dequeue();
     delayInMs = (int) ((float) pkt->delay_in_us / 1000.0);
     send_audio_pkt(channel, 101, pkt->av_pkt);

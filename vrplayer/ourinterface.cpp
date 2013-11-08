@@ -128,25 +128,27 @@ int OurInterface::sendMetadataFile()
 
 int OurInterface::sendVideoFormat()
 {
+#if 0
     if (xrdpvr_set_video_format(channel, stream_id))
     {
         emit on_ErrorMsg("I/O Error",
                          "Error sending video format to remote client");
         return -1;
     }
-
+#endif
     return 0;
 }
 
 int OurInterface::sendAudioFormat()
 {
+#if 0
     if (xrdpvr_set_audio_format(channel, stream_id))
     {
         emit on_ErrorMsg("I/O Error",
                          "Error sending audio format to remote client");
         return -1;
     }
-
+#endif
     return 0;
 }
 
