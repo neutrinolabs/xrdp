@@ -62,6 +62,8 @@
 #define EXPORT_CC
 #endif
 
+#ifndef DEFINED_Ts
+#define DEFINED_Ts
 typedef char ti8;
 typedef unsigned char tui8;
 typedef signed char tsi8;
@@ -93,6 +95,7 @@ typedef int twchar;
 typedef int tsock;
 typedef unsigned long long tui64;
 typedef signed long long tsi64;
+#endif
 #endif
 
 #endif
