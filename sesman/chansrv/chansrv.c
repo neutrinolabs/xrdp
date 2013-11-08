@@ -664,7 +664,7 @@ process_message_channel_data(struct stream *s)
             if (chan_flags & 2) /* last */
             {
                 s_mark_end(ls);
-                trans_write_copy(g_api_con_trans);
+                rv = trans_force_write(g_api_con_trans);
             }
         }
     }
