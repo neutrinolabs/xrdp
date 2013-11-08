@@ -80,15 +80,18 @@ void PlayVideo::play()
 
 label1:
 
+        printf("video\n");
         if (videoQueue->isEmpty())
         {
+            printf("---empty\n");
+            usleep(1000);
             continue;
         }
         pkt = videoQueue->dequeue();
         sendMutex->lock();
         send_video_pkt(channel, stream_id, pkt->av_pkt);
         sendMutex->unlock();
-        usl = pkt->delay_in_us;
+        usl = 1000; // pkt->delay_in_us;
         if (usl < 0)
         {
             usl = 0;

@@ -1,3 +1,4 @@
+
 #include "ourinterface.h"
 
 OurInterface::OurInterface(QObject *parent) :
@@ -84,6 +85,7 @@ int OurInterface::openVirtualChannel()
     if (channel)
         return -1;
 
+    printf("OurInterface::openVirtualChannel:\n");
     /* open a virtual channel and connect to remote client */
     channel = WTSVirtualChannelOpenEx(WTS_CURRENT_SESSION, "xrdpvr", 0);
     if (channel == NULL)
@@ -116,13 +118,20 @@ int OurInterface::closeVirtualChannel()
  ******************************************************************************/
 int OurInterface::sendMetadataFile()
 {
+
+    if (xrdpvr_init_player(channel, 101, filename.toAscii().data()))
+    {
+        fprintf(stderr, "failed to initialize the player\n");
+        return -1;
+    }
+#if 0
     if (xrdpvr_create_metadata_file(channel, filename.toAscii().data()))
     {
         emit on_ErrorMsg("I/O Error",
                          "An error occurred while sending data to remote client");
         return -1;
     }
-
+#endif
     return 0;
 }
 
