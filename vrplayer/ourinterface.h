@@ -40,7 +40,8 @@ public:
     int  sendGeometry(QRect rect);
     void setFilename(QString filename);
     void playMedia();
-    PlayVideo *getPlayVideoInstance();
+    //PlayVideo *getPlayVideoInstance();
+    DemuxMedia *getDemuxMediaInstance();
     void setVcrOp(int op);
     int setVolume(int volume);
 
@@ -54,12 +55,12 @@ signals:
 private:
 
     /* private stuff */
-    QQueue<MediaPacket *> audioQueue;
+
     QQueue<MediaPacket *> videoQueue;
 
     DemuxMedia     *demuxMedia;
     QThread        *demuxMediaThread;
-    PlayVideo      *playVideo;
+    //PlayVideo      *playVideo;
     QString         filename;
     void           *channel;
     int             stream_id;

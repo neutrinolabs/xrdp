@@ -647,8 +647,9 @@ process_message_channel_data(struct stream *s)
         {
             rv = drdynvc_data_in(s, chan_id, chan_flags, length, total_length);
         }
-        else if (chan_id == ((struct xrdp_api_data *)
-                             (g_api_con_trans->callback_data))->chan_id)
+        else if ((g_api_con_trans != 0) &&
+                        (chan_id == ((struct xrdp_api_data *)
+                             (g_api_con_trans->callback_data))->chan_id))
         {
             LOG(10, ("process_message_channel_data length %d total_length %d "
                      "chan_flags 0x%8.8x", length, total_length, chan_flags));

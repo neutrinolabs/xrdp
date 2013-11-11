@@ -60,11 +60,11 @@ void OurInterface::initRemoteClient()
     /* LK_TODO this needs to be undone in deinitRemoteClient() */
     if (!demuxMedia)
     {
-        demuxMedia = new DemuxMedia(NULL, &audioQueue, &videoQueue, channel, stream_id);
+        demuxMedia = new DemuxMedia(NULL, &videoQueue, channel, stream_id);
         demuxMediaThread = new QThread(this);
         connect(demuxMediaThread, SIGNAL(started()), demuxMedia, SLOT(startDemuxing()));
         demuxMedia->moveToThread(demuxMediaThread);
-        playVideo = demuxMedia->getPlayVideoInstance();
+        //playVideo = demuxMedia->getPlayVideoInstance();
     }
 }
 
@@ -216,10 +216,16 @@ void OurInterface::playMedia()
     demuxMediaThread->start();
 }
 
-PlayVideo * OurInterface::getPlayVideoInstance()
+//PlayVideo * OurInterface::getPlayVideoInstance()
+//{
+//    return this->playVideo;
+//}
+
+DemuxMedia * OurInterface::getDemuxMediaInstance()
 {
-    return this->playVideo;
+    return this->demuxMedia;
 }
+
 
 void OurInterface::setVcrOp(int op)
 {

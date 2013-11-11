@@ -111,7 +111,8 @@ private:
 
     /* private stuff */
     OurInterface  *interface;
-    PlayVideo     *playVideo;
+    //PlayVideo     *playVideo;
+    DemuxMedia    *demuxMedia;
     QString        filename;
     bool           oneTimeInitSuccess;
     bool           remoteClientInited;

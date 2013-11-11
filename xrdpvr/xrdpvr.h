@@ -48,6 +48,7 @@ int  send_audio_pkt(void *channel, int stream_id, void *pkt_p);
 int  send_video_pkt(void *channel, int stream_id, void *pkt_p);
 int  xrdpvr_set_volume(void *channel, int volume);
 int  xrdpvr_send_init(void *channel);
+int  xrdpvr_read_ack(void *channel, int *frame);
 
 #ifdef __cplusplus
 }
