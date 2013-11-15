@@ -24,6 +24,15 @@ Client connection to xrdp
 #ifndef _RDPCLIENTCON_H
 #define _RDPCLIENTCON_H
 
+struct rdpup_os_bitmap
+{
+    int used;
+    PixmapPtr pixmap;
+    rdpPixmapPtr priv;
+    int stamp;
+};
+
+/* one of these for each client */
 struct _rdpClientCon
 {
     int sck;
@@ -31,6 +40,19 @@ struct _rdpClientCon
     int sckControl;
     struct stream *out_s;
     struct stream *in_s;
+
+    int rectIdAck;
+    int rectId;
+    int connected; /* boolean */
+    int begin; /* boolean */
+    int count;
+    int sckClosed; /* boolean */
+    struct rdpup_os_bitmap *osBitmaps;
+    int maxOsBitmaps;
+    int osBitmapStamp;
+    int osBitmapAllocSize;
+    int osBitmapNumUsed;
+
     struct _rdpClientCon *next;
 };
 
@@ -40,5 +62,17 @@ int
 rdpClientConInit(rdpPtr dev);
 int
 rdpClientConDeinit(rdpPtr dev);
+
+int
+rdpClientConDeleteOsSurface(rdpPtr dev, rdpClientCon *clientCon, int rdpindex);
+
+int
+rdpClientConRemoveOsBitmap(rdpPtr dev, rdpClientCon *clientCon, int rdpindex);
+
+void
+rdpClientConScheduleDeferredUpdate(rdpPtr dev);
+int
+rdpClientConCheckDirtyScreen(rdpPtr dev, rdpClientCon *clientCon);
+
 
 #endif

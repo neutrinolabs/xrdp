@@ -39,10 +39,98 @@ misc draw calls
 
 #include "rdp.h"
 #include "rdpDraw.h"
+#include "rdpClientCon.h"
+#include "rdpMisc.h"
+#include "rdpGlyphs.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
+
+/******************************************************************************/
+int
+rdpDrawItemAdd(rdpPtr dev, rdpPixmapRec *priv, struct rdp_draw_item *di)
+{
+    priv->is_alpha_dirty_not = FALSE;
+
+    if (priv->draw_item_tail == NULL)
+    {
+        priv->draw_item_tail = di;
+        priv->draw_item_head = di;
+    }
+    else
+    {
+        di->prev = priv->draw_item_tail;
+        priv->draw_item_tail->next = di;
+        priv->draw_item_tail = di;
+    }
+
+    if (priv == &(dev->screenPriv))
+    {
+        rdpClientConScheduleDeferredUpdate(dev);
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpDrawItemRemove(rdpPtr dev, rdpPixmapRec *priv, struct rdp_draw_item *di)
+{
+    if (di->prev != NULL)
+    {
+        di->prev->next = di->next;
+    }
+
+    if (di->next != NULL)
+    {
+        di->next->prev = di->prev;
+    }
+
+    if (priv->draw_item_head == di)
+    {
+        priv->draw_item_head = di->next;
+    }
+
+    if (priv->draw_item_tail == di)
+    {
+        priv->draw_item_tail = di->prev;
+    }
+
+    if (di->type == RDI_LINE)
+    {
+        if (di->u.line.segs != NULL)
+        {
+            g_free(di->u.line.segs);
+        }
+    }
+
+    if (di->type == RDI_TEXT)
+    {
+        rdpGlyphDeleteRdpText(di->u.text.rtext);
+    }
+
+    RegionDestroy(di->reg);
+    g_free(di);
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpDrawItemRemoveAll(rdpPtr dev, rdpPixmapRec *priv)
+{
+    struct rdp_draw_item *di;
+
+    di = priv->draw_item_head;
+
+    while (di != NULL)
+    {
+        rdpDrawItemRemove(dev, priv, di);
+        di = priv->draw_item_head;
+    }
+
+    return 0;
+}
 
 /*****************************************************************************/
 void

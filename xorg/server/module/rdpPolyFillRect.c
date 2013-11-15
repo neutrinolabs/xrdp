@@ -32,10 +32,19 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "rdp.h"
 #include "rdpDraw.h"
+#include "rdpClientCon.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
+
+/******************************************************************************/
+static void
+rdpPolyFillRectPre(rdpClientCon *clientCon,
+                   DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
+                   xRectangle *prectInit)
+{
+}
 
 /******************************************************************************/
 static void
@@ -50,11 +59,35 @@ rdpPolyFillRectOrg(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
 }
 
 /******************************************************************************/
+static void
+rdpPolyFillRectPost(rdpClientCon *clientCon,
+                    DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
+                    xRectangle *prectInit)
+{
+}
+
+/******************************************************************************/
 void
 rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
                 xRectangle *prectInit)
 {
+    rdpPtr dev;
+    rdpClientCon *clientCon;
+
     LLOGLN(10, ("rdpPolyFillRect:"));
+    dev = rdpGetDevFromScreen(pGC->pScreen);
+    clientCon = dev->clientConHead;
+    while (clientCon != NULL)
+    {
+        rdpPolyFillRectPre(clientCon, pDrawable, pGC, nrectFill, prectInit);
+        clientCon = clientCon->next;
+    }
     /* do original call */
     rdpPolyFillRectOrg(pDrawable, pGC, nrectFill, prectInit);
+    clientCon = dev->clientConHead;
+    while (clientCon != NULL)
+    {
+        rdpPolyFillRectPost(clientCon, pDrawable, pGC, nrectFill, prectInit);
+        clientCon = clientCon->next;
+    }
 }

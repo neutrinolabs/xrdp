@@ -29,15 +29,15 @@ the rest
 int
 rdpBitsPerPixel(int depth);
 int
-g_tcp_recv(int sck, void *ptr, int len, int flags);
+g_sck_recv(int sck, void *ptr, int len, int flags);
 void
-g_tcp_close(int sck);
+g_sck_close(int sck);
 int
-g_tcp_last_error_would_block(int sck);
+g_sck_last_error_would_block(int sck);
 void
 g_sleep(int msecs);
 int
-g_tcp_send(int sck, void *ptr, int len, int flags);
+g_sck_send(int sck, void *ptr, int len, int flags);
 void *
 g_malloc(int size, int zero);
 void
@@ -45,29 +45,29 @@ g_free(void *ptr);
 void
 g_sprintf(char *dest, char *format, ...);
 int
-g_tcp_socket(void);
+g_sck_tcp_socket(void);
 int
-g_tcp_local_socket_dgram(void);
+g_sck_local_socket_dgram(void);
 int
-g_tcp_local_socket_stream(void);
+g_sck_local_socket_stream(void);
 void
 g_memcpy(void *d_ptr, const void *s_ptr, int size);
 void
 g_memset(void *d_ptr, const unsigned char chr, int size);
 int
-g_tcp_set_no_delay(int sck);
+g_sck_tcp_set_no_delay(int sck);
 int
-g_tcp_set_non_blocking(int sck);
+g_sck_set_non_blocking(int sck);
 int
-g_tcp_accept(int sck);
+g_sck_accept(int sck);
 int
-g_tcp_select(int sck1, int sck2, int sck3);
+g_sck_select(int sck1, int sck2, int sck3);
 int
-g_tcp_bind(int sck, char *port);
+g_sck_tcp_bind(int sck, char *port);
 int
-g_tcp_local_bind(int sck, char *port);
+g_sck_local_bind(int sck, char *port);
 int
-g_tcp_listen(int sck);
+g_sck_listen(int sck);
 int
 g_create_dir(const char *dirname);
 int

@@ -50,6 +50,12 @@ do { \
 
 extern GCOps g_rdpGCOps; /* in rdpGC.c */
 
+int
+rdpDrawItemAdd(rdpPtr dev, rdpPixmapRec *priv, struct rdp_draw_item *di);
+int
+rdpDrawItemRemove(rdpPtr dev, rdpPixmapRec *priv, struct rdp_draw_item *di);
+int
+rdpDrawItemRemoveAll(rdpPtr dev, rdpPixmapRec *priv);
 void
 rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion);
 Bool

@@ -67,14 +67,14 @@ rdpBitsPerPixel(int depth)
 
 /*****************************************************************************/
 int
-g_tcp_recv(int sck, void *ptr, int len, int flags)
+g_sck_recv(int sck, void *ptr, int len, int flags)
 {
     return recv(sck, ptr, len, flags);
 }
 
 /*****************************************************************************/
 void
-g_tcp_close(int sck)
+g_sck_close(int sck)
 {
     if (sck == 0)
     {
@@ -87,7 +87,7 @@ g_tcp_close(int sck)
 
 /*****************************************************************************/
 int
-g_tcp_last_error_would_block(int sck)
+g_sck_last_error_would_block(int sck)
 {
     return (errno == EWOULDBLOCK) || (errno == EINPROGRESS);
 }
@@ -101,7 +101,7 @@ g_sleep(int msecs)
 
 /*****************************************************************************/
 int
-g_tcp_send(int sck, void *ptr, int len, int flags)
+g_sck_send(int sck, void *ptr, int len, int flags)
 {
     return send(sck, ptr, len, flags);
 }
@@ -146,7 +146,7 @@ g_sprintf(char *dest, char *format, ...)
 
 /*****************************************************************************/
 int
-g_tcp_socket(void)
+g_sck_tcp_socket(void)
 {
     int rv;
     int i;
@@ -160,14 +160,14 @@ g_tcp_socket(void)
 
 /*****************************************************************************/
 int
-g_tcp_local_socket_dgram(void)
+g_sck_local_socket_dgram(void)
 {
     return socket(AF_UNIX, SOCK_DGRAM, 0);
 }
 
 /*****************************************************************************/
 int
-g_tcp_local_socket_stream(void)
+g_sck_local_socket_stream(void)
 {
     return socket(AF_UNIX, SOCK_STREAM, 0);
 }
@@ -188,7 +188,7 @@ g_memset(void *d_ptr, const unsigned char chr, int size)
 
 /*****************************************************************************/
 int
-g_tcp_set_no_delay(int sck)
+g_sck_tcp_set_no_delay(int sck)
 {
     int i;
 
@@ -199,7 +199,7 @@ g_tcp_set_no_delay(int sck)
 
 /*****************************************************************************/
 int
-g_tcp_set_non_blocking(int sck)
+g_sck_set_non_blocking(int sck)
 {
     unsigned long i;
 
@@ -211,7 +211,7 @@ g_tcp_set_non_blocking(int sck)
 
 /*****************************************************************************/
 int
-g_tcp_accept(int sck)
+g_sck_accept(int sck)
 {
     struct sockaddr_in s;
     unsigned int i;
@@ -223,7 +223,7 @@ g_tcp_accept(int sck)
 
 /*****************************************************************************/
 int
-g_tcp_select(int sck1, int sck2, int sck3)
+g_sck_select(int sck1, int sck2, int sck3)
 {
     fd_set rfds;
     struct timeval time;
@@ -292,7 +292,7 @@ g_tcp_select(int sck1, int sck2, int sck3)
 
 /*****************************************************************************/
 int
-g_tcp_bind(int sck, char *port)
+g_sck_tcp_bind(int sck, char *port)
 {
     struct sockaddr_in s;
 
@@ -305,7 +305,7 @@ g_tcp_bind(int sck, char *port)
 
 /*****************************************************************************/
 int
-g_tcp_local_bind(int sck, char *port)
+g_sck_local_bind(int sck, char *port)
 {
     struct sockaddr_un s;
 
@@ -317,7 +317,7 @@ g_tcp_local_bind(int sck, char *port)
 
 /*****************************************************************************/
 int
-g_tcp_listen(int sck)
+g_sck_listen(int sck)
 {
     return listen(sck, 2);
 }

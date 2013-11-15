@@ -65,6 +65,26 @@ struct _rdpKeyboard
 };
 typedef struct _rdpKeyboard rdpKeyboard;
 
+
+struct _rdpPixmapRec
+{
+    int status;
+    int rdpindex;
+    int con_number;
+    int is_dirty;
+    int is_scratch;
+    int is_alpha_dirty_not;
+    /* number of times used in a remote operation
+       if this gets above XRDP_USE_COUNT_THRESHOLD
+       then we force remote the pixmap */
+    int use_count;
+    int kind_width;
+    struct rdp_draw_item *draw_item_head;
+    struct rdp_draw_item *draw_item_tail;
+};
+typedef struct _rdpPixmapRec rdpPixmapRec;
+typedef struct _rdpPixmapRec * rdpPixmapPtr;
+
 /* move this to common header */
 struct _rdpRec
 {
@@ -114,6 +134,13 @@ struct _rdpRec
     char uds_data[256];
     rdpClientCon *clientConHead;
     rdpClientCon *clientConTail;
+
+    rdpPixmapRec screenPriv;
+    int sendUpdateScheduled; /* boolean */
+    OsTimerPtr sendUpdateTimer;
+
+    int do_dirty_ons; /* boolean */
+
 };
 typedef struct _rdpRec rdpRec;
 typedef struct _rdpRec * rdpPtr;
@@ -127,11 +154,73 @@ struct _rdpGCRec
 typedef struct _rdpGCRec rdpGCRec;
 typedef struct _rdpGCRec * rdpGCPtr;
 
-struct _rdpPixmapRec
-{
-    int i1;
-};
-typedef struct _rdpPixmapRec rdpPixmapRec;
-typedef struct _rdpPixmapRec * rdpPixmapPtr;
+#define RDI_FILL 1
+#define RDI_IMGLL 2 /* lossless */
+#define RDI_IMGLY 3 /* lossy */
+#define RDI_LINE 4
+#define RDI_SCRBLT 5
+#define RDI_TEXT 6
 
+struct urdp_draw_item_fill
+{
+  int opcode;
+  int fg_color;
+  int bg_color;
+  int pad0;
+};
+
+struct urdp_draw_item_img
+{
+  int opcode;
+  int pad0;
+};
+
+struct urdp_draw_item_line
+{
+  int opcode;
+  int fg_color;
+  int bg_color;
+  int width;
+  xSegment* segs;
+  int nseg;
+  int flags;
+};
+
+struct urdp_draw_item_scrblt
+{
+  int srcx;
+  int srcy;
+  int dstx;
+  int dsty;
+  int cx;
+  int cy;
+};
+
+struct urdp_draw_item_text
+{
+  int opcode;
+  int fg_color;
+  struct rdp_text* rtext; /* in rdpglyph.h */
+};
+
+union urdp_draw_item
+{
+  struct urdp_draw_item_fill fill;
+  struct urdp_draw_item_img img;
+  struct urdp_draw_item_line line;
+  struct urdp_draw_item_scrblt scrblt;
+  struct urdp_draw_item_text text;
+};
+
+struct rdp_draw_item
+{
+  int type; /* RDI_FILL, RDI_IMGLL, ... */
+  int flags;
+  struct rdp_draw_item* prev;
+  struct rdp_draw_item* next;
+  RegionPtr reg;
+  union urdp_draw_item u;
+};
+
+#define XRDP_USE_COUNT_THRESHOLD 1
 #endif

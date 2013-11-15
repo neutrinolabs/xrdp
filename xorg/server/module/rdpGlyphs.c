@@ -38,11 +38,36 @@ gylph(font) calls
 #include "rdp.h"
 #include "rdpGlyphs.h"
 #include "rdpDraw.h"
+#include "rdpMisc.h"
 
 /******************************************************************************/
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
+
+/******************************************************************************/
+int
+rdpGlyphDeleteRdpText(struct rdp_text *rtext)
+{
+    int index;
+
+    if (rtext == NULL)
+    {
+        return 0;
+    }
+    for (index = 0; index < rtext->num_chars; index++)
+    {
+        if (rtext->chars[index] != NULL)
+        {
+            g_free(rtext->chars[index]->data);
+            g_free(rtext->chars[index]);
+        }
+    }
+    RegionDestroy(rtext->reg);
+    rdpGlyphDeleteRdpText(rtext->next);
+    g_free(rtext);
+    return 0;
+}
 
 /******************************************************************************/
 static void
