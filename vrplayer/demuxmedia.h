@@ -37,33 +37,39 @@ class DemuxMedia : public QObject
     Q_OBJECT
 
 public:
-    explicit DemuxMedia(QObject *parent = 0, QQueue<MediaPacket *> *audioQueue = 0,
-                        QQueue<MediaPacket *> *videoQueue = 0, void *channel = 0, int stream_id = 101);
+    explicit DemuxMedia(QObject *parent = 0, QQueue<MediaPacket *> *videoQueue = 0,
+                        void *channel = 0, int stream_id = 101);
 
     void setVcrOp(int op);
 
 public slots:
     void       startDemuxing();
-    PlayVideo *getPlayVideoInstance();
+    void       onMediaSeek(int value);
 
 private:
-    QQueue<MediaPacket *> *audioQueue;
+    QMutex     vcrMutex;
+    int        vcrFlag;
+    void      *channel;
+    int        stream_id;
+    QMutex     sendMutex;
+    QMutex     posMutex;
+    int64_t    elapsedTime; /* elapsed time in usecs since play started */
+    int64_t    pausedTime;  /* time at which stream was paused          */
+    int64_t    la_seekPos;  /* locked access; must hold posMutex        */
+    bool       isStopped;
+
     QQueue<MediaPacket *> *videoQueue;
-    QMutex                 vcrMutex;
-    int                    vcrFlag;
-    void                  *channel;
     PlayVideo             *playVideo;
     QThread               *playVideoThread;
-    PlayAudio             *playAudio;
-    QThread               *playAudioThread;
-    int                    stream_id;
-    bool                   threadsStarted;
-    QMutex                 sendMutex;
 
-    void startAudioVideoThreads();
+    void updateMediaPos();
 
 signals:
     void onMediaRestarted();
+
+signals:
+    void onElapsedtime(int val); /* in hundredth of a sec */
+
 };
 
 #endif // DEMUXMEDIA_H

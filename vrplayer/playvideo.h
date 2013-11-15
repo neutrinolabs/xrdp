@@ -39,34 +39,36 @@ public:
                        QQueue<MediaPacket *> *videoQueue = 0,
                        QMutex *sendMutex = 0,
                        void *channel = 0,
-                       int stream_id = 101);
+                       int stream_id = 101,
+                       int fps = 24);
 
-    void onMediaSeek(int value);
-    void setVcrOp(int op);
-    void onMediaRestarted();
+    //void onMediaSeek(int value);
+    //void setVcrOp(int op);
+    //void onMediaRestarted();
 
 public slots:
     void play();
 
-signals:
-    void onElapsedtime(int val); /* in hundredth of a sec */
+//signals:
+//    void onElapsedtime(int val); /* in hundredth of a sec */
 
 private:
     QQueue<MediaPacket *> *videoQueue;
 
-    int       vcrFlag;
-    QMutex    vcrMutex;
+//    int       vcrFlag;
+//    QMutex    vcrMutex;
     QMutex   *sendMutex;
-    QMutex    posMutex;
-    int64_t   la_seekPos;  /* locked access; must hold posMutex */
+//    QMutex    posMutex;
+//    int64_t   la_seekPos;  /* locked access; must hold posMutex */
     void     *channel;
     int       stream_id;
-    int64_t   elapsedTime; /* elapsed time in usecs since play started */
-    int64_t   pausedTime;  /* time at which stream was paused          */
-    bool      isStopped;
+    int       fps;
+//    int64_t   elapsedTime; /* elapsed time in usecs since play started */
+//    int64_t   pausedTime;  /* time at which stream was paused          */
+//    bool      isStopped;
 
-    void updateMediaPos();
-    void clearVideoQ();
+//    void updateMediaPos();
+//    void clearVideoQ();
 };
 
 #endif // PLAYVIDEO_H

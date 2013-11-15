@@ -222,7 +222,7 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
         return -1;
     }
 
-#if 0
+#if 1
     /* print media info to standard out */
     av_dump_format(g_psi.p_format_ctx, 0, filename, 0);
 #endif
@@ -231,13 +231,15 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
     for (i = 0; i < g_psi.p_format_ctx->nb_streams; i++)
     {
         if (g_psi.p_format_ctx->streams[i]->codec->codec_type == CODEC_TYPE_VIDEO &&
-                g_video_index < 0)
+            g_psi.p_format_ctx->streams[i]->codec->codec_id == CODEC_ID_H264 &&
+            g_video_index < 0)
         {
             g_video_index = i;
         }
 
         if (g_psi.p_format_ctx->streams[i]->codec->codec_type == CODEC_TYPE_AUDIO &&
-                g_audio_index < 0)
+            g_psi.p_format_ctx->streams[i]->codec->codec_id == CODEC_ID_AAC &&
+            g_audio_index < 0)
         {
             g_audio_index = i;
         }
@@ -468,7 +470,7 @@ xrdpvr_play_frame(void *channel, int stream_id, int *videoTimeout, int *audioTim
     AVBitStreamFilterContext *bsfc;
     AVPacket                  new_pkt;
 
-    printf("xrdpvr_play_frame:\n");
+    //printf("xrdpvr_play_frame:\n");
 
     if (av_read_frame(g_psi.p_format_ctx, &av_pkt) < 0)
     {
@@ -726,7 +728,7 @@ xrdpvr_send_video_data(void *channel, uint32_t stream_id, uint32_t data_len, uin
     int     rv;
     int     len;
 
-    printf("xrdpvr_send_video_data:\n");
+    //printf("xrdpvr_send_video_data:\n");
     stream_new(s, MAX_PDU_SIZE + data_len);
 
     stream_ins_u32_le(s, 0); /* number of bytes to follow */
@@ -771,7 +773,7 @@ xrdpvr_send_audio_data(void *channel, uint32_t stream_id, uint32_t data_len, uin
     int     rv;
     int     len;
 
-    printf("xrdpvr_send_audio_data:\n");
+    //printf("xrdpvr_send_audio_data:\n");
     stream_new(s, MAX_PDU_SIZE + data_len);
 
     stream_ins_u32_le(s, 0); /* number of bytes to follow */
@@ -789,12 +791,6 @@ xrdpvr_send_audio_data(void *channel, uint32_t stream_id, uint32_t data_len, uin
 
     /* write data to virtual channel */
     rv = xrdpvr_write_to_client(channel, s);
-    stream_free(s);
-
-    // read ack back
-    stream_new(s, MAX_PDU_SIZE);
-    xrdpvr_read_from_client(channel, s, 4, 1000);
-    //hexdump(s->data, s->p - s->data);
     stream_free(s);
 
     return rv;
@@ -1006,4 +1002,17 @@ xrdpvr_send_init(void *channel)
     rv = xrdpvr_write_to_client(channel, s);
     stream_free(s);
     return rv;
+}
+
+int
+xrdpvr_read_ack(void *channel, int *frame)
+{
+    STREAM  *s;
+
+    stream_new(s, MAX_PDU_SIZE);
+    xrdpvr_read_from_client(channel, s, 4, 1000);
+    s->p = s->data;
+    stream_ext_u32_le(s, *frame);
+    stream_free(s);
+    return 0;
 }
