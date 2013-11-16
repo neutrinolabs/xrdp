@@ -39,6 +39,7 @@ gylph(font) calls
 #include "rdpGlyphs.h"
 #include "rdpDraw.h"
 #include "rdpMisc.h"
+#include "rdpReg.h"
 
 /******************************************************************************/
 #define LOG_LEVEL 1
@@ -63,7 +64,7 @@ rdpGlyphDeleteRdpText(struct rdp_text *rtext)
             g_free(rtext->chars[index]);
         }
     }
-    RegionDestroy(rtext->reg);
+    rdpRegionDestroy(rtext->reg);
     rdpGlyphDeleteRdpText(rtext->next);
     g_free(rtext);
     return 0;

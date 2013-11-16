@@ -142,6 +142,13 @@ struct _rdpRec
     OsTimerPtr sendUpdateTimer;
 
     int do_dirty_ons; /* boolean */
+    int disconnect_scheduled; /* boolean */
+    int do_kill_disconnected; /* boolean */
+
+    OsTimerPtr disconnectTimer;
+    int disconnectScheduled; /* boolean */
+    int disconnect_timeout_s;
+    int disconnect_time_ms;
 
 };
 typedef struct _rdpRec rdpRec;

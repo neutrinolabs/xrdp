@@ -24,6 +24,8 @@ Client connection to xrdp
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
+#include <sys/types.h>
 
 /* this should be before all X11 .h files */
 #include <xorg-server.h>
@@ -45,6 +47,45 @@ Client connection to xrdp
 
 #define USE_MAX_OS_BYTES 1
 #define MAX_OS_BYTES (16 * 1024 * 1024)
+
+/*
+0 GXclear,        0
+1 GXnor,          DPon
+2 GXandInverted,  DPna
+3 GXcopyInverted, Pn
+4 GXandReverse,   PDna
+5 GXinvert,       Dn
+6 GXxor,          DPx
+7 GXnand,         DPan
+8 GXand,          DPa
+9 GXequiv,        DPxn
+a GXnoop,         D
+b GXorInverted,   DPno
+c GXcopy,         P
+d GXorReverse,   PDno
+e GXor,          DPo
+f GXset          1
+*/
+
+static int g_rdp_opcodes[16] =
+{
+    0x00, /* GXclear        0x0 0 */
+    0x88, /* GXand          0x1 src AND dst */
+    0x44, /* GXandReverse   0x2 src AND NOT dst */
+    0xcc, /* GXcopy         0x3 src */
+    0x22, /* GXandInverted  0x4 NOT src AND dst */
+    0xaa, /* GXnoop         0x5 dst */
+    0x66, /* GXxor          0x6 src XOR dst */
+    0xee, /* GXor           0x7 src OR dst */
+    0x11, /* GXnor          0x8 NOT src AND NOT dst */
+    0x99, /* GXequiv        0x9 NOT src XOR dst */
+    0x55, /* GXinvert       0xa NOT dst */
+    0xdd, /* GXorReverse    0xb src OR NOT dst */
+    0x33, /* GXcopyInverted 0xc NOT src */
+    0xbb, /* GXorInverted   0xd NOT src OR dst */
+    0x77, /* GXnand         0xe NOT src OR NOT dst */
+    0xff  /* GXset          0xf 1 */
+};
 
 static int
 rdpClientConSendPending(rdpPtr dev, rdpClientCon *clientCon);
@@ -252,10 +293,105 @@ rdpClientConDeinit(rdpPtr dev)
     return 0;
 }
 
+/******************************************************************************/
+static CARD32
+rdpClientConDeferredDisconnectCallback(OsTimerPtr timer, CARD32 now,
+                                       pointer arg)
+{
+    CARD32 lnow_ms;
+    rdpPtr dev;
+
+    LLOGLN(10, ("rdpClientConDeferredDisconnectCallback"));
+    dev = (rdpPtr) arg;
+    if (dev->clientConHead != NULL) /* is there any connection ? */
+    {
+        LLOGLN(0, ("rdpClientConDeferredDisconnectCallback: one connected"));
+        if (dev->disconnectTimer != NULL)
+        {
+            LLOGLN(0, ("rdpClientConDeferredDisconnectCallback: "
+                   "canceling disconnectTimer"));
+            TimerCancel(dev->disconnectTimer);
+            TimerFree(dev->disconnectTimer);
+            dev->disconnectTimer = NULL;
+        }
+        dev->disconnectScheduled = FALSE;
+        return 0;
+    }
+    else
+    {
+        LLOGLN(10, ("rdpClientConDeferredDisconnectCallback: not connected"));
+    }
+    lnow_ms = GetTimeInMillis();
+    if (lnow_ms - dev->disconnect_time_ms > dev->disconnect_timeout_s * 1000)
+    {
+        LLOGLN(0, ("rdpClientConDeferredDisconnectCallback: exit X11rdp"));
+        kill(getpid(), SIGTERM);
+        return 0;
+    }
+    dev->disconnectTimer = TimerSet(dev->disconnectTimer, 0, 1000 * 10,
+                                    rdpClientConDeferredDisconnectCallback,
+                                    dev);
+    return 0;
+}
+
+
 /*****************************************************************************/
 static int
 rdpClientConDisconnect(rdpPtr dev, rdpClientCon *clientCon)
 {
+    //int index;
+
+    LLOGLN(0, ("rdpClientConDisconnect:"));
+    if (dev->do_kill_disconnected)
+    {
+        if (dev->disconnect_scheduled == FALSE)
+        {
+            LLOGLN(0, ("rdpClientConDisconnect: starting g_dis_timer"));
+            dev->disconnectTimer = TimerSet(dev->disconnectTimer, 0, 1000 * 10,
+                         rdpClientConDeferredDisconnectCallback, dev);
+            dev->disconnect_scheduled = TRUE;
+        }
+        dev->disconnect_time_ms = GetTimeInMillis();
+    }
+
+    //rdpClientConDelete(dev, clientCon);
+
+#if 0
+
+    // TODO
+
+    RemoveEnabledDevice(clientCon->sck);
+    clientCon->connected = FALSE;
+    g_sck_close(clientCon->sck);
+    clientCon->sck = 0;
+    clientCon->sckClosed = TRUE;
+    clientCon->osBitmapNumUsed = 0;
+    clientCon->rdpIndex = -1;
+
+    if (clientCon->maxOsBitmaps > 0)
+    {
+        for (index = 0; index < clientCon->maxOsBitmaps; index++)
+        {
+            if (clientCon->osBitmaps[index].used)
+            {
+                if (g_os_bitmaps[index].priv != 0)
+                {
+                    g_os_bitmaps[index].priv->status = 0;
+                }
+            }
+        }
+    }
+    g_os_bitmap_alloc_size = 0;
+
+    g_max_os_bitmaps = 0;
+    g_free(g_os_bitmaps);
+    g_os_bitmaps = 0;
+    g_use_rail = 0;
+    g_do_glyph_cache = 0;
+    g_do_composite = 0;
+
+#endif
+
     return 0;
 }
 
@@ -615,6 +751,192 @@ rdpClientConSetBgcolor(rdpPtr dev, rdpClientCon *clientCon, int bgcolor)
         bgcolor = rdpClientConConvertPixel(dev, clientCon, bgcolor) &
                   clientCon->rdp_Bpp_mask;
         out_uint32_le(clientCon->out_s, bgcolor);
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpClientConSetOpcode(rdpPtr dev, rdpClientCon *clientCon, int opcode)
+{
+    if (clientCon->connected)
+    {
+        LLOGLN(10, ("rdpClientConSetOpcode:"));
+        rdpClientConPreCheck(dev, clientCon, 6);
+        out_uint16_le(clientCon->out_s, 14); /* set opcode */
+        out_uint16_le(clientCon->out_s, 6); /* size */
+        clientCon->count++;
+        out_uint16_le(clientCon->out_s, g_rdp_opcodes[opcode & 0xf]);
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpClientConSetPen(rdpPtr dev, rdpClientCon *clientCon, int style, int width)
+{
+    if (clientCon->connected)
+    {
+        LLOGLN(10, ("rdpClientConSetPen:"));
+        rdpClientConPreCheck(dev, clientCon, 8);
+        out_uint16_le(clientCon->out_s, 17); /* set pen */
+        out_uint16_le(clientCon->out_s, 8); /* size */
+        clientCon->count++;
+        out_uint16_le(clientCon->out_s, style);
+        out_uint16_le(clientCon->out_s, width);
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpClientConDrawLine(rdpPtr dev, rdpClientCon *clientCon,
+                     short x1, short y1, short x2, short y2)
+{
+    if (clientCon->connected)
+    {
+        LLOGLN(10, ("rdpClientConDrawLine:"));
+        rdpClientConPreCheck(dev, clientCon, 12);
+        out_uint16_le(clientCon->out_s, 18); /* draw line */
+        out_uint16_le(clientCon->out_s, 12); /* size */
+        clientCon->count++;
+        out_uint16_le(clientCon->out_s, x1);
+        out_uint16_le(clientCon->out_s, y1);
+        out_uint16_le(clientCon->out_s, x2);
+        out_uint16_le(clientCon->out_s, y2);
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpClientConSetCursor(rdpPtr dev, rdpClientCon *clientCon,
+                      short x, short y, char *cur_data, char *cur_mask)
+{
+    int size;
+
+    if (clientCon->connected)
+    {
+        LLOGLN(10, ("rdpClientConSetCursor:"));
+        size = 8 + 32 * (32 * 3) + 32 * (32 / 8);
+        rdpClientConPreCheck(dev, clientCon, size);
+        out_uint16_le(clientCon->out_s, 19); /* set cursor */
+        out_uint16_le(clientCon->out_s, size); /* size */
+        clientCon->count++;
+        x = RDPMAX(0, x);
+        x = RDPMIN(31, x);
+        y = RDPMAX(0, y);
+        y = RDPMIN(31, y);
+        out_uint16_le(clientCon->out_s, x);
+        out_uint16_le(clientCon->out_s, y);
+        out_uint8a(clientCon->out_s, cur_data, 32 * (32 * 3));
+        out_uint8a(clientCon->out_s, cur_mask, 32 * (32 / 8));
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpClientConSetCursorEx(rdpPtr dev, rdpClientCon *clientCon,
+                        short x, short y, char *cur_data,
+                        char *cur_mask, int bpp)
+{
+    int size;
+    int Bpp;
+
+    if (clientCon->connected)
+    {
+        LLOGLN(10, ("rdpClientConSetCursorEx:"));
+        Bpp = (bpp == 0) ? 3 : (bpp + 7) / 8;
+        size = 10 + 32 * (32 * Bpp) + 32 * (32 / 8);
+        rdpClientConPreCheck(dev, clientCon, size);
+        out_uint16_le(clientCon->out_s, 51); /* set cursor ex */
+        out_uint16_le(clientCon->out_s, size); /* size */
+        clientCon->count++;
+        x = RDPMAX(0, x);
+        x = RDPMIN(31, x);
+        y = RDPMAX(0, y);
+        y = RDPMIN(31, y);
+        out_uint16_le(clientCon->out_s, x);
+        out_uint16_le(clientCon->out_s, y);
+        out_uint16_le(clientCon->out_s, bpp);
+        out_uint8a(clientCon->out_s, cur_data, 32 * (32 * Bpp));
+        out_uint8a(clientCon->out_s, cur_mask, 32 * (32 / 8));
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpClientConCreateOsSurface(rdpPtr dev, rdpClientCon *clientCon,
+                            int rdpindex, int width, int height)
+{
+    LLOGLN(10, ("rdpClientConCreateOsSurface:"));
+
+    if (clientCon->connected)
+    {
+        LLOGLN(10, ("rdpClientConCreateOsSurface: width %d height %d", width, height));
+        rdpClientConPreCheck(dev, clientCon, 12);
+        out_uint16_le(clientCon->out_s, 20);
+        out_uint16_le(clientCon->out_s, 12);
+        clientCon->count++;
+        out_uint32_le(clientCon->out_s, rdpindex);
+        out_uint16_le(clientCon->out_s, width);
+        out_uint16_le(clientCon->out_s, height);
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpClientConCreateOsSurfaceBpp(rdpPtr dev, rdpClientCon *clientCon,
+                               int rdpindex, int width, int height, int bpp)
+{
+    LLOGLN(10, ("rdpClientConCreateOsSurfaceBpp:"));
+    if (clientCon->connected)
+    {
+        LLOGLN(10, ("rdpClientConCreateOsSurfaceBpp: width %d height %d "
+               "bpp %d", width, height, bpp));
+        rdpClientConPreCheck(dev, clientCon, 13);
+        out_uint16_le(clientCon->out_s, 31);
+        out_uint16_le(clientCon->out_s, 13);
+        clientCon->count++;
+        out_uint32_le(clientCon->out_s, rdpindex);
+        out_uint16_le(clientCon->out_s, width);
+        out_uint16_le(clientCon->out_s, height);
+        out_uint8(clientCon->out_s, bpp);
+    }
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpClientConSwitchOsSurface(rdpPtr dev, rdpClientCon *clientCon, int rdpindex)
+{
+    LLOGLN(10, ("rdpClientConSwitchOsSurface:"));
+
+    if (clientCon->connected)
+    {
+        if (clientCon->rdpIndex == rdpindex)
+        {
+            return 0;
+        }
+
+        clientCon->rdpIndex = rdpindex;
+        LLOGLN(10, ("rdpClientConSwitchOsSurface: rdpindex %d", rdpindex));
+        /* switch surface */
+        rdpClientConPreCheck(dev, clientCon, 8);
+        out_uint16_le(clientCon->out_s, 21);
+        out_uint16_le(clientCon->out_s, 8);
+        out_uint32_le(clientCon->out_s, rdpindex);
+        clientCon->count++;
     }
 
     return 0;

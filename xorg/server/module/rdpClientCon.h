@@ -56,6 +56,8 @@ struct _rdpClientCon
     int rdp_bpp; /* client depth */
     int rdp_Bpp_mask;
 
+    int rdpIndex; /* current os target */
+
     struct _rdpClientCon *next;
 };
 
