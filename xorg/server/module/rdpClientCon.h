@@ -53,6 +53,9 @@ struct _rdpClientCon
     int osBitmapAllocSize;
     int osBitmapNumUsed;
 
+    int rdp_bpp; /* client depth */
+    int rdp_Bpp_mask;
+
     struct _rdpClientCon *next;
 };
 

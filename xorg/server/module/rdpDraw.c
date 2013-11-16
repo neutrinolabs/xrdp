@@ -42,6 +42,7 @@ misc draw calls
 #include "rdpClientCon.h"
 #include "rdpMisc.h"
 #include "rdpGlyphs.h"
+#include "rdpReg.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
@@ -110,7 +111,7 @@ rdpDrawItemRemove(rdpPtr dev, rdpPixmapRec *priv, struct rdp_draw_item *di)
         rdpGlyphDeleteRdpText(di->u.text.rtext);
     }
 
-    RegionDestroy(di->reg);
+    rdpRegionDestroy(di->reg);
     g_free(di);
     return 0;
 }

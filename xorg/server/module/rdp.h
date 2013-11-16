@@ -95,6 +95,8 @@ struct _rdpRec
     int sizeInBytes;
     int num_modes;
     int bitsPerPixel;
+    int Bpp;
+    int Bpp_mask;
     char *pfbMemory;
     ScreenPtr pScreen;
     rdpDevPrivateKey privateKeyRecGC;

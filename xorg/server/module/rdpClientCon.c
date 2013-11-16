@@ -335,6 +335,293 @@ rdpClientConPreCheck(rdpPtr dev, rdpClientCon *clientCon, int in_size)
 
 /******************************************************************************/
 int
+rdpClientConFillRect(rdpPtr dev, rdpClientCon *clientCon,
+                     short x, short y, int cx, int cy)
+{
+    if (clientCon->connected)
+    {
+        LLOGLN(10, ("rdpClientConFillRect:"));
+        rdpClientConPreCheck(dev, clientCon, 12);
+        out_uint16_le(clientCon->out_s, 3); /* fill rect */
+        out_uint16_le(clientCon->out_s, 12); /* size */
+        clientCon->count++;
+        out_uint16_le(clientCon->out_s, x);
+        out_uint16_le(clientCon->out_s, y);
+        out_uint16_le(clientCon->out_s, cx);
+        out_uint16_le(clientCon->out_s, cy);
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpClientConScreenBlt(rdpPtr dev, rdpClientCon *clientCon,
+                      short x, short y, int cx, int cy, short srcx, short srcy)
+{
+    if (clientCon->connected)
+    {
+        LLOGLN(10, ("rdpClientConScreenBlt: x %d y %d cx %d cy %d "
+               "srcx %d srcy %d",
+               x, y, cx, cy, srcx, srcy));
+        rdpClientConPreCheck(dev, clientCon, 16);
+        out_uint16_le(clientCon->out_s, 4); /* screen blt */
+        out_uint16_le(clientCon->out_s, 16); /* size */
+        clientCon->count++;
+        out_uint16_le(clientCon->out_s, x);
+        out_uint16_le(clientCon->out_s, y);
+        out_uint16_le(clientCon->out_s, cx);
+        out_uint16_le(clientCon->out_s, cy);
+        out_uint16_le(clientCon->out_s, srcx);
+        out_uint16_le(clientCon->out_s, srcy);
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpClientConSetClip(rdpPtr dev, rdpClientCon *clientCon,
+                    short x, short y, int cx, int cy)
+{
+    if (clientCon->connected)
+    {
+        LLOGLN(10, ("rdpClientConSetClip:"));
+        rdpClientConPreCheck(dev, clientCon, 12);
+        out_uint16_le(clientCon->out_s, 10); /* set clip */
+        out_uint16_le(clientCon->out_s, 12); /* size */
+        clientCon->count++;
+        out_uint16_le(clientCon->out_s, x);
+        out_uint16_le(clientCon->out_s, y);
+        out_uint16_le(clientCon->out_s, cx);
+        out_uint16_le(clientCon->out_s, cy);
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpClientConResetClip(rdpPtr dev, rdpClientCon *clientCon)
+{
+    if (clientCon->connected)
+    {
+        LLOGLN(10, ("rdpClientConResetClip:"));
+        rdpClientConPreCheck(dev, clientCon, 4);
+        out_uint16_le(clientCon->out_s, 11); /* reset clip */
+        out_uint16_le(clientCon->out_s, 4); /* size */
+        clientCon->count++;
+    }
+
+    return 0;
+}
+
+#define COLOR8(r, g, b) \
+    ((((r) >> 5) << 0)  | (((g) >> 5) << 3) | (((b) >> 6) << 6))
+#define COLOR15(r, g, b) \
+    ((((r) >> 3) << 10) | (((g) >> 3) << 5) | (((b) >> 3) << 0))
+#define COLOR16(r, g, b) \
+    ((((r) >> 3) << 11) | (((g) >> 2) << 5) | (((b) >> 3) << 0))
+#define COLOR24(r, g, b) \
+    ((((r) >> 0) << 0)  | (((g) >> 0) << 8) | (((b) >> 0) << 16))
+#define SPLITCOLOR32(r, g, b, c) \
+    { \
+        r = ((c) >> 16) & 0xff; \
+        g = ((c) >> 8) & 0xff; \
+        b = (c) & 0xff; \
+    }
+
+/******************************************************************************/
+int
+rdpClientConConvertPixel(rdpPtr dev, rdpClientCon *clientCon, int in_pixel)
+{
+    int red;
+    int green;
+    int blue;
+    int rv;
+
+    rv = 0;
+
+    if (dev->depth == 24)
+    {
+        if (clientCon->rdp_bpp == 24)
+        {
+            rv = in_pixel;
+            SPLITCOLOR32(red, green, blue, rv);
+            rv = COLOR24(red, green, blue);
+        }
+        else if (clientCon->rdp_bpp == 16)
+        {
+            rv = in_pixel;
+            SPLITCOLOR32(red, green, blue, rv);
+            rv = COLOR16(red, green, blue);
+        }
+        else if (clientCon->rdp_bpp == 15)
+        {
+            rv = in_pixel;
+            SPLITCOLOR32(red, green, blue, rv);
+            rv = COLOR15(red, green, blue);
+        }
+        else if (clientCon->rdp_bpp == 8)
+        {
+            rv = in_pixel;
+            SPLITCOLOR32(red, green, blue, rv);
+            rv = COLOR8(red, green, blue);
+        }
+    }
+    else if (dev->depth == clientCon->rdp_bpp)
+    {
+        return in_pixel;
+    }
+
+    return rv;
+}
+
+/******************************************************************************/
+int
+rdpClientConConvertPixels(rdpPtr dev, rdpClientCon *clientCon,
+                          void *src, void *dst, int num_pixels)
+{
+    unsigned int pixel;
+    unsigned int red;
+    unsigned int green;
+    unsigned int blue;
+    unsigned int *src32;
+    unsigned int *dst32;
+    unsigned short *dst16;
+    unsigned char *dst8;
+    int index;
+
+    if (dev->depth == clientCon->rdp_bpp)
+    {
+        memcpy(dst, src, num_pixels * dev->Bpp);
+        return 0;
+    }
+
+    if (dev->depth == 24)
+    {
+        src32 = (unsigned int *)src;
+
+        if (clientCon->rdp_bpp == 24)
+        {
+            dst32 = (unsigned int *)dst;
+
+            for (index = 0; index < num_pixels; index++)
+            {
+                pixel = *src32;
+                *dst32 = pixel;
+                dst32++;
+                src32++;
+            }
+        }
+        else if (clientCon->rdp_bpp == 16)
+        {
+            dst16 = (unsigned short *)dst;
+
+            for (index = 0; index < num_pixels; index++)
+            {
+                pixel = *src32;
+                SPLITCOLOR32(red, green, blue, pixel);
+                pixel = COLOR16(red, green, blue);
+                *dst16 = pixel;
+                dst16++;
+                src32++;
+            }
+        }
+        else if (clientCon->rdp_bpp == 15)
+        {
+            dst16 = (unsigned short *)dst;
+
+            for (index = 0; index < num_pixels; index++)
+            {
+                pixel = *src32;
+                SPLITCOLOR32(red, green, blue, pixel);
+                pixel = COLOR15(red, green, blue);
+                *dst16 = pixel;
+                dst16++;
+                src32++;
+            }
+        }
+        else if (clientCon->rdp_bpp == 8)
+        {
+            dst8 = (unsigned char *)dst;
+
+            for (index = 0; index < num_pixels; index++)
+            {
+                pixel = *src32;
+                SPLITCOLOR32(red, green, blue, pixel);
+                pixel = COLOR8(red, green, blue);
+                *dst8 = pixel;
+                dst8++;
+                src32++;
+            }
+        }
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpClientConAlphaPixels(void* src, void* dst, int num_pixels)
+{
+    unsigned int* src32;
+    unsigned char* dst8;
+    int index;
+
+    src32 = (unsigned int*)src;
+    dst8 = (unsigned char*)dst;
+    for (index = 0; index < num_pixels; index++)
+    {
+        *dst8 = (*src32) >> 24;
+        dst8++;
+        src32++;
+    }
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpClientConSetFgcolor(rdpPtr dev, rdpClientCon *clientCon, int fgcolor)
+{
+    if (clientCon->connected)
+    {
+        LLOGLN(10, ("rdpClientConSetFgcolor:"));
+        rdpClientConPreCheck(dev, clientCon, 8);
+        out_uint16_le(clientCon->out_s, 12); /* set fgcolor */
+        out_uint16_le(clientCon->out_s, 8); /* size */
+        clientCon->count++;
+        fgcolor = fgcolor & dev->Bpp_mask;
+        fgcolor = rdpClientConConvertPixel(dev, clientCon, fgcolor) &
+                  clientCon->rdp_Bpp_mask;
+        out_uint32_le(clientCon->out_s, fgcolor);
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpClientConSetBgcolor(rdpPtr dev, rdpClientCon *clientCon, int bgcolor)
+{
+    if (clientCon->connected)
+    {
+        LLOGLN(10, ("rdpClientConSetBgcolor:"));
+        rdpClientConPreCheck(dev, clientCon, 8);
+        out_uint16_le(clientCon->out_s, 13); /* set bg color */
+        out_uint16_le(clientCon->out_s, 8); /* size */
+        clientCon->count++;
+        bgcolor = bgcolor & dev->Bpp_mask;
+        bgcolor = rdpClientConConvertPixel(dev, clientCon, bgcolor) &
+                  clientCon->rdp_Bpp_mask;
+        out_uint32_le(clientCon->out_s, bgcolor);
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+int
 rdpClientConDeleteOsSurface(rdpPtr dev, rdpClientCon *clientCon, int rdpindex)
 {
     LLOGLN(10, ("rdpClientConDeleteOsSurface: rdpindex %d", rdpindex));
