@@ -25,12 +25,6 @@
 #include <freerdp/codec/rfx.h>
 #endif
 
-/* some compilers need unsigned char to avoid warnings */
-/*
-static tui8 g_unknown2[8] =
-{ 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00 };
-*/
-
 /*****************************************************************************/
 static int APP_CC
 xrdp_rdp_read_config(struct xrdp_client_info *client_info)
