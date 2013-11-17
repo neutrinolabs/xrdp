@@ -52,16 +52,6 @@ static tui8 g_unknown1[172] =
     0x2b, 0x00, 0x2a, 0x00
 };
 
-static tui8 g_monitorlayout[44] =
-{
-    0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x7F, 0x07, 0x00, 0x00,
-    0x37, 0x04, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
-    0x80, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0xFF, 0x0E, 0x00, 0x00, 0x37, 0x04, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00
-};
-
 /* some compilers need unsigned char to avoid warnings */
 /*
 static tui8 g_unknown2[8] =
@@ -1615,6 +1605,7 @@ static int APP_CC
 xrdp_rdp_send_monitorlayout(struct xrdp_rdp *self)
 {
     struct stream *s;
+    int i;
 
     make_stream(s);
     init_stream(s, 8192);
@@ -1625,7 +1616,18 @@ xrdp_rdp_send_monitorlayout(struct xrdp_rdp *self)
         return 1;
     }
 
-    out_uint8a(s, g_monitorlayout, 44);
+    out_uint32_le(s, self->client_info.monitorCount); /* MonitorCount */
+
+    /* TODO: validate for allowed monitors in terminal server (maybe by config?) */
+    for (i = 0; i < self->client_info.monitorCount; i++)
+    {
+        out_uint32_le(s, self->client_info.minfo[i].left);
+        out_uint32_le(s, self->client_info.minfo[i].top);
+        out_uint32_le(s, self->client_info.minfo[i].right);
+        out_uint32_le(s, self->client_info.minfo[i].bottom);
+        out_uint32_le(s, self->client_info.minfo[i].is_primary);
+    }
+
     s_mark_end(s);
 
     if (xrdp_rdp_send_data(self, s, 0x37) != 0)
@@ -1644,9 +1646,9 @@ xrdp_rdp_process_data_font(struct xrdp_rdp *self, struct stream *s)
     int seq;
 
     DEBUG(("in xrdp_rdp_process_data_font"));
-    in_uint8s(s, 2); /* num of fonts */
-    in_uint8s(s, 2); /* unknown */
-    in_uint16_le(s, seq);
+    in_uint8s(s, 2); /* NumberFonts: 0x0, SHOULD be set to 0 */
+    in_uint8s(s, 2); /* TotalNumberFonts: 0x0, SHOULD be set to 0 */
+    in_uint16_le(s, seq); /* ListFlags */
 
     /* 419 client sends Seq 1, then 2 */
     /* 2600 clients sends only Seq 3 */
@@ -1655,12 +1657,19 @@ xrdp_rdp_process_data_font(struct xrdp_rdp *self, struct stream *s)
         /* running */
         DEBUG(("sending unknown1"));
         xrdp_rdp_send_unknown1(self);
-        if (self->client_info.monitorCount > 0) {
+
+        /* TODO: Monitor Layout PDU should send to client after demand active pdu
+         * MOVE THAT CALL
+         */
+        DEBUG(("sending monitor layout pdu"));
+        if (self->client_info.monitorCount > 0 && self->client_info.multimon == 1)
+        {
             if (xrdp_rdp_send_monitorlayout(self) != 0)
             {
               g_writeln("Problem with monitor layout packet!!!");
             }
         }
+
         self->session->up_and_running = 1;
         DEBUG(("up_and_running set"));
         xrdp_rdp_send_data_update_sync(self);
