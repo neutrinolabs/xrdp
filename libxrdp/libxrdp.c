@@ -107,6 +107,17 @@ libxrdp_process_data(struct xrdp_session *session)
         {
             case -1:
                 xrdp_rdp_send_demand_active((struct xrdp_rdp *)session->rdp);
+
+                // send Monitor Layout PDU for multimon
+                if (session->client_info->monitorCount > 0 && session->client_info->multimon == 1)
+                {
+                    DEBUG(("sending monitor layout pdu"));
+                    if (xrdp_rdp_send_monitorlayout((struct xrdp_rdp *)session->rdp) != 0)
+                    {
+                      g_writeln("xrdp_rdp_send_monitorlayout: error");
+                    }
+                }
+
                 session->up_and_running = 0;
                 break;
             case 0:

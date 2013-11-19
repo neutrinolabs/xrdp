@@ -1572,7 +1572,7 @@ xrdp_rdp_send_fontmap(struct xrdp_rdp *self)
     return 0;
 }
 /*****************************************************************************/
-static int APP_CC
+int APP_CC
 xrdp_rdp_send_monitorlayout(struct xrdp_rdp *self)
 {
     struct stream *s;
@@ -1628,18 +1628,6 @@ xrdp_rdp_process_data_font(struct xrdp_rdp *self, struct stream *s)
         /* running */
         DEBUG(("sending fontmap"));
         xrdp_rdp_send_fontmap(self);
-
-        /* TODO: Monitor Layout PDU should send to client after demand active pdu
-         * MOVE THAT CALL
-         */
-        if (self->client_info.monitorCount > 0 && self->client_info.multimon == 1)
-        {
-            DEBUG(("sending monitor layout pdu"));
-            if (xrdp_rdp_send_monitorlayout(self) != 0)
-            {
-              g_writeln("Problem with monitor layout packet!!!");
-            }
-        }
 
         self->session->up_and_running = 1;
         DEBUG(("up_and_running set"));

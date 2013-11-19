@@ -353,6 +353,8 @@ xrdp_rdp_incoming(struct xrdp_rdp* self);
 int APP_CC
 xrdp_rdp_send_demand_active(struct xrdp_rdp* self);
 int APP_CC
+xrdp_rdp_send_monitorlayout(struct xrdp_rdp* self);
+int APP_CC
 xrdp_rdp_process_confirm_active(struct xrdp_rdp* self, struct stream* s);
 int APP_CC
 xrdp_rdp_process_data(struct xrdp_rdp* self, struct stream* s);
