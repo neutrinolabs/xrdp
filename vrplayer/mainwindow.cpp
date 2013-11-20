@@ -135,7 +135,7 @@ void MainWindow::moveEvent(QMoveEvent *)
 void MainWindow::onVolSliderValueChanged(int value)
 {
     int volume;
-    
+
     volume = (value * 0xffff) / 100;
     if (interface != 0)
     {
@@ -153,8 +153,8 @@ void MainWindow::setupUI()
     lblVideo->setMinimumWidth(320);
     lblVideo->setMinimumHeight(200);
     QPalette palette = lblVideo->palette();
-    palette.setColor(lblVideo->backgroundRole(), Qt::black);
-    palette.setColor(lblVideo->foregroundRole(), Qt::black);
+    palette.setColor(lblVideo->backgroundRole(), QColor(0x00, 0x00, 0x01, 0xff));
+    palette.setColor(lblVideo->foregroundRole(), QColor(0x00, 0x00, 0x01, 0xff));
     lblVideo->setAutoFillBackground(true);
     lblVideo->setPalette(palette);
     hboxLayoutTop = new QHBoxLayout;
