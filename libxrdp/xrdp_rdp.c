@@ -25,39 +25,6 @@
 #include <freerdp/codec/rfx.h>
 #endif
 
-/* some compilers need unsigned char to avoid warnings */
-static tui8 g_unknown1[172] =
-{
-    0xff, 0x02, 0xb6, 0x00, 0x28, 0x00, 0x00, 0x00,
-    0x27, 0x00, 0x27, 0x00, 0x03, 0x00, 0x04, 0x00,
-    0x00, 0x00, 0x26, 0x00, 0x01, 0x00, 0x1e, 0x00,
-    0x02, 0x00, 0x1f, 0x00, 0x03, 0x00, 0x1d, 0x00,
-    0x04, 0x00, 0x27, 0x00, 0x05, 0x00, 0x0b, 0x00,
-    0x06, 0x00, 0x28, 0x00, 0x08, 0x00, 0x21, 0x00,
-    0x09, 0x00, 0x20, 0x00, 0x0a, 0x00, 0x22, 0x00,
-    0x0b, 0x00, 0x25, 0x00, 0x0c, 0x00, 0x24, 0x00,
-    0x0d, 0x00, 0x23, 0x00, 0x0e, 0x00, 0x19, 0x00,
-    0x0f, 0x00, 0x16, 0x00, 0x10, 0x00, 0x15, 0x00,
-    0x11, 0x00, 0x1c, 0x00, 0x12, 0x00, 0x1b, 0x00,
-    0x13, 0x00, 0x1a, 0x00, 0x14, 0x00, 0x17, 0x00,
-    0x15, 0x00, 0x18, 0x00, 0x16, 0x00, 0x0e, 0x00,
-    0x18, 0x00, 0x0c, 0x00, 0x19, 0x00, 0x0d, 0x00,
-    0x1a, 0x00, 0x12, 0x00, 0x1b, 0x00, 0x14, 0x00,
-    0x1f, 0x00, 0x13, 0x00, 0x20, 0x00, 0x00, 0x00,
-    0x21, 0x00, 0x0a, 0x00, 0x22, 0x00, 0x06, 0x00,
-    0x23, 0x00, 0x07, 0x00, 0x24, 0x00, 0x08, 0x00,
-    0x25, 0x00, 0x09, 0x00, 0x26, 0x00, 0x04, 0x00,
-    0x27, 0x00, 0x03, 0x00, 0x28, 0x00, 0x02, 0x00,
-    0x29, 0x00, 0x01, 0x00, 0x2a, 0x00, 0x05, 0x00,
-    0x2b, 0x00, 0x2a, 0x00
-};
-
-/* some compilers need unsigned char to avoid warnings */
-/*
-static tui8 g_unknown2[8] =
-{ 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00 };
-*/
-
 /*****************************************************************************/
 static int APP_CC
 xrdp_rdp_read_config(struct xrdp_client_info *client_info)
@@ -1572,7 +1539,7 @@ xrdp_rdp_process_screen_update(struct xrdp_rdp *self, struct stream *s)
 
 /*****************************************************************************/
 static int APP_CC
-xrdp_rdp_send_unknown1(struct xrdp_rdp *self)
+xrdp_rdp_send_fontmap(struct xrdp_rdp *self)
 {
     struct stream *s;
 
@@ -1585,7 +1552,11 @@ xrdp_rdp_send_unknown1(struct xrdp_rdp *self)
         return 1;
     }
 
-    out_uint8a(s, g_unknown1, 172);
+    out_uint16_le(s, 0); /* numberEntries */
+    out_uint16_le(s, 0); /* totalNumEntries */
+    out_uint16_le(s, 0x3); /* mapFlags (sequence flags) */
+    out_uint16_le(s, 0x4); /* entrySize */
+
     s_mark_end(s);
 
     if (xrdp_rdp_send_data(self, s, 0x28) != 0)
@@ -1597,7 +1568,45 @@ xrdp_rdp_send_unknown1(struct xrdp_rdp *self)
     free_stream(s);
     return 0;
 }
+/*****************************************************************************/
+int APP_CC
+xrdp_rdp_send_monitorlayout(struct xrdp_rdp *self)
+{
+    struct stream *s;
+    int i;
 
+    make_stream(s);
+    init_stream(s, 8192);
+
+    if (xrdp_rdp_init_data(self, s) != 0)
+    {
+        free_stream(s);
+        return 1;
+    }
+
+    out_uint32_le(s, self->client_info.monitorCount); /* MonitorCount */
+
+    /* TODO: validate for allowed monitors in terminal server (maybe by config?) */
+    for (i = 0; i < self->client_info.monitorCount; i++)
+    {
+        out_uint32_le(s, self->client_info.minfo[i].left);
+        out_uint32_le(s, self->client_info.minfo[i].top);
+        out_uint32_le(s, self->client_info.minfo[i].right);
+        out_uint32_le(s, self->client_info.minfo[i].bottom);
+        out_uint32_le(s, self->client_info.minfo[i].is_primary);
+    }
+
+    s_mark_end(s);
+
+    if (xrdp_rdp_send_data(self, s, 0x37) != 0)
+    {
+        free_stream(s);
+        return 1;
+    }
+
+    free_stream(s);
+    return 0;
+}
 /*****************************************************************************/
 static int APP_CC
 xrdp_rdp_process_data_font(struct xrdp_rdp *self, struct stream *s)
@@ -1605,17 +1614,18 @@ xrdp_rdp_process_data_font(struct xrdp_rdp *self, struct stream *s)
     int seq;
 
     DEBUG(("in xrdp_rdp_process_data_font"));
-    in_uint8s(s, 2); /* num of fonts */
-    in_uint8s(s, 2); /* unknown */
-    in_uint16_le(s, seq);
+    in_uint8s(s, 2); /* NumberFonts: 0x0, SHOULD be set to 0 */
+    in_uint8s(s, 2); /* TotalNumberFonts: 0x0, SHOULD be set to 0 */
+    in_uint16_le(s, seq); /* ListFlags */
 
     /* 419 client sends Seq 1, then 2 */
     /* 2600 clients sends only Seq 3 */
     if (seq == 2 || seq == 3) /* after second font message, we are up and */
     {
         /* running */
-        DEBUG(("sending unknown1"));
-        xrdp_rdp_send_unknown1(self);
+        DEBUG(("sending fontmap"));
+        xrdp_rdp_send_fontmap(self);
+
         self->session->up_and_running = 1;
         DEBUG(("up_and_running set"));
         xrdp_rdp_send_data_update_sync(self);
