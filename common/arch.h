@@ -32,6 +32,12 @@
     defined(__AIX__) || defined(__PPC__) || defined(__mips__) || \
     defined(__ia64__) || defined(__ppc__) || defined(__arm__)
 #define NEED_ALIGN
+#elif defined(__x86__) || defined(__x86_64__) || \
+      defined(__AMD64__) || defined(_M_IX86) || \
+      defined(__i386__)
+#define NO_NEED_ALIGN
+#else
+#warning unknown arch
 #endif
 #endif
 
