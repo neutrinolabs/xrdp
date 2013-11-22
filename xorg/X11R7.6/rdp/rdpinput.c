@@ -38,12 +38,6 @@ keyboard and mouse stuff
 
 #include "rdp.h"
 
-#if 1
-#define DEBUG_OUT_INPUT(arg)
-#else
-#define DEBUG_OUT_INPUT(arg) ErrorF arg
-#endif
-
 #define LOG_LEVEL 1
 #define LLOG(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; } } while (0)
@@ -76,22 +70,79 @@ static int g_delay_motion = 1; /* turn on or off */
 #define MAX_KEY_CODE 255
 #define NO_OF_KEYS ((MAX_KEY_CODE - MIN_KEY_CODE) + 1)
 #define GLYPHS_PER_KEY 2
-/* control */
-#define CONTROL_L_KEY_CODE 37
-#define CONTROL_R_KEY_CODE 109
-/* shift */
-#define SHIFT_L_KEY_CODE 50
-#define SHIFT_R_KEY_CODE 62
-/* win keys */
-#define SUPER_L_KEY_CODE 115
-#define SUPER_R_KEY_CODE 116
-/* alt */
-#define ALT_L_KEY_CODE 64
-#define ALT_R_KEY_CODE 113
-/* caps lock */
-#define CAPS_LOCK_KEY_CODE 66
-/* num lock */
-#define NUM_LOCK_KEY_CODE 77
+
+#define RDPSCAN_Tab         15
+#define RDPSCAN_Return      28 /* ext is used to know KP or not */
+#define RDPSCAN_Control     29 /* ext is used to know L or R */
+#define RDPSCAN_Shift_L     42
+#define RDPSCAN_Slash       53
+#define RDPSCAN_Shift_R     54
+#define RDPSCAN_KP_Multiply 55
+#define RDPSCAN_Alt         56 /* ext is used to know L or R */
+#define RDPSCAN_Caps_Lock   58
+#define RDPSCAN_Pause       69
+#define RDPSCAN_Scroll_Lock 70
+#define RDPSCAN_KP_7        71 /* KP7 or home */
+#define RDPSCAN_KP_8        72 /* KP8 or up */
+#define RDPSCAN_KP_9        73 /* KP9 or page up */
+#define RDPSCAN_KP_4        75 /* KP4 or left */
+#define RDPSCAN_KP_6        77 /* KP6 or right */
+#define RDPSCAN_KP_1        79 /* KP1 or home */
+#define RDPSCAN_KP_2        80 /* KP2 or up */
+#define RDPSCAN_KP_3        81 /* KP3 or page down */
+#define RDPSCAN_KP_0        82 /* KP0 or insert */
+#define RDPSCAN_KP_Decimal  83 /* KP. or delete */
+#define RDPSCAN_89          89
+#define RDPSCAN_90          90
+#define RDPSCAN_LWin        91
+#define RDPSCAN_RWin        92
+#define RDPSCAN_Menu        93
+#define RDPSCAN_115         115
+#define RDPSCAN_126         126
+
+#define XSCAN_Tab         23
+#define XSCAN_Return      36 /* above right shift */
+#define XSCAN_Control_L   37
+#define XSCAN_Shift_L     50
+#define XSCAN_slash       61
+#define XSCAN_Shift_R     62
+#define XSCAN_KP_Multiply 63
+#define XSCAN_Alt_L       64
+#define XSCAN_Caps_Lock   66 /* caps lock */
+#define XSCAN_Num_Lock    77 /* num lock */
+#define XSCAN_KP_7        79
+#define XSCAN_KP_8        80
+#define XSCAN_KP_9        81
+#define XSCAN_KP_4        83
+#define XSCAN_KP_6        85
+#define XSCAN_KP_1        87
+#define XSCAN_KP_2        88
+#define XSCAN_KP_3        89
+#define XSCAN_KP_0        90
+#define XSCAN_KP_Decimal  91
+#define XSCAN_97          97
+#define XSCAN_Enter       104 /* on keypad */
+#define XSCAN_Control_R   105
+#define XSCAN_KP_Divide   106
+#define XSCAN_Print       107
+#define XSCAN_Alt_R       108
+#define XSCAN_Home        110
+#define XSCAN_Up          111
+#define XSCAN_Prior       112
+#define XSCAN_Left        113
+#define XSCAN_Right       114
+#define XSCAN_End         115
+#define XSCAN_Down        116
+#define XSCAN_Next        117
+#define XSCAN_Insert      118
+#define XSCAN_Delete      119
+#define XSCAN_Pause       127
+#define XSCAN_129         129
+#define XSCAN_LWin        133
+#define XSCAN_RWin        134
+#define XSCAN_Menu        135
+#define XSCAN_LMeta       156
+#define XSCAN_RMeta       156
 
 #define N_PREDEFINED_KEYS \
     (sizeof(g_kbdMap) / (sizeof(KeySym) * GLYPHS_PER_KEY))
@@ -176,7 +227,7 @@ static KeySym g_kbdMap[] =
     XK_L,            NoSymbol,
     XK_semicolon,    XK_colon,
     XK_apostrophe,   XK_quotedbl,
-    XK_grave,    XK_asciitilde,
+    XK_grave,        XK_asciitilde,
     XK_Shift_L,      NoSymbol,        /* 50 */
     XK_backslash,    XK_bar,
     XK_Z,            NoSymbol,
@@ -224,31 +275,45 @@ static KeySym g_kbdMap[] =
     NoSymbol,        NoSymbol,
     XK_F11,          NoSymbol,
     XK_F12,          NoSymbol,
-    XK_Home,         NoSymbol,
+    NoSymbol,        NoSymbol,
+    NoSymbol,        NoSymbol,
+    NoSymbol,        NoSymbol,
+    NoSymbol,        NoSymbol,        /* 100 */
+    NoSymbol,        NoSymbol,
+    NoSymbol,        NoSymbol,
+    NoSymbol,        NoSymbol,
+    XK_KP_Enter,     NoSymbol,
+    XK_Control_R,    NoSymbol,
+    XK_KP_Divide,    NoSymbol,
+    XK_Print,        NoSymbol,
+    XK_Alt_R,        NoSymbol,
+    NoSymbol,        NoSymbol,
+    XK_Home,         NoSymbol,        /* 110 */
     XK_Up,           NoSymbol,
     XK_Prior,        NoSymbol,
-    XK_Left,         NoSymbol,        /* 100 */
-    XK_Print,        NoSymbol,
+    XK_Left,         NoSymbol,
     XK_Right,        NoSymbol,
     XK_End,          NoSymbol,
     XK_Down,         NoSymbol,
     XK_Next,         NoSymbol,
     XK_Insert,       NoSymbol,
     XK_Delete,       NoSymbol,
-    XK_KP_Enter,     NoSymbol,
-    XK_Control_R,    NoSymbol,
-    XK_Pause,        NoSymbol,        /* 110 */
-    XK_Print,        NoSymbol,
-    XK_KP_Divide,    NoSymbol,
-    XK_Alt_R,        NoSymbol,
+    NoSymbol,        NoSymbol,        /* 120 */
+    NoSymbol,        NoSymbol,
+    NoSymbol,        NoSymbol,
+    NoSymbol,        NoSymbol,
+    NoSymbol,        NoSymbol,
+    NoSymbol,        NoSymbol,
+    NoSymbol,        NoSymbol,
+    XK_Pause,        NoSymbol,
+    NoSymbol,        NoSymbol,
+    NoSymbol,        NoSymbol,
+    NoSymbol,        NoSymbol,        /* 130 */
+    NoSymbol,        NoSymbol,
     NoSymbol,        NoSymbol,
     XK_Super_L,      NoSymbol,
     XK_Super_R,      NoSymbol,
-    XK_Menu,         NoSymbol,
-    NoSymbol,        NoSymbol,
-    NoSymbol,        NoSymbol,
-    NoSymbol,        NoSymbol,        /* 120 */
-    NoSymbol,        NoSymbol
+    XK_Menu,         NoSymbol
 };
 
 #if 0
@@ -256,7 +321,7 @@ static KeySym g_kbdMap[] =
 static void
 rdpSendBell(void)
 {
-    DEBUG_OUT_INPUT(("rdpSendBell\n"));
+    LLOGLN(10, ("rdpSendBell:"));
 }
 #endif
 
@@ -266,23 +331,23 @@ KbdDeviceInit(DeviceIntPtr pDevice, KeySymsPtr pKeySyms, CARD8 *pModMap)
 {
     int i;
 
-    DEBUG_OUT_INPUT(("KbdDeviceInit\n"));
+    LLOGLN(10, ("KbdDeviceInit:"));
 
     for (i = 0; i < MAP_LENGTH; i++)
     {
         pModMap[i] = NoSymbol;
     }
 
-    pModMap[SHIFT_L_KEY_CODE] = ShiftMask;
-    pModMap[SHIFT_R_KEY_CODE] = ShiftMask;
-    pModMap[CAPS_LOCK_KEY_CODE] = LockMask;
-    pModMap[CONTROL_L_KEY_CODE] = ControlMask;
-    pModMap[CONTROL_R_KEY_CODE] = ControlMask;
-    pModMap[ALT_L_KEY_CODE] = Mod1Mask;
-    pModMap[ALT_R_KEY_CODE] = Mod1Mask;
-    pModMap[NUM_LOCK_KEY_CODE] = Mod2Mask;
-    pModMap[SUPER_L_KEY_CODE] = Mod4Mask;
-    pModMap[SUPER_R_KEY_CODE] = Mod4Mask;
+    pModMap[XSCAN_Shift_L] = ShiftMask;
+    pModMap[XSCAN_Shift_R] = ShiftMask;
+    pModMap[XSCAN_Caps_Lock] = LockMask;
+    pModMap[XSCAN_Control_L] = ControlMask;
+    pModMap[XSCAN_Control_R] = ControlMask;
+    pModMap[XSCAN_Alt_L] = Mod1Mask;
+    pModMap[XSCAN_Alt_R] = Mod1Mask;
+    pModMap[XSCAN_Num_Lock] = Mod2Mask;
+    pModMap[XSCAN_LWin] = Mod4Mask;
+    pModMap[XSCAN_RWin] = Mod4Mask;
     pKeySyms->minKeyCode = MIN_KEY_CODE;
     pKeySyms->maxKeyCode = MAX_KEY_CODE;
     pKeySyms->mapWidth = GLYPHS_PER_KEY;
@@ -310,28 +375,28 @@ KbdDeviceInit(DeviceIntPtr pDevice, KeySymsPtr pKeySyms, CARD8 *pModMap)
 void
 KbdDeviceOn(void)
 {
-    DEBUG_OUT_INPUT(("KbdDeviceOn\n"));
+    LLOGLN(10, ("KbdDeviceOn:"));
 }
 
 /******************************************************************************/
 void
 KbdDeviceOff(void)
 {
-    DEBUG_OUT_INPUT(("KbdDeviceOff\n"));
+    LLOGLN(10, ("KbdDeviceOff:"));
 }
 
 /******************************************************************************/
 void
 rdpBell(int volume, DeviceIntPtr pDev, pointer ctrl, int cls)
 {
-    ErrorF("rdpBell:\n");
+    LLOGLN(0, ("rdpBell:"));
 }
 
 /******************************************************************************/
 static CARD32
 rdpInDeferredUpdateCallback(OsTimerPtr timer, CARD32 now, pointer arg)
 {
-    //ErrorF("rdpInDeferredUpdateCallback:\n");
+    LLOGLN(10, ("rdpInDeferredUpdateCallback:"));
 
     /* our keyboard device */
     XkbSetRepeatKeys(g_keyboard, -1, AutoRepeatModeOff);
@@ -347,7 +412,7 @@ rdpChangeKeyboardControl(DeviceIntPtr pDev, KeybdCtrl *ctrl)
 {
     XkbControlsPtr ctrls;
 
-    ErrorF("rdpChangeKeyboardControl:\n");
+    LLOGLN(0, ("rdpChangeKeyboardControl:"));
     ctrls = 0;
     if (pDev != 0)
     {
@@ -369,14 +434,14 @@ rdpChangeKeyboardControl(DeviceIntPtr pDev, KeybdCtrl *ctrl)
     {
         if (ctrls->enabled_ctrls & XkbRepeatKeysMask)
         {
-            //ErrorF("rdpChangeKeyboardControl: autoRepeat on\n");
+            LLOGLN(10, ("rdpChangeKeyboardControl: autoRepeat on"));
             /* schedual to turn off the autorepeat after 100 ms so any app
              * polling it will be happy it's on */
             g_kbtimer = TimerSet(g_kbtimer, 0, 100, rdpInDeferredUpdateCallback, 0);\
         }
         else
         {
-            //ErrorF("rdpChangeKeyboardControl: autoRepeat off\n");
+            LLOGLN(10, ("rdpChangeKeyboardControl: autoRepeat off"));
         }
     }
 }
@@ -390,7 +455,7 @@ rdpKeybdProc(DeviceIntPtr pDevice, int onoff)
     DevicePtr pDev;
     XkbRMLVOSet set;
 
-    DEBUG_OUT_INPUT(("rdpKeybdProc\n"));
+    LLOGLN(10, ("rdpKeybdProc:"));
     pDev = (DevicePtr)pDevice;
 
     switch (onoff)
@@ -398,7 +463,7 @@ rdpKeybdProc(DeviceIntPtr pDevice, int onoff)
         case DEVICE_INIT:
             KbdDeviceInit(pDevice, &keySyms, modMap);
             memset(&set, 0, sizeof(set));
-            set.rules = "base";
+            set.rules = "evdev"; /* was "base" */
             set.model = "pc104";
             set.layout = "us";
             set.variant = "";
@@ -432,35 +497,35 @@ rdpKeybdProc(DeviceIntPtr pDevice, int onoff)
 void
 PtrDeviceControl(DeviceIntPtr dev, PtrCtrl *ctrl)
 {
-    DEBUG_OUT_INPUT(("PtrDeviceControl\n"));
+    LLOGLN(10, ("PtrDeviceControl:"));
 }
 
 /******************************************************************************/
 void
 PtrDeviceInit(void)
 {
-    DEBUG_OUT_INPUT(("PtrDeviceInit\n"));
+    LLOGLN(10, ("PtrDeviceInit:"));
 }
 
 /******************************************************************************/
 void
 PtrDeviceOn(DeviceIntPtr pDev)
 {
-    DEBUG_OUT_INPUT(("PtrDeviceOn\n"));
+    LLOGLN(10, ("PtrDeviceOn:"));
 }
 
 /******************************************************************************/
 void
 PtrDeviceOff(void)
 {
-    DEBUG_OUT_INPUT(("PtrDeviceOff\n"));
+    LLOGLN(10, ("PtrDeviceOff:"));
 }
 
 /******************************************************************************/
 static void
 rdpMouseCtrl(DeviceIntPtr pDevice, PtrCtrl *pCtrl)
 {
-    ErrorF("rdpMouseCtrl:\n");
+    LLOGLN(0, ("rdpMouseCtrl:"));
 }
 
 /******************************************************************************/
@@ -472,7 +537,7 @@ rdpMouseProc(DeviceIntPtr pDevice, int onoff)
     Atom btn_labels[8];
     Atom axes_labels[2];
 
-    DEBUG_OUT_INPUT(("rdpMouseProc\n"));
+    LLOGLN(10, ("rdpMouseProc:"));
     pDev = (DevicePtr)pDevice;
 
     switch (onoff)
@@ -528,7 +593,7 @@ rdpMouseProc(DeviceIntPtr pDevice, int onoff)
 Bool
 rdpCursorOffScreen(ScreenPtr *ppScreen, int *x, int *y)
 {
-    DEBUG_OUT_INPUT(("rdpCursorOffScreen\n"));
+    LLOGLN(10, ("rdpCursorOffScreen:"));
     return 0;
 }
 
@@ -536,14 +601,14 @@ rdpCursorOffScreen(ScreenPtr *ppScreen, int *x, int *y)
 void
 rdpCrossScreen(ScreenPtr pScreen, Bool entering)
 {
-    DEBUG_OUT_INPUT(("rdpCrossScreen\n"));
+    LLOGLN(10, ("rdpCrossScreen:"));
 }
 
 /******************************************************************************/
 void
 rdpPointerWarpCursor(DeviceIntPtr pDev, ScreenPtr pScr, int x, int y)
 {
-    ErrorF("rdpPointerWarpCursor:\n");
+    LLOGLN(0, ("rdpPointerWarpCursor:"));
     miPointerWarpCursor(pDev, pScr, x, y);
 }
 
@@ -551,21 +616,21 @@ rdpPointerWarpCursor(DeviceIntPtr pDev, ScreenPtr pScr, int x, int y)
 void
 rdpPointerEnqueueEvent(DeviceIntPtr pDev, InternalEvent *event)
 {
-    ErrorF("rdpPointerEnqueueEvent:\n");
+    LLOGLN(0, ("rdpPointerEnqueueEvent:"));
 }
 
 /******************************************************************************/
 void
 rdpPointerNewEventScreen(DeviceIntPtr pDev, ScreenPtr pScr, Bool fromDIX)
 {
-    ErrorF("rdpPointerNewEventScreen:\n");
+    LLOGLN(0, ("rdpPointerNewEventScreen:"));
 }
 
 /******************************************************************************/
 Bool
 rdpSpriteRealizeCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs)
 {
-    DEBUG_OUT_INPUT(("rdpSpriteRealizeCursor\n"));
+    LLOGLN(10, ("rdpSpriteRealizeCursor:"));
     return 1;
 }
 
@@ -573,7 +638,7 @@ rdpSpriteRealizeCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs)
 Bool
 rdpSpriteUnrealizeCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs)
 {
-    DEBUG_OUT_INPUT(("hi rdpSpriteUnrealizeCursor\n"));
+    LLOGLN(10, ("rdpSpriteUnrealizeCursor:"));
     return 1;
 }
 
@@ -780,14 +845,14 @@ rdpSpriteSetCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs,
 void
 rdpSpriteMoveCursor(DeviceIntPtr pDev, ScreenPtr pScr, int x, int y)
 {
-    DEBUG_OUT_INPUT(("hi rdpSpriteMoveCursor\n"));
+    LLOGLN(10, ("rdpSpriteMoveCursor:"));
 }
 
 /******************************************************************************/
 Bool
 rdpSpriteDeviceCursorInitialize(DeviceIntPtr pDev, ScreenPtr pScr)
 {
-    ErrorF("rdpSpriteDeviceCursorInitialize:\n");
+    LLOGLN(0, ("rdpSpriteDeviceCursorInitialize:"));
     return 1;
 }
 
@@ -795,7 +860,7 @@ rdpSpriteDeviceCursorInitialize(DeviceIntPtr pDev, ScreenPtr pScr)
 void
 rdpSpriteDeviceCursorCleanup(DeviceIntPtr pDev, ScreenPtr pScr)
 {
-    ErrorF("rdpSpriteDeviceCursorCleanup:\n");
+    LLOGLN(0, ("rdpSpriteDeviceCursorCleanup:"));
 }
 
 /******************************************************************************/
@@ -992,11 +1057,8 @@ KbdAddEvent(int down, int param1, int param2, int param3, int param4)
     int is_spe;
     int type;
 
-#if 0
-    fprintf(stderr, "down=0x%x param1=0x%x param2=0x%x param3=0x%x "
-            "param4=0x%x\n", down, param1, param2, param3, param4);
-#endif
-
+    LLOGLN(10, ("KbdAddEvent: down=0x%x param1=0x%x param2=0x%x param3=0x%x "
+           "param4=0x%x", down, param1, param2, param3, param4));
     type = down ? KeyPress : KeyRelease;
     rdp_scancode = param3;
     is_ext = param4 & 256; /* 0x100 */
@@ -1005,16 +1067,17 @@ KbdAddEvent(int down, int param1, int param2, int param3, int param4)
 
     switch (rdp_scancode)
     {
-        case 58: /* caps lock             */
-        case 42: /* left shift            */
-        case 54: /* right shift           */
-        case 70: /* scroll lock           */
+        case RDPSCAN_Caps_Lock:   /* caps lock             */
+        case RDPSCAN_Shift_L:     /* left shift            */
+        case RDPSCAN_Shift_R:     /* right shift           */
+        case RDPSCAN_Scroll_Lock: /* scroll lock           */
             x_scancode = rdp_scancode + MIN_KEY_CODE;
 
             if (x_scancode > 0)
             {
                 /* left or right shift */
-                if ((rdp_scancode == 42) || (rdp_scancode == 54))
+                if ((rdp_scancode == RDPSCAN_Shift_L) ||
+                    (rdp_scancode == RDPSCAN_Shift_R))
                 {
                     g_shift_down = down ? x_scancode : 0;
                 }
@@ -1022,22 +1085,22 @@ KbdAddEvent(int down, int param1, int param2, int param3, int param4)
             }
             break;
 
-        case 56: /* left - right alt button */
+        case RDPSCAN_Alt: /* left - right alt button */
 
             if (is_ext)
             {
-                x_scancode = 113; /* right alt button */
+                x_scancode = XSCAN_Alt_R; /* right alt button */
             }
             else
             {
-                x_scancode = 64;  /* left alt button   */
+                x_scancode = XSCAN_Alt_L;  /* left alt button   */
             }
 
             g_alt_down = down ? x_scancode : 0;
             rdpEnqueueKey(type, x_scancode);
             break;
 
-        case 15: /* tab */
+        case RDPSCAN_Tab: /* tab */
 
             if (!down && !g_tab_down)
             {
@@ -1045,13 +1108,13 @@ KbdAddEvent(int down, int param1, int param2, int param3, int param4)
             }
             else
             {
-                sendDownUpKeyEvent(type, 23);
+                sendDownUpKeyEvent(type, XSCAN_Tab);
             }
 
             g_tab_down = down;
             break;
 
-        case 29: /* left or right ctrl */
+        case RDPSCAN_Control: /* left or right ctrl */
 
             /* this is to handle special case with pause key sending control first */
             if (is_spe)
@@ -1064,18 +1127,18 @@ KbdAddEvent(int down, int param1, int param2, int param3, int param4)
             }
             else
             {
-                x_scancode = is_ext ? 109 : 37;
+                x_scancode = is_ext ? XSCAN_Control_R : XSCAN_Control_L;
                 g_ctrl_down = down ? x_scancode : 0;
                 rdpEnqueueKey(type, x_scancode);
             }
 
             break;
 
-        case 69: /* Pause or Num Lock */
+        case RDPSCAN_Pause: /* Pause or Num Lock */
 
             if (g_pause_spe)
             {
-                x_scancode = 110;
+                x_scancode = XSCAN_Pause;
 
                 if (!down)
                 {
@@ -1084,102 +1147,112 @@ KbdAddEvent(int down, int param1, int param2, int param3, int param4)
             }
             else
             {
-                x_scancode = g_ctrl_down ? 110 : 77;
+                x_scancode = g_ctrl_down ? XSCAN_Pause : XSCAN_Num_Lock;
             }
 
+            rdpEnqueueKey(type, x_scancode);
+            break;
+
+        case RDPSCAN_Return: /* Enter or Return */
+            x_scancode = is_ext ? XSCAN_Enter : XSCAN_Return;
             sendDownUpKeyEvent(type, x_scancode);
             break;
 
-        case 28: /* Enter or Return */
-            x_scancode = is_ext ? 108 : 36;
+        case RDPSCAN_Slash: /* / */
+            x_scancode = is_ext ? XSCAN_KP_Divide : XSCAN_slash;
             sendDownUpKeyEvent(type, x_scancode);
             break;
 
-        case 53: /* / */
-            x_scancode = is_ext ? 112 : 61;
+        case RDPSCAN_KP_Multiply: /* * on KP or Print Screen */
+            x_scancode = is_ext ? XSCAN_Print : XSCAN_KP_Multiply;
             sendDownUpKeyEvent(type, x_scancode);
             break;
 
-        case 55: /* * on KP or Print Screen */
-            x_scancode = is_ext ? 111 : 63;
+        case RDPSCAN_KP_7: /* 7 or Home */
+            x_scancode = is_ext ? XSCAN_Home : XSCAN_KP_7;
             sendDownUpKeyEvent(type, x_scancode);
             break;
 
-        case 71: /* 7 or Home */
-            x_scancode = is_ext ? 97 : 79;
+        case RDPSCAN_KP_8: /* 8 or Up */
+            x_scancode = is_ext ? XSCAN_Up : XSCAN_KP_8;
             sendDownUpKeyEvent(type, x_scancode);
             break;
 
-        case 72: /* 8 or Up */
-            x_scancode = is_ext ? 98 : 80;
+        case RDPSCAN_KP_9: /* 9 or PgUp */
+            x_scancode = is_ext ? XSCAN_Prior : XSCAN_KP_9;
             sendDownUpKeyEvent(type, x_scancode);
             break;
 
-        case 73: /* 9 or PgUp */
-            x_scancode = is_ext ? 99 : 81;
+        case RDPSCAN_KP_4: /* 4 or Left */
+            x_scancode = is_ext ? XSCAN_Left : XSCAN_KP_4;
             sendDownUpKeyEvent(type, x_scancode);
             break;
 
-        case 75: /* 4 or Left */
-            x_scancode = is_ext ? 100 : 83;
+        case RDPSCAN_KP_6: /* 6 or Right */
+            x_scancode = is_ext ? XSCAN_Right : XSCAN_KP_6;
             sendDownUpKeyEvent(type, x_scancode);
             break;
 
-        case 77: /* 6 or Right */
-            x_scancode = is_ext ? 102 : 85;
+        case RDPSCAN_KP_1: /* 1 or End */
+            x_scancode = is_ext ? XSCAN_End : XSCAN_KP_1;
             sendDownUpKeyEvent(type, x_scancode);
             break;
 
-        case 79: /* 1 or End */
-            x_scancode = is_ext ? 103 : 87;
+        case RDPSCAN_KP_2: /* 2 or Down */
+            x_scancode = is_ext ? XSCAN_Down : XSCAN_KP_2;
             sendDownUpKeyEvent(type, x_scancode);
             break;
 
-        case 80: /* 2 or Down */
-            x_scancode = is_ext ? 104 : 88;
+        case RDPSCAN_KP_3: /* 3 or PgDn */
+            x_scancode = is_ext ? XSCAN_Next : XSCAN_KP_3;
             sendDownUpKeyEvent(type, x_scancode);
             break;
 
-        case 81: /* 3 or PgDn */
-            x_scancode = is_ext ? 105 : 89;
+        case RDPSCAN_KP_0: /* 0 or Insert */
+            x_scancode = is_ext ? XSCAN_Insert : XSCAN_KP_0;
             sendDownUpKeyEvent(type, x_scancode);
             break;
 
-        case 82: /* 0 or Insert */
-            x_scancode = is_ext ? 106 : 90;
+        case RDPSCAN_KP_Decimal: /* . or Delete */
+            x_scancode = is_ext ? XSCAN_Delete : XSCAN_KP_Decimal;
             sendDownUpKeyEvent(type, x_scancode);
             break;
 
-        case 83: /* . or Delete */
-            x_scancode = is_ext ? 107 : 91;
-            sendDownUpKeyEvent(type, x_scancode);
+        case RDPSCAN_LWin: /* left win key */
+            rdpEnqueueKey(type, XSCAN_LWin);
             break;
 
-        case 91: /* left win key */
-            rdpEnqueueKey(type, 115);
+        case RDPSCAN_RWin: /* right win key */
+            rdpEnqueueKey(type, XSCAN_RWin);
             break;
 
-        case 92: /* right win key */
-            rdpEnqueueKey(type, 116);
+        case RDPSCAN_Menu: /* menu key */
+            rdpEnqueueKey(type, XSCAN_Menu);
             break;
 
-        case 93: /* menu key */
-            rdpEnqueueKey(type, 117);
+        case RDPSCAN_89: /* left meta */
+            rdpEnqueueKey(type, XSCAN_LMeta);
             break;
 
-        case 89: /* left meta */
-            rdpEnqueueKey(type, 156);
+        case RDPSCAN_90: /* right meta */
+            rdpEnqueueKey(type, XSCAN_RMeta);
             break;
 
-        case 90: /* right meta */
-            rdpEnqueueKey(type, 156);
+        case RDPSCAN_115:
+            rdpEnqueueKey(type, XSCAN_97); /* "/ ?" on br keybaord */
             break;
-        
+
+        case RDPSCAN_126:
+            rdpEnqueueKey(type, XSCAN_129); /* . on br keypad */
+            break;
+
         default:
             x_scancode = rdp_scancode + MIN_KEY_CODE;
 
             if (x_scancode > 0)
             {
+                LLOGLN(10, ("KbdAddEvent: rdp_scancode %d x_scancode %d",
+                       rdp_scancode, x_scancode));
                 sendDownUpKeyEvent(type, x_scancode);
             }
 
@@ -1200,21 +1273,21 @@ KbdSync(int param1)
 
     if ((!(xkb_state & 0x02)) != (!(param1 & 4))) /* caps lock */
     {
-        ErrorF("KbdSync: toggling caps lock\n");
+        LLOGLN(0, ("KbdSync: toggling caps lock"));
         KbdAddEvent(1, 58, 0, 58, 0);
         KbdAddEvent(0, 58, 49152, 58, 49152);
     }
 
     if ((!(xkb_state & 0x10)) != (!(param1 & 2))) /* num lock */
     {
-        ErrorF("KbdSync: toggling num lock\n");
+        LLOGLN(0, ("KbdSync: toggling num lock"));
         KbdAddEvent(1, 69, 0, 69, 0);
         KbdAddEvent(0, 69, 49152, 69, 49152);
     }
 
     if ((!(g_scroll_lock_down)) != (!(param1 & 1))) /* scroll lock */
     {
-        ErrorF("KbdSync: toggling scroll lock\n");
+        LLOGLN(0, ("KbdSync: toggling scroll lock"));
         KbdAddEvent(1, 70, 0, 70, 0);
         KbdAddEvent(0, 70, 49152, 70, 49152);
     }
