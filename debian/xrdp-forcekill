@@ -1,0 +1,18 @@
+#!/bin/bash
+
+for X11RDP in $(ps -ef | grep X11rdp | grep ^${USER} | grep -v grep | tr -s " " ",")
+do
+	if [ "${X11RDP}" != "" ] ; then
+		XNFO=$(echo ${X11RDP} | tr "," " ")
+		PID=$(echo ${XNFO} | awk -e '{print $2}')
+		PPD=$(echo ${XNFO} | awk -e '{print $3}')
+		DN=$(echo ${XNFO} | awk -e '{print $9}')
+		echo Found display ${DN} running for ${USER} managed by pid ${PPD}
+		if [ $PPID -gt 1 ] ; then
+			echo Killing process ${PID} and ${PPD}
+			kill ${PID}
+			kill ${PPD}
+		fi
+	fi
+done
+

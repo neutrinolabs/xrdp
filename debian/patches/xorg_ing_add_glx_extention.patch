@@ -1,0 +1,38 @@
+Index: xorg-server-1.14.3/mi/miinitext.c
+===================================================================
+--- xorg-server-1.14.3.orig/mi/miinitext.c	2013-11-23 14:09:51.403840020 +0100
++++ xorg-server-1.14.3/mi/miinitext.c	2013-11-23 14:10:43.331698028 +0100
+@@ -135,7 +135,7 @@
+ #ifdef DPMSExtension
+     {"DPMS", &noDPMSExtension},
+ #endif
+-#ifdef GLXEXT
++#ifdef GLXEXT_RDP
+     {"GLX", &noGlxExtension},
+ #endif
+ #ifdef SCREENSAVER
+@@ -280,6 +280,9 @@
+ #ifdef DAMAGE
+     {DamageExtensionInit, "DAMAGE", &noDamageExtension},
+ #endif
++#ifdef GLXEXT_RDP
++    {GlxExtensionInit, "GLX", &noGlxExtension},
++#endif
+ #ifdef SCREENSAVER
+     {ScreenSaverExtensionInit, ScreenSaverName, &noScreenSaverExtension},
+ #endif
+Index: xorg-server-1.14.3/include/extinit.h
+===================================================================
+--- xorg-server-1.14.3.orig/include/extinit.h	2013-11-23 14:09:51.403840020 +0100
++++ xorg-server-1.14.3/include/extinit.h	2013-11-23 14:10:27.739740648 +0100
+@@ -77,8 +77,9 @@
+ extern Bool noGEExtension;
+ extern void GEExtensionInit(void);
+ 
+-#ifdef GLXEXT
++#ifdef GLXEXT_RDP
+ extern _X_EXPORT Bool noGlxExtension;
++extern void GlxExtensionInit(void);
+ #endif
+ 
+ #ifdef PANORAMIX

@@ -7,9 +7,10 @@
 override_dh_auto_configure:
 	./bootstrap
 	#./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var --enable-jpeg --enable-simplesound --enable-fuse --enable-xrdpvr CFLAGS="-g -O3 -march=native"
+	#./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var --enable-jpeg --enable-simplesound --enable-fuse CFLAGS="-g -O3 -march=native"
 	./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var CFLAGS="-g -O3 -march=native"
 	find -name Makefile | while read i; do sed -e 's#\(XRDP_PID_PATH.*/run\)#\1/xrdp#g' -i "$$i"; done
-	[ -d ../xorg-server-1.12.4 ] || (XRDP=`pwd`; cd .. && apt-get source xorg-server && cd xorg-server-1.12.4 && patch -p0 < $$XRDP/debian/patches/xorg-optimize.patch && ./debian/rules binary)
+	[ -d ../xorg-server-1.12.4 ] || (XRDP=`pwd`; cd .. && apt-get source xorg-server && cd xorg-server-1.12.4 && patch -p0 < $$XRDP/debian/patches/xorg-optimize.patch && patch -p1 < $$XRDP/debian/patches/xorg_ing_add_glx_extention.patch  && ./debian/rules binary)
 
 override_dh_clean:
 	dh_clean
@@ -25,6 +26,7 @@ override_dh_install:
 	install -m 755 xorg/X11R7.6/rdp/X11rdp debian/xrdp/usr/bin
 	install -m 755 debian/xrdp-cleanup debian/xrdp/usr/bin
 	install -m 755 debian/xrdp-kill debian/xrdp/usr/bin
+	install -m 755 debian/xrdp-forcekill debian/xrdp/usr/bin
 	install -m 744 debian/xrdp-killall debian/xrdp/usr/sbin
 	install -m 744 debian/xrdp-reap-sessions debian/xrdp/usr/sbin
 

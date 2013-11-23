@@ -1,0 +1,13 @@
+Index: xrdp-bartw72/sesman/sig.c
+===================================================================
+--- xrdp-bartw72.orig/sesman/sig.c	2013-07-27 10:09:12.765103474 +0200
++++ xrdp-bartw72/sesman/sig.c	2013-11-22 14:37:34.000000000 +0100
+@@ -133,7 +133,7 @@
+ 
+     if (pid > 0)
+     {
+-        session_kill(pid);
++//        session_kill(pid);
+     }
+ }
+ 

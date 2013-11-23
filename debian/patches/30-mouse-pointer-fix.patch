@@ -1,7 +1,16 @@
 Index: xrdp-bartw72/xorg/X11R7.6/rdp/rdp.h
 ===================================================================
---- xrdp-bartw72.orig/xorg/X11R7.6/rdp/rdp.h	2013-09-21 19:27:54.861672261 +0200
-+++ xrdp-bartw72/xorg/X11R7.6/rdp/rdp.h	2013-09-21 19:27:54.857672099 +0200
+--- xrdp-bartw72.orig/xorg/X11R7.6/rdp/rdp.h	2013-11-23 14:50:18.585216610 +0100
++++ xrdp-bartw72/xorg/X11R7.6/rdp/rdp.h	2013-11-23 14:50:18.577216634 +0100
+@@ -47,7 +47,7 @@
+ 
+ //#include "cfb.h"
+ 
+-#include "mibstore.h"
++//#include "mibstore.h"
+ #include "colormapst.h"
+ #include "gcstruct.h"
+ #include "input.h"
 @@ -443,6 +443,8 @@
  Bool
  rdpSpriteUnrealizeCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs);
@@ -13,8 +22,8 @@ Index: xrdp-bartw72/xorg/X11R7.6/rdp/rdp.h
  void
 Index: xrdp-bartw72/xorg/X11R7.6/rdp/rdpinput.c
 ===================================================================
---- xrdp-bartw72.orig/xorg/X11R7.6/rdp/rdpinput.c	2013-09-21 19:27:54.861672261 +0200
-+++ xrdp-bartw72/xorg/X11R7.6/rdp/rdpinput.c	2013-09-21 19:27:54.857672099 +0200
+--- xrdp-bartw72.orig/xorg/X11R7.6/rdp/rdpinput.c	2013-11-23 14:50:18.585216610 +0100
++++ xrdp-bartw72/xorg/X11R7.6/rdp/rdpinput.c	2013-11-23 14:51:16.537045011 +0100
 @@ -37,6 +37,7 @@
  /* this should be fixed in rdesktop */
  
@@ -177,7 +186,9 @@ Index: xrdp-bartw72/xorg/X11R7.6/rdp/rdpinput.c
      }
 -    else if (bpp == 32)
 +    else
-+    {
+     {
+-        dst32 = (unsigned int*)data;
+-        dst32[y * width + x] = pixel;
 +        set_pixel_safe(cur_mask, x, 31 - y, 32, 32, 1, 1);
 +    }
 +}
@@ -242,9 +253,7 @@ Index: xrdp-bartw72/xorg/X11R7.6/rdp/rdpinput.c
 +getCachedMousePointerSprite(const int id, char **data, char **mask)
 +{
 +    switch (id)
-     {
--        dst32 = (unsigned int*)data;
--        dst32[y * width + x] = pixel;
++    {
 +        case 2382: CACHED_MP_DATA(data_2382, mask_2382);
 +        case 1103: CACHED_MP_DATA(data_1103, mask_1103);
 +        case 3307: CACHED_MP_DATA(data_3307, mask_3307);
@@ -387,11 +396,11 @@ Index: xrdp-bartw72/xorg/X11R7.6/rdp/rdpinput.c
 +        {
 +            pdata = cur_data;
 +            pmask = cur_mask;
-+
-+            memset(cur_data, 0, sizeof(cur_data));
-+            memset(cur_mask, 0, sizeof(cur_mask));
  
 -                if (p != 0)
++            memset(cur_data, 0, sizeof(cur_data));
++            memset(cur_mask, 0, sizeof(cur_mask));
++
 +#ifdef RECORD_UNDEF_MOUSE_POINTER
 +            char buf[100];
 +            int l = sprintf(buf, "const char *shape_%d = \\\n\"", id);
@@ -459,10 +468,31 @@ Index: xrdp-bartw72/xorg/X11R7.6/rdp/rdpinput.c
      rdpup_end_update();
  }
  
+@@ -739,8 +915,8 @@
+ rdpEnqueueMotion(int mode, double x, double y)
+ {
+     int i;
+-    int n;
+-    InternalEvent* rdp_events;
++    int n = 0;
++    InternalEvent* rdp_events = NULL;
+     ValuatorMask *mask = valuator_mask_new(2);
+ 
+ # if 0
+@@ -753,7 +929,8 @@
+     }
+ 
+ #endif
+-    miPointerSetPosition(g_pointer, mode, &x, &y);
++    miPointerSetPosition(g_pointer, mode, &x, &y, &n, rdp_events);
++
+     valuator_mask_set_double(mask, 0, x);
+     valuator_mask_set_double(mask, 1, y);
+ 
 Index: xrdp-bartw72/common/xrdp_client_info.h
 ===================================================================
---- xrdp-bartw72.orig/common/xrdp_client_info.h	2013-09-21 19:27:54.861672261 +0200
-+++ xrdp-bartw72/common/xrdp_client_info.h	2013-09-21 19:28:21.810763476 +0200
+--- xrdp-bartw72.orig/common/xrdp_client_info.h	2013-11-23 14:50:18.585216610 +0100
++++ xrdp-bartw72/common/xrdp_client_info.h	2013-11-23 14:50:18.581216622 +0100
 @@ -93,6 +93,7 @@
    int pointer_flags; /* 0 color, 1 new, 2 no new */
    int use_fast_path;
@@ -473,8 +503,8 @@ Index: xrdp-bartw72/common/xrdp_client_info.h
  #endif
 Index: xrdp-bartw72/libxrdp/xrdp_rdp.c
 ===================================================================
---- xrdp-bartw72.orig/libxrdp/xrdp_rdp.c	2013-09-21 19:27:54.861672261 +0200
-+++ xrdp-bartw72/libxrdp/xrdp_rdp.c	2013-09-21 19:27:54.857672099 +0200
+--- xrdp-bartw72.orig/libxrdp/xrdp_rdp.c	2013-11-23 14:50:18.585216610 +0100
++++ xrdp-bartw72/libxrdp/xrdp_rdp.c	2013-11-23 14:50:18.581216622 +0100
 @@ -98,6 +98,15 @@
          {
              client_info->use_bulk_comp = text2bool(value);
@@ -494,7 +524,7 @@ Index: xrdp-bartw72/libxrdp/xrdp_rdp.c
 Index: xrdp-bartw72/xorg/X11R7.6/rdp/cursors.h
 ===================================================================
 --- /dev/null	1970-01-01 00:00:00.000000000 +0000
-+++ xrdp-bartw72/xorg/X11R7.6/rdp/cursors.h	2013-09-21 19:27:54.861672261 +0200
++++ xrdp-bartw72/xorg/X11R7.6/rdp/cursors.h	2013-11-23 14:50:18.581216622 +0100
 @@ -0,0 +1,1057 @@
 +
 +#ifndef _CURSORS_H
@@ -1555,8 +1585,8 @@ Index: xrdp-bartw72/xorg/X11R7.6/rdp/cursors.h
 +#endif
 Index: xrdp-bartw72/xrdp/xrdp.ini
 ===================================================================
---- xrdp-bartw72.orig/xrdp/xrdp.ini	2013-09-21 19:27:54.861672261 +0200
-+++ xrdp-bartw72/xrdp/xrdp.ini	2013-09-21 19:27:54.861672261 +0200
+--- xrdp-bartw72.orig/xrdp/xrdp.ini	2013-11-23 14:50:18.585216610 +0100
++++ xrdp-bartw72/xrdp/xrdp.ini	2013-11-23 14:50:18.581216622 +0100
 @@ -29,6 +29,7 @@
  # require_credentials=yes
  

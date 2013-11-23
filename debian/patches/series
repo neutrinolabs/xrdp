@@ -2,11 +2,13 @@
 #02-unix-socks-in-var-run.patch
 03-default-keymap.patch
 20-startup-messages.patch
-21-xserver-1.12.4.patch
+#21-xserver-1.12.4.patch
+21-xserver-1.14.3.patch
 23_disable_offscreen_bitmaps.patch
 30-mouse-pointer-fix.patch
 31-sesman-more-sessions.patch
 #99_ing_x11rdp_fixes.patch
 32_fix_fourcc.patch
 33_fix_instfiles.patch
-35_automake.patch
+#35_automake.patch
+#36_use_other_thread_type.diff

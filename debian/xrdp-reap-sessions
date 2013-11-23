@@ -17,7 +17,7 @@ do
 	if [ "${PID}" != "" ] && [ "${PIDS}" != "" ] ; then
 		RV=`echo "${PIDS}" | grep "${PID}"`
 		if [ $? -eq 0 ] ; then
-			echo Skip /tmp/.ICE-unix/${PID} since this is an active session
+#			echo Skip /tmp/.ICE-unix/${PID} since this is an active session
 
 			DISPLAY=$(tr '\0' '\n' < /proc/${PID}/environ | grep "DISPLAY" | cut -d "=" -f 2- | cut -f 1 -d "." | cut -c 2-)
 			if [ "${DISPLAY}" -ge 10 ] && [ "${DISPLAY}" -le 99 ] ; then
@@ -52,7 +52,8 @@ for f in $(ls /tmp/.xrdp/xrdp*_?? 2>/dev/null)
 do
 	DN=${f: -2}
 	if [ ! -f /tmp/.X${DN}-lock ] ; then
-		echo Reaping socket ${f} since it holds no /tmp/.X${DN}-lock
+#		echo Reaping socket ${f} since it holds no /tmp/.X${DN}-lock
 		rm -f ${f}
+		rm -f /tmp/.X11-unix/X${DN}
 	fi
 done
