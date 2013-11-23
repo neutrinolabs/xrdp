@@ -437,13 +437,161 @@ rdpChangeKeyboardControl(DeviceIntPtr pDev, KeybdCtrl *ctrl)
             LLOGLN(10, ("rdpChangeKeyboardControl: autoRepeat on"));
             /* schedual to turn off the autorepeat after 100 ms so any app
              * polling it will be happy it's on */
-            g_kbtimer = TimerSet(g_kbtimer, 0, 100, rdpInDeferredUpdateCallback, 0);\
+            g_kbtimer = TimerSet(g_kbtimer, 0, 100,
+                                 rdpInDeferredUpdateCallback, 0);
         }
         else
         {
             LLOGLN(10, ("rdpChangeKeyboardControl: autoRepeat off"));
         }
     }
+}
+
+/******************************************************************************/
+/*
+0x00000401  Arabic (101)
+0x00000402  Bulgarian
+0x00000404  Chinese (Traditional) - US Keyboard
+0x00000405  Czech
+0x00000406  Danish
+0x00000407  German
+0x00000408  Greek
+0x00000409  US
+0x0000040A  Spanish
+0x0000040B  Finnish
+0x0000040C  French
+0x0000040D  Hebrew
+0x0000040E  Hungarian
+0x0000040F  Icelandic
+0x00000410  Italian
+0x00000411  Japanese
+0x00000412  Korean
+0x00000413  Dutch
+0x00000414  Norwegian
+0x00000415  Polish (Programmers)
+0x00000416  Portuguese (Brazilian ABNT)
+0x00000418  Romanian
+0x00000419  Russian
+0x0000041A  Croatian
+0x0000041B  Slovak
+0x0000041C  Albanian
+0x0000041D  Swedish
+0x0000041E  Thai Kedmanee
+0x0000041F  Turkish Q
+0x00000420  Urdu
+0x00000422  Ukrainian
+0x00000423  Belarusian
+0x00000424  Slovenian
+0x00000425  Estonian
+0x00000426  Latvian
+0x00000427  Lithuanian IBM
+0x00000429  Farsi
+0x0000042A  Vietnamese
+0x0000042B  Armenian Eastern
+0x0000042C  Azeri Latin
+0x0000042F  FYRO Macedonian
+0x00000437  Georgian
+0x00000438  Faeroese
+0x00000439  Devanagari - INSCRIPT
+0x0000043A  Maltese 47-key
+0x0000043B  Norwegian with Sami
+0x0000043F  Kazakh
+0x00000440  Kyrgyz Cyrillic
+0x00000444  Tatar
+0x00000445  Bengali
+0x00000446  Punjabi
+0x00000447  Gujarati
+0x00000449  Tamil
+0x0000044A  Telugu
+0x0000044B  Kannada
+0x0000044C  Malayalam
+0x0000044E  Marathi
+0x00000450  Mongolian Cyrillic
+0x00000452  United Kingdom Extended
+0x0000045A  Syriac
+0x00000461  Nepali
+0x00000463  Pashto
+0x00000465  Divehi Phonetic
+0x0000046E  Luxembourgish
+0x00000481  Maori
+0x00000804  Chinese (Simplified) - US Keyboard
+0x00000807  Swiss German
+0x00000809  United Kingdom
+0x0000080A  Latin American
+0x0000080C  Belgian French
+0x00000813  Belgian (Period)
+0x00000816  Portuguese
+0x0000081A  Serbian (Latin)
+0x0000082C  Azeri Cyrillic
+0x0000083B  Swedish with Sami
+0x00000843  Uzbek Cyrillic
+0x0000085D  Inuktitut Latin
+0x00000C0C  Canadian French (legacy)
+0x00000C1A  Serbian (Cyrillic)
+0x00001009  Canadian French
+0x0000100C  Swiss French
+0x0000141A  Bosnian
+0x00001809  Irish
+0x0000201A  Bosnian Cyrillic
+*/
+int
+rdpLoadLayout(int keylayout)
+{
+    char a1[16];
+    char a2[16];
+    char a3[16];
+    char a4[16];
+    char a5[16];
+    char a6[16];
+    char a7[16];
+    char a8[16];
+    int pid;
+
+    LLOGLN(10, ("rdpLoadLayout: keylayout 0x%8.8x display %s",
+           keylayout, display));
+    snprintf(a1, 15, "setxkbmap");
+    snprintf(a2, 15, "setxkbmap");
+    snprintf(a3, 15, "-layout");
+    snprintf(a4, 15, "us");
+    snprintf(a5, 15, "-display");
+    snprintf(a6, 15, ":%s", display);
+    snprintf(a7, 15, "-model");
+    snprintf(a8, 15, "pc104");
+    switch (keylayout)
+    {
+        case 0x00000407: /* German */
+            snprintf(a4, 15, "%s", "de");
+            break;
+        case 0x00000409: /* US */
+            snprintf(a4, 15, "%s", "us");
+            break;
+        case 0x0000040C: /* French */
+            snprintf(a4, 15, "%s", "fr");
+            break;
+        case 0x00000410: /* Italian */
+            snprintf(a4, 15, "%s", "it");
+            break;
+        case 0x00000416: /* Portuguese (Brazilian ABNT) */
+            snprintf(a4, 15, "%s", "br");
+            snprintf(a8, 15, "%s", "abnt2");
+            break;
+        case 0x00000419: /* Russian */
+            snprintf(a4, 15, "%s", "ru");
+            break;
+        case 0x0000041D: /* Swedish */
+            snprintf(a4, 15, "%s", "se");
+            break;
+        default:
+            LLOGLN(0, ("rdpLoadLayout: unknown keylayout 0x%8.8x", keylayout));
+            return 1;
+    }
+    pid = fork();
+    if (pid == 0)
+    {
+        execlp(a1, a2, a3, a4, a5, a6, a7, a8, (void *)0);
+        exit(0);
+    }
+    return 0;
 }
 
 /******************************************************************************/
@@ -454,6 +602,7 @@ rdpKeybdProc(DeviceIntPtr pDevice, int onoff)
     CARD8 modMap[MAP_LENGTH];
     DevicePtr pDev;
     XkbRMLVOSet set;
+    int ok;
 
     LLOGLN(10, ("rdpKeybdProc:"));
     pDev = (DevicePtr)pDevice;
@@ -461,6 +610,7 @@ rdpKeybdProc(DeviceIntPtr pDevice, int onoff)
     switch (onoff)
     {
         case DEVICE_INIT:
+            LLOGLN(10, ("rdpKeybdProc: DEVICE_INIT"));
             KbdDeviceInit(pDevice, &keySyms, modMap);
             memset(&set, 0, sizeof(set));
             set.rules = "evdev"; /* was "base" */
@@ -468,28 +618,29 @@ rdpKeybdProc(DeviceIntPtr pDevice, int onoff)
             set.layout = "us";
             set.variant = "";
             set.options = "";
-            InitKeyboardDeviceStruct(pDevice, &set, rdpBell,
-                                     rdpChangeKeyboardControl);
-            //XkbDDXChangeControls(pDevice, 0, 0);
+            ok = InitKeyboardDeviceStruct(pDevice, &set, rdpBell,
+                                          rdpChangeKeyboardControl);
+            LLOGLN(10, ("rdpKeybdProc: InitKeyboardDeviceStruct %d", ok));
+            //kbDDXChangeControls(pDevice, 0, 0);
             break;
         case DEVICE_ON:
+            LLOGLN(10, ("rdpKeybdProc: DEVICE_ON"));
             pDev->on = 1;
             KbdDeviceOn();
             break;
         case DEVICE_OFF:
+            LLOGLN(10, ("rdpKeybdProc: DEVICE_OFF"));
             pDev->on = 0;
             KbdDeviceOff();
             break;
         case DEVICE_CLOSE:
-
+            LLOGLN(10, ("rdpKeybdProc: DEVICE_CLOSE"));
             if (pDev->on)
             {
                 KbdDeviceOff();
             }
-
             break;
     }
-
     return Success;
 }
 

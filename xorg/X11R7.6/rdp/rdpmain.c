@@ -540,7 +540,7 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
     }
 
     rdpGlyphInit();
-    
+
     //rdpXvInit(pScreen);
 
     ErrorF("rdpScreenInit: ret %d\n", ret);

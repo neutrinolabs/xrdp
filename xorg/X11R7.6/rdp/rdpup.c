@@ -538,7 +538,7 @@ static int
 rdpup_send_pending(void)
 {
     int rv;
-    
+
     rv = 0;
     if (g_connected && g_begin)
     {
@@ -1116,6 +1116,9 @@ rdpup_process_msg(struct stream *s)
             LLOGLN(0, ("  client can not do multimon"));
             g_do_multimon = 0;
         }
+
+        rdpLoadLayout(g_rdpScreen.client_info.keylayout);
+
     }
     else if (msg_type == 105)
     {
@@ -1431,7 +1434,7 @@ int
 rdpup_pre_check(int in_size)
 {
     int rv;
-    
+
     rv = 0;
     if (!g_begin)
     {
@@ -2226,7 +2229,7 @@ rdpup_send_alpha_area(struct image_data* id, int x, int y, int w, int h)
     int lw;
     int size;
     struct image_data lid;
-    
+
     LLOGLN(10, ("rdpup_send_alpha_area: id %p x %d y %d w %d h %d",
                 id, x, y, w, h));
     if (id == 0)
@@ -2234,7 +2237,7 @@ rdpup_send_alpha_area(struct image_data* id, int x, int y, int w, int h)
         rdpup_get_screen_image_rect(&lid);
         id = &lid;
     }
-    
+
     if (x >= id->width)
     {
         return;
@@ -2480,7 +2483,7 @@ rdpup_show_window(WindowPtr pWindow, rdpWindowRec* priv, int showState)
     if (g_connected)
     {
         int flags = WINDOW_ORDER_TYPE_WINDOW;
-        
+
         rdpup_pre_check(16);
         out_uint16_le(g_out_s, 27);
         out_uint16_le(g_out_s, 16);
@@ -2780,7 +2783,7 @@ int
 rdpup_check_alpha_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec* pDirtyPriv)
 {
     struct image_data id;
-    
+
     LLOGLN(10, ("rdpup_check_alpha_dirty: width %d height %d",
                 pDirtyPixmap->drawable.width, pDirtyPixmap->drawable.height));
     if (pDirtyPriv == 0)
