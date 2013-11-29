@@ -37,6 +37,8 @@ keyboard and mouse stuff
 /* this should be fixed in rdesktop */
 
 #include "rdp.h"
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #define LOG_LEVEL 1
 #define LLOG(_level, _args) \
@@ -546,6 +548,11 @@ rdpLoadLayout(int keylayout)
     char a7[16];
     char a8[16];
     int pid;
+    int rv;
+    int rv_pid;
+    int status;
+    int start_time;
+    int now_time;
 
     LLOGLN(10, ("rdpLoadLayout: keylayout 0x%8.8x display %s",
            keylayout, display));
@@ -585,13 +592,57 @@ rdpLoadLayout(int keylayout)
             LLOGLN(0, ("rdpLoadLayout: unknown keylayout 0x%8.8x", keylayout));
             return 1;
     }
+    rv = 1;
     pid = fork();
-    if (pid == 0)
+    if (pid == -1)
     {
+        LLOGLN(0, ("rdpLoadLayout: fork failed"));
+        return rv;
+    }
+    else if (pid == 0)
+    {
+        /* child */
         execlp(a1, a2, a3, a4, a5, a6, a7, a8, (void *)0);
         exit(0);
     }
-    return 0;
+    else
+    {
+        /* parent */
+        start_time = get_mstime();
+        while (1)
+        {
+            usleep(1000);
+            rv_pid = waitpid(pid, &status, WNOHANG);
+            if (rv_pid == -1)
+            {
+                if (errno == EINTR) /* signal occurred */
+                {
+                }
+                else
+                {
+                    LLOGLN(0, ("rdpLoadLayout: waitpid failed"));
+                    break;
+                }
+            }
+            else if (rv_pid == pid)
+            {
+                rv = 0;
+                LLOGLN(0, ("rdpLoadLayout: setxkbmap result %d", status));
+                break;
+            }
+            else
+            {
+                LLOGLN(0, ("rdpLoadLayout: waitpid unknown pid return %d", rv));
+            }
+            now_time = get_mstime();
+            if (now_time - start_time > 1000 * 1000)
+            {
+                LLOGLN(0, ("rdpLoadLayout: waitpid timeout"));
+                break;
+            }
+        }
+    }
+    return rv;
 }
 
 /******************************************************************************/

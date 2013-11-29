@@ -368,6 +368,8 @@ void
 RegionAroundSegs(RegionPtr reg, xSegment* segs, int nseg);
 int
 get_crc(char* data, int data_bytes);
+int
+get_mstime(void);
 
 /* rdpdraw.c */
 Bool
