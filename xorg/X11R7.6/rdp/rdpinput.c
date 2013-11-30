@@ -61,7 +61,7 @@ static int g_tab_down = 0;
    above *_down vars */
 static int g_scroll_lock_down = 0;
 static OsTimerPtr g_kbtimer = 0;
-
+static OsTimerPtr g_xkbtimer = 0;
 static OsTimerPtr g_timer = 0;
 static int g_x = 0;
 static int g_y = 0;
@@ -450,6 +450,44 @@ rdpChangeKeyboardControl(DeviceIntPtr pDev, KeybdCtrl *ctrl)
 }
 
 /******************************************************************************/
+static CARD32
+rdpInDeferredXkbCallback(OsTimerPtr timer, CARD32 now, pointer arg)
+{
+    int rv_pid;
+    int pid;
+    int status;
+
+    LLOGLN(10, ("rdpInDeferredXkbCallback:"));
+    pid = (int) arg;
+    rv_pid = waitpid(pid, &status, WNOHANG);
+    if (rv_pid == -1)
+    {
+        if (errno == EINTR) /* signal occurred */
+        {
+        }
+        else
+        {
+            LLOGLN(0, ("rdpInDeferredXkbCallback: waitpid failed"));
+        }
+    }
+    else if (rv_pid == pid)
+    {
+        LLOGLN(0, ("rdpInDeferredXkbCallback: setxkbmap result %d", status));
+        TimerFree(g_xkbtimer);
+        g_xkbtimer = 0;
+        return 0;
+    }
+    else if (rv_pid == 0)
+    {
+        LLOGLN(0, ("rdpInDeferredXkbCallback: setxkbmap not done yet"));
+    }
+    /* try again */
+    g_xkbtimer = TimerSet(g_xkbtimer, 0, 1000,
+                          rdpInDeferredXkbCallback, (pointer)(long)pid);
+    return 0;
+}
+
+/******************************************************************************/
 /*
 0x00000401  Arabic (101)
 0x00000402  Bulgarian
@@ -549,10 +587,6 @@ rdpLoadLayout(int keylayout)
     char a8[16];
     int pid;
     int rv;
-    int rv_pid;
-    int status;
-    int start_time;
-    int now_time;
 
     LLOGLN(10, ("rdpLoadLayout: keylayout 0x%8.8x display %s",
            keylayout, display));
@@ -608,39 +642,9 @@ rdpLoadLayout(int keylayout)
     else
     {
         /* parent */
-        start_time = get_mstime();
-        while (1)
-        {
-            usleep(1000);
-            rv_pid = waitpid(pid, &status, WNOHANG);
-            if (rv_pid == -1)
-            {
-                if (errno == EINTR) /* signal occurred */
-                {
-                }
-                else
-                {
-                    LLOGLN(0, ("rdpLoadLayout: waitpid failed"));
-                    break;
-                }
-            }
-            else if (rv_pid == pid)
-            {
-                rv = 0;
-                LLOGLN(0, ("rdpLoadLayout: setxkbmap result %d", status));
-                break;
-            }
-            else
-            {
-                LLOGLN(0, ("rdpLoadLayout: waitpid unknown pid return %d", rv));
-            }
-            now_time = get_mstime();
-            if (now_time - start_time > 1000 * 1000)
-            {
-                LLOGLN(0, ("rdpLoadLayout: waitpid timeout"));
-                break;
-            }
-        }
+        LLOGLN(0, ("rdpLoadLayout: setxkbmap started pid %d", pid));
+        g_xkbtimer = TimerSet(g_xkbtimer, 0, 1000,
+                              rdpInDeferredXkbCallback, (pointer)(long)pid);
     }
     return rv;
 }
