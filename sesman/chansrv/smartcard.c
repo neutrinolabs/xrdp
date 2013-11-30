@@ -1190,9 +1190,9 @@ scard_send_GetStatusChange(IRP* irp, tui32 context, int wide, tui32 timeout,
     /* see [MS-RDPESC] 2.2.2.11 for ASCII     */
     /* see [MS-RDPESC] 2.2.2.12 for Wide char */
 
-    SMARTCARD*     sc;
-    READER_STATE*  rs;
-    struct stream* s;
+    SMARTCARD     *sc;
+    READER_STATE  *rs;
+    struct stream *s;
     tui32          ioctl;
     int            bytes;
     int            i;
@@ -1228,7 +1228,7 @@ scard_send_GetStatusChange(IRP* irp, tui32 context, int wide, tui32 timeout,
     out_uint32_le(s, 4);
     out_uint32_le(s, context);
 
-    out_uint32_le(s, num_readers);    /* ? */
+    out_uint32_le(s, num_readers);
 
     /* insert card reader state */
     for (i = 0; i < num_readers; i++)
@@ -1238,7 +1238,7 @@ scard_send_GetStatusChange(IRP* irp, tui32 context, int wide, tui32 timeout,
         out_uint32_le(s, rs->current_state);
         out_uint32_le(s, rs->event_state);
         out_uint32_le(s, rs->atr_len);
-        xstream_copyin(s, rs->atr, 33);
+        out_uint8p(s, rs->atr, 33);
         out_uint8s(s, 3);
     }
 
@@ -1257,6 +1257,7 @@ scard_send_GetStatusChange(IRP* irp, tui32 context, int wide, tui32 timeout,
                 out_uint16_le(s, w_reader_name[index]);
             }
             out_uint16_le(s, 0);
+            out_uint16_le(s, 0);
             align_s(s, 4);
         }
     }
@@ -1274,6 +1275,7 @@ scard_send_GetStatusChange(IRP* irp, tui32 context, int wide, tui32 timeout,
             {
                 out_uint8(s, w_reader_name[index]);
             }
+            out_uint8(s, 0);
             out_uint8(s, 0);
             align_s(s, 4);
         }
@@ -1296,10 +1298,12 @@ scard_send_GetStatusChange(IRP* irp, tui32 context, int wide, tui32 timeout,
     /* send to client */
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
 
-    //g_writeln("scard_send_GetStatusChange:");
-    //g_hexdump(s->data, bytes);
+#if 0
+    g_writeln("scard_send_GetStatusChange:");
+    g_hexdump(s->data, bytes);
+#endif
 
-    xstream_free(s);
+    free_stream(s);
 }
 
 /**
