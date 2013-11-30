@@ -831,9 +831,9 @@ scard_make_new_ioctl(IRP *irp, tui32 ioctl)
                                     0);
 
     xstream_wr_u32_le(s, 2048);        /* OutputBufferLength               */
-    xstream_wr_u32_le(s, 0);           /* InputBufferLength - insert later */
+    s_push_layer(s, iso_hdr, 4);       /* InputBufferLength - insert later */
     xstream_wr_u32_le(s, ioctl);       /* Ioctl Code                       */
-    xstream_seek(s, 20);               /* padding                          */
+    out_uint8s(s, 20);                 /* padding                          */
 
     /* [MS-RPCE] 2.2.6.1 */
     xstream_wr_u32_le(s, 0x00081001);  /* len 8, LE, v1                    */
@@ -967,7 +967,10 @@ scard_send_ReleaseContext(IRP* irp, tui32 context)
     }
 
     if ((s = scard_make_new_ioctl(irp, SCARD_IOCTL_RELEASE_CONTEXT)) == NULL)
+    {
+        log_error("scard_make_new_ioctl failed");
         return;
+    }
 
     /*
      * command format
@@ -1019,7 +1022,10 @@ scard_send_IsContextValid(IRP* irp, tui32 context)
     }
 
     if ((s = scard_make_new_ioctl(irp, SCARD_IOCTL_IS_VALID_CONTEXT)) == NULL)
+    {
+        log_error("scard_make_new_ioctl failed");
         return;
+    }
 
     /*
      * command format
@@ -1073,10 +1079,20 @@ scard_send_ListReaders(IRP *irp, tui32 context, int wide)
                      SCARD_IOCTL_LIST_READERS_A;
 
     if ((s = scard_make_new_ioctl(irp, ioctl)) == NULL)
+    {
+        log_error("scard_make_new_ioctl failed");
         return;
+    }
 
     xstream_wr_u32_le(s, 72); /* number of bytes to follow */
-    xstream_seek(s, 28);      /* freerdp does not use this */
+
+    out_uint32_le(s, 0x00000000);
+    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, 0x00020000);
+    out_uint32_le(s, 0x00000024);
+    out_uint32_le(s, 0x00020004);
+    out_uint32_le(s, 0x00000000);
+    out_uint32_le(s, 0xFFFFFFFF);
 
     /* insert context */
     xstream_wr_u32_le(s, 4);
@@ -1110,6 +1126,10 @@ scard_send_ListReaders(IRP *irp, tui32 context, int wide)
 
     /* send to client */
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
+
+    //g_writeln("scard_send_ListReaders:");
+    //g_hexdump(s->data, bytes);
+
     xstream_free(s);
 
     /*
@@ -1190,27 +1210,34 @@ scard_send_GetStatusChange(IRP* irp, tui32 context, int wide, tui32 timeout,
                      SCARD_IOCTL_GET_STATUS_CHANGE_A;
 
     if ((s = scard_make_new_ioctl(irp, ioctl)) == NULL)
+    {
+        log_error("scard_make_new_ioctl failed");
         return;
+    }
 
-    xstream_seek(s, 16);                /* unused */
-    xstream_wr_u32_le(s, timeout);
-    xstream_wr_u32_le(s, num_readers);
-    xstream_wr_u32_le(s, 0);            /* unused */
+    s_push_layer(s, mcs_hdr, 4); /* set later */
+    out_uint32_le(s, 0x00000000);
+    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, 0x00020000);
+
+    out_uint32_le(s, timeout);
+    out_uint32_le(s, num_readers);
+    out_uint32_le(s, 0x00020004);     /* ? */
 
     /* insert context */
-    xstream_wr_u32_le(s, 4);
-    xstream_wr_u32_le(s, context);
+    out_uint32_le(s, 4);
+    out_uint32_le(s, context);
 
-    xstream_wr_u32_le(s, 0);            /* unused */
+    out_uint32_le(s, num_readers);    /* ? */
 
     /* insert card reader state */
     for (i = 0; i < num_readers; i++)
     {
         rs = &rsa[i];
-        xstream_wr_u32_le(s, 0);        /* unused */
-        xstream_wr_u32_le(s, rs->current_state);
-        xstream_wr_u32_le(s, rs->event_state);
-        xstream_wr_u32_le(s, rs->atr_len);
+        out_uint32_le(s, 0x00020008); /* ? */
+        out_uint32_le(s, rs->current_state);
+        out_uint32_le(s, rs->event_state);
+        out_uint32_le(s, rs->atr_len);
         xstream_copyin(s, rs->atr, 33);
         out_uint8s(s, 3);
     }
@@ -1222,13 +1249,14 @@ scard_send_GetStatusChange(IRP* irp, tui32 context, int wide, tui32 timeout,
         {
             rs = &rsa[i];
             num_chars = g_mbstowcs(w_reader_name, rs->reader_name, 99);
-            xstream_wr_u32_le(s, 0);        /* unused */
-            xstream_wr_u32_le(s, 0);        /* unused */
-            xstream_wr_u32_le(s, num_chars);
+            out_uint32_le(s, num_chars + 2);
+            out_uint32_le(s, 0);
+            out_uint32_le(s, num_chars + 2);
             for (index = 0; index < num_chars; index++)
             {
-                xstream_wr_u16_le(s, w_reader_name[index]);
+                out_uint16_le(s, w_reader_name[index]);
             }
+            out_uint16_le(s, 0);
             align_s(s, 4);
         }
     }
@@ -1239,25 +1267,38 @@ scard_send_GetStatusChange(IRP* irp, tui32 context, int wide, tui32 timeout,
         {
             rs = &rsa[i];
             num_chars = g_mbstowcs(w_reader_name, rs->reader_name, 99);
-            xstream_wr_u32_le(s, 0);        /* unused */
-            xstream_wr_u32_le(s, 0);        /* unused */
-            xstream_wr_u32_le(s, num_chars);
+            out_uint32_le(s, num_chars + 2);
+            out_uint32_le(s, 0);
+            out_uint32_le(s, num_chars + 2);
             for (index = 0; index < num_chars; index++)
             {
-                xstream_wr_u8(s, w_reader_name[index]);
+                out_uint8(s, w_reader_name[index]);
             }
+            out_uint8(s, 0);
             align_s(s, 4);
         }
     }
 
-    /* get stream len */
-    bytes = xstream_len(s);
+    s_mark_end(s);
 
-    /* InputBufferLength is number of bytes AFTER 20 byte padding */
-    *(s->data + 28) = bytes - 56;
+    s_pop_layer(s, mcs_hdr);
+    bytes = (int) (s->end - s->p);
+    bytes -= 8;
+    out_uint32_le(s, bytes);
+
+    s_pop_layer(s, iso_hdr);
+    bytes = (int) (s->end - s->p);
+    bytes -= 28;
+    out_uint32_le(s, bytes);
+
+    bytes = (int) (s->end - s->data);
 
     /* send to client */
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
+
+    //g_writeln("scard_send_GetStatusChange:");
+    //g_hexdump(s->data, bytes);
+
     xstream_free(s);
 }
 
@@ -1292,7 +1333,10 @@ scard_send_Connect(IRP* irp, tui32 context, int wide, READER_STATE* rs)
                      SCARD_IOCTL_CONNECT_A;
 
     if ((s = scard_make_new_ioctl(irp, ioctl)) == NULL)
+    {
+        log_error("scard_make_new_ioctl failed");
         return;
+    }
 
     /*
      * command format
@@ -1377,7 +1421,10 @@ scard_send_Reconnect(IRP* irp, tui32 context, tui32 sc_handle, READER_STATE* rs)
     }
 
     if ((s = scard_make_new_ioctl(irp, SCARD_IOCTL_RECONNECT)) == NULL)
+    {
+        log_error("scard_make_new_ioctl failed");
         return;
+    }
 
     /*
      * command format
@@ -1438,7 +1485,10 @@ scard_send_BeginTransaction(IRP *irp, tui32 sc_handle)
     }
 
     if ((s = scard_make_new_ioctl(irp, SCARD_IOCTL_BEGIN_TRANSACTION)) == NULL)
+    {
+        log_error("scard_make_new_ioctl failed");
         return;
+    }
 
     /*
      * command format
@@ -1492,7 +1542,10 @@ scard_send_EndTransaction(IRP *irp, tui32 sc_handle, tui32 dwDisposition)
     }
 
     if ((s = scard_make_new_ioctl(irp, SCARD_IOCTL_END_TRANSACTION)) == NULL)
+    {
+        log_error("scard_make_new_ioctl failed");
         return;
+    }
 
     /*
      * command format
@@ -1618,7 +1671,10 @@ scard_send_Disconnect(IRP *irp, tui32 context, tui32 sc_handle,
     }
 
     if ((s = scard_make_new_ioctl(irp, SCARD_IOCTL_DISCONNECT)) == NULL)
+    {
+        log_error("scard_make_new_ioctl failed");
         return;
+    }
 
     /*
      * command format
@@ -2091,16 +2147,10 @@ scard_handle_ListReaders_Return(struct stream *s, IRP *irp,
         log_error("DeviceId/CompletionId do not match those in IRP");
         return;
     }
-    if (IoStatus != 0)
-    {
-        log_error("failed to list readers");
-        /* LK_TODO delete irp and smartcard entry */
-        return;
-    }
     /* get OutputBufferLen */
     xstream_rd_u32_le(s, len);
     con = (struct trans *) (irp->user_data);
-    scard_function_list_readers_return(con, s, len);
+    scard_function_list_readers_return(con, s, len, IoStatus);
     devredir_irp_delete(irp);
     log_debug("leaving");
 }
@@ -2123,16 +2173,10 @@ scard_handle_GetStatusChange_Return(struct stream *s, IRP *irp,
         log_error("DeviceId/CompletionId do not match those in IRP");
         return;
     }
-    if (IoStatus != 0)
-    {
-        log_error("failed to get status change");
-        /* LK_TODO delete irp and smartcard entry */
-        return;
-    }
     /* get OutputBufferLen */
     xstream_rd_u32_le(s, len);
     con = (struct trans *) (irp->user_data);
-    scard_function_get_status_change_return(con, s, len);
+    scard_function_get_status_change_return(con, s, len, IoStatus);
     devredir_irp_delete(irp);
     log_debug("leaving");
 }

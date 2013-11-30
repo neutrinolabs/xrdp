@@ -155,6 +155,9 @@ scard_function_establish_context_return(struct trans *con,
         return 1;
     }
     g_xrdp_pcsc_state &= ~XRDP_PCSC_STATE_GOT_EC;
+
+    //g_hexdump(in_s->p, len);
+
     in_uint8s(in_s, 28);
     in_uint32_le(in_s, context_len);
     if (context_len != 4)
@@ -248,7 +251,7 @@ scard_process_list_readers(struct trans *con, struct stream *in_s)
 int APP_CC
 scard_function_list_readers_return(struct trans *con,
                                    struct stream *in_s,
-                                   int len)
+                                   int len, int status)
 {
     struct stream *out_s;
     int            chr;
@@ -273,39 +276,39 @@ scard_function_list_readers_return(struct trans *con,
     in_uint8s(in_s, 28);
     len -= 28;
     in_uint32_le(in_s, len);
-    //g_writeln("len %d", len);
     rn_index = 0;
     readers = 0;
-    while (len > 0)
+    if (status == 0)
     {
-        in_uint16_le(in_s, chr);
-        len -= 2;
-        if (chr == 0)
+        while (len > 0)
+        {
+            in_uint16_le(in_s, chr);
+            len -= 2;
+            if (chr == 0)
+            {
+                if (reader_name[0] != 0)
+                {
+                    g_wcstombs(lreader_name[readers], reader_name, 99);
+                    g_memset(reader_name, 0, sizeof(reader_name));
+                    readers++;
+                }
+                reader_name[0] = 0;
+                rn_index = 0;
+            }
+            else
+            {
+                reader_name[rn_index] = chr;
+                rn_index++;
+            }
+        }
+        if (rn_index > 0)
         {
             if (reader_name[0] != 0)
             {
                 g_wcstombs(lreader_name[readers], reader_name, 99);
-                //g_writeln("1 %s", lreader_name[readers]);
                 g_memset(reader_name, 0, sizeof(reader_name));
                 readers++;
             }
-            reader_name[0] = 0;
-            rn_index = 0;
-        }
-        else
-        {
-            reader_name[rn_index] = chr;
-            rn_index++;
-        }
-    }
-    if (rn_index > 0)
-    {
-        if (reader_name[0] != 0)
-        {
-            g_wcstombs(lreader_name[readers], reader_name, 99);
-            //g_writeln("2 %s", lreader_name[readers]);
-            g_memset(reader_name, 0, sizeof(reader_name));
-            readers++;
         }
     }
 
@@ -314,10 +317,9 @@ scard_function_list_readers_return(struct trans *con,
     out_uint32_le(out_s, readers);
     for (index = 0; index < readers; index++)
     {
-        //g_writeln("3 - %s", lreader_name[index]);
         out_uint8a(out_s, lreader_name[index], 100);
     }
-    out_uint32_le(out_s, 0); /* SCARD_S_SUCCESS status */
+    out_uint32_le(out_s, status); /* SCARD_S_SUCCESS status */
     s_mark_end(out_s);
     bytes = (int) (out_s->end - out_s->data);
     s_pop_layer(out_s, iso_hdr);
@@ -913,7 +915,7 @@ scard_process_get_status_change(struct trans *con, struct stream *in_s)
 int APP_CC
 scard_function_get_status_change_return(struct trans *con,
                                         struct stream *in_s,
-                                        int len)
+                                        int len, int status)
 {
     int bytes;
     int index;
@@ -925,6 +927,7 @@ scard_function_get_status_change_return(struct trans *con,
     struct stream *out_s;
 
     LLOGLN(10, ("scard_function_get_status_change_return:"));
+    LLOGLN(10, ("  status 0x%8.8x", status));
     //g_hexdump(in_s->p, len);
     if ((g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_GSC) == 0)
     {
@@ -932,33 +935,43 @@ scard_function_get_status_change_return(struct trans *con,
         return 1;
     }
     g_xrdp_pcsc_state &= ~XRDP_PCSC_STATE_GOT_GSC;
-    in_uint8s(in_s, 28);
-    in_uint32_le(in_s, cReaders);
-    if (cReaders > 0)
+
+    out_s = trans_get_out_s(con, 8192);
+    s_push_layer(out_s, iso_hdr, 8);
+    if (status != 0)
     {
-        out_s = trans_get_out_s(con, 8192);
-        s_push_layer(out_s, iso_hdr, 8);
-        out_uint32_le(out_s, cReaders);
-        for (index = 0; index < cReaders; index++)
-        {
-            in_uint32_le(in_s, current_state);
-            out_uint32_le(out_s, current_state);
-            in_uint32_le(in_s, event_state);
-            out_uint32_le(out_s, event_state);
-            in_uint32_le(in_s, atr_len);
-            out_uint32_le(out_s, atr_len);
-            in_uint8a(in_s, atr, 36);
-            out_uint8a(out_s, atr, 36);
-        }
-        out_uint32_le(out_s, 0); /* SCARD_S_SUCCESS status */
-        s_mark_end(out_s);
-        bytes = (int) (out_s->end - out_s->data);
-        s_pop_layer(out_s, iso_hdr);
-        out_uint32_le(out_s, bytes - 8);
-        out_uint32_le(out_s, 0x0C); /* SCARD_ESTABLISH_CONTEXT 0x0C */
-        return trans_force_write(con);
+        out_uint32_le(out_s, 0); /* cReaders */
+        out_uint32_le(out_s, status); /* SCARD_S_SUCCESS status */
     }
-    return 0;
+    else
+    {
+        in_uint8s(in_s, 28);
+        in_uint32_le(in_s, cReaders);
+        LLOGLN(10, ("  cReaders %d", cReaders));
+        out_uint32_le(out_s, cReaders);
+        if (cReaders > 0)
+        {
+            for (index = 0; index < cReaders; index++)
+            {
+                in_uint32_le(in_s, current_state);
+                out_uint32_le(out_s, current_state);
+                in_uint32_le(in_s, event_state);
+                out_uint32_le(out_s, event_state);
+                in_uint32_le(in_s, atr_len);
+                out_uint32_le(out_s, atr_len);
+                in_uint8a(in_s, atr, 36);
+                out_uint8a(out_s, atr, 36);
+            }
+        }
+        out_uint32_le(out_s, status); /* SCARD_S_SUCCESS status */
+    }
+
+    s_mark_end(out_s);
+    bytes = (int) (out_s->end - out_s->data);
+    s_pop_layer(out_s, iso_hdr);
+    out_uint32_le(out_s, bytes - 8);
+    out_uint32_le(out_s, 0x0C); /* SCARD_ESTABLISH_CONTEXT 0x0C */
+    return trans_force_write(con);
 }
 
 /*****************************************************************************/

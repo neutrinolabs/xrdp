@@ -1139,7 +1139,7 @@ SCardSetAttrib(SCARDHANDLE hCard, DWORD dwAttrId, LPCBYTE pbAttr,
 PCSC_API char *
 pcsc_stringify_error(const long code)
 {
-    LLOGLN(10, ("pcsc_stringify_error: %d", (int)code));
+    LLOGLN(10, ("pcsc_stringify_error: 0x%8.8x", (int)code));
     switch (code)
     {
         case SCARD_S_SUCCESS:
