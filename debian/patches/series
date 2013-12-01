@@ -12,3 +12,4 @@
 33_fix_instfiles.patch
 #35_automake.patch
 #36_use_other_thread_type.diff
+40_ck_support.diff

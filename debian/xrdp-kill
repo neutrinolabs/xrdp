@@ -6,7 +6,7 @@ if [ "${DISPLAY}" != "" ] || [ "${DBUS_SESSION_BUS_ADDRESS}" != "" ] ; then
 	exit 1
 fi
 
-compatiblePrograms=( nautilus kdeinit kded4 pulseaudio trackerd )
+compatiblePrograms=( nautilus kdeinit kded4 pulseaudio trackerd xfwm4 xfsettingsd )
 
 # Attempt to get a program pid
 for index in ${compatiblePrograms[@]}; do
@@ -60,6 +60,18 @@ else
 	exit 1
 fi
 
-if [ -x /usr/bin/gnome-session-quit ] ; then
-	gnome-session-quit --logout --no-prompt
+HOMEDIR="$(tr '\0' '\n' < /proc/${PID}/environ | grep "HOME" | cut -d "=" -f 2-)"
+if [ -f ${HOMEDIR}/.xsession ] ; then
+	if grep "^gnome-session" ${HOMEDIR}/.xsession ; then
+		if [ -x /usr/bin/gnome-session-quit ] ; then
+			gnome-session-quit --logout --no-prompt
+		fi
+	fi
+
+	if grep "^xfce4-session" ${HOMEDIR}/.xsession ; then
+		if [ -x /usr/bin/xfce4-session-logout ] ; then
+			xfce4-session-logout --logout
+		fi
+	fi
 fi
+

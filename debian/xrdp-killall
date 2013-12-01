@@ -18,3 +18,22 @@ do
 	echo Attempting to stop server with lock held on ${X} owned by ${OWNER}
 	(su ${OWNER} -c xrdp-kill)
 done
+
+PROCS=$(pidof X11rdp Xvnc)
+if [ "${PROCS}" != "" ] ; then
+	echo Not all processes finished yet, waiting for them to finish
+	sleep 3
+fi
+
+PROCS=$(pidof X11rdp Xvnc)
+if [ "${PROCS}" != "" ] ; then
+	kill ${PROCS}
+
+	echo Waiting for all processes to finish
+	sleep 3
+	PROCS=$(pidof X11rdp Xvnc)
+	if [ "${PROCS}" != "" ] ; then
+		echo Not all processes finished, terminating them now
+		kill -9 ${PROCS}
+	fi
+fi

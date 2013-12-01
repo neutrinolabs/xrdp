@@ -20,6 +20,15 @@ if [ "$1" = "configure" ]; then
         # We remove old keys
 	[ -f /etc/xrdp/rsakeys.ini ] && rm /etc/xrdp/rsakeys.ini
     fi
+
+    for i in /home/[a-z]*
+    do
+      if test -f ${i}/.xsession
+      then
+	sed -i -e 's/gnome-fallback/gnome-flashback/' ${i}/.xsession
+      fi 
+    done
+
 fi
 
 

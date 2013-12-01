@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Vincent Bernat <bernat@debian.org>
 Build-Depends: debhelper (>= 7.0.50~), libssl-dev, libpam0g-dev,
 	       autoconf (>= 2.59), automake (>= 1.6), libtool,
-	       libx11-dev, libxfixes-dev
+	       libx11-dev, libxfixes-dev, libdbus-1-dev, libck-connector-dev
 Standards-Version: 3.9.2
 Homepage: http://xrdp.sourceforge.net
 Vcs-Browser: http://git.debian.org/?p=collab-maint/xrdp.git

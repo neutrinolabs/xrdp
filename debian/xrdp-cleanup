@@ -12,7 +12,7 @@ if [ "${DN}" != "" ] && [ -d /tmp/.xrdp ] && [ "$DN" -ge 10 ] && [ "$DN" -le 99 
 		fi
 
 		DISPLAYS=""
-		PIDS=$(pidof gnome-session)
+		PIDS=$(pidof gnome-session xfce4-session)
 		for PID in $(ls -1 /tmp/.ICE-unix/ 2>/dev/null)
 		do
 			if [ "${PID}" != "" ] && [ "${PIDS}" != "" ] ; then

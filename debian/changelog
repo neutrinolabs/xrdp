@@ -1,8 +1,32 @@
+xrdp (0.7.0-1.7) ingunstable; urgency=low
+
+  * Cleanup scripts also remove sessions from xfce4, which is not correct.
+
+ -- Warmerdam, B. (Bart) <Bart.Warmerdam@mail.ing.nl>  Sun, 01 Dec 2013 06:36:32 +0100
+
+xrdp (0.7.0-1.6) ingunstable; urgency=low
+
+  * Change threading model.
+
+ -- Warmerdam, B. (Bart) <Bart.Warmerdam@mail.ing.nl>  Thu, 28 Nov 2013 11:12:15 +0100
+
+xrdp (0.7.0-1.5) ingunstable; urgency=low
+
+  * Re-upload the version to make sure the right version is present.
+
+ -- Warmerdam, B. (Bart) <Bart.Warmerdam@mail.ing.nl>  Mon, 25 Nov 2013 08:02:18 +0100
+
+xrdp (0.7.0-1.4) ingunstable; urgency=low
+
+  * Change .xsession setup for existing users to flashback.
+
+ -- Warmerdam, B. (Bart) <Bart.Warmerdam@mail.ing.nl>  Sat, 23 Nov 2013 19:40:55 +0100
+
 xrdp (0.7.0-1.3) ingunstable; urgency=low
 
   * Merge upstream version.
 
- -- Bart Warmerdam <Bart.Warmerdam@mail.ing.nl>  Sat, 21 Sep 2013 20:22:39 +0200
+ -- Warmerdam, B. (Bart) <Bart.Warmerdam@mail.ing.nl>  Sat, 21 Sep 2013 20:22:39 +0200
 
 xrdp (0.7.0-1.2) ingunstable; urgency=low
 

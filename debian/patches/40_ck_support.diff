@@ -1,0 +1,98 @@
+Index: xrdp-bartw72/sesman/session.c
+===================================================================
+--- xrdp-bartw72.orig/sesman/session.c	2013-11-29 15:03:56.094448332 +0100
++++ xrdp-bartw72/sesman/session.c	2013-11-29 15:47:21.484050618 +0100
+@@ -30,6 +30,8 @@
+ #include <errno.h>
+ //#include <time.h>
+ 
++#include <ConsoleKit/ck-connector/ck-connector.h>
++
+ extern tbus g_sync_event;
+ extern unsigned char g_fixedkey[8];
+ extern struct config_sesman *g_cfg; /* in sesman.c */
+@@ -234,11 +236,15 @@
+     char xpid_str[25];
+     char exe_path[262];
+     int i = 0;
++    CkConnector *ck;
++    DBusError error;
++    char runtime_path[255];
+ 
+     /* initialize (zero out) local variables: */
+     g_memset(wmpid_str, 0, sizeof(char) * 25);
+     g_memset(xpid_str, 0, sizeof(char) * 25);
+     g_memset(exe_path, 0, sizeof(char) * 262);
++    g_memset(runtime_path, 0, sizeof(char) * 255);
+ 
+     /* new style waiting for clients */
+     g_sprintf(wmpid_str, "%d", wmpid);
+@@ -260,6 +266,27 @@
+ 
+     env_set_user(username, 0, display);
+ 
++    ck = ck_connector_new();
++    if (ck != NULL)
++    {
++        dbus_error_init (&error);
++        if (ck_connector_open_session(ck, &error))
++        {
++            log_message(LOG_LEVEL_INFO, "Created new consolekit session.");
++            g_setenv("XDG_SESSION_COOKIE", ck_connector_get_cookie(ck), 1);
++            g_sprintf(runtime_path, "/run/user/%s", g_getenv("UID"), 1);
++            g_setenv("XDG_RUNTIME_DIR", runtime_path, 1);
++        }
++        else
++        {
++            log_message(LOG_LEVEL_ALWAYS, "Error opening consolekit session.");
++        }
++    }
++    else
++    {
++        log_message(LOG_LEVEL_ALWAYS, "Error opening consolekit connection.");
++    }
++
+     /* executing sessvc */
+     g_execvp(exe_path, ((char **)sessvc_params->items));
+ 
+@@ -283,6 +310,12 @@
+ 
+     list_delete(sessvc_params);
+ 
++    dbus_error_init (&error);
++    if (ck != NULL && !ck_connector_close_session(ck, &error))
++    {
++        log_message(LOG_LEVEL_ALWAYS, "Error closing consolekit connection.");
++    }
++
+     /* keep the old waitpid if some error occurs during execlp */
+     g_waitpid(wmpid);
+     g_sigterm(xpid);
+Index: xrdp-bartw72/sesman/Makefile.am
+===================================================================
+--- xrdp-bartw72.orig/sesman/Makefile.am	2013-11-29 15:03:56.094448332 +0100
++++ xrdp-bartw72/sesman/Makefile.am	2013-11-29 15:46:15.000000000 +0100
+@@ -6,9 +6,11 @@
+   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
+   -DXRDP_PID_PATH=\"${localstatedir}/run\"
+ 
++DBUS1=$(shell ${PKG_CONFIG} --cflags dbus-1)
+ INCLUDES = \
+   -I$(top_srcdir)/common \
+-  -I$(top_srcdir)/sesman/libscp
++  -I$(top_srcdir)/sesman/libscp \
++  ${DBUS1}
+ 
+ if SESMAN_NOPAM
+ AUTH_C = verify_user.c
+@@ -50,7 +52,9 @@
+   $(top_builddir)/common/libcommon.la \
+   $(top_builddir)/sesman/libscp/libscp.la \
+   $(AUTH_LIB) \
+-  -lpthread
++  -lpthread \
++  -lck-connector \
++  -ldbus-1
+ 
+ sesmansysconfdir=$(sysconfdir)/xrdp
+ 
