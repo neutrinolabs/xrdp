@@ -183,7 +183,8 @@ rdpRRScreenSetSize(ScreenPtr pScreen, CARD16 width, CARD16 height,
     pScreen->root->drawable.width = width;
     pScreen->root->drawable.height = height;
     ResizeChildrenWinSize(pScreen->root, 0, 0, 0, 0);
-    RRGetInfo(pScreen, 1);
+    //RRGetInfo(pScreen, 1);
+    RRScreenSizeNotify(pScreen);
     rdpInvalidateArea(g_pScreen, 0, 0, g_rdpScreen.width, g_rdpScreen.height);
     ErrorF("  screen resized to %dx%d\n",
            pScreen->width, pScreen->height);
@@ -243,7 +244,7 @@ rdpRRModeDestroy(ScreenPtr pScreen, RRModePtr mode)
 
 /******************************************************************************/
 Bool
-rdpRROutputGetProperty(ScreenPtr   pScreen, RROutputPtr output, Atom property)
+rdpRROutputGetProperty(ScreenPtr pScreen, RROutputPtr output, Atom property)
 {
     ErrorF("rdpRROutputGetProperty:\n");
     return TRUE;
