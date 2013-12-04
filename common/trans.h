@@ -66,6 +66,10 @@ trans_delete(struct trans* self);
 int APP_CC
 trans_get_wait_objs(struct trans* self, tbus* objs, int* count);
 int APP_CC
+trans_get_wait_objs_rw(struct trans *self,
+                       tbus *robjs, int *rcount,
+                       tbus *wobjs, int *wcount);
+int APP_CC
 trans_check_wait_objs(struct trans* self);
 int APP_CC
 trans_force_read_s(struct trans* self, struct stream* in_s, int size);
