@@ -471,6 +471,15 @@ trans_write_copy(struct trans *self)
         }
         temp_s->next_packet = (char *) wait_s;
     }
+
+    /* try to send */
+    if (send_waiting(self, 0) != 0)
+    {
+        /* error */
+        self->status = TRANS_STATUS_DOWN;
+        return 1;
+    }
+
     return 0;
 }
 
