@@ -24,6 +24,7 @@
 
 #include "fifo.h"
 #include "mlog.h"
+#include "os_calls.h"
 
 /**
  * Initialize a FIFO that grows as required
@@ -50,7 +51,7 @@ fifo_init(FIFO* fp, int num_entries)
 
     fp->rd_ptr = 0;
     fp->wr_ptr = 0;
-    fp->user_data = (long *) g_malloc(sizeof(long) * num_entries);
+    fp->user_data = (long *) g_malloc(sizeof(long) * num_entries, 1);
 
     if (fp->user_data)
     {
@@ -94,6 +95,7 @@ fifo_deinit(FIFO* fp)
     fp->rd_ptr = 0;
     fp->wr_ptr = 0;
     fp->entries = 0;
+    return 0;
 }
 
 /**
@@ -148,7 +150,7 @@ fifo_insert(FIFO* fp, void* data)
     if (next_val == fp->rd_ptr)
     {
         /* FIFO is full, expand it by 10 entries */
-        lp = (long *) g_malloc(sizeof(long) * (fp->entries + 10));
+        lp = (long *) g_malloc(sizeof(long) * (fp->entries + 10), 1);
         if (!lp)
         {
             log_debug_low("FIFO full; cannot expand, no memory");
@@ -233,8 +235,6 @@ fifo_remove(FIFO* fp)
 void*
 fifo_peek(FIFO* fp)
 {
-    long data;
-
     log_debug_high("entered\n");
 
     if (!fp)
