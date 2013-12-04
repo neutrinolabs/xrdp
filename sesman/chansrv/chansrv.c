@@ -46,7 +46,6 @@ static int g_rdpsnd_index = -1;
 static int g_rdpdr_index = -1;
 static int g_rail_index = -1;
 static int g_drdynvc_index = -1;
-static int g_sent = 0; /* if sent data to xrdp, waiting response */
 
 /* state info for dynamic virtual channels */
 static struct xrdp_api_data *g_dvc_channels[MAX_DVC_CHANNELS];
@@ -95,7 +94,7 @@ add_timeout(int msoffset, void (*callback)(void *data), void *data)
 {
     struct timeout_obj *tobj;
     tui32 now;
-    
+
     LOG(10, ("add_timeout:"));
     now = g_time3();
     tobj = g_malloc(sizeof(struct timeout_obj), 1);
@@ -297,7 +296,6 @@ send_data_from_chan_item(struct chan_item *chan_item)
     s_mark_end(s);
     LOGM((LOG_LEVEL_DEBUG, "chansrv::send_data_from_chan_item: -- "
           "size %d chan_flags 0x%8.8x", size, chan_flags));
-    g_sent = 1;
 
     error = trans_write_copy(g_con_trans);
     if (error != 0)
@@ -363,10 +361,7 @@ send_channel_data(int chan_id, char *data, int size)
         if (g_chan_items[index].id == chan_id)
         {
             add_data_to_chan_item(g_chan_items + index, data, size);
-            if (g_sent == 0)
-            {
-                check_chan_items();
-            }
+            check_chan_items();
             return 0;
         }
     }
@@ -380,10 +375,10 @@ int APP_CC
 send_rail_drawing_orders(char* data, int size)
 {
     LOGM((LOG_LEVEL_DEBUG, "chansrv::send_rail_drawing_orders: size %d", size));
-    
+
     struct stream* s;
     int error;
-    
+
     s = trans_get_out_s(g_con_trans, 8192);
     out_uint32_le(s, 0); /* version */
     out_uint32_le(s, 8 + 8 + size); /* size */
@@ -579,8 +574,6 @@ process_message_channel_setup(struct stream *s)
 
     if (g_rdpsnd_index >= 0)
     {
-        /* gets reset to 1 by next send_data_from_chan_item */
-        g_sent = 0; /* wait for response! */
         sound_init();
     }
 
@@ -679,7 +672,6 @@ static int APP_CC
 process_message_channel_data_response(struct stream *s)
 {
     LOG(10, ("process_message_channel_data_response:"));
-    g_sent = 0;
     check_chan_items();
     return 0;
 }
@@ -1379,7 +1371,7 @@ get_log_level(const char* level_str, unsigned int default_level)
         "LOG_LEVEL_DEBUG"
     };
     unsigned int i;
-    
+
     if (level_str == NULL || level_str[0] == 0)
     {
         return default_level;
@@ -1449,7 +1441,7 @@ main(int argc, char **argv)
     pid = g_getpid();
 
     log_level = get_log_level(g_getenv("CHANSRV_LOG_LEVEL"), LOG_LEVEL_ERROR);
-    
+
     /* starting logging subsystem */
     g_memset(&logconfig, 0, sizeof(struct log_config));
     logconfig.program_name = "XRDP-Chansrv";
