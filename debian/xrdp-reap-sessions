@@ -11,7 +11,7 @@ if [ ! -d /tmp/.xrdp ] ; then
 fi
 
 DISPLAYS=""
-PIDS=$(pidof gnome-sessioni xfce4-session)
+PIDS=$(pidof gnome-session xfce4-session)
 for PID in $(ls -1 /tmp/.ICE-unix/ 2>/dev/null)
 do
 	if [ "${PID}" != "" ] && [ "${PIDS}" != "" ] ; then

@@ -1,10 +1,29 @@
-Index: xrdp-bartw72/instfiles/Makefile.am
-===================================================================
---- xrdp-bartw72.orig/instfiles/Makefile.am	2013-11-23 14:13:04.000000000 +0100
-+++ xrdp-bartw72/instfiles/Makefile.am	2013-11-23 14:26:57.000000000 +0100
+--- a/instfiles/Makefile.am
++++ b/instfiles/Makefile.am
 @@ -29,4 +29,4 @@
  install-data-hook:
  	chmod 755 $(DESTDIR)$(sysconfdir)/xrdp/xrdp.sh
  	chmod 755 $(DESTDIR)$(sysconfdir)/init.d/xrdp
 -	sed -i 's|__BASE__|$(prefix)|' $(sysconfdir)/init.d/xrdp;
 +	sed -i 's|__BASE__|$(prefix)|' $(DESTDIR)$(sysconfdir)/init.d/xrdp;
+--- a/instfiles/init.d/xrdp
++++ b/instfiles/init.d/xrdp
+@@ -135,6 +135,18 @@
+         else
+             log_progress_msg "apparently not running"
+         fi
++        if pidofproc /usr/bin/X11rdp > /dev/null; then
++            sh /usr/sbin/xrdp-killall >/dev/null
++        elif pidofproc /usr/bin/Xvnc > /dev/null; then
++            sh /usr/sbin/xrdp-killall >/dev/null
++        fi
++        if [ -d /tmp/.xrdp ] ; then
++                sleep 3
++                rm -rf /tmp/.xrdp
++        fi
++	if [ -d /tmp/.X11-unix ] ; then
++		rm -f /tmp/.X11-unix/X??
++	fi
+         log_end_msg $exitval
+ 	;;
+   force-stop)

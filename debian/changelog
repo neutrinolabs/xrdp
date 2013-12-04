@@ -1,3 +1,21 @@
+xrdp (0.7.0-1.10) UNRELEASED; urgency=low
+
+  * Fix issue in reap script.
+
+ -- Warmerdam, B. (Bart) <Bart.Warmerdam@mail.ing.nl>  Wed, 04 Dec 2013 10:00:50 +0100
+
+xrdp (0.7.0-1.9) ingunstable; urgency=low
+
+  * Do not strip binaries to make it possibel to debug.
+
+ -- Warmerdam, B. (Bart) <Bart.Warmerdam@mail.ing.nl>  Tue, 03 Dec 2013 21:35:43 +0100
+
+xrdp (0.7.0-1.8) ingunstable; urgency=low
+
+  * Disable all but clipboard redirection.
+
+ -- Warmerdam, B. (Bart) <Bart.Warmerdam@mail.ing.nl>  Tue, 03 Dec 2013 15:43:23 +0100
+
 xrdp (0.7.0-1.7) ingunstable; urgency=low
 
   * Cleanup scripts also remove sessions from xfce4, which is not correct.

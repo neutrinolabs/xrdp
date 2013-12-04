@@ -1,0 +1,43 @@
+--- a/sesman/session.c
++++ b/sesman/session.c
+@@ -481,6 +481,8 @@
+ 
+     if (pid == -1)
+     {
++        log_message(LOG_LEVEL_ERROR, "cannot fork process for wm and x"
++                    " - user %s, display=%d, sessioncount=%d", username, display, g_session_count);
+     }
+     else if (pid == 0) /* child sesman */
+     {
+@@ -494,6 +496,8 @@
+ 
+         if (wmpid == -1)
+         {
++            log_message(LOG_LEVEL_ERROR, "cannot fork process for wm"
++                    " - user %s, display=%d, sessioncount=%d", username, display, g_session_count);
+         }
+         else if (wmpid == 0) /* child (child sesman) xserver */
+         {
+@@ -586,6 +590,8 @@
+ 
+             if (xpid == -1)
+             {
++                log_message(LOG_LEVEL_ERROR, "cannot fork process for x"
++                    " - user %s, display=%d, sessioncount=%d", username, display, g_session_count);
+             }
+             else if (xpid == 0) /* child */
+             {
+--- a/common/os_calls.c
++++ b/common/os_calls.c
+@@ -2595,6 +2595,11 @@
+         g_mk_temp_dir(0);
+     }
+ 
++    if (rv == -1)
++    {
++        log_message(LOG_LEVEL_ERROR, "Error forking process with error: %d", errno);
++    }
++
+     return rv;
+ #endif
+ }

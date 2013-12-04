@@ -13,3 +13,4 @@
 #35_automake.patch
 #36_use_other_thread_type.diff
 40_ck_support.diff
+41_add_fork_logging.diff
