@@ -2,6 +2,7 @@
  * xrdp: A Remote Desktop Protocol server.
  *
  * Copyright (C) Laxmikant Rashinkar 2013 LK.Rashinkar@gmail.com
+ * Copyright (C) Jay Sorg 2013 jay.sorg@gmail.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -163,25 +164,25 @@ static int  APP_CC scard_get_free_slot(void);
 #if 0
 static void APP_CC scard_release_resources(void);
 #endif
-static void APP_CC scard_send_EstablishContext(IRP* irp, int scope);
-static void APP_CC scard_send_ReleaseContext(IRP* irp, tui32 context);
+static void APP_CC scard_send_EstablishContext(IRP *irp, int scope);
+static void APP_CC scard_send_ReleaseContext(IRP *irp, tui32 context);
 static void APP_CC scard_send_IsContextValid(IRP* irp, tui32 context);
-static void APP_CC scard_send_ListReaders(IRP* irp, tui32 context, int wide);
-static void APP_CC scard_send_GetStatusChange(IRP* irp, tui32 context, int wide,
+static void APP_CC scard_send_ListReaders(IRP *irp, tui32 context, int wide);
+static void APP_CC scard_send_GetStatusChange(IRP *irp, tui32 context, int wide,
                                               tui32 timeout, tui32 num_readers,
-                                              READER_STATE* rsa);
-static void APP_CC scard_send_Connect(IRP* irp, tui32 context, int wide,
-                                      READER_STATE* rs);
-static void APP_CC scard_send_Reconnect(IRP* irp, tui32 context,
-                                        tui32 sc_handle, READER_STATE* rs);
-static void APP_CC scard_send_BeginTransaction(IRP* irp, tui32 sc_handle);
-static void APP_CC scard_send_EndTransaction(IRP* irp, tui32 sc_handle,
+                                              READER_STATE *rsa);
+static void APP_CC scard_send_Connect(IRP *irp, tui32 context, int wide,
+                                      READER_STATE *rs);
+static void APP_CC scard_send_Reconnect(IRP *irp, tui32 context,
+                                        tui32 sc_handle, READER_STATE *rs);
+static void APP_CC scard_send_BeginTransaction(IRP *irp, tui32 sc_handle);
+static void APP_CC scard_send_EndTransaction(IRP *irp, tui32 sc_handle,
                                              tui32 dwDisposition);
-static void APP_CC scard_send_Status(IRP* irp, int wide, tui32 sc_handle,
+static void APP_CC scard_send_Status(IRP *irp, int wide, tui32 sc_handle,
                                      int cchReaderLen, int cbAtrLen);
-static void APP_CC scard_send_Disconnect(IRP* irp, tui32 context,
+static void APP_CC scard_send_Disconnect(IRP *irp, tui32 context,
                                          tui32 sc_handle, int dwDisposition);
-static int  APP_CC scard_send_Transmit(IRP* irp, tui32 sc_handle,
+static int  APP_CC scard_send_Transmit(IRP *irp, tui32 sc_handle,
                                        char *send_data, int send_bytes,
                                        int recv_bytes,
                                        struct xrdp_scard_io_request *send_ior,
@@ -189,9 +190,9 @@ static int  APP_CC scard_send_Transmit(IRP* irp, tui32 sc_handle,
 static int APP_CC scard_send_Control(IRP* irp, tui32 context, tui32 sc_handle,
                                      char *send_data, int send_bytes,
                                      int recv_bytes, int control_code);
-static int APP_CC scard_send_Cancel(IRP* irp, tui32 context);
-static int APP_CC scard_send_GetAttrib(IRP* irp, tui32 sc_handle,
-                                       READER_STATE* rs);
+static int APP_CC scard_send_Cancel(IRP *irp, tui32 context);
+static int APP_CC scard_send_GetAttrib(IRP *irp, tui32 sc_handle,
+                                       READER_STATE *rs);
 
 /******************************************************************************
 **                    local callbacks into this module                       **
@@ -937,14 +938,19 @@ scard_send_EstablishContext(IRP *irp, int scope)
     xstream_wr_u32_le(s, scope);  /* Ioctl specific data      */
     xstream_wr_u32_le(s, 0);      /* don't know what this is, */
                                   /* but Win7 is sending it   */
-    /* get stream len */
-    bytes = xstream_len(s);
 
-    /* InputBufferLength is number of bytes AFTER 20 byte padding */
-    *(s->data + 28) = bytes - 56;
+    s_mark_end(s);
+
+    s_pop_layer(s, iso_hdr);
+    bytes = (int) (s->end - s->p);
+    bytes -= 28;
+    out_uint32_le(s, bytes);
+
+    bytes = (int) (s->end - s->data);
 
     /* send to client */
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
+
     xstream_free(s);
 }
 
@@ -952,12 +958,12 @@ scard_send_EstablishContext(IRP *irp, int scope)
  * Release a previously established Smart Card context
  *****************************************************************************/
 static void APP_CC
-scard_send_ReleaseContext(IRP* irp, tui32 context)
+scard_send_ReleaseContext(IRP *irp, tui32 context)
 {
     /* see [MS-RDPESC] 3.1.4.2 */
 
-    SMARTCARD*     sc;
-    struct stream* s;
+    SMARTCARD     *sc;
+    struct stream *s;
     int            bytes;
 
     if ((sc = smartcards[irp->scard_index]) == NULL)
@@ -992,14 +998,18 @@ scard_send_ReleaseContext(IRP* irp, tui32 context)
     xstream_wr_u32_le(s, 4);
     xstream_wr_u32_le(s, context);
 
-    /* get stream len */
-    bytes = xstream_len(s);
+    s_mark_end(s);
 
-    /* InputBufferLength is number of bytes AFTER 20 byte padding */
-    *(s->data + 28) = bytes - 56;
+    s_pop_layer(s, iso_hdr);
+    bytes = (int) (s->end - s->p);
+    bytes -= 28;
+    out_uint32_le(s, bytes);
+
+    bytes = (int) (s->end - s->data);
 
     /* send to client */
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
+
     xstream_free(s);
 }
 
@@ -1007,12 +1017,12 @@ scard_send_ReleaseContext(IRP* irp, tui32 context)
  * Checks if a previously established context is still valid
  *****************************************************************************/
 static void APP_CC
-scard_send_IsContextValid(IRP* irp, tui32 context)
+scard_send_IsContextValid(IRP *irp, tui32 context)
 {
     /* see [MS-RDPESC] 3.1.4.3 */
 
-    SMARTCARD*     sc;
-    struct stream* s;
+    SMARTCARD     *sc;
+    struct stream *s;
     int            bytes;
 
     if ((sc = smartcards[irp->scard_index]) == NULL)
@@ -1045,14 +1055,18 @@ scard_send_IsContextValid(IRP* irp, tui32 context)
     xstream_wr_u32_le(s, 4);
     xstream_wr_u32_le(s, context);
 
-    /* get stream len */
-    bytes = xstream_len(s);
+    s_mark_end(s);
 
-    /* InputBufferLength is number of bytes AFTER 20 byte padding */
-    *(s->data + 28) = bytes - 56;
+    s_pop_layer(s, iso_hdr);
+    bytes = (int) (s->end - s->p);
+    bytes -= 28;
+    out_uint32_le(s, bytes);
+
+    bytes = (int) (s->end - s->data);
 
     /* send to client */
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
+
     xstream_free(s);
 }
 
@@ -1118,17 +1132,22 @@ scard_send_ListReaders(IRP *irp, tui32 context, int wide)
 
     xstream_wr_u32_le(s, 0x00);
 
-    /* get stream len */
-    bytes = xstream_len(s);
+    s_mark_end(s);
 
-    /* InputBufferLength is number of bytes AFTER 20 byte padding  */
-    *(s->data + 28) = bytes - 56;
+    s_pop_layer(s, iso_hdr);
+    bytes = (int) (s->end - s->p);
+    bytes -= 28;
+    out_uint32_le(s, bytes);
+
+    bytes = (int) (s->end - s->data);
 
     /* send to client */
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
 
-    //g_writeln("scard_send_ListReaders:");
-    //g_hexdump(s->data, bytes);
+#if 0
+    g_writeln("scard_send_ListReaders:");
+    g_hexdump(s->data, bytes);
+#endif
 
     xstream_free(s);
 
@@ -1215,7 +1234,7 @@ scard_send_GetStatusChange(IRP* irp, tui32 context, int wide, tui32 timeout,
         return;
     }
 
-    s_push_layer(s, mcs_hdr, 4); /* set later */
+    s_push_layer(s, mcs_hdr, 4); /* bytes, set later */
     out_uint32_le(s, 0x00000000);
     out_uint32_le(s, 0x00000004);
     out_uint32_le(s, 0x00020000);
@@ -1342,58 +1361,54 @@ scard_send_Connect(IRP* irp, tui32 context, int wide, READER_STATE* rs)
         return;
     }
 
-    /*
-     * command format
-     *
-     * ......
-     *       20 bytes    padding
-     * u32    4 bytes    len 8, LE, v1
-     * u32    4 bytes    filler
-     *       20 bytes    unused (s->p currently pointed here at unused[0])
-     * u32    4 bytes    dwShareMode
-     * u32    4 bytes    dwPreferredProtocols
-     *       xx bytes    reader name
-     * u32    4 bytes    context length (len)
-     *      len bytes    context
-     */
-
-    xstream_seek(s, 20);
-    xstream_wr_u32_le(s, rs->dwShareMode);
-    xstream_wr_u32_le(s, rs->dwPreferredProtocols);
-
-    /* insert reader name */
+    s_push_layer(s, mcs_hdr, 4); /* bytes, set later */
+    out_uint32_le(s, 0x00000000);
+    out_uint32_le(s, 0x00020000);
+    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, 0x00020004);
+    out_uint32_le(s, rs->dwShareMode);
+    out_uint32_le(s, rs->dwPreferredProtocols);
     num_chars = g_mbstowcs(w_reader_name, rs->reader_name, 99);
-    xstream_wr_u32_le(s, 0);
-    xstream_wr_u32_le(s, 0);
-    xstream_wr_u32_le(s, num_chars);
+    out_uint32_le(s, num_chars + 2);
+    out_uint32_le(s, 0x00000000);
+    out_uint32_le(s, num_chars + 2);
     if (wide)
     {
         for (index = 0; index < num_chars; index++)
         {
-            xstream_wr_u16_le(s, w_reader_name[index]);
+            out_uint16_le(s, w_reader_name[index]);
         }
+        out_uint16_le(s, 0);
+        out_uint16_le(s, 0);
     }
     else
     {
         for (index = 0; index < num_chars; index++)
         {
-            xstream_wr_u8(s, w_reader_name[index]);
+            out_uint8(s, w_reader_name[index]);
         }
+        out_uint8(s, 0);
+        out_uint8(s, 0);
     }
     align_s(s, 4);
 
     /* insert context */
-    xstream_wr_u32_le(s, 4);
-    xstream_wr_u32_le(s, context);
+    out_uint32_le(s, 4);
+    out_uint32_le(s, context);
+    out_uint32_le(s, 0);
 
-    /* get stream len */
-    bytes = xstream_len(s);
+    s_mark_end(s);
 
-    /* InputBufferLength is number of bytes AFTER 20 byte padding */
-    *(s->data + 28) = bytes - 56;
+    s_pop_layer(s, iso_hdr);
+    bytes = (int) (s->end - s->p);
+    bytes -= 28;
+    out_uint32_le(s, bytes);
+
+    bytes = (int) (s->end - s->data);
 
     /* send to client */
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
+
     xstream_free(s);
 }
 
@@ -1409,13 +1424,13 @@ scard_send_Connect(IRP* irp, tui32 context, int wide, READER_STATE* rs)
  *                        rs.init_type
  *****************************************************************************/
 static void APP_CC
-scard_send_Reconnect(IRP* irp, tui32 context, tui32 sc_handle, READER_STATE* rs)
+scard_send_Reconnect(IRP *irp, tui32 context, tui32 sc_handle, READER_STATE *rs)
 {
     /* see [MS-RDPESC] 2.2.2.15 */
     /* see [MS-RDPESC] 3.1.4.36 */
 
-    SMARTCARD*     sc;
-    struct stream* s;
+    SMARTCARD     *sc;
+    struct stream *s;
     int            bytes;
 
     if ((sc = smartcards[irp->scard_index]) == NULL)
@@ -1456,14 +1471,18 @@ scard_send_Reconnect(IRP* irp, tui32 context, tui32 sc_handle, READER_STATE* rs)
     xstream_wr_u32_le(s, 4);
     xstream_wr_u32_le(s, sc_handle);
 
-    /* get stream len */
-    bytes = xstream_len(s);
+    s_mark_end(s);
 
-    /* InputBufferLength is number of bytes AFTER 20 byte padding */
-    *(s->data + 28) = bytes - 56;
+    s_pop_layer(s, iso_hdr);
+    bytes = (int) (s->end - s->p);
+    bytes -= 28;
+    out_uint32_le(s, bytes);
+
+    bytes = (int) (s->end - s->data);
 
     /* send to client */
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
+
     xstream_free(s);
 }
 
@@ -1494,32 +1513,38 @@ scard_send_BeginTransaction(IRP *irp, tui32 sc_handle)
         return;
     }
 
-    /*
-     * command format
-     *
-     * ......
-     *       20 bytes    padding
-     * u32    4 bytes    len 8, LE, v1
-     * u32    4 bytes    filler
-     *       36 bytes    unused (s->p currently pointed here at unused[0])
-     * u32    4 bytes    len of sc_handle
-     *        4 bytes    sc_handle
-     */
-
-    xstream_seek(s, 36);
+    s_push_layer(s, mcs_hdr, 4); /* bytes, set later */
+    out_uint32_le(s, 0x00000000);
+    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, 0x00020000);
+    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, 0x00020004);
+    out_uint32_le(s, 0x00000000);
+    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, 0x00000002);
 
     /* insert handle */
-    xstream_wr_u32_le(s, 4);
-    xstream_wr_u32_le(s, sc_handle);
+    out_uint32_le(s, 4);
+    out_uint32_le(s, sc_handle);
+    out_uint32_le(s, 0x00000000);
 
-    /* get stream len */
-    bytes = xstream_len(s);
+    s_mark_end(s);
 
-    /* InputBufferLength is number of bytes AFTER 20 byte padding */
-    *(s->data + 28) = bytes - 56;
+    s_pop_layer(s, mcs_hdr);
+    bytes = (int) (s->end - s->p);
+    bytes -= 8;
+    out_uint32_le(s, bytes);
+
+    s_pop_layer(s, iso_hdr);
+    bytes = (int) (s->end - s->p);
+    bytes -= 28;
+    out_uint32_le(s, bytes);
+
+    bytes = (int) (s->end - s->data);
 
     /* send to client */
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
+
     xstream_free(s);
 }
 
@@ -1551,36 +1576,38 @@ scard_send_EndTransaction(IRP *irp, tui32 sc_handle, tui32 dwDisposition)
         return;
     }
 
-    /*
-     * command format
-     *
-     * ......
-     *       20 bytes    padding
-     * u32    4 bytes    len 8, LE, v1
-     * u32    4 bytes    filler
-     *       24 bytes    unused (s->p currently pointed here at unused[0])
-     * u32    4 bytes    disposition
-     *        8 unused
-     * u32    4 bytes    length of sc_handle
-     *        4 bytes    sc_handle
-     */
-
-    xstream_seek(s, 24);
-    xstream_wr_u32_le(s, dwDisposition);
-    xstream_seek(s, 8);
+    s_push_layer(s, mcs_hdr, 4); /* bytes, set later */
+    out_uint32_le(s, 0x00000000);
+    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, 0x00020000);
+    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, 0x00020004);
+    out_uint32_le(s, dwDisposition);
+    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, 0x00000009);
 
     /* insert handle */
-    xstream_wr_u32_le(s, 4);
-    xstream_wr_u32_le(s, sc_handle);
+    out_uint32_le(s, 4);
+    out_uint32_le(s, sc_handle);
+    out_uint32_le(s, 0);
 
-    /* get stream len */
-    bytes = xstream_len(s);
+    s_mark_end(s);
 
-    /* InputBufferLength is number of bytes AFTER 20 byte padding */
-    *(s->data + 28) = bytes - 56;
+    s_pop_layer(s, mcs_hdr);
+    bytes = (int) (s->end - s->p);
+    bytes -= 8;
+    out_uint32_le(s, bytes);
+
+    s_pop_layer(s, iso_hdr);
+    bytes = (int) (s->end - s->p);
+    bytes -= 28;
+    out_uint32_le(s, bytes);
+
+    bytes = (int) (s->end - s->data);
 
     /* send to client */
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
+
     xstream_free(s);
 }
 
@@ -1613,42 +1640,55 @@ scard_send_Status(IRP *irp, int wide, tui32 sc_handle,
         log_error("scard_make_new_ioctl");
         return;
     }
-
-    /*
-     * command format
-     *
-     * ......
-     *       20 bytes    padding
-     * u32    4 bytes    len 8, LE, v1
-     * u32    4 bytes    filler
-     *       28 bytes    unused (s->p currently pointed here at unused[0])
-     * u32    4 bytes    reader len
-     * u32    4 bytes    ATR len
-     *        8 bytes    unused
-     * u32    4 bytes    len of sc_handle
-     *        4 bytes    sc_handle
-     *        4 bytes    unused
-     */
-
-    xstream_seek(s, 28);
-    xstream_wr_u32_le(s, cchReaderLen); /* readerLen, see [MS-RDPESC] 4.11 */
-    xstream_wr_u32_le(s, cbAtrLen); /* atrLen,    see [MS-RDPESC] 4.11 */
-    xstream_seek(s, 8);
-
+/*
+              30 00 00 00
+              00 00 00 00
+              04 00 00 00
+              00 00 02 00
+              04 00 00 00
+              04 00 02 00
+              01 00 00 00 dwReaderLen
+              00 00 00 00 dwAtrLen
+              40 00 00 00
+              04 00 00 00
+              07 00 00 00
+              04 00 00 00
+              09 00 00 00 hCard
+              00 00 00 00
+*/
+    s_push_layer(s, mcs_hdr, 4); /* bytes, set later */
+    out_uint32_le(s, 0x00000000);
+    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, 0x00020000);
+    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, 0x00020004);
+    out_uint32_le(s, cchReaderLen); /* readerLen, see [MS-RDPESC] 4.11 */
+    out_uint32_le(s, cbAtrLen); /* atrLen,    see [MS-RDPESC] 4.11 */
+    out_uint32_le(s, 0x00000040);
+    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, 0x00000007);
     /* insert sc_handle */
-    xstream_wr_u32_le(s, 4);
-    xstream_wr_u32_le(s, sc_handle);
+    out_uint32_le(s, 4);
+    out_uint32_le(s, sc_handle);
+    out_uint32_le(s, 0);
 
-    xstream_wr_u32_le(s, 0);
+    s_mark_end(s);
 
-    /* get stream len */
-    bytes = xstream_len(s);
+    s_pop_layer(s, mcs_hdr);
+    bytes = (int) (s->end - s->p);
+    bytes -= 8;
+    out_uint32_le(s, bytes);
 
-    /* InputBufferLength is number of bytes AFTER 20 byte padding */
-    *(s->data + 28) = bytes - 56;
+    s_pop_layer(s, iso_hdr);
+    bytes = (int) (s->end - s->p);
+    bytes -= 28;
+    out_uint32_le(s, bytes);
+
+    bytes = (int) (s->end - s->data);
 
     /* send to client */
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
+
     xstream_free(s);
 }
 
@@ -1680,40 +1720,41 @@ scard_send_Disconnect(IRP *irp, tui32 context, tui32 sc_handle,
         return;
     }
 
-    /*
-     * command format
-     *
-     * ......
-     *       20 bytes    padding
-     * u32    4 bytes    len 8, LE, v1
-     * u32    4 bytes    filler
-     *       24 bytes    unused (s->p currently pointed here at unused[0])
-     * u32    4 bytes    disposition
-     * u32    4 bytes    context len
-     *        4 bytes    context
-     * u32    4 bytes    length of sc_handle
-     *        4 bytes    sc_handle
-     */
-
-    xstream_seek(s, 24);
-    xstream_wr_u32_le(s, dwDisposition);
+    s_push_layer(s, mcs_hdr, 4); /* bytes, set later */
+    out_uint32_le(s, 0x00000000);
+    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, 0x00020000);
+    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, 0x00020004);
+    out_uint32_le(s, dwDisposition);
 
     /* insert context */
-    xstream_wr_u32_le(s, 4);
-    xstream_wr_u32_le(s, context);
+    out_uint32_le(s, 4);
+    out_uint32_le(s, context);
 
     /* insert handle */
-    xstream_wr_u32_le(s, 4);
-    xstream_wr_u32_le(s, sc_handle);
+    out_uint32_le(s, 4);
+    out_uint32_le(s, sc_handle);
 
-    /* get stream len */
-    bytes = xstream_len(s);
+    out_uint32_le(s, 0x00000000);
 
-    /* InputBufferLength is number of bytes AFTER 20 byte padding */
-    *(s->data + 28) = bytes - 56;
+    s_mark_end(s);
+
+    s_pop_layer(s, mcs_hdr);
+    bytes = (int) (s->end - s->p);
+    bytes -= 8;
+    out_uint32_le(s, bytes);
+
+    s_pop_layer(s, iso_hdr);
+    bytes = (int) (s->end - s->p);
+    bytes -= 28;
+    out_uint32_le(s, bytes);
+
+    bytes = (int) (s->end - s->data);
 
     /* send to client */
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
+
     xstream_free(s);
 }
 
@@ -1722,15 +1763,15 @@ scard_send_Disconnect(IRP *irp, tui32 context, tui32 sc_handle,
  * associated with a valid context.
  *****************************************************************************/
 static int APP_CC
-scard_send_Transmit(IRP* irp, tui32 sc_handle, char *send_data,
+scard_send_Transmit(IRP *irp, tui32 sc_handle, char *send_data,
                     int send_bytes, int recv_bytes,
                     struct xrdp_scard_io_request *send_ior,
                     struct xrdp_scard_io_request *recv_ior)
 {
     /* see [MS-RDPESC] 2.2.2.19 */
 
-    SMARTCARD*     sc;
-    struct stream* s;
+    SMARTCARD     *sc;
+    struct stream *s;
     int            bytes;
     int            val;
 
@@ -1776,21 +1817,84 @@ scard_send_Transmit(IRP* irp, tui32 sc_handle, char *send_data,
      * u32    4 bytes    sc_handle
      */
 
-    xstream_seek(s, 12);
-    xstream_wr_u32_le(s, 0); // map0
-    xstream_seek(s, 4);
-    xstream_wr_u32_le(s, 0); // map1
+    g_writeln("send_bytes %d", send_bytes);
+    g_writeln("recv_bytes %d", recv_bytes);
+
+#if 1
+    s_push_layer(s, mcs_hdr, 4); /* bytes, set later */
+    //out_uint32_be(s, 0x58000000);
+    out_uint32_be(s, 0x00000000);
+    out_uint32_be(s, 0x04000000);
+    out_uint32_be(s, 0x00000200);
+    out_uint32_be(s, 0x04000000);
+    out_uint32_be(s, 0x04000200);
+    out_uint32_be(s, 0x01000000);
+    out_uint32_be(s, 0x00000000);
+    out_uint32_be(s, 0x00000000);
+
+    //out_uint32_be(s, 0x05000000);
+    out_uint32_le(s, send_bytes);
+
+    out_uint32_be(s, 0x08000200);
+    out_uint32_be(s, 0x0c000200);
+    out_uint32_be(s, 0x00000000);
+
+    //out_uint32_be(s, 0x02010000);
+    out_uint32_le(s, recv_bytes);
+
+    out_uint32_be(s, 0x04000000);
+    out_uint32_be(s, 0x05000000);
+    out_uint32_be(s, 0x04000000);
+    out_uint32_be(s, 0x0b000000);
+
+    //out_uint32_be(s, 0x05000000);
+    //out_uint32_be(s, 0x00b00704);
+    //out_uint32_be(s, 0x10000000);
+    out_uint32_le(s, send_bytes);
+    out_uint8p(s, send_data, send_bytes);
+    align_s(s, 4);
+
+    out_uint32_be(s, 0x01000000);
+    out_uint32_be(s, 0x00000000);
+    out_uint32_be(s, 0x00000000);
+#else
+
+    g_printf("send cbPciLength %d\n", send_ior->cbPciLength);
+    g_printf("send extra_bytes %d\n", send_ior->extra_bytes);
+    g_printf("recv cbPciLength %d\n", recv_ior->cbPciLength);
+    g_printf("recv extra_bytes %d\n", recv_ior->extra_bytes);
+
+    s_push_layer(s, mcs_hdr, 4); /* bytes, set later */
+    out_uint32_le(s, 0x00000000);
+
+    out_uint32_le(s, 4);
+    xstream_wr_u32_le(s, 0x00020000); /* map0 */
+
+    out_uint32_le(s, 4);
+    xstream_wr_u32_le(s, 0x00020004); /* map1 */
+
     xstream_wr_u32_le(s, send_ior->dwProtocol);
-    xstream_wr_u32_le(s, send_ior->cbPciLength);
+    xstream_wr_u32_le(s, send_ior->cbPciLength - 8);
+
     val = send_ior->extra_bytes > 0 ? 1 : 0;
-    xstream_wr_u32_le(s, val); // map2
+    xstream_wr_u32_le(s, val); /* map2 */
+
     xstream_wr_u32_le(s, send_bytes);
-    val = send_bytes > 0 ? 1 : 0;
-    xstream_wr_u32_le(s, val); // map3
-    val = recv_ior->cbPciLength > 0 ? 1 : 0;
-    xstream_wr_u32_le(s, val); // map 4
+
+    val = send_bytes > 0 ? 0x00020008 : 0;
+    xstream_wr_u32_le(s, val); /* map3 */
+
+    val = recv_ior->cbPciLength > 0 ? 0x0002000c : 0;
+    xstream_wr_u32_le(s, val); /* map 4 */
+
     xstream_wr_u32_le(s, 0); // map5
     xstream_wr_u32_le(s, recv_bytes);
+
+    /* map0 */
+    out_uint32_le(s, 4);
+    out_uint32_le(s, 5);
+
+    /* map1 */
     xstream_wr_u32_le(s, 4);
     xstream_wr_u32_le(s, sc_handle);
 
@@ -1804,29 +1908,46 @@ scard_send_Transmit(IRP* irp, tui32 sc_handle, char *send_data,
     {
         xstream_wr_u32_le(s, send_bytes);
         out_uint8a(s, send_data, send_bytes);
+        align_s(s, 4);
     }
 
     if (recv_ior->cbPciLength > 0)
     {
+        /* map4 */
         xstream_wr_u32_le(s, recv_ior->dwProtocol);
         xstream_wr_u32_le(s, recv_ior->cbPciLength);
         val = recv_ior->extra_bytes > 0 ? 1 : 0;
-        xstream_wr_u32_le(s, val);
+        xstream_wr_u32_le(s, val); /* map6*/
         if (val)
         {
             xstream_wr_u32_le(s, recv_ior->extra_bytes);
             out_uint8a(s, recv_ior->extra_data, recv_ior->extra_bytes);
         }
     }
+#endif
 
-    /* get stream len */
-    bytes = xstream_len(s);
+    s_mark_end(s);
 
-    /* InputBufferLength is number of bytes AFTER 20 byte padding */
-    *(s->data + 28) = bytes - 56;
+    s_pop_layer(s, mcs_hdr);
+    bytes = (int) (s->end - s->p);
+    bytes -= 8;
+    out_uint32_le(s, bytes);
+
+    s_pop_layer(s, iso_hdr);
+    bytes = (int) (s->end - s->p);
+    bytes -= 28;
+    out_uint32_le(s, bytes);
+
+    bytes = (int) (s->end - s->data);
 
     /* send to client */
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
+
+#if 1
+    g_writeln("scard_send_Transmit:");
+    g_hexdump(s->data, bytes);
+#endif
+
     xstream_free(s);
     return 0;
 }
@@ -1835,13 +1956,13 @@ scard_send_Transmit(IRP* irp, tui32 sc_handle, char *send_data,
  * Communicate directly with the smart card reader
  *****************************************************************************/
 static int APP_CC
-scard_send_Control(IRP* irp, tui32 context, tui32 sc_handle, char *send_data,
+scard_send_Control(IRP *irp, tui32 context, tui32 sc_handle, char *send_data,
                    int send_bytes, int recv_bytes, int control_code)
 {
     /* see [MS-RDPESC] 2.2.2.19 */
 
-    SMARTCARD*     sc;
-    struct stream* s;
+    SMARTCARD     *sc;
+    struct stream *s;
     int            bytes;
     int            val;
 
@@ -1857,61 +1978,49 @@ scard_send_Control(IRP* irp, tui32 context, tui32 sc_handle, char *send_data,
         return 1;
     }
 
-    /*
-     * command format
-     *
-     * ......
-     *       20 bytes    padding
-     * u32    4 bytes    len 8, LE, v1
-     * u32    4 bytes    filler
-     *       12 bytes    unused (s->p currently pointed here at unused[0])
-     * u32    4 bytes    map0
-     *        4 bytes    unused
-     * u32    4 bytes    map1
-     * u32    4 bytes    dwControlCode
-     * u32    4 bytes    cbRecvLength
-     * u32    4 bytes    map2
-     *        4 bytes    unused
-     * u32    4 bytes    cbOutBufferSize
-     * u32    4 bytes    context len
-     * u32    4 bytes    context
-     * u32    4 bytes    handle len
-     * u32    4 bytes    handle
-     */
-
-    xstream_seek(s, 12);
-    xstream_wr_u32_le(s, 0); // map0
-    xstream_seek(s, 4);
-    xstream_wr_u32_le(s, 0); // map1
-
-    xstream_wr_u32_le(s, control_code);
-
-    xstream_wr_u32_le(s, send_bytes);
-
-    val = send_bytes > 0 ? 1 : 0;
-    xstream_wr_u32_le(s, val); // map2
-
-    xstream_wr_u32_le(s, 0);
-    xstream_wr_u32_le(s, recv_bytes);
-    xstream_wr_u32_le(s, 4);
-    xstream_wr_u32_le(s, context);
-    xstream_wr_u32_le(s, 4);
-    xstream_wr_u32_le(s, sc_handle);
-
+    s_push_layer(s, mcs_hdr, 4); /* bytes, set later */
+    out_uint32_le(s, 0x00000000);
+    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, 0x00020000); /* map0 */
+    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, 0x00020004); /* map1 */
+    out_uint32_le(s, control_code);
+    out_uint32_le(s, send_bytes);
+    val = send_bytes > 0 ? 0x00020008 : 0;
+    out_uint32_le(s, val);        /* map2 */
+    out_uint32_le(s, 0x00000000);
+    out_uint32_le(s, recv_bytes);
+    out_uint32_le(s, 4);
+    out_uint32_le(s, context);
+    out_uint32_le(s, 4);
+    out_uint32_le(s, sc_handle);
     if (send_bytes > 0)
     {
-        xstream_wr_u32_le(s, send_bytes);
+        out_uint32_le(s, send_bytes);
         out_uint8a(s, send_data, send_bytes);
     }
+    else
+    {
+        out_uint32_le(s, 0x00000000);
+    }
 
-    /* get stream len */
-    bytes = xstream_len(s);
+    s_mark_end(s);
 
-    /* InputBufferLength is number of bytes AFTER 20 byte padding */
-    *(s->data + 28) = bytes - 56;
+    s_pop_layer(s, mcs_hdr);
+    bytes = (int) (s->end - s->p);
+    bytes -= 8;
+    out_uint32_le(s, bytes);
+
+    s_pop_layer(s, iso_hdr);
+    bytes = (int) (s->end - s->p);
+    bytes -= 28;
+    out_uint32_le(s, bytes);
+
+    bytes = (int) (s->end - s->data);
 
     /* send to client */
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
+
     xstream_free(s);
     return 0;
 }
@@ -1920,12 +2029,12 @@ scard_send_Control(IRP* irp, tui32 context, tui32 sc_handle, char *send_data,
  * Cancel any outstanding calls
  *****************************************************************************/
 static int APP_CC
-scard_send_Cancel(IRP* irp, tui32 context)
+scard_send_Cancel(IRP *irp, tui32 context)
 {
     /* see [MS-RDPESC] 3.1.4.27 */
 
-    SMARTCARD*     sc;
-    struct stream* s;
+    SMARTCARD     *sc;
+    struct stream *s;
     int            bytes;
 
     if ((sc = smartcards[irp->scard_index]) == NULL)
@@ -1956,14 +2065,18 @@ scard_send_Cancel(IRP* irp, tui32 context)
     xstream_wr_u32_le(s, 4);
     xstream_wr_u32_le(s, context);
 
-    /* get stream len */
-    bytes = xstream_len(s);
+    s_mark_end(s);
 
-    /* InputBufferLength is number of bytes AFTER 20 byte padding */
-    *(s->data + 28) = bytes - 56;
+    s_pop_layer(s, iso_hdr);
+    bytes = (int) (s->end - s->p);
+    bytes -= 28;
+    out_uint32_le(s, bytes);
+
+    bytes = (int) (s->end - s->data);
 
     /* send to client */
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
+
     xstream_free(s);
     return 0;
 }
@@ -1972,12 +2085,12 @@ scard_send_Cancel(IRP* irp, tui32 context)
  * Get reader attributes
  *****************************************************************************/
 static int APP_CC
-scard_send_GetAttrib(IRP* irp, tui32 sc_handle, READER_STATE* rs)
+scard_send_GetAttrib(IRP *irp, tui32 sc_handle, READER_STATE *rs)
 {
     /* see [MS-RDPESC] 2.2.2.21 */
 
-    SMARTCARD*     sc;
-    struct stream* s;
+    SMARTCARD     *sc;
+    struct stream *s;
     int            bytes;
 
     if ((sc = smartcards[irp->scard_index]) == NULL)
@@ -2016,14 +2129,18 @@ scard_send_GetAttrib(IRP* irp, tui32 sc_handle, READER_STATE* rs)
     xstream_wr_u32_le(s, 4);
     xstream_wr_u32_le(s, sc_handle);
 
-    /* get stream len */
-    bytes = xstream_len(s);
+    s_mark_end(s);
 
-    /* InputBufferLength is number of bytes AFTER 20 byte padding */
-    *(s->data + 28) = bytes - 56;
+    s_pop_layer(s, iso_hdr);
+    bytes = (int) (s->end - s->p);
+    bytes -= 28;
+    out_uint32_le(s, bytes);
+
+    bytes = (int) (s->end - s->data);
 
     /* send to client */
     send_channel_data(g_rdpdr_chan_id, s->data, bytes);
+
     xstream_free(s);
     return 0;
 }
@@ -2052,16 +2169,10 @@ scard_handle_EstablishContext_Return(struct stream *s, IRP *irp,
         log_error("DeviceId/CompletionId do not match those in IRP");
         return;
     }
-    if (IoStatus != 0)
-    {
-        log_error("failed to establish context - device not usable");
-        /* LK_TODO delete irp and smartcard entry */
-        return;
-    }
     /* get OutputBufferLen */
     xstream_rd_u32_le(s, len);
     con = (struct trans *) (irp->user_data);
-    scard_function_establish_context_return(con, s, len);
+    scard_function_establish_context_return(con, s, len, IoStatus);
     devredir_irp_delete(irp);
     log_debug("leaving");
 }
@@ -2084,16 +2195,10 @@ scard_handle_ReleaseContext_Return(struct stream *s, IRP *irp,
         log_error("DeviceId/CompletionId do not match those in IRP");
         return;
     }
-    if (IoStatus != 0)
-    {
-        log_error("ReleaseContext failed");
-        /* LK_TODO delete irp and smartcard entry */
-        return;
-    }
     /* get OutputBufferLen */
     xstream_rd_u32_le(s, len);
     con = (struct trans *) (irp->user_data);
-    scard_function_release_context_return(con, s, len);
+    scard_function_release_context_return(con, s, len, IoStatus);
     devredir_irp_delete(irp);
     log_debug("leaving");
 }
@@ -2118,17 +2223,10 @@ APP_CC scard_handle_IsContextValid_Return(struct stream *s, IRP *irp,
         return;
     }
 
-    if (IoStatus != 0)
-    {
-        log_error("Error checking context validity");
-        /* LK_TODO delete irp and smartcard entry */
-        return;
-    }
-
     /* get OutputBufferLen */
     xstream_rd_u32_le(s, len);
     con = (struct trans *) (irp->user_data);
-    scard_function_is_context_valid_return(con, s, len);
+    scard_function_is_context_valid_return(con, s, len, IoStatus);
     devredir_irp_delete(irp);
     log_debug("leaving");
 }
@@ -2205,18 +2303,11 @@ scard_handle_Connect_Return(struct stream *s, IRP *irp,
         return;
     }
 
-    if (IoStatus != 0)
-    {
-        log_error("failed to connect");
-        /* LK_TODO delete irp and smartcard entry */
-        return;
-    }
-
     /* get OutputBufferLen */
     xstream_rd_u32_le(s, len);
 
     con = (struct trans *) (irp->user_data);
-    scard_function_connect_return(con, s, len);
+    scard_function_connect_return(con, s, len, IoStatus);
     devredir_irp_delete(irp);
 
     log_debug("leaving");
@@ -2242,17 +2333,10 @@ scard_handle_Reconnect_Return(struct stream *s, IRP *irp,
         return;
     }
 
-    if (IoStatus != 0)
-    {
-        log_error("failed to reconnect");
-        /* LK_TODO delete irp and smartcard entry */
-        return;
-    }
-
     /* get OutputBufferLen */
     xstream_rd_u32_le(s, len);
     con = (struct trans *) (irp->user_data);
-    scard_function_reconnect_return(con, s, len);
+    scard_function_reconnect_return(con, s, len, IoStatus);
     devredir_irp_delete(irp);
     log_debug("leaving");
 }
@@ -2277,17 +2361,10 @@ scard_handle_BeginTransaction_Return(struct stream *s, IRP *irp,
         return;
     }
 
-    if (IoStatus != 0)
-    {
-        log_error("BeginTransaction failed");
-        /* LK_TODO delete irp and smartcard entry */
-        return;
-    }
-
     /* get OutputBufferLen */
     xstream_rd_u32_le(s, len);
     con = (struct trans *) (irp->user_data);
-    scard_function_begin_transaction_return(con, s, len);
+    scard_function_begin_transaction_return(con, s, len, IoStatus);
     devredir_irp_delete(irp);
     log_debug("leaving");
 }
@@ -2312,17 +2389,10 @@ scard_handle_EndTransaction_Return(struct stream *s, IRP *irp,
         return;
     }
 
-    if (IoStatus != 0)
-    {
-        log_error("EndTransaction failed");
-        /* LK_TODO delete irp and smartcard entry */
-        return;
-    }
-
     /* get OutputBufferLen */
     xstream_rd_u32_le(s, len);
     con = (struct trans *) (irp->user_data);
-    scard_function_end_transaction_return(con, s, len);
+    scard_function_end_transaction_return(con, s, len, IoStatus);
     devredir_irp_delete(irp);
     log_debug("leaving");
 }
@@ -2347,17 +2417,10 @@ scard_handle_Status_Return(struct stream *s, IRP *irp,
         return;
     }
 
-    if (IoStatus != 0)
-    {
-        log_error("StatusCall failed");
-        /* LK_TODO delete irp and smartcard entry */
-        return;
-    }
-
     /* get OutputBufferLen */
     xstream_rd_u32_le(s, len);
     con = (struct trans *) (irp->user_data);
-    scard_function_status_return(con, s, len);
+    scard_function_status_return(con, s, len, IoStatus);
     devredir_irp_delete(irp);
     log_debug("leaving");
 }
@@ -2382,17 +2445,10 @@ scard_handle_Disconnect_Return(struct stream *s, IRP *irp,
         return;
     }
 
-    if (IoStatus != 0)
-    {
-        log_error("Disconnect failed");
-        /* LK_TODO delete irp and smartcard entry */
-        return;
-    }
-
     /* get OutputBufferLen */
     xstream_rd_u32_le(s, len);
     con = (struct trans *) (irp->user_data);
-    scard_function_disconnect_return(con, s, len);
+    scard_function_disconnect_return(con, s, len, IoStatus);
     devredir_irp_delete(irp);
     log_debug("leaving");
 }
@@ -2416,17 +2472,10 @@ scard_handle_Transmit_Return(struct stream *s, IRP *irp, tui32 DeviceId,
         return;
     }
 
-    if (IoStatus != 0)
-    {
-        log_error("Transmit failed");
-        /* LK_TODO delete irp and smartcard entry */
-        return;
-    }
-
     /* get OutputBufferLen */
     xstream_rd_u32_le(s, len);
     con = (struct trans *) (irp->user_data);
-    scard_function_transmit_return(con, s, len);
+    scard_function_transmit_return(con, s, len, IoStatus);
     devredir_irp_delete(irp);
     log_debug("leaving");
 }
@@ -2450,17 +2499,10 @@ scard_handle_Control_Return(struct stream *s, IRP *irp, tui32 DeviceId,
         return;
     }
 
-    if (IoStatus != 0)
-    {
-        log_error("Control failed");
-        /* LK_TODO delete irp and smartcard entry */
-        return;
-    }
-
     /* get OutputBufferLen */
     xstream_rd_u32_le(s, len);
     con = (struct trans *) (irp->user_data);
-    scard_function_control_return(con, s, len);
+    scard_function_control_return(con, s, len, IoStatus);
     devredir_irp_delete(irp);
     log_debug("leaving");
 }
@@ -2484,17 +2526,10 @@ scard_handle_Cancel_Return(struct stream *s, IRP *irp, tui32 DeviceId,
         return;
     }
 
-    if (IoStatus != 0)
-    {
-        log_error("Cancel_call failed");
-        /* LK_TODO delete irp and smartcard entry */
-        return;
-    }
-
     /* get OutputBufferLen */
     xstream_rd_u32_le(s, len);
     con = (struct trans *) (irp->user_data);
-    scard_function_cancel_return(con, s, len);
+    scard_function_cancel_return(con, s, len, IoStatus);
     devredir_irp_delete(irp);
     log_debug("leaving");
 }
@@ -2518,17 +2553,10 @@ scard_handle_GetAttrib_Return(struct stream *s, IRP *irp, tui32 DeviceId,
         return;
     }
 
-    if (IoStatus != 0)
-    {
-        log_error("GetAttrib_call failed");
-        /* LK_TODO delete irp and smartcard entry */
-        return;
-    }
-
     /* get OutputBufferLen */
     xstream_rd_u32_le(s, len);
     con = (struct trans *) (irp->user_data);
-    scard_function_get_attrib_return(con, s, len);
+    scard_function_get_attrib_return(con, s, len, IoStatus);
     devredir_irp_delete(irp);
     log_debug("leaving");
 }
