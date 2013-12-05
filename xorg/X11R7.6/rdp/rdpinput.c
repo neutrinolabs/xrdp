@@ -622,6 +622,9 @@ rdpLoadLayout(int keylayout)
         case 0x0000041D: /* Swedish */
             snprintf(a4, 15, "%s", "se");
             break;
+        case 0x00000816: /* Portuguese */
+            snprintf(a4, 15, "%s", "pt");
+            break;
         default:
             LLOGLN(0, ("rdpLoadLayout: unknown keylayout 0x%8.8x", keylayout));
             return 1;
