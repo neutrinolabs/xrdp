@@ -113,7 +113,8 @@ int  APP_CC scard_deinit(void);
 int  APP_CC scard_send_establish_context(struct trans *con, int scope);
 int  APP_CC scard_send_release_context(struct trans *con, tui32 context);
 int  APP_CC scard_send_is_valid_context(struct trans *con, tui32 context);
-int  APP_CC scard_send_list_readers(struct trans *con, tui32 context, int wide);
+int  APP_CC scard_send_list_readers(struct trans *con, tui32 context,
+                                    char *groups, int cchReaders, int wide);
 
 int  APP_CC scard_send_get_status_change(struct trans *con, tui32 context,
                                          int wide, tui32 timeout,

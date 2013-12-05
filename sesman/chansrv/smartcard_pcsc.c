@@ -65,6 +65,7 @@
 
 /* TODO: put this in con */
 static int g_xrdp_pcsc_state = XRDP_PCSC_STATE_NONE;
+static int g_xrdp_pcsc_extra1;
 
 extern int g_display_num; /* in chansrv.c */
 
@@ -238,6 +239,9 @@ int APP_CC
 scard_process_list_readers(struct trans *con, struct stream *in_s)
 {
     int hContext;
+    int bytes_groups;
+    int cchReaders;
+    char *groups;
 
     LLOGLN(10, ("scard_process_list_readers:"));
     if (g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_LR)
@@ -247,8 +251,15 @@ scard_process_list_readers(struct trans *con, struct stream *in_s)
     }
     g_xrdp_pcsc_state |= XRDP_PCSC_STATE_GOT_LR;
     in_uint32_le(in_s, hContext);
-    LLOGLN(10, ("scard_process_list_readers: dwScope 0x%8.8x", hContext));
-    scard_send_list_readers(con, hContext, 1);
+    in_uint32_le(in_s, bytes_groups);
+    groups = (char *) g_malloc(bytes_groups + 1, 1);
+    in_uint8a(in_s, groups, bytes_groups);
+    in_uint32_le(in_s, cchReaders);
+    g_xrdp_pcsc_extra1 = g_xrdp_pcsc_extra1 = cchReaders;
+    LLOGLN(10, ("scard_process_list_readers: hContext 0x%8.8x cchReaders %d",
+           hContext, cchReaders));
+    scard_send_list_readers(con, hContext, groups, cchReaders, 1);
+    g_free(groups);
     return 0;
 }
 
@@ -264,6 +275,8 @@ scard_function_list_readers_return(struct trans *con,
     int            rn_index;
     int            index;
     int            bytes;
+    int            cchReaders;
+    int            llen;
     twchar         reader_name[100];
     char           lreader_name[16][100];
 
@@ -277,33 +290,40 @@ scard_function_list_readers_return(struct trans *con,
     }
     g_xrdp_pcsc_state &= ~XRDP_PCSC_STATE_GOT_LR;
 
+    cchReaders = g_xrdp_pcsc_extra1;
+
     g_memset(reader_name, 0, sizeof(reader_name));
     g_memset(lreader_name, 0, sizeof(lreader_name));
     rn_index = 0;
     readers = 0;
+    llen = 0;
     if (status == 0)
     {
         in_uint8s(in_s, 28);
         in_uint32_le(in_s, len);
-        while (len > 0)
+        llen = len;
+        if (cchReaders > 0)
         {
-            in_uint16_le(in_s, chr);
-            len -= 2;
-            if (chr == 0)
+            while (len > 0)
             {
-                if (reader_name[0] != 0)
+                in_uint16_le(in_s, chr);
+                len -= 2;
+                if (chr == 0)
                 {
-                    g_wcstombs(lreader_name[readers], reader_name, 99);
-                    g_memset(reader_name, 0, sizeof(reader_name));
-                    readers++;
+                    if (reader_name[0] != 0)
+                    {
+                        g_wcstombs(lreader_name[readers], reader_name, 99);
+                        g_memset(reader_name, 0, sizeof(reader_name));
+                        readers++;
+                    }
+                    reader_name[0] = 0;
+                    rn_index = 0;
                 }
-                reader_name[0] = 0;
-                rn_index = 0;
-            }
-            else
-            {
-                reader_name[rn_index] = chr;
-                rn_index++;
+                else
+                {
+                    reader_name[rn_index] = chr;
+                    rn_index++;
+                }
             }
         }
         if (rn_index > 0)
@@ -319,6 +339,7 @@ scard_function_list_readers_return(struct trans *con,
 
     out_s = trans_get_out_s(con, 8192);
     s_push_layer(out_s, iso_hdr, 8);
+    out_uint32_le(out_s, llen);
     out_uint32_le(out_s, readers);
     for (index = 0; index < readers; index++)
     {

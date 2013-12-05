@@ -1004,9 +1004,14 @@ SCardListReaders(SCARDCONTEXT hContext, LPCSTR mszGroups, LPSTR mszReaders,
     int status;
     int offset;
     int index;
+    int bytes_groups;
+    int val;
+    int llen;
     char reader[100];
 
     LLOGLN(10, ("SCardListReaders:"));
+    LLOGLN(10, ("SCardListReaders: mszGroups %s", mszGroups));
+    LLOGLN(10, ("SCardListReaders: *pcchReaders %d", *pcchReaders));
     if (g_sck == -1)
     {
         LLOGLN(0, ("SCardListReaders: error, not connected"));
@@ -1014,8 +1019,22 @@ SCardListReaders(SCARDCONTEXT hContext, LPCSTR mszGroups, LPSTR mszReaders,
     }
     msg = (char *) malloc(8192);
     pthread_mutex_lock(&g_mutex);
-    SET_UINT32(msg, 0, hContext);
-    if (send_message(SCARD_LIST_READERS, msg, 4) != 0)
+    offset = 0;
+    SET_UINT32(msg, offset, hContext);
+    offset += 4;
+    bytes_groups = 0;
+    if (mszGroups != 0)
+    {
+        bytes_groups = strlen(mszGroups);
+    }
+    SET_UINT32(msg, offset, bytes_groups);
+    offset += 4;
+    memcpy(msg + offset, mszGroups, bytes_groups);
+    offset += bytes_groups;
+    val = *pcchReaders;
+    SET_UINT32(msg, offset, val);
+    offset += 4;
+    if (send_message(SCARD_LIST_READERS, msg, offset) != 0)
     {
         LLOGLN(0, ("SCardListReaders: error, send_message"));
         free(msg);
@@ -1039,6 +1058,8 @@ SCardListReaders(SCARDCONTEXT hContext, LPCSTR mszGroups, LPSTR mszReaders,
     }
     pthread_mutex_unlock(&g_mutex);
     offset = 0;
+    llen = GET_UINT32(msg, offset);
+    offset += 4;
     num_readers = GET_UINT32(msg, offset);
     offset += 4;
     LLOGLN(10, ("SCardListReaders: mszReaders %p pcchReaders %p num_readers %d",
@@ -1060,6 +1081,10 @@ SCardListReaders(SCARDCONTEXT hContext, LPCSTR mszGroups, LPSTR mszReaders,
     reader_names_index++;
     status = GET_UINT32(msg, offset);
     offset += 4;
+    if (mszReaders == 0)
+    {
+        reader_names_index = llen;
+    }
     if (pcchReaders != 0)
     {
         *pcchReaders = reader_names_index;
