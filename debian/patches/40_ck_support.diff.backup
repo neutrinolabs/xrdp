@@ -1,0 +1,292 @@
+--- a/sesman/session.c
++++ b/sesman/session.c
+@@ -30,6 +30,8 @@
+ #include <errno.h>
+ //#include <time.h>
+ 
++#include <ConsoleKit/ck-connector/ck-connector.h>
++
+ extern tbus g_sync_event;
+ extern unsigned char g_fixedkey[8];
+ extern struct config_sesman *g_cfg; /* in sesman.c */
+@@ -227,7 +229,7 @@
+ 
+ /******************************************************************************/
+ static void DEFAULT_CC
+-session_start_sessvc(int xpid, int wmpid, long data, char *username, int display)
++session_start_sessvc(int xpid, int wmpid, long data, char *username, int display, environment_item environment[], int envsize)
+ {
+     struct list *sessvc_params = (struct list *)NULL;
+     char wmpid_str[25];
+@@ -258,7 +260,7 @@
+     list_add_item(sessvc_params, (long)g_strdup(wmpid_str));
+     list_add_item(sessvc_params, 0); /* mandatory */
+ 
+-    env_set_user(username, 0, display);
++    env_set_user(username, 0, display, environment, envsize);
+ 
+     /* executing sessvc */
+     g_execvp(exe_path, ((char **)sessvc_params->items));
+@@ -375,6 +377,49 @@
+     return 0;
+ }
+ 
++static int APP_CC
++ck_start_session(CkConnector *ck, char *username, int display, char *client_ip)
++{
++    DBusError error;
++    char *session;
++
++    log_message(LOG_LEVEL_ALWAYS, "Starting consolekit connection for user %s, display %d and client %s.",
++            username, display, client_ip);
++
++    dbus_error_init (&error);
++    if (ck_connector_open_session(ck, &error))
++    {
++        session = ck_connector_get_cookie(ck);
++        g_setenv("XDG_SESSION_COOKIE", session, 1);
++        log_message(LOG_LEVEL_INFO, "Created new consolekit session with cookie %s.", session);
++    }
++    else
++    {
++        log_message(LOG_LEVEL_ALWAYS, "Error opening consolekit session.");
++    }
++}
++
++static int APP_CC
++ck_stop_session(CkConnector *ck)
++{
++    DBusError error;
++    dbus_error_init (&error);
++    log_message(LOG_LEVEL_ALWAYS, "Closing consolekit connection with connection %p.", ck);
++    if (ck != NULL)
++    {
++        if (!ck_connector_close_session(ck, &error))
++        {
++            if (dbus_error_is_set(&error)) {
++                log_message(LOG_LEVEL_ALWAYS, "Error closing consolekit connection (%s).", error.message);
++                dbus_error_free(&error);
++            } else {
++                log_message(LOG_LEVEL_ALWAYS, "Error closing consolekit connection.");
++            }
++        }
++        ck_connector_unref(ck);
++    }
++}
++
+ /******************************************************************************/
+ /* called with the main thread */
+ static int APP_CC
+@@ -398,6 +443,8 @@
+     time_t ltime;
+     struct tm stime;
+     char execvpparams[2048];
++    CkConnector *ck;
++    environment_item environment[2];
+ 
+     /* initialize (zero out) local variables: */
+     g_memset(&ltime, 0, sizeof(time_t));
+@@ -444,6 +491,14 @@
+         return 0;
+     }
+ 
++    ck = ck_connector_new();
++    if (ck == 0)
++    {
++        log_message(LOG_LEVEL_ERROR, "cannot create consolekit connection "
++                    "element - user %s", username);
++        return 0;
++    }
++
+     pid = g_fork();
+ 
+     if (pid == -1)
+@@ -454,6 +509,11 @@
+         g_tcp_close(g_sck);
+         g_tcp_close(g_thread_sck);
+         auth_start_session(data, display);
++        ck_start_session(ck, username, display, client_ip);
++        environment[0].key = "XDG_SESSION_COOKIE";
++        environment[0].value = g_getenv("XDG_SESSION_COOKIE");
++        environment[1].key = "GDMSESSION";
++        environment[1].value = "FAKE_SESSION";
+         g_sprintf(geometry, "%dx%d", width, height);
+         g_sprintf(depth, "%d", bpp);
+         g_sprintf(screen, ":%d", display);
+@@ -465,7 +525,7 @@
+         else if (wmpid == 0) /* child (child sesman) xserver */
+         {
+             wait_for_xserver(display);
+-            env_set_user(username, 0, display);
++            env_set_user(username, 0, display, environment, 2);
+ 
+             if (x_server_running(display))
+             {
+@@ -556,7 +616,7 @@
+             }
+             else if (xpid == 0) /* child */
+             {
+-                env_set_user(username, passwd_file, display);
++                env_set_user(username, passwd_file, display, environment, 2);
+                 env_check_password_file(passwd_file, password);
+ 
+                 if (type == SESMAN_SESSION_TYPE_XVNC)
+@@ -641,7 +701,7 @@
+                 g_snprintf(text, 255, ":%d.0", display);
+                 g_setenv("DISPLAY", text, 1);
+                 /* new style waiting for clients */
+-                session_start_sessvc(xpid, wmpid, data, username, display);
++                session_start_sessvc(xpid, wmpid, data, username, display, environment, 1);
+             }
+         }
+     }
+@@ -669,6 +729,8 @@
+         temp->item->type = type;
+         temp->item->status = SESMAN_SESSION_STATUS_ACTIVE;
+ 
++        temp->item->ck = ck;
++
+         temp->next = g_sessions;
+         g_sessions = temp;
+         g_session_count++;
+@@ -692,7 +754,7 @@
+     }
+     else if (pid == 0)
+     {
+-        env_set_user(username, 0, display);
++        env_set_user(username, 0, display, NULL, 0);
+         g_snprintf(text, 255, "%s/%s", XRDP_CFG_PATH, "reconnectwm.sh");
+ 
+         if (g_file_exist(text))
+@@ -824,6 +886,8 @@
+ 
+         if (tmp->item->pid == pid)
+         {
++            ck_stop_session(tmp->item->ck);
++
+             /* deleting the session */
+             log_message(LOG_LEVEL_INFO, "++ terminated session:  username %s, display :%d.0, session_pid %d, ip %s", tmp->item->name, tmp->item->display, tmp->item->pid, tmp->item->client_ip);
+             g_free(tmp->item);
+--- a/sesman/Makefile.am
++++ b/sesman/Makefile.am
+@@ -6,9 +6,11 @@
+   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
+   -DXRDP_PID_PATH=\"${localstatedir}/run\"
+ 
++DBUS1=$(shell ${PKG_CONFIG} --cflags dbus-1)
+ INCLUDES = \
+   -I$(top_srcdir)/common \
+-  -I$(top_srcdir)/sesman/libscp
++  -I$(top_srcdir)/sesman/libscp \
++  ${DBUS1}
+ 
+ if SESMAN_NOPAM
+ AUTH_C = verify_user.c
+@@ -50,7 +52,9 @@
+   $(top_builddir)/common/libcommon.la \
+   $(top_builddir)/sesman/libscp/libscp.la \
+   $(AUTH_LIB) \
+-  -lpthread
++  -lpthread \
++  -lck-connector \
++  -ldbus-1
+ 
+ sesmansysconfdir=$(sysconfdir)/xrdp
+ 
+--- a/sesman/tools/Makefile.am
++++ b/sesman/tools/Makefile.am
+@@ -6,10 +6,12 @@
+   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
+   -DXRDP_PID_PATH=\"${localstatedir}/run\"
+ 
++DBUS1=$(shell ${PKG_CONFIG} --cflags dbus-1)
+ INCLUDES = \
+   -I$(top_srcdir)/common \
+   -I$(top_srcdir)/sesman/libscp \
+-  -I$(top_srcdir)/sesman
++  -I$(top_srcdir)/sesman \
++  ${DBUS1}
+ 
+ bin_PROGRAMS = \
+   xrdp-sesrun \
+--- a/sesman/session.h
++++ b/sesman/session.h
+@@ -30,6 +30,8 @@
+ 
+ #include "libscp_types.h"
+ 
++#include <ConsoleKit/ck-connector/ck-connector.h>
++
+ #define SESMAN_SESSION_TYPE_XRDP  1
+ #define SESMAN_SESSION_TYPE_XVNC  2
+ 
+@@ -75,6 +77,7 @@
+   struct session_date disconnect_time;
+   struct session_date idle_time;
+   char client_ip[256];
++  CkConnector *ck;
+ };
+ 
+ struct session_chain
+--- a/sesman/env.c
++++ b/sesman/env.c
+@@ -60,7 +60,7 @@
+ 
+ /******************************************************************************/
+ int DEFAULT_CC
+-env_set_user(char *username, char *passwd_file, int display)
++env_set_user(char *username, char *passwd_file, int display, environment_item environ[], int envsize)
+ {
+     int error;
+     int pw_uid;
+@@ -70,6 +70,7 @@
+     char pw_dir[256];
+     char pw_gecos[256];
+     char text[256];
++    int i;
+ 
+     error = g_getuser_info(username, &pw_gid, &pw_uid, pw_shell, pw_dir,
+                            pw_gecos);
+@@ -107,6 +108,11 @@
+             g_setenv("LANG", "en_US.UTF-8", 1);
+             g_setenv("XRDP_SESSION", "1", 1);
+ 
++            for (i = 0; i < envsize; i++)
++            {
++                g_setenv(environ[i].key, environ[i].value, 1);
++            }
++
+             if (passwd_file != 0)
+             {
+                 if (0 == g_cfg->auth_file_path)
+--- a/sesman/env.h
++++ b/sesman/env.h
+@@ -27,6 +27,14 @@
+ #ifndef ENV_H
+ #define ENV_H
+ 
++struct environment_item
++{
++    char * key;
++    char * value;
++};
++
++typedef struct environment_item environment_item;
++
+ /**
+  *
+  * @brief Creates vnc password file
+@@ -44,10 +52,12 @@
+  * @param username Username
+  * @param passwd_file VNC password file
+  * @param display The session display
++ * @param environ Additional environment variables.
++ * @param envsize Number of environment variables passed.
+  * @return 0 on success, g_getuser_info() error codes on error
+  *
+  */
+ int DEFAULT_CC
+-env_set_user(char* username, char* passwd_file, int display);
++env_set_user(char* username, char* passwd_file, int display, environment_item environ[], int envsize);
+ 
+ #endif

@@ -1,5 +1,7 @@
---- a/common/os_calls.c
-+++ b/common/os_calls.c
+Index: xrdp-bartw72/common/os_calls.c
+===================================================================
+--- xrdp-bartw72.orig/common/os_calls.c	2013-12-06 09:16:59.169242558 +0100
++++ xrdp-bartw72/common/os_calls.c	2013-12-06 09:16:59.165242690 +0100
 @@ -2595,6 +2595,11 @@
          g_mk_temp_dir(0);
      }
@@ -12,8 +14,10 @@
      return rv;
  #endif
  }
---- a/sesman/sessvc/sessvc.c
-+++ b/sesman/sessvc/sessvc.c
+Index: xrdp-bartw72/sesman/sessvc/sessvc.c
+===================================================================
+--- xrdp-bartw72.orig/sesman/sessvc/sessvc.c	2013-12-06 09:16:59.169242558 +0100
++++ xrdp-bartw72/sesman/sessvc/sessvc.c	2013-12-06 09:16:59.165242690 +0100
 @@ -30,6 +30,9 @@
  #include "file_loc.h"
  #include "os_calls.h"
@@ -149,8 +153,10 @@
      g_writeln("xrdp-sessvc: clean exit");
      g_deinit();
      return 0;
---- a/sesman/chansrv/chansrv.c
-+++ b/sesman/chansrv/chansrv.c
+Index: xrdp-bartw72/sesman/chansrv/chansrv.c
+===================================================================
+--- xrdp-bartw72.orig/sesman/chansrv/chansrv.c	2013-12-06 09:16:59.169242558 +0100
++++ xrdp-bartw72/sesman/chansrv/chansrv.c	2013-12-06 09:16:59.165242690 +0100
 @@ -1230,7 +1230,7 @@
  
      logconfig.log_file = log_file;
@@ -160,9 +166,11 @@
      logconfig.enable_syslog = 0;
      logconfig.syslog_level = 0;
      error = log_start_from_param(&logconfig);
---- a/sesman/session.c
-+++ b/sesman/session.c
-@@ -503,6 +503,8 @@
+Index: xrdp-bartw72/sesman/session.c
+===================================================================
+--- xrdp-bartw72.orig/sesman/session.c	2013-12-06 09:16:59.169242558 +0100
++++ xrdp-bartw72/sesman/session.c	2013-12-06 09:16:59.165242690 +0100
+@@ -448,6 +448,8 @@
  
      if (pid == -1)
      {
@@ -171,7 +179,7 @@
      }
      else if (pid == 0) /* child sesman */
      {
-@@ -521,6 +523,8 @@
+@@ -461,6 +463,8 @@
  
          if (wmpid == -1)
          {
@@ -180,7 +188,7 @@
          }
          else if (wmpid == 0) /* child (child sesman) xserver */
          {
-@@ -613,6 +617,8 @@
+@@ -553,6 +557,8 @@
  
              if (xpid == -1)
              {
@@ -189,30 +197,3 @@
              }
              else if (xpid == 0) /* child */
              {
-@@ -696,12 +702,20 @@
-             else /* parent (child sesman)*/
-             {
-                 wait_for_xserver(display);
--                g_snprintf(text, 255, "%d", display);
--                g_setenv("XRDP_SESSVC_DISPLAY", text, 1);
--                g_snprintf(text, 255, ":%d.0", display);
--                g_setenv("DISPLAY", text, 1);
--                /* new style waiting for clients */
--                session_start_sessvc(xpid, wmpid, data, username, display, environment, 1);
-+                if (x_server_running(display))
-+                {
-+                    g_snprintf(text, 255, "%d", display);
-+                    g_setenv("XRDP_SESSVC_DISPLAY", text, 1);
-+                    g_snprintf(text, 255, ":%d.0", display);
-+                    g_setenv("DISPLAY", text, 1);
-+                    /* new style waiting for clients */
-+                    session_start_sessvc(xpid, wmpid, data, username, display, environment, 2);
-+                }
-+                else
-+                {
-+                    log_message(LOG_LEVEL_ALWAYS, "error starting X server, sessvc not started, "
-+                                "- user %s - pid %d", username, g_getpid());
-+                }
-             }
-         }
-     }
