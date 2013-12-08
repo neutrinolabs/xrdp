@@ -137,23 +137,15 @@
  
                  /* additional parameters from sesman.ini file */
                  //config_read_xserver_params(SESMAN_SESSION_TYPE_XRDP,
-@@ -547,20 +606,29 @@
+@@ -547,20 +606,30 @@
          }
          else /* parent (child sesman) */
          {
 -            wmpid = g_fork();
--
--            if (wmpid == -1)
--            {
--                log_message(LOG_LEVEL_ERROR, "cannot fork process for wm"
--                    " - user %s, display=%d, sessioncount=%d", username, display, g_session_count);
--            }
--            else if (wmpid == 0) /* child */
 +            wait_for_xserver(display);
++            g_sleep(500);
 +            if (x_server_running(display))
-             {
--                wait_for_xserver(display);
--                env_set_user(username, 0, display);
++            {
 +                ck_start_session(ck, username, display, client_ip);
 +
 +                environment[0].key = "XDG_SESSION_COOKIE";
@@ -162,23 +154,32 @@
 +                environment[1].value = "FAKE_SESSION";
 +                environment[2].key = "XDG_SEAT";
 +                environment[2].value = seat;
-+
+ 
+-            if (wmpid == -1)
+-            {
+-                log_message(LOG_LEVEL_ERROR, "cannot fork process for wm"
+-                    " - user %s, display=%d, sessioncount=%d", username, display, g_session_count);
+-            }
+-            else if (wmpid == 0) /* child */
+-            {
+-                wait_for_xserver(display);
+-                env_set_user(username, 0, display);
 +                wmpid = g_fork();
  
 -                if (x_server_running(display))
 +                if (wmpid == -1)
-+                {
+                 {
 +                    log_message(LOG_LEVEL_ERROR, "cannot fork process for wm"
 +                        " - user %s, display=%d, sessioncount=%d", username, display, g_session_count);
 +                }
 +                else if (wmpid == 0) /* child */
-                 {
++                {
 +                    env_set_user(username, 0, display, environment, 3);
 +
                      auth_set_env(data);
  
                      if (directory != 0)
-@@ -630,60 +698,58 @@
+@@ -630,60 +699,58 @@
                      log_message(LOG_LEVEL_DEBUG, "errno: %d, description: "
                                  "%s", errno, g_get_strerror());
                  }
@@ -278,7 +279,7 @@
          }
      }
  
-@@ -705,7 +771,7 @@
+@@ -705,7 +772,7 @@
      }
      else if (pid == 0)
      {
@@ -287,7 +288,7 @@
          g_snprintf(text, 255, "%s/%s", XRDP_CFG_PATH, "reconnectwm.sh");
  
          if (g_file_exist(text))
-@@ -837,6 +903,8 @@
+@@ -837,6 +904,8 @@
  
          if (tmp->item->pid == pid)
          {
