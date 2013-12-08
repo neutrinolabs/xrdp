@@ -1,8 +1,10 @@
-xrdp (0.7.0-1.10) UNRELEASED; urgency=low
+xrdp (0.7.0-1.10) ingunstable; urgency=low
 
   * Fix issue in reap script.
   * Add ck support on different location on all childs from xrdp-sesman
   * Suppress ck-launch-session by supply fake GDMSESSION environment var.
+  * Remove tcp port check on active server since it starts with nolistener on tcp
+  * Re-add the ck socket to be able to close on end.
 
  -- Warmerdam, B. (Bart) <Bart.Warmerdam@mail.ing.nl>  Wed, 04 Dec 2013 10:00:50 +0100
 
