@@ -99,13 +99,15 @@ drdynvc_process_capability_response(struct stream *s, unsigned char cmd)
     /* read client's version */
     in_uint16_le(s, cap_version);
 
-    if (cap_version != 2)
+    if ((cap_version != 2) && (cap_version != 3))
     {
-        LOG(0, ("drdynvc_process_capability_response: incompatible DVC version %d detected", cap_version));
+        LOG(0, ("drdynvc_process_capability_response: incompatible DVC "
+            "version %d detected", cap_version));
         return -1;
     }
 
-    LOG(0, ("drdynvc_process_capability_response: DVC version 2 selected"));
+    LOG(0, ("drdynvc_process_capability_response: DVC version %d selected",
+        cap_version));
     g_drdynvc_inited = 1;
 
     return 0;
