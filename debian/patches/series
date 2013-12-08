@@ -12,6 +12,7 @@
 33_fix_instfiles.patch
 #35_automake.patch
 #36_use_other_thread_type.diff
+34_disable_tcp_check_wait_server.diff
 37_add_fork_logging.diff
 38_wait_for_xserver_in_parent.diff
 39_reorder_fork_sequence.diff

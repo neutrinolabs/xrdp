@@ -1,7 +1,5 @@
-Index: xrdp-bartw72/sesman/session.c
-===================================================================
---- xrdp-bartw72.orig/sesman/session.c	2013-12-06 13:01:13.411938678 +0100
-+++ xrdp-bartw72/sesman/session.c	2013-12-06 13:02:22.487731423 +0100
+--- a/sesman/session.c
++++ b/sesman/session.c
 @@ -30,6 +30,8 @@
  #include <errno.h>
  //#include <time.h>
@@ -180,7 +178,7 @@ Index: xrdp-bartw72/sesman/session.c
                      auth_set_env(data);
  
                      if (directory != 0)
-@@ -630,60 +698,56 @@
+@@ -630,60 +698,58 @@
                      log_message(LOG_LEVEL_DEBUG, "errno: %d, description: "
                                  "%s", errno, g_get_strerror());
                  }
@@ -272,13 +270,15 @@ Index: xrdp-bartw72/sesman/session.c
 +            temp->item->type = type;
 +            temp->item->status = SESMAN_SESSION_STATUS_ACTIVE;
 +
++            temp->item->ck = ck;
++
 +            temp->next = g_sessions;
 +            g_sessions = temp;
 +            g_session_count++;
          }
      }
  
-@@ -705,7 +769,7 @@
+@@ -705,7 +771,7 @@
      }
      else if (pid == 0)
      {
@@ -287,7 +287,7 @@ Index: xrdp-bartw72/sesman/session.c
          g_snprintf(text, 255, "%s/%s", XRDP_CFG_PATH, "reconnectwm.sh");
  
          if (g_file_exist(text))
-@@ -837,6 +901,8 @@
+@@ -837,6 +903,8 @@
  
          if (tmp->item->pid == pid)
          {
@@ -296,10 +296,8 @@ Index: xrdp-bartw72/sesman/session.c
              /* deleting the session */
              log_message(LOG_LEVEL_INFO, "++ terminated session:  username %s, display :%d.0, session_pid %d, ip %s", tmp->item->name, tmp->item->display, tmp->item->pid, tmp->item->client_ip);
              g_free(tmp->item);
-Index: xrdp-bartw72/sesman/Makefile.am
-===================================================================
---- xrdp-bartw72.orig/sesman/Makefile.am	2013-12-06 13:01:13.411938678 +0100
-+++ xrdp-bartw72/sesman/Makefile.am	2013-12-06 13:01:13.407938690 +0100
+--- a/sesman/Makefile.am
++++ b/sesman/Makefile.am
 @@ -6,9 +6,11 @@
    -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
    -DXRDP_PID_PATH=\"${localstatedir}/run\"
@@ -324,10 +322,8 @@ Index: xrdp-bartw72/sesman/Makefile.am
  
  sesmansysconfdir=$(sysconfdir)/xrdp
  
-Index: xrdp-bartw72/sesman/tools/Makefile.am
-===================================================================
---- xrdp-bartw72.orig/sesman/tools/Makefile.am	2013-12-06 13:01:13.411938678 +0100
-+++ xrdp-bartw72/sesman/tools/Makefile.am	2013-12-06 13:01:13.407938690 +0100
+--- a/sesman/tools/Makefile.am
++++ b/sesman/tools/Makefile.am
 @@ -6,10 +6,12 @@
    -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
    -DXRDP_PID_PATH=\"${localstatedir}/run\"
@@ -342,10 +338,8 @@ Index: xrdp-bartw72/sesman/tools/Makefile.am
  
  bin_PROGRAMS = \
    xrdp-sesrun \
-Index: xrdp-bartw72/sesman/session.h
-===================================================================
---- xrdp-bartw72.orig/sesman/session.h	2013-12-06 13:01:13.411938678 +0100
-+++ xrdp-bartw72/sesman/session.h	2013-12-06 13:01:13.407938690 +0100
+--- a/sesman/session.h
++++ b/sesman/session.h
 @@ -30,6 +30,8 @@
  
  #include "libscp_types.h"
@@ -363,10 +357,8 @@ Index: xrdp-bartw72/sesman/session.h
  };
  
  struct session_chain
-Index: xrdp-bartw72/sesman/env.c
-===================================================================
---- xrdp-bartw72.orig/sesman/env.c	2013-12-06 13:01:13.411938678 +0100
-+++ xrdp-bartw72/sesman/env.c	2013-12-06 13:01:13.407938690 +0100
+--- a/sesman/env.c
++++ b/sesman/env.c
 @@ -60,7 +60,7 @@
  
  /******************************************************************************/
@@ -396,10 +388,8 @@ Index: xrdp-bartw72/sesman/env.c
              if (passwd_file != 0)
              {
                  if (0 == g_cfg->auth_file_path)
-Index: xrdp-bartw72/sesman/env.h
-===================================================================
---- xrdp-bartw72.orig/sesman/env.h	2013-12-06 13:01:13.411938678 +0100
-+++ xrdp-bartw72/sesman/env.h	2013-12-06 13:01:13.407938690 +0100
+--- a/sesman/env.h
++++ b/sesman/env.h
 @@ -27,6 +27,14 @@
  #ifndef ENV_H
  #define ENV_H
