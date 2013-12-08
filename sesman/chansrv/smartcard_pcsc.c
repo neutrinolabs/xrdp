@@ -83,6 +83,7 @@ static struct pcsc_client *g_tail = 0;
 static struct trans *g_lis = 0;
 static struct trans *g_con = 0; /* todo, remove this */
 static char g_pcsclite_ipc_dir[256] = "";
+static char g_pcsclite_ipc_file[256] = "";
 static int g_pub_file_fd = 0;
 
 /*****************************************************************************/
@@ -255,7 +256,7 @@ scard_process_list_readers(struct trans *con, struct stream *in_s)
     groups = (char *) g_malloc(bytes_groups + 1, 1);
     in_uint8a(in_s, groups, bytes_groups);
     in_uint32_le(in_s, cchReaders);
-    g_xrdp_pcsc_extra1 = g_xrdp_pcsc_extra1 = cchReaders;
+    g_xrdp_pcsc_extra1 = cchReaders;
     LLOGLN(10, ("scard_process_list_readers: hContext 0x%8.8x cchReaders %d",
            hContext, cchReaders));
     scard_send_list_readers(con, hContext, groups, cchReaders, 1);
@@ -1214,7 +1215,6 @@ my_pcsc_trans_conn_in(struct trans *trans, struct trans *new_trans)
 int APP_CC
 scard_pcsc_init(void)
 {
-    char port[256];
     char *home;
     int disp;
     int error;
@@ -1223,31 +1223,35 @@ scard_pcsc_init(void)
     if (g_lis == 0)
     {
         g_lis = trans_create(2, 8192, 8192);
-
-        //g_snprintf(g_pcsclite_ipc_dir, 255, "/tmp/.xrdp/pcsc%d", g_display_num);
         home = g_getenv("HOME");
         disp = g_display_num;
         g_snprintf(g_pcsclite_ipc_dir, 255, "%s/.pcsc%d", home, disp);
 
         if (g_directory_exist(g_pcsclite_ipc_dir))
         {
-            if (g_remove_dir(g_pcsclite_ipc_dir) != 0)
+            if (!g_remove_dir(g_pcsclite_ipc_dir))
             {
                 LLOGLN(0, ("scard_pcsc_init: g_remove_dir failed"));
             }
         }
-        if (!g_create_dir(g_pcsclite_ipc_dir))
+        if (!g_directory_exist(g_pcsclite_ipc_dir))
         {
-            LLOGLN(0, ("scard_pcsc_init: g_create_dir failed"));
+            if (!g_create_dir(g_pcsclite_ipc_dir))
+            {
+                if (!g_directory_exist(g_pcsclite_ipc_dir))
+                {
+                    LLOGLN(0, ("scard_pcsc_init: g_create_dir failed"));
+                }
+            }
         }
         g_chmod_hex(g_pcsclite_ipc_dir, 0x1777);
-        g_snprintf(port, 255, "%s/pcscd.comm", g_pcsclite_ipc_dir);
+        g_snprintf(g_pcsclite_ipc_file, 255, "%s/pcscd.comm", g_pcsclite_ipc_dir);
         g_lis->trans_conn_in = my_pcsc_trans_conn_in;
-        error = trans_listen(g_lis, port);
+        error = trans_listen(g_lis, g_pcsclite_ipc_file);
         if (error != 0)
         {
             LLOGLN(0, ("scard_pcsc_init: trans_listen failed for port %s",
-                   port));
+                   g_pcsclite_ipc_file));
             return 1;
         }
     }
@@ -1259,20 +1263,29 @@ int APP_CC
 scard_pcsc_deinit(void)
 {
     LLOGLN(0, ("scard_pcsc_deinit:"));
+
     if (g_lis != 0)
     {
         trans_delete(g_lis);
         g_lis = 0;
+    }
 
+    if (g_pub_file_fd != 0)
+    {
         g_file_close(g_pub_file_fd);
         g_pub_file_fd = 0;
+    }
 
-        if (g_remove_dir(g_pcsclite_ipc_dir) != 0)
+    if (g_pcsclite_ipc_dir[0] != 0)
+    {
+        g_file_delete(g_pcsclite_ipc_file);
+        if (!g_remove_dir(g_pcsclite_ipc_dir))
         {
             LLOGLN(0, ("scard_pcsc_deinit: g_remove_dir failed"));
         }
         g_pcsclite_ipc_dir[0] = 0;
     }
+
     return 0;
 }
 

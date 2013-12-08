@@ -29,6 +29,7 @@
 #include "irp.h"
 #include "devredir.h"
 #include "smartcard_pcsc.h"
+#include "chansrv.h"
 
 /*
  * TODO
@@ -59,9 +60,8 @@
 #define LOG_INFO    1
 #define LOG_DEBUG   2
 
-#ifndef LOG_LEVEL
+#undef LOG_LEVEL
 #define LOG_LEVEL   LOG_INFO
-#endif
 
 #define log_error(_params...)                           \
 do                                                      \
@@ -86,6 +86,7 @@ do                                                      \
 do                                                      \
 {                                                       \
     if (LOG_DEBUG <= LOG_LEVEL)                         \
+    if (2 <= 1)                         \
     {                                                   \
         g_write("[%10.10u]: SMART_CARD %s: %d : ",      \
                 g_time3(), __func__, __LINE__);         \
@@ -318,7 +319,7 @@ scard_check_wait_objs(void)
 int APP_CC
 scard_init(void)
 {
-    log_debug("init");
+    LOG(0, ("scard_init:"));
     return scard_pcsc_init();
 }
 
@@ -328,7 +329,7 @@ scard_init(void)
 int APP_CC
 scard_deinit(void)
 {
-    log_debug("deinit");
+    LOG(0, ("scard_deinit:"));
     return scard_pcsc_deinit();
 }
 

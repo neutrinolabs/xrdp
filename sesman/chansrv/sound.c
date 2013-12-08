@@ -225,7 +225,7 @@ sound_process_format(int aindex, int wFormatTag, int nChannels,
         {
             g_current_client_format_index = aindex;
             g_current_server_format_index = lindex;
-        }        
+        }
     }
 #endif
     return 0;
@@ -576,6 +576,8 @@ sound_init(void)
 int APP_CC
 sound_deinit(void)
 {
+    LOG(0, ("sound_deinit:"));
+
     if (g_audio_l_trans != 0)
     {
         trans_delete(g_audio_l_trans);
