@@ -1,0 +1,78 @@
+ClassInstall32
+SCardAccessNewReaderEvent
+SCardReleaseAllEvents
+SCardReleaseNewReaderEvent
+SCardAccessStartedEvent
+
+done SCardAddReaderToGroupA
+done SCardAddReaderToGroupW
+done SCardBeginTransaction
+done SCardCancel
+done SCardConnectA
+done SCardConnectW
+done SCardControl
+done SCardDisconnect
+done SCardEndTransaction
+done SCardEstablishContext
+done SCardForgetCardTypeA
+done SCardForgetCardTypeW
+done SCardForgetReaderA
+done SCardForgetReaderGroupA
+done SCardForgetReaderGroupW
+done SCardForgetReaderW
+done SCardFreeMemory
+done SCardGetAttrib
+done SCardGetCardTypeProviderNameA
+done SCardGetCardTypeProviderNameW
+done SCardGetProviderIdA
+done SCardGetProviderIdW
+done SCardGetStatusChangeA
+done SCardGetStatusChangeW
+
+SCardGetTransmitCount
+
+done SCardIntroduceCardTypeA
+done SCardIntroduceCardTypeW
+done SCardIntroduceReaderA
+done SCardIntroduceReaderGroupA
+done SCardIntroduceReaderGroupW
+done SCardIntroduceReaderW
+done SCardIsValidContext
+done SCardListCardsA
+done SCardListCardsW
+done SCardListInterfacesA
+done SCardListInterfacesW
+done SCardListReaderGroupsA
+done SCardListReaderGroupsW
+done SCardListReadersA
+done SCardListReadersW
+done SCardLocateCardsA
+
+SCardLocateCardsByATRA
+SCardLocateCardsByATRW
+
+done SCardLocateCardsW
+
+SCardReadCacheA
+SCardReadCacheW
+
+done SCardReconnect
+done SCardReleaseContext
+
+SCardReleaseStartedEvent
+
+done SCardRemoveReaderFromGroupA
+done SCardRemoveReaderFromGroupW
+done SCardSetAttrib
+done SCardSetCardTypeProviderNameA
+done SCardSetCardTypeProviderNameW
+done SCardState
+done SCardStatusA
+done SCardStatusW
+done SCardTransmit
+
+SCardWriteCacheA
+SCardWriteCacheW
+g_rgSCardRawPci
+g_rgSCardT0Pci
+g_rgSCardT1Pci
