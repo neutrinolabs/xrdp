@@ -139,7 +139,7 @@ int  APP_CC scard_send_transmit(struct trans *con, tui32 sc_handle,
                                 struct xrdp_scard_io_request *send_ior,
                                 struct xrdp_scard_io_request *recv_ior);
 
-int  APP_CC scard_send_control(struct trans *con, tui32 context, tui32 sc_handle,
+int  APP_CC scard_send_control(struct trans *con, tui32 sc_handle,
                                char *send_data, int send_bytes,
                                int recv_bytes, int control_code);
 

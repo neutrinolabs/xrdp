@@ -155,7 +155,8 @@ scard_function_establish_context_return(struct trans *con,
     //g_hexdump(in_s->p, len);
     if ((g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_EC) == 0)
     {
-        LLOGLN(0, ("scard_function_establish_context_return: opps"));
+        LLOGLN(0, ("scard_function_establish_context_return: opps "
+               "g_xrdp_pcsc_state 0x%8.8x, g_xrdp_pcsc_state"));
         return 1;
     }
     g_xrdp_pcsc_state &= ~XRDP_PCSC_STATE_GOT_EC;
@@ -166,7 +167,8 @@ scard_function_establish_context_return(struct trans *con,
         in_uint32_le(in_s, context_len);
         if (context_len != 4)
         {
-            LLOGLN(0, ("scard_function_establish_context_return: opps"));
+            LLOGLN(0, ("scard_function_establish_context_return: opps "
+                   "context_len %d", context_len));
             return 1;
         }
         in_uint32_le(in_s, context);
@@ -681,27 +683,29 @@ scard_function_transmit_return(struct trans *con,
         return 1;
     }
     g_xrdp_pcsc_state &= ~XRDP_PCSC_STATE_GOT_TR;
-
     g_memset(&recv_ior, 0, sizeof(recv_ior));
     cbRecvLength = 0;
-
+    recvBuf = 0;
     if (status == 0)
     {
         in_uint8s(in_s, 20);
         in_uint32_le(in_s, val);
-        g_memset(&recv_ior, 0, sizeof(recv_ior));
         if (val != 0)
         {
             /* pioRecvPci */
-            LLOGLN(0, ("scard_function_transmit_return: pioRecvPci not zero!"));
+            in_uint8s(in_s, 8);
+            in_uint32_le(in_s, recv_ior.dwProtocol);
+            in_uint32_le(in_s, recv_ior.cbPciLength);
+            recv_ior.cbPciLength += 8;
+            in_uint32_le(in_s, recv_ior.extra_bytes);
+            if (recv_ior.extra_bytes > 0)
+            {
+                in_uint8p(in_s, recv_ior.extra_data, recv_ior.extra_bytes);
+            }
         }
-        in_uint8s(in_s, 4);
-        in_uint32_le(in_s, val);
-        cbRecvLength = 0;
-        recvBuf = 0;
-        if (val != 0)
+        in_uint32_le(in_s, cbRecvLength);
+        if (cbRecvLength > 0)
         {
-            in_uint32_le(in_s, cbRecvLength);
             in_uint8p(in_s, recvBuf, cbRecvLength);
         }
     }
@@ -728,7 +732,6 @@ scard_function_transmit_return(struct trans *con,
 int APP_CC
 scard_process_control(struct trans *con, struct stream *in_s)
 {
-    tui32 context;
     int hCard;
     int send_bytes;
     int recv_bytes;
@@ -750,9 +753,7 @@ scard_process_control(struct trans *con, struct stream *in_s)
     in_uint8p(in_s, send_data, send_bytes);
     in_uint32_le(in_s, recv_bytes);
 
-    context = 1;
-
-    scard_send_control(con, context, hCard, send_data, send_bytes, recv_bytes,
+    scard_send_control(con, hCard, send_data, send_bytes, recv_bytes,
                        control_code);
 
     return 0;
@@ -997,7 +998,8 @@ scard_function_get_status_change_return(struct trans *con,
     //g_hexdump(in_s->p, len);
     if ((g_xrdp_pcsc_state & XRDP_PCSC_STATE_GOT_GSC) == 0)
     {
-        LLOGLN(0, ("scard_function_establish_context_return: opps"));
+        LLOGLN(0, ("scard_function_get_status_change_return: opps "
+               "g_xrdp_pcsc_state 0x%8.8x", g_xrdp_pcsc_state));
         return 1;
     }
     g_xrdp_pcsc_state &= ~XRDP_PCSC_STATE_GOT_GSC;
