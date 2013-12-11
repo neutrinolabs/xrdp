@@ -1924,7 +1924,7 @@ scard_send_Transmit(IRP *irp, tui32 sc_handle, char *send_data,
     {
         /* map4 */
         out_uint32_le(s, recv_ior->dwProtocol);
-        out_uint32_le(s, recv_ior->cbPciLength - 8);
+        out_uint32_le(s, recv_ior->cbPciLength);
         val = recv_ior->extra_bytes > 0 ? 1 : 0;
         out_uint32_le(s, val); /* map6*/
         if (val)

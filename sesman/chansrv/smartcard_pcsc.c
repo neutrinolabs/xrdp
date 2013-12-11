@@ -481,7 +481,8 @@ scard_function_disconnect_return(struct trans *con,
         in_uint32_le(in_s, dwActiveProtocol);
         in_uint8s(in_s, 4);
         in_uint32_le(in_s, hCard);
-        LLOGLN(10, ("scard_function_connect_return: hCard %d dwActiveProtocol %d", hCard, dwActiveProtocol));
+        LLOGLN(10, ("scard_function_connect_return: hCard %d "
+               "dwActiveProtocol %d", hCard, dwActiveProtocol));
     }
     out_s = trans_get_out_s(con, 8192);
     s_push_layer(out_s, iso_hdr, 8);
@@ -703,11 +704,15 @@ scard_function_transmit_return(struct trans *con,
                 in_uint8p(in_s, recv_ior.extra_data, recv_ior.extra_bytes);
             }
         }
-        in_uint32_le(in_s, cbRecvLength);
-        if (cbRecvLength > 0)
+
+        in_uint8s(in_s, 4);
+        in_uint32_le(in_s, val);
+        if (val != 0)
         {
+            in_uint32_le(in_s, cbRecvLength);
             in_uint8p(in_s, recvBuf, cbRecvLength);
         }
+
     }
     LLOGLN(10, ("scard_function_transmit_return: cbRecvLength %d", cbRecvLength));
     out_s = trans_get_out_s(con, 8192);
