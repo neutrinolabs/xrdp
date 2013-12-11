@@ -69,7 +69,7 @@ static tSCardSetAttrib aSCardSetAttrib;
 
 static int g_true = 1;
 
-#define LLOGLN(_level, _args) do { if ((_level < 1) && g_true) { writeln _args ; } } while (0)
+#define LLOGLN(_level, _args) do { if ((_level < 11) && g_true) { writeln _args ; } } while (0)
 
 /*****************************************************************************/
 static int
@@ -159,6 +159,7 @@ load_funsc(void)
     LLOAD(aSCardStatusA, tSCardStatusA, "SCardStatusA");
     LLOAD(aSCardStatusW, tSCardStatusW, "SCardStatusW");
     LLOAD(aSCardTransmit, tSCardTransmit, "SCardTransmit");
+    LLOAD(aSCardControl, tSCardControl, "SCardControl");
     LLOAD(aSCardGetAttrib, tSCardGetAttrib, "SCardGetAttrib");
     LLOAD(aSCardSetAttrib, tSCardSetAttrib, "SCardSetAttrib");
 
@@ -674,9 +675,15 @@ SCardStatusW(SCARDHANDLE hCard, LPWSTR szReaderName, LPDWORD pcchReaderLen,
              LPDWORD pdwState, LPDWORD pdwProtocol, LPBYTE pbAtr,
              LPDWORD pcbAtrLen)
 {
+    LONG rv;
+
     LLOGLN(0, ("SCardStatusW:"));
-    return aSCardStatusW(hCard, szReaderName, pcchReaderLen,
-                         pdwState, pdwProtocol, pbAtr, pcbAtrLen);
+    LLOGLN(0, ("  cchReaderLen %d", *pcchReaderLen));
+    LLOGLN(0, ("  cbAtrLen %d", *pcbAtrLen));
+    rv = aSCardStatusW(hCard, szReaderName, pcchReaderLen,
+                       pdwState, pdwProtocol, pbAtr, pcbAtrLen);
+    LLOGLN(0, ("  rv %d cchReaderLen %d", rv, *pcchReaderLen));
+    return rv;
 }
 
 /*****************************************************************************/
@@ -686,9 +693,24 @@ SCardTransmit(SCARDHANDLE hCard, LPCSCARD_IO_REQUEST pioSendPci,
               LPSCARD_IO_REQUEST pioRecvPci, LPBYTE pbRecvBuffer,
               LPDWORD pcbRecvLength)
 {
-    LLOGLN(0, ("SCardTransmit:"));
-    return aSCardTransmit(hCard, pioSendPci, pbSendBuffer, cbSendLength,
-                          pioRecvPci, pbRecvBuffer, pcbRecvLength);
+    LONG rv;
+
+    LLOGLN(10, ("SCardTransmit:"));
+    LLOGLN(10, ("  hCard %p", hCard));
+    LLOGLN(10, ("  cbSendLength %d", cbSendLength));
+    LLOGLN(10, ("  cbRecvLength %d", *pcbRecvLength));
+    LLOGLN(10, ("  pioSendPci->dwProtocol %d", pioSendPci->dwProtocol));
+    LLOGLN(10, ("  pioSendPci->cbPciLength %d", pioSendPci->cbPciLength));
+    LLOGLN(10, ("  pioRecvPci %p", pioRecvPci));
+    if (pioRecvPci != NULL)
+    {
+        LLOGLN(10, ("    pioRecvPci->dwProtocol %d", pioRecvPci->dwProtocol));
+        LLOGLN(10, ("    pioRecvPci->cbPciLength %d", pioRecvPci->cbPciLength));
+    }
+    rv = aSCardTransmit(hCard, pioSendPci, pbSendBuffer, cbSendLength,
+                        pioRecvPci, pbRecvBuffer, pcbRecvLength);
+    LLOGLN(10, ("  rv %d cbRecvLength %d", rv, *pcbRecvLength));
+    return rv;
 }
 
 /*****************************************************************************/
@@ -697,10 +719,23 @@ SCardControl(SCARDHANDLE hCard, DWORD dwControlCode, LPCVOID lpInBuffer,
              DWORD nInBufferSize, LPVOID lpOutBuffer,
              DWORD nOutBufferSize, LPDWORD lpBytesReturned)
 {
-    LLOGLN(0, ("SCardControl:"));
-    return aSCardControl(hCard, dwControlCode, lpInBuffer,
-                         nInBufferSize, lpOutBuffer, nOutBufferSize,
-                         lpBytesReturned);
+    LONG rv;
+    char text[8148];
+
+    LLOGLN(10, ("SCardControl:"));
+    LLOGLN(10, ("  hCard %p", hCard));
+    LLOGLN(10, ("  dwControlCode 0x%8.8x", dwControlCode));
+    LLOGLN(10, ("  lpInBuffer %p", lpInBuffer));
+    LLOGLN(10, ("  nInBufferSize %d", nInBufferSize));
+    LLOGLN(10, ("  lpOutBuffer %p", lpOutBuffer));
+    LLOGLN(10, ("  nOutBufferSize %d", nOutBufferSize));
+    LLOGLN(10, ("  lpBytesReturned %p", lpBytesReturned));
+    rv = aSCardControl(hCard, dwControlCode,
+                       lpInBuffer, nInBufferSize,
+                       lpOutBuffer, nOutBufferSize,
+                       lpBytesReturned);
+    LLOGLN(10, ("  rv %d BytesReturned %d", rv, *lpBytesReturned));
+    return rv;
 }
 
 /*****************************************************************************/
