@@ -45,7 +45,7 @@ override_dh_installdeb:
 	rm debian/xrdp/etc/xrdp/xrdp.sh
 	rm debian/xrdp/usr/lib/xrdp/*a
 	# Use our own startwm.sh
-	install -m 755 debian/startwm.sh debian/xrdp/etc/xrdp
+	install -m 755 sesman/startwm.sh debian/xrdp/etc/xrdp
 	# Move rsakeys to documentation
 	install -m 644 xrdp/rsakeys.ini debian/xrdp/usr/share/doc/xrdp
 	dh_installdeb -a

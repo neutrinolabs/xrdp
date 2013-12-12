@@ -1,3 +1,9 @@
+xrdp (0.7.0-1.12) UNRELEASED; urgency=low
+
+  * Add more logging in chansrv.
+
+ -- Warmerdam, B. (Bart) <Bart.Warmerdam@mail.ing.nl>  Tue, 10 Dec 2013 08:33:47 +0100
+
 xrdp (0.7.0-1.11) ingunstable; urgency=low
 
   * Add waitpid and sleep on wm startup, since the lock of X is not reliable
