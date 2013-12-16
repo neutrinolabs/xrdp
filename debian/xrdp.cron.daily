@@ -1,5 +1,0 @@
-#!/bin/sh
-
-if [ -x /usr/sbin/xrdp-reap-sessions ] ; then
-	/usr/sbin/xrdp-reap-sessions
-fi
