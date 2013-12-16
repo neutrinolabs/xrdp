@@ -1,11 +1,3 @@
---- a/instfiles/Makefile.am
-+++ b/instfiles/Makefile.am
-@@ -29,4 +29,4 @@
- install-data-hook:
- 	chmod 755 $(DESTDIR)$(sysconfdir)/xrdp/xrdp.sh
- 	chmod 755 $(DESTDIR)$(sysconfdir)/init.d/xrdp
--	sed -i 's|__BASE__|$(prefix)|' $(sysconfdir)/init.d/xrdp;
-+	sed -i 's|__BASE__|$(prefix)|' $(DESTDIR)$(sysconfdir)/init.d/xrdp;
 --- a/instfiles/init.d/xrdp
 +++ b/instfiles/init.d/xrdp
 @@ -135,6 +135,18 @@
@@ -27,3 +19,14 @@
          log_end_msg $exitval
  	;;
    force-stop)
+--- a/xrdp/xrdp.ini
++++ b/xrdp/xrdp.ini
+@@ -3,7 +3,7 @@
+ bitmap_cache=yes
+ bitmap_compression=yes
+ port=3389
+-crypt_level=high
++crypt_level=low
+ allow_channels=true
+ max_bpp=24
+ fork=yes
