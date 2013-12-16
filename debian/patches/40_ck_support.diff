@@ -1,15 +1,18 @@
---- a/sesman/session.c
-+++ b/sesman/session.c
-@@ -30,6 +30,8 @@
+Index: xrdp-bartw72/sesman/session.c
+===================================================================
+--- xrdp-bartw72.orig/sesman/session.c	2013-12-14 16:28:31.000000000 +0100
++++ xrdp-bartw72/sesman/session.c	2013-12-14 16:34:27.103022467 +0100
+@@ -30,6 +30,9 @@
  #include <errno.h>
  //#include <time.h>
  
 +#include <ConsoleKit/ck-connector/ck-connector.h>
++#include <pwd.h>
 +
  extern tbus g_sync_event;
  extern unsigned char g_fixedkey[8];
  extern struct config_sesman *g_cfg; /* in sesman.c */
-@@ -227,7 +229,7 @@
+@@ -227,7 +230,7 @@
  
  /******************************************************************************/
  static void DEFAULT_CC
@@ -18,29 +21,69 @@
  {
      struct list *sessvc_params = (struct list *)NULL;
      char wmpid_str[25];
-@@ -258,7 +260,7 @@
+@@ -258,7 +261,11 @@
      list_add_item(sessvc_params, (long)g_strdup(wmpid_str));
      list_add_item(sessvc_params, 0); /* mandatory */
  
 -    env_set_user(username, 0, display);
++    log_message(LOG_LEVEL_DEBUG, "Changing process to user %s", username);
++
 +    env_set_user(username, 0, display, environment, envsize);
++
++    log_message(LOG_LEVEL_DEBUG, "Starting %s", exe_path);
  
      /* executing sessvc */
      g_execvp(exe_path, ((char **)sessvc_params->items));
-@@ -375,6 +377,49 @@
+@@ -375,6 +382,90 @@
      return 0;
  }
  
 +static int APP_CC
++uid_from_username(char *username)
++{
++    struct passwd * pwd = getpwnam(username);
++    if (pwd != NULL)
++    {
++        return pwd->pw_uid;
++    }
++    return -1;
++}
++
++static int APP_CC
 +ck_start_session(CkConnector *ck, char *username, int display, char *client_ip)
 +{
 +    DBusError error;
-+    char const *session;
++    const char *session;
++    char display_device[20];
++    char x11_display[10];
++    char x11_display_device[20];
++    const char *remote_host_name;
++    uid_t       uid;
++    dbus_bool_t is_local;
 +
-+    log_message(LOG_LEVEL_ALWAYS, "Starting consolekit connection for user %s, display %d and client %s.",
-+            username, display, client_ip);
++    //g_snprintf(display_device, 20, "/dev/tty%d", display);
++    g_snprintf(display_device, 20, "/dev/x%d", display);
++    g_snprintf(x11_display, 10, ":%d", display);
++    g_snprintf(x11_display_device, 20, "");
++    //g_snprintf(x11_display_device, 20, "/dev/tty%d", display);
++    remote_host_name = client_ip;
++    uid = uid_from_username(username);
++    is_local = FALSE;
++
++    log_message(LOG_LEVEL_ALWAYS, "Starting consolekit connection for user %s(%d), display %d (%s) and client %s.",
++            username, uid, display, display_device, client_ip);
 +
 +    dbus_error_init (&error);
++//    if (ck_connector_open_session_with_parameters (ck,
++//                                                         &error,
++//                                                         "unix-user", &uid,
++//                                                         "display-device", &display_device,
++//                                                         "x11-display", &x11_display,
++//                                                         "x11-display-device", &x11_display_device,
++//                                                         "remote-host-name", &remote_host_name,
++//                                                         "is-local", &is_local,
++//                                                         NULL))
++//    {
 +    if (ck_connector_open_session(ck, &error))
 +    {
 +        session = ck_connector_get_cookie(ck);
@@ -49,7 +92,12 @@
 +    }
 +    else
 +    {
-+        log_message(LOG_LEVEL_ALWAYS, "Error opening consolekit session.");
++        if (dbus_error_is_set (&error)) {
++            log_message(LOG_LEVEL_ERROR, "Error opening consolekit session - %s.", error.message);
++            dbus_error_free (&error);
++        } else {
++            log_message(LOG_LEVEL_ERROR, "insufficient privileges or D-Bus / ConsoleKit not available");
++        }
 +    }
 +}
 +
@@ -77,17 +125,16 @@
  /******************************************************************************/
  /* called with the main thread */
  static int APP_CC
-@@ -398,6 +443,9 @@
+@@ -398,6 +489,8 @@
      time_t ltime;
      struct tm stime;
      char execvpparams[2048];
 +    CkConnector *ck;
-+    environment_item environment[3];
-+    char seat[10];
++    environment_item environment[2];
  
      /* initialize (zero out) local variables: */
      g_memset(&ltime, 0, sizeof(time_t));
-@@ -444,6 +492,14 @@
+@@ -444,10 +537,20 @@
          return 0;
      }
  
@@ -102,24 +149,28 @@
      pid = g_fork();
  
      if (pid == -1)
-@@ -459,6 +515,7 @@
-         g_sprintf(geometry, "%dx%d", width, height);
-         g_sprintf(depth, "%d", bpp);
-         g_sprintf(screen, ":%d", display);
-+        g_snprintf(seat, 10, "seat%d", display);
-         xpid = g_fork();
- 
-         if (xpid == -1)
-@@ -468,7 +525,7 @@
+     {
++        ck_connector_unref(ck);
++        ck = NULL;
+         log_message(LOG_LEVEL_ERROR, "cannot fork process for wm and x"
+                     " - user %s, display=%d, sessioncount=%d", username, display, g_session_count);
+     }
+@@ -468,9 +571,13 @@
          }
          else if (xpid == 0) /* child (child sesman) xserver */
          {
 -            env_set_user(username, passwd_file, display);
++            log_message(LOG_LEVEL_DEBUG, "Forked the process for running xserver for user %s", username);
++
 +            env_set_user(username, passwd_file, display, NULL, 0);
              env_check_password_file(passwd_file, password);
  
++            log_message(LOG_LEVEL_DEBUG, "Running xserver process as user %s", username);
++
              if (type == SESMAN_SESSION_TYPE_XVNC)
-@@ -487,7 +544,7 @@
+             {
+                 xserver_params = list_create();
+@@ -487,7 +594,7 @@
  
                  /* additional parameters from sesman.ini file */
                  //config_read_xserver_params(SESMAN_SESSION_TYPE_XVNC,
@@ -128,35 +179,16 @@
                  list_append_list_strdup(g_cfg->vnc_params, xserver_params, 0);
  
                  /* make sure it ends with a zero */
-@@ -507,6 +564,8 @@
-                 list_add_item(xserver_params, (long)g_strdup(geometry));
-                 list_add_item(xserver_params, (long)g_strdup("-depth"));
-                 list_add_item(xserver_params, (long)g_strdup(depth));
-+                list_add_item(xserver_params, (long)g_strdup("-seat"));
-+                list_add_item(xserver_params, (long)g_strdup(seat));
- 
-                 /* additional parameters from sesman.ini file */
-                 //config_read_xserver_params(SESMAN_SESSION_TYPE_XRDP,
-@@ -547,20 +606,30 @@
+@@ -547,22 +654,32 @@
          }
          else /* parent (child sesman) */
          {
 -            wmpid = g_fork();
-+            wait_for_xserver(display);
-+            g_sleep(500);
-+            if (x_server_running(display))
-+            {
-+                ck_start_session(ck, username, display, client_ip);
-+
-+                environment[0].key = "XDG_SESSION_COOKIE";
-+                environment[0].value = g_getenv("XDG_SESSION_COOKIE");
-+                environment[1].key = "GDMSESSION";
-+                environment[1].value = "FAKE_SESSION";
-+                environment[2].key = "XDG_SEAT";
-+                environment[2].value = seat;
- 
+-
 -            if (wmpid == -1)
--            {
++            wait_for_xserver(display);
++            if (x_server_running(display))
+             {
 -                log_message(LOG_LEVEL_ERROR, "cannot fork process for wm"
 -                    " - user %s, display=%d, sessioncount=%d", username, display, g_session_count);
 -            }
@@ -164,22 +196,68 @@
 -            {
 -                wait_for_xserver(display);
 -                env_set_user(username, 0, display);
-+                wmpid = g_fork();
++                ck_start_session(ck, username, display, client_ip);
++
++                environment[0].key = "XDG_SESSION_COOKIE";
++                environment[0].value = g_getenv("XDG_SESSION_COOKIE");
++                environment[1].key = "GDMSESSION";
++                environment[1].value = "FAKE_SESSION";
  
 -                if (x_server_running(display))
++                wmpid = g_fork();
++
 +                if (wmpid == -1)
-                 {
++                {
 +                    log_message(LOG_LEVEL_ERROR, "cannot fork process for wm"
 +                        " - user %s, display=%d, sessioncount=%d", username, display, g_session_count);
 +                }
 +                else if (wmpid == 0) /* child */
-+                {
-+                    env_set_user(username, 0, display, environment, 3);
+                 {
++                    log_message(LOG_LEVEL_DEBUG, "Forked the process for running windowmanager for pid %s", username);
 +
++                    env_set_user(username, 0, display, environment, 2);
                      auth_set_env(data);
  
++                    log_message(LOG_LEVEL_DEBUG, "Running windowmanager process as user %s", username);
++
                      if (directory != 0)
-@@ -630,60 +699,58 @@
+                     {
+                         if (directory[0] != 0)
+@@ -575,6 +692,8 @@
+                     {
+                         if (program[0] != 0)
+                         {
++                            log_message(LOG_LEVEL_DEBUG, "Starting program %s for user %s", program, username);
++
+                             g_execlp3(program, program, 0);
+                             log_message(LOG_LEVEL_ALWAYS,
+                                         "error starting program %s for user %s - pid %d",
+@@ -589,6 +708,7 @@
+ 
+                         if (g_file_exist(text))
+                         {
++                            log_message(LOG_LEVEL_DEBUG, "Starting user windowmanager %s for user %s", text, username);
+                             g_execlp3(text, g_cfg->user_wm, 0);
+                             log_message(LOG_LEVEL_ALWAYS, "error starting user "
+                                         "wm for user %s - pid %d", username, g_getpid());
+@@ -607,6 +727,8 @@
+                     /* if we're here something happened to g_execlp3
+                        so we try running the default window manager */
+                     g_sprintf(text, "%s/%s", XRDP_CFG_PATH, g_cfg->default_wm);
++
++                    log_message(LOG_LEVEL_DEBUG, "Starting default windowmanager %s for user %s", text, username);
+                     g_execlp3(text, g_cfg->default_wm, 0);
+ 
+                     log_message( LOG_LEVEL_ALWAYS, "error starting default "
+@@ -621,6 +743,7 @@
+                                 g_cfg->default_wm);
+ 
+                     /* still a problem starting window manager just start xterm */
++                    log_message(LOG_LEVEL_DEBUG, "Starting xterm");
+                     g_execlp3("xterm", "xterm", 0);
+ 
+                     /* should not get here */
+@@ -630,61 +753,63 @@
                      log_message(LOG_LEVEL_DEBUG, "errno: %d, description: "
                                  "%s", errno, g_get_strerror());
                  }
@@ -193,14 +271,15 @@
 +                    g_snprintf(text, 256, ":%d.0", display);
 +                    g_setenv("DISPLAY", text, 1);
 +                    /* new style waiting for clients */
-+                    session_start_sessvc(xpid, wmpid, data, username, display, environment, 3);
++                    session_start_sessvc(xpid, wmpid, data, username, display, environment, 2);
                  }
  
                  log_message(LOG_LEVEL_DEBUG, "aborting connection...");
                  g_exit(0);
              }
 -            else /* parent (child sesman)*/
--            {
++            else
+             {
 -				wait_for_xserver(display);
 -                if (x_server_running(display))
 -                {
@@ -211,8 +290,6 @@
 -					/* new style waiting for clients */
 -					session_start_sessvc(xpid, wmpid, data, username, display);
 -                }
-+             else
-+             {
 +                 log_message(LOG_LEVEL_ERROR, "another Xserver might "
 +                             "already be active on display %d - see log", display);
              }
@@ -221,9 +298,8 @@
      else /* parent sesman process */
      {
 -		wait_for_xserver(display);
-+        wait_for_xserver(display);
-         if (x_server_running(display))
-         {
+-        if (x_server_running(display))
+-        {
 -			temp->item->pid = pid;
 -			temp->item->display = display;
 -			temp->item->width = width;
@@ -249,37 +325,46 @@
 -			temp->next = g_sessions;
 -			g_sessions = temp;
 -			g_session_count++;
-+            temp->item->pid = pid;
-+            temp->item->display = display;
-+            temp->item->width = width;
-+            temp->item->height = height;
-+            temp->item->bpp = bpp;
-+            temp->item->data = data;
-+            g_strncpy(temp->item->client_ip, client_ip, 255);   /* store client ip data */
-+            g_strncpy(temp->item->name, username, 255);
+-        }
++        temp->item->pid = pid;
++        temp->item->display = display;
++        temp->item->width = width;
++        temp->item->height = height;
++        temp->item->bpp = bpp;
++        temp->item->data = data;
++        g_strncpy(temp->item->client_ip, client_ip, 255);   /* store client ip data */
++        g_strncpy(temp->item->name, username, 255);
 +
-+            ltime = g_time1();
-+            localtime_r(&ltime, &stime);
-+            temp->item->connect_time.year = (tui16)(stime.tm_year + 1900);
-+            temp->item->connect_time.month = (tui8)stime.tm_mon;
-+            temp->item->connect_time.day = (tui8)stime.tm_mday;
-+            temp->item->connect_time.hour = (tui8)stime.tm_hour;
-+            temp->item->connect_time.minute = (tui8)stime.tm_min;
-+            zero_time(&(temp->item->disconnect_time));
-+            zero_time(&(temp->item->idle_time));
++        ltime = g_time1();
++        localtime_r(&ltime, &stime);
++        temp->item->connect_time.year = (tui16)(stime.tm_year + 1900);
++        temp->item->connect_time.month = (tui8)stime.tm_mon;
++        temp->item->connect_time.day = (tui8)stime.tm_mday;
++        temp->item->connect_time.hour = (tui8)stime.tm_hour;
++        temp->item->connect_time.minute = (tui8)stime.tm_min;
++        zero_time(&(temp->item->disconnect_time));
++        zero_time(&(temp->item->idle_time));
 +
-+            temp->item->type = type;
-+            temp->item->status = SESMAN_SESSION_STATUS_ACTIVE;
++        temp->item->type = type;
++        temp->item->status = SESMAN_SESSION_STATUS_ACTIVE;
 +
-+            temp->item->ck = ck;
++        temp->item->ck = ck;
 +
-+            temp->next = g_sessions;
-+            g_sessions = temp;
-+            g_session_count++;
-         }
++        log_message(LOG_LEVEL_DEBUG, "Going to register pid %d and display %d for user %s", pid, display, username);
++        /*THREAD-FIX require chain lock */
++        lock_chain_acquire();
++
++        temp->next = g_sessions;
++        g_sessions = temp;
++        g_session_count++;
++
++        /*THREAD-FIX release chain lock */
++        lock_chain_release();
++        log_message(LOG_LEVEL_DEBUG, "Registered pid %d and display %d for user %s", pid, display, username);
      }
  
-@@ -705,7 +772,7 @@
+     return display;
+@@ -705,7 +830,7 @@
      }
      else if (pid == 0)
      {
@@ -288,7 +373,7 @@
          g_snprintf(text, 255, "%s/%s", XRDP_CFG_PATH, "reconnectwm.sh");
  
          if (g_file_exist(text))
-@@ -837,6 +904,8 @@
+@@ -837,6 +962,8 @@
  
          if (tmp->item->pid == pid)
          {
@@ -297,8 +382,10 @@
              /* deleting the session */
              log_message(LOG_LEVEL_INFO, "++ terminated session:  username %s, display :%d.0, session_pid %d, ip %s", tmp->item->name, tmp->item->display, tmp->item->pid, tmp->item->client_ip);
              g_free(tmp->item);
---- a/sesman/Makefile.am
-+++ b/sesman/Makefile.am
+Index: xrdp-bartw72/sesman/Makefile.am
+===================================================================
+--- xrdp-bartw72.orig/sesman/Makefile.am	2013-12-14 11:12:36.966909554 +0100
++++ xrdp-bartw72/sesman/Makefile.am	2013-12-14 16:28:31.000000000 +0100
 @@ -6,9 +6,11 @@
    -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
    -DXRDP_PID_PATH=\"${localstatedir}/run\"
@@ -323,8 +410,10 @@
  
  sesmansysconfdir=$(sysconfdir)/xrdp
  
---- a/sesman/tools/Makefile.am
-+++ b/sesman/tools/Makefile.am
+Index: xrdp-bartw72/sesman/tools/Makefile.am
+===================================================================
+--- xrdp-bartw72.orig/sesman/tools/Makefile.am	2013-12-14 11:12:36.966909554 +0100
++++ xrdp-bartw72/sesman/tools/Makefile.am	2013-12-14 16:28:31.000000000 +0100
 @@ -6,10 +6,12 @@
    -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
    -DXRDP_PID_PATH=\"${localstatedir}/run\"
@@ -339,8 +428,10 @@
  
  bin_PROGRAMS = \
    xrdp-sesrun \
---- a/sesman/session.h
-+++ b/sesman/session.h
+Index: xrdp-bartw72/sesman/session.h
+===================================================================
+--- xrdp-bartw72.orig/sesman/session.h	2013-12-14 11:12:36.966909554 +0100
++++ xrdp-bartw72/sesman/session.h	2013-12-14 16:28:31.000000000 +0100
 @@ -30,6 +30,8 @@
  
  #include "libscp_types.h"
@@ -358,8 +449,10 @@
  };
  
  struct session_chain
---- a/sesman/env.c
-+++ b/sesman/env.c
+Index: xrdp-bartw72/sesman/env.c
+===================================================================
+--- xrdp-bartw72.orig/sesman/env.c	2013-12-14 11:12:36.966909554 +0100
++++ xrdp-bartw72/sesman/env.c	2013-12-14 16:28:31.000000000 +0100
 @@ -60,7 +60,7 @@
  
  /******************************************************************************/
@@ -389,8 +482,10 @@
              if (passwd_file != 0)
              {
                  if (0 == g_cfg->auth_file_path)
---- a/sesman/env.h
-+++ b/sesman/env.h
+Index: xrdp-bartw72/sesman/env.h
+===================================================================
+--- xrdp-bartw72.orig/sesman/env.h	2013-12-14 11:12:36.966909554 +0100
++++ xrdp-bartw72/sesman/env.h	2013-12-14 16:28:31.000000000 +0100
 @@ -27,6 +27,14 @@
  #ifndef ENV_H
  #define ENV_H

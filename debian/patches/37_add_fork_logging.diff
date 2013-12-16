@@ -1,5 +1,7 @@
---- a/common/os_calls.c
-+++ b/common/os_calls.c
+Index: xrdp-bartw72/common/os_calls.c
+===================================================================
+--- xrdp-bartw72.orig/common/os_calls.c	2013-12-07 19:11:41.833065840 +0100
++++ xrdp-bartw72/common/os_calls.c	2013-12-07 19:11:41.829065852 +0100
 @@ -2595,6 +2595,11 @@
          g_mk_temp_dir(0);
      }
@@ -12,8 +14,10 @@
      return rv;
  #endif
  }
---- a/sesman/sessvc/sessvc.c
-+++ b/sesman/sessvc/sessvc.c
+Index: xrdp-bartw72/sesman/sessvc/sessvc.c
+===================================================================
+--- xrdp-bartw72.orig/sesman/sessvc/sessvc.c	2013-12-07 19:11:41.833065840 +0100
++++ xrdp-bartw72/sesman/sessvc/sessvc.c	2013-12-14 10:25:28.151036346 +0100
 @@ -30,6 +30,9 @@
  #include "file_loc.h"
  #include "os_calls.h"
@@ -24,23 +28,7 @@
  
  static int g_term = 0;
  
-@@ -37,6 +40,7 @@
- void DEFAULT_CC
- term_signal_handler(int sig)
- {
-+    LOGM((LOG_LEVEL_ERROR, "term_signal_handler: get signal %d", sig));
-     g_writeln("xrdp-sessvc: term_signal_handler: got signal %d", sig);
-     g_term = 1;
- }
-@@ -45,6 +49,7 @@
- void DEFAULT_CC
- nil_signal_handler(int sig)
- {
-+    LOGM((LOG_LEVEL_ERROR, "nil_signal_handler: get signal %d", sig));
-     g_writeln("xrdp-sessvc: nil_signal_handler: got signal %d", sig);
- }
- 
-@@ -81,7 +86,13 @@
+@@ -81,7 +84,13 @@
      int wm_pid = 0;
      int x_pid = 0;
      int lerror = 0;
@@ -54,7 +42,7 @@
  
      g_init("xrdp-sessvc");
      g_memset(exe_path, 0, sizeof(exe_path));
-@@ -93,6 +104,57 @@
+@@ -93,6 +102,57 @@
          return 1;
      }
  
@@ -112,7 +100,7 @@
      g_signal_kill(term_signal_handler); /* SIGKILL */
      g_signal_terminate(term_signal_handler); /* SIGTERM */
      g_signal_user_interrupt(term_signal_handler); /* SIGINT */
-@@ -101,11 +163,15 @@
+@@ -101,11 +161,15 @@
      wm_pid = g_atoi(argv[2]);
      g_writeln("xrdp-sessvc: waiting for X (pid %d) and WM (pid %d)",
                x_pid, wm_pid);
@@ -128,7 +116,7 @@
          g_writeln("xrdp-sessvc: fork error");
          g_deinit();
          return 1;
-@@ -114,8 +180,12 @@
+@@ -114,7 +178,13 @@
      {
          g_set_current_dir(XRDP_SBIN_PATH);
          g_snprintf(exe_path, 261, "%s/xrdp-chansrv", XRDP_SBIN_PATH);
@@ -136,46 +124,42 @@
 +        LOGM((LOG_LEVEL_INFO, "main: fork success, starting %s/xrdp-chansrv", exe_path));
 +
          g_execlp3(exe_path, "xrdp-chansrv", 0);
++
++        LOGM((LOG_LEVEL_ERROR, "main: %s/xrdp-chansrv not started, errno=%d", exe_path, lerror));
++
          /* should not get here */
-+        LOGM((LOG_LEVEL_ERROR, "main: execlp3 failed for xrdp-chansrv with %d", g_get_errno()));
          g_writeln("xrdp-sessvc: g_execlp3() failed");
          g_deinit();
-         return 1;
-@@ -123,6 +193,7 @@
- 
-     lerror = 0;
-     /* wait for window manager to get done */
-+    LOGM((LOG_LEVEL_INFO, "main: going to wait for window manager (pid=%d)", wm_pid));
-     ret = g_waitpid(wm_pid);
- 
-     while ((ret == 0) && !g_term)
-@@ -136,11 +207,14 @@
+@@ -136,10 +206,14 @@
          lerror = g_get_errno();
      }
  
-+    LOGM((LOG_LEVEL_ERROR, "main: window manager stopped, waitpid=%d. errno=%d", ret, lerror));
++    LOGM((LOG_LEVEL_INFO, "main: wm finished with waitpid=%d and errno=%d", ret, lerror));
      g_writeln("xrdp-sessvc: WM is dead (waitpid said %d, errno is %d) "
                "exiting...", ret, lerror);
++
      /* kill channel server */
-+    LOGM((LOG_LEVEL_ERROR, "main: killing channel server"));
++    LOGM((LOG_LEVEL_INFO, "main: sending chansrv(pid %d) the term signal", chansrv_pid));
      g_writeln("xrdp-sessvc: stopping channel server");
++
      g_sigterm(chansrv_pid);
-+    LOGM((LOG_LEVEL_INFO, "main: going to wait for channel server (pid=%d)", chansrv_pid));
      ret = g_waitpid(chansrv_pid);
  
-     while ((ret == 0) && !g_term)
-@@ -149,8 +223,10 @@
+@@ -149,9 +223,13 @@
          g_sleep(1);
      }
  
-+    LOGM((LOG_LEVEL_INFO, "main: going to cleanup chansrv, term flag = %d", g_term));
++    LOGM((LOG_LEVEL_INFO, "main: going to cleanup chansrv"));
      chansrv_cleanup(chansrv_pid);
++
      /* kill X server */
-+    LOGM((LOG_LEVEL_INFO, "main: going to kill X server with pid %d", x_pid));
++    LOGM((LOG_LEVEL_INFO, "main: going to terminate X server with pid %d", x_pid));
      g_writeln("xrdp-sessvc: stopping X server");
++
      g_sigterm(x_pid);
      ret = g_waitpid(x_pid);
-@@ -161,6 +237,7 @@
+ 
+@@ -161,6 +239,7 @@
          g_sleep(1);
      }
  
@@ -183,8 +167,10 @@
      g_writeln("xrdp-sessvc: clean exit");
      g_deinit();
      return 0;
---- a/sesman/chansrv/chansrv.c
-+++ b/sesman/chansrv/chansrv.c
+Index: xrdp-bartw72/sesman/chansrv/chansrv.c
+===================================================================
+--- xrdp-bartw72.orig/sesman/chansrv/chansrv.c	2013-12-07 19:11:41.833065840 +0100
++++ xrdp-bartw72/sesman/chansrv/chansrv.c	2013-12-07 19:11:41.829065852 +0100
 @@ -1230,7 +1230,7 @@
  
      logconfig.log_file = log_file;
@@ -194,8 +180,10 @@
      logconfig.enable_syslog = 0;
      logconfig.syslog_level = 0;
      error = log_start_from_param(&logconfig);
---- a/sesman/session.c
-+++ b/sesman/session.c
+Index: xrdp-bartw72/sesman/session.c
+===================================================================
+--- xrdp-bartw72.orig/sesman/session.c	2013-12-07 19:11:41.833065840 +0100
++++ xrdp-bartw72/sesman/session.c	2013-12-14 10:14:32.000000000 +0100
 @@ -448,6 +448,8 @@
  
      if (pid == -1)

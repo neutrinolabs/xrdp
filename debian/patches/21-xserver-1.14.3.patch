@@ -1,5 +1,7 @@
---- a/xorg/X11R7.6/rdp/Makefile
-+++ b/xorg/X11R7.6/rdp/Makefile
+Index: xrdp-bartw72/xorg/X11R7.6/rdp/Makefile
+===================================================================
+--- xrdp-bartw72.orig/xorg/X11R7.6/rdp/Makefile	2013-12-14 11:11:09.871298973 +0100
++++ xrdp-bartw72/xorg/X11R7.6/rdp/Makefile	2013-12-14 11:12:31.734932562 +0100
 @@ -5,7 +5,9 @@
  LIBBASE = $(X11RDPBASE)/lib
  
@@ -134,8 +136,10 @@
  
  install: all
  	$(INSTALL) X11rdp $(X11RDPBASE)/bin/X11rdp
---- a/xorg/X11R7.6/rdp/rdp.h
-+++ b/xorg/X11R7.6/rdp/rdp.h
+Index: xrdp-bartw72/xorg/X11R7.6/rdp/rdp.h
+===================================================================
+--- xrdp-bartw72.orig/xorg/X11R7.6/rdp/rdp.h	2013-12-07 19:11:41.681066310 +0100
++++ xrdp-bartw72/xorg/X11R7.6/rdp/rdp.h	2013-12-14 11:12:07.000000000 +0100
 @@ -23,6 +23,7 @@
  #define __arm32__
  #endif
@@ -201,8 +205,10 @@
  void
  KbdAddEvent(int down, int param1, int param2, int param3, int param4);
  void
---- a/xorg/X11R7.6/rdp/rdpdraw.c
-+++ b/xorg/X11R7.6/rdp/rdpdraw.c
+Index: xrdp-bartw72/xorg/X11R7.6/rdp/rdpdraw.c
+===================================================================
+--- xrdp-bartw72.orig/xorg/X11R7.6/rdp/rdpdraw.c	2013-12-07 19:11:41.681066310 +0100
++++ xrdp-bartw72/xorg/X11R7.6/rdp/rdpdraw.c	2013-12-07 19:11:41.677066323 +0100
 @@ -399,7 +399,7 @@
      //pScreen->PaintWindowBorder = g_rdpScreen.PaintWindowBorder;
      pScreen->CopyWindow = g_rdpScreen.CopyWindow;
@@ -235,8 +241,10 @@
  }
  
  /******************************************************************************/
---- a/xorg/X11R7.6/rdp/rdpinput.c
-+++ b/xorg/X11R7.6/rdp/rdpinput.c
+Index: xrdp-bartw72/xorg/X11R7.6/rdp/rdpinput.c
+===================================================================
+--- xrdp-bartw72.orig/xorg/X11R7.6/rdp/rdpinput.c	2013-12-07 19:11:41.681066310 +0100
++++ xrdp-bartw72/xorg/X11R7.6/rdp/rdpinput.c	2013-12-14 11:12:07.000000000 +0100
 @@ -736,13 +736,12 @@
  
  /******************************************************************************/
@@ -345,8 +353,10 @@
  
      for (i = 0; i < 5; i++)
      {
---- a/xorg/X11R7.6/rdp/rdpmain.c
-+++ b/xorg/X11R7.6/rdp/rdpmain.c
+Index: xrdp-bartw72/xorg/X11R7.6/rdp/rdpmain.c
+===================================================================
+--- xrdp-bartw72.orig/xorg/X11R7.6/rdp/rdpmain.c	2013-12-07 19:11:41.681066310 +0100
++++ xrdp-bartw72/xorg/X11R7.6/rdp/rdpmain.c	2013-12-07 19:11:41.677066323 +0100
 @@ -167,11 +167,11 @@
  
  /******************************************************************************/
@@ -432,8 +442,10 @@
  {
  }
  
---- a/xorg/X11R7.6/rdp/rdpup.c
-+++ b/xorg/X11R7.6/rdp/rdpup.c
+Index: xrdp-bartw72/xorg/X11R7.6/rdp/rdpup.c
+===================================================================
+--- xrdp-bartw72.orig/xorg/X11R7.6/rdp/rdpup.c	2013-12-07 19:11:41.681066310 +0100
++++ xrdp-bartw72/xorg/X11R7.6/rdp/rdpup.c	2013-12-07 19:11:41.677066323 +0100
 @@ -670,47 +670,47 @@
                     past the width or height */
                  g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
@@ -493,8 +505,10 @@
                  break;
              case 200:
                  rdpup_begin_update();
---- a/xup/xup.c
-+++ b/xup/xup.c
+Index: xrdp-bartw72/xup/xup.c
+===================================================================
+--- xrdp-bartw72.orig/xup/xup.c	2013-12-07 19:11:41.681066310 +0100
++++ xrdp-bartw72/xup/xup.c	2013-12-07 19:11:41.677066323 +0100
 @@ -19,6 +19,11 @@
   */
  
