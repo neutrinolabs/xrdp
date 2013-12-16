@@ -1,7 +1,5 @@
-Index: xrdp-bartw72/sesman/session.c
-===================================================================
---- xrdp-bartw72.orig/sesman/session.c	2013-12-14 16:28:31.000000000 +0100
-+++ xrdp-bartw72/sesman/session.c	2013-12-14 16:34:27.103022467 +0100
+--- a/sesman/session.c
++++ b/sesman/session.c
 @@ -30,6 +30,9 @@
  #include <errno.h>
  //#include <time.h>
@@ -134,17 +132,18 @@ Index: xrdp-bartw72/sesman/session.c
  
      /* initialize (zero out) local variables: */
      g_memset(&ltime, 0, sizeof(time_t));
-@@ -444,10 +537,20 @@
+@@ -444,10 +537,21 @@
          return 0;
      }
  
-+    ck = ck_connector_new();
-+    if (ck == 0)
-+    {
-+        log_message(LOG_LEVEL_ERROR, "cannot create consolekit connection "
-+                    "element - user %s", username);
-+        return 0;
-+    }
++    ck = NULL;
++//    ck = ck_connector_new();
++//    if (ck == 0)
++//    {
++//        log_message(LOG_LEVEL_ERROR, "cannot create consolekit connection "
++//                    "element - user %s", username);
++//        return 0;
++//    }
 +
      pid = g_fork();
  
@@ -155,7 +154,7 @@ Index: xrdp-bartw72/sesman/session.c
          log_message(LOG_LEVEL_ERROR, "cannot fork process for wm and x"
                      " - user %s, display=%d, sessioncount=%d", username, display, g_session_count);
      }
-@@ -468,9 +571,13 @@
+@@ -468,9 +572,13 @@
          }
          else if (xpid == 0) /* child (child sesman) xserver */
          {
@@ -170,7 +169,7 @@ Index: xrdp-bartw72/sesman/session.c
              if (type == SESMAN_SESSION_TYPE_XVNC)
              {
                  xserver_params = list_create();
-@@ -487,7 +594,7 @@
+@@ -487,7 +595,7 @@
  
                  /* additional parameters from sesman.ini file */
                  //config_read_xserver_params(SESMAN_SESSION_TYPE_XVNC,
@@ -179,24 +178,24 @@ Index: xrdp-bartw72/sesman/session.c
                  list_append_list_strdup(g_cfg->vnc_params, xserver_params, 0);
  
                  /* make sure it ends with a zero */
-@@ -547,22 +654,32 @@
+@@ -547,22 +655,32 @@
          }
          else /* parent (child sesman) */
          {
 -            wmpid = g_fork();
 -
 -            if (wmpid == -1)
-+            wait_for_xserver(display);
-+            if (x_server_running(display))
-             {
+-            {
 -                log_message(LOG_LEVEL_ERROR, "cannot fork process for wm"
 -                    " - user %s, display=%d, sessioncount=%d", username, display, g_session_count);
 -            }
 -            else if (wmpid == 0) /* child */
--            {
++            wait_for_xserver(display);
++            if (x_server_running(display))
+             {
 -                wait_for_xserver(display);
 -                env_set_user(username, 0, display);
-+                ck_start_session(ck, username, display, client_ip);
++//                ck_start_session(ck, username, display, client_ip);
 +
 +                environment[0].key = "XDG_SESSION_COOKIE";
 +                environment[0].value = g_getenv("XDG_SESSION_COOKIE");
@@ -223,7 +222,7 @@ Index: xrdp-bartw72/sesman/session.c
                      if (directory != 0)
                      {
                          if (directory[0] != 0)
-@@ -575,6 +692,8 @@
+@@ -575,6 +693,8 @@
                      {
                          if (program[0] != 0)
                          {
@@ -232,7 +231,7 @@ Index: xrdp-bartw72/sesman/session.c
                              g_execlp3(program, program, 0);
                              log_message(LOG_LEVEL_ALWAYS,
                                          "error starting program %s for user %s - pid %d",
-@@ -589,6 +708,7 @@
+@@ -589,6 +709,7 @@
  
                          if (g_file_exist(text))
                          {
@@ -240,7 +239,7 @@ Index: xrdp-bartw72/sesman/session.c
                              g_execlp3(text, g_cfg->user_wm, 0);
                              log_message(LOG_LEVEL_ALWAYS, "error starting user "
                                          "wm for user %s - pid %d", username, g_getpid());
-@@ -607,6 +727,8 @@
+@@ -607,6 +728,8 @@
                      /* if we're here something happened to g_execlp3
                         so we try running the default window manager */
                      g_sprintf(text, "%s/%s", XRDP_CFG_PATH, g_cfg->default_wm);
@@ -249,7 +248,7 @@ Index: xrdp-bartw72/sesman/session.c
                      g_execlp3(text, g_cfg->default_wm, 0);
  
                      log_message( LOG_LEVEL_ALWAYS, "error starting default "
-@@ -621,6 +743,7 @@
+@@ -621,6 +744,7 @@
                                  g_cfg->default_wm);
  
                      /* still a problem starting window manager just start xterm */
@@ -257,7 +256,7 @@ Index: xrdp-bartw72/sesman/session.c
                      g_execlp3("xterm", "xterm", 0);
  
                      /* should not get here */
-@@ -630,61 +753,63 @@
+@@ -630,61 +754,63 @@
                      log_message(LOG_LEVEL_DEBUG, "errno: %d, description: "
                                  "%s", errno, g_get_strerror());
                  }
@@ -364,7 +363,7 @@ Index: xrdp-bartw72/sesman/session.c
      }
  
      return display;
-@@ -705,7 +830,7 @@
+@@ -705,7 +831,7 @@
      }
      else if (pid == 0)
      {
@@ -373,7 +372,7 @@ Index: xrdp-bartw72/sesman/session.c
          g_snprintf(text, 255, "%s/%s", XRDP_CFG_PATH, "reconnectwm.sh");
  
          if (g_file_exist(text))
-@@ -837,6 +962,8 @@
+@@ -837,6 +963,8 @@
  
          if (tmp->item->pid == pid)
          {
@@ -382,10 +381,8 @@ Index: xrdp-bartw72/sesman/session.c
              /* deleting the session */
              log_message(LOG_LEVEL_INFO, "++ terminated session:  username %s, display :%d.0, session_pid %d, ip %s", tmp->item->name, tmp->item->display, tmp->item->pid, tmp->item->client_ip);
              g_free(tmp->item);
-Index: xrdp-bartw72/sesman/Makefile.am
-===================================================================
---- xrdp-bartw72.orig/sesman/Makefile.am	2013-12-14 11:12:36.966909554 +0100
-+++ xrdp-bartw72/sesman/Makefile.am	2013-12-14 16:28:31.000000000 +0100
+--- a/sesman/Makefile.am
++++ b/sesman/Makefile.am
 @@ -6,9 +6,11 @@
    -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
    -DXRDP_PID_PATH=\"${localstatedir}/run\"
@@ -410,10 +407,8 @@ Index: xrdp-bartw72/sesman/Makefile.am
  
  sesmansysconfdir=$(sysconfdir)/xrdp
  
-Index: xrdp-bartw72/sesman/tools/Makefile.am
-===================================================================
---- xrdp-bartw72.orig/sesman/tools/Makefile.am	2013-12-14 11:12:36.966909554 +0100
-+++ xrdp-bartw72/sesman/tools/Makefile.am	2013-12-14 16:28:31.000000000 +0100
+--- a/sesman/tools/Makefile.am
++++ b/sesman/tools/Makefile.am
 @@ -6,10 +6,12 @@
    -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
    -DXRDP_PID_PATH=\"${localstatedir}/run\"
@@ -428,10 +423,8 @@ Index: xrdp-bartw72/sesman/tools/Makefile.am
  
  bin_PROGRAMS = \
    xrdp-sesrun \
-Index: xrdp-bartw72/sesman/session.h
-===================================================================
---- xrdp-bartw72.orig/sesman/session.h	2013-12-14 11:12:36.966909554 +0100
-+++ xrdp-bartw72/sesman/session.h	2013-12-14 16:28:31.000000000 +0100
+--- a/sesman/session.h
++++ b/sesman/session.h
 @@ -30,6 +30,8 @@
  
  #include "libscp_types.h"
@@ -449,10 +442,8 @@ Index: xrdp-bartw72/sesman/session.h
  };
  
  struct session_chain
-Index: xrdp-bartw72/sesman/env.c
-===================================================================
---- xrdp-bartw72.orig/sesman/env.c	2013-12-14 11:12:36.966909554 +0100
-+++ xrdp-bartw72/sesman/env.c	2013-12-14 16:28:31.000000000 +0100
+--- a/sesman/env.c
++++ b/sesman/env.c
 @@ -60,7 +60,7 @@
  
  /******************************************************************************/
@@ -482,10 +473,8 @@ Index: xrdp-bartw72/sesman/env.c
              if (passwd_file != 0)
              {
                  if (0 == g_cfg->auth_file_path)
-Index: xrdp-bartw72/sesman/env.h
-===================================================================
---- xrdp-bartw72.orig/sesman/env.h	2013-12-14 11:12:36.966909554 +0100
-+++ xrdp-bartw72/sesman/env.h	2013-12-14 16:28:31.000000000 +0100
+--- a/sesman/env.h
++++ b/sesman/env.h
 @@ -27,6 +27,14 @@
  #ifndef ENV_H
  #define ENV_H
@@ -515,3 +504,12 @@ Index: xrdp-bartw72/sesman/env.h
 +env_set_user(char* username, char* passwd_file, int display, environment_item environ[], int envsize);
  
  #endif
+--- a/instfiles/pam.d/xrdp-sesman
++++ b/instfiles/pam.d/xrdp-sesman
+@@ -1,5 +1,6 @@
+ #%PAM-1.0
+ @include common-auth
+ @include common-account
++session	optional			pam_ck_connector.so
+ @include common-session
+ @include common-password
