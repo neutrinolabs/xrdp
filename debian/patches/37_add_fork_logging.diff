@@ -1,7 +1,5 @@
-Index: xrdp-bartw72/common/os_calls.c
-===================================================================
---- xrdp-bartw72.orig/common/os_calls.c	2013-12-07 19:11:41.833065840 +0100
-+++ xrdp-bartw72/common/os_calls.c	2013-12-07 19:11:41.829065852 +0100
+--- a/common/os_calls.c
++++ b/common/os_calls.c
 @@ -2595,6 +2595,11 @@
          g_mk_temp_dir(0);
      }
@@ -14,10 +12,8 @@ Index: xrdp-bartw72/common/os_calls.c
      return rv;
  #endif
  }
-Index: xrdp-bartw72/sesman/sessvc/sessvc.c
-===================================================================
---- xrdp-bartw72.orig/sesman/sessvc/sessvc.c	2013-12-07 19:11:41.833065840 +0100
-+++ xrdp-bartw72/sesman/sessvc/sessvc.c	2013-12-14 10:25:28.151036346 +0100
+--- a/sesman/sessvc/sessvc.c
++++ b/sesman/sessvc/sessvc.c
 @@ -30,6 +30,9 @@
  #include "file_loc.h"
  #include "os_calls.h"
@@ -167,10 +163,8 @@ Index: xrdp-bartw72/sesman/sessvc/sessvc.c
      g_writeln("xrdp-sessvc: clean exit");
      g_deinit();
      return 0;
-Index: xrdp-bartw72/sesman/chansrv/chansrv.c
-===================================================================
---- xrdp-bartw72.orig/sesman/chansrv/chansrv.c	2013-12-07 19:11:41.833065840 +0100
-+++ xrdp-bartw72/sesman/chansrv/chansrv.c	2013-12-07 19:11:41.829065852 +0100
+--- a/sesman/chansrv/chansrv.c
++++ b/sesman/chansrv/chansrv.c
 @@ -1230,7 +1230,7 @@
  
      logconfig.log_file = log_file;
@@ -180,10 +174,8 @@ Index: xrdp-bartw72/sesman/chansrv/chansrv.c
      logconfig.enable_syslog = 0;
      logconfig.syslog_level = 0;
      error = log_start_from_param(&logconfig);
-Index: xrdp-bartw72/sesman/session.c
-===================================================================
---- xrdp-bartw72.orig/sesman/session.c	2013-12-07 19:11:41.833065840 +0100
-+++ xrdp-bartw72/sesman/session.c	2013-12-14 10:14:32.000000000 +0100
+--- a/sesman/session.c
++++ b/sesman/session.c
 @@ -448,6 +448,8 @@
  
      if (pid == -1)
@@ -211,3 +203,12 @@ Index: xrdp-bartw72/sesman/session.c
              }
              else if (xpid == 0) /* child */
              {
+@@ -689,6 +695,8 @@
+ 
+     if (pid == -1)
+     {
++        log_message(LOG_LEVEL_ERROR, "cannot create new chain "
++                    "element - display %d, user %s", display, username);
+     }
+     else if (pid == 0)
+     {

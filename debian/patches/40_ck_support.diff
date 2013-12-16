@@ -185,14 +185,14 @@
 -            wmpid = g_fork();
 -
 -            if (wmpid == -1)
--            {
++            wait_for_xserver(display);
++            if (x_server_running(display))
+             {
 -                log_message(LOG_LEVEL_ERROR, "cannot fork process for wm"
 -                    " - user %s, display=%d, sessioncount=%d", username, display, g_session_count);
 -            }
 -            else if (wmpid == 0) /* child */
-+            wait_for_xserver(display);
-+            if (x_server_running(display))
-             {
+-            {
 -                wait_for_xserver(display);
 -                env_set_user(username, 0, display);
 +//                ck_start_session(ck, username, display, client_ip);
@@ -201,17 +201,17 @@
 +                environment[0].value = g_getenv("XDG_SESSION_COOKIE");
 +                environment[1].key = "GDMSESSION";
 +                environment[1].value = "FAKE_SESSION";
++
++                wmpid = g_fork();
  
 -                if (x_server_running(display))
-+                wmpid = g_fork();
-+
 +                if (wmpid == -1)
-+                {
+                 {
 +                    log_message(LOG_LEVEL_ERROR, "cannot fork process for wm"
 +                        " - user %s, display=%d, sessioncount=%d", username, display, g_session_count);
 +                }
 +                else if (wmpid == 0) /* child */
-                 {
++                {
 +                    log_message(LOG_LEVEL_DEBUG, "Forked the process for running windowmanager for pid %s", username);
 +
 +                    env_set_user(username, 0, display, environment, 2);
@@ -363,7 +363,7 @@
      }
  
      return display;
-@@ -705,7 +831,7 @@
+@@ -707,14 +833,17 @@
      }
      else if (pid == 0)
      {
@@ -372,7 +372,17 @@
          g_snprintf(text, 255, "%s/%s", XRDP_CFG_PATH, "reconnectwm.sh");
  
          if (g_file_exist(text))
-@@ -837,6 +963,8 @@
+         {
++            log_message(LOG_LEVEL_DEBUG, "Reconnect to windowmanager process %s as user %s", text, username);
++
+             g_execlp3(text, g_cfg->default_wm, 0);
+         }
+ 
++        log_message(LOG_LEVEL_DEBUG, "Reconnection to %s failed.", text);
+         g_exit(0);
+     }
+ 
+@@ -839,6 +968,8 @@
  
          if (tmp->item->pid == pid)
          {

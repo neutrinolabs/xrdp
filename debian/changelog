@@ -1,10 +1,16 @@
-xrdp (0.7.0-1.12) UNRELEASED; urgency=low
+xrdp (0.7.0-1.13) UNRELEASED; urgency=medium
+
+  * Add logging in reconnect flow
+
+ -- Warmerdam, B. (Bart) <Bart.Warmerdam@mail.ing.nl>  Mon, 16 Dec 2013 11:39:47 +0100
+
+xrdp (0.7.0-1.12) ingunstable; urgency=low
 
   * Add more logging in chansrv.
   * Use pam for consolekit session
   * Add lock on display chain when adding in fork
 
- -- Warmerdam, B. (Bart) <Bart.Warmerdam@mail.ing.nl>  Tue, 10 Dec 2013 08:33:47 +0100
+ -- Warmerdam, B. (Bart) <Bart.Warmerdam@mail.ing.nl>  Mon, 16 Dec 2013 11:39:20 +0100
 
 xrdp (0.7.0-1.11) ingunstable; urgency=low
 
