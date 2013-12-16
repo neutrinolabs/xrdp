@@ -669,9 +669,15 @@ session_start_fork(int width, int height, int bpp, char *username,
         temp->item->type = type;
         temp->item->status = SESMAN_SESSION_STATUS_ACTIVE;
 
+        /*THREAD-FIX require chain lock */
+        lock_chain_acquire();
+
         temp->next = g_sessions;
         g_sessions = temp;
         g_session_count++;
+
+        /*THREAD-FIX release chain lock */
+        lock_chain_release();
     }
 
     return display;
