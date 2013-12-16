@@ -1,6 +1,8 @@
 xrdp (0.7.0-1.12) UNRELEASED; urgency=low
 
   * Add more logging in chansrv.
+  * Use pam for consolekit session
+  * Add lock on display chain when adding in fork
 
  -- Warmerdam, B. (Bart) <Bart.Warmerdam@mail.ing.nl>  Tue, 10 Dec 2013 08:33:47 +0100
 
