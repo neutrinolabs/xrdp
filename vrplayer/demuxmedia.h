@@ -41,6 +41,7 @@ public:
                         void *channel = 0, int stream_id = 101);
 
     void setVcrOp(int op);
+    int clear();
 
 public slots:
     void       startDemuxing();

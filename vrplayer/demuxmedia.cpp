@@ -29,6 +29,18 @@ void DemuxMedia::setVcrOp(int op)
     vcrMutex.lock();
     vcrFlag = op;
     vcrMutex.unlock();
+    if (op == VCR_STOP)
+    {
+        clear();
+    }
+}
+
+int DemuxMedia::clear()
+{
+    sendMutex.lock();
+    videoQueue->clear();
+    sendMutex.unlock();
+    return 0;
 }
 
 void DemuxMedia::startDemuxing()

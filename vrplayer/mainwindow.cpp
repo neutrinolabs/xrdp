@@ -295,11 +295,9 @@ void MainWindow::getVdoGeometry(QRect *rect)
 
 void MainWindow::clearDisplay()
 {
-    QPixmap pixmap(100,100);
-    pixmap.fill(QColor(0x00, 0x00, 0x00));
-    QPainter painter(&pixmap);
-    painter.setBrush(QBrush(Qt::black));
-    lblVideo->setPixmap(pixmap);
+    /* TODO: this needs to be set after video actually stops
+     * a few frames come after this */
+    lblVideo->update();
 }
 
 /*******************************************************************************
@@ -333,11 +331,21 @@ void MainWindow::on_actionOpen_Media_File_triggered()
     {
         remoteClientInited = false;
         interface->deInitRemoteClient();
-        interface->initRemoteClient();
+        if (interface->initRemoteClient() != 0)
+        {
+            QMessageBox::question(this, "vrplayer", "Unsupported codec",
+                                  QMessageBox::Ok);
+            return;
+        }
     }
     else
     {
-        interface->initRemoteClient();
+        if (interface->initRemoteClient() != 0)
+        {
+            QMessageBox::question(this, "vrplayer", "Unsupported codec",
+                                  QMessageBox::Ok);
+            return;
+        }
     }
 
     demuxMedia = interface->getDemuxMediaInstance();
@@ -413,6 +421,7 @@ void MainWindow::onBtnStopClicked(bool)
     lblCurrentPos->setText("00:00:00");
 
     /* clear screen by filling it with black */
+    usleep(500 * 1000);
     clearDisplay();
 
     btnPlay->setChecked(false);

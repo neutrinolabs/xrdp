@@ -2,6 +2,7 @@
  * xrdp: A Remote Desktop Protocol server.
  *
  * Copyright (C) Laxmikant Rashinkar 2012-2013 LK.Rashinkar@gmail.com
+ * Copyright (C) Jay Sorg 2013 jay.sorg@gmail.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,18 +33,25 @@ extern "C" {
 int  xrdpvr_init_player(void *channel, int stream_id, char *filename);
 int  xrdpvr_deinit_player(void *channel, int stream_id);
 int  xrdpvr_play_media(void *channel, int stream_id, char *filename);
-int  xrdpvr_set_geometry(void *channel, int stream_id, int xpos, int ypos, int width, int height);
-int  xrdpvr_set_video_format(void *channel, uint32_t stream_id);
-int  xrdpvr_set_audio_format(void *channel, uint32_t stream_id, char *extradata,
-                             int extradata_size, int sample_rate, int bit_rate,
+int  xrdpvr_set_geometry(void *channel, int stream_id, int xpos, int ypos,
+                         int width, int height);
+int  xrdpvr_set_video_format(void *channel, uint32_t stream_id, int format,
+                             int width, int height);
+int  xrdpvr_set_audio_format(void *channel, uint32_t stream_id, int format,
+                             char *extradata, int extradata_size,
+                             int sample_rate, int bit_rate,
                              int channels, int block_align);
-int  xrdpvr_send_video_data(void *channel, uint32_t stream_id, uint32_t data_len, uint8_t *data);
-int  xrdpvr_send_audio_data(void *channel, uint32_t stream_id, uint32_t data_len, uint8_t *data);
+int  xrdpvr_send_video_data(void *channel, uint32_t stream_id,
+                            uint32_t data_len, uint8_t *data);
+int  xrdpvr_send_audio_data(void *channel, uint32_t stream_id,
+                            uint32_t data_len, uint8_t *data);
 int  xrdpvr_create_metadata_file(void *channel, char *filename);
-int  xrdpvr_play_frame(void *channel, int stream_id, int *vdoTimeout, int *audioTimeout);
+int  xrdpvr_play_frame(void *channel, int stream_id, int *vdoTimeout,
+                       int *audioTimeout);
 void xrdpvr_get_media_duration(int64_t *start_time, int64_t *duration);
 int  xrdpvr_seek_media(int64_t pos, int backward);
-int  xrdpvr_get_frame(void **av_pkt_ret, int *is_video_frame, int *delay_in_us);
+int  xrdpvr_get_frame(void **av_pkt_ret, int *is_video_frame,
+                      int *delay_in_us);
 int  send_audio_pkt(void *channel, int stream_id, void *pkt_p);
 int  send_video_pkt(void *channel, int stream_id, void *pkt_p);
 int  xrdpvr_set_volume(void *channel, int volume);

@@ -32,7 +32,8 @@ void OurInterface::oneTimeDeinit()
     closeVirtualChannel();
 }
 
-void OurInterface::initRemoteClient()
+/* returns error */
+int OurInterface::initRemoteClient()
 {
     int64_t start_time;
     int64_t duration;
@@ -40,18 +41,21 @@ void OurInterface::initRemoteClient()
     //elapsedTime = 0;
 
     if (sendMetadataFile())
-        return;
+        return 1;
 
     if (sendVideoFormat())
-        return;
+        return 1;
 
     if (sendAudioFormat())
-        return;
+        return 1;
 
     if (sendGeometry(savedGeometry))
-        return;
+        return 1;
 
-    xrdpvr_play_media(channel, 101, filename.toAscii().data());
+    if (xrdpvr_play_media(channel, 101, filename.toAscii().data()) != 0)
+    {
+        return 1;
+    }
 
     xrdpvr_get_media_duration(&start_time, &duration);
     //qDebug() << "ourInterface:initRemoteClient: emit onMediaDurationInSecs: dur=" << duration;
@@ -66,6 +70,7 @@ void OurInterface::initRemoteClient()
         demuxMedia->moveToThread(demuxMediaThread);
         //playVideo = demuxMedia->getPlayVideoInstance();
     }
+    return 0;
 }
 
 void OurInterface::deInitRemoteClient()

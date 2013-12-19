@@ -31,11 +31,11 @@ class OurInterface : public QObject
 
 public:
     explicit OurInterface(QObject *parent = 0);
-    
+
     /* public methods */
     int  oneTimeInit();
     void oneTimeDeinit();
-    void initRemoteClient();
+    int initRemoteClient();
     void deInitRemoteClient();
     int  sendGeometry(QRect rect);
     void setFilename(QString filename);
