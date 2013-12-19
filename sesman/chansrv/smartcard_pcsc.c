@@ -106,14 +106,24 @@ scard_pcsc_get_wait_objs(tbus *objs, int *count, int *timeout)
 int APP_CC
 scard_pcsc_check_wait_objs(void)
 {
-    LLOGLN(10, ("scard_pcsc_check_wait_objs"));
+    LLOGLN(10, ("scard_pcsc_check_wait_objs:"));
     if (g_lis != 0)
     {
-        trans_check_wait_objs(g_lis);
+        if (trans_check_wait_objs(g_lis) != 0)
+        {
+            LLOGLN(0, ("scard_pcsc_check_wait_objs: g_lis trans_check_wait_objs error"));
+        }
     }
     if (g_con != 0)
     {
-        trans_check_wait_objs(g_con);
+        if (trans_check_wait_objs(g_con) != 0)
+        {
+            LLOGLN(0, ("scard_pcsc_check_wait_objs: g_con trans_check_wait_objs error"));
+            /* TODO: cleanup better */
+            trans_delete(g_con);
+            g_con = 0;
+            g_xrdp_pcsc_state = 0;
+        }
     }
     return 0;
 }
