@@ -23,7 +23,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>VRPlayer v1.4</string>
+    <string>VRPlayer v1.6</string>
    </property>
   </widget>
   <widget class="QPushButton" name="okButton">
