@@ -243,16 +243,20 @@ send_message(int code, char *data, int bytes)
 {
     char header[8];
 
+    pthread_mutex_lock(&g_mutex);
     SET_UINT32(header, 0, bytes);
     SET_UINT32(header, 4, code);
     if (send(g_sck, header, 8, 0) != 8)
     {
+        pthread_mutex_unlock(&g_mutex);
         return 1;
     }
     if (send(g_sck, data, bytes, 0) != bytes)
     {
+        pthread_mutex_unlock(&g_mutex);
         return 1;
     }
+    pthread_mutex_unlock(&g_mutex);
     return 0;
 }
 
@@ -262,9 +266,49 @@ get_message(int *code, char *data, int *bytes)
 {
     char header[8];
     int max_bytes;
+    int error;
+    int max;
+    int lcode;
+    struct timeval time;
+    fd_set rd_set;
+
+    LLOGLN(10, ("get_message:"));
+    max = g_sck + 1;
+    while (1)
+    {
+        LLOGLN(10, ("get_message: loop"));
+        time.tv_sec = 1;
+        time.tv_usec = 0;
+        FD_ZERO(&rd_set);
+        FD_SET(((unsigned int)g_sck), &rd_set);
+        error = select(max, &rd_set, 0, 0, &time);
+        if (error == 1)
+        {
+            pthread_mutex_lock(&g_mutex);
+            time.tv_sec = 0;
+            time.tv_usec = 0;
+            FD_ZERO(&rd_set);
+            FD_SET(((unsigned int)g_sck), &rd_set);
+            error = select(max, &rd_set, 0, 0, &time);
+            if (error == 1)
+            {
+                if (recv(g_sck, header, 8, MSG_PEEK) == 8)
+                {
+                    lcode = GET_UINT32(header, 4);
+                    if (lcode == *code)
+                    {
+                        /* still have mutex lock */
+                        break;
+                    }
+                }
+            }
+            pthread_mutex_unlock(&g_mutex);
+        }
+    }
 
     if (recv(g_sck, header, 8, 0) != 8)
     {
+        pthread_mutex_unlock(&g_mutex);
         return 1;
     }
     max_bytes = *bytes;
@@ -272,12 +316,15 @@ get_message(int *code, char *data, int *bytes)
     *code = GET_UINT32(header, 4);
     if (*bytes > max_bytes)
     {
+        pthread_mutex_unlock(&g_mutex);
         return 1;
     }
     if (recv(g_sck, data, *bytes, 0) != *bytes)
     {
+        pthread_mutex_unlock(&g_mutex);
         return 1;
     }
+    pthread_mutex_unlock(&g_mutex);
     return 0;
 }
 
@@ -302,28 +349,24 @@ SCardEstablishContext(DWORD dwScope, LPCVOID pvReserved1, LPCVOID pvReserved2,
             return SCARD_F_INTERNAL_ERROR;
         }
     }
-    pthread_mutex_lock(&g_mutex);
     SET_UINT32(msg, 0, dwScope);
     if (send_message(SCARD_ESTABLISH_CONTEXT, msg, 4) != 0)
     {
         LLOGLN(0, ("SCardEstablishContext: error, send_message"));
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
     bytes = 256;
+    code = SCARD_ESTABLISH_CONTEXT;
     if (get_message(&code, msg, &bytes) != 0)
     {
         LLOGLN(0, ("SCardEstablishContext: error, get_message"));
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
     if ((code != SCARD_ESTABLISH_CONTEXT) || (bytes != 8))
     {
         LLOGLN(0, ("SCardEstablishContext: error, bad code"));
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
-    pthread_mutex_unlock(&g_mutex);
     context = GET_UINT32(msg, 0);
     status = GET_UINT32(msg, 4);
     LLOGLN(10, ("SCardEstablishContext: got context 0x%8.8x", context));
@@ -346,28 +389,24 @@ SCardReleaseContext(SCARDCONTEXT hContext)
         LLOGLN(0, ("SCardReleaseContext: error, not connected"));
         return SCARD_F_INTERNAL_ERROR;
     }
-    pthread_mutex_lock(&g_mutex);
     SET_UINT32(msg, 0, hContext);
     if (send_message(SCARD_RELEASE_CONTEXT, msg, 4) != 0)
     {
         LLOGLN(0, ("SCardReleaseContext: error, send_message"));
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
     bytes = 256;
+    code = SCARD_RELEASE_CONTEXT;
     if (get_message(&code, msg, &bytes) != 0)
     {
         LLOGLN(0, ("SCardReleaseContext: error, get_message"));
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
     if ((code != SCARD_RELEASE_CONTEXT) || (bytes != 4))
     {
         LLOGLN(0, ("SCardReleaseContext: error, bad code"));
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
-    pthread_mutex_unlock(&g_mutex);
     status = GET_UINT32(msg, 0);
     LLOGLN(10, ("SCardReleaseContext: got status 0x%8.8x", status));
     return status;
@@ -383,8 +422,6 @@ SCardIsValidContext(SCARDCONTEXT hContext)
         LLOGLN(0, ("SCardIsValidContext: error, not connected"));
         return SCARD_F_INTERNAL_ERROR;
     }
-    pthread_mutex_lock(&g_mutex);
-    pthread_mutex_unlock(&g_mutex);
     return SCARD_S_SUCCESS;
 }
 
@@ -425,27 +462,23 @@ SCardConnect(SCARDCONTEXT hContext, LPCSTR szReader, DWORD dwShareMode,
     offset += 4;
     SET_UINT32(msg, offset, dwPreferredProtocols);
     offset += 4;
-    pthread_mutex_lock(&g_mutex);
     if (send_message(SCARD_CONNECT, msg, offset) != 0)
     {
         LLOGLN(0, ("SCardConnect: error, send_message"));
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
     bytes = 256;
+    code = SCARD_CONNECT;
     if (get_message(&code, msg, &bytes) != 0)
     {
         LLOGLN(0, ("SCardConnect: error, get_message"));
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
     if (code != SCARD_CONNECT)
     {
         LLOGLN(0, ("SCardConnect: error, bad code"));
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
-    pthread_mutex_unlock(&g_mutex);
     *phCard = GET_UINT32(msg, 0);
     *pdwActiveProtocol = GET_UINT32(msg, 4);
     status = GET_UINT32(msg, 8);
@@ -465,8 +498,6 @@ SCardReconnect(SCARDHANDLE hCard, DWORD dwShareMode,
         LLOGLN(0, ("SCardReconnect: error, not connected"));
         return SCARD_F_INTERNAL_ERROR;
     }
-    pthread_mutex_lock(&g_mutex);
-    pthread_mutex_unlock(&g_mutex);
     return SCARD_S_SUCCESS;
 }
 
@@ -485,29 +516,25 @@ SCardDisconnect(SCARDHANDLE hCard, DWORD dwDisposition)
         LLOGLN(0, ("SCardDisconnect: error, not connected"));
         return SCARD_F_INTERNAL_ERROR;
     }
-    pthread_mutex_lock(&g_mutex);
     SET_UINT32(msg, 0, hCard);
     SET_UINT32(msg, 4, dwDisposition);
     if (send_message(SCARD_DISCONNECT, msg, 8) != 0)
     {
         LLOGLN(0, ("SCardDisconnect: error, send_message"));
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
     bytes = 256;
+    code = SCARD_DISCONNECT;
     if (get_message(&code, msg, &bytes) != 0)
     {
         LLOGLN(0, ("SCardDisconnect: error, get_message"));
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
     if ((code != SCARD_DISCONNECT) || (bytes != 4))
     {
         LLOGLN(0, ("SCardDisconnect: error, bad code"));
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
-    pthread_mutex_unlock(&g_mutex);
     status = GET_UINT32(msg, 0);
     LLOGLN(10, ("SCardDisconnect: got status 0x%8.8x", status));
     return status;
@@ -528,28 +555,24 @@ SCardBeginTransaction(SCARDHANDLE hCard)
         LLOGLN(0, ("SCardBeginTransaction: error, not connected"));
         return SCARD_F_INTERNAL_ERROR;
     }
-    pthread_mutex_lock(&g_mutex);
     SET_UINT32(msg, 0, hCard);
     if (send_message(SCARD_BEGIN_TRANSACTION, msg, 4) != 0)
     {
         LLOGLN(0, ("SCardBeginTransaction: error, send_message"));
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
     bytes = 256;
+    code = SCARD_BEGIN_TRANSACTION;
     if (get_message(&code, msg, &bytes) != 0)
     {
         LLOGLN(0, ("SCardBeginTransaction: error, get_message"));
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
     if ((code != SCARD_BEGIN_TRANSACTION) || (bytes != 4))
     {
         LLOGLN(0, ("SCardBeginTransaction: error, bad code"));
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
-    pthread_mutex_unlock(&g_mutex);
     status = GET_UINT32(msg, 0);
     LLOGLN(10, ("SCardBeginTransaction: got status 0x%8.8x", status));
     return status;
@@ -570,29 +593,25 @@ SCardEndTransaction(SCARDHANDLE hCard, DWORD dwDisposition)
         LLOGLN(0, ("SCardEndTransaction: error, not connected"));
         return SCARD_F_INTERNAL_ERROR;
     }
-    pthread_mutex_lock(&g_mutex);
     SET_UINT32(msg, 0, hCard);
     SET_UINT32(msg, 4, dwDisposition);
     if (send_message(SCARD_END_TRANSACTION, msg, 8) != 0)
     {
         LLOGLN(0, ("SCardEndTransaction: error, send_message"));
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
     bytes = 256;
+    code = SCARD_END_TRANSACTION;
     if (get_message(&code, msg, &bytes) != 0)
     {
         LLOGLN(0, ("SCardEndTransaction: error, get_message"));
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
     if ((code != SCARD_END_TRANSACTION) || (bytes != 4))
     {
         LLOGLN(0, ("SCardEndTransaction: error, bad code"));
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
-    pthread_mutex_unlock(&g_mutex);
     status = GET_UINT32(msg, 0);
     LLOGLN(10, ("SCardEndTransaction: got status 0x%8.8x", status));
     return status;
@@ -627,30 +646,26 @@ SCardStatus(SCARDHANDLE hCard, LPSTR mszReaderName, LPDWORD pcchReaderLen,
     SET_UINT32(msg, 0, hCard);
     SET_UINT32(msg, 4, cchReaderLen);
     SET_UINT32(msg, 8, *pcbAtrLen);
-    pthread_mutex_lock(&g_mutex);
     if (send_message(SCARD_STATUS, msg, 12) != 0)
     {
         LLOGLN(0, ("SCardStatus: error, send_message"));
         free(msg);
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
     bytes = 8192;
+    code = SCARD_STATUS;
     if (get_message(&code, msg, &bytes) != 0)
     {
         LLOGLN(0, ("SCardStatus: error, get_message"));
         free(msg);
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
     if (code != SCARD_STATUS)
     {
         LLOGLN(0, ("SCardStatus: error, bad code"));
         free(msg);
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
-    pthread_mutex_unlock(&g_mutex);
 
     LLOGLN(10, ("SCardStatus: cchReaderLen in %d", *pcchReaderLen));
     offset = 0;
@@ -693,12 +708,17 @@ SCardGetStatusChange(SCARDCONTEXT hContext, DWORD dwTimeout,
                      LPSCARD_READERSTATE rgReaderStates, DWORD cReaders)
 {
     char *msg;
+    const char *rname;
     int bytes;
     int code;
     int index;
     int offset;
     int str_len;
     int status;
+    int dwCurrentState;
+    int dwEventState;
+    int cbAtr;
+    char atr[36];
 
     LLOGLN(10, ("SCardGetStatusChange:"));
     LLOGLN(10, ("  dwTimeout %d cReaders %d", dwTimeout, cReaders));
@@ -714,69 +734,79 @@ SCardGetStatusChange(SCARDCONTEXT hContext, DWORD dwTimeout,
     offset = 12;
     for (index = 0; index < cReaders; index++)
     {
-        if (rgReaderStates[index].dwCurrentState == 0) /* SCARD_STATE_UNAWARE */
+        rname = rgReaderStates[index].szReader;
+        if (strcmp(rname, "\\\\?PnP?\\Notification") == 0)
         {
-            rgReaderStates[index].dwEventState = 0;
-            rgReaderStates[index].cbAtr = 0;
+            LLOGLN(10, ("  found \\\\?PnP?\\Notification"));
+            dwCurrentState = 0x00010000;
+            dwEventState = 0;
+            cbAtr = 0;
+            memset(atr, 0, 36);
         }
-        str_len = strlen(rgReaderStates[index].szReader);
+        else
+        {
+            dwCurrentState = rgReaderStates[index].dwCurrentState;
+            dwEventState = rgReaderStates[index].dwEventState;
+            cbAtr = rgReaderStates[index].cbAtr;
+            memset(atr, 0, 36);
+            memcpy(atr, rgReaderStates[index].rgbAtr, 33);
+        }
+        str_len = strlen(rname);
         str_len = LMIN(str_len, 99);
         memset(msg + offset, 0, 100);
-        memcpy(msg + offset, rgReaderStates[index].szReader, str_len);
-        LLOGLN(10, ("  in szReader       %s", rgReaderStates[index].szReader));
+        memcpy(msg + offset, rname, str_len);
+        LLOGLN(10, ("  in szReader       %s", rname));
         offset += 100;
-        LLOGLN(10, ("  in dwCurrentState 0x%8.8x", rgReaderStates[index].dwCurrentState));
-        SET_UINT32(msg, offset, rgReaderStates[index].dwCurrentState);
+        LLOGLN(10, ("  in dwCurrentState 0x%8.8x", dwCurrentState));
+        SET_UINT32(msg, offset, dwCurrentState);
         offset += 4;
-        LLOGLN(10, ("  in dwEventState   0x%8.8x", rgReaderStates[index].dwEventState));
-        SET_UINT32(msg, offset, rgReaderStates[index].dwEventState);
+        LLOGLN(10, ("  in dwEventState   0x%8.8x", dwEventState));
+        SET_UINT32(msg, offset, dwEventState);
         offset += 4;
-        LLOGLN(10, ("  in cbAtr          %d", rgReaderStates[index].cbAtr));
-        SET_UINT32(msg, offset, rgReaderStates[index].cbAtr);
+        LLOGLN(10, ("  in cbAtr          %d", cbAtr));
+        SET_UINT32(msg, offset, cbAtr);
         offset += 4;
-        memset(msg + offset, 0, 36);
-        memcpy(msg + offset, rgReaderStates[index].rgbAtr, 33);
+        memcpy(msg + offset, atr, 36);
         offset += 36;
     }
-    pthread_mutex_lock(&g_mutex);
     if (send_message(SCARD_GET_STATUS_CHANGE, msg, offset) != 0)
     {
         LLOGLN(0, ("SCardGetStatusChange: error, send_message"));
         free(msg);
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
     bytes = 8192;
+    code = SCARD_GET_STATUS_CHANGE;
     if (get_message(&code, msg, &bytes) != 0)
     {
         LLOGLN(0, ("SCardGetStatusChange: error, get_message"));
         free(msg);
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
     if (code != SCARD_GET_STATUS_CHANGE)
     {
         LLOGLN(0, ("SCardGetStatusChange: error, bad code"));
         free(msg);
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
-    pthread_mutex_unlock(&g_mutex);
     cReaders = GET_UINT32(msg, 0);
     offset = 4;
     LLOGLN(10, ("SCardGetStatusChange: got back cReaders %d", cReaders));
     for (index = 0; index < cReaders; index++)
     {
         LLOGLN(10, ("  out szReader       %s", rgReaderStates[index].szReader));
-        rgReaderStates[index].dwCurrentState = GET_UINT32(msg, offset);
+        dwCurrentState = GET_UINT32(msg, offset);
+        rgReaderStates[index].dwCurrentState = dwCurrentState;
         offset += 4;
-        LLOGLN(10, ("  out dwCurrentState 0x%8.8x", rgReaderStates[index].dwCurrentState));
-        rgReaderStates[index].dwEventState = GET_UINT32(msg, offset);
+        LLOGLN(10, ("  out dwCurrentState 0x%8.8x", dwCurrentState));
+        dwEventState = GET_UINT32(msg, offset);
+        rgReaderStates[index].dwEventState = dwEventState;
         offset += 4;
-        LLOGLN(10, ("  out dwEventState   0x%8.8x", rgReaderStates[index].dwEventState));
-        rgReaderStates[index].cbAtr = GET_UINT32(msg, offset);
+        LLOGLN(10, ("  out dwEventState   0x%8.8x", dwEventState));
+        cbAtr = GET_UINT32(msg, offset);
+        rgReaderStates[index].cbAtr = cbAtr;
         offset += 4;
-        LLOGLN(10, ("  out cbAtr          %d", rgReaderStates[index].cbAtr));
+        LLOGLN(10, ("  out cbAtr          %d", cbAtr));
         memcpy(rgReaderStates[index].rgbAtr, msg + offset, 33);
         offset += 36;
     }
@@ -831,30 +861,26 @@ SCardControl(SCARDHANDLE hCard, DWORD dwControlCode, LPCVOID pbSendBuffer,
     offset += cbSendLength;
     SET_UINT32(msg, offset, cbRecvLength);
     offset += 4;
-    pthread_mutex_lock(&g_mutex);
     if (send_message(SCARD_CONTROL, msg, offset) != 0)
     {
         LLOGLN(0, ("SCardControl: error, send_message"));
         free(msg);
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
     bytes = 8192;
+    code = SCARD_CONTROL;
     if (get_message(&code, msg, &bytes) != 0)
     {
         LLOGLN(0, ("SCardControl: error, get_message"));
         free(msg);
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
     if (code != SCARD_CONTROL)
     {
         LLOGLN(0, ("SCardControl: error, bad code"));
         free(msg);
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
-    pthread_mutex_unlock(&g_mutex);
     offset = 0;
     *lpBytesReturned = GET_UINT32(msg, offset);
     LLOGLN(10, ("  cbRecvLength %d", *lpBytesReturned));
@@ -937,30 +963,26 @@ SCardTransmit(SCARDHANDLE hCard, const SCARD_IO_REQUEST *pioSendPci,
     }
     SET_UINT32(msg, offset, *pcbRecvLength);
     offset += 4;
-    pthread_mutex_lock(&g_mutex);
     if (send_message(SCARD_TRANSMIT, msg, offset) != 0)
     {
         LLOGLN(0, ("SCardTransmit: error, send_message"));
         free(msg);
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
     bytes = 8192;
+    code = SCARD_TRANSMIT;
     if (get_message(&code, msg, &bytes) != 0)
     {
         LLOGLN(0, ("SCardTransmit: error, get_message"));
         free(msg);
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
     if (code != SCARD_TRANSMIT)
     {
         LLOGLN(0, ("SCardTransmit: error, bad code"));
         free(msg);
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
-    pthread_mutex_unlock(&g_mutex);
     offset = 0;
     if (pioRecvPci == 0)
     {
@@ -1000,8 +1022,6 @@ SCardListReaderGroups(SCARDCONTEXT hContext, LPSTR mszGroups,
         LLOGLN(0, ("SCardListReaderGroups: error, not connected"));
         return SCARD_F_INTERNAL_ERROR;
     }
-    pthread_mutex_lock(&g_mutex);
-    pthread_mutex_unlock(&g_mutex);
     return SCARD_S_SUCCESS;
 }
 
@@ -1033,7 +1053,6 @@ SCardListReaders(SCARDCONTEXT hContext, LPCSTR mszGroups, LPSTR mszReaders,
         return SCARD_F_INTERNAL_ERROR;
     }
     msg = (char *) malloc(8192);
-    pthread_mutex_lock(&g_mutex);
     offset = 0;
     SET_UINT32(msg, offset, hContext);
     offset += 4;
@@ -1053,25 +1072,22 @@ SCardListReaders(SCARDCONTEXT hContext, LPCSTR mszGroups, LPSTR mszReaders,
     {
         LLOGLN(0, ("SCardListReaders: error, send_message"));
         free(msg);
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
     bytes = 8192;
+    code = SCARD_LIST_READERS;
     if (get_message(&code, msg, &bytes) != 0)
     {
         LLOGLN(0, ("SCardListReaders: error, get_message"));
         free(msg);
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
     if (code != SCARD_LIST_READERS)
     {
         LLOGLN(0, ("SCardListReaders: error, bad code"));
         free(msg);
-        pthread_mutex_unlock(&g_mutex);
         return SCARD_F_INTERNAL_ERROR;
     }
-    pthread_mutex_unlock(&g_mutex);
     offset = 0;
     llen = GET_UINT32(msg, offset);
     offset += 4;
@@ -1095,10 +1111,11 @@ SCardListReaders(SCARDCONTEXT hContext, LPCSTR mszGroups, LPSTR mszReaders,
     reader_names[reader_names_index] = 0;
     reader_names_index++;
     status = GET_UINT32(msg, offset);
+    LLOGLN(10, ("SCardListReaders: status 0x%8.8x", status));
     offset += 4;
     if (mszReaders == 0)
     {
-        reader_names_index = llen;
+        reader_names_index = llen / 2;
     }
     if (pcchReaders != 0)
     {
@@ -1123,8 +1140,6 @@ SCardFreeMemory(SCARDCONTEXT hContext, LPCVOID pvMem)
         LLOGLN(0, ("SCardFreeMemory: error, not connected"));
         return SCARD_F_INTERNAL_ERROR;
     }
-    pthread_mutex_lock(&g_mutex);
-    pthread_mutex_unlock(&g_mutex);
     return SCARD_S_SUCCESS;
 }
 
@@ -1138,8 +1153,6 @@ SCardCancel(SCARDCONTEXT hContext)
         LLOGLN(0, ("SCardCancel: error, not connected"));
         return SCARD_F_INTERNAL_ERROR;
     }
-    pthread_mutex_lock(&g_mutex);
-    pthread_mutex_unlock(&g_mutex);
     return SCARD_S_SUCCESS;
 }
 
@@ -1154,8 +1167,6 @@ SCardGetAttrib(SCARDHANDLE hCard, DWORD dwAttrId, LPBYTE pbAttr,
         LLOGLN(0, ("SCardGetAttrib: error, not connected"));
         return SCARD_F_INTERNAL_ERROR;
     }
-    pthread_mutex_lock(&g_mutex);
-    pthread_mutex_unlock(&g_mutex);
     return SCARD_S_SUCCESS;
 }
 
@@ -1170,8 +1181,6 @@ SCardSetAttrib(SCARDHANDLE hCard, DWORD dwAttrId, LPCBYTE pbAttr,
         LLOGLN(0, ("SCardSetAttrib: error, not connected"));
         return SCARD_F_INTERNAL_ERROR;
     }
-    pthread_mutex_lock(&g_mutex);
-    pthread_mutex_unlock(&g_mutex);
     return SCARD_S_SUCCESS;
 }
 
