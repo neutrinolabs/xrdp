@@ -57,6 +57,7 @@ PCSC_API SCARD_IO_REQUEST g_rgSCardT1Pci  = { SCARD_PROTOCOL_T1,  8 };
 PCSC_API SCARD_IO_REQUEST g_rgSCardT0Pci  = { SCARD_PROTOCOL_RAW, 8 };
 
 #define LLOG_LEVEL 5
+//#define LLOG_LEVEL 11
 #define LLOGLN(_level, _args) \
   do { if (_level < LLOG_LEVEL) { printf _args ; printf("\n"); } } while (0)
 
@@ -482,7 +483,8 @@ SCardConnect(SCARDCONTEXT hContext, LPCSTR szReader, DWORD dwShareMode,
     *phCard = GET_UINT32(msg, 0);
     *pdwActiveProtocol = GET_UINT32(msg, 4);
     status = GET_UINT32(msg, 8);
-    LLOGLN(10, ("SCardReleaseContext: got status 0x%8.8x", status));
+    LLOGLN(10, ("SCardConnect: got status 0x%8.8x hCard %d",
+           status, *phCard));
     return status;
 }
 
@@ -510,7 +512,8 @@ SCardDisconnect(SCARDHANDLE hCard, DWORD dwDisposition)
     int bytes;
     int status;
 
-    LLOGLN(10, ("SCardDisconnect:"));
+    LLOGLN(10, ("SCardDisconnect: hCard %d dwDisposition %d",
+           hCard, dwDisposition));
     if (g_sck == -1)
     {
         LLOGLN(0, ("SCardDisconnect: error, not connected"));
@@ -549,7 +552,12 @@ SCardBeginTransaction(SCARDHANDLE hCard)
     int bytes;
     int status;
 
-    LLOGLN(10, ("SCardBeginTransaction:"));
+    LLOGLN(10, ("SCardBeginTransaction: hCard %d", hCard));
+    if (hCard == 0)
+    {
+        LLOGLN(0, ("SCardBeginTransaction: error, bad hCard"));
+        return SCARD_F_INTERNAL_ERROR;
+    }
     if (g_sck == -1)
     {
         LLOGLN(0, ("SCardBeginTransaction: error, not connected"));
@@ -632,6 +640,11 @@ SCardStatus(SCARDHANDLE hCard, LPSTR mszReaderName, LPDWORD pcchReaderLen,
     int to_copy;
 
     LLOGLN(10, ("SCardStatus:"));
+    if (hCard == 0)
+    {
+        LLOGLN(0, ("SCardStatus: error, bad hCard"));
+        return SCARD_F_INTERNAL_ERROR;
+    }
     if (g_sck == -1)
     {
         LLOGLN(0, ("SCardStatus: error, not connected"));
@@ -734,11 +747,13 @@ SCardGetStatusChange(SCARDCONTEXT hContext, DWORD dwTimeout,
     offset = 12;
     for (index = 0; index < cReaders; index++)
     {
+        rgReaderStates[index].dwCurrentState &= ~2;
+        rgReaderStates[index].dwEventState &= ~2;
         rname = rgReaderStates[index].szReader;
         if (strcmp(rname, "\\\\?PnP?\\Notification") == 0)
         {
-            LLOGLN(10, ("  found \\\\?PnP?\\Notification"));
-            dwCurrentState = 0x00010000;
+            LLOGLN(10, ("  \\\\?PnP?\\Notification present"));
+            dwCurrentState = 0;
             dwEventState = 0;
             cbAtr = 0;
             memset(atr, 0, 36);
@@ -794,21 +809,46 @@ SCardGetStatusChange(SCARDCONTEXT hContext, DWORD dwTimeout,
     LLOGLN(10, ("SCardGetStatusChange: got back cReaders %d", cReaders));
     for (index = 0; index < cReaders; index++)
     {
-        LLOGLN(10, ("  out szReader       %s", rgReaderStates[index].szReader));
-        dwCurrentState = GET_UINT32(msg, offset);
-        rgReaderStates[index].dwCurrentState = dwCurrentState;
-        offset += 4;
-        LLOGLN(10, ("  out dwCurrentState 0x%8.8x", dwCurrentState));
-        dwEventState = GET_UINT32(msg, offset);
-        rgReaderStates[index].dwEventState = dwEventState;
-        offset += 4;
-        LLOGLN(10, ("  out dwEventState   0x%8.8x", dwEventState));
-        cbAtr = GET_UINT32(msg, offset);
-        rgReaderStates[index].cbAtr = cbAtr;
-        offset += 4;
-        LLOGLN(10, ("  out cbAtr          %d", cbAtr));
-        memcpy(rgReaderStates[index].rgbAtr, msg + offset, 33);
-        offset += 36;
+        rname = rgReaderStates[index].szReader;
+#if 1
+        if (strcmp(rname, "\\\\?PnP?\\Notification") == 0)
+        {
+            LLOGLN(10, ("  out szReader       %s", rgReaderStates[index].szReader));
+            dwCurrentState = GET_UINT32(msg, offset);
+            rgReaderStates[index].dwCurrentState = dwCurrentState;
+            offset += 4;
+            LLOGLN(10, ("  out dwCurrentState 0x%8.8x", dwCurrentState));
+            // disable PnP for now
+            dwEventState = 4; // GET_UINT32(msg, offset);
+            rgReaderStates[index].dwEventState = dwEventState;
+            offset += 4;
+            LLOGLN(10, ("  out dwEventState   0x%8.8x", dwEventState));
+            cbAtr = GET_UINT32(msg, offset);
+            rgReaderStates[index].cbAtr = cbAtr;
+            offset += 4;
+            LLOGLN(10, ("  out cbAtr          %d", cbAtr));
+            memcpy(rgReaderStates[index].rgbAtr, msg + offset, 33);
+            offset += 36;
+        }
+        else
+#endif
+        {
+            LLOGLN(10, ("  out szReader       %s", rgReaderStates[index].szReader));
+            dwCurrentState = GET_UINT32(msg, offset);
+            rgReaderStates[index].dwCurrentState = dwCurrentState;
+            offset += 4;
+            LLOGLN(10, ("  out dwCurrentState 0x%8.8x", dwCurrentState));
+            dwEventState = GET_UINT32(msg, offset);
+            rgReaderStates[index].dwEventState = dwEventState;
+            offset += 4;
+            LLOGLN(10, ("  out dwEventState   0x%8.8x", dwEventState));
+            cbAtr = GET_UINT32(msg, offset);
+            rgReaderStates[index].cbAtr = cbAtr;
+            offset += 4;
+            LLOGLN(10, ("  out cbAtr          %d", cbAtr));
+            memcpy(rgReaderStates[index].rgbAtr, msg + offset, 33);
+            offset += 36;
+        }
     }
     status = GET_UINT32(msg, offset);
     offset += 4;
@@ -1147,13 +1187,38 @@ SCardFreeMemory(SCARDCONTEXT hContext, LPCVOID pvMem)
 PCSC_API LONG
 SCardCancel(SCARDCONTEXT hContext)
 {
-    LLOGLN(0, ("SCardCancel:"));
+    char msg[256];
+    int code;
+    int bytes;
+    int status;
+
+    LLOGLN(10, ("SCardCancel:"));
     if (g_sck == -1)
     {
         LLOGLN(0, ("SCardCancel: error, not connected"));
         return SCARD_F_INTERNAL_ERROR;
     }
-    return SCARD_S_SUCCESS;
+    SET_UINT32(msg, 0, hContext);
+    if (send_message(SCARD_CANCEL, msg, 4) != 0)
+    {
+        LLOGLN(0, ("SCardCancel: error, send_message"));
+        return SCARD_F_INTERNAL_ERROR;
+    }
+    bytes = 256;
+    code = SCARD_CANCEL;
+    if (get_message(&code, msg, &bytes) != 0)
+    {
+        LLOGLN(0, ("SCardCancel: error, get_message"));
+        return SCARD_F_INTERNAL_ERROR;
+    }
+    if ((code != SCARD_RELEASE_CONTEXT) || (bytes != 4))
+    {
+        LLOGLN(0, ("SCardCancel: error, bad code"));
+        return SCARD_F_INTERNAL_ERROR;
+    }
+    status = GET_UINT32(msg, 0);
+    LLOGLN(10, ("SCardCancel: got status 0x%8.8x", status));
+    return status;
 }
 
 /*****************************************************************************/

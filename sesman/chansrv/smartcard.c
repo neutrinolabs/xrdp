@@ -166,35 +166,54 @@ static int  APP_CC scard_get_free_slot(void);
 static void APP_CC scard_release_resources(void);
 #endif
 static void APP_CC scard_send_EstablishContext(IRP *irp, int scope);
-static void APP_CC scard_send_ReleaseContext(IRP *irp, tui32 context);
-static void APP_CC scard_send_IsContextValid(IRP* irp, tui32 context);
-static void APP_CC scard_send_ListReaders(IRP *irp, tui32 context,
+static void APP_CC scard_send_ReleaseContext(IRP *irp,
+                                             char *context, int context_bytes);
+static void APP_CC scard_send_IsContextValid(IRP* irp,
+                                             char *context, int context_bytes);
+static void APP_CC scard_send_ListReaders(IRP *irp,
+                                          char *context, int context_bytes,
                                           char *groups, int cchReaders,
                                           int wide);
-static void APP_CC scard_send_GetStatusChange(IRP *irp, tui32 context, int wide,
+static void APP_CC scard_send_GetStatusChange(IRP *irp,
+                                              char *context, int context_bytes,
+                                              int wide,
                                               tui32 timeout, tui32 num_readers,
                                               READER_STATE *rsa);
-static void APP_CC scard_send_Connect(IRP *irp, tui32 context, int wide,
+static void APP_CC scard_send_Connect(IRP *irp,
+                                      char *context, int context_bytes,
+                                      int wide,
                                       READER_STATE *rs);
-static void APP_CC scard_send_Reconnect(IRP *irp, tui32 context,
-                                        tui32 sc_handle, READER_STATE *rs);
-static void APP_CC scard_send_BeginTransaction(IRP *irp, tui32 sc_handle);
-static void APP_CC scard_send_EndTransaction(IRP *irp, tui32 sc_handle,
+static void APP_CC scard_send_Reconnect(IRP *irp,
+                                        char *context, int context_bytes,
+                                        char *card, int card_bytes,
+                                        READER_STATE *rs);
+static void APP_CC scard_send_BeginTransaction(IRP *irp,
+                                               char *context, int context_bytes,
+                                               char *card, int card_bytes);
+static void APP_CC scard_send_EndTransaction(IRP *irp,
+                                             char *context, int context_bytes,
+                                             char *card, int card_bytes,
                                              tui32 dwDisposition);
-static void APP_CC scard_send_Status(IRP *irp, int wide, tui32 sc_handle,
+static void APP_CC scard_send_Status(IRP *irp, int wide,
+                                     char *context, int context_bytes,
+                                     char *card, int card_bytes,
                                      int cchReaderLen, int cbAtrLen);
-static void APP_CC scard_send_Disconnect(IRP *irp, tui32 context,
-                                         tui32 sc_handle, int dwDisposition);
-static int  APP_CC scard_send_Transmit(IRP *irp, tui32 sc_handle,
+static void APP_CC scard_send_Disconnect(IRP *irp,
+                                         char *context, int context_bytes,
+                                         char *card, int card_bytes,
+                                         int dwDisposition);
+static int  APP_CC scard_send_Transmit(IRP *irp,
+                                       char *context, int context_byte,
+                                       char *card, int card_bytes,
                                        char *send_data, int send_bytes,
                                        int recv_bytes,
                                        struct xrdp_scard_io_request *send_ior,
                                        struct xrdp_scard_io_request *recv_ior);
-static int APP_CC scard_send_Control(IRP* irp, tui32 sc_handle,
+static int APP_CC scard_send_Control(IRP* irp, char *card, int card_bytes,
                                      char *send_data, int send_bytes,
                                      int recv_bytes, int control_code);
-static int APP_CC scard_send_Cancel(IRP *irp, tui32 context);
-static int APP_CC scard_send_GetAttrib(IRP *irp, tui32 sc_handle,
+static int APP_CC scard_send_Cancel(IRP *irp, char *context, int context_bytes);
+static int APP_CC scard_send_GetAttrib(IRP *irp, char *card, int card_bytes,
                                        READER_STATE *rs);
 
 /******************************************************************************
@@ -364,7 +383,8 @@ scard_send_establish_context(void *user_data, int scope)
  * Release a previously established Smart Card context
  *****************************************************************************/
 int APP_CC
-scard_send_release_context(void *user_data, tui32 context)
+scard_send_release_context(void *user_data,
+                           char *context, int context_bytes)
 {
     IRP *irp;
 
@@ -382,7 +402,7 @@ scard_send_release_context(void *user_data, tui32 context)
     irp->user_data = user_data;
 
     /* send IRP to client */
-    scard_send_ReleaseContext(irp, context);
+    scard_send_ReleaseContext(irp, context, context_bytes);
 
     return 0;
 }
@@ -391,7 +411,7 @@ scard_send_release_context(void *user_data, tui32 context)
  * Checks if a previously established context is still valid
  *****************************************************************************/
 int APP_CC
-scard_send_is_valid_context(void *user_data, tui32 context)
+scard_send_is_valid_context(void *user_data, char *context, int context_bytes)
 {
     IRP *irp;
 
@@ -409,7 +429,7 @@ scard_send_is_valid_context(void *user_data, tui32 context)
     irp->user_data = user_data;
 
     /* send IRP to client */
-    scard_send_IsContextValid(irp, context);
+    scard_send_IsContextValid(irp, context, context_bytes);
 
     return 0;
 }
@@ -418,8 +438,8 @@ scard_send_is_valid_context(void *user_data, tui32 context)
  *
  *****************************************************************************/
 int APP_CC
-scard_send_list_readers(void *user_data, tui32 context, char *groups,
-                        int cchReaders, int wide)
+scard_send_list_readers(void *user_data, char *context, int context_bytes,
+                        char *groups, int cchReaders, int wide)
 {
     IRP *irp;
 
@@ -436,7 +456,8 @@ scard_send_list_readers(void *user_data, tui32 context, char *groups,
     irp->user_data = user_data;
 
     /* send IRP to client */
-    scard_send_ListReaders(irp, context, groups, cchReaders, wide);
+    scard_send_ListReaders(irp, context, context_bytes, groups,
+                           cchReaders, wide);
 
     return 0;
 }
@@ -451,8 +472,8 @@ scard_send_list_readers(void *user_data, tui32 context, char *groups,
  * @param  rsa          array of READER_STATEs
  *****************************************************************************/
 int APP_CC
-scard_send_get_status_change(void *user_data, tui32 context, int wide,
-                             tui32 timeout, tui32 num_readers,
+scard_send_get_status_change(void *user_data, char *context, int context_bytes,
+                             int wide, tui32 timeout, tui32 num_readers,
                              READER_STATE* rsa)
 {
     IRP *irp;
@@ -471,7 +492,8 @@ scard_send_get_status_change(void *user_data, tui32 context, int wide,
     irp->user_data = user_data;
 
     /* send IRP to client */
-    scard_send_GetStatusChange(irp, context, wide, timeout, num_readers, rsa);
+    scard_send_GetStatusChange(irp, context, context_bytes, wide, timeout,
+                               num_readers, rsa);
 
     return 0;
 }
@@ -483,8 +505,8 @@ scard_send_get_status_change(void *user_data, tui32 context, int wide,
  * @param  wide  TRUE if unicode string
  *****************************************************************************/
 int APP_CC
-scard_send_connect(void *user_data, tui32 context, int wide,
-                   READER_STATE* rs)
+scard_send_connect(void *user_data, char *context, int context_bytes,
+                   int wide, READER_STATE* rs)
 {
     IRP *irp;
 
@@ -502,7 +524,7 @@ scard_send_connect(void *user_data, tui32 context, int wide,
     irp->user_data = user_data;
 
     /* send IRP to client */
-    scard_send_Connect(irp, context, wide, rs);
+    scard_send_Connect(irp, context, context_bytes, wide, rs);
 
     return 0;
 }
@@ -519,8 +541,8 @@ scard_send_connect(void *user_data, tui32 context, int wide,
  *                        rs.init_type
  *****************************************************************************/
 int APP_CC
-scard_send_reconnect(void *user_data, tui32 context, tui32 sc_handle,
-                     READER_STATE* rs)
+scard_send_reconnect(void *user_data, char *context, int context_bytes,
+                     char *card, int card_bytes, READER_STATE* rs)
 {
     IRP *irp;
 
@@ -538,7 +560,7 @@ scard_send_reconnect(void *user_data, tui32 context, tui32 sc_handle,
     irp->user_data = user_data;
 
     /* send IRP to client */
-    scard_send_Reconnect(irp, context, sc_handle, rs);
+    scard_send_Reconnect(irp, context, context_bytes, card, card_bytes, rs);
 
     return 0;
 }
@@ -550,7 +572,8 @@ scard_send_reconnect(void *user_data, tui32 context, tui32 sc_handle,
  * @param  con   connection to client
  *****************************************************************************/
 int APP_CC
-scard_send_begin_transaction(void *user_data, tui32 sc_handle)
+scard_send_begin_transaction(void *user_data, char *context, int context_bytes,
+                            char *card, int card_bytes)
 {
     IRP *irp;
 
@@ -568,7 +591,7 @@ scard_send_begin_transaction(void *user_data, tui32 sc_handle)
     irp->user_data = user_data;
 
     /* send IRP to client */
-    scard_send_BeginTransaction(irp, sc_handle);
+    scard_send_BeginTransaction(irp, context, context_bytes, card, card_bytes);
 
     return 0;
 }
@@ -581,7 +604,8 @@ scard_send_begin_transaction(void *user_data, tui32 sc_handle)
  * @param  sc_handle  handle to smartcard
  *****************************************************************************/
 int APP_CC
-scard_send_end_transaction(void *user_data, tui32 sc_handle,
+scard_send_end_transaction(void *user_data, char *context, int context_bytes,
+                           char *card, int card_bytes,
                            tui32 dwDisposition)
 {
     IRP *irp;
@@ -600,7 +624,8 @@ scard_send_end_transaction(void *user_data, tui32 sc_handle,
     irp->user_data = user_data;
 
     /* send IRP to client */
-    scard_send_EndTransaction(irp, sc_handle, dwDisposition);
+    scard_send_EndTransaction(irp, context, context_bytes,
+                              card, card_bytes, dwDisposition);
 
     return 0;
 }
@@ -612,7 +637,8 @@ scard_send_end_transaction(void *user_data, tui32 sc_handle,
  * @param  wide  TRUE if unicode string
  *****************************************************************************/
 int APP_CC
-scard_send_status(void *user_data, int wide, tui32 sc_handle,
+scard_send_status(void *user_data, int wide, char *context, int context_bytes,
+                  char *card, int card_bytes,
                   int cchReaderLen, int cbAtrLen)
 {
     IRP *irp;
@@ -631,7 +657,8 @@ scard_send_status(void *user_data, int wide, tui32 sc_handle,
     irp->user_data = user_data;
 
     /* send IRP to client */
-    scard_send_Status(irp, wide, sc_handle, cchReaderLen, cbAtrLen);
+    scard_send_Status(irp, wide, context, context_bytes, card, card_bytes,
+                      cchReaderLen, cbAtrLen);
 
     return 0;
 }
@@ -643,8 +670,8 @@ scard_send_status(void *user_data, int wide, tui32 sc_handle,
  * @param  sc_handle  handle to smartcard
  *****************************************************************************/
 int APP_CC
-scard_send_disconnect(void *user_data, tui32 context, tui32 sc_handle,
-                      int dwDisposition)
+scard_send_disconnect(void *user_data, char *context, int context_bytes,
+                      char *card, int card_bytes, int dwDisposition)
 {
     IRP *irp;
 
@@ -662,7 +689,8 @@ scard_send_disconnect(void *user_data, tui32 context, tui32 sc_handle,
     irp->user_data = user_data;
 
     /* send IRP to client */
-    scard_send_Disconnect(irp, context, sc_handle, dwDisposition);
+    scard_send_Disconnect(irp, context, context_bytes,
+                          card, card_bytes, dwDisposition);
 
     return 0;
 }
@@ -672,7 +700,8 @@ scard_send_disconnect(void *user_data, tui32 context, tui32 sc_handle,
  * associated with a valid context.
  *****************************************************************************/
 int APP_CC
-scard_send_transmit(void *user_data, tui32 sc_handle,
+scard_send_transmit(void *user_data, char *context, int context_bytes,
+                    char *card, int card_bytes,
                     char *send_data, int send_bytes, int recv_bytes,
                     struct xrdp_scard_io_request *send_ior,
                     struct xrdp_scard_io_request *recv_ior)
@@ -693,8 +722,9 @@ scard_send_transmit(void *user_data, tui32 sc_handle,
     irp->user_data = user_data;
 
     /* send IRP to client */
-    scard_send_Transmit(irp, sc_handle, send_data, send_bytes, recv_bytes,
-                        send_ior, recv_ior);
+    scard_send_Transmit(irp, context, context_bytes, card, card_bytes,
+                        send_data, send_bytes,
+                        recv_bytes, send_ior, recv_ior);
 
     return 0;
 }
@@ -703,7 +733,7 @@ scard_send_transmit(void *user_data, tui32 sc_handle,
  * Communicate directly with the smart card reader
  *****************************************************************************/
 int APP_CC
-scard_send_control(void *user_data, tui32 sc_handle,
+scard_send_control(void *user_data, char *card, int card_bytes,
                    char *send_data, int send_bytes,
                    int recv_bytes, int control_code)
 {
@@ -723,7 +753,7 @@ scard_send_control(void *user_data, tui32 sc_handle,
     irp->user_data = user_data;
 
     /* send IRP to client */
-    scard_send_Control(irp, sc_handle, send_data,
+    scard_send_Control(irp, card, card_bytes, send_data,
                        send_bytes, recv_bytes, control_code);
 
     return 0;
@@ -733,7 +763,7 @@ scard_send_control(void *user_data, tui32 sc_handle,
  * Cancel any outstanding calls
  *****************************************************************************/
 int APP_CC
-scard_send_cancel(void *user_data, tui32 context)
+scard_send_cancel(void *user_data, char *context, int context_bytes)
 {
     IRP *irp;
 
@@ -751,7 +781,7 @@ scard_send_cancel(void *user_data, tui32 context)
     irp->user_data = user_data;
 
     /* send IRP to client */
-    scard_send_Cancel(irp, context);
+    scard_send_Cancel(irp, context, context_bytes);
 
     return 0;
 }
@@ -760,7 +790,8 @@ scard_send_cancel(void *user_data, tui32 context)
  * Get reader attributes
  *****************************************************************************/
 int APP_CC
-scard_send_get_attrib(void *user_data, tui32 sc_handle, READER_STATE* rs)
+scard_send_get_attrib(void *user_data, char *card, int card_bytes,
+                      READER_STATE* rs)
 {
     IRP *irp;
 
@@ -778,7 +809,7 @@ scard_send_get_attrib(void *user_data, tui32 sc_handle, READER_STATE* rs)
     irp->user_data = user_data;
 
     /* send IRP to client */
-    scard_send_GetAttrib(irp, sc_handle, rs);
+    scard_send_GetAttrib(irp, card, card_bytes, rs);
 
     return 0;
 }
@@ -966,7 +997,7 @@ scard_send_EstablishContext(IRP *irp, int scope)
  * Release a previously established Smart Card context
  *****************************************************************************/
 static void APP_CC
-scard_send_ReleaseContext(IRP *irp, tui32 context)
+scard_send_ReleaseContext(IRP *irp, char *context, int context_bytes)
 {
     /* see [MS-RDPESC] 3.1.4.2 */
 
@@ -988,10 +1019,10 @@ scard_send_ReleaseContext(IRP *irp, tui32 context)
 
     s_push_layer(s, mcs_hdr, 4); /* bytes, set later */
     out_uint32_le(s, 0x00000000);
-    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, context_bytes);
     out_uint32_le(s, 0x00020000);
-    out_uint32_le(s, 0x00000004);
-    out_uint32_le(s, context);
+    out_uint32_le(s, context_bytes);
+    out_uint8a(s, context, context_bytes);
 
     s_mark_end(s);
 
@@ -1017,7 +1048,7 @@ scard_send_ReleaseContext(IRP *irp, tui32 context)
  * Checks if a previously established context is still valid
  *****************************************************************************/
 static void APP_CC
-scard_send_IsContextValid(IRP *irp, tui32 context)
+scard_send_IsContextValid(IRP *irp, char *context, int context_bytes)
 {
     /* see [MS-RDPESC] 3.1.4.3 */
 
@@ -1049,13 +1080,18 @@ scard_send_IsContextValid(IRP *irp, tui32 context)
      * u32    4 bytes    context
      */
 
-    xstream_wr_u32_le(s, 16);
+    s_push_layer(s, mcs_hdr, 4); /* bytes, set later */
 
     /* insert context */
-    xstream_wr_u32_le(s, 4);
-    xstream_wr_u32_le(s, context);
+    out_uint32_le(s, context_bytes);
+    out_uint8a(s, context, context_bytes);
 
     s_mark_end(s);
+
+    s_pop_layer(s, mcs_hdr);
+    bytes = (int) (s->end - s->p);
+    bytes -= 8;
+    out_uint32_le(s, bytes);
 
     s_pop_layer(s, iso_hdr);
     bytes = (int) (s->end - s->p);
@@ -1074,8 +1110,8 @@ scard_send_IsContextValid(IRP *irp, tui32 context)
  *
  *****************************************************************************/
 static void APP_CC
-scard_send_ListReaders(IRP *irp, tui32 context, char *groups,
-                       int cchReaders, int wide)
+scard_send_ListReaders(IRP *irp, char *context, int context_bytes,
+                       char *groups, int cchReaders, int wide)
 {
     /* see [MS-RDPESC] 2.2.2.4 */
 
@@ -1121,7 +1157,7 @@ scard_send_ListReaders(IRP *irp, tui32 context, char *groups,
 
     s_push_layer(s, mcs_hdr, 4); /* bytes, set later */
     out_uint32_le(s, 0x00000000);
-    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, context_bytes);
     out_uint32_le(s, 0x00020000);
     out_uint32_le(s, bytes_groups);
     out_uint32_le(s, val);
@@ -1129,8 +1165,8 @@ scard_send_ListReaders(IRP *irp, tui32 context, char *groups,
     out_uint32_le(s, cchReaders);
 
     /* insert context */
-    out_uint32_le(s, 4);
-    out_uint32_le(s, context);
+    out_uint32_le(s, context_bytes);
+    out_uint8a(s, context, context_bytes);
 
     if (bytes_groups > 0)
     {
@@ -1206,7 +1242,8 @@ align_s(struct stream *s, int bytes)
  * @param  rsa          array of READER_STATEs
  *****************************************************************************/
 static void APP_CC
-scard_send_GetStatusChange(IRP* irp, tui32 context, int wide, tui32 timeout,
+scard_send_GetStatusChange(IRP* irp, char *context, int context_bytes,
+                           int wide, tui32 timeout,
                            tui32 num_readers, READER_STATE* rsa)
 {
     /* see [MS-RDPESC] 2.2.2.11 for ASCII     */
@@ -1239,7 +1276,7 @@ scard_send_GetStatusChange(IRP* irp, tui32 context, int wide, tui32 timeout,
 
     s_push_layer(s, mcs_hdr, 4); /* bytes, set later */
     out_uint32_le(s, 0x00000000);
-    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, context_bytes);
     out_uint32_le(s, 0x00020000);
 
     out_uint32_le(s, timeout);
@@ -1247,8 +1284,8 @@ scard_send_GetStatusChange(IRP* irp, tui32 context, int wide, tui32 timeout,
     out_uint32_le(s, 0x00020004);     /* ? */
 
     /* insert context */
-    out_uint32_le(s, 4);
-    out_uint32_le(s, context);
+    out_uint32_le(s, context_bytes);
+    out_uint8a(s, context, context_bytes);
 
     out_uint32_le(s, num_readers);
 
@@ -1336,7 +1373,8 @@ scard_send_GetStatusChange(IRP* irp, tui32 context, int wide, tui32 timeout,
  * @param  rs   reader state
  *****************************************************************************/
 static void APP_CC
-scard_send_Connect(IRP* irp, tui32 context, int wide, READER_STATE* rs)
+scard_send_Connect(IRP* irp, char *context, int context_bytes,
+                   int wide, READER_STATE* rs)
 {
     /* see [MS-RDPESC] 2.2.2.13 for ASCII     */
     /* see [MS-RDPESC] 2.2.2.14 for Wide char */
@@ -1367,7 +1405,7 @@ scard_send_Connect(IRP* irp, tui32 context, int wide, READER_STATE* rs)
     s_push_layer(s, mcs_hdr, 4); /* bytes, set later */
     out_uint32_le(s, 0x00000000);
     out_uint32_le(s, 0x00020000);
-    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, context_bytes);
     out_uint32_le(s, 0x00020004);
     out_uint32_le(s, rs->dwShareMode);
     out_uint32_le(s, rs->dwPreferredProtocols);
@@ -1396,8 +1434,8 @@ scard_send_Connect(IRP* irp, tui32 context, int wide, READER_STATE* rs)
     align_s(s, 4);
 
     /* insert context */
-    out_uint32_le(s, 4);
-    out_uint32_le(s, context);
+    out_uint32_le(s, context_bytes);
+    out_uint8a(s, context, context_bytes);
     out_uint32_le(s, 0);
 
     s_mark_end(s);
@@ -1432,7 +1470,8 @@ scard_send_Connect(IRP* irp, tui32 context, int wide, READER_STATE* rs)
  *                        rs.init_type
  *****************************************************************************/
 static void APP_CC
-scard_send_Reconnect(IRP *irp, tui32 context, tui32 sc_handle, READER_STATE *rs)
+scard_send_Reconnect(IRP *irp, char *context, int context_bytes,
+                     char *card, int card_bytes, READER_STATE *rs)
 {
     /* see [MS-RDPESC] 2.2.2.15 */
     /* see [MS-RDPESC] 3.1.4.36 */
@@ -1470,14 +1509,15 @@ scard_send_Reconnect(IRP *irp, tui32 context, tui32 sc_handle, READER_STATE *rs)
      * u32    4 bytes    handle
      */
 
-    xstream_seek(s, 24);
-    xstream_wr_u32_le(s, rs->dwShareMode);
-    xstream_wr_u32_le(s, rs->dwPreferredProtocols);
-    xstream_wr_u32_le(s, rs->init_type);
-    xstream_wr_u32_le(s, 4);
-    xstream_wr_u32_le(s, context);
-    xstream_wr_u32_le(s, 4);
-    xstream_wr_u32_le(s, sc_handle);
+    xstream_seek(s, 24); /* TODO */
+
+    out_uint32_le(s, rs->dwShareMode);
+    out_uint32_le(s, rs->dwPreferredProtocols);
+    out_uint32_le(s, rs->init_type);
+    out_uint32_le(s, context_bytes);
+    out_uint8a(s, context, context_bytes);
+    out_uint32_le(s, card_bytes);
+    out_uint8a(s, card, card_bytes);
 
     s_mark_end(s);
 
@@ -1501,7 +1541,8 @@ scard_send_Reconnect(IRP *irp, tui32 context, tui32 sc_handle, READER_STATE *rs)
  * @param  con   connection to client
  *****************************************************************************/
 static void APP_CC
-scard_send_BeginTransaction(IRP *irp, tui32 sc_handle)
+scard_send_BeginTransaction(IRP *irp, char *context, int context_bytes,
+                            char *card, int card_bytes)
 {
     /* see [MS-RDPESC] 4.9 */
 
@@ -1523,17 +1564,20 @@ scard_send_BeginTransaction(IRP *irp, tui32 sc_handle)
 
     s_push_layer(s, mcs_hdr, 4); /* bytes, set later */
     out_uint32_le(s, 0x00000000);
-    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, context_bytes);
     out_uint32_le(s, 0x00020000);
-    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, card_bytes);
     out_uint32_le(s, 0x00020004);
     out_uint32_le(s, 0x00000000);
-    out_uint32_le(s, 0x00000004);
-    out_uint32_le(s, 0x00000002);
 
-    /* insert handle */
-    out_uint32_le(s, 4);
-    out_uint32_le(s, sc_handle);
+    /* insert context */
+    out_uint32_le(s, context_bytes);
+    out_uint8a(s, context, context_bytes);
+
+    /* insert card */
+    out_uint32_le(s, card_bytes);
+    out_uint8a(s, card, card_bytes);
+
     out_uint32_le(s, 0x00000000);
 
     s_mark_end(s);
@@ -1564,7 +1608,9 @@ scard_send_BeginTransaction(IRP *irp, tui32 sc_handle)
  * @param  sc_handle  handle to smartcard
  *****************************************************************************/
 static void APP_CC
-scard_send_EndTransaction(IRP *irp, tui32 sc_handle, tui32 dwDisposition)
+scard_send_EndTransaction(IRP *irp, char *context, int context_bytes,
+                          char *card, int card_bytes,
+                          tui32 dwDisposition)
 {
     /* see [MS-RDPESC] 3.1.4.32 */
 
@@ -1586,17 +1632,20 @@ scard_send_EndTransaction(IRP *irp, tui32 sc_handle, tui32 dwDisposition)
 
     s_push_layer(s, mcs_hdr, 4); /* bytes, set later */
     out_uint32_le(s, 0x00000000);
-    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, context_bytes);
     out_uint32_le(s, 0x00020000);
-    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, card_bytes);
     out_uint32_le(s, 0x00020004);
     out_uint32_le(s, dwDisposition);
-    out_uint32_le(s, 0x00000004);
-    out_uint32_le(s, 0x00000009);
 
-    /* insert handle */
-    out_uint32_le(s, 4);
-    out_uint32_le(s, sc_handle);
+    /* insert context */
+    out_uint32_le(s, context_bytes);
+    out_uint8a(s, context, context_bytes);
+
+    /* insert card */
+    out_uint32_le(s, card_bytes);
+    out_uint8a(s, card, card_bytes);
+
     out_uint32_le(s, 0);
 
     s_mark_end(s);
@@ -1626,7 +1675,8 @@ scard_send_EndTransaction(IRP *irp, tui32 sc_handle, tui32 dwDisposition)
  * @param  wide  TRUE if unicode string
  *****************************************************************************/
 static void APP_CC
-scard_send_Status(IRP *irp, int wide, tui32 sc_handle,
+scard_send_Status(IRP *irp, int wide, char *context, int context_bytes,
+                  char *card, int card_bytes,
                   int cchReaderLen, int cbAtrLen)
 {
     /* see [MS-RDPESC] 2.2.2.18 */
@@ -1666,18 +1716,22 @@ scard_send_Status(IRP *irp, int wide, tui32 sc_handle,
 */
     s_push_layer(s, mcs_hdr, 4); /* bytes, set later */
     out_uint32_le(s, 0x00000000);
-    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, context_bytes);
     out_uint32_le(s, 0x00020000);
-    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, card_bytes);
     out_uint32_le(s, 0x00020004);
     out_uint32_le(s, 0x00000001);
     out_uint32_le(s, cchReaderLen); /* readerLen, see [MS-RDPESC] 4.11 */
     out_uint32_le(s, cbAtrLen); /* atrLen,    see [MS-RDPESC] 4.11 */
-    out_uint32_le(s, 0x00000004);
-    out_uint32_le(s, 0x00000007);
-    /* insert sc_handle */
-    out_uint32_le(s, 4);
-    out_uint32_le(s, sc_handle);
+
+    /* insert context */
+    out_uint32_le(s, context_bytes);
+    out_uint8a(s, context, context_bytes);
+
+    /* insert card */
+    out_uint32_le(s, card_bytes);
+    out_uint8a(s, card, card_bytes);
+
     out_uint32_le(s, 0);
 
     s_mark_end(s);
@@ -1709,8 +1763,8 @@ scard_send_Status(IRP *irp, int wide, tui32 sc_handle,
  * @param  sc_handle  handle to smartcard
  *****************************************************************************/
 static void APP_CC
-scard_send_Disconnect(IRP *irp, tui32 context, tui32 sc_handle,
-                      int dwDisposition)
+scard_send_Disconnect(IRP *irp, char *context, int context_bytes,
+                      char *card, int card_bytes, int dwDisposition)
 {
     /* see [MS-RDPESC] 3.1.4.30 */
 
@@ -1732,19 +1786,19 @@ scard_send_Disconnect(IRP *irp, tui32 context, tui32 sc_handle,
 
     s_push_layer(s, mcs_hdr, 4); /* bytes, set later */
     out_uint32_le(s, 0x00000000);
-    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, context_bytes);
     out_uint32_le(s, 0x00020000);
-    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, card_bytes);
     out_uint32_le(s, 0x00020004);
     out_uint32_le(s, dwDisposition);
 
     /* insert context */
-    out_uint32_le(s, 4);
-    out_uint32_le(s, context);
+    out_uint32_le(s, context_bytes);
+    out_uint8a(s, context, context_bytes);
 
-    /* insert handle */
-    out_uint32_le(s, 4);
-    out_uint32_le(s, sc_handle);
+    /* insert card */
+    out_uint32_le(s, card_bytes);
+    out_uint8a(s, card, card_bytes);
 
     out_uint32_le(s, 0x00000000);
 
@@ -1773,7 +1827,8 @@ scard_send_Disconnect(IRP *irp, tui32 context, tui32 sc_handle,
  * associated with a valid context.
  *****************************************************************************/
 static int APP_CC
-scard_send_Transmit(IRP *irp, tui32 sc_handle, char *send_data,
+scard_send_Transmit(IRP *irp, char *context, int context_bytes,
+                    char *card, int card_bytes, char *send_data,
                     int send_bytes, int recv_bytes,
                     struct xrdp_scard_io_request *send_ior,
                     struct xrdp_scard_io_request *recv_ior)
@@ -1876,10 +1931,10 @@ scard_send_Transmit(IRP *irp, tui32 sc_handle, char *send_data,
     s_push_layer(s, mcs_hdr, 4); /* bytes, set later */
     out_uint32_le(s, 0x00000000);
 
-    out_uint32_le(s, 4);
+    out_uint32_le(s, context_bytes);
     out_uint32_le(s, 0x00020000); /* map0 */
 
-    out_uint32_le(s, 4);
+    out_uint32_le(s, card_bytes);
     out_uint32_le(s, 0x00020004); /* map1 */
 
     out_uint32_le(s, send_ior->dwProtocol);
@@ -1900,12 +1955,12 @@ scard_send_Transmit(IRP *irp, tui32 sc_handle, char *send_data,
     out_uint32_le(s, recv_bytes);
 
     /* map0 */
-    out_uint32_le(s, 4);
-    out_uint32_le(s, 5);
+    out_uint32_le(s, context_bytes);
+    out_uint8a(s, context, context_bytes);
 
     /* map1 */
-    out_uint32_le(s, 4);
-    out_uint32_le(s, sc_handle);
+    out_uint32_le(s, card_bytes);
+    out_uint8a(s, card, card_bytes);
 
     if (send_ior->extra_bytes > 0)
     {
@@ -1965,7 +2020,7 @@ scard_send_Transmit(IRP *irp, tui32 sc_handle, char *send_data,
  * Communicate directly with the smart card reader
  *****************************************************************************/
 static int APP_CC
-scard_send_Control(IRP *irp, tui32 sc_handle, char *send_data,
+scard_send_Control(IRP *irp, char *card, int card_bytes, char *send_data,
                    int send_bytes, int recv_bytes, int control_code)
 {
     /* see [MS-RDPESC] 2.2.2.19 */
@@ -2001,8 +2056,8 @@ scard_send_Control(IRP *irp, tui32 sc_handle, char *send_data,
     out_uint32_le(s, recv_bytes);
     out_uint32_le(s, 4);
     out_uint32_le(s, 0); /* context ? */
-    out_uint32_le(s, 4);
-    out_uint32_le(s, sc_handle);
+    out_uint32_le(s, card_bytes);
+    out_uint8a(s, card, card_bytes);
     if (send_bytes > 0)
     {
         out_uint32_le(s, send_bytes);
@@ -2040,7 +2095,7 @@ scard_send_Control(IRP *irp, tui32 sc_handle, char *send_data,
  * Cancel any outstanding calls
  *****************************************************************************/
 static int APP_CC
-scard_send_Cancel(IRP *irp, tui32 context)
+scard_send_Cancel(IRP *irp, char *context, int context_bytes)
 {
     /* see [MS-RDPESC] 3.1.4.27 */
 
@@ -2062,10 +2117,10 @@ scard_send_Cancel(IRP *irp, tui32 context)
 
     s_push_layer(s, mcs_hdr, 4); /* bytes, set later */
     out_uint32_le(s, 0x00000000);
-    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, context_bytes);
     out_uint32_le(s, 0x00020000);
-    out_uint32_le(s, 4);
-    out_uint32_le(s, context);
+    out_uint32_le(s, context_bytes);
+    out_uint8a(s, context, context_bytes);
 
     s_mark_end(s);
 
@@ -2092,7 +2147,7 @@ scard_send_Cancel(IRP *irp, tui32 context)
  * Get reader attributes
  *****************************************************************************/
 static int APP_CC
-scard_send_GetAttrib(IRP *irp, tui32 sc_handle, READER_STATE *rs)
+scard_send_GetAttrib(IRP *irp, char *card, int card_bytes, READER_STATE *rs)
 {
     /* see [MS-RDPESC] 2.2.2.21 */
 
@@ -2128,13 +2183,13 @@ scard_send_GetAttrib(IRP *irp, tui32 sc_handle, READER_STATE *rs)
      * u32    4 bytes    handle
      */
 
-    xstream_seek(s, 24);
-    xstream_wr_u32_le(s, rs->dwAttribId);
-    xstream_wr_u32_le(s, 0);
-    xstream_wr_u32_le(s, rs->dwAttrLen);
+    xstream_seek(s, 24); /* TODO */
+    out_uint32_le(s, rs->dwAttribId);
+    out_uint32_le(s, 0);
+    out_uint32_le(s, rs->dwAttrLen);
     xstream_seek(s, 8);
-    xstream_wr_u32_le(s, 4);
-    xstream_wr_u32_le(s, sc_handle);
+    out_uint32_le(s, card_bytes);
+    out_uint8a(s, card, card_bytes);
 
     s_mark_end(s);
 
