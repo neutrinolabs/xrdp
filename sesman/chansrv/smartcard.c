@@ -162,9 +162,7 @@ extern int   g_rdpdr_chan_id;    /* in chansrv.c */
 static struct stream * APP_CC scard_make_new_ioctl(IRP *irp, tui32 ioctl);
 static int  APP_CC scard_add_new_device(tui32 device_id);
 static int  APP_CC scard_get_free_slot(void);
-#if 0
 static void APP_CC scard_release_resources(void);
-#endif
 static void APP_CC scard_send_EstablishContext(IRP *irp, int scope);
 static void APP_CC scard_send_ReleaseContext(IRP *irp,
                                              char *context, int context_bytes);
@@ -301,7 +299,10 @@ scard_device_announce(tui32 device_id)
     log_debug("entered: device_id=%d", device_id);
 
     if (g_smartcards_inited)
+    {
+        log_error("already init");
         return;
+    }
 
     g_memset(&smartcards, 0, sizeof(smartcards));
     g_smartcards_inited = 1;
@@ -349,7 +350,10 @@ int APP_CC
 scard_deinit(void)
 {
     LOG(0, ("scard_deinit:"));
-    return scard_pcsc_deinit();
+    scard_pcsc_deinit();
+    scard_release_resources();
+    g_smartcards_inited = 0;
+    return 0;
 }
 
 /**
@@ -933,7 +937,6 @@ scard_get_free_slot(void)
     return -1;
 }
 
-#if 0
 /**
  * Release resources prior to shutting down
  *****************************************************************************/
@@ -951,7 +954,6 @@ scard_release_resources(void)
         }
     }
 }
-#endif
 
 /**
  *
