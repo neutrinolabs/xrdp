@@ -52,12 +52,11 @@ typedef struct _SCARD_IO_REQUEST
 #define SCARD_PROTOCOL_T1       0x0002 /**< T=1 active protocol. */
 #define SCARD_PROTOCOL_RAW      0x0004 /**< Raw active protocol. */
 
-PCSC_API SCARD_IO_REQUEST g_rgSCardRawPci = { SCARD_PROTOCOL_T0,  8 };
+PCSC_API SCARD_IO_REQUEST g_rgSCardT0Pci  = { SCARD_PROTOCOL_T0,  8 };
 PCSC_API SCARD_IO_REQUEST g_rgSCardT1Pci  = { SCARD_PROTOCOL_T1,  8 };
-PCSC_API SCARD_IO_REQUEST g_rgSCardT0Pci  = { SCARD_PROTOCOL_RAW, 8 };
+PCSC_API SCARD_IO_REQUEST g_rgSCardRawPci = { SCARD_PROTOCOL_RAW, 8 };
 
 #define LLOG_LEVEL 5
-//#define LLOG_LEVEL 11
 #define LLOGLN(_level, _args) \
   do { if (_level < LLOG_LEVEL) { printf _args ; printf("\n"); } } while (0)
 
@@ -268,6 +267,7 @@ get_message(int *code, char *data, int *bytes)
     char header[8];
     int max_bytes;
     int error;
+    int recv_rv;
     int max;
     int lcode;
     struct timeval time;
@@ -293,7 +293,9 @@ get_message(int *code, char *data, int *bytes)
             error = select(max, &rd_set, 0, 0, &time);
             if (error == 1)
             {
-                if (recv(g_sck, header, 8, MSG_PEEK) == 8)
+                /* just take a look at the next message */
+                recv_rv = recv(g_sck, header, 8, MSG_PEEK);
+                if (recv_rv == 8)
                 {
                     lcode = GET_UINT32(header, 4);
                     if (lcode == *code)
@@ -301,9 +303,29 @@ get_message(int *code, char *data, int *bytes)
                         /* still have mutex lock */
                         break;
                     }
+                    else
+                    {
+                        LLOGLN(10, ("get_message: lcode %d *code %d",
+                               lcode, *code));
+                    }
+                }
+                else if (recv_rv == 0)
+                {
+                    pthread_mutex_unlock(&g_mutex);
+                    LLOGLN(0, ("get_message: recv_rv 0, disconnect"));
+                    return 1;
+                }
+                else
+                {
+                    LLOGLN(10, ("get_message: recv_rv %d", recv_rv));
                 }
             }
+            else
+            {
+                LLOGLN(10, ("get_message: select return %d", error));
+            }
             pthread_mutex_unlock(&g_mutex);
+            usleep(1000);
         }
     }
 
