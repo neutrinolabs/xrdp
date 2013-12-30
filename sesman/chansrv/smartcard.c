@@ -207,7 +207,8 @@ static int  APP_CC scard_send_Transmit(IRP *irp,
                                        int recv_bytes,
                                        struct xrdp_scard_io_request *send_ior,
                                        struct xrdp_scard_io_request *recv_ior);
-static int APP_CC scard_send_Control(IRP* irp, char *card, int card_bytes,
+static int APP_CC scard_send_Control(IRP* irp, char *context, int context_bytes,
+                                     char *card, int card_bytes,
                                      char *send_data, int send_bytes,
                                      int recv_bytes, int control_code);
 static int APP_CC scard_send_Cancel(IRP *irp, char *context, int context_bytes);
@@ -737,7 +738,8 @@ scard_send_transmit(void *user_data, char *context, int context_bytes,
  * Communicate directly with the smart card reader
  *****************************************************************************/
 int APP_CC
-scard_send_control(void *user_data, char *card, int card_bytes,
+scard_send_control(void *user_data, char* context, int context_bytes,
+                   char *card, int card_bytes,
                    char *send_data, int send_bytes,
                    int recv_bytes, int control_code)
 {
@@ -757,8 +759,10 @@ scard_send_control(void *user_data, char *card, int card_bytes,
     irp->user_data = user_data;
 
     /* send IRP to client */
-    scard_send_Control(irp, card, card_bytes, send_data,
-                       send_bytes, recv_bytes, control_code);
+    scard_send_Control(irp, context, context_bytes,
+                       card, card_bytes,
+                       send_data, send_bytes,
+                       recv_bytes, control_code);
 
     return 0;
 }
@@ -1981,7 +1985,7 @@ scard_send_Transmit(IRP *irp, char *context, int context_bytes,
     {
         /* map4 */
         out_uint32_le(s, recv_ior->dwProtocol);
-        out_uint32_le(s, recv_ior->cbPciLength);
+        out_uint32_le(s, recv_ior->cbPciLength - 8);
         val = recv_ior->extra_bytes > 0 ? 1 : 0;
         out_uint32_le(s, val); /* map6*/
         if (val)
@@ -2022,7 +2026,8 @@ scard_send_Transmit(IRP *irp, char *context, int context_bytes,
  * Communicate directly with the smart card reader
  *****************************************************************************/
 static int APP_CC
-scard_send_Control(IRP *irp, char *card, int card_bytes, char *send_data,
+scard_send_Control(IRP *irp, char *context, int context_bytes,
+                   char *card, int card_bytes, char *send_data,
                    int send_bytes, int recv_bytes, int control_code)
 {
     /* see [MS-RDPESC] 2.2.2.19 */
@@ -2046,9 +2051,9 @@ scard_send_Control(IRP *irp, char *card, int card_bytes, char *send_data,
 
     s_push_layer(s, mcs_hdr, 4); /* bytes, set later */
     out_uint32_le(s, 0x00000000);
-    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, context_bytes);
     out_uint32_le(s, 0x00020000); /* map0 */
-    out_uint32_le(s, 0x00000004);
+    out_uint32_le(s, card_bytes);
     out_uint32_le(s, 0x00020004); /* map1 */
     out_uint32_le(s, control_code);
     out_uint32_le(s, send_bytes);
@@ -2056,8 +2061,8 @@ scard_send_Control(IRP *irp, char *card, int card_bytes, char *send_data,
     out_uint32_le(s, val);        /* map2 */
     out_uint32_le(s, 0x00000000);
     out_uint32_le(s, recv_bytes);
-    out_uint32_le(s, 4);
-    out_uint32_le(s, 0); /* context ? */
+    out_uint32_le(s, context_bytes);
+    out_uint8a(s, context, context_bytes);
     out_uint32_le(s, card_bytes);
     out_uint8a(s, card, card_bytes);
     if (send_bytes > 0)

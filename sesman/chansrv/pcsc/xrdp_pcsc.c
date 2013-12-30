@@ -461,9 +461,9 @@ SCardConnect(SCARDCONTEXT hContext, LPCSTR szReader, DWORD dwShareMode,
     int offset;
 
     LLOGLN(10, ("SCardConnect:"));
-    LLOGLN(10, ("SCardConnect: hContext %p szReader %s dwShareMode %d "
+    LLOGLN(10, ("SCardConnect: hContext 0x%8.8x szReader %s dwShareMode %d "
            "dwPreferredProtocols %d",
-           (void*)hContext, szReader, dwShareMode, dwPreferredProtocols));
+           hContext, szReader, dwShareMode, dwPreferredProtocols));
     if (g_sck == -1)
     {
         LLOGLN(0, ("SCardConnect: error, not connected"));
@@ -505,8 +505,9 @@ SCardConnect(SCARDCONTEXT hContext, LPCSTR szReader, DWORD dwShareMode,
     *phCard = GET_UINT32(msg, 0);
     *pdwActiveProtocol = GET_UINT32(msg, 4);
     status = GET_UINT32(msg, 8);
-    LLOGLN(10, ("SCardConnect: got status 0x%8.8x hCard %d",
-           status, *phCard));
+    LLOGLN(10, ("SCardConnect: got status 0x%8.8x hCard 0x%8.8x "
+           "dwActiveProtocol %d",
+           status, *phCard, *pdwActiveProtocol));
     return status;
 }
 
@@ -534,7 +535,7 @@ SCardDisconnect(SCARDHANDLE hCard, DWORD dwDisposition)
     int bytes;
     int status;
 
-    LLOGLN(10, ("SCardDisconnect: hCard %d dwDisposition %d",
+    LLOGLN(10, ("SCardDisconnect: hCard 0x%8.8x dwDisposition %d",
            hCard, dwDisposition));
     if (g_sck == -1)
     {
@@ -574,7 +575,7 @@ SCardBeginTransaction(SCARDHANDLE hCard)
     int bytes;
     int status;
 
-    LLOGLN(10, ("SCardBeginTransaction: hCard %d", hCard));
+    LLOGLN(10, ("SCardBeginTransaction: hCard 0x%8.8x", hCard));
     if (hCard == 0)
     {
         LLOGLN(0, ("SCardBeginTransaction: error, bad hCard"));
@@ -967,6 +968,7 @@ SCardTransmit(SCARDHANDLE hCard, const SCARD_IO_REQUEST *pioSendPci,
     int offset;
     int status;
     int extra_len;
+    int got_recv_pci;
 
     LLOGLN(10, ("SCardTransmit:"));
     if (g_sck == -1)
@@ -1002,8 +1004,10 @@ SCardTransmit(SCARDHANDLE hCard, const SCARD_IO_REQUEST *pioSendPci,
     offset += 4;
     memcpy(msg + offset, pbSendBuffer, cbSendLength);
     offset += cbSendLength;
-    if ((pioRecvPci == 0) || (pioRecvPci->cbPciLength < 8))
+    // TODO figure out why recv pci does not work
+    if (1 || (pioRecvPci == 0) || (pioRecvPci->cbPciLength < 8))
     {
+        got_recv_pci = 0;
         SET_UINT32(msg, offset, 0); /* dwProtocol */
         offset += 4;
         SET_UINT32(msg, offset, 0); /* cbPciLength */
@@ -1013,6 +1017,7 @@ SCardTransmit(SCARDHANDLE hCard, const SCARD_IO_REQUEST *pioSendPci,
     }
     else
     {
+        got_recv_pci = 1;
         SET_UINT32(msg, offset, pioRecvPci->dwProtocol);
         offset += 4;
         SET_UINT32(msg, offset, pioRecvPci->cbPciLength);
@@ -1046,7 +1051,7 @@ SCardTransmit(SCARDHANDLE hCard, const SCARD_IO_REQUEST *pioSendPci,
         return SCARD_F_INTERNAL_ERROR;
     }
     offset = 0;
-    if (pioRecvPci == 0)
+    if (got_recv_pci == 0)
     {
         offset += 8;
         extra_len = GET_UINT32(msg, offset);

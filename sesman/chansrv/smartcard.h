@@ -156,7 +156,9 @@ int  APP_CC scard_send_transmit(void *user_data,
                                 struct xrdp_scard_io_request *send_ior,
                                 struct xrdp_scard_io_request *recv_ior);
 
-int  APP_CC scard_send_control(void *user_data, char *card, int card_bytes,
+int  APP_CC scard_send_control(void *user_data,
+                               char *context, int context_bytes,
+                               char *card, int card_bytes,
                                char *send_data, int send_bytes,
                                int recv_bytes, int control_code);
 
