@@ -1207,25 +1207,23 @@ nil_signal_handler(int sig)
 void DEFAULT_CC
 child_signal_handler(int sig)
 {
-    int i1;
+    int pid;
 
     LOG(0, ("child_signal_handler:"));
-
     do
     {
-        i1 = g_waitchild();
-
-        if (i1 == g_exec_pid)
+        pid = g_waitchild();
+        LOG(0, ("child_signal_handler: child pid %d", pid));
+        if ((pid == g_exec_pid) && (pid > 0))
         {
-            LOG(0, ("child_signal_handler: found pid %d", i1));
+            LOG(0, ("child_signal_handler: found pid %d", pid));
             //shutdownx();
         }
-
-        LOG(10, ("  %d", i1));
     }
-    while (i1 >= 0);
+    while (pid >= 0);
 }
 
+/*****************************************************************************/
 void DEFAULT_CC
 segfault_signal_handler(int sig)
 {
