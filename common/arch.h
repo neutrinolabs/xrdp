@@ -79,6 +79,7 @@ typedef signed short tsi16;
 typedef int ti32;
 typedef unsigned int tui32;
 typedef signed int tsi32;
+typedef int tbool;
 #if defined(_WIN64)
 /* Microsoft's VC++ compiler uses the more backwards-compatible LLP64 model.
    Most other 64 bit compilers(Solaris, AIX, HP, Linux, Mac OS X) use
@@ -102,6 +103,6 @@ typedef int tsock;
 typedef unsigned long long tui64;
 typedef signed long long tsi64;
 #endif
-#endif
+#endif /* DEFINED_Ts */
 
 #endif
