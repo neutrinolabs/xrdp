@@ -75,4 +75,5 @@ static int APP_CC sound_input_start_recording();
 static int APP_CC sound_input_stop_recording();
 static int APP_CC sound_process_input_data(struct stream *s, int bytes);
 static int DEFAULT_CC sound_sndsrvr_source_data_in(struct trans *trans);
+static int APP_CC load_pulse_modules();
 #endif
