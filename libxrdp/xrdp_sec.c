@@ -1232,6 +1232,15 @@ xrdp_sec_in_mcs_data(struct xrdp_sec *self)
     }
     in_uint8s(s, 39);
     in_uint32_le(s, client_info->keylayout);
+    /* get keyboard type / subtype */
+    s->p = s->data;
+    if (!s_check_rem(s, 79 + 8))
+    {
+        return 1;
+    }
+    in_uint8s(s, 79);
+    in_uint32_le(s, client_info->keyboard_type);
+    in_uint32_le(s, client_info->keyboard_subtype);
     s->p = s->data;
     return 0;
 }
