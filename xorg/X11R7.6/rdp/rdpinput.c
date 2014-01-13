@@ -61,7 +61,6 @@ static int g_tab_down = 0;
    above *_down vars */
 static int g_scroll_lock_down = 0;
 static OsTimerPtr g_kbtimer = 0;
-static OsTimerPtr g_xkbtimer = 0;
 static OsTimerPtr g_timer = 0;
 static int g_x = 0;
 static int g_y = 0;
@@ -329,52 +328,6 @@ rdpSendBell(void)
 
 /******************************************************************************/
 void
-KbdDeviceInit(DeviceIntPtr pDevice, KeySymsPtr pKeySyms, CARD8 *pModMap)
-{
-    int i;
-
-    LLOGLN(10, ("KbdDeviceInit:"));
-
-    for (i = 0; i < MAP_LENGTH; i++)
-    {
-        pModMap[i] = NoSymbol;
-    }
-
-    pModMap[XSCAN_Shift_L] = ShiftMask;
-    pModMap[XSCAN_Shift_R] = ShiftMask;
-    pModMap[XSCAN_Caps_Lock] = LockMask;
-    pModMap[XSCAN_Control_L] = ControlMask;
-    pModMap[XSCAN_Control_R] = ControlMask;
-    pModMap[XSCAN_Alt_L] = Mod1Mask;
-    pModMap[XSCAN_Alt_R] = Mod1Mask;
-    pModMap[XSCAN_Num_Lock] = Mod2Mask;
-    pModMap[XSCAN_LWin] = Mod4Mask;
-    pModMap[XSCAN_RWin] = Mod4Mask;
-    pKeySyms->minKeyCode = MIN_KEY_CODE;
-    pKeySyms->maxKeyCode = MAX_KEY_CODE;
-    pKeySyms->mapWidth = GLYPHS_PER_KEY;
-    i = sizeof(KeySym) * MAP_LENGTH * GLYPHS_PER_KEY;
-    pKeySyms->map = (KeySym *)g_malloc(i, 1);
-
-    if (pKeySyms->map == 0)
-    {
-        rdpLog("KbdDeviceInit g_malloc failed\n");
-        exit(1);
-    }
-
-    for (i = 0; i < MAP_LENGTH * GLYPHS_PER_KEY; i++)
-    {
-        pKeySyms->map[i] = NoSymbol;
-    }
-
-    for (i = 0; i < N_PREDEFINED_KEYS * GLYPHS_PER_KEY; i++)
-    {
-        pKeySyms->map[i] = g_kbdMap[i];
-    }
-}
-
-/******************************************************************************/
-void
 KbdDeviceOn(void)
 {
     LLOGLN(10, ("KbdDeviceOn:"));
@@ -447,44 +400,6 @@ rdpChangeKeyboardControl(DeviceIntPtr pDev, KeybdCtrl *ctrl)
             LLOGLN(10, ("rdpChangeKeyboardControl: autoRepeat off"));
         }
     }
-}
-
-/******************************************************************************/
-static CARD32
-rdpInDeferredXkbCallback(OsTimerPtr timer, CARD32 now, pointer arg)
-{
-    int rv_pid;
-    int pid;
-    int status;
-
-    LLOGLN(10, ("rdpInDeferredXkbCallback:"));
-    pid = (int) arg;
-    rv_pid = waitpid(pid, &status, WNOHANG);
-    if (rv_pid == -1)
-    {
-        if (errno == EINTR) /* signal occurred */
-        {
-        }
-        else
-        {
-            LLOGLN(0, ("rdpInDeferredXkbCallback: waitpid failed"));
-        }
-    }
-    else if (rv_pid == pid)
-    {
-        LLOGLN(0, ("rdpInDeferredXkbCallback: setxkbmap result %d", status));
-        TimerFree(g_xkbtimer);
-        g_xkbtimer = 0;
-        return 0;
-    }
-    else if (rv_pid == 0)
-    {
-        LLOGLN(0, ("rdpInDeferredXkbCallback: setxkbmap not done yet"));
-    }
-    /* try again */
-    g_xkbtimer = TimerSet(g_xkbtimer, 0, 1000,
-                          rdpInDeferredXkbCallback, (pointer)(long)pid);
-    return 0;
 }
 
 /******************************************************************************/
@@ -574,90 +489,96 @@ rdpInDeferredXkbCallback(OsTimerPtr timer, CARD32 now, pointer arg)
 0x00001809  Irish
 0x0000201A  Bosnian Cyrillic
 */
+
+/******************************************************************************/
 int
 rdpLoadLayout(int keylayout)
 {
-    char a1[16];
-    char a2[16];
-    char a3[16];
-    char a4[16];
-    char a5[16];
-    char a6[16];
-    char a7[16];
-    char a8[16];
-    int pid;
-    int rv;
+    XkbRMLVOSet set;
+    XkbSrvInfoPtr xkbi;
+    XkbDescPtr xkb;
+    KeySymsPtr keySyms;
+    DeviceIntPtr pDev;
+    KeyCode first_key;
+    CARD8 num_keys;
 
-    LLOGLN(10, ("rdpLoadLayout: keylayout 0x%8.8x display %s",
+    LLOGLN(0, ("rdpLoadLayout: keylayout 0x%8.8x display %s",
            keylayout, display));
-    snprintf(a1, 15, "setxkbmap");
-    snprintf(a2, 15, "setxkbmap");
-    snprintf(a3, 15, "-layout");
-    snprintf(a4, 15, "us");
-    snprintf(a5, 15, "-display");
-    snprintf(a6, 15, ":%s", display);
-    snprintf(a7, 15, "-model");
-    snprintf(a8, 15, "pc104");
+    memset(&set, 0, sizeof(set));
+    set.rules = "evdev"; /* was "base" */
+    set.model = "pc104";
+    set.layout = "us";
     switch (keylayout)
     {
         case 0x00000407: /* German */
-            snprintf(a4, 15, "%s", "de");
+            set.layout = "de";
             break;
         case 0x00000409: /* US */
-            snprintf(a4, 15, "%s", "us");
+            set.layout = "us";
             break;
         case 0x0000040C: /* French */
-            snprintf(a4, 15, "%s", "fr");
+            set.layout = "fr";
             break;
         case 0x00000410: /* Italian */
-            snprintf(a4, 15, "%s", "it");
+            set.layout = "it";
             break;
         case 0x00000416: /* Portuguese (Brazilian ABNT) */
-            snprintf(a4, 15, "%s", "br");
-            snprintf(a8, 15, "%s", "abnt2");
+            set.model = "abnt2";
+            set.layout = "br";
             break;
         case 0x00000419: /* Russian */
-            snprintf(a4, 15, "%s", "ru");
+            set.layout = "ru";
             break;
         case 0x0000041D: /* Swedish */
-            snprintf(a4, 15, "%s", "se");
+            set.layout = "se";
             break;
         case 0x00000816: /* Portuguese */
-            snprintf(a4, 15, "%s", "pt");
+            set.layout = "pt";
             break;
         default:
             LLOGLN(0, ("rdpLoadLayout: unknown keylayout 0x%8.8x", keylayout));
-            return 1;
+            break;
     }
-    rv = 1;
-    pid = fork();
-    if (pid == -1)
+    set.variant = "";
+    set.options = "";
+
+    /* free some stuff so we can call InitKeyboardDeviceStruct again */
+    xkbi = g_keyboard->key->xkbInfo;
+    xkb = xkbi->desc;
+    XkbFreeKeyboard(xkb, 0, TRUE);
+    free(xkbi);
+    g_keyboard->key->xkbInfo = NULL;
+    free(g_keyboard->kbdfeed);
+    g_keyboard->kbdfeed = NULL;
+    free(g_keyboard->key);
+    g_keyboard->key = NULL;
+
+    /* init keyboard and reload the map */
+    InitKeyboardDeviceStruct(g_keyboard, &set, rdpBell,
+                             rdpChangeKeyboardControl);
+
+    /* notify the X11 clients eg. X_ChangeKeyboardMapping */
+    keySyms = XkbGetCoreMap(g_keyboard);
+    first_key = keySyms->minKeyCode;
+    num_keys = (keySyms->maxKeyCode - keySyms->minKeyCode) + 1;
+    XkbApplyMappingChange(g_keyboard, keySyms, first_key, num_keys,
+                          NULL, serverClient);
+    for (pDev = inputInfo.devices; pDev; pDev = pDev->next)
     {
-        LLOGLN(0, ("rdpLoadLayout: fork failed"));
-        return rv;
+        if ((pDev->coreEvents || pDev == inputInfo.keyboard) && pDev->key)
+        {
+            XkbApplyMappingChange(pDev, keySyms, first_key, num_keys,
+                                  NULL, serverClient);
+        }
     }
-    else if (pid == 0)
-    {
-        /* child */
-        execlp(a1, a2, a3, a4, a5, a6, a7, a8, (void *)0);
-        exit(0);
-    }
-    else
-    {
-        /* parent */
-        LLOGLN(0, ("rdpLoadLayout: setxkbmap started pid %d", pid));
-        g_xkbtimer = TimerSet(g_xkbtimer, 0, 1000,
-                              rdpInDeferredXkbCallback, (pointer)(long)pid);
-    }
-    return rv;
+
+    return 0;
 }
 
 /******************************************************************************/
 int
 rdpKeybdProc(DeviceIntPtr pDevice, int onoff)
 {
-    KeySymsRec keySyms;
-    CARD8 modMap[MAP_LENGTH];
     DevicePtr pDev;
     XkbRMLVOSet set;
     int ok;
@@ -669,7 +590,6 @@ rdpKeybdProc(DeviceIntPtr pDevice, int onoff)
     {
         case DEVICE_INIT:
             LLOGLN(10, ("rdpKeybdProc: DEVICE_INIT"));
-            KbdDeviceInit(pDevice, &keySyms, modMap);
             memset(&set, 0, sizeof(set));
             set.rules = "evdev"; /* was "base" */
             set.model = "pc104";
@@ -679,7 +599,6 @@ rdpKeybdProc(DeviceIntPtr pDevice, int onoff)
             ok = InitKeyboardDeviceStruct(pDevice, &set, rdpBell,
                                           rdpChangeKeyboardControl);
             LLOGLN(10, ("rdpKeybdProc: InitKeyboardDeviceStruct %d", ok));
-            //kbDDXChangeControls(pDevice, 0, 0);
             break;
         case DEVICE_ON:
             LLOGLN(10, ("rdpKeybdProc: DEVICE_ON"));
@@ -695,6 +614,7 @@ rdpKeybdProc(DeviceIntPtr pDevice, int onoff)
             LLOGLN(10, ("rdpKeybdProc: DEVICE_CLOSE"));
             if (pDev->on)
             {
+                pDev->on = 0;
                 KbdDeviceOff();
             }
             break;
@@ -1168,6 +1088,10 @@ PtrAddEvent(int buttonMask, int x, int y)
     int send_now;
 
     LLOGLN(10, ("PtrAddEvent: x %d y %d", x, y));
+    if (g_pointer == 0)
+    {
+        return;
+    }
     send_now = (buttonMask ^ g_old_button_mask) || (g_delay_motion == 0);
     LLOGLN(10, ("PtrAddEvent: send_now %d g_timer_schedualed %d",
            send_now, g_timer_schedualed));
@@ -1268,6 +1192,10 @@ KbdAddEvent(int down, int param1, int param2, int param3, int param4)
 
     LLOGLN(10, ("KbdAddEvent: down=0x%x param1=0x%x param2=0x%x param3=0x%x "
            "param4=0x%x", down, param1, param2, param3, param4));
+    if (g_keyboard == 0)
+    {
+        return;
+    }
     type = down ? KeyPress : KeyRelease;
     rdp_scancode = param3;
     is_ext = param4 & 256; /* 0x100 */
@@ -1478,6 +1406,10 @@ KbdSync(int param1)
 {
     int xkb_state;
 
+    if (g_keyboard == 0)
+    {
+        return;
+    }
     xkb_state = XkbStateFieldFromRec(&(g_keyboard->key->xkbInfo->state));
 
     if ((!(xkb_state & 0x02)) != (!(param1 & 4))) /* caps lock */
