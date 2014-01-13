@@ -16,17 +16,36 @@
  * limitations under the License.
  */
 
+#include <stdio.h>
+#include <pulse/util.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/errno.h>
+#include <signal.h>
+#include <sys/un.h>
+
 #include "sound.h"
 #include "thread_calls.h"
 #include "defines.h"
+#include "fifo.h"
 
 extern int g_rdpsnd_chan_id;    /* in chansrv.c */
 extern int g_display_num;       /* in chansrv.c */
 
-static struct trans *g_audio_l_trans = 0; /* listener */
-static struct trans *g_audio_c_trans = 0; /* connection */
-static int g_training_sent_time = 0;
-static int g_cBlockNo = 0;
+/* audio out: sound_server -> xrdp -> NeutrinoRDP */
+static struct trans *g_audio_l_trans_out = 0; /* listener */
+static struct trans *g_audio_c_trans_out = 0; /* connection */
+
+/* audio in:  sound_server <- xrdp <- NeutrinoRDP */
+static struct trans *g_audio_l_trans_in = 0;  /* listener */
+static struct trans *g_audio_c_trans_in = 0;  /* connection */
+
+static int    g_training_sent_time = 0;
+static int    g_cBlockNo = 0;
+static int    g_bytes_in_stream = 0;
+static FIFO   in_fifo;
+
+static struct stream *g_stream_inp = NULL;
 
 #define BBUF_SIZE (1024 * 8)
 char g_buffer[BBUF_SIZE];
@@ -38,7 +57,8 @@ static void *DEFAULT_CC
 read_raw_audio_data(void *arg);
 #endif
 
-#define CHANSRV_PORT_STR "/tmp/.xrdp/xrdp_chansrv_audio_socket_%d"
+#define CHANSRV_PORT_OUT_STR  "/tmp/.xrdp/xrdp_chansrv_audio_out_socket_%d"
+#define CHANSRV_PORT_IN_STR   "/tmp/.xrdp/xrdp_chansrv_audio_in_socket_%d"
 
 struct xr_wave_format_ex
 {
@@ -52,8 +72,10 @@ struct xr_wave_format_ex
     char *data;
 };
 
-static char g_pmc_22050_data[] = { 0 };
-static struct xr_wave_format_ex g_pmc_22050 =
+/* output formats */
+
+static char g_pcm_22050_data[] = { 0 };
+static struct xr_wave_format_ex g_pcm_22050 =
 {
     1,               /* wFormatTag - WAVE_FORMAT_PCM */
     2,               /* num of channels */
@@ -62,11 +84,11 @@ static struct xr_wave_format_ex g_pmc_22050 =
     4,               /* block align */
     16,              /* bits per sample */
     0,               /* data size */
-    g_pmc_22050_data /* data */
+    g_pcm_22050_data /* data */
 };
 
-static char g_pmc_44100_data[] = { 0 };
-static struct xr_wave_format_ex g_pmc_44100 =
+static char g_pcm_44100_data[] = { 0 };
+static struct xr_wave_format_ex g_pcm_44100 =
 {
     1,               /* wFormatTag - WAVE_FORMAT_PCM */
     2,               /* num of channels */
@@ -75,24 +97,63 @@ static struct xr_wave_format_ex g_pmc_44100 =
     4,               /* block align */
     16,              /* bits per sample */
     0,               /* data size */
-    g_pmc_44100_data /* data */
+    g_pcm_44100_data /* data */
 };
 
-#define NUM_BUILT_IN 2
-static struct xr_wave_format_ex *g_wave_formats[NUM_BUILT_IN] =
+#define SND_NUM_OUTP_FORMATS 2
+static struct xr_wave_format_ex *g_wave_outp_formats[SND_NUM_OUTP_FORMATS] =
 {
-    &g_pmc_44100,
-    &g_pmc_22050
+    &g_pcm_44100,
+    &g_pcm_22050
 };
 
 /* index into list from client */
 static int g_current_client_format_index = 0;
+
 /* index into list from server */
 static int g_current_server_format_index = 0;
 
+/* input formats */
+
+static char g_pcm_inp_22050_data[] = { 0 };
+static struct xr_wave_format_ex g_pcm_inp_22050 =
+{
+    1,               /* wFormatTag - WAVE_FORMAT_PCM */
+    2,               /* num of channels */
+    22050,           /* samples per sec */
+    88200,           /* avg bytes per sec */
+    4,               /* block align */
+    16,              /* bits per sample */
+    0,               /* data size */
+    g_pcm_inp_22050_data /* data */
+};
+
+static char g_pcm_inp_44100_data[] = { 0 };
+static struct xr_wave_format_ex g_pcm_inp_44100 =
+{
+    1,               /* wFormatTag - WAVE_FORMAT_PCM */
+    2,               /* num of channels */
+    44100,           /* samples per sec */
+    176400,          /* avg bytes per sec */
+    4,               /* block align */
+    16,              /* bits per sample */
+    0,               /* data size */
+    g_pcm_inp_44100_data /* data */
+};
+
+#define SND_NUM_INP_FORMATS 2
+static struct xr_wave_format_ex *g_wave_inp_formats[SND_NUM_INP_FORMATS] =
+{
+    &g_pcm_inp_22050,
+    &g_pcm_inp_44100
+};
+
+static int g_client_input_format_index = 0;
+static int g_server_input_format_index = 0;
+
 /*****************************************************************************/
 static int APP_CC
-sound_send_server_formats(void)
+sound_send_server_output_formats(void)
 {
     struct stream *s;
     int bytes;
@@ -103,15 +164,15 @@ sound_send_server_formats(void)
     init_stream(s, 8182);
     out_uint16_le(s, SNDC_FORMATS);
     size_ptr = s->p;
-    out_uint16_le(s, 0);            /* size, set later */
-    out_uint32_le(s, 0);            /* dwFlags */
-    out_uint32_le(s, 0);            /* dwVolume */
-    out_uint32_le(s, 0);            /* dwPitch */
-    out_uint16_le(s, 0);            /* wDGramPort */
-    out_uint16_le(s, NUM_BUILT_IN); /* wNumberOfFormats */
-    out_uint8(s, g_cBlockNo);       /* cLastBlockConfirmed */
-    out_uint16_le(s, 2);            /* wVersion */
-    out_uint8(s, 0);                /* bPad */
+    out_uint16_le(s, 0);                    /* size, set later */
+    out_uint32_le(s, 0);                    /* dwFlags */
+    out_uint32_le(s, 0);                    /* dwVolume */
+    out_uint32_le(s, 0);                    /* dwPitch */
+    out_uint16_le(s, 0);                    /* wDGramPort */
+    out_uint16_le(s, SND_NUM_OUTP_FORMATS); /* wNumberOfFormats */
+    out_uint8(s, g_cBlockNo);               /* cLastBlockConfirmed */
+    out_uint16_le(s, 2);                    /* wVersion */
+    out_uint8(s, 0);                        /* bPad */
 
     /* sndFormats */
     /*
@@ -132,19 +193,19 @@ sound_send_server_formats(void)
         00 00
     */
 
-    for (index = 0; index < NUM_BUILT_IN; index++)
+    for (index = 0; index < SND_NUM_OUTP_FORMATS; index++)
     {
-        out_uint16_le(s, g_wave_formats[index]->wFormatTag);
-        out_uint16_le(s, g_wave_formats[index]->nChannels);
-        out_uint32_le(s, g_wave_formats[index]->nSamplesPerSec);
-        out_uint32_le(s, g_wave_formats[index]->nAvgBytesPerSec);
-        out_uint16_le(s, g_wave_formats[index]->nBlockAlign);
-        out_uint16_le(s, g_wave_formats[index]->wBitsPerSample);
-        bytes = g_wave_formats[index]->cbSize;
+        out_uint16_le(s, g_wave_outp_formats[index]->wFormatTag);
+        out_uint16_le(s, g_wave_outp_formats[index]->nChannels);
+        out_uint32_le(s, g_wave_outp_formats[index]->nSamplesPerSec);
+        out_uint32_le(s, g_wave_outp_formats[index]->nAvgBytesPerSec);
+        out_uint16_le(s, g_wave_outp_formats[index]->nBlockAlign);
+        out_uint16_le(s, g_wave_outp_formats[index]->wBitsPerSample);
+        bytes = g_wave_outp_formats[index]->cbSize;
         out_uint16_le(s, bytes);
         if (bytes > 0)
         {
-            out_uint8p(s, g_wave_formats[index]->data, bytes);
+            out_uint8p(s, g_wave_outp_formats[index]->data, bytes);
         }
     }
 
@@ -159,6 +220,7 @@ sound_send_server_formats(void)
 }
 
 /*****************************************************************************/
+
 static int
 sound_send_training(void)
 {
@@ -189,26 +251,29 @@ sound_send_training(void)
 
 /*****************************************************************************/
 static int APP_CC
-sound_process_format(int aindex, int wFormatTag, int nChannels,
-                     int nSamplesPerSec, int nAvgBytesPerSec,
-                     int nBlockAlign, int wBitsPerSample,
-                     int cbSize, char *data)
+sound_process_output_format(int aindex, int wFormatTag, int nChannels,
+                            int nSamplesPerSec, int nAvgBytesPerSec,
+                            int nBlockAlign, int wBitsPerSample,
+                            int cbSize, char *data)
 {
-    LOG(0, ("sound_process_format:"));
-    LOG(0, ("  wFormatTag %d", wFormatTag));
-    LOG(0, ("  nChannels %d", nChannels));
-    LOG(0, ("  nSamplesPerSec %d", nSamplesPerSec));
-    LOG(0, ("  nAvgBytesPerSec %d", nAvgBytesPerSec));
-    LOG(0, ("  nBlockAlign %d", nBlockAlign));
-    LOG(0, ("  wBitsPerSample %d", wBitsPerSample));
-    LOG(0, ("  cbSize %d", cbSize));
+    LOG(1, ("sound_process_output_format:"));
+    LOG(1, ("      wFormatTag      %d", wFormatTag));
+    LOG(1, ("      nChannels       %d", nChannels));
+    LOG(1, ("      nSamplesPerSec  %d", nSamplesPerSec));
+    LOG(1, ("      nAvgBytesPerSec %d", nAvgBytesPerSec));
+    LOG(1, ("      nBlockAlign     %d", nBlockAlign));
+    LOG(1, ("      wBitsPerSample  %d", wBitsPerSample));
+    LOG(1, ("      cbSize          %d", cbSize));
+
     g_hexdump(data, cbSize);
-    if (wFormatTag == g_pmc_44100.wFormatTag &&
-        nChannels == g_pmc_44100.nChannels &&
-        nSamplesPerSec == g_pmc_44100.nSamplesPerSec &&
-        nAvgBytesPerSec == g_pmc_44100.nAvgBytesPerSec &&
-        nBlockAlign == g_pmc_44100.nBlockAlign &&
-        wBitsPerSample == g_pmc_44100.wBitsPerSample)
+
+    /* select CD quality audio */
+    if (wFormatTag == g_pcm_44100.wFormatTag &&
+        nChannels == g_pcm_44100.nChannels &&
+        nSamplesPerSec == g_pcm_44100.nSamplesPerSec &&
+        nAvgBytesPerSec == g_pcm_44100.nAvgBytesPerSec &&
+        nBlockAlign == g_pcm_44100.nBlockAlign &&
+        wBitsPerSample == g_pcm_44100.wBitsPerSample)
     {
         g_current_client_format_index = aindex;
         g_current_server_format_index = 0;
@@ -239,7 +304,7 @@ sound_process_format(int aindex, int wFormatTag, int nChannels,
 */
 
 static int APP_CC
-sound_process_formats(struct stream *s, int size)
+sound_process_output_formats(struct stream *s, int size)
 {
     int num_formats;
     int index;
@@ -252,12 +317,8 @@ sound_process_formats(struct stream *s, int size)
     int cbSize;
     char *data;
 
-    LOG(0, ("sound_process_formats:"));
-
     if (size < 16)
-    {
         return 1;
-    }
 
     in_uint8s(s, 14);
     in_uint16_le(s, num_formats);
@@ -275,9 +336,9 @@ sound_process_formats(struct stream *s, int size)
             in_uint16_le(s, wBitsPerSample);
             in_uint16_le(s, cbSize);
             in_uint8p(s, data, cbSize);
-            sound_process_format(index, wFormatTag, nChannels, nSamplesPerSec,
-                                 nAvgBytesPerSec, nBlockAlign, wBitsPerSample,
-                                 cbSize, data);
+            sound_process_output_format(index, wFormatTag, nChannels, nSamplesPerSec,
+                                        nAvgBytesPerSec, nBlockAlign, wBitsPerSample,
+                                        cbSize, data);
         }
         sound_send_training();
     }
@@ -458,16 +519,18 @@ process_pcm_message(int id, int size, struct stream *s)
             sound_send_close();
             break;
         default:
-            LOG(0, ("process_pcm_message: unknown id %d", id));
+            LOG(10, ("process_pcm_message: unknown id %d", id));
             break;
     }
     return 0;
 }
 
 /*****************************************************************************/
-/* data in from audio source, eg pulse, alsa */
+
+/* data in from sound_server_sink */
+
 static int DEFAULT_CC
-sound_trans_audio_data_in(struct trans *trans)
+sound_sndsrvr_sink_data_in(struct trans *trans)
 {
     struct stream *s;
     int id;
@@ -475,14 +538,10 @@ sound_trans_audio_data_in(struct trans *trans)
     int error;
 
     if (trans == 0)
-    {
         return 0;
-    }
 
-    if (trans != g_audio_c_trans)
-    {
+    if (trans != g_audio_c_trans_out)
         return 1;
-    }
 
     s = trans_get_in_s(trans);
     in_uint32_le(s, id);
@@ -490,10 +549,11 @@ sound_trans_audio_data_in(struct trans *trans)
 
     if ((id & ~3) || (size > 128 * 1024 + 8) || (size < 8))
     {
-        LOG(0, ("sound_trans_audio_data_in: bad message id %d size %d", id, size));
+        LOG(0, ("sound_sndsrvr_sink_data_in: bad message id %d size %d", id, size));
         return 1;
     }
-    LOG(10, ("sound_trans_audio_data_in: good message id %d size %d", id, size));
+
+    LOG(10, ("sound_sndsrvr_sink_data_in: good message id %d size %d", id, size));
 
     error = trans_force_read(trans, size - 8);
 
@@ -507,37 +567,62 @@ sound_trans_audio_data_in(struct trans *trans)
 }
 
 /*****************************************************************************/
-/* this is a connection in on the unix domain socket */
+
+/* incoming connection on unix domain socket - sound_server_sink -> xrdp */
+
 static int DEFAULT_CC
-sound_trans_audio_conn_in(struct trans *trans, struct trans *new_trans)
+sound_sndsrvr_sink_conn_in(struct trans *trans, struct trans *new_trans)
 {
-    LOG(0, ("sound_trans_audio_conn_in:"));
+    LOG(0, ("sound_sndsrvr_sink_conn_in:"));
 
     if (trans == 0)
-    {
         return 1;
-    }
 
-    if (trans != g_audio_l_trans)
-    {
+    if (trans != g_audio_l_trans_out)
         return 1;
-    }
 
-    if (g_audio_c_trans != 0) /* if already set, error */
-    {
+    if (g_audio_c_trans_out != 0) /* if already set, error */
         return 1;
-    }
 
     if (new_trans == 0)
-    {
         return 1;
-    }
 
-    g_audio_c_trans = new_trans;
-    g_audio_c_trans->trans_data_in = sound_trans_audio_data_in;
-    g_audio_c_trans->header_size = 8;
-    trans_delete(g_audio_l_trans);
-    g_audio_l_trans = 0;
+    g_audio_c_trans_out = new_trans;
+    g_audio_c_trans_out->trans_data_in = sound_sndsrvr_sink_data_in;
+    g_audio_c_trans_out->header_size = 8;
+    trans_delete(g_audio_l_trans_out);
+    g_audio_l_trans_out = 0;
+
+    return 0;
+}
+
+/*****************************************************************************/
+
+/* incoming connection on unix domain socket - sound_server_source -> xrdp */
+
+static int DEFAULT_CC
+sound_sndsrvr_source_conn_in(struct trans *trans, struct trans *new_trans)
+{
+    LOG(0, ("sound_sndsrvr_source_conn_in: client connected"));
+
+    if (trans == 0)
+        return 1;
+
+    if (trans != g_audio_l_trans_in)
+        return 1;
+
+    if (g_audio_c_trans_in != 0) /* if already set, error */
+        return 1;
+
+    if (new_trans == 0)
+        return 1;
+
+    g_audio_c_trans_in = new_trans;
+    g_audio_c_trans_in->trans_data_in = sound_sndsrvr_source_data_in;
+    g_audio_c_trans_in->header_size = 8;
+    trans_delete(g_audio_l_trans_in);
+    g_audio_l_trans_in = 0;
+
     return 0;
 }
 
@@ -546,21 +631,39 @@ int APP_CC
 sound_init(void)
 {
     char port[256];
-    int error;
 
     LOG(0, ("sound_init:"));
 
-    sound_send_server_formats();
-    g_audio_l_trans = trans_create(TRANS_MODE_UNIX, 128 * 1024, 8192);
-    g_audio_l_trans->is_term = g_is_term;
-    g_snprintf(port, 255, CHANSRV_PORT_STR, g_display_num);
-    g_audio_l_trans->trans_conn_in = sound_trans_audio_conn_in;
-    error = trans_listen(g_audio_l_trans, port);
 
-    if (error != 0)
-    {
+#ifdef XRDP_LOAD_PULSE_MODULES
+    if (load_pulse_modules())
+        LOG(0, ("Audio and microphone redirection will not work!"));
+#endif
+
+    /* init sound output */
+    sound_send_server_output_formats();
+
+    g_audio_l_trans_out = trans_create(TRANS_MODE_UNIX, 128 * 1024, 8192);
+    g_audio_l_trans_out->is_term = g_is_term;
+    g_snprintf(port, 255, CHANSRV_PORT_OUT_STR, g_display_num);
+    g_audio_l_trans_out->trans_conn_in = sound_sndsrvr_sink_conn_in;
+
+    if (trans_listen(g_audio_l_trans_out, port) != 0)
         LOG(0, ("sound_init: trans_listen failed"));
-    }
+
+    /* init sound input */
+    sound_send_server_input_formats();
+
+    g_audio_l_trans_in = trans_create(TRANS_MODE_UNIX, 128 * 1024, 8192);
+    g_audio_l_trans_in->is_term = g_is_term;
+    g_snprintf(port, 255, CHANSRV_PORT_IN_STR, g_display_num);
+    g_audio_l_trans_in->trans_conn_in = sound_sndsrvr_source_conn_in;
+
+    if (trans_listen(g_audio_l_trans_in, port) != 0)
+        LOG(0, ("sound_init: trans_listen failed"));
+
+    /* save data from sound_server_source */
+    fifo_init(&in_fifo, 100);
 
 #if defined(XRDP_SIMPLESOUND)
 
@@ -576,25 +679,43 @@ sound_init(void)
 int APP_CC
 sound_deinit(void)
 {
-    LOG(0, ("sound_deinit:"));
-
-    if (g_audio_l_trans != 0)
+    if (g_audio_l_trans_out != 0)
     {
-        trans_delete(g_audio_l_trans);
-        g_audio_l_trans = 0;
+        trans_delete(g_audio_l_trans_out);
+        g_audio_l_trans_out = 0;
     }
 
-    if (g_audio_c_trans != 0)
+    if (g_audio_c_trans_out != 0)
     {
-        trans_delete(g_audio_c_trans);
-        g_audio_c_trans = 0;
+        trans_delete(g_audio_c_trans_out);
+        g_audio_c_trans_out = 0;
     }
+
+    if (g_audio_l_trans_in != 0)
+    {
+        trans_delete(g_audio_l_trans_in);
+        g_audio_l_trans_in = 0;
+    }
+
+    if (g_audio_c_trans_in != 0)
+    {
+        trans_delete(g_audio_c_trans_in);
+        g_audio_c_trans_in = 0;
+    }
+
+    fifo_deinit(&in_fifo);
+
+#ifdef XRDP_LOAD_PULSE_MODULES
+    system("pulseaudio --kill");
+#endif
 
     return 0;
 }
 
 /*****************************************************************************/
+
 /* data in from client ( client -> xrdp -> chansrv ) */
+
 int APP_CC
 sound_data_in(struct stream *s, int chan_id, int chan_flags, int length,
               int total_length)
@@ -617,11 +738,19 @@ sound_data_in(struct stream *s, int chan_id, int chan_flags, int length,
             break;
 
         case SNDC_FORMATS:
-            sound_process_formats(s, size);
+            sound_process_output_formats(s, size);
+            break;
+
+        case SNDC_REC_NEGOTIATE:
+            sound_process_input_formats(s, size);
+            break;
+
+        case SNDC_REC_DATA:
+            sound_process_input_data(s, size);
             break;
 
         default:
-            LOG(0, ("sound_data_in: unknown code %d size %d", code, size));
+            LOG(10, ("sound_data_in: unknown code %d size %d", code, size));
             break;
     }
 
@@ -636,15 +765,27 @@ sound_get_wait_objs(tbus *objs, int *count, int *timeout)
 
     lcount = *count;
 
-    if (g_audio_l_trans != 0)
+    if (g_audio_l_trans_out != 0)
     {
-        objs[lcount] = g_audio_l_trans->sck;
+        objs[lcount] = g_audio_l_trans_out->sck;
         lcount++;
     }
 
-    if (g_audio_c_trans != 0)
+    if (g_audio_c_trans_out != 0)
     {
-        objs[lcount] = g_audio_c_trans->sck;
+        objs[lcount] = g_audio_c_trans_out->sck;
+        lcount++;
+    }
+
+    if (g_audio_l_trans_in != 0)
+    {
+        objs[lcount] = g_audio_l_trans_in->sck;
+        lcount++;
+    }
+
+    if (g_audio_c_trans_in != 0)
+    {
+        objs[lcount] = g_audio_c_trans_in->sck;
         lcount++;
     }
 
@@ -656,18 +797,516 @@ sound_get_wait_objs(tbus *objs, int *count, int *timeout)
 int APP_CC
 sound_check_wait_objs(void)
 {
-    if (g_audio_l_trans != 0)
+    if (g_audio_l_trans_out != 0)
     {
-        trans_check_wait_objs(g_audio_l_trans);
+        trans_check_wait_objs(g_audio_l_trans_out);
     }
 
-    if (g_audio_c_trans != 0)
+    if (g_audio_c_trans_out != 0)
     {
-        trans_check_wait_objs(g_audio_c_trans);
+        trans_check_wait_objs(g_audio_c_trans_out);
+    }
+
+    if (g_audio_l_trans_in != 0)
+    {
+        trans_check_wait_objs(g_audio_l_trans_in);
+    }
+
+    if (g_audio_c_trans_in != 0)
+    {
+        trans_check_wait_objs(g_audio_c_trans_in);
     }
 
     return 0;
 }
+
+/**
+ * Load xrdp pulseaudio sink and source modules
+ *
+ * @return 0 on success, -1 on failure
+ *****************************************************************************/
+
+#ifdef XRDP_LOAD_PULSE_MODULES
+
+static int APP_CC
+load_pulse_modules()
+{
+    struct sockaddr_un sa;
+
+    pid_t pid;
+    char* cli;
+    int   fd;
+    int   i;
+    int   rv;
+    char  buf[1024];
+
+    /* is pulse audio daemon running? */
+    if (pa_pid_file_check_running(&pid, "pulseaudio") < 0)
+    {
+        LOG(0, ("load_pulse_modules: No PulseAudio daemon running, "
+                "or not running as session daemon"));
+    }
+
+    /* get name of unix domain socket used by pulseaudio for CLI */
+    if ((cli = (char *) pa_runtime_path("cli")) == NULL)
+    {
+        LOG(0, ("load_pulse_modules: Error getting PulesAudio runtime path"));
+        return -1;
+    }
+
+    /* open a socket */
+    if ((fd = socket(PF_LOCAL, SOCK_STREAM, 0)) < 0)
+    {
+        pa_xfree(cli);
+        LOG(0, ("load_pulse_modules: Socket open error"));
+        return -1;
+    }
+
+    /* set it up */
+    memset(&sa, 0, sizeof(struct sockaddr_un));
+    sa.sun_family = AF_UNIX;
+    pa_strlcpy(sa.sun_path, cli, sizeof(sa.sun_path));
+    pa_xfree(cli);
+
+    for (i = 0; i < 20; i++)
+    {
+        if (pa_pid_file_kill(SIGUSR2, NULL, "pulseaudio") < 0)
+            LOG(0, ("load_pulse_modules: Failed to kill PulseAudio daemon"));
+
+        if ((rv = connect(fd, (struct sockaddr*) &sa, sizeof(sa))) < 0 &&
+            (errno != ECONNREFUSED && errno != ENOENT))
+        {
+            LOG(0, ("load_pulse_modules: connect() failed with error: %s",
+                    strerror(errno)));
+            return -1;
+        }
+
+        if (rv >= 0)
+            break;
+
+        pa_msleep(300);
+    }
+
+    if (i >= 20)
+    {
+        LOG(0, ("load_pulse_modules: Daemon not responding"));
+        return -1;
+    }
+
+    LOG(0, ("load_pulse_modules: connected to pulseaudio daemon"));
+
+    /* read back PulseAudio sign on message */
+    memset(buf, 0, 1024);
+    recv(fd, buf, 1024, 0);
+
+    /* send cmd to load source module */
+    memset(buf, 0, 1024);
+    sprintf(buf, "load-module module-xrdp-source\n");
+    send(fd, buf, strlen(buf), 0);
+
+    /* read back response */
+    memset(buf, 0, 1024);
+    recv(fd, buf, 1024, 0);
+    if (strcasestr(buf, "Module load failed") != 0)
+    {
+        LOG(0, ("load_pulse_modules: Error loading module-xrdp-source"));
+    }
+    else
+    {
+        LOG(0, ("load_pulse_modules: Loaded module-xrdp-source"));
+
+        /* success, set it as the default source */
+        memset(buf, 0, 1024);
+        sprintf(buf, "set-default-source xrdp-source\n");
+        send(fd, buf, strlen(buf), 0);
+
+        memset(buf, 0, 1024);
+        recv(fd, buf, 1024, 0);
+
+        if (strcasestr(buf, "does not exist") != 0)
+        {
+            LOG(0, ("load_pulse_modules: Error setting default source"));
+        }
+        else
+        {
+            LOG(0, ("load_pulse_modules: set default source"));
+        }
+    }
+
+    /* send cmd to load sink module */
+    memset(buf, 0, 1024);
+    sprintf(buf, "load-module module-xrdp-sink\n");
+    send(fd, buf, strlen(buf), 0);
+
+    /* read back response */
+    memset(buf, 0, 1024);
+    recv(fd, buf, 1024, 0);
+    if (strcasestr(buf, "Module load failed") != 0)
+    {
+        LOG(0, ("load_pulse_modules: Error loading module-xrdp-sink"));
+    }
+    else
+    {
+        LOG(0, ("load_pulse_modules: Loaded module-xrdp-sink"));
+
+        /* success, set it as the default sink */
+        memset(buf, 0, 1024);
+        sprintf(buf, "set-default-sink xrdp-sink\n");
+        send(fd, buf, strlen(buf), 0);
+
+        memset(buf, 0, 1024);
+        recv(fd, buf, 1024, 0);
+
+        if (strcasestr(buf, "does not exist") != 0)
+        {
+            LOG(0, ("load_pulse_modules: Error setting default sink"));
+        }
+        else
+        {
+            LOG(0, ("load_pulse_modules: set default sink"));
+        }
+    }
+
+    close(fd);
+    return 0;
+}
+#endif
+
+/******************************************************************************
+ **                                                                          **
+ **                       Microphone releated code                           **
+ **                                                                          **
+ ******************************************************************************/
+
+/**
+ *
+ *****************************************************************************/
+
+static int APP_CC
+sound_send_server_input_formats(void)
+{
+    struct stream* s;
+    int    bytes;
+    int    index;
+    char*  size_ptr;
+
+    make_stream(s);
+    init_stream(s, 8182);
+    out_uint16_le(s, SNDC_REC_NEGOTIATE);
+    size_ptr = s->p;
+    out_uint16_le(s, 0);                   /* size, set later */
+    out_uint32_le(s, 0);                   /* unused */
+    out_uint32_le(s, 0);                   /* unused */
+    out_uint16_le(s, SND_NUM_INP_FORMATS); /* wNumberOfFormats */
+    out_uint16_le(s, 2);                   /* wVersion */
+
+    /*
+        wFormatTag      2 byte offset 0
+        nChannels       2 byte offset 2
+        nSamplesPerSec  4 byte offset 4
+        nAvgBytesPerSec 4 byte offset 8
+        nBlockAlign     2 byte offset 12
+        wBitsPerSample  2 byte offset 14
+        cbSize          2 byte offset 16
+        data            variable offset 18
+    */
+
+    for (index = 0; index < SND_NUM_INP_FORMATS; index++)
+    {
+        out_uint16_le(s, g_wave_inp_formats[index]->wFormatTag);
+        out_uint16_le(s, g_wave_inp_formats[index]->nChannels);
+        out_uint32_le(s, g_wave_inp_formats[index]->nSamplesPerSec);
+        out_uint32_le(s, g_wave_inp_formats[index]->nAvgBytesPerSec);
+        out_uint16_le(s, g_wave_inp_formats[index]->nBlockAlign);
+        out_uint16_le(s, g_wave_inp_formats[index]->wBitsPerSample);
+        bytes = g_wave_inp_formats[index]->cbSize;
+        out_uint16_le(s, bytes);
+        if (bytes > 0)
+        {
+            out_uint8p(s, g_wave_inp_formats[index]->data, bytes);
+        }
+    }
+
+    s_mark_end(s);
+    bytes = (int)((s->end - s->data) - 4);
+    size_ptr[0] = bytes;
+    size_ptr[1] = bytes >> 8;
+    bytes = (int)(s->end - s->data);
+    send_channel_data(g_rdpsnd_chan_id, s->data, bytes);
+    free_stream(s);
+    return 0;
+}
+
+/**
+ *
+ *****************************************************************************/
+
+static int APP_CC
+sound_process_input_format(int aindex, int wFormatTag, int nChannels,
+                           int nSamplesPerSec, int nAvgBytesPerSec,
+                           int nBlockAlign, int wBitsPerSample,
+                           int cbSize, char *data)
+{
+    LOG(10, ("sound_process_input_format:"));
+    LOG(10, ("      wFormatTag      %d", wFormatTag));
+    LOG(10, ("      nChannels       %d", nChannels));
+    LOG(10, ("      nSamplesPerSec  %d", nSamplesPerSec));
+    LOG(10, ("      nAvgBytesPerSec %d", nAvgBytesPerSec));
+    LOG(10, ("      nBlockAlign     %d", nBlockAlign));
+    LOG(10, ("      wBitsPerSample  %d", wBitsPerSample));
+    LOG(10, ("      cbSize          %d", cbSize));
+
+#if 0
+    /* select CD quality audio */
+    if (wFormatTag == g_pcm_inp_44100.wFormatTag &&
+        nChannels == g_pcm_inp_44100.nChannels &&
+        nSamplesPerSec == g_pcm_inp_44100.nSamplesPerSec &&
+        nAvgBytesPerSec == g_pcm_inp_44100.nAvgBytesPerSec &&
+        nBlockAlign == g_pcm_inp_44100.nBlockAlign &&
+        wBitsPerSample == g_pcm_inp_44100.wBitsPerSample)
+    {
+        g_client_input_format_index = aindex;
+        g_server_input_format_index = 0;
+    }
+#else
+    /* select half of CD quality audio */
+    if (wFormatTag == g_pcm_inp_22050.wFormatTag &&
+        nChannels == g_pcm_inp_22050.nChannels &&
+        nSamplesPerSec == g_pcm_inp_22050.nSamplesPerSec &&
+        nAvgBytesPerSec == g_pcm_inp_22050.nAvgBytesPerSec &&
+        nBlockAlign == g_pcm_inp_22050.nBlockAlign &&
+        wBitsPerSample == g_pcm_inp_22050.wBitsPerSample)
+    {
+        g_client_input_format_index = aindex;
+        g_server_input_format_index = 0;
+    }
+#endif
+
+    return 0;
+}
+
+/**
+ *
+ *****************************************************************************/
+
+static int APP_CC
+sound_process_input_formats(struct stream *s, int size)
+{
+    int num_formats;
+    int index;
+    int wFormatTag;
+    int nChannels;
+    int nSamplesPerSec;
+    int nAvgBytesPerSec;
+    int nBlockAlign;
+    int wBitsPerSample;
+    int cbSize;
+    char *data;
+
+    LOG(10, ("sound_process_input_formats: size=%d", size));
+
+    in_uint8s(s, 8); /* skip 8 bytes */
+    in_uint16_le(s, num_formats);
+    in_uint8s(s, 2); /* skip version */
+
+    if (num_formats > 0)
+    {
+        for (index = 0; index < num_formats; index++)
+        {
+            in_uint16_le(s, wFormatTag);
+            in_uint16_le(s, nChannels);
+            in_uint32_le(s, nSamplesPerSec);
+            in_uint32_le(s, nAvgBytesPerSec);
+            in_uint16_le(s, nBlockAlign);
+            in_uint16_le(s, wBitsPerSample);
+            in_uint16_le(s, cbSize);
+            in_uint8p(s, data, cbSize);
+            sound_process_input_format(index, wFormatTag, nChannels, nSamplesPerSec,
+                                       nAvgBytesPerSec, nBlockAlign, wBitsPerSample,
+                                       cbSize, data);
+        }
+    }
+
+    return 0;
+}
+
+/**
+ *
+ *****************************************************************************/
+
+static int APP_CC
+sound_input_start_recording()
+{
+    struct stream* s;
+
+    /* if there is any data in FIFO, discard it */
+    while ((s = (struct stream *) fifo_remove(&in_fifo)) != NULL)
+        xstream_free(s);
+
+    xstream_new(s, 1024);
+
+    /*
+     * command format
+     *
+     * 02 bytes command SNDC_REC_START
+     * 02 bytes length
+     * 02 bytes data format received earlier
+     */
+
+    out_uint16_le(s, SNDC_REC_START);
+    out_uint16_le(s, 2);
+    out_uint16_le(s, g_client_input_format_index);
+
+    s_mark_end(s);
+    send_channel_data(g_rdpsnd_chan_id, s->data, 6);
+    xstream_free(s);
+
+    return 0;
+}
+
+/**
+ *
+ *****************************************************************************/
+
+static int APP_CC
+sound_input_stop_recording()
+{
+    struct stream* s;
+
+    xstream_new(s, 1024);
+
+    /*
+     * command format
+     *
+     * 02 bytes command SNDC_REC_STOP
+     * 02 bytes length (zero)
+     */
+
+    out_uint16_le(s, SNDC_REC_STOP);
+    out_uint16_le(s, 0);
+
+    s_mark_end(s);
+    send_channel_data(g_rdpsnd_chan_id, s->data, 4);
+    xstream_free(s);
+
+    return 0;
+}
+
+/**
+ * Process data: xrdp <- client
+ *****************************************************************************/
+
+static unsigned char data = 0;
+
+static int APP_CC
+sound_process_input_data(struct stream *s, int bytes)
+{
+    struct stream *ls;
+
+    xstream_new(ls, bytes);
+    memcpy(ls->data, s->p, bytes);
+    ls->p += bytes;
+    s_mark_end(ls);
+
+    fifo_insert(&in_fifo, (void *) ls);
+
+    return 0;
+}
+
+/**
+ * Got a command from sound_server_source
+ *****************************************************************************/
+
+static int DEFAULT_CC
+sound_sndsrvr_source_data_in(struct trans *trans)
+{
+    struct stream *ts = NULL;
+    struct stream *s  = NULL;
+
+    tui16    bytes_req   = 0;
+    int      bytes_read  = 0;
+    int      cmd;
+    int      i;
+
+    if (trans == 0)
+        return 0;
+
+    if (trans != g_audio_c_trans_in)
+        return 1;
+
+    ts = trans_get_in_s(trans);
+    trans_force_read(trans, 3);
+
+    ts->p = ts->data + 8;
+    in_uint8(ts, cmd);
+    in_uint16_le(ts, bytes_req);
+
+    if (bytes_req != 0)
+        xstream_new(s, bytes_req + 2);
+
+    if (cmd == PA_CMD_SEND_DATA)
+    {
+        /* set real len later */
+        out_uint16_le(s, 0);
+
+        while (bytes_read < bytes_req)
+        {
+            if (g_stream_inp == NULL)
+                g_stream_inp = (struct stream *) fifo_remove(&in_fifo);
+
+            if (g_stream_inp == NULL)
+            {
+                /* no more data, send what we have */
+                break;
+            }
+            else
+            {
+                if (g_bytes_in_stream == 0)
+                    g_bytes_in_stream = g_stream_inp->size;
+
+                i = bytes_req - bytes_read;
+
+                if (i < g_bytes_in_stream)
+                {
+                    xstream_copyin(s, &g_stream_inp->data[g_stream_inp->size - g_bytes_in_stream], i);
+                    bytes_read += i;
+                    g_bytes_in_stream -= i;
+                }
+                else
+                {
+                    xstream_copyin(s, &g_stream_inp->data[g_stream_inp->size - g_bytes_in_stream], g_bytes_in_stream);
+                    bytes_read += g_bytes_in_stream;
+                    g_bytes_in_stream = 0;
+                    xstream_free(g_stream_inp);
+                    g_stream_inp = NULL;
+                }
+            }
+        }
+
+        if (bytes_read)
+        {
+            s->data[0] = (char) (bytes_read & 0xff);
+            s->data[1] = (char) ((bytes_read >> 8) & 0xff);
+        }
+
+        s_mark_end(s);
+
+        trans_force_write_s(trans, s);
+        xstream_free(s);
+    }
+    else if (cmd == PA_CMD_START_REC)
+    {
+        sound_input_start_recording();
+    }
+    else if (cmd == PA_CMD_STOP_REC)
+    {
+        sound_input_stop_recording();
+    }
+
+    return 0;
+}
+
+/*****************************************************************************/
 
 #if defined(XRDP_SIMPLESOUND)
 
