@@ -71,6 +71,12 @@ int g_use_uds = 0;
 char g_uds_data[256] = ""; /* data */
 char g_uds_cont[256] = ""; /* control */
 
+int g_shift_down = 0;
+int g_alt_down = 0;
+int g_ctrl_down = 0;
+int g_pause_spe = 0;
+int g_tab_down = 0;
+
 /* set all these at once, use function set_bpp */
 int g_bpp = 16;
 int g_Bpp = 2;
