@@ -184,7 +184,7 @@ mysend(int sck, const void* adata, int bytes)
  * write data to client connection
  *
  * @return 0 on success, -1 on error
-/*****************************************************************************/
+ *****************************************************************************/
 int
 WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
                        unsigned int Length, unsigned int *pBytesWritten)
