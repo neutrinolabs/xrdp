@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2013 Jay Sorg
+Copyright 2005-2014 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -23,6 +23,17 @@ Client connection to xrdp
 
 #ifndef _RDPCLIENTCON_H
 #define _RDPCLIENTCON_H
+
+/* used in rdpGlyphs.c */
+struct font_cache
+{
+    int offset;
+    int baseline;
+    int width;
+    int height;
+    int crc;
+    int stamp;
+};
 
 struct rdpup_os_bitmap
 {
@@ -57,6 +68,12 @@ struct _rdpClientCon
     int rdp_Bpp_mask;
 
     int rdpIndex; /* current os target */
+
+    int conNumber;
+
+    /* rdpGlyphs.c */
+    struct font_cache font_cache[12][256];
+    int font_stamp;
 
     struct _rdpClientCon *next;
 };

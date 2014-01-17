@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2013 Jay Sorg
+Copyright 2005-2014 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -38,6 +38,7 @@ Client connection to xrdp
 #include "rdpDraw.h"
 #include "rdpClientCon.h"
 #include "rdpMisc.h"
+#include "rdpInput.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
@@ -62,9 +63,9 @@ Client connection to xrdp
 a GXnoop,         D
 b GXorInverted,   DPno
 c GXcopy,         P
-d GXorReverse,   PDno
-e GXor,          DPo
-f GXset          1
+d GXorReverse,    PDno
+e GXor,           DPo
+f GXset           1
 */
 
 static int g_rdp_opcodes[16] =
@@ -87,16 +88,12 @@ static int g_rdp_opcodes[16] =
     0xff  /* GXset          0xf 1 */
 };
 
-static int
-rdpClientConSendPending(rdpPtr dev, rdpClientCon *clientCon);
-static int
-rdpClientConSendMsg(rdpPtr dev, rdpClientCon *clientCon);
-
 /******************************************************************************/
 static int
 rdpClientConGotConnection(ScreenPtr pScreen, rdpPtr dev)
 {
     rdpClientCon *clientCon;
+    int new_sck;
 
     LLOGLN(0, ("rdpClientConGotConnection:"));
     clientCon = (rdpClientCon *) g_malloc(sizeof(rdpClientCon), 1);
@@ -104,13 +101,36 @@ rdpClientConGotConnection(ScreenPtr pScreen, rdpPtr dev)
     init_stream(clientCon->in_s, 8192);
     make_stream(clientCon->out_s);
     init_stream(clientCon->out_s, 8192 * 4 + 100);
+
+    new_sck = g_sck_accept(dev->listen_sck);
+    if (new_sck == -1)
+    {
+        LLOGLN(0, ("rdpClientConGotConnection: g_sck_accept failed"));
+    }
+    else
+    {
+        LLOGLN(0, ("rdpClientConGotConnection: g_sck_accept ok new_sck %d",
+               new_sck));
+        clientCon->sck = new_sck;
+        g_sck_set_non_blocking(clientCon->sck);
+        g_sck_tcp_set_no_delay(clientCon->sck); /* only works if TCP */
+        clientCon->connected = TRUE;
+        clientCon->sckClosed = FALSE;
+        clientCon->begin = FALSE;
+        dev->conNumber++;
+        clientCon->conNumber = dev->conNumber;
+        AddEnabledDevice(clientCon->sck);
+    }
+
     if (dev->clientConTail == NULL)
     {
+        LLOGLN(0, ("rdpClientConGotConnection: adding only clientCon"));
         dev->clientConHead = clientCon;
         dev->clientConTail = clientCon;
     }
     else
     {
+        LLOGLN(0, ("rdpClientConGotConnection: adding clientCon"));
         dev->clientConTail->next = clientCon;
         dev->clientConTail = clientCon;
     }
@@ -118,10 +138,465 @@ rdpClientConGotConnection(ScreenPtr pScreen, rdpPtr dev)
 }
 
 /******************************************************************************/
+static CARD32
+rdpDeferredDisconnectCallback(OsTimerPtr timer, CARD32 now, pointer arg)
+{
+    CARD32 lnow_ms;
+    rdpPtr dev;
+
+    dev = (rdpPtr) arg;
+    LLOGLN(10, ("rdpDeferredDisconnectCallback"));
+    if (dev->clientConHead != NULL)
+    {
+        /* this should not happen */
+        LLOGLN(0, ("rdpDeferredDisconnectCallback: connected"));
+        if (dev->disconnectTimer != NULL)
+        {
+            LLOGLN(0, ("rdpDeferredDisconnectCallback: canceling g_dis_timer"));
+            TimerCancel(dev->disconnectTimer);
+            TimerFree(dev->disconnectTimer);
+            dev->disconnectTimer = NULL;
+        }
+        dev->disconnect_scheduled = FALSE;
+        return 0;
+    }
+    else
+    {
+        LLOGLN(10, ("rdpDeferredDisconnectCallback: not connected"));
+    }
+    lnow_ms = GetTimeInMillis();
+    if (lnow_ms - dev->disconnect_time_ms > dev->disconnect_timeout_s * 1000)
+    {
+        LLOGLN(0, ("rdpDeferredDisconnectCallback: exit X11rdp"));
+        kill(getpid(), SIGTERM);
+        return 0;
+    }
+    dev->disconnectTimer = TimerSet(dev->disconnectTimer, 0, 1000 * 10,
+                                    rdpDeferredDisconnectCallback, dev);
+    return 0;
+}
+
+/*****************************************************************************/
+static int
+rdpClientConDisconnect(rdpPtr dev, rdpClientCon *clientCon)
+{
+    int index;
+    rdpClientCon *pcli;
+    rdpClientCon *plcli;
+
+    LLOGLN(0, ("rdpClientConDisconnect:"));
+    if (dev->do_kill_disconnected)
+    {
+        if (dev->disconnect_scheduled == FALSE)
+        {
+            LLOGLN(0, ("rdpClientConDisconnect: starting g_dis_timer"));
+            dev->disconnectTimer = TimerSet(dev->disconnectTimer, 0, 1000 * 10,
+                                            rdpDeferredDisconnectCallback, dev);
+            dev->disconnect_scheduled = TRUE;
+        }
+        dev->disconnect_time_ms = GetTimeInMillis();
+    }
+
+    RemoveEnabledDevice(clientCon->sck);
+    g_sck_close(clientCon->sck);
+    if (clientCon->maxOsBitmaps > 0)
+    {
+        for (index = 0; index < clientCon->maxOsBitmaps; index++)
+        {
+            if (clientCon->osBitmaps[index].used)
+            {
+                if (clientCon->osBitmaps[index].priv != NULL)
+                {
+                    clientCon->osBitmaps[index].priv->status = 0;
+                }
+            }
+        }
+    }
+    g_free(clientCon->osBitmaps);
+
+    plcli = NULL;
+    pcli = dev->clientConHead;
+    while (pcli != NULL)
+    {
+        if (pcli == clientCon)
+        {
+            if (plcli == NULL)
+            {
+                /* removing first item */
+                dev->clientConHead = pcli->next;
+                if (dev->clientConHead == NULL)
+                {
+                    dev->clientConTail = NULL;
+                }
+            }
+            else
+            {
+                plcli->next = pcli->next;
+            }
+            break;
+        }
+        plcli = pcli;
+        pcli = pcli->next;
+    }
+
+    g_free(clientCon);
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+static int
+rdpClientConSend(rdpPtr dev, rdpClientCon *clientCon, char *data, int len)
+{
+    int sent;
+
+    LLOGLN(10, ("rdpClientConSend - sending %d bytes", len));
+
+    if (clientCon->sckClosed)
+    {
+        return 1;
+    }
+
+    while (len > 0)
+    {
+        sent = g_sck_send(clientCon->sck, data, len, 0);
+
+        if (sent == -1)
+        {
+            if (g_sck_last_error_would_block(clientCon->sck))
+            {
+                g_sleep(1);
+            }
+            else
+            {
+                LLOGLN(0, ("rdpClientConSend: g_tcp_send failed(returned -1)"));
+                rdpClientConDisconnect(dev, clientCon);
+                return 1;
+            }
+        }
+        else if (sent == 0)
+        {
+            LLOGLN(0, ("rdpClientConSend: g_tcp_send failed(returned zero)"));
+            rdpClientConDisconnect(dev, clientCon);
+            return 1;
+        }
+        else
+        {
+            data += sent;
+            len -= sent;
+        }
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+static int
+rdpClientConSendMsg(rdpPtr dev, rdpClientCon *clientCon)
+{
+    int len;
+    int rv;
+    struct stream *s;
+
+    rv = 1;
+    s = clientCon->out_s;
+    if (s != NULL)
+    {
+        len = (int) (s->end - s->data);
+
+        if (len > s->size)
+        {
+            LLOGLN(0, ("rdpClientConSendMsg: overrun error len %d count %d",
+                   len, clientCon->count));
+        }
+
+        s_pop_layer(s, iso_hdr);
+        out_uint16_le(s, 3);
+        out_uint16_le(s, clientCon->count);
+        out_uint32_le(s, len - 8);
+        rv = rdpClientConSend(dev, clientCon, s->data, len);
+    }
+
+    if (rv != 0)
+    {
+        LLOGLN(0, ("rdpClientConSendMsg: error in rdpup_send_msg"));
+    }
+
+    return rv;
+}
+
+/******************************************************************************/
+static int
+rdpClientConSendPending(rdpPtr dev, rdpClientCon *clientCon)
+{
+    int rv;
+
+    rv = 0;
+    if (clientCon->connected && clientCon->begin)
+    {
+        out_uint16_le(clientCon->out_s, 2); /* XR_SERVER_END_UPDATE */
+        out_uint16_le(clientCon->out_s, 4); /* size */
+        clientCon->count++;
+        s_mark_end(clientCon->out_s);
+        if (rdpClientConSendMsg(dev, clientCon) != 0)
+        {
+            LLOGLN(0, ("rdpClientConSendPending: rdpClientConSendMsg failed"));
+            rv = 1;
+        }
+    }
+    clientCon->count = 0;
+    clientCon->begin = FALSE;
+    return rv;
+}
+
+/******************************************************************************/
+/* returns error */
+static int
+rdpClientConRecv(rdpPtr dev, rdpClientCon *clientCon, char *data, int len)
+{
+    int rcvd;
+
+    if (clientCon->sckClosed)
+    {
+        return 1;
+    }
+
+    while (len > 0)
+    {
+        rcvd = g_sck_recv(clientCon->sck, data, len, 0);
+
+        if (rcvd == -1)
+        {
+            if (g_sck_last_error_would_block(clientCon->sck))
+            {
+                g_sleep(1);
+            }
+            else
+            {
+                LLOGLN(0, ("rdpClientConRecv: g_sck_recv failed(returned -1)"));
+                rdpClientConDisconnect(dev, clientCon);
+                return 1;
+            }
+        }
+        else if (rcvd == 0)
+        {
+            LLOGLN(0, ("rdpClientConRecv: g_sck_recv failed(returned 0)"));
+            rdpClientConDisconnect(dev, clientCon);
+            return 1;
+        }
+        else
+        {
+            data += rcvd;
+            len -= rcvd;
+        }
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+static int
+rdpClientConRecvMsg(rdpPtr dev, rdpClientCon *clientCon)
+{
+    int len;
+    int rv;
+    struct stream *s;
+
+    rv = 1;
+
+    s = clientCon->in_s;
+    if (s != 0)
+    {
+        init_stream(s, 4);
+        rv = rdpClientConRecv(dev, clientCon, s->data, 4);
+
+        if (rv == 0)
+        {
+            in_uint32_le(s, len);
+
+            if (len > 3)
+            {
+                init_stream(s, len);
+                rv = rdpClientConRecv(dev, clientCon, s->data, len - 4);
+            }
+        }
+    }
+
+    if (rv != 0)
+    {
+        LLOGLN(0, ("rdpClientConRecvMsg: error"));
+    }
+
+    return rv;
+}
+
+/******************************************************************************/
+static int
+rdpClientConSendCaps(rdpPtr dev, rdpClientCon *clientCon)
+{
+    struct stream *ls;
+    int len;
+    int rv;
+    int cap_count;
+    int cap_bytes;
+
+    make_stream(ls);
+    init_stream(ls, 8192);
+    s_push_layer(ls, iso_hdr, 8);
+
+    cap_count = 0;
+    cap_bytes = 0;
+
+#if 0
+    out_uint16_le(ls, 0);
+    out_uint16_le(ls, 4);
+    cap_count++;
+    cap_bytes += 4;
+
+    out_uint16_le(ls, 1);
+    out_uint16_le(ls, 4);
+    cap_count++;
+    cap_bytes += 4;
+#endif
+
+    s_mark_end(ls);
+    len = (int)(ls->end - ls->data);
+    s_pop_layer(ls, iso_hdr);
+    out_uint16_le(ls, 2); /* caps */
+    out_uint16_le(ls, cap_count); /* num caps */
+    out_uint32_le(ls, cap_bytes); /* caps len after header */
+
+    rv = rdpClientConSend(dev, clientCon, ls->data, len);
+
+    if (rv != 0)
+    {
+        LLOGLN(0, ("rdpClientConSendCaps: rdpup_send failed"));
+    }
+
+    free_stream(ls);
+    return rv;
+}
+
+/******************************************************************************/
+static int
+rdpClientConProcessMsgVersion(rdpPtr dev, rdpClientCon *clientCon,
+                              int param1, int param2, int param3, int param4)
+{
+    LLOGLN(0, ("rdpClientConProcessMsgVersion: version %d %d %d %d",
+           param1, param2, param3, param4));
+
+    if ((param1 > 0) || (param2 > 0) || (param3 > 0) || (param4 > 0))
+    {
+        rdpClientConSendCaps(dev, clientCon);
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+static int
+rdpClientConProcessMsgClientInput(rdpPtr dev, rdpClientCon *clientCon)
+{
+    struct stream *s;
+    int msg;
+    int param1;
+    int param2;
+    int param3;
+    int param4;
+
+    s = clientCon->in_s;
+    in_uint32_le(s, msg);
+    in_uint32_le(s, param1);
+    in_uint32_le(s, param2);
+    in_uint32_le(s, param3);
+    in_uint32_le(s, param4);
+
+    LLOGLN(10, ("rdpClientConProcessMsgClientInput: msg %d param1 %d param2 %d "
+           "param3 %d param4 %d", msg, param1, param2, param3, param4));
+
+    if (msg < 100)
+    {
+        rdpInputKeyboardEvent(dev, msg, param1, param2, param3, param4);
+    }
+    else if (msg < 200)
+    {
+        rdpInputMouseEvent(dev, msg, param1, param2, param3, param4);
+    }
+    else if (msg == 200) /* invalidate */
+    {
+    }
+    else if (msg == 300) /* resize desktop */
+    {
+    }
+    else if (msg == 301) /* version */
+    {
+        rdpClientConProcessMsgVersion(dev, clientCon,
+                                   param1, param2, param3, param4);
+    }
+    else
+    {
+        LLOGLN(0, ("rdpClientConProcessMsgClientInput: unknown msg %d", msg));
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+static int
+rdpClientConProcessMsgClientInfo(rdpPtr dev, rdpClientCon *clientCon)
+{
+    LLOGLN(0, ("rdpClientConProcessMsgClientInfo:"));
+    return 0;
+}
+
+/******************************************************************************/
+static int
+rdpClientConProcessMsgClientRegion(rdpPtr dev, rdpClientCon *clientCon)
+{
+    LLOGLN(0, ("rdpClientConProcessMsgClientRegion:"));
+    return 0;
+}
+
+/******************************************************************************/
+static int
+rdpClientConProcessMsg(rdpPtr dev, rdpClientCon *clientCon)
+{
+    int msg_type;
+    struct stream *s;
+
+    LLOGLN(10, ("rdpClientConProcessMsg:"));
+    s = clientCon->in_s;
+    in_uint16_le(s, msg_type);
+    LLOGLN(10, ("rdpClientConProcessMsg: msg_type %d", msg_type));
+    switch (msg_type)
+    {
+        case 103: /* client input */
+            rdpClientConProcessMsgClientInput(dev, clientCon);
+            break;
+        case 104: /* client info */
+            rdpClientConProcessMsgClientInfo(dev, clientCon);
+            break;
+        case 105: /* client region */
+            rdpClientConProcessMsgClientRegion(dev, clientCon);
+            break;
+        default:
+            break;
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
 static int
 rdpClientConGotData(ScreenPtr pScreen, rdpPtr dev, rdpClientCon *clientCon)
 {
-    LLOGLN(0, ("rdpClientConGotData:"));
+    LLOGLN(10, ("rdpClientConGotData:"));
+
+    if (rdpClientConRecvMsg(dev, clientCon) == 0)
+    {
+        rdpClientConProcessMsg(dev, clientCon);
+    }
+
     return 0;
 }
 
@@ -290,108 +765,6 @@ rdpClientConDeinit(rdpPtr dev)
         close(dev->listen_sck);
         unlink(dev->uds_data);
     }
-    return 0;
-}
-
-/******************************************************************************/
-static CARD32
-rdpClientConDeferredDisconnectCallback(OsTimerPtr timer, CARD32 now,
-                                       pointer arg)
-{
-    CARD32 lnow_ms;
-    rdpPtr dev;
-
-    LLOGLN(10, ("rdpClientConDeferredDisconnectCallback"));
-    dev = (rdpPtr) arg;
-    if (dev->clientConHead != NULL) /* is there any connection ? */
-    {
-        LLOGLN(0, ("rdpClientConDeferredDisconnectCallback: one connected"));
-        if (dev->disconnectTimer != NULL)
-        {
-            LLOGLN(0, ("rdpClientConDeferredDisconnectCallback: "
-                   "canceling disconnectTimer"));
-            TimerCancel(dev->disconnectTimer);
-            TimerFree(dev->disconnectTimer);
-            dev->disconnectTimer = NULL;
-        }
-        dev->disconnectScheduled = FALSE;
-        return 0;
-    }
-    else
-    {
-        LLOGLN(10, ("rdpClientConDeferredDisconnectCallback: not connected"));
-    }
-    lnow_ms = GetTimeInMillis();
-    if (lnow_ms - dev->disconnect_time_ms > dev->disconnect_timeout_s * 1000)
-    {
-        LLOGLN(0, ("rdpClientConDeferredDisconnectCallback: exit X11rdp"));
-        kill(getpid(), SIGTERM);
-        return 0;
-    }
-    dev->disconnectTimer = TimerSet(dev->disconnectTimer, 0, 1000 * 10,
-                                    rdpClientConDeferredDisconnectCallback,
-                                    dev);
-    return 0;
-}
-
-
-/*****************************************************************************/
-static int
-rdpClientConDisconnect(rdpPtr dev, rdpClientCon *clientCon)
-{
-    //int index;
-
-    LLOGLN(0, ("rdpClientConDisconnect:"));
-    if (dev->do_kill_disconnected)
-    {
-        if (dev->disconnect_scheduled == FALSE)
-        {
-            LLOGLN(0, ("rdpClientConDisconnect: starting g_dis_timer"));
-            dev->disconnectTimer = TimerSet(dev->disconnectTimer, 0, 1000 * 10,
-                         rdpClientConDeferredDisconnectCallback, dev);
-            dev->disconnect_scheduled = TRUE;
-        }
-        dev->disconnect_time_ms = GetTimeInMillis();
-    }
-
-    //rdpClientConDelete(dev, clientCon);
-
-#if 0
-
-    // TODO
-
-    RemoveEnabledDevice(clientCon->sck);
-    clientCon->connected = FALSE;
-    g_sck_close(clientCon->sck);
-    clientCon->sck = 0;
-    clientCon->sckClosed = TRUE;
-    clientCon->osBitmapNumUsed = 0;
-    clientCon->rdpIndex = -1;
-
-    if (clientCon->maxOsBitmaps > 0)
-    {
-        for (index = 0; index < clientCon->maxOsBitmaps; index++)
-        {
-            if (clientCon->osBitmaps[index].used)
-            {
-                if (g_os_bitmaps[index].priv != 0)
-                {
-                    g_os_bitmaps[index].priv->status = 0;
-                }
-            }
-        }
-    }
-    g_os_bitmap_alloc_size = 0;
-
-    g_max_os_bitmaps = 0;
-    g_free(g_os_bitmaps);
-    g_os_bitmaps = 0;
-    g_use_rail = 0;
-    g_do_glyph_cache = 0;
-    g_do_composite = 0;
-
-#endif
-
     return 0;
 }
 
@@ -1178,112 +1551,6 @@ rdpClientConUpdateOsUse(rdpPtr dev, rdpClientCon *clientCon, int rdpindex)
     return 0;
 }
 
-/*****************************************************************************/
-/* returns error */
-static int
-rdpClientConSend(rdpPtr dev, rdpClientCon *clientCon, char *data, int len)
-{
-    int sent;
-
-    LLOGLN(10, ("rdpClientConSend - sending %d bytes", len));
-
-    if (clientCon->sckClosed)
-    {
-        return 1;
-    }
-
-    while (len > 0)
-    {
-        sent = g_sck_send(clientCon->sck, data, len, 0);
-
-        if (sent == -1)
-        {
-            if (g_sck_last_error_would_block(clientCon->sck))
-            {
-                g_sleep(1);
-            }
-            else
-            {
-                LLOGLN(0, ("rdpClientConSend: g_tcp_send failed(returned -1)"));
-                rdpClientConDisconnect(dev, clientCon);
-                return 1;
-            }
-        }
-        else if (sent == 0)
-        {
-            LLOGLN(0, ("rdpClientConSend: g_tcp_send failed(returned zero)"));
-            rdpClientConDisconnect(dev, clientCon);
-            return 1;
-        }
-        else
-        {
-            data += sent;
-            len -= sent;
-        }
-    }
-
-    return 0;
-}
-
-/******************************************************************************/
-static int
-rdpClientConSendMsg(rdpPtr dev, rdpClientCon *clientCon)
-{
-    int len;
-    int rv;
-    struct stream *s;
-
-    rv = 1;
-    s = clientCon->out_s;
-    if (s != NULL)
-    {
-        len = (int) (s->end - s->data);
-
-        if (len > s->size)
-        {
-            LLOGLN(0, ("rdpClientConSendMsg: overrun error len %d count %d",
-                   len, clientCon->count));
-        }
-
-        s_pop_layer(s, iso_hdr);
-        out_uint16_le(s, 3);
-        out_uint16_le(s, clientCon->count);
-        out_uint32_le(s, len - 8);
-        rv = rdpClientConSend(dev, clientCon, s->data, len);
-    }
-
-    if (rv != 0)
-    {
-        LLOGLN(0, ("rdpClientConSendMsg: error in rdpup_send_msg"));
-    }
-
-    return rv;
-}
-
-/******************************************************************************/
-static int
-rdpClientConSendPending(rdpPtr dev, rdpClientCon *clientCon)
-{
-    int rv;
-
-    rv = 0;
-    if (clientCon->connected && clientCon->begin)
-    {
-        out_uint16_le(clientCon->out_s, 2); /* XR_SERVER_END_UPDATE */
-        out_uint16_le(clientCon->out_s, 4); /* size */
-        clientCon->count++;
-        s_mark_end(clientCon->out_s);
-        if (rdpClientConSendMsg(dev, clientCon) != 0)
-        {
-            LLOGLN(0, ("rdpClientConSendPending: rdpClientConSendMsg failed"));
-            rv = 1;
-        }
-    }
-    clientCon->count = 0;
-    clientCon->begin = FALSE;
-    return rv;
-}
-
 /******************************************************************************/
 static CARD32
 rdpClientConDeferredUpdateCallback(OsTimerPtr timer, CARD32 now, pointer arg)
@@ -1325,9 +1592,9 @@ rdpClientConScheduleDeferredUpdate(rdpPtr dev)
     if (dev->sendUpdateScheduled == FALSE)
     {
         dev->sendUpdateScheduled = TRUE;
-        dev->sendUpdateTimer = TimerSet(dev->sendUpdateTimer, 0, 40,
-                                        rdpClientConDeferredUpdateCallback,
-                                        dev);
+        dev->sendUpdateTimer =
+                TimerSet(dev->sendUpdateTimer, 0, 40,
+                         rdpClientConDeferredUpdateCallback, dev);
     }
 }
 

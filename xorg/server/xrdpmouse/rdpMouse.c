@@ -1,5 +1,5 @@
 /*
-Copyright 2013 Jay Sorg
+Copyright 2013-2014 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -152,7 +152,7 @@ rdpInputMouse(rdpPtr dev, int msg,
 {
     rdpPointer *pointer;
 
-    LLOGLN(0, ("rdpInputMouse:"));
+    LLOGLN(10, ("rdpInputMouse:"));
     pointer = &(dev->pointer);
     switch (msg)
     {

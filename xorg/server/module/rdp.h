@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2013 Jay Sorg
+Copyright 2005-2014 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -37,6 +37,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define RDPMAX(_val1, _val2) ((_val1) < (_val2) ? (_val2) : (_val1))
 #define RDPCLAMP(_val, _lo, _hi) \
   (_val) < (_lo) ? (_lo) : (_val) > (_hi) ? (_hi) : (_val)
+
+struct image_data
+{
+    int width;
+    int height;
+    int bpp;
+    int Bpp;
+    int lineBytes;
+    char *pixels;
+    char *shmem_pixels;
+    int shmem_id;
+    int shmem_offset;
+    int shmem_lineBytes;
+};
 
 /* defined in rdpClientCon.h */
 typedef struct _rdpClientCon rdpClientCon;
@@ -84,6 +98,8 @@ struct _rdpPixmapRec
 };
 typedef struct _rdpPixmapRec rdpPixmapRec;
 typedef struct _rdpPixmapRec * rdpPixmapPtr;
+#define GETPIXPRIV(_dev, _pPixmap) (rdpPixmapPtr) \
+rdpGetPixmapPrivate(&((_pPixmap)->devPrivates),  (_dev)->privateKeyRecPixmap)
 
 /* move this to common header */
 struct _rdpRec
@@ -141,6 +157,7 @@ struct _rdpRec
     int sendUpdateScheduled; /* boolean */
     OsTimerPtr sendUpdateTimer;
 
+    int do_dirty_os; /* boolean */
     int do_dirty_ons; /* boolean */
     int disconnect_scheduled; /* boolean */
     int do_kill_disconnected; /* boolean */
@@ -149,6 +166,8 @@ struct _rdpRec
     int disconnectScheduled; /* boolean */
     int disconnect_timeout_s;
     int disconnect_time_ms;
+
+    int conNumber;
 
 };
 typedef struct _rdpRec rdpRec;
