@@ -17,12 +17,15 @@
  */
 
 #include <stdio.h>
-#include <pulse/util.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/errno.h>
 #include <signal.h>
 #include <sys/un.h>
+
+#ifdef XRDP_LOAD_PULSE_MODULES
+#include <pulse/util.h>
+#endif
 
 #include "sound.h"
 #include "thread_calls.h"
