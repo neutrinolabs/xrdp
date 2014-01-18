@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2013 Jay Sorg
+Copyright 2005-2014 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -75,7 +75,7 @@ g_directory_exist(const char *dirname);
 int
 g_chmod_hex(const char *filename, int flags);
 void
-g_hexdump(unsigned char *p, unsigned int len);
+g_hexdump(void *p, long len);
 
 #if defined(X_BYTE_ORDER)
 #  if X_BYTE_ORDER == X_LITTLE_ENDIAN

@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2013 Jay Sorg
+Copyright 2005-2014 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -24,9 +24,30 @@ pixmap calls
 #ifndef __RDPPIXMAP_H
 #define __RDPPIXAMP_H
 
+#ifndef XORG_VERSION_NUMERIC
+#warning XORG_VERSION_NUMERIC not defined, need #include <xorgVersion.h>
+#endif
+
+#ifndef XORG_VERSION_CURRENT
+#warning XORG_VERSION_CURRENT not defined
+#endif
+
+#if XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(1, 5, 0, 0, 0)
+/* 1.1, 1.2, 1.3, 1.4 */
+#define XRDP_PIX 1
+#else
+/* 1.5, 1.6, 1.7, 1.8, 1.9, 1.10, 1.11, 1.12 */
+#define XRDP_PIX 2
+#endif
+
+#if XRDP_PIX == 2
 PixmapPtr
 rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
                 unsigned usage_hint);
+#else
+PixmapPtr
+rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth);
+#endif
 Bool
 rdpDestroyPixmap(PixmapPtr pPixmap);
 Bool

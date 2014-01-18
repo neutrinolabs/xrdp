@@ -373,7 +373,7 @@ g_chmod_hex(const char *filename, int flags)
 /*****************************************************************************/
 /* produce a hex dump */
 void
-g_hexdump(unsigned char *p, unsigned int len)
+g_hexdump(void *p, long len)
 {
     unsigned char *line;
     int i;
@@ -381,9 +381,9 @@ g_hexdump(unsigned char *p, unsigned int len)
     int offset;
 
     offset = 0;
-    line = p;
+    line = (unsigned char *) p;
 
-    while (offset < len)
+    while (offset < (int) len)
     {
         ErrorF("%04x ", offset);
         thisline = len - offset;

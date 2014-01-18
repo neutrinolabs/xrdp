@@ -46,6 +46,21 @@ Client connection to xrdp
 
 #define LTOUI32(_in) ((unsigned int)(_in))
 
+#define COLOR8(r, g, b) \
+    ((((r) >> 5) << 0)  | (((g) >> 5) << 3) | (((b) >> 6) << 6))
+#define COLOR15(r, g, b) \
+    ((((r) >> 3) << 10) | (((g) >> 3) << 5) | (((b) >> 3) << 0))
+#define COLOR16(r, g, b) \
+    ((((r) >> 3) << 11) | (((g) >> 2) << 5) | (((b) >> 3) << 0))
+#define COLOR24(r, g, b) \
+    ((((r) >> 0) << 0)  | (((g) >> 0) << 8) | (((b) >> 0) << 16))
+#define SPLITCOLOR32(r, g, b, c) \
+    do { \
+        r = ((c) >> 16) & 0xff; \
+        g = ((c) >> 8) & 0xff; \
+        b = (c) & 0xff; \
+    } while (0)
+
 #define USE_MAX_OS_BYTES 1
 #define MAX_OS_BYTES (16 * 1024 * 1024)
 
@@ -545,7 +560,11 @@ rdpClientConProcessMsgClientInput(rdpPtr dev, rdpClientCon *clientCon)
 static int
 rdpClientConProcessMsgClientInfo(rdpPtr dev, rdpClientCon *clientCon)
 {
+    struct stream *s;
+
     LLOGLN(0, ("rdpClientConProcessMsgClientInfo:"));
+    s = clientCon->in_s;
+    g_hexdump(s->p, s->end - s->p);
     return 0;
 }
 
@@ -553,7 +572,11 @@ rdpClientConProcessMsgClientInfo(rdpPtr dev, rdpClientCon *clientCon)
 static int
 rdpClientConProcessMsgClientRegion(rdpPtr dev, rdpClientCon *clientCon)
 {
+    struct stream *s;
+
     LLOGLN(0, ("rdpClientConProcessMsgClientRegion:"));
+    s = clientCon->in_s;
+    g_hexdump(s->p, s->end - s->p);
     return 0;
 }
 
@@ -924,21 +947,6 @@ rdpClientConResetClip(rdpPtr dev, rdpClientCon *clientCon)
 
     return 0;
 }
-
-#define COLOR8(r, g, b) \
-    ((((r) >> 5) << 0)  | (((g) >> 5) << 3) | (((b) >> 6) << 6))
-#define COLOR15(r, g, b) \
-    ((((r) >> 3) << 10) | (((g) >> 3) << 5) | (((b) >> 3) << 0))
-#define COLOR16(r, g, b) \
-    ((((r) >> 3) << 11) | (((g) >> 2) << 5) | (((b) >> 3) << 0))
-#define COLOR24(r, g, b) \
-    ((((r) >> 0) << 0)  | (((g) >> 0) << 8) | (((b) >> 0) << 16))
-#define SPLITCOLOR32(r, g, b, c) \
-    { \
-        r = ((c) >> 16) & 0xff; \
-        g = ((c) >> 8) & 0xff; \
-        b = (c) & 0xff; \
-    }
 
 /******************************************************************************/
 int
