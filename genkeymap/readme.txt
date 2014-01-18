@@ -1,13 +1,13 @@
 Creating a new keymap file.
 ---------------------------
 
-The names of the files are
+The names of the files are of the format;
 
 km-xxxx.ini
 
 where the xxxx is replaced by the hex number of the layout of interest.
 
-The files have 6 section
+The files have 6 sections;
 
 [noshift], [shift], [altgr], [shiftaltgr], [capslock], [shiftcapslock]
 
