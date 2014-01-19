@@ -7,7 +7,8 @@ rdpImageText16.o rdpImageGlyphBlt.o rdpPolyGlyphBlt.o rdpPushPixels.o \
 rdpCursor.o rdpMain.o rdpRandR.o rdpMisc.o rdpReg.o \
 rdpComposite.o rdpGlyphs.o rdpPixmap.o rdpInput.o rdpClientCon.o
 
-CFLAGS = -g -O2 -Wall -fPIC -I/usr/include/xorg -I/usr/include/pixman-1
+CFLAGS = -g -O2 -Wall -fPIC -I/usr/include/xorg -I/usr/include/pixman-1 \
+-I../../../common
 
 LDFLAGS =
 

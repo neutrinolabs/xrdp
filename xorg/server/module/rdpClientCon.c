@@ -26,6 +26,8 @@ Client connection to xrdp
 #include <string.h>
 #include <signal.h>
 #include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 
 /* this should be before all X11 .h files */
 #include <xorg-server.h>
@@ -39,6 +41,7 @@ Client connection to xrdp
 #include "rdpClientCon.h"
 #include "rdpMisc.h"
 #include "rdpInput.h"
+#include "rdpReg.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
@@ -149,6 +152,9 @@ rdpClientConGotConnection(ScreenPtr pScreen, rdpPtr dev)
         dev->clientConTail->next = clientCon;
         dev->clientConTail = clientCon;
     }
+
+    clientCon->dirtyRegion = rdpRegionCreate(NullBox, 0);
+
     return 0;
 }
 
@@ -241,19 +247,25 @@ rdpClientConDisconnect(rdpPtr dev, rdpClientCon *clientCon)
                 dev->clientConHead = pcli->next;
                 if (dev->clientConHead == NULL)
                 {
+                    /* removed only */
                     dev->clientConTail = NULL;
                 }
             }
             else
             {
                 plcli->next = pcli->next;
+                if (pcli == dev->clientConTail)
+                {
+                    /* removed last */
+                    dev->clientConTail = plcli;
+                }
             }
             break;
         }
         plcli = pcli;
         pcli = pcli->next;
     }
-
+    rdpRegionDestroy(clientCon->dirtyRegion);
     g_free(clientCon);
     return 0;
 }
@@ -427,12 +439,17 @@ rdpClientConRecvMsg(rdpPtr dev, rdpClientCon *clientCon)
 
         if (rv == 0)
         {
+            s->end = s->data + 4;
             in_uint32_le(s, len);
 
             if (len > 3)
             {
                 init_stream(s, len);
                 rv = rdpClientConRecv(dev, clientCon, s->data, len - 4);
+                if (rv == 0)
+                {
+                    s->end = s->data + len;
+                }
             }
         }
     }
@@ -509,6 +526,93 @@ rdpClientConProcessMsgVersion(rdpPtr dev, rdpClientCon *clientCon,
 }
 
 /******************************************************************************/
+/*
+    this from miScreenInit
+    pScreen->mmWidth = (xsize * 254 + dpix * 5) / (dpix * 10);
+    pScreen->mmHeight = (ysize * 254 + dpiy * 5) / (dpiy * 10);
+*/
+static int
+rdpClientConProcessScreenSizeMsg(rdpPtr dev, rdpClientCon *clientCon,
+                                 int width, int height, int bpp)
+{
+    RRScreenSizePtr pSize;
+    int mmwidth;
+    int mmheight;
+    int bytes;
+    Bool ok;
+
+    LLOGLN(0, ("rdpClientConProcessScreenSizeMsg: set width %d height %d bpp %d",
+               width, height, bpp));
+    clientCon->rdp_width = width;
+    clientCon->rdp_height = height;
+    clientCon->rdp_bpp = bpp;
+
+    if (bpp < 15)
+    {
+        clientCon->rdp_Bpp = 1;
+        clientCon->rdp_Bpp_mask = 0xff;
+    }
+    else if (bpp == 15)
+    {
+        clientCon->rdp_Bpp = 2;
+        clientCon->rdp_Bpp_mask = 0x7fff;
+    }
+    else if (bpp == 16)
+    {
+        clientCon->rdp_Bpp = 2;
+        clientCon->rdp_Bpp_mask = 0xffff;
+    }
+    else if (bpp > 16)
+    {
+        clientCon->rdp_Bpp = 4;
+        clientCon->rdp_Bpp_mask = 0xffffff;
+    }
+
+// todo
+#if 0
+    if (g_use_shmem)
+    {
+        if (g_shmemptr != 0)
+        {
+            shmdt(g_shmemptr);
+        }
+        bytes = g_rdpScreen.rdp_width * g_rdpScreen.rdp_height *
+                g_rdpScreen.rdp_Bpp;
+        g_shmemid = shmget(IPC_PRIVATE, bytes, IPC_CREAT | 0777);
+        g_shmemptr = shmat(g_shmemid, 0, 0);
+        shmctl(g_shmemid, IPC_RMID, NULL);
+        LLOGLN(0, ("rdpClientConProcessScreenSizeMsg: g_shmemid %d g_shmemptr %p",
+               g_shmemid, g_shmemptr));
+        g_shmem_lineBytes = g_rdpScreen.rdp_Bpp * g_rdpScreen.rdp_width;
+
+        if (g_shm_reg != 0)
+        {
+            RegionDestroy(g_shm_reg);
+        }
+        g_shm_reg = RegionCreate(NullBox, 0);
+    }
+#endif
+
+    mmwidth = PixelToMM(width);
+    mmheight = PixelToMM(height);
+
+// todo
+#if 0
+    pSize = RRRegisterSize(g_pScreen, width, height, mmwidth, mmheight);
+    RRSetCurrentConfig(g_pScreen, RR_Rotate_0, 0, pSize);
+
+    if ((g_rdpScreen.width != width) || (g_rdpScreen.height != height))
+    {
+        LLOGLN(0, ("  calling RRScreenSizeSet"));
+        ok = RRScreenSizeSet(g_pScreen, width, height, mmwidth, mmheight);
+        LLOGLN(0, ("  RRScreenSizeSet ok=[%d]", ok));
+    }
+#endif
+
+    return 0;
+}
+
+/******************************************************************************/
 static int
 rdpClientConProcessMsgClientInput(rdpPtr dev, rdpClientCon *clientCon)
 {
@@ -539,9 +643,14 @@ rdpClientConProcessMsgClientInput(rdpPtr dev, rdpClientCon *clientCon)
     }
     else if (msg == 200) /* invalidate */
     {
+        rdpClientConBeginUpdate(dev, clientCon);
+        rdpClientConSetFgcolor(dev, clientCon, 0x00ff0000);
+        rdpClientConFillRect(dev, clientCon, 0, 0, dev->width, dev->height);
+        rdpClientConEndUpdate(dev, clientCon);
     }
     else if (msg == 300) /* resize desktop */
     {
+        rdpClientConProcessScreenSizeMsg(dev, clientCon, param1, param2, param3);
     }
     else if (msg == 301) /* version */
     {
@@ -561,10 +670,89 @@ static int
 rdpClientConProcessMsgClientInfo(rdpPtr dev, rdpClientCon *clientCon)
 {
     struct stream *s;
+    int bytes;
+    int i1;
 
     LLOGLN(0, ("rdpClientConProcessMsgClientInfo:"));
     s = clientCon->in_s;
-    g_hexdump(s->p, s->end - s->p);
+    in_uint32_le(s, bytes);
+    if (bytes > sizeof(clientCon->client_info))
+    {
+        bytes = sizeof(clientCon->client_info);
+    }
+    memcpy(&(clientCon->client_info), s->p - 4, bytes);
+    clientCon->client_info.size = bytes;
+
+    LLOGLN(0, ("  got client info bytes %d", bytes));
+    LLOGLN(0, ("  jpeg support %d", clientCon->client_info.jpeg));
+    i1 = clientCon->client_info.offscreen_support_level;
+    LLOGLN(0, ("  offscreen support %d", i1));
+    i1 = clientCon->client_info.offscreen_cache_size;
+    LLOGLN(0, ("  offscreen size %d", i1));
+    i1 = clientCon->client_info.offscreen_cache_entries;
+    LLOGLN(0, ("  offscreen entries %d", i1));
+
+    if (clientCon->client_info.offscreen_support_level > 0)
+    {
+        if (clientCon->client_info.offscreen_cache_entries > 0)
+        {
+            clientCon->maxOsBitmaps = clientCon->client_info.offscreen_cache_entries;
+            g_free(clientCon->osBitmaps);
+            clientCon->osBitmaps = (struct rdpup_os_bitmap *)
+                        g_malloc(sizeof(struct rdpup_os_bitmap) * clientCon->maxOsBitmaps, 1);
+        }
+    }
+
+    if (clientCon->client_info.orders[0x1b])   /* 27 NEG_GLYPH_INDEX_INDEX */
+    {
+        LLOGLN(0, ("  client supports glyph cache but server disabled"));
+        //clientCon->doGlyphCache = 1;
+    }
+    if (clientCon->client_info.order_flags_ex & 0x100)
+    {
+        clientCon->doComposite = 1;
+    }
+    if (clientCon->doGlyphCache)
+    {
+        LLOGLN(0, ("  using glyph cache"));
+    }
+    if (clientCon->doComposite)
+    {
+        LLOGLN(0, ("  using client composite"));
+    }
+    LLOGLN(10, ("order_flags_ex 0x%x", clientCon->client_info.order_flags_ex));
+    if (clientCon->client_info.offscreen_cache_entries == 2000)
+    {
+        LLOGLN(0, ("  client can do offscreen to offscreen blits"));
+        clientCon->canDoPixToPix = 1;
+    }
+    else
+    {
+        LLOGLN(0, ("  client can not do offscreen to offscreen blits"));
+        clientCon->canDoPixToPix = 0;
+    }
+    if (clientCon->client_info.pointer_flags & 1)
+    {
+        LLOGLN(0, ("  client can do new(color) cursor"));
+    }
+    else
+    {
+        LLOGLN(0, ("  client can not do new(color) cursor"));
+    }
+    if (clientCon->client_info.monitorCount > 0)
+    {
+        LLOGLN(0, ("  client can do multimon"));
+        LLOGLN(0, ("  client monitor data, monitorCount= %d", clientCon->client_info.monitorCount));
+        clientCon->doMultimon = 1;
+    }
+    else
+    {
+        LLOGLN(0, ("  client can not do multimon"));
+        clientCon->doMultimon = 0;
+    }
+
+    //rdpLoadLayout(g_rdpScreen.client_info.keylayout);
+
     return 0;
 }
 
@@ -613,14 +801,17 @@ rdpClientConProcessMsg(rdpPtr dev, rdpClientCon *clientCon)
 static int
 rdpClientConGotData(ScreenPtr pScreen, rdpPtr dev, rdpClientCon *clientCon)
 {
+    int rv;
+
     LLOGLN(10, ("rdpClientConGotData:"));
 
-    if (rdpClientConRecvMsg(dev, clientCon) == 0)
+    rv = rdpClientConRecvMsg(dev, clientCon);
+    if (rv == 0)
     {
-        rdpClientConProcessMsg(dev, clientCon);
+        rv = rdpClientConProcessMsg(dev, clientCon);
     }
 
-    return 0;
+    return rv;
 }
 
 /******************************************************************************/
@@ -716,21 +907,36 @@ rdpClientConCheck(ScreenPtr pScreen)
         {
             if (FD_ISSET(LTOUI32(clientCon->sck), &rfds))
             {
-                rdpClientConGotData(pScreen, dev, clientCon);
+                if (rdpClientConGotData(pScreen, dev, clientCon) != 0)
+                {
+                    LLOGLN(0, ("rdpClientConCheck: rdpClientConGotData failed"));
+                    clientCon = dev->clientConHead;
+                    continue;
+                }
             }
         }
         if (clientCon->sckControlListener > 0)
         {
             if (FD_ISSET(LTOUI32(clientCon->sckControlListener), &rfds))
             {
-                rdpClientConGotControlConnection(pScreen, dev, clientCon);
+                if (rdpClientConGotControlConnection(pScreen, dev, clientCon) != 0)
+                {
+                    LLOGLN(0, ("rdpClientConCheck: rdpClientConGotControlConnection failed"));
+                    clientCon = dev->clientConHead;
+                    continue;
+                }
             }
         }
         if (clientCon->sckControl > 0)
         {
             if (FD_ISSET(LTOUI32(clientCon->sckControl), &rfds))
             {
-                rdpClientConGotControlData(pScreen, dev, clientCon);
+                if (rdpClientConGotControlData(pScreen, dev, clientCon) != 0)
+                {
+                    LLOGLN(0, ("rdpClientConCheck: rdpClientConGotControlData failed"));
+                    clientCon = dev->clientConHead;
+                    continue;
+                }
             }
         }
         clientCon = clientCon->next;
@@ -1611,4 +1817,73 @@ int
 rdpClientConCheckDirtyScreen(rdpPtr dev, rdpClientCon *clientCon)
 {
     return 0;
+}
+
+/******************************************************************************/
+int
+rdpClientConAddDirtyScreenReg(rdpPtr dev, rdpClientCon *clientCon,
+                              RegionPtr reg)
+{
+    rdpRegionUnion(clientCon->dirtyRegion, clientCon->dirtyRegion, reg);
+    return 0;
+}
+
+/******************************************************************************/
+void
+rdpClientConGetScreenImageRect(rdpPtr dev, rdpClientCon *clientCon,
+                               struct image_data *id)
+{
+    id->width = dev->width;
+    id->height = dev->height;
+    id->bpp = clientCon->rdp_bpp;
+    id->Bpp = clientCon->rdp_Bpp;
+    id->lineBytes = dev->paddedWidthInBytes;
+    id->pixels = dev->pfbMemory;
+    id->shmem_pixels = g_shmemptr;
+    id->shmem_id = g_shmemid;
+    id->shmem_offset = 0;
+    id->shmem_lineBytes = g_shmem_lineBytes;
+}
+
+/******************************************************************************/
+void
+rdpClientConGetPixmapImageRect(rdpPtr dev, rdpClientCon *clientCon,
+                               PixmapPtr pPixmap, struct image_data *id)
+{
+    id->width = pPixmap->drawable.width;
+    id->height = pPixmap->drawable.height;
+    id->bpp = g_rdpScreen.rdp_bpp;
+    id->Bpp = g_rdpScreen.rdp_Bpp;
+    id->lineBytes = pPixmap->devKind;
+    id->pixels = (char *)(pPixmap->devPrivate.ptr);
+    id->shmem_pixels = 0;
+    id->shmem_id = 0;
+    id->shmem_offset = 0;
+    id->shmem_lineBytes = 0;
+}
+
+/******************************************************************************/
+void
+rdpClientConSendArea(struct image_data *id, int x, int y, int w, int h)
+{
+    struct image_data lid;
+
+    LLOGLN(10, ("rdpClientConSendArea: id %p x %d y %d w %d h %d", id, x, y, w, h));
+
+    if (id == 0)
+    {
+        rdpup_get_screen_image_rect(&lid);
+        id = &lid;
+    }
+
+    if (x >= id->width)
+    {
+        return;
+    }
+
+    if (y >= id->height)
+    {
+        return;
+    }
+
 }
