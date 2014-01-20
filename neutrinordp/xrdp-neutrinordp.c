@@ -17,17 +17,17 @@
  * limitations under the License.
  */
 
-#include <freerdp/settings.h>
-#include <X11/Xlib.h>
 #include "xrdp-neutrinordp.h"
 #include "xrdp-color.h"
 #include "xrdp_rail.h"
 #include "log.h"
+#include <freerdp/settings.h>
+#include <X11/Xlib.h>
 
 #ifdef XRDP_DEBUG
 #define LOG_LEVEL 99
 #else
-#define LOG_LEVEL 1
+#define LOG_LEVEL 10
 #endif
 
 #define LLOG(_level, _args) \
@@ -1478,8 +1478,10 @@ lrail_WindowCreate(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
     int index;
     struct mod *mod;
     struct rail_window_state_order wso;
+    UNICONV* uniconv;
 
     LLOGLN(0, ("llrail_WindowCreate:"));
+    uniconv = freerdp_uniconv_new();
     mod = ((struct mod_context *)context)->modi;
     memset(&wso, 0, sizeof(wso));
     /* copy the window state order */
@@ -1490,7 +1492,8 @@ lrail_WindowCreate(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
 
     if (orderInfo->fieldFlags & WINDOW_ORDER_FIELD_TITLE)
     {
-        freerdp_UnicodeToAsciiAlloc(window_state->titleInfo.string, &wso.title_info, window_state->titleInfo.length / 2);
+        wso.title_info = freerdp_uniconv_in(uniconv,
+                window_state->titleInfo.string, window_state->titleInfo.length);
     }
 
     LLOGLN(0, ("lrail_WindowCreate: %s", wso.title_info));
@@ -1616,29 +1619,31 @@ lrail_NotifyIconCreate(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
 {
     struct mod *mod;
     struct rail_notify_state_order rnso;
+    UNICONV* uniconv;
 
     LLOGLN(0, ("lrail_NotifyIconCreate:"));
-
+    uniconv = freerdp_uniconv_new();
     mod = ((struct mod_context *)context)->modi;
 
     memset(&rnso, 0, sizeof(rnso));
     rnso.version = notify_icon_state->version;
 
     if (orderInfo->fieldFlags & WINDOW_ORDER_FIELD_NOTIFY_TIP)
-    {
-        freerdp_UnicodeToAsciiAlloc(notify_icon_state->toolTip.string,
-                    &rnso.tool_tip, notify_icon_state->toolTip.length / 2);
-    }
-
-    if (orderInfo->fieldFlags & WINDOW_ORDER_FIELD_NOTIFY_INFO_TIP)
-    {
-        rnso.infotip.timeout = notify_icon_state->infoTip.timeout;
-        rnso.infotip.flags = notify_icon_state->infoTip.flags;
-        freerdp_UnicodeToAsciiAlloc(notify_icon_state->infoTip.text.string,
-                    &rnso.infotip.text, notify_icon_state->infoTip.text.length / 2);
-        freerdp_UnicodeToAsciiAlloc(notify_icon_state->infoTip.title.string,
-                    &rnso.infotip.title, notify_icon_state->infoTip.title.length / 2);
-    }
+     {
+       rnso.tool_tip = freerdp_uniconv_in(uniconv,
+           notify_icon_state->toolTip.string, notify_icon_state->toolTip.length);
+     }
+     if (orderInfo->fieldFlags & WINDOW_ORDER_FIELD_NOTIFY_INFO_TIP)
+     {
+       rnso.infotip.timeout = notify_icon_state->infoTip.timeout;
+       rnso.infotip.flags = notify_icon_state->infoTip.flags;
+       rnso.infotip.text = freerdp_uniconv_in(uniconv,
+           notify_icon_state->infoTip.text.string,
+           notify_icon_state->infoTip.text.length);
+       rnso.infotip.title = freerdp_uniconv_in(uniconv,
+           notify_icon_state->infoTip.title.string,
+           notify_icon_state->infoTip.title.length);
+     }
 
     rnso.state = notify_icon_state->state;
     rnso.icon_cache_entry = notify_icon_state->icon.cacheEntry;
