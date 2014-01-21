@@ -221,7 +221,7 @@ struct xrdp_orders_state
   int com_blt_width;                                /* 2 */
   int com_blt_height;                               /* 2 */
   int com_blt_dstformat;                            /* 2 */
-    
+
 };
 
 /* orders */
@@ -473,6 +473,24 @@ xrdp_jpeg_compress(void *handle, char* in_data, int width, int height,
                    struct stream* s, int bpp, int byte_limit,
                    int start_line, struct stream* temp_s,
                    int e, int quality);
+
+int APP_CC
+xrdp_codec_jpeg_compress(void *handle,
+                         int   format,   /* input data format */
+                         char *inp_data, /* input data */
+                         int   width,    /* width of inp_data */
+                         int   height,   /* height of inp_data */
+                         int   stride,   /* inp_data stride, in bytes*/
+                         int   x,        /* x loc in inp_data */
+                         int   y,        /* y loc in inp_data */
+                         int   cx,       /* width of area to compress */
+                         int   cy,       /* height of area to compress */
+                         int   quality,  /* higher numbers compress less */
+                         char *out_data, /* dest for jpg image */
+                         int  *io_len    /* length of out_data and on return */
+                                         /* len of compressed data */
+                         );
+
 void *APP_CC
 xrdp_jpeg_init(void);
 int APP_CC
