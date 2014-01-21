@@ -58,7 +58,7 @@ rdpPolyText8(DrawablePtr pDrawable, GCPtr pGC,
 {
     int rv;
 
-    LLOGLN(10, ("rdpPolyText8:"));
+    LLOGLN(0, ("rdpPolyText8:"));
     /* do original call */
     rv = rdpPolyText8Org(pDrawable, pGC, x, y, count, chars);
     return rv;

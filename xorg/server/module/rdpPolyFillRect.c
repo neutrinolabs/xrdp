@@ -65,7 +65,6 @@ rdpPolyFillRectPost(rdpPtr dev, rdpClientCon *clientCon,
                     int cd, RegionPtr clip_reg,
                     DrawablePtr pDrawable, GCPtr pGC, RegionPtr fill_reg)
 {
-    BoxRec box;
     WindowPtr pDstWnd;
 
     if (cd == 0)
@@ -108,7 +107,7 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
 
     rdpRegionInit(&clip_reg, NullBox, 0);
     cd = rdpDrawGetClip(dev, &clip_reg, pDrawable, pGC);
-    LLOGLN(0, ("rdpPolyFillRect: cd %d", cd));
+    LLOGLN(10, ("rdpPolyFillRect: cd %d", cd));
     clientCon = dev->clientConHead;
     while (clientCon != NULL)
     {

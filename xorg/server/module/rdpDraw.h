@@ -52,6 +52,9 @@ extern GCOps g_rdpGCOps; /* in rdpGC.c */
 
 int
 rdpDrawGetClip(rdpPtr dev, RegionPtr pRegion, DrawablePtr pDrawable, GCPtr pGC);
+void
+GetTextBoundingBox(DrawablePtr pDrawable, FontPtr font, int x, int y,
+                   int n, BoxPtr pbox);
 int
 rdpDrawItemAdd(rdpPtr dev, rdpPixmapRec *priv, struct rdp_draw_item *di);
 int

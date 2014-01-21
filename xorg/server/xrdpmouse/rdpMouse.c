@@ -98,18 +98,16 @@ l_bound_by(int val, int low, int high)
 static void
 rdpEnqueueMotion(DeviceIntPtr device, int x, int y)
 {
-    int valuators[2];
-
-    valuators[0] = x;
-    valuators[1] = y;
-    xf86PostMotionEvent(device, TRUE, 0, 2, valuators);
+    LLOGLN(10, ("rdpEnqueueMotion:"));
+    xf86PostMotionEvent(device, TRUE, 0, 2, x, y);
 }
 
 /******************************************************************************/
 static void
 rdpEnqueueButton(DeviceIntPtr device, int type, int buttons)
 {
-    xf86PostButtonEvent(device, FALSE, buttons, type, 0, 0);
+    LLOGLN(10, ("rdpEnqueueButton:"));
+    xf86PostButtonEvent(device, FALSE, buttons, type == ButtonPress, 0, 0);
 }
 
 /******************************************************************************/
@@ -121,6 +119,8 @@ PtrAddEvent(rdpPointer *pointer)
     int buttons;
 
     rdpEnqueueMotion(pointer->device, pointer->cursor_x, pointer->cursor_y);
+
+    LLOGLN(10, ("PtrAddEvent: x %d y %d", pointer->cursor_x, pointer->cursor_y));
 
     for (i = 0; i < 5; i++)
     {
@@ -152,7 +152,8 @@ rdpInputMouse(rdpPtr dev, int msg,
 {
     rdpPointer *pointer;
 
-    LLOGLN(10, ("rdpInputMouse:"));
+    LLOGLN(10, ("rdpInputMouse: msg %d param1 %ld param2 %ld param3 %ld param4 %ld",
+           msg, param1, param2, param3, param4));
     pointer = &(dev->pointer);
     switch (msg)
     {

@@ -32,10 +32,22 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "rdp.h"
 #include "rdpDraw.h"
+#include "rdpClientCon.h"
+#include "rdpReg.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
+
+/******************************************************************************/
+void
+rdpImageText16Pre(rdpPtr dev, rdpClientCon *clientCon,
+                  int cd, RegionPtr clip_reg,
+                  DrawablePtr pDrawable, GCPtr pGC,
+                  int x, int y, int count, unsigned short *chars,
+                  BoxPtr box)
+{
+}
 
 /******************************************************************************/
 void
@@ -51,10 +63,69 @@ rdpImageText16Org(DrawablePtr pDrawable, GCPtr pGC,
 
 /******************************************************************************/
 void
+rdpImageText16Post(rdpPtr dev, rdpClientCon *clientCon,
+                   int cd, RegionPtr clip_reg,
+                   DrawablePtr pDrawable, GCPtr pGC,
+                   int x, int y, int count, unsigned short *chars,
+                   BoxPtr box)
+{
+    WindowPtr pDstWnd;
+    RegionRec reg;
+
+    if (cd == 0)
+    {
+        return;
+    }
+    if (pDrawable->type != DRAWABLE_WINDOW)
+    {
+        return;
+    }
+    pDstWnd = (WindowPtr) pDrawable;
+    if (pDstWnd->viewable == FALSE)
+    {
+        return;
+    }
+    rdpRegionInit(&reg, box, 0);
+    if (cd == 2)
+    {
+        rdpRegionIntersect(&reg, clip_reg, &reg);
+    }
+    rdpClientConAddDirtyScreenReg(dev, clientCon, &reg);
+    RegionUninit(&reg);
+}
+
+/******************************************************************************/
+void
 rdpImageText16(DrawablePtr pDrawable, GCPtr pGC,
                int x, int y, int count, unsigned short *chars)
 {
+    rdpPtr dev;
+    rdpClientCon *clientCon;
+    RegionRec clip_reg;
+    int cd;
+    BoxRec box;
+
     LLOGLN(10, ("rdpImageText16:"));
+    dev = rdpGetDevFromScreen(pGC->pScreen);
+    GetTextBoundingBox(pDrawable, pGC->font, x, y, count, &box);
+    rdpRegionInit(&clip_reg, NullBox, 0);
+    cd = rdpDrawGetClip(dev, &clip_reg, pDrawable, pGC);
+    LLOGLN(10, ("rdpImageText16: cd %d", cd));
+    clientCon = dev->clientConHead;
+    while (clientCon != NULL)
+    {
+        rdpImageText16Pre(dev, clientCon, cd, &clip_reg, pDrawable, pGC,
+                          x, y, count, chars, &box);
+        clientCon = clientCon->next;
+    }
     /* do original call */
     rdpImageText16Org(pDrawable, pGC, x, y, count, chars);
+    clientCon = dev->clientConHead;
+    while (clientCon != NULL)
+    {
+        rdpImageText16Post(dev, clientCon, cd, &clip_reg, pDrawable, pGC,
+                           x, y, count, chars, &box);
+        clientCon = clientCon->next;
+    }
+    RegionUninit(&clip_reg);
 }

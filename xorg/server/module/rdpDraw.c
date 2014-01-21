@@ -36,6 +36,7 @@ misc draw calls
 #include <fb.h>
 #include <micmap.h>
 #include <mi.h>
+#include <dixfontstr.h>
 
 #include "rdp.h"
 #include "rdpDraw.h"
@@ -149,6 +150,54 @@ rdpDrawGetClip(rdpPtr dev, RegionPtr pRegion, DrawablePtr pDrawable, GCPtr pGC)
 }
 
 /******************************************************************************/
+void
+GetTextBoundingBox(DrawablePtr pDrawable, FontPtr font, int x, int y,
+                   int n, BoxPtr pbox)
+{
+    int maxAscent;
+    int maxDescent;
+    int maxCharWidth;
+
+    if (FONTASCENT(font) > FONTMAXBOUNDS(font, ascent))
+    {
+        maxAscent = FONTASCENT(font);
+    }
+    else
+    {
+        maxAscent = FONTMAXBOUNDS(font, ascent);
+    }
+
+    if (FONTDESCENT(font) > FONTMAXBOUNDS(font, descent))
+    {
+        maxDescent = FONTDESCENT(font);
+    }
+    else
+    {
+        maxDescent = FONTMAXBOUNDS(font, descent);
+    }
+
+    if (FONTMAXBOUNDS(font, rightSideBearing) >
+            FONTMAXBOUNDS(font, characterWidth))
+    {
+        maxCharWidth = FONTMAXBOUNDS(font, rightSideBearing);
+    }
+    else
+    {
+        maxCharWidth = FONTMAXBOUNDS(font, characterWidth);
+    }
+
+    pbox->x1 = pDrawable->x + x;
+    pbox->y1 = pDrawable->y + y - maxAscent;
+    pbox->x2 = pbox->x1 + maxCharWidth * n;
+    pbox->y2 = pbox->y1 + maxAscent + maxDescent;
+
+    if (FONTMINBOUNDS(font, leftSideBearing) < 0)
+    {
+        pbox->x1 += FONTMINBOUNDS(font, leftSideBearing);
+    }
+}
+
+/******************************************************************************/
 int
 rdpDrawItemAdd(rdpPtr dev, rdpPixmapRec *priv, struct rdp_draw_item *di)
 {
@@ -239,12 +288,62 @@ rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
 {
     ScreenPtr pScreen;
     rdpPtr dev;
+    rdpClientCon *clientCon;
+    RegionRec reg;
+    RegionRec clip;
+    int dx;
+    int dy;
+    int num_clip_rects;
+    int num_reg_rects;
+    BoxPtr box;
 
     pScreen = pWin->drawable.pScreen;
     dev = rdpGetDevFromScreen(pScreen);
+
+    rdpRegionInit(&reg, NullBox, 0);
+    rdpRegionCopy(&reg, pOldRegion);
+    rdpRegionInit(&clip, NullBox, 0);
+    rdpRegionCopy(&clip, &pWin->borderClip);
+    dx = pWin->drawable.x - ptOldOrg.x;
+    dy = pWin->drawable.y - ptOldOrg.y;
+
     dev->pScreen->CopyWindow = dev->CopyWindow;
     dev->pScreen->CopyWindow(pWin, ptOldOrg, pOldRegion);
     dev->pScreen->CopyWindow = rdpCopyWindow;
+
+    num_clip_rects = REGION_NUM_RECTS(&clip);
+    num_reg_rects = REGION_NUM_RECTS(&reg);
+
+    if ((num_clip_rects == 0) || (num_reg_rects == 0))
+    {
+        rdpRegionUninit(&reg);
+        rdpRegionUninit(&clip);
+        return;
+    }
+
+    if ((num_clip_rects > 16) && (num_reg_rects > 16))
+    {
+        box = rdpRegionExtents(&reg);
+        clientCon = dev->clientConHead;
+        while (clientCon != NULL)
+        {
+            rdpClientConAddDirtyScreenBox(dev, clientCon, box);
+            clientCon = clientCon->next;
+        }
+    }
+    else
+    {
+        rdpRegionTranslate(&reg, dx, dy);
+        rdpRegionIntersect(&reg, &reg, &clip);
+        clientCon = dev->clientConHead;
+        while (clientCon != NULL)
+        {
+            rdpClientConAddDirtyScreenReg(dev, clientCon, &reg);
+            clientCon = clientCon->next;
+        }
+    }
+    rdpRegionUninit(&reg);
+    rdpRegionUninit(&clip);
 }
 
 /*****************************************************************************/

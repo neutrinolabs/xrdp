@@ -32,10 +32,21 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "rdp.h"
 #include "rdpDraw.h"
+#include "rdpClientCon.h"
+#include "rdpReg.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
+
+/******************************************************************************/
+void
+rdpPutImagePre(rdpPtr dev, rdpClientCon *clientCon,
+               int cd, RegionPtr clip_reg,
+               DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
+               int w, int h, int leftPad, int format, char *pBits)
+{
+}
 
 /******************************************************************************/
 static void
@@ -52,10 +63,72 @@ rdpPutImageOrg(DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
 
 /******************************************************************************/
 void
+rdpPutImagePost(rdpPtr dev, rdpClientCon *clientCon,
+                int cd, RegionPtr clip_reg,
+                DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
+                int w, int h, int leftPad, int format, char *pBits)
+{
+    WindowPtr pDstWnd;
+    BoxRec box;
+    RegionRec reg;
+
+    if (cd == 0)
+    {
+        return;
+    }
+    if (pDst->type != DRAWABLE_WINDOW)
+    {
+        return;
+    }
+    pDstWnd = (WindowPtr) pDst;
+    if (pDstWnd->viewable == FALSE)
+    {
+        return;
+    }
+    box.x1 = x + pDst->x;
+    box.y1 = y + pDst->y;
+    box.x2 = box.x1 + w;
+    box.y2 = box.y1 + h;
+    rdpRegionInit(&reg, &box, 0);
+    if (cd == 2)
+    {
+        rdpRegionIntersect(&reg, clip_reg, &reg);
+    }
+    rdpClientConAddDirtyScreenReg(dev, clientCon, &reg);
+    RegionUninit(&reg);
+}
+
+/******************************************************************************/
+void
 rdpPutImage(DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
             int w, int h, int leftPad, int format, char *pBits)
 {
+    rdpPtr dev;
+    rdpClientCon *clientCon;
+    RegionRec clip_reg;
+    int cd;
+
     LLOGLN(10, ("rdpPutImage:"));
+    dev = rdpGetDevFromScreen(pGC->pScreen);
+    rdpRegionInit(&clip_reg, NullBox, 0);
+    cd = rdpDrawGetClip(dev, &clip_reg, pDst, pGC);
+    LLOGLN(10, ("rdpPutImage: cd %d", cd));
+    clientCon = dev->clientConHead;
+    while (clientCon != NULL)
+    {
+        rdpPutImagePre(dev, clientCon, cd, &clip_reg, pDst, pGC, depth, x, y,
+                       w, h, leftPad, format, pBits);
+        clientCon = clientCon->next;
+    }
+
     /* do original call */
     rdpPutImageOrg(pDst, pGC, depth, x, y, w, h, leftPad, format, pBits);
+    clientCon = dev->clientConHead;
+    while (clientCon != NULL)
+    {
+        rdpPutImagePost(dev, clientCon, cd, &clip_reg, pDst, pGC, depth, x, y,
+                        w, h, leftPad, format, pBits);
+        clientCon = clientCon->next;
+    }
+    RegionUninit(&clip_reg);
 }

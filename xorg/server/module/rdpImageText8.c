@@ -32,6 +32,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "rdp.h"
 #include "rdpDraw.h"
+#include "rdpClientCon.h"
+#include "rdpReg.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
@@ -54,7 +56,7 @@ void
 rdpImageText8(DrawablePtr pDrawable, GCPtr pGC,
               int x, int y, int count, char *chars)
 {
-    LLOGLN(10, ("rdpImageText8:"));
+    LLOGLN(0, ("rdpImageText8:"));
     /* do original call */
     rdpImageText8Org(pDrawable, pGC, x, y, count, chars);
     return;
