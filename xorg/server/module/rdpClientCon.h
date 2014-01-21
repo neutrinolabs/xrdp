@@ -21,6 +21,10 @@ Client connection to xrdp
 
 */
 
+/* in xrdp/common */
+#include "xrdp_client_info.h"
+#include "xrdp_constants.h"
+
 #ifndef _RDPCLIENTCON_H
 #define _RDPCLIENTCON_H
 
@@ -63,9 +67,16 @@ struct _rdpClientCon
     int osBitmapStamp;
     int osBitmapAllocSize;
     int osBitmapNumUsed;
+    int doComposite;
+    int doGlyphCache;
+    int canDoPixToPix;
+    int doMultimon;
 
     int rdp_bpp; /* client depth */
+    int rdp_Bpp;
     int rdp_Bpp_mask;
+    int rdp_width;
+    int rdp_height;
 
     int rdpIndex; /* current os target */
 
@@ -75,9 +86,22 @@ struct _rdpClientCon
     struct font_cache font_cache[12][256];
     int font_stamp;
 
+    RegionPtr dirtyRegion;
+
+    struct xrdp_client_info client_info;
+
     struct _rdpClientCon *next;
 };
 
+int
+rdpClientConBeginUpdate(rdpPtr dev, rdpClientCon *clientCon);
+int
+rdpClientConEndUpdate(rdpPtr dev, rdpClientCon *clientCon);
+int
+rdpClientConSetFgcolor(rdpPtr dev, rdpClientCon *clientCon, int fgcolor);
+int
+rdpClientConFillRect(rdpPtr dev, rdpClientCon *clientCon,
+                     short x, short y, int cx, int cy);
 int
 rdpClientConCheck(ScreenPtr pScreen);
 int
@@ -95,6 +119,9 @@ void
 rdpClientConScheduleDeferredUpdate(rdpPtr dev);
 int
 rdpClientConCheckDirtyScreen(rdpPtr dev, rdpClientCon *clientCon);
+int
+rdpClientConAddDirtyScreenReg(rdpPtr dev, rdpClientCon *clientCon,
+                              RegionPtr reg);
 
 
 #endif

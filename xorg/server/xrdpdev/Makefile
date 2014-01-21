@@ -1,7 +1,8 @@
 
 OBJS = xrdpdev.o
 
-CFLAGS = -g -O2 -Wall -fPIC -I/usr/include/xorg -I/usr/include/pixman-1 -I../module
+CFLAGS = -g -O2 -Wall -fPIC -I/usr/include/xorg -I/usr/include/pixman-1 \
+-I../module -I../../../common
 
 LDFLAGS =
 

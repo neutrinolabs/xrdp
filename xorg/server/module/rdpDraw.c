@@ -49,6 +49,106 @@ misc draw calls
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
 /******************************************************************************/
+/* return 0, draw nothing */
+/* return 1, draw with no clip */
+/* return 2, draw using clip */
+int
+rdpDrawGetClip(rdpPtr dev, RegionPtr pRegion, DrawablePtr pDrawable, GCPtr pGC)
+{
+    WindowPtr pWindow;
+    RegionPtr temp;
+    BoxRec box;
+    int rv;
+
+    rv = 0;
+
+    if (pDrawable->type == DRAWABLE_PIXMAP)
+    {
+        switch (pGC->clientClipType)
+        {
+            case CT_NONE:
+                rv = 1;
+                break;
+            case CT_REGION:
+                rv = 2;
+                rdpRegionCopy(pRegion, pGC->clientClip);
+                break;
+            default:
+                LLOGLN(0, ("rdpDrawGetClip: unimp clip type %d",
+                       pGC->clientClipType));
+                break;
+        }
+
+        if (rv == 2) /* check if the clip is the entire pixmap */
+        {
+            box.x1 = 0;
+            box.y1 = 0;
+            box.x2 = pDrawable->width;
+            box.y2 = pDrawable->height;
+
+            if (rdpRegionContainsRect(pRegion, &box) == rgnIN)
+            {
+                rv = 1;
+            }
+        }
+    }
+    else if (pDrawable->type == DRAWABLE_WINDOW)
+    {
+        pWindow = (WindowPtr)pDrawable;
+
+        if (pWindow->viewable)
+        {
+            if (pGC->subWindowMode == IncludeInferiors)
+            {
+                temp = &pWindow->borderClip;
+            }
+            else
+            {
+                temp = &pWindow->clipList;
+            }
+
+            if (RegionNotEmpty(temp))
+            {
+                switch (pGC->clientClipType)
+                {
+                    case CT_NONE:
+                        rv = 2;
+                        rdpRegionCopy(pRegion, temp);
+                        break;
+                    case CT_REGION:
+                        rv = 2;
+                        rdpRegionCopy(pRegion, pGC->clientClip);
+                        rdpRegionTranslate(pRegion,
+                                           pDrawable->x + pGC->clipOrg.x,
+                                           pDrawable->y + pGC->clipOrg.y);
+                        rdpRegionIntersect(pRegion, pRegion, temp);
+                        break;
+                    default:
+                        LLOGLN(0, ("rdpDrawGetClip: unimp clip type %d",
+                               pGC->clientClipType));
+                        break;
+                }
+
+                if (rv == 2) /* check if the clip is the entire screen */
+                {
+                    box.x1 = 0;
+                    box.y1 = 0;
+                    box.x2 = dev->width;
+                    box.y2 = dev->height;
+
+                    if (rdpRegionContainsRect(pRegion, &box) == rgnIN)
+                    {
+                        rv = 1;
+                    }
+                }
+            }
+        }
+    }
+
+    return rv;
+}
+
+/******************************************************************************/
 int
 rdpDrawItemAdd(rdpPtr dev, rdpPixmapRec *priv, struct rdp_draw_item *di)
 {

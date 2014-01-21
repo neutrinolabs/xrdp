@@ -542,6 +542,10 @@ rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
         LLOGLN(0, ("rdpScreenInit: rdpClientConInit failed"));
     }
 
+    dev->Bpp_mask = 0x00FFFFFF;
+    dev->Bpp = 4;
+    dev->bitsPerPixel = 32;
+
     LLOGLN(0, ("rdpScreenInit: out"));
     return TRUE;
 }
