@@ -27,6 +27,12 @@ misc draw calls
 #include <xorg-server.h>
 #include <xf86.h>
 
+/* true is drawable is window or pixmap is screen */
+#define XRDP_DRAWABLE_IS_VISIBLE(_dev, _drw) \
+(((_drw)->type == DRAWABLE_WINDOW && ((WindowPtr)(_drw))->viewable) || \
+ ((_drw)->type == DRAWABLE_PIXMAP && \
+                   ((PixmapPtr)(_drw))->devPrivate.ptr == (_dev)->pfbMemory))
+
 /******************************************************************************/
 #define GC_OP_VARS rdpPtr dev; rdpGCPtr priv; GCFuncs *oldFuncs
 

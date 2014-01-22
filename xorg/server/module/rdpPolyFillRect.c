@@ -65,18 +65,11 @@ rdpPolyFillRectPost(rdpPtr dev, rdpClientCon *clientCon,
                     int cd, RegionPtr clip_reg,
                     DrawablePtr pDrawable, GCPtr pGC, RegionPtr fill_reg)
 {
-    WindowPtr pDstWnd;
-
     if (cd == 0)
     {
         return;
     }
-    if (pDrawable->type != DRAWABLE_WINDOW)
-    {
-        return;
-    }
-    pDstWnd = (WindowPtr) pDrawable;
-    if (pDstWnd->viewable == FALSE)
+    if (!XRDP_DRAWABLE_IS_VISIBLE(dev, pDrawable))
     {
         return;
     }

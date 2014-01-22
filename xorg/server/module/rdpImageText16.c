@@ -69,19 +69,13 @@ rdpImageText16Post(rdpPtr dev, rdpClientCon *clientCon,
                    int x, int y, int count, unsigned short *chars,
                    BoxPtr box)
 {
-    WindowPtr pDstWnd;
     RegionRec reg;
 
     if (cd == 0)
     {
         return;
     }
-    if (pDrawable->type != DRAWABLE_WINDOW)
-    {
-        return;
-    }
-    pDstWnd = (WindowPtr) pDrawable;
-    if (pDstWnd->viewable == FALSE)
+    if (!XRDP_DRAWABLE_IS_VISIBLE(dev, pDrawable))
     {
         return;
     }
