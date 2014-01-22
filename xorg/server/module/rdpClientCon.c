@@ -769,7 +769,7 @@ rdpClientConProcessMsgClientRegion(rdpPtr dev, rdpClientCon *clientCon)
     RegionRec reg;
     BoxRec box;
 
-    LLOGLN(0, ("rdpClientConProcessMsgClientRegion:"));
+    LLOGLN(10, ("rdpClientConProcessMsgClientRegion:"));
     s = clientCon->in_s;
 
     in_uint32_le(s, flags);
@@ -778,9 +778,9 @@ rdpClientConProcessMsgClientRegion(rdpPtr dev, rdpClientCon *clientCon)
     in_uint32_le(s, y);
     in_uint32_le(s, cx);
     in_uint32_le(s, cy);
-    LLOGLN(0, ("rdpClientConProcessMsgClientRegion: %d %d %d %d flags 0x%8.8x",
+    LLOGLN(10, ("rdpClientConProcessMsgClientRegion: %d %d %d %d flags 0x%8.8x",
            x, y, cx, cy, flags));
-    LLOGLN(0, ("rdpClientConProcessMsgClientRegion: rect_id %d rect_id_ack %d",
+    LLOGLN(10, ("rdpClientConProcessMsgClientRegion: rect_id %d rect_id_ack %d",
            clientCon->rect_id, clientCon->rect_id_ack));
 
     box.x1 = x;
@@ -789,7 +789,7 @@ rdpClientConProcessMsgClientRegion(rdpPtr dev, rdpClientCon *clientCon)
     box.y2 = box.y1 + cy;
 
     rdpRegionInit(&reg, &box, 0);
-    LLOGLN(0, ("rdpClientConProcessMsgClientRegion: %d %d %d %d",
+    LLOGLN(10, ("rdpClientConProcessMsgClientRegion: %d %d %d %d",
            box.x1, box.y1, box.x2, box.y2));
     rdpRegionSubtract(clientCon->shmRegion, clientCon->shmRegion, &reg);
     rdpRegionUninit(&reg);
@@ -1857,12 +1857,12 @@ rdpDeferredUpdateCallback(OsTimerPtr timer, CARD32 now, pointer arg)
     int index;
     BoxRec box;
 
-    LLOGLN(0, ("rdpDeferredUpdateCallback:"));
+    LLOGLN(10, ("rdpDeferredUpdateCallback:"));
     clientCon = (rdpClientCon *) arg;
 
     if (clientCon->rect_id != clientCon->rect_id_ack)
     {
-        LLOGLN(0, ("rdpDeferredUpdateCallback: reschedual"));
+        LLOGLN(10, ("rdpDeferredUpdateCallback: reschedual"));
         clientCon->updateTimer = TimerSet(clientCon->updateTimer, 0, 40,
                                           rdpDeferredUpdateCallback, clientCon);
         return 0;
@@ -1874,7 +1874,7 @@ rdpDeferredUpdateCallback(OsTimerPtr timer, CARD32 now, pointer arg)
     for (index = 0; index < num_rects; index++)
     {
         box = REGION_RECTS(clientCon->dirtyRegion)[index];
-        LLOGLN(0, ("  x1 %d y1 %d x2 %d y2 %d cx %d cy %d", box.x1, box.y1,
+        LLOGLN(10, ("  x1 %d y1 %d x2 %d y2 %d cx %d cy %d", box.x1, box.y1,
                box.x2, box.y2, box.x2 - box.x1, box.y2 - box.y1));
         rdpClientConSendArea(clientCon->dev, clientCon, NULL, box.x1, box.y1,
                              box.x2 - box.x1, box.y2 - box.y1);
@@ -2030,7 +2030,7 @@ rdpClientConSendArea(rdpPtr dev, rdpClientCon *clientCon,
     {
         if (id->shmem_pixels != 0)
         {
-            LLOGLN(0, ("rdpClientConSendArea: using shmem"));
+            LLOGLN(10, ("rdpClientConSendArea: using shmem"));
             box.x1 = x;
             box.y1 = y;
             box.x2 = box.x1 + w;
@@ -2055,7 +2055,7 @@ rdpClientConSendArea(rdpPtr dev, rdpClientCon *clientCon,
             out_uint16_le(s, 60);
             out_uint16_le(s, size);
             clientCon->count++;
-            LLOGLN(0, ("rdpClientConSendArea: 2 x %d y %d w %d h %d", x, y, w, h));
+            LLOGLN(10, ("rdpClientConSendArea: 2 x %d y %d w %d h %d", x, y, w, h));
             out_uint16_le(s, x);
             out_uint16_le(s, y);
             out_uint16_le(s, w);

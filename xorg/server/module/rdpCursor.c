@@ -49,7 +49,7 @@ cursor
 Bool
 rdpSpriteRealizeCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs)
 {
-    LLOGLN(0, ("rdpSpriteRealizeCursor:"));
+    LLOGLN(10, ("rdpSpriteRealizeCursor:"));
     return TRUE;
 }
 
@@ -57,7 +57,7 @@ rdpSpriteRealizeCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs)
 Bool
 rdpSpriteUnrealizeCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs)
 {
-    LLOGLN(0, ("rdpSpriteUnrealizeCursor:"));
+    LLOGLN(10, ("rdpSpriteUnrealizeCursor:"));
     return TRUE;
 }
 
@@ -66,21 +66,21 @@ void
 rdpSpriteSetCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs,
                    int x, int y)
 {
-    LLOGLN(0, ("rdpSpriteSetCursor:"));
+    LLOGLN(10, ("rdpSpriteSetCursor:"));
 }
 
 /******************************************************************************/
 void
 rdpSpriteMoveCursor(DeviceIntPtr pDev, ScreenPtr pScr, int x, int y)
 {
-    LLOGLN(0, ("rdpSpriteMoveCursor:"));
+    LLOGLN(10, ("rdpSpriteMoveCursor:"));
 }
 
 /******************************************************************************/
 Bool
 rdpSpriteDeviceCursorInitialize(DeviceIntPtr pDev, ScreenPtr pScr)
 {
-    LLOGLN(0, ("rdpSpriteDeviceCursorInitialize:"));
+    LLOGLN(10, ("rdpSpriteDeviceCursorInitialize:"));
     return TRUE;
 }
 
@@ -88,6 +88,6 @@ rdpSpriteDeviceCursorInitialize(DeviceIntPtr pDev, ScreenPtr pScr)
 void
 rdpSpriteDeviceCursorCleanup(DeviceIntPtr pDev, ScreenPtr pScr)
 {
-    LLOGLN(0, ("rdpSpriteDeviceCursorCleanup:"));
+    LLOGLN(10, ("rdpSpriteDeviceCursorCleanup:"));
     xorgxrdpDownDown(pScr);
 }
