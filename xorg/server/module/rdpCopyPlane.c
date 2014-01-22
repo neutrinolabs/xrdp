@@ -61,7 +61,7 @@ rdpCopyPlane(DrawablePtr pSrc, DrawablePtr pDst,
 {
     RegionPtr rv;
 
-    LLOGLN(10, ("rdpCopyPlane:"));
+    LLOGLN(0, ("rdpCopyPlane:"));
     /* do original call */
     rv = rdpCopyPlaneOrg(pSrc, pDst, pGC, srcx, srcy, w, h,
                          dstx, dsty, bitPlane);

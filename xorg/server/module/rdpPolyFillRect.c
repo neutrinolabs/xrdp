@@ -43,7 +43,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 static void
 rdpPolyFillRectPre(rdpPtr dev, rdpClientCon *clientCon,
                    int cd, RegionPtr clip_reg,
-                   DrawablePtr pDrawable, GCPtr pGC, RegionPtr fill_reg)
+                   DrawablePtr pDrawable, GCPtr pGC,
+                   int nrectFill, xRectangle *prectInit,
+                   RegionPtr fill_reg)
 {
 }
 
@@ -63,7 +65,9 @@ rdpPolyFillRectOrg(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
 static void
 rdpPolyFillRectPost(rdpPtr dev, rdpClientCon *clientCon,
                     int cd, RegionPtr clip_reg,
-                    DrawablePtr pDrawable, GCPtr pGC, RegionPtr fill_reg)
+                    DrawablePtr pDrawable, GCPtr pGC,
+                    int nrectFill, xRectangle *prectInit,
+                    RegionPtr fill_reg)
 {
     if (cd == 0)
     {
@@ -105,7 +109,7 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
     while (clientCon != NULL)
     {
         rdpPolyFillRectPre(dev, clientCon, cd, &clip_reg, pDrawable,
-                           pGC, fill_reg);
+                           pGC, nrectFill, prectInit, fill_reg);
         clientCon = clientCon->next;
     }
     /* do original call */
@@ -114,9 +118,9 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
     while (clientCon != NULL)
     {
         rdpPolyFillRectPost(dev, clientCon, cd, &clip_reg, pDrawable,
-                            pGC, fill_reg);
+                            pGC, nrectFill, prectInit, fill_reg);
         clientCon = clientCon->next;
     }
-    RegionUninit(&clip_reg);
+    rdpRegionUninit(&clip_reg);
     rdpRegionDestroy(fill_reg);
 }

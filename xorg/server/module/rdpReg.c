@@ -233,3 +233,14 @@ rdpRegionBreak(RegionPtr pReg)
     return RegionBreak(pReg);
 #endif
 }
+
+/*****************************************************************************/
+void
+rdpRegionUnionRect(RegionPtr pReg, BoxPtr prect)
+{
+    RegionRec reg;
+
+    rdpRegionInit(&reg, prect, 0);
+    rdpRegionUnion(pReg, pReg, &reg);
+    rdpRegionUninit(&reg);
+}

@@ -52,7 +52,7 @@ rdpPolyArcOrg(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc *parcs)
 void
 rdpPolyArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc *parcs)
 {
-    LLOGLN(10, ("rdpPolyArc:"));
+    LLOGLN(0, ("rdpPolyArc:"));
     /* do original call */
     rdpPolyArcOrg(pDrawable, pGC, narcs, parcs);
 }

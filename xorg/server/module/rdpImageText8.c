@@ -41,6 +41,16 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /******************************************************************************/
 void
+rdpImageText8Pre(rdpPtr dev, rdpClientCon *clientCon,
+                 int cd, RegionPtr clip_reg,
+                 DrawablePtr pDrawable, GCPtr pGC,
+                 int x, int y, int count, char *chars,
+                 BoxPtr box)
+{
+}
+
+/******************************************************************************/
+void
 rdpImageText8Org(DrawablePtr pDrawable, GCPtr pGC,
                  int x, int y, int count, char *chars)
 {
@@ -53,11 +63,63 @@ rdpImageText8Org(DrawablePtr pDrawable, GCPtr pGC,
 
 /******************************************************************************/
 void
+rdpImageText8Post(rdpPtr dev, rdpClientCon *clientCon,
+                  int cd, RegionPtr clip_reg,
+                  DrawablePtr pDrawable, GCPtr pGC,
+                  int x, int y, int count, char *chars,
+                  BoxPtr box)
+{
+    RegionRec reg;
+
+    if (cd == 0)
+    {
+        return;
+    }
+    if (!XRDP_DRAWABLE_IS_VISIBLE(dev, pDrawable))
+    {
+        return;
+    }
+    rdpRegionInit(&reg, box, 0);
+    if (cd == 2)
+    {
+        rdpRegionIntersect(&reg, clip_reg, &reg);
+    }
+    rdpClientConAddDirtyScreenReg(dev, clientCon, &reg);
+    RegionUninit(&reg);
+}
+
+/******************************************************************************/
+void
 rdpImageText8(DrawablePtr pDrawable, GCPtr pGC,
               int x, int y, int count, char *chars)
 {
-    LLOGLN(0, ("rdpImageText8:"));
+    rdpPtr dev;
+    rdpClientCon *clientCon;
+    RegionRec clip_reg;
+    int cd;
+    BoxRec box;
+
+    LLOGLN(10, ("rdpImageText8:"));
+    dev = rdpGetDevFromScreen(pGC->pScreen);
+    GetTextBoundingBox(pDrawable, pGC->font, x, y, count, &box);
+    rdpRegionInit(&clip_reg, NullBox, 0);
+    cd = rdpDrawGetClip(dev, &clip_reg, pDrawable, pGC);
+    LLOGLN(10, ("rdpImageText8: cd %d", cd));
+    clientCon = dev->clientConHead;
+    while (clientCon != NULL)
+    {
+        rdpImageText8Pre(dev, clientCon, cd, &clip_reg, pDrawable, pGC,
+                         x, y, count, chars, &box);
+        clientCon = clientCon->next;
+    }
     /* do original call */
     rdpImageText8Org(pDrawable, pGC, x, y, count, chars);
-    return;
+    clientCon = dev->clientConHead;
+    while (clientCon != NULL)
+    {
+        rdpImageText8Post(dev, clientCon, cd, &clip_reg, pDrawable, pGC,
+                          x, y, count, chars, &box);
+        clientCon = clientCon->next;
+    }
+    RegionUninit(&clip_reg);
 }

@@ -56,7 +56,7 @@ rdpPolyGlyphBlt(DrawablePtr pDrawable, GCPtr pGC,
                 int x, int y, unsigned int nglyph,
                 CharInfoPtr *ppci, pointer pglyphBase)
 {
-    LLOGLN(10, ("rdpPolyGlyphBlt:"));
+    LLOGLN(0, ("rdpPolyGlyphBlt:"));
     /* do original call */
     rdpPolyGlyphBltOrg(pDrawable, pGC, x, y, nglyph, ppci, pglyphBase);
 }

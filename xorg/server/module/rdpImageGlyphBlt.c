@@ -32,6 +32,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "rdp.h"
 #include "rdpDraw.h"
+#include "rdpClientCon.h"
+#include "rdpReg.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
@@ -56,7 +58,7 @@ rdpImageGlyphBlt(DrawablePtr pDrawable, GCPtr pGC,
                  int x, int y, unsigned int nglyph,
                  CharInfoPtr *ppci, pointer pglyphBase)
 {
-    LLOGLN(10, ("rdpImageGlyphBlt:"));
+    LLOGLN(0, ("rdpImageGlyphBlt:"));
     /* do original call */
     rdpImageGlyphBltOrg(pDrawable, pGC, x, y, nglyph, ppci, pglyphBase);
 }

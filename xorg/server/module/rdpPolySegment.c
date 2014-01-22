@@ -52,7 +52,7 @@ rdpPolySegmentOrg(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment *pSegs)
 void
 rdpPolySegment(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment *pSegs)
 {
-    LLOGLN(10, ("rdpPolySegment:"));
+    LLOGLN(0, ("rdpPolySegment:"));
     /* do original call */
     rdpPolySegmentOrg(pDrawable, pGC, nseg, pSegs);
 }

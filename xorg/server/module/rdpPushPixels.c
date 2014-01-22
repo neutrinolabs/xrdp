@@ -54,7 +54,7 @@ void
 rdpPushPixels(GCPtr pGC, PixmapPtr pBitMap, DrawablePtr pDst,
               int w, int h, int x, int y)
 {
-    LLOGLN(10, ("rdpPushPixels:"));
+    LLOGLN(0, ("rdpPushPixels:"));
     /* do original call */
     rdpPushPixelsOrg(pGC, pBitMap, pDst, w, h, x, y);
 }

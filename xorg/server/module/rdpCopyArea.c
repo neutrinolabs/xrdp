@@ -110,7 +110,6 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
     RegionRec clip_reg;
     int cd;
 
-
     LLOGLN(10, ("rdpCopyArea:"));
     dev = rdpGetDevFromScreen(pGC->pScreen);
     rdpRegionInit(&clip_reg, NullBox, 0);

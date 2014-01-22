@@ -54,7 +54,7 @@ void
 rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
              int npt, DDXPointPtr in_pts)
 {
-    LLOGLN(10, ("rdpPolyPoint:"));
+    LLOGLN(0, ("rdpPolyPoint:"));
     /* do original call */
     rdpPolyPointOrg(pDrawable, pGC, mode, npt, in_pts);
 }

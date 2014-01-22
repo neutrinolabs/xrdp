@@ -56,7 +56,7 @@ rdpFillPolygon(DrawablePtr pDrawable, GCPtr pGC,
                int shape, int mode, int count,
                DDXPointPtr pPts)
 {
-    LLOGLN(10, ("rdpFillPolygon:"));
+    LLOGLN(0, ("rdpFillPolygon:"));
     /* do original call */
     rdpFillPolygonOrg(pDrawable, pGC, shape, mode, count, pPts);
 }

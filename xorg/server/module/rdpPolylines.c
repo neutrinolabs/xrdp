@@ -54,7 +54,7 @@ void
 rdpPolylines(DrawablePtr pDrawable, GCPtr pGC, int mode,
              int npt, DDXPointPtr pptInit)
 {
-    LLOGLN(10, ("rdpPolylines:"));
+    LLOGLN(0, ("rdpPolylines:"));
     /* do original call */
     rdpPolylinesOrg(pDrawable, pGC, mode, npt, pptInit);
 }
