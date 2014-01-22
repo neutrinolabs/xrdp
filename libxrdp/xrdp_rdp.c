@@ -23,6 +23,7 @@
 
 #if defined(XRDP_NEUTRINORDP)
 #include <freerdp/codec/rfx.h>
+#include <freerdp/constants.h>
 #endif
 
 /*****************************************************************************/
