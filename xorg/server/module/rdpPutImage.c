@@ -68,20 +68,14 @@ rdpPutImagePost(rdpPtr dev, rdpClientCon *clientCon,
                 DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
                 int w, int h, int leftPad, int format, char *pBits)
 {
-    WindowPtr pDstWnd;
     BoxRec box;
     RegionRec reg;
 
-    if (cd == 0)
+    if (cd == XRDP_CD_NODRAW)
     {
         return;
     }
-    if (pDst->type != DRAWABLE_WINDOW)
-    {
-        return;
-    }
-    pDstWnd = (WindowPtr) pDst;
-    if (pDstWnd->viewable == FALSE)
+    if (!XRDP_DRAWABLE_IS_VISIBLE(dev, pDst))
     {
         return;
     }
@@ -90,12 +84,12 @@ rdpPutImagePost(rdpPtr dev, rdpClientCon *clientCon,
     box.x2 = box.x1 + w;
     box.y2 = box.y1 + h;
     rdpRegionInit(&reg, &box, 0);
-    if (cd == 2)
+    if (cd == XRDP_CD_CLIP)
     {
         rdpRegionIntersect(&reg, clip_reg, &reg);
     }
     rdpClientConAddDirtyScreenReg(dev, clientCon, &reg);
-    RegionUninit(&reg);
+    rdpRegionUninit(&reg);
 }
 
 /******************************************************************************/
@@ -110,6 +104,7 @@ rdpPutImage(DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
 
     LLOGLN(10, ("rdpPutImage:"));
     dev = rdpGetDevFromScreen(pGC->pScreen);
+    dev->counts.rdpPutImageCallCount++;
     rdpRegionInit(&clip_reg, NullBox, 0);
     cd = rdpDrawGetClip(dev, &clip_reg, pDst, pGC);
     LLOGLN(10, ("rdpPutImage: cd %d", cd));
@@ -130,5 +125,5 @@ rdpPutImage(DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
                         w, h, leftPad, format, pBits);
         clientCon = clientCon->next;
     }
-    RegionUninit(&clip_reg);
+    rdpRegionUninit(&clip_reg);
 }

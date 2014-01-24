@@ -90,7 +90,7 @@ rdpCompositePost(rdpPtr dev, rdpClientCon *clientCon,
         rdpRegionIntersect(&reg, pDst->pCompositeClip, &reg);
     }
     rdpClientConAddDirtyScreenReg(dev, clientCon, &reg);
-    RegionUninit(&reg);
+    rdpRegionUninit(&reg);
 }
 
 /******************************************************************************/
@@ -108,6 +108,7 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
     LLOGLN(10, ("rdpComposite:"));
     pScreen = pSrc->pDrawable->pScreen;
     dev = rdpGetDevFromScreen(pScreen);
+    dev->counts.rdpCompositeCallCount++;
     box.x1 = xDst + pDst->pDrawable->x;
     box.y1 = yDst + pDst->pDrawable->y;
     box.x2 = box.x1 + width;

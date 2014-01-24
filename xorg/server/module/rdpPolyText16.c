@@ -40,7 +40,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
 /******************************************************************************/
-void
+static void
 rdpPolyText16Pre(rdpPtr dev, rdpClientCon *clientCon,
                  int cd, RegionPtr clip_reg,
                  DrawablePtr pDrawable, GCPtr pGC,
@@ -50,7 +50,7 @@ rdpPolyText16Pre(rdpPtr dev, rdpClientCon *clientCon,
 }
 
 /******************************************************************************/
-int
+static int
 rdpPolyText16Org(DrawablePtr pDrawable, GCPtr pGC,
                  int x, int y, int count, unsigned short *chars)
 {
@@ -64,7 +64,7 @@ rdpPolyText16Org(DrawablePtr pDrawable, GCPtr pGC,
 }
 
 /******************************************************************************/
-void
+static void
 rdpPolyText16Post(rdpPtr dev, rdpClientCon *clientCon,
                   int cd, RegionPtr clip_reg,
                   DrawablePtr pDrawable, GCPtr pGC,
@@ -73,7 +73,7 @@ rdpPolyText16Post(rdpPtr dev, rdpClientCon *clientCon,
 {
     RegionRec reg;
 
-    if (cd == 0)
+    if (cd == XRDP_CD_NODRAW)
     {
         return;
     }
@@ -82,12 +82,12 @@ rdpPolyText16Post(rdpPtr dev, rdpClientCon *clientCon,
         return;
     }
     rdpRegionInit(&reg, box, 0);
-    if (cd == 2)
+    if (cd == XRDP_CD_CLIP)
     {
         rdpRegionIntersect(&reg, clip_reg, &reg);
     }
     rdpClientConAddDirtyScreenReg(dev, clientCon, &reg);
-    RegionUninit(&reg);
+    rdpRegionUninit(&reg);
 }
 
 /******************************************************************************/
@@ -104,6 +104,7 @@ rdpPolyText16(DrawablePtr pDrawable, GCPtr pGC,
 
     LLOGLN(10, ("rdpPolyText16:"));
     dev = rdpGetDevFromScreen(pGC->pScreen);
+    dev->counts.rdpPolyText16CallCount++;
     GetTextBoundingBox(pDrawable, pGC->font, x, y, count, &box);
     rdpRegionInit(&clip_reg, NullBox, 0);
     cd = rdpDrawGetClip(dev, &clip_reg, pDrawable, pGC);
@@ -124,6 +125,6 @@ rdpPolyText16(DrawablePtr pDrawable, GCPtr pGC,
                           x, y, count, chars, &box);
         clientCon = clientCon->next;
     }
-    RegionUninit(&clip_reg);
+    rdpRegionUninit(&clip_reg);
     return rv;
 }

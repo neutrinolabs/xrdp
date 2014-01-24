@@ -109,7 +109,7 @@ rdpDrawGetClip(rdpPtr dev, RegionPtr pRegion, DrawablePtr pDrawable, GCPtr pGC)
                 temp = &pWindow->clipList;
             }
 
-            if (RegionNotEmpty(temp))
+            if (rdpRegionNotEmpty(temp))
             {
                 switch (pGC->clientClipType)
                 {
@@ -300,6 +300,7 @@ rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
 
     pScreen = pWin->drawable.pScreen;
     dev = rdpGetDevFromScreen(pScreen);
+    dev->counts.rdpCopyWindowCallCount++;
 
     rdpRegionInit(&reg, NullBox, 0);
     rdpRegionCopy(&reg, pOldRegion);

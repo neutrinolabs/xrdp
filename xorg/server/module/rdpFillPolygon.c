@@ -32,10 +32,22 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "rdp.h"
 #include "rdpDraw.h"
+#include "rdpClientCon.h"
+#include "rdpReg.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
+
+/******************************************************************************/
+void
+rdpFillPolygonPre(rdpPtr dev, rdpClientCon *clientCon,
+                  int cd, RegionPtr clip_reg,
+                  DrawablePtr pDrawable, GCPtr pGC,
+                  int shape, int mode, int count,
+                  DDXPointPtr pPts, BoxPtr box)
+{
+}
 
 /******************************************************************************/
 void
@@ -52,11 +64,95 @@ rdpFillPolygonOrg(DrawablePtr pDrawable, GCPtr pGC,
 
 /******************************************************************************/
 void
+rdpFillPolygonPost(rdpPtr dev, rdpClientCon *clientCon,
+                   int cd, RegionPtr clip_reg,
+                   DrawablePtr pDrawable, GCPtr pGC,
+                   int shape, int mode, int count,
+                   DDXPointPtr pPts, BoxPtr box)
+{
+    RegionRec reg;
+
+    if (cd == XRDP_CD_NODRAW)
+    {
+        return;
+    }
+    if (!XRDP_DRAWABLE_IS_VISIBLE(dev, pDrawable))
+    {
+        return;
+    }
+    rdpRegionInit(&reg, box, 0);
+    if (cd == XRDP_CD_CLIP)
+    {
+        rdpRegionIntersect(&reg, clip_reg, &reg);
+    }
+    rdpClientConAddDirtyScreenReg(dev, clientCon, &reg);
+    rdpRegionUninit(&reg);
+}
+
+/******************************************************************************/
+void
 rdpFillPolygon(DrawablePtr pDrawable, GCPtr pGC,
                int shape, int mode, int count,
                DDXPointPtr pPts)
 {
-    LLOGLN(0, ("rdpFillPolygon:"));
+    rdpPtr dev;
+    rdpClientCon *clientCon;
+    RegionRec clip_reg;
+    int cd;
+    int maxx;
+    int maxy;
+    int minx;
+    int miny;
+    int index;
+    int x;
+    int y;
+    BoxRec box;
+
+    LLOGLN(10, ("rdpFillPolygon:"));
+    dev = rdpGetDevFromScreen(pGC->pScreen);
+    dev->counts.rdpFillPolygonCallCount++;
+    box.x1 = 0;
+    box.y1 = 0;
+    box.x2 = 0;
+    box.y2 = 0;
+    if (count > 0)
+    {
+        maxx = pPts[0].x;
+        maxy = pPts[0].y;
+        minx = maxx;
+        miny = maxy;
+        for (index = 1; index < count; index++)
+        {
+            x = pPts[index].x;
+            y = pPts[index].y;
+            maxx = RDPMAX(x, maxx);
+            minx = RDPMIN(x, minx);
+            maxy = RDPMAX(y, maxy);
+            miny = RDPMIN(y, miny);
+        }
+        box.x1 = pDrawable->x + minx;
+        box.y1 = pDrawable->y + miny;
+        box.x2 = pDrawable->x + maxx + 1;
+        box.y2 = pDrawable->y + maxy + 1;
+    }
+    rdpRegionInit(&clip_reg, NullBox, 0);
+    cd = rdpDrawGetClip(dev, &clip_reg, pDrawable, pGC);
+    LLOGLN(10, ("rdpFillPolygon: cd %d", cd));
+    clientCon = dev->clientConHead;
+    while (clientCon != NULL)
+    {
+        rdpFillPolygonPre(dev, clientCon, cd, &clip_reg, pDrawable, pGC,
+                          shape, mode, count, pPts, &box);
+        clientCon = clientCon->next;
+    }
     /* do original call */
     rdpFillPolygonOrg(pDrawable, pGC, shape, mode, count, pPts);
+    clientCon = dev->clientConHead;
+    while (clientCon != NULL)
+    {
+        rdpFillPolygonPost(dev, clientCon, cd, &clip_reg, pDrawable, pGC,
+                           shape, mode, count, pPts, &box);
+        clientCon = clientCon->next;
+    }
+    rdpRegionUninit(&clip_reg);
 }

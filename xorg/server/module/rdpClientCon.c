@@ -1881,7 +1881,7 @@ rdpDeferredUpdateCallback(OsTimerPtr timer, CARD32 now, pointer arg)
     }
     rdpClientConEndUpdate(clientCon->dev, clientCon);
     rdpRegionDestroy(clientCon->dirtyRegion);
-    clientCon->dirtyRegion = RegionCreate(NullBox, 0);
+    clientCon->dirtyRegion = rdpRegionCreate(NullBox, 0);
     return 0;
 }
 

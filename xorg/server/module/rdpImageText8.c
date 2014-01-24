@@ -40,7 +40,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
 /******************************************************************************/
-void
+static void
 rdpImageText8Pre(rdpPtr dev, rdpClientCon *clientCon,
                  int cd, RegionPtr clip_reg,
                  DrawablePtr pDrawable, GCPtr pGC,
@@ -50,7 +50,7 @@ rdpImageText8Pre(rdpPtr dev, rdpClientCon *clientCon,
 }
 
 /******************************************************************************/
-void
+static void
 rdpImageText8Org(DrawablePtr pDrawable, GCPtr pGC,
                  int x, int y, int count, char *chars)
 {
@@ -62,7 +62,7 @@ rdpImageText8Org(DrawablePtr pDrawable, GCPtr pGC,
 }
 
 /******************************************************************************/
-void
+static void
 rdpImageText8Post(rdpPtr dev, rdpClientCon *clientCon,
                   int cd, RegionPtr clip_reg,
                   DrawablePtr pDrawable, GCPtr pGC,
@@ -71,7 +71,7 @@ rdpImageText8Post(rdpPtr dev, rdpClientCon *clientCon,
 {
     RegionRec reg;
 
-    if (cd == 0)
+    if (cd == XRDP_CD_NODRAW)
     {
         return;
     }
@@ -80,12 +80,12 @@ rdpImageText8Post(rdpPtr dev, rdpClientCon *clientCon,
         return;
     }
     rdpRegionInit(&reg, box, 0);
-    if (cd == 2)
+    if (cd == XRDP_CD_CLIP)
     {
         rdpRegionIntersect(&reg, clip_reg, &reg);
     }
     rdpClientConAddDirtyScreenReg(dev, clientCon, &reg);
-    RegionUninit(&reg);
+    rdpRegionUninit(&reg);
 }
 
 /******************************************************************************/
@@ -101,6 +101,7 @@ rdpImageText8(DrawablePtr pDrawable, GCPtr pGC,
 
     LLOGLN(10, ("rdpImageText8:"));
     dev = rdpGetDevFromScreen(pGC->pScreen);
+    dev->counts.rdpImageText8CallCount++;
     GetTextBoundingBox(pDrawable, pGC->font, x, y, count, &box);
     rdpRegionInit(&clip_reg, NullBox, 0);
     cd = rdpDrawGetClip(dev, &clip_reg, pDrawable, pGC);
@@ -121,5 +122,5 @@ rdpImageText8(DrawablePtr pDrawable, GCPtr pGC,
                           x, y, count, chars, &box);
         clientCon = clientCon->next;
     }
-    RegionUninit(&clip_reg);
+    rdpRegionUninit(&clip_reg);
 }

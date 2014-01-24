@@ -32,10 +32,22 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "rdp.h"
 #include "rdpDraw.h"
+#include "rdpClientCon.h"
+#include "rdpReg.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
+
+/******************************************************************************/
+static void
+rdpCopyPlanePre(rdpPtr dev, rdpClientCon *clientCon,
+                int cd, RegionPtr clip_reg,
+                DrawablePtr pSrc, DrawablePtr pDst,
+                GCPtr pGC, int srcx, int srcy, int w, int h,
+                int dstx, int dsty, unsigned long bitPlane, BoxPtr box)
+{
+}
 
 /******************************************************************************/
 static RegionPtr
@@ -54,16 +66,74 @@ rdpCopyPlaneOrg(DrawablePtr pSrc, DrawablePtr pDst,
 }
 
 /******************************************************************************/
+static void
+rdpCopyPlanePost(rdpPtr dev, rdpClientCon *clientCon,
+                 int cd, RegionPtr clip_reg,
+                 DrawablePtr pSrc, DrawablePtr pDst,
+                 GCPtr pGC, int srcx, int srcy, int w, int h,
+                 int dstx, int dsty, unsigned long bitPlane, BoxPtr box)
+{
+    RegionRec reg;
+
+    if (cd == XRDP_CD_NODRAW)
+    {
+        return;
+    }
+    if (!XRDP_DRAWABLE_IS_VISIBLE(dev, pDst))
+    {
+        return;
+    }
+    rdpRegionInit(&reg, box, 0);
+    if (cd == XRDP_CD_CLIP)
+    {
+        rdpRegionIntersect(&reg, clip_reg, &reg);
+    }
+    rdpClientConAddDirtyScreenReg(dev, clientCon, &reg);
+    rdpRegionUninit(&reg);
+}
+
+/******************************************************************************/
 RegionPtr
 rdpCopyPlane(DrawablePtr pSrc, DrawablePtr pDst,
              GCPtr pGC, int srcx, int srcy, int w, int h,
              int dstx, int dsty, unsigned long bitPlane)
 {
     RegionPtr rv;
+    rdpPtr dev;
+    rdpClientCon *clientCon;
+    RegionRec clip_reg;
+    int cd;
+    BoxRec box;
 
-    LLOGLN(0, ("rdpCopyPlane:"));
+    LLOGLN(10, ("rdpCopyPlane:"));
+    dev = rdpGetDevFromScreen(pGC->pScreen);
+    dev->counts.rdpCopyPlaneCallCount++;
+    box.x1 = pDst->x + dstx;
+    box.y1 = pDst->y + dsty;
+    box.x2 = box.x1 + w;
+    box.y2 = box.x1 + h;
+    rdpRegionInit(&clip_reg, NullBox, 0);
+    cd = rdpDrawGetClip(dev, &clip_reg, pDst, pGC);
+    LLOGLN(10, ("rdpCopyPlane: cd %d", cd));
+    clientCon = dev->clientConHead;
+    while (clientCon != NULL)
+    {
+        rdpCopyPlanePre(dev, clientCon, cd, &clip_reg, pSrc, pDst,
+                        pGC, srcx, srcy, w, h,
+                        dstx, dsty, bitPlane, &box);
+        clientCon = clientCon->next;
+    }
     /* do original call */
     rv = rdpCopyPlaneOrg(pSrc, pDst, pGC, srcx, srcy, w, h,
                          dstx, dsty, bitPlane);
+    clientCon = dev->clientConHead;
+    while (clientCon != NULL)
+    {
+        rdpCopyPlanePost(dev, clientCon, cd, &clip_reg, pSrc, pDst,
+                         pGC, srcx, srcy, w, h,
+                         dstx, dsty, bitPlane, &box);
+        clientCon = clientCon->next;
+    }
+    rdpRegionUninit(&clip_reg);
     return rv;
 }

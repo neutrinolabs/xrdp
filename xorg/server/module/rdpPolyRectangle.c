@@ -67,7 +67,7 @@ rdpPolyRectanglePost(rdpPtr dev, rdpClientCon *clientCon,
                      DrawablePtr pDrawable, GCPtr pGC, int nrects,
                      xRectangle *rects, RegionPtr reg)
 {
-    if (cd == 0)
+    if (cd == XRDP_CD_NODRAW)
     {
         return;
     }
@@ -75,7 +75,7 @@ rdpPolyRectanglePost(rdpPtr dev, rdpClientCon *clientCon,
     {
         return;
     }
-    if (cd == 2)
+    if (cd == XRDP_CD_CLIP)
     {
         rdpRegionIntersect(reg, clip_reg, reg);
     }
@@ -100,7 +100,7 @@ rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
 
     LLOGLN(10, ("rdpPolyRectangle:"));
     dev = rdpGetDevFromScreen(pGC->pScreen);
-
+    dev->counts.rdpPolyRectangleCallCount++;
     rdpRegionInit(&reg, NullBox, 0);
     lw = pGC->lineWidth;
     if (lw < 1)
@@ -161,4 +161,5 @@ rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
         clientCon = clientCon->next;
     }
     rdpRegionUninit(&reg);
+    rdpRegionUninit(&clip_reg);
 }

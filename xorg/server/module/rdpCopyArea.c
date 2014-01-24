@@ -69,20 +69,14 @@ rdpCopyAreaPost(rdpPtr dev, rdpClientCon *clientCon,
                 DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
                 int srcx, int srcy, int w, int h, int dstx, int dsty)
 {
-    WindowPtr pDstWnd;
     BoxRec box;
     RegionRec reg;
 
-    if (cd == 0)
+    if (cd == XRDP_CD_NODRAW)
     {
         return;
     }
-    if (pDst->type != DRAWABLE_WINDOW)
-    {
-        return;
-    }
-    pDstWnd = (WindowPtr) pDst;
-    if (pDstWnd->viewable == FALSE)
+    if (!XRDP_DRAWABLE_IS_VISIBLE(dev, pDst))
     {
         return;
     }
@@ -91,12 +85,12 @@ rdpCopyAreaPost(rdpPtr dev, rdpClientCon *clientCon,
     box.x2 = box.x1 + w;
     box.y2 = box.y1 + h;
     rdpRegionInit(&reg, &box, 0);
-    if (cd == 2)
+    if (cd == XRDP_CD_CLIP)
     {
         rdpRegionIntersect(&reg, clip_reg, &reg);
     }
     rdpClientConAddDirtyScreenReg(dev, clientCon, &reg);
-    RegionUninit(&reg);
+    rdpRegionUninit(&reg);
 }
 
 /******************************************************************************/
@@ -112,6 +106,7 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
 
     LLOGLN(10, ("rdpCopyArea:"));
     dev = rdpGetDevFromScreen(pGC->pScreen);
+    dev->counts.rdpCopyAreaCallCount++;
     rdpRegionInit(&clip_reg, NullBox, 0);
     cd = rdpDrawGetClip(dev, &clip_reg, pDst, pGC);
     LLOGLN(10, ("rdpCopyArea: cd %d", cd));
@@ -131,6 +126,6 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
                         srcx, srcy, w, h, dstx, dsty);
         clientCon = clientCon->next;
     }
-    RegionUninit(&clip_reg);
+    rdpRegionUninit(&clip_reg);
     return rv;
 }
