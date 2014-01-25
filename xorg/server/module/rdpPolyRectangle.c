@@ -95,6 +95,10 @@ rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
     int down;
     int lw;
     int cd;
+    int x1;
+    int y1;
+    int x2;
+    int y2;
     RegionRec clip_reg;
     RegionRec reg;
 
@@ -113,28 +117,37 @@ rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
     while (index < nrects)
     {
 
-        box.x1 = (rects[index].x + pDrawable->x) - up;
-        box.y1 = (rects[index].y + pDrawable->y) - up;
-        box.x2 = box.x1 + rects[index].width + (up + down);
-        box.y2 = box.y1 + lw;
+        x1 = rects[index].x + pDrawable->x;
+        y1 = rects[index].y + pDrawable->y;
+        x2 = x1 + rects[index].width;
+        y2 = y1 + rects[index].height;
+
+        /* top */
+        box.x1 = x1 - up;
+        box.y1 = y1 - up;
+        box.x2 = x2 + down;
+        box.y2 = y1 + down;
         rdpRegionUnionRect(&reg, &box);
 
-        box.x1 = (rects[index].x + pDrawable->x) - up;
-        box.y1 = (rects[index].y + pDrawable->y) + down;
-        box.x2 = box.x1 + lw;
-        box.y2 = box.y1 + rects[index].height - (up + down);
+        /* left */
+        box.x1 = x1 - up;
+        box.y1 = y1 - up;
+        box.x2 = x1 + down;
+        box.y2 = y2 + down;
         rdpRegionUnionRect(&reg, &box);
 
-        box.x1 = ((rects[index].x + rects[index].width) + pDrawable->x) - up;
-        box.y1 = (rects[index].y + pDrawable->y) + down;
-        box.x2 = box.x1 + lw;
-        box.y2 = box.y1 + rects[index].height - (up + down);
+        /* right */
+        box.x1 = x2 - up;
+        box.y1 = y1 - up;
+        box.x2 = x2 + down;
+        box.y2 = y2 + down;
         rdpRegionUnionRect(&reg, &box);
 
-        box.x1 = (rects[index].x + pDrawable->x) - up;
-        box.y1 = ((rects[index].y + rects[index].height) + pDrawable->y) - up;
-        box.x2 = box.x1 + rects[index].width + (up + down);
-        box.y2 = box.y1 + lw;
+        /* bottom */
+        box.x1 = x1 - up;
+        box.y1 = y2 - up;
+        box.x2 = x2 + down;
+        box.y2 = y2 + down;
         rdpRegionUnionRect(&reg, &box);
 
         index++;
