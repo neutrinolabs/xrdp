@@ -77,10 +77,6 @@ rdpPolyFillRectPost(rdpPtr dev, rdpClientCon *clientCon,
     {
         return;
     }
-    if (cd == XRDP_CD_CLIP)
-    {
-        rdpRegionIntersect(reg, clip_reg, reg);
-    }
     rdpClientConAddDirtyScreenReg(dev, clientCon, reg);
 }
 
@@ -103,6 +99,10 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
     rdpRegionTranslate(reg, pDrawable->x, pDrawable->y);
     rdpRegionInit(&clip_reg, NullBox, 0);
     cd = rdpDrawGetClip(dev, &clip_reg, pDrawable, pGC);
+    if (cd == XRDP_CD_CLIP)
+    {
+        rdpRegionIntersect(reg, &clip_reg, reg);
+    }
     LLOGLN(10, ("rdpPolyFillRect: cd %d", cd));
     clientCon = dev->clientConHead;
     while (clientCon != NULL)

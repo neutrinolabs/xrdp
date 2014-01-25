@@ -531,6 +531,9 @@ rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
         /* glyphs */
         dev->Glyphs = ps->Glyphs;
         ps->Glyphs = rdpGlyphs;
+
+        dev->Trapezoids = ps->Trapezoids;
+        ps->Trapezoids = rdpTrapezoids;
     }
 
     RegisterBlockAndWakeupHandlers(rdpBlockHandler1, rdpWakeupHandler1, pScreen);

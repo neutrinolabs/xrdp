@@ -32,10 +32,21 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "rdp.h"
 #include "rdpDraw.h"
+#include "rdpClientCon.h"
+#include "rdpReg.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
+
+/******************************************************************************/
+void
+rdpPolySegmentPre(rdpPtr dev, rdpClientCon *clientCon,
+                  int cd, RegionPtr clip_reg,
+                  DrawablePtr pDrawable, GCPtr pGC, int nseg,
+                  xSegment *pSegs, RegionPtr reg)
+{
+}
 
 /******************************************************************************/
 void
@@ -50,9 +61,83 @@ rdpPolySegmentOrg(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment *pSegs)
 
 /******************************************************************************/
 void
+rdpPolySegmentPost(rdpPtr dev, rdpClientCon *clientCon,
+                   int cd, RegionPtr clip_reg,
+                   DrawablePtr pDrawable, GCPtr pGC, int nseg,
+                   xSegment *pSegs, RegionPtr reg)
+{
+    RegionRec lreg;
+
+    if (cd == XRDP_CD_NODRAW)
+    {
+        return;
+    }
+    if (!XRDP_DRAWABLE_IS_VISIBLE(dev, pDrawable))
+    {
+        return;
+    }
+    rdpRegionInit(&lreg, NullBox, 0);
+    if (cd == XRDP_CD_CLIP)
+    {
+        rdpRegionIntersect(&lreg, clip_reg, reg);
+    }
+    rdpClientConAddDirtyScreenReg(dev, clientCon, &lreg);
+    rdpRegionUninit(&lreg);
+}
+
+/******************************************************************************/
+void
 rdpPolySegment(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment *pSegs)
 {
-    LLOGLN(0, ("rdpPolySegment:"));
+    rdpPtr dev;
+    rdpClientCon *clientCon;
+    RegionRec clip_reg;
+    RegionRec reg;
+    int cd;
+    int index;
+    int x1;
+    int y1;
+    int x2;
+    int y2;
+    BoxRec box;
+
+    LLOGLN(10, ("rdpPolySegment:"));
+    dev = rdpGetDevFromScreen(pGC->pScreen);
+    dev->counts.rdpPolySegmentCallCount++;
+    rdpRegionInit(&reg, NullBox, 0);
+    for (index = 0; index < nseg; index++)
+    {
+        x1 = pSegs[index].x1 + pDrawable->x;
+        y1 = pSegs[index].y1 + pDrawable->y;
+        x2 = pSegs[index].x2 + pDrawable->x;
+        y2 = pSegs[index].y2 + pDrawable->y;
+        box.x1 = RDPMIN(x1, x2);
+        box.y1 = RDPMIN(y1, y2);
+        box.x2 = RDPMAX(x1, x2) + 1;
+        box.y2 = RDPMAX(y1, y2) + 1;
+        rdpRegionUnionRect(&reg, &box);
+    }
+    rdpRegionInit(&clip_reg, NullBox, 0);
+    cd = rdpDrawGetClip(dev, &clip_reg, pDrawable, pGC);
+    LLOGLN(10, ("rdpPolySegment: cd %d", cd));
+    clientCon = dev->clientConHead;
+    while (clientCon != NULL)
+    {
+        rdpPolySegmentPre(dev, clientCon, cd, &clip_reg, pDrawable,
+                          pGC, nseg, pSegs, &reg);
+        clientCon = clientCon->next;
+    }
     /* do original call */
     rdpPolySegmentOrg(pDrawable, pGC, nseg, pSegs);
+
+    clientCon = dev->clientConHead;
+    while (clientCon != NULL)
+    {
+        rdpPolySegmentPost(dev, clientCon, cd, &clip_reg, pDrawable,
+                           pGC, nseg, pSegs, &reg);
+        clientCon = clientCon->next;
+    }
+    rdpRegionUninit(&clip_reg);
+    rdpRegionUninit(&reg);
+
 }

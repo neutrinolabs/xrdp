@@ -105,8 +105,8 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
     PictureScreenPtr ps;
     BoxRec box;
 
-    LLOGLN(10, ("rdpComposite:"));
-    pScreen = pSrc->pDrawable->pScreen;
+    LLOGLN(0, ("rdpComposite:"));
+    pScreen = pDst->pDrawable->pScreen;
     dev = rdpGetDevFromScreen(pScreen);
     dev->counts.rdpCompositeCallCount++;
     box.x1 = xDst + pDst->pDrawable->x;
@@ -131,6 +131,99 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
         rdpCompositePost(dev, clientCon, ps, op, pSrc, pMask, pDst,
                          xSrc, ySrc, xMask, yMask, xDst, yDst,
                          width, height, &box);
+        clientCon = clientCon->next;
+    }
+}
+
+/******************************************************************************/
+static void
+rdpTrapezoidsPre(rdpPtr dev, rdpClientCon *clientCon, PictureScreenPtr ps,
+                 CARD8 op, PicturePtr pSrc, PicturePtr pDst,
+                 PictFormatPtr maskFormat, INT16 xSrc, INT16 ySrc,
+                 int ntrap, xTrapezoid *traps, BoxPtr box)
+{
+}
+
+/******************************************************************************/
+static void
+rdpTrapezoidsOrg(PictureScreenPtr ps, rdpPtr dev,
+                 CARD8 op, PicturePtr pSrc, PicturePtr pDst,
+                 PictFormatPtr maskFormat, INT16 xSrc, INT16 ySrc,
+                 int ntrap, xTrapezoid *traps)
+{
+    ps->Trapezoids = dev->Trapezoids;
+    ps->Trapezoids(op, pSrc, pDst, maskFormat, xSrc, ySrc, ntrap, traps);
+    ps->Trapezoids = rdpTrapezoids;
+}
+
+/******************************************************************************/
+static void
+rdpTrapezoidsPost(rdpPtr dev, rdpClientCon *clientCon, PictureScreenPtr ps,
+                  CARD8 op, PicturePtr pSrc, PicturePtr pDst,
+                  PictFormatPtr maskFormat, INT16 xSrc, INT16 ySrc,
+                  int ntrap, xTrapezoid *traps, BoxPtr box)
+{
+    RegionRec reg;
+
+    if (!XRDP_DRAWABLE_IS_VISIBLE(dev, pDst->pDrawable))
+    {
+        return;
+    }
+    rdpRegionInit(&reg, box, 0);
+    if (pDst->pCompositeClip != 0)
+    {
+        rdpRegionIntersect(&reg, pDst->pCompositeClip, &reg);
+    }
+    rdpClientConAddDirtyScreenReg(dev, clientCon, &reg);
+    rdpRegionUninit(&reg);
+}
+
+/******************************************************************************/
+void
+rdpTrapezoids(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
+              PictFormatPtr maskFormat, INT16 xSrc, INT16 ySrc,
+              int ntrap, xTrapezoid *traps)
+{
+    ScreenPtr pScreen;
+    rdpPtr dev;
+    rdpClientCon *clientCon;
+    PictureScreenPtr ps;
+    BoxRec box;
+    RegionRec reg;
+    int index;
+
+    LLOGLN(0, ("rdpTrapezoids:"));
+    pScreen = pDst->pDrawable->pScreen;
+    dev = rdpGetDevFromScreen(pScreen);
+    dev->counts.rdpTrapezoidsCallCount++;
+
+    rdpRegionInit(&reg, NullBox, 0);
+    for (index = 0; index < ntrap; index++)
+    {
+        LLOGLN(0, ("  top %d bottom %d left p1 %d %d",
+               traps[index].top, traps[index].bottom,
+               traps[index].left.p1.x, traps[index].left.p1.y));
+        //box.x1 = traps[index].left + pDst->pDrawable->x;
+        //box.y1 = traps[index].top + pDst->pDrawable->y;
+        //box.x2 = traps[index].right + pDst->pDrawable->x;
+        //box.y2 = traps[index].bottom + pDst->pDrawable->y;
+    }
+    ps = GetPictureScreen(pScreen);
+    clientCon = dev->clientConHead;
+    while (clientCon != NULL)
+    {
+        //rdpTrapezoidsPre(dev, clientCon, ps, op, pSrc, pDst,
+        //                 maskFormat, xSrc, ySrc, ntrap, traps, &box);
+        clientCon = clientCon->next;
+    }
+    /* do original call */
+    rdpTrapezoidsOrg(ps, dev, op, pSrc, pDst, maskFormat, xSrc, ySrc,
+                     ntrap, traps);
+    clientCon = dev->clientConHead;
+    while (clientCon != NULL)
+    {
+        //rdpTrapezoidsPost(dev, clientCon, ps, op, pSrc, pDst,
+        //                  maskFormat, xSrc, ySrc, ntrap, traps, &box);
         clientCon = clientCon->next;
     }
 }

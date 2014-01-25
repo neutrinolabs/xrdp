@@ -74,10 +74,6 @@ rdpPolyArcPost(rdpPtr dev, rdpClientCon *clientCon,
     {
         return;
     }
-    if (cd == XRDP_CD_CLIP)
-    {
-        rdpRegionIntersect(reg, clip_reg, reg);
-    }
     rdpClientConAddDirtyScreenReg(dev, clientCon, reg);
 }
 
@@ -95,7 +91,7 @@ rdpPolyArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc *parcs)
     RegionRec clip_reg;
     RegionRec reg;
 
-    LLOGLN(10, ("rdpPolyArc:"));
+    LLOGLN(0, ("rdpPolyArc:"));
     dev = rdpGetDevFromScreen(pGC->pScreen);
     dev->counts.rdpPolyArcCallCount++;
     rdpRegionInit(&reg, NullBox, 0);
@@ -119,6 +115,10 @@ rdpPolyArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc *parcs)
     rdpRegionInit(&clip_reg, NullBox, 0);
     cd = rdpDrawGetClip(dev, &clip_reg, pDrawable, pGC);
     LLOGLN(10, ("rdpPolyArc: cd %d", cd));
+    if (cd == XRDP_CD_CLIP)
+    {
+        rdpRegionIntersect(&reg, &clip_reg, &reg);
+    }
     clientCon = dev->clientConHead;
     while (clientCon != NULL)
     {

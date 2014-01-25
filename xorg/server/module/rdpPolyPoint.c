@@ -67,6 +67,8 @@ rdpPolyPointPost(rdpPtr dev, rdpClientCon *clientCon,
                  DrawablePtr pDrawable, GCPtr pGC, int mode,
                  int npt, DDXPointPtr in_pts, RegionPtr reg)
 {
+    RegionRec lreg;
+
     if (cd == XRDP_CD_NODRAW)
     {
         return;
@@ -75,11 +77,13 @@ rdpPolyPointPost(rdpPtr dev, rdpClientCon *clientCon,
     {
         return;
     }
+    rdpRegionInit(&lreg, NullBox, 0);
     if (cd == XRDP_CD_CLIP)
     {
-        rdpRegionIntersect(reg, clip_reg, reg);
+        rdpRegionIntersect(&lreg, clip_reg, reg);
     }
-    rdpClientConAddDirtyScreenReg(dev, clientCon, reg);
+    rdpClientConAddDirtyScreenReg(dev, clientCon, &lreg);
+    rdpRegionUninit(&lreg);
 }
 
 /******************************************************************************/
@@ -92,18 +96,24 @@ rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
     RegionRec clip_reg;
     RegionRec reg;
     int cd;
+    int index;
+    BoxRec box;
 
     LLOGLN(0, ("rdpPolyPoint:"));
     dev = rdpGetDevFromScreen(pGC->pScreen);
     dev->counts.rdpPolyPointCallCount++;
-
     rdpRegionInit(&reg, NullBox, 0);
-    /* TODO */
-
+    for (index = 0; index < npt; index++)
+    {
+        box.x1 = in_pts[index].x + pDrawable->x;
+        box.y1 = in_pts[index].y + pDrawable->y;
+        box.x2 = box.x1 + 1;
+        box.y2 = box.y1 + 1;
+        rdpRegionUnionRect(&reg, &box);
+    }
     rdpRegionInit(&clip_reg, NullBox, 0);
     cd = rdpDrawGetClip(dev, &clip_reg, pDrawable, pGC);
     LLOGLN(10, ("rdpPolyPoint: cd %d", cd));
-
     clientCon = dev->clientConHead;
     while (clientCon != NULL)
     {
@@ -111,10 +121,8 @@ rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
                         pGC, mode, npt, in_pts, &reg);
         clientCon = clientCon->next;
     }
-
     /* do original call */
     rdpPolyPointOrg(pDrawable, pGC, mode, npt, in_pts);
-
     clientCon = dev->clientConHead;
     while (clientCon != NULL)
     {
@@ -122,7 +130,6 @@ rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
                          pGC, mode, npt, in_pts, &reg);
         clientCon = clientCon->next;
     }
-
     rdpRegionUninit(&clip_reg);
     rdpRegionUninit(&reg);
 }
