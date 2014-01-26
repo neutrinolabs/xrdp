@@ -95,7 +95,7 @@ rdpPolyFillArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc *parcs)
     RegionRec clip_reg;
     RegionRec reg;
 
-    LLOGLN(0, ("rdpPolyFillArc:"));
+    LLOGLN(10, ("rdpPolyFillArc:"));
     dev = rdpGetDevFromScreen(pGC->pScreen);
     dev->counts.rdpPolyFillArcCallCount++;
     rdpRegionInit(&reg, NullBox, 0);

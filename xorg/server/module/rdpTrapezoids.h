@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2014 Jay Sorg
+Copyright 2014 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -17,16 +17,14 @@ OPEN GROUP BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
 AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-composite(alpha blending) calls
-
 */
 
-#ifndef _RDPCOMPOSITE_H
-#define _RDPCOMPOSITE_H
+#ifndef _RDPTRAPEZOIDS_H
+#define _RDPTRAPEZOIDS_H
 
 void
-rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
-             INT16 xSrc, INT16 ySrc, INT16 xMask, INT16 yMask, INT16 xDst,
-             INT16 yDst, CARD16 width, CARD16 height);
+rdpTrapezoids(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
+              PictFormatPtr maskFormat, INT16 xSrc, INT16 ySrc,
+              int ntrap, xTrapezoid *traps);
 
 #endif

@@ -47,6 +47,7 @@ This is the main driver file
 #include "rdpRandR.h"
 #include "rdpMisc.h"
 #include "rdpComposite.h"
+#include "rdpTrapezoids.h"
 #include "rdpGlyphs.h"
 #include "rdpPixmap.h"
 #include "rdpClientCon.h"

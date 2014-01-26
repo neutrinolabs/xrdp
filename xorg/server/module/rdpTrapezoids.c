@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2014 Jay Sorg
+Copyright 2014 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -16,8 +16,6 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
 OPEN GROUP BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
 AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-composite(alpha blending) calls
 
 */
 
@@ -39,7 +37,7 @@ composite(alpha blending) calls
 #include "rdpDraw.h"
 #include "rdpClientCon.h"
 #include "rdpReg.h"
-#include "rdpComposite.h"
+#include "rdpTrapezoids.h"
 
 /******************************************************************************/
 #define LOG_LEVEL 1
@@ -48,36 +46,31 @@ composite(alpha blending) calls
 
 /******************************************************************************/
 static void
-rdpCompositePre(rdpPtr dev, rdpClientCon *clientCon,
-                PictureScreenPtr ps, CARD8 op, PicturePtr pSrc,
-                PicturePtr pMask, PicturePtr pDst,
-                INT16 xSrc, INT16 ySrc, INT16 xMask, INT16 yMask,
-                INT16 xDst, INT16 yDst, CARD16 width, CARD16 height,
-                BoxPtr box)
+rdpTrapezoidsPre(rdpPtr dev, rdpClientCon *clientCon, PictureScreenPtr ps,
+                 CARD8 op, PicturePtr pSrc, PicturePtr pDst,
+                 PictFormatPtr maskFormat, INT16 xSrc, INT16 ySrc,
+                 int ntrap, xTrapezoid *traps, BoxPtr box)
 {
 }
 
 /******************************************************************************/
 static void
-rdpCompositeOrg(PictureScreenPtr ps, rdpPtr dev,
-                CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
-                INT16 xSrc, INT16 ySrc, INT16 xMask, INT16 yMask,
-                INT16 xDst, INT16 yDst, CARD16 width, CARD16 height)
+rdpTrapezoidsOrg(PictureScreenPtr ps, rdpPtr dev,
+                 CARD8 op, PicturePtr pSrc, PicturePtr pDst,
+                 PictFormatPtr maskFormat, INT16 xSrc, INT16 ySrc,
+                 int ntrap, xTrapezoid *traps)
 {
-    ps->Composite = dev->Composite;
-    ps->Composite(op, pSrc, pMask, pDst, xSrc, ySrc, xMask, yMask,
-                  xDst, yDst, width, height);
-    ps->Composite = rdpComposite;
+    ps->Trapezoids = dev->Trapezoids;
+    ps->Trapezoids(op, pSrc, pDst, maskFormat, xSrc, ySrc, ntrap, traps);
+    ps->Trapezoids = rdpTrapezoids;
 }
 
 /******************************************************************************/
 static void
-rdpCompositePost(rdpPtr dev, rdpClientCon *clientCon,
-                 PictureScreenPtr ps, CARD8 op, PicturePtr pSrc,
-                 PicturePtr pMask, PicturePtr pDst,
-                 INT16 xSrc, INT16 ySrc, INT16 xMask, INT16 yMask,
-                 INT16 xDst, INT16 yDst, CARD16 width, CARD16 height,
-                 BoxPtr box)
+rdpTrapezoidsPost(rdpPtr dev, rdpClientCon *clientCon, PictureScreenPtr ps,
+                  CARD8 op, PicturePtr pSrc, PicturePtr pDst,
+                  PictFormatPtr maskFormat, INT16 xSrc, INT16 ySrc,
+                  int ntrap, xTrapezoid *traps, BoxPtr box)
 {
     RegionRec reg;
 
@@ -96,42 +89,47 @@ rdpCompositePost(rdpPtr dev, rdpClientCon *clientCon,
 
 /******************************************************************************/
 void
-rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
-             INT16 xSrc, INT16 ySrc, INT16 xMask, INT16 yMask, INT16 xDst,
-             INT16 yDst, CARD16 width, CARD16 height)
+rdpTrapezoids(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
+              PictFormatPtr maskFormat, INT16 xSrc, INT16 ySrc,
+              int ntrap, xTrapezoid *traps)
 {
     ScreenPtr pScreen;
     rdpPtr dev;
     rdpClientCon *clientCon;
     PictureScreenPtr ps;
     BoxRec box;
+    int dstx;
+    int dsty;
 
-    LLOGLN(10, ("rdpComposite:"));
+    LLOGLN(10, ("rdpTrapezoids:"));
     pScreen = pDst->pDrawable->pScreen;
     dev = rdpGetDevFromScreen(pScreen);
-    dev->counts.rdpCompositeCallCount++;
-    box.x1 = xDst + pDst->pDrawable->x;
-    box.y1 = yDst + pDst->pDrawable->y;
-    box.x2 = box.x1 + width;
-    box.y2 = box.y1 + height;
+    dev->counts.rdpTrapezoidsCallCount++;
+    dstx = traps[0].left.p1.x >> 16;
+    dsty = traps[0].left.p1.y >> 16;
+    miTrapezoidBounds(ntrap, traps, &box);
+    box.x1 += pDst->pDrawable->x;
+    box.y1 += pDst->pDrawable->y;
+    box.x2 += pDst->pDrawable->x;
+    box.y2 += pDst->pDrawable->y;
+    LLOGLN(10, ("%d %d %d %d %d %d", dstx, dsty, box.x1, box.y1,
+           box.x2, box.y2));
     ps = GetPictureScreen(pScreen);
     clientCon = dev->clientConHead;
     while (clientCon != NULL)
     {
-        rdpCompositePre(dev, clientCon, ps, op, pSrc, pMask, pDst,
-                        xSrc, ySrc, xMask, yMask, xDst, yDst,
-                        width, height, &box);
+        rdpTrapezoidsPre(dev, clientCon, ps, op, pSrc, pDst,
+                         maskFormat, xSrc, ySrc, ntrap, traps, &box);
         clientCon = clientCon->next;
     }
     /* do original call */
-    rdpCompositeOrg(ps, dev, op, pSrc, pMask, pDst, xSrc, ySrc,
-                    xMask, yMask, xDst, yDst, width, height);
+    rdpTrapezoidsOrg(ps, dev, op, pSrc, pDst, maskFormat, xSrc, ySrc,
+                     ntrap, traps);
     clientCon = dev->clientConHead;
     while (clientCon != NULL)
     {
-        rdpCompositePost(dev, clientCon, ps, op, pSrc, pMask, pDst,
-                         xSrc, ySrc, xMask, yMask, xDst, yDst,
-                         width, height, &box);
+        rdpTrapezoidsPost(dev, clientCon, ps, op, pSrc, pDst,
+                          maskFormat, xSrc, ySrc, ntrap, traps, &box);
         clientCon = clientCon->next;
     }
 }
