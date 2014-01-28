@@ -25,7 +25,16 @@ misc draw calls
 #define __RDPDRAW_H
 
 #include <xorg-server.h>
+#include <xorgVersion.h>
 #include <xf86.h>
+
+#if XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(1, 13, 0, 0, 0)
+/* 1.1, 1.2, 1.3, 1.4 1.5, 1.6, 1.7, 1.8, 1.9, 1.10, 1.11, 1.12 */
+#define XRDP_CLOSESCR 1
+#else
+/* 1.13 */
+#define XRDP_CLOSESCR 2
+#endif
 
 /* true if drawable is window or pixmap is screen */
 #define XRDP_DRAWABLE_IS_VISIBLE(_dev, _drw) \
@@ -69,8 +78,13 @@ int
 rdpDrawItemRemoveAll(rdpPtr dev, rdpPixmapRec *priv);
 void
 rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion);
+#if XRDP_CLOSESCR == 1
 Bool
 rdpCloseScreen(int index, ScreenPtr pScreen);
+#else
+Bool
+rdpCloseScreen(ScreenPtr pScreen);
+#endif
 WindowPtr
 rdpGetRootWindowPtr(ScreenPtr pScreen);
 rdpPtr

@@ -24,13 +24,8 @@ pixmap calls
 #ifndef __RDPPIXMAP_H
 #define __RDPPIXAMP_H
 
-#ifndef XORG_VERSION_NUMERIC
-#warning XORG_VERSION_NUMERIC not defined, need #include <xorgVersion.h>
-#endif
-
-#ifndef XORG_VERSION_CURRENT
-#warning XORG_VERSION_CURRENT not defined
-#endif
+#include <xorg-server.h>
+#include <xorgVersion.h>
 
 #if XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(1, 5, 0, 0, 0)
 /* 1.1, 1.2, 1.3, 1.4 */

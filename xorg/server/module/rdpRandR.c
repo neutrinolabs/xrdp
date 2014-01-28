@@ -27,6 +27,7 @@ RandR draw calls
 
 /* this should be before all X11 .h files */
 #include <xorg-server.h>
+#include <xorgVersion.h>
 
 /* all driver need this */
 #include <xf86.h>
@@ -141,8 +142,13 @@ rdpRRScreenSetSize(ScreenPtr pScreen, CARD16 width, CARD16 height,
     RRGetInfo(pScreen, 1);
     LLOGLN(0, ("  screen resized to %dx%d", pScreen->width, pScreen->height));
     RRScreenSizeNotify(pScreen);
+#if XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(1, 13, 0, 0, 0)
     xf86EnableDisableFBAccess(pScreen->myNum, FALSE);
     xf86EnableDisableFBAccess(pScreen->myNum, TRUE);
+#else
+    xf86EnableDisableFBAccess(xf86Screens[pScreen->myNum], FALSE);
+    xf86EnableDisableFBAccess(xf86Screens[pScreen->myNum], TRUE);
+#endif
     return TRUE;
 }
 

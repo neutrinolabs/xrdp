@@ -354,7 +354,11 @@ rdpCloseScreen(int index, ScreenPtr pScreen)
     LLOGLN(0, ("rdpCloseScreen:"));
     dev = rdpGetDevFromScreen(pScreen);
     dev->pScreen->CloseScreen = dev->CloseScreen;
+#if XRDP_CLOSESCR == 1 /* before v1.13 */
     rv = dev->pScreen->CloseScreen(index, pScreen);
+#else
+    rv = dev->pScreen->CloseScreen(pScreen);
+#endif
     dev->pScreen->CloseScreen = rdpCloseScreen;
     return rv;
 }
