@@ -42,6 +42,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 #include <dlfcn.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -3117,4 +3119,18 @@ g_text2bool(const char *s)
         return 1;
     }
     return 0;
+}
+
+/*****************************************************************************/
+void * APP_CC
+g_shmat(int shmid)
+{
+    return shmat(shmid, 0, 0);
+}
+
+/*****************************************************************************/
+int APP_CC
+g_shmdt(const void *shmaddr)
+{
+    return shmdt(shmaddr);
 }
