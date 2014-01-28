@@ -40,15 +40,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
 /******************************************************************************/
-void
-rdpPolyRectanglePre(rdpPtr dev, rdpClientCon *clientCon,
-                    int cd, RegionPtr clip_reg,
-                    DrawablePtr pDrawable, GCPtr pGC, int nrects,
-                    xRectangle *rects, RegionPtr reg)
-{
-}
-
-/******************************************************************************/
 static void
 rdpPolyRectangleOrg(DrawablePtr pDrawable, GCPtr pGC, int nrects,
                     xRectangle *rects)
@@ -62,33 +53,10 @@ rdpPolyRectangleOrg(DrawablePtr pDrawable, GCPtr pGC, int nrects,
 
 /******************************************************************************/
 void
-rdpPolyRectanglePost(rdpPtr dev, rdpClientCon *clientCon,
-                     int cd, RegionPtr clip_reg,
-                     DrawablePtr pDrawable, GCPtr pGC, int nrects,
-                     xRectangle *rects, RegionPtr reg)
-{
-    if (cd == XRDP_CD_NODRAW)
-    {
-        return;
-    }
-    if (!XRDP_DRAWABLE_IS_VISIBLE(dev, pDrawable))
-    {
-        return;
-    }
-    if (cd == XRDP_CD_CLIP)
-    {
-        rdpRegionIntersect(reg, clip_reg, reg);
-    }
-    rdpClientConAddDirtyScreenReg(dev, clientCon, reg);
-}
-
-/******************************************************************************/
-void
 rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
                  xRectangle *rects)
 {
     rdpPtr dev;
-    rdpClientCon *clientCon;
     BoxRec box;
     int index;
     int up;
@@ -116,63 +84,49 @@ rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
     index = 0;
     while (index < nrects)
     {
-
         x1 = rects[index].x + pDrawable->x;
         y1 = rects[index].y + pDrawable->y;
         x2 = x1 + rects[index].width;
         y2 = y1 + rects[index].height;
-
         /* top */
         box.x1 = x1 - up;
         box.y1 = y1 - up;
         box.x2 = x2 + down;
         box.y2 = y1 + down;
         rdpRegionUnionRect(&reg, &box);
-
         /* left */
         box.x1 = x1 - up;
         box.y1 = y1 - up;
         box.x2 = x1 + down;
         box.y2 = y2 + down;
         rdpRegionUnionRect(&reg, &box);
-
         /* right */
         box.x1 = x2 - up;
         box.y1 = y1 - up;
         box.x2 = x2 + down;
         box.y2 = y2 + down;
         rdpRegionUnionRect(&reg, &box);
-
         /* bottom */
         box.x1 = x1 - up;
         box.y1 = y2 - up;
         box.x2 = x2 + down;
         box.y2 = y2 + down;
         rdpRegionUnionRect(&reg, &box);
-
         index++;
     }
-
     rdpRegionInit(&clip_reg, NullBox, 0);
     cd = rdpDrawGetClip(dev, &clip_reg, pDrawable, pGC);
     LLOGLN(10, ("rdpPolyRectangle: cd %d", cd));
-
-    clientCon = dev->clientConHead;
-    while (clientCon != NULL)
+    if (cd == XRDP_CD_CLIP)
     {
-        rdpPolyRectanglePre(dev, clientCon, cd, &clip_reg, pDrawable, pGC,
-                            nrects, rects, &reg);
-        clientCon = clientCon->next;
+        rdpRegionIntersect(&reg, &clip_reg, &reg);
     }
     /* do original call */
     rdpPolyRectangleOrg(pDrawable, pGC, nrects, rects);
-    clientCon = dev->clientConHead;
-    while (clientCon != NULL)
+    if (cd != XRDP_CD_NODRAW)
     {
-        rdpPolyRectanglePost(dev, clientCon, cd, &clip_reg, pDrawable, pGC,
-                             nrects, rects, &reg);
-        clientCon = clientCon->next;
+        rdpClientConAddAllReg(dev, &reg, pDrawable);
     }
-    rdpRegionUninit(&reg);
     rdpRegionUninit(&clip_reg);
+    rdpRegionUninit(&reg);
 }

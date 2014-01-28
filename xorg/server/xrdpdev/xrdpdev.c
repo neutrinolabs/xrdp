@@ -532,7 +532,7 @@ rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
         /* glyphs */
         dev->Glyphs = ps->Glyphs;
         ps->Glyphs = rdpGlyphs;
-
+        /* trapezoids */
         dev->Trapezoids = ps->Trapezoids;
         ps->Trapezoids = rdpTrapezoids;
     }

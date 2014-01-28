@@ -40,15 +40,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
 /******************************************************************************/
-void
-rdpPolylinesPre(rdpPtr dev, rdpClientCon *clientCon,
-                int cd,  RegionPtr clip_reg,
-                DrawablePtr pDrawable, GCPtr pGC, int mode,
-                int npt, DDXPointPtr pptInit, RegionPtr reg)
-{
-}
-
-/******************************************************************************/
 static void
 rdpPolylinesOrg(DrawablePtr pDrawable, GCPtr pGC, int mode,
                 int npt, DDXPointPtr pptInit)
@@ -62,37 +53,10 @@ rdpPolylinesOrg(DrawablePtr pDrawable, GCPtr pGC, int mode,
 
 /******************************************************************************/
 void
-rdpPolylinesPost(rdpPtr dev, rdpClientCon *clientCon,
-                 int cd,  RegionPtr clip_reg,
-                 DrawablePtr pDrawable, GCPtr pGC, int mode,
-                 int npt, DDXPointPtr pptInit, RegionPtr reg)
-{
-    RegionRec lreg;
-
-    if (cd == XRDP_CD_NODRAW)
-    {
-        return;
-    }
-    if (!XRDP_DRAWABLE_IS_VISIBLE(dev, pDrawable))
-    {
-        return;
-    }
-    rdpRegionInit(&lreg, NullBox, 0);
-    if (cd == XRDP_CD_CLIP)
-    {
-        rdpRegionIntersect(&lreg, clip_reg, reg);
-    }
-    rdpClientConAddDirtyScreenReg(dev, clientCon, &lreg);
-    rdpRegionUninit(&lreg);
-}
-
-/******************************************************************************/
-void
 rdpPolylines(DrawablePtr pDrawable, GCPtr pGC, int mode,
              int npt, DDXPointPtr pptInit)
 {
     rdpPtr dev;
-    rdpClientCon *clientCon;
     RegionRec clip_reg;
     RegionRec reg;
     int cd;
@@ -122,21 +86,15 @@ rdpPolylines(DrawablePtr pDrawable, GCPtr pGC, int mode,
     rdpRegionInit(&clip_reg, NullBox, 0);
     cd = rdpDrawGetClip(dev, &clip_reg, pDrawable, pGC);
     LLOGLN(10, ("rdpPolylines: cd %d", cd));
-    clientCon = dev->clientConHead;
-    while (clientCon != NULL)
+    if (cd == XRDP_CD_CLIP)
     {
-        rdpPolylinesPre(dev, clientCon, cd, &clip_reg, pDrawable,
-                        pGC, mode, npt, pptInit, &reg);
-        clientCon = clientCon->next;
+        rdpRegionIntersect(&reg, &clip_reg, &reg);
     }
     /* do original call */
     rdpPolylinesOrg(pDrawable, pGC, mode, npt, pptInit);
-    clientCon = dev->clientConHead;
-    while (clientCon != NULL)
+    if (cd != XRDP_CD_NODRAW)
     {
-        rdpPolylinesPost(dev, clientCon, cd, &clip_reg, pDrawable,
-                         pGC, mode, npt, pptInit, &reg);
-        clientCon = clientCon->next;
+        rdpClientConAddAllReg(dev, &reg, pDrawable);
     }
     rdpRegionUninit(&clip_reg);
     rdpRegionUninit(&reg);

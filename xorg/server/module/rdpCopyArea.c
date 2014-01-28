@@ -40,16 +40,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
 /******************************************************************************/
-static void
-rdpCopyAreaPre(rdpPtr dev, rdpClientCon *clientCon,
-               int cd, RegionPtr clip_reg,
-               DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
-               int srcx, int srcy, int w, int h, int dstx, int dsty,
-               RegionPtr reg)
-{
-}
-
-/******************************************************************************/
 static RegionPtr
 rdpCopyAreaOrg(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
                int srcx, int srcy, int w, int h, int dstx, int dsty)
@@ -64,68 +54,37 @@ rdpCopyAreaOrg(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
 }
 
 /******************************************************************************/
-static void
-rdpCopyAreaPost(rdpPtr dev, rdpClientCon *clientCon,
-                int cd, RegionPtr clip_reg,
-                DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
-                int srcx, int srcy, int w, int h, int dstx, int dsty,
-                RegionPtr reg)
-{
-
-    if (cd == XRDP_CD_NODRAW)
-    {
-        return;
-    }
-    if (!XRDP_DRAWABLE_IS_VISIBLE(dev, pDst))
-    {
-        return;
-    }
-    rdpClientConAddDirtyScreenReg(dev, clientCon, reg);
-}
-
-/******************************************************************************/
 RegionPtr
 rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
             int srcx, int srcy, int w, int h, int dstx, int dsty)
 {
     rdpPtr dev;
-    rdpClientCon *clientCon;
     RegionPtr rv;
     RegionRec clip_reg;
+    RegionRec reg;
     int cd;
     BoxRec box;
-    RegionRec reg;
 
     LLOGLN(10, ("rdpCopyArea:"));
     dev = rdpGetDevFromScreen(pGC->pScreen);
     dev->counts.rdpCopyAreaCallCount++;
-    rdpRegionInit(&clip_reg, NullBox, 0);
-    cd = rdpDrawGetClip(dev, &clip_reg, pDst, pGC);
-    LLOGLN(10, ("rdpCopyArea: cd %d", cd));
     box.x1 = dstx + pDst->x;
     box.y1 = dsty + pDst->y;
     box.x2 = box.x1 + w;
     box.y2 = box.y1 + h;
     rdpRegionInit(&reg, &box, 0);
+    rdpRegionInit(&clip_reg, NullBox, 0);
+    cd = rdpDrawGetClip(dev, &clip_reg, pDst, pGC);
+    LLOGLN(10, ("rdpCopyArea: cd %d", cd));
     if (cd == XRDP_CD_CLIP)
     {
         rdpRegionIntersect(&reg, &clip_reg, &reg);
     }
-    clientCon = dev->clientConHead;
-    while (clientCon != NULL)
-    {
-        rdpCopyAreaPre(dev, clientCon, cd, &clip_reg, pSrc, pDst, pGC,
-                       srcx, srcy, w, h, dstx, dsty, &reg);
-        clientCon = clientCon->next;
-    }
     /* do original call */
     rv = rdpCopyAreaOrg(pSrc, pDst, pGC, srcx, srcy, w, h, dstx, dsty);
-    clientCon = dev->clientConHead;
-    while (clientCon != NULL)
+    if (cd != XRDP_CD_NODRAW)
     {
-        rdpCopyAreaPost(dev, clientCon, cd, &clip_reg, pSrc, pDst, pGC,
-                        srcx, srcy, w, h, dstx, dsty, &reg);
-        clientCon = clientCon->next;
+        rdpClientConAddAllReg(dev, &reg, pDst);
     }
     rdpRegionUninit(&clip_reg);
     rdpRegionUninit(&reg);

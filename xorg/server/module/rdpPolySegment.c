@@ -41,15 +41,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /******************************************************************************/
 void
-rdpPolySegmentPre(rdpPtr dev, rdpClientCon *clientCon,
-                  int cd, RegionPtr clip_reg,
-                  DrawablePtr pDrawable, GCPtr pGC, int nseg,
-                  xSegment *pSegs, RegionPtr reg)
-{
-}
-
-/******************************************************************************/
-void
 rdpPolySegmentOrg(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment *pSegs)
 {
     GC_OP_VARS;
@@ -61,36 +52,9 @@ rdpPolySegmentOrg(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment *pSegs)
 
 /******************************************************************************/
 void
-rdpPolySegmentPost(rdpPtr dev, rdpClientCon *clientCon,
-                   int cd, RegionPtr clip_reg,
-                   DrawablePtr pDrawable, GCPtr pGC, int nseg,
-                   xSegment *pSegs, RegionPtr reg)
-{
-    RegionRec lreg;
-
-    if (cd == XRDP_CD_NODRAW)
-    {
-        return;
-    }
-    if (!XRDP_DRAWABLE_IS_VISIBLE(dev, pDrawable))
-    {
-        return;
-    }
-    rdpRegionInit(&lreg, NullBox, 0);
-    if (cd == XRDP_CD_CLIP)
-    {
-        rdpRegionIntersect(&lreg, clip_reg, reg);
-    }
-    rdpClientConAddDirtyScreenReg(dev, clientCon, &lreg);
-    rdpRegionUninit(&lreg);
-}
-
-/******************************************************************************/
-void
 rdpPolySegment(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment *pSegs)
 {
     rdpPtr dev;
-    rdpClientCon *clientCon;
     RegionRec clip_reg;
     RegionRec reg;
     int cd;
@@ -120,24 +84,16 @@ rdpPolySegment(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment *pSegs)
     rdpRegionInit(&clip_reg, NullBox, 0);
     cd = rdpDrawGetClip(dev, &clip_reg, pDrawable, pGC);
     LLOGLN(10, ("rdpPolySegment: cd %d", cd));
-    clientCon = dev->clientConHead;
-    while (clientCon != NULL)
+    if (cd == XRDP_CD_CLIP)
     {
-        rdpPolySegmentPre(dev, clientCon, cd, &clip_reg, pDrawable,
-                          pGC, nseg, pSegs, &reg);
-        clientCon = clientCon->next;
+        rdpRegionIntersect(&reg, &clip_reg, &reg);
     }
     /* do original call */
     rdpPolySegmentOrg(pDrawable, pGC, nseg, pSegs);
-
-    clientCon = dev->clientConHead;
-    while (clientCon != NULL)
+    if (cd != XRDP_CD_NODRAW)
     {
-        rdpPolySegmentPost(dev, clientCon, cd, &clip_reg, pDrawable,
-                           pGC, nseg, pSegs, &reg);
-        clientCon = clientCon->next;
+        rdpClientConAddAllReg(dev, &reg, pDrawable);
     }
     rdpRegionUninit(&clip_reg);
     rdpRegionUninit(&reg);
-
 }

@@ -46,15 +46,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /******************************************************************************/
 static void
-rdpTrapezoidsPre(rdpPtr dev, rdpClientCon *clientCon, PictureScreenPtr ps,
-                 CARD8 op, PicturePtr pSrc, PicturePtr pDst,
-                 PictFormatPtr maskFormat, INT16 xSrc, INT16 ySrc,
-                 int ntrap, xTrapezoid *traps, BoxPtr box)
-{
-}
-
-/******************************************************************************/
-static void
 rdpTrapezoidsOrg(PictureScreenPtr ps, rdpPtr dev,
                  CARD8 op, PicturePtr pSrc, PicturePtr pDst,
                  PictFormatPtr maskFormat, INT16 xSrc, INT16 ySrc,
@@ -66,28 +57,6 @@ rdpTrapezoidsOrg(PictureScreenPtr ps, rdpPtr dev,
 }
 
 /******************************************************************************/
-static void
-rdpTrapezoidsPost(rdpPtr dev, rdpClientCon *clientCon, PictureScreenPtr ps,
-                  CARD8 op, PicturePtr pSrc, PicturePtr pDst,
-                  PictFormatPtr maskFormat, INT16 xSrc, INT16 ySrc,
-                  int ntrap, xTrapezoid *traps, BoxPtr box)
-{
-    RegionRec reg;
-
-    if (!XRDP_DRAWABLE_IS_VISIBLE(dev, pDst->pDrawable))
-    {
-        return;
-    }
-    rdpRegionInit(&reg, box, 0);
-    if (pDst->pCompositeClip != 0)
-    {
-        rdpRegionIntersect(&reg, pDst->pCompositeClip, &reg);
-    }
-    rdpClientConAddDirtyScreenReg(dev, clientCon, &reg);
-    rdpRegionUninit(&reg);
-}
-
-/******************************************************************************/
 void
 rdpTrapezoids(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
               PictFormatPtr maskFormat, INT16 xSrc, INT16 ySrc,
@@ -95,41 +64,24 @@ rdpTrapezoids(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
 {
     ScreenPtr pScreen;
     rdpPtr dev;
-    rdpClientCon *clientCon;
     PictureScreenPtr ps;
     BoxRec box;
-    int dstx;
-    int dsty;
+    RegionRec reg;
 
     LLOGLN(10, ("rdpTrapezoids:"));
     pScreen = pDst->pDrawable->pScreen;
     dev = rdpGetDevFromScreen(pScreen);
     dev->counts.rdpTrapezoidsCallCount++;
-    dstx = traps[0].left.p1.x >> 16;
-    dsty = traps[0].left.p1.y >> 16;
     miTrapezoidBounds(ntrap, traps, &box);
     box.x1 += pDst->pDrawable->x;
     box.y1 += pDst->pDrawable->y;
     box.x2 += pDst->pDrawable->x;
     box.y2 += pDst->pDrawable->y;
-    LLOGLN(10, ("%d %d %d %d %d %d", dstx, dsty, box.x1, box.y1,
-           box.x2, box.y2));
+    rdpRegionInit(&reg, &box, 0);
     ps = GetPictureScreen(pScreen);
-    clientCon = dev->clientConHead;
-    while (clientCon != NULL)
-    {
-        rdpTrapezoidsPre(dev, clientCon, ps, op, pSrc, pDst,
-                         maskFormat, xSrc, ySrc, ntrap, traps, &box);
-        clientCon = clientCon->next;
-    }
     /* do original call */
     rdpTrapezoidsOrg(ps, dev, op, pSrc, pDst, maskFormat, xSrc, ySrc,
                      ntrap, traps);
-    clientCon = dev->clientConHead;
-    while (clientCon != NULL)
-    {
-        rdpTrapezoidsPost(dev, clientCon, ps, op, pSrc, pDst,
-                          maskFormat, xSrc, ySrc, ntrap, traps, &box);
-        clientCon = clientCon->next;
-    }
+    rdpClientConAddAllReg(dev, &reg, pDst->pDrawable);
+    rdpRegionUninit(&reg);
 }

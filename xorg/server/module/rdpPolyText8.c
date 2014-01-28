@@ -40,16 +40,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
 /******************************************************************************/
-static void
-rdpPolyText8Pre(rdpPtr dev, rdpClientCon *clientCon,
-                int cd, RegionPtr clip_reg,
-                DrawablePtr pDrawable, GCPtr pGC,
-                int x, int y, int count, char *chars,
-                BoxPtr box)
-{
-}
-
-/******************************************************************************/
 static int
 rdpPolyText8Org(DrawablePtr pDrawable, GCPtr pGC,
                 int x, int y, int count, char *chars)
@@ -64,41 +54,14 @@ rdpPolyText8Org(DrawablePtr pDrawable, GCPtr pGC,
 }
 
 /******************************************************************************/
-static void
-rdpPolyText8Post(rdpPtr dev, rdpClientCon *clientCon,
-                 int cd, RegionPtr clip_reg,
-                 DrawablePtr pDrawable, GCPtr pGC,
-                 int x, int y, int count, char *chars,
-                 BoxPtr box)
-{
-    RegionRec reg;
-
-    if (cd == XRDP_CD_NODRAW)
-    {
-        return;
-    }
-    if (!XRDP_DRAWABLE_IS_VISIBLE(dev, pDrawable))
-    {
-        return;
-    }
-    rdpRegionInit(&reg, box, 0);
-    if (cd == XRDP_CD_CLIP)
-    {
-        rdpRegionIntersect(&reg, clip_reg, &reg);
-    }
-    rdpClientConAddDirtyScreenReg(dev, clientCon, &reg);
-    rdpRegionUninit(&reg);
-}
-
-/******************************************************************************/
 int
 rdpPolyText8(DrawablePtr pDrawable, GCPtr pGC,
              int x, int y, int count, char *chars)
 {
     int rv;
     rdpPtr dev;
-    rdpClientCon *clientCon;
     RegionRec clip_reg;
+    RegionRec reg;
     int cd;
     BoxRec box;
 
@@ -106,25 +69,21 @@ rdpPolyText8(DrawablePtr pDrawable, GCPtr pGC,
     dev = rdpGetDevFromScreen(pGC->pScreen);
     dev->counts.rdpPolyText8CallCount++;
     GetTextBoundingBox(pDrawable, pGC->font, x, y, count, &box);
+    rdpRegionInit(&reg, &box, 0);
     rdpRegionInit(&clip_reg, NullBox, 0);
     cd = rdpDrawGetClip(dev, &clip_reg, pDrawable, pGC);
     LLOGLN(10, ("rdpPolyText8: cd %d", cd));
-    clientCon = dev->clientConHead;
-    while (clientCon != NULL)
+    if (cd == XRDP_CD_CLIP)
     {
-        rdpPolyText8Pre(dev, clientCon, cd, &clip_reg, pDrawable, pGC,
-                        x, y, count, chars, &box);
-        clientCon = clientCon->next;
+        rdpRegionIntersect(&reg, &clip_reg, &reg);
     }
     /* do original call */
     rv = rdpPolyText8Org(pDrawable, pGC, x, y, count, chars);
-    clientCon = dev->clientConHead;
-    while (clientCon != NULL)
+    if (cd != XRDP_CD_NODRAW)
     {
-        rdpPolyText8Post(dev, clientCon, cd, &clip_reg, pDrawable, pGC,
-                         x, y, count, chars, &box);
-        clientCon = clientCon->next;
+        rdpClientConAddAllReg(dev, &reg, pDrawable);
     }
     rdpRegionUninit(&clip_reg);
+    rdpRegionUninit(&reg);
     return rv;
 }

@@ -40,15 +40,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
 /******************************************************************************/
-void
-rdpPutImagePre(rdpPtr dev, rdpClientCon *clientCon,
-               int cd, RegionPtr clip_reg,
-               DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
-               int w, int h, int leftPad, int format, char *pBits)
-{
-}
-
-/******************************************************************************/
 static void
 rdpPutImageOrg(DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
                int w, int h, int leftPad, int format, char *pBits)
@@ -63,67 +54,36 @@ rdpPutImageOrg(DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
 
 /******************************************************************************/
 void
-rdpPutImagePost(rdpPtr dev, rdpClientCon *clientCon,
-                int cd, RegionPtr clip_reg,
-                DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
-                int w, int h, int leftPad, int format, char *pBits)
+rdpPutImage(DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
+            int w, int h, int leftPad, int format, char *pBits)
 {
-    BoxRec box;
+    rdpPtr dev;
+    RegionRec clip_reg;
     RegionRec reg;
+    int cd;
+    BoxRec box;
 
-    if (cd == XRDP_CD_NODRAW)
-    {
-        return;
-    }
-    if (!XRDP_DRAWABLE_IS_VISIBLE(dev, pDst))
-    {
-        return;
-    }
+    LLOGLN(10, ("rdpPutImage:"));
+    dev = rdpGetDevFromScreen(pGC->pScreen);
+    dev->counts.rdpPutImageCallCount++;
     box.x1 = x + pDst->x;
     box.y1 = y + pDst->y;
     box.x2 = box.x1 + w;
     box.y2 = box.y1 + h;
     rdpRegionInit(&reg, &box, 0);
-    if (cd == XRDP_CD_CLIP)
-    {
-        rdpRegionIntersect(&reg, clip_reg, &reg);
-    }
-    rdpClientConAddDirtyScreenReg(dev, clientCon, &reg);
-    rdpRegionUninit(&reg);
-}
-
-/******************************************************************************/
-void
-rdpPutImage(DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
-            int w, int h, int leftPad, int format, char *pBits)
-{
-    rdpPtr dev;
-    rdpClientCon *clientCon;
-    RegionRec clip_reg;
-    int cd;
-
-    LLOGLN(10, ("rdpPutImage:"));
-    dev = rdpGetDevFromScreen(pGC->pScreen);
-    dev->counts.rdpPutImageCallCount++;
     rdpRegionInit(&clip_reg, NullBox, 0);
     cd = rdpDrawGetClip(dev, &clip_reg, pDst, pGC);
     LLOGLN(10, ("rdpPutImage: cd %d", cd));
-    clientCon = dev->clientConHead;
-    while (clientCon != NULL)
+    if (cd == XRDP_CD_CLIP)
     {
-        rdpPutImagePre(dev, clientCon, cd, &clip_reg, pDst, pGC, depth, x, y,
-                       w, h, leftPad, format, pBits);
-        clientCon = clientCon->next;
+        rdpRegionIntersect(&reg, &clip_reg, &reg);
     }
-
     /* do original call */
     rdpPutImageOrg(pDst, pGC, depth, x, y, w, h, leftPad, format, pBits);
-    clientCon = dev->clientConHead;
-    while (clientCon != NULL)
+    if (cd != XRDP_CD_NODRAW)
     {
-        rdpPutImagePost(dev, clientCon, cd, &clip_reg, pDst, pGC, depth, x, y,
-                        w, h, leftPad, format, pBits);
-        clientCon = clientCon->next;
+        rdpClientConAddAllReg(dev, &reg, pDst);
     }
     rdpRegionUninit(&clip_reg);
+    rdpRegionUninit(&reg);
 }

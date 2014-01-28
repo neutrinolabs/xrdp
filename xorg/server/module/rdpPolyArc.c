@@ -41,15 +41,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /******************************************************************************/
 static void
-rdpPolyArcPre(rdpPtr dev, rdpClientCon *clientCon,
-              int cd, RegionPtr clip_reg,
-              DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc *parcs,
-              RegionPtr reg)
-{
-}
-
-/******************************************************************************/
-static void
 rdpPolyArcOrg(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc *parcs)
 {
     GC_OP_VARS;
@@ -60,29 +51,10 @@ rdpPolyArcOrg(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc *parcs)
 }
 
 /******************************************************************************/
-static void
-rdpPolyArcPost(rdpPtr dev, rdpClientCon *clientCon,
-               int cd, RegionPtr clip_reg,
-               DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc *parcs,
-               RegionPtr reg)
-{
-    if (cd == XRDP_CD_NODRAW)
-    {
-        return;
-    }
-    if (!XRDP_DRAWABLE_IS_VISIBLE(dev, pDrawable))
-    {
-        return;
-    }
-    rdpClientConAddDirtyScreenReg(dev, clientCon, reg);
-}
-
-/******************************************************************************/
 void
 rdpPolyArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc *parcs)
 {
     rdpPtr dev;
-    rdpClientCon *clientCon;
     BoxRec box;
     int index;
     int cd;
@@ -119,22 +91,12 @@ rdpPolyArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc *parcs)
     {
         rdpRegionIntersect(&reg, &clip_reg, &reg);
     }
-    clientCon = dev->clientConHead;
-    while (clientCon != NULL)
-    {
-        rdpPolyArcPre(dev, clientCon, cd, &clip_reg, pDrawable, pGC,
-                      narcs, parcs, &reg);
-        clientCon = clientCon->next;
-    }
     /* do original call */
     rdpPolyArcOrg(pDrawable, pGC, narcs, parcs);
-    clientCon = dev->clientConHead;
-    while (clientCon != NULL)
+    if (cd != XRDP_CD_NODRAW)
     {
-        rdpPolyArcPost(dev, clientCon, cd, &clip_reg, pDrawable, pGC,
-                       narcs, parcs, &reg);
-        clientCon = clientCon->next;
+        rdpClientConAddAllReg(dev, &reg, pDrawable);
     }
-    rdpRegionUninit(&reg);
     rdpRegionUninit(&clip_reg);
+    rdpRegionUninit(&reg);
 }
