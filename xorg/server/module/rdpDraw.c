@@ -344,6 +344,8 @@ rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
     rdpRegionUninit(&clip);
 }
 
+#if XRDP_CLOSESCR == 1 /* before v1.13 */
+
 /*****************************************************************************/
 Bool
 rdpCloseScreen(int index, ScreenPtr pScreen)
@@ -354,14 +356,29 @@ rdpCloseScreen(int index, ScreenPtr pScreen)
     LLOGLN(0, ("rdpCloseScreen:"));
     dev = rdpGetDevFromScreen(pScreen);
     dev->pScreen->CloseScreen = dev->CloseScreen;
-#if XRDP_CLOSESCR == 1 /* before v1.13 */
     rv = dev->pScreen->CloseScreen(index, pScreen);
-#else
-    rv = dev->pScreen->CloseScreen(pScreen);
-#endif
     dev->pScreen->CloseScreen = rdpCloseScreen;
     return rv;
 }
+
+#else
+
+/*****************************************************************************/
+Bool
+rdpCloseScreen(ScreenPtr pScreen)
+{
+    rdpPtr dev;
+    Bool rv;
+
+    LLOGLN(0, ("rdpCloseScreen:"));
+    dev = rdpGetDevFromScreen(pScreen);
+    dev->pScreen->CloseScreen = dev->CloseScreen;
+    rv = dev->pScreen->CloseScreen(pScreen);
+    dev->pScreen->CloseScreen = rdpCloseScreen;
+    return rv;
+}
+
+#endif
 
 /******************************************************************************/
 WindowPtr
