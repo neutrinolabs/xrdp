@@ -41,17 +41,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /******************************************************************************/
 static void
-rdpImageGlyphBltPre(rdpPtr dev, rdpClientCon *clientCon,
-                    int cd, RegionPtr clip_reg,
-                    DrawablePtr pDrawable, GCPtr pGC,
-                    int x, int y, unsigned int nglyph,
-                    CharInfoPtr *ppci, pointer pglyphBase,
-                    BoxPtr box)
-{
-}
-
-/******************************************************************************/
-static void
 rdpImageGlyphBltOrg(DrawablePtr pDrawable, GCPtr pGC,
                     int x, int y, unsigned int nglyph,
                     CharInfoPtr *ppci, pointer pglyphBase)
@@ -64,42 +53,14 @@ rdpImageGlyphBltOrg(DrawablePtr pDrawable, GCPtr pGC,
 }
 
 /******************************************************************************/
-static void
-rdpImageGlyphBltPost(rdpPtr dev, rdpClientCon *clientCon,
-                     int cd, RegionPtr clip_reg,
-                     DrawablePtr pDrawable, GCPtr pGC,
-                     int x, int y, unsigned int nglyph,
-                     CharInfoPtr *ppci, pointer pglyphBase,
-                     BoxPtr box)
-{
-    RegionRec reg;
-
-    if (cd == XRDP_CD_NODRAW)
-    {
-        return;
-    }
-    if (!XRDP_DRAWABLE_IS_VISIBLE(dev, pDrawable))
-    {
-        return;
-    }
-    rdpRegionInit(&reg, box, 0);
-    if (cd == XRDP_CD_CLIP)
-    {
-        rdpRegionIntersect(&reg, clip_reg, &reg);
-    }
-    rdpClientConAddDirtyScreenReg(dev, clientCon, &reg);
-    rdpRegionUninit(&reg);
-}
-
-/******************************************************************************/
 void
 rdpImageGlyphBlt(DrawablePtr pDrawable, GCPtr pGC,
                  int x, int y, unsigned int nglyph,
                  CharInfoPtr *ppci, pointer pglyphBase)
 {
     rdpPtr dev;
-    rdpClientCon *clientCon;
     RegionRec clip_reg;
+    RegionRec reg;
     int cd;
     BoxRec box;
 
@@ -107,24 +68,20 @@ rdpImageGlyphBlt(DrawablePtr pDrawable, GCPtr pGC,
     dev = rdpGetDevFromScreen(pGC->pScreen);
     dev->counts.rdpImageGlyphBltCallCount++;
     GetTextBoundingBox(pDrawable, pGC->font, x, y, nglyph, &box);
+    rdpRegionInit(&reg, &box, 0);
     rdpRegionInit(&clip_reg, NullBox, 0);
     cd = rdpDrawGetClip(dev, &clip_reg, pDrawable, pGC);
     LLOGLN(10, ("rdpImageGlyphBlt: cd %d", cd));
-    clientCon = dev->clientConHead;
-    while (clientCon != NULL)
+    if (cd == XRDP_CD_CLIP)
     {
-        rdpImageGlyphBltPre(dev, clientCon, cd, &clip_reg, pDrawable, pGC,
-                            x, y, nglyph, ppci, pglyphBase, &box);
-        clientCon = clientCon->next;
+        rdpRegionIntersect(&reg, &clip_reg, &reg);
     }
     /* do original call */
     rdpImageGlyphBltOrg(pDrawable, pGC, x, y, nglyph, ppci, pglyphBase);
-    clientCon = dev->clientConHead;
-    while (clientCon != NULL)
+    if (cd != XRDP_CD_NODRAW)
     {
-        rdpImageGlyphBltPost(dev, clientCon, cd, &clip_reg, pDrawable, pGC,
-                             x, y, nglyph, ppci, pglyphBase, &box);
-        clientCon = clientCon->next;
+        rdpClientConAddAllReg(dev, &reg, pDrawable);
     }
     rdpRegionUninit(&clip_reg);
+    rdpRegionUninit(&reg);
 }

@@ -143,6 +143,9 @@ rdpClientConAddDirtyScreenBox(rdpPtr dev, rdpClientCon *clientCon,
 int
 rdpClientConAddDirtyScreen(rdpPtr dev, rdpClientCon *clientCon,
                            int x, int y, int cx, int cy);
-
+int
+rdpClientConAddAllReg(rdpPtr dev, RegionPtr reg, DrawablePtr pDrawable);
+int
+rdpClientConAddAllBox(rdpPtr dev, BoxPtr box, DrawablePtr pDrawable);
 
 #endif

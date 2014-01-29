@@ -289,7 +289,6 @@ rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
 {
     ScreenPtr pScreen;
     rdpPtr dev;
-    rdpClientCon *clientCon;
     RegionRec reg;
     RegionRec clip;
     int dx;
@@ -297,7 +296,9 @@ rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
     int num_clip_rects;
     int num_reg_rects;
     BoxPtr box;
+    BoxRec box1;
 
+    LLOGLN(10, ("rdpCopyWindow:"));
     pScreen = pWin->drawable.pScreen;
     dev = rdpGetDevFromScreen(pScreen);
     dev->counts.rdpCopyWindowCallCount++;
@@ -318,35 +319,32 @@ rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
 
     if ((num_clip_rects == 0) || (num_reg_rects == 0))
     {
-        rdpRegionUninit(&reg);
-        rdpRegionUninit(&clip);
-        return;
-    }
-
-    if ((num_clip_rects > 16) && (num_reg_rects > 16))
-    {
-        box = rdpRegionExtents(&reg);
-        clientCon = dev->clientConHead;
-        while (clientCon != NULL)
-        {
-            rdpClientConAddDirtyScreenBox(dev, clientCon, box);
-            clientCon = clientCon->next;
-        }
     }
     else
     {
-        rdpRegionTranslate(&reg, dx, dy);
-        rdpRegionIntersect(&reg, &reg, &clip);
-        clientCon = dev->clientConHead;
-        while (clientCon != NULL)
+        if ((num_clip_rects > 16) || (num_reg_rects > 16))
         {
-            rdpClientConAddDirtyScreenReg(dev, clientCon, &reg);
-            clientCon = clientCon->next;
+            LLOGLN(10, ("rdpCopyWindow: big list"));
+            box = rdpRegionExtents(&reg);
+            box1 = *box;
+            box1.x1 += dx;
+            box1.y1 += dy;
+            box1.x2 += dx;
+            box1.y2 += dy;
+            rdpClientConAddAllBox(dev, &box1, &(pWin->drawable));
+        }
+        else
+        {
+            rdpRegionTranslate(&reg, dx, dy);
+            rdpRegionIntersect(&reg, &reg, &clip);
+            rdpClientConAddAllReg(dev, &reg, &(pWin->drawable));
         }
     }
     rdpRegionUninit(&reg);
     rdpRegionUninit(&clip);
 }
+
+#if XRDP_CLOSESCR == 1 /* before v1.13 */
 
 /*****************************************************************************/
 Bool
@@ -362,6 +360,25 @@ rdpCloseScreen(int index, ScreenPtr pScreen)
     dev->pScreen->CloseScreen = rdpCloseScreen;
     return rv;
 }
+
+#else
+
+/*****************************************************************************/
+Bool
+rdpCloseScreen(ScreenPtr pScreen)
+{
+    rdpPtr dev;
+    Bool rv;
+
+    LLOGLN(0, ("rdpCloseScreen:"));
+    dev = rdpGetDevFromScreen(pScreen);
+    dev->pScreen->CloseScreen = dev->CloseScreen;
+    rv = dev->pScreen->CloseScreen(pScreen);
+    dev->pScreen->CloseScreen = rdpCloseScreen;
+    return rv;
+}
+
+#endif
 
 /******************************************************************************/
 WindowPtr

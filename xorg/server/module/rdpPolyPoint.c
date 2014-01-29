@@ -41,15 +41,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /******************************************************************************/
 static void
-rdpPolyPointPre(rdpPtr dev, rdpClientCon *clientCon,
-                int cd, RegionPtr clip_reg,
-                DrawablePtr pDrawable, GCPtr pGC, int mode,
-                int npt, DDXPointPtr in_pts, RegionPtr reg)
-{
-}
-
-/******************************************************************************/
-static void
 rdpPolyPointOrg(DrawablePtr pDrawable, GCPtr pGC, int mode,
                 int npt, DDXPointPtr in_pts)
 {
@@ -61,68 +52,42 @@ rdpPolyPointOrg(DrawablePtr pDrawable, GCPtr pGC, int mode,
 }
 
 /******************************************************************************/
-static void
-rdpPolyPointPost(rdpPtr dev, rdpClientCon *clientCon,
-                 int cd, RegionPtr clip_reg,
-                 DrawablePtr pDrawable, GCPtr pGC, int mode,
-                 int npt, DDXPointPtr in_pts, RegionPtr reg)
-{
-    if (cd == XRDP_CD_NODRAW)
-    {
-        return;
-    }
-    if (!XRDP_DRAWABLE_IS_VISIBLE(dev, pDrawable))
-    {
-        return;
-    }
-    if (cd == XRDP_CD_CLIP)
-    {
-        rdpRegionIntersect(reg, clip_reg, reg);
-    }
-    rdpClientConAddDirtyScreenReg(dev, clientCon, reg);
-}
-
-/******************************************************************************/
 void
 rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
              int npt, DDXPointPtr in_pts)
 {
     rdpPtr dev;
-    rdpClientCon *clientCon;
     RegionRec clip_reg;
     RegionRec reg;
     int cd;
+    int index;
+    BoxRec box;
 
-    LLOGLN(0, ("rdpPolyPoint:"));
+    LLOGLN(10, ("rdpPolyPoint:"));
     dev = rdpGetDevFromScreen(pGC->pScreen);
     dev->counts.rdpPolyPointCallCount++;
-
     rdpRegionInit(&reg, NullBox, 0);
-    /* TODO */
-
+    for (index = 0; index < npt; index++)
+    {
+        box.x1 = in_pts[index].x + pDrawable->x;
+        box.y1 = in_pts[index].y + pDrawable->y;
+        box.x2 = box.x1 + 1;
+        box.y2 = box.y1 + 1;
+        rdpRegionUnionRect(&reg, &box);
+    }
     rdpRegionInit(&clip_reg, NullBox, 0);
     cd = rdpDrawGetClip(dev, &clip_reg, pDrawable, pGC);
     LLOGLN(10, ("rdpPolyPoint: cd %d", cd));
-
-    clientCon = dev->clientConHead;
-    while (clientCon != NULL)
+    if (cd == XRDP_CD_CLIP)
     {
-        rdpPolyPointPre(dev, clientCon, cd, &clip_reg, pDrawable,
-                        pGC, mode, npt, in_pts, &reg);
-        clientCon = clientCon->next;
+        rdpRegionIntersect(&reg, &clip_reg, &reg);
     }
-
     /* do original call */
     rdpPolyPointOrg(pDrawable, pGC, mode, npt, in_pts);
-
-    clientCon = dev->clientConHead;
-    while (clientCon != NULL)
+    if (cd != XRDP_CD_NODRAW)
     {
-        rdpPolyPointPost(dev, clientCon, cd, &clip_reg, pDrawable,
-                         pGC, mode, npt, in_pts, &reg);
-        clientCon = clientCon->next;
+        rdpClientConAddAllReg(dev, &reg, pDrawable);
     }
-
     rdpRegionUninit(&clip_reg);
     rdpRegionUninit(&reg);
 }

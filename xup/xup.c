@@ -21,9 +21,6 @@
 #include "xup.h"
 #include "log.h"
 
-#include <sys/ipc.h>
-#include <sys/shm.h>
-
 #define LOG_LEVEL 1
 #define LLOG(_level, _args) \
     do { if (_level < LOG_LEVEL) { g_write _args ; } } while (0)
@@ -527,7 +524,7 @@ process_server_window_show(struct mod* mod, struct stream* s)
     int rv;
     int flags;
     struct rail_window_state_order rwso;
-    
+
     g_memset(&rwso, 0, sizeof(rwso));
     in_uint32_le(s, window_id);
     in_uint32_le(s, flags);
@@ -899,7 +896,7 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
                 if (mod->screen_shmem_id == 0)
                 {
                     mod->screen_shmem_id = shmem_id;
-                    mod->screen_shmem_pixels = shmat(mod->screen_shmem_id, 0, 0);
+                    mod->screen_shmem_pixels = g_shmat(mod->screen_shmem_id);
                 }
                 if (mod->screen_shmem_pixels != 0)
                 {
@@ -1062,6 +1059,11 @@ lib_mod_signal(struct mod *mod)
 int DEFAULT_CC
 lib_mod_end(struct mod *mod)
 {
+    if (mod->screen_shmem_pixels != 0)
+    {
+        g_shmdt(mod->screen_shmem_pixels);
+        mod->screen_shmem_pixels = 0;
+    }
     return 0;
 }
 

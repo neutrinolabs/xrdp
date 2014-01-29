@@ -96,7 +96,7 @@ rdpGlyphs(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
     PictureScreenPtr ps;
 
     LLOGLN(10, ("rdpGlyphs:"));
-    pScreen = pSrc->pDrawable->pScreen;
+    pScreen = pDst->pDrawable->pScreen;
     dev = rdpGetDevFromScreen(pScreen);
     ps = GetPictureScreen(pScreen);
     rdpGlyphsOrg(ps, dev, op, pSrc, pDst, maskFormat, xSrc, ySrc,

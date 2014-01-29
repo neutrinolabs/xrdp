@@ -149,7 +149,8 @@ struct _rdpCounts
     CARD32 rdpPushPixelsCallCount; /* 20 */
     CARD32 rdpCompositeCallCount;
     CARD32 rdpCopyWindowCallCount; /* 22 */
-    CARD32 callCount[64 - 22];
+    CARD32 rdpTrapezoidsCallCount;
+    CARD32 callCount[64 - 23];
 };
 
 /* move this to common header */
@@ -177,6 +178,7 @@ struct _rdpRec
     CloseScreenProcPtr CloseScreen;
     CompositeProcPtr Composite;
     GlyphsProcPtr Glyphs;
+    TrapezoidsProcPtr Trapezoids;
 
     /* keyboard and mouse */
     miPointerScreenFuncPtr pCursorFuncs;

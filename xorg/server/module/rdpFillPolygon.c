@@ -41,16 +41,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /******************************************************************************/
 void
-rdpFillPolygonPre(rdpPtr dev, rdpClientCon *clientCon,
-                  int cd, RegionPtr clip_reg,
-                  DrawablePtr pDrawable, GCPtr pGC,
-                  int shape, int mode, int count,
-                  DDXPointPtr pPts, BoxPtr box)
-{
-}
-
-/******************************************************************************/
-void
 rdpFillPolygonOrg(DrawablePtr pDrawable, GCPtr pGC,
                   int shape, int mode, int count,
                   DDXPointPtr pPts)
@@ -64,40 +54,13 @@ rdpFillPolygonOrg(DrawablePtr pDrawable, GCPtr pGC,
 
 /******************************************************************************/
 void
-rdpFillPolygonPost(rdpPtr dev, rdpClientCon *clientCon,
-                   int cd, RegionPtr clip_reg,
-                   DrawablePtr pDrawable, GCPtr pGC,
-                   int shape, int mode, int count,
-                   DDXPointPtr pPts, BoxPtr box)
-{
-    RegionRec reg;
-
-    if (cd == XRDP_CD_NODRAW)
-    {
-        return;
-    }
-    if (!XRDP_DRAWABLE_IS_VISIBLE(dev, pDrawable))
-    {
-        return;
-    }
-    rdpRegionInit(&reg, box, 0);
-    if (cd == XRDP_CD_CLIP)
-    {
-        rdpRegionIntersect(&reg, clip_reg, &reg);
-    }
-    rdpClientConAddDirtyScreenReg(dev, clientCon, &reg);
-    rdpRegionUninit(&reg);
-}
-
-/******************************************************************************/
-void
 rdpFillPolygon(DrawablePtr pDrawable, GCPtr pGC,
                int shape, int mode, int count,
                DDXPointPtr pPts)
 {
     rdpPtr dev;
-    rdpClientCon *clientCon;
     RegionRec clip_reg;
+    RegionRec reg;
     int cd;
     int maxx;
     int maxy;
@@ -135,24 +98,20 @@ rdpFillPolygon(DrawablePtr pDrawable, GCPtr pGC,
         box.x2 = pDrawable->x + maxx + 1;
         box.y2 = pDrawable->y + maxy + 1;
     }
+    rdpRegionInit(&reg, &box, 0);
     rdpRegionInit(&clip_reg, NullBox, 0);
     cd = rdpDrawGetClip(dev, &clip_reg, pDrawable, pGC);
     LLOGLN(10, ("rdpFillPolygon: cd %d", cd));
-    clientCon = dev->clientConHead;
-    while (clientCon != NULL)
+    if (cd == XRDP_CD_CLIP)
     {
-        rdpFillPolygonPre(dev, clientCon, cd, &clip_reg, pDrawable, pGC,
-                          shape, mode, count, pPts, &box);
-        clientCon = clientCon->next;
+        rdpRegionIntersect(&reg, &clip_reg, &reg);
     }
     /* do original call */
     rdpFillPolygonOrg(pDrawable, pGC, shape, mode, count, pPts);
-    clientCon = dev->clientConHead;
-    while (clientCon != NULL)
+    if (cd != XRDP_CD_NODRAW)
     {
-        rdpFillPolygonPost(dev, clientCon, cd, &clip_reg, pDrawable, pGC,
-                           shape, mode, count, pPts, &box);
-        clientCon = clientCon->next;
+        rdpClientConAddAllReg(dev, &reg, pDrawable);
     }
     rdpRegionUninit(&clip_reg);
+    rdpRegionUninit(&reg);
 }

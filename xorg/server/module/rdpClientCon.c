@@ -2076,3 +2076,45 @@ rdpClientConSendArea(rdpPtr dev, rdpClientCon *clientCon,
         }
     }
 }
+
+/******************************************************************************/
+int
+rdpClientConAddAllReg(rdpPtr dev, RegionPtr reg, DrawablePtr pDrawable)
+{
+    rdpClientCon *clientCon;
+    Bool drw_is_vis;
+
+    drw_is_vis = XRDP_DRAWABLE_IS_VISIBLE(dev, pDrawable);
+    if (!drw_is_vis)
+    {
+        return 0;
+    }
+    clientCon = dev->clientConHead;
+    while (clientCon != NULL)
+    {
+        rdpClientConAddDirtyScreenReg(dev, clientCon, reg);
+        clientCon = clientCon->next;
+    }
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpClientConAddAllBox(rdpPtr dev, BoxPtr box, DrawablePtr pDrawable)
+{
+    rdpClientCon *clientCon;
+    Bool drw_is_vis;
+
+    drw_is_vis = XRDP_DRAWABLE_IS_VISIBLE(dev, pDrawable);
+    if (!drw_is_vis)
+    {
+        return 0;
+    }
+    clientCon = dev->clientConHead;
+    while (clientCon != NULL)
+    {
+        rdpClientConAddDirtyScreenBox(dev, clientCon, box);
+        clientCon = clientCon->next;
+    }
+    return 0;
+}
