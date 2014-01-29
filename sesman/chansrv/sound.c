@@ -54,6 +54,7 @@ static struct stream *g_stream_inp = NULL;
 char g_buffer[BBUF_SIZE];
 int g_buf_index = 0;
 int g_sent_time[256];
+int g_sent_flag[256];
 
 #if defined(XRDP_SIMPLESOUND)
 static void *DEFAULT_CC
@@ -367,6 +368,16 @@ sound_send_wave_data_chunk(char *data, int data_bytes)
         return 0;
     }
 
+    if (g_sent_flag[(g_cBlockNo + 1) & 0xff] & 1)
+    {
+        LOG(10, ("sound_send_wave_data_chunk: no room"));
+        return 0;
+    }
+    else
+    {
+        LOG(10, ("sound_send_wave_data_chunk: got room"));
+    }
+
     /* part one of 2 PDU wave info */
 
     LOG(10, ("sound_send_wave_data_chunk: sending %d bytes", data_bytes));
@@ -382,6 +393,7 @@ sound_send_wave_data_chunk(char *data, int data_bytes)
     g_cBlockNo++;
     out_uint8(s, g_cBlockNo);
     g_sent_time[g_cBlockNo & 0xff] = time;
+    g_sent_flag[g_cBlockNo & 0xff] = 1;
 
     LOG(10, ("sound_send_wave_data_chunk: sending time %d, g_cBlockNo %d",
              time & 0xffff, g_cBlockNo & 0xff));
@@ -498,7 +510,8 @@ sound_process_wave_confirm(struct stream *s, int size)
     time = g_time2();
     in_uint16_le(s, wTimeStamp);
     in_uint8(s, cConfirmedBlockNo);
-    time_diff = time - g_sent_time[cConfirmedBlockNo];
+    time_diff = time - g_sent_time[cConfirmedBlockNo & 0xff];
+    g_sent_flag[cConfirmedBlockNo & 0xff] &= ~1;
 
     LOG(10, ("sound_process_wave_confirm: wTimeStamp %d, "
         "cConfirmedBlockNo %d time diff %d",
@@ -637,6 +650,7 @@ sound_init(void)
 
     LOG(0, ("sound_init:"));
 
+    g_memset(g_sent_flag, 0, sizeof(g_sent_flag));
 
 #ifdef XRDP_LOAD_PULSE_MODULES
     if (load_pulse_modules())
