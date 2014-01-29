@@ -58,6 +58,10 @@ xrdp_wm_create(struct xrdp_process *owner,
     xrdp_wm_set_login_mode(self, 0);
     self->target_surface = self->screen;
     self->current_surface_index = 0xffff; /* screen */
+
+    /* to store configuration from xrdp.ini */
+    self->xrdp_config = g_malloc(sizeof(struct xrdp_config), 1);
+
     return self;
 }
 
@@ -79,6 +83,10 @@ xrdp_wm_delete(struct xrdp_wm *self)
     /* free default font */
     xrdp_font_delete(self->default_font);
     g_delete_wait_obj(self->login_mode_event);
+
+    if (self->xrdp_config)
+        g_free(self->xrdp_config);
+
     /* free self */
     g_free(self);
 }
@@ -535,12 +543,18 @@ xrdp_wm_init(struct xrdp_wm *self)
     char cfg_file[256];
     char autorun_name[256];
 
+    load_xrdp_config(self->xrdp_config);
+
     xrdp_wm_load_static_colors_plus(self, autorun_name);
     xrdp_wm_load_static_pointers(self);
-    self->screen->bg_color = self->background;
+    self->screen->bg_color = self->xrdp_config->cfg_globals.ls_top_window_bg_color;
 
     if (self->session->client_info->rdp_autologin || (autorun_name[0] != 0))
     {
+        /*
+         * NOTE: this should eventually be accessed from self->xrdp_config
+         */
+
         g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
         fd = g_file_open(cfg_file); /* xrdp.ini */
 
