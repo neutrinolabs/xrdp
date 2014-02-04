@@ -435,6 +435,287 @@ lib_mod_event(struct mod *mod, int msg, tbus param1, tbus param2,
 /******************************************************************************/
 /* return error */
 static int APP_CC
+process_server_fill_rect(struct mod *mod, struct stream *s)
+{
+    int rv;
+    int x;
+    int y;
+    int cx;
+    int cy;
+
+    in_sint16_le(s, x);
+    in_sint16_le(s, y);
+    in_uint16_le(s, cx);
+    in_uint16_le(s, cy);
+    rv = mod->server_fill_rect(mod, x, y, cx, cy);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
+process_server_screen_blt(struct mod *mod, struct stream *s)
+{
+    int rv;
+    int x;
+    int y;
+    int cx;
+    int cy;
+    int srcx;
+    int srcy;
+
+    in_sint16_le(s, x);
+    in_sint16_le(s, y);
+    in_uint16_le(s, cx);
+    in_uint16_le(s, cy);
+    in_sint16_le(s, srcx);
+    in_sint16_le(s, srcy);
+    rv = mod->server_screen_blt(mod, x, y, cx, cy, srcx, srcy);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
+process_server_paint_rect(struct mod *mod, struct stream *s)
+{
+    int rv;
+    int x;
+    int y;
+    int cx;
+    int cy;
+    int len_bmpdata;
+    char *bmpdata;
+    int width;
+    int height;
+    int srcx;
+    int srcy;
+
+    in_sint16_le(s, x);
+    in_sint16_le(s, y);
+    in_uint16_le(s, cx);
+    in_uint16_le(s, cy);
+    in_uint32_le(s, len_bmpdata);
+    in_uint8p(s, bmpdata, len_bmpdata);
+    in_uint16_le(s, width);
+    in_uint16_le(s, height);
+    in_sint16_le(s, srcx);
+    in_sint16_le(s, srcy);
+    rv = mod->server_paint_rect(mod, x, y, cx, cy,
+                                bmpdata, width, height,
+                                srcx, srcy);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
+process_server_set_clip(struct mod *mod, struct stream *s)
+{
+    int rv;
+    int x;
+    int y;
+    int cx;
+    int cy;
+
+    in_sint16_le(s, x);
+    in_sint16_le(s, y);
+    in_uint16_le(s, cx);
+    in_uint16_le(s, cy);
+    rv = mod->server_set_clip(mod, x, y, cx, cy);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
+process_server_reset_clip(struct mod *mod, struct stream *s)
+{
+    int rv;
+
+    rv = mod->server_reset_clip(mod);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
+process_server_set_fgcolor(struct mod *mod, struct stream *s)
+{
+    int rv;
+    int fgcolor;
+
+    in_uint32_le(s, fgcolor);
+    rv = mod->server_set_fgcolor(mod, fgcolor);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
+process_server_set_bgcolor(struct mod *mod, struct stream *s)
+{
+    int rv;
+    int bgcolor;
+
+    in_uint32_le(s, bgcolor);
+    rv = mod->server_set_bgcolor(mod, bgcolor);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
+process_server_set_opcode(struct mod *mod, struct stream *s)
+{
+    int rv;
+    int opcode;
+
+    in_uint16_le(s, opcode);
+    rv = mod->server_set_opcode(mod, opcode);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
+process_server_set_pen(struct mod *mod, struct stream *s)
+{
+    int rv;
+    int style;
+    int width;
+
+    in_uint16_le(s, style);
+    in_uint16_le(s, width);
+    rv = mod->server_set_pen(mod, style, width);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
+process_server_draw_line(struct mod *mod, struct stream *s)
+{
+    int rv;
+    int x1;
+    int y1;
+    int x2;
+    int y2;
+
+    in_sint16_le(s, x1);
+    in_sint16_le(s, y1);
+    in_sint16_le(s, x2);
+    in_sint16_le(s, y2);
+    rv = mod->server_draw_line(mod, x1, y1, x2, y2);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
+process_server_set_cursor(struct mod *mod, struct stream *s)
+{
+    int rv;
+    int x;
+    int y;
+    char cur_data[32 * (32 * 3)];
+    char cur_mask[32 * (32 / 8)];
+
+    in_sint16_le(s, x);
+    in_sint16_le(s, y);
+    in_uint8a(s, cur_data, 32 * (32 * 3));
+    in_uint8a(s, cur_mask, 32 * (32 / 8));
+    rv = mod->server_set_cursor(mod, x, y, cur_data, cur_mask);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
+process_server_create_os_surface(struct mod *mod, struct stream *s)
+{
+    int rv;
+    int rdpid;
+    int width;
+    int height;
+
+    in_uint32_le(s, rdpid);
+    in_uint16_le(s, width);
+    in_uint16_le(s, height);
+    rv = mod->server_create_os_surface(mod, rdpid, width, height);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
+process_server_switch_os_surface(struct mod *mod, struct stream *s)
+{
+    int rv;
+    int rdpid;
+
+    in_uint32_le(s, rdpid);
+    rv = mod->server_switch_os_surface(mod, rdpid);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
+process_server_delete_os_surface(struct mod *mod, struct stream *s)
+{
+    int rv;
+    int rdpid;
+
+    in_uint32_le(s, rdpid);
+    rv = mod->server_delete_os_surface(mod, rdpid);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
+process_server_paint_rect_os(struct mod *mod, struct stream *s)
+{
+    int rv;
+    int x;
+    int y;
+    int cx;
+    int cy;
+    int rdpid;
+    int srcx;
+    int srcy;
+
+    in_sint16_le(s, x);
+    in_sint16_le(s, y);
+    in_uint16_le(s, cx);
+    in_uint16_le(s, cy);
+    in_uint32_le(s, rdpid);
+    in_sint16_le(s, srcx);
+    in_sint16_le(s, srcy);
+    rv = mod->server_paint_rect_os(mod, x, y, cx, cy,
+                                   rdpid, srcx, srcy);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
+process_server_set_hints(struct mod *mod, struct stream *s)
+{
+    int rv;
+    int hints;
+    int mask;
+
+    in_uint32_le(s, hints);
+    in_uint32_le(s, mask);
+    rv = mod->server_set_hints(mod, hints, mask);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
 process_server_window_new_update(struct mod *mod, struct stream *s)
 {
     int flags;
@@ -518,6 +799,20 @@ process_server_window_new_update(struct mod *mod, struct stream *s)
 /******************************************************************************/
 /* return error */
 static int APP_CC
+process_server_window_delete(struct mod *mod, struct stream *s)
+{
+    int window_id;
+    int rv;
+
+    in_uint32_le(s, window_id);
+    mod->server_window_delete(mod, window_id);
+    rv = 0;
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
 process_server_window_show(struct mod* mod, struct stream* s)
 {
     int window_id;
@@ -537,14 +832,209 @@ process_server_window_show(struct mod* mod, struct stream* s)
 /******************************************************************************/
 /* return error */
 static int APP_CC
-process_server_window_delete(struct mod *mod, struct stream *s)
+process_server_add_char(struct mod *mod, struct stream *s)
 {
-    int window_id;
     int rv;
+    int font;
+    int charactor;
+    int x;
+    int y;
+    int cx;
+    int cy;
+    int len_bmpdata;
+    char *bmpdata;
 
-    in_uint32_le(s, window_id);
-    mod->server_window_delete(mod, window_id);
-    rv = 0;
+    in_uint16_le(s, font);
+    in_uint16_le(s, charactor);
+    in_sint16_le(s, x);
+    in_sint16_le(s, y);
+    in_uint16_le(s, cx);
+    in_uint16_le(s, cy);
+    in_uint16_le(s, len_bmpdata);
+    in_uint8p(s, bmpdata, len_bmpdata);
+    rv = mod->server_add_char(mod, font, charactor, x, y, cx, cy, bmpdata);
+    return rv;
+}
+
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
+process_server_add_char_alpha(struct mod *mod, struct stream *s)
+{
+    int rv;
+    int font;
+    int charactor;
+    int x;
+    int y;
+    int cx;
+    int cy;
+    int len_bmpdata;
+    char *bmpdata;
+
+    in_uint16_le(s, font);
+    in_uint16_le(s, charactor);
+    in_sint16_le(s, x);
+    in_sint16_le(s, y);
+    in_uint16_le(s, cx);
+    in_uint16_le(s, cy);
+    in_uint16_le(s, len_bmpdata);
+    in_uint8p(s, bmpdata, len_bmpdata);
+    rv = mod->server_add_char_alpha(mod, font, charactor, x, y, cx, cy,
+                                    bmpdata);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
+process_server_draw_text(struct mod *mod, struct stream *s)
+{
+    int rv;
+    int font;
+    int flags;
+    int mixmode;
+    int clip_left;
+    int clip_top;
+    int clip_right;
+    int clip_bottom;
+    int box_left;
+    int box_top;
+    int box_right;
+    int box_bottom;
+    int x;
+    int y;
+    int len_bmpdata;
+    char *bmpdata;
+
+    in_uint16_le(s, font);
+    in_uint16_le(s, flags);
+    in_uint16_le(s, mixmode);
+    in_sint16_le(s, clip_left);
+    in_sint16_le(s, clip_top);
+    in_sint16_le(s, clip_right);
+    in_sint16_le(s, clip_bottom);
+    in_sint16_le(s, box_left);
+    in_sint16_le(s, box_top);
+    in_sint16_le(s, box_right);
+    in_sint16_le(s, box_bottom);
+    in_sint16_le(s, x);
+    in_sint16_le(s, y);
+    in_uint16_le(s, len_bmpdata);
+    in_uint8p(s, bmpdata, len_bmpdata);
+    rv = mod->server_draw_text(mod, font, flags, mixmode, clip_left, clip_top,
+                               clip_right, clip_bottom, box_left, box_top,
+                               box_right, box_bottom, x, y, bmpdata, len_bmpdata);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
+process_server_create_os_surface_bpp(struct mod *mod, struct stream *s)
+{
+    int rv;
+    int rdpid;
+    int width;
+    int height;
+    int bpp;
+
+    in_uint32_le(s, rdpid);
+    in_uint16_le(s, width);
+    in_uint16_le(s, height);
+    in_uint8(s, bpp);
+    rv = mod->server_create_os_surface_bpp(mod, rdpid, width, height, bpp);
+    return rv;
+}
+
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
+process_server_paint_rect_bpp(struct mod *mod, struct stream *s)
+{
+    int rv;
+    int x;
+    int y;
+    int cx;
+    int cy;
+    int len_bmpdata;
+    char *bmpdata;
+    int width;
+    int height;
+    int srcx;
+    int srcy;
+    int bpp;
+
+    in_sint16_le(s, x);
+    in_sint16_le(s, y);
+    in_uint16_le(s, cx);
+    in_uint16_le(s, cy);
+    in_uint32_le(s, len_bmpdata);
+    in_uint8p(s, bmpdata, len_bmpdata);
+    in_uint16_le(s, width);
+    in_uint16_le(s, height);
+    in_sint16_le(s, srcx);
+    in_sint16_le(s, srcy);
+    in_uint8(s, bpp);
+    rv = mod->server_paint_rect_bpp(mod, x, y, cx, cy,
+                                    bmpdata, width, height,
+                                    srcx, srcy, bpp);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
+process_server_composite(struct mod *mod, struct stream *s)
+{
+    int rv;
+    int srcidx;
+    int srcformat;
+    int srcwidth;
+    int srcrepeat;
+    int transform[10];
+    int mskflags;
+    int mskidx;
+    int mskformat;
+    int mskwidth;
+    int mskrepeat;
+    int op;
+    int srcx;
+    int srcy;
+    int mskx;
+    int msky;
+    int dstx;
+    int dsty;
+    int width;
+    int height;
+    int dstformat;
+
+    in_uint16_le(s, srcidx);
+    in_uint32_le(s, srcformat);
+    in_uint16_le(s, srcwidth);
+    in_uint8(s, srcrepeat);
+    g_memcpy(transform, s->p, 40);
+    in_uint8s(s, 40);
+    in_uint8(s, mskflags);
+    in_uint16_le(s, mskidx);
+    in_uint32_le(s, mskformat);
+    in_uint16_le(s, mskwidth);
+    in_uint8(s, mskrepeat);
+    in_uint8(s, op);
+    in_sint16_le(s, srcx);
+    in_sint16_le(s, srcy);
+    in_sint16_le(s, mskx);
+    in_sint16_le(s, msky);
+    in_sint16_le(s, dstx);
+    in_sint16_le(s, dsty);
+    in_uint16_le(s, width);
+    in_uint16_le(s, height);
+    in_uint32_le(s, dstformat);
+    rv = mod->server_composite(mod, srcidx, srcformat, srcwidth, srcrepeat,
+                               transform, mskflags, mskidx, mskformat,
+                               mskwidth, mskrepeat, op, srcx, srcy, mskx, msky,
+                               dstx, dsty, width, height, dstformat);
     return rv;
 }
 
@@ -602,67 +1092,70 @@ send_paint_rect_ack(struct mod *mod, int flags, int x, int y, int cx, int cy,
 /******************************************************************************/
 /* return error */
 static int APP_CC
-lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
+process_server_paint_rect_shmem(struct mod *mod, struct stream *s)
 {
     int rv;
     int x;
     int y;
     int cx;
     int cy;
-    int srcx;
-    int srcy;
-    int mskx;
-    int msky;
-    int dstx;
-    int dsty;
-    int len_bmpdata;
-    int style;
-    int x1;
-    int y1;
-    int x2;
-    int y2;
-    int bpp;
-    int rdpid;
-    int hints;
-    int mask;
-    int width;
-    int height;
-    int fgcolor;
-    int bgcolor;
-    int opcode;
     int flags;
+    int frame_id;
     int shmem_id;
     int shmem_offset;
-    int frame_id;
-    int charactor;
-    int font;
-    int mixmode;
-    int clip_left;
-    int clip_top;
-    int clip_right;
-    int clip_bottom;
-    int box_left;
-    int box_top;
-    int box_right;
-    int box_bottom;
-    int srcrepeat;
-    int srcidx;
-    int srcformat;
-    int srcwidth;
-    int mskflags;
-    int mskidx;
-    int mskformat;
-    int mskwidth;
-    int mskrepeat;
-    int dstformat;
-    int op;
-    int transform[10];
+    int width;
+    int height;
+    int srcx;
+    int srcy;
     char *bmpdata;
-    char cur_data[32 * (32 * 3)];
-    char cur_mask[32 * (32 / 8)];
+
+    in_sint16_le(s, x);
+    in_sint16_le(s, y);
+    in_uint16_le(s, cx);
+    in_uint16_le(s, cy);
+    in_uint32_le(s, flags);
+    in_uint32_le(s, frame_id);
+    in_uint32_le(s, shmem_id);
+    in_uint32_le(s, shmem_offset);
+    in_uint16_le(s, width);
+    in_uint16_le(s, height);
+    in_sint16_le(s, srcx);
+    in_sint16_le(s, srcy);
+    bmpdata = 0;
+    if (flags == 0) /* screen */
+    {
+        if (mod->screen_shmem_id == 0)
+        {
+            mod->screen_shmem_id = shmem_id;
+            mod->screen_shmem_pixels = g_shmat(mod->screen_shmem_id);
+        }
+        if (mod->screen_shmem_pixels != 0)
+        {
+            bmpdata = mod->screen_shmem_pixels + shmem_offset;
+        }
+    }
+    if (bmpdata != 0)
+    {
+        rv = mod->server_paint_rect(mod, x, y, cx, cy,
+                                    bmpdata, width, height,
+                                    srcx, srcy);
+    }
+    else
+    {
+        rv = 1;
+    }
+    send_paint_rect_ack(mod, flags, x, y, cx, cy, frame_id);
+    return rv;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
+lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
+{
+    int rv;
 
     rv = 0;
-
     switch (type)
     {
         case 1: /* server_begin_update */
@@ -671,107 +1164,54 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
         case 2: /* server_end_update */
             rv = mod->server_end_update(mod);
             break;
+
         case 3: /* server_fill_rect */
-            in_sint16_le(s, x);
-            in_sint16_le(s, y);
-            in_uint16_le(s, cx);
-            in_uint16_le(s, cy);
-            rv = mod->server_fill_rect(mod, x, y, cx, cy);
+            rv = process_server_fill_rect(mod, s);
             break;
         case 4: /* server_screen_blt */
-            in_sint16_le(s, x);
-            in_sint16_le(s, y);
-            in_uint16_le(s, cx);
-            in_uint16_le(s, cy);
-            in_sint16_le(s, srcx);
-            in_sint16_le(s, srcy);
-            rv = mod->server_screen_blt(mod, x, y, cx, cy, srcx, srcy);
+            rv = process_server_screen_blt(mod, s);
             break;
         case 5: /* server_paint_rect */
-            in_sint16_le(s, x);
-            in_sint16_le(s, y);
-            in_uint16_le(s, cx);
-            in_uint16_le(s, cy);
-            in_uint32_le(s, len_bmpdata);
-            in_uint8p(s, bmpdata, len_bmpdata);
-            in_uint16_le(s, width);
-            in_uint16_le(s, height);
-            in_sint16_le(s, srcx);
-            in_sint16_le(s, srcy);
-            rv = mod->server_paint_rect(mod, x, y, cx, cy,
-                                        bmpdata, width, height,
-                                        srcx, srcy);
+            rv = process_server_paint_rect(mod, s);
             break;
         case 10: /* server_set_clip */
-            in_sint16_le(s, x);
-            in_sint16_le(s, y);
-            in_uint16_le(s, cx);
-            in_uint16_le(s, cy);
-            rv = mod->server_set_clip(mod, x, y, cx, cy);
+            rv = process_server_set_clip(mod, s);
             break;
         case 11: /* server_reset_clip */
-            rv = mod->server_reset_clip(mod);
+            rv = process_server_reset_clip(mod, s);
             break;
         case 12: /* server_set_fgcolor */
-            in_uint32_le(s, fgcolor);
-            rv = mod->server_set_fgcolor(mod, fgcolor);
+            rv = process_server_set_fgcolor(mod, s);
             break;
         case 13: /* server_set_bgcolor */
-            in_uint32_le(s, bgcolor);
-            rv = mod->server_set_bgcolor(mod, bgcolor);
+            rv = process_server_set_bgcolor(mod, s);
             break;
-        case 14:
-            in_uint16_le(s, opcode);
-            rv = mod->server_set_opcode(mod, opcode);
+        case 14: /* server_set_opcode */
+            rv =  process_server_set_opcode(mod, s);
             break;
-        case 17:
-            in_uint16_le(s, style);
-            in_uint16_le(s, width);
-            rv = mod->server_set_pen(mod, style, width);
+        case 17: /* server_set_pen */
+            rv = process_server_set_pen(mod, s);
             break;
-        case 18:
-            in_sint16_le(s, x1);
-            in_sint16_le(s, y1);
-            in_sint16_le(s, x2);
-            in_sint16_le(s, y2);
-            rv = mod->server_draw_line(mod, x1, y1, x2, y2);
+        case 18: /* server_draw_line */
+            rv = process_server_draw_line(mod, s);
             break;
-        case 19:
-            in_sint16_le(s, x);
-            in_sint16_le(s, y);
-            in_uint8a(s, cur_data, 32 * (32 * 3));
-            in_uint8a(s, cur_mask, 32 * (32 / 8));
-            rv = mod->server_set_cursor(mod, x, y, cur_data, cur_mask);
+        case 19: /* server_set_cursor */
+            rv = process_server_set_cursor(mod, s);
             break;
-        case 20:
-            in_uint32_le(s, rdpid);
-            in_uint16_le(s, width);
-            in_uint16_le(s, height);
-            rv = mod->server_create_os_surface(mod, rdpid, width, height);
+        case 20: /* server_create_os_surface */
+            rv = process_server_create_os_surface(mod, s);
             break;
-        case 21:
-            in_uint32_le(s, rdpid);
-            rv = mod->server_switch_os_surface(mod, rdpid);
+        case 21: /* server_switch_os_surface */
+            rv = process_server_switch_os_surface(mod, s);
             break;
-        case 22:
-            in_uint32_le(s, rdpid);
-            rv = mod->server_delete_os_surface(mod, rdpid);
+        case 22: /* server_delete_os_surface */
+            rv = process_server_delete_os_surface(mod, s);
             break;
         case 23: /* server_paint_rect_os */
-            in_sint16_le(s, x);
-            in_sint16_le(s, y);
-            in_uint16_le(s, cx);
-            in_uint16_le(s, cy);
-            in_uint32_le(s, rdpid);
-            in_sint16_le(s, srcx);
-            in_sint16_le(s, srcy);
-            rv = mod->server_paint_rect_os(mod, x, y, cx, cy,
-                                           rdpid, srcx, srcy);
+            rv = process_server_paint_rect_os(mod, s);
             break;
         case 24: /* server_set_hints */
-            in_uint32_le(s, hints);
-            in_uint32_le(s, mask);
-            rv = mod->server_set_hints(mod, hints, mask);
+            rv = process_server_set_hints(mod, s);
             break;
         case 25: /* server_window_new_update */
             rv = process_server_window_new_update(mod, s);
@@ -783,145 +1223,34 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
             rv = process_server_window_show(mod, s);
             break;
         case 28: /* server_add_char */
-            in_uint16_le(s, font);
-            in_uint16_le(s, charactor);
-            in_sint16_le(s, x);
-            in_sint16_le(s, y);
-            in_uint16_le(s, cx);
-            in_uint16_le(s, cy);
-            in_uint16_le(s, len_bmpdata);
-            in_uint8p(s, bmpdata, len_bmpdata);
-            rv = mod->server_add_char(mod, font, charactor, x, y, cx, cy, bmpdata);
+            rv = process_server_add_char(mod, s);
             break;
         case 29: /* server_add_char_alpha */
-            in_uint16_le(s, font);
-            in_uint16_le(s, charactor);
-            in_sint16_le(s, x);
-            in_sint16_le(s, y);
-            in_uint16_le(s, cx);
-            in_uint16_le(s, cy);
-            in_uint16_le(s, len_bmpdata);
-            in_uint8p(s, bmpdata, len_bmpdata);
-            rv = mod->server_add_char_alpha(mod, font, charactor, x, y, cx, cy, bmpdata);
+            rv = process_server_add_char_alpha(mod, s);
             break;
         case 30: /* server_draw_text */
-            in_uint16_le(s, font);
-            in_uint16_le(s, flags);
-            in_uint16_le(s, mixmode);
-            in_sint16_le(s, clip_left);
-            in_sint16_le(s, clip_top);
-            in_sint16_le(s, clip_right);
-            in_sint16_le(s, clip_bottom);
-            in_sint16_le(s, box_left);
-            in_sint16_le(s, box_top);
-            in_sint16_le(s, box_right);
-            in_sint16_le(s, box_bottom);
-            in_sint16_le(s, x);
-            in_sint16_le(s, y);
-            in_uint16_le(s, len_bmpdata);
-            in_uint8p(s, bmpdata, len_bmpdata);
-            rv = mod->server_draw_text(mod, font, flags, mixmode, clip_left, clip_top,
-                                       clip_right, clip_bottom, box_left, box_top,
-                                       box_right, box_bottom, x, y, bmpdata, len_bmpdata);
+            rv = process_server_draw_text(mod, s);
             break;
         case 31: /* server_create_os_surface_bpp */
-            in_uint32_le(s, rdpid);
-            in_uint16_le(s, width);
-            in_uint16_le(s, height);
-            in_uint8(s, bpp);
-            rv = mod->server_create_os_surface_bpp(mod, rdpid, width, height, bpp);
+            rv = process_server_create_os_surface_bpp(mod, s);
             break;
         case 32: /* server_paint_rect_bpp */
-            in_sint16_le(s, x);
-            in_sint16_le(s, y);
-            in_uint16_le(s, cx);
-            in_uint16_le(s, cy);
-            in_uint32_le(s, len_bmpdata);
-            in_uint8p(s, bmpdata, len_bmpdata);
-            in_uint16_le(s, width);
-            in_uint16_le(s, height);
-            in_sint16_le(s, srcx);
-            in_sint16_le(s, srcy);
-            in_uint8(s, bpp);
-            rv = mod->server_paint_rect_bpp(mod, x, y, cx, cy,
-                                            bmpdata, width, height,
-                                            srcx, srcy, bpp);
+            rv = process_server_paint_rect_bpp(mod, s);
             break;
-        case 33:
-            in_uint16_le(s, srcidx);
-            in_uint32_le(s, srcformat);
-            in_uint16_le(s, srcwidth);
-            in_uint8(s, srcrepeat);
-            g_memcpy(transform, s->p, 40);
-            in_uint8s(s, 40);
-            in_uint8(s, mskflags);
-            in_uint16_le(s, mskidx);
-            in_uint32_le(s, mskformat);
-            in_uint16_le(s, mskwidth);
-            in_uint8(s, mskrepeat);
-            in_uint8(s, op);
-            in_sint16_le(s, srcx);
-            in_sint16_le(s, srcy);
-            in_sint16_le(s, mskx);
-            in_sint16_le(s, msky);
-            in_sint16_le(s, dstx);
-            in_sint16_le(s, dsty);
-            in_uint16_le(s, width);
-            in_uint16_le(s, height);
-            in_uint32_le(s, dstformat);
-            rv = mod->server_composite(mod, srcidx, srcformat, srcwidth, srcrepeat,
-                                       transform, mskflags, mskidx, mskformat,
-                                       mskwidth, mskrepeat, op, srcx, srcy, mskx, msky,
-                                       dstx, dsty, width, height, dstformat);
+        case 33: /* server_composite */
+            rv = process_server_composite(mod, s);
             break;
         case 51: /* server_set_pointer_ex */
             rv = process_server_set_pointer_ex(mod, s);
             break;
         case 60: /* server_paint_rect_shmem */
-            in_sint16_le(s, x);
-            in_sint16_le(s, y);
-            in_uint16_le(s, cx);
-            in_uint16_le(s, cy);
-            in_uint32_le(s, flags);
-            in_uint32_le(s, frame_id);
-            in_uint32_le(s, shmem_id);
-            in_uint32_le(s, shmem_offset);
-            in_uint16_le(s, width);
-            in_uint16_le(s, height);
-            in_sint16_le(s, srcx);
-            in_sint16_le(s, srcy);
-            bmpdata = 0;
-            if (flags == 0) /* screen */
-            {
-                if (mod->screen_shmem_id == 0)
-                {
-                    mod->screen_shmem_id = shmem_id;
-                    mod->screen_shmem_pixels = g_shmat(mod->screen_shmem_id);
-                }
-                if (mod->screen_shmem_pixels != 0)
-                {
-                    bmpdata = mod->screen_shmem_pixels + shmem_offset;
-                }
-            }
-            if (bmpdata != 0)
-            {
-                rv = mod->server_paint_rect(mod, x, y, cx, cy,
-                                            bmpdata, width, height,
-                                            srcx, srcy);
-            }
-            else
-            {
-                rv = 1;
-            }
-            send_paint_rect_ack(mod, flags, x, y, cx, cy, frame_id);
+            rv = process_server_paint_rect_shmem(mod, s);
             break;
-
         default:
             g_writeln("lib_mod_process_orders: unknown order type %d", type);
             rv = 0;
             break;
     }
-
     return rv;
 }
 
