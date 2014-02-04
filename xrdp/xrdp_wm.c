@@ -575,7 +575,7 @@ xrdp_wm_init(struct xrdp_wm *self)
             {
                 if (autorun_name[0] == 0)
                 {
-                    /* if no doamin is passed, and no autorun in xrdp.ini,
+                    /* if no domain is passed, and no autorun in xrdp.ini,
                        use the first item in the xrdp.ini
                        file thats not named
                        'globals' or 'Logging' or 'channels' */
@@ -1042,7 +1042,7 @@ xrdp_wm_mouse_move(struct xrdp_wm *self, int x, int y)
 
     b = xrdp_wm_at_pos(self->screen, x, y, 0);
 
-    if (b == 0) /* if b is null, the movment must be over the screen */
+    if (b == 0) /* if b is null, the movement must be over the screen */
     {
         if (self->screen->pointer != self->current_pointer)
         {
@@ -1050,7 +1050,7 @@ xrdp_wm_mouse_move(struct xrdp_wm *self, int x, int y)
             self->current_pointer = self->screen->pointer;
         }
 
-        if (self->mm->mod != 0) /* if screen is mod controled */
+        if (self->mm->mod != 0) /* if screen is mod controlled */
         {
             if (self->mm->mod->mod_event != 0)
             {
@@ -1189,7 +1189,7 @@ xrdp_wm_mouse_click(struct xrdp_wm *self, int x, int y, int but, int down)
 
     if (control == 0)
     {
-        if (self->mm->mod != 0) /* if screen is mod controled */
+        if (self->mm->mod != 0) /* if screen is mod controlled */
         {
             if (self->mm->mod->mod_event != 0)
             {
@@ -1738,7 +1738,7 @@ xrdp_wm_login_mode_changed(struct xrdp_wm *self)
 }
 
 /*****************************************************************************/
-/* this is the log windows nofity function */
+/* this is the log windows notify function */
 static int DEFAULT_CC
 xrdp_wm_log_wnd_notify(struct xrdp_bitmap *wnd,
                        struct xrdp_bitmap *sender,
