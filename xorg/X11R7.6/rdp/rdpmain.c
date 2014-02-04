@@ -32,6 +32,27 @@ Sets up the  functions
 #define DEBUG_OUT(arg) ErrorF arg
 #endif
 
+#ifndef XRDP_DISABLE_LINUX_ABSTRACT
+#ifdef __linux__
+#define XRDP_DISABLE_LINUX_ABSTRACT 1
+#else
+#define XRDP_DISABLE_LINUX_ABSTRACT 0
+#endif
+#endif
+
+#if XRDP_DISABLE_LINUX_ABSTRACT
+/* because including <X11/Xtrans/Xtransint.h> in problematic
+ * we dup a small struct
+ * we need to set flags to zero to turn off abstract sockets */
+struct _MyXtransport
+{
+    char *TransName;
+    int flags;
+};
+/* in xtrans-1.2.6/Xtranssock.c */
+extern struct _MyXtransport _XSERVTransSocketLocalFuncs;
+#endif
+
 rdpScreenInfoRec g_rdpScreen; /* the one screen */
 ScreenPtr g_pScreen = 0;
 
@@ -232,6 +253,16 @@ rdpDestroyColormap(ColormapPtr pColormap)
     ErrorF("rdpDestroyColormap:\n");
 }
 #endif
+
+/******************************************************************************/
+void
+rdpSetUDSRights(void)
+{
+    char unixSocketName[128];
+
+    sprintf(unixSocketName, "/tmp/.X11-unix/X%s", display);
+    chmod(unixSocketName, 0700);
+}
 
 /******************************************************************************/
 /* returns boolean, true if everything is ok */
@@ -548,6 +579,8 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
     rdpGlyphInit();
 
     //rdpXvInit(pScreen);
+    
+    rdpSetUDSRights();
 
     ErrorF("rdpScreenInit: ret %d\n", ret);
 
@@ -620,6 +653,11 @@ ddxProcessArgument(int argc, char **argv, int i)
 void
 OsVendorInit(void)
 {
+#if XRDP_DISABLE_LINUX_ABSTRACT
+    /* turn off the Linux abstract unix doamin sockets TRANS_ABSTRACT */
+    /* TRANS_NOLISTEN = 1 << 3 */
+    _XSERVTransSocketLocalFuncs.flags = 0;
+#endif
 }
 
 /******************************************************************************/
