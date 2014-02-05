@@ -901,7 +901,39 @@ xrdp_sec_send(struct xrdp_sec *self, struct stream *s, int chan)
     DEBUG((" out xrdp_sec_send"));
     return 0;
 }
+/*****************************************************************************/
+/* returns error */
+static int APP_CC
+xrdp_sec_process_mcs_cli_info(struct xrdp_sec *self, struct stream *s)
+{
+    in_uint8s(s, 4); /* RDP client version */
+    in_uint8s(s, 2); /* desktopWidth */
+    in_uint8s(s, 2); /* desktopHeight */
+    in_uint8s(s, 2); /* colorDepth */
+    in_uint8s(s, 2);
+    in_uint8s(s, 4);
+    in_uint8s(s, 4);
+    in_uint8s(s, 32);
+    in_uint8s(s, 4);
+    in_uint8s(s, 4);
+    in_uint8s(s, 64);
+    in_uint8s(s, 2);
+    in_uint8s(s, 2);
+    in_uint8s(s, 4);
+    in_uint8s(s, 2);
+    in_uint8s(s, 2);
+    in_uint8s(s, 2); /* earlyCapabilityFlags */
+    in_uint8s(s, 64);
+    in_uint8s(s, 1);
+    in_uint8s(s, 1); /* pad1octet */
+    in_uint8s(s, 4);
+    in_uint8s(s, 4);
+    in_uint8s(s, 4);
+    in_uint8s(s, 2);
+    in_uint8s(s, 4);
+    in_uint8s(s, 4);
 
+}
 /*****************************************************************************/
 /* this adds the mcs channels in the list of channels to be used when
    creating the server mcs data */
@@ -1043,6 +1075,10 @@ xrdp_sec_process_mcs_data(struct xrdp_sec *self)
         switch (tag)
         {
             case SEC_TAG_CLI_INFO:
+                if (xrdp_sec_process_mcs_cli_info(self, s) != 0)
+                {
+                  return 1;
+                }
                 break;
             case SEC_TAG_CLI_CRYPT:
                 break;
