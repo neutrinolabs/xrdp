@@ -95,9 +95,14 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code, int *len)
     *len = 0;  // X.224 Length Indicator
 
     plen = xrdp_iso_recv_tpkt_header(self, s);
-    if (plen == 1)
+
+    if (plen == 2)
     {
-        DEBUG(("     xrdp_iso_recv_msg: error in tpkt header reading"));
+        DEBUG(("     xrdp_iso_recv_msg: non-TPKT header detected, we try fastpath"));
+        return plen;
+    }
+
+    if (plen == 1) {
         return 1;
     }
 
@@ -118,10 +123,19 @@ xrdp_iso_recv(struct xrdp_iso *self, struct stream *s)
 {
     int code;
     int len;
+    int iso_msg;
 
     DEBUG(("   in xrdp_iso_recv"));
 
-    if (xrdp_iso_recv_msg(self, s, &code, &len) != 0)
+    iso_msg = xrdp_iso_recv_msg(self, s, &code, &len);
+
+    if (iso_msg == 2) // non-TPKT header
+    {
+        DEBUG(("   out xrdp_iso_recv xrdp_iso_recv_msg return 2, non-TPKT header detected"));
+        return iso_msg;
+    }
+
+    if (iso_msg == 1) // error
     {
         DEBUG(("   out xrdp_iso_recv xrdp_iso_recv_msg return non zero"));
         return 1;
@@ -137,37 +151,31 @@ xrdp_iso_recv(struct xrdp_iso *self, struct stream *s)
     return 0;
 }
 /*****************************************************************************/
-/* returns error */
+/* returns packet length or error (1) */
 int APP_CC
-xrdp_iso_detect_tpkt(struct xrdp_iso *self, struct stream *s)
+xrdp_iso_recv_tpkt_header(struct xrdp_iso *self, struct stream *s)
 {
+    int plen;
     int ver;
 
-    DEBUG(("    in xrdp_iso_detect_tpkt"));
+    DEBUG(("      in xrdp_iso_recv_tpkt_header"));
+
     if (xrdp_tcp_recv(self->tcp_layer, s, 1) != 0)
     {
        return 1;
     }
 
     in_uint8_peek(s, ver);
-    g_writeln("tpkt version: %x", ver);
+    g_writeln("       tpkt version: %x", ver);
 
     if (ver != 3)
     {
-      return 1;
+      /*
+       * special error code that means we got non-TPKT header,
+       * so we gonna try fastpath input.
+       */
+      return 2;
     }
-
-    DEBUG(("    out xrdp_iso_detect_tpkt"));
-    return 0;
-}
-/*****************************************************************************/
-/* returns packet length or error (1) */
-int APP_CC
-xrdp_iso_recv_tpkt_header(struct xrdp_iso *self, struct stream *s)
-{
-    int plen;
-
-    DEBUG(("      in xrdp_iso_recv_tpkt_header"));
 
     if (xrdp_tcp_recv(self->tcp_layer, s, 3) != 0)
     {
@@ -373,13 +381,6 @@ xrdp_iso_incoming(struct xrdp_iso *self)
     make_stream(s);
     init_stream(s, 8192);
     DEBUG(("   in xrdp_iso_incoming"));
-
-    if (xrdp_iso_detect_tpkt(self, s) != 0)
-    {
-        g_writeln("xrdp_iso_incoming: TPKT not detected");
-        free_stream(s);
-        return 1;
-    }
 
     if (xrdp_iso_recv_msg(self, s, &code, &len) != 0)
     {

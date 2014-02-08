@@ -263,19 +263,6 @@ xrdp_rdp_init_data(struct xrdp_rdp *self, struct stream *s)
 int APP_CC
 xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
 {
-    // Detect TPKT or FastPath
-    if (xrdp_iso_detect_tpkt(self->sec_layer->mcs_layer->iso_layer, s) == 0) {
-            return xrdp_rdp_recv_tpkt(self, s, code);
-    } else {
-            return xrdp_rdp_recv_fastpath(self, s, code);
-    }
-
-}
-/*****************************************************************************/
-/* returns error */
-int APP_CC
-xrdp_rdp_recv_tpkt(struct xrdp_rdp *self, struct stream *s, int *code)
-{
     int error = 0;
     int len = 0;
     int pdu_code = 0;
@@ -287,6 +274,11 @@ xrdp_rdp_recv_tpkt(struct xrdp_rdp *self, struct stream *s, int *code)
     {
         chan = 0;
         error = xrdp_sec_recv(self->sec_layer, s, &chan);
+
+        if (error == 2) /* we have fastpath packet! */
+        {
+            return xrdp_rdp_recv_fastpath(self, s, code);
+        }
 
         if (error == -1) /* special code for send demand active */
         {
@@ -357,7 +349,10 @@ int APP_CC
 xrdp_rdp_recv_fastpath(struct xrdp_rdp *self, struct stream *s, int *code)
 {
     g_writeln("Booyah!");
-    return 0;
+    int msg;
+    in_uint8(s, msg);
+    g_writeln("msg= %x", msg);
+    return 1;
 }
 /*****************************************************************************/
 int APP_CC
@@ -793,7 +788,7 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp *self)
        INPUT_FLAG_FASTPATH_INPUT 0x0008
        INPUT_FLAG_FASTPATH_INPUT2 0x0020 */
     flags = 0x0001 | 0x0004;
-    if (self->client_info.use_fast_path & 2)
+//    if (self->client_info.use_fast_path & 2)
         flags |= 0x0008 | 0x0020;
     out_uint16_le(s, flags);
     out_uint8s(s, 82);

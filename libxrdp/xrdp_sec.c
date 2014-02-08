@@ -740,12 +740,22 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
 {
     int flags;
     int len;
+    int mcs_msg;
 
     DEBUG((" in xrdp_sec_recv"));
 
-    if (xrdp_mcs_recv(self->mcs_layer, s, chan) != 0)
+    mcs_msg = xrdp_mcs_recv(self->mcs_layer, s, chan);
+
+    if (mcs_msg == 2)
     {
-        DEBUG((" out xrdp_sec_recv error"));
+        DEBUG((" out xrdp_sec_recv : non-TPKT msg detected, we try fastpath"));
+//        xrdp_sec_recv_fastpath(self->mcs_layer->iso_layer, s);
+        return mcs_msg;
+    }
+
+    if (mcs_msg == 1)
+    {
+        DEBUG((" out xrdp_sec_recv : error"));
         return 1;
     }
 
