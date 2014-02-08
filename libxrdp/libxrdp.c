@@ -128,7 +128,6 @@ libxrdp_process_data(struct xrdp_session *session)
                                                 session->s);
                 break;
             case RDP_PDU_DATA: /* 7 */
-
                 if (xrdp_rdp_process_data((struct xrdp_rdp *)session->rdp,
                                           session->s) != 0)
                 {
@@ -139,7 +138,7 @@ libxrdp_process_data(struct xrdp_session *session)
 
                 break;
             default:
-                g_writeln("unknown in libxrdp_process_data");
+                g_writeln("unknown in libxrdp_process_data: code= %d", code);
                 dead_lock_counter++;
                 break;
         }

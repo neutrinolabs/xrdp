@@ -116,7 +116,8 @@ struct stream
   (v) = *((unsigned char*)((s)->p)); \
   (s)->p++; \
 } while (0)
-
+/******************************************************************************/
+#define in_uint8_peek(s, v) do { v = *s->p; } while (0)
 /******************************************************************************/
 #if defined(B_ENDIAN) || defined(NEED_ALIGN)
 #define in_sint16_le(s, v) do \

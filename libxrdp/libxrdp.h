@@ -290,6 +290,8 @@ int APP_CC
 xrdp_iso_send(struct xrdp_iso* self, struct stream* s);
 int APP_CC
 xrdp_iso_incoming(struct xrdp_iso* self);
+int APP_CC
+xrdp_iso_detect_tpkt(struct xrdp_iso *self, struct stream *s);
 
 /* xrdp_mcs.c */
 struct xrdp_mcs* APP_CC

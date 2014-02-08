@@ -127,11 +127,13 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
 
     while (1)
     {
+
         if (xrdp_iso_recv(self->iso_layer, s) != 0)
         {
-            DEBUG(("  out xrdp_mcs_recv xrdp_iso_recv returned non zero"));
+            free_stream(s);
             return 1;
         }
+
 
         if (!s_check_rem(s, 1))
         {
@@ -320,10 +322,16 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
     make_stream(s);
     init_stream(s, 16 * 1024);
 
-    if (xrdp_iso_recv(self->iso_layer, s) != 0)
-    {
-        free_stream(s);
-        return 1;
+    if (xrdp_iso_detect_tpkt(self->iso_layer, s) == 0) {
+            if (xrdp_iso_recv(self->iso_layer, s) != 0)
+            {
+                free_stream(s);
+                return 1;
+            }
+    } else {
+            g_writeln("xrdp_mcs_recv_connect_initial: TPKT not detected");
+            free_stream(s);
+            return 1;
     }
 
     if (xrdp_mcs_ber_parse_header(self, s, MCS_CONNECT_INITIAL, &len) != 0)
@@ -441,10 +449,16 @@ xrdp_mcs_recv_edrq(struct xrdp_mcs *self)
     make_stream(s);
     init_stream(s, 8192);
 
-    if (xrdp_iso_recv(self->iso_layer, s) != 0)
-    {
-        free_stream(s);
-        return 1;
+    if (xrdp_iso_detect_tpkt(self->iso_layer, s) == 0) {
+            if (xrdp_iso_recv(self->iso_layer, s) != 0)
+            {
+                free_stream(s);
+                return 1;
+            }
+    } else {
+            g_writeln("xrdp_mcs_recv_edrq: TPKT not detected");
+            free_stream(s);
+            return 1;
     }
   
     if (!s_check_rem(s, 1))
@@ -503,11 +517,18 @@ xrdp_mcs_recv_aurq(struct xrdp_mcs *self)
     make_stream(s);
     init_stream(s, 8192);
 
-    if (xrdp_iso_recv(self->iso_layer, s) != 0)
-    {
-        free_stream(s);
-        return 1;
+    if (xrdp_iso_detect_tpkt(self->iso_layer, s) == 0) {
+            if (xrdp_iso_recv(self->iso_layer, s) != 0)
+            {
+                free_stream(s);
+                return 1;
+            }
+    } else {
+            g_writeln("xrdp_mcs_recv_aurq: TPKT not detected");
+            free_stream(s);
+            return 1;
     }
+
 
     if (!s_check_rem(s, 1))
     {
@@ -590,10 +611,16 @@ xrdp_mcs_recv_cjrq(struct xrdp_mcs *self)
     make_stream(s);
     init_stream(s, 8192);
 
-    if (xrdp_iso_recv(self->iso_layer, s) != 0)
-    {
-        free_stream(s);
-        return 1;
+    if (xrdp_iso_detect_tpkt(self->iso_layer, s) == 0) {
+            if (xrdp_iso_recv(self->iso_layer, s) != 0)
+            {
+                free_stream(s);
+                return 1;
+            }
+    } else {
+            g_writeln("xrdp_mcs_recv_cjrq: TPKT not detected");
+            free_stream(s);
+            return 1;
     }
 
     if (!s_check_rem(s, 1))

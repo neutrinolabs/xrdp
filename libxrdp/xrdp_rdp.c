@@ -259,9 +259,22 @@ xrdp_rdp_init_data(struct xrdp_rdp *self, struct stream *s)
 }
 
 /*****************************************************************************/
-/* returns erros */
+/* returns error */
 int APP_CC
 xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
+{
+    // Detect TPKT or FastPath
+    if (xrdp_iso_detect_tpkt(self->sec_layer->mcs_layer->iso_layer, s) == 0) {
+            return xrdp_rdp_recv_tpkt(self, s, code);
+    } else {
+            return xrdp_rdp_recv_fastpath(self, s, code);
+    }
+
+}
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+xrdp_rdp_recv_tpkt(struct xrdp_rdp *self, struct stream *s, int *code)
 {
     int error = 0;
     int len = 0;
@@ -338,7 +351,14 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
         return 0;
     }
 }
-
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+xrdp_rdp_recv_fastpath(struct xrdp_rdp *self, struct stream *s, int *code)
+{
+    g_writeln("Booyah!");
+    return 0;
+}
 /*****************************************************************************/
 int APP_CC
 xrdp_rdp_send(struct xrdp_rdp *self, struct stream *s, int pdu_type)

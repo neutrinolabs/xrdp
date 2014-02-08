@@ -56,7 +56,7 @@ xrdp_tcp_init(struct xrdp_tcp *self, struct stream *s)
 int APP_CC
 xrdp_tcp_recv(struct xrdp_tcp *self, struct stream *s, int len)
 {
-    DEBUG(("    in xrdp_tcp_recv, gota get %d bytes", len));
+    DEBUG(("     in xrdp_tcp_recv, gota get %d bytes", len));
     init_stream(s, len);
 
     if (trans_force_read_s(self->trans, s, len) != 0)
@@ -65,7 +65,7 @@ xrdp_tcp_recv(struct xrdp_tcp *self, struct stream *s, int len)
         return 1;
     }
 
-    DEBUG(("    out xrdp_tcp_recv"));
+    DEBUG(("     out xrdp_tcp_recv"));
     return 0;
 }
 

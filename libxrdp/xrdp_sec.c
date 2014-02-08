@@ -1075,10 +1075,10 @@ xrdp_sec_process_mcs_data(struct xrdp_sec *self)
         switch (tag)
         {
             case SEC_TAG_CLI_INFO:
-                if (xrdp_sec_process_mcs_cli_info(self, s) != 0)
-                {
-                  return 1;
-                }
+//                if (xrdp_sec_process_mcs_cli_info(self, s) != 0)
+//                {
+//                  return 1;
+//                }
                 break;
             case SEC_TAG_CLI_CRYPT:
                 break;
