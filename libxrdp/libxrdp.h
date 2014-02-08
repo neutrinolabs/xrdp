@@ -42,6 +42,8 @@ struct xrdp_tcp
 {
   struct trans* trans;
   struct xrdp_iso* iso_layer; /* owner */
+  struct xrdp_fastpath* fastpath_layer; /* owner */
+
 };
 
 /* iso */
@@ -73,11 +75,21 @@ struct xrdp_mcs
   struct list* channel_list;
 };
 
+/* fastpath */
+struct xrdp_fastpath
+{
+  struct xrdp_sec* sec_layer; /* owner */
+  struct xrdp_tcp* tcp_layer;
+  int numEvents;
+  int secFlags;
+};
+
 /* sec */
 struct xrdp_sec
 {
   struct xrdp_rdp* rdp_layer; /* owner */
   struct xrdp_mcs* mcs_layer;
+  struct xrdp_fastpath* fastpath_layer;
   struct xrdp_channel* chan_layer;
   char server_random[32];
   char client_random[64];
@@ -493,5 +505,13 @@ xrdp_channel_send(struct xrdp_channel* self, struct stream* s, int channel_id,
 int APP_CC
 xrdp_channel_process(struct xrdp_channel* self, struct stream* s,
                      int chanid);
+
+/* xrdp_fastpath.c */
+struct xrdp_fastpath *APP_CC
+xrdp_fastpath_create(struct xrdp_sec *owner, struct trans *trans);
+void APP_CC
+xrdp_fastpath_delete(struct xrdp_fastpath *self);
+int APP_CC
+xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s);
 
 #endif

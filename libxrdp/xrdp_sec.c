@@ -185,6 +185,7 @@ xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans, int crypt_level,
     self->encrypt_rc4_info = ssl_rc4_info_create();
     self->mcs_layer = xrdp_mcs_create(self, trans, &self->client_mcs_data,
                                       &self->server_mcs_data);
+    self->fastpath_layer = xrdp_fastpath_create(self, trans);
     self->chan_layer = xrdp_channel_create(self, self->mcs_layer);
     DEBUG((" out xrdp_sec_create"));
     return self;
@@ -202,6 +203,7 @@ xrdp_sec_delete(struct xrdp_sec *self)
 
     xrdp_channel_delete(self->chan_layer);
     xrdp_mcs_delete(self->mcs_layer);
+    xrdp_fastpath_delete(self->fastpath_layer);
     ssl_rc4_info_delete(self->decrypt_rc4_info); /* TODO clear all data */
     ssl_rc4_info_delete(self->encrypt_rc4_info); /* TODO clear all data */
     g_free(self->client_mcs_data.data);
@@ -732,7 +734,32 @@ xrdp_sec_establish_keys(struct xrdp_sec *self)
     ssl_rc4_set_key(self->decrypt_rc4_info, self->decrypt_key, self->rc4_key_len);
     ssl_rc4_set_key(self->encrypt_rc4_info, self->encrypt_key, self->rc4_key_len);
 }
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
+{
+  if (xrdp_fastpath_recv(self->fastpath_layer, s) != 0) {
+      return 1;
+  }
 
+
+  in_uint8s(s, 8); /* dataSignature, skip for now */
+
+  if (self->fastpath_layer->secFlags & FASTPATH_INPUT_ENCRYPTED) {
+      xrdp_sec_decrypt(self, s->p, (int)(s->end - s->p));
+  }
+
+  if (self->fastpath_layer->numEvents == 0) {
+      /**
+       * If numberEvents is not provided in fpInputHeader, it will be provided
+       * as one additional byte here.
+       */
+      in_uint8(s, self->fastpath_layer->numEvents); /* numEvents (optional) */
+  }
+
+  return 0;
+}
 /*****************************************************************************/
 /* returns error */
 int APP_CC
@@ -749,7 +776,7 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
     if (mcs_msg == 2)
     {
         DEBUG((" out xrdp_sec_recv : non-TPKT msg detected, we try fastpath"));
-//        xrdp_sec_recv_fastpath(self->mcs_layer->iso_layer, s);
+        xrdp_sec_recv_fastpath(self, s);
         return mcs_msg;
     }
 

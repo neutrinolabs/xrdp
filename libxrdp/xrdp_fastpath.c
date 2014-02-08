@@ -21,16 +21,15 @@
 
 /*****************************************************************************/
 struct xrdp_fastpath *APP_CC
-xrdp_fastpath_create(struct xrdp_session *session)
+xrdp_fastpath_create(struct xrdp_sec *owner, struct trans *trans)
 {
     struct xrdp_fastpath *self;
 
+    DEBUG(("  in xrdp_fastpath_create"));
     self = (struct xrdp_fastpath *)g_malloc(sizeof(struct xrdp_fastpath), 1);
-    self->tcp_layer =
-        ((struct xrdp_rdp *)session->rdp)->sec_layer->
-        mcs_layer->iso_layer->tcp_layer;
-    make_stream(self->out_s);
-    init_stream(self->out_s, FASTPATH_MAX_PACKET_SIZE);
+    self->sec_layer = owner;
+    self->tcp_layer = owner->mcs_layer->iso_layer->tcp_layer;
+    DEBUG(("  out xrdp_fastpath_create"));
     return self;
 }
 
@@ -42,8 +41,6 @@ xrdp_fastpath_delete(struct xrdp_fastpath *self)
     {
         return;
     }
-
-    free_stream(self->out_s);
     g_free(self);
 }
 
@@ -54,7 +51,52 @@ xrdp_fastpath_reset(struct xrdp_fastpath *self)
 {
     return 0;
 }
+/*****************************************************************************/
+int APP_CC
+xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
+{
+    int fp_hdr;
+    int len;
+    int byte;
+    DEBUG(("  in xrdp_fastpath_recv"));
 
+    /* read the first fastpath byte
+     * (we already received it via iso layer */
+    in_uint8(s, fp_hdr); /* fpInputHeader (1 byte) */
+
+    self->numEvents = (fp_hdr & 0x3C) >> 2;
+    self->secFlags = (fp_hdr & 0xC0) >> 6;
+
+    // receive fastpath packet length
+    if (xrdp_tcp_recv(self->tcp_layer, s, 1) != 0)
+    {
+       return 1;
+    }
+
+    in_uint8(s, byte); /* length 1 */
+
+    if (byte & 0x80)
+    {
+      byte &= ~(0x80);
+      len = (byte << 8);
+      in_uint8(s, byte); /* length 2 */
+      len += byte;
+    }
+    else
+    {
+      len = byte;
+    }
+
+    // receive the left bytes
+    if (xrdp_tcp_recv(self->tcp_layer, s, len) != 0)
+    {
+       return 1;
+    }
+    DEBUG(("  out xrdp_fastpath_recv"));
+
+    return 0;
+}
+/*****************************************************************************/
 int APP_CC
 xrdp_fastpath_init(struct xrdp_fastpath *self)
 {
@@ -76,7 +118,7 @@ xrdp_fastpath_send_update_pdu(struct xrdp_fastpath *self, tui8 updateCode,
     int i32;
 
     compression = 0;
-    s_send = self->out_s;
+//    s_send = self->out_s;
     maxLen = FASTPATH_MAX_PACKET_SIZE - 6; /* 6 bytes for header */
     payloadLeft = (s->end - s->data);
 
@@ -112,7 +154,7 @@ xrdp_fastpath_send_update_pdu(struct xrdp_fastpath *self, tui8 updateCode,
               ((compression & 0x03) << 6);
         out_uint8(s_send, i32);
         out_uint16_le(s_send, len);
-        s_copy(s_send, s, len);
+//        s_copy(s_send, s, len);
         s_mark_end(s_send);
 
         if (xrdp_tcp_send(self->tcp_layer, s_send) != 0)

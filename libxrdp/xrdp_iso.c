@@ -158,15 +158,13 @@ xrdp_iso_recv_tpkt_header(struct xrdp_iso *self, struct stream *s)
     int plen;
     int ver;
 
-    DEBUG(("      in xrdp_iso_recv_tpkt_header"));
-
     if (xrdp_tcp_recv(self->tcp_layer, s, 1) != 0)
     {
        return 1;
     }
 
-    in_uint8_peek(s, ver);
-    g_writeln("       tpkt version: %x", ver);
+    in_uint8_peek(s, ver); // Peek only so we can use it later in fastpath layer, if needed
+    g_writeln("       tpkt version: %x", ver); // TODO: delete it
 
     if (ver != 3)
     {
@@ -190,8 +188,6 @@ xrdp_iso_recv_tpkt_header(struct xrdp_iso *self, struct stream *s)
         return 1; // tpkt must be >= 4 bytes length
     }
 
-    DEBUG(("      out xrdp_iso_recv_tpkt_header"));
-
     return plen;
 }
 /*****************************************************************************/
@@ -208,7 +204,6 @@ xrdp_iso_write_tpkt_header(struct stream *s, int len)
 int APP_CC
 xrdp_iso_read_x224_header(struct stream *s, int *code, int *len)
 {
-    DEBUG(("      in xrdp_iso_read_x224_header"));
     if (!s_check_rem(s, 2))
     {
         return 1;
@@ -233,7 +228,6 @@ xrdp_iso_read_x224_header(struct stream *s, int *code, int *len)
         }
         in_uint8s(s, 5);
     }
-    DEBUG(("      out xrdp_iso_read_x224_header"));
 
     return 0;
 }

@@ -348,10 +348,13 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
 int APP_CC
 xrdp_rdp_recv_fastpath(struct xrdp_rdp *self, struct stream *s, int *code)
 {
-    g_writeln("Booyah!");
-    int msg;
-    in_uint8(s, msg);
-    g_writeln("msg= %x", msg);
+    int i;
+    DEBUG(("in xrdp_rdp_recv_fastpath"));
+//    for (i = 0 ; i < self->sec_layer->fastpath_layer->numEvents ; i++) {
+//
+//    }
+    g_hexdump(s->data, 7);
+    DEBUG(("out xrdp_rdp_recv_fastpath"));
     return 1;
 }
 /*****************************************************************************/
