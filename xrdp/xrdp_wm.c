@@ -323,7 +323,8 @@ xrdp_wm_set_pointer(struct xrdp_wm *self, int cache_idx)
 
 /*****************************************************************************/
 /* convert hex string to int */
-unsigned int xrdp_wm_htoi (const char *ptr)
+unsigned int APP_CC
+xrdp_wm_htoi (const char *ptr)
 {
     unsigned int value = 0;
     char ch = *ptr;

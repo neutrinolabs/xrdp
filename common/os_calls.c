@@ -613,7 +613,11 @@ int APP_CC
 g_sck_get_peer_cred(int sck, int *pid, int *uid, int *gid)
 {
 #if defined(SO_PEERCRED)
+#if defined(_WIN32)
     int ucred_length;
+#else
+    unsigned int ucred_length;
+#endif
     struct myucred
     {
         pid_t pid;
@@ -3151,7 +3155,7 @@ g_shmat(int shmid)
 }
 
 /*****************************************************************************/
-/* returns -1 on error */
+/* returns -1 on error 0 on success */
 int APP_CC
 g_shmdt(const void *shmaddr)
 {
@@ -3160,4 +3164,12 @@ g_shmdt(const void *shmaddr)
 #else
     return shmdt(shmaddr);
 #endif
+}
+
+/*****************************************************************************/
+/* returns -1 on error 0 on success */
+int APP_CC
+g_gethostname(char *name, int len)
+{
+    return gethostname(name, len);
 }

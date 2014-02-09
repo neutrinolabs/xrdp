@@ -559,7 +559,7 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
 
     self->login_window->notify = xrdp_wm_login_notify;
 
-    gethostname(buf1, 256);
+    g_gethostname(buf1, 256);
     g_sprintf(buf, "Login to %s", buf1);
     set_string(&self->login_window->caption1, buf);
 
@@ -642,7 +642,7 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
  *
  * @return 0 on success, -1 on failure
  *****************************************************************************/
-
+int APP_CC
 load_xrdp_config(struct xrdp_config *config)
 {
     struct xrdp_cfg_globals  *globals;

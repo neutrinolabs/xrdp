@@ -163,5 +163,6 @@ int APP_CC      g_time3(void);
 int APP_CC      g_text2bool(const char *s);
 void * APP_CC   g_shmat(int shmid);
 int APP_CC      g_shmdt(const void *shmaddr);
+int APP_CC      g_gethostname(char *name, int len);
 
 #endif

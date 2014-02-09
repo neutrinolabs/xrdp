@@ -108,6 +108,8 @@ xrdp_wm_send_bitmap(struct xrdp_wm* self, struct xrdp_bitmap* bitmap,
                     int x, int y, int cx, int cy);
 int APP_CC
 xrdp_wm_set_pointer(struct xrdp_wm* self, int cache_idx);
+unsigned int APP_CC
+xrdp_wm_htoi (const char *ptr);
 int APP_CC
 xrdp_wm_set_focused(struct xrdp_wm* self, struct xrdp_bitmap* wnd);
 int APP_CC
@@ -349,6 +351,8 @@ get_keymaps(int keylayout, struct xrdp_keymap* keymap);
 /* xrdp_login_wnd.c */
 int APP_CC
 xrdp_login_wnd_create(struct xrdp_wm* self);
+int APP_CC
+load_xrdp_config(struct xrdp_config *config);
 
 /* xrdp_bitmap_compress.c */
 int APP_CC
