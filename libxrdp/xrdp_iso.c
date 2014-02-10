@@ -98,7 +98,7 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code, int *len)
 
     if (plen == 2)
     {
-        DEBUG(("     xrdp_iso_recv_msg: non-TPKT header detected, we try fastpath"));
+        DEBUG(("xrdp_iso_recv_msg: non-TPKT header detected, we try fastpath"));
         return plen;
     }
 
@@ -164,7 +164,6 @@ xrdp_iso_recv_tpkt_header(struct xrdp_iso *self, struct stream *s)
     }
 
     in_uint8_peek(s, ver); // Peek only so we can use it later in fastpath layer, if needed
-    g_writeln("       tpkt version: %x", ver); // TODO: delete it
 
     if (ver != 3)
     {

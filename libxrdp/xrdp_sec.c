@@ -774,8 +774,8 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
 
     if (mcs_msg == 2)
     {
-        DEBUG((" out xrdp_sec_recv : non-TPKT msg detected, we try fastpath"));
         xrdp_sec_recv_fastpath(self, s);
+        DEBUG((" out xrdp_sec_recv : non-TPKT msg detected, we try fastpath"));
         return mcs_msg;
     }
 

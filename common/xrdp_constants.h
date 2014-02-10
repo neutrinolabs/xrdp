@@ -161,6 +161,7 @@
 #define RDP_INPUT_VIRTKEY              2
 #define RDP_INPUT_SCANCODE             4
 #define RDP_INPUT_MOUSE                0x8001
+#define RDP_INPUT_MOUSEX               0x8002
 
 /* Device flags */
 #define KBD_FLAG_RIGHT                 0x0001

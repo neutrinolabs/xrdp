@@ -132,7 +132,7 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
 
         if (iso_msg == 2) // non-TPKT header
         {
-            DEBUG(("   out xrdp_mcs_recv, non-TPKT header detected, we try fastpath"));
+            DEBUG(("  out xrdp_mcs_recv, non-TPKT header detected, we try fastpath"));
             return iso_msg;
         }
 
