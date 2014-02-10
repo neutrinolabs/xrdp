@@ -1741,8 +1741,8 @@ xrdp_rdp_process_fastpath_data_input(struct xrdp_rdp *self, struct stream *s)
                       RDP_INPUT_MOUSE - 0x8001
                       RDP_INPUT_MOUSEX - 0x8002 */
                    /* call to xrdp_wm.c : callback */
-                   self->session->callback(self->session->id, RDP_INPUT_SCANCODE, flags, param2,
-                                           code, time);
+                   self->session->callback(self->session->id, RDP_INPUT_SCANCODE, code, 0,
+                                           flags, 0);
                }
               break;
 
