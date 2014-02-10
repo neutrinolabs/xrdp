@@ -82,7 +82,6 @@ struct xrdp_fastpath
   struct xrdp_tcp* tcp_layer;
   int numEvents;
   int secFlags;
-  int firstPacket;
 };
 
 /* sec */

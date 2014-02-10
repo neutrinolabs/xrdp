@@ -277,7 +277,6 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
 
         if (error == 2) /* we have fastpath packet! */
         {
-            s->next_packet = 0;
             *code = 2;
             return 0;
         }
@@ -1710,6 +1709,8 @@ xrdp_rdp_process_fastpath_data_input(struct xrdp_rdp *self, struct stream *s)
     int eventFlags;
     int code;
     int flags;
+    int param2;
+    int time;
 
     // process fastpath input events
     for (i = 0 ; i < self->sec_layer->fastpath_layer->numEvents ; i++) {
@@ -1740,7 +1741,7 @@ xrdp_rdp_process_fastpath_data_input(struct xrdp_rdp *self, struct stream *s)
                       RDP_INPUT_MOUSE - 0x8001
                       RDP_INPUT_MOUSEX - 0x8002 */
                    /* call to xrdp_wm.c : callback */
-                   self->session->callback(self->session->id, RDP_INPUT_SCANCODE, flags, 0,
+                   self->session->callback(self->session->id, RDP_INPUT_SCANCODE, flags, param2,
                                            code, time);
                }
               break;
