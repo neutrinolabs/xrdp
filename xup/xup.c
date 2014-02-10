@@ -1151,6 +1151,60 @@ process_server_paint_rect_shmem(struct mod *mod, struct stream *s)
 /******************************************************************************/
 /* return error */
 static int APP_CC
+send_paint_rect_ex_ack(struct mod *mod, int flags, int frame_id)
+{
+    int len;
+    struct stream *s;
+
+    make_stream(s);
+    init_stream(s, 8192);
+    s_push_layer(s, iso_hdr, 4);
+    out_uint16_le(s, 106);
+    out_uint32_le(s, flags);
+    out_uint32_le(s, frame_id);
+    s_mark_end(s);
+    len = (int)(s->end - s->data);
+    s_pop_layer(s, iso_hdr);
+    out_uint32_le(s, len);
+    lib_send(mod, s->data, len);
+    free_stream(s);
+    return 0;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
+process_server_paint_rect_shmem_ex(struct mod *mod, struct stream *s)
+{
+    int num_rects;
+    int flags;
+    int frame_id;
+    int shmem_id;
+    int shmem_offset;
+    int width;
+    int height;
+
+    in_uint16_le(s, num_rects);
+    in_uint8s(s, num_rects * 8);
+    in_uint16_le(s, num_rects);
+    in_uint8s(s, num_rects * 8);
+
+    in_uint32_le(s, flags);
+    in_uint32_le(s, frame_id);
+    in_uint32_le(s, shmem_id);
+    in_uint32_le(s, shmem_offset);
+
+    in_uint16_le(s, width);
+    in_uint16_le(s, height);
+
+    send_paint_rect_ex_ack(mod, flags, frame_id);
+
+    return 0;
+}
+
+/******************************************************************************/
+/* return error */
+static int APP_CC
 lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
 {
     int rv;
@@ -1164,7 +1218,6 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
         case 2: /* server_end_update */
             rv = mod->server_end_update(mod);
             break;
-
         case 3: /* server_fill_rect */
             rv = process_server_fill_rect(mod, s);
             break;
@@ -1246,6 +1299,9 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
         case 60: /* server_paint_rect_shmem */
             rv = process_server_paint_rect_shmem(mod, s);
             break;
+        case 61: /* server_paint_rect_shmem_ex */
+            rv = process_server_paint_rect_shmem_ex(mod, s);
+            break;
         default:
             g_writeln("lib_mod_process_orders: unknown order type %d", type);
             rv = 0;
@@ -1253,7 +1309,6 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
     }
     return rv;
 }
-
 
 /******************************************************************************/
 /* return error */
