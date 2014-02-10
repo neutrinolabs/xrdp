@@ -137,6 +137,15 @@ libxrdp_process_data(struct xrdp_session *session)
                 }
 
                 break;
+            case 2: /* FASTPATH_INPUT_EVENT */
+              if (xrdp_rdp_process_fastpath_data_input((struct xrdp_rdp *)session->rdp,
+                                                       session->s) != 0)
+               {
+                   DEBUG(("libxrdp_process_data returned non zero"));
+                   cont = 0;
+                   term = 1;
+               }
+              break;
             default:
                 g_writeln("unknown in libxrdp_process_data: code= %d", code);
                 dead_lock_counter++;

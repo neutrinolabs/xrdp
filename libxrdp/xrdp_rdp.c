@@ -277,7 +277,9 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
 
         if (error == 2) /* we have fastpath packet! */
         {
-            return xrdp_rdp_recv_fastpath(self, s, code);
+            s->next_packet = 0;
+            *code = 2;
+            return 0;
         }
 
         if (error == -1) /* special code for send demand active */
@@ -342,20 +344,6 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
         DEBUG(("out (4) xrdp_rdp_recv"));
         return 0;
     }
-}
-/*****************************************************************************/
-/* returns error */
-int APP_CC
-xrdp_rdp_recv_fastpath(struct xrdp_rdp *self, struct stream *s, int *code)
-{
-    int i;
-    DEBUG(("in xrdp_rdp_recv_fastpath"));
-//    for (i = 0 ; i < self->sec_layer->fastpath_layer->numEvents ; i++) {
-//
-//    }
-    g_hexdump(s->data, 7);
-    DEBUG(("out xrdp_rdp_recv_fastpath"));
-    return 1;
 }
 /*****************************************************************************/
 int APP_CC
@@ -1711,7 +1699,77 @@ xrdp_rdp_send_disconnect_reason(struct xrdp_rdp *self, int reason)
     return 0;
 }
 #endif
+/*****************************************************************************/
+/* FASTPATH_INPUT_EVENT */
+int APP_CC
+xrdp_rdp_process_fastpath_data_input(struct xrdp_rdp *self, struct stream *s)
+{
+    int i;
+    int eventHeader;
+    int eventCode;
+    int eventFlags;
+    int code;
+    int flags;
 
+    // process fastpath input events
+    for (i = 0 ; i < self->sec_layer->fastpath_layer->numEvents ; i++) {
+        in_uint8(s, eventHeader);
+
+        eventFlags = (eventHeader & 0x1F);
+        eventCode = (eventHeader >> 5);
+        g_writeln("eventCode= %d, eventFlags= %d, numEvents= %d", eventCode, eventFlags, self->sec_layer->fastpath_layer->numEvents);
+        switch (eventCode)
+          {
+            case FASTPATH_INPUT_EVENT_SCANCODE:
+              in_uint8(s, code); /* keyCode (1 byte) */
+              g_writeln("scan code detected: %d", code);
+              flags = 0;
+              if ((eventFlags & FASTPATH_INPUT_KBDFLAGS_RELEASE))
+                flags |= KBD_FLAG_UP;
+              else
+                flags |= KBD_FLAG_DOWN;
+
+              if ((eventFlags & FASTPATH_INPUT_KBDFLAGS_EXTENDED))
+                flags |= KBD_FLAG_EXT;
+
+              if (self->session->callback != 0)
+               {
+                   /* msg_type can be
+                      RDP_INPUT_SYNCHRONIZE - 0
+                      RDP_INPUT_SCANCODE - 4
+                      RDP_INPUT_MOUSE - 0x8001
+                      RDP_INPUT_MOUSEX - 0x8002 */
+                   /* call to xrdp_wm.c : callback */
+                   self->session->callback(self->session->id, RDP_INPUT_SCANCODE, flags, 0,
+                                           code, time);
+               }
+              break;
+
+            case FASTPATH_INPUT_EVENT_MOUSE:
+              in_uint8s(s, 6);
+              break;
+
+            case FASTPATH_INPUT_EVENT_MOUSEX:
+              in_uint8s(s, 6);
+              break;
+
+            case FASTPATH_INPUT_EVENT_SYNC:
+
+              break;
+
+            case FASTPATH_INPUT_EVENT_UNICODE:
+              in_uint8s(s, 2);
+              break;
+
+            default:
+              printf("Unknown eventCode %d\n", eventCode);
+              break;
+          }
+
+    }
+
+    return 0;
+}
 /*****************************************************************************/
 /* RDP_PDU_DATA */
 int APP_CC

@@ -743,7 +743,6 @@ xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
       return 1;
   }
 
-
   in_uint8s(s, 8); /* dataSignature, skip for now */
 
   if (self->fastpath_layer->secFlags & FASTPATH_INPUT_ENCRYPTED) {

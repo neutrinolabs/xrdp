@@ -88,7 +88,7 @@ xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
     }
 
     // receive the left bytes
-    if (xrdp_tcp_recv(self->tcp_layer, s, len) != 0)
+    if (xrdp_tcp_recv(self->tcp_layer, s, len - (s->p - s->data)) != 0)
     {
        return 1;
     }

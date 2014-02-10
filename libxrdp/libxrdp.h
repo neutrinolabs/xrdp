@@ -82,6 +82,7 @@ struct xrdp_fastpath
   struct xrdp_tcp* tcp_layer;
   int numEvents;
   int secFlags;
+  int firstPacket;
 };
 
 /* sec */
@@ -372,6 +373,8 @@ int APP_CC
 xrdp_rdp_process_confirm_active(struct xrdp_rdp* self, struct stream* s);
 int APP_CC
 xrdp_rdp_process_data(struct xrdp_rdp* self, struct stream* s);
+int APP_CC
+xrdp_rdp_process_fastpath_data_input(struct xrdp_rdp *self, struct stream *s);
 int APP_CC
 xrdp_rdp_disconnect(struct xrdp_rdp* self);
 int APP_CC
