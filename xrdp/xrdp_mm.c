@@ -238,7 +238,7 @@ xrdp_mm_send_login(struct xrdp_mm *self)
 /*****************************************************************************/
 /* returns error */
 /* this goes through the login_names looking for one called 'aname'
-   then it copies the corisponding login_values item into 'dest'
+   then it copies the corresponding login_values item into 'dest'
    'dest' must be at least 'dest_len' + 1 bytes in size */
 static int APP_CC
 xrdp_mm_get_value(struct xrdp_mm *self, char *aname, char *dest, int dest_len)
@@ -1511,7 +1511,7 @@ getPAMError(const int pamError, char *text, int text_bytes)
         case PAM_USER_UNKNOWN:
             return "User not known to the underlying authentication module";
         case PAM_MAXTRIES:
-            return "Have exhasted maximum number of retries for service.";
+            return "Have exhausted maximum number of retries for service.";
         case PAM_NEW_AUTHTOK_REQD:
             return "Authentication token is no longer valid; new one required.";
         case PAM_ACCT_EXPIRED:

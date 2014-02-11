@@ -1,6 +1,7 @@
-CFLAGS = -O2 -Wall -I../../common
-LDFLAGS = -Wl
-OBJS = main.o ../../common/os_calls.o
+
+CFLAGS = -O2 -Wall
+LDFLAGS =
+OBJS = main.o
 LIBS = -ldl
 
 all: tcp_proxy
