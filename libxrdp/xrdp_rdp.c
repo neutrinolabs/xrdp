@@ -483,65 +483,223 @@ xrdp_rdp_send_data_update_sync(struct xrdp_rdp *self)
 }
 
 /*****************************************************************************/
+/* http://msdn.microsoft.com/en-us/library/cc240510.aspx
+   2.2.1.3.2 Client Core Data (TS_UD_CS_CORE) */
 static int APP_CC
-xrdp_rdp_parse_client_mcs_data(struct xrdp_rdp *self)
+xrdp_rdp_parse_client_mcs_data_CS_CORE(struct xrdp_rdp* self, struct stream* s)
 {
-    struct stream *p = (struct stream *)NULL;
-    int i = 0;
+    int colorDepth;
+    int postBeta2ColorDepth;
+    int highColorDepth;
+    int supportedColorDepths;
+    int earlyCapabilityFlags;
 
-    p = &(self->sec_layer->client_mcs_data);
-    p->p = p->data;
-    if (!s_check_rem(p, 31 + 2 + 2 + 120 + 2))
+    in_uint8s(s, 4); /* version */
+    in_uint16_le(s, self->client_info.width);
+    in_uint16_le(s, self->client_info.height);
+    in_uint16_le(s, colorDepth);
+    g_writeln("colorDepth 0x%4.4x (0xca00 4bpp 0xca01 8bpp)", colorDepth);
+    switch (colorDepth)
     {
-        g_writeln("xrdp_rdp_parse_client_mcs_data: error");
-        return 1;
-    }
-    in_uint8s(p, 31);
-    in_uint16_le(p, self->client_info.width);
-    in_uint16_le(p, self->client_info.height);
-    in_uint8s(p, 120);
-    self->client_info.bpp = 8;
-    in_uint16_le(p, i);
-
-    switch (i)
-    {
-        case 0xca01:
-            if (!s_check_rem(p, 6 + 1))
-            {
-                return 1;
-            }
-            in_uint8s(p, 6);
-            in_uint8(p, i);
-
-            if (i > 8)
-            {
-                self->client_info.bpp = i;
-            }
-
+        case 0xca00: /* RNS_UD_COLOR_4BPP */
+            self->client_info.bpp = 4;
             break;
-        case 0xca02:
+        case 0xca01: /* RNS_UD_COLOR_8BPP */
+            self->client_info.bpp = 8;
+            break;
+    }
+    in_uint8s(s, 2); /* SASSequence */
+    in_uint8s(s, 4); /* keyboardLayout */
+    in_uint8s(s, 4); /* clientBuild */
+    in_uint8s(s, 32); /* clientName */
+    in_uint8s(s, 4); /* keyboardType */
+    in_uint8s(s, 4); /* keyboardSubType */
+    in_uint8s(s, 4); /* keyboardFunctionKey */
+    in_uint8s(s, 64); /* imeFileName */
+    in_uint16_le(s, postBeta2ColorDepth);
+    g_writeln("postBeta2ColorDepth 0x%4.4x (0xca00 4bpp 0xca01 8bpp "
+              "0xca02 15bpp 0xca03 16bpp 0xca04 24bpp)", postBeta2ColorDepth);
+
+    switch (postBeta2ColorDepth)
+    {
+        case 0xca00: /* RNS_UD_COLOR_4BPP */
+            self->client_info.bpp = 4;
+            break;
+        case 0xca01: /* RNS_UD_COLOR_8BPP */
+            self->client_info.bpp = 8;
+            break;
+        case 0xca02: /* RNS_UD_COLOR_16BPP_555 */
             self->client_info.bpp = 15;
             break;
-        case 0xca03:
+        case 0xca03: /* RNS_UD_COLOR_16BPP_565 */
             self->client_info.bpp = 16;
             break;
-        case 0xca04:
+        case 0xca04: /* RNS_UD_COLOR_24BPP */
             self->client_info.bpp = 24;
             break;
     }
+    if (!s_check_rem(s, 2))
+    {
+        return 0;
+    }
+    in_uint8s(s, 2); /* clientProductId */
 
+    if (!s_check_rem(s, 4))
+    {
+        return 0;
+    }
+    in_uint8s(s, 4); /* serialNumber */
+
+    if (!s_check_rem(s, 2))
+    {
+        return 0;
+    }
+    in_uint16_le(s, highColorDepth);
+    g_writeln("highColorDepth 0x%4.4x (0x0004 4bpp 0x0008 8bpp 0x000f 15bpp "
+              "0x0010 16 bpp 0x0018 24bpp)", highColorDepth);
+    self->client_info.bpp = highColorDepth;
+
+    if (!s_check_rem(s, 2))
+    {
+        return 0;
+    }
+    in_uint16_le(s, supportedColorDepths);
+    g_writeln("supportedColorDepths 0x%4.4x (0x0001 24bpp 0x0002 16bpp "
+              "0x0004 15bpp 0x0008 32bpp)", supportedColorDepths);
+
+    if (!s_check_rem(s, 2))
+    {
+        return 0;
+    }
+    in_uint16_le(s, earlyCapabilityFlags);
+    self->client_info.mcs_early_capability_flags = earlyCapabilityFlags;
+    g_writeln("earlyCapabilityFlags 0x%4.4x (0x0002 want32)",
+              earlyCapabilityFlags);
+    if ((earlyCapabilityFlags & 0x0002) && (supportedColorDepths & 0x0008))
+    {
+        self->client_info.bpp = 32;
+    }
+
+    if (!s_check_rem(s, 64))
+    {
+        return 0;
+    }
+    in_uint8s(s, 64); /* clientDigProductId */
+
+    if (!s_check_rem(s, 1))
+    {
+        return 0;
+    }
+    in_uint8(s, self->client_info.mcs_connection_type); /* connectionType */
+    g_writeln("got client client connection type 0x%8.8x",
+              self->client_info.mcs_connection_type);
+
+    if (!s_check_rem(s, 1))
+    {
+        return 0;
+    }
+    in_uint8s(s, 1); /* pad1octet */
+
+    if (!s_check_rem(s, 4))
+    {
+        return 0;
+    }
+    in_uint8s(s, 4); /* serverSelectedProtocol */
+
+    if (!s_check_rem(s, 4))
+    {
+        return 0;
+    }
+    in_uint8s(s, 4); /* desktopPhysicalWidth */
+
+    if (!s_check_rem(s, 4))
+    {
+        return 0;
+    }
+    in_uint8s(s, 4); /* desktopPhysicalHeight */
+
+    if (!s_check_rem(s, 2))
+    {
+        return 0;
+    }
+    in_uint8s(s, 2); /* reserved */
+
+    return 0;
+}
+
+/*****************************************************************************/
+static int APP_CC
+xrdp_rdp_parse_client_mcs_data(struct xrdp_rdp* self)
+{
+    struct stream* s;
+    int i;
+    int header_type;
+    int length;
+    char* hold_p;
+    char* hold_end;
+
+    s = &(self->sec_layer->client_mcs_data);
+    s->p = s->data;
+
+    in_uint8s(s, 23);
+    while (s->p < s->end)
+    {
+        if (!s_check_rem(s, 4))
+        {
+            g_writeln("xrdp_rdp_parse_client_mcs_data: parse error, bytes "
+                      "left %d", (int)(s->end - s->p));
+            return 1;
+        }
+        hold_p = s->p;
+        hold_end = s->end;
+        in_uint16_le(s, header_type);
+        in_uint16_le(s, length);
+        g_writeln("type 0x%2.2x len %d", header_type, length);
+        if (length < 4)
+        {
+            g_writeln("xrdp_rdp_parse_client_mcs_data: parse error");
+            return 1;
+        }
+        if (!s_check_rem(s, length - 4))
+        {
+            g_writeln("xrdp_rdp_parse_client_mcs_data: parse error");
+            return 1;
+        }
+        s->end = s->p + length;
+        switch (header_type)
+        {
+            case 0xc001: /* CS_CORE */
+                xrdp_rdp_parse_client_mcs_data_CS_CORE(self, s);
+                break;
+            case 0xc002: /* CS_SECURITY */
+                break;
+            case 0xc003: /* CS_NET */
+                break;
+            case 0xc004: /* CS_CLUSTER */
+                break;
+            default:
+                g_writeln("xrdp_rdp_parse_client_mcs_data: error unknown "
+                          "header type 0x%4.4x", header_type);
+                break;
+        }
+        s->p = hold_p + length;
+        s->end = hold_end;
+    }
     if (self->client_info.max_bpp > 0)
     {
         if (self->client_info.bpp > self->client_info.max_bpp)
         {
+            g_writeln("xrdp_rdp_parse_client_mcs_data: client asked for %dbpp "
+                      "connection but configuration is limited to %dbpp",
+                      self->client_info.bpp, self->client_info.max_bpp);
             self->client_info.bpp = self->client_info.max_bpp;
         }
     }
+    s->p = s->data;
 
-    p->p = p->data;
-    DEBUG(("client width %d, client height %d bpp %d",
-           self->client_info.width, self->client_info.height,
-           self->client_info.bpp));
+    g_writeln("xrdp_rdp_parse_client_mcs_data: client bpp %d",
+              self->client_info.bpp);
+
     return 0;
 }
 
