@@ -30,7 +30,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <xf86.h>
 #include <xf86_OSproc.h>
 
-#include "mipict.h"
+#include <mipict.h>
 #include <picture.h>
 
 #include "rdp.h"

@@ -18,7 +18,10 @@
  * Routines to copy regions from framebuffer to shared memory
  */
 
-Bool rdpCapture(RegionPtr in_reg, RegionPtr out_reg,
-                void *src, int src_width, int src_height, int src_stride, int src_format,
-                void *dst, int dst_width, int dst_height, int dst_stride, int dst_format,
-                int mode)
+Bool
+rdpCapture(RegionPtr in_reg, RegionPtr out_reg,
+           void *src, int src_width, int src_height,
+           int src_stride, int src_format,
+           void *dst, int dst_width, int dst_height,
+           int dst_stride, int dst_format,
+           int mode);

@@ -30,6 +30,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "rdpPri.h"
 
+/* PIXMAN_a8r8g8b8 */
+#define XRDP_a8r8g8b8 \
+((32 << 24) | (2 << 16) | (8 << 12) | (8 << 8)  | (8 << 4) | 8)
+
 #define PixelDPI 100
 #define PixelToMM(_size) (((_size) * 254 + (PixelDPI) * 5) / ((PixelDPI) * 10))
 
