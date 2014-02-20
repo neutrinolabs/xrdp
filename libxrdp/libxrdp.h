@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,6 +73,20 @@ struct xrdp_mcs
   struct list* channel_list;
 };
 
+/* Encryption Methods */
+#define CRYPT_METHOD_NONE              0x00000000
+#define CRYPT_METHOD_40BIT             0x00000001
+#define CRYPT_METHOD_128BIT            0x00000002
+#define CRYPT_METHOD_56BIT             0x00000008
+#define CRYPT_METHOD_FIPS              0x00000010
+
+/* Encryption Levels */
+#define CRYPT_LEVEL_NONE               0x00000000
+#define CRYPT_LEVEL_LOW                0x00000001
+#define CRYPT_LEVEL_CLIENT_COMPATIBLE  0x00000002
+#define CRYPT_LEVEL_HIGH               0x00000003
+#define CRYPT_LEVEL_FIPS               0x00000004
+
 /* sec */
 struct xrdp_sec
 {
@@ -90,9 +104,9 @@ struct xrdp_sec
   char encrypt_key[16];
   char decrypt_update_key[16];
   char encrypt_update_key[16];
-  int rc4_key_size; /* 1 = 40 bit, 2 = 128 bit */
+  int crypt_method;
   int rc4_key_len; /* 8 = 40 bit, 16 = 128 bit */
-  int crypt_level; /* 1, 2, 3 = low, meduim, high */
+  int crypt_level;
   char sign_key[16];
   void* decrypt_rc4_info;
   void* encrypt_rc4_info;

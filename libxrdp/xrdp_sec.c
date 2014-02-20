@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -145,22 +145,25 @@ xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans, int crypt_level,
     DEBUG((" in xrdp_sec_create"));
     self = (struct xrdp_sec *)g_malloc(sizeof(struct xrdp_sec), 1);
     self->rdp_layer = owner;
-    self->rc4_key_size = 1; /* 1 = 40 bit, 2 = 128 bit */
-    self->crypt_level = 1; /* 1, 2, 3 = low, medium, high */
-
+    self->crypt_method = CRYPT_METHOD_40BIT;
+    self->crypt_level = CRYPT_LEVEL_LOW;
     switch (crypt_level)
     {
-        case 1:
-            self->rc4_key_size = 1;
-            self->crypt_level = 1;
+        case 1: /* low */
+            self->crypt_method = CRYPT_METHOD_40BIT;
+            self->crypt_level = CRYPT_LEVEL_LOW;
             break;
-        case 2:
-            self->rc4_key_size = 1;
-            self->crypt_level = 2;
+        case 2: /* medium */
+            self->crypt_method = CRYPT_METHOD_40BIT;
+            self->crypt_level = CRYPT_LEVEL_CLIENT_COMPATIBLE;
             break;
-        case 3:
-            self->rc4_key_size = 2;
-            self->crypt_level = 3;
+        case 3: /* high */
+            self->crypt_method = CRYPT_METHOD_128BIT;
+            self->crypt_level = CRYPT_LEVEL_HIGH;
+            break;
+        case 4: /* fips */
+            self->crypt_method = CRYPT_METHOD_FIPS;
+            self->crypt_level = CRYPT_LEVEL_FIPS;
             break;
         default:
             g_writeln("Fatal : Illegal crypt_level");
@@ -715,7 +718,7 @@ xrdp_sec_establish_keys(struct xrdp_sec *self)
     xrdp_sec_hash_16(self->decrypt_key, session_key + 32, self->client_random,
                      self->server_random);
 
-    if (self->rc4_key_size == 1)
+    if (self->crypt_method == CRYPT_METHOD_40BIT)
     {
         xrdp_sec_make_40bit(self->sign_key);
         xrdp_sec_make_40bit(self->encrypt_key);
@@ -1152,9 +1155,8 @@ xrdp_sec_out_mcs_data(struct xrdp_sec *self)
 
     out_uint16_le(s, SEC_TAG_SRV_CRYPT);
     out_uint16_le(s, 0x00ec); /* len is 236 */
-    out_uint32_le(s, self->rc4_key_size); /* key len 1 = 40 bit 2 = 128 bit */
-    out_uint32_le(s, self->crypt_level); /* crypt level 1 = low 2 = medium */
-    /* 3 = high */
+    out_uint32_le(s, self->crypt_method);
+    out_uint32_le(s, self->crypt_level);
     out_uint32_le(s, 32);     /* 32 bytes random len */
     out_uint32_le(s, 0xb8);   /* 184 bytes rsa info(certificate) len */
     out_uint8a(s, self->server_random, 32);

@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -79,6 +79,10 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
             else if (g_strcasecmp(value, "high") == 0)
             {
                 client_info->crypt_level = 3;
+            }
+            else if (g_strcasecmp(value, "fips") == 0)
+            {
+                client_info->crypt_level = 4;
             }
             else
             {
@@ -628,6 +632,7 @@ xrdp_rdp_parse_client_mcs_data_CS_CORE(struct xrdp_rdp* self, struct stream* s)
 }
 
 /*****************************************************************************/
+/* TODO: move xrdp_sec.c::xrdp_sec_in_mcs_data here */
 static int APP_CC
 xrdp_rdp_parse_client_mcs_data(struct xrdp_rdp* self)
 {
