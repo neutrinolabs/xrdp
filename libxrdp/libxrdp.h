@@ -116,6 +116,11 @@ struct xrdp_sec
   char pri_exp[64];
   int channel_code;
   int multimon;
+  char fips_encrypt_key[24];
+  char fips_decrypt_key[24];
+  char fips_sign_key[20];
+  void* encrypt_fips_info;
+  void* decrypt_fips_info;
 };
 
 /* channel */
