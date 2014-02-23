@@ -199,7 +199,10 @@ ssl_des3_info_delete(void *des3)
     EVP_CIPHER_CTX *des3_ctx;
 
     des3_ctx = (EVP_CIPHER_CTX *) des3;
-    EVP_CIPHER_CTX_cleanup(des3_ctx);
+    if (des3_ctx != 0)
+    {
+        EVP_CIPHER_CTX_cleanup(des3_ctx);
+    }
 }
 
 /*****************************************************************************/
