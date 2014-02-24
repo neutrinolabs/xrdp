@@ -1174,20 +1174,53 @@ send_paint_rect_ex_ack(struct mod *mod, int flags, int frame_id)
 /******************************************************************************/
 /* return error */
 static int APP_CC
-process_server_paint_rect_shmem_ex(struct mod *mod, struct stream *s)
+process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
 {
-    int num_rects;
+    int num_drects;
+    int num_crects;
     int flags;
     int frame_id;
     int shmem_id;
     int shmem_offset;
     int width;
     int height;
+    int x;
+    int y;
+    int cx;
+    int cy;
+    int index;
+    int rv;
+    tsi16 *ldrects;
+    tsi16 *ldrects1;
+    tsi16 *lcrects;
+    tsi16 *lcrects1;
+    char *bmpdata;
 
-    in_uint16_le(s, num_rects);
-    in_uint8s(s, num_rects * 8);
-    in_uint16_le(s, num_rects);
-    in_uint8s(s, num_rects * 8);
+    /* dirty pixels */
+    in_uint16_le(s, num_drects);
+    ldrects = (tsi16 *) g_malloc(2 * 4 * num_drects, 0);
+    ldrects1 = ldrects;
+    for (index = 0; index < num_drects; index++)
+    {
+        in_sint16_le(s, ldrects1[0]);
+        in_sint16_le(s, ldrects1[1]);
+        in_sint16_le(s, ldrects1[2]);
+        in_sint16_le(s, ldrects1[3]);
+        ldrects1 += 4;
+    }
+
+    /* copied pixels */
+    in_uint16_le(s, num_crects);
+    lcrects = (tsi16 *) g_malloc(2 * 4 * num_crects, 0);
+    lcrects1 = lcrects;
+    for (index = 0; index < num_crects; index++)
+    {
+        in_sint16_le(s, lcrects1[0]);
+        in_sint16_le(s, lcrects1[1]);
+        in_sint16_le(s, lcrects1[2]);
+        in_sint16_le(s, lcrects1[3]);
+        lcrects1 += 4;
+    }
 
     in_uint32_le(s, flags);
     in_uint32_le(s, frame_id);
@@ -1196,8 +1229,36 @@ process_server_paint_rect_shmem_ex(struct mod *mod, struct stream *s)
 
     in_uint16_le(s, width);
     in_uint16_le(s, height);
+    
+    bmpdata = 0;
+    if (flags == 0) /* screen */
+    {
+        if (amod->screen_shmem_id == 0)
+        {
+            amod->screen_shmem_id = shmem_id;
+            amod->screen_shmem_pixels = g_shmat(amod->screen_shmem_id);
+        }
+        if (amod->screen_shmem_pixels != 0)
+        {
+            bmpdata = amod->screen_shmem_pixels + shmem_offset;
+        }
+    }
+    if (bmpdata != 0)
+    {
+        
+        rv = amod->server_paint_rects(amod, num_drects, ldrects,
+                                      num_crects, lcrects,
+                                      bmpdata, width, height, 0);
+    }
+    else
+    {
+        rv = 1;
+    }
 
-    send_paint_rect_ex_ack(mod, flags, frame_id);
+    send_paint_rect_ex_ack(amod, flags, frame_id);
+
+    g_free(lcrects);
+    g_free(ldrects);
 
     return 0;
 }

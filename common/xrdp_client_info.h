@@ -113,6 +113,14 @@ struct xrdp_client_info
 
   int keyboard_type;
   int keyboard_subtype;
+  
+  int png_codec_id;
+  int png_prop_len;
+  char png_prop[64];
+  int vendor_flags[4];
+  int mcs_connection_type;
+  int mcs_early_capability_flags;
+
 };
 
 #endif

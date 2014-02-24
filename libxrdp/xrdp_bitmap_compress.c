@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,15 @@
  * limitations under the License.
  *
  * bitmap compressor
+ * This is the original RDP bitmap compression algorithm.  Pixel based.
+ * This does not do 32 bpp compression, nscodec, rfx, etc
  */
 
 #include "libxrdp.h"
 
 /*****************************************************************************/
 #define IN_PIXEL8(in_ptr, in_x, in_y, in_w, in_last_pixel, in_pixel); \
-    { \
+    do { \
         if (in_ptr == 0) \
         { \
             in_pixel = 0; \
@@ -35,11 +37,11 @@
         { \
             in_pixel = in_last_pixel; \
         } \
-    }
+    } while (0)
 
 /*****************************************************************************/
 #define IN_PIXEL16(in_ptr, in_x, in_y, in_w, in_last_pixel, in_pixel); \
-    { \
+    do { \
         if (in_ptr == 0) \
         { \
             in_pixel = 0; \
@@ -52,11 +54,11 @@
         { \
             in_pixel = in_last_pixel; \
         } \
-    }
+    } while (0)
 
 /*****************************************************************************/
 #define IN_PIXEL32(in_ptr, in_x, in_y, in_w, in_last_pixel, in_pixel); \
-    { \
+    do { \
         if (in_ptr == 0) \
         { \
             in_pixel = 0; \
@@ -69,12 +71,12 @@
         { \
             in_pixel = in_last_pixel; \
         } \
-    }
+    } while (0)
 
 /*****************************************************************************/
 /* color */
 #define OUT_COLOR_COUNT1(in_count, in_s, in_data) \
-    { \
+    do { \
         if (in_count > 0) \
         { \
             if (in_count < 32) \
@@ -98,12 +100,12 @@
             } \
         } \
         in_count = 0; \
-    }
+    } while (0)
 
 /*****************************************************************************/
 /* color */
 #define OUT_COLOR_COUNT2(in_count, in_s, in_data) \
-    { \
+    do { \
         if (in_count > 0) \
         { \
             if (in_count < 32) \
@@ -127,12 +129,12 @@
             } \
         } \
         in_count = 0; \
-    }
+    } while (0)
 
 /*****************************************************************************/
 /* color */
 #define OUT_COLOR_COUNT3(in_count, in_s, in_data) \
-    { \
+    do { \
         if (in_count > 0) \
         { \
             if (in_count < 32) \
@@ -162,12 +164,12 @@
             } \
         } \
         in_count = 0; \
-    }
+    } while (0)
 
 /*****************************************************************************/
 /* copy */
 #define OUT_COPY_COUNT1(in_count, in_s, in_data) \
-    { \
+    do { \
         if (in_count > 0) \
         { \
             if (in_count < 32) \
@@ -192,12 +194,12 @@
         } \
         in_count = 0; \
         init_stream(in_data, 0); \
-    }
+    } while (0)
 
 /*****************************************************************************/
 /* copy */
 #define OUT_COPY_COUNT2(in_count, in_s, in_data) \
-    { \
+    do { \
         if (in_count > 0) \
         { \
             if (in_count < 32) \
@@ -225,12 +227,12 @@
         } \
         in_count = 0; \
         init_stream(in_data, 0); \
-    }
+    } while (0)
 
 /*****************************************************************************/
 /* copy */
 #define OUT_COPY_COUNT3(in_count, in_s, in_data) \
-    { \
+    do { \
         if (in_count > 0) \
         { \
             if (in_count < 32) \
@@ -258,12 +260,12 @@
         } \
         in_count = 0; \
         init_stream(in_data, 0); \
-    }
+    } while (0)
 
 /*****************************************************************************/
 /* bicolor */
 #define OUT_BICOLOR_COUNT1(in_count, in_s, in_color1, in_color2) \
-    { \
+    do { \
         if (in_count > 0) \
         { \
             if (in_count / 2 < 16) \
@@ -291,12 +293,12 @@
             } \
         } \
         in_count = 0; \
-    }
+    } while (0)
 
 /*****************************************************************************/
 /* bicolor */
 #define OUT_BICOLOR_COUNT2(in_count, in_s, in_color1, in_color2) \
-    { \
+    do { \
         if (in_count > 0) \
         { \
             if (in_count / 2 < 16) \
@@ -324,12 +326,12 @@
             } \
         } \
         in_count = 0; \
-    }
+    } while (0)
 
 /*****************************************************************************/
 /* bicolor */
 #define OUT_BICOLOR_COUNT3(in_count, in_s, in_color1, in_color2) \
-    { \
+    do { \
         if (in_count > 0) \
         { \
             if (in_count / 2 < 16) \
@@ -369,12 +371,12 @@
             } \
         } \
         in_count = 0; \
-    }
+    } while (0)
 
 /*****************************************************************************/
 /* fill */
 #define OUT_FILL_COUNT1(in_count, in_s) \
-    { \
+    do { \
         if (in_count > 0) \
         { \
             if (in_count < 32) \
@@ -394,12 +396,12 @@
             } \
         } \
         in_count = 0; \
-    }
+    } while (0)
 
 /*****************************************************************************/
 /* fill */
 #define OUT_FILL_COUNT2(in_count, in_s) \
-    { \
+    do { \
         if (in_count > 0) \
         { \
             if (in_count < 32) \
@@ -419,12 +421,12 @@
             } \
         } \
         in_count = 0; \
-    }
+    } while (0)
 
 /*****************************************************************************/
 /* fill */
 #define OUT_FILL_COUNT3(in_count, in_s) \
-    { \
+    do { \
         if (in_count > 0) \
         { \
             if (in_count < 32) \
@@ -444,12 +446,12 @@
             } \
         } \
         in_count = 0; \
-    }
+    } while (0)
 
 /*****************************************************************************/
 /* mix */
 #define OUT_MIX_COUNT1(in_count, in_s) \
-    { \
+    do { \
         if (in_count > 0) \
         { \
             if (in_count < 32) \
@@ -470,12 +472,12 @@
             } \
         } \
         in_count = 0; \
-    }
+    } while (0)
 
 /*****************************************************************************/
 /* mix */
 #define OUT_MIX_COUNT2(in_count, in_s) \
-    { \
+    do { \
         if (in_count > 0) \
         { \
             if (in_count < 32) \
@@ -496,12 +498,12 @@
             } \
         } \
         in_count = 0; \
-    }
+    } while (0)
 
 /*****************************************************************************/
 /* mix */
 #define OUT_MIX_COUNT3(in_count, in_s) \
-    { \
+    do { \
         if (in_count > 0) \
         { \
             if (in_count < 32) \
@@ -522,12 +524,12 @@
             } \
         } \
         in_count = 0; \
-    }
+    } while (0)
 
 /*****************************************************************************/
 /* fom */
 #define OUT_FOM_COUNT1(in_count, in_s, in_mask, in_mask_len) \
-    { \
+    do { \
         if (in_count > 0) \
         { \
             if ((in_count % 8) == 0 && in_count < 249) \
@@ -551,12 +553,12 @@
             } \
         } \
         in_count = 0; \
-    }
+    } while (0)
 
 /*****************************************************************************/
 /* fom */
 #define OUT_FOM_COUNT2(in_count, in_s, in_mask, in_mask_len) \
-    { \
+    do { \
         if (in_count > 0) \
         { \
             if ((in_count % 8) == 0 && in_count < 249) \
@@ -580,12 +582,12 @@
             } \
         } \
         in_count = 0; \
-    }
+    } while (0)
 
 /*****************************************************************************/
 /* fill or mix (fom) */
 #define OUT_FOM_COUNT3(in_count, in_s, in_mask, in_mask_len) \
-    { \
+    do { \
         if (in_count > 0) \
         { \
             if ((in_count % 8) == 0 && in_count < 249) \
@@ -609,7 +611,7 @@
             } \
         } \
         in_count = 0; \
-    }
+    } while (0)
 
 /*****************************************************************************/
 #define TEST_FILL \
@@ -629,7 +631,7 @@
       ) \
     )
 #define RESET_COUNTS \
-    { \
+    do { \
         bicolor_count = 0; \
         fill_count = 0; \
         color_count = 0; \
@@ -637,7 +639,7 @@
         fom_count = 0; \
         fom_mask_len = 0; \
         bicolor_spin = 0; \
-    }
+    } while (0)
 
 /*****************************************************************************/
 int APP_CC

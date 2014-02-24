@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@
 #include <openssl/rc4.h>
 #include <openssl/md5.h>
 #include <openssl/sha.h>
+#include <openssl/hmac.h>
 #include <openssl/bn.h>
 #include <openssl/rsa.h>
 
@@ -155,6 +156,85 @@ void APP_CC
 ssl_md5_complete(void *md5_info, char *data)
 {
     MD5_Final((tui8 *)data, (MD5_CTX *)md5_info);
+}
+
+/*****************************************************************************/
+void *APP_CC
+ssl_des3_encrypt_info_create(const char *key, const char* ivec)
+{
+    EVP_CIPHER_CTX *des3_ctx;
+    const tui8 *lkey;
+    const tui8 *livec;
+
+    des3_ctx = (EVP_CIPHER_CTX *) g_malloc(sizeof(EVP_CIPHER_CTX), 1);
+    EVP_CIPHER_CTX_init(des3_ctx);
+    lkey = (const tui8 *) key;
+    livec = (const tui8 *) ivec;
+    EVP_EncryptInit_ex(des3_ctx, EVP_des_ede3_cbc(), NULL, lkey, livec);
+    EVP_CIPHER_CTX_set_padding(des3_ctx, 0);
+    return des3_ctx;
+}
+
+/*****************************************************************************/
+void *APP_CC
+ssl_des3_decrypt_info_create(const char *key, const char* ivec)
+{
+    EVP_CIPHER_CTX *des3_ctx;
+    const tui8 *lkey;
+    const tui8 *livec;
+
+    des3_ctx = g_malloc(sizeof(EVP_CIPHER_CTX), 1);
+    EVP_CIPHER_CTX_init(des3_ctx);
+    lkey = (const tui8 *) key;
+    livec = (const tui8 *) ivec;
+    EVP_DecryptInit_ex(des3_ctx, EVP_des_ede3_cbc(), NULL, lkey, livec);
+    EVP_CIPHER_CTX_set_padding(des3_ctx, 0);
+    return des3_ctx;
+}
+
+/*****************************************************************************/
+void APP_CC
+ssl_des3_info_delete(void *des3)
+{
+    EVP_CIPHER_CTX *des3_ctx;
+
+    des3_ctx = (EVP_CIPHER_CTX *) des3;
+    if (des3_ctx != 0)
+    {
+        EVP_CIPHER_CTX_cleanup(des3_ctx);
+    }
+}
+
+/*****************************************************************************/
+int APP_CC
+ssl_des3_encrypt(void *des3, int length, const char *in_data, char *out_data)
+{
+    EVP_CIPHER_CTX *des3_ctx;
+    int len;
+    const tui8 *lin_data;
+    tui8 *lout_data;
+
+    des3_ctx = (EVP_CIPHER_CTX *) des3;
+    lin_data = (const tui8 *) in_data;
+    lout_data = (tui8 *) out_data;
+    EVP_EncryptUpdate(des3_ctx, lout_data, &len, lin_data, length);
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+ssl_des3_decrypt(void *des3, int length, const char *in_data, char *out_data)
+{
+    EVP_CIPHER_CTX *des3_ctx;
+    int len;
+    const tui8 *lin_data;
+    tui8 *lout_data;
+
+    des3_ctx = (EVP_CIPHER_CTX *) des3;
+    lin_data = (const tui8 *) in_data;
+    lout_data = (tui8 *) out_data;
+    EVP_DecryptUpdate(des3_ctx, lout_data, &len, lin_data, length);
+    return 0;
 }
 
 /*****************************************************************************/

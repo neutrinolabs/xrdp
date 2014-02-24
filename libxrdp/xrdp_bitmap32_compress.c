@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Laxmikant Rashinkar 2014
+ * Copyright (C) Jay Sorg 2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Routines to copy regions from framebuffer to shared memory
+ * planar bitmap compressor
+ * 32 bpp compression
  */
 
-Bool
-rdpCapture(RegionPtr in_reg, RegionPtr out_reg,
-           void *src, int src_width, int src_height,
-           int src_stride, int src_format,
-           void *dst, int dst_width, int dst_height,
-           int dst_stride, int dst_format,
-           int mode);
+#include "libxrdp.h"
+
+/*****************************************************************************/
+int APP_CC
+xrdp_bitmap32_compress(char *in_data, int width, int height,
+                       struct stream *s, int bpp, int byte_limit,
+                       int start_line, struct stream *temp_s,
+                       int e)
+{
+    return 0;
+}

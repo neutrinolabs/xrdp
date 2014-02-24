@@ -42,6 +42,7 @@ Client connection to xrdp
 #include "rdpMisc.h"
 #include "rdpInput.h"
 #include "rdpReg.h"
+#include "rdpCapture.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
@@ -116,6 +117,8 @@ rdpClientConGotConnection(ScreenPtr pScreen, rdpPtr dev)
     LLOGLN(0, ("rdpClientConGotConnection:"));
     clientCon = (rdpClientCon *) g_malloc(sizeof(rdpClientCon), 1);
     clientCon->dev = dev;
+    dev->do_dirty_ons = 1;
+
     make_stream(clientCon->in_s);
     init_stream(clientCon->in_s, 8192);
     make_stream(clientCon->out_s);
@@ -262,6 +265,8 @@ rdpClientConDisconnect(rdpPtr dev, rdpClientCon *clientCon)
                     dev->clientConTail = plcli;
                 }
             }
+            LLOGLN(0, ("rdpClientConDisconnect: clientCon removed from "
+                   "dev list"));
             break;
         }
         plcli = pcli;
@@ -799,6 +804,24 @@ rdpClientConProcessMsgClientRegion(rdpPtr dev, rdpClientCon *clientCon)
 
 /******************************************************************************/
 static int
+rdpClientConProcessMsgClientRegionEx(rdpPtr dev, rdpClientCon *clientCon)
+{
+    struct stream *s;
+    int flags;
+ 
+    LLOGLN(10, ("rdpClientConProcessMsgClientRegionEx:"));
+    s = clientCon->in_s;
+
+    in_uint32_le(s, flags);
+    in_uint32_le(s, clientCon->rect_id_ack);
+    LLOGLN(10, ("rdpClientConProcessMsgClientRegionEx: flags 0x%8.8x", flags));
+    LLOGLN(10, ("rdpClientConProcessMsgClientRegionEx: rect_id %d "
+           "rect_id_ack %d", clientCon->rect_id, clientCon->rect_id_ack));
+    return 0;
+}
+
+/******************************************************************************/
+static int
 rdpClientConProcessMsg(rdpPtr dev, rdpClientCon *clientCon)
 {
     int msg_type;
@@ -818,6 +841,9 @@ rdpClientConProcessMsg(rdpPtr dev, rdpClientCon *clientCon)
             break;
         case 105: /* client region */
             rdpClientConProcessMsgClientRegion(dev, clientCon);
+            break;
+        case 106: /* client region ex */
+            rdpClientConProcessMsgClientRegionEx(dev, clientCon);
             break;
         default:
             break;
@@ -1849,39 +1875,103 @@ rdpClientConCheckDirtyScreen(rdpPtr dev, rdpClientCon *clientCon)
 }
 
 /******************************************************************************/
+static int
+rdpClientConSendPaintRectShmEx(rdpPtr dev, rdpClientCon *clientCon,
+                               struct image_data *id,
+                               RegionPtr dirtyReg, RegionPtr copyReg)
+{
+    int index;
+    int size;
+    int num_rects_d;
+    int num_rects_c;
+    struct stream *s;
+    BoxRec box;
+
+    rdpClientConBeginUpdate(dev, clientCon);
+
+    num_rects_d = REGION_NUM_RECTS(dirtyReg);
+    num_rects_c = REGION_NUM_RECTS(copyReg);
+    size = 2 + 2 + 2 + num_rects_d * 8 + 2 + num_rects_c * 8;
+    size += 4 + 4 + 4 + 4 + 2 + 2;
+    rdpClientConPreCheck(dev, clientCon, size);
+
+    s = clientCon->out_s;
+    out_uint16_le(s, 61);
+    out_uint16_le(s, size);
+    clientCon->count++;
+
+    out_uint16_le(s, num_rects_d);
+    for (index = 0; index < num_rects_d; index++)
+    {
+        box = REGION_RECTS(dirtyReg)[index];
+        out_uint16_le(s, box.x1);
+        out_uint16_le(s, box.y1);
+        out_uint16_le(s, box.x2 - box.x1);
+        out_uint16_le(s, box.y2 - box.y1);
+    }
+
+    out_uint16_le(s, num_rects_c);
+    for (index = 0; index < num_rects_c; index++)
+    {
+        box = REGION_RECTS(copyReg)[index];
+        out_uint16_le(s, box.x1);
+        out_uint16_le(s, box.y1);
+        out_uint16_le(s, box.x2 - box.x1);
+        out_uint16_le(s, box.y2 - box.y1);
+    }
+
+    out_uint32_le(s, 0);
+    clientCon->rect_id++;
+    out_uint32_le(s, clientCon->rect_id);
+    out_uint32_le(s, id->shmem_id);
+    out_uint32_le(s, id->shmem_offset);
+    out_uint16_le(s, clientCon->rdp_width);
+    out_uint16_le(s, clientCon->rdp_height);
+
+    rdpClientConEndUpdate(dev, clientCon);
+
+    return 0;
+}
+                                   
+/******************************************************************************/
 static CARD32
 rdpDeferredUpdateCallback(OsTimerPtr timer, CARD32 now, pointer arg)
 {
     rdpClientCon *clientCon;
-    int num_rects;
-    int index;
-    BoxRec box;
+    RegionRec reg;
+    struct image_data id;
 
     LLOGLN(10, ("rdpDeferredUpdateCallback:"));
     clientCon = (rdpClientCon *) arg;
 
     if (clientCon->rect_id != clientCon->rect_id_ack)
     {
-        LLOGLN(10, ("rdpDeferredUpdateCallback: reschedual"));
+        LLOGLN(0, ("rdpDeferredUpdateCallback: reschedual"));
         clientCon->updateTimer = TimerSet(clientCon->updateTimer, 0, 40,
                                           rdpDeferredUpdateCallback, clientCon);
         return 0;
     }
-
-    clientCon->updateSchedualed = FALSE;
-    rdpClientConBeginUpdate(clientCon->dev, clientCon);
-    num_rects = REGION_NUM_RECTS(clientCon->dirtyRegion);
-    for (index = 0; index < num_rects; index++)
+    else
     {
-        box = REGION_RECTS(clientCon->dirtyRegion)[index];
-        LLOGLN(10, ("  x1 %d y1 %d x2 %d y2 %d cx %d cy %d", box.x1, box.y1,
-               box.x2, box.y2, box.x2 - box.x1, box.y2 - box.y1));
-        rdpClientConSendArea(clientCon->dev, clientCon, NULL, box.x1, box.y1,
-                             box.x2 - box.x1, box.y2 - box.y1);
+        LLOGLN(10, ("rdpDeferredUpdateCallback: sending"));
     }
-    rdpClientConEndUpdate(clientCon->dev, clientCon);
+    rdpClientConGetScreenImageRect(clientCon->dev, clientCon, &id);
+    LLOGLN(10, ("rdpDeferredUpdateCallback: rdp_width %d rdp_height %d "
+           "rdp_Bpp %d screen width %d screen height %d",
+           clientCon->rdp_width, clientCon->rdp_height, clientCon->rdp_Bpp,
+           id.width, id.height));
+    clientCon->updateSchedualed = FALSE;
+    rdpRegionInit(&reg, NullBox, 0);
+    rdpCapture(clientCon->dirtyRegion, &reg,
+               id.pixels, id.width, id.height,
+               id.lineBytes, XRDP_a8r8g8b8,
+               id.shmem_pixels, clientCon->rdp_width, clientCon->rdp_height,
+               clientCon->rdp_width * clientCon->rdp_Bpp , XRDP_a8r8g8b8, 0);
+    rdpClientConSendPaintRectShmEx(clientCon->dev, clientCon, &id,
+                                   clientCon->dirtyRegion, &reg);
     rdpRegionDestroy(clientCon->dirtyRegion);
     clientCon->dirtyRegion = rdpRegionCreate(NullBox, 0);
+    rdpRegionUninit(&reg);
     return 0;
 }
 
@@ -1890,6 +1980,8 @@ int
 rdpClientConAddDirtyScreenReg(rdpPtr dev, rdpClientCon *clientCon,
                               RegionPtr reg)
 {
+    LLOGLN(10, ("rdpClientConAddDirtyScreenReg:"));
+
     rdpRegionUnion(clientCon->dirtyRegion, clientCon->dirtyRegion, reg);
     if (clientCon->updateSchedualed == FALSE)
     {
@@ -1969,7 +2061,6 @@ rdpClientConSendArea(rdpPtr dev, rdpClientCon *clientCon,
 {
     struct image_data lid;
     BoxRec box;
-    RegionRec reg;
     int ly;
     int size;
     char *src;
@@ -2069,9 +2160,7 @@ rdpClientConSendArea(rdpPtr dev, rdpClientCon *clientCon,
             out_uint16_le(s, id->height);
             out_uint16_le(s, x);
             out_uint16_le(s, y);
-            rdpRegionInit(&reg, &box, 0);
-            rdpRegionUnion(clientCon->shmRegion, clientCon->shmRegion, &reg);
-            rdpRegionUninit(&reg);
+            rdpRegionUnionRect(clientCon->shmRegion, &box);
             return;
         }
     }

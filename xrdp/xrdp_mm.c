@@ -417,6 +417,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             self->mod->server_create_os_surface_bpp = server_create_os_surface_bpp;
             self->mod->server_paint_rect_bpp = server_paint_rect_bpp;
             self->mod->server_composite = server_composite;
+            self->mod->server_paint_rects = server_paint_rects;
         }
     }
 
@@ -2133,6 +2134,38 @@ server_composite(struct xrdp_mod* mod, int srcidx, int srcformat,
     {
         g_writeln("server_composite: error finding id %d or %d", srcidx, mskidx);
     }
+    return 0;
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_paint_rects(struct xrdp_mod* mod, int num_drects, short *drects,
+                   int num_crects, short *crects,
+                   char *data, int width, int height, int flags)
+{
+    struct xrdp_wm* wm;
+    struct xrdp_painter* p;
+    struct xrdp_bitmap *b;
+    short *s;
+    int index;
+
+    //g_writeln("server_paint_rects:");
+    wm = (struct xrdp_wm*)(mod->wm);
+    p = (struct xrdp_painter*)(mod->painter);
+    if (p == 0)
+    {
+        return 0;
+    }
+    b = xrdp_bitmap_create_with_data(width, height, wm->screen->bpp,
+                                     data, wm);
+    s = crects;
+    for (index = 0; index < num_crects; index++)
+    {
+        xrdp_painter_copy(p, b, wm->target_surface, s[0], s[1], s[2], s[3],
+                          s[0], s[1]);
+        s += 4;
+    }                 
+    xrdp_bitmap_delete(b);
     return 0;
 }
 
