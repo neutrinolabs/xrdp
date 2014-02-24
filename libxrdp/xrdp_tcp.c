@@ -47,7 +47,7 @@ xrdp_tcp_delete(struct xrdp_tcp *self)
 int APP_CC
 xrdp_tcp_init(struct xrdp_tcp *self, struct stream *s)
 {
-    init_stream(s, 8192);
+    init_stream(s, 8192 * 4); /* 32 KB */
     return 0;
 }
 

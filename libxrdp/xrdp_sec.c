@@ -966,7 +966,7 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
 
     if (flags & SEC_ENCRYPT) /* 0x08 */
     {
-        if (self->crypt_method == CRYPT_METHOD_FIPS)
+        if (self->crypt_level == CRYPT_LEVEL_FIPS)
         {
             if (!s_check_rem(s, 12))
             {
@@ -974,6 +974,10 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
             }
             in_uint16_le(s, len);
             in_uint8(s, ver);
+            if ((len != 16) || (ver != 1))
+            {
+                return 1;
+            }
             in_uint8(s, pad);
             LLOGLN(10, ("xrdp_sec_recv: len %d ver %d pad %d", len, ver, pad));
             in_uint8s(s, 8); /* signature(8) */
@@ -1002,7 +1006,7 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
         in_uint8a(s, self->client_crypt_random, 64);
         xrdp_sec_rsa_op(self->client_random, self->client_crypt_random,
                         self->pub_mod, self->pri_exp);
-        if (self->crypt_method == CRYPT_METHOD_FIPS)
+        if (self->crypt_level == CRYPT_LEVEL_FIPS)
         {
             xrdp_sec_fips_establish_keys(self);
         }
@@ -1076,6 +1080,23 @@ buf_out_uint32(char *buffer, int value)
 /*****************************************************************************/
 /* Generate a MAC hash (5.2.3.1), using a combination of SHA1 and MD5 */
 static void APP_CC
+xrdp_sec_fips_sign(struct xrdp_sec *self, char *out, int out_len,
+                   char *data, int data_len)
+{
+    char buf[20];
+    char lenhdr[4];
+
+    buf_out_uint32(lenhdr, self->encrypt_use_count);
+    ssl_hmac_sha1_init(self->sign_fips_info, self->fips_sign_key, 20);
+    ssl_hmac_transform(self->sign_fips_info, data, data_len);
+    ssl_hmac_transform(self->sign_fips_info, lenhdr, 4);
+    ssl_hmac_complete(self->sign_fips_info, buf, 20);
+    g_memcpy(out, buf, out_len);
+}
+
+/*****************************************************************************/
+/* Generate a MAC hash (5.2.3.1), using a combination of SHA1 and MD5 */
+static void APP_CC
 xrdp_sec_sign(struct xrdp_sec *self, char *out, int out_len,
               char *data, int data_len)
 {
@@ -1102,26 +1123,6 @@ xrdp_sec_sign(struct xrdp_sec *self, char *out, int out_len,
     g_memcpy(out, md5sig, out_len);
     ssl_sha1_info_delete(sha1_info);
     ssl_md5_info_delete(md5_info);
-}
-
-/*****************************************************************************/
-/* Generate a MAC hash (5.2.3.1), using a combination of SHA1 and MD5 */
-static void APP_CC
-xrdp_sec_fips_sign(struct xrdp_sec *self, char *out, int out_len,
-                   char *data, int data_len)
-{
-    char buf[20];
-    char use_count_le[4];
-
-    use_count_le[0] = (self->encrypt_use_count >> 0) & 0xFF;
-    use_count_le[1] = (self->encrypt_use_count >> 8) & 0xFF;
-    use_count_le[2] = (self->encrypt_use_count >> 16) & 0xFF;
-    use_count_le[3] = (self->encrypt_use_count >> 24) & 0xFF;
-    ssl_hmac_sha1_init(self->sign_fips_info, self->fips_sign_key, 20);
-    ssl_hmac_transform(self->sign_fips_info, data, data_len);
-    ssl_hmac_transform(self->sign_fips_info, use_count_le, 4);
-    ssl_hmac_complete(self->sign_fips_info, buf, 20);
-    g_memcpy(out, buf, out_len);
 }
 
 /*****************************************************************************/
@@ -1533,7 +1534,7 @@ xrdp_sec_process_mcs_data(struct xrdp_sec *self)
         in_uint16_le(s, tag);
         in_uint16_le(s, size);
 
-        if (size < 4 || !s_check_rem(s, size - 4))
+        if ((size < 4) || (!s_check_rem(s, size - 4)))
         {
             LLOGLN(0, ("error in xrdp_sec_process_mcs_data tag %d size %d",
                    tag, size));
@@ -1578,8 +1579,8 @@ xrdp_sec_process_mcs_data(struct xrdp_sec *self)
                                           SC_MCS_MSGCHANNEL 0x0C04
                                           SC_MULTITRANSPORT 0x0C08 */
             default:
-                LLOGLN(0, ("error unknown xrdp_sec_process_mcs_data tag %d "
-                       "size %d", tag, size));
+                LLOGLN(0, ("error unknown xrdp_sec_process_mcs_data "
+                       "tag 0x%4.4x size %d", tag, size));
                 break;
         }
 
