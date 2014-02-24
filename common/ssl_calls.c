@@ -158,6 +158,8 @@ ssl_md5_complete(void *md5_info, char *data)
     MD5_Final((tui8 *)data, (MD5_CTX *)md5_info);
 }
 
+/* FIPS stuff */
+
 /*****************************************************************************/
 void *APP_CC
 ssl_des3_encrypt_info_create(const char *key, const char* ivec)
@@ -202,6 +204,7 @@ ssl_des3_info_delete(void *des3)
     if (des3_ctx != 0)
     {
         EVP_CIPHER_CTX_cleanup(des3_ctx);
+        g_free(des3_ctx);
     }
 }
 
@@ -217,6 +220,7 @@ ssl_des3_encrypt(void *des3, int length, const char *in_data, char *out_data)
     des3_ctx = (EVP_CIPHER_CTX *) des3;
     lin_data = (const tui8 *) in_data;
     lout_data = (tui8 *) out_data;
+    len = 0;
     EVP_EncryptUpdate(des3_ctx, lout_data, &len, lin_data, length);
     return 0;
 }
@@ -233,8 +237,70 @@ ssl_des3_decrypt(void *des3, int length, const char *in_data, char *out_data)
     des3_ctx = (EVP_CIPHER_CTX *) des3;
     lin_data = (const tui8 *) in_data;
     lout_data = (tui8 *) out_data;
+    len = 0;
     EVP_DecryptUpdate(des3_ctx, lout_data, &len, lin_data, length);
     return 0;
+}
+
+/*****************************************************************************/
+void * APP_CC
+ssl_hmac_info_create(void)
+{
+    HMAC_CTX *hmac_ctx;
+
+    hmac_ctx = (HMAC_CTX *) g_malloc(sizeof(HMAC_CTX), 1);
+    HMAC_CTX_init(hmac_ctx);
+    return hmac_ctx;
+}
+
+/*****************************************************************************/
+void APP_CC
+ssl_hmac_info_delete(void *hmac)
+{
+    HMAC_CTX *hmac_ctx;
+
+    hmac_ctx = (HMAC_CTX *) hmac;
+    if (hmac_ctx != 0)
+    {
+        HMAC_CTX_cleanup(hmac_ctx);
+        g_free(hmac_ctx);
+    }
+}
+
+/*****************************************************************************/
+void APP_CC
+ssl_hmac_sha1_init(void *hmac, const char *data, int len)
+{
+    HMAC_CTX *hmac_ctx;
+
+    hmac_ctx = (HMAC_CTX *) hmac;
+    HMAC_Init_ex(hmac_ctx, data, len, EVP_sha1(), NULL);
+}
+
+/*****************************************************************************/
+void APP_CC
+ssl_hmac_transform(void *hmac, const char *data, int len)
+{
+    HMAC_CTX *hmac_ctx;
+    const tui8 *ldata;
+
+    hmac_ctx = (HMAC_CTX *) hmac;
+    ldata = (const tui8*) data;
+    HMAC_Update(hmac_ctx, ldata, len);
+}
+
+/*****************************************************************************/
+void APP_CC
+ssl_hmac_complete(void *hmac, char *data, int len)
+{
+    HMAC_CTX *hmac_ctx;
+    tui8* ldata;
+    tui32 llen;
+
+    hmac_ctx = (HMAC_CTX *) hmac;
+    ldata = (tui8 *) data;
+    llen = len;
+    HMAC_Final(hmac_ctx, ldata, &llen);
 }
 
 /*****************************************************************************/

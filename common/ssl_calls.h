@@ -63,6 +63,16 @@ int APP_CC
 ssl_des3_encrypt(void *des3, int length, const char *in_data, char *out_data);
 int APP_CC
 ssl_des3_decrypt(void *des3, int length, const char *in_data, char *out_data);
+void * APP_CC
+ssl_hmac_info_create(void);
+void APP_CC
+ssl_hmac_info_delete(void *hmac);
+void APP_CC
+ssl_hmac_sha1_init(void *hmac, const char *data, int len);
+void APP_CC
+ssl_hmac_transform(void *hmac, const char *data, int len);
+void APP_CC
+ssl_hmac_complete(void *hmac, char *data, int len);
 int APP_CC
 ssl_mod_exp(char* out, int out_len, char* in, int in_len,
             char* mod, int mod_len, char* exp, int exp_len);
