@@ -544,7 +544,7 @@ xrdp_wm_init(struct xrdp_wm *self)
     char cfg_file[256];
     char autorun_name[256];
 
-    load_xrdp_config(self->xrdp_config);
+    load_xrdp_config(self->xrdp_config, self->screen->bpp);
 
     xrdp_wm_load_static_colors_plus(self, autorun_name);
     xrdp_wm_load_static_pointers(self);

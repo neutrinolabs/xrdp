@@ -54,10 +54,10 @@ AC_ARG_ENABLE(fuse, AS_HELP_STRING([--enable-fuse],
               [fuse=true], [fuse=false])
 AM_CONDITIONAL(XRDP_FUSE, [test x$fuse = xtrue])
 
-AC_ARG_ENABLE(load_pulse_modules, AS_HELP_STRING([--enable-load_pulse_modules],
+AC_ARG_ENABLE(loadpulsemodules, AS_HELP_STRING([--enable-loadpulsemodules],
               [Build code to load pulse audio modules (default: no)]),
-              [load_pulse_modules=true], [load_pulse_modules=false])
-AM_CONDITIONAL(XRDP_LOAD_PULSE_MODULES, [test x$load_pulse_modules = xtrue])
+              [loadpulsemodules=true], [loadpulsemodules=false])
+AM_CONDITIONAL(XRDP_LOAD_PULSE_MODULES, [test x$loadpulsemodules = xtrue])
 
 AC_ARG_ENABLE(xrdpvr, AS_HELP_STRING([--enable-xrdpvr],
               [Build xrdpvr module (default: no)]),
@@ -114,7 +114,7 @@ then
 fi
 
 # checking for libpulse 
-if ! test -z "$enable_load_pulse_modules"
+if ! test -z "$enable_loadpulsemodules"
 then
   AC_CHECK_HEADER([pulse/util.h], [],
     [AC_MSG_ERROR([please install libpulse-dev or libpulse-devel])])

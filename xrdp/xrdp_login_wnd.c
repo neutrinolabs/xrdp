@@ -643,7 +643,7 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
  * @return 0 on success, -1 on failure
  *****************************************************************************/
 int APP_CC
-load_xrdp_config(struct xrdp_config *config)
+load_xrdp_config(struct xrdp_config *config, int bpp)
 {
     struct xrdp_cfg_globals  *globals;
 
@@ -663,7 +663,8 @@ load_xrdp_config(struct xrdp_config *config)
 
     /* set default values incase we can't get them from xrdp.ini file */
     globals->ini_version = 1;
-    globals->ls_top_window_bg_color = xrdp_wm_htoi("bf9c00");
+    globals->ls_top_window_bg_color = HCOLOR(bpp, xrdp_wm_htoi("009cb5"));
+    globals->ls_bg_color = HCOLOR(bpp, xrdp_wm_htoi("dedede"));
     globals->ls_width = 350;
     globals->ls_height = 350;
     globals->ls_bg_color = 0xdedede;
@@ -814,7 +815,7 @@ load_xrdp_config(struct xrdp_config *config)
 
         /* login screen values */
         else if (g_strncmp(n, "ls_top_window_bg_color", 64) == 0)
-            globals->ls_top_window_bg_color = xrdp_wm_htoi(v);
+            globals->ls_top_window_bg_color = HCOLOR(bpp, xrdp_wm_htoi(v));
 
         else if (g_strncmp(n, "ls_width", 64) == 0)
             globals->ls_width = g_atoi(v);
@@ -823,7 +824,7 @@ load_xrdp_config(struct xrdp_config *config)
             globals->ls_height = g_atoi(v);
 
         else if (g_strncmp(n, "ls_bg_color", 64) == 0)
-            globals->ls_bg_color = xrdp_wm_htoi(v);
+            globals->ls_bg_color = HCOLOR(bpp, xrdp_wm_htoi(v));
 
         else if (g_strncmp(n, "ls_logo_filename", 255) == 0)
         {
