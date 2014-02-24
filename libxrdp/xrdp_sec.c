@@ -292,6 +292,7 @@ xrdp_sec_delete(struct xrdp_sec *self)
     ssl_rc4_info_delete(self->encrypt_rc4_info); /* TODO clear all data */
     ssl_des3_info_delete(self->decrypt_fips_info);
     ssl_des3_info_delete(self->encrypt_fips_info);
+    ssl_hmac_info_delete(self->sign_fips_info);
     g_free(self->client_mcs_data.data);
     g_free(self->server_mcs_data.data);
     /* Crypto information must always be cleared */
@@ -375,50 +376,55 @@ xrdp_sec_update(char *key, char *update_key, int key_len)
 
 /*****************************************************************************/
 static void APP_CC
+xrdp_sec_fips_decrypt(struct xrdp_sec *self, char *data, int len)
+{
+    LLOGLN(10, ("xrdp_sec_fips_decrypt:"));
+    ssl_des3_decrypt(self->decrypt_fips_info, len, data, data);
+    self->decrypt_use_count++;
+}
+
+/*****************************************************************************/
+static void APP_CC
 xrdp_sec_decrypt(struct xrdp_sec *self, char *data, int len)
 {
-    if (self->crypt_method == CRYPT_METHOD_FIPS)
+    LLOGLN(10, ("xrdp_sec_decrypt:"));
+    if (self->decrypt_use_count == 4096)
     {
-        ssl_des3_decrypt(self->decrypt_fips_info, len, data, data);
+        xrdp_sec_update(self->decrypt_key, self->decrypt_update_key,
+                        self->rc4_key_len);
+        ssl_rc4_set_key(self->decrypt_rc4_info, self->decrypt_key,
+                        self->rc4_key_len);
+        self->decrypt_use_count = 0;
     }
-    else
-    {
-        if (self->decrypt_use_count == 4096)
-        {
-            xrdp_sec_update(self->decrypt_key, self->decrypt_update_key,
-                            self->rc4_key_len);
-            ssl_rc4_set_key(self->decrypt_rc4_info, self->decrypt_key,
-                            self->rc4_key_len);
-            self->decrypt_use_count = 0;
-        }
+    ssl_rc4_crypt(self->decrypt_rc4_info, data, len);
+    self->decrypt_use_count++;
+}
 
-        ssl_rc4_crypt(self->decrypt_rc4_info, data, len);
-        self->decrypt_use_count++;
-    }
+/*****************************************************************************/
+static void APP_CC
+xrdp_sec_fips_encrypt(struct xrdp_sec *self, char *data, int len)
+{
+    LLOGLN(10, ("xrdp_sec_fips_encrypt:"));
+    ssl_des3_encrypt(self->encrypt_fips_info, len, data, data);
+    self->encrypt_use_count++;
 }
 
 /*****************************************************************************/
 static void APP_CC
 xrdp_sec_encrypt(struct xrdp_sec *self, char *data, int len)
 {
-    if (self->crypt_method == CRYPT_METHOD_FIPS)
+    LLOGLN(10, ("xrdp_sec_encrypt:"));
+    if (self->encrypt_use_count == 4096)
     {
-        ssl_des3_encrypt(self->encrypt_fips_info, len, data, data);
+        xrdp_sec_update(self->encrypt_key, self->encrypt_update_key,
+                        self->rc4_key_len);
+        ssl_rc4_set_key(self->encrypt_rc4_info, self->encrypt_key,
+                        self->rc4_key_len);
+        self->encrypt_use_count = 0;
     }
-    else
-    {
-        if (self->encrypt_use_count == 4096)
-        {
-            xrdp_sec_update(self->encrypt_key, self->encrypt_update_key,
-                            self->rc4_key_len);
-            ssl_rc4_set_key(self->encrypt_rc4_info, self->encrypt_key,
-                            self->rc4_key_len);
-            self->encrypt_use_count = 0;
-        }
 
-        ssl_rc4_crypt(self->encrypt_rc4_info, data, len);
-        self->encrypt_use_count++;
-    }
+    ssl_rc4_crypt(self->encrypt_rc4_info, data, len);
+    self->encrypt_use_count++;
 }
 
 /*****************************************************************************/
@@ -487,6 +493,8 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
     {
         /* must be or error */
         DEBUG(("xrdp_sec_process_logon_info: flags wrong, major error"));
+        LLOGLN(0, ("xrdp_sec_process_logon_info: flags wrong, likely decrypt "
+               "not working"));
         return 1;
     }
 
@@ -663,8 +671,9 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 static int APP_CC
 xrdp_sec_send_lic_initial(struct xrdp_sec *self)
 {
-    struct stream *s = (struct stream *)NULL;
+    struct stream *s;
 
+    LLOGLN(10, ("xrdp_sec_send_lic_initial:"));
     make_stream(s);
     init_stream(s, 8192);
 
@@ -845,53 +854,60 @@ fips_expand_key_bits(const char *in, char *out)
     }
 }
 
-/*****************************************************************************/
+/****************************************************************************/
+static void APP_CC
+xrdp_sec_fips_establish_keys(struct xrdp_sec *self)
+{
+    char server_encrypt_key[32];
+    char server_decrypt_key[32];
+    const char *fips_ivec;
+    void *sha1;
+
+    LLOGLN(0, ("xrdp_sec_fips_establish_keys:"));
+
+    sha1 = ssl_sha1_info_create();
+    ssl_sha1_clear(sha1);
+    ssl_sha1_transform(sha1, self->client_random + 16, 16);
+    ssl_sha1_transform(sha1, self->server_random + 16, 16);
+    ssl_sha1_complete(sha1, server_decrypt_key);
+
+    server_decrypt_key[20] = server_decrypt_key[0];
+    fips_expand_key_bits(server_decrypt_key, self->fips_decrypt_key);
+    ssl_sha1_info_delete(sha1);
+
+    sha1 = ssl_sha1_info_create();
+    ssl_sha1_clear(sha1);
+    ssl_sha1_transform(sha1, self->client_random, 16);
+    ssl_sha1_transform(sha1, self->server_random, 16);
+    ssl_sha1_complete(sha1, server_encrypt_key);
+    server_encrypt_key[20] = server_encrypt_key[0];
+    fips_expand_key_bits(server_encrypt_key, self->fips_encrypt_key);
+    ssl_sha1_info_delete(sha1);
+
+    sha1 = ssl_sha1_info_create();
+    ssl_sha1_clear(sha1);
+    ssl_sha1_transform(sha1, server_encrypt_key, 20);
+    ssl_sha1_transform(sha1, server_decrypt_key, 20);
+    ssl_sha1_complete(sha1, self->fips_sign_key);
+    ssl_sha1_info_delete(sha1);
+
+    fips_ivec = (const char *) g_fips_ivec;
+    self->encrypt_fips_info =
+          ssl_des3_encrypt_info_create(self->fips_encrypt_key, fips_ivec);
+    self->decrypt_fips_info =
+          ssl_des3_decrypt_info_create(self->fips_decrypt_key, fips_ivec);
+    self->sign_fips_info = ssl_hmac_info_create();
+}
+
+/****************************************************************************/
 static void APP_CC
 xrdp_sec_establish_keys(struct xrdp_sec *self)
 {
     char session_key[48];
     char temp_hash[48];
     char input[48];
-    char client_encrypt_key[32];
-    char client_decrypt_key[32];
-    const char *fips_ivec;
-    void *sha1;
 
-    if (self->crypt_method == CRYPT_METHOD_FIPS)
-    {
-        LLOGLN(0, ("xrdp_sec_establish_keys: fips"));
-        sha1 = ssl_sha1_info_create();
-        ssl_sha1_transform(sha1, self->client_random + 16, 16);
-        ssl_sha1_transform(sha1, self->server_random + 16, 16);
-        ssl_sha1_complete(sha1, client_encrypt_key);
-        client_encrypt_key[20] = client_encrypt_key[0];
-        fips_expand_key_bits(client_encrypt_key, self->fips_encrypt_key);
-        ssl_sha1_info_delete(sha1);
-
-        sha1 = ssl_sha1_info_create();
-        ssl_sha1_transform(sha1, self->client_random, 16);
-        ssl_sha1_transform(sha1, self->server_random, 16);
-        ssl_sha1_complete(sha1, client_decrypt_key);
-        client_decrypt_key[20] = client_decrypt_key[0];
-        fips_expand_key_bits(client_decrypt_key, self->fips_decrypt_key);
-        ssl_sha1_info_delete(sha1);
-
-        sha1 = ssl_sha1_info_create();
-        ssl_sha1_transform(sha1, client_decrypt_key, 20);
-        ssl_sha1_transform(sha1, client_encrypt_key, 20);
-        ssl_sha1_complete(sha1, self->fips_sign_key);
-        ssl_sha1_info_delete(sha1);
-
-        fips_ivec = (const char *) g_fips_ivec;
-        self->encrypt_fips_info =
-              ssl_des3_encrypt_info_create(self->fips_encrypt_key, fips_ivec);
-        self->decrypt_fips_info =
-              ssl_des3_encrypt_info_create(self->fips_decrypt_key, fips_ivec);
-    }
-    else
-    {
-        LLOGLN(0, ("xrdp_sec_establish_keys: not fips"));
-    }
+    LLOGLN(0, ("xrdp_sec_establish_keys:"));
 
     g_memcpy(input, self->client_random, 24);
     g_memcpy(input + 24, self->server_random, 24);
@@ -930,6 +946,8 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
 {
     int flags;
     int len;
+    int ver;
+    int pad;
 
     DEBUG((" in xrdp_sec_recv"));
 
@@ -954,8 +972,14 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
             {
                 return 1;
             }
-            in_uint8s(s, 12); /* len(2), version(1), pad(1), signature(8) */
-            xrdp_sec_decrypt(self, s->p, (int)(s->end - s->p));
+            in_uint16_le(s, len);
+            in_uint8(s, ver);
+            in_uint8(s, pad);
+            LLOGLN(10, ("xrdp_sec_recv: len %d ver %d pad %d", len, ver, pad));
+            in_uint8s(s, 8); /* signature(8) */
+            LLOGLN(10, ("xrdp_sec_recv: data len %d", (int)(s->end - s->p)));
+            xrdp_sec_fips_decrypt(self, s->p, (int)(s->end - s->p));
+            s->end -= pad;
         }
         else
         {
@@ -978,7 +1002,14 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
         in_uint8a(s, self->client_crypt_random, 64);
         xrdp_sec_rsa_op(self->client_random, self->client_crypt_random,
                         self->pub_mod, self->pri_exp);
-        xrdp_sec_establish_keys(self);
+        if (self->crypt_method == CRYPT_METHOD_FIPS)
+        {
+            xrdp_sec_fips_establish_keys(self);
+        }
+        else
+        {
+            xrdp_sec_establish_keys(self);
+        }
         *chan = 1; /* just set a non existing channel and exit */
         DEBUG((" out xrdp_sec_recv"));
         return 0;
@@ -1074,17 +1105,50 @@ xrdp_sec_sign(struct xrdp_sec *self, char *out, int out_len,
 }
 
 /*****************************************************************************/
+/* Generate a MAC hash (5.2.3.1), using a combination of SHA1 and MD5 */
+static void APP_CC
+xrdp_sec_fips_sign(struct xrdp_sec *self, char *out, int out_len,
+                   char *data, int data_len)
+{
+    char buf[20];
+    char use_count_le[4];
+
+    use_count_le[0] = (self->encrypt_use_count >> 0) & 0xFF;
+    use_count_le[1] = (self->encrypt_use_count >> 8) & 0xFF;
+    use_count_le[2] = (self->encrypt_use_count >> 16) & 0xFF;
+    use_count_le[3] = (self->encrypt_use_count >> 24) & 0xFF;
+    ssl_hmac_sha1_init(self->sign_fips_info, self->fips_sign_key, 20);
+    ssl_hmac_transform(self->sign_fips_info, data, data_len);
+    ssl_hmac_transform(self->sign_fips_info, use_count_le, 4);
+    ssl_hmac_complete(self->sign_fips_info, buf, 20);
+    g_memcpy(out, buf, out_len);
+}
+
+/*****************************************************************************/
 /* returns error */
 int APP_CC
 xrdp_sec_send(struct xrdp_sec *self, struct stream *s, int chan)
 {
     int datalen;
+    int pad;
 
+    LLOGLN(10, ("xrdp_sec_send:"));
     DEBUG((" in xrdp_sec_send"));
     s_pop_layer(s, sec_hdr);
 
     if (self->crypt_level == CRYPT_LEVEL_FIPS)
     {
+        LLOGLN(10, ("xrdp_sec_send: fips"));
+        out_uint32_le(s, SEC_ENCRYPT);
+        datalen = (int)((s->end - s->p) - 12);
+        out_uint16_le(s, 16); /* crypto header size */
+        out_uint8(s, 1); /* fips version */
+        pad = (8 - (datalen % 8)) & 7;
+        g_memset(s->end, 0, pad);
+        s->end += pad;
+        out_uint8(s, pad); /* fips pad */
+        xrdp_sec_fips_sign(self, s->p, 8, s->p + 8, datalen);
+        xrdp_sec_fips_encrypt(self, s->p + 8, datalen + pad);
     }
     else if (self->crypt_level > CRYPT_LEVEL_LOW)
     {
@@ -1303,7 +1367,7 @@ xrdp_sec_process_mcs_data_CS_SECURITY(struct xrdp_sec *self, struct stream* s)
             found = 1;
         }
     }
-    if ((found == 0) && 
+    if ((found == 0) &&
         (self->crypt_method & CRYPT_METHOD_40BIT) &&
         (self->crypt_level == CRYPT_LEVEL_CLIENT_COMPATIBLE))
     {
@@ -1316,7 +1380,7 @@ xrdp_sec_process_mcs_data_CS_SECURITY(struct xrdp_sec *self, struct stream* s)
             found = 1;
         }
     }
-    if ((found == 0) && 
+    if ((found == 0) &&
         (self->crypt_method & CRYPT_METHOD_40BIT) &&
         (self->crypt_level == CRYPT_LEVEL_LOW))
     {
@@ -1521,7 +1585,7 @@ xrdp_sec_process_mcs_data(struct xrdp_sec *self)
 
         s->p = hold_p + size;
     }
-    
+
     if (self->rdp_layer->client_info.max_bpp > 0)
     {
         if (self->rdp_layer->client_info.bpp >
@@ -1722,8 +1786,8 @@ xrdp_sec_incoming(struct xrdp_sec *self)
     char *value = NULL;
     char key_file[256];
 
+    LLOGLN(10, ("xrdp_sec_incoming:"));
     g_memset(key_file, 0, sizeof(char) * 256);
-
     DEBUG((" in xrdp_sec_incoming"));
     g_random(self->server_random, 32);
     items = list_create();
@@ -1786,6 +1850,7 @@ xrdp_sec_incoming(struct xrdp_sec *self)
     {
         return 1;
     }
+    LLOGLN(10, ("xrdp_sec_incoming: out"));
     return 0;
 }
 

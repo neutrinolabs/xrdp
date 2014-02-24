@@ -121,6 +121,7 @@ struct xrdp_sec
   char fips_sign_key[20];
   void* encrypt_fips_info;
   void* decrypt_fips_info;
+  void* sign_fips_info;
 };
 
 /* channel */

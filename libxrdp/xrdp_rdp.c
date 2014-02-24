@@ -305,7 +305,10 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
             }
             else
             {
-                g_writeln("Wrong channel Id to be handled by xrdp_channel_process %d", chan);
+                if (chan != 1)
+                {
+                    g_writeln("Wrong channel Id to be handled by xrdp_channel_process %d", chan);
+                }
             }
 
             s->next_packet = 0;
