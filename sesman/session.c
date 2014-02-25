@@ -551,6 +551,7 @@ session_start_fork(int width, int height, int bpp, char *username,
             {
                 g_waitpid(pampid);
                 auth_stop_session(data);
+                g_deinit();
                 g_exit(0);
             }
         }
