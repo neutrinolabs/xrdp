@@ -37,20 +37,13 @@
 #include "file_loc.h"
 #include "xrdp_client_info.h"
 
-/* tcp */
-struct xrdp_tcp
-{
-  struct trans* trans;
-  struct xrdp_iso* iso_layer; /* owner */
-};
-
 /* iso */
 struct xrdp_iso
 {
   struct xrdp_mcs* mcs_layer; /* owner */
-  struct xrdp_tcp* tcp_layer;
   int requestedProtocol;
   int selectedProtocol;
+  struct trans* trans;
 };
 
 /* used in mcs */

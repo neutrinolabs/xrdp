@@ -70,8 +70,8 @@ struct xrdp_session
   void* orders;
   struct xrdp_client_info* client_info;
   int up_and_running;
-  struct stream* s;
   int (*is_term)(void);
+  int in_process_data; /* inc / dec libxrdp_process_data calls */
 };
 
 struct xrdp_session* DEFAULT_CC
@@ -83,7 +83,7 @@ libxrdp_disconnect(struct xrdp_session* session);
 int DEFAULT_CC
 libxrdp_process_incomming(struct xrdp_session* session);
 int DEFAULT_CC
-libxrdp_process_data(struct xrdp_session* session);
+libxrdp_process_data(struct xrdp_session* session, struct stream *s);
 int DEFAULT_CC
 libxrdp_send_palette(struct xrdp_session* session, int* palette);
 int DEFAULT_CC

@@ -75,8 +75,8 @@ xrdp_mcs_delete(struct xrdp_mcs *self)
 }
 
 /*****************************************************************************/
-/* This function sends channel join confirm*/
-/* returns error = 1 ok = 0*/
+/* This function sends channel join confirm */
+/* returns error = 1 ok = 0 */
 static int APP_CC
 xrdp_mcs_send_cjcf(struct xrdp_mcs *self, int userid, int chanid)
 {
@@ -151,6 +151,12 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
         /* this is channels getting added from the client */
         if (appid == MCS_CJRQ)
         {
+            if (s == self->iso_layer->trans->in_s)
+            {
+                /* this should not happen */
+                g_writeln("xrdp_mcs_recv: error, MCS_CJRQ at wrong time");
+                return 1;
+            }
             if (!s_check_rem(s, 4))
             {
                 return 1;
@@ -165,13 +171,12 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
             {
                 log_message(LOG_LEVEL_ERROR,"Non handled error from xrdp_mcs_send_cjcf") ;
             }
-
             continue;
         }
 
         if (appid == MCS_SDRQ || appid == MCS_SDIN)
         {
-            break ;
+            break;
         }
         else
         {
@@ -949,12 +954,12 @@ xrdp_mcs_send(struct xrdp_mcs *self, struct stream *s, int chan)
 void APP_CC
 close_rdp_socket(struct xrdp_mcs *self)
 {
-    if (self->iso_layer->tcp_layer != 0)
+    if (self->iso_layer != 0)
     {
-        if (self->iso_layer->tcp_layer->trans != 0)
+        if (self->iso_layer->trans != 0)
         {
-            g_tcp_close(self->iso_layer->tcp_layer->trans->sck);
-            self->iso_layer->tcp_layer->trans->sck = 0 ;
+            g_tcp_close(self->iso_layer->trans->sck);
+            self->iso_layer->trans->sck = 0 ;
             g_writeln("xrdp_mcs_disconnect - socket closed");
             return;
         }

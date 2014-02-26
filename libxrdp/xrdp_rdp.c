@@ -198,8 +198,10 @@ xrdp_rdp_create(struct xrdp_session *session, struct trans *trans)
     /* read ini settings */
     xrdp_rdp_read_config(&self->client_info);
     /* create sec layer */
-    self->sec_layer = xrdp_sec_create(self, trans, self->client_info.crypt_level,
-                                      self->client_info.channel_code, self->client_info.multimon);
+    self->sec_layer = xrdp_sec_create(self, trans,
+                                      self->client_info.crypt_level,
+                                      self->client_info.channel_code,
+                                      self->client_info.multimon);
     /* default 8 bit v1 color bitmap cache entries and size */
     self->client_info.cache1_entries = 600;
     self->client_info.cache1_size = 256;
@@ -503,10 +505,10 @@ xrdp_rdp_incoming(struct xrdp_rdp *self)
                         MCS_USERCHANNEL_BASE;
     DEBUG(("out xrdp_rdp_incoming mcs channel %d", self->mcs_channel));
     g_strncpy(self->client_info.client_addr,
-              self->sec_layer->mcs_layer->iso_layer->tcp_layer->trans->addr,
+              self->sec_layer->mcs_layer->iso_layer->trans->addr,
               sizeof(self->client_info.client_addr) - 1);
     g_strncpy(self->client_info.client_port,
-              self->sec_layer->mcs_layer->iso_layer->tcp_layer->trans->port,
+              self->sec_layer->mcs_layer->iso_layer->trans->port,
               sizeof(self->client_info.client_port) - 1);
     return 0;
 }
@@ -1568,6 +1570,7 @@ xrdp_rdp_process_data_font(struct xrdp_rdp *self, struct stream *s)
         xrdp_rdp_send_fontmap(self);
 
         self->session->up_and_running = 1;
+        g_writeln("yeah, up_and_running");
         DEBUG(("up_and_running set"));
         xrdp_rdp_send_data_update_sync(self);
     }

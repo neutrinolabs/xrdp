@@ -55,7 +55,6 @@ libxrdp_la_SOURCES = \
   xrdp_orders.c \
   xrdp_rdp.c \
   xrdp_sec.c \
-  xrdp_tcp.c \
   xrdp_bitmap_compress.c \
   xrdp_bitmap32_compress.c \
   xrdp_jpeg_compress.c \

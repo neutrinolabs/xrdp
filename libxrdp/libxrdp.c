@@ -32,8 +32,6 @@ libxrdp_init(tbus id, struct trans *trans)
     session->rdp = xrdp_rdp_create(session, trans);
     session->orders = xrdp_orders_create(session, (struct xrdp_rdp *)session->rdp);
     session->client_info = &(((struct xrdp_rdp *)session->rdp)->client_info);
-    make_stream(session->s);
-    init_stream(session->s, 8192 * 2);
     return session;
 }
 
@@ -48,7 +46,6 @@ libxrdp_exit(struct xrdp_session *session)
 
     xrdp_orders_delete((struct xrdp_orders *)session->orders);
     xrdp_rdp_delete((struct xrdp_rdp *)session->rdp);
-    free_stream(session->s);
     g_free(session);
     return 0;
 }
@@ -69,18 +66,37 @@ libxrdp_process_incomming(struct xrdp_session *session)
 
 /******************************************************************************/
 int EXPORT_CC
-libxrdp_process_data(struct xrdp_session *session)
+libxrdp_process_data(struct xrdp_session *session, struct stream *s)
 {
     int cont;
     int rv;
     int code;
     int term;
     int dead_lock_counter;
+    struct xrdp_rdp *rdp;
+    struct stream *ls;
+
+    if (session->in_process_data != 0)
+    {
+        g_writeln("libxrdp_process_data: error reentry");
+        return 1;
+    }
+    session->in_process_data++;
+
+    ls = 0;
+    if (s == 0)
+    {
+        make_stream(ls);
+        init_stream(ls, 8192 * 4);
+        s = ls;
+    }
 
     term = 0;
     cont = 1;
     rv = 0;
     dead_lock_counter = 0;
+
+    rdp = (struct xrdp_rdp *) (session->rdp);
 
     while ((cont || !session->up_and_running) && !term)
     {
@@ -94,8 +110,7 @@ libxrdp_process_data(struct xrdp_session *session)
 
         code = 0;
 
-        if (xrdp_rdp_recv((struct xrdp_rdp *)(session->rdp),
-                          session->s, &code) != 0)
+        if (xrdp_rdp_recv(rdp, s, &code) != 0)
         {
             rv = 1;
             break;
@@ -106,13 +121,14 @@ libxrdp_process_data(struct xrdp_session *session)
         switch (code)
         {
             case -1:
-                xrdp_rdp_send_demand_active((struct xrdp_rdp *)session->rdp);
+                xrdp_rdp_send_demand_active(rdp);
 
-                // send Monitor Layout PDU for multimon
-                if (session->client_info->monitorCount > 0 && session->client_info->multimon == 1)
+                /* send Monitor Layout PDU for multimon */
+                if (session->client_info->monitorCount > 0 &&
+                    session->client_info->multimon == 1)
                 {
                     DEBUG(("sending monitor layout pdu"));
-                    if (xrdp_rdp_send_monitorlayout((struct xrdp_rdp *)session->rdp) != 0)
+                    if (xrdp_rdp_send_monitorlayout(rdp) != 0)
                     {
                       g_writeln("xrdp_rdp_send_monitorlayout: error");
                     }
@@ -124,13 +140,11 @@ libxrdp_process_data(struct xrdp_session *session)
                 dead_lock_counter++;
                 break;
             case RDP_PDU_CONFIRM_ACTIVE: /* 3 */
-                xrdp_rdp_process_confirm_active((struct xrdp_rdp *)session->rdp,
-                                                session->s);
+                xrdp_rdp_process_confirm_active(rdp, s);
                 break;
             case RDP_PDU_DATA: /* 7 */
 
-                if (xrdp_rdp_process_data((struct xrdp_rdp *)session->rdp,
-                                          session->s) != 0)
+                if (xrdp_rdp_process_data(rdp, s) != 0)
                 {
                     DEBUG(("libxrdp_process_data returned non zero"));
                     cont = 0;
@@ -149,16 +163,23 @@ libxrdp_process_data(struct xrdp_session *session)
             /*This situation can happen and this is a workaround*/
             cont = 0;
             g_writeln("Serious programming error we were locked in a deadly loop") ;
-            g_writeln("remaining :%d", session->s->end - session->s->next_packet);
-            session->s->next_packet = 0;
+            g_writeln("remaining :%d", s->end - s->next_packet);
+            s->next_packet = 0;
         }
 
         if (cont)
         {
-            cont = (session->s->next_packet != 0) &&
-                   (session->s->next_packet < session->s->end);
+            cont = (s->next_packet != 0) &&
+                   (s->next_packet < s->end);
         }
     }
+
+    if (s == ls)
+    {
+        free_stream(s);
+    }
+
+    session->in_process_data--;
 
     return rv;
 }
@@ -769,7 +790,7 @@ libxrdp_reset(struct xrdp_session *session,
     /* process till up and running */
     session->up_and_running = 0;
 
-    if (libxrdp_process_data(session) != 0)
+    if (libxrdp_process_data(session, 0) != 0)
     {
         g_writeln("non handled error from libxrdp_process_data");
     }
