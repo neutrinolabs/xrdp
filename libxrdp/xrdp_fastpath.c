@@ -28,7 +28,7 @@ xrdp_fastpath_create(struct xrdp_sec *owner, struct trans *trans)
     DEBUG(("  in xrdp_fastpath_create"));
     self = (struct xrdp_fastpath *)g_malloc(sizeof(struct xrdp_fastpath), 1);
     self->sec_layer = owner;
-    self->tcp_layer = owner->mcs_layer->iso_layer->tcp_layer;
+    self->trans = trans;
     DEBUG(("  out xrdp_fastpath_create"));
     return self;
 }
@@ -69,7 +69,7 @@ xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
     self->secFlags = (fp_hdr & 0xC0) >> 6;
 
     // receive fastpath first length packet
-    if (xrdp_tcp_recv(self->tcp_layer, s, 1) != 0)
+    if (trans_force_read_s(self->trans, s, 1) != 0)
     {
        return 1;
     }

@@ -58,6 +58,10 @@ xrdp_wm_create(struct xrdp_process *owner,
     xrdp_wm_set_login_mode(self, 0);
     self->target_surface = self->screen;
     self->current_surface_index = 0xffff; /* screen */
+
+    /* to store configuration from xrdp.ini */
+    self->xrdp_config = g_malloc(sizeof(struct xrdp_config), 1);
+
     return self;
 }
 
@@ -79,6 +83,10 @@ xrdp_wm_delete(struct xrdp_wm *self)
     /* free default font */
     xrdp_font_delete(self->default_font);
     g_delete_wait_obj(self->login_mode_event);
+
+    if (self->xrdp_config)
+        g_free(self->xrdp_config);
+
     /* free self */
     g_free(self);
 }
@@ -315,7 +323,8 @@ xrdp_wm_set_pointer(struct xrdp_wm *self, int cache_idx)
 
 /*****************************************************************************/
 /* convert hex string to int */
-unsigned int xrdp_wm_htoi (const char *ptr)
+unsigned int APP_CC
+xrdp_wm_htoi (const char *ptr)
 {
     unsigned int value = 0;
     char ch = *ptr;
@@ -535,12 +544,18 @@ xrdp_wm_init(struct xrdp_wm *self)
     char cfg_file[256];
     char autorun_name[256];
 
+    load_xrdp_config(self->xrdp_config, self->screen->bpp);
+
     xrdp_wm_load_static_colors_plus(self, autorun_name);
     xrdp_wm_load_static_pointers(self);
-    self->screen->bg_color = self->background;
+    self->screen->bg_color = self->xrdp_config->cfg_globals.ls_top_window_bg_color;
 
     if (self->session->client_info->rdp_autologin || (autorun_name[0] != 0))
     {
+        /*
+         * NOTE: this should eventually be accessed from self->xrdp_config
+         */
+
         g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
         fd = g_file_open(cfg_file); /* xrdp.ini */
 
@@ -561,7 +576,7 @@ xrdp_wm_init(struct xrdp_wm *self)
             {
                 if (autorun_name[0] == 0)
                 {
-                    /* if no doamin is passed, and no autorun in xrdp.ini,
+                    /* if no domain is passed, and no autorun in xrdp.ini,
                        use the first item in the xrdp.ini
                        file thats not named
                        'globals' or 'Logging' or 'channels' */
@@ -1028,7 +1043,7 @@ xrdp_wm_mouse_move(struct xrdp_wm *self, int x, int y)
 
     b = xrdp_wm_at_pos(self->screen, x, y, 0);
 
-    if (b == 0) /* if b is null, the movment must be over the screen */
+    if (b == 0) /* if b is null, the movement must be over the screen */
     {
         if (self->screen->pointer != self->current_pointer)
         {
@@ -1036,7 +1051,7 @@ xrdp_wm_mouse_move(struct xrdp_wm *self, int x, int y)
             self->current_pointer = self->screen->pointer;
         }
 
-        if (self->mm->mod != 0) /* if screen is mod controled */
+        if (self->mm->mod != 0) /* if screen is mod controlled */
         {
             if (self->mm->mod->mod_event != 0)
             {
@@ -1175,7 +1190,7 @@ xrdp_wm_mouse_click(struct xrdp_wm *self, int x, int y, int but, int down)
 
     if (control == 0)
     {
-        if (self->mm->mod != 0) /* if screen is mod controled */
+        if (self->mm->mod != 0) /* if screen is mod controlled */
         {
             if (self->mm->mod->mod_event != 0)
             {
@@ -1724,7 +1739,7 @@ xrdp_wm_login_mode_changed(struct xrdp_wm *self)
 }
 
 /*****************************************************************************/
-/* this is the log windows nofity function */
+/* this is the log windows notify function */
 static int DEFAULT_CC
 xrdp_wm_log_wnd_notify(struct xrdp_bitmap *wnd,
                        struct xrdp_bitmap *sender,

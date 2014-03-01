@@ -115,7 +115,7 @@ xrdp_bitmap_create(int width, int height, int bpp,
         self->child_list = list_create();
     }
 
-    self->line_size = width *Bpp;
+    self->line_size = width * Bpp;
 
     if (self->type == WND_TYPE_COMBO)
     {

@@ -47,6 +47,7 @@ This is the main driver file
 #include "rdpRandR.h"
 #include "rdpMisc.h"
 #include "rdpComposite.h"
+#include "rdpTrapezoids.h"
 #include "rdpGlyphs.h"
 #include "rdpPixmap.h"
 #include "rdpClientCon.h"
@@ -410,7 +411,11 @@ rdpWakeupHandler1(pointer blockData, int result, pointer pReadmask)
 
 /*****************************************************************************/
 static Bool
+#if XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(1, 13, 0, 0, 0)
 rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
+#else
+rdpScreenInit(ScreenPtr pScreen, int argc, char **argv)
+#endif
 {
     ScrnInfoPtr pScrn;
     rdpPtr dev;
@@ -418,7 +423,7 @@ rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     Bool vis_found;
     PictureScreenPtr ps;
 
-    pScrn = xf86Screens[scrnIndex];
+    pScrn = xf86Screens[pScreen->myNum];
     dev = XRDPPTR(pScrn);
 
     dev->pScreen = pScreen;
@@ -531,6 +536,9 @@ rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
         /* glyphs */
         dev->Glyphs = ps->Glyphs;
         ps->Glyphs = rdpGlyphs;
+        /* trapezoids */
+        dev->Trapezoids = ps->Trapezoids;
+        ps->Trapezoids = rdpTrapezoids;
     }
 
     RegisterBlockAndWakeupHandlers(rdpBlockHandler1, rdpWakeupHandler1, pScreen);
@@ -552,7 +560,11 @@ rdpScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 
 /*****************************************************************************/
 static Bool
+#if XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(1, 13, 0, 0, 0)
 rdpSwitchMode(int a, DisplayModePtr b, int c)
+#else
+rdpSwitchMode(ScrnInfoPtr a, DisplayModePtr b)
+#endif
 {
     LLOGLN(0, ("rdpSwitchMode:"));
     return TRUE;
@@ -560,14 +572,22 @@ rdpSwitchMode(int a, DisplayModePtr b, int c)
 
 /*****************************************************************************/
 static void
+#if XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(1, 13, 0, 0, 0)
 rdpAdjustFrame(int a, int b, int c, int d)
+#else
+rdpAdjustFrame(ScrnInfoPtr a, int b, int c)
+#endif
 {
     LLOGLN(10, ("rdpAdjustFrame:"));
 }
 
 /*****************************************************************************/
 static Bool
+#if XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(1, 13, 0, 0, 0)
 rdpEnterVT(int a, int b)
+#else
+rdpEnterVT(ScrnInfoPtr a)
+#endif
 {
     LLOGLN(0, ("rdpEnterVT:"));
     return TRUE;
@@ -575,14 +595,22 @@ rdpEnterVT(int a, int b)
 
 /*****************************************************************************/
 static void
+#if XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(1, 13, 0, 0, 0)
 rdpLeaveVT(int a, int b)
+#else
+rdpLeaveVT(ScrnInfoPtr a)
+#endif
 {
     LLOGLN(0, ("rdpLeaveVT:"));
 }
 
 /*****************************************************************************/
 static ModeStatus
+#if XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(1, 13, 0, 0, 0)
 rdpValidMode(int a, DisplayModePtr b, Bool c, int d)
+#else
+rdpValidMode(ScrnInfoPtr a, DisplayModePtr b, Bool c, int d)
+#endif
 {
     LLOGLN(0, ("rdpValidMode:"));
     return 0;

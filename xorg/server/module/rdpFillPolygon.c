@@ -32,6 +32,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "rdp.h"
 #include "rdpDraw.h"
+#include "rdpClientCon.h"
+#include "rdpReg.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
@@ -56,7 +58,60 @@ rdpFillPolygon(DrawablePtr pDrawable, GCPtr pGC,
                int shape, int mode, int count,
                DDXPointPtr pPts)
 {
+    rdpPtr dev;
+    RegionRec clip_reg;
+    RegionRec reg;
+    int cd;
+    int maxx;
+    int maxy;
+    int minx;
+    int miny;
+    int index;
+    int x;
+    int y;
+    BoxRec box;
+
     LLOGLN(10, ("rdpFillPolygon:"));
+    dev = rdpGetDevFromScreen(pGC->pScreen);
+    dev->counts.rdpFillPolygonCallCount++;
+    box.x1 = 0;
+    box.y1 = 0;
+    box.x2 = 0;
+    box.y2 = 0;
+    if (count > 0)
+    {
+        maxx = pPts[0].x;
+        maxy = pPts[0].y;
+        minx = maxx;
+        miny = maxy;
+        for (index = 1; index < count; index++)
+        {
+            x = pPts[index].x;
+            y = pPts[index].y;
+            maxx = RDPMAX(x, maxx);
+            minx = RDPMIN(x, minx);
+            maxy = RDPMAX(y, maxy);
+            miny = RDPMIN(y, miny);
+        }
+        box.x1 = pDrawable->x + minx;
+        box.y1 = pDrawable->y + miny;
+        box.x2 = pDrawable->x + maxx + 1;
+        box.y2 = pDrawable->y + maxy + 1;
+    }
+    rdpRegionInit(&reg, &box, 0);
+    rdpRegionInit(&clip_reg, NullBox, 0);
+    cd = rdpDrawGetClip(dev, &clip_reg, pDrawable, pGC);
+    LLOGLN(10, ("rdpFillPolygon: cd %d", cd));
+    if (cd == XRDP_CD_CLIP)
+    {
+        rdpRegionIntersect(&reg, &clip_reg, &reg);
+    }
     /* do original call */
     rdpFillPolygonOrg(pDrawable, pGC, shape, mode, count, pPts);
+    if (cd != XRDP_CD_NODRAW)
+    {
+        rdpClientConAddAllReg(dev, &reg, pDrawable);
+    }
+    rdpRegionUninit(&clip_reg);
+    rdpRegionUninit(&reg);
 }

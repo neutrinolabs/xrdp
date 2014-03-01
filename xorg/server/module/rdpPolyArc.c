@@ -32,13 +32,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "rdp.h"
 #include "rdpDraw.h"
+#include "rdpClientCon.h"
+#include "rdpReg.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
 /******************************************************************************/
-void
+static void
 rdpPolyArcOrg(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc *parcs)
 {
     GC_OP_VARS;
@@ -52,7 +54,49 @@ rdpPolyArcOrg(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc *parcs)
 void
 rdpPolyArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc *parcs)
 {
-    LLOGLN(10, ("rdpPolyArc:"));
+    rdpPtr dev;
+    BoxRec box;
+    int index;
+    int cd;
+    int lw;
+    int extra;
+    RegionRec clip_reg;
+    RegionRec reg;
+
+    LLOGLN(0, ("rdpPolyArc:"));
+    dev = rdpGetDevFromScreen(pGC->pScreen);
+    dev->counts.rdpPolyArcCallCount++;
+    rdpRegionInit(&reg, NullBox, 0);
+    if (narcs > 0)
+    {
+        lw = pGC->lineWidth;
+        if (lw == 0)
+        {
+            lw = 1;
+        }
+        extra = lw / 2;
+        for (index = 0; index < narcs; index++)
+        {
+            box.x1 = (parcs[index].x - extra) + pDrawable->x;
+            box.y1 = (parcs[index].y - extra) + pDrawable->y;
+            box.x2 = box.x1 + parcs[index].width + lw;
+            box.y2 = box.y1 + parcs[index].height + lw;
+            rdpRegionUnionRect(&reg, &box);
+        }
+    }
+    rdpRegionInit(&clip_reg, NullBox, 0);
+    cd = rdpDrawGetClip(dev, &clip_reg, pDrawable, pGC);
+    LLOGLN(10, ("rdpPolyArc: cd %d", cd));
+    if (cd == XRDP_CD_CLIP)
+    {
+        rdpRegionIntersect(&reg, &clip_reg, &reg);
+    }
     /* do original call */
     rdpPolyArcOrg(pDrawable, pGC, narcs, parcs);
+    if (cd != XRDP_CD_NODRAW)
+    {
+        rdpClientConAddAllReg(dev, &reg, pDrawable);
+    }
+    rdpRegionUninit(&clip_reg);
+    rdpRegionUninit(&reg);
 }

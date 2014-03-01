@@ -56,5 +56,9 @@ void
 rdpRegionReset(RegionPtr pReg, BoxPtr pBox);
 Bool
 rdpRegionBreak(RegionPtr pReg);
+void
+rdpRegionUnionRect(RegionPtr pReg, BoxPtr prect);
+int
+rdpRegionPixelCount(RegionPtr pReg);
 
 #endif

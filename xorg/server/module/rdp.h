@@ -30,6 +30,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "rdpPri.h"
 
+/* PIXMAN_a8r8g8b8 */
+#define XRDP_a8r8g8b8 \
+((32 << 24) | (2 << 16) | (8 << 12) | (8 << 8)  | (8 << 4) | 8)
+
 #define PixelDPI 100
 #define PixelToMM(_size) (((_size) * 254 + (PixelDPI) * 5) / ((PixelDPI) * 10))
 
@@ -37,6 +41,30 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define RDPMAX(_val1, _val2) ((_val1) < (_val2) ? (_val2) : (_val1))
 #define RDPCLAMP(_val, _lo, _hi) \
   (_val) < (_lo) ? (_lo) : (_val) > (_hi) ? (_hi) : (_val)
+
+#define XRDP_CD_NODRAW 0
+#define XRDP_CD_NOCLIP 1
+#define XRDP_CD_CLIP   2
+
+#if 0
+#define RegionCopy DONOTUSE
+#define RegionTranslate DONOTUSE
+#define RegionNotEmpty DONOTUSE
+#define RegionIntersect DONOTUSE
+#define RegionContainsRect DONOTUSE
+#define RegionInit DONOTUSE
+#define RegionUninit DONOTUSE
+#define RegionFromRects DONOTUSE
+#define RegionDestroy DONOTUSE
+#define RegionCreate DONOTUSE
+#define RegionUnion DONOTUSE
+#define RegionSubtract DONOTUSE
+#define RegionInverse DONOTUSE
+#define RegionExtents DONOTUSE
+#define RegionReset DONOTUSE
+#define RegionBreak DONOTUSE
+#define RegionUnionRect DONOTUSE
+#endif
 
 struct image_data
 {
@@ -101,6 +129,34 @@ typedef struct _rdpPixmapRec * rdpPixmapPtr;
 #define GETPIXPRIV(_dev, _pPixmap) (rdpPixmapPtr) \
 rdpGetPixmapPrivate(&((_pPixmap)->devPrivates),  (_dev)->privateKeyRecPixmap)
 
+struct _rdpCounts
+{
+    CARD32 rdpFillSpansCallCount; /* 1 */
+    CARD32 rdpSetSpansCallCount;
+    CARD32 rdpPutImageCallCount;
+    CARD32 rdpCopyAreaCallCount;
+    CARD32 rdpCopyPlaneCallCount;
+    CARD32 rdpPolyPointCallCount;
+    CARD32 rdpPolylinesCallCount;
+    CARD32 rdpPolySegmentCallCount;
+    CARD32 rdpPolyRectangleCallCount;
+    CARD32 rdpPolyArcCallCount; /* 10 */
+    CARD32 rdpFillPolygonCallCount;
+    CARD32 rdpPolyFillRectCallCount;
+    CARD32 rdpPolyFillArcCallCount;
+    CARD32 rdpPolyText8CallCount;
+    CARD32 rdpPolyText16CallCount;
+    CARD32 rdpImageText8CallCount;
+    CARD32 rdpImageText16CallCount;
+    CARD32 rdpImageGlyphBltCallCount;
+    CARD32 rdpPolyGlyphBltCallCount;
+    CARD32 rdpPushPixelsCallCount; /* 20 */
+    CARD32 rdpCompositeCallCount;
+    CARD32 rdpCopyWindowCallCount; /* 22 */
+    CARD32 rdpTrapezoidsCallCount;
+    CARD32 callCount[64 - 23];
+};
+
 /* move this to common header */
 struct _rdpRec
 {
@@ -126,6 +182,7 @@ struct _rdpRec
     CloseScreenProcPtr CloseScreen;
     CompositeProcPtr Composite;
     GlyphsProcPtr Glyphs;
+    TrapezoidsProcPtr Trapezoids;
 
     /* keyboard and mouse */
     miPointerScreenFuncPtr pCursorFuncs;
@@ -168,6 +225,8 @@ struct _rdpRec
     int disconnect_time_ms;
 
     int conNumber;
+
+    struct _rdpCounts counts;
 
 };
 typedef struct _rdpRec rdpRec;

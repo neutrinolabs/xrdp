@@ -41,14 +41,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /******************************************************************************/
 static void
-rdpPolyFillRectPre(rdpPtr dev, rdpClientCon *clientCon,
-                   int cd, RegionPtr clip_reg,
-                   DrawablePtr pDrawable, GCPtr pGC, RegionPtr fill_reg)
-{
-}
-
-/******************************************************************************/
-static void
 rdpPolyFillRectOrg(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
                    xRectangle *prectInit)
 {
@@ -60,71 +52,34 @@ rdpPolyFillRectOrg(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
 }
 
 /******************************************************************************/
-static void
-rdpPolyFillRectPost(rdpPtr dev, rdpClientCon *clientCon,
-                    int cd, RegionPtr clip_reg,
-                    DrawablePtr pDrawable, GCPtr pGC, RegionPtr fill_reg)
-{
-    BoxRec box;
-    WindowPtr pDstWnd;
-
-    if (cd == 0)
-    {
-        return;
-    }
-    if (pDrawable->type != DRAWABLE_WINDOW)
-    {
-        return;
-    }
-    pDstWnd = (WindowPtr) pDrawable;
-    if (pDstWnd->viewable == FALSE)
-    {
-        return;
-    }
-    if (cd == 2)
-    {
-        rdpRegionIntersect(fill_reg, clip_reg, fill_reg);
-    }
-    rdpClientConAddDirtyScreenReg(dev, clientCon, fill_reg);
-}
-
-/******************************************************************************/
 void
 rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
                 xRectangle *prectInit)
 {
     rdpPtr dev;
-    rdpClientCon *clientCon;
     RegionRec clip_reg;
-    RegionPtr fill_reg;
+    RegionPtr reg;
     int cd;
 
     LLOGLN(10, ("rdpPolyFillRect:"));
     dev = rdpGetDevFromScreen(pGC->pScreen);
-
+    dev->counts.rdpPolyFillRectCallCount++;
     /* make a copy of rects */
-    fill_reg = rdpRegionFromRects(nrectFill, prectInit, CT_NONE);
-    rdpRegionTranslate(fill_reg, pDrawable->x, pDrawable->y);
-
+    reg = rdpRegionFromRects(nrectFill, prectInit, CT_NONE);
+    rdpRegionTranslate(reg, pDrawable->x, pDrawable->y);
     rdpRegionInit(&clip_reg, NullBox, 0);
     cd = rdpDrawGetClip(dev, &clip_reg, pDrawable, pGC);
-    LLOGLN(0, ("rdpPolyFillRect: cd %d", cd));
-    clientCon = dev->clientConHead;
-    while (clientCon != NULL)
+    LLOGLN(10, ("rdpPolyFillRect: cd %d", cd));
+    if (cd == XRDP_CD_CLIP)
     {
-        rdpPolyFillRectPre(dev, clientCon, cd, &clip_reg, pDrawable,
-                           pGC, fill_reg);
-        clientCon = clientCon->next;
+        rdpRegionIntersect(reg, &clip_reg, reg);
     }
     /* do original call */
     rdpPolyFillRectOrg(pDrawable, pGC, nrectFill, prectInit);
-    clientCon = dev->clientConHead;
-    while (clientCon != NULL)
+    if (cd != XRDP_CD_NODRAW)
     {
-        rdpPolyFillRectPost(dev, clientCon, cd, &clip_reg, pDrawable,
-                            pGC, fill_reg);
-        clientCon = clientCon->next;
+        rdpClientConAddAllReg(dev, reg, pDrawable);
     }
-    RegionUninit(&clip_reg);
-    rdpRegionDestroy(fill_reg);
+    rdpRegionUninit(&clip_reg);
+    rdpRegionDestroy(reg);
 }

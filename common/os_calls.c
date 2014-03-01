@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,11 @@
  *
  * put all the os / arch define in here you want
  */
+
+/* To test for Windows (64 bit or 32 bit) use _WIN32 and _WIN64 in addition
+   for 64 bit windows.  _WIN32 is defined for both.
+   To test for Linux use __linux__.
+   To test for BSD use BSD */
 
 #if defined(HAVE_CONFIG_H)
 #include "config_ac.h"
@@ -42,6 +47,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 #include <dlfcn.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -57,6 +64,13 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <locale.h>
+
+/* this is so we can use #ifdef BSD later */
+/* This is the recommended way of detecting BSD in the
+   FreeBSD Porter's Handbook. */
+#if (defined(__unix__) || defined(unix)) && !defined(USG)
+#include <sys/param.h>
+#endif
 
 #include "os_calls.h"
 #include "arch.h"
@@ -594,10 +608,16 @@ g_tcp_local_socket(void)
 }
 
 /*****************************************************************************/
+/* returns error */
 int APP_CC
 g_sck_get_peer_cred(int sck, int *pid, int *uid, int *gid)
 {
+#if defined(SO_PEERCRED)
+#if defined(_WIN32)
     int ucred_length;
+#else
+    unsigned int ucred_length;
+#endif
     struct myucred
     {
         pid_t pid;
@@ -623,6 +643,9 @@ g_sck_get_peer_cred(int sck, int *pid, int *uid, int *gid)
         *gid = credentials.gid;
     }
     return 0;
+#else
+    return 1;
+#endif
 }
 
 /*****************************************************************************/
@@ -3117,4 +3140,36 @@ g_text2bool(const char *s)
         return 1;
     }
     return 0;
+}
+
+/*****************************************************************************/
+/* returns pointer or nil on error */
+void * APP_CC
+g_shmat(int shmid)
+{
+#if defined(_WIN32)
+    return 0;
+#else
+     return shmat(shmid, 0, 0);
+#endif
+}
+
+/*****************************************************************************/
+/* returns -1 on error 0 on success */
+int APP_CC
+g_shmdt(const void *shmaddr)
+{
+#if defined(_WIN32)
+    return -1;
+#else
+    return shmdt(shmaddr);
+#endif
+}
+
+/*****************************************************************************/
+/* returns -1 on error 0 on success */
+int APP_CC
+g_gethostname(char *name, int len)
+{
+    return gethostname(name, len);
 }

@@ -32,11 +32,14 @@ composite(alpha blending) calls
 #include <xf86.h>
 #include <xf86_OSproc.h>
 
+#include "mipict.h"
 #include <picture.h>
 
 #include "rdp.h"
-#include "rdpComposite.h"
 #include "rdpDraw.h"
+#include "rdpClientCon.h"
+#include "rdpReg.h"
+#include "rdpComposite.h"
 
 /******************************************************************************/
 #define LOG_LEVEL 1
@@ -65,11 +68,26 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
     ScreenPtr pScreen;
     rdpPtr dev;
     PictureScreenPtr ps;
+    BoxRec box;
+    RegionRec reg;
 
     LLOGLN(10, ("rdpComposite:"));
-    pScreen = pSrc->pDrawable->pScreen;
+    pScreen = pDst->pDrawable->pScreen;
     dev = rdpGetDevFromScreen(pScreen);
+    dev->counts.rdpCompositeCallCount++;
+    box.x1 = xDst + pDst->pDrawable->x;
+    box.y1 = yDst + pDst->pDrawable->y;
+    box.x2 = box.x1 + width;
+    box.y2 = box.y1 + height;
+    rdpRegionInit(&reg, &box, 0);
+    if (pDst->pCompositeClip != NULL)
+    {
+        rdpRegionIntersect(&reg, pDst->pCompositeClip, &reg);
+    }
     ps = GetPictureScreen(pScreen);
+    /* do original call */
     rdpCompositeOrg(ps, dev, op, pSrc, pMask, pDst, xSrc, ySrc,
                     xMask, yMask, xDst, yDst, width, height);
+    rdpClientConAddAllReg(dev, &reg, pDst->pDrawable);
+    rdpRegionUninit(&reg);
 }

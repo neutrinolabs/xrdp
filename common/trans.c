@@ -282,7 +282,10 @@ trans_check_wait_objs(struct trans *self)
                 if (self->trans_data_in != 0)
                 {
                     rv = self->trans_data_in(self);
-                    init_stream(self->in_s, 0);
+                    if (self->no_stream_init_on_data_in == 0)
+                    {
+                        init_stream(self->in_s, 0);
+                    }
                 }
             }
         }

@@ -50,6 +50,8 @@ struct rdpup_os_bitmap
 /* one of these for each client */
 struct _rdpClientCon
 {
+    rdpPtr dev;
+
     int sck;
     int sckControlListener;
     int sckControl;
@@ -90,6 +92,16 @@ struct _rdpClientCon
 
     struct xrdp_client_info client_info;
 
+    char *shmemptr;
+    int shmemid;
+    int shmem_lineBytes;
+    RegionPtr shmRegion;
+    int rect_id;
+    int rect_id_ack;
+
+    OsTimerPtr updateTimer;
+    int updateSchedualed; /* boolean */
+
     struct _rdpClientCon *next;
 };
 
@@ -99,6 +111,9 @@ int
 rdpClientConEndUpdate(rdpPtr dev, rdpClientCon *clientCon);
 int
 rdpClientConSetFgcolor(rdpPtr dev, rdpClientCon *clientCon, int fgcolor);
+void
+rdpClientConSendArea(rdpPtr dev, rdpClientCon *clientCon,
+                     struct image_data *id, int x, int y, int w, int h);
 int
 rdpClientConFillRect(rdpPtr dev, rdpClientCon *clientCon,
                      short x, short y, int cx, int cy);
@@ -122,6 +137,25 @@ rdpClientConCheckDirtyScreen(rdpPtr dev, rdpClientCon *clientCon);
 int
 rdpClientConAddDirtyScreenReg(rdpPtr dev, rdpClientCon *clientCon,
                               RegionPtr reg);
-
+int
+rdpClientConAddDirtyScreenBox(rdpPtr dev, rdpClientCon *clientCon,
+                              BoxPtr box);
+int
+rdpClientConAddDirtyScreen(rdpPtr dev, rdpClientCon *clientCon,
+                           int x, int y, int cx, int cy);
+void
+rdpClientConGetScreenImageRect(rdpPtr dev, rdpClientCon *clientCon,
+                               struct image_data *id);
+int
+rdpClientConAddAllReg(rdpPtr dev, RegionPtr reg, DrawablePtr pDrawable);
+int
+rdpClientConAddAllBox(rdpPtr dev, BoxPtr box, DrawablePtr pDrawable);
+int
+rdpClientConSetCursor(rdpPtr dev, rdpClientCon *clientCon,
+                      short x, short y, char *cur_data, char *cur_mask);
+int
+rdpClientConSetCursorEx(rdpPtr dev, rdpClientCon *clientCon,
+                        short x, short y, char *cur_data,
+                        char *cur_mask, int bpp);
 
 #endif

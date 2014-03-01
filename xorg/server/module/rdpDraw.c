@@ -27,6 +27,7 @@ misc draw calls
 
 /* this should be before all X11 .h files */
 #include <xorg-server.h>
+#include <xorgVersion.h>
 
 /* all driver need this */
 #include <xf86.h>
@@ -36,6 +37,7 @@ misc draw calls
 #include <fb.h>
 #include <micmap.h>
 #include <mi.h>
+#include <dixfontstr.h>
 
 #include "rdp.h"
 #include "rdpDraw.h"
@@ -107,7 +109,7 @@ rdpDrawGetClip(rdpPtr dev, RegionPtr pRegion, DrawablePtr pDrawable, GCPtr pGC)
                 temp = &pWindow->clipList;
             }
 
-            if (RegionNotEmpty(temp))
+            if (rdpRegionNotEmpty(temp))
             {
                 switch (pGC->clientClipType)
                 {
@@ -146,6 +148,54 @@ rdpDrawGetClip(rdpPtr dev, RegionPtr pRegion, DrawablePtr pDrawable, GCPtr pGC)
     }
 
     return rv;
+}
+
+/******************************************************************************/
+void
+GetTextBoundingBox(DrawablePtr pDrawable, FontPtr font, int x, int y,
+                   int n, BoxPtr pbox)
+{
+    int maxAscent;
+    int maxDescent;
+    int maxCharWidth;
+
+    if (FONTASCENT(font) > FONTMAXBOUNDS(font, ascent))
+    {
+        maxAscent = FONTASCENT(font);
+    }
+    else
+    {
+        maxAscent = FONTMAXBOUNDS(font, ascent);
+    }
+
+    if (FONTDESCENT(font) > FONTMAXBOUNDS(font, descent))
+    {
+        maxDescent = FONTDESCENT(font);
+    }
+    else
+    {
+        maxDescent = FONTMAXBOUNDS(font, descent);
+    }
+
+    if (FONTMAXBOUNDS(font, rightSideBearing) >
+            FONTMAXBOUNDS(font, characterWidth))
+    {
+        maxCharWidth = FONTMAXBOUNDS(font, rightSideBearing);
+    }
+    else
+    {
+        maxCharWidth = FONTMAXBOUNDS(font, characterWidth);
+    }
+
+    pbox->x1 = pDrawable->x + x;
+    pbox->y1 = pDrawable->y + y - maxAscent;
+    pbox->x2 = pbox->x1 + maxCharWidth * n;
+    pbox->y2 = pbox->y1 + maxAscent + maxDescent;
+
+    if (FONTMINBOUNDS(font, leftSideBearing) < 0)
+    {
+        pbox->x1 += FONTMINBOUNDS(font, leftSideBearing);
+    }
 }
 
 /******************************************************************************/
@@ -239,13 +289,62 @@ rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion)
 {
     ScreenPtr pScreen;
     rdpPtr dev;
+    RegionRec reg;
+    RegionRec clip;
+    int dx;
+    int dy;
+    int num_clip_rects;
+    int num_reg_rects;
+    BoxPtr box;
+    BoxRec box1;
 
+    LLOGLN(10, ("rdpCopyWindow:"));
     pScreen = pWin->drawable.pScreen;
     dev = rdpGetDevFromScreen(pScreen);
+    dev->counts.rdpCopyWindowCallCount++;
+
+    rdpRegionInit(&reg, NullBox, 0);
+    rdpRegionCopy(&reg, pOldRegion);
+    rdpRegionInit(&clip, NullBox, 0);
+    rdpRegionCopy(&clip, &pWin->borderClip);
+    dx = pWin->drawable.x - ptOldOrg.x;
+    dy = pWin->drawable.y - ptOldOrg.y;
+
     dev->pScreen->CopyWindow = dev->CopyWindow;
     dev->pScreen->CopyWindow(pWin, ptOldOrg, pOldRegion);
     dev->pScreen->CopyWindow = rdpCopyWindow;
+
+    num_clip_rects = REGION_NUM_RECTS(&clip);
+    num_reg_rects = REGION_NUM_RECTS(&reg);
+
+    if ((num_clip_rects == 0) || (num_reg_rects == 0))
+    {
+    }
+    else
+    {
+        if ((num_clip_rects > 16) || (num_reg_rects > 16))
+        {
+            LLOGLN(10, ("rdpCopyWindow: big list"));
+            box = rdpRegionExtents(&reg);
+            box1 = *box;
+            box1.x1 += dx;
+            box1.y1 += dy;
+            box1.x2 += dx;
+            box1.y2 += dy;
+            rdpClientConAddAllBox(dev, &box1, &(pWin->drawable));
+        }
+        else
+        {
+            rdpRegionTranslate(&reg, dx, dy);
+            rdpRegionIntersect(&reg, &reg, &clip);
+            rdpClientConAddAllReg(dev, &reg, &(pWin->drawable));
+        }
+    }
+    rdpRegionUninit(&reg);
+    rdpRegionUninit(&clip);
 }
+
+#if XRDP_CLOSESCR == 1 /* before v1.13 */
 
 /*****************************************************************************/
 Bool
@@ -262,11 +361,30 @@ rdpCloseScreen(int index, ScreenPtr pScreen)
     return rv;
 }
 
+#else
+
+/*****************************************************************************/
+Bool
+rdpCloseScreen(ScreenPtr pScreen)
+{
+    rdpPtr dev;
+    Bool rv;
+
+    LLOGLN(0, ("rdpCloseScreen:"));
+    dev = rdpGetDevFromScreen(pScreen);
+    dev->pScreen->CloseScreen = dev->CloseScreen;
+    rv = dev->pScreen->CloseScreen(pScreen);
+    dev->pScreen->CloseScreen = rdpCloseScreen;
+    return rv;
+}
+
+#endif
+
 /******************************************************************************/
 WindowPtr
 rdpGetRootWindowPtr(ScreenPtr pScreen)
 {
-#if XORG_VERSION_CURRENT < (((1) * 10000000) + ((9) * 100000) + ((0) * 1000) + 0)
+#if XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(1, 9, 0, 0, 0)
     return WindowTable[pScreen->myNum]; /* in globals.c */
 #else
     return pScreen->root;

@@ -1,7 +1,16 @@
 
-Notes for building xrdpdev_drv.so and libxorgxrdp.so
+------------------------------------------------------
+ Notes for building xrdpdev_drv.so and libxorgxrdp.so
+------------------------------------------------------
 
+Pre-requisites:
+    o sudo apt-get install xserver-xorg-dev
 
+quick and easy way to build and run the driver
+    o cd xorg/server
+    o ./test-in-home.sh
+
+    o see /etc/X11/xrdp/xorg.conf to see how things are configured
 
 to run it
 create /etc/X11/xrdp

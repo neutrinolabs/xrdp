@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2014 Jay Sorg
+Copyright 2014 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -30,73 +30,58 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <xf86.h>
 #include <xf86_OSproc.h>
 
+#include <mipict.h>
+#include <picture.h>
+
 #include "rdp.h"
 #include "rdpDraw.h"
 #include "rdpClientCon.h"
 #include "rdpReg.h"
+#include "rdpTrapezoids.h"
 
+/******************************************************************************/
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
 /******************************************************************************/
 static void
-rdpPolyFillArcOrg(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc *parcs)
+rdpTrapezoidsOrg(PictureScreenPtr ps, rdpPtr dev,
+                 CARD8 op, PicturePtr pSrc, PicturePtr pDst,
+                 PictFormatPtr maskFormat, INT16 xSrc, INT16 ySrc,
+                 int ntrap, xTrapezoid *traps)
 {
-    GC_OP_VARS;
-
-    GC_OP_PROLOGUE(pGC);
-    pGC->ops->PolyFillArc(pDrawable, pGC, narcs, parcs);
-    GC_OP_EPILOGUE(pGC);
+    ps->Trapezoids = dev->Trapezoids;
+    ps->Trapezoids(op, pSrc, pDst, maskFormat, xSrc, ySrc, ntrap, traps);
+    ps->Trapezoids = rdpTrapezoids;
 }
 
 /******************************************************************************/
 void
-rdpPolyFillArc(DrawablePtr pDrawable, GCPtr pGC, int narcs, xArc *parcs)
+rdpTrapezoids(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
+              PictFormatPtr maskFormat, INT16 xSrc, INT16 ySrc,
+              int ntrap, xTrapezoid *traps)
 {
+    ScreenPtr pScreen;
     rdpPtr dev;
+    PictureScreenPtr ps;
     BoxRec box;
-    int index;
-    int cd;
-    int lw;
-    int extra;
-    RegionRec clip_reg;
     RegionRec reg;
 
-    LLOGLN(10, ("rdpPolyFillArc:"));
-    dev = rdpGetDevFromScreen(pGC->pScreen);
-    dev->counts.rdpPolyFillArcCallCount++;
-    rdpRegionInit(&reg, NullBox, 0);
-    if (narcs > 0)
-    {
-        lw = pGC->lineWidth;
-        if (lw == 0)
-        {
-            lw = 1;
-        }
-        extra = lw / 2;
-        for (index = 0; index < narcs; index++)
-        {
-            box.x1 = (parcs[index].x - extra) + pDrawable->x;
-            box.y1 = (parcs[index].y - extra) + pDrawable->y;
-            box.x2 = box.x1 + parcs[index].width + lw;
-            box.y2 = box.y1 + parcs[index].height + lw;
-            rdpRegionUnionRect(&reg, &box);
-        }
-    }
-    rdpRegionInit(&clip_reg, NullBox, 0);
-    cd = rdpDrawGetClip(dev, &clip_reg, pDrawable, pGC);
-    LLOGLN(10, ("rdpPolyFillArc: cd %d", cd));
-    if (cd == XRDP_CD_CLIP)
-    {
-        rdpRegionIntersect(&reg, &clip_reg, &reg);
-    }
+    LLOGLN(10, ("rdpTrapezoids:"));
+    pScreen = pDst->pDrawable->pScreen;
+    dev = rdpGetDevFromScreen(pScreen);
+    dev->counts.rdpTrapezoidsCallCount++;
+    miTrapezoidBounds(ntrap, traps, &box);
+    box.x1 += pDst->pDrawable->x;
+    box.y1 += pDst->pDrawable->y;
+    box.x2 += pDst->pDrawable->x;
+    box.y2 += pDst->pDrawable->y;
+    rdpRegionInit(&reg, &box, 0);
+    ps = GetPictureScreen(pScreen);
     /* do original call */
-    rdpPolyFillArcOrg(pDrawable, pGC, narcs, parcs);
-    if (cd != XRDP_CD_NODRAW)
-    {
-        rdpClientConAddAllReg(dev, &reg, pDrawable);
-    }
-    rdpRegionUninit(&clip_reg);
+    rdpTrapezoidsOrg(ps, dev, op, pSrc, pDst, maskFormat, xSrc, ySrc,
+                     ntrap, traps);
+    rdpClientConAddAllReg(dev, &reg, pDst->pDrawable);
     rdpRegionUninit(&reg);
 }

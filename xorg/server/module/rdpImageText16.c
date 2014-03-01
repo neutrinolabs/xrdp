@@ -32,13 +32,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "rdp.h"
 #include "rdpDraw.h"
+#include "rdpClientCon.h"
+#include "rdpReg.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
 /******************************************************************************/
-void
+static void
 rdpImageText16Org(DrawablePtr pDrawable, GCPtr pGC,
                   int x, int y, int count, unsigned short *chars)
 {
@@ -54,7 +56,30 @@ void
 rdpImageText16(DrawablePtr pDrawable, GCPtr pGC,
                int x, int y, int count, unsigned short *chars)
 {
+    rdpPtr dev;
+    RegionRec clip_reg;
+    RegionRec reg;
+    int cd;
+    BoxRec box;
+
     LLOGLN(10, ("rdpImageText16:"));
+    dev = rdpGetDevFromScreen(pGC->pScreen);
+    dev->counts.rdpImageText16CallCount++;
+    GetTextBoundingBox(pDrawable, pGC->font, x, y, count, &box);
+    rdpRegionInit(&reg, &box, 0);
+    rdpRegionInit(&clip_reg, NullBox, 0);
+    cd = rdpDrawGetClip(dev, &clip_reg, pDrawable, pGC);
+    LLOGLN(10, ("rdpImageText16: cd %d", cd));
+    if (cd == XRDP_CD_CLIP)
+    {
+        rdpRegionIntersect(&reg, &clip_reg, &reg);
+    }
     /* do original call */
     rdpImageText16Org(pDrawable, pGC, x, y, count, chars);
+    if (cd != XRDP_CD_NODRAW)
+    {
+        rdpClientConAddAllReg(dev, &reg, pDrawable);
+    }
+    rdpRegionUninit(&clip_reg);
+    rdpRegionUninit(&reg);
 }

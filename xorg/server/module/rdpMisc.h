@@ -29,6 +29,8 @@ the rest
 int
 rdpBitsPerPixel(int depth);
 int
+g_sck_can_recv(int sck, int millis);
+int
 g_sck_recv(int sck, void *ptr, int len, int flags);
 void
 g_sck_close(int sck);

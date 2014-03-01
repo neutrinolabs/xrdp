@@ -547,7 +547,7 @@ process_message_channel_setup(struct stream *s)
             g_rdpdr_chan_id = ci->id;
         }
         /* disabled for now */
-        else if (g_strcasecmp(ci->name, "notrail") == 0)
+        else if (g_strcasecmp(ci->name, "rail") == 0)
         {
             g_rail_index = g_num_chan_items;
             g_rail_chan_id = ci->id;

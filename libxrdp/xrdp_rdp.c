@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@
 
 #if defined(XRDP_NEUTRINORDP)
 #include <freerdp/codec/rfx.h>
+#include <freerdp/constants.h>
 #endif
 
 /*****************************************************************************/
@@ -78,6 +79,10 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
             else if (g_strcasecmp(value, "high") == 0)
             {
                 client_info->crypt_level = 3;
+            }
+            else if (g_strcasecmp(value, "fips") == 0)
+            {
+                client_info->crypt_level = 4;
             }
             else
             {
@@ -218,8 +223,10 @@ xrdp_rdp_create(struct xrdp_session *session, struct trans *trans)
     /* read ini settings */
     xrdp_rdp_read_config(&self->client_info);
     /* create sec layer */
-    self->sec_layer = xrdp_sec_create(self, trans, self->client_info.crypt_level,
-                                      self->client_info.channel_code, self->client_info.multimon);
+    self->sec_layer = xrdp_sec_create(self, trans,
+                                      self->client_info.crypt_level,
+                                      self->client_info.channel_code,
+                                      self->client_info.multimon);
     /* default 8 bit v1 color bitmap cache entries and size */
     self->client_info.cache1_entries = 600;
     self->client_info.cache1_size = 256;
@@ -331,7 +338,10 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
             }
             else
             {
-                g_writeln("Wrong channel Id to be handled by xrdp_channel_process %d", chan);
+                if (chan != 1)
+                {
+                    g_writeln("Wrong channel Id to be handled by xrdp_channel_process %d", chan);
+                }
             }
 
             s->next_packet = 0;
@@ -512,69 +522,6 @@ xrdp_rdp_send_data_update_sync(struct xrdp_rdp *self)
 }
 
 /*****************************************************************************/
-static int APP_CC
-xrdp_rdp_parse_client_mcs_data(struct xrdp_rdp *self)
-{
-    struct stream *p = (struct stream *)NULL;
-    int i = 0;
-
-    p = &(self->sec_layer->client_mcs_data);
-    p->p = p->data;
-    if (!s_check_rem(p, 31 + 2 + 2 + 120 + 2))
-    {
-        g_writeln("xrdp_rdp_parse_client_mcs_data: error");
-        return 1;
-    }
-    in_uint8s(p, 31);
-    in_uint16_le(p, self->client_info.width);
-    in_uint16_le(p, self->client_info.height);
-    in_uint8s(p, 120);
-    self->client_info.bpp = 8;
-    in_uint16_le(p, i);
-
-    switch (i)
-    {
-        case 0xca01:
-            if (!s_check_rem(p, 6 + 1))
-            {
-                return 1;
-            }
-            in_uint8s(p, 6);
-            in_uint8(p, i);
-
-            if (i > 8)
-            {
-                self->client_info.bpp = i;
-            }
-
-            break;
-        case 0xca02:
-            self->client_info.bpp = 15;
-            break;
-        case 0xca03:
-            self->client_info.bpp = 16;
-            break;
-        case 0xca04:
-            self->client_info.bpp = 24;
-            break;
-    }
-
-    if (self->client_info.max_bpp > 0)
-    {
-        if (self->client_info.bpp > self->client_info.max_bpp)
-        {
-            self->client_info.bpp = self->client_info.max_bpp;
-        }
-    }
-
-    p->p = p->data;
-    DEBUG(("client width %d, client height %d bpp %d",
-           self->client_info.width, self->client_info.height,
-           self->client_info.bpp));
-    return 0;
-}
-
-/*****************************************************************************/
 int APP_CC
 xrdp_rdp_incoming(struct xrdp_rdp *self)
 {
@@ -584,19 +531,15 @@ xrdp_rdp_incoming(struct xrdp_rdp *self)
     {
         return 1;
     }
-
     self->mcs_channel = self->sec_layer->mcs_layer->userid +
                         MCS_USERCHANNEL_BASE;
-    xrdp_rdp_parse_client_mcs_data(self);
     DEBUG(("out xrdp_rdp_incoming mcs channel %d", self->mcs_channel));
-
     g_strncpy(self->client_info.client_addr,
-              self->sec_layer->mcs_layer->iso_layer->tcp_layer->trans->addr,
+              self->sec_layer->mcs_layer->iso_layer->trans->addr,
               sizeof(self->client_info.client_addr) - 1);
     g_strncpy(self->client_info.client_port,
-              self->sec_layer->mcs_layer->iso_layer->tcp_layer->trans->port,
+              self->sec_layer->mcs_layer->iso_layer->trans->port,
               sizeof(self->client_info.client_port) - 1);
-
     return 0;
 }
 
@@ -1657,6 +1600,7 @@ xrdp_rdp_process_data_font(struct xrdp_rdp *self, struct stream *s)
         xrdp_rdp_send_fontmap(self);
 
         self->session->up_and_running = 1;
+        g_writeln("yeah, up_and_running");
         DEBUG(("up_and_running set"));
         xrdp_rdp_send_data_update_sync(self);
     }

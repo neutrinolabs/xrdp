@@ -233,3 +233,33 @@ rdpRegionBreak(RegionPtr pReg)
     return RegionBreak(pReg);
 #endif
 }
+
+/*****************************************************************************/
+void
+rdpRegionUnionRect(RegionPtr pReg, BoxPtr prect)
+{
+    RegionRec reg;
+
+    rdpRegionInit(&reg, prect, 0);
+    rdpRegionUnion(pReg, pReg, &reg);
+    rdpRegionUninit(&reg);
+}
+
+/*****************************************************************************/
+int
+rdpRegionPixelCount(RegionPtr pReg)
+{
+    int index;
+    int count;
+    int rv;
+    BoxRec box;
+
+    rv = 0;
+    count = REGION_NUM_RECTS(pReg);
+    for (index = 0; index < count; index++)
+    {
+        box = REGION_RECTS(pReg)[index];
+        rv += (box.x2 - box.x1) * (box.y2 - box.y1);
+    }
+    return rv;
+}

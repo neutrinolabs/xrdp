@@ -32,6 +32,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "rdp.h"
 #include "rdpDraw.h"
+#include "rdpClientCon.h"
+#include "rdpReg.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
@@ -56,10 +58,35 @@ RegionPtr
 rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
             int srcx, int srcy, int w, int h, int dstx, int dsty)
 {
+    rdpPtr dev;
     RegionPtr rv;
+    RegionRec clip_reg;
+    RegionRec reg;
+    int cd;
+    BoxRec box;
 
     LLOGLN(10, ("rdpCopyArea:"));
+    dev = rdpGetDevFromScreen(pGC->pScreen);
+    dev->counts.rdpCopyAreaCallCount++;
+    box.x1 = dstx + pDst->x;
+    box.y1 = dsty + pDst->y;
+    box.x2 = box.x1 + w;
+    box.y2 = box.y1 + h;
+    rdpRegionInit(&reg, &box, 0);
+    rdpRegionInit(&clip_reg, NullBox, 0);
+    cd = rdpDrawGetClip(dev, &clip_reg, pDst, pGC);
+    LLOGLN(10, ("rdpCopyArea: cd %d", cd));
+    if (cd == XRDP_CD_CLIP)
+    {
+        rdpRegionIntersect(&reg, &clip_reg, &reg);
+    }
     /* do original call */
     rv = rdpCopyAreaOrg(pSrc, pDst, pGC, srcx, srcy, w, h, dstx, dsty);
+    if (cd != XRDP_CD_NODRAW)
+    {
+        rdpClientConAddAllReg(dev, &reg, pDst);
+    }
+    rdpRegionUninit(&clip_reg);
+    rdpRegionUninit(&reg);
     return rv;
 }

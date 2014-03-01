@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,22 +37,14 @@
 #include "file_loc.h"
 #include "xrdp_client_info.h"
 
-/* tcp */
-struct xrdp_tcp
-{
-  struct trans* trans;
-  struct xrdp_iso* iso_layer; /* owner */
-  struct xrdp_fastpath* fastpath_layer; /* owner */
-
-};
 
 /* iso */
 struct xrdp_iso
 {
   struct xrdp_mcs* mcs_layer; /* owner */
-  struct xrdp_tcp* tcp_layer;
   int requestedProtocol;
   int selectedProtocol;
+  struct trans* trans;
 };
 
 /* used in mcs */
@@ -79,10 +71,25 @@ struct xrdp_mcs
 struct xrdp_fastpath
 {
   struct xrdp_sec* sec_layer; /* owner */
-  struct xrdp_tcp* tcp_layer;
+  struct trans* trans;
   int numEvents;
   int secFlags;
 };
+
+/* Encryption Methods */
+#define CRYPT_METHOD_NONE              0x00000000
+#define CRYPT_METHOD_40BIT             0x00000001
+#define CRYPT_METHOD_128BIT            0x00000002
+#define CRYPT_METHOD_56BIT             0x00000008
+#define CRYPT_METHOD_FIPS              0x00000010
+
+/* Encryption Levels */
+#define CRYPT_LEVEL_NONE               0x00000000
+#define CRYPT_LEVEL_LOW                0x00000001
+#define CRYPT_LEVEL_CLIENT_COMPATIBLE  0x00000002
+#define CRYPT_LEVEL_HIGH               0x00000003
+#define CRYPT_LEVEL_FIPS               0x00000004
+
 
 /* sec */
 struct xrdp_sec
@@ -102,9 +109,9 @@ struct xrdp_sec
   char encrypt_key[16];
   char decrypt_update_key[16];
   char encrypt_update_key[16];
-  int rc4_key_size; /* 1 = 40 bit, 2 = 128 bit */
+  int crypt_method;
   int rc4_key_len; /* 8 = 40 bit, 16 = 128 bit */
-  int crypt_level; /* 1, 2, 3 = low, meduim, high */
+  int crypt_level;
   char sign_key[16];
   void* decrypt_rc4_info;
   void* encrypt_rc4_info;
@@ -114,6 +121,12 @@ struct xrdp_sec
   char pri_exp[64];
   int channel_code;
   int multimon;
+  char fips_encrypt_key[24];
+  char fips_decrypt_key[24];
+  char fips_sign_key[20];
+  void* encrypt_fips_info;
+  void* decrypt_fips_info;
+  void* sign_fips_info;
 };
 
 /* channel */
@@ -233,7 +246,7 @@ struct xrdp_orders_state
   int com_blt_width;                                /* 2 */
   int com_blt_height;                               /* 2 */
   int com_blt_dstformat;                            /* 2 */
-    
+
 };
 
 /* orders */
@@ -485,10 +498,33 @@ xrdp_bitmap_compress(char* in_data, int width, int height,
                      int start_line, struct stream* temp_s,
                      int e);
 int APP_CC
+xrdp_bitmap32_compress(char* in_data, int width, int height,
+                       struct stream* s, int bpp, int byte_limit,
+                       int start_line, struct stream* temp_s,
+                       int e);
+int APP_CC
 xrdp_jpeg_compress(void *handle, char* in_data, int width, int height,
                    struct stream* s, int bpp, int byte_limit,
                    int start_line, struct stream* temp_s,
                    int e, int quality);
+
+int APP_CC
+xrdp_codec_jpeg_compress(void *handle,
+                         int   format,   /* input data format */
+                         char *inp_data, /* input data */
+                         int   width,    /* width of inp_data */
+                         int   height,   /* height of inp_data */
+                         int   stride,   /* inp_data stride, in bytes*/
+                         int   x,        /* x loc in inp_data */
+                         int   y,        /* y loc in inp_data */
+                         int   cx,       /* width of area to compress */
+                         int   cy,       /* height of area to compress */
+                         int   quality,  /* higher numbers compress less */
+                         char *out_data, /* dest for jpg image */
+                         int  *io_len    /* length of out_data and on return */
+                                         /* len of compressed data */
+                         );
+
 void *APP_CC
 xrdp_jpeg_init(void);
 int APP_CC

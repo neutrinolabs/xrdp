@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -95,6 +95,67 @@ xrdp_jpeg_compress(void *handle, char *in_data, int width, int height,
                        TJSAMP_420, quality, 0);
     s->p += cdata_bytes;
     g_free(temp_buf);
+    return height;
+}
+
+/**
+ * Compress a rectangular area (aka inner rectangle) inside our
+ * frame buffer (inp_data)
+ *****************************************************************************/
+
+int APP_CC
+xrdp_codec_jpeg_compress(void *handle,
+                         int   format,   /* input data format */
+                         char *inp_data, /* input data */
+                         int   width,    /* width of inp_data */
+                         int   height,   /* height of inp_data */
+                         int   stride,   /* inp_data stride, in bytes*/
+                         int   x,        /* x loc in inp_data */
+                         int   y,        /* y loc in inp_data */
+                         int   cx,       /* width of area to compress */
+                         int   cy,       /* height of area to compress */
+                         int   quality,  /* higher numbers compress less */
+                         char *out_data, /* dest for jpg image */
+                         int  *io_len    /* length of out_data and on return */
+                                         /* len of compressed data */
+                         )
+{
+    tjhandle  tj_han;
+    int       error;
+    int       bpp;
+    char     *src_ptr;
+
+    /*
+     * note: for now we assume that format is always XBGR and ignore format
+     */
+
+    if (handle == 0)
+    {
+        g_writeln("xrdp_codec_jpeg_compress: handle is nil");
+        return height;
+    }
+
+    tj_han = (tjhandle) handle;
+
+    /* get bytes per pixel */
+    bpp = stride / width;
+
+    /* start of inner rect in inp_data */
+    src_ptr = inp_data + (y * stride + x * bpp);
+
+    /* compress inner rect */
+    error = tjCompress(tj_han,     /* opaque handle */
+                       src_ptr,    /* source buf */
+                       cx,         /* width of area to compress */
+                       stride,     /* pitch */
+                       cy,         /* height of area to compress */
+                       TJPF_XBGR,  /* pixel size */
+                       out_data,   /* dest buf */
+                       io_len,     /* inner_buf length & compressed_size */
+                       TJSAMP_420, /* jpeg sub sample */
+                       quality,    /* jpeg quality */
+                       0           /* flags */
+                       );
     return height;
 }
 

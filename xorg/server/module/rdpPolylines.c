@@ -32,6 +32,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "rdp.h"
 #include "rdpDraw.h"
+#include "rdpClientCon.h"
+#include "rdpReg.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
@@ -54,7 +56,46 @@ void
 rdpPolylines(DrawablePtr pDrawable, GCPtr pGC, int mode,
              int npt, DDXPointPtr pptInit)
 {
+    rdpPtr dev;
+    RegionRec clip_reg;
+    RegionRec reg;
+    int cd;
+    int index;
+    int x1;
+    int y1;
+    int x2;
+    int y2;
+    BoxRec box;
+
     LLOGLN(10, ("rdpPolylines:"));
+    dev = rdpGetDevFromScreen(pGC->pScreen);
+    dev->counts.rdpPolylinesCallCount++;
+    rdpRegionInit(&reg, NullBox, 0);
+    for (index = 1; index < npt; index++)
+    {
+        x1 = pptInit[index - 1].x + pDrawable->x;
+        y1 = pptInit[index - 1].y + pDrawable->y;
+        x2 = pptInit[index].x + pDrawable->x;
+        y2 = pptInit[index].y + pDrawable->y;
+        box.x1 = RDPMIN(x1, x2);
+        box.y1 = RDPMIN(y1, y2);
+        box.x2 = RDPMAX(x1, x2) + 1;
+        box.y2 = RDPMAX(y1, y2) + 1;
+        rdpRegionUnionRect(&reg, &box);
+    }
+    rdpRegionInit(&clip_reg, NullBox, 0);
+    cd = rdpDrawGetClip(dev, &clip_reg, pDrawable, pGC);
+    LLOGLN(10, ("rdpPolylines: cd %d", cd));
+    if (cd == XRDP_CD_CLIP)
+    {
+        rdpRegionIntersect(&reg, &clip_reg, &reg);
+    }
     /* do original call */
     rdpPolylinesOrg(pDrawable, pGC, mode, npt, pptInit);
+    if (cd != XRDP_CD_NODRAW)
+    {
+        rdpClientConAddAllReg(dev, &reg, pDrawable);
+    }
+    rdpRegionUninit(&clip_reg);
+    rdpRegionUninit(&reg);
 }
