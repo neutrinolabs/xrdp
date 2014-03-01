@@ -223,7 +223,7 @@ lib_mod_connect(struct mod *mod)
             g_tcp_set_no_delay(mod->sck);
         }
 
-        mod->server_msg(mod, "connecting...", 0);
+        /* mod->server_msg(mod, "connecting...", 0); */
 
         if (use_uds)
         {
@@ -255,7 +255,7 @@ lib_mod_connect(struct mod *mod)
             }
             else
             {
-                mod->server_msg(mod, "connect error", 0);
+                /* mod->server_msg(mod, "connect error", 0); */
             }
         }
 
@@ -268,13 +268,13 @@ lib_mod_connect(struct mod *mod)
         mod->sck = 0;
         i++;
 
-        if (i >= 4)
+        if (i >= 60)
         {
             mod->server_msg(mod, "connection problem, giving up", 0);
             break;
         }
 
-        g_sleep(250);
+        g_sleep(500);
     }
 
     if (error == 0)
@@ -1229,7 +1229,7 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
 
     in_uint16_le(s, width);
     in_uint16_le(s, height);
-    
+
     bmpdata = 0;
     if (flags == 0) /* screen */
     {
@@ -1245,7 +1245,7 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
     }
     if (bmpdata != 0)
     {
-        
+
         rv = amod->server_paint_rects(amod, num_drects, ldrects,
                                       num_crects, lcrects,
                                       bmpdata, width, height, 0);

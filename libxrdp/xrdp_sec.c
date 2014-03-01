@@ -543,6 +543,16 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
     }
     in_uint16_le(s, len_user);
 
+    /*
+     * Microsoft's itap client running on Mac OS/Android
+     * always sends autologon credentials, even when user has not
+     * configured any
+     */
+    if (len_user == 0)
+    {
+        self->rdp_layer->client_info.rdp_autologin = 0;
+    }
+
     if (len_user > 511)
     {
         DEBUG(("ERROR [xrdp_sec_process_logon_info()]: len_user > 511"));
