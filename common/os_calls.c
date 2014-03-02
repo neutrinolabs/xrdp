@@ -2907,7 +2907,7 @@ g_clearenv(void)
 {
 #if defined(_WIN32)
 #else
-    environ = 0;
+    environ[0] = NULL;
 #endif
 }
 
