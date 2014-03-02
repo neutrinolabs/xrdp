@@ -1,9 +1,10 @@
 
-xrdp 0.7.0
+xrdp 0.8.0
 
 Credits
-  This project is very much dependent on FreeRDP(was rdesktop), the work of
-  Matt Chapman and the FreeRDP team members, of which I'm a member.
+  This project is very much dependent on NeutrinoRDP, FreeRDP, rdesktop, and
+  the work of Matt Chapman and the NeutrinoRDP team members, of which I'm a
+  member.
 
   Mark from up 19.9 was the first to work with rdp server code.
 

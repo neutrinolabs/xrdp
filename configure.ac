@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script
 
 AC_PREREQ(2.59)
-AC_INIT([xrdp], [0.7.0], [xrdp-devel@lists.sourceforge.net])
+AC_INIT([xrdp], [0.8.0], [xrdp-devel@lists.sourceforge.net])
 AC_CONFIG_HEADERS(config_ac.h:config_ac-h.in)
 AM_INIT_AUTOMAKE([1.6 foreign])
 AC_PROG_CC
@@ -113,7 +113,7 @@ then
     [#define _FILE_OFFSET_BITS 64])
 fi
 
-# checking for libpulse 
+# checking for libpulse
 if ! test -z "$enable_loadpulsemodules"
 then
   AC_CHECK_HEADER([pulse/util.h], [],
