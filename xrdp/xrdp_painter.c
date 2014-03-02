@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -913,19 +913,19 @@ xrdp_painter_composite(struct xrdp_painter* self,
     int palette_id;
     int cache_srcidx;
     int cache_mskidx;
-    
+
     if (self == 0 || src == 0 || dst == 0)
     {
         return 0;
     }
-    
+
     /* todo data */
-    
+
     if (dst->type == WND_TYPE_BITMAP)
     {
         return 0;
     }
-    
+
     if (src->type == WND_TYPE_OFFSCREEN)
     {
         xrdp_bitmap_get_screen_clip(dst, self, &clip_rect, &dx, &dy);
@@ -933,7 +933,7 @@ xrdp_painter_composite(struct xrdp_painter* self,
         xrdp_region_add_rect(region, &clip_rect);
         dstx += dx;
         dsty += dy;
-        
+
         palette_id = 0;
         cache_srcidx = src->item_index;
         cache_mskidx = -1;
@@ -944,7 +944,7 @@ xrdp_painter_composite(struct xrdp_painter* self,
                 cache_mskidx = msk->item_index; // todo
             }
         }
-        
+
         k = 0;
         while (xrdp_region_get_rect(region, k, &rect1) == 0)
         {
