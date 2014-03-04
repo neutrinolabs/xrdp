@@ -152,7 +152,7 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
                 }
                 break;
             case 2: /* FASTPATH_INPUT_EVENT */
-                if (xrdp_rdp_process_fastpath_data_input(rdp, s) != 0)
+                if (xrdp_fastpath_process_input_event(rdp->sec_layer->fastpath_layer, s) != 0)
                 {
                      DEBUG(("libxrdp_process_data returned non zero"));
                      cont = 0;

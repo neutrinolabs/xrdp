@@ -72,6 +72,7 @@ struct xrdp_fastpath
 {
   struct xrdp_sec* sec_layer; /* owner */
   struct trans* trans;
+  struct xrdp_session* session;
   int numEvents;
   int secFlags;
 };
@@ -386,8 +387,6 @@ xrdp_rdp_process_confirm_active(struct xrdp_rdp* self, struct stream* s);
 int APP_CC
 xrdp_rdp_process_data(struct xrdp_rdp* self, struct stream* s);
 int APP_CC
-xrdp_rdp_process_fastpath_data_input(struct xrdp_rdp *self, struct stream *s);
-int APP_CC
 xrdp_rdp_disconnect(struct xrdp_rdp* self);
 int APP_CC
 xrdp_rdp_send_deactive(struct xrdp_rdp* self);
@@ -551,5 +550,6 @@ void APP_CC
 xrdp_fastpath_delete(struct xrdp_fastpath *self);
 int APP_CC
 xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s);
-
+int APP_CC
+xrdp_fastpath_process_input_event(struct xrdp_fastpath *self, struct stream *s);
 #endif

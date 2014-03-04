@@ -289,7 +289,6 @@ xrdp_rdp_init_data(struct xrdp_rdp *self, struct stream *s)
     s_push_layer(s, rdp_hdr, 18);
     return 0;
 }
-
 /*****************************************************************************/
 /* returns error */
 int APP_CC
@@ -305,7 +304,6 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
     DEBUG(("in xrdp_rdp_recv"));
     if (s->next_packet == 0 || s->next_packet >= s->end)
     {
-
         /* check for fastpath first */
         if ((header[0] != 0x3) && (header[0] != 0x3c))
         {
@@ -313,7 +311,7 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
             {
               return 1;
             }
-            *code = 2; // special code for fastpath
+            *code = 2; // special code for fastpath input
             DEBUG(("out (fastpath) xrdp_rdp_recv"));
             return 0;
         }
@@ -1676,128 +1674,7 @@ xrdp_rdp_send_disconnect_reason(struct xrdp_rdp *self, int reason)
     return 0;
 }
 #endif
-/*****************************************************************************/
-/* FASTPATH_INPUT_EVENT */
-int APP_CC
-xrdp_rdp_process_fastpath_data_input(struct xrdp_rdp *self, struct stream *s)
-{
-    int i;
-    int eventHeader;
-    int eventCode;
-    int eventFlags;
-    int code;
-    int flags;
-    int param2;
-    int time;
-    int pointerFlags;
-    int xPos;
-    int yPos;
 
-    // process fastpath input events
-    for (i = 0 ; i < self->sec_layer->fastpath_layer->numEvents ; i++) {
-        in_uint8(s, eventHeader);
-
-        eventFlags = (eventHeader & 0x1F);
-        eventCode = (eventHeader >> 5);
-
-//        g_writeln("eventCode= %d, eventFlags= %d, numEvents= %d",
-//                  eventCode, eventFlags, self->sec_layer->fastpath_layer->numEvents);
-
-        switch (eventCode)
-          {
-            case FASTPATH_INPUT_EVENT_SCANCODE:
-              in_uint8(s, code); /* keyCode (1 byte) */
-              //g_writeln("scan code detected: %d", code);
-              flags = 0;
-              if ((eventFlags & FASTPATH_INPUT_KBDFLAGS_RELEASE))
-                flags |= KBD_FLAG_UP;
-              else
-                flags |= KBD_FLAG_DOWN;
-
-              if ((eventFlags & FASTPATH_INPUT_KBDFLAGS_EXTENDED))
-                flags |= KBD_FLAG_EXT;
-
-              if (self->session->callback != 0)
-               {
-                   /* msg_type can be
-                      RDP_INPUT_SYNCHRONIZE - 0
-                      RDP_INPUT_SCANCODE - 4
-                      RDP_INPUT_MOUSE - 0x8001
-                      RDP_INPUT_MOUSEX - 0x8002 */
-                   /* call to xrdp_wm.c : callback */
-                   self->session->callback(self->session->id, RDP_INPUT_SCANCODE, code, 0,
-                                           flags, 0);
-               }
-              break;
-
-            case FASTPATH_INPUT_EVENT_MOUSE:
-              in_uint16_le(s, pointerFlags); /* pointerFlags (2 bytes) */
-              in_uint16_le(s, xPos); /* xPos (2 bytes) */
-              in_uint16_le(s, yPos); /* yPos (2 bytes) */
-
-              if (self->session->callback != 0)
-              {
-                  /* msg_type can be
-                     RDP_INPUT_SYNCHRONIZE - 0
-                     RDP_INPUT_SCANCODE - 4
-                     RDP_INPUT_MOUSE - 0x8001
-                     RDP_INPUT_MOUSEX - 0x8002 */
-                  /* call to xrdp_wm.c : callback */
-                  self->session->callback(self->session->id, RDP_INPUT_MOUSE, xPos, yPos,
-                                        pointerFlags, 0);
-              }
-              break;
-
-            case FASTPATH_INPUT_EVENT_MOUSEX:
-              in_uint16_le(s, pointerFlags); /* pointerFlags (2 bytes) */
-              in_uint16_le(s, xPos); /* xPos (2 bytes) */
-              in_uint16_le(s, yPos); /* yPos (2 bytes) */
-
-              if (self->session->callback != 0)
-              {
-                  /* msg_type can be
-                     RDP_INPUT_SYNCHRONIZE - 0
-                     RDP_INPUT_SCANCODE - 4
-                     RDP_INPUT_MOUSE - 0x8001
-                     RDP_INPUT_MOUSEX - 0x8002 */
-                  /* call to xrdp_wm.c : callback */
-                  self->session->callback(self->session->id, RDP_INPUT_MOUSEX, xPos, yPos,
-                                        pointerFlags, 0);
-              }
-              break;
-
-            case FASTPATH_INPUT_EVENT_SYNC:
-              /*
-               * The eventCode bitfield (3 bits in size) MUST be set to FASTPATH_INPUT_EVENT_SYNC (3).
-               * The eventFlags bitfield (5 bits in size) contains flags indicating the "on"
-               * status of the keyboard toggle keys.
-               */
-              if (self->session->callback != 0)
-              {
-                  /* msg_type can be
-                     RDP_INPUT_SYNCHRONIZE - 0
-                     RDP_INPUT_SCANCODE - 4
-                     RDP_INPUT_MOUSE - 0x8001
-                     RDP_INPUT_MOUSEX - 0x8002 */
-                  /* call to xrdp_wm.c : callback */
-                  self->session->callback(self->session->id, RDP_INPUT_SYNCHRONIZE, eventCode, 0,
-                                          eventFlags, 0);
-              }
-              break;
-
-            case FASTPATH_INPUT_EVENT_UNICODE:
-              in_uint8s(s, 2);
-              break;
-
-            default:
-              g_writeln("xrdp_rdp_process_fastpath_data_input: unknown eventCode %d", eventCode);
-              break;
-          }
-
-    }
-
-    return 0;
-}
 /*****************************************************************************/
 /* RDP_PDU_DATA */
 int APP_CC
@@ -1854,7 +1731,6 @@ xrdp_rdp_process_data(struct xrdp_rdp *self, struct stream *s)
 
     return 0;
 }
-
 /*****************************************************************************/
 int APP_CC
 xrdp_rdp_disconnect(struct xrdp_rdp *self)

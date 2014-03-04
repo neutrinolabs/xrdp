@@ -949,9 +949,15 @@ xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
       return 1;
   }
 
-  in_uint8s(s, 8); /* dataSignature, skip for now */
+  if (self->crypt_level == CRYPT_LEVEL_FIPS)
+  {
+      in_uint8s(s, 4); /* fipsInformation (4 bytes) */
+  }
 
-  if (self->fastpath_layer->secFlags & FASTPATH_INPUT_ENCRYPTED) {
+  in_uint8s(s, 8); /* dataSignature (8 bytes), skip for now */
+
+  if (self->fastpath_layer->secFlags & FASTPATH_INPUT_ENCRYPTED)
+  {
       xrdp_sec_decrypt(self, s->p, (int)(s->end - s->p));
   }
 
@@ -960,7 +966,7 @@ xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
        * If numberEvents is not provided in fpInputHeader, it will be provided
        * as one additional byte here.
        */
-      in_uint8(s, self->fastpath_layer->numEvents); /* numEvents (optional) */
+      in_uint8(s, self->fastpath_layer->numEvents); /* numEvents (1 byte) (optional) */
   }
 
   return 0;
