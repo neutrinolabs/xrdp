@@ -59,7 +59,8 @@ libxrdp_la_SOURCES = \
   xrdp_bitmap32_compress.c \
   xrdp_jpeg_compress.c \
   xrdp_orders_rail.c \
-  xrdp_mppc_enc.c
+  xrdp_mppc_enc.c \
+  xrdp_fastpath.c
 
 libxrdp_la_LDFLAGS = \
   $(EXTRA_FLAGS)

@@ -29,6 +29,7 @@ libxrdp_init(tbus id, struct trans *trans)
 
     session = (struct xrdp_session *)g_malloc(sizeof(struct xrdp_session), 1);
     session->id = id;
+    session->trans = trans;
     session->rdp = xrdp_rdp_create(session, trans);
     session->orders = xrdp_orders_create(session, (struct xrdp_rdp *)session->rdp);
     session->client_info = &(((struct xrdp_rdp *)session->rdp)->client_info);
@@ -143,17 +144,23 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
                 xrdp_rdp_process_confirm_active(rdp, s);
                 break;
             case RDP_PDU_DATA: /* 7 */
-
                 if (xrdp_rdp_process_data(rdp, s) != 0)
                 {
                     DEBUG(("libxrdp_process_data returned non zero"));
                     cont = 0;
                     term = 1;
                 }
-
+                break;
+            case 2: /* FASTPATH_INPUT_EVENT */
+                if (xrdp_fastpath_process_input_event(rdp->sec_layer->fastpath_layer, s) != 0)
+                {
+                     DEBUG(("libxrdp_process_data returned non zero"));
+                     cont = 0;
+                     term = 1;
+                }
                 break;
             default:
-                g_writeln("unknown in libxrdp_process_data");
+                g_writeln("unknown in libxrdp_process_data: code= %d", code);
                 dead_lock_counter++;
                 break;
         }

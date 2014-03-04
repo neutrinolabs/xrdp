@@ -122,14 +122,13 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
     int len;
     int userid;
     int chanid;
-
     DEBUG(("  in xrdp_mcs_recv"));
 
     while (1)
     {
         if (xrdp_iso_recv(self->iso_layer, s) != 0)
         {
-            DEBUG(("  out xrdp_mcs_recv xrdp_iso_recv returned non zero"));
+            DEBUG(("   out xrdp_mcs_recv, xrdp_iso_recv return non zero"));
             return 1;
         }
 

@@ -123,6 +123,31 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
         {
             client_info->require_credentials = g_text2bool(value);
         }
+        else if (g_strcasecmp(item, "use_fastpath") == 0)
+        {
+            if (g_strcasecmp(value, "output") == 0)
+            {
+                client_info->use_fast_path = 1;
+            }
+            else if (g_strcasecmp(value, "input") == 0)
+            {
+                client_info->use_fast_path = 2;
+            }
+            else if (g_strcasecmp(value, "both") == 0)
+            {
+                client_info->use_fast_path = 3;
+            }
+            else if (g_strcasecmp(value, "none") == 0)
+            {
+                client_info->use_fast_path = 0;
+            }
+            else
+            {
+                log_message(LOG_LEVEL_ALWAYS,"Warning: Your configured fastpath level is"
+                          "undefined, fastpath will not be used");
+                client_info->use_fast_path = 0;
+            }
+        }
     }
 
     list_delete(items);
@@ -264,9 +289,8 @@ xrdp_rdp_init_data(struct xrdp_rdp *self, struct stream *s)
     s_push_layer(s, rdp_hdr, 18);
     return 0;
 }
-
 /*****************************************************************************/
-/* returns erros */
+/* returns error */
 int APP_CC
 xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
 {
@@ -274,11 +298,25 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
     int len = 0;
     int pdu_code = 0;
     int chan = 0;
+    const tui8 *header;
+    header = (const tui8 *) (self->session->trans->in_s->p);
 
     DEBUG(("in xrdp_rdp_recv"));
-
     if (s->next_packet == 0 || s->next_packet >= s->end)
     {
+        /* check for fastpath first */
+        if ((header[0] != 0x3) && (header[0] != 0x3c))
+        {
+            if (xrdp_sec_recv_fastpath(self->sec_layer, s) != 0)
+            {
+              return 1;
+            }
+            *code = 2; // special code for fastpath input
+            DEBUG(("out (fastpath) xrdp_rdp_recv"));
+            return 0;
+        }
+
+        /* not fastpath, do tpkt */
         chan = 0;
         error = xrdp_sec_recv(self->sec_layer, s, &chan);
 
@@ -348,7 +386,6 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
         return 0;
     }
 }
-
 /*****************************************************************************/
 int APP_CC
 xrdp_rdp_send(struct xrdp_rdp *self, struct stream *s, int pdu_type)
@@ -1694,7 +1731,6 @@ xrdp_rdp_process_data(struct xrdp_rdp *self, struct stream *s)
 
     return 0;
 }
-
 /*****************************************************************************/
 int APP_CC
 xrdp_rdp_disconnect(struct xrdp_rdp *self)
