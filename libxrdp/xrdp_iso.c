@@ -111,7 +111,7 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code, int *len)
 
     if (ver != 3)
     {
-        return 2; // special code for fastpath
+        return 1;
     }
 
     in_uint8s(s, 1);

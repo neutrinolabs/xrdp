@@ -122,21 +122,11 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
     int len;
     int userid;
     int chanid;
-    int iso_msg;
     DEBUG(("  in xrdp_mcs_recv"));
 
     while (1)
     {
-
-        iso_msg = xrdp_iso_recv(self->iso_layer, s);
-
-        if (iso_msg == 2) // non-TPKT header
-        {
-            DEBUG(("  out xrdp_mcs_recv, non-TPKT header detected, we try fastpath"));
-            return iso_msg;
-        }
-
-        if (iso_msg == 1) // error
+        if (xrdp_iso_recv(self->iso_layer, s) != 0)
         {
             DEBUG(("   out xrdp_mcs_recv, xrdp_iso_recv return non zero"));
             return 1;

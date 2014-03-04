@@ -58,22 +58,23 @@ xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
     int fp_hdr;
     int len = 0;
     int byte;
-    int hdr_len = 2; /* fastpath header lenght - can be 2 or 3 bytes long, depends on length */
+    int hdr_len = 2; /* fastpath header length - can be 2 or 3 bytes long, depends on length */
     DEBUG(("  in xrdp_fastpath_recv"));
 
     /* read the first fastpath byte
      * (we already received it via iso layer */
+    // receive fastpath first length packet
+    init_stream(s, hdr_len);
+    if (trans_force_read_s(self->trans, s, hdr_len) != 0)
+    {
+       return 1;
+    }
     in_uint8(s, fp_hdr); /* fpInputHeader (1 byte) */
 
     self->numEvents = (fp_hdr & 0x3C) >> 2;
     self->secFlags = (fp_hdr & 0xC0) >> 6;
 
     // receive fastpath first length packet
-    if (trans_force_read_s(self->trans, s, 1) != 0)
-    {
-       return 1;
-    }
-
     in_uint8(s, byte); /* length 1 */
 
     if (byte & 0x80)
@@ -81,7 +82,8 @@ xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
       byte &= ~(0x80);
       len = (byte << 8);
       // receive fastpath second length packet
-      if (xrdp_tcp_recv(self->tcp_layer, s, 1) != 0)
+      init_stream(s, 1);
+      if (trans_force_read_s(self->trans, s, 1) != 0)
       {
          return 1;
       }
@@ -94,10 +96,11 @@ xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
       len = byte;
     }
 
-    //g_writeln("len= %d , numEvents= %d, secFlags= %d, bytesleft: %d", len, self->numEvents, self->secFlags, (s->p - s->data));
+    g_writeln("len= %d , numEvents= %d, secFlags= %d, bytesleft: %d", len, self->numEvents, self->secFlags, (s->p - s->data));
 
     // receive the left bytes
-    if (xrdp_tcp_recv(self->tcp_layer, s, len - hdr_len) != 0)
+    init_stream(s, len - hdr_len);
+    if (trans_force_read_s(self->trans, s, len - hdr_len) != 0)
     {
        return 1;
     }
@@ -166,10 +169,10 @@ xrdp_fastpath_send_update_pdu(struct xrdp_fastpath *self, tui8 updateCode,
 //        s_copy(s_send, s, len);
         s_mark_end(s_send);
 
-        if (xrdp_tcp_send(self->tcp_layer, s_send) != 0)
-        {
-            return 1;
-        }
+//        if (xrdp_tcp_send(self->tcp_layer, s_send) != 0)
+//        {
+//            return 1;
+//        }
     }
 
     return 0;
@@ -220,12 +223,12 @@ xrdp_fastpath_process_data(struct xrdp_fastpath *self, struct stream *s,
 
     encryptionFlags = (header & 0xc0) >> 6;
     numberEvents = (header & 0x3c) >> 2;
-    xrdp_tcp_recv(self->tcp_layer, s, 1);
+//    xrdp_tcp_recv(self->tcp_layer, s, 1);
     in_uint8(s, length);
 
     if (length & 0x80)
     {
-        xrdp_tcp_recv(self->tcp_layer, s, 1);
+//        xrdp_tcp_recv(self->tcp_layer, s, 1);
         in_uint8(s, length2);
         length = (length & 0x7f) << 8 + length2 - 3;
     }
@@ -234,7 +237,7 @@ xrdp_fastpath_process_data(struct xrdp_fastpath *self, struct stream *s,
         length -= 2;
     }
 
-    xrdp_tcp_recv(self->tcp_layer, s, length);
+//    xrdp_tcp_recv(self->tcp_layer, s, length);
 
     if (encryptionFlags != 0)
     {

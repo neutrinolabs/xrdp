@@ -29,6 +29,7 @@ libxrdp_init(tbus id, struct trans *trans)
 
     session = (struct xrdp_session *)g_malloc(sizeof(struct xrdp_session), 1);
     session->id = id;
+    session->trans = trans;
     session->rdp = xrdp_rdp_create(session, trans);
     session->orders = xrdp_orders_create(session, (struct xrdp_rdp *)session->rdp);
     session->client_info = &(((struct xrdp_rdp *)session->rdp)->client_info);

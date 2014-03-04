@@ -299,19 +299,29 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
     int len = 0;
     int pdu_code = 0;
     int chan = 0;
+    const tui8 *header;
+    header = (const tui8 *) (self->session->trans->in_s->p);
 
     DEBUG(("in xrdp_rdp_recv"));
 
+    /* not fastpath, do tpkt */
     if (s->next_packet == 0 || s->next_packet >= s->end)
     {
-        chan = 0;
-        error = xrdp_sec_recv(self->sec_layer, s, &chan);
+        /* check for fastpath first */
+        g_writeln("xrdp_rdp_recv: header= 0x%8.8x", header[0]);
 
-        if (error == 2) /* we have fastpath packet! */
+        if ((header[0] & 0x3) == 0 && (header[0] != 0x3c))
         {
-            *code = 2;
+            if (xrdp_sec_recv_fastpath(self->sec_layer, s) != 0)
+            {
+              return 1;
+            }
+            *code = 2; // special code for fastpath
             return 0;
         }
+
+        chan = 0;
+        error = xrdp_sec_recv(self->sec_layer, s, &chan);
 
         if (error == -1) /* special code for send demand active */
         {
@@ -1691,8 +1701,8 @@ xrdp_rdp_process_fastpath_data_input(struct xrdp_rdp *self, struct stream *s)
         eventFlags = (eventHeader & 0x1F);
         eventCode = (eventHeader >> 5);
 
-        //g_writeln("eventCode= %d, eventFlags= %d, numEvents= %d",
-        //          eventCode, eventFlags, self->sec_layer->fastpath_layer->numEvents);
+//        g_writeln("eventCode= %d, eventFlags= %d, numEvents= %d",
+//                  eventCode, eventFlags, self->sec_layer->fastpath_layer->numEvents);
 
         switch (eventCode)
           {

@@ -123,6 +123,7 @@ xrdp_process_get_pdu_bytes(const char *aheader)
 
     rv = -1;
     header = (const tui8 *) aheader;
+
     if (header[0] == 0x03)
     {
         /* TPKT */
