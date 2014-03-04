@@ -59,17 +59,10 @@ xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
     int len = 0;
     int byte;
     int hdr_len = 2; /* fastpath header length - can be 2 or 3 bytes long, depends on length */
-    DEBUG(("  in xrdp_fastpath_recv"));
+    DEBUG(("   in xrdp_fastpath_recv"));
 
-    /* read the first fastpath byte
-     * (we already received it via iso layer */
-    // receive fastpath first length packet
-    init_stream(s, hdr_len);
-    if (trans_force_read_s(self->trans, s, hdr_len) != 0)
-    {
-       return 1;
-    }
     in_uint8(s, fp_hdr); /* fpInputHeader (1 byte) */
+    g_writeln("xrdp_fastpath_recv: header= 0x%8.8x", fp_hdr);
 
     self->numEvents = (fp_hdr & 0x3C) >> 2;
     self->secFlags = (fp_hdr & 0xC0) >> 6;
@@ -82,13 +75,8 @@ xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
       byte &= ~(0x80);
       len = (byte << 8);
       // receive fastpath second length packet
-      init_stream(s, 1);
-      if (trans_force_read_s(self->trans, s, 1) != 0)
-      {
-         return 1;
-      }
-      hdr_len++;
       in_uint8(s, byte); /* length 2 */
+      hdr_len++;
       len += byte;
     }
     else
@@ -96,14 +84,8 @@ xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
       len = byte;
     }
 
-    g_writeln("len= %d , numEvents= %d, secFlags= %d, bytesleft: %d", len, self->numEvents, self->secFlags, (s->p - s->data));
+//    g_writeln("len= %d , numEvents= %d, secFlags= %d, bytesleft: %d", len, self->numEvents, self->secFlags, (s->p - s->data));
 
-    // receive the left bytes
-    init_stream(s, len - hdr_len);
-    if (trans_force_read_s(self->trans, s, len - hdr_len) != 0)
-    {
-       return 1;
-    }
     DEBUG(("  out xrdp_fastpath_recv"));
 
     return 0;

@@ -303,23 +303,22 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
     header = (const tui8 *) (self->session->trans->in_s->p);
 
     DEBUG(("in xrdp_rdp_recv"));
-
-    /* not fastpath, do tpkt */
     if (s->next_packet == 0 || s->next_packet >= s->end)
     {
-        /* check for fastpath first */
-        g_writeln("xrdp_rdp_recv: header= 0x%8.8x", header[0]);
 
-        if ((header[0] & 0x3) == 0 && (header[0] != 0x3c))
+        /* check for fastpath first */
+        if ((header[0] != 0x3) && (header[0] != 0x3c))
         {
             if (xrdp_sec_recv_fastpath(self->sec_layer, s) != 0)
             {
               return 1;
             }
             *code = 2; // special code for fastpath
+            DEBUG(("out (fastpath) xrdp_rdp_recv"));
             return 0;
         }
 
+        /* not fastpath, do tpkt */
         chan = 0;
         error = xrdp_sec_recv(self->sec_layer, s, &chan);
 
