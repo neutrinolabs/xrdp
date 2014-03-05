@@ -955,6 +955,10 @@ xrdp_sec_establish_keys(struct xrdp_sec *self)
 int APP_CC
 xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
 {
+  int ver;
+  int len;
+  int pad;
+
   if (xrdp_fastpath_recv(self->fastpath_layer, s) != 0) {
       return 1;
   }
@@ -965,18 +969,29 @@ xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
       {
           return 1;
       }
-      in_uint8s(s, 4); /* fipsInformation (4 bytes) */
-  }
+      in_uint16_le(s, len);
+      in_uint8(s, ver); /* length (2 bytes) */
+      if (len != 0x10)  /* length MUST set to 0x10 */
+      {
+          return 1;
+      }
+      in_uint8(s, pad);
+      LLOGLN(10, ("xrdp_sec_recv_fastpath: len %d ver %d pad %d", len, ver, pad));
+      in_uint8s(s, 8);  /* dataSignature (8 bytes), skip for now */
+      LLOGLN(10, ("xrdp_sec_recv_fastpath: data len %d", (int)(s->end - s->p)));
+      xrdp_sec_fips_decrypt(self, s->p, (int)(s->end - s->p));
+      s->end -= pad;
+  } else {
+      if (!s_check_rem(s, 8))
+      {
+          return 1;
+      }
+      in_uint8s(s, 8);  /* dataSignature (8 bytes), skip for now */
 
-  if (!s_check_rem(s, 8))
-  {
-      return 1;
-  }
-  in_uint8s(s, 8); /* dataSignature (8 bytes), skip for now */
-
-  if (self->fastpath_layer->secFlags & FASTPATH_INPUT_ENCRYPTED)
-  {
-      xrdp_sec_decrypt(self, s->p, (int)(s->end - s->p));
+      if (self->fastpath_layer->secFlags & FASTPATH_INPUT_ENCRYPTED)
+      {
+          xrdp_sec_decrypt(self, s->p, (int)(s->end - s->p));
+      }
   }
 
   if (self->fastpath_layer->numEvents == 0) {
