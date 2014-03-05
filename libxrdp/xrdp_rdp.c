@@ -299,17 +299,17 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
     int pdu_code = 0;
     int chan = 0;
     const tui8 *header;
-    header = (const tui8 *) (self->session->trans->in_s->p);
 
     DEBUG(("in xrdp_rdp_recv"));
     if (s->next_packet == 0 || s->next_packet >= s->end)
     {
         /* check for fastpath first */
+        header = (const tui8 *) (self->session->trans->in_s->p);
         if ((header[0] != 0x3) && (header[0] != 0x3c))
         {
             if (xrdp_sec_recv_fastpath(self->sec_layer, s) != 0)
             {
-              return 1;
+                return 1;
             }
             *code = 2; // special code for fastpath input
             DEBUG(("out (fastpath) xrdp_rdp_recv"));
@@ -331,6 +331,7 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
         if (error != 0)
         {
             DEBUG(("out xrdp_rdp_recv error"));
+            g_writeln("xrdp_rdp_recv: xrdp_sec_recv failed");
             return 1;
         }
 

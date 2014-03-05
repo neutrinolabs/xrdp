@@ -3,7 +3,7 @@
  * Miscellaneous protocol constants
  *
  * Copyright (C) Matthew Chapman 1999-2008
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  * Copyright (C) Kevin Zhou 2012
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
