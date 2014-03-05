@@ -304,13 +304,14 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
     if (s->next_packet == 0 || s->next_packet >= s->end)
     {
         /* check for fastpath first */
-        header = (const tui8 *) (self->session->trans->in_s->p);
+        header = (const tui8 *) (s->p);
         if ((header[0] != 0x3) && (header[0] != 0x3c))
         {
             if (xrdp_sec_recv_fastpath(self->sec_layer, s) != 0)
             {
                 return 1;
             }
+            s->next_packet = 0;
             *code = 2; // special code for fastpath input
             DEBUG(("out (fastpath) xrdp_rdp_recv"));
             return 0;
@@ -387,6 +388,7 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
         return 0;
     }
 }
+
 /*****************************************************************************/
 int APP_CC
 xrdp_rdp_send(struct xrdp_rdp *self, struct stream *s, int pdu_type)

@@ -206,7 +206,17 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
 
         if (do_read)
         {
-            s = libxrdp_force_read(session->trans);
+            if (s == 0)
+            {
+                s = libxrdp_force_read(session->trans);
+            }
+            else
+            {
+                if ((s->next_packet == 0) || (s->next_packet >= s->end))
+                {
+                    s = libxrdp_force_read(session->trans);
+                }
+            }
             if (s == 0)
             {
                 g_writeln("libxrdp_process_data: libxrdp_force_read failed");
@@ -281,8 +291,7 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
 
         if (cont)
         {
-            cont = (s->next_packet != 0) &&
-                   (s->next_packet < s->end);
+            cont = (s->next_packet != 0) && (s->next_packet < s->end);
         }
     }
 
