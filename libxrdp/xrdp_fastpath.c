@@ -57,35 +57,37 @@ int APP_CC
 xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
 {
     int fp_hdr;
-    int len = 0;
+    int len = 0; /* unused */
     int byte;
-    int hdr_len = 2; /* fastpath header length - can be 2 or 3 bytes long, depends on length */
     DEBUG(("   in xrdp_fastpath_recv"));
 
+    if (!s_check_rem(s, 2))
+    {
+        return 1;
+    }
     in_uint8(s, fp_hdr); /* fpInputHeader (1 byte) */
-    //g_writeln("xrdp_fastpath_recv: header= 0x%8.8x", fp_hdr);
+    in_uint8(s, byte); /* length 1 (1 byte) */
 
     self->numEvents = (fp_hdr & 0x3C) >> 2;
     self->secFlags = (fp_hdr & 0xC0) >> 6;
-
-    // receive fastpath first length packet
-    in_uint8(s, byte); /* length 1 */
 
     if (byte & 0x80)
     {
       byte &= ~(0x80);
       len = (byte << 8);
-      // receive fastpath second length packet
-      in_uint8(s, byte); /* length 2 */
-      hdr_len++;
+
+      if (!s_check_rem(s, 1))
+      {
+          return 1;
+      }
+      in_uint8(s, byte); /* length 2 (1 byte) */
+
       len += byte;
     }
     else
     {
       len = byte;
     }
-
-//    g_writeln("len= %d , numEvents= %d, secFlags= %d, bytesleft: %d", len, self->numEvents, self->secFlags, (s->p - s->data));
 
     DEBUG(("  out xrdp_fastpath_recv"));
 
@@ -254,8 +256,11 @@ xrdp_fastpath_process_EVENT_SCANCODE(struct xrdp_fastpath *self, int eventFlags,
   int code;
   flags = 0;
 
+  if (!s_check_rem(s, 1))
+  {
+      return 1;
+  }
   in_uint8(s, code); /* keyCode (1 byte) */
-  //g_writeln("scan code detected: %d", code);
 
   if ((eventFlags & FASTPATH_INPUT_KBDFLAGS_RELEASE))
    flags |= KBD_FLAG_UP;
@@ -287,6 +292,10 @@ xrdp_fastpath_process_EVENT_MOUSE(struct xrdp_fastpath *self, int eventFlags, st
   int xPos;
   int yPos;
 
+  if (!s_check_rem(s, 2 + 2 + 2))
+  {
+      return 1;
+  }
   in_uint16_le(s, pointerFlags); /* pointerFlags (2 bytes) */
   in_uint16_le(s, xPos); /* xPos (2 bytes) */
   in_uint16_le(s, yPos); /* yPos (2 bytes) */
@@ -313,6 +322,10 @@ xrdp_fastpath_process_EVENT_MOUSEX(struct xrdp_fastpath *self, int eventFlags, s
   int xPos;
   int yPos;
 
+  if (!s_check_rem(s, 2 + 2 + 2))
+  {
+      return 1;
+  }
   in_uint16_le(s, pointerFlags); /* pointerFlags (2 bytes) */
   in_uint16_le(s, xPos); /* xPos (2 bytes) */
   in_uint16_le(s, yPos); /* yPos (2 bytes) */
@@ -358,6 +371,10 @@ xrdp_fastpath_process_EVENT_SYNC(struct xrdp_fastpath *self, int eventCode, int 
 int APP_CC
 xrdp_fastpath_process_EVENT_UNICODE(struct xrdp_fastpath *self, int eventFlags, struct stream *s)
 {
+  if (!s_check_rem(s, 2))
+  {
+      return 1;
+  }
   in_uint8s(s, 2);
   return 0;
 }
@@ -373,13 +390,17 @@ xrdp_fastpath_process_input_event(struct xrdp_fastpath *self, struct stream *s)
 
     // process fastpath input events
     for (i = 0 ; i < self->numEvents ; i++) {
+        if (!s_check_rem(s, 1))
+        {
+            return 1;
+        }
         in_uint8(s, eventHeader);
 
         eventFlags = (eventHeader & 0x1F);
         eventCode = (eventHeader >> 5);
 
-//        g_writeln("eventCode= %d, eventFlags= %d, numEvents= %d",
-//                  eventCode, eventFlags, self->sec_layer->fastpath_layer->numEvents);
+        //DEBUG(("xrdp_fastpath_process_input_event: eventCode= %d, eventFlags= %d, numEvents= %d",
+        //          eventCode, eventFlags, self->sec_layer->fastpath_layer->numEvents));
 
         switch (eventCode)
           {
@@ -413,10 +434,9 @@ xrdp_fastpath_process_input_event(struct xrdp_fastpath *self, struct stream *s)
               {
                 return 1;
               }
-
               break;
             default:
-              g_writeln("xrdp_rdp_process_fastpath_data_input: unknown eventCode %d", eventCode);
+              g_writeln("xrdp_fastpath_process_input_event: unknown eventCode %d", eventCode);
               break;
           }
 
