@@ -82,6 +82,10 @@ int DEFAULT_CC
 libxrdp_disconnect(struct xrdp_session* session);
 int DEFAULT_CC
 libxrdp_process_incomming(struct xrdp_session* session);
+int EXPORT_CC
+libxrdp_get_pdu_bytes(const char *aheader);
+struct stream * APP_CC
+libxrdp_force_read(struct trans* trans);
 int DEFAULT_CC
 libxrdp_process_data(struct xrdp_session* session, struct stream *s);
 int DEFAULT_CC

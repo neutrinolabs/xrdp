@@ -129,6 +129,7 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
         if (xrdp_iso_recv(self->iso_layer, s) != 0)
         {
             DEBUG(("   out xrdp_mcs_recv, xrdp_iso_recv return non zero"));
+            g_writeln("xrdp_mcs_recv: xrdp_iso_recv failed");
             return 1;
         }
 
@@ -150,12 +151,7 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
         /* this is channels getting added from the client */
         if (appid == MCS_CJRQ)
         {
-            if (s == self->iso_layer->trans->in_s)
-            {
-                /* this should not happen */
-                g_writeln("xrdp_mcs_recv: error, MCS_CJRQ at wrong time");
-                return 1;
-            }
+
             if (!s_check_rem(s, 4))
             {
                 return 1;
@@ -170,6 +166,14 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
             {
                 log_message(LOG_LEVEL_ERROR,"Non handled error from xrdp_mcs_send_cjcf") ;
             }
+
+            s = libxrdp_force_read(self->iso_layer->trans);
+            if (s == 0)
+            {
+                g_writeln("xrdp_mcs_recv: libxrdp_force_read failed");
+                return 1;
+            }
+
             continue;
         }
 
@@ -321,30 +325,29 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
     int len;
     struct stream *s;
 
-    make_stream(s);
-    init_stream(s, 16 * 1024);
+    s = libxrdp_force_read(self->iso_layer->trans);
+    if (s == 0)
+    {
+        return 1;
+    }
 
     if (xrdp_iso_recv(self->iso_layer, s) != 0)
     {
-        free_stream(s);
         return 1;
     }
 
     if (xrdp_mcs_ber_parse_header(self, s, MCS_CONNECT_INITIAL, &len) != 0)
     {
-        free_stream(s);
         return 1;
     }
 
     if (xrdp_mcs_ber_parse_header(self, s, BER_TAG_OCTET_STRING, &len) != 0)
     {
-        free_stream(s);
         return 1;
     }
 
     if ((len < 0) || !s_check_rem(s, len))
     {
-        free_stream(s);
         return 1;
     }
 
@@ -352,13 +355,11 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
 
     if (xrdp_mcs_ber_parse_header(self, s, BER_TAG_OCTET_STRING, &len) != 0)
     {
-        free_stream(s);
         return 1;
     }
 
     if ((len < 0) || !s_check_rem(s, len))
     {
-        free_stream(s);
         return 1;
     }
 
@@ -366,13 +367,11 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
 
     if (xrdp_mcs_ber_parse_header(self, s, BER_TAG_BOOLEAN, &len) != 0)
     {
-        free_stream(s);
         return 1;
     }
 
     if ((len < 0) || !s_check_rem(s, len))
     {
-        free_stream(s);
         return 1;
     }
 
@@ -380,38 +379,32 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
 
     if (xrdp_mcs_parse_domain_params(self, s) != 0)
     {
-        free_stream(s);
         return 1;
     }
 
     if (xrdp_mcs_parse_domain_params(self, s) != 0)
     {
-        free_stream(s);
         return 1;
     }
 
     if (xrdp_mcs_parse_domain_params(self, s) != 0)
     {
-        free_stream(s);
         return 1;
     }
 
     if (xrdp_mcs_ber_parse_header(self, s, BER_TAG_OCTET_STRING, &len) != 0)
     {
-        free_stream(s);
         return 1;
     }
 
     /* mcs data can not be zero length */
     if ((len <= 0) || (len > 16 * 1024))
     {
-        free_stream(s);
         return 1;
     }
 
     if (!s_check_rem(s, len))
     {
-        free_stream(s);
         return 1;
     }
 
@@ -423,12 +416,10 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
 
     if (s_check_end(s))
     {
-        free_stream(s);
         return 0;
     }
     else
     {
-        free_stream(s);
         return 1;
     }
 }
@@ -442,18 +433,20 @@ xrdp_mcs_recv_edrq(struct xrdp_mcs *self)
     struct stream *s;
 
     DEBUG(("    in xrdp_mcs_recv_edrq"));
-    make_stream(s);
-    init_stream(s, 8192);
+
+    s = libxrdp_force_read(self->iso_layer->trans);
+    if (s == 0)
+    {
+        return 1;
+    }
 
     if (xrdp_iso_recv(self->iso_layer, s) != 0)
     {
-        free_stream(s);
         return 1;
     }
-  
+
     if (!s_check_rem(s, 1))
     {
-        free_stream(s);
         return 1;
     }
 
@@ -461,13 +454,11 @@ xrdp_mcs_recv_edrq(struct xrdp_mcs *self)
 
     if ((opcode >> 2) != MCS_EDRQ)
     {
-        free_stream(s);
         return 1;
     }
 
     if (!s_check_rem(s, 4))
     {
-        free_stream(s);
         return 1;
     }
 
@@ -478,7 +469,6 @@ xrdp_mcs_recv_edrq(struct xrdp_mcs *self)
     {
         if (!s_check_rem(s, 2))
         {
-            free_stream(s);
             return 1;
         }
         in_uint16_be(s, self->userid);
@@ -486,11 +476,9 @@ xrdp_mcs_recv_edrq(struct xrdp_mcs *self)
 
     if (!(s_check_end(s)))
     {
-        free_stream(s);
         return 1;
     }
 
-    free_stream(s);
     DEBUG(("    out xrdp_mcs_recv_edrq"));
     return 0;
 }
@@ -504,18 +492,20 @@ xrdp_mcs_recv_aurq(struct xrdp_mcs *self)
     struct stream *s;
 
     DEBUG(("    in xrdp_mcs_recv_aurq"));
-    make_stream(s);
-    init_stream(s, 8192);
+
+    s = libxrdp_force_read(self->iso_layer->trans);
+    if (s == 0)
+    {
+        return 1;
+    }
 
     if (xrdp_iso_recv(self->iso_layer, s) != 0)
     {
-        free_stream(s);
         return 1;
     }
 
     if (!s_check_rem(s, 1))
     {
-        free_stream(s);
         return 1;
     }
 
@@ -523,7 +513,6 @@ xrdp_mcs_recv_aurq(struct xrdp_mcs *self)
 
     if ((opcode >> 2) != MCS_AURQ)
     {
-        free_stream(s);
         return 1;
     }
 
@@ -531,7 +520,6 @@ xrdp_mcs_recv_aurq(struct xrdp_mcs *self)
     {
         if (!s_check_rem(s, 2))
         {
-            free_stream(s);
             return 1;
         }
         in_uint16_be(s, self->userid);
@@ -539,11 +527,9 @@ xrdp_mcs_recv_aurq(struct xrdp_mcs *self)
 
     if (!(s_check_end(s)))
     {
-        free_stream(s);
         return 1;
     }
 
-    free_stream(s);
     DEBUG(("    out xrdp_mcs_recv_aurq"));
     return 0;
 }
@@ -591,18 +577,19 @@ xrdp_mcs_recv_cjrq(struct xrdp_mcs *self)
     int opcode;
     struct stream *s;
 
-    make_stream(s);
-    init_stream(s, 8192);
+    s = libxrdp_force_read(self->iso_layer->trans);
+    if (s == 0)
+    {
+        return 1;
+    }
 
     if (xrdp_iso_recv(self->iso_layer, s) != 0)
     {
-        free_stream(s);
         return 1;
     }
 
     if (!s_check_rem(s, 1))
     {
-        free_stream(s);
         return 1;
     }
 
@@ -610,13 +597,11 @@ xrdp_mcs_recv_cjrq(struct xrdp_mcs *self)
 
     if ((opcode >> 2) != MCS_CJRQ)
     {
-        free_stream(s);
         return 1;
     }
 
     if (!s_check_rem(s, 4))
     {
-        free_stream(s);
         return 1;
     }
 
@@ -626,7 +611,6 @@ xrdp_mcs_recv_cjrq(struct xrdp_mcs *self)
     {
         if (!s_check_rem(s, 2))
         {
-            free_stream(s);
             return 1;
         }
         in_uint8s(s, 2);
@@ -634,11 +618,9 @@ xrdp_mcs_recv_cjrq(struct xrdp_mcs *self)
 
     if (!(s_check_end(s)))
     {
-        free_stream(s);
         return 1;
     }
 
-    free_stream(s);
     return 0;
 }
 

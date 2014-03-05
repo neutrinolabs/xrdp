@@ -63,7 +63,7 @@ xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
     DEBUG(("   in xrdp_fastpath_recv"));
 
     in_uint8(s, fp_hdr); /* fpInputHeader (1 byte) */
-    g_writeln("xrdp_fastpath_recv: header= 0x%8.8x", fp_hdr);
+    //g_writeln("xrdp_fastpath_recv: header= 0x%8.8x", fp_hdr);
 
     self->numEvents = (fp_hdr & 0x3C) >> 2;
     self->secFlags = (fp_hdr & 0xC0) >> 6;

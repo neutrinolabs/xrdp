@@ -62,7 +62,101 @@ libxrdp_disconnect(struct xrdp_session *session)
 int EXPORT_CC
 libxrdp_process_incomming(struct xrdp_session *session)
 {
-    return xrdp_rdp_incoming((struct xrdp_rdp *)session->rdp);
+    int rv;
+
+    rv = xrdp_rdp_incoming((struct xrdp_rdp *)(session->rdp));
+    return rv;
+}
+
+/*****************************************************************************/
+int EXPORT_CC
+libxrdp_get_pdu_bytes(const char *aheader)
+{
+    int rv;
+    const tui8 *header;
+
+    rv = -1;
+    header = (const tui8 *) aheader;
+
+    if (header[0] == 0x03)
+    {
+        /* TPKT */
+        rv = (header[2] << 8) | header[3];
+    }
+    else if (header[0] == 0x30)
+    {
+        /* TSRequest (NLA) */
+        if (header[1] & 0x80)
+        {
+            if ((header[1] & ~(0x80)) == 1)
+            {
+                rv = header[2];
+                rv += 3;
+            }
+            else if ((header[1] & ~(0x80)) == 2)
+            {
+                rv = (header[2] << 8) | header[3];
+                rv += 4;
+            }
+            else
+            {
+                g_writeln("libxrdp_get_pdu_bytes: error TSRequest!");
+                return -1;
+            }
+        }
+        else
+        {
+            rv = header[1];
+            rv += 2;
+        }
+    }
+    else
+    {
+        /* Fast-Path */
+        if (header[1] & 0x80)
+        {
+            rv = ((header[1] & 0x7F) << 8) | header[2];
+        }
+        else
+        {
+            rv = header[1];
+        }
+    }
+    return rv;
+}
+
+/******************************************************************************/
+/* only used durring connection */
+struct stream * APP_CC
+libxrdp_force_read(struct trans* trans)
+{
+    int bytes;
+    struct stream *s;
+
+    s = trans->in_s;
+    init_stream(s, 32 * 1024);
+    if (trans_force_read(trans, 4) != 0)
+    {
+        g_writeln("libxrdp_force_read: error");
+        return 0;
+    }
+    bytes = libxrdp_get_pdu_bytes(s->data);
+    if (bytes < 1)
+    {
+        g_writeln("libxrdp_force_read: error");
+        return 0;
+    }
+    if (bytes > 32 * 1024)
+    {
+        g_writeln("libxrdp_force_read: error");
+        return 0;
+    }
+    if (trans_force_read(trans, bytes - 4) != 0)
+    {
+        g_writeln("libxrdp_force_read: error");
+        return 0;
+    }
+    return s;
 }
 
 /******************************************************************************/
@@ -74,23 +168,21 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
     int code;
     int term;
     int dead_lock_counter;
+    int do_read;
     struct xrdp_rdp *rdp;
-    struct stream *ls;
 
+    do_read = s == 0;
+    if (do_read && session->up_and_running)
+    {
+        g_writeln("libxrdp_process_data: error logic");
+        return 1;
+    }
     if (session->in_process_data != 0)
     {
         g_writeln("libxrdp_process_data: error reentry");
         return 1;
     }
     session->in_process_data++;
-
-    ls = 0;
-    if (s == 0)
-    {
-        make_stream(ls);
-        init_stream(ls, 8192 * 4);
-        s = ls;
-    }
 
     term = 0;
     cont = 1;
@@ -106,13 +198,26 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
             if (session->is_term())
             {
                 term = 1;
+                break;
             }
         }
 
         code = 0;
 
+        if (do_read)
+        {
+            s = libxrdp_force_read(session->trans);
+            if (s == 0)
+            {
+                g_writeln("libxrdp_process_data: libxrdp_force_read failed");
+                rv = 1;
+                break;
+            }
+        }
+
         if (xrdp_rdp_recv(rdp, s, &code) != 0)
         {
+            g_writeln("libxrdp_process_data: xrdp_rdp_recv failed");
             rv = 1;
             break;
         }
@@ -179,11 +284,6 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
             cont = (s->next_packet != 0) &&
                    (s->next_packet < s->end);
         }
-    }
-
-    if (s == ls)
-    {
-        free_stream(s);
     }
 
     session->in_process_data--;

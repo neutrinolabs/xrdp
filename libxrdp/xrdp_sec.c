@@ -996,6 +996,7 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
     if (xrdp_mcs_recv(self->mcs_layer, s, chan) != 0)
     {
         DEBUG((" out xrdp_sec_recv : error"));
+        g_writeln("xrdp_sec_recv: xrdp_mcs_recv failed");
         return 1;
     }
 
