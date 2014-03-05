@@ -59,33 +59,22 @@ xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
     int fp_hdr;
     int len = 0;
     int byte;
-    int hdr_len = 2; /* fastpath header length - can be 2 or 3 bytes long, depends on length */
     DEBUG(("   in xrdp_fastpath_recv"));
 
     in_uint8(s, fp_hdr); /* fpInputHeader (1 byte) */
-    g_writeln("xrdp_fastpath_recv: header= 0x%8.8x", fp_hdr);
 
     self->numEvents = (fp_hdr & 0x3C) >> 2;
     self->secFlags = (fp_hdr & 0xC0) >> 6;
 
-    // receive fastpath first length packet
-    in_uint8(s, byte); /* length 1 */
+    in_uint8(s, byte); /* length 1 (1 byte) */
 
     if (byte & 0x80)
     {
       byte &= ~(0x80);
       len = (byte << 8);
-      // receive fastpath second length packet
-      in_uint8(s, byte); /* length 2 */
-      hdr_len++;
+      in_uint8(s, byte); /* length 2 (1 byte) */
       len += byte;
     }
-    else
-    {
-      len = byte;
-    }
-
-//    g_writeln("len= %d , numEvents= %d, secFlags= %d, bytesleft: %d", len, self->numEvents, self->secFlags, (s->p - s->data));
 
     DEBUG(("  out xrdp_fastpath_recv"));
 
