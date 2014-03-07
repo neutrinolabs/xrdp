@@ -757,7 +757,11 @@ xrdp_rdp_send_demand_active(struct xrdp_rdp *self)
        INPUT_FLAG_FASTPATH_INPUT2 0x0020 */
     flags = 0x0001 | 0x0004;
     if (self->client_info.use_fast_path & 2)
+    {
+        /* 0x0008 INPUT_FLAG_FASTPATH_INPUT */
+        /* 0x0020 INPUT_FLAG_FASTPATH_INPUT2 */
         flags |= 0x0008 | 0x0020;
+    }
     out_uint16_le(s, flags);
     out_uint8s(s, 82);
 
@@ -810,7 +814,8 @@ static int APP_CC
 xrdp_process_capset_general(struct xrdp_rdp *self, struct stream *s,
                             int len)
 {
-    int i;
+    int extraFlags;
+    int client_does_fastpath_output;
 
     if (len < 10 + 2)
     {
@@ -818,12 +823,19 @@ xrdp_process_capset_general(struct xrdp_rdp *self, struct stream *s,
         return 1;
     }
     in_uint8s(s, 10);
-    in_uint16_le(s, i);
+    in_uint16_le(s, extraFlags);
     /* use_compact_packets is pretty much 'use rdp5' */
-    self->client_info.use_compact_packets = (i != 0);
+    self->client_info.use_compact_packets = (extraFlags != 0);
     /* op2 is a boolean to use compact bitmap headers in bitmap cache */
     /* set it to same as 'use rdp5' boolean */
     self->client_info.op2 = self->client_info.use_compact_packets;
+    /* FASTPATH_OUTPUT_SUPPORTED 0x0001 */
+    client_does_fastpath_output = extraFlags & FASTPATH_OUTPUT_SUPPORTED;
+    if ((self->client_info.use_fast_path & 1) && !client_does_fastpath_output)
+    {
+        /* server supports fast path output and client does not, turn it off */
+        self->client_info.use_fast_path &= ~1;
+    }
     return 0;
 }
 
@@ -1038,6 +1050,24 @@ xrdp_process_capset_pointercache(struct xrdp_rdp *self, struct stream *s,
         g_writeln("xrdp_process_capset_pointercache: new(color) cursor is "
                   "disabled by config");
         self->client_info.pointer_flags = 0;
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+static int APP_CC
+xrdp_process_capset_input(struct xrdp_rdp *self, struct stream *s,
+                          int len)
+{
+    int inputFlags;
+    int client_does_fastpath_input;
+
+    in_uint16_le(s, inputFlags);
+    client_does_fastpath_input = (inputFlags & INPUT_FLAG_FASTPATH_INPUT) ||
+                                 (inputFlags & INPUT_FLAG_FASTPATH_INPUT2);
+    if ((self->client_info.use_fast_path & 2) && !client_does_fastpath_input)
+    {
+        self->client_info.use_fast_path &= ~2;
     }
     return 0;
 }
@@ -1285,7 +1315,7 @@ xrdp_rdp_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
                 DEBUG(("--12"));
                 break;
             case 13: /* 13 */
-                DEBUG(("--13"));
+                xrdp_process_capset_input(self, s, len);
                 break;
             case 14: /* 14 */
                 DEBUG(("--14"));
