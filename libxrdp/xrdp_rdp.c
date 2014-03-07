@@ -311,7 +311,7 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
             {
                 return 1;
             }
-            s->next_packet = 0;
+            /* next_packet gets set in xrdp_sec_recv_fastpath */
             *code = 2; // special code for fastpath input
             DEBUG(("out (fastpath) xrdp_rdp_recv"));
             return 0;

@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2012-2013
+ * Copyright (C) Jay Sorg 2012-2014
  * Copyright (C) Idan Freiberg 2013-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -52,6 +52,7 @@ xrdp_fastpath_reset(struct xrdp_fastpath *self)
 {
     return 0;
 }
+
 /*****************************************************************************/
 int APP_CC
 xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
@@ -59,8 +60,10 @@ xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
     int fp_hdr;
     int len = 0; /* unused */
     int byte;
-    DEBUG(("   in xrdp_fastpath_recv"));
+    char *holdp;
 
+    DEBUG(("   in xrdp_fastpath_recv"));
+    holdp = s->p;
     if (!s_check_rem(s, 2))
     {
         return 1;
@@ -73,26 +76,26 @@ xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
 
     if (byte & 0x80)
     {
-      byte &= ~(0x80);
-      len = (byte << 8);
+        byte &= ~(0x80);
+        len = (byte << 8);
 
-      if (!s_check_rem(s, 1))
-      {
-          return 1;
-      }
-      in_uint8(s, byte); /* length 2 (1 byte) */
+        if (!s_check_rem(s, 1))
+        {
+            return 1;
+        }
+        in_uint8(s, byte); /* length 2 (1 byte) */
 
-      len += byte;
+        len += byte;
     }
     else
     {
-      len = byte;
+        len = byte;
     }
-
+    s->next_packet = holdp + len;
     DEBUG(("  out xrdp_fastpath_recv"));
-
     return 0;
 }
+
 /*****************************************************************************/
 int APP_CC
 xrdp_fastpath_init(struct xrdp_fastpath *self)
@@ -252,97 +255,102 @@ xrdp_fastpath_process_data(struct xrdp_fastpath *self, struct stream *s,
 int APP_CC
 xrdp_fastpath_process_EVENT_SCANCODE(struct xrdp_fastpath *self, int eventFlags, struct stream *s)
 {
-  int flags;
-  int code;
-  flags = 0;
+    int flags;
+    int code;
+    flags = 0;
 
-  if (!s_check_rem(s, 1))
-  {
-      return 1;
-  }
-  in_uint8(s, code); /* keyCode (1 byte) */
+    if (!s_check_rem(s, 1))
+    {
+        return 1;
+    }
+    in_uint8(s, code); /* keyCode (1 byte) */
 
-  if ((eventFlags & FASTPATH_INPUT_KBDFLAGS_RELEASE))
-   flags |= KBD_FLAG_UP;
-  else
-   flags |= KBD_FLAG_DOWN;
+    if ((eventFlags & FASTPATH_INPUT_KBDFLAGS_RELEASE))
+        flags |= KBD_FLAG_UP;
+    else
+        flags |= KBD_FLAG_DOWN;
 
-  if ((eventFlags & FASTPATH_INPUT_KBDFLAGS_EXTENDED))
-   flags |= KBD_FLAG_EXT;
+    if ((eventFlags & FASTPATH_INPUT_KBDFLAGS_EXTENDED))
+        flags |= KBD_FLAG_EXT;
 
-  if (self->session->callback != 0)
-  {
-      /* msg_type can be
-         RDP_INPUT_SYNCHRONIZE - 0
-         RDP_INPUT_SCANCODE - 4
-         RDP_INPUT_MOUSE - 0x8001
-         RDP_INPUT_MOUSEX - 0x8002 */
-      /* call to xrdp_wm.c : callback */
-      self->session->callback(self->session->id, RDP_INPUT_SCANCODE, code, 0,
-                              flags, 0);
-  }
-  return 0;
+    if (self->session->callback != 0)
+    {
+        /* msg_type can be
+          RDP_INPUT_SYNCHRONIZE - 0
+          RDP_INPUT_SCANCODE - 4
+          RDP_INPUT_MOUSE - 0x8001
+          RDP_INPUT_MOUSEX - 0x8002 */
+        /* call to xrdp_wm.c : callback */
+        self->session->callback(self->session->id, RDP_INPUT_SCANCODE, code, 0,
+                                flags, 0);
+    }
+    return 0;
 }
+
 /*****************************************************************************/
 /* FASTPATH_INPUT_EVENT_MOUSE */
 int APP_CC
-xrdp_fastpath_process_EVENT_MOUSE(struct xrdp_fastpath *self, int eventFlags, struct stream *s)
+xrdp_fastpath_process_EVENT_MOUSE(struct xrdp_fastpath *self, int eventFlags,
+                                  struct stream *s)
 {
-  int pointerFlags;
-  int xPos;
-  int yPos;
+    int pointerFlags;
+    int xPos;
+    int yPos;
 
-  if (!s_check_rem(s, 2 + 2 + 2))
-  {
-      return 1;
-  }
-  in_uint16_le(s, pointerFlags); /* pointerFlags (2 bytes) */
-  in_uint16_le(s, xPos); /* xPos (2 bytes) */
-  in_uint16_le(s, yPos); /* yPos (2 bytes) */
+    if (!s_check_rem(s, 2 + 2 + 2))
+    {
+        return 1;
+    }
+    in_uint16_le(s, pointerFlags); /* pointerFlags (2 bytes) */
+    in_uint16_le(s, xPos); /* xPos (2 bytes) */
+    in_uint16_le(s, yPos); /* yPos (2 bytes) */
 
-  if (self->session->callback != 0)
-  {
-      /* msg_type can be
-         RDP_INPUT_SYNCHRONIZE - 0
-         RDP_INPUT_SCANCODE - 4
-         RDP_INPUT_MOUSE - 0x8001
-         RDP_INPUT_MOUSEX - 0x8002 */
-      /* call to xrdp_wm.c : callback */
-      self->session->callback(self->session->id, RDP_INPUT_MOUSE, xPos, yPos,
-                            pointerFlags, 0);
-  }
-  return 0;
+    if (self->session->callback != 0)
+    {
+        /* msg_type can be
+          RDP_INPUT_SYNCHRONIZE - 0
+          RDP_INPUT_SCANCODE - 4
+          RDP_INPUT_MOUSE - 0x8001
+          RDP_INPUT_MOUSEX - 0x8002 */
+        /* call to xrdp_wm.c : callback */
+        self->session->callback(self->session->id, RDP_INPUT_MOUSE,
+                                xPos, yPos, pointerFlags, 0);
+    }
+    return 0;
 }
+
 /*****************************************************************************/
 /* FASTPATH_INPUT_EVENT_MOUSEX */
 int APP_CC
-xrdp_fastpath_process_EVENT_MOUSEX(struct xrdp_fastpath *self, int eventFlags, struct stream *s)
+xrdp_fastpath_process_EVENT_MOUSEX(struct xrdp_fastpath *self,
+                                   int eventFlags, struct stream *s)
 {
-  int pointerFlags;
-  int xPos;
-  int yPos;
+    int pointerFlags;
+    int xPos;
+    int yPos;
 
-  if (!s_check_rem(s, 2 + 2 + 2))
-  {
-      return 1;
-  }
-  in_uint16_le(s, pointerFlags); /* pointerFlags (2 bytes) */
-  in_uint16_le(s, xPos); /* xPos (2 bytes) */
-  in_uint16_le(s, yPos); /* yPos (2 bytes) */
+    if (!s_check_rem(s, 2 + 2 + 2))
+    {
+        return 1;
+    }
+    in_uint16_le(s, pointerFlags); /* pointerFlags (2 bytes) */
+    in_uint16_le(s, xPos); /* xPos (2 bytes) */
+    in_uint16_le(s, yPos); /* yPos (2 bytes) */
 
-  if (self->session->callback != 0)
-  {
-      /* msg_type can be
-         RDP_INPUT_SYNCHRONIZE - 0
-         RDP_INPUT_SCANCODE - 4
-         RDP_INPUT_MOUSE - 0x8001
-         RDP_INPUT_MOUSEX - 0x8002 */
-      /* call to xrdp_wm.c : callback */
-      self->session->callback(self->session->id, RDP_INPUT_MOUSEX, xPos, yPos,
-                            pointerFlags, 0);
-  }
-  return 0;
+    if (self->session->callback != 0)
+    {
+        /* msg_type can be
+          RDP_INPUT_SYNCHRONIZE - 0
+          RDP_INPUT_SCANCODE - 4
+          RDP_INPUT_MOUSE - 0x8001
+          RDP_INPUT_MOUSEX - 0x8002 */
+        /* call to xrdp_wm.c : callback */
+        self->session->callback(self->session->id, RDP_INPUT_MOUSEX,
+                                xPos, yPos, pointerFlags, 0);
+    }
+    return 0;
 }
+
 /*****************************************************************************/
 /* FASTPATH_INPUT_EVENT_SYNC */
 int APP_CC
@@ -353,23 +361,25 @@ xrdp_fastpath_process_EVENT_SYNC(struct xrdp_fastpath *self, int eventCode, int 
     * The eventFlags bitfield (5 bits in size) contains flags indicating the "on"
     * status of the keyboard toggle keys.
     */
-   if (self->session->callback != 0)
-   {
-       /* msg_type can be
-          RDP_INPUT_SYNCHRONIZE - 0
-          RDP_INPUT_SCANCODE - 4
-          RDP_INPUT_MOUSE - 0x8001
-          RDP_INPUT_MOUSEX - 0x8002 */
-       /* call to xrdp_wm.c : callback */
-       self->session->callback(self->session->id, RDP_INPUT_SYNCHRONIZE, eventCode, 0,
-                               eventFlags, 0);
-   }
-  return 0;
+    if (self->session->callback != 0)
+    {
+        /* msg_type can be
+           RDP_INPUT_SYNCHRONIZE - 0
+           RDP_INPUT_SCANCODE - 4
+           RDP_INPUT_MOUSE - 0x8001
+           RDP_INPUT_MOUSEX - 0x8002 */
+        /* call to xrdp_wm.c : callback */
+        self->session->callback(self->session->id, RDP_INPUT_SYNCHRONIZE,
+                                eventCode, 0, eventFlags, 0);
+    }
+    return 0;
 }
+
 /*****************************************************************************/
 /* FASTPATH_INPUT_EVENT_UNICODE */
 int APP_CC
-xrdp_fastpath_process_EVENT_UNICODE(struct xrdp_fastpath *self, int eventFlags, struct stream *s)
+xrdp_fastpath_process_EVENT_UNICODE(struct xrdp_fastpath *self,
+                                    int eventFlags, struct stream *s)
 {
   if (!s_check_rem(s, 2))
   {
@@ -378,6 +388,7 @@ xrdp_fastpath_process_EVENT_UNICODE(struct xrdp_fastpath *self, int eventFlags, 
   in_uint8s(s, 2);
   return 0;
 }
+
 /*****************************************************************************/
 /* FASTPATH_INPUT_EVENT */
 int APP_CC
@@ -389,7 +400,8 @@ xrdp_fastpath_process_input_event(struct xrdp_fastpath *self, struct stream *s)
     int eventFlags;
 
     // process fastpath input events
-    for (i = 0 ; i < self->numEvents ; i++) {
+    for (i = 0; i < self->numEvents; i++)
+    {
         if (!s_check_rem(s, 1))
         {
             return 1;
@@ -403,44 +415,42 @@ xrdp_fastpath_process_input_event(struct xrdp_fastpath *self, struct stream *s)
         //          eventCode, eventFlags, self->sec_layer->fastpath_layer->numEvents));
 
         switch (eventCode)
-          {
+        {
             case FASTPATH_INPUT_EVENT_SCANCODE:
-              if (xrdp_fastpath_process_EVENT_SCANCODE(self, eventFlags, s) != 0)
-              {
-                return 1;
-              }
-              break;
+                if (xrdp_fastpath_process_EVENT_SCANCODE(self, eventFlags, s) != 0)
+                {
+                    return 1;
+                }
+                break;
 
             case FASTPATH_INPUT_EVENT_MOUSE:
-              if (xrdp_fastpath_process_EVENT_MOUSE(self, eventFlags, s) != 0)
-              {
-                return 1;
-              }
-              break;
+                if (xrdp_fastpath_process_EVENT_MOUSE(self, eventFlags, s) != 0)
+                {
+                    return 1;
+                }
+                break;
             case FASTPATH_INPUT_EVENT_MOUSEX:
-              if (xrdp_fastpath_process_EVENT_MOUSEX(self, eventFlags, s) != 0)
-              {
-                return 1;
-              }
-              break;
+                if (xrdp_fastpath_process_EVENT_MOUSEX(self, eventFlags, s) != 0)
+                {
+                    return 1;
+                }
+                break;
             case FASTPATH_INPUT_EVENT_SYNC:
-              if (xrdp_fastpath_process_EVENT_SYNC(self, eventCode, eventFlags, s) != 0)
-              {
-                return 1;
-              }
-              break;
+                if (xrdp_fastpath_process_EVENT_SYNC(self, eventCode, eventFlags, s) != 0)
+                {
+                    return 1;
+                }
+                break;
             case FASTPATH_INPUT_EVENT_UNICODE:
-              if (xrdp_fastpath_process_EVENT_UNICODE(self, eventFlags, s) != 0)
-              {
-                return 1;
-              }
-              break;
+                if (xrdp_fastpath_process_EVENT_UNICODE(self, eventFlags, s) != 0)
+                {
+                    return 1;
+                }
+                break;
             default:
-              g_writeln("xrdp_fastpath_process_input_event: unknown eventCode %d", eventCode);
-              break;
+                g_writeln("xrdp_fastpath_process_input_event: unknown eventCode %d", eventCode);
+                break;
           }
-
     }
-
     return 0;
 }
