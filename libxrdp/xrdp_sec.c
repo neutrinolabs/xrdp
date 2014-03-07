@@ -1288,14 +1288,15 @@ xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s)
         LLOGLN(10, ("xrdp_sec_send_fastpath: fips"));
         pdulen = (int)(s->end - s->p);
         datalen = pdulen - 15;
+        pad = (8 - (datalen % 8)) & 7;
         secFlags = 0x2;
         fpOutputHeader = secFlags << 6;
         out_uint8(s, fpOutputHeader);
+        pdulen += pad;
         pdulen |= 0x8000;
         out_uint16_be(s, pdulen);
         out_uint16_le(s, 16); /* crypto header size */
         out_uint8(s, 1); /* fips version */
-        pad = (8 - (datalen % 8)) & 7;
         g_memset(s->end, 0, pad);
         s->end += pad;
         out_uint8(s, pad); /* fips pad */
