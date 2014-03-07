@@ -1245,6 +1245,94 @@ xrdp_sec_send(struct xrdp_sec *self, struct stream *s, int chan)
     DEBUG((" out xrdp_sec_send"));
     return 0;
 }
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+xrdp_sec_init_fastpath(struct xrdp_sec *self, struct stream *s)
+{
+    if (xrdp_fastpath_init(self->fastpath_layer, s) != 0)
+    {
+        return 1;
+    }
+    if (self->crypt_level == CRYPT_LEVEL_FIPS)
+    {
+        s_push_layer(s, sec_hdr, 3 + 4 + 8);
+    }
+    else if (self->crypt_level > CRYPT_LEVEL_LOW)
+    {
+        s_push_layer(s, sec_hdr, 3 + 8);
+    }
+    else
+    {
+        s_push_layer(s, sec_hdr, 3);
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s)
+{
+    int secFlags;
+    int fpOutputHeader;
+    int datalen;
+    int pdulen;
+    int pad;
+
+    LLOGLN(10, ("xrdp_sec_send_fastpath:"));
+    s_pop_layer(s, sec_hdr);
+    if (self->crypt_level == CRYPT_LEVEL_FIPS)
+    {
+        LLOGLN(10, ("xrdp_sec_send_fastpath: fips"));
+        pdulen = (int)(s->end - s->p);
+        datalen = pdulen - 15;
+        secFlags = 0x2;
+        fpOutputHeader = secFlags << 6;
+        out_uint8(s, fpOutputHeader);
+        pdulen |= 0x8000;
+        out_uint16_be(s, pdulen);
+        out_uint16_le(s, 16); /* crypto header size */
+        out_uint8(s, 1); /* fips version */
+        pad = (8 - (datalen % 8)) & 7;
+        g_memset(s->end, 0, pad);
+        s->end += pad;
+        out_uint8(s, pad); /* fips pad */
+        xrdp_sec_fips_sign(self, s->p, 8, s->p + 8, datalen);
+        xrdp_sec_fips_encrypt(self, s->p + 8, datalen + pad);
+    }
+    else if (self->crypt_level > CRYPT_LEVEL_LOW)
+    {
+        LLOGLN(10, ("xrdp_sec_send_fastpath: crypt"));
+        pdulen = (int)(s->end - s->p);
+        datalen = pdulen - 11;
+        secFlags = 0x2;
+        fpOutputHeader = secFlags << 6;
+        out_uint8(s, fpOutputHeader);
+        pdulen |= 0x8000;
+        out_uint16_be(s, pdulen);
+        xrdp_sec_sign(self, s->p, 8, s->p + 8, datalen);
+        xrdp_sec_encrypt(self, s->p + 8, datalen);
+    }
+    else
+    {
+        LLOGLN(10, ("xrdp_sec_send_fastpath: no crypt"));
+        pdulen = (int)(s->end - s->p);
+        LLOGLN(10, ("xrdp_sec_send_fastpath: pdulen %d", pdulen));
+        secFlags = 0x0;
+        fpOutputHeader = secFlags << 6;
+        out_uint8(s, fpOutputHeader);
+        pdulen |= 0x8000;
+        out_uint16_be(s, pdulen);
+    }
+    if (xrdp_fastpath_send(self->fastpath_layer, s) != 0)
+    {
+        return 1;
+    }
+    return 0;
+}
+
 /*****************************************************************************/
 /* http://msdn.microsoft.com/en-us/library/cc240510.aspx
    2.2.1.3.2 Client Core Data (TS_UD_CS_CORE) */

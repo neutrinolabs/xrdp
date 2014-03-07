@@ -346,6 +346,10 @@ xrdp_sec_delete(struct xrdp_sec* self);
 int APP_CC
 xrdp_sec_init(struct xrdp_sec* self, struct stream* s);
 int APP_CC
+xrdp_sec_init_fastpath(struct xrdp_sec *self, struct stream *s);
+int APP_CC
+xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s);
+int APP_CC
 xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s);
 int APP_CC
 xrdp_sec_recv(struct xrdp_sec* self, struct stream* s, int* chan);
@@ -370,12 +374,17 @@ xrdp_rdp_init(struct xrdp_rdp* self, struct stream* s);
 int APP_CC
 xrdp_rdp_init_data(struct xrdp_rdp* self, struct stream* s);
 int APP_CC
+xrdp_rdp_init_fastpath(struct xrdp_rdp *self, struct stream *s);
+int APP_CC
 xrdp_rdp_recv(struct xrdp_rdp* self, struct stream* s, int* code);
 int APP_CC
 xrdp_rdp_send(struct xrdp_rdp* self, struct stream* s, int pdu_type);
 int APP_CC
 xrdp_rdp_send_data(struct xrdp_rdp* self, struct stream* s,
                    int data_pdu_type);
+int APP_CC
+xrdp_rdp_send_fastpath(struct xrdp_rdp *self, struct stream *s,
+                       int data_pdu_type);
 int APP_CC
 xrdp_rdp_send_data_update_sync(struct xrdp_rdp* self);
 int APP_CC
@@ -554,4 +563,9 @@ int APP_CC
 xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s);
 int APP_CC
 xrdp_fastpath_process_input_event(struct xrdp_fastpath *self, struct stream *s);
+int APP_CC
+xrdp_fastpath_init(struct xrdp_fastpath *self, struct stream *s);
+int APP_CC
+xrdp_fastpath_send(struct xrdp_fastpath *self, struct stream *s);
+
 #endif

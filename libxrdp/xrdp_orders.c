@@ -64,7 +64,6 @@ xrdp_orders_delete(struct xrdp_orders *self)
     {
         return;
     }
-
     xrdp_jpeg_deinit(self->jpeg_han);
     free_stream(self->out_s);
     g_free(self->orders_state.text_data);
@@ -81,7 +80,6 @@ xrdp_orders_reset(struct xrdp_orders *self)
     {
         return 1;
     }
-
     g_free(self->orders_state.text_data);
     g_memset(&(self->orders_state), 0, sizeof(self->orders_state));
     self->order_count_ptr = 0;
@@ -98,24 +96,33 @@ int APP_CC
 xrdp_orders_init(struct xrdp_orders *self)
 {
     self->order_level++;
-
     if (self->order_level == 1)
     {
         self->order_count = 0;
-
-        /* is this big enough */
-        if (xrdp_rdp_init_data(self->rdp_layer, self->out_s) != 0)
+        if (self->rdp_layer->client_info.use_fast_path & 1)
         {
-            return 1;
+            LLOGLN(10, ("xrdp_orders_init: fastpath"));
+            if (xrdp_rdp_init_fastpath(self->rdp_layer, self->out_s) != 0)
+            {
+                return 1;
+            }
+            self->order_count_ptr = self->out_s->p;
+            out_uint8s(self->out_s, 2); /* number of orders, set later */
         }
-
-        out_uint16_le(self->out_s, RDP_UPDATE_ORDERS);
-        out_uint8s(self->out_s, 2); /* pad */
-        self->order_count_ptr = self->out_s->p;
-        out_uint8s(self->out_s, 2); /* number of orders, set later */
-        out_uint8s(self->out_s, 2); /* pad */
+        else
+        {
+            LLOGLN(10, ("xrdp_orders_init: slowpath"));
+            if (xrdp_rdp_init_data(self->rdp_layer, self->out_s) != 0)
+            {
+                return 1;
+            }
+            out_uint16_le(self->out_s, RDP_UPDATE_ORDERS);
+            out_uint8s(self->out_s, 2); /* pad */
+            self->order_count_ptr = self->out_s->p;
+            out_uint8s(self->out_s, 2); /* number of orders, set later */
+            out_uint8s(self->out_s, 2); /* pad */
+        }
     }
-
     return 0;
 }
 
@@ -127,11 +134,9 @@ xrdp_orders_send(struct xrdp_orders *self)
     int rv;
 
     rv = 0;
-
     if (self->order_level > 0)
     {
         self->order_level--;
-
         if ((self->order_level == 0) && (self->order_count > 0))
         {
             s_mark_end(self->out_s);
@@ -139,15 +144,24 @@ xrdp_orders_send(struct xrdp_orders *self)
             self->order_count_ptr[0] = self->order_count;
             self->order_count_ptr[1] = self->order_count >> 8;
             self->order_count = 0;
-
-            if (xrdp_rdp_send_data(self->rdp_layer, self->out_s,
-                                   RDP_DATA_PDU_UPDATE) != 0)
+            if (self->rdp_layer->client_info.use_fast_path & 1)
             {
-                rv = 1;
+                if (xrdp_rdp_send_fastpath(self->rdp_layer,
+                                           self->out_s, 0) != 0)
+                {
+                    rv = 1;
+                }
+            }
+            else
+            {
+                if (xrdp_rdp_send_data(self->rdp_layer, self->out_s,
+                                       RDP_DATA_PDU_UPDATE) != 0)
+                {
+                    rv = 1;
+                }
             }
         }
     }
-
     return rv;
 }
 
@@ -160,21 +174,29 @@ xrdp_orders_force_send(struct xrdp_orders *self)
     {
         return 1;
     }
-
     if ((self->order_level > 0) && (self->order_count > 0))
     {
         s_mark_end(self->out_s);
         DEBUG(("xrdp_orders_force_send sending %d orders", self->order_count));
         self->order_count_ptr[0] = self->order_count;
         self->order_count_ptr[1] = self->order_count >> 8;
-
-        if (xrdp_rdp_send_data(self->rdp_layer, self->out_s,
-                               RDP_DATA_PDU_UPDATE) != 0)
+        if (self->rdp_layer->client_info.use_fast_path & 1)
         {
-            return 1;
+            if (xrdp_rdp_send_fastpath(self->rdp_layer,
+                                       self->out_s, 0) != 0)
+            {
+                return 1;
+            }
+        }
+        else
+        {
+            if (xrdp_rdp_send_data(self->rdp_layer, self->out_s,
+                                   RDP_DATA_PDU_UPDATE) != 0)
+            {
+                return 1;
+            }
         }
     }
-
     self->order_count = 0;
     self->order_level = 0;
     return 0;
@@ -1632,7 +1654,7 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
     int present;
     char* present_ptr;
     char* order_flags_ptr;
-    
+
     if (xrdp_orders_check(self, 80) != 0)
     {
         return 1;
@@ -1653,9 +1675,9 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
             order_flags |= RDP_ORDER_BOUNDS;
             if (xrdp_orders_last_bounds(self, rect))
             {
-                
+
                 order_flags |= RDP_ORDER_LASTBOUNDS;
-                
+
             }
         }
     }
@@ -1699,21 +1721,21 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
     {
         xrdp_orders_out_bounds(self, rect);
     }
-    
+
     if (srcidx != self->orders_state.com_blt_srcidx)
     {
         present |= 0x000001;
         out_uint16_le(self->out_s, srcidx);
         self->orders_state.com_blt_srcidx = srcidx;
     }
-    
+
     if (srcformat != self->orders_state.com_blt_srcformat)
     {
         present |= 0x000002;
         out_uint32_le(self->out_s, srcformat);
         self->orders_state.com_blt_srcformat = srcformat;
     }
-    
+
     if (srcwidth != self->orders_state.com_blt_srcwidth)
     {
         present |= 0x000004;
@@ -1727,14 +1749,14 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
         }
         self->orders_state.com_blt_srcwidth = srcwidth;
     }
-    
+
     if (srcrepeat != self->orders_state.com_blt_srcrepeat)
     {
         present |= 0x000008;
         out_uint8(self->out_s, srcrepeat);
         self->orders_state.com_blt_srcrepeat = srcrepeat;
     }
-    
+
     if (srctransform != 0)
     {
         if (srctransform[0] != self->orders_state.com_blt_srctransform[0])
@@ -1768,21 +1790,21 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
             self->orders_state.com_blt_srctransform[0] = 0;
         }
     }
-    
+
     if (mskflags != self->orders_state.com_blt_mskflags)
     {
         present |= 0x000040;
         out_uint8(self->out_s, mskflags);
         self->orders_state.com_blt_mskflags = mskflags;
     }
-    
+
     if (mskidx != self->orders_state.com_blt_mskidx)
     {
         present |= 0x000080;
         out_uint16_le(self->out_s, mskidx);
         self->orders_state.com_blt_mskidx = mskidx;
     }
-    
+
     if (mskformat != self->orders_state.com_blt_mskformat)
     {
         present |= 0x000100;
@@ -1803,21 +1825,21 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
         }
         self->orders_state.com_blt_mskwidth = mskwidth;
     }
-    
+
     if (mskrepeat != self->orders_state.com_blt_mskrepeat)
     {
         present |= 0x000400;
         out_uint8(self->out_s, mskrepeat);
         self->orders_state.com_blt_mskrepeat = mskrepeat;
     }
-    
+
     if (op != self->orders_state.com_blt_op)
     {
         present |= 0x000800;
         out_uint8(self->out_s, op);
         self->orders_state.com_blt_op = op;
     }
-    
+
     if (srcx != self->orders_state.com_blt_srcx)
     {
         present |= 0x001000;
@@ -1831,7 +1853,7 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
         }
         self->orders_state.com_blt_srcx = srcx;
     }
-    
+
     if (srcy != self->orders_state.com_blt_srcy)
     {
         present |= 0x002000;
@@ -1845,7 +1867,7 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
         }
         self->orders_state.com_blt_srcy = srcy;
     }
-    
+
     if (mskx != self->orders_state.com_blt_mskx)
     {
         present |= 0x004000;
@@ -1859,7 +1881,7 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
         }
         self->orders_state.com_blt_mskx = mskx;
     }
-    
+
     if (msky != self->orders_state.com_blt_msky)
     {
         present |= 0x008000;
@@ -1873,7 +1895,7 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
         }
         self->orders_state.com_blt_msky = msky;
     }
-    
+
     if (dstx != self->orders_state.com_blt_dstx)
     {
         present |= 0x010000;
@@ -1887,7 +1909,7 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
         }
         self->orders_state.com_blt_dstx = dstx;
     }
-    
+
     if (dsty != self->orders_state.com_blt_dsty)
     {
         present |= 0x020000;
@@ -1901,7 +1923,7 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
         }
         self->orders_state.com_blt_dsty = dsty;
     }
-    
+
     if (width != self->orders_state.com_blt_width)
     {
         present |= 0x040000;
@@ -1915,7 +1937,7 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
         }
         self->orders_state.com_blt_width = width;
     }
-    
+
     if (height != self->orders_state.com_blt_height)
     {
         present |= 0x080000;
@@ -1936,11 +1958,11 @@ xrdp_orders_composite_blt(struct xrdp_orders* self, int srcidx, int srcformat,
         out_uint32_le(self->out_s, dstformat);
         self->orders_state.com_blt_dstformat = dstformat;
     }
-    
+
     xrdp_order_pack_small_or_tiny(self, order_flags_ptr, order_flags,
-                                  
+
                                   present_ptr, present, 3);
-    
+
     return 0;
 }
 

@@ -26,6 +26,12 @@
 #include <freerdp/constants.h>
 #endif
 
+#define LOG_LEVEL 1
+#define LLOG(_level, _args) \
+    do { if (_level < LOG_LEVEL) { g_write _args ; } } while (0)
+#define LLOGLN(_level, _args) \
+    do { if (_level < LOG_LEVEL) { g_writeln _args ; } } while (0)
+
 /*****************************************************************************/
 static int APP_CC
 xrdp_rdp_read_config(struct xrdp_client_info *client_info)
@@ -289,6 +295,7 @@ xrdp_rdp_init_data(struct xrdp_rdp *self, struct stream *s)
     s_push_layer(s, rdp_hdr, 18);
     return 0;
 }
+
 /*****************************************************************************/
 /* returns error */
 int APP_CC
@@ -495,6 +502,65 @@ xrdp_rdp_send_data(struct xrdp_rdp *self, struct stream *s,
     }
 
     DEBUG(("out xrdp_rdp_send_data"));
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+xrdp_rdp_init_fastpath(struct xrdp_rdp *self, struct stream *s)
+{
+    if (xrdp_sec_init_fastpath(self->sec_layer, s) != 0)
+    {
+        return 1;
+    }
+    if (self->client_info.rdp_compression)
+    {
+        s_push_layer(s, rdp_hdr, 4);
+    }
+    else
+    {
+        s_push_layer(s, rdp_hdr, 3);
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+/* TODO: compression */
+int APP_CC
+xrdp_rdp_send_fastpath(struct xrdp_rdp *self, struct stream *s,
+                       int data_pdu_type)
+{
+    int updateHeader;
+    int ctype;
+    int len;
+
+    LLOGLN(10, ("xrdp_rdp_send_fastpath:"));
+    s_pop_layer(s, rdp_hdr);
+    len = (int)(s->end - s->p);
+    if (self->client_info.rdp_compression)
+    {
+        /* TODO: finish compression */
+        LLOGLN(10, ("xrdp_rdp_send_fastpath: compress"));
+        updateHeader = data_pdu_type & 15;
+        updateHeader |= 2 << 6; /* FASTPATH_OUTPUT_COMPRESSION_USED */
+        out_uint8(s, updateHeader);
+        ctype = 0;
+        out_uint8(s, ctype);
+        len -= 4;
+    }
+    else
+    {
+        LLOGLN(10, ("xrdp_rdp_send_fastpath: no compress"));
+        updateHeader = data_pdu_type & 15;
+        out_uint8(s, updateHeader);
+        len -= 3;
+    }
+    out_uint16_le(s, len);
+    if (xrdp_sec_send_fastpath(self->sec_layer, s) != 0)
+    {
+        LLOGLN(0, ("xrdp_rdp_send_fastpath: xrdp_fastpath_send failed"));
+        return 1;
+    }
     return 0;
 }
 
@@ -1581,6 +1647,7 @@ xrdp_rdp_send_fontmap(struct xrdp_rdp *self)
     free_stream(s);
     return 0;
 }
+
 /*****************************************************************************/
 int APP_CC
 xrdp_rdp_send_monitorlayout(struct xrdp_rdp *self)
@@ -1620,6 +1687,7 @@ xrdp_rdp_send_monitorlayout(struct xrdp_rdp *self)
     free_stream(s);
     return 0;
 }
+
 /*****************************************************************************/
 static int APP_CC
 xrdp_rdp_process_data_font(struct xrdp_rdp *self, struct stream *s)

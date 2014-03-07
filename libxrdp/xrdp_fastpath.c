@@ -97,12 +97,27 @@ xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
 }
 
 /*****************************************************************************/
+/* no fragmenation */
 int APP_CC
-xrdp_fastpath_init(struct xrdp_fastpath *self)
+xrdp_fastpath_init(struct xrdp_fastpath *self, struct stream *s)
 {
+    init_stream(s, 32 * 1024);
     return 0;
 }
 
+/*****************************************************************************/
+/* no fragmenation */
+int APP_CC
+xrdp_fastpath_send(struct xrdp_fastpath *self, struct stream *s)
+{
+    if (trans_force_write_s(self->trans, s) != 0)
+    {
+        return 1;
+    }
+    return 0;
+}
+
+#if 0
 /*****************************************************************************/
 int APP_CC
 xrdp_fastpath_send_update_pdu(struct xrdp_fastpath *self, tui8 updateCode,
@@ -165,6 +180,7 @@ xrdp_fastpath_send_update_pdu(struct xrdp_fastpath *self, tui8 updateCode,
 
     return 0;
 }
+#endif
 
 /*****************************************************************************/
 int
@@ -194,6 +210,7 @@ xrdp_fastpath_process_update(struct xrdp_fastpath *self, tui8 updateCode,
     return 0;
 }
 
+#if 0
 /*****************************************************************************/
 int APP_CC
 xrdp_fastpath_process_data(struct xrdp_fastpath *self, struct stream *s,
@@ -249,6 +266,7 @@ xrdp_fastpath_process_data(struct xrdp_fastpath *self, struct stream *s,
     in_uint16_le(s, size);
     return xrdp_fastpath_process_update(self, updateCode, size, s);
 }
+#endif
 
 /*****************************************************************************/
 /* FASTPATH_INPUT_EVENT_SCANCODE */
