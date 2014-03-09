@@ -42,7 +42,7 @@
 #define SESMAN_CFG_AUTH_FILE_PATH    "AuthFilePath"
 
 #define SESMAN_CFG_RDP_PARAMS        "X11rdp"
-#define SESMAN_CFG_XORG_PARAMS       "XOrg"
+#define SESMAN_CFG_XORG_PARAMS       "Xorg"
 #define SESMAN_CFG_VNC_PARAMS        "Xvnc"
 
 /*

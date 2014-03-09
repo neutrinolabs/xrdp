@@ -151,7 +151,7 @@ xrdp_mm_send_login(struct xrdp_mm *self)
         }
         else if (g_strcasecmp(name, "code") == 0)
         {
-            /* this code is either 0 for Xvnc or 10 for X11rdp */
+            /* this code is either 0 for Xvnc, 10 for X11rdp or 20 for Xorg */
             self->code = g_atoi(value);
         }
         else if (g_strcasecmp(name, "xserverbpp") == 0)
@@ -168,7 +168,7 @@ xrdp_mm_send_login(struct xrdp_mm *self)
 
     s = trans_get_out_s(self->sesman_trans, 8192);
     s_push_layer(s, channel_hdr, 8);
-    /* this code is either 0 for Xvnc or 10 for X11rdp */
+    /* this code is either 0 for Xvnc, 10 for X11rdp or 20 for Xorg */
     out_uint16_be(s, self->code);
     index = g_strlen(username);
     out_uint16_be(s, index);
@@ -465,7 +465,7 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
             {
                 g_snprintf(text, 255, "%d", 5900 + self->display);
             }
-            else if (self->code == 10) /* X11rdp */
+            else if (self->code == 10 || self->code == 20) /* X11rdp/Xorg */
             {
                 use_uds = 1;
 
@@ -1473,7 +1473,7 @@ cleanup_states(struct xrdp_mm *self)
         self-> sesman_trans_up = 0; /* true once connected to sesman */
         self-> delete_sesman_trans = 0; /* boolean set when done with sesman connection */
         self-> display = 0; /* 10 for :10.0, 11 for :11.0, etc */
-        self-> code = 0; /* 0 Xvnc session 10 X11rdp session */
+        self-> code = 0; /* 0 Xvnc session, 10 X11rdp session, 20 Xorg session */
         self-> sesman_controlled = 0; /* true if this is a sesman session */
         self-> chan_trans = NULL; /* connection to chansrv */
         self-> chan_trans_up = 0; /* true once connected to chansrv */
@@ -3045,4 +3045,3 @@ server_add_char_alpha(struct xrdp_mod* mod, int font, int charactor,
     return libxrdp_orders_send_font(((struct xrdp_wm*)mod->wm)->session,
                                     &fi, font, charactor);
 }
-
