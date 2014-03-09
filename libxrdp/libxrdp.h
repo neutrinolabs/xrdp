@@ -346,6 +346,8 @@ xrdp_sec_delete(struct xrdp_sec* self);
 int APP_CC
 xrdp_sec_init(struct xrdp_sec* self, struct stream* s);
 int APP_CC
+xrdp_sec_get_fastpath_bytes(struct xrdp_sec *self);
+int APP_CC
 xrdp_sec_init_fastpath(struct xrdp_sec *self, struct stream *s);
 int APP_CC
 xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s);

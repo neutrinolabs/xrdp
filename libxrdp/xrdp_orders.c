@@ -34,6 +34,8 @@
         } \
     }
 
+#define MAX_ORDERS_SIZE (16 * 1024 + 512)
+
 /*****************************************************************************/
 struct xrdp_orders *APP_CC
 xrdp_orders_create(struct xrdp_session *session, struct xrdp_rdp *rdp_layer)
@@ -44,7 +46,7 @@ xrdp_orders_create(struct xrdp_session *session, struct xrdp_rdp *rdp_layer)
     self->session = session;
     self->rdp_layer = rdp_layer;
     make_stream(self->out_s);
-    init_stream(self->out_s, 16384);
+    init_stream(self->out_s, 32 * 1024);
     self->orders_state.clip_right = 1; /* silly rdp right clip */
     self->orders_state.clip_bottom = 1; /* silly rdp bottom clip */
     self->jpeg_han = xrdp_jpeg_init();
@@ -212,14 +214,7 @@ xrdp_orders_check(struct xrdp_orders *self, int max_size)
     int size;
     int max_packet_size;
 
-    if (self->rdp_layer->client_info.bpp == 8)
-    {
-        max_packet_size = 8000;
-    }
-    else
-    {
-        max_packet_size = 16000;
-    }
+    max_packet_size = MAX_ORDERS_SIZE;
 
     if (self->order_level < 1)
     {

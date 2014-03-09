@@ -1247,6 +1247,22 @@ xrdp_sec_send(struct xrdp_sec *self, struct stream *s, int chan)
 }
 
 /*****************************************************************************/
+/* returns the fastpath sec byte count */
+int APP_CC
+xrdp_sec_get_fastpath_bytes(struct xrdp_sec *self)
+{
+    if (self->crypt_level == CRYPT_LEVEL_FIPS)
+    {
+        return 3 + 4 + 8;
+    }
+    else if (self->crypt_level > CRYPT_LEVEL_LOW)
+    {
+        return 3 + 8;
+    }
+    return 3;
+}
+
+/*****************************************************************************/
 /* returns error */
 int APP_CC
 xrdp_sec_init_fastpath(struct xrdp_sec *self, struct stream *s)
@@ -1272,6 +1288,8 @@ xrdp_sec_init_fastpath(struct xrdp_sec *self, struct stream *s)
 
 /*****************************************************************************/
 /* returns error */
+/* 2.2.9.1.2 Server Fast-Path Update PDU (TS_FP_UPDATE_PDU)
+ * http://msdn.microsoft.com/en-us/library/cc240621.aspx */
 int APP_CC
 xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s)
 {
@@ -1297,7 +1315,6 @@ xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s)
         out_uint16_be(s, pdulen);
         out_uint16_le(s, 16); /* crypto header size */
         out_uint8(s, 1); /* fips version */
-        g_memset(s->end, 0, pad);
         s->end += pad;
         out_uint8(s, pad); /* fips pad */
         xrdp_sec_fips_sign(self, s->p, 8, s->p + 8, datalen);

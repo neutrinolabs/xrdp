@@ -32,6 +32,8 @@
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { g_writeln _args ; } } while (0)
 
+#define FASTPATH_FRAG_SIZE (16 * 1024 + 1024)
+
 /*****************************************************************************/
 static int APP_CC
 xrdp_rdp_read_config(struct xrdp_client_info *client_info)
@@ -526,40 +528,94 @@ xrdp_rdp_init_fastpath(struct xrdp_rdp *self, struct stream *s)
 
 /*****************************************************************************/
 /* TODO: compression */
+/* returns error */
+/* 2.2.9.1.2.1 Fast-Path Update (TS_FP_UPDATE)
+ * http://msdn.microsoft.com/en-us/library/cc240622.aspx */
 int APP_CC
 xrdp_rdp_send_fastpath(struct xrdp_rdp *self, struct stream *s,
                        int data_pdu_type)
 {
     int updateHeader;
+    int updateCode;
+    int fragmentation;
+    int compression;
     int ctype;
     int len;
+    int cont;
+    int header_bytes;
+    int sec_bytes;
+    struct stream ls;
+    char *holdp;
+    char *holdend;
 
     LLOGLN(10, ("xrdp_rdp_send_fastpath:"));
     s_pop_layer(s, rdp_hdr);
-    len = (int)(s->end - s->p);
+    updateCode = data_pdu_type;
     if (self->client_info.rdp_compression)
     {
-        /* TODO: finish compression */
-        LLOGLN(10, ("xrdp_rdp_send_fastpath: compress"));
-        updateHeader = data_pdu_type & 15;
-        updateHeader |= 2 << 6; /* FASTPATH_OUTPUT_COMPRESSION_USED */
-        out_uint8(s, updateHeader);
-        ctype = 0;
-        out_uint8(s, ctype);
-        len -= 4;
+        compression = 2;
+        header_bytes = 4;
     }
     else
     {
-        LLOGLN(10, ("xrdp_rdp_send_fastpath: no compress"));
-        updateHeader = data_pdu_type & 15;
-        out_uint8(s, updateHeader);
-        len -= 3;
+        compression = 0;
+        header_bytes = 3;
     }
-    out_uint16_le(s, len);
-    if (xrdp_sec_send_fastpath(self->sec_layer, s) != 0)
+    sec_bytes = xrdp_sec_get_fastpath_bytes(self->sec_layer);
+    fragmentation = 0;
+    ls = *s;
+    cont = 1;
+    while (cont)
     {
-        LLOGLN(0, ("xrdp_rdp_send_fastpath: xrdp_fastpath_send failed"));
-        return 1;
+        len = (int)(ls.end - ls.p);
+        if (len > FASTPATH_FRAG_SIZE)
+        {
+            len = FASTPATH_FRAG_SIZE;
+            if (fragmentation == 0)
+            {
+                fragmentation = 2; /* FASTPATH_FRAGMENT_FIRST */
+            }
+            else if (fragmentation == 2)
+            {
+                fragmentation = 3; /* FASTPATH_FRAGMENT_NEXT */
+            }
+        }
+        else
+        {
+            if (fragmentation != 0)
+            {
+                fragmentation = 1; /* FASTPATH_FRAGMENT_LAST */
+            }
+        }
+        len = MIN(len, 32 * 1024);
+        LLOGLN(10, ("xrdp_rdp_send_fastpath: len %d fragmentation %d",
+               len, fragmentation));
+        updateHeader = (updateCode & 15) |
+                      ((fragmentation & 3) << 4) |
+                      ((compression & 3) << 6);
+        out_uint8(&ls, updateHeader);
+        if (compression != 0)
+        {
+            /* TODO: */
+            ctype = 0;
+            out_uint8(&ls, ctype);
+        }
+        len -= header_bytes;
+        out_uint16_le(&ls, len);
+        holdp = ls.p;
+        holdend = ls.end;
+        ls.end = ls.p + len;
+        if (xrdp_sec_send_fastpath(self->sec_layer, &ls) != 0)
+        {
+            LLOGLN(0, ("xrdp_rdp_send_fastpath: xrdp_fastpath_send failed"));
+            return 1;
+        }
+        ls.p = holdp + len;
+        ls.end = holdend;
+        cont = ls.p < ls.end;
+        ls.p -= header_bytes;
+        ls.sec_hdr = ls.p - sec_bytes;
+        ls.data = ls.sec_hdr;
     }
     return 0;
 }
