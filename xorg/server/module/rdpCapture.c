@@ -53,6 +53,8 @@ rdpCapture0(RegionPtr in_reg, RegionPtr out_reg,
     char *dst_rect;
     int num_regions;
     int bytespp;
+    int src_bytespp;
+    int dst_bytespp;
     int width;
     int height;
     int src_offset;
@@ -60,7 +62,14 @@ rdpCapture0(RegionPtr in_reg, RegionPtr out_reg,
     int bytes;
     int i;
     int j;
+    int k;
+    int red;
+    int green;
+    int blue;
     Bool rv;
+    unsigned int *s32;
+    unsigned short *d16;
+    unsigned char *d8;
 
     LLOGLN(10, ("rdpCapture0:"));
 
@@ -114,6 +123,126 @@ rdpCapture0(RegionPtr in_reg, RegionPtr out_reg,
             for (j = 0; j < height; j++)
             {
                 memcpy(dst_rect, src_rect, bytes);
+                src_rect += src_stride;
+                dst_rect += dst_stride;
+            }
+        }
+    }
+    else if ((src_format == XRDP_a8r8g8b8) && (dst_format == XRDP_r5g6b5))
+    {
+        src_bytespp = 4;
+        dst_bytespp = 2;
+
+        for (i = 0; i < num_regions; i++)
+        {
+            /* get rect to copy */
+            rect = prects[i];
+
+            /* get rect dimensions */
+            width = rect.x2 - rect.x1;
+            height = rect.y2 - rect.y1;
+
+            /* point to start of each rect in respective memory */
+            src_offset = rect.y1 * src_stride + rect.x1 * src_bytespp;
+            dst_offset = rect.y1 * dst_stride + rect.x1 * dst_bytespp;
+            src_rect = src + src_offset;
+            dst_rect = dst + dst_offset;
+
+            /* bytes per line */
+            bytes = width * bytespp;
+
+            /* copy one line at a time */
+            for (j = 0; j < height; j++)
+            {
+                s32 = (unsigned int *) src_rect;
+                d16 = (unsigned short *) dst_rect;
+                for (k = 0; k < width; k++)
+                {
+                    SPLITCOLOR32(red, green, blue, *s32);
+                    *d16 = COLOR16(red, green, blue);
+                    s32++;
+                    d16++;
+                }
+                src_rect += src_stride;
+                dst_rect += dst_stride;
+            }
+        }
+    }
+    else if ((src_format == XRDP_a8r8g8b8) && (dst_format == XRDP_a1r5g5b5))
+    {
+        src_bytespp = 4;
+        dst_bytespp = 2;
+
+        for (i = 0; i < num_regions; i++)
+        {
+            /* get rect to copy */
+            rect = prects[i];
+
+            /* get rect dimensions */
+            width = rect.x2 - rect.x1;
+            height = rect.y2 - rect.y1;
+
+            /* point to start of each rect in respective memory */
+            src_offset = rect.y1 * src_stride + rect.x1 * src_bytespp;
+            dst_offset = rect.y1 * dst_stride + rect.x1 * dst_bytespp;
+            src_rect = src + src_offset;
+            dst_rect = dst + dst_offset;
+
+            /* bytes per line */
+            bytes = width * bytespp;
+
+            /* copy one line at a time */
+            for (j = 0; j < height; j++)
+            {
+                s32 = (unsigned int *) src_rect;
+                d16 = (unsigned short *) dst_rect;
+                for (k = 0; k < width; k++)
+                {
+                    SPLITCOLOR32(red, green, blue, *s32);
+                    *d16 = COLOR15(red, green, blue);
+                    s32++;
+                    d16++;
+                }
+                src_rect += src_stride;
+                dst_rect += dst_stride;
+            }
+        }
+    }
+    else if ((src_format == XRDP_a8r8g8b8) && (dst_format == XRDP_r3g3b2))
+    {
+        src_bytespp = 4;
+        dst_bytespp = 1;
+
+        for (i = 0; i < num_regions; i++)
+        {
+            /* get rect to copy */
+            rect = prects[i];
+
+            /* get rect dimensions */
+            width = rect.x2 - rect.x1;
+            height = rect.y2 - rect.y1;
+
+            /* point to start of each rect in respective memory */
+            src_offset = rect.y1 * src_stride + rect.x1 * src_bytespp;
+            dst_offset = rect.y1 * dst_stride + rect.x1 * dst_bytespp;
+            src_rect = src + src_offset;
+            dst_rect = dst + dst_offset;
+
+            /* bytes per line */
+            bytes = width * bytespp;
+
+            /* copy one line at a time */
+            for (j = 0; j < height; j++)
+            {
+                s32 = (unsigned int *) src_rect;
+                d8 = (unsigned char *) dst_rect;
+                for (k = 0; k < width; k++)
+                {
+                    SPLITCOLOR32(red, green, blue, *s32);
+                    *d8 = COLOR8(red, green, blue);
+                    s32++;
+                    d8++;
+                }
                 src_rect += src_stride;
                 dst_rect += dst_stride;
             }

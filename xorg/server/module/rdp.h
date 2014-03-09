@@ -30,9 +30,33 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "rdpPri.h"
 
+#define COLOR8(r, g, b) \
+    ((((r) >> 5) << 0)  | (((g) >> 5) << 3) | (((b) >> 6) << 6))
+#define COLOR15(r, g, b) \
+    ((((r) >> 3) << 10) | (((g) >> 3) << 5) | (((b) >> 3) << 0))
+#define COLOR16(r, g, b) \
+    ((((r) >> 3) << 11) | (((g) >> 2) << 5) | (((b) >> 3) << 0))
+#define COLOR24(r, g, b) \
+    ((((r) >> 0) << 0)  | (((g) >> 0) << 8) | (((b) >> 0) << 16))
+#define SPLITCOLOR32(r, g, b, c) \
+    do { \
+        r = ((c) >> 16) & 0xff; \
+        g = ((c) >> 8) & 0xff; \
+        b = (c) & 0xff; \
+    } while (0)
+
 /* PIXMAN_a8r8g8b8 */
 #define XRDP_a8r8g8b8 \
-((32 << 24) | (2 << 16) | (8 << 12) | (8 << 8)  | (8 << 4) | 8)
+((32 << 24) | (2 << 16) | (8 << 12) | (8 << 8) | (8 << 4) | 8)
+/* PIXMAN_r5g6b5 */
+#define XRDP_r5g6b5 \
+((16 << 24) | (2 << 16) | (0 << 12) | (5 << 8) | (6 << 4) | 5)
+/* PIXMAN_a1r5g5b5 */
+#define XRDP_a1r5g5b5 \
+((16 << 24) | (2 << 16) | (1 << 12) | (5 << 8) | (5 << 4) | 5)
+/* PIXMAN_r3g3b2 */
+#define XRDP_r3g3b2 \
+((8 << 24) | (2 << 16) | (0 << 12) | (3 << 8) | (3 << 4) | 2)
 
 #define PixelDPI 100
 #define PixelToMM(_size) (((_size) * 254 + (PixelDPI) * 5) / ((PixelDPI) * 10))
