@@ -42,6 +42,7 @@
 #define SESMAN_CFG_AUTH_FILE_PATH    "AuthFilePath"
 
 #define SESMAN_CFG_RDP_PARAMS        "X11rdp"
+#define SESMAN_CFG_XORG_PARAMS       "XOrg"
 #define SESMAN_CFG_VNC_PARAMS        "Xvnc"
 
 /*
@@ -192,6 +193,13 @@ struct config_sesman
    * @var log
    * @brief Log configuration struct
    */
+   
+  struct list* xorg_params;
+  /**
+   * @var log
+   * @brief Log configuration struct
+   */
+      
   //struct log_config log;
   /**
    * @var sec
@@ -285,7 +293,20 @@ int DEFAULT_CC
 config_read_rdp_params(int file, struct config_sesman* cs, struct list* param_n,
                        struct list* param_v);
 
-
+/**
+ *
+ * @brief Reads sesman [XOrg] configuration section
+ * @param file configuration file descriptor
+ * @param cs pointer to a config_sesman struct
+ * @param param_n parameter name list
+ * @param param_v parameter value list
+ * @return 0 on success, 1 on failure
+ *
+ */
+int DEFAULT_CC
+config_read_xorg_params(int file, struct config_sesman* cs, struct list* param_n,
+                        struct list* param_v);
+                       
 /**
  *
  * @brief Reads sesman [Xvnc] configuration section

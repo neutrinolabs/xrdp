@@ -30,8 +30,9 @@
 
 #include "libscp_types.h"
 
-#define SESMAN_SESSION_TYPE_XRDP  1
-#define SESMAN_SESSION_TYPE_XVNC  2
+#define SESMAN_SESSION_TYPE_XRDP      1
+#define SESMAN_SESSION_TYPE_XVNC      2
+#define SESMAN_SESSION_TYPE_XORG      3
 
 #define SESMAN_SESSION_STATUS_ACTIVE        0x01
 #define SESMAN_SESSION_STATUS_IDLE          0x02

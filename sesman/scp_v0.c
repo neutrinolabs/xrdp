@@ -122,11 +122,20 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
                                             s->domain, s->program, s->directory,
                                             s->client_ip);
                 }
-                else
+                else if (SCP_SESSION_TYPE_XRDP == s->type)
                 {
                     log_message(LOG_LEVEL_INFO, "starting X11rdp session...");
                     display = session_start(s->width, s->height, s->bpp, s->username,
                                             s->password, data, SESMAN_SESSION_TYPE_XRDP,
+                                            s->domain, s->program, s->directory,
+                                            s->client_ip);					
+				}
+                else 
+                {
+					/* type is SCP_SESSION_TYPE_XORG */
+                    log_message(LOG_LEVEL_INFO, "starting XOrg session...");
+                    display = session_start(s->width, s->height, s->bpp, s->username,
+                                            s->password, data, SESMAN_SESSION_TYPE_XORG,
                                             s->domain, s->program, s->directory,
                                             s->client_ip);
                 }

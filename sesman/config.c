@@ -74,9 +74,10 @@ config_read(struct config_sesman *cfg)
     /* read global config */
     config_read_globals(fd, cfg, param_n, param_v);
 
-    /* read Xvnc/X11rdp parameter list */
+    /* read Xvnc/X11rdp/XOrg parameter list */
     config_read_vnc_params(fd, cfg, param_n, param_v);
     config_read_rdp_params(fd, cfg, param_n, param_v);
+    config_read_xorg_params(fd, cfg, param_n, param_v);
 
     /* read logging config */
     // config_read_logging(fd, &(cfg->log), param_n, param_v);
@@ -405,6 +406,38 @@ config_read_rdp_params(int file, struct config_sesman *cs, struct list *param_n,
     for (i = 0; i < cs->rdp_params->count; i++)
     {
         g_printf("\tParameter %02d                   %s\r\n", i, (char *)list_get_item(cs->rdp_params, i));
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+int DEFAULT_CC
+config_read_xorg_params(int file, struct config_sesman *cs, 
+                        struct list *param_n, struct list *param_v)
+{
+    int i;
+
+    list_clear(param_v);
+    list_clear(param_n);
+
+    cs->xorg_params = list_create();
+
+    file_read_section(file, SESMAN_CFG_XORG_PARAMS, param_n, param_v);
+
+    for (i = 0; i < param_n->count; i++)
+    {
+        list_add_item(cs->xorg_params, 
+                      (long) g_strdup((char *) list_get_item(param_v, i)));
+    }
+
+    /* printing security config */
+    g_printf("XOrg parameters:\r\n");
+
+    for (i = 0; i < cs->xorg_params->count; i++)
+    {
+        g_printf("\tParameter %02d                   %s\r\n", 
+                 i, (char *) list_get_item(cs->xorg_params, i));
     }
 
     return 0;
