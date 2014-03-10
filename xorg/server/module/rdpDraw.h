@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2013 Jay Sorg
+Copyright 2005-2014 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -25,7 +25,22 @@ misc draw calls
 #define __RDPDRAW_H
 
 #include <xorg-server.h>
+#include <xorgVersion.h>
 #include <xf86.h>
+
+#if XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(1, 13, 0, 0, 0)
+/* 1.1, 1.2, 1.3, 1.4 1.5, 1.6, 1.7, 1.8, 1.9, 1.10, 1.11, 1.12 */
+#define XRDP_CLOSESCR 1
+#else
+/* 1.13 */
+#define XRDP_CLOSESCR 2
+#endif
+
+/* true if drawable is window or pixmap is screen */
+#define XRDP_DRAWABLE_IS_VISIBLE(_dev, _drw) \
+(((_drw)->type == DRAWABLE_WINDOW && ((WindowPtr)(_drw))->viewable) || \
+ ((_drw)->type == DRAWABLE_PIXMAP && \
+                   ((PixmapPtr)(_drw))->devPrivate.ptr == (_dev)->pfbMemory))
 
 /******************************************************************************/
 #define GC_OP_VARS rdpPtr dev; rdpGCPtr priv; GCFuncs *oldFuncs
@@ -50,10 +65,26 @@ do { \
 
 extern GCOps g_rdpGCOps; /* in rdpGC.c */
 
+int
+rdpDrawGetClip(rdpPtr dev, RegionPtr pRegion, DrawablePtr pDrawable, GCPtr pGC);
+void
+GetTextBoundingBox(DrawablePtr pDrawable, FontPtr font, int x, int y,
+                   int n, BoxPtr pbox);
+int
+rdpDrawItemAdd(rdpPtr dev, rdpPixmapRec *priv, struct rdp_draw_item *di);
+int
+rdpDrawItemRemove(rdpPtr dev, rdpPixmapRec *priv, struct rdp_draw_item *di);
+int
+rdpDrawItemRemoveAll(rdpPtr dev, rdpPixmapRec *priv);
 void
 rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion);
+#if XRDP_CLOSESCR == 1
 Bool
 rdpCloseScreen(int index, ScreenPtr pScreen);
+#else
+Bool
+rdpCloseScreen(ScreenPtr pScreen);
+#endif
 WindowPtr
 rdpGetRootWindowPtr(ScreenPtr pScreen);
 rdpPtr

@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2013 Jay Sorg
+Copyright 2005-2014 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -32,6 +32,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "rdp.h"
 #include "rdpDraw.h"
+#include "rdpClientCon.h"
+#include "rdpReg.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
@@ -60,10 +62,35 @@ rdpCopyPlane(DrawablePtr pSrc, DrawablePtr pDst,
              int dstx, int dsty, unsigned long bitPlane)
 {
     RegionPtr rv;
+    rdpPtr dev;
+    RegionRec clip_reg;
+    RegionRec reg;
+    int cd;
+    BoxRec box;
 
     LLOGLN(10, ("rdpCopyPlane:"));
+    dev = rdpGetDevFromScreen(pGC->pScreen);
+    dev->counts.rdpCopyPlaneCallCount++;
+    box.x1 = pDst->x + dstx;
+    box.y1 = pDst->y + dsty;
+    box.x2 = box.x1 + w;
+    box.y2 = box.x1 + h;
+    rdpRegionInit(&reg, &box, 0);
+    rdpRegionInit(&clip_reg, NullBox, 0);
+    cd = rdpDrawGetClip(dev, &clip_reg, pDst, pGC);
+    LLOGLN(10, ("rdpCopyPlane: cd %d", cd));
+    if (cd == XRDP_CD_CLIP)
+    {
+        rdpRegionIntersect(&reg, &clip_reg, &reg);
+    }
     /* do original call */
     rv = rdpCopyPlaneOrg(pSrc, pDst, pGC, srcx, srcy, w, h,
                          dstx, dsty, bitPlane);
+    if (cd != XRDP_CD_NODRAW)
+    {
+        rdpClientConAddAllReg(dev, &reg, pDst);
+    }
+    rdpRegionUninit(&clip_reg);
+    rdpRegionUninit(&reg);
     return rv;
 }

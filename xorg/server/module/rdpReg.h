@@ -1,5 +1,5 @@
 /*
-Copyright 2013 Jay Sorg
+Copyright 2013-2014 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -56,5 +56,9 @@ void
 rdpRegionReset(RegionPtr pReg, BoxPtr pBox);
 Bool
 rdpRegionBreak(RegionPtr pReg);
+void
+rdpRegionUnionRect(RegionPtr pReg, BoxPtr prect);
+int
+rdpRegionPixelCount(RegionPtr pReg);
 
 #endif

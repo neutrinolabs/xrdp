@@ -30,7 +30,7 @@ xrdp_iso_create(struct xrdp_mcs *owner, struct trans *trans)
     DEBUG(("   in xrdp_iso_create"));
     self = (struct xrdp_iso *)g_malloc(sizeof(struct xrdp_iso), 1);
     self->mcs_layer = owner;
-    self->tcp_layer = xrdp_tcp_create(self, trans);
+    self->trans = trans;
     DEBUG(("   out xrdp_iso_create"));
     return self;
 }
@@ -44,7 +44,6 @@ xrdp_iso_delete(struct xrdp_iso *self)
         return;
     }
 
-    xrdp_tcp_delete(self->tcp_layer);
     g_free(self);
 }
 
@@ -91,13 +90,21 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code, int *len)
 {
     int ver;  // TPKT Version
     int plen; // TPKT PacketLength
+    int do_read;
 
     *code = 0; // X.224 Packet Type
     *len = 0;  // X.224 Length Indicator
 
-    if (xrdp_tcp_recv(self->tcp_layer, s, 4) != 0)
+    /* early in connection sequence, iso needs to do a force read */
+    do_read = s != self->trans->in_s;
+
+    if (do_read)
     {
-        return 1;
+        init_stream(s, 4);
+        if (trans_force_read_s(self->trans, s, 4) != 0)
+        {
+            return 1;
+        }
     }
 
     in_uint8(s, ver);
@@ -115,9 +122,13 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code, int *len)
         return 1;
     }
 
-    if (xrdp_tcp_recv(self->tcp_layer, s, plen - 4) != 0)
+    if (do_read)
     {
-        return 1;
+        init_stream(s, plen - 4);
+        if (trans_force_read_s(self->trans, s, plen - 4) != 0)
+        {
+            return 1;
+        }
     }
 
     if (!s_check_rem(s, 2))
@@ -147,6 +158,7 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code, int *len)
 
     return 0;
 }
+
 /*****************************************************************************/
 /* returns error */
 int APP_CC
@@ -177,10 +189,7 @@ xrdp_iso_recv(struct xrdp_iso *self, struct stream *s)
 static int APP_CC
 xrdp_iso_send_rdpnegrsp(struct xrdp_iso *self, struct stream *s, int code)
 {
-    if (xrdp_tcp_init(self->tcp_layer, s) != 0)
-    {
-        return 1;
-    }
+    init_stream(s, 8192 * 4); /* 32 KB */
 
     /* TPKT HEADER - 4 bytes */
     out_uint8(s, 3);    /* version */
@@ -217,7 +226,7 @@ xrdp_iso_send_rdpnegrsp(struct xrdp_iso *self, struct stream *s, int code)
 
     s_mark_end(s);
 
-    if (xrdp_tcp_send(self->tcp_layer, s) != 0)
+    if (trans_force_write_s(self->trans, s) != 0)
     {
         return 1;
     }
@@ -228,10 +237,7 @@ xrdp_iso_send_rdpnegrsp(struct xrdp_iso *self, struct stream *s, int code)
 static int APP_CC
 xrdp_iso_send_rdpnegfailure(struct xrdp_iso *self, struct stream *s, int code, int failureCode)
 {
-    if (xrdp_tcp_init(self->tcp_layer, s) != 0)
-    {
-        return 1;
-    }
+    init_stream(s, 8192 * 4); /* 32 KB */
 
     /* TPKT HEADER - 4 bytes */
     out_uint8(s, 3);    /* version */
@@ -250,7 +256,7 @@ xrdp_iso_send_rdpnegfailure(struct xrdp_iso *self, struct stream *s, int code, i
     out_uint32_le(s, failureCode); /* failure code */
     s_mark_end(s);
 
-    if (xrdp_tcp_send(self->tcp_layer, s) != 0)
+    if (trans_force_write_s(self->trans, s) != 0)
     {
         return 1;
     }
@@ -379,7 +385,7 @@ xrdp_iso_incoming(struct xrdp_iso *self)
 int APP_CC
 xrdp_iso_init(struct xrdp_iso *self, struct stream *s)
 {
-    xrdp_tcp_init(self->tcp_layer, s);
+    init_stream(s, 8192 * 4); /* 32 KB */
     s_push_layer(s, iso_hdr, 7);
     return 0;
 }
@@ -401,7 +407,7 @@ xrdp_iso_send(struct xrdp_iso *self, struct stream *s)
     out_uint8(s, ISO_PDU_DT);
     out_uint8(s, 0x80);
 
-    if (xrdp_tcp_send(self->tcp_layer, s) != 0)
+    if (trans_force_write_s(self->trans, s) != 0)
     {
         return 1;
     }

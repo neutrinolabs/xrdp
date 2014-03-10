@@ -238,7 +238,7 @@ xrdp_mm_send_login(struct xrdp_mm *self)
 /*****************************************************************************/
 /* returns error */
 /* this goes through the login_names looking for one called 'aname'
-   then it copies the corisponding login_values item into 'dest'
+   then it copies the corresponding login_values item into 'dest'
    'dest' must be at least 'dest_len' + 1 bytes in size */
 static int APP_CC
 xrdp_mm_get_value(struct xrdp_mm *self, char *aname, char *dest, int dest_len)
@@ -417,6 +417,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             self->mod->server_create_os_surface_bpp = server_create_os_surface_bpp;
             self->mod->server_paint_rect_bpp = server_paint_rect_bpp;
             self->mod->server_composite = server_composite;
+            self->mod->server_paint_rects = server_paint_rects;
         }
     }
 
@@ -692,12 +693,12 @@ xrdp_mm_process_rail_create_window(struct xrdp_mm* self, struct stream* s)
     int bytes;
     int rv;
     struct rail_window_state_order rwso;
-    
+
     g_memset(&rwso, 0, sizeof(rwso));
     in_uint32_le(s, window_id);
-    
+
     g_writeln("xrdp_mm_process_rail_create_window: 0x%8.8x", window_id);
-    
+
     in_uint32_le(s, rwso.owner_window_id);
     in_uint32_le(s, rwso.style);
     in_uint32_le(s, rwso.extended_style);
@@ -771,12 +772,12 @@ xrdp_mm_process_rail_configure_window(struct xrdp_mm* self, struct stream* s)
     int bytes;
     int rv;
     struct rail_window_state_order rwso;
-    
+
     g_memset(&rwso, 0, sizeof(rwso));
     in_uint32_le(s, window_id);
-    
+
     g_writeln("xrdp_mm_process_rail_configure_window: 0x%8.8x", window_id);
-    
+
     in_uint32_le(s, rwso.client_offset_x);
     in_uint32_le(s, rwso.client_offset_y);
     in_uint32_le(s, rwso.client_area_width);
@@ -834,7 +835,7 @@ xrdp_mm_process_rail_destroy_window(struct xrdp_mm* self, struct stream* s)
 {
     int window_id;
     int rv;
-    
+
     in_uint32_le(s, window_id);
     g_writeln("xrdp_mm_process_rail_destroy_window 0x%8.8x", window_id);
     rv = libxrdp_orders_init(self->wm->session);
@@ -853,7 +854,7 @@ xrdp_mm_process_rail_show_window(struct xrdp_mm* self, struct stream* s)
     int rv;
     int flags;
     struct rail_window_state_order rwso;
-    
+
     g_memset(&rwso, 0, sizeof(rwso));
     in_uint32_le(s, window_id);
     in_uint32_le(s, flags);
@@ -877,13 +878,13 @@ xrdp_mm_process_rail_update_window_text(struct xrdp_mm* self, struct stream* s)
     int rv = 0;
     int window_id;
     struct rail_window_state_order rwso;
-    
+
     g_writeln("xrdp_mm_process_rail_update_window_text:");
-    
+
     in_uint32_le(s, window_id);
     in_uint32_le(s, flags);
     g_writeln("  update window title info: 0x%8.8x", window_id);
-    
+
     g_memset(&rwso, 0, sizeof(rwso));
     in_uint32_le(s, size); /* title size */
     rwso.title_info = g_malloc(size + 1, 0);
@@ -894,7 +895,7 @@ xrdp_mm_process_rail_update_window_text(struct xrdp_mm* self, struct stream* s)
     rv = libxrdp_window_new_update(self->wm->session, window_id, &rwso, flags);
     rv = libxrdp_orders_send(self->wm->session);
     g_writeln("  set window title %s %d", rwso.title_info, rv);
-    
+
     g_free(rwso.title_info);
 
     return rv;
@@ -909,14 +910,14 @@ xrdp_mm_process_rail_drawing_orders(struct xrdp_mm* self, struct trans* trans)
     struct stream* s;
     int order_type;
     int rv = 0;
-    
+
     s = trans_get_in_s(trans);
     if (s == 0)
     {
         return 1;
     }
     in_uint32_le(s, order_type);
-    
+
     switch(order_type)
     {
         case 2: /* create_window */
@@ -934,7 +935,7 @@ xrdp_mm_process_rail_drawing_orders(struct xrdp_mm* self, struct trans* trans)
         default:
             break;
     }
-    
+
     return rv;
 }
 
@@ -1511,7 +1512,7 @@ getPAMError(const int pamError, char *text, int text_bytes)
         case PAM_USER_UNKNOWN:
             return "User not known to the underlying authentication module";
         case PAM_MAXTRIES:
-            return "Have exhasted maximum number of retries for service.";
+            return "Have exhausted maximum number of retries for service.";
         case PAM_NEW_AUTHTOK_REQD:
             return "Authentication token is no longer valid; new one required.";
         case PAM_ACCT_EXPIRED:
@@ -2072,7 +2073,7 @@ server_paint_rect_bpp(struct xrdp_mod* mod, int x, int y, int cx, int cy,
     struct xrdp_wm* wm;
     struct xrdp_bitmap* b;
     struct xrdp_painter* p;
-    
+
     p = (struct xrdp_painter*)(mod->painter);
     if (p == 0)
     {
@@ -2099,7 +2100,7 @@ server_composite(struct xrdp_mod* mod, int srcidx, int srcformat,
     struct xrdp_bitmap* msk;
     struct xrdp_painter* p;
     struct xrdp_os_bitmap_item* bi;
-    
+
     p = (struct xrdp_painter*)(mod->painter);
     if (p == 0)
     {
@@ -2133,6 +2134,38 @@ server_composite(struct xrdp_mod* mod, int srcidx, int srcformat,
     {
         g_writeln("server_composite: error finding id %d or %d", srcidx, mskidx);
     }
+    return 0;
+}
+
+/*****************************************************************************/
+int DEFAULT_CC
+server_paint_rects(struct xrdp_mod* mod, int num_drects, short *drects,
+                   int num_crects, short *crects,
+                   char *data, int width, int height, int flags)
+{
+    struct xrdp_wm* wm;
+    struct xrdp_painter* p;
+    struct xrdp_bitmap *b;
+    short *s;
+    int index;
+
+    //g_writeln("server_paint_rects:");
+    wm = (struct xrdp_wm*)(mod->wm);
+    p = (struct xrdp_painter*)(mod->painter);
+    if (p == 0)
+    {
+        return 0;
+    }
+    b = xrdp_bitmap_create_with_data(width, height, wm->screen->bpp,
+                                     data, wm);
+    s = crects;
+    for (index = 0; index < num_crects; index++)
+    {
+        xrdp_painter_copy(p, b, wm->target_surface, s[0], s[1], s[2], s[3],
+                          s[0], s[1]);
+        s += 4;
+    }                 
+    xrdp_bitmap_delete(b);
     return 0;
 }
 
@@ -2493,7 +2526,7 @@ find_name_in_lists(char *inName, struct list *names)
     for (index = 0; index < names->count; index++)
     {
         name = (char *)list_get_item(names, index);
-        if ( (name != 0) && (g_strncmp(name, inName, MAX_CHANNEL_NAME) == 0) )
+        if ( (name != 0) && (g_strncasecmp(name, inName, MAX_CHANNEL_NAME) == 0) )
         {
             reply = index;
             break; /* stop loop - item found*/
@@ -2759,7 +2792,7 @@ server_create_os_surface_bpp(struct xrdp_mod* mod, int rdpindex,
     struct xrdp_wm* wm;
     struct xrdp_bitmap* bitmap;
     int error;
-    
+
     wm = (struct xrdp_wm*)(mod->wm);
     bitmap = xrdp_bitmap_create(width, height, bpp,
                                 WND_TYPE_OFFSCREEN, wm);

@@ -1,3 +1,4 @@
+
 #include "ourinterface.h"
 
 OurInterface::OurInterface(QObject *parent) :
@@ -31,7 +32,8 @@ void OurInterface::oneTimeDeinit()
     closeVirtualChannel();
 }
 
-void OurInterface::initRemoteClient()
+/* returns error */
+int OurInterface::initRemoteClient()
 {
     int64_t start_time;
     int64_t duration;
@@ -39,18 +41,21 @@ void OurInterface::initRemoteClient()
     //elapsedTime = 0;
 
     if (sendMetadataFile())
-        return;
+        return 1;
 
     if (sendVideoFormat())
-        return;
+        return 1;
 
     if (sendAudioFormat())
-        return;
+        return 1;
 
     if (sendGeometry(savedGeometry))
-        return;
+        return 1;
 
-    xrdpvr_play_media(channel, 101, filename.toAscii().data());
+    if (xrdpvr_play_media(channel, 101, filename.toAscii().data()) != 0)
+    {
+        return 1;
+    }
 
     xrdpvr_get_media_duration(&start_time, &duration);
     //qDebug() << "ourInterface:initRemoteClient: emit onMediaDurationInSecs: dur=" << duration;
@@ -59,12 +64,13 @@ void OurInterface::initRemoteClient()
     /* LK_TODO this needs to be undone in deinitRemoteClient() */
     if (!demuxMedia)
     {
-        demuxMedia = new DemuxMedia(NULL, &audioQueue, &videoQueue, channel, stream_id);
+        demuxMedia = new DemuxMedia(NULL, &videoQueue, channel, stream_id);
         demuxMediaThread = new QThread(this);
         connect(demuxMediaThread, SIGNAL(started()), demuxMedia, SLOT(startDemuxing()));
         demuxMedia->moveToThread(demuxMediaThread);
-        playVideo = demuxMedia->getPlayVideoInstance();
+        //playVideo = demuxMedia->getPlayVideoInstance();
     }
+    return 0;
 }
 
 void OurInterface::deInitRemoteClient()
@@ -84,6 +90,7 @@ int OurInterface::openVirtualChannel()
     if (channel)
         return -1;
 
+    printf("OurInterface::openVirtualChannel:\n");
     /* open a virtual channel and connect to remote client */
     channel = WTSVirtualChannelOpenEx(WTS_CURRENT_SESSION, "xrdpvr", 0);
     if (channel == NULL)
@@ -116,37 +123,46 @@ int OurInterface::closeVirtualChannel()
  ******************************************************************************/
 int OurInterface::sendMetadataFile()
 {
+
+    if (xrdpvr_init_player(channel, 101, filename.toAscii().data()))
+    {
+        fprintf(stderr, "failed to initialize the player\n");
+        return -1;
+    }
+#if 0
     if (xrdpvr_create_metadata_file(channel, filename.toAscii().data()))
     {
         emit on_ErrorMsg("I/O Error",
                          "An error occurred while sending data to remote client");
         return -1;
     }
-
+#endif
     return 0;
 }
 
 int OurInterface::sendVideoFormat()
 {
+#if 0
     if (xrdpvr_set_video_format(channel, stream_id))
     {
         emit on_ErrorMsg("I/O Error",
                          "Error sending video format to remote client");
         return -1;
     }
-
+#endif
     return 0;
 }
 
 int OurInterface::sendAudioFormat()
 {
+#if 0
     if (xrdpvr_set_audio_format(channel, stream_id))
     {
         emit on_ErrorMsg("I/O Error",
                          "Error sending audio format to remote client");
         return -1;
     }
-
+#endif
     return 0;
 }
 
@@ -205,10 +221,16 @@ void OurInterface::playMedia()
     demuxMediaThread->start();
 }
 
-PlayVideo * OurInterface::getPlayVideoInstance()
+//PlayVideo * OurInterface::getPlayVideoInstance()
+//{
+//    return this->playVideo;
+//}
+
+DemuxMedia * OurInterface::getDemuxMediaInstance()
 {
-    return this->playVideo;
+    return this->demuxMedia;
 }
+
 
 void OurInterface::setVcrOp(int op)
 {

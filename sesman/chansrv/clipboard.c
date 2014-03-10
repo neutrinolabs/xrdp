@@ -363,7 +363,7 @@ clipboard_init(void)
     int ver_min;
     Status st;
 
-    log_debug("xrdp-chansrv: in clipboard_init");
+    LOG(0, ("clipboard_init:"));
 
     if (g_clip_up)
     {
@@ -507,7 +507,7 @@ clipboard_init(void)
 int APP_CC
 clipboard_deinit(void)
 {
-    log_debug("clipboard_deinit:");
+    LOG(0, ("clipboard_deinit:"));
     if (g_wnd != 0)
     {
         XDestroyWindow(g_display, g_wnd);

@@ -31,16 +31,17 @@ class OurInterface : public QObject
 
 public:
     explicit OurInterface(QObject *parent = 0);
-    
+
     /* public methods */
     int  oneTimeInit();
     void oneTimeDeinit();
-    void initRemoteClient();
+    int initRemoteClient();
     void deInitRemoteClient();
     int  sendGeometry(QRect rect);
     void setFilename(QString filename);
     void playMedia();
-    PlayVideo *getPlayVideoInstance();
+    //PlayVideo *getPlayVideoInstance();
+    DemuxMedia *getDemuxMediaInstance();
     void setVcrOp(int op);
     int setVolume(int volume);
 
@@ -54,12 +55,12 @@ signals:
 private:
 
     /* private stuff */
-    QQueue<MediaPacket *> audioQueue;
+
     QQueue<MediaPacket *> videoQueue;
 
     DemuxMedia     *demuxMedia;
     QThread        *demuxMediaThread;
-    PlayVideo      *playVideo;
+    //PlayVideo      *playVideo;
     QString         filename;
     void           *channel;
     int             stream_id;

@@ -26,6 +26,11 @@ EXTRA_DEFINES += -DXRDP_FUSE
 EXTRA_LIBS += -lfuse
 endif
 
+if XRDP_LOAD_PULSE_MODULES
+EXTRA_DEFINES += -DXRDP_LOAD_PULSE_MODULES
+EXTRA_LIBS += -lpulse 
+endif
+
 AM_CFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \

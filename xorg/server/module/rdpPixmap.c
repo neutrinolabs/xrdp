@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2013 Jay Sorg
+Copyright 2005-2014 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -27,6 +27,7 @@ pixmap calls
 
 /* this should be before all X11 .h files */
 #include <xorg-server.h>
+#include <xorgVersion.h>
 
 /* all driver need this */
 #include <xf86.h>
@@ -34,11 +35,18 @@ pixmap calls
 
 #include "rdp.h"
 #include "rdpDraw.h"
+#include "rdpPixmap.h"
+
+#ifndef XRDP_PIX
+#warning XRDP_PIX not defined
+#endif
 
 /******************************************************************************/
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
+
+#if XRDP_PIX == 2
 
 /*****************************************************************************/
 PixmapPtr
@@ -56,6 +64,26 @@ rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
     pScreen->CreatePixmap = rdpCreatePixmap;
     return rv;
 }
+
+#else
+
+/*****************************************************************************/
+PixmapPtr
+rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth)
+{
+    rdpPtr dev;
+    PixmapPtr rv;
+
+    LLOGLN(10, ("rdpCreatePixmap: width %d height %d depth %d",
+           width, height, depth));
+    dev = rdpGetDevFromScreen(pScreen);
+    pScreen->CreatePixmap = dev->CreatePixmap;
+    rv = pScreen->CreatePixmap(pScreen, width, height, depth);
+    pScreen->CreatePixmap = rdpCreatePixmap;
+    return rv;
+}
+
+#endif
 
 /******************************************************************************/
 Bool

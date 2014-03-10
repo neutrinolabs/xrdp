@@ -254,6 +254,9 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
     char *value;
     struct xrdp_mod_data *mod;
     struct xrdp_bitmap *b;
+    struct xrdp_cfg_globals *globals;
+
+    globals = &self->xrdp_config->cfg_globals;
 
     username_set = 0;
 
@@ -289,11 +292,13 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
                 insert_index++;
                 b->parent = self->login_window;
                 b->owner = self->login_window;
-                b->left = self->login_window->width >= DEFAULT_WND_LOGIN_W ? 155 : 5;
-                b->top = DEFAULT_ELEMENT_TOP + DEFAULT_COMBO_H + 5 + (DEFAULT_EDIT_H + 5) * count;
+                b->left = globals->ls_label_x_pos;
+
+                b->top = globals->ls_input_y_pos + DEFAULT_COMBO_H + 5 + (DEFAULT_EDIT_H + 5) * count;
                 b->id = 100 + 2 * count;
                 name = (char *)list_get_item(mod->names, index);
                 set_string(&b->caption1, name);
+
                 /* edit */
                 b = xrdp_bitmap_create(DEFAULT_EDIT_W, DEFAULT_EDIT_H, self->screen->bpp,
                                        WND_TYPE_EDIT, self);
@@ -302,8 +307,10 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
                 insert_index++;
                 b->parent = self->login_window;
                 b->owner = self->login_window;
-                b->left = self->login_window->width >= DEFAULT_WND_LOGIN_W ? DEFAULT_WND_LOGIN_W - DEFAULT_EDIT_W - 30 : 70;
-                b->top = DEFAULT_ELEMENT_TOP + DEFAULT_COMBO_H + 5 + (DEFAULT_EDIT_H + 5) * count;
+                b->left = globals->ls_input_x_pos;
+
+                b->top = globals->ls_input_y_pos + DEFAULT_COMBO_H + 5 + (DEFAULT_EDIT_H + 5) * count;
+
                 b->id = 100 + 2 * count + 1;
                 b->pointer = 1;
                 b->tab_stop = 1;
@@ -506,15 +513,20 @@ xrdp_wm_login_fill_in_combo(struct xrdp_wm *self, struct xrdp_bitmap *b)
 int APP_CC
 xrdp_login_wnd_create(struct xrdp_wm *self)
 {
-    struct xrdp_bitmap *but;
-    struct xrdp_bitmap *combo;
-    char file_path[256];
+    struct xrdp_bitmap      *but;
+    struct xrdp_bitmap      *combo;
+    struct xrdp_cfg_globals *globals;
+
+    char buf[256];
+    char buf1[256];
     int log_width;
     int log_height;
     int regular;
 
-    log_width = DEFAULT_WND_LOGIN_W;
-    log_height = DEFAULT_WND_LOGIN_H;
+    globals = &self->xrdp_config->cfg_globals;
+
+    log_width = globals->ls_width;
+    log_height = globals->ls_height;
     regular = 1;
 
     if (self->screen->width < log_width)
@@ -537,115 +549,393 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
     list_add_item(self->screen->child_list, (long)self->login_window);
     self->login_window->parent = self->screen;
     self->login_window->owner = self->screen;
-    self->login_window->bg_color = self->grey;
+    self->login_window->bg_color = globals->ls_bg_color;
+
     self->login_window->left = self->screen->width / 2 -
                                self->login_window->width / 2;
+
     self->login_window->top = self->screen->height / 2 -
                               self->login_window->height / 2;
+
     self->login_window->notify = xrdp_wm_login_notify;
-    set_string(&self->login_window->caption1, "Login to xrdp");
+
+    g_gethostname(buf1, 256);
+    g_sprintf(buf, "Login to %s", buf1);
+    set_string(&self->login_window->caption1, buf);
 
     if (regular)
     {
-        /* image */
+        /* if logo image not specified, use default */
+        if (globals->ls_logo_filename[0] == 0)
+            g_snprintf(globals->ls_logo_filename, 255, "%s/xrdp_logo.bmp", XRDP_SHARE_PATH);
+
+        /* logo image */
         but = xrdp_bitmap_create(4, 4, self->screen->bpp, WND_TYPE_IMAGE, self);
 
-        if (self->screen->bpp > 8)
-        {
-            g_snprintf(file_path, 255, "%s/xrdp24b.bmp", XRDP_SHARE_PATH);
-        }
-        else
-        {
-            g_snprintf(file_path, 255, "%s/xrdp256.bmp", XRDP_SHARE_PATH);
-        }
+        if (self->screen->bpp <= 8)
+            g_snprintf(globals->ls_logo_filename, 255, "%s/ad256.bmp", XRDP_SHARE_PATH);
 
-        xrdp_bitmap_load(but, file_path, self->palette);
-        but->parent = self->screen;
-        but->owner = self->screen;
-        but->left = self->screen->width - but->width;
-        but->top = self->screen->height - but->height;
-        list_add_item(self->screen->child_list, (long)but);
-
-        /* image */
-        but = xrdp_bitmap_create(4, 4, self->screen->bpp, WND_TYPE_IMAGE, self);
-
-        if (self->screen->bpp > 8)
-        {
-            g_snprintf(file_path, 255, "%s/ad24b.bmp", XRDP_SHARE_PATH);
-        }
-        else
-        {
-            g_snprintf(file_path, 255, "%s/ad256.bmp", XRDP_SHARE_PATH);
-        }
-
-        xrdp_bitmap_load(but, file_path, self->palette);
+        xrdp_bitmap_load(but, globals->ls_logo_filename, self->palette);
         but->parent = self->login_window;
         but->owner = self->login_window;
-        but->left = 10;
-        but->top = 30;
+        but->left = globals->ls_logo_x_pos;
+        but->top = globals->ls_logo_y_pos;
         list_add_item(self->login_window->child_list, (long)but);
     }
 
     /* label */
-    but = xrdp_bitmap_create(60, DEFAULT_EDIT_H, self->screen->bpp, WND_TYPE_LABEL, self);
+    but = xrdp_bitmap_create(globals->ls_label_width, DEFAULT_EDIT_H, self->screen->bpp, WND_TYPE_LABEL, self);
     list_add_item(self->login_window->child_list, (long)but);
     but->parent = self->login_window;
     but->owner = self->login_window;
-    but->left = regular ? 155 : 5;
-    but->top = DEFAULT_ELEMENT_TOP;
-    set_string(&but->caption1, "Module");
+    but->left = globals->ls_label_x_pos;
+    but->top = globals->ls_input_y_pos;
+    set_string(&but->caption1, "Session");
 
     /* combo */
-    combo = xrdp_bitmap_create(DEFAULT_COMBO_W, DEFAULT_COMBO_H, self->screen->bpp, WND_TYPE_COMBO, self);
+    combo = xrdp_bitmap_create(globals->ls_input_width, DEFAULT_COMBO_H,
+                               self->screen->bpp, WND_TYPE_COMBO, self);
     list_add_item(self->login_window->child_list, (long)combo);
     combo->parent = self->login_window;
     combo->owner = self->login_window;
-    combo->left = regular ? DEFAULT_WND_LOGIN_W - DEFAULT_COMBO_W - 30 : 70;
-    combo->top = DEFAULT_ELEMENT_TOP;
+    combo->left = globals->ls_input_x_pos;
+    combo->top = globals->ls_input_y_pos;
     combo->id = 6;
     combo->tab_stop = 1;
     xrdp_wm_login_fill_in_combo(self, combo);
 
-    /* button */
-    but = xrdp_bitmap_create(DEFAULT_BUTTON_W, DEFAULT_BUTTON_H, self->screen->bpp, WND_TYPE_BUTTON, self);
+    /* OK button */
+    but = xrdp_bitmap_create(globals->ls_btn_ok_width, globals->ls_btn_ok_height,
+                             self->screen->bpp, WND_TYPE_BUTTON, self);
     list_add_item(self->login_window->child_list, (long)but);
     but->parent = self->login_window;
     but->owner = self->login_window;
-    but->left = regular ? DEFAULT_WND_LOGIN_W - ((DEFAULT_BUTTON_W + 10) * 3) - 10 : 30;
-    but->top = DEFAULT_WND_LOGIN_H - DEFAULT_BUTTON_H - 15;
+    but->left = globals->ls_btn_ok_x_pos;
+    but->top = globals->ls_btn_ok_y_pos;
     but->id = 3;
     set_string(&but->caption1, "OK");
     but->tab_stop = 1;
     self->login_window->default_button = but;
 
-    /* button */
-    but = xrdp_bitmap_create(DEFAULT_BUTTON_W, DEFAULT_BUTTON_H, self->screen->bpp, WND_TYPE_BUTTON, self);
+    /* Cancel button */
+    but = xrdp_bitmap_create(globals->ls_btn_cancel_width,
+                             globals->ls_btn_cancel_height, self->screen->bpp,
+                             WND_TYPE_BUTTON, self);
     list_add_item(self->login_window->child_list, (long)but);
     but->parent = self->login_window;
     but->owner = self->login_window;
-    but->left = regular ? DEFAULT_WND_LOGIN_W - ((DEFAULT_BUTTON_W + 10) * 2) - 10 : ((log_width - 30) - DEFAULT_BUTTON_W);
-    but->top = DEFAULT_WND_LOGIN_H - DEFAULT_BUTTON_H - 15;
+    but->left = globals->ls_btn_cancel_x_pos;
+    but->top = globals->ls_btn_cancel_y_pos;
     but->id = 2;
     set_string(&but->caption1, "Cancel");
     but->tab_stop = 1;
     self->login_window->esc_button = but;
 
-    if (regular)
-    {
-        /* button */
-        but = xrdp_bitmap_create(DEFAULT_BUTTON_W, DEFAULT_BUTTON_H, self->screen->bpp, WND_TYPE_BUTTON, self);
-        list_add_item(self->login_window->child_list, (long)but);
-        but->parent = self->login_window;
-        but->owner = self->login_window;
-        but->left = DEFAULT_WND_LOGIN_W - (DEFAULT_BUTTON_W + 10) - 10;
-        but->top = DEFAULT_WND_LOGIN_H - DEFAULT_BUTTON_H - 15;
-        but->id = 1;
-        set_string(&but->caption1, "Help");
-        but->tab_stop = 1;
-    }
-
     /* labels and edits */
     xrdp_wm_show_edits(self, combo);
 
+    return 0;
+}
+
+/**
+ * Load configuration from xrdp.ini file
+ *
+ * @return 0 on success, -1 on failure
+ *****************************************************************************/
+int APP_CC
+load_xrdp_config(struct xrdp_config *config, int bpp)
+{
+    struct xrdp_cfg_globals  *globals;
+
+    struct list *names;
+    struct list *values;
+
+    char *n;
+    char *v;
+    char  buf[256];
+    int   fd;
+    int   i;
+
+    if (!config)
+        return -1;
+
+    globals = &config->cfg_globals;
+
+    /* set default values incase we can't get them from xrdp.ini file */
+    globals->ini_version = 1;
+    globals->ls_top_window_bg_color = HCOLOR(bpp, xrdp_wm_htoi("009cb5"));
+    globals->ls_bg_color = HCOLOR(bpp, xrdp_wm_htoi("dedede"));
+    globals->ls_width = 350;
+    globals->ls_height = 350;
+    globals->ls_bg_color = 0xdedede;
+    globals->ls_logo_x_pos = 63;
+    globals->ls_logo_y_pos = 50;
+    globals->ls_label_x_pos = 30;
+    globals->ls_label_width = 60;
+    globals->ls_input_x_pos = 110;
+    globals->ls_input_width = 210;
+    globals->ls_input_y_pos = 150;
+    globals->ls_btn_ok_x_pos = 150;
+    globals->ls_btn_ok_y_pos = 300;
+    globals->ls_btn_ok_width = 85;
+    globals->ls_btn_ok_height =30;
+    globals->ls_btn_cancel_x_pos = 245;
+    globals->ls_btn_cancel_y_pos = 300;
+    globals->ls_btn_cancel_width = 85;
+    globals->ls_btn_cancel_height = 30;
+
+    /* open xrdp.ini file */
+    g_snprintf(buf, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
+    if ((fd = g_file_open(buf)) < 0)
+    {
+        log_message(LOG_LEVEL_ERROR,"load_config: Could not read "
+                    "xrdp.ini file %s", buf);
+        return -1;
+
+    }
+
+    names = list_create();
+    values = list_create();
+    names->auto_free = 1;
+    values->auto_free = 1;
+
+    if (file_read_section(fd, "globals", names, values) != 0)
+    {
+        list_delete(names);
+        list_delete(values);
+        g_file_close(fd);
+        log_message(LOG_LEVEL_ERROR,"load_config: Could not read globals "
+                    "section from xrdp.ini file %s", buf);
+        return -1;
+    }
+
+    for (i = 0; i < names->count; i++)
+    {
+        n = (char *) list_get_item(names, i);
+        v = (char *) list_get_item(values, i);
+
+        /*
+         * parse globals section
+         */
+
+        if (g_strncmp(n, "ini_version", 64) == 0)
+            globals->ini_version = g_atoi(v);
+
+        else if (g_strncmp(n, "bitmap_cache", 64) == 0)
+            globals->use_bitmap_cache = g_text2bool(v);
+
+        else if (g_strncmp(n, "bitmap_compression", 64) == 0)
+            globals->use_bitmap_compression = g_text2bool(v);
+
+        else if (g_strncmp(n, "port", 64) == 0)
+            globals->port = g_atoi(v);
+
+        else if (g_strncmp(n, "crypt_level", 64) == 0)
+        {
+            if (g_strcmp(v, "low") == 0)
+                globals->crypt_level = 1;
+            else if (g_strcmp(v, "medium") == 0)
+                globals->crypt_level = 2;
+            else
+                globals->crypt_level = 3;
+        }
+
+        else if (g_strncmp(n, "allow_channels", 64) == 0)
+            globals->allow_channels = g_text2bool(v);
+
+        else if (g_strncmp(n, "max_bpp", 64) == 0)
+            globals->max_bpp = g_atoi(v);
+
+        else if (g_strncmp(n, "fork", 64) == 0)
+            globals->fork = g_text2bool(v);
+
+        else if (g_strncmp(n, "tcp_nodelay", 64) == 0)
+            globals->tcp_nodelay = g_text2bool(v);
+
+        else if (g_strncmp(n, "tcp_keepalive", 64) == 0)
+            globals->tcp_keepalive = g_text2bool(v);
+
+        else if (g_strncmp(n, "tcp_send_buffer_bytes", 64) == 0)
+            globals->tcp_send_buffer_bytes = g_atoi(v);
+
+        else if (g_strncmp(n, "tcp_recv_buffer_bytes", 64) == 0)
+            globals->tcp_recv_buffer_bytes = g_atoi(v);
+
+        /* colors */
+
+        else if (g_strncmp(n, "grey", 64) == 0)
+            globals->grey = xrdp_wm_htoi(v);
+
+        else if (g_strncmp(n, "black", 64) == 0)
+            globals->black = xrdp_wm_htoi(v);
+
+        else if (g_strncmp(n, "dark_grey", 64) == 0)
+            globals->dark_grey = xrdp_wm_htoi(v);
+
+        else if (g_strncmp(n, "blue", 64) == 0)
+            globals->blue = xrdp_wm_htoi(v);
+
+        else if (g_strncmp(n, "dark_blue", 64) == 0)
+            globals->dark_blue = xrdp_wm_htoi(v);
+
+        else if (g_strncmp(n, "white", 64) == 0)
+            globals->white = xrdp_wm_htoi(v);
+
+        else if (g_strncmp(n, "red", 64) == 0)
+            globals->red = xrdp_wm_htoi(v);
+
+        else if (g_strncmp(n, "green", 64) == 0)
+            globals->green = xrdp_wm_htoi(v);
+
+        else if (g_strncmp(n, "background", 64) == 0)
+            globals->background = xrdp_wm_htoi(v);
+
+        /* misc stuff */
+
+        else if (g_strncmp(n, "autorun", 255) == 0)
+            g_strncpy(globals->autorun, v, 255);
+
+        else if (g_strncmp(n, "hidelogwindow", 64) == 0)
+            globals->hidelogwindow = g_text2bool(v);
+
+        else if (g_strncmp(n, "require_credentials", 64) == 0)
+            globals->require_credentials = g_text2bool(v);
+
+        else if (g_strncmp(n, "bulk_compression", 64) == 0)
+            globals->bulk_compression = g_text2bool(v);
+
+        else if (g_strncmp(n, "new_cursors", 64) == 0)
+            globals->new_cursors = g_text2bool(v);
+
+        else if (g_strncmp(n, "nego_sec_layer", 64) == 0)
+            globals->nego_sec_layer = g_atoi(v);
+
+        else if (g_strncmp(n, "allow_multimon", 64) == 0)
+            globals->allow_multimon = g_text2bool(v);
+
+        /* login screen values */
+        else if (g_strncmp(n, "ls_top_window_bg_color", 64) == 0)
+            globals->ls_top_window_bg_color = HCOLOR(bpp, xrdp_wm_htoi(v));
+
+        else if (g_strncmp(n, "ls_width", 64) == 0)
+            globals->ls_width = g_atoi(v);
+
+        else if (g_strncmp(n, "ls_height", 64) == 0)
+            globals->ls_height = g_atoi(v);
+
+        else if (g_strncmp(n, "ls_bg_color", 64) == 0)
+            globals->ls_bg_color = HCOLOR(bpp, xrdp_wm_htoi(v));
+
+        else if (g_strncmp(n, "ls_logo_filename", 255) == 0)
+        {
+            g_strncpy(globals->ls_logo_filename, v, 255);
+            globals->ls_logo_filename[255] = 0;
+        }
+
+        else if (g_strncmp(n, "ls_logo_x_pos", 64) == 0)
+            globals->ls_logo_x_pos = g_atoi(v);
+
+        else if (g_strncmp(n, "ls_logo_y_pos", 64) == 0)
+            globals->ls_logo_y_pos = g_atoi(v);
+
+        else if (g_strncmp(n, "ls_label_x_pos", 64) == 0)
+            globals->ls_label_x_pos = g_atoi(v);
+
+        else if (g_strncmp(n, "ls_label_width", 64) == 0)
+            globals->ls_label_width = g_atoi(v);
+
+        else if (g_strncmp(n, "ls_input_x_pos", 64) == 0)
+            globals->ls_input_x_pos = g_atoi(v);
+
+        else if (g_strncmp(n, "ls_input_width", 64) == 0)
+            globals->ls_input_width = g_atoi(v);
+
+        else if (g_strncmp(n, "ls_input_y_pos", 64) == 0)
+            globals->ls_input_y_pos = g_atoi(v);
+
+        else if (g_strncmp(n, "ls_btn_ok_x_pos", 64) == 0)
+            globals->ls_btn_ok_x_pos = g_atoi(v);
+
+        else if (g_strncmp(n, "ls_btn_ok_y_pos", 64) == 0)
+            globals->ls_btn_ok_y_pos = g_atoi(v);
+
+        else if (g_strncmp(n, "ls_btn_ok_width", 64) == 0)
+            globals->ls_btn_ok_width = g_atoi(v);
+
+        else if (g_strncmp(n, "ls_btn_ok_height", 64) == 0)
+            globals->ls_btn_ok_height = g_atoi(v);
+
+        else if (g_strncmp(n, "ls_btn_cancel_x_pos", 64) == 0)
+            globals->ls_btn_cancel_x_pos = g_atoi(v);
+
+        else if (g_strncmp(n, "ls_btn_cancel_y_pos", 64) == 0)
+            globals->ls_btn_cancel_y_pos = g_atoi(v);
+
+        else if (g_strncmp(n, "ls_btn_cancel_width", 64) == 0)
+            globals->ls_btn_cancel_width = g_atoi(v);
+
+        else if (g_strncmp(n, "ls_btn_cancel_height", 64) == 0)
+            globals->ls_btn_cancel_height = g_atoi(v);
+    }
+
+#if 0
+    g_writeln("ini_version:             %d", globals->ini_version);
+    g_writeln("use_bitmap_cache:        %d", globals->use_bitmap_cache);
+    g_writeln("use_bitmap_compression:  %d", globals->use_bitmap_compression);
+    g_writeln("port:                    %d", globals->port);
+    g_writeln("crypt_level:             %d", globals->crypt_level);
+    g_writeln("allow_channels:          %d", globals->allow_channels);
+    g_writeln("max_bpp:                 %d", globals->max_bpp);
+    g_writeln("fork:                    %d", globals->fork);
+    g_writeln("tcp_nodelay:             %d", globals->tcp_nodelay);
+    g_writeln("tcp_keepalive:           %d", globals->tcp_keepalive);
+    g_writeln("tcp_send_buffer_bytes:   %d", globals->tcp_send_buffer_bytes);
+    g_writeln("tcp_recv_buffer_bytes:   %d", globals->tcp_recv_buffer_bytes);
+    g_writeln("new_cursors:             %d", globals->new_cursors);
+    g_writeln("allow_multimon:          %d", globals->allow_multimon);
+
+    g_writeln("grey:                    %d", globals->grey);
+    g_writeln("black:                   %d", globals->black);
+    g_writeln("dark_grey:               %d", globals->dark_grey);
+    g_writeln("blue:                    %d", globals->blue);
+    g_writeln("dark_blue:               %d", globals->dark_blue);
+    g_writeln("white:                   %d", globals->white);
+    g_writeln("red:                     %d", globals->red);
+    g_writeln("green:                   %d", globals->green);
+    g_writeln("background:              %d", globals->background);
+
+    g_writeln("autorun:                 %s", globals->autorun);
+    g_writeln("hidelogwindow:           %d", globals->hidelogwindow);
+    g_writeln("require_credentials:     %d", globals->require_credentials);
+    g_writeln("bulk_compression:        %d", globals->bulk_compression);
+    g_writeln("new_cursors:             %d", globals->new_cursors);
+    g_writeln("nego_sec_layer:          %d", globals->nego_sec_layer);
+    g_writeln("allow_multimon:          %d", globals->allow_multimon);
+
+    g_writeln("ls_top_window_bg_color:  %x", globals->ls_top_window_bg_color);
+    g_writeln("ls_width:                %d", globals->ls_width);
+    g_writeln("ls_height:               %d", globals->ls_height);
+    g_writeln("ls_bg_color:             %x", globals->ls_bg_color);
+    g_writeln("ls_logo_filename:        %s", globals->ls_logo_filename);
+    g_writeln("ls_logo_x_pos:           %d", globals->ls_logo_x_pos);
+    g_writeln("ls_logo_y_pos:           %d", globals->ls_logo_y_pos);
+    g_writeln("ls_label_x_pos:          %d", globals->ls_label_x_pos);
+    g_writeln("ls_label_width:          %d", globals->ls_label_width);
+    g_writeln("ls_input_x_pos:          %d", globals->ls_input_x_pos);
+    g_writeln("ls_input_width:          %d", globals->ls_input_width);
+    g_writeln("ls_input_y_pos:          %d", globals->ls_input_y_pos);
+    g_writeln("ls_btn_ok_x_pos:         %d", globals->ls_btn_ok_x_pos);
+    g_writeln("ls_btn_ok_y_pos:         %d", globals->ls_btn_ok_y_pos);
+    g_writeln("ls_btn_ok_width:         %d", globals->ls_btn_ok_width);
+    g_writeln("ls_btn_ok_height:        %d", globals->ls_btn_ok_height);
+    g_writeln("ls_btn_cancel_x_pos:     %d", globals->ls_btn_cancel_x_pos);
+    g_writeln("ls_btn_cancel_y_pos:     %d", globals->ls_btn_cancel_y_pos);
+    g_writeln("ls_btn_cancel_width:     %d", globals->ls_btn_cancel_width);
+    g_writeln("ls_btn_cancel_height:    %d", globals->ls_btn_cancel_height);
+#endif
+
+    list_delete(names);
+    list_delete(values);
+    g_file_close(fd);
     return 0;
 }

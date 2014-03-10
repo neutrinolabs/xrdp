@@ -110,6 +110,17 @@ struct xrdp_client_info
   int multimon; /* 0 = deny , 1 = allow */
   int monitorCount; /* number of monitors detected (max = 16) */
   struct monitor_info minfo[16]; /* client monitor data */
+
+  int keyboard_type;
+  int keyboard_subtype;
+  
+  int png_codec_id;
+  int png_prop_len;
+  char png_prop[64];
+  int vendor_flags[4];
+  int mcs_connection_type;
+  int mcs_early_capability_flags;
+
 };
 
 #endif

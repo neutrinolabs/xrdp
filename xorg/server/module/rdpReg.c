@@ -1,5 +1,5 @@
 /*
-Copyright 2013 Jay Sorg
+Copyright 2013-2014 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -27,6 +27,7 @@ to deal with regions changing in xorg versions
 
 /* this should be before all X11 .h files */
 #include <xorg-server.h>
+#include <xorgVersion.h>
 
 /* all driver need this */
 #include <xf86.h>
@@ -49,7 +50,7 @@ miRegionReset     ->      RegionReset
 miRegionBreak     ->      RegionBreak
 */
 
-#if XORG_VERSION_CURRENT < (((1) * 10000000) + ((9) * 100000) + ((0) * 1000) + 0)
+#if XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(1, 9, 0, 0, 0)
 /* 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8 */
 #define XRDP_REG 1
 #else
@@ -231,4 +232,34 @@ rdpRegionBreak(RegionPtr pReg)
 #else
     return RegionBreak(pReg);
 #endif
+}
+
+/*****************************************************************************/
+void
+rdpRegionUnionRect(RegionPtr pReg, BoxPtr prect)
+{
+    RegionRec reg;
+
+    rdpRegionInit(&reg, prect, 0);
+    rdpRegionUnion(pReg, pReg, &reg);
+    rdpRegionUninit(&reg);
+}
+
+/*****************************************************************************/
+int
+rdpRegionPixelCount(RegionPtr pReg)
+{
+    int index;
+    int count;
+    int rv;
+    BoxRec box;
+
+    rv = 0;
+    count = REGION_NUM_RECTS(pReg);
+    for (index = 0; index < count; index++)
+    {
+        box = REGION_RECTS(pReg)[index];
+        rv += (box.x2 - box.x1) * (box.y2 - box.y1);
+    }
+    return rv;
 }

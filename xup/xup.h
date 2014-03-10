@@ -133,8 +133,12 @@ struct mod
                           int mskformat, int mskwidth, int mskrepeat, int op,
                           int srcx, int srcy, int mskx, int msky,
                           int dstx, int dsty, int width, int height, int dstformat);
+  int (*server_paint_rects)(struct mod* v,
+                            int num_drects, short *drects,
+                            int num_crects, short *crects,
+                            char *data, int width, int height, int flags);
 
-  tbus server_dumby[100 - 42]; /* align, 100 minus the number of server
+  tbus server_dumby[100 - 43]; /* align, 100 minus the number of server
                                   functions above */
   /* common */
   tbus handle; /* pointer to self as long */

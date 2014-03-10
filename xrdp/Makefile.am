@@ -1,4 +1,4 @@
-EXTRA_DIST = xrdp.ini ad24b.bmp ad256.bmp xrdp24b.bmp xrdp256.bmp sans-10.fv1 cursor0.cur cursor1.cur xrdp.h xrdp_types.h
+EXTRA_DIST = xrdp.ini ad24b.bmp ad256.bmp xrdp24b.bmp xrdp256.bmp xrdp_logo.bmp sans-10.fv1 cursor0.cur cursor1.cur xrdp.h xrdp_types.h
 
 EXTRA_INCLUDES =
 EXTRA_LIBS =
@@ -66,6 +66,7 @@ xrdppkgdata_DATA = \
   ad256.bmp \
   xrdp24b.bmp \
   xrdp256.bmp \
+  xrdp_logo.bmp \
   sans-10.fv1 \
   cursor0.cur \
   cursor1.cur

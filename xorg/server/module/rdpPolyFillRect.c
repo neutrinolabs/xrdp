@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2013 Jay Sorg
+Copyright 2005-2014 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -32,6 +32,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "rdp.h"
 #include "rdpDraw.h"
+#include "rdpClientCon.h"
+#include "rdpReg.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
@@ -54,7 +56,30 @@ void
 rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
                 xRectangle *prectInit)
 {
+    rdpPtr dev;
+    RegionRec clip_reg;
+    RegionPtr reg;
+    int cd;
+
     LLOGLN(10, ("rdpPolyFillRect:"));
+    dev = rdpGetDevFromScreen(pGC->pScreen);
+    dev->counts.rdpPolyFillRectCallCount++;
+    /* make a copy of rects */
+    reg = rdpRegionFromRects(nrectFill, prectInit, CT_NONE);
+    rdpRegionTranslate(reg, pDrawable->x, pDrawable->y);
+    rdpRegionInit(&clip_reg, NullBox, 0);
+    cd = rdpDrawGetClip(dev, &clip_reg, pDrawable, pGC);
+    LLOGLN(10, ("rdpPolyFillRect: cd %d", cd));
+    if (cd == XRDP_CD_CLIP)
+    {
+        rdpRegionIntersect(reg, &clip_reg, reg);
+    }
     /* do original call */
     rdpPolyFillRectOrg(pDrawable, pGC, nrectFill, prectInit);
+    if (cd != XRDP_CD_NODRAW)
+    {
+        rdpClientConAddAllReg(dev, reg, pDrawable);
+    }
+    rdpRegionUninit(&clip_reg);
+    rdpRegionDestroy(reg);
 }

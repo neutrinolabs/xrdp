@@ -282,7 +282,10 @@ trans_check_wait_objs(struct trans *self)
                 if (self->trans_data_in != 0)
                 {
                     rv = self->trans_data_in(self);
-                    init_stream(self->in_s, 0);
+                    if (self->no_stream_init_on_data_in == 0)
+                    {
+                        init_stream(self->in_s, 0);
+                    }
                 }
             }
         }
@@ -471,6 +474,15 @@ trans_write_copy(struct trans *self)
         }
         temp_s->next_packet = (char *) wait_s;
     }
+
+    /* try to send */
+    if (send_waiting(self, 0) != 0)
+    {
+        /* error */
+        self->status = TRANS_STATUS_DOWN;
+        return 1;
+    }
+
     return 0;
 }
 

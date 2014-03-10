@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2013 Jay Sorg
+Copyright 2005-2014 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -66,15 +66,43 @@ rdpBitsPerPixel(int depth)
 /* the g_ functions from os_calls.c */
 
 /*****************************************************************************/
+/* wait 'millis' milliseconds for the socket to be able to receive */
+/* returns boolean */
 int
-g_tcp_recv(int sck, void *ptr, int len, int flags)
+g_sck_can_recv(int sck, int millis)
+{
+    fd_set rfds;
+    struct timeval time;
+    int rv;
+
+    time.tv_sec = millis / 1000;
+    time.tv_usec = (millis * 1000) % 1000000;
+    FD_ZERO(&rfds);
+
+    if (sck > 0)
+    {
+        FD_SET(((unsigned int)sck), &rfds);
+        rv = select(sck + 1, &rfds, 0, 0, &time);
+
+        if (rv > 0)
+        {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+/*****************************************************************************/
+int
+g_sck_recv(int sck, void *ptr, int len, int flags)
 {
     return recv(sck, ptr, len, flags);
 }
 
 /*****************************************************************************/
 void
-g_tcp_close(int sck)
+g_sck_close(int sck)
 {
     if (sck == 0)
     {
@@ -87,7 +115,7 @@ g_tcp_close(int sck)
 
 /*****************************************************************************/
 int
-g_tcp_last_error_would_block(int sck)
+g_sck_last_error_would_block(int sck)
 {
     return (errno == EWOULDBLOCK) || (errno == EINPROGRESS);
 }
@@ -101,7 +129,7 @@ g_sleep(int msecs)
 
 /*****************************************************************************/
 int
-g_tcp_send(int sck, void *ptr, int len, int flags)
+g_sck_send(int sck, void *ptr, int len, int flags)
 {
     return send(sck, ptr, len, flags);
 }
@@ -146,7 +174,7 @@ g_sprintf(char *dest, char *format, ...)
 
 /*****************************************************************************/
 int
-g_tcp_socket(void)
+g_sck_tcp_socket(void)
 {
     int rv;
     int i;
@@ -160,14 +188,14 @@ g_tcp_socket(void)
 
 /*****************************************************************************/
 int
-g_tcp_local_socket_dgram(void)
+g_sck_local_socket_dgram(void)
 {
     return socket(AF_UNIX, SOCK_DGRAM, 0);
 }
 
 /*****************************************************************************/
 int
-g_tcp_local_socket_stream(void)
+g_sck_local_socket_stream(void)
 {
     return socket(AF_UNIX, SOCK_STREAM, 0);
 }
@@ -188,7 +216,7 @@ g_memset(void *d_ptr, const unsigned char chr, int size)
 
 /*****************************************************************************/
 int
-g_tcp_set_no_delay(int sck)
+g_sck_tcp_set_no_delay(int sck)
 {
     int i;
 
@@ -199,7 +227,7 @@ g_tcp_set_no_delay(int sck)
 
 /*****************************************************************************/
 int
-g_tcp_set_non_blocking(int sck)
+g_sck_set_non_blocking(int sck)
 {
     unsigned long i;
 
@@ -211,7 +239,7 @@ g_tcp_set_non_blocking(int sck)
 
 /*****************************************************************************/
 int
-g_tcp_accept(int sck)
+g_sck_accept(int sck)
 {
     struct sockaddr_in s;
     unsigned int i;
@@ -223,7 +251,7 @@ g_tcp_accept(int sck)
 
 /*****************************************************************************/
 int
-g_tcp_select(int sck1, int sck2, int sck3)
+g_sck_select(int sck1, int sck2, int sck3)
 {
     fd_set rfds;
     struct timeval time;
@@ -292,7 +320,7 @@ g_tcp_select(int sck1, int sck2, int sck3)
 
 /*****************************************************************************/
 int
-g_tcp_bind(int sck, char *port)
+g_sck_tcp_bind(int sck, char *port)
 {
     struct sockaddr_in s;
 
@@ -305,7 +333,7 @@ g_tcp_bind(int sck, char *port)
 
 /*****************************************************************************/
 int
-g_tcp_local_bind(int sck, char *port)
+g_sck_local_bind(int sck, char *port)
 {
     struct sockaddr_un s;
 
@@ -317,7 +345,7 @@ g_tcp_local_bind(int sck, char *port)
 
 /*****************************************************************************/
 int
-g_tcp_listen(int sck)
+g_sck_listen(int sck)
 {
     return listen(sck, 2);
 }
@@ -373,7 +401,7 @@ g_chmod_hex(const char *filename, int flags)
 /*****************************************************************************/
 /* produce a hex dump */
 void
-g_hexdump(unsigned char *p, unsigned int len)
+g_hexdump(void *p, long len)
 {
     unsigned char *line;
     int i;
@@ -381,9 +409,9 @@ g_hexdump(unsigned char *p, unsigned int len)
     int offset;
 
     offset = 0;
-    line = p;
+    line = (unsigned char *) p;
 
-    while (offset < len)
+    while (offset < (int) len)
     {
         ErrorF("%04x ", offset);
         thisline = len - offset;

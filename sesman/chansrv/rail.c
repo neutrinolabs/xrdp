@@ -230,7 +230,7 @@ static struct rail_window_data* APP_CC
 rail_get_window_data_safe(Window window)
 {
     struct rail_window_data* rv;
-    
+
     rv = rail_get_window_data(window);
     if (rv != 0)
     {
@@ -331,19 +331,42 @@ rail_is_another_wm_running(void)
 int APP_CC
 rail_init(void)
 {
+    LOG(10, ("chansrv::rail_init:"));
+    xcommon_init();
+
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+rail_deinit(void)
+{
+    if (g_rail_up)
+    {
+        list_delete(g_window_list);
+        g_window_list = 0;
+        /* no longer window manager */
+        XSelectInput(g_display, g_root_window, 0);
+        g_rail_up = 0;
+    }
+
+    return 0;
+}
+
+int APP_CC
+rail_startup()
+{
     int dummy;
     int ver_maj;
     int ver_min;
     Status st;
-    
-    LOG(10, ("chansrv::rail_init:"));
-    xcommon_init();
 
     if (rail_is_another_wm_running())
     {
         log_message(LOG_LEVEL_ERROR, "rail_init: another window manager "
                     "is running");
     }
+
     list_delete(g_window_list);
     g_window_list = list_create();
     rail_send_init();
@@ -371,21 +394,6 @@ rail_init(void)
     {
         g_default_cursor = XCreateFontCursor(g_display, XC_left_ptr);
         XDefineCursor(g_display, g_root_window, g_default_cursor);
-    }
-    return 0;
-}
-
-/*****************************************************************************/
-int APP_CC
-rail_deinit(void)
-{
-    if (g_rail_up)
-    {
-        list_delete(g_window_list);
-        g_window_list = 0;
-        /* no longer window manager */
-        XSelectInput(g_display, g_root_window, 0);
-        g_rail_up = 0;
     }
 
     return 0;
@@ -454,6 +462,8 @@ rail_process_exec(struct stream *s, int size)
 
     if (g_strlen(ExeOrFile) > 0)
     {
+        rail_startup();
+
         LOG(10, ("rail_process_exec: pre"));
         /* ask main thread to fork */
         tc_mutex_lock(g_exec_mutex);
@@ -481,13 +491,13 @@ rail_win_popdown(void)
     Window p;
     Window* children;
     XWindowAttributes window_attributes;
-    
+
     /*
      * Check the tree of current existing X windows and dismiss
      * the managed rail popups by simulating a esc key, so
      * that the requested window can be closed properly.
      */
-    
+
     XQueryTree(g_display, g_root_window, &r, &p, &children, &nchild);
     for (i = nchild - 1; i >= 0; i--)
     {
@@ -501,7 +511,7 @@ rail_win_popdown(void)
             rv = 1;
         }
     }
-    
+
     XFree(children);
     return rv;
 }
@@ -511,11 +521,11 @@ static int APP_CC
 rail_close_window(int window_id)
 {
     XEvent ce;
-    
+
     LOG(0, ("chansrv::rail_close_window:"));
-    
+
     rail_win_popdown();
-    
+
     g_memset(&ce, 0, sizeof(ce));
     ce.xclient.type = ClientMessage;
     ce.xclient.message_type = g_wm_protocols_atom;
@@ -562,13 +572,13 @@ rail_process_activate(struct stream *s, int size)
                  window_id));
         return 0;
     }
-    
+
     g_focus_counter++;
     g_got_focus = enabled;
     LOG(10, ("  window_id 0x%8.8x enabled %d", window_id, enabled));
 
     XGetWindowAttributes(g_display, window_id, &window_attributes);
-    
+
     if (enabled)
     {
         if (g_focus_win == window_id)
@@ -619,7 +629,7 @@ rail_restore_windows(void)
     Window r;
     Window p;
     Window* children;
-    
+
     XQueryTree(g_display, g_root_window, &r, &p, &children, &nchild);
     for (i = 0; i < nchild; i++)
     {
@@ -671,7 +681,7 @@ rail_get_property(Display* display, Window target, Atom type, Atom property,
     int size;
     unsigned long nitems, bytes_left;
     char* prop_name;
-    
+
     int ret = XGetWindowProperty(display, target, property,
                                  0l, 1l, False,
                                  type, &atom_return, &size,
@@ -683,7 +693,7 @@ rail_get_property(Display* display, Window target, Atom type, Atom property,
         XFree(prop_name);
         return 1;
     }
-    
+
     if (bytes_left != 0)
     {
         XFree(*data);
@@ -697,7 +707,7 @@ rail_get_property(Display* display, Window target, Atom type, Atom property,
             return 1;
         }
     }
-    
+
     *count = nitems;
     return 0;
 }
@@ -709,18 +719,18 @@ rail_win_get_state(Window win)
     unsigned long nitems = 0;
     int rv = -1;
     char* data = 0;
-    
+
     rail_get_property(g_display, win, g_wm_state, g_wm_state,
                       (unsigned char **)&data,
                       &nitems);
-    
+
     if (data || nitems > 0)
     {
         rv = *(unsigned long *)data;
         XFree(data);
         LOG(10, ("  rail_win_get_state: %d", rv));
     }
-    
+
     return rv;
 }
 
@@ -730,7 +740,7 @@ rail_win_set_state(Window win, unsigned long state)
 {
     int old_state;
     unsigned long data[2] = { state, None };
-    
+
     LOG(10, ("  rail_win_set_state: %d", state));
     /* check whether WM_STATE exists */
     old_state = rail_win_get_state(win);
@@ -756,7 +766,7 @@ rail_win_get_text(Window win, char **data)
     int ret = 0;
     int i = 0;
     unsigned long nitems = 0;
-    
+
     ret = rail_get_property(g_display, win, g_utf8_string, g_net_wm_name,
                       (unsigned char **)data, &nitems);
     if (ret != 0)
@@ -764,7 +774,7 @@ rail_win_get_text(Window win, char **data)
         /* _NET_WM_NAME isn't set, use WM_NAME (XFetchName) instead */
         XFetchName(g_display, win, data);
     }
-    
+
     if (data)
     {
         char *ptr = *data;
@@ -776,7 +786,7 @@ rail_win_get_text(Window win, char **data)
             }
         }
     }
-    
+
     return i;
 }
 
@@ -787,7 +797,7 @@ rail_minmax_window(int window_id, int max)
     LOG(10, ("chansrv::rail_minmax_window 0x%8.8x:", window_id));
     if (max)
     {
-        
+
     } else {
         XUnmapWindow(g_display, window_id);
         /* change window state to IconicState (3) */
@@ -804,7 +814,7 @@ static int APP_CC
 rail_restore_window(int window_id)
 {
     XWindowAttributes window_attributes;
-    
+
     LOG(10, ("chansrv::rail_restore_window 0x%8.8x:", window_id));
     XGetWindowAttributes(g_display, window_id, &window_attributes);
     if (window_attributes.map_state != IsViewable)
@@ -815,7 +825,7 @@ rail_restore_window(int window_id)
     XRaiseWindow(g_display, window_id);
     LOG(10, ("chansrv::rail_process_activate: calling XSetInputFocus 0x%8.8x", window_id));
     XSetInputFocus(g_display, window_id, RevertToParent, CurrentTime);
-    
+
     return 0;
 }
 
@@ -838,7 +848,7 @@ rail_process_system_command(struct stream *s, int size)
                  window_id));
         return 0;
     }
-    
+
     switch (command)
     {
         case SC_SIZE:
@@ -1196,7 +1206,7 @@ rail_win_send_text(Window win)
     int flags;
     int crc;
     struct rail_window_data* rwd;
-    
+
     len = rail_win_get_text(win, &data);
     rwd = rail_get_window_data_safe(win);
     if (rwd != 0)
@@ -1254,7 +1264,7 @@ static int APP_CC
 rail_destroy_window(Window window_id)
 {
     struct stream *s;
-    
+
     LOG(10, ("chansrv::rail_destroy_window 0x%8.8x", window_id));
     make_stream(s);
     init_stream(s, 1024);
@@ -1348,7 +1358,7 @@ rail_create_window(Window window_id, Window owner_id)
     title_size = rail_win_get_text(window_id, &title_bytes);
 
     XGetTransientForHint(g_display, window_id, &transient_for);
-    
+
     if (attributes.override_redirect)
     {
         style = RAIL_STYLE_TOOLTIP;
@@ -1368,7 +1378,7 @@ rail_create_window(Window window_id, Window owner_id)
 
     make_stream(s);
     init_stream(s, 1024);
-    
+
     out_uint32_le(s, 2); /* create_window */
     out_uint32_le(s, window_id); /* window_id */
     out_uint32_le(s, owner_id); /* owner_window_id */
@@ -1459,9 +1469,9 @@ rail_configure_request_window(XConfigureRequestEvent* config)
     int mask;
     int resized = 0;
     struct rail_window_data* rwd;
-    
+
     struct stream* s;
-    
+
     window_id = config->window;
     mask = config->value_mask;
     LOG(10, ("chansrv::rail_configure_request_window: mask %d", mask));
@@ -1580,13 +1590,13 @@ rail_configure_request_window(XConfigureRequestEvent* config)
         XFree(rwd);
         return 0;
     }
-    
+
     LOG(10, ("chansrv::rail_configure_request_window: 0x%8.8x", window_id));
-    
-    
+
+
     LOG(10, ("  x %d y %d width %d height %d border_width %d", config->x,
              config->y, config->width, config->height, config->border_width));
-    
+
     index = list_index_of(g_window_list, window_id);
     if (index == -1)
     {
@@ -1594,15 +1604,15 @@ rail_configure_request_window(XConfigureRequestEvent* config)
         LOG(0, ("chansrv::rail_configure_request_window: window not mapped"));
         return 0;
     }
-    
+
     flags = WINDOW_ORDER_TYPE_WINDOW;
-    
+
     make_stream(s);
     init_stream(s, 1024);
-    
+
     out_uint32_le(s, 10); /* configure_window */
     out_uint32_le(s, window_id); /* window_id */
-    
+
     out_uint32_le(s, 0); /* client_offset_x */
     out_uint32_le(s, 0); /* client_offset_y */
     flags |= WINDOW_ORDER_FIELD_CLIENT_AREA_OFFSET;
@@ -1643,7 +1653,7 @@ rail_configure_request_window(XConfigureRequestEvent* config)
     }
     flags |= WINDOW_ORDER_FIELD_VISIBILITY;
     out_uint32_le(s, flags); /*flags*/
-    
+
     s_mark_end(s);
     send_rail_drawing_orders(s->data, (int)(s->end - s->data));
     free_stream(s);
@@ -1661,32 +1671,32 @@ rail_configure_window(XConfigureEvent *config)
     int flags;
     int index;
     int window_id;
-    
+
     struct stream* s;
-    
+
     window_id = config->window;
-    
+
     LOG(10, ("chansrv::rail_configure_window 0x%8.8x", window_id));
-    
-    
+
+
     LOG(10, ("  x %d y %d width %d height %d border_width %d", config->x,
              config->y, config->width, config->height, config->border_width));
-    
+
     index = list_index_of(g_window_list, window_id);
     if (index == -1)
     {
         /* window isn't mapped yet */
         return 0;
     }
-    
+
     flags = WINDOW_ORDER_TYPE_WINDOW;
-    
+
     make_stream(s);
     init_stream(s, 1024);
-    
+
     out_uint32_le(s, 10); /* configure_window */
     out_uint32_le(s, window_id); /* window_id */
-    
+
     out_uint32_le(s, 0); /* client_offset_x */
     out_uint32_le(s, 0); /* client_offset_y */
     flags |= WINDOW_ORDER_FIELD_CLIENT_AREA_OFFSET;
@@ -1727,7 +1737,7 @@ rail_configure_window(XConfigureEvent *config)
     }
     flags |= WINDOW_ORDER_FIELD_VISIBILITY;
     out_uint32_le(s, flags); /*flags*/
-    
+
     s_mark_end(s);
     send_rail_drawing_orders(s->data, (int)(s->end - s->data));
     free_stream(s);
@@ -1772,7 +1782,7 @@ rail_xevent(void *xevent)
             LOG(10, ("  got PropertyNotify window_id 0x%8.8x %s state new %d",
                      lxevent->xproperty.window, prop_name,
                      lxevent->xproperty.state == PropertyNewValue));
-            
+
             if (list_index_of(g_window_list, lxevent->xproperty.window) < 0)
             {
                 break;
@@ -1790,7 +1800,7 @@ rail_xevent(void *xevent)
             }
             XFree(prop_name);
             break;
-            
+
         case ConfigureRequest:
             LOG(10, ("  got ConfigureRequest window_id 0x%8.8x", lxevent->xconfigurerequest.window));
             g_memset(&xwc, 0, sizeof(xwc));
@@ -1833,7 +1843,7 @@ rail_xevent(void *xevent)
             }
             rv = 0;
             break;
-            
+
         case MapRequest:
             LOG(10, ("  got MapRequest window 0x%8.8x", lxevent->xmaprequest.window));
             XMapWindow(g_display, lxevent->xmaprequest.window);
@@ -1916,7 +1926,7 @@ rail_xevent(void *xevent)
         case FocusOut:
             LOG(10, ("  got FocusOut"));
             break;
-            
+
         case ButtonPress:
             LOG(10, ("  got ButtonPress"));
             break;
@@ -1951,7 +1961,7 @@ rail_xevent(void *xevent)
             }
             rv = 0;
             break;
-            
+
         default:
             if (g_xrr_event_base > 0)
             {

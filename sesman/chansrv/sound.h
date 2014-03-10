@@ -43,16 +43,37 @@
 #define SNDC_UDPWAVELAST    0x0B
 #define SNDC_QUALITYMODE    0x0C
 
-int APP_CC
-sound_init(void);
-int APP_CC
-sound_deinit(void);
-int APP_CC
-sound_get_wait_objs(tbus* objs, int* count, int* timeout);
-int APP_CC
-sound_check_wait_objs(void);
-int APP_CC
-sound_data_in(struct stream* s, int chan_id, int chan_flags,
-              int length, int total_length);
+/* used for sound input (mic) */
+#define SNDC_REC_NEGOTIATE  39
+#define SNDC_REC_START      40
+#define SNDC_REC_STOP       41
+#define SNDC_REC_DATA       42
+#define SNDC_REC_SET_VOLUME 43
 
+/* commands recvd from pulseaudio source */
+#define PA_CMD_START_REC    1
+#define PA_CMD_STOP_REC     2
+#define PA_CMD_SEND_DATA    3
+
+int APP_CC sound_init(void);
+int APP_CC sound_deinit(void);
+int APP_CC sound_get_wait_objs(tbus* objs, int* count, int* timeout);
+int APP_CC sound_check_wait_objs(void);
+
+int APP_CC sound_data_in(struct stream* s, int chan_id, int chan_flags,
+                         int length, int total_length);
+
+/* microphone related */
+static int APP_CC sound_send_server_input_formats(void);
+
+static int APP_CC sound_process_input_format(int aindex, int wFormatTag,
+                int nChannels, int nSamplesPerSec, int nAvgBytesPerSec,
+                int nBlockAlign, int wBitsPerSample, int cbSize, char *data);
+
+static int APP_CC sound_process_input_formats(struct stream *s, int size);
+static int APP_CC sound_input_start_recording();
+static int APP_CC sound_input_stop_recording();
+static int APP_CC sound_process_input_data(struct stream *s, int bytes);
+static int DEFAULT_CC sound_sndsrvr_source_data_in(struct trans *trans);
+static int APP_CC load_pulse_modules();
 #endif

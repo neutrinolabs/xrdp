@@ -1,5 +1,5 @@
 /*
-Copyright 2013 Jay Sorg
+Copyright 2013-2014 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -27,6 +27,7 @@ to deal with privates changing in xorg versions
 
 /* this should be before all X11 .h files */
 #include <xorg-server.h>
+#include <xorgVersion.h>
 
 /* all driver need this */
 #include <xf86.h>
@@ -40,10 +41,10 @@ to deal with privates changing in xorg versions
 #include "rdpPri.h"
 #include "rdpMisc.h"
 
-#if XORG_VERSION_CURRENT < (((1) * 10000000) + ((5) * 100000) + ((0) * 1000) + 0)
+#if XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(1, 5, 0, 0, 0)
 /* 1.1, 1.2, 1.3, 1.4 */
 #define XRDP_PRI 1
-#elif XORG_VERSION_CURRENT < (((1) * 10000000) + ((9) * 100000) + ((0) * 1000) + 0)
+#elif XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(1, 9, 0, 0, 0)
 /* 1.5, 1.6, 1.7, 1.8 */
 #define XRDP_PRI 2
 #else

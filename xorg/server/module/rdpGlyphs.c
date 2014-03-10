@@ -1,5 +1,5 @@
 /*
-Copyright 2012-2013 Jay Sorg
+Copyright 2012-2014 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -38,11 +38,37 @@ gylph(font) calls
 #include "rdp.h"
 #include "rdpGlyphs.h"
 #include "rdpDraw.h"
+#include "rdpMisc.h"
+#include "rdpReg.h"
 
 /******************************************************************************/
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
+
+/******************************************************************************/
+int
+rdpGlyphDeleteRdpText(struct rdp_text *rtext)
+{
+    int index;
+
+    if (rtext == NULL)
+    {
+        return 0;
+    }
+    for (index = 0; index < rtext->num_chars; index++)
+    {
+        if (rtext->chars[index] != NULL)
+        {
+            g_free(rtext->chars[index]->data);
+            g_free(rtext->chars[index]);
+        }
+    }
+    rdpRegionDestroy(rtext->reg);
+    rdpGlyphDeleteRdpText(rtext->next);
+    g_free(rtext);
+    return 0;
+}
 
 /******************************************************************************/
 static void
@@ -70,7 +96,7 @@ rdpGlyphs(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
     PictureScreenPtr ps;
 
     LLOGLN(10, ("rdpGlyphs:"));
-    pScreen = pSrc->pDrawable->pScreen;
+    pScreen = pDst->pDrawable->pScreen;
     dev = rdpGetDevFromScreen(pScreen);
     ps = GetPictureScreen(pScreen);
     rdpGlyphsOrg(ps, dev, op, pSrc, pDst, maskFormat, xSrc, ySrc,

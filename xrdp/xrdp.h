@@ -108,6 +108,8 @@ xrdp_wm_send_bitmap(struct xrdp_wm* self, struct xrdp_bitmap* bitmap,
                     int x, int y, int cx, int cy);
 int APP_CC
 xrdp_wm_set_pointer(struct xrdp_wm* self, int cache_idx);
+unsigned int APP_CC
+xrdp_wm_htoi (const char *ptr);
 int APP_CC
 xrdp_wm_set_focused(struct xrdp_wm* self, struct xrdp_bitmap* wnd);
 int APP_CC
@@ -349,6 +351,8 @@ get_keymaps(int keylayout, struct xrdp_keymap* keymap);
 /* xrdp_login_wnd.c */
 int APP_CC
 xrdp_login_wnd_create(struct xrdp_wm* self);
+int APP_CC
+load_xrdp_config(struct xrdp_config *config, int bpp);
 
 /* xrdp_bitmap_compress.c */
 int APP_CC
@@ -397,6 +401,10 @@ server_composite(struct xrdp_mod* mod, int srcidx, int srcformat, int srcwidth,
                  int mskformat, int mskwidth, int mskrepeat, int op,
                  int srcx, int srcy, int mskx, int msky,
                  int dstx, int dsty, int width, int height, int dstformat);
+int DEFAULT_CC
+server_paint_rects(struct xrdp_mod* mod, int num_drects, short *drects,
+                   int num_crects, short *crects,
+                   char *data, int width, int height, int flags);
 int DEFAULT_CC
 server_set_pointer(struct xrdp_mod* mod, int x, int y,
                    char* data, char* mask);

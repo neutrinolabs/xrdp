@@ -61,7 +61,7 @@ xrdp_process_delete(struct xrdp_process *self)
 
 /*****************************************************************************/
 static int APP_CC
-xrdp_process_loop(struct xrdp_process *self)
+xrdp_process_loop(struct xrdp_process *self, struct stream *s)
 {
     int rv;
 
@@ -69,7 +69,7 @@ xrdp_process_loop(struct xrdp_process *self)
 
     if (self->session != 0)
     {
-        rv = libxrdp_process_data(self->session);
+        rv = libxrdp_process_data(self->session, s);
     }
 
     if ((self->wm == 0) && (self->session->up_and_running) && (rv == 0))
@@ -115,17 +115,116 @@ xrdp_process_mod_end(struct xrdp_process *self)
 }
 
 /*****************************************************************************/
+static int APP_CC
+xrdp_process_get_pdu_bytes(const char *aheader)
+{
+    int rv;
+    const tui8 *header;
+
+    rv = -1;
+    header = (const tui8 *) aheader;
+    if (header[0] == 0x03)
+    {
+        /* TPKT */
+        rv = (header[2] << 8) | header[3];
+    }
+    else if (header[0] == 0x30)
+    {
+        /* TSRequest (NLA) */
+        if (header[1] & 0x80)
+        {
+            if ((header[1] & ~(0x80)) == 1)
+            {
+                rv = header[2];
+                rv += 3;
+            }
+            else if ((header[1] & ~(0x80)) == 2)
+            {
+                rv = (header[2] << 8) | header[3];
+                rv += 4;
+            }
+            else
+            {
+                g_writeln("xrdp_process_get_packet_bytes: error TSRequest!");
+                return -1;
+            }
+        }
+        else
+        {
+            rv = header[1];
+            rv += 2;
+        }
+    }
+    else
+    {
+        /* Fast-Path */
+        if (header[1] & 0x80)
+        {
+            rv = ((header[1] & 0x7F) << 8) | header[2];
+        }
+        else
+        {
+            rv = header[1];
+        }
+    }
+    return rv;
+}
+
+/*****************************************************************************/
 static int DEFAULT_CC
 xrdp_process_data_in(struct trans *self)
 {
     struct xrdp_process *pro;
+    struct stream *s;
+    int len;
 
     DEBUG(("xrdp_process_data_in"));
     pro = (struct xrdp_process *)(self->callback_data);
 
-    if (xrdp_process_loop(pro) != 0)
+    s = pro->server_trans->in_s;
+    switch (pro->server_trans->extra_flags)
     {
-        return 1;
+        case 0:
+            /* early in connection sequence, we're in this mode */
+            if (xrdp_process_loop(pro, 0) != 0)
+            {
+                g_writeln("xrdp_process_data_in: "
+                          "xrdp_process_loop failed");
+                return 1;
+            }
+            if (pro->session->up_and_running)
+            {
+                pro->server_trans->extra_flags = 1;
+                pro->server_trans->header_size = 4;
+            }
+            break;
+
+        case 1:
+            /* we have enough now to get the PDU bytes */
+            len = xrdp_process_get_pdu_bytes(s->p);
+            if (len == -1)
+            {
+                g_writeln("xrdp_process_data_in: "
+                          "xrdp_process_get_packet_bytes failed");
+                return 1;
+            }
+            pro->server_trans->header_size = len;
+            pro->server_trans->extra_flags = 2;
+            break;
+
+        case 2:
+            /* the whole PDU is read in now process */
+            s->p = s->data;
+            if (xrdp_process_loop(pro, s) != 0)
+            {
+                g_writeln("xrdp_process_data_in: "
+                          "xrdp_process_loop failed");
+                return 1;
+            }
+            init_stream(s, 0);
+            pro->server_trans->header_size = 4;
+            pro->server_trans->extra_flags = 1;
+            break;
     }
 
     return 0;
@@ -145,8 +244,12 @@ xrdp_process_main_loop(struct xrdp_process *self)
 
     DEBUG(("xrdp_process_main_loop"));
     self->status = 1;
+    self->server_trans->extra_flags = 0;
+    self->server_trans->header_size = 0;
+    self->server_trans->no_stream_init_on_data_in = 1;
     self->server_trans->trans_data_in = xrdp_process_data_in;
     self->server_trans->callback_data = self;
+    init_stream(self->server_trans->in_s, 8192 * 4);
     self->session = libxrdp_init((tbus)self, self->server_trans);
     /* this callback function is in xrdp_wm.c */
     self->session->callback = callback;

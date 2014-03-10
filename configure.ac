@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script
 
 AC_PREREQ(2.59)
-AC_INIT([xrdp], [0.7.0], [xrdp-devel@lists.sourceforge.net])
+AC_INIT([xrdp], [0.9.0], [xrdp-devel@lists.sourceforge.net])
 AC_CONFIG_HEADERS(config_ac.h:config_ac-h.in)
 AM_INIT_AUTOMAKE([1.6 foreign])
 AC_PROG_CC
@@ -43,14 +43,22 @@ AC_ARG_ENABLE(tjpeg, AS_HELP_STRING([--enable-tjpeg],
               [Build turbo jpeg module(assumes /opt/libjpeg-turbo) (default: no)]),
               [tjpeg=true], [tjpeg=false])
 AM_CONDITIONAL(XRDP_TJPEG, [test x$tjpeg = xtrue])
+
 AC_ARG_ENABLE(simplesound, AS_HELP_STRING([--enable-simplesound],
               [Build simple pulse audio interface (default: no)]),
               [simplesound=true], [simplesound=false])
 AM_CONDITIONAL(XRDP_SIMPLESOUND, [test x$simplesound = xtrue])
+
 AC_ARG_ENABLE(fuse, AS_HELP_STRING([--enable-fuse],
               [Build fuse(clipboard file / drive redir) (default: no)]),
               [fuse=true], [fuse=false])
 AM_CONDITIONAL(XRDP_FUSE, [test x$fuse = xtrue])
+
+AC_ARG_ENABLE(loadpulsemodules, AS_HELP_STRING([--enable-loadpulsemodules],
+              [Build code to load pulse audio modules (default: no)]),
+              [loadpulsemodules=true], [loadpulsemodules=false])
+AM_CONDITIONAL(XRDP_LOAD_PULSE_MODULES, [test x$loadpulsemodules = xtrue])
+
 AC_ARG_ENABLE(xrdpvr, AS_HELP_STRING([--enable-xrdpvr],
               [Build xrdpvr module (default: no)]),
               [xrdpvr=true], [xrdpvr=false])
@@ -103,6 +111,13 @@ then
   AC_CHECK_HEADER([fuse.h], [],
     [AC_MSG_ERROR([please install libfuse-dev or fuse-devel])],
     [#define _FILE_OFFSET_BITS 64])
+fi
+
+# checking for libpulse
+if ! test -z "$enable_loadpulsemodules"
+then
+  AC_CHECK_HEADER([pulse/util.h], [],
+    [AC_MSG_ERROR([please install libpulse-dev or libpulse-devel])])
 fi
 
 # checking for libpulse libpulse-simple

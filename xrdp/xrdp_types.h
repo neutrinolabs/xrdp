@@ -18,6 +18,9 @@
  * types
  */
 
+#ifndef _XRDP_TYPES_H_
+#define _XRDP_TYPES_H_
+
 #define DEFAULT_STRING_LEN 255
 #define LOG_WINDOW_CHAR_PER_LINE 60
 
@@ -136,7 +139,11 @@ struct xrdp_mod
                           int srcx, int srcy, int mskx, int msky,
                           int dstx, int dsty, int width, int height,
                           int dstformat);
-  long server_dumby[100 - 42]; /* align, 100 minus the number of server
+  int (*server_paint_rects)(struct xrdp_mod* v,
+                            int num_drects, short *drects,
+                            int num_crects, short *crects,
+                            char *data, int width, int height, int flags);
+  long server_dumby[100 - 43]; /* align, 100 minus the number of server
                                   functions above */
   /* common */
   long handle; /* pointer to self as int */
@@ -342,6 +349,9 @@ struct xrdp_wm
   int allowedchannels[MAX_NR_CHANNELS];
   int allowedinitialized ;
   char pamerrortxt[256];
+
+  /* configuration derived from xrdp.ini */
+  struct xrdp_config *xrdp_config;
 };
 
 /* rdp process */
@@ -456,8 +466,8 @@ struct xrdp_bitmap
 #define DEFAULT_COMBO_H       21
 #define DEFAULT_EDIT_W        210
 #define DEFAULT_EDIT_H        21
-#define DEFAULT_WND_LOGIN_W   500
-#define DEFAULT_WND_LOGIN_H   250
+#define DEFAULT_WND_LOGIN_W   425
+#define DEFAULT_WND_LOGIN_H   475
 #define DEFAULT_WND_HELP_W    340
 #define DEFAULT_WND_HELP_H    300
 #define DEFAULT_WND_LOG_W     400
@@ -492,3 +502,83 @@ struct xrdp_startup_params
   int send_buffer_bytes;
   int recv_buffer_bytes;
 };
+
+/*
+ * For storing xrdp.ini configuration settings
+ */
+
+struct xrdp_cfg_globals
+{
+    int  ini_version;            /* xrdp.ini file version number */
+    int  use_bitmap_cache;
+    int  use_bitmap_compression;
+    int  port;
+    int  crypt_level;            /* low=1, medium=2, high=3 */
+    int  allow_channels;
+    int  max_bpp;
+    int  fork;
+    int  tcp_nodelay;
+    int  tcp_keepalive;
+    int  tcp_send_buffer_bytes;
+    int  tcp_recv_buffer_bytes;
+    char autorun[256];
+    int  hidelogwindow;
+    int  require_credentials;
+    int  bulk_compression;
+    int  new_cursors;
+    int  nego_sec_layer;
+    int  allow_multimon;
+
+    /* colors */
+
+    int  grey;
+    int  black;
+    int  dark_grey;
+    int  blue;
+    int  dark_blue;
+    int  white;
+    int  red;
+    int  green;
+    int  background;
+
+    /* login screen */
+    int  ls_top_window_bg_color; /* top level window background color */
+    int  ls_width;               /* window width */
+    int  ls_height;              /* window height */
+    int  ls_bg_color;            /* background color */
+    char ls_logo_filename[256];  /* logo filename */
+    int  ls_logo_x_pos;          /* logo x co-ordinate */
+    int  ls_logo_y_pos;          /* logo y co-ordinate */
+    int  ls_label_x_pos;         /* x pos of labels */
+    int  ls_label_width;         /* width of labels */
+    int  ls_input_x_pos;         /* x pos of text and combo boxes */
+    int  ls_input_width;         /* width of input and combo boxes */
+    int  ls_input_y_pos;         /* y pos for for first label and combo box */
+    int  ls_btn_ok_x_pos;        /* x pos for OK button */
+    int  ls_btn_ok_y_pos;        /* y pos for OK button */
+    int  ls_btn_ok_width;        /* width of OK button */
+    int  ls_btn_ok_height;       /* height of OK button */
+    int  ls_btn_cancel_x_pos;    /* x pos for Cancel button */
+    int  ls_btn_cancel_y_pos;    /* y pos for Cancel button */
+    int  ls_btn_cancel_width;    /* width of Cancel button */
+    int  ls_btn_cancel_height;   /* height of Cancel button */
+};
+
+struct xrdp_cfg_logging
+{
+
+};
+
+struct xrdp_cfg_channels
+{
+
+};
+
+struct xrdp_config
+{
+    struct xrdp_cfg_globals   cfg_globals;
+    struct xrdp_cfg_logging   cfg_logging;
+    struct xrdp_cfg_channels  cfg_channels;
+};
+
+#endif

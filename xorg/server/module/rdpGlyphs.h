@@ -1,5 +1,5 @@
 /*
-Copyright 2012-2013 Jay Sorg
+Copyright 2012-2014 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -24,6 +24,35 @@ gylph(font) calls
 #ifndef _RDPGLYPHS_H
 #define _RDPGLYPHS_H
 
+struct rdp_font_char
+{
+    int offset;    /* x */
+    int baseline;  /* y */
+    int width;     /* cx */
+    int height;    /* cy */
+    int incby;
+    int bpp;
+    char *data;
+    int data_bytes;
+};
+
+struct rdp_text
+{
+    RegionPtr reg;
+    int font;
+    int x;
+    int y;
+    int flags;
+    int mixmode;
+    char data[256];
+    int data_bytes;
+    struct rdp_font_char* chars[256];
+    int num_chars;
+    struct rdp_text* next;
+};
+
+int
+rdpGlyphDeleteRdpText(struct rdp_text* rtext);
 void
 rdpGlyphs(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
           PictFormatPtr maskFormat,

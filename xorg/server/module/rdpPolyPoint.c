@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2013 Jay Sorg
+Copyright 2005-2014 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -32,13 +32,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "rdp.h"
 #include "rdpDraw.h"
+#include "rdpClientCon.h"
+#include "rdpReg.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
 /******************************************************************************/
-void
+static void
 rdpPolyPointOrg(DrawablePtr pDrawable, GCPtr pGC, int mode,
                 int npt, DDXPointPtr in_pts)
 {
@@ -54,7 +56,38 @@ void
 rdpPolyPoint(DrawablePtr pDrawable, GCPtr pGC, int mode,
              int npt, DDXPointPtr in_pts)
 {
+    rdpPtr dev;
+    RegionRec clip_reg;
+    RegionRec reg;
+    int cd;
+    int index;
+    BoxRec box;
+
     LLOGLN(10, ("rdpPolyPoint:"));
+    dev = rdpGetDevFromScreen(pGC->pScreen);
+    dev->counts.rdpPolyPointCallCount++;
+    rdpRegionInit(&reg, NullBox, 0);
+    for (index = 0; index < npt; index++)
+    {
+        box.x1 = in_pts[index].x + pDrawable->x;
+        box.y1 = in_pts[index].y + pDrawable->y;
+        box.x2 = box.x1 + 1;
+        box.y2 = box.y1 + 1;
+        rdpRegionUnionRect(&reg, &box);
+    }
+    rdpRegionInit(&clip_reg, NullBox, 0);
+    cd = rdpDrawGetClip(dev, &clip_reg, pDrawable, pGC);
+    LLOGLN(10, ("rdpPolyPoint: cd %d", cd));
+    if (cd == XRDP_CD_CLIP)
+    {
+        rdpRegionIntersect(&reg, &clip_reg, &reg);
+    }
     /* do original call */
     rdpPolyPointOrg(pDrawable, pGC, mode, npt, in_pts);
+    if (cd != XRDP_CD_NODRAW)
+    {
+        rdpClientConAddAllReg(dev, &reg, pDrawable);
+    }
+    rdpRegionUninit(&clip_reg);
+    rdpRegionUninit(&reg);
 }

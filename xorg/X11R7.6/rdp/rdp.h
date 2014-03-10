@@ -368,6 +368,8 @@ void
 RegionAroundSegs(RegionPtr reg, xSegment* segs, int nseg);
 int
 get_crc(char* data, int data_bytes);
+int
+get_mstime(void);
 
 /* rdpdraw.c */
 Bool
@@ -505,6 +507,8 @@ void
 KbdAddEvent(int down, int param1, int param2, int param3, int param4);
 void
 KbdSync(int param1);
+int
+rdpLoadLayout(int keylayout);
 
 /* rdpup.c */
 int

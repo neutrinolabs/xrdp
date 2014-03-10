@@ -1,3 +1,23 @@
+
+
+// not used
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #include "decoderthread.h"
 
 /*
@@ -178,7 +198,7 @@ void DecoderThread::videoTimerCallback()
     }
 
     pkt = videoQueue.dequeue();
-    delayInMs = (int) ((float) pkt->delay_in_us / 1000.0);
+    delayInMs = (int) 10; // ((float) pkt->delay_in_us / 1000.0);
     send_video_pkt(channel, 101, pkt->av_pkt);
     delete pkt;
     updateSlider();

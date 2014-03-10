@@ -668,3 +668,13 @@ get_crc(char* data, int data_bytes)
     CRC_END(crc);
     return crc;
 }
+
+/*****************************************************************************/
+int
+get_mstime(void)
+{
+    struct timeval tp;
+
+    gettimeofday(&tp, 0);
+    return (tp.tv_sec * 1000) + (tp.tv_usec / 1000);
+}

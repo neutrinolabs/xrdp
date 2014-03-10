@@ -1,34 +1,77 @@
 
-this is /etc/apt/sources.list
-I added the deb-src line
+--------------------------------------
+ Building pulseaudio modules for xrdp
+--------------------------------------
 
-----------------------
-deb http://packages.linuxmint.com/ maya main upstream import
-deb http://archive.ubuntu.com/ubuntu/ precise main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu/ precise-updates main restricted universe multiverse
-deb-src http://archive.ubuntu.com/ubuntu/ precise-updates main restricted universe multiverse
-deb http://security.ubuntu.com/ubuntu/ precise-security main restricted universe multiverse
-deb http://archive.canonical.com/ubuntu/ precise partner
-deb http://packages.medibuntu.org/ precise free non-free
+o append the following line to /etc/apt/sources.list
 
-#deb http://archive.getdeb.net/ubuntu precise-getdeb apps
-#deb http://archive.getdeb.net/ubuntu precise-getdeb games
-deb http://drbl.sourceforge.net/drbl-core drbl stable
-----------------------
+    deb-src http://archive.ubuntu.com/ubuntu/ precise-updates main restricted universe multiverse
 
-do all this in a new directory
+    this is what my /etc/apt/sources.list looks like
 
-root
-sudo apt-get install dpkg-dev
+    deb http://packages.linuxmint.com/ maya main upstream import
+    deb http://archive.ubuntu.com/ubuntu/ precise main restricted universe multiverse
+    deb http://archive.ubuntu.com/ubuntu/ precise-updates main restricted universe multiverse
+    deb http://security.ubuntu.com/ubuntu/ precise-security main restricted universe multiverse
+    deb http://archive.canonical.com/ubuntu/ precise partner
+    deb http://packages.medibuntu.org/ precise free non-free
 
-non root
-apt-get source pulseaudio
+    #deb http://archive.getdeb.net/ubuntu precise-getdeb apps
+    #deb http://archive.getdeb.net/ubuntu precise-getdeb games
+    deb http://drbl.sourceforge.net/drbl-core drbl stable
+    deb-src http://archive.ubuntu.com/ubuntu/ precise-updates main restricted universe multiverse
 
-root
-sudo apt-get build-dep pulseaudio
+    NOTE: If you get an error message that goes something like this:
 
-cd pulseaudio-1.1
+    E: You must put some 'source' URIs in your sources.list
 
-non root
-dpkg-buildpackage -rfakeroot -uc -b
+    try running the following command first:
 
+    apt-get source pulseaudio
+
+o run these commands in your home directory
+
+    cd
+    sudo apt-get install dpkg-dev
+    apt-get source pulseaudio
+    sudo apt-get build-dep pulseaudio
+
+    cd pulseaudio-1.1
+    dpkg-buildpackage -rfakeroot -uc -b
+
+o edit Makefile and point PULSE_DIR to ~/pulseaudio<version> dir
+
+o run make; the outputs will be
+  module-xrdp-sink.so
+  module-xrdp-source.so
+
+o sudo cp module-xrdp-sink.so   /usr/lib/pulse-<version>/modules
+  sudo cp module-xrdp-source.so /usr/lib/pulse-<version>/modules
+  note: on a 64bit machine use lib64 instead of lib
+
+o if you build xrdp with --enable-load_pulse_modules, then the above modules
+  will get loaded automatically when xrdp starts. However if --enable-load_pulse_modules
+  is not used, then you need to edit /etc/pulse/default.pa and insert the following
+  two lines into it:
+
+  load-module module-xrdp-sink
+  load-module module-xrdp-source
+
+--------------------------------------
+ To test sound/microphone redirection
+--------------------------------------
+
+o install gnome sound recorder or your favorite sound recorder
+
+o mplayer -ao pulse <audio file>
+
+o sudo apt-get install pavucontrol
+
+o in another window run pavucontrol and you should see xrdp-sink in use
+
+o to enable pulseaudio log
+    o edit /etc/pulse/daemon.conf and set
+      log-target = syslog
+      log-level = notice
+    o pulseaudio --kill
+    o log output will be in /var/log/syslog or /var/log/messages

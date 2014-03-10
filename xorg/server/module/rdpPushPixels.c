@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2013 Jay Sorg
+Copyright 2005-2014 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -54,7 +54,7 @@ void
 rdpPushPixels(GCPtr pGC, PixmapPtr pBitMap, DrawablePtr pDst,
               int w, int h, int x, int y)
 {
-    LLOGLN(10, ("rdpPushPixels:"));
+    LLOGLN(0, ("rdpPushPixels:"));
     /* do original call */
     rdpPushPixelsOrg(pGC, pBitMap, pDst, w, h, x, y);
 }

@@ -1,5 +1,5 @@
 /*
-Copyright 2013 Jay Sorg
+Copyright 2013-2014 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -492,7 +492,7 @@ rdpInputKeyboard(rdpPtr dev, int msg, long param1, long param2,
     rdpKeyboard *keyboard;
 
     keyboard = &(dev->keyboard);
-    LLOGLN(0, ("rdpInputKeyboard:"));
+    LLOGLN(10, ("rdpInputKeyboard:"));
     switch (msg)
     {
         case 15: /* key down */

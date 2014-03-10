@@ -13,6 +13,7 @@ Decoder::Decoder(QObject *parent) :
  *****************************************************************************/
 int Decoder::init(QString filename)
 {
+    printf("Decoder::init\n");
     if (channel)
         return -1;
 

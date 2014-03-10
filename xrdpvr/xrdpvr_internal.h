@@ -48,6 +48,7 @@
 #ifdef DISTRO_UBUNTU1204
 #define CODEC_TYPE_VIDEO AVMEDIA_TYPE_VIDEO
 #define CODEC_TYPE_AUDIO AVMEDIA_TYPE_AUDIO
+#define PKT_FLAG_KEY AV_PKT_FLAG_KEY
 #endif
 
 #define MAX_BUFSIZE (1024 * 1024 * 8)
@@ -62,6 +63,7 @@
 #define CMD_DEINIT_XRDPVR           8
 #define CMD_SET_GEOMETRY            9
 #define CMD_SET_VOLUME              10
+#define CMD_INIT_XRDPVR             11
 
 /* max number of bytes we can send in one pkt */
 #define MAX_PDU_SIZE                1600
@@ -221,6 +223,7 @@ typedef struct _player_state_info
 
 } PLAYER_STATE_INFO;
 
+static int xrdpvr_read_from_client(void *channel, STREAM *s, int bytes, int timeout);
 static int xrdpvr_write_to_client(void *channel, STREAM *s);
 
 #endif /* __XRDPVR_INTERNAL_H__ */

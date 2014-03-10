@@ -57,6 +57,8 @@ struct trans
   struct stream* wait_s;
   char addr[256];
   char port[256];
+  int no_stream_init_on_data_in;
+  int extra_flags; /* user defined */
 };
 
 struct trans* APP_CC
@@ -65,6 +67,10 @@ void APP_CC
 trans_delete(struct trans* self);
 int APP_CC
 trans_get_wait_objs(struct trans* self, tbus* objs, int* count);
+int APP_CC
+trans_get_wait_objs_rw(struct trans *self,
+                       tbus *robjs, int *rcount,
+                       tbus *wobjs, int *wcount);
 int APP_CC
 trans_check_wait_objs(struct trans* self);
 int APP_CC

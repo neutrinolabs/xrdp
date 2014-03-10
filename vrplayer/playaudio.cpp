@@ -54,13 +54,15 @@ void PlayAudio::play()
 
 label1:
 
+        printf("audio\n");
         if (audioQueue->isEmpty())
         {
             qDebug() << "PlayAudio::play: GOT EMPTY";
-            usleep(1000 * 100);
+            usleep(1000 * 10);
             continue;
         }
 
+        printf("");
         pkt = audioQueue->dequeue();
         sendMutex->lock();
         send_audio_pkt(channel, stream_id, pkt->av_pkt);

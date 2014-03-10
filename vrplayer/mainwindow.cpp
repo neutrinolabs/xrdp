@@ -66,8 +66,8 @@ MainWindow::~MainWindow()
 {
     delete ui;
 
-    if (moveResizeTimer)
-        delete moveResizeTimer;
+    //if (moveResizeTimer)
+    //    delete moveResizeTimer;
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
@@ -86,56 +86,56 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
 void MainWindow::resizeEvent(QResizeEvent *)
 {
-    if (vcrFlag != VCR_PLAY)
+    //if (vcrFlag != VCR_PLAY)
     {
         QRect rect;
 
         getVdoGeometry(&rect);
         interface->sendGeometry(rect);
-        return;
+        //return;
     }
 
-    interface->setVcrOp(VCR_PAUSE);
-    vcrFlag = VCR_PAUSE;
+    //interface->setVcrOp(VCR_PAUSE);
+    //vcrFlag = VCR_PAUSE;
 
-    if (!moveResizeTimer)
-    {
-        moveResizeTimer = new QTimer;
-        connect(moveResizeTimer, SIGNAL(timeout()),
-                this, SLOT(onMoveCompleted()));
-    }
-    lblVideo->setStyleSheet("QLabel { background-color : black; color : blue; }");
-    moveResizeTimer->start(1000);
+    //if (!moveResizeTimer)
+    //{
+    //    moveResizeTimer = new QTimer;
+    //    connect(moveResizeTimer, SIGNAL(timeout()),
+    //            this, SLOT(onMoveCompleted()));
+    //}
+    //lblVideo->setStyleSheet("QLabel { background-color : black; color : blue; }");
+    //moveResizeTimer->start(1000);
 }
 
 void MainWindow::moveEvent(QMoveEvent *)
 {
-    if (vcrFlag != VCR_PLAY)
+    //if (vcrFlag != VCR_PLAY)
     {
         QRect rect;
 
         getVdoGeometry(&rect);
         interface->sendGeometry(rect);
-        return;
+        //return;
     }
 
-    interface->setVcrOp(VCR_PAUSE);
-    vcrFlag = VCR_PAUSE;
+    //interface->setVcrOp(VCR_PAUSE);
+    //vcrFlag = VCR_PAUSE;
 
-    if (!moveResizeTimer)
-    {
-        moveResizeTimer = new QTimer;
-        connect(moveResizeTimer, SIGNAL(timeout()),
-                this, SLOT(onMoveCompleted()));
-    }
-    lblVideo->setStyleSheet("QLabel { background-color : black; color : blue; }");
-    moveResizeTimer->start(1000);
+    //if (!moveResizeTimer)
+    //{
+    //    moveResizeTimer = new QTimer;
+    //    connect(moveResizeTimer, SIGNAL(timeout()),
+    //            this, SLOT(onMoveCompleted()));
+    //}
+    //lblVideo->setStyleSheet("QLabel { background-color : black; color : blue; }");
+    //moveResizeTimer->start(1000);
 }
 
 void MainWindow::onVolSliderValueChanged(int value)
 {
     int volume;
-    
+
     volume = (value * 0xffff) / 100;
     if (interface != 0)
     {
@@ -153,8 +153,8 @@ void MainWindow::setupUI()
     lblVideo->setMinimumWidth(320);
     lblVideo->setMinimumHeight(200);
     QPalette palette = lblVideo->palette();
-    palette.setColor(lblVideo->backgroundRole(), Qt::black);
-    palette.setColor(lblVideo->foregroundRole(), Qt::black);
+    palette.setColor(lblVideo->backgroundRole(), QColor(0x00, 0x00, 0x01, 0xff));
+    palette.setColor(lblVideo->foregroundRole(), QColor(0x00, 0x00, 0x01, 0xff));
     lblVideo->setAutoFillBackground(true);
     lblVideo->setPalette(palette);
     hboxLayoutTop = new QHBoxLayout;
@@ -253,10 +253,17 @@ void MainWindow::openMediaFile()
 
     if (filename.length() == 0)
     {
+
         /* no previous selection - open user's home folder TODO */
         // TODO filename = QFileDialog::getOpenFileName(this, "Select Media File", "/");
+        //filename = QFileDialog::getOpenFileName(this, "Select Media File",
+        //                                        QDir::currentPath());
+
         filename = QFileDialog::getOpenFileName(this, "Select Media File",
-                                                QDir::currentPath());
+                                                QDir::currentPath(),
+                                                "Media *.mov *.mp4 *.mkv (*.mov *.mp4 *.mkv)");
+
+
     }
     else
     {
@@ -288,11 +295,9 @@ void MainWindow::getVdoGeometry(QRect *rect)
 
 void MainWindow::clearDisplay()
 {
-    QPixmap pixmap(100,100);
-    pixmap.fill(QColor(0x00, 0x00, 0x00));
-    QPainter painter(&pixmap);
-    painter.setBrush(QBrush(Qt::black));
-    lblVideo->setPixmap(pixmap);
+    /* TODO: this needs to be set after video actually stops
+     * a few frames come after this */
+    lblVideo->update();
 }
 
 /*******************************************************************************
@@ -302,13 +307,19 @@ void MainWindow::clearDisplay()
 void MainWindow::on_actionOpen_Media_File_triggered()
 {
     if (vcrFlag != 0)
+    {
         onBtnStopClicked(true);
+    }
 
     /* if media was specified on cmd line, use it just once */
     if (gotMediaOnCmdline)
+    {
         gotMediaOnCmdline = false;
+    }
     else
+    {
         openMediaFile();
+    }
 
     if (filename.length() == 0)
     {
@@ -320,17 +331,27 @@ void MainWindow::on_actionOpen_Media_File_triggered()
     {
         remoteClientInited = false;
         interface->deInitRemoteClient();
-        interface->initRemoteClient();
+        if (interface->initRemoteClient() != 0)
+        {
+            QMessageBox::question(this, "vrplayer", "Unsupported codec",
+                                  QMessageBox::Ok);
+            return;
+        }
     }
     else
     {
-        interface->initRemoteClient();
+        if (interface->initRemoteClient() != 0)
+        {
+            QMessageBox::question(this, "vrplayer", "Unsupported codec",
+                                  QMessageBox::Ok);
+            return;
+        }
     }
 
-    playVideo = interface->getPlayVideoInstance();
-    if (playVideo)
+    demuxMedia = interface->getDemuxMediaInstance();
+    if (demuxMedia)
     {
-        connect(playVideo, SIGNAL(onElapsedtime(int)),
+        connect(demuxMedia, SIGNAL(onElapsedtime(int)),
                 this, SLOT(onElapsedTime(int)));
     }
 
@@ -355,7 +376,7 @@ void MainWindow::onBtnPlayClicked(bool)
 {
     if (vcrFlag == 0)
     {
-        /* first time play button has been clicked */
+        /* first time play button3 has been clicked */
         on_actionOpen_Media_File_triggered();
         btnPlay->setText("Pause");
         vcrFlag = VCR_PLAY;
@@ -385,8 +406,8 @@ void MainWindow::onBtnPlayClicked(bool)
 
 void MainWindow::onBtnRewindClicked(bool)
 {
-    if (playVideo)
-        playVideo->onMediaSeek(0);
+    //if (playVideo)
+    //    playVideo->onMediaSeek(0);
 }
 
 void MainWindow::onBtnStopClicked(bool)
@@ -400,7 +421,10 @@ void MainWindow::onBtnStopClicked(bool)
     lblCurrentPos->setText("00:00:00");
 
     /* clear screen by filling it with black */
+    usleep(500 * 1000);
     clearDisplay();
+
+    btnPlay->setChecked(false);
 }
 
 void MainWindow::onMediaDurationInSeconds(int duration)
@@ -479,8 +503,10 @@ void MainWindow::onSliderValueChanged(int value)
     if (acceptSliderMove)
     {
         acceptSliderMove = false;
-        if (playVideo)
-            playVideo->onMediaSeek(value / 100);
+        if (demuxMedia != NULL)
+        {
+            demuxMedia->onMediaSeek(value / 100);
+        }
     }
 }
 
@@ -503,6 +529,7 @@ void MainWindow::onSliderActionTriggered(int action)
     }
 }
 
+// not called
 void MainWindow::onMoveCompleted()
 {
     QRect rect;
@@ -512,7 +539,7 @@ void MainWindow::onMoveCompleted()
 
     interface->setVcrOp(VCR_PLAY);
     vcrFlag = VCR_PLAY;
-    moveResizeTimer->stop();
+    //moveResizeTimer->stop();
 }
 
 void MainWindow::on_actionAbout_triggered()
