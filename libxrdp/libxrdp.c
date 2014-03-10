@@ -237,26 +237,14 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
         switch (code)
         {
             case -1:
-                xrdp_rdp_send_demand_active(rdp);
-
-                /* send Monitor Layout PDU for multimon */
-                if (session->client_info->monitorCount > 0 &&
-                    session->client_info->multimon == 1)
-                {
-                    DEBUG(("sending monitor layout pdu"));
-                    if (xrdp_rdp_send_monitorlayout(rdp) != 0)
-                    {
-                      g_writeln("xrdp_rdp_send_monitorlayout: error");
-                    }
-                }
-
+                xrdp_caps_send_demand_active(rdp);
                 session->up_and_running = 0;
                 break;
             case 0:
                 dead_lock_counter++;
                 break;
             case RDP_PDU_CONFIRM_ACTIVE: /* 3 */
-                xrdp_rdp_process_confirm_active(rdp, s);
+                xrdp_caps_process_confirm_active(rdp, s);
                 break;
             case RDP_PDU_DATA: /* 7 */
                 if (xrdp_rdp_process_data(rdp, s) != 0)
@@ -898,7 +886,7 @@ libxrdp_reset(struct xrdp_session *session,
     }
 
     /* this should do the resizing */
-    if (xrdp_rdp_send_demand_active((struct xrdp_rdp *)session->rdp) != 0)
+    if (xrdp_caps_send_demand_active((struct xrdp_rdp *)session->rdp) != 0)
     {
         return 1;
     }

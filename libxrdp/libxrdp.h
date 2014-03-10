@@ -392,12 +392,6 @@ xrdp_rdp_send_data_update_sync(struct xrdp_rdp* self);
 int APP_CC
 xrdp_rdp_incoming(struct xrdp_rdp* self);
 int APP_CC
-xrdp_rdp_send_demand_active(struct xrdp_rdp* self);
-int APP_CC
-xrdp_rdp_send_monitorlayout(struct xrdp_rdp* self);
-int APP_CC
-xrdp_rdp_process_confirm_active(struct xrdp_rdp* self, struct stream* s);
-int APP_CC
 xrdp_rdp_process_data(struct xrdp_rdp* self, struct stream* s);
 int APP_CC
 xrdp_rdp_disconnect(struct xrdp_rdp* self);
@@ -570,4 +564,9 @@ xrdp_fastpath_init(struct xrdp_fastpath *self, struct stream *s);
 int APP_CC
 xrdp_fastpath_send(struct xrdp_fastpath *self, struct stream *s);
 
+/* xrdp_caps.c */
+int APP_CC
+xrdp_caps_send_demand_active(struct xrdp_rdp *self);
+int APP_CC
+xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s);
 #endif
