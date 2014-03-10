@@ -950,6 +950,7 @@ xrdp_sec_establish_keys(struct xrdp_sec *self)
     ssl_rc4_set_key(self->decrypt_rc4_info, self->decrypt_key, self->rc4_key_len);
     ssl_rc4_set_key(self->encrypt_rc4_info, self->encrypt_key, self->rc4_key_len);
 }
+
 /*****************************************************************************/
 /* returns error */
 int APP_CC

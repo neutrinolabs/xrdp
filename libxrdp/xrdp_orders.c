@@ -34,7 +34,7 @@
         } \
     }
 
-#define MAX_ORDERS_SIZE (16 * 1024 + 512)
+#define MAX_ORDERS_SIZE (16 * 1024 - 256)
 
 /*****************************************************************************/
 struct xrdp_orders *APP_CC

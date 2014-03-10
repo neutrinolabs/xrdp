@@ -32,7 +32,7 @@
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { g_writeln _args ; } } while (0)
 
-#define FASTPATH_FRAG_SIZE (16 * 1024 + 1024)
+#define FASTPATH_FRAG_SIZE (16 * 1024 - 128)
 
 /*****************************************************************************/
 static int APP_CC
@@ -587,7 +587,6 @@ xrdp_rdp_send_fastpath(struct xrdp_rdp *self, struct stream *s,
                 fragmentation = 1; /* FASTPATH_FRAGMENT_LAST */
             }
         }
-        len = MIN(len, 32 * 1024);
         LLOGLN(10, ("xrdp_rdp_send_fastpath: len %d fragmentation %d",
                len, fragmentation));
         updateHeader = (updateCode & 15) |
