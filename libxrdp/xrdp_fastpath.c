@@ -169,6 +169,11 @@ xrdp_fastpath_process_EVENT_MOUSE(struct xrdp_fastpath *self, int eventFlags,
     int xPos;
     int yPos;
 
+    /* eventFlags MUST be zeroed out */
+    if (eventFlags != 0) {
+            return 1;
+    }
+
     if (!s_check_rem(s, 2 + 2 + 2))
     {
         return 1;
@@ -200,6 +205,11 @@ xrdp_fastpath_process_EVENT_MOUSEX(struct xrdp_fastpath *self,
     int pointerFlags;
     int xPos;
     int yPos;
+
+    /* eventFlags MUST be zeroed out */
+    if (eventFlags != 0) {
+            return 1;
+    }
 
     if (!s_check_rem(s, 2 + 2 + 2))
     {
