@@ -455,6 +455,10 @@ static int APP_CC
 xrdp_caps_process_multifragmetupdate(struct xrdp_rdp *self, struct stream *s,
                                      int len)
 {
+    int MaxRequestSize;
+
+    in_uint32_le(s, MaxRequestSize);
+    self->client_info.max_fastpath_frag_bytes = MaxRequestSize;
     return 0;
 }
 
@@ -820,6 +824,14 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     out_uint16_le(s, 0x0006);
     out_uint16_le(s, 5);
     out_uint8(s, 0); /* client sets */
+
+    if (self->client_info.use_fast_path & 1) /* fastpath output on */
+    {
+        caps_count++;
+        out_uint16_le(s, 0x001A); /* 26 CAPSETTYPE_MULTIFRAGMENTUPDATE */
+        out_uint16_le(s, 8);
+        out_uint32_le(s, 3 * 1024 * 1024); /* 3MB */
+    }
 
     out_uint8s(s, 4); /* pad */
 
