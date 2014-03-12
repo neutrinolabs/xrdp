@@ -121,6 +121,8 @@ struct xrdp_client_info
   int mcs_connection_type;
   int mcs_early_capability_flags;
 
+  int max_fastpath_frag_bytes;
+
 };
 
 #endif

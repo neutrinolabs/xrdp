@@ -101,7 +101,14 @@ xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
 int APP_CC
 xrdp_fastpath_init(struct xrdp_fastpath *self, struct stream *s)
 {
-    init_stream(s, 32 * 1024);
+    int bytes;
+
+    bytes = self->session->client_info->max_fastpath_frag_bytes;
+    if (bytes < 32 * 1024)
+    {
+        bytes = 32 * 1024;
+    }
+    init_stream(s, bytes);
     return 0;
 }
 
