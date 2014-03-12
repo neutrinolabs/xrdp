@@ -21,6 +21,12 @@
 #include "libxrdp.h"
 #include "xrdp_orders_rail.h"
 
+#define LOG_LEVEL 1
+#define LLOG(_level, _args) \
+    do { if (_level < LOG_LEVEL) { g_write _args ; } } while (0)
+#define LLOGLN(_level, _args) \
+    do { if (_level < LOG_LEVEL) { g_writeln _args ; } } while (0)
+
 /******************************************************************************/
 struct xrdp_session *EXPORT_CC
 libxrdp_init(tbus id, struct trans *trans)
@@ -306,7 +312,20 @@ libxrdp_send_palette(struct xrdp_session *session, int *palette)
     libxrdp_orders_force_send(session);
     make_stream(s);
     init_stream(s, 8192);
-    xrdp_rdp_init_data((struct xrdp_rdp *)session->rdp, s);
+    if (session->client_info->use_fast_path & 1) /* fastpath output supported */
+    {
+        LLOGLN(10, ("libxrdp_send_palette: fastpath"));
+        if (xrdp_rdp_init_fastpath((struct xrdp_rdp *)session->rdp, s) != 0)
+        {
+            return 1;
+        }
+    }
+    else {
+        LLOGLN(10, ("libxrdp_send_palette: slowpath"));
+        xrdp_rdp_init_data((struct xrdp_rdp *)session->rdp, s);
+    }
+
+    /* TS_UPDATE_PALETTE_DATA */
     out_uint16_le(s, RDP_UPDATE_PALETTE);
     out_uint16_le(s, 0);
     out_uint16_le(s, 256); /* # of colors */
@@ -321,7 +340,19 @@ libxrdp_send_palette(struct xrdp_session *session, int *palette)
     }
 
     s_mark_end(s);
-    xrdp_rdp_send_data((struct xrdp_rdp *)session->rdp, s, RDP_DATA_PDU_UPDATE);
+    if (session->client_info->use_fast_path & 1) /* fastpath output supported */
+    {
+       if (xrdp_rdp_send_fastpath((struct xrdp_rdp *)session->rdp, s,
+                                   FASTPATH_UPDATETYPE_PALETTE) != 0)
+       {
+           return 1;
+       }
+    }
+    else
+    {
+       xrdp_rdp_send_data((struct xrdp_rdp *)session->rdp, s,
+                           RDP_DATA_PDU_UPDATE);
+    }
     free_stream(s);
     /* send the orders palette too */
     libxrdp_orders_init(session);
@@ -586,20 +617,45 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
     }
     make_stream(s);
     init_stream(s, 8192);
-    xrdp_rdp_init_data((struct xrdp_rdp *)session->rdp, s);
-    if ((session->client_info->pointer_flags & 1) == 0)
+
+    if (session->client_info->use_fast_path & 1) /* fastpath output supported */
     {
-        out_uint16_le(s, RDP_POINTER_COLOR);
-        out_uint16_le(s, 0); /* pad */
-        data_bytes = 3072;
+        LLOGLN(10, ("libxrdp_send_pointer: fastpath"));
+        if (xrdp_rdp_init_fastpath((struct xrdp_rdp *)session->rdp, s) != 0)
+        {
+            return 1;
+        }
+
+        if ((session->client_info->pointer_flags & 1) == 0)
+        {
+            data_bytes = 3072;
+        }
+        else
+        {
+            data_bytes = ((bpp + 7) / 8) * 32 * 32;
+            out_uint16_le(s, bpp);
+        }
     }
     else
     {
-        out_uint16_le(s, RDP_POINTER_POINTER);
-        out_uint16_le(s, 0); /* pad */
-        out_uint16_le(s, bpp);
-        data_bytes = ((bpp + 7) / 8) * 32 * 32;
+        LLOGLN(10, ("libxrdp_send_pointer: slowpath"));
+        xrdp_rdp_init_data((struct xrdp_rdp *)session->rdp, s);
+        if ((session->client_info->pointer_flags & 1) == 0)
+         {
+             out_uint16_le(s, RDP_POINTER_COLOR);
+             out_uint16_le(s, 0); /* pad */
+             data_bytes = 3072;
+         }
+         else
+         {
+             out_uint16_le(s, RDP_POINTER_POINTER);
+             out_uint16_le(s, 0); /* pad */
+             out_uint16_le(s, bpp);
+             data_bytes = ((bpp + 7) / 8) * 32 * 32;
+         }
     }
+
+
     out_uint16_le(s, cache_idx); /* cache_idx */
     out_uint16_le(s, x);
     out_uint16_le(s, y);
@@ -651,9 +707,32 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
     }
 
     out_uint8a(s, mask, 128); /* mask */
+    out_uint8(s, 0); /* pad */
     s_mark_end(s);
-    xrdp_rdp_send_data((struct xrdp_rdp *)(session->rdp), s,
-                       RDP_DATA_PDU_POINTER);
+    if (session->client_info->use_fast_path & 1) /* fastpath output supported */
+    {
+        if ((session->client_info->pointer_flags & 1) == 0)
+        {
+            if (xrdp_rdp_send_fastpath((struct xrdp_rdp *)session->rdp, s,
+                                        FASTPATH_UPDATETYPE_COLOR) != 0)
+            {
+                return 1;
+            }
+        }
+        else
+        {
+            if (xrdp_rdp_send_fastpath((struct xrdp_rdp *)session->rdp, s,
+                                        FASTPATH_UPDATETYPE_POINTER) != 0)
+            {
+                return 1;
+            }
+        }
+    }
+    else
+    {
+        xrdp_rdp_send_data((struct xrdp_rdp *)session->rdp, s,
+                          RDP_DATA_PDU_POINTER);
+    }
     free_stream(s);
     return 0;
 }
@@ -667,12 +746,40 @@ libxrdp_set_pointer(struct xrdp_session *session, int cache_idx)
     DEBUG(("libxrdp_set_pointer sending cursor index"));
     make_stream(s);
     init_stream(s, 8192);
-    xrdp_rdp_init_data((struct xrdp_rdp *)session->rdp, s);
-    out_uint16_le(s, RDP_POINTER_CACHED);
-    out_uint16_le(s, 0); /* pad */
+
+
+    if (session->client_info->use_fast_path & 1) /* fastpath output supported */
+    {
+        LLOGLN(10, ("libxrdp_send_pointer: fastpath"));
+        if (xrdp_rdp_init_fastpath((struct xrdp_rdp *)session->rdp, s) != 0)
+        {
+            return 1;
+        }
+    }
+    else
+    {
+        LLOGLN(10, ("libxrdp_send_pointer: slowpath"));
+        xrdp_rdp_init_data((struct xrdp_rdp *)session->rdp, s);
+        out_uint16_le(s, RDP_POINTER_CACHED);
+        out_uint16_le(s, 0); /* pad */
+    }
+
     out_uint16_le(s, cache_idx); /* cache_idx */
     s_mark_end(s);
-    xrdp_rdp_send_data((struct xrdp_rdp *)session->rdp, s, RDP_DATA_PDU_POINTER);
+
+    if (session->client_info->use_fast_path & 1) /* fastpath output supported */
+    {
+        if (xrdp_rdp_send_fastpath((struct xrdp_rdp *)session->rdp, s,
+                                    FASTPATH_UPDATETYPE_CACHED) != 0)
+        {
+            return 1;
+        }
+    }
+    else
+    {
+        xrdp_rdp_send_data((struct xrdp_rdp *)session->rdp, s,
+                            RDP_DATA_PDU_POINTER);
+    }
     free_stream(s);
     return 0;
 }

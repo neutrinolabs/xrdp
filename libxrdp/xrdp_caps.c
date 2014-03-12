@@ -23,6 +23,46 @@
 
 /*****************************************************************************/
 static int APP_CC
+xrdp_caps_send_monitorlayout(struct xrdp_rdp *self)
+{
+    struct stream *s;
+    int i;
+
+    make_stream(s);
+    init_stream(s, 8192);
+
+    if (xrdp_rdp_init_data(self, s) != 0)
+    {
+        free_stream(s);
+        return 1;
+    }
+
+    out_uint32_le(s, self->client_info.monitorCount); /* MonitorCount */
+
+    /* TODO: validate for allowed monitors in terminal server (maybe by config?) */
+    for (i = 0; i < self->client_info.monitorCount; i++)
+    {
+        out_uint32_le(s, self->client_info.minfo[i].left);
+        out_uint32_le(s, self->client_info.minfo[i].top);
+        out_uint32_le(s, self->client_info.minfo[i].right);
+        out_uint32_le(s, self->client_info.minfo[i].bottom);
+        out_uint32_le(s, self->client_info.minfo[i].is_primary);
+    }
+
+    s_mark_end(s);
+
+    if (xrdp_rdp_send_data(self, s, 0x37) != 0)
+    {
+        free_stream(s);
+        return 1;
+    }
+
+    free_stream(s);
+    return 0;
+}
+
+/*****************************************************************************/
+static int APP_CC
 xrdp_caps_process_general(struct xrdp_rdp *self, struct stream *s,
                           int len)
 {
@@ -862,46 +902,6 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
         {
           g_writeln("xrdp_caps_send_demand_active: error sending monitor layout pdu");
         }
-    }
-
-    free_stream(s);
-    return 0;
-}
-
-/*****************************************************************************/
-int APP_CC
-xrdp_caps_send_monitorlayout(struct xrdp_rdp *self)
-{
-    struct stream *s;
-    int i;
-
-    make_stream(s);
-    init_stream(s, 8192);
-
-    if (xrdp_rdp_init_data(self, s) != 0)
-    {
-        free_stream(s);
-        return 1;
-    }
-
-    out_uint32_le(s, self->client_info.monitorCount); /* MonitorCount */
-
-    /* TODO: validate for allowed monitors in terminal server (maybe by config?) */
-    for (i = 0; i < self->client_info.monitorCount; i++)
-    {
-        out_uint32_le(s, self->client_info.minfo[i].left);
-        out_uint32_le(s, self->client_info.minfo[i].top);
-        out_uint32_le(s, self->client_info.minfo[i].right);
-        out_uint32_le(s, self->client_info.minfo[i].bottom);
-        out_uint32_le(s, self->client_info.minfo[i].is_primary);
-    }
-
-    s_mark_end(s);
-
-    if (xrdp_rdp_send_data(self, s, 0x37) != 0)
-    {
-        free_stream(s);
-        return 1;
     }
 
     free_stream(s);

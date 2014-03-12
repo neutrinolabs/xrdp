@@ -185,7 +185,7 @@ xrdp_orders_force_send(struct xrdp_orders *self)
         if (self->rdp_layer->client_info.use_fast_path & 1)
         {
             if (xrdp_rdp_send_fastpath(self->rdp_layer,
-                                       self->out_s, 0) != 0)
+                                       self->out_s, FASTPATH_UPDATETYPE_ORDERS) != 0)
             {
                 return 1;
             }
