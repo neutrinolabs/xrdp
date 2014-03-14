@@ -213,9 +213,6 @@ int APP_CC
 xrdp_bitmap_compare(struct xrdp_bitmap* self,
                     struct xrdp_bitmap* b);
 int APP_CC
-xrdp_bitmap_compare_with_crc(struct xrdp_bitmap* self,
-                             struct xrdp_bitmap* b);
-int APP_CC
 xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect);
 int APP_CC
 xrdp_bitmap_def_proc(struct xrdp_bitmap* self, int msg,

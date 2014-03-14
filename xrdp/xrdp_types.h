@@ -177,7 +177,16 @@ struct xrdp_palette_item
 struct xrdp_bitmap_item
 {
   int stamp;
+  int lru_index;
   struct xrdp_bitmap* bitmap;
+};
+
+struct xrdp_lru_item
+{
+  int next;
+  int prev;
+  int cacheid;
+  int pad0;
 };
 
 struct xrdp_os_bitmap_item
@@ -225,6 +234,16 @@ struct xrdp_cache
   int bitmap_stamp;
   struct xrdp_bitmap_item bitmap_items[XRDP_MAX_BITMAP_CACHE_ID]
                                       [XRDP_MAX_BITMAP_CACHE_IDX];
+
+  /* lru optimize */
+  struct xrdp_lru_item bitmap_lrus[XRDP_MAX_BITMAP_CACHE_ID]
+                                  [XRDP_MAX_BITMAP_CACHE_IDX];
+  int lru_head[XRDP_MAX_BITMAP_CACHE_ID];
+  int lru_tail[XRDP_MAX_BITMAP_CACHE_ID];
+
+  /* crc optimize */
+  struct list *crc16[XRDP_MAX_BITMAP_CACHE_ID][64 * 1024];
+
   int use_bitmap_comp;
   int cache1_entries;
   int cache1_size;
@@ -453,7 +472,8 @@ struct xrdp_bitmap
   struct xrdp_bitmap* popped_from;
   int item_height;
   /* crc */
-  int crc;
+  int crc32;
+  int crc16;
 };
 
 #define NUM_FONTS 0x4e00
