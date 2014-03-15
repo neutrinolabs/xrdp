@@ -266,8 +266,8 @@ xrdp_caps_process_cache_v3_codec_id(struct xrdp_rdp *self, struct stream *s,
 /*****************************************************************************/
 /* get the number of client cursor cache */
 static int APP_CC
-xrdp_caps_process_pointercache(struct xrdp_rdp *self, struct stream *s,
-                               int len)
+xrdp_caps_process_pointer(struct xrdp_rdp *self, struct stream *s,
+                          int len)
 {
     int i;
     int colorPointerFlag;
@@ -275,7 +275,7 @@ xrdp_caps_process_pointercache(struct xrdp_rdp *self, struct stream *s,
 
     if (len < 2 + 2 + 2)
     {
-        g_writeln("xrdp_caps_process_pointercache: error");
+        g_writeln("xrdp_caps_process_pointer: error");
         return 1;
     }
     no_new_cursor = self->client_info.pointer_flags & 2;
@@ -286,7 +286,7 @@ xrdp_caps_process_pointercache(struct xrdp_rdp *self, struct stream *s,
     self->client_info.pointer_cache_entries = i;
     if (colorPointerFlag & 1)
     {
-        g_writeln("xrdp_caps_process_pointercache: client supports "
+        g_writeln("xrdp_caps_process_pointer: client supports "
                   "new(color) cursor");
         in_uint16_le(s, i);
         i = MIN(i, 32);
@@ -294,12 +294,12 @@ xrdp_caps_process_pointercache(struct xrdp_rdp *self, struct stream *s,
     }
     else
     {
-        g_writeln("xrdp_caps_process_pointercache: client does not support "
+        g_writeln("xrdp_caps_process_pointer: client does not support "
                   "new(color) cursor");
     }
     if (no_new_cursor)
     {
-        g_writeln("xrdp_caps_process_pointercache: new(color) cursor is "
+        g_writeln("xrdp_caps_process_pointer: new(color) cursor is "
                   "disabled by config");
         self->client_info.pointer_flags = 0;
     }
@@ -567,7 +567,7 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
                 break;
             case RDP_CAPSET_POINTER: /* 8 */
                 DEBUG(("RDP_CAPSET_POINTER"));
-                xrdp_caps_process_pointercache(self, s, len);
+                xrdp_caps_process_pointer(self, s, len);
                 break;
             case RDP_CAPSET_SHARE: /* 9 */
                 DEBUG(("RDP_CAPSET_SHARE"));
