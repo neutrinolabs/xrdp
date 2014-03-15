@@ -185,8 +185,6 @@ struct xrdp_lru_item
 {
   int next;
   int prev;
-  int cacheid;
-  int pad0;
 };
 
 struct xrdp_os_bitmap_item
@@ -240,6 +238,7 @@ struct xrdp_cache
                                   [XRDP_MAX_BITMAP_CACHE_IDX];
   int lru_head[XRDP_MAX_BITMAP_CACHE_ID];
   int lru_tail[XRDP_MAX_BITMAP_CACHE_ID];
+  int lru_reset[XRDP_MAX_BITMAP_CACHE_ID];
 
   /* crc optimize */
   struct list *crc16[XRDP_MAX_BITMAP_CACHE_ID][64 * 1024];
