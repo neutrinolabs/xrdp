@@ -40,6 +40,10 @@ xrdp_mm_create(struct xrdp_wm *owner)
     self->login_names->auto_free = 1;
     self->login_values = list_create();
     self->login_values->auto_free = 1;
+    
+    /* setup thread to handle codec mode messages */
+    init_xrdp_encoder(self);
+    
     return self;
 }
 
@@ -1875,6 +1879,11 @@ xrdp_mm_get_wait_objs(struct xrdp_mm *self,
         }
     }
 
+    if (self->in_codec_mode)
+    {
+        read_objs[(*rcount)++] = self->xrdp_encoder_event;
+    }
+    
     return rv;
 }
 
@@ -1931,6 +1940,35 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
         self->delete_chan_trans = 0;
     }
 
+    if (self->in_codec_mode)
+    {
+        XRDP_ENC_DATA *enc;
+        
+        if (!g_is_wait_obj_set(self->xrdp_encoder_event))
+            return rv;
+            
+        g_reset_wait_obj(self->xrdp_encoder_event);
+        tc_mutex_lock(self->mutex);
+        
+        while ((enc = fifo_remove_item(self->fifo_processed)) != 0)
+        {
+            tc_mutex_unlock(self->mutex);
+            
+            /* do something with msg */
+            
+            /* JAY_TODO */
+            
+            /* free enc */
+            g_free(enc->drects);
+            g_free(enc->crects);
+            g_free(enc);   
+                         
+            tc_mutex_lock(self->mutex);
+        }
+        
+        tc_mutex_unlock(self->mutex);
+    }
+    
     return rv;
 }
 
@@ -2140,17 +2178,68 @@ server_composite(struct xrdp_mod* mod, int srcidx, int srcformat,
 /*****************************************************************************/
 int DEFAULT_CC
 server_paint_rects(struct xrdp_mod* mod, int num_drects, short *drects,
-                   int num_crects, short *crects,
-                   char *data, int width, int height, int flags)
+                   int num_crects, short *crects, char *data, int width, 
+                   int height, int flags)
 {
     struct xrdp_wm* wm;
+    struct xrdp_mm* mm;
     struct xrdp_painter* p;
     struct xrdp_bitmap *b;
     short *s;
     int index;
+    int is_empty;
+
+    wm = (struct xrdp_wm*)(mod->wm);
+    mm = wm->mm;
+    
+    if (mm->in_codec_mode)
+    {
+        /* copy formal params to XRDP_ENC_DATA */
+        XRDP_ENC_DATA *enc_data = (XRDP_ENC_DATA *) g_malloc(sizeof(XRDP_ENC_DATA), 0);
+        if (!enc_data)
+            return 1;
+            
+        enc_data->drects = g_malloc(sizeof(short) * num_drects * 4, 0);
+        if (!enc_data->drects)
+        {
+            g_free(enc_data);
+            return 1;
+        }
+        
+        enc_data->crects = g_malloc(sizeof(short) * num_crects * 4, 0);
+        if (!enc_data->crects)
+        {
+            g_free(enc_data);
+            g_free(enc_data->drects);
+            return 1;
+        }
+        
+        g_memcpy(enc_data->drects, drects, sizeof(short) * num_drects * 4);
+        g_memcpy(enc_data->crects, crects, sizeof(short) * num_crects * 4);
+
+        enc_data->mod = mod;
+        enc_data->num_drects = num_drects;
+        enc_data->num_crects = num_crects;
+        enc_data->data = data;
+        enc_data->width = width;
+        enc_data->height = height;
+        enc_data->flags = flags;
+        
+        /* insert into fifo for encoder thread to process */
+        tc_mutex_lock(mm->mutex);
+        is_empty = fifo_is_empty(mm->fifo_to_proc);
+        fifo_add_item(mm->fifo_to_proc, (void *) enc_data);
+        tc_mutex_unlock(mm->mutex);
+    
+        /* signal xrdp_encoder thread */
+        if (is_empty)
+            g_set_wait_obj(mm->xrdp_encoder_event);
+        
+        return 0;
+    }
 
     //g_writeln("server_paint_rects:");
-    wm = (struct xrdp_wm*)(mod->wm);
+    
     p = (struct xrdp_painter*)(mod->painter);
     if (p == 0)
     {

@@ -26,6 +26,7 @@
 
 #include "xrdp_rail.h"
 #include "xrdp_constants.h"
+#include "fifo.h"
 
 #define MAX_NR_CHANNELS 16
 #define MAX_CHANNEL_NAME 16
@@ -262,12 +263,19 @@ struct xrdp_mm
   int (*mod_exit)(struct xrdp_mod*);
   struct xrdp_mod* mod; /* module interface */
   int display; /* 10 for :10.0, 11 for :11.0, etc */
-  int code; /* 0 Xvnc session 10 X11rdp session */
+  int code; /* 0=Xvnc session, 10=X11rdp session, 20=xorg driver mode */
   int sesman_controlled; /* true if this is a sesman session */
   struct trans* chan_trans; /* connection to chansrv */
   int chan_trans_up; /* true once connected to chansrv */
   int delete_chan_trans; /* boolean set when done with channel connection */
   int usechansrv; /* true if chansrvport is set in xrdp.ini or using sesman */
+  
+  /* for codec mode operations */
+  int   in_codec_mode;
+  tbus  xrdp_encoder_event;
+  FIFO *fifo_to_proc;
+  FIFO *fifo_processed;
+  tbus  mutex;
 };
 
 struct xrdp_key_info
@@ -580,5 +588,21 @@ struct xrdp_config
     struct xrdp_cfg_logging   cfg_logging;
     struct xrdp_cfg_channels  cfg_channels;
 };
+
+/* used when scheduling tasks in xrdp_encoder.c */
+struct xrdp_enc_data
+{
+    struct xrdp_mod *mod;
+    int              num_drects;
+    short           *drects;     /* 4 * num_drects */
+    int              num_crects;
+    short           *crects;     /* 4 * num_crects */
+    char            *data;
+    int              width;
+    int              height;
+    int              flags;  
+};
+
+typedef struct xrdp_enc_data XRDP_ENC_DATA;
 
 #endif
