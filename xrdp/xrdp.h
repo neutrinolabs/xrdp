@@ -207,6 +207,8 @@ xrdp_bitmap_copy_box(struct xrdp_bitmap* self,
                      struct xrdp_bitmap* dest,
                      int x, int y, int cx, int cy);
 int APP_CC
+xrdp_bitmap_hash_crc(struct xrdp_bitmap *self);
+int APP_CC
 xrdp_bitmap_copy_box_with_crc(struct xrdp_bitmap* self,
                               struct xrdp_bitmap* dest,
                               int x, int y, int cx, int cy);

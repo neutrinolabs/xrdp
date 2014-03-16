@@ -729,11 +729,17 @@ xrdp_bitmap_copy_box(struct xrdp_bitmap *self,
                      struct xrdp_bitmap *dest,
                      int x, int y, int cx, int cy)
 {
-    int i = 0;
-    int j = 0;
-    int destx = 0;
-    int desty = 0;
-    int pixel = 0;
+    int i;
+    int destx;
+    int desty;
+    int incs;
+    int incd;
+    tui8 *s8;
+    tui8 *d8;
+    tui16 *s16;
+    tui16 *d16;
+    tui32 *s32;
+    tui32 *d32;
 
     if (self == 0)
     {
@@ -775,35 +781,54 @@ xrdp_bitmap_copy_box(struct xrdp_bitmap *self,
 
     if (self->bpp == 24)
     {
+        s32 = ((tui32 *)(self->data)) + (self->width * y + x);
+        d32 = ((tui32 *)(dest->data)) + (dest->width * desty + destx);
+        incs = self->width - cx;
+        incd = dest->width - cx;
+
         for (i = 0; i < cy; i++)
         {
-            for (j = 0; j < cx; j++)
-            {
-                pixel = GETPIXEL32(self->data, j + x, i + y, self->width);
-                SETPIXEL32(dest->data, j + destx, i + desty, dest->width, pixel);
-            }
+            g_memcpy(d32, s32, cx * 4);
+            s32 += cx;
+            d32 += cx;
+
+            s32 += incs;
+            d32 += incd;
         }
+
     }
     else if (self->bpp == 15 || self->bpp == 16)
     {
+        s16 = ((tui16 *)(self->data)) + (self->width * y + x);
+        d16 = ((tui16 *)(dest->data)) + (dest->width * desty + destx);
+        incs = self->width - cx;
+        incd = dest->width - cx;
+
         for (i = 0; i < cy; i++)
         {
-            for (j = 0; j < cx; j++)
-            {
-                pixel = GETPIXEL16(self->data, j + x, i + y, self->width);
-                SETPIXEL16(dest->data, j + destx, i + desty, dest->width, pixel);
-            }
+            g_memcpy(d16, s16, cx * 2);
+            s16 += cx;
+            d16 += cx;
+
+            s16 += incs;
+            d16 += incd;
         }
     }
     else if (self->bpp == 8)
     {
+        s8 = ((tui8 *)(self->data)) + (self->width * y + x);
+        d8 = ((tui8 *)(dest->data)) + (dest->width * desty + destx);
+        incs = self->width - cx;
+        incd = dest->width - cx;
+
         for (i = 0; i < cy; i++)
         {
-            for (j = 0; j < cx; j++)
-            {
-                pixel = GETPIXEL8(self->data, j + x, i + y, self->width);
-                SETPIXEL8(dest->data, j + destx, i + desty, dest->width, pixel);
-            }
+            g_memcpy(d8, s8, cx);
+            s8 += cx;
+            d8 += cx;
+
+            s8 += incs;
+            d8 += incd;
         }
     }
     else
@@ -811,6 +836,51 @@ xrdp_bitmap_copy_box(struct xrdp_bitmap *self,
         return 1;
     }
 
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+xrdp_bitmap_hash_crc(struct xrdp_bitmap *self)
+{
+    void *hash;
+    int bytes;
+    int crc;
+    int index;
+    char hash_data[16];
+
+    if (self->bpp == 24)
+    {
+        bytes = self->width * self->height * 4;
+    }
+    else if (self->bpp == 15 || self->bpp == 16)
+    {
+        bytes = self->width * self->height * 2;
+    }
+    else if (self->bpp == 8)
+    {
+        bytes = self->width * self->height;
+    }
+    else
+    {
+        return 1;
+    }
+    hash = ssl_md5_info_create();
+    ssl_md5_transform(hash, self->data, bytes);
+    ssl_md5_complete(hash, hash_data);
+    ssl_md5_info_delete(hash);
+    CRC_START(crc);
+    CRC_PASS(self->width, crc);
+    CRC_PASS(self->width >> 8, crc);
+    CRC_PASS(self->height, crc);
+    CRC_PASS(self->height >> 8, crc);
+    for (index = 0; index < 16; index++)
+    {
+        CRC_PASS(hash_data[index], crc);
+    }
+    CRC_END(crc);
+    self->crc32 = crc;
+    self->crc16 = self->crc32 & 0xffff;
     return 0;
 }
 
