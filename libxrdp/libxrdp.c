@@ -636,7 +636,7 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
             out_uint16_le(s, bpp);
         }
     }
-    else
+    else /* slowpath */
     {
         LLOGLN(10, ("libxrdp_send_pointer: slowpath"));
         xrdp_rdp_init_data((struct xrdp_rdp *)session->rdp, s);

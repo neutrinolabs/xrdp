@@ -26,6 +26,7 @@
 #include "parse.h"
 #include "trans.h"
 #include "list.h"
+#include "list16.h"
 #include "libxrdpinc.h"
 #include "xrdp_constants.h"
 #include "xrdp_types.h"
@@ -206,15 +207,14 @@ xrdp_bitmap_copy_box(struct xrdp_bitmap* self,
                      struct xrdp_bitmap* dest,
                      int x, int y, int cx, int cy);
 int APP_CC
+xrdp_bitmap_hash_crc(struct xrdp_bitmap *self);
+int APP_CC
 xrdp_bitmap_copy_box_with_crc(struct xrdp_bitmap* self,
                               struct xrdp_bitmap* dest,
                               int x, int y, int cx, int cy);
 int APP_CC
 xrdp_bitmap_compare(struct xrdp_bitmap* self,
                     struct xrdp_bitmap* b);
-int APP_CC
-xrdp_bitmap_compare_with_crc(struct xrdp_bitmap* self,
-                             struct xrdp_bitmap* b);
 int APP_CC
 xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect);
 int APP_CC

@@ -629,23 +629,46 @@ xrdp_rdp_send_data_update_sync(struct xrdp_rdp *self)
     init_stream(s, 8192);
     DEBUG(("in xrdp_rdp_send_data_update_sync"));
 
-    if (xrdp_rdp_init_data(self, s) != 0)
+    if (self->client_info.use_fast_path & 1) /* fastpath output supported */
     {
-        DEBUG(("out xrdp_rdp_send_data_update_sync error"));
-        free_stream(s);
-        return 1;
+        LLOGLN(10, ("xrdp_rdp_send_data_update_sync: fastpath"));
+        if (xrdp_rdp_init_fastpath(self, s) != 0)
+        {
+           return 1;
+        }
+    }
+    else /* slowpath */
+    {
+        if (xrdp_rdp_init_data(self, s) != 0)
+        {
+            DEBUG(("out xrdp_rdp_send_data_update_sync error"));
+            free_stream(s);
+            return 1;
+        }
+        out_uint16_le(s, RDP_UPDATE_SYNCHRONIZE);
     }
 
-    out_uint16_le(s, RDP_UPDATE_SYNCHRONIZE);
-    out_uint8s(s, 2);
+    out_uint16_le(s, 0); /* pad */
     s_mark_end(s);
 
-    if (xrdp_rdp_send_data(self, s, RDP_DATA_PDU_UPDATE) != 0)
+    if (self->client_info.use_fast_path & 1) /* fastpath output supported */
     {
-        DEBUG(("out xrdp_rdp_send_data_update_sync error"));
-        free_stream(s);
-        return 1;
+        if (xrdp_rdp_send_fastpath(self, s,
+                                   FASTPATH_UPDATETYPE_SYNCHRONIZE) != 0)
+        {
+            return 1;
+        }
     }
+    else /* slowpath */
+    {
+        if (xrdp_rdp_send_data(self, s, RDP_DATA_PDU_UPDATE) != 0)
+        {
+            DEBUG(("out xrdp_rdp_send_data_update_sync error"));
+            free_stream(s);
+            return 1;
+        }
+    }
+
 
     DEBUG(("out xrdp_rdp_send_data_update_sync"));
     free_stream(s);
@@ -748,8 +771,8 @@ xrdp_rdp_send_synchronise(struct xrdp_rdp *self)
         return 1;
     }
 
-    out_uint16_le(s, 1);
-    out_uint16_le(s, 1002);
+    out_uint16_le(s, 1); /* messageType (2 bytes) */
+    out_uint16_le(s, 1002); /* targetUser (2 bytes) */
     s_mark_end(s);
 
     if (xrdp_rdp_send_data(self, s, RDP_DATA_PDU_SYNCHRONISE) != 0)
