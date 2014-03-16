@@ -148,9 +148,6 @@ rdpCapture0(RegionPtr in_reg, RegionPtr out_reg,
             src_rect = src + src_offset;
             dst_rect = dst + dst_offset;
 
-            /* bytes per line */
-            bytes = width * bytespp;
-
             /* copy one line at a time */
             for (j = 0; j < height; j++)
             {
@@ -188,9 +185,6 @@ rdpCapture0(RegionPtr in_reg, RegionPtr out_reg,
             src_rect = src + src_offset;
             dst_rect = dst + dst_offset;
 
-            /* bytes per line */
-            bytes = width * bytespp;
-
             /* copy one line at a time */
             for (j = 0; j < height; j++)
             {
@@ -227,9 +221,6 @@ rdpCapture0(RegionPtr in_reg, RegionPtr out_reg,
             dst_offset = rect.y1 * dst_stride + rect.x1 * dst_bytespp;
             src_rect = src + src_offset;
             dst_rect = dst + dst_offset;
-
-            /* bytes per line */
-            bytes = width * bytespp;
 
             /* copy one line at a time */
             for (j = 0; j < height; j++)
