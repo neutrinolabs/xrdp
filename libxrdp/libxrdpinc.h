@@ -228,5 +228,12 @@ int DEFAULT_CC
 libxrdp_monitored_desktop(struct xrdp_session* session,
                           struct rail_monitored_desktop_order* mdo,
                           int flags);
+int DEFAULT_CC
+libxrdp_codec_jpeg_compress(struct xrdp_session *session,
+                            int format, char *inp_data,
+                            int width, int height,
+                            int stride, int x, int y,
+                            int cx, int cy, int quality,
+                            char *out_data, int *io_len);
 
 #endif

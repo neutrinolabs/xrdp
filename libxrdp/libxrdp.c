@@ -1290,3 +1290,22 @@ libxrdp_monitored_desktop(struct xrdp_session *session,
     orders = (struct xrdp_orders *)(session->orders);
     return xrdp_orders_send_monitored_desktop(orders, mdo, flags);
 }
+
+/*****************************************************************************/
+int EXPORT_CC
+libxrdp_codec_jpeg_compress(struct xrdp_session *session,
+                            int format, char *inp_data,
+                            int width, int height,
+                            int stride, int x, int y,
+                            int cx, int cy, int quality,
+                            char *out_data, int *io_len)
+{
+    struct xrdp_orders *orders;
+    void* jpeg_han;
+
+    orders = (struct xrdp_orders *)(session->orders);
+    jpeg_han = orders->jpeg_han;
+    return xrdp_codec_jpeg_compress(jpeg_han, format, inp_data,
+                                    width, height, stride, x, y,
+                                    cx, cy, quality, out_data, io_len);
+}
