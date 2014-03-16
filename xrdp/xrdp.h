@@ -26,6 +26,7 @@
 #include "parse.h"
 #include "trans.h"
 #include "list.h"
+#include "list16.h"
 #include "libxrdpinc.h"
 #include "xrdp_constants.h"
 #include "xrdp_types.h"

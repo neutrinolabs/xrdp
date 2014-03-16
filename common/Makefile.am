@@ -5,6 +5,7 @@ EXTRA_DIST = \
   file.h \
   file_loc.h \
   list.h \
+  list16.h \
   fifo.h \
   log.h \
   os_calls.h \
@@ -32,6 +33,7 @@ libcommon_la_SOURCES = \
   d3des.c \
   file.c \
   list.c \
+  list16.c \
   fifo.c \
   log.c \
   os_calls.c \

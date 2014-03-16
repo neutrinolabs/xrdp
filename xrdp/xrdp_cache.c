@@ -79,8 +79,9 @@ xrdp_cache_reset_crc(struct xrdp_cache *self)
     {
         for (jndex = 0; jndex < 64 * 1024; jndex++)
         {
-            list_delete(self->crc16[index][jndex]);
-            self->crc16[index][jndex] = list_create();
+            /* it's ok it deinit a zero'ed out struct list16 */
+            list16_deinit(&(self->crc16[index][jndex]));
+            list16_init(&(self->crc16[index][jndex]));
         }
     }
     return 0;
@@ -168,8 +169,7 @@ xrdp_cache_delete(struct xrdp_cache *self)
     {
         for (j = 0; j < 64 * 1024; j++)
         {
-            list_delete(self->crc16[i][j]);
-            self->crc16[i][j] = 0;
+            list16_deinit(&(self->crc16[i][j]));
         }
     }
 
@@ -320,7 +320,7 @@ xrdp_cache_add_bitmap(struct xrdp_cache *self, struct xrdp_bitmap *bitmap,
     int found;
     int cache_entries;
     int lru_index;
-    struct list *ll;
+    struct list16 *ll;
     struct xrdp_bitmap *lbm;
     struct xrdp_lru_item *llru;
 
@@ -361,10 +361,10 @@ xrdp_cache_add_bitmap(struct xrdp_cache *self, struct xrdp_bitmap *bitmap,
     }
 
     crc16 = bitmap->crc16;
-    ll = self->crc16[cache_id][crc16];
+    ll = &(self->crc16[cache_id][crc16]);
     for (jndex = 0; jndex < ll->count; jndex++)
     {
-        cache_idx = list_get_item(ll, jndex);
+        cache_idx = list16_get_item(ll, jndex);
         if (COMPARE_WITH_CRC32
                  (self->bitmap_items[cache_id][cache_idx].bitmap, bitmap))
         {
@@ -418,15 +418,15 @@ xrdp_cache_add_bitmap(struct xrdp_cache *self, struct xrdp_bitmap *bitmap,
     if (lbm != 0)
     {
         crc16 = lbm->crc16;
-        ll = self->crc16[cache_id][crc16];
-        iig = list_index_of(ll, cache_idx);
+        ll = &(self->crc16[cache_id][crc16]);
+        iig = list16_index_of(ll, cache_idx);
         if (iig == -1)
         {
             LLOGLN(0, ("xrdp_cache_add_bitmap: error removing cache_idx"));
         }
         LLOGLN(10, ("xrdp_cache_add_bitmap: removing index %d from crc16 %d",
                iig, crc16));
-        list_remove_item(ll, iig);
+        list16_remove_item(ll, iig);
         xrdp_bitmap_delete(lbm);
     }
 
@@ -438,8 +438,8 @@ xrdp_cache_add_bitmap(struct xrdp_cache *self, struct xrdp_bitmap *bitmap,
 
     /* add to crc16 list */
     crc16 = bitmap->crc16;
-    ll = self->crc16[cache_id][crc16];
-    list_add_item(ll, cache_idx);
+    ll = &(self->crc16[cache_id][crc16]);
+    list16_add_item(ll, cache_idx);
     if (ll->count > 1)
     {
         LLOGLN(10, ("xrdp_cache_add_bitmap: count %d", ll->count));
