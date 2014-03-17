@@ -133,6 +133,9 @@ AC_CHECK_HEADER([X11/Xlib.h], [],
 AC_CHECK_HEADER([X11/extensions/Xfixes.h], [],
   [AC_MSG_ERROR([please install libx11-dev and libxfixes-dev or libXfixes-devel])],
   [#include <X11/Xlib.h>])
+AC_CHECK_HEADER([X11/extensions/Xrandr.h], [],
+  [AC_MSG_ERROR([please install libxrandr-dev or libXrandr-devel])],
+  [#include <X11/Xlib.h>])
 
 libdir="${libdir}/xrdp";
 if test "x${prefix}" = "xNONE" ; then
@@ -158,8 +161,8 @@ AC_CONFIG_FILES([Makefile
                  docs/man/Makefile
                  instfiles/Makefile
                  instfiles/pam.d/Makefile
-				 instfiles/init.d/Makefile
-				 instfiles/default/Makefile
+                 instfiles/init.d/Makefile
+                 instfiles/default/Makefile
                  genkeymap/Makefile
                  xrdpapi/Makefile
                  xrdpvr/Makefile
