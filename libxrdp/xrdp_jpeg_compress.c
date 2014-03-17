@@ -398,6 +398,15 @@ xrdp_jpeg_compress(void *handle, char *in_data, int width, int height,
 }
 
 /*****************************************************************************/
+int APP_CC
+xrdp_codec_jpeg_compress(void *handle, int format, char *inp_data, int width,
+                         int height, int stride, int x, int y, int cx, int cy,
+                         int quality, char *out_data, int *io_len)
+{
+    return 0;
+}
+
+/*****************************************************************************/
 void *APP_CC
 xrdp_jpeg_init(void)
 {
