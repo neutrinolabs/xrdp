@@ -1,10 +1,16 @@
+
 #ifndef _XRDP_ENCODER_H
 #define _XRDP_ENCODER_H
 
-struct xrdp_mm *self;
+#include "arch.h"
 
-int   init_xrdp_encoder(struct xrdp_mm *mm);
-void  deinit_xrdp_encoder();
-void *proc_enc_msg(void *arg);
+struct xrdp_mm;
+
+int APP_CC
+init_xrdp_encoder(struct xrdp_mm *self);
+void APP_CC
+deinit_xrdp_encoder(struct xrdp_mm *self);
+THREAD_RV THREAD_CC
+proc_enc_msg(void *arg);
 
 #endif

@@ -23,56 +23,73 @@
 #include "thread_calls.h"
 #include "fifo.h"
 
+#define LLOG_LEVEL 1
+#define LLOGLN(_level, _args) \
+  do \
+  { \
+    if (_level < LLOG_LEVEL) \
+    { \
+        g_write("xrdp:xrdp_encoder [%10.10u]: ", g_time3()); \
+        g_writeln _args ; \
+    } \
+  } \
+  while (0)
+
 /**
  * Init encoder
- * 
+ *
  * @return 0 on success, -1 on failure
- *****************************************************************************/ 
- 
-int init_xrdp_encoder(struct xrdp_mm *mm)
+ *****************************************************************************/
+
+int APP_CC
+init_xrdp_encoder(struct xrdp_mm *self)
 {
     char buf[1024];
-    
-    g_writeln("xrdp_encoder.c: initing encoder");
-        
-    if (!mm)
+
+    LLOGLN(0, ("init_xrdp_encoder: initing encoder"));
+
+    if (self == 0)
+    {
         return -1;
-        
-    /* save mm so thread can access it */
-    self = mm;
-    
+    }
+
     /* setup required FIFOs */
     self->fifo_to_proc = fifo_create();
     self->fifo_processed = fifo_create();
     self->mutex = tc_mutex_create();
-    
+
     /* setup wait objects for signalling */
     g_snprintf(buf, 1024, "xrdp_encoder_%8.8x", g_getpid());
-    self->xrdp_encoder_event = g_create_wait_obj(buf);
-    
+    self->xrdp_encoder_event_to_proc = g_create_wait_obj(buf);
+    self->xrdp_encoder_event_processed = g_create_wait_obj(buf);
+
     /* create thread to process messages */
-    tc_thread_create(proc_enc_msg, 0);
-    
+    tc_thread_create(proc_enc_msg, self);
+
     return 0;
 }
 
 /**
  * Deinit xrdp encoder
  *****************************************************************************/
- 
-void deinit_xrdp_encoder()
+
+void APP_CC
+deinit_xrdp_encoder(struct xrdp_mm *self)
 {
     XRDP_ENC_DATA *enc;
     FIFO          *fifo;
-    
-    g_writeln("xrdp_encoder.c: deiniting encoder");
-    
-    if (!self)
+
+    LLOGLN(0, ("deinit_xrdp_encoder: deiniting encoder"));
+
+    if (self == 0)
+    {
         return;
+    }
 
     /* destroy wait objects used for signalling */
-    g_delete_wait_obj(self->xrdp_encoder_event);
-    
+    g_delete_wait_obj(self->xrdp_encoder_event_to_proc);
+    g_delete_wait_obj(self->xrdp_encoder_event_processed);
+
     /* cleanup fifo_to_proc */
     fifo = self->fifo_to_proc;
     if (fifo)
@@ -82,15 +99,15 @@ void deinit_xrdp_encoder()
             enc = fifo_remove_item(fifo);
             if (!enc)
                 continue;
-                
+
             g_free(enc->drects);
             g_free(enc->crects);
             g_free(enc);
         }
-        
+
         fifo_delete(fifo);
     }
-    
+
     /* cleanup fifo_processed */
     fifo = self->fifo_processed;
     if (fifo)
@@ -99,61 +116,157 @@ void deinit_xrdp_encoder()
         {
             enc = fifo_remove_item(fifo);
             if (!enc)
+            {
                 continue;
-                
+            }
             g_free(enc->drects);
             g_free(enc->crects);
             g_free(enc);
         }
-        
         fifo_delete(fifo);
-    }    
+    }
 }
 
-void *proc_enc_msg(void *arg)
+/*****************************************************************************/
+static int
+process_enc(struct xrdp_mm *self, XRDP_ENC_DATA *enc)
 {
-    XRDP_ENC_DATA *enc;
-    FIFO          *fifo_to_proc; 
-    FIFO          *fifo_processed; 
-    tbus           mutex;
-    tbus           event;
-    
-    g_writeln("xrdp_encoder.c: process_enc_msg thread is running");
-    
-    fifo_to_proc = self->fifo_to_proc;
+    int                  index;
+    int                  x;
+    int                  y;
+    int                  cx;
+    int                  cy;
+    int                  quality;
+    int                  error;
+    int                  out_data_bytes;
+    char                *out_data;
+    XRDP_ENC_DATA_DONE  *enc_done;
+    FIFO                *fifo_processed;
+    tbus                 mutex;
+    tbus                 event_processed;
+
+    LLOGLN(10, ("process_enc:"));
+    quality = 75;
     fifo_processed = self->fifo_processed;
     mutex = self->mutex;
-    event = self->xrdp_encoder_event;
-    
-    while (1)
+    event_processed = self->xrdp_encoder_event_processed;
+    for (index = 0; index < enc->num_crects; index++)
     {
-        /* get next msg */
-        tc_mutex_lock(mutex);
-        enc = fifo_remove_item(fifo_to_proc);
-        tc_mutex_unlock(mutex);
-        
-        /* if no msg available, wait for signal */
-        if (!enc)
+        x = enc->crects[index * 4 + 0];
+        y = enc->crects[index * 4 + 1];
+        cx = enc->crects[index * 4 + 2];
+        cy = enc->crects[index * 4 + 3];
+        out_data_bytes = MAX((cx + 4) * cy * 4, 8192);
+        if ((out_data_bytes < 1) || (out_data_bytes > 16 * 1024 * 1024))
         {
-            g_writeln("###### JAY_TODO: waiting for msg....");
-            g_tcp_can_recv(event, 1000);
-            g_reset_wait_obj(event);
-            continue;
+            LLOGLN(0, ("process_enc: error"));
+            return 1;
         }
-        
-        /* process msg in enc obj */
-        g_writeln("###### JAY_TODO: got msg....");
-        /* JAY_TODO */
-        
+        out_data = (char *) g_malloc(out_data_bytes, 0);
+        if (out_data == 0)
+        {
+            LLOGLN(0, ("process_enc: error"));
+            return 1;
+        }
+        error = libxrdp_codec_jpeg_compress(self->wm->session, 0, enc->data,
+                                            enc->width, enc->height,
+                                            enc->width * 4, x, y, cx, cy,
+                                            quality,
+                                            out_data, &out_data_bytes);
+        LLOGLN(10, ("jpeg error %d bytes %d", error, out_data_bytes));
+        enc_done = g_malloc(sizeof(XRDP_ENC_DATA_DONE), 1);
+        enc_done->comp_bytes = out_data_bytes;
+        enc_done->comp_data = out_data;
+        enc_done->enc = enc;
+        enc_done->last = index == (enc->num_crects - 1);
+        enc_done->index = index;
         /* done with msg */
+        /* inform main thread done */
         tc_mutex_lock(mutex);
-        fifo_add_item(fifo_processed, enc);
+        fifo_add_item(fifo_processed, enc_done);
         tc_mutex_unlock(mutex);
-        
-        /* signal completion */
-        g_set_wait_obj(event);
-        
-    } /* end while (1) */
-    
+        /* signal completion for main thread */
+        g_set_wait_obj(event_processed);
+    }
+    return 0;
+}
+
+/**
+ * Init encoder
+ *
+ * @return 0 on success, -1 on failure
+ *****************************************************************************/
+THREAD_RV THREAD_CC
+proc_enc_msg(void *arg)
+{
+    XRDP_ENC_DATA  *enc;
+    FIFO           *fifo_to_proc;
+    tbus            mutex;
+    tbus            event_to_proc;
+    tbus            term_obj;
+    int             robjs_count;
+    int             wobjs_count;
+    int             cont;
+    int             timeout;
+    tbus            robjs[32];
+    tbus            wobjs[32];
+    struct xrdp_mm *self;
+
+    LLOGLN(0, ("proc_enc_msg: thread is running"));
+
+    self = (struct xrdp_mm *) arg;
+    if (self == 0)
+    {
+        LLOGLN(0, ("proc_enc_msg: self nil"));
+        return 0;
+    }
+
+    fifo_to_proc = self->fifo_to_proc;
+    mutex = self->mutex;
+    event_to_proc = self->xrdp_encoder_event_to_proc;
+
+    term_obj = g_get_term_event();
+
+    cont = 1;
+    while (cont)
+    {
+        timeout = -1;
+        robjs_count = 0;
+        wobjs_count = 0;
+        robjs[robjs_count++] = term_obj;
+        robjs[robjs_count++] = event_to_proc;
+
+        if (g_obj_wait(robjs, robjs_count, wobjs, wobjs_count, timeout) != 0)
+        {
+            /* error, should not get here */
+            g_sleep(100);
+        }
+
+        if (g_is_wait_obj_set(term_obj)) /* term */
+        {
+            break;
+        }
+
+        if (g_is_wait_obj_set(event_to_proc))
+        {
+            /* clear it right away */
+            g_reset_wait_obj(event_to_proc);
+            /* get first msg */
+            tc_mutex_lock(mutex);
+            enc = (XRDP_ENC_DATA *) fifo_remove_item(fifo_to_proc);
+            tc_mutex_unlock(mutex);
+            while (enc != 0)
+            {
+                /* do work */
+                process_enc(self, enc);
+                /* get next msg */
+                tc_mutex_lock(mutex);
+                enc = (XRDP_ENC_DATA *) fifo_remove_item(fifo_to_proc);
+                tc_mutex_unlock(mutex);
+            }
+        }
+
+    } /* end while (cont) */
+    LLOGLN(0, ("proc_enc_msg: thread exit"));
     return 0;
 }

@@ -120,10 +120,11 @@ xrdp_codec_jpeg_compress(void *handle,
                                          /* len of compressed data */
                          )
 {
-    tjhandle  tj_han;
-    int       error;
-    int       bpp;
-    char     *src_ptr;
+    tjhandle       tj_han;
+    int            error;
+    int            bpp;
+    char          *src_ptr;
+    unsigned long  lio_len;
 
     /*
      * note: for now we assume that format is always XBGR and ignore format
@@ -143,7 +144,21 @@ xrdp_codec_jpeg_compress(void *handle,
     /* start of inner rect in inp_data */
     src_ptr = inp_data + (y * stride + x * bpp);
 
+    lio_len = *io_len;
     /* compress inner rect */
+
+    /* notes
+     * TJPF_RGB no works, zero bytes
+     * TJPF_BGR no works, not zero but no open
+     * TJPF_RGBX no works, zero bytes
+     * TJPF_BGRX no works, off scaled image
+     * TJPF_XBGR works
+     * TJPF_XRGB no works, zero bytes
+     * TJPF_RGBA no works, zero bytes
+     * TJPF_BGRA no works, zero bytes
+     * TJPF_ABGR no works, zero bytes
+     * TJPF_ARGB no works, zero bytes */
+
     error = tjCompress(tj_han,     /* opaque handle */
                        src_ptr,    /* source buf */
                        cx,         /* width of area to compress */
@@ -151,11 +166,12 @@ xrdp_codec_jpeg_compress(void *handle,
                        cy,         /* height of area to compress */
                        TJPF_XBGR,  /* pixel size */
                        out_data,   /* dest buf */
-                       io_len,     /* inner_buf length & compressed_size */
+                       &lio_len,   /* inner_buf length & compressed_size */
                        TJSAMP_420, /* jpeg sub sample */
                        quality,    /* jpeg quality */
                        0           /* flags */
                        );
+    *io_len = lio_len;
     return height;
 }
 
@@ -405,6 +421,15 @@ xrdp_jpeg_compress(void *handle, char *in_data, int width, int height,
                    int e, int quality)
 {
     return height;
+}
+
+/*****************************************************************************/
+int APP_CC
+xrdp_codec_jpeg_compress(void *handle, int format, char *inp_data, int width,
+                         int height, int stride, int x, int y, int cx, int cy,
+                         int quality, char *out_data, int *io_len)
+{
+    return 0;
 }
 
 /*****************************************************************************/

@@ -287,10 +287,11 @@ struct xrdp_mm
   int chan_trans_up; /* true once connected to chansrv */
   int delete_chan_trans; /* boolean set when done with channel connection */
   int usechansrv; /* true if chansrvport is set in xrdp.ini or using sesman */
-  
+
   /* for codec mode operations */
   int   in_codec_mode;
-  tbus  xrdp_encoder_event;
+  tbus  xrdp_encoder_event_to_proc;
+  tbus  xrdp_encoder_event_processed;
   FIFO *fifo_to_proc;
   FIFO *fifo_processed;
   tbus  mutex;
@@ -619,9 +620,23 @@ struct xrdp_enc_data
     char            *data;
     int              width;
     int              height;
-    int              flags;  
+    int              flags;
 };
 
 typedef struct xrdp_enc_data XRDP_ENC_DATA;
+
+/* used when scheduling tasks from xrdp_encoder.c */
+struct xrdp_enc_data_done
+{
+    int                   comp_bytes;
+    char                 *comp_data;
+    struct xrdp_enc_data *enc;
+    int                   last; /* true is this is last message for enc */
+    int                   index; /* depends on codec */
+};
+
+typedef struct xrdp_enc_data_done XRDP_ENC_DATA_DONE;
+
+
 
 #endif
