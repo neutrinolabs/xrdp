@@ -90,6 +90,8 @@ xrdp_mm_module_cleanup(struct xrdp_mm *self)
 {
     log_message(LOG_LEVEL_DEBUG,"xrdp_mm_module_cleanup");
 
+    deinit_xrdp_encoder(self);
+
     if (self->mod != 0)
     {
         if (self->mod_exit != 0)
