@@ -508,6 +508,18 @@ xrdp_rdp_send_data(struct xrdp_rdp *self, struct stream *s,
 }
 
 /*****************************************************************************/
+/* returns the fastpath rdp byte count */
+int APP_CC
+xrdp_rdp_get_fastpath_bytes(struct xrdp_rdp *self)
+{
+    if (self->client_info.rdp_compression)
+    {
+        return 4;
+    }
+    return 3;
+}
+
+/*****************************************************************************/
 int APP_CC
 xrdp_rdp_init_fastpath(struct xrdp_rdp *self, struct stream *s)
 {

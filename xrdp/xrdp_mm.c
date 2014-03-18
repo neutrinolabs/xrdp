@@ -1980,9 +1980,17 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
                     g_snprintf(text, 255, "/tmp/jj0x%8.8x.jpg", jj);
                     jj++;
                     ii = g_file_open(text);
-                    g_file_write(ii, enc_done->comp_data, enc_done->comp_bytes);
+                    g_file_write(ii, enc_done->comp_pad_data + enc_done->pad_bytes, enc_done->comp_bytes);
                     g_file_close(ii);
                 }
+                
+                libxrdp_fastpath_send_surface(self->wm->session,
+                                              enc_done->comp_pad_data,
+                                              enc_done->pad_bytes,
+                                              enc_done->comp_bytes,
+                                              0, 0, 0, 0, 32, 99, 0, 0);
+                
+                
                 /* free enc_done */
                 if (enc_done->last)
                 {
@@ -1991,7 +1999,7 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
                     g_free(enc_done->enc->crects);
                     g_free(enc_done->enc);
                 }
-                g_free(enc_done->comp_data);
+                g_free(enc_done->comp_pad_data);
                 g_free(enc_done);
                 tc_mutex_lock(self->mutex);
                 enc_done = (XRDP_ENC_DATA_DONE*)

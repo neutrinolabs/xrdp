@@ -162,7 +162,7 @@ process_enc(struct xrdp_mm *self, XRDP_ENC_DATA *enc)
             LLOGLN(0, ("process_enc: error"));
             return 1;
         }
-        out_data = (char *) g_malloc(out_data_bytes, 0);
+        out_data = (char *) g_malloc(out_data_bytes + 256, 0);
         if (out_data == 0)
         {
             LLOGLN(0, ("process_enc: error"));
@@ -172,11 +172,20 @@ process_enc(struct xrdp_mm *self, XRDP_ENC_DATA *enc)
                                             enc->width, enc->height,
                                             enc->width * 4, x, y, cx, cy,
                                             quality,
-                                            out_data, &out_data_bytes);
+                                            out_data + 256, &out_data_bytes);
+        if (error < 0)
+        {
+            LLOGLN(0, ("process_enc: jpeg error %d bytes %d",
+                   error, out_data_bytes));
+            g_free(out_data);
+            return 1;
+        }
         LLOGLN(10, ("jpeg error %d bytes %d", error, out_data_bytes));
-        enc_done = g_malloc(sizeof(XRDP_ENC_DATA_DONE), 1);
+        enc_done = (XRDP_ENC_DATA_DONE *)
+                   g_malloc(sizeof(XRDP_ENC_DATA_DONE), 1);
         enc_done->comp_bytes = out_data_bytes;
-        enc_done->comp_data = out_data;
+        enc_done->pad_bytes = 256;
+        enc_done->comp_pad_data = out_data;
         enc_done->enc = enc;
         enc_done->last = index == (enc->num_crects - 1);
         enc_done->index = index;

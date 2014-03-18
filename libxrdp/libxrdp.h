@@ -376,6 +376,8 @@ xrdp_rdp_init(struct xrdp_rdp* self, struct stream* s);
 int APP_CC
 xrdp_rdp_init_data(struct xrdp_rdp* self, struct stream* s);
 int APP_CC
+xrdp_rdp_get_fastpath_bytes(struct xrdp_rdp *self);
+int APP_CC
 xrdp_rdp_init_fastpath(struct xrdp_rdp *self, struct stream *s);
 int APP_CC
 xrdp_rdp_recv(struct xrdp_rdp* self, struct stream* s, int* code);

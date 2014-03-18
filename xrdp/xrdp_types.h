@@ -629,7 +629,8 @@ typedef struct xrdp_enc_data XRDP_ENC_DATA;
 struct xrdp_enc_data_done
 {
     int                   comp_bytes;
-    char                 *comp_data;
+    int                   pad_bytes;
+    char                 *comp_pad_data;
     struct xrdp_enc_data *enc;
     int                   last; /* true is this is last message for enc */
     int                   index; /* depends on codec */

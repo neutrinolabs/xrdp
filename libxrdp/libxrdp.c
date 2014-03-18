@@ -1309,3 +1309,72 @@ libxrdp_codec_jpeg_compress(struct xrdp_session *session,
                                     width, height, stride, x, y,
                                     cx, cy, quality, out_data, io_len);
 }
+
+/*****************************************************************************/
+int EXPORT_CC
+libxrdp_fastpath_send_surface(struct xrdp_session *session,
+                              char* data_pad, int pad_bytes,
+                              int data_bytes,
+                              int destLeft, int destTop,
+                              int destRight, int destBottom, int bpp,
+                              int codecID, int width, int height)
+{
+    struct stream ls;
+    struct stream *s;
+    struct xrdp_rdp *rdp;
+    int rv;
+    int sec_bytes;
+    int rdp_bytes;
+    int max_bytes;
+    int cmd_bytes;
+
+    LLOGLN(10, ("libxrdp_fastpath_init:"));
+    if ((session->client_info->use_fast_path & 1) == 0)
+    {
+        return 1;
+    }
+    max_bytes = session->client_info->max_fastpath_frag_bytes;
+    if (max_bytes < 32 * 1024)
+    {
+        max_bytes = 32 * 1024;
+    }
+    rdp = (struct xrdp_rdp *) (session->rdp);
+    rdp_bytes = xrdp_rdp_get_fastpath_bytes(rdp);
+    sec_bytes = xrdp_sec_get_fastpath_bytes(rdp->sec_layer);
+    cmd_bytes = 10 + 12;
+    if (data_bytes + rdp_bytes + sec_bytes + cmd_bytes > max_bytes)
+    {
+        return 1;
+    }
+    if (sec_bytes + rdp_bytes + cmd_bytes > pad_bytes)
+    {
+        return 1;
+    }
+    g_memset(&ls, 0, sizeof(ls));
+    s = &ls;
+    s->data = (data_pad + pad_bytes) - (rdp_bytes + sec_bytes + cmd_bytes);
+    s->sec_hdr = s->data;
+    s->rdp_hdr = s->sec_hdr + sec_bytes;
+    s->end = data_pad + pad_bytes + data_bytes;
+    s->p = s->data + (rdp_bytes + sec_bytes);
+    /* TS_SURFCMD_SET_SURF_BITS */
+    out_uint16_le(s, 0x0001); /* CMDTYPE_SET_SURFACE_BITS */
+    out_uint16_le(s, destLeft);
+    out_uint16_le(s, destTop);
+    out_uint16_le(s, destRight);
+    out_uint16_le(s, destBottom);
+    /* TS_ BITMAP_DATA_EX */
+    out_uint8(s, bpp);
+    out_uint8(s, 0);
+    out_uint8(s, 0);
+    out_uint8(s, codecID);
+    out_uint16_le(s, width);
+    out_uint16_le(s, height);
+    out_uint32_le(s, data_bytes);
+    /* 4 = FASTPATH_UPDATETYPE_SURFCMDS */
+    if (xrdp_rdp_send_fastpath(rdp, s, 4) != 0)
+    {
+        return 1;
+    }
+    return 0;
+}

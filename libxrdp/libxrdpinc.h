@@ -235,5 +235,12 @@ libxrdp_codec_jpeg_compress(struct xrdp_session *session,
                             int stride, int x, int y,
                             int cx, int cy, int quality,
                             char *out_data, int *io_len);
+int DEFAULT_CC
+libxrdp_fastpath_send_surface(struct xrdp_session *session,
+                              char* data_pad, int pad_bytes,
+                              int data_bytes,
+                              int destLeft, int dst_Top,
+                              int destRight, int destBottom, int bpp,
+                              int codecID, int width, int height);
 
 #endif
