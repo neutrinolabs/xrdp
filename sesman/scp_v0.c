@@ -130,10 +130,10 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
                                             s->domain, s->program, s->directory,
                                             s->client_ip);					
 				}
-                else 
+                else if (SCP_SESSION_TYPE_XORG == s->type)
                 {
 					/* type is SCP_SESSION_TYPE_XORG */
-                    log_message(LOG_LEVEL_INFO, "starting XOrg session...");
+                    log_message(LOG_LEVEL_INFO, "starting Xorg session...");
                     display = session_start(s->width, s->height, s->bpp, s->username,
                                             s->password, data, SESMAN_SESSION_TYPE_XORG,
                                             s->domain, s->program, s->directory,
