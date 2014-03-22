@@ -1299,8 +1299,11 @@ xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s)
     int datalen;
     int pdulen;
     int pad;
+    int error;
+    char save[8];
 
     LLOGLN(10, ("xrdp_sec_send_fastpath:"));
+    error = 0;
     s_pop_layer(s, sec_hdr);
     if (self->crypt_level == CRYPT_LEVEL_FIPS)
     {
@@ -1319,7 +1322,11 @@ xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s)
         s->end += pad;
         out_uint8(s, pad); /* fips pad */
         xrdp_sec_fips_sign(self, s->p, 8, s->p + 8, datalen);
+        g_memcpy(save, s->p + 8 + datalen, pad);
+        g_memset(s->p + 8 + datalen, 0, pad);
         xrdp_sec_fips_encrypt(self, s->p + 8, datalen + pad);
+        error = xrdp_fastpath_send(self->fastpath_layer, s);
+        g_memcpy(s->p + 8 + datalen, save, pad);
     }
     else if (self->crypt_level > CRYPT_LEVEL_LOW)
     {
@@ -1333,6 +1340,7 @@ xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s)
         out_uint16_be(s, pdulen);
         xrdp_sec_sign(self, s->p, 8, s->p + 8, datalen);
         xrdp_sec_encrypt(self, s->p + 8, datalen);
+        error = xrdp_fastpath_send(self->fastpath_layer, s);
     }
     else
     {
@@ -1344,8 +1352,9 @@ xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s)
         out_uint8(s, fpOutputHeader);
         pdulen |= 0x8000;
         out_uint16_be(s, pdulen);
+        error = xrdp_fastpath_send(self->fastpath_layer, s);
     }
-    if (xrdp_fastpath_send(self->fastpath_layer, s) != 0)
+    if (error != 0)
     {
         return 1;
     }
