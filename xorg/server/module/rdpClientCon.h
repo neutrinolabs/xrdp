@@ -89,8 +89,6 @@ struct _rdpClientCon
     struct font_cache font_cache[12][256];
     int font_stamp;
 
-    RegionPtr dirtyRegion;
-
     struct xrdp_client_info client_info;
 
     char *shmemptr;
@@ -102,6 +100,8 @@ struct _rdpClientCon
 
     OsTimerPtr updateTimer;
     int updateSchedualed; /* boolean */
+
+    RegionPtr dirtyRegion;
 
     struct _rdpClientCon *next;
 };

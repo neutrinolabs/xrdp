@@ -1873,6 +1873,10 @@ rdpClientConSendPaintRectShmEx(rdpPtr dev, rdpClientCon *clientCon,
     int size;
     int num_rects_d;
     int num_rects_c;
+    short x;
+    short y;
+    short cx;
+    short cy;
     struct stream *s;
     BoxRec box;
 
@@ -1880,6 +1884,11 @@ rdpClientConSendPaintRectShmEx(rdpPtr dev, rdpClientCon *clientCon,
 
     num_rects_d = REGION_NUM_RECTS(dirtyReg);
     num_rects_c = REGION_NUM_RECTS(copyReg);
+    if ((num_rects_c < 1) || (num_rects_d < 1))
+    {
+        LLOGLN(0, ("rdpClientConSendPaintRectShmEx: nothing to send"));
+        return 0;
+    }
     size = 2 + 2 + 2 + num_rects_d * 8 + 2 + num_rects_c * 8;
     size += 4 + 4 + 4 + 4 + 2 + 2;
     rdpClientConPreCheck(dev, clientCon, size);
@@ -1893,20 +1902,28 @@ rdpClientConSendPaintRectShmEx(rdpPtr dev, rdpClientCon *clientCon,
     for (index = 0; index < num_rects_d; index++)
     {
         box = REGION_RECTS(dirtyReg)[index];
-        out_uint16_le(s, box.x1);
-        out_uint16_le(s, box.y1);
-        out_uint16_le(s, box.x2 - box.x1);
-        out_uint16_le(s, box.y2 - box.y1);
+        x = box.x1;
+        y = box.y1;
+        cx = box.x2 - box.x1;
+        cy = box.y2 - box.y1;
+        out_uint16_le(s, x);
+        out_uint16_le(s, y);
+        out_uint16_le(s, cx);
+        out_uint16_le(s, cy);
     }
 
     out_uint16_le(s, num_rects_c);
     for (index = 0; index < num_rects_c; index++)
     {
         box = REGION_RECTS(copyReg)[index];
-        out_uint16_le(s, box.x1);
-        out_uint16_le(s, box.y1);
-        out_uint16_le(s, box.x2 - box.x1);
-        out_uint16_le(s, box.y2 - box.y1);
+        x = box.x1;
+        y = box.y1;
+        cx = box.x2 - box.x1;
+        cy = box.y2 - box.y1;
+        out_uint16_le(s, x);
+        out_uint16_le(s, y);
+        out_uint16_le(s, cx);
+        out_uint16_le(s, cy);
     }
 
     out_uint32_le(s, 0);
@@ -1933,11 +1950,14 @@ rdpDeferredUpdateCallback(OsTimerPtr timer, CARD32 now, pointer arg)
     LLOGLN(10, ("rdpDeferredUpdateCallback:"));
     clientCon = (rdpClientCon *) arg;
 
-    if (clientCon->rect_id != clientCon->rect_id_ack)
+    if (clientCon->rect_id > clientCon->rect_id_ack)
     {
-        LLOGLN(0, ("rdpDeferredUpdateCallback: reschedual"));
+        LLOGLN(0, ("rdpDeferredUpdateCallback: reschedual rect_id %d "
+               "rect_id_ack %d",
+               clientCon->rect_id, clientCon->rect_id_ack));
         clientCon->updateTimer = TimerSet(clientCon->updateTimer, 0, 40,
-                                          rdpDeferredUpdateCallback, clientCon);
+                                          rdpDeferredUpdateCallback,
+                                          clientCon);
         return 0;
     }
     else
