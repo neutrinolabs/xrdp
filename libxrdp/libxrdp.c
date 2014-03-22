@@ -623,6 +623,7 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
         LLOGLN(10, ("libxrdp_send_pointer: fastpath"));
         if (xrdp_rdp_init_fastpath((struct xrdp_rdp *)session->rdp, s) != 0)
         {
+            free_stream(s);
             return 1;
         }
 
@@ -716,6 +717,7 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
             if (xrdp_rdp_send_fastpath((struct xrdp_rdp *)session->rdp, s,
                                         FASTPATH_UPDATETYPE_COLOR) != 0)
             {
+                free_stream(s);
                 return 1;
             }
         }
@@ -724,6 +726,7 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
             if (xrdp_rdp_send_fastpath((struct xrdp_rdp *)session->rdp, s,
                                         FASTPATH_UPDATETYPE_POINTER) != 0)
             {
+                free_stream(s);
                 return 1;
             }
         }
