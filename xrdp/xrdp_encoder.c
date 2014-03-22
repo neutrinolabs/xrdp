@@ -45,6 +45,7 @@ int APP_CC
 init_xrdp_encoder(struct xrdp_mm *self)
 {
     char buf[1024];
+    int pid;
 
     LLOGLN(0, ("init_xrdp_encoder: initing encoder"));
 
@@ -58,10 +59,14 @@ init_xrdp_encoder(struct xrdp_mm *self)
     self->fifo_processed = fifo_create();
     self->mutex = tc_mutex_create();
 
+    pid = g_getpid();
     /* setup wait objects for signalling */
-    g_snprintf(buf, 1024, "xrdp_encoder_%8.8x", g_getpid());
+    g_snprintf(buf, 1024, "xrdp_%8.8x_encoder_event_to_proc", pid);
     self->xrdp_encoder_event_to_proc = g_create_wait_obj(buf);
+    g_snprintf(buf, 1024, "xrdp_%8.8x_encoder_event_processed", pid);
     self->xrdp_encoder_event_processed = g_create_wait_obj(buf);
+    g_snprintf(buf, 1024, "xrdp_%8.8x_encoder_term", pid);
+    self->xrdp_encoder_term = g_create_wait_obj(buf);
 
     /* create thread to process messages */
     tc_thread_create(proc_enc_msg, self);
@@ -72,11 +77,12 @@ init_xrdp_encoder(struct xrdp_mm *self)
 /**
  * Deinit xrdp encoder
  *****************************************************************************/
-
+/* called from main thread */
 void APP_CC
 deinit_xrdp_encoder(struct xrdp_mm *self)
 {
     XRDP_ENC_DATA *enc;
+    XRDP_ENC_DATA_DONE *enc_done;
     FIFO          *fifo;
 
     LLOGLN(0, ("deinit_xrdp_encoder: deiniting encoder"));
@@ -86,9 +92,18 @@ deinit_xrdp_encoder(struct xrdp_mm *self)
         return;
     }
 
+    if (self->in_codec_mode == 0)
+    {
+        return;
+    }
+    /* tell worker thread to shut down */
+    g_set_wait_obj(self->xrdp_encoder_term);
+    g_sleep(1000);
+
     /* destroy wait objects used for signalling */
     g_delete_wait_obj(self->xrdp_encoder_event_to_proc);
     g_delete_wait_obj(self->xrdp_encoder_event_processed);
+    g_delete_wait_obj(self->xrdp_encoder_term);
 
     /* cleanup fifo_to_proc */
     fifo = self->fifo_to_proc;
@@ -97,9 +112,10 @@ deinit_xrdp_encoder(struct xrdp_mm *self)
         while (!fifo_is_empty(fifo))
         {
             enc = fifo_remove_item(fifo);
-            if (!enc)
+            if (enc == 0)
+            {
                 continue;
-
+            }
             g_free(enc->drects);
             g_free(enc->crects);
             g_free(enc);
@@ -114,14 +130,13 @@ deinit_xrdp_encoder(struct xrdp_mm *self)
     {
         while (!fifo_is_empty(fifo))
         {
-            enc = fifo_remove_item(fifo);
-            if (!enc)
+            enc_done = fifo_remove_item(fifo);
+            if (enc == 0)
             {
                 continue;
             }
-            g_free(enc->drects);
-            g_free(enc->crects);
-            g_free(enc);
+            g_free(enc_done->comp_pad_data);
+            g_free(enc_done);
         }
         fifo_delete(fifo);
     }
@@ -139,6 +154,7 @@ process_enc(struct xrdp_mm *self, XRDP_ENC_DATA *enc)
     int                  quality;
     int                  error;
     int                  out_data_bytes;
+    int                  count;
     char                *out_data;
     XRDP_ENC_DATA_DONE  *enc_done;
     FIFO                *fifo_processed;
@@ -150,29 +166,37 @@ process_enc(struct xrdp_mm *self, XRDP_ENC_DATA *enc)
     fifo_processed = self->fifo_processed;
     mutex = self->mutex;
     event_processed = self->xrdp_encoder_event_processed;
-    for (index = 0; index < enc->num_crects; index++)
+    count = enc->num_crects;
+    for (index = 0; index < count; index++)
     {
         x = enc->crects[index * 4 + 0];
         y = enc->crects[index * 4 + 1];
         cx = enc->crects[index * 4 + 2];
         cy = enc->crects[index * 4 + 3];
+        if (cx < 1 || cy < 1)
+        {
+            LLOGLN(0, ("process_enc: error 1"));
+            continue;
+        }
         out_data_bytes = MAX((cx + 4) * cy * 4, 8192);
         if ((out_data_bytes < 1) || (out_data_bytes > 16 * 1024 * 1024))
         {
-            LLOGLN(0, ("process_enc: error"));
+            LLOGLN(0, ("process_enc: error 2"));
             return 1;
         }
-        out_data = (char *) g_malloc(out_data_bytes + 256, 0);
+        out_data = (char *) g_malloc(out_data_bytes + 256 + 2, 0);
         if (out_data == 0)
         {
-            LLOGLN(0, ("process_enc: error"));
+            LLOGLN(0, ("process_enc: error 3"));
             return 1;
         }
+        out_data[256] = 0; /* header bytes */
+        out_data[257] = 0;
         error = libxrdp_codec_jpeg_compress(self->wm->session, 0, enc->data,
                                             enc->width, enc->height,
                                             enc->width * 4, x, y, cx, cy,
                                             quality,
-                                            out_data + 256, &out_data_bytes);
+                                            out_data + 256 + 2, &out_data_bytes);
         if (error < 0)
         {
             LLOGLN(0, ("process_enc: jpeg error %d bytes %d",
@@ -183,7 +207,7 @@ process_enc(struct xrdp_mm *self, XRDP_ENC_DATA *enc)
         LLOGLN(10, ("jpeg error %d bytes %d", error, out_data_bytes));
         enc_done = (XRDP_ENC_DATA_DONE *)
                    g_malloc(sizeof(XRDP_ENC_DATA_DONE), 1);
-        enc_done->comp_bytes = out_data_bytes;
+        enc_done->comp_bytes = out_data_bytes + 2;
         enc_done->pad_bytes = 256;
         enc_done->comp_pad_data = out_data;
         enc_done->enc = enc;
@@ -213,6 +237,7 @@ proc_enc_msg(void *arg)
     tbus            mutex;
     tbus            event_to_proc;
     tbus            term_obj;
+    tbus            lterm_obj;
     int             robjs_count;
     int             wobjs_count;
     int             cont;
@@ -235,6 +260,7 @@ proc_enc_msg(void *arg)
     event_to_proc = self->xrdp_encoder_event_to_proc;
 
     term_obj = g_get_term_event();
+    lterm_obj = self->xrdp_encoder_term;
 
     cont = 1;
     while (cont)
@@ -243,6 +269,7 @@ proc_enc_msg(void *arg)
         robjs_count = 0;
         wobjs_count = 0;
         robjs[robjs_count++] = term_obj;
+        robjs[robjs_count++] = lterm_obj;
         robjs[robjs_count++] = event_to_proc;
 
         if (g_obj_wait(robjs, robjs_count, wobjs, wobjs_count, timeout) != 0)
@@ -251,8 +278,15 @@ proc_enc_msg(void *arg)
             g_sleep(100);
         }
 
-        if (g_is_wait_obj_set(term_obj)) /* term */
+        if (g_is_wait_obj_set(term_obj)) /* global term */
         {
+            LLOGLN(0, ("proc_enc_msg: global term"));
+            break;
+        }
+
+        if (g_is_wait_obj_set(lterm_obj)) /* xrdp_mm term */
+        {
+            LLOGLN(0, ("proc_enc_msg: xrdp_mm term"));
             break;
         }
 

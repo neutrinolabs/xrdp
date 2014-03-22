@@ -404,7 +404,8 @@ server_composite(struct xrdp_mod* mod, int srcidx, int srcformat, int srcwidth,
 int DEFAULT_CC
 server_paint_rects(struct xrdp_mod* mod, int num_drects, short *drects,
                    int num_crects, short *crects,
-                   char *data, int width, int height, int flags);
+                   char *data, int width, int height,
+                   int flags, int frame_id);
 int DEFAULT_CC
 server_set_pointer(struct xrdp_mod* mod, int x, int y,
                    char* data, char* mask);

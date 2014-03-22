@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,8 @@ struct mod
   int (*mod_get_wait_objs)(struct mod* v, tbus* read_objs, int* rcount,
                            tbus* write_objs, int* wcount, int* timeout);
   int (*mod_check_wait_objs)(struct mod* v);
-  tbus mod_dumby[100 - 9]; /* align, 100 minus the number of mod
+  int (*mod_frame_ack)(struct mod* v, int flags, int frame_id);
+  tbus mod_dumby[100 - 10]; /* align, 100 minus the number of mod
                               functions above */
   /* server functions */
   int (*server_begin_update)(struct mod* v);
@@ -136,7 +137,8 @@ struct mod
   int (*server_paint_rects)(struct mod* v,
                             int num_drects, short *drects,
                             int num_crects, short *crects,
-                            char *data, int width, int height, int flags);
+                            char *data, int width, int height,
+                            int flags, int frame_id);
 
   tbus server_dumby[100 - 43]; /* align, 100 minus the number of server
                                   functions above */

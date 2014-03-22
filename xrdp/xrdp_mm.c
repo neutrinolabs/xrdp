@@ -55,10 +55,13 @@ xrdp_mm_create(struct xrdp_wm *owner)
     self->login_values = list_create();
     self->login_values->auto_free = 1;
 
-    /* setup thread to handle codec mode messages */
-    init_xrdp_encoder(self);
+    self->in_codec_mode = 0; /* TODO: */
 
-    //self->in_codec_mode = 1;
+    if (self->in_codec_mode)
+    {
+    /* setup thread to handle codec mode messages */
+        init_xrdp_encoder(self);
+    }
 
     return self;
 }
@@ -90,6 +93,7 @@ xrdp_mm_module_cleanup(struct xrdp_mm *self)
 {
     log_message(LOG_LEVEL_DEBUG,"xrdp_mm_module_cleanup");
 
+    /* shutdown thread */
     deinit_xrdp_encoder(self);
 
     if (self->mod != 0)
@@ -1911,6 +1915,10 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
 {
     XRDP_ENC_DATA_DONE *enc_done;
     int rv;
+    int x;
+    int y;
+    int cx;
+    int cy;
 
     if (self == 0)
     {
@@ -1971,7 +1979,7 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
             while (enc_done != 0)
             {
                 /* do something with msg */
-                LLOGLN(0, ("xrdp_mm_check_wait_objs: message back bytes %d",
+                LLOGLN(10, ("xrdp_mm_check_wait_objs: message back bytes %d",
                        enc_done->comp_bytes));
                 if (0)
                 {
@@ -1985,18 +1993,23 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
                     g_file_write(ii, enc_done->comp_pad_data + enc_done->pad_bytes, enc_done->comp_bytes);
                     g_file_close(ii);
                 }
-                
+
+                x = enc_done->enc->crects[enc_done->index * 4 + 0];
+                y = enc_done->enc->crects[enc_done->index * 4 + 1];
+                cx = enc_done->enc->crects[enc_done->index * 4 + 2];
+                cy = enc_done->enc->crects[enc_done->index * 4 + 3];
                 libxrdp_fastpath_send_surface(self->wm->session,
                                               enc_done->comp_pad_data,
                                               enc_done->pad_bytes,
                                               enc_done->comp_bytes,
-                                              0, 0, 0, 0, 32, 99, 0, 0);
-                
-                
+                                              x, y, x + cx, y + cy,
+                                              32, 2, cx, cy);
+
                 /* free enc_done */
                 if (enc_done->last)
                 {
                     LLOGLN(10, ("xrdp_mm_check_wait_objs: last set"));
+                    self->mod->mod_frame_ack(self->mod, enc_done->enc->flags, enc_done->enc->frame_id);
                     g_free(enc_done->enc->drects);
                     g_free(enc_done->enc->crects);
                     g_free(enc_done->enc);
@@ -2220,7 +2233,7 @@ server_composite(struct xrdp_mod* mod, int srcidx, int srcformat,
 int DEFAULT_CC
 server_paint_rects(struct xrdp_mod* mod, int num_drects, short *drects,
                    int num_crects, short *crects, char *data, int width,
-                   int height, int flags)
+                   int height, int flags, int frame_id)
 {
     struct xrdp_wm* wm;
     struct xrdp_mm* mm;
@@ -2239,7 +2252,7 @@ server_paint_rects(struct xrdp_mod* mod, int num_drects, short *drects,
     if (mm->in_codec_mode)
     {
         /* copy formal params to XRDP_ENC_DATA */
-        enc_data = (XRDP_ENC_DATA *) g_malloc(sizeof(XRDP_ENC_DATA), 0);
+        enc_data = (XRDP_ENC_DATA *) g_malloc(sizeof(XRDP_ENC_DATA), 1);
         if (enc_data == 0)
         {
             return 1;
@@ -2272,6 +2285,11 @@ server_paint_rects(struct xrdp_mod* mod, int num_drects, short *drects,
         enc_data->width = width;
         enc_data->height = height;
         enc_data->flags = flags;
+        enc_data->frame_id = frame_id;
+        if (width == 0 || height == 0)
+        {
+            LLOGLN(10, ("server_paint_rects: error"));
+        }
 
         /* insert into fifo for encoder thread to process */
         tc_mutex_lock(mm->mutex);
@@ -2281,7 +2299,7 @@ server_paint_rects(struct xrdp_mod* mod, int num_drects, short *drects,
         /* signal xrdp_encoder thread */
         g_set_wait_obj(mm->xrdp_encoder_event_to_proc);
 
-        //return 0;
+        return 0;
     }
 
     //g_writeln("server_paint_rects:");
@@ -2301,6 +2319,7 @@ server_paint_rects(struct xrdp_mod* mod, int num_drects, short *drects,
         s += 4;
     }
     xrdp_bitmap_delete(b);
+    mm->mod->mod_frame_ack(mm->mod, flags, frame_id);
     return 0;
 }
 

@@ -79,7 +79,7 @@ xrdp_cache_reset_crc(struct xrdp_cache *self)
     {
         for (jndex = 0; jndex < 64 * 1024; jndex++)
         {
-            /* it's ok it deinit a zero'ed out struct list16 */
+            /* it's ok to deinit a zero'ed out struct list16 */
             list16_deinit(&(self->crc16[index][jndex]));
             list16_init(&(self->crc16[index][jndex]));
         }

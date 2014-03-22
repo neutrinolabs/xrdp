@@ -47,7 +47,8 @@ struct xrdp_mod
   int (*mod_get_wait_objs)(struct xrdp_mod* v, tbus* read_objs, int* rcount,
                            tbus* write_objs, int* wcount, int* timeout);
   int (*mod_check_wait_objs)(struct xrdp_mod* v);
-  long mod_dumby[100 - 9]; /* align, 100 minus the number of mod
+  int (*mod_frame_ack)(struct xrdp_mod* v, int flags, int frame_id);
+  long mod_dumby[100 - 10]; /* align, 100 minus the number of mod
                               functions above */
   /* server functions */
   int (*server_begin_update)(struct xrdp_mod* v);
@@ -143,7 +144,8 @@ struct xrdp_mod
   int (*server_paint_rects)(struct xrdp_mod* v,
                             int num_drects, short *drects,
                             int num_crects, short *crects,
-                            char *data, int width, int height, int flags);
+                            char *data, int width, int height,
+                            int flags, int frame_id);
   long server_dumby[100 - 43]; /* align, 100 minus the number of server
                                   functions above */
   /* common */
@@ -292,6 +294,7 @@ struct xrdp_mm
   int   in_codec_mode;
   tbus  xrdp_encoder_event_to_proc;
   tbus  xrdp_encoder_event_processed;
+  tbus  xrdp_encoder_term;
   FIFO *fifo_to_proc;
   FIFO *fifo_processed;
   tbus  mutex;
@@ -621,6 +624,7 @@ struct xrdp_enc_data
     int              width;
     int              height;
     int              flags;
+    int              frame_id;
 };
 
 typedef struct xrdp_enc_data XRDP_ENC_DATA;

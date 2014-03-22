@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -207,6 +207,7 @@ lib_mod_connect(struct mod *mod)
         use_uds = 1;
     }
 
+    error = 0;
     mod->sck_closed = 0;
     i = 0;
 
@@ -1248,14 +1249,16 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
 
         rv = amod->server_paint_rects(amod, num_drects, ldrects,
                                       num_crects, lcrects,
-                                      bmpdata, width, height, 0);
+                                      bmpdata, width, height,
+                                      flags, frame_id);
     }
     else
     {
         rv = 1;
     }
 
-    send_paint_rect_ex_ack(amod, flags, frame_id);
+    //g_writeln("frame_id %d", frame_id);
+    //send_paint_rect_ex_ack(amod, flags, frame_id);
 
     g_free(lcrects);
     g_free(ldrects);
@@ -1587,6 +1590,16 @@ lib_mod_check_wait_objs(struct mod *mod)
 }
 
 /******************************************************************************/
+/* return error */
+int DEFAULT_CC
+lib_mod_frame_ack(struct mod *amod, int flags, int frame_id)
+{
+    LLOGLN(10, ("lib_mod_frame_ack: flags 0x%8.8x frame_id %d", flags, frame_id));
+    send_paint_rect_ex_ack(amod, flags, frame_id);
+    return 0;
+}
+
+/******************************************************************************/
 struct mod *EXPORT_CC
 mod_init(void)
 {
@@ -1604,6 +1617,7 @@ mod_init(void)
     mod->mod_set_param = lib_mod_set_param;
     mod->mod_get_wait_objs = lib_mod_get_wait_objs;
     mod->mod_check_wait_objs = lib_mod_check_wait_objs;
+    mod->mod_frame_ack = lib_mod_frame_ack;
     return mod;
 }
 
