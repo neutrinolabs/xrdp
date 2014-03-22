@@ -109,8 +109,8 @@ session_get_bydata(char *name, int width, int height, int bpp, int type)
             type = SESMAN_SESSION_TYPE_XRDP; /* 1 */
             break;
         case SCP_SESSION_TYPE_XORG:
-        	type = SESMAN_SESSION_TYPE_XORG;
-        	break;
+            type = SESMAN_SESSION_TYPE_XORG;
+            break;
         default:
             lock_chain_release();
             return 0;
