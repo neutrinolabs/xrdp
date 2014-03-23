@@ -162,7 +162,7 @@ process_enc(struct xrdp_mm *self, XRDP_ENC_DATA *enc)
     tbus                 event_processed;
 
     LLOGLN(10, ("process_enc:"));
-    quality = 75;
+    quality = self->codec_quality;
     fifo_processed = self->fifo_processed;
     mutex = self->mutex;
     event_processed = self->xrdp_encoder_event_processed;

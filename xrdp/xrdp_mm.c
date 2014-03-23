@@ -55,7 +55,21 @@ xrdp_mm_create(struct xrdp_wm *owner)
     self->login_values = list_create();
     self->login_values->auto_free = 1;
 
-    self->in_codec_mode = 0; /* TODO: */
+    LLOGLN(10, ("xrdp_mm_create: bpp %d", self->wm->client_info->bpp));
+    /* go into jpeg codec mode if jpeg set, lan set */
+    if (self->wm->client_info->mcs_connection_type == 6) /* LAN */
+    {
+        if (self->wm->client_info->jpeg_codec_id == 2) /* JPEG */
+        {
+            if (self->wm->client_info->bpp > 16)
+            {
+                LLOGLN(0, ("xrdp_mm_create: starting jpeg codec session"));
+                self->codec_id = 2;
+                self->in_codec_mode = 1;
+                self->codec_quality = self->wm->client_info->jpeg_prop[0];
+            }
+        }
+    }
 
     if (self->in_codec_mode)
     {

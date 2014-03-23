@@ -292,6 +292,8 @@ struct xrdp_mm
 
   /* for codec mode operations */
   int   in_codec_mode;
+  int   codec_id;
+  int   codec_quality;
   tbus  xrdp_encoder_event_to_proc;
   tbus  xrdp_encoder_event_processed;
   tbus  xrdp_encoder_term;
