@@ -18,8 +18,8 @@ endif
 
 if XRDP_TJPEG
 EXTRA_DEFINES += -DXRDP_JPEG -DXRDP_TJPEG
-EXTRA_INCLUDES += -I/opt/libjpeg-turbo/include
-EXTRA_FLAGS += -L/opt/libjpeg-turbo/lib -Wl,-rpath -Wl,/opt/libjpeg-turbo/lib
+EXTRA_INCLUDES += @TurboJpegIncDir@
+EXTRA_FLAGS += @TurboJpegLibDir@
 EXTRA_LIBS += -lturbojpeg
 else
 if XRDP_JPEG

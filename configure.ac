@@ -127,6 +127,33 @@ then
     [AC_MSG_ERROR([please install libpulse-dev or libpulse-devel])])
 fi
 
+# checking for TurboJPEG
+if test ! -z "$TURBOJPEG_PATH"
+then
+  # env var TURBOJPEG_PATH has been defined, use that
+  AC_CHECK_HEADER([$TURBOJPEG_PATH/include/turbojpeg.h], [],
+    [AC_MSG_ERROR([could not find TurboJPEG in dir specified by env variable TURBOJPEG_PATH ($TURBOJPEG_PATH)])])
+
+   AC_SUBST(TurboJpegIncDir, ["-I$TURBOJPEG_PATH/include"])
+   AC_SUBST(TurboJpegLibDir, ["-L$TURBOJPEG_PATH/lib -Wl,-rpath -Wl,$TURBOJPEG_PATH/lib"])
+elif test -e /opt/libjpeg-turbo/lib64
+then
+  # TurboJPEG has been installed to /opt on a 64 bit m/c
+  AC_SUBST(TurboJpegIncDir, ["-I/opt/libjpeg-turbo/include"])
+  AC_SUBST(TurboJpegLibDir, ["-L/opt/libjpeg-turbo/lib64 -Wl,-rpath -Wl,/opt/libjpeg-turbo/lib64"])
+elif test -e /opt/libjpeg-turbo/lib32
+then
+  # TurboJPEG has been installed to /opt on a 32 bit m/c
+  AC_SUBST(TurboJpegIncDir, ["-I/opt/libjpeg-turbo/include"])
+  AC_SUBST(TurboJpegLibDir, ["-L/opt/libjpeg-turbo/lib32 -Wl,-rpath -Wl,/opt/libjpeg-turbo/lib32"])
+else
+  # check in default location
+  AC_CHECK_HEADER([/usr/include/turbojpeg.h], [],
+    [AC_MSG_ERROR([please install TurboJPEG ])])
+  AC_SUBST(TurboJpegIncDir, [""])
+  AC_SUBST(TurboJpegLibDir, [""])
+fi
+
 # checking for Xlib, Xfixes
 AC_CHECK_HEADER([X11/Xlib.h], [],
   [AC_MSG_ERROR([please install libx11-dev or libX11-devel])])
