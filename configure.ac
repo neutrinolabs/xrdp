@@ -128,6 +128,8 @@ then
 fi
 
 # checking for TurboJPEG
+if ! test -z "$enable_tpeg"
+then
 if test ! -z "$TURBOJPEG_PATH"
 then
   # env var TURBOJPEG_PATH has been defined, use that
@@ -152,6 +154,7 @@ else
     [AC_MSG_ERROR([please install TurboJPEG ])])
   AC_SUBST(TurboJpegIncDir, [""])
   AC_SUBST(TurboJpegLibDir, [""])
+fi
 fi
 
 # checking for Xlib, Xfixes
