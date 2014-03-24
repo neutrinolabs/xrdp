@@ -128,7 +128,7 @@ then
 fi
 
 # checking for TurboJPEG
-if ! test -z "$enable_tpeg"
+if ! test -z "$enable_tjpeg"
 then
 if test ! -z "$TURBOJPEG_PATH"
 then
