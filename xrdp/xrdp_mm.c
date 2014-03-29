@@ -1923,6 +1923,61 @@ xrdp_mm_get_wait_objs(struct xrdp_mm *self,
     return rv;
 }
 
+#define DUMP_JPEG 0
+
+#if DUMP_JPEG
+
+/*****************************************************************************/
+static int APP_CC
+xrdp_mm_dump_jpeg(struct xrdp_mm *self, XRDP_ENC_DATA_DONE *enc_done)
+{
+    static tbus ii;
+    static int jj;
+    struct _header
+    {
+        char tag[4];
+        int width;
+        int height;
+        int bytes_follow;
+    } header;
+    tui16 *pheader_bytes;
+    int cx;
+    int cy;
+
+    pheader_bytes = (tui16 *) (enc_done->comp_pad_data + enc_done->pad_bytes);
+
+    cx = enc_done->enc->crects[enc_done->index * 4 + 2];
+    cy = enc_done->enc->crects[enc_done->index * 4 + 3];
+
+    header.tag[0] = 'B';
+    header.tag[1] = 'E';
+    header.tag[2] = 'E';
+    header.tag[3] = 'F';
+    header.width = cx;
+    header.height = cy;
+    header.bytes_follow = enc_done->comp_bytes - (2 + pheader_bytes[0]);
+    if (ii == 0)
+    {
+        ii = g_file_open("/tmp/jpeg.beef.bin");
+        if (ii == -1)
+        {
+            ii = 0;
+        }
+    }
+    if (ii != 0)
+    {
+        g_file_write(ii, (char*)&header, sizeof(header));
+        g_file_write(ii, enc_done->comp_pad_data +
+                     enc_done->pad_bytes + 2 + pheader_bytes[0],
+                     enc_done->comp_bytes - (2 + pheader_bytes[0]));
+        jj++;
+        g_writeln("dumping jpeg index %d", jj);
+    }
+    return 0;
+}
+
+#endif
+
 /*****************************************************************************/
 int APP_CC
 xrdp_mm_check_wait_objs(struct xrdp_mm *self)
@@ -1995,23 +2050,16 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
                 /* do something with msg */
                 LLOGLN(10, ("xrdp_mm_check_wait_objs: message back bytes %d",
                        enc_done->comp_bytes));
-                if (0)
-                {
-                    tbus ii;
-                    static int jj;
-                    char text[256];
-
-                    g_snprintf(text, 255, "/tmp/jj0x%8.8x.jpg", jj);
-                    jj++;
-                    ii = g_file_open(text);
-                    g_file_write(ii, enc_done->comp_pad_data + enc_done->pad_bytes, enc_done->comp_bytes);
-                    g_file_close(ii);
-                }
 
                 x = enc_done->enc->crects[enc_done->index * 4 + 0];
                 y = enc_done->enc->crects[enc_done->index * 4 + 1];
                 cx = enc_done->enc->crects[enc_done->index * 4 + 2];
                 cy = enc_done->enc->crects[enc_done->index * 4 + 3];
+
+#if DUMP_JPEG
+                xrdp_mm_dump_jpeg(self, enc_done);
+#endif
+
                 libxrdp_fastpath_send_surface(self->wm->session,
                                               enc_done->comp_pad_data,
                                               enc_done->pad_bytes,
