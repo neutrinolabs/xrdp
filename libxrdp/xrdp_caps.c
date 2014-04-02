@@ -37,7 +37,7 @@ xrdp_caps_send_monitorlayout(struct xrdp_rdp *self)
         return 1;
     }
 
-    out_uint32_le(s, self->client_info.monitorCount); /* MonitorCount */
+    out_uint32_le(s, self->client_info.monitorCount); /* monitorCount (4 bytes) */
 
     /* TODO: validate for allowed monitors in terminal server (maybe by config?) */
     for (i = 0; i < self->client_info.monitorCount; i++)
@@ -477,7 +477,14 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
             i1 = MIN(64, codec_properties_length);
             g_memcpy(self->client_info.jpeg_prop, s->p, i1);
             self->client_info.jpeg_prop_len = i1;
-            g_writeln("  jpeg quality %d", self->client_info.jpeg_prop[0]);
+            /* make sure that requested quality is  between 0 to 100 */
+            if (self->client_info.jpeg_prop[0] < 0 || self->client_info.jpeg_prop[0] > 100)
+            {
+                g_writeln("  Warning: the requested jpeg quality (%d) is invalid,"
+                          " falling back to default", self->client_info.jpeg_prop[0]);
+                self->client_info.jpeg_prop[0] = 75; /* use default */
+            }
+            g_writeln("  jpeg quality set to %d", self->client_info.jpeg_prop[0]);
         }
         else
         {
@@ -893,7 +900,7 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     }
     DEBUG(("out (1) xrdp_caps_send_demand_active"));
 
-    /* send Monitor Layout PDU for multimon */
+    /* send Monitor Layout PDU for dual monitor */
     if (self->client_info.monitorCount > 0 &&
         self->client_info.multimon == 1)
     {
