@@ -45,6 +45,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         b = (c) & 0xff; \
     } while (0)
 
+/* PIXMAN_a8b8g8r8 */
+#define XRDP_a8b8g8r8 \
+((32 << 24) | (3 << 16) | (8 << 12) | (8 << 8) | (8 << 4) | 8)
 /* PIXMAN_a8r8g8b8 */
 #define XRDP_a8r8g8b8 \
 ((32 << 24) | (2 << 16) | (8 << 12) | (8 << 8) | (8 << 4) | 8)

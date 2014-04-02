@@ -68,6 +68,7 @@ rdpCapture0(RegionPtr in_reg, RegionPtr out_reg,
     int blue;
     Bool rv;
     unsigned int *s32;
+    unsigned int *d32;
     unsigned short *d16;
     unsigned char *d8;
 
@@ -123,6 +124,43 @@ rdpCapture0(RegionPtr in_reg, RegionPtr out_reg,
             for (j = 0; j < height; j++)
             {
                 memcpy(dst_rect, src_rect, bytes);
+                src_rect += src_stride;
+                dst_rect += dst_stride;
+            }
+        }
+    }
+    else if ((src_format == XRDP_a8r8g8b8) && (dst_format == XRDP_a8b8g8r8))
+    {
+        src_bytespp = 4;
+        dst_bytespp = 4;
+
+        for (i = 0; i < num_regions; i++)
+        {
+            /* get rect to copy */
+            rect = prects[i];
+
+            /* get rect dimensions */
+            width = rect.x2 - rect.x1;
+            height = rect.y2 - rect.y1;
+
+            /* point to start of each rect in respective memory */
+            src_offset = rect.y1 * src_stride + rect.x1 * src_bytespp;
+            dst_offset = rect.y1 * dst_stride + rect.x1 * dst_bytespp;
+            src_rect = src + src_offset;
+            dst_rect = dst + dst_offset;
+
+            /* copy one line at a time */
+            for (j = 0; j < height; j++)
+            {
+                s32 = (unsigned int *) src_rect;
+                d32 = (unsigned int *) dst_rect;
+                for (k = 0; k < width; k++)
+                {
+                    SPLITCOLOR32(red, green, blue, *s32);
+                    *d32 = COLOR24(red, green, blue);
+                    s32++;
+                    d32++;
+                }
                 src_rect += src_stride;
                 dst_rect += dst_stride;
             }

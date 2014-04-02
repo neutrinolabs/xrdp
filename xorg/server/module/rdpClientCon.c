@@ -686,6 +686,13 @@ rdpClientConProcessMsgClientInfo(rdpPtr dev, rdpClientCon *clientCon)
     i1 = clientCon->client_info.offscreen_cache_entries;
     LLOGLN(0, ("  offscreen entries %d", i1));
 
+    if ((clientCon->client_info.mcs_connection_type == 6) && /* LAN */
+        (clientCon->client_info.jpeg_codec_id == 2))
+    {
+        /* jpeg capture needs swap */
+        clientCon->rdp_format = XRDP_a8b8g8r8;
+    }
+
     if (clientCon->client_info.offscreen_support_level > 0)
     {
         if (clientCon->client_info.offscreen_cache_entries > 0)
