@@ -540,6 +540,7 @@ xrdp_wm_init(struct xrdp_wm *self)
     struct list *values;
     char *q;
     char *r;
+    char param[256];
     char section_name[256];
     char cfg_file[256];
     char autorun_name[256];
@@ -630,6 +631,29 @@ xrdp_wm_init(struct xrdp_wm *self)
                         if (g_strncmp("ask", r, 3) == 0)
                         {
                             r = self->session->client_info->username;
+                        }
+                    }
+                    else if (g_strncmp("ip", q, 255) == 0)
+                    {
+                        /* if the ip has been asked for by the module, use what the
+                         client says (target ip should be in 'domain' field, when starting with "_")
+                         if the ip has been manually set in the config, use that
+                         instead of what the client says. */
+                        if (g_strncmp("ask", r, 3) == 0)
+                        {
+                            if (self->session->client_info->domain[0] == '_')
+                            {
+                                g_strncpy(param, &self->session->client_info->domain[1], 255);
+                                r = param;
+                            }
+
+                        }
+                    }
+                    else if (g_strncmp("port", q, 255) == 0)
+                    {
+                        if (g_strncmp("ask3389", r, 7) == 0)
+                        {
+                            r = "3389"; /* use default */
                         }
                     }
 

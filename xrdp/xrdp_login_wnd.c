@@ -329,8 +329,8 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
 		    /* If the first char in the domain name is '_' we use the domain name as IP*/
 		    if(self->session->client_info->domain[0]=='_')
 		    {
-			g_strncpy(b->caption1, &self->session->client_info->domain[1], 255);
-			b->edit_pos = g_mbstowcs(0, b->caption1, 0);
+                g_strncpy(b->caption1, &self->session->client_info->domain[1], 255);
+                b->edit_pos = g_mbstowcs(0, b->caption1, 0);
 		    }
 
 		}
