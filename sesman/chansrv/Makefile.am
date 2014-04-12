@@ -28,7 +28,7 @@ endif
 
 if XRDP_LOAD_PULSE_MODULES
 EXTRA_DEFINES += -DXRDP_LOAD_PULSE_MODULES
-EXTRA_LIBS += -lpulse 
+EXTRA_LIBS += -lpulse -lpulse-simple
 endif
 
 AM_CFLAGS = \

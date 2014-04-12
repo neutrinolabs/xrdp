@@ -25,6 +25,7 @@
 
 #ifdef XRDP_LOAD_PULSE_MODULES
 #include <pulse/util.h>
+#include <pulse/simple.h>
 #endif
 
 #include "sound.h"
@@ -55,6 +56,10 @@ char g_buffer[BBUF_SIZE];
 int g_buf_index = 0;
 int g_sent_time[256];
 int g_sent_flag[256];
+
+#ifdef XRDP_LOAD_PULSE_MODULES
+pa_simple *g_pa_simple = NULL;
+#endif
 
 #if defined(XRDP_SIMPLESOUND)
 static void *DEFAULT_CC
@@ -724,6 +729,8 @@ sound_deinit(void)
 
 #ifdef XRDP_LOAD_PULSE_MODULES
     system("pulseaudio --kill");
+    if (g_pa_simple)
+        pa_simple_free(g_pa_simple);
 #endif
 
     return 0;
@@ -848,146 +855,82 @@ sound_check_wait_objs(void)
 static int APP_CC
 load_pulse_modules()
 {
-    struct sockaddr_un sa;
-
-    pid_t pid;
-    char* cli;
-    int   fd;
-    int   i;
-    int   rv;
-    char  buf[1024];
-
-    /* is pulse audio daemon running? */
-    if (pa_pid_file_check_running(&pid, "pulseaudio") < 0)
-    {
-        LOG(0, ("load_pulse_modules: No PulseAudio daemon running, "
-                "or not running as session daemon"));
-    }
-
-    /* get name of unix domain socket used by pulseaudio for CLI */
-    if ((cli = (char *) pa_runtime_path("cli")) == NULL)
-    {
-        LOG(0, ("load_pulse_modules: Error getting PulesAudio runtime path"));
-        return -1;
-    }
-
-    /* open a socket */
-    if ((fd = socket(PF_LOCAL, SOCK_STREAM, 0)) < 0)
-    {
-        pa_xfree(cli);
-        LOG(0, ("load_pulse_modules: Socket open error"));
-        return -1;
-    }
-
-    /* set it up */
-    memset(&sa, 0, sizeof(struct sockaddr_un));
-    sa.sun_family = AF_UNIX;
-    pa_strlcpy(sa.sun_path, cli, sizeof(sa.sun_path));
-    pa_xfree(cli);
-
-    for (i = 0; i < 20; i++)
-    {
-        if (pa_pid_file_kill(SIGUSR2, NULL, "pulseaudio") < 0)
-            LOG(0, ("load_pulse_modules: Failed to kill PulseAudio daemon"));
-
-        if ((rv = connect(fd, (struct sockaddr*) &sa, sizeof(sa))) < 0 &&
-            (errno != ECONNREFUSED && errno != ENOENT))
-        {
-            LOG(0, ("load_pulse_modules: connect() failed with error: %s",
-                    strerror(errno)));
-            return -1;
-        }
-
-        if (rv >= 0)
-            break;
-
-        pa_msleep(300);
-    }
-
-    if (i >= 20)
-    {
-        LOG(0, ("load_pulse_modules: Daemon not responding"));
-        return -1;
-    }
-
-    LOG(0, ("load_pulse_modules: connected to pulseaudio daemon"));
-
-    /* read back PulseAudio sign on message */
-    memset(buf, 0, 1024);
-    recv(fd, buf, 1024, 0);
+    pa_sample_spec samp_spec;
+    int            error;
 
     /* send cmd to load source module */
-    memset(buf, 0, 1024);
-    sprintf(buf, "load-module module-xrdp-source\n");
-    send(fd, buf, strlen(buf), 0);
-
-    /* read back response */
-    memset(buf, 0, 1024);
-    recv(fd, buf, 1024, 0);
-    if (strcasestr(buf, "Module load failed") != 0)
-    {
-        LOG(0, ("load_pulse_modules: Error loading module-xrdp-source"));
-    }
-    else
-    {
-        LOG(0, ("load_pulse_modules: Loaded module-xrdp-source"));
-
-        /* success, set it as the default source */
-        memset(buf, 0, 1024);
-        sprintf(buf, "set-default-source xrdp-source\n");
-        send(fd, buf, strlen(buf), 0);
-
-        memset(buf, 0, 1024);
-        recv(fd, buf, 1024, 0);
-
-        if (strcasestr(buf, "does not exist") != 0)
-        {
-            LOG(0, ("load_pulse_modules: Error setting default source"));
-        }
-        else
-        {
-            LOG(0, ("load_pulse_modules: set default source"));
-        }
-    }
+    if (run_pacmd("load-module module-xrdp-source", "Module load failed"))
+        return -1;
+    
+    /* success, set it as the default source */
+    if (run_pacmd("set-default-source xrdp-source", "does not exist"))
+        return -1;
 
     /* send cmd to load sink module */
-    memset(buf, 0, 1024);
-    sprintf(buf, "load-module module-xrdp-sink\n");
-    send(fd, buf, strlen(buf), 0);
+    if (run_pacmd("load-module module-xrdp-sink", "Module load failed"))
+        return -1;
+    
+    /* success, set it as the default sink */
+    if (run_pacmd("set-default-sink xrdp-sink", "does not exist"))
+        return -1;
 
-    /* read back response */
-    memset(buf, 0, 1024);
-    recv(fd, buf, 1024, 0);
-    if (strcasestr(buf, "Module load failed") != 0)
+    /* setup audio format */
+    samp_spec.format = PA_SAMPLE_S16LE;
+    samp_spec.rate = 44100;
+    samp_spec.channels = 2;
+    
+    g_pa_simple = pa_simple_new(NULL, "xrdp", PA_STREAM_PLAYBACK, NULL,
+                                "keepalive", &samp_spec, NULL, NULL, &error);
+                               
+    if (!g_pa_simple)
     {
-        LOG(0, ("load_pulse_modules: Error loading module-xrdp-sink"));
-    }
-    else
-    {
-        LOG(0, ("load_pulse_modules: Loaded module-xrdp-sink"));
-
-        /* success, set it as the default sink */
-        memset(buf, 0, 1024);
-        sprintf(buf, "set-default-sink xrdp-sink\n");
-        send(fd, buf, strlen(buf), 0);
-
-        memset(buf, 0, 1024);
-        recv(fd, buf, 1024, 0);
-
-        if (strcasestr(buf, "does not exist") != 0)
-        {
-            LOG(0, ("load_pulse_modules: Error setting default sink"));
-        }
-        else
-        {
-            LOG(0, ("load_pulse_modules: set default sink"));
-        }
+        LOG(0, ("load_pulse_modules: error opening keepalive connection "
+                "to pulseaudio server\n"));
+        return -1;
     }
 
-    close(fd);
+    LOG(0, ("load_pulse_modules: opened keepalive connection "
+            "to pulseaudio server\n"));
+    
     return 0;
 }
-#endif
+
+/**
+ * Use pacmd to run a command on pulseaudio server
+ * 
+ * @param cmd        command to run on pulseaudio server
+ * @param error_msg  error message to check for
+ * 
+ * @return 0 on success, -1 on failure
+ *****************************************************************************/
+
+static int APP_CC run_pacmd(char *cmd, char *error_msg)
+{
+    FILE *fp;
+    char  buf[1024];
+    
+    sprintf(buf, "pacmd %s", cmd);
+    if ((fp = popen(buf, "r")) == NULL)
+    {
+        LOG(0, ("run_pacmd: error running command: %s; pacmd is not "
+                "installed or not found in PATH"));
+        return -1;
+    }
+    
+    while (fgets(buf, 1024, fp) != NULL)
+    {
+        if (strcasestr(buf, error_msg) != 0)
+        {
+            pclose(fp);
+            return -1;
+        }
+    }
+    
+    pclose(fp);
+    return 0;
+}
+
+#endif /* end #ifdef XRDP_LOAD_PULSE_MODULES */
 
 /******************************************************************************
  **                                                                          **
