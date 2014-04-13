@@ -1,7 +1,8 @@
 /**
- * RFX codec encoder
+ * FreeRDP: A Remote Desktop Protocol client.
+ * RemoteFX Codec Library - Encode
  *
- * Copyright 2014 Jay Sorg <jay.sorg@gmail.com>
+ * Copyright 2011 Vic Lee
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,28 +17,15 @@
  * limitations under the License.
  */
 
-#ifndef __RFXENCODE_H
-#define __RFXENCODE_H
+#ifndef __RFXTILE_H
+#define __RFXTILE_H
 
-struct rfxencode
-{
-    int width;
-    int height;
-    int frame_idx;
-    int header_processed;
-    int mode;
-    int properties;
-    int flags;
-    int bits_per_pixel;
-    int format;
-    int pad0[7];
+#include "rfxcommon.h"
 
-    sint16 y_r_buffer[4096];
-    sint16 cb_g_buffer[4096];
-    sint16 cr_b_buffer[4096];
-
-    sint16 dwt_buffer[4096];
-
-};
+int
+rfx_encode_rgb(struct rfxencode *enc, char *rgb_data,
+               int width, int height, int stride_bytes,
+               const int *y_quants, const int *cb_quants, const int *cr_quants,
+               STREAM *data_out, int *y_size, int *cb_size, int *cr_size);
 
 #endif

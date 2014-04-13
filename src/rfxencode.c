@@ -78,6 +78,25 @@ rfxcodec_encode(void *handle, char *cdata, int *cdata_bytes,
     s.p = s.data;
     s.size = *cdata_bytes;
 
+    switch (format)
+    {
+        case RFX_FORMAT_BGRA:
+            enc->bits_per_pixel = 32;
+            break;
+        case RFX_FORMAT_RGBA:
+            enc->bits_per_pixel = 32;
+            break;
+        case RFX_FORMAT_BGR:
+            enc->bits_per_pixel = 24;
+            break;
+        case RFX_FORMAT_RGB:
+            enc->bits_per_pixel = 24;
+            break;
+        default:
+            return 1;
+    }
+    enc->format = format;
+
     /* Only the first frame should send the RemoteFX header */
     if ((enc->frame_idx == 0) && (enc->header_processed == 0))
     {

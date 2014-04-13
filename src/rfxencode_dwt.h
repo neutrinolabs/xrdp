@@ -16,32 +16,10 @@
  * limitations under the License.
  */
 
-#ifndef __RFXCODEC_ENCODE_H
-#define __RFXCODEC_ENCODE_H
+#ifndef __RFXENCODE_RFX_H
+#define __RFXENCODE_RFX_H
 
-#define RFX_FORMAT_BGRA 0
-#define RFX_FORMAT_RGBA 1
-#define RFX_FORMAT_BGR  2
-#define RFX_FORMAT_RGB  3
-
-struct rfx_rect
-{
-    int x;
-    int y;
-    int cx;
-    int cy;
-};
-
-void *
-rfxcodec_encode_create(int width, int height);
 int
-rfxcodec_encode_destroy(void * handle);
-int
-rfxcodec_encode(void *handle, char *cdata, int *cdata_bytes,
-                char *buf, int width, int height, int stride_bytes,
-                int format,
-                struct rfx_rect *region, int num_region,
-                struct rfx_rect *tiles, int num_tiles,
-                int *quant);
+rfx_dwt_2d_encode(sint16 *buffer, sint16 *dwt_buffer);
 
 #endif

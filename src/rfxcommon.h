@@ -19,27 +19,32 @@
 #ifndef __RFXCOMMON_H
 #define __RFXCOMMON_H
 
+#define MIN(_val1, _val2) (_val1) < (_val2) ? (_val1) : (_val2)
+#define MAX(_val1, _val2) (_val1) > (_val2) ? (_val1) : (_val2)
+#define MINMAX(_v, _l, _h) ((_v) < (_l) ? (_l) : ((_v) > (_h) ? (_h) : (_v)))
+
+typedef signed char sint8;
 typedef unsigned char uint8;
 typedef signed short sint16;
 typedef unsigned short uint16;
-typedef unsigned int uint32;
 typedef signed int sint32;
+typedef unsigned int uint32;
 
 struct _STREAM
 {
-	uint8 *data;
-	uint8 *p;
-	int size;
+    uint8 *data;
+    uint8 *p;
+    int size;
 };
 typedef struct _STREAM STREAM;
 
 #if defined(__x86__) || defined(__x86_64__) || \
     defined(__AMD64__) || defined(_M_IX86) || \
     defined(__i386__)
-#define stream_read_uint8(_s, _v) do { _v = ((uint8*) ((_s)->p))[0]; (_s)->p += 1; } while (0)
+#define stream_read_uint8(_s, _v) do { _v = ((uint8*)((_s)->p))[0]; (_s)->p += 1; } while (0)
 #define stream_read_uint16(_s, _v) do { _v = ((uint16*)((_s)->p))[0]; (_s)->p += 2; } while (0)
 #define stream_read_uint32(_s, _v) do { _v = ((uint32*)((_s)->p))[0]; (_s)->p += 4; } while (0)
-#define stream_write_uint8(_s, _v) do  { ((uint8*) ((_s)->p))[0] = _v; (_s)->p += 1; } while (0)
+#define stream_write_uint8(_s, _v) do { ((uint8*)((_s)->p))[0] = _v; (_s)->p += 1; } while (0)
 #define stream_write_uint16(_s, _v) do { ((uint16*)((_s)->p))[0] = _v; (_s)->p += 2; } while (0)
 #define stream_write_uint32(_s, _v) do { ((uint32*)((_s)->p))[0] = _v; (_s)->p += 4; } while (0)
 #else

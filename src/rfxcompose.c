@@ -1,6 +1,6 @@
 /**
  * FreeRDP: A Remote Desktop Protocol client.
- * RemoteFX Codec Library - API Header
+ * RemoteFX Codec Library
  *
  * Copyright 2011 Vic Lee
  *
@@ -26,6 +26,15 @@
 #include "rfxcommon.h"
 #include "rfxencode.h"
 #include "rfxconstants.h"
+#include "rfxtile.h"
+
+/*
+ * LL3, LH3, HL3, HH3, LH2, HL2, HH2, LH1, HL1, HH1
+ */
+static const int g_rfx_default_quantization_values[] =
+{
+    6, 6, 6, 6, 7, 7, 8, 8, 8, 9
+};
 
 /******************************************************************************/
 static int
@@ -189,6 +198,137 @@ rfx_compose_message_region(struct rfxencode* enc, STREAM* s,
 
 /******************************************************************************/
 static int
+rfx_compose_message_tile(struct rfxencode *enc, STREAM *s,
+                         char *tile_data, int tile_width, int tile_height,
+                         int stride_bytes, const int *quantVals,
+                         int quantIdxY, int quantIdxCb, int quantIdxCr,
+                         int xIdx, int yIdx)
+{
+    int YLen = 0;
+    int CbLen = 0;
+    int CrLen = 0;
+    int start_pos;
+    int end_pos;
+
+    start_pos = stream_get_pos(s);
+    stream_write_uint16(s, CBT_TILE); /* BlockT.blockType */
+    stream_seek_uint32(s); /* set BlockT.blockLen later */
+    stream_write_uint8(s, quantIdxY);
+    stream_write_uint8(s, quantIdxCb);
+    stream_write_uint8(s, quantIdxCr);
+    stream_write_uint16(s, xIdx);
+    stream_write_uint16(s, yIdx);
+    stream_seek(s, 6); /* YLen, CbLen, CrLen */
+    if (rfx_encode_rgb(enc, tile_data, tile_width, tile_height, stride_bytes,
+                       quantVals + quantIdxY * 10,
+                       quantVals + quantIdxCb * 10,
+                       quantVals + quantIdxCr * 10,
+                       s, &YLen, &CbLen, &CrLen) != 0)
+    {
+        return 1;
+    }
+    end_pos = stream_get_pos(s);
+    stream_set_pos(s, start_pos + 2);
+    stream_write_uint32(s, 19 + YLen + CbLen + CrLen); /* BlockT.blockLen */
+    stream_set_pos(s, start_pos + 13);
+    stream_write_uint16(s, YLen);
+    stream_write_uint16(s, CbLen);
+    stream_write_uint16(s, CrLen);
+    stream_set_pos(s, end_pos);
+    return 0;
+}
+
+/******************************************************************************/
+static int
+rfx_compose_message_tileset(struct rfxencode* enc, STREAM* s,
+                            char* buf, int width, int height,
+                            int stride_bytes,
+                            struct rfx_rect *tiles, int num_tiles, int *quant)
+{
+    int size;
+    int start_pos;
+    int end_pos;
+    int i;
+    int numQuants;
+    const int *quantVals;
+    const int *quantValsPtr;
+    int quantIdxY;
+    int quantIdxCb;
+    int quantIdxCr;
+    int numTiles;
+    int tilesDataSize;
+    int x;
+    int y;
+    int cx;
+    int cy;
+    char *tile_data;
+
+    if (quant == 0)
+    {
+        numQuants = 1;
+        quantVals = g_rfx_default_quantization_values;
+        quantIdxY = 0;
+        quantIdxCb = 0;
+        quantIdxCr = 0;
+    }
+    else
+    {
+        numQuants = 1;
+        quantVals = quant;
+        quantIdxY = 0;
+        quantIdxCb = 0;
+        quantIdxCr = 0;
+    }
+    numTiles = num_tiles;
+    size = 22 + numQuants * 5;
+    start_pos = stream_get_pos(s);
+    stream_write_uint16(s, WBT_EXTENSION); /* CodecChannelT.blockType */
+    stream_seek_uint32(s); /* set CodecChannelT.blockLen later */
+    stream_write_uint8(s, 1); /* CodecChannelT.codecId */
+    stream_write_uint8(s, 0); /* CodecChannelT.channelId */
+    stream_write_uint16(s, CBT_TILESET); /* subtype */
+    stream_write_uint16(s, 0); /* idx */
+    stream_write_uint16(s, enc->properties); /* properties */
+    stream_write_uint8(s, numQuants); /* numQuants */
+    stream_write_uint8(s, 0x40); /* tileSize */
+    stream_write_uint16(s, numTiles); /* numTiles */
+    stream_seek_uint32(s); /* set tilesDataSize later */
+    quantValsPtr = quantVals;
+    for (i = 0; i < numQuants * 5; i++)
+    {
+        stream_write_uint8(s, quantValsPtr[0] + (quantValsPtr[1] << 4));
+        quantValsPtr += 2;
+    }
+    end_pos = stream_get_pos(s);
+    for (i = 0; i < numTiles; i++)
+    {
+        x = tiles[i].x;
+        y = tiles[i].y;
+        cx = tiles[i].cx;
+        cy = tiles[i].cy;
+        tile_data = buf + y * stride_bytes + x * (enc->bits_per_pixel / 4);
+        if (rfx_compose_message_tile(enc, s,
+                                     tile_data, cx, cy, stride_bytes,
+                                     quantVals,
+                                     quantIdxY, quantIdxCb, quantIdxCr,
+                                     x / 64, y / 64) != 0)
+        {
+            return 1;
+        }
+    }
+    tilesDataSize = stream_get_pos(s) - end_pos;
+    size += tilesDataSize;
+    end_pos = stream_get_pos(s);
+    stream_set_pos(s, start_pos + 2);
+    stream_write_uint32(s, size); /* CodecChannelT.blockLen */
+    stream_set_pos(s, start_pos + 18);
+    stream_write_uint32(s, tilesDataSize);
+    stream_set_pos(s, end_pos);
+    return 0;
+}
+
+/******************************************************************************/
+static int
 rfx_compose_message_frame_end(struct rfxencode* enc, STREAM* s)
 {
     if (stream_get_left(s) < 8)
@@ -218,9 +358,11 @@ rfx_compose_message_data(struct rfxencode* enc, STREAM* s,
     {
         return 1;
     }
-
-
-
+    if (rfx_compose_message_tileset(enc, s, buf, width, height, stride_bytes,
+                                    tiles, num_tiles, quant) != 0)
+    {
+        return 1;
+    }
     if (rfx_compose_message_frame_end(enc, s) != 0)
     {
         return 1;

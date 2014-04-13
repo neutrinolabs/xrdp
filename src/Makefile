@@ -1,5 +1,5 @@
 
-OBJS = rfxencode.o rfxcompose.o
+OBJS = rfxencode.o rfxcompose.o rfxtile.o rfxencode_dwt.o
 
 CFLAGS = -g -O2 -Wall -fPIC -I../include
 
