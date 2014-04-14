@@ -39,6 +39,8 @@ This is the main driver file
 #include <mi.h>
 #include <randrstr.h>
 
+#include <xf86Modes.h>
+
 #include "rdp.h"
 #include "rdpPri.h"
 #include "rdpDraw.h"
