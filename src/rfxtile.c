@@ -30,6 +30,7 @@
 #include "rfxencode_dwt.h"
 #include "rfxencode_quantization.h"
 #include "rfxencode_differential.h"
+#include "rfxencode_rlgr3.h"
 
 /******************************************************************************/
 static int
@@ -177,7 +178,7 @@ rfx_encode_component(struct rfxencode *enc, const int *quantization_values,
     {
         return 1;
     }
-    //*size = rfx_rlgr_encode(context->mode, data, 4096, buffer, buffer_size);
+    *size = rfx_rlgr3_encode(data, 4096, buffer, buffer_size);
     return 0;
 }
 
