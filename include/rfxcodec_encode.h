@@ -33,13 +33,12 @@ struct rfx_rect
 };
 
 void *
-rfxcodec_encode_create(int width, int height);
+rfxcodec_encode_create(int width, int height, int format);
 int
 rfxcodec_encode_destroy(void * handle);
 int
 rfxcodec_encode(void *handle, char *cdata, int *cdata_bytes,
                 char *buf, int width, int height, int stride_bytes,
-                int format,
                 struct rfx_rect *region, int num_region,
                 struct rfx_rect *tiles, int num_tiles,
                 int *quant);

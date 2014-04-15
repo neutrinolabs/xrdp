@@ -28,6 +28,8 @@
 #include "rfxconstants.h"
 #include "rfxtile.h"
 #include "rfxencode_dwt.h"
+#include "rfxencode_quantization.h"
+#include "rfxencode_differential.h"
 
 /******************************************************************************/
 static int
@@ -167,8 +169,14 @@ rfx_encode_component(struct rfxencode *enc, const int *quantization_values,
     {
         return 1;
     }
-    //rfx_quantization_encode(data, quantization_values);
-    //rfx_differential_encode(data + 4032, 64);
+    if (rfx_quantization_encode(data, quantization_values) != 0)
+    {
+        return 1;
+    }
+    if (rfx_differential_encode(data + 4032, 64) != 0)
+    {
+        return 1;
+    }
     //*size = rfx_rlgr_encode(context->mode, data, 4096, buffer, buffer_size);
     return 0;
 }

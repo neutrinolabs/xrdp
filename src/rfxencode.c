@@ -29,7 +29,7 @@
 
 /******************************************************************************/
 void *
-rfxcodec_encode_create(int width, int height)
+rfxcodec_encode_create(int width, int height, int format)
 {
     struct rfxencode *enc;
 
@@ -42,6 +42,22 @@ rfxcodec_encode_create(int width, int height)
     enc->width = width;
     enc->height = height;
     enc->mode = RLGR3;
+    switch (format)
+    {
+        case RFX_FORMAT_BGRA:
+            enc->bits_per_pixel = 32;
+            break;
+        case RFX_FORMAT_RGBA:
+            enc->bits_per_pixel = 32;
+            break;
+        case RFX_FORMAT_BGR:
+            enc->bits_per_pixel = 24;
+            break;
+        case RFX_FORMAT_RGB:
+            enc->bits_per_pixel = 24;
+            break;
+    }
+    enc->format = format;
     return enc;
 }
 
@@ -64,7 +80,6 @@ rfxcodec_encode_destroy(void * handle)
 int
 rfxcodec_encode(void *handle, char *cdata, int *cdata_bytes,
                 char *buf, int width, int height, int stride_bytes,
-                int format,
                 struct rfx_rect *regions, int num_regions,
                 struct rfx_rect *tiles, int num_tiles,
                 int *quant)
@@ -77,25 +92,6 @@ rfxcodec_encode(void *handle, char *cdata, int *cdata_bytes,
     s.data = (uint8 *) cdata;
     s.p = s.data;
     s.size = *cdata_bytes;
-
-    switch (format)
-    {
-        case RFX_FORMAT_BGRA:
-            enc->bits_per_pixel = 32;
-            break;
-        case RFX_FORMAT_RGBA:
-            enc->bits_per_pixel = 32;
-            break;
-        case RFX_FORMAT_BGR:
-            enc->bits_per_pixel = 24;
-            break;
-        case RFX_FORMAT_RGB:
-            enc->bits_per_pixel = 24;
-            break;
-        default:
-            return 1;
-    }
-    enc->format = format;
 
     /* Only the first frame should send the RemoteFX header */
     if ((enc->frame_idx == 0) && (enc->header_processed == 0))
