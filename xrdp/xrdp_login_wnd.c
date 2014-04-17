@@ -564,7 +564,7 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
     if (globals->ls_title[0] == 0)
     {
        g_gethostname(buf1, 256);
-       g_sprintf(buf, "Login 1 to %s", buf1);
+       g_sprintf(buf, "Login to %s", buf1);
        set_string(&self->login_window->caption1, buf);
     }
     else
