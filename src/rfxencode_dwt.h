@@ -21,5 +21,7 @@
 
 int
 rfx_dwt_2d_encode(sint16 *buffer, sint16 *dwt_buffer);
+int
+rfx_dwt_2d_encode8(sint8 *in_buffer, sint16 *buffer, sint16 *dwt_buffer);
 
 #endif

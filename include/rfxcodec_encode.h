@@ -23,6 +23,7 @@
 #define RFX_FORMAT_RGBA 1
 #define RFX_FORMAT_BGR  2
 #define RFX_FORMAT_RGB  3
+#define RFX_FORMAT_YUV  4 /* YUV444 linear tiled mode */
 
 struct rfx_rect
 {

@@ -22,10 +22,17 @@
 
 #include "rfxcommon.h"
 
+#define RFX_YUV_BTES (64 * 64)
+
 int
 rfx_encode_rgb(struct rfxencode *enc, char *rgb_data,
                int width, int height, int stride_bytes,
                const int *y_quants, const int *cb_quants, const int *cr_quants,
                STREAM *data_out, int *y_size, int *cb_size, int *cr_size);
+int
+rfx_encode_yuv(struct rfxencode *enc, char *yuv_data,
+               int width, int height, int stride_bytes,
+               const int *y_quants, const int *u_quants, const int *v_quants,
+               STREAM *data_out, int *y_size, int *u_size, int *v_size);
 
 #endif

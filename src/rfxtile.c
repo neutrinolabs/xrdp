@@ -183,16 +183,43 @@ rfx_encode_component(struct rfxencode *enc, const int *quantization_values,
 }
 
 /******************************************************************************/
+static int
+rfx_encode_component8(struct rfxencode *enc, const int *quantization_values,
+                      sint8 *data, uint8 *buffer, int buffer_size, int *size)
+{
+    sint16 *buffer16;
+
+    buffer16 = enc->y_r_buffer;
+    if (rfx_dwt_2d_encode8(data, buffer16, enc->dwt_buffer) != 0)
+    {
+        return 1;
+    }
+    if (rfx_quantization_encode(buffer16, quantization_values) != 0)
+    {
+        return 1;
+    }
+    if (rfx_differential_encode(buffer16 + 4032, 64) != 0)
+    {
+        return 1;
+    }
+    *size = rfx_rlgr3_encode(buffer16, 4096, buffer, buffer_size);
+    return 0;
+}
+
+/******************************************************************************/
 int
 rfx_encode_rgb(struct rfxencode *enc, char *rgb_data,
                int width, int height, int stride_bytes,
                const int *y_quants, const int *cb_quants, const int *cr_quants,
                STREAM *data_out, int *y_size, int *cb_size, int *cr_size)
 {
-    sint16 *y_r_buffer = enc->y_r_buffer;
-    sint16 *cb_g_buffer = enc->cb_g_buffer;
-    sint16 *cr_b_buffer = enc->cr_b_buffer;
+    sint16 *y_r_buffer;
+    sint16 *cb_g_buffer;
+    sint16 *cr_b_buffer;
 
+    y_r_buffer = enc->y_r_buffer;
+    cb_g_buffer = enc->cb_g_buffer;
+    cr_b_buffer = enc->cr_b_buffer;
     if (rfx_encode_format_rgb(rgb_data, width, height, stride_bytes,
                               enc->format,
                               y_r_buffer, cb_g_buffer, cr_b_buffer) != 0)
@@ -227,5 +254,46 @@ rfx_encode_rgb(struct rfxencode *enc, char *rgb_data,
         return 1;
     }
     stream_seek(data_out, *cr_size);
+    return 0;
+}
+
+/******************************************************************************/
+int
+rfx_encode_yuv(struct rfxencode *enc, char *yuv_data,
+               int width, int height, int stride_bytes,
+               const int *y_quants, const int *u_quants, const int *v_quants,
+               STREAM *data_out, int *y_size, int *u_size, int *v_size)
+{
+    sint8 *y_buffer;
+    sint8 *u_buffer;
+    sint8 *v_buffer;
+
+    y_buffer = (sint8*)yuv_data;
+    u_buffer = (sint8*)(yuv_data + RFX_YUV_BTES);
+    v_buffer = (sint8*)(yuv_data + RFX_YUV_BTES * 2);
+    if (rfx_encode_component8(enc, y_quants, y_buffer,
+                              stream_get_tail(data_out),
+                              stream_get_left(data_out),
+                              y_size) != 0)
+    {
+        return 1;
+    }
+    stream_seek(data_out, *y_size);
+    if (rfx_encode_component8(enc, u_quants, u_buffer,
+                              stream_get_tail(data_out),
+                              stream_get_left(data_out),
+                              u_size) != 0)
+    {
+        return 1;
+    }
+    stream_seek(data_out, *u_size);
+    if (rfx_encode_component8(enc, v_quants, v_buffer,
+                              stream_get_tail(data_out),
+                              stream_get_left(data_out),
+                              v_size) != 0)
+    {
+        return 1;
+    }
+    stream_seek(data_out, *v_size);
     return 0;
 }

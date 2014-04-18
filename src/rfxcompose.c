@@ -219,13 +219,29 @@ rfx_compose_message_tile(struct rfxencode *enc, STREAM *s,
     stream_write_uint16(s, xIdx);
     stream_write_uint16(s, yIdx);
     stream_seek(s, 6); /* YLen, CbLen, CrLen */
-    if (rfx_encode_rgb(enc, tile_data, tile_width, tile_height, stride_bytes,
-                       quantVals + quantIdxY * 10,
-                       quantVals + quantIdxCb * 10,
-                       quantVals + quantIdxCr * 10,
-                       s, &YLen, &CbLen, &CrLen) != 0)
+    if (enc->format == RFX_FORMAT_YUV)
     {
-        return 1;
+        if (rfx_encode_yuv(enc, tile_data, tile_width, tile_height,
+                           stride_bytes,
+                           quantVals + quantIdxY * 10,
+                           quantVals + quantIdxCb * 10,
+                           quantVals + quantIdxCr * 10,
+                           s, &YLen, &CbLen, &CrLen) != 0)
+        {
+            return 1;
+        }
+    }
+    else
+    {
+        if (rfx_encode_rgb(enc, tile_data, tile_width, tile_height,
+                           stride_bytes,
+                           quantVals + quantIdxY * 10,
+                           quantVals + quantIdxCb * 10,
+                           quantVals + quantIdxCr * 10,
+                           s, &YLen, &CbLen, &CrLen) != 0)
+        {
+            return 1;
+        }
     }
     end_pos = stream_get_pos(s);
     stream_set_pos(s, start_pos + 2);
@@ -306,7 +322,14 @@ rfx_compose_message_tileset(struct rfxencode* enc, STREAM* s,
         y = tiles[i].y;
         cx = tiles[i].cx;
         cy = tiles[i].cy;
-        tile_data = buf + y * stride_bytes + x * (enc->bits_per_pixel / 4);
+        if (enc->format == RFX_FORMAT_YUV)
+        {
+            tile_data = buf + (y * stride_bytes) + x * RFX_YUV_BTES;
+        }
+        else
+        {
+            tile_data = buf + y * stride_bytes + x * (enc->bits_per_pixel / 4);
+        }
         if (rfx_compose_message_tile(enc, s,
                                      tile_data, cx, cy, stride_bytes,
                                      quantVals,
@@ -341,7 +364,6 @@ rfx_compose_message_frame_end(struct rfxencode* enc, STREAM* s)
     stream_write_uint8(s, 0); /* CodecChannelT.channelId */
     return 0;
 }
-
 
 /******************************************************************************/
 int
