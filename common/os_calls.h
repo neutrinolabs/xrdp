@@ -115,6 +115,7 @@ char* APP_CC    g_strdup(const char* in);
 char* APP_CC    g_strndup(const char* in, const unsigned int maxlen);
 int APP_CC      g_strcmp(const char* c1, const char* c2);
 int APP_CC      g_strncmp(const char* c1, const char* c2, int len);
+int APP_CC      g_strncmp_d(const char* c1, const char* c2, const char delim, int len);
 int APP_CC      g_strcasecmp(const char* c1, const char* c2);
 int APP_CC      g_strncasecmp(const char* c1, const char* c2, int len);
 int APP_CC      g_atoi(const char* str);
