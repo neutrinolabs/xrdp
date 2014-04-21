@@ -45,6 +45,15 @@
 #include <pulsecore/thread-mq.h>
 #include <pulsecore/thread.h>
 
+/* defined in pulse/version.h */
+#if PA_PROTOCOL_VERSION > 28
+/* these used to be defined in pulsecore/macro.h */
+typedef bool pa_bool_t;
+#define FALSE ((pa_bool_t) 0)
+#define TRUE (!FALSE)
+#else
+#endif
+
 #include "module-xrdp-source-symdef.h"
 
 PA_MODULE_AUTHOR("Laxmikant Rashinkar");
@@ -329,8 +338,7 @@ int pa__init(pa_module *m) {
     pa_source_new_data_set_name(&data, pa_modargs_get_value(ma, "source_name", DEFAULT_SOURCE_NAME));
     pa_source_new_data_set_sample_spec(&data, &ss);
     pa_source_new_data_set_channel_map(&data, &map);
-    //pa_proplist_sets(data.proplist, PA_PROP_DEVICE_DESCRIPTION, pa_modargs_get_value(ma, "description", "Null Input"));
-    pa_proplist_sets(data.proplist, PA_PROP_DEVICE_DESCRIPTION, pa_modargs_get_value(ma, "description", "xrdp Input"));
+    pa_proplist_sets(data.proplist, PA_PROP_DEVICE_DESCRIPTION, pa_modargs_get_value(ma, "description", "xrdp source"));
     pa_proplist_sets(data.proplist, PA_PROP_DEVICE_CLASS, "abstract");
 
     u->source = pa_source_new(m->core, &data, PA_SOURCE_LATENCY | PA_SOURCE_DYNAMIC_LATENCY);

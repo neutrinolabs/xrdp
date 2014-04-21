@@ -58,6 +58,15 @@
 #include <pulsecore/thread-mq.h>
 #include <pulsecore/rtpoll.h>
 
+/* defined in pulse/version.h */
+#if PA_PROTOCOL_VERSION > 28
+/* these used to be defined in pulsecore/macro.h */
+typedef bool pa_bool_t;
+#define FALSE ((pa_bool_t) 0)
+#define TRUE (!FALSE)
+#else
+#endif
+
 #include "module-xrdp-sink-symdef.h"
 
 PA_MODULE_AUTHOR("Jay Sorg");
