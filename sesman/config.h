@@ -65,6 +65,29 @@
 #define SESMAN_CFG_SESS_IDLE_LIMIT   "IdleTimeLimit"
 #define SESMAN_CFG_SESS_DISC_LIMIT   "DisconnectedTimeLimit"
 
+#define SESMAN_CFG_SESS_POLICY_S "Policy"
+#define SESMAN_CFG_SESS_POLICY_DFLT_S "Default"
+#define SESMAN_CFG_SESS_POLICY_UBD_S "UBD"
+#define SESMAN_CFG_SESS_POLICY_UBI_S "UBI"
+#define SESMAN_CFG_SESS_POLICY_UBC_S "UBC"
+#define SESMAN_CFG_SESS_POLICY_UBDI_S "UBDI"
+#define SESMAN_CFG_SESS_POLICY_UBDC_S "UBDC"
+
+enum SESMAN_CFG_SESS_POLICY_BITS {
+    SESMAN_CFG_SESS_POLICY_D = 0x01,
+    SESMAN_CFG_SESS_POLICY_I = 0x02,
+    SESMAN_CFG_SESS_POLICY_C = 0x04
+};
+
+enum SESMAN_CFG_SESS_POLICY {
+    SESMAN_CFG_SESS_POLICY_DFLT = 0,
+    SESMAN_CFG_SESS_POLICY_UBD = SESMAN_CFG_SESS_POLICY_D,
+    SESMAN_CFG_SESS_POLICY_UBI = SESMAN_CFG_SESS_POLICY_I,
+    SESMAN_CFG_SESS_POLICY_UBC = SESMAN_CFG_SESS_POLICY_C,
+    SESMAN_CFG_SESS_POLICY_UBDI = SESMAN_CFG_SESS_POLICY_D | SESMAN_CFG_SESS_POLICY_I,
+    SESMAN_CFG_SESS_POLICY_UBDC = SESMAN_CFG_SESS_POLICY_D | SESMAN_CFG_SESS_POLICY_C
+};
+
 /**
  *
  * @struct config_security
@@ -135,6 +158,11 @@ struct config_sessions
    * @brief enables automatic killing of disconnected session
    */
   int kill_disconnected;
+  /**
+   * @var policy
+   * @brief session allocation policy
+   */
+  enum SESMAN_CFG_SESS_POLICY policy;
 };
 
 /**

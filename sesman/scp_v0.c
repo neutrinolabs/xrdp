@@ -74,7 +74,7 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     else if (data)
     {
         s_item = session_get_bydata(s->username, s->width, s->height,
-                                    s->bpp, s->type);
+                                    s->bpp, s->type, s->client_ip);
 
         if (s_item != 0)
         {

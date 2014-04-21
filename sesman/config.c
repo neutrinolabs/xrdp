@@ -337,6 +337,7 @@ config_read_sessions(int file, struct config_sessions *se, struct list *param_n,
     se->max_idle_time = 0;
     se->max_disc_time = 0;
     se->kill_disconnected = 0;
+    se->policy = SESMAN_CFG_SESS_POLICY_DFLT;
 
     file_read_section(file, SESMAN_CFG_SESSIONS, param_n, param_v);
 
@@ -368,15 +369,49 @@ config_read_sessions(int file, struct config_sessions *se, struct list *param_n,
         {
             se->max_disc_time = g_atoi((char *)list_get_item(param_v, i));
         }
+
+        if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_POLICY_S))
+        {
+            char *value = (char *)list_get_item(param_v, i);
+            if (0 == g_strcasecmp(value, SESMAN_CFG_SESS_POLICY_DFLT_S))
+            {
+                se->policy = SESMAN_CFG_SESS_POLICY_DFLT;
+            }
+            else if (0 == g_strcasecmp(value, SESMAN_CFG_SESS_POLICY_UBD_S))
+            {
+                se->policy = SESMAN_CFG_SESS_POLICY_UBD;
+            }
+            else if (0 == g_strcasecmp(value, SESMAN_CFG_SESS_POLICY_UBI_S))
+            {
+                se->policy = SESMAN_CFG_SESS_POLICY_UBI;
+            }
+            else if (0 == g_strcasecmp(value, SESMAN_CFG_SESS_POLICY_UBC_S))
+            {
+                se->policy = SESMAN_CFG_SESS_POLICY_UBC;
+            }
+            else if (0 == g_strcasecmp(value, SESMAN_CFG_SESS_POLICY_UBDI_S))
+            {
+                se->policy = SESMAN_CFG_SESS_POLICY_UBDI;
+            }
+            else if (0 == g_strcasecmp(value, SESMAN_CFG_SESS_POLICY_UBDC_S))
+            {
+                se->policy = SESMAN_CFG_SESS_POLICY_UBDC;
+            }
+            else /* silently ignore typos */
+            {
+                se->policy = SESMAN_CFG_SESS_POLICY_DFLT;
+            }
+        }
     }
 
-    /* printing security config */
+    /* printing session config */
     g_printf("session configuration:\r\n");
     g_printf("\tMaxSessions:                 %i\r\n", se->max_sessions);
     g_printf("\tX11DisplayOffset:            %i\r\n", se->x11_display_offset);
     g_printf("\tKillDisconnected:            %i\r\n", se->kill_disconnected);
     g_printf("\tIdleTimeLimit:               %i\r\n", se->max_idle_time);
     g_printf("\tDisconnectedTimeLimit:       %i\r\n", se->max_idle_time);
+    g_printf("\tPolicy:       %i\r\n", se->policy);
 
     return 0;
 }
@@ -413,7 +448,7 @@ config_read_rdp_params(int file, struct config_sesman *cs, struct list *param_n,
 
 /******************************************************************************/
 int DEFAULT_CC
-config_read_xorg_params(int file, struct config_sesman *cs, 
+config_read_xorg_params(int file, struct config_sesman *cs,
                         struct list *param_n, struct list *param_v)
 {
     int i;
@@ -427,7 +462,7 @@ config_read_xorg_params(int file, struct config_sesman *cs,
 
     for (i = 0; i < param_n->count; i++)
     {
-        list_add_item(cs->xorg_params, 
+        list_add_item(cs->xorg_params,
                       (long) g_strdup((char *) list_get_item(param_v, i)));
     }
 
@@ -436,7 +471,7 @@ config_read_xorg_params(int file, struct config_sesman *cs,
 
     for (i = 0; i < cs->xorg_params->count; i++)
     {
-        g_printf("\tParameter %02d                   %s\r\n", 
+        g_printf("\tParameter %02d                   %s\r\n",
                  i, (char *) list_get_item(cs->xorg_params, i));
     }
 
