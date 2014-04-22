@@ -369,7 +369,15 @@ int pa__init(pa_module *m) {
     u->source->thread_info.max_rewind =
         pa_usec_to_bytes(u->block_usec, &u->source->sample_spec);
 
-    if (!(u->thread = pa_thread_new("null-source", thread_func, u))) {
+    #if defined(PA_CHECK_VERSION)
+    #if PA_CHECK_VERSION(0, 9, 22)
+        if (!(u->thread = pa_thread_new("xrdp-source", thread_func, u))) {
+    #else
+        if (!(u->thread = pa_thread_new(thread_func, u))) {
+    #endif
+    #else
+	if (!(u->thread = pa_thread_new(thread_func, u))) 
+    #endif
         pa_log("Failed to create thread.");
         goto fail;
     }
