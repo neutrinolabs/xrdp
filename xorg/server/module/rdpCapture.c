@@ -33,6 +33,7 @@
 #include "rdpDraw.h"
 #include "rdpClientCon.h"
 #include "rdpReg.h"
+#include "rdpMisc.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
@@ -40,13 +41,13 @@
 
 /******************************************************************************/
 static Bool
-rdpCapture0(RegionPtr in_reg, RegionPtr out_reg,
+rdpCapture0(RegionPtr in_reg, BoxPtr *out_rects, int *num_out_rects,
             void *src, int src_width, int src_height,
             int src_stride, int src_format,
             void *dst, int dst_width, int dst_height,
             int dst_stride, int dst_format, int max_rects)
 {
-    BoxPtr prects;
+    BoxPtr psrc_rects;
     BoxRec rect;
     RegionRec reg;
     char *src_rect;
@@ -88,14 +89,25 @@ rdpCapture0(RegionPtr in_reg, RegionPtr out_reg,
     if (num_regions > max_rects)
     {
         num_regions = 1;
-        prects = rdpRegionExtents(&reg);
-        rdpRegionUninit(out_reg);
-        rdpRegionInit(out_reg, prects, 0);
+        psrc_rects = rdpRegionExtents(&reg);
     }
     else
     {
-        prects = REGION_RECTS(&reg);
-        rdpRegionCopy(out_reg, &reg);
+        psrc_rects = REGION_RECTS(&reg);
+    }
+
+    if (num_regions < 1)
+    {
+        return FALSE;
+    }
+
+    *num_out_rects = num_regions;
+
+    *out_rects = (BoxPtr) g_malloc(sizeof(BoxRec) * num_regions, 0);
+    for (i = 0; i < num_regions; i++)
+    {
+        rect = psrc_rects[i];
+        (*out_rects)[i] = rect;
     }
 
     if ((src_format == XRDP_a8r8g8b8) && (dst_format == XRDP_a8r8g8b8))
@@ -105,7 +117,7 @@ rdpCapture0(RegionPtr in_reg, RegionPtr out_reg,
         for (i = 0; i < num_regions; i++)
         {
             /* get rect to copy */
-            rect = prects[i];
+            rect = (*out_rects)[i];
 
             /* get rect dimensions */
             width = rect.x2 - rect.x1;
@@ -137,7 +149,7 @@ rdpCapture0(RegionPtr in_reg, RegionPtr out_reg,
         for (i = 0; i < num_regions; i++)
         {
             /* get rect to copy */
-            rect = prects[i];
+            rect = (*out_rects)[i];
 
             /* get rect dimensions */
             width = rect.x2 - rect.x1;
@@ -174,7 +186,7 @@ rdpCapture0(RegionPtr in_reg, RegionPtr out_reg,
         for (i = 0; i < num_regions; i++)
         {
             /* get rect to copy */
-            rect = prects[i];
+            rect = (*out_rects)[i];
 
             /* get rect dimensions */
             width = rect.x2 - rect.x1;
@@ -211,7 +223,7 @@ rdpCapture0(RegionPtr in_reg, RegionPtr out_reg,
         for (i = 0; i < num_regions; i++)
         {
             /* get rect to copy */
-            rect = prects[i];
+            rect = (*out_rects)[i];
 
             /* get rect dimensions */
             width = rect.x2 - rect.x1;
@@ -248,7 +260,7 @@ rdpCapture0(RegionPtr in_reg, RegionPtr out_reg,
         for (i = 0; i < num_regions; i++)
         {
             /* get rect to copy */
-            rect = prects[i];
+            rect = (*out_rects)[i];
 
             /* get rect dimensions */
             width = rect.x2 - rect.x1;
@@ -285,11 +297,22 @@ rdpCapture0(RegionPtr in_reg, RegionPtr out_reg,
     return rv;
 }
 
+/******************************************************************************/
+static Bool
+rdpCapture1(RegionPtr in_reg, BoxPtr *out_rects, int *num_out_rects,
+            void *src, int src_width, int src_height,
+            int src_stride, int src_format,
+            void *dst, int dst_width, int dst_height,
+            int dst_stride, int dst_format, int max_rects)
+{
+    return FALSE;
+}
+
 /**
  * Copy an array of rectangles from one memory area to another
  *****************************************************************************/
 Bool
-rdpCapture(RegionPtr in_reg, RegionPtr out_reg,
+rdpCapture(RegionPtr in_reg, BoxPtr *out_rects, int *num_out_rects,
            void *src, int src_width, int src_height,
            int src_stride, int src_format,
            void *dst, int dst_width, int dst_height,
@@ -299,7 +322,13 @@ rdpCapture(RegionPtr in_reg, RegionPtr out_reg,
     switch (mode)
     {
         case 0:
-            return rdpCapture0(in_reg, out_reg,
+            return rdpCapture0(in_reg, out_rects, num_out_rects,
+                               src, src_width, src_height,
+                               src_stride, src_format,
+                               dst, dst_width, dst_height,
+                               dst_stride, dst_format, 15);
+        case 1:
+            return rdpCapture1(in_reg, out_rects, num_out_rects,
                                src, src_width, src_height,
                                src_stride, src_format,
                                dst, dst_width, dst_height,
@@ -308,5 +337,5 @@ rdpCapture(RegionPtr in_reg, RegionPtr out_reg,
             LLOGLN(0, ("rdpCapture: unimp mode"));
             break;
     }
-    return TRUE;
+    return FALSE;
 }
