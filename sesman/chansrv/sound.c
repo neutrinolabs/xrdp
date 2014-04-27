@@ -368,6 +368,8 @@ sound_send_wave_data_chunk(char *data, int data_bytes)
         return 0;
     }
 
+    LOG(20, ("sound_send_wave_data_chunk: g_sent_flag[%d] = %d",
+            g_cBlockNo + 1, g_sent_flag[(g_cBlockNo + 1) & 0xff]));
     if (g_sent_flag[(g_cBlockNo + 1) & 0xff] & 1)
     {
         LOG(10, ("sound_send_wave_data_chunk: no room"));
@@ -469,6 +471,7 @@ sound_send_close(void)
     /* send any left over data */
     sound_send_wave_data_chunk(g_buffer, g_buf_index);
     g_buf_index = 0;
+    g_memset(g_sent_flag, 0, sizeof(g_sent_flag));
 
     make_stream(s);
     init_stream(s, 8182);
@@ -696,6 +699,7 @@ sound_init(void)
 int APP_CC
 sound_deinit(void)
 {
+    LOG(10, ("sound_deinit:"));
     if (g_audio_l_trans_out != 0)
     {
         trans_delete(g_audio_l_trans_out);
