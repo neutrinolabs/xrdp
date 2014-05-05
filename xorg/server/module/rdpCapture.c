@@ -312,7 +312,6 @@ rdpCapture1(RegionPtr in_reg, BoxPtr *out_rects, int *num_out_rects,
     char *src_rect;
     char *dst_rect;
     int num_regions;
-    int bytespp;
     int src_bytespp;
     int dst_bytespp;
     int width;
@@ -321,25 +320,24 @@ rdpCapture1(RegionPtr in_reg, BoxPtr *out_rects, int *num_out_rects,
     int min_height;
     int src_offset;
     int dst_offset;
-    int bytes;
-    int i;
-    int j;
-    int k;
+    int index;
+    int jndex;
+    int kndex;
     int red;
     int green;
     int blue;
+    int ex;
+    int ey;
     Bool rv;
     unsigned int *s32;
     unsigned int *d32;
-    unsigned short *d16;
-    unsigned char *d8;
 
-    LLOGLN(10, ("rdpCapture0:"));
+    LLOGLN(10, ("rdpCapture1:"));
 
     rv = TRUE;
 
-    min_width = min(dst_width, src_width);
-    min_height = min(dst_height, src_height);
+    min_width = RDPMIN(dst_width, src_width);
+    min_height = RDPMIN(dst_height, src_height);
 
     rect.x1 = 0;
     rect.y1 = 0;
@@ -367,27 +365,69 @@ rdpCapture1(RegionPtr in_reg, BoxPtr *out_rects, int *num_out_rects,
 
     *num_out_rects = num_regions;
 
-    *out_rects = (BoxPtr) g_malloc(sizeof(BoxRec) * num_regions, 0);
-    for (i = 0; i < num_regions; i++)
+    *out_rects = (BoxPtr) g_malloc(sizeof(BoxRec) * num_regions * 4, 0);
+    index = 0;
+    while (index < num_regions)
     {
-        rect = psrc_rects[i];
+        rect = psrc_rects[index];
         width = rect.x2 - rect.x1;
         height = rect.y2 - rect.y1;
-        width = (width + 15) & ~15;
-        height = (height + 15) & ~15;
-        rect.x2 = rect.x1 + width;
-        rect.y2 = rect.y1 + height;
+        ex = ((width + 15) & ~15) - width;
+        if (ex != 0)
+        {
+            rect.x2 += ex;
+            if (rect.x2 > min_width)
+            {
+                rect.x1 -= rect.x2 - min_width;
+                rect.x2 = min_width;
+            }
+            if (rect.x1 < 0)
+            {
+                rect.x1 += 16;
+            }
+        }
+        ey = ((height + 15) & ~15) - height;
+        if (ey != 0)
+        {
+            rect.y2 += ey;
+            if (rect.y2 > min_height)
+            {
+                rect.y1 -= rect.y2 - min_height;
+                rect.y2 = min_height;
+            }
+            if (rect.y1 < 0)
+            {
+                rect.y1 += 16;
+            }
+        }
+#if 0
+        if (rect.x1 < 0)
+        {
+            LLOGLN(0, ("rdpCapture1: error"));
+        }
+        if (rect.y1 < 0)
+        {
+            LLOGLN(0, ("rdpCapture1: error"));
+        }
         if (rect.x2 > min_width)
         {
-            rect.x2 = min_width;
-            rect.x1 = min_width - 16;
+            LLOGLN(0, ("rdpCapture1: error"));
         }
         if (rect.y2 > min_height)
         {
-            rect.y2 = min_height;
-            rect.y1 = min_height - 16;
+            LLOGLN(0, ("rdpCapture1: error"));
         }
-        (*out_rects)[i] = rect;
+        if ((rect.x2 - rect.x1) % 16 != 0)
+        {
+            LLOGLN(0, ("rdpCapture1: error"));
+        }
+        if ((rect.y2 - rect.y1) % 16 != 0)
+        {
+            LLOGLN(0, ("rdpCapture1: error"));
+        }
+#endif
+        (*out_rects)[index] = rect;
+        index++;
     }
 
     if ((src_format == XRDP_a8r8g8b8) && (dst_format == XRDP_a8b8g8r8))
@@ -395,10 +435,10 @@ rdpCapture1(RegionPtr in_reg, BoxPtr *out_rects, int *num_out_rects,
         src_bytespp = 4;
         dst_bytespp = 4;
 
-        for (i = 0; i < num_regions; i++)
+        for (index = 0; index < num_regions; index++)
         {
             /* get rect to copy */
-            rect = (*out_rects)[i];
+            rect = (*out_rects)[index];
 
             /* get rect dimensions */
             width = rect.x2 - rect.x1;
@@ -411,11 +451,11 @@ rdpCapture1(RegionPtr in_reg, BoxPtr *out_rects, int *num_out_rects,
             dst_rect = dst + dst_offset;
 
             /* copy one line at a time */
-            for (j = 0; j < height; j++)
+            for (jndex = 0; jndex < height; jndex++)
             {
                 s32 = (unsigned int *) src_rect;
                 d32 = (unsigned int *) dst_rect;
-                for (k = 0; k < width; k++)
+                for (kndex = 0; kndex < width; kndex++)
                 {
                     SPLITCOLOR32(red, green, blue, *s32);
                     *d32 = COLOR24(red, green, blue);
@@ -427,8 +467,12 @@ rdpCapture1(RegionPtr in_reg, BoxPtr *out_rects, int *num_out_rects,
             }
         }
     }
-
-    return FALSE;
+    else
+    {
+        LLOGLN(0, ("rdpCapture1: unimp color conversion"));
+    }
+    rdpRegionUninit(&reg);
+    return rv;
 }
 
 /**
