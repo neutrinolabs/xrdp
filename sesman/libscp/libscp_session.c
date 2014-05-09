@@ -58,19 +58,19 @@ scp_session_set_type(struct SCP_SESSION *s, tui8 type)
         case SCP_SESSION_TYPE_XVNC:
             s->type = SCP_SESSION_TYPE_XVNC;
             break;
-            
+
         case SCP_SESSION_TYPE_XRDP:
             s->type = SCP_SESSION_TYPE_XRDP;
             break;
-            
+
         case SCP_SESSION_TYPE_XORG:
-			s->type = SCP_SESSION_TYPE_XORG;
-			break;
-			
+            s->type = SCP_SESSION_TYPE_XORG;
+            break;
+
         case SCP_GW_AUTHENTICATION:
             s->type = SCP_GW_AUTHENTICATION;
             break;
-            
+
         case SCP_SESSION_TYPE_MANAGE:
             s->type = SCP_SESSION_TYPE_MANAGE;
             s->mng = (struct SCP_MNG_DATA *)g_malloc(sizeof(struct SCP_MNG_DATA), 1);
@@ -82,7 +82,7 @@ scp_session_set_type(struct SCP_SESSION *s, tui8 type)
             }
 
             break;
-            
+
         default:
             log_message(LOG_LEVEL_WARNING, "[session:%d] set_type: unknown type", __LINE__);
             return 1;

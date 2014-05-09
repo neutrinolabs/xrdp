@@ -45,6 +45,8 @@
 #define SESMAN_CFG_XORG_PARAMS       "Xorg"
 #define SESMAN_CFG_VNC_PARAMS        "Xvnc"
 
+#define SESMAN_CFG_SESSION_VARIABLES "SessionVariables"
+
 /*
 #define SESMAN_CFG_LOGGING           "Logging"
 #define SESMAN_CFG_LOG_FILE          "LogFile"
@@ -221,13 +223,13 @@ struct config_sesman
    * @var log
    * @brief Log configuration struct
    */
-   
+
   struct list* xorg_params;
   /**
    * @var log
    * @brief Log configuration struct
    */
-      
+
   //struct log_config log;
   /**
    * @var sec
@@ -239,6 +241,9 @@ struct config_sesman
    * @brief Session configuration options struct
    */
   struct config_sessions sess;
+
+  struct list* session_variables1;
+  struct list* session_variables2;
 };
 
 /**
@@ -334,7 +339,7 @@ config_read_rdp_params(int file, struct config_sesman* cs, struct list* param_n,
 int DEFAULT_CC
 config_read_xorg_params(int file, struct config_sesman* cs, struct list* param_n,
                         struct list* param_v);
-                       
+
 /**
  *
  * @brief Reads sesman [Xvnc] configuration section
@@ -348,5 +353,9 @@ config_read_xorg_params(int file, struct config_sesman* cs, struct list* param_n
 int DEFAULT_CC
 config_read_vnc_params(int file, struct config_sesman* cs, struct list* param_n,
                        struct list* param_v);
+
+int DEFAULT_CC
+config_read_session_variables(int file, struct config_sesman *cs,
+                              struct list *param_n, struct list *param_v);
 
 #endif

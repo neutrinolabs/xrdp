@@ -88,6 +88,8 @@ config_read(struct config_sesman *cfg)
     /* read session config */
     config_read_sessions(fd, &(cfg->sess), param_n, param_v);
 
+    config_read_session_variables(fd, cfg, param_n, param_v);
+
     /* cleanup */
     list_delete(sec);
     list_delete(param_v);
@@ -503,6 +505,42 @@ config_read_vnc_params(int file, struct config_sesman *cs, struct list *param_n,
     for (i = 0; i < cs->vnc_params->count; i++)
     {
         g_printf("\tParameter %02d                   %s\r\n", i, (char *)list_get_item(cs->vnc_params, i));
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+int DEFAULT_CC
+config_read_session_variables(int file, struct config_sesman *cs,
+                              struct list *param_n, struct list *param_v)
+{
+    int i;
+
+    list_clear(param_v);
+    list_clear(param_n);
+
+    cs->session_variables1 = list_create();
+    cs->session_variables2 = list_create();
+
+    file_read_section(file, SESMAN_CFG_SESSION_VARIABLES, param_n, param_v);
+
+    for (i = 0; i < param_n->count; i++)
+    {
+        list_add_item(cs->session_variables1,
+                      (tintptr) g_strdup((char *) list_get_item(param_n, i)));
+        list_add_item(cs->session_variables2,
+                      (tintptr) g_strdup((char *) list_get_item(param_v, i)));
+    }
+
+    /* printing security config */
+    g_writeln("%s parameters:", SESMAN_CFG_SESSION_VARIABLES);
+
+    for (i = 0; i < cs->session_variables1->count; i++)
+    {
+        g_writeln("  Parameter %02d                   %s=%s", i,
+               (char *) list_get_item(cs->session_variables1, i),
+               (char *) list_get_item(cs->session_variables2, i));
     }
 
     return 0;

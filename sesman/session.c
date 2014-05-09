@@ -288,7 +288,8 @@ session_start_sessvc(int xpid, int wmpid, long data, char *username, int display
     list_add_item(sessvc_params, (long)g_strdup(wmpid_str));
     list_add_item(sessvc_params, 0); /* mandatory */
 
-    env_set_user(username, 0, display);
+    env_set_user(username, 0, display,
+                 g_cfg->session_variables1, g_cfg->session_variables2);
 
     /* executing sessvc */
     g_execvp(exe_path, ((char **)sessvc_params->items));
@@ -501,7 +502,9 @@ session_start_fork(int width, int height, int bpp, char *username,
             }
             else if (pampid == 0) /* child: X11/client */
             {
-                env_set_user(username, 0, display);
+                env_set_user(username, 0, display,
+                             g_cfg->session_variables1,
+                             g_cfg->session_variables2);
                 if (x_server_running(display))
                 {
                     auth_set_env(data);
@@ -594,7 +597,9 @@ session_start_fork(int width, int height, int bpp, char *username,
             }
             else if (xpid == 0) /* child */
             {
-                env_set_user(username, passwd_file, display);
+                env_set_user(username, passwd_file, display,
+                             g_cfg->session_variables1,
+                             g_cfg->session_variables2);
                 env_check_password_file(passwd_file, password);
 
                 g_snprintf(text, 255, "%d", g_cfg->sess.max_idle_time);
@@ -774,7 +779,8 @@ session_reconnect_fork(int display, char *username)
     }
     else if (pid == 0)
     {
-        env_set_user(username, 0, display);
+        env_set_user(username, 0, display,
+                     g_cfg->session_variables1, g_cfg->session_variables2);
         g_snprintf(text, 255, "%s/%s", XRDP_CFG_PATH, "reconnectwm.sh");
 
         if (g_file_exist(text))
