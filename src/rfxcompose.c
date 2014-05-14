@@ -259,7 +259,8 @@ static int
 rfx_compose_message_tileset(struct rfxencode* enc, STREAM* s,
                             char* buf, int width, int height,
                             int stride_bytes,
-                            struct rfx_rect *tiles, int num_tiles, int *quant)
+                            struct rfx_tile *tiles, int num_tiles,
+                            int *quants, int num_quants)
 {
     int size;
     int start_pos;
@@ -279,21 +280,15 @@ rfx_compose_message_tileset(struct rfxencode* enc, STREAM* s,
     int cy;
     char *tile_data;
 
-    if (quant == 0)
+    if (quants == 0)
     {
         numQuants = 1;
         quantVals = g_rfx_default_quantization_values;
-        quantIdxY = 0;
-        quantIdxCb = 0;
-        quantIdxCr = 0;
     }
     else
     {
-        numQuants = 1;
-        quantVals = quant;
-        quantIdxY = 0;
-        quantIdxCb = 0;
-        quantIdxCr = 0;
+        numQuants = num_quants;
+        quantVals = quants;
     }
     numTiles = num_tiles;
     size = 22 + numQuants * 5;
@@ -322,6 +317,9 @@ rfx_compose_message_tileset(struct rfxencode* enc, STREAM* s,
         y = tiles[i].y;
         cx = tiles[i].cx;
         cy = tiles[i].cy;
+        quantIdxY = tiles[i].quant_y;
+        quantIdxCb = tiles[i].quant_cb;
+        quantIdxCr = tiles[i].quant_cr;
         if (enc->format == RFX_FORMAT_YUV)
         {
             tile_data = buf + (y * stride_bytes) + x * RFX_YUV_BTES;
@@ -370,7 +368,8 @@ int
 rfx_compose_message_data(struct rfxencode* enc, STREAM* s,
                          struct rfx_rect *regions, int num_regions,
                          char *buf, int width, int height, int stride_bytes,
-                         struct rfx_rect *tiles, int num_tiles, int *quant)
+                         struct rfx_tile *tiles, int num_tiles,
+                         int *quants, int num_quants)
 {
     if (rfx_compose_message_frame_begin(enc, s) != 0)
     {
@@ -381,7 +380,7 @@ rfx_compose_message_data(struct rfxencode* enc, STREAM* s,
         return 1;
     }
     if (rfx_compose_message_tileset(enc, s, buf, width, height, stride_bytes,
-                                    tiles, num_tiles, quant) != 0)
+                                    tiles, num_tiles, quants, num_quants) != 0)
     {
         return 1;
     }

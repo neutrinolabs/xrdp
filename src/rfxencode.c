@@ -29,7 +29,7 @@
 
 /******************************************************************************/
 void *
-rfxcodec_encode_create(int width, int height, int format)
+rfxcodec_encode_create(int width, int height, int format, int flags)
 {
     struct rfxencode *enc;
 
@@ -56,6 +56,9 @@ rfxcodec_encode_create(int width, int height, int format)
         case RFX_FORMAT_RGB:
             enc->bits_per_pixel = 24;
             break;
+        default:
+            free(enc);
+            return NULL;
     }
     enc->format = format;
     return enc;
@@ -81,8 +84,8 @@ int
 rfxcodec_encode(void *handle, char *cdata, int *cdata_bytes,
                 char *buf, int width, int height, int stride_bytes,
                 struct rfx_rect *regions, int num_regions,
-                struct rfx_rect *tiles, int num_tiles,
-                int *quant)
+                struct rfx_tile *tiles, int num_tiles,
+                int *quants, int num_quants)
 {
     struct rfxencode *enc;
     STREAM s;
@@ -103,7 +106,7 @@ rfxcodec_encode(void *handle, char *cdata, int *cdata_bytes,
     }
     if (rfx_compose_message_data(enc, &s, regions, num_regions,
                                  buf, width, height, stride_bytes,
-                                 tiles, num_tiles, quant) != 0)
+                                 tiles, num_tiles, quants, num_quants) != 0)
     {
         return 1;
     }

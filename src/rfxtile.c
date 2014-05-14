@@ -3,6 +3,7 @@
  * RemoteFX Codec Library - Encode
  *
  * Copyright 2011 Vic Lee
+ * Copyright 2014 Jay Sorg <jay.sorg@gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +32,10 @@
 #include "rfxencode_quantization.h"
 #include "rfxencode_differential.h"
 #include "rfxencode_rlgr3.h"
+
+#define LLOG_LEVEL 11
+#define LLOGLN(_level, _args) \
+    do { if (_level < LLOG_LEVEL) { printf _args ; printf("\n"); } } while (0)
 
 /******************************************************************************/
 static int
@@ -237,6 +242,7 @@ rfx_encode_rgb(struct rfxencode *enc, char *rgb_data,
     {
         return 1;
     }
+    LLOGLN(10, ("rfx_encode_rgb: y_size %d", *y_size));
     stream_seek(data_out, *y_size);
     if (rfx_encode_component(enc, cb_quants, cb_g_buffer,
                              stream_get_tail(data_out),
@@ -245,6 +251,7 @@ rfx_encode_rgb(struct rfxencode *enc, char *rgb_data,
     {
         return 1;
     }
+    LLOGLN(10, ("rfx_encode_rgb: cb_size %d", *cb_size));
     stream_seek(data_out, *cb_size);
     if (rfx_encode_component(enc, cr_quants, cr_b_buffer,
                              stream_get_tail(data_out),
@@ -253,6 +260,7 @@ rfx_encode_rgb(struct rfxencode *enc, char *rgb_data,
     {
         return 1;
     }
+    LLOGLN(10, ("rfx_encode_rgb: cr_size %d", *cr_size));
     stream_seek(data_out, *cr_size);
     return 0;
 }
@@ -268,9 +276,9 @@ rfx_encode_yuv(struct rfxencode *enc, char *yuv_data,
     sint8 *u_buffer;
     sint8 *v_buffer;
 
-    y_buffer = (sint8*)yuv_data;
-    u_buffer = (sint8*)(yuv_data + RFX_YUV_BTES);
-    v_buffer = (sint8*)(yuv_data + RFX_YUV_BTES * 2);
+    y_buffer = (sint8 *) yuv_data;
+    u_buffer = (sint8 *) (yuv_data + RFX_YUV_BTES);
+    v_buffer = (sint8 *) (yuv_data + RFX_YUV_BTES * 2);
     if (rfx_encode_component8(enc, y_quants, y_buffer,
                               stream_get_tail(data_out),
                               stream_get_left(data_out),
