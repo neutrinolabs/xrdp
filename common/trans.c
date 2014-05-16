@@ -574,7 +574,7 @@ trans_listen_address(struct trans *self, char *port, const char *address)
 
             if (g_tcp_listen(self->sck) == 0)
             {
-                g_chmod_hex(port, 0xffff);
+                g_chmod_hex(port, 0x0660);
                 self->status = TRANS_STATUS_UP; /* ok */
                 self->type1 = TRANS_TYPE_LISTENER; /* listener */
                 return 0;
