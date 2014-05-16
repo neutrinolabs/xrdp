@@ -547,6 +547,7 @@ struct xrdp_cfg_globals
     int  ls_height;              /* window height */
     int  ls_bg_color;            /* background color */
     char ls_logo_filename[256];  /* logo filename */
+    char ls_background_image[256];  /* background image file name */
     int  ls_logo_x_pos;          /* logo x co-ordinate */
     int  ls_logo_y_pos;          /* logo y co-ordinate */
     int  ls_label_x_pos;         /* x pos of labels */
