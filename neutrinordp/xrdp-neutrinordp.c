@@ -27,7 +27,7 @@
 #ifdef XRDP_DEBUG
 #define LOG_LEVEL 99
 #else
-#define LOG_LEVEL 10
+#define LOG_LEVEL 0
 #endif
 
 #define LLOG(_level, _args) \
@@ -195,14 +195,31 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
     switch (msg)
     {
         case 15: /* key down */
+            // Before we handle the first character we synchronize 
+            // capslock and numlock. 
+	    // We collect the state during the first synchronize ( see msg 17)
+            if(!mod->bool_keyBoardSynced)
+            {
+                LLOGLN(0, ("Additional Sync event handled : %d",mod->keyBoardLockInfo));
+                mod->inst->input->SynchronizeEvent(mod->inst->input, mod->keyBoardLockInfo);
+                mod->bool_keyBoardSynced = 1;
+            }
             mod->inst->input->KeyboardEvent(mod->inst->input, param4, param3);
             break;
         case 16: /* key up */
             mod->inst->input->KeyboardEvent(mod->inst->input, param4, param3);
             break;
-        case 17: /*Synchronize*/
-            LLOGLN(11, ("Synchronized event handled"));
-            mod->inst->input->SynchronizeEvent(mod->inst->input, 0);
+        case 17: /*Synchronize*/       
+            LLOGLN(11, ("Synchronized event handled : %d",param1));
+            // In some situations the Synchronize event come to early. 
+            // Therefore we store this information and use it when we 
+            // receive the first keyboard event
+            // Without this fix numlock and capslock can come out of sync.	    
+            mod->inst->input->SynchronizeEvent(mod->inst->input, param1);
+            if(!mod->bool_keyBoardSynced)
+            {
+                mod->keyBoardLockInfo = param1 ;
+            }
             break;
         case 100: /* mouse move */
             LLOGLN(12, ("mouse move %d %d", param1, param2));
