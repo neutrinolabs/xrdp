@@ -1825,7 +1825,7 @@ void add_string_to_logwindow(char *msg, struct list *log)
 
 /*****************************************************************************/
 int APP_CC
-xrdp_wm_log_msg(struct xrdp_wm *self, char *msg)
+xrdp_wm_show_log(struct xrdp_wm *self)
 {
     struct xrdp_bitmap *but;
     int w;
@@ -1835,10 +1835,11 @@ xrdp_wm_log_msg(struct xrdp_wm *self, char *msg)
 
     if (self->hide_log_window)
     {
+        /* make sure autologin is off */
+        self->session->client_info->rdp_autologin = 0;
+        xrdp_wm_set_login_mode(self, 0); /* reset session */
         return 0;
     }
-
-    add_string_to_logwindow(msg, self->log);
 
     if (self->log_wnd == 0)
     {
@@ -1886,7 +1887,15 @@ xrdp_wm_log_msg(struct xrdp_wm *self, char *msg)
 
     xrdp_wm_set_focused(self, self->log_wnd);
     xrdp_bitmap_invalidate(self->log_wnd, 0);
-    g_sleep(100);
+
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+xrdp_wm_log_msg(struct xrdp_wm *self, char *msg)
+{
+    add_string_to_logwindow(msg, self->log);
     return 0;
 }
 
