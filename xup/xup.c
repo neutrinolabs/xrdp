@@ -175,11 +175,7 @@ lib_mod_connect(struct mod *mod)
     char con_port[256];
 
     LIB_DEBUG(mod, "in lib_mod_connect");
-    /* clear screen */
-    mod->server_begin_update(mod);
-    mod->server_set_fgcolor(mod, 0);
-    mod->server_fill_rect(mod, 0, 0, mod->width, mod->height);
-    mod->server_end_update(mod);
+
     mod->server_msg(mod, "started connecting", 0);
 
     /* only support 8, 15, 16, and 24 bpp connections from rdp client */
