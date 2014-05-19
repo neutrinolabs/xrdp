@@ -27,7 +27,7 @@
 #ifdef XRDP_DEBUG
 #define LOG_LEVEL 99
 #else
-#define LOG_LEVEL 11
+#define LOG_LEVEL 1
 #endif
 
 #define LLOG(_level, _args) \
@@ -280,8 +280,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             data = (char *)param3;
             total_size = (int)param4;
 
-            LLOGLN(10, ("lxrdp_event: client to server ,chanid= %d  flags= %d", chanid, flags));
-            g_hexdump(data, size); // for debugging
+            LLOGLN(12, ("lxrdp_event: client to server ,chanid= %d  flags= %d", chanid, flags));
             if ((chanid < 0) || (chanid >= mod->inst->settings->num_channels))
             {
                 LLOGLN(0, ("lxrdp_event: error chanid %d", chanid));
@@ -1473,7 +1472,6 @@ lfreerdp_pre_connect(freerdp *instance)
     instance->update->pointer->PointerNew = lfreerdp_pointer_new;
     instance->update->pointer->PointerCached = lfreerdp_pointer_cached;
 
-
     if ((mod->username[0] != 0) && (mod->password[0] != 0))
     {
         /* since we have username and password, we can try nla */
@@ -1761,7 +1759,6 @@ lfreerdp_post_connect(freerdp *instance)
     mod = ((struct mod_context *)(instance->context))->modi;
     g_memset(mod->password, 0, sizeof(mod->password));
 
-
     mod->inst->update->window->WindowCreate = lrail_WindowCreate;
     mod->inst->update->window->WindowUpdate = lrail_WindowUpdate;
     mod->inst->update->window->WindowDelete = lrail_WindowDelete;
@@ -1772,7 +1769,6 @@ lfreerdp_post_connect(freerdp *instance)
     mod->inst->update->window->NotifyIconDelete = lrail_NotifyIconDelete;
     mod->inst->update->window->MonitoredDesktop = lrail_MonitoredDesktop;
     mod->inst->update->window->NonMonitoredDesktop = lrail_NonMonitoredDesktop;
-
 
     return 1;
 }
@@ -1816,7 +1812,6 @@ lfreerdp_receive_channel_data(freerdp *instance, int channelId, uint8 *data,
     if (lchid >= 0)
     {
         LLOGLN(10, ("lfreerdp_receive_channel_data: server to client, chanid: %d", lchid));
-        g_hexdump(data, size); // for debugging
         error = mod->server_send_to_channel(mod, lchid, (char *)data, size,
                                             total_size, flags);
 
