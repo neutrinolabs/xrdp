@@ -435,8 +435,13 @@ main(int argc, char **argv)
     {
         g_writeln("");
         g_writeln("xrdp: A Remote Desktop Protocol server.");
+<<<<<<< HEAD
         g_writeln("Copyright (C) Jay Sorg 2004-2013");
         g_writeln("See http://xrdp.sourceforge.net for more information.");
+=======
+        g_writeln("Copyright (C) Jay Sorg 2004-2014");
+        g_writeln("See http://www.xrdp.org for more information.");
+>>>>>>> ec44b9d... xrdp: update web site
         g_writeln("");
         g_writeln("Usage: xrdp [options]");
         g_writeln("   --help: show help");
@@ -453,8 +458,13 @@ main(int argc, char **argv)
     {
         g_writeln("");
         g_writeln("xrdp: A Remote Desktop Protocol server.");
+<<<<<<< HEAD
         g_writeln("Copyright (C) Jay Sorg 2004-2013");
         g_writeln("See http://xrdp.sourceforge.net for more information.");
+=======
+        g_writeln("Copyright (C) Jay Sorg 2004-2014");
+        g_writeln("See http://www.xrdp.org for more information.");
+>>>>>>> ec44b9d... xrdp: update web site
         g_writeln("Version %s", PACKAGE_VERSION);
         g_writeln("");
         g_deinit();
