@@ -1,0 +1,6 @@
+.nofail
+.fail
+load-module module-augment-properties
+load-module module-xrdp-sink
+load-module module-xrdp-source
+load-module module-native-protocol-unix
