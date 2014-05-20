@@ -105,7 +105,7 @@ xrdp_mm_sync_load(long param1, long param2)
 static void APP_CC
 xrdp_mm_module_cleanup(struct xrdp_mm *self)
 {
-    log_message(LOG_LEVEL_DEBUG,"xrdp_mm_module_cleanup");
+    log_message(LOG_LEVEL_DEBUG, "xrdp_mm_module_cleanup");
 
     /* shutdown thread */
     deinit_xrdp_encoder(self);
@@ -132,6 +132,14 @@ xrdp_mm_module_cleanup(struct xrdp_mm *self)
     self->mod_exit = 0;
     self->mod = 0;
     self->mod_handle = 0;
+
+    if (self->wm->hide_log_window)
+    {
+        /* make sure autologin is off */
+        self->wm->session->client_info->rdp_autologin = 0;
+        xrdp_wm_set_login_mode(self->wm, 0); /* reset session */
+    }
+
 }
 
 /*****************************************************************************/
@@ -565,6 +573,10 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
         if (self->mod->mod_connect(self->mod) == 0)
         {
             rv = 0; /* connect success */
+        }
+        else
+        {
+            xrdp_wm_show_log(self->wm);
         }
     }
 
@@ -1216,6 +1228,7 @@ xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
                         "login failed");
         log_message(LOG_LEVEL_INFO,"xrdp_mm_process_login_response: "
                         "login failed");
+        xrdp_wm_show_log(self->wm);
     }
 
     cleanup_sesman_connection(self);

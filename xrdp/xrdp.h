@@ -138,6 +138,8 @@ callback(long id, int msg, long param1, long param2, long param3, long param4);
 int APP_CC
 xrdp_wm_delete_all_childs(struct xrdp_wm* self);
 int APP_CC
+xrdp_wm_show_log(struct xrdp_wm *self);
+int APP_CC
 xrdp_wm_log_msg(struct xrdp_wm* self, char* msg);
 int APP_CC
 xrdp_wm_get_wait_objs(struct xrdp_wm* self, tbus* robjs, int* rc,
