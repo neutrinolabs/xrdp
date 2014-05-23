@@ -116,6 +116,31 @@ Sets the time(in seconds) limit before a disconnected session is killed.
 If set to \fI0\fR, automatic killing is disabled.
 .br 
 
+.TP 
+\fBPolicy\fR=\fI[Default|UBD|UBI|UBC|UBDI|UBDC]\fR
+Session allocation policy. By Default, a new session is created
+for the combination <User,BitPerPixel> when using Xrdp, and 
+for the combination <User,BitPerPixel,DisplaySize> when using Xvnc.
+This behaviour can be changed by setting session policy to:
+.br
+
+.br 
+\fBUBD\fR - session per <User,BitPerPixel,DisplaySize>
+.br 
+\fBUBI\fR - session per <User,BitPerPixel,IPAddr>
+.br 
+\fBUBC\fR - session per <User,BitPerPixel,Connection>
+.br 
+\fBUBDI\fR - session per <User,BitPerPixel,DisplaySize,IPAddr>
+.br 
+\fBUBDC\fR - session per <User,BitPerPixel,DisplaySize,Connection>
+.br
+
+.br
+Note that the criteria <User,BitPerPixel> can not be turned off
+and <DisplaySize> will always be checkt when for Xvnc connections.
+.br
+
 .SH "SECURITY"
 The following parameters can be used in the \fB[Sessions]\fR section:
 

@@ -74,9 +74,10 @@ config_read(struct config_sesman *cfg)
     /* read global config */
     config_read_globals(fd, cfg, param_n, param_v);
 
-    /* read Xvnc/X11rdp parameter list */
+    /* read Xvnc/X11rdp/XOrg parameter list */
     config_read_vnc_params(fd, cfg, param_n, param_v);
     config_read_rdp_params(fd, cfg, param_n, param_v);
+    config_read_xorg_params(fd, cfg, param_n, param_v);
 
     /* read logging config */
     // config_read_logging(fd, &(cfg->log), param_n, param_v);
@@ -86,6 +87,8 @@ config_read(struct config_sesman *cfg)
 
     /* read session config */
     config_read_sessions(fd, &(cfg->sess), param_n, param_v);
+
+    config_read_session_variables(fd, cfg, param_n, param_v);
 
     /* cleanup */
     list_delete(sec);
@@ -336,6 +339,7 @@ config_read_sessions(int file, struct config_sessions *se, struct list *param_n,
     se->max_idle_time = 0;
     se->max_disc_time = 0;
     se->kill_disconnected = 0;
+    se->policy = SESMAN_CFG_SESS_POLICY_DFLT;
 
     file_read_section(file, SESMAN_CFG_SESSIONS, param_n, param_v);
 
@@ -367,15 +371,49 @@ config_read_sessions(int file, struct config_sessions *se, struct list *param_n,
         {
             se->max_disc_time = g_atoi((char *)list_get_item(param_v, i));
         }
+
+        if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_POLICY_S))
+        {
+            char *value = (char *)list_get_item(param_v, i);
+            if (0 == g_strcasecmp(value, SESMAN_CFG_SESS_POLICY_DFLT_S))
+            {
+                se->policy = SESMAN_CFG_SESS_POLICY_DFLT;
+            }
+            else if (0 == g_strcasecmp(value, SESMAN_CFG_SESS_POLICY_UBD_S))
+            {
+                se->policy = SESMAN_CFG_SESS_POLICY_UBD;
+            }
+            else if (0 == g_strcasecmp(value, SESMAN_CFG_SESS_POLICY_UBI_S))
+            {
+                se->policy = SESMAN_CFG_SESS_POLICY_UBI;
+            }
+            else if (0 == g_strcasecmp(value, SESMAN_CFG_SESS_POLICY_UBC_S))
+            {
+                se->policy = SESMAN_CFG_SESS_POLICY_UBC;
+            }
+            else if (0 == g_strcasecmp(value, SESMAN_CFG_SESS_POLICY_UBDI_S))
+            {
+                se->policy = SESMAN_CFG_SESS_POLICY_UBDI;
+            }
+            else if (0 == g_strcasecmp(value, SESMAN_CFG_SESS_POLICY_UBDC_S))
+            {
+                se->policy = SESMAN_CFG_SESS_POLICY_UBDC;
+            }
+            else /* silently ignore typos */
+            {
+                se->policy = SESMAN_CFG_SESS_POLICY_DFLT;
+            }
+        }
     }
 
-    /* printing security config */
+    /* printing session config */
     g_printf("session configuration:\r\n");
     g_printf("\tMaxSessions:                 %i\r\n", se->max_sessions);
     g_printf("\tX11DisplayOffset:            %i\r\n", se->x11_display_offset);
     g_printf("\tKillDisconnected:            %i\r\n", se->kill_disconnected);
     g_printf("\tIdleTimeLimit:               %i\r\n", se->max_idle_time);
     g_printf("\tDisconnectedTimeLimit:       %i\r\n", se->max_idle_time);
+    g_printf("\tPolicy:       %i\r\n", se->policy);
 
     return 0;
 }
@@ -412,6 +450,38 @@ config_read_rdp_params(int file, struct config_sesman *cs, struct list *param_n,
 
 /******************************************************************************/
 int DEFAULT_CC
+config_read_xorg_params(int file, struct config_sesman *cs,
+                        struct list *param_n, struct list *param_v)
+{
+    int i;
+
+    list_clear(param_v);
+    list_clear(param_n);
+
+    cs->xorg_params = list_create();
+
+    file_read_section(file, SESMAN_CFG_XORG_PARAMS, param_n, param_v);
+
+    for (i = 0; i < param_n->count; i++)
+    {
+        list_add_item(cs->xorg_params,
+                      (long) g_strdup((char *) list_get_item(param_v, i)));
+    }
+
+    /* printing security config */
+    g_printf("XOrg parameters:\r\n");
+
+    for (i = 0; i < cs->xorg_params->count; i++)
+    {
+        g_printf("\tParameter %02d                   %s\r\n",
+                 i, (char *) list_get_item(cs->xorg_params, i));
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+int DEFAULT_CC
 config_read_vnc_params(int file, struct config_sesman *cs, struct list *param_n,
                        struct list *param_v)
 {
@@ -435,6 +505,42 @@ config_read_vnc_params(int file, struct config_sesman *cs, struct list *param_n,
     for (i = 0; i < cs->vnc_params->count; i++)
     {
         g_printf("\tParameter %02d                   %s\r\n", i, (char *)list_get_item(cs->vnc_params, i));
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+int DEFAULT_CC
+config_read_session_variables(int file, struct config_sesman *cs,
+                              struct list *param_n, struct list *param_v)
+{
+    int i;
+
+    list_clear(param_v);
+    list_clear(param_n);
+
+    cs->session_variables1 = list_create();
+    cs->session_variables2 = list_create();
+
+    file_read_section(file, SESMAN_CFG_SESSION_VARIABLES, param_n, param_v);
+
+    for (i = 0; i < param_n->count; i++)
+    {
+        list_add_item(cs->session_variables1,
+                      (tintptr) g_strdup((char *) list_get_item(param_n, i)));
+        list_add_item(cs->session_variables2,
+                      (tintptr) g_strdup((char *) list_get_item(param_v, i)));
+    }
+
+    /* printing security config */
+    g_writeln("%s parameters:", SESMAN_CFG_SESSION_VARIABLES);
+
+    for (i = 0; i < cs->session_variables1->count; i++)
+    {
+        g_writeln("  Parameter %02d                   %s=%s", i,
+               (char *) list_get_item(cs->session_variables1, i),
+               (char *) list_get_item(cs->session_variables2, i));
     }
 
     return 0;

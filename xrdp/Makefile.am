@@ -45,7 +45,8 @@ xrdp_SOURCES = \
   xrdp_painter.c \
   xrdp_process.c \
   xrdp_region.c \
-  xrdp_wm.c
+  xrdp_wm.c \
+  xrdp_encoder.c
 
 xrdp_LDADD = \
   $(top_builddir)/common/libcommon.la \
@@ -70,4 +71,3 @@ xrdppkgdata_DATA = \
   sans-10.fv1 \
   cursor0.cur \
   cursor1.cur
-

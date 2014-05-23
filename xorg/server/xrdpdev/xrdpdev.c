@@ -39,6 +39,8 @@ This is the main driver file
 #include <mi.h>
 #include <randrstr.h>
 
+#include <xf86Modes.h>
+
 #include "rdp.h"
 #include "rdpPri.h"
 #include "rdpDraw.h"
@@ -449,7 +451,11 @@ rdpScreenInit(ScreenPtr pScreen, int argc, char **argv)
         LLOGLN(0, ("rdpScreenInit: fbScreenInit failed"));
         return FALSE;
     }
+
+#if XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(1, 14, 0, 0, 0)
+    /* 1.13 has this function, 1.14 and up does not */
     miInitializeBackingStore(pScreen);
+#endif
 
 #if 0
     /* XVideo */

@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,12 @@
 #include "list.h"
 #include "file.h"
 
-#define MY_KEY_SIZE 512
+/* this is the signature size in bytes */
+#define	TSSK_KEY_LENGTH	64
+
+/* default to 512 bit key size, can set changed, set */
+static int g_key_size_bits = 512;
+static int g_key_size_bytes = 64;
 
 static tui8 g_exponent[4] =
 {
@@ -296,12 +301,12 @@ key_gen(const char *path_and_file_name)
     sign_len = 64;
     error = 0;
     g_writeln("");
-    g_writeln("Generating %d bit rsa key...", MY_KEY_SIZE);
+    g_writeln("Generating %d bit rsa key...", g_key_size_bits);
     g_writeln("");
 
     if (error == 0)
     {
-        error = ssl_gen_key_xrdp1(MY_KEY_SIZE, e_data, e_len, n_data, n_len,
+        error = ssl_gen_key_xrdp1(g_key_size_bits, e_data, e_len, n_data, n_len,
                                   d_data, d_len);
 
         if (error != 0)

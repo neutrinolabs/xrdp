@@ -45,6 +45,15 @@
 #include <pulsecore/thread-mq.h>
 #include <pulsecore/thread.h>
 
+/* defined in pulse/version.h */
+#if PA_PROTOCOL_VERSION > 28
+/* these used to be defined in pulsecore/macro.h */
+typedef bool pa_bool_t;
+#define FALSE ((pa_bool_t) 0)
+#define TRUE (!FALSE)
+#else
+#endif
+
 #include "module-xrdp-source-symdef.h"
 
 PA_MODULE_AUTHOR("Laxmikant Rashinkar");
@@ -329,8 +338,7 @@ int pa__init(pa_module *m) {
     pa_source_new_data_set_name(&data, pa_modargs_get_value(ma, "source_name", DEFAULT_SOURCE_NAME));
     pa_source_new_data_set_sample_spec(&data, &ss);
     pa_source_new_data_set_channel_map(&data, &map);
-    //pa_proplist_sets(data.proplist, PA_PROP_DEVICE_DESCRIPTION, pa_modargs_get_value(ma, "description", "Null Input"));
-    pa_proplist_sets(data.proplist, PA_PROP_DEVICE_DESCRIPTION, pa_modargs_get_value(ma, "description", "xrdp Input"));
+    pa_proplist_sets(data.proplist, PA_PROP_DEVICE_DESCRIPTION, pa_modargs_get_value(ma, "description", "xrdp source"));
     pa_proplist_sets(data.proplist, PA_PROP_DEVICE_CLASS, "abstract");
 
     u->source = pa_source_new(m->core, &data, PA_SOURCE_LATENCY | PA_SOURCE_DYNAMIC_LATENCY);
@@ -361,7 +369,15 @@ int pa__init(pa_module *m) {
     u->source->thread_info.max_rewind =
         pa_usec_to_bytes(u->block_usec, &u->source->sample_spec);
 
-    if (!(u->thread = pa_thread_new("null-source", thread_func, u))) {
+    #if defined(PA_CHECK_VERSION)
+    #if PA_CHECK_VERSION(0, 9, 22)
+        if (!(u->thread = pa_thread_new("xrdp-source", thread_func, u))) {
+    #else
+        if (!(u->thread = pa_thread_new(thread_func, u))) {
+    #endif
+    #else
+	if (!(u->thread = pa_thread_new(thread_func, u))) 
+    #endif
         pa_log("Failed to create thread.");
         goto fail;
     }

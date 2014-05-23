@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -116,7 +116,8 @@ struct stream
   (v) = *((unsigned char*)((s)->p)); \
   (s)->p++; \
 } while (0)
-
+/******************************************************************************/
+#define in_uint8_peek(s, v) do { v = *s->p; } while (0)
 /******************************************************************************/
 #if defined(B_ENDIAN) || defined(NEED_ALIGN)
 #define in_sint16_le(s, v) do \
