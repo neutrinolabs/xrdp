@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -574,7 +574,7 @@ trans_listen_address(struct trans *self, char *port, const char *address)
 
             if (g_tcp_listen(self->sck) == 0)
             {
-                g_chmod_hex(port, 0xffff);
+                g_chmod_hex(port, 0x0660);
                 self->status = TRANS_STATUS_UP; /* ok */
                 self->type1 = TRANS_TYPE_LISTENER; /* listener */
                 return 0;

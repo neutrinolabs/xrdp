@@ -90,9 +90,10 @@ dumpItemsToString(struct list *self, char *outstr, int len)
 
 /******************************************************************************/
 struct session_item *DEFAULT_CC
-session_get_bydata(char *name, int width, int height, int bpp, int type)
+session_get_bydata(char *name, int width, int height, int bpp, int type, char *client_ip)
 {
     struct session_chain *tmp;
+    enum SESMAN_CFG_SESS_POLICY policy = g_cfg->sess.policy;
 
     /*THREAD-FIX require chain lock */
     lock_chain_acquire();
@@ -104,23 +105,49 @@ session_get_bydata(char *name, int width, int height, int bpp, int type)
     {
         case SCP_SESSION_TYPE_XVNC: /* 0 */
             type = SESMAN_SESSION_TYPE_XVNC; /* 2 */
+            policy |= SESMAN_CFG_SESS_POLICY_D;  /* Xvnc cannot resize */
             break;
         case SCP_SESSION_TYPE_XRDP: /* 1 */
             type = SESMAN_SESSION_TYPE_XRDP; /* 1 */
+            break;
+        case SCP_SESSION_TYPE_XORG:
+            type = SESMAN_SESSION_TYPE_XORG;
             break;
         default:
             lock_chain_release();
             return 0;
     }
 
+#if 0
+    log_message(LOG_LEVEL_INFO,
+            "session_get_bydata: search policy %d U %s W %d H %d bpp %d T %d IP %s",
+            policy, name, width, height, bpp, type, client_ip);
+#endif
+
     while (tmp != 0)
     {
+#if 0
+        log_message(LOG_LEVEL_INFO,
+            "session_get_bydata: try %p U %s W %d H %d bpp %d T %d IP %s",
+            tmp->item,
+            tmp->item->name,
+            tmp->item->width, tmp->item->height,
+            tmp->item->bpp, tmp->item->type,
+            tmp->item->client_ip);
+#endif
+
         if (type == SESMAN_SESSION_TYPE_XRDP)
         {
             /* only name and bpp need to match for X11rdp, it can resize */
             if (g_strncmp(name, tmp->item->name, 255) == 0 &&
-                    tmp->item->bpp == bpp &&
-                    tmp->item->type == type)
+                (!(policy & SESMAN_CFG_SESS_POLICY_D) ||
+                 (tmp->item->width == width && tmp->item->height == height)) &&
+                (!(policy & SESMAN_CFG_SESS_POLICY_I) ||
+                 (g_strncmp_d(client_ip, tmp->item->client_ip, ':', 255) == 0)) &&
+                (!(policy & SESMAN_CFG_SESS_POLICY_C) ||
+                 (g_strncmp(client_ip, tmp->item->client_ip, 255) == 0)) &&
+                tmp->item->bpp == bpp &&
+                tmp->item->type == type)
             {
                 /*THREAD-FIX release chain lock */
                 lock_chain_release();
@@ -129,10 +156,13 @@ session_get_bydata(char *name, int width, int height, int bpp, int type)
         }
 
         if (g_strncmp(name, tmp->item->name, 255) == 0 &&
-                tmp->item->width == width &&
-                tmp->item->height == height &&
-                tmp->item->bpp == bpp &&
-                tmp->item->type == type)
+            (tmp->item->width == width && tmp->item->height == height) &&
+            (!(policy & SESMAN_CFG_SESS_POLICY_I) ||
+             (g_strncmp_d(client_ip, tmp->item->client_ip, ':', 255) == 0)) &&
+            (!(policy & SESMAN_CFG_SESS_POLICY_C) ||
+             (g_strncmp(client_ip, tmp->item->client_ip, 255) == 0)) &&
+            tmp->item->bpp == bpp &&
+            tmp->item->type == type)
         {
             /*THREAD-FIX release chain lock */
             lock_chain_release();
@@ -258,7 +288,8 @@ session_start_sessvc(int xpid, int wmpid, long data, char *username, int display
     list_add_item(sessvc_params, (long)g_strdup(wmpid_str));
     list_add_item(sessvc_params, 0); /* mandatory */
 
-    env_set_user(username, 0, display);
+    env_set_user(username, 0, display,
+                 g_cfg->session_variables1, g_cfg->session_variables2);
 
     /* executing sessvc */
     g_execvp(exe_path, ((char **)sessvc_params->items));
@@ -471,7 +502,9 @@ session_start_fork(int width, int height, int bpp, char *username,
             }
             else if (pampid == 0) /* child: X11/client */
             {
-                env_set_user(username, 0, display);
+                env_set_user(username, 0, display,
+                             g_cfg->session_variables1,
+                             g_cfg->session_variables2);
                 if (x_server_running(display))
                 {
                     auth_set_env(data);
@@ -564,7 +597,9 @@ session_start_fork(int width, int height, int bpp, char *username,
             }
             else if (xpid == 0) /* child */
             {
-                env_set_user(username, passwd_file, display);
+                env_set_user(username, passwd_file, display,
+                             g_cfg->session_variables1,
+                             g_cfg->session_variables2);
                 env_check_password_file(passwd_file, password);
 
                 g_snprintf(text, 255, "%d", g_cfg->sess.max_idle_time);
@@ -574,10 +609,40 @@ session_start_fork(int width, int height, int bpp, char *username,
                 g_snprintf(text, 255, "%d", g_cfg->sess.kill_disconnected);
                 g_setenv("XRDP_SESMAN_KILL_DISCONNECTED", text, 1);
 
-                if (type == SESMAN_SESSION_TYPE_XVNC)
+                if (type == SESMAN_SESSION_TYPE_XORG)
                 {
                     xserver_params = list_create();
                     xserver_params->auto_free = 1;
+
+                    /* these are the must have parameters */
+                    list_add_item(xserver_params, (long) g_strdup("/usr/bin/Xorg"));
+                    list_add_item(xserver_params, (long) g_strdup(screen));
+
+                    /* additional parameters from sesman.ini file */
+                    list_append_list_strdup(g_cfg->xorg_params, xserver_params, 0);
+
+                    /* make sure it ends with a zero */
+                    list_add_item(xserver_params, 0);
+
+                    pp1 = (char **) xserver_params->items;
+
+                    log_message(LOG_LEVEL_INFO, "%s", dumpItemsToString(xserver_params, execvpparams, 2048));
+
+                    /* some args are passed via env vars */
+                    g_sprintf(geometry, "%d", width);
+                    g_setenv("XRDP_START_WIDTH", geometry, 1);
+
+                    g_sprintf(geometry, "%d", height);
+                    g_setenv("XRDP_START_HEIGHT", geometry, 1);
+
+                    /* fire up Xorg */
+                    g_execvp("/usr/bin/Xorg", pp1);
+                }
+                else if (type == SESMAN_SESSION_TYPE_XVNC)
+                {
+                    xserver_params = list_create();
+                    xserver_params->auto_free = 1;
+
                     /* these are the must have parameters */
                     list_add_item(xserver_params, (long)g_strdup("Xvnc"));
                     list_add_item(xserver_params, (long)g_strdup(screen));
@@ -596,13 +661,14 @@ session_start_fork(int width, int height, int bpp, char *username,
                     /* make sure it ends with a zero */
                     list_add_item(xserver_params, 0);
                     pp1 = (char **)xserver_params->items;
-                    log_message(LOG_LEVEL_INFO, "Xvnc start:%s", dumpItemsToString(xserver_params, execvpparams, 2048));
+                    log_message(LOG_LEVEL_INFO, "%s", dumpItemsToString(xserver_params, execvpparams, 2048));
                     g_execvp("Xvnc", pp1);
                 }
                 else if (type == SESMAN_SESSION_TYPE_XRDP)
                 {
                     xserver_params = list_create();
                     xserver_params->auto_free = 1;
+
                     /* these are the must have parameters */
                     list_add_item(xserver_params, (long)g_strdup("X11rdp"));
                     list_add_item(xserver_params, (long)g_strdup(screen));
@@ -619,7 +685,7 @@ session_start_fork(int width, int height, int bpp, char *username,
                     /* make sure it ends with a zero */
                     list_add_item(xserver_params, 0);
                     pp1 = (char **)xserver_params->items;
-                    log_message(LOG_LEVEL_INFO, "X11rdp start:%s", dumpItemsToString(xserver_params, execvpparams, 2048));
+                    log_message(LOG_LEVEL_INFO, "%s", dumpItemsToString(xserver_params, execvpparams, 2048));
                     g_execvp("X11rdp", pp1);
                 }
                 else
@@ -713,7 +779,8 @@ session_reconnect_fork(int display, char *username)
     }
     else if (pid == 0)
     {
-        env_set_user(username, 0, display);
+        env_set_user(username, 0, display,
+                     g_cfg->session_variables1, g_cfg->session_variables2);
         g_snprintf(text, 255, "%s/%s", XRDP_CFG_PATH, "reconnectwm.sh");
 
         if (g_file_exist(text))

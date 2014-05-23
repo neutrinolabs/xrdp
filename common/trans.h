@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,29 +36,30 @@
 
 struct trans; /* forward declaration */
 
-typedef int (*ttrans_data_in)(struct trans* self);
-typedef int (*ttrans_conn_in)(struct trans* self, struct trans* new_self);
-typedef int (*tis_term)(void);
+typedef int (DEFAULT_CC *ttrans_data_in)(struct trans* self);
+typedef int (DEFAULT_CC *ttrans_conn_in)(struct trans* self,
+                                         struct trans* new_self);
+typedef int (DEFAULT_CC *tis_term)(void);
 
 struct trans
 {
-  tbus sck; /* socket handle */
-  int mode; /* 1 tcp, 2 unix socket */
-  int status;
-  int type1; /* 1 listener 2 server 3 client */
-  ttrans_data_in trans_data_in;
-  ttrans_conn_in trans_conn_in;
-  void* callback_data;
-  int header_size;
-  struct stream* in_s;
-  struct stream* out_s;
-  char* listen_filename;
-  tis_term is_term; /* used to test for exit */
-  struct stream* wait_s;
-  char addr[256];
-  char port[256];
-  int no_stream_init_on_data_in;
-  int extra_flags; /* user defined */
+    tbus sck; /* socket handle */
+    int mode; /* 1 tcp, 2 unix socket */
+    int status;
+    int type1; /* 1 listener 2 server 3 client */
+    ttrans_data_in trans_data_in;
+    ttrans_conn_in trans_conn_in;
+    void* callback_data;
+    int header_size;
+    struct stream* in_s;
+    struct stream* out_s;
+    char* listen_filename;
+    tis_term is_term; /* used to test for exit */
+    struct stream* wait_s;
+    char addr[256];
+    char port[256];
+    int no_stream_init_on_data_in;
+    int extra_flags; /* user defined */
 };
 
 struct trans* APP_CC

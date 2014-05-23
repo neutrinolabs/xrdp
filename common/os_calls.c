@@ -2266,6 +2266,27 @@ g_strncmp(const char *c1, const char *c2, int len)
 }
 
 /*****************************************************************************/
+/* compare up to delim */
+int APP_CC
+g_strncmp_d(const char *s1, const char *s2, const char delim, int n)
+{
+    char c1;
+    char c2;
+
+    while (n > 0)
+    {
+        c1 = *s1++;
+        c2 = *s2++;
+        if ((c1 == 0) || (c1 != c2) || (c1 == delim) || (c2 == delim))
+        {
+            return c1 - c2;
+        }
+        n--;
+    }
+    return c1 - c2;
+}
+
+/*****************************************************************************/
 int APP_CC
 g_strcasecmp(const char *c1, const char *c2)
 {
@@ -2907,7 +2928,11 @@ g_clearenv(void)
 {
 #if defined(_WIN32)
 #else
+#if defined(BSD)
+    environ[0] = 0;
+#else
     environ = 0;
+#endif
 #endif
 }
 

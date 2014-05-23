@@ -271,6 +271,7 @@ xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans, int crypt_level,
     self->encrypt_rc4_info = ssl_rc4_info_create();
     self->mcs_layer = xrdp_mcs_create(self, trans, &self->client_mcs_data,
                                       &self->server_mcs_data);
+    self->fastpath_layer = xrdp_fastpath_create(self, trans);
     self->chan_layer = xrdp_channel_create(self, self->mcs_layer);
     DEBUG((" out xrdp_sec_create"));
     return self;
@@ -288,6 +289,7 @@ xrdp_sec_delete(struct xrdp_sec *self)
 
     xrdp_channel_delete(self->chan_layer);
     xrdp_mcs_delete(self->mcs_layer);
+    xrdp_fastpath_delete(self->fastpath_layer);
     ssl_rc4_info_delete(self->decrypt_rc4_info); /* TODO clear all data */
     ssl_rc4_info_delete(self->encrypt_rc4_info); /* TODO clear all data */
     ssl_des3_info_delete(self->decrypt_fips_info);
@@ -952,6 +954,68 @@ xrdp_sec_establish_keys(struct xrdp_sec *self)
 /*****************************************************************************/
 /* returns error */
 int APP_CC
+xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s)
+{
+    int ver;
+    int len;
+    int pad;
+
+    LLOGLN(10, ("xrdp_sec_recv_fastpath:"));
+    if (xrdp_fastpath_recv(self->fastpath_layer, s) != 0)
+    {
+        return 1;
+    }
+
+    if (self->fastpath_layer->secFlags & FASTPATH_INPUT_ENCRYPTED)
+    {
+        if (self->crypt_level == CRYPT_LEVEL_FIPS)
+        {
+            if (!s_check_rem(s, 12))
+            {
+                return 1;
+            }
+            in_uint16_le(s, len);
+            in_uint8(s, ver); /* length (2 bytes) */
+            if (len != 0x10)  /* length MUST set to 0x10 */
+            {
+                return 1;
+            }
+            in_uint8(s, pad);
+            LLOGLN(10, ("xrdp_sec_recv_fastpath: len %d ver %d pad %d", len, ver, pad));
+            in_uint8s(s, 8);  /* dataSignature (8 bytes), skip for now */
+            LLOGLN(10, ("xrdp_sec_recv_fastpath: data len %d", (int)(s->end - s->p)));
+            xrdp_sec_fips_decrypt(self, s->p, (int)(s->end - s->p));
+            s->end -= pad;
+        }
+        else
+        {
+            if (!s_check_rem(s, 8))
+            {
+                return 1;
+            }
+            in_uint8s(s, 8);  /* dataSignature (8 bytes), skip for now */
+            xrdp_sec_decrypt(self, s->p, (int)(s->end - s->p));
+        }
+    }
+
+    if (self->fastpath_layer->numEvents == 0)
+    {
+        /**
+         * If numberEvents is not provided in fpInputHeader, it will be provided
+         * as one additional byte here.
+         */
+        if (!s_check_rem(s, 8))
+        {
+            return 1;
+        }
+        in_uint8(s, self->fastpath_layer->numEvents); /* numEvents (1 byte) (optional) */
+    }
+
+    return 0;
+}
+/*****************************************************************************/
+/* returns error */
+int APP_CC
 xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
 {
     int flags;
@@ -963,7 +1027,8 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
 
     if (xrdp_mcs_recv(self->mcs_layer, s, chan) != 0)
     {
-        DEBUG((" out xrdp_sec_recv error"));
+        DEBUG((" out xrdp_sec_recv : error"));
+        g_writeln("xrdp_sec_recv: xrdp_mcs_recv failed");
         return 1;
     }
 
@@ -1179,6 +1244,120 @@ xrdp_sec_send(struct xrdp_sec *self, struct stream *s, int chan)
     }
 
     DEBUG((" out xrdp_sec_send"));
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns the fastpath sec byte count */
+int APP_CC
+xrdp_sec_get_fastpath_bytes(struct xrdp_sec *self)
+{
+    if (self->crypt_level == CRYPT_LEVEL_FIPS)
+    {
+        return 3 + 4 + 8;
+    }
+    else if (self->crypt_level > CRYPT_LEVEL_LOW)
+    {
+        return 3 + 8;
+    }
+    return 3;
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+xrdp_sec_init_fastpath(struct xrdp_sec *self, struct stream *s)
+{
+    if (xrdp_fastpath_init(self->fastpath_layer, s) != 0)
+    {
+        return 1;
+    }
+    if (self->crypt_level == CRYPT_LEVEL_FIPS)
+    {
+        s_push_layer(s, sec_hdr, 3 + 4 + 8);
+    }
+    else if (self->crypt_level > CRYPT_LEVEL_LOW)
+    {
+        s_push_layer(s, sec_hdr, 3 + 8);
+    }
+    else
+    {
+        s_push_layer(s, sec_hdr, 3);
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+/* 2.2.9.1.2 Server Fast-Path Update PDU (TS_FP_UPDATE_PDU)
+ * http://msdn.microsoft.com/en-us/library/cc240621.aspx */
+int APP_CC
+xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s)
+{
+    int secFlags;
+    int fpOutputHeader;
+    int datalen;
+    int pdulen;
+    int pad;
+    int error;
+    char save[8];
+
+    LLOGLN(10, ("xrdp_sec_send_fastpath:"));
+    error = 0;
+    s_pop_layer(s, sec_hdr);
+    if (self->crypt_level == CRYPT_LEVEL_FIPS)
+    {
+        LLOGLN(10, ("xrdp_sec_send_fastpath: fips"));
+        pdulen = (int)(s->end - s->p);
+        datalen = pdulen - 15;
+        pad = (8 - (datalen % 8)) & 7;
+        secFlags = 0x2;
+        fpOutputHeader = secFlags << 6;
+        out_uint8(s, fpOutputHeader);
+        pdulen += pad;
+        pdulen |= 0x8000;
+        out_uint16_be(s, pdulen);
+        out_uint16_le(s, 16); /* crypto header size */
+        out_uint8(s, 1); /* fips version */
+        s->end += pad;
+        out_uint8(s, pad); /* fips pad */
+        xrdp_sec_fips_sign(self, s->p, 8, s->p + 8, datalen);
+        g_memcpy(save, s->p + 8 + datalen, pad);
+        g_memset(s->p + 8 + datalen, 0, pad);
+        xrdp_sec_fips_encrypt(self, s->p + 8, datalen + pad);
+        error = xrdp_fastpath_send(self->fastpath_layer, s);
+        g_memcpy(s->p + 8 + datalen, save, pad);
+    }
+    else if (self->crypt_level > CRYPT_LEVEL_LOW)
+    {
+        LLOGLN(10, ("xrdp_sec_send_fastpath: crypt"));
+        pdulen = (int)(s->end - s->p);
+        datalen = pdulen - 11;
+        secFlags = 0x2;
+        fpOutputHeader = secFlags << 6;
+        out_uint8(s, fpOutputHeader);
+        pdulen |= 0x8000;
+        out_uint16_be(s, pdulen);
+        xrdp_sec_sign(self, s->p, 8, s->p + 8, datalen);
+        xrdp_sec_encrypt(self, s->p + 8, datalen);
+        error = xrdp_fastpath_send(self->fastpath_layer, s);
+    }
+    else
+    {
+        LLOGLN(10, ("xrdp_sec_send_fastpath: no crypt"));
+        pdulen = (int)(s->end - s->p);
+        LLOGLN(10, ("xrdp_sec_send_fastpath: pdulen %d", pdulen));
+        secFlags = 0x0;
+        fpOutputHeader = secFlags << 6;
+        out_uint8(s, fpOutputHeader);
+        pdulen |= 0x8000;
+        out_uint16_be(s, pdulen);
+        error = xrdp_fastpath_send(self->fastpath_layer, s);
+    }
+    if (error != 0)
+    {
+        return 1;
+    }
     return 0;
 }
 

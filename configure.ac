@@ -40,7 +40,7 @@ AC_ARG_ENABLE(jpeg, AS_HELP_STRING([--enable-jpeg],
               [jpeg=true], [jpeg=false])
 AM_CONDITIONAL(XRDP_JPEG, [test x$jpeg = xtrue])
 AC_ARG_ENABLE(tjpeg, AS_HELP_STRING([--enable-tjpeg],
-              [Build turbo jpeg module(assumes /opt/libjpeg-turbo) (default: no)]),
+              [Build turbo jpeg module (default: no)]),
               [tjpeg=true], [tjpeg=false])
 AM_CONDITIONAL(XRDP_TJPEG, [test x$tjpeg = xtrue])
 
@@ -127,11 +127,44 @@ then
     [AC_MSG_ERROR([please install libpulse-dev or libpulse-devel])])
 fi
 
+# checking for TurboJPEG
+if ! test -z "$enable_tjpeg"
+then
+if test ! -z "$TURBOJPEG_PATH"
+then
+  # env var TURBOJPEG_PATH has been defined, use that
+  AC_CHECK_HEADER([$TURBOJPEG_PATH/include/turbojpeg.h], [],
+    [AC_MSG_ERROR([could not find TurboJPEG in dir specified by env variable TURBOJPEG_PATH ($TURBOJPEG_PATH)])])
+
+   AC_SUBST(TurboJpegIncDir, ["-I$TURBOJPEG_PATH/include"])
+   AC_SUBST(TurboJpegLibDir, ["-L$TURBOJPEG_PATH/lib -Wl,-rpath -Wl,$TURBOJPEG_PATH/lib"])
+elif test -e /opt/libjpeg-turbo/lib64
+then
+  # TurboJPEG has been installed to /opt on a 64 bit m/c
+  AC_SUBST(TurboJpegIncDir, ["-I/opt/libjpeg-turbo/include"])
+  AC_SUBST(TurboJpegLibDir, ["-L/opt/libjpeg-turbo/lib64 -Wl,-rpath -Wl,/opt/libjpeg-turbo/lib64"])
+elif test -e /opt/libjpeg-turbo/lib32
+then
+  # TurboJPEG has been installed to /opt on a 32 bit m/c
+  AC_SUBST(TurboJpegIncDir, ["-I/opt/libjpeg-turbo/include"])
+  AC_SUBST(TurboJpegLibDir, ["-L/opt/libjpeg-turbo/lib32 -Wl,-rpath -Wl,/opt/libjpeg-turbo/lib32"])
+else
+  # check in default location
+  AC_CHECK_HEADER([/usr/include/turbojpeg.h], [],
+    [AC_MSG_ERROR([please install TurboJPEG ])])
+  AC_SUBST(TurboJpegIncDir, [""])
+  AC_SUBST(TurboJpegLibDir, [""])
+fi
+fi
+
 # checking for Xlib, Xfixes
 AC_CHECK_HEADER([X11/Xlib.h], [],
   [AC_MSG_ERROR([please install libx11-dev or libX11-devel])])
 AC_CHECK_HEADER([X11/extensions/Xfixes.h], [],
   [AC_MSG_ERROR([please install libx11-dev and libxfixes-dev or libXfixes-devel])],
+  [#include <X11/Xlib.h>])
+AC_CHECK_HEADER([X11/extensions/Xrandr.h], [],
+  [AC_MSG_ERROR([please install libxrandr-dev or libXrandr-devel])],
   [#include <X11/Xlib.h>])
 
 libdir="${libdir}/xrdp";
@@ -158,8 +191,9 @@ AC_CONFIG_FILES([Makefile
                  docs/man/Makefile
                  instfiles/Makefile
                  instfiles/pam.d/Makefile
-				 instfiles/init.d/Makefile
-				 instfiles/default/Makefile
+                 instfiles/init.d/Makefile
+                 instfiles/default/Makefile
+                 instfiles/pulse/Makefile
                  genkeymap/Makefile
                  xrdpapi/Makefile
                  xrdpvr/Makefile

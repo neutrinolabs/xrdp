@@ -90,27 +90,21 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code, int *len)
 {
     int ver;  // TPKT Version
     int plen; // TPKT PacketLength
-    int do_read;
 
     *code = 0; // X.224 Packet Type
     *len = 0;  // X.224 Length Indicator
 
-    /* early in connection sequence, iso needs to do a force read */
-    do_read = s != self->trans->in_s;
-
-    if (do_read)
+    if (s != self->trans->in_s)
     {
-        init_stream(s, 4);
-        if (trans_force_read_s(self->trans, s, 4) != 0)
-        {
-            return 1;
-        }
+        g_writeln("xrdp_iso_recv_msg error logic");
     }
 
     in_uint8(s, ver);
 
     if (ver != 3)
     {
+        g_writeln("xrdp_iso_recv_msg: bad ver");
+        g_hexdump(s->data, 4);
         return 1;
     }
 
@@ -120,15 +114,6 @@ xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code, int *len)
     if (plen < 4)
     {
         return 1;
-    }
-
-    if (do_read)
-    {
-        init_stream(s, plen - 4);
-        if (trans_force_read_s(self->trans, s, plen - 4) != 0)
-        {
-            return 1;
-        }
     }
 
     if (!s_check_rem(s, 2))
@@ -311,20 +296,22 @@ xrdp_iso_incoming(struct xrdp_iso *self)
     char *pend;
     struct stream *s;
 
-    make_stream(s);
-    init_stream(s, 8192);
     DEBUG(("   in xrdp_iso_incoming"));
+
+    s = libxrdp_force_read(self->trans);
+    if (s == 0)
+    {
+        return 1;
+    }
 
     if (xrdp_iso_recv_msg(self, s, &code, &len) != 0)
     {
         DEBUG(("   in xrdp_iso_recv_msg error!!"));
-        free_stream(s);
         return 1;
     }
 
     if ((code != ISO_PDU_CR) || (len < 6))
     {
-        free_stream(s);
         return 1;
     }
 
@@ -343,7 +330,6 @@ xrdp_iso_incoming(struct xrdp_iso *self)
             case RDP_NEG_REQ: /* rdpNegReq 1 */
                 if (xrdp_iso_recv_rdpnegreq(self, s) != 0)
                 {
-                    free_stream(s);
                     return 1;
                 }
                 break;
@@ -371,12 +357,10 @@ xrdp_iso_incoming(struct xrdp_iso *self)
 
     if (xrdp_iso_send_nego(self) != 0)
     {
-        free_stream(s);
         return 1;
     }
 
     DEBUG(("   out xrdp_iso_incoming"));
-    free_stream(s);
     return 0;
 }
 

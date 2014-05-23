@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,20 @@
 #endif
 #endif
 
+#include "xrdp_encoder.h"
+
+#define LLOG_LEVEL 1
+#define LLOGLN(_level, _args) \
+  do \
+  { \
+    if (_level < LLOG_LEVEL) \
+    { \
+        g_write("xrdp:xrdp_mm [%10.10u]: ", g_time3()); \
+        g_writeln _args ; \
+    } \
+  } \
+  while (0)
+
 /*****************************************************************************/
 struct xrdp_mm *APP_CC
 xrdp_mm_create(struct xrdp_wm *owner)
@@ -40,6 +54,29 @@ xrdp_mm_create(struct xrdp_wm *owner)
     self->login_names->auto_free = 1;
     self->login_values = list_create();
     self->login_values->auto_free = 1;
+
+    LLOGLN(10, ("xrdp_mm_create: bpp %d", self->wm->client_info->bpp));
+    /* go into jpeg codec mode if jpeg set, lan set */
+    if (self->wm->client_info->mcs_connection_type == 6) /* LAN */
+    {
+        if (self->wm->client_info->jpeg_codec_id == 2) /* JPEG */
+        {
+            if (self->wm->client_info->bpp > 16)
+            {
+                LLOGLN(0, ("xrdp_mm_create: starting jpeg codec session"));
+                self->codec_id = 2;
+                self->in_codec_mode = 1;
+                self->codec_quality = self->wm->client_info->jpeg_prop[0];
+            }
+        }
+    }
+
+    if (self->in_codec_mode)
+    {
+    /* setup thread to handle codec mode messages */
+        init_xrdp_encoder(self);
+    }
+
     return self;
 }
 
@@ -68,7 +105,10 @@ xrdp_mm_sync_load(long param1, long param2)
 static void APP_CC
 xrdp_mm_module_cleanup(struct xrdp_mm *self)
 {
-    log_message(LOG_LEVEL_DEBUG,"xrdp_mm_module_cleanup");
+    log_message(LOG_LEVEL_DEBUG, "xrdp_mm_module_cleanup");
+
+    /* shutdown thread */
+    deinit_xrdp_encoder(self);
 
     if (self->mod != 0)
     {
@@ -92,6 +132,14 @@ xrdp_mm_module_cleanup(struct xrdp_mm *self)
     self->mod_exit = 0;
     self->mod = 0;
     self->mod_handle = 0;
+
+    if (self->wm->hide_log_window)
+    {
+        /* make sure autologin is off */
+        self->wm->session->client_info->rdp_autologin = 0;
+        xrdp_wm_set_login_mode(self->wm, 0); /* reset session */
+    }
+
 }
 
 /*****************************************************************************/
@@ -151,7 +199,7 @@ xrdp_mm_send_login(struct xrdp_mm *self)
         }
         else if (g_strcasecmp(name, "code") == 0)
         {
-            /* this code is either 0 for Xvnc or 10 for X11rdp */
+            /* this code is either 0 for Xvnc, 10 for X11rdp or 20 for Xorg */
             self->code = g_atoi(value);
         }
         else if (g_strcasecmp(name, "xserverbpp") == 0)
@@ -168,7 +216,7 @@ xrdp_mm_send_login(struct xrdp_mm *self)
 
     s = trans_get_out_s(self->sesman_trans, 8192);
     s_push_layer(s, channel_hdr, 8);
-    /* this code is either 0 for Xvnc or 10 for X11rdp */
+    /* this code is either 0 for Xvnc, 10 for X11rdp or 20 for Xorg */
     out_uint16_be(s, self->code);
     index = g_strlen(username);
     out_uint16_be(s, index);
@@ -465,7 +513,7 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
             {
                 g_snprintf(text, 255, "%d", 5900 + self->display);
             }
-            else if (self->code == 10) /* X11rdp */
+            else if (self->code == 10 || self->code == 20) /* X11rdp/Xorg */
             {
                 use_uds = 1;
 
@@ -525,6 +573,10 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
         if (self->mod->mod_connect(self->mod) == 0)
         {
             rv = 0; /* connect success */
+        }
+        else
+        {
+            xrdp_wm_show_log(self->wm);
         }
     }
 
@@ -1176,6 +1228,7 @@ xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
                         "login failed");
         log_message(LOG_LEVEL_INFO,"xrdp_mm_process_login_response: "
                         "login failed");
+        xrdp_wm_show_log(self->wm);
     }
 
     cleanup_sesman_connection(self);
@@ -1473,7 +1526,7 @@ cleanup_states(struct xrdp_mm *self)
         self-> sesman_trans_up = 0; /* true once connected to sesman */
         self-> delete_sesman_trans = 0; /* boolean set when done with sesman connection */
         self-> display = 0; /* 10 for :10.0, 11 for :11.0, etc */
-        self-> code = 0; /* 0 Xvnc session 10 X11rdp session */
+        self-> code = 0; /* 0 Xvnc session, 10 X11rdp session, 20 Xorg session */
         self-> sesman_controlled = 0; /* true if this is a sesman session */
         self-> chan_trans = NULL; /* connection to chansrv */
         self-> chan_trans_up = 0; /* true once connected to chansrv */
@@ -1875,14 +1928,79 @@ xrdp_mm_get_wait_objs(struct xrdp_mm *self,
         }
     }
 
+    if (self->in_codec_mode)
+    {
+        read_objs[(*rcount)++] = self->xrdp_encoder_event_processed;
+    }
+
     return rv;
 }
+
+#define DUMP_JPEG 0
+
+#if DUMP_JPEG
+
+/*****************************************************************************/
+static int APP_CC
+xrdp_mm_dump_jpeg(struct xrdp_mm *self, XRDP_ENC_DATA_DONE *enc_done)
+{
+    static tbus ii;
+    static int jj;
+    struct _header
+    {
+        char tag[4];
+        int width;
+        int height;
+        int bytes_follow;
+    } header;
+    tui16 *pheader_bytes;
+    int cx;
+    int cy;
+
+    pheader_bytes = (tui16 *) (enc_done->comp_pad_data + enc_done->pad_bytes);
+
+    cx = enc_done->enc->crects[enc_done->index * 4 + 2];
+    cy = enc_done->enc->crects[enc_done->index * 4 + 3];
+
+    header.tag[0] = 'B';
+    header.tag[1] = 'E';
+    header.tag[2] = 'E';
+    header.tag[3] = 'F';
+    header.width = cx;
+    header.height = cy;
+    header.bytes_follow = enc_done->comp_bytes - (2 + pheader_bytes[0]);
+    if (ii == 0)
+    {
+        ii = g_file_open("/tmp/jpeg.beef.bin");
+        if (ii == -1)
+        {
+            ii = 0;
+        }
+    }
+    if (ii != 0)
+    {
+        g_file_write(ii, (char*)&header, sizeof(header));
+        g_file_write(ii, enc_done->comp_pad_data +
+                     enc_done->pad_bytes + 2 + pheader_bytes[0],
+                     enc_done->comp_bytes - (2 + pheader_bytes[0]));
+        jj++;
+        g_writeln("dumping jpeg index %d", jj);
+    }
+    return 0;
+}
+
+#endif
 
 /*****************************************************************************/
 int APP_CC
 xrdp_mm_check_wait_objs(struct xrdp_mm *self)
 {
+    XRDP_ENC_DATA_DONE *enc_done;
     int rv;
+    int x;
+    int y;
+    int cx;
+    int cy;
 
     if (self == 0)
     {
@@ -1931,6 +2049,55 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
         self->delete_chan_trans = 0;
     }
 
+    if (self->in_codec_mode)
+    {
+        if (g_is_wait_obj_set(self->xrdp_encoder_event_processed))
+        {
+            g_reset_wait_obj(self->xrdp_encoder_event_processed);
+            tc_mutex_lock(self->mutex);
+            enc_done = (XRDP_ENC_DATA_DONE*)
+                       fifo_remove_item(self->fifo_processed);
+            tc_mutex_unlock(self->mutex);
+            while (enc_done != 0)
+            {
+                /* do something with msg */
+                LLOGLN(10, ("xrdp_mm_check_wait_objs: message back bytes %d",
+                       enc_done->comp_bytes));
+
+                x = enc_done->enc->crects[enc_done->index * 4 + 0];
+                y = enc_done->enc->crects[enc_done->index * 4 + 1];
+                cx = enc_done->enc->crects[enc_done->index * 4 + 2];
+                cy = enc_done->enc->crects[enc_done->index * 4 + 3];
+
+#if DUMP_JPEG
+                xrdp_mm_dump_jpeg(self, enc_done);
+#endif
+
+                libxrdp_fastpath_send_surface(self->wm->session,
+                                              enc_done->comp_pad_data,
+                                              enc_done->pad_bytes,
+                                              enc_done->comp_bytes,
+                                              x, y, x + cx, y + cy,
+                                              32, 2, cx, cy);
+
+                /* free enc_done */
+                if (enc_done->last)
+                {
+                    LLOGLN(10, ("xrdp_mm_check_wait_objs: last set"));
+                    self->mod->mod_frame_ack(self->mod, enc_done->enc->flags, enc_done->enc->frame_id);
+                    g_free(enc_done->enc->drects);
+                    g_free(enc_done->enc->crects);
+                    g_free(enc_done->enc);
+                }
+                g_free(enc_done->comp_pad_data);
+                g_free(enc_done);
+                tc_mutex_lock(self->mutex);
+                enc_done = (XRDP_ENC_DATA_DONE*)
+                           fifo_remove_item(self->fifo_processed);
+                tc_mutex_unlock(self->mutex);
+            }
+        }
+    }
     return rv;
 }
 
@@ -2140,17 +2307,78 @@ server_composite(struct xrdp_mod* mod, int srcidx, int srcformat,
 /*****************************************************************************/
 int DEFAULT_CC
 server_paint_rects(struct xrdp_mod* mod, int num_drects, short *drects,
-                   int num_crects, short *crects,
-                   char *data, int width, int height, int flags)
+                   int num_crects, short *crects, char *data, int width,
+                   int height, int flags, int frame_id)
 {
     struct xrdp_wm* wm;
+    struct xrdp_mm* mm;
     struct xrdp_painter* p;
     struct xrdp_bitmap *b;
     short *s;
     int index;
+    XRDP_ENC_DATA *enc_data;
+
+    wm = (struct xrdp_wm*)(mod->wm);
+    mm = wm->mm;
+
+    LLOGLN(10, ("server_paint_rects:"));
+    LLOGLN(10, ("server_paint_rects: %d", mm->in_codec_mode));
+
+    if (mm->in_codec_mode)
+    {
+        /* copy formal params to XRDP_ENC_DATA */
+        enc_data = (XRDP_ENC_DATA *) g_malloc(sizeof(XRDP_ENC_DATA), 1);
+        if (enc_data == 0)
+        {
+            return 1;
+        }
+
+        enc_data->drects = (short *)
+                           g_malloc(sizeof(short) * num_drects * 4, 0);
+        if (enc_data->drects == 0)
+        {
+            g_free(enc_data);
+            return 1;
+        }
+
+        enc_data->crects = (short *)
+                           g_malloc(sizeof(short) * num_crects * 4, 0);
+        if (enc_data->crects == 0)
+        {
+            g_free(enc_data);
+            g_free(enc_data->drects);
+            return 1;
+        }
+
+        g_memcpy(enc_data->drects, drects, sizeof(short) * num_drects * 4);
+        g_memcpy(enc_data->crects, crects, sizeof(short) * num_crects * 4);
+
+        enc_data->mod = mod;
+        enc_data->num_drects = num_drects;
+        enc_data->num_crects = num_crects;
+        enc_data->data = data;
+        enc_data->width = width;
+        enc_data->height = height;
+        enc_data->flags = flags;
+        enc_data->frame_id = frame_id;
+        if (width == 0 || height == 0)
+        {
+            LLOGLN(10, ("server_paint_rects: error"));
+        }
+
+        /* insert into fifo for encoder thread to process */
+        tc_mutex_lock(mm->mutex);
+        fifo_add_item(mm->fifo_to_proc, (void *) enc_data);
+        tc_mutex_unlock(mm->mutex);
+
+        /* signal xrdp_encoder thread */
+        g_set_wait_obj(mm->xrdp_encoder_event_to_proc);
+
+        return 0;
+    }
 
     //g_writeln("server_paint_rects:");
-    wm = (struct xrdp_wm*)(mod->wm);
+
     p = (struct xrdp_painter*)(mod->painter);
     if (p == 0)
     {
@@ -2164,8 +2392,9 @@ server_paint_rects(struct xrdp_mod* mod, int num_drects, short *drects,
         xrdp_painter_copy(p, b, wm->target_surface, s[0], s[1], s[2], s[3],
                           s[0], s[1]);
         s += 4;
-    }                 
+    }
     xrdp_bitmap_delete(b);
+    mm->mod->mod_frame_ack(mm->mod, flags, frame_id);
     return 0;
 }
 
@@ -3045,4 +3274,3 @@ server_add_char_alpha(struct xrdp_mod* mod, int font, int charactor,
     return libxrdp_orders_send_font(((struct xrdp_wm*)mod->wm)->session,
                                     &fi, font, charactor);
 }
-

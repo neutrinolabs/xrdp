@@ -82,6 +82,10 @@ int DEFAULT_CC
 libxrdp_disconnect(struct xrdp_session* session);
 int DEFAULT_CC
 libxrdp_process_incomming(struct xrdp_session* session);
+int EXPORT_CC
+libxrdp_get_pdu_bytes(const char *aheader);
+struct stream * APP_CC
+libxrdp_force_read(struct trans* trans);
 int DEFAULT_CC
 libxrdp_process_data(struct xrdp_session* session, struct stream *s);
 int DEFAULT_CC
@@ -224,5 +228,19 @@ int DEFAULT_CC
 libxrdp_monitored_desktop(struct xrdp_session* session,
                           struct rail_monitored_desktop_order* mdo,
                           int flags);
+int DEFAULT_CC
+libxrdp_codec_jpeg_compress(struct xrdp_session *session,
+                            int format, char *inp_data,
+                            int width, int height,
+                            int stride, int x, int y,
+                            int cx, int cy, int quality,
+                            char *out_data, int *io_len);
+int DEFAULT_CC
+libxrdp_fastpath_send_surface(struct xrdp_session *session,
+                              char* data_pad, int pad_bytes,
+                              int data_bytes,
+                              int destLeft, int dst_Top,
+                              int destRight, int destBottom, int bpp,
+                              int codecID, int width, int height);
 
 #endif

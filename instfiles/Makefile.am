@@ -5,7 +5,8 @@ xrdp.service
 SUBDIRS = \
   pam.d \
   init.d \
-  default
+  default \
+  pulse
 
 if HAVE_SYSTEMD
 systemdsystemunit_DATA = \

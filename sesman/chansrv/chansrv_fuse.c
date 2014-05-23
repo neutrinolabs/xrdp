@@ -39,6 +39,8 @@
 
 //#define USE_SYNC_FLAG
 
+static char g_fuse_mount_name[256] = "xrdp_client";
+
 /* FUSE mount point */
 char g_fuse_root_path[256] = "";
 char g_fuse_clipboard_path[256] = ""; /* for clipboard use */
@@ -369,6 +371,37 @@ int clipboard_request_file_data(int stream_id, int lindex, int offset,
 static void xfuse_mark_as_stale(int pinode);
 static void xfuse_delete_stale_entries(int pinode);
 
+/*****************************************************************************/
+int APP_CC
+load_fuse_config(void)
+{
+    int index;
+    char cfg_file[256];
+    struct list *items;
+    struct list *values;
+    char *item;
+    char *value;
+
+    items = list_create();
+    items->auto_free = 1;
+    values = list_create();
+    values->auto_free = 1;
+    g_snprintf(cfg_file, 255, "%s/sesman.ini", XRDP_CFG_PATH);
+    file_by_name_read_section(cfg_file, "Chansrv", items, values);
+    for (index = 0; index < items->count; index++)
+    {
+        item = (char *)list_get_item(items, index);
+        value = (char *)list_get_item(values, index);
+        if (g_strcasecmp(item, "FuseMountName") == 0)
+        {
+            g_strncpy(g_fuse_mount_name, value, 255);
+        }
+    }
+    list_delete(items);
+    list_delete(values);
+    return 0;
+}
+
 /*****************************************************************************
 **                                                                          **
 **         public functions - can be called from any code path              **
@@ -381,7 +414,8 @@ static void xfuse_delete_stale_entries(int pinode);
  * @return 0 on success, -1 on failure
  *****************************************************************************/
 
-int xfuse_init()
+int APP_CC
+xfuse_init(void)
 {
     struct fuse_args args = FUSE_ARGS_INIT(0, NULL);
 
@@ -398,8 +432,10 @@ int xfuse_init()
         return -1;
     }
 
-    /* define FUSE mount point to ~/xrdp_client */
-    g_snprintf(g_fuse_root_path, 255, "%s/xrdp_client", g_getenv("HOME"));
+    load_fuse_config();
+
+    /* define FUSE mount point to ~/xrdp_client, ~/thinclient_drives */
+    g_snprintf(g_fuse_root_path, 255, "%s/%s", g_getenv("HOME"), g_fuse_mount_name);
     g_snprintf(g_fuse_clipboard_path, 255, "%s/.clipboard", g_fuse_root_path);
 
     /* if FUSE mount point does not exist, create it */
@@ -460,7 +496,8 @@ int xfuse_init()
  * @return 0 on success, -1 on failure
  *****************************************************************************/
 
-int xfuse_deinit()
+int APP_CC
+xfuse_deinit(void)
 {
     xfuse_deinit_xrdp_fs();
     fifo_deinit(&g_fifo_opendir);
@@ -1987,7 +2024,7 @@ static void xfuse_cb_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
         return;
     }
 
-    di = (struct dir_info *) fi->fh;
+    di = (struct dir_info *) (tintptr) (fi->fh);
     if (di == NULL)
     {
         /* something seriously wrong somewhere! */

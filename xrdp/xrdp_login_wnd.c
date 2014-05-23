@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -322,18 +322,19 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
                 {
                     self->login_window->focused_control = b;
                 }
-		/*Use the domain name as the destination IP/DNS
-		 This is useful in a gateway setup.*/
-		if (g_strncmp(name, "ip", 255) == 0)
-		{
-		    /* If the first char in the domain name is '_' we use the domain name as IP*/
-		    if(self->session->client_info->domain[0]=='_')
-		    {
-			g_strncpy(b->caption1, &self->session->client_info->domain[1], 255);
-			b->edit_pos = g_mbstowcs(0, b->caption1, 0);
-		    }
 
-		}
+                /*Use the domain name as the destination IP/DNS
+                 This is useful in a gateway setup.*/
+                if (g_strncmp(name, "ip", 255) == 0)
+                {
+                    /* If the first char in the domain name is '_' we use the domain name as IP*/
+                    if(self->session->client_info->domain[0]=='_')
+                    {
+                        g_strncpy(b->caption1, &self->session->client_info->domain[1], 255);
+                        b->edit_pos = g_mbstowcs(0, b->caption1, 0);
+                    }
+
+                }
                 if (g_strncmp(name, "username", 255) == 0)
                 {
                     g_strncpy(b->caption1, self->session->client_info->username, 255);
@@ -559,12 +560,39 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
 
     self->login_window->notify = xrdp_wm_login_notify;
 
-    g_gethostname(buf1, 256);
-    g_sprintf(buf, "Login to %s", buf1);
-    set_string(&self->login_window->caption1, buf);
+    /* if window title not specified, use hostname as default */
+    if (globals->ls_title[0] == 0)
+    {
+       g_gethostname(buf1, 256);
+       g_sprintf(buf, "Login to %s", buf1);
+       set_string(&self->login_window->caption1, buf);
+    }
+    else
+    {
+       /*self->login_window->caption1 = globals->ls_title[0];*/
+       g_sprintf(buf, "%s", globals->ls_title);
+       set_string(&self->login_window->caption1, buf);
+    }
 
     if (regular)
     {
+        // Load the background image.
+        // If no file is specified no default image will be loaded.
+        // We only load the image if bpp > 8
+        if (globals->ls_background_image[0] != 0 && self->screen->bpp > 8)
+        {
+            char fileName[256] ;
+            but = xrdp_bitmap_create(4, 4, self->screen->bpp, WND_TYPE_IMAGE, self);
+            g_snprintf(fileName, 255, "%s/%s", XRDP_SHARE_PATH, globals->ls_background_image);
+            log_message(LOG_LEVEL_DEBUG, "We try to load the following background file: %s", fileName);
+            xrdp_bitmap_load(but, fileName, self->palette);
+            but->parent = self->screen;
+            but->owner = self->screen;
+            but->left = self->screen->width - but->width;
+            but->top = self->screen->height - but->height;
+            list_add_item(self->screen->child_list, (long)but);
+        }
+
         /* if logo image not specified, use default */
         if (globals->ls_logo_filename[0] == 0)
             g_snprintf(globals->ls_logo_filename, 255, "%s/xrdp_logo.bmp", XRDP_SHARE_PATH);
@@ -826,12 +854,22 @@ load_xrdp_config(struct xrdp_config *config, int bpp)
         else if (g_strncmp(n, "ls_bg_color", 64) == 0)
             globals->ls_bg_color = HCOLOR(bpp, xrdp_wm_htoi(v));
 
+        else if (g_strncmp(n, "ls_title", 255) == 0)
+        {
+            g_strncpy(globals->ls_title, v, 255);
+            globals->ls_title[255] = 0;
+        }
+
         else if (g_strncmp(n, "ls_logo_filename", 255) == 0)
         {
             g_strncpy(globals->ls_logo_filename, v, 255);
             globals->ls_logo_filename[255] = 0;
         }
-
+        else if (g_strncmp(n, "ls_background_image", 255) == 0)
+        {
+            g_strncpy(globals->ls_background_image, v, 255);
+            globals->ls_background_image[255] = 0;
+        }
         else if (g_strncmp(n, "ls_logo_x_pos", 64) == 0)
             globals->ls_logo_x_pos = g_atoi(v);
 
@@ -916,6 +954,7 @@ load_xrdp_config(struct xrdp_config *config, int bpp)
     g_writeln("ls_width:                %d", globals->ls_width);
     g_writeln("ls_height:               %d", globals->ls_height);
     g_writeln("ls_bg_color:             %x", globals->ls_bg_color);
+    g_writeln("ls_title:        	%s", globals->ls_title);
     g_writeln("ls_logo_filename:        %s", globals->ls_logo_filename);
     g_writeln("ls_logo_x_pos:           %d", globals->ls_logo_x_pos);
     g_writeln("ls_logo_y_pos:           %d", globals->ls_logo_y_pos);
