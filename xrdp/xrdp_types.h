@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@
 
 #include "xrdp_rail.h"
 #include "xrdp_constants.h"
+#include "fifo.h"
 
 #define MAX_NR_CHANNELS 16
 #define MAX_CHANNEL_NAME 16
@@ -46,7 +47,8 @@ struct xrdp_mod
   int (*mod_get_wait_objs)(struct xrdp_mod* v, tbus* read_objs, int* rcount,
                            tbus* write_objs, int* wcount, int* timeout);
   int (*mod_check_wait_objs)(struct xrdp_mod* v);
-  long mod_dumby[100 - 9]; /* align, 100 minus the number of mod
+  int (*mod_frame_ack)(struct xrdp_mod* v, int flags, int frame_id);
+  long mod_dumby[100 - 10]; /* align, 100 minus the number of mod
                               functions above */
   /* server functions */
   int (*server_begin_update)(struct xrdp_mod* v);
@@ -142,7 +144,8 @@ struct xrdp_mod
   int (*server_paint_rects)(struct xrdp_mod* v,
                             int num_drects, short *drects,
                             int num_crects, short *crects,
-                            char *data, int width, int height, int flags);
+                            char *data, int width, int height,
+                            int flags, int frame_id);
   long server_dumby[100 - 43]; /* align, 100 minus the number of server
                                   functions above */
   /* common */
@@ -177,7 +180,14 @@ struct xrdp_palette_item
 struct xrdp_bitmap_item
 {
   int stamp;
+  int lru_index;
   struct xrdp_bitmap* bitmap;
+};
+
+struct xrdp_lru_item
+{
+  int next;
+  int prev;
 };
 
 struct xrdp_os_bitmap_item
@@ -225,6 +235,17 @@ struct xrdp_cache
   int bitmap_stamp;
   struct xrdp_bitmap_item bitmap_items[XRDP_MAX_BITMAP_CACHE_ID]
                                       [XRDP_MAX_BITMAP_CACHE_IDX];
+
+  /* lru optimize */
+  struct xrdp_lru_item bitmap_lrus[XRDP_MAX_BITMAP_CACHE_ID]
+                                  [XRDP_MAX_BITMAP_CACHE_IDX];
+  int lru_head[XRDP_MAX_BITMAP_CACHE_ID];
+  int lru_tail[XRDP_MAX_BITMAP_CACHE_ID];
+  int lru_reset[XRDP_MAX_BITMAP_CACHE_ID];
+
+  /* crc optimize */
+  struct list16 crc16[XRDP_MAX_BITMAP_CACHE_ID][64 * 1024];
+
   int use_bitmap_comp;
   int cache1_entries;
   int cache1_size;
@@ -262,12 +283,23 @@ struct xrdp_mm
   int (*mod_exit)(struct xrdp_mod*);
   struct xrdp_mod* mod; /* module interface */
   int display; /* 10 for :10.0, 11 for :11.0, etc */
-  int code; /* 0 Xvnc session 10 X11rdp session */
+  int code; /* 0=Xvnc session, 10=X11rdp session, 20=xorg driver mode */
   int sesman_controlled; /* true if this is a sesman session */
   struct trans* chan_trans; /* connection to chansrv */
   int chan_trans_up; /* true once connected to chansrv */
   int delete_chan_trans; /* boolean set when done with channel connection */
   int usechansrv; /* true if chansrvport is set in xrdp.ini or using sesman */
+
+  /* for codec mode operations */
+  int   in_codec_mode;
+  int   codec_id;
+  int   codec_quality;
+  tbus  xrdp_encoder_event_to_proc;
+  tbus  xrdp_encoder_event_processed;
+  tbus  xrdp_encoder_term;
+  FIFO *fifo_to_proc;
+  FIFO *fifo_processed;
+  tbus  mutex;
 };
 
 struct xrdp_key_info
@@ -453,7 +485,8 @@ struct xrdp_bitmap
   struct xrdp_bitmap* popped_from;
   int item_height;
   /* crc */
-  int crc;
+  int crc32;
+  int crc16;
 };
 
 #define NUM_FONTS 0x4e00
@@ -562,6 +595,7 @@ struct xrdp_cfg_globals
     int  ls_btn_cancel_y_pos;    /* y pos for Cancel button */
     int  ls_btn_cancel_width;    /* width of Cancel button */
     int  ls_btn_cancel_height;   /* height of Cancel button */
+    char ls_title[256];  	 /* loginscreen window title */
 };
 
 struct xrdp_cfg_logging
@@ -580,5 +614,37 @@ struct xrdp_config
     struct xrdp_cfg_logging   cfg_logging;
     struct xrdp_cfg_channels  cfg_channels;
 };
+
+/* used when scheduling tasks in xrdp_encoder.c */
+struct xrdp_enc_data
+{
+    struct xrdp_mod *mod;
+    int              num_drects;
+    short           *drects;     /* 4 * num_drects */
+    int              num_crects;
+    short           *crects;     /* 4 * num_crects */
+    char            *data;
+    int              width;
+    int              height;
+    int              flags;
+    int              frame_id;
+};
+
+typedef struct xrdp_enc_data XRDP_ENC_DATA;
+
+/* used when scheduling tasks from xrdp_encoder.c */
+struct xrdp_enc_data_done
+{
+    int                   comp_bytes;
+    int                   pad_bytes;
+    char                 *comp_pad_data;
+    struct xrdp_enc_data *enc;
+    int                   last; /* true is this is last message for enc */
+    int                   index; /* depends on codec */
+};
+
+typedef struct xrdp_enc_data_done XRDP_ENC_DATA_DONE;
+
+
 
 #endif

@@ -37,6 +37,7 @@
 #include "file_loc.h"
 #include "xrdp_client_info.h"
 
+
 /* iso */
 struct xrdp_iso
 {
@@ -66,6 +67,16 @@ struct xrdp_mcs
   struct list* channel_list;
 };
 
+/* fastpath */
+struct xrdp_fastpath
+{
+  struct xrdp_sec* sec_layer; /* owner */
+  struct trans* trans;
+  struct xrdp_session* session;
+  int numEvents;
+  int secFlags;
+};
+
 /* Encryption Methods */
 #define CRYPT_METHOD_NONE              0x00000000
 #define CRYPT_METHOD_40BIT             0x00000001
@@ -80,11 +91,13 @@ struct xrdp_mcs
 #define CRYPT_LEVEL_HIGH               0x00000003
 #define CRYPT_LEVEL_FIPS               0x00000004
 
+
 /* sec */
 struct xrdp_sec
 {
   struct xrdp_rdp* rdp_layer; /* owner */
   struct xrdp_mcs* mcs_layer;
+  struct xrdp_fastpath* fastpath_layer;
   struct xrdp_channel* chan_layer;
   char server_random[32];
   char client_random[64];
@@ -303,6 +316,8 @@ int APP_CC
 xrdp_iso_send(struct xrdp_iso* self, struct stream* s);
 int APP_CC
 xrdp_iso_incoming(struct xrdp_iso* self);
+int APP_CC
+xrdp_iso_detect_tpkt(struct xrdp_iso *self, struct stream *s);
 
 /* xrdp_mcs.c */
 struct xrdp_mcs* APP_CC
@@ -331,6 +346,14 @@ xrdp_sec_delete(struct xrdp_sec* self);
 int APP_CC
 xrdp_sec_init(struct xrdp_sec* self, struct stream* s);
 int APP_CC
+xrdp_sec_get_fastpath_bytes(struct xrdp_sec *self);
+int APP_CC
+xrdp_sec_init_fastpath(struct xrdp_sec *self, struct stream *s);
+int APP_CC
+xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s);
+int APP_CC
+xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s);
+int APP_CC
 xrdp_sec_recv(struct xrdp_sec* self, struct stream* s, int* chan);
 int APP_CC
 xrdp_sec_send(struct xrdp_sec* self, struct stream* s, int chan);
@@ -353,6 +376,10 @@ xrdp_rdp_init(struct xrdp_rdp* self, struct stream* s);
 int APP_CC
 xrdp_rdp_init_data(struct xrdp_rdp* self, struct stream* s);
 int APP_CC
+xrdp_rdp_get_fastpath_bytes(struct xrdp_rdp *self);
+int APP_CC
+xrdp_rdp_init_fastpath(struct xrdp_rdp *self, struct stream *s);
+int APP_CC
 xrdp_rdp_recv(struct xrdp_rdp* self, struct stream* s, int* code);
 int APP_CC
 xrdp_rdp_send(struct xrdp_rdp* self, struct stream* s, int pdu_type);
@@ -360,15 +387,12 @@ int APP_CC
 xrdp_rdp_send_data(struct xrdp_rdp* self, struct stream* s,
                    int data_pdu_type);
 int APP_CC
+xrdp_rdp_send_fastpath(struct xrdp_rdp *self, struct stream *s,
+                       int data_pdu_type);
+int APP_CC
 xrdp_rdp_send_data_update_sync(struct xrdp_rdp* self);
 int APP_CC
 xrdp_rdp_incoming(struct xrdp_rdp* self);
-int APP_CC
-xrdp_rdp_send_demand_active(struct xrdp_rdp* self);
-int APP_CC
-xrdp_rdp_send_monitorlayout(struct xrdp_rdp* self);
-int APP_CC
-xrdp_rdp_process_confirm_active(struct xrdp_rdp* self, struct stream* s);
 int APP_CC
 xrdp_rdp_process_data(struct xrdp_rdp* self, struct stream* s);
 int APP_CC
@@ -528,4 +552,23 @@ int APP_CC
 xrdp_channel_process(struct xrdp_channel* self, struct stream* s,
                      int chanid);
 
+/* xrdp_fastpath.c */
+struct xrdp_fastpath *APP_CC
+xrdp_fastpath_create(struct xrdp_sec *owner, struct trans *trans);
+void APP_CC
+xrdp_fastpath_delete(struct xrdp_fastpath *self);
+int APP_CC
+xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s);
+int APP_CC
+xrdp_fastpath_process_input_event(struct xrdp_fastpath *self, struct stream *s);
+int APP_CC
+xrdp_fastpath_init(struct xrdp_fastpath *self, struct stream *s);
+int APP_CC
+xrdp_fastpath_send(struct xrdp_fastpath *self, struct stream *s);
+
+/* xrdp_caps.c */
+int APP_CC
+xrdp_caps_send_demand_active(struct xrdp_rdp *self);
+int APP_CC
+xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s);
 #endif

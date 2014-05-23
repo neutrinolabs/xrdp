@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -540,9 +540,12 @@ xrdp_wm_init(struct xrdp_wm *self)
     struct list *values;
     char *q;
     char *r;
+    char param[256];
     char section_name[256];
     char cfg_file[256];
     char autorun_name[256];
+
+    g_writeln("in xrdp_wm_init: ");
 
     load_xrdp_config(self->xrdp_config, self->screen->bpp);
 
@@ -550,7 +553,7 @@ xrdp_wm_init(struct xrdp_wm *self)
     xrdp_wm_load_static_pointers(self);
     self->screen->bg_color = self->xrdp_config->cfg_globals.ls_top_window_bg_color;
 
-    if (self->session->client_info->rdp_autologin || (autorun_name[0] != 0))
+    if (self->session->client_info->rdp_autologin)
     {
         /*
          * NOTE: this should eventually be accessed from self->xrdp_config
@@ -558,51 +561,53 @@ xrdp_wm_init(struct xrdp_wm *self)
 
         g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
         fd = g_file_open(cfg_file); /* xrdp.ini */
-
         if (fd > 0)
         {
             names = list_create();
             names->auto_free = 1;
             values = list_create();
             values->auto_free = 1;
-            /* domain names that starts with '_' are reserved for IP/DNS to
-             * simplify for the user in a gateway setup */
-            if (self->session->client_info->domain[0] != '_')
-            {
-                g_strncpy(section_name, self->session->client_info->domain,
-                          255);
+
+            /* look for module name to be loaded */
+            if (autorun_name[0] != 0) {
+                /* if autorun is configured in xrdp.ini, we enforce that module to be loaded */
+                g_strncpy(section_name, autorun_name, 255);
             }
-            if (section_name[0] == 0)
+            else if (self->session->client_info->domain &&
+                     self->session->client_info->domain[0] != '_')
             {
-                if (autorun_name[0] == 0)
+                /* domain names that starts with '_' are reserved for IP/DNS to
+                 * simplify for the user in a proxy setup */
+
+                /* we use the domain name as the module name to be loaded */
+                g_strncpy(section_name, self->session->client_info->domain,
+                              255);
+            }
+            else
+            {
+                /* if no domain is passed, and no autorun in xrdp.ini,
+                   use the first item in the xrdp.ini
+                   file thats not named
+                   'globals' or 'Logging' or 'channels' */
+                /* TODO: change this and have a 'autologin'
+                   line in globals section */
+                file_read_sections(fd, names);
+                for (index = 0; index < names->count; index++)
                 {
-                    /* if no domain is passed, and no autorun in xrdp.ini,
-                       use the first item in the xrdp.ini
-                       file thats not named
-                       'globals' or 'Logging' or 'channels' */
-                    /* TODO: change this and have a 'autologin'
-                       line in globals section */
-                    file_read_sections(fd, names);
-                    for (index = 0; index < names->count; index++)
+                    q = (char *)list_get_item(names, index);
+                    if ((g_strncasecmp("globals", q, 8) != 0) &&
+                        (g_strncasecmp("Logging", q, 8) != 0) &&
+                        (g_strncasecmp("channels", q, 9) != 0))
                     {
-                        q = (char *)list_get_item(names, index);
-                        if ((g_strncasecmp("globals", q, 8) != 0) &&
-                            (g_strncasecmp("Logging", q, 8) != 0) &&
-                            (g_strncasecmp("channels", q, 9) != 0))
-                        {
-                            g_strncpy(section_name, q, 255);
-                            break;
-                        }
+                        g_strncpy(section_name, q, 255);
+                        break;
                     }
-                }
-                else
-                {
-                    g_strncpy(section_name, autorun_name, 255);
                 }
             }
 
             list_clear(names);
 
+            /* look for the required module in xrdp.ini, fetch its parameters */
             if (file_read_section(fd, section_name, names, values) == 0)
             {
                 for (index = 0; index < names->count; index++)
@@ -632,12 +637,42 @@ xrdp_wm_init(struct xrdp_wm *self)
                             r = self->session->client_info->username;
                         }
                     }
+                    else if (g_strncmp("ip", q, 255) == 0)
+                    {
+                        /* if the ip has been asked for by the module, use what the
+                         client says (target ip should be in 'domain' field, when starting with "_")
+                         if the ip has been manually set in the config, use that
+                         instead of what the client says. */
+                        if (g_strncmp("ask", r, 3) == 0)
+                        {
+                            if (self->session->client_info->domain[0] == '_')
+                            {
+                                g_strncpy(param, &self->session->client_info->domain[1], 255);
+                                r = param;
+                            }
+
+                        }
+                    }
+                    else if (g_strncmp("port", q, 255) == 0)
+                    {
+                        if (g_strncmp("ask3389", r, 7) == 0)
+                        {
+                            r = "3389"; /* use default */
+                        }
+                    }
 
                     list_add_item(self->mm->login_names, (long)g_strdup(q));
                     list_add_item(self->mm->login_values, (long)g_strdup(r));
                 }
 
                 xrdp_wm_set_login_mode(self, 2);
+            }
+            else
+            {
+                /* requested module name not found in xrdp.ini */
+                g_writeln("   xrdp_wm_init: file_read_section returned non-zero, requested section not found in xrdp.ini");
+                xrdp_wm_log_msg(self, "ERROR: The requested xrdp module not found in xrdp.ini,"
+                                      " falling back to login window");
             }
 
             list_delete(names);
@@ -651,6 +686,7 @@ xrdp_wm_init(struct xrdp_wm *self)
     }
     else
     {
+        g_writeln("   xrdp_wm_init: no autologin / auto run detected, draw login window");
         xrdp_login_wnd_create(self);
         /* clear screen */
         xrdp_bitmap_invalidate(self->screen, 0);
@@ -658,6 +694,7 @@ xrdp_wm_init(struct xrdp_wm *self)
         xrdp_wm_set_login_mode(self, 1);
     }
 
+    g_writeln("out xrdp_wm_init: ");
     return 0;
 }
 
@@ -1701,6 +1738,8 @@ callback(long id, int msg, long param1, long param2, long param3, long param4)
 static int APP_CC
 xrdp_wm_login_mode_changed(struct xrdp_wm *self)
 {
+    g_writeln("xrdp_wm_login_mode_changed: login_mode is %d", self->login_mode);
+
     if (self == 0)
     {
         return 0;
@@ -1825,7 +1864,7 @@ void add_string_to_logwindow(char *msg, struct list *log)
 
 /*****************************************************************************/
 int APP_CC
-xrdp_wm_log_msg(struct xrdp_wm *self, char *msg)
+xrdp_wm_show_log(struct xrdp_wm *self)
 {
     struct xrdp_bitmap *but;
     int w;
@@ -1835,10 +1874,11 @@ xrdp_wm_log_msg(struct xrdp_wm *self, char *msg)
 
     if (self->hide_log_window)
     {
+        /* make sure autologin is off */
+        self->session->client_info->rdp_autologin = 0;
+        xrdp_wm_set_login_mode(self, 0); /* reset session */
         return 0;
     }
-
-    add_string_to_logwindow(msg, self->log);
 
     if (self->log_wnd == 0)
     {
@@ -1886,7 +1926,15 @@ xrdp_wm_log_msg(struct xrdp_wm *self, char *msg)
 
     xrdp_wm_set_focused(self, self->log_wnd);
     xrdp_bitmap_invalidate(self->log_wnd, 0);
-    g_sleep(100);
+
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+xrdp_wm_log_msg(struct xrdp_wm *self, char *msg)
+{
+    add_string_to_logwindow(msg, self->log);
     return 0;
 }
 

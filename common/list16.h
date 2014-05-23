@@ -18,40 +18,39 @@
  * simple list
  */
 
-#if !defined(LIST_H)
-#define LIST_H
+#if !defined(LIST16_H)
+#define LIST16_H
 
 #include "arch.h"
 
 /* list */
-struct list
+struct list16
 {
-  tbus* items;
+  tui16* items;
   int count;
-  int alloc_size;
-  int grow_by;
-  int auto_free;
+  int max_count;
+  tui16 mitems[4];
 };
 
-struct list* APP_CC
-list_create(void);
+struct list16* APP_CC
+list16_create(void);
 void APP_CC
-list_delete(struct list* self);
+list16_delete(struct list16* self);
 void APP_CC
-list_add_item(struct list* self, tbus item);
-tbus APP_CC
-list_get_item(struct list* self, int index);
+list16_init(struct list16* self);
 void APP_CC
-list_clear(struct list* self);
+list16_deinit(struct list16* self);
+void APP_CC
+list16_add_item(struct list16* self, tui16 item);
+tui16 APP_CC
+list16_get_item(struct list16* self, int index);
+void APP_CC
+list16_clear(struct list16* self);
 int APP_CC
-list_index_of(struct list* self, tbus item);
+list16_index_of(struct list16* self, tui16 item);
 void APP_CC
-list_remove_item(struct list* self, int index);
+list16_remove_item(struct list16* self, int index);
 void APP_CC
-list_insert_item(struct list* self, int index, tbus item);
-void APP_CC
-list_append_list_strdup(struct list* self, struct list* dest, int start_index);
-void APP_CC
-list_dump_items(struct list* self);
+list16_insert_item(struct list16* self, int index, tui16 item);
 
 #endif
