@@ -275,11 +275,13 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
         case 107: /* wheel up */
             flags = PTR_FLAGS_WHEEL | 0x0078;
             mod->inst->input->MouseEvent(mod->inst->input, flags, 0, 0);
+            break;
         case 108:
             break;
         case 109: /* wheel down */
             flags = PTR_FLAGS_WHEEL | PTR_FLAGS_WHEEL_NEGATIVE | 0x0088;
             mod->inst->input->MouseEvent(mod->inst->input, flags, 0, 0);
+            break;
         case 110:
             break;
         case 200:
