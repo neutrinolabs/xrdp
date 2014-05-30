@@ -1,24 +1,34 @@
 Compile FAQ
 
-Q.  I get error: security/pam_appl.h: File or directory doesn't exist
+Q.  I get one of the following errors:
+    - "security/pam_appl.h: File or directory doesn't exist"
+    - "configure: error: please install libpam0g-dev or pam-devel"
     What is wrong?
 
-A.  You need to install pam development package.
+A.  You need to install the pam development package.
     For Debian / Ubuntu this package is called libpam0g-dev.
-    For Red Hat / Suse this package is called pam-devel.
+    For Red Hat / SUSE this package is called pam-devel.
 
-Q.  I get error :
 
-A.  You need to install opensll development package.
+Q.  I get an error: "configure: error: please install libssl-dev or openssl-devel"
+
+A.  You need to install the openssl development package.
     For Debian / Ubuntu this package is called libssl-dev.
-    For Red Hat / Suze this package is called openssl-devel.
+    For Red Hat / Fedora this package is called openssl-devel.
+    For SUSE / openSUSE this package is called libopenssl-devel.
 
-Q.
 
-A.i
-Red Hat
-    libX11-devel
-    libXfixes-devel
-Debian
-    libx11-dev
-    libxfixes-dev
+Q.  I get one of the following errors:
+    - "configure: error: please install libx11-dev or libX11-devel"
+    - "configure: error: please install libx11-dev and libxfixes-dev or libXfixes-devel"
+
+A.  You need to install the X11 and X11 Xfixes development package(s).
+    For Debian: libx11-dev and libxfixes-dev.
+    For Red Hat / SUSE: libX11-devel and libXfixes-devel.
+
+
+Q.  I get an error: "rail.c:31:35: fatal error: X11/extensions/Xrandr.h: No such file or directory"
+
+A.  You need to install the Xrandr development package.
+    For Debian / Ubuntu this package is called libxrandr-dev.
+    For SUSE / openSUSE this package is called libXrandr-devel.
