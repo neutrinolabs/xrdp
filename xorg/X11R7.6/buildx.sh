@@ -59,10 +59,8 @@ remove_modules()
 
     while IFS=: read mod_file mod_dir mod_args
     do
-        if [ -d build_dir/$mod_dir ]; then
-            rm -rf build_dir/$mod_dir
-        fi
-    done < ../$data_file
+        (cd build_dir; [ -d $mod_dir ] && rm -rf $mod_dir)
+    done < $data_file
 }
 
 extract_it()
