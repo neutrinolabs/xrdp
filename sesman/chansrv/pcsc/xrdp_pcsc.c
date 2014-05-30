@@ -64,6 +64,8 @@ PCSC_API SCARD_IO_REQUEST g_rgSCardRawPci = { SCARD_PROTOCOL_RAW, 8 };
 #define LLOG_LEVEL 5
 #define LLOGLN(_level, _args) \
   do { if (_level < LLOG_LEVEL) { printf _args ; printf("\n"); } } while (0)
+#define LHEXDUMP(_level, _args) \
+  do { if  (_level < LLOG_LEVEL) { lhexdump _args ; } } while (0)
 
 #define SCARD_ESTABLISH_CONTEXT  0x01
 #define SCARD_RELEASE_CONTEXT    0x02
@@ -106,6 +108,50 @@ static pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* for pcsc_stringify_error */
 static char g_error_str[512];
+
+/*****************************************************************************/
+/* produce a hex dump */
+static void
+lhexdump(void *p, int len)
+{
+    unsigned char *line;
+    int i;
+    int thisline;
+    int offset;
+
+    line = (unsigned char *)p;
+    offset = 0;
+
+    while (offset < len)
+    {
+        printf("%04x ", offset);
+        thisline = len - offset;
+
+        if (thisline > 16)
+        {
+            thisline = 16;
+        }
+
+        for (i = 0; i < thisline; i++)
+        {
+            printf("%02x ", line[i]);
+        }
+
+        for (; i < 16; i++)
+        {
+            printf("   ");
+        }
+
+        for (i = 0; i < thisline; i++)
+        {
+            printf("%c", (line[i] >= 0x20 && line[i] < 0x7f) ? line[i] : '.');
+        }
+
+        printf("\n");
+        offset += thisline;
+        line += thisline;
+    }
+}
 
 /*****************************************************************************/
 static int
@@ -261,6 +307,8 @@ send_message(int code, char *data, int bytes)
         pthread_mutex_unlock(&g_mutex);
         return 1;
     }
+    LLOGLN(10, ("send_message:"));
+    LHEXDUMP(10, (data, bytes));
     pthread_mutex_unlock(&g_mutex);
     return 0;
 }
@@ -1084,6 +1132,7 @@ SCardTransmit(SCARDHANDLE hCard, const SCARD_IO_REQUEST *pioSendPci,
     offset += 4;
     LLOGLN(10, ("  cbRecvLength %d", (int)*pcbRecvLength));
     memcpy(pbRecvBuffer, msg + offset, *pcbRecvLength);
+    LHEXDUMP(10, (pbRecvBuffer, *pcbRecvLength));
     offset += *pcbRecvLength;
     status = GET_UINT32(msg, offset);
     free(msg);
