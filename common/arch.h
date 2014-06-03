@@ -33,7 +33,7 @@
     defined(__ia64__) || defined(__ppc__) || defined(__arm__)
 #define NEED_ALIGN
 #elif defined(__x86__) || defined(__x86_64__) || \
-      defined(__AMD64__) || defined(_M_IX86) || \
+      defined(__AMD64__) || defined(_M_IX86) || defined (_M_AMD64) || \
       defined(__i386__)
 #define NO_NEED_ALIGN
 #else
