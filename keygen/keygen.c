@@ -36,19 +36,20 @@
 
 /* default to 512 bit key size, can set changed, set */
 static int g_key_size_bits = 512;
-static int g_key_size_bytes = 64;
 
 static tui8 g_exponent[4] =
 {
     0x01, 0x00, 0x01, 0x00
 };
 
+/* 4 bytes public exponent */
 static tui8 g_ppk_e[4] =
 {
     0x5B, 0x7B, 0x88, 0xC0
 };
 
-static tui8 g_ppk_n[72] =
+/* 64 byte modulus */
+static tui8 g_ppk_n[72] = /* 64 bytes + 8 bytes pad */
 {
     0x3D, 0x3A, 0x5E, 0xBD, 0x72, 0x43, 0x3E, 0xC9,
     0x4D, 0xBB, 0xC1, 0x1E, 0x4A, 0xBA, 0x5F, 0xCB,
@@ -61,7 +62,8 @@ static tui8 g_ppk_n[72] =
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-static tui8 g_ppk_d[108] =
+/* 64 bytes private exponent */
+static tui8 g_ppk_d[108] = /* 64 bytes + 44 bytes pad */
 {
     0x87, 0xA7, 0x19, 0x32, 0xDA, 0x11, 0x87, 0x55,
     0x58, 0x00, 0x16, 0x16, 0x25, 0x65, 0x68, 0xF8,
@@ -79,40 +81,115 @@ static tui8 g_ppk_d[108] =
     0x00, 0x00, 0x00, 0x00
 };
 
-static tui8 g_testkey[176] =
+/* 512 bit proprietary certificate
+  dwVersion            0   4  bytes always 0x00000001
+  dwSigAlgId           4   4  bytes always 0x00000001
+  dwKeyAlgId           8   4  bytes always 0x00000001
+  wPublicKeyBlobType  12   2  bytes always 0x0006
+  wPublicKeyBlobLen   14   2  bytes        0x005C      92  bytes
+    magic             16   4  bytes always 0x31415352
+    keylen            20   4  bytes        0x0048      72  bytes
+    bitlen            24   4  bytes        0x0200     512  bits
+    datalen           28   4  bytes        0x003F      63  bytes
+    pubExp            32   4  bytes        0x00010001
+    modulus           36  72  bytes
+  wSignatureBlobType 108   2  bytes always 0x0008
+  wSignatureBlobLen  110   2  bytes        0x0048      72 bytes
+    SignatureBlob    112  72  bytes */
+
+static tui8 g_testkey512[184] = /* 512 bit test key */
 {
-    0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+    0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, /* 0 */
     0x01, 0x00, 0x00, 0x00, 0x06, 0x00, 0x5c, 0x00,
     0x52, 0x53, 0x41, 0x31, 0x48, 0x00, 0x00, 0x00,
     0x00, 0x02, 0x00, 0x00, 0x3f, 0x00, 0x00, 0x00,
-    0x01, 0x00, 0x01, 0x00, 0x79, 0x6f, 0xb4, 0xdf,
+    0x01, 0x00, 0x01, 0x00, 0x79, 0x6f, 0xb4, 0xdf, /* 32 */
     0xa6, 0x95, 0xb9, 0xa9, 0x61, 0xe3, 0xc4, 0x5e,
     0xff, 0x6b, 0xd8, 0x81, 0x8a, 0x12, 0x4a, 0x93,
     0x42, 0x97, 0x18, 0x93, 0xac, 0xd1, 0x3a, 0x38,
-    0x3c, 0x68, 0x50, 0x19, 0x31, 0xb6, 0x84, 0x51,
+    0x3c, 0x68, 0x50, 0x19, 0x31, 0xb6, 0x84, 0x51, /* 64 */
     0x79, 0xfb, 0x1c, 0xe7, 0xe3, 0x99, 0x20, 0xc7,
     0x84, 0xdf, 0xd1, 0xaa, 0xb5, 0x15, 0xef, 0x47,
     0x7e, 0xfc, 0x88, 0xeb, 0x29, 0xc3, 0x27, 0x5a,
-    0x35, 0xf8, 0xfd, 0xaa, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x08, 0x00, 0x48, 0x00,
+    0x35, 0xf8, 0xfd, 0xaa, 0x00, 0x00, 0x00, 0x00, /* 96 */
+    0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x48, 0x00,
     0x32, 0x3b, 0xde, 0x6f, 0x18, 0x97, 0x1e, 0xc3,
     0x6b, 0x2b, 0x2d, 0xe4, 0xfc, 0x2d, 0xa2, 0x8e,
-    0x32, 0x3c, 0xf3, 0x1b, 0x24, 0x90, 0x57, 0x4d,
+    0x32, 0x3c, 0xf3, 0x1b, 0x24, 0x90, 0x57, 0x4d, /* 128 */
     0x8e, 0xe4, 0x69, 0xfc, 0x16, 0x8d, 0x41, 0x92,
     0x78, 0xc7, 0x9c, 0xb4, 0x26, 0xff, 0xe8, 0x3e,
     0xa1, 0x8a, 0xf5, 0x57, 0xc0, 0x7f, 0x3e, 0x21,
-    0x17, 0x32, 0x30, 0x6f, 0x79, 0xe1, 0x36, 0xcd,
-    0xb6, 0x8e, 0xbe, 0x57, 0x57, 0xd2, 0xa9, 0x36
+    0x17, 0x32, 0x30, 0x6f, 0x79, 0xe1, 0x36, 0xcd, /* 160 */
+    0xb6, 0x8e, 0xbe, 0x57, 0x57, 0xd2, 0xa9, 0x36,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-/* this is the installed signature */
-char inst_pub_sig[] = "0x6a,0x41,0xb1,0x43,0xcf,0x47,0x6f,0xf1,0xe6,0xcc,0xa1,\
-0x72,0x97,0xd9,0xe1,0x85,0x15,0xb3,0xc2,0x39,0xa0,0xa6,0x26,0x1a,0xb6,\
-0x49,0x01,0xfa,0xa6,0xda,0x60,0xd7,0x45,0xf7,0x2c,0xee,0xe4,0x8e,0x64,\
-0x2e,0x37,0x49,0xf0,0x4c,0x94,0x6f,0x08,0xf5,0x63,0x4c,0x56,0x29,0x55,\
-0x5a,0x63,0x41,0x2c,0x20,0x65,0x95,0x99,0xb1,0x15,0x7c";
+/* 2048 bit proprietary certificate
+  dwVersion            0   4  bytes always 0x00000001
+  dwSigAlgId           4   4  bytes always 0x00000001
+  dwKeyAlgId           8   4  bytes always 0x00000001
+  wPublicKeyBlobType  12   2  bytes always 0x0006
+  wPublicKeyBlobLen   14   2  bytes        0x011C     284  bytes
+    magic             16   4  bytes always 0x31415352
+    keylen            20   4  bytes        0x0108     264  bytes
+    bitlen            24   4  bytes        0x0800    2048  bits
+    datalen           28   4  bytes        0x00FF     255  bytes
+    pubExp            32   4  bytes        0x00010001
+    modulus           36 264  bytes
+  wSignatureBlobType 300   2  bytes always 0x0008
+  wSignatureBlobLen  302   2  bytes        0x0048      72 bytes
+    SignatureBlob    304  72  bytes */
 
+static tui8 g_testkey2048[376] = /* 2048 bit test key */
+{
+    0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, /* 0 */
+    0x01, 0x00, 0x00, 0x00, 0x06, 0x00, 0x1c, 0x01,
+    0x52, 0x53, 0x41, 0x31, 0x08, 0x01, 0x00, 0x00,
+    0x00, 0x08, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00,
+    0x01, 0x00, 0x01, 0x00, 0x13, 0x77, 0x6d, 0xd8, /* 32 */
+    0x7b, 0x6e, 0x6f, 0xb4, 0x27, 0x6d, 0x70, 0x3a,
+    0x97, 0x5f, 0xcb, 0x50, 0x9b, 0x13, 0x6b, 0xc7,
+    0xba, 0xdf, 0x73, 0x54, 0x17, 0x35, 0xf0, 0x09,
+    0x9e, 0x9d, 0x0b, 0x6a, 0x2c, 0x9f, 0xd1, 0x0c, /* 64 */
+    0xc6, 0x47, 0x83, 0xde, 0xca, 0x90, 0x20, 0xac,
+    0x70, 0x63, 0x9b, 0xb7, 0x49, 0x07, 0x0b, 0xf5,
+    0xf2, 0x38, 0x2a, 0x40, 0xff, 0xf1, 0xba, 0x97,
+    0x79, 0x3e, 0xd4, 0xd1, 0xf3, 0x41, 0x0f, 0x91, /* 96 */
+    0xfe, 0x1a, 0x86, 0xf4, 0x1b, 0xef, 0xcc, 0x29,
+    0xa3, 0x35, 0x6f, 0x60, 0xfa, 0x98, 0x53, 0x51,
+    0x80, 0x57, 0x15, 0x2f, 0xe1, 0x8b, 0xd7, 0x86,
+    0x15, 0x2d, 0xb5, 0xec, 0x7a, 0xdd, 0xc5, 0x1d, /* 128 */
+    0x1b, 0x88, 0x53, 0x67, 0x86, 0xe1, 0x6e, 0xcd,
+    0x4e, 0x2e, 0xfd, 0xd2, 0x49, 0x04, 0xfb, 0x1d,
+    0x95, 0xf0, 0xe9, 0x7f, 0x97, 0xa3, 0x1b, 0xb2,
+    0x92, 0x2e, 0x62, 0x2a, 0x96, 0xd4, 0xea, 0x18, /* 160 */
+    0x8e, 0x99, 0x41, 0xea, 0x83, 0xb5, 0xf1, 0x0e,
+    0xea, 0x53, 0x70, 0x99, 0xd7, 0x9e, 0x0c, 0x65,
+    0x2b, 0xf4, 0xdc, 0x0e, 0xe7, 0x9e, 0xce, 0x04,
+    0x25, 0x01, 0x88, 0xc4, 0xc1, 0xd2, 0xa4, 0x18, /* 192 */
+    0xc2, 0x8a, 0x52, 0x0f, 0x01, 0xb2, 0x71, 0x30,
+    0x44, 0x3f, 0x5b, 0x11, 0x2e, 0xe7, 0x53, 0xa0,
+    0xc8, 0x1f, 0x77, 0xaf, 0xb5, 0xbb, 0xaf, 0x12,
+    0xe8, 0x19, 0x0c, 0xf6, 0x1f, 0xa8, 0x3e, 0x11, /* 224 */
+    0x34, 0xe4, 0xac, 0x1c, 0x1c, 0x00, 0xbb, 0xb9,
+    0x2f, 0xbb, 0x81, 0x76, 0x4e, 0x46, 0xda, 0x73,
+    0x00, 0x82, 0x71, 0xa4, 0x62, 0xc3, 0xd4, 0x3f,
+    0xda, 0x34, 0x54, 0x27, 0xe3, 0xd0, 0x3a, 0x73, /* 256 */
+    0x2f, 0x99, 0xc4, 0x91, 0x56, 0x12, 0x98, 0xa8,
+    0x3b, 0x8d, 0x61, 0x83, 0x62, 0xb7, 0x20, 0x61,
+    0x4d, 0xc9, 0x41, 0xd1, 0x40, 0x02, 0x11, 0x4b,
+    0x63, 0x46, 0xc7, 0xc1, 0x00, 0x00, 0x00, 0x00, /* 288 */
+    0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x48, 0x00,
+    0x00, 0x50, 0xb7, 0x75, 0xf3, 0x77, 0x99, 0xb2,
+    0xd3, 0xdd, 0xcd, 0x83, 0x6e, 0xdb, 0x0a, 0x29,
+    0x88, 0x05, 0xb5, 0x8a, 0x49, 0xd5, 0xa8, 0x5a, /* 320 */
+    0xc3, 0xb7, 0x18, 0xc2, 0x3c, 0x1e, 0xde, 0xd3,
+    0x8f, 0xdd, 0x21, 0x27, 0x84, 0xa0, 0xc8, 0x8d,
+    0x65, 0xce, 0x5d, 0x3d, 0x46, 0x65, 0x88, 0xfc,
+    0x35, 0x0a, 0x04, 0xa0, 0xda, 0xc1, 0xab, 0xbf, /* 352 */
+    0xcd, 0xf1, 0x7e, 0x71, 0x7b, 0xf8, 0x4a, 0x78,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
 
 /*****************************************************************************/
 static int APP_CC
@@ -120,7 +197,7 @@ out_params(void)
 {
     g_writeln("");
     g_writeln("xrdp rsa key gen utility examples");
-    g_writeln("  xrdp-keygen xrdp ['path and file name' | auto]");
+    g_writeln("  xrdp-keygen xrdp ['path and file name' | auto] [512 or 2048]");
     g_writeln("  xrdp-keygen test");
     g_writeln("");
     return 0;
@@ -136,37 +213,73 @@ sign_key(char *e_data, int e_len, char *n_data, int n_len,
     char *md5_final;
     void *md5;
 
-    if ((e_len != 4) || (n_len != 64) || (sign_len != 64))
+    if ((e_len != 4) || ((n_len != 64) && (n_len != 256)) || (sign_len != 64))
     {
         return 1;
     }
-
-    key = (char *)g_malloc(176, 0);
-    md5_final = (char *)g_malloc(64, 0);
-    md5 = ssl_md5_info_create();
-    /* copy the test key */
-    g_memcpy(key, g_testkey, 176);
-    /* replace e and n */
-    g_memcpy(key + 32, e_data, 4);
-    g_memcpy(key + 36, n_data, 64);
-    ssl_md5_clear(md5);
-    /* the first 108 bytes */
-    ssl_md5_transform(md5, key, 108);
-    /* set the whole thing with 0xff */
-    g_memset(md5_final, 0xff, 64);
-    /* digest 16 bytes */
-    ssl_md5_complete(md5, md5_final);
-    /* set non 0xff array items */
-    md5_final[16] = 0;
-    md5_final[62] = 1;
-    md5_final[63] = 0;
-    /* encrypt */
-    ssl_mod_exp(sign_data, 64, md5_final, 64, (char *)g_ppk_n, 64,
-                (char *)g_ppk_d, 64);
-    /* cleanup */
-    ssl_md5_info_delete(md5);
-    g_free(key);
-    g_free(md5_final);
+    
+    if (n_len == 64)
+    {
+        key = (char *)g_malloc(184, 0);
+        md5_final = (char *)g_malloc(64, 0);
+        md5 = ssl_md5_info_create();
+        /* copy the test key */
+        g_memcpy(key, g_testkey512, 184);
+        /* replace e and n */
+        g_memcpy(key + 32, e_data, e_len);
+        g_memcpy(key + 36, n_data, n_len);
+        ssl_md5_clear(md5);
+        /* the first 108 bytes */
+        ssl_md5_transform(md5, key, 108);
+        /* set the whole thing with 0xff */
+        g_memset(md5_final, 0xff, 64);
+        /* digest 16 bytes */
+        ssl_md5_complete(md5, md5_final);
+        /* set non 0xff array items */
+        md5_final[16] = 0;
+        md5_final[62] = 1;
+        md5_final[63] = 0;
+        /* encrypt */
+        ssl_mod_exp(sign_data, sign_len, md5_final, 64, (char *)g_ppk_n, 64,
+                    (char *)g_ppk_d, 64);
+        /* cleanup */
+        ssl_md5_info_delete(md5);
+        g_free(key);
+        g_free(md5_final);
+    }
+    else if (n_len == 256)
+    {
+        key = (char *)g_malloc(376, 0);
+        md5_final = (char *)g_malloc(64, 0);
+        md5 = ssl_md5_info_create();
+        /* copy the test key */
+        g_memcpy(key, g_testkey2048, 376);
+        /* replace e and n */
+        g_memcpy(key + 32, e_data, e_len);
+        g_memcpy(key + 36, n_data, n_len);
+        ssl_md5_clear(md5);
+        /* the first 300 bytes */
+        ssl_md5_transform(md5, key, 300);
+        /* set the whole thing with 0xff */
+        g_memset(md5_final, 0xff, 64);
+        /* digest 16 bytes */
+        ssl_md5_complete(md5, md5_final);
+        /* set non 0xff array items */
+        md5_final[16] = 0;
+        md5_final[62] = 1;
+        md5_final[63] = 0;
+        /* encrypt */
+        ssl_mod_exp(sign_data, sign_len, md5_final, 64, (char *)g_ppk_n, 64,
+                    (char *)g_ppk_d, 64);
+        /* cleanup */
+        ssl_md5_info_delete(md5);
+        g_free(key);
+        g_free(md5_final);
+    }
+    else
+    {
+        g_writeln("problem");
+    }
     return 0;
 }
 
@@ -292,12 +405,12 @@ key_gen(const char *path_and_file_name)
     int error;
 
     e_data = (char *)g_exponent;
-    n_data = (char *)g_malloc(64, 0);
-    d_data = (char *)g_malloc(64, 0);
+    n_data = (char *)g_malloc(256, 0);
+    d_data = (char *)g_malloc(256, 0);
     sign_data = (char *)g_malloc(64, 0);
     e_len = 4;
-    n_len = 64;
-    d_len = 64;
+    n_len = g_key_size_bits / 8;
+    d_len = n_len;
     sign_len = 64;
     error = 0;
     g_writeln("");
@@ -345,84 +458,15 @@ key_gen(const char *path_and_file_name)
 }
 
 /*****************************************************************************/
-/* returns boolean */
-static int APP_CC
-key_gen_run_it(void)
-{
-    int fd;
-    int index;
-    int rv;
-    struct list *names;
-    struct list *values;
-    char *name;
-    char *value;
-
-    if (!g_file_exist("/etc/xrdp/rsakeys.ini"))
-    {
-        return 1;
-    }
-
-    if (g_file_get_size("/etc/xrdp/rsakeys.ini") < 10)
-    {
-        return 1;
-    }
-
-    fd = g_file_open("/etc/xrdp/rsakeys.ini");
-
-    if (fd < 0)
-    {
-        return 1;
-    }
-
-    rv = 0;
-    names = list_create();
-    names->auto_free = 1;
-    values = list_create();
-    values->auto_free = 1;
-
-    if (file_read_section(fd, "keys", names, values) == 0)
-    {
-        for (index = 0; index < names->count; index++)
-        {
-            name = (char *)list_get_item(names, index);
-            value = (char *)list_get_item(values, index);
-
-            if (g_strcasecmp(name, "pub_sig") == 0)
-            {
-                if (g_strcasecmp(value, inst_pub_sig) == 0)
-                {
-                    rv = 1;
-                }
-            }
-        }
-    }
-    else
-    {
-        g_writeln("error reading keys section of rsakeys.ini");
-    }
-
-    list_delete(names);
-    list_delete(values);
-    g_file_close(fd);
-    return rv;
-}
-
-/*****************************************************************************/
 static int APP_CC
 key_gen_auto(void)
 {
-    if (key_gen_run_it())
-    {
-        return key_gen("/etc/xrdp/rsakeys.ini");
-    }
-
-    g_writeln("xrdp-keygen does not need to run");
-    return 0;
+    return key_gen("/etc/xrdp/rsakeys.ini");
 }
 
 /*****************************************************************************/
 static int APP_CC
-key_test(void)
+key_test512(void)
 {
     char *md5_final;
     char *sig;
@@ -432,15 +476,15 @@ key_test(void)
     sig = (char *)g_malloc(64, 0);
     md5 = ssl_md5_info_create();
     g_writeln("original key is:");
-    g_hexdump((char *)g_testkey, 176);
+    g_hexdump((char *)g_testkey512, 184);
     g_writeln("original exponent is:");
-    g_hexdump((char *)g_testkey + 32, 4);
+    g_hexdump((char *)g_testkey512 + 32, 4);
     g_writeln("original modulus is:");
-    g_hexdump((char *)g_testkey + 36, 64);
+    g_hexdump((char *)g_testkey512 + 36, 64);
     g_writeln("original signature is:");
-    g_hexdump((char *)g_testkey + 112, 64);
+    g_hexdump((char *)g_testkey512 + 112, 64);
     ssl_md5_clear(md5);
-    ssl_md5_transform(md5, (char *)g_testkey, 108);
+    ssl_md5_transform(md5, (char *)g_testkey512, 108);
     g_memset(md5_final, 0xff, 64);
     ssl_md5_complete(md5, md5_final);
     g_writeln("md5 hash of first 108 bytes of this key is:");
@@ -449,11 +493,54 @@ key_test(void)
     md5_final[62] = 1;
     md5_final[63] = 0;
     ssl_mod_exp(sig, 64, md5_final, 64, (char *)g_ppk_n, 64, (char *)g_ppk_d, 64);
-    g_writeln("produced signature(this should match original \
-signature above) is:");
+    g_writeln("produced signature(this should match original "
+              "signature above) is:");
     g_hexdump(sig, 64);
     g_memset(md5_final, 0, 64);
-    ssl_mod_exp(md5_final, 64, (char *)g_testkey + 112, 64, (char *)g_ppk_n, 64,
+    ssl_mod_exp(md5_final, 64, (char *)g_testkey512 + 112, 64, (char *)g_ppk_n, 64,
+                (char *)g_ppk_e, 4);
+    g_writeln("decrypted hash of first 108 bytes of this key is:");
+    g_hexdump(md5_final, 64);
+    ssl_md5_info_delete(md5);
+    g_free(md5_final);
+    g_free(sig);
+    return 0;
+}
+
+/*****************************************************************************/
+static int APP_CC
+key_test2048(void)
+{
+    char *md5_final;
+    char *sig;
+    void *md5;
+
+    md5_final = (char *)g_malloc(64, 0);
+    sig = (char *)g_malloc(64, 0);
+    md5 = ssl_md5_info_create();
+    g_writeln("original key is:");
+    g_hexdump((char *)g_testkey2048, 376);
+    g_writeln("original exponent is:");
+    g_hexdump((char *)g_testkey2048 + 32, 4);
+    g_writeln("original modulus is:");
+    g_hexdump((char *)g_testkey2048 + 36, 256);
+    g_writeln("original signature is:");
+    g_hexdump((char *)g_testkey2048 + 304, 64);
+    ssl_md5_clear(md5);
+    ssl_md5_transform(md5, (char *)g_testkey2048, 300);
+    g_memset(md5_final, 0xff, 64);
+    ssl_md5_complete(md5, md5_final);
+    g_writeln("md5 hash of first 300 bytes of this key is:");
+    g_hexdump(md5_final, 16);
+    md5_final[16] = 0;
+    md5_final[62] = 1;
+    md5_final[63] = 0;
+    ssl_mod_exp(sig, 64, md5_final, 64, (char *)g_ppk_n, 64, (char *)g_ppk_d, 64);
+    g_writeln("produced signature(this should match original "
+              "signature above) is:");
+    g_hexdump(sig, 64);
+    g_memset(md5_final, 0, 64);
+    ssl_mod_exp(md5_final, 64, (char *)g_testkey2048 + 304, 64, (char *)g_ppk_n, 64,
                 (char *)g_ppk_e, 4);
     g_writeln("decrypted hash of first 108 bytes of this key is:");
     g_hexdump(md5_final, 64);
@@ -473,6 +560,15 @@ main(int argc, char **argv)
         {
             if (argc > 2)
             {
+                if (argc > 3)
+                {
+                    g_key_size_bits = g_atoi(argv[3]);
+                    if ((g_key_size_bits != 512) && (g_key_size_bits != 2048))
+                    {
+                        out_params();
+                        return 0;
+                    }
+                }
                 if (g_strcasecmp(argv[2], "auto") == 0)
                 {
                     if (g_getuid() != 0)
@@ -495,7 +591,13 @@ main(int argc, char **argv)
         }
         else if (g_strcasecmp(argv[1], "test") == 0)
         {
-            return key_test();
+            g_writeln("");
+            g_writeln("testing 512 bit key");
+            key_test512();
+            g_writeln("");
+            g_writeln("testing 2048 bit key");
+            key_test2048();
+            return 0;
         }
     }
 
