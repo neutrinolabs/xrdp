@@ -52,11 +52,6 @@ int g_buf_index = 0;
 int g_sent_time[256];
 int g_sent_flag[256];
 
-#if defined(XRDP_SIMPLESOUND)
-static void *DEFAULT_CC
-read_raw_audio_data(void *arg);
-#endif
-
 #define CHANSRV_PORT_OUT_STR  "/tmp/.xrdp/xrdp_chansrv_audio_out_socket_%d"
 #define CHANSRV_PORT_IN_STR   "/tmp/.xrdp/xrdp_chansrv_audio_in_socket_%d"
 
@@ -676,13 +671,6 @@ sound_init(void)
     /* save data from sound_server_source */
     fifo_init(&in_fifo, 100);
 
-#if defined(XRDP_SIMPLESOUND)
-
-    /* start thread to read raw audio data from pulseaudio device */
-    tc_thread_create(read_raw_audio_data, 0);
-
-#endif
-
     return 0;
 }
 
@@ -1161,131 +1149,3 @@ sound_sndsrvr_source_data_in(struct trans *trans)
 
     return 0;
 }
-
-/*****************************************************************************/
-
-#if defined(XRDP_SIMPLESOUND)
-
-#define AUDIO_BUF_SIZE 2048
-
-static int DEFAULT_CC
-sttrans_data_in(struct trans *self)
-{
-    LOG(0, ("sttrans_data_in:\n"));
-    return 0;
-}
-
-/**
- * read raw audio data from pulseaudio device and write it
- * to a unix domain socket on which trans server is listening
- */
-
-static void *DEFAULT_CC
-read_raw_audio_data(void *arg)
-{
-    pa_sample_spec samp_spec;
-    pa_simple *simple = NULL;
-    uint32_t bytes_read;
-    char *cptr;
-    int i;
-    int error;
-    struct trans *strans;
-    char path[256];
-    struct stream *outs;
-
-    strans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
-
-    if (strans == 0)
-    {
-        LOG(0, ("read_raw_audio_data: trans_create failed\n"));
-        return 0;
-    }
-
-    strans->trans_data_in = sttrans_data_in;
-    g_snprintf(path, 255, CHANSRV_PORT_OUT_STR, g_display_num);
-
-    if (trans_connect(strans, "", path, 100) != 0)
-    {
-        LOG(0, ("read_raw_audio_data: trans_connect failed\n"));
-        trans_delete(strans);
-        return 0;
-    }
-
-    /* setup audio format */
-    samp_spec.format = PA_SAMPLE_S16LE;
-    samp_spec.rate = 44100;
-    samp_spec.channels = 2;
-
-    /* if we are root, then for first 8 seconds connection to pulseaudo server
-       fails; if we are non-root, then connection succeeds on first attempt;
-       for now we have changed code to be non-root, but this may change in the
-       future - so pretend we are root and try connecting to pulseaudio server
-       for upto one minute */
-    for (i = 0; i < 60; i++)
-    {
-        simple = pa_simple_new(NULL, "xrdp", PA_STREAM_RECORD, NULL,
-                               "record", &samp_spec, NULL, NULL, &error);
-
-        if (simple)
-        {
-            /* connected to pulseaudio server */
-            LOG(0, ("read_raw_audio_data: connected to pulseaudio server\n"));
-            break;
-        }
-
-        LOG(0, ("read_raw_audio_data: ERROR creating PulseAudio async interface\n"));
-        LOG(0, ("read_raw_audio_data: %s\n", pa_strerror(error)));
-        g_sleep(1000);
-    }
-
-    if (i == 60)
-    {
-        /* failed to connect to audio server */
-        trans_delete(strans);
-        return NULL;
-    }
-
-    /* insert header just once */
-    outs = trans_get_out_s(strans, 8192);
-    out_uint32_le(outs, 0);
-    out_uint32_le(outs, AUDIO_BUF_SIZE + 8);
-    cptr = outs->p;
-    out_uint8s(outs, AUDIO_BUF_SIZE);
-    s_mark_end(outs);
-
-    while (1)
-    {
-        /* read a block of raw audio data... */
-        g_memset(cptr, 0, 4);
-        bytes_read = pa_simple_read(simple, cptr, AUDIO_BUF_SIZE, &error);
-
-        if (bytes_read < 0)
-        {
-            LOG(0, ("read_raw_audio_data: ERROR reading from pulseaudio stream\n"));
-            LOG(0, ("read_raw_audio_data: %s\n", pa_strerror(error)));
-            break;
-        }
-
-        /* bug workaround:
-           even when there is no audio data, pulseaudio is returning without
-           errors but the data itself is zero; we use this zero data to
-           determine that there is no audio data present */
-        if (*cptr == 0 && *(cptr + 1) == 0 && *(cptr + 2) == 0 && *(cptr + 3) == 0)
-        {
-            g_sleep(10);
-            continue;
-        }
-
-        if (trans_force_write_s(strans, outs) != 0)
-        {
-            LOG(0, ("read_raw_audio_data: ERROR writing audio data to server\n"));
-            break;
-        }
-    }
-
-    pa_simple_free(simple);
-    trans_delete(strans);
-    return NULL;
-}
-
-#endif
