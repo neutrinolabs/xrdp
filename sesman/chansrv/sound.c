@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2009-2013
+ * Copyright (C) Jay Sorg 2009-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,10 +22,6 @@
 #include <sys/errno.h>
 #include <signal.h>
 #include <sys/un.h>
-
-#ifdef XRDP_LOAD_PULSE_MODULES
-#include <pulse/util.h>
-#endif
 
 #include "sound.h"
 #include "thread_calls.h"
@@ -655,11 +651,6 @@ sound_init(void)
 
     g_memset(g_sent_flag, 0, sizeof(g_sent_flag));
 
-#ifdef XRDP_LOAD_PULSE_MODULES
-    if (load_pulse_modules())
-        LOG(0, ("Audio and microphone redirection will not work!"));
-#endif
-
     /* init sound output */
     sound_send_server_output_formats();
 
@@ -725,10 +716,6 @@ sound_deinit(void)
     }
 
     fifo_deinit(&in_fifo);
-
-#ifdef XRDP_LOAD_PULSE_MODULES
-    system("pulseaudio --kill");
-#endif
 
     return 0;
 }
@@ -840,158 +827,6 @@ sound_check_wait_objs(void)
 
     return 0;
 }
-
-/**
- * Load xrdp pulseaudio sink and source modules
- *
- * @return 0 on success, -1 on failure
- *****************************************************************************/
-
-#ifdef XRDP_LOAD_PULSE_MODULES
-
-static int APP_CC
-load_pulse_modules()
-{
-    struct sockaddr_un sa;
-
-    pid_t pid;
-    char* cli;
-    int   fd;
-    int   i;
-    int   rv;
-    char  buf[1024];
-
-    /* is pulse audio daemon running? */
-    if (pa_pid_file_check_running(&pid, "pulseaudio") < 0)
-    {
-        LOG(0, ("load_pulse_modules: No PulseAudio daemon running, "
-                "or not running as session daemon"));
-    }
-
-    /* get name of unix domain socket used by pulseaudio for CLI */
-    if ((cli = (char *) pa_runtime_path("cli")) == NULL)
-    {
-        LOG(0, ("load_pulse_modules: Error getting PulesAudio runtime path"));
-        return -1;
-    }
-
-    /* open a socket */
-    if ((fd = socket(PF_LOCAL, SOCK_STREAM, 0)) < 0)
-    {
-        pa_xfree(cli);
-        LOG(0, ("load_pulse_modules: Socket open error"));
-        return -1;
-    }
-
-    /* set it up */
-    memset(&sa, 0, sizeof(struct sockaddr_un));
-    sa.sun_family = AF_UNIX;
-    pa_strlcpy(sa.sun_path, cli, sizeof(sa.sun_path));
-    pa_xfree(cli);
-
-    for (i = 0; i < 20; i++)
-    {
-        if (pa_pid_file_kill(SIGUSR2, NULL, "pulseaudio") < 0)
-            LOG(0, ("load_pulse_modules: Failed to kill PulseAudio daemon"));
-
-        if ((rv = connect(fd, (struct sockaddr*) &sa, sizeof(sa))) < 0 &&
-            (errno != ECONNREFUSED && errno != ENOENT))
-        {
-            LOG(0, ("load_pulse_modules: connect() failed with error: %s",
-                    strerror(errno)));
-            return -1;
-        }
-
-        if (rv >= 0)
-            break;
-
-        pa_msleep(300);
-    }
-
-    if (i >= 20)
-    {
-        LOG(0, ("load_pulse_modules: Daemon not responding"));
-        return -1;
-    }
-
-    LOG(0, ("load_pulse_modules: connected to pulseaudio daemon"));
-
-    /* read back PulseAudio sign on message */
-    memset(buf, 0, 1024);
-    recv(fd, buf, 1024, 0);
-
-    /* send cmd to load source module */
-    memset(buf, 0, 1024);
-    sprintf(buf, "load-module module-xrdp-source\n");
-    send(fd, buf, strlen(buf), 0);
-
-    /* read back response */
-    memset(buf, 0, 1024);
-    recv(fd, buf, 1024, 0);
-    if (strcasestr(buf, "Module load failed") != 0)
-    {
-        LOG(0, ("load_pulse_modules: Error loading module-xrdp-source"));
-    }
-    else
-    {
-        LOG(0, ("load_pulse_modules: Loaded module-xrdp-source"));
-
-        /* success, set it as the default source */
-        memset(buf, 0, 1024);
-        sprintf(buf, "set-default-source xrdp-source\n");
-        send(fd, buf, strlen(buf), 0);
-
-        memset(buf, 0, 1024);
-        recv(fd, buf, 1024, 0);
-
-        if (strcasestr(buf, "does not exist") != 0)
-        {
-            LOG(0, ("load_pulse_modules: Error setting default source"));
-        }
-        else
-        {
-            LOG(0, ("load_pulse_modules: set default source"));
-        }
-    }
-
-    /* send cmd to load sink module */
-    memset(buf, 0, 1024);
-    sprintf(buf, "load-module module-xrdp-sink\n");
-    send(fd, buf, strlen(buf), 0);
-
-    /* read back response */
-    memset(buf, 0, 1024);
-    recv(fd, buf, 1024, 0);
-    if (strcasestr(buf, "Module load failed") != 0)
-    {
-        LOG(0, ("load_pulse_modules: Error loading module-xrdp-sink"));
-    }
-    else
-    {
-        LOG(0, ("load_pulse_modules: Loaded module-xrdp-sink"));
-
-        /* success, set it as the default sink */
-        memset(buf, 0, 1024);
-        sprintf(buf, "set-default-sink xrdp-sink\n");
-        send(fd, buf, strlen(buf), 0);
-
-        memset(buf, 0, 1024);
-        recv(fd, buf, 1024, 0);
-
-        if (strcasestr(buf, "does not exist") != 0)
-        {
-            LOG(0, ("load_pulse_modules: Error setting default sink"));
-        }
-        else
-        {
-            LOG(0, ("load_pulse_modules: set default sink"));
-        }
-    }
-
-    close(fd);
-    return 0;
-}
-#endif
 
 /******************************************************************************
  **                                                                          **
