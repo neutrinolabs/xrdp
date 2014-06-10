@@ -679,7 +679,7 @@ xrdp_bitmap_get_pixel(struct xrdp_bitmap *self, int x, int y)
         {
             return GETPIXEL16(self->data, x, y, self->width);
         }
-        else if (self->bpp == 24)
+        else if (self->bpp >= 24)
         {
             return GETPIXEL32(self->data, x, y, self->width);
         }
@@ -712,7 +712,7 @@ xrdp_bitmap_set_pixel(struct xrdp_bitmap *self, int x, int y, int pixel)
         {
             SETPIXEL16(self->data, x, y, self->width, pixel);
         }
-        else if (self->bpp == 24)
+        else if (self->bpp >= 24)
         {
             SETPIXEL32(self->data, x, y, self->width, pixel);
         }
@@ -779,7 +779,7 @@ xrdp_bitmap_copy_box(struct xrdp_bitmap *self,
         return 1;
     }
 
-    if (self->bpp == 24)
+    if (self->bpp >= 24)
     {
         s32 = ((tui32 *)(self->data)) + (self->width * y + x);
         d32 = ((tui32 *)(dest->data)) + (dest->width * desty + destx);
@@ -849,7 +849,7 @@ xrdp_bitmap_hash_crc(struct xrdp_bitmap *self)
     int index;
     char hash_data[16];
 
-    if (self->bpp == 24)
+    if (self->bpp >= 24)
     {
         bytes = self->width * self->height * 4;
     }
@@ -953,7 +953,76 @@ xrdp_bitmap_copy_box_with_crc(struct xrdp_bitmap *self,
     CRC_PASS(self->height, crc);
     CRC_PASS(self->height >> 8, crc);
 
-    if (self->bpp == 24)
+    if (self->bpp == 32)
+    {
+        s32 = ((tui32 *)(self->data)) + (self->width * y + x);
+        d32 = ((tui32 *)(dest->data)) + (dest->width * desty + destx);
+        incs = self->width - cx;
+        incd = dest->width - cx;
+
+        for (i = 0; i < cy; i++)
+        {
+            j = 0;
+
+            while (j < cx - 4)
+            {
+                pixel = *s32;
+                *d32 = pixel;
+                CRC_PASS(pixel, crc);
+                CRC_PASS(pixel >> 8, crc);
+                CRC_PASS(pixel >> 16, crc);
+                CRC_PASS(pixel >> 24, crc);
+                s32++;
+                d32++;
+
+                pixel = *s32;
+                *d32 = pixel;
+                CRC_PASS(pixel, crc);
+                CRC_PASS(pixel >> 8, crc);
+                CRC_PASS(pixel >> 16, crc);
+                CRC_PASS(pixel >> 24, crc);
+                s32++;
+                d32++;
+
+                pixel = *s32;
+                *d32 = pixel;
+                CRC_PASS(pixel, crc);
+                CRC_PASS(pixel >> 8, crc);
+                CRC_PASS(pixel >> 16, crc);
+                CRC_PASS(pixel >> 24, crc);
+                s32++;
+                d32++;
+
+                pixel = *s32;
+                *d32 = pixel;
+                CRC_PASS(pixel, crc);
+                CRC_PASS(pixel >> 8, crc);
+                CRC_PASS(pixel >> 16, crc);
+                CRC_PASS(pixel >> 24, crc);
+                s32++;
+                d32++;
+
+                j += 4;
+            }
+            while (j < cx)
+            {
+                pixel = *s32;
+                *d32 = pixel;
+                CRC_PASS(pixel, crc);
+                CRC_PASS(pixel >> 8, crc);
+                CRC_PASS(pixel >> 16, crc);
+                CRC_PASS(pixel >> 24, crc);
+                s32++;
+                d32++;
+
+                j += 1;
+            }
+
+            s32 += incs;
+            d32 += incd;
+        }
+    }
+    else if (self->bpp == 24)
     {
         s32 = ((tui32 *)(self->data)) + (self->width * y + x);
         d32 = ((tui32 *)(dest->data)) + (dest->width * desty + destx);
