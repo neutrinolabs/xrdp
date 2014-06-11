@@ -1563,7 +1563,7 @@ convert_pixel(int in_pixel)
 
     if (g_rdpScreen.depth == 24)
     {
-        if (g_rdpScreen.rdp_bpp == 24)
+        if (g_rdpScreen.rdp_bpp >= 24)
         {
             rv = in_pixel;
             SPLITCOLOR32(red, green, blue, rv);
@@ -1619,7 +1619,7 @@ convert_pixels(void *src, void *dst, int num_pixels)
     {
         src32 = (unsigned int *)src;
 
-        if (g_rdpScreen.rdp_bpp == 24)
+        if (g_rdpScreen.rdp_bpp >= 24)
         {
             dst32 = (unsigned int *)dst;
 

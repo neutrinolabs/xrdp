@@ -49,17 +49,20 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
     int jindex;
     int cx;
     int cy;
+    int header;
 
-    alpha_data = g_malloc(width * height * 4, 0);
-    red_data = alpha_data + width * height;
-    green_data = red_data + width * height;
-    blue_data = green_data + width * height;
+    header = 0x20; /* no alpha TODO */
+
+    cx = width + e;
+    cy = 0;
+    alpha_data = g_malloc(cx * height * 4, 0);
+    red_data = alpha_data + cx * height;
+    green_data = red_data + cx * height;
+    blue_data = green_data + cx * height;
     alpha_bytes = 0;
     red_bytes = 0;
     green_bytes = 0;
     blue_bytes = 0;
-    cx = width;
-    cy = 0;
 
     /* split planes */
     while (start_line >= 0)
@@ -78,14 +81,29 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
             blue_data[blue_bytes] = pixel >> 0;
             blue_bytes++;
         }
+        for (iindex = 0; iindex < e; iindex++)
+        {
+            alpha_data[alpha_bytes] = 0;
+            alpha_bytes++;
+            red_data[red_bytes] = 0;
+            red_bytes++;
+            green_data[green_bytes] = 0;
+            green_bytes++;
+            blue_data[blue_bytes] = 0;
+            blue_bytes++;
+        }
         start_line--;
         cy++;
     }
-    out_uint8(s, 0x20); /* no alpha */
+    out_uint8(s, header);
     out_uint8a(s, red_data, red_bytes);
     out_uint8a(s, green_data, green_bytes);
     out_uint8a(s, blue_data, blue_bytes);
-    out_uint8(s, 0x00);
+    if ((header & 0x10) == 0)
+    {
+        /* pad if no RLE */
+        out_uint8(s, 0x00);
+    }
     g_free(alpha_data);
     return cy;
 }
