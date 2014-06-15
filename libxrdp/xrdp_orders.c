@@ -2327,8 +2327,16 @@ xrdp_orders_send_bitmap(struct xrdp_orders *self,
     init_stream(temp_s, 16384);
     p = s->p;
     i = height;
-    lines_sending = xrdp_bitmap_compress(data, width, height, s, bpp, 16384,
-                                         i - 1, temp_s, e);
+    if (bpp > 24)
+    {
+        lines_sending = xrdp_bitmap32_compress(data, width, height, s, bpp, 16384,
+                                               i - 1, temp_s, e);
+    }
+    else
+    {
+        lines_sending = xrdp_bitmap_compress(data, width, height, s, bpp, 16384,
+                                             i - 1, temp_s, e);
+    }
 
     if (lines_sending != height)
     {
