@@ -26,6 +26,173 @@ http://msdn.microsoft.com/en-us/library/cc241877.aspx
 
 #include "libxrdp.h"
 
+#define FLAGS_RLE     0x10
+#define FLAGS_NOALPHA 0x20
+
+#define LLOG_LEVEL 1
+#define LLOGLN(_level, _args) \
+  do { if (_level < LLOG_LEVEL) { g_writeln _args ; } } while (0)
+#define LHEXDUMP(_level, _args) \
+  do { if (_level < LLOG_LEVEL) { g_hexdump _args ; } } while (0)
+
+/*****************************************************************************/
+static int APP_CC
+fdelta(char *plane, int cx, int cy)
+{
+    char delta;
+    char *ptr8;
+    int index;
+    int jndex;
+
+    for (jndex = cy - 2; jndex >= 0; jndex--)
+    {
+        ptr8 = plane + jndex * cx;
+        for (index = 0; index < cx; index++)
+        {
+            delta = ptr8[cx] - ptr8[0];
+            if (delta & 0x80)
+            {
+                delta = (((~delta) + 1) << 1) - 1;
+            }
+            else
+            {
+                delta = delta << 1;
+            }
+            ptr8[cx] = delta;
+            ptr8++;
+        }
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+static int APP_CC
+fout(int collen, int replen, char *colptr, struct stream *s)
+{
+    int code;
+    int lcollen;
+    int lreplen;
+    int cont;
+
+    LLOGLN(10, ("fout: collen %d replen %d", collen, replen));
+    cont = collen > 13;
+    while (cont)
+    {
+        lcollen = collen;
+        if (lcollen > 15)
+        {
+            lcollen = 15;
+        }
+        code = lcollen << 4;
+        out_uint8(s, code);
+        out_uint8a(s, colptr, lcollen);
+        colptr += lcollen;
+        collen -= lcollen;
+        cont = collen > 13;
+    }
+    cont = (collen > 0) || (replen > 0);
+    while (cont)
+    {
+        lreplen = replen;
+        if ((collen == 0) && (lreplen > 15))
+        {
+            /* big run */
+            if (lreplen > 47)
+            {
+                lreplen = 47;
+            }
+            LLOGLN(10, ("fout: big run lreplen %d", lreplen));
+            replen -= lreplen;
+            code = ((lreplen & 0xF) << 4) | ((lreplen & 0xF0) >> 4);
+        }
+        else
+        {
+            if (lreplen > 15)
+            {
+                lreplen = 15;
+            }
+            replen -= lreplen;
+            if (lreplen < 3)
+            {
+                collen += lreplen;
+                lreplen = 0;
+            }
+            code = (collen << 4) | lreplen;
+        }
+        out_uint8(s, code);
+        out_uint8a(s, colptr, collen);
+        colptr += collen + lreplen;
+        collen = 0;
+        cont = replen > 0;
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+static int APP_CC
+fpack(char *plane, int cx, int cy, struct stream *s)
+{
+    char *ptr8;
+    char *colptr;
+    char *lend;
+    int jndex;
+    int collen;
+    int replen;
+
+    LLOGLN(10, ("fpack:"));
+    for (jndex = 0; jndex < cy; jndex++)
+    {
+        LLOGLN(10, ("line start line %d cx %d cy %d", jndex, cx, cy));
+        ptr8 = plane + jndex * cx;
+        LHEXDUMP(10, (ptr8, cx));
+        lend = ptr8 + (cx - 1);
+        colptr = ptr8;
+        if (colptr[0] == 0)
+        {
+            collen = 0;
+            replen = 1;
+        }
+        else
+        {
+            collen = 1;
+            replen = 0;
+        }
+        while (ptr8 < lend)
+        {
+            if (ptr8[0] == ptr8[1])
+            {
+                replen++;
+            }
+            else
+            {
+                if (replen > 0)
+                {
+                    if (replen < 3)
+                    {
+                        collen += replen + 1;
+                        replen = 0;
+                    }
+                    else
+                    {
+                        fout(collen, replen, colptr, s);
+                        colptr = ptr8 + 1;
+                        replen = 0;
+                        collen = 1;
+                    }
+                }
+                else
+                {
+                    collen++;
+                }
+            }
+            ptr8++;
+        }
+        /* end of line */
+        fout(collen, replen, colptr, s);
+    }
+    return 0;
+}
+
 /*****************************************************************************/
 /* returns the number of lines compressed */
 int APP_CC
@@ -36,7 +203,6 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
 {
     int pixel;
     int *ptr32;
-    char *ptr8;
     char *alpha_data;
     char *red_data;
     char *green_data;
@@ -45,17 +211,20 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
     int red_bytes;
     int green_bytes;
     int blue_bytes;
-    int iindex;
-    int jindex;
+    int index;
     int cx;
     int cy;
     int header;
 
-    header = 0x20; /* no alpha TODO */
+    LLOGLN(10, ("xrdp_bitmap32_compress:"));
+
+    //header = FLAGS_NOALPHA | FLAGS_RLE;
+    //header = FLAGS_NOALPHA;
+    header = FLAGS_RLE;
 
     cx = width + e;
     cy = 0;
-    alpha_data = g_malloc(cx * height * 4, 0);
+    alpha_data = temp_s->data;
     red_data = alpha_data + cx * height;
     green_data = red_data + cx * height;
     blue_data = green_data + cx * height;
@@ -68,7 +237,7 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
     while (start_line >= 0)
     {
         ptr32 = (int *) (in_data + start_line * width * 4);
-        for (iindex = 0; iindex < width; iindex++)
+        for (index = 0; index < width; index++)
         {
             pixel = *ptr32;
             ptr32++;
@@ -81,7 +250,7 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
             blue_data[blue_bytes] = pixel >> 0;
             blue_bytes++;
         }
-        for (iindex = 0; iindex < e; iindex++)
+        for (index = 0; index < e; index++)
         {
             alpha_data[alpha_bytes] = 0;
             alpha_bytes++;
@@ -95,15 +264,42 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
         start_line--;
         cy++;
     }
-    out_uint8(s, header);
-    out_uint8a(s, red_data, red_bytes);
-    out_uint8a(s, green_data, green_bytes);
-    out_uint8a(s, blue_data, blue_bytes);
-    if ((header & 0x10) == 0)
+
+    if (header & FLAGS_RLE)
     {
+        out_uint8(s, header);
+
+        /* delta, other steps */
+        if ((header & FLAGS_NOALPHA) == 0)
+        {
+            fdelta(alpha_data, cx, cy);
+        }
+        fdelta(red_data, cx, cy);
+        fdelta(green_data, cx, cy);
+        fdelta(blue_data, cx, cy);
+
+        /* pack */
+        if ((header & FLAGS_NOALPHA) == 0)
+        {
+            fpack(alpha_data, cx, cy, s);
+        }
+        fpack(red_data, cx, cy, s);
+        fpack(green_data, cx, cy, s);
+        fpack(blue_data, cx, cy, s);
+    }
+    else
+    {
+        out_uint8(s, header);
+        if ((header & FLAGS_NOALPHA) == 0)
+        {
+            out_uint8a(s, alpha_data, alpha_bytes);
+        }
+        out_uint8a(s, red_data, red_bytes);
+        out_uint8a(s, green_data, green_bytes);
+        out_uint8a(s, blue_data, blue_bytes);
         /* pad if no RLE */
         out_uint8(s, 0x00);
     }
-    g_free(alpha_data);
+
     return cy;
 }
