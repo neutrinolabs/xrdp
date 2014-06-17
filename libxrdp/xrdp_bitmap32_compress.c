@@ -40,46 +40,77 @@ static int APP_CC
 fsplit(char *in_data, int start_line, int width, int e,
        char *alpha_data, char *red_data, char *green_data, char *blue_data)
 {
+#if defined(L_ENDIAN)
+    int alpha;
+    int red;
+    int green;
+    int blue;
+#endif
     int index;
+    int out_index;
     int pixel;
     int cy;
-    int alpha_bytes;
-    int red_bytes;
-    int green_bytes;
-    int blue_bytes;
     int *ptr32;
 
     cy = 0;
-    alpha_bytes = 0;
-    red_bytes = 0;
-    green_bytes = 0;
-    blue_bytes = 0;
+    out_index = 0;
     while (start_line >= 0)
     {
         ptr32 = (int *) (in_data + start_line * width * 4);
-        for (index = 0; index < width; index++)
+        index = 0;
+#if defined(L_ENDIAN)
+        while (index + 4 <= width)
         {
             pixel = *ptr32;
             ptr32++;
-            alpha_data[alpha_bytes] = pixel >> 24;
-            alpha_bytes++;
-            red_data[red_bytes] = pixel >> 16;
-            red_bytes++;
-            green_data[green_bytes] = pixel >> 8;
-            green_bytes++;
-            blue_data[blue_bytes] = pixel >> 0;
-            blue_bytes++;
+            alpha  = (pixel >> 24) & 0x000000ff;
+            red    = (pixel >> 16) & 0x000000ff;
+            green  = (pixel >>  8) & 0x000000ff;
+            blue   = (pixel >>  0) & 0x000000ff;
+            pixel  = *ptr32;
+            ptr32++;
+            alpha |= (pixel >> 16) & 0x0000ff00;
+            red   |= (pixel >>  8) & 0x0000ff00;
+            green |= (pixel <<  0) & 0x0000ff00;
+            blue  |= (pixel <<  8) & 0x0000ff00;
+            pixel = *ptr32;
+            ptr32++;
+            alpha |= (pixel >>  8) & 0x00ff0000;
+            red   |= (pixel >>  0) & 0x00ff0000;
+            green |= (pixel <<  8) & 0x00ff0000;
+            blue  |= (pixel << 16) & 0x00ff0000;
+            pixel = *ptr32;
+            ptr32++;
+            alpha |= (pixel <<  0) & 0xff000000;
+            red   |= (pixel <<  8) & 0xff000000;
+            green |= (pixel << 16) & 0xff000000;
+            blue  |= (pixel << 24) & 0xff000000;
+            *((int*)(alpha_data + out_index)) = alpha;
+            *((int*)(red_data + out_index)) = red;
+            *((int*)(green_data + out_index)) = green;
+            *((int*)(blue_data + out_index)) = blue;
+            out_index += 4;
+            index += 4;
+        }
+#endif
+        while (index < width)
+        {
+            pixel = *ptr32;
+            ptr32++;
+            alpha_data[out_index] = pixel >> 24;
+            red_data[out_index] = pixel >> 16;
+            green_data[out_index] = pixel >> 8;
+            blue_data[out_index] = pixel >> 0;
+            out_index++;
+            index++;
         }
         for (index = 0; index < e; index++)
         {
-            alpha_data[alpha_bytes] = 0;
-            alpha_bytes++;
-            red_data[red_bytes] = 0;
-            red_bytes++;
-            green_data[green_bytes] = 0;
-            green_bytes++;
-            blue_data[blue_bytes] = 0;
-            blue_bytes++;
+            alpha_data[out_index] = 0;
+            red_data[out_index] = 0;
+            green_data[out_index] = 0;
+            blue_data[out_index] = 0;
+            out_index++;
         }
         start_line--;
         cy++;
@@ -292,6 +323,7 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
             fdelta(red_data, cx, cy);
             fdelta(green_data, cx, cy);
             fdelta(blue_data, cx, cy);
+            alpha_bytes = 0;
             red_bytes = fpack(red_data, cx, cy, s);
             green_bytes = fpack(green_data, cx, cy, s);
             blue_bytes = fpack(blue_data, cx, cy, s);
