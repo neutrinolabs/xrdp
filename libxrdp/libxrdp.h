@@ -117,9 +117,10 @@ struct xrdp_sec
     void *decrypt_rc4_info;
     void *encrypt_rc4_info;
     char pub_exp[4];
-    char pub_mod[64];
+    char pub_mod[256];
     char pub_sig[64];
-    char pri_exp[64];
+    char pri_exp[256];
+    int rsa_key_bytes; /* 64 or 256 */
     int channel_code;
     int multimon;
     char fips_encrypt_key[24];
@@ -509,7 +510,7 @@ int APP_CC
 xrdp_bitmap32_compress(char *in_data, int width, int height,
                        struct stream *s, int bpp, int byte_limit,
                        int start_line, struct stream *temp_s,
-                       int e);
+                       int e, int flags);
 int APP_CC
 xrdp_jpeg_compress(void *handle, char *in_data, int width, int height,
                    struct stream *s, int bpp, int byte_limit,
