@@ -1823,6 +1823,9 @@ xrdp_sec_out_mcs_data(struct xrdp_sec *self)
     int num_channels;
     int index;
     int channel;
+    int gcc_size;
+    char* gcc_size_ptr;
+    char* ud_ptr;
 
     num_channels = self->mcs_layer->channel_list->count;
     num_channels_even = num_channels + (num_channels & 1);
@@ -1845,14 +1848,11 @@ xrdp_sec_out_mcs_data(struct xrdp_sec *self)
     out_uint8(s, 0x63); /* c */
     out_uint8(s, 0x44); /* D */
     out_uint8(s, 0x6e); /* n */
-    if (self->mcs_layer->iso_layer->selectedProtocol != -1)
-    { // Check for RDPNEGDATA availability
-        out_uint16_be(s, 0x80fc + (num_channels_even * 2) + 4);
-    }
-    else
-    {
-        out_uint16_be(s, 0x80fc + (num_channels_even * 2));
-    }
+    /* GCC Response Total Length - 2 bytes , set later */
+    gcc_size_ptr = s->p; /* RDPGCCUserDataResponseLength */
+    out_uint8s(s, 2);
+    ud_ptr = s->p; /* User Data */
+    
     out_uint16_le(s, SEC_TAG_SRV_INFO);
     if (self->mcs_layer->iso_layer->selectedProtocol != -1)
     {
@@ -1866,9 +1866,9 @@ xrdp_sec_out_mcs_data(struct xrdp_sec *self)
     out_uint8(s, 0);
     out_uint8(s, 8);
     out_uint8(s, 0);
-    if (self->mcs_layer->iso_layer->selectedProtocol != -1)
+    if (self->mcs_layer->iso_layer->selectedProtocol != -1) 
     {
-         /* clientReqeustedProtocol */
+         /* ReqeustedProtocol */
         out_uint32_le(s, self->mcs_layer->iso_layer->selectedProtocol);
     }
     out_uint16_le(s, SEC_TAG_SRV_CHANNELS);
@@ -1927,7 +1927,7 @@ xrdp_sec_out_mcs_data(struct xrdp_sec *self)
         out_uint32_le(s, self->crypt_method);
         out_uint32_le(s, self->crypt_level);
         out_uint32_le(s, 32); /* 32 bytes random len */
-        out_uint32_le(s, 0x0178); /* 376 bytes rsa info(certificate) len */
+        out_uint32_le(s, 0x178); /* 376 bytes rsa info(certificate) len */
         out_uint8a(s, self->server_random, 32);
         /* here to end is certificate */
         /* HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\ */
@@ -1938,7 +1938,7 @@ xrdp_sec_out_mcs_data(struct xrdp_sec *self)
         out_uint16_le(s, SEC_TAG_PUBKEY); /* 0x0006 */
         out_uint16_le(s, 0x011c); /* 284 bytes length of SEC_TAG_PUBKEY */
         out_uint32_le(s, SEC_RSA_MAGIC); /* 0x31415352 'RSA1' */
-        out_uint32_le(s, 0x108); /* 264 bytes modulus len */
+        out_uint32_le(s, 0x0108); /* 264 bytes modulus len */
         out_uint32_be(s, 0x00080000); /* bit len */
         out_uint32_be(s, 0xff000000); /* data len */
         out_uint8a(s, self->pub_exp, 4); /* pub exp */
@@ -1955,6 +1955,11 @@ xrdp_sec_out_mcs_data(struct xrdp_sec *self)
     }
     /* end certificate */
     s_mark_end(s);
+
+    gcc_size = (int)(s->end - ud_ptr) | 0x8000;
+    gcc_size_ptr[0] = gcc_size >> 8;
+    gcc_size_ptr[1] = gcc_size;
+
     return 0;
 }
 
