@@ -259,6 +259,11 @@ rdpClientConDisconnect(rdpPtr dev, rdpClientCon *clientCon)
     }
     rdpRegionDestroy(clientCon->dirtyRegion);
     rdpRegionDestroy(clientCon->shmRegion);
+    if (clientCon->updateTimer != NULL)
+    {
+        TimerCancel(clientCon->updateTimer);
+        TimerFree(clientCon->updateTimer);
+    }
     g_free(clientCon);
     return 0;
 }
