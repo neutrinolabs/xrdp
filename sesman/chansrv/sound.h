@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2009-2013
+ * Copyright (C) Jay Sorg 2009-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,6 @@
 
 #ifndef _SOUND_H_
 #define _SOUND_H_
-
-#if defined(XRDP_SIMPLESOUND)
-#include <pulse/simple.h>
-#include <pulse/error.h>
-#endif
 
 #include "arch.h"
 #include "parse.h"
@@ -75,5 +70,5 @@ static int APP_CC sound_input_start_recording();
 static int APP_CC sound_input_stop_recording();
 static int APP_CC sound_process_input_data(struct stream *s, int bytes);
 static int DEFAULT_CC sound_sndsrvr_source_data_in(struct trans *trans);
-static int APP_CC load_pulse_modules();
+
 #endif

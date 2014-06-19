@@ -178,11 +178,11 @@ lib_mod_connect(struct mod *mod)
 
     mod->server_msg(mod, "started connecting", 0);
 
-    /* only support 8, 15, 16, and 24 bpp connections from rdp client */
-    if (mod->bpp != 8 && mod->bpp != 15 && mod->bpp != 16 && mod->bpp != 24)
+    /* only support 8, 15, 16, 24, and 32 bpp connections from rdp client */
+    if (mod->bpp != 8 && mod->bpp != 15 && mod->bpp != 16 && mod->bpp != 24 && mod->bpp != 32)
     {
         mod->server_msg(mod,
-                        "error - only supporting 8, 15, 16, and 24 bpp rdp connections", 0);
+                        "error - only supporting 8, 15, 16, 24, and 32 bpp rdp connections", 0);
         LIB_DEBUG(mod, "out lib_mod_connect error");
         return 1;
     }

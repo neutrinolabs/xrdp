@@ -2322,13 +2322,22 @@ xrdp_orders_send_bitmap(struct xrdp_orders *self,
     }
 
     make_stream(s);
-    init_stream(s, 16384);
+    init_stream(s, 16384 * 2);
     make_stream(temp_s);
-    init_stream(temp_s, 16384);
+    init_stream(temp_s, 16384 * 2);
     p = s->p;
     i = height;
-    lines_sending = xrdp_bitmap_compress(data, width, height, s, bpp, 16384,
-                                         i - 1, temp_s, e);
+    if (bpp > 24)
+    {
+        lines_sending = xrdp_bitmap32_compress(data, width, height, s,
+                                               bpp, 16384,
+                                               i - 1, temp_s, e, 0x30);
+    }
+    else
+    {
+        lines_sending = xrdp_bitmap_compress(data, width, height, s, bpp, 16384,
+                                             i - 1, temp_s, e);
+    }
 
     if (lines_sending != height)
     {
@@ -2582,15 +2591,16 @@ xrdp_orders_send_bitmap2(struct xrdp_orders *self,
     }
 
     make_stream(s);
-    init_stream(s, 16384);
+    init_stream(s, 16384 * 2);
     make_stream(temp_s);
-    init_stream(temp_s, 16384);
+    init_stream(temp_s, 16384 * 2);
     p = s->p;
     i = height;
     if (bpp > 24)
     {
-        lines_sending = xrdp_bitmap32_compress(data, width, height, s, bpp, 16384,
-                                               i - 1, temp_s, e);
+        lines_sending = xrdp_bitmap32_compress(data, width, height, s,
+                                               bpp, 16384,
+                                               i - 1, temp_s, e, 0x30);
     }
     else
     {
