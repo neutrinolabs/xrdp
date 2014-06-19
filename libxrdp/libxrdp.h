@@ -265,6 +265,9 @@ struct xrdp_orders
     struct xrdp_orders_state orders_state;
     void *jpeg_han;
     int rfx_min_pixel;
+    /* shared */
+    struct stream *s;
+    struct stream *temp_s;
 };
 
 #define PROTO_RDP_40 1

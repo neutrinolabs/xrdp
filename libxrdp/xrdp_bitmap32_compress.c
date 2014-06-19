@@ -268,6 +268,8 @@ fout(int collen, int replen, char *colptr, struct stream *s)
             LLOGLN(10, ("fout: big run lreplen %d", lreplen));
             replen -= lreplen;
             code = ((lreplen & 0xF) << 4) | ((lreplen & 0xF0) >> 4);
+            out_uint8(s, code);
+            colptr += lreplen;
         }
         else
         {
@@ -282,11 +284,11 @@ fout(int collen, int replen, char *colptr, struct stream *s)
                 lreplen = 0;
             }
             code = (collen << 4) | lreplen;
+            out_uint8(s, code);
+            out_uint8a(s, colptr, collen);
+            colptr += collen + lreplen;
+            collen = 0;
         }
-        out_uint8(s, code);
-        out_uint8a(s, colptr, collen);
-        colptr += collen + lreplen;
-        collen = 0;
         cont = replen > 0;
     }
     return 0;
