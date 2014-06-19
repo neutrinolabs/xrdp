@@ -100,8 +100,8 @@ struct xrdp_sec
     struct xrdp_fastpath *fastpath_layer;
     struct xrdp_channel *chan_layer;
     char server_random[32];
-    char client_random[64];
-    char client_crypt_random[72];
+    char client_random[256];
+    char client_crypt_random[256 + 8]; /* 64 + 8, 256 + 8 */
     struct stream client_mcs_data;
     struct stream server_mcs_data;
     int decrypt_use_count;

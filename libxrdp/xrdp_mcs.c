@@ -718,7 +718,7 @@ xrdp_mcs_send_connect_response(struct xrdp_mcs *self)
     DEBUG(("  in xrdp_mcs_send_connect_response"));
     make_stream(s);
     init_stream(s, 8192);
-    data_len = self->server_mcs_data->end - self->server_mcs_data->data;
+    data_len = (int) (self->server_mcs_data->end - self->server_mcs_data->data);
     xrdp_iso_init(self->iso_layer, s);
     xrdp_mcs_ber_out_header(self, s, MCS_CONNECT_RESPONSE, data_len + 38);
     xrdp_mcs_ber_out_header(self, s, BER_TAG_RESULT, 1);

@@ -32,7 +32,7 @@
 #include "file.h"
 
 /* this is the signature size in bytes */
-#define	TSSK_KEY_LENGTH	64
+#define TSSK_KEY_LENGTH 64
 
 /* default to 512 bit key size, can set changed, set */
 static int g_key_size_bits = 512;

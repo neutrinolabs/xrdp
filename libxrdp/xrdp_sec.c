@@ -26,6 +26,8 @@
     do { if (_level < LOG_LEVEL) { g_write _args ; } } while (0)
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { g_writeln _args ; } } while (0)
+#define LHEXDUMP(_level, _args) \
+    do { if (_level < LOG_LEVEL) { g_hexdump _args ; } } while (0)
 
 /* some compilers need unsigned char to avoid warnings */
 static tui8 g_pad_54[40] =
@@ -269,8 +271,9 @@ xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans, int crypt_level,
     }
 
     self->encrypt_rc4_info = ssl_rc4_info_create();
-    self->mcs_layer = xrdp_mcs_create(self, trans, &self->client_mcs_data,
-                                      &self->server_mcs_data);
+    self->mcs_layer = xrdp_mcs_create(self, trans,
+                                      &(self->client_mcs_data),
+                                      &(self->server_mcs_data));
     self->fastpath_layer = xrdp_fastpath_create(self, trans);
     self->chan_layer = xrdp_channel_create(self, self->mcs_layer);
     DEBUG((" out xrdp_sec_create"));
@@ -768,9 +771,12 @@ xrdp_sec_send_media_lic_response(struct xrdp_sec *self)
 
 /*****************************************************************************/
 static void APP_CC
-xrdp_sec_rsa_op(char *out, char *in, char *mod, char *exp)
+xrdp_sec_rsa_op(struct xrdp_sec *self, char *out, char *in, int in_bytes, 
+                char *mod, char *exp)
 {
-    ssl_mod_exp(out, 64, in, 64, mod, 64, exp, 64);
+    ssl_mod_exp(out, self->rsa_key_bytes, in, in_bytes,
+                mod, self->rsa_key_bytes,
+                exp, self->rsa_key_bytes);
 }
 
 /*****************************************************************************/
@@ -1073,14 +1079,26 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
 
     if (flags & SEC_CLIENT_RANDOM) /* 0x01 */
     {
-        if (!s_check_rem(s, 4 + 64))
+        if (!s_check_rem(s, 4))
         {
             return 1;
         }
         in_uint32_le(s, len);
-        in_uint8a(s, self->client_crypt_random, 64);
-        xrdp_sec_rsa_op(self->client_random, self->client_crypt_random,
-                        self->pub_mod, self->pri_exp);
+        /* 512, 2048 bit */
+        if ((len != 64 + 8) && (len != 256 + 8))
+        {
+            return 1;
+        }
+        if (!s_check_rem(s, len - 8))
+        {
+            return 1;
+        }
+        in_uint8a(s, self->client_crypt_random, len - 8);
+        xrdp_sec_rsa_op(self, self->client_random, self->client_crypt_random,
+                        len - 8, self->pub_mod, self->pri_exp);
+        LLOGLN(10, ("xrdp_sec_recv: client random - len %d", len));
+        LHEXDUMP(10, (self->client_random, 256));
+        LHEXDUMP(10, (self->client_crypt_random, len - 8));
         if (self->crypt_level == CRYPT_LEVEL_FIPS)
         {
             xrdp_sec_fips_establish_keys(self);
@@ -1808,8 +1826,8 @@ xrdp_sec_out_mcs_data(struct xrdp_sec *self)
 
     num_channels = self->mcs_layer->channel_list->count;
     num_channels_even = num_channels + (num_channels & 1);
-    s = &self->server_mcs_data;
-    init_stream(s, 512);
+    s = &(self->server_mcs_data);
+    init_stream(s, 8192);
     out_uint16_be(s, 5);
     out_uint16_be(s, 0x14);
     out_uint8(s, 0x7c);
@@ -1871,32 +1889,70 @@ xrdp_sec_out_mcs_data(struct xrdp_sec *self)
         }
     }
 
-    out_uint16_le(s, SEC_TAG_SRV_CRYPT);
-    out_uint16_le(s, 0x00ec); /* len is 236 */
-    out_uint32_le(s, self->crypt_method);
-    out_uint32_le(s, self->crypt_level);
-    out_uint32_le(s, 32);     /* 32 bytes random len */
-    out_uint32_le(s, 0xb8);   /* 184 bytes rsa info(certificate) len */
-    out_uint8a(s, self->server_random, 32);
-    /* here to end is certificate */
-    /* HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\ */
-    /* TermService\Parameters\Certificate */
-    out_uint32_le(s, 1);
-    out_uint32_le(s, 1);
-    out_uint32_le(s, 1);
-    out_uint16_le(s, SEC_TAG_PUBKEY);
-    out_uint16_le(s, 0x005c); /* 92 bytes length of SEC_TAG_PUBKEY */
-    out_uint32_le(s, SEC_RSA_MAGIC);
-    out_uint32_le(s, 0x48); /* 72 bytes modulus len */
-    out_uint32_be(s, 0x00020000);
-    out_uint32_be(s, 0x3f000000);
-    out_uint8a(s, self->pub_exp, 4); /* pub exp */
-    out_uint8a(s, self->pub_mod, 64); /* pub mod */
-    out_uint8s(s, 8); /* pad */
-    out_uint16_le(s, SEC_TAG_KEYSIG);
-    out_uint16_le(s, 72); /* len */
-    out_uint8a(s, self->pub_sig, 64); /* pub sig */
-    out_uint8s(s, 8); /* pad */
+    if (self->rsa_key_bytes == 64)
+    {
+        g_writeln("xrdp_sec_out_mcs_data: using 512 bit RSA key");
+        out_uint16_le(s, SEC_TAG_SRV_CRYPT);
+        out_uint16_le(s, 0x00ec); /* len is 236 */
+        out_uint32_le(s, self->crypt_method);
+        out_uint32_le(s, self->crypt_level);
+        out_uint32_le(s, 32); /* 32 bytes random len */
+        out_uint32_le(s, 0xb8); /* 184 bytes rsa info(certificate) len */
+        out_uint8a(s, self->server_random, 32);
+        /* here to end is certificate */
+        /* HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\ */
+        /* TermService\Parameters\Certificate */
+        out_uint32_le(s, 1);
+        out_uint32_le(s, 1);
+        out_uint32_le(s, 1);
+        out_uint16_le(s, SEC_TAG_PUBKEY); /* 0x0006 */
+        out_uint16_le(s, 0x005c); /* 92 bytes length of SEC_TAG_PUBKEY */
+        out_uint32_le(s, SEC_RSA_MAGIC); /* 0x31415352 'RSA1' */
+        out_uint32_le(s, 0x0048); /* 72 bytes modulus len */
+        out_uint32_be(s, 0x00020000); /* bit len */
+        out_uint32_be(s, 0x3f000000); /* data len */
+        out_uint8a(s, self->pub_exp, 4); /* pub exp */
+        out_uint8a(s, self->pub_mod, 64); /* pub mod */
+        out_uint8s(s, 8); /* pad */
+        out_uint16_le(s, SEC_TAG_KEYSIG); /* 0x0008 */
+        out_uint16_le(s, 72); /* len */
+        out_uint8a(s, self->pub_sig, 64); /* pub sig */
+        out_uint8s(s, 8); /* pad */
+    }
+    else if (self->rsa_key_bytes == 256)
+    {
+        g_writeln("xrdp_sec_out_mcs_data: using 2048 bit RSA key");
+        out_uint16_le(s, SEC_TAG_SRV_CRYPT);
+        out_uint16_le(s, 0x01ac); /* len is 428 */
+        out_uint32_le(s, self->crypt_method);
+        out_uint32_le(s, self->crypt_level);
+        out_uint32_le(s, 32); /* 32 bytes random len */
+        out_uint32_le(s, 0x0178); /* 376 bytes rsa info(certificate) len */
+        out_uint8a(s, self->server_random, 32);
+        /* here to end is certificate */
+        /* HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\ */
+        /* TermService\Parameters\Certificate */
+        out_uint32_le(s, 1);
+        out_uint32_le(s, 1);
+        out_uint32_le(s, 1);
+        out_uint16_le(s, SEC_TAG_PUBKEY); /* 0x0006 */
+        out_uint16_le(s, 0x011c); /* 284 bytes length of SEC_TAG_PUBKEY */
+        out_uint32_le(s, SEC_RSA_MAGIC); /* 0x31415352 'RSA1' */
+        out_uint32_le(s, 0x108); /* 264 bytes modulus len */
+        out_uint32_be(s, 0x00080000); /* bit len */
+        out_uint32_be(s, 0xff000000); /* data len */
+        out_uint8a(s, self->pub_exp, 4); /* pub exp */
+        out_uint8a(s, self->pub_mod, 256); /* pub mod */
+        out_uint8s(s, 8); /* pad */
+        out_uint16_le(s, SEC_TAG_KEYSIG); /* 0x0008 */
+        out_uint16_le(s, 72); /* len */
+        out_uint8a(s, self->pub_sig, 64); /* pub sig */
+        out_uint8s(s, 8); /* pad */
+    }
+    else
+    {
+        LLOGLN(0, ("xrdp_sec_out_mcs_data: error"));
+    }
     /* end certificate */
     s_mark_end(s);
     return 0;
@@ -1976,7 +2032,6 @@ xrdp_sec_incoming(struct xrdp_sec *self)
     char *value = NULL;
     char key_file[256];
 
-    LLOGLN(10, ("xrdp_sec_incoming:"));
     g_memset(key_file, 0, sizeof(char) * 256);
     DEBUG((" in xrdp_sec_incoming"));
     g_random(self->server_random, 32);
@@ -2000,14 +2055,16 @@ xrdp_sec_incoming(struct xrdp_sec *self)
     {
         item = (char *)list_get_item(items, index);
         value = (char *)list_get_item(values, index);
-
+        
         if (g_strcasecmp(item, "pub_exp") == 0)
         {
             hex_str_to_bin(value, self->pub_exp, 4);
         }
         else if (g_strcasecmp(item, "pub_mod") == 0)
         {
-            hex_str_to_bin(value, self->pub_mod, 64);
+            self->rsa_key_bytes = (g_strlen(value) + 1) / 5;
+            g_writeln("pub_mod bytes %d", self->rsa_key_bytes);
+            hex_str_to_bin(value, self->pub_mod, self->rsa_key_bytes);
         }
         else if (g_strcasecmp(item, "pub_sig") == 0)
         {
@@ -2015,7 +2072,9 @@ xrdp_sec_incoming(struct xrdp_sec *self)
         }
         else if (g_strcasecmp(item, "pri_exp") == 0)
         {
-            hex_str_to_bin(value, self->pri_exp, 64);
+            self->rsa_key_bytes = (g_strlen(value) + 1) / 5;
+            g_writeln("pri_exp %d", self->rsa_key_bytes);
+            hex_str_to_bin(value, self->pri_exp, self->rsa_key_bytes);
         }
     }
 
