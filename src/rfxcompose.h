@@ -28,6 +28,6 @@ rfx_compose_message_data(struct rfxencode* enc, STREAM* s,
                          struct rfx_rect *regions, int num_regions,
                          char *buf, int width, int height, int stride_bytes,
                          struct rfx_tile *tiles, int num_tiles,
-                         int *quants, int num_quants);
+                         const int *quants, int num_quants);
 
 #endif
