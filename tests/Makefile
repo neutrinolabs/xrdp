@@ -3,9 +3,15 @@ OBJS = rfxcodectest.o
 
 CFLAGS = -g -O2 -Wall -fPIC -I../include
 
-LDFLAGS = -L../src -Wl,-rpath=../src
+# this for linking to .so
+#LDFLAGS = $(PROFIL) -L../src -Wl,-rpath=../src
+# this if using .a
+LDFLAGS = $(PROFIL)
 
-LIBS = -lrfxencode
+# this for linking to .so
+#LIBS = -lrfxencode
+# this for using .a
+LIBS = ../src/librfxencode.a
 
 all: rfxcodectest
 

@@ -74,6 +74,6 @@ rfxcodec_encode(void *handle, char *cdata, int *cdata_bytes,
                 char *buf, int width, int height, int stride_bytes,
                 struct rfx_rect *region, int num_region,
                 struct rfx_tile *tiles, int num_tiles,
-                int *quants, int num_quants);
+                const int *quants, int num_quants);
 
 #endif
