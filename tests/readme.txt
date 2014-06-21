@@ -9,7 +9,7 @@ make PROFIL=-pg
 run
 tests/rfxcodectest --speed --count 10000
 
-gprof -b rfxcodectest > profile.txt
+gprof -b tests/rfxcodectest > profile.txt
 
 look at profile.txt
 

@@ -60,19 +60,22 @@ speed_random(int count, const int *quants)
     int etime;
     int tiles_per_second;
 
-    printf("main:\n");
+    printf("speed_random:\n");
     han = rfxcodec_encode_create(1920, 1024, RFX_FORMAT_BGRA, RFX_FLAGS_NONE);
     if (han == 0)
     {
-        printf("main: rfxcodec_encode_create failed\n");
+        printf("speed_random: rfxcodec_encode_create failed\n");
         return 1;
     }
-    printf("main: rfxcodec_encode_create ok\n");
+    printf("speed_random: rfxcodec_encode_create ok\n");
     cdata = (char *) malloc(64 * 64 * 4);
     cdata_bytes = 64 * 64 * 4;
     buf = (char *) malloc(64 * 64 * 4);
     fd = open("/dev/urandom", O_RDONLY);
-    read(fd, buf, 64 * 64 * 4);
+    if (read(fd, buf, 64 * 64 * 4) != 64 * 64 * 4)
+    {
+        printf("speed_random: read error\n");
+    }
     close(fd);
     regions[0].x = 0;
     regions[0].y = 0;
