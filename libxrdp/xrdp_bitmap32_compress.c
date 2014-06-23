@@ -36,16 +36,15 @@ http://msdn.microsoft.com/en-us/library/cc241877.aspx
   do { if (_level < LLOG_LEVEL) { g_hexdump _args ; } } while (0)
 
 /*****************************************************************************/
-/* split ARGB */
+/* split RGB */
 static int APP_CC
-fsplit4(char *in_data, int start_line, int width, int e,
-        char *alpha_data, char *red_data, char *green_data, char *blue_data)
+fsplit3(char *in_data, int start_line, int width, int e,
+        char *r_data, char *g_data, char *b_data)
 {
 #if defined(L_ENDIAN)
-    int alpha;
-    int red;
-    int green;
-    int blue;
+    int rp;
+    int gp;
+    int bp;
 #endif
     int index;
     int out_index;
@@ -64,32 +63,27 @@ fsplit4(char *in_data, int start_line, int width, int e,
         {
             pixel = *ptr32;
             ptr32++;
-            alpha  = (pixel >> 24) & 0x000000ff;
-            red    = (pixel >> 16) & 0x000000ff;
-            green  = (pixel >>  8) & 0x000000ff;
-            blue   = (pixel >>  0) & 0x000000ff;
+            rp  = (pixel >> 16) & 0x000000ff;
+            gp  = (pixel >>  8) & 0x000000ff;
+            bp  = (pixel >>  0) & 0x000000ff;
             pixel  = *ptr32;
             ptr32++;
-            alpha |= (pixel >> 16) & 0x0000ff00;
-            red   |= (pixel >>  8) & 0x0000ff00;
-            green |= (pixel <<  0) & 0x0000ff00;
-            blue  |= (pixel <<  8) & 0x0000ff00;
+            rp |= (pixel >>  8) & 0x0000ff00;
+            gp |= (pixel <<  0) & 0x0000ff00;
+            bp |= (pixel <<  8) & 0x0000ff00;
             pixel = *ptr32;
             ptr32++;
-            alpha |= (pixel >>  8) & 0x00ff0000;
-            red   |= (pixel >>  0) & 0x00ff0000;
-            green |= (pixel <<  8) & 0x00ff0000;
-            blue  |= (pixel << 16) & 0x00ff0000;
+            rp |= (pixel >>  0) & 0x00ff0000;
+            gp |= (pixel <<  8) & 0x00ff0000;
+            bp |= (pixel << 16) & 0x00ff0000;
             pixel = *ptr32;
             ptr32++;
-            alpha |= (pixel <<  0) & 0xff000000;
-            red   |= (pixel <<  8) & 0xff000000;
-            green |= (pixel << 16) & 0xff000000;
-            blue  |= (pixel << 24) & 0xff000000;
-            *((int*)(alpha_data + out_index)) = alpha;
-            *((int*)(red_data + out_index)) = red;
-            *((int*)(green_data + out_index)) = green;
-            *((int*)(blue_data + out_index)) = blue;
+            rp |= (pixel <<  8) & 0xff000000;
+            gp |= (pixel << 16) & 0xff000000;
+            bp |= (pixel << 24) & 0xff000000;
+            *((int*)(r_data + out_index)) = rp;
+            *((int*)(g_data + out_index)) = gp;
+            *((int*)(b_data + out_index)) = bp;
             out_index += 4;
             index += 4;
         }
@@ -98,37 +92,40 @@ fsplit4(char *in_data, int start_line, int width, int e,
         {
             pixel = *ptr32;
             ptr32++;
-            alpha_data[out_index] = pixel >> 24;
-            red_data[out_index] = pixel >> 16;
-            green_data[out_index] = pixel >> 8;
-            blue_data[out_index] = pixel >> 0;
+            r_data[out_index] = pixel >> 16;
+            g_data[out_index] = pixel >> 8;
+            b_data[out_index] = pixel >> 0;
             out_index++;
             index++;
         }
         for (index = 0; index < e; index++)
         {
-            alpha_data[out_index] = alpha_data[out_index - 1];
-            red_data[out_index] = red_data[out_index - 1];
-            green_data[out_index] = green_data[out_index - 1];
-            blue_data[out_index] = blue_data[out_index - 1];
+            r_data[out_index] = r_data[out_index - 1];
+            g_data[out_index] = g_data[out_index - 1];
+            b_data[out_index] = b_data[out_index - 1];
             out_index++;
         }
         start_line--;
         cy++;
+        if (out_index > 64 * 64)
+        {
+            break;
+        }
     }
     return cy;
 }
 
 /*****************************************************************************/
-/* split RGB */
+/* split ARGB */
 static int APP_CC
-fsplit3(char *in_data, int start_line, int width, int e,
-        char *red_data, char *green_data, char *blue_data)
+fsplit4(char *in_data, int start_line, int width, int e,
+        char *a_data, char *r_data, char *g_data, char *b_data)
 {
 #if defined(L_ENDIAN)
-    int red;
-    int green;
-    int blue;
+    int ap;
+    int rp;
+    int gp;
+    int bp;
 #endif
     int index;
     int out_index;
@@ -147,27 +144,32 @@ fsplit3(char *in_data, int start_line, int width, int e,
         {
             pixel = *ptr32;
             ptr32++;
-            red    = (pixel >> 16) & 0x000000ff;
-            green  = (pixel >>  8) & 0x000000ff;
-            blue   = (pixel >>  0) & 0x000000ff;
+            ap  = (pixel >> 24) & 0x000000ff;
+            rp  = (pixel >> 16) & 0x000000ff;
+            gp  = (pixel >>  8) & 0x000000ff;
+            bp  = (pixel >>  0) & 0x000000ff;
             pixel  = *ptr32;
             ptr32++;
-            red   |= (pixel >>  8) & 0x0000ff00;
-            green |= (pixel <<  0) & 0x0000ff00;
-            blue  |= (pixel <<  8) & 0x0000ff00;
+            ap |= (pixel >> 16) & 0x0000ff00;
+            rp |= (pixel >>  8) & 0x0000ff00;
+            gp |= (pixel <<  0) & 0x0000ff00;
+            bp |= (pixel <<  8) & 0x0000ff00;
             pixel = *ptr32;
             ptr32++;
-            red   |= (pixel >>  0) & 0x00ff0000;
-            green |= (pixel <<  8) & 0x00ff0000;
-            blue  |= (pixel << 16) & 0x00ff0000;
+            ap |= (pixel >>  8) & 0x00ff0000;
+            rp |= (pixel >>  0) & 0x00ff0000;
+            gp |= (pixel <<  8) & 0x00ff0000;
+            bp |= (pixel << 16) & 0x00ff0000;
             pixel = *ptr32;
             ptr32++;
-            red   |= (pixel <<  8) & 0xff000000;
-            green |= (pixel << 16) & 0xff000000;
-            blue  |= (pixel << 24) & 0xff000000;
-            *((int*)(red_data + out_index)) = red;
-            *((int*)(green_data + out_index)) = green;
-            *((int*)(blue_data + out_index)) = blue;
+            ap |= (pixel <<  0) & 0xff000000;
+            rp |= (pixel <<  8) & 0xff000000;
+            gp |= (pixel << 16) & 0xff000000;
+            bp |= (pixel << 24) & 0xff000000;
+            *((int*)(a_data + out_index)) = ap;
+            *((int*)(r_data + out_index)) = rp;
+            *((int*)(g_data + out_index)) = gp;
+            *((int*)(b_data + out_index)) = bp;
             out_index += 4;
             index += 4;
         }
@@ -176,21 +178,27 @@ fsplit3(char *in_data, int start_line, int width, int e,
         {
             pixel = *ptr32;
             ptr32++;
-            red_data[out_index] = pixel >> 16;
-            green_data[out_index] = pixel >> 8;
-            blue_data[out_index] = pixel >> 0;
+            a_data[out_index] = pixel >> 24;
+            r_data[out_index] = pixel >> 16;
+            g_data[out_index] = pixel >> 8;
+            b_data[out_index] = pixel >> 0;
             out_index++;
             index++;
         }
         for (index = 0; index < e; index++)
         {
-            red_data[out_index] = red_data[out_index - 1];
-            green_data[out_index] = green_data[out_index - 1];
-            blue_data[out_index] = blue_data[out_index - 1];
+            a_data[out_index] = a_data[out_index - 1];
+            r_data[out_index] = r_data[out_index - 1];
+            g_data[out_index] = g_data[out_index - 1];
+            b_data[out_index] = b_data[out_index - 1];
             out_index++;
         }
         start_line--;
         cy++;
+        if (out_index > 64 * 64)
+        {
+            break;
+        }
     }
     return cy;
 }
@@ -364,12 +372,12 @@ fpack(char *plane, int cx, int cy, struct stream *s)
 /*****************************************************************************/
 static int APP_CC
 foutraw3(struct stream *s, int bytes, int header,
-         char *red_data, char *green_data, char *blue_data)
+         char *r_data, char *g_data, char *b_data)
 {
     out_uint8(s, header);
-    out_uint8a(s, red_data, bytes);
-    out_uint8a(s, green_data, bytes);
-    out_uint8a(s, blue_data, bytes);
+    out_uint8a(s, r_data, bytes);
+    out_uint8a(s, g_data, bytes);
+    out_uint8a(s, b_data, bytes);
     /* pad if no RLE */
     out_uint8(s, 0x00);
     return 0;
@@ -378,13 +386,13 @@ foutraw3(struct stream *s, int bytes, int header,
 /*****************************************************************************/
 static int APP_CC
 foutraw4(struct stream *s, int bytes, int header,
-         char *alpha_data, char *red_data, char *green_data, char *blue_data)
+         char *a_data, char *r_data, char *g_data, char *b_data)
 {
     out_uint8(s, header);
-    out_uint8a(s, alpha_data, bytes);
-    out_uint8a(s, red_data, bytes);
-    out_uint8a(s, green_data, bytes);
-    out_uint8a(s, blue_data, bytes);
+    out_uint8a(s, a_data, bytes);
+    out_uint8a(s, r_data, bytes);
+    out_uint8a(s, g_data, bytes);
+    out_uint8a(s, b_data, bytes);
     /* pad if no RLE */
     out_uint8(s, 0x00);
     return 0;
@@ -398,18 +406,18 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
                        int start_line, struct stream *temp_s,
                        int e, int flags)
 {
-    char *alpha_data;
-    char *red_data;
-    char *green_data;
-    char *blue_data;
-    char *salpha_data;
-    char *sred_data;
-    char *sgreen_data;
-    char *sblue_data;
-    int alpha_bytes;
-    int red_bytes;
-    int green_bytes;
-    int blue_bytes;
+    char *a_data;
+    char *r_data;
+    char *g_data;
+    char *b_data;
+    char *sa_data;
+    char *sr_data;
+    char *sg_data;
+    char *sb_data;
+    int a_bytes;
+    int r_bytes;
+    int g_bytes;
+    int b_bytes;
     int cx;
     int cy;
     int max_bytes;
@@ -417,38 +425,43 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
     int header;
 
     LLOGLN(10, ("xrdp_bitmap32_compress:"));
-
+    max_bytes = 4 * 1024;
+    /* need max 8, 4K planes for work */
+    if (max_bytes * 8 > temp_s->size)
+    {
+        return 0;
+    }
     header = flags & 0xFF;
     cx = width + e;
-    salpha_data = temp_s->data;
-    sred_data = salpha_data + cx * height;
-    sgreen_data = sred_data + cx * height;
-    sblue_data = sgreen_data + cx * height;
-    alpha_data = sblue_data + cx * height;
-    red_data = alpha_data + cx * height;
-    green_data = red_data + cx * height;
-    blue_data = green_data + cx * height;
+    sa_data = temp_s->data;
+    sr_data = sa_data + max_bytes;
+    sg_data = sr_data + max_bytes;
+    sb_data = sg_data + max_bytes;
+    a_data = sb_data + max_bytes;
+    r_data = a_data + max_bytes;
+    g_data = r_data + max_bytes;
+    b_data = g_data + max_bytes;
 
     if (header & FLAGS_NOALPHA)
     {
         cy = fsplit3(in_data, start_line, width, e,
-                     sred_data, sgreen_data, sblue_data);
+                     sr_data, sg_data, sb_data);
         if (header & FLAGS_RLE)
         {
-            fdelta(sred_data, red_data, cx, cy);
-            fdelta(sgreen_data, green_data, cx, cy);
-            fdelta(sblue_data, blue_data, cx, cy);
+            fdelta(sr_data, r_data, cx, cy);
+            fdelta(sg_data, g_data, cx, cy);
+            fdelta(sb_data, b_data, cx, cy);
             out_uint8(s, header);
-            red_bytes = fpack(red_data, cx, cy, s);
-            green_bytes = fpack(green_data, cx, cy, s);
-            blue_bytes = fpack(blue_data, cx, cy, s);
-            total_bytes = red_bytes + green_bytes + blue_bytes;
+            r_bytes = fpack(r_data, cx, cy, s);
+            g_bytes = fpack(g_data, cx, cy, s);
+            b_bytes = fpack(b_data, cx, cy, s);
+            total_bytes = r_bytes + g_bytes + b_bytes;
             if (1 + total_bytes > byte_limit)
             {
                 /* failed */
                 LLOGLN(0, ("xrdp_bitmap32_compress: too big, rgb "
-                       "bytes %d %d %d total_bytes %d cx %d cy %d byte_limit %d",
-                       red_bytes, green_bytes, blue_bytes,
+                       "bytes %d %d %d total_bytes %d cx %d cy %d "
+                       "byte_limit %d", r_bytes, g_bytes, b_bytes,
                        total_bytes, cx, cy, byte_limit));
                 return 0;
             }
@@ -457,43 +470,41 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
             {
                 /* raw is better */
                 LLOGLN(10, ("xrdp_bitmap32_compress: too big, rgb "
-                       "bytes %d %d %d total_bytes %d cx %d cy %d max_bytes %d",
-                       red_bytes, green_bytes, blue_bytes,
+                       "bytes %d %d %d total_bytes %d cx %d cy %d "
+                       "max_bytes %d", r_bytes, g_bytes, b_bytes,
                        total_bytes, cx, cy, max_bytes));
                 init_stream(s, 0);
-                foutraw3(s, cx * cy, FLAGS_NOALPHA, sred_data,
-                         sgreen_data, sblue_data);
+                foutraw3(s, cx * cy, FLAGS_NOALPHA, sr_data, sg_data, sb_data);
             }
         }
         else
         {
-            foutraw3(s, cx * cy, FLAGS_NOALPHA, sred_data,
-                     sgreen_data, sblue_data);
+            foutraw3(s, cx * cy, FLAGS_NOALPHA, sr_data, sg_data, sb_data);
         }
     }
     else
     {
         cy = fsplit4(in_data, start_line, width, e,
-                     salpha_data, sred_data, sgreen_data, sblue_data);
+                     sa_data, sr_data, sg_data, sb_data);
         if (header & FLAGS_RLE)
         {
-            fdelta(salpha_data, alpha_data, cx, cy);
-            fdelta(sred_data, red_data, cx, cy);
-            fdelta(sgreen_data, green_data, cx, cy);
-            fdelta(sblue_data, blue_data, cx, cy);
+            fdelta(sa_data, a_data, cx, cy);
+            fdelta(sr_data, r_data, cx, cy);
+            fdelta(sg_data, g_data, cx, cy);
+            fdelta(sb_data, b_data, cx, cy);
             out_uint8(s, header);
-            alpha_bytes = fpack(alpha_data, cx, cy, s);
-            red_bytes = fpack(red_data, cx, cy, s);
-            green_bytes = fpack(green_data, cx, cy, s);
-            blue_bytes = fpack(blue_data, cx, cy, s);
+            a_bytes = fpack(a_data, cx, cy, s);
+            r_bytes = fpack(r_data, cx, cy, s);
+            g_bytes = fpack(g_data, cx, cy, s);
+            b_bytes = fpack(b_data, cx, cy, s);
             max_bytes = cx * cy * 4;
-            total_bytes = alpha_bytes + red_bytes + green_bytes + blue_bytes;
+            total_bytes = a_bytes + r_bytes + g_bytes + b_bytes;
             if (1 + total_bytes > byte_limit)
             {
                 /* failed */
                 LLOGLN(0, ("xrdp_bitmap32_compress: too big, argb "
-                       "bytes %d %d %d %d total_bytes %d cx %d cy %d byte_limit %d",
-                       alpha_bytes, red_bytes, green_bytes, blue_bytes,
+                       "bytes %d %d %d %d total_bytes %d cx %d cy %d "
+                       "byte_limit %d", a_bytes, r_bytes, g_bytes, b_bytes,
                        total_bytes, cx, cy, byte_limit));
                 return 0;
             }
@@ -501,18 +512,16 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
             {
                 /* raw is better */
                 LLOGLN(10, ("xrdp_bitmap32_compress: too big, argb "
-                       "bytes %d %d %d %d total_bytes %d cx %d cy %d max_bytes %d",
-                       alpha_bytes, red_bytes, green_bytes, blue_bytes,
+                       "bytes %d %d %d %d total_bytes %d cx %d cy %d "
+                       "max_bytes %d", a_bytes, r_bytes, g_bytes, b_bytes,
                        total_bytes, cx, cy, max_bytes));
                 init_stream(s, 0);
-                foutraw4(s, cx * cy, 0, salpha_data, sred_data,
-                         sgreen_data, sblue_data);
+                foutraw4(s, cx * cy, 0, sa_data, sr_data, sg_data, sb_data);
             }
         }
         else
         {
-            foutraw4(s, cx * cy, 0, salpha_data, sred_data,
-                     sgreen_data, sblue_data);
+            foutraw4(s, cx * cy, 0, sa_data, sr_data, sg_data, sb_data);
         }
     }
     return cy;
