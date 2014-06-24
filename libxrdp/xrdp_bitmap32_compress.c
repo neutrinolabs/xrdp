@@ -204,35 +204,43 @@ fsplit4(char *in_data, int start_line, int width, int e,
 }
 
 /*****************************************************************************/
+#define DELTA_ONE \
+do { \
+    delta = src8[cx] - src8[0]; \
+    is_neg = (delta >> 7) & 1; \
+    dst8[cx] = (((delta ^ -is_neg) + is_neg) << 1) - is_neg; \
+    src8++; \
+    dst8++; \
+} while (0)
+
+/*****************************************************************************/
 static int APP_CC
 fdelta(char *in_plane, char *out_plane, int cx, int cy)
 {
     char delta;
+    char is_neg;
     char *src8;
     char *dst8;
-    int index;
-    int jndex;
+    char *src8_end;
 
     g_memcpy(out_plane, in_plane, cx);
-    for (jndex = cy - 2; jndex >= 0; jndex--)
+    src8 = in_plane;
+    dst8 = out_plane;
+    src8_end = src8 + (cx * cy - cx);
+    while (src8 + 8 <= src8_end)
     {
-        src8 = in_plane + jndex * cx;
-        dst8 = out_plane + jndex * cx;
-        for (index = 0; index < cx; index++)
-        {
-            delta = src8[cx] - src8[0];
-            if (delta & 0x80)
-            {
-                delta = (((~delta) + 1) << 1) - 1;
-            }
-            else
-            {
-                delta = delta << 1;
-            }
-            dst8[cx] = delta;
-            src8++;
-            dst8++;
-        }
+        DELTA_ONE;
+        DELTA_ONE;
+        DELTA_ONE;
+        DELTA_ONE;
+        DELTA_ONE;
+        DELTA_ONE;
+        DELTA_ONE;
+        DELTA_ONE;
+    }
+    while (src8 < src8_end)
+    {
+        DELTA_ONE;
     }
     return 0;
 }
