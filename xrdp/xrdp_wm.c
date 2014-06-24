@@ -259,8 +259,11 @@ xrdp_wm_load_pointer(struct xrdp_wm *self, char *file_name, char *data,
     {
         if (bpp == 1)
         {
-            in_uint8a(fs, palette, 8);
-
+            for (i = 0; i < 2; i++)
+            {
+                in_uint32_le(fs, pixel);
+                palette[i] = pixel;
+            }
             for (i = 0; i < 32; i++)
             {
                 for (j = 0; j < 32; j++)
@@ -279,8 +282,11 @@ xrdp_wm_load_pointer(struct xrdp_wm *self, char *file_name, char *data,
         }
         else if (bpp == 4)
         {
-            in_uint8a(fs, palette, 64);
-
+            for (i = 0; i < 16; i++)
+            {
+                in_uint32_le(fs, pixel);
+                palette[i] = pixel;
+            }
             for (i = 0; i < 32; i++)
             {
                 for (j = 0; j < 32; j++)
