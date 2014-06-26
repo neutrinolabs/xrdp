@@ -356,7 +356,7 @@ sound_send_wave_data_chunk(char *data, int data_bytes)
     if ((data_bytes < 4) || (data_bytes > 128 * 1024))
     {
         LOG(0, ("sound_send_wave_data_chunk: bad data_bytes %d", data_bytes));
-        return 0;
+        return 1;
     }
 
     LOG(20, ("sound_send_wave_data_chunk: g_sent_flag[%d] = %d",
@@ -364,7 +364,7 @@ sound_send_wave_data_chunk(char *data, int data_bytes)
     if (g_sent_flag[(g_cBlockNo + 1) & 0xff] & 1)
     {
         LOG(10, ("sound_send_wave_data_chunk: no room"));
-        return 0;
+        return 1;
     }
     else
     {
@@ -423,9 +423,11 @@ sound_send_wave_data(char *data, int data_bytes)
     int space_left;
     int chunk_bytes;
     int data_index;
+    int error;
 
     LOG(10, ("sound_send_wave_data: sending %d bytes", data_bytes));
     data_index = 0;
+    error = 0;
     while (data_bytes > 0)
     {
         space_left = BBUF_SIZE - g_buf_index;
@@ -433,19 +435,26 @@ sound_send_wave_data(char *data, int data_bytes)
         if (chunk_bytes < 1)
         {
             LOG(10, ("sound_send_wave_data: error"));
+	    error = 1;
             break;
         }
         g_memcpy(g_buffer + g_buf_index, data + data_index, chunk_bytes);
         g_buf_index += chunk_bytes;
         if (g_buf_index >= BBUF_SIZE)
         {
-            sound_send_wave_data_chunk(g_buffer, BBUF_SIZE);
+            if (sound_send_wave_data_chunk(g_buffer, BBUF_SIZE) != 0)
+	    {
+               LOG(10, ("sound_send_wave_data: error"));
+	       error = 1;
+	       break;
+	    }
             g_buf_index = 0;
         }
         data_bytes -= chunk_bytes;
         data_index += chunk_bytes;
     }
-    return 0;
+
+    return error;
 }
 
 /*****************************************************************************/
@@ -460,10 +469,15 @@ sound_send_close(void)
     LOG(10, ("sound_send_close:"));
 
     /* send any left over data */
-    sound_send_wave_data_chunk(g_buffer, g_buf_index);
+    if (sound_send_wave_data_chunk(g_buffer, g_buf_index) != 0)
+    {
+        LOG(10, ("sound_send_close: sound_send_wave_data_chunk failed"));
+        return 1;
+    }
     g_buf_index = 0;
     g_memset(g_sent_flag, 0, sizeof(g_sent_flag));
-
+    
+    /* send close msg */
     make_stream(s);
     init_stream(s, 8182);
     out_uint16_le(s, SNDC_CLOSE);
@@ -516,23 +530,23 @@ sound_process_wave_confirm(struct stream *s, int size)
 
 /*****************************************************************************/
 /* process message in from the audio source, eg pulse, alsa
-   on it's way to the client */
+   on it's way to the client. returns error */
 static int APP_CC
 process_pcm_message(int id, int size, struct stream *s)
 {
     switch (id)
     {
         case 0:
-            sound_send_wave_data(s->p, size);
+            return sound_send_wave_data(s->p, size);
             break;
         case 1:
-            sound_send_close();
+            return sound_send_close();
             break;
         default:
             LOG(10, ("process_pcm_message: unknown id %d", id));
             break;
     }
-    return 0;
+    return 1;
 }
 
 /*****************************************************************************/
@@ -793,24 +807,46 @@ sound_get_wait_objs(tbus *objs, int *count, int *timeout)
 int APP_CC
 sound_check_wait_objs(void)
 {
+    
     if (g_audio_l_trans_out != 0)
     {
-        trans_check_wait_objs(g_audio_l_trans_out);
+	if (trans_check_wait_objs(g_audio_l_trans_out) != 0)
+	{
+            LOG(10, ("sound_check_wait_objs: g_audio_l_trans_out returned non-zero"));
+	    trans_delete(g_audio_l_trans_out);
+	    g_audio_l_trans_out = 0;
+	}
     }
 
     if (g_audio_c_trans_out != 0)
     {
-        trans_check_wait_objs(g_audio_c_trans_out);
+	if (trans_check_wait_objs(g_audio_c_trans_out) != 0)
+	{
+            LOG(10, ("sound_check_wait_objs: g_audio_c_trans_out returned non-zero"));
+	    trans_delete(g_audio_c_trans_out);
+	    g_audio_c_trans_out = 0;
+	}
+
     }
 
     if (g_audio_l_trans_in != 0)
     {
-        trans_check_wait_objs(g_audio_l_trans_in);
+	if (trans_check_wait_objs(g_audio_l_trans_in) != 0)
+	{
+            LOG(10, ("sound_check_wait_objs: g_audio_l_trans_in returned non-zero"));
+	    trans_delete(g_audio_l_trans_in);
+	    g_audio_l_trans_in = 0;
+	}
     }
 
     if (g_audio_c_trans_in != 0)
     {
-        trans_check_wait_objs(g_audio_c_trans_in);
+	if (trans_check_wait_objs(g_audio_c_trans_in) != 0)
+	{
+            LOG(10, ("sound_check_wait_objs: g_audio_c_trans_in returned non-zero"));
+	    trans_delete(g_audio_c_trans_in);
+	    g_audio_c_trans_in = 0;
+	}
     }
 
     return 0;
