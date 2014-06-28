@@ -1,3 +1,4 @@
+moduledir := $(shell pkg-config xorg-server --variable moduledir)
 
 all: allmake
 
@@ -27,7 +28,8 @@ xinstall:
 	cp xrdpkeyb/xrdpkeyb_drv.so   $(HOME)/xorg-modules/input/
 
 install:
-	install --mode=0644 --strip module/libxorgxrdp.so /usr/lib/xorg/modules
-	install --mode=0644 --strip xrdpdev/xrdpdev_drv.so /usr/lib/xorg/modules/drivers
-	install --mode=0644 --strip xrdpmouse/xrdpmouse_drv.so /usr/lib/xorg/modules/input
-	install --mode=0644 --strip xrdpkeyb/xrdpkeyb_drv.so /usr/lib/xorg/modules/input
+	install --directory $(DESTDIR)$(moduledir)
+	install --mode=0644 --strip module/libxorgxrdp.so $(DESTDIR)$(moduledir)
+	install --mode=0644 --strip xrdpdev/xrdpdev_drv.so $(DESTDIR)$(moduledir)/drivers
+	install --mode=0644 --strip xrdpmouse/xrdpmouse_drv.so $(DESTDIR)$(moduledir)/input
+	install --mode=0644 --strip xrdpkeyb/xrdpkeyb_drv.so $(DESTDIR)$(moduledir)/input
