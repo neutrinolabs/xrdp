@@ -22,14 +22,15 @@ xinstall:
 	strip xrdpmouse/xrdpmouse_drv.so
 	strip xrdpkeyb/xrdpkeyb_drv.so
 
+	mkdir -p $(HOME)/xorg-modules/drivers $(HOME)/xorg-modules/input
 	cp module/libxorgxrdp.so      $(HOME)/xorg-modules/
 	cp xrdpdev/xrdpdev_drv.so     $(HOME)/xorg-modules/drivers/
 	cp xrdpmouse/xrdpmouse_drv.so $(HOME)/xorg-modules/input/
 	cp xrdpkeyb/xrdpkeyb_drv.so   $(HOME)/xorg-modules/input/
 
 install:
-	install --directory $(DESTDIR)$(moduledir)
+	install --directory $(DESTDIR)$(moduledir) $(DESTDIR)$(moduledir)/drivers $(DESTDIR)$(moduledir)/input
 	install --mode=0644 --strip module/libxorgxrdp.so $(DESTDIR)$(moduledir)
-	install --mode=0644 --strip xrdpdev/xrdpdev_drv.so $(DESTDIR)$(moduledir)/drivers
-	install --mode=0644 --strip xrdpmouse/xrdpmouse_drv.so $(DESTDIR)$(moduledir)/input
-	install --mode=0644 --strip xrdpkeyb/xrdpkeyb_drv.so $(DESTDIR)$(moduledir)/input
+	install --mode=0644 --strip xrdpdev/xrdpdev_drv.so $(DESTDIR)$(moduledir)/drivers/
+	install --mode=0644 --strip xrdpmouse/xrdpmouse_drv.so $(DESTDIR)$(moduledir)/input/
+	install --mode=0644 --strip xrdpkeyb/xrdpkeyb_drv.so $(DESTDIR)$(moduledir)/input/
