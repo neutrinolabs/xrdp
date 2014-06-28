@@ -58,17 +58,4 @@ int APP_CC sound_check_wait_objs(void);
 int APP_CC sound_data_in(struct stream* s, int chan_id, int chan_flags,
                          int length, int total_length);
 
-/* microphone related */
-static int APP_CC sound_send_server_input_formats(void);
-
-static int APP_CC sound_process_input_format(int aindex, int wFormatTag,
-                int nChannels, int nSamplesPerSec, int nAvgBytesPerSec,
-                int nBlockAlign, int wBitsPerSample, int cbSize, char *data);
-
-static int APP_CC sound_process_input_formats(struct stream *s, int size);
-static int APP_CC sound_input_start_recording();
-static int APP_CC sound_input_stop_recording();
-static int APP_CC sound_process_input_data(struct stream *s, int bytes);
-static int DEFAULT_CC sound_sndsrvr_source_data_in(struct trans *trans);
-
 #endif

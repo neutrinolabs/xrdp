@@ -146,6 +146,25 @@ static struct xr_wave_format_ex *g_wave_inp_formats[SND_NUM_INP_FORMATS] =
 static int g_client_input_format_index = 0;
 static int g_server_input_format_index = 0;
 
+/* microphone related */
+static int APP_CC
+sound_send_server_input_formats(void);
+static int APP_CC
+sound_process_input_format(int aindex, int wFormatTag,
+                           int nChannels, int nSamplesPerSec,
+                           int nAvgBytesPerSec, int nBlockAlign,
+                           int wBitsPerSample, int cbSize, char *data);
+static int APP_CC
+sound_process_input_formats(struct stream *s, int size);
+static int APP_CC
+sound_input_start_recording(void);
+static int APP_CC
+sound_input_stop_recording(void);
+static int APP_CC
+sound_process_input_data(struct stream *s, int bytes);
+static int DEFAULT_CC
+sound_sndsrvr_source_data_in(struct trans *trans);
+
 /*****************************************************************************/
 static int APP_CC
 sound_send_server_output_formats(void)
@@ -215,7 +234,6 @@ sound_send_server_output_formats(void)
 }
 
 /*****************************************************************************/
-
 static int
 sound_send_training(void)
 {
@@ -435,7 +453,7 @@ sound_send_wave_data(char *data, int data_bytes)
         if (chunk_bytes < 1)
         {
             LOG(10, ("sound_send_wave_data: error"));
-	    error = 1;
+            error = 1;
             break;
         }
         g_memcpy(g_buffer + g_buf_index, data + data_index, chunk_bytes);
@@ -443,11 +461,11 @@ sound_send_wave_data(char *data, int data_bytes)
         if (g_buf_index >= BBUF_SIZE)
         {
             if (sound_send_wave_data_chunk(g_buffer, BBUF_SIZE) != 0)
-	    {
-               LOG(10, ("sound_send_wave_data: error"));
-	       error = 1;
-	       break;
-	    }
+            {
+                LOG(10, ("sound_send_wave_data: error"));
+                error = 1;
+                break;
+            }
             g_buf_index = 0;
         }
         data_bytes -= chunk_bytes;
@@ -476,7 +494,7 @@ sound_send_close(void)
     }
     g_buf_index = 0;
     g_memset(g_sent_flag, 0, sizeof(g_sent_flag));
-    
+
     /* send close msg */
     make_stream(s);
     init_stream(s, 8182);
@@ -807,46 +825,45 @@ sound_get_wait_objs(tbus *objs, int *count, int *timeout)
 int APP_CC
 sound_check_wait_objs(void)
 {
-    
+
     if (g_audio_l_trans_out != 0)
     {
-	if (trans_check_wait_objs(g_audio_l_trans_out) != 0)
-	{
+        if (trans_check_wait_objs(g_audio_l_trans_out) != 0)
+        {
             LOG(10, ("sound_check_wait_objs: g_audio_l_trans_out returned non-zero"));
-	    trans_delete(g_audio_l_trans_out);
-	    g_audio_l_trans_out = 0;
-	}
+            trans_delete(g_audio_l_trans_out);
+            g_audio_l_trans_out = 0;
+        }
     }
 
     if (g_audio_c_trans_out != 0)
     {
-	if (trans_check_wait_objs(g_audio_c_trans_out) != 0)
-	{
+        if (trans_check_wait_objs(g_audio_c_trans_out) != 0)
+        {
             LOG(10, ("sound_check_wait_objs: g_audio_c_trans_out returned non-zero"));
-	    trans_delete(g_audio_c_trans_out);
-	    g_audio_c_trans_out = 0;
-	}
-
+            trans_delete(g_audio_c_trans_out);
+            g_audio_c_trans_out = 0;
+        }
     }
 
     if (g_audio_l_trans_in != 0)
     {
-	if (trans_check_wait_objs(g_audio_l_trans_in) != 0)
-	{
+        if (trans_check_wait_objs(g_audio_l_trans_in) != 0)
+        {
             LOG(10, ("sound_check_wait_objs: g_audio_l_trans_in returned non-zero"));
-	    trans_delete(g_audio_l_trans_in);
-	    g_audio_l_trans_in = 0;
-	}
+            trans_delete(g_audio_l_trans_in);
+            g_audio_l_trans_in = 0;
+        }
     }
 
     if (g_audio_c_trans_in != 0)
     {
-	if (trans_check_wait_objs(g_audio_c_trans_in) != 0)
-	{
+        if (trans_check_wait_objs(g_audio_c_trans_in) != 0)
+        {
             LOG(10, ("sound_check_wait_objs: g_audio_c_trans_in returned non-zero"));
-	    trans_delete(g_audio_c_trans_in);
-	    g_audio_c_trans_in = 0;
-	}
+            trans_delete(g_audio_c_trans_in);
+            g_audio_c_trans_in = 0;
+        }
     }
 
     return 0;
@@ -1015,7 +1032,7 @@ sound_process_input_formats(struct stream *s, int size)
  *****************************************************************************/
 
 static int APP_CC
-sound_input_start_recording()
+sound_input_start_recording(void)
 {
     struct stream* s;
 
@@ -1049,7 +1066,7 @@ sound_input_start_recording()
  *****************************************************************************/
 
 static int APP_CC
-sound_input_stop_recording()
+sound_input_stop_recording(void)
 {
     struct stream* s;
 
