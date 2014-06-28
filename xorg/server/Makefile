@@ -28,7 +28,8 @@ xinstall:
 	cp xrdpkeyb/xrdpkeyb_drv.so   $(HOME)/xorg-modules/input/
 
 install:
-	install --mode=0644 --strip module/libxorgxrdp.so $(moduledir)
-	install --mode=0644 --strip xrdpdev/xrdpdev_drv.so $(moduledir)/drivers
-	install --mode=0644 --strip xrdpmouse/xrdpmouse_drv.so $(moduledir)/input
-	install --mode=0644 --strip xrdpkeyb/xrdpkeyb_drv.so $(moduledir)/input
+	install --directory $(DESTDIR)$(moduledir)
+	install --mode=0644 --strip module/libxorgxrdp.so $(DESTDIR)$(moduledir)
+	install --mode=0644 --strip xrdpdev/xrdpdev_drv.so $(DESTDIR)$(moduledir)/drivers
+	install --mode=0644 --strip xrdpmouse/xrdpmouse_drv.so $(DESTDIR)$(moduledir)/input
+	install --mode=0644 --strip xrdpkeyb/xrdpkeyb_drv.so $(DESTDIR)$(moduledir)/input
