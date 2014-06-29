@@ -551,14 +551,22 @@ xrdp_rdp_send_fastpath(struct xrdp_rdp *self, struct stream *s,
     int updateCode;
     int fragmentation;
     int compression;
-    int ctype;
-    int len;
+    int comp_type;
+    int comp_len;
+    int no_comp_len;
+    int send_len;
     int cont;
     int header_bytes;
     int sec_bytes;
-    struct stream ls;
+    int to_comp_len;
+    int sec_offset;
+    int rdp_offset;
+    struct stream frag_s;
+    struct stream comp_s;
+    struct stream *send_s;
     char *holdp;
     char *holdend;
+    struct xrdp_mppc_enc *mppc_enc;
 
     LLOGLN(10, ("xrdp_rdp_send_fastpath:"));
     s_pop_layer(s, rdp_hdr);
@@ -575,14 +583,18 @@ xrdp_rdp_send_fastpath(struct xrdp_rdp *self, struct stream *s,
     }
     sec_bytes = xrdp_sec_get_fastpath_bytes(self->sec_layer);
     fragmentation = 0;
-    ls = *s;
+    frag_s = *s;
+    sec_offset = (int)(frag_s.sec_hdr - frag_s.data);
+    rdp_offset = (int)(frag_s.rdp_hdr - frag_s.data);
     cont = 1;
     while (cont)
     {
-        len = (int)(ls.end - ls.p);
-        if (len > FASTPATH_FRAG_SIZE)
+        comp_type = 0;
+        send_s = &frag_s;
+        no_comp_len = (int)(frag_s.end - frag_s.p);
+        if (no_comp_len > FASTPATH_FRAG_SIZE)
         {
-            len = FASTPATH_FRAG_SIZE;
+            no_comp_len = FASTPATH_FRAG_SIZE;
             if (fragmentation == 0)
             {
                 fragmentation = 2; /* FASTPATH_FRAGMENT_FIRST */
@@ -599,34 +611,64 @@ xrdp_rdp_send_fastpath(struct xrdp_rdp *self, struct stream *s,
                 fragmentation = 1; /* FASTPATH_FRAGMENT_LAST */
             }
         }
-        LLOGLN(10, ("xrdp_rdp_send_fastpath: len %d fragmentation %d",
-               len, fragmentation));
+        send_len = no_comp_len;
+        LLOGLN(10, ("xrdp_rdp_send_fastpath: no_comp_len %d fragmentation %d",
+               no_comp_len, fragmentation));
+        if (compression != 0)
+        {
+            to_comp_len = no_comp_len - header_bytes;
+            mppc_enc = self->mppc_enc;
+            if (compress_rdp(mppc_enc, (tui8 *)(frag_s.p + header_bytes),
+                             to_comp_len))
+            {
+                comp_len = mppc_enc->bytes_in_opb + header_bytes;
+                LLOGLN(10, ("xrdp_rdp_send_fastpath: no_comp_len %d "
+                       "comp_len %d", no_comp_len, comp_len));
+                send_len = comp_len;
+                comp_type = mppc_enc->flags;
+                /* outputBuffer has 64 bytes preceding it */
+                g_memset(&comp_s, 0, sizeof(comp_s));
+                comp_s.data = mppc_enc->outputBuffer -
+                                         (rdp_offset + header_bytes);
+                comp_s.p = comp_s.data + rdp_offset;
+                comp_s.end = comp_s.p + send_len;
+                comp_s.size = send_len;
+                comp_s.sec_hdr = comp_s.data + sec_offset;
+                comp_s.rdp_hdr = comp_s.data + rdp_offset;
+                send_s = &comp_s;
+            }
+            else
+            {
+                LLOGLN(0, ("xrdp_rdp_send_fastpath: mppc_encode not ok "
+                       "type %d flags %d", mppc_enc->protocol_type,
+                       mppc_enc->flags));
+                return 1;
+            }
+        }
+        holdp = frag_s.p;
+        holdend = frag_s.end;
         updateHeader = (updateCode & 15) |
                       ((fragmentation & 3) << 4) |
                       ((compression & 3) << 6);
-        out_uint8(&ls, updateHeader);
+        out_uint8(send_s, updateHeader);
         if (compression != 0)
         {
-            /* TODO: */
-            ctype = 0;
-            out_uint8(&ls, ctype);
+            out_uint8(send_s, comp_type);
         }
-        len -= header_bytes;
-        out_uint16_le(&ls, len);
-        holdp = ls.p;
-        holdend = ls.end;
-        ls.end = ls.p + len;
-        if (xrdp_sec_send_fastpath(self->sec_layer, &ls) != 0)
+        send_len -= header_bytes;
+        out_uint16_le(send_s, send_len);
+        send_s->end = send_s->p + send_len;
+        if (xrdp_sec_send_fastpath(self->sec_layer, send_s) != 0)
         {
             LLOGLN(0, ("xrdp_rdp_send_fastpath: xrdp_fastpath_send failed"));
             return 1;
         }
-        ls.p = holdp + len;
-        ls.end = holdend;
-        cont = ls.p < ls.end;
-        ls.p -= header_bytes;
-        ls.sec_hdr = ls.p - sec_bytes;
-        ls.data = ls.sec_hdr;
+        frag_s.p = holdp + no_comp_len;
+        frag_s.end = holdend;
+        cont = frag_s.p < frag_s.end;
+        frag_s.p -= header_bytes;
+        frag_s.sec_hdr = frag_s.p - sec_bytes;
+        frag_s.data = frag_s.sec_hdr;
     }
     return 0;
 }
