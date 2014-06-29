@@ -848,7 +848,7 @@ xrdp_painter_copy(struct xrdp_painter *self,
             while (i < (srcx + cx))
             {
                 w = MIN(64, ((srcx + cx) - i));
-                h = MIN(64, ((srcy + cy) - j));
+                h = MIN(63, ((srcy + cy) - j));
                 b = xrdp_bitmap_create(w, h, src->bpp, 0, self->wm);
 #if 1
                 xrdp_bitmap_copy_box_with_crc(src, b, i, j, w, h);
@@ -883,7 +883,7 @@ xrdp_painter_copy(struct xrdp_painter *self,
                 i += 64;
             }
 
-            j += 64;
+            j += 63;
         }
 
         xrdp_region_delete(region);
