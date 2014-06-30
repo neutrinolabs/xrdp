@@ -639,10 +639,10 @@ xrdp_rdp_send_fastpath(struct xrdp_rdp *self, struct stream *s,
             }
             else
             {
-                LLOGLN(0, ("xrdp_rdp_send_fastpath: mppc_encode not ok "
+                /* this can happen part of normal operation */
+                LLOGLN(10, ("xrdp_rdp_send_fastpath: mppc_encode not ok "
                        "type %d flags %d", mppc_enc->protocol_type,
                        mppc_enc->flags));
-                return 1;
             }
         }
         holdp = frag_s.p;
