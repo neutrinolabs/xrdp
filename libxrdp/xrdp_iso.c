@@ -58,7 +58,7 @@ xrdp_iso_recv_rdpnegreq(struct xrdp_iso *self, struct stream *s)
     DEBUG(("     in xrdp_iso_recv_rdpnegreq"));
 
     in_uint8(s, flags);
-    if (flags != 0x0)
+    if (flags != 0x0 && flags != 0x8 && flags != 0x1)
     {
         DEBUG(("       xrdp_iso_recv_rdpnegreq: flags: %x",flags));
         return 1;
