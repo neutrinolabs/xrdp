@@ -539,7 +539,6 @@ xrdp_rdp_init_fastpath(struct xrdp_rdp *self, struct stream *s)
 }
 
 /*****************************************************************************/
-/* TODO: compression */
 /* returns error */
 /* 2.2.9.1.2.1 Fast-Path Update (TS_FP_UPDATE)
  * http://msdn.microsoft.com/en-us/library/cc240622.aspx */
@@ -563,9 +562,7 @@ xrdp_rdp_send_fastpath(struct xrdp_rdp *self, struct stream *s,
     int rdp_offset;
     struct stream frag_s;
     struct stream comp_s;
-    struct stream *send_s;
-    char *holdp;
-    char *holdend;
+    struct stream send_s;
     struct xrdp_mppc_enc *mppc_enc;
 
     LLOGLN(10, ("xrdp_rdp_send_fastpath:"));
@@ -590,7 +587,7 @@ xrdp_rdp_send_fastpath(struct xrdp_rdp *self, struct stream *s,
     while (cont)
     {
         comp_type = 0;
-        send_s = &frag_s;
+        send_s = frag_s;
         no_comp_len = (int)(frag_s.end - frag_s.p);
         if (no_comp_len > FASTPATH_FRAG_SIZE)
         {
@@ -614,7 +611,7 @@ xrdp_rdp_send_fastpath(struct xrdp_rdp *self, struct stream *s,
         send_len = no_comp_len;
         LLOGLN(10, ("xrdp_rdp_send_fastpath: no_comp_len %d fragmentation %d",
                no_comp_len, fragmentation));
-        if (compression != 0)
+        if ((compression != 0) && (no_comp_len > header_bytes + 16))
         {
             to_comp_len = no_comp_len - header_bytes;
             mppc_enc = self->mppc_enc;
@@ -635,36 +632,32 @@ xrdp_rdp_send_fastpath(struct xrdp_rdp *self, struct stream *s,
                 comp_s.size = send_len;
                 comp_s.sec_hdr = comp_s.data + sec_offset;
                 comp_s.rdp_hdr = comp_s.data + rdp_offset;
-                send_s = &comp_s;
+                send_s = comp_s;
             }
             else
             {
-                /* this can happen part of normal operation */
                 LLOGLN(10, ("xrdp_rdp_send_fastpath: mppc_encode not ok "
                        "type %d flags %d", mppc_enc->protocol_type,
                        mppc_enc->flags));
             }
         }
-        holdp = frag_s.p;
-        holdend = frag_s.end;
         updateHeader = (updateCode & 15) |
                       ((fragmentation & 3) << 4) |
                       ((compression & 3) << 6);
-        out_uint8(send_s, updateHeader);
+        out_uint8(&send_s, updateHeader);
         if (compression != 0)
         {
-            out_uint8(send_s, comp_type);
+            out_uint8(&send_s, comp_type);
         }
         send_len -= header_bytes;
-        out_uint16_le(send_s, send_len);
-        send_s->end = send_s->p + send_len;
-        if (xrdp_sec_send_fastpath(self->sec_layer, send_s) != 0)
+        out_uint16_le(&send_s, send_len);
+        send_s.end = send_s.p + send_len;
+        if (xrdp_sec_send_fastpath(self->sec_layer, &send_s) != 0)
         {
             LLOGLN(0, ("xrdp_rdp_send_fastpath: xrdp_fastpath_send failed"));
             return 1;
         }
-        frag_s.p = holdp + no_comp_len;
-        frag_s.end = holdend;
+        frag_s.p += no_comp_len;
         cont = frag_s.p < frag_s.end;
         frag_s.p -= header_bytes;
         frag_s.sec_hdr = frag_s.p - sec_bytes;
