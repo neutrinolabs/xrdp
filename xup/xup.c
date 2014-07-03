@@ -1125,6 +1125,12 @@ process_server_paint_rect_shmem(struct mod *mod, struct stream *s)
         {
             mod->screen_shmem_id = shmem_id;
             mod->screen_shmem_pixels = g_shmat(mod->screen_shmem_id);
+            if (mod->screen_shmem_pixels == (void*)-1)
+            {
+                /* failed */
+                mod->screen_shmem_id = 0;
+                mod->screen_shmem_pixels = 0;
+            }
         }
         if (mod->screen_shmem_pixels != 0)
         {
@@ -1136,10 +1142,6 @@ process_server_paint_rect_shmem(struct mod *mod, struct stream *s)
         rv = mod->server_paint_rect(mod, x, y, cx, cy,
                                     bmpdata, width, height,
                                     srcx, srcy);
-    }
-    else
-    {
-        rv = 1;
     }
     send_paint_rect_ack(mod, flags, x, y, cx, cy, frame_id);
     return rv;
