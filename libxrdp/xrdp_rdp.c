@@ -482,7 +482,9 @@ xrdp_rdp_send_data(struct xrdp_rdp *self, struct stream *s,
         }
         else
         {
-            g_writeln("mppc_encode not ok: type %d flags %d", mppc_enc->protocol_type, mppc_enc->flags);
+            LLOGLN(10, ("xrdp_rdp_send_data: mppc_encode not ok "
+                   "type %d flags %d", mppc_enc->protocol_type,
+                   mppc_enc->flags));
         }
     }
 
