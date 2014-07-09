@@ -106,7 +106,7 @@ struct xrdp_client_info
   char client_addr[256];
   char client_port[256];
 
-  int nego_sec_layer; /* 0, 1, 2 = RDP security layer, TLS , Negotiate */
+  int security_layer; /* 0 = rdp, 1 = tls , 2 = hybrid */
   int multimon; /* 0 = deny , 1 = allow */
   int monitorCount; /* number of monitors detected (max = 16) */
   struct monitor_info minfo[16]; /* client monitor data */

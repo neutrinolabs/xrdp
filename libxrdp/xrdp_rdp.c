@@ -156,6 +156,28 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
                 client_info->use_fast_path = 0;
             }
         }
+        else if (g_strcasecmp(item, "security_layer") == 0)
+        {
+            if (g_strcasecmp(value, "rdp") == 0)
+            {
+                client_info->security_layer = 1;
+            }
+            else if (g_strcasecmp(value, "tls") == 0)
+            {
+                client_info->security_layer = 2;
+            }
+            else if (g_strcasecmp(value, "hybrid") == 0)
+            {
+                client_info->security_layer = 3;
+            }
+            else
+            {
+                log_message(LOG_LEVEL_ALWAYS,"Warning: Your configured security layer is"
+                          "undefined, xrdp will negotiate client compatible");
+                client_info->security_layer = -1;
+            }
+        }
+
     }
 
     list_delete(items);
