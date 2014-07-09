@@ -1,0 +1,3 @@
+[submodule "librfxcodec"]
+	path = librfxcodec
+	url = git://github.com/neutrinolabs/librfxcodec.git
