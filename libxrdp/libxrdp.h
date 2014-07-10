@@ -42,8 +42,10 @@
 struct xrdp_iso
 {
     struct xrdp_mcs *mcs_layer; /* owner */
+    int rdpNegData; /* bool */
     int requestedProtocol;
     int selectedProtocol;
+    int failureCode;
     struct trans *trans;
 };
 

@@ -1,8 +1,8 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
- * Copyright (C) Idan Freiberg 2013
+ * Copyright (C) Jay Sorg 2004-2014
+ * Copyright (C) Idan Freiberg 2013-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,13 +22,14 @@
 #include "libxrdp.h"
 
 /*****************************************************************************/
-struct xrdp_iso *APP_CC
+struct xrdp_iso *
+APP_CC
 xrdp_iso_create(struct xrdp_mcs *owner, struct trans *trans)
 {
     struct xrdp_iso *self;
 
     DEBUG(("   in xrdp_iso_create"));
-    self = (struct xrdp_iso *)g_malloc(sizeof(struct xrdp_iso), 1);
+    self = (struct xrdp_iso *) g_malloc(sizeof(struct xrdp_iso), 1);
     self->mcs_layer = owner;
     self->trans = trans;
     DEBUG(("   out xrdp_iso_create"));
@@ -50,37 +51,36 @@ xrdp_iso_delete(struct xrdp_iso *self)
 /*****************************************************************************/
 /* returns error */
 static int APP_CC
-xrdp_iso_recv_rdpnegreq(struct xrdp_iso *self, struct stream *s)
+xrdp_iso_process_rdpNegReq(struct xrdp_iso *self, struct stream *s)
 {
     int flags;
     int len;
 
-    DEBUG(("     in xrdp_iso_recv_rdpnegreq"));
+    DEBUG(("     in xrdp_iso_process_neg_req"));
 
     in_uint8(s, flags);
     if (flags != 0x0 && flags != 0x8 && flags != 0x1)
     {
-        DEBUG(("       xrdp_iso_recv_rdpnegreq: flags: %x",flags));
+        DEBUG(("xrdp_iso_process_rdpNegReq: error, flags: %x",flags));
         return 1;
     }
 
     in_uint16_le(s, len);
-    if (len != 8) // fixed length
+    if (len != 8)
     {
-        DEBUG(("       xrdp_iso_recv_rdpnegreq: length: %x",len));
+        DEBUG(("xrdp_iso_process_rdpNegReq: error, length: %x",len));
         return 1;
     }
 
     in_uint32_le(s, self->requestedProtocol);
+    if (self->requestedProtocol > 0xb)
+    {
+        DEBUG(("xrdp_iso_process_rdpNegReq: error, requestedProtocol: %x",
+                        self->requestedProtocol));
+        return 1;
+    }
 
-    //TODO: think of protocol verification logic
-//    if (requestedProtocol != PROTOCOL_RDP || PROTOCOL_SSL || PROTOCOL_HYBRID || PROTOCOL_HYBRID_EX)
-//    {
-//        DEBUG(("       xrdp_iso_recv_rdpnegreq: wrong requestedProtocol: %x",requestedProtocol));
-//        return 1;
-//    }
-
-    DEBUG(("     out xrdp_iso_recv_rdpnegreq"));
+    DEBUG(("     out xrdp_iso_process_rdpNegReq"));
     return 0;
 }
 /*****************************************************************************/
@@ -88,11 +88,11 @@ xrdp_iso_recv_rdpnegreq(struct xrdp_iso *self, struct stream *s)
 static int APP_CC
 xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code, int *len)
 {
-    int ver;  // TPKT Version
-    int plen; // TPKT PacketLength
+    int ver; // tpkt ver
+    int plen; // tpkt len
 
-    *code = 0; // X.224 Packet Type
-    *len = 0;  // X.224 Length Indicator
+    *code = 0; // x.244 type
+    *len = 0; // X.224 len indicator
 
     if (s != self->trans->in_s)
     {
@@ -169,120 +169,69 @@ xrdp_iso_recv(struct xrdp_iso *self, struct stream *s)
     DEBUG(("   out xrdp_iso_recv"));
     return 0;
 }
-
 /*****************************************************************************/
 static int APP_CC
-xrdp_iso_send_rdpnegrsp(struct xrdp_iso *self, struct stream *s, int code)
-{
-    init_stream(s, 8192 * 4); /* 32 KB */
-
-    /* TPKT HEADER - 4 bytes */
-    out_uint8(s, 3);    /* version */
-    out_uint8(s, 0);    /* RESERVED */
-    if (self->selectedProtocol != -1)
-    {
-        out_uint16_be(s, 19); /* length */ //rdp negotiation happens.
-    }
-    else
-    {
-        out_uint16_be(s, 11); /* length */ //rdp negotiation doesn't happen.
-    }
-    /* ISO LAYER - X.224  - 7 bytes*/
-    if (self->selectedProtocol != -1)
-    {
-        out_uint8(s, 14); /* length */
-    }
-    else
-    {
-        out_uint8(s, 6); /* length */
-    }
-    out_uint8(s, code); /* SHOULD BE 0xD for CC */
-    out_uint16_be(s, 0);
-    out_uint16_be(s, 0x1234);
-    out_uint8(s, 0);
-    if (self->selectedProtocol != -1)
-    {
-        /* RDP_NEG_RSP - 8 bytes*/
-        out_uint8(s, RDP_NEG_RSP);
-        out_uint8(s, EXTENDED_CLIENT_DATA_SUPPORTED); /* flags */
-        out_uint16_le(s, 8); /* fixed length */
-        out_uint32_le(s, self->selectedProtocol); /* selected protocol */
-    }
-
-    s_mark_end(s);
-
-    if (trans_force_write_s(self->trans, s) != 0)
-    {
-        return 1;
-    }
-
-    return 0;
-}
-/*****************************************************************************/
-static int APP_CC
-xrdp_iso_send_rdpnegfailure(struct xrdp_iso *self, struct stream *s, int code, int failureCode)
-{
-    init_stream(s, 8192 * 4); /* 32 KB */
-
-    /* TPKT HEADER - 4 bytes */
-    out_uint8(s, 3);    /* version */
-    out_uint8(s, 0);    /* RESERVED */
-    out_uint16_be(s, 19); /* length */
-    /* ISO LAYER - X.224  - 7 bytes*/
-    out_uint8(s, 14); /* length */
-    out_uint8(s, code); /* SHOULD BE 0xD for CC */
-    out_uint16_be(s, 0);
-    out_uint16_be(s, 0x1234);
-    out_uint8(s, 0);
-    /* RDP_NEG_FAILURE - 8 bytes*/
-    out_uint8(s, RDP_NEG_FAILURE);
-    out_uint8(s, 0); /* no flags available */
-    out_uint16_le(s, 8); /* fixed length */
-    out_uint32_le(s, failureCode); /* failure code */
-    s_mark_end(s);
-
-    if (trans_force_write_s(self->trans, s) != 0)
-    {
-        return 1;
-    }
-
-    return 0;
-}
-
-/*****************************************************************************/
-static int APP_CC
-xrdp_iso_send_nego(struct xrdp_iso *self)
+xrdp_iso_send_cc(struct xrdp_iso *self)
 {
     struct stream *s;
+    char *holdp;
+    char *len_ptr;
+    char *len_indicator_ptr;
+    int len;
+    int len_indicator;
 
     make_stream(s);
     init_stream(s, 8192);
 
-    //TODO: negotiation logic here.
-    if (self->requestedProtocol != PROTOCOL_RDP)
+    holdp = s->p;
+    /* tpkt */
+    out_uint8(s, 3); /* version */
+    out_uint8(s, 0); /* pad */
+    len_ptr = s->p;
+    out_uint16_be(s, 0); /* length, set later */
+    /* iso */
+    len_indicator_ptr = s->p;
+    out_uint8(s, 0); /* length indicator, set later */
+    out_uint8(s, ISO_PDU_CC); /* Connection Confirm PDU */
+    out_uint16_be(s, 0);
+    out_uint16_be(s, 0x1234);
+    out_uint8(s, 0);
+    /* rdpNegData */
+    if (self->rdpNegData)
     {
-        // Send RDP_NEG_FAILURE back to client
-        if (xrdp_iso_send_rdpnegfailure(self, s, ISO_PDU_CC,
-                                        SSL_NOT_ALLOWED_BY_SERVER) != 0)
+        if (self->failureCode)
         {
-            free_stream(s);
-            return 1;
+            out_uint8(s, RDP_NEG_FAILURE);
+            out_uint8(s, 0); /* no flags */
+            out_uint16_le(s, 8); /* must be 8 */
+            out_uint32_le(s, self->failureCode); /* failure code */
+        }
+        else
+        {
+            out_uint8(s, RDP_NEG_RSP);
+            //TODO: hardcoded flags
+            out_uint8(s, EXTENDED_CLIENT_DATA_SUPPORTED); /* flags */
+            out_uint16_le(s, 8); /* must be 8 */
+            out_uint32_le(s, self->selectedProtocol); /* selected protocol */
         }
     }
-    else
+
+    s_mark_end(s);
+
+    len = (int) (s->end - holdp);
+    len_indicator = (int) (s->end - len_indicator_ptr);
+    len_ptr[0] = len << 8;
+    len_ptr[1] = len;
+    len_indicator_ptr[0] = len_indicator;
+
+    if (trans_force_write_s(self->trans, s) != 0)
     {
-        self->selectedProtocol = PROTOCOL_RDP;
-        // Send RDP_NEG_RSP back to client
-        if (xrdp_iso_send_rdpnegrsp(self, s, ISO_PDU_CC) != 0)
-        {
-            free_stream(s);
-            return 1;
-        }
+        return 1;
     }
+
     free_stream(s);
     return 0;
 }
-
 /*****************************************************************************/
 /* returns error */
 int APP_CC
@@ -306,7 +255,7 @@ xrdp_iso_incoming(struct xrdp_iso *self)
 
     if (xrdp_iso_recv_msg(self, s, &code, &len) != 0)
     {
-        DEBUG(("   in xrdp_iso_recv_msg error!!"));
+        g_writeln("xrdp_iso_incoming: xrdp_iso_recv_msg returned non zero");
         return 1;
     }
 
@@ -315,9 +264,7 @@ xrdp_iso_incoming(struct xrdp_iso *self)
         return 1;
     }
 
-    self->selectedProtocol = -1;
-    self->requestedProtocol = PROTOCOL_RDP;
-
+    /* process connection request */
     pend = s->p + (len - 6);
     cookie_index = 0;
     while (s->p < pend)
@@ -328,8 +275,11 @@ xrdp_iso_incoming(struct xrdp_iso *self)
             default:
                 break;
             case RDP_NEG_REQ: /* rdpNegReq 1 */
-                if (xrdp_iso_recv_rdpnegreq(self, s) != 0)
+                self->rdpNegData = 1;
+                if (xrdp_iso_process_rdpNegReq(self, s) != 0)
                 {
+                    g_writeln(
+                            "xrdp_iso_incoming: xrdp_iso_process_rdpNegReq returned non zero");
                     return 1;
                 }
                 break;
@@ -355,8 +305,77 @@ xrdp_iso_incoming(struct xrdp_iso *self)
         }
     }
 
-    if (xrdp_iso_send_nego(self) != 0)
+    /* security layer negotiation */
+    if (self->rdpNegData)
     {
+        int
+                serverSecurityLayer =
+                        self->mcs_layer->sec_layer->rdp_layer->client_info.security_layer;
+        self->selectedProtocol = PROTOCOL_RDP; /* set default security layer */
+
+        switch (serverSecurityLayer)
+        {
+            case (PROTOCOL_SSL | PROTOCOL_HYBRID | PROTOCOL_HYBRID_EX):
+                /* server supports tls+hybrid+hybrid_ex */
+                if (self->requestedProtocol == (PROTOCOL_SSL | PROTOCOL_HYBRID
+                        | PROTOCOL_HYBRID_EX))
+                {
+                    /* client supports tls+hybrid+hybrid_ex */
+                    self->selectedProtocol = PROTOCOL_SSL; //TODO: change
+                }
+                else
+                {
+                    self->failureCode = SSL_WITH_USER_AUTH_REQUIRED_BY_SERVER;
+                }
+                break;
+            case (PROTOCOL_SSL | PROTOCOL_HYBRID):
+                /* server supports tls+hybrid */
+                if (self->requestedProtocol == (PROTOCOL_SSL | PROTOCOL_HYBRID))
+                {
+                    /* client supports tls+hybrid */
+                    self->selectedProtocol = PROTOCOL_SSL; //TODO: change
+                }
+                else
+                {
+                    self->failureCode = HYBRID_REQUIRED_BY_SERVER;
+                }
+                break;
+            case PROTOCOL_SSL:
+                /* server supports tls */
+                if (self->requestedProtocol & PROTOCOL_SSL) //TODO
+                {
+                    /* client supports tls */
+                    self->selectedProtocol = PROTOCOL_SSL;
+                }
+                else
+                {
+                    self->failureCode = SSL_REQUIRED_BY_SERVER;
+                }
+                break;
+            case PROTOCOL_RDP:
+                /* server supports rdp */
+                if (self->requestedProtocol == PROTOCOL_RDP)
+                {
+                    /* client supports rdp */
+                    self->selectedProtocol = PROTOCOL_RDP;
+                }
+                else
+                {
+                    self->failureCode = SSL_NOT_ALLOWED_BY_SERVER;
+                }
+                break;
+            default:
+                /* unsupported protocol */
+                g_writeln("xrdp_iso_incoming: unsupported protocol %d",
+                        self->requestedProtocol);
+                self->failureCode = INCONSISTENT_FLAGS; //TODO: ?
+        }
+    }
+
+    /* send connection confirm back to client */
+    if (xrdp_iso_send_cc(self) != 0)
+    {
+        g_writeln("xrdp_iso_incoming: xrdp_iso_send_cc returned non zero");
         return 1;
     }
 
@@ -383,7 +402,7 @@ xrdp_iso_send(struct xrdp_iso *self, struct stream *s)
 
     DEBUG(("   in xrdp_iso_send"));
     s_pop_layer(s, iso_hdr);
-    len = (int)(s->end - s->p);
+    len = (int) (s->end - s->p);
     out_uint8(s, 3);
     out_uint8(s, 0);
     out_uint16_be(s, len);

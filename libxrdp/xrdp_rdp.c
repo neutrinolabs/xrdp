@@ -160,21 +160,21 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
         {
             if (g_strcasecmp(value, "rdp") == 0)
             {
-                client_info->security_layer = 1;
+                client_info->security_layer = PROTOCOL_RDP;
             }
             else if (g_strcasecmp(value, "tls") == 0)
             {
-                client_info->security_layer = 2;
+                client_info->security_layer = PROTOCOL_SSL;
             }
             else if (g_strcasecmp(value, "hybrid") == 0)
             {
-                client_info->security_layer = 3;
+                client_info->security_layer = PROTOCOL_SSL | PROTOCOL_HYBRID;
             }
             else
             {
                 log_message(LOG_LEVEL_ALWAYS,"Warning: Your configured security layer is"
                           "undefined, xrdp will negotiate client compatible");
-                client_info->security_layer = -1;
+                client_info->security_layer = PROTOCOL_SSL | PROTOCOL_HYBRID | PROTOCOL_HYBRID_EX;
             }
         }
 
