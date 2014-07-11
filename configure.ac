@@ -51,6 +51,10 @@ AC_ARG_ENABLE(xrdpvr, AS_HELP_STRING([--enable-xrdpvr],
               [Build xrdpvr module (default: no)]),
               [xrdpvr=true], [xrdpvr=false])
 AM_CONDITIONAL(XRDP_XRDPVR, [test x$xrdpvr = xtrue])
+AC_ARG_ENABLE(rfxcodec, AS_HELP_STRING([--enable-rfxcodec],
+              [Build using librfxcodec (default: no)]),
+              [rfxcodec=true], [rfxcodec=false])
+AM_CONDITIONAL(XRDP_RFXCODEC, [test x$rfxcodec = xtrue])
 
 AM_CONDITIONAL(GOT_PREFIX, test "x${prefix}" != "xNONE"])
 

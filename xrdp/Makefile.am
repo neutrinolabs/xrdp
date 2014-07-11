@@ -15,6 +15,12 @@ EXTRA_INCLUDES += -I$(prefix)/include
 EXTRA_FLAGS += -L$(prefix)/lib -Wl,-rpath -Wl,$(prefix)/lib
 endif
 
+if XRDP_RFXCODEC
+EXTRA_DEFINES += -DXRDP_RFXCODEC
+EXTRA_INCLUDES += -I$(top_srcdir)/librfxcodec/include
+EXTRA_LIBS += $(top_srcdir)/librfxcodec/src/librfxencode.a
+endif
+
 AM_CFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
@@ -50,7 +56,8 @@ xrdp_SOURCES = \
 
 xrdp_LDADD = \
   $(top_builddir)/common/libcommon.la \
-  $(top_builddir)/libxrdp/libxrdp.la
+  $(top_builddir)/libxrdp/libxrdp.la \
+  $(EXTRA_LIBS)
 
 xrdp_LDFLAGS = \
   $(EXTRA_FLAGS)

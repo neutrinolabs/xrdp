@@ -23,6 +23,10 @@
 #include "thread_calls.h"
 #include "fifo.h"
 
+#ifdef XRDP_RFXCODEC
+#include "rfxcodec_encode.h"
+#endif
+
 #define LLOG_LEVEL 1
 #define LLOGLN(_level, _args) \
   do \
