@@ -219,7 +219,7 @@ xrdp_iso_send_cc(struct xrdp_iso *self)
     s_mark_end(s);
 
     len = (int) (s->end - holdp);
-    len_indicator = (int) (s->end - len_indicator_ptr);
+    len_indicator = (int) (s->end - len_indicator_ptr) - 1;
     len_ptr[0] = len << 8;
     len_ptr[1] = len;
     len_indicator_ptr[0] = len_indicator;
