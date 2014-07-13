@@ -56,6 +56,9 @@ rfxcodec_encode_create(int width, int height, int format, int flags)
         case RFX_FORMAT_RGB:
             enc->bits_per_pixel = 24;
             break;
+        case RFX_FORMAT_YUV:
+            enc->bits_per_pixel = 32;
+            break;
         default:
             free(enc);
             return NULL;

@@ -199,7 +199,7 @@ rfx_encode_component8(struct rfxencode *enc, const int *quantization_values,
     {
         return 1;
     }
-    if (rfx_quantization_encode(buffer16, quantization_values) != 0)
+    if (rfx_quantization_encode8(buffer16, quantization_values) != 0)
     {
         return 1;
     }

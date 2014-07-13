@@ -322,11 +322,11 @@ rfx_compose_message_tileset(struct rfxencode* enc, STREAM* s,
         quantIdxCr = tiles[i].quant_cr;
         if (enc->format == RFX_FORMAT_YUV)
         {
-            tile_data = buf + (y * stride_bytes) + x * RFX_YUV_BTES;
+            tile_data = buf + y * 64 * 4 * (stride_bytes / (64 * 4)) + x * 64 * 4;
         }
         else
         {
-            tile_data = buf + y * stride_bytes + x * (enc->bits_per_pixel / 4);
+            tile_data = buf + y * stride_bytes + x * (enc->bits_per_pixel / 8);
         }
         if (rfx_compose_message_tile(enc, s,
                                      tile_data, cx, cy, stride_bytes,

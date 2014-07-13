@@ -66,3 +66,21 @@ rfx_quantization_encode(sint16* buffer, const int* quantization_values)
     rfx_quantization_encode_block(buffer, 4096, 5);
     return 0;
 }
+
+/******************************************************************************/
+int
+rfx_quantization_encode8(sint16* buffer, const int* quantization_values)
+{
+    rfx_quantization_encode_block(buffer, 1024, quantization_values[8] - 6); /* HL1 */
+    rfx_quantization_encode_block(buffer + 1024, 1024, quantization_values[7] - 6); /* LH1 */
+    rfx_quantization_encode_block(buffer + 2048, 1024, quantization_values[9] - 6); /* HH1 */
+    rfx_quantization_encode_block(buffer + 3072, 256, quantization_values[5] - 6); /* HL2 */
+    rfx_quantization_encode_block(buffer + 3328, 256, quantization_values[4] - 6); /* LH2 */
+    rfx_quantization_encode_block(buffer + 3584, 256, quantization_values[6] - 6); /* HH2 */
+    rfx_quantization_encode_block(buffer + 3840, 64, quantization_values[2] - 6); /* HL3 */
+    rfx_quantization_encode_block(buffer + 3904, 64, quantization_values[1] - 6); /* LH3 */
+    rfx_quantization_encode_block(buffer + 3968, 64, quantization_values[3] - 6); /* HH3 */
+    rfx_quantization_encode_block(buffer + 4032, 64, quantization_values[0] - 6); /* LL3 */
+
+    return 0;
+}
