@@ -220,7 +220,7 @@ xrdp_iso_send_cc(struct xrdp_iso *self)
 
     len = (int) (s->end - holdp);
     len_indicator = (int) (s->end - len_indicator_ptr) - 1;
-    len_ptr[0] = len << 8;
+    len_ptr[0] = len >> 8;
     len_ptr[1] = len;
     len_indicator_ptr[0] = len_indicator;
 
@@ -371,6 +371,9 @@ xrdp_iso_incoming(struct xrdp_iso *self)
                 self->failureCode = INCONSISTENT_FLAGS; //TODO: ?
         }
     }
+
+    /* set things for tls connection */
+
 
     /* send connection confirm back to client */
     if (xrdp_iso_send_cc(self) != 0)
