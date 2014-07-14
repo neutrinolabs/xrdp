@@ -305,12 +305,10 @@ xrdp_iso_incoming(struct xrdp_iso *self)
         }
     }
 
+    int serverSecurityLayer = self->mcs_layer->sec_layer->rdp_layer->client_info.security_layer;
     /* security layer negotiation */
     if (self->rdpNegData)
     {
-        int
-                serverSecurityLayer =
-                        self->mcs_layer->sec_layer->rdp_layer->client_info.security_layer;
         self->selectedProtocol = PROTOCOL_RDP; /* set default security layer */
 
         switch (serverSecurityLayer)
@@ -370,6 +368,11 @@ xrdp_iso_incoming(struct xrdp_iso *self)
                         self->requestedProtocol);
                 self->failureCode = INCONSISTENT_FLAGS; //TODO: ?
         }
+    }
+    else if (self->requestedProtocol != serverSecurityLayer)
+    {
+    	/* enforce server security */
+    	return 1;
     }
 
     /* set things for tls connection */
