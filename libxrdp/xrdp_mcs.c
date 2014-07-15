@@ -755,6 +755,21 @@ xrdp_mcs_incoming(struct xrdp_mcs *self)
         return 1;
     }
 
+    /* tls */
+    if (PROTOCOL_SSL & self->iso_layer->selectedProtocol)
+    {
+    	g_writeln("xrdp_mcs_incoming: TLS mode!");
+    	self->sec_layer->crypt_level = CRYPT_LEVEL_NONE;
+    	self->sec_layer->crypt_method = CRYPT_METHOD_NONE;
+
+    	if (xrdp_tls_accept(self->sec_layer->tls) != 0)
+    	{
+    		g_writeln("xrdp_mcs_incoming: ssl_tls_accept failed");
+    		return 1;
+    	}
+    	g_writeln("xrdp_mcs_incoming: ssl_tls_accept done!!!!");
+    }
+
     if (xrdp_mcs_recv_connect_initial(self) != 0)
     {
         return 1;
@@ -961,6 +976,7 @@ xrdp_mcs_disconnect(struct xrdp_mcs *self)
 
     if (xrdp_iso_init(self->iso_layer, s) != 0)
     {
+    	xrdp_tls_disconnect(self->sec_layer->tls);
         free_stream(s);
         close_rdp_socket(self);
         DEBUG(("  out xrdp_mcs_disconnect error - 1"));
@@ -973,12 +989,14 @@ xrdp_mcs_disconnect(struct xrdp_mcs *self)
 
     if (xrdp_iso_send(self->iso_layer, s) != 0)
     {
+    	xrdp_tls_disconnect(self->sec_layer->tls);
         free_stream(s);
         close_rdp_socket(self);
         DEBUG(("  out xrdp_mcs_disconnect error - 2"));
         return 1;
     }
 
+    xrdp_tls_disconnect(self->sec_layer->tls);
     free_stream(s);
     close_rdp_socket(self);
     DEBUG(("xrdp_mcs_disconnect - close sent"));

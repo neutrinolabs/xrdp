@@ -36,6 +36,7 @@
 #include "libxrdpinc.h"
 #include "file_loc.h"
 #include "xrdp_client_info.h"
+#include <openssl/ssl.h>
 
 
 /* iso */
@@ -131,6 +132,7 @@ struct xrdp_sec
     void *encrypt_fips_info;
     void *decrypt_fips_info;
     void *sign_fips_info;
+    struct xrdp_tls *tls;
 };
 
 /* channel */
@@ -289,6 +291,30 @@ struct xrdp_mppc_enc
     int    first_pkt;        /* this is the first pkt passing through enc */
     tui16 *hash_table;
 };
+
+
+/* xrdp_tls */
+struct xrdp_tls {
+	SSL *ssl;
+	SSL_CTX *ctx;
+	char *cert;
+	char *key;
+	struct trans *trans;
+};
+
+/* xrdp_tls.c */
+struct xrdp_tls *APP_CC
+xrdp_tls_create(struct trans *trans, const char *key, const char *cert);
+int APP_CC
+xrdp_tls_accept(struct xrdp_tls *self);
+int APP_CC
+xrdp_tls_disconnect(struct xrdp_tls *self);
+void APP_CC
+xrdp_tls_delete(struct xrdp_tls *self);
+int APP_CC
+xrdp_tls_read(struct xrdp_tls *tls, unsigned char *data, int length);
+int APP_CC
+xrdp_tls_write(struct xrdp_tls *tls, unsigned char *data, int length);
 
 int APP_CC
 compress_rdp(struct xrdp_mppc_enc *enc, tui8 *srcData, int len);

@@ -141,7 +141,11 @@ libxrdp_force_read(struct trans* trans)
 
     s = trans->in_s;
     init_stream(s, 32 * 1024);
-    if (trans_force_read(trans, 4) != 0)
+    if (trans->do_tls)
+    {
+    	/*TLS*/
+    }
+    else if (trans_force_read(trans, 4) != 0) /*TCP*/
     {
         g_writeln("libxrdp_force_read: error");
         return 0;

@@ -38,6 +38,8 @@ trans_create(int mode, int in_size, int out_size)
         make_stream(self->out_s);
         init_stream(self->out_s, out_size);
         self->mode = mode;
+        self->do_tls = 0; /* default simple tcp layer */
+        self->tls = 0;
     }
 
     return self;
@@ -248,7 +250,7 @@ trans_check_wait_objs(struct trans *self)
 
             if (to_read > 0)
             {
-                read_bytes = g_tcp_recv(self->sck, self->in_s->end, to_read, 0);
+				read_bytes = g_tcp_recv(self->sck, self->in_s->end, to_read, 0);
 
                 if (read_bytes == -1)
                 {
@@ -318,7 +320,9 @@ trans_force_read_s(struct trans *self, struct stream *in_s, int size)
         {
             return 1;
         }
+
         rcvd = g_tcp_recv(self->sck, in_s->end, size, 0);
+
         if (rcvd == -1)
         {
             if (g_tcp_last_error_would_block(self->sck))
@@ -391,7 +395,7 @@ trans_force_write_s(struct trans *self, struct stream *out_s)
 
     while (total < size)
     {
-        sent = g_tcp_send(self->sck, out_s->data + total, size - total, 0);
+		sent = g_tcp_send(self->sck, out_s->data + total, size - total, 0);
 
         if (sent == -1)
         {

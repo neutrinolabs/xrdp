@@ -276,6 +276,8 @@ xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans, int crypt_level,
                                       &(self->server_mcs_data));
     self->fastpath_layer = xrdp_fastpath_create(self, trans);
     self->chan_layer = xrdp_channel_create(self, self->mcs_layer);
+    //TODO: add cert to config
+    self->tls = xrdp_tls_create(trans, "/opt/xrdpdev/etc/xrdp/pkey.pem", "/opt/xrdpdev/etc/xrdp/cert.pem");
     DEBUG((" out xrdp_sec_create"));
     return self;
 }
@@ -298,6 +300,7 @@ xrdp_sec_delete(struct xrdp_sec *self)
     ssl_des3_info_delete(self->decrypt_fips_info);
     ssl_des3_info_delete(self->encrypt_fips_info);
     ssl_hmac_info_delete(self->sign_fips_info);
+    xrdp_tls_delete(self->tls);
     g_free(self->client_mcs_data.data);
     g_free(self->server_mcs_data.data);
     /* Crypto information must always be cleared */
@@ -2115,6 +2118,7 @@ xrdp_sec_disconnect(struct xrdp_sec *self)
     int rv;
 
     DEBUG((" in xrdp_sec_disconnect"));
+
     rv = xrdp_mcs_disconnect(self->mcs_layer);
     DEBUG((" out xrdp_sec_disconnect"));
     return rv;

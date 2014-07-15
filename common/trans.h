@@ -60,6 +60,8 @@ struct trans
     char port[256];
     int no_stream_init_on_data_in;
     int extra_flags; /* user defined */
+    int do_tls; /* 0 - tcp, 1 - tls */
+    struct xrdp_tls *tls;
 };
 
 struct trans* APP_CC
