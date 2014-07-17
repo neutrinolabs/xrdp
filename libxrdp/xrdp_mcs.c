@@ -630,6 +630,7 @@ static int APP_CC
 xrdp_mcs_ber_out_header(struct xrdp_mcs *self, struct stream *s,
                         int tag_val, int len)
 {
+	g_writeln("tag_val > 0xff ? %d", tag_val > 0xff);
     if (tag_val > 0xff)
     {
         out_uint16_be(s, tag_val);
@@ -639,6 +640,7 @@ xrdp_mcs_ber_out_header(struct xrdp_mcs *self, struct stream *s,
         out_uint8(s, tag_val);
     }
 
+    g_writeln("len >= 0x80 ? %d", len >= 0x80);
     if (len >= 0x80)
     {
         out_uint8(s, 0x82);
@@ -720,7 +722,8 @@ xrdp_mcs_send_connect_response(struct xrdp_mcs *self)
     init_stream(s, 8192);
     data_len = (int) (self->server_mcs_data->end - self->server_mcs_data->data);
     xrdp_iso_init(self->iso_layer, s);
-    xrdp_mcs_ber_out_header(self, s, MCS_CONNECT_RESPONSE, data_len + 38);
+    //TODO: 36 - tls , 38 - rdp - we should calculate that
+    xrdp_mcs_ber_out_header(self, s, MCS_CONNECT_RESPONSE, data_len + 36);
     xrdp_mcs_ber_out_header(self, s, BER_TAG_RESULT, 1);
     out_uint8(s, 0);
     xrdp_mcs_ber_out_header(self, s, BER_TAG_INTEGER, 1);
@@ -750,17 +753,19 @@ xrdp_mcs_incoming(struct xrdp_mcs *self)
 {
     DEBUG(("  in xrdp_mcs_incoming"));
 
+    /* ISO */
     if (xrdp_iso_incoming(self->iso_layer) != 0)
     {
         return 1;
     }
 
-    /* tls */
+    /* TLS */
     if (PROTOCOL_SSL & self->iso_layer->selectedProtocol)
     {
     	g_writeln("xrdp_mcs_incoming: TLS mode!");
     	self->sec_layer->crypt_level = CRYPT_LEVEL_NONE;
     	self->sec_layer->crypt_method = CRYPT_METHOD_NONE;
+    	self->sec_layer->rsa_key_bytes = 0;
 
     	if (xrdp_tls_accept(self->sec_layer->tls) != 0)
     	{
@@ -770,6 +775,7 @@ xrdp_mcs_incoming(struct xrdp_mcs *self)
     	g_writeln("xrdp_mcs_incoming: ssl_tls_accept done!!!!");
     }
 
+    /* MCS */
     if (xrdp_mcs_recv_connect_initial(self) != 0)
     {
         return 1;

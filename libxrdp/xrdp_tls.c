@@ -237,3 +237,182 @@ xrdp_tls_write(struct xrdp_tls *tls, unsigned char *data, int length)
 	return status;
 }
 /*****************************************************************************/
+int APP_CC
+xrdp_tls_force_read_s(struct trans *self, struct stream *in_s, int size)
+{
+    int rcvd;
+
+    if (self->status != TRANS_STATUS_UP)
+    {
+        return 1;
+    }
+
+    while (size > 0)
+    {
+        /* make sure stream has room */
+        if ((in_s->end + size) > (in_s->data + in_s->size))
+        {
+            return 1;
+        }
+
+		g_writeln("xrdp_tls_force_read_s: Pending= %d", SSL_pending(self->tls->ssl));
+		rcvd = xrdp_tls_read(self->tls, in_s->end, size);
+
+        if (rcvd == -1)
+        {
+            if (g_tcp_last_error_would_block(self->sck))
+            {
+                if (!g_tcp_can_recv(self->sck, 100))
+                {
+                    /* check for term here */
+                    if (self->is_term != 0)
+                    {
+                        if (self->is_term())
+                        {
+                            /* term */
+                            self->status = TRANS_STATUS_DOWN;
+                            return 1;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                /* error */
+                self->status = TRANS_STATUS_DOWN;
+                return 1;
+            }
+        }
+        else if (rcvd == 0)
+        {
+            /* error */
+            self->status = TRANS_STATUS_DOWN;
+            return 1;
+        }
+        else
+        {
+            in_s->end += rcvd;
+            size -= rcvd;
+        }
+    }
+
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+xrdp_tls_force_write_s(struct trans *self, struct stream *out_s)
+{
+    int size;
+    int total;
+    int sent;
+
+    if (self->status != TRANS_STATUS_UP)
+    {
+        return 1;
+    }
+
+    size = (int)(out_s->end - out_s->data);
+    g_writeln("packet size= %d", size);
+    total = 0;
+
+    if (send_waiting(self, 1) != 0)
+    {
+        self->status = TRANS_STATUS_DOWN;
+        return 1;
+    }
+
+    while (total < size)
+    {
+		sent = xrdp_tls_write(self->tls, out_s->data + total, size - total);
+
+        if (sent == -1)
+        {
+            if (g_tcp_last_error_would_block(self->sck))
+            {
+                if (!g_tcp_can_send(self->sck, 100))
+                {
+                    /* check for term here */
+                    if (self->is_term != 0)
+                    {
+                        if (self->is_term())
+                        {
+                            /* term */
+                            self->status = TRANS_STATUS_DOWN;
+                            return 1;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                /* error */
+                self->status = TRANS_STATUS_DOWN;
+                return 1;
+            }
+        }
+        else if (sent == 0)
+        {
+            /* error */
+            self->status = TRANS_STATUS_DOWN;
+            return 1;
+        }
+        else
+        {
+            total = total + sent;
+        }
+    }
+
+    return 0;
+}
+/*****************************************************************************/
+int APP_CC
+send_waiting(struct trans *self, int block)
+{
+    struct stream *temp_s;
+    int bytes;
+    int sent;
+    int timeout;
+    int cont;
+
+    timeout = block ? 100 : 0;
+    cont = 1;
+    while (cont)
+    {
+        if (self->wait_s != 0)
+        {
+            temp_s = self->wait_s;
+            if (g_tcp_can_send(self->sck, timeout))
+            {
+                bytes = (int) (temp_s->end - temp_s->p);
+                sent = xrdp_tls_write(self->tls, temp_s->p, bytes);
+                if (sent > 0)
+                {
+                    temp_s->p += sent;
+                    if (temp_s->p >= temp_s->end)
+                    {
+                        self->wait_s = (struct stream *) (temp_s->next_packet);
+                        free_stream(temp_s);
+                    }
+                }
+                else if (sent == 0)
+                {
+                    return 1;
+                }
+                else
+                {
+                    if (!g_tcp_last_error_would_block(self->sck))
+                    {
+                        return 1;
+                    }
+                }
+            }
+        }
+        else
+        {
+            break;
+        }
+        cont = block;
+    }
+    return 0;
+}

@@ -312,9 +312,9 @@ xrdp_tls_disconnect(struct xrdp_tls *self);
 void APP_CC
 xrdp_tls_delete(struct xrdp_tls *self);
 int APP_CC
-xrdp_tls_read(struct xrdp_tls *tls, unsigned char *data, int length);
+xrdp_tls_force_read_s(struct trans *self, struct stream *in_s, int size);
 int APP_CC
-xrdp_tls_write(struct xrdp_tls *tls, unsigned char *data, int length);
+xrdp_tls_force_write_s(struct trans *self, struct stream *out_s);
 
 int APP_CC
 compress_rdp(struct xrdp_mppc_enc *enc, tui8 *srcData, int len);

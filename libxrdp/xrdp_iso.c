@@ -416,7 +416,14 @@ xrdp_iso_send(struct xrdp_iso *self, struct stream *s)
     out_uint8(s, ISO_PDU_DT);
     out_uint8(s, 0x80);
 
-    if (trans_force_write_s(self->trans, s) != 0)
+    if (self->trans->do_tls)
+    {
+    	if (xrdp_tls_force_write_s(self->trans, s) != 0)
+    	{
+    		return 1;
+    	}
+    }
+    else if (trans_force_write_s(self->trans, s) != 0)
     {
         return 1;
     }

@@ -143,7 +143,12 @@ libxrdp_force_read(struct trans* trans)
     init_stream(s, 32 * 1024);
     if (trans->do_tls)
     {
-    	/*TLS*/
+    	g_writeln("libxrdp_force_read: tls data in");
+    	if (xrdp_tls_force_read_s(trans, s, 4) != 0)
+    	{
+    		return 0;
+    	}
+    	g_hexdump(s->data, 4);
     }
     else if (trans_force_read(trans, 4) != 0) /*TCP*/
     {
@@ -161,11 +166,25 @@ libxrdp_force_read(struct trans* trans)
         g_writeln("libxrdp_force_read: error");
         return 0;
     }
-    if (trans_force_read(trans, bytes - 4) != 0)
+
+    if (trans->do_tls)
+    {
+    	g_writeln("libxrdp_force_read: tls data in");
+    	xrdp_tls_force_read_s(trans, s, bytes - 4);
+    	g_hexdump(s->data, bytes);
+    }
+    else if (trans_force_read(trans, bytes - 4) != 0) /*TCP*/
     {
         g_writeln("libxrdp_force_read: error");
         return 0;
     }
+
+
+//    if (trans_force_read(trans, bytes - 4) != 0)
+//    {
+//        g_writeln("libxrdp_force_read: error");
+//        return 0;
+//    }
     return s;
 }
 

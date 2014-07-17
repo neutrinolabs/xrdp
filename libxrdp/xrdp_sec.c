@@ -277,7 +277,8 @@ xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans, int crypt_level,
     self->fastpath_layer = xrdp_fastpath_create(self, trans);
     self->chan_layer = xrdp_channel_create(self, self->mcs_layer);
     //TODO: add cert to config
-    self->tls = xrdp_tls_create(trans, "/opt/xrdpdev/etc/xrdp/pkey.pem", "/opt/xrdpdev/etc/xrdp/cert.pem");
+    self->tls = xrdp_tls_create(trans, "/opt/xrdpdev/etc/xrdp/pkey.pem",
+			"/opt/xrdpdev/etc/xrdp/cert.pem");
     DEBUG((" out xrdp_sec_create"));
     return self;
 }
@@ -1857,7 +1858,7 @@ xrdp_sec_out_mcs_data(struct xrdp_sec *self)
     ud_ptr = s->p; /* User Data */
     
     out_uint16_le(s, SEC_TAG_SRV_INFO);
-    if (self->mcs_layer->iso_layer->selectedProtocol != -1)
+    if (self->mcs_layer->iso_layer->rdpNegData)
     {
         out_uint16_le(s, 12); /* len */
     }
@@ -1869,7 +1870,7 @@ xrdp_sec_out_mcs_data(struct xrdp_sec *self)
     out_uint8(s, 0);
     out_uint8(s, 8);
     out_uint8(s, 0);
-    if (self->mcs_layer->iso_layer->selectedProtocol != -1) 
+    if (self->mcs_layer->iso_layer->rdpNegData)
     {
          /* ReqeustedProtocol */
         out_uint32_le(s, self->mcs_layer->iso_layer->selectedProtocol);
@@ -1952,6 +1953,14 @@ xrdp_sec_out_mcs_data(struct xrdp_sec *self)
         out_uint8a(s, self->pub_sig, 64); /* pub sig */
         out_uint8s(s, 8); /* pad */
     }
+    else if (self->rsa_key_bytes == 0) /* no security */
+    {
+    	g_writeln("xrdp_sec_out_mcs_data: using no security");
+		out_uint16_le(s, SEC_TAG_SRV_CRYPT);
+		out_uint16_le(s, 12); /* len is 12 */
+		out_uint32_le(s, self->crypt_method);
+		out_uint32_le(s, self->crypt_level);
+	}
     else
     {
         LLOGLN(0, ("xrdp_sec_out_mcs_data: error"));
