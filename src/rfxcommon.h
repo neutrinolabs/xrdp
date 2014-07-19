@@ -48,12 +48,38 @@ typedef struct _STREAM STREAM;
 #define stream_write_uint16(_s, _v) do { ((uint16*)((_s)->p))[0] = _v; (_s)->p += 2; } while (0)
 #define stream_write_uint32(_s, _v) do { ((uint32*)((_s)->p))[0] = _v; (_s)->p += 4; } while (0)
 #else
-#define stream_read_uint8(_s, _v) do { _v = ((uint8*)((_s)->p))[0]; (_s)->p += 1; } while (0)
-#define stream_read_uint16(_s, _v) do { _v = (((uint8*)((_s)->p))[0]) || ((((uint8*)((_s)->p))[1]) << 8); (_s)->p += 2; } while (0)
-#define stream_read_uint32(_s, _v) do { _v = (((uint8*)((_s)->p))[0]) || ((((uint8*)((_s)->p))[1]) << 8) || ((((uint8*)((_s)->p))[2]) << 16) || ((((uint8*)((_s)->p))[3]) << 24); (_s)->p += 4; } while (0)
-#define stream_write_uint8(_s, _v) do { ((uint8*)((_s)->p))[0] = _v; (_s)->p += 1; } while (0)
-#define stream_write_uint16(_s, _v) do { ((uint8*)((_s)->p))[0] = (uint8)(_v); ((uint8*)((_s)->p))[1] = (uint8)((_v) >> 8); (_s)->p += 2; } while (0)
-#define stream_write_uint32(_s, _v) do { ((uint8*)((_s)->p))[0] = (uint8)(_v); ((uint8*)((_s)->p))[1] = (uint8)((_v) >> 8); ((uint8*)((_s)->p))[2] = (uint8)((_v) >> 16); ((uint8*)((_s)->p))[3] = (uint8)((_v) >> 24); (_s)->p += 4; } while (0)
+#define stream_read_uint8(_s, _v) do { \
+    _v = ((uint8*)((_s)->p))[0]; \
+    (_s)->p += 1; \
+} while (0)
+#define stream_read_uint16(_s, _v) do { \
+    _v = (((uint8*)((_s)->p))[0]) | \
+        ((((uint8*)((_s)->p))[1]) << 8); \
+    (_s)->p += 2; \
+} while (0)
+#define stream_read_uint32(_s, _v) do { \
+    _v = (((uint8*)((_s)->p))[0]) | \
+        ((((uint8*)((_s)->p))[1]) << 8) | \
+        ((((uint8*)((_s)->p))[2]) << 16) | \
+        ((((uint8*)((_s)->p))[3]) << 24); \
+    (_s)->p += 4; \
+} while (0)
+#define stream_write_uint8(_s, _v) do { \
+    ((uint8*)((_s)->p))[0] = _v; \
+    (_s)->p += 1; \
+} while (0)
+#define stream_write_uint16(_s, _v) do { \
+    ((uint8*)((_s)->p))[0] = (uint8)(_v); \
+    ((uint8*)((_s)->p))[1] = (uint8)((_v) >> 8); \
+    (_s)->p += 2; \
+} while (0)
+#define stream_write_uint32(_s, _v) do { \
+    ((uint8*)((_s)->p))[0] = (uint8)(_v); \
+    ((uint8*)((_s)->p))[1] = (uint8)((_v) >> 8); \
+    ((uint8*)((_s)->p))[2] = (uint8)((_v) >> 16); \
+    ((uint8*)((_s)->p))[3] = (uint8)((_v) >> 24); \
+    (_s)->p += 4; \
+} while (0)
 #endif
 
 #define stream_seek(_s, _n) (_s)->p += _n
