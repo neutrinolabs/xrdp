@@ -226,6 +226,7 @@ xrdp_iso_send_cc(struct xrdp_iso *self)
 
     if (trans_force_write_s(self->trans, s) != 0)
     {
+        free_stream(s);
         return 1;
     }
 

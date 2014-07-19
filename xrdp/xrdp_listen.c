@@ -169,7 +169,7 @@ xrdp_listen_get_port_address(char *port, int port_bytes,
     *tcp_nodelay = 0 ;
     *tcp_keepalive = 0 ;
 
-    if (fd > 0)
+    if (fd != -1)
     {
         names = list_create();
         names->auto_free = 1;
@@ -242,8 +242,9 @@ xrdp_listen_get_port_address(char *port, int port_bytes,
 
         list_delete(names);
         list_delete(values);
-        g_file_close(fd);
     }
+
+    g_file_close(fd);
 
     /* startup_param overrides */
     if (startup_param->port[0] != 0)

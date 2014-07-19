@@ -771,7 +771,7 @@ xrdp_sec_send_media_lic_response(struct xrdp_sec *self)
 
 /*****************************************************************************/
 static void APP_CC
-xrdp_sec_rsa_op(struct xrdp_sec *self, char *out, char *in, int in_bytes, 
+xrdp_sec_rsa_op(struct xrdp_sec *self, char *out, char *in, int in_bytes,
                 char *mod, char *exp)
 {
     ssl_mod_exp(out, self->rsa_key_bytes, in, in_bytes,
@@ -1616,7 +1616,6 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
 {
     int num_channels;
     int index;
-    struct mcs_channel_item *channel_item;
 
     DEBUG(("processing channels, channel_code is %d", self->channel_code));
 
@@ -1641,16 +1640,19 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
 
     for (index = 0; index < num_channels; index++)
     {
+        struct mcs_channel_item *channel_item;
+
         channel_item = (struct mcs_channel_item *)
                        g_malloc(sizeof(struct mcs_channel_item), 1);
         if (!s_check_rem(s, 12))
         {
+            g_free(channel_item);
             return 1;
         }
         in_uint8a(s, channel_item->name, 8);
         in_uint32_le(s, channel_item->flags);
         channel_item->chanid = MCS_GLOBAL_CHANNEL + (index + 1);
-        list_add_item(self->mcs_layer->channel_list, (tintptr)channel_item);
+        list_add_item(self->mcs_layer->channel_list, (tintptr) channel_item);
         DEBUG(("got channel flags %8.8x name %s", channel_item->flags,
                channel_item->name));
     }
@@ -1852,7 +1854,7 @@ xrdp_sec_out_mcs_data(struct xrdp_sec *self)
     gcc_size_ptr = s->p; /* RDPGCCUserDataResponseLength */
     out_uint8s(s, 2);
     ud_ptr = s->p; /* User Data */
-    
+
     out_uint16_le(s, SEC_TAG_SRV_INFO);
     if (self->mcs_layer->iso_layer->selectedProtocol != -1)
     {
@@ -1866,7 +1868,7 @@ xrdp_sec_out_mcs_data(struct xrdp_sec *self)
     out_uint8(s, 0);
     out_uint8(s, 8);
     out_uint8(s, 0);
-    if (self->mcs_layer->iso_layer->selectedProtocol != -1) 
+    if (self->mcs_layer->iso_layer->selectedProtocol != -1)
     {
          /* ReqeustedProtocol */
         out_uint32_le(s, self->mcs_layer->iso_layer->selectedProtocol);
@@ -2060,7 +2062,7 @@ xrdp_sec_incoming(struct xrdp_sec *self)
     {
         item = (char *)list_get_item(items, index);
         value = (char *)list_get_item(values, index);
-        
+
         if (g_strcasecmp(item, "pub_exp") == 0)
         {
             hex_str_to_bin(value, self->pub_exp, 4);

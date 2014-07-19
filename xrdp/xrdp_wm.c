@@ -236,10 +236,11 @@ xrdp_wm_load_pointer(struct xrdp_wm *self, char *file_name, char *data,
     init_stream(fs, 8192);
     fd = g_file_open(file_name);
 
-    if (fd < 1)
+    if (fd < 0)
     {
         log_message(LOG_LEVEL_ERROR,"xrdp_wm_load_pointer: error loading pointer from file [%s]",
                   file_name);
+        xstream_free(fs);
         return 1;
     }
 
@@ -567,7 +568,7 @@ xrdp_wm_init(struct xrdp_wm *self)
 
         g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
         fd = g_file_open(cfg_file); /* xrdp.ini */
-        if (fd > 0)
+        if (fd != -1)
         {
             names = list_create();
             names->auto_free = 1;

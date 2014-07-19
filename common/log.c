@@ -284,6 +284,7 @@ internalReadConfiguration(const char *inFilename, const char *applicationName)
 
     if (ret != LOG_STARTUP_OK)
     {
+        g_file_close(fd);
         return ret;
     }
 
@@ -301,6 +302,7 @@ internalReadConfiguration(const char *inFilename, const char *applicationName)
 
     if (ret != LOG_STARTUP_OK)
     {
+        g_file_close(fd);
         return ret;
     }
 

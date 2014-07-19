@@ -179,15 +179,15 @@ void cmndList(struct SCP_CONNECTION *c)
                    (dsl[idx]).idle_days, (dsl[idx]).idle_hours, (dsl[idx]).idle_minutes, \
                    (dsl[idx]).conn_year, (dsl[idx]).conn_month, (dsl[idx]).conn_day, (dsl[idx]).conn_hour, (dsl[idx]).conn_minute);
         }
-
-        if (0 != dsl)
-        {
-            g_free(dsl);
-        }
     }
     else
     {
         printf("No sessions.\n");
+    }
+
+    if (0 != dsl)
+    {
+        g_free(dsl);
     }
 }
 

@@ -879,7 +879,7 @@ dev_redir_proc_query_dir_response(IRP *irp,
                                   tui32 IoStatus)
 {
     FUSE_DATA  *fuse_data = NULL;
-    XRDP_INODE *xinode    = NULL;
+    XRDP_INODE *xinode;
 
     tui32 Length;
     tui32 NextEntryOffset;
@@ -1017,6 +1017,7 @@ dev_redir_get_dir_listing(void *fusep, tui32 device_id, char *path)
     irp->CompletionId = g_completion_id++;
     irp->completion_type = CID_CREATE_DIR_REQ;
     irp->DeviceId = device_id;
+
     strcpy(irp->pathname, path);
     devredir_fuse_data_enqueue(irp, fusep);
 
@@ -1069,6 +1070,7 @@ dev_redir_file_open(void *fusep, tui32 device_id, char *path,
 
     irp->CompletionId = g_completion_id++;
     irp->DeviceId = device_id;
+
     strcpy(irp->pathname, path);
     devredir_fuse_data_enqueue(irp, fusep);
 
@@ -1174,6 +1176,7 @@ devredir_rmdir_or_file(void *fusep, tui32 device_id, char *path, int mode)
     irp->CompletionId = g_completion_id++;
     irp->completion_type = CID_RMDIR_OR_FILE;
     irp->DeviceId = device_id;
+
     strcpy(irp->pathname, path);
     devredir_fuse_data_enqueue(irp, fusep);
 
@@ -1216,6 +1219,7 @@ devredir_file_read(void *fusep, tui32 DeviceId, tui32 FileId,
     {
         log_error("no IRP found with FileId = %d", FileId);
         xfuse_devredir_cb_read_file(fusep, NULL, 0);
+        xstream_free(s);
         return -1;
     }
 
@@ -1224,6 +1228,7 @@ devredir_file_read(void *fusep, tui32 DeviceId, tui32 FileId,
     {
         /* system out of memory */
         xfuse_devredir_cb_read_file(fusep, NULL, 0);
+        xstream_free(s);
         return -1;
     }
     new_irp->FileId = 0;
@@ -1268,6 +1273,7 @@ dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
     {
         log_error("no IRP found with FileId = %d", FileId);
         xfuse_devredir_cb_write_file(fusep, NULL, 0);
+        xstream_free(s);
         return -1;
     }
 
@@ -1276,6 +1282,7 @@ dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
     {
         /* system out of memory */
         xfuse_devredir_cb_write_file(fusep, NULL, 0);
+        xstream_free(s);
         return -1;
     }
     new_irp->FileId = 0;

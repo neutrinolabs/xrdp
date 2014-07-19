@@ -759,8 +759,12 @@ session_start_fork(int width, int height, int bpp, char *username,
 
         /*THREAD-FIX release chain lock */
         lock_chain_release();
+
+        return display;
     }
 
+    g_free(temp->item);
+    g_free(temp);
     return display;
 }
 
@@ -1003,6 +1007,7 @@ session_get_bypid(int pid)
                         "pid %d is null!", pid);
             /*THREAD-FIX release chain lock */
             lock_chain_release();
+            g_free(dummy);
             return 0;
         }
 
@@ -1021,6 +1026,7 @@ session_get_bypid(int pid)
 
     /*THREAD-FIX release chain lock */
     lock_chain_release();
+    g_free(dummy);
     return 0;
 }
 

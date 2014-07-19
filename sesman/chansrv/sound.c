@@ -1189,7 +1189,6 @@ sound_sndsrvr_source_data_in(struct trans *trans)
         s_mark_end(s);
 
         trans_force_write_s(trans, s);
-        xstream_free(s);
     }
     else if (cmd == PA_CMD_START_REC)
     {
@@ -1199,6 +1198,8 @@ sound_sndsrvr_source_data_in(struct trans *trans)
     {
         sound_input_stop_recording();
     }
+
+    xstream_free(s);
 
     return 0;
 }

@@ -1287,9 +1287,9 @@ xrdp_mm_get_sesman_port(char *port, int port_bytes)
 
         list_delete(names);
         list_delete(values);
-        g_file_close(fd);
     }
 
+    g_file_close(fd);
     return 0;
 }
 
@@ -1414,7 +1414,7 @@ access_control(char *username, char *password, char *srv)
     int index;
     int socket = g_tcp_socket();
 
-    if (socket > 0)
+    if (socket != -1)
     {
         /* we use a blocking socket here */
         reply = g_tcp_connect(socket, srv, "3350");
@@ -1506,6 +1506,9 @@ access_control(char *username, char *password, char *srv)
     {
         log_message(LOG_LEVEL_ERROR, "Failure creating socket - for access control");
     }
+
+    if (socket != -1)
+        g_tcp_close(socket);
 
     return rec;
 }
@@ -2719,10 +2722,11 @@ int read_allowed_channel_names(struct list *names, struct list *values)
     int ret = 0;
     char cfg_file[256];
     int pos;
+
     g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
     fd = g_file_open(cfg_file);
 
-    if (fd > 0)
+    if (fd != -1)
     {
         names->auto_free = 1;
         values->auto_free = 1;
