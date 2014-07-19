@@ -691,11 +691,9 @@ rdpClientConProcessMsgClientInfo(rdpPtr dev, rdpClientCon *clientCon)
     i1 = clientCon->client_info.offscreen_cache_entries;
     LLOGLN(0, ("  offscreen entries %d", i1));
 
-    if ((clientCon->client_info.mcs_connection_type == 6) && /* LAN */
-        (clientCon->client_info.jpeg_codec_id == 2))
+    if (clientCon->client_info.capture_format != 0)
     {
-        /* jpeg capture needs swap */
-        clientCon->rdp_format = XRDP_a8b8g8r8;
+        clientCon->rdp_format = clientCon->client_info.capture_format;
     }
 
     if (clientCon->client_info.offscreen_support_level > 0)
@@ -1964,7 +1962,9 @@ rdpDeferredUpdateCallback(OsTimerPtr timer, CARD32 now, pointer arg)
     LLOGLN(10, ("rdpDeferredUpdateCallback:"));
     clientCon = (rdpClientCon *) arg;
 
-    if (clientCon->rect_id > clientCon->rect_id_ack)
+    if ((clientCon->rect_id > clientCon->rect_id_ack) ||
+        /* do not allow captures until we have the client_info */
+        clientCon->client_info.size == 0)
     {
         LLOGLN(0, ("rdpDeferredUpdateCallback: reschedual rect_id %d "
                "rect_id_ack %d",
@@ -1986,13 +1986,16 @@ rdpDeferredUpdateCallback(OsTimerPtr timer, CARD32 now, pointer arg)
     clientCon->updateSchedualed = FALSE;
     rects = 0;
     num_rects = 0;
-    if (rdpCapture(clientCon->dirtyRegion, &rects, &num_rects,
+    LLOGLN(10, ("rdpDeferredUpdateCallback: capture_code %d",
+           clientCon->client_info.capture_code));
+    if (rdpCapture(clientCon, clientCon->dirtyRegion, &rects, &num_rects,
                    id.pixels, id.width, id.height,
                    id.lineBytes, XRDP_a8r8g8b8, id.shmem_pixels,
                    clientCon->rdp_width, clientCon->rdp_height,
                    clientCon->rdp_width * clientCon->rdp_Bpp,
-                   clientCon->rdp_format, 0))
+                   clientCon->rdp_format, clientCon->client_info.capture_code))
     {
+        LLOGLN(10, ("rdpDeferredUpdateCallback: num_rects %d", num_rects));
         rdpClientConSendPaintRectShmEx(clientCon->dev, clientCon, &id,
                                        clientCon->dirtyRegion,
                                        rects, num_rects);
