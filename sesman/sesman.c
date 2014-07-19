@@ -361,7 +361,11 @@ main(int argc, char **argv)
     /* make sure the /tmp/.X11-unix directory exist */
     if (!g_directory_exist("/tmp/.X11-unix"))
     {
-        g_create_dir("/tmp/.X11-unix");
+        if (!g_create_dir("/tmp/.X11-unix"))
+        {
+            log_message(LOG_LEVEL_ERROR,
+                "sesman.c: error creating dir /tmp/.X11-unix");
+        }
         g_chmod_hex("/tmp/.X11-unix", 0x1777);
     }
 

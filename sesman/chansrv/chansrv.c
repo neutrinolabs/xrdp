@@ -812,7 +812,8 @@ my_api_trans_data_in(struct trans *trans)
             in_uint8s(s, 12);
             in_uint32_le(s, bytes_read);
             init_stream(s, bytes_read);
-            trans_force_read(trans, bytes_read);
+            if (trans_force_read(trans, bytes_read))
+                log_message(LOG_LEVEL_ERROR, "chansrv.c: error reading from transport");
         }
         else if (g_tcp_select(trans->sck, 0) & 1)
         {

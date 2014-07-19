@@ -1132,7 +1132,8 @@ sound_sndsrvr_source_data_in(struct trans *trans)
         return 1;
 
     ts = trans_get_in_s(trans);
-    trans_force_read(trans, 3);
+    if (trans_force_read(trans, 3))
+        log_message(LOG_LEVEL_ERROR, "sound.c: error reading from transport");
 
     ts->p = ts->data + 8;
     in_uint8(ts, cmd);
