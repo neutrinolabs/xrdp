@@ -523,6 +523,8 @@ rdpClientConProcessMsgVersion(rdpPtr dev, rdpClientCon *clientCon,
     return 0;
 }
 
+#define LALIGN(_num, _po2) ((_num + ((_po2) - 1)) & ~((_po2) - 1))
+
 /******************************************************************************/
 /*
     this from miScreenInit
@@ -544,6 +546,8 @@ rdpClientConProcessScreenSizeMsg(rdpPtr dev, rdpClientCon *clientCon,
     clientCon->rdp_width = width;
     clientCon->rdp_height = height;
     clientCon->rdp_bpp = bpp;
+    clientCon->cap_width = width;
+    clientCon->cap_height = height;
 
     if (bpp < 15)
     {
@@ -649,12 +653,13 @@ rdpClientConProcessMsgClientInput(rdpPtr dev, rdpClientCon *clientCon)
     }
     else if (msg == 300) /* resize desktop */
     {
-        rdpClientConProcessScreenSizeMsg(dev, clientCon, param1, param2, param3);
+        rdpClientConProcessScreenSizeMsg(dev, clientCon, param1,
+                                         param2, param3);
     }
     else if (msg == 301) /* version */
     {
         rdpClientConProcessMsgVersion(dev, clientCon,
-                                   param1, param2, param3, param4);
+                                      param1, param2, param3, param4);
     }
     else
     {
@@ -694,6 +699,27 @@ rdpClientConProcessMsgClientInfo(rdpPtr dev, rdpClientCon *clientCon)
     if (clientCon->client_info.capture_format != 0)
     {
         clientCon->rdp_format = clientCon->client_info.capture_format;
+    }
+
+    if (clientCon->client_info.capture_code == 2) /* RFX */
+    {
+        LLOGLN(0, ("rdpClientConProcessMsgClientInfo: got RFX capture"));
+        clientCon->cap_width = LALIGN(clientCon->rdp_width, 64);
+        clientCon->cap_height = LALIGN(clientCon->rdp_height, 64);
+        LLOGLN(0, ("  cap_width %d cap_height %d",
+               clientCon->cap_width, clientCon->cap_height));
+        if (clientCon->shmemptr != 0)
+        {
+            shmdt(clientCon->shmemptr);
+        }
+        bytes = clientCon->cap_width * clientCon->cap_height *
+                clientCon->rdp_Bpp;
+        clientCon->shmemid = shmget(IPC_PRIVATE, bytes, IPC_CREAT | 0777);
+        clientCon->shmemptr = shmat(clientCon->shmemid, 0, 0);
+        shmctl(clientCon->shmemid, IPC_RMID, NULL);
+        LLOGLN(0, ("rdpClientConProcessMsgClientInfo: shmemid %d shmemptr %p "
+               "bytes %d", clientCon->shmemid, clientCon->shmemptr, bytes));
+        clientCon->shmem_lineBytes = clientCon->rdp_Bpp * clientCon->cap_width;
     }
 
     if (clientCon->client_info.offscreen_support_level > 0)
@@ -1942,8 +1968,8 @@ rdpClientConSendPaintRectShmEx(rdpPtr dev, rdpClientCon *clientCon,
     out_uint32_le(s, clientCon->rect_id);
     out_uint32_le(s, id->shmem_id);
     out_uint32_le(s, id->shmem_offset);
-    out_uint16_le(s, clientCon->rdp_width);
-    out_uint16_le(s, clientCon->rdp_height);
+    out_uint16_le(s, clientCon->cap_width);
+    out_uint16_le(s, clientCon->cap_height);
 
     rdpClientConEndUpdate(dev, clientCon);
 
@@ -1991,8 +2017,8 @@ rdpDeferredUpdateCallback(OsTimerPtr timer, CARD32 now, pointer arg)
     if (rdpCapture(clientCon, clientCon->dirtyRegion, &rects, &num_rects,
                    id.pixels, id.width, id.height,
                    id.lineBytes, XRDP_a8r8g8b8, id.shmem_pixels,
-                   clientCon->rdp_width, clientCon->rdp_height,
-                   clientCon->rdp_width * clientCon->rdp_Bpp,
+                   clientCon->cap_width, clientCon->cap_height,
+                   clientCon->cap_width * clientCon->rdp_Bpp,
                    clientCon->rdp_format, clientCon->client_info.capture_code))
     {
         LLOGLN(10, ("rdpDeferredUpdateCallback: num_rects %d", num_rects));

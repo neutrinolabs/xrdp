@@ -668,7 +668,6 @@ rdpCapture2(rdpClientCon *clientCon,
         rdpRegionInit(&lin_reg, NullBox, 0);
         pin_reg = &temp_reg;
     }
-
     extents_rect = *rdpRegionExtents(pin_reg);
     y = extents_rect.y1 & ~63;
     while (y < extents_rect.y2)
