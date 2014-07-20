@@ -441,7 +441,13 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
         g_file_read(fd, s->data, 4);
         in_uint32_le(s, size);
         /* read bmp header */
-        g_file_seek(fd, 14);
+        if (g_file_seek(fd, 14) < 0)
+        {
+            log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s\n",
+                filename);
+            g_file_close(fd);
+            return 1;
+        }
         init_stream(s, 8192);
         g_file_read(fd, s->data, 40); /* size better be 40 */
         in_uint32_le(s, header.size);
@@ -468,7 +474,11 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
 
         if (header.bit_count == 24) /* 24 bit bitmap */
         {
-            g_file_seek(fd, 14 + header.size);
+            if (g_file_seek(fd, 14 + header.size) < 0)
+            {
+                log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s\n",
+                    filename);
+            }
             xrdp_bitmap_resize(self, header.image_width, header.image_height);
             size = header.image_width * header.image_height * 3;
             init_stream(s, size);
@@ -521,7 +531,11 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
         else if (header.bit_count == 8) /* 8 bit bitmap */
         {
             /* read palette */
-            g_file_seek(fd, 14 + header.size);
+            if (g_file_seek(fd, 14 + header.size) < 0)
+            {
+                log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s\n",
+                    filename);
+            }
             init_stream(s, 8192);
             g_file_read(fd, s->data, header.clr_used * sizeof(int));
 
@@ -578,7 +592,11 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
         else if (header.bit_count == 4) /* 4 bit bitmap */
         {
             /* read palette */
-            g_file_seek(fd, 14 + header.size);
+            if (g_file_seek(fd, 14 + header.size) < 0)
+            {
+                log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s\n",
+                    filename);
+            }
             init_stream(s, 8192);
             g_file_read(fd, s->data, header.clr_used * sizeof(int));
 
