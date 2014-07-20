@@ -1048,8 +1048,11 @@ clipboard_process_format_announce(struct stream *s, int clip_msg_status,
         log_debug("clipboard_process_format_announce: formatId 0x%8.8x "
                     "wszFormatName [%s] clip_msg_len %d", formatId, desc,
                     clip_msg_len);
-        g_formatIds[g_num_formatIds] = formatId;
-        g_num_formatIds++;
+        if (g_num_formatIds <= 15)
+        {
+            g_formatIds[g_num_formatIds] = formatId;
+            g_num_formatIds++;
+        }
         if (g_num_formatIds > 15)
         {
             log_debug("clipboard_process_format_announce: max formats");
