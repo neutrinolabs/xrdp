@@ -1781,12 +1781,15 @@ void xfuse_devredir_cb_rename_file(void *vp, tui32 IoStatus)
         new_xinode = xfuse_get_inode_from_pinode_name(fip->new_inode,
                                                       fip->new_name);
 
-        if (new_xinode->mode & S_IFREG)
-            xfuse_delete_file_with_xinode(new_xinode);
-        else
-            xfuse_delete_dir_with_xinode(new_xinode);
+        if (new_xinode)
+        {
+            if (new_xinode->mode & S_IFREG)
+                xfuse_delete_file_with_xinode(new_xinode);
+            else
+                xfuse_delete_dir_with_xinode(new_xinode);
 
-        new_xinode = NULL;
+            new_xinode = NULL;
+        }
     }
 
     old_xinode = xfuse_get_inode_from_pinode_name(fip->inode, fip->name);

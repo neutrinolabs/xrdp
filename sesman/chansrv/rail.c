@@ -739,7 +739,7 @@ rail_win_get_state(Window win)
                       (unsigned char **)&data,
                       &nitems);
 
-    if (data || nitems > 0)
+    if (data && nitems > 0)
     {
         rv = *(unsigned long *)data;
         XFree(data);

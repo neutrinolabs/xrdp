@@ -60,12 +60,12 @@ init_xrdp_encoder(struct xrdp_mm *self)
     char buf[1024];
     int pid;
 
-    LLOGLN(0, ("init_xrdp_encoder: initing encoder codec_id %d", self->codec_id));
-
     if (self == 0)
     {
         return -1;
     }
+
+    LLOGLN(0, ("init_xrdp_encoder: initing encoder codec_id %d", self->codec_id));
 
     /* setup required FIFOs */
     self->fifo_to_proc = fifo_create();
@@ -100,7 +100,7 @@ init_xrdp_encoder(struct xrdp_mm *self)
             LLOGLN(0, ("init_xrdp_encoder: unknown codec_id %d",
                    self->codec_id));
             break;
-            
+
     }
 
     /* create thread to process messages */

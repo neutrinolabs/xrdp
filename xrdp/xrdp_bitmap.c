@@ -1764,42 +1764,6 @@ xrdp_bitmap_def_proc(struct xrdp_bitmap *self, int msg,
                 if (self->child_list != 0)
                 {
                     i = list_index_of(self->child_list, (long)self->focused_control);
-                }
-
-                if (shift)
-                {
-                    i--;
-
-                    if (i < 0)
-                    {
-                        i = self->child_list->count - 1;
-                    }
-                }
-                else
-                {
-                    i++;
-
-                    if (i >= self->child_list->count)
-                    {
-                        i = 0;
-                    }
-                }
-
-                n = self->child_list->count;
-                b = (struct xrdp_bitmap *)list_get_item(self->child_list, i);
-
-                while (b != self->focused_control && b != 0 && n > 0)
-                {
-                    n--;
-
-                    if (b->tab_stop)
-                    {
-                        focus_out_control = self->focused_control;
-                        self->focused_control = b;
-                        xrdp_bitmap_invalidate(focus_out_control, 0);
-                        xrdp_bitmap_invalidate(b, 0);
-                        break;
-                    }
 
                     if (shift)
                     {
@@ -1820,7 +1784,43 @@ xrdp_bitmap_def_proc(struct xrdp_bitmap *self, int msg,
                         }
                     }
 
+                    n = self->child_list->count;
                     b = (struct xrdp_bitmap *)list_get_item(self->child_list, i);
+
+                    while (b != self->focused_control && b != 0 && n > 0)
+                    {
+                        n--;
+
+                        if (b->tab_stop)
+                        {
+                            focus_out_control = self->focused_control;
+                            self->focused_control = b;
+                            xrdp_bitmap_invalidate(focus_out_control, 0);
+                            xrdp_bitmap_invalidate(b, 0);
+                            break;
+                        }
+
+                        if (shift)
+                        {
+                            i--;
+
+                            if (i < 0)
+                            {
+                                i = self->child_list->count - 1;
+                            }
+                        }
+                        else
+                        {
+                            i++;
+
+                            if (i >= self->child_list->count)
+                            {
+                                i = 0;
+                            }
+                        }
+
+                        b = (struct xrdp_bitmap *)list_get_item(self->child_list, i);
+                    }
                 }
             }
             else if (scan_code == 28) /* enter */

@@ -1745,12 +1745,12 @@ callback(long id, int msg, long param1, long param2, long param3, long param4)
 static int APP_CC
 xrdp_wm_login_mode_changed(struct xrdp_wm *self)
 {
-    g_writeln("xrdp_wm_login_mode_changed: login_mode is %d", self->login_mode);
-
     if (self == 0)
     {
         return 0;
     }
+
+    g_writeln("xrdp_wm_login_mode_changed: login_mode is %d", self->login_mode);
 
     if (self->login_mode == 0)
     {

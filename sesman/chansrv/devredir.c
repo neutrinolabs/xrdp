@@ -790,10 +790,14 @@ dev_redir_proc_device_iocompletion(struct stream *s)
         fuse_data = devredir_fuse_data_dequeue(irp);
 
         if (fuse_data == NULL)
+        {
             log_error("fuse_data is NULL");
-
-        xfuse_devredir_cb_read_file(fuse_data->data_ptr, s->p, Length);
-        devredir_irp_delete(irp);
+        }
+        else
+        {
+            xfuse_devredir_cb_read_file(fuse_data->data_ptr, s->p, Length);
+            devredir_irp_delete(irp);
+        }
         break;
 
     case CID_WRITE:
@@ -802,10 +806,14 @@ dev_redir_proc_device_iocompletion(struct stream *s)
         fuse_data = devredir_fuse_data_dequeue(irp);
 
         if (fuse_data == NULL)
+        {
             log_error("fuse_data is NULL");
-
-        xfuse_devredir_cb_write_file(fuse_data->data_ptr, s->p, Length);
-        devredir_irp_delete(irp);
+        }
+        else
+        {
+            xfuse_devredir_cb_write_file(fuse_data->data_ptr, s->p, Length);
+            devredir_irp_delete(irp);
+        }
         break;
 
     case CID_CLOSE:
