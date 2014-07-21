@@ -277,8 +277,8 @@ xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans, int crypt_level,
     self->fastpath_layer = xrdp_fastpath_create(self, trans);
     self->chan_layer = xrdp_channel_create(self, self->mcs_layer);
     //TODO: add cert to config
-    self->tls = xrdp_tls_create(trans, "/opt/xrdpdev/etc/xrdp/pkey.pem",
-			"/opt/xrdpdev/etc/xrdp/cert.pem");
+    self->tls = xrdp_tls_create(trans, "/opt/xrdpinstall/etc/xrdp/pkey.pem",
+			"/opt/xrdpinstall/etc/xrdp/cert.pem");
     DEBUG((" out xrdp_sec_create"));
     return self;
 }
@@ -329,7 +329,7 @@ xrdp_sec_init(struct xrdp_sec *self, struct stream *s)
     }
     else
     {
-        s_push_layer(s, sec_hdr, 4);
+//        s_push_layer(s, sec_hdr, 4);
     }
 
     return 0;
@@ -1048,6 +1048,7 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
     }
     in_uint32_le(s, flags);
     DEBUG((" in xrdp_sec_recv flags $%x", flags));
+    g_writeln("userdata shareheaedr flags = %d", flags);
 
     if (flags & SEC_ENCRYPT) /* 0x08 */
     {
@@ -1257,7 +1258,7 @@ xrdp_sec_send(struct xrdp_sec *self, struct stream *s, int chan)
     }
     else
     {
-        out_uint32_le(s, 0);
+//        out_uint32_le(s, 0);
     }
 
     if (xrdp_mcs_send(self->mcs_layer, s, chan) != 0)
@@ -1835,11 +1836,11 @@ xrdp_sec_out_mcs_data(struct xrdp_sec *self)
     num_channels_even = num_channels + (num_channels & 1);
     s = &(self->server_mcs_data);
     init_stream(s, 8192);
-    out_uint16_be(s, 5);
+    out_uint16_be(s, 5); /* AsnBerObjectIdentifier */
     out_uint16_be(s, 0x14);
     out_uint8(s, 0x7c);
-    out_uint16_be(s, 1);
-    out_uint8(s, 0x2a);
+    out_uint16_be(s, 1); /* -- */
+    out_uint8(s, 0x2a);  /* ConnectPDULen */
     out_uint8(s, 0x14);
     out_uint8(s, 0x76);
     out_uint8(s, 0x0a);
@@ -1854,7 +1855,7 @@ xrdp_sec_out_mcs_data(struct xrdp_sec *self)
     out_uint8(s, 0x6e); /* n */
     /* GCC Response Total Length - 2 bytes , set later */
     gcc_size_ptr = s->p; /* RDPGCCUserDataResponseLength */
-    out_uint8s(s, 2);
+    out_uint8(s, 0);
     ud_ptr = s->p; /* User Data */
     
     out_uint16_le(s, SEC_TAG_SRV_INFO);
@@ -1873,7 +1874,7 @@ xrdp_sec_out_mcs_data(struct xrdp_sec *self)
     if (self->mcs_layer->iso_layer->rdpNegData)
     {
          /* ReqeustedProtocol */
-        out_uint32_le(s, self->mcs_layer->iso_layer->selectedProtocol);
+        out_uint32_le(s, self->mcs_layer->iso_layer->requestedProtocol);
     }
     out_uint16_le(s, SEC_TAG_SRV_CHANNELS);
     out_uint16_le(s, 8 + (num_channels_even * 2)); /* len */
@@ -1960,7 +1961,7 @@ xrdp_sec_out_mcs_data(struct xrdp_sec *self)
 		out_uint16_le(s, 12); /* len is 12 */
 		out_uint32_le(s, self->crypt_method);
 		out_uint32_le(s, self->crypt_level);
-	}
+    }
     else
     {
         LLOGLN(0, ("xrdp_sec_out_mcs_data: error"));
@@ -1968,9 +1969,9 @@ xrdp_sec_out_mcs_data(struct xrdp_sec *self)
     /* end certificate */
     s_mark_end(s);
 
-    gcc_size = (int)(s->end - ud_ptr) | 0x8000;
-    gcc_size_ptr[0] = gcc_size >> 8;
-    gcc_size_ptr[1] = gcc_size;
+    gcc_size = (int)(s->end - ud_ptr);// | 0x8000;
+    gcc_size_ptr[0] = gcc_size;// >> 8;
+    //gcc_size_ptr[1] = gcc_size;
 
     return 0;
 }

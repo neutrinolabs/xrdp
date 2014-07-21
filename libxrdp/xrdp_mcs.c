@@ -630,7 +630,6 @@ static int APP_CC
 xrdp_mcs_ber_out_header(struct xrdp_mcs *self, struct stream *s,
                         int tag_val, int len)
 {
-	g_writeln("tag_val > 0xff ? %d", tag_val > 0xff);
     if (tag_val > 0xff)
     {
         out_uint16_be(s, tag_val);
@@ -640,7 +639,6 @@ xrdp_mcs_ber_out_header(struct xrdp_mcs *self, struct stream *s,
         out_uint8(s, tag_val);
     }
 
-    g_writeln("len >= 0x80 ? %d", len >= 0x80);
     if (len >= 0x80)
     {
         out_uint8(s, 0x82);
@@ -721,6 +719,7 @@ xrdp_mcs_send_connect_response(struct xrdp_mcs *self)
     make_stream(s);
     init_stream(s, 8192);
     data_len = (int) (self->server_mcs_data->end - self->server_mcs_data->data);
+    g_writeln("data len = %d , +36= %d", data_len, data_len+36);
     xrdp_iso_init(self->iso_layer, s);
     //TODO: 36 - tls , 38 - rdp - we should calculate that
     xrdp_mcs_ber_out_header(self, s, MCS_CONNECT_RESPONSE, data_len + 36);
@@ -734,6 +733,7 @@ xrdp_mcs_send_connect_response(struct xrdp_mcs *self)
     out_uint8a(s, self->server_mcs_data->data, data_len);
     s_mark_end(s);
 
+    g_hexdump(s->data, 150);
     if (xrdp_iso_send(self->iso_layer, s) != 0)
     {
         free_stream(s);
