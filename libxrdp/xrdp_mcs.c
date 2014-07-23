@@ -889,7 +889,6 @@ xrdp_mcs_send_connect_response(struct xrdp_mcs *self)
     out_uint8a(s, self->server_mcs_data->data, data_len);
     s_mark_end(s);
 
-    g_hexdump(s->data, 150);
     if (xrdp_iso_send(self->iso_layer, s) != 0)
     {
         free_stream(s);
