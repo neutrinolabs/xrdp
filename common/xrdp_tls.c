@@ -18,7 +18,8 @@
  * transport layer security
  */
 
-#include "libxrdp.h"
+#include "trans.h"
+#include "ssl_calls.h"
 
 /*****************************************************************************/
 struct xrdp_tls *APP_CC
@@ -30,10 +31,8 @@ xrdp_tls_create(struct trans *trans, const char *key, const char *cert)
     if (self != NULL)
     {
 		self->trans = trans;
-		self->cert = g_malloc(g_strlen(key) + 1, 1);
-		self->key = g_malloc(g_strlen(cert) + 1, 1);
-		strcpy(self->cert, cert);
-		strcpy(self->key, key);
+		self->cert = (char *) cert;
+		self->key = (char *) key;
     }
 
     return self;
@@ -87,30 +86,30 @@ xrdp_tls_accept(struct xrdp_tls *self)
 	SSL_CTX_set_read_ahead(self->ctx, 1);
 
 	if (self->ctx == NULL) {
-		g_writeln("ssl_tls_accept: SSL_CTX_new failed");
+		g_writeln("xrdp_tls_accept: SSL_CTX_new failed");
 		return 1;
 	}
 
 	if (SSL_CTX_use_RSAPrivateKey_file(self->ctx, self->key, SSL_FILETYPE_PEM)
 			<= 0) {
-		g_writeln("ssl_tls_accept: SSL_CTX_use_RSAPrivateKey_file failed");
+		g_writeln("xrdp_tls_accept: SSL_CTX_use_RSAPrivateKey_file failed");
 		return 1;
 	}
 
 	self->ssl = SSL_new(self->ctx);
 
 	if (self->ssl == NULL) {
-		g_writeln("ssl_tls_accept: SSL_new failed");
+		g_writeln("xrdp_tls_accept: SSL_new failed");
 		return 1;
 	}
 
 	if (SSL_use_certificate_file(self->ssl, self->cert, SSL_FILETYPE_PEM) <= 0) {
-		g_writeln("ssl_tls_accept: SSL_use_certificate_file failed");
+		g_writeln("xrdp_tls_accept: SSL_use_certificate_file failed");
 		return 1;
 	}
 
 	if (SSL_set_fd(self->ssl, self->trans->sck) < 1) {
-		g_writeln("ssl_tls_accept: SSL_set_fd failed");
+		g_writeln("xrdp_tls_accept: SSL_set_fd failed");
 		return 1;
 	}
 
@@ -123,11 +122,7 @@ xrdp_tls_accept(struct xrdp_tls *self)
 		}
 	}
 
-	g_writeln("ssl_tls_accept: TLS connection accepted");
-
-	/* set trans for TLS */
-	self->trans->do_tls = 1; /* TLS layer */
-	self->trans->tls = self; /* owner */
+	g_writeln("xrdp_tls_accept: TLS connection accepted");
 
 	return 0;
 }
@@ -166,7 +161,18 @@ xrdp_tls_print_error(char *func, SSL *connection, int value)
 int APP_CC
 xrdp_tls_disconnect(struct xrdp_tls *self)
 {
-	SSL_shutdown(self->ssl);
+	int status = SSL_shutdown(self->ssl);
+	while (status != 1)
+	{
+		status = SSL_shutdown(self->ssl);
+
+		if (status <= 0) {
+			if (xrdp_tls_print_error("SSL_shutdown", self->ssl, status))
+			{
+				return 1;
+			}
+		}
+	}
 	return 0;
 }
 /*****************************************************************************/
@@ -255,7 +261,6 @@ xrdp_tls_force_read_s(struct trans *self, struct stream *in_s, int size)
             return 1;
         }
 
-		g_writeln("xrdp_tls_force_read_s: Pending= %d", SSL_pending(self->tls->ssl));
 		rcvd = xrdp_tls_read(self->tls, in_s->end, size);
 
         if (rcvd == -1)
@@ -313,10 +318,9 @@ xrdp_tls_force_write_s(struct trans *self, struct stream *out_s)
     }
 
     size = (int)(out_s->end - out_s->data);
-    g_writeln("packet size= %d", size);
     total = 0;
 
-    if (send_waiting(self, 1) != 0)
+    if (xrdp_tls_send_waiting(self, 1) != 0)
     {
         self->status = TRANS_STATUS_DOWN;
         return 1;
@@ -367,7 +371,7 @@ xrdp_tls_force_write_s(struct trans *self, struct stream *out_s)
 }
 /*****************************************************************************/
 int APP_CC
-send_waiting(struct trans *self, int block)
+xrdp_tls_send_waiting(struct trans *self, int block)
 {
     struct stream *temp_s;
     int bytes;

@@ -56,8 +56,6 @@ xrdp_iso_process_rdpNegReq(struct xrdp_iso *self, struct stream *s)
     int flags;
     int len;
 
-    DEBUG(("     in xrdp_iso_process_neg_req"));
-
     in_uint8(s, flags);
     if (flags != 0x0 && flags != 0x8 && flags != 0x1)
     {
@@ -80,7 +78,6 @@ xrdp_iso_process_rdpNegReq(struct xrdp_iso *self, struct stream *s)
         return 1;
     }
 
-    DEBUG(("     out xrdp_iso_process_rdpNegReq"));
     return 0;
 }
 /*****************************************************************************/
@@ -278,8 +275,7 @@ xrdp_iso_incoming(struct xrdp_iso *self)
                 self->rdpNegData = 1;
                 if (xrdp_iso_process_rdpNegReq(self, s) != 0)
                 {
-                    g_writeln(
-                            "xrdp_iso_incoming: xrdp_iso_process_rdpNegReq returned non zero");
+                    g_writeln("xrdp_iso_incoming: xrdp_iso_process_rdpNegReq returned non zero");
                     return 1;
                 }
                 break;
@@ -416,14 +412,7 @@ xrdp_iso_send(struct xrdp_iso *self, struct stream *s)
     out_uint8(s, ISO_PDU_DT);
     out_uint8(s, 0x80);
 
-    if (self->trans->do_tls)
-    {
-    	if (xrdp_tls_force_write_s(self->trans, s) != 0)
-    	{
-    		return 1;
-    	}
-    }
-    else if (trans_force_write_s(self->trans, s) != 0)
+    if (trans_force_write_s(self->trans, s) != 0)
     {
         return 1;
     }

@@ -123,6 +123,9 @@ struct xrdp_client_info
 
   int max_fastpath_frag_bytes;
 
+  char certificate[1024];
+  char key_file[1024];
+
 };
 
 #endif

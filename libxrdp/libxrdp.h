@@ -36,7 +36,6 @@
 #include "libxrdpinc.h"
 #include "file_loc.h"
 #include "xrdp_client_info.h"
-#include <openssl/ssl.h>
 
 
 /* iso */
@@ -123,16 +122,13 @@ struct xrdp_sec
     char pub_mod[256];
     char pub_sig[64];
     char pri_exp[256];
-    int rsa_key_bytes; /* 64 or 256 */
-    int channel_code;
-    int multimon;
+    int rsa_key_bytes; /* 64 or 256 , 0 = no rdp security */
     char fips_encrypt_key[24];
     char fips_decrypt_key[24];
     char fips_sign_key[20];
     void *encrypt_fips_info;
     void *decrypt_fips_info;
     void *sign_fips_info;
-    struct xrdp_tls *tls;
 };
 
 /* channel */
@@ -293,29 +289,6 @@ struct xrdp_mppc_enc
 };
 
 
-/* xrdp_tls */
-struct xrdp_tls {
-	SSL *ssl;
-	SSL_CTX *ctx;
-	char *cert;
-	char *key;
-	struct trans *trans;
-};
-
-/* xrdp_tls.c */
-struct xrdp_tls *APP_CC
-xrdp_tls_create(struct trans *trans, const char *key, const char *cert);
-int APP_CC
-xrdp_tls_accept(struct xrdp_tls *self);
-int APP_CC
-xrdp_tls_disconnect(struct xrdp_tls *self);
-void APP_CC
-xrdp_tls_delete(struct xrdp_tls *self);
-int APP_CC
-xrdp_tls_force_read_s(struct trans *self, struct stream *in_s, int size);
-int APP_CC
-xrdp_tls_force_write_s(struct trans *self, struct stream *out_s);
-
 int APP_CC
 compress_rdp(struct xrdp_mppc_enc *enc, tui8 *srcData, int len);
 struct xrdp_mppc_enc * APP_CC
@@ -370,9 +343,8 @@ int APP_CC
 xrdp_mcs_disconnect(struct xrdp_mcs *self);
 
 /* xrdp_sec.c */
-struct xrdp_sec * APP_CC
-xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans, int crypt_level,
-                int channel_code, int multimon);
+struct xrdp_sec *APP_CC
+xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans);
 void APP_CC
 xrdp_sec_delete(struct xrdp_sec *self);
 int APP_CC
@@ -391,8 +363,6 @@ int APP_CC
 xrdp_sec_send(struct xrdp_sec *self, struct stream *s, int chan);
 int APP_CC
 xrdp_sec_process_mcs_data(struct xrdp_sec *self);
-int APP_CC
-xrdp_sec_out_mcs_data(struct xrdp_sec *self);
 int APP_CC
 xrdp_sec_incoming(struct xrdp_sec *self);
 int APP_CC

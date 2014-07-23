@@ -38,8 +38,10 @@ trans_create(int mode, int in_size, int out_size)
         make_stream(self->out_s);
         init_stream(self->out_s, out_size);
         self->mode = mode;
-        self->do_tls = 0; /* default simple tcp layer */
         self->tls = 0;
+        /* assign tcp functions */
+        self->trans_read_call = trans_tcp_force_read_s;
+        self->trans_write_call = trans_tcp_force_write_s;
     }
 
     return self;
@@ -68,6 +70,11 @@ trans_delete(struct trans *self)
     {
         g_file_delete(self->listen_filename);
         g_free(self->listen_filename);
+    }
+
+    if (self->tls != 0)
+    {
+    	xrdp_tls_delete(self->tls);
     }
 
     g_free(self);
@@ -301,10 +308,15 @@ trans_check_wait_objs(struct trans *self)
 
     return rv;
 }
-
 /*****************************************************************************/
 int APP_CC
 trans_force_read_s(struct trans *self, struct stream *in_s, int size)
+{
+	return self->trans_read_call(self, in_s, size);
+}
+/*****************************************************************************/
+int APP_CC
+trans_tcp_force_read_s(struct trans *self, struct stream *in_s, int size)
 {
     int rcvd;
 
@@ -368,12 +380,22 @@ trans_force_read_s(struct trans *self, struct stream *in_s, int size)
 int APP_CC
 trans_force_read(struct trans *self, int size)
 {
+	if (self->tls != 0)
+	{
+		return xrdp_tls_force_read_s(self, self->in_s, size);
+	}
     return trans_force_read_s(self, self->in_s, size);
 }
 
 /*****************************************************************************/
 int APP_CC
 trans_force_write_s(struct trans *self, struct stream *out_s)
+{
+	return self->trans_write_call(self, out_s);
+}
+/*****************************************************************************/
+int APP_CC
+trans_tcp_force_write_s(struct trans *self, struct stream *out_s)
 {
     int size;
     int total;
@@ -631,4 +653,43 @@ trans_get_out_s(struct trans *self, int size)
     }
 
     return rv;
+}
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+trans_set_tls_mode(struct trans *self, const char *key, const char *cert)
+{
+	self->tls = xrdp_tls_create(self, key, cert);
+	if (self->tls == NULL)
+	{
+		g_writeln("trans_set_tls_mode: xrdp_tls_create malloc error");
+		return 1;
+	}
+
+	if (xrdp_tls_accept(self->tls) != 0)
+	{
+		g_writeln("trans_set_tls_mode: xrdp_tls_accept failed");
+		return 1;
+	}
+
+	/* assign tls functions */
+	self->trans_read_call = xrdp_tls_force_read_s;
+	self->trans_write_call = xrdp_tls_force_write_s;
+
+	return 0;
+}
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+trans_shutdown_tls_mode(struct trans *self)
+{
+	if (self->tls != NULL)
+	{
+		return xrdp_tls_disconnect(self->tls);
+	}
+
+	/* set callback to tls */
+	self->trans_read_call = trans_tcp_force_read_s;
+	self->trans_write_call = trans_tcp_force_write_s;
+	return 0;
 }

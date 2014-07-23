@@ -17,7 +17,7 @@ EXTRA_DIST = \
   trans.h \
   xrdp_client_info.h \
   xrdp_constants.h \
-  xrdp_rail.h
+  xrdp_rail.h 
 
 AM_CFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
@@ -39,7 +39,8 @@ libcommon_la_SOURCES = \
   os_calls.c \
   ssl_calls.c \
   thread_calls.c \
-  trans.c
+  trans.c \
+  xrdp_tls.c
 
 libcommon_la_LIBADD = \
   -lcrypto \

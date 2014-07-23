@@ -177,6 +177,38 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
                 client_info->security_layer = PROTOCOL_SSL | PROTOCOL_HYBRID | PROTOCOL_HYBRID_EX;
             }
         }
+        else if (g_strcasecmp(item, "certificate") == 0)
+        {
+            g_memset(client_info->certificate, 0, sizeof(char) * 1024);
+            if (value[0] != '/')
+            {
+            	/* default certificate path */
+                g_snprintf(client_info->certificate, 1023, "%s/cert.pem", XRDP_CFG_PATH);
+                log_message(LOG_LEVEL_ALWAYS,"WARNING: Invalid x.509 certificate path defined, "
+                          "default path will be used: %s", client_info->certificate);
+            }
+            else
+            {
+            	/* use user defined certificate */
+            	g_strncpy(client_info->certificate, value, 1023);
+            }
+        }
+        else if (g_strcasecmp(item, "key_file") == 0)
+        {
+            g_memset(client_info->key_file, 0, sizeof(char) * 1024);
+            if (value[0] != '/')
+            {
+            	/* default key_file path */
+                g_snprintf(client_info->key_file, 1023, "%s/key.pem", XRDP_CFG_PATH);
+                log_message(LOG_LEVEL_ALWAYS,"WARNING: Invalid x.509 certificate path defined, "
+                          "default path will be used: %s", client_info->key_file);
+            }
+            else
+            {
+            	/* use user defined key_file */
+            	g_strncpy(client_info->key_file, value, 1023);
+            }
+        }
 
     }
 
@@ -253,10 +285,7 @@ xrdp_rdp_create(struct xrdp_session *session, struct trans *trans)
     /* read ini settings */
     xrdp_rdp_read_config(&self->client_info);
     /* create sec layer */
-    self->sec_layer = xrdp_sec_create(self, trans,
-                                      self->client_info.crypt_level,
-                                      self->client_info.channel_code,
-                                      self->client_info.multimon);
+    self->sec_layer = xrdp_sec_create(self, trans);
     /* default 8 bit v1 color bitmap cache entries and size */
     self->client_info.cache1_entries = 600;
     self->client_info.cache1_size = 256;
@@ -351,6 +380,15 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
         /* not fastpath, do tpkt */
         chan = 0;
         error = xrdp_sec_recv(self->sec_layer, s, &chan);
+
+        if (error == 3)
+        {
+        	/* unencrypted confirm active msg arrived */
+            s->next_packet = 0;
+            *code = 3;
+            DEBUG(("out (0) xrdp_rdp_recv"));
+            return 0;
+        }
 
         if (error == -1) /* special code for send demand active */
         {
