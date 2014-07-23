@@ -1002,12 +1002,12 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
         return 1;
     }
 
-    //TODO: HACK, we should recognize packets with sec header: client info, and license.
+    /* TODO: HACK, we should recognize packets without security header
+     However, client info packet and license packet always have security header. */
     if (s->data[17] == 0x13) /* confirm active pdu */
     {
     	g_writeln("CONFIRM ACTIVE ARRIVED");
-    	in_uint8s(s, 6);
-    	return 3;
+    	return 0;
     }
 
     if (s->data[17] == 0x17 || s->data[16] == 0x17) /* rdp data pdu */
