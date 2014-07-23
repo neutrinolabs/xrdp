@@ -380,10 +380,6 @@ trans_tcp_force_read_s(struct trans *self, struct stream *in_s, int size)
 int APP_CC
 trans_force_read(struct trans *self, int size)
 {
-	if (self->tls != 0)
-	{
-		return xrdp_tls_force_read_s(self, self->in_s, size);
-	}
     return trans_force_read_s(self, self->in_s, size);
 }
 
@@ -688,7 +684,7 @@ trans_shutdown_tls_mode(struct trans *self)
 		return xrdp_tls_disconnect(self->tls);
 	}
 
-	/* set callback to tls */
+	/* set callback back to tcp */
 	self->trans_read_call = trans_tcp_force_read_s;
 	self->trans_write_call = trans_tcp_force_write_s;
 	return 0;
