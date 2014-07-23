@@ -233,7 +233,7 @@ l_file_read_section(int fd, int max_file_size, const char *section,
     int len;
     int index;
     int file_size;
-    
+
     data = (char *) g_malloc(FILE_MAX_LINE_BYTES * 3, 0);
     text = data;
     name = text + FILE_MAX_LINE_BYTES;
@@ -364,7 +364,7 @@ file_by_name_read_sections(const char *file_name, struct list *names)
 
     fd = g_file_open(file_name);
 
-    if (fd < 1)
+    if (fd < 0)
     {
         return 1;
     }
@@ -405,7 +405,7 @@ file_by_name_read_section(const char *file_name, const char *section,
 
     fd = g_file_open(file_name);
 
-    if (fd < 1)
+    if (fd < 0)
     {
         return 1;
     }

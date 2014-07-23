@@ -743,7 +743,8 @@ xrdp_rdp_send_data_update_sync(struct xrdp_rdp *self)
         LLOGLN(10, ("xrdp_rdp_send_data_update_sync: fastpath"));
         if (xrdp_rdp_init_fastpath(self, s) != 0)
         {
-           return 1;
+            free_stream(s);
+            return 1;
         }
     }
     else /* slowpath */
@@ -765,6 +766,7 @@ xrdp_rdp_send_data_update_sync(struct xrdp_rdp *self)
         if (xrdp_rdp_send_fastpath(self, s,
                                    FASTPATH_UPDATETYPE_SYNCHRONIZE) != 0)
         {
+            free_stream(s);
             return 1;
         }
     }

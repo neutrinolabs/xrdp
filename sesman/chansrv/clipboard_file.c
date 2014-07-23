@@ -446,7 +446,13 @@ clipboard_send_file_data(int streamId, int lindex,
                    full_fn);
         return 1;
     }
-    g_file_seek(fd, nPositionLow);
+    if (g_file_seek(fd, nPositionLow) < 0)
+    {
+        log_message(LOG_LEVEL_ERROR, "clipboard_send_file_data: seek error "
+            "in file: %s\n", full_fn);
+        g_file_close(fd);
+        return 1;
+    }
     make_stream(s);
     init_stream(s, cbRequested + 64);
     size = g_file_read(fd, s->data + 12, cbRequested);

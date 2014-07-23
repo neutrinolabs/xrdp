@@ -217,7 +217,7 @@ sign_key(char *e_data, int e_len, char *n_data, int n_len,
     {
         return 1;
     }
-    
+
     if (n_len == 64)
     {
         key = (char *)g_malloc(184, 0);
@@ -367,11 +367,12 @@ save_all(char *e_data, int e_len, char *n_data, int n_len,
 
     fd = g_file_open(filename);
 
-    if (fd > 0)
+    if (fd != -1)
     {
         if (g_file_write(fd, "[keys]\n", 7) == -1)
         {
             g_writeln("problem writing to %s, maybe no rights", filename);
+            g_file_close(fd);
             return 1;
         }
 

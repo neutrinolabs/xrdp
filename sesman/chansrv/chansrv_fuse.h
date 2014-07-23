@@ -57,7 +57,7 @@ int xfuse_file_contents_size(int stream_id, int file_size);
 int xfuse_add_clip_dir_item(char *filename, int flags, int size, int lindex);
 
 /* functions that are invoked from devredir */
-void xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode);
+int xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode);
 void xfuse_devredir_cb_enum_dir_done(void *vp, tui32 IoStatus);
 void xfuse_devredir_cb_open_file(void *vp, tui32 IoStatus, tui32 DeviceId, tui32 FileId);
 void xfuse_devredir_cb_read_file(void *vp, char *buf, size_t length);

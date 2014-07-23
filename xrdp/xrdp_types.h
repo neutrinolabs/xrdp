@@ -268,6 +268,9 @@ struct xrdp_cache
   struct list* xrdp_os_del_list;
 };
 
+/* defined later */
+struct xrdp_enc_data;
+
 struct xrdp_mm
 {
   struct xrdp_wm* wm; /* owner */
@@ -300,6 +303,8 @@ struct xrdp_mm
   FIFO *fifo_to_proc;
   FIFO *fifo_processed;
   tbus  mutex;
+  int (*process_enc)(struct xrdp_mm *self, struct xrdp_enc_data *enc);
+  void *codec_handle;
 };
 
 struct xrdp_key_info
@@ -641,7 +646,10 @@ struct xrdp_enc_data_done
     char                 *comp_pad_data;
     struct xrdp_enc_data *enc;
     int                   last; /* true is this is last message for enc */
-    int                   index; /* depends on codec */
+    int                   x;
+    int                   y;
+    int                   cx;
+    int                   cy;
 };
 
 typedef struct xrdp_enc_data_done XRDP_ENC_DATA_DONE;

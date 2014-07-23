@@ -80,6 +80,8 @@ struct _rdpClientCon
     int rdp_width;
     int rdp_height;
     int rdp_format; /* XRDP_a8r8g8b8, XRDP_r5g6b5, ... */
+    int cap_width;
+    int cap_height;
 
     int rdpIndex; /* current os target */
 

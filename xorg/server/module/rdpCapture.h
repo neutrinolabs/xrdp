@@ -19,7 +19,8 @@
  */
 
 Bool
-rdpCapture(RegionPtr in_reg, BoxPtr *out_rects, int *num_out_rects,
+rdpCapture(rdpClientCon *clientCon,
+           RegionPtr in_reg, BoxPtr *out_rects, int *num_out_rects,
            void *src, int src_width, int src_height,
            int src_stride, int src_format,
            void *dst, int dst_width, int dst_height,

@@ -55,7 +55,13 @@ xrdp_mm_create(struct xrdp_wm *owner)
     self->login_values = list_create();
     self->login_values->auto_free = 1;
 
-    LLOGLN(10, ("xrdp_mm_create: bpp %d", self->wm->client_info->bpp));
+    LLOGLN(0, ("xrdp_mm_create: bpp %d mcs_connection_type %d "
+           "jpeg_codec_id %d v3_codec_id %d rfx_codec_id %d",
+           self->wm->client_info->bpp,
+           self->wm->client_info->mcs_connection_type,
+           self->wm->client_info->jpeg_codec_id,
+           self->wm->client_info->v3_codec_id,
+           self->wm->client_info->rfx_codec_id));
     /* go into jpeg codec mode if jpeg set, lan set */
     if (self->wm->client_info->mcs_connection_type == 6) /* LAN */
     {
@@ -67,6 +73,20 @@ xrdp_mm_create(struct xrdp_wm *owner)
                 self->codec_id = 2;
                 self->in_codec_mode = 1;
                 self->codec_quality = self->wm->client_info->jpeg_prop[0];
+                self->wm->client_info->capture_code = 0;
+                self->wm->client_info->capture_format =
+                /* PIXMAN_a8b8g8r8 */
+                (32 << 24) | (3 << 16) | (8 << 12) | (8 << 8) | (8 << 4) | 8;
+            }
+        }
+        else if (self->wm->client_info->rfx_codec_id == 3) /* RFX */
+        {
+            if (self->wm->client_info->bpp > 16)
+            {
+                LLOGLN(0, ("xrdp_mm_create: starting rfx codec session"));
+                self->codec_id = 3;
+                self->in_codec_mode = 1;
+                self->wm->client_info->capture_code = 2;
             }
         }
     }
@@ -1287,9 +1307,9 @@ xrdp_mm_get_sesman_port(char *port, int port_bytes)
 
         list_delete(names);
         list_delete(values);
-        g_file_close(fd);
     }
 
+    g_file_close(fd);
     return 0;
 }
 
@@ -1414,7 +1434,7 @@ access_control(char *username, char *password, char *srv)
     int index;
     int socket = g_tcp_socket();
 
-    if (socket > 0)
+    if (socket != -1)
     {
         /* we use a blocking socket here */
         reply = g_tcp_connect(socket, srv, "3350");
@@ -1506,6 +1526,9 @@ access_control(char *username, char *password, char *srv)
     {
         log_message(LOG_LEVEL_ERROR, "Failure creating socket - for access control");
     }
+
+    if (socket != -1)
+        g_tcp_close(socket);
 
     return rec;
 }
@@ -2064,27 +2087,31 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
                 LLOGLN(10, ("xrdp_mm_check_wait_objs: message back bytes %d",
                        enc_done->comp_bytes));
 
-                x = enc_done->enc->crects[enc_done->index * 4 + 0];
-                y = enc_done->enc->crects[enc_done->index * 4 + 1];
-                cx = enc_done->enc->crects[enc_done->index * 4 + 2];
-                cy = enc_done->enc->crects[enc_done->index * 4 + 3];
+                x = enc_done->x;
+                y = enc_done->y;
+                cx = enc_done->cx;
+                cy = enc_done->cy;
 
 #if DUMP_JPEG
                 xrdp_mm_dump_jpeg(self, enc_done);
 #endif
 
-                libxrdp_fastpath_send_surface(self->wm->session,
-                                              enc_done->comp_pad_data,
-                                              enc_done->pad_bytes,
-                                              enc_done->comp_bytes,
-                                              x, y, x + cx, y + cy,
-                                              32, 2, cx, cy);
+                if (enc_done->comp_bytes > 0)
+                {
+                    libxrdp_fastpath_send_surface(self->wm->session,
+                                                  enc_done->comp_pad_data,
+                                                  enc_done->pad_bytes,
+                                                  enc_done->comp_bytes,
+                                                  x, y, x + cx, y + cy,
+                                                  32, self->codec_id, cx, cy);
+                }
 
                 /* free enc_done */
                 if (enc_done->last)
                 {
                     LLOGLN(10, ("xrdp_mm_check_wait_objs: last set"));
-                    self->mod->mod_frame_ack(self->mod, enc_done->enc->flags, enc_done->enc->frame_id);
+                           self->mod->mod_frame_ack(self->mod,
+                           enc_done->enc->flags, enc_done->enc->frame_id);
                     g_free(enc_done->enc->drects);
                     g_free(enc_done->enc->crects);
                     g_free(enc_done->enc);
@@ -2719,10 +2746,11 @@ int read_allowed_channel_names(struct list *names, struct list *values)
     int ret = 0;
     char cfg_file[256];
     int pos;
+
     g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
     fd = g_file_open(cfg_file);
 
-    if (fd > 0)
+    if (fd != -1)
     {
         names->auto_free = 1;
         values->auto_free = 1;

@@ -538,9 +538,19 @@ main(int argc, char **argv)
         g_file_close(0);
         g_file_close(1);
         g_file_close(2);
-        g_file_open("/dev/null");
-        g_file_open("/dev/null");
-        g_file_open("/dev/null");
+
+        if (g_file_open("/dev/null") < 0)
+        {
+        }
+
+        if (g_file_open("/dev/null") < 0)
+        {
+        }
+
+        if (g_file_open("/dev/null") < 0)
+        {
+        }
+
         /* end of daemonizing code */
     }
 

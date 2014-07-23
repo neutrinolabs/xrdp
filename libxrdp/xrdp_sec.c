@@ -730,7 +730,7 @@ xrdp_sec_send_media_lic_response(struct xrdp_sec *self)
 
 /*****************************************************************************/
 static void APP_CC
-xrdp_sec_rsa_op(struct xrdp_sec *self, char *out, char *in, int in_bytes, 
+xrdp_sec_rsa_op(struct xrdp_sec *self, char *out, char *in, int in_bytes,
                 char *mod, char *exp)
 {
     ssl_mod_exp(out, self->rsa_key_bytes, in, in_bytes,
@@ -1595,6 +1595,7 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
 
     client_info = &(self->rdp_layer->client_info);
 
+
     DEBUG(("processing channels, channel_code is %d", client_info->channel_code));
 
     /* this is an option set in xrdp.ini */
@@ -1618,16 +1619,19 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
 
     for (index = 0; index < num_channels; index++)
     {
+        struct mcs_channel_item *channel_item;
+
         channel_item = (struct mcs_channel_item *)
                        g_malloc(sizeof(struct mcs_channel_item), 1);
         if (!s_check_rem(s, 12))
         {
+            g_free(channel_item);
             return 1;
         }
         in_uint8a(s, channel_item->name, 8);
         in_uint32_le(s, channel_item->flags);
         channel_item->chanid = MCS_GLOBAL_CHANNEL + (index + 1);
-        list_add_item(self->mcs_layer->channel_list, (tintptr)channel_item);
+        list_add_item(self->mcs_layer->channel_list, (tintptr) channel_item);
         DEBUG(("got channel flags %8.8x name %s", channel_item->flags,
                channel_item->name));
     }
@@ -1926,20 +1930,20 @@ xrdp_sec_incoming(struct xrdp_sec *self)
     /* initialize selected security layer */
     if (iso->requestedProtocol > PROTOCOL_RDP)
     {
-    	/* init tls security */
-    	DEBUG((" in xrdp_sec_incoming: init tls security"));
+        /* init tls security */
+        DEBUG((" in xrdp_sec_incoming: init tls security"));
 
-    	if (trans_set_tls_mode(self->mcs_layer->iso_layer->trans,
-				self->rdp_layer->client_info.key_file,
-				self->rdp_layer->client_info.certificate) != 0)
-    	{
-			g_writeln("xrdp_sec_incoming: trans_set_tls_mode failed");
-			return 1;
-		}
+        if (trans_set_tls_mode(self->mcs_layer->iso_layer->trans,
+                self->rdp_layer->client_info.key_file,
+                self->rdp_layer->client_info.certificate) != 0)
+        {
+            g_writeln("xrdp_sec_incoming: trans_set_tls_mode failed");
+            return 1;
+        }
 
-    	self->crypt_level = CRYPT_LEVEL_NONE;
-    	self->crypt_method = CRYPT_METHOD_NONE;
-    	self->rsa_key_bytes = 0;
+        self->crypt_level = CRYPT_LEVEL_NONE;
+        self->crypt_method = CRYPT_METHOD_NONE;
+        self->rsa_key_bytes = 0;
 
     }
     else

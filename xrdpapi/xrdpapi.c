@@ -129,7 +129,10 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     /* set non blocking */
     llong = fcntl(wts->fd, F_GETFL);
     llong = llong | O_NONBLOCK;
-    fcntl(wts->fd, F_SETFL, llong);
+    if (fcntl(wts->fd, F_SETFL, llong) < 0)
+    {
+        LLOGLN(10, ("WTSVirtualChannelOpenEx: set non-block mode failed"));
+    }
 
     /* connect to chansrv session */
     memset(&s, 0, sizeof(struct sockaddr_un));

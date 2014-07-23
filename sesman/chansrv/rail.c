@@ -739,7 +739,7 @@ rail_win_get_state(Window win)
                       (unsigned char **)&data,
                       &nitems);
 
-    if (data || nitems > 0)
+    if (data && nitems > 0)
     {
         rv = *(unsigned long *)data;
         XFree(data);
@@ -1254,6 +1254,7 @@ rail_win_send_text(Window win)
     else
     {
         LOG(0, ("chansrv::rail_win_send_text: error rail_get_window_data_safe failed"));
+        g_free(data);
         return 1;
     }
     if (data && len > 0)

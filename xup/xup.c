@@ -1380,6 +1380,7 @@ lib_send_client_info(struct mod *mod)
     struct stream *s;
     int len;
 
+    g_writeln("lib_send_client_info:");
     make_stream(s);
     init_stream(s, 8192);
     s_push_layer(s, iso_hdr, 4);
