@@ -124,7 +124,11 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     }
 
     /* we use unix domain socket to communicate with chansrv */
-    wts->fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if ((wts->fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
+    {
+        g_free(wts);
+        return NULL;
+    }
 
     /* set non blocking */
     llong = fcntl(wts->fd, F_GETFL);

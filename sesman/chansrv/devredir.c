@@ -118,7 +118,7 @@ dev_redir_init(void)
     } u;
 
     /* get a random number that will act as a unique clientID */
-    if ((fd = open("/dev/urandom", O_RDONLY)))
+    if ((fd = open("/dev/urandom", O_RDONLY)) != -1)
     {
         if (read(fd, u.buf, 4) != 4)
         {
