@@ -171,7 +171,6 @@ xrdp_process_data_in(struct trans *self)
             pro->server_trans->extra_flags = 1;
             break;
     }
-
     return 0;
 }
 
