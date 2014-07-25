@@ -19,7 +19,7 @@
  */
 
 #include "fifo.h"
-#include "common/os_calls.h"
+#include "os_calls.h"
 
 /**
  * Create new fifo data struct
