@@ -24,12 +24,13 @@
 #include "parse.h"
 
 /*****************************************************************************/
-struct trans *APP_CC
+struct trans *
+APP_CC
 trans_create(int mode, int in_size, int out_size)
 {
-    struct trans *self = (struct trans *)NULL;
+    struct trans *self = (struct trans *) NULL;
 
-    self = (struct trans *)g_malloc(sizeof(struct trans), 1);
+    self = (struct trans *) g_malloc(sizeof(struct trans), 1);
 
     if (self != NULL)
     {
@@ -74,7 +75,7 @@ trans_delete(struct trans *self)
 
     if (self->tls != 0)
     {
-    	xrdp_tls_delete(self->tls);
+        xrdp_tls_delete(self->tls);
     }
 
     g_free(self);
@@ -101,9 +102,8 @@ trans_get_wait_objs(struct trans *self, tbus *objs, int *count)
 
 /*****************************************************************************/
 int APP_CC
-trans_get_wait_objs_rw(struct trans *self,
-                       tbus *robjs, int *rcount,
-                       tbus *wobjs, int *wcount)
+trans_get_wait_objs_rw(struct trans *self, tbus *robjs, int *rcount,
+        tbus *wobjs, int *wcount)
 {
     if (self == 0)
     {
@@ -183,8 +183,8 @@ send_waiting(struct trans *self, int block)
 int APP_CC
 trans_check_wait_objs(struct trans *self)
 {
-    tbus in_sck = (tbus)0;
-    struct trans *in_trans = (struct trans *)NULL;
+    tbus in_sck = (tbus) 0;
+    struct trans *in_trans = (struct trans *) NULL;
     int read_bytes = 0;
     int to_read = 0;
     int read_so_far = 0;
@@ -207,7 +207,7 @@ trans_check_wait_objs(struct trans *self)
         if (g_tcp_can_recv(self->sck, 0))
         {
             in_sck = g_sck_accept(self->sck, self->addr, sizeof(self->addr),
-                                  self->port, sizeof(self->port));
+                    self->port, sizeof(self->port));
 
             if (in_sck == -1)
             {
@@ -228,13 +228,15 @@ trans_check_wait_objs(struct trans *self)
                 if (self->trans_conn_in != 0) /* is function assigned */
                 {
                     in_trans = trans_create(self->mode, self->in_s->size,
-                                            self->out_s->size);
+                            self->out_s->size);
                     in_trans->sck = in_sck;
                     in_trans->type1 = TRANS_TYPE_SERVER;
                     in_trans->status = TRANS_STATUS_UP;
                     in_trans->is_term = self->is_term;
-                    g_strncpy(in_trans->addr, self->addr, sizeof(self->addr) - 1);
-                    g_strncpy(in_trans->port, self->port, sizeof(self->port) - 1);
+                    g_strncpy(in_trans->addr, self->addr,
+                            sizeof(self->addr) - 1);
+                    g_strncpy(in_trans->port, self->port,
+                            sizeof(self->port) - 1);
 
                     if (self->trans_conn_in(self, in_trans) != 0)
                     {
@@ -252,12 +254,12 @@ trans_check_wait_objs(struct trans *self)
     {
         if (g_tcp_can_recv(self->sck, 0))
         {
-            read_so_far = (int)(self->in_s->end - self->in_s->data);
+            read_so_far = (int) (self->in_s->end - self->in_s->data);
             to_read = self->header_size - read_so_far;
 
             if (to_read > 0)
             {
-				read_bytes = g_tcp_recv(self->sck, self->in_s->end, to_read, 0);
+                read_bytes = g_tcp_recv(self->sck, self->in_s->end, to_read, 0);
 
                 if (read_bytes == -1)
                 {
@@ -284,7 +286,7 @@ trans_check_wait_objs(struct trans *self)
                 }
             }
 
-            read_so_far = (int)(self->in_s->end - self->in_s->data);
+            read_so_far = (int) (self->in_s->end - self->in_s->data);
 
             if (read_so_far == self->header_size)
             {
@@ -312,7 +314,7 @@ trans_check_wait_objs(struct trans *self)
 int APP_CC
 trans_force_read_s(struct trans *self, struct stream *in_s, int size)
 {
-	return self->trans_read_call(self, in_s, size);
+    return self->trans_read_call(self, in_s, size);
 }
 /*****************************************************************************/
 int APP_CC
@@ -387,7 +389,7 @@ trans_force_read(struct trans *self, int size)
 int APP_CC
 trans_force_write_s(struct trans *self, struct stream *out_s)
 {
-	return self->trans_write_call(self, out_s);
+    return self->trans_write_call(self, out_s);
 }
 /*****************************************************************************/
 int APP_CC
@@ -402,7 +404,7 @@ trans_tcp_force_write_s(struct trans *self, struct stream *out_s)
         return 1;
     }
 
-    size = (int)(out_s->end - out_s->data);
+    size = (int) (out_s->end - out_s->data);
     total = 0;
 
     if (send_waiting(self, 1) != 0)
@@ -413,7 +415,7 @@ trans_tcp_force_write_s(struct trans *self, struct stream *out_s)
 
     while (total < size)
     {
-		sent = g_tcp_send(self->sck, out_s->data + total, size - total, 0);
+        sent = g_tcp_send(self->sck, out_s->data + total, size - total, 0);
 
         if (sent == -1)
         {
@@ -477,7 +479,7 @@ trans_write_copy(struct trans *self)
     }
 
     out_s = self->out_s;
-    size = (int)(out_s->end - out_s->data);
+    size = (int) (out_s->end - out_s->data);
     make_stream(wait_s);
     init_stream(wait_s, size);
     out_uint8a(wait_s, out_s->data, size);
@@ -511,7 +513,7 @@ trans_write_copy(struct trans *self)
 /*****************************************************************************/
 int APP_CC
 trans_connect(struct trans *self, const char *server, const char *port,
-              int timeout)
+        int timeout)
 {
     int error;
 
@@ -615,14 +617,15 @@ trans_listen(struct trans *self, char *port)
 }
 
 /*****************************************************************************/
-struct stream *APP_CC
+struct stream *
+APP_CC
 trans_get_in_s(struct trans *self)
 {
-    struct stream *rv = (struct stream *)NULL;
+    struct stream *rv = (struct stream *) NULL;
 
     if (self == NULL)
     {
-        rv = (struct stream *)NULL;
+        rv = (struct stream *) NULL;
     }
     else
     {
@@ -633,14 +636,15 @@ trans_get_in_s(struct trans *self)
 }
 
 /*****************************************************************************/
-struct stream *APP_CC
+struct stream *
+APP_CC
 trans_get_out_s(struct trans *self, int size)
 {
-    struct stream *rv = (struct stream *)NULL;
+    struct stream *rv = (struct stream *) NULL;
 
     if (self == NULL)
     {
-        rv = (struct stream *)NULL;
+        rv = (struct stream *) NULL;
     }
     else
     {
@@ -655,37 +659,38 @@ trans_get_out_s(struct trans *self, int size)
 int APP_CC
 trans_set_tls_mode(struct trans *self, const char *key, const char *cert)
 {
-	self->tls = xrdp_tls_create(self, key, cert);
-	if (self->tls == NULL)
-	{
-		g_writeln("trans_set_tls_mode: xrdp_tls_create malloc error");
-		return 1;
-	}
+    self->tls = xrdp_tls_create(self, key, cert);
+    if (self->tls == NULL)
+    {
+        g_writeln("trans_set_tls_mode: xrdp_tls_create malloc error");
+        return 1;
+    }
 
-	if (xrdp_tls_accept(self->tls) != 0)
-	{
-		g_writeln("trans_set_tls_mode: xrdp_tls_accept failed");
-		return 1;
-	}
+    if (xrdp_tls_accept(self->tls) != 0)
+    {
+        g_writeln("trans_set_tls_mode: xrdp_tls_accept failed");
+        return 1;
+    }
 
-	/* assign tls functions */
-	self->trans_read_call = xrdp_tls_force_read_s;
-	self->trans_write_call = xrdp_tls_force_write_s;
+    /* assign tls functions */
+    self->trans_read_call = xrdp_tls_force_read_s;
+    self->trans_write_call = xrdp_tls_force_write_s;
 
-	return 0;
+    return 0;
 }
 /*****************************************************************************/
 /* returns error */
 int APP_CC
 trans_shutdown_tls_mode(struct trans *self)
 {
-	if (self->tls != NULL)
-	{
-		return xrdp_tls_disconnect(self->tls);
-	}
+    if (self->tls != NULL)
+    {
+        return xrdp_tls_disconnect(self->tls);
+    }
 
-	/* set callback back to tcp */
-	self->trans_read_call = trans_tcp_force_read_s;
-	self->trans_write_call = trans_tcp_force_write_s;
-	return 0;
+    /* set callback back to tcp 
+     self->trans_read_call = trans_tcp_force_read_s;
+     self->trans_write_call = trans_tcp_force_write_s;
+     */
+    return 0;
 }
