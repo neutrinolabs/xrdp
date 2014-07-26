@@ -203,26 +203,32 @@ x_server_running_check_ports(int display)
 
     if (!x_running) /* check 59xx */
     {
-        sck = g_tcp_socket();
-        g_sprintf(text, "59%2.2d", display);
-        x_running = g_tcp_bind(sck, text);
-        g_tcp_close(sck);
+        if ((sck = g_tcp_socket()) != -1)
+        {
+            g_sprintf(text, "59%2.2d", display);
+            x_running = g_tcp_bind(sck, text);
+            g_tcp_close(sck);
+        }
     }
 
     if (!x_running) /* check 60xx */
     {
-        sck = g_tcp_socket();
-        g_sprintf(text, "60%2.2d", display);
-        x_running = g_tcp_bind(sck, text);
-        g_tcp_close(sck);
+        if ((sck = g_tcp_socket()) != -1)
+        {
+            g_sprintf(text, "60%2.2d", display);
+            x_running = g_tcp_bind(sck, text);
+            g_tcp_close(sck);
+        }
     }
 
     if (!x_running) /* check 62xx */
     {
-        sck = g_tcp_socket();
-        g_sprintf(text, "62%2.2d", display);
-        x_running = g_tcp_bind(sck, text);
-        g_tcp_close(sck);
+        if ((sck = g_tcp_socket()) != -1)
+        {
+            g_sprintf(text, "62%2.2d", display);
+            x_running = g_tcp_bind(sck, text);
+            g_tcp_close(sck);
+        }
     }
 
     return x_running;

@@ -212,10 +212,15 @@ lib_mod_connect(struct mod *mod)
         if (use_uds)
         {
             mod->sck = g_tcp_local_socket();
+            if (mod->sck < 0)
+                return 1;
         }
         else
         {
             mod->sck = g_tcp_socket();
+            if (mod->sck < 0)
+                return 1;
+
             g_tcp_set_non_blocking(mod->sck);
             g_tcp_set_no_delay(mod->sck);
         }

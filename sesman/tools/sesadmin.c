@@ -107,6 +107,12 @@ int main(int argc, char **argv)
     scp_init(&logging);
 
     sock = g_tcp_socket();
+    if (sock < 0)
+    {
+        LOG_DBG("Socket open error, g_tcp_socket() failed\n");
+        return 1;
+    }
+
     s = scp_session_create();
     c = scp_connection_create(sock);
 

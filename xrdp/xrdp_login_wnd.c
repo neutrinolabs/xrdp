@@ -459,9 +459,10 @@ xrdp_wm_login_fill_in_combo(struct xrdp_wm *self, struct xrdp_bitmap *b)
     g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
     fd = g_file_open(cfg_file); /* xrdp.ini */
 
-    if (fd < 1)
+    if (fd < 0)
     {
         log_message(LOG_LEVEL_ERROR, "Could not read xrdp ini file %s", cfg_file);
+        return 1;
     }
 
     file_read_sections(fd, sections);
@@ -956,7 +957,7 @@ load_xrdp_config(struct xrdp_config *config, int bpp)
     g_writeln("ls_width:                %d", globals->ls_width);
     g_writeln("ls_height:               %d", globals->ls_height);
     g_writeln("ls_bg_color:             %x", globals->ls_bg_color);
-    g_writeln("ls_title:        	%s", globals->ls_title);
+    g_writeln("ls_title:            %s", globals->ls_title);
     g_writeln("ls_logo_filename:        %s", globals->ls_logo_filename);
     g_writeln("ls_logo_x_pos:           %d", globals->ls_logo_x_pos);
     g_writeln("ls_logo_y_pos:           %d", globals->ls_logo_y_pos);

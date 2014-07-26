@@ -54,7 +54,14 @@ sesman_main_loop(void)
 
     /*main program loop*/
     log_message(LOG_LEVEL_INFO, "listening...");
+
     g_sck = g_tcp_socket();
+    if (g_sck < 0)
+    {
+        log_message(LOG_LEVEL_ERROR, "error opening socket, g_tcp_socket() failed...");
+        return 1;
+    }
+
     g_tcp_set_non_blocking(g_sck);
     error = scp_tcp_bind(g_sck, g_cfg->listen_address, g_cfg->listen_port);
 
@@ -132,7 +139,8 @@ sesman_main_loop(void)
                     g_get_errno(), g_get_strerror());
     }
 
-    g_tcp_close(g_sck);
+    if (g_sck != -1)
+        g_tcp_close(g_sck);
 }
 
 /******************************************************************************/

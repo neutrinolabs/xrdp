@@ -1170,6 +1170,9 @@ rdp_rec_check_file(struct rdp_rdp *self)
         }
 
         self->rec_fd = g_file_open(file_name);
+        if (self->rec_fd < 0)
+            return 1;
+
         make_stream(s);
         init_stream(s, 8192);
         out_uint8a(s, "XRDPREC1", 8);

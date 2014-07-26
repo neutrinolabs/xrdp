@@ -244,7 +244,8 @@ xrdp_listen_get_port_address(char *port, int port_bytes,
         list_delete(values);
     }
 
-    g_file_close(fd);
+    if (fd != -1)
+        g_file_close(fd);
 
     /* startup_param overrides */
     if (startup_param->port[0] != 0)

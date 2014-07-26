@@ -1309,7 +1309,9 @@ xrdp_mm_get_sesman_port(char *port, int port_bytes)
         list_delete(values);
     }
 
-    g_file_close(fd);
+    if (fd != -1)
+        g_file_close(fd);
+
     return 0;
 }
 

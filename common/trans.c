@@ -501,12 +501,18 @@ trans_connect(struct trans *self, const char *server, const char *port,
     if (self->mode == TRANS_MODE_TCP) /* tcp */
     {
         self->sck = g_tcp_socket();
+        if (self->sck < 0)
+            return 1;
+
         g_tcp_set_non_blocking(self->sck);
         error = g_tcp_connect(self->sck, server, port);
     }
     else if (self->mode == TRANS_MODE_UNIX) /* unix socket */
     {
         self->sck = g_tcp_local_socket();
+        if (self->sck < 0)
+            return 1;
+
         g_tcp_set_non_blocking(self->sck);
         error = g_tcp_local_connect(self->sck, port);
     }
@@ -537,6 +543,10 @@ trans_connect(struct trans *self, const char *server, const char *port,
 }
 
 /*****************************************************************************/
+
+/**
+ * @return 0 on success, 1 on failure
+ */
 int APP_CC
 trans_listen_address(struct trans *self, char *port, const char *address)
 {
@@ -548,6 +558,9 @@ trans_listen_address(struct trans *self, char *port, const char *address)
     if (self->mode == TRANS_MODE_TCP) /* tcp */
     {
         self->sck = g_tcp_socket();
+        if (self->sck < 0)
+            return 1;
+
         g_tcp_set_non_blocking(self->sck);
 
         if (g_tcp_bind_address(self->sck, port, address) == 0)
@@ -565,7 +578,11 @@ trans_listen_address(struct trans *self, char *port, const char *address)
         g_free(self->listen_filename);
         self->listen_filename = 0;
         g_file_delete(port);
+
         self->sck = g_tcp_local_socket();
+        if (self->sck < 0)
+            return 1;
+
         g_tcp_set_non_blocking(self->sck);
 
         if (g_tcp_local_bind(self->sck, port) == 0)
