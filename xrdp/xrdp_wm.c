@@ -580,8 +580,7 @@ xrdp_wm_init(struct xrdp_wm *self)
                 /* if autorun is configured in xrdp.ini, we enforce that module to be loaded */
                 g_strncpy(section_name, autorun_name, 255);
             }
-            else if (self->session->client_info->domain &&
-                     self->session->client_info->domain[0] != '_')
+            else if (self->session->client_info->domain[0] != '_')
             {
                 /* domain names that starts with '_' are reserved for IP/DNS to
                  * simplify for the user in a proxy setup */

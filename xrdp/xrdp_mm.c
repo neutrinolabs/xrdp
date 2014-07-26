@@ -1229,7 +1229,7 @@ xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
                 self->wm->dragging = 0;
 
                 /* connect channel redir */
-                if ((ip == 0) || (g_strcmp(ip, "127.0.0.1") == 0) || (ip[0] == 0))
+                if ((g_strcmp(ip, "127.0.0.1") == 0) || (ip[0] == 0))
                 {
                     g_snprintf(port, 255, "/tmp/.xrdp/xrdp_chansrv_socket_%d", 7200 + display);
                 }
