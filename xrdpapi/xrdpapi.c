@@ -243,11 +243,13 @@ WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
         return 0;
     }
 
+#if 0 /* coverity: this is dead code */
     /* error, but is it ok to try again? */
     if ((rv == EWOULDBLOCK) || (rv == EAGAIN) || (rv == EINPROGRESS))
     {
         return 0;    /* failed to send, but should try again */
     }
+#endif
 
     /* fatal error */
     return -1;

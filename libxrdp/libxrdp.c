@@ -310,18 +310,18 @@ libxrdp_send_palette(struct xrdp_session *session, int *palette)
     }
 
     DEBUG(("libxrdp_send_palette sending palette"));
-    
+
     /* clear orders */
     libxrdp_orders_force_send(session);
     make_stream(s);
     init_stream(s, 8192);
-    
+
     if (session->client_info->use_fast_path & 1) /* fastpath output supported */
     {
         LLOGLN(10, ("libxrdp_send_palette: fastpath"));
         if (xrdp_rdp_init_fastpath((struct xrdp_rdp *)session->rdp, s) != 0)
         {
-			free_stream(s);
+            free_stream(s);
             return 1;
         }
     }
@@ -350,7 +350,7 @@ libxrdp_send_palette(struct xrdp_session *session, int *palette)
        if (xrdp_rdp_send_fastpath((struct xrdp_rdp *)session->rdp, s,
                                    FASTPATH_UPDATETYPE_PALETTE) != 0)
        {
-		   free_stream(s);
+           free_stream(s);
            return 1;
        }
     }
@@ -360,7 +360,7 @@ libxrdp_send_palette(struct xrdp_session *session, int *palette)
                            RDP_DATA_PDU_UPDATE);
     }
     free_stream(s);
-    
+
     /* send the orders palette too */
     libxrdp_orders_init(session);
     libxrdp_orders_send_palette(session, palette, 0);
@@ -674,7 +674,7 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
 
     switch (bpp)
     {
-        case 15:
+        //case 15: /* coverity: this is logically dead code */
         case 16:
             p16 = (tui16 *) data;
             for (i = 0; i < 32; i++)
@@ -782,7 +782,7 @@ libxrdp_set_pointer(struct xrdp_session *session, int cache_idx)
         if (xrdp_rdp_send_fastpath((struct xrdp_rdp *)session->rdp, s,
                                     FASTPATH_UPDATETYPE_CACHED) != 0)
         {
-			free_stream(s);
+            free_stream(s);
             return 1;
         }
     }

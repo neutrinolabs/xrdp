@@ -276,10 +276,7 @@ sign_key(char *e_data, int e_len, char *n_data, int n_len,
         g_free(key);
         g_free(md5_final);
     }
-    else
-    {
-        g_writeln("problem");
-    }
+
     return 0;
 }
 

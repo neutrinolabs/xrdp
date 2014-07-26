@@ -219,12 +219,6 @@ scp_v0s_accept(struct SCP_CONNECTION *c, struct SCP_SESSION **s, int skipVchk)
         {
             scp_session_set_type(session, SCP_SESSION_TYPE_XORG);
         }
-        else
-        {
-            log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: "
-                        "invalid code in xrdp.ini file: code=%d", __LINE__, code);
-            return SCP_SERVER_STATE_INTERNAL_ERR;
-        }
 
         /* reading username */
         in_uint16_be(c->in_s, sz);
