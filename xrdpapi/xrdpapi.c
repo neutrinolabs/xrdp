@@ -41,7 +41,7 @@ struct wts_obj
 {
     int      fd;
     int      status;
-    char     name[8];
+    char     name[9];
     char     dname[128];
     int      display_num;
     uint32_t flags;
