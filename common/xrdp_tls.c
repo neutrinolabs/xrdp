@@ -83,8 +83,8 @@ xrdp_tls_accept(struct xrdp_tls *self)
     self->ctx = SSL_CTX_new(SSLv23_server_method());
     /* set context options */
     SSL_CTX_set_mode(self->ctx,
-            SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER
-                    | SSL_MODE_ENABLE_PARTIAL_WRITE);
+                     SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER |
+                     SSL_MODE_ENABLE_PARTIAL_WRITE);
     SSL_CTX_set_options(self->ctx, options);
     SSL_CTX_set_read_ahead(self->ctx, 1);
 
@@ -143,7 +143,7 @@ xrdp_tls_print_error(char *func, SSL *connection, int value)
     {
     case SSL_ERROR_ZERO_RETURN:
         g_writeln("xrdp_tls_print_error: %s: Server closed TLS connection",
-                func);
+                  func);
         return 1;
 
     case SSL_ERROR_WANT_READ:

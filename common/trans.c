@@ -103,7 +103,7 @@ trans_get_wait_objs(struct trans *self, tbus *objs, int *count)
 /*****************************************************************************/
 int APP_CC
 trans_get_wait_objs_rw(struct trans *self, tbus *robjs, int *rcount,
-        tbus *wobjs, int *wcount)
+                       tbus *wobjs, int *wcount)
 {
     if (self == 0)
     {
@@ -207,7 +207,7 @@ trans_check_wait_objs(struct trans *self)
         if (g_tcp_can_recv(self->sck, 0))
         {
             in_sck = g_sck_accept(self->sck, self->addr, sizeof(self->addr),
-                    self->port, sizeof(self->port));
+                                  self->port, sizeof(self->port));
 
             if (in_sck == -1)
             {
@@ -228,15 +228,15 @@ trans_check_wait_objs(struct trans *self)
                 if (self->trans_conn_in != 0) /* is function assigned */
                 {
                     in_trans = trans_create(self->mode, self->in_s->size,
-                            self->out_s->size);
+                                            self->out_s->size);
                     in_trans->sck = in_sck;
                     in_trans->type1 = TRANS_TYPE_SERVER;
                     in_trans->status = TRANS_STATUS_UP;
                     in_trans->is_term = self->is_term;
                     g_strncpy(in_trans->addr, self->addr,
-                            sizeof(self->addr) - 1);
+                              sizeof(self->addr) - 1);
                     g_strncpy(in_trans->port, self->port,
-                            sizeof(self->port) - 1);
+                              sizeof(self->port) - 1);
 
                     if (self->trans_conn_in(self, in_trans) != 0)
                     {
@@ -513,7 +513,7 @@ trans_write_copy(struct trans *self)
 /*****************************************************************************/
 int APP_CC
 trans_connect(struct trans *self, const char *server, const char *port,
-        int timeout)
+              int timeout)
 {
     int error;
 
