@@ -2184,7 +2184,7 @@ static void xfuse_remove_dir_or_file(fuse_req_t req, fuse_ino_t parent,
     }
 
     strcat(full_path, "/");
-    strcat(full_path, name);
+    strncat(full_path, name, sizeof(full_path) - strlen(full_path));
 
     if (xinode->is_loc_resource)
     {

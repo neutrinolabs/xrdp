@@ -1026,7 +1026,7 @@ dev_redir_get_dir_listing(void *fusep, tui32 device_id, char *path)
     irp->completion_type = CID_CREATE_DIR_REQ;
     irp->DeviceId = device_id;
 
-    strcpy(irp->pathname, path);
+    strncpy(irp->pathname, path, 255);
     devredir_fuse_data_enqueue(irp, fusep);
 
     DesiredAccess = DA_FILE_READ_DATA | DA_SYNCHRONIZE;
@@ -1069,7 +1069,7 @@ dev_redir_file_open(void *fusep, tui32 device_id, char *path,
     if (type & OP_RENAME_FILE)
     {
         irp->completion_type = CID_RENAME_FILE;
-        strcpy(irp->gen_buf, gen_buf);
+        strncpy(irp->gen_buf, gen_buf, 1023);
     }
     else
     {
@@ -1079,7 +1079,7 @@ dev_redir_file_open(void *fusep, tui32 device_id, char *path,
     irp->CompletionId = g_completion_id++;
     irp->DeviceId = device_id;
 
-    strcpy(irp->pathname, path);
+    strncpy(irp->pathname, path, 255);
     devredir_fuse_data_enqueue(irp, fusep);
 
     if (mode & O_CREAT)
@@ -1185,7 +1185,7 @@ devredir_rmdir_or_file(void *fusep, tui32 device_id, char *path, int mode)
     irp->completion_type = CID_RMDIR_OR_FILE;
     irp->DeviceId = device_id;
 
-    strcpy(irp->pathname, path);
+    strncpy(irp->pathname, path, 255);
     devredir_fuse_data_enqueue(irp, fusep);
 
     //DesiredAccess = DA_DELETE | DA_FILE_READ_ATTRIBUTES | DA_SYNCHRONIZE;
