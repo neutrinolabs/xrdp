@@ -70,12 +70,13 @@ struct trans
 };
 
 /* xrdp_tls */
-struct xrdp_tls {
-	SSL *ssl;
-	SSL_CTX *ctx;
-	char *cert;
-	char *key;
-	struct trans *trans;
+struct xrdp_tls
+{
+    SSL *ssl;
+    SSL_CTX *ctx;
+    char *cert;
+    char *key;
+    struct trans *trans;
 };
 
 /* xrdp_tls.c */
