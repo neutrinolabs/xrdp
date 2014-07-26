@@ -122,9 +122,7 @@ struct xrdp_sec
     char pub_mod[256];
     char pub_sig[64];
     char pri_exp[256];
-    int rsa_key_bytes; /* 64 or 256 */
-    int channel_code;
-    int multimon;
+    int rsa_key_bytes; /* 64 or 256 , 0 = no rdp security */
     char fips_encrypt_key[24];
     char fips_decrypt_key[24];
     char fips_sign_key[20];
@@ -290,6 +288,7 @@ struct xrdp_mppc_enc
     tui16 *hash_table;
 };
 
+
 int APP_CC
 compress_rdp(struct xrdp_mppc_enc *enc, tui8 *srcData, int len);
 struct xrdp_mppc_enc * APP_CC
@@ -344,9 +343,8 @@ int APP_CC
 xrdp_mcs_disconnect(struct xrdp_mcs *self);
 
 /* xrdp_sec.c */
-struct xrdp_sec * APP_CC
-xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans, int crypt_level,
-                int channel_code, int multimon);
+struct xrdp_sec *APP_CC
+xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans);
 void APP_CC
 xrdp_sec_delete(struct xrdp_sec *self);
 int APP_CC
@@ -365,8 +363,6 @@ int APP_CC
 xrdp_sec_send(struct xrdp_sec *self, struct stream *s, int chan);
 int APP_CC
 xrdp_sec_process_mcs_data(struct xrdp_sec *self);
-int APP_CC
-xrdp_sec_out_mcs_data(struct xrdp_sec *self);
 int APP_CC
 xrdp_sec_incoming(struct xrdp_sec *self);
 int APP_CC

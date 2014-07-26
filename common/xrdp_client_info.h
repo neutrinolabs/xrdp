@@ -125,6 +125,9 @@ struct xrdp_client_info
   int capture_code;
   int capture_format;
 
+  char certificate[1024];
+  char key_file[1024];
+
 };
 
 #endif

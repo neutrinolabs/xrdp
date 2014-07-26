@@ -141,6 +141,7 @@ libxrdp_force_read(struct trans* trans)
 
     s = trans->in_s;
     init_stream(s, 32 * 1024);
+
     if (trans_force_read(trans, 4) != 0)
     {
         g_writeln("libxrdp_force_read: error");
@@ -157,6 +158,7 @@ libxrdp_force_read(struct trans* trans)
         g_writeln("libxrdp_force_read: error");
         return 0;
     }
+
     if (trans_force_read(trans, bytes - 4) != 0)
     {
         g_writeln("libxrdp_force_read: error");

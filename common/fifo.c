@@ -19,7 +19,7 @@
  */
 
 #include "fifo.h"
-#include "common/os_calls.h"
+#include "os_calls.h"
 
 /**
  * Create new fifo data struct
@@ -27,7 +27,8 @@
  * @return pointer to new FIFO or NULL if system out of memory
  *****************************************************************************/
  
-FIFO *fifo_create()
+FIFO * APP_CC
+fifo_create(void)
 {
     return (FIFO *) g_malloc(sizeof(FIFO), 1);
 }
@@ -36,7 +37,8 @@ FIFO *fifo_create()
  * Delete specified FIFO
  *****************************************************************************/
  
-void fifo_delete(FIFO *self)
+void APP_CC
+fifo_delete(FIFO *self)
 {
     USER_DATA *udp;
     
@@ -85,7 +87,8 @@ void fifo_delete(FIFO *self)
  * @return 0 on success, -1 on error
  *****************************************************************************/ 
  
-int fifo_add_item(FIFO *self, void *item)
+int APP_CC
+fifo_add_item(FIFO *self, void *item)
 {
     USER_DATA *udp;
     
@@ -121,7 +124,8 @@ int fifo_add_item(FIFO *self, void *item)
  * @return top item from FIFO or NULL if FIFO is empty
  *****************************************************************************/ 
  
-void *fifo_remove_item(FIFO *self)
+void * APP_CC
+fifo_remove_item(FIFO *self)
 {
     void      *item;
     USER_DATA *udp;
@@ -155,7 +159,8 @@ void *fifo_remove_item(FIFO *self)
  * @return true if FIFO is empty, false otherwise
  *****************************************************************************/ 
  
-int fifo_is_empty(FIFO *self)
+int APP_CC
+fifo_is_empty(FIFO *self)
 {
     if (!self)
         return 1;

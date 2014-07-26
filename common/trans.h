@@ -23,6 +23,7 @@
 
 #include "arch.h"
 #include "parse.h"
+#include <openssl/ssl.h>
 
 #define TRANS_MODE_TCP 1
 #define TRANS_MODE_UNIX 2
@@ -35,11 +36,14 @@
 #define TRANS_STATUS_UP 1
 
 struct trans; /* forward declaration */
+struct xrdp_tls;
 
 typedef int (DEFAULT_CC *ttrans_data_in)(struct trans* self);
 typedef int (DEFAULT_CC *ttrans_conn_in)(struct trans* self,
                                          struct trans* new_self);
 typedef int (DEFAULT_CC *tis_term)(void);
+typedef int (APP_CC *trans_read_call) (struct trans *self, struct stream *in_s, int size);
+typedef int (APP_CC *trans_write_call) (struct trans *self, struct stream *out_s);
 
 struct trans
 {
@@ -60,7 +64,34 @@ struct trans
     char port[256];
     int no_stream_init_on_data_in;
     int extra_flags; /* user defined */
+    struct xrdp_tls *tls;
+    trans_read_call trans_read_call;
+    trans_write_call trans_write_call;
 };
+
+/* xrdp_tls */
+struct xrdp_tls
+{
+    SSL *ssl;
+    SSL_CTX *ctx;
+    char *cert;
+    char *key;
+    struct trans *trans;
+};
+
+/* xrdp_tls.c */
+struct xrdp_tls *APP_CC
+xrdp_tls_create(struct trans *trans, const char *key, const char *cert);
+int APP_CC
+xrdp_tls_accept(struct xrdp_tls *self);
+int APP_CC
+xrdp_tls_disconnect(struct xrdp_tls *self);
+void APP_CC
+xrdp_tls_delete(struct xrdp_tls *self);
+int APP_CC
+xrdp_tls_force_read_s(struct trans *self, struct stream *in_s, int size);
+int APP_CC
+xrdp_tls_force_write_s(struct trans *self, struct stream *out_s);
 
 struct trans* APP_CC
 trans_create(int mode, int in_size, int out_size);
@@ -95,5 +126,13 @@ struct stream* APP_CC
 trans_get_in_s(struct trans* self);
 struct stream* APP_CC
 trans_get_out_s(struct trans* self, int size);
+int APP_CC
+trans_set_tls_mode(struct trans *self, const char *key, const char *cert);
+int APP_CC
+trans_shutdown_tls_mode(struct trans *self);
+int APP_CC
+trans_tcp_force_read_s(struct trans *self, struct stream *in_s, int size);
+int APP_CC
+trans_tcp_force_write_s(struct trans *self, struct stream *out_s);
 
 #endif

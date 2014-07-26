@@ -41,4 +41,8 @@
 #define XRDP_LIB_PATH "/usr/local/lib/xrdp"
 #endif
 
+#if !defined(XRDP_LOG_PATH)
+#define XRDP_LOG_PATH "/var/log"
+#endif
+
 #endif

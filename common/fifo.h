@@ -21,6 +21,8 @@
 #ifndef _FIFO_H
 #define _FIFO_H
 
+#include "arch.h"
+
 typedef struct user_data USER_DATA;
 
 struct user_data
@@ -36,10 +38,10 @@ typedef struct fifo
     int        auto_free;
 } FIFO;
 
-FIFO *fifo_create();
-void  fifo_delete(FIFO *self);
-int   fifo_add_item(FIFO *self, void *item);
-void *fifo_remove_item(FIFO *self);
-int   fifo_is_empty();
+FIFO * APP_CC fifo_create(void);
+void   APP_CC fifo_delete(FIFO *self);
+int    APP_CC fifo_add_item(FIFO *self, void *item);
+void * APP_CC fifo_remove_item(FIFO *self);
+int    APP_CC fifo_is_empty(FIFO *self);
 
 #endif
