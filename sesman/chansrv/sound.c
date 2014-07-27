@@ -1139,8 +1139,7 @@ sound_sndsrvr_source_data_in(struct trans *trans)
     in_uint8(ts, cmd);
     in_uint16_le(ts, bytes_req);
 
-    if (bytes_req != 0)
-        xstream_new(s, bytes_req + 2);
+    xstream_new(s, bytes_req + 2);
 
     if (cmd == PA_CMD_SEND_DATA)
     {
