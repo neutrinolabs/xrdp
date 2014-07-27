@@ -2626,7 +2626,6 @@ static void xfuse_cb_release(fuse_req_t req, fuse_ino_t ino, struct
               fip, fip->fi, fip->fi->fh);
 
     FileId = handle->FileId;
-    free(handle);
     fip->fi->fh = 0;
     xinode->close_in_progress = 1;
 
@@ -2635,6 +2634,8 @@ static void xfuse_cb_release(fuse_req_t req, fuse_ino_t ino, struct
         log_error("failed to send devredir_close_file() cmd");
         fuse_reply_err(req, EREMOTEIO);
     }
+
+    free(handle);
 }
 
 /**

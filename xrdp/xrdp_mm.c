@@ -2374,8 +2374,8 @@ server_paint_rects(struct xrdp_mod* mod, int num_drects, short *drects,
                            g_malloc(sizeof(short) * num_crects * 4, 0);
         if (enc_data->crects == 0)
         {
-            g_free(enc_data);
             g_free(enc_data->drects);
+            g_free(enc_data);
             return 1;
         }
 
