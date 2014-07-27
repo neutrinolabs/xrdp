@@ -1801,7 +1801,8 @@ void xfuse_devredir_cb_rename_file(void *vp, tui32 IoStatus)
     }
 
     old_xinode->parent_inode = fip->new_inode;
-    strcpy(old_xinode->name, fip->new_name);
+    strncpy(old_xinode->name, fip->new_name, 1023);
+    old_xinode->name[1023] = 0;
 
     if (fip->inode != fip->new_inode)
     {

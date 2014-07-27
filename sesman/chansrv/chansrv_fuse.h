@@ -34,7 +34,7 @@ struct xrdp_inode
     time_t          atime;             /* Time of last access.              */
     time_t          mtime;             /* Time of last modification.        */
     time_t          ctime;             /* Time of last status change.       */
-    char            name[256];         /* Dir or filename                   */
+    char            name[1024];        /* Dir or filename                   */
     tui32           device_id;         /* for file system redirection       */
     char            is_synced;         /* dir struct has been read from     */
                                        /* remote device, done just once     */

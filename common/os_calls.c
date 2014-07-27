@@ -778,6 +778,8 @@ g_tcp_local_connect(int sck, const char *port)
     memset(&s, 0, sizeof(struct sockaddr_un));
     s.sun_family = AF_UNIX;
     strncpy(s.sun_path, port, sizeof(s.sun_path));
+    s.sun_path[sizeof(s.sun_path) - 1] = 0;
+
     return connect(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_un));
 #endif
 }
@@ -938,6 +940,8 @@ g_tcp_local_bind(int sck, const char *port)
     memset(&s, 0, sizeof(struct sockaddr_un));
     s.sun_family = AF_UNIX;
     strncpy(s.sun_path, port, sizeof(s.sun_path));
+    s.sun_path[sizeof(s.sun_path) - 1] = 0;
+
     return bind(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_un));
 #endif
 }
