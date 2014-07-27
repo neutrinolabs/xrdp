@@ -215,7 +215,6 @@ scp_v1c_get_session_list(struct SCP_CONNECTION *c, int *scount,
 
         if (cmd != 42)
         {
-            g_free(ds);
             return SCP_CLIENT_STATE_SEQUENCE_ERR;
         }
 

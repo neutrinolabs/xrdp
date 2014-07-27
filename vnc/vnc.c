@@ -972,6 +972,8 @@ lib_mod_connect(struct vnc *v)
     if (v->sck < 0)
     {
         v->server_msg(v, "VNC error: socket create error, g_tcp_socket() failed", 0);
+        free_stream(s);
+        free_stream(pixel_format);
         return 1;
     }
 

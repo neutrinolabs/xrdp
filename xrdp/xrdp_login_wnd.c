@@ -462,6 +462,9 @@ xrdp_wm_login_fill_in_combo(struct xrdp_wm *self, struct xrdp_bitmap *b)
     if (fd < 0)
     {
         log_message(LOG_LEVEL_ERROR, "Could not read xrdp ini file %s", cfg_file);
+        list_delete(sections);
+        list_delete(section_names);
+        list_delete(section_values);
         return 1;
     }
 

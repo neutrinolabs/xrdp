@@ -413,7 +413,6 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
         return 1;
     }
 
-    s = (struct stream *)NULL;
     fd = g_file_open(filename);
 
     if (fd != -1)
@@ -445,6 +444,7 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
         {
             log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s\n",
                 filename);
+            free_stream(s);
             g_file_close(fd);
             return 1;
         }
