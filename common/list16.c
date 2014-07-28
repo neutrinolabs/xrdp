@@ -157,7 +157,7 @@ list16_insert_item(struct list16 *self, int index, tui16 item)
 
     if (index == self->count)
     {
-        list_add_item(self, item);
+        list16_add_item(self, item);
         return;
     }
 
