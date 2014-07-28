@@ -21,6 +21,10 @@
 #include "xrdp.h"
 #include "log.h"
 
+#if !defined(PACKAGE_VERSION)
+#define PACKAGE_VERSION "???"
+#endif
+
 #define THREAD_WAITING 100
 
 static struct xrdp_listen *g_listen = 0;
