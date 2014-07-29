@@ -27,7 +27,7 @@
 #include "rfxcommon.h"
 #include "rfxencode.h"
 #include "rfxconstants.h"
-#include "rfxtile.h"
+#include "rfxencode_tile.h"
 #include "rfxencode_dwt.h"
 #include "rfxencode_quantization.h"
 #include "rfxencode_differential.h"

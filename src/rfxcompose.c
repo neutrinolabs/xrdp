@@ -26,7 +26,7 @@
 #include "rfxcommon.h"
 #include "rfxencode.h"
 #include "rfxconstants.h"
-#include "rfxtile.h"
+#include "rfxencode_tile.h"
 
 /*
  * LL3, LH3, HL3, HH3, LH2, HL2, HH2, LH1, HL1, HH1
