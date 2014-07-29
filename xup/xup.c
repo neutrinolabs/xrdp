@@ -1129,7 +1129,10 @@ process_server_paint_rect_shmem(struct mod *mod, struct stream *s)
     in_uint16_le(s, height);
     in_sint16_le(s, srcx);
     in_sint16_le(s, srcy);
+
     bmpdata = 0;
+    rv = 0;
+
     if (flags == 0) /* screen */
     {
         if (mod->screen_shmem_id == 0)
