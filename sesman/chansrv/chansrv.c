@@ -1600,11 +1600,6 @@ remove_struct_with_chan_id(tui32 dvc_chan_id)
 {
     int i;
 
-    if (dvc_chan_id < 0)
-    {
-        return -1;
-    }
-
     for (i = 0; i < MAX_DVC_CHANNELS; i++)
     {
         if (g_dvc_channels[i]->dvc_chan_id == dvc_chan_id)
