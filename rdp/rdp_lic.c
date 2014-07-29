@@ -175,9 +175,9 @@ rdp_lic_process_demand(struct rdp_lic *self, struct stream *s)
     g_memset(null_data, 0, sizeof(null_data));
     rdp_lic_generate_keys(self, null_data, server_random, null_data);
 
+#if 0
     licence_size = 0; /* todo load_licence(&licence_data); */
 
-#if 0
     if (licence_size > 0)
     {
         /* Generate a signature for the HWID buffer */
