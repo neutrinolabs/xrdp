@@ -18,8 +18,16 @@
  * transport layer security
  */
 
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <openssl/ssl.h>
+
+#include "os_calls.h"
 #include "trans.h"
 #include "ssl_calls.h"
+
 
 /*****************************************************************************/
 struct xrdp_tls *
@@ -38,6 +46,41 @@ xrdp_tls_create(struct trans *trans, const char *key, const char *cert)
 
     return self;
 }
+
+/*****************************************************************************/
+int APP_CC
+xrdp_tls_print_error(char *func, SSL *connection, int value)
+{
+    switch (SSL_get_error(connection, value))
+    {
+        case SSL_ERROR_ZERO_RETURN:
+            g_writeln("xrdp_tls_print_error: %s: Server closed TLS connection",
+                      func);
+            return 1;
+
+        case SSL_ERROR_WANT_READ:
+            g_writeln("xrdp_tls_print_error: SSL_ERROR_WANT_READ");
+            return 0;
+
+        case SSL_ERROR_WANT_WRITE:
+            g_writeln("xrdp_tls_print_error: SSL_ERROR_WANT_WRITE");
+            return 0;
+
+        case SSL_ERROR_SYSCALL:
+            g_writeln("xrdp_tls_print_error: %s: I/O error", func);
+            return 1;
+
+        case SSL_ERROR_SSL:
+            g_writeln("xrdp_tls_print_error: %s: Failure in SSL library (protocol error?)",
+                      func);
+            return 1;
+
+        default:
+            g_writeln("xrdp_tls_print_error: %s: Unknown error", func);
+            return 1;
+    }
+}
+
 /*****************************************************************************/
 int APP_CC
 xrdp_tls_accept(struct xrdp_tls *self)
@@ -53,6 +96,7 @@ xrdp_tls_accept(struct xrdp_tls *self)
      */
     options |= SSL_OP_NO_SSLv2;
 
+#if defined(SSL_OP_NO_COMPRESSION)
     /**
      * SSL_OP_NO_COMPRESSION:
      *
@@ -63,6 +107,7 @@ xrdp_tls_accept(struct xrdp_tls *self)
      * which is why we're disabling it.
      */
     options |= SSL_OP_NO_COMPRESSION;
+#endif
 
     /**
      * SSL_OP_TLS_BLOCK_PADDING_BUG:
@@ -137,40 +182,6 @@ xrdp_tls_accept(struct xrdp_tls *self)
 }
 /*****************************************************************************/
 int APP_CC
-xrdp_tls_print_error(char *func, SSL *connection, int value)
-{
-    switch (SSL_get_error(connection, value))
-    {
-    case SSL_ERROR_ZERO_RETURN:
-        g_writeln("xrdp_tls_print_error: %s: Server closed TLS connection",
-                  func);
-        return 1;
-
-    case SSL_ERROR_WANT_READ:
-        g_writeln("xrdp_tls_print_error: SSL_ERROR_WANT_READ");
-        return 0;
-
-    case SSL_ERROR_WANT_WRITE:
-        g_writeln("xrdp_tls_print_error: SSL_ERROR_WANT_WRITE");
-        return 0;
-
-    case SSL_ERROR_SYSCALL:
-        g_writeln("xrdp_tls_print_error: %s: I/O error", func);
-        return 1;
-
-    case SSL_ERROR_SSL:
-        g_writeln(
-                "xrdp_tls_print_error: %s: Failure in SSL library (protocol error?)",
-                func);
-        return 1;
-
-    default:
-        g_writeln("xrdp_tls_print_error: %s: Unknown error", func);
-        return 1;
-    }
-}
-/*****************************************************************************/
-int APP_CC
 xrdp_tls_disconnect(struct xrdp_tls *self)
 {
     int status = SSL_shutdown(self->ssl);
@@ -205,7 +216,7 @@ xrdp_tls_delete(struct xrdp_tls *self)
 }
 /*****************************************************************************/
 int APP_CC
-xrdp_tls_read(struct xrdp_tls *tls, unsigned char *data, int length)
+xrdp_tls_read(struct xrdp_tls *tls, char *data, int length)
 {
     int status;
 
@@ -213,25 +224,25 @@ xrdp_tls_read(struct xrdp_tls *tls, unsigned char *data, int length)
 
     switch (SSL_get_error(tls->ssl, status))
     {
-    case SSL_ERROR_NONE:
-        break;
+        case SSL_ERROR_NONE:
+            break;
 
-    case SSL_ERROR_WANT_READ:
-    case SSL_ERROR_WANT_WRITE:
-        status = 0;
-        break;
+        case SSL_ERROR_WANT_READ:
+        case SSL_ERROR_WANT_WRITE:
+            status = 0;
+            break;
 
-    default:
-        xrdp_tls_print_error("SSL_read", tls->ssl, status);
-        status = -1;
-        break;
+        default:
+            xrdp_tls_print_error("SSL_read", tls->ssl, status);
+            status = -1;
+            break;
     }
 
     return status;
 }
 /*****************************************************************************/
 int APP_CC
-xrdp_tls_write(struct xrdp_tls *tls, unsigned char *data, int length)
+xrdp_tls_write(struct xrdp_tls *tls, char *data, int length)
 {
     int status;
 
@@ -239,18 +250,18 @@ xrdp_tls_write(struct xrdp_tls *tls, unsigned char *data, int length)
 
     switch (SSL_get_error(tls->ssl, status))
     {
-    case SSL_ERROR_NONE:
-        break;
+        case SSL_ERROR_NONE:
+            break;
 
-    case SSL_ERROR_WANT_READ:
-    case SSL_ERROR_WANT_WRITE:
-        status = 0;
-        break;
+        case SSL_ERROR_WANT_READ:
+        case SSL_ERROR_WANT_WRITE:
+            status = 0;
+            break;
 
-    default:
-        xrdp_tls_print_error("SSL_write", tls->ssl, status);
-        status = -1;
-        break;
+        default:
+            xrdp_tls_print_error("SSL_write", tls->ssl, status);
+            status = -1;
+            break;
     }
 
     return status;
@@ -319,6 +330,58 @@ xrdp_tls_force_read_s(struct trans *self, struct stream *in_s, int size)
 
 /*****************************************************************************/
 int APP_CC
+xrdp_tls_send_waiting(struct trans *self, int block)
+{
+    struct stream *temp_s;
+    int bytes;
+    int sent;
+    int timeout;
+    int cont;
+
+    timeout = block ? 100 : 0;
+    cont = 1;
+    while (cont)
+    {
+        if (self->wait_s != 0)
+        {
+            temp_s = self->wait_s;
+            if (g_tcp_can_send(self->sck, timeout))
+            {
+                bytes = (int) (temp_s->end - temp_s->p);
+                sent = xrdp_tls_write(self->tls, temp_s->p, bytes);
+                if (sent > 0)
+                {
+                    temp_s->p += sent;
+                    if (temp_s->p >= temp_s->end)
+                    {
+                        self->wait_s = (struct stream *) (temp_s->next_packet);
+                        free_stream(temp_s);
+                    }
+                }
+                else if (sent == 0)
+                {
+                    return 1;
+                }
+                else
+                {
+                    if (!g_tcp_last_error_would_block(self->sck))
+                    {
+                        return 1;
+                    }
+                }
+            }
+        }
+        else
+        {
+            break;
+        }
+        cont = block;
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
 xrdp_tls_force_write_s(struct trans *self, struct stream *out_s)
 {
     int size;
@@ -382,54 +445,4 @@ xrdp_tls_force_write_s(struct trans *self, struct stream *out_s)
 
     return 0;
 }
-/*****************************************************************************/
-int APP_CC
-xrdp_tls_send_waiting(struct trans *self, int block)
-{
-    struct stream *temp_s;
-    int bytes;
-    int sent;
-    int timeout;
-    int cont;
 
-    timeout = block ? 100 : 0;
-    cont = 1;
-    while (cont)
-    {
-        if (self->wait_s != 0)
-        {
-            temp_s = self->wait_s;
-            if (g_tcp_can_send(self->sck, timeout))
-            {
-                bytes = (int) (temp_s->end - temp_s->p);
-                sent = xrdp_tls_write(self->tls, temp_s->p, bytes);
-                if (sent > 0)
-                {
-                    temp_s->p += sent;
-                    if (temp_s->p >= temp_s->end)
-                    {
-                        self->wait_s = (struct stream *) (temp_s->next_packet);
-                        free_stream(temp_s);
-                    }
-                }
-                else if (sent == 0)
-                {
-                    return 1;
-                }
-                else
-                {
-                    if (!g_tcp_last_error_would_block(self->sck))
-                    {
-                        return 1;
-                    }
-                }
-            }
-        }
-        else
-        {
-            break;
-        }
-        cont = block;
-    }
-    return 0;
-}
