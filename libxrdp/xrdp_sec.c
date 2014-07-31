@@ -221,6 +221,195 @@ hex_str_to_bin(char *in, char *out, int out_len)
 }
 
 /*****************************************************************************/
+static void APP_CC
+xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
+{
+    int fd;
+    int index = 0;
+    struct list *names = (struct list *)NULL;
+    struct list *items = (struct list *)NULL;
+    struct list *values = (struct list *)NULL;
+    char *item = (char *)NULL;
+    char *value = (char *)NULL;
+    char *q = (char *)NULL;
+    char keyboard_cfg_file[256] = { 0 };
+    char rdp_layout[256] = { 0 };
+
+    /* infer model/variant */
+    /* TODO specify different X11 keyboard models/variants */
+    g_memset(client_info->model, 0, sizeof(client_info->model));
+    g_memset(client_info->variant, 0, sizeof(client_info->variant));
+    g_strncpy(client_info->layout, "us", sizeof(client_info->layout) - 1);
+    if (client_info->keyboard_subtype == 3)
+    {
+        /* macintosh keyboard */
+        g_strncpy(client_info->variant, "mac", sizeof(client_info->variant) - 1);
+    }
+    else if (client_info->keyboard_subtype == 0)
+    {
+        /* default - standard subtype */
+        client_info->keyboard_subtype = 1;
+    }
+
+    g_snprintf(keyboard_cfg_file, 255, "%s/xrdp_keyboard.ini", XRDP_CFG_PATH);
+    DEBUG(("keyboard_cfg_file %s", keyboard_cfg_file));
+
+    fd = g_file_open(keyboard_cfg_file);
+
+    if (fd > 0)
+    {
+        int section_found = -1;
+        char section_rdp_layouts[256] = { 0 };
+        char section_layouts_map[256] = { 0 };
+
+        names = list_create();
+        names->auto_free = 1;
+        items = list_create();
+        items->auto_free = 1;
+        values = list_create();
+        values->auto_free = 1;
+
+        file_read_sections(fd, names);
+        for (index = 0; index < names->count; index++)
+        {
+            q = (char *)list_get_item(names, index);
+            if (g_strncasecmp("default", q, 8) != 0)
+            {
+                int i;
+
+                file_read_section(fd, q, items, values);
+
+                for (i = 0; i < items->count; i++)
+                {
+                    item = (char *)list_get_item(items, i);
+                    value = (char *)list_get_item(values, i);
+
+                    if (g_strcasecmp(item, "keyboard_type") == 0)
+                    {
+                        int v = g_atoi(value);
+                        if (v == client_info->keyboard_type)
+                        {
+                            section_found = index;
+                        }
+                    }
+                    else if (g_strcasecmp(item, "keyboard_subtype") == 0)
+                    {
+                        int v = g_atoi(value);
+                        if (v != client_info->keyboard_subtype &&
+                            section_found == index)
+                        {
+                            section_found = -1;
+                            break;
+                        }
+                    }
+                    else if (g_strcasecmp(item, "rdp_layouts") == 0)
+                    {
+                        if (section_found != -1 && section_found == index)
+                        {
+                            g_strncpy(section_rdp_layouts, value, 255);
+                        }
+                    }
+                    else if (g_strcasecmp(item, "layouts_map") == 0)
+                    {
+                        if (section_found != -1 && section_found == index)
+                        {
+                            g_strncpy(section_layouts_map, value, 255);
+                        }
+                    }
+                    else if (g_strcasecmp(item, "model") == 0)
+                    {
+                        if (section_found != -1 && section_found == index)
+                        {
+                            g_memset(client_info->model, 0, sizeof(client_info->model) - 1);
+                            g_strncpy(client_info->model, value, sizeof(client_info->model) - 1);
+                        }
+                    }
+                    else if (g_strcasecmp(item, "variant") == 0)
+                    {
+                        if (section_found != -1 && section_found == index)
+                        {
+                            g_memset(client_info->variant, 0, sizeof(client_info->variant) - 1);
+                            g_strncpy(client_info->variant, value, sizeof(client_info->variant) - 1);
+                        }
+                    }
+                    else
+                    {
+                        /*
+                         * mixing items from different sections will result in
+                         * skipping over current section.
+                         */
+                        DEBUG(("xrdp_load_keyboard_layout: skipping configuration item - %s, continuing to next section", item));
+                        break;
+                    }
+                }
+
+                list_clear(items);
+                list_clear(values);
+            }
+        }
+
+        if (section_found == -1)
+        {
+            g_memset(section_rdp_layouts, 0, sizeof(char) * 256);
+            g_memset(section_layouts_map, 0, sizeof(char) * 256);
+            // read default section
+            file_read_section(fd, "default", items, values);
+            for (index = 0; index < items->count; index++)
+            {
+                item = (char *)list_get_item(items, index);
+                value = (char *)list_get_item(values, index);
+                if (g_strcasecmp(item, "rdp_layouts") == 0)
+                {
+                    g_strncpy(section_rdp_layouts, value, 255);
+                }
+                else if (g_strcasecmp(item, "layouts_map") == 0)
+                {
+                    g_strncpy(section_layouts_map, value, 255);
+                }
+            }
+            list_clear(items);
+            list_clear(values);
+        }
+
+        // load the map
+        file_read_section(fd, section_rdp_layouts, items, values);
+        for (index = 0; index < items->count; index++)
+        {
+            int rdp_layout_id;
+            item = (char *)list_get_item(items, index);
+            value = (char *)list_get_item(values, index);
+            rdp_layout_id = g_htoi(value);
+            if (rdp_layout_id == client_info->keylayout)
+            {
+                g_strncpy(rdp_layout, item, 255);
+                break;
+            }
+        }
+        list_clear(items);
+        list_clear(values);
+        file_read_section(fd, section_layouts_map, items, values);
+        for (index = 0; index < items->count; index++)
+        {
+            item = (char *)list_get_item(items, index);
+            value = (char *)list_get_item(values, index);
+            if (g_strcasecmp(item, rdp_layout) == 0)
+            {
+                g_strncpy(client_info->layout, value, sizeof(client_info->layout) - 1);
+                break;
+            }
+        }
+
+        list_delete(names);
+        list_delete(items);
+        list_delete(values);
+
+        DEBUG(("xrdp_load_keyboard_layout: model %s variant %s layout %s",
+               client_info->model, client_info->variant, client_info->layout));
+        g_file_close(fd);
+    }
+}
+
+/*****************************************************************************/
 struct xrdp_sec *APP_CC
 xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans)
 {
@@ -1853,6 +2042,7 @@ xrdp_sec_in_mcs_data(struct xrdp_sec *self)
     in_uint8s(s, 79);
     in_uint32_le(s, client_info->keyboard_type);
     in_uint32_le(s, client_info->keyboard_subtype);
+    xrdp_load_keyboard_layout(client_info);
     s->p = s->data;
     return 0;
 }
