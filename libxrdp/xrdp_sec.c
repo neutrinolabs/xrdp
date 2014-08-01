@@ -226,6 +226,7 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
 {
     int fd;
     int index = 0;
+    int bytes;
     struct list *names = (struct list *)NULL;
     struct list *items = (struct list *)NULL;
     struct list *values = (struct list *)NULL;
@@ -235,6 +236,7 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
     char keyboard_cfg_file[256] = { 0 };
     char rdp_layout[256] = { 0 };
 
+    LLOGLN(0, ("xrdp_load_keyboard_layout:"));
     /* infer model/variant */
     /* TODO specify different X11 keyboard models/variants */
     g_memset(client_info->model, 0, sizeof(client_info->model));
@@ -243,7 +245,8 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
     if (client_info->keyboard_subtype == 3)
     {
         /* macintosh keyboard */
-        g_strncpy(client_info->variant, "mac", sizeof(client_info->variant) - 1);
+        bytes = sizeof(client_info->variant);
+        g_strncpy(client_info->variant, "mac", bytes - 1);
     }
     else if (client_info->keyboard_subtype == 0)
     {
@@ -252,7 +255,7 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
     }
 
     g_snprintf(keyboard_cfg_file, 255, "%s/xrdp_keyboard.ini", XRDP_CFG_PATH);
-    DEBUG(("keyboard_cfg_file %s", keyboard_cfg_file));
+    LLOGLN(10, ("keyboard_cfg_file %s", keyboard_cfg_file));
 
     fd = g_file_open(keyboard_cfg_file);
 
@@ -283,7 +286,8 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
                 {
                     item = (char *)list_get_item(items, i);
                     value = (char *)list_get_item(values, i);
-
+                    LLOGLN(10, ("xrdp_load_keyboard_layout: item %s value %s",
+                           item, value));
                     if (g_strcasecmp(item, "keyboard_type") == 0)
                     {
                         int v = g_atoi(value);
@@ -320,16 +324,18 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
                     {
                         if (section_found != -1 && section_found == index)
                         {
-                            g_memset(client_info->model, 0, sizeof(client_info->model) - 1);
-                            g_strncpy(client_info->model, value, sizeof(client_info->model) - 1);
+                            bytes = sizeof(client_info->model);
+                            g_memset(client_info->model, 0, bytes);
+                            g_strncpy(client_info->model, value, bytes - 1);
                         }
                     }
                     else if (g_strcasecmp(item, "variant") == 0)
                     {
                         if (section_found != -1 && section_found == index)
                         {
-                            g_memset(client_info->variant, 0, sizeof(client_info->variant) - 1);
-                            g_strncpy(client_info->variant, value, sizeof(client_info->variant) - 1);
+                            bytes = sizeof(client_info->variant);
+                            g_memset(client_info->variant, 0, bytes);
+                            g_strncpy(client_info->variant, value, bytes - 1);
                         }
                     }
                     else
@@ -338,7 +344,9 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
                          * mixing items from different sections will result in
                          * skipping over current section.
                          */
-                        DEBUG(("xrdp_load_keyboard_layout: skipping configuration item - %s, continuing to next section", item));
+                        LLOGLN(10, ("xrdp_load_keyboard_layout: skipping "
+                               "configuration item - %s, continuing to next "
+                               "section", item));
                         break;
                     }
                 }
@@ -371,7 +379,7 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
             list_clear(values);
         }
 
-        // load the map
+        /* load the map */
         file_read_section(fd, section_rdp_layouts, items, values);
         for (index = 0; index < items->count; index++)
         {
@@ -394,7 +402,8 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
             value = (char *)list_get_item(values, index);
             if (g_strcasecmp(item, rdp_layout) == 0)
             {
-                g_strncpy(client_info->layout, value, sizeof(client_info->layout) - 1);
+                bytes = sizeof(client_info->layout);
+                g_strncpy(client_info->layout, value, bytes - 1);
                 break;
             }
         }
@@ -403,9 +412,15 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
         list_delete(items);
         list_delete(values);
 
-        DEBUG(("xrdp_load_keyboard_layout: model %s variant %s layout %s",
-               client_info->model, client_info->variant, client_info->layout));
+        LLOGLN(0, ("xrdp_load_keyboard_layout: model [%s] variant [%s] "
+               "layout [%s]", client_info->model, client_info->variant,
+               client_info->layout));
         g_file_close(fd);
+    }
+    else
+    {
+        LLOGLN(0, ("xrdp_load_keyboard_layout: error opening %d",
+               keyboard_cfg_file));
     }
 }
 
