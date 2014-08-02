@@ -65,7 +65,8 @@ xrdp_LDFLAGS = \
 xrdpsysconfdir=$(sysconfdir)/xrdp
 
 xrdpsysconf_DATA = \
-  xrdp.ini 
+  xrdp.ini \
+  xrdp_keyboard.ini
 
 xrdppkgdatadir=$(datadir)/xrdp
 

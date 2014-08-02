@@ -1117,7 +1117,7 @@ rdpup_process_msg(struct stream *s)
             g_do_multimon = 0;
         }
 
-        rdpLoadLayout(g_rdpScreen.client_info.keylayout);
+        rdpLoadLayout(&(g_rdpScreen.client_info));
 
     }
     else if (msg_type == 105)

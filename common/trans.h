@@ -23,7 +23,6 @@
 
 #include "arch.h"
 #include "parse.h"
-#include <openssl/ssl.h>
 
 #define TRANS_MODE_TCP 1
 #define TRANS_MODE_UNIX 2
@@ -72,8 +71,8 @@ struct trans
 /* xrdp_tls */
 struct xrdp_tls
 {
-    SSL *ssl;
-    SSL_CTX *ctx;
+    void *ssl; /* SSL * */
+    void *ctx; /* SSL_CTX * */
     char *cert;
     char *key;
     struct trans *trans;
