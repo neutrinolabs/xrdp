@@ -933,6 +933,7 @@ my_api_trans_conn_in(struct trans *trans, struct trans *new_trans)
     {
         LOG(0, ("my_api_trans_conn_in: trans_force_read failed"));
         trans_delete(new_trans);
+        return 1;
     }
 
     s->end = s->data;
