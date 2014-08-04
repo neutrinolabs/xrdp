@@ -54,7 +54,7 @@ If set to \fB0\fR, \fBfalse\fR or \fBno\fR this option disables all channels \fB
 See section \fBCHANNELS\fP below for more fine grained options.
 
 .TP
-\fBcrypt_level\fP=\fIlow|medium|high\fP
+\fBcrypt_level\fP=\fIlow|medium|high|fips\fP
 .\" <http://blogs.msdn.com/b/openspecification/archive/2011/12/08/encryption-negotiation-in-rdp-connection.aspx>
 RDP connection are controlled by two encryption settings: \fIEncryption Level\fP and \fIEncryption Method\fP.
 The only supported \fIEncryption Method\fP is \fB40BIT_ENCRYPTION\fP, \fB128BIT_ENCRYPTION\fP and \fB56BIT_ENCRYPTION\fP are currently not supported.
@@ -70,6 +70,10 @@ All data sent between the client and the server is protected by encryption based
 .TP
 .B high
 All data sent between the client and server is protected by encryption based on the server's maximum key strength.
+.TP
+.B fips
+All data sent between the client and server is protected using Federal Information Processing Standard 140-1 validated encryption methods.
+.I This level is required for Windows clients (mstsc.exe) if the client's group policy enforces FIPS-compliance mode.
 .RE
 
 .TP
