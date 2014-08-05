@@ -945,18 +945,18 @@ xrdp_mcs_incoming(struct xrdp_mcs *self)
         return 1;
     }
 
-    for (i = 0 ; i < self->channel_list->count + 2 ; i++)
+    for (i = 0; i < self->channel_list->count + 2; i++)
     {
-		if (xrdp_mcs_recv_cjrq(self) != 0)
-		{
-			return 1;
-		}
+        if (xrdp_mcs_recv_cjrq(self) != 0)
+        {
+            return 1;
+        }
 
-		if (xrdp_mcs_send_cjcf(self, self->userid,
-							   self->userid + MCS_USERCHANNEL_BASE + i) != 0)
-		{
-			return 1;
-		}
+        if (xrdp_mcs_send_cjcf(self, self->userid,
+                               self->userid + MCS_USERCHANNEL_BASE + i) != 0)
+        {
+            return 1;
+        }
     }
 
     DEBUG(("  out xrdp_mcs_incoming"));
@@ -1085,7 +1085,7 @@ close_rdp_socket(struct xrdp_mcs *self)
     {
         if (self->iso_layer->trans != 0)
         {
-        	trans_shutdown_tls_mode(self->iso_layer->trans);
+            trans_shutdown_tls_mode(self->iso_layer->trans);
             g_tcp_close(self->iso_layer->trans->sck);
             self->iso_layer->trans->sck = 0 ;
             g_writeln("xrdp_mcs_disconnect - socket closed");
@@ -1108,7 +1108,7 @@ xrdp_mcs_disconnect(struct xrdp_mcs *self)
 
     if (xrdp_iso_init(self->iso_layer, s) != 0)
     {
-    	free_stream(s);
+        free_stream(s);
         close_rdp_socket(self);
         DEBUG(("  out xrdp_mcs_disconnect error - 1"));
         return 1;

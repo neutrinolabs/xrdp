@@ -1210,14 +1210,14 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
      However, client info packet and license packet always have security header. */
     if (s->data[17] == 0x13) /* confirm active pdu */
     {
-    	g_writeln("CONFIRM ACTIVE ARRIVED");
-    	return 0;
+        g_writeln("CONFIRM ACTIVE ARRIVED");
+        return 0;
     }
 
     if (s->data[17] == 0x17 || s->data[16] == 0x17) /* rdp data pdu */
     {
-    	g_writeln("RDP DATA ARRIVED");
-    	return 0;
+        g_writeln("RDP DATA ARRIVED");
+        return 0;
     }
 
     in_uint32_le(s, flags);
@@ -2096,7 +2096,7 @@ xrdp_sec_init_rdp_security(struct xrdp_sec *self)
     }
     else
     {
-    	self->decrypt_rc4_info = ssl_rc4_info_create();
+        self->decrypt_rc4_info = ssl_rc4_info_create();
     }
 
     if (self->encrypt_rc4_info != NULL)
@@ -2105,11 +2105,12 @@ xrdp_sec_init_rdp_security(struct xrdp_sec *self)
     }
     else
     {
-    	self->encrypt_rc4_info = ssl_rc4_info_create();
+        self->encrypt_rc4_info = ssl_rc4_info_create();
    	}
 
-	return 0;
+    return 0;
 }
+
 /*****************************************************************************/
 int APP_CC
 xrdp_sec_incoming(struct xrdp_sec *self)
@@ -2153,7 +2154,7 @@ xrdp_sec_incoming(struct xrdp_sec *self)
     }
     else
     {
-    	/* init rdp security */
+        /* init rdp security */
         DEBUG((" in xrdp_sec_incoming: init rdp security"));
         if (xrdp_sec_init_rdp_security(self) != 0)
         {
