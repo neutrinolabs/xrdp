@@ -76,7 +76,11 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
         }
         else if (g_strcasecmp(item, "crypt_level") == 0)
         {
-            if (g_strcasecmp(value, "low") == 0)
+            if (g_strcasecmp(value, "none") == 0)
+            {
+                client_info->crypt_level = 0;
+            }
+            else if (g_strcasecmp(value, "low") == 0)
             {
                 client_info->crypt_level = 1;
             }

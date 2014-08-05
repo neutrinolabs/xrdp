@@ -1779,9 +1779,22 @@ xrdp_sec_process_mcs_data_CS_SECURITY(struct xrdp_sec *self, struct stream* s)
             found = 1;
         }
     }
+    if ((found == 0) &&
+        (self->crypt_level == CRYPT_LEVEL_NONE))
+    {
+        if (crypt_method == CRYPT_METHOD_NONE)
+        {
+            g_writeln("  client and server support none crypt, using "
+                      "none crypt");
+            self->crypt_method = CRYPT_METHOD_NONE;
+            self->crypt_level = CRYPT_LEVEL_NONE;
+            found = 1;
+        }
+    }
     if (found == 0)
     {
-        g_writeln("  no security");
+        g_writeln("  can not find client / server agreed encryption method");
+        return 1;
     }
     return 0;
 }
@@ -2069,6 +2082,10 @@ xrdp_sec_init_rdp_security(struct xrdp_sec *self)
 {
     switch (self->rdp_layer->client_info.crypt_level)
     {
+        case 0: /* none */
+            self->crypt_method = CRYPT_METHOD_NONE;
+            self->crypt_level = CRYPT_LEVEL_NONE;
+            break;
         case 1: /* low */
             self->crypt_method = CRYPT_METHOD_40BIT;
             self->crypt_level = CRYPT_LEVEL_LOW;
