@@ -844,11 +844,11 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
     }
     else if (self->rsa_key_bytes == 0) /* no security */
     {
-    	g_writeln("xrdp_sec_out_mcs_data: using no security");
-		out_uint16_le(s, SEC_TAG_SRV_CRYPT);
-		out_uint16_le(s, 12); /* len is 12 */
-		out_uint32_le(s, self->crypt_method);
-		out_uint32_le(s, self->crypt_level);
+        g_writeln("xrdp_sec_out_mcs_data: using no security");
+        out_uint16_le(s, SEC_TAG_SRV_CRYPT);
+        out_uint16_le(s, 12); /* len is 12 */
+        out_uint32_le(s, self->crypt_method);
+        out_uint32_le(s, self->crypt_level);
     }
     else
     {

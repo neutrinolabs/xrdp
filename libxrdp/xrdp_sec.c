@@ -1281,7 +1281,7 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
         {
             xrdp_sec_fips_establish_keys(self);
         }
-        else
+        else if (self->crypt_method != CRYPT_METHOD_NONE)
         {
             xrdp_sec_establish_keys(self);
         }
@@ -2176,56 +2176,57 @@ xrdp_sec_incoming(struct xrdp_sec *self)
         if (xrdp_sec_init_rdp_security(self) != 0)
         {
             DEBUG(("xrdp_sec_incoming: xrdp_sec_init_rdp_security failed"));
-        	return 1;
-        }
-
-        g_memset(key_file, 0, sizeof(char) * 256);
-        g_random(self->server_random, 32);
-        items = list_create();
-        items->auto_free = 1;
-        values = list_create();
-        values->auto_free = 1;
-        g_snprintf(key_file, 255, "%s/rsakeys.ini", XRDP_CFG_PATH);
-
-        if (file_by_name_read_section(key_file, "keys", items, values) != 0)
-        {
-            /* this is a show stopper */
-            log_message(LOG_LEVEL_ALWAYS, "XRDP cannot read file: %s "
-                        "(check permissions)", key_file);
-            list_delete(items);
-            list_delete(values);
             return 1;
         }
-
-        for (index = 0; index < items->count; index++)
+        if (self->crypt_method != CRYPT_METHOD_NONE)
         {
-            item = (char *)list_get_item(items, index);
-            value = (char *)list_get_item(values, index);
+            g_memset(key_file, 0, sizeof(char) * 256);
+            g_random(self->server_random, 32);
+            items = list_create();
+            items->auto_free = 1;
+            values = list_create();
+            values->auto_free = 1;
+            g_snprintf(key_file, 255, "%s/rsakeys.ini", XRDP_CFG_PATH);
 
-            if (g_strcasecmp(item, "pub_exp") == 0)
+            if (file_by_name_read_section(key_file, "keys", items, values) != 0)
             {
-                hex_str_to_bin(value, self->pub_exp, 4);
+                /* this is a show stopper */
+                log_message(LOG_LEVEL_ALWAYS, "XRDP cannot read file: %s "
+                            "(check permissions)", key_file);
+                list_delete(items);
+                list_delete(values);
+                return 1;
             }
-            else if (g_strcasecmp(item, "pub_mod") == 0)
+
+            for (index = 0; index < items->count; index++)
             {
-                self->rsa_key_bytes = (g_strlen(value) + 1) / 5;
-                g_writeln("pub_mod bytes %d", self->rsa_key_bytes);
-                hex_str_to_bin(value, self->pub_mod, self->rsa_key_bytes);
+                item = (char *)list_get_item(items, index);
+                value = (char *)list_get_item(values, index);
+
+                if (g_strcasecmp(item, "pub_exp") == 0)
+                {
+                    hex_str_to_bin(value, self->pub_exp, 4);
+                }
+                else if (g_strcasecmp(item, "pub_mod") == 0)
+                {
+                    self->rsa_key_bytes = (g_strlen(value) + 1) / 5;
+                    g_writeln("pub_mod bytes %d", self->rsa_key_bytes);
+                    hex_str_to_bin(value, self->pub_mod, self->rsa_key_bytes);
+                }
+                else if (g_strcasecmp(item, "pub_sig") == 0)
+                {
+                    hex_str_to_bin(value, self->pub_sig, 64);
+                }
+                else if (g_strcasecmp(item, "pri_exp") == 0)
+                {
+                    self->rsa_key_bytes = (g_strlen(value) + 1) / 5;
+                    g_writeln("pri_exp %d", self->rsa_key_bytes);
+                    hex_str_to_bin(value, self->pri_exp, self->rsa_key_bytes);
+                }
             }
-            else if (g_strcasecmp(item, "pub_sig") == 0)
-            {
-                hex_str_to_bin(value, self->pub_sig, 64);
-            }
-            else if (g_strcasecmp(item, "pri_exp") == 0)
-            {
-                self->rsa_key_bytes = (g_strlen(value) + 1) / 5;
-                g_writeln("pri_exp %d", self->rsa_key_bytes);
-                hex_str_to_bin(value, self->pri_exp, self->rsa_key_bytes);
-            }
+            list_delete(items);
+            list_delete(values);
         }
-
-        list_delete(items);
-        list_delete(values);
     }
 
     /* negotiate mcs layer */
