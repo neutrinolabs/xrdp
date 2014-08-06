@@ -231,6 +231,36 @@ x_server_running_check_ports(int display)
         }
     }
 
+    if (!x_running)
+    {
+        g_sprintf(text, XRDP_CHANSRV_STR, display);
+        x_running = g_file_exist(text);
+    }
+
+    if (!x_running)
+    {
+        g_sprintf(text, CHANSRV_PORT_OUT_STR, display);
+        x_running = g_file_exist(text);
+    }
+
+    if (!x_running)
+    {
+        g_sprintf(text, CHANSRV_PORT_IN_STR, display);
+        x_running = g_file_exist(text);
+    }
+
+    if (!x_running)
+    {
+        g_sprintf(text, CHANSRV_API_STR, display);
+        x_running = g_file_exist(text);
+    }
+
+    if (!x_running)
+    {
+        g_sprintf(text, XRDP_X11RDP_STR, display);
+        x_running = g_file_exist(text);
+    }
+
     return x_running;
 }
 
