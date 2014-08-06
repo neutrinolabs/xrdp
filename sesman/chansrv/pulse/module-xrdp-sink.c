@@ -277,6 +277,19 @@ static int get_display_num_from_display(char *display_text) {
     return display_num;
 }
 
+static int lsend(int fd, char *data, int bytes) {
+    int sent = 0;
+    int error;
+    while (sent < bytes) {
+        error = send(fd, data + sent, bytes - sent, 0);
+        if (error < 1) {
+            return error;
+        }
+        sent += error;
+    }
+    return sent;
+}
+
 static int data_send(struct userdata *u, pa_memchunk *chunk) {
     char *data;
     int bytes;
@@ -325,7 +338,7 @@ static int data_send(struct userdata *u, pa_memchunk *chunk) {
 
     h.code = 0;
     h.bytes = bytes + 8;
-    if (send(u->fd, &h, 8, 0) != 8) {
+    if (lsend(u->fd, (char*)(&h), 8) != 8) {
         pa_log("data_send: send failed");
         close(u->fd);
         u->fd = 0;
@@ -336,7 +349,7 @@ static int data_send(struct userdata *u, pa_memchunk *chunk) {
 
     data = (char*)pa_memblock_acquire(chunk->memblock);
     data += chunk->index;
-    sent = send(u->fd, data, bytes, 0);
+    sent = lsend(u->fd, data, bytes);
     pa_memblock_release(chunk->memblock);
 
     if (sent != bytes) {
@@ -358,7 +371,7 @@ static int close_send(struct userdata *u) {
     }
     h.code = 1;
     h.bytes = 8;
-    if (send(u->fd, &h, 8, 0) != 8) {
+    if (lsend(u->fd, (char*)(&h), 8) != 8) {
         pa_log("close_send: send failed");
         close(u->fd);
         u->fd = 0;
