@@ -382,7 +382,7 @@ sound_send_wave_data_chunk(char *data, int data_bytes)
     if (g_sent_flag[(g_cBlockNo + 1) & 0xff] & 1)
     {
         LOG(10, ("sound_send_wave_data_chunk: no room"));
-        return 1;
+        return 2;
     }
     else
     {
@@ -442,6 +442,7 @@ sound_send_wave_data(char *data, int data_bytes)
     int chunk_bytes;
     int data_index;
     int error;
+    int res;
 
     LOG(10, ("sound_send_wave_data: sending %d bytes", data_bytes));
     data_index = 0;
@@ -460,13 +461,20 @@ sound_send_wave_data(char *data, int data_bytes)
         g_buf_index += chunk_bytes;
         if (g_buf_index >= BBUF_SIZE)
         {
-            if (sound_send_wave_data_chunk(g_buffer, BBUF_SIZE) != 0)
+            g_buf_index = 0;
+            res = sound_send_wave_data_chunk(g_buffer, BBUF_SIZE);
+            if (res == 2)
+            {
+                /* don't need to error on this */
+                LOG(0, ("sound_send_wave_data: dropped, no room"));
+                break;
+            }
+            else if (res != 0)
             {
                 LOG(10, ("sound_send_wave_data: error"));
                 error = 1;
                 break;
             }
-            g_buf_index = 0;
         }
         data_bytes -= chunk_bytes;
         data_index += chunk_bytes;
