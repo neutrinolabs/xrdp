@@ -549,7 +549,7 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
 
                 if (use_uds)
                 {
-                    g_snprintf(text, 255, "/tmp/.xrdp/xrdp_display_%d", self->display);
+                    g_snprintf(text, 255, XRDP_X11RDP_STR, self->display);
                 }
                 else
                 {
@@ -1233,7 +1233,7 @@ xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
                 /* connect channel redir */
                 if ((g_strcmp(ip, "127.0.0.1") == 0) || (ip[0] == 0))
                 {
-                    g_snprintf(port, 255, "/tmp/.xrdp/xrdp_chansrv_socket_%d", 7200 + display);
+                    g_snprintf(port, 255, XRDP_CHANSRV_STR, display);
                 }
                 else
                 {

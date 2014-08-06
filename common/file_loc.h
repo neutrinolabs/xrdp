@@ -45,4 +45,24 @@
 #define XRDP_LOG_PATH "/var/log"
 #endif
 
+#if !defined(XRDP_CHANSRV_STR)
+#define XRDP_CHANSRV_STR "/tmp/.xrdp/xrdp_chansrv_socket_%d"
+#endif
+
+#if !defined(CHANSRV_PORT_OUT_STR)
+#define CHANSRV_PORT_OUT_STR "/tmp/.xrdp/xrdp_chansrv_audio_out_socket_%d"
+#endif
+
+#if !defined(CHANSRV_PORT_IN_STR)
+#define CHANSRV_PORT_IN_STR "/tmp/.xrdp/xrdp_chansrv_audio_in_socket_%d"
+#endif
+
+#if !defined(CHANSRV_API_STR)
+#define CHANSRV_API_STR "/tmp/.xrdp/xrdpapi_%d"
+#endif
+
+#if !defined(XRDP_X11RDP_STR)
+#define XRDP_X11RDP_STR "/tmp/.xrdp/xrdp_display_%d"
+#endif
+
 #endif

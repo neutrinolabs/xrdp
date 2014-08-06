@@ -1013,8 +1013,7 @@ setup_listen(void)
     {
         g_lis_trans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
         g_lis_trans->is_term = g_is_term;
-        g_snprintf(port, 255, "/tmp/.xrdp/xrdp_chansrv_socket_%d",
-                   7200 + g_display_num);
+        g_snprintf(port, 255, XRDP_CHANSRV_STR, g_display_num);
     }
     else
     {
@@ -1045,7 +1044,7 @@ setup_api_listen(void)
 
     g_api_lis_trans = trans_create(TRANS_MODE_UNIX, 8192 * 4, 8192 * 4);
     g_api_lis_trans->is_term = g_is_term;
-    g_snprintf(port, 255, "/tmp/.xrdp/xrdpapi_%d", g_display_num);
+    g_snprintf(port, 255, CHANSRV_API_STR, g_display_num);
     g_api_lis_trans->trans_conn_in = my_api_trans_conn_in;
     error = trans_listen(g_api_lis_trans, port);
 

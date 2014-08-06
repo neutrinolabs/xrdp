@@ -27,6 +27,7 @@
 #include "thread_calls.h"
 #include "defines.h"
 #include "fifo.h"
+#include "file_loc.h"
 
 extern int g_rdpsnd_chan_id;    /* in chansrv.c */
 extern int g_display_num;       /* in chansrv.c */
@@ -51,9 +52,6 @@ char g_buffer[BBUF_SIZE];
 int g_buf_index = 0;
 int g_sent_time[256];
 int g_sent_flag[256];
-
-#define CHANSRV_PORT_OUT_STR  "/tmp/.xrdp/xrdp_chansrv_audio_out_socket_%d"
-#define CHANSRV_PORT_IN_STR   "/tmp/.xrdp/xrdp_chansrv_audio_in_socket_%d"
 
 struct xr_wave_format_ex
 {
