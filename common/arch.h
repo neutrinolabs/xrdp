@@ -19,10 +19,12 @@
 #if !defined(ARCH_H)
 #define ARCH_H
 
+#include <endian.h>
+
 #if !(defined(L_ENDIAN) || defined(B_ENDIAN))
 /* check endianess */
 #if defined(__sparc__) || defined(__PPC__) || defined(__ppc__) || \
-    defined(__hppa__)
+    defined(__hppa__) || (BYTE_ORDER == BIG_ENDIAN)
 #define B_ENDIAN
 #else
 #define L_ENDIAN
