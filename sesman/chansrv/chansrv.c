@@ -38,8 +38,7 @@
 static struct trans *g_lis_trans = 0;
 static struct trans *g_con_trans = 0;
 static struct trans *g_api_lis_trans = 0;
-static struct list *g_api_con_trans_list = 0;
-//static struct trans *g_api_con_trans = 0;
+static struct list *g_api_con_trans_list = 0; /* list of apps using api functions */
 static struct chan_item g_chan_items[32];
 static int g_num_chan_items = 0;
 static int g_cliprdr_index = -1;
@@ -807,9 +806,12 @@ my_api_trans_data_in(struct trans *trans)
         return 0;
     }
 
-    if (list_index_of(g_api_con_trans_list, (tintptr) trans) == -1)
+    if (g_api_con_trans_list != 0)
     {
-        return 1;
+        if (list_index_of(g_api_con_trans_list, (tintptr) trans) == -1)
+        {
+            return 1;
+        }
     }
 
     LOGM((LOG_LEVEL_DEBUG, "my_api_trans_data_in:"));
@@ -1185,12 +1187,15 @@ channel_thread_loop(void *in_val)
                                    wobjs, &num_wobjs);
             trans_get_wait_objs(g_api_lis_trans, objs, &num_objs);
 
-            for (index = g_api_con_trans_list->count - 1; index >= 0; index--)
+            if (g_api_con_trans_list != 0)
             {
-                ltran = (struct trans *) list_get_item(g_api_con_trans_list, index);
-                if (ltran != 0)
+                for (index = g_api_con_trans_list->count - 1; index >= 0; index--)
                 {
-                    trans_get_wait_objs(ltran, objs, &num_objs);
+                    ltran = (struct trans *) list_get_item(g_api_con_trans_list, index);
+                    if (ltran != 0)
+                    {
+                        trans_get_wait_objs(ltran, objs, &num_objs);
+                    }
                 }
             }
 
