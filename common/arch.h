@@ -19,17 +19,35 @@
 #if !defined(ARCH_H)
 #define ARCH_H
 
-#include <endian.h>
+/* you can define L_ENDIAN or B_ENDIAN and NEED_ALIGN or NO_NEED_ALIGN
+   in the makefile to override */
 
-#if !(defined(L_ENDIAN) || defined(B_ENDIAN))
 /* check endianess */
-#if defined(__sparc__) || defined(__PPC__) || defined(__ppc__) || \
-    defined(__hppa__) || (BYTE_ORDER == BIG_ENDIAN)
+#if !(defined(L_ENDIAN) || defined(B_ENDIAN))
+#if !defined(__BYTE_ORDER) && defined(__linux__)
+#include <endian.h>
+#endif
+
+#if defined(BYTE_ORDER)
+#if BYTE_ORDER == BIG_ENDIAN
 #define B_ENDIAN
 #else
 #define L_ENDIAN
 #endif
+#endif
+
+#if !(defined(L_ENDIAN) || defined(B_ENDIAN))
+#if defined(__sparc__) || defined(__PPC__) || defined(__ppc__) || \
+    defined(__hppa__)
+#define B_ENDIAN
+#else
+#define L_ENDIAN
+#endif
+#endif
+#endif
+
 /* check if we need to align data */
+#if !(defined(NEED_ALIGN) || defined(NO_NEED_ALIGN))
 #if defined(__sparc__) || defined(__alpha__) || defined(__hppa__) || \
     defined(__AIX__) || defined(__PPC__) || defined(__mips__) || \
     defined(__ia64__) || defined(__ppc__) || defined(__arm__)
