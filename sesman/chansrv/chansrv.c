@@ -38,7 +38,8 @@
 static struct trans *g_lis_trans = 0;
 static struct trans *g_con_trans = 0;
 static struct trans *g_api_lis_trans = 0;
-static struct trans *g_api_con_trans = 0;
+static struct list *g_api_con_trans_list = 0;
+//static struct trans *g_api_con_trans = 0;
 static struct chan_item g_chan_items[32];
 static int g_num_chan_items = 0;
 static int g_cliprdr_index = -1;
@@ -608,7 +609,10 @@ process_message_channel_data(struct stream *s)
     int rv = 0;
     int length = 0;
     int total_length = 0;
+    int index;
     struct stream *ls;
+    struct trans *ltran;
+    struct xrdp_api_data *api_data;
 
     in_uint16_le(s, chan_id);
     in_uint16_le(s, chan_flags);
@@ -641,29 +645,36 @@ process_message_channel_data(struct stream *s)
         {
             rv = drdynvc_data_in(s, chan_id, chan_flags, length, total_length);
         }
-        else if ((g_api_con_trans != 0) &&
-                        (chan_id == ((struct xrdp_api_data *)
-                             (g_api_con_trans->callback_data))->chan_id))
+        else if (g_api_con_trans_list != 0)
         {
-            LOG(10, ("process_message_channel_data length %d total_length %d "
-                     "chan_flags 0x%8.8x", length, total_length, chan_flags));
-            ls = g_api_con_trans->out_s;
-
-            if (chan_flags & 1) /* first */
+            for (index = 0; index < g_api_con_trans_list->count; index++)
             {
-                init_stream(ls, total_length);
-            }
-
-            out_uint8a(ls, s->p, length);
-
-            if (chan_flags & 2) /* last */
-            {
-                s_mark_end(ls);
-                rv = trans_force_write(g_api_con_trans);
+                ltran = (struct trans *) list_get_item(g_api_con_trans_list, index);
+                if (ltran != 0)
+                {
+                    api_data = (struct xrdp_api_data *) (ltran->callback_data);
+                    if (api_data != 0)
+                    {
+                        if (api_data->chan_id == chan_id)
+                        {
+                            ls = ltran->out_s;
+                            if (chan_flags & 1) /* first */
+                            {
+                                init_stream(ls, total_length);
+                            }
+                            out_uint8a(ls, s->p, length);
+                            if (chan_flags & 2) /* last */
+                            {
+                                s_mark_end(ls);
+                                rv = trans_force_write(ltran);
+                            }
+                            break;
+                        }
+                    }
+                }
             }
         }
     }
-
     return rv;
 }
 
@@ -796,7 +807,7 @@ my_api_trans_data_in(struct trans *trans)
         return 0;
     }
 
-    if (trans != g_api_con_trans)
+    if (list_index_of(g_api_con_trans_list, (tintptr) trans) == -1)
     {
         return 1;
     }
@@ -989,10 +1000,13 @@ my_api_trans_conn_in(struct trans *trans, struct trans *new_trans)
 
     new_trans->callback_data = ad;
 
-    trans_delete(g_api_con_trans);
-    g_api_con_trans = new_trans;
-    g_api_con_trans->trans_data_in = my_api_trans_data_in;
-    g_api_con_trans->header_size = 0;
+    if (g_api_con_trans_list == 0)
+    {
+        g_api_con_trans_list = list_create();
+    }
+    new_trans->trans_data_in = my_api_trans_data_in;
+    new_trans->header_size = 0;
+    list_add_item(g_api_con_trans_list, (tintptr) new_trans);
 
     return 0;
 }
@@ -1068,7 +1082,9 @@ channel_thread_loop(void *in_val)
     int num_wobjs;
     int timeout;
     int error;
+    int index;
     THREAD_RV rv;
+    struct trans *ltran;
 
     LOGM((LOG_LEVEL_INFO, "channel_thread_loop: thread start"));
     rv = 0;
@@ -1138,19 +1154,20 @@ channel_thread_loop(void *in_val)
                 }
             }
 
-            LOG(10, ("0 %p", g_api_con_trans));
-
-            if (g_api_con_trans != 0)
+            if (g_api_con_trans_list != 0)
             {
-                LOG(10, ("1 %p %d", g_api_con_trans, g_tcp_can_recv(g_api_con_trans->sck, 0)));
-
-                if (trans_check_wait_objs(g_api_con_trans) != 0)
+                for (index = g_api_con_trans_list->count - 1; index >= 0; index--)
                 {
-                    LOG(10, ("channel_thread_loop: trans_check_wait_objs failed, "
-                             "or disconnected"));
-                    g_free(g_api_con_trans->callback_data);
-                    trans_delete(g_api_con_trans);
-                    g_api_con_trans = 0;
+                    ltran = (struct trans *) list_get_item(g_api_con_trans_list, index);
+                    if (ltran != 0)
+                    {
+                        if (trans_check_wait_objs(ltran) != 0)
+                        {
+                            list_remove_item(g_api_con_trans_list, index);
+                            g_free(ltran->callback_data);
+                            trans_delete(ltran);
+                        }
+                    }
                 }
             }
 
@@ -1167,7 +1184,16 @@ channel_thread_loop(void *in_val)
             trans_get_wait_objs_rw(g_con_trans, objs, &num_objs,
                                    wobjs, &num_wobjs);
             trans_get_wait_objs(g_api_lis_trans, objs, &num_objs);
-            trans_get_wait_objs(g_api_con_trans, objs, &num_objs);
+
+            for (index = g_api_con_trans_list->count - 1; index >= 0; index--)
+            {
+                ltran = (struct trans *) list_get_item(g_api_con_trans_list, index);
+                if (ltran != 0)
+                {
+                    trans_get_wait_objs(ltran, objs, &num_objs);
+                }
+            }
+
             xcommon_get_wait_objs(objs, &num_objs, &timeout);
             sound_get_wait_objs(objs, &num_objs, &timeout);
             dev_redir_get_wait_objs(objs, &num_objs, &timeout);
@@ -1182,8 +1208,20 @@ channel_thread_loop(void *in_val)
     g_con_trans = 0;
     trans_delete(g_api_lis_trans);
     g_api_lis_trans = 0;
-    trans_delete(g_api_con_trans);
-    g_api_con_trans = 0;
+    if (g_api_con_trans_list != 0)
+    {
+        for (index = g_api_con_trans_list->count - 1; index >= 0; index--)
+        {
+            ltran = (struct trans *) list_get_item(g_api_con_trans_list, index);
+            if (ltran != 0)
+            {
+                list_remove_item(g_api_con_trans_list, index);
+                g_free(ltran->callback_data);
+                trans_delete(ltran);
+            }
+        }
+        list_delete(g_api_con_trans_list);
+    }
     LOGM((LOG_LEVEL_INFO, "channel_thread_loop: thread stop"));
     g_set_wait_obj(g_thread_done_event);
     return rv;
