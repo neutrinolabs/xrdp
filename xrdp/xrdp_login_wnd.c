@@ -565,6 +565,23 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
 
     if (regular)
     {
+	// Load the background image.
+	// If no file is specified no default image will be loaded.
+	// We only load the image if bpp > 8
+	if (globals->ls_background_image[0] != 0 && self->screen->bpp > 8)
+	{	
+	    char fileName[256] ;
+	    but = xrdp_bitmap_create(4, 4, self->screen->bpp, WND_TYPE_IMAGE, self);
+	    g_snprintf(fileName, 255, "%s/%s", XRDP_SHARE_PATH, globals->ls_background_image);	    	
+	    log_message(LOG_LEVEL_DEBUG, "We try to load the following background file: %s", fileName);
+	    xrdp_bitmap_load(but, fileName, self->palette);
+	    but->parent = self->screen;
+	    but->owner = self->screen;
+	    but->left = self->screen->width - but->width;
+	    but->top = self->screen->height - but->height;
+	    list_add_item(self->screen->child_list, (long)but);
+        }
+
         /* if logo image not specified, use default */
         if (globals->ls_logo_filename[0] == 0)
             g_snprintf(globals->ls_logo_filename, 255, "%s/xrdp_logo.bmp", XRDP_SHARE_PATH);
@@ -830,6 +847,11 @@ load_xrdp_config(struct xrdp_config *config, int bpp)
         {
             g_strncpy(globals->ls_logo_filename, v, 255);
             globals->ls_logo_filename[255] = 0;
+        }
+	else if (g_strncmp(n, "ls_background_image", 255) == 0)
+        {
+            g_strncpy(globals->ls_background_image, v, 255);
+            globals->ls_background_image[255] = 0;
         }
 
         else if (g_strncmp(n, "ls_logo_x_pos", 64) == 0)
