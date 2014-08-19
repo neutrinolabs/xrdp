@@ -129,9 +129,6 @@ xrdp_mm_module_cleanup(struct xrdp_mm *self)
 {
     log_message(LOG_LEVEL_DEBUG, "xrdp_mm_module_cleanup");
 
-    /* shutdown thread */
-    deinit_xrdp_encoder(self);
-
     if (self->mod != 0)
     {
         if (self->mod_exit != 0)
@@ -175,6 +172,10 @@ xrdp_mm_delete(struct xrdp_mm *self)
 
     /* free any module stuff */
     xrdp_mm_module_cleanup(self);
+
+    /* shutdown thread */
+    deinit_xrdp_encoder(self);
+
     trans_delete(self->sesman_trans);
     self->sesman_trans = 0;
     self->sesman_trans_up = 0;
