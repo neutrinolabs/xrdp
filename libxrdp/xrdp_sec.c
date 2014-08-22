@@ -185,6 +185,8 @@ static const tui8 g_fips_ivec[8] =
     0x12, 0x34, 0x56, 0x78, 0x90, 0xAB, 0xCD, 0xEF
 };
 
+static int is_security_header_present = 1; /* next packet should contain security header? */
+
 /*****************************************************************************/
 static void APP_CC
 hex_str_to_bin(char *in, char *out, int out_len)
@@ -1206,17 +1208,9 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
         return 1;
     }
 
-    /* TODO: HACK, we should recognize packets without security header
-     However, client info packet and license packet always have security header. */
-    if (s->data[17] == 0x13) /* confirm active pdu */
-    {
-        g_writeln("CONFIRM ACTIVE ARRIVED");
-        return 0;
-    }
 
-    if (s->data[17] == 0x17 || s->data[16] == 0x17) /* rdp data pdu */
+    if (!is_security_header_present)
     {
-        g_writeln("RDP DATA ARRIVED");
         return 0;
     }
 
@@ -1327,6 +1321,12 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
         {
             DEBUG((" out xrdp_sec_recv error"));
             return 1;
+        }
+
+        if (self->crypt_level == CRYPT_LEVEL_NONE
+                && self->crypt_method == CRYPT_METHOD_NONE)
+        {
+            is_security_header_present = 0; /* in tls mode, no more security header from now on */
         }
 
         DEBUG((" out xrdp_sec_recv"));
@@ -1791,11 +1791,11 @@ xrdp_sec_process_mcs_data_CS_SECURITY(struct xrdp_sec *self, struct stream* s)
             found = 1;
         }
     }
-    if (found == 0)
-    {
-        g_writeln("  can not find client / server agreed encryption method");
-        return 1;
-    }
+//    if (found == 0)
+//    {
+//        g_writeln("  can not find client / server agreed encryption method");
+//        return 1;
+//    }
     return 0;
 }
 

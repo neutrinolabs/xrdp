@@ -24,6 +24,42 @@
 #include "parse.h"
 
 /*****************************************************************************/
+int APP_CC
+trans_tls_recv(struct trans *self, void *ptr, int len)
+{
+    if (self->tls == NULL)
+    {
+        return 1;
+    }
+    return xrdp_tls_read(self->tls, ptr, len);
+}
+
+/*****************************************************************************/
+int APP_CC
+trans_tls_send(struct trans *self, const void *data, int len)
+{
+    if (self->tls == NULL)
+    {
+        return 1;
+    }
+    return xrdp_tls_write(self->tls, data, len);
+}
+
+/*****************************************************************************/
+int APP_CC
+trans_tcp_recv(struct trans *self, void *ptr, int len)
+{
+    return g_tcp_recv(self->sck, ptr, len, 0);
+}
+
+/*****************************************************************************/
+int APP_CC
+trans_tcp_send(struct trans *self, const void *data, int len)
+{
+    return g_tcp_send(self->sck, data, len, 0);
+}
+
+/*****************************************************************************/
 struct trans *
 APP_CC
 trans_create(int mode, int in_size, int out_size)
@@ -40,9 +76,9 @@ trans_create(int mode, int in_size, int out_size)
         init_stream(self->out_s, out_size);
         self->mode = mode;
         self->tls = 0;
-        /* assign tcp functions */
-        self->trans_read_call = trans_tcp_force_read_s;
-        self->trans_write_call = trans_tcp_force_write_s;
+        /* assign tcp calls by default */
+        self->trans_recv = trans_tcp_recv;
+        self->trans_send = trans_tcp_send;
     }
 
     return self;
@@ -147,7 +183,7 @@ send_waiting(struct trans *self, int block)
             if (g_tcp_can_send(self->sck, timeout))
             {
                 bytes = (int) (temp_s->end - temp_s->p);
-                sent = g_tcp_send(self->sck, temp_s->p, bytes, 0);
+                sent = self->trans_send(self, temp_s->p, bytes);
                 if (sent > 0)
                 {
                     temp_s->p += sent;
@@ -259,7 +295,7 @@ trans_check_wait_objs(struct trans *self)
 
             if (to_read > 0)
             {
-                read_bytes = g_tcp_recv(self->sck, self->in_s->end, to_read, 0);
+                read_bytes = self->trans_recv(self, self->in_s->end, to_read);
 
                 if (read_bytes == -1)
                 {
@@ -314,12 +350,6 @@ trans_check_wait_objs(struct trans *self)
 int APP_CC
 trans_force_read_s(struct trans *self, struct stream *in_s, int size)
 {
-    return self->trans_read_call(self, in_s, size);
-}
-/*****************************************************************************/
-int APP_CC
-trans_tcp_force_read_s(struct trans *self, struct stream *in_s, int size)
-{
     int rcvd;
 
     if (self->status != TRANS_STATUS_UP)
@@ -335,7 +365,7 @@ trans_tcp_force_read_s(struct trans *self, struct stream *in_s, int size)
             return 1;
         }
 
-        rcvd = g_tcp_recv(self->sck, in_s->end, size, 0);
+        rcvd = self->trans_recv(self, in_s->end, size);
 
         if (rcvd == -1)
         {
@@ -389,12 +419,6 @@ trans_force_read(struct trans *self, int size)
 int APP_CC
 trans_force_write_s(struct trans *self, struct stream *out_s)
 {
-    return self->trans_write_call(self, out_s);
-}
-/*****************************************************************************/
-int APP_CC
-trans_tcp_force_write_s(struct trans *self, struct stream *out_s)
-{
     int size;
     int total;
     int sent;
@@ -415,7 +439,7 @@ trans_tcp_force_write_s(struct trans *self, struct stream *out_s)
 
     while (total < size)
     {
-        sent = g_tcp_send(self->sck, out_s->data + total, size - total, 0);
+        sent = self->trans_send(self, out_s->data + total, size - total);
 
         if (sent == -1)
         {
@@ -690,8 +714,8 @@ trans_set_tls_mode(struct trans *self, const char *key, const char *cert)
     }
 
     /* assign tls functions */
-    self->trans_read_call = xrdp_tls_force_read_s;
-    self->trans_write_call = xrdp_tls_force_write_s;
+    self->trans_recv = trans_tls_recv;
+    self->trans_send = trans_tls_send;
 
     return 0;
 }
@@ -705,9 +729,9 @@ trans_shutdown_tls_mode(struct trans *self)
         return xrdp_tls_disconnect(self->tls);
     }
 
-    /* set callback back to tcp 
-     self->trans_read_call = trans_tcp_force_read_s;
-     self->trans_write_call = trans_tcp_force_write_s;
-     */
+    /* assign callback back to tcp cal */
+    self->trans_recv = trans_tcp_recv;
+    self->trans_send = trans_tcp_send;
+
     return 0;
 }

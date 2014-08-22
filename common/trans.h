@@ -41,8 +41,8 @@ typedef int (DEFAULT_CC *ttrans_data_in)(struct trans* self);
 typedef int (DEFAULT_CC *ttrans_conn_in)(struct trans* self,
                                          struct trans* new_self);
 typedef int (DEFAULT_CC *tis_term)(void);
-typedef int (APP_CC *trans_read_call) (struct trans *self, struct stream *in_s, int size);
-typedef int (APP_CC *trans_write_call) (struct trans *self, struct stream *out_s);
+typedef int (APP_CC *trans_recv) (struct trans *self, void *ptr, int len);
+typedef int (APP_CC *trans_send) (struct trans *self, const void *data, int len);
 
 struct trans
 {
@@ -64,8 +64,8 @@ struct trans
     int no_stream_init_on_data_in;
     int extra_flags; /* user defined */
     struct xrdp_tls *tls;
-    trans_read_call trans_read_call;
-    trans_write_call trans_write_call;
+    trans_recv trans_recv;
+    trans_send trans_send;
 };
 
 /* xrdp_tls */
@@ -87,10 +87,6 @@ int APP_CC
 xrdp_tls_disconnect(struct xrdp_tls *self);
 void APP_CC
 xrdp_tls_delete(struct xrdp_tls *self);
-int APP_CC
-xrdp_tls_force_read_s(struct trans *self, struct stream *in_s, int size);
-int APP_CC
-xrdp_tls_force_write_s(struct trans *self, struct stream *out_s);
 
 struct trans* APP_CC
 trans_create(int mode, int in_size, int out_size);
@@ -132,6 +128,6 @@ trans_shutdown_tls_mode(struct trans *self);
 int APP_CC
 trans_tcp_force_read_s(struct trans *self, struct stream *in_s, int size);
 int APP_CC
-trans_tcp_force_write_s(struct trans *self, struct stream *out_s);
+trans_force_write_s(struct trans *self, struct stream *out_s);
 
 #endif

@@ -385,15 +385,6 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
         chan = 0;
         error = xrdp_sec_recv(self->sec_layer, s, &chan);
 
-        if (error == 3)
-        {
-        	/* unencrypted confirm active msg arrived */
-            s->next_packet = 0;
-            *code = 3;
-            DEBUG(("out (0) xrdp_rdp_recv"));
-            return 0;
-        }
-
         if (error == -1) /* special code for send demand active */
         {
             s->next_packet = 0;
