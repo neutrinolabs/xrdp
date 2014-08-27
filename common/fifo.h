@@ -17,7 +17,7 @@
  *
  * FIFO implementation to store pointer to data struct
  */
- 
+
 #ifndef _FIFO_H
 #define _FIFO_H
 

@@ -23,10 +23,10 @@
 
 /**
  * Create new fifo data struct
- * 
+ *
  * @return pointer to new FIFO or NULL if system out of memory
  *****************************************************************************/
- 
+
 FIFO * APP_CC
 fifo_create(void)
 {
@@ -36,12 +36,12 @@ fifo_create(void)
 /**
  * Delete specified FIFO
  *****************************************************************************/
- 
+
 void APP_CC
 fifo_delete(FIFO *self)
 {
     USER_DATA *udp;
-    
+
     if (!self)
         return;
 
@@ -51,56 +51,56 @@ fifo_delete(FIFO *self)
          g_free(self);
          return;
      }
-     
+
     if (self->head == self->tail)
     {
         /* only one item in FIFO */
         if (self->auto_free)
             g_free(self->head->item);
-            
+
         g_free(self->head);
         g_free(self);
         return;
     }
-    
+
     /* more then one item in FIFO */
     while (self->head)
     {
         udp = self->head;
-        
+
         if (self->auto_free)
             g_free(udp->item);
-        
+
         self->head = udp->next;
         g_free(udp);
     }
-    
+
     g_free(self);
 }
 
 /**
  * Add an item to the specified FIFO
- * 
+ *
  * @param self FIFO to operate on
  * @param item item to add to specified FIFO
- * 
+ *
  * @return 0 on success, -1 on error
- *****************************************************************************/ 
- 
+ *****************************************************************************/
+
 int APP_CC
 fifo_add_item(FIFO *self, void *item)
 {
     USER_DATA *udp;
-    
+
     if (!self || !item)
         return -1;
 
     if ((udp = (USER_DATA *) g_malloc(sizeof(USER_DATA), 0)) == 0)
         return -1;
-        
+
     udp->item = item;
     udp->next = 0;
-    
+
     /* if fifo is empty, add to head */
     if (!self->head)
     {
@@ -108,31 +108,31 @@ fifo_add_item(FIFO *self, void *item)
         self->tail = udp;
         return 0;
     }
-    
+
     /* add to tail */
     self->tail->next = udp;
     self->tail = udp;
-    
+
     return 0;
 }
 
 /**
  * Return an item from top of FIFO
- * 
+ *
  * @param self FIFO to operate on
- * 
+ *
  * @return top item from FIFO or NULL if FIFO is empty
- *****************************************************************************/ 
- 
+ *****************************************************************************/
+
 void * APP_CC
 fifo_remove_item(FIFO *self)
 {
     void      *item;
     USER_DATA *udp;
-    
+
     if (!self || !self->head)
         return 0;
-        
+
     if (self->head == self->tail)
     {
         /* only one item in FIFO */
@@ -142,7 +142,7 @@ fifo_remove_item(FIFO *self)
         self->tail = 0;
         return item;
     }
-    
+
     /* more then one item in FIFO */
     udp = self->head;
     item = self->head->item;
@@ -153,17 +153,17 @@ fifo_remove_item(FIFO *self)
 
 /**
  * Return FIFO status
- * 
+ *
  * @param self FIFO to operate on
- * 
+ *
  * @return true if FIFO is empty, false otherwise
- *****************************************************************************/ 
- 
+ *****************************************************************************/
+
 int APP_CC
 fifo_is_empty(FIFO *self)
 {
     if (!self)
         return 1;
-        
+
     return (self->head == 0);
 }
