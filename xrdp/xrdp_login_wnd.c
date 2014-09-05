@@ -242,16 +242,18 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap *wnd)
     return 0;
 }
 
+/*****************************************************************************/
 /**
-* This is an internal function in this file used to parse the domain information
-* sent from the client.
-* If the information starts with '_' the domain field contains the
-* IP/DNS to connect to. If the domain field contains an additional '__' the char
-* that follows this '__' is an index number of a preferred combo choice.
-* Valid values for this choice is 0-9. But this function will only return index 
-* numbers between 0 and the max number of combo items -1.
-* Example: _192.168.1.2__1 result in a resultbuffer containing 192.168.1.2 and 
-* the return value will be 1. Meaning that index 1 is the preferred combo choice.
+* This is an internal function in this file used to parse the domain 
+* information sent from the client. If the information starts 
+* with '_' the domain field contains the IP/DNS to connect to. 
+* If the domain field contains an additional '__' the char that 
+* follows this '__' is an index number of a preferred combo choice. 
+* Valid values for this choice is 0-9. But this function will only return 
+* index numbers between 0 and the max number of combo items -1.
+* Example: _192.168.1.2__1 result in a resultbuffer containing 
+* 192.168.1.2  and the return value will be 1. Meaning that 
+* index 1 is the preferred combo choice. 
 * 
 * Users can create shortcuts where this information is configured. These 
 * shortcuts simplifies login.
@@ -263,51 +265,64 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap *wnd)
 * @return the index number of the combobox that the user prefer.
 * 0 if the user does not prefer any choice.
 */
-static int APP_CC xrdp_wm_parse_domain_information(char *orginalDomainInfo, int comboMax, int decode, char *resultBuffer)
+static int APP_CC
+xrdp_wm_parse_domain_information(char *orginalDomainInfo, int comboMax,
+                                 int decode, char *resultBuffer)
 {
-    /* If the first char in the domain name is '_' we use the domain name as IP*/
-    int ret = 0; // default return value
-    g_memset(resultBuffer, 0, 255);  
-    if(orginalDomainInfo[0]=='_')
+    int ret;
+    int pos;
+    int comboxindex;
+    char index[2];
+    char debugstr[256];
+
+    /* If the first char in the domain name is '_' we use the domain
+       name as IP*/
+    ret = 0; /* default return value */
+    /* resultBuffer assumed to be 256 chars */
+    g_memset(resultBuffer, 0, 256);
+    if (orginalDomainInfo[0] == '_')
     {
-         /* we try to locate a number indicating what combobox index the user prefer
-         * the information is loaded from domain field, from the client
-         * log_message(LOG_LEVEL_DEBUG, "domain contains _");	
-         * We must use valid chars in the domain name. 
+        /* we try to locate a number indicating what combobox index the user
+         * prefer the information is loaded from domain field, from the client
+         * log_message(LOG_LEVEL_DEBUG, "domain contains _");
+         * We must use valid chars in the domain name.
          * Underscore is a valid name in the domain.
-         * Invalid chars are ignored in microsoft client therefore we use '_' again.
-         * this sec '__' contains the split for index.*/
-         int pos = g_pos(&orginalDomainInfo[1],"__");
-         if(pos>0)
-         {
-             /* an index is found we try to use it
-             log_message(LOG_LEVEL_DEBUG, "domain contains index char __");*/
-             if(decode)
-             {
-                 char index[2] ;
-                 char debugstr[256] ;
-                 g_memset(index, 0, 2) ;
-                 int comboxindex ;
-                 g_strncpy(index, &orginalDomainInfo[pos+3], 1); // we just accept values 0-9  (one figure)
-                 comboxindex = g_htoi(index) ;
-                 g_sprintf(debugstr, "Value of index (as char): %s (converted) : %d (max) : %d",index,comboxindex,comboMax-1);
-                 log_message(LOG_LEVEL_DEBUG, debugstr);
-                 if(comboxindex>0 && comboxindex<comboMax) // limit to max number of items in combo box
-                 {
-                    log_message(LOG_LEVEL_DEBUG, "domain contains a valid index number");
-                    ret = comboxindex ; // preferred index for combo box.
-                 }
-             }
-             // pos limit the String to only contain the IP
-             g_strncpy(resultBuffer, &orginalDomainInfo[1], pos); 
-         }
-         else
-         {
-             //log_message(LOG_LEVEL_DEBUG, "domain does not contain _");
-             g_strncpy(resultBuffer, &orginalDomainInfo[1], 255);		
-         }
+         * Invalid chars are ignored in microsoft client therefore we use '_' 
+         * again. this sec '__' contains the split for index.*/
+        pos = g_pos(&orginalDomainInfo[1], "__");
+        if (pos > 0)
+        {
+            /* an index is found we try to use it
+            log_message(LOG_LEVEL_DEBUG, "domain contains index char __");*/
+            if (decode)
+            {
+                g_memset(index, 0, 2);
+                /* we just accept values 0-9  (one figure) */
+                g_strncpy(index, &orginalDomainInfo[pos + 3], 1);
+                comboxindex = g_htoi(index);
+                g_snprintf(debugstr, 255, "Value of index (as char): %s "
+                           "(converted) : %d (max) : %d", index, comboxindex,
+                           comboMax - 1);
+                debugstr[255] = 0;
+                log_message(LOG_LEVEL_DEBUG, debugstr);
+                /* limit to max number of items in combo box */
+                if ((comboxindex > 0) && (comboxindex < comboMax))
+                {
+                    log_message(LOG_LEVEL_DEBUG, "domain contains a valid "
+                                "index number");
+                    ret = comboxindex; /* preferred index for combo box. */
+                }
+            }
+            /* pos limit the String to only contain the IP */
+            g_strncpy(resultBuffer, &orginalDomainInfo[1], pos); 
+        }
+        else
+        {
+            /* log_message(LOG_LEVEL_DEBUG, "domain does not contain _"); */
+            g_strncpy(resultBuffer, &orginalDomainInfo[1], 255);
+        }
     }
-    return ret ;
+    return ret;
 }
 
 /******************************************************************************/
@@ -323,6 +338,7 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
     struct xrdp_mod_data *mod;
     struct xrdp_bitmap *b;
     struct xrdp_cfg_globals *globals;
+    char resultIP[256];
 
     globals = &self->xrdp_config->cfg_globals;
 
@@ -337,7 +353,7 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
     }
 
     insert_index = list_index_of(self->login_window->child_list,
-                                 (long)combo); // find combo in the list
+                                 (long)combo); /* find combo in the list */
     insert_index++;
     mod = (struct xrdp_mod_data *)
           list_get_item(combo->data_list, combo->item_index);
@@ -391,15 +407,17 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
                     self->login_window->focused_control = b;
                 }
 
-                /*Use the domain name as the destination IP/DNS
-                 This is useful in a gateway setup.*/
+                /* Use the domain name as the destination IP/DNS
+                   This is useful in a gateway setup. */
                 if (g_strncmp(name, "ip", 255) == 0)
                 {
-                    /* If the first char in the domain name is '_' we use the domain name as IP*/
-                    if(self->session->client_info->domain[0]=='_')
+                    /* If the first char in the domain name is '_' we use the
+                       domain name as IP */
+                    if (self->session->client_info->domain[0] == '_')
                     {
-                        char resultIP[256];
-                        xrdp_wm_parse_domain_information(self->session->client_info->domain,combo->data_list->count,0,resultIP);
+                        xrdp_wm_parse_domain_information(
+                                self->session->client_info->domain,
+                                combo->data_list->count, 0, resultIP);
                         g_strncpy(b->caption1, resultIP, 255);
                         b->edit_pos = g_mbstowcs(0, b->caption1, 0);
                     }
@@ -596,6 +614,7 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
 
     char buf[256];
     char buf1[256];
+    char resultIP[256];
     int log_width;
     int log_height;
     int regular;
@@ -652,9 +671,9 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
 
     if (regular)
     {
-        // Load the background image.
-        // If no file is specified no default image will be loaded.
-        // We only load the image if bpp > 8
+        /* Load the background image. */
+        /* If no file is specified no default image will be loaded. */
+        /* We only load the image if bpp > 8 */
         if (globals->ls_background_image[0] != 0 && self->screen->bpp > 8)
         {
             char fileName[256] ;
@@ -739,8 +758,10 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
     * parameter: 1 = decode domain field index information from client.
     * We only perform this the first time for each connection.
     */
-    char resultIP[256]; // just a dummy place holder, we ignore
-    combo->item_index = xrdp_wm_parse_domain_information(self->session->client_info->domain,combo->data_list->count,1,resultIP);   
+    combo->item_index = xrdp_wm_parse_domain_information(
+                self->session->client_info->domain,
+                combo->data_list->count, 1,
+                resultIP /* just a dummy place holder, we ignore */ );
     xrdp_wm_show_edits(self, combo);
 
     return 0;
