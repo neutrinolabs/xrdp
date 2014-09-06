@@ -167,7 +167,7 @@ rfx_encode_rgb_to_ycbcr(sint16 *y_r_buf, sint16 *cb_g_buf, sint16 *cr_b_buf)
 }
 
 /******************************************************************************/
-static int
+int
 rfx_encode_component(struct rfxencode *enc, const int *quantization_values,
                      sint16 *data, uint8 *buffer, int buffer_size, int *size)
 {
@@ -188,7 +188,7 @@ rfx_encode_component(struct rfxencode *enc, const int *quantization_values,
 }
 
 /******************************************************************************/
-static int
+int
 rfx_encode_component8(struct rfxencode *enc, const int *quantization_values,
                       sint8 *data, uint8 *buffer, int buffer_size, int *size)
 {
@@ -208,6 +208,28 @@ rfx_encode_component8(struct rfxencode *enc, const int *quantization_values,
         return 1;
     }
     *size = rfx_rlgr3_encode(buffer16, 4096, buffer, buffer_size);
+    return 0;
+}
+
+/******************************************************************************/
+int
+rfx_encode_component_accel(struct rfxencode *enc,
+                           const int *quantization_values,
+                           sint16 *data,
+                           uint8 *buffer, int buffer_size, int *size)
+{
+    /* put asm calls here */
+    return 0;
+}
+
+/******************************************************************************/
+int
+rfx_encode_component8_accel(struct rfxencode *enc,
+                            const int *quantization_values,
+                            sint8 *data,
+                            uint8 *buffer, int buffer_size, int *size)
+{
+    /* put asm calls here */
     return 0;
 }
 
@@ -235,28 +257,28 @@ rfx_encode_rgb(struct rfxencode *enc, char *rgb_data,
     {
         return 1;
     }
-    if (rfx_encode_component(enc, y_quants, y_r_buffer,
-                             stream_get_tail(data_out),
-                             stream_get_left(data_out),
-                             y_size) != 0)
+    if (enc->rfx_encode_16bit(enc, y_quants, y_r_buffer,
+                              stream_get_tail(data_out),
+                              stream_get_left(data_out),
+                              y_size) != 0)
     {
         return 1;
     }
     LLOGLN(10, ("rfx_encode_rgb: y_size %d", *y_size));
     stream_seek(data_out, *y_size);
-    if (rfx_encode_component(enc, cb_quants, cb_g_buffer,
-                             stream_get_tail(data_out),
-                             stream_get_left(data_out),
-                             cb_size) != 0)
+    if (enc->rfx_encode_16bit(enc, cb_quants, cb_g_buffer,
+                              stream_get_tail(data_out),
+                              stream_get_left(data_out),
+                              cb_size) != 0)
     {
         return 1;
     }
     LLOGLN(10, ("rfx_encode_rgb: cb_size %d", *cb_size));
     stream_seek(data_out, *cb_size);
-    if (rfx_encode_component(enc, cr_quants, cr_b_buffer,
-                             stream_get_tail(data_out),
-                             stream_get_left(data_out),
-                             cr_size) != 0)
+    if (enc->rfx_encode_16bit(enc, cr_quants, cr_b_buffer,
+                              stream_get_tail(data_out),
+                              stream_get_left(data_out),
+                              cr_size) != 0)
     {
         return 1;
     }
@@ -279,26 +301,26 @@ rfx_encode_yuv(struct rfxencode *enc, char *yuv_data,
     y_buffer = (sint8 *) yuv_data;
     u_buffer = (sint8 *) (yuv_data + RFX_YUV_BTES);
     v_buffer = (sint8 *) (yuv_data + RFX_YUV_BTES * 2);
-    if (rfx_encode_component8(enc, y_quants, y_buffer,
-                              stream_get_tail(data_out),
-                              stream_get_left(data_out),
-                              y_size) != 0)
+    if (enc->rfx_encode_8bit(enc, y_quants, y_buffer,
+                             stream_get_tail(data_out),
+                             stream_get_left(data_out),
+                             y_size) != 0)
     {
         return 1;
     }
     stream_seek(data_out, *y_size);
-    if (rfx_encode_component8(enc, u_quants, u_buffer,
-                              stream_get_tail(data_out),
-                              stream_get_left(data_out),
-                              u_size) != 0)
+    if (enc->rfx_encode_8bit(enc, u_quants, u_buffer,
+                             stream_get_tail(data_out),
+                             stream_get_left(data_out),
+                             u_size) != 0)
     {
         return 1;
     }
     stream_seek(data_out, *u_size);
-    if (rfx_encode_component8(enc, v_quants, v_buffer,
-                              stream_get_tail(data_out),
-                              stream_get_left(data_out),
-                              v_size) != 0)
+    if (enc->rfx_encode_8bit(enc, v_quants, v_buffer,
+                             stream_get_tail(data_out),
+                             stream_get_left(data_out),
+                             v_size) != 0)
     {
         return 1;
     }

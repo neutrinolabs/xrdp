@@ -25,6 +25,24 @@
 #define RFX_YUV_BTES (64 * 64)
 
 int
+rfx_encode_component(struct rfxencode *enc, const int *quantization_values,
+                     sint16 *data, uint8 *buffer, int buffer_size, int *size);
+int
+rfx_encode_component8(struct rfxencode *enc, const int *quantization_values,
+                      sint8 *data, uint8 *buffer, int buffer_size, int *size);
+
+int
+rfx_encode_component_accel(struct rfxencode *enc,
+                           const int *quantization_values,
+                           sint16 *data,
+                           uint8 *buffer, int buffer_size, int *size);
+int
+rfx_encode_component8_accel(struct rfxencode *enc,
+                            const int *quantization_values,
+                            sint8 *data,
+                            uint8 *buffer, int buffer_size, int *size);
+
+int
 rfx_encode_rgb(struct rfxencode *enc, char *rgb_data,
                int width, int height, int stride_bytes,
                const int *y_quants, const int *cb_quants, const int *cr_quants,

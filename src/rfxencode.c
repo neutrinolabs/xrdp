@@ -26,6 +26,7 @@
 #include "rfxencode.h"
 #include "rfxcompose.h"
 #include "rfxconstants.h"
+#include "rfxencode_tile.h"
 
 /******************************************************************************/
 void *
@@ -33,7 +34,7 @@ rfxcodec_encode_create(int width, int height, int format, int flags)
 {
     struct rfxencode *enc;
 
-    enc = malloc(sizeof(struct rfxencode));
+    enc = (struct rfxencode *) malloc(sizeof(struct rfxencode));
     if (enc == 0)
     {
         return 0;
@@ -64,6 +65,22 @@ rfxcodec_encode_create(int width, int height, int format, int flags)
             return NULL;
     }
     enc->format = format;
+    /* assign encoding functions */
+    if (flags & RFX_FLAGS_NOACCEL)
+    {
+        enc->rfx_encode_8bit = rfx_encode_component8; /* rfxencode_tile.c */
+        enc->rfx_encode_16bit = rfx_encode_component; /* rfxencode_tile.c */
+    }
+    else
+    {
+#if defined(RFX_USE_ACCEL) && RFX_USE_ACCEL
+        enc->rfx_encode_8bit = rfx_encode_component8_accel; /* rfxencode_tile.c */
+        enc->rfx_encode_16bit = rfx_encode_component_accel; /* rfxencode_tile.c */
+#else
+        enc->rfx_encode_8bit = rfx_encode_component8; /* rfxencode_tile.c */
+        enc->rfx_encode_16bit = rfx_encode_component; /* rfxencode_tile.c */
+#endif
+    }
     return enc;
 }
 

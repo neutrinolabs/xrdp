@@ -19,6 +19,8 @@
 #ifndef __RFXCODEC_ENCODE_H
 #define __RFXCODEC_ENCODE_H
 
+#define RFX_USE_ACCEL 0
+
 #define RFX_FORMAT_BGRA 0
 #define RFX_FORMAT_RGBA 1
 #define RFX_FORMAT_BGR  2
@@ -31,8 +33,9 @@
 #define RFX_FLAGS_RLGR1 1
 
 #define RFX_FLAGS_SAFE  0 /* default */
-#define RFX_FLAGS_OPT1  8
-#define RFX_FLAGS_OPT2  16
+#define RFX_FLAGS_OPT1    (1 << 3)
+#define RFX_FLAGS_OPT2    (1 << 4)
+#define RFX_FLAGS_NOACCEL (1 << 6)
 
 struct rfx_rect
 {

@@ -19,6 +19,17 @@
 #ifndef __RFXENCODE_H
 #define __RFXENCODE_H
 
+struct rfxencode;
+
+typedef int (*rfx_encode_8bit_proc)(struct rfxencode *enc,
+                                    const int *quantization_values,
+                                    sint8 *data, uint8 *buffer,
+                                    int buffer_size, int *size);
+typedef int (*rfx_encode_16bit_proc)(struct rfxencode *enc,
+                                     const int *quantization_values,
+                                     sint16 *data, uint8 *buffer,
+                                     int buffer_size, int *size);
+
 struct rfxencode
 {
     int width;
@@ -37,6 +48,9 @@ struct rfxencode
     sint16 cr_b_buffer[4096];
 
     sint16 dwt_buffer[4096];
+
+    rfx_encode_8bit_proc rfx_encode_8bit;
+    rfx_encode_16bit_proc rfx_encode_16bit;
 
 };
 
