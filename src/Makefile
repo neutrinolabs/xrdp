@@ -22,4 +22,4 @@ rfxrlgr3.o: x86/rfxrlgr3.asm
 	yasm -f elf32 -g dwarf2 x86/rfxrlgr3.asm
 
 clean:
-	rm -f $(OBJS) librfxencode.so
+	rm -f $(OBJS) librfxencode.so librfxencode.a

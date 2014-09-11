@@ -105,9 +105,11 @@ bit (edx) feature
 31        3DNow! 
 */ 
 
-//#define cpuid(_func, _ax, _bx, _cx, _dx)\
-//    __asm volatile ("cpuid":\
-//    "=a" (_ax), "=b" (_bx), "=c" (_cx), "=d" (_dx) : "a" (_func));
+#if 0
+#define cpuid(_func, _ax, _bx, _cx, _dx) \
+    __asm volatile ("cpuid": \
+    "=a" (_ax), "=b" (_bx), "=c" (_cx), "=d" (_dx) : "a" (_func));
+#endif
 
 /******************************************************************************/
 void *
