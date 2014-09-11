@@ -188,17 +188,7 @@ rfx_dwt_2d_encode_block8(sint8 *in_buffer,
 
 /******************************************************************************/
 int
-rfx_dwt_2d_encode(sint16 *buffer, sint16 *dwt_buffer)
-{
-    rfx_dwt_2d_encode_block(buffer, dwt_buffer, 32);
-    rfx_dwt_2d_encode_block(buffer + 3072, dwt_buffer, 16);
-    rfx_dwt_2d_encode_block(buffer + 3840, dwt_buffer, 8);
-    return 0;
-}
-
-/******************************************************************************/
-int
-rfx_dwt_2d_encode8(sint8 *in_buffer, sint16 *buffer, sint16 *dwt_buffer)
+rfx_dwt_2d_encode(sint8 *in_buffer, sint16 *buffer, sint16 *dwt_buffer)
 {
     rfx_dwt_2d_encode_block8(in_buffer, buffer, dwt_buffer, 32);
     rfx_dwt_2d_encode_block(buffer + 3072, dwt_buffer, 16);

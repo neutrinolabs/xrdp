@@ -21,14 +21,10 @@
 
 struct rfxencode;
 
-typedef int (*rfx_encode_8bit_proc)(struct rfxencode *enc,
-                                    const int *quantization_values,
-                                    sint8 *data, uint8 *buffer,
-                                    int buffer_size, int *size);
-typedef int (*rfx_encode_16bit_proc)(struct rfxencode *enc,
-                                     const int *quantization_values,
-                                     sint16 *data, uint8 *buffer,
-                                     int buffer_size, int *size);
+typedef int (*rfx_encode_proc)(struct rfxencode *enc,
+                               const int *quantization_values,
+                               sint8 *data, uint8 *buffer,
+                               int buffer_size, int *size);
 
 struct rfxencode
 {
@@ -43,14 +39,20 @@ struct rfxencode
     int format;
     int pad0[7];
 
-    sint16 y_r_buffer[4096];
-    sint16 cb_g_buffer[4096];
-    sint16 cr_b_buffer[4096];
+    sint8 y_r_buffer[4096];
+    sint8 cb_g_buffer[4096];
+    sint8 cr_b_buffer[4096];
 
     sint16 dwt_buffer[4096];
+    sint16 dwt_buffer1[4096];
 
-    rfx_encode_8bit_proc rfx_encode_8bit;
-    rfx_encode_16bit_proc rfx_encode_16bit;
+    rfx_encode_proc rfx_encode;
+
+    int got_sse2;
+    int got_sse3;
+    int got_sse41;
+    int got_sse42;
+    int got_neon;
 
 };
 
