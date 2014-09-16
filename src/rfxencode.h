@@ -52,6 +52,9 @@ struct rfxencode
     int got_sse3;
     int got_sse41;
     int got_sse42;
+    int got_sse4a;
+    int got_popcnt;
+    int got_lzcnt;
     int got_neon;
 
 };

@@ -424,7 +424,7 @@ main(int argc, char **argv)
     }
     if (do_read)
     {
-        read_file(count, quants, 1, in_file, out_file);
+        read_file(count, quants, 2, in_file, out_file);
     }
     return 0; 
 }

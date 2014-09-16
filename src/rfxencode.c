@@ -145,6 +145,22 @@ rfxcodec_encode_create(int width, int height, int format, int flags)
         printf("rfxcodec_encode_create: got sse4.2\n");
         enc->got_sse42 = 1;
     }
+    if (cx & (1 << 23)) /* popcnt */
+    {
+        printf("rfxcodec_encode_create: got popcnt\n");
+        enc->got_popcnt = 1;
+    }
+    cpuid(0x80000001, &ax, &bx, &cx, &dx);
+    if (cx & (1 << 5)) /* lzcnt */
+    {
+        printf("rfxcodec_encode_create: got lzcnt\n");
+        enc->got_lzcnt = 1;
+    }
+    if (cx & (1 << 6)) /* SSE 4.a */
+    {
+        printf("rfxcodec_encode_create: got sse4.a\n");
+        enc->got_sse4a = 1;
+    }
 
     enc->width = width;
     enc->height = height;
@@ -179,7 +195,7 @@ rfxcodec_encode_create(int width, int height, int format, int flags)
     else
     {
 #if defined(RFX_USE_ACCEL) && RFX_USE_ACCEL
-        enc->rfx_encode = rfx_encode_component_sse4; /* rfxencode_tile.c */
+        enc->rfx_encode = rfx_encode_component_x86_sse4; /* rfxencode_tile.c */
 #else
         enc->rfx_encode = rfx_encode_component; /* rfxencode_tile.c */
 #endif

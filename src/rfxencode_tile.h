@@ -31,10 +31,10 @@ rfx_encode_component(struct rfxencode *enc,
                      uint8 *buffer, int buffer_size, int *size);
 
 int
-rfx_encode_component_sse4(struct rfxencode *enc,
-                          const int *quantization_values,
-                          sint8 *data,
-                          uint8 *buffer, int buffer_size, int *size);
+rfx_encode_component_x86_sse4(struct rfxencode *enc,
+                              const int *quantization_values,
+                              sint8 *data,
+                              uint8 *buffer, int buffer_size, int *size);
 
 int
 rfx_encode_rgb(struct rfxencode *enc, char *rgb_data,
