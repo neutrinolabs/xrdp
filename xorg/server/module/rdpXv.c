@@ -429,7 +429,7 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
         rdpRegionIntersect(&dreg, &dreg, clipBoxes);
     }
 
-    num_clips = REGION_NUM_RECTS(clipBoxes);
+    num_clips = REGION_NUM_RECTS(&dreg);
     for (jndex = 0; jndex < num_clips; jndex++)
     {
         box = REGION_RECTS(&dreg)[jndex];
