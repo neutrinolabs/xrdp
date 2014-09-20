@@ -54,50 +54,13 @@ static XF86VideoEncodingRec g_xrdpVidEncodings[T_NUM_ENCODINGS] =
 static XF86VideoFormatRec g_xrdpVidFormats[T_NUM_FORMATS] =
 { { 0, TrueColor } };
 
-#define FOURCC_RV15 0x35315652
-#define XVIMAGE_RV15 \
-{ FOURCC_RV15,XvRGB,LSBFirst, \
-  {'R','V','1','5',0,0,0,0,0,0,0,0,0,0,0,0}, \
-  16,XvPacked,1,15,0x001f,0x03e0,0x7c00,0,0,0,0,0,0,0,0,0, \
-  {'R','V','B',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, \
-  XvTopToBottom \
-}
-
-#define FOURCC_RV16 0x36315652
-#define XVIMAGE_RV16 \
-{ FOURCC_RV16,XvRGB,LSBFirst, \
-  {'R','V','1','6',0,0,0,0,0,0,0,0,0,0,0,0}, \
-  16,XvPacked,1,16,0x001f,0x07e0,0xf800,0,0,0,0,0,0,0,0,0, \
-  {'R','V','B',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, \
-  XvTopToBottom \
-}
-
-#define FOURCC_RV24 0x34325652
-#define XVIMAGE_RV24 \
-{ FOURCC_RV24,XvRGB,LSBFirst, \
-  {'R','V','2','4',0,0,0,0,0,0,0,0,0,0,0,0}, \
-  32,XvPacked,1,24,0x000000ff,0x0000ff00,0x00ff0000,0,0,0,0,0,0,0,0,0, \
-  {'R','V','B',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, \
-  XvTopToBottom \
-}
-
-#define FOURCC_RV32 0x32335652
-#define XVIMAGE_RV32 \
-{ FOURCC_RV32,XvRGB,LSBFirst, \
-  {'R','V','3','2',0,0,0,0,0,0,0,0,0,0,0,0}, \
-  32,XvPacked,1,32,0x000000ff,0x0000ff00,0x00ff0000,0,0,0,0,0,0,0,0,0, \
-  {'R','V','B',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, \
-  XvTopToBottom \
-}
-
 /* XVIMAGE_YV12 FOURCC_YV12 0x32315659 */
 /* XVIMAGE_YUY2 FOURCC_YUY2 0x32595559 */
 /* XVIMAGE_UYVY FOURCC_UYVY 0x59565955 */
 /* XVIMAGE_I420 FOURCC_I420 0x30323449 */
 
 static XF86ImageRec g_xrdpVidImages[] =
-{ XVIMAGE_RV15, XVIMAGE_RV16, XVIMAGE_RV24, XVIMAGE_RV32, XVIMAGE_YV12,
-  XVIMAGE_YUY2, XVIMAGE_UYVY, XVIMAGE_I420 };
+{ XVIMAGE_YV12, XVIMAGE_YUY2, XVIMAGE_UYVY, XVIMAGE_I420 };
 
 #define T_MAX_PORTS 1
 
@@ -222,6 +185,155 @@ YV12_to_RGB32(unsigned char *yuvs, int width, int height, int *rgbs)
 
 /*****************************************************************************/
 static int
+I420_to_RGB32(unsigned char *yuvs, int width, int height, int *rgbs)
+{
+    int size_total;
+    int y;
+    int u;
+    int v;
+    int c;
+    int d;
+    int e;
+    int r;
+    int g;
+    int b;
+    int t;
+    int i;
+    int j;
+
+    size_total = width * height;
+    for (j = 0; j < height; j++)
+    {
+        for (i = 0; i < width; i++)
+        {
+            y = yuvs[j * width + i];
+            v = yuvs[(j / 2) * (width / 2) + (i / 2) + size_total];
+            u = yuvs[(j / 2) * (width / 2) + (i / 2) + size_total + (size_total / 4)];
+            c = y - 16;
+            d = u - 128;
+            e = v - 128;
+            t = (298 * c + 409 * e + 128) >> 8;
+            b = RDPCLAMP(t, 0, 255);
+            t = (298 * c - 100 * d - 208 * e + 128) >> 8;
+            g = RDPCLAMP(t, 0, 255);
+            t = (298 * c + 516 * d + 128) >> 8;
+            r = RDPCLAMP(t, 0, 255);
+            rgbs[j * width + i] = (r << 16) | (g << 8) | b;
+        }
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+static int
+YUY2_to_RGB32(unsigned char *yuvs, int width, int height, int *rgbs)
+{
+    int y1;
+    int y2;
+    int u;
+    int v;
+    int c;
+    int d;
+    int e;
+    int r;
+    int g;
+    int b;
+    int t;
+    int i;
+    int j;
+
+    for (j = 0; j < height; j++)
+    {
+        for (i = 0; i < width; i++)
+        {
+            y1 = *(yuvs++);
+            v = *(yuvs++);
+            y2 = *(yuvs++);
+            u = *(yuvs++);
+
+            c = y1 - 16;
+            d = u - 128;
+            e = v - 128;
+            t = (298 * c + 409 * e + 128) >> 8;
+            b = RDPCLAMP(t, 0, 255);
+            t = (298 * c - 100 * d - 208 * e + 128) >> 8;
+            g = RDPCLAMP(t, 0, 255);
+            t = (298 * c + 516 * d + 128) >> 8;
+            r = RDPCLAMP(t, 0, 255);
+            rgbs[j * width + i] = (r << 16) | (g << 8) | b;
+
+            i++;
+            c = y2 - 16;
+            d = u - 128;
+            e = v - 128;
+            t = (298 * c + 409 * e + 128) >> 8;
+            b = RDPCLAMP(t, 0, 255);
+            t = (298 * c - 100 * d - 208 * e + 128) >> 8;
+            g = RDPCLAMP(t, 0, 255);
+            t = (298 * c + 516 * d + 128) >> 8;
+            r = RDPCLAMP(t, 0, 255);
+            rgbs[j * width + i] = (r << 16) | (g << 8) | b;
+        }
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+static int
+UYVY_to_RGB32(unsigned char *yuvs, int width, int height, int *rgbs)
+{
+    int y1;
+    int y2;
+    int u;
+    int v;
+    int c;
+    int d;
+    int e;
+    int r;
+    int g;
+    int b;
+    int t;
+    int i;
+    int j;
+
+    for (j = 0; j < height; j++)
+    {
+        for (i = 0; i < width; i++)
+        {
+            v = *(yuvs++);
+            y1 = *(yuvs++);
+            u = *(yuvs++);
+            y2 = *(yuvs++);
+
+            c = y1 - 16;
+            d = u - 128;
+            e = v - 128;
+            t = (298 * c + 409 * e + 128) >> 8;
+            b = RDPCLAMP(t, 0, 255);
+            t = (298 * c - 100 * d - 208 * e + 128) >> 8;
+            g = RDPCLAMP(t, 0, 255);
+            t = (298 * c + 516 * d + 128) >> 8;
+            r = RDPCLAMP(t, 0, 255);
+            rgbs[j * width + i] = (r << 16) | (g << 8) | b;
+
+            i++;
+            c = y2 - 16;
+            d = u - 128;
+            e = v - 128;
+            t = (298 * c + 409 * e + 128) >> 8;
+            b = RDPCLAMP(t, 0, 255);
+            t = (298 * c - 100 * d - 208 * e + 128) >> 8;
+            g = RDPCLAMP(t, 0, 255);
+            t = (298 * c + 516 * d + 128) >> 8;
+            r = RDPCLAMP(t, 0, 255);
+            rgbs[j * width + i] = (r << 16) | (g << 8) | b;
+        }
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+static int
 stretch_RGB32_RGB32(int *src, int src_width, int src_height,
                     int src_x, int src_y, int src_w, int src_h,
                     int *dst, int dst_w, int dst_h)
@@ -243,13 +355,13 @@ stretch_RGB32_RGB32(int *src, int src_width, int src_height,
 
 /*****************************************************************************/
 static int
-xrdpVidPutImage_FOURCC_YV12(ScrnInfoPtr pScrn,
-                            short src_x, short src_y, short drw_x, short drw_y,
-                            short src_w, short src_h, short drw_w, short drw_h,
-                            int format, unsigned char* buf,
-                            short width, short height,
-                            Bool sync, RegionPtr clipBoxes,
-                            pointer data, DrawablePtr dst)
+xrdpVidPutImage(ScrnInfoPtr pScrn,
+                short src_x, short src_y, short drw_x, short drw_y,
+                short src_w, short src_h, short drw_w, short drw_h,
+                int format, unsigned char* buf,
+                short width, short height,
+                Bool sync, RegionPtr clipBoxes,
+                pointer data, DrawablePtr dst)
 {
     rdpPtr dev;
     char *dst8;
@@ -264,14 +376,44 @@ xrdpVidPutImage_FOURCC_YV12(ScrnInfoPtr pScrn,
     RegionRec dreg;
     BoxRec box;
 
-    LLOGLN(0, ("xrdpVidPutImage_FOURCC_YV12:"));
+    LLOGLN(10, ("xrdpVidPutImage:"));
     dev = XRDPPTR(pScrn);
 
-    rgborg32 = (int *) g_malloc(width * height * 4, 0);
-    rgbend32 = (int *) g_malloc(drw_w * drw_h * 4, 0);
+    index = width * height * 4 + drw_w * drw_h * 4;
+    rgborg32 = (int *) g_malloc(index, 0);
+    if (rgborg32 == NULL)
+    {
+        LLOGLN(0, ("xrdpVidPutImage: memory alloc error"));
+        return Success;
+    }
+    rgbend32 = rgborg32 + width * height;
 
-    YV12_to_RGB32(buf, width, height, rgborg32);
-    stretch_RGB32_RGB32(rgborg32, width, height, src_x, src_y, src_w, src_h,
+    switch (format)
+    {
+        case FOURCC_YV12:
+            LLOGLN(10, ("xrdpVidPutImage: FOURCC_YV12"));
+            YV12_to_RGB32(buf, width, height, rgborg32);
+            break;
+        case FOURCC_I420:
+            LLOGLN(10, ("xrdpVidPutImage: FOURCC_I420"));
+            I420_to_RGB32(buf, width, height, rgborg32);
+            break;
+        case FOURCC_YUY2:
+            LLOGLN(10, ("xrdpVidPutImage: FOURCC_YUY2"));
+            YUY2_to_RGB32(buf, width, height, rgborg32);
+            break;
+        case FOURCC_UYVY:
+            LLOGLN(10, ("xrdpVidPutImage: FOURCC_UYVY"));
+            UYVY_to_RGB32(buf, width, height, rgborg32);
+            break;
+        default:
+            LLOGLN(0, ("xrdpVidPutImage: unknown format 0x%8.8x", format));
+            g_free(rgborg32);
+            return Success;
+    }
+
+    stretch_RGB32_RGB32(rgborg32, width, height,
+                        src_x, src_y, src_w, src_h,
                         rgbend32, drw_w, drw_h);
 
     box.x1 = drw_x;
@@ -281,6 +423,7 @@ xrdpVidPutImage_FOURCC_YV12(ScrnInfoPtr pScrn,
     rdpRegionInit(&dreg, &box, 0);
 
     num_clips = REGION_NUM_RECTS(clipBoxes);
+    LLOGLN(10, ("xrdpVidPutImage: num_clips %d", num_clips));
     if (num_clips > 0)
     {
         rdpRegionIntersect(&dreg, &dreg, clipBoxes);
@@ -307,33 +450,7 @@ xrdpVidPutImage_FOURCC_YV12(ScrnInfoPtr pScrn,
     rdpRegionUninit(&dreg);
 
     g_free(rgborg32);
-    g_free(rgbend32);
 
-    return Success;
-}
-
-/*****************************************************************************/
-static int
-xrdpVidPutImage(ScrnInfoPtr pScrn,
-                short src_x, short src_y, short drw_x, short drw_y,
-                short src_w, short src_h, short drw_w, short drw_h,
-                int format, unsigned char* buf, short width, short height,
-                Bool sync, RegionPtr clipBoxes, pointer data, DrawablePtr dst)
-{
-    LLOGLN(0, ("xrdpVidPutImage:"));
-    switch (format)
-    {
-        case FOURCC_YV12:
-            LLOGLN(10, ("xrdpVidPutImage: FOURCC_YV12"));
-            return xrdpVidPutImage_FOURCC_YV12(pScrn,
-                                               src_x, src_y, drw_x, drw_y,
-                                               src_w, src_h, drw_w, drw_h,
-                                               format, buf, width, height,
-                                               sync, clipBoxes, data, dst);
-        default:
-            LLOGLN(0, ("xrdpVidPutImage: unknown format 0x%8.8x", format));
-            break;
-    }
     return Success;
 }
 
@@ -345,7 +462,7 @@ xrdpVidQueryImageAttributes(ScrnInfoPtr pScrn, int id,
 {
     int size, tmp;
 
-    LLOGLN(0, ("xrdpVidQueryImageAttributes:"));
+    LLOGLN(10, ("xrdpVidQueryImageAttributes:"));
     /* this is same code as all drivers currently have */
     if (*w > 2046)
     {
@@ -395,27 +512,9 @@ xrdpVidQueryImageAttributes(ScrnInfoPtr pScrn, int id,
             }
             size += tmp;
             break;
-        case FOURCC_RV15:
-        case FOURCC_RV16:
         case FOURCC_YUY2:
         case FOURCC_UYVY:
             size = (*w) * 2;
-            if (pitches != NULL)
-            {
-                pitches[0] = size;
-            }
-            size *= *h;
-            break;
-        case FOURCC_RV24:
-            size = (*w) * 3;
-            if (pitches != NULL)
-            {
-                pitches[0] = size;
-            }
-            size *= *h;
-            break;
-        case FOURCC_RV32:
-            size = (*w) * 4;
             if (pitches != NULL)
             {
                 pitches[0] = size;
