@@ -122,6 +122,7 @@ auth_userpass(char *user, char *pass, int *errorcode)
 		*errorcode = error ;
 	}
         g_printf("pam_start failed: %s\r\n", pam_strerror(auth_info->ph, error));
+        pam_end(auth_info->ph, error);
         g_free(auth_info);
         return 0;
     }
@@ -135,6 +136,7 @@ auth_userpass(char *user, char *pass, int *errorcode)
 	}
         g_printf("pam_authenticate failed: %s\r\n",
                  pam_strerror(auth_info->ph, error));
+        pam_end(auth_info->ph, error);
         g_free(auth_info);
         return 0;
     }
@@ -153,6 +155,7 @@ auth_userpass(char *user, char *pass, int *errorcode)
 	}
         g_printf("pam_acct_mgmt failed: %s\r\n",
                  pam_strerror(auth_info->ph, error));
+        pam_end(auth_info->ph, error);
         g_free(auth_info);
         return 0;
     }
