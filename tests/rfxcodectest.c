@@ -405,13 +405,13 @@ main(int argc, char **argv)
         else if (strcmp("-i", argv[index]) == 0)
         {
             index++;
-            snprintf(in_file, 255, argv[index]);
+            snprintf(in_file, 255, "%s", argv[index]);
             do_read = 1;
         }
         else if (strcmp("-o", argv[index]) == 0)
         {
             index++;
-            snprintf(out_file, 255, argv[index]);
+            snprintf(out_file, 255, "%s", argv[index]);
         }
         else
         {
