@@ -6,7 +6,7 @@ rdpPolyFillArc.o rdpPolyText8.o rdpPolyText16.o rdpImageText8.o \
 rdpImageText16.o rdpImageGlyphBlt.o rdpPolyGlyphBlt.o rdpPushPixels.o \
 rdpCursor.o rdpMain.o rdpRandR.o rdpMisc.o rdpReg.o \
 rdpComposite.o rdpGlyphs.o rdpPixmap.o rdpInput.o rdpClientCon.o rdpCapture.o \
-rdpTrapezoids.o
+rdpTrapezoids.o rdpXv.o
 
 CFLAGS = -g -O2 -Wall -fPIC -I/usr/include/xorg -I/usr/include/pixman-1 \
 -I../../../common

@@ -92,6 +92,9 @@ static int g_rdp_opcodes[16] =
     0xff  /* GXset          0xf 1 */
 };
 
+static int
+rdpClientConDisconnect(rdpPtr dev, rdpClientCon *clientCon);
+
 /******************************************************************************/
 static int
 rdpClientConGotConnection(ScreenPtr pScreen, rdpPtr dev)
@@ -128,6 +131,15 @@ rdpClientConGotConnection(ScreenPtr pScreen, rdpPtr dev)
         clientCon->conNumber = dev->conNumber;
         AddEnabledDevice(clientCon->sck);
     }
+
+#if 0
+    if (dev->clientConTail != NULL)
+    {
+        rdpClientConDisconnect(dev, dev->clientConTail);
+        dev->clientConHead = NULL;
+        dev->clientConTail = NULL;
+    }
+#endif
 
     if (dev->clientConTail == NULL)
     {

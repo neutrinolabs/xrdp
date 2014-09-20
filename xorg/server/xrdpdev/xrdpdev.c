@@ -53,6 +53,7 @@ This is the main driver file
 #include "rdpGlyphs.h"
 #include "rdpPixmap.h"
 #include "rdpClientCon.h"
+#include "rdpXv.h"
 
 #define XRDP_DRIVER_NAME "XRDPDEV"
 #define XRDP_NAME "XRDPDEV"
@@ -457,11 +458,11 @@ rdpScreenInit(ScreenPtr pScreen, int argc, char **argv)
     miInitializeBackingStore(pScreen);
 #endif
 
-#if 0
+#if 1
     /* XVideo */
-    if (rdp_xv_init(pScreen, pScrn) != 0)
+    if (!rdpXvInit(pScreen, pScrn))
     {
-        LLOGLN(0, ("rdpScreenInit: rdp_xv_init failed"));
+        LLOGLN(0, ("rdpScreenInit: rdpXvInit failed"));
     }
 #endif
 
