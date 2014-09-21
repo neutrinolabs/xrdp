@@ -55,14 +55,6 @@ This is the main driver file
 #include "rdpClientCon.h"
 #include "rdpXv.h"
 
-#define XRDP_DRIVER_NAME "XRDPDEV"
-#define XRDP_NAME "XRDPDEV"
-#define XRDP_VERSION 1000
-
-#define PACKAGE_VERSION_MAJOR 1
-#define PACKAGE_VERSION_MINOR 0
-#define PACKAGE_VERSION_PATCHLEVEL 0
-
 #define LLOG_LEVEL 1
 #define LLOGLN(_level, _args) \
   do \
@@ -458,7 +450,7 @@ rdpScreenInit(ScreenPtr pScreen, int argc, char **argv)
     miInitializeBackingStore(pScreen);
 #endif
 
-#if 1
+#if defined(XvExtension) && XvExtension
     /* XVideo */
     if (!rdpXvInit(pScreen, pScrn))
     {
@@ -665,7 +657,7 @@ rdpProbe(DriverPtr drv, int flags)
             found_screen = 1;
             pscrn->driverVersion = XRDP_VERSION;
             pscrn->driverName    = XRDP_DRIVER_NAME;
-            pscrn->name          = XRDP_NAME;
+            pscrn->name          = XRDP_DRIVER_NAME;
             pscrn->Probe         = rdpProbe;
             pscrn->PreInit       = rdpPreInit;
             pscrn->ScreenInit    = rdpScreenInit;
@@ -717,7 +709,7 @@ static void
 rdpIdentify(int flags)
 {
     LLOGLN(0, ("rdpIdentify:"));
-    xf86PrintChipsets(XRDP_NAME, "driver for xrdp", g_Chipsets);
+    xf86PrintChipsets(XRDP_DRIVER_NAME, "driver for xrdp", g_Chipsets);
 }
 
 /*****************************************************************************/

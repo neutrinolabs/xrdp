@@ -30,6 +30,16 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "rdpPri.h"
 
+#define XRDP_MODULE_NAME "XRDPMOD"
+#define XRDP_DRIVER_NAME "XRDPDEV"
+#define XRDP_MOUSE_NAME "XRDPMOUSE"
+#define XRDP_KEYB_NAME "XRDPKEYB"
+#define XRDP_VERSION 1000
+
+#define PACKAGE_VERSION_MAJOR 1
+#define PACKAGE_VERSION_MINOR 0
+#define PACKAGE_VERSION_PATCHLEVEL 0
+
 #define COLOR8(r, g, b) \
     ((((r) >> 5) << 0)  | (((g) >> 5) << 3) | (((b) >> 6) << 6))
 #define COLOR15(r, g, b) \

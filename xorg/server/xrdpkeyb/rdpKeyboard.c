@@ -52,14 +52,6 @@ xrdp keyboard module
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
-#define XRDP_DRIVER_NAME "XRDPKEYB"
-#define XRDP_NAME "XRDPKEYB"
-#define XRDP_VERSION 1000
-
-#define PACKAGE_VERSION_MAJOR 1
-#define PACKAGE_VERSION_MINOR 0
-#define PACKAGE_VERSION_PATCHLEVEL 0
-
 #define MIN_KEY_CODE 8
 #define MAX_KEY_CODE 255
 #define NO_OF_KEYS ((MAX_KEY_CODE - MIN_KEY_CODE) + 1)
@@ -688,7 +680,7 @@ rdpkeybUnInit(InputDriverPtr drv, InputInfoPtr info, int flags)
 static InputDriverRec rdpkeyb =
 {
     PACKAGE_VERSION_MAJOR,  /* version   */
-    XRDP_NAME,              /* name      */
+    XRDP_KEYB_NAME,         /* name      */
     NULL,                   /* identify  */
     rdpkeybPreInit,         /* preinit   */
     rdpkeybUnInit,          /* uninit    */
@@ -715,7 +707,7 @@ rdpkeybUnplug(pointer p)
 /******************************************************************************/
 static XF86ModuleVersionInfo rdpkeybVersionRec =
 {
-    XRDP_DRIVER_NAME,
+    XRDP_KEYB_NAME,
     MODULEVENDORSTRING,
     MODINFOSTRING1,
     MODINFOSTRING2,

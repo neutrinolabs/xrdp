@@ -545,7 +545,7 @@ rdpXvInit(ScreenPtr pScreen, ScrnInfoPtr pScrn)
     }
     adaptor->type = XvInputMask | XvImageMask | XvVideoMask | XvStillMask | XvWindowMask | XvPixmapMask;
     adaptor->flags = VIDEO_CLIP_TO_VIEWPORT;
-    adaptor->name = "XORGXRDP XVideo Adaptor";
+    adaptor->name = XRDP_MODULE_NAME " XVideo Adaptor";
     adaptor->nEncodings = T_NUM_ENCODINGS;
     adaptor->pEncodings = &(g_xrdpVidEncodings[0]);
     adaptor->nFormats = T_NUM_FORMATS;
