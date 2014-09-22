@@ -31,6 +31,7 @@
 #include "rfxencode_dwt.h"
 #include "rfxencode_quantization.h"
 #include "rfxencode_differential.h"
+#include "rfxencode_rlgr1.h"
 #include "rfxencode_rlgr3.h"
 
 #define LLOG_LEVEL 1
@@ -156,8 +157,29 @@ rfx_encode_rgb_to_ycbcr(sint8 *y_r_buf, sint8 *cb_g_buf, sint8 *cr_b_buf)
 
 /******************************************************************************/
 int
-rfx_encode_component(struct rfxencode *enc, const int *quantization_values,
-                      sint8 *data, uint8 *buffer, int buffer_size, int *size)
+rfx_encode_component_rlgr1(struct rfxencode *enc, const int *quantization_values,
+                           sint8 *data, uint8 *buffer, int buffer_size, int *size)
+{
+    if (rfx_dwt_2d_encode(data, enc->dwt_buffer1, enc->dwt_buffer) != 0)
+    {
+        return 1;
+    }
+    if (rfx_quantization_encode(enc->dwt_buffer1, quantization_values) != 0)
+    {
+        return 1;
+    }
+    if (rfx_differential_encode(enc->dwt_buffer1 + 4032, 64) != 0)
+    {
+        return 1;
+    }
+    *size = rfx_rlgr1_encode(enc->dwt_buffer1, 4096, buffer, buffer_size);
+    return 0;
+}
+
+/******************************************************************************/
+int
+rfx_encode_component_rlgr3(struct rfxencode *enc, const int *quantization_values,
+                           sint8 *data, uint8 *buffer, int buffer_size, int *size)
 {
     if (rfx_dwt_2d_encode(data, enc->dwt_buffer1, enc->dwt_buffer) != 0)
     {

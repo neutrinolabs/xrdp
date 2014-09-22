@@ -17,12 +17,12 @@
  * limitations under the License.
  */
 
-#ifndef __RFX_RLGR3_H
-#define __RFX_RLGR3_H
+#ifndef __RFX_RLGR1_H
+#define __RFX_RLGR1_H
 
 #include "rfxcommon.h"
 
 int
-rfx_rlgr3_encode(const sint16* data, int data_size, uint8* buffer, int buffer_size);
+rfx_rlgr1_encode(const sint16* data, int data_size, uint8* buffer, int buffer_size);
 
 #endif /* __RFX_RLGR_H */

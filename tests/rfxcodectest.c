@@ -65,7 +65,7 @@ speed_random(int count, const int *quants)
     int num_quants;
 
     printf("speed_random:\n");
-    han = rfxcodec_encode_create(1920, 1024, RFX_FORMAT_BGRA, RFX_FLAGS_NONE);
+    han = rfxcodec_encode_create(1920, 1024, RFX_FORMAT_BGRA, RFX_FLAGS_RLGR1);
     if (han == 0)
     {
         printf("speed_random: rfxcodec_encode_create failed\n");
@@ -235,7 +235,7 @@ encode_file(char *data, int width, int height, char *cdata, int *cdata_bytes,
     void *han;
     struct rfx_rect regions[1];
 
-    han = rfxcodec_encode_create(1920, 1024, RFX_FORMAT_BGRA, RFX_FLAGS_NONE);
+    han = rfxcodec_encode_create(1920, 1024, RFX_FORMAT_BGRA, RFX_FLAGS_RLGR1);
     if (han == 0)
     {
         printf("encode_file: rfxcodec_encode_create failed\n");

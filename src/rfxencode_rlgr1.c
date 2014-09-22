@@ -124,7 +124,7 @@ do { \
 } while (0)
 
 int
-rfx_rlgr3_encode(const sint16* data, int data_size, uint8* buffer, int buffer_size)
+rfx_rlgr1_encode(const sint16* data, int data_size, uint8* buffer, int buffer_size)
 {
     int k;
     int kp;
@@ -140,10 +140,7 @@ rfx_rlgr3_encode(const sint16* data, int data_size, uint8* buffer, int buffer_si
 
     RFX_BITSTREAM bs;
 
-    uint32 twoMs1;
-    uint32 twoMs2;
-    uint32 sum2Ms;
-    uint32 nIdx;
+    uint32 twoMs;
 
     rfx_bitstream_attach(bs, buffer, buffer_size);
 
@@ -201,33 +198,25 @@ rfx_rlgr3_encode(const sint16* data, int data_size, uint8* buffer, int buffer_si
         {
             /* GOLOMB-RICE MODE */
 
-            /* RLGR3 variant */
+            /* RLGR1 variant */
 
-            /* convert the next two input values to (2*magnitude - sign) and */
-            /* encode their sum using GR code */
-
+            /* convert input to (2*magnitude - sign), encode using GR code */
             GetNextInput(input);
-            twoMs1 = Get2MagSign(input);
-            GetNextInput(input);
-            twoMs2 = Get2MagSign(input);
-            sum2Ms = twoMs1 + twoMs2;
+            twoMs = Get2MagSign(input);
+            CodeGR(krp, twoMs);
 
-            CodeGR(krp, sum2Ms);
-
-            /* encode binary representation of the first input (twoMs1). */
-            GetMinBits(sum2Ms, nIdx);
-            OutputBits(nIdx, twoMs1);
-
-            /* update k,kp for the two input values */
-
-            if (twoMs1 && twoMs2)
+            /* update k, kp */
+            /* NOTE: as of Aug 2011, the algorithm is still wrongly documented
+               and the update direction is reversed */
+            if (twoMs)
             {
-                UpdateParam(kp, -2 * DQ_GR, k);
+                UpdateParam(kp, -DQ_GR, k);
             }
-            else if (!twoMs1 && !twoMs2)
+            else
             {
-                UpdateParam(kp, 2 * UQ_GR, k);
+                UpdateParam(kp, UQ_GR, k);
             }
+
         }
     }
 

@@ -165,7 +165,11 @@ rfxcodec_encode_create(int width, int height, int format, int flags)
     enc->width = width;
     enc->height = height;
     enc->mode = RLGR3;
-    switch (format)
+    if (flags & RFX_FLAGS_RLGR1)
+    {
+        enc->mode = RLGR1;
+    }
+    switch (format) 
     {
         case RFX_FORMAT_BGRA:
             enc->bits_per_pixel = 32;
@@ -190,14 +194,28 @@ rfxcodec_encode_create(int width, int height, int format, int flags)
     /* assign encoding functions */
     if (flags & RFX_FLAGS_NOACCEL)
     {
-        enc->rfx_encode = rfx_encode_component; /* rfxencode_tile.c */
+        if (enc->mode == RLGR3)
+        {
+            enc->rfx_encode = rfx_encode_component_rlgr3; /* rfxencode_tile.c */
+        }
+        else
+        {
+            enc->rfx_encode = rfx_encode_component_rlgr1; /* rfxencode_tile.c */
+        }
     }
     else
     {
 #if defined(RFX_USE_ACCEL) && RFX_USE_ACCEL
         enc->rfx_encode = rfx_encode_component_x86_sse4; /* rfxencode_tile.c */
 #else
-        enc->rfx_encode = rfx_encode_component; /* rfxencode_tile.c */
+        if (enc->mode == RLGR3)
+        {
+            enc->rfx_encode = rfx_encode_component_rlgr3; /* rfxencode_tile.c */
+        }
+        else
+        {
+            enc->rfx_encode = rfx_encode_component_rlgr1; /* rfxencode_tile.c */
+        }
 #endif
     }
     return enc; 
