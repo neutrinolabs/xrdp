@@ -332,6 +332,7 @@ UYVY_to_RGB32(unsigned char *yuvs, int width, int height, int *rgbs)
     return 0;
 }
 
+#if 0
 /*****************************************************************************/
 static int
 stretch_RGB32_RGB32(int *src, int src_width, int src_height,
@@ -349,6 +350,52 @@ stretch_RGB32_RGB32(int *src, int src_width, int src_height,
         g_memcpy(dst, src, mwidth * 4);
         src += src_width;
         dst += dst_w;
+    }
+    return 0;
+}
+#endif
+
+/*****************************************************************************/
+static int
+stretch_RGB32_RGB32(int *src, int src_width, int src_height,
+                    int src_x, int src_y, int src_w, int src_h,
+                    int *dst, int dst_w, int dst_h)
+{
+    int index;
+    int jndex;
+    int kndex;
+    int lndex;
+    int oh = (src_w << 16) / dst_w;
+    int ih;
+    int ov = (src_h << 16) / dst_h;
+    int iv;
+    int pix;
+
+    LLOGLN(10, ("stretch_RGB32_RGB32: oh 0x%8.8x ov 0x%8.8x", oh, ov));
+    iv = ov;
+    lndex = src_y;
+    for (index = 0; index < dst_h; index++)
+    {
+        ih = oh;
+        kndex = src_x;
+        for (jndex = 0; jndex < dst_w; jndex++)
+        {
+            pix = src[lndex * src_width + kndex];
+            dst[index * dst_w + jndex] = pix;
+            while (ih > (1 << 16) - 1)
+            {
+                ih -= 1 << 16;
+                kndex++;
+            }
+            ih += oh;
+        }
+        while (iv > (1 << 16) - 1)
+        {
+            iv -= 1 << 16;
+            lndex++;
+        }
+        iv += ov;
+
     }
     return 0; 
 }
@@ -377,6 +424,7 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
     BoxRec box;
 
     LLOGLN(10, ("xrdpVidPutImage:"));
+    LLOGLN(10, ("xrdpVidPutImage: src_x %d srcy_y %d", src_x, src_y));
     dev = XRDPPTR(pScrn);
 
     index = width * height * 4 + drw_w * drw_h * 4;
@@ -420,6 +468,7 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
     box.y1 = drw_y;
     box.x2 = box.x1 + drw_w;
     box.y2 = box.y1 + drw_h;
+    LLOGLN(10, ("box 1 %d %d %d %d", box.x1, box.y1, box.x2, box.y2));
     rdpRegionInit(&dreg, &box, 0);
 
     num_clips = REGION_NUM_RECTS(clipBoxes);
@@ -433,6 +482,7 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
     for (jndex = 0; jndex < num_clips; jndex++)
     {
         box = REGION_RECTS(&dreg)[jndex];
+        LLOGLN(10, ("box 2 %d %d %d %d", box.x1, box.y1, box.x2, box.y2));
         dst8 = dev->pfbMemory + box.y1 * dev->paddedWidthInBytes;
         src32a = rgbend32 + (box.y1 - drw_y) * drw_w;
         for (index = 0; index < box.y2 - box.y1; index++)
@@ -544,7 +594,9 @@ rdpXvInit(ScreenPtr pScreen, ScrnInfoPtr pScrn)
         return 0;
     }
     adaptor->type = XvInputMask | XvImageMask | XvVideoMask | XvStillMask | XvWindowMask | XvPixmapMask;
-    adaptor->flags = VIDEO_CLIP_TO_VIEWPORT;
+    //adaptor->flags = VIDEO_NO_CLIPPING;
+    //adaptor->flags = VIDEO_CLIP_TO_VIEWPORT;
+    adaptor->flags = 0;
     adaptor->name = XRDP_MODULE_NAME " XVideo Adaptor";
     adaptor->nEncodings = T_NUM_ENCODINGS;
     adaptor->pEncodings = &(g_xrdpVidEncodings[0]);
