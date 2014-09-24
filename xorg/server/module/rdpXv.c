@@ -73,12 +73,12 @@ static XF86VideoFormatRec g_xrdpVidFormats[T_NUM_FORMATS] =
    every second pixel */
 
 /* XVIMAGE_YV12 FOURCC_YV12 0x32315659 */
+/* XVIMAGE_I420 FOURCC_I420 0x30323449 */
 /* XVIMAGE_YUY2 FOURCC_YUY2 0x32595559 */
 /* XVIMAGE_UYVY FOURCC_UYVY 0x59565955 */
-/* XVIMAGE_I420 FOURCC_I420 0x30323449 */
 
 static XF86ImageRec g_xrdpVidImages[] =
-{ XVIMAGE_YV12, XVIMAGE_YUY2, XVIMAGE_UYVY, XVIMAGE_I420 };
+{ XVIMAGE_YV12, XVIMAGE_I420, XVIMAGE_YUY2, XVIMAGE_UYVY };
 
 #define T_MAX_PORTS 1
 
@@ -611,18 +611,18 @@ xrdpVidQueryImageAttributes(ScrnInfoPtr pScrn, int id,
 
 #if defined(__x86_64__) || defined(__AMD64__) || defined (_M_AMD64)
 int
-i420_to_rgb32_amd64_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
-int
 yv12_to_rgb32_amd64_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
+int
+i420_to_rgb32_amd64_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
 int
 yuy2_to_rgb32_amd64_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
 int
 uyvy_to_rgb32_amd64_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
 #elif defined(__x86__) || defined(_M_IX86) || defined(__i386__)
 int
-i420_to_rgb32_x86_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
-int
 yv12_to_rgb32_x86_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
+int
+i420_to_rgb32_x86_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
 int
 yuy2_to_rgb32_x86_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
 int
