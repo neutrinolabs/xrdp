@@ -194,6 +194,8 @@ struct _rdpCounts
     CARD32 callCount[64 - 23];
 };
 
+typedef int (*yuv_to_rgb32_proc)(unsigned char *yuvs, int width, int height, int *rgbs);
+
 /* move this to common header */
 struct _rdpRec
 {
@@ -264,6 +266,11 @@ struct _rdpRec
     int conNumber;
 
     struct _rdpCounts counts;
+
+    yuv_to_rgb32_proc i420_to_rgb32;
+    yuv_to_rgb32_proc yv12_to_rgb32;
+    yuv_to_rgb32_proc yuy2_to_rgb32;
+    yuv_to_rgb32_proc uyvy_to_rgb32;
 
 };
 typedef struct _rdpRec rdpRec;

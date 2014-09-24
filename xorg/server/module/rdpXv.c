@@ -46,6 +46,12 @@ XVideo
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
+/* use simd, run time */
+int g_xv_use_accel = 1;
+
+/* use simd, compile time, if zero, g_xv_use_accel does not matter */
+#define XV_USE_ACCEL 0
+
 #define T_NUM_ENCODINGS 1
 static XF86VideoEncodingRec g_xrdpVidEncodings[T_NUM_ENCODINGS] =
 { { 0, "XV_IMAGE", 2046, 2046, { 1, 1 } } };
@@ -53,6 +59,18 @@ static XF86VideoEncodingRec g_xrdpVidEncodings[T_NUM_ENCODINGS] =
 #define T_NUM_FORMATS 1
 static XF86VideoFormatRec g_xrdpVidFormats[T_NUM_FORMATS] =
 { { 0, TrueColor } };
+
+/* YV12
+   I420
+   12 bpp planar
+   YUV 4:2:0 8 bit Y plane followed by 8 bit 2x2 subsampled
+   U and V planes. */
+
+/* YUY2
+   UYVY
+   16 bpp packed
+   YUV 4:2:2 Y sample at every pixel, U and V sampled at
+   every second pixel */
 
 /* XVIMAGE_YV12 FOURCC_YV12 0x32315659 */
 /* XVIMAGE_YUY2 FOURCC_YUY2 0x32595559 */
@@ -397,10 +415,11 @@ stretch_RGB32_RGB32(int *src, int src_width, int src_height,
         iv += ov;
 
     }
-    return 0; 
+    return 0;
 }
 
 /*****************************************************************************/
+/* see hw/xfree86/common/xf86xv.c for info */
 static int
 xrdpVidPutImage(ScrnInfoPtr pScrn,
                 short src_x, short src_y, short drw_x, short drw_y,
@@ -420,6 +439,7 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
     int index;
     int jndex;
     int num_clips;
+    int error;
     RegionRec dreg;
     BoxRec box;
 
@@ -436,33 +456,43 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
     }
     rgbend32 = rgborg32 + width * height;
 
+    error = 0;
     switch (format)
     {
         case FOURCC_YV12:
             LLOGLN(10, ("xrdpVidPutImage: FOURCC_YV12"));
-            YV12_to_RGB32(buf, width, height, rgborg32);
+            error = dev->yv12_to_rgb32(buf, width, height, rgborg32);
             break;
         case FOURCC_I420:
             LLOGLN(10, ("xrdpVidPutImage: FOURCC_I420"));
-            I420_to_RGB32(buf, width, height, rgborg32);
+            error = dev->i420_to_rgb32(buf, width, height, rgborg32);
             break;
         case FOURCC_YUY2:
             LLOGLN(10, ("xrdpVidPutImage: FOURCC_YUY2"));
-            YUY2_to_RGB32(buf, width, height, rgborg32);
+            error = YUY2_to_RGB32(buf, width, height, rgborg32);
             break;
         case FOURCC_UYVY:
             LLOGLN(10, ("xrdpVidPutImage: FOURCC_UYVY"));
-            UYVY_to_RGB32(buf, width, height, rgborg32);
+            error = UYVY_to_RGB32(buf, width, height, rgborg32);
             break;
         default:
             LLOGLN(0, ("xrdpVidPutImage: unknown format 0x%8.8x", format));
             g_free(rgborg32);
             return Success;
     }
-
-    stretch_RGB32_RGB32(rgborg32, width, height,
-                        src_x, src_y, src_w, src_h,
-                        rgbend32, drw_w, drw_h);
+    if (error != 0)
+    {
+        g_free(rgborg32);
+        return Success;
+    }
+    error = stretch_RGB32_RGB32(rgborg32, width, height,
+                                src_x, src_y, src_w, src_h,
+                                rgbend32, drw_w, drw_h);
+    if (error != 0)
+    {
+        g_free(rgborg32);
+        return Success;
+    }
 
     box.x1 = drw_x;
     box.y1 = drw_y;
@@ -579,10 +609,31 @@ xrdpVidQueryImageAttributes(ScrnInfoPtr pScrn, int id,
     return size;
 }
 
+#if defined(__x86_64__) || defined(__AMD64__) || defined (_M_AMD64)
+int
+i420_to_rgb32_amd64_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
+int
+yv12_to_rgb32_amd64_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
+int
+yuy2_to_rgb32_amd64_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
+int
+uyvy_to_rgb32_amd64_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
+#elif defined(__x86__) || defined(_M_IX86) || defined(__i386__)
+int
+i420_to_rgb32_x86_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
+int
+yv12_to_rgb32_x86_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
+int
+yuy2_to_rgb32_x86_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
+int
+uyvy_to_rgb32_x86_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
+#endif
+
 /*****************************************************************************/
 Bool
 rdpXvInit(ScreenPtr pScreen, ScrnInfoPtr pScrn)
 {
+    rdpPtr dev;
     XF86VideoAdaptorPtr adaptor;
     DevUnion* pDevUnion;
     int bytes;
@@ -628,6 +679,49 @@ rdpXvInit(ScreenPtr pScreen, ScrnInfoPtr pScrn)
         return 0;
     }
     xf86XVFreeVideoAdaptorRec(adaptor);
+
+    dev = XRDPPTR(pScrn);
+    /* assign functions */
+    LLOGLN(0, ("rdpXvInit: assigning yuv functions"));
+#if XV_USE_ACCEL
+    if (g_xv_use_accel)
+    {
+#if defined(__x86_64__) || defined(__AMD64__) || defined (_M_AMD64)
+        dev->yv12_to_rgb32 = yv12_to_rgb32_amd64_sse2;
+        dev->i420_to_rgb32 = i420_to_rgb32_amd64_sse2;
+        dev->yuy2_to_rgb32 = yuy2_to_rgb32_amd64_sse2;
+        dev->uyvy_to_rgb32 = uyvy_to_rgb32_amd64_sse2;
+        LLOGLN(0, ("rdpXvInit: sse amd64 yuv functions assigned"));
+#elif defined(__x86__) || defined(_M_IX86) || defined(__i386__)
+        dev->yv12_to_rgb32 = yv12_to_rgb32_x86_sse2;
+        dev->i420_to_rgb32 = i420_to_rgb32_x86_sse2;
+        dev->yuy2_to_rgb32 = yuy2_to_rgb32_x86_sse2;
+        dev->uyvy_to_rgb32 = uyvy_to_rgb32_x86_sse2;
+        LLOGLN(0, ("rdpXvInit: sse x86 yuv functions assigned"));
+#else
+        dev->yv12_to_rgb32 = YV12_to_RGB32;
+        dev->i420_to_rgb32 = I420_to_RGB32;
+        dev->yuy2_to_rgb32 = YUY2_to_RGB32;
+        dev->uyvy_to_rgb32 = UYVY_to_RGB32;
+        LLOGLN(0, ("rdpXvInit: warning, c yuv functions assigned"));
+#endif
+    }
+    else
+    {
+        dev->yv12_to_rgb32 = YV12_to_RGB32;
+        dev->i420_to_rgb32 = I420_to_RGB32;
+        dev->yuy2_to_rgb32 = YUY2_to_RGB32;
+        dev->uyvy_to_rgb32 = UYVY_to_RGB32;
+        LLOGLN(0, ("rdpXvInit: warning, c yuv functions assigned"));
+    }
+#else
+        dev->yv12_to_rgb32 = YV12_to_RGB32;
+        dev->i420_to_rgb32 = I420_to_RGB32;
+        dev->yuy2_to_rgb32 = YUY2_to_RGB32;
+        dev->uyvy_to_rgb32 = UYVY_to_RGB32;
+        LLOGLN(0, ("rdpXvInit: warning, c yuv functions assigned"));
+#endif
+
     return 1;
 }
 
