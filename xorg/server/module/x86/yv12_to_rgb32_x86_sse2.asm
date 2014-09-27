@@ -1,6 +1,7 @@
 
 SECTION .data
 align 16
+c8 times 4 dd 8
 c16 times 4 dd 16
 c100 times 4 dd 100
 c128 times 4 dd 128
@@ -20,45 +21,29 @@ SECTION .text
 
 y1_do4:
     ; y
-    mov eax, 0
-    mov al, [esi]
-    add esi, 1
-    pinsrd xmm0, eax, 0
-    mov al, [esi]
-    add esi, 1
-    pinsrd xmm0, eax, 1
-    mov al, [esi]
-    add esi, 1
-    pinsrd xmm0, eax, 2
-    mov al, [esi]
-    add esi, 1
-    pinsrd xmm0, eax, 3
+    movd xmm0, [esi]     ; 4 at a time
+    add esi, 4
+    pxor xmm6, xmm6
+    punpcklbw xmm0, xmm6
+    punpcklwd xmm0, xmm6
     movdqa xmm7, [c16]
     psubd xmm0, xmm7
 
     ; u
-    mov eax, 0
-    mov al, [ebx]
-    add ebx, 1
-    pinsrd xmm1, eax, 0
-    pinsrd xmm1, eax, 1
-    mov al, [ebx]
-    add ebx, 1
-    pinsrd xmm1, eax, 2
-    pinsrd xmm1, eax, 3
+    movd xmm1, [ebx]     ; read 4 but only using 2
+    add ebx, 2
+    punpcklbw xmm1, xmm1
+    punpcklbw xmm1, xmm6
+    punpcklwd xmm1, xmm6
     movdqa xmm7, [c128]
     psubd xmm1, xmm7
 
     ; v
-    mov eax, 0
-    mov al, [edx]
-    add edx, 1
-    pinsrd xmm2, eax, 0
-    pinsrd xmm2, eax, 1
-    mov al, [edx]
-    add edx, 1
-    pinsrd xmm2, eax, 2
-    pinsrd xmm2, eax, 3
+    movd xmm2, [edx]     ; read 4 but only using 2
+    add edx, 2
+    punpcklbw xmm2, xmm2
+    punpcklbw xmm2, xmm6
+    punpcklwd xmm2, xmm6
     psubd xmm2, xmm7
 
     ; t = (298 * c + 409 * e + 128) >> 8;
@@ -69,11 +54,6 @@ y1_do4:
     paddd xmm3, xmm4
     paddd xmm3, xmm7
     psrad xmm3, 8
-    ; b = RDPCLAMP(t, 0, 255);
-    pxor xmm4, xmm4
-    pmaxsd xmm3, xmm4
-    movdqa xmm4, [c255]
-    pminsd xmm3, xmm4
 
     ; t = (298 * c - 100 * d - 208 * e + 128) >> 8;
     movdqa xmm4, [c298]
@@ -86,11 +66,6 @@ y1_do4:
     psubd xmm4, xmm6
     paddd xmm4, xmm7
     psrad xmm4, 8
-    ; g = RDPCLAMP(t, 0, 255);
-    pxor xmm5, xmm5
-    pmaxsd xmm4, xmm5
-    movdqa xmm5, [c255]
-    pminsd xmm4, xmm5
 
     ; t = (298 * c + 516 * d + 128) >> 8;
     movdqa xmm5, [c298]
@@ -100,69 +75,31 @@ y1_do4:
     paddd xmm5, xmm6
     paddd xmm5, xmm7
     psrad xmm5, 8
-    ; r = RDPCLAMP(t, 0, 255);
-    pxor xmm6, xmm6
-    pmaxsd xmm5, xmm6
-    movdqa xmm6, [c255]
-    pminsd xmm5, xmm6
 
-    pextrd eax, xmm3, 0
-    mov [edi], al
-    pextrd eax, xmm4, 0
-    mov [edi + 1], al
-    pextrd eax, xmm5, 0
-    mov [edi + 2], al
-    mov eax, 0
-    mov [edi + 3], al
-    add edi, 4
+    packusdw xmm3, xmm3  ; b
+    packuswb xmm3, xmm3
+    packusdw xmm4, xmm4  ; g
+    packuswb xmm4, xmm4
+    punpcklbw xmm3, xmm4 ; gb
 
-    pextrd eax, xmm3, 1
-    mov [edi], al
-    pextrd eax, xmm4, 1
-    mov [edi + 1], al
-    pextrd eax, xmm5, 1
-    mov [edi + 2], al
-    mov eax, 0
-    mov [edi + 3], al
-    add edi, 4
+    pxor xmm4, xmm4      ; a
+    packusdw xmm5, xmm5  ; b
+    packuswb xmm5, xmm5
+    punpcklbw xmm5, xmm4 ; ar
 
-    pextrd eax, xmm3, 2
-    mov [edi], al
-    pextrd eax, xmm4, 2
-    mov [edi + 1], al
-    pextrd eax, xmm5, 2
-    mov [edi + 2], al
-    mov eax, 0
-    mov [edi + 3], al
-    add edi, 4
-
-    pextrd eax, xmm3, 3
-    mov [edi], al
-    pextrd eax, xmm4, 3
-    mov [edi + 1], al
-    pextrd eax, xmm5, 3
-    mov [edi + 2], al
-    mov eax, 0
-    mov [edi + 3], al
-    add edi, 4
+    punpcklwd xmm3, xmm5 ; argb
+    movdqu [edi], xmm3
+    add edi, 16
 
     ret;
 
 y2_do4:
     ; y
-    mov eax, 0
-    mov al, [esi]
-    add esi, 1
-    pinsrd xmm0, eax, 0
-    mov al, [esi]
-    add esi, 1
-    pinsrd xmm0, eax, 1
-    mov al, [esi]
-    add esi, 1
-    pinsrd xmm0, eax, 2
-    mov al, [esi]
-    add esi, 1
-    pinsrd xmm0, eax, 3
+    movd xmm0, [esi]     ; read 4 but only using 2
+    add esi, 4
+    pxor xmm6, xmm6
+    punpcklbw xmm0, xmm6
+    punpcklwd xmm0, xmm6
     movdqa xmm7, [c16]
     psubd xmm0, xmm7
 
@@ -176,11 +113,6 @@ y2_do4:
     paddd xmm3, xmm4
     paddd xmm3, xmm7
     psrad xmm3, 8
-    ; b = RDPCLAMP(t, 0, 255);
-    pxor xmm4, xmm4
-    pmaxsd xmm3, xmm4
-    movdqa xmm4, [c255]
-    pminsd xmm3, xmm4
 
     ; t = (298 * c - 100 * d - 208 * e + 128) >> 8;
     movdqa xmm4, [c298]
@@ -193,11 +125,6 @@ y2_do4:
     psubd xmm4, xmm6
     paddd xmm4, xmm7
     psrad xmm4, 8
-    ; g = RDPCLAMP(t, 0, 255);
-    pxor xmm5, xmm5
-    pmaxsd xmm4, xmm5
-    movdqa xmm5, [c255]
-    pminsd xmm4, xmm5
 
     ; t = (298 * c + 516 * d + 128) >> 8;
     movdqa xmm5, [c298]
@@ -207,51 +134,21 @@ y2_do4:
     paddd xmm5, xmm6
     paddd xmm5, xmm7
     psrad xmm5, 8
-    ; r = RDPCLAMP(t, 0, 255);
-    pxor xmm6, xmm6
-    pmaxsd xmm5, xmm6
-    movdqa xmm6, [c255]
-    pminsd xmm5, xmm6
 
-    pextrd eax, xmm3, 0
-    mov [edi], al
-    pextrd eax, xmm4, 0
-    mov [edi + 1], al
-    pextrd eax, xmm5, 0
-    mov [edi + 2], al
-    mov eax, 0
-    mov [edi + 3], al
-    add edi, 4
+    packusdw xmm3, xmm3  ; b
+    packuswb xmm3, xmm3
+    packusdw xmm4, xmm4  ; g
+    packuswb xmm4, xmm4
+    punpcklbw xmm3, xmm4 ; gb
 
-    pextrd eax, xmm3, 1
-    mov [edi], al
-    pextrd eax, xmm4, 1
-    mov [edi + 1], al
-    pextrd eax, xmm5, 1
-    mov [edi + 2], al
-    mov eax, 0
-    mov [edi + 3], al
-    add edi, 4
+    pxor xmm4, xmm4      ; a
+    packusdw xmm5, xmm5  ; b
+    packuswb xmm5, xmm5
+    punpcklbw xmm5, xmm4 ; ar
 
-    pextrd eax, xmm3, 2
-    mov [edi], al
-    pextrd eax, xmm4, 2
-    mov [edi + 1], al
-    pextrd eax, xmm5, 2
-    mov [edi + 2], al
-    mov eax, 0
-    mov [edi + 3], al
-    add edi, 4
-
-    pextrd eax, xmm3, 3
-    mov [edi], al
-    pextrd eax, xmm4, 3
-    mov [edi + 1], al
-    pextrd eax, xmm5, 3
-    mov [edi + 2], al
-    mov eax, 0
-    mov [edi + 3], al
-    add edi, 4
+    punpcklwd xmm3, xmm5 ; argb
+    movdqu [edi], xmm3
+    add edi, 16
 
     ret;
 
@@ -308,6 +205,10 @@ loop_y:
 
     ; save edx
     mov [esp + 24], edx
+
+    prefetchnta 4096[esp + 0]  ; y
+    prefetchnta 4096[esp + 8]  ; u
+    prefetchnta 4096[esp + 12] ; v
 
 loop_x:
 
