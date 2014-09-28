@@ -1,15 +1,24 @@
 
+; RGB to YUV
+;   0.299    0.587    0.114
+;  -0.14713 -0.28886  0.436
+;   0.615   -0.51499 -0.10001
+; YUV to RGB
+;   1        0        1.13983
+;   1       -0.39465 -0.58060
+;   1        2.03211  0
+; shift left 12
+;   4096     0        4669
+;   4096    -1616    -2378
+;   4096     9324     0
+
 SECTION .data
 align 16
-c8 times 4 dd 8
-c16 times 4 dd 16
-c100 times 4 dd 100
-c128 times 4 dd 128
-c208 times 4 dd 208
-c255 times 4 dd 255
-c298 times 4 dd 298
-c409 times 4 dd 409
-c516 times 4 dd 516
+c128 times 8 dw 128
+c4669 times 8 dw 4669
+c1616 times 8 dw 1616
+c2378 times 8 dw 2378
+c9324 times 8 dw 9324
 
 SECTION .text
 
@@ -19,135 +28,69 @@ SECTION .text
     %1:
 %endmacro
 
-y1_do4:
-    ; y
-    movd xmm0, [esi]     ; 4 at a time
-    add esi, 4
-    pxor xmm6, xmm6
-    punpcklbw xmm0, xmm6
-    punpcklwd xmm0, xmm6
-    movdqa xmm7, [c16]
-    psubd xmm0, xmm7
+do8_uv:
 
     ; u
-    movd xmm1, [ebx]     ; read 4 but only using 2
-    add ebx, 2
+    movd xmm1, [ebx]     ; 4 at a time
+    add ebx, 4
     punpcklbw xmm1, xmm1
+    pxor xmm6, xmm6
     punpcklbw xmm1, xmm6
-    punpcklwd xmm1, xmm6
     movdqa xmm7, [c128]
-    psubd xmm1, xmm7
+    psubw xmm1, xmm7
+    psllw xmm1, 4
 
     ; v
-    movd xmm2, [edx]     ; read 4 but only using 2
-    add edx, 2
+    movd xmm2, [edx]     ; 4 at a time
+    add edx, 4
     punpcklbw xmm2, xmm2
     punpcklbw xmm2, xmm6
-    punpcklwd xmm2, xmm6
-    psubd xmm2, xmm7
+    psubw xmm2, xmm7
+    psllw xmm2, 4
 
-    ; t = (298 * c + 409 * e + 128) >> 8;
-    movdqa xmm3, [c298]
-    pmulld xmm3, xmm0
-    movdqa xmm4, [c409]
-    pmulld xmm4, xmm2
-    paddd xmm3, xmm4
-    paddd xmm3, xmm7
-    psrad xmm3, 8
+do8:
 
-    ; t = (298 * c - 100 * d - 208 * e + 128) >> 8;
-    movdqa xmm4, [c298]
-    pmulld xmm4, xmm0
-    movdqa xmm5, [c100]
-    pmulld xmm5, xmm1
-    movdqa xmm6, [c208]
-    pmulld xmm6, xmm2
-    psubd xmm4, xmm5
-    psubd xmm4, xmm6
-    paddd xmm4, xmm7
-    psrad xmm4, 8
+    ; y
+    movq xmm0, [esi]     ; 8 at a time
+    add esi, 8
+    pxor xmm6, xmm6
+    punpcklbw xmm0, xmm6
 
-    ; t = (298 * c + 516 * d + 128) >> 8;
-    movdqa xmm5, [c298]
-    pmulld xmm5, xmm0
-    movdqa xmm6, [c516]
-    pmulld xmm6, xmm1
-    paddd xmm5, xmm6
-    paddd xmm5, xmm7
-    psrad xmm5, 8
+    ; r = y + hiword(4669 * (v << 4))
+    movdqa xmm4, [c4669]
+    pmulhw xmm4, xmm2
+    movdqa xmm3, xmm0
+    paddw xmm3, xmm4
 
-    packusdw xmm3, xmm3  ; b
-    packuswb xmm3, xmm3
-    packusdw xmm4, xmm4  ; g
-    packuswb xmm4, xmm4
+    ; g = y - hiword(1616 * (u << 4)) - hiword(2378 * (v << 4))
+    movdqa xmm5, [c1616]
+    pmulhw xmm5, xmm1
+    movdqa xmm6, [c2378]
+    pmulhw xmm6, xmm2
+    movdqa xmm4, xmm0
+    psubw xmm4, xmm5
+    psubw xmm4, xmm6
+
+    ; b = y + hiword(9324 * (u << 4))
+    movdqa xmm6, [c9324]
+    pmulhw xmm6, xmm1
+    movdqa xmm5, xmm0
+    paddw xmm5, xmm6
+
+    packuswb xmm3, xmm3  ; b
+    packuswb xmm4, xmm4  ; g
     punpcklbw xmm3, xmm4 ; gb
 
     pxor xmm4, xmm4      ; a
-    packusdw xmm5, xmm5  ; b
-    packuswb xmm5, xmm5
+    packuswb xmm5, xmm5  ; r
     punpcklbw xmm5, xmm4 ; ar
 
+    movdqa xmm4, xmm3
     punpcklwd xmm3, xmm5 ; argb
     movdqu [edi], xmm3
     add edi, 16
-
-    ret;
-
-y2_do4:
-    ; y
-    movd xmm0, [esi]     ; read 4 but only using 2
-    add esi, 4
-    pxor xmm6, xmm6
-    punpcklbw xmm0, xmm6
-    punpcklwd xmm0, xmm6
-    movdqa xmm7, [c16]
-    psubd xmm0, xmm7
-
-    movdqa xmm7, [c128]
-
-    ; t = (298 * c + 409 * e + 128) >> 8;
-    movdqa xmm3, [c298]
-    pmulld xmm3, xmm0
-    movdqa xmm4, [c409]
-    pmulld xmm4, xmm2
-    paddd xmm3, xmm4
-    paddd xmm3, xmm7
-    psrad xmm3, 8
-
-    ; t = (298 * c - 100 * d - 208 * e + 128) >> 8;
-    movdqa xmm4, [c298]
-    pmulld xmm4, xmm0
-    movdqa xmm5, [c100]
-    pmulld xmm5, xmm1
-    movdqa xmm6, [c208]
-    pmulld xmm6, xmm2
-    psubd xmm4, xmm5
-    psubd xmm4, xmm6
-    paddd xmm4, xmm7
-    psrad xmm4, 8
-
-    ; t = (298 * c + 516 * d + 128) >> 8;
-    movdqa xmm5, [c298]
-    pmulld xmm5, xmm0
-    movdqa xmm6, [c516]
-    pmulld xmm6, xmm1
-    paddd xmm5, xmm6
-    paddd xmm5, xmm7
-    psrad xmm5, 8
-
-    packusdw xmm3, xmm3  ; b
-    packuswb xmm3, xmm3
-    packusdw xmm4, xmm4  ; g
-    packuswb xmm4, xmm4
-    punpcklbw xmm3, xmm4 ; gb
-
-    pxor xmm4, xmm4      ; a
-    packusdw xmm5, xmm5  ; b
-    packuswb xmm5, xmm5
-    punpcklbw xmm5, xmm4 ; ar
-
-    punpcklwd xmm3, xmm5 ; argb
-    movdqu [edi], xmm3
+    punpckhwd xmm4, xmm5 ; argb
+    movdqu [edi], xmm4
     add edi, 16
 
     ret;
@@ -201,14 +144,14 @@ PROC yv12_to_rgb32_x86_sse2
 loop_y:
 
     mov ecx, edx        ; width
-    shr ecx, 2
+    shr ecx, 3
 
     ; save edx
     mov [esp + 24], edx
 
     prefetchnta 4096[esp + 0]  ; y
-    prefetchnta 4096[esp + 8]  ; u
-    prefetchnta 4096[esp + 12] ; v
+    prefetchnta 1024[esp + 8]  ; u
+    prefetchnta 1024[esp + 12] ; v
 
 loop_x:
 
@@ -218,7 +161,7 @@ loop_x:
     mov edi, [esp + 16] ; rgbs1
 
     ; y1
-    call y1_do4
+    call do8_uv
 
     mov [esp + 0], esi  ; y1
     mov [esp + 16], edi ; rgbs1
@@ -227,7 +170,7 @@ loop_x:
     mov edi, [esp + 20] ; rgbs2
 
     ; y2
-    call y2_do4
+    call do8
 
     mov [esp + 4], esi  ; y2
     mov [esp + 8], ebx  ; u
