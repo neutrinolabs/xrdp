@@ -440,6 +440,7 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
     int jndex;
     int num_clips;
     int error;
+    void *mem;
     RegionRec dreg;
     BoxRec box;
 
@@ -447,15 +448,16 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
     LLOGLN(10, ("xrdpVidPutImage: src_x %d srcy_y %d", src_x, src_y));
     dev = XRDPPTR(pScrn);
 
-    index = width * height * 4 + drw_w * drw_h * 4;
-    rgborg32 = (int *) g_malloc(index, 0);
-    if (rgborg32 == NULL)
+    index = width * height * 4 + drw_w * drw_h * 4 + 64;
+    mem = g_malloc(index, 0);
+    if (mem == NULL)
     {
         LLOGLN(0, ("xrdpVidPutImage: memory alloc error"));
         return Success;
     }
+    rgborg32 = (int *) RDPALIGN(mem, 16);
     rgbend32 = rgborg32 + width * height;
-
+    rgbend32 = (int *) RDPALIGN(rgbend32, 16);
     error = 0;
     switch (format)
     {
@@ -469,20 +471,20 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
             break;
         case FOURCC_YUY2:
             LLOGLN(10, ("xrdpVidPutImage: FOURCC_YUY2"));
-            error = YUY2_to_RGB32(buf, width, height, rgborg32);
+            error = dev->yuy2_to_rgb32(buf, width, height, rgborg32);
             break;
         case FOURCC_UYVY:
             LLOGLN(10, ("xrdpVidPutImage: FOURCC_UYVY"));
-            error = UYVY_to_RGB32(buf, width, height, rgborg32);
+            error = dev->uyvy_to_rgb32(buf, width, height, rgborg32);
             break;
         default:
             LLOGLN(0, ("xrdpVidPutImage: unknown format 0x%8.8x", format));
-            g_free(rgborg32);
+            g_free(mem);
             return Success;
     }
     if (error != 0)
     {
-        g_free(rgborg32);
+        g_free(mem);
         return Success;
     }
     error = stretch_RGB32_RGB32(rgborg32, width, height,
@@ -490,7 +492,7 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
                                 rgbend32, drw_w, drw_h);
     if (error != 0)
     {
-        g_free(rgborg32);
+        g_free(mem);
         return Success;
     }
 
@@ -529,7 +531,7 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
     rdpClientConAddAllReg(dev, &dreg, dst);
     rdpRegionUninit(&dreg);
 
-    g_free(rgborg32);
+    g_free(mem);
 
     return Success;
 }

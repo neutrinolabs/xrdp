@@ -1,4 +1,25 @@
-
+;
+;Copyright 2014 Jay Sorg
+;
+;Permission to use, copy, modify, distribute, and sell this software and its
+;documentation for any purpose is hereby granted without fee, provided that
+;the above copyright notice appear in all copies and that both that
+;copyright notice and this permission notice appear in supporting
+;documentation.
+;
+;The above copyright notice and this permission notice shall be included in
+;all copies or substantial portions of the Software.
+;
+;THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+;IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+;FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+;OPEN GROUP BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+;AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+;CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+;
+;YV12 to RGB32
+;x86 SSE2 32 bit
+;
 ; RGB to YUV
 ;   0.299    0.587    0.114
 ;  -0.14713 -0.28886  0.436
@@ -87,10 +108,10 @@ do8:
 
     movdqa xmm4, xmm3
     punpcklwd xmm3, xmm5 ; argb
-    movdqu [edi], xmm3
+    movdqa [edi], xmm3
     add edi, 16
     punpckhwd xmm4, xmm5 ; argb
-    movdqu [edi], xmm4
+    movdqa [edi], xmm4
     add edi, 16
 
     ret;

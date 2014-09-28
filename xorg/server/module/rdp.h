@@ -78,6 +78,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define RDPMAX(_val1, _val2) ((_val1) < (_val2) ? (_val2) : (_val1))
 #define RDPCLAMP(_val, _lo, _hi) \
     (_val) < (_lo) ? (_lo) : (_val) > (_hi) ? (_hi) : (_val)
+#define RDPALIGN(_val, _al) ((((long)(_val)) + ((_al) - 1)) & ~((_al) - 1))
 
 #define XRDP_CD_NODRAW 0
 #define XRDP_CD_NOCLIP 1
