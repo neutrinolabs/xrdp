@@ -624,16 +624,7 @@ yuy2_to_rgb32_amd64_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
 int
 uyvy_to_rgb32_amd64_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
 #elif defined(__x86__) || defined(_M_IX86) || defined(__i386__)
-int
-cpuid_x86(int eax_in, int ecx_in, int *eax, int *ebx, int *ecx, int *edx);
-int
-yv12_to_rgb32_x86_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
-int
-i420_to_rgb32_x86_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
-int
-yuy2_to_rgb32_x86_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
-int
-uyvy_to_rgb32_x86_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
+#include "x86/funcs_x86.h"
 #endif
 #endif
 
