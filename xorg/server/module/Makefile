@@ -8,7 +8,7 @@ rdpCursor.o rdpMain.o rdpRandR.o rdpMisc.o rdpReg.o \
 rdpComposite.o rdpGlyphs.o rdpPixmap.o rdpInput.o rdpClientCon.o rdpCapture.o \
 rdpTrapezoids.o rdpXv.o
 
-;OBJS += i420_to_rgb32_x86_sse2.o yv12_to_rgb32_x86_sse2.o yuy2_to_rgb32_x86_sse2.o uyvy_to_rgb32_x86_sse2.o
+;OBJS += cpuid_x86.o i420_to_rgb32_x86_sse2.o yv12_to_rgb32_x86_sse2.o yuy2_to_rgb32_x86_sse2.o uyvy_to_rgb32_x86_sse2.o
 ;OBJS += i420_to_rgb32_amd64_sse2.o yv12_to_rgb32_amd64_sse2.o yuy2_to_rgb32_amd64_sse2.o uyvy_to_rgb32_amd64_sse2.o
 
 CFLAGS = -g -O2 -Wall -fPIC -I/usr/include/xorg -I/usr/include/pixman-1 \
@@ -25,6 +25,9 @@ libxorgxrdp.so: $(OBJS) Makefile
 
 clean:
 	rm -f $(OBJS) libxorgxrdp.so
+
+cpuid_x86.o: x86/cpuid_x86.asm
+	yasm -f elf32 -g dwarf2 x86/cpuid_x86.asm
 
 i420_to_rgb32_x86_sse2.o: x86/i420_to_rgb32_x86_sse2.asm
 	yasm -f elf32 -g dwarf2 x86/i420_to_rgb32_x86_sse2.asm

@@ -50,7 +50,9 @@ XVideo
 int g_xv_use_accel = 1;
 
 /* use simd, compile time, if zero, g_xv_use_accel does not matter */
+#if !defined(XV_USE_ACCEL)
 #define XV_USE_ACCEL 0
+#endif
 
 #define T_NUM_ENCODINGS 1
 static XF86VideoEncodingRec g_xrdpVidEncodings[T_NUM_ENCODINGS] =
@@ -611,6 +613,7 @@ xrdpVidQueryImageAttributes(ScrnInfoPtr pScrn, int id,
     return size;
 }
 
+#if XV_USE_ACCEL
 #if defined(__x86_64__) || defined(__AMD64__) || defined (_M_AMD64)
 int
 yv12_to_rgb32_amd64_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
@@ -622,6 +625,8 @@ int
 uyvy_to_rgb32_amd64_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
 #elif defined(__x86__) || defined(_M_IX86) || defined(__i386__)
 int
+cpuid_x86(int eax_in, int ecx_in, int *eax, int *ebx, int *ecx, int *edx);
+int
 yv12_to_rgb32_x86_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
 int
 i420_to_rgb32_x86_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
@@ -629,6 +634,7 @@ int
 yuy2_to_rgb32_x86_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
 int
 uyvy_to_rgb32_x86_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
+#endif
 #endif
 
 /*****************************************************************************/
@@ -695,11 +701,26 @@ rdpXvInit(ScreenPtr pScreen, ScrnInfoPtr pScrn)
         dev->uyvy_to_rgb32 = uyvy_to_rgb32_amd64_sse2;
         LLOGLN(0, ("rdpXvInit: sse amd64 yuv functions assigned"));
 #elif defined(__x86__) || defined(_M_IX86) || defined(__i386__)
-        dev->yv12_to_rgb32 = yv12_to_rgb32_x86_sse2;
-        dev->i420_to_rgb32 = i420_to_rgb32_x86_sse2;
-        dev->yuy2_to_rgb32 = yuy2_to_rgb32_x86_sse2;
-        dev->uyvy_to_rgb32 = uyvy_to_rgb32_x86_sse2;
-        LLOGLN(0, ("rdpXvInit: sse x86 yuv functions assigned"));
+        int ax, bx, cx, dx;
+        cpuid_x86(1, 0, &ax, &bx, &cx, &dx);
+        LLOGLN(0, ("rdpXvInit: cpuid eax 1 ecx 0 return eax 0x%8.8x ebx "
+               "0x%8.8x ecx 0x%8.8x edx 0x%8.8x", ax, bx, cx, dx));
+        if (dx & (1 << 26)) /* SSE 2 */
+        {
+            dev->yv12_to_rgb32 = yv12_to_rgb32_x86_sse2;
+            dev->i420_to_rgb32 = i420_to_rgb32_x86_sse2;
+            dev->yuy2_to_rgb32 = yuy2_to_rgb32_x86_sse2;
+            dev->uyvy_to_rgb32 = uyvy_to_rgb32_x86_sse2;
+            LLOGLN(0, ("rdpXvInit: sse x86 yuv functions assigned"));
+        }
+        else
+        {
+            dev->yv12_to_rgb32 = YV12_to_RGB32;
+            dev->i420_to_rgb32 = I420_to_RGB32;
+            dev->yuy2_to_rgb32 = YUY2_to_RGB32;
+            dev->uyvy_to_rgb32 = UYVY_to_RGB32;
+            LLOGLN(0, ("rdpXvInit: warning, c yuv functions assigned"));
+        }
 #else
         dev->yv12_to_rgb32 = YV12_to_RGB32;
         dev->i420_to_rgb32 = I420_to_RGB32;
