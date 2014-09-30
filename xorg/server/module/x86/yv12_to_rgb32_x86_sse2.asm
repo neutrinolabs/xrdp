@@ -53,7 +53,7 @@ do8_uv:
 
     ; u
     movd xmm1, [ebx]     ; 4 at a time
-    add ebx, 4
+    lea ebx, [ebx + 4]
     punpcklbw xmm1, xmm1
     pxor xmm6, xmm6
     punpcklbw xmm1, xmm6
@@ -63,7 +63,7 @@ do8_uv:
 
     ; v
     movd xmm2, [edx]     ; 4 at a time
-    add edx, 4
+    lea edx, [edx + 4]
     punpcklbw xmm2, xmm2
     punpcklbw xmm2, xmm6
     psubw xmm2, xmm7
@@ -73,7 +73,7 @@ do8:
 
     ; y
     movq xmm0, [esi]     ; 8 at a time
-    add esi, 8
+    lea esi, [esi + 8]
     pxor xmm6, xmm6
     punpcklbw xmm0, xmm6
 
@@ -109,10 +109,10 @@ do8:
     movdqa xmm4, xmm3
     punpcklwd xmm3, xmm5 ; argb
     movdqa [edi], xmm3
-    add edi, 16
+    lea edi, [edi + 16]
     punpckhwd xmm4, xmm5 ; argb
     movdqa [edi], xmm4
-    add edi, 16
+    lea edi, [edi + 16]
 
     ret;
 
