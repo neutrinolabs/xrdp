@@ -272,6 +272,10 @@ struct _rdpRec
     yuv_to_rgb32_proc yv12_to_rgb32;
     yuv_to_rgb32_proc yuy2_to_rgb32;
     yuv_to_rgb32_proc uyvy_to_rgb32;
+    char *xv_data;
+    int xv_data_bytes;
+    int xv_timer_schedualed;
+    OsTimerPtr xv_timer;
 
 };
 typedef struct _rdpRec rdpRec;

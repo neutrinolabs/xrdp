@@ -420,6 +420,22 @@ stretch_RGB32_RGB32(int *src, int src_width, int src_height,
     return 0;
 }
 
+/******************************************************************************/
+/* returns error */
+static CARD32
+rdpDeferredXv(OsTimerPtr timer, CARD32 now, pointer arg)
+{
+    rdpPtr dev;
+
+    LLOGLN(0, ("rdpDeferredXv:"));
+    dev = (rdpPtr) arg;
+    dev->xv_timer_schedualed = 0;
+    dev->xv_data_bytes = 0;
+    g_free(dev->xv_data);
+    dev->xv_data = 0;
+    return 0;
+}
+
 /*****************************************************************************/
 /* see hw/xfree86/common/xf86xv.c for info */
 static int
@@ -442,7 +458,6 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
     int jndex;
     int num_clips;
     int error;
-    void *mem;
     RegionRec dreg;
     BoxRec box;
 
@@ -450,14 +465,31 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
     LLOGLN(10, ("xrdpVidPutImage: src_x %d srcy_y %d", src_x, src_y));
     dev = XRDPPTR(pScrn);
 
-    index = width * height * 4 + drw_w * drw_h * 4 + 64;
-    mem = g_malloc(index, 0);
-    if (mem == NULL)
+    if (dev->xv_timer_schedualed)
     {
-        LLOGLN(0, ("xrdpVidPutImage: memory alloc error"));
-        return Success;
+        TimerCancel(dev->xv_timer);
+        dev->xv_timer = TimerSet(dev->xv_timer, 0, 2000, rdpDeferredXv, dev);
     }
-    rgborg32 = (int *) RDPALIGN(mem, 16);
+    else
+    {
+        dev->xv_timer_schedualed = 1;
+        dev->xv_timer = TimerSet(dev->xv_timer, 0, 2000, rdpDeferredXv, dev);
+    }
+
+    index = width * height * 4 + drw_w * drw_h * 4 + 64;
+    if (index > dev->xv_data_bytes)
+    {
+        g_free(dev->xv_data);
+        dev->xv_data = g_malloc(index, 0);
+        if (dev->xv_data == NULL)
+        {
+            LLOGLN(0, ("xrdpVidPutImage: memory alloc error"));
+            dev->xv_data_bytes = 0;
+            return Success;
+        }
+        dev->xv_data_bytes = index;
+    }
+    rgborg32 = (int *) RDPALIGN(dev->xv_data, 16);
     rgbend32 = rgborg32 + width * height;
     rgbend32 = (int *) RDPALIGN(rgbend32, 16);
     error = 0;
@@ -481,12 +513,10 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
             break;
         default:
             LLOGLN(0, ("xrdpVidPutImage: unknown format 0x%8.8x", format));
-            g_free(mem);
             return Success;
     }
     if (error != 0)
     {
-        g_free(mem);
         return Success;
     }
     error = stretch_RGB32_RGB32(rgborg32, width, height,
@@ -494,7 +524,6 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
                                 rgbend32, drw_w, drw_h);
     if (error != 0)
     {
-        g_free(mem);
         return Success;
     }
 
@@ -532,8 +561,6 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
 
     rdpClientConAddAllReg(dev, &dreg, dst);
     rdpRegionUninit(&dreg);
-
-    g_free(mem);
 
     return Success;
 }
