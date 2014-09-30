@@ -15,16 +15,22 @@ PROC cpuid_x86
     push ebx
     push ecx
     push edx
+    push edi
     ; cpuid
-    mov eax, [esp + 16]
-    mov ecx, [esp + 20]
+    mov eax, [esp + 20]
+    mov ecx, [esp + 24]
     cpuid
-    mov [esp + 24], eax
-    mov [esp + 28], ebx
-    mov [esp + 32], ecx
-    mov [esp + 36], edx
+    mov edi, [esp + 28]
+    mov [edi], eax
+    mov edi, [esp + 32]
+    mov [edi], ebx
+    mov edi, [esp + 36]
+    mov [edi], ecx
+    mov edi, [esp + 40]
+    mov [edi], edx
     mov eax, 0
     ; restore registers
+    pop edi
     pop edx
     pop ecx
     pop ebx
