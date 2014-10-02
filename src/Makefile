@@ -1,7 +1,10 @@
 
-OBJS = rfxencode.o rfxcompose.o rfxencode_tile.o rfxencode_dwt.o rfxencode_quantization.o \
-rfxencode_differential.o rfxencode_rlgr1.o rfxencode_rlgr3.o \
-rfxdwt_sse4.o rfxrlgr1.o rfxrlgr3.o
+OBJS = rfxencode.o rfxcompose.o rfxencode_tile.o rfxencode_dwt.o \
+rfxencode_quantization.o rfxencode_differential.o \
+rfxencode_rlgr1.o rfxencode_rlgr3.o
+
+;OBJS += cpuid_x86.o rfxrlgr1_x86.o rfxrlgr3_x86.o rfxdwt_x86_sse2.o
+;OBJS += cpuid_amd64.o rfxrlgr1_amd64.o rfxrlgr3_amd64.o rfxdwt_amd64_sse2.o
 
 CFLAGS = $(PROFIL) -g -O2 -Wall -fPIC -I../include
 
@@ -15,14 +18,29 @@ librfxencode.so: $(OBJS) Makefile
 	$(CC) -shared -o librfxencode.so $(LDFLAGS) $(OBJS) $(LIBS)
 	$(AR) -rv librfxencode.a $(OBJS)
 
-rfxdwt_sse4.o: x86/rfxdwt_sse4.asm
-	yasm -f elf32 -g dwarf2 x86/rfxdwt_sse4.asm
+cpuid_x86.o: x86/cpuid_x86.asm
+	yasm -f elf32 -g dwarf2 x86/cpuid_x86.asm
 
-rfxrlgr1.o: x86/rfxrlgr1.asm
-	yasm -f elf32 -g dwarf2 x86/rfxrlgr1.asm
+rfxrlgr1_x86.o: x86/rfxrlgr1_x86.asm
+	yasm -f elf32 -g dwarf2 x86/rfxrlgr1_x86.asm
 
-rfxrlgr3.o: x86/rfxrlgr3.asm
-	yasm -f elf32 -g dwarf2 x86/rfxrlgr3.asm
+rfxrlgr3_x86.o: x86/rfxrlgr3_x86.asm
+	yasm -f elf32 -g dwarf2 x86/rfxrlgr3_x86.asm
+
+rfxdwt_x86_sse2.o: x86/rfxdwt_x86_sse2.asm
+	yasm -f elf32 -g dwarf2 x86/rfxdwt_x86_sse2.asm
+
+cpuid_amd64.o: amd64/cpuid_amd64.asm
+	yasm -f elf64 -g dwarf2 amd64/cpuid_amd64.asm
+
+rfxrlgr1_amd64.o: amd64/rfxrlgr1_amd64.asm
+	yasm -f elf64 -g dwarf2 amd64/rfxrlgr1_amd64.asm
+
+rfxrlgr3_amd64.o: amd64/rfxrlgr3_amd64.asm
+	yasm -f elf64 -g dwarf2 amd64/rfxrlgr3_amd64.asm
+
+rfxdwt_amd64_sse2.o: amd64/rfxdwt_amd64_sse2.asm
+	yasm -f elf64 -g dwarf2 amd64/rfxdwt_amd64_sse2.asm
 
 clean:
 	rm -f $(OBJS) librfxencode.so librfxencode.a
