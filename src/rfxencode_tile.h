@@ -3,6 +3,7 @@
  * RemoteFX Codec Library - Encode
  *
  * Copyright 2011 Vic Lee
+ * Copyright 2014 Jay Sorg <jay.sorg@gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,19 +30,21 @@ rfx_encode_component_rlgr1(struct rfxencode *enc,
                            const int *quantization_values,
                            sint8 *data,
                            uint8 *buffer, int buffer_size, int *size);
-
 int
 rfx_encode_component_rlgr3(struct rfxencode *enc,
                            const int *quantization_values,
                            sint8 *data,
                            uint8 *buffer, int buffer_size, int *size);
-
 int
-rfx_encode_component_x86_sse4(struct rfxencode *enc,
+rfx_encode_component_x86_sse2(struct rfxencode *enc,
                               const int *quantization_values,
                               sint8 *data,
                               uint8 *buffer, int buffer_size, int *size);
-
+int
+rfx_encode_component_amd64_sse2(struct rfxencode *enc,
+                                const int *quantization_values,
+                                sint8 *data,
+                                uint8 *buffer, int buffer_size, int *size);
 int
 rfx_encode_rgb(struct rfxencode *enc, char *rgb_data,
                int width, int height, int stride_bytes,

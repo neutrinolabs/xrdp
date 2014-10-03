@@ -9,9 +9,9 @@ section .data
 %endmacro
 
 ;int
-;dwt_shift_x86_sse4(const int* qtable, sint8* src, sint16* dst, sint16* temp)
+;dwt_shift_x86_sse2(const int* qtable, sint8* src, sint16* dst, sint16* temp)
 
-PROC dwt_shift_x86_sse4
+PROC dwt_shift_x86_sse2
     push ebx
     push esi
     push edi

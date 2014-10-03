@@ -197,21 +197,16 @@ rfx_encode_component_rlgr3(struct rfxencode *enc, const int *quantization_values
     return 0;
 }
 
-int
-dwt_shift_x86_sse4(const int *qtable, sint8 *src, sint16 *dst, sint16 *temp);
-int
-diff_rlgr3_x86(sint16 *co, int num_co, uint8 *dst, int dst_bytes);
-
 /******************************************************************************/
 int
-rfx_encode_component_x86_sse4(struct rfxencode *enc,
+rfx_encode_component_x86_sse2(struct rfxencode *enc,
                               const int *quantization_values,
                               sint8 *data,
                               uint8 *buffer, int buffer_size, int *size)
 {
-    LLOGLN(10, ("rfx_encode_component_x86_sse4:"));
+    LLOGLN(10, ("rfx_encode_component_x86_sse2:"));
     /* put asm calls here */
-    if (dwt_shift_x86_sse4(quantization_values, data, enc->dwt_buffer1,
+    if (dwt_shift_x86_sse2(quantization_values, data, enc->dwt_buffer1,
                            enc->dwt_buffer) != 0)
     {
         return 1;
