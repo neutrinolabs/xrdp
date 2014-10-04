@@ -417,6 +417,7 @@ stretch_RGB32_RGB32(int *src, int src_width, int src_height,
         iv += ov;
 
     }
+    LLOGLN(10, ("stretch_RGB32_RGB32: out"));
     return 0;
 }
 
@@ -642,14 +643,7 @@ xrdpVidQueryImageAttributes(ScrnInfoPtr pScrn, int id,
 
 #if XV_USE_ACCEL
 #if defined(__x86_64__) || defined(__AMD64__) || defined (_M_AMD64)
-int
-yv12_to_rgb32_amd64_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
-int
-i420_to_rgb32_amd64_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
-int
-yuy2_to_rgb32_amd64_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
-int
-uyvy_to_rgb32_amd64_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
+#include "amd64/funcs_amd64.h"
 #elif defined(__x86__) || defined(_M_IX86) || defined(__i386__)
 #include "x86/funcs_x86.h"
 #endif
@@ -713,23 +707,38 @@ rdpXvInit(ScreenPtr pScreen, ScrnInfoPtr pScrn)
     if (g_xv_use_accel)
     {
 #if defined(__x86_64__) || defined(__AMD64__) || defined (_M_AMD64)
-        dev->yv12_to_rgb32 = yv12_to_rgb32_amd64_sse2;
-        dev->i420_to_rgb32 = i420_to_rgb32_amd64_sse2;
-        dev->yuy2_to_rgb32 = yuy2_to_rgb32_amd64_sse2;
-        dev->uyvy_to_rgb32 = uyvy_to_rgb32_amd64_sse2;
-        LLOGLN(0, ("rdpXvInit: sse amd64 yuv functions assigned"));
+        int ax, bx, cx, dx;
+        cpuid_amd64(1, 0, &ax, &bx, &cx, &dx);
+        LLOGLN(0, ("rdpXvInit: cpuid ax 1 cx 0 return ax 0x%8.8x bx "
+               "0x%8.8x cx 0x%8.8x dx 0x%8.8x", ax, bx, cx, dx));
+        if (dx & (1 << 26)) /* SSE 2 */
+        {
+            dev->yv12_to_rgb32 = yv12_to_rgb32_amd64_sse2;
+            dev->i420_to_rgb32 = i420_to_rgb32_amd64_sse2;
+            dev->yuy2_to_rgb32 = yuy2_to_rgb32_amd64_sse2;
+            dev->uyvy_to_rgb32 = uyvy_to_rgb32_amd64_sse2;
+            LLOGLN(0, ("rdpXvInit: sse2 amd64 yuv functions assigned"));
+        }
+        else
+        {
+            dev->yv12_to_rgb32 = YV12_to_RGB32;
+            dev->i420_to_rgb32 = I420_to_RGB32;
+            dev->yuy2_to_rgb32 = YUY2_to_RGB32;
+            dev->uyvy_to_rgb32 = UYVY_to_RGB32;
+            LLOGLN(0, ("rdpXvInit: warning, c yuv functions assigned"));
+        }
 #elif defined(__x86__) || defined(_M_IX86) || defined(__i386__)
         int ax, bx, cx, dx;
         cpuid_x86(1, 0, &ax, &bx, &cx, &dx);
-        LLOGLN(0, ("rdpXvInit: cpuid eax 1 ecx 0 return eax 0x%8.8x ebx "
-               "0x%8.8x ecx 0x%8.8x edx 0x%8.8x", ax, bx, cx, dx));
+        LLOGLN(0, ("rdpXvInit: cpuid ax 1 cx 0 return ax 0x%8.8x bx "
+               "0x%8.8x cx 0x%8.8x dx 0x%8.8x", ax, bx, cx, dx));
         if (dx & (1 << 26)) /* SSE 2 */
         {
             dev->yv12_to_rgb32 = yv12_to_rgb32_x86_sse2;
             dev->i420_to_rgb32 = i420_to_rgb32_x86_sse2;
             dev->yuy2_to_rgb32 = yuy2_to_rgb32_x86_sse2;
             dev->uyvy_to_rgb32 = uyvy_to_rgb32_x86_sse2;
-            LLOGLN(0, ("rdpXvInit: sse x86 yuv functions assigned"));
+            LLOGLN(0, ("rdpXvInit: sse2 x86 yuv functions assigned"));
         }
         else
         {

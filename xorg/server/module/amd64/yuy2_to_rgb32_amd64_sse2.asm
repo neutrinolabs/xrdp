@@ -9,10 +9,9 @@
 ;yuy2_to_rgb32_amd64_sse2(unsigned char *yuvs, int width, int height, int *rgbs)
 
 PROC yuy2_to_rgb32_amd64_sse2
-    push ebx
-
-    mov eax, 0
-    pop ebx
+    push rbx
+    mov rax, 0
+    pop rbx
     ret
     align 16
 
