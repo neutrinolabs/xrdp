@@ -451,32 +451,15 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
                 pointer data, DrawablePtr dst)
 {
     rdpPtr dev;
-    char *dst8;
-    int *dst32;
-    int *src32;
-    int *src32a;
     int *rgborg32;
     int *rgbend32;
     int index;
-    int jndex;
-    int num_clips;
     int error;
-    RegionRec dreg;
-    BoxRec box;
-
-    FbBits *dst1;
-    FbStride dstStride; /* pixels */
-    int dstBpp;
-    int dstXoff;
-    int dstYoff;
+    GCPtr tempGC;
 
     LLOGLN(10, ("xrdpVidPutImage:"));
     LLOGLN(10, ("xrdpVidPutImage: src_x %d srcy_y %d", src_x, src_y));
     dev = XRDPPTR(pScrn);
-
-    fbGetDrawable(dst, dst1, dstStride, dstBpp, dstXoff, dstYoff);
-    LLOGLN(10, ("dstStride %d dstXoff %d dstYoff %d dst1 %p dev->pfbMemory %p",
-           dstStride, dstXoff, dstYoff, dst1, dev->pfbMemory));
 
     if (dev->xv_timer_schedualed)
     {
@@ -540,40 +523,15 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
         return Success;
     }
 
-    box.x1 = drw_x;
-    box.y1 = drw_y;
-    box.x2 = box.x1 + drw_w;
-    box.y2 = box.y1 + drw_h;
-    LLOGLN(10, ("box 1 %d %d %d %d", box.x1, box.y1, box.x2, box.y2));
-    rdpRegionInit(&dreg, &box, 0);
-
-    num_clips = REGION_NUM_RECTS(clipBoxes);
-    LLOGLN(10, ("xrdpVidPutImage: num_clips %d", num_clips));
-    if (num_clips > 0)
+    tempGC = GetScratchGC(dst->depth, pScrn->pScreen);
+    if (tempGC != NULL)
     {
-        rdpRegionIntersect(&dreg, &dreg, clipBoxes);
+        ValidateGC(dst, tempGC); 
+        (*tempGC->ops->PutImage)(dst, tempGC, 24,
+                                 drw_x - dst->x, drw_y - dst->y,
+                                 drw_w, drw_h, 0, ZPixmap, (char*)rgbend32);
+        FreeScratchGC(tempGC);
     }
-
-    num_clips = REGION_NUM_RECTS(&dreg);
-    for (jndex = 0; jndex < num_clips; jndex++)
-    {
-        box = REGION_RECTS(&dreg)[jndex];
-        LLOGLN(10, ("box 2 %d %d %d %d", box.x1, box.y1, box.x2, box.y2));
-        dst8 = (char *) (dst1 + ((box.y1 + dstYoff) * dstStride) + dstXoff);
-        src32a = rgbend32 + (box.y1 - drw_y) * drw_w;
-        for (index = 0; index < box.y2 - box.y1; index++)
-        {
-            dst32 = (int *) dst8;
-            dst32 += box.x1;
-            src32 = src32a + (box.x1 - drw_x);
-            g_memcpy(dst32, src32, (box.x2 - box.x1) * 4);
-            dst8 += dstStride * 4;
-            src32a += drw_w;
-        }
-    }
-
-    rdpClientConAddAllReg(dev, &dreg, dst);
-    rdpRegionUninit(&dreg);
 
     return Success;
 }
