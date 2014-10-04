@@ -37,6 +37,8 @@ XVideo
 #include <X11/extensions/Xv.h>
 #include <fourcc.h>
 
+#include <fb.h>
+
 #include "rdp.h"
 #include "rdpMisc.h"
 #include "rdpReg.h"
@@ -462,9 +464,19 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
     RegionRec dreg;
     BoxRec box;
 
+    FbBits *dst1;
+    FbStride dstStride; /* pixels */
+    int dstBpp;
+    int dstXoff;
+    int dstYoff;
+
     LLOGLN(10, ("xrdpVidPutImage:"));
     LLOGLN(10, ("xrdpVidPutImage: src_x %d srcy_y %d", src_x, src_y));
     dev = XRDPPTR(pScrn);
+
+    fbGetDrawable(dst, dst1, dstStride, dstBpp, dstXoff, dstYoff);
+    LLOGLN(10, ("dstStride %d dstXoff %d dstYoff %d dst1 %p dev->pfbMemory %p",
+           dstStride, dstXoff, dstYoff, dst1, dev->pfbMemory));
 
     if (dev->xv_timer_schedualed)
     {
@@ -547,7 +559,7 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
     {
         box = REGION_RECTS(&dreg)[jndex];
         LLOGLN(10, ("box 2 %d %d %d %d", box.x1, box.y1, box.x2, box.y2));
-        dst8 = dev->pfbMemory + box.y1 * dev->paddedWidthInBytes;
+        dst8 = (char *) (dst1 + ((box.y1 + dstYoff) * dstStride) + dstXoff);
         src32a = rgbend32 + (box.y1 - drw_y) * drw_w;
         for (index = 0; index < box.y2 - box.y1; index++)
         {
@@ -555,7 +567,7 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
             dst32 += box.x1;
             src32 = src32a + (box.x1 - drw_x);
             g_memcpy(dst32, src32, (box.x2 - box.x1) * 4);
-            dst8 += dev->paddedWidthInBytes;
+            dst8 += dstStride * 4;
             src32a += drw_w;
         }
     }
