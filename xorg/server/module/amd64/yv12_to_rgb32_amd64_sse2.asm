@@ -129,11 +129,12 @@ PROC yv12_to_rgb32_amd64_sse2
     push rbp
 
     push rdi
+    push rdx
     mov rdi, rcx        ; rgbs
 
     mov rcx, rsi        ; width
     mov rdx, rcx
-    mov rbp, rdx        ; height
+    pop rbp             ; height
     mov rax, rbp
     shr rbp, 1
     imul rax, rcx       ; rax = width * height

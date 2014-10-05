@@ -140,12 +140,12 @@ PROC i420_to_rgb32_x86_sse2
     add ebx, eax
 
     ; local vars
-    ; char* yptr1;
-    ; char* yptr2;
-    ; char* uptr;
-    ; char* vptr;
-    ; int* rgbs1;
-    ; int* rgbs2;
+    ; char* yptr1
+    ; char* yptr2
+    ; char* uptr
+    ; char* vptr
+    ; int* rgbs1
+    ; int* rgbs2
     ; int width
     sub esp, 28         ; local vars, 28 bytes
     mov [esp + 0], esi  ; save y1

@@ -412,7 +412,7 @@ stretch_RGB32_RGB32(int *src, int src_width, int src_height,
         }
         else
         {
-            ih = oh; 
+            ih = oh;
             src32 = src + lndex * src_width + src_x;
             pix = *src32;
             dst32 = dst + index * dst_w;
@@ -423,8 +423,8 @@ stretch_RGB32_RGB32(int *src, int src_width, int src_height,
                 {
                     ih -= 1 << 16;
                     src32++;
-                    pix = *src32;
                 }
+                pix = *src32;
                 ih += oh;
                 dst32++;
             }
@@ -445,11 +445,11 @@ stretch_RGB32_RGB32(int *src, int src_width, int src_height,
 /******************************************************************************/
 /* returns error */
 static CARD32
-rdpDeferredXv(OsTimerPtr timer, CARD32 now, pointer arg)
+rdpDeferredXvCleanup(OsTimerPtr timer, CARD32 now, pointer arg)
 {
     rdpPtr dev;
 
-    LLOGLN(0, ("rdpDeferredXv:"));
+    LLOGLN(0, ("rdpDeferredXvCleanup:"));
     dev = (rdpPtr) arg;
     dev->xv_timer_schedualed = 0;
     dev->xv_data_bytes = 0;
@@ -476,19 +476,21 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
     int error;
     GCPtr tempGC;
 
-    LLOGLN(10, ("xrdpVidPutImage:"));
+    LLOGLN(10, ("xrdpVidPutImage: format 0x%8.8x", format));
     LLOGLN(10, ("xrdpVidPutImage: src_x %d srcy_y %d", src_x, src_y));
     dev = XRDPPTR(pScrn);
 
     if (dev->xv_timer_schedualed)
     {
         TimerCancel(dev->xv_timer);
-        dev->xv_timer = TimerSet(dev->xv_timer, 0, 2000, rdpDeferredXv, dev);
+        dev->xv_timer = TimerSet(dev->xv_timer, 0, 2000,
+                                 rdpDeferredXvCleanup, dev);
     }
     else
     {
         dev->xv_timer_schedualed = 1;
-        dev->xv_timer = TimerSet(dev->xv_timer, 0, 2000, rdpDeferredXv, dev);
+        dev->xv_timer = TimerSet(dev->xv_timer, 0, 2000,
+                                 rdpDeferredXvCleanup, dev);
     }
 
     index = width * height * 4 + drw_w * drw_h * 4 + 64;
@@ -545,7 +547,7 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
     tempGC = GetScratchGC(dst->depth, pScrn->pScreen);
     if (tempGC != NULL)
     {
-        ValidateGC(dst, tempGC); 
+        ValidateGC(dst, tempGC);
         (*tempGC->ops->PutImage)(dst, tempGC, 24,
                                  drw_x - dst->x, drw_y - dst->y,
                                  drw_w, drw_h, 0, ZPixmap, (char*)rgbend32);
