@@ -385,32 +385,51 @@ stretch_RGB32_RGB32(int *src, int src_width, int src_height,
 {
     int index;
     int jndex;
-    int kndex;
     int lndex;
-    int oh = (src_w << 16) / dst_w;
+    int last_lndex;
+    int oh;
     int ih;
-    int ov = (src_h << 16) / dst_h;
+    int ov;
     int iv;
     int pix;
+    int *src32;
+    int *dst32;
 
     LLOGLN(10, ("stretch_RGB32_RGB32: oh 0x%8.8x ov 0x%8.8x", oh, ov));
+    oh = (src_w << 16) / dst_w;
+    ov = (src_h << 16) / dst_h;
     iv = ov;
     lndex = src_y;
+    last_lndex = -1;
     for (index = 0; index < dst_h; index++)
     {
-        ih = oh;
-        kndex = src_x;
-        for (jndex = 0; jndex < dst_w; jndex++)
+        if (lndex == last_lndex)
         {
-            pix = src[lndex * src_width + kndex];
-            dst[index * dst_w + jndex] = pix;
-            while (ih > (1 << 16) - 1)
-            {
-                ih -= 1 << 16;
-                kndex++;
-            }
-            ih += oh;
+            /* repeat line */
+            dst32 = dst + index * dst_w;
+            src32 = dst32 - dst_w;
+            g_memcpy(dst32, src32, dst_w * 4);
         }
+        else
+        {
+            ih = oh; 
+            src32 = src + lndex * src_width + src_x;
+            pix = *src32;
+            dst32 = dst + index * dst_w;
+            for (jndex = 0; jndex < dst_w; jndex++)
+            {
+                *dst32 = pix;
+                while (ih > (1 << 16) - 1)
+                {
+                    ih -= 1 << 16;
+                    src32++;
+                    pix = *src32;
+                }
+                ih += oh;
+                dst32++;
+            }
+        }
+        last_lndex = lndex;
         while (iv > (1 << 16) - 1)
         {
             iv -= 1 << 16;
