@@ -493,10 +493,13 @@ sound_send_close(void)
     LOG(10, ("sound_send_close:"));
 
     /* send any left over data */
-    if (sound_send_wave_data_chunk(g_buffer, g_buf_index) != 0)
+    if (g_buf_index)
     {
-        LOG(10, ("sound_send_close: sound_send_wave_data_chunk failed"));
-        return 1;
+        if (sound_send_wave_data_chunk(g_buffer, g_buf_index) != 0) 
+        {
+            LOG(10, ("sound_send_close: sound_send_wave_data_chunk failed"));
+            return 1;
+        }
     }
     g_buf_index = 0;
     g_memset(g_sent_flag, 0, sizeof(g_sent_flag));
