@@ -6,7 +6,7 @@ rdpPolyFillArc.o rdpPolyText8.o rdpPolyText16.o rdpImageText8.o \
 rdpImageText16.o rdpImageGlyphBlt.o rdpPolyGlyphBlt.o rdpPushPixels.o \
 rdpCursor.o rdpMain.o rdpRandR.o rdpMisc.o rdpReg.o \
 rdpComposite.o rdpGlyphs.o rdpPixmap.o rdpInput.o rdpClientCon.o rdpCapture.o \
-rdpTrapezoids.o rdpXv.o
+rdpTrapezoids.o rdpXv.o rdpSimd.o
 
 ;OBJS += cpuid_x86.o i420_to_rgb32_x86_sse2.o yv12_to_rgb32_x86_sse2.o yuy2_to_rgb32_x86_sse2.o uyvy_to_rgb32_x86_sse2.o
 ;OBJS += cpuid_amd64.o i420_to_rgb32_amd64_sse2.o yv12_to_rgb32_amd64_sse2.o yuy2_to_rgb32_amd64_sse2.o uyvy_to_rgb32_amd64_sse2.o

@@ -17,27 +17,18 @@ OPEN GROUP BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
 AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-XVideo
+SIMD function asign
 
 */
 
-#ifndef __RDPXV_H
-#define __RDPXV_H
+#ifndef __RDPSIMD_H
+#define __RDPSIMD_H
 
 #include <xorg-server.h>
 #include <xorgVersion.h>
 #include <xf86.h>
 
 Bool
-rdpXvInit(ScreenPtr pScreen, ScrnInfoPtr pScrn);
-
-int
-YV12_to_RGB32(unsigned char *yuvs, int width, int height, int *rgbs);
-int
-I420_to_RGB32(unsigned char *yuvs, int width, int height, int *rgbs);
-int
-YUY2_to_RGB32(unsigned char *yuvs, int width, int height, int *rgbs);
-int
-UYVY_to_RGB32(unsigned char *yuvs, int width, int height, int *rgbs);
+rdpSimdInit(ScreenPtr pScreen, ScrnInfoPtr pScrn);
 
 #endif

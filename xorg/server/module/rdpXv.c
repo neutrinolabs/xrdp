@@ -48,14 +48,6 @@ XVideo
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
-/* use simd, run time */
-int g_xv_use_accel = 1;
-
-/* use simd, compile time, if zero, g_xv_use_accel does not matter */
-#if !defined(XV_USE_ACCEL)
-#define XV_USE_ACCEL 0
-#endif
-
 #define T_NUM_ENCODINGS 1
 static XF86VideoEncodingRec g_xrdpVidEncodings[T_NUM_ENCODINGS] =
 { { 0, "XV_IMAGE", 2046, 2046, { 1, 1 } } };
@@ -165,7 +157,7 @@ xrdpVidQueryBestSize(ScrnInfoPtr pScrn, Bool motion,
 }
 
 /*****************************************************************************/
-static int
+int
 YV12_to_RGB32(unsigned char *yuvs, int width, int height, int *rgbs)
 {
     int size_total;
@@ -206,7 +198,7 @@ YV12_to_RGB32(unsigned char *yuvs, int width, int height, int *rgbs)
 }
 
 /*****************************************************************************/
-static int
+int
 I420_to_RGB32(unsigned char *yuvs, int width, int height, int *rgbs)
 {
     int size_total;
@@ -247,7 +239,7 @@ I420_to_RGB32(unsigned char *yuvs, int width, int height, int *rgbs)
 }
 
 /*****************************************************************************/
-static int
+int
 YUY2_to_RGB32(unsigned char *yuvs, int width, int height, int *rgbs)
 {
     int y1;
@@ -301,7 +293,7 @@ YUY2_to_RGB32(unsigned char *yuvs, int width, int height, int *rgbs)
 }
 
 /*****************************************************************************/
-static int
+int
 UYVY_to_RGB32(unsigned char *yuvs, int width, int height, int *rgbs)
 {
     int y1;
@@ -644,7 +636,6 @@ xrdpVidQueryImageAttributes(ScrnInfoPtr pScrn, int id,
 Bool
 rdpXvInit(ScreenPtr pScreen, ScrnInfoPtr pScrn)
 {
-    rdpPtr dev;
     XF86VideoAdaptorPtr adaptor;
     DevUnion* pDevUnion;
     int bytes;
@@ -690,79 +681,6 @@ rdpXvInit(ScreenPtr pScreen, ScrnInfoPtr pScrn)
         return 0;
     }
     xf86XVFreeVideoAdaptorRec(adaptor);
-
-    dev = XRDPPTR(pScrn);
-    /* assign functions */
-    LLOGLN(0, ("rdpXvInit: assigning yuv functions"));
-#if XV_USE_ACCEL
-    if (g_xv_use_accel)
-    {
-#if defined(__x86_64__) || defined(__AMD64__) || defined (_M_AMD64)
-        int ax, bx, cx, dx;
-        cpuid_amd64(1, 0, &ax, &bx, &cx, &dx);
-        LLOGLN(0, ("rdpXvInit: cpuid ax 1 cx 0 return ax 0x%8.8x bx "
-               "0x%8.8x cx 0x%8.8x dx 0x%8.8x", ax, bx, cx, dx));
-        if (dx & (1 << 26)) /* SSE 2 */
-        {
-            dev->yv12_to_rgb32 = yv12_to_rgb32_amd64_sse2;
-            dev->i420_to_rgb32 = i420_to_rgb32_amd64_sse2;
-            dev->yuy2_to_rgb32 = yuy2_to_rgb32_amd64_sse2;
-            dev->uyvy_to_rgb32 = uyvy_to_rgb32_amd64_sse2;
-            LLOGLN(0, ("rdpXvInit: sse2 amd64 yuv functions assigned"));
-        }
-        else
-        {
-            dev->yv12_to_rgb32 = YV12_to_RGB32;
-            dev->i420_to_rgb32 = I420_to_RGB32;
-            dev->yuy2_to_rgb32 = YUY2_to_RGB32;
-            dev->uyvy_to_rgb32 = UYVY_to_RGB32;
-            LLOGLN(0, ("rdpXvInit: warning, c yuv functions assigned"));
-        }
-#elif defined(__x86__) || defined(_M_IX86) || defined(__i386__)
-        int ax, bx, cx, dx;
-        cpuid_x86(1, 0, &ax, &bx, &cx, &dx);
-        LLOGLN(0, ("rdpXvInit: cpuid ax 1 cx 0 return ax 0x%8.8x bx "
-               "0x%8.8x cx 0x%8.8x dx 0x%8.8x", ax, bx, cx, dx));
-        if (dx & (1 << 26)) /* SSE 2 */
-        {
-            dev->yv12_to_rgb32 = yv12_to_rgb32_x86_sse2;
-            dev->i420_to_rgb32 = i420_to_rgb32_x86_sse2;
-            dev->yuy2_to_rgb32 = yuy2_to_rgb32_x86_sse2;
-            dev->uyvy_to_rgb32 = uyvy_to_rgb32_x86_sse2;
-            LLOGLN(0, ("rdpXvInit: sse2 x86 yuv functions assigned"));
-        }
-        else
-        {
-            dev->yv12_to_rgb32 = YV12_to_RGB32;
-            dev->i420_to_rgb32 = I420_to_RGB32;
-            dev->yuy2_to_rgb32 = YUY2_to_RGB32;
-            dev->uyvy_to_rgb32 = UYVY_to_RGB32;
-            LLOGLN(0, ("rdpXvInit: warning, c yuv functions assigned"));
-        }
-#else
-        dev->yv12_to_rgb32 = YV12_to_RGB32;
-        dev->i420_to_rgb32 = I420_to_RGB32;
-        dev->yuy2_to_rgb32 = YUY2_to_RGB32;
-        dev->uyvy_to_rgb32 = UYVY_to_RGB32;
-        LLOGLN(0, ("rdpXvInit: warning, c yuv functions assigned"));
-#endif
-    }
-    else
-    {
-        dev->yv12_to_rgb32 = YV12_to_RGB32;
-        dev->i420_to_rgb32 = I420_to_RGB32;
-        dev->yuy2_to_rgb32 = YUY2_to_RGB32;
-        dev->uyvy_to_rgb32 = UYVY_to_RGB32;
-        LLOGLN(0, ("rdpXvInit: warning, c yuv functions assigned"));
-    }
-#else
-        dev->yv12_to_rgb32 = YV12_to_RGB32;
-        dev->i420_to_rgb32 = I420_to_RGB32;
-        dev->yuy2_to_rgb32 = YUY2_to_RGB32;
-        dev->uyvy_to_rgb32 = UYVY_to_RGB32;
-        LLOGLN(0, ("rdpXvInit: warning, c yuv functions assigned"));
-#endif
-
     return 1;
 }
 

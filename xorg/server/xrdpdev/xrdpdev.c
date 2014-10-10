@@ -54,6 +54,7 @@ This is the main driver file
 #include "rdpPixmap.h"
 #include "rdpClientCon.h"
 #include "rdpXv.h"
+#include "rdpSimd.h"
 
 #define LLOG_LEVEL 1
 #define LLOGLN(_level, _args) \
@@ -449,6 +450,9 @@ rdpScreenInit(ScreenPtr pScreen, int argc, char **argv)
     /* 1.13 has this function, 1.14 and up does not */
     miInitializeBackingStore(pScreen);
 #endif
+
+    /* try in init simd functions */
+    rdpSimdInit(pScreen, pScrn);
 
 #if defined(XvExtension) && XvExtension
     /* XVideo */
