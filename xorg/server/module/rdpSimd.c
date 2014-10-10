@@ -44,6 +44,14 @@ int g_simd_use_accel = 1;
 #define SIMD_USE_ACCEL 0
 #endif
 
+#if SIMD_USE_ACCEL
+#if defined(__x86_64__) || defined(__AMD64__) || defined (_M_AMD64)
+#include "amd64/funcs_amd64.h"
+#elif defined(__x86__) || defined(_M_IX86) || defined(__i386__)
+#include "x86/funcs_x86.h"
+#endif
+#endif
+
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)

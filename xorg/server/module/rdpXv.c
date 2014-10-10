@@ -624,14 +624,6 @@ xrdpVidQueryImageAttributes(ScrnInfoPtr pScrn, int id,
     return size;
 }
 
-#if XV_USE_ACCEL
-#if defined(__x86_64__) || defined(__AMD64__) || defined (_M_AMD64)
-#include "amd64/funcs_amd64.h"
-#elif defined(__x86__) || defined(_M_IX86) || defined(__i386__)
-#include "x86/funcs_x86.h"
-#endif
-#endif
-
 /*****************************************************************************/
 Bool
 rdpXvInit(ScreenPtr pScreen, ScrnInfoPtr pScrn)

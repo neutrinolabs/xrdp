@@ -170,9 +170,9 @@ loop_y:
     ; save edx
     mov [esp + 24], edx
 
-    prefetchnta 4096[esp + 0]  ; y
-    prefetchnta 1024[esp + 8]  ; u
-    prefetchnta 1024[esp + 12] ; v
+    ;prefetchnta 4096[esp + 0]  ; y
+    ;prefetchnta 1024[esp + 8]  ; u
+    ;prefetchnta 1024[esp + 12] ; v
 
 loop_x:
 

@@ -175,9 +175,9 @@ loop_y:
     ; save rdx
     mov [rsp + 48], rdx
 
-    prefetchnta 4096[rsp + 0]  ; y
-    prefetchnta 1024[rsp + 16] ; u
-    prefetchnta 1024[rsp + 24] ; v
+    ;prefetchnta 4096[rsp + 0]  ; y
+    ;prefetchnta 1024[rsp + 16] ; u
+    ;prefetchnta 1024[rsp + 24] ; v
 
 loop_x:
 

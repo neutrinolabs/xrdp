@@ -14,6 +14,8 @@ rdpTrapezoids.o rdpXv.o rdpSimd.o
 CFLAGS = -g -O2 -Wall -fPIC -I/usr/include/xorg -I/usr/include/pixman-1 \
 -I../../../common
 
+;CFLAGS += -DSIMD_USE_ACCEL=1
+
 LDFLAGS =
 
 LIBS =
