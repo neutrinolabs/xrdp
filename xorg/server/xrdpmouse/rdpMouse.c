@@ -50,14 +50,6 @@ xrdp mouse module
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
-#define XRDP_DRIVER_NAME "XRDPMOUSE"
-#define XRDP_NAME "XRDPMOUSE"
-#define XRDP_VERSION 1000
-
-#define PACKAGE_VERSION_MAJOR 1
-#define PACKAGE_VERSION_MINOR 0
-#define PACKAGE_VERSION_PATCHLEVEL 0
-
 /******************************************************************************/
 static void
 rdpmouseDeviceInit(void)
@@ -323,7 +315,7 @@ rdpmouseUnInit(InputDriverPtr drv, InputInfoPtr info, int flags)
 static InputDriverRec rdpmouse =
 {
     PACKAGE_VERSION_MAJOR,    /* version   */
-    XRDP_NAME,                /* name      */
+    XRDP_MOUSE_NAME,          /* name      */
     NULL,                     /* identify  */
     rdpmousePreInit,          /* preinit   */
     rdpmouseUnInit,           /* uninit    */
@@ -350,7 +342,7 @@ rdpmouseUnplug(pointer p)
 /******************************************************************************/
 static XF86ModuleVersionInfo rdpmouseVersionRec =
 {
-    XRDP_DRIVER_NAME,
+    XRDP_MOUSE_NAME,
     MODULEVENDORSTRING,
     MODINFOSTRING1,
     MODINFOSTRING2,

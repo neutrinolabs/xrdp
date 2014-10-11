@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,20 +106,32 @@ struct xrdp_client_info
   char client_addr[256];
   char client_port[256];
 
-  int nego_sec_layer; /* 0, 1, 2 = RDP security layer, TLS , Negotiate */
+  int security_layer; /* 0 = rdp, 1 = tls , 2 = hybrid */
   int multimon; /* 0 = deny , 1 = allow */
   int monitorCount; /* number of monitors detected (max = 16) */
   struct monitor_info minfo[16]; /* client monitor data */
 
   int keyboard_type;
   int keyboard_subtype;
-  
+
   int png_codec_id;
   int png_prop_len;
   char png_prop[64];
   int vendor_flags[4];
   int mcs_connection_type;
   int mcs_early_capability_flags;
+
+  int max_fastpath_frag_bytes;
+  int capture_code;
+  int capture_format;
+
+  char certificate[1024];
+  char key_file[1024];
+
+  /* X11 keyboard layout - inferred from keyboard type/subtype */
+  char model[16];
+  char layout[16];
+  char variant[16];
 
 };
 

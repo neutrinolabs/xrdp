@@ -39,11 +39,18 @@ cursor
 #include <cursor.h>
 #include <cursorstr.h>
 
+#include <X11/Xarch.h>
+
 #include "rdp.h"
 #include "rdpMain.h"
 #include "rdpDraw.h"
 #include "rdpClientCon.h"
 
+#ifndef X_BYTE_ORDER
+#warning X_BYTE_ORDER not defined
+#endif
+
+#if (X_BYTE_ORDER == X_LITTLE_ENDIAN)
 /* Copied from Xvnc/lib/font/util/utilbitmap.c */
 static unsigned char g_reverse_byte[0x100] =
 {
@@ -80,6 +87,7 @@ static unsigned char g_reverse_byte[0x100] =
     0x0f, 0x8f, 0x4f, 0xcf, 0x2f, 0xaf, 0x6f, 0xef,
     0x1f, 0x9f, 0x5f, 0xdf, 0x3f, 0xbf, 0x7f, 0xff
 };
+#endif
 
 /******************************************************************************/
 #define LOG_LEVEL 1

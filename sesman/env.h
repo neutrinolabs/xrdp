@@ -27,6 +27,8 @@
 #ifndef ENV_H
 #define ENV_H
 
+#include "list.h"
+
 /**
  *
  * @brief Creates vnc password file
@@ -48,6 +50,7 @@ env_check_password_file(char* filename, char* password);
  *
  */
 int DEFAULT_CC
-env_set_user(char* username, char* passwd_file, int display);
+env_set_user(char* username, char* passwd_file, int display,
+             struct list *env_names, struct list* env_values);
 
 #endif

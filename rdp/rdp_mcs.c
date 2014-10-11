@@ -19,6 +19,7 @@
  */
 
 #include "rdp.h"
+#include "common/log.h"
 
 /*****************************************************************************/
 struct rdp_mcs *APP_CC
@@ -598,7 +599,8 @@ failed"));
 int APP_CC
 rdp_mcs_init(struct rdp_mcs *self, struct stream *s)
 {
-    rdp_iso_init(self->iso_layer, s);
+    if (rdp_iso_init(self->iso_layer, s))
+        log_message(LOG_LEVEL_ERROR, "rdp_mcs.c: rdp_iso_init() failed");
     s_push_layer(s, mcs_hdr, 8);
     return 0;
 }

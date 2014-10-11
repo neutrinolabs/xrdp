@@ -21,6 +21,12 @@
 #include "libxrdp.h"
 #include "xrdp_orders_rail.h"
 
+#define LOG_LEVEL 1
+#define LLOG(_level, _args) \
+    do { if (_level < LOG_LEVEL) { g_write _args ; } } while (0)
+#define LLOGLN(_level, _args) \
+    do { if (_level < LOG_LEVEL) { g_writeln _args ; } } while (0)
+
 /******************************************************************************/
 struct xrdp_session *EXPORT_CC
 libxrdp_init(tbus id, struct trans *trans)
@@ -29,6 +35,7 @@ libxrdp_init(tbus id, struct trans *trans)
 
     session = (struct xrdp_session *)g_malloc(sizeof(struct xrdp_session), 1);
     session->id = id;
+    session->trans = trans;
     session->rdp = xrdp_rdp_create(session, trans);
     session->orders = xrdp_orders_create(session, (struct xrdp_rdp *)session->rdp);
     session->client_info = &(((struct xrdp_rdp *)session->rdp)->client_info);
@@ -61,7 +68,103 @@ libxrdp_disconnect(struct xrdp_session *session)
 int EXPORT_CC
 libxrdp_process_incomming(struct xrdp_session *session)
 {
-    return xrdp_rdp_incoming((struct xrdp_rdp *)session->rdp);
+    int rv;
+
+    rv = xrdp_rdp_incoming((struct xrdp_rdp *)(session->rdp));
+    return rv;
+}
+
+/*****************************************************************************/
+int EXPORT_CC
+libxrdp_get_pdu_bytes(const char *aheader)
+{
+    int rv;
+    const tui8 *header;
+
+    rv = -1;
+    header = (const tui8 *) aheader;
+
+    if (header[0] == 0x03)
+    {
+        /* TPKT */
+        rv = (header[2] << 8) | header[3];
+    }
+    else if (header[0] == 0x30)
+    {
+        /* TSRequest (NLA) */
+        if (header[1] & 0x80)
+        {
+            if ((header[1] & ~(0x80)) == 1)
+            {
+                rv = header[2];
+                rv += 3;
+            }
+            else if ((header[1] & ~(0x80)) == 2)
+            {
+                rv = (header[2] << 8) | header[3];
+                rv += 4;
+            }
+            else
+            {
+                g_writeln("libxrdp_get_pdu_bytes: error TSRequest!");
+                return -1;
+            }
+        }
+        else
+        {
+            rv = header[1];
+            rv += 2;
+        }
+    }
+    else
+    {
+        /* Fast-Path */
+        if (header[1] & 0x80)
+        {
+            rv = ((header[1] & 0x7F) << 8) | header[2];
+        }
+        else
+        {
+            rv = header[1];
+        }
+    }
+    return rv;
+}
+
+/******************************************************************************/
+/* only used durring connection */
+struct stream * APP_CC
+libxrdp_force_read(struct trans* trans)
+{
+    int bytes;
+    struct stream *s;
+
+    s = trans->in_s;
+    init_stream(s, 32 * 1024);
+
+    if (trans_force_read(trans, 4) != 0)
+    {
+        g_writeln("libxrdp_force_read: error");
+        return 0;
+    }
+    bytes = libxrdp_get_pdu_bytes(s->data);
+    if (bytes < 1)
+    {
+        g_writeln("libxrdp_force_read: error");
+        return 0;
+    }
+    if (bytes > 32 * 1024)
+    {
+        g_writeln("libxrdp_force_read: error");
+        return 0;
+    }
+
+    if (trans_force_read(trans, bytes - 4) != 0)
+    {
+        g_writeln("libxrdp_force_read: error");
+        return 0;
+    }
+    return s;
 }
 
 /******************************************************************************/
@@ -73,23 +176,21 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
     int code;
     int term;
     int dead_lock_counter;
+    int do_read;
     struct xrdp_rdp *rdp;
-    struct stream *ls;
 
+    do_read = s == 0;
+    if (do_read && session->up_and_running)
+    {
+        g_writeln("libxrdp_process_data: error logic");
+        return 1;
+    }
     if (session->in_process_data != 0)
     {
         g_writeln("libxrdp_process_data: error reentry");
         return 1;
     }
     session->in_process_data++;
-
-    ls = 0;
-    if (s == 0)
-    {
-        make_stream(ls);
-        init_stream(ls, 8192 * 4);
-        s = ls;
-    }
 
     term = 0;
     cont = 1;
@@ -105,13 +206,36 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
             if (session->is_term())
             {
                 term = 1;
+                break;
             }
         }
 
         code = 0;
 
+        if (do_read)
+        {
+            if (s == 0)
+            {
+                s = libxrdp_force_read(session->trans);
+            }
+            else
+            {
+                if ((s->next_packet == 0) || (s->next_packet >= s->end))
+                {
+                    s = libxrdp_force_read(session->trans);
+                }
+            }
+            if (s == 0)
+            {
+                g_writeln("libxrdp_process_data: libxrdp_force_read failed");
+                rv = 1;
+                break;
+            }
+        }
+
         if (xrdp_rdp_recv(rdp, s, &code) != 0)
         {
+            g_writeln("libxrdp_process_data: xrdp_rdp_recv failed");
             rv = 1;
             break;
         }
@@ -121,39 +245,33 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
         switch (code)
         {
             case -1:
-                xrdp_rdp_send_demand_active(rdp);
-
-                /* send Monitor Layout PDU for multimon */
-                if (session->client_info->monitorCount > 0 &&
-                    session->client_info->multimon == 1)
-                {
-                    DEBUG(("sending monitor layout pdu"));
-                    if (xrdp_rdp_send_monitorlayout(rdp) != 0)
-                    {
-                      g_writeln("xrdp_rdp_send_monitorlayout: error");
-                    }
-                }
-
+                xrdp_caps_send_demand_active(rdp);
                 session->up_and_running = 0;
                 break;
             case 0:
                 dead_lock_counter++;
                 break;
             case RDP_PDU_CONFIRM_ACTIVE: /* 3 */
-                xrdp_rdp_process_confirm_active(rdp, s);
+                xrdp_caps_process_confirm_active(rdp, s);
                 break;
             case RDP_PDU_DATA: /* 7 */
-
                 if (xrdp_rdp_process_data(rdp, s) != 0)
                 {
                     DEBUG(("libxrdp_process_data returned non zero"));
                     cont = 0;
                     term = 1;
                 }
-
+                break;
+            case 2: /* FASTPATH_INPUT_EVENT */
+                if (xrdp_fastpath_process_input_event(rdp->sec_layer->fastpath_layer, s) != 0)
+                {
+                     DEBUG(("libxrdp_process_data returned non zero"));
+                     cont = 0;
+                     term = 1;
+                }
                 break;
             default:
-                g_writeln("unknown in libxrdp_process_data");
+                g_writeln("unknown in libxrdp_process_data: code= %d", code);
                 dead_lock_counter++;
                 break;
         }
@@ -169,14 +287,8 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
 
         if (cont)
         {
-            cont = (s->next_packet != 0) &&
-                   (s->next_packet < s->end);
+            cont = (s->next_packet != 0) && (s->next_packet < s->end);
         }
-    }
-
-    if (s == ls)
-    {
-        free_stream(s);
     }
 
     session->in_process_data--;
@@ -198,11 +310,27 @@ libxrdp_send_palette(struct xrdp_session *session, int *palette)
     }
 
     DEBUG(("libxrdp_send_palette sending palette"));
+
     /* clear orders */
     libxrdp_orders_force_send(session);
     make_stream(s);
     init_stream(s, 8192);
-    xrdp_rdp_init_data((struct xrdp_rdp *)session->rdp, s);
+
+    if (session->client_info->use_fast_path & 1) /* fastpath output supported */
+    {
+        LLOGLN(10, ("libxrdp_send_palette: fastpath"));
+        if (xrdp_rdp_init_fastpath((struct xrdp_rdp *)session->rdp, s) != 0)
+        {
+            free_stream(s);
+            return 1;
+        }
+    }
+    else {
+        LLOGLN(10, ("libxrdp_send_palette: slowpath"));
+        xrdp_rdp_init_data((struct xrdp_rdp *)session->rdp, s);
+    }
+
+    /* TS_UPDATE_PALETTE_DATA */
     out_uint16_le(s, RDP_UPDATE_PALETTE);
     out_uint16_le(s, 0);
     out_uint16_le(s, 256); /* # of colors */
@@ -217,8 +345,22 @@ libxrdp_send_palette(struct xrdp_session *session, int *palette)
     }
 
     s_mark_end(s);
-    xrdp_rdp_send_data((struct xrdp_rdp *)session->rdp, s, RDP_DATA_PDU_UPDATE);
+    if (session->client_info->use_fast_path & 1) /* fastpath output supported */
+    {
+       if (xrdp_rdp_send_fastpath((struct xrdp_rdp *)session->rdp, s,
+                                   FASTPATH_UPDATETYPE_PALETTE) != 0)
+       {
+           free_stream(s);
+           return 1;
+       }
+    }
+    else
+    {
+       xrdp_rdp_send_data((struct xrdp_rdp *)session->rdp, s,
+                           RDP_DATA_PDU_UPDATE);
+    }
     free_stream(s);
+
     /* send the orders palette too */
     libxrdp_orders_init(session);
     libxrdp_orders_send_palette(session, palette, 0);
@@ -482,20 +624,46 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
     }
     make_stream(s);
     init_stream(s, 8192);
-    xrdp_rdp_init_data((struct xrdp_rdp *)session->rdp, s);
-    if ((session->client_info->pointer_flags & 1) == 0)
+
+    if (session->client_info->use_fast_path & 1) /* fastpath output supported */
     {
-        out_uint16_le(s, RDP_POINTER_COLOR);
-        out_uint16_le(s, 0); /* pad */
-        data_bytes = 3072;
+        LLOGLN(10, ("libxrdp_send_pointer: fastpath"));
+        if (xrdp_rdp_init_fastpath((struct xrdp_rdp *)session->rdp, s) != 0)
+        {
+            free_stream(s);
+            return 1;
+        }
+
+        if ((session->client_info->pointer_flags & 1) == 0)
+        {
+            data_bytes = 3072;
+        }
+        else
+        {
+            data_bytes = ((bpp + 7) / 8) * 32 * 32;
+            out_uint16_le(s, bpp);
+        }
     }
-    else
+    else /* slowpath */
     {
-        out_uint16_le(s, RDP_POINTER_POINTER);
-        out_uint16_le(s, 0); /* pad */
-        out_uint16_le(s, bpp);
-        data_bytes = ((bpp + 7) / 8) * 32 * 32;
+        LLOGLN(10, ("libxrdp_send_pointer: slowpath"));
+        xrdp_rdp_init_data((struct xrdp_rdp *)session->rdp, s);
+        if ((session->client_info->pointer_flags & 1) == 0)
+         {
+             out_uint16_le(s, RDP_POINTER_COLOR);
+             out_uint16_le(s, 0); /* pad */
+             data_bytes = 3072;
+         }
+         else
+         {
+             out_uint16_le(s, RDP_POINTER_POINTER);
+             out_uint16_le(s, 0); /* pad */
+             out_uint16_le(s, bpp);
+             data_bytes = ((bpp + 7) / 8) * 32 * 32;
+         }
     }
+
+
     out_uint16_le(s, cache_idx); /* cache_idx */
     out_uint16_le(s, x);
     out_uint16_le(s, y);
@@ -506,7 +674,7 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
 
     switch (bpp)
     {
-        case 15:
+        //case 15: /* coverity: this is logically dead code */
         case 16:
             p16 = (tui16 *) data;
             for (i = 0; i < 32; i++)
@@ -547,9 +715,34 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
     }
 
     out_uint8a(s, mask, 128); /* mask */
+    out_uint8(s, 0); /* pad */
     s_mark_end(s);
-    xrdp_rdp_send_data((struct xrdp_rdp *)(session->rdp), s,
-                       RDP_DATA_PDU_POINTER);
+    if (session->client_info->use_fast_path & 1) /* fastpath output supported */
+    {
+        if ((session->client_info->pointer_flags & 1) == 0)
+        {
+            if (xrdp_rdp_send_fastpath((struct xrdp_rdp *)session->rdp, s,
+                                        FASTPATH_UPDATETYPE_COLOR) != 0)
+            {
+                free_stream(s);
+                return 1;
+            }
+        }
+        else
+        {
+            if (xrdp_rdp_send_fastpath((struct xrdp_rdp *)session->rdp, s,
+                                        FASTPATH_UPDATETYPE_POINTER) != 0)
+            {
+                free_stream(s);
+                return 1;
+            }
+        }
+    }
+    else
+    {
+        xrdp_rdp_send_data((struct xrdp_rdp *)session->rdp, s,
+                          RDP_DATA_PDU_POINTER);
+    }
     free_stream(s);
     return 0;
 }
@@ -563,12 +756,41 @@ libxrdp_set_pointer(struct xrdp_session *session, int cache_idx)
     DEBUG(("libxrdp_set_pointer sending cursor index"));
     make_stream(s);
     init_stream(s, 8192);
-    xrdp_rdp_init_data((struct xrdp_rdp *)session->rdp, s);
-    out_uint16_le(s, RDP_POINTER_CACHED);
-    out_uint16_le(s, 0); /* pad */
+
+
+    if (session->client_info->use_fast_path & 1) /* fastpath output supported */
+    {
+        LLOGLN(10, ("libxrdp_send_pointer: fastpath"));
+        if (xrdp_rdp_init_fastpath((struct xrdp_rdp *)session->rdp, s) != 0)
+        {
+            return 1;
+        }
+    }
+    else
+    {
+        LLOGLN(10, ("libxrdp_send_pointer: slowpath"));
+        xrdp_rdp_init_data((struct xrdp_rdp *)session->rdp, s);
+        out_uint16_le(s, RDP_POINTER_CACHED);
+        out_uint16_le(s, 0); /* pad */
+    }
+
     out_uint16_le(s, cache_idx); /* cache_idx */
     s_mark_end(s);
-    xrdp_rdp_send_data((struct xrdp_rdp *)session->rdp, s, RDP_DATA_PDU_POINTER);
+
+    if (session->client_info->use_fast_path & 1) /* fastpath output supported */
+    {
+        if (xrdp_rdp_send_fastpath((struct xrdp_rdp *)session->rdp, s,
+                                    FASTPATH_UPDATETYPE_CACHED) != 0)
+        {
+            free_stream(s);
+            return 1;
+        }
+    }
+    else
+    {
+        xrdp_rdp_send_data((struct xrdp_rdp *)session->rdp, s,
+                            RDP_DATA_PDU_POINTER);
+    }
     free_stream(s);
     return 0;
 }
@@ -782,7 +1004,7 @@ libxrdp_reset(struct xrdp_session *session,
     }
 
     /* this should do the resizing */
-    if (xrdp_rdp_send_demand_active((struct xrdp_rdp *)session->rdp) != 0)
+    if (xrdp_caps_send_demand_active((struct xrdp_rdp *)session->rdp) != 0)
     {
         return 1;
     }
@@ -1078,4 +1300,92 @@ libxrdp_monitored_desktop(struct xrdp_session *session,
 
     orders = (struct xrdp_orders *)(session->orders);
     return xrdp_orders_send_monitored_desktop(orders, mdo, flags);
+}
+
+/*****************************************************************************/
+int EXPORT_CC
+libxrdp_codec_jpeg_compress(struct xrdp_session *session,
+                            int format, char *inp_data,
+                            int width, int height,
+                            int stride, int x, int y,
+                            int cx, int cy, int quality,
+                            char *out_data, int *io_len)
+{
+    struct xrdp_orders *orders;
+    void* jpeg_han;
+
+    orders = (struct xrdp_orders *)(session->orders);
+    jpeg_han = orders->jpeg_han;
+    return xrdp_codec_jpeg_compress(jpeg_han, format, inp_data,
+                                    width, height, stride, x, y,
+                                    cx, cy, quality, out_data, io_len);
+}
+
+/*****************************************************************************/
+int EXPORT_CC
+libxrdp_fastpath_send_surface(struct xrdp_session *session,
+                              char* data_pad, int pad_bytes,
+                              int data_bytes,
+                              int destLeft, int destTop,
+                              int destRight, int destBottom, int bpp,
+                              int codecID, int width, int height)
+{
+    struct stream ls;
+    struct stream *s;
+    struct xrdp_rdp *rdp;
+    int rv;
+    int sec_bytes;
+    int rdp_bytes;
+    int max_bytes;
+    int cmd_bytes;
+
+    LLOGLN(10, ("libxrdp_fastpath_init:"));
+    if ((session->client_info->use_fast_path & 1) == 0)
+    {
+        return 1;
+    }
+    max_bytes = session->client_info->max_fastpath_frag_bytes;
+    if (max_bytes < 32 * 1024)
+    {
+        max_bytes = 32 * 1024;
+    }
+    rdp = (struct xrdp_rdp *) (session->rdp);
+    rdp_bytes = xrdp_rdp_get_fastpath_bytes(rdp);
+    sec_bytes = xrdp_sec_get_fastpath_bytes(rdp->sec_layer);
+    cmd_bytes = 10 + 12;
+    if (data_bytes + rdp_bytes + sec_bytes + cmd_bytes > max_bytes)
+    {
+        return 1;
+    }
+    if (sec_bytes + rdp_bytes + cmd_bytes > pad_bytes)
+    {
+        return 1;
+    }
+    g_memset(&ls, 0, sizeof(ls));
+    s = &ls;
+    s->data = (data_pad + pad_bytes) - (rdp_bytes + sec_bytes + cmd_bytes);
+    s->sec_hdr = s->data;
+    s->rdp_hdr = s->sec_hdr + sec_bytes;
+    s->end = data_pad + pad_bytes + data_bytes;
+    s->p = s->data + (rdp_bytes + sec_bytes);
+    /* TS_SURFCMD_SET_SURF_BITS */
+    out_uint16_le(s, 0x0001); /* CMDTYPE_SET_SURFACE_BITS */
+    out_uint16_le(s, destLeft);
+    out_uint16_le(s, destTop);
+    out_uint16_le(s, destRight);
+    out_uint16_le(s, destBottom);
+    /* TS_ BITMAP_DATA_EX */
+    out_uint8(s, bpp);
+    out_uint8(s, 0);
+    out_uint8(s, 0);
+    out_uint8(s, codecID);
+    out_uint16_le(s, width);
+    out_uint16_le(s, height);
+    out_uint32_le(s, data_bytes);
+    /* 4 = FASTPATH_UPDATETYPE_SURFCMDS */
+    if (xrdp_rdp_send_fastpath(rdp, s, 4) != 0)
+    {
+        return 1;
+    }
+    return 0;
 }

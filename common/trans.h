@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,31 +35,58 @@
 #define TRANS_STATUS_UP 1
 
 struct trans; /* forward declaration */
+struct xrdp_tls;
 
-typedef int (*ttrans_data_in)(struct trans* self);
-typedef int (*ttrans_conn_in)(struct trans* self, struct trans* new_self);
-typedef int (*tis_term)(void);
+typedef int (DEFAULT_CC *ttrans_data_in)(struct trans* self);
+typedef int (DEFAULT_CC *ttrans_conn_in)(struct trans* self,
+                                         struct trans* new_self);
+typedef int (DEFAULT_CC *tis_term)(void);
+typedef int (APP_CC *trans_recv) (struct trans *self, void *ptr, int len);
+typedef int (APP_CC *trans_send) (struct trans *self, const void *data, int len);
 
 struct trans
 {
-  tbus sck; /* socket handle */
-  int mode; /* 1 tcp, 2 unix socket */
-  int status;
-  int type1; /* 1 listener 2 server 3 client */
-  ttrans_data_in trans_data_in;
-  ttrans_conn_in trans_conn_in;
-  void* callback_data;
-  int header_size;
-  struct stream* in_s;
-  struct stream* out_s;
-  char* listen_filename;
-  tis_term is_term; /* used to test for exit */
-  struct stream* wait_s;
-  char addr[256];
-  char port[256];
-  int no_stream_init_on_data_in;
-  int extra_flags; /* user defined */
+    tbus sck; /* socket handle */
+    int mode; /* 1 tcp, 2 unix socket */
+    int status;
+    int type1; /* 1 listener 2 server 3 client */
+    ttrans_data_in trans_data_in;
+    ttrans_conn_in trans_conn_in;
+    void* callback_data;
+    int header_size;
+    struct stream* in_s;
+    struct stream* out_s;
+    char* listen_filename;
+    tis_term is_term; /* used to test for exit */
+    struct stream* wait_s;
+    char addr[256];
+    char port[256];
+    int no_stream_init_on_data_in;
+    int extra_flags; /* user defined */
+    struct xrdp_tls *tls;
+    trans_recv trans_recv;
+    trans_send trans_send;
 };
+
+/* xrdp_tls */
+struct xrdp_tls
+{
+    void *ssl; /* SSL * */
+    void *ctx; /* SSL_CTX * */
+    char *cert;
+    char *key;
+    struct trans *trans;
+};
+
+/* xrdp_tls.c */
+struct xrdp_tls *APP_CC
+xrdp_tls_create(struct trans *trans, const char *key, const char *cert);
+int APP_CC
+xrdp_tls_accept(struct xrdp_tls *self);
+int APP_CC
+xrdp_tls_disconnect(struct xrdp_tls *self);
+void APP_CC
+xrdp_tls_delete(struct xrdp_tls *self);
 
 struct trans* APP_CC
 trans_create(int mode, int in_size, int out_size);
@@ -94,5 +121,13 @@ struct stream* APP_CC
 trans_get_in_s(struct trans* self);
 struct stream* APP_CC
 trans_get_out_s(struct trans* self, int size);
+int APP_CC
+trans_set_tls_mode(struct trans *self, const char *key, const char *cert);
+int APP_CC
+trans_shutdown_tls_mode(struct trans *self);
+int APP_CC
+trans_tcp_force_read_s(struct trans *self, struct stream *in_s, int size);
+int APP_CC
+trans_force_write_s(struct trans *self, struct stream *out_s);
 
 #endif

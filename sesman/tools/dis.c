@@ -58,7 +58,12 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    sck = socket(PF_UNIX, SOCK_DGRAM, 0);
+    if ((sck = socket(PF_UNIX, SOCK_DGRAM, 0)) < 0)
+    {
+        printf("socket open error\n");
+        return 1;
+    }
+
     len = sizeof(sa);
 
     if (sendto(sck, "sig", 4, 0, (struct sockaddr *)&sa, len) > 0)

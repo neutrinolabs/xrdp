@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,15 +70,15 @@ xrdp_process_loop(struct xrdp_process *self, struct stream *s)
     if (self->session != 0)
     {
         rv = libxrdp_process_data(self->session, s);
-    }
 
-    if ((self->wm == 0) && (self->session->up_and_running) && (rv == 0))
-    {
-        DEBUG(("calling xrdp_wm_init and creating wm"));
-        self->wm = xrdp_wm_create(self, self->session->client_info);
-        /* at this point the wm(window manager) is create and wm::login_mode is
-           zero and login_mode_event is set so xrdp_wm_init should be called by
-           xrdp_wm_check_wait_objs */
+        if ((self->wm == 0) && (self->session->up_and_running) && (rv == 0))
+        {
+            DEBUG(("calling xrdp_wm_init and creating wm"));
+            self->wm = xrdp_wm_create(self, self->session->client_info);
+            /* at this point the wm(window manager) is create and wm::login_mode is
+               zero and login_mode_event is set so xrdp_wm_init should be called by
+               xrdp_wm_check_wait_objs */
+        }
     }
 
     return rv;
@@ -115,62 +115,6 @@ xrdp_process_mod_end(struct xrdp_process *self)
 }
 
 /*****************************************************************************/
-static int APP_CC
-xrdp_process_get_pdu_bytes(const char *aheader)
-{
-    int rv;
-    const tui8 *header;
-
-    rv = -1;
-    header = (const tui8 *) aheader;
-    if (header[0] == 0x03)
-    {
-        /* TPKT */
-        rv = (header[2] << 8) | header[3];
-    }
-    else if (header[0] == 0x30)
-    {
-        /* TSRequest (NLA) */
-        if (header[1] & 0x80)
-        {
-            if ((header[1] & ~(0x80)) == 1)
-            {
-                rv = header[2];
-                rv += 3;
-            }
-            else if ((header[1] & ~(0x80)) == 2)
-            {
-                rv = (header[2] << 8) | header[3];
-                rv += 4;
-            }
-            else
-            {
-                g_writeln("xrdp_process_get_packet_bytes: error TSRequest!");
-                return -1;
-            }
-        }
-        else
-        {
-            rv = header[1];
-            rv += 2;
-        }
-    }
-    else
-    {
-        /* Fast-Path */
-        if (header[1] & 0x80)
-        {
-            rv = ((header[1] & 0x7F) << 8) | header[2];
-        }
-        else
-        {
-            rv = header[1];
-        }
-    }
-    return rv;
-}
-
-/*****************************************************************************/
 static int DEFAULT_CC
 xrdp_process_data_in(struct trans *self)
 {
@@ -196,12 +140,13 @@ xrdp_process_data_in(struct trans *self)
             {
                 pro->server_trans->extra_flags = 1;
                 pro->server_trans->header_size = 4;
+                init_stream(s, 0);
             }
             break;
 
         case 1:
             /* we have enough now to get the PDU bytes */
-            len = xrdp_process_get_pdu_bytes(s->p);
+            len = libxrdp_get_pdu_bytes(s->p);
             if (len == -1)
             {
                 g_writeln("xrdp_process_data_in: "
@@ -226,7 +171,6 @@ xrdp_process_data_in(struct trans *self)
             pro->server_trans->extra_flags = 1;
             break;
     }
-
     return 0;
 }
 
@@ -258,6 +202,8 @@ xrdp_process_main_loop(struct xrdp_process *self)
 
     if (libxrdp_process_incomming(self->session) == 0)
     {
+        init_stream(self->server_trans->in_s, 32 * 1024);
+
         term_obj = g_get_term_event();
         cont = 1;
 

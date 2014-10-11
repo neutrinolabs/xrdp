@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -848,9 +848,14 @@ xrdp_painter_copy(struct xrdp_painter *self,
             while (i < (srcx + cx))
             {
                 w = MIN(64, ((srcx + cx) - i));
-                h = MIN(64, ((srcy + cy) - j));
+                h = MIN(63, ((srcy + cy) - j));
                 b = xrdp_bitmap_create(w, h, src->bpp, 0, self->wm);
+#if 1
                 xrdp_bitmap_copy_box_with_crc(src, b, i, j, w, h);
+#else
+                xrdp_bitmap_copy_box(src, b, i, j, w, h);
+                xrdp_bitmap_hash_crc(b);
+#endif
                 bitmap_id = xrdp_cache_add_bitmap(self->wm->cache, b, self->wm->hints);
                 cache_id = HIWORD(bitmap_id);
                 cache_idx = LOWORD(bitmap_id);
@@ -878,7 +883,7 @@ xrdp_painter_copy(struct xrdp_painter *self,
                 i += 64;
             }
 
-            j += 64;
+            j += 63;
         }
 
         xrdp_region_delete(region);
@@ -913,19 +918,19 @@ xrdp_painter_composite(struct xrdp_painter* self,
     int palette_id;
     int cache_srcidx;
     int cache_mskidx;
-    
+
     if (self == 0 || src == 0 || dst == 0)
     {
         return 0;
     }
-    
+
     /* todo data */
-    
+
     if (dst->type == WND_TYPE_BITMAP)
     {
         return 0;
     }
-    
+
     if (src->type == WND_TYPE_OFFSCREEN)
     {
         xrdp_bitmap_get_screen_clip(dst, self, &clip_rect, &dx, &dy);
@@ -933,7 +938,7 @@ xrdp_painter_composite(struct xrdp_painter* self,
         xrdp_region_add_rect(region, &clip_rect);
         dstx += dx;
         dsty += dy;
-        
+
         palette_id = 0;
         cache_srcidx = src->item_index;
         cache_mskidx = -1;
@@ -944,7 +949,7 @@ xrdp_painter_composite(struct xrdp_painter* self,
                 cache_mskidx = msk->item_index; // todo
             }
         }
-        
+
         k = 0;
         while (xrdp_region_get_rect(region, k, &rect1) == 0)
         {

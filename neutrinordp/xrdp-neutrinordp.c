@@ -275,11 +275,13 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
         case 107: /* wheel up */
             flags = PTR_FLAGS_WHEEL | 0x0078;
             mod->inst->input->MouseEvent(mod->inst->input, flags, 0, 0);
+            break;
         case 108:
             break;
         case 109: /* wheel down */
             flags = PTR_FLAGS_WHEEL | PTR_FLAGS_WHEEL_NEGATIVE | 0x0088;
             mod->inst->input->MouseEvent(mod->inst->input, flags, 0, 0);
+            break;
         case 110:
             break;
         case 200:
@@ -296,8 +298,8 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             size = (int)param2;
             data = (char *)param3;
             total_size = (int)param4;
-            LLOGLN(12, ("lxrdp_event: client to server flags %d", flags));
 
+            LLOGLN(12, ("lxrdp_event: client to server ,chanid= %d  flags= %d", chanid, flags));
             if ((chanid < 0) || (chanid >= mod->inst->settings->num_channels))
             {
                 LLOGLN(0, ("lxrdp_event: error chanid %d", chanid));
@@ -491,7 +493,7 @@ lfreerdp_begin_paint(rdpContext *context)
 {
     struct mod *mod;
 
-    LLOGLN(10, ("lfreerdp_begin_paint:"));
+    LLOGLN(12, ("lfreerdp_begin_paint:"));
     mod = ((struct mod_context *)context)->modi;
     mod->server_begin_update(mod);
 }
@@ -502,7 +504,7 @@ lfreerdp_end_paint(rdpContext *context)
 {
     struct mod *mod;
 
-    LLOGLN(10, ("lfreerdp_end_paint:"));
+    LLOGLN(12, ("lfreerdp_end_paint:"));
     mod = ((struct mod_context *)context)->modi;
     mod->server_end_update(mod);
 }
@@ -517,7 +519,7 @@ lfreerdp_set_bounds(rdpContext *context, rdpBounds *bounds)
     int cx;
     int cy;
 
-    LLOGLN(10, ("lfreerdp_set_bounds: %p", bounds));
+    LLOGLN(12, ("lfreerdp_set_bounds: %p", bounds));
     mod = ((struct mod_context *)context)->modi;
 
     if (bounds != 0)
@@ -734,7 +736,7 @@ lfreerdp_mem_blt(rdpContext *context, MEMBLT_ORDER *memblt)
     struct bitmap_item *bi;
 
     mod = ((struct mod_context *)context)->modi;
-    LLOGLN(10, ("lfreerdp_mem_blt: cacheId %d cacheIndex %d",
+    LLOGLN(12, ("lfreerdp_mem_blt: cacheId %d cacheIndex %d",
                 memblt->cacheId, memblt->cacheIndex));
 
     id = memblt->cacheId;
@@ -1353,7 +1355,7 @@ static void DEFAULT_CC lfreerdp_syncronize(rdpContext* context)
 {
     struct mod *mod;
     mod = ((struct mod_context *)context)->modi;
-    LLOGLN(0, ("lfreerdp_synchronize received - not handled"));
+    LLOGLN(12, ("lfreerdp_synchronize received - not handled"));
 }
 
 /******************************************************************************/
@@ -1378,8 +1380,8 @@ lfreerdp_pre_connect(freerdp *instance)
     while (error == 0)
     {
         num_chans++;
-        LLOGLN(10, ("lfreerdp_pre_connect: got channel [%s], flags [0x%8.8x]",
-                    ch_name, ch_flags));
+        LLOGLN(10, ("lfreerdp_pre_connect: got channel [%s], id [%d], flags [0x%8.8x]",
+                    ch_name, index, ch_flags));
         dst_ch_name = instance->settings->channels[index].name;
         g_memset(dst_ch_name, 0, 8);
         g_snprintf(dst_ch_name, 8, "%s", ch_name);
@@ -1408,23 +1410,24 @@ lfreerdp_pre_connect(freerdp *instance)
     instance->settings->order_support[NEG_MEM3BLT_INDEX] = 0;
     instance->settings->order_support[NEG_MEM3BLT_V2_INDEX] = 0;
     instance->settings->bitmapCacheV2NumCells = 3; // 5;
-    instance->settings->bitmapCacheV2CellInfo[0].numEntries = 0x78; // 600;
+    instance->settings->bitmapCacheV2CellInfo[0].numEntries = 600; // 0x78;
     instance->settings->bitmapCacheV2CellInfo[0].persistent = 0;
-    instance->settings->bitmapCacheV2CellInfo[1].numEntries = 0x78; // 600;
+    instance->settings->bitmapCacheV2CellInfo[1].numEntries = 600; //0x78; // 600;
     instance->settings->bitmapCacheV2CellInfo[1].persistent = 0;
-    instance->settings->bitmapCacheV2CellInfo[2].numEntries = 0x150; // 2048;
+    instance->settings->bitmapCacheV2CellInfo[2].numEntries = 2048; //0x150; // 2048;
     instance->settings->bitmapCacheV2CellInfo[2].persistent = 0;
-    instance->settings->bitmapCacheV2CellInfo[3].numEntries = 0; // 4096;
+    instance->settings->bitmapCacheV2CellInfo[3].numEntries = 4096; // 4096;
     instance->settings->bitmapCacheV2CellInfo[3].persistent = 0;
-    instance->settings->bitmapCacheV2CellInfo[4].numEntries = 0; // 2048;
+    instance->settings->bitmapCacheV2CellInfo[4].numEntries = 2048; // 2048;
     instance->settings->bitmapCacheV2CellInfo[4].persistent = 0;
 
-    // instance->settings->BitmapCacheV3Enabled = FALSE;
+    instance->settings->bitmap_cache_v3 = 1;
     instance->settings->order_support[NEG_MULTIDSTBLT_INDEX] = 0;
     instance->settings->order_support[NEG_MULTIPATBLT_INDEX] = 0;
     instance->settings->order_support[NEG_MULTISCRBLT_INDEX] = 0;
     instance->settings->order_support[NEG_MULTIOPAQUERECT_INDEX] = 0;
     instance->settings->order_support[NEG_POLYLINE_INDEX] = 0;
+
 
     instance->settings->username = g_strdup(mod->username);
     instance->settings->password = g_strdup(mod->password);
@@ -1436,6 +1439,10 @@ lfreerdp_pre_connect(freerdp *instance)
         instance->settings->rail_langbar_supported = 1;
         instance->settings->workarea = 1;
         instance->settings->performance_flags = PERF_DISABLE_WALLPAPER | PERF_DISABLE_FULLWINDOWDRAG;
+        instance->settings->num_icon_caches = mod->client_info.wnd_num_icon_caches;
+        instance->settings->num_icon_cache_entries = mod->client_info.wnd_num_icon_cache_entries;
+
+
     }
     else
     {
@@ -1448,8 +1455,16 @@ lfreerdp_pre_connect(freerdp *instance)
     instance->settings->compression = 0;
     instance->settings->ignore_certificate = 1;
 
-    // here
-    //instance->settings->RdpVersion = 4;
+    // Multi Monitor Settings
+    instance->settings->num_monitors = mod->client_info.monitorCount;
+    for (index = 0; index < mod->client_info.monitorCount; index++)
+    {
+            instance->settings->monitors[index].x = mod->client_info.minfo[index].left;
+            instance->settings->monitors[index].y = mod->client_info.minfo[index].top;
+            instance->settings->monitors[index].width = mod->client_info.minfo[index].right;
+            instance->settings->monitors[index].height = mod->client_info.minfo[index].bottom;
+            instance->settings->monitors[index].is_primary = mod->client_info.minfo[index].is_primary;
+    }
 
     instance->update->BeginPaint = lfreerdp_begin_paint;
     instance->update->EndPaint = lfreerdp_end_paint;
@@ -1648,21 +1663,21 @@ lrail_NotifyIconCreate(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
     rnso.version = notify_icon_state->version;
 
     if (orderInfo->fieldFlags & WINDOW_ORDER_FIELD_NOTIFY_TIP)
-     {
-       rnso.tool_tip = freerdp_uniconv_in(uniconv,
-           notify_icon_state->toolTip.string, notify_icon_state->toolTip.length);
-     }
-     if (orderInfo->fieldFlags & WINDOW_ORDER_FIELD_NOTIFY_INFO_TIP)
-     {
-       rnso.infotip.timeout = notify_icon_state->infoTip.timeout;
-       rnso.infotip.flags = notify_icon_state->infoTip.flags;
-       rnso.infotip.text = freerdp_uniconv_in(uniconv,
-           notify_icon_state->infoTip.text.string,
-           notify_icon_state->infoTip.text.length);
-       rnso.infotip.title = freerdp_uniconv_in(uniconv,
-           notify_icon_state->infoTip.title.string,
-           notify_icon_state->infoTip.title.length);
-     }
+    {
+     rnso.tool_tip = freerdp_uniconv_in(uniconv,
+         notify_icon_state->toolTip.string, notify_icon_state->toolTip.length);
+    }
+    if (orderInfo->fieldFlags & WINDOW_ORDER_FIELD_NOTIFY_INFO_TIP)
+    {
+     rnso.infotip.timeout = notify_icon_state->infoTip.timeout;
+     rnso.infotip.flags = notify_icon_state->infoTip.flags;
+     rnso.infotip.text = freerdp_uniconv_in(uniconv,
+         notify_icon_state->infoTip.text.string,
+         notify_icon_state->infoTip.text.length);
+     rnso.infotip.title = freerdp_uniconv_in(uniconv,
+         notify_icon_state->infoTip.title.string,
+         notify_icon_state->infoTip.title.length);
+    }
 
     rnso.state = notify_icon_state->state;
     rnso.icon_cache_entry = notify_icon_state->icon.cacheEntry;
@@ -1815,7 +1830,7 @@ lfreerdp_receive_channel_data(freerdp *instance, int channelId, uint8 *data,
 
     if (lchid >= 0)
     {
-        LLOGLN(10, ("lfreerdp_receive_channel_data: server to client"));
+        LLOGLN(10, ("lfreerdp_receive_channel_data: server to client, chanid: %d", lchid));
         error = mod->server_send_to_channel(mod, lchid, (char *)data, size,
                                             total_size, flags);
 

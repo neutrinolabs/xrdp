@@ -195,8 +195,6 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
                 parseCommonStates(e, "scp_v1s_list_sessions()");
                 break;
         }
-
-        g_free(slist);
     }
 
     /* resource management */
@@ -208,6 +206,7 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     /* cleanup */
     scp_session_destroy(s);
     auth_end(data);
+    g_free(slist);
 }
 
 static void parseCommonStates(enum SCP_SERVER_STATES_E e, char *f)

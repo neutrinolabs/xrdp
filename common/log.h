@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,23 +29,23 @@
 /* logging levels */
 enum logLevels
 {
-  LOG_LEVEL_ALWAYS = 0,
-  LOG_LEVEL_ERROR,
-  LOG_LEVEL_WARNING,
-  LOG_LEVEL_INFO,
-  LOG_LEVEL_DEBUG
+    LOG_LEVEL_ALWAYS = 0,
+    LOG_LEVEL_ERROR,
+    LOG_LEVEL_WARNING,
+    LOG_LEVEL_INFO,
+    LOG_LEVEL_DEBUG
 };
 
 /* startup return values */
 enum logReturns
 {
-  LOG_STARTUP_OK = 0,
-  LOG_ERROR_MALLOC,
-  LOG_ERROR_NULL_FILE,
-  LOG_ERROR_FILE_OPEN,
-  LOG_ERROR_NO_CFG,
-  LOG_ERROR_FILE_NOT_OPEN,
-  LOG_GENERAL_ERROR
+    LOG_STARTUP_OK = 0,
+    LOG_ERROR_MALLOC,
+    LOG_ERROR_NULL_FILE,
+    LOG_ERROR_FILE_OPEN,
+    LOG_ERROR_NO_CFG,
+    LOG_ERROR_FILE_NOT_OPEN,
+    LOG_GENERAL_ERROR
 };
 
 #define SESMAN_CFG_LOGGING           "Logging"
@@ -65,14 +65,14 @@ enum logReturns
 
 struct log_config
 {
-  char* program_name;
-  char* log_file;
-  int fd;
-  unsigned int log_level;
-  int enable_syslog;
-  unsigned int syslog_level;
-  pthread_mutex_t log_lock;
-  pthread_mutexattr_t log_lock_attr;
+    char *program_name;
+    char *log_file;
+    int fd;
+    unsigned int log_level;
+    int enable_syslog;
+    unsigned int syslog_level;
+    pthread_mutex_t log_lock;
+    pthread_mutexattr_t log_lock_attr;
 };
 
 /* internal functions, only used in log.c if this ifdef is defined.*/
@@ -86,7 +86,7 @@ struct log_config
  *
  */
 enum logReturns DEFAULT_CC
-internal_log_start(struct log_config* l_cfg);
+internal_log_start(struct log_config *l_cfg);
 
 /**
  *
@@ -95,7 +95,7 @@ internal_log_start(struct log_config* l_cfg);
  *
  */
 enum logReturns DEFAULT_CC
-internal_log_end(struct log_config* l_cfg);
+internal_log_end(struct log_config *l_cfg);
 
 /**
  * Converts a log level to a string
@@ -103,7 +103,7 @@ internal_log_end(struct log_config* l_cfg);
  * @param str pointer where the string will be stored.
  */
 void DEFAULT_CC
-internal_log_lvl2str(const enum logLevels lvl, char* str);
+internal_log_lvl2str(const enum logLevels lvl, char *str);
 
 /**
  *
@@ -113,7 +113,7 @@ internal_log_lvl2str(const enum logLevels lvl, char* str);
  *
  */
 enum logLevels DEFAULT_CC
-internal_log_text2level(char* s);
+internal_log_text2level(char *s);
 
 /**
  * A function that init our struct that holds all state and
@@ -133,9 +133,9 @@ internalInitAndAllocStruct(void);
  * @return
  */
 enum logReturns DEFAULT_CC
-internal_config_read_logging(int file, struct log_config* lc,
-                             struct list* param_n,
-                             struct list* param_v,
+internal_config_read_logging(int file, struct log_config *lc,
+                             struct list *param_n,
+                             struct list *param_v,
                              const char *applicationName);
 /*End of internal functions*/
 #endif
@@ -147,7 +147,7 @@ internal_config_read_logging(int file, struct log_config* lc,
  * @return LOG_STARTUP_OK on success
  */
 enum logReturns DEFAULT_CC
-log_start(const char* iniFile, const char* applicationName);
+log_start(const char *iniFile, const char *applicationName);
 
 /**
  * An alternative log_start where the caller gives the params directly.
@@ -171,7 +171,7 @@ log_end(void);
  * @return
  */
 enum logReturns DEFAULT_CC
-log_message(const enum logLevels lvl, const char* msg, ...);
+log_message(const enum logLevels lvl, const char *msg, ...);
 
 /**
  *
@@ -181,7 +181,7 @@ log_message(const enum logLevels lvl, const char* msg, ...);
  * @return 0 on success, 1 on failure
  *
  */
-int APP_CC text2bool(char* s);
+int APP_CC text2bool(char *s);
 
 /**
  * This function returns the configured file name for the logfile

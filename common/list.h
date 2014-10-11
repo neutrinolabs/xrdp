@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,11 +26,11 @@
 /* list */
 struct list
 {
-  tbus* items;
-  int count;
-  int alloc_size;
-  int grow_by;
-  int auto_free;
+    tintptr* items;
+    int count;
+    int alloc_size;
+    int grow_by;
+    int auto_free;
 };
 
 struct list* APP_CC
@@ -38,17 +38,17 @@ list_create(void);
 void APP_CC
 list_delete(struct list* self);
 void APP_CC
-list_add_item(struct list* self, tbus item);
-tbus APP_CC
+list_add_item(struct list* self, tintptr item);
+tintptr APP_CC
 list_get_item(struct list* self, int index);
 void APP_CC
 list_clear(struct list* self);
 int APP_CC
-list_index_of(struct list* self, tbus item);
+list_index_of(struct list* self, tintptr item);
 void APP_CC
 list_remove_item(struct list* self, int index);
 void APP_CC
-list_insert_item(struct list* self, int index, tbus item);
+list_insert_item(struct list* self, int index, tintptr item);
 void APP_CC
 list_append_list_strdup(struct list* self, struct list* dest, int start_index);
 void APP_CC

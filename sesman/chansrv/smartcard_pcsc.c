@@ -603,6 +603,7 @@ scard_process_list_readers(struct trans *con, struct stream *in_s)
     {
         LLOGLN(0, ("scard_process_list_readers: "
                "get_pcsc_context_by_app_context failed"));
+        g_free(groups);
         return 1;
     }
     pcscListReaders = g_malloc(sizeof(struct pcsc_list_readers), 1);
@@ -1489,6 +1490,7 @@ scard_process_get_status_change(struct trans *con, struct stream *in_s)
     {
         LLOGLN(0, ("scard_process_get_status_change: "
                "get_pcsc_context_by_app_context failed"));
+        g_free(rsa);
         return 1;
     }
     scard_send_get_status_change(user_data,

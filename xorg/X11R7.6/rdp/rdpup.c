@@ -1117,7 +1117,7 @@ rdpup_process_msg(struct stream *s)
             g_do_multimon = 0;
         }
 
-        rdpLoadLayout(g_rdpScreen.client_info.keylayout);
+        rdpLoadLayout(&(g_rdpScreen.client_info));
 
     }
     else if (msg_type == 105)
@@ -1563,7 +1563,7 @@ convert_pixel(int in_pixel)
 
     if (g_rdpScreen.depth == 24)
     {
-        if (g_rdpScreen.rdp_bpp == 24)
+        if (g_rdpScreen.rdp_bpp >= 24)
         {
             rv = in_pixel;
             SPLITCOLOR32(red, green, blue, rv);
@@ -1619,7 +1619,7 @@ convert_pixels(void *src, void *dst, int num_pixels)
     {
         src32 = (unsigned int *)src;
 
-        if (g_rdpScreen.rdp_bpp == 24)
+        if (g_rdpScreen.rdp_bpp >= 24)
         {
             dst32 = (unsigned int *)dst;
 

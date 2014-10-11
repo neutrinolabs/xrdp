@@ -86,6 +86,7 @@ sig_sesman_reload_cfg(int sig)
     if (config_read(cfg) != 0)
     {
         log_message(LOG_LEVEL_ERROR, "error reading config - keeping old cfg");
+        g_free(cfg);
         return;
     }
 

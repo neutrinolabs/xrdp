@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -175,18 +175,14 @@ lib_mod_connect(struct mod *mod)
     char con_port[256];
 
     LIB_DEBUG(mod, "in lib_mod_connect");
-    /* clear screen */
-    mod->server_begin_update(mod);
-    mod->server_set_fgcolor(mod, 0);
-    mod->server_fill_rect(mod, 0, 0, mod->width, mod->height);
-    mod->server_end_update(mod);
+
     mod->server_msg(mod, "started connecting", 0);
 
-    /* only support 8, 15, 16, and 24 bpp connections from rdp client */
-    if (mod->bpp != 8 && mod->bpp != 15 && mod->bpp != 16 && mod->bpp != 24)
+    /* only support 8, 15, 16, 24, and 32 bpp connections from rdp client */
+    if (mod->bpp != 8 && mod->bpp != 15 && mod->bpp != 16 && mod->bpp != 24 && mod->bpp != 32)
     {
         mod->server_msg(mod,
-                        "error - only supporting 8, 15, 16, and 24 bpp rdp connections", 0);
+                        "error - only supporting 8, 15, 16, 24, and 32 bpp rdp connections", 0);
         LIB_DEBUG(mod, "out lib_mod_connect error");
         return 1;
     }
@@ -207,6 +203,7 @@ lib_mod_connect(struct mod *mod)
         use_uds = 1;
     }
 
+    error = 0;
     mod->sck_closed = 0;
     i = 0;
 
@@ -215,10 +212,21 @@ lib_mod_connect(struct mod *mod)
         if (use_uds)
         {
             mod->sck = g_tcp_local_socket();
+            if (mod->sck < 0)
+            {
+                free_stream(s);
+                return 1;
+            }
         }
         else
         {
             mod->sck = g_tcp_socket();
+            if (mod->sck < 0)
+            {
+                free_stream(s);
+                return 1;
+            }
+
             g_tcp_set_non_blocking(mod->sck);
             g_tcp_set_no_delay(mod->sck);
         }
@@ -1121,13 +1129,22 @@ process_server_paint_rect_shmem(struct mod *mod, struct stream *s)
     in_uint16_le(s, height);
     in_sint16_le(s, srcx);
     in_sint16_le(s, srcy);
+
     bmpdata = 0;
+    rv = 0;
+
     if (flags == 0) /* screen */
     {
         if (mod->screen_shmem_id == 0)
         {
             mod->screen_shmem_id = shmem_id;
             mod->screen_shmem_pixels = g_shmat(mod->screen_shmem_id);
+            if (mod->screen_shmem_pixels == (void*)-1)
+            {
+                /* failed */
+                mod->screen_shmem_id = 0;
+                mod->screen_shmem_pixels = 0;
+            }
         }
         if (mod->screen_shmem_pixels != 0)
         {
@@ -1139,10 +1156,6 @@ process_server_paint_rect_shmem(struct mod *mod, struct stream *s)
         rv = mod->server_paint_rect(mod, x, y, cx, cy,
                                     bmpdata, width, height,
                                     srcx, srcy);
-    }
-    else
-    {
-        rv = 1;
     }
     send_paint_rect_ack(mod, flags, x, y, cx, cy, frame_id);
     return rv;
@@ -1248,14 +1261,16 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
 
         rv = amod->server_paint_rects(amod, num_drects, ldrects,
                                       num_crects, lcrects,
-                                      bmpdata, width, height, 0);
+                                      bmpdata, width, height,
+                                      flags, frame_id);
     }
     else
     {
         rv = 1;
     }
 
-    send_paint_rect_ex_ack(amod, flags, frame_id);
+    //g_writeln("frame_id %d", frame_id);
+    //send_paint_rect_ex_ack(amod, flags, frame_id);
 
     g_free(lcrects);
     g_free(ldrects);
@@ -1379,6 +1394,7 @@ lib_send_client_info(struct mod *mod)
     struct stream *s;
     int len;
 
+    g_writeln("lib_send_client_info:");
     make_stream(s);
     init_stream(s, 8192);
     s_push_layer(s, iso_hdr, 4);
@@ -1587,6 +1603,16 @@ lib_mod_check_wait_objs(struct mod *mod)
 }
 
 /******************************************************************************/
+/* return error */
+int DEFAULT_CC
+lib_mod_frame_ack(struct mod *amod, int flags, int frame_id)
+{
+    LLOGLN(10, ("lib_mod_frame_ack: flags 0x%8.8x frame_id %d", flags, frame_id));
+    send_paint_rect_ex_ack(amod, flags, frame_id);
+    return 0;
+}
+
+/******************************************************************************/
 struct mod *EXPORT_CC
 mod_init(void)
 {
@@ -1604,6 +1630,7 @@ mod_init(void)
     mod->mod_set_param = lib_mod_set_param;
     mod->mod_get_wait_objs = lib_mod_get_wait_objs;
     mod->mod_check_wait_objs = lib_mod_check_wait_objs;
+    mod->mod_frame_ack = lib_mod_frame_ack;
     return mod;
 }
 

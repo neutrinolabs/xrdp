@@ -79,6 +79,9 @@ struct _rdpClientCon
     int rdp_Bpp_mask;
     int rdp_width;
     int rdp_height;
+    int rdp_format; /* XRDP_a8r8g8b8, XRDP_r5g6b5, ... */
+    int cap_width;
+    int cap_height;
 
     int rdpIndex; /* current os target */
 
@@ -87,8 +90,6 @@ struct _rdpClientCon
     /* rdpGlyphs.c */
     struct font_cache font_cache[12][256];
     int font_stamp;
-
-    RegionPtr dirtyRegion;
 
     struct xrdp_client_info client_info;
 
@@ -101,6 +102,8 @@ struct _rdpClientCon
 
     OsTimerPtr updateTimer;
     int updateSchedualed; /* boolean */
+
+    RegionPtr dirtyRegion;
 
     struct _rdpClientCon *next;
 };

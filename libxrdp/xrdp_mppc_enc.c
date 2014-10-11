@@ -456,7 +456,7 @@ mppc_enc_new(int protocol_type)
             return 0;
     }
 
-    enc->first_pkt = 1;
+    enc->flagsHold = PACKET_AT_FRONT;
     enc->historyBuffer = (char *) g_malloc(enc->buf_len, 1);
 
     if (enc->historyBuffer == 0)
@@ -574,20 +574,13 @@ compress_rdp_5(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
     g_memset(outputBuffer, 0, len);
     enc->flags = PACKET_COMPR_TYPE_64K;
 
-    if (enc->first_pkt)
-    {
-        enc->first_pkt = 0;
-        enc->flagsHold |= PACKET_AT_FRONT;
-    }
-
-    if ((enc->historyOffset + len) >= enc->buf_len)
+    if ((enc->historyOffset + len) >= enc->buf_len - 3)
     {
         /* historyBuffer cannot hold srcData - rewind it */
         enc->historyOffset = 0;
         g_memset(hash_table, 0, enc->buf_len * 2);
         g_memset(enc->historyBuffer, 0, enc->buf_len); // added
-        enc->first_pkt = 0;
-        enc->flagsHold |= PACKET_AT_FRONT;
+        enc->flagsHold |= PACKET_AT_FRONT | PACKET_FLUSHED;
     }
 
     /* point to next free byte in historyBuffer */
@@ -602,7 +595,7 @@ compress_rdp_5(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
     ctr = copy_offset = lom = 0;
 
     /* if we are at start of history buffer, do not attempt to compress */
-    /* first 2 bytes,because minimum LoM is 3                           */
+    /* first 2 bytes, because minimum LoM is 3                          */
     if (historyOffset == 0)
     {
         /* encode first two bytes as literals */
@@ -970,40 +963,6 @@ compress_rdp_5(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
         ctr++;
     }
 
-    /* if bits_left == 8, opb_index has already been incremented */
-    if ((bits_left == 8) && (opb_index > len))
-    {
-        /* compressed data longer than uncompressed data */
-        /* give up */
-        enc->historyOffset = 0;
-        g_memset(hash_table, 0, enc->buf_len * 2);
-        g_memset(enc->historyBuffer, 0, enc->buf_len);
-        enc->flagsHold |= PACKET_FLUSHED;
-        enc->first_pkt = 1;
-
-        g_memcpy(enc->outputBuffer, srcData, len);
-        enc->bytes_in_opb = len;
-        enc->flags = 0x81;
-
-        return 1;
-    }
-    else if (opb_index + 1 > len)
-    {
-        /* compressed data longer than uncompressed data */
-        /* give up */
-        enc->historyOffset = 0;
-        g_memset(hash_table, 0, enc->buf_len * 2);
-        g_memset(enc->historyBuffer, 0, enc->buf_len);
-        enc->flagsHold |= PACKET_FLUSHED;
-        enc->first_pkt = 1;
-
-        g_memcpy(enc->outputBuffer, srcData, len);
-        enc->bytes_in_opb = len;
-        enc->flags = 0x81;
-
-        return 1;
-    }
-
     /* if bits_left != 8, increment opb_index, which is zero indexed */
     if (bits_left != 8)
     {
@@ -1012,24 +971,21 @@ compress_rdp_5(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
 
     if (opb_index > len)
     {
+        /* compressed data longer than uncompressed data */
         /* give up */
         enc->historyOffset = 0;
         g_memset(hash_table, 0, enc->buf_len * 2);
         g_memset(enc->historyBuffer, 0, enc->buf_len);
-        enc->flagsHold |= PACKET_FLUSHED;
-        enc->first_pkt = 1;
-
-        g_memcpy(enc->outputBuffer, srcData, len);
-        enc->bytes_in_opb = len;
-        enc->flags = 0x81;
-
-        return 1;
+        enc->flagsHold |= PACKET_AT_FRONT | PACKET_FLUSHED;
+        return 0;
     }
+
     enc->flags |= PACKET_COMPRESSED;
     enc->bytes_in_opb = opb_index;
 
     enc->flags |= enc->flagsHold;
     enc->flagsHold = 0;
+
     DLOG(("\n"));
 
     //g_writeln("compression ratio: %f", (float) len / (float) enc->bytes_in_opb);

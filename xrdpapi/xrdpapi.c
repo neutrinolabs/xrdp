@@ -41,7 +41,7 @@ struct wts_obj
 {
     int      fd;
     int      status;
-    char     name[8];
+    char     name[9];
     char     dname[128];
     int      display_num;
     uint32_t flags;
@@ -124,12 +124,19 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     }
 
     /* we use unix domain socket to communicate with chansrv */
-    wts->fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if ((wts->fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
+    {
+        g_free(wts);
+        return NULL;
+    }
 
     /* set non blocking */
     llong = fcntl(wts->fd, F_GETFL);
     llong = llong | O_NONBLOCK;
-    fcntl(wts->fd, F_SETFL, llong);
+    if (fcntl(wts->fd, F_SETFL, llong) < 0)
+    {
+        LLOGLN(10, ("WTSVirtualChannelOpenEx: set non-block mode failed"));
+    }
 
     /* connect to chansrv session */
     memset(&s, 0, sizeof(struct sockaddr_un));
@@ -236,11 +243,13 @@ WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
         return 0;
     }
 
+#if 0 /* coverity: this is dead code */
     /* error, but is it ok to try again? */
     if ((rv == EWOULDBLOCK) || (rv == EAGAIN) || (rv == EINPROGRESS))
     {
         return 0;    /* failed to send, but should try again */
     }
+#endif
 
     /* fatal error */
     return -1;

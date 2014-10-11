@@ -30,9 +30,46 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "rdpPri.h"
 
+#define XRDP_MODULE_NAME "XRDPMOD"
+#define XRDP_DRIVER_NAME "XRDPDEV"
+#define XRDP_MOUSE_NAME "XRDPMOUSE"
+#define XRDP_KEYB_NAME "XRDPKEYB"
+#define XRDP_VERSION 1000
+
+#define PACKAGE_VERSION_MAJOR 1
+#define PACKAGE_VERSION_MINOR 0
+#define PACKAGE_VERSION_PATCHLEVEL 0
+
+#define COLOR8(r, g, b) \
+    ((((r) >> 5) << 0)  | (((g) >> 5) << 3) | (((b) >> 6) << 6))
+#define COLOR15(r, g, b) \
+    ((((r) >> 3) << 10) | (((g) >> 3) << 5) | (((b) >> 3) << 0))
+#define COLOR16(r, g, b) \
+    ((((r) >> 3) << 11) | (((g) >> 2) << 5) | (((b) >> 3) << 0))
+#define COLOR24(r, g, b) \
+    ((((r) >> 0) << 0)  | (((g) >> 0) << 8) | (((b) >> 0) << 16))
+#define SPLITCOLOR32(r, g, b, c) \
+    do { \
+        r = ((c) >> 16) & 0xff; \
+        g = ((c) >> 8) & 0xff; \
+        b = (c) & 0xff; \
+    } while (0)
+
+/* PIXMAN_a8b8g8r8 */
+#define XRDP_a8b8g8r8 \
+((32 << 24) | (3 << 16) | (8 << 12) | (8 << 8) | (8 << 4) | 8)
 /* PIXMAN_a8r8g8b8 */
 #define XRDP_a8r8g8b8 \
-((32 << 24) | (2 << 16) | (8 << 12) | (8 << 8)  | (8 << 4) | 8)
+((32 << 24) | (2 << 16) | (8 << 12) | (8 << 8) | (8 << 4) | 8)
+/* PIXMAN_r5g6b5 */
+#define XRDP_r5g6b5 \
+((16 << 24) | (2 << 16) | (0 << 12) | (5 << 8) | (6 << 4) | 5)
+/* PIXMAN_a1r5g5b5 */
+#define XRDP_a1r5g5b5 \
+((16 << 24) | (2 << 16) | (1 << 12) | (5 << 8) | (5 << 4) | 5)
+/* PIXMAN_r3g3b2 */
+#define XRDP_r3g3b2 \
+((8 << 24) | (2 << 16) | (0 << 12) | (3 << 8) | (3 << 4) | 2)
 
 #define PixelDPI 100
 #define PixelToMM(_size) (((_size) * 254 + (PixelDPI) * 5) / ((PixelDPI) * 10))
@@ -40,7 +77,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define RDPMIN(_val1, _val2) ((_val1) < (_val2) ? (_val1) : (_val2))
 #define RDPMAX(_val1, _val2) ((_val1) < (_val2) ? (_val2) : (_val1))
 #define RDPCLAMP(_val, _lo, _hi) \
-  (_val) < (_lo) ? (_lo) : (_val) > (_hi) ? (_hi) : (_val)
+    (_val) < (_lo) ? (_lo) : (_val) > (_hi) ? (_hi) : (_val)
+#define RDPALIGN(_val, _al) ((((long)(_val)) + ((_al) - 1)) & ~((_al) - 1))
 
 #define XRDP_CD_NODRAW 0
 #define XRDP_CD_NOCLIP 1
@@ -157,6 +195,8 @@ struct _rdpCounts
     CARD32 callCount[64 - 23];
 };
 
+typedef int (*yuv_to_rgb32_proc)(unsigned char *yuvs, int width, int height, int *rgbs);
+
 /* move this to common header */
 struct _rdpRec
 {
@@ -228,6 +268,15 @@ struct _rdpRec
 
     struct _rdpCounts counts;
 
+    yuv_to_rgb32_proc i420_to_rgb32;
+    yuv_to_rgb32_proc yv12_to_rgb32;
+    yuv_to_rgb32_proc yuy2_to_rgb32;
+    yuv_to_rgb32_proc uyvy_to_rgb32;
+    char *xv_data;
+    int xv_data_bytes;
+    int xv_timer_schedualed;
+    OsTimerPtr xv_timer;
+
 };
 typedef struct _rdpRec rdpRec;
 typedef struct _rdpRec * rdpPtr;
@@ -250,63 +299,63 @@ typedef struct _rdpGCRec * rdpGCPtr;
 
 struct urdp_draw_item_fill
 {
-  int opcode;
-  int fg_color;
-  int bg_color;
-  int pad0;
+    int opcode;
+    int fg_color;
+    int bg_color;
+    int pad0;
 };
 
 struct urdp_draw_item_img
 {
-  int opcode;
-  int pad0;
+    int opcode;
+    int pad0;
 };
 
 struct urdp_draw_item_line
 {
-  int opcode;
-  int fg_color;
-  int bg_color;
-  int width;
-  xSegment* segs;
-  int nseg;
-  int flags;
+    int opcode;
+    int fg_color;
+    int bg_color;
+    int width;
+    xSegment* segs;
+    int nseg;
+    int flags;
 };
 
 struct urdp_draw_item_scrblt
 {
-  int srcx;
-  int srcy;
-  int dstx;
-  int dsty;
-  int cx;
-  int cy;
+    int srcx;
+    int srcy;
+    int dstx;
+    int dsty;
+    int cx;
+    int cy;
 };
 
 struct urdp_draw_item_text
 {
-  int opcode;
-  int fg_color;
-  struct rdp_text* rtext; /* in rdpglyph.h */
+    int opcode;
+    int fg_color;
+    struct rdp_text* rtext; /* in rdpglyph.h */
 };
 
 union urdp_draw_item
 {
-  struct urdp_draw_item_fill fill;
-  struct urdp_draw_item_img img;
-  struct urdp_draw_item_line line;
-  struct urdp_draw_item_scrblt scrblt;
-  struct urdp_draw_item_text text;
+    struct urdp_draw_item_fill fill;
+    struct urdp_draw_item_img img;
+    struct urdp_draw_item_line line;
+    struct urdp_draw_item_scrblt scrblt;
+    struct urdp_draw_item_text text;
 };
 
 struct rdp_draw_item
 {
-  int type; /* RDI_FILL, RDI_IMGLL, ... */
-  int flags;
-  struct rdp_draw_item* prev;
-  struct rdp_draw_item* next;
-  RegionPtr reg;
-  union urdp_draw_item u;
+    int type; /* RDI_FILL, RDI_IMGLL, ... */
+    int flags;
+    struct rdp_draw_item* prev;
+    struct rdp_draw_item* next;
+    RegionPtr reg;
+    union urdp_draw_item u;
 };
 
 #define XRDP_USE_COUNT_THRESHOLD 1

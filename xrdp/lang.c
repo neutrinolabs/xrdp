@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -231,7 +231,7 @@ get_keymaps(int keylayout, struct xrdp_keymap *keymap)
     {
         fd = g_file_open(filename);
 
-        if (fd > 0)
+        if (fd != -1)
         {
             lkeymap = (struct xrdp_keymap *)g_malloc(sizeof(struct xrdp_keymap), 0);
             /* make a copy of the build in kaymap */

@@ -40,29 +40,21 @@ AC_ARG_ENABLE(jpeg, AS_HELP_STRING([--enable-jpeg],
               [jpeg=true], [jpeg=false])
 AM_CONDITIONAL(XRDP_JPEG, [test x$jpeg = xtrue])
 AC_ARG_ENABLE(tjpeg, AS_HELP_STRING([--enable-tjpeg],
-              [Build turbo jpeg module(assumes /opt/libjpeg-turbo) (default: no)]),
+              [Build turbo jpeg module (default: no)]),
               [tjpeg=true], [tjpeg=false])
 AM_CONDITIONAL(XRDP_TJPEG, [test x$tjpeg = xtrue])
-
-AC_ARG_ENABLE(simplesound, AS_HELP_STRING([--enable-simplesound],
-              [Build simple pulse audio interface (default: no)]),
-              [simplesound=true], [simplesound=false])
-AM_CONDITIONAL(XRDP_SIMPLESOUND, [test x$simplesound = xtrue])
-
 AC_ARG_ENABLE(fuse, AS_HELP_STRING([--enable-fuse],
               [Build fuse(clipboard file / drive redir) (default: no)]),
               [fuse=true], [fuse=false])
 AM_CONDITIONAL(XRDP_FUSE, [test x$fuse = xtrue])
-
-AC_ARG_ENABLE(loadpulsemodules, AS_HELP_STRING([--enable-loadpulsemodules],
-              [Build code to load pulse audio modules (default: no)]),
-              [loadpulsemodules=true], [loadpulsemodules=false])
-AM_CONDITIONAL(XRDP_LOAD_PULSE_MODULES, [test x$loadpulsemodules = xtrue])
-
 AC_ARG_ENABLE(xrdpvr, AS_HELP_STRING([--enable-xrdpvr],
               [Build xrdpvr module (default: no)]),
               [xrdpvr=true], [xrdpvr=false])
 AM_CONDITIONAL(XRDP_XRDPVR, [test x$xrdpvr = xtrue])
+AC_ARG_ENABLE(rfxcodec, AS_HELP_STRING([--enable-rfxcodec],
+              [Build using librfxcodec (default: no)]),
+              [rfxcodec=true], [rfxcodec=false])
+AM_CONDITIONAL(XRDP_RFXCODEC, [test x$rfxcodec = xtrue])
 
 AM_CONDITIONAL(GOT_PREFIX, test "x${prefix}" != "xNONE"])
 
@@ -113,18 +105,34 @@ then
     [#define _FILE_OFFSET_BITS 64])
 fi
 
-# checking for libpulse
-if ! test -z "$enable_loadpulsemodules"
+# checking for TurboJPEG
+if ! test -z "$enable_tjpeg"
 then
-  AC_CHECK_HEADER([pulse/util.h], [],
-    [AC_MSG_ERROR([please install libpulse-dev or libpulse-devel])])
-fi
+if test ! -z "$TURBOJPEG_PATH"
+then
+  # env var TURBOJPEG_PATH has been defined, use that
+  AC_CHECK_HEADER([$TURBOJPEG_PATH/include/turbojpeg.h], [],
+    [AC_MSG_ERROR([could not find TurboJPEG in dir specified by env variable TURBOJPEG_PATH ($TURBOJPEG_PATH)])])
 
-# checking for libpulse libpulse-simple
-if ! test -z "$enable_simplesound"
+   AC_SUBST(TurboJpegIncDir, ["-I$TURBOJPEG_PATH/include"])
+   AC_SUBST(TurboJpegLibDir, ["-L$TURBOJPEG_PATH/lib -Wl,-rpath -Wl,$TURBOJPEG_PATH/lib"])
+elif test -e /opt/libjpeg-turbo/lib64
 then
-  AC_CHECK_HEADER([pulse/simple.h], [],
-    [AC_MSG_ERROR([please install libpulse-dev or libpulse-devel])])
+  # TurboJPEG has been installed to /opt on a 64 bit m/c
+  AC_SUBST(TurboJpegIncDir, ["-I/opt/libjpeg-turbo/include"])
+  AC_SUBST(TurboJpegLibDir, ["-L/opt/libjpeg-turbo/lib64 -Wl,-rpath -Wl,/opt/libjpeg-turbo/lib64"])
+elif test -e /opt/libjpeg-turbo/lib32
+then
+  # TurboJPEG has been installed to /opt on a 32 bit m/c
+  AC_SUBST(TurboJpegIncDir, ["-I/opt/libjpeg-turbo/include"])
+  AC_SUBST(TurboJpegLibDir, ["-L/opt/libjpeg-turbo/lib32 -Wl,-rpath -Wl,/opt/libjpeg-turbo/lib32"])
+else
+  # check in default location
+  AC_CHECK_HEADER([/usr/include/turbojpeg.h], [],
+    [AC_MSG_ERROR([please install TurboJPEG ])])
+  AC_SUBST(TurboJpegIncDir, [""])
+  AC_SUBST(TurboJpegLibDir, [""])
+fi
 fi
 
 # checking for Xlib, Xfixes
@@ -132,6 +140,9 @@ AC_CHECK_HEADER([X11/Xlib.h], [],
   [AC_MSG_ERROR([please install libx11-dev or libX11-devel])])
 AC_CHECK_HEADER([X11/extensions/Xfixes.h], [],
   [AC_MSG_ERROR([please install libx11-dev and libxfixes-dev or libXfixes-devel])],
+  [#include <X11/Xlib.h>])
+AC_CHECK_HEADER([X11/extensions/Xrandr.h], [],
+  [AC_MSG_ERROR([please install libxrandr-dev or libXrandr-devel])],
   [#include <X11/Xlib.h>])
 
 libdir="${libdir}/xrdp";
@@ -158,8 +169,9 @@ AC_CONFIG_FILES([Makefile
                  docs/man/Makefile
                  instfiles/Makefile
                  instfiles/pam.d/Makefile
-				 instfiles/init.d/Makefile
-				 instfiles/default/Makefile
+                 instfiles/init.d/Makefile
+                 instfiles/default/Makefile
+                 instfiles/pulse/Makefile
                  genkeymap/Makefile
                  xrdpapi/Makefile
                  xrdpvr/Makefile

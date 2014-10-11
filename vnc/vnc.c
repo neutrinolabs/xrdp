@@ -967,7 +967,16 @@ lib_mod_connect(struct vnc *v)
     make_stream(s);
     g_sprintf(con_port, "%s", v->port);
     make_stream(pixel_format);
+
     v->sck = g_tcp_socket();
+    if (v->sck < 0)
+    {
+        v->server_msg(v, "VNC error: socket create error, g_tcp_socket() failed", 0);
+        free_stream(s);
+        free_stream(pixel_format);
+        return 1;
+    }
+
     v->sck_obj = g_create_wait_obj_from_socket(v->sck, 0);
     v->sck_closed = 0;
     g_sprintf(text, "VNC connecting to %s %s", v->ip, con_port);

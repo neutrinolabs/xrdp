@@ -15,8 +15,13 @@
 
 typedef unsigned char BYTE;
 typedef BYTE *LPBYTE;
-typedef unsigned int LONG;
+#ifdef __APPLE__
+typedef int LONG;
 typedef unsigned int DWORD;
+#else
+typedef long LONG;
+typedef unsigned long DWORD;
+#endif
 typedef DWORD *LPDWORD;
 typedef const void *LPCVOID;
 typedef const char *LPCSTR;
@@ -59,6 +64,8 @@ PCSC_API SCARD_IO_REQUEST g_rgSCardRawPci = { SCARD_PROTOCOL_RAW, 8 };
 #define LLOG_LEVEL 5
 #define LLOGLN(_level, _args) \
   do { if (_level < LLOG_LEVEL) { printf _args ; printf("\n"); } } while (0)
+#define LHEXDUMP(_level, _args) \
+  do { if  (_level < LLOG_LEVEL) { lhexdump _args ; } } while (0)
 
 #define SCARD_ESTABLISH_CONTEXT  0x01
 #define SCARD_RELEASE_CONTEXT    0x02
@@ -101,6 +108,50 @@ static pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* for pcsc_stringify_error */
 static char g_error_str[512];
+
+/*****************************************************************************/
+/* produce a hex dump */
+static void
+lhexdump(void *p, int len)
+{
+    unsigned char *line;
+    int i;
+    int thisline;
+    int offset;
+
+    line = (unsigned char *)p;
+    offset = 0;
+
+    while (offset < len)
+    {
+        printf("%04x ", offset);
+        thisline = len - offset;
+
+        if (thisline > 16)
+        {
+            thisline = 16;
+        }
+
+        for (i = 0; i < thisline; i++)
+        {
+            printf("%02x ", line[i]);
+        }
+
+        for (; i < 16; i++)
+        {
+            printf("   ");
+        }
+
+        for (i = 0; i < thisline; i++)
+        {
+            printf("%c", (line[i] >= 0x20 && line[i] < 0x7f) ? line[i] : '.');
+        }
+
+        printf("\n");
+        offset += thisline;
+        line += thisline;
+    }
+}
 
 /*****************************************************************************/
 static int
@@ -156,7 +207,7 @@ get_display_num_from_display(const char *display_text)
     host[host_index] = 0;
     disp[disp_index] = 0;
     scre[scre_index] = 0;
-    LLOGLN(0, ("get_display_num_from_display: host [%s] disp [%s] scre [%s]",
+    LLOGLN(10, ("get_display_num_from_display: host [%s] disp [%s] scre [%s]",
            host, disp, scre));
     rv = atoi(disp);
     return rv;
@@ -219,7 +270,7 @@ connect_to_chansrv(void)
     bytes = sizeof(saddr.sun_path);
     snprintf(saddr.sun_path, bytes, "%s/.pcsc%d/pcscd.comm", home_str, dis);
     saddr.sun_path[bytes - 1] = 0;
-    LLOGLN(0, ("connect_to_chansrv: connecting to %s", saddr.sun_path));
+    LLOGLN(10, ("connect_to_chansrv: connecting to %s", saddr.sun_path));
     psaddr = (struct sockaddr *) &saddr;
     bytes = sizeof(struct sockaddr_un);
     error = connect(g_sck, psaddr, bytes);
@@ -256,6 +307,8 @@ send_message(int code, char *data, int bytes)
         pthread_mutex_unlock(&g_mutex);
         return 1;
     }
+    LLOGLN(10, ("send_message:"));
+    LHEXDUMP(10, (data, bytes));
     pthread_mutex_unlock(&g_mutex);
     return 0;
 }
@@ -392,7 +445,7 @@ SCardEstablishContext(DWORD dwScope, LPCVOID pvReserved1, LPCVOID pvReserved2,
     }
     context = GET_UINT32(msg, 0);
     status = GET_UINT32(msg, 4);
-    LLOGLN(10, ("SCardEstablishContext: got context 0x%8.8x", context));
+    LLOGLN(10, ("SCardEstablishContext: got context 0x%8.8x", (int)context));
     *phContext = context;
     return status;
 }
@@ -463,7 +516,7 @@ SCardConnect(SCARDCONTEXT hContext, LPCSTR szReader, DWORD dwShareMode,
     LLOGLN(10, ("SCardConnect:"));
     LLOGLN(10, ("SCardConnect: hContext 0x%8.8x szReader %s dwShareMode %d "
            "dwPreferredProtocols %d",
-           hContext, szReader, dwShareMode, dwPreferredProtocols));
+           (int)hContext, szReader, (int)dwShareMode, (int)dwPreferredProtocols));
     if (g_sck == -1)
     {
         LLOGLN(0, ("SCardConnect: error, not connected"));
@@ -507,7 +560,7 @@ SCardConnect(SCARDCONTEXT hContext, LPCSTR szReader, DWORD dwShareMode,
     status = GET_UINT32(msg, 8);
     LLOGLN(10, ("SCardConnect: got status 0x%8.8x hCard 0x%8.8x "
            "dwActiveProtocol %d",
-           status, *phCard, *pdwActiveProtocol));
+           status, (int)*phCard, (int)*pdwActiveProtocol));
     return status;
 }
 
@@ -536,7 +589,7 @@ SCardDisconnect(SCARDHANDLE hCard, DWORD dwDisposition)
     int status;
 
     LLOGLN(10, ("SCardDisconnect: hCard 0x%8.8x dwDisposition %d",
-           hCard, dwDisposition));
+           (int)hCard, (int)dwDisposition));
     if (g_sck == -1)
     {
         LLOGLN(0, ("SCardDisconnect: error, not connected"));
@@ -575,7 +628,7 @@ SCardBeginTransaction(SCARDHANDLE hCard)
     int bytes;
     int status;
 
-    LLOGLN(10, ("SCardBeginTransaction: hCard 0x%8.8x", hCard));
+    LLOGLN(10, ("SCardBeginTransaction: hCard 0x%8.8x", (int)hCard));
     if (hCard == 0)
     {
         LLOGLN(0, ("SCardBeginTransaction: error, bad hCard"));
@@ -665,7 +718,7 @@ SCardStatus(SCARDHANDLE hCard, LPSTR mszReaderName, LPDWORD pcchReaderLen,
     LLOGLN(10, ("SCardStatus:"));
     if (hCard == 0)
     {
-        LLOGLN(0, ("SCardStatus: error, bad hCard"));
+        LLOGLN(10, ("SCardStatus: error, bad hCard"));
         return SCARD_F_INTERNAL_ERROR;
     }
     if (g_sck == -1)
@@ -673,9 +726,9 @@ SCardStatus(SCARDHANDLE hCard, LPSTR mszReaderName, LPDWORD pcchReaderLen,
         LLOGLN(0, ("SCardStatus: error, not connected"));
         return SCARD_F_INTERNAL_ERROR;
     }
-    LLOGLN(10, ("  hCard 0x%8.8x", hCard));
-    LLOGLN(10, ("  cchReaderLen %d", *pcchReaderLen));
-    LLOGLN(10, ("  cbAtrLen %d", *pcbAtrLen));
+    LLOGLN(10, ("  hCard 0x%8.8x", (int)hCard));
+    LLOGLN(10, ("  cchReaderLen %d", (int)*pcchReaderLen));
+    LLOGLN(10, ("  cbAtrLen %d", (int)*pcbAtrLen));
 
     cchReaderLen = *pcchReaderLen;
     msg = (char *) malloc(8192);
@@ -703,10 +756,10 @@ SCardStatus(SCARDHANDLE hCard, LPSTR mszReaderName, LPDWORD pcchReaderLen,
         return SCARD_F_INTERNAL_ERROR;
     }
 
-    LLOGLN(10, ("SCardStatus: cchReaderLen in %d", *pcchReaderLen));
+    LLOGLN(10, ("SCardStatus: cchReaderLen in %d", (int)*pcchReaderLen));
     offset = 0;
     *pcchReaderLen = GET_UINT32(msg, offset);
-    LLOGLN(10, ("SCardStatus: cchReaderLen out %d", *pcchReaderLen));
+    LLOGLN(10, ("SCardStatus: cchReaderLen out %d", (int)*pcchReaderLen));
     offset += 4;
     if (cchReaderLen > 0)
     {
@@ -721,14 +774,18 @@ SCardStatus(SCARDHANDLE hCard, LPSTR mszReaderName, LPDWORD pcchReaderLen,
     LLOGLN(10, ("SCardStatus: mszReaderName out %s", mszReaderName));
     offset += *pcchReaderLen;
     *pdwState = GET_UINT32(msg, offset);
-    LLOGLN(10, ("SCardStatus: dwState %d", *pdwState));
+    if (*pdwState == 1)
+    {
+        *pdwState = 0x34;
+    }
+    LLOGLN(10, ("SCardStatus: dwState %d", (int)*pdwState));
     offset += 4;
     *pdwProtocol = GET_UINT32(msg, offset);
-    LLOGLN(10, ("SCardStatus: dwProtocol %d", *pdwProtocol));
+    LLOGLN(10, ("SCardStatus: dwProtocol %d", (int)*pdwProtocol));
     offset += 4;
     *pcbAtrLen = GET_UINT32(msg, offset);
     offset += 4;
-    LLOGLN(10, ("SCardStatus: cbAtrLen %d", *pcbAtrLen));
+    LLOGLN(10, ("SCardStatus: cbAtrLen %d", (int)*pcbAtrLen));
     memcpy(pbAtr, msg + offset, *pcbAtrLen);
     offset += *pcbAtrLen;
     status = GET_UINT32(msg, offset);
@@ -757,7 +814,7 @@ SCardGetStatusChange(SCARDCONTEXT hContext, DWORD dwTimeout,
     char atr[36];
 
     LLOGLN(10, ("SCardGetStatusChange:"));
-    LLOGLN(10, ("  dwTimeout %d cReaders %d", dwTimeout, cReaders));
+    LLOGLN(10, ("  dwTimeout %d cReaders %d", (int)dwTimeout, (int)cReaders));
     if (g_sck == -1)
     {
         LLOGLN(0, ("SCardGetStatusChange: error, not connected"));
@@ -829,7 +886,7 @@ SCardGetStatusChange(SCARDCONTEXT hContext, DWORD dwTimeout,
     }
     cReaders = GET_UINT32(msg, 0);
     offset = 4;
-    LLOGLN(10, ("SCardGetStatusChange: got back cReaders %d", cReaders));
+    LLOGLN(10, ("SCardGetStatusChange: got back cReaders %d", (int)cReaders));
     for (index = 0; index < cReaders; index++)
     {
         rname = rgReaderStates[index].szReader;
@@ -897,10 +954,10 @@ SCardControl(SCARDHANDLE hCard, DWORD dwControlCode, LPCVOID pbSendBuffer,
         LLOGLN(0, ("SCardControl: error, not connected"));
         return SCARD_F_INTERNAL_ERROR;
     }
-    LLOGLN(10, ("  hCard 0x%8.8x", hCard));
-    LLOGLN(10, ("  dwControlCode 0x%8.8x", dwControlCode));
-    LLOGLN(10, ("  cbSendLength %d", cbSendLength));
-    LLOGLN(10, ("  cbRecvLength %d", cbRecvLength));
+    LLOGLN(10, ("  hCard 0x%8.8x", (int)hCard));
+    LLOGLN(10, ("  dwControlCode 0x%8.8x", (int)dwControlCode));
+    LLOGLN(10, ("  cbSendLength %d", (int)cbSendLength));
+    LLOGLN(10, ("  cbRecvLength %d", (int)cbRecvLength));
 
     /* #define SCARD_CTL_CODE(code) (0x42000000 + (code))
        control_code = (control_code & 0x3ffc) >> 2;
@@ -910,7 +967,7 @@ SCardControl(SCARDHANDLE hCard, DWORD dwControlCode, LPCVOID pbSendBuffer,
     dwControlCode = dwControlCode - 0x42000000;
     dwControlCode = dwControlCode << 2;
     dwControlCode = dwControlCode | (49 << 16);
-    LLOGLN(10, ("  MS dwControlCode 0x%8.8x", dwControlCode));
+    LLOGLN(10, ("  MS dwControlCode 0x%8.8d", (int)dwControlCode));
 
     msg = (char *) malloc(8192);
     offset = 0;
@@ -946,7 +1003,7 @@ SCardControl(SCARDHANDLE hCard, DWORD dwControlCode, LPCVOID pbSendBuffer,
     }
     offset = 0;
     *lpBytesReturned = GET_UINT32(msg, offset);
-    LLOGLN(10, ("  cbRecvLength %d", *lpBytesReturned));
+    LLOGLN(10, ("  cbRecvLength %d", (int)*lpBytesReturned));
     offset += 4;
     memcpy(pbRecvBuffer, msg + offset, *lpBytesReturned);
     offset += *lpBytesReturned;
@@ -976,9 +1033,10 @@ SCardTransmit(SCARDHANDLE hCard, const SCARD_IO_REQUEST *pioSendPci,
         LLOGLN(0, ("SCardTransmit: error, not connected"));
         return SCARD_F_INTERNAL_ERROR;
     }
-    LLOGLN(10, ("  hCard 0x%8.8x", hCard));
-    LLOGLN(10, ("  cbSendLength %d", cbSendLength));
-    LLOGLN(10, ("  cbRecvLength %d", *pcbRecvLength));
+
+    LLOGLN(10, ("  hCard 0x%8.8x", (int)hCard));
+    LLOGLN(10, ("  cbSendLength %d", (int)cbSendLength));
+    LLOGLN(10, ("  cbRecvLength %d", (int)*pcbRecvLength));
     LLOGLN(10, ("  pioSendPci->dwProtocol %d", (int)(pioSendPci->dwProtocol)));
     LLOGLN(10, ("  pioSendPci->cbPciLength %d", (int)(pioSendPci->cbPciLength)));
     LLOGLN(10, ("  pioRecvPci %p", pioRecvPci));
@@ -993,9 +1051,11 @@ SCardTransmit(SCARDHANDLE hCard, const SCARD_IO_REQUEST *pioSendPci,
     offset += 4;
     SET_UINT32(msg, offset, pioSendPci->dwProtocol);
     offset += 4;
-    SET_UINT32(msg, offset, pioSendPci->cbPciLength);
+/*  SET_UINT32(msg, offset, pioSendPci->cbPciLength); */
+    SET_UINT32(msg, offset, 8);
     offset += 4;
-    extra_len = pioSendPci->cbPciLength - 8;
+/*  extra_len = pioSendPci->cbPciLength - 8;  */
+    extra_len = 0;
     SET_UINT32(msg, offset, extra_len);
     offset += 4;
     memcpy(msg + offset, pioSendPci + 1, extra_len);
@@ -1070,8 +1130,9 @@ SCardTransmit(SCARDHANDLE hCard, const SCARD_IO_REQUEST *pioSendPci,
     }
     *pcbRecvLength = GET_UINT32(msg, offset);
     offset += 4;
-    LLOGLN(10, ("  cbRecvLength %d", *pcbRecvLength));
+    LLOGLN(10, ("  cbRecvLength %d", (int)*pcbRecvLength));
     memcpy(pbRecvBuffer, msg + offset, *pcbRecvLength);
+    LHEXDUMP(10, (pbRecvBuffer, *pcbRecvLength));
     offset += *pcbRecvLength;
     status = GET_UINT32(msg, offset);
     free(msg);
@@ -1113,11 +1174,15 @@ SCardListReaders(SCARDCONTEXT hContext, LPCSTR mszGroups, LPSTR mszReaders,
 
     LLOGLN(10, ("SCardListReaders:"));
     LLOGLN(10, ("SCardListReaders: mszGroups %s", mszGroups));
-    LLOGLN(10, ("SCardListReaders: *pcchReaders %d", *pcchReaders));
+    LLOGLN(10, ("SCardListReaders: *pcchReaders %d", (int)*pcchReaders));
     if (g_sck == -1)
     {
         LLOGLN(0, ("SCardListReaders: error, not connected"));
         return SCARD_F_INTERNAL_ERROR;
+    }
+    if ((mszGroups == NULL) && (mszReaders == NULL))
+    {
+        *pcchReaders = 0;
     }
     msg = (char *) malloc(8192);
     offset = 0;

@@ -400,7 +400,8 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
     int error;
     int len;
 
-    if ((exp_len != 4) || (mod_len != 64) || (pri_len != 64))
+    if ((exp_len != 4) || ((mod_len != 64) && (mod_len != 256)) ||
+                          ((pri_len != 64) && (pri_len != 256)))
     {
         return 1;
     }
@@ -469,7 +470,8 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
     int error;
     int len;
 
-    if ((exp_len != 4) || (mod_len != 64) || (pri_len != 64))
+    if ((exp_len != 4) || ((mod_len != 64) && (mod_len != 256)) ||
+                          ((pri_len != 64) && (pri_len != 256)))
     {
         return 1;
     }

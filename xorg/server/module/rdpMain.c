@@ -47,14 +47,6 @@ rdp module main
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
-#define XRDP_DRIVER_NAME "XORGXRDP"
-#define XRDP_NAME "XORGXRDP"
-#define XRDP_VERSION 1000
-
-#define PACKAGE_VERSION_MAJOR 1
-#define PACKAGE_VERSION_MINOR 0
-#define PACKAGE_VERSION_PATCHLEVEL 0
-
 static Bool g_initialised = FALSE;
 
 /*****************************************************************************/
@@ -95,7 +87,7 @@ xorgxrdpDownDown(ScreenPtr pScreen)
 static MODULESETUPPROTO(xorgxrdpSetup);
 static XF86ModuleVersionInfo RDPVersRec =
 {
-    XRDP_DRIVER_NAME,
+    XRDP_MODULE_NAME,
     MODULEVENDORSTRING,
     MODINFOSTRING1,
     MODINFOSTRING2,

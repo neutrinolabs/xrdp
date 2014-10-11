@@ -471,8 +471,11 @@ g_tcp_socket(void)
         {
             option_value = 0;
             option_len = sizeof(option_value);
-            setsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&option_value,
-                       option_len);
+            if (setsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&option_value,
+                       option_len) < 0)
+            {
+                log_message(LOG_LEVEL_ERROR, "g_tcp_socket: setsockopt() failed\n");
+            }
         }
     }
 #endif
@@ -484,8 +487,11 @@ g_tcp_socket(void)
         {
             option_value = 1;
             option_len = sizeof(option_value);
-            setsockopt(rv, SOL_SOCKET, SO_REUSEADDR, (char *)&option_value,
-                       option_len);
+            if (setsockopt(rv, SOL_SOCKET, SO_REUSEADDR, (char *)&option_value,
+                       option_len) < 0)
+            {
+                log_message(LOG_LEVEL_ERROR, "g_tcp_socket: setsockopt() failed\n");
+            }
         }
     }
 
@@ -498,8 +504,11 @@ g_tcp_socket(void)
         {
             option_value = 1024 * 32;
             option_len = sizeof(option_value);
-            setsockopt(rv, SOL_SOCKET, SO_SNDBUF, (char *)&option_value,
-                       option_len);
+            if (setsockopt(rv, SOL_SOCKET, SO_SNDBUF, (char *)&option_value,
+                       option_len) < 0)
+            {
+                log_message(LOG_LEVEL_ERROR, "g_tcp_socket: setsockopt() failed\n");
+            }
         }
     }
 
@@ -768,7 +777,9 @@ g_tcp_local_connect(int sck, const char *port)
 
     memset(&s, 0, sizeof(struct sockaddr_un));
     s.sun_family = AF_UNIX;
-    strcpy(s.sun_path, port);
+    strncpy(s.sun_path, port, sizeof(s.sun_path));
+    s.sun_path[sizeof(s.sun_path) - 1] = 0;
+
     return connect(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_un));
 #endif
 }
@@ -785,7 +796,10 @@ g_tcp_set_non_blocking(int sck)
 #else
     i = fcntl(sck, F_GETFL);
     i = i | O_NONBLOCK;
-    fcntl(sck, F_SETFL, i);
+    if (fcntl(sck, F_SETFL, i) < 0)
+    {
+        log_message(LOG_LEVEL_ERROR, "g_tcp_set_non_blocking: fcntl() failed\n");
+    }
 #endif
     return 0;
 }
@@ -925,7 +939,9 @@ g_tcp_local_bind(int sck, const char *port)
 
     memset(&s, 0, sizeof(struct sockaddr_un));
     s.sun_family = AF_UNIX;
-    strcpy(s.sun_path, port);
+    strncpy(s.sun_path, port, sizeof(s.sun_path));
+    s.sun_path[sizeof(s.sun_path) - 1] = 0;
+
     return bind(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_un));
 #endif
 }
@@ -1421,7 +1437,12 @@ g_set_wait_obj(tbus obj)
         return 1;
     }
 
-    sendto(s, "sig", 4, 0, (struct sockaddr *)&sa, sa_size);
+    if (sendto(s, "sig", 4, 0, (struct sockaddr *)&sa, sa_size) < 0)
+    {
+        close(s);
+        return 1;
+    }
+
     close(s);
     return 0;
 #endif
@@ -1934,8 +1955,7 @@ g_mkdir(const char *dirname)
 #if defined(_WIN32)
     return 0;
 #else
-    mkdir(dirname, S_IRWXU);
-    return 0;
+    return mkdir(dirname, S_IRWXU);
 #endif
 }
 
@@ -2263,6 +2283,27 @@ int APP_CC
 g_strncmp(const char *c1, const char *c2, int len)
 {
     return strncmp(c1, c2, len);
+}
+
+/*****************************************************************************/
+/* compare up to delim */
+int APP_CC
+g_strncmp_d(const char *s1, const char *s2, const char delim, int n)
+{
+    char c1;
+    char c2;
+
+    while (n > 0)
+    {
+        c1 = *s1++;
+        c2 = *s2++;
+        if ((c1 == 0) || (c1 != c2) || (c1 == delim) || (c2 == delim))
+        {
+            return c1 - c2;
+        }
+        n--;
+    }
+    return c1 - c2;
 }
 
 /*****************************************************************************/
@@ -2907,7 +2948,11 @@ g_clearenv(void)
 {
 #if defined(_WIN32)
 #else
+#if defined(BSD)
+    environ[0] = 0;
+#else
     environ = 0;
+#endif
 #endif
 }
 

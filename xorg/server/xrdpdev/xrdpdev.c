@@ -39,6 +39,8 @@ This is the main driver file
 #include <mi.h>
 #include <randrstr.h>
 
+#include <xf86Modes.h>
+
 #include "rdp.h"
 #include "rdpPri.h"
 #include "rdpDraw.h"
@@ -51,14 +53,8 @@ This is the main driver file
 #include "rdpGlyphs.h"
 #include "rdpPixmap.h"
 #include "rdpClientCon.h"
-
-#define XRDP_DRIVER_NAME "XRDPDEV"
-#define XRDP_NAME "XRDPDEV"
-#define XRDP_VERSION 1000
-
-#define PACKAGE_VERSION_MAJOR 1
-#define PACKAGE_VERSION_MINOR 0
-#define PACKAGE_VERSION_PATCHLEVEL 0
+#include "rdpXv.h"
+#include "rdpSimd.h"
 
 #define LLOG_LEVEL 1
 #define LLOGLN(_level, _args) \
@@ -449,13 +445,20 @@ rdpScreenInit(ScreenPtr pScreen, int argc, char **argv)
         LLOGLN(0, ("rdpScreenInit: fbScreenInit failed"));
         return FALSE;
     }
-    miInitializeBackingStore(pScreen);
 
-#if 0
+#if XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(1, 14, 0, 0, 0)
+    /* 1.13 has this function, 1.14 and up does not */
+    miInitializeBackingStore(pScreen);
+#endif
+
+    /* try in init simd functions */
+    rdpSimdInit(pScreen, pScrn);
+
+#if defined(XvExtension) && XvExtension
     /* XVideo */
-    if (rdp_xv_init(pScreen, pScrn) != 0)
+    if (!rdpXvInit(pScreen, pScrn))
     {
-        LLOGLN(0, ("rdpScreenInit: rdp_xv_init failed"));
+        LLOGLN(0, ("rdpScreenInit: rdpXvInit failed"));
     }
 #endif
 
@@ -658,7 +661,7 @@ rdpProbe(DriverPtr drv, int flags)
             found_screen = 1;
             pscrn->driverVersion = XRDP_VERSION;
             pscrn->driverName    = XRDP_DRIVER_NAME;
-            pscrn->name          = XRDP_NAME;
+            pscrn->name          = XRDP_DRIVER_NAME;
             pscrn->Probe         = rdpProbe;
             pscrn->PreInit       = rdpPreInit;
             pscrn->ScreenInit    = rdpScreenInit;
@@ -710,7 +713,7 @@ static void
 rdpIdentify(int flags)
 {
     LLOGLN(0, ("rdpIdentify:"));
-    xf86PrintChipsets(XRDP_NAME, "driver for xrdp", g_Chipsets);
+    xf86PrintChipsets(XRDP_DRIVER_NAME, "driver for xrdp", g_Chipsets);
 }
 
 /*****************************************************************************/
