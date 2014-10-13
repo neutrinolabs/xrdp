@@ -46,6 +46,7 @@ static int    g_bytes_in_stream = 0;
 static FIFO   in_fifo;
 
 static struct stream *g_stream_inp = NULL;
+static struct stream *g_stream_incoming_packet = NULL;
 
 #define BBUF_SIZE (1024 * 8)
 char g_buffer[BBUF_SIZE];
@@ -686,6 +687,7 @@ sound_init(void)
     LOG(0, ("sound_init:"));
 
     g_memset(g_sent_flag, 0, sizeof(g_sent_flag));
+    g_stream_incoming_packet = NULL;
 
     /* init sound output */
     sound_send_server_output_formats();
@@ -759,36 +761,50 @@ sound_data_in(struct stream *s, int chan_id, int chan_flags, int length,
 {
     int code;
     int size;
+    int ok_to_free = 1;
 
-    in_uint8(s, code);
-    in_uint8s(s, 1);
-    in_uint16_le(s, size);
+    if (!read_entire_packet(s, &g_stream_incoming_packet, chan_flags, 
+                            length, total_length))
+    {
+        return 0;
+    }
+
+    in_uint8(g_stream_incoming_packet, code);
+    in_uint8s(g_stream_incoming_packet, 1);
+    in_uint16_le(g_stream_incoming_packet, size);
 
     switch (code)
     {
         case SNDC_WAVECONFIRM:
-            sound_process_wave_confirm(s, size);
+            sound_process_wave_confirm(g_stream_incoming_packet, size);
             break;
 
         case SNDC_TRAINING:
-            sound_process_training(s, size);
+            sound_process_training(g_stream_incoming_packet, size);
             break;
 
         case SNDC_FORMATS:
-            sound_process_output_formats(s, size);
+            sound_process_output_formats(g_stream_incoming_packet, size);
             break;
 
         case SNDC_REC_NEGOTIATE:
-            sound_process_input_formats(s, size);
+            sound_process_input_formats(g_stream_incoming_packet, size);
             break;
 
         case SNDC_REC_DATA:
-            sound_process_input_data(s, size);
+            sound_process_input_data(g_stream_incoming_packet, size);
+            ok_to_free = 0;
             break;
 
         default:
             LOG(10, ("sound_data_in: unknown code %d size %d", code, size));
             break;
+    }
+
+    if (ok_to_free && g_stream_incoming_packet)
+    {
+        xstream_free(g_stream_incoming_packet);
+        g_stream_incoming_packet = NULL;
     }
 
     return 0;

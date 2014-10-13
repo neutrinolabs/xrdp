@@ -9,7 +9,8 @@ EXTRA_DIST = \
   rail.h \
   sound.h \
   xcommon.h \
-  mlog.h
+  mlog.h \
+  chansrv_common.h
 
 EXTRA_DEFINES =
 EXTRA_INCLUDES =
@@ -48,7 +49,8 @@ xrdp_chansrv_SOURCES = \
   drdynvc.c \
   chansrv_fuse.c \
   irp.c \
-  fifo.c
+  fifo.c \
+  chansrv_common.c
 
 xrdp_chansrv_LDFLAGS = \
   $(EXTRA_FLAGS)
