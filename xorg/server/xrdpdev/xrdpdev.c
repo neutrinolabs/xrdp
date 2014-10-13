@@ -620,6 +620,17 @@ rdpValidMode(ScrnInfoPtr a, DisplayModePtr b, Bool c, int d)
 }
 
 /*****************************************************************************/
+static void
+#if XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(1, 13, 0, 0, 0)
+rdpFreeScreen(int a, int b)
+#else
+rdpFreeScreen(ScrnInfoPtr a)
+#endif
+{
+    LLOGLN(0, ("rdpFreeScreen:"));
+}
+
+/*****************************************************************************/
 static Bool
 rdpProbe(DriverPtr drv, int flags)
 {
@@ -670,7 +681,7 @@ rdpProbe(DriverPtr drv, int flags)
             pscrn->EnterVT       = rdpEnterVT;
             pscrn->LeaveVT       = rdpLeaveVT;
             pscrn->ValidMode     = rdpValidMode;
-
+            pscrn->FreeScreen    = rdpFreeScreen;
             xf86DrvMsg(pscrn->scrnIndex, X_INFO, "%s", "using default device\n");
         }
     }

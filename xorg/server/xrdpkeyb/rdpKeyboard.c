@@ -674,6 +674,7 @@ rdpkeybUnInit(InputDriverPtr drv, InputInfoPtr info, int flags)
 {
     LLOGLN(0, ("rdpkeybUnInit: drv %p info %p, flags 0x%x",
            drv, info, flags));
+    rdpUnregisterInputCallback(rdpInputKeyboard);
 }
 
 /******************************************************************************/

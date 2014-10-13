@@ -309,6 +309,7 @@ rdpmouseUnInit(InputDriverPtr drv, InputInfoPtr info, int flags)
 {
     LLOGLN(0, ("rdpmouseUnInit: drv %p info %p, flags 0x%x",
            drv, info, flags));
+    rdpUnregisterInputCallback(rdpInputMouse);
 }
 
 /******************************************************************************/
