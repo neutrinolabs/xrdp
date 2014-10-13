@@ -1297,12 +1297,16 @@ lfreerdp_pointer_cached(rdpContext *context,
                                mod->pointer_cache[index].bpp);
 }
 
-static void DEFAULT_CC lfreerdp_polygon_cb(rdpContext* context, POLYGON_CB_ORDER* polygon_cb)
+/******************************************************************************/
+static void DEFAULT_CC
+lfreerdp_polygon_cb(rdpContext* context, POLYGON_CB_ORDER* polygon_cb)
 {
     LLOGLN(0, ("lfreerdp_polygon_sc called:- not supported!!!!!!!!!!!!!!!!!!!!"));
 }
 
-static void DEFAULT_CC lfreerdp_polygon_sc(rdpContext* context, POLYGON_SC_ORDER* polygon_sc)
+/******************************************************************************/
+static void DEFAULT_CC
+lfreerdp_polygon_sc(rdpContext* context, POLYGON_SC_ORDER* polygon_sc)
 {
     struct mod *mod;
     int i, npoints;
@@ -1351,7 +1355,9 @@ static void DEFAULT_CC lfreerdp_polygon_sc(rdpContext* context, POLYGON_SC_ORDER
     }
 }
 
-static void DEFAULT_CC lfreerdp_syncronize(rdpContext* context)
+/******************************************************************************/
+static void DEFAULT_CC
+lfreerdp_syncronize(rdpContext* context)
 {
     struct mod *mod;
     mod = ((struct mod_context *)context)->modi;
@@ -1398,17 +1404,41 @@ lfreerdp_pre_connect(freerdp *instance)
     instance->settings->glyph_cache = true;
     /* GLYPH_SUPPORT_FULL and GLYPH_SUPPORT_PARTIAL seem to be the same */
     instance->settings->glyphSupportLevel = GLYPH_SUPPORT_FULL;
-    instance->settings->order_support[NEG_GLYPH_INDEX_INDEX] = 1;
-    instance->settings->order_support[NEG_FAST_GLYPH_INDEX] = 0;
-    instance->settings->order_support[NEG_FAST_INDEX_INDEX] = 0;
+
+    instance->settings->order_support[NEG_DSTBLT_INDEX] = 1; /* 0x00 */
+    instance->settings->order_support[NEG_PATBLT_INDEX] = 1;
     instance->settings->order_support[NEG_SCRBLT_INDEX] = 1;
+    instance->settings->order_support[NEG_MEMBLT_INDEX] = 1;
+    instance->settings->order_support[NEG_MEM3BLT_INDEX] = 0;
+    instance->settings->order_support[NEG_ATEXTOUT_INDEX] = 0;
+    instance->settings->order_support[NEG_AEXTTEXTOUT_INDEX] = 0;
+    instance->settings->order_support[NEG_DRAWNINEGRID_INDEX] = 0;
+    instance->settings->order_support[NEG_LINETO_INDEX] = 1; /* 0x08 */
+    instance->settings->order_support[NEG_MULTI_DRAWNINEGRID_INDEX] = 0;
+    instance->settings->order_support[NEG_OPAQUE_RECT_INDEX] = 1;
     instance->settings->order_support[NEG_SAVEBITMAP_INDEX] = 0;
+    instance->settings->order_support[NEG_WTEXTOUT_INDEX] = 0;
+    instance->settings->order_support[NEG_MEMBLT_V2_INDEX] = 1;
+    instance->settings->order_support[NEG_MEM3BLT_V2_INDEX] = 0;
+    instance->settings->order_support[NEG_MULTIDSTBLT_INDEX] = 0;
+    instance->settings->order_support[NEG_MULTIPATBLT_INDEX] = 0; /* 0x10 */
+    instance->settings->order_support[NEG_MULTISCRBLT_INDEX] = 0;
+    instance->settings->order_support[NEG_MULTIOPAQUERECT_INDEX] = 0;
+    instance->settings->order_support[NEG_FAST_INDEX_INDEX] = 0;
+    instance->settings->order_support[NEG_POLYGON_SC_INDEX] = 0;
+    instance->settings->order_support[NEG_POLYGON_CB_INDEX] = 0;
+    instance->settings->order_support[NEG_POLYLINE_INDEX] = 0;
+    /* 0x17 missing */
+    instance->settings->order_support[NEG_FAST_GLYPH_INDEX] = 0; /* 0x18 */
+    instance->settings->order_support[NEG_ELLIPSE_SC_INDEX] = 0;
+    instance->settings->order_support[NEG_ELLIPSE_CB_INDEX] = 0;
+    instance->settings->order_support[NEG_GLYPH_INDEX_INDEX] = 1;
+    instance->settings->order_support[NEG_GLYPH_WEXTTEXTOUT_INDEX] = 0;
+    instance->settings->order_support[NEG_GLYPH_WLONGTEXTOUT_INDEX] = 0;
+    instance->settings->order_support[NEG_GLYPH_WLONGEXTTEXTOUT_INDEX] = 0;
+    /* 0x1F missing*/
 
     instance->settings->bitmap_cache = 1;
-    instance->settings->order_support[NEG_MEMBLT_INDEX] = 1;
-    instance->settings->order_support[NEG_MEMBLT_V2_INDEX] = 1;
-    instance->settings->order_support[NEG_MEM3BLT_INDEX] = 0;
-    instance->settings->order_support[NEG_MEM3BLT_V2_INDEX] = 0;
     instance->settings->bitmapCacheV2NumCells = 3; // 5;
     instance->settings->bitmapCacheV2CellInfo[0].numEntries = 600; // 0x78;
     instance->settings->bitmapCacheV2CellInfo[0].persistent = 0;
@@ -1422,12 +1452,6 @@ lfreerdp_pre_connect(freerdp *instance)
     instance->settings->bitmapCacheV2CellInfo[4].persistent = 0;
 
     instance->settings->bitmap_cache_v3 = 1;
-    instance->settings->order_support[NEG_MULTIDSTBLT_INDEX] = 0;
-    instance->settings->order_support[NEG_MULTIPATBLT_INDEX] = 0;
-    instance->settings->order_support[NEG_MULTISCRBLT_INDEX] = 0;
-    instance->settings->order_support[NEG_MULTIOPAQUERECT_INDEX] = 0;
-    instance->settings->order_support[NEG_POLYLINE_INDEX] = 0;
-
 
     instance->settings->username = g_strdup(mod->username);
     instance->settings->password = g_strdup(mod->password);
