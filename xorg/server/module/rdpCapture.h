@@ -25,3 +25,9 @@ rdpCapture(rdpClientCon *clientCon,
            int src_stride, int src_format,
            void *dst, int dst_width, int dst_height,
            int dst_stride, int dst_format, int mode);
+
+int
+a8r8g8b8_to_a8b8g8r8_box(char *s8, int src_stride,
+                         char *d8, int dst_stride,
+                         int width, int height);
+

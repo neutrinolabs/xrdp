@@ -197,6 +197,10 @@ struct _rdpCounts
 
 typedef int (*yuv_to_rgb32_proc)(unsigned char *yuvs, int width, int height, int *rgbs);
 
+typedef int (*copy_box_proc)(char *s8, int src_stride,
+                             char *d8, int dst_stride,
+                             int width, int height);
+
 /* move this to common header */
 struct _rdpRec
 {
@@ -209,6 +213,7 @@ struct _rdpRec
     int bitsPerPixel;
     int Bpp;
     int Bpp_mask;
+    char *pfbMemory_alloc;
     char *pfbMemory;
     ScreenPtr pScreen;
     rdpDevPrivateKey privateKeyRecGC;
@@ -276,6 +281,8 @@ struct _rdpRec
     int xv_data_bytes;
     int xv_timer_schedualed;
     OsTimerPtr xv_timer;
+
+    copy_box_proc a8r8g8b8_to_a8b8g8r8_box;
 
 };
 typedef struct _rdpRec rdpRec;

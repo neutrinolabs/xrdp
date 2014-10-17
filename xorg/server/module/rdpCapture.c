@@ -63,7 +63,8 @@ rdpLimitRects(RegionPtr reg, int max_rects, BoxPtr *rects)
 /******************************************************************************/
 /* copy rects with no error checking */
 static int
-rdpCopyBox_a8r8g8b8_to_a8r8g8b8(void *src, int src_stride, int srcx, int srcy,
+rdpCopyBox_a8r8g8b8_to_a8r8g8b8(rdpClientCon *clientCon,
+                                void *src, int src_stride, int srcx, int srcy,
                                 void *dst, int dst_stride, int dstx, int dsty,
                                 BoxPtr rects, int num_rects)
 {
@@ -87,7 +88,7 @@ rdpCopyBox_a8r8g8b8_to_a8r8g8b8(void *src, int src_stride, int srcx, int srcy,
         height = box->y2 - box->y1;
         for (jndex = 0; jndex < height; jndex++)
         {
-            memcpy(d8, s8, bytes);
+            g_memcpy(d8, s8, bytes);
             d8 += dst_stride;
             s8 += src_stride;
         }
@@ -101,7 +102,7 @@ rdpFillBox_yuvalp(int ax, int ay,
                  void *dst, int dst_stride)
 {
     dst = ((char *) dst) + (ay << 8) * (dst_stride >> 8) + (ax << 8);
-    memset(dst, 0, 64 * 64 * 4);
+    g_memset(dst, 0, 64 * 64 * 4);
     return 0;
 }
 
@@ -195,52 +196,66 @@ rdpCopyBox_a8r8g8b8_to_yuvalp(int ax, int ay,
 }
 
 /******************************************************************************/
+int
+a8r8g8b8_to_a8b8g8r8_box(char *s8, int src_stride,
+                         char *d8, int dst_stride,
+                         int width, int height)
+{
+    int index;
+    int jndex;
+    int red;
+    int green;
+    int blue;
+    unsigned int *s32;
+    unsigned int *d32;
+
+    for (index = 0; index < height; index++)
+    {
+        s32 = (unsigned int *) s8;
+        d32 = (unsigned int *) d8;
+        for (jndex = 0; jndex < width; jndex++)
+        {
+            SPLITCOLOR32(red, green, blue, *s32);
+            *d32 = COLOR24(red, green, blue);
+             s32++;
+             d32++;
+        }
+        d8 += dst_stride;
+        s8 += src_stride;
+    }
+    return 0;
+}
+
+/******************************************************************************/
 /* copy rects with no error checking */
 static int
-rdpCopyBox_a8r8g8b8_to_a8b8g8r8(void *src, int src_stride,
-                                void *dst, int dst_stride,
+rdpCopyBox_a8r8g8b8_to_a8b8g8r8(rdpClientCon *clientCon,
+                                void *src, int src_stride, int srcx, int srcy,
+                                void *dst, int dst_stride, int dstx, int dsty,
                                 BoxPtr rects, int num_rects)
 {
     char *s8;
     char *d8;
     int index;
-    int jndex;
-    int kndex;
     int bytes;
     int width;
     int height;
-    int red;
-    int green;
-    int blue;
     BoxPtr box;
-    unsigned int *s32;
-    unsigned int *d32;
+    copy_box_proc copy_box;
 
+    copy_box = clientCon->dev->a8r8g8b8_to_a8b8g8r8_box;
     for (index = 0; index < num_rects; index++)
     {
         box = rects + index;
-        s8 = ((char *) src) + box->y1 * src_stride;
-        s8 += box->x1 * 4;
-        d8 = ((char *) dst) + box->y1 * dst_stride;
-        d8 += box->x1 * 4;
+        s8 = ((char *) src) + (box->y1 - srcy) * src_stride;
+        s8 += (box->x1 - srcx) * 4;
+        d8 = ((char *) dst) + (box->y1 - dsty) * dst_stride;
+        d8 += (box->x1 - dstx) * 4;
         bytes = box->x2 - box->x1;
         bytes *= 4;
         width = box->x2 - box->x1;
         height = box->y2 - box->y1;
-        for (jndex = 0; jndex < height; jndex++)
-        {
-            s32 = (unsigned int *) s8;
-            d32 = (unsigned int *) d8;
-            for (kndex = 0; kndex < width; kndex++)
-            {
-                SPLITCOLOR32(red, green, blue, *s32);
-                *d32 = COLOR24(red, green, blue);
-                s32++;
-                d32++;
-            }
-            d8 += dst_stride;
-            s8 += src_stride;
-        }
+        copy_box(s8, src_stride, d8, dst_stride, width, height);
     }
     return 0;
 }
@@ -283,8 +298,8 @@ rdpCapture0(rdpClientCon *clientCon,
 
     rect.x1 = 0;
     rect.y1 = 0;
-    rect.x2 = min(dst_width, src_width);
-    rect.y2 = min(dst_height, src_height);
+    rect.x2 = RDPMIN(dst_width, src_width);
+    rect.y2 = RDPMIN(dst_height, src_height);
     rdpRegionInit(&reg, &rect, 0);
     rdpRegionIntersect(&reg, in_reg, &reg);
 
@@ -307,14 +322,16 @@ rdpCapture0(rdpClientCon *clientCon,
 
     if ((src_format == XRDP_a8r8g8b8) && (dst_format == XRDP_a8r8g8b8))
     {
-        rdpCopyBox_a8r8g8b8_to_a8r8g8b8(src, src_stride, 0, 0,
+        rdpCopyBox_a8r8g8b8_to_a8r8g8b8(clientCon,
+                                        src, src_stride, 0, 0,
                                         dst, dst_stride, 0, 0,
                                         psrc_rects, num_rects);
     }
     else if ((src_format == XRDP_a8r8g8b8) && (dst_format == XRDP_a8b8g8r8))
     {
-        rdpCopyBox_a8r8g8b8_to_a8b8g8r8(src, src_stride,
-                                        dst, dst_stride,
+        rdpCopyBox_a8r8g8b8_to_a8b8g8r8(clientCon,
+                                        src, src_stride, 0, 0,
+                                        dst, dst_stride, 0, 0,
                                         psrc_rects, num_rects);
     }
     else if ((src_format == XRDP_a8r8g8b8) && (dst_format == XRDP_r5g6b5))
@@ -739,6 +756,7 @@ rdpCapture(rdpClientCon *clientCon,
            int dst_stride, int dst_format, int mode)
 {
     LLOGLN(10, ("rdpCapture:"));
+    LLOGLN(10, ("rdpCapture: src %p dst %p", src, dst));
     switch (mode)
     {
         case 0:
