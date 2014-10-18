@@ -146,23 +146,18 @@ static int g_client_input_format_index = 0;
 static int g_server_input_format_index = 0;
 
 /* microphone related */
-static int APP_CC
-sound_send_server_input_formats(void);
-static int APP_CC
-sound_process_input_format(int aindex, int wFormatTag,
+static int APP_CC sound_send_server_input_formats(void);
+static int APP_CC sound_process_input_format(int aindex, int wFormatTag,
                            int nChannels, int nSamplesPerSec,
                            int nAvgBytesPerSec, int nBlockAlign,
                            int wBitsPerSample, int cbSize, char *data);
-static int APP_CC
-sound_process_input_formats(struct stream *s, int size);
-static int APP_CC
-sound_input_start_recording(void);
-static int APP_CC
-sound_input_stop_recording(void);
-static int APP_CC
-sound_process_input_data(struct stream *s, int bytes);
-static int DEFAULT_CC
-sound_sndsrvr_source_data_in(struct trans *trans);
+static int APP_CC sound_process_input_formats(struct stream *s, int size);
+static int APP_CC sound_input_start_recording(void);
+static int APP_CC sound_input_stop_recording(void);
+static int APP_CC sound_process_input_data(struct stream *s, int bytes);
+static int DEFAULT_CC sound_sndsrvr_source_data_in(struct trans *trans);
+static int APP_CC sound_start_source_listener();
+static int APP_CC sound_start_sink_listener();
 
 /*****************************************************************************/
 static int APP_CC
@@ -682,8 +677,6 @@ sound_sndsrvr_source_conn_in(struct trans *trans, struct trans *new_trans)
 int APP_CC
 sound_init(void)
 {
-    char port[256];
-
     LOG(0, ("sound_init:"));
 
     g_memset(g_sent_flag, 0, sizeof(g_sent_flag));
@@ -691,25 +684,11 @@ sound_init(void)
 
     /* init sound output */
     sound_send_server_output_formats();
-
-    g_audio_l_trans_out = trans_create(TRANS_MODE_UNIX, 128 * 1024, 8192);
-    g_audio_l_trans_out->is_term = g_is_term;
-    g_snprintf(port, 255, CHANSRV_PORT_OUT_STR, g_display_num);
-    g_audio_l_trans_out->trans_conn_in = sound_sndsrvr_sink_conn_in;
-
-    if (trans_listen(g_audio_l_trans_out, port) != 0)
-        LOG(0, ("sound_init: trans_listen failed"));
+    sound_start_sink_listener();
 
     /* init sound input */
     sound_send_server_input_formats();
-
-    g_audio_l_trans_in = trans_create(TRANS_MODE_UNIX, 128 * 1024, 8192);
-    g_audio_l_trans_in->is_term = g_is_term;
-    g_snprintf(port, 255, CHANSRV_PORT_IN_STR, g_display_num);
-    g_audio_l_trans_in->trans_conn_in = sound_sndsrvr_source_conn_in;
-
-    if (trans_listen(g_audio_l_trans_in, port) != 0)
-        LOG(0, ("sound_init: trans_listen failed"));
+    sound_start_source_listener();
 
     /* save data from sound_server_source */
     fifo_init(&in_fifo, 100);
@@ -850,7 +829,6 @@ sound_get_wait_objs(tbus *objs, int *count, int *timeout)
 int APP_CC
 sound_check_wait_objs(void)
 {
-
     if (g_audio_l_trans_out != 0)
     {
         if (trans_check_wait_objs(g_audio_l_trans_out) != 0)
@@ -868,6 +846,7 @@ sound_check_wait_objs(void)
             LOG(10, ("sound_check_wait_objs: g_audio_c_trans_out returned non-zero"));
             trans_delete(g_audio_c_trans_out);
             g_audio_c_trans_out = 0;
+            sound_start_sink_listener();
         }
     }
 
@@ -888,6 +867,7 @@ sound_check_wait_objs(void)
             LOG(10, ("sound_check_wait_objs: g_audio_c_trans_in returned non-zero"));
             trans_delete(g_audio_c_trans_in);
             g_audio_c_trans_in = 0;
+            sound_start_source_listener();
         }
     }
 
@@ -1228,3 +1208,38 @@ sound_sndsrvr_source_data_in(struct trans *trans)
 
     return 0;
 }
+
+/**
+ * Start a listener for microphone redirection connections
+ *****************************************************************************/
+static int APP_CC
+sound_start_source_listener()
+{
+    char port[1024];
+
+    g_audio_l_trans_in = trans_create(TRANS_MODE_UNIX, 128 * 1024, 8192);
+    g_audio_l_trans_in->is_term = g_is_term;
+    g_snprintf(port, 255, CHANSRV_PORT_IN_STR, g_display_num);
+    g_audio_l_trans_in->trans_conn_in = sound_sndsrvr_source_conn_in;
+    if (trans_listen(g_audio_l_trans_in, port) != 0)
+        LOG(0, ("trans_listen failed"));
+    return 0;
+}
+
+/**
+ * Start a listener for speaker redirection connections
+ *****************************************************************************/
+static int APP_CC
+sound_start_sink_listener()
+{
+    char port[1024];
+
+    g_audio_l_trans_out = trans_create(TRANS_MODE_UNIX, 128 * 1024, 8192);
+    g_audio_l_trans_out->is_term = g_is_term;
+    g_snprintf(port, 255, CHANSRV_PORT_OUT_STR, g_display_num);
+    g_audio_l_trans_out->trans_conn_in = sound_sndsrvr_sink_conn_in;
+    if (trans_listen(g_audio_l_trans_out, port) != 0)
+        LOG(0, ("trans_listen failed"));
+    return 0;
+}
+
