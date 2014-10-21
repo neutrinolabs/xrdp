@@ -22,6 +22,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef __RDPPOLYTEXT8_H
 #define __RDPPOLYTEXT8_H
 
+#include <xorg-server.h>
+#include <xorgVersion.h>
+#include <xf86.h>
+
 int
 rdpPolyText8(DrawablePtr pDrawable, GCPtr pGC,
              int x, int y, int count, char* chars);

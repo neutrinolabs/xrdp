@@ -22,38 +22,42 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef _RDPRANDR_H
 #define _RDPRANDR_H
 
-Bool
+#include <xorg-server.h>
+#include <xorgVersion.h>
+#include <xf86.h>
+
+extern _X_EXPORT Bool
 rdpRRRegisterSize(ScreenPtr pScreen, int width, int height);
-Bool
+extern _X_EXPORT Bool
 rdpRRGetInfo(ScreenPtr pScreen, Rotation* pRotations);
-Bool
+extern _X_EXPORT Bool
 rdpRRSetConfig(ScreenPtr pScreen, Rotation rotateKind, int rate,
                RRScreenSizePtr pSize);
-Bool
+extern _X_EXPORT Bool
 rdpRRScreenSetSize(ScreenPtr pScreen, CARD16 width, CARD16 height,
                    CARD32 mmWidth, CARD32 mmHeight);
-Bool
+extern _X_EXPORT Bool
 rdpRRCrtcSet(ScreenPtr pScreen, RRCrtcPtr crtc, RRModePtr mode,
              int x, int y, Rotation rotation, int numOutputs,
              RROutputPtr* outputs);
-Bool
+extern _X_EXPORT Bool
 rdpRRCrtcSetGamma(ScreenPtr pScreen, RRCrtcPtr crtc);
-Bool
+extern _X_EXPORT Bool
 rdpRRCrtcGetGamma(ScreenPtr pScreen, RRCrtcPtr crtc);
-Bool
+extern _X_EXPORT Bool
 rdpRROutputSetProperty(ScreenPtr pScreen, RROutputPtr output, Atom property,
                        RRPropertyValuePtr value);
-Bool
+extern _X_EXPORT Bool
 rdpRROutputValidateMode(ScreenPtr pScreen, RROutputPtr output,
                         RRModePtr mode);
-void
+extern _X_EXPORT void
 rdpRRModeDestroy(ScreenPtr pScreen, RRModePtr mode);
-Bool
+extern _X_EXPORT Bool
 rdpRROutputGetProperty(ScreenPtr   pScreen, RROutputPtr output, Atom property);
-Bool
+extern _X_EXPORT Bool
 rdpRRGetPanning(ScreenPtr pScrn, RRCrtcPtr crtc, BoxPtr totalArea,
                 BoxPtr trackingArea, INT16* border);
-Bool
+extern _X_EXPORT Bool
 rdpRRSetPanning(ScreenPtr pScrn, RRCrtcPtr crtc, BoxPtr totalArea,
                 BoxPtr trackingArea, INT16* border);
 

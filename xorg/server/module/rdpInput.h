@@ -24,23 +24,27 @@ input
 #ifndef _RDPINPUT_H
 #define _RDPINPUT_H
 
+#include <xorg-server.h>
+#include <xorgVersion.h>
+#include <xf86.h>
+
 typedef int (*rdpInputEventProcPtr)(rdpPtr dev, int msg,
                                     long param1, long param2,
                                     long param3, long param4);
 
-int
+extern _X_EXPORT int
 rdpRegisterInputCallback(int type, rdpInputEventProcPtr proc);
-int
+extern _X_EXPORT int
 rdpUnregisterInputCallback(rdpInputEventProcPtr proc);
-int
+extern _X_EXPORT int
 rdpInputKeyboardEvent(rdpPtr dev, int msg,
                       long param1, long param2,
                       long param3, long param4);
-int
+extern _X_EXPORT int
 rdpInputMouseEvent(rdpPtr dev, int msg,
                    long param1, long param2,
                    long param3, long param4);
-int
+extern _X_EXPORT int
 rdpInputInit(void);
 
 #endif

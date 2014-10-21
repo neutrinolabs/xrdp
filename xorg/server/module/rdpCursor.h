@@ -25,20 +25,21 @@ misc draw calls
 #define __RDPCURSOR_H
 
 #include <xorg-server.h>
+#include <xorgVersion.h>
 #include <xf86.h>
 
-Bool
+extern _X_EXPORT Bool
 rdpSpriteRealizeCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs);
-Bool
+extern _X_EXPORT Bool
 rdpSpriteUnrealizeCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs);
-void
+extern _X_EXPORT void
 rdpSpriteSetCursor(DeviceIntPtr pDev, ScreenPtr pScr, CursorPtr pCurs,
                    int x, int y);
-void
+extern _X_EXPORT void
 rdpSpriteMoveCursor(DeviceIntPtr pDev, ScreenPtr pScr, int x, int y);
-Bool
+extern _X_EXPORT Bool
 rdpSpriteDeviceCursorInitialize(DeviceIntPtr pDev, ScreenPtr pScr);
-void
+extern _X_EXPORT void
 rdpSpriteDeviceCursorCleanup(DeviceIntPtr pDev, ScreenPtr pScr);
 
 #endif

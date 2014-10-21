@@ -43,6 +43,7 @@ XVideo
 #include "rdpMisc.h"
 #include "rdpReg.h"
 #include "rdpClientCon.h"
+#include "rdpXv.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \

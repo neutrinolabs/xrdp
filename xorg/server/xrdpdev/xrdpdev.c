@@ -322,7 +322,7 @@ rdpDeferredRandR(OsTimerPtr timer, CARD32 now, pointer arg)
 
     pScreen = (ScreenPtr) arg;
     dev = rdpGetDevFromScreen(pScreen);
-    LLOGLN(10, ("rdpDeferredRandR:"));
+    LLOGLN(0, ("rdpDeferredRandR:"));
     pRRScrPriv = rrGetScrPriv(pScreen);
     if (pRRScrPriv == 0)
     {

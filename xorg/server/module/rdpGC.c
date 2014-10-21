@@ -27,6 +27,7 @@ GC related calls
 
 /* this should be before all X11 .h files */
 #include <xorg-server.h>
+#include <xorgVersion.h>
 
 /* all driver need this */
 #include <xf86.h>
@@ -59,6 +60,7 @@ GC related calls
 #include "rdpPolyGlyphBlt.h"
 #include "rdpPushPixels.h"
 #include "rdpDraw.h"
+#include "rdpGC.h"
 
 /******************************************************************************/
 #define LOG_LEVEL 1

@@ -26,6 +26,7 @@ pixmap calls
 
 #include <xorg-server.h>
 #include <xorgVersion.h>
+#include <xf86.h>
 
 #if XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(1, 5, 0, 0, 0)
 /* 1.1, 1.2, 1.3, 1.4 */
@@ -36,16 +37,16 @@ pixmap calls
 #endif
 
 #if XRDP_PIX == 2
-PixmapPtr
+extern _X_EXPORT PixmapPtr
 rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth,
                 unsigned usage_hint);
 #else
-PixmapPtr
+extern _X_EXPORT PixmapPtr
 rdpCreatePixmap(ScreenPtr pScreen, int width, int height, int depth);
 #endif
-Bool
+extern _X_EXPORT Bool
 rdpDestroyPixmap(PixmapPtr pPixmap);
-Bool
+extern _X_EXPORT Bool
 rdpModifyPixmapHeader(PixmapPtr pPixmap, int width, int height, int depth,
                       int bitsPerPixel, int devKind, pointer pPixData);
 

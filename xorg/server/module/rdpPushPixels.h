@@ -22,7 +22,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef __RDPPUSHPIXELS_H
 #define __RDPPUSHPIXELS_H
 
-void
+#include <xorg-server.h>
+#include <xorgVersion.h>
+#include <xf86.h>
+
+extern _X_EXPORT void
 rdpPushPixels(GCPtr pGC, PixmapPtr pBitMap, DrawablePtr pDst,
               int w, int h, int x, int y);
 

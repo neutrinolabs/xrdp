@@ -24,6 +24,7 @@
 
 /* this should be before all X11 .h files */
 #include <xorg-server.h>
+#include <xorgVersion.h>
 
 /* all driver need this */
 #include <xf86.h>
@@ -34,6 +35,7 @@
 #include "rdpClientCon.h"
 #include "rdpReg.h"
 #include "rdpMisc.h"
+#include "rdpCapture.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \

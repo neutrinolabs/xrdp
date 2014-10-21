@@ -18,7 +18,14 @@
  * Routines to copy regions from framebuffer to shared memory
  */
 
-Bool
+#ifndef __RDPCAPTURE_H
+#define __RDPCAPTURE_H
+
+#include <xorg-server.h>
+#include <xorgVersion.h>
+#include <xf86.h>
+
+extern _X_EXPORT Bool
 rdpCapture(rdpClientCon *clientCon,
            RegionPtr in_reg, BoxPtr *out_rects, int *num_out_rects,
            void *src, int src_width, int src_height,
@@ -26,8 +33,9 @@ rdpCapture(rdpClientCon *clientCon,
            void *dst, int dst_width, int dst_height,
            int dst_stride, int dst_format, int mode);
 
-int
+extern _X_EXPORT int
 a8r8g8b8_to_a8b8g8r8_box(char *s8, int src_stride,
                          char *d8, int dst_stride,
                          int width, int height);
 
+#endif

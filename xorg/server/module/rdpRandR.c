@@ -42,6 +42,7 @@ RandR draw calls
 #include "rdpDraw.h"
 #include "rdpReg.h"
 #include "rdpMisc.h"
+#include "rdpRandR.h"
 
 /******************************************************************************/
 #define LOG_LEVEL 1

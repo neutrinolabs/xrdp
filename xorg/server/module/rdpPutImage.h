@@ -22,7 +22,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef __RDPPUTIMAGE_H
 #define __RDPPUTIMAGE_H
 
-void
+#include <xorg-server.h>
+#include <xorgVersion.h>
+#include <xf86.h>
+
+extern _X_EXPORT void
 rdpPutImage(DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
             int w, int h, int leftPad, int format, char* pBits);
 

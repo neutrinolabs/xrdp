@@ -23,6 +23,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define _RDP_H
 
 #include <xorg-server.h>
+#include <xorgVersion.h>
+#include <xf86.h>
+
 #include <scrnintstr.h>
 #include <gcstruct.h>
 #include <mipointer.h>

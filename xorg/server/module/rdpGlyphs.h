@@ -24,6 +24,10 @@ gylph(font) calls
 #ifndef _RDPGLYPHS_H
 #define _RDPGLYPHS_H
 
+#include <xorg-server.h>
+#include <xorgVersion.h>
+#include <xf86.h>
+
 struct rdp_font_char
 {
     int offset;    /* x */
@@ -51,9 +55,9 @@ struct rdp_text
     struct rdp_text* next;
 };
 
-int
+extern _X_EXPORT int
 rdpGlyphDeleteRdpText(struct rdp_text* rtext);
-void
+extern _X_EXPORT void
 rdpGlyphs(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
           PictFormatPtr maskFormat,
           INT16 xSrc, INT16 ySrc, int nlists, GlyphListPtr lists,

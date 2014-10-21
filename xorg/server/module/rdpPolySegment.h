@@ -22,7 +22,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef __RDPPOLYSEGMENT_H
 #define __RDPPOLYSEGMENT_H
 
-void
+#include <xorg-server.h>
+#include <xorgVersion.h>
+#include <xf86.h>
+
+extern _X_EXPORT void
 rdpPolySegment(DrawablePtr pDrawable, GCPtr pGC, int nseg, xSegment* pSegs);
 
 #endif

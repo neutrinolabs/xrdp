@@ -36,6 +36,7 @@ SIMD function asign
 #include "rdp.h"
 #include "rdpXv.h"
 #include "rdpCapture.h"
+#include "rdpSimd.h"
 
 /* use simd, run time */
 int g_simd_use_accel = 1;

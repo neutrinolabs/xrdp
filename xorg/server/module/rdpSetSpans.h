@@ -22,7 +22,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef __RDPSETSPANS_H
 #define __RDPSETSPANS_H
 
-void
+#include <xorg-server.h>
+#include <xorgVersion.h>
+#include <xf86.h>
+
+extern _X_EXPORT void
 rdpSetSpans(DrawablePtr pDrawable, GCPtr pGC, char* psrc,
             DDXPointPtr ppt, int* pwidth, int nspans, int fSorted);
 

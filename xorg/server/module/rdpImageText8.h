@@ -22,7 +22,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef __RDPIMAGETEXT8_H
 #define __RDPIMAGETEXT8_H
 
-void
+#include <xorg-server.h>
+#include <xorgVersion.h>
+#include <xf86.h>
+
+extern _X_EXPORT void
 rdpImageText8(DrawablePtr pDrawable, GCPtr pGC,
               int x, int y, int count, char* chars);
 
