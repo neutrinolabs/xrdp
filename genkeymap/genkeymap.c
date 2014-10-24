@@ -45,8 +45,8 @@ int main(int argc, char **argv)
     char text[256];
     char *displayname = NULL;
     char *outfname;
-    char *sections[6] = {"noshift", "shift", "altgr", "shiftaltgr", "capslock", "shiftcapslock"};
-    int states[6] = {0, 1, 0x80, 0x81, 2, 3};
+    char *sections[8] = {"noshift", "shift", "altgr", "shiftaltgr", "capslock", "capslockaltgr", "shiftcapslock", "shiftcapslockaltgr"};
+    int states[8] = {0, 1, 0x80, 0x81, 2, 0x82, 3, 0x83};
     int i;
     int idx;
     int char_count;
@@ -94,7 +94,7 @@ int main(int argc, char **argv)
     e.display = dpy;
     e.same_screen = True;
 
-    for (idx = 0; idx < 6; idx++) /* Sections and states */
+    for (idx = 0; idx < 8; idx++) /* Sections and states */
     {
         fprintf(outf, "[%s]\n", sections[idx]);
         e.state = states[idx];
@@ -115,7 +115,7 @@ int main(int argc, char **argv)
             fprintf(outf, "Key%d=%d:%d\n", i, (int) ks, unicode);
         }
 
-        if (idx != 4)
+        if (idx != 7)
         {
             fprintf(outf, "\n");
         }
