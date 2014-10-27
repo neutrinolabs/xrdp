@@ -17,44 +17,44 @@ AM_CONDITIONAL(HAVE_SYSTEMD, [test -n "$with_systemdsystemunitdir" -a "x$with_sy
 
 AC_ARG_ENABLE(nopam, AS_HELP_STRING([--enable-nopam],
               [Build no PAM support (default: no)]),
-              [nopam=true], [nopam=false])
-AM_CONDITIONAL(SESMAN_NOPAM, [test x$nopam = xtrue])
+              [], [enable_nopam=no])
+AM_CONDITIONAL(SESMAN_NOPAM, [test x$enable_nopam = xyes])
 AC_ARG_ENABLE(kerberos, AS_HELP_STRING([--enable-kerberos],
               [Build kerberos support (default: no)]),
-              [kerberos=true], [kerberos=false])
-AM_CONDITIONAL(SESMAN_KERBEROS, [test x$kerberos = xtrue])
+              [], [enable_kerberos=no])
+AM_CONDITIONAL(SESMAN_KERBEROS, [test x$enable_kerberos = xyes])
 AC_ARG_ENABLE(pamuserpass, AS_HELP_STRING([--enable-pamuserpass],
               [Build pam userpass support (default: no)]),
-              [pamuserpass=true], [pamuserpass=false])
-AM_CONDITIONAL(SESMAN_PAMUSERPASS, [test x$pamuserpass = xtrue])
+              [], [enable_pamuserpass=no])
+AM_CONDITIONAL(SESMAN_PAMUSERPASS, [test x$enable_pamuserpass = xyes])
 AC_ARG_ENABLE(xrdpdebug, AS_HELP_STRING([--enable-xrdpdebug],
               [Build debug (default: no)]),
-              [xrdpdebug=true], [xrdpdebug=false])
-AM_CONDITIONAL(XRDP_DEBUG, [test x$xrdpdebug = xtrue])
+              [], [enable_xrdpdebug=no])
+AM_CONDITIONAL(XRDP_DEBUG, [test x$enable_xrdpdebug = xyes])
 AC_ARG_ENABLE(neutrinordp, AS_HELP_STRING([--enable-neutrinordp],
               [Build neutrinordp module (default: no)]),
-              [neutrinordp=true], [neutrinordp=false])
-AM_CONDITIONAL(XRDP_NEUTRINORDP, [test x$neutrinordp = xtrue])
+              [], [enable_neutrinordp=no])
+AM_CONDITIONAL(XRDP_NEUTRINORDP, [test x$enable_neutrinordp = xyes])
 AC_ARG_ENABLE(jpeg, AS_HELP_STRING([--enable-jpeg],
               [Build jpeg module (default: no)]),
-              [jpeg=true], [jpeg=false])
-AM_CONDITIONAL(XRDP_JPEG, [test x$jpeg = xtrue])
+              [], [enable_jpeg=no])
+AM_CONDITIONAL(XRDP_JPEG, [test x$enable_jpeg = xyes])
 AC_ARG_ENABLE(tjpeg, AS_HELP_STRING([--enable-tjpeg],
               [Build turbo jpeg module (default: no)]),
-              [tjpeg=true], [tjpeg=false])
-AM_CONDITIONAL(XRDP_TJPEG, [test x$tjpeg = xtrue])
+              [], [enable_tjpeg=no])
+AM_CONDITIONAL(XRDP_TJPEG, [test x$enable_tjpeg = xyes])
 AC_ARG_ENABLE(fuse, AS_HELP_STRING([--enable-fuse],
               [Build fuse(clipboard file / drive redir) (default: no)]),
-              [fuse=true], [fuse=false])
-AM_CONDITIONAL(XRDP_FUSE, [test x$fuse = xtrue])
+              [], [enable_fuse=no])
+AM_CONDITIONAL(XRDP_FUSE, [test x$enable_fuse = xyes])
 AC_ARG_ENABLE(xrdpvr, AS_HELP_STRING([--enable-xrdpvr],
               [Build xrdpvr module (default: no)]),
-              [xrdpvr=true], [xrdpvr=false])
-AM_CONDITIONAL(XRDP_XRDPVR, [test x$xrdpvr = xtrue])
+              [], [enable_xrdpvr=no])
+AM_CONDITIONAL(XRDP_XRDPVR, [test x$enable_xrdpvr = xyes])
 AC_ARG_ENABLE(rfxcodec, AS_HELP_STRING([--enable-rfxcodec],
               [Build using librfxcodec (default: no)]),
-              [rfxcodec=true], [rfxcodec=false])
-AM_CONDITIONAL(XRDP_RFXCODEC, [test x$rfxcodec = xtrue])
+              [], [enable_rfxcodec=no])
+AM_CONDITIONAL(XRDP_RFXCODEC, [test x$enable_rfxcodec = xyes])
 
 AM_CONDITIONAL(GOT_PREFIX, test "x${prefix}" != "xNONE"])
 
@@ -64,9 +64,9 @@ AC_CHECK_HEADER([openssl/rc4.h], [],
   [#include <stdlib.h>])
 
 # checking if pam should be autodetected.
-if test -z "$enable_nopam"
+if test "x$enable_nopam" != "xyes"
 then
-  if test -z "$enable_kerberos"
+  if test "x$enable_kerberos" != "xyes"
   then
     AC_CHECK_HEADER([security/pam_appl.h], [],
       [AC_MSG_ERROR([please install libpam0g-dev or pam-devel])])
@@ -86,19 +86,19 @@ fi
 AS_IF( [test "x$enable_neutrinordp" = "xyes"] , [PKG_CHECK_MODULES(FREERDP, freerdp >= 1.0.0)] )
 
 # checking for libjpeg
-if ! test -z "$enable_jpeg"
+if test "x$enable_jpeg" = "xyes"
 then
   AC_CHECK_HEADER([jpeglib.h], [],
     [AC_MSG_ERROR([please install libjpeg-dev or libjpeg-devel])])
 fi
 
-if ! test -z "$enable_xrdpdebug"
+if test "x$enable_xrdpdebug" = "xyes"
 then
   CFLAGS="-g -O0"
 fi
 
 # checking for fuse
-if ! test -z "$enable_fuse"
+if test "x$enable_fuse" = "xyes"
 then
   AC_CHECK_HEADER([fuse.h], [],
     [AC_MSG_ERROR([please install libfuse-dev or fuse-devel])],
@@ -106,7 +106,7 @@ then
 fi
 
 # checking for TurboJPEG
-if ! test -z "$enable_tjpeg"
+if test "x$enable_tjpeg" = "xyes"
 then
 if test ! -z "$TURBOJPEG_PATH"
 then
