@@ -7,6 +7,7 @@ AM_INIT_AUTOMAKE([1.6 foreign])
 AC_PROG_CC
 AC_C_CONST
 AC_PROG_LIBTOOL
+PKG_PROG_PKG_CONFIG
 AC_ARG_WITH([systemdsystemunitdir],
         AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files]),
         [], [with_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)])
