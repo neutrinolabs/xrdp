@@ -15,10 +15,19 @@ if test "x$with_systemdsystemunitdir" != xno; then
 fi
 AM_CONDITIONAL(HAVE_SYSTEMD, [test -n "$with_systemdsystemunitdir" -a "x$with_systemdsystemunitdir" != xno ])
 
+AC_ARG_ENABLE(pam, AS_HELP_STRING([--disable-pam],
+              [Build PAM support (default: yes)]),
+              [], [enable_pam=yes])
 AC_ARG_ENABLE(nopam, AS_HELP_STRING([--enable-nopam],
-              [Build no PAM support (default: no)]),
-              [], [enable_nopam=no])
-AM_CONDITIONAL(SESMAN_NOPAM, [test x$enable_nopam = xyes])
+              [Build no PAM support (default: no, deprecated)]),
+              [
+                  if test "x$enable_nopam" = "xyes"
+                  then
+                      enable_pam=no
+                      AC_MSG_WARN([--enable-nopam option is deprecated. Please use --disable-pam instead.])
+                  fi
+              ])
+AM_CONDITIONAL(SESMAN_NOPAM, [test x$enable_pam != xyes])
 AC_ARG_ENABLE(kerberos, AS_HELP_STRING([--enable-kerberos],
               [Build kerberos support (default: no)]),
               [], [enable_kerberos=no])
@@ -64,7 +73,7 @@ AC_CHECK_HEADER([openssl/rc4.h], [],
   [#include <stdlib.h>])
 
 # checking if pam should be autodetected.
-if test "x$enable_nopam" != "xyes"
+if test "x$enable_pam" = "xyes"
 then
   if test "x$enable_kerberos" != "xyes"
   then
@@ -78,7 +87,7 @@ AC_CHECK_MEMBER([struct in6_addr.s6_addr],
                 [AC_DEFINE(NO_ARPA_INET_H_IP6, 1, [for IPv6])],
                 [#include <arpa/inet.h>])
 
-if test "x$enable_nopam" = "xyes"
+if test "x$enable_pam" != "xyes"
 then
   AC_DEFINE([USE_NOPAM],1,[Disable PAM])
 fi
