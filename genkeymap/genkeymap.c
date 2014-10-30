@@ -37,7 +37,10 @@
 #include <string.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/XKBlib.h>
 #include <locale.h>
+
+extern int xfree86_to_evdev[137-8];
 
 int main(int argc, char **argv)
 {
@@ -57,6 +60,9 @@ int main(int argc, char **argv)
     FILE *outf;
     XKeyPressedEvent e;
     wchar_t wtext[256];
+    XkbDescPtr kbdesc;
+    char *symatom;
+    int is_evdev;
 
     setlocale(LC_CTYPE, "");
     programname = argv[0];
@@ -77,6 +83,30 @@ int main(int argc, char **argv)
                 programname, XDisplayName(displayname));
         return 1;
     }
+
+    /* check whether evdev is used */
+    kbdesc = XkbAllocKeyboard();
+    if (!kbdesc)
+    {
+        fprintf(stderr, "%s:  unable to allocate keyboard desc\n",
+                programname);
+        XCloseDisplay(dpy);
+        return 1;
+    }
+
+    if (XkbGetNames(dpy, XkbKeycodesNameMask, kbdesc) != Success)
+    {
+        fprintf(stderr, "%s:  unable to obtain keycode name for keyboard\n",
+                programname);
+        XkbFreeKeyboard(kbdesc, 0, True);
+        XCloseDisplay(dpy);
+        return 1;
+    }
+
+    symatom = XGetAtomName(dpy, kbdesc->names->keycodes);
+    is_evdev = !strncmp(symatom, "evdev", 5);
+    XFree(symatom);
+    XkbFreeKeyboard(kbdesc, 0, True);
 
     outf = fopen(outfname, "w");
 
@@ -101,7 +131,10 @@ int main(int argc, char **argv)
 
         for (i = 8; i <= 137; i++) /* Keycodes */
         {
-            e.keycode = i;
+            if (is_evdev)
+                e.keycode = xfree86_to_evdev[i-8];
+            else
+                e.keycode = i;
             nbytes = XLookupString(&e, text, 255, &ks, NULL);
             text[nbytes] = 0;
             char_count = mbstowcs(wtext, text, 255);
