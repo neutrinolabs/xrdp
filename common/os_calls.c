@@ -2115,7 +2115,11 @@ g_clearenv(void)
 {
 #if defined(_WIN32)
 #else
+#if defined(BSD)
+  environ[0] = 0;
+#else
   environ = 0;
+#endif
 #endif
 }
 
