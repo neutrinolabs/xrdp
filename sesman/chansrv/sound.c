@@ -43,7 +43,8 @@ static struct trans *g_audio_c_trans_in = 0;  /* connection */
 static int    g_training_sent_time = 0;
 static int    g_cBlockNo = 0;
 static int    g_bytes_in_stream = 0;
-static FIFO   in_fifo;
+static FIFO   g_in_fifo;
+static int    g_bytes_in_fifo = 0;
 
 static struct stream *g_stream_inp = NULL;
 static struct stream *g_stream_incoming_packet = NULL;
@@ -691,7 +692,7 @@ sound_init(void)
     sound_start_source_listener();
 
     /* save data from sound_server_source */
-    fifo_init(&in_fifo, 100);
+    fifo_init(&g_in_fifo, 100);
 
     return 0;
 }
@@ -725,7 +726,7 @@ sound_deinit(void)
         g_audio_c_trans_in = 0;
     }
 
-    fifo_deinit(&in_fifo);
+    fifo_deinit(&g_in_fifo);
 
     return 0;
 }
@@ -1041,9 +1042,12 @@ sound_input_start_recording(void)
 {
     struct stream* s;
 
+    LOG(10, ("sound_input_start_recording:"));
+
     /* if there is any data in FIFO, discard it */
-    while ((s = (struct stream *) fifo_remove(&in_fifo)) != NULL)
+    while ((s = (struct stream *) fifo_remove(&g_in_fifo)) != NULL)
         xstream_free(s);
+    g_bytes_in_fifo = 0;
 
     xstream_new(s, 1024);
 
@@ -1075,6 +1079,8 @@ sound_input_stop_recording(void)
 {
     struct stream* s;
 
+    LOG(10, ("sound_input_stop_recording:"));
+
     xstream_new(s, 1024);
 
     /*
@@ -1098,19 +1104,25 @@ sound_input_stop_recording(void)
  * Process data: xrdp <- client
  *****************************************************************************/
 
-static unsigned char data = 0;
-
 static int APP_CC
 sound_process_input_data(struct stream *s, int bytes)
 {
     struct stream *ls;
 
+    LOG(0, ("sound_process_input_data: bytes %d g_bytes_in_fifo %d",
+        bytes, g_bytes_in_fifo));
+
+    /* cap data in fifo */
+    if (g_bytes_in_fifo > 8 * 1024)
+    {
+        return 0;
+    }
     xstream_new(ls, bytes);
-    memcpy(ls->data, s->p, bytes);
+    g_memcpy(ls->data, s->p, bytes);
     ls->p += bytes;
     s_mark_end(ls);
-
-    fifo_insert(&in_fifo, (void *) ls);
+    fifo_insert(&g_in_fifo, (void *) ls);
+    g_bytes_in_fifo += bytes;
 
     return 0;
 }
@@ -1143,6 +1155,7 @@ sound_sndsrvr_source_data_in(struct trans *trans)
     ts->p = ts->data + 8;
     in_uint8(ts, cmd);
     in_uint16_le(ts, bytes_req);
+    LOG(10, ("sound_sndsrvr_source_data_in: bytes_req %d", bytes_req));
 
     xstream_new(s, bytes_req + 2);
 
@@ -1154,7 +1167,14 @@ sound_sndsrvr_source_data_in(struct trans *trans)
         while (bytes_read < bytes_req)
         {
             if (g_stream_inp == NULL)
-                g_stream_inp = (struct stream *) fifo_remove(&in_fifo);
+            {
+                g_stream_inp = (struct stream *) fifo_remove(&g_in_fifo);
+                if (g_stream_inp != NULL)
+                {
+                    g_bytes_in_fifo -= g_stream_inp->size;
+                    LOG(10, ("  g_bytes_in_fifo %d", g_bytes_in_fifo));
+                }
+            }
 
             if (g_stream_inp == NULL)
             {
