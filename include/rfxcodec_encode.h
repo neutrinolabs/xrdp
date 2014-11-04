@@ -19,8 +19,6 @@
 #ifndef __RFXCODEC_ENCODE_H
 #define __RFXCODEC_ENCODE_H
 
-#define RFX_USE_ACCEL 0
-
 #define RFX_FORMAT_BGRA 0
 #define RFX_FORMAT_RGBA 1
 #define RFX_FORMAT_BGR  2

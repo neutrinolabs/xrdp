@@ -27,7 +27,10 @@ amd64 asm files
 int
 cpuid_amd64(int eax_in, int ecx_in, int *eax, int *ebx, int *ecx, int *edx);
 int
-dwt_shift_amd64_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
+dwt_shift_amd64_sse2(const int *quantization_values, uint8 *data,
+                     sint16 *dwt_buffer1, sint16 *dwt_buffer);
+int
+diff_rlgr1_amd64(sint16 *co, int num_co, uint8 *dst, int dst_bytes);
 int
 diff_rlgr3_amd64(sint16 *co, int num_co, uint8 *dst, int dst_bytes);
 

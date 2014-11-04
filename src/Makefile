@@ -7,7 +7,8 @@ rfxencode_rlgr1.o rfxencode_rlgr3.o
 #OBJS += cpuid_amd64.o rfxrlgr1_amd64.o rfxrlgr3_amd64.o rfxdwt_amd64_sse2.o
 
 CFLAGS = $(PROFIL) -g -O2 -Wall -fPIC -I../include
-#-DRFX_USE_ACCEL
+#-DRFX_USE_ACCEL_X86
+#-DRFX_USE_ACCEL_AMD64
 
 LDFLAGS =
 

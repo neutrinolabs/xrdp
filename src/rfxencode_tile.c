@@ -34,6 +34,14 @@
 #include "rfxencode_rlgr1.h"
 #include "rfxencode_rlgr3.h"
 
+#ifdef RFX_USE_ACCEL_X86
+#include "x86/funcs_x86.h"
+#endif
+
+#ifdef RFX_USE_ACCEL_AMD64
+#include "amd64/funcs_amd64.h"
+#endif
+
 #define LLOG_LEVEL 1
 #define LLOGLN(_level, _args) \
     do { if (_level < LLOG_LEVEL) { printf _args ; printf("\n"); } } while (0)
@@ -199,20 +207,76 @@ rfx_encode_component_rlgr3(struct rfxencode *enc, const int *quantization_values
 
 /******************************************************************************/
 int
-rfx_encode_component_x86_sse2(struct rfxencode *enc,
-                              const int *quantization_values,
-                              uint8 *data,
-                              uint8 *buffer, int buffer_size, int *size)
+rfx_encode_component_rlgr1_x86_sse2(struct rfxencode *enc,
+                                    const int *quantization_values,
+                                    uint8 *data,
+                                    uint8 *buffer, int buffer_size, int *size)
 {
-    LLOGLN(10, ("rfx_encode_component_x86_sse2:"));
-#if defined(RFX_USE_ACCEL) && RFX_USE_ACCEL
-    /* put asm calls here */
+    LLOGLN(10, ("rfx_encode_component_rlgr1_x86_sse2:"));
+#if defined(RFX_USE_ACCEL_X86)
+    if (dwt_shift_x86_sse2(quantization_values, data, enc->dwt_buffer1,
+                           enc->dwt_buffer) != 0)
+    {
+        return 1;
+    }
+    *size = diff_rlgr1_x86(enc->dwt_buffer1, 4096, buffer, buffer_size);
+#endif
+    return 0;
+}
+
+/******************************************************************************/
+int
+rfx_encode_component_rlgr3_x86_sse2(struct rfxencode *enc,
+                                    const int *quantization_values,
+                                    uint8 *data,
+                                    uint8 *buffer, int buffer_size, int *size)
+{
+    LLOGLN(10, ("rfx_encode_component_rlgr3_x86_sse2:"));
+#if defined(RFX_USE_ACCEL_X86)
     if (dwt_shift_x86_sse2(quantization_values, data, enc->dwt_buffer1,
                            enc->dwt_buffer) != 0)
     {
         return 1;
     }
     *size = diff_rlgr3_x86(enc->dwt_buffer1, 4096, buffer, buffer_size);
+#endif
+    return 0;
+}
+
+/******************************************************************************/
+int
+rfx_encode_component_rlgr1_amd64_sse2(struct rfxencode *enc,
+                                      const int *quantization_values,
+                                      uint8 *data,
+                                      uint8 *buffer, int buffer_size, int *size)
+{
+    LLOGLN(10, ("rfx_encode_component_rlgr1_amd64_sse2:"));
+#if defined(RFX_USE_ACCEL_AMD64)
+    if (dwt_shift_amd64_sse2(quantization_values, data, enc->dwt_buffer1,
+                             enc->dwt_buffer) != 0)
+    {
+        return 1;
+    }
+    *size = diff_rlgr1_amd64(enc->dwt_buffer1, 4096, buffer, buffer_size);
+#endif
+    return 0;
+}
+
+/******************************************************************************/
+int
+rfx_encode_component_rlgr3_amd64_sse2(struct rfxencode *enc,
+                                      const int *quantization_values,
+                                      uint8 *data,
+                                      uint8 *buffer, int buffer_size, int *size)
+{
+    LLOGLN(10, ("rfx_encode_component_rlgr3_amd64_sse2:"));
+#if defined(RFX_USE_ACCEL_AMD64)
+    if (dwt_shift_amd64_sse2(quantization_values, data, enc->dwt_buffer1,
+                             enc->dwt_buffer) != 0)
+    {
+        return 1;
+    }
+    *size = diff_rlgr3_amd64(enc->dwt_buffer1, 4096, buffer, buffer_size);
 #endif
     return 0;
 }

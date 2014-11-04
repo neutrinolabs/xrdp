@@ -9,7 +9,8 @@ section .data
 %endmacro
 
 ;int
-;dwt_shift_amd64_sse2(const int* qtable, sint8* src, sint16* dst, sint16* temp)
+;dwt_shift_amd64_sse2(const int *quantization_values, uint8 *data,
+;                     sint16 *dwt_buffer1, sint16 *dwt_buffer);
 
 PROC dwt_shift_amd64_sse2
     ; save registers
