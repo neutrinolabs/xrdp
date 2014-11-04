@@ -42,14 +42,14 @@
 static int
 rfx_encode_format_rgb(char *rgb_data, int width, int height,
                       int stride_bytes, int pixel_format,
-                      sint8 *r_buf, sint8 *g_buf, sint8 *b_buf)
+                      uint8 *r_buf, uint8 *g_buf, uint8 *b_buf)
 {
     int x;
     int y;
     const uint8 *src;
-    sint8 r;
-    sint8 g;
-    sint8 b;
+    uint8 r;
+    uint8 g;
+    uint8 b;
 
     switch (pixel_format)
     {
@@ -131,7 +131,7 @@ rfx_encode_format_rgb(char *rgb_data, int width, int height,
   -11071 -21736  32807
    32756 -27429  -5327 */
 static int
-rfx_encode_rgb_to_ycbcr(sint8 *y_r_buf, sint8 *cb_g_buf, sint8 *cr_b_buf)
+rfx_encode_rgb_to_ycbcr(uint8 *y_r_buf, uint8 *cb_g_buf, uint8 *cr_b_buf)
 {
     int i;
     sint32 r, g, b;
@@ -147,9 +147,9 @@ rfx_encode_rgb_to_ycbcr(sint8 *y_r_buf, sint8 *cb_g_buf, sint8 *cr_b_buf)
         cb = (r * -11071 + g * -21736 + b *  32807) >> 16;
         cr = (r *  32756 + g * -27429 + b *  -5327) >> 16;
 
-        y_r_buf[i] = MINMAX(y - 128, -128, 127);
-        cb_g_buf[i] = MINMAX(cb, -128, 127);
-        cr_b_buf[i] = MINMAX(cr, -128, 127);
+        y_r_buf[i] = MINMAX(y, 0, 255);
+        cb_g_buf[i] = MINMAX(cb + 128, 0, 255);
+        cr_b_buf[i] = MINMAX(cr + 128, 0, 255);
 
     }
     return 0;
@@ -158,7 +158,7 @@ rfx_encode_rgb_to_ycbcr(sint8 *y_r_buf, sint8 *cb_g_buf, sint8 *cr_b_buf)
 /******************************************************************************/
 int
 rfx_encode_component_rlgr1(struct rfxencode *enc, const int *quantization_values,
-                           sint8 *data, uint8 *buffer, int buffer_size, int *size)
+                           uint8 *data, uint8 *buffer, int buffer_size, int *size)
 {
     if (rfx_dwt_2d_encode(data, enc->dwt_buffer1, enc->dwt_buffer) != 0)
     {
@@ -179,7 +179,7 @@ rfx_encode_component_rlgr1(struct rfxencode *enc, const int *quantization_values
 /******************************************************************************/
 int
 rfx_encode_component_rlgr3(struct rfxencode *enc, const int *quantization_values,
-                           sint8 *data, uint8 *buffer, int buffer_size, int *size)
+                           uint8 *data, uint8 *buffer, int buffer_size, int *size)
 {
     if (rfx_dwt_2d_encode(data, enc->dwt_buffer1, enc->dwt_buffer) != 0)
     {
@@ -201,10 +201,11 @@ rfx_encode_component_rlgr3(struct rfxencode *enc, const int *quantization_values
 int
 rfx_encode_component_x86_sse2(struct rfxencode *enc,
                               const int *quantization_values,
-                              sint8 *data,
+                              uint8 *data,
                               uint8 *buffer, int buffer_size, int *size)
 {
     LLOGLN(10, ("rfx_encode_component_x86_sse2:"));
+#if defined(RFX_USE_ACCEL) && RFX_USE_ACCEL
     /* put asm calls here */
     if (dwt_shift_x86_sse2(quantization_values, data, enc->dwt_buffer1,
                            enc->dwt_buffer) != 0)
@@ -212,6 +213,7 @@ rfx_encode_component_x86_sse2(struct rfxencode *enc,
         return 1;
     }
     *size = diff_rlgr3_x86(enc->dwt_buffer1, 4096, buffer, buffer_size);
+#endif
     return 0;
 }
 
@@ -222,9 +224,9 @@ rfx_encode_rgb(struct rfxencode *enc, char *rgb_data,
                const int *y_quants, const int *cb_quants, const int *cr_quants,
                STREAM *data_out, int *y_size, int *cb_size, int *cr_size)
 {
-    sint8 *y_r_buffer;
-    sint8 *cb_g_buffer;
-    sint8 *cr_b_buffer;
+    uint8 *y_r_buffer;
+    uint8 *cb_g_buffer;
+    uint8 *cr_b_buffer;
 
     y_r_buffer = enc->y_r_buffer;
     cb_g_buffer = enc->cb_g_buffer;
@@ -276,13 +278,13 @@ rfx_encode_yuv(struct rfxencode *enc, char *yuv_data,
                const int *y_quants, const int *u_quants, const int *v_quants,
                STREAM *data_out, int *y_size, int *u_size, int *v_size)
 {
-    sint8 *y_buffer;
-    sint8 *u_buffer;
-    sint8 *v_buffer;
+    uint8 *y_buffer;
+    uint8 *u_buffer;
+    uint8 *v_buffer;
 
-    y_buffer = (sint8 *) yuv_data;
-    u_buffer = (sint8 *) (yuv_data + RFX_YUV_BTES);
-    v_buffer = (sint8 *) (yuv_data + RFX_YUV_BTES * 2);
+    y_buffer = (uint8 *) yuv_data;
+    u_buffer = (uint8 *) (yuv_data + RFX_YUV_BTES);
+    v_buffer = (uint8 *) (yuv_data + RFX_YUV_BTES * 2);
     if (enc->rfx_encode(enc, y_quants, y_buffer,
                         stream_get_tail(data_out),
                         stream_get_left(data_out),

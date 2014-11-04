@@ -146,10 +146,10 @@ rfx_dwt_2d_encode_block(sint16 *buffer, sint16 *dwt, int subband_width)
 
 /******************************************************************************/
 static int
-rfx_dwt_2d_encode_block8(sint8 *in_buffer,
+rfx_dwt_2d_encode_block8(uint8 *in_buffer,
                          sint16 *buffer, sint16 *dwt, int subband_width)
 {
-    sint8 *src;
+    uint8 *src;
     sint16 *l, *h;
     int total_width;
     int x, y;
@@ -166,8 +166,8 @@ rfx_dwt_2d_encode_block8(sint8 *in_buffer,
         l = dwt + x;
         h = l + subband_width * total_width;
         src = in_buffer + x;
-        *h = (src[total_width] - ((src[0] + src[2 * total_width]) >> 1)) >> 1;
-        *l = src[0] + *h;
+        *h = ((src[total_width] - 128) - (((src[0] - 128) + (src[2 * total_width] - 128)) >> 1)) >> 1;
+        *l = (src[0] - 128) + *h;
 
         /* loop */
         for (n = 1; n < subband_width - 1; n++)
@@ -176,8 +176,8 @@ rfx_dwt_2d_encode_block8(sint8 *in_buffer,
             l = dwt + n * total_width + x;
             h = l + subband_width * total_width;
             src = in_buffer + y * total_width + x;
-            *h = (src[total_width] - ((src[0] + src[2 * total_width]) >> 1)) >> 1;
-            *l = src[0] + ((*(h - total_width) + *h) >> 1);
+            *h = ((src[total_width] - 128) - (((src[0] - 128) + (src[2 * total_width] - 128)) >> 1)) >> 1;
+            *l = (src[0] - 128) + ((*(h - total_width) + *h) >> 1);
         }
 
         /* post */
@@ -186,8 +186,8 @@ rfx_dwt_2d_encode_block8(sint8 *in_buffer,
         l = dwt + n * total_width + x;
         h = l + subband_width * total_width;
         src = in_buffer + y * total_width + x;
-        *h = (src[total_width] - ((src[0] + src[0]) >> 1)) >> 1;
-        *l = src[0] + ((*(h - total_width) + *h) >> 1);
+        *h = ((src[total_width] - 128) - (((src[0] - 128) + (src[0] - 128)) >> 1)) >> 1;
+        *l = (src[0] - 128) + ((*(h - total_width) + *h) >> 1);
 
     }
 
@@ -196,7 +196,7 @@ rfx_dwt_2d_encode_block8(sint8 *in_buffer,
 
 /******************************************************************************/
 int
-rfx_dwt_2d_encode(sint8 *in_buffer, sint16 *buffer, sint16 *dwt_buffer)
+rfx_dwt_2d_encode(uint8 *in_buffer, sint16 *buffer, sint16 *dwt_buffer)
 {
     rfx_dwt_2d_encode_block8(in_buffer, buffer, dwt_buffer, 32);
     rfx_dwt_2d_encode_block(buffer + 3072, dwt_buffer, 16);

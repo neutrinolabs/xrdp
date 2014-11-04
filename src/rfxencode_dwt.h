@@ -20,6 +20,6 @@
 #define __RFXENCODE_RFX_H
 
 int
-rfx_dwt_2d_encode(sint8 *in_buffer, sint16 *buffer, sint16 *dwt_buffer);
+rfx_dwt_2d_encode(uint8 *in_buffer, sint16 *buffer, sint16 *dwt_buffer);
 
 #endif

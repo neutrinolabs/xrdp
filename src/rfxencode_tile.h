@@ -23,27 +23,28 @@
 
 #include "rfxcommon.h"
 
+
 #define RFX_YUV_BTES (64 * 64)
 
 int
 rfx_encode_component_rlgr1(struct rfxencode *enc,
                            const int *quantization_values,
-                           sint8 *data,
+                           uint8 *data,
                            uint8 *buffer, int buffer_size, int *size);
 int
 rfx_encode_component_rlgr3(struct rfxencode *enc,
                            const int *quantization_values,
-                           sint8 *data,
+                           uint8 *data,
                            uint8 *buffer, int buffer_size, int *size);
 int
 rfx_encode_component_x86_sse2(struct rfxencode *enc,
                               const int *quantization_values,
-                              sint8 *data,
+                              uint8 *data,
                               uint8 *buffer, int buffer_size, int *size);
 int
 rfx_encode_component_amd64_sse2(struct rfxencode *enc,
                                 const int *quantization_values,
-                                sint8 *data,
+                                uint8 *data,
                                 uint8 *buffer, int buffer_size, int *size);
 int
 rfx_encode_rgb(struct rfxencode *enc, char *rgb_data,
