@@ -115,4 +115,5 @@ struct vnc
   char* clip_data;
   int clip_data_size;
   tbus sck_obj;
+  int delay_ms;
 };
