@@ -906,7 +906,8 @@ xrdp_mcs_send_connect_response(struct xrdp_mcs *self)
 int APP_CC
 xrdp_mcs_incoming(struct xrdp_mcs *self)
 {
-	int i;
+    int index;
+
     DEBUG(("  in xrdp_mcs_incoming"));
 
     if (xrdp_mcs_recv_connect_initial(self) != 0)
@@ -945,7 +946,7 @@ xrdp_mcs_incoming(struct xrdp_mcs *self)
         return 1;
     }
 
-    for (i = 0; i < self->channel_list->count + 2; i++)
+    for (index = 0; index < self->channel_list->count + 2; index++)
     {
         if (xrdp_mcs_recv_cjrq(self) != 0)
         {
@@ -953,7 +954,7 @@ xrdp_mcs_incoming(struct xrdp_mcs *self)
         }
 
         if (xrdp_mcs_send_cjcf(self, self->userid,
-                               self->userid + MCS_USERCHANNEL_BASE + i) != 0)
+                      self->userid + MCS_USERCHANNEL_BASE + index) != 0)
         {
             return 1;
         }

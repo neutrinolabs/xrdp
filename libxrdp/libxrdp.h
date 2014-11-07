@@ -129,6 +129,7 @@ struct xrdp_sec
     void *encrypt_fips_info;
     void *decrypt_fips_info;
     void *sign_fips_info;
+    int is_security_header_present; /* boolean */
 };
 
 /* channel */
