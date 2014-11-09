@@ -979,6 +979,13 @@ lib_mod_connect(struct vnc *v)
 
     v->sck_obj = g_create_wait_obj_from_socket(v->sck, 0);
     v->sck_closed = 0;
+    if (v->delay_ms > 0)
+    {
+        g_sprintf(text, "Waiting %d ms for VNC to start...", v->delay_ms);
+        v->server_msg(v, text, 0);
+        g_sleep(v->delay_ms);
+    }
+    
     g_sprintf(text, "VNC connecting to %s %s", v->ip, con_port);
     v->server_msg(v, text, 0);
     error = g_tcp_connect(v->sck, v->ip, con_port);
@@ -1330,6 +1337,10 @@ lib_mod_set_param(struct vnc *v, char *name, char *value)
     else if (g_strcasecmp(name, "keylayout") == 0)
     {
         v->keylayout = g_atoi(value);
+    }
+    else if (g_strcasecmp(name, "delay_ms") == 0)
+    {
+        v->delay_ms = g_atoi(value);
     }
 
     return 0;
