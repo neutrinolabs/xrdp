@@ -636,7 +636,6 @@ session_start_fork(int width, int height, int bpp, char *username,
                 env_set_user(username, passwd_file, display,
                              g_cfg->session_variables1,
                              g_cfg->session_variables2);
-                env_check_password_file(passwd_file, password);
 
                 g_snprintf(text, 255, "%d", g_cfg->sess.max_idle_time);
                 g_setenv("XRDP_SESMAN_MAX_IDLE_TIME", text, 1);
@@ -676,6 +675,7 @@ session_start_fork(int width, int height, int bpp, char *username,
                 }
                 else if (type == SESMAN_SESSION_TYPE_XVNC)
                 {
+                    env_check_password_file(passwd_file, password);
                     xserver_params = list_create();
                     xserver_params->auto_free = 1;
 
