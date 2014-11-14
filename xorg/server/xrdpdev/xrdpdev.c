@@ -322,7 +322,7 @@ rdpDeferredRandR(OsTimerPtr timer, CARD32 now, pointer arg)
 
     pScreen = (ScreenPtr) arg;
     dev = rdpGetDevFromScreen(pScreen);
-    LLOGLN(10, ("rdpDeferredRandR:"));
+    LLOGLN(0, ("rdpDeferredRandR:"));
     pRRScrPriv = rrGetScrPriv(pScreen);
     if (pRRScrPriv == 0)
     {
@@ -436,7 +436,9 @@ rdpScreenInit(ScreenPtr pScreen, int argc, char **argv)
     dev->bitsPerPixel = rdpBitsPerPixel(dev->depth);
     dev->sizeInBytes = dev->paddedWidthInBytes * dev->height;
     LLOGLN(0, ("rdpScreenInit: pfbMemory bytes %d", dev->sizeInBytes));
-    dev->pfbMemory = (char *) g_malloc(dev->sizeInBytes, 1);
+    dev->pfbMemory_alloc = (char *) g_malloc(dev->sizeInBytes + 16, 1);
+    dev->pfbMemory = (char*) RDPALIGN(dev->pfbMemory_alloc, 16);
+    LLOGLN(0, ("rdpScreenInit: pfbMemory %p", dev->pfbMemory));
     if (!fbScreenInit(pScreen, dev->pfbMemory,
                       pScrn->virtualX, pScrn->virtualY,
                       pScrn->xDpi, pScrn->yDpi, pScrn->displayWidth,
@@ -620,6 +622,17 @@ rdpValidMode(ScrnInfoPtr a, DisplayModePtr b, Bool c, int d)
 }
 
 /*****************************************************************************/
+static void
+#if XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(1, 13, 0, 0, 0)
+rdpFreeScreen(int a, int b)
+#else
+rdpFreeScreen(ScrnInfoPtr a)
+#endif
+{
+    LLOGLN(0, ("rdpFreeScreen:"));
+}
+
+/*****************************************************************************/
 static Bool
 rdpProbe(DriverPtr drv, int flags)
 {
@@ -670,7 +683,7 @@ rdpProbe(DriverPtr drv, int flags)
             pscrn->EnterVT       = rdpEnterVT;
             pscrn->LeaveVT       = rdpLeaveVT;
             pscrn->ValidMode     = rdpValidMode;
-
+            pscrn->FreeScreen    = rdpFreeScreen;
             xf86DrvMsg(pscrn->scrnIndex, X_INFO, "%s", "using default device\n");
         }
     }

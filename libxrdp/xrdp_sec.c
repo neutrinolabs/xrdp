@@ -185,8 +185,6 @@ static const tui8 g_fips_ivec[8] =
     0x12, 0x34, 0x56, 0x78, 0x90, 0xAB, 0xCD, 0xEF
 };
 
-static int is_security_header_present = 1; /* next packet should contain security header? */
-
 /*****************************************************************************/
 static void APP_CC
 hex_str_to_bin(char *in, char *out, int out_len)
@@ -432,42 +430,44 @@ xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans)
 {
     struct xrdp_sec *self;
 
-	DEBUG((" in xrdp_sec_create"));
-	self = (struct xrdp_sec *) g_malloc(sizeof(struct xrdp_sec), 1);
-	self->rdp_layer = owner;
-	self->crypt_method = CRYPT_METHOD_NONE; /* set later */
-	self->crypt_level = CRYPT_LEVEL_NONE;
-	self->mcs_layer = xrdp_mcs_create(self, trans, &(self->client_mcs_data),
-			&(self->server_mcs_data));
-	self->fastpath_layer = xrdp_fastpath_create(self, trans);
-	self->chan_layer = xrdp_channel_create(self, self->mcs_layer);
-	DEBUG((" out xrdp_sec_create"));
+    DEBUG((" in xrdp_sec_create"));
+    self = (struct xrdp_sec *) g_malloc(sizeof(struct xrdp_sec), 1);
+    self->rdp_layer = owner;
+    self->crypt_method = CRYPT_METHOD_NONE; /* set later */
+    self->crypt_level = CRYPT_LEVEL_NONE;
+    self->mcs_layer = xrdp_mcs_create(self, trans, &(self->client_mcs_data),
+                                      &(self->server_mcs_data));
+    self->fastpath_layer = xrdp_fastpath_create(self, trans);
+    self->chan_layer = xrdp_channel_create(self, self->mcs_layer);
+    self->is_security_header_present = 1;
+    DEBUG((" out xrdp_sec_create"));
 
-	return self;
+    return self;
 }
 
 /*****************************************************************************/
 void APP_CC
-xrdp_sec_delete(struct xrdp_sec *self) {
+xrdp_sec_delete(struct xrdp_sec *self)
+{
+    if (self == 0)
+    {
+        g_writeln("xrdp_sec_delete: self is null");
+        return;
+    }
 
-	if (self == 0) {
-		g_writeln("xrdp_sec_delete:  indata is null");
-		return;
-	}
-
-	xrdp_channel_delete(self->chan_layer);
-	xrdp_mcs_delete(self->mcs_layer);
-	xrdp_fastpath_delete(self->fastpath_layer);
-	ssl_rc4_info_delete(self->decrypt_rc4_info); /* TODO clear all data */
-	ssl_rc4_info_delete(self->encrypt_rc4_info); /* TODO clear all data */
-	ssl_des3_info_delete(self->decrypt_fips_info);
-	ssl_des3_info_delete(self->encrypt_fips_info);
-	ssl_hmac_info_delete(self->sign_fips_info);
-	g_free(self->client_mcs_data.data);
-	g_free(self->server_mcs_data.data);
-	/* Crypto information must always be cleared */
-	g_memset(self, 0, sizeof(struct xrdp_sec));
-	g_free(self);
+    xrdp_channel_delete(self->chan_layer);
+    xrdp_mcs_delete(self->mcs_layer);
+    xrdp_fastpath_delete(self->fastpath_layer);
+    ssl_rc4_info_delete(self->decrypt_rc4_info); /* TODO clear all data */
+    ssl_rc4_info_delete(self->encrypt_rc4_info); /* TODO clear all data */
+    ssl_des3_info_delete(self->decrypt_fips_info);
+    ssl_des3_info_delete(self->encrypt_fips_info);
+    ssl_hmac_info_delete(self->sign_fips_info);
+    g_free(self->client_mcs_data.data);
+    g_free(self->server_mcs_data.data);
+    /* Crypto information must always be cleared */
+    g_memset(self, 0, sizeof(struct xrdp_sec));
+    g_free(self);
 }
 
 /*****************************************************************************/
@@ -490,7 +490,6 @@ xrdp_sec_init(struct xrdp_sec *self, struct stream *s)
     }
     else
     {
-//        s_push_layer(s, sec_hdr, 4);
     }
 
     return 0;
@@ -1209,7 +1208,7 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
     }
 
 
-    if (!is_security_header_present)
+    if (!(self->is_security_header_present))
     {
         return 0;
     }
@@ -1326,7 +1325,8 @@ xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan)
         if (self->crypt_level == CRYPT_LEVEL_NONE
                 && self->crypt_method == CRYPT_METHOD_NONE)
         {
-            is_security_header_present = 0; /* in tls mode, no more security header from now on */
+            /* in tls mode, no more security header from now on */
+            self->is_security_header_present = 0;
         }
 
         DEBUG((" out xrdp_sec_recv"));

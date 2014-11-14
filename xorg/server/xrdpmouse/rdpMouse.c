@@ -27,6 +27,7 @@ xrdp mouse module
 
 /* this should be before all X11 .h files */
 #include <xorg-server.h>
+#include <xorgVersion.h>
 
 /* all driver need this */
 #include <xf86.h>
@@ -309,6 +310,7 @@ rdpmouseUnInit(InputDriverPtr drv, InputInfoPtr info, int flags)
 {
     LLOGLN(0, ("rdpmouseUnInit: drv %p info %p, flags 0x%x",
            drv, info, flags));
+    rdpUnregisterInputCallback(rdpInputMouse);
 }
 
 /******************************************************************************/

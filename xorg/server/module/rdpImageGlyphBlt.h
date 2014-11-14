@@ -22,7 +22,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef __RDPIMAGEGLYPHBLT_H
 #define __RDPIMAGEGLYPHBLT_H
 
-void
+#include <xorg-server.h>
+#include <xorgVersion.h>
+#include <xf86.h>
+
+extern _X_EXPORT void
 rdpImageGlyphBlt(DrawablePtr pDrawable, GCPtr pGC,
                  int x, int y, unsigned int nglyph,
                  CharInfoPtr* ppci, pointer pglyphBase);

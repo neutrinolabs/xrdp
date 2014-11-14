@@ -460,6 +460,7 @@ session_start_fork(int width, int height, int bpp, char *username,
     char screen[32];
     char text[256];
     char passwd_file[256];
+    char *pfile;
     char **pp1 = (char **)NULL;
     struct session_chain *temp = (struct session_chain *)NULL;
     struct list *xserver_params = (struct list *)NULL;
@@ -633,10 +634,14 @@ session_start_fork(int width, int height, int bpp, char *username,
             }
             else if (xpid == 0) /* child */
             {
-                env_set_user(username, passwd_file, display,
+                pfile = 0;
+                if (type == SESMAN_SESSION_TYPE_XVNC)
+                {
+                    pfile = passwd_file;
+                }
+                env_set_user(username, pfile, display,
                              g_cfg->session_variables1,
                              g_cfg->session_variables2);
-                env_check_password_file(passwd_file, password);
 
                 g_snprintf(text, 255, "%d", g_cfg->sess.max_idle_time);
                 g_setenv("XRDP_SESMAN_MAX_IDLE_TIME", text, 1);
@@ -676,6 +681,7 @@ session_start_fork(int width, int height, int bpp, char *username,
                 }
                 else if (type == SESMAN_SESSION_TYPE_XVNC)
                 {
+                    env_check_password_file(passwd_file, password);
                     xserver_params = list_create();
                     xserver_params->auto_free = 1;
 

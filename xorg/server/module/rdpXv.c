@@ -43,6 +43,7 @@ XVideo
 #include "rdpMisc.h"
 #include "rdpReg.h"
 #include "rdpClientCon.h"
+#include "rdpXv.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
@@ -502,6 +503,7 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
     rgbend32 = rgborg32 + width * height;
     rgbend32 = (int *) RDPALIGN(rgbend32, 16);
     error = 0;
+
     switch (format)
     {
         case FOURCC_YV12:
@@ -528,12 +530,21 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
     {
         return Success;
     }
-    error = stretch_RGB32_RGB32(rgborg32, width, height,
-                                src_x, src_y, src_w, src_h,
-                                rgbend32, drw_w, drw_h);
-    if (error != 0)
+    if ((width == drw_w) && (height == drw_h))
     {
-        return Success;
+        LLOGLN(10, ("xrdpVidPutImage: strech skip"));
+        rgbend32 = rgborg32;
+    }
+    else
+    {
+        error = stretch_RGB32_RGB32(rgborg32, width, height,
+                                    src_x, src_y, src_w, src_h,
+                                    rgbend32, drw_w, drw_h);
+        if (error != 0)
+        {
+            return Success;
+        }
+
     }
 
     tempGC = GetScratchGC(dst->depth, pScrn->pScreen);
@@ -542,7 +553,8 @@ xrdpVidPutImage(ScrnInfoPtr pScrn,
         ValidateGC(dst, tempGC);
         (*tempGC->ops->PutImage)(dst, tempGC, 24,
                                  drw_x - dst->x, drw_y - dst->y,
-                                 drw_w, drw_h, 0, ZPixmap, (char*)rgbend32);
+                                 drw_w, drw_h, 0, ZPixmap,
+                                 (char *) rgbend32);
         FreeScratchGC(tempGC);
     }
 

@@ -22,6 +22,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef __RDPFILLSPANS_H
 #define __RDPFILLSPANS_H
 
+#include <xorg-server.h>
+#include <xorgVersion.h>
+#include <xf86.h>
+
 void
 rdpFillSpans(DrawablePtr pDrawable, GCPtr pGC, int nInit,
              DDXPointPtr pptInit, int* pwidthInit, int fSorted);

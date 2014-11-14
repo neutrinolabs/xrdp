@@ -33,6 +33,8 @@ to deal with regions changing in xorg versions
 #include <xf86.h>
 #include <xf86_OSproc.h>
 
+#include "rdpReg.h"
+
 /*
 miRegionCopy      ->      RegionCopy
 miTranslateRegion ->      RegionTranslate

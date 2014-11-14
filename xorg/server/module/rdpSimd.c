@@ -35,6 +35,8 @@ SIMD function asign
 
 #include "rdp.h"
 #include "rdpXv.h"
+#include "rdpCapture.h"
+#include "rdpSimd.h"
 
 /* use simd, run time */
 int g_simd_use_accel = 1;
@@ -65,6 +67,11 @@ rdpSimdInit(ScreenPtr pScreen, ScrnInfoPtr pScrn)
     dev = XRDPPTR(pScrn);
     /* assign functions */
     LLOGLN(0, ("rdpSimdInit: assigning yuv functions"));
+    dev->yv12_to_rgb32 = YV12_to_RGB32;
+    dev->i420_to_rgb32 = I420_to_RGB32;
+    dev->yuy2_to_rgb32 = YUY2_to_RGB32;
+    dev->uyvy_to_rgb32 = UYVY_to_RGB32;
+    dev->a8r8g8b8_to_a8b8g8r8_box = a8r8g8b8_to_a8b8g8r8_box;
 #if SIMD_USE_ACCEL
     if (g_simd_use_accel)
     {
@@ -81,14 +88,6 @@ rdpSimdInit(ScreenPtr pScreen, ScrnInfoPtr pScrn)
             dev->uyvy_to_rgb32 = uyvy_to_rgb32_amd64_sse2;
             LLOGLN(0, ("rdpSimdInit: sse2 amd64 yuv functions assigned"));
         }
-        else
-        {
-            dev->yv12_to_rgb32 = YV12_to_RGB32;
-            dev->i420_to_rgb32 = I420_to_RGB32;
-            dev->yuy2_to_rgb32 = YUY2_to_RGB32;
-            dev->uyvy_to_rgb32 = UYVY_to_RGB32;
-            LLOGLN(0, ("rdpSimdInit: warning, c yuv functions assigned"));
-        }
 #elif defined(__x86__) || defined(_M_IX86) || defined(__i386__)
         int ax, bx, cx, dx;
         cpuid_x86(1, 0, &ax, &bx, &cx, &dx);
@@ -100,38 +99,11 @@ rdpSimdInit(ScreenPtr pScreen, ScrnInfoPtr pScrn)
             dev->i420_to_rgb32 = i420_to_rgb32_x86_sse2;
             dev->yuy2_to_rgb32 = yuy2_to_rgb32_x86_sse2;
             dev->uyvy_to_rgb32 = uyvy_to_rgb32_x86_sse2;
+            dev->a8r8g8b8_to_a8b8g8r8_box = a8r8g8b8_to_a8b8g8r8_box_x86_sse2;
             LLOGLN(0, ("rdpSimdInit: sse2 x86 yuv functions assigned"));
         }
-        else
-        {
-            dev->yv12_to_rgb32 = YV12_to_RGB32;
-            dev->i420_to_rgb32 = I420_to_RGB32;
-            dev->yuy2_to_rgb32 = YUY2_to_RGB32;
-            dev->uyvy_to_rgb32 = UYVY_to_RGB32;
-            LLOGLN(0, ("rdpSimdInit: warning, c yuv functions assigned"));
-        }
-#else
-        dev->yv12_to_rgb32 = YV12_to_RGB32;
-        dev->i420_to_rgb32 = I420_to_RGB32;
-        dev->yuy2_to_rgb32 = YUY2_to_RGB32;
-        dev->uyvy_to_rgb32 = UYVY_to_RGB32;
-        LLOGLN(0, ("rdpSimdInit: warning, c yuv functions assigned"));
 #endif
     }
-    else
-    {
-        dev->yv12_to_rgb32 = YV12_to_RGB32;
-        dev->i420_to_rgb32 = I420_to_RGB32;
-        dev->yuy2_to_rgb32 = YUY2_to_RGB32;
-        dev->uyvy_to_rgb32 = UYVY_to_RGB32;
-        LLOGLN(0, ("rdpSimdInit: warning, c yuv functions assigned"));
-    }
-#else
-        dev->yv12_to_rgb32 = YV12_to_RGB32;
-        dev->i420_to_rgb32 = I420_to_RGB32;
-        dev->yuy2_to_rgb32 = YUY2_to_RGB32;
-        dev->uyvy_to_rgb32 = UYVY_to_RGB32;
-        LLOGLN(0, ("rdpSimdInit: warning, c yuv functions assigned"));
 #endif
     return 1;
 }

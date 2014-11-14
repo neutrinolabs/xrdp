@@ -43,9 +43,11 @@ static struct trans *g_audio_c_trans_in = 0;  /* connection */
 static int    g_training_sent_time = 0;
 static int    g_cBlockNo = 0;
 static int    g_bytes_in_stream = 0;
-static FIFO   in_fifo;
+static FIFO   g_in_fifo;
+static int    g_bytes_in_fifo = 0;
 
 static struct stream *g_stream_inp = NULL;
+static struct stream *g_stream_incoming_packet = NULL;
 
 #define BBUF_SIZE (1024 * 8)
 char g_buffer[BBUF_SIZE];
@@ -145,23 +147,18 @@ static int g_client_input_format_index = 0;
 static int g_server_input_format_index = 0;
 
 /* microphone related */
-static int APP_CC
-sound_send_server_input_formats(void);
-static int APP_CC
-sound_process_input_format(int aindex, int wFormatTag,
+static int APP_CC sound_send_server_input_formats(void);
+static int APP_CC sound_process_input_format(int aindex, int wFormatTag,
                            int nChannels, int nSamplesPerSec,
                            int nAvgBytesPerSec, int nBlockAlign,
                            int wBitsPerSample, int cbSize, char *data);
-static int APP_CC
-sound_process_input_formats(struct stream *s, int size);
-static int APP_CC
-sound_input_start_recording(void);
-static int APP_CC
-sound_input_stop_recording(void);
-static int APP_CC
-sound_process_input_data(struct stream *s, int bytes);
-static int DEFAULT_CC
-sound_sndsrvr_source_data_in(struct trans *trans);
+static int APP_CC sound_process_input_formats(struct stream *s, int size);
+static int APP_CC sound_input_start_recording(void);
+static int APP_CC sound_input_stop_recording(void);
+static int APP_CC sound_process_input_data(struct stream *s, int bytes);
+static int DEFAULT_CC sound_sndsrvr_source_data_in(struct trans *trans);
+static int APP_CC sound_start_source_listener();
+static int APP_CC sound_start_sink_listener();
 
 /*****************************************************************************/
 static int APP_CC
@@ -681,36 +678,21 @@ sound_sndsrvr_source_conn_in(struct trans *trans, struct trans *new_trans)
 int APP_CC
 sound_init(void)
 {
-    char port[256];
-
     LOG(0, ("sound_init:"));
 
     g_memset(g_sent_flag, 0, sizeof(g_sent_flag));
+    g_stream_incoming_packet = NULL;
 
     /* init sound output */
     sound_send_server_output_formats();
-
-    g_audio_l_trans_out = trans_create(TRANS_MODE_UNIX, 128 * 1024, 8192);
-    g_audio_l_trans_out->is_term = g_is_term;
-    g_snprintf(port, 255, CHANSRV_PORT_OUT_STR, g_display_num);
-    g_audio_l_trans_out->trans_conn_in = sound_sndsrvr_sink_conn_in;
-
-    if (trans_listen(g_audio_l_trans_out, port) != 0)
-        LOG(0, ("sound_init: trans_listen failed"));
+    sound_start_sink_listener();
 
     /* init sound input */
     sound_send_server_input_formats();
-
-    g_audio_l_trans_in = trans_create(TRANS_MODE_UNIX, 128 * 1024, 8192);
-    g_audio_l_trans_in->is_term = g_is_term;
-    g_snprintf(port, 255, CHANSRV_PORT_IN_STR, g_display_num);
-    g_audio_l_trans_in->trans_conn_in = sound_sndsrvr_source_conn_in;
-
-    if (trans_listen(g_audio_l_trans_in, port) != 0)
-        LOG(0, ("sound_init: trans_listen failed"));
+    sound_start_source_listener();
 
     /* save data from sound_server_source */
-    fifo_init(&in_fifo, 100);
+    fifo_init(&g_in_fifo, 100);
 
     return 0;
 }
@@ -744,7 +726,7 @@ sound_deinit(void)
         g_audio_c_trans_in = 0;
     }
 
-    fifo_deinit(&in_fifo);
+    fifo_deinit(&g_in_fifo);
 
     return 0;
 }
@@ -759,36 +741,50 @@ sound_data_in(struct stream *s, int chan_id, int chan_flags, int length,
 {
     int code;
     int size;
+    int ok_to_free = 1;
 
-    in_uint8(s, code);
-    in_uint8s(s, 1);
-    in_uint16_le(s, size);
+    if (!read_entire_packet(s, &g_stream_incoming_packet, chan_flags, 
+                            length, total_length))
+    {
+        return 0;
+    }
+
+    in_uint8(g_stream_incoming_packet, code);
+    in_uint8s(g_stream_incoming_packet, 1);
+    in_uint16_le(g_stream_incoming_packet, size);
 
     switch (code)
     {
         case SNDC_WAVECONFIRM:
-            sound_process_wave_confirm(s, size);
+            sound_process_wave_confirm(g_stream_incoming_packet, size);
             break;
 
         case SNDC_TRAINING:
-            sound_process_training(s, size);
+            sound_process_training(g_stream_incoming_packet, size);
             break;
 
         case SNDC_FORMATS:
-            sound_process_output_formats(s, size);
+            sound_process_output_formats(g_stream_incoming_packet, size);
             break;
 
         case SNDC_REC_NEGOTIATE:
-            sound_process_input_formats(s, size);
+            sound_process_input_formats(g_stream_incoming_packet, size);
             break;
 
         case SNDC_REC_DATA:
-            sound_process_input_data(s, size);
+            sound_process_input_data(g_stream_incoming_packet, size);
+            ok_to_free = 0;
             break;
 
         default:
             LOG(10, ("sound_data_in: unknown code %d size %d", code, size));
             break;
+    }
+
+    if (ok_to_free && g_stream_incoming_packet)
+    {
+        xstream_free(g_stream_incoming_packet);
+        g_stream_incoming_packet = NULL;
     }
 
     return 0;
@@ -834,7 +830,6 @@ sound_get_wait_objs(tbus *objs, int *count, int *timeout)
 int APP_CC
 sound_check_wait_objs(void)
 {
-
     if (g_audio_l_trans_out != 0)
     {
         if (trans_check_wait_objs(g_audio_l_trans_out) != 0)
@@ -852,6 +847,7 @@ sound_check_wait_objs(void)
             LOG(10, ("sound_check_wait_objs: g_audio_c_trans_out returned non-zero"));
             trans_delete(g_audio_c_trans_out);
             g_audio_c_trans_out = 0;
+            sound_start_sink_listener();
         }
     }
 
@@ -872,6 +868,7 @@ sound_check_wait_objs(void)
             LOG(10, ("sound_check_wait_objs: g_audio_c_trans_in returned non-zero"));
             trans_delete(g_audio_c_trans_in);
             g_audio_c_trans_in = 0;
+            sound_start_source_listener();
         }
     }
 
@@ -1045,9 +1042,12 @@ sound_input_start_recording(void)
 {
     struct stream* s;
 
+    LOG(10, ("sound_input_start_recording:"));
+
     /* if there is any data in FIFO, discard it */
-    while ((s = (struct stream *) fifo_remove(&in_fifo)) != NULL)
+    while ((s = (struct stream *) fifo_remove(&g_in_fifo)) != NULL)
         xstream_free(s);
+    g_bytes_in_fifo = 0;
 
     xstream_new(s, 1024);
 
@@ -1079,6 +1079,8 @@ sound_input_stop_recording(void)
 {
     struct stream* s;
 
+    LOG(10, ("sound_input_stop_recording:"));
+
     xstream_new(s, 1024);
 
     /*
@@ -1102,19 +1104,25 @@ sound_input_stop_recording(void)
  * Process data: xrdp <- client
  *****************************************************************************/
 
-static unsigned char data = 0;
-
 static int APP_CC
 sound_process_input_data(struct stream *s, int bytes)
 {
     struct stream *ls;
 
+    LOG(0, ("sound_process_input_data: bytes %d g_bytes_in_fifo %d",
+        bytes, g_bytes_in_fifo));
+
+    /* cap data in fifo */
+    if (g_bytes_in_fifo > 8 * 1024)
+    {
+        return 0;
+    }
     xstream_new(ls, bytes);
-    memcpy(ls->data, s->p, bytes);
+    g_memcpy(ls->data, s->p, bytes);
     ls->p += bytes;
     s_mark_end(ls);
-
-    fifo_insert(&in_fifo, (void *) ls);
+    fifo_insert(&g_in_fifo, (void *) ls);
+    g_bytes_in_fifo += bytes;
 
     return 0;
 }
@@ -1147,6 +1155,7 @@ sound_sndsrvr_source_data_in(struct trans *trans)
     ts->p = ts->data + 8;
     in_uint8(ts, cmd);
     in_uint16_le(ts, bytes_req);
+    LOG(10, ("sound_sndsrvr_source_data_in: bytes_req %d", bytes_req));
 
     xstream_new(s, bytes_req + 2);
 
@@ -1158,7 +1167,14 @@ sound_sndsrvr_source_data_in(struct trans *trans)
         while (bytes_read < bytes_req)
         {
             if (g_stream_inp == NULL)
-                g_stream_inp = (struct stream *) fifo_remove(&in_fifo);
+            {
+                g_stream_inp = (struct stream *) fifo_remove(&g_in_fifo);
+                if (g_stream_inp != NULL)
+                {
+                    g_bytes_in_fifo -= g_stream_inp->size;
+                    LOG(10, ("  g_bytes_in_fifo %d", g_bytes_in_fifo));
+                }
+            }
 
             if (g_stream_inp == NULL)
             {
@@ -1212,3 +1228,38 @@ sound_sndsrvr_source_data_in(struct trans *trans)
 
     return 0;
 }
+
+/**
+ * Start a listener for microphone redirection connections
+ *****************************************************************************/
+static int APP_CC
+sound_start_source_listener()
+{
+    char port[1024];
+
+    g_audio_l_trans_in = trans_create(TRANS_MODE_UNIX, 128 * 1024, 8192);
+    g_audio_l_trans_in->is_term = g_is_term;
+    g_snprintf(port, 255, CHANSRV_PORT_IN_STR, g_display_num);
+    g_audio_l_trans_in->trans_conn_in = sound_sndsrvr_source_conn_in;
+    if (trans_listen(g_audio_l_trans_in, port) != 0)
+        LOG(0, ("trans_listen failed"));
+    return 0;
+}
+
+/**
+ * Start a listener for speaker redirection connections
+ *****************************************************************************/
+static int APP_CC
+sound_start_sink_listener()
+{
+    char port[1024];
+
+    g_audio_l_trans_out = trans_create(TRANS_MODE_UNIX, 128 * 1024, 8192);
+    g_audio_l_trans_out->is_term = g_is_term;
+    g_snprintf(port, 255, CHANSRV_PORT_OUT_STR, g_display_num);
+    g_audio_l_trans_out->trans_conn_in = sound_sndsrvr_sink_conn_in;
+    if (trans_listen(g_audio_l_trans_out, port) != 0)
+        LOG(0, ("trans_listen failed"));
+    return 0;
+}
+

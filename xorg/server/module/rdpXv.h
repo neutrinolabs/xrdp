@@ -28,16 +28,15 @@ XVideo
 #include <xorgVersion.h>
 #include <xf86.h>
 
-Bool
+extern _X_EXPORT Bool
 rdpXvInit(ScreenPtr pScreen, ScrnInfoPtr pScrn);
-
-int
+extern _X_EXPORT int
 YV12_to_RGB32(unsigned char *yuvs, int width, int height, int *rgbs);
-int
+extern _X_EXPORT int
 I420_to_RGB32(unsigned char *yuvs, int width, int height, int *rgbs);
-int
+extern _X_EXPORT int
 YUY2_to_RGB32(unsigned char *yuvs, int width, int height, int *rgbs);
-int
+extern _X_EXPORT int
 UYVY_to_RGB32(unsigned char *yuvs, int width, int height, int *rgbs);
 
 #endif

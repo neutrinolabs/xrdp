@@ -27,6 +27,7 @@ rdp module main
 
 /* this should be before all X11 .h files */
 #include <xorg-server.h>
+#include <xorgVersion.h>
 
 /* all driver need this */
 #include <xf86.h>
@@ -41,6 +42,7 @@ rdp module main
 #include "rdpInput.h"
 #include "rdpDraw.h"
 #include "rdpClientCon.h"
+#include "rdpMain.h"
 
 /******************************************************************************/
 #define LOG_LEVEL 1

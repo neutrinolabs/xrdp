@@ -24,24 +24,28 @@ to deal with privates changing in xorg versions
 #ifndef _XRDPPRI_H
 #define _XRDPPRI_H
 
+#include <xorg-server.h>
+#include <xorgVersion.h>
+#include <xf86.h>
+
 #include <screenint.h>
 #include <gc.h>
 
 typedef void* rdpDevPrivateKey;
 
-rdpDevPrivateKey
+extern _X_EXPORT rdpDevPrivateKey
 rdpAllocateGCPrivate(ScreenPtr pScreen, int bytes);
-rdpDevPrivateKey
+extern _X_EXPORT rdpDevPrivateKey
 rdpAllocatePixmapPrivate(ScreenPtr pScreen, int bytes);
-rdpDevPrivateKey
+extern _X_EXPORT rdpDevPrivateKey
 rdpAllocateWindowPrivate(ScreenPtr pScreen, int bytes);
-void*
+extern _X_EXPORT void*
 rdpGetGCPrivate(GCPtr pGC, rdpDevPrivateKey key);
-void*
+extern _X_EXPORT void*
 rdpGetPixmapPrivate(PixmapPtr pPixmap, rdpDevPrivateKey key);
-void*
+extern _X_EXPORT void*
 rdpGetWindowPrivate(WindowPtr pWindow, rdpDevPrivateKey key);
-int
+extern _X_EXPORT int
 rdpPrivateInit(void);
 
 #endif

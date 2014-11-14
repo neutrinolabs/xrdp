@@ -21,6 +21,10 @@ Client connection to xrdp
 
 */
 
+#include <xorg-server.h>
+#include <xorgVersion.h>
+#include <xf86.h>
+
 /* in xrdp/common */
 #include "xrdp_client_info.h"
 #include "xrdp_constants.h"
@@ -108,55 +112,55 @@ struct _rdpClientCon
     struct _rdpClientCon *next;
 };
 
-int
+extern _X_EXPORT int
 rdpClientConBeginUpdate(rdpPtr dev, rdpClientCon *clientCon);
-int
+extern _X_EXPORT int
 rdpClientConEndUpdate(rdpPtr dev, rdpClientCon *clientCon);
-int
+extern _X_EXPORT int
 rdpClientConSetFgcolor(rdpPtr dev, rdpClientCon *clientCon, int fgcolor);
-void
+extern _X_EXPORT void
 rdpClientConSendArea(rdpPtr dev, rdpClientCon *clientCon,
                      struct image_data *id, int x, int y, int w, int h);
-int
+extern _X_EXPORT int
 rdpClientConFillRect(rdpPtr dev, rdpClientCon *clientCon,
                      short x, short y, int cx, int cy);
-int
+extern _X_EXPORT int
 rdpClientConCheck(ScreenPtr pScreen);
-int
+extern _X_EXPORT int
 rdpClientConInit(rdpPtr dev);
-int
+extern _X_EXPORT int
 rdpClientConDeinit(rdpPtr dev);
 
-int
+extern _X_EXPORT int
 rdpClientConDeleteOsSurface(rdpPtr dev, rdpClientCon *clientCon, int rdpindex);
 
-int
+extern _X_EXPORT int
 rdpClientConRemoveOsBitmap(rdpPtr dev, rdpClientCon *clientCon, int rdpindex);
 
-void
+extern _X_EXPORT void
 rdpClientConScheduleDeferredUpdate(rdpPtr dev);
-int
+extern _X_EXPORT int
 rdpClientConCheckDirtyScreen(rdpPtr dev, rdpClientCon *clientCon);
-int
+extern _X_EXPORT int
 rdpClientConAddDirtyScreenReg(rdpPtr dev, rdpClientCon *clientCon,
                               RegionPtr reg);
-int
+extern _X_EXPORT int
 rdpClientConAddDirtyScreenBox(rdpPtr dev, rdpClientCon *clientCon,
                               BoxPtr box);
-int
+extern _X_EXPORT int
 rdpClientConAddDirtyScreen(rdpPtr dev, rdpClientCon *clientCon,
                            int x, int y, int cx, int cy);
-void
+extern _X_EXPORT void
 rdpClientConGetScreenImageRect(rdpPtr dev, rdpClientCon *clientCon,
                                struct image_data *id);
-int
+extern _X_EXPORT int
 rdpClientConAddAllReg(rdpPtr dev, RegionPtr reg, DrawablePtr pDrawable);
-int
+extern _X_EXPORT int
 rdpClientConAddAllBox(rdpPtr dev, BoxPtr box, DrawablePtr pDrawable);
-int
+extern _X_EXPORT int
 rdpClientConSetCursor(rdpPtr dev, rdpClientCon *clientCon,
                       short x, short y, char *cur_data, char *cur_mask);
-int
+extern _X_EXPORT int
 rdpClientConSetCursorEx(rdpPtr dev, rdpClientCon *clientCon,
                         short x, short y, char *cur_data,
                         char *cur_mask, int bpp);

@@ -27,6 +27,7 @@ cursor
 
 /* this should be before all X11 .h files */
 #include <xorg-server.h>
+#include <xorgVersion.h>
 
 /* all driver need this */
 #include <xf86.h>
@@ -45,6 +46,7 @@ cursor
 #include "rdpMain.h"
 #include "rdpDraw.h"
 #include "rdpClientCon.h"
+#include "rdpCursor.h"
 
 #ifndef X_BYTE_ORDER
 #warning X_BYTE_ORDER not defined

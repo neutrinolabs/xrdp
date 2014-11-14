@@ -24,7 +24,11 @@ rdp module main
 #ifndef __RDPMAIN_H
 #define __RDPMAIN_H
 
-void
+#include <xorg-server.h>
+#include <xorgVersion.h>
+#include <xf86.h>
+
+extern _X_EXPORT void
 xorgxrdpDownDown(ScreenPtr pScreen);
 
 #endif

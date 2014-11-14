@@ -7,9 +7,10 @@ km-xxxx.ini
 
 where the xxxx is replaced by the hex number of the layout of interest.
 
-The files have 6 sections;
+The files have 8 sections;
 
-[noshift], [shift], [altgr], [shiftaltgr], [capslock], [shiftcapslock]
+[noshift], [shift], [altgr], [shiftaltgr], [capslock], [capslockaltgr],
+[shiftcapslock], [shiftcapslockaltgr]
 
 In each section there are multiple lines for each key.
 

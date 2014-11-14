@@ -24,7 +24,11 @@ GC related calls
 #ifndef _RDPGC_H
 #define _RDPGC_H
 
-Bool
+#include <xorg-server.h>
+#include <xorgVersion.h>
+#include <xf86.h>
+
+extern _X_EXPORT Bool
 rdpCreateGC(GCPtr pGC);
 
 #endif

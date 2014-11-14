@@ -71,7 +71,7 @@ PA_MODULE_USAGE(
 
 #define DEFAULT_SOURCE_NAME "xrdp-source"
 #define DEFAULT_LATENCY_TIME 10
-#define MAX_LATENCY_USEC (PA_USEC_PER_SEC * 2)
+#define MAX_LATENCY_USEC 1000
 #define CHANSRV_PORT_STR "/tmp/.xrdp/xrdp_chansrv_audio_in_socket_%d"
 
 struct userdata {
@@ -144,6 +144,32 @@ static void source_update_requested_latency_cb(pa_source *s) {
     u->block_usec = pa_source_get_requested_latency_within_thread(s);
 }
 
+static int lsend(int fd, char *data, int bytes) {
+    int sent = 0;
+    int error;
+    while (sent < bytes) {
+        error = send(fd, data + sent, bytes - sent, 0);
+        if (error < 1) {
+            return error;
+        }
+        sent += error;
+    }
+    return sent;
+}
+
+static int lrecv(int fd, char *data, int bytes) {
+    int recved = 0;
+    int error;
+    while (recved < bytes) {
+        error = recv(fd, data + recved, bytes - recved, 0);
+        if (error < 1) {
+            return error;
+        }
+        recved += error;
+    }
+    return recved;
+}
+
 static int data_get(struct userdata *u, pa_memchunk *chunk) {
 
     int fd;
@@ -190,7 +216,7 @@ static int data_get(struct userdata *u, pa_memchunk *chunk) {
         buf[9]  = 0;
         buf[10] = 0;
 
-        send(u->fd, buf, 11, 0);
+        lsend(u->fd, buf, 11);
         u->want_src_data = 1;
         pa_log_debug("###### started recording");
     }
@@ -208,10 +234,10 @@ static int data_get(struct userdata *u, pa_memchunk *chunk) {
     buf[9]  = (unsigned char) chunk->length;
     buf[10] = (unsigned char) ((chunk->length >> 8) & 0xff);
 
-    send(u->fd, buf, 11, 0);
+    lsend(u->fd, buf, 11);
 
     /* read length of data available */
-    recv(u->fd, ubuf, 2, 0);
+    lrecv(u->fd, (char *) ubuf, 2);
     bytes = ((ubuf[1] << 8) & 0xff00) | (ubuf[0] & 0xff);
 
     if (bytes == 0) {
@@ -220,7 +246,7 @@ static int data_get(struct userdata *u, pa_memchunk *chunk) {
     }
 
     /* get data */
-    bytes = recv(u->fd, data, bytes, 0);
+    bytes = lrecv(u->fd, data, bytes);
 
     pa_memblock_release(chunk->memblock);
 
@@ -272,7 +298,7 @@ static void thread_func(void *userdata) {
                 buf[9]  = 0;
                 buf[10] = 0;
 
-                send(u->fd, buf, 11, 0);
+                lsend(u->fd, buf, 11);
                 u->want_src_data = 0;
                 pa_log_debug("###### stopped recording");
             }

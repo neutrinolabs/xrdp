@@ -318,8 +318,11 @@ struct xrdp_keymap
   struct xrdp_key_info keys_noshift[256];
   struct xrdp_key_info keys_shift[256];
   struct xrdp_key_info keys_altgr[256];
+  struct xrdp_key_info keys_shiftaltgr[256];
   struct xrdp_key_info keys_capslock[256];
+  struct xrdp_key_info keys_capslockaltgr[256];
   struct xrdp_key_info keys_shiftcapslock[256];
+  struct xrdp_key_info keys_shiftcapslockaltgr[256];
 };
 
 /* the window manager */

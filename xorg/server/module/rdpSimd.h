@@ -28,7 +28,7 @@ SIMD function asign
 #include <xorgVersion.h>
 #include <xf86.h>
 
-Bool
+extern _X_EXPORT Bool
 rdpSimdInit(ScreenPtr pScreen, ScrnInfoPtr pScrn);
 
 #endif
