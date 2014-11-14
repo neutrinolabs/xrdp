@@ -54,7 +54,14 @@ sesman_main_loop(void)
 
     /*main program loop*/
     log_message(LOG_LEVEL_INFO, "listening...");
+
     g_sck = g_tcp_socket();
+    if (g_sck < 0)
+    {
+        log_message(LOG_LEVEL_ERROR, "error opening socket, g_tcp_socket() failed...");
+        return 1;
+    }
+
     g_tcp_set_non_blocking(g_sck);
     error = scp_tcp_bind(g_sck, g_cfg->listen_address, g_cfg->listen_port);
 
@@ -132,7 +139,8 @@ sesman_main_loop(void)
                     g_get_errno(), g_get_strerror());
     }
 
-    g_tcp_close(g_sck);
+    if (g_sck != -1)
+        g_tcp_close(g_sck);
 }
 
 /******************************************************************************/
@@ -308,9 +316,17 @@ main(int argc, char **argv)
         g_file_close(1);
         g_file_close(2);
 
-        g_file_open("/dev/null");
-        g_file_open("/dev/null");
-        g_file_open("/dev/null");
+        if (g_file_open("/dev/null") < 0)
+        {
+        }
+
+        if (g_file_open("/dev/null") < 0)
+        {
+        }
+
+        if (g_file_open("/dev/null") < 0)
+        {
+        }
     }
 
     /* initializing locks */
@@ -361,7 +377,11 @@ main(int argc, char **argv)
     /* make sure the /tmp/.X11-unix directory exist */
     if (!g_directory_exist("/tmp/.X11-unix"))
     {
-        g_create_dir("/tmp/.X11-unix");
+        if (!g_create_dir("/tmp/.X11-unix"))
+        {
+            log_message(LOG_LEVEL_ERROR,
+                "sesman.c: error creating dir /tmp/.X11-unix");
+        }
         g_chmod_hex("/tmp/.X11-unix", 0x1777);
     }
 

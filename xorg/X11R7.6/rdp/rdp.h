@@ -508,7 +508,7 @@ KbdAddEvent(int down, int param1, int param2, int param3, int param4);
 void
 KbdSync(int param1);
 int
-rdpLoadLayout(int keylayout);
+rdpLoadLayout(struct xrdp_client_info *client_info);
 
 /* rdpup.c */
 int

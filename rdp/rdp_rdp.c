@@ -427,6 +427,12 @@ rdp_rdp_process_color_pointer_pdu(struct rdp_rdp *self, struct stream *s)
         return 1;
     }
 
+    /* there are only 32 cursors */
+    if (cache_idx > 31)
+    {
+        return 1;
+    }
+
     cursor = self->cursors + cache_idx;
     in_uint16_le(s, cursor->x);
     in_uint16_le(s, cursor->y);
@@ -457,7 +463,7 @@ rdp_rdp_process_cached_pointer_pdu(struct rdp_rdp *self, struct stream *s)
 
     in_uint16_le(s, cache_idx);
 
-    if (cache_idx >= sizeof(self->cursors) / sizeof(cursor))
+    if (cache_idx > 31)
     {
         return 1;
     }
@@ -1164,6 +1170,9 @@ rdp_rec_check_file(struct rdp_rdp *self)
         }
 
         self->rec_fd = g_file_open(file_name);
+        if (self->rec_fd < 0)
+            return 1;
+
         make_stream(s);
         init_stream(s, 8192);
         out_uint8a(s, "XRDPREC1", 8);

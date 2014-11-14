@@ -15,6 +15,12 @@ EXTRA_INCLUDES += -I$(prefix)/include
 EXTRA_FLAGS += -L$(prefix)/lib -Wl,-rpath -Wl,$(prefix)/lib
 endif
 
+if XRDP_RFXCODEC
+EXTRA_DEFINES += -DXRDP_RFXCODEC
+EXTRA_INCLUDES += -I$(top_srcdir)/librfxcodec/include
+EXTRA_LIBS += $(top_srcdir)/librfxcodec/src/librfxencode.a
+endif
+
 AM_CFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
@@ -45,11 +51,13 @@ xrdp_SOURCES = \
   xrdp_painter.c \
   xrdp_process.c \
   xrdp_region.c \
-  xrdp_wm.c
+  xrdp_wm.c \
+  xrdp_encoder.c
 
 xrdp_LDADD = \
   $(top_builddir)/common/libcommon.la \
-  $(top_builddir)/libxrdp/libxrdp.la
+  $(top_builddir)/libxrdp/libxrdp.la \
+  $(EXTRA_LIBS)
 
 xrdp_LDFLAGS = \
   $(EXTRA_FLAGS)
@@ -57,7 +65,8 @@ xrdp_LDFLAGS = \
 xrdpsysconfdir=$(sysconfdir)/xrdp
 
 xrdpsysconf_DATA = \
-  xrdp.ini 
+  xrdp.ini \
+  xrdp_keyboard.ini
 
 xrdppkgdatadir=$(datadir)/xrdp
 
@@ -70,4 +79,3 @@ xrdppkgdata_DATA = \
   sans-10.fv1 \
   cursor0.cur \
   cursor1.cur
-

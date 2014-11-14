@@ -861,11 +861,6 @@ scard_make_new_ioctl(IRP *irp, tui32 ioctl)
     struct stream *s;
 
     xstream_new(s, 1024 * 4);
-    if (s == NULL)
-    {
-        log_error("system out of memory");
-        return s;
-    }
 
     devredir_insert_DeviceIoRequest(s,
                                     irp->DeviceId,

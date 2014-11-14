@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@
 #include "parse.h"
 #include "trans.h"
 #include "list.h"
+#include "list16.h"
 #include "libxrdpinc.h"
 #include "xrdp_constants.h"
 #include "xrdp_types.h"
@@ -208,15 +209,14 @@ xrdp_bitmap_copy_box(struct xrdp_bitmap* self,
                      struct xrdp_bitmap* dest,
                      int x, int y, int cx, int cy);
 int APP_CC
+xrdp_bitmap_hash_crc(struct xrdp_bitmap *self);
+int APP_CC
 xrdp_bitmap_copy_box_with_crc(struct xrdp_bitmap* self,
                               struct xrdp_bitmap* dest,
                               int x, int y, int cx, int cy);
 int APP_CC
 xrdp_bitmap_compare(struct xrdp_bitmap* self,
                     struct xrdp_bitmap* b);
-int APP_CC
-xrdp_bitmap_compare_with_crc(struct xrdp_bitmap* self,
-                             struct xrdp_bitmap* b);
 int APP_CC
 xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect);
 int APP_CC
@@ -406,7 +406,8 @@ server_composite(struct xrdp_mod* mod, int srcidx, int srcformat, int srcwidth,
 int DEFAULT_CC
 server_paint_rects(struct xrdp_mod* mod, int num_drects, short *drects,
                    int num_crects, short *crects,
-                   char *data, int width, int height, int flags);
+                   char *data, int width, int height,
+                   int flags, int frame_id);
 int DEFAULT_CC
 server_set_pointer(struct xrdp_mod* mod, int x, int y,
                    char* data, char* mask);

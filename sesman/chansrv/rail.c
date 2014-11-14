@@ -71,6 +71,8 @@ static int g_xrr_event_base = 0; /* non zero means we got extension */
 
 static Cursor g_default_cursor = 0;
 
+static char *g_override_window_title = 0;
+
 /* used in valid field of struct rail_window_data */
 #define RWD_X       (1 << 0)
 #define RWD_Y       (1 << 1)
@@ -621,6 +623,18 @@ rail_process_activate(struct stream *s, int size)
 }
 
 /*****************************************************************************/
+static int
+rail_select_input(Window window_id)
+{
+    XSelectInput(g_display, window_id,
+                 PropertyChangeMask | StructureNotifyMask |
+                 SubstructureNotifyMask | FocusChangeMask |
+                 EnterWindowMask | LeaveWindowMask);
+    XSync(g_display, 0);
+    return 0;
+}
+
+/*****************************************************************************/
 static int APP_CC
 rail_restore_windows(void)
 {
@@ -637,6 +651,7 @@ rail_restore_windows(void)
         XGetWindowAttributes(g_display, children[i], &window_attributes);
         if (!window_attributes.override_redirect)
         {
+            rail_select_input(children[i]);
             if (window_attributes.map_state == IsViewable)
             {
                 rail_win_set_state(children[i], 0x0); /* WithdrawnState */
@@ -724,7 +739,7 @@ rail_win_get_state(Window win)
                       (unsigned char **)&data,
                       &nitems);
 
-    if (data || nitems > 0)
+    if (data && nitems > 0)
     {
         rv = *(unsigned long *)data;
         XFree(data);
@@ -760,31 +775,40 @@ rail_win_set_state(Window win, unsigned long state)
 }
 
 /*****************************************************************************/
+/* *data pointer that needs g_free */
 static int APP_CC
 rail_win_get_text(Window win, char **data)
 {
     int ret = 0;
     int i = 0;
     unsigned long nitems = 0;
+    unsigned char *ldata = 0;
+    char *lldata = 0;
 
+    if (g_override_window_title != 0)
+    {
+        *data = g_strdup(g_override_window_title);
+        return g_strlen(*data);
+    }
     ret = rail_get_property(g_display, win, g_utf8_string, g_net_wm_name,
-                      (unsigned char **)data, &nitems);
+                            &ldata, &nitems);
     if (ret != 0)
     {
         /* _NET_WM_NAME isn't set, use WM_NAME (XFetchName) instead */
-        XFetchName(g_display, win, data);
+        XFetchName(g_display, win, &lldata);
+        *data = g_strdup(lldata);
+        i = g_strlen(*data);
+        XFree(lldata);
+        return i;
     }
 
-    if (data)
+    *data = 0;
+    if (ldata)
     {
-        char *ptr = *data;
-        for (; ptr != NULL; i++)
-        {
-            if (ptr[i] == '\0')
-            {
-                break;
-            }
-        }
+        *data = g_strdup((char *)ldata);
+        i = g_strlen(*data);
+        XFree(ldata);
+        return i;
     }
 
     return i;
@@ -1207,6 +1231,7 @@ rail_win_send_text(Window win)
     int crc;
     struct rail_window_data* rwd;
 
+    LOG(10, ("chansrv::rail_win_send_text:"));
     len = rail_win_get_text(win, &data);
     rwd = rail_get_window_data_safe(win);
     if (rwd != 0)
@@ -1219,7 +1244,7 @@ rail_win_send_text(Window win)
                 if (rwd->title_crc == crc)
                 {
                     LOG(10, ("chansrv::rail_win_send_text: skipping, title not changed"));
-                    XFree(data);
+                    g_free(data);
                     XFree(rwd);
                     return 0;
                 }
@@ -1229,13 +1254,15 @@ rail_win_send_text(Window win)
     else
     {
         LOG(0, ("chansrv::rail_win_send_text: error rail_get_window_data_safe failed"));
+        g_free(data);
         return 1;
     }
-    if (data && len > 0) {
+    if (data && len > 0)
+    {
         LOG(10, ("chansrv::rail_win_send_text: 0x%8.8x text %s length %d",
                  win, data, len));
         make_stream(s);
-        init_stream(s, 1024);
+        init_stream(s, len + 1024);
         flags = WINDOW_ORDER_TYPE_WINDOW | WINDOW_ORDER_FIELD_TITLE;
         out_uint32_le(s, 8); /* update title info */
         out_uint32_le(s, win); /* window id */
@@ -1251,10 +1278,7 @@ rail_win_send_text(Window win)
         rwd->title_crc = crc;
         rail_set_window_data(win, rwd);
     }
-    if (data != 0)
-    {
-        XFree(data);
-    }
+    g_free(data);
     XFree(rwd);
     return 0;
 }
@@ -1355,7 +1379,8 @@ rail_create_window(Window window_id, Window owner_id)
         flags = WINDOW_ORDER_TYPE_WINDOW;
     }
 
-    title_size = rail_win_get_text(window_id, &title_bytes);
+    title_size = 0;
+    title_bytes = 0;
 
     XGetTransientForHint(g_display, window_id, &transient_for);
 
@@ -1363,21 +1388,24 @@ rail_create_window(Window window_id, Window owner_id)
     {
         style = RAIL_STYLE_TOOLTIP;
         ext_style = RAIL_EXT_STYLE_TOOLTIP;
+        /* for tooltips, we don't grab the window text */
     }
     else if (transient_for > 0)
     {
         style = RAIL_STYLE_DIALOG;
         ext_style = RAIL_EXT_STYLE_DIALOG;
         owner_id = transient_for;
+        title_size = rail_win_get_text(window_id, &title_bytes);
     }
     else
     {
         style = RAIL_STYLE_NORMAL;
         ext_style = RAIL_EXT_STYLE_NORMAL;
+        title_size = rail_win_get_text(window_id, &title_bytes);
     }
 
     make_stream(s);
-    init_stream(s, 1024);
+    init_stream(s, title_size + 1024 + num_window_rects * 8 + num_visibility_rects * 8);
 
     out_uint32_le(s, 2); /* create_window */
     out_uint32_le(s, window_id); /* window_id */
@@ -1387,6 +1415,7 @@ rail_create_window(Window window_id, Window owner_id)
     out_uint32_le(s, ext_style); /* extended_style */
     flags |= WINDOW_ORDER_FIELD_STYLE;
     out_uint32_le(s, 0x05); /* show_state */
+    LOG(10, ("  title %s", title_bytes));
     flags |= WINDOW_ORDER_FIELD_SHOW;
     if (title_size > 0)
     {
@@ -1449,7 +1478,7 @@ rail_create_window(Window window_id, Window owner_id)
     s_mark_end(s);
     send_rail_drawing_orders(s->data, (int)(s->end - s->data));
     free_stream(s);
-    XFree(title_bytes);
+    g_free(title_bytes);
     rail_set_window_data(window_id, rwd);
     XFree(rwd);
     return 0;
@@ -1608,7 +1637,7 @@ rail_configure_request_window(XConfigureRequestEvent* config)
     flags = WINDOW_ORDER_TYPE_WINDOW;
 
     make_stream(s);
-    init_stream(s, 1024);
+    init_stream(s, 1024 + num_window_rects * 8 + num_visibility_rects * 8);
 
     out_uint32_le(s, 10); /* configure_window */
     out_uint32_le(s, window_id); /* window_id */
@@ -1692,7 +1721,7 @@ rail_configure_window(XConfigureEvent *config)
     flags = WINDOW_ORDER_TYPE_WINDOW;
 
     make_stream(s);
-    init_stream(s, 1024);
+    init_stream(s, 1024 + num_window_rects * 8 + num_visibility_rects * 8);
 
     out_uint32_le(s, 10); /* configure_window */
     out_uint32_le(s, window_id); /* window_id */
@@ -1822,10 +1851,7 @@ rail_xevent(void *xevent)
         case CreateNotify:
             LOG(10, (" got CreateNotify window 0x%8.8x parent 0x%8.8x",
                      lxevent->xcreatewindow.window, lxevent->xcreatewindow.parent));
-            XSelectInput(g_display, lxevent->xcreatewindow.window,
-                         PropertyChangeMask | StructureNotifyMask |
-                         SubstructureNotifyMask | FocusChangeMask |
-                         EnterWindowMask | LeaveWindowMask);
+            rail_select_input(lxevent->xcreatewindow.window);
             break;
 
         case DestroyNotify:
@@ -1865,7 +1891,7 @@ rail_xevent(void *xevent)
             XGetWindowAttributes(g_display, lxevent->xmap.window, &wnd_attributes);
             if (wnd_attributes.map_state == IsViewable)
             {
-                rail_create_window(lxevent->xmap.window, lxevent->xmap.event);
+                rail_create_window(lxevent->xmap.window, g_root_window);
                 if (!wnd_attributes.override_redirect)
                 {
                     rail_win_set_state(lxevent->xmap.window, 0x1); /* NormalState */
@@ -1887,7 +1913,16 @@ rail_xevent(void *xevent)
                 LOG(10, ("  window 0x%8.8x is unmapped", lxevent->xunmap.window));
                 if (index >= 0)
                 {
+                    XGetWindowAttributes(g_display, lxevent->xunmap.window, &wnd_attributes);
+                    if (wnd_attributes.override_redirect)
+                    {
+                        // remove popups
+                        rail_destroy_window(lxevent->xunmap.window);
+                        list_remove_item(g_window_list, index);
+                    } else {
                     rail_show_window(lxevent->xunmap.window, 0x0);
+                    }
+
                     rv = 0;
                 }
             }

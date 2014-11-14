@@ -75,7 +75,10 @@ main(int argc, char **argv)
         init_stream(in_s, 8192);
         make_stream(out_s);
         init_stream(out_s, 8192);
+
         sck = g_tcp_socket();
+        if (sck < 0)
+            return 1;
 
         if (g_tcp_connect(sck, argv[1], g_cfg.listen_port) == 0)
         {

@@ -1,5 +1,5 @@
 
-xrdp 0.8.0
+xrdp 0.8.1
 
 Credits
   This project is very much dependent on NeutrinoRDP, FreeRDP, rdesktop, and

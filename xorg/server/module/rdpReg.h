@@ -24,41 +24,45 @@ to deal with regions changing in xorg versions
 #ifndef __RDPREG_H
 #define __RDPREG_H
 
-Bool
+#include <xorg-server.h>
+#include <xorgVersion.h>
+#include <xf86.h>
+
+extern _X_EXPORT Bool
 rdpRegionCopy(RegionPtr dst, RegionPtr src);
-void
+extern _X_EXPORT void
 rdpRegionTranslate(RegionPtr pReg, int x, int y);
-Bool
+extern _X_EXPORT Bool
 rdpRegionNotEmpty(RegionPtr pReg);
-Bool
+extern _X_EXPORT Bool
 rdpRegionIntersect(RegionPtr newReg, RegionPtr reg1, RegionPtr reg2);
-int
+extern _X_EXPORT int
 rdpRegionContainsRect(RegionPtr region, BoxPtr prect);
-void
+extern _X_EXPORT void
 rdpRegionInit(RegionPtr pReg, BoxPtr rect, int size);
-void
+extern _X_EXPORT void
 rdpRegionUninit(RegionPtr pReg);
-RegionPtr
+extern _X_EXPORT RegionPtr
 rdpRegionFromRects(int nrects, xRectanglePtr prect, int ctype);
-void
+extern _X_EXPORT void
 rdpRegionDestroy(RegionPtr pReg);
-RegionPtr
+extern _X_EXPORT RegionPtr
 rdpRegionCreate(BoxPtr rect, int size);
-Bool
+extern _X_EXPORT Bool
 rdpRegionUnion(RegionPtr newReg, RegionPtr reg1, RegionPtr reg2);
-Bool
+extern _X_EXPORT Bool
 rdpRegionSubtract(RegionPtr newReg, RegionPtr reg1, RegionPtr reg2);
-Bool
+extern _X_EXPORT Bool
 rdpRegionInverse(RegionPtr newReg, RegionPtr reg1, BoxPtr invRect);
-BoxPtr
+extern _X_EXPORT BoxPtr
 rdpRegionExtents(RegionPtr pReg);
-void
+extern _X_EXPORT void
 rdpRegionReset(RegionPtr pReg, BoxPtr pBox);
-Bool
+extern _X_EXPORT Bool
 rdpRegionBreak(RegionPtr pReg);
-void
+extern _X_EXPORT void
 rdpRegionUnionRect(RegionPtr pReg, BoxPtr prect);
-int
+extern _X_EXPORT int
 rdpRegionPixelCount(RegionPtr pReg);
 
 #endif

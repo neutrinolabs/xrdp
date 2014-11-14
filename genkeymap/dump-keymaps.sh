@@ -19,6 +19,10 @@ setxkbmap -model pc104 -layout de
 setxkbmap -model pc104 -layout it
 ./xrdp-genkeymap ../instfiles/km-0410.ini
 
+# Polish 'pl' 0x0415
+setxkbmap -model pc104 -layout pl
+./xrdp-genkeymap ../instfiles/km-0415.ini
+
 # Russia 'ru' 0x0419
 setxkbmap -model pc104 -layout ru
 ./xrdp-genkeymap ../instfiles/km-0419.ini

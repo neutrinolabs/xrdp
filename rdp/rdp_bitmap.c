@@ -164,6 +164,7 @@ bitmap_decompress1(char *output, int width, int height, char *input, int size)
                 break;
             case 8: /* Bicolor */
                 color1 = CVAL(input);
+                /* fall through is intentional */
             case 3: /* Color */
                 color2 = CVAL(input);
                 break;
@@ -435,6 +436,7 @@ bitmap_decompress2(char *output, int width, int height, char *input, int size)
             case 8: /* Bicolor */
                 color1[EIK0] = CVAL(input);
                 color1[EIK1] = CVAL(input);
+                /* fall through is intentional */
             case 3: /* Color */
                 color2[EIK0] = CVAL(input);
                 color2[EIK1] = CVAL(input);
@@ -752,6 +754,7 @@ bitmap_decompress3(char *output, int width, int height, char *input, int size)
                 color1[0] = CVAL(input);
                 color1[1] = CVAL(input);
                 color1[2] = CVAL(input);
+                /* fall through is intentional */
             case 3: /* Color */
                 color2[0] = CVAL(input);
                 color2[1] = CVAL(input);

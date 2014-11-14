@@ -24,59 +24,63 @@ the rest
 #ifndef __RDPMISC_H
 #define __RDPMISC_H
 
+#include <xorg-server.h>
+#include <xorgVersion.h>
+#include <xf86.h>
+
 #include <X11/Xos.h>
 
-int
+extern _X_EXPORT int
 rdpBitsPerPixel(int depth);
-int
+extern _X_EXPORT int
 g_sck_can_recv(int sck, int millis);
-int
+extern _X_EXPORT int
 g_sck_recv(int sck, void *ptr, int len, int flags);
-void
+extern _X_EXPORT void
 g_sck_close(int sck);
-int
+extern _X_EXPORT int
 g_sck_last_error_would_block(int sck);
-void
+extern _X_EXPORT void
 g_sleep(int msecs);
-int
+extern _X_EXPORT int
 g_sck_send(int sck, void *ptr, int len, int flags);
-void *
+extern _X_EXPORT void *
 g_malloc(int size, int zero);
-void
+extern _X_EXPORT void
 g_free(void *ptr);
-void
+extern _X_EXPORT void
 g_sprintf(char *dest, char *format, ...);
-int
+extern _X_EXPORT int
 g_sck_tcp_socket(void);
-int
+extern _X_EXPORT int
 g_sck_local_socket_dgram(void);
-int
+extern _X_EXPORT int
 g_sck_local_socket_stream(void);
-void
+extern _X_EXPORT void
 g_memcpy(void *d_ptr, const void *s_ptr, int size);
-void
+extern _X_EXPORT void
 g_memset(void *d_ptr, const unsigned char chr, int size);
-int
+extern _X_EXPORT int
 g_sck_tcp_set_no_delay(int sck);
-int
+extern _X_EXPORT int
 g_sck_set_non_blocking(int sck);
-int
+extern _X_EXPORT int
 g_sck_accept(int sck);
-int
+extern _X_EXPORT int
 g_sck_select(int sck1, int sck2, int sck3);
-int
+extern _X_EXPORT int
 g_sck_tcp_bind(int sck, char *port);
-int
+extern _X_EXPORT int
 g_sck_local_bind(int sck, char *port);
-int
+extern _X_EXPORT int
 g_sck_listen(int sck);
-int
+extern _X_EXPORT int
 g_create_dir(const char *dirname);
-int
+extern _X_EXPORT int
 g_directory_exist(const char *dirname);
-int
+extern _X_EXPORT int
 g_chmod_hex(const char *filename, int flags);
-void
+extern _X_EXPORT void
 g_hexdump(void *p, long len);
 
 #if defined(X_BYTE_ORDER)

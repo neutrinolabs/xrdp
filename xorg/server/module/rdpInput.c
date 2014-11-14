@@ -25,6 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /* this should be before all X11 .h files */
 #include <xorg-server.h>
+#include <xorgVersion.h>
 
 /* all driver need this */
 #include <xf86.h>
@@ -53,6 +54,7 @@ static struct input_proc_list g_input_proc[MAX_INPUT_PROC];
 int
 rdpRegisterInputCallback(int type, rdpInputEventProcPtr proc)
 {
+    LLOGLN(0, ("rdpRegisterInputCallback: type %d proc %p", type, proc));
     if (type == 0)
     {
         g_input_proc[0].proc = proc;
@@ -73,12 +75,22 @@ int
 rdpUnregisterInputCallback(rdpInputEventProcPtr proc)
 {
     int index;
+    char text[256];
 
+    LLOGLN(0, ("rdpUnregisterInputCallback: proc %p", proc));
     for (index = 0; index < MAX_INPUT_PROC; index++)
     {
         if (g_input_proc[index].proc == proc)
         {
-            g_input_proc[index].proc = 0;
+            if (index == 0)
+            {
+                /* hack to cleanup
+                   remove when xrdpdevTearDown is working */
+                g_sprintf(text, "/tmp/.xrdp/xrdp_display_%s", display);
+                LLOGLN(0, ("rdpUnregisterInputCallback: deleting file %s", text));
+                unlink(text);
+            }
+            g_input_proc[index].proc = 0; 
             return 0;
         }
     }

@@ -22,7 +22,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef __RDPPOLYTEXT16_H
 #define __RDPPOLYTEXT16_H
 
-int
+#include <xorg-server.h>
+#include <xorgVersion.h>
+#include <xf86.h>
+
+extern _X_EXPORT int
 rdpPolyText16(DrawablePtr pDrawable, GCPtr pGC,
               int x, int y, int count, unsigned short* chars);
 

@@ -22,7 +22,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef __RDPPOLYRECTANGLE_H
 #define __RDPPOLYRECTANGLE_H
 
-void
+#include <xorg-server.h>
+#include <xorgVersion.h>
+#include <xf86.h>
+
+extern _X_EXPORT void
 rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
                  xRectangle* rects);
 

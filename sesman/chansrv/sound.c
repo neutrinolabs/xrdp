@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2009-2013
+ * Copyright (C) Jay Sorg 2009-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,15 +23,11 @@
 #include <signal.h>
 #include <sys/un.h>
 
-#ifdef XRDP_LOAD_PULSE_MODULES
-#include <pulse/util.h>
-#include <pulse/simple.h>
-#endif
-
 #include "sound.h"
 #include "thread_calls.h"
 #include "defines.h"
 #include "fifo.h"
+#include "file_loc.h"
 
 extern int g_rdpsnd_chan_id;    /* in chansrv.c */
 extern int g_display_num;       /* in chansrv.c */
@@ -47,27 +43,17 @@ static struct trans *g_audio_c_trans_in = 0;  /* connection */
 static int    g_training_sent_time = 0;
 static int    g_cBlockNo = 0;
 static int    g_bytes_in_stream = 0;
-static FIFO   in_fifo;
+static FIFO   g_in_fifo;
+static int    g_bytes_in_fifo = 0;
 
 static struct stream *g_stream_inp = NULL;
+static struct stream *g_stream_incoming_packet = NULL;
 
 #define BBUF_SIZE (1024 * 8)
 char g_buffer[BBUF_SIZE];
 int g_buf_index = 0;
 int g_sent_time[256];
 int g_sent_flag[256];
-
-#ifdef XRDP_LOAD_PULSE_MODULES
-pa_simple *g_pa_simple = NULL;
-#endif
-
-#if defined(XRDP_SIMPLESOUND)
-static void *DEFAULT_CC
-read_raw_audio_data(void *arg);
-#endif
-
-#define CHANSRV_PORT_OUT_STR  "/tmp/.xrdp/xrdp_chansrv_audio_out_socket_%d"
-#define CHANSRV_PORT_IN_STR   "/tmp/.xrdp/xrdp_chansrv_audio_in_socket_%d"
 
 struct xr_wave_format_ex
 {
@@ -160,6 +146,20 @@ static struct xr_wave_format_ex *g_wave_inp_formats[SND_NUM_INP_FORMATS] =
 static int g_client_input_format_index = 0;
 static int g_server_input_format_index = 0;
 
+/* microphone related */
+static int APP_CC sound_send_server_input_formats(void);
+static int APP_CC sound_process_input_format(int aindex, int wFormatTag,
+                           int nChannels, int nSamplesPerSec,
+                           int nAvgBytesPerSec, int nBlockAlign,
+                           int wBitsPerSample, int cbSize, char *data);
+static int APP_CC sound_process_input_formats(struct stream *s, int size);
+static int APP_CC sound_input_start_recording(void);
+static int APP_CC sound_input_stop_recording(void);
+static int APP_CC sound_process_input_data(struct stream *s, int bytes);
+static int DEFAULT_CC sound_sndsrvr_source_data_in(struct trans *trans);
+static int APP_CC sound_start_source_listener();
+static int APP_CC sound_start_sink_listener();
+
 /*****************************************************************************/
 static int APP_CC
 sound_send_server_output_formats(void)
@@ -229,7 +229,6 @@ sound_send_server_output_formats(void)
 }
 
 /*****************************************************************************/
-
 static int
 sound_send_training(void)
 {
@@ -370,7 +369,7 @@ sound_send_wave_data_chunk(char *data, int data_bytes)
     if ((data_bytes < 4) || (data_bytes > 128 * 1024))
     {
         LOG(0, ("sound_send_wave_data_chunk: bad data_bytes %d", data_bytes));
-        return 0;
+        return 1;
     }
 
     LOG(20, ("sound_send_wave_data_chunk: g_sent_flag[%d] = %d",
@@ -378,7 +377,7 @@ sound_send_wave_data_chunk(char *data, int data_bytes)
     if (g_sent_flag[(g_cBlockNo + 1) & 0xff] & 1)
     {
         LOG(10, ("sound_send_wave_data_chunk: no room"));
-        return 0;
+        return 2;
     }
     else
     {
@@ -437,9 +436,12 @@ sound_send_wave_data(char *data, int data_bytes)
     int space_left;
     int chunk_bytes;
     int data_index;
+    int error;
+    int res;
 
     LOG(10, ("sound_send_wave_data: sending %d bytes", data_bytes));
     data_index = 0;
+    error = 0;
     while (data_bytes > 0)
     {
         space_left = BBUF_SIZE - g_buf_index;
@@ -447,19 +449,33 @@ sound_send_wave_data(char *data, int data_bytes)
         if (chunk_bytes < 1)
         {
             LOG(10, ("sound_send_wave_data: error"));
+            error = 1;
             break;
         }
         g_memcpy(g_buffer + g_buf_index, data + data_index, chunk_bytes);
         g_buf_index += chunk_bytes;
         if (g_buf_index >= BBUF_SIZE)
         {
-            sound_send_wave_data_chunk(g_buffer, BBUF_SIZE);
             g_buf_index = 0;
+            res = sound_send_wave_data_chunk(g_buffer, BBUF_SIZE);
+            if (res == 2)
+            {
+                /* don't need to error on this */
+                LOG(0, ("sound_send_wave_data: dropped, no room"));
+                break;
+            }
+            else if (res != 0)
+            {
+                LOG(10, ("sound_send_wave_data: error"));
+                error = 1;
+                break;
+            }
         }
         data_bytes -= chunk_bytes;
         data_index += chunk_bytes;
     }
-    return 0;
+
+    return error;
 }
 
 /*****************************************************************************/
@@ -474,10 +490,18 @@ sound_send_close(void)
     LOG(10, ("sound_send_close:"));
 
     /* send any left over data */
-    sound_send_wave_data_chunk(g_buffer, g_buf_index);
+    if (g_buf_index)
+    {
+        if (sound_send_wave_data_chunk(g_buffer, g_buf_index) != 0) 
+        {
+            LOG(10, ("sound_send_close: sound_send_wave_data_chunk failed"));
+            return 1;
+        }
+    }
     g_buf_index = 0;
     g_memset(g_sent_flag, 0, sizeof(g_sent_flag));
 
+    /* send close msg */
     make_stream(s);
     init_stream(s, 8182);
     out_uint16_le(s, SNDC_CLOSE);
@@ -530,23 +554,23 @@ sound_process_wave_confirm(struct stream *s, int size)
 
 /*****************************************************************************/
 /* process message in from the audio source, eg pulse, alsa
-   on it's way to the client */
+   on it's way to the client. returns error */
 static int APP_CC
 process_pcm_message(int id, int size, struct stream *s)
 {
     switch (id)
     {
         case 0:
-            sound_send_wave_data(s->p, size);
+            return sound_send_wave_data(s->p, size);
             break;
         case 1:
-            sound_send_close();
+            return sound_send_close();
             break;
         default:
             LOG(10, ("process_pcm_message: unknown id %d", id));
             break;
     }
-    return 0;
+    return 1;
 }
 
 /*****************************************************************************/
@@ -654,48 +678,21 @@ sound_sndsrvr_source_conn_in(struct trans *trans, struct trans *new_trans)
 int APP_CC
 sound_init(void)
 {
-    char port[256];
-
     LOG(0, ("sound_init:"));
 
     g_memset(g_sent_flag, 0, sizeof(g_sent_flag));
-
-#ifdef XRDP_LOAD_PULSE_MODULES
-    if (load_pulse_modules())
-        LOG(0, ("Audio and microphone redirection will not work!"));
-#endif
+    g_stream_incoming_packet = NULL;
 
     /* init sound output */
     sound_send_server_output_formats();
-
-    g_audio_l_trans_out = trans_create(TRANS_MODE_UNIX, 128 * 1024, 8192);
-    g_audio_l_trans_out->is_term = g_is_term;
-    g_snprintf(port, 255, CHANSRV_PORT_OUT_STR, g_display_num);
-    g_audio_l_trans_out->trans_conn_in = sound_sndsrvr_sink_conn_in;
-
-    if (trans_listen(g_audio_l_trans_out, port) != 0)
-        LOG(0, ("sound_init: trans_listen failed"));
+    sound_start_sink_listener();
 
     /* init sound input */
     sound_send_server_input_formats();
-
-    g_audio_l_trans_in = trans_create(TRANS_MODE_UNIX, 128 * 1024, 8192);
-    g_audio_l_trans_in->is_term = g_is_term;
-    g_snprintf(port, 255, CHANSRV_PORT_IN_STR, g_display_num);
-    g_audio_l_trans_in->trans_conn_in = sound_sndsrvr_source_conn_in;
-
-    if (trans_listen(g_audio_l_trans_in, port) != 0)
-        LOG(0, ("sound_init: trans_listen failed"));
+    sound_start_source_listener();
 
     /* save data from sound_server_source */
-    fifo_init(&in_fifo, 100);
-
-#if defined(XRDP_SIMPLESOUND)
-
-    /* start thread to read raw audio data from pulseaudio device */
-    tc_thread_create(read_raw_audio_data, 0);
-
-#endif
+    fifo_init(&g_in_fifo, 100);
 
     return 0;
 }
@@ -729,13 +726,7 @@ sound_deinit(void)
         g_audio_c_trans_in = 0;
     }
 
-    fifo_deinit(&in_fifo);
-
-#ifdef XRDP_LOAD_PULSE_MODULES
-    system("pulseaudio --kill");
-    if (g_pa_simple)
-        pa_simple_free(g_pa_simple);
-#endif
+    fifo_deinit(&g_in_fifo);
 
     return 0;
 }
@@ -750,36 +741,50 @@ sound_data_in(struct stream *s, int chan_id, int chan_flags, int length,
 {
     int code;
     int size;
+    int ok_to_free = 1;
 
-    in_uint8(s, code);
-    in_uint8s(s, 1);
-    in_uint16_le(s, size);
+    if (!read_entire_packet(s, &g_stream_incoming_packet, chan_flags, 
+                            length, total_length))
+    {
+        return 0;
+    }
+
+    in_uint8(g_stream_incoming_packet, code);
+    in_uint8s(g_stream_incoming_packet, 1);
+    in_uint16_le(g_stream_incoming_packet, size);
 
     switch (code)
     {
         case SNDC_WAVECONFIRM:
-            sound_process_wave_confirm(s, size);
+            sound_process_wave_confirm(g_stream_incoming_packet, size);
             break;
 
         case SNDC_TRAINING:
-            sound_process_training(s, size);
+            sound_process_training(g_stream_incoming_packet, size);
             break;
 
         case SNDC_FORMATS:
-            sound_process_output_formats(s, size);
+            sound_process_output_formats(g_stream_incoming_packet, size);
             break;
 
         case SNDC_REC_NEGOTIATE:
-            sound_process_input_formats(s, size);
+            sound_process_input_formats(g_stream_incoming_packet, size);
             break;
 
         case SNDC_REC_DATA:
-            sound_process_input_data(s, size);
+            sound_process_input_data(g_stream_incoming_packet, size);
+            ok_to_free = 0;
             break;
 
         default:
             LOG(10, ("sound_data_in: unknown code %d size %d", code, size));
             break;
+    }
+
+    if (ok_to_free && g_stream_incoming_packet)
+    {
+        xstream_free(g_stream_incoming_packet);
+        g_stream_incoming_packet = NULL;
     }
 
     return 0;
@@ -827,114 +832,48 @@ sound_check_wait_objs(void)
 {
     if (g_audio_l_trans_out != 0)
     {
-        trans_check_wait_objs(g_audio_l_trans_out);
+        if (trans_check_wait_objs(g_audio_l_trans_out) != 0)
+        {
+            LOG(10, ("sound_check_wait_objs: g_audio_l_trans_out returned non-zero"));
+            trans_delete(g_audio_l_trans_out);
+            g_audio_l_trans_out = 0;
+        }
     }
 
     if (g_audio_c_trans_out != 0)
     {
-        trans_check_wait_objs(g_audio_c_trans_out);
+        if (trans_check_wait_objs(g_audio_c_trans_out) != 0)
+        {
+            LOG(10, ("sound_check_wait_objs: g_audio_c_trans_out returned non-zero"));
+            trans_delete(g_audio_c_trans_out);
+            g_audio_c_trans_out = 0;
+            sound_start_sink_listener();
+        }
     }
 
     if (g_audio_l_trans_in != 0)
     {
-        trans_check_wait_objs(g_audio_l_trans_in);
+        if (trans_check_wait_objs(g_audio_l_trans_in) != 0)
+        {
+            LOG(10, ("sound_check_wait_objs: g_audio_l_trans_in returned non-zero"));
+            trans_delete(g_audio_l_trans_in);
+            g_audio_l_trans_in = 0;
+        }
     }
 
     if (g_audio_c_trans_in != 0)
     {
-        trans_check_wait_objs(g_audio_c_trans_in);
-    }
-
-    return 0;
-}
-
-/**
- * Load xrdp pulseaudio sink and source modules
- *
- * @return 0 on success, -1 on failure
- *****************************************************************************/
-
-#ifdef XRDP_LOAD_PULSE_MODULES
-
-static int APP_CC
-load_pulse_modules()
-{
-    pa_sample_spec samp_spec;
-    int            error;
-
-    /* send cmd to load source module */
-    if (run_pacmd("load-module module-xrdp-source", "Module load failed"))
-        return -1;
-    
-    /* success, set it as the default source */
-    if (run_pacmd("set-default-source xrdp-source", "does not exist"))
-        return -1;
-
-    /* send cmd to load sink module */
-    if (run_pacmd("load-module module-xrdp-sink", "Module load failed"))
-        return -1;
-    
-    /* success, set it as the default sink */
-    if (run_pacmd("set-default-sink xrdp-sink", "does not exist"))
-        return -1;
-
-    /* setup audio format */
-    samp_spec.format = PA_SAMPLE_S16LE;
-    samp_spec.rate = 44100;
-    samp_spec.channels = 2;
-    
-    g_pa_simple = pa_simple_new(NULL, "xrdp", PA_STREAM_PLAYBACK, NULL,
-                                "keepalive", &samp_spec, NULL, NULL, &error);
-                               
-    if (!g_pa_simple)
-    {
-        LOG(0, ("load_pulse_modules: error opening keepalive connection "
-                "to pulseaudio server\n"));
-        return -1;
-    }
-
-    LOG(0, ("load_pulse_modules: opened keepalive connection "
-            "to pulseaudio server\n"));
-    
-    return 0;
-}
-
-/**
- * Use pacmd to run a command on pulseaudio server
- * 
- * @param cmd        command to run on pulseaudio server
- * @param error_msg  error message to check for
- * 
- * @return 0 on success, -1 on failure
- *****************************************************************************/
-
-static int APP_CC run_pacmd(char *cmd, char *error_msg)
-{
-    FILE *fp;
-    char  buf[1024];
-    
-    sprintf(buf, "pacmd %s", cmd);
-    if ((fp = popen(buf, "r")) == NULL)
-    {
-        LOG(0, ("run_pacmd: error running command: %s; pacmd is not "
-                "installed or not found in PATH"));
-        return -1;
-    }
-    
-    while (fgets(buf, 1024, fp) != NULL)
-    {
-        if (strcasestr(buf, error_msg) != 0)
+        if (trans_check_wait_objs(g_audio_c_trans_in) != 0)
         {
-            pclose(fp);
-            return -1;
+            LOG(10, ("sound_check_wait_objs: g_audio_c_trans_in returned non-zero"));
+            trans_delete(g_audio_c_trans_in);
+            g_audio_c_trans_in = 0;
+            sound_start_source_listener();
         }
     }
-    
-    pclose(fp);
+
     return 0;
 }
-
-#endif /* end #ifdef XRDP_LOAD_PULSE_MODULES */
 
 /******************************************************************************
  **                                                                          **
@@ -1099,13 +1038,16 @@ sound_process_input_formats(struct stream *s, int size)
  *****************************************************************************/
 
 static int APP_CC
-sound_input_start_recording()
+sound_input_start_recording(void)
 {
     struct stream* s;
 
+    LOG(10, ("sound_input_start_recording:"));
+
     /* if there is any data in FIFO, discard it */
-    while ((s = (struct stream *) fifo_remove(&in_fifo)) != NULL)
+    while ((s = (struct stream *) fifo_remove(&g_in_fifo)) != NULL)
         xstream_free(s);
+    g_bytes_in_fifo = 0;
 
     xstream_new(s, 1024);
 
@@ -1133,9 +1075,11 @@ sound_input_start_recording()
  *****************************************************************************/
 
 static int APP_CC
-sound_input_stop_recording()
+sound_input_stop_recording(void)
 {
     struct stream* s;
+
+    LOG(10, ("sound_input_stop_recording:"));
 
     xstream_new(s, 1024);
 
@@ -1160,19 +1104,25 @@ sound_input_stop_recording()
  * Process data: xrdp <- client
  *****************************************************************************/
 
-static unsigned char data = 0;
-
 static int APP_CC
 sound_process_input_data(struct stream *s, int bytes)
 {
     struct stream *ls;
 
+    LOG(0, ("sound_process_input_data: bytes %d g_bytes_in_fifo %d",
+        bytes, g_bytes_in_fifo));
+
+    /* cap data in fifo */
+    if (g_bytes_in_fifo > 8 * 1024)
+    {
+        return 0;
+    }
     xstream_new(ls, bytes);
-    memcpy(ls->data, s->p, bytes);
+    g_memcpy(ls->data, s->p, bytes);
     ls->p += bytes;
     s_mark_end(ls);
-
-    fifo_insert(&in_fifo, (void *) ls);
+    fifo_insert(&g_in_fifo, (void *) ls);
+    g_bytes_in_fifo += bytes;
 
     return 0;
 }
@@ -1199,14 +1149,15 @@ sound_sndsrvr_source_data_in(struct trans *trans)
         return 1;
 
     ts = trans_get_in_s(trans);
-    trans_force_read(trans, 3);
+    if (trans_force_read(trans, 3))
+        log_message(LOG_LEVEL_ERROR, "sound.c: error reading from transport");
 
     ts->p = ts->data + 8;
     in_uint8(ts, cmd);
     in_uint16_le(ts, bytes_req);
+    LOG(10, ("sound_sndsrvr_source_data_in: bytes_req %d", bytes_req));
 
-    if (bytes_req != 0)
-        xstream_new(s, bytes_req + 2);
+    xstream_new(s, bytes_req + 2);
 
     if (cmd == PA_CMD_SEND_DATA)
     {
@@ -1216,7 +1167,14 @@ sound_sndsrvr_source_data_in(struct trans *trans)
         while (bytes_read < bytes_req)
         {
             if (g_stream_inp == NULL)
-                g_stream_inp = (struct stream *) fifo_remove(&in_fifo);
+            {
+                g_stream_inp = (struct stream *) fifo_remove(&g_in_fifo);
+                if (g_stream_inp != NULL)
+                {
+                    g_bytes_in_fifo -= g_stream_inp->size;
+                    LOG(10, ("  g_bytes_in_fifo %d", g_bytes_in_fifo));
+                }
+            }
 
             if (g_stream_inp == NULL)
             {
@@ -1256,7 +1214,6 @@ sound_sndsrvr_source_data_in(struct trans *trans)
         s_mark_end(s);
 
         trans_force_write_s(trans, s);
-        xstream_free(s);
     }
     else if (cmd == PA_CMD_START_REC)
     {
@@ -1267,133 +1224,42 @@ sound_sndsrvr_source_data_in(struct trans *trans)
         sound_input_stop_recording();
     }
 
-    return 0;
-}
+    xstream_free(s);
 
-/*****************************************************************************/
-
-#if defined(XRDP_SIMPLESOUND)
-
-#define AUDIO_BUF_SIZE 2048
-
-static int DEFAULT_CC
-sttrans_data_in(struct trans *self)
-{
-    LOG(0, ("sttrans_data_in:\n"));
     return 0;
 }
 
 /**
- * read raw audio data from pulseaudio device and write it
- * to a unix domain socket on which trans server is listening
- */
-
-static void *DEFAULT_CC
-read_raw_audio_data(void *arg)
+ * Start a listener for microphone redirection connections
+ *****************************************************************************/
+static int APP_CC
+sound_start_source_listener()
 {
-    pa_sample_spec samp_spec;
-    pa_simple *simple = NULL;
-    uint32_t bytes_read;
-    char *cptr;
-    int i;
-    int error;
-    struct trans *strans;
-    char path[256];
-    struct stream *outs;
+    char port[1024];
 
-    strans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
-
-    if (strans == 0)
-    {
-        LOG(0, ("read_raw_audio_data: trans_create failed\n"));
-        return 0;
-    }
-
-    strans->trans_data_in = sttrans_data_in;
-    g_snprintf(path, 255, CHANSRV_PORT_OUT_STR, g_display_num);
-
-    if (trans_connect(strans, "", path, 100) != 0)
-    {
-        LOG(0, ("read_raw_audio_data: trans_connect failed\n"));
-        trans_delete(strans);
-        return 0;
-    }
-
-    /* setup audio format */
-    samp_spec.format = PA_SAMPLE_S16LE;
-    samp_spec.rate = 44100;
-    samp_spec.channels = 2;
-
-    /* if we are root, then for first 8 seconds connection to pulseaudo server
-       fails; if we are non-root, then connection succeeds on first attempt;
-       for now we have changed code to be non-root, but this may change in the
-       future - so pretend we are root and try connecting to pulseaudio server
-       for upto one minute */
-    for (i = 0; i < 60; i++)
-    {
-        simple = pa_simple_new(NULL, "xrdp", PA_STREAM_RECORD, NULL,
-                               "record", &samp_spec, NULL, NULL, &error);
-
-        if (simple)
-        {
-            /* connected to pulseaudio server */
-            LOG(0, ("read_raw_audio_data: connected to pulseaudio server\n"));
-            break;
-        }
-
-        LOG(0, ("read_raw_audio_data: ERROR creating PulseAudio async interface\n"));
-        LOG(0, ("read_raw_audio_data: %s\n", pa_strerror(error)));
-        g_sleep(1000);
-    }
-
-    if (i == 60)
-    {
-        /* failed to connect to audio server */
-        trans_delete(strans);
-        return NULL;
-    }
-
-    /* insert header just once */
-    outs = trans_get_out_s(strans, 8192);
-    out_uint32_le(outs, 0);
-    out_uint32_le(outs, AUDIO_BUF_SIZE + 8);
-    cptr = outs->p;
-    out_uint8s(outs, AUDIO_BUF_SIZE);
-    s_mark_end(outs);
-
-    while (1)
-    {
-        /* read a block of raw audio data... */
-        g_memset(cptr, 0, 4);
-        bytes_read = pa_simple_read(simple, cptr, AUDIO_BUF_SIZE, &error);
-
-        if (bytes_read < 0)
-        {
-            LOG(0, ("read_raw_audio_data: ERROR reading from pulseaudio stream\n"));
-            LOG(0, ("read_raw_audio_data: %s\n", pa_strerror(error)));
-            break;
-        }
-
-        /* bug workaround:
-           even when there is no audio data, pulseaudio is returning without
-           errors but the data itself is zero; we use this zero data to
-           determine that there is no audio data present */
-        if (*cptr == 0 && *(cptr + 1) == 0 && *(cptr + 2) == 0 && *(cptr + 3) == 0)
-        {
-            g_sleep(10);
-            continue;
-        }
-
-        if (trans_force_write_s(strans, outs) != 0)
-        {
-            LOG(0, ("read_raw_audio_data: ERROR writing audio data to server\n"));
-            break;
-        }
-    }
-
-    pa_simple_free(simple);
-    trans_delete(strans);
-    return NULL;
+    g_audio_l_trans_in = trans_create(TRANS_MODE_UNIX, 128 * 1024, 8192);
+    g_audio_l_trans_in->is_term = g_is_term;
+    g_snprintf(port, 255, CHANSRV_PORT_IN_STR, g_display_num);
+    g_audio_l_trans_in->trans_conn_in = sound_sndsrvr_source_conn_in;
+    if (trans_listen(g_audio_l_trans_in, port) != 0)
+        LOG(0, ("trans_listen failed"));
+    return 0;
 }
 
-#endif
+/**
+ * Start a listener for speaker redirection connections
+ *****************************************************************************/
+static int APP_CC
+sound_start_sink_listener()
+{
+    char port[1024];
+
+    g_audio_l_trans_out = trans_create(TRANS_MODE_UNIX, 128 * 1024, 8192);
+    g_audio_l_trans_out->is_term = g_is_term;
+    g_snprintf(port, 255, CHANSRV_PORT_OUT_STR, g_display_num);
+    g_audio_l_trans_out->trans_conn_in = sound_sndsrvr_sink_conn_in;
+    if (trans_listen(g_audio_l_trans_out, port) != 0)
+        LOG(0, ("trans_listen failed"));
+    return 0;
+}
+

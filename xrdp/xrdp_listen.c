@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,6 +60,7 @@ xrdp_listen_create(void)
         g_process_sem = tc_sem_create(0);
     }
 
+    /* setting TCP mode now, may change later */
     self->listen_trans = trans_create(TRANS_MODE_TCP, 16, 16);
 
     if (self->listen_trans == 0)
@@ -168,7 +169,7 @@ xrdp_listen_get_port_address(char *port, int port_bytes,
     *tcp_nodelay = 0 ;
     *tcp_keepalive = 0 ;
 
-    if (fd > 0)
+    if (fd != -1)
     {
         names = list_create();
         names->auto_free = 1;
@@ -186,11 +187,17 @@ xrdp_listen_get_port_address(char *port, int port_bytes,
                     if (g_strcasecmp(val, "port") == 0)
                     {
                         val = (char *)list_get_item(values, index);
-                        error = g_atoi(val);
-
-                        if ((error > 0) && (error < 65000))
+                        if (val[0] == '/')
                         {
                             g_strncpy(port, val, port_bytes - 1);
+                        }
+                        else
+                        {
+                            error = g_atoi(val);
+                            if ((error > 0) && (error < 65000))
+                            {
+                                g_strncpy(port, val, port_bytes - 1);
+                            }
                         }
                     }
 
@@ -235,8 +242,10 @@ xrdp_listen_get_port_address(char *port, int port_bytes,
 
         list_delete(names);
         list_delete(values);
-        g_file_close(fd);
     }
+
+    if (fd != -1)
+        g_file_close(fd);
 
     /* startup_param overrides */
     if (startup_param->port[0] != 0)
@@ -348,7 +357,15 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
         return 1;
     }
 
-    /*Create socket*/
+    if (port[0] == '/')
+    {
+        /* set UDS mode */
+        self->listen_trans->mode = TRANS_MODE_UNIX;
+        /* not valid with UDS */
+        tcp_nodelay = 0;
+    }
+
+    /* Create socket */
     error = trans_listen_address(self->listen_trans, port, address);
 
     if (error == 0)
@@ -433,7 +450,7 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
             robjs[robjs_count++] = done_obj;
             timeout = -1;
 
-            if (self->listen_trans != 0)
+            /* if (self->listen_trans != 0) */
             {
                 if (trans_get_wait_objs(self->listen_trans, robjs,
                                         &robjs_count) != 0)

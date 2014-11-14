@@ -25,6 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /* this should be before all X11 .h files */
 #include <xorg-server.h>
+#include <xorgVersion.h>
 
 /* all driver need this */
 #include <xf86.h>
@@ -34,6 +35,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "rdpDraw.h"
 #include "rdpClientCon.h"
 #include "rdpReg.h"
+#include "rdpPolyFillRect.h"
 
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \

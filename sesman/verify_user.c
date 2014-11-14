@@ -51,6 +51,7 @@ long DEFAULT_CC
 auth_userpass(char *user, char *pass, int *errorcode)
 {
     const char *encr;
+    const char *epass;
     struct passwd *spw;
     struct spwd *stp;
 
@@ -84,8 +85,12 @@ auth_userpass(char *user, char *pass, int *errorcode)
         /* old system with only passwd */
         encr = spw->pw_passwd;
     }
-
-    return (strcmp(encr, crypt(pass, encr)) == 0);
+    epass = crypt(pass, encr);
+    if (epass == 0)
+    {
+        return 0;
+    }
+    return (strcmp(encr, epass) == 0);
 }
 
 /******************************************************************************/

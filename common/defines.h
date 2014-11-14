@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,7 +72,7 @@
   (bpp==8?COLOR8(HRED(c),HGREEN(c),HBLUE(c)): \
    (bpp==15?COLOR15(HRED(c),HGREEN(c),HBLUE(c)): \
     (bpp==16?COLOR16(HRED(c),HGREEN(c),HBLUE(c)): \
-      (bpp==24?COLOR24BGR(HRED(c),HGREEN(c),HBLUE(c)):c) \
+      (bpp>=24?COLOR24BGR(HRED(c),HGREEN(c),HBLUE(c)):c) \
     ) \
    ) \
   ) \
@@ -100,5 +100,11 @@
   ((((f)->height * (((f)->width + 7) / 8)) + 3) & ~3);
 /* use crc for bitmap cache lookups */
 #define USE_CRC
+
+#define XR_RGB2BGR(a_ulColor) \
+   (a_ulColor & 0xFF000000) | \
+  ((a_ulColor & 0x00FF0000) >> 16) | \
+   (a_ulColor & 0x0000FF00) |  \
+  ((a_ulColor & 0x000000FF) << 16)
 
 #endif

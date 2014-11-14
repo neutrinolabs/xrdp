@@ -27,6 +27,7 @@ xrdp keyboard module
 
 /* this should be before all X11 .h files */
 #include <xorg-server.h>
+#include <xorgVersion.h>
 
 /* all driver need this */
 #include <xf86.h>
@@ -51,14 +52,6 @@ xrdp keyboard module
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
-
-#define XRDP_DRIVER_NAME "XRDPKEYB"
-#define XRDP_NAME "XRDPKEYB"
-#define XRDP_VERSION 1000
-
-#define PACKAGE_VERSION_MAJOR 1
-#define PACKAGE_VERSION_MINOR 0
-#define PACKAGE_VERSION_PATCHLEVEL 0
 
 #define MIN_KEY_CODE 8
 #define MAX_KEY_CODE 255
@@ -682,13 +675,14 @@ rdpkeybUnInit(InputDriverPtr drv, InputInfoPtr info, int flags)
 {
     LLOGLN(0, ("rdpkeybUnInit: drv %p info %p, flags 0x%x",
            drv, info, flags));
+    rdpUnregisterInputCallback(rdpInputKeyboard);
 }
 
 /******************************************************************************/
 static InputDriverRec rdpkeyb =
 {
     PACKAGE_VERSION_MAJOR,  /* version   */
-    XRDP_NAME,              /* name      */
+    XRDP_KEYB_NAME,         /* name      */
     NULL,                   /* identify  */
     rdpkeybPreInit,         /* preinit   */
     rdpkeybUnInit,          /* uninit    */
@@ -715,7 +709,7 @@ rdpkeybUnplug(pointer p)
 /******************************************************************************/
 static XF86ModuleVersionInfo rdpkeybVersionRec =
 {
-    XRDP_DRIVER_NAME,
+    XRDP_KEYB_NAME,
     MODULEVENDORSTRING,
     MODINFOSTRING1,
     MODINFOSTRING2,

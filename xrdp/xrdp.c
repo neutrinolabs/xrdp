@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,10 @@
 
 #include "xrdp.h"
 #include "log.h"
+
+#if !defined(PACKAGE_VERSION)
+#define PACKAGE_VERSION "???"
+#endif
 
 #define THREAD_WAITING 100
 
@@ -538,9 +542,19 @@ main(int argc, char **argv)
         g_file_close(0);
         g_file_close(1);
         g_file_close(2);
-        g_file_open("/dev/null");
-        g_file_open("/dev/null");
-        g_file_open("/dev/null");
+
+        if (g_file_open("/dev/null") < 0)
+        {
+        }
+
+        if (g_file_open("/dev/null") < 0)
+        {
+        }
+
+        if (g_file_open("/dev/null") < 0)
+        {
+        }
+
         /* end of daemonizing code */
     }
 

@@ -1,5 +1,47 @@
 
 ------------------------------------------------------
+11/01/2014
+------------------------------------------------------
+
+There are four modules built for the Xorg driver model and one configuration file
+This works best with newer Xorg installs, xserver 1.10 +, example Debian 7 +, Ubuntu 12.04 +
+
+To see what version you have, run
+xdpyinfo | grep version:
+or
+dpkg -l | grep xserver-xorg-core
+or
+yum list | grep xorg-x11-server-Xorg
+
+It should compile with older version and may run but may be problems.
+Usually, the problems are related to startup / login.
+
+autotools should build and install them
+
+./bootstrap
+./configure
+make
+sudo make install
+
+This should install the following...
+
+libxorgxrdp.so goes in /usr/lib/xorg/modules/
+xrdpdev_drv.so goes in /usr/lib/xorg/modules/drivers/
+xrdpkeyb_drv.so goes in /usr/lib/xorg/modules/input/
+xrdpmouse_drv.so goes in /usr/lib/xorg/modules/input/
+xorg.conf goes in /etc/X11/xrdp/
+
+with all these components in place, you can start Xorg with the xrdp modules with
+Xorg -config xrdp/xorg.conf -logfile /tmp/Xtmp.log -noreset -ac :10
+or
+Xorg -config xrdp/xorg.conf -logfile /dev/null -noreset -ac :10
+
+
+
+
+older notes
+
+------------------------------------------------------
  Notes for building xrdpdev_drv.so and libxorgxrdp.so
 ------------------------------------------------------
 

@@ -126,8 +126,12 @@ g_mk_temp_dir(const char *app_name)
             {
                 if (!g_create_dir("/tmp/.xrdp"))
                 {
-                    printf("g_mk_temp_dir: g_create_dir failed\n");
-                    return 1;
+                    /* if failed, still check if it got created by someone else */
+                    if (!g_directory_exist("/tmp/.xrdp"))
+                    {
+                        printf("g_mk_temp_dir: g_create_dir failed\n");
+                        return 1;
+                    }
                 }
 
                 g_chmod_hex("/tmp/.xrdp", 0x1777);
@@ -471,8 +475,11 @@ g_tcp_socket(void)
         {
             option_value = 0;
             option_len = sizeof(option_value);
-            setsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&option_value,
-                       option_len);
+            if (setsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&option_value,
+                       option_len) < 0)
+            {
+                log_message(LOG_LEVEL_ERROR, "g_tcp_socket: setsockopt() failed\n");
+            }
         }
     }
 #endif
@@ -484,8 +491,11 @@ g_tcp_socket(void)
         {
             option_value = 1;
             option_len = sizeof(option_value);
-            setsockopt(rv, SOL_SOCKET, SO_REUSEADDR, (char *)&option_value,
-                       option_len);
+            if (setsockopt(rv, SOL_SOCKET, SO_REUSEADDR, (char *)&option_value,
+                       option_len) < 0)
+            {
+                log_message(LOG_LEVEL_ERROR, "g_tcp_socket: setsockopt() failed\n");
+            }
         }
     }
 
@@ -498,8 +508,11 @@ g_tcp_socket(void)
         {
             option_value = 1024 * 32;
             option_len = sizeof(option_value);
-            setsockopt(rv, SOL_SOCKET, SO_SNDBUF, (char *)&option_value,
-                       option_len);
+            if (setsockopt(rv, SOL_SOCKET, SO_SNDBUF, (char *)&option_value,
+                       option_len) < 0)
+            {
+                log_message(LOG_LEVEL_ERROR, "g_tcp_socket: setsockopt() failed\n");
+            }
         }
     }
 
@@ -768,7 +781,9 @@ g_tcp_local_connect(int sck, const char *port)
 
     memset(&s, 0, sizeof(struct sockaddr_un));
     s.sun_family = AF_UNIX;
-    strcpy(s.sun_path, port);
+    strncpy(s.sun_path, port, sizeof(s.sun_path));
+    s.sun_path[sizeof(s.sun_path) - 1] = 0;
+
     return connect(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_un));
 #endif
 }
@@ -785,7 +800,10 @@ g_tcp_set_non_blocking(int sck)
 #else
     i = fcntl(sck, F_GETFL);
     i = i | O_NONBLOCK;
-    fcntl(sck, F_SETFL, i);
+    if (fcntl(sck, F_SETFL, i) < 0)
+    {
+        log_message(LOG_LEVEL_ERROR, "g_tcp_set_non_blocking: fcntl() failed\n");
+    }
 #endif
     return 0;
 }
@@ -925,7 +943,9 @@ g_tcp_local_bind(int sck, const char *port)
 
     memset(&s, 0, sizeof(struct sockaddr_un));
     s.sun_family = AF_UNIX;
-    strcpy(s.sun_path, port);
+    strncpy(s.sun_path, port, sizeof(s.sun_path));
+    s.sun_path[sizeof(s.sun_path) - 1] = 0;
+
     return bind(sck, (struct sockaddr *)&s, sizeof(struct sockaddr_un));
 #endif
 }
@@ -1421,7 +1441,12 @@ g_set_wait_obj(tbus obj)
         return 1;
     }
 
-    sendto(s, "sig", 4, 0, (struct sockaddr *)&sa, sa_size);
+    if (sendto(s, "sig", 4, 0, (struct sockaddr *)&sa, sa_size) < 0)
+    {
+        close(s);
+        return 1;
+    }
+
     close(s);
     return 0;
 #endif
@@ -1934,8 +1959,7 @@ g_mkdir(const char *dirname)
 #if defined(_WIN32)
     return 0;
 #else
-    mkdir(dirname, S_IRWXU);
-    return 0;
+    return mkdir(dirname, S_IRWXU);
 #endif
 }
 
@@ -2263,6 +2287,27 @@ int APP_CC
 g_strncmp(const char *c1, const char *c2, int len)
 {
     return strncmp(c1, c2, len);
+}
+
+/*****************************************************************************/
+/* compare up to delim */
+int APP_CC
+g_strncmp_d(const char *s1, const char *s2, const char delim, int n)
+{
+    char c1;
+    char c2;
+
+    while (n > 0)
+    {
+        c1 = *s1++;
+        c2 = *s2++;
+        if ((c1 == 0) || (c1 != c2) || (c1 == delim) || (c2 == delim))
+        {
+            return c1 - c2;
+        }
+        n--;
+    }
+    return c1 - c2;
 }
 
 /*****************************************************************************/
@@ -3129,6 +3174,158 @@ g_time3(void)
     gettimeofday(&tp, 0);
     return (tp.tv_sec * 1000) + (tp.tv_usec / 1000);
 #endif
+}
+
+/******************************************************************************/
+/******************************************************************************/
+struct bmp_magic
+{
+    char magic[2];
+};
+
+struct bmp_hdr
+{
+    unsigned int   size;        /* file size in bytes */
+    unsigned short reserved1;
+    unsigned short reserved2;
+    unsigned int   offset;      /* offset to image data, in bytes */
+};
+
+struct dib_hdr
+{
+    unsigned int   hdr_size;
+    int            width;
+    int            height;
+    unsigned short nplanes;
+    unsigned short bpp;
+    unsigned int   compress_type;
+    unsigned int   image_size;
+    int            hres;
+    int            vres;
+    unsigned int   ncolors;
+    unsigned int   nimpcolors;
+    };
+
+/******************************************************************************/
+int APP_CC
+g_save_to_bmp(const char* filename, char* data, int stride_bytes,
+              int width, int height, int depth, int bits_per_pixel)
+{
+    struct bmp_magic bm;
+    struct bmp_hdr bh;
+    struct dib_hdr dh;
+    int bytes;
+    int fd;
+    int index;
+    int i1;
+    int pixel;
+    int extra;
+    int file_stride_bytes;
+    char* line;
+    char* line_ptr;
+    
+    if ((depth == 24) && (bits_per_pixel == 32))
+    {
+    }
+    else if ((depth == 32) && (bits_per_pixel == 32))
+    {
+    }
+    else
+    {
+        g_writeln("g_save_to_bpp: unimp");
+        return 1;
+    }
+    bm.magic[0] = 'B';
+    bm.magic[1] = 'M';
+
+    /* scan lines are 32 bit aligned, bottom 2 bits must be zero */
+    file_stride_bytes = width * ((depth + 7) / 8);
+    extra = file_stride_bytes;
+    extra = extra & 3;
+    extra = (4 - extra) & 3;
+    file_stride_bytes += extra;
+
+    bh.size = sizeof(bm) + sizeof(bh) + sizeof(dh) + height * file_stride_bytes;
+    bh.reserved1 = 0;
+    bh.reserved2 = 0;
+    bh.offset = sizeof(bm) + sizeof(bh) + sizeof(dh);
+    
+    dh.hdr_size = sizeof(dh);
+    dh.width = width;
+    dh.height = height;
+    dh.nplanes = 1;
+    dh.bpp = depth;
+    dh.compress_type = 0;
+    dh.image_size = height * file_stride_bytes;
+    dh.hres = 0xb13;
+    dh.vres = 0xb13;
+    dh.ncolors = 0;
+    dh.nimpcolors = 0;
+
+    fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+    if (fd == -1)
+    {
+        g_writeln("g_save_to_bpp: open error");
+        return 1;
+    }
+    bytes = write(fd, &bm, sizeof(bm));
+    if (bytes != sizeof(bm))
+    {
+        g_writeln("g_save_to_bpp: write error");
+    }
+    bytes = write(fd, &bh, sizeof(bh));
+    if (bytes != sizeof(bh))
+    {
+        g_writeln("g_save_to_bpp: write error");
+    }
+    bytes = write(fd, &dh, sizeof(dh));
+    if (bytes != sizeof(dh))
+    {
+        g_writeln("g_save_to_bpp: write error");
+    }
+    data += stride_bytes * height;
+    data -= stride_bytes;
+    if ((depth == 24) && (bits_per_pixel == 32))
+    {
+        line = malloc(file_stride_bytes);
+        memset(line, 0, file_stride_bytes);
+        for (index = 0; index < height; index++)
+        {
+            line_ptr = line;
+            for (i1 = 0; i1 < width; i1++)
+            {
+                pixel = ((int*)data)[i1];
+                *(line_ptr++) = (pixel >>  0) & 0xff;
+                *(line_ptr++) = (pixel >>  8) & 0xff;
+                *(line_ptr++) = (pixel >> 16) & 0xff;
+            }
+            bytes = write(fd, line, file_stride_bytes);
+            if (bytes != file_stride_bytes)
+            {
+                g_writeln("g_save_to_bpp: write error");
+            }
+            data -= stride_bytes;
+        }
+        free(line);
+    }
+    else if (depth == bits_per_pixel)
+    {
+        for (index = 0; index < height; index++)
+        {
+            bytes = write(fd, data, width * (bits_per_pixel / 8));
+            if (bytes != width * (bits_per_pixel / 8))
+            {
+                g_writeln("g_save_to_bpp: write error");
+            }
+            data -= stride_bytes;
+        }
+    }
+    else
+    {
+        g_writeln("g_save_to_bpp: unimp");
+    }
+    close(fd);
+    return 0;
 }
 
 /*****************************************************************************/

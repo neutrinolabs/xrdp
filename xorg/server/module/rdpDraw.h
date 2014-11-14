@@ -65,29 +65,29 @@ do { \
 
 extern GCOps g_rdpGCOps; /* in rdpGC.c */
 
-int
+extern _X_EXPORT int
 rdpDrawGetClip(rdpPtr dev, RegionPtr pRegion, DrawablePtr pDrawable, GCPtr pGC);
-void
+extern _X_EXPORT void
 GetTextBoundingBox(DrawablePtr pDrawable, FontPtr font, int x, int y,
                    int n, BoxPtr pbox);
-int
+extern _X_EXPORT int
 rdpDrawItemAdd(rdpPtr dev, rdpPixmapRec *priv, struct rdp_draw_item *di);
-int
+extern _X_EXPORT int
 rdpDrawItemRemove(rdpPtr dev, rdpPixmapRec *priv, struct rdp_draw_item *di);
-int
+extern _X_EXPORT int
 rdpDrawItemRemoveAll(rdpPtr dev, rdpPixmapRec *priv);
-void
+extern _X_EXPORT void
 rdpCopyWindow(WindowPtr pWin, DDXPointRec ptOldOrg, RegionPtr pOldRegion);
 #if XRDP_CLOSESCR == 1
-Bool
+extern _X_EXPORT Bool
 rdpCloseScreen(int index, ScreenPtr pScreen);
 #else
-Bool
+extern _X_EXPORT Bool
 rdpCloseScreen(ScreenPtr pScreen);
 #endif
-WindowPtr
+extern _X_EXPORT WindowPtr
 rdpGetRootWindowPtr(ScreenPtr pScreen);
-rdpPtr
+extern _X_EXPORT rdpPtr
 rdpGetDevFromScreen(ScreenPtr pScreen);
 
 #endif

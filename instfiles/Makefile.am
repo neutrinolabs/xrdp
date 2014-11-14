@@ -5,7 +5,8 @@ xrdp.service
 SUBDIRS = \
   pam.d \
   init.d \
-  default
+  default \
+  pulse
 
 if HAVE_SYSTEMD
 systemdsystemunit_DATA = \
@@ -21,6 +22,7 @@ startscript_DATA = \
   km-0409.ini \
   km-040c.ini \
   km-0410.ini \
+  km-0415.ini \
   km-0419.ini \
   km-041d.ini \
   km-0816.ini

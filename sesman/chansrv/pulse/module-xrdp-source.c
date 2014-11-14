@@ -45,6 +45,15 @@
 #include <pulsecore/thread-mq.h>
 #include <pulsecore/thread.h>
 
+/* defined in pulse/version.h */
+#if PA_PROTOCOL_VERSION > 28
+/* these used to be defined in pulsecore/macro.h */
+typedef bool pa_bool_t;
+#define FALSE ((pa_bool_t) 0)
+#define TRUE (!FALSE)
+#else
+#endif
+
 #include "module-xrdp-source-symdef.h"
 
 PA_MODULE_AUTHOR("Laxmikant Rashinkar");
@@ -62,7 +71,7 @@ PA_MODULE_USAGE(
 
 #define DEFAULT_SOURCE_NAME "xrdp-source"
 #define DEFAULT_LATENCY_TIME 10
-#define MAX_LATENCY_USEC (PA_USEC_PER_SEC * 2)
+#define MAX_LATENCY_USEC 1000
 #define CHANSRV_PORT_STR "/tmp/.xrdp/xrdp_chansrv_audio_in_socket_%d"
 
 struct userdata {
@@ -135,6 +144,32 @@ static void source_update_requested_latency_cb(pa_source *s) {
     u->block_usec = pa_source_get_requested_latency_within_thread(s);
 }
 
+static int lsend(int fd, char *data, int bytes) {
+    int sent = 0;
+    int error;
+    while (sent < bytes) {
+        error = send(fd, data + sent, bytes - sent, 0);
+        if (error < 1) {
+            return error;
+        }
+        sent += error;
+    }
+    return sent;
+}
+
+static int lrecv(int fd, char *data, int bytes) {
+    int recved = 0;
+    int error;
+    while (recved < bytes) {
+        error = recv(fd, data + recved, bytes - recved, 0);
+        if (error < 1) {
+            return error;
+        }
+        recved += error;
+    }
+    return recved;
+}
+
 static int data_get(struct userdata *u, pa_memchunk *chunk) {
 
     int fd;
@@ -181,7 +216,7 @@ static int data_get(struct userdata *u, pa_memchunk *chunk) {
         buf[9]  = 0;
         buf[10] = 0;
 
-        send(u->fd, buf, 11, 0);
+        lsend(u->fd, buf, 11);
         u->want_src_data = 1;
         pa_log_debug("###### started recording");
     }
@@ -199,10 +234,10 @@ static int data_get(struct userdata *u, pa_memchunk *chunk) {
     buf[9]  = (unsigned char) chunk->length;
     buf[10] = (unsigned char) ((chunk->length >> 8) & 0xff);
 
-    send(u->fd, buf, 11, 0);
+    lsend(u->fd, buf, 11);
 
     /* read length of data available */
-    recv(u->fd, ubuf, 2, 0);
+    lrecv(u->fd, (char *) ubuf, 2);
     bytes = ((ubuf[1] << 8) & 0xff00) | (ubuf[0] & 0xff);
 
     if (bytes == 0) {
@@ -211,7 +246,7 @@ static int data_get(struct userdata *u, pa_memchunk *chunk) {
     }
 
     /* get data */
-    bytes = recv(u->fd, data, bytes, 0);
+    bytes = lrecv(u->fd, data, bytes);
 
     pa_memblock_release(chunk->memblock);
 
@@ -263,7 +298,7 @@ static void thread_func(void *userdata) {
                 buf[9]  = 0;
                 buf[10] = 0;
 
-                send(u->fd, buf, 11, 0);
+                lsend(u->fd, buf, 11);
                 u->want_src_data = 0;
                 pa_log_debug("###### stopped recording");
             }
@@ -329,8 +364,7 @@ int pa__init(pa_module *m) {
     pa_source_new_data_set_name(&data, pa_modargs_get_value(ma, "source_name", DEFAULT_SOURCE_NAME));
     pa_source_new_data_set_sample_spec(&data, &ss);
     pa_source_new_data_set_channel_map(&data, &map);
-    //pa_proplist_sets(data.proplist, PA_PROP_DEVICE_DESCRIPTION, pa_modargs_get_value(ma, "description", "Null Input"));
-    pa_proplist_sets(data.proplist, PA_PROP_DEVICE_DESCRIPTION, pa_modargs_get_value(ma, "description", "xrdp Input"));
+    pa_proplist_sets(data.proplist, PA_PROP_DEVICE_DESCRIPTION, pa_modargs_get_value(ma, "description", "xrdp source"));
     pa_proplist_sets(data.proplist, PA_PROP_DEVICE_CLASS, "abstract");
 
     u->source = pa_source_new(m->core, &data, PA_SOURCE_LATENCY | PA_SOURCE_DYNAMIC_LATENCY);
@@ -361,7 +395,15 @@ int pa__init(pa_module *m) {
     u->source->thread_info.max_rewind =
         pa_usec_to_bytes(u->block_usec, &u->source->sample_spec);
 
-    if (!(u->thread = pa_thread_new("null-source", thread_func, u))) {
+    #if defined(PA_CHECK_VERSION)
+    #if PA_CHECK_VERSION(0, 9, 22)
+        if (!(u->thread = pa_thread_new("xrdp-source", thread_func, u))) {
+    #else
+        if (!(u->thread = pa_thread_new(thread_func, u))) {
+    #endif
+    #else
+	if (!(u->thread = pa_thread_new(thread_func, u))) 
+    #endif
         pa_log("Failed to create thread.");
         goto fail;
     }

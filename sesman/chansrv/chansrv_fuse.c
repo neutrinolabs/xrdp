@@ -73,7 +73,7 @@ int xfuse_create_share(tui32 device_id, char *dirname)                       { r
 void xfuse_devredir_cb_open_file(void *vp, tui32 IoStatus, tui32 DeviceId, tui32 FileId)     {}
 void xfuse_devredir_cb_write_file(void *vp, char *buf, size_t length)        {}
 void xfuse_devredir_cb_read_file(void *vp, char *buf, size_t length)         {}
-void xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode)         {}
+int  xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode)         {}
 void xfuse_devredir_cb_enum_dir_done(void *vp, tui32 IoStatus)               {}
 void xfuse_devredir_cb_rmdir_or_file(void *vp, tui32 IoStatus)               {}
 void xfuse_devredir_cb_rename_file(void *vp, tui32 IoStatus)                 {}
@@ -1422,7 +1422,7 @@ static void xfuse_update_xrdpfs_size()
  * Add a file or directory to xrdp file system
  *****************************************************************************/
 
-void xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode)
+int xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode)
 {
     XFUSE_INFO *fip = (XFUSE_INFO *) vp;
     XRDP_INODE *xip = NULL;
@@ -1430,13 +1430,14 @@ void xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode)
     if ((fip == NULL) || (xinode == NULL))
     {
         log_error("fip or xinode are NULL");
-        return;
+        return -1;
     }
 
     if (!xfuse_is_inode_valid(fip->inode))
     {
         log_error("inode %d is not valid", fip->inode);
-        return;
+        g_free(xinode);
+        return -1;
     }
 
     log_debug("parent_inode=%d name=%s", fip->inode, xinode->name);
@@ -1444,8 +1445,8 @@ void xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode)
     /* if filename is . or .. don't add it */
     if ((strcmp(xinode->name, ".") == 0) || (strcmp(xinode->name, "..") == 0))
     {
-        free(xinode);
-        return;
+        g_free(xinode);
+        return -1;
     }
 
     xfuse_dump_fs();
@@ -1454,9 +1455,9 @@ void xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode)
     {
         log_debug("inode=%d name=%s already exists in xrdp_fs; not adding it",
                   fip->inode, xinode->name);
-        free(xinode);
+        g_free(xinode);
         xip->stale = 0;
-        return;
+        return -1;
     }
 
     xinode->parent_inode = fip->inode;
@@ -1473,6 +1474,7 @@ void xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode)
     xfuse_update_xrdpfs_size();
 
     xfuse_dump_fs();
+    return 0;
 }
 
 /**
@@ -1779,12 +1781,15 @@ void xfuse_devredir_cb_rename_file(void *vp, tui32 IoStatus)
         new_xinode = xfuse_get_inode_from_pinode_name(fip->new_inode,
                                                       fip->new_name);
 
-        if (new_xinode->mode & S_IFREG)
-            xfuse_delete_file_with_xinode(new_xinode);
-        else
-            xfuse_delete_dir_with_xinode(new_xinode);
+        if (new_xinode)
+        {
+            if (new_xinode->mode & S_IFREG)
+                xfuse_delete_file_with_xinode(new_xinode);
+            else
+                xfuse_delete_dir_with_xinode(new_xinode);
 
-        new_xinode = NULL;
+            new_xinode = NULL;
+        }
     }
 
     old_xinode = xfuse_get_inode_from_pinode_name(fip->inode, fip->name);
@@ -1796,7 +1801,8 @@ void xfuse_devredir_cb_rename_file(void *vp, tui32 IoStatus)
     }
 
     old_xinode->parent_inode = fip->new_inode;
-    strcpy(old_xinode->name, fip->new_name);
+    strncpy(old_xinode->name, fip->new_name, 1023);
+    old_xinode->name[1023] = 0;
 
     if (fip->inode != fip->new_inode)
     {
@@ -2179,7 +2185,7 @@ static void xfuse_remove_dir_or_file(fuse_req_t req, fuse_ino_t parent,
     }
 
     strcat(full_path, "/");
-    strcat(full_path, name);
+    strncat(full_path, name, sizeof(full_path) - strlen(full_path));
 
     if (xinode->is_loc_resource)
     {
@@ -2620,7 +2626,6 @@ static void xfuse_cb_release(fuse_req_t req, fuse_ino_t ino, struct
               fip, fip->fi, fip->fi->fh);
 
     FileId = handle->FileId;
-    free(handle);
     fip->fi->fh = 0;
     xinode->close_in_progress = 1;
 
@@ -2629,6 +2634,8 @@ static void xfuse_cb_release(fuse_req_t req, fuse_ino_t ino, struct
         log_error("failed to send devredir_close_file() cmd");
         fuse_reply_err(req, EREMOTEIO);
     }
+
+    free(handle);
 }
 
 /**

@@ -174,6 +174,8 @@ rdp_lic_process_demand(struct rdp_lic *self, struct stream *s)
        the security of licence negotiation isn't exactly paramount. */
     g_memset(null_data, 0, sizeof(null_data));
     rdp_lic_generate_keys(self, null_data, server_random, null_data);
+
+#if 0
     licence_size = 0; /* todo load_licence(&licence_data); */
 
     if (licence_size > 0)
@@ -192,6 +194,7 @@ rdp_lic_process_demand(struct rdp_lic *self, struct stream *s)
         g_free(licence_data);
         return;
     }
+#endif
 
     rdp_lic_send_request(self, null_data, null_data,
                          self->sec_layer->rdp_layer->mod->username,

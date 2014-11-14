@@ -3,7 +3,7 @@
  * Miscellaneous protocol constants
  *
  * Copyright (C) Matthew Chapman 1999-2008
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2014
  * Copyright (C) Kevin Zhou 2012
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -161,6 +161,7 @@
 #define RDP_INPUT_VIRTKEY              2
 #define RDP_INPUT_SCANCODE             4
 #define RDP_INPUT_MOUSE                0x8001
+#define RDP_INPUT_MOUSEX               0x8002
 
 /* Device flags */
 #define KBD_FLAG_RIGHT                 0x0001
@@ -456,6 +457,7 @@
    Extended order support flags. */
 #define XR_ORDERFLAGS_EX_CACHE_BITMAP_REV3_SUPPORT   0x0002
 #define XR_ORDERFLAGS_EX_ALTSEC_FRAME_MARKER_SUPPORT 0x0004
+#define XR_ORDERFLAGS_EX_OFFSCREEN_COMPOSITE_SUPPORT 0x0100
 
 /* drawable types */
 #define WND_TYPE_BITMAP  0
@@ -547,9 +549,13 @@
 #define XR_CODEC_GUID_REMOTEFX \
   "\x12\x2F\x77\x76\x72\xBD\x63\x44\xAF\xB3\xB7\x3C\x9C\x6F\x78\x86"
 
-/* CODEC_GUID_JPEG 0x430C9EED1BAF4CE6869ACB8B37B66237*/
+/* CODEC_GUID_JPEG     0x1BAF4CE6 9EED 430C 869ACB8B37B66237 */
 #define XR_CODEC_GUID_JPEG \
   "\xE6\x4C\xAF\x1B\xED\x9E\x0C\x43\x86\x9A\xCB\x8B\x37\xB6\x62\x37"
+
+/* CODEC_GUID_PNG      0xOE0C858D 28E0 45DB ADAA0F83E57CC560 */
+#define XR_CODEC_GUID_PNG \
+  "\x8D\x85\x0C\x0E\xE0\x28\xDB\x45\xAD\xAA\x0F\x83\xE5\x7C\xC5\x60"
 
 #define RDP_CAPSET_SURFCMDS       0x1c
 #define RDP_CAPLEN_SURFCMDS       0x0c
@@ -560,6 +566,24 @@
 #define RDP_CAPSET_LPOINTER       0x27
 #define RDP_CAPLEN_LPOINTER       0x06
 
+/* fastpath input */
+#define FASTPATH_INPUT_SECURE_CHECKSUM 0x1
+#define FASTPATH_INPUT_ENCRYPTED       0x2
+
+#define FASTPATH_INPUT_ACTION_FASTPATH 0x0
+#define FASTPATH_INPUT_ACTION_X224     0x3
+
+#define FASTPATH_INPUT_EVENT_SCANCODE  0x0
+#define FASTPATH_INPUT_EVENT_MOUSE     0x1
+#define FASTPATH_INPUT_EVENT_MOUSEX    0x2
+#define FASTPATH_INPUT_EVENT_SYNC      0x3
+#define FASTPATH_INPUT_EVENT_UNICODE   0x4
+
+#define FASTPATH_INPUT_KBDFLAGS_RELEASE   0x01
+#define FASTPATH_INPUT_KBDFLAGS_EXTENDED  0x02
+
+
+/* fastpath output */
 #define FASTPATH_OUTPUT_ACTION_FASTPATH   0x0
 #define FASTPATH_OUTPUT_ACTION_X224       0x3
 

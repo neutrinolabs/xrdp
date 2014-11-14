@@ -39,6 +39,8 @@ This is the main driver file
 #include <mi.h>
 #include <randrstr.h>
 
+#include <xf86Modes.h>
+
 #include "rdp.h"
 #include "rdpPri.h"
 #include "rdpDraw.h"
@@ -51,14 +53,8 @@ This is the main driver file
 #include "rdpGlyphs.h"
 #include "rdpPixmap.h"
 #include "rdpClientCon.h"
-
-#define XRDP_DRIVER_NAME "XRDPDEV"
-#define XRDP_NAME "XRDPDEV"
-#define XRDP_VERSION 1000
-
-#define PACKAGE_VERSION_MAJOR 1
-#define PACKAGE_VERSION_MINOR 0
-#define PACKAGE_VERSION_PATCHLEVEL 0
+#include "rdpXv.h"
+#include "rdpSimd.h"
 
 #define LLOG_LEVEL 1
 #define LLOGLN(_level, _args) \
@@ -326,7 +322,7 @@ rdpDeferredRandR(OsTimerPtr timer, CARD32 now, pointer arg)
 
     pScreen = (ScreenPtr) arg;
     dev = rdpGetDevFromScreen(pScreen);
-    LLOGLN(10, ("rdpDeferredRandR:"));
+    LLOGLN(0, ("rdpDeferredRandR:"));
     pRRScrPriv = rrGetScrPriv(pScreen);
     if (pRRScrPriv == 0)
     {
@@ -440,7 +436,9 @@ rdpScreenInit(ScreenPtr pScreen, int argc, char **argv)
     dev->bitsPerPixel = rdpBitsPerPixel(dev->depth);
     dev->sizeInBytes = dev->paddedWidthInBytes * dev->height;
     LLOGLN(0, ("rdpScreenInit: pfbMemory bytes %d", dev->sizeInBytes));
-    dev->pfbMemory = (char *) g_malloc(dev->sizeInBytes, 1);
+    dev->pfbMemory_alloc = (char *) g_malloc(dev->sizeInBytes + 16, 1);
+    dev->pfbMemory = (char*) RDPALIGN(dev->pfbMemory_alloc, 16);
+    LLOGLN(0, ("rdpScreenInit: pfbMemory %p", dev->pfbMemory));
     if (!fbScreenInit(pScreen, dev->pfbMemory,
                       pScrn->virtualX, pScrn->virtualY,
                       pScrn->xDpi, pScrn->yDpi, pScrn->displayWidth,
@@ -449,13 +447,20 @@ rdpScreenInit(ScreenPtr pScreen, int argc, char **argv)
         LLOGLN(0, ("rdpScreenInit: fbScreenInit failed"));
         return FALSE;
     }
-    miInitializeBackingStore(pScreen);
 
-#if 0
+#if XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(1, 14, 0, 0, 0)
+    /* 1.13 has this function, 1.14 and up does not */
+    miInitializeBackingStore(pScreen);
+#endif
+
+    /* try in init simd functions */
+    rdpSimdInit(pScreen, pScrn);
+
+#if defined(XvExtension) && XvExtension
     /* XVideo */
-    if (rdp_xv_init(pScreen, pScrn) != 0)
+    if (!rdpXvInit(pScreen, pScrn))
     {
-        LLOGLN(0, ("rdpScreenInit: rdp_xv_init failed"));
+        LLOGLN(0, ("rdpScreenInit: rdpXvInit failed"));
     }
 #endif
 
@@ -617,6 +622,17 @@ rdpValidMode(ScrnInfoPtr a, DisplayModePtr b, Bool c, int d)
 }
 
 /*****************************************************************************/
+static void
+#if XORG_VERSION_CURRENT < XORG_VERSION_NUMERIC(1, 13, 0, 0, 0)
+rdpFreeScreen(int a, int b)
+#else
+rdpFreeScreen(ScrnInfoPtr a)
+#endif
+{
+    LLOGLN(0, ("rdpFreeScreen:"));
+}
+
+/*****************************************************************************/
 static Bool
 rdpProbe(DriverPtr drv, int flags)
 {
@@ -658,7 +674,7 @@ rdpProbe(DriverPtr drv, int flags)
             found_screen = 1;
             pscrn->driverVersion = XRDP_VERSION;
             pscrn->driverName    = XRDP_DRIVER_NAME;
-            pscrn->name          = XRDP_NAME;
+            pscrn->name          = XRDP_DRIVER_NAME;
             pscrn->Probe         = rdpProbe;
             pscrn->PreInit       = rdpPreInit;
             pscrn->ScreenInit    = rdpScreenInit;
@@ -667,7 +683,7 @@ rdpProbe(DriverPtr drv, int flags)
             pscrn->EnterVT       = rdpEnterVT;
             pscrn->LeaveVT       = rdpLeaveVT;
             pscrn->ValidMode     = rdpValidMode;
-
+            pscrn->FreeScreen    = rdpFreeScreen;
             xf86DrvMsg(pscrn->scrnIndex, X_INFO, "%s", "using default device\n");
         }
     }
@@ -710,7 +726,7 @@ static void
 rdpIdentify(int flags)
 {
     LLOGLN(0, ("rdpIdentify:"));
-    xf86PrintChipsets(XRDP_NAME, "driver for xrdp", g_Chipsets);
+    xf86PrintChipsets(XRDP_DRIVER_NAME, "driver for xrdp", g_Chipsets);
 }
 
 /*****************************************************************************/

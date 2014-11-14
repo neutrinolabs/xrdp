@@ -27,6 +27,7 @@ xrdp mouse module
 
 /* this should be before all X11 .h files */
 #include <xorg-server.h>
+#include <xorgVersion.h>
 
 /* all driver need this */
 #include <xf86.h>
@@ -49,14 +50,6 @@ xrdp mouse module
 #define LOG_LEVEL 1
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
-
-#define XRDP_DRIVER_NAME "XRDPMOUSE"
-#define XRDP_NAME "XRDPMOUSE"
-#define XRDP_VERSION 1000
-
-#define PACKAGE_VERSION_MAJOR 1
-#define PACKAGE_VERSION_MINOR 0
-#define PACKAGE_VERSION_PATCHLEVEL 0
 
 /******************************************************************************/
 static void
@@ -317,13 +310,14 @@ rdpmouseUnInit(InputDriverPtr drv, InputInfoPtr info, int flags)
 {
     LLOGLN(0, ("rdpmouseUnInit: drv %p info %p, flags 0x%x",
            drv, info, flags));
+    rdpUnregisterInputCallback(rdpInputMouse);
 }
 
 /******************************************************************************/
 static InputDriverRec rdpmouse =
 {
     PACKAGE_VERSION_MAJOR,    /* version   */
-    XRDP_NAME,                /* name      */
+    XRDP_MOUSE_NAME,          /* name      */
     NULL,                     /* identify  */
     rdpmousePreInit,          /* preinit   */
     rdpmouseUnInit,           /* uninit    */
@@ -350,7 +344,7 @@ rdpmouseUnplug(pointer p)
 /******************************************************************************/
 static XF86ModuleVersionInfo rdpmouseVersionRec =
 {
-    XRDP_DRIVER_NAME,
+    XRDP_MOUSE_NAME,
     MODULEVENDORSTRING,
     MODINFOSTRING1,
     MODINFOSTRING2,

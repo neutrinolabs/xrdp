@@ -118,23 +118,34 @@ auth_userpass(char *user, char *pass, int *errorcode)
 
     if (error != PAM_SUCCESS)
     {
-	if(errorcode!=NULL){
-		*errorcode = error ;
-	}
+        if (errorcode != NULL)
+        {
+            *errorcode = error;
+        }
         g_printf("pam_start failed: %s\r\n", pam_strerror(auth_info->ph, error));
+        pam_end(auth_info->ph, error);
         g_free(auth_info);
         return 0;
+    }
+
+    error = pam_set_item(auth_info->ph, PAM_TTY, service_name);
+    if (error != PAM_SUCCESS)
+    {
+        g_printf("pam_set_item failed: %s\r\n",
+                 pam_strerror(auth_info->ph, error));
     }
 
     error = pam_authenticate(auth_info->ph, 0);
 
     if (error != PAM_SUCCESS)
     {
-	if(errorcode!=NULL){
-		*errorcode = error ;
-	}
+        if (errorcode != NULL)
+        {
+            *errorcode = error;
+        }
         g_printf("pam_authenticate failed: %s\r\n",
                  pam_strerror(auth_info->ph, error));
+        pam_end(auth_info->ph, error);
         g_free(auth_info);
         return 0;
     }
@@ -148,11 +159,13 @@ auth_userpass(char *user, char *pass, int *errorcode)
 
     if (error != PAM_SUCCESS)
     {
-	if(errorcode!=NULL){
-		*errorcode = error ;
-	}
+        if (errorcode != NULL)
+        {
+            *errorcode = error;
+        }
         g_printf("pam_acct_mgmt failed: %s\r\n",
                  pam_strerror(auth_info->ph, error));
+        pam_end(auth_info->ph, error);
         g_free(auth_info);
         return 0;
     }
