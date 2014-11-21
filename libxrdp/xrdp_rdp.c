@@ -155,7 +155,7 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
             }
             else
             {
-                log_message(LOG_LEVEL_ALWAYS,"Warning: Your configured fastpath level is"
+                log_message(LOG_LEVEL_ALWAYS,"Warning: Your configured fastpath level is "
                           "undefined, fastpath will not be used");
                 client_info->use_fast_path = 0;
             }
@@ -176,7 +176,7 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
             }
             else
             {
-                log_message(LOG_LEVEL_ALWAYS,"Warning: Your configured security layer is"
+                log_message(LOG_LEVEL_ALWAYS,"Warning: Your configured security layer is "
                           "undefined, xrdp will negotiate client compatible");
                 client_info->security_layer = PROTOCOL_SSL | PROTOCOL_HYBRID | PROTOCOL_HYBRID_EX;
             }
@@ -369,7 +369,7 @@ xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code)
     {
         /* check for fastpath first */
         header = (const tui8 *) (s->p);
-        if ((header[0] != 0x3) && (header[0] != 0x3c))
+        if (header[0] != 0x3)
         {
             if (xrdp_sec_recv_fastpath(self->sec_layer, s) != 0)
             {
