@@ -19,7 +19,7 @@
 
 /**
  *
- * @file verify_user_user.c
+ * @file verify_user_bsd.c
  * @brief Authenticate user using BSD password system
  * @author Renaud Allard
  *
@@ -45,7 +45,7 @@ extern struct config_sesman* g_cfg; /* in sesman.c */
 /******************************************************************************/
 /* returns boolean */
 long DEFAULT_CC
-auth_userpass(char* user, char* pass)
+auth_userpass(char *user, char *pass, int *errorcode)
 {
 	int ret = auth_userokay(user, NULL, "auth-xrdp", pass);
 	return ret;
@@ -82,6 +82,12 @@ auth_check_pwd_chg(char* user)
 
 int DEFAULT_CC
 auth_change_pwd(char* user, char* newpwd)
+{
+  return 0;
+}
+
+int DEFAULT_CC   
+auth_stop_session(long in_val)
 {
   return 0;
 }
