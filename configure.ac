@@ -32,6 +32,10 @@ AM_CONDITIONAL(SESMAN_NOPAM, [test x$enable_pam != xyes])
 AC_ARG_ENABLE(kerberos, AS_HELP_STRING([--enable-kerberos],
               [Build kerberos support (default: no)]),
               [], [enable_kerberos=no])
+AC_ARG_ENABLE(bsd, AS_HELP_STRING([--enable-bsd],
+              [Build BSD auth support (default: no)]),
+              [bsd=true], [bsd=false])
+AM_CONDITIONAL(SESMAN_BSD, [test x$bsd = xtrue])
 AM_CONDITIONAL(SESMAN_KERBEROS, [test x$enable_kerberos = xyes])
 AC_ARG_ENABLE(pamuserpass, AS_HELP_STRING([--enable-pamuserpass],
               [Build pam userpass support (default: no)]),
@@ -78,8 +82,11 @@ if test "x$enable_pam" = "xyes"
 then
   if test "x$enable_kerberos" != "xyes"
   then
-    AC_CHECK_HEADER([security/pam_appl.h], [],
-      [AC_MSG_ERROR([please install libpam0g-dev or pam-devel])])
+    if test -z "$enable_bsd"
+    then
+      AC_CHECK_HEADER([security/pam_appl.h], [],
+        [AC_MSG_ERROR([please install libpam0g-dev or pam-devel])])
+    fi
   fi
 fi
 
