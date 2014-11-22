@@ -35,13 +35,18 @@ APP_CC
 xrdp_tls_create(struct trans *trans, const char *key, const char *cert)
 {
     struct xrdp_tls *self;
-    self = (struct xrdp_tls *) g_malloc(sizeof(struct xrdp_tls), 1);
+    int pid;
+    char buf[1024];
 
+    self = (struct xrdp_tls *) g_malloc(sizeof(struct xrdp_tls), 1);
     if (self != NULL)
     {
         self->trans = trans;
         self->cert = (char *) cert;
         self->key = (char *) key;
+        pid = g_getpid();
+        g_snprintf(buf, 1024, "xrdp_%8.8x_tls_rwo", pid);
+        self->rwo = g_create_wait_obj(buf);
     }
 
     return self;
@@ -211,6 +216,8 @@ xrdp_tls_delete(struct xrdp_tls *self)
         if (self->ctx)
             SSL_CTX_free(self->ctx);
 
+        g_delete_wait_obj(self->rwo);
+
         g_free(self);
     }
 }
@@ -238,11 +245,16 @@ xrdp_tls_read(struct xrdp_tls *tls, char *data, int length)
             break;
     }
 
+    if (SSL_pending(tls->ssl) > 0)
+    {
+        g_set_wait_obj(tls->rwo);
+    }
+
     return status;
 }
 /*****************************************************************************/
 int APP_CC
-xrdp_tls_write(struct xrdp_tls *tls, char *data, int length)
+xrdp_tls_write(struct xrdp_tls *tls, const char *data, int length)
 {
     int status;
 
@@ -265,5 +277,17 @@ xrdp_tls_write(struct xrdp_tls *tls, char *data, int length)
     }
 
     return status;
+}
+/*****************************************************************************/
+/* returns boolean */
+int APP_CC
+xrdp_tls_can_recv(struct xrdp_tls *tls, int sck, int millis)
+{
+    if (SSL_pending(tls->ssl) > 0)
+    {
+        return 1;
+    }
+    g_reset_wait_obj(tls->rwo);
+    return g_tcp_can_recv(sck, millis);
 }
 
