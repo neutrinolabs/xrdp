@@ -102,6 +102,14 @@ auth_start_session(long in_val, int in_display)
 }
 
 /******************************************************************************/
+/* returns error */
+int DEFAULT_CC
+auth_stop_session(long in_val)
+{
+    return 0;
+}
+
+/******************************************************************************/
 int DEFAULT_CC
 auth_end(long in_val)
 {

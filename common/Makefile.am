@@ -39,8 +39,7 @@ libcommon_la_SOURCES = \
   os_calls.c \
   ssl_calls.c \
   thread_calls.c \
-  trans.c \
-  xrdp_tls.c
+  trans.c
 
 libcommon_la_LIBADD = \
   -lcrypto \

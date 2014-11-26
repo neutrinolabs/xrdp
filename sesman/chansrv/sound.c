@@ -28,6 +28,7 @@
 #include "defines.h"
 #include "fifo.h"
 #include "file_loc.h"
+#include "chansrv_common.h"
 
 extern int g_rdpsnd_chan_id;    /* in chansrv.c */
 extern int g_display_num;       /* in chansrv.c */

@@ -20,6 +20,7 @@
 #define _CHANSRV_COMMON_H
 
 #include "parse.h"
+#include "os_calls.h"
 
 int read_entire_packet(struct stream *src, struct stream **dest, int chan_flags, int length, int total_length);
 

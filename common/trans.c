@@ -22,6 +22,7 @@
 #include "trans.h"
 #include "arch.h"
 #include "parse.h"
+#include "ssl_calls.h"
 
 /*****************************************************************************/
 int APP_CC
@@ -31,7 +32,7 @@ trans_tls_recv(struct trans *self, void *ptr, int len)
     {
         return 1;
     }
-    return xrdp_tls_read(self->tls, ptr, len);
+    return ssl_tls_read(self->tls, ptr, len);
 }
 
 /*****************************************************************************/
@@ -42,7 +43,18 @@ trans_tls_send(struct trans *self, const void *data, int len)
     {
         return 1;
     }
-    return xrdp_tls_write(self->tls, data, len);
+    return ssl_tls_write(self->tls, data, len);
+}
+
+/*****************************************************************************/
+int APP_CC
+trans_tls_can_recv(struct trans *self, int sck, int millis)
+{
+    if (self->tls == NULL)
+    {
+        return 1;
+    }
+    return ssl_tls_can_recv(self->tls, sck, millis);
 }
 
 /*****************************************************************************/
@@ -57,6 +69,13 @@ int APP_CC
 trans_tcp_send(struct trans *self, const void *data, int len)
 {
     return g_tcp_send(self->sck, data, len, 0);
+}
+
+/*****************************************************************************/
+int APP_CC
+trans_tcp_can_recv(struct trans *self, int sck, int millis)
+{
+    return g_tcp_can_recv(sck, millis);
 }
 
 /*****************************************************************************/
@@ -79,6 +98,7 @@ trans_create(int mode, int in_size, int out_size)
         /* assign tcp calls by default */
         self->trans_recv = trans_tcp_recv;
         self->trans_send = trans_tcp_send;
+        self->trans_can_recv = trans_tcp_can_recv;
     }
 
     return self;
@@ -111,7 +131,7 @@ trans_delete(struct trans *self)
 
     if (self->tls != 0)
     {
-        xrdp_tls_delete(self->tls);
+        ssl_tls_delete(self->tls);
     }
 
     g_free(self);
@@ -133,6 +153,16 @@ trans_get_wait_objs(struct trans *self, tbus *objs, int *count)
 
     objs[*count] = self->sck;
     (*count)++;
+
+    if (self->tls != 0)
+    {
+        if (self->tls->rwo != 0)
+        {
+            objs[*count] = self->tls->rwo;
+            (*count)++;
+        }
+    }
+
     return 0;
 }
 
@@ -141,18 +171,10 @@ int APP_CC
 trans_get_wait_objs_rw(struct trans *self, tbus *robjs, int *rcount,
                        tbus *wobjs, int *wcount)
 {
-    if (self == 0)
+    if (trans_get_wait_objs(self, robjs, rcount) != 0)
     {
         return 1;
     }
-
-    if (self->status != TRANS_STATUS_UP)
-    {
-        return 1;
-    }
-
-    robjs[*rcount] = self->sck;
-    (*rcount)++;
 
     if (self->wait_s != 0)
     {
@@ -288,7 +310,7 @@ trans_check_wait_objs(struct trans *self)
     }
     else /* connected server or client (2 or 3) */
     {
-        if (g_tcp_can_recv(self->sck, 0))
+        if (self->trans_can_recv(self, self->sck, 0))
         {
             read_so_far = (int) (self->in_s->end - self->in_s->data);
             to_read = self->header_size - read_so_far;
@@ -700,22 +722,23 @@ trans_get_out_s(struct trans *self, int size)
 int APP_CC
 trans_set_tls_mode(struct trans *self, const char *key, const char *cert)
 {
-    self->tls = xrdp_tls_create(self, key, cert);
+    self->tls = ssl_tls_create(self, key, cert);
     if (self->tls == NULL)
     {
-        g_writeln("trans_set_tls_mode: xrdp_tls_create malloc error");
+        g_writeln("trans_set_tls_mode: ssl_tls_create malloc error");
         return 1;
     }
 
-    if (xrdp_tls_accept(self->tls) != 0)
+    if (ssl_tls_accept(self->tls) != 0)
     {
-        g_writeln("trans_set_tls_mode: xrdp_tls_accept failed");
+        g_writeln("trans_set_tls_mode: ssl_tls_accept failed");
         return 1;
     }
 
     /* assign tls functions */
     self->trans_recv = trans_tls_recv;
     self->trans_send = trans_tls_send;
+    self->trans_can_recv = trans_tls_can_recv;
 
     return 0;
 }
@@ -726,12 +749,13 @@ trans_shutdown_tls_mode(struct trans *self)
 {
     if (self->tls != NULL)
     {
-        return xrdp_tls_disconnect(self->tls);
+        return ssl_tls_disconnect(self->tls);
     }
 
     /* assign callback back to tcp cal */
     self->trans_recv = trans_tcp_recv;
     self->trans_send = trans_tcp_send;
+    self->trans_can_recv = trans_tcp_can_recv;
 
     return 0;
 }
