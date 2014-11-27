@@ -306,10 +306,10 @@ rdpLoadLayout(struct xrdp_client_info *client_info)
         set.rules = "base";
     }
 
-    set.model = "pc104";
+    set.model = "pc105";
     set.layout = "us";
     set.variant = "";
-    set.options = "";
+    set.options = "terminate:ctrl_alt_bksp,grp:shift_caps_toggle";
 
     if (strlen(client_info->model) > 0)
     {
@@ -360,7 +360,8 @@ rdpLoadLayout(struct xrdp_client_info *client_info)
                                       NULL, serverClient);
             }
         }
-    } else
+    }
+    else
     {
         /* sometimes, variant doesn't support all layouts */
         set.variant = "";
@@ -394,10 +395,10 @@ rdpKeybdProc(DeviceIntPtr pDevice, int onoff)
             {
                 set.rules = "base";
             }
-            set.model = "pc104";
+            set.model = "pc105";
             set.layout = "us";
             set.variant = "";
-            set.options = "";
+            set.options = "terminate:ctrl_alt_bksp,grp:shift_caps_toggle";
             ok = InitKeyboardDeviceStruct(pDevice, &set, rdpBell,
                                           rdpChangeKeyboardControl);
             LLOGLN(10, ("rdpKeybdProc: InitKeyboardDeviceStruct %d", ok));
