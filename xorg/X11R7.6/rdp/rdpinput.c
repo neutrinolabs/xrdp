@@ -68,7 +68,7 @@ static int g_x = 0;
 static int g_y = 0;
 static int g_timer_schedualed = 0;
 static int g_delay_motion = 1; /* turn on or off */
-static int g_use_evdev = 1;
+static int g_use_evdev = 0;
 
 /* Copied from Xvnc/lib/font/util/utilbitmap.c */
 static unsigned char g_reverse_byte[0x100] =
@@ -309,7 +309,7 @@ rdpLoadLayout(struct xrdp_client_info *client_info)
     set.model = "pc105";
     set.layout = "us";
     set.variant = "";
-    set.options = "terminate:ctrl_alt_bksp,grp:shift_caps_toggle";
+    set.options = "";
 
     if (strlen(client_info->model) > 0)
     {
@@ -398,7 +398,7 @@ rdpKeybdProc(DeviceIntPtr pDevice, int onoff)
             set.model = "pc105";
             set.layout = "us";
             set.variant = "";
-            set.options = "terminate:ctrl_alt_bksp,grp:shift_caps_toggle";
+            set.options = "";
             ok = InitKeyboardDeviceStruct(pDevice, &set, rdpBell,
                                           rdpChangeKeyboardControl);
             LLOGLN(10, ("rdpKeybdProc: InitKeyboardDeviceStruct %d", ok));
