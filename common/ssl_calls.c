@@ -685,14 +685,24 @@ ssl_tls_accept(struct ssl_tls *self)
 }
 
 /*****************************************************************************/
+/* returns error, */
 int APP_CC
 ssl_tls_disconnect(struct ssl_tls *self)
 {
-    int status = SSL_shutdown(self->ssl);
+    int status;
+
+    if (self == NULL)
+    {
+        return 0;
+    }
+    if (self->ssl == NULL)
+    {
+        return 0;
+    }
+    status = SSL_shutdown(self->ssl);
     while (status != 1)
     {
         status = SSL_shutdown(self->ssl);
-
         if (status <= 0)
         {
             if (ssl_tls_print_error("SSL_shutdown", self->ssl, status))
