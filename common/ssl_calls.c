@@ -649,17 +649,17 @@ ssl_tls_accept(struct ssl_tls *self)
         return 1;
     }
 
+    if (SSL_CTX_use_certificate_chain_file(self->ctx, self->cert) <= 0)
+    {
+        g_writeln("ssl_tls_accept: SSL_CTX_use_certificate_chain_file failed");
+        return 1;
+    }
+
     self->ssl = SSL_new(self->ctx);
 
     if (self->ssl == NULL)
     {
         g_writeln("ssl_tls_accept: SSL_new failed");
-        return 1;
-    }
-
-    if (SSL_use_certificate_file(self->ssl, self->cert, SSL_FILETYPE_PEM) <= 0)
-    {
-        g_writeln("ssl_tls_accept: SSL_use_certificate_file failed");
         return 1;
     }
 
