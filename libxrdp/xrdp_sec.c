@@ -2151,7 +2151,7 @@ xrdp_sec_incoming(struct xrdp_sec *self)
     }
 
     /* initialize selected security layer */
-    if (iso->requestedProtocol > PROTOCOL_RDP)
+    if (iso->selectedProtocol > PROTOCOL_RDP)
     {
         /* init tls security */
         DEBUG((" in xrdp_sec_incoming: init tls security"));
