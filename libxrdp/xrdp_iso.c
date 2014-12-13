@@ -49,8 +49,10 @@ xrdp_iso_delete(struct xrdp_iso *self)
 }
 
 /*****************************************************************************/
+/* returns error */
 static int APP_CC
 xrdp_iso_negotiate_security(struct xrdp_iso *self) {
+	int rv = 0;
 	int server_security_layer = self->mcs_layer->sec_layer->rdp_layer->client_info.security_layer;
 
 	self->selectedProtocol = server_security_layer;
@@ -64,6 +66,7 @@ xrdp_iso_negotiate_security(struct xrdp_iso *self) {
 				self->selectedProtocol = PROTOCOL_SSL;
 			} else {
 				self->failureCode = SSL_REQUIRED_BY_SERVER;
+				rv = 1; /* error */
 			}
 			break;
 		case PROTOCOL_HYBRID:
@@ -80,7 +83,7 @@ xrdp_iso_negotiate_security(struct xrdp_iso *self) {
 
 	DEBUG(("xrdp_iso_negotiate_security: server security layer %d , client security layer %d",
 					self->selectedProtocol, self->requestedProtocol));
-	return 0;
+	return rv;
 }
 
 /*****************************************************************************/
@@ -269,6 +272,7 @@ xrdp_iso_send_cc(struct xrdp_iso *self)
 int APP_CC
 xrdp_iso_incoming(struct xrdp_iso *self)
 {
+    int rv = 0;
     int code;
     int len;
     int cookie_index;
@@ -337,7 +341,7 @@ xrdp_iso_incoming(struct xrdp_iso *self)
     }
 
     /* negotiate client-server security layer */
-    xrdp_iso_negotiate_security(self);
+    rv = xrdp_iso_negotiate_security(self);
 
     /* send connection confirm back to client */
     if (xrdp_iso_send_cc(self) != 0)
@@ -347,7 +351,7 @@ xrdp_iso_incoming(struct xrdp_iso *self)
     }
 
     DEBUG(("   out xrdp_iso_incoming"));
-    return 0;
+    return rv;
 }
 
 /*****************************************************************************/
