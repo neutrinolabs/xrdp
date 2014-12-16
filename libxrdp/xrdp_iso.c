@@ -51,39 +51,47 @@ xrdp_iso_delete(struct xrdp_iso *self)
 /*****************************************************************************/
 /* returns error */
 static int APP_CC
-xrdp_iso_negotiate_security(struct xrdp_iso *self) {
-	int rv = 0;
-	int server_security_layer = self->mcs_layer->sec_layer->rdp_layer->client_info.security_layer;
+xrdp_iso_negotiate_security(struct xrdp_iso *self)
+{
+    int rv = 0;
+    int server_security_layer = self->mcs_layer->sec_layer->rdp_layer->client_info.security_layer;
 
-	self->selectedProtocol = server_security_layer;
+    self->selectedProtocol = server_security_layer;
 
-	switch (server_security_layer) {
-		case PROTOCOL_RDP:
-			self->rdpNegData = 0; /* no need to send rdp_neg_data back to client */
-			break;
-		case PROTOCOL_SSL:
-			if (self->requestedProtocol & PROTOCOL_SSL) {
-				self->selectedProtocol = PROTOCOL_SSL;
-			} else {
-				self->failureCode = SSL_REQUIRED_BY_SERVER;
-				rv = 1; /* error */
-			}
-			break;
-		case PROTOCOL_HYBRID:
-		case PROTOCOL_HYBRID_EX:
-		default:
-			if (self->requestedProtocol & PROTOCOL_SSL) {
-				/* thats a patch since we don't support CredSSP for now */
-				self->selectedProtocol = PROTOCOL_SSL;
-			} else {
-				self->selectedProtocol = PROTOCOL_RDP;
-			}
-			break;
-	}
+    switch (server_security_layer)
+    {
+        case PROTOCOL_RDP:
+            self->rdpNegData = 0; /* no need to send rdp_neg_data back to client */
+            break;
+        case PROTOCOL_SSL:
+            if (self->requestedProtocol & PROTOCOL_SSL)
+            {
+                self->selectedProtocol = PROTOCOL_SSL;
+            }
+            else
+            {
+                self->failureCode = SSL_REQUIRED_BY_SERVER;
+                rv = 1; /* error */
+            }
+            break;
+        case PROTOCOL_HYBRID:
+        case PROTOCOL_HYBRID_EX:
+        default:
+            if (self->requestedProtocol & PROTOCOL_SSL)
+            {
+                /* thats a patch since we don't support CredSSP for now */
+                self->selectedProtocol = PROTOCOL_SSL;
+            }
+            else
+            {
+                self->selectedProtocol = PROTOCOL_RDP;
+            }
+            break;
+    }
 
-	DEBUG(("xrdp_iso_negotiate_security: server security layer %d , client security layer %d",
-					self->selectedProtocol, self->requestedProtocol));
-	return rv;
+    DEBUG(("xrdp_iso_negotiate_security: server security layer %d , client security layer %d",
+                    self->selectedProtocol, self->requestedProtocol));
+    return rv;
 }
 
 /*****************************************************************************/
