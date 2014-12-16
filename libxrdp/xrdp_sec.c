@@ -480,21 +480,21 @@ xrdp_sec_init(struct xrdp_sec *self, struct stream *s)
         return 1;
     }
 
-	if (self->crypt_level > CRYPT_LEVEL_NONE) /* RDP encryption */
-	{
-		if (self->crypt_level == CRYPT_LEVEL_FIPS)
-		{
-			s_push_layer(s, sec_hdr, 4 + 4 + 8);
-		}
-		else if (self->crypt_level > CRYPT_LEVEL_LOW)
-		{
-			s_push_layer(s, sec_hdr, 4 + 8);
-		}
-		else if (self->crypt_level)
-		{
-			s_push_layer(s, sec_hdr, 4);
-		}
-	}
+    if (self->crypt_level > CRYPT_LEVEL_NONE) /* RDP encryption */
+    {
+        if (self->crypt_level == CRYPT_LEVEL_FIPS)
+        {
+            s_push_layer(s, sec_hdr, 4 + 4 + 8);
+        }
+        else if (self->crypt_level > CRYPT_LEVEL_LOW)
+        {
+            s_push_layer(s, sec_hdr, 4 + 8);
+        }
+        else if (self->crypt_level)
+        {
+            s_push_layer(s, sec_hdr, 4);
+        }
+    }
 
     return 0;
 }
@@ -1414,31 +1414,31 @@ xrdp_sec_send(struct xrdp_sec *self, struct stream *s, int chan)
 
     if (self->crypt_level > CRYPT_LEVEL_NONE)
     {
-		if (self->crypt_level == CRYPT_LEVEL_FIPS)
-		{
-			LLOGLN(10, ("xrdp_sec_send: fips"));
-			out_uint32_le(s, SEC_ENCRYPT);
-			datalen = (int)((s->end - s->p) - 12);
-			out_uint16_le(s, 16); /* crypto header size */
-			out_uint8(s, 1); /* fips version */
-			pad = (8 - (datalen % 8)) & 7;
-			g_memset(s->end, 0, pad);
-			s->end += pad;
-			out_uint8(s, pad); /* fips pad */
-			xrdp_sec_fips_sign(self, s->p, 8, s->p + 8, datalen);
-			xrdp_sec_fips_encrypt(self, s->p + 8, datalen + pad);
-		}
-		else if (self->crypt_level > CRYPT_LEVEL_LOW)
-		{
-			out_uint32_le(s, SEC_ENCRYPT);
-			datalen = (int)((s->end - s->p) - 8);
-			xrdp_sec_sign(self, s->p, 8, s->p + 8, datalen);
-			xrdp_sec_encrypt(self, s->p + 8, datalen);
-		}
-		else
-		{
-			out_uint32_le(s, 0);
-		}
+        if (self->crypt_level == CRYPT_LEVEL_FIPS)
+        {
+            LLOGLN(10, ("xrdp_sec_send: fips"));
+            out_uint32_le(s, SEC_ENCRYPT);
+            datalen = (int)((s->end - s->p) - 12);
+            out_uint16_le(s, 16); /* crypto header size */
+            out_uint8(s, 1); /* fips version */
+            pad = (8 - (datalen % 8)) & 7;
+            g_memset(s->end, 0, pad);
+            s->end += pad;
+            out_uint8(s, pad); /* fips pad */
+            xrdp_sec_fips_sign(self, s->p, 8, s->p + 8, datalen);
+            xrdp_sec_fips_encrypt(self, s->p + 8, datalen + pad);
+        }
+        else if (self->crypt_level > CRYPT_LEVEL_LOW)
+        {
+            out_uint32_le(s, SEC_ENCRYPT);
+            datalen = (int)((s->end - s->p) - 8);
+            xrdp_sec_sign(self, s->p, 8, s->p + 8, datalen);
+            xrdp_sec_encrypt(self, s->p + 8, datalen);
+        }
+        else
+        {
+            out_uint32_le(s, 0);
+        }
     }
 
     if (xrdp_mcs_send(self->mcs_layer, s, chan) != 0)
@@ -2130,7 +2130,7 @@ xrdp_sec_init_rdp_security(struct xrdp_sec *self)
     else
     {
         self->encrypt_rc4_info = ssl_rc4_info_create();
-   	}
+    }
 
     return 0;
 }
