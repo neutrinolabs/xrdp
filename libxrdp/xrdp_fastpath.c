@@ -264,7 +264,7 @@ xrdp_fastpath_process_EVENT_SYNC(struct xrdp_fastpath *self, int eventCode,
            RDP_INPUT_MOUSEX - 0x8002 */
         /* call to xrdp_wm.c : callback */
         self->session->callback(self->session->id, RDP_INPUT_SYNCHRONIZE,
-                                eventCode, 0, eventFlags, 0);
+                                eventFlags, 0, 0, 0);
     }
     return 0;
 }
