@@ -1,4 +1,4 @@
-default certificate pa/**
+/**
  * xrdp: A Remote Desktop Protocol server.
  *
  * Copyright (C) Jay Sorg 2004-2014
