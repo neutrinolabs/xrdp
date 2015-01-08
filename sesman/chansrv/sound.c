@@ -140,8 +140,8 @@ static struct xr_wave_format_ex g_pcm_inp_44100 =
 #define SND_NUM_INP_FORMATS 2
 static struct xr_wave_format_ex *g_wave_inp_formats[SND_NUM_INP_FORMATS] =
 {
-    &g_pcm_inp_22050,
-    &g_pcm_inp_44100
+    &g_pcm_inp_44100,
+    &g_pcm_inp_22050
 };
 
 static int g_client_input_format_index = 0;
@@ -960,7 +960,7 @@ sound_process_input_format(int aindex, int wFormatTag, int nChannels,
     LOG(10, ("      wBitsPerSample  %d", wBitsPerSample));
     LOG(10, ("      cbSize          %d", cbSize));
 
-#if 0
+#if 1
     /* select CD quality audio */
     if (wFormatTag == g_pcm_inp_44100.wFormatTag &&
         nChannels == g_pcm_inp_44100.nChannels &&
@@ -1047,7 +1047,9 @@ sound_input_start_recording(void)
 
     /* if there is any data in FIFO, discard it */
     while ((s = (struct stream *) fifo_remove(&g_in_fifo)) != NULL)
+    {
         xstream_free(s);
+    }
     g_bytes_in_fifo = 0;
 
     xstream_new(s, 1024);
@@ -1110,14 +1112,15 @@ sound_process_input_data(struct stream *s, int bytes)
 {
     struct stream *ls;
 
-    LOG(0, ("sound_process_input_data: bytes %d g_bytes_in_fifo %d",
+    LOG(10, ("sound_process_input_data: bytes %d g_bytes_in_fifo %d",
         bytes, g_bytes_in_fifo));
-
+#if 0 /* no need to cap anymore */
     /* cap data in fifo */
     if (g_bytes_in_fifo > 8 * 1024)
     {
         return 0;
     }
+#endif
     xstream_new(ls, bytes);
     g_memcpy(ls->data, s->p, bytes);
     ls->p += bytes;

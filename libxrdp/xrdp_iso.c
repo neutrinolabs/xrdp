@@ -51,7 +51,53 @@ xrdp_iso_delete(struct xrdp_iso *self)
 /*****************************************************************************/
 /* returns error */
 static int APP_CC
-xrdp_iso_process_rdpNegReq(struct xrdp_iso *self, struct stream *s)
+xrdp_iso_negotiate_security(struct xrdp_iso *self)
+{
+    int rv = 0;
+    int server_security_layer = self->mcs_layer->sec_layer->rdp_layer->client_info.security_layer;
+
+    self->selectedProtocol = server_security_layer;
+
+    switch (server_security_layer)
+    {
+        case PROTOCOL_RDP:
+            self->rdpNegData = 0; /* no need to send rdp_neg_data back to client */
+            break;
+        case PROTOCOL_SSL:
+            if (self->requestedProtocol & PROTOCOL_SSL)
+            {
+                self->selectedProtocol = PROTOCOL_SSL;
+            }
+            else
+            {
+                self->failureCode = SSL_REQUIRED_BY_SERVER;
+                rv = 1; /* error */
+            }
+            break;
+        case PROTOCOL_HYBRID:
+        case PROTOCOL_HYBRID_EX:
+        default:
+            if (self->requestedProtocol & PROTOCOL_SSL)
+            {
+                /* thats a patch since we don't support CredSSP for now */
+                self->selectedProtocol = PROTOCOL_SSL;
+            }
+            else
+            {
+                self->selectedProtocol = PROTOCOL_RDP;
+            }
+            break;
+    }
+
+    DEBUG(("xrdp_iso_negotiate_security: server security layer %d , client security layer %d",
+                    self->selectedProtocol, self->requestedProtocol));
+    return rv;
+}
+
+/*****************************************************************************/
+/* returns error */
+static int APP_CC
+xrdp_iso_process_rdp_neg_req(struct xrdp_iso *self, struct stream *s)
 {
     int flags;
     int len;
@@ -85,11 +131,11 @@ xrdp_iso_process_rdpNegReq(struct xrdp_iso *self, struct stream *s)
 static int APP_CC
 xrdp_iso_recv_msg(struct xrdp_iso *self, struct stream *s, int *code, int *len)
 {
-    int ver; // tpkt ver
-    int plen; // tpkt len
+    int ver;
+    int plen;
 
-    *code = 0; // x.244 type
-    *len = 0; // X.224 len indicator
+    *code = 0;
+    *len = 0;
 
     if (s != self->trans->in_s)
     {
@@ -212,7 +258,6 @@ xrdp_iso_send_cc(struct xrdp_iso *self)
             out_uint32_le(s, self->selectedProtocol); /* selected protocol */
         }
     }
-
     s_mark_end(s);
 
     len = (int) (s->end - holdp);
@@ -235,6 +280,7 @@ xrdp_iso_send_cc(struct xrdp_iso *self)
 int APP_CC
 xrdp_iso_incoming(struct xrdp_iso *self)
 {
+    int rv = 0;
     int code;
     int len;
     int cookie_index;
@@ -274,7 +320,7 @@ xrdp_iso_incoming(struct xrdp_iso *self)
                 break;
             case RDP_NEG_REQ: /* rdpNegReq 1 */
                 self->rdpNegData = 1;
-                if (xrdp_iso_process_rdpNegReq(self, s) != 0)
+                if (xrdp_iso_process_rdp_neg_req(self, s) != 0)
                 {
                     g_writeln("xrdp_iso_incoming: xrdp_iso_process_rdpNegReq returned non zero");
                     return 1;
@@ -302,78 +348,8 @@ xrdp_iso_incoming(struct xrdp_iso *self)
         }
     }
 
-    int serverSecurityLayer = self->mcs_layer->sec_layer->rdp_layer->client_info.security_layer;
-    /* security layer negotiation */
-    if (self->rdpNegData)
-    {
-        self->selectedProtocol = PROTOCOL_RDP; /* set default security layer */
-
-        switch (serverSecurityLayer)
-        {
-            case (PROTOCOL_SSL | PROTOCOL_HYBRID | PROTOCOL_HYBRID_EX):
-                /* server supports tls+hybrid+hybrid_ex */
-                if (self->requestedProtocol == (PROTOCOL_SSL | PROTOCOL_HYBRID
-                        | PROTOCOL_HYBRID_EX))
-                {
-                    /* client supports tls+hybrid+hybrid_ex */
-                    self->selectedProtocol = PROTOCOL_SSL; //TODO: change
-                }
-                else
-                {
-                    self->failureCode = SSL_WITH_USER_AUTH_REQUIRED_BY_SERVER;
-                }
-                break;
-            case (PROTOCOL_SSL | PROTOCOL_HYBRID):
-                /* server supports tls+hybrid */
-                if (self->requestedProtocol == (PROTOCOL_SSL | PROTOCOL_HYBRID))
-                {
-                    /* client supports tls+hybrid */
-                    self->selectedProtocol = PROTOCOL_SSL; //TODO: change
-                }
-                else
-                {
-                    self->failureCode = HYBRID_REQUIRED_BY_SERVER;
-                }
-                break;
-            case PROTOCOL_SSL:
-                /* server supports tls */
-                if (self->requestedProtocol & PROTOCOL_SSL) //TODO
-                {
-                    /* client supports tls */
-                    self->selectedProtocol = PROTOCOL_SSL;
-                }
-                else
-                {
-                    self->failureCode = SSL_REQUIRED_BY_SERVER;
-                }
-                break;
-            case PROTOCOL_RDP:
-                /* server supports rdp */
-                if (self->requestedProtocol == PROTOCOL_RDP)
-                {
-                    /* client supports rdp */
-                    self->selectedProtocol = PROTOCOL_RDP;
-                }
-                else
-                {
-                    self->failureCode = SSL_NOT_ALLOWED_BY_SERVER;
-                }
-                break;
-            default:
-                /* unsupported protocol */
-                g_writeln("xrdp_iso_incoming: unsupported protocol %d",
-                        self->requestedProtocol);
-                self->failureCode = INCONSISTENT_FLAGS; //TODO: ?
-        }
-    }
-    else if (self->requestedProtocol != serverSecurityLayer)
-    {
-    	/* enforce server security */
-    	return 1;
-    }
-
-    /* set things for tls connection */
-
+    /* negotiate client-server security layer */
+    rv = xrdp_iso_negotiate_security(self);
 
     /* send connection confirm back to client */
     if (xrdp_iso_send_cc(self) != 0)
@@ -383,7 +359,7 @@ xrdp_iso_incoming(struct xrdp_iso *self)
     }
 
     DEBUG(("   out xrdp_iso_incoming"));
-    return 0;
+    return rv;
 }
 
 /*****************************************************************************/

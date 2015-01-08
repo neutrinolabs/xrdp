@@ -19,6 +19,13 @@ setxkbmap -model pc104 -layout de
 setxkbmap -model pc104 -layout it
 ./xrdp-genkeymap ../instfiles/km-0410.ini
 
+# Japanese 'jp' 0x0411
+setxkbmap -model jp106 -layout jp -variant OADG109A
+./xrdp-genkeymap ../instfiles/km-0411.ini
+./xrdp-genkeymap ../instfiles/km-e0010411.ini
+./xrdp-genkeymap ../instfiles/km-e0200411.ini
+./xrdp-genkeymap ../instfiles/km-e0210411.ini
+
 # Polish 'pl' 0x0415
 setxkbmap -model pc104 -layout pl
 ./xrdp-genkeymap ../instfiles/km-0415.ini
