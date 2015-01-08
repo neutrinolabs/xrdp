@@ -878,7 +878,7 @@ xrdp_mcs_send_connect_response(struct xrdp_mcs *self)
     xrdp_iso_init(self->iso_layer, s);
     //TODO: we should calculate the whole length include MCS_CONNECT_RESPONSE
     xrdp_mcs_ber_out_header(self, s, MCS_CONNECT_RESPONSE,
-			data_len > 0x80 ? data_len + 38 : data_len + 36);
+            data_len > 0x80 ? data_len + 38 : data_len + 36);
     xrdp_mcs_ber_out_header(self, s, BER_TAG_RESULT, 1);
     out_uint8(s, 0);
     xrdp_mcs_ber_out_header(self, s, BER_TAG_INTEGER, 1);

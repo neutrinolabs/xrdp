@@ -174,6 +174,7 @@ static int data_get(struct userdata *u, pa_memchunk *chunk) {
 
     int fd;
     int bytes;
+    int read_bytes;
     struct sockaddr_un s;
     char *data;
     char buf[11];
@@ -216,7 +217,12 @@ static int data_get(struct userdata *u, pa_memchunk *chunk) {
         buf[9]  = 0;
         buf[10] = 0;
 
-        lsend(u->fd, buf, 11);
+        if (lsend(u->fd, buf, 11) != 11) {
+            close(u->fd);
+            u->fd = 0;
+            pa_memblock_release(chunk->memblock);
+            return -1;
+        }
         u->want_src_data = 1;
         pa_log_debug("###### started recording");
     }
@@ -234,10 +240,22 @@ static int data_get(struct userdata *u, pa_memchunk *chunk) {
     buf[9]  = (unsigned char) chunk->length;
     buf[10] = (unsigned char) ((chunk->length >> 8) & 0xff);
 
-    lsend(u->fd, buf, 11);
+    if (lsend(u->fd, buf, 11) != 11) {
+        close(u->fd);
+        u->fd = 0;
+        pa_memblock_release(chunk->memblock);
+        u->want_src_data = 0;
+        return -1;
+    }
 
     /* read length of data available */
-    lrecv(u->fd, (char *) ubuf, 2);
+    if (lrecv(u->fd, (char *) ubuf, 2) != 2) {
+        close(u->fd);
+        u->fd = 0;
+        pa_memblock_release(chunk->memblock);
+        u->want_src_data = 0;
+        return -1;
+    }
     bytes = ((ubuf[1] << 8) & 0xff00) | (ubuf[0] & 0xff);
 
     if (bytes == 0) {
@@ -246,15 +264,22 @@ static int data_get(struct userdata *u, pa_memchunk *chunk) {
     }
 
     /* get data */
-    bytes = lrecv(u->fd, data, bytes);
-
+    read_bytes = lrecv(u->fd, data, bytes);
+    if (read_bytes != bytes) {
+        close(u->fd);
+        u->fd = 0;
+        pa_memblock_release(chunk->memblock);
+        u->want_src_data = 0;
+        return -1;
+    }
     pa_memblock_release(chunk->memblock);
 
-    return bytes;
+    return read_bytes;
 }
 
 static void thread_func(void *userdata) {
     struct userdata *u = userdata;
+    int bytes;
 
     pa_assert(u);
     pa_thread_mq_install(&u->thread_mq);
@@ -271,10 +296,15 @@ static void thread_func(void *userdata) {
             now = pa_rtclock_now();
 
             if ((chunk.length = pa_usec_to_bytes(now - u->timestamp, &u->source->sample_spec)) > 0) {
-                chunk.memblock = pa_memblock_new(u->core->mempool, (size_t) -1); /* or chunk.length? */
+                chunk.length *= 4;
+                chunk.memblock = pa_memblock_new(u->core->mempool, chunk.length);
                 chunk.index = 0;
-                data_get(u, &chunk);
-                pa_source_post(u->source, &chunk);
+                bytes = data_get(u, &chunk);
+                if (bytes > 0)
+                {
+                    chunk.length = bytes;
+                    pa_source_post(u->source, &chunk); 
+                }
                 pa_memblock_unref(chunk.memblock);
                 u->timestamp = now;
             }
@@ -298,7 +328,10 @@ static void thread_func(void *userdata) {
                 buf[9]  = 0;
                 buf[10] = 0;
 
-                lsend(u->fd, buf, 11);
+                if (lsend(u->fd, buf, 11) != 11) {
+                    close(u->fd);
+                    u->fd = 0;
+                }
                 u->want_src_data = 0;
                 pa_log_debug("###### stopped recording");
             }
@@ -338,7 +371,7 @@ int pa__init(pa_module *m) {
         goto fail;
     }
 
-#if 0
+#if 1
     ss = m->core->default_sample_spec;
 #else
     ss.format = PA_SAMPLE_S16LE;

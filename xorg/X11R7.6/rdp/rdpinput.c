@@ -68,7 +68,7 @@ static int g_x = 0;
 static int g_y = 0;
 static int g_timer_schedualed = 0;
 static int g_delay_motion = 1; /* turn on or off */
-static int g_use_evdev = 1;
+static int g_use_evdev = 0;
 
 /* Copied from Xvnc/lib/font/util/utilbitmap.c */
 static unsigned char g_reverse_byte[0x100] =
@@ -306,7 +306,7 @@ rdpLoadLayout(struct xrdp_client_info *client_info)
         set.rules = "base";
     }
 
-    set.model = "pc104";
+    set.model = "pc105";
     set.layout = "us";
     set.variant = "";
     set.options = "";
@@ -360,7 +360,8 @@ rdpLoadLayout(struct xrdp_client_info *client_info)
                                       NULL, serverClient);
             }
         }
-    } else
+    }
+    else
     {
         /* sometimes, variant doesn't support all layouts */
         set.variant = "";
@@ -394,7 +395,7 @@ rdpKeybdProc(DeviceIntPtr pDevice, int onoff)
             {
                 set.rules = "base";
             }
-            set.model = "pc104";
+            set.model = "pc105";
             set.layout = "us";
             set.variant = "";
             set.options = "";
