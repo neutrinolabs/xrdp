@@ -22,6 +22,11 @@ EXTRA_DEFINES += -DXRDP_FUSE
 EXTRA_LIBS += -lfuse
 endif
 
+if XRDP_OPUS
+EXTRA_DEFINES += -DXRDP_OPUS
+EXTRA_LIBS += -lopus
+endif
+
 AM_CFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \

@@ -69,6 +69,10 @@ AC_ARG_ENABLE(rfxcodec, AS_HELP_STRING([--enable-rfxcodec],
               [Build using librfxcodec (default: no)]),
               [], [enable_rfxcodec=no])
 AM_CONDITIONAL(XRDP_RFXCODEC, [test x$enable_rfxcodec = xyes])
+AC_ARG_ENABLE(opus, AS_HELP_STRING([--enable-opus],
+              [Build opus(audio codec) (default: no)]),
+              [], [enable_opus=no])
+AM_CONDITIONAL(XRDP_OPUS, [test x$enable_opus = xyes])
 
 AM_CONDITIONAL(GOT_PREFIX, test "x${prefix}" != "xNONE"])
 
@@ -120,6 +124,13 @@ then
   AC_CHECK_HEADER([fuse.h], [],
     [AC_MSG_ERROR([please install libfuse-dev or fuse-devel])],
     [#define _FILE_OFFSET_BITS 64])
+fi
+
+# checking for opus
+if test "x$enable_opus" = "xyes"
+then
+  AC_CHECK_HEADER([opus/opus.h], [],
+    [AC_MSG_ERROR([please install libopus-dev or opus-devel])])
 fi
 
 # checking for TurboJPEG

@@ -30,6 +30,11 @@
 #include "file_loc.h"
 #include "chansrv_common.h"
 
+#if defined(XRDP_OPUS)
+#include <opus/opus.h>
+static OpusEncoder *g_opus_encoder = 0;
+#endif
+
 extern int g_rdpsnd_chan_id;    /* in chansrv.c */
 extern int g_display_num;       /* in chansrv.c */
 
@@ -50,11 +55,13 @@ static int    g_bytes_in_fifo = 0;
 static struct stream *g_stream_inp = NULL;
 static struct stream *g_stream_incoming_packet = NULL;
 
-#define BBUF_SIZE (1024 * 8)
-char g_buffer[BBUF_SIZE];
-int g_buf_index = 0;
-int g_sent_time[256];
-int g_sent_flag[256];
+#define MAX_BBUF_SIZE (1024 * 16)
+static char g_buffer[MAX_BBUF_SIZE];
+static int g_buf_index = 0;
+static int g_sent_time[256];
+static int g_sent_flag[256];
+
+static int g_bbuf_size = 1024 * 8; /* may change later */
 
 struct xr_wave_format_ex
 {
@@ -96,12 +103,39 @@ static struct xr_wave_format_ex g_pcm_44100 =
     g_pcm_44100_data /* data */
 };
 
+static char g_opus_44100_data[] = { 0 };
+static struct xr_wave_format_ex g_opus_44100 =
+{
+    0x0069,           /* wFormatTag - WAVE_FORMAT_OPUS */
+    2,                /* num of channels */
+    44100,            /* samples per sec */
+    176400,           /* avg bytes per sec */
+    4,                /* block align */
+    16,               /* bits per sample */
+    0,                /* data size */
+    g_opus_44100_data /* data */
+};
+
+
+#if defined(XRDP_OPUS)
+#define SND_NUM_OUTP_FORMATS 3
+static struct xr_wave_format_ex *g_wave_outp_formats[SND_NUM_OUTP_FORMATS] =
+{
+    &g_pcm_44100,
+    &g_pcm_22050,
+    &g_opus_44100
+};
+#else
 #define SND_NUM_OUTP_FORMATS 2
 static struct xr_wave_format_ex *g_wave_outp_formats[SND_NUM_OUTP_FORMATS] =
 {
     &g_pcm_44100,
     &g_pcm_22050
 };
+#endif
+
+static int g_client_does_opus = 0;
+static int g_client_opus_index = 0;
 
 /* index into list from client */
 static int g_current_client_format_index = 0;
@@ -302,6 +336,14 @@ sound_process_output_format(int aindex, int wFormatTag, int nChannels,
         }
     }
 #endif
+
+    if (wFormatTag == 0x0069)
+    {
+        g_client_does_opus = 1;
+        g_client_opus_index = aindex;
+        g_bbuf_size = 11520;
+    }
+
     return 0;
 }
 
@@ -355,6 +397,72 @@ sound_process_output_formats(struct stream *s, int size)
     return 0;
 }
 
+#if defined(XRDP_OPUS)
+
+/*****************************************************************************/
+static int
+sound_wave_compress(char *data, int data_bytes, int *format_index)
+{
+    unsigned char *cdata;
+    int cdata_bytes;
+    int rv;
+    int error;
+    opus_int16 *os16;
+
+    if (g_client_does_opus == 0)
+    {
+        return data_bytes;
+    }
+    if (g_opus_encoder == 0)
+    {
+        // NB (narrowband)       8 kHz
+        // MB (medium-band)     12 kHz
+        // WB (wideband)        16 kHz
+        // SWB (super-wideband) 24 kHz
+        // FB (fullband)        48 kHz
+        g_opus_encoder = opus_encoder_create(48000, 2,
+                                             OPUS_APPLICATION_AUDIO,
+                                             &error);
+        if (g_opus_encoder == 0)
+        {
+            LOG(0, ("sound_wave_compress: opus_encoder_create failed"));
+            return data_bytes;
+        }
+    }
+    rv = data_bytes;
+    cdata_bytes = data_bytes;
+    cdata = (unsigned char *) g_malloc(cdata_bytes, 0);
+    os16 = (opus_int16 *) data;
+    // at 48000 we have
+    // 2.5 ms   480
+    // 5   ms   960
+    // 10  ms  1920
+    // 20  ms  3840
+    // 40  ms  7680
+    // 60  ms 11520
+    cdata_bytes = opus_encode(g_opus_encoder, os16, data_bytes / 4,
+                              cdata, cdata_bytes);
+    if ((cdata_bytes > 0) && (cdata_bytes < data_bytes))
+    {
+        *format_index = g_client_opus_index;
+        g_memcpy(data, cdata, cdata_bytes);
+        rv = cdata_bytes;
+    }
+    g_free(cdata);
+    return rv;
+}
+
+#else
+
+/*****************************************************************************/
+static int
+sound_wave_compress(char *data, int data_bytes, int *format_index)
+{
+    return data_bytes;
+}
+
+#endif
+
 /*****************************************************************************/
 /* send wave message to client */
 static int
@@ -363,6 +471,7 @@ sound_send_wave_data_chunk(char *data, int data_bytes)
     struct stream *s;
     int bytes;
     int time;
+    int format_index;
     char *size_ptr;
 
     LOG(10, ("sound_send_wave_data_chunk: data_bytes %d", data_bytes));
@@ -385,6 +494,10 @@ sound_send_wave_data_chunk(char *data, int data_bytes)
         LOG(10, ("sound_send_wave_data_chunk: got room"));
     }
 
+    /* compress, if available */
+    format_index = g_current_client_format_index;
+    data_bytes = sound_wave_compress(data, data_bytes, &format_index);
+
     /* part one of 2 PDU wave info */
 
     LOG(10, ("sound_send_wave_data_chunk: sending %d bytes", data_bytes));
@@ -396,7 +509,7 @@ sound_send_wave_data_chunk(char *data, int data_bytes)
     out_uint16_le(s, 0); /* size, set later */
     time = g_time2();
     out_uint16_le(s, time);
-    out_uint16_le(s, g_current_client_format_index); /* wFormatNo */
+    out_uint16_le(s, format_index); /* wFormatNo */
     g_cBlockNo++;
     out_uint8(s, g_cBlockNo);
     g_sent_time[g_cBlockNo & 0xff] = time;
@@ -445,7 +558,7 @@ sound_send_wave_data(char *data, int data_bytes)
     error = 0;
     while (data_bytes > 0)
     {
-        space_left = BBUF_SIZE - g_buf_index;
+        space_left = g_bbuf_size - g_buf_index;
         chunk_bytes = MIN(space_left, data_bytes);
         if (chunk_bytes < 1)
         {
@@ -455,10 +568,10 @@ sound_send_wave_data(char *data, int data_bytes)
         }
         g_memcpy(g_buffer + g_buf_index, data + data_index, chunk_bytes);
         g_buf_index += chunk_bytes;
-        if (g_buf_index >= BBUF_SIZE)
+        if (g_buf_index >= g_bbuf_size)
         {
             g_buf_index = 0;
-            res = sound_send_wave_data_chunk(g_buffer, BBUF_SIZE);
+            res = sound_send_wave_data_chunk(g_buffer, g_bbuf_size);
             if (res == 2)
             {
                 /* don't need to error on this */
