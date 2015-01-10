@@ -808,6 +808,9 @@ sound_init(void)
     /* save data from sound_server_source */
     fifo_init(&g_in_fifo, 100);
 
+    g_client_does_opus = 0;
+    g_client_opus_index = 0;
+
     return 0;
 }
 
