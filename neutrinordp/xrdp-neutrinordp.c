@@ -812,13 +812,14 @@ lfreerdp_glyph_index(rdpContext *context, GLYPH_INDEX_ORDER *glyph_index)
 #if 1
     /* workarounds for freerdp not using fOpRedundant in
        glyph.c::update_gdi_glyph_index */
-    if (glyph_index->fOpRedundant)
+    /* disabled as causing problems using neutrinordp */
+/*    if (glyph_index->fOpRedundant)
     {
         opLeft = glyph_index->bkLeft;
         opTop = glyph_index->bkTop;
         opRight = glyph_index->bkRight;
         opBottom =glyph_index->bkBottom;
-    }
+    }*/
 #endif
     mod->server_draw_text(mod, glyph_index->cacheId, glyph_index->flAccel,
                           glyph_index->fOpRedundant,
