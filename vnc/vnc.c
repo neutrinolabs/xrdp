@@ -21,6 +21,20 @@
 #include "vnc.h"
 #include "log.h"
 
+#define LLOG_LEVEL 1
+#define LLOGLN(_level, _args) \
+  do \
+  { \
+    if (_level < LLOG_LEVEL) \
+    { \
+        g_write("xrdp:vnc [%10.10u]: ", g_time3()); \
+        g_writeln _args ; \
+    } \
+  } \
+  while (0)
+
+#define AS_LOG_MESSAGE log_message
+
 /******************************************************************************/
 /* taken from vncauth.c */
 void DEFAULT_CC
@@ -309,7 +323,6 @@ lib_mod_event(struct vnc *v, int msg, long param1, long param2,
     int chanid;
     int flags;
     char *data;
-    char text[256];
 
     error = 0;
     make_stream(s);
@@ -912,7 +925,6 @@ lib_palette_update(struct vnc *v)
 int DEFAULT_CC
 lib_bell_trigger(struct vnc *v)
 {
-    struct stream *s;
     int error;
 
     error = v->server_bell_trigger(v);
