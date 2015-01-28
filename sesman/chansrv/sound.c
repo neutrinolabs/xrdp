@@ -407,6 +407,7 @@ sound_wave_compress(char *data, int data_bytes, int *format_index)
     int cdata_bytes;
     int rv;
     int error;
+    int data_bytes_org;
     opus_int16 *os16;
 
     if (g_client_does_opus == 0)
@@ -415,11 +416,11 @@ sound_wave_compress(char *data, int data_bytes, int *format_index)
     }
     if (g_opus_encoder == 0)
     {
-        // NB (narrowband)       8 kHz
-        // MB (medium-band)     12 kHz
-        // WB (wideband)        16 kHz
-        // SWB (super-wideband) 24 kHz
-        // FB (fullband)        48 kHz
+        /* NB (narrowband)       8 kHz
+           MB (medium-band)     12 kHz
+           WB (wideband)        16 kHz
+           SWB (super-wideband) 24 kHz
+           FB (fullband)        48 kHz */
         g_opus_encoder = opus_encoder_create(48000, 2,
                                              OPUS_APPLICATION_AUDIO,
                                              &error);
@@ -429,20 +430,26 @@ sound_wave_compress(char *data, int data_bytes, int *format_index)
             return data_bytes;
         }
     }
+    data_bytes_org = data_bytes;
     rv = data_bytes;
     cdata_bytes = data_bytes;
     cdata = (unsigned char *) g_malloc(cdata_bytes, 0);
     os16 = (opus_int16 *) data;
-    // at 48000 we have
-    // 2.5 ms   480
-    // 5   ms   960
-    // 10  ms  1920
-    // 20  ms  3840
-    // 40  ms  7680
-    // 60  ms 11520
+    /* at 48000 we have
+       2.5 ms   480
+       5   ms   960
+       10  ms  1920
+       20  ms  3840
+       40  ms  7680
+       60  ms 11520 */
+    if (data_bytes < g_bbuf_size)
+    {
+        g_memset(data + data_bytes, 0, g_bbuf_size - data_bytes);
+        data_bytes = g_bbuf_size;
+    }
     cdata_bytes = opus_encode(g_opus_encoder, os16, data_bytes / 4,
                               cdata, cdata_bytes);
-    if ((cdata_bytes > 0) && (cdata_bytes < data_bytes))
+    if ((cdata_bytes > 0) && (cdata_bytes < data_bytes_org))
     {
         *format_index = g_client_opus_index;
         g_memcpy(data, cdata, cdata_bytes);
