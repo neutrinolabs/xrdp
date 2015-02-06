@@ -132,6 +132,7 @@ struct xrdp_client_info
   char model[16];
   char layout[16];
   char variant[16];
+  char options[256];
 
 };
 
