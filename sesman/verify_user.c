@@ -321,7 +321,10 @@ auth_account_disabled(struct spwd *stp)
         return 1;
     }
 
-    if (today >= (stp->sp_lstchg + stp->sp_max + stp->sp_inact))
+    if ((stp->sp_max >= 0) &&
+        (stp->sp_inact >= 0) &&
+        (stp->sp_lstchg > 0) &&
+        (today >= (stp->sp_lstchg + stp->sp_max + stp->sp_inact)))
     {
         return 1;
     }
