@@ -29,6 +29,9 @@ AC_ARG_ENABLE(nopam, AS_HELP_STRING([--enable-nopam],
                   fi
               ])
 AM_CONDITIONAL(SESMAN_NOPAM, [test x$enable_pam != xyes])
+AC_ARG_ENABLE(ipv6, AS_HELP_STRING([--enable-ipv6],
+              [Build IPv6 support (default: no, experimental)]),
+              [], [enable_ipv6=no])
 AC_ARG_ENABLE(kerberos, AS_HELP_STRING([--enable-kerberos],
               [Build kerberos support (default: no)]),
               [], [enable_kerberos=no])
@@ -92,6 +95,11 @@ then
         [AC_MSG_ERROR([please install libpam0g-dev or pam-devel])])
     fi
   fi
+fi
+
+if test "x$enable_ipv6" = "xyes"
+then
+  AC_DEFINE([XRDP_ENABLE_IPV6],1,[Enable IPv6])
 fi
 
 AC_CHECK_MEMBER([struct in6_addr.s6_addr],
