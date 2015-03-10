@@ -457,7 +457,7 @@ g_tcp_socket(void)
     unsigned int option_len;
 #endif
 
-#if 0 && !defined(NO_ARPA_INET_H_IP6)
+#if defined(XRDP_ENABLE_IPV6) && !defined(NO_ARPA_INET_H_IP6)
     rv = (int)socket(AF_INET6, SOCK_STREAM, 0);
 #else
     rv = (int)socket(AF_INET, SOCK_STREAM, 0);
@@ -466,7 +466,7 @@ g_tcp_socket(void)
     {
         return -1;
     }
-#if 0 && !defined(NO_ARPA_INET_H_IP6)
+#if defined(XRDP_ENABLE_IPV6) && !defined(NO_ARPA_INET_H_IP6)
     option_len = sizeof(option_value);
     if (getsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&option_value,
                    &option_len) == 0)
@@ -683,7 +683,7 @@ g_tcp_close(int sck)
 
 /*****************************************************************************/
 /* returns error, zero is good */
-#if 0
+#if defined(XRDP_ENABLE_IPV6) && !defined(NO_ARPA_INET_H_IP6)
 int APP_CC
 g_tcp_connect(int sck, const char *address, const char *port)
 {
@@ -703,7 +703,6 @@ g_tcp_connect(int sck, const char *address, const char *port)
     */
     p.ai_socktype = SOCK_STREAM;
     p.ai_protocol = IPPROTO_TCP;
-#if !defined(NO_ARPA_INET_H_IP6)
     p.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED;
     p.ai_family = AF_INET6;
     if (g_strcmp(address, "127.0.0.1") == 0)
@@ -714,11 +713,6 @@ g_tcp_connect(int sck, const char *address, const char *port)
     {
         res = getaddrinfo(address, port, &p, &h);
     }
-#else
-    p.ai_flags = AI_ADDRCONFIG;
-    p.ai_family = AF_INET;
-    res = getaddrinfo(address, port, &p, &h);
-#endif
     if (res > -1)
     {
         if (h != NULL)
@@ -808,7 +802,7 @@ g_tcp_set_non_blocking(int sck)
     return 0;
 }
 
-#if 0
+#if defined(XRDP_ENABLE_IPV6)
 /*****************************************************************************/
 /* return boolean */
 static int APP_CC
@@ -876,7 +870,7 @@ address_match(const char *address, struct addrinfo *j)
 }
 #endif
 
-#if 0
+#if defined(XRDP_ENABLE_IPV6)
 /*****************************************************************************/
 /* returns error, zero is good */
 static int APP_CC
@@ -950,7 +944,7 @@ g_tcp_local_bind(int sck, const char *port)
 #endif
 }
 
-#if 0
+#if defined(XRDP_ENABLE_IPV6)
 /*****************************************************************************/
 /* returns error, zero is good */
 int APP_CC
