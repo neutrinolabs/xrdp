@@ -108,7 +108,7 @@ rdp_get_clip(RegionPtr pRegion, DrawablePtr pDrawable, GCPtr pGC)
                 break;
             case CT_REGION:
                 rv = 2;
-                RegionCopy(pRegion, pGC->clientClip);
+                RegionCopy(pRegion, pGC->pCompositeClip);
                 break;
             default:
                 rdpLog("unimp clip type %d\n", pGC->clientClipType);
