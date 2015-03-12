@@ -1534,7 +1534,9 @@ main(int argc, char **argv)
 
     display_text = g_getenv("DISPLAY");
     LOGM((LOG_LEVEL_INFO, "main: DISPLAY env var set to %s", display_text));
-    get_display_num_from_display(display_text);
+
+    if (display_text)
+        get_display_num_from_display(display_text);
 
     if (g_display_num == 0)
     {
