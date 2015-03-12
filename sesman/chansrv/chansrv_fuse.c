@@ -56,6 +56,7 @@ char g_fuse_clipboard_path[256] = ""; /* for clipboard use */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "arch.h"
 #include "chansrv_fuse.h"
