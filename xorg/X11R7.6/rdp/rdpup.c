@@ -35,7 +35,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
 static int g_use_shmem = 1; /* turns on or off */
-static int g_shmemid = 0;
+static int g_shmemid = -1;
 static char *g_shmemptr = 0;
 static int g_shmem_lineBytes = 0;
 static RegionPtr g_shm_reg = 0;
@@ -750,21 +750,35 @@ process_screen_size_msg(int width, int height, int bpp)
         if (g_shmemptr != 0)
         {
             shmdt(g_shmemptr);
+            g_shmemptr = 0;
         }
         bytes = g_rdpScreen.rdp_width * g_rdpScreen.rdp_height *
                 g_rdpScreen.rdp_Bpp;
         g_shmemid = shmget(IPC_PRIVATE, bytes, IPC_CREAT | 0777);
-        g_shmemptr = shmat(g_shmemid, 0, 0);
-        shmctl(g_shmemid, IPC_RMID, NULL);
-        LLOGLN(0, ("process_screen_size_msg: g_shmemid %d g_shmemptr %p",
-               g_shmemid, g_shmemptr));
-        g_shmem_lineBytes = g_rdpScreen.rdp_Bpp * g_rdpScreen.rdp_width;
-
-        if (g_shm_reg != 0)
+        if (g_shmemid != -1)
         {
-            RegionDestroy(g_shm_reg);
+            g_shmemptr = shmat(g_shmemid, 0, 0);
+            if (g_shmemptr == (void *) -1)
+            {
+                LLOGLN(0, ("process_screen_size_msg: shmat failed for %d "
+                       "bytes g_shmemid %d", bytes, g_shmemid));
+                g_shmemptr = 0;
+                shmctl(g_shmemid, IPC_RMID, NULL);
+                g_shmemid = -1;
+            }
+            else
+            {
+                shmctl(g_shmemid, IPC_RMID, NULL);
+            }
+            LLOGLN(0, ("process_screen_size_msg: g_shmemid %d g_shmemptr %p",
+                   g_shmemid, g_shmemptr));
+            g_shmem_lineBytes = g_rdpScreen.rdp_Bpp * g_rdpScreen.rdp_width;
+            if (g_shm_reg != 0)
+            {
+                RegionDestroy(g_shm_reg);
+            }
+            g_shm_reg = RegionCreate(NullBox, 0);
         }
-        g_shm_reg = RegionCreate(NullBox, 0);
     }
 
     mmwidth = PixelToMM(width);
