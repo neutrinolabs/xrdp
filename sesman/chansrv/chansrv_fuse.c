@@ -107,6 +107,10 @@ void xfuse_devredir_cb_file_close(void *vp)                                  {}
 #include "list.h"
 #include "fifo.h"
 
+#ifndef EREMOTEIO
+#define EREMOTEIO EIO
+#endif
+
 #define min(x, y) ((x) < (y) ? (x) : (y))
 
 #define XFUSE_ATTR_TIMEOUT      1.0
