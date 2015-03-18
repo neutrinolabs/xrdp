@@ -117,9 +117,8 @@ fi
 # checking for fuse
 if test "x$enable_fuse" = "xyes"
 then
-  AC_CHECK_HEADER([fuse.h], [],
-    [AC_MSG_ERROR([please install libfuse-dev or fuse-devel])],
-    [#define _FILE_OFFSET_BITS 64])
+  PKG_CHECK_MODULES([FUSE], [fuse >= 2.6], [],
+    [AC_MSG_ERROR([please install libfuse-dev or fuse-devel])])
 fi
 
 # checking for TurboJPEG
