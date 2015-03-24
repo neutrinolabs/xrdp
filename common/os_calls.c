@@ -86,6 +86,12 @@ extern char **environ;
 #include <linux/unistd.h>
 #endif
 
+/* sys/ucred.h needs to be included to use struct xucred
+ * in FreeBSD and OS X. No need for other BSDs  */
+#if defined(__FreeBSD__) || defined(__APPLE__)
+#include <sys/ucred.h>
+#endif
+
 /* for solaris */
 #if !defined(PF_LOCAL)
 #define PF_LOCAL AF_UNIX
@@ -654,6 +660,28 @@ g_sck_get_peer_cred(int sck, int *pid, int *uid, int *gid)
     if (gid != 0)
     {
         *gid = credentials.gid;
+    }
+    return 0;
+#elif defined(LOCAL_PEERCRED)
+    /* FreeBSD, OS X reach here*/
+    struct xucred xucred;
+    unsigned int xucred_length;
+    xucred_length = sizeof(xucred);
+
+    if (getsockopt(sck, SOL_SOCKET, LOCAL_PEERCRED, &xucred, &xucred_length))
+    {
+            return 1;
+    }
+    if (pid !=0)
+    {
+        *pid = 0; /* can't get pid in FreeBSD, OS X */
+    }
+    if (uid != 0)
+    {
+        *uid = xucred.cr_uid;
+    }
+    if (gid != 0) {
+        *gid = xucred.cr_gid;
     }
     return 0;
 #else
