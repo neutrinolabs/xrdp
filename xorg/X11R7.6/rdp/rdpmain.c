@@ -297,8 +297,8 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
     ErrorF("\n");
     ErrorF("X11rdp, an X server for xrdp\n");
     ErrorF("Version %s\n", X11RDPVER);
-    ErrorF("Copyright (C) 2005-2012 Jay Sorg\n");
-    ErrorF("See http://xrdp.sf.net for information on xrdp.\n");
+    ErrorF("Copyright (C) 2005-2015 Jay Sorg\n");
+    ErrorF("See http://www.xrdp.org for information on xrdp.\n");
 #if defined(XORG_VERSION_CURRENT) && defined (XVENDORNAME)
     ErrorF("Underlying X server release %d, %s\n",
            XORG_VERSION_CURRENT, XVENDORNAME);
@@ -579,7 +579,7 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
     rdpGlyphInit();
 
     //rdpXvInit(pScreen);
-    
+
     rdpSetUDSRights();
 
     ErrorF("rdpScreenInit: ret %d\n", ret);
