@@ -58,46 +58,16 @@ xrdp_mm_create(struct xrdp_wm *owner)
     self->login_values->auto_free = 1;
 
     LLOGLN(0, ("xrdp_mm_create: bpp %d mcs_connection_type %d "
-           "jpeg_codec_id %d v3_codec_id %d rfx_codec_id %d",
+           "jpeg_codec_id %d v3_codec_id %d rfx_codec_id %d "
+           "h264_codec_id %d",
            self->wm->client_info->bpp,
            self->wm->client_info->mcs_connection_type,
            self->wm->client_info->jpeg_codec_id,
            self->wm->client_info->v3_codec_id,
-           self->wm->client_info->rfx_codec_id));
-    /* go into jpeg codec mode if jpeg set, lan set */
-    if (self->wm->client_info->mcs_connection_type == 6) /* LAN */
-    {
-        if (self->wm->client_info->jpeg_codec_id == 2) /* JPEG */
-        {
-            if (self->wm->client_info->bpp > 16)
-            {
-                LLOGLN(0, ("xrdp_mm_create: starting jpeg codec session"));
-                self->codec_id = 2;
-                self->in_codec_mode = 1;
-                self->codec_quality = self->wm->client_info->jpeg_prop[0];
-                self->wm->client_info->capture_code = 0;
-                self->wm->client_info->capture_format =
-                /* PIXMAN_a8b8g8r8 */
-                (32 << 24) | (3 << 16) | (8 << 12) | (8 << 8) | (8 << 4) | 8;
-            }
-        }
-        else if (self->wm->client_info->rfx_codec_id == 3) /* RFX */
-        {
-            if (self->wm->client_info->bpp > 16)
-            {
-                LLOGLN(0, ("xrdp_mm_create: starting rfx codec session"));
-                self->codec_id = 3;
-                self->in_codec_mode = 1;
-                self->wm->client_info->capture_code = 2;
-            }
-        }
-    }
+           self->wm->client_info->rfx_codec_id,
+           self->wm->client_info->h264_codec_id));
 
-    if (self->in_codec_mode)
-    {
-    /* setup thread to handle codec mode messages */
-        init_xrdp_encoder(self);
-    }
+    self->encoder = xrdp_encoder_create(self);
 
     return self;
 }
@@ -174,7 +144,7 @@ xrdp_mm_delete(struct xrdp_mm *self)
     xrdp_mm_module_cleanup(self);
 
     /* shutdown thread */
-    deinit_xrdp_encoder(self);
+    xrdp_encoder_delete(self->encoder);
 
     trans_delete(self->sesman_trans);
     self->sesman_trans = 0;
@@ -1956,9 +1926,9 @@ xrdp_mm_get_wait_objs(struct xrdp_mm *self,
         }
     }
 
-    if (self->in_codec_mode)
+    if (self->encoder != 0)
     {
-        read_objs[(*rcount)++] = self->xrdp_encoder_event_processed;
+        read_objs[(*rcount)++] = self->encoder->xrdp_encoder_event_processed;
     }
 
     return rv;
@@ -2021,6 +1991,28 @@ xrdp_mm_dump_jpeg(struct xrdp_mm *self, XRDP_ENC_DATA_DONE *enc_done)
 
 /*****************************************************************************/
 int APP_CC
+xrdp_mm_check_chan(struct xrdp_mm *self)
+{
+    //g_writeln("xrdp_mm_check_chan:");
+    if ((self->chan_trans != 0) && self->chan_trans_up)
+    {
+        if (trans_check_wait_objs(self->chan_trans) != 0)
+        {
+            self->delete_chan_trans = 1;
+        }
+    }
+    if (self->delete_chan_trans)
+    {
+        trans_delete(self->chan_trans);
+        self->chan_trans = 0;
+        self->chan_trans_up = 0;
+        self->delete_chan_trans = 0;
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
 xrdp_mm_check_wait_objs(struct xrdp_mm *self)
 {
     XRDP_ENC_DATA_DONE *enc_done;
@@ -2029,6 +2021,8 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
     int y;
     int cx;
     int cy;
+    int use_frame_acks;
+    int ex;
 
     if (self == 0)
     {
@@ -2077,15 +2071,18 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
         self->delete_chan_trans = 0;
     }
 
-    if (self->in_codec_mode)
+    if (self->encoder != 0)
     {
-        if (g_is_wait_obj_set(self->xrdp_encoder_event_processed))
+
+        use_frame_acks = self->wm->client_info->use_frame_acks;
+
+        if (g_is_wait_obj_set(self->encoder->xrdp_encoder_event_processed))
         {
-            g_reset_wait_obj(self->xrdp_encoder_event_processed);
-            tc_mutex_lock(self->mutex);
+            g_reset_wait_obj(self->encoder->xrdp_encoder_event_processed);
+            tc_mutex_lock(self->encoder->mutex);
             enc_done = (XRDP_ENC_DATA_DONE*)
-                       fifo_remove_item(self->fifo_processed);
-            tc_mutex_unlock(self->mutex);
+                       fifo_remove_item(self->encoder->fifo_processed);
+            tc_mutex_unlock(self->encoder->mutex);
             while (enc_done != 0)
             {
                 /* do something with msg */
@@ -2103,34 +2100,83 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
 
                 if (enc_done->comp_bytes > 0)
                 {
+                    libxrdp_fastpath_send_frame_marker(self->wm->session, 0,
+                                                       enc_done->enc->frame_id);
                     libxrdp_fastpath_send_surface(self->wm->session,
                                                   enc_done->comp_pad_data,
                                                   enc_done->pad_bytes,
                                                   enc_done->comp_bytes,
                                                   x, y, x + cx, y + cy,
-                                                  32, self->codec_id, cx, cy);
+                                                  32, self->encoder->codec_id, cx, cy);
+                    libxrdp_fastpath_send_frame_marker(self->wm->session, 1,
+                                                       enc_done->enc->frame_id);
                 }
 
                 /* free enc_done */
                 if (enc_done->last)
                 {
                     LLOGLN(10, ("xrdp_mm_check_wait_objs: last set"));
-                           self->mod->mod_frame_ack(self->mod,
-                           enc_done->enc->flags, enc_done->enc->frame_id);
+                    if (use_frame_acks == 0)
+                    {
+                        self->mod->mod_frame_ack(self->mod,
+                                                 enc_done->enc->flags,
+                                                 enc_done->enc->frame_id);
+                    }
+                    else
+                    {
+#if 1
+                        ex = self->wm->client_info->max_unacknowledged_frame_count;
+                        if (self->encoder->frame_id_client + ex > self->encoder->frame_id_server)
+                        {
+                            if (self->encoder->frame_id_server > self->encoder->frame_id_server_sent)
+                            {
+                                LLOGLN(10, ("xrdp_mm_check_wait_objs: 1 -- %d", self->encoder->frame_id_server));
+                                self->encoder->frame_id_server_sent = self->encoder->frame_id_server;
+                                self->mod->mod_frame_ack(self->mod, 0, self->encoder->frame_id_server);
+                            }
+                        }
+#endif
+                    }
                     g_free(enc_done->enc->drects);
                     g_free(enc_done->enc->crects);
                     g_free(enc_done->enc);
                 }
                 g_free(enc_done->comp_pad_data);
                 g_free(enc_done);
-                tc_mutex_lock(self->mutex);
+                tc_mutex_lock(self->encoder->mutex);
                 enc_done = (XRDP_ENC_DATA_DONE*)
-                           fifo_remove_item(self->fifo_processed);
-                tc_mutex_unlock(self->mutex);
+                           fifo_remove_item(self->encoder->fifo_processed);
+                tc_mutex_unlock(self->encoder->mutex);
             }
         }
     }
     return rv;
+}
+
+/*****************************************************************************/
+/* frame ack from client */
+int APP_CC
+xrdp_mm_frame_ack(struct xrdp_mm *self, int frame_id)
+{
+    int ex;
+
+    LLOGLN(0, ("xrdp_mm_frame_ack:"));
+    self->encoder->frame_id_client = frame_id;
+    if (self->wm->client_info->use_frame_acks == 0)
+    {
+        return 1;
+    }
+    ex = self->wm->client_info->max_unacknowledged_frame_count;
+    if (self->encoder->frame_id_client + ex > self->encoder->frame_id_server)
+    {
+        if (self->encoder->frame_id_server > self->encoder->frame_id_server_sent)
+        {
+            LLOGLN(10, ("xrdp_mm_frame_ack: frame_id_server %d", self->encoder->frame_id_server));
+            self->encoder->frame_id_server_sent = self->encoder->frame_id_server;
+            self->mod->mod_frame_ack(self->mod, 0, self->encoder->frame_id_server);
+        }
+    }
+    return 0;
 }
 
 #if 0
@@ -2354,9 +2400,9 @@ server_paint_rects(struct xrdp_mod* mod, int num_drects, short *drects,
     mm = wm->mm;
 
     LLOGLN(10, ("server_paint_rects:"));
-    LLOGLN(10, ("server_paint_rects: %d", mm->in_codec_mode));
+    LLOGLN(10, ("server_paint_rects: %p", mm->encoder));
 
-    if (mm->in_codec_mode)
+    if (mm->encoder != 0)
     {
         /* copy formal params to XRDP_ENC_DATA */
         enc_data = (XRDP_ENC_DATA *) g_malloc(sizeof(XRDP_ENC_DATA), 1);
@@ -2393,18 +2439,19 @@ server_paint_rects(struct xrdp_mod* mod, int num_drects, short *drects,
         enc_data->height = height;
         enc_data->flags = flags;
         enc_data->frame_id = frame_id;
+        mm->encoder->frame_id_server = frame_id;
         if (width == 0 || height == 0)
         {
             LLOGLN(10, ("server_paint_rects: error"));
         }
 
         /* insert into fifo for encoder thread to process */
-        tc_mutex_lock(mm->mutex);
-        fifo_add_item(mm->fifo_to_proc, (void *) enc_data);
-        tc_mutex_unlock(mm->mutex);
+        tc_mutex_lock(mm->encoder->mutex);
+        fifo_add_item(mm->encoder->fifo_to_proc, (void *) enc_data);
+        tc_mutex_unlock(mm->encoder->mutex);
 
         /* signal xrdp_encoder thread */
-        g_set_wait_obj(mm->xrdp_encoder_event_to_proc);
+        g_set_wait_obj(mm->encoder->xrdp_encoder_event_to_proc);
 
         return 0;
     }

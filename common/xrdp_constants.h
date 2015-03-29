@@ -557,6 +557,10 @@
 #define XR_CODEC_GUID_PNG \
   "\x8D\x85\x0C\x0E\xE0\x28\xDB\x45\xAD\xAA\x0F\x83\xE5\x7C\xC5\x60"
 
+/* MFVideoFormat_H264 ({34363248-0000-0010-8000-00AA00389B71}) */
+#define XR_CODEC_GUID_H264 \
+  "\x48\x32\x36\x34\x00\x00\x10\x00\x80\x00\x00\xAA\x00\x38\x9B\x71"
+
 #define RDP_CAPSET_SURFCMDS       0x1c
 #define RDP_CAPLEN_SURFCMDS       0x0c
 #define RDP_CAPSET_BMPCODECS      0x1d

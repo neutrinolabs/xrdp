@@ -1312,7 +1312,7 @@ libxrdp_fastpath_send_surface(struct xrdp_session *session,
     int max_bytes;
     int cmd_bytes;
 
-    LLOGLN(10, ("libxrdp_fastpath_init:"));
+    LLOGLN(10, ("libxrdp_fastpath_send_surface:"));
     if ((session->client_info->use_fast_path & 1) == 0)
     {
         return 1;
@@ -1362,3 +1362,40 @@ libxrdp_fastpath_send_surface(struct xrdp_session *session,
     }
     return 0;
 }
+
+/*****************************************************************************/
+int EXPORT_CC
+libxrdp_fastpath_send_frame_marker(struct xrdp_session *session,
+                                   int frame_action, int frame_id)
+{
+    struct stream *s;
+    struct xrdp_rdp *rdp;
+
+    LLOGLN(10, ("libxrdp_fastpath_send_frame_marker:"));
+    if ((session->client_info->use_fast_path & 1) == 0)
+    {
+        return 1;
+    }
+    if (session->client_info->use_frame_acks == 0)
+    {
+        return 1;
+    }
+    rdp = (struct xrdp_rdp *) (session->rdp);
+    make_stream(s);
+    init_stream(s, 8192);
+    xrdp_rdp_init_fastpath(rdp, s);
+    out_uint16_le(s, 0x0004); /* CMDTYPE_FRAME_MARKER */
+    out_uint16_le(s, frame_action);
+    out_uint32_le(s, frame_id);
+    s_mark_end(s);
+    /* 4 = FASTPATH_UPDATETYPE_SURFCMDS */
+    if (xrdp_rdp_send_fastpath(rdp, s, 4) != 0)
+    {
+        free_stream(s);
+        return 1;
+    }
+    free_stream(s);
+    return 0;
+
+}
+

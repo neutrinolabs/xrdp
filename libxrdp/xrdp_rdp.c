@@ -1107,6 +1107,24 @@ xrdp_rdp_send_disconnect_reason(struct xrdp_rdp *self, int reason)
 #endif
 
 /*****************************************************************************/
+static int APP_CC
+xrdp_rdp_process_frame_ack(struct xrdp_rdp *self, struct stream *s)
+{
+    int frame_id;
+
+    //g_writeln("xrdp_rdp_process_frame_ack:");
+    in_uint32_le(s, frame_id);
+    //g_writeln("  frame_id %d", frame_id);
+    if (self->session->callback != 0)
+    {
+        /* call to xrdp_wm.c : callback */
+        self->session->callback(self->session->id, 0x5557, frame_id, 0,
+                                0, 0);
+    }
+    return 0;
+}
+
+/*****************************************************************************/
 /* RDP_PDU_DATA */
 int APP_CC
 xrdp_rdp_process_data(struct xrdp_rdp *self, struct stream *s)
@@ -1154,6 +1172,9 @@ xrdp_rdp_process_data(struct xrdp_rdp *self, struct stream *s)
             break;
         case RDP_DATA_PDU_FONT2: /* 39(0x27) */
             xrdp_rdp_process_data_font(self, s);
+            break;
+        case 56: /* PDUTYPE2_FRAME_ACKNOWLEDGE 0x38 */
+            xrdp_rdp_process_frame_ack(self, s);
             break;
         default:
             g_writeln("unknown in xrdp_rdp_process_data %d", data_type);

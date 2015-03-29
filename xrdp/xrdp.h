@@ -378,6 +378,8 @@ xrdp_mm_get_wait_objs(struct xrdp_mm* self,
                       tbus* read_objs, int* rcount,
                       tbus* write_objs, int* wcount, int* timeout);
 int APP_CC
+xrdp_mm_check_chan(struct xrdp_mm *self);
+int APP_CC
 xrdp_mm_check_wait_objs(struct xrdp_mm* self);
 int DEFAULT_CC
 server_begin_update(struct xrdp_mod* mod);

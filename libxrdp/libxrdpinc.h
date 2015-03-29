@@ -242,5 +242,8 @@ libxrdp_fastpath_send_surface(struct xrdp_session *session,
                               int destLeft, int dst_Top,
                               int destRight, int destBottom, int bpp,
                               int codecID, int width, int height);
+int EXPORT_CC
+libxrdp_fastpath_send_frame_marker(struct xrdp_session *session,
+                                   int frame_action, int frame_id);
 
 #endif
