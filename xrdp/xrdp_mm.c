@@ -24,11 +24,18 @@
 #define ACCESS
 #include "xrdp.h"
 #include "log.h"
+
 #ifdef ACCESS
 #ifndef USE_NOPAM
+#if defined(HAVE__PAM_TYPES_H)
+#define LINUXPAM 1
 #include "security/_pam_types.h"
+#elif defined(HAVE_PAM_CONSTANTS_H)
+#define OPENPAM 1
+#include <security/pam_constants.h>
 #endif
-#endif
+#endif /* USE_NOPAM */
+#endif /* ACCESS */
 
 #include "xrdp_encoder.h"
 
@@ -1540,6 +1547,7 @@ getPAMError(const int pamError, char *text, int text_bytes)
 {
     switch (pamError)
     {
+#if defined(LINUXPAM)
         case PAM_SUCCESS:
             return "Success";
         case PAM_OPEN_ERR:
@@ -1605,6 +1613,71 @@ getPAMError(const int pamError, char *text, int text_bytes)
         default:
             g_snprintf(text, text_bytes, "Not defined PAM error:%d", pamError);
             return text;
+#elif defined(OPENPAM)
+        case PAM_SUCCESS: /* 0 */
+            return "Success";
+        case PAM_OPEN_ERR:
+            return "dlopen() failure";
+        case PAM_SYMBOL_ERR:
+            return "Symbol not found";
+        case PAM_SERVICE_ERR:
+            return "Error in service module";
+        case PAM_SYSTEM_ERR:
+            return "System error";
+        case PAM_BUF_ERR:
+            return "Memory buffer error";
+        case PAM_CONV_ERR:
+            return "Conversation error";
+        case PAM_PERM_DENIED:
+            return "Permission denied";
+        case PAM_MAXTRIES:
+            return "Have exhausted maximum number of retries for service.";
+        case PAM_AUTH_ERR:
+            return "Authentication failure";
+        case PAM_NEW_AUTHTOK_REQD: /* 10 */
+            return "Authentication token is no longer valid; new one required.";
+        case PAM_CRED_INSUFFICIENT:
+            return "Insufficient credentials to access authentication data";
+        case PAM_AUTHINFO_UNAVAIL:
+            return "Authentication service cannot retrieve authentication info.";
+        case PAM_USER_UNKNOWN:
+            return "User not known to the underlying authentication module";
+        case PAM_CRED_UNAVAIL:
+            return "Authentication service cannot retrieve user credentials";
+        case PAM_CRED_EXPIRED:
+            return "User credentials expired";
+        case PAM_CRED_ERR:
+            return "Failure setting user credentials";
+        case PAM_ACCT_EXPIRED:
+            return "User account has expired";
+        case PAM_AUTHTOK_EXPIRED:
+            return "Authentication token expired";
+        case PAM_SESSION_ERR:
+            return "Session failure";
+        case PAM_AUTHTOK_ERR: /* 20 */
+            return "Authentication token manipulation error";
+        case PAM_AUTHTOK_RECOVERY_ERR:
+            return "Failed to recover old authentication token";
+        case PAM_AUTHTOK_LOCK_BUSY:
+            return "Authentication token lock busy";
+        case PAM_AUTHTOK_DISABLE_AGING:
+            return "Authentication token aging disabled";
+        case PAM_NO_MODULE_DATA:
+            return "No module specific data is present";
+        case PAM_IGNORE:
+            return "Please ignore underlying account module";
+        case PAM_ABORT:
+            return "General failure";
+        case PAM_TRY_AGAIN:
+            return "Failed preliminary check by password service";
+        case PAM_MODULE_UNKNOWN:
+            return "Module is unknown";
+        case PAM_DOMAIN_UNKNOWN: /* 29 */
+            return "Unknown authentication domain";
+        default:
+            g_snprintf(text, text_bytes, "Not defined PAM error:%d", pamError);
+            return text;
+#endif
     }
 }
 
@@ -1613,6 +1686,7 @@ getPAMAdditionalErrorInfo(const int pamError, struct xrdp_mm *self)
 {
     switch (pamError)
     {
+#if defined(LINUXPAM)
         case PAM_SUCCESS:
             return NULL;
         case PAM_OPEN_ERR:
@@ -1656,6 +1730,49 @@ getPAMAdditionalErrorInfo(const int pamError, struct xrdp_mm *self)
             }
         default:
             return "No expected error";
+#elif defined(OPENPAM)
+        case PAM_SUCCESS: /* 0 */
+            return NULL;
+        case PAM_OPEN_ERR:
+        case PAM_SYMBOL_ERR:
+        case PAM_SERVICE_ERR:
+        case PAM_SYSTEM_ERR:
+        case PAM_BUF_ERR:
+        case PAM_CONV_ERR:
+        case PAM_PERM_DENIED:
+        case PAM_MAXTRIES:
+        case PAM_AUTH_ERR:
+        case PAM_NEW_AUTHTOK_REQD: /* 10 */
+        case PAM_CRED_INSUFFICIENT:
+        case PAM_AUTHINFO_UNAVAIL:
+        case PAM_USER_UNKNOWN:
+        case PAM_CRED_UNAVAIL:
+        case PAM_CRED_EXPIRED:
+        case PAM_CRED_ERR:
+        case PAM_ACCT_EXPIRED:
+        case PAM_AUTHTOK_EXPIRED:
+        case PAM_SESSION_ERR:
+        case PAM_AUTHTOK_ERR: /* 20 */
+        case PAM_AUTHTOK_RECOVERY_ERR:
+        case PAM_AUTHTOK_LOCK_BUSY:
+        case PAM_AUTHTOK_DISABLE_AGING:
+        case PAM_NO_MODULE_DATA:
+        case PAM_IGNORE:
+        case PAM_ABORT:
+        case PAM_TRY_AGAIN:
+        case PAM_MODULE_UNKNOWN:
+        case PAM_DOMAIN_UNKNOWN: /* 29 */
+            if (self->wm->pamerrortxt[0])
+            {
+                return self->wm->pamerrortxt;
+            }
+            else
+            {
+                return "Authentication error - Verify that user/password is valid";
+            }
+        default:
+            return "No expected error";
+#endif
     }
 }
 #endif

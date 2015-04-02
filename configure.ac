@@ -84,6 +84,15 @@ AC_CHECK_HEADER([openssl/rc4.h], [],
   [AC_MSG_ERROR([please install libssl-dev or openssl-devel])],
   [#include <stdlib.h>])
 
+# checking for pam variation
+# Linux-PAM is used in Linux systems
+# OpenPAM is used by FreeBSD, NetBSD, DragonFly BSD and OS X
+# OpenBSD uses BSD Authentication rather than both PAMs
+AC_CHECK_HEADER([security/_pam_types.h],
+                [AC_DEFINE([HAVE__PAM_TYPES_H], 1, [Using Linux-PAM], [])])
+AC_CHECK_HEADER([security/pam_constants.h],
+                [AC_DEFINE([HAVE_PAM_CONSTANTS_H], 1, [Using OpenPAM], [])])
+
 # checking if pam should be autodetected.
 if test "x$enable_pam" = "xyes"
 then
