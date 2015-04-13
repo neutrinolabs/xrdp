@@ -4,7 +4,6 @@ xrdp.service
 
 SUBDIRS = \
   pam.d \
-  init.d \
   default \
   pulse
 
@@ -12,6 +11,9 @@ if HAVE_SYSTEMD
 systemdsystemunit_DATA = \
         xrdp-sesman.service \
         xrdp.service
+else
+SUBDIRS+=
+  init.d
 endif
 
 startscriptdir=$(sysconfdir)/xrdp
@@ -34,5 +36,7 @@ startscript_DATA = \
 # must be tab below
 install-data-hook:
 	chmod 755 $(DESTDIR)$(sysconfdir)/xrdp/xrdp.sh
-	chmod 755 $(DESTDIR)$(sysconfdir)/init.d/xrdp
-	sed -i 's|__BASE__|$(prefix)|' $(DESTDIR)$(sysconfdir)/init.d/xrdp;
+	if [ -f $(DESTDIR)$(sysconfdir)/init.d/xrdp ]; then \
+		chmod 755 $(DESTDIR)$(sysconfdir)/init.d/xrdp; \
+		sed -i 's|__BASE__|$(prefix)|' $(DESTDIR)$(sysconfdir)/init.d/xrdp; \
+	fi
