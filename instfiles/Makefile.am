@@ -4,7 +4,6 @@ xrdp.service
 
 SUBDIRS = \
   pam.d \
-  default \
   pulse
 
 if HAVE_SYSTEMD
@@ -13,6 +12,7 @@ systemdsystemunit_DATA = \
         xrdp.service
 else
 SUBDIRS+=
+  default \
   init.d
 endif
 
