@@ -11,9 +11,9 @@ systemdsystemunit_DATA = \
         xrdp-sesman.service \
         xrdp.service
 else
-SUBDIRS+=
-  default \
-  init.d
+SUBDIRS+= \
+  	default \
+	init.d
 endif
 
 startscriptdir=$(sysconfdir)/xrdp
