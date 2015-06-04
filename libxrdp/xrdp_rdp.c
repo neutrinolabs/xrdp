@@ -204,7 +204,7 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
             {
                 /* default key_file path */
                 g_snprintf(client_info->key_file, 1023, "%s/key.pem", XRDP_CFG_PATH);
-                log_message(LOG_LEVEL_ALWAYS,"WARNING: Invalid x.509 certificate path defined, "
+                log_message(LOG_LEVEL_WARNING,"Invalid X.509 certificate path defined, "
                           "default path will be used: %s", client_info->key_file);
             }
             else
