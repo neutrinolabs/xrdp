@@ -1,0 +1,78 @@
+/**
+ * painter main header
+ *
+ * Copyright 2015 Jay Sorg <jay.sorg@gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef __PAINTER_H
+#define __PAINTER_H
+
+#define PT_FORMAT_a8b8g8r8 \
+((32 << 24) | (3 << 16) | (8 << 12) | (8 << 8) | (8 << 4) | 8)
+#define PT_FORMAT_a8r8g8b8 \
+((32 << 24) | (2 << 16) | (8 << 12) | (8 << 8) | (8 << 4) | 8)
+#define PT_FORMAT_r5g6b5 \
+((16 << 24) | (2 << 16) | (0 << 12) | (5 << 8) | (6 << 4) | 5)
+#define PT_FORMAT_a1r5g5b5 \
+((16 << 24) | (2 << 16) | (1 << 12) | (5 << 8) | (5 << 4) | 5)
+#define PT_FORMAT_r3g3b2 \
+((8 << 24) | (2 << 16) | (0 << 12) | (3 << 8) | (3 << 4) | 2)
+
+struct painter_bitmap
+{
+    int format;
+    int width;
+    int stride_bytes;
+    int height;
+    char *data;
+};
+
+#define PT_ERROR_NONE 0
+#define PT_ERROR_OUT_OF_MEM 1
+
+#define PT_LINE_FLAGS_NONE 0
+
+int
+painter_create(void **handle);
+int
+painter_delete(void *handle);
+int
+painter_set_fgcolor(void *handle, int color);
+int
+painter_set_bgcolor(void *handle, int color);
+int
+painter_set_rop(void *handle, int rop);
+int
+painter_set_fill_mode(void *handle, int mode);
+int
+painter_set_clip(void *handle, int x, int y, int cx, int cy);
+int
+painter_clear_clip(void *handle);
+int
+painter_fill_rect(void *handle, struct painter_bitmap *dst,
+                  int x, int y, int cx, int cy);
+int
+painter_fill_pattern(void *handle, struct painter_bitmap *dst,
+                     struct painter_bitmap *pat, int patx, int paty,
+                     int x, int y, int cx, int cy);
+int
+painter_copy(void *handle, struct painter_bitmap *dst,
+             int x, int y, int cx, int cy,
+             struct painter_bitmap *src, int srcx, int srcy);
+int
+painter_line(void *handle, struct painter_bitmap *dst,
+             int x1, int y1, int x2, int y2, int width, int flags);
+
+#endif
