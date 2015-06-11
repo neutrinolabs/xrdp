@@ -669,13 +669,24 @@ ssl_tls_accept(struct ssl_tls *self)
         return 1;
     }
 
-    connection_status = SSL_accept(self->ssl);
+    while(1) {
+        connection_status = SSL_accept(self->ssl);
 
-    if (connection_status <= 0)
-    {
-        if (ssl_tls_print_error("SSL_accept", self->ssl, connection_status))
+        if (connection_status <= 0)
         {
-            return 1;
+            if (ssl_tls_print_error("SSL_accept", self->ssl, connection_status))
+            {
+                return 1;
+            }
+            /**
+             * retry when SSL_get_error returns:
+             *     SSL_ERROR_WANT_READ
+             *     SSL_ERROR_WANT_WRITE
+             */
+        }
+        else
+        {
+            break;
         }
     }
 
@@ -709,6 +720,11 @@ ssl_tls_disconnect(struct ssl_tls *self)
             {
                 return 1;
             }
+            /**
+             * retry when SSL_get_error returns:
+             *     SSL_ERROR_WANT_READ
+             *     SSL_ERROR_WANT_WRITE
+             */
         }
     }
     return 0;
@@ -737,23 +753,37 @@ int APP_CC
 ssl_tls_read(struct ssl_tls *tls, char *data, int length)
 {
     int status;
+    int break_flag;
 
-    status = SSL_read(tls->ssl, data, length);
+    while(1) {
+        status = SSL_read(tls->ssl, data, length);
 
-    switch (SSL_get_error(tls->ssl, status))
-    {
-        case SSL_ERROR_NONE:
+        switch (SSL_get_error(tls->ssl, status))
+        {
+            case SSL_ERROR_NONE:
+                break_flag = 1;
+                break;
+
+            case SSL_ERROR_WANT_READ:
+            case SSL_ERROR_WANT_WRITE:
+                /**
+                 * retry when SSL_get_error returns:
+                 *     SSL_ERROR_WANT_READ
+                 *     SSL_ERROR_WANT_WRITE
+                 */
+                continue;
+
+            default:
+                ssl_tls_print_error("SSL_read", tls->ssl, status);
+                status = -1;
+                break_flag = 1;
+                break;
+        }
+
+        if (break_flag)
+        {
             break;
-
-        case SSL_ERROR_WANT_READ:
-        case SSL_ERROR_WANT_WRITE:
-            status = 0;
-            break;
-
-        default:
-            ssl_tls_print_error("SSL_read", tls->ssl, status);
-            status = -1;
-            break;
+        }
     }
 
     if (SSL_pending(tls->ssl) > 0)
@@ -769,23 +799,37 @@ int APP_CC
 ssl_tls_write(struct ssl_tls *tls, const char *data, int length)
 {
     int status;
+    int break_flag;
 
-    status = SSL_write(tls->ssl, data, length);
+    while(1) {
+        status = SSL_write(tls->ssl, data, length);
 
-    switch (SSL_get_error(tls->ssl, status))
-    {
-        case SSL_ERROR_NONE:
+        switch (SSL_get_error(tls->ssl, status))
+        {
+            case SSL_ERROR_NONE:
+                break_flag = 1;
+                break;
+
+            case SSL_ERROR_WANT_READ:
+            case SSL_ERROR_WANT_WRITE:
+                /**
+                 * retry when SSL_get_error returns:
+                 *     SSL_ERROR_WANT_READ
+                 *     SSL_ERROR_WANT_WRITE
+                 */
+                continue;
+
+            default:
+                ssl_tls_print_error("SSL_write", tls->ssl, status);
+                status = -1;
+                break_flag = 1;
+                break;
+        }
+
+        if (break_flag)
+        {
             break;
-
-        case SSL_ERROR_WANT_READ:
-        case SSL_ERROR_WANT_WRITE:
-            status = 0;
-            break;
-
-        default:
-            ssl_tls_print_error("SSL_write", tls->ssl, status);
-            status = -1;
-            break;
+        }
     }
 
     return status;
