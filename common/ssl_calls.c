@@ -562,11 +562,7 @@ ssl_tls_print_error(char *func, SSL *connection, int value)
             return 1;
 
         case SSL_ERROR_WANT_READ:
-            g_writeln("ssl_tls_print_error: SSL_ERROR_WANT_READ");
-            return 0;
-
         case SSL_ERROR_WANT_WRITE:
-            g_writeln("ssl_tls_print_error: SSL_ERROR_WANT_WRITE");
             return 0;
 
         case SSL_ERROR_SYSCALL:
