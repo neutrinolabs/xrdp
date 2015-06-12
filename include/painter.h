@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#ifndef __PAINTER_H
+#if !defined(__PAINTER_H)
 #define __PAINTER_H
 
 #define PT_FORMAT_a8b8g8r8 \

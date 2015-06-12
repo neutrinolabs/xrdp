@@ -1,5 +1,5 @@
 /**
- * painter main header
+ * painter main
  *
  * Copyright 2015 Jay Sorg <jay.sorg@gmail.com>
  *
@@ -21,26 +21,7 @@
 #include <string.h>
 
 #include "painter.h"
-
-struct painter_rect
-{
-    short x1;
-    short y1;
-    short x2;
-    short y2;
-};
-
-struct painter
-{
-    int rop;
-    int fgcolor;
-    int bgcolor;
-    int fill_mode;
-    int clip_valid;
-    struct painter_rect clip;
-    int origin_x;
-    int origin_y;
-};
+#include "painter_utils.h"
 
 /*****************************************************************************/
 int
@@ -60,7 +41,7 @@ painter_create(void **handle)
     memset(*handle, 0, sizeof(struct painter));
 
     pt = (struct painter *) *handle;
-    pt->rop = PT_ROP_COPY;
+    pt->rop = PT_ROP_S;
 
     return PT_ERROR_NONE; 
 }
