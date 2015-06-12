@@ -39,10 +39,30 @@ struct painter_bitmap
     char *data;
 };
 
-#define PT_ERROR_NONE 0
-#define PT_ERROR_OUT_OF_MEM 1
+#define PT_ERROR_NONE        0
+#define PT_ERROR_OUT_OF_MEM  1
+#define PT_ERROR_PARAM       2
 
 #define PT_LINE_FLAGS_NONE 0
+
+                         /* reverse  Windows     X11 */
+                         /* polish */
+#define PT_ROP_0    0x00 /* 0        BLACKNESS   GXclear        */
+#define PT_ROP_DSon 0x11 /* Dson     NOTSRCERASE GXnor          */
+#define PT_ROP_DSna 0x22 /* DSna                 GXandInverted  */
+#define PT_ROP_Sn   0x33 /* Sn       NOTSRCCOPY  GXcopyInverted */
+#define PT_ROP_SDna 0x44 /* SDna     SRCERASE    GXandReverse   */
+#define PT_ROP_Dn   0x55 /* Dn       DSTINVERT   GXinvert       */
+#define PT_ROP_DSx  0x66 /* DSx      SRCINVERT   GXxor          */
+#define PT_ROP_DSan 0x77 /* DSan                 GXnand         */
+#define PT_ROP_DSa  0x88 /* DSa      SRCAND      GXand          */
+#define PT_ROP_DSxn 0x99 /* DSxn                 GXequiv        */
+#define PT_ROP_D    0xAA /* D                    GXnoop         */
+#define PT_ROP_DSno 0xBB /* DSno     MERGEPAINT  GXorInverted   */
+#define PT_ROP_S    0xCC /* S        SRCCOPY     GXcopy         */
+#define PT_ROP_SDno 0xDD /* SDno                 GXorReverse    */
+#define PT_ROP_DSo  0xEE /* DSo                  GXor           */
+#define PT_ROP_1    0xFF /* 1        WHITENESS   GXset          */
 
 int
 painter_create(void **handle);
@@ -56,6 +76,8 @@ int
 painter_set_rop(void *handle, int rop);
 int
 painter_set_fill_mode(void *handle, int mode);
+int
+painter_set_pattern_origin(void *handle, int x, int y);
 int
 painter_set_clip(void *handle, int x, int y, int cx, int cy);
 int
