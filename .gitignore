@@ -15,7 +15,7 @@ depcomp
 .deps/
 install-sh
 *.la
-.libs
+.libs/
 libtool
 *.lo
 ltmain.sh
@@ -26,4 +26,4 @@ NEWS
 *.o
 README
 stamp-h1
-
+tests/paintertest

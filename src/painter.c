@@ -34,7 +34,7 @@ painter_create(void **handle)
         return PT_ERROR_PARAM;
     }
     *handle = malloc(sizeof(struct painter));
-    if (*hanlde == NULL)
+    if (*handle == NULL)
     {
         return PT_ERROR_OUT_OF_MEM;
     }
@@ -65,7 +65,7 @@ painter_set_fgcolor(void *handle, int color)
     struct painter *pt;
 
     pt = (struct painter *) handle;
-    pt->fgcolor = fgcolor;
+    pt->fgcolor = color;
     return PT_ERROR_NONE;
 }
 
@@ -76,7 +76,7 @@ painter_set_bgcolor(void *handle, int color)
     struct painter *pt;
 
     pt = (struct painter *) handle;
-    pt->bgcolor = bgcolor;
+    pt->bgcolor = color;
     return PT_ERROR_NONE;
 }
 
@@ -98,7 +98,7 @@ painter_set_fill_mode(void *handle, int mode)
     struct painter *pt;
 
     pt = (struct painter *) handle;
-    pt->fill_mode = fill_mode;
+    pt->fill_mode = mode;
     return PT_ERROR_NONE;
 }
 

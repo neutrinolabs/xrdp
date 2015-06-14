@@ -71,6 +71,20 @@ bitmap_get_ptr(struct painter_bitmap *bitmap, int x, int y)
 }
 
 /*****************************************************************************/
+static int
+bitmap_get_pixel(struct painter_bitmap *dst, int x, int y)
+{
+    return 0;
+}
+
+/*****************************************************************************/
+static int
+bitmap_set_pixel(struct painter_bitmap *dst, int x, int y, int pixel)
+{
+    return 0;
+}
+
+/*****************************************************************************/
 int
 pixel_convert(int pixel, int src_format, int dst_format, int *palette)
 {
@@ -116,8 +130,8 @@ painter_set_pixel(struct painter *painter, struct painter_bitmap *dst,
             (y >= 0) && (y < dst->height))
         {
             pixel = pixel_convert(pixel, pixel_format, dst->format,
-                                  painter->palete);
-            if (rop != PT_ROP_S)
+                                  painter->palette);
+            if (painter->rop != PT_ROP_S)
             {
                 pixel = do_rop(painter->rop, pixel,
                                bitmap_get_pixel(dst, x, y));
@@ -125,5 +139,6 @@ painter_set_pixel(struct painter *painter, struct painter_bitmap *dst,
             bitmap_set_pixel(dst, x, y, pixel);
         }
     }
+    return 0;
 }
 

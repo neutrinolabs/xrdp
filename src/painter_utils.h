@@ -60,6 +60,6 @@ int
 painter_rop(int rop, int src, int dst);
 int
 painter_set_pixel(struct painter *painter, struct painter_bitmap *dst,
-                  int x, int y, int pixel);
+                  int x, int y, int pixel, int pixel_format);
 
 #endif
