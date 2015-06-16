@@ -3,6 +3,11 @@
  *
  * Copyright (C) Jay Sorg 2004-2013
  *
+ * BSD process grouping by:
+ * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland.
+ * Copyright (c) 2000-2001 Markus Friedl.
+ * Copyright (c) 2011-2015 Koichiro Iwao, Kyushu Institute of Technology.
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
