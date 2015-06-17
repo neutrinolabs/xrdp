@@ -3,6 +3,11 @@
  *
  * Copyright (C) Jay Sorg 2004-2013
  *
+ * BSD process grouping by:
+ * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland.
+ * Copyright (c) 2000-2001 Markus Friedl.
+ * Copyright (c) 2011-2015 Koichiro Iwao, Kyushu Institute of Technology.
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -525,6 +530,42 @@ session_start_fork(int width, int height, int bpp, char *username,
         g_sprintf(geometry, "%dx%d", width, height);
         g_sprintf(depth, "%d", bpp);
         g_sprintf(screen, ":%d", display);
+#ifdef __FreeBSD__
+        /*
+         * FreeBSD bug
+         * ports/157282: effective login name is not set by xrdp-sesman
+         * http://www.freebsd.org/cgi/query-pr.cgi?pr=157282
+         *
+         * from:
+         *  $OpenBSD: session.c,v 1.252 2010/03/07 11:57:13 dtucker Exp $
+         *  with some ideas about BSD process grouping to xrdp
+         */
+        pid_t bsdsespid = g_fork();
+
+        if (bsdsespid == -1)
+        {
+        }
+        else if (bsdsespid == 0) /* BSD session leader */
+        {
+            /**
+             * Create a new session and process group since the 4.4BSD
+             * setlogin() affects the entire process group
+             */
+            if (setsid() < 0)
+            {
+              log_message(LOG_LEVEL_ERROR,
+                "setsid failed - pid %d", g_getpid());
+            }
+
+            if (setlogin(username) < 0)
+            {
+              log_message(LOG_LEVEL_ERROR,
+                "setlogin failed for user %s - pid %d", username, g_getpid());
+            }
+        }
+
+        g_waitpid(bsdsespid);
+#endif
         wmpid = g_fork();
         if (wmpid == -1)
         {
