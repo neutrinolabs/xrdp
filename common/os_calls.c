@@ -479,7 +479,11 @@ g_tcp_socket(void)
     {
         if (option_value != 0)
         {
+#if defined(XRDP_ENABLE_IPV6ONLY)
+            option_value = 1;
+#else
             option_value = 0;
+#endif
             option_len = sizeof(option_value);
             if (setsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&option_value,
                        option_len) < 0)
