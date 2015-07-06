@@ -137,7 +137,7 @@ xrdp_fastpath_session_callback(struct xrdp_fastpath *self, int msg,
 int APP_CC
 xrdp_fastpath_send(struct xrdp_fastpath *self, struct stream *s)
 {
-    if (trans_force_write_s(self->trans, s) != 0)
+    if (trans_write_copy_s(self->trans, s) != 0)
     {
         return 1;
     }

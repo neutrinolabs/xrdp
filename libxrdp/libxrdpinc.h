@@ -72,6 +72,8 @@ struct xrdp_session
     int up_and_running;
     int (*is_term)(void);
     int in_process_data; /* inc / dec libxrdp_process_data calls */
+
+    struct source_info si;
 };
 
 struct xrdp_session * DEFAULT_CC

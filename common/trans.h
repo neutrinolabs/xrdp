@@ -45,6 +45,20 @@ typedef int (APP_CC *trans_recv_proc) (struct trans *self, void *ptr, int len);
 typedef int (APP_CC *trans_send_proc) (struct trans *self, const void *data, int len);
 typedef int (APP_CC *trans_can_recv_proc) (struct trans *self, int sck, int millis);
 
+/* optional source info */
+
+#define XRDP_SOURCE_NONE    0
+#define XRDP_SOURCE_CLIENT  1
+#define XRDP_SOURCE_SESMAN  2
+#define XRDP_SOURCE_CHANSRV 3
+#define XRDP_SOURCE_MOD     4
+
+struct source_info
+{
+    int cur_source;
+    int source[7];
+};
+
 struct trans
 {
     tbus sck; /* socket handle */
@@ -68,6 +82,8 @@ struct trans
     trans_recv_proc trans_recv;
     trans_send_proc trans_send;
     trans_can_recv_proc trans_can_recv;
+    struct source_info *si;
+    int my_source;
 };
 
 struct trans* APP_CC
@@ -92,6 +108,8 @@ int APP_CC
 trans_force_write(struct trans* self);
 int APP_CC
 trans_write_copy(struct trans* self);
+int APP_CC
+trans_write_copy_s(struct trans* self, struct stream* out_s);
 int APP_CC
 trans_connect(struct trans* self, const char* server, const char* port,
               int timeout);

@@ -286,7 +286,7 @@ xrdp_iso_send_cc(struct xrdp_iso *self)
     len_ptr[1] = len;
     len_indicator_ptr[0] = len_indicator;
 
-    if (trans_force_write_s(self->trans, s) != 0)
+    if (trans_write_copy_s(self->trans, s) != 0)
     {
         free_stream(s);
         return 1;
@@ -409,7 +409,7 @@ xrdp_iso_send(struct xrdp_iso *self, struct stream *s)
     out_uint8(s, ISO_PDU_DT);
     out_uint8(s, 0x80);
 
-    if (trans_force_write_s(self->trans, s) != 0)
+    if (trans_write_copy_s(self->trans, s) != 0)
     {
         return 1;
     }
