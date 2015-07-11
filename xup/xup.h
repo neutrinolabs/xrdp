@@ -162,4 +162,5 @@ struct mod
   int screen_shmem_id;
   int screen_shmem_id_mapped; /* boolean */
   char *screen_shmem_pixels;
+  struct trans *trans;
 };
