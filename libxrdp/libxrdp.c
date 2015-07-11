@@ -982,14 +982,6 @@ libxrdp_reset(struct xrdp_session *session,
         return 1;
     }
 
-    /* process till up and running */
-    session->up_and_running = 0;
-
-    if (libxrdp_process_data(session, 0) != 0)
-    {
-        g_writeln("non handled error from libxrdp_process_data");
-    }
-
     return 0;
 }
 
