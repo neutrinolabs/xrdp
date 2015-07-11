@@ -466,6 +466,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             self->mod->server_paint_rect_bpp = server_paint_rect_bpp;
             self->mod->server_composite = server_composite;
             self->mod->server_paint_rects = server_paint_rects;
+            self->mod->si = (tintptr) &(self->wm->session->si);
         }
     }
 
@@ -1116,15 +1117,16 @@ xrdp_mm_connect_chansrv(struct xrdp_mm *self, char *ip, char *port)
     {
         /* unix socket */
         self->chan_trans = trans_create(TRANS_MODE_UNIX, 8192, 8192);
-        self->chan_trans->is_term = g_is_term;
     }
     else
     {
         /* tcp */
         self->chan_trans = trans_create(TRANS_MODE_TCP, 8192, 8192);
-        self->chan_trans->is_term = g_is_term;
     }
 
+    self->chan_trans->is_term = g_is_term;
+    self->chan_trans->si = &(self->wm->session->si);
+    self->chan_trans->my_source = XRDP_SOURCE_CHANSRV;
     self->chan_trans->trans_data_in = xrdp_mm_chan_data_in;
     self->chan_trans->header_size = 8;
     self->chan_trans->callback_data = self;
