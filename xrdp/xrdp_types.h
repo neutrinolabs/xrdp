@@ -48,8 +48,8 @@ struct xrdp_mod
                            tbus* write_objs, int* wcount, int* timeout);
   int (*mod_check_wait_objs)(struct xrdp_mod* v);
   int (*mod_frame_ack)(struct xrdp_mod* v, int flags, int frame_id);
-  long mod_dumby[100 - 10]; /* align, 100 minus the number of mod
-                              functions above */
+  tintptr mod_dumby[100 - 10]; /* align, 100 minus the number of mod
+                                  functions above */
   /* server functions */
   int (*server_begin_update)(struct xrdp_mod* v);
   int (*server_end_update)(struct xrdp_mod* v);
@@ -146,13 +146,13 @@ struct xrdp_mod
                             int num_crects, short *crects,
                             char *data, int width, int height,
                             int flags, int frame_id);
-  long server_dumby[100 - 43]; /* align, 100 minus the number of server
-                                  functions above */
+  tintptr server_dumby[100 - 43]; /* align, 100 minus the number of server
+                                     functions above */
   /* common */
-  long handle; /* pointer to self as int */
-  long wm; /* struct xrdp_wm* */
-  long painter;
-  int sck;
+  tintptr handle; /* pointer to self as int */
+  tintptr wm; /* struct xrdp_wm* */
+  tintptr painter;
+  tintptr si;
 };
 
 /* header for bmp file */

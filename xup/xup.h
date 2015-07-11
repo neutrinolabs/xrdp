@@ -26,7 +26,7 @@
 #include "xrdp_client_info.h"
 #include "xrdp_rail.h"
 
-#define CURRENT_MOD_VER 2
+#define CURRENT_MOD_VER 3
 
 struct mod
 {
@@ -45,8 +45,8 @@ struct mod
                            tbus* write_objs, int* wcount, int* timeout);
   int (*mod_check_wait_objs)(struct mod* v);
   int (*mod_frame_ack)(struct mod* v, int flags, int frame_id);
-  tbus mod_dumby[100 - 10]; /* align, 100 minus the number of mod
-                              functions above */
+  tintptr mod_dumby[100 - 10]; /* align, 100 minus the number of mod
+                                 functions above */
   /* server functions */
   int (*server_begin_update)(struct mod* v);
   int (*server_end_update)(struct mod* v);
@@ -140,13 +140,13 @@ struct mod
                             char *data, int width, int height,
                             int flags, int frame_id);
 
-  tbus server_dumby[100 - 43]; /* align, 100 minus the number of server
-                                  functions above */
+  tintptr server_dumby[100 - 43]; /* align, 100 minus the number of server
+                                     functions above */
   /* common */
-  tbus handle; /* pointer to self as long */
-  tbus wm;
-  tbus painter;
-  int sck;
+  tintptr handle; /* pointer to self as long */
+  tintptr wm;
+  tintptr painter;
+  tintptr si;
   /* mod data */
   int width;
   int height;
@@ -156,7 +156,6 @@ struct mod
   char password[256];
   char ip[256];
   char port[256];
-  tbus sck_obj;
   int shift_state;
   struct xrdp_client_info client_info;
   int screen_shmem_id;

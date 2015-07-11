@@ -25,7 +25,7 @@
 #include "d3des.h"
 #include "defines.h"
 
-#define CURRENT_MOD_VER 2
+#define CURRENT_MOD_VER 3
 
 struct vnc
 {
@@ -43,8 +43,8 @@ struct vnc
   int (*mod_get_wait_objs)(struct vnc* v, tbus* read_objs, int* rcount,
                            tbus* write_objs, int* wcount, int* timeout);
   int (*mod_check_wait_objs)(struct vnc* v);
-  long mod_dumby[100 - 9]; /* align, 100 minus the number of mod
-                              functions above */
+  tintptr mod_dumby[100 - 9]; /* align, 100 minus the number of mod
+                                 functions above */
   /* server functions */
   int (*server_begin_update)(struct vnc* v);
   int (*server_end_update)(struct vnc* v);
@@ -86,14 +86,15 @@ struct vnc
                                 char* data, int data_len,
                                 int total_data_len, int flags);
   int (*server_bell_trigger)(struct vnc* v);
-  long server_dumby[100 - 25]; /* align, 100 minus the number of server
-                                  functions above */
+  tintptr server_dumby[100 - 25]; /* align, 100 minus the number of server
+                                     functions above */
   /* common */
-  long handle; /* pointer to self as long */
-  long wm;
-  long painter;
-  int sck;
+  tintptr handle; /* pointer to self as long */
+  tintptr wm;
+  tintptr painter;
+  tintptr si;
   /* mod data */
+  int sck;
   int server_width;
   int server_height;
   int server_bpp;
