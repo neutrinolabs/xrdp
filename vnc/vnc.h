@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2015
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -94,7 +94,6 @@ struct vnc
   tintptr painter;
   tintptr si;
   /* mod data */
-  int sck;
   int server_width;
   int server_height;
   int server_bpp;
@@ -113,8 +112,7 @@ struct vnc
   int shift_state; /* 0 up, 1 down */
   int keylayout;
   int clip_chanid;
-  char* clip_data;
-  int clip_data_size;
-  tbus sck_obj;
+  struct stream *clip_data_s;
   int delay_ms;
+  struct trans *trans;
 };
