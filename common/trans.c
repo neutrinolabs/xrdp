@@ -336,7 +336,7 @@ trans_check_wait_objs(struct trans *self)
         if (self->si != 0 && self->si->source[self->my_source] > MAX_SBYTES)
         {
         }
-        else if (g_tcp_can_recv(self->sck, 0))
+        else if (self->trans_can_recv(self, self->sck, 0))
         {
             cur_source = 0;
             if (self->si != 0)
