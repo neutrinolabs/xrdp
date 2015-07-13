@@ -1,0 +1,61 @@
+#!/bin/sh
+#
+# $FreeBSD$
+#
+# REQUIRE: DAEMON
+# PROVIDE: xrdp xrdp_sesman
+#
+
+. /etc/rc.subr
+
+name="xrdp"
+rcvar=xrdp_enable
+xrdp_daemons="xrdp"
+
+# Read settings and set default values.
+load_rc_config "$name"
+: ${xrdp_enable="NO"}
+
+# Enable/disable dependent daemon.
+if [ -n "${rcvar}" ] && checkyesno "xrdp_sesman_enable"; then
+	xrdp_daemons="xrdp xrdp_sesman"
+fi
+
+# Commands.
+extra_commands="reload status"
+start_cmd="xrdp_cmd"
+stop_cmd="xrdp_cmd"
+status_cmd="xrdp_cmd"
+reload_cmd="xrdp_cmd"
+rcvar_cmd="xrdp_cmd"
+
+# Command wrapper to call each of them per daemon.
+xrdp_cmd() {
+    local name rcvar command pidfile xrdp_daemons
+    # Prevent recursive calling.
+    unset "${rc_arg}_cmd"
+    # Stop processes in the reverse to order.
+    if [ "${rc_arg}" = "stop" ] ; then
+	xrdp_daemons=$(reverse_list ${xrdp_daemons})
+    fi
+    # Generate rsakeys.ini on start
+    if [ "${rc_arg}" = "start" -a ! -f %%PREFIX%%/etc/xrdp/rsakeys.ini ] ; then
+        %%PREFIX%%/bin/xrdp-keygen xrdp %%PREFIX%%/etc/xrdp/rsakeys.ini
+    fi
+
+    # Apply to all the daemons.
+    for name in ${xrdp_daemons}; do
+	rcvar=${name}_enable
+	if [ "${name}" = "xrdp_sesman" ]; then
+		command="%%PREFIX%%/sbin/xrdp-sesman"
+		pidfile="/var/run/xrdp-sesman.pid"
+	else
+		command="%%PREFIX%%/sbin/${name}"
+		pidfile="/var/run/${name}.pid"
+	fi
+
+	run_rc_command "${_rc_prefix}${rc_arg}" ${rc_extra_args}
+    done
+}
+
+run_rc_command "$1"

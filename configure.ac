@@ -8,6 +8,27 @@ AC_PROG_CC
 AC_C_CONST
 AC_PROG_LIBTOOL
 PKG_PROG_PKG_CONFIG
+
+case $host_os in
+	*linux*)
+		linux=yes
+		;;
+	*freebsd*)
+		freebsd=yes
+		;;
+	*netbsd*)
+		netbsd=yes
+		;;
+	*openbsd*)
+		openbsd=yes
+		;;
+esac
+
+AM_CONDITIONAL(LINUX, [test "x$linux" = xyes])
+AM_CONDITIONAL(FREEBSD, [test "x$freebsd" = xyes])
+AM_CONDITIONAL(OPENBSD, [test "x$openbsd" = xyes])
+AM_CONDITIONAL(NETBSD, [test "x$netbsd" = xyes])
+
 AC_ARG_WITH([systemdsystemunitdir],
         AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files]),
         [], [with_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)])
@@ -214,6 +235,7 @@ AC_CONFIG_FILES([Makefile
                  instfiles/Makefile
                  instfiles/pam.d/Makefile
                  instfiles/init.d/Makefile
+                 instfiles/rc.d/Makefile
                  instfiles/default/Makefile
                  instfiles/pulse/Makefile
                  genkeymap/Makefile
