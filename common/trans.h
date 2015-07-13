@@ -95,7 +95,7 @@ trans_get_wait_objs(struct trans* self, tbus* objs, int* count);
 int APP_CC
 trans_get_wait_objs_rw(struct trans *self,
                        tbus *robjs, int *rcount,
-                       tbus *wobjs, int *wcount);
+                       tbus *wobjs, int *wcount, int *timeout);
 int APP_CC
 trans_check_wait_objs(struct trans* self);
 int APP_CC

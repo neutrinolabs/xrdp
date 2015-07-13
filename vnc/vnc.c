@@ -1407,7 +1407,7 @@ lib_mod_get_wait_objs(struct vnc *v, tbus *read_objs, int *rcount,
         if (v->trans != 0)
         {
             trans_get_wait_objs_rw(v->trans, read_objs, rcount,
-                                   write_objs, wcount);
+                                   write_objs, wcount, timeout);
         }
     }
 

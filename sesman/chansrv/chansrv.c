@@ -1184,7 +1184,7 @@ channel_thread_loop(void *in_val)
             num_objs++;
             trans_get_wait_objs(g_lis_trans, objs, &num_objs);
             trans_get_wait_objs_rw(g_con_trans, objs, &num_objs,
-                                   wobjs, &num_wobjs);
+                                   wobjs, &num_wobjs, &timeout);
             trans_get_wait_objs(g_api_lis_trans, objs, &num_objs);
 
             if (g_api_con_trans_list != 0)

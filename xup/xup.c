@@ -1510,7 +1510,7 @@ lib_mod_get_wait_objs(struct mod *mod, tbus *read_objs, int *rcount,
         if (mod->trans != 0)
         {
             trans_get_wait_objs_rw(mod->trans, read_objs, rcount,
-                                   write_objs, wcount);
+                                   write_objs, wcount, timeout);
         }
     }
     return 0;
