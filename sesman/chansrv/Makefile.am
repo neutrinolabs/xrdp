@@ -13,7 +13,8 @@ EXTRA_DIST = \
   chansrv_common.h \
   irp.h \
   smartcard.h \
-  smartcard_pcsc.h
+  smartcard_pcsc.h \
+  fifo.h
 
 EXTRA_DEFINES =
 EXTRA_INCLUDES =
