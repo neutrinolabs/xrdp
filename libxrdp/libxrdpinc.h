@@ -72,6 +72,8 @@ struct xrdp_session
     int up_and_running;
     int (*is_term)(void);
     int in_process_data; /* inc / dec libxrdp_process_data calls */
+
+    struct source_info si;
 };
 
 struct xrdp_session * DEFAULT_CC
@@ -242,5 +244,8 @@ libxrdp_fastpath_send_surface(struct xrdp_session *session,
                               int destLeft, int dst_Top,
                               int destRight, int destBottom, int bpp,
                               int codecID, int width, int height);
+int EXPORT_CC
+libxrdp_fastpath_send_frame_marker(struct xrdp_session *session,
+                                   int frame_action, int frame_id);
 
 #endif

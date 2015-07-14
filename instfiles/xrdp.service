@@ -4,11 +4,8 @@ Requires=xrdp-sesman.service
 After=syslog.target network.target xrdp-sesman.service
 
 [Service]
-Type=forking
-PIDFile=/var/run/xrdp.pid
 EnvironmentFile=/etc/sysconfig/xrdp
-ExecStart=/usr/sbin/xrdp $XRDP_OPTIONS
-ExecStop=/usr/sbin/xrdp $XRDP_OPTIONS --kill
+ExecStart=/usr/sbin/xrdp $XRDP_OPTIONS --nodaemon
 
 [Install]
 WantedBy=multi-user.target

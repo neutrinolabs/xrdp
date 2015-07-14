@@ -58,7 +58,7 @@ struct pointer_item
   int bpp;
 };
 
-#define CURRENT_MOD_VER 2
+#define CURRENT_MOD_VER 3
 
 struct mod
 {
@@ -76,8 +76,8 @@ struct mod
   int (*mod_get_wait_objs)(struct mod* v, tbus* read_objs, int* rcount,
                            tbus* write_objs, int* wcount, int* timeout);
   int (*mod_check_wait_objs)(struct mod* v);
-  long mod_dumby[100 - 9]; /* align, 100 minus the number of mod
-                              functions above */
+  tintptr mod_dumby[100 - 9]; /* align, 100 minus the number of mod
+                                 functions above */
   /* server functions */
   int (*server_begin_update)(struct mod* v);
   int (*server_end_update)(struct mod* v);
@@ -152,14 +152,15 @@ struct mod
   int (*server_set_pointer_ex)(struct mod* mod, int x, int y, char* data,
                                char* mask, int bpp);
 
-  long server_dumby[100 - 37]; /* align, 100 minus the number of server
-                                  functions above */
+  tintptr server_dumby[100 - 37]; /* align, 100 minus the number of server
+                                     functions above */
   /* common */
-  tbus handle; /* pointer to self as long */
-  tbus wm;
-  tbus painter;
-  int sck;
+  tintptr handle; /* pointer to self as long */
+  tintptr wm;
+  tintptr painter;
+  tintptr si;
   /* mod data */
+  int sck;
   int width;
   int height;
   int bpp;

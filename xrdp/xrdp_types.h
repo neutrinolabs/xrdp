@@ -48,8 +48,8 @@ struct xrdp_mod
                            tbus* write_objs, int* wcount, int* timeout);
   int (*mod_check_wait_objs)(struct xrdp_mod* v);
   int (*mod_frame_ack)(struct xrdp_mod* v, int flags, int frame_id);
-  long mod_dumby[100 - 10]; /* align, 100 minus the number of mod
-                              functions above */
+  tintptr mod_dumby[100 - 10]; /* align, 100 minus the number of mod
+                                  functions above */
   /* server functions */
   int (*server_begin_update)(struct xrdp_mod* v);
   int (*server_end_update)(struct xrdp_mod* v);
@@ -146,13 +146,13 @@ struct xrdp_mod
                             int num_crects, short *crects,
                             char *data, int width, int height,
                             int flags, int frame_id);
-  long server_dumby[100 - 43]; /* align, 100 minus the number of server
-                                  functions above */
+  tintptr server_dumby[100 - 43]; /* align, 100 minus the number of server
+                                     functions above */
   /* common */
-  long handle; /* pointer to self as int */
-  long wm; /* struct xrdp_wm* */
-  long painter;
-  int sck;
+  tintptr handle; /* pointer to self as int */
+  tintptr wm; /* struct xrdp_wm* */
+  tintptr painter;
+  tintptr si;
 };
 
 /* header for bmp file */
@@ -292,19 +292,7 @@ struct xrdp_mm
   int chan_trans_up; /* true once connected to chansrv */
   int delete_chan_trans; /* boolean set when done with channel connection */
   int usechansrv; /* true if chansrvport is set in xrdp.ini or using sesman */
-
-  /* for codec mode operations */
-  int   in_codec_mode;
-  int   codec_id;
-  int   codec_quality;
-  tbus  xrdp_encoder_event_to_proc;
-  tbus  xrdp_encoder_event_processed;
-  tbus  xrdp_encoder_term;
-  FIFO *fifo_to_proc;
-  FIFO *fifo_processed;
-  tbus  mutex;
-  int (*process_enc)(struct xrdp_mm *self, struct xrdp_enc_data *enc);
-  void *codec_handle;
+  struct xrdp_encoder *encoder;
 };
 
 struct xrdp_key_info
@@ -623,40 +611,5 @@ struct xrdp_config
     struct xrdp_cfg_logging   cfg_logging;
     struct xrdp_cfg_channels  cfg_channels;
 };
-
-/* used when scheduling tasks in xrdp_encoder.c */
-struct xrdp_enc_data
-{
-    struct xrdp_mod *mod;
-    int              num_drects;
-    short           *drects;     /* 4 * num_drects */
-    int              num_crects;
-    short           *crects;     /* 4 * num_crects */
-    char            *data;
-    int              width;
-    int              height;
-    int              flags;
-    int              frame_id;
-};
-
-typedef struct xrdp_enc_data XRDP_ENC_DATA;
-
-/* used when scheduling tasks from xrdp_encoder.c */
-struct xrdp_enc_data_done
-{
-    int                   comp_bytes;
-    int                   pad_bytes;
-    char                 *comp_pad_data;
-    struct xrdp_enc_data *enc;
-    int                   last; /* true is this is last message for enc */
-    int                   x;
-    int                   y;
-    int                   cx;
-    int                   cy;
-};
-
-typedef struct xrdp_enc_data_done XRDP_ENC_DATA_DONE;
-
-
 
 #endif

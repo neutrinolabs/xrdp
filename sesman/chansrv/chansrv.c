@@ -1184,7 +1184,7 @@ channel_thread_loop(void *in_val)
             num_objs++;
             trans_get_wait_objs(g_lis_trans, objs, &num_objs);
             trans_get_wait_objs_rw(g_con_trans, objs, &num_objs,
-                                   wobjs, &num_wobjs);
+                                   wobjs, &num_wobjs, &timeout);
             trans_get_wait_objs(g_api_lis_trans, objs, &num_objs);
 
             if (g_api_con_trans_list != 0)
@@ -1534,7 +1534,9 @@ main(int argc, char **argv)
 
     display_text = g_getenv("DISPLAY");
     LOGM((LOG_LEVEL_INFO, "main: DISPLAY env var set to %s", display_text));
-    get_display_num_from_display(display_text);
+
+    if (display_text)
+        get_display_num_from_display(display_text);
 
     if (g_display_num == 0)
     {

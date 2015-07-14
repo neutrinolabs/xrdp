@@ -195,6 +195,8 @@ xrdp_process_main_loop(struct xrdp_process *self)
     self->server_trans->callback_data = self;
     init_stream(self->server_trans->in_s, 8192 * 4);
     self->session = libxrdp_init((tbus)self, self->server_trans);
+    self->server_trans->si = &(self->session->si);
+    self->server_trans->my_source = XRDP_SOURCE_CLIENT;
     /* this callback function is in xrdp_wm.c */
     self->session->callback = callback;
     /* this function is just above */
@@ -217,8 +219,8 @@ xrdp_process_main_loop(struct xrdp_process *self)
             robjs[robjs_count++] = self->self_term_event;
             xrdp_wm_get_wait_objs(self->wm, robjs, &robjs_count,
                                   wobjs, &wobjs_count, &timeout);
-            trans_get_wait_objs(self->server_trans, robjs, &robjs_count);
-
+            trans_get_wait_objs_rw(self->server_trans, robjs, &robjs_count,
+                                   wobjs, &wobjs_count, &timeout);
             /* wait */
             if (g_obj_wait(robjs, robjs_count, wobjs, wobjs_count, timeout) != 0)
             {

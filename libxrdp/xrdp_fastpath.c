@@ -113,18 +113,6 @@ xrdp_fastpath_init(struct xrdp_fastpath *self, struct stream *s)
 }
 
 /*****************************************************************************/
-/* no fragmenation */
-int APP_CC
-xrdp_fastpath_send(struct xrdp_fastpath *self, struct stream *s)
-{
-    if (trans_force_write_s(self->trans, s) != 0)
-    {
-        return 1;
-    }
-    return 0;
-}
-
-/*****************************************************************************/
 static int APP_CC
 xrdp_fastpath_session_callback(struct xrdp_fastpath *self, int msg,
                                long param1, long param2,
@@ -141,6 +129,19 @@ xrdp_fastpath_session_callback(struct xrdp_fastpath *self, int msg,
         self->session->callback(self->session->id, msg,
                                 param1, param2, param3, param4);
     }
+    return 0;
+}
+
+/*****************************************************************************/
+/* no fragmenation */
+int APP_CC
+xrdp_fastpath_send(struct xrdp_fastpath *self, struct stream *s)
+{
+    if (trans_write_copy_s(self->trans, s) != 0)
+    {
+        return 1;
+    }
+    xrdp_fastpath_session_callback(self, 0x5556, 0, 0, 0, 0);
     return 0;
 }
 

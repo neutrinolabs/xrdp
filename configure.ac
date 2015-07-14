@@ -8,6 +8,27 @@ AC_PROG_CC
 AC_C_CONST
 AC_PROG_LIBTOOL
 PKG_PROG_PKG_CONFIG
+
+case $host_os in
+	*linux*)
+		linux=yes
+		;;
+	*freebsd*)
+		freebsd=yes
+		;;
+	*netbsd*)
+		netbsd=yes
+		;;
+	*openbsd*)
+		openbsd=yes
+		;;
+esac
+
+AM_CONDITIONAL(LINUX, [test "x$linux" = xyes])
+AM_CONDITIONAL(FREEBSD, [test "x$freebsd" = xyes])
+AM_CONDITIONAL(OPENBSD, [test "x$openbsd" = xyes])
+AM_CONDITIONAL(NETBSD, [test "x$netbsd" = xyes])
+
 AC_ARG_WITH([systemdsystemunitdir],
         AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files]),
         [], [with_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)])
@@ -29,6 +50,9 @@ AC_ARG_ENABLE(nopam, AS_HELP_STRING([--enable-nopam],
                   fi
               ])
 AM_CONDITIONAL(SESMAN_NOPAM, [test x$enable_pam != xyes])
+AC_ARG_ENABLE(ipv6, AS_HELP_STRING([--enable-ipv6],
+              [Build IPv6 support (default: no, experimental)]),
+              [], [enable_ipv6=no])
 AC_ARG_ENABLE(kerberos, AS_HELP_STRING([--enable-kerberos],
               [Build kerberos support (default: no)]),
               [], [enable_kerberos=no])
@@ -69,6 +93,10 @@ AC_ARG_ENABLE(rfxcodec, AS_HELP_STRING([--enable-rfxcodec],
               [Build using librfxcodec (default: no)]),
               [], [enable_rfxcodec=no])
 AM_CONDITIONAL(XRDP_RFXCODEC, [test x$enable_rfxcodec = xyes])
+AC_ARG_ENABLE(opus, AS_HELP_STRING([--enable-opus],
+              [Build opus(audio codec) (default: no)]),
+              [], [enable_opus=no])
+AM_CONDITIONAL(XRDP_OPUS, [test x$enable_opus = xyes])
 
 AM_CONDITIONAL(GOT_PREFIX, test "x${prefix}" != "xNONE"])
 
@@ -76,6 +104,15 @@ AM_CONDITIONAL(GOT_PREFIX, test "x${prefix}" != "xNONE"])
 AC_CHECK_HEADER([openssl/rc4.h], [],
   [AC_MSG_ERROR([please install libssl-dev or openssl-devel])],
   [#include <stdlib.h>])
+
+# checking for pam variation
+# Linux-PAM is used in Linux systems
+# OpenPAM is used by FreeBSD, NetBSD, DragonFly BSD and OS X
+# OpenBSD uses BSD Authentication rather than both PAMs
+AC_CHECK_HEADER([security/_pam_types.h],
+                [AC_DEFINE([HAVE__PAM_TYPES_H], 1, [Using Linux-PAM], [])])
+AC_CHECK_HEADER([security/pam_constants.h],
+                [AC_DEFINE([HAVE_PAM_CONSTANTS_H], 1, [Using OpenPAM], [])])
 
 # checking if pam should be autodetected.
 if test "x$enable_pam" = "xyes"
@@ -88,6 +125,11 @@ then
         [AC_MSG_ERROR([please install libpam0g-dev or pam-devel])])
     fi
   fi
+fi
+
+if test "x$enable_ipv6" = "xyes"
+then
+  AC_DEFINE([XRDP_ENABLE_IPV6],1,[Enable IPv6])
 fi
 
 AC_CHECK_MEMBER([struct in6_addr.s6_addr],
@@ -117,9 +159,15 @@ fi
 # checking for fuse
 if test "x$enable_fuse" = "xyes"
 then
-  AC_CHECK_HEADER([fuse.h], [],
-    [AC_MSG_ERROR([please install libfuse-dev or fuse-devel])],
-    [#define _FILE_OFFSET_BITS 64])
+  PKG_CHECK_MODULES([FUSE], [fuse >= 2.6], [],
+    [AC_MSG_ERROR([please install libfuse-dev or fuse-devel])])
+fi
+
+# checking for opus
+if test "x$enable_opus" = "xyes"
+then
+  AC_CHECK_HEADER([opus/opus.h], [],
+    [AC_MSG_ERROR([please install libopus-dev or opus-devel])])
 fi
 
 # checking for TurboJPEG
@@ -187,6 +235,7 @@ AC_CONFIG_FILES([Makefile
                  instfiles/Makefile
                  instfiles/pam.d/Makefile
                  instfiles/init.d/Makefile
+                 instfiles/rc.d/Makefile
                  instfiles/default/Makefile
                  instfiles/pulse/Makefile
                  genkeymap/Makefile

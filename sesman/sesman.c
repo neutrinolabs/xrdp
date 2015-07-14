@@ -59,7 +59,7 @@ sesman_main_loop(void)
     if (g_sck < 0)
     {
         log_message(LOG_LEVEL_ERROR, "error opening socket, g_tcp_socket() failed...");
-        return 1;
+        return;
     }
 
     g_tcp_set_non_blocking(g_sck);

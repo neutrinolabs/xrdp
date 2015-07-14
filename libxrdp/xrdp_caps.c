@@ -486,6 +486,15 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
             }
             g_writeln("  jpeg quality set to %d", self->client_info.jpeg_prop[0]);
         }
+        else if (g_memcmp(codec_guid, XR_CODEC_GUID_H264, 16) == 0)
+        {
+            g_writeln("xrdp_caps_process_codecs: h264 codec id %d prop len %d",
+                      codec_id, codec_properties_length);
+            self->client_info.h264_codec_id = codec_id;
+            i1 = MIN(64, codec_properties_length);
+            g_memcpy(self->client_info.h264_prop, s->p, i1);
+            self->client_info.h264_prop_len = i1;
+        }
         else
         {
             g_writeln("xrdp_caps_process_codecs: unknown codec id %d", codec_id);
@@ -506,6 +515,17 @@ xrdp_caps_process_multifragmetupdate(struct xrdp_rdp *self, struct stream *s,
 
     in_uint32_le(s, MaxRequestSize);
     self->client_info.max_fastpath_frag_bytes = MaxRequestSize;
+    return 0;
+}
+
+ /*****************************************************************************/
+static int APP_CC
+xrdp_caps_process_frame_ack(struct xrdp_rdp *self, struct stream *s, int len)
+{
+    g_writeln("xrdp_caps_process_frame_ack:");
+    self->client_info.use_frame_acks = 1;
+    in_uint32_le(s, self->client_info.max_unacknowledged_frame_count);
+    g_writeln("  max_unacknowledged_frame_count %d", self->client_info.max_unacknowledged_frame_count);
     return 0;
 }
 
@@ -625,6 +645,9 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
                 break;
             case RDP_CAPSET_BMPCODECS: /* 0x1d(29) */
                 xrdp_caps_process_codecs(self, s, len);
+                break;
+            case 0x001E: /* CAPSSETTYPE_FRAME_ACKNOWLEDGE */
+                xrdp_caps_process_frame_ack(self, s, len);
                 break;
             default:
                 g_writeln("unknown in xrdp_caps_process_confirm_active %d", type);
@@ -879,6 +902,12 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
         out_uint16_le(s, 8);
         out_uint32_le(s, 3 * 1024 * 1024); /* 3MB */
     }
+
+    /* frame acks */
+    caps_count++;
+    out_uint16_le(s, 0x001E); /* CAPSETTYPE_FRAME_ACKNOWLEDGE */
+    out_uint16_le(s, 8);
+    out_uint32_le(s, 2); /* 2 frames in flight */
 
     out_uint8s(s, 4); /* pad */
 

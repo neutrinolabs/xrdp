@@ -1733,8 +1733,14 @@ callback(long id, int msg, long param1, long param2, long param3, long param4)
                     pass it to module if there is one */
             rv = xrdp_wm_process_channel_data(wm, param1, param2, param3, param4);
             break;
+        case 0x5556:
+            rv = xrdp_mm_check_chan(wm->mm);
+            break;
+        case 0x5557:
+            //g_writeln("callback: frame ack %d", param1);
+            xrdp_mm_frame_ack(wm->mm, param1);
+            break;
     }
-
     return rv;
 }
 
