@@ -17,7 +17,8 @@ EXTRA_DIST = \
   trans.h \
   xrdp_client_info.h \
   xrdp_constants.h \
-  xrdp_rail.h 
+  xrdp_rail.h \
+  crc16.h
 
 AM_CFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
