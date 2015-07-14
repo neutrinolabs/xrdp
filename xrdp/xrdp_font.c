@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,7 @@
 */
 
 #include "xrdp.h"
+#include "log.h"
 
 #if 0 /* not used */
 static char w_char[] =
@@ -80,8 +81,8 @@ xrdp_font_create(struct xrdp_wm *wm)
 
     if (!g_file_exist(file_path))
     {
-        g_writeln("xrdp_font_create: error font file [%s] does not exist",
-                  file_path);
+        log_message(LOG_LEVEL_ERROR,"xrdp_font_create: error font file [%s] does not exist",
+               file_path);
         return 0;
     }
 
@@ -89,8 +90,8 @@ xrdp_font_create(struct xrdp_wm *wm)
 
     if (file_size < 1)
     {
-        g_writeln("xrdp_font_create: error reading font from file [%s]",
-                  file_path);
+        log_message(LOG_LEVEL_ERROR,"xrdp_font_create: error reading font from file [%s]",
+        file_path);
         return 0;
     }
 
@@ -134,9 +135,9 @@ xrdp_font_create(struct xrdp_wm *wm)
                 if (datasize < 0 || datasize > 512)
                 {
                     /* shouldn't happen */
-                    g_writeln("error in xrdp_font_create, datasize wrong");
-                    g_writeln("width %d height %d datasize %d index %d",
-                              f->width, f->height, datasize, index);
+                    log_message(LOG_LEVEL_ERROR,"error in xrdp_font_create, datasize wrong");
+                    log_message(LOG_LEVEL_DEBUG,"width %d height %d datasize %d index %d",
+                               f->width, f->height, datasize, index);
                     break;
                 }
 
@@ -147,7 +148,7 @@ xrdp_font_create(struct xrdp_wm *wm)
                 }
                 else
                 {
-                    g_writeln("error in xrdp_font_create");
+                    log_message(LOG_LEVEL_ERROR,"error in xrdp_font_create");
                 }
 
                 index++;

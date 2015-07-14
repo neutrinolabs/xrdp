@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,7 +58,12 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    sck = socket(PF_UNIX, SOCK_DGRAM, 0);
+    if ((sck = socket(PF_UNIX, SOCK_DGRAM, 0)) < 0)
+    {
+        printf("socket open error\n");
+        return 1;
+    }
+
     len = sizeof(sa);
 
     if (sendto(sck, "sig", 4, 0, (struct sockaddr *)&sa, len) > 0)

@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,8 +30,9 @@
 
 #include "libscp_types.h"
 
-#define SESMAN_SESSION_TYPE_XRDP  1
-#define SESMAN_SESSION_TYPE_XVNC  2
+#define SESMAN_SESSION_TYPE_XRDP      1
+#define SESMAN_SESSION_TYPE_XVNC      2
+#define SESMAN_SESSION_TYPE_XORG      3
 
 #define SESMAN_SESSION_STATUS_ACTIVE        0x01
 #define SESMAN_SESSION_STATUS_IDLE          0x02
@@ -90,9 +91,9 @@ struct session_chain
  *
  */
 struct session_item* DEFAULT_CC
-session_get_bydata(char* name, int width, int height, int bpp, int type);
+session_get_bydata(char* name, int width, int height, int bpp, int type, char *client_ip);
 #ifndef session_find_item
-  #define session_find_item(a, b, c, d, e) session_get_bydata(a, b, c, d, e);
+  #define session_find_item(a, b, c, d, e, f) session_get_bydata(a, b, c, d, e, f);
 #endif
 
 /**

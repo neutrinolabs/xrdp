@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -137,7 +137,7 @@ void DEFAULT_CC
 pipe_sig(int sig_num)
 {
     /* do nothing */
-    g_writeln("got SIGPIPE(%d)", sig_num);
+    g_writeln("got XRDP WIN SIGPIPE(%d)", sig_num);
 }
 
 /*****************************************************************************/

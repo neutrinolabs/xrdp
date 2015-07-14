@@ -56,6 +56,10 @@ scp_v0c_connect(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     {
         out_uint16_be(c->out_s, 10);
     }
+    else if (s->type == SCP_SESSION_TYPE_XORG)
+    {
+        out_uint16_be(c->out_s, 20);
+    }
     else
     {
         log_message(LOG_LEVEL_WARNING, "[v0:%d] connection aborted: network error", __LINE__);
@@ -191,7 +195,7 @@ scp_v0s_accept(struct SCP_CONNECTION *c, struct SCP_SESSION **s, int skipVchk)
 
     in_uint16_be(c->in_s, code);
 
-    if (code == 0 || code == 10)
+    if (code == 0 || code == 10 || code == 20)
     {
         session = scp_session_create();
 
@@ -207,9 +211,13 @@ scp_v0s_accept(struct SCP_CONNECTION *c, struct SCP_SESSION **s, int skipVchk)
         {
             scp_session_set_type(session, SCP_SESSION_TYPE_XVNC);
         }
-        else
+        else if (code == 10)
         {
             scp_session_set_type(session, SCP_SESSION_TYPE_XRDP);
+        }
+        else if (code == 20)
+        {
+            scp_session_set_type(session, SCP_SESSION_TYPE_XORG);
         }
 
         /* reading username */

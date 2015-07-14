@@ -37,7 +37,10 @@
 #include <string.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/XKBlib.h>
 #include <locale.h>
+
+extern int xfree86_to_evdev[137-8];
 
 int main(int argc, char **argv)
 {
@@ -45,8 +48,8 @@ int main(int argc, char **argv)
     char text[256];
     char *displayname = NULL;
     char *outfname;
-    char *sections[5] = {"noshift", "shift", "altgr", "capslock", "shiftcapslock"};
-    int states[5] = {0, 1, 0x80, 2, 3};
+    char *sections[8] = {"noshift", "shift", "altgr", "shiftaltgr", "capslock", "capslockaltgr", "shiftcapslock", "shiftcapslockaltgr"};
+    int states[8] = {0, 1, 0x80, 0x81, 2, 0x82, 3, 0x83};
     int i;
     int idx;
     int char_count;
@@ -57,6 +60,9 @@ int main(int argc, char **argv)
     FILE *outf;
     XKeyPressedEvent e;
     wchar_t wtext[256];
+    XkbDescPtr kbdesc;
+    char *symatom;
+    int is_evdev;
 
     setlocale(LC_CTYPE, "");
     programname = argv[0];
@@ -78,6 +84,30 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    /* check whether evdev is used */
+    kbdesc = XkbAllocKeyboard();
+    if (!kbdesc)
+    {
+        fprintf(stderr, "%s:  unable to allocate keyboard desc\n",
+                programname);
+        XCloseDisplay(dpy);
+        return 1;
+    }
+
+    if (XkbGetNames(dpy, XkbKeycodesNameMask, kbdesc) != Success)
+    {
+        fprintf(stderr, "%s:  unable to obtain keycode name for keyboard\n",
+                programname);
+        XkbFreeKeyboard(kbdesc, 0, True);
+        XCloseDisplay(dpy);
+        return 1;
+    }
+
+    symatom = XGetAtomName(dpy, kbdesc->names->keycodes);
+    is_evdev = !strncmp(symatom, "evdev", 5);
+    XFree(symatom);
+    XkbFreeKeyboard(kbdesc, 0, True);
+
     outf = fopen(outfname, "w");
 
     if (outf == NULL)
@@ -94,14 +124,17 @@ int main(int argc, char **argv)
     e.display = dpy;
     e.same_screen = True;
 
-    for (idx = 0; idx < 5; idx++) /* Sections and states */
+    for (idx = 0; idx < 8; idx++) /* Sections and states */
     {
         fprintf(outf, "[%s]\n", sections[idx]);
         e.state = states[idx];
 
         for (i = 8; i <= 137; i++) /* Keycodes */
         {
-            e.keycode = i;
+            if (is_evdev)
+                e.keycode = xfree86_to_evdev[i-8];
+            else
+                e.keycode = i;
             nbytes = XLookupString(&e, text, 255, &ks, NULL);
             text[nbytes] = 0;
             char_count = mbstowcs(wtext, text, 255);
@@ -115,7 +148,7 @@ int main(int argc, char **argv)
             fprintf(outf, "Key%d=%d:%d\n", i, (int) ks, unicode);
         }
 
-        if (idx != 4)
+        if (idx != 7)
         {
             fprintf(outf, "\n");
         }

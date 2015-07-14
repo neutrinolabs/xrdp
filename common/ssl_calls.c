@@ -1,7 +1,8 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2014
+ * Copyright (C) Idan Freiberg 2013-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,12 +25,14 @@
 #include <openssl/rc4.h>
 #include <openssl/md5.h>
 #include <openssl/sha.h>
+#include <openssl/hmac.h>
 #include <openssl/bn.h>
 #include <openssl/rsa.h>
 
 #include "os_calls.h"
 #include "arch.h"
 #include "ssl_calls.h"
+#include "trans.h"
 
 #if defined(OPENSSL_VERSION_NUMBER) && (OPENSSL_VERSION_NUMBER >= 0x0090800f)
 #undef OLD_RSA_GEN1
@@ -157,6 +160,151 @@ ssl_md5_complete(void *md5_info, char *data)
     MD5_Final((tui8 *)data, (MD5_CTX *)md5_info);
 }
 
+/* FIPS stuff */
+
+/*****************************************************************************/
+void *APP_CC
+ssl_des3_encrypt_info_create(const char *key, const char* ivec)
+{
+    EVP_CIPHER_CTX *des3_ctx;
+    const tui8 *lkey;
+    const tui8 *livec;
+
+    des3_ctx = (EVP_CIPHER_CTX *) g_malloc(sizeof(EVP_CIPHER_CTX), 1);
+    EVP_CIPHER_CTX_init(des3_ctx);
+    lkey = (const tui8 *) key;
+    livec = (const tui8 *) ivec;
+    EVP_EncryptInit_ex(des3_ctx, EVP_des_ede3_cbc(), NULL, lkey, livec);
+    EVP_CIPHER_CTX_set_padding(des3_ctx, 0);
+    return des3_ctx;
+}
+
+/*****************************************************************************/
+void *APP_CC
+ssl_des3_decrypt_info_create(const char *key, const char* ivec)
+{
+    EVP_CIPHER_CTX *des3_ctx;
+    const tui8 *lkey;
+    const tui8 *livec;
+
+    des3_ctx = g_malloc(sizeof(EVP_CIPHER_CTX), 1);
+    EVP_CIPHER_CTX_init(des3_ctx);
+    lkey = (const tui8 *) key;
+    livec = (const tui8 *) ivec;
+    EVP_DecryptInit_ex(des3_ctx, EVP_des_ede3_cbc(), NULL, lkey, livec);
+    EVP_CIPHER_CTX_set_padding(des3_ctx, 0);
+    return des3_ctx;
+}
+
+/*****************************************************************************/
+void APP_CC
+ssl_des3_info_delete(void *des3)
+{
+    EVP_CIPHER_CTX *des3_ctx;
+
+    des3_ctx = (EVP_CIPHER_CTX *) des3;
+    if (des3_ctx != 0)
+    {
+        EVP_CIPHER_CTX_cleanup(des3_ctx);
+        g_free(des3_ctx);
+    }
+}
+
+/*****************************************************************************/
+int APP_CC
+ssl_des3_encrypt(void *des3, int length, const char *in_data, char *out_data)
+{
+    EVP_CIPHER_CTX *des3_ctx;
+    int len;
+    const tui8 *lin_data;
+    tui8 *lout_data;
+
+    des3_ctx = (EVP_CIPHER_CTX *) des3;
+    lin_data = (const tui8 *) in_data;
+    lout_data = (tui8 *) out_data;
+    len = 0;
+    EVP_EncryptUpdate(des3_ctx, lout_data, &len, lin_data, length);
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+ssl_des3_decrypt(void *des3, int length, const char *in_data, char *out_data)
+{
+    EVP_CIPHER_CTX *des3_ctx;
+    int len;
+    const tui8 *lin_data;
+    tui8 *lout_data;
+
+    des3_ctx = (EVP_CIPHER_CTX *) des3;
+    lin_data = (const tui8 *) in_data;
+    lout_data = (tui8 *) out_data;
+    len = 0;
+    EVP_DecryptUpdate(des3_ctx, lout_data, &len, lin_data, length);
+    return 0;
+}
+
+/*****************************************************************************/
+void * APP_CC
+ssl_hmac_info_create(void)
+{
+    HMAC_CTX *hmac_ctx;
+
+    hmac_ctx = (HMAC_CTX *) g_malloc(sizeof(HMAC_CTX), 1);
+    HMAC_CTX_init(hmac_ctx);
+    return hmac_ctx;
+}
+
+/*****************************************************************************/
+void APP_CC
+ssl_hmac_info_delete(void *hmac)
+{
+    HMAC_CTX *hmac_ctx;
+
+    hmac_ctx = (HMAC_CTX *) hmac;
+    if (hmac_ctx != 0)
+    {
+        HMAC_CTX_cleanup(hmac_ctx);
+        g_free(hmac_ctx);
+    }
+}
+
+/*****************************************************************************/
+void APP_CC
+ssl_hmac_sha1_init(void *hmac, const char *data, int len)
+{
+    HMAC_CTX *hmac_ctx;
+
+    hmac_ctx = (HMAC_CTX *) hmac;
+    HMAC_Init_ex(hmac_ctx, data, len, EVP_sha1(), NULL);
+}
+
+/*****************************************************************************/
+void APP_CC
+ssl_hmac_transform(void *hmac, const char *data, int len)
+{
+    HMAC_CTX *hmac_ctx;
+    const tui8 *ldata;
+
+    hmac_ctx = (HMAC_CTX *) hmac;
+    ldata = (const tui8*) data;
+    HMAC_Update(hmac_ctx, ldata, len);
+}
+
+/*****************************************************************************/
+void APP_CC
+ssl_hmac_complete(void *hmac, char *data, int len)
+{
+    HMAC_CTX *hmac_ctx;
+    tui8* ldata;
+    tui32 llen;
+
+    hmac_ctx = (HMAC_CTX *) hmac;
+    ldata = (tui8 *) data;
+    llen = len;
+    HMAC_Final(hmac_ctx, ldata, &llen);
+}
+
 /*****************************************************************************/
 static void APP_CC
 ssl_reverse_it(char *p, int len)
@@ -254,7 +402,8 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
     int error;
     int len;
 
-    if ((exp_len != 4) || (mod_len != 64) || (pri_len != 64))
+    if ((exp_len != 4) || ((mod_len != 64) && (mod_len != 256)) ||
+                          ((pri_len != 64) && (pri_len != 256)))
     {
         return 1;
     }
@@ -323,7 +472,8 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
     int error;
     int len;
 
-    if ((exp_len != 4) || (mod_len != 64) || (pri_len != 64))
+    if ((exp_len != 4) || ((mod_len != 64) && (mod_len != 256)) ||
+                          ((pri_len != 64) && (pri_len != 256)))
     {
         return 1;
     }
@@ -376,3 +526,321 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
     return error;
 }
 #endif
+
+/*****************************************************************************/
+struct ssl_tls *
+APP_CC
+ssl_tls_create(struct trans *trans, const char *key, const char *cert)
+{
+    struct ssl_tls *self;
+    int pid;
+    char buf[1024];
+
+    self = (struct ssl_tls *) g_malloc(sizeof(struct ssl_tls), 1);
+    if (self != NULL)
+    {
+        self->trans = trans;
+        self->cert = (char *) cert;
+        self->key = (char *) key;
+        pid = g_getpid();
+        g_snprintf(buf, 1024, "xrdp_%8.8x_tls_rwo", pid);
+        self->rwo = g_create_wait_obj(buf);
+    }
+
+    return self;
+}
+
+/*****************************************************************************/
+int APP_CC
+ssl_tls_print_error(char *func, SSL *connection, int value)
+{
+    switch (SSL_get_error(connection, value))
+    {
+        case SSL_ERROR_ZERO_RETURN:
+            g_writeln("ssl_tls_print_error: %s: Server closed TLS connection",
+                      func);
+            return 1;
+
+        case SSL_ERROR_WANT_READ:
+        case SSL_ERROR_WANT_WRITE:
+            return 0;
+
+        case SSL_ERROR_SYSCALL:
+            g_writeln("ssl_tls_print_error: %s: I/O error", func);
+            return 1;
+
+        case SSL_ERROR_SSL:
+            g_writeln("ssl_tls_print_error: %s: Failure in SSL library (protocol error?)",
+                      func);
+            return 1;
+
+        default:
+            g_writeln("ssl_tls_print_error: %s: Unknown error", func);
+            return 1;
+    }
+}
+
+/*****************************************************************************/
+int APP_CC
+ssl_tls_accept(struct ssl_tls *self)
+{
+    int connection_status;
+    long options = 0;
+
+    /**
+     * SSL_OP_NO_SSLv2:
+     *
+     * We only want SSLv3 and TLSv1, so disable SSLv2.
+     * SSLv3 is used by, eg. Microsoft RDC for Mac OS X.
+     */
+    options |= SSL_OP_NO_SSLv2;
+
+#if defined(SSL_OP_NO_COMPRESSION)
+    /**
+     * SSL_OP_NO_COMPRESSION:
+     *
+     * The Microsoft RDP server does not advertise support
+     * for TLS compression, but alternative servers may support it.
+     * This was observed between early versions of the FreeRDP server
+     * and the FreeRDP client, and caused major performance issues,
+     * which is why we're disabling it.
+     */
+    options |= SSL_OP_NO_COMPRESSION;
+#endif
+
+    /**
+     * SSL_OP_TLS_BLOCK_PADDING_BUG:
+     *
+     * The Microsoft RDP server does *not* support TLS padding.
+     * It absolutely needs to be disabled otherwise it won't work.
+     */
+    options |= SSL_OP_TLS_BLOCK_PADDING_BUG;
+
+    /**
+     * SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS:
+     *
+     * Just like TLS padding, the Microsoft RDP server does not
+     * support empty fragments. This needs to be disabled.
+     */
+    options |= SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS;
+
+    self->ctx = SSL_CTX_new(SSLv23_server_method());
+    /* set context options */
+    SSL_CTX_set_mode(self->ctx,
+                     SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER |
+                     SSL_MODE_ENABLE_PARTIAL_WRITE);
+    SSL_CTX_set_options(self->ctx, options);
+    SSL_CTX_set_read_ahead(self->ctx, 1);
+
+    if (self->ctx == NULL)
+    {
+        g_writeln("ssl_tls_accept: SSL_CTX_new failed");
+        return 1;
+    }
+
+    if (SSL_CTX_use_RSAPrivateKey_file(self->ctx, self->key, SSL_FILETYPE_PEM)
+            <= 0)
+    {
+        g_writeln("ssl_tls_accept: SSL_CTX_use_RSAPrivateKey_file failed");
+        return 1;
+    }
+
+    if (SSL_CTX_use_certificate_chain_file(self->ctx, self->cert) <= 0)
+    {
+        g_writeln("ssl_tls_accept: SSL_CTX_use_certificate_chain_file failed");
+        return 1;
+    }
+
+    self->ssl = SSL_new(self->ctx);
+
+    if (self->ssl == NULL)
+    {
+        g_writeln("ssl_tls_accept: SSL_new failed");
+        return 1;
+    }
+
+    if (SSL_set_fd(self->ssl, self->trans->sck) < 1)
+    {
+        g_writeln("ssl_tls_accept: SSL_set_fd failed");
+        return 1;
+    }
+
+    while(1) {
+        connection_status = SSL_accept(self->ssl);
+
+        if (connection_status <= 0)
+        {
+            if (ssl_tls_print_error("SSL_accept", self->ssl, connection_status))
+            {
+                return 1;
+            }
+            /**
+             * retry when SSL_get_error returns:
+             *     SSL_ERROR_WANT_READ
+             *     SSL_ERROR_WANT_WRITE
+             */
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    g_writeln("ssl_tls_accept: TLS connection accepted");
+
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error, */
+int APP_CC
+ssl_tls_disconnect(struct ssl_tls *self)
+{
+    int status;
+
+    if (self == NULL)
+    {
+        return 0;
+    }
+    if (self->ssl == NULL)
+    {
+        return 0;
+    }
+    status = SSL_shutdown(self->ssl);
+    while (status != 1)
+    {
+        status = SSL_shutdown(self->ssl);
+        if (status <= 0)
+        {
+            if (ssl_tls_print_error("SSL_shutdown", self->ssl, status))
+            {
+                return 1;
+            }
+            /**
+             * retry when SSL_get_error returns:
+             *     SSL_ERROR_WANT_READ
+             *     SSL_ERROR_WANT_WRITE
+             */
+        }
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+void APP_CC
+ssl_tls_delete(struct ssl_tls *self)
+{
+    if (self != NULL)
+    {
+        if (self->ssl)
+            SSL_free(self->ssl);
+
+        if (self->ctx)
+            SSL_CTX_free(self->ctx);
+
+        g_delete_wait_obj(self->rwo);
+
+        g_free(self);
+    }
+}
+
+/*****************************************************************************/
+int APP_CC
+ssl_tls_read(struct ssl_tls *tls, char *data, int length)
+{
+    int status;
+    int break_flag;
+
+    while(1) {
+        status = SSL_read(tls->ssl, data, length);
+
+        switch (SSL_get_error(tls->ssl, status))
+        {
+            case SSL_ERROR_NONE:
+                break_flag = 1;
+                break;
+
+            case SSL_ERROR_WANT_READ:
+            case SSL_ERROR_WANT_WRITE:
+                /**
+                 * retry when SSL_get_error returns:
+                 *     SSL_ERROR_WANT_READ
+                 *     SSL_ERROR_WANT_WRITE
+                 */
+                continue;
+
+            default:
+                ssl_tls_print_error("SSL_read", tls->ssl, status);
+                status = -1;
+                break_flag = 1;
+                break;
+        }
+
+        if (break_flag)
+        {
+            break;
+        }
+    }
+
+    if (SSL_pending(tls->ssl) > 0)
+    {
+        g_set_wait_obj(tls->rwo);
+    }
+
+    return status;
+}
+
+/*****************************************************************************/
+int APP_CC
+ssl_tls_write(struct ssl_tls *tls, const char *data, int length)
+{
+    int status;
+    int break_flag;
+
+    while(1) {
+        status = SSL_write(tls->ssl, data, length);
+
+        switch (SSL_get_error(tls->ssl, status))
+        {
+            case SSL_ERROR_NONE:
+                break_flag = 1;
+                break;
+
+            case SSL_ERROR_WANT_READ:
+            case SSL_ERROR_WANT_WRITE:
+                /**
+                 * retry when SSL_get_error returns:
+                 *     SSL_ERROR_WANT_READ
+                 *     SSL_ERROR_WANT_WRITE
+                 */
+                continue;
+
+            default:
+                ssl_tls_print_error("SSL_write", tls->ssl, status);
+                status = -1;
+                break_flag = 1;
+                break;
+        }
+
+        if (break_flag)
+        {
+            break;
+        }
+    }
+
+    return status;
+}
+
+/*****************************************************************************/
+/* returns boolean */
+int APP_CC
+ssl_tls_can_recv(struct ssl_tls *tls, int sck, int millis)
+{
+    if (SSL_pending(tls->ssl) > 0)
+    {
+        return 1;
+    }
+    g_reset_wait_obj(tls->rwo);
+    return g_tcp_can_recv(sck, millis);
+}
+

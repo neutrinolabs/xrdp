@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2012 Jay Sorg
+Copyright 2005-2013 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -83,6 +83,8 @@ rdpPutImage(DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
 
     LLOGLN(10, ("rdpPutImage:"));
     LLOGLN(10, ("rdpPutImage: drawable id 0x%x", (int)(pDst->id)));
+    LLOGLN(10, ("rdpPutImage: x %d y %d w %d h %d is_window %d", x, y, w, h,
+           pDst->type == DRAWABLE_WINDOW));
 
     /* do original call */
     rdpPutImageOrg(pDst, pGC, depth, x, y, w, h, leftPad, format, pBits);
@@ -98,13 +100,13 @@ rdpPutImage(DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
         pDstPixmap = (PixmapPtr)pDst;
         pDstPriv = GETPIXPRIV(pDstPixmap);
 
-        if (XRDP_IS_OS(pDstPriv))
+        if (xrdp_is_os(pDstPixmap, pDstPriv))
         {
             post_process = 1;
 
             if (g_do_dirty_os)
             {
-                LLOGLN(10, ("rdpPutImage: gettig dirty"));
+                LLOGLN(10, ("rdpPutImage: getting dirty"));
                 pDstPriv->is_dirty = 1;
                 pDirtyPriv = pDstPriv;
                 dirty_type = RDI_IMGLY;
@@ -130,10 +132,10 @@ rdpPutImage(DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
 
                 if (g_do_dirty_ons)
                 {
-                    LLOGLN(0, ("rdpPutImage: gettig dirty"));
+                    LLOGLN(10, ("rdpPutImage: getting dirty"));
                     g_screenPriv.is_dirty = 1;
                     pDirtyPriv = &g_screenPriv;
-                    dirty_type = RDI_IMGLL;
+                    dirty_type = RDI_IMGLY;
                 }
                 else
                 {
@@ -161,7 +163,7 @@ rdpPutImage(DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
             box.x2 = box.x1 + w;
             box.y2 = box.y1 + h;
             RegionInit(&reg1, &box, 0);
-            draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type);
+            draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type, TAG_PUTIMAGE);
             RegionUninit(&reg1);
         }
         else if (got_id)
@@ -183,7 +185,7 @@ rdpPutImage(DrawablePtr pDst, GCPtr pGC, int depth, int x, int y,
             RegionInit(&reg2, NullBox, 0);
             RegionCopy(&reg2, &clip_reg);
             RegionIntersect(&reg1, &reg1, &reg2);
-            draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type);
+            draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type, TAG_PUTIMAGE);
             RegionUninit(&reg1);
             RegionUninit(&reg2);
         }

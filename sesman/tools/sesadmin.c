@@ -107,6 +107,12 @@ int main(int argc, char **argv)
     scp_init(&logging);
 
     sock = g_tcp_socket();
+    if (sock < 0)
+    {
+        LOG_DBG("Socket open error, g_tcp_socket() failed\n");
+        return 1;
+    }
+
     s = scp_session_create();
     c = scp_connection_create(sock);
 
@@ -179,15 +185,15 @@ void cmndList(struct SCP_CONNECTION *c)
                    (dsl[idx]).idle_days, (dsl[idx]).idle_hours, (dsl[idx]).idle_minutes, \
                    (dsl[idx]).conn_year, (dsl[idx]).conn_month, (dsl[idx]).conn_day, (dsl[idx]).conn_hour, (dsl[idx]).conn_minute);
         }
-
-        if (0 != dsl)
-        {
-            g_free(dsl);
-        }
     }
     else
     {
         printf("No sessions.\n");
+    }
+
+    if (0 != dsl)
+    {
+        g_free(dsl);
     }
 }
 

@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
  */
 
 #include "rdp.h"
+#include "common/log.h"
 
 /*****************************************************************************/
 struct rdp_mcs *APP_CC
@@ -598,7 +599,8 @@ failed"));
 int APP_CC
 rdp_mcs_init(struct rdp_mcs *self, struct stream *s)
 {
-    rdp_iso_init(self->iso_layer, s);
+    if (rdp_iso_init(self->iso_layer, s))
+        log_message(LOG_LEVEL_ERROR, "rdp_mcs.c: rdp_iso_init() failed");
     s_push_layer(s, mcs_hdr, 8);
     return 0;
 }

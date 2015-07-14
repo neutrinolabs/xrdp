@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,7 +61,7 @@ xrdp_process_delete(struct xrdp_process *self)
 
 /*****************************************************************************/
 static int APP_CC
-xrdp_process_loop(struct xrdp_process *self)
+xrdp_process_loop(struct xrdp_process *self, struct stream *s)
 {
     int rv;
 
@@ -69,16 +69,16 @@ xrdp_process_loop(struct xrdp_process *self)
 
     if (self->session != 0)
     {
-        rv = libxrdp_process_data(self->session);
-    }
+        rv = libxrdp_process_data(self->session, s);
 
-    if ((self->wm == 0) && (self->session->up_and_running) && (rv == 0))
-    {
-        DEBUG(("calling xrdp_wm_init and creating wm"));
-        self->wm = xrdp_wm_create(self, self->session->client_info);
-        /* at this point the wm(window manager) is create and wm::login_mode is
-           zero and login_mode_event is set so xrdp_wm_init should be called by
-           xrdp_wm_check_wait_objs */
+        if ((self->wm == 0) && (self->session->up_and_running) && (rv == 0))
+        {
+            DEBUG(("calling xrdp_wm_init and creating wm"));
+            self->wm = xrdp_wm_create(self, self->session->client_info);
+            /* at this point the wm(window manager) is create and wm::login_mode is
+               zero and login_mode_event is set so xrdp_wm_init should be called by
+               xrdp_wm_check_wait_objs */
+        }
     }
 
     return rv;
@@ -119,15 +119,58 @@ static int DEFAULT_CC
 xrdp_process_data_in(struct trans *self)
 {
     struct xrdp_process *pro;
+    struct stream *s;
+    int len;
 
     DEBUG(("xrdp_process_data_in"));
     pro = (struct xrdp_process *)(self->callback_data);
 
-    if (xrdp_process_loop(pro) != 0)
+    s = pro->server_trans->in_s;
+    switch (pro->server_trans->extra_flags)
     {
-        return 1;
-    }
+        case 0:
+            /* early in connection sequence, we're in this mode */
+            if (xrdp_process_loop(pro, 0) != 0)
+            {
+                g_writeln("xrdp_process_data_in: "
+                          "xrdp_process_loop failed");
+                return 1;
+            }
+            if (pro->session->up_and_running)
+            {
+                pro->server_trans->extra_flags = 1;
+                pro->server_trans->header_size = 4;
+                init_stream(s, 0);
+            }
+            break;
 
+        case 1:
+            /* we have enough now to get the PDU bytes */
+            len = libxrdp_get_pdu_bytes(s->p);
+            if (len == -1)
+            {
+                g_writeln("xrdp_process_data_in: "
+                          "xrdp_process_get_packet_bytes failed");
+                return 1;
+            }
+            pro->server_trans->header_size = len;
+            pro->server_trans->extra_flags = 2;
+            break;
+
+        case 2:
+            /* the whole PDU is read in now process */
+            s->p = s->data;
+            if (xrdp_process_loop(pro, s) != 0)
+            {
+                g_writeln("xrdp_process_data_in: "
+                          "xrdp_process_loop failed");
+                return 1;
+            }
+            init_stream(s, 0);
+            pro->server_trans->header_size = 4;
+            pro->server_trans->extra_flags = 1;
+            break;
+    }
     return 0;
 }
 
@@ -145,9 +188,15 @@ xrdp_process_main_loop(struct xrdp_process *self)
 
     DEBUG(("xrdp_process_main_loop"));
     self->status = 1;
+    self->server_trans->extra_flags = 0;
+    self->server_trans->header_size = 0;
+    self->server_trans->no_stream_init_on_data_in = 1;
     self->server_trans->trans_data_in = xrdp_process_data_in;
     self->server_trans->callback_data = self;
+    init_stream(self->server_trans->in_s, 8192 * 4);
     self->session = libxrdp_init((tbus)self, self->server_trans);
+    self->server_trans->si = &(self->session->si);
+    self->server_trans->my_source = XRDP_SOURCE_CLIENT;
     /* this callback function is in xrdp_wm.c */
     self->session->callback = callback;
     /* this function is just above */
@@ -155,6 +204,8 @@ xrdp_process_main_loop(struct xrdp_process *self)
 
     if (libxrdp_process_incomming(self->session) == 0)
     {
+        init_stream(self->server_trans->in_s, 32 * 1024);
+
         term_obj = g_get_term_event();
         cont = 1;
 
@@ -168,8 +219,8 @@ xrdp_process_main_loop(struct xrdp_process *self)
             robjs[robjs_count++] = self->self_term_event;
             xrdp_wm_get_wait_objs(self->wm, robjs, &robjs_count,
                                   wobjs, &wobjs_count, &timeout);
-            trans_get_wait_objs(self->server_trans, robjs, &robjs_count);
-
+            trans_get_wait_objs_rw(self->server_trans, robjs, &robjs_count,
+                                   wobjs, &wobjs_count, &timeout);
             /* wait */
             if (g_obj_wait(robjs, robjs_count, wobjs, wobjs_count, timeout) != 0)
             {
@@ -197,14 +248,17 @@ xrdp_process_main_loop(struct xrdp_process *self)
                 break;
             }
         }
-
+        /* send disconnect message if possible */
         libxrdp_disconnect(self->session);
     }
     else
     {
         g_writeln("xrdp_process_main_loop: libxrdp_process_incomming failed");
+        /* this will try to send a disconnect,
+           maybe should check that connection got far enough */
+        libxrdp_disconnect(self->session);
     }
-
+    /* Run end in module */
     xrdp_process_mod_end(self);
     libxrdp_exit(self->session);
     self->session = 0;

@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -708,6 +708,8 @@ xrdp_painter_copy(struct xrdp_painter *self,
     int dsty;
     int w;
     int h;
+    int index;
+    struct list *del_list;
 
     if (self == 0 || src == 0 || dst == 0)
     {
@@ -781,6 +783,22 @@ xrdp_painter_copy(struct xrdp_painter *self,
         cache_id = 255; // todo
         cache_idx = src->item_index; // todo
 
+        if (src->tab_stop == 0)
+        {
+            g_writeln("xrdp_painter_copy: warning src not created");
+            del_list = self->wm->cache->xrdp_os_del_list;
+            index = list_index_of(del_list, cache_idx);
+            list_remove_item(del_list, index);
+            libxrdp_orders_send_create_os_surface(self->session,
+                                                  cache_idx,
+                                                  src->width,
+                                                  src->height,
+                                                  del_list);
+            src->tab_stop = 1;
+            list_clear(del_list);
+        }
+
+
         k = 0;
 
         while (xrdp_region_get_rect(region, k, &rect1) == 0)
@@ -830,9 +848,14 @@ xrdp_painter_copy(struct xrdp_painter *self,
             while (i < (srcx + cx))
             {
                 w = MIN(64, ((srcx + cx) - i));
-                h = MIN(64, ((srcy + cy) - j));
-                b = xrdp_bitmap_create(w, h, self->wm->screen->bpp, 0, self->wm);
+                h = MIN(63, ((srcy + cy) - j));
+                b = xrdp_bitmap_create(w, h, src->bpp, 0, self->wm);
+#if 1
                 xrdp_bitmap_copy_box_with_crc(src, b, i, j, w, h);
+#else
+                xrdp_bitmap_copy_box(src, b, i, j, w, h);
+                xrdp_bitmap_hash_crc(b);
+#endif
                 bitmap_id = xrdp_cache_add_bitmap(self->wm->cache, b, self->wm->hints);
                 cache_id = HIWORD(bitmap_id);
                 cache_idx = LOWORD(bitmap_id);
@@ -860,12 +883,92 @@ xrdp_painter_copy(struct xrdp_painter *self,
                 i += 64;
             }
 
-            j += 64;
+            j += 63;
         }
 
         xrdp_region_delete(region);
     }
 
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
+xrdp_painter_composite(struct xrdp_painter* self,
+                       struct xrdp_bitmap* src,
+                       int srcformat,
+                       int srcwidth,
+                       int srcrepeat,
+                       struct xrdp_bitmap* dst,
+                       int* srctransform,
+                       int mskflags,
+                       struct xrdp_bitmap* msk,
+                       int mskformat, int mskwidth, int mskrepeat, int op,
+                       int srcx, int srcy, int mskx, int msky,
+                       int dstx, int dsty, int width, int height, int dstformat)
+{
+    struct xrdp_rect clip_rect;
+    struct xrdp_rect draw_rect;
+    struct xrdp_rect rect1;
+    struct xrdp_rect rect2;
+    struct xrdp_region* region;
+    int k;
+    int dx;
+    int dy;
+    int palette_id;
+    int cache_srcidx;
+    int cache_mskidx;
+
+    if (self == 0 || src == 0 || dst == 0)
+    {
+        return 0;
+    }
+
+    /* todo data */
+
+    if (dst->type == WND_TYPE_BITMAP)
+    {
+        return 0;
+    }
+
+    if (src->type == WND_TYPE_OFFSCREEN)
+    {
+        xrdp_bitmap_get_screen_clip(dst, self, &clip_rect, &dx, &dy);
+        region = xrdp_region_create(self->wm);
+        xrdp_region_add_rect(region, &clip_rect);
+        dstx += dx;
+        dsty += dy;
+
+        palette_id = 0;
+        cache_srcidx = src->item_index;
+        cache_mskidx = -1;
+        if (mskflags & 1)
+        {
+            if (msk != 0)
+            {
+                cache_mskidx = msk->item_index; // todo
+            }
+        }
+
+        k = 0;
+        while (xrdp_region_get_rect(region, k, &rect1) == 0)
+        {
+            if (rect_intersect(&rect1, &clip_rect, &rect2))
+            {
+                MAKERECT(rect1, dstx, dsty, width, height);
+                if (rect_intersect(&rect2, &rect1, &draw_rect))
+                {
+                    libxrdp_orders_composite_blt(self->session, cache_srcidx, srcformat, srcwidth,
+                                                 srcrepeat, srctransform, mskflags, cache_mskidx,
+                                                 mskformat, mskwidth, mskrepeat, op, srcx, srcy,
+                                                 mskx, msky, dstx, dsty, width, height, dstformat,
+                                                 &draw_rect);
+                }
+            }
+            k++;
+        }
+        xrdp_region_delete(region);
+    }
     return 0;
 }
 

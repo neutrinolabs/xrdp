@@ -1,0 +1,12 @@
+.nofail
+.fail
+load-module module-augment-properties
+load-module module-always-sink
+.ifexists module-xrdp-sink.so
+load-module module-xrdp-sink
+.endif
+.ifexists module-xrdp-source.so
+load-module module-xrdp-source
+.endif
+load-module module-native-protocol-unix
+

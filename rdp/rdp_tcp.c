@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -157,7 +157,10 @@ int APP_CC
 rdp_tcp_connect(struct rdp_tcp *self, char *ip, char *port)
 {
     DEBUG(("    in rdp_tcp_connect ip %s port %s", ip, port));
+
     self->sck = g_tcp_socket();
+    if (self->sck < 0)
+        return 1;
 
     if (g_tcp_connect(self->sck, ip, port) == 0)
     {

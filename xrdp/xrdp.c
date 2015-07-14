@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,10 @@
 
 #include "xrdp.h"
 #include "log.h"
+
+#if !defined(PACKAGE_VERSION)
+#define PACKAGE_VERSION "???"
+#endif
 
 #define THREAD_WAITING 100
 
@@ -138,7 +142,7 @@ xrdp_child_fork(void)
 }
 
 /*****************************************************************************/
-int APP_CC
+int DEFAULT_CC
 g_is_term(void)
 {
     return g_is_wait_obj_set(g_term_event);
@@ -177,7 +181,7 @@ void DEFAULT_CC
 pipe_sig(int sig_num)
 {
     /* do nothing */
-    g_writeln("got SIGPIPE(%d)", sig_num);
+    g_writeln("got XRDP SIGPIPE(%d)", sig_num);
 }
 
 /*****************************************************************************/
@@ -305,11 +309,16 @@ main(int argc, char **argv)
 
     g_init("xrdp");
     ssl_init();
+
+    for (test = 0; test < argc; test++)
+    {
+        DEBUG(("Argument %i - %s", test, argv[test]));
+    }
+
     /* check compiled endian with actual endian */
     test = 1;
     host_be = !((int)(*(unsigned char *)(&test)));
 #if defined(B_ENDIAN)
-
     if (!host_be)
 #endif
 #if defined(L_ENDIAN)
@@ -347,6 +356,51 @@ main(int argc, char **argv)
 
     g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
 
+    startup_params = (struct xrdp_startup_params *)
+                     g_malloc(sizeof(struct xrdp_startup_params), 1);
+
+    if (xrdp_process_params(argc, argv, startup_params) != 0)
+    {
+        g_writeln("Unknown Parameter");
+        g_writeln("xrdp -h for help");
+        g_writeln("");
+        g_deinit();
+        g_exit(0);
+    }
+
+    g_snprintf(pid_file, 255, "%s/xrdp.pid", XRDP_PID_PATH);
+    no_daemon = 0;
+
+    if (startup_params->help)
+    {
+        g_writeln("");
+        g_writeln("xrdp: A Remote Desktop Protocol server.");
+        g_writeln("Copyright (C) Jay Sorg 2004-2014");
+        g_writeln("See http://www.xrdp.org for more information.");
+        g_writeln("");
+        g_writeln("Usage: xrdp [options]");
+        g_writeln("   --help: show help");
+        g_writeln("   --nodaemon: don't fork into background");
+        g_writeln("   --kill: shut down xrdp");
+        g_writeln("   --port: tcp listen port");
+        g_writeln("   --fork: fork on new connection");
+        g_writeln("");
+        g_deinit();
+        g_exit(0);
+    }
+
+    if (startup_params->version)
+    {
+        g_writeln("");
+        g_writeln("xrdp: A Remote Desktop Protocol server.");
+        g_writeln("Copyright (C) Jay Sorg 2004-2014");
+        g_writeln("See http://www.xrdp.org for more information.");
+        g_writeln("Version %s", PACKAGE_VERSION);
+        g_writeln("");
+        g_deinit();
+        g_exit(0);
+    }
+
     /* starting logging subsystem */
     error = log_start(cfg_file, "XRDP");
 
@@ -370,20 +424,15 @@ main(int argc, char **argv)
         g_exit(1);
     }
 
-    startup_params = (struct xrdp_startup_params *)
-                     g_malloc(sizeof(struct xrdp_startup_params), 1);
 
-    if (xrdp_process_params(argc, argv, startup_params) != 0)
+
+    if (g_file_exist(pid_file)) /* xrdp.pid */
     {
-        g_writeln("Unknown Parameter");
-        g_writeln("xrdp -h for help");
-        g_writeln("");
+        g_writeln("It looks like xrdp is allready running,");
+        g_writeln("if not delete the xrdp.pid file and try again");
         g_deinit();
         g_exit(0);
     }
-
-    g_snprintf(pid_file, 255, "%s/xrdp.pid", XRDP_PID_PATH);
-    no_daemon = 0;
 
     if (startup_params->kill)
     {
@@ -425,43 +474,6 @@ main(int argc, char **argv)
         no_daemon = 1;
     }
 
-    if (startup_params->help)
-    {
-        g_writeln("");
-        g_writeln("xrdp: A Remote Desktop Protocol server.");
-        g_writeln("Copyright (C) Jay Sorg 2004-2011");
-        g_writeln("See http://xrdp.sourceforge.net for more information.");
-        g_writeln("");
-        g_writeln("Usage: xrdp [options]");
-        g_writeln("   --help: show help");
-        g_writeln("   --nodaemon: don't fork into background");
-        g_writeln("   --kill: shut down xrdp");
-        g_writeln("   --port: tcp listen port");
-        g_writeln("   --fork: fork on new connection");
-        g_writeln("");
-        g_deinit();
-        g_exit(0);
-    }
-
-    if (startup_params->version)
-    {
-        g_writeln("");
-        g_writeln("xrdp: A Remote Desktop Protocol server.");
-        g_writeln("Copyright (C) Jay Sorg 2004-2011");
-        g_writeln("See http://xrdp.sourceforge.net for more information.");
-        g_writeln("Version %s", PACKAGE_VERSION);
-        g_writeln("");
-        g_deinit();
-        g_exit(0);
-    }
-
-    if (g_file_exist(pid_file)) /* xrdp.pid */
-    {
-        g_writeln("It looks like xrdp is allready running,");
-        g_writeln("if not delete the xrdp.pid file and try again");
-        g_deinit();
-        g_exit(0);
-    }
 
     if (!no_daemon)
     {
@@ -532,9 +544,19 @@ main(int argc, char **argv)
         g_file_close(0);
         g_file_close(1);
         g_file_close(2);
-        g_file_open("/dev/null");
-        g_file_open("/dev/null");
-        g_file_open("/dev/null");
+
+        if (g_file_open("/dev/null") < 0)
+        {
+        }
+
+        if (g_file_open("/dev/null") < 0)
+        {
+        }
+
+        if (g_file_open("/dev/null") < 0)
+        {
+        }
+
         /* end of daemonizing code */
     }
 

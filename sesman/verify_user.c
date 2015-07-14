@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,14 +48,12 @@ auth_account_disabled(struct spwd *stp);
 /******************************************************************************/
 /* returns boolean */
 long DEFAULT_CC
-auth_userpass(char *user, char *pass)
+auth_userpass(char *user, char *pass, int *errorcode)
 {
-    char salt[13] = "$1$";
-    char hash[35] = "";
-    char *encr = 0;
+    const char *encr;
+    const char *epass;
     struct passwd *spw;
     struct spwd *stp;
-    int saltcnt = 0;
 
     spw = getpwnam(user);
 
@@ -76,56 +74,37 @@ auth_userpass(char *user, char *pass)
 
         if (1 == auth_account_disabled(stp))
         {
-            log_message(&(g_cfg->log), LOG_LEVEL_INFO, "account %s is disabled", user);
+            log_message(LOG_LEVEL_INFO, "account %s is disabled", user);
             return 0;
         }
 
-        g_strncpy(hash, stp->sp_pwdp, 34);
+        encr = stp->sp_pwdp;
     }
     else
     {
         /* old system with only passwd */
-        g_strncpy(hash, spw->pw_passwd, 34);
+        encr = spw->pw_passwd;
     }
-
-    hash[34] = '\0';
-
-    if (g_strncmp(hash, "$1$", 3) == 0)
-    {
-        /* gnu style crypt(); */
-        saltcnt = 3;
-
-        while ((hash[saltcnt] != '$') && (saltcnt < 11))
-        {
-            salt[saltcnt] = hash[saltcnt];
-            saltcnt++;
-        }
-
-        salt[saltcnt] = '$';
-        salt[saltcnt + 1] = '\0';
-    }
-    else
-    {
-        /* classic two char salt */
-        salt[0] = hash[0];
-        salt[1] = hash[1];
-        salt[2] = '\0';
-    }
-
-    encr = crypt(pass, salt);
-
-    if (g_strncmp(encr, hash, 34) != 0)
+    epass = crypt(pass, encr);
+    if (epass == 0)
     {
         return 0;
     }
-
-    return 1;
+    return (strcmp(encr, epass) == 0);
 }
 
 /******************************************************************************/
 /* returns error */
 int DEFAULT_CC
 auth_start_session(long in_val, int in_display)
+{
+    return 0;
+}
+
+/******************************************************************************/
+/* returns error */
+int DEFAULT_CC
+auth_stop_session(long in_val)
 {
     return 0;
 }
@@ -342,7 +321,10 @@ auth_account_disabled(struct spwd *stp)
         return 1;
     }
 
-    if (today >= (stp->sp_lstchg + stp->sp_max + stp->sp_inact))
+    if ((stp->sp_max >= 0) &&
+        (stp->sp_inact >= 0) &&
+        (stp->sp_lstchg > 0) &&
+        (today >= (stp->sp_lstchg + stp->sp_max + stp->sp_inact)))
     {
         return 1;
     }

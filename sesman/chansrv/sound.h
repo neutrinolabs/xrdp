@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2009-2012
+ * Copyright (C) Jay Sorg 2009-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,28 +19,11 @@
 #ifndef _SOUND_H_
 #define _SOUND_H_
 
-#if defined(XRDP_SIMPLESOUND)
-#include <pulse/simple.h>
-#include <pulse/error.h>
-#endif
-
 #include "arch.h"
 #include "parse.h"
 #include "os_calls.h"
 #include "chansrv.h"
 #include "trans.h"
-
-#define _DEBUG_RDPSND
-
-#ifdef DEBUG_RDPSND
-#include <stdio.h>
-#define print_got_here() printf("****** got here: %s : %s : %d\n", \
-                                 __FILE__, __func__, __LINE__);
-#else
-#define print_got_here()
-#endif
-
-#define AUDIO_BUF_SIZE 2048
 
 #define SNDC_CLOSE          0x01
 #define SNDC_WAVE           0x02
@@ -55,16 +38,24 @@
 #define SNDC_UDPWAVELAST    0x0B
 #define SNDC_QUALITYMODE    0x0C
 
-int APP_CC
-sound_init(void);
-int APP_CC
-sound_deinit(void);
-int APP_CC
-sound_get_wait_objs(tbus* objs, int* count, int* timeout);
-int APP_CC
-sound_check_wait_objs(void);
-int APP_CC
-sound_data_in(struct stream* s, int chan_id, int chan_flags,
-              int length, int total_length);
+/* used for sound input (mic) */
+#define SNDC_REC_NEGOTIATE  39
+#define SNDC_REC_START      40
+#define SNDC_REC_STOP       41
+#define SNDC_REC_DATA       42
+#define SNDC_REC_SET_VOLUME 43
+
+/* commands recvd from pulseaudio source */
+#define PA_CMD_START_REC    1
+#define PA_CMD_STOP_REC     2
+#define PA_CMD_SEND_DATA    3
+
+int APP_CC sound_init(void);
+int APP_CC sound_deinit(void);
+int APP_CC sound_get_wait_objs(tbus* objs, int* count, int* timeout);
+int APP_CC sound_check_wait_objs(void);
+
+int APP_CC sound_data_in(struct stream* s, int chan_id, int chan_flags,
+                         int length, int total_length);
 
 #endif

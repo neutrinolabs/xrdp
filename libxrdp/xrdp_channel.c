@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2006-2012
+ * Copyright (C) Jay Sorg 2006-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -105,10 +105,21 @@ xrdp_channel_send(struct xrdp_channel *self, struct stream *s, int channel_id,
     s_pop_layer(s, channel_hdr);
     out_uint32_le(s, total_data_len);
 
-    if (channel->flags & XR_CHANNEL_OPTION_SHOW_PROTOCOL)
-    {
-        flags |= CHANNEL_FLAG_SHOW_PROTOCOL;
-    }
+    /*
+     * According to 2.2.1.3.4.1 Channel Definition Structure (CHANNEL_DEF):
+     * CHANNEL_OPTION_SHOW_PROTOCOL 0x00200000
+     *  The value of this flag MUST be ignored by the server. The
+     *  visibility of the Channel PDU Header (section 2.2.6.1.1) is
+     *  determined by the CHANNEL_FLAG_SHOW_PROTOCOL
+     *  (0x00000010) flag as defined in the flags field (section
+     *  2.2.6.1.1).
+     *
+     *   That's flag makes MSTSC crash when using RAIL channel.
+     */
+//    if (channel->flags & XR_CHANNEL_OPTION_SHOW_PROTOCOL)
+//    {
+//        flags |= CHANNEL_FLAG_SHOW_PROTOCOL;
+//    }
 
     out_uint32_le(s, flags);
 

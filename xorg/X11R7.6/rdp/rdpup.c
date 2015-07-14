@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2012 Jay Sorg
+Copyright 2005-2013 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -21,6 +21,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "rdp.h"
 #include "xrdp_rail.h"
+#include "rdpglyph.h"
+
+#include <signal.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <sys/types.h>
 
 #define LOG_LEVEL 1
 #define LLOG(_level, _args) \
@@ -28,7 +34,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
-int g_con_number = 0; /* increments for each connection */
+static int g_use_shmem = 1; /* turns on or off */
+static int g_shmemid = -1;
+static char *g_shmemptr = 0;
+static int g_shmem_lineBytes = 0;
+static RegionPtr g_shm_reg = 0;
+
+static int g_rect_id_ack = 0;
+static int g_rect_id = 0;
 
 static int g_listen_sck = 0;
 static int g_sck = 0;
@@ -55,13 +68,17 @@ extern ScreenPtr g_pScreen; /* from rdpmain.c */
 extern int g_Bpp; /* from rdpmain.c */
 extern int g_Bpp_mask; /* from rdpmain.c */
 extern rdpScreenInfoRec g_rdpScreen; /* from rdpmain.c */
+extern int g_do_glyph_cache; /* from rdpmain.c */
+extern int g_can_do_pix_to_pix; /* from rdpmain.c */
 extern int g_use_rail; /* from rdpmain.c */
+extern int g_do_composite; /* from rdpmain.c */
 
 /* true is to use unix domain socket */
 extern int g_use_uds; /* in rdpmain.c */
 extern char g_uds_data[]; /* in rdpmain.c */
 extern int g_do_dirty_ons; /* in rdpmain.c */
 extern rdpPixmapRec g_screenPriv; /* in rdpmain.c */
+extern int g_con_number; /* in rdpmain.c */
 
 struct rdpup_os_bitmap
 {
@@ -71,9 +88,12 @@ struct rdpup_os_bitmap
     int stamp;
 };
 
+#define USE_MAX_OS_BYTES 1
+#define MAX_OS_BYTES (16 * 1024 * 1024)
 static struct rdpup_os_bitmap *g_os_bitmaps = 0;
 static int g_max_os_bitmaps = 0;
 static int g_os_bitmap_stamp = 0;
+static int g_os_bitmap_alloc_size = 0;
 
 static int g_pixmap_byte_total = 0;
 static int g_pixmap_num_used = 0;
@@ -123,11 +143,69 @@ static int g_rdp_opcodes[16] =
     0xff  /* GXset          0xf 1 */
 };
 
+static int g_do_kill_disconnected = 0; /* turn on or off */
+static OsTimerPtr g_dis_timer = 0;
+static int g_disconnect_scheduled = 0;
+static CARD32 g_disconnect_timeout_s = 60; /* 60 seconds */
+static CARD32 g_disconnect_time_ms = 0; /* time of disconnect in milliseconds */
+
+static int g_do_multimon = 0; /* multimon - turn on or off */
+
+/******************************************************************************/
+static CARD32
+rdpDeferredDisconnectCallback(OsTimerPtr timer, CARD32 now, pointer arg)
+{
+    CARD32 lnow_ms;
+
+    LLOGLN(10, ("rdpDeferredDisconnectCallback"));
+    if (g_connected)
+    {
+        /* this should not happen */
+        LLOGLN(0, ("rdpDeferredDisconnectCallback: connected"));
+        if (g_dis_timer != 0)
+        {
+            LLOGLN(0, ("rdpDeferredDisconnectCallback: canceling g_dis_timer"));
+            TimerCancel(g_dis_timer);
+            TimerFree(g_dis_timer);
+            g_dis_timer = 0;
+        }
+        g_disconnect_scheduled = 0;
+        return 0;
+    }
+    else
+    {
+        LLOGLN(10, ("rdpDeferredDisconnectCallback: not connected"));
+    }
+    lnow_ms = GetTimeInMillis();
+    if (lnow_ms - g_disconnect_time_ms > g_disconnect_timeout_s * 1000)
+    {
+        LLOGLN(0, ("rdpDeferredDisconnectCallback: exit X11rdp"));
+        kill(getpid(), SIGTERM);
+        return 0;
+    }
+    g_dis_timer = TimerSet(g_dis_timer, 0, 1000 * 10,
+                           rdpDeferredDisconnectCallback, 0);
+    return 0;
+}
+
 /*****************************************************************************/
 static int
 rdpup_disconnect(void)
 {
     int index;
+
+    LLOGLN(0, ("rdpup_disconnect:"));
+    if (g_do_kill_disconnected)
+    {
+        if (!g_disconnect_scheduled)
+        {
+            LLOGLN(0, ("rdpup_disconnect: starting g_dis_timer"));
+            g_dis_timer = TimerSet(g_dis_timer, 0, 1000 * 10,
+                                   rdpDeferredDisconnectCallback, 0);
+            g_disconnect_scheduled = 1;
+        }
+        g_disconnect_time_ms = GetTimeInMillis();
+    }
 
     RemoveEnabledDevice(g_sck);
     g_connected = 0;
@@ -136,6 +214,7 @@ rdpup_disconnect(void)
     g_sck_closed = 1;
     g_pixmap_byte_total = 0;
     g_pixmap_num_used = 0;
+    g_rdpindex = -1;
 
     if (g_max_os_bitmaps > 0)
     {
@@ -150,15 +229,19 @@ rdpup_disconnect(void)
             }
         }
     }
+    g_os_bitmap_alloc_size = 0;
 
     g_max_os_bitmaps = 0;
     g_free(g_os_bitmaps);
     g_os_bitmaps = 0;
     g_use_rail = 0;
+    g_do_glyph_cache = 0;
+    g_do_composite = 0;
     return 0;
 }
 
 /*****************************************************************************/
+/* returns -1 on error */
 int
 rdpup_add_os_bitmap(PixmapPtr pixmap, rdpPixmapPtr priv)
 {
@@ -166,17 +249,32 @@ rdpup_add_os_bitmap(PixmapPtr pixmap, rdpPixmapPtr priv)
     int rv;
     int oldest;
     int oldest_index;
+    int this_bytes;
 
+    LLOGLN(10, ("rdpup_add_os_bitmap:"));
     if (!g_connected)
     {
+        LLOGLN(10, ("rdpup_add_os_bitmap: test error 1"));
         return -1;
     }
 
     if (g_os_bitmaps == 0)
     {
+        LLOGLN(10, ("rdpup_add_os_bitmap: test error 2"));
         return -1;
     }
 
+    this_bytes = pixmap->devKind * pixmap->drawable.height;
+    if (this_bytes > MAX_OS_BYTES)
+    {
+        LLOGLN(10, ("rdpup_add_os_bitmap: error, too big this_bytes %d "
+               "width %d height %d", this_bytes,
+               pixmap->drawable.height, pixmap->drawable.height));
+        return -1;
+    }
+
+    oldest = 0x7fffffff;
+    oldest_index = -1;
     rv = -1;
     index = 0;
 
@@ -193,41 +291,83 @@ rdpup_add_os_bitmap(PixmapPtr pixmap, rdpPixmapPtr priv)
             rv = index;
             break;
         }
-
-        index++;
-    }
-
-    if (rv == -1)
-    {
-        /* find oldest */
-        oldest = 0x7fffffff;
-        oldest_index = 0;
-        index = 0;
-
-        while (index < g_max_os_bitmaps)
+        else
         {
             if (g_os_bitmaps[index].stamp < oldest)
             {
                 oldest = g_os_bitmaps[index].stamp;
                 oldest_index = index;
             }
-
-            index++;
         }
-
-        LLOGLN(10, ("rdpup_add_os_bitmap: evicting old, oldest_index %d", oldest_index));
-        /* evict old */
-        g_os_bitmaps[oldest_index].priv->status = 0;
-        /* set new */
-        g_os_bitmaps[oldest_index].pixmap = pixmap;
-        g_os_bitmaps[oldest_index].priv = priv;
-        g_os_bitmaps[oldest_index].stamp = g_os_bitmap_stamp;
-        g_os_bitmap_stamp++;
-        rv = oldest_index;
+        index++;
     }
 
+    if (rv == -1)
+    {
+        if (oldest_index == -1)
+        {
+            LLOGLN(0, ("rdpup_add_os_bitmap: error"));
+        }
+        else
+        {
+            LLOGLN(10, ("rdpup_add_os_bitmap: too many pixmaps removing "
+                   "oldest_index %d", oldest_index));
+            rdpup_remove_os_bitmap(oldest_index);
+            rdpup_delete_os_surface(oldest_index);
+            g_os_bitmaps[oldest_index].used = 1;
+            g_os_bitmaps[oldest_index].pixmap = pixmap;
+            g_os_bitmaps[oldest_index].priv = priv;
+            g_os_bitmaps[oldest_index].stamp = g_os_bitmap_stamp;
+            g_os_bitmap_stamp++;
+            g_pixmap_num_used++;
+            rv = oldest_index;
+        }
+    }
+
+    if (rv < 0)
+    {
+        LLOGLN(10, ("rdpup_add_os_bitmap: test error 3"));
+        return rv;
+    }
+
+    g_os_bitmap_alloc_size += this_bytes;
+    LLOGLN(10, ("rdpup_add_os_bitmap: this_bytes %d g_os_bitmap_alloc_size %d",
+           this_bytes, g_os_bitmap_alloc_size));
+#if USE_MAX_OS_BYTES
+    while (g_os_bitmap_alloc_size > MAX_OS_BYTES)
+    {
+        LLOGLN(10, ("rdpup_add_os_bitmap: must delete g_pixmap_num_used %d",
+               g_pixmap_num_used));
+        /* find oldest */
+        oldest = 0x7fffffff;
+        oldest_index = -1;
+        index = 0;
+        while (index < g_max_os_bitmaps)
+        {
+            if (g_os_bitmaps[index].used && (g_os_bitmaps[index].stamp < oldest))
+            {
+                oldest = g_os_bitmaps[index].stamp;
+                oldest_index = index;
+            }
+            index++;
+        }
+        if (oldest_index == -1)
+        {
+            LLOGLN(0, ("rdpup_add_os_bitmap: error 1"));
+            break;
+        }
+        if (oldest_index == rv)
+        {
+            LLOGLN(0, ("rdpup_add_os_bitmap: error 2"));
+            break;
+        }
+        rdpup_remove_os_bitmap(oldest_index);
+        rdpup_delete_os_surface(oldest_index);
+    }
+#endif
     LLOGLN(10, ("rdpup_add_os_bitmap: new bitmap index %d", rv));
-    LLOGLN(10, ("  g_pixmap_num_used %d", g_pixmap_num_used));
+    LLOGLN(10, ("rdpup_add_os_bitmap: g_pixmap_num_used %d "
+           "g_os_bitmap_stamp 0x%8.8x", g_pixmap_num_used, g_os_bitmap_stamp));
     return rv;
 }
 
@@ -235,8 +375,59 @@ rdpup_add_os_bitmap(PixmapPtr pixmap, rdpPixmapPtr priv)
 int
 rdpup_remove_os_bitmap(int rdpindex)
 {
+    PixmapPtr pixmap;
+    rdpPixmapPtr priv;
+    int this_bytes;
+
     LLOGLN(10, ("rdpup_remove_os_bitmap: index %d stamp %d",
-                rdpindex, g_os_bitmaps[rdpindex].stamp));
+           rdpindex, g_os_bitmaps[rdpindex].stamp));
+
+    if (g_os_bitmaps == 0)
+    {
+        LLOGLN(10, ("rdpup_remove_os_bitmap: test error 1"));
+        return 1;
+    }
+
+    if ((rdpindex < 0) && (rdpindex >= g_max_os_bitmaps))
+    {
+        LLOGLN(10, ("rdpup_remove_os_bitmap: test error 2"));
+        return 1;
+    }
+
+    if (g_os_bitmaps[rdpindex].used)
+    {
+        pixmap = g_os_bitmaps[rdpindex].pixmap;
+        priv = g_os_bitmaps[rdpindex].priv;
+        draw_item_remove_all(priv);
+        this_bytes = pixmap->devKind * pixmap->drawable.height;
+        g_os_bitmap_alloc_size -= this_bytes;
+        LLOGLN(10, ("rdpup_remove_os_bitmap: this_bytes %d "
+               "g_os_bitmap_alloc_size %d", this_bytes,
+               g_os_bitmap_alloc_size));
+        g_os_bitmaps[rdpindex].used = 0;
+        g_os_bitmaps[rdpindex].pixmap = 0;
+        g_os_bitmaps[rdpindex].priv = 0;
+        g_pixmap_num_used--;
+        priv->status = 0;
+        priv->con_number = 0;
+        priv->use_count = 0;
+    }
+    else
+    {
+        LLOGLN(0, ("rdpup_remove_os_bitmap: error"));
+    }
+
+    LLOGLN(10, ("rdpup_remove_os_bitmap: g_pixmap_num_used %d",
+           g_pixmap_num_used));
+    return 0;
+}
+
+/*****************************************************************************/
+int
+rdpup_update_os_use(int rdpindex)
+{
+    LLOGLN(10, ("rdpup_update_use: index %d stamp %d",
+           rdpindex, g_os_bitmaps[rdpindex].stamp));
 
     if (g_os_bitmaps == 0)
     {
@@ -250,15 +441,17 @@ rdpup_remove_os_bitmap(int rdpindex)
 
     if (g_os_bitmaps[rdpindex].used)
     {
-        g_os_bitmaps[rdpindex].used = 0;
-        g_os_bitmaps[rdpindex].pixmap = 0;
-        g_os_bitmaps[rdpindex].priv = 0;
-        g_pixmap_num_used--;
+        g_os_bitmaps[rdpindex].stamp = g_os_bitmap_stamp;
+        g_os_bitmap_stamp++;
+    }
+    else
+    {
+        LLOGLN(0, ("rdpup_update_use: error rdpindex %d", rdpindex));
     }
 
-    LLOGLN(10, ("  g_pixmap_num_used %d", g_pixmap_num_used));
     return 0;
 }
+
 
 /*****************************************************************************/
 /* returns error */
@@ -286,12 +479,14 @@ rdpup_send(char *data, int len)
             }
             else
             {
+                LLOGLN(0, ("rdpup_send: g_tcp_send failed(returned -1)"));
                 rdpup_disconnect();
                 return 1;
             }
         }
         else if (sent == 0)
         {
+            LLOGLN(0, ("rdpup_send: g_tcp_send failed(returned zero)"));
             rdpup_disconnect();
             return 1;
         }
@@ -342,6 +537,9 @@ rdpup_send_msg(struct stream *s)
 static int
 rdpup_send_pending(void)
 {
+    int rv;
+
+    rv = 0;
     if (g_connected && g_begin)
     {
         LLOGLN(10, ("end %d", g_count));
@@ -349,12 +547,16 @@ rdpup_send_pending(void)
         out_uint16_le(g_out_s, 4);
         g_count++;
         s_mark_end(g_out_s);
-        rdpup_send_msg(g_out_s);
+        if (rdpup_send_msg(g_out_s) != 0)
+        {
+            LLOGLN(0, ("rdpup_send_pending: rdpup_send_msg failed"));
+            rv = 1;
+        }
     }
 
     g_count = 0;
     g_begin = 0;
-    return 0;
+    return rv;
 }
 
 /******************************************************************************/
@@ -365,7 +567,14 @@ rdpDeferredUpdateCallback(OsTimerPtr timer, CARD32 now, pointer arg)
 
     if (g_do_dirty_ons)
     {
-        rdpup_check_dirty_screen(&g_screenPriv);
+        if (g_rect_id == g_rect_id_ack)
+        {
+            rdpup_check_dirty_screen(&g_screenPriv);
+        }
+        else
+        {
+            LLOGLN(0, ("rdpDeferredUpdateCallback: skipping"));
+        }
     }
     else
     {
@@ -411,12 +620,14 @@ rdpup_recv(char *data, int len)
             }
             else
             {
+                LLOGLN(0, ("rdpup_recv: g_tcp_recv failed(returned -1)"));
                 rdpup_disconnect();
                 return 1;
             }
         }
         else if (rcvd == 0)
         {
+            LLOGLN(0, ("rdpup_recv: g_tcp_recv failed(returned 0)"));
             rdpup_disconnect();
             return 1;
         }
@@ -464,6 +675,34 @@ rdpup_recv_msg(struct stream *s)
     return rv;
 }
 
+/*****************************************************************************/
+/* wait 'millis' milliseconds for the socket to be able to receive */
+/* returns boolean */
+static int
+sck_can_recv(int sck, int millis)
+{
+    fd_set rfds;
+    struct timeval time;
+    int rv;
+
+    time.tv_sec = millis / 1000;
+    time.tv_usec = (millis * 1000) % 1000000;
+    FD_ZERO(&rfds);
+
+    if (sck > 0)
+    {
+        FD_SET(((unsigned int)sck), &rfds);
+        rv = select(sck + 1, &rfds, 0, 0, &time);
+
+        if (rv > 0)
+        {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 /******************************************************************************/
 /*
     this from miScreenInit
@@ -476,6 +715,7 @@ process_screen_size_msg(int width, int height, int bpp)
     RRScreenSizePtr pSize;
     int mmwidth;
     int mmheight;
+    int bytes;
     Bool ok;
 
     LLOGLN(0, ("process_screen_size_msg: set width %d height %d bpp %d",
@@ -503,6 +743,42 @@ process_screen_size_msg(int width, int height, int bpp)
     {
         g_rdpScreen.rdp_Bpp = 4;
         g_rdpScreen.rdp_Bpp_mask = 0xffffff;
+    }
+
+    if (g_use_shmem)
+    {
+        if (g_shmemptr != 0)
+        {
+            shmdt(g_shmemptr);
+            g_shmemptr = 0;
+        }
+        bytes = g_rdpScreen.rdp_width * g_rdpScreen.rdp_height *
+                g_rdpScreen.rdp_Bpp;
+        g_shmemid = shmget(IPC_PRIVATE, bytes, IPC_CREAT | 0777);
+        if (g_shmemid != -1)
+        {
+            g_shmemptr = shmat(g_shmemid, 0, 0);
+            if (g_shmemptr == (void *) -1)
+            {
+                LLOGLN(0, ("process_screen_size_msg: shmat failed for %d "
+                       "bytes g_shmemid %d", bytes, g_shmemid));
+                g_shmemptr = 0;
+                shmctl(g_shmemid, IPC_RMID, NULL);
+                g_shmemid = -1;
+            }
+            else
+            {
+                shmctl(g_shmemid, IPC_RMID, NULL);
+            }
+            LLOGLN(0, ("process_screen_size_msg: g_shmemid %d g_shmemptr %p",
+                   g_shmemid, g_shmemptr));
+            g_shmem_lineBytes = g_rdpScreen.rdp_Bpp * g_rdpScreen.rdp_width;
+            if (g_shm_reg != 0)
+            {
+                RegionDestroy(g_shm_reg);
+            }
+            g_shm_reg = RegionCreate(NullBox, 0);
+        }
     }
 
     mmwidth = PixelToMM(width);
@@ -629,6 +905,14 @@ rdpup_send_rail(void)
     return 0;
 }
 
+#define XR_BUTTON1 1
+#define XR_BUTTON2 2
+#define XR_BUTTON3 4
+#define XR_BUTTON4 8
+#define XR_BUTTON5 16
+#define XR_BUTTON6 32
+#define XR_BUTTON7 64
+
 /******************************************************************************/
 static int
 rdpup_process_msg(struct stream *s)
@@ -641,6 +925,13 @@ rdpup_process_msg(struct stream *s)
     int param4;
     int bytes;
     int i1;
+    int flags;
+    int x;
+    int y;
+    int cx;
+    int cy;
+    RegionRec reg;
+    BoxRec box;
 
     in_uint16_le(s, msg_type);
 
@@ -670,44 +961,74 @@ rdpup_process_msg(struct stream *s)
                 g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 101:
-                g_button_mask = g_button_mask & (~1);
+            case 101: /* left button up */
+                g_button_mask = g_button_mask & (~XR_BUTTON1);
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 102:
-                g_button_mask = g_button_mask | 1;
+            case 102: /* left button down */
+                g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
+                g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
+                g_button_mask = g_button_mask | XR_BUTTON1;
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 103:
-                g_button_mask = g_button_mask & (~4);
+            case 103: /* right button up */
+                g_button_mask = g_button_mask & (~XR_BUTTON3);
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 104:
-                g_button_mask = g_button_mask | 4;
+            case 104: /* right button down */
+                g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
+                g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
+                g_button_mask = g_button_mask | XR_BUTTON3;
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 105:
-                g_button_mask = g_button_mask & (~2);
+            case 105: /* middle button down */
+                g_button_mask = g_button_mask & (~XR_BUTTON2);
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 106:
-                g_button_mask = g_button_mask | 2;
+            case 106: /* middle button up */
+                g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
+                g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
+                g_button_mask = g_button_mask | XR_BUTTON2;
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 107:
-                g_button_mask = g_button_mask & (~8);
+            case 107: /* button 4 up */
+                g_button_mask = g_button_mask & (~XR_BUTTON4);
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 108:
-                g_button_mask = g_button_mask | 8;
+            case 108: /* button 4 down */
+                g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
+                g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
+                g_button_mask = g_button_mask | XR_BUTTON4;
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 109:
-                g_button_mask = g_button_mask & (~16);
+            case 109: /* button 5 up */
+                g_button_mask = g_button_mask & (~XR_BUTTON5);
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
-            case 110:
-                g_button_mask = g_button_mask | 16;
+            case 110: /* button 5 down */
+                g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
+                g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
+                g_button_mask = g_button_mask | XR_BUTTON5;
+                PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+                break;
+            case 111: /* button 6 up */
+                g_button_mask = g_button_mask & (~XR_BUTTON6);
+                PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+                break;
+            case 112: /* button 6 down */
+                g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
+                g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
+                g_button_mask = g_button_mask | XR_BUTTON6;
+                PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+                break;
+            case 113: /* button 7 up */
+                g_button_mask = g_button_mask & (~XR_BUTTON7);
+                PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
+                break;
+            case 114: /* button 7 down */
+                g_cursor_x = l_bound_by(param1, 0, g_rdpScreen.width - 2);
+                g_cursor_y = l_bound_by(param2, 0, g_rdpScreen.height - 2);
+                g_button_mask = g_button_mask | XR_BUTTON7;
                 PtrAddEvent(g_button_mask, g_cursor_x, g_cursor_y);
                 break;
             case 200:
@@ -758,9 +1079,86 @@ rdpup_process_msg(struct stream *s)
         if (g_rdpScreen.client_info.rail_support_level > 0)
         {
             g_use_rail = 1;
+#ifdef XRDP_WM_RDPUP
             rdpup_send_rail();
+#endif
         }
+        if (g_rdpScreen.client_info.orders[0x1b])   /* 27 NEG_GLYPH_INDEX_INDEX */
+        {
+            LLOGLN(0, ("  client supports glyph cache but server disabled"));
+            //g_do_glyph_cache = 1;
+        }
+        if (g_rdpScreen.client_info.order_flags_ex & 0x100)
+        {
+            g_do_composite = 1;
+        }
+        if (g_do_glyph_cache)
+        {
+            LLOGLN(0, ("  using glyph cache"));
+        }
+        if (g_do_composite)
+        {
+            LLOGLN(0, ("  using client composite"));
+        }
+        LLOGLN(10, ("order_flags_ex 0x%x", g_rdpScreen.client_info.order_flags_ex));
+        if (g_rdpScreen.client_info.offscreen_cache_entries == 2000)
+        {
+            LLOGLN(0, ("  client can do offscreen to offscreen blits"));
+            g_can_do_pix_to_pix = 1;
+        }
+        else
+        {
+            LLOGLN(0, ("  client can not do offscreen to offscreen blits"));
+            g_can_do_pix_to_pix = 0;
+        }
+        if (g_rdpScreen.client_info.pointer_flags & 1)
+        {
+            LLOGLN(0, ("  client can do new(color) cursor"));
+        }
+        else
+        {
+            LLOGLN(0, ("  client can not do new(color) cursor"));
+        }
+        if (g_rdpScreen.client_info.monitorCount > 0)
+        {
+            LLOGLN(0, ("  client can do multimon"));
+            LLOGLN(0, ("  client monitor data, monitorCount= %d", g_rdpScreen.client_info.monitorCount));
+            g_do_multimon = 1;
+        }
+        else
+        {
+            LLOGLN(0, ("  client can not do multimon"));
+            g_do_multimon = 0;
+        }
+
+        rdpLoadLayout(&(g_rdpScreen.client_info));
+
     }
+    else if (msg_type == 105)
+    {
+        LLOGLN(10, ("rdpup_process_msg: got msg 105"));
+        in_uint32_le(s, flags);
+        in_uint32_le(s, g_rect_id_ack);
+        in_uint32_le(s, x);
+        in_uint32_le(s, y);
+        in_uint32_le(s, cx);
+        in_uint32_le(s, cy);
+        LLOGLN(10, ("rdpup_process_msg: %d %d %d %d", x, y, cx ,cy));
+        LLOGLN(10, ("rdpup_process_msg: rect_id %d rect_id_ack %d", g_rect_id, g_rect_id_ack));
+
+        box.x1 = x;
+        box.y1 = y;
+        box.x2 = box.x1 + cx;
+        box.y2 = box.y1 + cy;
+
+        RegionInit(&reg, &box, 0);
+        LLOGLN(10, ("rdpup_process_msg: %d %d %d %d", box.x1, box.y1, box.x2, box.y2));
+        RegionSubtract(g_shm_reg, g_shm_reg, &reg);
+        RegionUninit(&reg);
+
+    }
+
+
     else
     {
         rdpLog("unknown message type in rdpup_process_msg %d\n", msg_type);
@@ -779,6 +1177,10 @@ rdpup_get_screen_image_rect(struct image_data *id)
     id->Bpp = g_rdpScreen.rdp_Bpp;
     id->lineBytes = g_rdpScreen.paddedWidthInBytes;
     id->pixels = g_rdpScreen.pfbMemory;
+    id->shmem_pixels = g_shmemptr;
+    id->shmem_id = g_shmemid;
+    id->shmem_offset = 0;
+    id->shmem_lineBytes = g_shmem_lineBytes;
 }
 
 /******************************************************************************/
@@ -791,6 +1193,10 @@ rdpup_get_pixmap_image_rect(PixmapPtr pPixmap, struct image_data *id)
     id->Bpp = g_rdpScreen.rdp_Bpp;
     id->lineBytes = pPixmap->devKind;
     id->pixels = (char *)(pPixmap->devPrivate.ptr);
+    id->shmem_pixels = 0;
+    id->shmem_id = 0;
+    id->shmem_offset = 0;
+    id->shmem_lineBytes = 0;
 }
 
 /******************************************************************************/
@@ -798,6 +1204,7 @@ int
 rdpup_init(void)
 {
     char text[256];
+    char *ptext;
     int i;
 
     if (!g_directory_exist("/tmp/.xrdp"))
@@ -882,6 +1289,39 @@ rdpup_init(void)
         }
     }
 
+    ptext = getenv("XRDP_SESMAN_MAX_IDLE_TIME");
+    if (ptext != 0)
+    {
+    }
+    ptext = getenv("XRDP_SESMAN_MAX_DISC_TIME");
+    if (ptext != 0)
+    {
+        i = atoi(ptext);
+        if (i > 0)
+        {
+            g_do_kill_disconnected = 1;
+            g_disconnect_timeout_s = atoi(ptext);
+        }
+    }
+    ptext = getenv("XRDP_SESMAN_KILL_DISCONNECTED");
+    if (ptext != 0)
+    {
+        i = atoi(ptext);
+        if (i != 0)
+        {
+            g_do_kill_disconnected = 1;
+            g_disconnect_timeout_s = 0;
+        }
+    }
+
+    if (g_do_kill_disconnected && (g_disconnect_timeout_s < 60))
+    {
+        g_disconnect_timeout_s = 60;
+    }
+
+    rdpLog("kill disconencted [%d] timeout [%d] sec\n", g_do_kill_disconnected,
+           g_disconnect_timeout_s);
+
     return 1;
 }
 
@@ -919,7 +1359,18 @@ rdpup_check(void)
             g_sck_closed = 0;
             g_begin = 0;
             g_con_number++;
+            rdpGlyphInit();
             AddEnabledDevice(g_sck);
+
+            if (g_dis_timer != 0)
+            {
+                LLOGLN(0, ("rdpup_check: canceling g_dis_timer"));
+                TimerCancel(g_dis_timer);
+                TimerFree(g_dis_timer);
+                g_dis_timer = 0;
+            }
+            g_disconnect_scheduled = 0;
+
         }
     }
 
@@ -950,7 +1401,7 @@ rdpup_check(void)
 int
 rdpup_begin_update(void)
 {
-    LLOGLN(10, ("rdpup_begin_update"));
+    LLOGLN(10, ("rdpup_begin_update:"));
 
     if (g_connected)
     {
@@ -958,7 +1409,6 @@ rdpup_begin_update(void)
         {
             return 0;
         }
-
         init_stream(g_out_s, 0);
         s_push_layer(g_out_s, iso_hdr, 8);
         out_uint16_le(g_out_s, 1); /* begin update */
@@ -981,6 +1431,7 @@ rdpup_end_update(void)
     {
         if (g_do_dirty_ons)
         {
+            /* in this mode, end update is only called in check dirty */
             rdpup_send_pending();
         }
         else
@@ -996,6 +1447,9 @@ rdpup_end_update(void)
 int
 rdpup_pre_check(int in_size)
 {
+    int rv;
+
+    rv = 0;
     if (!g_begin)
     {
         rdpup_begin_update();
@@ -1004,13 +1458,17 @@ rdpup_pre_check(int in_size)
     if ((g_out_s->p - g_out_s->data) > (g_out_s->size - (in_size + 20)))
     {
         s_mark_end(g_out_s);
-        rdpup_send_msg(g_out_s);
+        if (rdpup_send_msg(g_out_s) != 0)
+        {
+            LLOGLN(0, ("rdpup_pre_check: rdpup_send_msg failed"));
+            rv = 1;
+        }
         g_count = 0;
         init_stream(g_out_s, 0);
         s_push_layer(g_out_s, iso_hdr, 8);
     }
 
-    return 0;
+    return rv;
 }
 
 /******************************************************************************/
@@ -1039,7 +1497,8 @@ rdpup_screen_blt(short x, short y, int cx, int cy, short srcx, short srcy)
 {
     if (g_connected)
     {
-        LLOGLN(10, ("  rdpup_screen_blt"));
+        LLOGLN(10, ("  rdpup_screen_blt x %d y %d cx %d cy %d srcx %d srcy %d",
+               x, y, cx, cy, srcx, srcy));
         rdpup_pre_check(16);
         out_uint16_le(g_out_s, 4); /* screen blt */
         out_uint16_le(g_out_s, 16); /* size */
@@ -1118,7 +1577,7 @@ convert_pixel(int in_pixel)
 
     if (g_rdpScreen.depth == 24)
     {
-        if (g_rdpScreen.rdp_bpp == 24)
+        if (g_rdpScreen.rdp_bpp >= 24)
         {
             rv = in_pixel;
             SPLITCOLOR32(red, green, blue, rv);
@@ -1174,7 +1633,7 @@ convert_pixels(void *src, void *dst, int num_pixels)
     {
         src32 = (unsigned int *)src;
 
-        if (g_rdpScreen.rdp_bpp == 24)
+        if (g_rdpScreen.rdp_bpp >= 24)
         {
             dst32 = (unsigned int *)dst;
 
@@ -1231,6 +1690,25 @@ convert_pixels(void *src, void *dst, int num_pixels)
     }
 
     return 0;
+}
+
+/******************************************************************************/
+int
+alpha_pixels(void* src, void* dst, int num_pixels)
+{
+  unsigned int* src32;
+  unsigned char* dst8;
+  int index;
+
+  src32 = (unsigned int*)src;
+  dst8 = (unsigned char*)dst;
+  for (index = 0; index < num_pixels; index++)
+  {
+    *dst8 = (*src32) >> 24;
+    dst8++;
+    src32++;
+  }
+  return 0;
 }
 
 /******************************************************************************/
@@ -1355,6 +1833,36 @@ rdpup_set_cursor(short x, short y, char *cur_data, char *cur_mask)
 
 /******************************************************************************/
 int
+rdpup_set_cursor_ex(short x, short y, char *cur_data, char *cur_mask, int bpp)
+{
+    int size;
+    int Bpp;
+
+    if (g_connected)
+    {
+        LLOGLN(10, ("  rdpup_set_cursor_ex"));
+        Bpp = (bpp == 0) ? 3 : (bpp + 7) / 8;
+        size = 10 + 32 * (32 * Bpp) + 32 * (32 / 8);
+        rdpup_pre_check(size);
+        out_uint16_le(g_out_s, 51); /* set cursor ex */
+        out_uint16_le(g_out_s, size); /* size */
+        g_count++;
+        x = MAX(0, x);
+        x = MIN(31, x);
+        y = MAX(0, y);
+        y = MIN(31, y);
+        out_uint16_le(g_out_s, x);
+        out_uint16_le(g_out_s, y);
+        out_uint16_le(g_out_s, bpp);
+        out_uint8a(g_out_s, cur_data, 32 * (32 * Bpp));
+        out_uint8a(g_out_s, cur_mask, 32 * (32 / 8));
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
+int
 rdpup_create_os_surface(int rdpindex, int width, int height)
 {
     LLOGLN(10, ("rdpup_create_os_surface:"));
@@ -1371,6 +1879,26 @@ rdpup_create_os_surface(int rdpindex, int width, int height)
         out_uint16_le(g_out_s, height);
     }
 
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpup_create_os_surface_bpp(int rdpindex, int width, int height, int bpp)
+{
+    LLOGLN(10, ("rdpup_create_os_surface_bpp:"));
+    if (g_connected)
+    {
+        LLOGLN(10, ("  width %d height %d bpp %d", width, height, bpp));
+        rdpup_pre_check(13);
+        out_uint16_le(g_out_s, 31);
+        out_uint16_le(g_out_s, 13);
+        g_count++;
+        out_uint32_le(g_out_s, rdpindex);
+        out_uint16_le(g_out_s, width);
+        out_uint16_le(g_out_s, height);
+        out_uint8(g_out_s, bpp);
+    }
     return 0;
 }
 
@@ -1508,11 +2036,13 @@ get_single_color(struct image_data *id, int x, int y, int w, int h)
 }
 
 /******************************************************************************/
-/* split the bitmap up into 64 x 64 pixel areas */
+/* split the bitmap up into 64 x 64 pixel areas
+   or send using shared memory */
 void
 rdpup_send_area(struct image_data *id, int x, int y, int w, int h)
 {
     char *s;
+    char *d;
     int i;
     int single_color;
     int lx;
@@ -1520,7 +2050,10 @@ rdpup_send_area(struct image_data *id, int x, int y, int w, int h)
     int lh;
     int lw;
     int size;
+    int safety;
     struct image_data lid;
+    BoxRec box;
+    RegionRec reg;
 
     LLOGLN(10, ("rdpup_send_area: id %p x %d y %d w %d h %d", id, x, y, w, h));
 
@@ -1577,9 +2110,76 @@ rdpup_send_area(struct image_data *id, int x, int y, int w, int h)
     if (g_connected && g_begin)
     {
         LLOGLN(10, ("  rdpup_send_area"));
-        ly = y;
 
-        while (ly < y + h)
+        if (id->shmem_pixels != 0)
+        {
+            LLOGLN(10, ("rdpup_send_area: using shmem"));
+            box.x1 = x;
+            box.y1 = y;
+            box.x2 = box.x1 + w;
+            box.y2 = box.y1 + h;
+            LLOGLN(10, ("rdpup_send_area: 1 x %d y %d w %d h %d", x, y, w, h));
+            safety = 0;
+            while (RegionContainsRect(g_shm_reg, &box))
+            {
+                /* instread of rdpup_end_update, call rdpup_send_pending */
+                rdpup_send_pending();
+                rdpup_begin_update();
+                safety++;
+                if (safety > 100)
+                {
+                    LLOGLN(0, ("rdpup_send_area: shmem timeout"));
+                    break;
+                }
+                if (sck_can_recv(g_sck, 100))
+                {
+                    if (rdpup_recv_msg(g_in_s) == 0)
+                    {
+                        rdpup_process_msg(g_in_s);
+                    }
+                }
+            }
+            s = id->pixels;
+            s += y * id->lineBytes;
+            s += x * g_Bpp;
+            d = id->shmem_pixels + id->shmem_offset;
+            d += y * id->shmem_lineBytes;
+            d += x * g_rdpScreen.rdp_Bpp;
+            ly = y;
+            while (ly < y + h)
+            {
+                convert_pixels(s, d, w);
+                s += id->lineBytes;
+                d += id->shmem_lineBytes;
+                ly += 1;
+            }
+            size = 36;
+            rdpup_pre_check(size);
+            out_uint16_le(g_out_s, 60);
+            out_uint16_le(g_out_s, size);
+            g_count++;
+            LLOGLN(10, ("rdpup_send_area: 2 x %d y %d w %d h %d", x, y, w, h));
+            out_uint16_le(g_out_s, x);
+            out_uint16_le(g_out_s, y);
+            out_uint16_le(g_out_s, w);
+            out_uint16_le(g_out_s, h);
+            out_uint32_le(g_out_s, 0);
+            g_rect_id++;
+            out_uint32_le(g_out_s, g_rect_id);
+            out_uint32_le(g_out_s, id->shmem_id);
+            out_uint32_le(g_out_s, id->shmem_offset);
+            out_uint16_le(g_out_s, id->width);
+            out_uint16_le(g_out_s, id->height);
+            out_uint16_le(g_out_s, x);
+            out_uint16_le(g_out_s, y);
+            RegionInit(&reg, &box, 0);
+            RegionUnion(g_shm_reg, g_shm_reg, &reg);
+            RegionUninit(&reg);
+            return;
+        }
+
+        ly = y;
+        while ((ly < y + h) && g_connected)
         {
             lx = x;
 
@@ -1625,6 +2225,103 @@ rdpup_send_area(struct image_data *id, int x, int y, int w, int h)
                 lx += 64;
             }
 
+            ly += 64;
+        }
+    }
+}
+
+/******************************************************************************/
+/* split the bitmap up into 64 x 64 pixel areas */
+void
+rdpup_send_alpha_area(struct image_data* id, int x, int y, int w, int h)
+{
+    char* s;
+    int i;
+    int lx;
+    int ly;
+    int lh;
+    int lw;
+    int size;
+    struct image_data lid;
+
+    LLOGLN(10, ("rdpup_send_alpha_area: id %p x %d y %d w %d h %d",
+                id, x, y, w, h));
+    if (id == 0)
+    {
+        rdpup_get_screen_image_rect(&lid);
+        id = &lid;
+    }
+
+    if (x >= id->width)
+    {
+        return;
+    }
+    if (y >= id->height)
+    {
+        return;
+    }
+    if (x < 0)
+    {
+        w += x;
+        x = 0;
+    }
+    if (y < 0)
+    {
+        h += y;
+        y = 0;
+    }
+    if (w <= 0)
+    {
+        return;
+    }
+    if (h <= 0)
+    {
+        return;
+    }
+    if (x + w > id->width)
+    {
+        w = id->width - x;
+    }
+    if (y + h > id->height)
+    {
+        h = id->height - y;
+    }
+    LLOGLN(10, ("%d", w * h));
+    if (g_connected && g_begin)
+    {
+        LLOGLN(10, ("  rdpup_send_area"));
+        ly = y;
+        while ((ly < y + h) && g_connected)
+        {
+            lx = x;
+            while ((lx < x + w) && g_connected)
+            {
+                lw = MIN(64, (x + w) - lx);
+                lh = MIN(64, (y + h) - ly);
+                size = lw * lh + 25;
+                rdpup_pre_check(size);
+                out_uint16_le(g_out_s, 32); /* server_paint_rect_bpp */
+                out_uint16_le(g_out_s, size);
+                g_count++;
+                out_uint16_le(g_out_s, lx);
+                out_uint16_le(g_out_s, ly);
+                out_uint16_le(g_out_s, lw);
+                out_uint16_le(g_out_s, lh);
+                out_uint32_le(g_out_s, lw * lh);
+                for (i = 0; i < lh; i++)
+                {
+                    s = (id->pixels +
+                         ((ly + i) * id->lineBytes) + (lx * g_Bpp));
+                    alpha_pixels(s, g_out_s->p, lw);
+                    g_out_s->p += lw;
+                }
+                out_uint16_le(g_out_s, lw);
+                out_uint16_le(g_out_s, lh);
+                out_uint16_le(g_out_s, 0);
+                out_uint16_le(g_out_s, 0);
+                out_uint8(g_out_s, 8);
+                lx += 64;
+            }
             ly += 64;
         }
     }
@@ -1681,7 +2378,8 @@ rdpup_create_window(WindowPtr pWindow, rdpWindowRec *priv)
     int root_id;
     char title[256];
 
-    LLOGLN(10, ("rdpup_create_window: id 0x%8.8x", pWindow->drawable.id));
+    LLOGLN(10, ("rdpup_create_window: id 0x%8.8x",
+           (int)(pWindow->drawable.id)));
 
     if (g_connected)
     {
@@ -1720,7 +2418,7 @@ rdpup_create_window(WindowPtr pWindow, rdpWindowRec *priv)
         out_uint32_le(g_out_s, style); /* style */
         out_uint32_le(g_out_s, ext_style); /* extended_style */
         flags |= WINDOW_ORDER_FIELD_STYLE;
-        out_uint32_le(g_out_s, 0); /* show_state */
+        out_uint32_le(g_out_s, 0x05); /* show_state */
         flags |= WINDOW_ORDER_FIELD_SHOW;
         out_uint16_le(g_out_s, title_bytes); /* title_info */
         out_uint8a(g_out_s, title, title_bytes);
@@ -1777,7 +2475,8 @@ rdpup_create_window(WindowPtr pWindow, rdpWindowRec *priv)
 void
 rdpup_delete_window(WindowPtr pWindow, rdpWindowRec *priv)
 {
-    LLOGLN(10, ("rdpup_delete_window: id 0x%8.8x", pWindow->drawable.id));
+    LLOGLN(10, ("rdpup_delete_window: id 0x%8.8x",
+           (int)(pWindow->drawable.id)));
 
     if (g_connected)
     {
@@ -1786,6 +2485,27 @@ rdpup_delete_window(WindowPtr pWindow, rdpWindowRec *priv)
         out_uint16_le(g_out_s, 8);
         g_count++;
         out_uint32_le(g_out_s, pWindow->drawable.id); /* window_id */
+    }
+}
+
+/******************************************************************************/
+void
+rdpup_show_window(WindowPtr pWindow, rdpWindowRec* priv, int showState)
+{
+    LLOGLN(10, ("rdpup_show_window: id 0x%8.8x state 0x%x", pWindow->drawable.id,
+                showState));
+    if (g_connected)
+    {
+        int flags = WINDOW_ORDER_TYPE_WINDOW;
+
+        rdpup_pre_check(16);
+        out_uint16_le(g_out_s, 27);
+        out_uint16_le(g_out_s, 16);
+        g_count++;
+        out_uint32_le(g_out_s, pWindow->drawable.id);
+        flags |= WINDOW_ORDER_FIELD_SHOW;
+        out_uint32_le(g_out_s, flags);
+        out_uint32_le(g_out_s, showState);
     }
 }
 
@@ -1801,6 +2521,8 @@ rdpup_check_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec *pDirtyPriv)
     xSegment *seg;
     struct image_data id;
     struct rdp_draw_item *di;
+    struct rdp_text* rtext;
+    struct rdp_text* trtext;
 
     if (pDirtyPriv == 0)
     {
@@ -1812,15 +2534,11 @@ rdpup_check_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec *pDirtyPriv)
         return 0;
     }
 
-    /* update use time / count */
-    g_os_bitmaps[pDirtyPriv->rdpindex].stamp = g_os_bitmap_stamp;
-    g_os_bitmap_stamp++;
-
-    LLOGLN(10, ("-----------------got dirty"));
+    LLOGLN(10, ("rdpup_check_dirty: got dirty"));
     rdpup_switch_os_surface(pDirtyPriv->rdpindex);
     rdpup_get_pixmap_image_rect(pDirtyPixmap, &id);
     rdpup_begin_update();
-    draw_item_pack(pDirtyPriv);
+    draw_item_pack(pDirtyPixmap, pDirtyPriv);
     di = pDirtyPriv->draw_item_head;
 
     while (di != 0)
@@ -1907,6 +2625,37 @@ rdpup_check_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec *pDirtyPriv)
             case RDI_SCRBLT:
                 LLOGLN(10, ("  RDI_SCRBLT"));
                 break;
+            case RDI_TEXT:
+                LLOGLN(10, ("  RDI_TEXT"));
+                num_clips = REGION_NUM_RECTS(di->reg);
+                if (num_clips > 0)
+                {
+                    LLOGLN(10, ("  num_clips %d", num_clips));
+                    rdpup_set_fgcolor(di->u.text.fg_color);
+                    rdpup_set_opcode(di->u.text.opcode);
+                    rtext = di->u.text.rtext;
+                    trtext = rtext;
+                    while (trtext != 0)
+                    {
+                        rdp_text_chars_to_data(trtext);
+                        for (clip_index = num_clips - 1; clip_index >= 0; clip_index--)
+                        {
+                            box = REGION_RECTS(di->reg)[clip_index];
+                            rdpup_set_clip(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+                            LLOGLN(10, ("  %d %d %d %d", box.x1, box.y1, box.x2, box.y2));
+                            box = RegionExtents(trtext->reg)[0];
+                            rdpup_draw_text(trtext->font, trtext->flags, trtext->mixmode,
+                                            box.x1, box.y1, box.x2, box.y2,
+                                            //box.x1, box.y1, box.x2, box.y2,
+                                            0, 0, 0, 0,
+                                            trtext->x, trtext->y, trtext->data, trtext->data_bytes);
+                        }
+                        trtext = trtext->next;
+                    }
+                }
+                rdpup_reset_clip();
+                rdpup_set_opcode(GXcopy);
+                break;
         }
 
         di = di->next;
@@ -1942,10 +2691,10 @@ rdpup_check_dirty_screen(rdpPixmapRec *pDirtyPriv)
         return 0;
     }
 
-    LLOGLN(10, ("-----------------got dirty"));
+    LLOGLN(10, ("rdpup_check_dirty_screen: got dirty"));
     rdpup_get_screen_image_rect(&id);
     rdpup_begin_update();
-    draw_item_pack(pDirtyPriv);
+    draw_item_pack(0, pDirtyPriv);
     di = pDirtyPriv->draw_item_head;
 
     while (di != 0)
@@ -1977,8 +2726,8 @@ rdpup_check_dirty_screen(rdpPixmapRec *pDirtyPriv)
                 for (index = 0; index < count; index++)
                 {
                     box = REGION_RECTS(di->reg)[index];
-                    LLOGLN(10, ("  RDI_IMGLL %d %d %d %d", box.x1, box.y1,
-                                box.x2, box.y2));
+                    LLOGLN(10, ("  RDI_IMGLL x %d y %d w %d h %d", box.x1, box.y1,
+                                box.x2 - box.x1, box.y2 - box.y1));
                     rdpup_send_area(&id, box.x1, box.y1, box.x2 - box.x1,
                                     box.y2 - box.y1);
                 }
@@ -2040,5 +2789,173 @@ rdpup_check_dirty_screen(rdpPixmapRec *pDirtyPriv)
     draw_item_remove_all(pDirtyPriv);
     rdpup_end_update();
     pDirtyPriv->is_dirty = 0;
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpup_check_alpha_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec* pDirtyPriv)
+{
+    struct image_data id;
+
+    LLOGLN(10, ("rdpup_check_alpha_dirty: width %d height %d",
+                pDirtyPixmap->drawable.width, pDirtyPixmap->drawable.height));
+    if (pDirtyPriv == 0)
+    {
+        return 0;
+    }
+    LLOGLN(10, ("rdpup_check_alpha_dirty: is_alpha_dirty_not %d",
+                pDirtyPriv->is_alpha_dirty_not));
+    if (pDirtyPriv->is_alpha_dirty_not)
+    {
+        return 0;
+    }
+    pDirtyPriv->is_alpha_dirty_not = 1;
+    rdpup_switch_os_surface(pDirtyPriv->rdpindex);
+    rdpup_get_pixmap_image_rect(pDirtyPixmap, &id);
+    rdpup_begin_update();
+    rdpup_send_alpha_area(&id, 0, 0, pDirtyPixmap->drawable.width,
+                          pDirtyPixmap->drawable.height);
+    rdpup_end_update();
+    rdpup_switch_os_surface(-1);
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpup_add_char(int font, int charactor, short x, short y, int cx, int cy,
+               char* bmpdata, int bmpdata_bytes)
+{
+    if (g_connected)
+    {
+        LLOGLN(10, ("  rdpup_add_char"));
+        rdpup_pre_check(18 + bmpdata_bytes);
+        out_uint16_le(g_out_s, 28); /* add char */
+        out_uint16_le(g_out_s, 18 + bmpdata_bytes); /* size */
+        g_count++;
+        out_uint16_le(g_out_s, font);
+        out_uint16_le(g_out_s, charactor);
+        out_uint16_le(g_out_s, x);
+        out_uint16_le(g_out_s, y);
+        out_uint16_le(g_out_s, cx);
+        out_uint16_le(g_out_s, cy);
+        out_uint16_le(g_out_s, bmpdata_bytes);
+        out_uint8a(g_out_s, bmpdata, bmpdata_bytes);
+    }
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpup_add_char_alpha(int font, int charactor, short x, short y, int cx, int cy,
+                     char* bmpdata, int bmpdata_bytes)
+{
+    if (g_connected)
+    {
+        LLOGLN(10, ("  rdpup_add_char_alpha"));
+        rdpup_pre_check(18 + bmpdata_bytes);
+        out_uint16_le(g_out_s, 29); /* add char alpha */
+        out_uint16_le(g_out_s, 18 + bmpdata_bytes); /* size */
+        g_count++;
+        out_uint16_le(g_out_s, font);
+        out_uint16_le(g_out_s, charactor);
+        out_uint16_le(g_out_s, x);
+        out_uint16_le(g_out_s, y);
+        out_uint16_le(g_out_s, cx);
+        out_uint16_le(g_out_s, cy);
+        out_uint16_le(g_out_s, bmpdata_bytes);
+        out_uint8a(g_out_s, bmpdata, bmpdata_bytes);
+    }
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpup_draw_text(int font, int flags, int mixmode,
+                short clip_left, short clip_top,
+                short clip_right, short clip_bottom,
+                short box_left, short box_top,
+                short box_right, short box_bottom, short x, short y,
+                char* data, int data_bytes)
+{
+    if (g_connected)
+    {
+        LLOGLN(10, ("  rdpup_draw_text"));
+        rdpup_pre_check(32 + data_bytes);
+        out_uint16_le(g_out_s, 30); /* draw text */
+        out_uint16_le(g_out_s, 32 + data_bytes); /* size */
+        g_count++;
+        out_uint16_le(g_out_s, font);
+        out_uint16_le(g_out_s, flags);
+        out_uint16_le(g_out_s, mixmode);
+        out_uint16_le(g_out_s, clip_left);
+        out_uint16_le(g_out_s, clip_top);
+        out_uint16_le(g_out_s, clip_right);
+        out_uint16_le(g_out_s, clip_bottom);
+        out_uint16_le(g_out_s, box_left);
+        out_uint16_le(g_out_s, box_top);
+        out_uint16_le(g_out_s, box_right);
+        out_uint16_le(g_out_s, box_bottom);
+        out_uint16_le(g_out_s, x);
+        out_uint16_le(g_out_s, y);
+        out_uint16_le(g_out_s, data_bytes);
+        out_uint8a(g_out_s, data, data_bytes);
+    }
+    return 0;
+}
+
+/******************************************************************************/
+int
+rdpup_composite(short srcidx, int srcformat, short srcwidth, CARD8 srcrepeat,
+                PictTransform* srctransform, CARD8 mskflags,
+                short mskidx, int mskformat, short mskwidth, CARD8 mskrepeat,
+                CARD8 op, short srcx, short srcy, short mskx, short msky,
+                short dstx, short dsty, short width, short height,
+                int dstformat)
+{
+    if (g_connected)
+    {
+        LLOGLN(10, ("  rdpup_composite"));
+        rdpup_pre_check(84);
+        out_uint16_le(g_out_s, 33);
+        out_uint16_le(g_out_s, 84); /* size */
+        g_count++;
+        out_uint16_le(g_out_s, srcidx);
+        out_uint32_le(g_out_s, srcformat);
+        out_uint16_le(g_out_s, srcwidth);
+        out_uint8(g_out_s, srcrepeat);
+        if (srctransform == 0)
+        {
+            out_uint8s(g_out_s, 10 * 4);
+        }
+        else
+        {
+            out_uint32_le(g_out_s, 1);
+            out_uint32_le(g_out_s, srctransform->matrix[0][0]);
+            out_uint32_le(g_out_s, srctransform->matrix[0][1]);
+            out_uint32_le(g_out_s, srctransform->matrix[0][2]);
+            out_uint32_le(g_out_s, srctransform->matrix[1][0]);
+            out_uint32_le(g_out_s, srctransform->matrix[1][1]);
+            out_uint32_le(g_out_s, srctransform->matrix[1][2]);
+            out_uint32_le(g_out_s, srctransform->matrix[2][0]);
+            out_uint32_le(g_out_s, srctransform->matrix[2][1]);
+            out_uint32_le(g_out_s, srctransform->matrix[2][2]);
+        }
+        out_uint8(g_out_s, mskflags);
+        out_uint16_le(g_out_s, mskidx);
+        out_uint32_le(g_out_s, mskformat);
+        out_uint16_le(g_out_s, mskwidth);
+        out_uint8(g_out_s, mskrepeat);
+        out_uint8(g_out_s, op);
+        out_uint16_le(g_out_s, srcx);
+        out_uint16_le(g_out_s, srcy);
+        out_uint16_le(g_out_s, mskx);
+        out_uint16_le(g_out_s, msky);
+        out_uint16_le(g_out_s, dstx);
+        out_uint16_le(g_out_s, dsty);
+        out_uint16_le(g_out_s, width);
+        out_uint16_le(g_out_s, height);
+        out_uint32_le(g_out_s, dstformat);
+    }
     return 0;
 }

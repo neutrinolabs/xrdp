@@ -21,6 +21,15 @@
 int g_drdynvc_chan_id;
 int g_drdynvc_inited = 0;
 
+static int APP_CC drdynvc_send_capability_request(uint16_t version);
+static int APP_CC drdynvc_process_capability_response(struct stream* s, unsigned char cmd);
+static int APP_CC drdynvc_process_open_channel_response(struct stream *s, unsigned char cmd);
+static int APP_CC drdynvc_process_close_channel_response(struct stream *s, unsigned char cmd);
+static int APP_CC drdynvc_process_data_first(struct stream* s, unsigned char cmd);
+static int APP_CC drdynvc_process_data(struct stream* s, unsigned char cmd);
+static int APP_CC drdynvc_insert_uint_124(struct stream *s, uint32_t val);
+static int APP_CC drdynvc_get_chan_id(struct stream *s, char cmd, uint32_t *chan_id_p);
+
 /**
  * bring up dynamic virtual channel
  *
@@ -90,13 +99,15 @@ drdynvc_process_capability_response(struct stream *s, unsigned char cmd)
     /* read client's version */
     in_uint16_le(s, cap_version);
 
-    if (cap_version != 2)
+    if ((cap_version != 2) && (cap_version != 3))
     {
-        LOG(0, ("drdynvc_process_capability_response: incompatible DVC version %d detected", cap_version));
+        LOG(0, ("drdynvc_process_capability_response: incompatible DVC "
+            "version %d detected", cap_version));
         return -1;
     }
 
-    LOG(0, ("drdynvc_process_capability_response: DVC version 2 selected"));
+    LOG(0, ("drdynvc_process_capability_response: DVC version %d selected",
+        cap_version));
     g_drdynvc_inited = 1;
 
     return 0;

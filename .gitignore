@@ -11,6 +11,7 @@ config.log
 config.status
 config.sub
 configure
+compile
 depcomp
 .deps/
 install-sh
@@ -35,4 +36,5 @@ xrdp-sesrun
 xrdp-sessvc
 xrdp-sestest
 xrdp-dis
+xrdp-xcon
 xrdp/xrdp

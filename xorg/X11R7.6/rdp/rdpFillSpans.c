@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2012 Jay Sorg
+Copyright 2005-2013 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -80,7 +80,7 @@ rdpFillSpans(DrawablePtr pDrawable, GCPtr pGC, int nInit,
         pDstPixmap = (PixmapPtr)pDrawable;
         pDstPriv = GETPIXPRIV(pDstPixmap);
 
-        if (XRDP_IS_OS(pDstPriv))
+        if (xrdp_is_os(pDstPixmap, pDstPriv))
         {
             rdpup_switch_os_surface(pDstPriv->rdpindex);
             rdpup_get_pixmap_image_rect(pDstPixmap, &id);

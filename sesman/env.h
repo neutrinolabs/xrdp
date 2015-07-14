@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,8 @@
 #ifndef ENV_H
 #define ENV_H
 
+#include "list.h"
+
 /**
  *
  * @brief Creates vnc password file
@@ -48,6 +50,7 @@ env_check_password_file(char* filename, char* password);
  *
  */
 int DEFAULT_CC
-env_set_user(char* username, char* passwd_file, int display);
+env_set_user(char* username, char* passwd_file, int display,
+             struct list *env_names, struct list* env_values);
 
 #endif

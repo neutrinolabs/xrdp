@@ -1,24 +1,32 @@
 #!/bin/sh
 
-# change the order in line below to run to run whatever window manager you
-# want, default to kde
-
-SESSIONS="gnome-session blackbox fluxbox startxfce4 startkde xterm"
-
 #start the window manager
 wm_start()
 {
-  for WindowManager in $SESSIONS
-  do
-    which $WindowManager
-    if test $? -eq 0
-    then
-      echo "Starting $WindowManager"
-      $WindowManager
-      return 0
-    fi
-  done
-  return 0
+  if [ -r /etc/default/locale ]; then
+    . /etc/default/locale
+    export LANG LANGUAGE
+  fi
+
+  # debian
+  if [ -r /etc/X11/Xsession ]; then
+    . /etc/X11/Xsession
+    exit 0
+  fi
+
+  # el
+  if [ -r /etc/X11/xinit/Xsession ]; then
+    . /etc/X11/xinit/Xsession
+    exit 0
+  fi
+
+  # suse
+  if [ -r /etc/X11/xdm/Xsession ]; then
+    . /etc/X11/xdm/Xsession
+    exit 0
+  fi
+
+  xterm
 }
 
 #Execution sequence for interactive login shell

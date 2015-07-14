@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,8 @@
 #include "file.h"
 #include "parse.h"
 
+#define FILE_MAX_LINE_BYTES 2048
+
 /*****************************************************************************/
 /* returns error
    returns 0 if everything is ok
@@ -32,7 +34,7 @@ static int APP_CC
 l_file_read_sections(int fd, int max_file_size, struct list *names)
 {
     struct stream *s;
-    char text[256];
+    char text[FILE_MAX_LINE_BYTES];
     char c;
     int in_it;
     int in_it_index;
@@ -44,7 +46,7 @@ l_file_read_sections(int fd, int max_file_size, struct list *names)
     g_file_seek(fd, 0);
     in_it_index = 0;
     in_it = 0;
-    g_memset(text, 0, 256);
+    g_memset(text, 0, FILE_MAX_LINE_BYTES);
     list_clear(names);
     make_stream(s);
     init_stream(s, max_file_size);
@@ -67,7 +69,7 @@ l_file_read_sections(int fd, int max_file_size, struct list *names)
                 list_add_item(names, (tbus)g_strdup(text));
                 in_it = 0;
                 in_it_index = 0;
-                g_memset(text, 0, 256);
+                g_memset(text, 0, FILE_MAX_LINE_BYTES);
             }
             else if (in_it)
             {
@@ -86,8 +88,9 @@ l_file_read_sections(int fd, int max_file_size, struct list *names)
 }
 
 /*****************************************************************************/
+/* returns error */
 static int APP_CC
-file_read_line(struct stream *s, char *text)
+file_read_line(struct stream *s, char *text, int text_bytes)
 {
     int i;
     int skip_to_end;
@@ -108,6 +111,7 @@ file_read_line(struct stream *s, char *text)
 
     while (c != 10 && c != 13)
     {
+        /* these mean skip the rest of the line */
         if (c == '#' || c == '!' || c == ';')
         {
             skip_to_end = 1;
@@ -117,6 +121,10 @@ file_read_line(struct stream *s, char *text)
         {
             text[i] = c;
             i++;
+            if (i >= text_bytes)
+            {
+                return 1;
+            }
         }
 
         if (s_check_rem(s, 1))
@@ -214,9 +222,10 @@ l_file_read_section(int fd, int max_file_size, const char *section,
                     struct list *names, struct list *values)
 {
     struct stream *s;
-    char text[512];
-    char name[512];
-    char value[512];
+    char *data;
+    char *text;
+    char *name;
+    char *value;
     char *lvalue;
     char c;
     int in_it;
@@ -225,11 +234,16 @@ l_file_read_section(int fd, int max_file_size, const char *section,
     int index;
     int file_size;
 
+    data = (char *) g_malloc(FILE_MAX_LINE_BYTES * 3, 0);
+    text = data;
+    name = text + FILE_MAX_LINE_BYTES;
+    value = name + FILE_MAX_LINE_BYTES;
+
     file_size = 32 * 1024; /* 32 K file size limit */
     g_file_seek(fd, 0);
     in_it_index = 0;
     in_it = 0;
-    g_memset(text, 0, 512);
+    g_memset(text, 0, FILE_MAX_LINE_BYTES);
     list_clear(names);
     list_clear(values);
     make_stream(s);
@@ -242,8 +256,22 @@ l_file_read_section(int fd, int max_file_size, const char *section,
 
         for (index = 0; index < len; index++)
         {
+            if (!s_check_rem(s, 1))
+            {
+                break;
+            }
             in_uint8(s, c);
-
+            if ((c == '#') || (c == ';'))
+            {
+                if (file_read_line(s, text, FILE_MAX_LINE_BYTES) != 0)
+                {
+                    break;
+                }
+                in_it = 0;
+                in_it_index = 0;
+                g_memset(text, 0, FILE_MAX_LINE_BYTES);
+                continue;
+            }
             if (c == '[')
             {
                 in_it = 1;
@@ -252,9 +280,8 @@ l_file_read_section(int fd, int max_file_size, const char *section,
             {
                 if (g_strcasecmp(section, text) == 0)
                 {
-                    file_read_line(s, text);
-
-                    while (file_read_line(s, text) == 0)
+                    file_read_line(s, text, FILE_MAX_LINE_BYTES);
+                    while (file_read_line(s, text, FILE_MAX_LINE_BYTES) == 0)
                     {
                         if (g_strlen(text) > 0)
                         {
@@ -282,22 +309,27 @@ l_file_read_section(int fd, int max_file_size, const char *section,
                     }
 
                     free_stream(s);
+                    g_free(data);
                     return 0;
                 }
 
                 in_it = 0;
                 in_it_index = 0;
-                g_memset(text, 0, 512);
+                g_memset(text, 0, FILE_MAX_LINE_BYTES);
             }
             else if (in_it)
             {
                 text[in_it_index] = c;
                 in_it_index++;
+                if (in_it_index >= FILE_MAX_LINE_BYTES)
+                {
+                    break;
+                }
             }
         }
     }
-
     free_stream(s);
+    g_free(data);
     return 1;
 }
 
@@ -332,7 +364,7 @@ file_by_name_read_sections(const char *file_name, struct list *names)
 
     fd = g_file_open(file_name);
 
-    if (fd < 1)
+    if (fd < 0)
     {
         return 1;
     }
@@ -373,7 +405,7 @@ file_by_name_read_section(const char *file_name, const char *section,
 
     fd = g_file_open(file_name);
 
-    if (fd < 1)
+    if (fd < 0)
     {
         return 1;
     }

@@ -1,8 +1,8 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2012
- * Copyright (C) Laxmikant Rashinkar 2012
+ * Copyright (C) Jay Sorg 2012-2013
+ * Copyright (C) Laxmikant Rashinkar 2012-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ struct wts_obj
 {
     int      fd;
     int      status;
-    char     name[8];
+    char     name[9];
     char     dname[128];
     int      display_num;
     uint32_t flags;
@@ -52,6 +52,9 @@ static int get_display_num_from_display(char *display_text);
 static int send_init(struct wts_obj *wts);
 static int can_send(int sck, int millis);
 static int can_recv(int sck, int millis);
+
+static char g_xrdpapi_magic[12] =
+{ 0x78, 0x32, 0x10, 0x67, 0x00, 0x92, 0x30, 0x56, 0xff, 0xd8, 0xa9, 0x1f };
 
 /*
  * Opens a handle to the server end of a specified virtual channel - this
@@ -121,12 +124,19 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     }
 
     /* we use unix domain socket to communicate with chansrv */
-    wts->fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if ((wts->fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
+    {
+        g_free(wts);
+        return NULL;
+    }
 
     /* set non blocking */
     llong = fcntl(wts->fd, F_GETFL);
     llong = llong | O_NONBLOCK;
-    fcntl(wts->fd, F_SETFL, llong);
+    if (fcntl(wts->fd, F_SETFL, llong) < 0)
+    {
+        LLOGLN(10, ("WTSVirtualChannelOpenEx: set non-block mode failed"));
+    }
 
     /* connect to chansrv session */
     memset(&s, 0, sizeof(struct sockaddr_un));
@@ -152,17 +162,43 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     return wts;
 }
 
+/*****************************************************************************/
+static int
+mysend(int sck, const void* adata, int bytes)
+{
+    int sent;
+    int error;
+    const char* data;
+
+    data = (const char*)adata;
+    sent = 0;
+    while (sent < bytes)
+    {
+        if (can_send(sck, 100))
+        {
+            error = send(sck, data + sent, bytes - sent, MSG_NOSIGNAL);
+            if (error < 1)
+            {
+                return -1;
+            }
+            sent += error;
+        }
+    }
+    return sent;
+}
+
 /*
  * write data to client connection
  *
  * @return 0 on success, -1 on error
-/*****************************************************************************/
+ *****************************************************************************/
 int
 WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
                        unsigned int Length, unsigned int *pBytesWritten)
 {
     struct wts_obj *wts;
     int             rv;
+    int             header[4];
 
     wts = (struct wts_obj *) hChannelHandle;
 
@@ -185,8 +221,20 @@ WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
         return 0;    /* can't write now, ok to try again */
     }
 
-    rv = send(wts->fd, Buffer, Length, 0);
-    LLOGLN(10, ("WTSVirtualChannelWrite: send() reted %d", rv));
+    rv = 0;
+    memcpy(header, g_xrdpapi_magic, 12);
+    header[3] = Length;
+    if (mysend(wts->fd, header, 16) == 16)
+    {
+        rv = mysend(wts->fd, Buffer, Length);
+    }
+    else
+    {
+        LLOGLN(0, ("WTSVirtualChannelWrite: header write failed"));
+        return -1;
+    }
+
+    LLOGLN(10, ("WTSVirtualChannelWrite: mysend() reted %d", rv));
 
     if (rv >= 0)
     {
@@ -195,11 +243,13 @@ WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
         return 0;
     }
 
+#if 0 /* coverity: this is dead code */
     /* error, but is it ok to try again? */
     if ((rv == EWOULDBLOCK) || (rv == EAGAIN) || (rv == EINPROGRESS))
     {
         return 0;    /* failed to send, but should try again */
     }
+#endif
 
     /* fatal error */
     return -1;

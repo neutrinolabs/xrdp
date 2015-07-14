@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     retries = g_cfg->sec.login_retry;
     current_try = retries;
 
-    data = auth_userpass(s->username, s->password);
+    data = auth_userpass(s->username, s->password,NULL);
     /*LOG_DBG("user: %s\npass: %s", s->username, s->password);*/
 
     while ((!data) && ((retries == 0) || (current_try > 0)))
@@ -65,7 +65,7 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
         {
             case SCP_SERVER_STATE_OK:
                 /* all ok, we got new username and password */
-                data = auth_userpass(s->username, s->password);
+                data = auth_userpass(s->username, s->password,NULL);
 
                 /* one try less */
                 if (current_try > 0)
@@ -195,8 +195,6 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
                 parseCommonStates(e, "scp_v1s_list_sessions()");
                 break;
         }
-
-        g_free(slist);
     }
 
     /* resource management */
@@ -208,6 +206,7 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     /* cleanup */
     scp_session_destroy(s);
     auth_end(data);
+    g_free(slist);
 }
 
 static void parseCommonStates(enum SCP_SERVER_STATES_E e, char *f)

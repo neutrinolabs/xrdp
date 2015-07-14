@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -396,7 +396,7 @@ cleanup:
 /******************************************************************************/
 /* returns boolean */
 int DEFAULT_CC
-auth_userpass(char *user, char *pass)
+auth_userpass(char *user, char *pass, int *errorcode)
 {
     struct k_opts opts;
     struct k5_data k5;
@@ -426,6 +426,14 @@ auth_userpass(char *user, char *pass)
 /* returns error */
 int DEFAULT_CC
 auth_start_session(void)
+{
+    return 0;
+}
+
+/******************************************************************************/
+/* returns error */
+int DEFAULT_CC
+auth_stop_session(long in_val)
 {
     return 0;
 }

@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2015
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@
 #include "xrdp_client_info.h"
 #include "xrdp_rail.h"
 
-#define CURRENT_MOD_VER 2
+#define CURRENT_MOD_VER 3
 
 struct mod
 {
@@ -44,8 +44,9 @@ struct mod
   int (*mod_get_wait_objs)(struct mod* v, tbus* read_objs, int* rcount,
                            tbus* write_objs, int* wcount, int* timeout);
   int (*mod_check_wait_objs)(struct mod* v);
-  tbus mod_dumby[100 - 9]; /* align, 100 minus the number of mod
-                              functions above */
+  int (*mod_frame_ack)(struct mod* v, int flags, int frame_id);
+  tintptr mod_dumby[100 - 10]; /* align, 100 minus the number of mod
+                                 functions above */
   /* server functions */
   int (*server_begin_update)(struct mod* v);
   int (*server_end_update)(struct mod* v);
@@ -53,7 +54,8 @@ struct mod
   int (*server_screen_blt)(struct mod* v, int x, int y, int cx, int cy,
                            int srcx, int srcy);
   int (*server_paint_rect)(struct mod* v, int x, int y, int cx, int cy,
-                           char* data, int width, int height, int srcx, int srcy);
+                           char* data, int width, int height,
+                           int srcx, int srcy);
   int (*server_set_cursor)(struct mod* v, int x, int y, char* data, char* mask);
   int (*server_palette)(struct mod* v, int* palette);
   int (*server_msg)(struct mod* v, char* msg, int code);
@@ -117,13 +119,34 @@ struct mod
   int (*server_monitored_desktop)(struct mod* v,
                                   struct rail_monitored_desktop_order* mdo,
                                   int flags);
-  tbus server_dumby[100 - 37]; /* align, 100 minus the number of server
-                                  functions above */
+  int (*server_set_cursor_ex)(struct mod* v, int x, int y, char* data,
+                              char* mask, int bpp);
+  int (*server_add_char_alpha)(struct mod* v, int font, int charactor,
+                               int offset, int baseline,
+                               int width, int height, char* data);
+  int (*server_create_os_surface_bpp)(struct mod* v, int rdpindex,
+                                      int width, int height, int bpp);
+  int (*server_paint_rect_bpp)(struct mod* v, int x, int y, int cx, int cy,
+                               char* data, int width, int height,
+                               int srcx, int srcy, int bpp);
+  int (*server_composite)(struct mod* v, int srcidx, int srcformat, int srcwidth,
+                          int srcrepeat, int* srctransform, int mskflags, int mskidx,
+                          int mskformat, int mskwidth, int mskrepeat, int op,
+                          int srcx, int srcy, int mskx, int msky,
+                          int dstx, int dsty, int width, int height, int dstformat);
+  int (*server_paint_rects)(struct mod* v,
+                            int num_drects, short *drects,
+                            int num_crects, short *crects,
+                            char *data, int width, int height,
+                            int flags, int frame_id);
+
+  tintptr server_dumby[100 - 43]; /* align, 100 minus the number of server
+                                     functions above */
   /* common */
-  tbus handle; /* pointer to self as long */
-  tbus wm;
-  tbus painter;
-  int sck;
+  tintptr handle; /* pointer to self as long */
+  tintptr wm;
+  tintptr painter;
+  tintptr si;
   /* mod data */
   int width;
   int height;
@@ -133,7 +156,10 @@ struct mod
   char password[256];
   char ip[256];
   char port[256];
-  tbus sck_obj;
   int shift_state;
   struct xrdp_client_info client_info;
+  int screen_shmem_id;
+  int screen_shmem_id_mapped; /* boolean */
+  char *screen_shmem_pixels;
+  struct trans *trans;
 };

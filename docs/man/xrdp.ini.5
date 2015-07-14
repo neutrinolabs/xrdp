@@ -1,99 +1,244 @@
-.\" 
-.TH "xrdp.ini" "5" "0.1.0" "xrdp team" ""
+.TH "xrdp.ini" "5" "0.7.0" "xrdp team" ""
 .SH "NAME"
-.LP 
 \fBxrdp.ini\fR \- Configuration file for \fBxrdp\fR(8)
-.SH "DESCRIPTION"
-.LP 
-This is the man page for \fBxrdp.ini\fR, \fBxrdp\fR(8) configuration file.
-It is composed by a number of sections, each one composed by a section name, enclosed by square brackets, folowed by a list of \fI<parameter>\fR=\fI<value>\fR lines.
 
-\fBxrdp.ini\fR is contains a \fB[Globals]\fR section, which sets some global configuration settings for \fBxrdp\fR(8), and one or more "connection" sections which contain the info on which services \fBxrdp\fR(8) can connect to.
+.SH "DESCRIPTION"
+This is the man page for \fBxrdp.ini\fR, \fBxrdp\fR(8) configuration file.
+It is composed by a number of sections, each one composed by a section name, enclosed by square brackets, followed by a list of \fI<parameter>\fR=\fI<value>\fR lines.
+
+\fBxrdp.ini\fR supports the following sections:
+
+.TP
+\fB[Globals]\fP \- sets some global configuration settings for \fBxrdp\fR(8).
+
+.TP
+\fB[Logging]\fP \- logging subsystem parameters
+
+.TP
+\fB[Channels]\fP \- channel subsystem parameters
+
+.TP
+\fI[Connection]\fP \-  contain the info on which services \fBxrdp\fR(8) can connect to.
 
 .LP 
 All options and values (except for file names and paths) are case insensitive, and are described in detail below.
+
 .SH "GLOBALS"
-.LP 
-
-.TP 
 The options to be specified in the \fB[Globals]\fR section are the following:
-.br 
 
-.TP 
+.TP
+\fBaddress\fP=\fIip address\fP
+Specifies xrdp listening address. Default is 0.0.0.0 (all interfaces)
+
+.TP
+\fBautorun\fP=\fIsession_name\fP
+Automatically run the connection specified by \fIsession_name\fP, which must match a section as described below.
+By default a drop-down list with all available connections is shown.
+A connection can also be chosen by the connecting client by setting the \fBLOGIN DOMAIN\fP to a valid \fIsession name\fP.
+
+.TP
 \fBbitmap_cache\fR=\fI[0|1]\fR
-If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables bitmap caching in \fBxrdp\fR(8)
-.br 
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables bitmap caching in \fBxrdp\fR(8).
 
-.TP 
+.TP
 \fBbitmap_compression\fR=\fI[0|1]\fR
-If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables bitmap compression in \fBxrdp\fR(8)
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables bitmap compression in \fBxrdp\fR(8).
+
+.TP
+\fBbulk_compression\fP=\fI[0|1]\fP
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables compression of bulk data in \fBxrdp\fR(8).
+
+.TP
+\fBchannel_code\fP=\fI[0|1]\fP
+If set to \fB0\fR, \fBfalse\fR or \fBno\fR this option disables all channels \fBxrdp\fR(8).
+See section \fBCHANNELS\fP below for more fine grained options.
+
+.TP
+\fBcrypt_level\fP=\fIlow|medium|high|fips\fP
+.\" <http://blogs.msdn.com/b/openspecification/archive/2011/12/08/encryption-negotiation-in-rdp-connection.aspx>
+RDP connection are controlled by two encryption settings: \fIEncryption Level\fP and \fIEncryption Method\fP.
+The only supported \fIEncryption Method\fP is \fB40BIT_ENCRYPTION\fP, \fB128BIT_ENCRYPTION\fP and \fB56BIT_ENCRYPTION\fP are currently not supported.
+This option controls the \fIEncryption Level\fP:
+.RS 8
+.TP
+.B low
+All data sent from the client to the server is protected by encryption based on the maximum key strength supported by the client.
+.I This is the only level that the traffic sent by the server to client is not encrypted.
+.TP
+.B medium
+All data sent between the client and the server is protected by encryption based on the maximum key strength supported by the client.
+.TP
+.B high
+All data sent between the client and server is protected by encryption based on the server's maximum key strength.
+.TP
+.B fips
+All data sent between the client and server is protected using Federal Information Processing Standard 140-1 validated encryption methods.
+.I This level is required for Windows clients (mstsc.exe) if the client's group policy enforces FIPS-compliance mode.
+.RE
+
+.TP
+\fBfork\fP=\fI[0|1]\fP
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR for each incoming connection \fBxrdp\fR(8) forks a sub-process instead of using threads.
+
+.TP
+\fBhidelogwindow\fP=\fI[0|1]\fP
+If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP will not show a window for log messages.
+
+.TP
+\fBmax_bpp\fP=\fI[8|15|16|24]\fP
+Limit the color depth by specifying the maximum number of bits per pixel.
+
+.TP
+\fBport\fP=\fIport\fP
+Specify TCP port to listen on for incoming connections.
+The default for RDP is \fB3389\fP.
+
+.TP
+\fBtcp_keepalive\fP=\fI[yes|no]\fP
+Regulate if the listening socket uses socket option \fBSO_KEEPALIVE\fP.
+If set to \fB1\fP, \fBtrue\fP or \fByes\fP and the network connection disappears without closing messages, the connection will be closed.
+
+.TP
+\fBtcp_nodelay\fP=\fI[yes|no]\fP
+Regulate if the listening socket uses socket option \fBTCP_NODELAY\fP.
+If set to \fB1\fP, \fBtrue\fP or \fByes\fP, no buffering will be performed in the TCP stack.
+
+.TP
+\fBblack\fP=\fI000000\fP
+.TP
+\fBgrey\fP=\fIc0c0c0\fP
+.TP
+\fBdark_grey\fP=\fI808080\fP
+.TP
+\fBblue\fP=\fI0000ff\fP
+.TP
+\fBdark_blue\fP=\fI00007f\fP
+.TP
+\fBwhite\fP=\fIffffff\fP
+.TP
+\fBred\fP=\fIff0000\fP
+.TP
+\fBgreen\fP=\fI00ff00\fP
+.TP
+\fBbackground\fP=\fI000000\fP
+These options override the colors used internally by \fBxrdp\fP(8) to draw the login and log windows.
+Colors are defined using a hexadecimal (hex) notation for the combination of Red, Green, and Blue color values (RGB).
+The lowest value that can be given to one of the light sources is 0 (hex 00).
+The highest value is 255 (hex FF).
+
+.SH "LOGGING"
+The following parameters can be used in the \fB[logging]\fR section:
+
+.TP
+\fBLogFile\fR=\fI${SESMAN_LOG_DIR}/sesman.log\fR
+This options contains the path to logfile. It can be either absolute or relative, and the default is \fI${SESMAN_LOG_DIR}/sesman.log\fR
+
+.TP
+\fBLogLevel\fR=\fIlevel\fR
+This option can have one of the following values:
+
+\fBCORE\fR or \fB0\fR \- Log only core messages. these messages are _always_ logged, regardless the logging level selected.
+
+\fBERROR\fR or \fB1\fR \- Log only error messages
+
+\fBWARNING\fR, \fBWARN\fR or \fB2\fR \- Logs warnings and error messages
+
+\fBINFO\fR or \fB3\fR \- Logs errors, warnings and informational messages
+
+\fBDEBUG\fR or \fB4\fR \- Log everything. If \fBsesman\fR is compiled in debug mode, this options will output many more low\-level message, useful for developers
+
+.TP
+\fBEnableSyslog\fR=\fI[0|1]\fR
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables logging to syslog. Otherwise syslog is disabled.
+
+.TP
+\fBSyslogLevel\fR=\fIlevel\fR
+This option sets the logging level for syslog. It can have the same values of \fBLogLevel\fR. If \fBSyslogLevel\fR is greater than \fBLogLevel\fR, its value is lowered to that of \fBLogLevel\fR.
+
+.SH "CHANNELS"
+The Remote Desktop Protocol supports several channels, which are used to transfer additional data like sound, clipboard data and others.
+Channel names not listed here will be blocked by \fBxrdp\fP.
+Not all channels are supported in all cases, so setting a value to \fItrue\fP is a pre-requisite, but does not force it's use.
+.br
+Channels can also be enabled or disabled on a per connection basis by prefixing each setting with \fBchannel.\fP in the channel section.
+
+.TP
+\fBrdpdr\fP=\fI[0|1]\fP
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR using the RDP channel for device re-direction is allowed.
+
+.TP
+\fBrdpsnd\fP=\fI[0|1]\fP
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR using the RDP channel for sound is allowed.
+
+.TP
+\fBdrdynvc\fP=\fI[0|1]\fP
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR using the RDP channel to initiate additional dynamic virtual channels is allowed.
+
+.TP
+\fBcliprdr\fP=\fI[0|1]\fP
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR using the RDP channel for clipboard re-direction is allowed.
+
+.TP
+\fBrail\fP=\fI[0|1]\fP
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR using the RDP channel for remote applications integrated locally (RAIL) is allowed.
+
+.TP
+\fBxrdpvr\fP=\fI[0|1]\fP
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR using the RDP channel for XRDP Video streaming is allowed.
+
 .SH "CONNECTIONS"
-.LP 
-
-
-.TP 
 A connection section is made of a section name, enclosed in square brackets, and the following entries:
-.br 
 
 .TP 
 \fBname\fR=\fI<session name>\fR
 The name displayed in \fBxrdp\fR(8) login window's combo box.
-.br 
 
 .TP 
 \fBlib\fR=\fI../vnc/libvnc.so\fR
 Sets the library to be used with this connection.
-.br 
 
 .TP 
 \fBusername\fR=\fI<username>\fR|\fIask\fR
 Specifies the username used for authenticating in the connection.
 If set to \fIask\fR, user name should be provided in the login window.
-.br 
 
 .TP 
 \fBpassword\fR=\fI<password>\fR|\fIask\fR
 Specifies the password used for authenticating in the connection.
 If set to \fIask\fR, password should be provided in the login window.
-.br 
 
 .TP 
 \fBip\fR=\fI127.0.0.1\fR
 Specifies the ip address of the host to connect to.
-.br 
 
 .TP 
 \fBport\fR=\fI<number>\fR|\fI\-1\fR
 Specifies the port number to connect to. If set to \fI\-1\fR, the default port for the specified library is used.
+
 .SH "EXAMPLES"
-.LP 
 This is an example \fBxrdp.ini\fR:
 
+.nf
 [Globals]
-.br 
 bitmap_cache=yes
-.br 
 bitmap_compression=yes
 
-
 [vnc1]
-.br 
 name=sesman
-.br 
 lib=../vnc/libvnc.so
-.br 
 username=ask
-.br 
 password=ask
-.br 
 ip=127.0.0.1
-.br 
 port=\-1
+.fi
+
 .SH "FILES"
-.LP 
 ${XRDP_CFG_DIR}/xrdp.ini
+
 .SH "SEE ALSO"
-.LP 
-xrdp(8) sesman(8) sesrun(8)  sesman.ini(5)
+.BR xrdp (8),
+.BR sesman (8),
+.BR sesrun (8),
+.BR sesman.ini (5)
 
 for more info on \fBxrdp\fR see http://xrdp.sf.net

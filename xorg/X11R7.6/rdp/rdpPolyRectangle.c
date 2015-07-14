@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2012 Jay Sorg
+Copyright 2005-2013 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -112,13 +112,13 @@ rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
         pDstPixmap = (PixmapPtr)pDrawable;
         pDstPriv = GETPIXPRIV(pDstPixmap);
 
-        if (XRDP_IS_OS(pDstPriv))
+        if (xrdp_is_os(pDstPixmap, pDstPriv))
         {
             post_process = 1;
 
             if (g_do_dirty_os)
             {
-                LLOGLN(10, ("rdpPolyRectangle: gettig dirty"));
+                LLOGLN(10, ("rdpPolyRectangle: getting dirty"));
                 pDstPriv->is_dirty = 1;
                 pDirtyPriv = pDstPriv;
                 dirty_type = RDI_IMGLL;
@@ -144,7 +144,7 @@ rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
 
                 if (g_do_dirty_ons)
                 {
-                    LLOGLN(0, ("rdpPolyRectangle: gettig dirty"));
+                    LLOGLN(10, ("rdpPolyRectangle: getting dirty"));
                     g_screenPriv.is_dirty = 1;
                     pDirtyPriv = &g_screenPriv;
                     dirty_type = RDI_IMGLL;
@@ -221,7 +221,7 @@ rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
                 }
                 else
                 {
-                    draw_item_add_img_region(pDirtyPriv, fill_reg, GXcopy, dirty_type);
+                    draw_item_add_img_region(pDirtyPriv, fill_reg, GXcopy, dirty_type, TAG_POLYRECTANGLE);
                 }
 
                 RegionDestroy(fill_reg);
@@ -275,7 +275,7 @@ rdpPolyRectangle(DrawablePtr pDrawable, GCPtr pGC, int nrects,
                     }
                     else
                     {
-                        draw_item_add_img_region(pDirtyPriv, &clip_reg, GXcopy, dirty_type);
+                        draw_item_add_img_region(pDirtyPriv, &clip_reg, GXcopy, dirty_type, TAG_POLYRECTANGLE);
                     }
                 }
                 else if (got_id)

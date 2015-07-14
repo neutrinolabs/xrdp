@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2012 Jay Sorg
+Copyright 2005-2013 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -24,11 +24,33 @@ Sets up the  functions
 
 #include "rdp.h"
 #include "rdprandr.h"
+#include "rdpglyph.h"
 
 #if 1
 #define DEBUG_OUT(arg)
 #else
 #define DEBUG_OUT(arg) ErrorF arg
+#endif
+
+#ifndef XRDP_DISABLE_LINUX_ABSTRACT
+#ifdef __linux__
+#define XRDP_DISABLE_LINUX_ABSTRACT 1
+#else
+#define XRDP_DISABLE_LINUX_ABSTRACT 0
+#endif
+#endif
+
+#if XRDP_DISABLE_LINUX_ABSTRACT
+/* because including <X11/Xtrans/Xtransint.h> in problematic
+ * we dup a small struct
+ * we need to set flags to zero to turn off abstract sockets */
+struct _MyXtransport
+{
+    char *TransName;
+    int flags;
+};
+/* in xtrans-1.2.6/Xtranssock.c */
+extern struct _MyXtransport _XSERVTransSocketLocalFuncs;
 #endif
 
 rdpScreenInfoRec g_rdpScreen; /* the one screen */
@@ -42,23 +64,39 @@ DevPrivateKeyRec g_rdpPixmapIndex;
 DeviceIntPtr g_pointer = 0;
 DeviceIntPtr g_keyboard = 0;
 
-int g_can_do_pix_to_pix = 1;
+/* true if client is enhanced rdp client(freerdp) */
+int g_can_do_pix_to_pix = 0;
+
 int g_do_dirty_os = 1; /* delay remoting off screen bitmaps */
-int g_do_dirty_ons = 0; /* delay remoting screen */
+int g_do_dirty_ons = 1; /* delay remoting screen */
+int g_do_glyph_cache = 0; /* rdpup.c may set this */
+int g_do_alpha_glyphs = 1;
+int g_do_composite = 0; /* rdpup.c may set this */
 Bool g_wrapWindow = 1;
 Bool g_wrapPixmap = 1;
+
+int g_codec_mode = 0; /* 0 = standard rdp, 1 = rfx */
 
 rdpPixmapRec g_screenPriv;
 
 /* if true, running in RemoteApp / RAIL mode */
 int g_use_rail = 0;
 
+int g_con_number = 0; /* increments for each connection */
+
 WindowPtr g_invalidate_window = 0;
+int g_doing_font = 0;
 
 /* if true, use a unix domain socket instead of a tcp socket */
 int g_use_uds = 0;
 char g_uds_data[256] = ""; /* data */
 char g_uds_cont[256] = ""; /* control */
+
+int g_shift_down = 0;
+int g_alt_down = 0;
+int g_ctrl_down = 0;
+int g_pause_spe = 0;
+int g_tab_down = 0;
 
 /* set all these at once, use function set_bpp */
 int g_bpp = 16;
@@ -217,6 +255,16 @@ rdpDestroyColormap(ColormapPtr pColormap)
 #endif
 
 /******************************************************************************/
+void
+rdpSetUDSRights(void)
+{
+    char unixSocketName[128];
+
+    sprintf(unixSocketName, "/tmp/.X11-unix/X%s", display);
+    chmod(unixSocketName, 0700);
+}
+
+/******************************************************************************/
 /* returns boolean, true if everything is ok */
 static Bool
 rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
@@ -233,7 +281,7 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
     memset(&g_screenPriv, 0, sizeof(g_screenPriv));
 
     /*dpix = 75;
-    dpiy = 75;*/
+      dpiy = 75; */
     dpix = PixelDPI;
     dpiy = PixelDPI;
 
@@ -249,8 +297,8 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
     ErrorF("\n");
     ErrorF("X11rdp, an X server for xrdp\n");
     ErrorF("Version %s\n", X11RDPVER);
-    ErrorF("Copyright (C) 2005-2012 Jay Sorg\n");
-    ErrorF("See http://xrdp.sf.net for information on xrdp.\n");
+    ErrorF("Copyright (C) 2005-2015 Jay Sorg\n");
+    ErrorF("See http://www.xrdp.org for information on xrdp.\n");
 #if defined(XORG_VERSION_CURRENT) && defined (XVENDORNAME)
     ErrorF("Underlying X server release %d, %s\n",
            XORG_VERSION_CURRENT, XVENDORNAME);
@@ -267,7 +315,8 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
         g_rdpScreen.sizeInBytes =
             (g_rdpScreen.paddedWidthInBytes * g_rdpScreen.height);
         ErrorF("buffer size %d\n", g_rdpScreen.sizeInBytes);
-        g_rdpScreen.pfbMemory = (char *)g_malloc(2048 * 2048 * 4, 1);
+        g_rdpScreen.pfbMemory = (char *)g_malloc(g_rdpScreen.sizeInBytes, 1);
+        g_rdpScreen.sizeInBytesAlloc = g_rdpScreen.sizeInBytes;
     }
 
     if (g_rdpScreen.pfbMemory == 0)
@@ -391,6 +440,8 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
 
     if (ps)
     {
+        g_rdpScreen.CreatePicture = ps->CreatePicture;
+        g_rdpScreen.DestroyPicture = ps->DestroyPicture;
         g_rdpScreen.Composite = ps->Composite;
         g_rdpScreen.Glyphs = ps->Glyphs;
 
@@ -404,6 +455,8 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
 
     if (ps)
     {
+        ps->CreatePicture = rdpCreatePicture;
+        ps->DestroyPicture = rdpDestroyPicture;
         ps->Composite = rdpComposite;
         ps->Glyphs = rdpGlyphs;
     }
@@ -523,6 +576,12 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
 
     }
 
+    rdpGlyphInit();
+
+    //rdpXvInit(pScreen);
+    
+    rdpSetUDSRights();
+
     ErrorF("rdpScreenInit: ret %d\n", ret);
 
     return ret;
@@ -594,6 +653,11 @@ ddxProcessArgument(int argc, char **argv, int i)
 void
 OsVendorInit(void)
 {
+#if XRDP_DISABLE_LINUX_ABSTRACT
+    /* turn off the Linux abstract unix doamin sockets TRANS_ABSTRACT */
+    /* TRANS_NOLISTEN = 1 << 3 */
+    _XSERVTransSocketLocalFuncs.flags = 0;
+#endif
 }
 
 /******************************************************************************/

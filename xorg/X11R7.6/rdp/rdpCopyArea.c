@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2012 Jay Sorg
+Copyright 2005-2013 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -81,9 +81,6 @@ rdpCopyAreaWndToWnd(WindowPtr pSrcWnd, WindowPtr pDstWnd, GCPtr pGC,
     RegionRec clip_reg;
 
     LLOGLN(10, ("rdpCopyAreaWndToWnd:"));
-
-    rv = rdpCopyAreaOrg(&(pSrcWnd->drawable), &(pDstWnd->drawable),
-                        pGC, srcx, srcy, w, h, dstx, dsty);
     RegionInit(&clip_reg, NullBox, 0);
     cd = rdp_get_clip(&clip_reg, &(pDstWnd->drawable), pGC);
     lsrcx = pSrcWnd->drawable.x + srcx;
@@ -104,14 +101,16 @@ rdpCopyAreaWndToWnd(WindowPtr pSrcWnd, WindowPtr pDstWnd, GCPtr pGC,
         if (num_clips > 0)
         {
             rdpup_begin_update();
-            dx = dstx - srcx;
-            dy = dsty - srcy;
+            dx = ldstx - lsrcx;
+            dy = ldsty - lsrcy;
 
             if ((dy < 0) || ((dy == 0) && (dx < 0)))
             {
                 for (j = 0; j < num_clips; j++)
                 {
                     box = REGION_RECTS(&clip_reg)[j];
+                    LLOGLN(10, ("  index %d x1 %d y1 %d x2 %d y2 %d", j,
+                           box.x1, box.y1, box.x2, box.y2));
                     rdpup_set_clip(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
                     rdpup_screen_blt(ldstx, ldsty, w, h, lsrcx, lsrcy);
                 }
@@ -121,6 +120,8 @@ rdpCopyAreaWndToWnd(WindowPtr pSrcWnd, WindowPtr pDstWnd, GCPtr pGC,
                 for (j = num_clips - 1; j >= 0; j--)
                 {
                     box = REGION_RECTS(&clip_reg)[j];
+                    LLOGLN(10, ("  index %d x1 %d y1 %d x2 %d y2 %d", j,
+                           box.x1, box.y1, box.x2, box.y2));
                     rdpup_set_clip(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
                     rdpup_screen_blt(ldstx, ldsty, w, h, lsrcx, lsrcy);
                 }
@@ -132,6 +133,8 @@ rdpCopyAreaWndToWnd(WindowPtr pSrcWnd, WindowPtr pDstWnd, GCPtr pGC,
     }
 
     RegionUninit(&clip_reg);
+    rv = rdpCopyAreaOrg(&(pSrcWnd->drawable), &(pDstWnd->drawable),
+                        pGC, srcx, srcy, w, h, dstx, dsty);
     return rv;
 }
 
@@ -148,17 +151,12 @@ rdpCopyAreaWndToPixmap(WindowPtr pSrcWnd,
     int ldstx;
     int ldsty;
     int num_clips;
-    int dx;
-    int dy;
     int j;
     BoxRec box;
     RegionPtr rv;
     RegionRec clip_reg;
 
     LLOGLN(10, ("rdpCopyAreaWndToPixmap:"));
-
-    rv = rdpCopyAreaOrg(&(pSrcWnd->drawable), &(pDstPixmap->drawable),
-                        pGC, srcx, srcy, w, h, dstx, dsty);
     RegionInit(&clip_reg, NullBox, 0);
     cd = rdp_get_clip(&clip_reg, &(pDstPixmap->drawable), pGC);
     lsrcx = pSrcWnd->drawable.x + srcx;
@@ -182,26 +180,12 @@ rdpCopyAreaWndToPixmap(WindowPtr pSrcWnd,
         {
             rdpup_switch_os_surface(pDstPriv->rdpindex);
             rdpup_begin_update();
-            dx = dstx - srcx;
-            dy = dsty - srcy;
 
-            if ((dy < 0) || ((dy == 0) && (dx < 0)))
+            for (j = 0; j < num_clips; j++)
             {
-                for (j = 0; j < num_clips; j++)
-                {
-                    box = REGION_RECTS(&clip_reg)[j];
-                    rdpup_set_clip(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-                    rdpup_screen_blt(ldstx, ldsty, w, h, lsrcx, lsrcy);
-                }
-            }
-            else
-            {
-                for (j = num_clips - 1; j >= 0; j--)
-                {
-                    box = REGION_RECTS(&clip_reg)[j];
-                    rdpup_set_clip(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-                    rdpup_screen_blt(ldstx, ldsty, w, h, lsrcx, lsrcy);
-                }
+                box = REGION_RECTS(&clip_reg)[j];
+                rdpup_set_clip(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+                rdpup_screen_blt(ldstx, ldsty, w, h, lsrcx, lsrcy);
             }
 
             rdpup_reset_clip();
@@ -211,6 +195,8 @@ rdpCopyAreaWndToPixmap(WindowPtr pSrcWnd,
     }
 
     RegionUninit(&clip_reg);
+    rv = rdpCopyAreaOrg(&(pSrcWnd->drawable), &(pDstPixmap->drawable),
+                        pGC, srcx, srcy, w, h, dstx, dsty);
     return rv;
 }
 
@@ -234,9 +220,6 @@ rdpCopyAreaPixmapToWnd(PixmapPtr pSrcPixmap, rdpPixmapRec *pSrcPriv,
     BoxRec box;
 
     LLOGLN(10, ("rdpCopyAreaPixmapToWnd:"));
-
-    rv = rdpCopyAreaOrg(&(pSrcPixmap->drawable), &(pDstWnd->drawable),
-                        pGC, srcx, srcy, w, h, dstx, dsty);
     RegionInit(&clip_reg, NullBox, 0);
     cd = rdp_get_clip(&clip_reg, &(pDstWnd->drawable), pGC);
     ldstx = pDstWnd->drawable.x + dstx;
@@ -274,6 +257,8 @@ rdpCopyAreaPixmapToWnd(PixmapPtr pSrcPixmap, rdpPixmapRec *pSrcPriv,
     }
 
     RegionUninit(&clip_reg);
+    rv = rdpCopyAreaOrg(&(pSrcPixmap->drawable), &(pDstWnd->drawable),
+                        pGC, srcx, srcy, w, h, dstx, dsty);
     return rv;
 }
 
@@ -292,14 +277,13 @@ rdpCopyAreaPixmapToPixmap(PixmapPtr pSrcPixmap, rdpPixmapRec *pSrcPriv,
     int cd;
     int j;
     int num_clips;
+    int dx;
+    int dy;
     RegionPtr rv;
     RegionRec clip_reg;
     BoxRec box;
 
     LLOGLN(10, ("rdpCopyAreaPixmapToPixmap:"));
-
-    rv = rdpCopyAreaOrg(&(pSrcPixmap->drawable), &(pDstPixmap->drawable),
-                        pGC, srcx, srcy, w, h, dstx, dsty);
     RegionInit(&clip_reg, NullBox, 0);
     cd = rdp_get_clip(&clip_reg, &(pDstPixmap->drawable), pGC);
     LLOGLN(10, ("rdpCopyAreaPixmapToPixmap: cd %d", cd));
@@ -325,14 +309,30 @@ rdpCopyAreaPixmapToPixmap(PixmapPtr pSrcPixmap, rdpPixmapRec *pSrcPriv,
         {
             rdpup_switch_os_surface(pDstPriv->rdpindex);
             rdpup_begin_update();
+            dx = ldstx - lsrcx;
+            dy = ldsty - lsrcy;
+
             LLOGLN(10, ("rdpCopyAreaPixmapToPixmap: num_clips %d", num_clips));
 
-            for (j = 0; j < num_clips; j++)
+            if ((dy < 0) || ((dy == 0) && (dx < 0)))
             {
-                box = REGION_RECTS(&clip_reg)[j];
-                rdpup_set_clip(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-                rdpup_paint_rect_os(ldstx, ldsty, w, h, pSrcPriv->rdpindex, lsrcx, lsrcy);
-                LLOGLN(10, ("%d %d %d %d %d %d", ldstx, ldsty, w, h, lsrcx, lsrcy));
+                for (j = 0; j < num_clips; j++)
+                {
+                    box = REGION_RECTS(&clip_reg)[j];
+                    rdpup_set_clip(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+                    rdpup_paint_rect_os(ldstx, ldsty, w, h, pSrcPriv->rdpindex, lsrcx, lsrcy);
+                    LLOGLN(10, ("%d %d %d %d %d %d", ldstx, ldsty, w, h, lsrcx, lsrcy));
+                }
+            }
+            else
+            {
+                for (j = num_clips - 1; j >= 0; j--)
+                {
+                    box = REGION_RECTS(&clip_reg)[j];
+                    rdpup_set_clip(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+                    rdpup_paint_rect_os(ldstx, ldsty, w, h, pSrcPriv->rdpindex, lsrcx, lsrcy);
+                    LLOGLN(10, ("%d %d %d %d %d %d", ldstx, ldsty, w, h, lsrcx, lsrcy));
+                }
             }
 
             rdpup_reset_clip();
@@ -342,6 +342,8 @@ rdpCopyAreaPixmapToPixmap(PixmapPtr pSrcPixmap, rdpPixmapRec *pSrcPriv,
     }
 
     RegionUninit(&clip_reg);
+    rv = rdpCopyAreaOrg(&(pSrcPixmap->drawable), &(pDstPixmap->drawable),
+                        pGC, srcx, srcy, w, h, dstx, dsty);
     return rv;
 }
 
@@ -373,7 +375,7 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
     WindowPtr pDstWnd;
     WindowPtr pSrcWnd;
 
-    LLOGLN(10, ("rdpCopyArea:"));
+    LLOGLN(10, ("rdpCopyArea: x %d y %d w %d h %d", dstx, dsty, w, h));
 
     if (pSrc->type == DRAWABLE_WINDOW)
     {
@@ -403,7 +405,7 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
                 pDstPixmap = (PixmapPtr)pDst;
                 pDstPriv = GETPIXPRIV(pDstPixmap);
 
-                if (XRDP_IS_OS(pDstPriv))
+                if (xrdp_is_os(pDstPixmap, pDstPriv))
                 {
                     can_do_screen_blt = pGC->alu == GXcopy;
 
@@ -414,6 +416,10 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
                                                       srcx, srcy, w, h, dstx, dsty);
                     }
                 }
+                else
+                {
+                    LLOGLN(10, ("rdpCopyArea: 1"));
+                }
             }
         }
     }
@@ -423,7 +429,9 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
         pSrcPixmap = (PixmapPtr)pSrc;
         pSrcPriv = GETPIXPRIV(pSrcPixmap);
 
-        if (XRDP_IS_OS(pSrcPriv))
+        LLOGLN(10, ("rdpCopyArea: 3 %d %d", pSrcPixmap->usage_hint, pSrcPriv->is_scratch));
+
+        if (xrdp_is_os(pSrcPixmap, pSrcPriv))
         {
             if (pDst->type == DRAWABLE_WINDOW)
             {
@@ -442,7 +450,7 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
                 pDstPixmap = (PixmapPtr)pDst;
                 pDstPriv = GETPIXPRIV(pDstPixmap);
 
-                if (XRDP_IS_OS(pDstPriv))
+                if (xrdp_is_os(pDstPixmap, pDstPriv))
                 {
                     if (g_can_do_pix_to_pix)
                     {
@@ -454,10 +462,20 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
                                                          dstx, dsty);
                     }
                 }
+                else
+                {
+                    LLOGLN(10, ("rdpCopyArea: 4"));
+                }
             }
+        }
+        else
+        {
+            LLOGLN(10, ("rdpCopyArea: 2 %d %d", pSrcPixmap->usage_hint, pSrcPriv->is_scratch));
         }
     }
 
+    LLOGLN(10, ("rdpCopyArea: fallback"));
+    
     /* do original call */
     rv = rdpCopyAreaOrg(pSrc, pDst, pGC, srcx, srcy, w, h, dstx, dsty);
 
@@ -472,16 +490,16 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
         pDstPixmap = (PixmapPtr)pDst;
         pDstPriv = GETPIXPRIV(pDstPixmap);
 
-        if (XRDP_IS_OS(pDstPriv))
+        if (xrdp_is_os(pDstPixmap, pDstPriv))
         {
             post_process = 1;
 
             if (g_do_dirty_os)
             {
-                LLOGLN(10, ("rdpCopyArea: gettig dirty"));
+                LLOGLN(10, ("rdpCopyArea: getting dirty"));
                 pDstPriv->is_dirty = 1;
                 pDirtyPriv = pDstPriv;
-                dirty_type = RDI_IMGLL;
+                dirty_type = RDI_IMGLY;
             }
             else
             {
@@ -490,6 +508,10 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
                 rdpup_get_pixmap_image_rect(pDstPixmap, &id);
                 got_id = 1;
             }
+        }
+        else
+        {
+            LLOGLN(10, ("rdpCopyArea: 3"));
         }
     }
     else
@@ -504,10 +526,10 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
 
                 if (g_do_dirty_ons)
                 {
-                    LLOGLN(0, ("rdpCopyArea: gettig dirty"));
+                    LLOGLN(10, ("rdpCopyArea: getting dirty"));
                     g_screenPriv.is_dirty = 1;
                     pDirtyPriv = &g_screenPriv;
-                    dirty_type = RDI_IMGLL;
+                    dirty_type = RDI_IMGLY;
                 }
                 else
                 {
@@ -523,6 +545,8 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
         return rv;
     }
 
+    LLOGLN(10, ("rdpCopyArea: post_process"));
+
     RegionInit(&clip_reg, NullBox, 0);
     cd = rdp_get_clip(&clip_reg, pDst, pGC);
 
@@ -535,7 +559,7 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
             box.x2 = box.x1 + w;
             box.y2 = box.y1 + h;
             RegionInit(&reg1, &box, 0);
-            draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type);
+            draw_item_add_img_region(pDirtyPriv, &reg1, GXcopy, dirty_type, TAG_COPYAREA);
             RegionUninit(&reg1);
         }
         else if (got_id)
@@ -559,7 +583,7 @@ rdpCopyArea(DrawablePtr pSrc, DrawablePtr pDst, GCPtr pGC,
                 box.y2 = box.y1 + h;
                 RegionInit(&box_reg, &box, 0);
                 RegionIntersect(&clip_reg, &clip_reg, &box_reg);
-                draw_item_add_img_region(pDirtyPriv, &clip_reg, GXcopy, dirty_type);
+                draw_item_add_img_region(pDirtyPriv, &clip_reg, GXcopy, dirty_type, TAG_COPYAREA);
                 RegionUninit(&box_reg);
             }
             else if (got_id)

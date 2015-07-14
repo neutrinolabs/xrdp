@@ -36,7 +36,7 @@
  *
  */
 long DEFAULT_CC
-auth_userpass(char* user, char* pass);
+auth_userpass(char* user, char* pass, int *errorcode);
 
 /**
  *
@@ -48,6 +48,16 @@ auth_userpass(char* user, char* pass);
  */
 int DEFAULT_CC
 auth_start_session(long in_val, int in_display);
+
+/**
+ *
+ * @brief FIXME
+ * @param in_val
+ * @return 0 on success, 1 on failure
+ *
+ */
+int DEFAULT_CC
+auth_stop_session(long in_val);
 
 /**
  *

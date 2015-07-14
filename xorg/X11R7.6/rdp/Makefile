@@ -4,6 +4,7 @@
 INCBASE = $(X11RDPBASE)/include
 LIBBASE = $(X11RDPBASE)/lib
 
+INSTALL = /usr/bin/install -c
 XSRCBASE = ../build_dir/xorg-server-1.9.3
 
 OBJS = rdpmain.o rdpdraw.o rdpinput.o rdpmisc.o rdpup.o rdprandr.o \
@@ -12,7 +13,8 @@ rdpPolylines.o rdpPolySegment.o rdpFillSpans.o rdpSetSpans.o \
 rdpCopyPlane.o rdpPolyPoint.o rdpPolyArc.o rdpFillPolygon.o \
 rdpPolyFillArc.o rdpPolyText8.o rdpPolyText16.o \
 rdpImageText8.o rdpImageText16.o rdpImageGlyphBlt.o rdpPolyGlyphBlt.o \
-rdpPushPixels.o \
+rdpPushPixels.o rdpxv.o rdpglyph.o rdpComposite.o \
+rdpkeyboard.o rdpkeyboardevdev.o rdpkeyboardbase.o \
 miinitext.o \
 fbcmap_mi.o
 
@@ -42,7 +44,7 @@ LIBS = $(XSRCBASE)/dbe/.libs/libdbe.a \
 LLIBS = -Wl,-rpath=$(LIBBASE) -lfreetype -lz -lm -lXfont -lXau \
 	-lXdmcp -lpixman-1 -lrt -ldl -lcrypto -lGL -lXdamage
 
-CFLAGS = -O2 -Wall -fno-strength-reduce \
+CFLAGS = -g -O2 -Wall -fno-strength-reduce \
 	-I../../include \
 	-I../../cfb \
 	-I../../mfb \
@@ -109,3 +111,6 @@ fbcmap.o: ../build_dir/xorg-server-1.9.3/fb/fbcmap.c
 
 fbcmap_mi.o: ../build_dir/xorg-server-1.9.3/fb/fbcmap_mi.c
 	$(CC) $(CFLAGS) -c ../build_dir/xorg-server-1.9.3/fb/fbcmap_mi.c
+
+install: all
+	$(INSTALL) X11rdp $(X11RDPBASE)/bin/X11rdp

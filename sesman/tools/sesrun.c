@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,7 +75,10 @@ main(int argc, char **argv)
         init_stream(in_s, 8192);
         make_stream(out_s);
         init_stream(out_s, 8192);
+
         sck = g_tcp_socket();
+        if (sck < 0)
+            return 1;
 
         if (g_tcp_connect(sck, argv[1], g_cfg.listen_port) == 0)
         {

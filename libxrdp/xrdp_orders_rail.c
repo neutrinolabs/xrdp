@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2012
+ * Copyright (C) Jay Sorg 2012-2013
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,10 @@ xrdp_orders_send_window_delete(struct xrdp_orders *self, int window_id)
     int field_present_flags;
 
     order_size = 11;
-    xrdp_orders_check(self, order_size);
+    if (xrdp_orders_check(self, order_size) != 0)
+    {
+        return 1;
+    }
     self->order_count++;
     order_flags = RDP_ORDER_SECONDARY;
     order_flags |= 0xb << 2; /* type TS_ALTSEC_WINDOW */
@@ -64,7 +67,10 @@ xrdp_orders_send_window_cached_icon(struct xrdp_orders *self,
     int field_present_flags;
 
     order_size = 14;
-    xrdp_orders_check(self, order_size);
+    if (xrdp_orders_check(self, order_size) != 0)
+    {
+        return 1;
+    }
     self->order_count++;
     order_flags = RDP_ORDER_SECONDARY;
     order_flags |= 0xb << 2; /* type TS_ALTSEC_WINDOW */
@@ -155,7 +161,10 @@ xrdp_orders_send_window_icon(struct xrdp_orders *self,
         order_size += icon_info->cmap_bytes + 2;
     }
 
-    xrdp_orders_check(self, order_size);
+    if (xrdp_orders_check(self, order_size) != 0)
+    {
+        return 1;
+    }
     self->order_count++;
     order_flags = RDP_ORDER_SECONDARY;
     order_flags |= 0xb << 2; /* type TS_ALTSEC_WINDOW */
@@ -324,7 +333,10 @@ xrdp_orders_send_window_new_update(struct xrdp_orders *self, int window_id,
         order_size += 8 * window_state->num_visibility_rects;
     }
 
-    xrdp_orders_check(self, order_size);
+    if (xrdp_orders_check(self, order_size) != 0)
+    {
+        return 1;
+    }
     self->order_count++;
     order_flags = RDP_ORDER_SECONDARY;
     order_flags |= 0xb << 2; /* type TS_ALTSEC_WINDOW */
@@ -465,7 +477,10 @@ xrdp_orders_send_notify_delete(struct xrdp_orders *self, int window_id,
     int field_present_flags;
 
     order_size = 15;
-    xrdp_orders_check(self, order_size);
+    if (xrdp_orders_check(self, order_size) != 0)
+    {
+        return 1;
+    }
     self->order_count++;
     order_flags = RDP_ORDER_SECONDARY;
     order_flags |= 0xb << 2; /* type TS_ALTSEC_WINDOW */
@@ -560,7 +575,10 @@ xrdp_orders_send_notify_new_update(struct xrdp_orders *self,
         order_size += 3;
     }
 
-    xrdp_orders_check(self, order_size);
+    if (xrdp_orders_check(self, order_size) != 0)
+    {
+        return 1;
+    }
     self->order_count++;
     order_flags = RDP_ORDER_SECONDARY;
     order_flags |= 0xb << 2; /* type TS_ALTSEC_WINDOW */
@@ -651,7 +669,10 @@ xrdp_orders_send_monitored_desktop(struct xrdp_orders *self,
         order_size += mdo->num_window_ids *  4;
     }
 
-    xrdp_orders_check(self, order_size);
+    if (xrdp_orders_check(self, order_size) != 0)
+    {
+        return 1;
+    }
     self->order_count++;
     order_flags = RDP_ORDER_SECONDARY;
     order_flags |= 0xb << 2; /* type TS_ALTSEC_WINDOW */

@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Laxmikant Rashinkar 2012 LK.Rashinkar@gmail.com
+ * Copyright (C) Laxmikant Rashinkar 2012-2013 LK.Rashinkar@gmail.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,30 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <fcntl.h>
+#include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
+
+#if LIBAVCODEC_VERSION_MAJOR == 52 && LIBAVCODEC_VERSION_MINOR == 20
+#define DISTRO_DEBIAN6
+#endif
+
+#if LIBAVCODEC_VERSION_MAJOR == 52 && LIBAVCODEC_VERSION_MINOR == 72
+#define DISTRO_UBUNTU1104
+#endif
+
+#if LIBAVCODEC_VERSION_MAJOR == 53 && LIBAVCODEC_VERSION_MINOR == 35
+#define DISTRO_UBUNTU1204
+#endif
+
+#if !defined(DISTRO_DEBIAN6) && !defined(DISTRO_UBUNTU1104) && !defined(DISTRO_UBUNTU1204)
+#warning unsupported distro
+#endif
+
+#ifdef DISTRO_UBUNTU1204
+#define CODEC_TYPE_VIDEO AVMEDIA_TYPE_VIDEO
+#define CODEC_TYPE_AUDIO AVMEDIA_TYPE_AUDIO
+#define PKT_FLAG_KEY AV_PKT_FLAG_KEY
+#endif
 
 #define MAX_BUFSIZE (1024 * 1024 * 8)
 
@@ -38,6 +61,9 @@
 #define CMD_CLOSE_META_DATA_FILE    6
 #define CMD_WRITE_META_DATA         7
 #define CMD_DEINIT_XRDPVR           8
+#define CMD_SET_GEOMETRY            9
+#define CMD_SET_VOLUME              10
+#define CMD_INIT_XRDPVR             11
 
 /* max number of bytes we can send in one pkt */
 #define MAX_PDU_SIZE                1600
@@ -60,7 +86,7 @@ typedef struct stream
  * @param  _s     stream to create and init
  * @param  _len   number of bytes to store in stream
  ******************************************************************************/
-#define stream_new(_s, _len)                      \
+#define stream_new(_s, _len)                          \
     do                                                \
     {                                                 \
         (_s) = (STREAM *) calloc(1, sizeof(STREAM));  \
@@ -73,7 +99,7 @@ typedef struct stream
 /**
  * create a stream from an existing buffer
  ******************************************************************************/
-#define stream_from_buffer(_s, _buf, _buf_len)    \
+#define stream_from_buffer(_s, _buf, _buf_len)        \
     do                                                \
     {                                                 \
         (_s) = (STREAM *) calloc(1, sizeof(STREAM));  \
@@ -89,7 +115,7 @@ typedef struct stream
  *
  * @param  _s  the stream whose resources are to be released
  ******************************************************************************/
-#define stream_free(_s)                           \
+#define stream_free(_s)                               \
     do                                                \
     {                                                 \
         if (!(_s)->from_buf)                          \
@@ -104,14 +130,14 @@ typedef struct stream
 #define stream_length(_s) (int) ((_s)->p - (_s)->data)
 
 /** insert a 8 bit value into stream */
-#define stream_ins_u8(_s, _val)                   \
+#define stream_ins_u8(_s, _val)                       \
     do                                                \
     {                                                 \
         *(_s)->p++ = (unsigned char) (_val);          \
     } while(0)
 
 /** insert a 16 bit value into stream */
-#define stream_ins_u16_le(_s, _val)               \
+#define stream_ins_u16_le(_s, _val)                   \
     do                                                \
     {                                                 \
         *(_s)->p++ = (unsigned char) ((_val) >> 0);   \
@@ -119,7 +145,7 @@ typedef struct stream
     } while (0)
 
 /** insert a 32 bit value into stream */
-#define stream_ins_u32_le(_s, _val)               \
+#define stream_ins_u32_le(_s, _val)                   \
     do                                                \
     {                                                 \
         *(_s)->p++ = (unsigned char) ((_val) >> 0);   \
@@ -129,7 +155,7 @@ typedef struct stream
     } while (0)
 
 /** insert a 64 bit value into stream */
-#define stream_ins_u64_le(_s, _val)               \
+#define stream_ins_u64_le(_s, _val)                   \
     do                                                \
     {                                                 \
         *(_s)->p++ = (unsigned char) ((_val) >> 0);   \
@@ -143,7 +169,7 @@ typedef struct stream
     } while (0)
 
 /** insert array of chars into stream */
-#define stream_ins_byte_array(_s, _ba, _count)    \
+#define stream_ins_byte_array(_s, _ba, _count)        \
     do                                                \
     {                                                 \
         memcpy((_s)->p, (_ba), (_count));             \
@@ -151,14 +177,14 @@ typedef struct stream
     } while (0)
 
 /** extract a 8 bit value from stream */
-#define stream_ext_u8(_s, _v)                     \
+#define stream_ext_u8(_s, _v)                         \
     do                                                \
     {                                                 \
         (_v) = (u8) *(_s)->p++;                       \
     } while (0)
 
 /** extract a 16 bit value from stream */
-#define stream_ext_u16_le(_s, _v)                 \
+#define stream_ext_u16_le(_s, _v)                     \
     do                                                \
     {                                                 \
         (_v) = (u16) ((_s)->p[1] << 8 | (_s)->p[0]);  \
@@ -166,7 +192,7 @@ typedef struct stream
     } while (0)
 
 /** extract a 32 bit value from stream */
-#define stream_ext_u32_le(_s, _v)                 \
+#define stream_ext_u32_le(_s, _v)                     \
     do                                                \
     {                                                 \
         (_v) = (u32) ((_s)->p[3] << 24 |              \
@@ -186,18 +212,18 @@ typedef struct _player_state_info
 
     int              audio_stream_index;
     int              video_stream_index;
+    double           audioTimeout;
+    double           videoTimeout;
 
     /* LK_TODO delete this after we fix the problem */
     AVFrame         *frame;
     AVPacket        avpkt;
 
+    AVBitStreamFilterContext *bsfc;
+
 } PLAYER_STATE_INFO;
 
-static int xrdpvr_set_video_format(void *channel, uint32_t stream_id);
-static int xrdpvr_set_audio_format(void *channel, uint32_t stream_id);
-static int xrdpvr_send_video_data(void *channel, uint32_t stream_id, uint32_t data_len, uint8_t *data);
-static int xrdpvr_send_audio_data(void *channel, uint32_t stream_id, uint32_t data_len, uint8_t *data);
-static int xrdpvr_create_metadata_file(void *channel, char *filename);
+static int xrdpvr_read_from_client(void *channel, STREAM *s, int bytes, int timeout);
 static int xrdpvr_write_to_client(void *channel, STREAM *s);
 
 #endif /* __XRDPVR_INTERNAL_H__ */

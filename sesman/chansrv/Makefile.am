@@ -1,18 +1,30 @@
-EXTRA_DIST = chansrv.h clipboard.h devredir.h sound.h
+EXTRA_DIST = \
+  chansrv.h \
+  chansrv_fuse.h \
+  clipboard.h \
+  clipboard_common.h \
+  clipboard_file.h \
+  devredir.h \
+  drdynvc.h \
+  rail.h \
+  sound.h \
+  xcommon.h \
+  mlog.h \
+  chansrv_common.h
 
 EXTRA_DEFINES =
 EXTRA_INCLUDES =
 EXTRA_LIBS =
 EXTRA_FLAGS =
 
-if XRDP_SIMPLESOUND
-EXTRA_DEFINES += -DXRDP_SIMPLESOUND
-EXTRA_LIBS += -lpthread -lpulse -lpulse-simple
-endif
-
 if XRDP_FUSE
 EXTRA_DEFINES += -DXRDP_FUSE
 EXTRA_LIBS += -lfuse
+endif
+
+if XRDP_OPUS
+EXTRA_DEFINES += -DXRDP_OPUS
+EXTRA_LIBS += -lopus
 endif
 
 AM_CFLAGS = \
@@ -35,10 +47,15 @@ xrdp_chansrv_SOURCES = \
   clipboard.c \
   clipboard_file.c \
   devredir.c \
+  smartcard.c \
+  smartcard_pcsc.c \
   rail.c \
   xcommon.c \
   drdynvc.c \
-  chansrv_fuse.c
+  chansrv_fuse.c \
+  irp.c \
+  fifo.c \
+  chansrv_common.c
 
 xrdp_chansrv_LDFLAGS = \
   $(EXTRA_FLAGS)
@@ -46,5 +63,5 @@ xrdp_chansrv_LDFLAGS = \
 xrdp_chansrv_LDADD = \
   -L/usr/X11R6/lib \
   $(top_builddir)/common/libcommon.la \
-  -lX11 -lXfixes \
+  -lX11 -lXfixes -lXrandr \
   $(EXTRA_LIBS)

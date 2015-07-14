@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
  */
 
 #include "xrdp.h"
+#include "log.h"
 
 /* 'g_process' is protected by the semaphore 'g_process_sem'.  One thread sets
    g_process and waits for the other to process it */
@@ -38,7 +39,7 @@ xrdp_listen_create_pro_done(struct xrdp_listen *self)
 
     if (self->pro_done_event == 0)
     {
-        g_writeln("Failure creating pro_done_event");
+        log_message(LOG_LEVEL_ERROR,"Failure creating pro_done_event");
     }
 
     return 0;
@@ -59,11 +60,16 @@ xrdp_listen_create(void)
         g_process_sem = tc_sem_create(0);
     }
 
+    /* setting TCP mode now, may change later */
     self->listen_trans = trans_create(TRANS_MODE_TCP, 16, 16);
 
     if (self->listen_trans == 0)
     {
-        g_writeln("xrdp_listen_create: trans_create failed");
+        log_message(LOG_LEVEL_ERROR,"xrdp_listen_create: trans_create failed");
+    }
+    else
+    {
+        self->listen_trans->is_term = g_is_term;
     }
 
     return self;
@@ -163,7 +169,7 @@ xrdp_listen_get_port_address(char *port, int port_bytes,
     *tcp_nodelay = 0 ;
     *tcp_keepalive = 0 ;
 
-    if (fd > 0)
+    if (fd != -1)
     {
         names = list_create();
         names->auto_free = 1;
@@ -181,11 +187,17 @@ xrdp_listen_get_port_address(char *port, int port_bytes,
                     if (g_strcasecmp(val, "port") == 0)
                     {
                         val = (char *)list_get_item(values, index);
-                        error = g_atoi(val);
-
-                        if ((error > 0) && (error < 65000))
+                        if (val[0] == '/')
                         {
                             g_strncpy(port, val, port_bytes - 1);
+                        }
+                        else
+                        {
+                            error = g_atoi(val);
+                            if ((error > 0) && (error < 65000))
+                            {
+                                g_strncpy(port, val, port_bytes - 1);
+                            }
                         }
                     }
 
@@ -198,40 +210,31 @@ xrdp_listen_get_port_address(char *port, int port_bytes,
                     if (g_strcasecmp(val, "fork") == 0)
                     {
                         val = (char *)list_get_item(values, index);
-
-                        if ((g_strcasecmp(val, "yes") == 0) ||
-                                (g_strcasecmp(val, "on") == 0) ||
-                                (g_strcasecmp(val, "true") == 0) ||
-                                (g_atoi(val) != 0))
-                        {
-                            startup_param->fork = 1;
-                        }
+                        startup_param->fork = g_text2bool(val);
                     }
 
                     if (g_strcasecmp(val, "tcp_nodelay") == 0)
                     {
                         val = (char *)list_get_item(values, index);
-
-                        if ((g_strcasecmp(val, "yes") == 0) ||
-                                (g_strcasecmp(val, "on") == 0) ||
-                                (g_strcasecmp(val, "true") == 0) ||
-                                (g_atoi(val) != 0))
-                        {
-                            *tcp_nodelay = 1 ;
-                        }
+                        *tcp_nodelay = g_text2bool(val);
                     }
 
                     if (g_strcasecmp(val, "tcp_keepalive") == 0)
                     {
                         val = (char *)list_get_item(values, index);
+                        *tcp_keepalive = g_text2bool(val);
+                    }
 
-                        if ((g_strcasecmp(val, "yes") == 0) ||
-                                (g_strcasecmp(val, "on") == 0) ||
-                                (g_strcasecmp(val, "true") == 0) ||
-                                (g_atoi(val) != 0))
-                        {
-                            *tcp_keepalive = 1 ;
-                        }
+                    if (g_strcasecmp(val, "tcp_send_buffer_bytes") == 0)
+                    {
+                        val = (char *)list_get_item(values, index);
+                        startup_param->send_buffer_bytes = g_atoi(val);
+                    }
+
+                    if (g_strcasecmp(val, "tcp_recv_buffer_bytes") == 0)
+                    {
+                        val = (char *)list_get_item(values, index);
+                        startup_param->recv_buffer_bytes = g_atoi(val);
                     }
                 }
             }
@@ -239,8 +242,10 @@ xrdp_listen_get_port_address(char *port, int port_bytes,
 
         list_delete(names);
         list_delete(values);
-        g_file_close(fd);
     }
+
+    if (fd != -1)
+        g_file_close(fd);
 
     /* startup_param overrides */
     if (startup_param->port[0] != 0)
@@ -338,6 +343,7 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
     tbus done_obj;
     int tcp_nodelay;
     int tcp_keepalive;
+    int bytes;
 
     self->status = 1;
 
@@ -346,12 +352,20 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
                                      &tcp_nodelay, &tcp_keepalive,
                                      self->startup_params) != 0)
     {
-        g_writeln("xrdp_listen_main_loop: xrdp_listen_get_port failed");
+        log_message(LOG_LEVEL_ERROR,"xrdp_listen_main_loop: xrdp_listen_get_port failed");
         self->status = -1;
         return 1;
     }
 
-    /*Create socket*/
+    if (port[0] == '/')
+    {
+        /* set UDS mode */
+        self->listen_trans->mode = TRANS_MODE_UNIX;
+        /* not valid with UDS */
+        tcp_nodelay = 0;
+    }
+
+    /* Create socket */
     error = trans_listen_address(self->listen_trans, port, address);
 
     if (error == 0)
@@ -360,7 +374,7 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
         {
             if (g_tcp_set_no_delay(self->listen_trans->sck))
             {
-                g_writeln("Error setting tcp_nodelay");
+                log_message(LOG_LEVEL_ERROR,"Error setting tcp_nodelay");
             }
         }
 
@@ -368,7 +382,55 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
         {
             if (g_tcp_set_keepalive(self->listen_trans->sck))
             {
-                g_writeln("Error setting tcp_keepalive");
+                log_message(LOG_LEVEL_ERROR,"Error setting tcp_keepalive");
+            }
+        }
+
+        if (self->startup_params->send_buffer_bytes > 0)
+        {
+            bytes = self->startup_params->send_buffer_bytes;
+            log_message(LOG_LEVEL_INFO, "setting send buffer to %d bytes",
+                        bytes);
+            if (g_sck_set_send_buffer_bytes(self->listen_trans->sck,
+                                            bytes) != 0)
+            {
+                log_message(LOG_LEVEL_ERROR, "error setting send buffer");
+            }
+            else
+            {
+                if (g_sck_get_send_buffer_bytes(self->listen_trans->sck,
+                                                &bytes) != 0)
+                {
+                    log_message(LOG_LEVEL_ERROR, "error getting send buffer");
+                }
+                else
+                {
+                    log_message(LOG_LEVEL_INFO, "send buffer set to %d bytes", bytes);
+                }
+            }
+        }
+
+        if (self->startup_params->recv_buffer_bytes > 0)
+        {
+            bytes = self->startup_params->recv_buffer_bytes;
+            log_message(LOG_LEVEL_INFO, "setting recv buffer to %d bytes",
+                        bytes);
+            if (g_sck_set_recv_buffer_bytes(self->listen_trans->sck,
+                                            bytes) != 0)
+            {
+                log_message(LOG_LEVEL_ERROR, "error setting recv buffer");
+            }
+            else
+            {
+                if (g_sck_get_recv_buffer_bytes(self->listen_trans->sck,
+                                                &bytes) != 0)
+                {
+                    log_message(LOG_LEVEL_ERROR, "error getting recv buffer");
+                }
+                else
+                {
+                    log_message(LOG_LEVEL_INFO, "recv buffer set to %d bytes", bytes);
+                }
             }
         }
 
@@ -388,12 +450,12 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
             robjs[robjs_count++] = done_obj;
             timeout = -1;
 
-            if (self->listen_trans != 0)
+            /* if (self->listen_trans != 0) */
             {
                 if (trans_get_wait_objs(self->listen_trans, robjs,
                                         &robjs_count) != 0)
                 {
-                    g_writeln("Listening socket is in wrong state we "
+                    log_message(LOG_LEVEL_ERROR,"Listening socket is in wrong state we "
                               "terminate listener");
                     break;
                 }
@@ -474,7 +536,7 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
     }
     else
     {
-        g_writeln("xrdp_listen_main_loop: listen error, possible port "
+        log_message(LOG_LEVEL_ERROR,"xrdp_listen_main_loop: listen error, possible port "
                   "already in use");
     }
 

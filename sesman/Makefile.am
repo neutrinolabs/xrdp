@@ -14,6 +14,10 @@ if SESMAN_NOPAM
 AUTH_C = verify_user.c
 AUTH_LIB = -lcrypt
 else
+if SESMAN_BSD
+AUTH_C = verify_user_bsd.c
+AUTH_LIB = 
+else
 if SESMAN_PAMUSERPASS
 AUTH_C = verify_user_pam_userpass.c
 AUTH_LIB = -lpam -lpam_userpass
@@ -24,6 +28,7 @@ AUTH_LIB = -lkrb5
 else
 AUTH_C = verify_user_pam.c
 AUTH_LIB = -lpam
+endif
 endif
 endif
 endif

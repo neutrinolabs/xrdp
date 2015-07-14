@@ -19,6 +19,7 @@
 #ifndef _RAIL_H_
 #define _RAIL_H_
 
+#include "../../common/rail.h"
 #include "arch.h"
 #include "parse.h"
 
@@ -31,5 +32,6 @@ rail_data_in(struct stream* s, int chan_id, int chan_flags,
              int length, int total_length);
 int APP_CC
 rail_xevent(void* xevent);
+int APP_CC rail_request_title(int window_id);
 
 #endif

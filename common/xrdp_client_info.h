@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,15 @@
 
 #if !defined(XRDP_CLIENT_INFO_H)
 #define XRDP_CLIENT_INFO_H
+
+struct monitor_info
+{
+  int left;
+  int top;
+  int right;
+  int bottom;
+  int is_primary;
+};
 
 struct xrdp_client_info
 {
@@ -69,6 +78,7 @@ struct xrdp_client_info
   int offscreen_cache_size;
   int offscreen_cache_entries;
   int rfx;
+
   /* CAPSETTYPE_RAIL */
   int rail_support_level;
   /* CAPSETTYPE_WINDOW */
@@ -86,6 +96,52 @@ struct xrdp_client_info
   int jpeg_prop_len;
   char jpeg_prop[64];
   int v3_codec_id;
+  int rfx_min_pixel;
+  char orders[32];
+  int order_flags_ex;
+  int use_bulk_comp;
+  int pointer_flags; /* 0 color, 1 new, 2 no new */
+  int use_fast_path;
+  int require_credentials; /* when true, credentials *must* be passed on cmd line */
+  char client_addr[256];
+  char client_port[256];
+
+  int security_layer; /* 0 = rdp, 1 = tls , 2 = hybrid */
+  int multimon; /* 0 = deny , 1 = allow */
+  int monitorCount; /* number of monitors detected (max = 16) */
+  struct monitor_info minfo[16]; /* client monitor data */
+
+  int keyboard_type;
+  int keyboard_subtype;
+
+  int png_codec_id;
+  int png_prop_len;
+  char png_prop[64];
+  int vendor_flags[4];
+  int mcs_connection_type;
+  int mcs_early_capability_flags;
+
+  int max_fastpath_frag_bytes;
+  int capture_code;
+  int capture_format;
+
+  char certificate[1024];
+  char key_file[1024];
+
+  /* X11 keyboard layout - inferred from keyboard type/subtype */
+  char model[16];
+  char layout[16];
+  char variant[16];
+  char options[256];
+
+  /* codec */
+  int h264_codec_id;
+  int h264_prop_len;
+  char h264_prop[64];
+
+  int use_frame_acks;
+  int max_unacknowledged_frame_count;
+
 };
 
 #endif

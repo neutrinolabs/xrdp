@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2014
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,9 +26,10 @@
 #include "parse.h"
 #include "trans.h"
 #include "list.h"
+#include "list16.h"
 #include "libxrdpinc.h"
-#include "xrdp_types.h"
 #include "xrdp_constants.h"
+#include "xrdp_types.h"
 #include "defines.h"
 #include "os_calls.h"
 #include "ssl_calls.h"
@@ -41,7 +42,7 @@
 long APP_CC
 g_xrdp_sync(long (*sync_func)(long param1, long param2), long sync_param1,
             long sync_param2);
-int APP_CC
+int DEFAULT_CC
 g_is_term(void);
 void APP_CC
 g_set_term(int in_val);
@@ -108,6 +109,8 @@ xrdp_wm_send_bitmap(struct xrdp_wm* self, struct xrdp_bitmap* bitmap,
                     int x, int y, int cx, int cy);
 int APP_CC
 xrdp_wm_set_pointer(struct xrdp_wm* self, int cache_idx);
+unsigned int APP_CC
+xrdp_wm_htoi (const char *ptr);
 int APP_CC
 xrdp_wm_set_focused(struct xrdp_wm* self, struct xrdp_bitmap* wnd);
 int APP_CC
@@ -126,13 +129,16 @@ int APP_CC
 xrdp_wm_pu(struct xrdp_wm* self, struct xrdp_bitmap* control);
 int APP_CC
 xrdp_wm_send_pointer(struct xrdp_wm* self, int cache_idx,
-                     char* data, char* mask, int x, int y);
+                     char* data, char* mask, int x, int y, int bpp);
 int APP_CC
-xrdp_wm_pointer(struct xrdp_wm* self, char* data, char* mask, int x, int y);
+xrdp_wm_pointer(struct xrdp_wm* self, char* data, char* mask, int x, int y,
+                int bpp);
 int
 callback(long id, int msg, long param1, long param2, long param3, long param4);
 int APP_CC
 xrdp_wm_delete_all_childs(struct xrdp_wm* self);
+int APP_CC
+xrdp_wm_show_log(struct xrdp_wm *self);
 int APP_CC
 xrdp_wm_log_msg(struct xrdp_wm* self, char* msg);
 int APP_CC
@@ -203,15 +209,14 @@ xrdp_bitmap_copy_box(struct xrdp_bitmap* self,
                      struct xrdp_bitmap* dest,
                      int x, int y, int cx, int cy);
 int APP_CC
+xrdp_bitmap_hash_crc(struct xrdp_bitmap *self);
+int APP_CC
 xrdp_bitmap_copy_box_with_crc(struct xrdp_bitmap* self,
                               struct xrdp_bitmap* dest,
                               int x, int y, int cx, int cy);
 int APP_CC
 xrdp_bitmap_compare(struct xrdp_bitmap* self,
                     struct xrdp_bitmap* b);
-int APP_CC
-xrdp_bitmap_compare_with_crc(struct xrdp_bitmap* self,
-                             struct xrdp_bitmap* b);
 int APP_CC
 xrdp_bitmap_invalidate(struct xrdp_bitmap* self, struct xrdp_rect* rect);
 int APP_CC
@@ -282,6 +287,20 @@ xrdp_painter_copy(struct xrdp_painter* self,
                   int x, int y, int cx, int cy,
                   int srcx, int srcy);
 int APP_CC
+xrdp_painter_composite(struct xrdp_painter* self,
+                       struct xrdp_bitmap* src,
+                       int srcformat,
+                       int srcwidth,
+                       int srcrepeat,
+                       struct xrdp_bitmap* dst,
+                       int* srctransform,
+                       int mskflags,
+                       struct xrdp_bitmap* msk,
+                       int mskformat, int mskwidth, int mskrepeat, int op,
+                       int srcx, int srcy, int mskx, int msky,
+                       int dstx, int dsty, int width, int height,
+                       int dstformat);
+int APP_CC
 xrdp_painter_line(struct xrdp_painter* self,
                   struct xrdp_bitmap* bitmap,
                   int x1, int y1, int x2, int y2);
@@ -334,6 +353,8 @@ get_keymaps(int keylayout, struct xrdp_keymap* keymap);
 /* xrdp_login_wnd.c */
 int APP_CC
 xrdp_login_wnd_create(struct xrdp_wm* self);
+int APP_CC
+load_xrdp_config(struct xrdp_config *config, int bpp);
 
 /* xrdp_bitmap_compress.c */
 int APP_CC
@@ -357,6 +378,8 @@ xrdp_mm_get_wait_objs(struct xrdp_mm* self,
                       tbus* read_objs, int* rcount,
                       tbus* write_objs, int* wcount, int* timeout);
 int APP_CC
+xrdp_mm_check_chan(struct xrdp_mm *self);
+int APP_CC
 xrdp_mm_check_wait_objs(struct xrdp_mm* self);
 int DEFAULT_CC
 server_begin_update(struct xrdp_mod* mod);
@@ -373,8 +396,26 @@ int DEFAULT_CC
 server_paint_rect(struct xrdp_mod* mod, int x, int y, int cx, int cy,
                   char* data, int width, int height, int srcx, int srcy);
 int DEFAULT_CC
+server_paint_rect_bpp(struct xrdp_mod* mod, int x, int y, int cx, int cy,
+                      char* data, int width, int height, int srcx, int srcy,
+                      int bpp);
+int DEFAULT_CC
+server_composite(struct xrdp_mod* mod, int srcidx, int srcformat, int srcwidth,
+                 int srcrepeat, int* srctransform, int mskflags, int mskidx,
+                 int mskformat, int mskwidth, int mskrepeat, int op,
+                 int srcx, int srcy, int mskx, int msky,
+                 int dstx, int dsty, int width, int height, int dstformat);
+int DEFAULT_CC
+server_paint_rects(struct xrdp_mod* mod, int num_drects, short *drects,
+                   int num_crects, short *crects,
+                   char *data, int width, int height,
+                   int flags, int frame_id);
+int DEFAULT_CC
 server_set_pointer(struct xrdp_mod* mod, int x, int y,
                    char* data, char* mask);
+int DEFAULT_CC
+server_set_pointer_ex(struct xrdp_mod* mod, int x, int y,
+                      char* data, char* mask, int bpp);
 int DEFAULT_CC
 server_palette(struct xrdp_mod* mod, int* palette);
 int DEFAULT_CC
@@ -430,6 +471,9 @@ int DEFAULT_CC
 server_create_os_surface(struct xrdp_mod* mod, int id,
                          int width, int height);
 int DEFAULT_CC
+server_create_os_surface_bpp(struct xrdp_mod* mod, int id,
+                             int width, int height, int bpp);
+int DEFAULT_CC
 server_switch_os_surface(struct xrdp_mod* mod, int id);
 int DEFAULT_CC
 server_delete_os_surface(struct xrdp_mod* mod, int id);
@@ -464,3 +508,7 @@ int DEFAULT_CC
 server_monitored_desktop(struct xrdp_mod* mod,
                          struct rail_monitored_desktop_order* mdo,
                          int flags);
+int DEFAULT_CC
+server_add_char_alpha(struct xrdp_mod* mod, int font, int charactor,
+                      int offset, int baseline,
+                      int width, int height, char* data);

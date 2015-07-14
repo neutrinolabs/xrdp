@@ -3,7 +3,7 @@
  * Miscellaneous protocol constants
  *
  * Copyright (C) Matthew Chapman 1999-2008
- * Copyright (C) Jay Sorg 2004-2012
+ * Copyright (C) Jay Sorg 2004-2014
  * Copyright (C) Kevin Zhou 2012
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,11 +25,35 @@
 /* TCP port for Remote Desktop Protocol */
 #define TCP_PORT_RDP                   3389
 
-#define ISO_PDU_CR                     0xE0 /* Connection Request */
-#define ISO_PDU_CC                     0xD0 /* Connection Confirm */
+#define ISO_PDU_CR                     0xE0 /* X.224 Connection Request */
+#define ISO_PDU_CC                     0xD0 /* X.224 Connection Confirm */
 #define ISO_PDU_DR                     0x80 /* Disconnect Request */
 #define ISO_PDU_DT                     0xF0 /* Data */
 #define ISO_PDU_ER                     0x70 /* Error */
+
+
+/* RDP Security Negotiation codes */
+#define RDP_NEG_REQ                    0x01
+#define RDP_NEG_RSP                    0x02
+#define RDP_NEG_FAILURE                0x03
+#define RDP_CORRELATION_INFO           0x06
+/* Protocol types codes */
+#define PROTOCOL_RDP                   0x0
+#define PROTOCOL_SSL                   0x1
+#define PROTOCOL_HYBRID                0x2
+#define PROTOCOL_HYBRID_EX             0x8
+/* Negotiation packet flags */
+#define EXTENDED_CLIENT_DATA_SUPPORTED 0x1
+#define DYNVC_GFX_PROTOCOL_SUPPORTED   0x2
+#define RDP_NEGRSP_RESERVED            0x4
+/* Failure Codes */
+#define SSL_REQUIRED_BY_SERVER          0x1
+#define SSL_NOT_ALLOWED_BY_SERVER       0x2
+#define SSL_CERT_NOT_ON_SERVER          0x3
+#define INCONSISTENT_FLAGS              0x4
+#define HYBRID_REQUIRED_BY_SERVER       0x5
+#define SSL_WITH_USER_AUTH_REQUIRED_BY_SERVER   0x6
+
 
 /* MCS PDU codes */
 #define MCS_EDRQ                       1  /* Erect Domain Request */
@@ -72,6 +96,7 @@
 #define SEC_TAG_CLI_CRYPT              0xc002
 #define SEC_TAG_CLI_CHANNELS           0xc003
 #define SEC_TAG_CLI_4                  0xc004
+#define SEC_TAG_CLI_MONITOR            0xc005
 
 #define SEC_TAG_PUBKEY                 0x0006
 #define SEC_TAG_KEYSIG                 0x0008
@@ -126,6 +151,7 @@
 #define RDP_POINTER_MOVE               3
 #define RDP_POINTER_COLOR              6
 #define RDP_POINTER_CACHED             7
+#define RDP_POINTER_POINTER            8
 
 #define RDP_NULL_POINTER               0
 #define RDP_DEFAULT_POINTER            0x7F00
@@ -135,6 +161,7 @@
 #define RDP_INPUT_VIRTKEY              2
 #define RDP_INPUT_SCANCODE             4
 #define RDP_INPUT_MOUSE                0x8001
+#define RDP_INPUT_MOUSEX               0x8002
 
 /* Device flags */
 #define KBD_FLAG_RIGHT                 0x0001
@@ -415,6 +442,7 @@
 #define RDP_ORDER_TRIBLT    14
 #define RDP_ORDER_POLYLINE  22
 #define RDP_ORDER_TEXT2     27
+#define RDP_ORDER_COMPOSITE 37 /* 0x25 */
 
 #define RDP_ORDER_RAW_BMPCACHE  0
 #define RDP_ORDER_COLCACHE      1
@@ -429,6 +457,7 @@
    Extended order support flags. */
 #define XR_ORDERFLAGS_EX_CACHE_BITMAP_REV3_SUPPORT   0x0002
 #define XR_ORDERFLAGS_EX_ALTSEC_FRAME_MARKER_SUPPORT 0x0004
+#define XR_ORDERFLAGS_EX_OFFSCREEN_COMPOSITE_SUPPORT 0x0100
 
 /* drawable types */
 #define WND_TYPE_BITMAP  0
@@ -462,6 +491,10 @@
 #define WM_BUTTON4DOWN 108
 #define WM_BUTTON5UP   109
 #define WM_BUTTON5DOWN 110
+#define WM_BUTTON6UP   111
+#define WM_BUTTON6DOWN 112
+#define WM_BUTTON7UP   113
+#define WM_BUTTON7DOWN 114
 #define WM_INVALIDATE  200
 
 #define CB_ITEMCHANGE  300
@@ -516,9 +549,17 @@
 #define XR_CODEC_GUID_REMOTEFX \
   "\x12\x2F\x77\x76\x72\xBD\x63\x44\xAF\xB3\xB7\x3C\x9C\x6F\x78\x86"
 
-/* CODEC_GUID_JPEG 0x430C9EED1BAF4CE6869ACB8B37B66237*/
+/* CODEC_GUID_JPEG     0x1BAF4CE6 9EED 430C 869ACB8B37B66237 */
 #define XR_CODEC_GUID_JPEG \
   "\xE6\x4C\xAF\x1B\xED\x9E\x0C\x43\x86\x9A\xCB\x8B\x37\xB6\x62\x37"
+
+/* CODEC_GUID_PNG      0xOE0C858D 28E0 45DB ADAA0F83E57CC560 */
+#define XR_CODEC_GUID_PNG \
+  "\x8D\x85\x0C\x0E\xE0\x28\xDB\x45\xAD\xAA\x0F\x83\xE5\x7C\xC5\x60"
+
+/* MFVideoFormat_H264 ({34363248-0000-0010-8000-00AA00389B71}) */
+#define XR_CODEC_GUID_H264 \
+  "\x48\x32\x36\x34\x00\x00\x10\x00\x80\x00\x00\xAA\x00\x38\x9B\x71"
 
 #define RDP_CAPSET_SURFCMDS       0x1c
 #define RDP_CAPLEN_SURFCMDS       0x0c
@@ -529,6 +570,24 @@
 #define RDP_CAPSET_LPOINTER       0x27
 #define RDP_CAPLEN_LPOINTER       0x06
 
+/* fastpath input */
+#define FASTPATH_INPUT_SECURE_CHECKSUM 0x1
+#define FASTPATH_INPUT_ENCRYPTED       0x2
+
+#define FASTPATH_INPUT_ACTION_FASTPATH 0x0
+#define FASTPATH_INPUT_ACTION_X224     0x3
+
+#define FASTPATH_INPUT_EVENT_SCANCODE  0x0
+#define FASTPATH_INPUT_EVENT_MOUSE     0x1
+#define FASTPATH_INPUT_EVENT_MOUSEX    0x2
+#define FASTPATH_INPUT_EVENT_SYNC      0x3
+#define FASTPATH_INPUT_EVENT_UNICODE   0x4
+
+#define FASTPATH_INPUT_KBDFLAGS_RELEASE   0x01
+#define FASTPATH_INPUT_KBDFLAGS_EXTENDED  0x02
+
+
+/* fastpath output */
 #define FASTPATH_OUTPUT_ACTION_FASTPATH   0x0
 #define FASTPATH_OUTPUT_ACTION_X224       0x3
 
@@ -557,5 +616,9 @@
 #define CMDTYPE_SET_SURFACE_BITS       0x0001
 #define CMDTYPE_FRAME_MARKER           0x0004
 #define CMDTYPE_STREAM_SURFACE_BITS    0x0006
+
+#define XRDP_MAX_BITMAP_CACHE_ID  3
+#define XRDP_MAX_BITMAP_CACHE_IDX 2000
+#define XRDP_BITMAP_CACHE_ENTRIES 2048
 
 #endif

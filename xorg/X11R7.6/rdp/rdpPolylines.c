@@ -1,5 +1,5 @@
 /*
-Copyright 2005-2012 Jay Sorg
+Copyright 2005-2013 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -160,13 +160,13 @@ rdpPolylines(DrawablePtr pDrawable, GCPtr pGC, int mode,
         pDstPixmap = (PixmapPtr)pDrawable;
         pDstPriv = GETPIXPRIV(pDstPixmap);
 
-        if (XRDP_IS_OS(pDstPriv))
+        if (xrdp_is_os(pDstPixmap, pDstPriv))
         {
             post_process = 1;
 
             if (g_do_dirty_os)
             {
-                LLOGLN(10, ("rdpPolylines: gettig dirty"));
+                LLOGLN(10, ("rdpPolylines: getting dirty"));
                 pDstPriv->is_dirty = 1;
                 pDirtyPriv = pDstPriv;
                 dirty_type = RDI_IMGLL;
@@ -192,7 +192,7 @@ rdpPolylines(DrawablePtr pDrawable, GCPtr pGC, int mode,
 
                 if (g_do_dirty_ons)
                 {
-                    LLOGLN(0, ("rdpPolylines: gettig dirty"));
+                    LLOGLN(10, ("rdpPolylines: getting dirty"));
                     g_screenPriv.is_dirty = 1;
                     pDirtyPriv = &g_screenPriv;
                     dirty_type = RDI_IMGLL;
