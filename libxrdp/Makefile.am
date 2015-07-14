@@ -1,4 +1,4 @@
-EXTRA_DIST = libxrdp.h libxrdpinc.h
+EXTRA_DIST = libxrdp.h libxrdpinc.h xrdp_orders_rail.h
 
 EXTRA_DEFINES =
 EXTRA_INCLUDES =
