@@ -110,9 +110,13 @@ lib_data_in(struct trans *trans)
                 g_writeln("lib_data_in: bad size");
                 return 1;
             }
-            trans->header_size = len + 8;
-            trans->extra_flags = 2;
-            break;
+            if (len > 0)
+            {
+                trans->header_size = len + 8;
+                trans->extra_flags = 2;
+                break;
+            }
+            /* fall through */
         case 2:
             s->p = s->data;
             if (lib_mod_process_message(self, s) != 0)
