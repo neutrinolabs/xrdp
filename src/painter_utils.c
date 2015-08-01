@@ -72,15 +72,52 @@ bitmap_get_ptr(struct painter_bitmap *bitmap, int x, int y)
 
 /*****************************************************************************/
 static int
-bitmap_get_pixel(struct painter_bitmap *dst, int x, int y)
+bitmap_get_pixel(struct painter_bitmap *bitmap, int x, int y)
 {
+    char *ptr;
+
+    ptr = bitmap_get_ptr(bitmap, x, y);
+    switch (bitmap->format)
+    {
+        case PT_FORMAT_a8b8g8r8:
+            return *((unsigned int *) ptr);
+        case PT_FORMAT_a8r8g8b8:
+            return *((unsigned int *) ptr);
+        case PT_FORMAT_r5g6b5:
+            return *((unsigned short *) ptr);
+        case PT_FORMAT_a1r5g5b5:
+            return *((unsigned short *) ptr);
+        case PT_FORMAT_r3g3b2:
+            return *((unsigned char *) ptr);
+    }
     return 0;
 }
 
 /*****************************************************************************/
 static int
-bitmap_set_pixel(struct painter_bitmap *dst, int x, int y, int pixel)
+bitmap_set_pixel(struct painter_bitmap *bitmap, int x, int y, int pixel)
 {
+    char *ptr;
+
+    ptr = bitmap_get_ptr(bitmap, x, y);
+    switch (bitmap->format)
+    {
+        case PT_FORMAT_a8b8g8r8:
+            *((unsigned int *) ptr) = pixel;
+            break;
+        case PT_FORMAT_a8r8g8b8:
+            *((unsigned int *) ptr) = pixel;
+            break;
+        case PT_FORMAT_r5g6b5:
+            *((unsigned short *) ptr) = pixel;
+            break;
+        case PT_FORMAT_a1r5g5b5:
+            *((unsigned short *) ptr) = pixel;
+            break;
+        case PT_FORMAT_r3g3b2:
+            *((unsigned char *) ptr) = pixel;
+            break;
+    }
     return 0;
 }
 
@@ -100,11 +137,20 @@ pixel_convert(int pixel, int src_format, int dst_format, int *palette)
     }
     switch (src_format)
     {
+        case PT_FORMAT_a8b8g8r8:
+            SPLIT_a8b8g8r8(pixel, a, r, g, b);
+            break;
+        case PT_FORMAT_a8r8g8b8:
+            SPLIT_a8r8g8b8(pixel, a, r, g, b);
+            break;
         case PT_FORMAT_a1r5g5b5:
             SPLIT_a1r5g5b5(pixel, a, r, g, b);
             break;
         case PT_FORMAT_r5g6b5:
             SPLIT_r5g6b5(pixel, a, r, g, b);
+            break;
+        case PT_FORMAT_r3g3b2:
+            SPLIT_r3g3b2(pixel, a, r, g, b);
             break;
     }
     rv = 0;
@@ -122,9 +168,9 @@ int
 painter_set_pixel(struct painter *painter, struct painter_bitmap *dst,
                   int x, int y, int pixel, int pixel_format)
 {
-    if (painter->clip_valid == 0 ||
-        (x >= painter->clip.x1 && x < painter->clip.x2 &&
-         y >= painter->clip.y1 && y < painter->clip.y2))
+    if ((painter->clip_valid == 0) ||
+        ((x >= painter->clip.x1) && (x < painter->clip.x2) &&
+         (y >= painter->clip.y1) && (y < painter->clip.y2)))
     {
         if ((x >= 0) && (x < dst->width) &&
             (y >= 0) && (y < dst->height))

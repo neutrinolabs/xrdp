@@ -19,6 +19,22 @@
 #if !defined(__PAINTER_UTILS_H)
 #define __PAINTER_UTILS_H
 
+#define SPLIT_a8r8g8b8(c, a, r, g, b) \
+do { \
+    a = (c & 0xff000000) >> 24; \
+    r = (c & 0x00ff0000) >> 16; \
+    g = (c & 0x0000ff00) >> 8; \
+    b = (c & 0x000000ff) >> 0; \
+} while (0)
+
+#define SPLIT_a8b8g8r8(c, a, r, g, b) \
+do { \
+    a = (c & 0xff000000) >> 24; \
+    b = (c & 0x00ff0000) >> 16; \
+    g = (c & 0x0000ff00) >> 8; \
+    r = (c & 0x000000ff) >> 0; \
+} while (0)
+
 #define SPLIT_a1r5g5b5(c, a, r, g, b) \
 do { \
     a = (c & 0x8000) ? 0xff : 0; \
@@ -33,6 +49,14 @@ do { \
     r = ((c >> 8) & 0xf8) | ((c >> 13) & 0x7); \
     g = ((c >> 3) & 0xfc) | ((c >>  9) & 0x3); \
     b = ((c << 3) & 0xf8) | ((c >>  2) & 0x7); \
+} while (0)
+
+#define SPLIT_r3g3b2(c, a, r, g, b) \
+do { \
+    a = 0xff; \
+    r = 0; \
+    g = 0; \
+    b = 0; \
 } while (0)
 
 struct painter_rect
