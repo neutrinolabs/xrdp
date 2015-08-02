@@ -93,12 +93,12 @@ painter_set_rop(void *handle, int rop)
 
 /*****************************************************************************/
 int
-painter_set_fill_mode(void *handle, int mode)
+painter_set_pattern_mode(void *handle, int mode)
 {
     struct painter *pt;
 
     pt = (struct painter *) handle;
-    pt->fill_mode = mode;
+    pt->pattern_mode = mode;
     return PT_ERROR_NONE;
 }
 
@@ -166,6 +166,36 @@ painter_fill_pattern(void *handle, struct painter_bitmap *dst,
                      struct painter_bitmap *pat, int patx, int paty,
                      int x, int y, int cx, int cy)
 {
+    int index;
+    int jndex;
+    int pixel;
+    int lx;
+    int ly;
+    struct painter *pt;
+
+    pt = (struct painter *) handle;
+    for (jndex = 0; jndex < cy; jndex++)
+    {
+        for (index = 0; index < cx; index++)
+        {
+            lx = (patx + index + pt->origin_x) % pat->width;
+            ly = (paty + jndex + pt->origin_y) % pat->height;
+            pixel = bitmap_get_pixel(pat, lx, ly);
+            if (pixel != 0)
+            {
+                painter_set_pixel(pt, dst, x + index, y + jndex,
+                                  pt->fgcolor, dst->format);
+            }
+            else
+            {
+                if (pt->pattern_mode == PT_PATTERN_MODE_OPAQUE)
+                {
+                    painter_set_pixel(pt, dst, x + index, y + jndex,
+                                      pt->bgcolor, dst->format);
+                }
+            }
+        }
+    }
     return PT_ERROR_NONE;
 }
 
@@ -175,14 +205,125 @@ painter_copy(void *handle, struct painter_bitmap *dst,
              int x, int y, int cx, int cy,
              struct painter_bitmap *src, int srcx, int srcy)
 {
+    int index;
+    int jndex;
+    int pixel;
+    struct painter *pt;
+
+    pt = (struct painter *) handle;
+    if ((srcy < y) || ((srcy == y) && (srcx < x))) /* straight right or down */
+    {
+        for (jndex = cy - 1; jndex >= 0; jndex--)
+        {
+            for (index = cx - 1; index >= 0; index--)
+            {
+                pixel = painter_get_pixel(pt, src, srcx + index,
+                                          srcy + jndex);
+                painter_set_pixel(pt, dst, x + index, y + jndex,
+                                  pixel, src->format);
+            }
+        }
+    }
+    else
+    {
+        for (jndex = 0; jndex < cy; jndex++)
+        {
+            for (index = 0; index < cx; index++)
+            {
+                pixel = painter_get_pixel(pt, src, srcx + index,
+                                          srcy + jndex);
+                painter_set_pixel(pt, dst, x + index, y + jndex,
+                                  pixel, src->format);
+            }
+        }
+    }
     return PT_ERROR_NONE;
 }
 
 /*****************************************************************************/
+/* Bresenham's line drawing algorithm */
 int
 painter_line(void *handle, struct painter_bitmap *dst,
              int x1, int y1, int x2, int y2, int width, int flags)
 {
+    int dx;
+    int dy;
+    int incx;
+    int incy;
+    int dpr;
+    int dpru;
+    int p;
+    struct painter *pt;
+
+    pt = (struct painter *) handle;
+    if (x1 > x2)
+    {
+        dx = x1 - x2;
+        incx = -1;
+    }
+    else
+    {
+        dx = x2 - x1;
+        incx = 1;
+    }
+    if (y1 > y2)
+    {
+        dy = y1 - y2;
+        incy = -1;
+    }
+    else
+    {
+        dy = y2 - y1;
+        incy = 1;
+    }
+    if (dx >= dy)
+    {
+        dpr = dy << 1;
+        dpru = dpr - (dx << 1);
+        p = dpr - dx;
+        for (; dx >= 0; dx--)
+        {
+            if (x1 != x2 || y1 != y2)
+            {
+                painter_set_pixel(pt, dst, x1, y1, pt->fgcolor, dst->format);
+            }
+            if (p > 0)
+            {
+                x1 += incx;
+                y1 += incy;
+                p += dpru;
+            }
+            else
+            {
+                x1 += incx;
+                p += dpr;
+            }
+        }
+    }
+    else
+    {
+        dpr = dx << 1;
+        dpru = dpr - (dy << 1);
+        p = dpr - dy;
+        for (; dy >= 0; dy--)
+        {
+            if (x1 != x2 || y1 != y2)
+            {
+                painter_set_pixel(pt, dst, x1, y1, pt->fgcolor, dst->format);
+            }
+            if (p > 0)
+            {
+                x1 += incx;
+                y1 += incy;
+                p += dpru;
+            }
+            else
+            {
+                y1 += incy;
+                p += dpr;
+            }
+        }
+    }
     return PT_ERROR_NONE;
 }
 

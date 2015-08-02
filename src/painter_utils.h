@@ -19,44 +19,52 @@
 #if !defined(__PAINTER_UTILS_H)
 #define __PAINTER_UTILS_H
 
-#define SPLIT_a8r8g8b8(c, a, r, g, b) \
+#define SPLIT_a8r8g8b8(_c, _a, _r, _g, _b) \
 do { \
-    a = (c & 0xff000000) >> 24; \
-    r = (c & 0x00ff0000) >> 16; \
-    g = (c & 0x0000ff00) >> 8; \
-    b = (c & 0x000000ff) >> 0; \
+    _a = ((_c) & 0xff000000) >> 24; \
+    _r = ((_c) & 0x00ff0000) >> 16; \
+    _g = ((_c) & 0x0000ff00) >> 8; \
+    _b = ((_c) & 0x000000ff) >> 0; \
 } while (0)
 
-#define SPLIT_a8b8g8r8(c, a, r, g, b) \
+#define SPLIT_a8b8g8r8(_c, _a, _r, _g, _b) \
 do { \
-    a = (c & 0xff000000) >> 24; \
-    b = (c & 0x00ff0000) >> 16; \
-    g = (c & 0x0000ff00) >> 8; \
-    r = (c & 0x000000ff) >> 0; \
+    _a = ((_c) & 0xff000000) >> 24; \
+    _b = ((_c) & 0x00ff0000) >> 16; \
+    _g = ((_c) & 0x0000ff00) >> 8; \
+    _r = ((_c) & 0x000000ff) >> 0; \
 } while (0)
 
-#define SPLIT_a1r5g5b5(c, a, r, g, b) \
+#define SPLIT_a1r5g5b5(_c, _a, _r, _g, _b) \
 do { \
-    a = (c & 0x8000) ? 0xff : 0; \
-    r = ((c >> 7) & 0xf8) | ((c >> 12) & 0x7); \
-    g = ((c >> 2) & 0xf8) | ((c >>  8) & 0x7); \
-    b = ((c << 3) & 0xf8) | ((c >>  2) & 0x7); \
+    _a = (((_c) >> 15) & 1) * 0xff; \
+    _r = (((_c) >> 7) & 0xf8) | (((_c) >> 12) & 0x7); \
+    _g = (((_c) >> 2) & 0xf8) | (((_c) >>  8) & 0x7); \
+    _b = (((_c) << 3) & 0xf8) | (((_c) >>  2) & 0x7); \
 } while (0)
 
-#define SPLIT_r5g6b5(c, a, r, g, b) \
+#define SPLIT_r5g6b5(_c, _a, _r, _g, _b) \
 do { \
-    a = 0xff; \
-    r = ((c >> 8) & 0xf8) | ((c >> 13) & 0x7); \
-    g = ((c >> 3) & 0xfc) | ((c >>  9) & 0x3); \
-    b = ((c << 3) & 0xf8) | ((c >>  2) & 0x7); \
+    _a = 0xff; \
+    _r = (((_c) >> 8) & 0xf8) | (((_c) >> 13) & 0x7); \
+    _g = (((_c) >> 3) & 0xfc) | (((_c) >>  9) & 0x3); \
+    _b = (((_c) << 3) & 0xf8) | (((_c) >>  2) & 0x7); \
 } while (0)
 
-#define SPLIT_r3g3b2(c, a, r, g, b) \
+#define SPLIT_r3g3b2(_c, _a, _r, _g, _b) \
 do { \
-    a = 0xff; \
-    r = 0; \
-    g = 0; \
-    b = 0; \
+    _a = 0xff; \
+    _r = 0; \
+    _g = 0; \
+    _b = 0; \
+} while (0)
+
+#define MAKE_a8r8g8b8(_c, _a, _r, _g, _b) \
+do { \
+    _c = ((_a) & 0xff) << 24 | \
+         ((_r) & 0xff) << 16 | \
+         ((_g) & 0xff) <<  8 | \
+         ((_b) & 0xff) <<  0; \
 } while (0)
 
 struct painter_rect
@@ -72,7 +80,7 @@ struct painter
     int rop;
     int fgcolor;
     int bgcolor;
-    int fill_mode;
+    int pattern_mode;
     int clip_valid;
     struct painter_rect clip;
     int origin_x;
@@ -83,7 +91,14 @@ struct painter
 int
 painter_rop(int rop, int src, int dst);
 int
+painter_get_pixel(struct painter *painter, struct painter_bitmap *bitmap,
+                  int x, int y);
+int
 painter_set_pixel(struct painter *painter, struct painter_bitmap *dst,
                   int x, int y, int pixel, int pixel_format);
+int
+bitmap_get_pixel(struct painter_bitmap *bitmap, int x, int y);
+int
+bitmap_set_pixel(struct painter_bitmap *bitmap, int x, int y, int pixel);
 
 #endif

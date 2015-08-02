@@ -30,6 +30,11 @@
 #define PT_FORMAT_r3g3b2 \
 ((8 << 24) | (2 << 16) | (0 << 12) | (3 << 8) | (3 << 4) | 2)
 
+#define PT_FORMAT_c1 \
+((1 << 24) | (4 << 16) | (0 << 12) | (0 << 8) | (0 << 4) | 0)
+#define PT_FORMAT_c8 \
+((8 << 24) | (4 << 16) | (0 << 12) | (0 << 8) | (0 << 4) | 0)
+
 struct painter_bitmap
 {
     int format;
@@ -43,12 +48,15 @@ struct painter_bitmap
 #define PT_ERROR_OUT_OF_MEM  1
 #define PT_ERROR_PARAM       2
 
+#define PT_PATTERN_MODE_NORMAL 0
+#define PT_PATTERN_MODE_OPAQUE 1
+
 #define PT_LINE_FLAGS_NONE 0
 
                          /* reverse  Windows     X11 */
                          /* polish */
 #define PT_ROP_0    0x00 /* 0        BLACKNESS   GXclear        */
-#define PT_ROP_DSon 0x11 /* Dson     NOTSRCERASE GXnor          */
+#define PT_ROP_DSon 0x11 /* DSon     NOTSRCERASE GXnor          */
 #define PT_ROP_DSna 0x22 /* DSna                 GXandInverted  */
 #define PT_ROP_Sn   0x33 /* Sn       NOTSRCCOPY  GXcopyInverted */
 #define PT_ROP_SDna 0x44 /* SDna     SRCERASE    GXandReverse   */
@@ -75,7 +83,7 @@ painter_set_bgcolor(void *handle, int color);
 int
 painter_set_rop(void *handle, int rop);
 int
-painter_set_fill_mode(void *handle, int mode);
+painter_set_pattern_mode(void *handle, int mode);
 int
 painter_set_pattern_origin(void *handle, int x, int y);
 int

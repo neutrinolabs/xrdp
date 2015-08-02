@@ -55,14 +55,24 @@ char *
 bitmap_get_ptr(struct painter_bitmap *bitmap, int x, int y)
 {
     char *p;
+    int bpp;
     int Bpp;
 
     if ((x >= 0) && (x < bitmap->width) &&
         (y >= 0) && (y < bitmap->height))
     {
-        Bpp = ((bitmap->format >> 24) + 7) / 8;
-        p = bitmap->data + (y * bitmap->stride_bytes) + (x * Bpp);
-        return p;
+        bpp = bitmap->format >> 24;
+        if (bpp < 8)
+        {
+            p = bitmap->data + (y * bitmap->stride_bytes) + (x / 8);
+            return p;
+        }
+        else
+        {
+            Bpp = (bpp + 7) / 8;
+            p = bitmap->data + (y * bitmap->stride_bytes) + (x * Bpp);
+            return p;
+        }
     }
     else
     {
@@ -71,12 +81,17 @@ bitmap_get_ptr(struct painter_bitmap *bitmap, int x, int y)
 }
 
 /*****************************************************************************/
-static int
+int
 bitmap_get_pixel(struct painter_bitmap *bitmap, int x, int y)
 {
     char *ptr;
+    int rv;
 
     ptr = bitmap_get_ptr(bitmap, x, y);
+    if (ptr == NULL)
+    {
+        return 0;
+    }
     switch (bitmap->format)
     {
         case PT_FORMAT_a8b8g8r8:
@@ -89,17 +104,27 @@ bitmap_get_pixel(struct painter_bitmap *bitmap, int x, int y)
             return *((unsigned short *) ptr);
         case PT_FORMAT_r3g3b2:
             return *((unsigned char *) ptr);
+        case PT_FORMAT_c1:
+            rv = *((unsigned char *) ptr);
+            rv = (rv & (0x80 >> (x % 8))) != 0;
+            return rv;
+        case PT_FORMAT_c8:
+            return *((unsigned char *) ptr);
     }
     return 0;
 }
 
 /*****************************************************************************/
-static int
+int
 bitmap_set_pixel(struct painter_bitmap *bitmap, int x, int y, int pixel)
 {
     char *ptr;
 
     ptr = bitmap_get_ptr(bitmap, x, y);
+    if (ptr == NULL)
+    {
+        return 0;
+    }
     switch (bitmap->format)
     {
         case PT_FORMAT_a8b8g8r8:
@@ -157,7 +182,7 @@ pixel_convert(int pixel, int src_format, int dst_format, int *palette)
     switch (dst_format)
     {
         case PT_FORMAT_a8r8g8b8:
-            rv = (a << 24) | (r << 16) | (g << 8) | b;
+            MAKE_a8r8g8b8(rv, a, r, g, b);
             break;
     }
     return rv; 
@@ -165,24 +190,53 @@ pixel_convert(int pixel, int src_format, int dst_format, int *palette)
 
 /*****************************************************************************/
 int
-painter_set_pixel(struct painter *painter, struct painter_bitmap *dst,
+painter_get_pixel(struct painter *painter, struct painter_bitmap *bitmap,
+                  int x, int y)
+{
+    int rv;
+
+    rv = 0;
+    if ((x >= 0) && (x < bitmap->width) &&
+        (y >= 0) && (y < bitmap->height))
+    {
+        switch (bitmap->format)
+        {
+            case PT_FORMAT_c1:
+                rv = bitmap_get_pixel(bitmap, x, y);
+                rv = rv ? painter->fgcolor : painter->bgcolor;
+                break;
+            case PT_FORMAT_c8:
+                rv = bitmap_get_pixel(bitmap, x, y);
+                rv = painter->palette[rv & 0xff];
+                break;
+            default:
+                rv = bitmap_get_pixel(bitmap, x, y);
+                break;
+        }
+    }
+    return rv;
+}
+
+/*****************************************************************************/
+int
+painter_set_pixel(struct painter *painter, struct painter_bitmap *bitmap,
                   int x, int y, int pixel, int pixel_format)
 {
     if ((painter->clip_valid == 0) ||
         ((x >= painter->clip.x1) && (x < painter->clip.x2) &&
          (y >= painter->clip.y1) && (y < painter->clip.y2)))
     {
-        if ((x >= 0) && (x < dst->width) &&
-            (y >= 0) && (y < dst->height))
+        if ((x >= 0) && (x < bitmap->width) &&
+            (y >= 0) && (y < bitmap->height))
         {
-            pixel = pixel_convert(pixel, pixel_format, dst->format,
+            pixel = pixel_convert(pixel, pixel_format, bitmap->format,
                                   painter->palette);
             if (painter->rop != PT_ROP_S)
             {
                 pixel = do_rop(painter->rop, pixel,
-                               bitmap_get_pixel(dst, x, y));
+                               bitmap_get_pixel(bitmap, x, y));
             }
-            bitmap_set_pixel(dst, x, y, pixel);
+            bitmap_set_pixel(bitmap, x, y, pixel);
         }
     }
     return 0;
