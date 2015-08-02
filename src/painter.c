@@ -43,7 +43,7 @@ painter_create(void **handle)
     pt = (struct painter *) *handle;
     pt->rop = PT_ROP_S;
 
-    return PT_ERROR_NONE; 
+    return PT_ERROR_NONE;
 }
 
 /*****************************************************************************/
@@ -52,10 +52,10 @@ painter_delete(void *handle)
 {
     if (handle == NULL)
     {
-        return PT_ERROR_NONE; 
+        return PT_ERROR_NONE;
     }
     free(handle);
-    return PT_ERROR_NONE; 
+    return PT_ERROR_NONE;
 }
 
 /*****************************************************************************/

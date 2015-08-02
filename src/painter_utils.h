@@ -59,12 +59,36 @@ do { \
     _b = 0; \
 } while (0)
 
+#define MAKE_a1r5g5b5(_c, _a, _r, _g, _b) \
+do { \
+    _c = (((_a) & 0xff) >> 7) << 15 | \
+         (((_r) & 0xff) >> 3) << 10 | \
+         (((_g) & 0xff) >> 3) <<  5 | \
+         (((_b) & 0xff) >> 3) <<  0; \
+} while (0)
+
+#define MAKE_r5g6b5(_c, _a, _r, _g, _b) \
+do { \
+    _c = \
+         (((_r) & 0xff) >> 3) << 11 | \
+         (((_g) & 0xff) >> 2) <<  5 | \
+         (((_b) & 0xff) >> 3) <<  0; \
+} while (0)
+
 #define MAKE_a8r8g8b8(_c, _a, _r, _g, _b) \
 do { \
     _c = ((_a) & 0xff) << 24 | \
          ((_r) & 0xff) << 16 | \
          ((_g) & 0xff) <<  8 | \
          ((_b) & 0xff) <<  0; \
+} while (0)
+
+#define MAKE_a8b8g8r8(_c, _a, _r, _g, _b) \
+do { \
+    _c = ((_a) & 0xff) << 24 | \
+         ((_b) & 0xff) << 16 | \
+         ((_g) & 0xff) <<  8 | \
+         ((_r) & 0xff) <<  0; \
 } while (0)
 
 struct painter_rect
