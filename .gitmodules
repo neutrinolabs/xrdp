@@ -4,3 +4,6 @@
 [submodule "xorgxrdp"]
 	path = xorgxrdp
 	url = git://github.com/neutrinolabs/xorgxrdp
+[submodule "libpainter"]
+	path = libpainter
+	url = git://github.com/neutrinolabs/libpainter
