@@ -20,17 +20,39 @@
 
 #include "xrdp.h"
 
+#include <painter.h> /* libpainter */
+
+#define LLOG_LEVEL 1
+#define LLOGLN(_level, _args) \
+  do \
+  { \
+    if (_level < LLOG_LEVEL) \
+    { \
+        g_write("xrdp:xrdp_painter [%10.10u]: ", g_time3()); \
+        g_writeln _args ; \
+    } \
+  } \
+  while (0)
+
 /*****************************************************************************/
 struct xrdp_painter *APP_CC
 xrdp_painter_create(struct xrdp_wm *wm, struct xrdp_session *session)
 {
     struct xrdp_painter *self;
 
+    LLOGLN(0, ("xrdp_painter_create:"));
     self = (struct xrdp_painter *)g_malloc(sizeof(struct xrdp_painter), 1);
     self->wm = wm;
     self->session = session;
     self->rop = 0xcc; /* copy will use 0xcc*/
     self->clip_children = 1;
+
+    if (painter_create(&(self->painter)) != PT_ERROR_NONE)
+    {
+        self->painter = 0;
+        LLOGLN(0, ("xrdp_painter_create: painter_create failed"));
+    }
+
     return self;
 }
 
@@ -43,6 +65,8 @@ xrdp_painter_delete(struct xrdp_painter *self)
         return;
     }
 
+    painter_delete(self->painter);
+
     g_free(self);
 }
 
@@ -53,6 +77,13 @@ wm_painter_set_target(struct xrdp_painter *self)
     int surface_index;
     int index;
     struct list *del_list;
+
+    LLOGLN(0, ("wm_painter_set_target:"));
+
+    if (self->painter != 0)
+    {
+        return 0;
+    }
 
     if (self->wm->target_surface->type == WND_TYPE_SCREEN)
     {
@@ -97,7 +128,13 @@ wm_painter_set_target(struct xrdp_painter *self)
 int APP_CC
 xrdp_painter_begin_update(struct xrdp_painter *self)
 {
+    LLOGLN(0, ("xrdp_painter_begin_update:"));
     if (self == 0)
+    {
+        return 0;
+    }
+
+    if (self->painter != 0)
     {
         return 0;
     }
@@ -111,7 +148,13 @@ xrdp_painter_begin_update(struct xrdp_painter *self)
 int APP_CC
 xrdp_painter_end_update(struct xrdp_painter *self)
 {
+    LLOGLN(0, ("xrdp_painter_end_update:"));
     if (self == 0)
+    {
+        return 0;
+    }
+
+    if (self->painter != 0)
     {
         return 0;
     }
@@ -204,6 +247,13 @@ xrdp_painter_set_clip(struct xrdp_painter *self,
     self->clip.top = y;
     self->clip.right = x + cx;
     self->clip.bottom = y + cy;
+
+    if (self->painter != 0)
+    {
+        painter_set_clip(self->painter, x, y, cx, cy);
+        return 0;
+    }
+
     return 0;
 }
 
@@ -212,6 +262,13 @@ int APP_CC
 xrdp_painter_clr_clip(struct xrdp_painter *self)
 {
     self->use_clip = 0;
+
+    if (self->painter != 0)
+    {
+        painter_clear_clip(self->painter);
+        return 0;
+    }
+
     return 0;
 }
 
@@ -270,6 +327,7 @@ xrdp_painter_text_width(struct xrdp_painter *self, const char *text)
     struct xrdp_font_char *font_item;
     twchar *wstr;
 
+    LLOGLN(0, ("xrdp_painter_text_width:"));
     xrdp_painter_font_needed(self);
 
     if (self->font == 0)
@@ -307,6 +365,7 @@ xrdp_painter_text_height(struct xrdp_painter *self, const char *text)
     struct xrdp_font_char *font_item;
     twchar *wstr;
 
+    LLOGLN(0, ("xrdp_painter_text_height:"));
     xrdp_painter_font_needed(self);
 
     if (self->font == 0)
@@ -342,6 +401,13 @@ xrdp_painter_setup_brush(struct xrdp_painter *self,
 {
     int cache_id;
 
+    LLOGLN(0, ("xrdp_painter_setup_brush:"));
+
+    if (self->painter != 0)
+    {
+        return 0;
+    }
+
     g_memcpy(out_brush, in_brush, sizeof(struct xrdp_brush));
 
     if (in_brush->style == 3)
@@ -374,9 +440,51 @@ xrdp_painter_fill_rect(struct xrdp_painter *self,
     int dx;
     int dy;
     int rop;
+    struct painter_bitmap dst_pb;
+
+    LLOGLN(0, ("xrdp_painter_fill_rect:"));
 
     if (self == 0)
     {
+        return 0;
+    }
+
+    dx = 0;
+    dy = 0;
+
+    if (self->painter != 0)
+    {
+        if (dst->data != 0)
+        {
+            LLOGLN(0, ("xrdp_painter_fill_rect: using painter"));
+
+            g_memset(&dst_pb, 0, sizeof(dst_pb));
+            dst_pb.format = PT_FORMAT_r5g6b5;
+            dst_pb.width = dst->width;
+            dst_pb.stride_bytes = dst->line_size;
+            dst_pb.height = dst->height;
+            dst_pb.data = dst->data;
+
+            xrdp_bitmap_get_screen_clip(dst, self, &clip_rect, &dx, &dy);
+            region = xrdp_region_create(self->wm);
+            xrdp_wm_get_vis_region(self->wm, dst, x, y, cx, cy, region,
+                                   self->clip_children);
+            x += dx;
+            y += dy;
+            k = 0;
+            while (xrdp_region_get_rect(region, k, &rect) == 0)
+            {
+                if (rect_intersect(&rect, &clip_rect, &draw_rect))
+                {
+                    LLOGLN(0, ("xrdp_painter_fill_rect: mix_mode %d "
+                           "rop 0x%2.2x x %d y %d cx %d cy %d",
+                           self->mix_mode, self->rop, x, y, cx, cy));
+                    painter_fill_rect(self->painter, &dst_pb, x, y, cx, cy);
+                }
+                k++;
+            }
+            xrdp_region_delete(region);
+        }
         return 0;
     }
 
@@ -508,10 +616,18 @@ xrdp_painter_draw_text(struct xrdp_painter *self,
     struct xrdp_font_char *font_item;
     twchar *wstr;
 
+    LLOGLN(0, ("xrdp_painter_draw_text:"));
+
     if (self == 0)
     {
         return 0;
     }
+
+    if (self->painter != 0)
+    {
+        return 0;
+    }
+
 
     len = g_mbstowcs(0, text, 0);
 
@@ -616,7 +732,14 @@ xrdp_painter_draw_text2(struct xrdp_painter *self,
     int dx;
     int dy;
 
+    LLOGLN(0, ("xrdp_painter_draw_text2:"));
+
     if (self == 0)
+    {
+        return 0;
+    }
+
+    if (self->painter != 0)
     {
         return 0;
     }
@@ -711,7 +834,14 @@ xrdp_painter_copy(struct xrdp_painter *self,
     int index;
     struct list *del_list;
 
+    LLOGLN(0, ("xrdp_painter_copy:"));
+
     if (self == 0 || src == 0 || dst == 0)
+    {
+        return 0;
+    }
+
+    if (self->painter != 0)
     {
         return 0;
     }
@@ -918,7 +1048,14 @@ xrdp_painter_composite(struct xrdp_painter* self,
     int cache_srcidx;
     int cache_mskidx;
 
+    LLOGLN(0, ("xrdp_painter_composite:"));
+
     if (self == 0 || src == 0 || dst == 0)
+    {
+        return 0;
+    }
+
+    if (self->painter != 0)
     {
         return 0;
     }
@@ -985,7 +1122,14 @@ xrdp_painter_line(struct xrdp_painter *self,
     int dy;
     int rop;
 
+    LLOGLN(0, ("xrdp_painter_line:"));
+
     if (self == 0)
+    {
+        return 0;
+    }
+
+    if (self->painter != 0)
     {
         return 0;
     }

@@ -429,6 +429,7 @@ struct xrdp_painter
   struct xrdp_session* session;
   struct xrdp_wm* wm; /* owner */
   struct xrdp_font* font;
+  void *painter;
 };
 
 /* window or bitmap */
