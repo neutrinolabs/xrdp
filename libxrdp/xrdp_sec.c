@@ -1871,6 +1871,10 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
     int index;
     int monitorCount;
     int flags;
+    int x1;
+    int y1;
+    int x2;
+    int y2;
     struct xrdp_client_info *client_info = (struct xrdp_client_info *)NULL;
 
     client_info = &(self->rdp_layer->client_info);
@@ -1904,6 +1908,10 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
 
     client_info->monitorCount = monitorCount;
 
+    x1 = 0;
+    y1 = 0;
+    x2 = 0;
+    y2 = 0;
     /* Add client_monitor_data to client_info struct, will later pass to X11rdp */
     for (index = 0; index < monitorCount; index++)
     {
@@ -1912,10 +1920,31 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
         in_uint32_le(s, client_info->minfo[index].right);
         in_uint32_le(s, client_info->minfo[index].bottom);
         in_uint32_le(s, client_info->minfo[index].is_primary);
+        if (index == 0)
+        {
+            x1 = client_info->minfo[index].left;
+            y1 = client_info->minfo[index].top;
+            x2 = client_info->minfo[index].right;
+            y2 = client_info->minfo[index].bottom;
+        }
+        else
+        {
+            x1 = MIN(x1, client_info->minfo[index].left); 
+            y1 = MIN(y1, client_info->minfo[index].top);
+            x2 = MAX(x2, client_info->minfo[index].right);
+            y2 = MAX(y2, client_info->minfo[index].bottom);
+        }
 
         g_writeln("got a monitor: left= %d, top= %d, right= %d, bottom= %d, is_primary?= %d", client_info->minfo[index].left,
             client_info->minfo[index].top, client_info->minfo[index].right, client_info->minfo[index].bottom, client_info->minfo[index].is_primary);
     }
+
+    if ((x2 > x1) && (y2 > y1))
+    {
+        client_info->width = (x2 - x1) + 1; 
+        client_info->height = (y2 - y1) + 1;
+    }
+
     return 0;
 }
 
