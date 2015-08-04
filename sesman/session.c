@@ -697,7 +697,7 @@ session_start_fork(int width, int height, int bpp, char *username,
                     xserver_params->auto_free = 1;
 
                     /* these are the must have parameters */
-                    list_add_item(xserver_params, (long) g_strdup("/usr/bin/Xorg"));
+                    list_add_item(xserver_params, (long) g_strdup("Xorg"));
                     list_add_item(xserver_params, (long) g_strdup(screen));
 
                     /* additional parameters from sesman.ini file */
@@ -718,7 +718,7 @@ session_start_fork(int width, int height, int bpp, char *username,
                     g_setenv("XRDP_START_HEIGHT", geometry, 1);
 
                     /* fire up Xorg */
-                    g_execvp("/usr/bin/Xorg", pp1);
+                    g_execvp("Xorg", pp1);
                 }
                 else if (type == SESMAN_SESSION_TYPE_XVNC)
                 {
