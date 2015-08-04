@@ -1929,7 +1929,7 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
         }
         else
         {
-            x1 = MIN(x1, client_info->minfo[index].left); 
+            x1 = MIN(x1, client_info->minfo[index].left);
             y1 = MIN(y1, client_info->minfo[index].top);
             x2 = MAX(x2, client_info->minfo[index].right);
             y2 = MAX(y2, client_info->minfo[index].bottom);
@@ -1941,7 +1941,7 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
 
     if ((x2 > x1) && (y2 > y1))
     {
-        client_info->width = (x2 - x1) + 1; 
+        client_info->width = (x2 - x1) + 1;
         client_info->height = (y2 - y1) + 1;
     }
 
