@@ -14,7 +14,7 @@ then
   exit 1
 fi
 
-which libtool
+which libtool || which libtoolize
 if ! test $? -eq 0
 then
   echo "error, install libtool"
