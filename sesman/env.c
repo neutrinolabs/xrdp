@@ -25,11 +25,9 @@
  */
 
 #include "list.h"
-
 #include "sesman.h"
-
-#include "sys/types.h"
 #include "grp.h"
+#include "ssl_calls.h"
 
 extern unsigned char g_fixedkey[8]; /* in sesman.c */
 extern struct config_sesman *g_cfg;  /* in sesman.c */
@@ -39,14 +37,18 @@ int DEFAULT_CC
 env_check_password_file(char *filename, char *password)
 {
     char encryptedPasswd[16];
+    char key[24];
     int fd;
+    void* des;
 
-    g_memset(encryptedPasswd, 0, 16);
+    g_memset(encryptedPasswd, 0, sizeof(encryptedPasswd));
     g_strncpy(encryptedPasswd, password, 8);
-    rfbDesKey(g_fixedkey, 0);
-    rfbDes((unsigned char *)encryptedPasswd, (unsigned char *)encryptedPasswd);
+    g_memset(key, 0, sizeof(key));
+    g_mirror_memcpy(key, g_fixedkey, 8);
+    des = ssl_des3_encrypt_info_create(key, 0); 
+    ssl_des3_encrypt(des, 8, encryptedPasswd, encryptedPasswd);
+    ssl_des3_info_delete(des);
     fd = g_file_open(filename);
-
     if (fd == -1)
     {
         log_message(LOG_LEVEL_WARNING,
@@ -54,7 +56,6 @@ env_check_password_file(char *filename, char *password)
                     filename);
         return 1;
     }
-
     g_file_write(fd, encryptedPasswd, 8);
     g_file_close(fd);
     return 0;
