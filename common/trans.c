@@ -649,29 +649,88 @@ trans_connect(struct trans *self, const char *server, const char *port,
               int timeout)
 {
     int error;
+    int now;
+    int start_time;
+
+    start_time = g_time3();
 
     if (self->sck != 0)
     {
         g_tcp_close(self->sck);
+        self->sck = 0;
     }
 
     if (self->mode == TRANS_MODE_TCP) /* tcp */
     {
         self->sck = g_tcp_socket();
         if (self->sck < 0)
+        {
+            self->status = TRANS_STATUS_DOWN;
             return 1;
-
+        }
         g_tcp_set_non_blocking(self->sck);
-        error = g_tcp_connect(self->sck, server, port);
+        while (1)
+        {
+            error = g_tcp_connect(self->sck, server, port);
+            if (error == 0)
+            {
+                break;
+            }
+            else
+            {
+                if (timeout < 1)
+                {
+                    self->status = TRANS_STATUS_DOWN;
+                    return 1;
+                }
+                now = g_time3();
+                if (now - start_time < timeout)
+                {
+                    g_sleep(timeout / 5);
+                }
+                else
+                {
+                    self->status = TRANS_STATUS_DOWN;
+                    return 1;
+                }
+            }
+        }
     }
     else if (self->mode == TRANS_MODE_UNIX) /* unix socket */
     {
         self->sck = g_tcp_local_socket();
         if (self->sck < 0)
+        {
+            self->status = TRANS_STATUS_DOWN;
             return 1;
-
+        }
         g_tcp_set_non_blocking(self->sck);
-        error = g_tcp_local_connect(self->sck, port);
+        while (1)
+        {
+            error = g_tcp_local_connect(self->sck, port);
+            if (error == 0)
+            {
+                break;
+            }
+            else
+            {
+                if (timeout < 1)
+                {
+                    self->status = TRANS_STATUS_DOWN;
+                    return 1;
+                }
+                now = g_time3();
+                if (now - start_time < timeout)
+                {
+                    g_sleep(timeout / 5);
+                }
+                else
+                {
+                    self->status = TRANS_STATUS_DOWN;
+                    return 1;
+                }
+            }
+        }
     }
     else
     {
@@ -683,6 +742,15 @@ trans_connect(struct trans *self, const char *server, const char *port,
     {
         if (g_tcp_last_error_would_block(self->sck))
         {
+            now = g_time3();
+            if (now - start_time < timeout)
+            {
+                timeout = timeout - (now - start_time);
+            }
+            else
+            {
+                timeout = 0;
+            }
             if (g_tcp_can_send(self->sck, timeout))
             {
                 self->status = TRANS_STATUS_UP; /* ok */
