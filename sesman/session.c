@@ -141,7 +141,7 @@ session_get_bydata(char *name, int width, int height, int bpp, int type, char *c
             tmp->item->client_ip);
 #endif
 
-        if (type == SESMAN_SESSION_TYPE_XRDP)
+        if ((type == SESMAN_SESSION_TYPE_XRDP) || (type == SESMAN_SESSION_TYPE_XORG))
         {
             /* only name and bpp need to match for X11rdp, it can resize */
             if (g_strncmp(name, tmp->item->name, 255) == 0 &&
