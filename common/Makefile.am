@@ -1,6 +1,5 @@
 EXTRA_DIST = \
   arch.h \
-  d3des.h \
   defines.h \
   file.h \
   file_loc.h \
@@ -31,7 +30,6 @@ lib_LTLIBRARIES = \
   libcommon.la
 
 libcommon_la_SOURCES = \
-  d3des.c \
   file.c \
   list.c \
   list16.c \
