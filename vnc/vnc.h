@@ -22,7 +22,6 @@
 #include "arch.h"
 #include "parse.h"
 #include "os_calls.h"
-#include "d3des.h"
 #include "defines.h"
 
 #define CURRENT_MOD_VER 3

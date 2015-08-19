@@ -21,6 +21,7 @@
 #include "vnc.h"
 #include "log.h"
 #include "trans.h"
+#include "ssl_calls.h"
 
 #define LLOG_LEVEL 1
 #define LLOGLN(_level, _args) \
@@ -51,14 +52,18 @@ lib_send_copy(struct vnc *v, struct stream *s)
 void DEFAULT_CC
 rfbEncryptBytes(char *bytes, char *passwd)
 {
-    char key[12];
+    char key[24];
+    void *des;
 
     /* key is simply password padded with nulls */
     g_memset(key, 0, sizeof(key));
-    g_strncpy(key, passwd, 8);
-    rfbDesKey((unsigned char *)key, EN0); /* 0, encrypt */
-    rfbDes((unsigned char *)bytes, (unsigned char *)bytes);
-    rfbDes((unsigned char *)(bytes + 8), (unsigned char *)(bytes + 8));
+    g_mirror_memcpy(key, passwd, g_strlen(passwd));
+    des = ssl_des3_encrypt_info_create(key, 0);
+    ssl_des3_encrypt(des, 8, bytes, bytes);
+    ssl_des3_info_delete(des);
+    des = ssl_des3_encrypt_info_create(key, 0);
+    ssl_des3_encrypt(des, 8, bytes + 8, bytes + 8);
+    ssl_des3_info_delete(des);
 }
 
 /******************************************************************************/
