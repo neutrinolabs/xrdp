@@ -1,7 +1,7 @@
 /**
  * RFX codec encoder
  *
- * Copyright 2014 Jay Sorg <jay.sorg@gmail.com>
+ * Copyright 2014-2015 Jay Sorg <jay.sorg@gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,21 +19,7 @@
 #ifndef __RFXCODEC_ENCODE_H
 #define __RFXCODEC_ENCODE_H
 
-#define RFX_FORMAT_BGRA 0
-#define RFX_FORMAT_RGBA 1
-#define RFX_FORMAT_BGR  2
-#define RFX_FORMAT_RGB  3
-#define RFX_FORMAT_YUV  4 /* YUV444 linear tiled mode */
-
-#define RFX_FLAGS_NONE  0 /* default RFX_FLAGS_RLGR3 and RFX_FLAGS_SAFE */
-
-#define RFX_FLAGS_RLGR3 0 /* default */
-#define RFX_FLAGS_RLGR1 1
-
-#define RFX_FLAGS_SAFE  0 /* default */
-#define RFX_FLAGS_OPT1    (1 << 3)
-#define RFX_FLAGS_OPT2    (1 << 4)
-#define RFX_FLAGS_NOACCEL (1 << 6)
+#include <rfxcodec_common.h>
 
 struct rfx_rect
 {
@@ -47,8 +33,8 @@ struct rfx_tile
 {
     int x; /* multiple of 64 */
     int y; /* multiple of 64 */
-    int cx; /* must be 64 */
-    int cy; /* must be 64 */
+    int cx; /* must be 64 or less */
+    int cy; /* must be 64 or less */
     int quant_y;
     int quant_cb;
     int quant_cr;
@@ -58,7 +44,8 @@ void *
 rfxcodec_encode_create(int width, int height, int format, int flags);
 int
 rfxcodec_encode_destroy(void * handle);
-/* quants, 10 ints per set, should be num_quants * 10 ints in quants)
+/* quants, 5 ints per set, should be num_quants * 5 chars in quants)
+ * each char is 2 quant values
  * quantizer order is
  * 0 - LL3
  * 1 - LH3
@@ -75,6 +62,6 @@ rfxcodec_encode(void *handle, char *cdata, int *cdata_bytes,
                 char *buf, int width, int height, int stride_bytes,
                 struct rfx_rect *region, int num_region,
                 struct rfx_tile *tiles, int num_tiles,
-                const int *quants, int num_quants);
+                const char *quants, int num_quants, int flags);
 
 #endif
