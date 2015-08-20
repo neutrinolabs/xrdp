@@ -54,10 +54,12 @@ rfbEncryptBytes(char *bytes, char *passwd)
 {
     char key[24];
     void *des;
+    int len;
 
     /* key is simply password padded with nulls */
     g_memset(key, 0, sizeof(key));
-    g_mirror_memcpy(key, passwd, g_strlen(passwd));
+    len = MIN(g_strlen(passwd), 8);
+    g_mirror_memcpy(key, passwd, len);
     des = ssl_des3_encrypt_info_create(key, 0);
     ssl_des3_encrypt(des, 8, bytes, bytes);
     ssl_des3_info_delete(des);
