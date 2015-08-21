@@ -12,11 +12,10 @@ section .data
 ;rfxcodec_encode_diff_rlgr3_x86_sse2(short *co,
 ;                                    void *dst, int dst_bytes);
 
-%ifidn __OUTPUT_FORMAT__,win
-; Win32 - add _(underscore)
-PROC _rfxcodec_encode_diff_rlgr3_x86_sse2
-%else
+%ifidn __OUTPUT_FORMAT__,elf
 PROC rfxcodec_encode_diff_rlgr3_x86_sse2
+%else
+PROC _rfxcodec_encode_diff_rlgr3_x86_sse2
 %endif
     push ebx
     push esi

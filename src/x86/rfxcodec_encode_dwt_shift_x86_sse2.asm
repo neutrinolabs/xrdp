@@ -14,11 +14,10 @@ section .data
 ;                                   short *dwt_buffer1,
 ;                                   short *dwt_buffer);
 
-%ifidn __OUTPUT_FORMAT__,win
-; Win32 - add _(underscore)
+%ifidn __OUTPUT_FORMAT__,elf
 PROC rfxcodec_encode_dwt_shift_x86_sse2
 %else
-PROC rfxcodec_encode_dwt_shift_x86_sse2
+PROC _rfxcodec_encode_dwt_shift_x86_sse2
 %endif
     push ebx
     push esi

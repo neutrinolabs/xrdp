@@ -12,7 +12,11 @@ section .data
 ;rfxcodec_encode_diff_rlgr1_amd64_sse2(short *co,
 ;                                      void *dst, int dst_bytes);
 
+%ifidn __OUTPUT_FORMAT__,elf64
 PROC rfxcodec_encode_diff_rlgr1_amd64_sse2
+%else
+PROC _rfxcodec_encode_diff_rlgr1_amd64_sse2
+%endif
     ; save registers
     push rbx
     mov rax, 0

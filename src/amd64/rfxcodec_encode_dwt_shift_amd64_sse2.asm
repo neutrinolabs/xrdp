@@ -14,7 +14,11 @@ section .data
 ;                                     short *dwt_buffer1,
 ;                                     short *dwt_buffer);
 
+%ifidn __OUTPUT_FORMAT__,elf64
 PROC rfxcodec_encode_dwt_shift_amd64_sse2
+%else
+PROC _rfxcodec_encode_dwt_shift_amd64_sse2
+%endif
     ; save registers
     push rbx
     mov rax, 0

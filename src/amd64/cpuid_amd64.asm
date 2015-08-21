@@ -37,7 +37,7 @@ PROC _cpuid_amd64
     mov [rdi], ebx
     pop rdi
     mov [rdi], eax
-    mov eax, 0
+    mov rax, 0
     ; restore registers
     pop rbx
     ret;
