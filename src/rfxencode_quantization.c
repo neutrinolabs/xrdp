@@ -3,7 +3,7 @@
  * RemoteFX Codec Library - Quantization
  *
  * Copyright 2011 Vic Lee
- * Copyright 2014 Jay Sorg <jay.sorg@gmail.com>
+ * Copyright 2014-2015 Jay Sorg <jay.sorg@gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -88,7 +88,7 @@ rfx_quantization_encode_block(sint16* buffer, int buffer_size, uint32 factor)
 }
 #endif
 
-#if 1
+#if 0
 /******************************************************************************/
 static int
 rfx_quantization_encode_block(sint16* buffer, int buffer_size, uint32 factor)
@@ -110,20 +110,54 @@ rfx_quantization_encode_block(sint16* buffer, int buffer_size, uint32 factor)
 }
 #endif
 
+#if 1
+/******************************************************************************/
+static int
+rfx_quantization_encode_block(sint16* buffer, int buffer_size, uint32 factor)
+{
+    sint16* dst;
+    sint16 half;
+
+    factor += DWT_FACTOR;
+    if (factor == 0)
+    {
+        return 1;
+    }
+    half = (1 << (factor - 1));
+    for (dst = buffer; buffer_size > 0; dst++, buffer_size--)
+    {
+        *dst = (*dst + half) >> factor;
+    }
+    return 0;
+}
+#endif
+
 /******************************************************************************/
 int
-rfx_quantization_encode(sint16* buffer, const int* quantization_values)
+rfx_quantization_encode(sint16* buffer, const char* qtable)
 {
-    rfx_quantization_encode_block(buffer, 1024, quantization_values[8] - 6); /* HL1 */
-    rfx_quantization_encode_block(buffer + 1024, 1024, quantization_values[7] - 6); /* LH1 */
-    rfx_quantization_encode_block(buffer + 2048, 1024, quantization_values[9] - 6); /* HH1 */
-    rfx_quantization_encode_block(buffer + 3072, 256, quantization_values[5] - 6); /* HL2 */
-    rfx_quantization_encode_block(buffer + 3328, 256, quantization_values[4] - 6); /* LH2 */
-    rfx_quantization_encode_block(buffer + 3584, 256, quantization_values[6] - 6); /* HH2 */
-    rfx_quantization_encode_block(buffer + 3840, 64, quantization_values[2] - 6); /* HL3 */
-    rfx_quantization_encode_block(buffer + 3904, 64, quantization_values[1] - 6); /* LH3 */
-    rfx_quantization_encode_block(buffer + 3968, 64, quantization_values[3] - 6); /* HH3 */
-    rfx_quantization_encode_block(buffer + 4032, 64, quantization_values[0] - 6); /* LL3 */
+    uint32 factor;
+
+    factor = ((qtable[4] >> 0) & 0xf) - 6;
+    rfx_quantization_encode_block(buffer, 1024, factor); /* HL1 */
+    factor = ((qtable[3] >> 4) & 0xf) - 6;
+    rfx_quantization_encode_block(buffer + 1024, 1024, factor); /* LH1 */
+    factor = ((qtable[4] >> 4) & 0xf) - 6;
+    rfx_quantization_encode_block(buffer + 2048, 1024, factor); /* HH1 */
+    factor = ((qtable[2] >> 4) & 0xf) - 6;
+    rfx_quantization_encode_block(buffer + 3072, 256, factor); /* HL2 */
+    factor = ((qtable[2] >> 0) & 0xf) - 6;
+    rfx_quantization_encode_block(buffer + 3328, 256, factor); /* LH2 */
+    factor = ((qtable[3] >> 0) & 0xf) - 6;
+    rfx_quantization_encode_block(buffer + 3584, 256, factor); /* HH2 */
+    factor = ((qtable[1] >> 0) & 0xf) - 6;
+    rfx_quantization_encode_block(buffer + 3840, 64, factor); /* HL3 */
+    factor = ((qtable[0] >> 4) & 0xf) - 6;
+    rfx_quantization_encode_block(buffer + 3904, 64, factor); /* LH3 */
+    factor = ((qtable[1] >> 4) & 0xf) - 6;
+    rfx_quantization_encode_block(buffer + 3968, 64, factor); /* HH3 */
+    factor = ((qtable[0] >> 0) & 0xf) - 6;
+    rfx_quantization_encode_block(buffer + 4032, 64, factor); /* LL3 */
     return 0;
 }
 

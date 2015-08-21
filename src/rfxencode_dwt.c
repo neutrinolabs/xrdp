@@ -3,7 +3,7 @@
  * RemoteFX Codec Library - DWT
  *
  * Copyright 2011 Vic Lee
- * Copyright 2014 Jay Sorg <jay.sorg@gmail.com>
+ * Copyright 2014-2015 Jay Sorg <jay.sorg@gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -151,6 +151,7 @@ rfx_dwt_2d_encode_block8(uint8 *in_buffer,
 {
     uint8 *src;
     sint16 *l, *h;
+    sint16 s1, s2, s3;
     int total_width;
     int x, y;
     int n;
@@ -166,8 +167,12 @@ rfx_dwt_2d_encode_block8(uint8 *in_buffer,
         l = dwt + x;
         h = l + subband_width * total_width;
         src = in_buffer + x;
-        *h = ((src[total_width] - 128) - (((src[0] - 128) + (src[2 * total_width] - 128)) >> 1)) >> 1;
-        *l = (src[0] - 128) + *h;
+        s1 = (src[total_width] - 128) << DWT_FACTOR;
+        s2 = (src[0] - 128) << DWT_FACTOR;
+        s3 = (src[2 * total_width] - 128) << DWT_FACTOR;
+        *h = (s1 - ((s2 + s3) >> 1)) >> 1;
+        s1 = (src[0] - 128) << DWT_FACTOR;
+        *l = s1 + *h;
 
         /* loop */
         for (n = 1; n < subband_width - 1; n++)
@@ -176,8 +181,12 @@ rfx_dwt_2d_encode_block8(uint8 *in_buffer,
             l = dwt + n * total_width + x;
             h = l + subband_width * total_width;
             src = in_buffer + y * total_width + x;
-            *h = ((src[total_width] - 128) - (((src[0] - 128) + (src[2 * total_width] - 128)) >> 1)) >> 1;
-            *l = (src[0] - 128) + ((*(h - total_width) + *h) >> 1);
+            s1 = (src[total_width] - 128) << DWT_FACTOR;
+            s2 = (src[0] - 128) << DWT_FACTOR;
+            s3 = (src[2 * total_width] - 128) << DWT_FACTOR;
+            *h = (s1 - ((s2 + s3) >> 1)) >> 1;
+            s1 = (src[0] - 128) << DWT_FACTOR;
+            *l = s1 + ((*(h - total_width) + *h) >> 1);
         }
 
         /* post */
@@ -186,8 +195,12 @@ rfx_dwt_2d_encode_block8(uint8 *in_buffer,
         l = dwt + n * total_width + x;
         h = l + subband_width * total_width;
         src = in_buffer + y * total_width + x;
-        *h = ((src[total_width] - 128) - (((src[0] - 128) + (src[0] - 128)) >> 1)) >> 1;
-        *l = (src[0] - 128) + ((*(h - total_width) + *h) >> 1);
+        s1 = (src[total_width] - 128) << DWT_FACTOR;
+        s2 = (src[0] - 128) << DWT_FACTOR;
+        s3 = (src[0] - 128) << DWT_FACTOR;
+        *h = (s1 - ((s2 + s3) >> 1)) >> 1;
+        s1 = (src[0] - 128) << DWT_FACTOR;
+        *l = s1 + ((*(h - total_width) + *h) >> 1);
 
     }
 

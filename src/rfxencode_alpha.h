@@ -1,8 +1,8 @@
 /**
- * FreeRDP: A Remote Desktop Protocol client.
- * RemoteFX Codec Library - RLGR
+ * librfxcodec: A Remote Desktop Protocol client.
+ * RemoteFX Codec Library
  *
- * Copyright 2011 Vic Lee
+ * Copyright 2015 Jay Sorg <jay.sorg@gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,12 @@
  * limitations under the License.
  */
 
-#ifndef __RFX_RLGR3_H
-#define __RFX_RLGR3_H
-
-#include "rfxcommon.h"
+#ifndef __RFXCODEC_ENCODE_ALPHA_H
+#define __RFXCODEC_ENCODE_ALPHA_H
 
 int
-rfx_rlgr3_encode(const sint16* data, uint8* buffer, int buffer_size);
+rfx_encode_plane(struct rfxencode *enc, uint8 *plane, int cx, int cy,
+                 STREAM *s);
 
-#endif /* __RFX_RLGR_H */
+#endif
+

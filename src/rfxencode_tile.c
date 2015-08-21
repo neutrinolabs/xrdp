@@ -3,7 +3,7 @@
  * RemoteFX Codec Library - Encode
  *
  * Copyright 2011 Vic Lee
- * Copyright 2014 Jay Sorg <jay.sorg@gmail.com>
+ * Copyright 2014-2015 Jay Sorg <jay.sorg@gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@
 #include "rfxencode_differential.h"
 #include "rfxencode_rlgr1.h"
 #include "rfxencode_rlgr3.h"
+#include "rfxencode_alpha.h"
 
 #ifdef RFX_USE_ACCEL_X86
 #include "x86/funcs_x86.h"
@@ -58,69 +59,337 @@ rfx_encode_format_rgb(char *rgb_data, int width, int height,
     uint8 r;
     uint8 g;
     uint8 b;
+    uint8 *lr_buf;
+    uint8 *lg_buf;
+    uint8 *lb_buf;
 
+    LLOGLN(10, ("rfx_encode_format_rgb: pixel_format %d", pixel_format));
+    b = 0;
+    g = 0;
+    r = 0;
     switch (pixel_format)
     {
         case RFX_FORMAT_BGRA:
             for (y = 0; y < height; y++)
             {
                 src = (uint8*) (rgb_data + y * stride_bytes);
+                lr_buf = r_buf + y * 64;
+                lg_buf = g_buf + y * 64;
+                lb_buf = b_buf + y * 64;
                 for (x = 0; x < width; x++)
                 {
                     b = *src++;
-                    *b_buf++ = b;
+                    *lb_buf++ = b;
                     g = *src++;
-                    *g_buf++ = g;
+                    *lg_buf++ = g;
                     r = *src++;
-                    *r_buf++ = r;
+                    *lr_buf++ = r;
                     src++;
                 }
+                while (x < 64)
+                {
+                    *lr_buf++ = r;
+                    *lg_buf++ = g;
+                    *lb_buf++ = r;
+                    x++;
+                }
+            }
+            while (y < 64)
+            {
+                lr_buf = r_buf + y * 64;
+                lg_buf = g_buf + y * 64;
+                lb_buf = b_buf + y * 64;
+                memcpy(lr_buf, lr_buf - 64, 64);
+                memcpy(lg_buf, lg_buf - 64, 64);
+                memcpy(lb_buf, lb_buf - 64, 64);
+                y++;
             }
             break;
         case RFX_FORMAT_RGBA:
             for (y = 0; y < height; y++)
             {
                 src = (uint8*) (rgb_data + y * stride_bytes);
+                lr_buf = r_buf + y * 64;
+                lg_buf = g_buf + y * 64;
+                lb_buf = b_buf + y * 64;
                 for (x = 0; x < width; x++)
                 {
                     r = *src++;
-                    *r_buf++ = r;
+                    *lr_buf++ = r;
                     g = *src++;
-                    *g_buf++ = g;
+                    *lg_buf++ = g;
                     b = *src++;
-                    *b_buf++ = b;
+                    *lb_buf++ = b;
                     src++;
                 }
+                while (x < 64)
+                {
+                    *lr_buf++ = r;
+                    *lg_buf++ = g;
+                    *lb_buf++ = b;
+                    x++;
+                }
+            }
+            while (y < 64)
+            {
+                lr_buf = r_buf + y * 64;
+                lg_buf = g_buf + y * 64;
+                lb_buf = b_buf + y * 64;
+                memcpy(lr_buf, lr_buf - 64, 64);
+                memcpy(lg_buf, lg_buf - 64, 64);
+                memcpy(lb_buf, lb_buf - 64, 64);
+                y++;
             }
             break;
         case RFX_FORMAT_BGR:
             for (y = 0; y < height; y++)
             {
                 src = (uint8*) (rgb_data + y * stride_bytes);
+                lr_buf = r_buf + y * 64;
+                lg_buf = g_buf + y * 64;
+                lb_buf = b_buf + y * 64;
                 for (x = 0; x < width; x++)
                 {
                     b = *src++;
-                    *b_buf++ = b;
+                    *lb_buf++ = b;
                     g = *src++;
-                    *g_buf++ = g;
+                    *lg_buf++ = g;
                     r = *src++;
-                    *r_buf++ = r;
+                    *lr_buf++ = r;
                 }
+                while (x < 64)
+                {
+                    *lr_buf++ = r;
+                    *lg_buf++ = g;
+                    *lb_buf++ = b;
+                    x++;
+                }
+            }
+            while (y < 64)
+            {
+                lr_buf = r_buf + y * 64;
+                lg_buf = g_buf + y * 64;
+                lb_buf = b_buf + y * 64;
+                memcpy(lr_buf, lr_buf - 64, 64);
+                memcpy(lg_buf, lg_buf - 64, 64);
+                memcpy(lb_buf, lb_buf - 64, 64);
+                y++;
             }
             break;
         case RFX_FORMAT_RGB:
             for (y = 0; y < height; y++)
             {
                 src = (uint8*) (rgb_data + y * stride_bytes);
+                lr_buf = r_buf + y * 64;
+                lg_buf = g_buf + y * 64;
+                lb_buf = b_buf + y * 64;
                 for (x = 0; x < width; x++)
                 {
                     r = *src++;
-                    *r_buf++ = r;
+                    *lr_buf++ = r;
                     g = *src++;
-                    *g_buf++ = g;
+                    *lg_buf++ = g;
                     b = *src++;
-                    *b_buf++ = b;
+                    *lb_buf++ = b;
                 }
+                while (x < 64)
+                {
+                    *lr_buf++ = r;
+                    *lg_buf++ = g;
+                    *lb_buf++ = b;
+                    x++;
+                }
+            }
+            while (y < 64)
+            {
+                lr_buf = r_buf + y * 64;
+                lg_buf = g_buf + y * 64;
+                lb_buf = b_buf + y * 64;
+                memcpy(lr_buf, lr_buf - 64, 64);
+                memcpy(lg_buf, lg_buf - 64, 64);
+                memcpy(lb_buf, lb_buf - 64, 64);
+                y++;
+            }
+            break;
+    }
+    return 0;
+}
+
+/******************************************************************************/
+static int
+rfx_encode_format_argb(char *argb_data, int width, int height,
+                       int stride_bytes, int pixel_format,
+                       uint8 *a_buf, uint8 *r_buf, uint8 *g_buf, uint8 *b_buf)
+{
+    int x;
+    int y;
+    const uint8 *src;
+    uint8 a;
+    uint8 r;
+    uint8 g;
+    uint8 b;
+    uint8 *la_buf;
+    uint8 *lr_buf;
+    uint8 *lg_buf;
+    uint8 *lb_buf;
+
+    LLOGLN(10, ("rfx_encode_format_argb: pixel_format %d", pixel_format));
+    b = 0;
+    g = 0;
+    r = 0;
+    a = 0;
+    switch (pixel_format)
+    {
+        case RFX_FORMAT_BGRA:
+            for (y = 0; y < height; y++)
+            {
+                src = (uint8*) (argb_data + y * stride_bytes);
+                la_buf = a_buf + y * 64;
+                lr_buf = r_buf + y * 64;
+                lg_buf = g_buf + y * 64;
+                lb_buf = b_buf + y * 64;
+                for (x = 0; x < width; x++)
+                {
+                    b = *src++;
+                    *lb_buf++ = b;
+                    g = *src++;
+                    *lg_buf++ = g;
+                    r = *src++;
+                    *lr_buf++ = r;
+                    a = *src++;
+                    *la_buf++ = a;
+                }
+                while (x < 64)
+                {
+                    *la_buf++ = a;
+                    *lr_buf++ = r;
+                    *lg_buf++ = g;
+                    *lb_buf++ = r;
+                    x++;
+                }
+            }
+            while (y < 64)
+            {
+                la_buf = a_buf + y * 64;
+                lr_buf = r_buf + y * 64;
+                lg_buf = g_buf + y * 64;
+                lb_buf = b_buf + y * 64;
+                memcpy(la_buf, la_buf - 64, 64);
+                memcpy(lr_buf, lr_buf - 64, 64);
+                memcpy(lg_buf, lg_buf - 64, 64);
+                memcpy(lb_buf, lb_buf - 64, 64);
+                y++;
+            }
+            break;
+        case RFX_FORMAT_RGBA:
+            for (y = 0; y < height; y++)
+            {
+                src = (uint8*) (argb_data + y * stride_bytes);
+                la_buf = a_buf + y * 64;
+                lr_buf = r_buf + y * 64;
+                lg_buf = g_buf + y * 64;
+                lb_buf = b_buf + y * 64;
+                for (x = 0; x < width; x++)
+                {
+                    r = *src++;
+                    *lr_buf++ = r;
+                    g = *src++;
+                    *lg_buf++ = g;
+                    b = *src++;
+                    *lb_buf++ = b;
+                    a = *src++;
+                    *la_buf++ = a;
+                }
+                while (x < 64)
+                {
+                    *la_buf++ = a;
+                    *lr_buf++ = r;
+                    *lg_buf++ = g;
+                    *lb_buf++ = b;
+                    x++;
+                }
+            }
+            while (y < 64)
+            {
+                la_buf = a_buf + y * 64;
+                lr_buf = r_buf + y * 64;
+                lg_buf = g_buf + y * 64;
+                lb_buf = b_buf + y * 64;
+                memcpy(la_buf, la_buf - 64, 64);
+                memcpy(lr_buf, lr_buf - 64, 64);
+                memcpy(lg_buf, lg_buf - 64, 64);
+                memcpy(lb_buf, lb_buf - 64, 64);
+                y++;
+            }
+            break;
+        case RFX_FORMAT_BGR:
+            for (y = 0; y < height; y++)
+            {
+                src = (uint8*) (argb_data + y * stride_bytes);
+                lr_buf = r_buf + y * 64;
+                lg_buf = g_buf + y * 64;
+                lb_buf = b_buf + y * 64;
+                for (x = 0; x < width; x++)
+                {
+                    b = *src++;
+                    *lb_buf++ = b;
+                    g = *src++;
+                    *lg_buf++ = g;
+                    r = *src++;
+                    *lr_buf++ = r;
+                }
+                while (x < 64)
+                {
+                    *lr_buf++ = r;
+                    *lg_buf++ = g;
+                    *lb_buf++ = b;
+                    x++;
+                }
+            }
+            while (y < 64)
+            {
+                lr_buf = r_buf + y * 64;
+                lg_buf = g_buf + y * 64;
+                lb_buf = b_buf + y * 64;
+                memcpy(lr_buf, lr_buf - 64, 64);
+                memcpy(lg_buf, lg_buf - 64, 64);
+                memcpy(lb_buf, lb_buf - 64, 64);
+                y++;
+            }
+            break;
+        case RFX_FORMAT_RGB:
+            for (y = 0; y < height; y++)
+            {
+                src = (uint8*) (argb_data + y * stride_bytes);
+                lr_buf = r_buf + y * 64;
+                lg_buf = g_buf + y * 64;
+                lb_buf = b_buf + y * 64;
+                for (x = 0; x < width; x++)
+                {
+                    r = *src++;
+                    *lr_buf++ = r;
+                    g = *src++;
+                    *lg_buf++ = g;
+                    b = *src++;
+                    *lb_buf++ = b;
+                }
+                while (x < 64)
+                {
+                    *lr_buf++ = r;
+                    *lg_buf++ = g;
+                    *lb_buf++ = b;
+                    x++;
+                }
+            }
+            while (y < 64)
+            {
+                lr_buf = r_buf + y * 64;
+                lg_buf = g_buf + y * 64;
+                lb_buf = b_buf + y * 64;
+                memcpy(lr_buf, lr_buf - 64, 64);
+                memcpy(lg_buf, lg_buf - 64, 64);
+                memcpy(lb_buf, lb_buf - 64, 64);
+                y++;
             }
             break;
     }
@@ -139,25 +408,25 @@ rfx_encode_format_rgb(char *rgb_data, int width, int height,
   -11071 -21736  32807
    32756 -27429  -5327 */
 static int
-rfx_encode_rgb_to_ycbcr(uint8 *y_r_buf, uint8 *cb_g_buf, uint8 *cr_b_buf)
+rfx_encode_rgb_to_yuv(uint8 *y_r_buf, uint8 *u_g_buf, uint8 *v_b_buf)
 {
     int i;
     sint32 r, g, b;
-    sint32 y, cb, cr;
+    sint32 y, u, v;
 
     for (i = 0; i < 4096; i++)
     {
         r = y_r_buf[i];
-        g = cb_g_buf[i];
-        b = cr_b_buf[i];
+        g = u_g_buf[i];
+        b = v_b_buf[i];
 
-        y =  (r *  19595 + g *  38470 + b *   7471) >> 16;
-        cb = (r * -11071 + g * -21736 + b *  32807) >> 16;
-        cr = (r *  32756 + g * -27429 + b *  -5327) >> 16;
+        y = (r *  19595 + g *  38470 + b *   7471) >> 16;
+        u = (r * -11071 + g * -21736 + b *  32807) >> 16;
+        v = (r *  32756 + g * -27429 + b *  -5327) >> 16;
 
         y_r_buf[i] = MINMAX(y, 0, 255);
-        cb_g_buf[i] = MINMAX(cb + 128, 0, 255);
-        cr_b_buf[i] = MINMAX(cr + 128, 0, 255);
+        u_g_buf[i] = MINMAX(u + 128, 0, 255);
+        v_b_buf[i] = MINMAX(v + 128, 0, 255);
 
     }
     return 0;
@@ -165,14 +434,15 @@ rfx_encode_rgb_to_ycbcr(uint8 *y_r_buf, uint8 *cb_g_buf, uint8 *cr_b_buf)
 
 /******************************************************************************/
 int
-rfx_encode_component_rlgr1(struct rfxencode *enc, const int *quantization_values,
+rfx_encode_component_rlgr1(struct rfxencode *enc, const char *qtable,
                            uint8 *data, uint8 *buffer, int buffer_size, int *size)
 {
+    LLOGLN(10, ("rfx_encode_component_rlgr1:"));
     if (rfx_dwt_2d_encode(data, enc->dwt_buffer1, enc->dwt_buffer) != 0)
     {
         return 1;
     }
-    if (rfx_quantization_encode(enc->dwt_buffer1, quantization_values) != 0)
+    if (rfx_quantization_encode(enc->dwt_buffer1, qtable) != 0)
     {
         return 1;
     }
@@ -180,20 +450,21 @@ rfx_encode_component_rlgr1(struct rfxencode *enc, const int *quantization_values
     {
         return 1;
     }
-    *size = rfx_rlgr1_encode(enc->dwt_buffer1, 4096, buffer, buffer_size);
+    *size = rfx_rlgr1_encode(enc->dwt_buffer1, buffer, buffer_size);
     return 0;
 }
 
 /******************************************************************************/
 int
-rfx_encode_component_rlgr3(struct rfxencode *enc, const int *quantization_values,
+rfx_encode_component_rlgr3(struct rfxencode *enc, const char *qtable,
                            uint8 *data, uint8 *buffer, int buffer_size, int *size)
 {
+    LLOGLN(10, ("rfx_encode_component_rlgr3:"));
     if (rfx_dwt_2d_encode(data, enc->dwt_buffer1, enc->dwt_buffer) != 0)
     {
         return 1;
     }
-    if (rfx_quantization_encode(enc->dwt_buffer1, quantization_values) != 0)
+    if (rfx_quantization_encode(enc->dwt_buffer1, qtable) != 0)
     {
         return 1;
     }
@@ -201,82 +472,82 @@ rfx_encode_component_rlgr3(struct rfxencode *enc, const int *quantization_values
     {
         return 1;
     }
-    *size = rfx_rlgr3_encode(enc->dwt_buffer1, 4096, buffer, buffer_size);
+    *size = rfx_rlgr3_encode(enc->dwt_buffer1, buffer, buffer_size);
     return 0;
 }
 
 /******************************************************************************/
 int
-rfx_encode_component_rlgr1_x86_sse2(struct rfxencode *enc,
-                                    const int *quantization_values,
+rfx_encode_component_rlgr1_x86_sse2(struct rfxencode *enc, const char *qtable,
                                     uint8 *data,
                                     uint8 *buffer, int buffer_size, int *size)
 {
     LLOGLN(10, ("rfx_encode_component_rlgr1_x86_sse2:"));
 #if defined(RFX_USE_ACCEL_X86)
-    if (dwt_shift_x86_sse2(quantization_values, data, enc->dwt_buffer1,
-                           enc->dwt_buffer) != 0)
+    if (rfxcodec_encode_dwt_shift_x86_sse2(qtable, data, enc->dwt_buffer1,
+                                           enc->dwt_buffer) != 0)
     {
         return 1;
     }
-    *size = diff_rlgr1_x86(enc->dwt_buffer1, 4096, buffer, buffer_size);
+    *size = rfxcodec_encode_diff_rlgr1_x86_sse2(enc->dwt_buffer1,
+                                                buffer, buffer_size);
 #endif
     return 0;
 }
 
 /******************************************************************************/
 int
-rfx_encode_component_rlgr3_x86_sse2(struct rfxencode *enc,
-                                    const int *quantization_values,
+rfx_encode_component_rlgr3_x86_sse2(struct rfxencode *enc, const char *qtable,
                                     uint8 *data,
                                     uint8 *buffer, int buffer_size, int *size)
 {
     LLOGLN(10, ("rfx_encode_component_rlgr3_x86_sse2:"));
 #if defined(RFX_USE_ACCEL_X86)
-    if (dwt_shift_x86_sse2(quantization_values, data, enc->dwt_buffer1,
-                           enc->dwt_buffer) != 0)
+    if (rfxcodec_encode_dwt_shift_x86_sse2(qtable, data, enc->dwt_buffer1,
+                                           enc->dwt_buffer) != 0)
     {
         return 1;
     }
-    *size = diff_rlgr3_x86(enc->dwt_buffer1, 4096, buffer, buffer_size);
+    *size = rfxcodec_encode_diff_rlgr3_x86_sse2(enc->dwt_buffer1,
+                                                buffer, buffer_size);
 #endif
     return 0;
 }
 
 /******************************************************************************/
 int
-rfx_encode_component_rlgr1_amd64_sse2(struct rfxencode *enc,
-                                      const int *quantization_values,
+rfx_encode_component_rlgr1_amd64_sse2(struct rfxencode *enc, const char *qtable,
                                       uint8 *data,
                                       uint8 *buffer, int buffer_size, int *size)
 {
     LLOGLN(10, ("rfx_encode_component_rlgr1_amd64_sse2:"));
 #if defined(RFX_USE_ACCEL_AMD64)
-    if (dwt_shift_amd64_sse2(quantization_values, data, enc->dwt_buffer1,
-                             enc->dwt_buffer) != 0)
+    if (rfxcodec_encode_dwt_shift_amd64_sse2(qtable, data, enc->dwt_buffer1,
+                                             enc->dwt_buffer) != 0)
     {
         return 1;
     }
-    *size = diff_rlgr1_amd64(enc->dwt_buffer1, 4096, buffer, buffer_size);
+    *size = rfxcodec_encode_diff_rlgr1_amd64_sse2(enc->dwt_buffer1,
+                                                  buffer, buffer_size);
 #endif
     return 0;
 }
 
 /******************************************************************************/
 int
-rfx_encode_component_rlgr3_amd64_sse2(struct rfxencode *enc,
-                                      const int *quantization_values,
+rfx_encode_component_rlgr3_amd64_sse2(struct rfxencode *enc, const char *qtable,
                                       uint8 *data,
                                       uint8 *buffer, int buffer_size, int *size)
 {
     LLOGLN(10, ("rfx_encode_component_rlgr3_amd64_sse2:"));
 #if defined(RFX_USE_ACCEL_AMD64)
-    if (dwt_shift_amd64_sse2(quantization_values, data, enc->dwt_buffer1,
-                             enc->dwt_buffer) != 0)
+    if (rfxcodec_encode_dwt_shift_amd64_sse2(qtable, data, enc->dwt_buffer1,
+                                             enc->dwt_buffer) != 0)
     {
         return 1;
     }
-    *size = diff_rlgr3_amd64(enc->dwt_buffer1, 4096, buffer, buffer_size);
+    *size = rfxcodec_encode_diff_rlgr3_amd64_sse2(enc->dwt_buffer1,
+                                                  buffer, buffer_size);
 #endif
     return 0;
 }
@@ -285,23 +556,24 @@ rfx_encode_component_rlgr3_amd64_sse2(struct rfxencode *enc,
 int
 rfx_encode_rgb(struct rfxencode *enc, char *rgb_data,
                int width, int height, int stride_bytes,
-               const int *y_quants, const int *cb_quants, const int *cr_quants,
-               STREAM *data_out, int *y_size, int *cb_size, int *cr_size)
+               const char *y_quants, const char *u_quants,
+               const char *v_quants,
+               STREAM *data_out, int *y_size, int *u_size, int *v_size)
 {
     uint8 *y_r_buffer;
-    uint8 *cb_g_buffer;
-    uint8 *cr_b_buffer;
+    uint8 *u_g_buffer;
+    uint8 *v_b_buffer;
 
     y_r_buffer = enc->y_r_buffer;
-    cb_g_buffer = enc->cb_g_buffer;
-    cr_b_buffer = enc->cr_b_buffer;
+    u_g_buffer = enc->u_g_buffer;
+    v_b_buffer = enc->v_b_buffer;
     if (rfx_encode_format_rgb(rgb_data, width, height, stride_bytes,
                               enc->format,
-                              y_r_buffer, cb_g_buffer, cr_b_buffer) != 0)
+                              y_r_buffer, u_g_buffer, v_b_buffer) != 0)
     {
         return 1;
     }
-    if (rfx_encode_rgb_to_ycbcr(y_r_buffer, cb_g_buffer, cr_b_buffer) != 0)
+    if (rfx_encode_rgb_to_yuv(y_r_buffer, u_g_buffer, v_b_buffer) != 0)
     {
         return 1;
     }
@@ -314,24 +586,85 @@ rfx_encode_rgb(struct rfxencode *enc, char *rgb_data,
     }
     LLOGLN(10, ("rfx_encode_rgb: y_size %d", *y_size));
     stream_seek(data_out, *y_size);
-    if (enc->rfx_encode(enc, cb_quants, cb_g_buffer,
+    if (enc->rfx_encode(enc, u_quants, u_g_buffer,
                         stream_get_tail(data_out),
                         stream_get_left(data_out),
-                        cb_size) != 0)
+                        u_size) != 0)
     {
         return 1;
     }
-    LLOGLN(10, ("rfx_encode_rgb: cb_size %d", *cb_size));
-    stream_seek(data_out, *cb_size);
-    if (enc->rfx_encode(enc, cr_quants, cr_b_buffer,
+    LLOGLN(10, ("rfx_encode_rgb: u_size %d", *u_size));
+    stream_seek(data_out, *u_size);
+    if (enc->rfx_encode(enc, v_quants, v_b_buffer,
                         stream_get_tail(data_out),
                         stream_get_left(data_out),
-                        cr_size) != 0)
+                        v_size) != 0)
     {
         return 1;
     }
-    LLOGLN(10, ("rfx_encode_rgb: cr_size %d", *cr_size));
-    stream_seek(data_out, *cr_size);
+    LLOGLN(10, ("rfx_encode_rgb: v_size %d", *v_size));
+    stream_seek(data_out, *v_size);
+    return 0;
+}
+
+/******************************************************************************/
+int
+rfx_encode_argb(struct rfxencode *enc, char *rgb_data,
+                int width, int height, int stride_bytes,
+                const char *y_quants, const char *u_quants,
+                const char *v_quants,
+                STREAM *data_out, int *y_size, int *u_size,
+                int *v_size, int *a_size)
+{
+    uint8 *a_buffer;
+    uint8 *y_r_buffer;
+    uint8 *u_g_buffer;
+    uint8 *v_b_buffer;
+
+    LLOGLN(10, ("rfx_encode_argb:"));
+    a_buffer = enc->a_buffer;
+    y_r_buffer = enc->y_r_buffer;
+    u_g_buffer = enc->u_g_buffer;
+    v_b_buffer = enc->v_b_buffer;
+    if (rfx_encode_format_argb(rgb_data, width, height, stride_bytes,
+                               enc->format,
+                               a_buffer, y_r_buffer,
+                               u_g_buffer, v_b_buffer) != 0)
+    {
+        return 1;
+    }
+    if (rfx_encode_rgb_to_yuv(y_r_buffer, u_g_buffer, v_b_buffer) != 0)
+    {
+        return 1;
+    }
+    if (enc->rfx_encode(enc, y_quants, y_r_buffer,
+                        stream_get_tail(data_out),
+                        stream_get_left(data_out),
+                        y_size) != 0)
+    {
+        return 1;
+    }
+    LLOGLN(10, ("rfx_encode_rgb: y_size %d", *y_size));
+    stream_seek(data_out, *y_size);
+    if (enc->rfx_encode(enc, u_quants, u_g_buffer,
+                        stream_get_tail(data_out),
+                        stream_get_left(data_out),
+                        u_size) != 0)
+    {
+        return 1;
+    }
+    LLOGLN(10, ("rfx_encode_rgb: u_size %d", *u_size));
+    stream_seek(data_out, *u_size);
+    if (enc->rfx_encode(enc, v_quants, v_b_buffer,
+                        stream_get_tail(data_out),
+                        stream_get_left(data_out),
+                        v_size) != 0)
+    {
+        return 1;
+    }
+    LLOGLN(10, ("rfx_encode_rgb: v_size %d", *v_size));
+    stream_seek(data_out, *v_size);
+    *a_size = rfx_encode_plane(enc, a_buffer, 64, 64, data_out);
     return 0;
 }
 
@@ -339,7 +672,8 @@ rfx_encode_rgb(struct rfxencode *enc, char *rgb_data,
 int
 rfx_encode_yuv(struct rfxencode *enc, char *yuv_data,
                int width, int height, int stride_bytes,
-               const int *y_quants, const int *u_quants, const int *v_quants,
+               const char *y_quants, const char *u_quants,
+               const char *v_quants,
                STREAM *data_out, int *y_size, int *u_size, int *v_size)
 {
     uint8 *y_buffer;
@@ -375,3 +709,50 @@ rfx_encode_yuv(struct rfxencode *enc, char *yuv_data,
     stream_seek(data_out, *v_size);
     return 0;
 }
+
+/******************************************************************************/
+int
+rfx_encode_yuva(struct rfxencode *enc, char *yuva_data,
+                int width, int height, int stride_bytes,
+                const char *y_quants, const char *u_quants,
+                const char *v_quants,
+                STREAM *data_out, int *y_size, int *u_size,
+                int *v_size, int *a_size)
+{
+    uint8 *y_buffer;
+    uint8 *u_buffer;
+    uint8 *v_buffer;
+    uint8 *a_buffer;
+
+    y_buffer = (uint8 *) yuva_data;
+    u_buffer = (uint8 *) (yuva_data + RFX_YUV_BTES);
+    v_buffer = (uint8 *) (yuva_data + RFX_YUV_BTES * 2);
+    a_buffer = (uint8 *) (yuva_data + RFX_YUV_BTES * 3);
+    if (enc->rfx_encode(enc, y_quants, y_buffer,
+                        stream_get_tail(data_out),
+                        stream_get_left(data_out),
+                        y_size) != 0)
+    {
+        return 1;
+    }
+    stream_seek(data_out, *y_size);
+    if (enc->rfx_encode(enc, u_quants, u_buffer,
+                        stream_get_tail(data_out),
+                        stream_get_left(data_out),
+                        u_size) != 0)
+    {
+        return 1;
+    }
+    stream_seek(data_out, *u_size);
+    if (enc->rfx_encode(enc, v_quants, v_buffer,
+                        stream_get_tail(data_out),
+                        stream_get_left(data_out),
+                        v_size) != 0)
+    {
+        return 1;
+    }
+    stream_seek(data_out, *v_size);
+    *a_size = rfx_encode_plane(enc, a_buffer, 64, 64, data_out);
+    return 0;
+}
+

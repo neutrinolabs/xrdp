@@ -1,7 +1,7 @@
 /**
  * RFX codec encoder
  *
- * Copyright 2014 Jay Sorg <jay.sorg@gmail.com>
+ * Copyright 2014-2015 Jay Sorg <jay.sorg@gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -151,7 +151,7 @@ rfxcodec_encode_create(int width, int height, int format, int flags)
     }
     else
     {
-#if defined(RFX_USE_ACCEL_X86)
+#if defined(RFX_USE_ACCEL_X86_NOT) // turned off for now
         if (enc->mode == RLGR3)
         {
             enc->rfx_encode = rfx_encode_component_rlgr3_x86_sse2; /* rfxencode_tile.c */
@@ -160,7 +160,7 @@ rfxcodec_encode_create(int width, int height, int format, int flags)
         {
             enc->rfx_encode = rfx_encode_component_rlgr1_x86_sse2; /* rfxencode_tile.c */
         }
-#elif defined(RFX_USE_ACCEL_AMD64)
+#elif defined(RFX_USE_ACCEL_AMD64_NOT) // turned off for now
         if (enc->mode == RLGR3)
         {
             enc->rfx_encode = rfx_encode_component_rlgr3_amd64_sse2; /* rfxencode_tile.c */
@@ -210,7 +210,7 @@ rfxcodec_encode(void *handle, char *cdata, int *cdata_bytes,
                 char *buf, int width, int height, int stride_bytes,
                 struct rfx_rect *regions, int num_regions,
                 struct rfx_tile *tiles, int num_tiles,
-                const int *quants, int num_quants)
+                const char *quants, int num_quants, int flags)
 {
     struct rfxencode *enc;
     STREAM s;
@@ -231,7 +231,8 @@ rfxcodec_encode(void *handle, char *cdata, int *cdata_bytes,
     }
     if (rfx_compose_message_data(enc, &s, regions, num_regions,
                                  buf, width, height, stride_bytes,
-                                 tiles, num_tiles, quants, num_quants) != 0)
+                                 tiles, num_tiles, quants, num_quants,
+                                 flags) != 0)
     {
         return 1;
     }

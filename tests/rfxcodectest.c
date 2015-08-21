@@ -1,7 +1,7 @@
 /**
  * RFX codec encoder test
  *
- * Copyright 2014 Jay Sorg <jay.sorg@gmail.com>
+ * Copyright 2014-2015 Jay Sorg <jay.sorg@gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,11 +27,11 @@
 
 #include <rfxcodec_encode.h>
 
-static const int g_rfx_default_quantization_values[] =
+static const unsigned char g_rfx_default_quantization_values[] =
 {
     /* LL3 LH3 HL3 HH3 LH2 HL2 HH2 LH1 HL1 HH1 */
-    6,  6,  6,  6,  7,  7,  8,  8,  8,  9,
-    9,  9,  9,  9,  10,  10,  12,  12,  12,  13
+    0x66,  0x66,  0x77,  0x88,  0x98,
+    0x99,  0x99,  0xaa,  0xcc,  0xdc
 };
 
 /*****************************************************************************/
@@ -46,7 +46,7 @@ get_mstime(void)
 
 /******************************************************************************/
 static int
-speed_random(int count, const int *quants)
+speed_random(int count, const char *quants)
 {
     void *han;
     int error;
@@ -56,34 +56,42 @@ speed_random(int count, const int *quants)
     char *cdata;
     char *buf;
     struct rfx_rect regions[1];
-    struct rfx_tile tiles[1];
+    struct rfx_tile tiles[2];
     int stime;
     int etime;
     int tiles_per_second;
     int num_regions;
     int num_tiles;
     int num_quants;
+    int flags;
 
     printf("speed_random:\n");
-    han = rfxcodec_encode_create(1920, 1024, RFX_FORMAT_BGRA, RFX_FLAGS_RLGR1);
+    flags = RFX_FLAGS_RLGR1;
+    //flags = RFX_FLAGS_RLGR1 | RFX_FLAGS_ALPHAV1;
+    han = rfxcodec_encode_create(1920, 1024, RFX_FORMAT_BGRA, flags);
     if (han == 0)
     {
         printf("speed_random: rfxcodec_encode_create failed\n");
         return 1;
     }
     printf("speed_random: rfxcodec_encode_create ok\n");
-    cdata = (char *) malloc(64 * 64 * 4);
-    cdata_bytes = 64 * 64 * 4;
-    buf = (char *) malloc(64 * 64 * 4);
+    cdata = (char *) malloc(128 * 64 * 4);
+    cdata_bytes = 128 * 64 * 4;
+    buf = (char *) malloc(128 * 64 * 4);
+#if 1
     fd = open("/dev/urandom", O_RDONLY);
-    if (read(fd, buf, 64 * 64 * 4) != 64 * 64 * 4)
+    //fd = open("/dev/zero", O_RDONLY);
+    if (read(fd, buf, 128 * 64 * 4) != 128 * 64 * 4)
     {
         printf("speed_random: read error\n");
     }
     close(fd);
+#else
+    memset(buf, 0x7f, 128 * 64 * 4);
+#endif
     regions[0].x = 0;
     regions[0].y = 0;
-    regions[0].cx = 64;
+    regions[0].cx = 128;
     regions[0].cy = 64;
     num_regions = 1;
     tiles[0].x = 0;
@@ -93,22 +101,31 @@ speed_random(int count, const int *quants)
     tiles[0].quant_y = 0;
     tiles[0].quant_cb = 0;
     tiles[0].quant_cr = 0;
+    tiles[1].x = 64;
+    tiles[1].y = 0;
+    tiles[1].cx = 64;
+    tiles[1].cy = 64;
+    tiles[1].quant_y = 0;
+    tiles[1].quant_cb = 0;
+    tiles[1].quant_cr = 0;
     num_tiles = 1;
     num_quants = 1;
     error = 0;
     stime = get_mstime();
+    flags = 0;
+    //flags = RFX_FLAGS_ALPHAV1;
     for (index = 0; index < count; index++)
     {
         error = rfxcodec_encode(han, cdata, &cdata_bytes, buf, 64, 64, 64 * 4,
                                 regions, num_regions, tiles, num_tiles,
-                                quants, num_quants);
+                                quants, num_quants, flags);
         if (error != 0)
         {
             break;
         }
     }
     etime = get_mstime();
-    tiles_per_second = count * 1000 / (etime - stime);
+    tiles_per_second = count * num_tiles * 1000 / (etime - stime + 1);
     printf("speed_random: cdata_bytes %d count %d ms time %d "
            "tiles_per_second %d\n",
            cdata_bytes, count, etime - stime, tiles_per_second);
@@ -221,7 +238,7 @@ load_bmp_file(int in_fd, char **data, int *width, int *height)
 /******************************************************************************/
 static int
 encode_file(char *data, int width, int height, char *cdata, int *cdata_bytes,
-            const int *quants, int num_quants)
+            const char *quants, int num_quants)
 {
     int awidth;
     int aheight;
@@ -271,7 +288,7 @@ encode_file(char *data, int width, int height, char *cdata, int *cdata_bytes,
 
     error = rfxcodec_encode(han, cdata, cdata_bytes, data, width, height, width * 4,
                             regions, num_regions, tiles, num_tiles,
-                            quants, num_quants);
+                            quants, num_quants, 0);
     if (error != 0)
     {
         printf("encode_file: rfxcodec_encode failed error %d\n", error);
@@ -287,7 +304,7 @@ encode_file(char *data, int width, int height, char *cdata, int *cdata_bytes,
 
 /******************************************************************************/
 static int
-read_file(int count, const int *quants, int num_quants,
+read_file(int count, const char *quants, int num_quants,
           const char *in_file, const char *out_file)
 {
     int in_fd;
@@ -380,7 +397,7 @@ main(int argc, char **argv)
     int count;
     char in_file[256];
     char out_file[256];
-    const int *quants = g_rfx_default_quantization_values;
+    const char *quants = (const char *) g_rfx_default_quantization_values;
 
     do_speed = 0;
     do_read = 0;

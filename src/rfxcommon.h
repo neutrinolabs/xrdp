@@ -23,6 +23,8 @@
 #define MAX(_val1, _val2) (_val1) > (_val2) ? (_val1) : (_val2)
 #define MINMAX(_v, _l, _h) ((_v) < (_l) ? (_l) : ((_v) > (_h) ? (_h) : (_v)))
 
+#define DWT_FACTOR 5
+
 typedef signed char sint8;
 typedef unsigned char uint8;
 typedef signed short sint16;
