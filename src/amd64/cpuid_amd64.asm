@@ -13,7 +13,7 @@ SECTION .text
 ;int
 ;cpuid_amd64(int eax_in, int ecx_in, int *eax, int *ebx, int *ecx, int *edx)
 
-%ifidn __OUTPUT_FORMAT__,elf
+%ifidn __OUTPUT_FORMAT__,elf64
 PROC cpuid_amd64
 %else
 PROC _cpuid_amd64
