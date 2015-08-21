@@ -13,16 +13,14 @@ SECTION .text
 ;int
 ;cpuid_amd64(int eax_in, int ecx_in, int *eax, int *ebx, int *ecx, int *edx)
 
-%ifidn __YASM_OBJFMT__,macho64
-PROC _cpuid_amd64
-%elifidn __OUTPUT_FORMAT__,macho64
-PROC _cpuid_amd64
-%else
+%ifidn __OUTPUT_FORMAT__,elf
 PROC cpuid_amd64
+%else
+PROC _cpuid_amd64
 %endif
     ; save registers
     push rbx
-    
+
     push rdx
     push rcx
     push r8

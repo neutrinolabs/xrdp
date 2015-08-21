@@ -10,15 +10,10 @@ SECTION .text
 ;int
 ;cpuid_x86(int eax_in, int ecx_in, int *eax, int *ebx, int *ecx, int *edx)
 
-%ifidn __YASM_OBJFMT__,macho
-PROC _cpuid_x86
-%elifidn __OUTPUT_FORMAT__,macho
-PROC _cpuid_x86
-%elifidn __OUTPUT_FORMAT__,win
-; Win32 - add _(underscore)
-PROC _cpuid_x86
-%else
+%ifidn __OUTPUT_FORMAT__,elf
 PROC cpuid_x86
+%else
+PROC _cpuid_x86
 %endif
     ; save registers
     push ebx
