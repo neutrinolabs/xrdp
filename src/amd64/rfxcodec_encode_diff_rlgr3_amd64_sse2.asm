@@ -9,9 +9,10 @@ section .data
 %endmacro
 
 ;int
-;diff_rlgr3_amd64(sint16 *co, int num_co, uint8 *dst, int dst_bytes);
+;rfxcodec_encode_diff_rlgr3_amd64_sse2(short *co,
+;                                      void *dst, int dst_bytes);
 
-PROC diff_rlgr3_amd64
+PROC rfxcodec_encode_diff_rlgr3_amd64_sse2
     ; save registers
     push rbx
     mov rax, 0

@@ -9,10 +9,10 @@ section .data
 %endmacro
 
 ;int
-;dwt_shift_amd64_sse2(const int *quantization_values, uint8 *data,
-;                     sint16 *dwt_buffer1, sint16 *dwt_buffer);
+;rfxcodec_encode_diff_rlgr1_amd64_sse2(short *co,
+;                                      void *dst, int dst_bytes);
 
-PROC dwt_shift_amd64_sse2
+PROC rfxcodec_encode_diff_rlgr1_amd64_sse2
     ; save registers
     push rbx
     mov rax, 0
