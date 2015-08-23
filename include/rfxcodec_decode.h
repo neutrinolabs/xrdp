@@ -21,12 +21,13 @@
 
 #include <rfxcodec_common.h>
 
-void *
-rfxcodec_decode_create(int width, int height, int format, int flags);
 int
-rfxcodec_decode_destroy(void * handle);
+rfxcodec_decode_create(int width, int height, int format, int flags,
+                       void **handle);
 int
-rfxcodec_decode(void * handle, char * cdata, int cdata_bytes,
-                char * data, int width, int height, int stride_bytes);
+rfxcodec_decode_destroy(void *handle);
+int
+rfxcodec_decode(void *handle, char *cdata, int cdata_bytes,
+                char *data, int width, int height, int stride_bytes);
 
 #endif

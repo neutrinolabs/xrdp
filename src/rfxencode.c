@@ -37,8 +37,9 @@
 #endif
 
 /******************************************************************************/
-void *
-rfxcodec_encode_create(int width, int height, int format, int flags)
+int
+rfxcodec_encode_create(int width, int height, int format, int flags,
+                       void **handle)
 {
     struct rfxencode *enc;
     int ax;
@@ -49,7 +50,7 @@ rfxcodec_encode_create(int width, int height, int format, int flags)
     enc = (struct rfxencode *) malloc(sizeof(struct rfxencode));
     if (enc == 0)
     {
-        return 0;
+        return 1;
     }
     memset(enc, 0, sizeof(struct rfxencode));
 #if defined(RFX_USE_ACCEL_X86)
@@ -134,7 +135,7 @@ rfxcodec_encode_create(int width, int height, int format, int flags)
             break;
         default:
             free(enc);
-            return NULL;
+            return 2;
     }
     enc->format = format;
     /* assign encoding functions */
@@ -186,7 +187,8 @@ rfxcodec_encode_create(int width, int height, int format, int flags)
     if (bx == 0)
     {
     }
-    return enc;
+    *handle = enc;
+    return 0;
 }
 
 /******************************************************************************/
@@ -208,8 +210,8 @@ rfxcodec_encode_destroy(void * handle)
 int
 rfxcodec_encode(void *handle, char *cdata, int *cdata_bytes,
                 char *buf, int width, int height, int stride_bytes,
-                struct rfx_rect *regions, int num_regions,
-                struct rfx_tile *tiles, int num_tiles,
+                const struct rfx_rect *regions, int num_regions,
+                const struct rfx_tile *tiles, int num_tiles,
                 const char *quants, int num_quants, int flags)
 {
     struct rfxencode *enc;
