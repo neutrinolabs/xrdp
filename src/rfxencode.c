@@ -116,7 +116,7 @@ rfxcodec_encode_create(int width, int height, int format, int flags,
     {
         enc->mode = RLGR1;
     }
-    switch (format) 
+    switch (format)
     {
         case RFX_FORMAT_BGRA:
             enc->bits_per_pixel = 32;
