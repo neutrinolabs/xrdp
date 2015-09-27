@@ -186,7 +186,7 @@ internal_log_end(struct log_config *l_cfg)
     /* closing log file */
     log_message(LOG_LEVEL_ALWAYS, "shutting down log subsystem...");
 
-    if (0 > l_cfg->fd)
+    if (-1 != l_cfg->fd)
     {
         /* closing logfile... */
         g_file_close(l_cfg->fd);
