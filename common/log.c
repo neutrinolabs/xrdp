@@ -59,6 +59,13 @@ internal_log_file_open(const char *fname)
                    S_IRUSR | S_IWUSR);
     }
 
+#ifdef FD_CLOEXEC
+    if (ret != -1)
+    {
+        fcntl(ret, F_SETFD, FD_CLOEXEC); 
+    }
+#endif
+
     return ret;
 }
 
