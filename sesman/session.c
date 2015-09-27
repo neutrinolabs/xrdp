@@ -43,6 +43,9 @@ extern int g_thread_sck; /* in thread.c */
 struct session_chain *g_sessions;
 int g_session_count;
 
+extern tbus g_term_event; /* in sesman.c */
+extern tbus g_sync_event; /* in sesman.c */
+
 static int g_sync_width;
 static int g_sync_height;
 static int g_sync_bpp;
@@ -525,6 +528,8 @@ session_start_fork(int width, int height, int bpp, char *username,
     }
     else if (pid == 0) /* child sesman */
     {
+        g_tcp_close(g_term_event);
+        g_tcp_close(g_sync_event);
         g_tcp_close(g_sck);
         g_tcp_close(g_thread_sck);
         g_sprintf(geometry, "%dx%d", width, height);
