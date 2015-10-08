@@ -77,7 +77,7 @@ trans_tcp_send(struct trans *self, const void *data, int len)
 int APP_CC
 trans_tcp_can_recv(struct trans *self, int sck, int millis)
 {
-    return g_tcp_can_recv(sck, millis);
+    return g_sck_can_recv(sck, millis);
 }
 
 /*****************************************************************************/
@@ -285,7 +285,7 @@ trans_check_wait_objs(struct trans *self)
 
     if (self->type1 == TRANS_TYPE_LISTENER) /* listening */
     {
-        if (g_tcp_can_recv(self->sck, 0))
+        if (g_sck_can_recv(self->sck, 0))
         {
             in_sck = g_sck_accept(self->sck, self->addr, sizeof(self->addr),
                                   self->port, sizeof(self->port));
@@ -437,7 +437,7 @@ trans_force_read_s(struct trans *self, struct stream *in_s, int size)
         {
             if (g_tcp_last_error_would_block(self->sck))
             {
-                if (!g_tcp_can_recv(self->sck, 100))
+                if (!g_sck_can_recv(self->sck, 100))
                 {
                     /* check for term here */
                     if (self->is_term != 0)

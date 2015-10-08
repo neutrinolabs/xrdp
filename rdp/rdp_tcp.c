@@ -74,7 +74,7 @@ rdp_tcp_recv(struct rdp_tcp *self, struct stream *s, int len)
         {
             if (g_tcp_last_error_would_block(self->sck))
             {
-                g_tcp_can_recv(self->sck, 10);
+                g_sck_can_recv(self->sck, 10);
             }
             else
             {

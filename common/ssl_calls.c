@@ -841,6 +841,6 @@ ssl_tls_can_recv(struct ssl_tls *tls, int sck, int millis)
         return 1;
     }
     g_reset_wait_obj(tls->rwo);
-    return g_tcp_can_recv(sck, millis);
+    return g_sck_can_recv(sck, millis);
 }
 

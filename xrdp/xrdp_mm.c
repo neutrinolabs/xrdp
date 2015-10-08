@@ -1450,7 +1450,7 @@ access_control(char *username, char *password, char *srv)
             if (reply > 0)
             {
                 /* We wait in 5 sec for a reply from sesman*/
-                if (g_tcp_can_recv(socket, 5000))
+                if (g_sck_can_recv(socket, 5000))
                 {
                     reply = g_tcp_recv(socket, in_s->end, 500, 0);
 
