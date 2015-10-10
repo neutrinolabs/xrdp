@@ -401,39 +401,6 @@ main(int argc, char **argv)
         g_exit(0);
     }
 
-    /* starting logging subsystem */
-    error = log_start(cfg_file, "XRDP");
-
-    if (error != LOG_STARTUP_OK)
-    {
-        switch (error)
-        {
-            case LOG_ERROR_MALLOC:
-                g_writeln("error on malloc. cannot start logging. quitting.");
-                break;
-            case LOG_ERROR_FILE_OPEN:
-                g_writeln("error opening log file [%s]. quitting.",
-                          getLogFile(text, 255));
-                break;
-            default:
-                g_writeln("log_start error");
-                break;
-        }
-
-        g_deinit();
-        g_exit(1);
-    }
-
-
-
-    if (g_file_exist(pid_file)) /* xrdp.pid */
-    {
-        g_writeln("It looks like xrdp is allready running,");
-        g_writeln("if not delete the xrdp.pid file and try again");
-        g_deinit();
-        g_exit(0);
-    }
-
     if (startup_params->kill)
     {
         g_writeln("stopping xrdp");
@@ -465,6 +432,39 @@ main(int argc, char **argv)
             g_file_close(fd);
         }
 
+        g_deinit();
+        g_exit(0);
+    }
+
+    /* starting logging subsystem */
+    error = log_start(cfg_file, "XRDP");
+
+    if (error != LOG_STARTUP_OK)
+    {
+        switch (error)
+        {
+            case LOG_ERROR_MALLOC:
+                g_writeln("error on malloc. cannot start logging. quitting.");
+                break;
+            case LOG_ERROR_FILE_OPEN:
+                g_writeln("error opening log file [%s]. quitting.",
+                          getLogFile(text, 255));
+                break;
+            default:
+                g_writeln("log_start error");
+                break;
+        }
+
+        g_deinit();
+        g_exit(1);
+    }
+
+
+
+    if (g_file_exist(pid_file)) /* xrdp.pid */
+    {
+        g_writeln("It looks like xrdp is allready running,");
+        g_writeln("if not delete the xrdp.pid file and try again");
         g_deinit();
         g_exit(0);
     }
