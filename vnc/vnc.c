@@ -53,8 +53,26 @@ void DEFAULT_CC
 rfbEncryptBytes(char *bytes, char *passwd)
 {
     char key[24];
+    char passwd_hash[20];
+    char passwd_hash_text[40];
     void *des;
+    void *sha1;
     int len;
+    int passwd_bytes;
+
+    /* create password hash from passowrd */
+    passwd_bytes = g_strlen(passwd);
+    sha1 = ssl_sha1_info_create();
+    ssl_sha1_transform(sha1, "xrdp_vnc", 8);
+    ssl_sha1_transform(sha1, passwd, passwd_bytes);
+    ssl_sha1_transform(sha1, passwd, passwd_bytes);
+    ssl_sha1_complete(sha1, passwd_hash);
+    ssl_sha1_info_delete(sha1);
+    g_snprintf(passwd_hash_text, 39, "%2.2x%2.2x%2.2x%2.2x",
+               (tui8)passwd_hash[0], (tui8)passwd_hash[1],
+               (tui8)passwd_hash[2], (tui8)passwd_hash[3]);
+    passwd_hash_text[39] = 0;
+    passwd = passwd_hash_text;
 
     /* key is simply password padded with nulls */
     g_memset(key, 0, sizeof(key));
