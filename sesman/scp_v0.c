@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2015
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
             }
             else
             {
-                scp_v0s_replyauthentication(c, 32+3); /* all first 32 are reserved for PAM errors */
+                scp_v0s_replyauthentication(c, 32 + 3); /* all first 32 are reserved for PAM errors */
                 log_message(LOG_LEVEL_INFO, "Username okey but group problem for "
                             "user: %s", s->username);
                 /* g_writeln("user password ok, but group problem"); */
@@ -128,11 +128,11 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
                     display = session_start(s->width, s->height, s->bpp, s->username,
                                             s->password, data, SESMAN_SESSION_TYPE_XRDP,
                                             s->domain, s->program, s->directory,
-                                            s->client_ip);					
-				}
+                                            s->client_ip);
+                }
                 else if (SCP_SESSION_TYPE_XORG == s->type)
                 {
-					/* type is SCP_SESSION_TYPE_XORG */
+                    /* type is SCP_SESSION_TYPE_XORG */
                     log_message(LOG_LEVEL_INFO, "starting Xorg session...");
                     display = session_start(s->width, s->height, s->bpp, s->username,
                                             s->password, data, SESMAN_SESSION_TYPE_XORG,
