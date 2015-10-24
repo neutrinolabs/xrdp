@@ -164,7 +164,8 @@ session_get_bydata(char *name, int width, int height, int bpp, int type, char *c
         }
 
         if (g_strncmp(name, tmp->item->name, 255) == 0 &&
-            (tmp->item->width == width && tmp->item->height == height) &&
+            (!(policy & SESMAN_CFG_SESS_POLICY_D) ||
+             (tmp->item->width == width && tmp->item->height == height)) &&
             (!(policy & SESMAN_CFG_SESS_POLICY_I) ||
              (g_strncmp_d(client_ip, tmp->item->client_ip, ':', 255) == 0)) &&
             (!(policy & SESMAN_CFG_SESS_POLICY_C) ||
