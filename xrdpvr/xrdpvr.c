@@ -24,6 +24,27 @@
 #include "xrdpvr.h"
 #include "xrdpvr_internal.h"
 
+/* Support newer versions of ffmpeg and libav */
+#if ! defined(CODEC_TYPE_AUDIO)
+  #define CODEC_TYPE_AUDIO AVMEDIA_TYPE_AUDIO
+#endif
+
+#if ! defined(CODEC_TYPE_VIDEO)
+  #define CODEC_TYPE_VIDEO AVMEDIA_TYPE_VIDEO
+#endif
+
+#if ! defined(PKT_FLAG_KEY)
+  #define PKT_FLAG_KEY AV_PKT_FLAG_KEY
+#endif
+
+#ifndef CODEC_ID_H264
+  #define CODEC_ID_H264 AV_CODEC_ID_H264
+#endif
+
+#ifndef CODEC_ID_AAC
+  #define CODEC_ID_AAC AV_CODEC_ID_AAC
+#endif
+
 /* globals */
 PLAYER_STATE_INFO g_psi;
 int g_video_index = -1;
