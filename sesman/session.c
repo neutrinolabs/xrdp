@@ -144,27 +144,9 @@ session_get_bydata(char *name, int width, int height, int bpp, int type, char *c
             tmp->item->client_ip);
 #endif
 
-        if ((type == SESMAN_SESSION_TYPE_XRDP) || (type == SESMAN_SESSION_TYPE_XORG))
-        {
-            /* only name and bpp need to match for X11rdp, it can resize */
-            if (g_strncmp(name, tmp->item->name, 255) == 0 &&
-                (!(policy & SESMAN_CFG_SESS_POLICY_D) ||
-                 (tmp->item->width == width && tmp->item->height == height)) &&
-                (!(policy & SESMAN_CFG_SESS_POLICY_I) ||
-                 (g_strncmp_d(client_ip, tmp->item->client_ip, ':', 255) == 0)) &&
-                (!(policy & SESMAN_CFG_SESS_POLICY_C) ||
-                 (g_strncmp(client_ip, tmp->item->client_ip, 255) == 0)) &&
-                tmp->item->bpp == bpp &&
-                tmp->item->type == type)
-            {
-                /*THREAD-FIX release chain lock */
-                lock_chain_release();
-                return tmp->item;
-            }
-        }
-
         if (g_strncmp(name, tmp->item->name, 255) == 0 &&
-            (tmp->item->width == width && tmp->item->height == height) &&
+            (!(policy & SESMAN_CFG_SESS_POLICY_D) ||
+             (tmp->item->width == width && tmp->item->height == height)) &&
             (!(policy & SESMAN_CFG_SESS_POLICY_I) ||
              (g_strncmp_d(client_ip, tmp->item->client_ip, ':', 255) == 0)) &&
             (!(policy & SESMAN_CFG_SESS_POLICY_C) ||
