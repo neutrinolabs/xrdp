@@ -611,7 +611,8 @@ trans_write_copy_s(struct trans *self, struct stream *out_s)
     init_stream(wait_s, size);
     if (self->si != 0)
     {
-        if (self->si->cur_source != 0)
+        if ((self->si->cur_source != 0) &&
+            (self->si->cur_source != self->my_source))
         {
             self->si->source[self->si->cur_source] += size;
             wait_s->source = self->si->source + self->si->cur_source;
