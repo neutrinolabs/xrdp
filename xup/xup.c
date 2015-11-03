@@ -86,6 +86,7 @@ lib_data_in(struct trans *trans)
     struct stream *s;
     int len;
 
+    LLOGLN(10, ("lib_data_in:"));
     if (trans == 0)
     {
         return 1;
@@ -210,6 +211,8 @@ lib_mod_connect(struct mod *mod)
         error = -1;
         if (trans_connect(mod->trans, mod->ip, con_port, 3000) == 0)
         {
+            LLOGLN(0, ("lib_mod_connect: connected to Xserver"
+                   "(Xorg or X11rdp) sck %d", mod->trans->sck));
             error = 0;
         }
 
@@ -1247,6 +1250,7 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
 {
     int rv;
 
+    LLOGLN(10, ("lib_mod_process_orders: type %d", type));
     rv = 0;
     switch (type)
     {
@@ -1384,12 +1388,14 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
     int type;
     char *phold;
 
+    LLOGLN(10, ("lib_mod_process_message:"));
     rv = 0;
     if (rv == 0)
     {
         in_uint16_le(s, type);
         in_uint16_le(s, num_orders);
         in_uint32_le(s, len);
+        LLOGLN(10, ("lib_mod_process_message: type %d", type));
 
         if (type == 1) /* original order list */
         {
