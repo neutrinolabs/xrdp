@@ -24,6 +24,7 @@ startscript_DATA = \
   km-080c.ini \
   km-0813.ini \
   km-0816.ini \
+  km-100c.ini \
   km-e0010411.ini \
   km-e0200411.ini \
   km-e0210411.ini
