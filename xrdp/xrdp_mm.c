@@ -578,6 +578,10 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
         else
         {
             xrdp_wm_show_log(self->wm);
+            if (self->wm->hide_log_window)
+            {
+                rv = 1;
+            }
         }
     }
 
@@ -1231,6 +1235,10 @@ xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
         log_message(LOG_LEVEL_INFO,"xrdp_mm_process_login_response: "
                         "login failed");
         xrdp_wm_show_log(self->wm);
+        if (self->wm->hide_log_window)
+        {
+            rv = 1;
+        }
     }
 
     cleanup_sesman_connection(self);
@@ -2155,6 +2163,11 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
         if (trans_check_wait_objs(self->sesman_trans) != 0)
         {
             self->delete_sesman_trans = 1;
+            if (self->wm->hide_log_window)
+            {
+                /* if hide_log_window, this is fatal */
+                rv = 1;
+            }
         }
     }
 

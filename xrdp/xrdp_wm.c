@@ -560,7 +560,7 @@ xrdp_wm_init(struct xrdp_wm *self)
     xrdp_wm_load_static_pointers(self);
     self->screen->bg_color = self->xrdp_config->cfg_globals.ls_top_window_bg_color;
 
-    if (self->session->client_info->rdp_autologin)
+    if (self->session->client_info->rdp_autologin || self->hide_log_window)
     {
         /*
          * NOTE: this should eventually be accessed from self->xrdp_config
@@ -576,7 +576,8 @@ xrdp_wm_init(struct xrdp_wm *self)
             values->auto_free = 1;
 
             /* look for module name to be loaded */
-            if (autorun_name[0] != 0) {
+            if (autorun_name[0] != 0)
+            {
                 /* if autorun is configured in xrdp.ini, we enforce that module to be loaded */
                 g_strncpy(section_name, autorun_name, 255);
             }
