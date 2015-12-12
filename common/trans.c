@@ -607,7 +607,7 @@ trans_write_copy_s(struct trans *self, struct stream *out_s)
         return 0;
     }
     /* did not send right away, have to copy */
-    make_stream(wait_s); 
+    make_stream(wait_s);
     init_stream(wait_s, size);
     if (self->si != 0)
     {
