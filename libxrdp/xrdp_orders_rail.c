@@ -333,6 +333,12 @@ xrdp_orders_send_window_new_update(struct xrdp_orders *self, int window_id,
         order_size += 8 * window_state->num_visibility_rects;
     }
 
+    if (order_size < 12)
+    {
+        /* no flags set */
+        return 0;
+    }
+
     if (xrdp_orders_check(self, order_size) != 0)
     {
         return 1;
