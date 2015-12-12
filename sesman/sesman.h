@@ -42,9 +42,6 @@
 #include "session.h"
 #include "access.h"
 #include "scp.h"
-#include "thread.h"
-#include "lock.h"
-#include "thread_calls.h"
 
 #include "libscp.h"
 

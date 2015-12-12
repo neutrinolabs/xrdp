@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2015
  *
  * BSD process grouping by:
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland.
@@ -32,33 +32,13 @@
 #include "sesman.h"
 #include "libscp_types.h"
 
-#include <errno.h>
-//#include <time.h>
-
-extern tbus g_sync_event;
 extern unsigned char g_fixedkey[8];
 extern struct config_sesman *g_cfg; /* in sesman.c */
 extern int g_sck; /* in sesman.c */
-extern int g_thread_sck; /* in thread.c */
 struct session_chain *g_sessions;
 int g_session_count;
 
 extern tbus g_term_event; /* in sesman.c */
-extern tbus g_sync_event; /* in sesman.c */
-
-static int g_sync_width;
-static int g_sync_height;
-static int g_sync_bpp;
-static char *g_sync_username;
-static char *g_sync_password;
-static char *g_sync_domain;
-static char *g_sync_program;
-static char *g_sync_directory;
-static char *g_sync_client_ip;
-static tbus g_sync_data;
-static tui8 g_sync_type;
-static int g_sync_result;
-static int g_sync_cmd;
 
 /**
  * Creates a string consisting of all parameters that is hosted in the param list
@@ -71,7 +51,6 @@ char *APP_CC
 dumpItemsToString(struct list *self, char *outstr, int len)
 {
     int index;
-    tbus item;
     int totalLen = 0;
 
     g_memset(outstr, 0, len);
@@ -103,9 +82,6 @@ session_get_bydata(char *name, int width, int height, int bpp, int type, char *c
     struct session_chain *tmp;
     enum SESMAN_CFG_SESS_POLICY policy = g_cfg->sess.policy;
 
-    /*THREAD-FIX require chain lock */
-    lock_chain_acquire();
-
     tmp = g_sessions;
 
     /* convert from SCP_SESSION_TYPE namespace to SESMAN_SESSION_TYPE namespace */
@@ -122,7 +98,6 @@ session_get_bydata(char *name, int width, int height, int bpp, int type, char *c
             type = SESMAN_SESSION_TYPE_XORG;
             break;
         default:
-            lock_chain_release();
             return 0;
     }
 
@@ -154,16 +129,12 @@ session_get_bydata(char *name, int width, int height, int bpp, int type, char *c
             tmp->item->bpp == bpp &&
             tmp->item->type == type)
         {
-            /*THREAD-FIX release chain lock */
-            lock_chain_release();
             return tmp->item;
         }
 
         tmp = tmp->next;
     }
 
-    /*THREAD-FIX release chain lock */
-    lock_chain_release();
     return 0;
 }
 
@@ -267,7 +238,6 @@ x_server_running(int display)
 {
     char text[256];
     int x_running;
-    int sck;
 
     g_sprintf(text, "/tmp/.X11-unix/X%d", display);
     x_running = g_file_exist(text);
@@ -309,9 +279,9 @@ session_start_sessvc(int xpid, int wmpid, long data, char *username, int display
     /* building parameters */
     g_snprintf(exe_path, 261, "%s/xrdp-sessvc", XRDP_SBIN_PATH);
 
-    list_add_item(sessvc_params, (long)g_strdup(exe_path));
-    list_add_item(sessvc_params, (long)g_strdup(xpid_str));
-    list_add_item(sessvc_params, (long)g_strdup(wmpid_str));
+    list_add_item(sessvc_params, (tintptr)g_strdup(exe_path));
+    list_add_item(sessvc_params, (tintptr)g_strdup(xpid_str));
+    list_add_item(sessvc_params, (tintptr)g_strdup(wmpid_str));
     list_add_item(sessvc_params, 0); /* mandatory */
 
     env_set_user(username, 0, display,
@@ -329,7 +299,7 @@ session_start_sessvc(int xpid, int wmpid, long data, char *username, int display
     /* no problem calling strerror for thread safety: other threads
        are blocked */
     log_message(LOG_LEVEL_DEBUG, "errno: %d, description: %s",
-                errno, g_get_strerror());
+                g_get_errno(), g_get_strerror());
     log_message(LOG_LEVEL_DEBUG, "execve parameter list:");
 
     for (i = 0; i < (sessvc_params->count); i++)
@@ -383,7 +353,6 @@ session_get_aval_display_from_chain(void)
     int display;
 
     display = g_cfg->sess.x11_display_offset;
-    lock_chain_acquire();
 
     while ((display - g_cfg->sess.x11_display_offset) <= g_cfg->sess.max_sessions)
     {
@@ -391,7 +360,6 @@ session_get_aval_display_from_chain(void)
         {
             if (!x_server_running_check_ports(display))
             {
-                lock_chain_release();
                 return display;
             }
         }
@@ -399,7 +367,6 @@ session_get_aval_display_from_chain(void)
         display++;
     }
 
-    lock_chain_release();
     log_message(LOG_LEVEL_ERROR, "X server -- no display in range is available");
     return 0;
 }
@@ -503,17 +470,16 @@ session_start_fork(int width, int height, int bpp, char *username,
         return 0;
     }
 
-    pid = g_fork();
+    pid = g_fork(); /* parent is fork from tcp accpet,
+                       child forks X and wm, then becomes scp */
 
     if (pid == -1)
     {
     }
-    else if (pid == 0) /* child sesman */
+    else if (pid == 0)
     {
         g_tcp_close(g_term_event);
-        g_tcp_close(g_sync_event);
         g_tcp_close(g_sck);
-        g_tcp_close(g_thread_sck);
         g_sprintf(geometry, "%dx%d", width, height);
         g_sprintf(depth, "%d", bpp);
         g_sprintf(screen, ":%d", display);
@@ -553,19 +519,21 @@ session_start_fork(int width, int height, int bpp, char *username,
 
         g_waitpid(bsdsespid);
 #endif
-        wmpid = g_fork();
+        wmpid = g_fork(); /* parent becomes X,
+                             child forks wm, and waits, todo */
         if (wmpid == -1)
         {
         }
-        else if (wmpid == 0) /* child (child sesman) xserver */
+        else if (wmpid == 0)
         {
             wait_for_xserver(display);
             auth_start_session(data, display);
-            pampid = g_fork();
+            pampid = g_fork(); /* parent waits, todo
+                                  child becomes wm */
             if (pampid == -1)
             {
             }
-            else if (pampid == 0) /* child: X11/client */
+            else if (pampid == 0)
             {
                 env_set_user(username, 0, display,
                              g_cfg->session_variables1,
@@ -601,7 +569,7 @@ session_start_fork(int width, int height, int bpp, char *username,
                                         "wm for user %s - pid %d", username, g_getpid());
                             /* logging parameters */
                             log_message(LOG_LEVEL_DEBUG, "errno: %d, "
-                                        "description: %s", errno, g_get_strerror());
+                                        "description: %s", g_get_errno(), g_get_strerror());
                             log_message(LOG_LEVEL_DEBUG, "execlp3 parameter "
                                         "list:");
                             log_message(LOG_LEVEL_DEBUG, "        argv[0] = %s",
@@ -619,7 +587,7 @@ session_start_fork(int width, int height, int bpp, char *username,
                                  "wm for user %s - pid %d", username, g_getpid());
                     /* logging parameters */
                     log_message(LOG_LEVEL_DEBUG, "errno: %d, description: "
-                                "%s", errno, g_get_strerror());
+                                "%s", g_get_errno(), g_get_strerror());
                     log_message(LOG_LEVEL_DEBUG, "execlp3 parameter list:");
                     log_message(LOG_LEVEL_DEBUG, "        argv[0] = %s",
                                 text);
@@ -634,7 +602,7 @@ session_start_fork(int width, int height, int bpp, char *username,
                                 "for user %s - pid %d", username, g_getpid());
                     /* logging parameters */
                     log_message(LOG_LEVEL_DEBUG, "errno: %d, description: "
-                                "%s", errno, g_get_strerror());
+                                "%s", g_get_errno(), g_get_strerror());
                 }
                 else
                 {
@@ -653,10 +621,10 @@ session_start_fork(int width, int height, int bpp, char *username,
                 g_exit(0);
             }
         }
-        else /* parent (child sesman) */
+        else
         {
-            xpid = g_fork();
-
+            xpid = g_fork(); /* parent becomes scp,
+                                child becomes X */
             if (xpid == -1)
             {
             }
@@ -684,8 +652,8 @@ session_start_fork(int width, int height, int bpp, char *username,
                     xserver_params->auto_free = 1;
 
                     /* these are the must have parameters */
-                    list_add_item(xserver_params, (long) g_strdup("Xorg"));
-                    list_add_item(xserver_params, (long) g_strdup(screen));
+                    list_add_item(xserver_params, (tintptr) g_strdup("Xorg"));
+                    list_add_item(xserver_params, (tintptr) g_strdup(screen));
 
                     /* additional parameters from sesman.ini file */
                     list_append_list_strdup(g_cfg->xorg_params, xserver_params, 0);
@@ -714,14 +682,14 @@ session_start_fork(int width, int height, int bpp, char *username,
                     xserver_params->auto_free = 1;
 
                     /* these are the must have parameters */
-                    list_add_item(xserver_params, (long)g_strdup("Xvnc"));
-                    list_add_item(xserver_params, (long)g_strdup(screen));
-                    list_add_item(xserver_params, (long)g_strdup("-geometry"));
-                    list_add_item(xserver_params, (long)g_strdup(geometry));
-                    list_add_item(xserver_params, (long)g_strdup("-depth"));
-                    list_add_item(xserver_params, (long)g_strdup(depth));
-                    list_add_item(xserver_params, (long)g_strdup("-rfbauth"));
-                    list_add_item(xserver_params, (long)g_strdup(passwd_file));
+                    list_add_item(xserver_params, (tintptr)g_strdup("Xvnc"));
+                    list_add_item(xserver_params, (tintptr)g_strdup(screen));
+                    list_add_item(xserver_params, (tintptr)g_strdup("-geometry"));
+                    list_add_item(xserver_params, (tintptr)g_strdup(geometry));
+                    list_add_item(xserver_params, (tintptr)g_strdup("-depth"));
+                    list_add_item(xserver_params, (tintptr)g_strdup(depth));
+                    list_add_item(xserver_params, (tintptr)g_strdup("-rfbauth"));
+                    list_add_item(xserver_params, (tintptr)g_strdup(passwd_file));
 
                     /* additional parameters from sesman.ini file */
                     //config_read_xserver_params(SESMAN_SESSION_TYPE_XVNC,
@@ -740,12 +708,12 @@ session_start_fork(int width, int height, int bpp, char *username,
                     xserver_params->auto_free = 1;
 
                     /* these are the must have parameters */
-                    list_add_item(xserver_params, (long)g_strdup("X11rdp"));
-                    list_add_item(xserver_params, (long)g_strdup(screen));
-                    list_add_item(xserver_params, (long)g_strdup("-geometry"));
-                    list_add_item(xserver_params, (long)g_strdup(geometry));
-                    list_add_item(xserver_params, (long)g_strdup("-depth"));
-                    list_add_item(xserver_params, (long)g_strdup(depth));
+                    list_add_item(xserver_params, (tintptr)g_strdup("X11rdp"));
+                    list_add_item(xserver_params, (tintptr)g_strdup(screen));
+                    list_add_item(xserver_params, (tintptr)g_strdup("-geometry"));
+                    list_add_item(xserver_params, (tintptr)g_strdup(geometry));
+                    list_add_item(xserver_params, (tintptr)g_strdup("-depth"));
+                    list_add_item(xserver_params, (tintptr)g_strdup(depth));
 
                     /* additional parameters from sesman.ini file */
                     //config_read_xserver_params(SESMAN_SESSION_TYPE_XRDP,
@@ -771,7 +739,7 @@ session_start_fork(int width, int height, int bpp, char *username,
 
                 /* logging parameters */
                 log_message(LOG_LEVEL_DEBUG, "errno: %d, description: "
-                            "%s", errno, g_get_strerror());
+                            "%s", g_get_errno(), g_get_strerror());
                 log_message(LOG_LEVEL_DEBUG, "execve parameter list size: "
                             "%d", (xserver_params)->count);
 
@@ -784,7 +752,7 @@ session_start_fork(int width, int height, int bpp, char *username,
                 list_delete(xserver_params);
                 g_exit(1);
             }
-            else /* parent (child sesman)*/
+            else
             {
                 wait_for_xserver(display);
                 g_snprintf(text, 255, "%d", display);
@@ -796,7 +764,7 @@ session_start_fork(int width, int height, int bpp, char *username,
             }
         }
     }
-    else /* parent sesman process */
+    else
     {
         temp->item->pid = pid;
         temp->item->display = display;
@@ -820,15 +788,9 @@ session_start_fork(int width, int height, int bpp, char *username,
         temp->item->type = type;
         temp->item->status = SESMAN_SESSION_STATUS_ACTIVE;
 
-        /*THREAD-FIX require chain lock */
-        lock_chain_acquire();
-
         temp->next = g_sessions;
         g_sessions = temp;
         g_session_count++;
-
-        /*THREAD-FIX release chain lock */
-        lock_chain_release();
 
         return display;
     }
@@ -876,32 +838,9 @@ session_start(int width, int height, int bpp, char *username, char *password,
               long data, tui8 type, char *domain, char *program,
               char *directory, char *client_ip)
 {
-    int display;
-
-    /* lock mutex */
-    lock_sync_acquire();
-    /* set shared vars */
-    g_sync_cmd = 0;
-    g_sync_width = width;
-    g_sync_height = height;
-    g_sync_bpp = bpp;
-    g_sync_username = username;
-    g_sync_password = password;
-    g_sync_domain = domain;
-    g_sync_program = program;
-    g_sync_directory = directory;
-    g_sync_client_ip = client_ip;
-    g_sync_data = data;
-    g_sync_type = type;
-    /* set event for main thread to see */
-    g_set_wait_obj(g_sync_event);
-    /* wait for main thread to get done */
-    lock_sync_sem_acquire();
-    /* read result(display) from shared var */
-    display = g_sync_result;
-    /* unlock mutex */
-    lock_sync_release();
-    return display;
+    return session_start_fork(width, height, bpp, username,
+                              password, data, type, domain,
+                              program, directory, client_ip);
 }
 
 /******************************************************************************/
@@ -910,42 +849,7 @@ session_start(int width, int height, int bpp, char *username, char *password,
 int DEFAULT_CC
 session_reconnect(int display, char *username)
 {
-    /* lock mutex */
-    lock_sync_acquire();
-    /* set shared vars */
-    g_sync_cmd = 1;
-    g_sync_width = display;
-    g_sync_username = username;
-    /* set event for main thread to see */
-    g_set_wait_obj(g_sync_event);
-    /* wait for main thread to get done */
-    lock_sync_sem_acquire();
-    /* unlock mutex */
-    lock_sync_release();
-    return 0;
-}
-
-/******************************************************************************/
-/* called with the main thread */
-int APP_CC
-session_sync_start(void)
-{
-    if (g_sync_cmd == 0)
-    {
-        g_sync_result = session_start_fork(g_sync_width, g_sync_height, g_sync_bpp,
-                                           g_sync_username, g_sync_password,
-                                           g_sync_data, g_sync_type, g_sync_domain,
-                                           g_sync_program, g_sync_directory,
-                                           g_sync_client_ip);
-    }
-    else
-    {
-        /* g_sync_width is really display */
-        g_sync_result = session_reconnect_fork(g_sync_width, g_sync_username);
-    }
-
-    lock_sync_sem_release();
-    return 0;
+    return session_reconnect_fork(display, username);
 }
 
 /******************************************************************************/
@@ -954,9 +858,6 @@ session_kill(int pid)
 {
     struct session_chain *tmp;
     struct session_chain *prev;
-
-    /*THREAD-FIX require chain lock */
-    lock_chain_acquire();
 
     tmp = g_sessions;
     prev = 0;
@@ -979,8 +880,6 @@ session_kill(int pid)
                 prev->next = tmp->next;
             }
 
-            /*THREAD-FIX release chain lock */
-            lock_chain_release();
             return SESMAN_SESSION_KILL_NULLITEM;
         }
 
@@ -1003,8 +902,6 @@ session_kill(int pid)
 
             g_free(tmp);
             g_session_count--;
-            /*THREAD-FIX release chain lock */
-            lock_chain_release();
             return SESMAN_SESSION_KILL_OK;
         }
 
@@ -1013,8 +910,6 @@ session_kill(int pid)
         tmp = tmp->next;
     }
 
-    /*THREAD-FIX release chain lock */
-    lock_chain_release();
     return SESMAN_SESSION_KILL_NOTFOUND;
 }
 
@@ -1023,9 +918,6 @@ void DEFAULT_CC
 session_sigkill_all()
 {
     struct session_chain *tmp;
-
-    /*THREAD-FIX require chain lock */
-    lock_chain_acquire();
 
     tmp = g_sessions;
 
@@ -1044,9 +936,6 @@ session_sigkill_all()
         /* go on */
         tmp = tmp->next;
     }
-
-    /*THREAD-FIX release chain lock */
-    lock_chain_release();
 }
 
 /******************************************************************************/
@@ -1064,9 +953,6 @@ session_get_bypid(int pid)
         return 0;
     }
 
-    /*THREAD-FIX require chain lock */
-    lock_chain_acquire();
-
     tmp = g_sessions;
 
     while (tmp != 0)
@@ -1075,18 +961,13 @@ session_get_bypid(int pid)
         {
             log_message(LOG_LEVEL_ERROR, "session descriptor for "
                         "pid %d is null!", pid);
-            /*THREAD-FIX release chain lock */
-            lock_chain_release();
             g_free(dummy);
             return 0;
         }
 
         if (tmp->item->pid == pid)
         {
-            /*THREAD-FIX release chain lock */
             g_memcpy(dummy, tmp->item, sizeof(struct session_item));
-            lock_chain_release();
-            /*return tmp->item;*/
             return dummy;
         }
 
@@ -1094,8 +975,6 @@ session_get_bypid(int pid)
         tmp = tmp->next;
     }
 
-    /*THREAD-FIX release chain lock */
-    lock_chain_release();
     g_free(dummy);
     return 0;
 }
@@ -1110,9 +989,6 @@ session_get_byuser(char *user, int *cnt, unsigned char flags)
     int index;
 
     count = 0;
-
-    /*THREAD-FIX require chain lock */
-    lock_chain_acquire();
 
     tmp = g_sessions;
 
@@ -1139,8 +1015,6 @@ session_get_byuser(char *user, int *cnt, unsigned char flags)
     if (count == 0)
     {
         (*cnt) = 0;
-        /*THREAD-FIX release chain lock */
-        lock_chain_release();
         return 0;
     }
 
@@ -1150,8 +1024,6 @@ session_get_byuser(char *user, int *cnt, unsigned char flags)
     if (sess == 0)
     {
         (*cnt) = 0;
-        /*THREAD-FIX release chain lock */
-        lock_chain_release();
         return 0;
     }
 
@@ -1160,7 +1032,7 @@ session_get_byuser(char *user, int *cnt, unsigned char flags)
 
     while (tmp != 0)
     {
-#warning FIXME: we should get only disconnected sessions!
+/* #warning FIXME: we should get only disconnected sessions! */
         if ((NULL == user) || (!g_strncasecmp(user, tmp->item->name, 256)))
         {
             if ((tmp->item->status) & flags)
@@ -1170,7 +1042,7 @@ session_get_byuser(char *user, int *cnt, unsigned char flags)
                 (sess[index]).height = tmp->item->height;
                 (sess[index]).width = tmp->item->width;
                 (sess[index]).bpp = tmp->item->bpp;
-#warning FIXME: setting idle times and such
+/* #warning FIXME: setting idle times and such */
                 /*(sess[index]).connect_time.year = tmp->item->connect_time.year;
                 (sess[index]).connect_time.month = tmp->item->connect_time.month;
                 (sess[index]).connect_time.day = tmp->item->connect_time.day;
@@ -1203,8 +1075,6 @@ session_get_byuser(char *user, int *cnt, unsigned char flags)
         tmp = tmp->next;
     }
 
-    /*THREAD-FIX release chain lock */
-    lock_chain_release();
     (*cnt) = count;
     return sess;
 }
