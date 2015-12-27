@@ -693,6 +693,11 @@ int xfuse_clear_clip_dir(void)
 
     log_debug("entered");
 
+    if (g_xrdp_fs.inode_table == NULL)
+    {
+        return 0;
+    }
+
     /* xinode for .clipboard */
     xip = g_xrdp_fs.inode_table[2];
 
