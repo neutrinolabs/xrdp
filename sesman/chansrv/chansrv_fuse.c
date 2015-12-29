@@ -62,8 +62,8 @@ char g_fuse_clipboard_path[256] = ""; /* for clipboard use */
 #include "chansrv_fuse.h"
 
 /* dummy calls when XRDP_FUSE is not defined */
-int xfuse_init()                { return 0; }
-int xfuse_deinit()              { return 0; }
+int xfuse_init(void)            { return 0; }
+int xfuse_deinit(void)          { return 0; }
 int xfuse_check_wait_objs(void) { return 0; }
 int xfuse_get_wait_objs(tbus *objs, int *count, int *timeout) { return 0; }
 int xfuse_clear_clip_dir(void)  { return 0; }
@@ -74,7 +74,7 @@ int xfuse_create_share(tui32 device_id, char *dirname)                       { r
 void xfuse_devredir_cb_open_file(void *vp, tui32 IoStatus, tui32 DeviceId, tui32 FileId)     {}
 void xfuse_devredir_cb_write_file(void *vp, char *buf, size_t length)        {}
 void xfuse_devredir_cb_read_file(void *vp, char *buf, size_t length)         {}
-int  xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode)         {}
+int  xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode)         { return 0; }
 void xfuse_devredir_cb_enum_dir_done(void *vp, tui32 IoStatus)               {}
 void xfuse_devredir_cb_rmdir_or_file(void *vp, tui32 IoStatus)               {}
 void xfuse_devredir_cb_rename_file(void *vp, tui32 IoStatus)                 {}
@@ -253,8 +253,8 @@ static int g_fd = 0;
 static tintptr g_bufsize = 0;
 
 /* forward declarations for internal access */
-static int xfuse_init_xrdp_fs();
-static int xfuse_deinit_xrdp_fs();
+static int xfuse_init_xrdp_fs(void);
+static int xfuse_deinit_xrdp_fs(void);
 static int xfuse_init_lib(struct fuse_args *args);
 static int xfuse_is_inode_valid(int ino);
 
@@ -264,7 +264,7 @@ static void xfuse_create_file(fuse_req_t req, fuse_ino_t parent,
                               const char *name, mode_t mode, int type);
 #endif
 
-static void xfuse_dump_fs();
+static void xfuse_dump_fs(void);
 static void xfuse_dump_xrdp_inode(struct xrdp_inode *xino);
 static tui32 xfuse_get_device_id_for_inode(tui32 ino, char *full_path);
 static void fuse_reverse_pathname(char *full_path, char *reverse_path);
@@ -281,7 +281,7 @@ static int  xfuse_delete_file(int parent, char *name);
 static int  xfuse_delete_file_with_xinode(XRDP_INODE *xinode);
 static int  xfuse_delete_dir_with_xinode(XRDP_INODE *xinode);
 static int  xfuse_recursive_delete_dir_with_xinode(XRDP_INODE *xinode);
-static void xfuse_update_xrdpfs_size();
+static void xfuse_update_xrdpfs_size(void);
 static void xfuse_enum_dir(fuse_req_t req, fuse_ino_t ino, size_t size,
                            off_t off, struct fuse_file_info *fi);
 
