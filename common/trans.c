@@ -249,6 +249,18 @@ trans_send_waiting(struct trans *self, int block)
                     }
                 }
             }
+            else if (block)
+            {
+                /* check for term here */
+                if (self->is_term != 0)
+                {
+                    if (self->is_term())
+                    {
+                        /* term */
+                        return 1;
+                    }
+                }
+            }
         }
         else
         {
@@ -412,6 +424,7 @@ trans_check_wait_objs(struct trans *self)
 
     return rv;
 }
+
 /*****************************************************************************/
 int APP_CC
 trans_force_read_s(struct trans *self, struct stream *in_s, int size)
@@ -422,7 +435,6 @@ trans_force_read_s(struct trans *self, struct stream *in_s, int size)
     {
         return 1;
     }
-
     while (size > 0)
     {
         /* make sure stream has room */
@@ -430,47 +442,47 @@ trans_force_read_s(struct trans *self, struct stream *in_s, int size)
         {
             return 1;
         }
-
-        rcvd = self->trans_recv(self, in_s->end, size);
-
-        if (rcvd == -1)
+        if (self->trans_can_recv(self, self->sck, 100))
         {
-            if (g_tcp_last_error_would_block(self->sck))
+            rcvd = self->trans_recv(self, in_s->end, size);
+            if (rcvd == -1)
             {
-                if (!g_sck_can_recv(self->sck, 100))
+                if (g_tcp_last_error_would_block(self->sck))
                 {
-                    /* check for term here */
-                    if (self->is_term != 0)
-                    {
-                        if (self->is_term())
-                        {
-                            /* term */
-                            self->status = TRANS_STATUS_DOWN;
-                            return 1;
-                        }
-                    }
+                }
+                else
+                {
+                    /* error */
+                    self->status = TRANS_STATUS_DOWN;
+                    return 1;
                 }
             }
-            else
+            else if (rcvd == 0)
             {
                 /* error */
                 self->status = TRANS_STATUS_DOWN;
                 return 1;
             }
-        }
-        else if (rcvd == 0)
-        {
-            /* error */
-            self->status = TRANS_STATUS_DOWN;
-            return 1;
+            else
+            {
+                in_s->end += rcvd;
+                size -= rcvd;
+            }
         }
         else
         {
-            in_s->end += rcvd;
-            size -= rcvd;
+            /* check for term here */
+            if (self->is_term != 0)
+            {
+                if (self->is_term())
+                {
+                    /* term */
+                    self->status = TRANS_STATUS_DOWN;
+                    return 1;
+                }
+            }
         }
     }
-
     return 0;
 }
 
@@ -493,57 +505,55 @@ trans_force_write_s(struct trans *self, struct stream *out_s)
     {
         return 1;
     }
-
     size = (int) (out_s->end - out_s->data);
     total = 0;
-
     if (trans_send_waiting(self, 1) != 0)
     {
         self->status = TRANS_STATUS_DOWN;
         return 1;
     }
-
     while (total < size)
     {
-        sent = self->trans_send(self, out_s->data + total, size - total);
-
-        if (sent == -1)
+        if (g_tcp_can_send(self->sck, 100))
         {
-            if (g_tcp_last_error_would_block(self->sck))
+            sent = self->trans_send(self, out_s->data + total, size - total);
+            if (sent == -1)
             {
-                if (!g_tcp_can_send(self->sck, 100))
+                if (g_tcp_last_error_would_block(self->sck))
                 {
-                    /* check for term here */
-                    if (self->is_term != 0)
-                    {
-                        if (self->is_term())
-                        {
-                            /* term */
-                            self->status = TRANS_STATUS_DOWN;
-                            return 1;
-                        }
-                    }
+                }
+                else
+                {
+                    /* error */
+                    self->status = TRANS_STATUS_DOWN;
+                    return 1;
                 }
             }
-            else
+            else if (sent == 0)
             {
                 /* error */
                 self->status = TRANS_STATUS_DOWN;
                 return 1;
             }
-        }
-        else if (sent == 0)
-        {
-            /* error */
-            self->status = TRANS_STATUS_DOWN;
-            return 1;
+            else
+            {
+                total = total + sent;
+            }
         }
         else
         {
-            total = total + sent;
+            /* check for term here */
+            if (self->is_term != 0)
+            {
+                if (self->is_term())
+                {
+                    /* term */
+                    self->status = TRANS_STATUS_DOWN;
+                    return 1;
+                }
+            }
         }
     }
-
     return 0;
 }
 
@@ -873,6 +883,7 @@ trans_get_out_s(struct trans *self, int size)
 
     return rv;
 }
+
 /*****************************************************************************/
 /* returns error */
 int APP_CC
@@ -898,6 +909,7 @@ trans_set_tls_mode(struct trans *self, const char *key, const char *cert)
 
     return 0;
 }
+
 /*****************************************************************************/
 /* returns error */
 int APP_CC
