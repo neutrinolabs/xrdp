@@ -1319,7 +1319,7 @@ rdpup_init(void)
         g_disconnect_timeout_s = 60;
     }
 
-    rdpLog("kill disconencted [%d] timeout [%d] sec\n", g_do_kill_disconnected,
+    rdpLog("kill disconnected [%d] timeout [%d] sec\n", g_do_kill_disconnected,
            g_disconnect_timeout_s);
 
     return 1;

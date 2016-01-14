@@ -611,7 +611,7 @@ static gboolean on_delete_event(GtkWidget *widget, GdkEvent *ev, gpointer data)
 
 static void on_destroy(GtkWidget *widget, gpointer data)
 {
-    /* this will destory all windows and return control to gtk_main() */
+    /* this will destroy all windows and return control to gtk_main() */
     gtk_main_quit();
 }
 
@@ -673,6 +673,6 @@ static void on_clear_clicked(GtkWidget *widget, gpointer data)
 
 static void on_quit_clicked(GtkWidget *widget, gpointer data)
 {
-    /* this will destory all windows and return control to gtk_main() */
+    /* this will destroy all windows and return control to gtk_main() */
     gtk_main_quit();
 }

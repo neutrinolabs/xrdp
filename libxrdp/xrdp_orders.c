@@ -286,7 +286,7 @@ xrdp_orders_last_bounds(struct xrdp_orders *self, struct xrdp_rect *rect)
 }
 
 /*****************************************************************************/
-/* check if all coords are withing 256 bytes */
+/* check if all coords are within 256 bytes */
 /* returns boolean */
 static int APP_CC
 xrdp_orders_send_delta(struct xrdp_orders *self, int *vals, int count)
@@ -2719,7 +2719,7 @@ xrdp_orders_out_v3(struct xrdp_orders *self, int cache_id, int cache_idx,
     out_uint8(self->out_s, RDP_ORDER_BMPCACHE3); /* type */
     /* cache index */
     out_uint16_le(self->out_s, cache_idx);
-    /* persistant cache key 1/2 */
+    /* persistent cache key 1/2 */
     out_uint32_le(self->out_s, 0);
     out_uint32_le(self->out_s, 0);
     /* bitmap data */

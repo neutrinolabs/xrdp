@@ -691,7 +691,7 @@ lib_framebuffer_update(struct vnc *v)
                         }
                     }
 
-                    /* keep these in 32x32, vnc cursor can be alot bigger */
+                    /* keep these in 32x32, vnc cursor can be a lot bigger */
                     if (x > 31)
                     {
                         x = 31;
@@ -1041,7 +1041,7 @@ lib_mod_connect(struct vnc *v)
     if (error == 0)
     {
         v->server_msg(v, "VNC tcp connected", 0);
-        /* protocal version */
+        /* protocol version */
         init_stream(s, 8192);
         error = trans_force_read_s(v->trans, s, 12);
         if (error == 0)

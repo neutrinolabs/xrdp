@@ -346,7 +346,7 @@ file_read_sections(int fd, struct list *names)
 
 /*****************************************************************************/
 /* return error */
-/* this function should be prefered over file_read_sections because it can
+/* this function should be preferred over file_read_sections because it can
    read any file size */
 int APP_CC
 file_by_name_read_sections(const char *file_name, struct list *names)
@@ -386,7 +386,7 @@ file_read_section(int fd, const char *section,
 
 /*****************************************************************************/
 /* return error */
-/* this function should be prefered over file_read_section because it can
+/* this function should be preferred over file_read_section because it can
    read any file size */
 int APP_CC
 file_by_name_read_section(const char *file_name, const char *section,

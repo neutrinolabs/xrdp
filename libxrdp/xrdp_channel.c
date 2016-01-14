@@ -173,7 +173,7 @@ xrdp_channel_call_callback(struct xrdp_channel *self, struct stream *s,
 
 /*****************************************************************************/
 /* returns error */
-/* This is called from the secure layer to process an incomming non global
+/* This is called from the secure layer to process an incoming non global
    channel packet.
    'chanid' passed in here is the mcs channel id so it MCS_GLOBAL_CHANNEL
    plus something. */

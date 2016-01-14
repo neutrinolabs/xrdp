@@ -263,7 +263,7 @@ get_keymaps(int keylayout, struct xrdp_keymap *keymap)
             if (g_memcmp(lkeymap, keymap, sizeof(struct xrdp_keymap)) != 0)
             {
                 log_message(LOG_LEVEL_WARNING,
-                            "local keymap file for 0x%4.4x found and dosen't match "
+                            "local keymap file for 0x%4.4x found and doesn't match "
                             "built in keymap, using local keymap file", keylayout);
             }
 

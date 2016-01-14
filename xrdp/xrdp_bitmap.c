@@ -165,7 +165,7 @@ xrdp_bitmap_create_with_data(int width, int height,
     if (((bpp >= 24) && (data_as_int & 3)) ||
         (((bpp == 15) || (bpp == 16)) && (data_as_int & 1)))
     {
-        /* got to copy data here, it's not alligned
+        /* got to copy data here, it's not aligned
            other calls in this file assume alignment */
         Bpp = 4;
         switch (bpp)

@@ -313,7 +313,7 @@ static void thread_func(void *userdata) {
         } else {
             if (u->want_src_data)
             {
-                /* we dont want source data anymore */
+                /* we don't want source data anymore */
                 char buf[12];
 
                 buf[0]  = 0;

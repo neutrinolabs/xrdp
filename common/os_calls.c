@@ -1799,7 +1799,7 @@ g_file_read(int fd, char *ptr, int len)
 }
 
 /*****************************************************************************/
-/* write to file, returns the number of bytes writen or -1 on error */
+/* write to file, returns the number of bytes written or -1 on error */
 int APP_CC
 g_file_write(int fd, char *ptr, int len)
 {

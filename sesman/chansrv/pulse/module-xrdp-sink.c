@@ -309,7 +309,7 @@ static int data_send(struct userdata *u, pa_memchunk *chunk) {
         s.sun_family = AF_UNIX;
         bytes = sizeof(s.sun_path) - 1;
         snprintf(s.sun_path, bytes, CHANSRV_PORT_STR, u->display_num);
-        pa_log_debug("trying to conenct to %s", s.sun_path);
+        pa_log_debug("trying to connect to %s", s.sun_path);
         if (connect(fd, (struct sockaddr *)&s,
                     sizeof(struct sockaddr_un)) != 0) {
             u->failed_connect_time = pa_rtclock_now();
