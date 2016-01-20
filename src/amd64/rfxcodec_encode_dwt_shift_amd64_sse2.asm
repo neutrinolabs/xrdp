@@ -1,8 +1,25 @@
 
 section .data
     align 16
-    cw128 times 8 dw 128
-    cdFFFF times 4 dd 65535
+    cw128    times 8 dw 128
+    cdFFFF   times 4 dd 65535
+    ; these are 1 << (factor - 1) 0 to 15 is factor
+    cwa0     times 8 dw 0     ; 0
+    cwa1     times 8 dw 1     ; 1
+    cwa2     times 8 dw 2     ; 2
+    cwa4     times 8 dw 4     ; 3
+    cwa8     times 8 dw 8     ; 4
+    cwa16    times 8 dw 16    ; 5
+    cwa32    times 8 dw 32    ; 6
+    cwa64    times 8 dw 64    ; 7
+    cwa128   times 8 dw 128   ; 8
+    cwa256   times 8 dw 256   ; 9
+    cwa512   times 8 dw 512   ; 10
+    cwa1024  times 8 dw 1024  ; 11
+    cwa2048  times 8 dw 2048  ; 12
+    cwa4096  times 8 dw 4096  ; 13
+    cwa8192  times 8 dw 8192  ; 14
+    cwa16384 times 8 dw 16384 ; 15
 
 section .text
 
@@ -13,14 +30,15 @@ section .text
 %endmacro
 
 ;******************************************************************************
-; source 16 bit signed, 8 pixel width
-rfx_dwt_2d_encode_block_horiz_16_8:
-    sub rsp, 32                         ; local vars, 32 bytes
-    mov rcx, 8
-loop1k:
+; source 16 bit signed, 16 pixel width
+rfx_dwt_2d_encode_block_horiz_16_16:
+    mov ecx, 8
+loop1a:
     ; pre / post
-    movdqu xmm1, [rsi]                  ; src[2n]
-    movdqu xmm2, [rsi + 16]
+    movdqa xmm1, [rsi]                  ; src[2n]
+    movdqa xmm2, [rsi + 16]
+    movdqa xmm6, xmm1
+    movdqa xmm7, xmm2
     pand xmm1, [rel cdFFFF]
     pand xmm2, [rel cdFFFF]
     pslld xmm1, 16
@@ -28,8 +46,10 @@ loop1k:
     psrad xmm1, 16
     psrad xmm2, 16
     packssdw xmm1, xmm2
-    movdqu xmm2, [rsi + 2]              ; src[2n + 1]
-    movdqu xmm3, [rsi + 18]
+    movdqa xmm2, xmm6                   ; src[2n + 1]
+    movdqa xmm3, xmm7
+    psrldq xmm2, 2
+    psrldq xmm3, 2
     pand xmm2, [rel cdFFFF]
     pand xmm3, [rel cdFFFF]
     pslld xmm2, 16
@@ -37,22 +57,25 @@ loop1k:
     psrad xmm2, 16
     psrad xmm3, 16
     packssdw xmm2, xmm3
-    mov bx, [rsi + 4]                   ; src[2n + 2]
-    mov [rsp + 0], bx
-    mov bx, [rsi + 8]
-    mov [rsp + 2], bx
-    mov bx, [rsi + 12]
-    mov [rsp + 4], bx
-    mov bx, [rsi + 16]
-    mov [rsp + 6], bx
-    mov bx, [rsi + 20]
-    mov [rsp + 8], bx
-    mov bx, [rsi + 24]
-    mov [rsp + 10], bx
-    mov bx, [rsi + 28]
-    mov [rsp + 12], bx
-    mov [rsp + 14], bx
-    movdqu xmm3, [rsp]
+    movdqa xmm3, xmm6                   ; src[2n + 2]
+    movdqa xmm4, xmm7
+    psrldq xmm3, 4
+    psrldq xmm4, 4
+    movd eax, xmm7
+    movd xmm5, eax
+    pslldq xmm5, 12
+    por xmm3, xmm5
+    mov eax, [rsi + 28]
+    movd xmm5, eax
+    pslldq xmm5, 12
+    por xmm4, xmm5
+    pand xmm3, [rel cdFFFF]
+    pand xmm4, [rel cdFFFF]
+    pslld xmm3, 16
+    pslld xmm4, 16
+    psrad xmm3, 16
+    psrad xmm4, 16
+    packssdw xmm3, xmm4
     movdqa xmm4, xmm1
     movdqa xmm5, xmm2
     movdqa xmm6, xmm3
@@ -61,16 +84,28 @@ loop1k:
     psraw xmm4, 1
     psubw xmm5, xmm4
     psraw xmm5, 1
-    movdqu [rdi], xmm5                  ; out hi
+
+    movdqa xmm6, xmm5                   ; out hi
+    paddw xmm6, xmm8
+    psraw xmm6, xmm9
+    movdqa [rdi], xmm6
+
     ; l[n] = src[2n] + ((h[n - 1] + h[n]) >> 1)
-    movdqu [rsp + 2], xmm5
-    mov bx, [rsp + 2]
-    mov [rsp], bx
-    movdqu xmm7, [rsp]
+    movdqa xmm7, xmm5
+    movd eax, xmm7
+    pslldq xmm7, 2
+    and eax, 0xFFFF
+    movd xmm6, eax
+    por xmm7, xmm6
     paddw xmm5, xmm7
     psraw xmm5, 1
     paddw xmm5, xmm1
-    movdqu [rdx], xmm5                  ; out lo
+
+    movdqa xmm6, xmm5                   ; out lo
+    paddw xmm6, xmm10
+    psraw xmm6, xmm11
+    movdqa [rdx], xmm6
+
     ; move right
     lea rsi, [rsi + 16 * 2]
     lea rdi, [rdi + 8 * 2]
@@ -86,21 +121,20 @@ loop1k:
     lea rdi, [rdi + 8 * 2]
     lea rdx, [rdx + 8 * 2]
 
-    dec rcx
-    jnz loop1k
+    dec ecx
+    jnz loop1a
 
-    add rsp, 32                         ; local vars, 32 bytes
     ret
 
 ;******************************************************************************
-; source 16 bit signed, 8 pixel width
-rfx_dwt_2d_encode_block_verti_16_8:
-    mov rcx, 2
-loop1j:
+; source 16 bit signed, 16 pixel width
+rfx_dwt_2d_encode_block_verti_16_16:
+    mov ecx, 2
+loop1b:
     ; pre
-    movdqu xmm1, [rsi]                  ; src[2n]
-    movdqu xmm2, [rsi + 16 * 2]         ; src[2n + 1]
-    movdqu xmm3, [rsi + 16 * 2 * 2]     ; src[2n + 2]
+    movdqa xmm1, [rsi]                  ; src[2n]
+    movdqa xmm2, [rsi + 16 * 2]         ; src[2n + 1]
+    movdqa xmm3, [rsi + 16 * 2 * 2]     ; src[2n + 2]
     movdqa xmm4, xmm1
     movdqa xmm5, xmm2
     movdqa xmm6, xmm3
@@ -109,11 +143,11 @@ loop1j:
     psraw xmm4, 1
     psubw xmm5, xmm4
     psraw xmm5, 1
-    movdqu [rdi], xmm5                  ; out hi
+    movdqa [rdi], xmm5                  ; out hi
     movdqa xmm6, xmm5                   ; save hi
     ; l[n] = src[2n] + ((h[n - 1] + h[n]) >> 1)
     paddw xmm5, xmm1
-    movdqu [rdx], xmm5                  ; out lo
+    movdqa [rdx], xmm5                  ; out lo
     movdqa xmm7, xmm6                   ; save hi
     ; move down
     lea rsi, [rsi + 16 * 2 * 2]         ; 2 rows
@@ -121,11 +155,12 @@ loop1j:
     lea rdx, [rdx + 16 * 2]             ; 1 row
 
     ; loop
-    mov rax, 6
-loop2j:
+    shl ecx, 16
+    mov cx, 6
+loop2b:
     movdqa xmm1, xmm3                   ; src[2n]
-    movdqu xmm2, [rsi + 16 * 2]         ; src[2n + 1]
-    movdqu xmm3, [rsi + 16 * 2 * 2]     ; src[2n + 2]
+    movdqa xmm2, [rsi + 16 * 2]         ; src[2n + 1]
+    movdqa xmm3, [rsi + 16 * 2 * 2]     ; src[2n + 2]
     movdqa xmm4, xmm1
     movdqa xmm5, xmm2
     movdqa xmm6, xmm3
@@ -134,25 +169,26 @@ loop2j:
     psraw xmm4, 1
     psubw xmm5, xmm4
     psraw xmm5, 1
-    movdqu [rdi], xmm5                  ; out hi
+    movdqa [rdi], xmm5                  ; out hi
     movdqa xmm6, xmm5                   ; save hi
     ; l[n] = src[2n] + ((h[n - 1] + h[n]) >> 1)
     paddw xmm5, xmm7
     psraw xmm5, 1
     paddw xmm5, xmm1
-    movdqu [rdx], xmm5                  ; out lo
+    movdqa [rdx], xmm5                  ; out lo
     movdqa xmm7, xmm6                   ; save hi
     ; move down
     lea rsi, [rsi + 16 * 2 * 2]         ; 2 rows
     lea rdi, [rdi + 16 * 2]             ; 1 row
     lea rdx, [rdx + 16 * 2]             ; 1 row
 
-    dec rax
-    jnz loop2j
+    dec cx
+    jnz loop2b
+    shr ecx, 16
 
     ; post
     movdqa xmm1, xmm3                   ; src[2n]
-    movdqu xmm2, [rsi + 16 * 2]         ; src[2n + 1]
+    movdqa xmm2, [rsi + 16 * 2]         ; src[2n + 1]
     movdqa xmm4, xmm1
     movdqa xmm5, xmm2
     movdqa xmm6, xmm3
@@ -161,12 +197,12 @@ loop2j:
     psraw xmm4, 1
     psubw xmm5, xmm4
     psraw xmm5, 1
-    movdqu [rdi], xmm5                  ; out hi
+    movdqa [rdi], xmm5                  ; out hi
     ; l[n] = src[2n] + ((h[n - 1] + h[n]) >> 1)
     paddw xmm5, xmm7
     psraw xmm5, 1
     paddw xmm5, xmm1
-    movdqu [rdx], xmm5                  ; out lo
+    movdqa [rdx], xmm5                  ; out lo
     ; move down
     lea rsi, [rsi + 16 * 2 * 2]         ; 2 row
     lea rdi, [rdi + 16 * 2]             ; 1 row
@@ -182,20 +218,21 @@ loop2j:
     lea rdi, [rdi + 16]
     lea rdx, [rdx + 16]
 
-    dec rcx
-    jnz loop1j
+    dec ecx
+    jnz loop1b
 
     ret
 
 ;******************************************************************************
-; source 16 bit signed, 16 pixel width
-rfx_dwt_2d_encode_block_horiz_16_16:
-    sub rsp, 32                         ; local vars, 32 bytes
-    mov rcx, 16
-loop1e:
+; source 16 bit signed, 32 pixel width
+rfx_dwt_2d_encode_block_horiz_16_32:
+    mov ecx, 16
+loop1c:
     ; pre
-    movdqu xmm1, [rsi]                  ; src[2n]
-    movdqu xmm2, [rsi + 16]
+    movdqa xmm1, [rsi]                  ; src[2n]
+    movdqa xmm2, [rsi + 16]
+    movdqa xmm6, xmm1
+    movdqa xmm7, xmm2
     pand xmm1, [rel cdFFFF]
     pand xmm2, [rel cdFFFF]
     pslld xmm1, 16
@@ -203,8 +240,10 @@ loop1e:
     psrad xmm1, 16
     psrad xmm2, 16
     packssdw xmm1, xmm2
-    movdqu xmm2, [rsi + 2]              ; src[2n + 1]
-    movdqu xmm3, [rsi + 18]
+    movdqa xmm2, xmm6                   ; src[2n + 1]
+    movdqa xmm3, xmm7
+    psrldq xmm2, 2
+    psrldq xmm3, 2
     pand xmm2, [rel cdFFFF]
     pand xmm3, [rel cdFFFF]
     pslld xmm2, 16
@@ -212,8 +251,18 @@ loop1e:
     psrad xmm2, 16
     psrad xmm3, 16
     packssdw xmm2, xmm3
-    movdqu xmm3, [rsi + 4]              ; src[2n + 2]
-    movdqu xmm4, [rsi + 20]
+    movdqa xmm3, xmm6                   ; src[2n + 2]
+    movdqa xmm4, xmm7
+    psrldq xmm3, 4
+    psrldq xmm4, 4
+    movd eax, xmm7
+    movd xmm5, eax
+    pslldq xmm5, 12
+    por xmm3, xmm5
+    mov eax, [rsi + 32]
+    movd xmm5, eax
+    pslldq xmm5, 12
+    por xmm4, xmm5
     pand xmm3, [rel cdFFFF]
     pand xmm4, [rel cdFFFF]
     pslld xmm3, 16
@@ -229,24 +278,42 @@ loop1e:
     psraw xmm4, 1
     psubw xmm5, xmm4
     psraw xmm5, 1
-    movdqu [rdi], xmm5                  ; out hi
+
+    movdqa xmm6, xmm5                   ; out hi
+    paddw xmm6, xmm8
+    psraw xmm6, xmm9
+    movdqa [rdi], xmm6
+    movdqa xmm2, xmm5                   ; save hi
+
     ; l[n] = src[2n] + ((h[n - 1] + h[n]) >> 1)
-    movdqu [rsp + 2], xmm5
-    mov bx, [rsp + 2]
-    mov [rsp], bx
-    movdqu xmm7, [rsp]
+    movdqa xmm7, xmm5
+    movd eax, xmm7
+    pslldq xmm7, 2
+    and eax, 0xFFFF
+    movd xmm6, eax
+    por xmm7, xmm6
     paddw xmm5, xmm7
     psraw xmm5, 1
     paddw xmm5, xmm1
-    movdqu [rdx], xmm5                  ; out lo
+
+    psrldq xmm2, 14
+    movd ebx, xmm2                      ; save hi
+
+    movdqa xmm6, xmm5                   ; out lo
+    paddw xmm6, xmm10
+    psraw xmm6, xmm11
+    movdqa [rdx], xmm6
+
     ; move right
     lea rsi, [rsi + 16 * 2]
     lea rdi, [rdi + 8 * 2]
     lea rdx, [rdx + 8 * 2]
 
     ; post
-    movdqu xmm1, [rsi]                  ; src[2n]
-    movdqu xmm2, [rsi + 16]
+    movdqa xmm1, [rsi]                  ; src[2n]
+    movdqa xmm2, [rsi + 16]
+    movdqa xmm6, xmm1
+    movdqa xmm7, xmm2
     pand xmm1, [rel cdFFFF]
     pand xmm2, [rel cdFFFF]
     pslld xmm1, 16
@@ -254,8 +321,10 @@ loop1e:
     psrad xmm1, 16
     psrad xmm2, 16
     packssdw xmm1, xmm2
-    movdqu xmm2, [rsi + 2]              ; src[2n + 1]
-    movdqu xmm3, [rsi + 18]
+    movdqa xmm2, xmm6                   ; src[2n + 1]
+    movdqa xmm3, xmm7
+    psrldq xmm2, 2
+    psrldq xmm3, 2
     pand xmm2, [rel cdFFFF]
     pand xmm3, [rel cdFFFF]
     pslld xmm2, 16
@@ -263,22 +332,26 @@ loop1e:
     psrad xmm2, 16
     psrad xmm3, 16
     packssdw xmm2, xmm3
-    mov bx, [rsi + 4]                   ; src[2n + 2]
-    mov [rsp + 0], bx
-    mov bx, [rsi + 8]
-    mov [rsp + 2], bx
-    mov bx, [rsi + 12]
-    mov [rsp + 4], bx
-    mov bx, [rsi + 16]
-    mov [rsp + 6], bx
-    mov bx, [rsi + 20]
-    mov [rsp + 8], bx
-    mov bx, [rsi + 24]
-    mov [rsp + 10], bx
-    mov bx, [rsi + 28]
-    mov [rsp + 12], bx
-    mov [rsp + 14], bx
-    movdqu xmm3, [rsp]
+
+    movdqa xmm3, xmm6                   ; src[2n + 2]
+    movdqa xmm4, xmm7
+    psrldq xmm3, 4
+    psrldq xmm4, 4
+    movd eax, xmm7
+    movd xmm5, eax
+    pslldq xmm5, 12
+    por xmm3, xmm5
+    mov eax, [rsi + 28]
+    movd xmm5, eax
+    pslldq xmm5, 12
+    por xmm4, xmm5
+    pand xmm3, [rel cdFFFF]
+    pand xmm4, [rel cdFFFF]
+    pslld xmm3, 16
+    pslld xmm4, 16
+    psrad xmm3, 16
+    psrad xmm4, 16
+    packssdw xmm3, xmm4
     movdqa xmm4, xmm1
     movdqa xmm5, xmm2
     movdqa xmm6, xmm3
@@ -287,13 +360,26 @@ loop1e:
     psraw xmm4, 1
     psubw xmm5, xmm4
     psraw xmm5, 1
-    movdqu [rdi], xmm5                  ; out hi
+
+    movdqa xmm6, xmm5                   ; out hi
+    paddw xmm6, xmm8
+    psraw xmm6, xmm9
+    movdqa [rdi], xmm6
+
     ; l[n] = src[2n] + ((h[n - 1] + h[n]) >> 1)
-    movdqu xmm7, [rdi - 2]
+    movdqa xmm7, xmm5
+    pslldq xmm7, 2
+    movd xmm6, ebx
+    por xmm7, xmm6
     paddw xmm5, xmm7
     psraw xmm5, 1
     paddw xmm5, xmm1
-    movdqu [rdx], xmm5                  ; out lo
+
+    movdqa xmm6, xmm5                   ; out lo
+    paddw xmm6, xmm10
+    psraw xmm6, xmm11
+    movdqa [rdx], xmm6
+
     ; move right
     lea rsi, [rsi + 16 * 2]
     lea rdi, [rdi + 8 * 2]
@@ -309,21 +395,20 @@ loop1e:
     lea rdi, [rdi + 16 * 2]
     lea rdx, [rdx + 16 * 2]
 
-    dec rcx
-    jnz loop1e
+    dec ecx
+    jnz loop1c
 
-    add rsp, 32                         ; local vars, 32 bytes
     ret
 
 ;******************************************************************************
-; source 16 bit signed, 16 pixel width
-rfx_dwt_2d_encode_block_verti_16_16:
-    mov rcx, 4
-loop1b:
+; source 16 bit signed, 32 pixel width
+rfx_dwt_2d_encode_block_verti_16_32:
+    mov ecx, 4
+loop1d:
     ; pre
-    movdqu xmm1, [rsi]                  ; src[2n]
-    movdqu xmm2, [rsi + 32 * 2]         ; src[2n + 1]
-    movdqu xmm3, [rsi + 32 * 2 * 2]     ; src[2n + 2]
+    movdqa xmm1, [rsi]                  ; src[2n]
+    movdqa xmm2, [rsi + 32 * 2]         ; src[2n + 1]
+    movdqa xmm3, [rsi + 32 * 2 * 2]     ; src[2n + 2]
     movdqa xmm4, xmm1
     movdqa xmm5, xmm2
     movdqa xmm6, xmm3
@@ -332,11 +417,11 @@ loop1b:
     psraw xmm4, 1
     psubw xmm5, xmm4
     psraw xmm5, 1
-    movdqu [rdi], xmm5                  ; out hi
+    movdqa [rdi], xmm5                  ; out hi
     movdqa xmm6, xmm5                   ; save hi
     ; l[n] = src[2n] + ((h[n - 1] + h[n]) >> 1)
     paddw xmm5, xmm1
-    movdqu [rdx], xmm5                  ; out lo
+    movdqa [rdx], xmm5                  ; out lo
     movdqa xmm7, xmm6                   ; save hi
     ; move down
     lea rsi, [rsi + 32 * 2 * 2]         ; 2 rows
@@ -344,11 +429,12 @@ loop1b:
     lea rdx, [rdx + 32 * 2]             ; 1 row
 
     ; loop
-    mov rax, 14
-loop2b:
+    shl ecx, 16
+    mov cx, 14
+loop2d:
     movdqa xmm1, xmm3                   ; src[2n]
-    movdqu xmm2, [rsi + 32 * 2]         ; src[2n + 1]
-    movdqu xmm3, [rsi + 32 * 2 * 2]     ; src[2n + 2]
+    movdqa xmm2, [rsi + 32 * 2]         ; src[2n + 1]
+    movdqa xmm3, [rsi + 32 * 2 * 2]     ; src[2n + 2]
     movdqa xmm4, xmm1
     movdqa xmm5, xmm2
     movdqa xmm6, xmm3
@@ -357,25 +443,26 @@ loop2b:
     psraw xmm4, 1
     psubw xmm5, xmm4
     psraw xmm5, 1
-    movdqu [rdi], xmm5                  ; out hi
+    movdqa [rdi], xmm5                  ; out hi
     movdqa xmm6, xmm5                   ; save hi
     ; l[n] = src[2n] + ((h[n - 1] + h[n]) >> 1)
     paddw xmm5, xmm7
     psraw xmm5, 1
     paddw xmm5, xmm1
-    movdqu [rdx], xmm5                  ; out lo
+    movdqa [rdx], xmm5                  ; out lo
     movdqa xmm7, xmm6                   ; save hi
     ; move down
     lea rsi, [rsi + 32 * 2 * 2]         ; 2 rows
     lea rdi, [rdi + 32 * 2]             ; 1 row
     lea rdx, [rdx + 32 * 2]             ; 1 row
 
-    dec rax
-    jnz loop2b
+    dec cx
+    jnz loop2d
+    shr ecx, 16
 
     ; post
     movdqa xmm1, xmm3                   ; src[2n]
-    movdqu xmm2, [rsi + 32 * 2]         ; src[2n + 1]
+    movdqa xmm2, [rsi + 32 * 2]         ; src[2n + 1]
     movdqa xmm4, xmm1
     movdqa xmm5, xmm2
     movdqa xmm6, xmm3
@@ -384,12 +471,12 @@ loop2b:
     psraw xmm4, 1
     psubw xmm5, xmm4
     psraw xmm5, 1
-    movdqu [rdi], xmm5                  ; out hi
+    movdqa [rdi], xmm5                  ; out hi
     ; l[n] = src[2n] + ((h[n - 1] + h[n]) >> 1)
     paddw xmm5, xmm7
     psraw xmm5, 1
     paddw xmm5, xmm1
-    movdqu [rdx], xmm5                  ; out lo
+    movdqa [rdx], xmm5                  ; out lo
     ; move down
     lea rsi, [rsi + 32 * 2 * 2]         ; 2 row
     lea rdi, [rdi + 32 * 2]             ; 1 row
@@ -405,19 +492,21 @@ loop2b:
     lea rdi, [rdi + 16]
     lea rdx, [rdx + 16]
 
-    dec rcx
-    jnz loop1b
+    dec ecx
+    jnz loop1d
 
     ret
 
 ;******************************************************************************
-rfx_dwt_2d_encode_block_horiz_16_32:
-    sub rsp, 32                         ; local vars, 32 bytes
-    mov rcx, 32
-loop1d:
+; source 16 bit signed, 64 pixel width
+rfx_dwt_2d_encode_block_horiz_16_64:
+    mov ecx, 32
+loop1e:
     ; pre
-    movdqu xmm1, [rsi]                  ; src[2n]
-    movdqu xmm2, [rsi + 16]
+    movdqa xmm1, [rsi]                  ; src[2n]
+    movdqa xmm2, [rsi + 16]
+    movdqa xmm6, xmm1
+    movdqa xmm7, xmm2
     pand xmm1, [rel cdFFFF]
     pand xmm2, [rel cdFFFF]
     pslld xmm1, 16
@@ -425,8 +514,10 @@ loop1d:
     psrad xmm1, 16
     psrad xmm2, 16
     packssdw xmm1, xmm2
-    movdqu xmm2, [rsi + 2]              ; src[2n + 1]
-    movdqu xmm3, [rsi + 18]
+    movdqa xmm2, xmm6                   ; src[2n + 1]
+    movdqa xmm3, xmm7
+    psrldq xmm2, 2
+    psrldq xmm3, 2
     pand xmm2, [rel cdFFFF]
     pand xmm3, [rel cdFFFF]
     pslld xmm2, 16
@@ -434,8 +525,18 @@ loop1d:
     psrad xmm2, 16
     psrad xmm3, 16
     packssdw xmm2, xmm3
-    movdqu xmm3, [rsi + 4]              ; src[2n + 2]
-    movdqu xmm4, [rsi + 20]
+    movdqa xmm3, xmm6                   ; src[2n + 2]
+    movdqa xmm4, xmm7
+    psrldq xmm3, 4
+    psrldq xmm4, 4
+    movd eax, xmm7
+    movd xmm5, eax
+    pslldq xmm5, 12
+    por xmm3, xmm5
+    mov eax, [rsi + 32]
+    movd xmm5, eax
+    pslldq xmm5, 12
+    por xmm4, xmm5
     pand xmm3, [rel cdFFFF]
     pand xmm4, [rel cdFFFF]
     pslld xmm3, 16
@@ -451,26 +552,45 @@ loop1d:
     psraw xmm4, 1
     psubw xmm5, xmm4
     psraw xmm5, 1
-    movdqu [rdi], xmm5                  ; out hi
+
+    movdqa xmm6, xmm5                   ; out hi
+    paddw xmm6, xmm8
+    psraw xmm6, xmm9
+    movdqa [rdi], xmm6
+    movdqa xmm2, xmm5                   ; save hi
+
     ; l[n] = src[2n] + ((h[n - 1] + h[n]) >> 1)
-    movdqu [rsp + 2], xmm5
-    mov bx, [rsp + 2]
-    mov [rsp], bx
-    movdqu xmm7, [rsp]
+    movdqa xmm7, xmm5
+    movd eax, xmm7
+    pslldq xmm7, 2
+    and eax, 0xFFFF
+    movd xmm6, eax
+    por xmm7, xmm6
     paddw xmm5, xmm7
     psraw xmm5, 1
     paddw xmm5, xmm1
-    movdqu [rdx], xmm5                  ; out lo
+
+    psrldq xmm2, 14
+    movd ebx, xmm2                      ; save hi
+
+    movdqa xmm6, xmm5                   ; out lo
+    paddw xmm6, xmm10
+    psraw xmm6, xmm11
+    movdqa [rdx], xmm6
+
     ; move right
     lea rsi, [rsi + 16 * 2]
     lea rdi, [rdi + 8 * 2]
     lea rdx, [rdx + 8 * 2]
 
     ; loop
-    mov rax, 2
-loop2d:
-    movdqu xmm1, [rsi]                  ; src[2n]
-    movdqu xmm2, [rsi + 16]
+    shl ecx, 16
+    mov cx, 2
+loop2e:
+    movdqa xmm1, [rsi]                  ; src[2n]
+    movdqa xmm2, [rsi + 16]
+    movdqa xmm6, xmm1
+    movdqa xmm7, xmm2
     pand xmm1, [rel cdFFFF]
     pand xmm2, [rel cdFFFF]
     pslld xmm1, 16
@@ -478,8 +598,10 @@ loop2d:
     psrad xmm1, 16
     psrad xmm2, 16
     packssdw xmm1, xmm2
-    movdqu xmm2, [rsi + 2]              ; src[2n + 1]
-    movdqu xmm3, [rsi + 18]
+    movdqa xmm2, xmm6                   ; src[2n + 1]
+    movdqa xmm3, xmm7
+    psrldq xmm2, 2
+    psrldq xmm3, 2
     pand xmm2, [rel cdFFFF]
     pand xmm3, [rel cdFFFF]
     pslld xmm2, 16
@@ -487,8 +609,18 @@ loop2d:
     psrad xmm2, 16
     psrad xmm3, 16
     packssdw xmm2, xmm3
-    movdqu xmm3, [rsi + 4]              ; src[2n + 2]
-    movdqu xmm4, [rsi + 20]
+    movdqa xmm3, xmm6                   ; src[2n + 2]
+    movdqa xmm4, xmm7
+    psrldq xmm3, 4
+    psrldq xmm4, 4
+    movd eax, xmm7
+    movd xmm5, eax
+    pslldq xmm5, 12
+    por xmm3, xmm5
+    mov eax, [rsi + 32]
+    movd xmm5, eax
+    pslldq xmm5, 12
+    por xmm4, xmm5
     pand xmm3, [rel cdFFFF]
     pand xmm4, [rel cdFFFF]
     pslld xmm3, 16
@@ -504,24 +636,44 @@ loop2d:
     psraw xmm4, 1
     psubw xmm5, xmm4
     psraw xmm5, 1
-    movdqu [rdi], xmm5                  ; out hi
+
+    movdqa xmm6, xmm5                   ; out hi
+    paddw xmm6, xmm8
+    psraw xmm6, xmm9
+    movdqa [rdi], xmm6
+    movdqa xmm2, xmm5                   ; save hi
+
     ; l[n] = src[2n] + ((h[n - 1] + h[n]) >> 1)
-    movdqu xmm7, [rdi - 2]
+    movdqa xmm7, xmm5
+    pslldq xmm7, 2
+    movd xmm6, ebx
+    por xmm7, xmm6
     paddw xmm5, xmm7
     psraw xmm5, 1
     paddw xmm5, xmm1
-    movdqu [rdx], xmm5                  ; out lo
+
+    psrldq xmm2, 14
+    movd ebx, xmm2                      ; save hi
+
+    movdqa xmm6, xmm5                   ; out lo
+    paddw xmm6, xmm10
+    psraw xmm6, xmm11
+    movdqa [rdx], xmm6
+
     ; move right
     lea rsi, [rsi + 16 * 2]
     lea rdi, [rdi + 8 * 2]
     lea rdx, [rdx + 8 * 2]
 
-    dec rax
-    jnz loop2d
+    dec cx
+    jnz loop2e
+    shr ecx, 16
 
     ; post
-    movdqu xmm1, [rsi]                  ; src[2n]
-    movdqu xmm2, [rsi + 16]
+    movdqa xmm1, [rsi]                  ; src[2n]
+    movdqa xmm2, [rsi + 16]
+    movdqa xmm6, xmm1
+    movdqa xmm7, xmm2
     pand xmm1, [rel cdFFFF]
     pand xmm2, [rel cdFFFF]
     pslld xmm1, 16
@@ -529,8 +681,10 @@ loop2d:
     psrad xmm1, 16
     psrad xmm2, 16
     packssdw xmm1, xmm2
-    movdqu xmm2, [rsi + 2]              ; src[2n + 1]
-    movdqu xmm3, [rsi + 18]
+    movdqa xmm2, xmm6                   ; src[2n + 1]
+    movdqa xmm3, xmm7
+    psrldq xmm2, 2
+    psrldq xmm3, 2
     pand xmm2, [rel cdFFFF]
     pand xmm3, [rel cdFFFF]
     pslld xmm2, 16
@@ -538,22 +692,25 @@ loop2d:
     psrad xmm2, 16
     psrad xmm3, 16
     packssdw xmm2, xmm3
-    mov bx, [rsi + 4]                   ; src[2n + 2]
-    mov [rsp + 0], bx
-    mov bx, [rsi + 8]
-    mov [rsp + 2], bx
-    mov bx, [rsi + 12]
-    mov [rsp + 4], bx
-    mov bx, [rsi + 16]
-    mov [rsp + 6], bx
-    mov bx, [rsi + 20]
-    mov [rsp + 8], bx
-    mov bx, [rsi + 24]
-    mov [rsp + 10], bx
-    mov bx, [rsi + 28]
-    mov [rsp + 12], bx
-    mov [rsp + 14], bx
-    movdqu xmm3, [rsp]
+    movdqa xmm3, xmm6                   ; src[2n + 2]
+    movdqa xmm4, xmm7
+    psrldq xmm3, 4
+    psrldq xmm4, 4
+    movd eax, xmm7
+    movd xmm5, eax
+    pslldq xmm5, 12
+    por xmm3, xmm5
+    mov eax, [rsi + 28]
+    movd xmm5, eax
+    pslldq xmm5, 12
+    por xmm4, xmm5
+    pand xmm3, [rel cdFFFF]
+    pand xmm4, [rel cdFFFF]
+    pslld xmm3, 16
+    pslld xmm4, 16
+    psrad xmm3, 16
+    psrad xmm4, 16
+    packssdw xmm3, xmm4
     movdqa xmm4, xmm1
     movdqa xmm5, xmm2
     movdqa xmm6, xmm3
@@ -562,13 +719,26 @@ loop2d:
     psraw xmm4, 1
     psubw xmm5, xmm4
     psraw xmm5, 1
-    movdqu [rdi], xmm5                  ; out hi
+
+    movdqa xmm6, xmm5                   ; out hi
+    paddw xmm6, xmm8
+    psraw xmm6, xmm9
+    movdqa [rdi], xmm6
+
     ; l[n] = src[2n] + ((h[n - 1] + h[n]) >> 1)
-    movdqu xmm7, [rdi - 2]
+    movdqa xmm7, xmm5
+    pslldq xmm7, 2
+    movd xmm6, ebx
+    por xmm7, xmm6
     paddw xmm5, xmm7
     psraw xmm5, 1
     paddw xmm5, xmm1
-    movdqu [rdx], xmm5                  ; out lo
+
+    movdqa xmm6, xmm5                   ; out lo
+    paddw xmm6, xmm10
+    psraw xmm6, xmm11
+    movdqa [rdx], xmm6
+
     ; move right
     lea rsi, [rsi + 16 * 2]
     lea rdi, [rdi + 8 * 2]
@@ -584,17 +754,16 @@ loop2d:
     lea rdi, [rdi + 32 * 2]
     lea rdx, [rdx + 32 * 2]
 
-    dec rcx
-    jnz loop1d
+    dec ecx
+    jnz loop1e
 
-    add rsp, 32                         ; local vars, 32 bytes
     ret
 
 ;******************************************************************************
-; source 8 bit unsigned, 32 pixel width
-rfx_dwt_2d_encode_block_verti_8_32:
-    mov rcx, 8
-loop1a:
+; source 8 bit unsigned, 64 pixel width
+rfx_dwt_2d_encode_block_verti_8_64:
+    mov ecx, 8
+loop1f:
     ; pre
     movq xmm1, [rsi]                    ; src[2n]
     movq xmm2, [rsi + 64 * 1]           ; src[2n + 1]
@@ -616,11 +785,11 @@ loop1a:
     psraw xmm4, 1
     psubw xmm5, xmm4
     psraw xmm5, 1
-    movdqu [rdi], xmm5                  ; out hi
+    movdqa [rdi], xmm5                  ; out hi
     movdqa xmm6, xmm5                   ; save hi
     ; l[n] = src[2n] + ((h[n - 1] + h[n]) >> 1)
     paddw xmm5, xmm1
-    movdqu [rdx], xmm5                  ; out lo
+    movdqa [rdx], xmm5                  ; out lo
     movdqa xmm7, xmm6                   ; save hi
     ; move down
     lea rsi, [rsi + 64 * 1 * 2]         ; 2 rows
@@ -628,8 +797,9 @@ loop1a:
     lea rdx, [rdx + 64 * 2]             ; 1 row
 
     ; loop
-    mov rax, 30
-loop2a:
+    shl ecx, 16
+    mov cx, 30
+loop2f:
     movdqa xmm1, xmm3                   ; src[2n]
     movq xmm2, [rsi + 64 * 1]           ; src[2n + 1]
     movq xmm3, [rsi + 64 * 1 * 2]       ; src[2n + 2]
@@ -647,21 +817,22 @@ loop2a:
     psraw xmm4, 1
     psubw xmm5, xmm4
     psraw xmm5, 1
-    movdqu [rdi], xmm5                  ; out hi
+    movdqa [rdi], xmm5                  ; out hi
     movdqa xmm6, xmm5                   ; save hi
     ; l[n] = src[2n] + ((h[n - 1] + h[n]) >> 1)
     paddw xmm5, xmm7
     psraw xmm5, 1
     paddw xmm5, xmm1
-    movdqu [rdx], xmm5                  ; out lo
+    movdqa [rdx], xmm5                  ; out lo
     movdqa xmm7, xmm6                   ; save hi
     ; move down
     lea rsi, [rsi + 64 * 1 * 2]         ; 2 rows
     lea rdi, [rdi + 64 * 2]             ; 1 row
     lea rdx, [rdx + 64 * 2]             ; 1 row
 
-    dec rax
-    jnz loop2a
+    dec cx
+    jnz loop2f
+    shr ecx, 16
 
     ; post
     movdqa xmm1, xmm3                   ; src[2n]
@@ -677,12 +848,12 @@ loop2a:
     psraw xmm4, 1
     psubw xmm5, xmm4
     psraw xmm5, 1
-    movdqu [rdi], xmm5                  ; out hi
+    movdqa [rdi], xmm5                  ; out hi
     ; l[n] = src[2n] + ((h[n - 1] + h[n]) >> 1)
     paddw xmm5, xmm7
     psraw xmm5, 1
     paddw xmm5, xmm1
-    movdqu [rdx], xmm5                  ; out lo
+    movdqa [rdx], xmm5                  ; out lo
     ; move down
     lea rsi, [rsi + 64 * 1 * 2]         ; 2 rows
     lea rdi, [rdi + 64 * 2]             ; 1 row
@@ -698,9 +869,27 @@ loop2a:
     lea rdi, [rdi + 16]
     lea rdx, [rdx + 16]
 
-    dec rcx
-    jnz loop1a
+    dec ecx
+    jnz loop1f
 
+    ret
+
+set_quants_hi:
+    sub rax, 6 - 5
+    movd xmm9, eax
+    imul rax, 16
+    lea rdx, [rel cwa0]
+    add rdx, rax
+    movdqa xmm8, [rdx]
+    ret
+
+set_quants_lo:
+    sub rax, 6 - 5
+    movd xmm11, eax
+    imul rax, 16
+    lea rdx, [rel cwa0]
+    add rdx, rax
+    movdqa xmm10, [rdx]
     ret
 
 ;The first six integer or pointer arguments are passed in registers
@@ -720,144 +909,154 @@ PROC _rfxcodec_encode_dwt_shift_amd64_sse2
 %endif
     ; save registers
     push rbx
+    push rdx
+    push rcx
+    push rsi
+    push rdi
     pxor xmm0, xmm0
 
     ; verical DWT to work buffer, level 1
-    push rdx
-    push rcx
-    push rsi
-    push rdi
-    lea rdi, [rcx + 64 * 32 * 2]        ; dst hi
-    lea rdx, [rcx]                      ; dst lo
-    call rfx_dwt_2d_encode_block_verti_8_32
-    pop rdi
-    pop rsi
-    pop rcx
-    pop rdx
+    mov rsi, [rsp + 8]                  ; src
+    mov rdi, [rsp + 16]                 ; dst hi
+    lea rdi, [rdi + 64 * 32 * 2]        ; dst hi
+    mov rdx, [rsp + 16]                 ; dst lo
+    call rfx_dwt_2d_encode_block_verti_8_64
 
     ; horizontal DWT to out buffer, level 1, part 1
-    push rdx
-    push rcx
-    push rsi
-    push rdi
-    lea rsi, [rcx]                      ; src
-    lea rdi, [rdx]                      ; dst hi - HL1
+    xor rax, rax
+    mov rdx, [rsp]
+    mov al, [rdx + 4]
+    and al, 0xF
+    call set_quants_hi
+    movdqa xmm10, xmm0
+    movdqa xmm11, xmm0
+    mov rsi, [rsp + 16]                 ; src
+    mov rdi, [rsp + 24]                 ; dst hi - HL1
+    mov rdx, [rsp + 24]                 ; dst lo - LL1
     lea rdx, [rdx + 32 * 32 * 6]        ; dst lo - LL1
-    call rfx_dwt_2d_encode_block_horiz_16_32
-    pop rdi
-    pop rsi
-    pop rcx
-    pop rdx
+    call rfx_dwt_2d_encode_block_horiz_16_64
 
     ; horizontal DWT to out buffer, level 1, part 2
-    push rdx
-    push rcx
-    push rsi
-    push rdi
-    lea rsi, [rcx + 64 * 32 * 2]        ; src
-    lea rdi, [rdx + 32 * 32 * 4]        ; dst hi - HH1
+    xor rax, rax
+    mov rdx, [rsp]
+    mov al, [rdx + 4]
+    shr al, 4
+    call set_quants_hi
+    xor rax, rax
+    mov rdx, [rsp]
+    mov al, [rdx + 3]
+    shr al, 4
+    call set_quants_lo
+    mov rsi, [rsp + 16]                 ; src
+    lea rsi, [rsi + 64 * 32 * 2]        ; src
+    mov rdi, [rsp + 24]                 ; dst hi - HH1
+    lea rdi, [rdi + 32 * 32 * 4]        ; dst hi - HH1
+    mov rdx, [rsp + 24]                 ; dst lo - LH1
     lea rdx, [rdx + 32 * 32 * 2]        ; dst lo - LH1
-    call rfx_dwt_2d_encode_block_horiz_16_32
-    pop rdi
-    pop rsi
-    pop rcx
-    pop rdx
+    call rfx_dwt_2d_encode_block_horiz_16_64
 
     ; verical DWT to work buffer, level 2
-    push rdx
-    push rcx
-    push rsi
-    push rdi
-    lea rsi, [rdx + 32 * 32 * 6]        ; src
-    lea rdi, [rcx + 32 * 16 * 2]        ; dst hi
-    lea rdx, [rcx]                      ; dst lo
-    call rfx_dwt_2d_encode_block_verti_16_16
-    pop rdi
-    pop rsi
-    pop rcx
-    pop rdx
+    mov rsi, [rsp + 24]                 ; src
+    lea rsi, [rsi + 32 * 32 * 6]        ; src
+    mov rdi, [rsp + 16]                 ; dst hi
+    lea rdi, [rdi + 32 * 16 * 2]        ; dst hi
+    mov rdx, [rsp + 16]                 ; dst lo
+    call rfx_dwt_2d_encode_block_verti_16_32
 
     ; horizontal DWT to out buffer, level 2, part 1
-    push rdx
-    push rcx
-    push rsi
-    push rdi
-    lea rsi, [rcx]                      ; src
+    xor rax, rax
+    mov rdx, [rsp]
+    mov al, [rdx + 2]
+    shr al, 4
+    call set_quants_hi
+    movdqa xmm10, xmm0
+    movdqa xmm11, xmm0
+    mov rsi, [rsp + 16]                 ; src
     ; 32 * 32 * 6 + 16 * 16 * 0 = 6144
-    lea rdi, [rdx + 6144]               ; dst hi - HL2
+    mov rdi, [rsp + 24]                 ; dst hi - HL2
+    lea rdi, [rdi + 6144]               ; dst hi - HL2
     ; 32 * 32 * 6 + 16 * 16 * 6 = 7680
+    mov rdx, [rsp + 24]                 ; dst lo - LL2
     lea rdx, [rdx + 7680]               ; dst lo - LL2
-    call rfx_dwt_2d_encode_block_horiz_16_16
-    pop rdi
-    pop rsi
-    pop rcx
-    pop rdx
+    call rfx_dwt_2d_encode_block_horiz_16_32
 
     ; horizontal DWT to out buffer, level 2, part 2
-    push rdx
-    push rcx
-    push rsi
-    push rdi
-    lea rsi, [rcx + 32 * 16 * 2]        ; src
+    xor rax, rax
+    mov rdx, [rsp]
+    mov al, [rdx + 3]
+    and al, 0xF
+    call set_quants_hi
+    xor rax, rax
+    mov rdx, [rsp]
+    mov al, [rdx + 2]
+    and al, 0xF
+    call set_quants_lo
+    mov rsi, [rsp + 16]                 ; src
+    lea rsi, [rsi + 32 * 16 * 2]        ; src
     ; 32 * 32 * 6 + 16 * 16 * 4 = 7168
-    lea rdi, [rdx + 7168]               ; dst hi - HH2
+    mov rdi, [rsp + 24]                 ; dst hi - HH2
+    lea rdi, [rdi + 7168]               ; dst hi - HH2
     ; 32 * 32 * 6 + 16 * 16 * 2 = 6656
+    mov rdx, [rsp + 24]                 ; dst lo - LH2
     lea rdx, [rdx + 6656]               ; dst lo - LH2
-    call rfx_dwt_2d_encode_block_horiz_16_16
-    pop rdi
-    pop rsi
-    pop rcx
-    pop rdx
+    call rfx_dwt_2d_encode_block_horiz_16_32
 
     ; verical DWT to work buffer, level 3
-    push rdx
-    push rcx
-    push rsi
-    push rdi
     ; 32 * 32 * 6 + 16 * 16 * 6 = 7680
-    lea rsi, [rdx + 7680]               ; src
-    lea rdi, [rcx + 16 * 8 * 2]         ; dst hi
-    lea rdx, [rcx]                      ; dst lo
-    call rfx_dwt_2d_encode_block_verti_16_8
-    pop rdi
-    pop rsi
-    pop rcx
-    pop rdx
+    mov rsi, [rsp + 24]                 ; src
+    lea rsi, [rsi + 7680]               ; src
+    mov rdi, [rsp + 16]                 ; dst hi
+    lea rdi, [rdi + 16 * 8 * 2]         ; dst hi
+    mov rdx, [rsp + 16]                 ; dst lo
+    call rfx_dwt_2d_encode_block_verti_16_16
 
     ; horizontal DWT to out buffer, level 3, part 1
-    push rdx
-    push rcx
-    push rsi
-    push rdi
-    lea rsi, [rcx]                      ; src
+    xor rax, rax
+    mov rdx, [rsp]
+    mov al, [rdx + 1]
+    and al, 0xF
+    call set_quants_hi
+    xor rax, rax
+    mov rdx, [rsp]
+    mov al, [rdx + 0]
+    and al, 0xF
+    call set_quants_lo
+    mov rsi, [rsp + 16]                 ; src
     ; 32 * 32 * 6 + 16 * 16 * 6 + 8 * 8 * 0 = 7680
-    lea rdi, [rdx + 7680]               ; dst hi - HL3
+    mov rdi, [rsp + 24]                 ; dst hi - HL3
+    lea rdi, [rdi + 7680]               ; dst hi - HL3
     ; 32 * 32 * 6 + 16 * 16 * 6 + 8 * 8 * 6 = 8064
+    mov rdx, [rsp + 24]                 ; dst lo - LL3
     lea rdx, [rdx + 8064]               ; dst lo - LL3
-    call rfx_dwt_2d_encode_block_horiz_16_8
-    pop rdi
-    pop rsi
-    pop rcx
-    pop rdx
+    call rfx_dwt_2d_encode_block_horiz_16_16
 
     ; horizontal DWT to out buffer, level 3, part 2
-    push rdx
-    push rcx
-    push rsi
-    push rdi
-    lea rsi, [rcx + 16 * 8 * 2]         ; src
+    xor rax, rax
+    mov rdx, [rsp]
+    mov al, [rdx + 1]
+    shr al, 4
+    call set_quants_hi
+    xor rax, rax
+    mov rdx, [rsp]
+    mov al, [rdx + 0]
+    shr al, 4
+    call set_quants_lo
+    mov rsi, [rsp + 16]                 ; src
+    lea rsi, [rsi + 16 * 8 * 2]         ; src
     ; 32 * 32 * 6 + 16 * 16 * 6 + 8 * 8 * 4 = 7936
-    lea rdi, [rdx + 7936]               ; dst hi - HH3
+    mov rdi, [rsp + 24]                 ; dst hi - HH3
+    lea rdi, [rdi + 7936]               ; dst hi - HH3
     ; 32 * 32 * 6 + 16 * 16 * 6 + 8 * 8 * 2 = 7808
+    mov rdx, [rsp + 24]                 ; dst lo - LH3
     lea rdx, [rdx + 7808]               ; dst lo - LH3
-    call rfx_dwt_2d_encode_block_horiz_16_8
-    pop rdi
-    pop rsi
-    pop rcx
-    pop rdx
+    call rfx_dwt_2d_encode_block_horiz_16_16
 
     mov rax, 0
     ; restore registers
+    pop rdi
+    pop rsi
+    pop rcx
+    pop rdx
     pop rbx
     ret
     align 16
