@@ -70,7 +70,7 @@ rfx_compose_message_context(struct rfxencode* enc, STREAM* s)
     stream_write_uint16(s, WBT_CONTEXT); /* CodecChannelT.blockType */
     stream_write_uint32(s, 13); /* CodecChannelT.blockLen */
     stream_write_uint8(s, 1); /* CodecChannelT.codecId */
-    stream_write_uint8(s, 0); /* CodecChannelT.channelId */
+    stream_write_uint8(s, 255); /* CodecChannelT.channelId */
     stream_write_uint8(s, 0); /* ctxId */
     stream_write_uint16(s, CT_TILE_64x64); /* tileSize */
 
