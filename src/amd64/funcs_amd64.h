@@ -33,6 +33,11 @@ rfxcodec_encode_dwt_shift_amd64_sse2(const char *qtable,
                                      short *dwt_buffer1,
                                      short *dwt_buffer);
 int
+rfxcodec_encode_dwt_shift_amd64_sse41(const char *qtable,
+                                      unsigned char *data,
+                                      short *dwt_buffer1,
+                                      short *dwt_buffer);
+int
 rfxcodec_encode_diff_rlgr1_amd64_sse2(short *co,
                                       void *dst, int dst_bytes);
 int

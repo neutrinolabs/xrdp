@@ -182,7 +182,20 @@ rfxcodec_encode_create(int width, int height, int format, int flags,
             }
         }
 #elif defined(RFX_USE_ACCEL_AMD64)
-        if (enc->got_sse2)
+        if (enc->got_sse41)
+        {
+            if (enc->mode == RLGR3)
+            {
+                printf("rfxcodec_encode_create: rfx_encode set to rfx_encode_component_rlgr3_amd64_sse41\n");
+                enc->rfx_encode = rfx_encode_component_rlgr3_amd64_sse41; /* rfxencode_tile.c */
+            }
+            else
+            {
+                printf("rfxcodec_encode_create: rfx_encode set to rfx_encode_component_rlgr1_amd64_sse41\n");
+                enc->rfx_encode = rfx_encode_component_rlgr1_amd64_sse41; /* rfxencode_tile.c */
+            }
+        }
+        else if (enc->got_sse2)
         {
             if (enc->mode == RLGR3)
             {

@@ -11,7 +11,8 @@ if WITH_SIMD_AMD64
 EXTRA_ENCODE_SRC += amd64/cpuid_amd64.asm \
   amd64/rfxcodec_encode_diff_rlgr1_amd64_sse2.asm \
   amd64/rfxcodec_encode_diff_rlgr3_amd64_sse2.asm \
-  amd64/rfxcodec_encode_dwt_shift_amd64_sse2.asm
+  amd64/rfxcodec_encode_dwt_shift_amd64_sse2.asm \
+  amd64/rfxcodec_encode_dwt_shift_amd64_sse41.asm
 EXTRA_DEFINES += -DSIMD_USE_ACCEL=1 -DRFX_USE_ACCEL_AMD64=1
 endif
 
