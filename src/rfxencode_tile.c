@@ -548,16 +548,8 @@ rfx_encode_component_rlgr1_amd64_sse2(struct rfxencode *enc, const char *qtable,
 {
     LLOGLN(10, ("rfx_encode_component_rlgr1_amd64_sse2:"));
 #if defined(RFX_USE_ACCEL_AMD64)
-    //if (rfxcodec_encode_dwt_shift_amd64_sse2(qtable, data, enc->dwt_buffer,
-    //                                         enc->dwt_buffer1) != 0)
-    //{
-    //    return 1;
-    //}
-    if (rfx_dwt_2d_encode(data, enc->dwt_buffer1, enc->dwt_buffer) != 0)
-    {
-        return 1;
-    }
-    if (rfx_quantization_encode(enc->dwt_buffer1, qtable) != 0)
+    if (rfxcodec_encode_dwt_shift_amd64_sse2(qtable, data, enc->dwt_buffer,
+                                             enc->dwt_buffer1) != 0)
     {
         return 1;
     }
@@ -580,16 +572,8 @@ rfx_encode_component_rlgr3_amd64_sse2(struct rfxencode *enc, const char *qtable,
 {
     LLOGLN(10, ("rfx_encode_component_rlgr3_amd64_sse2:"));
 #if defined(RFX_USE_ACCEL_AMD64)
-    //if (rfxcodec_encode_dwt_shift_amd64_sse2(qtable, data, enc->dwt_buffer1,
-    //                                         enc->dwt_buffer) != 0)
-    //{
-    //    return 1;
-    //}
-    if (rfx_dwt_2d_encode(data, enc->dwt_buffer1, enc->dwt_buffer) != 0)
-    {
-        return 1;
-    }
-    if (rfx_quantization_encode(enc->dwt_buffer1, qtable) != 0)
+    if (rfxcodec_encode_dwt_shift_amd64_sse2(qtable, data, enc->dwt_buffer1,
+                                             enc->dwt_buffer) != 0)
     {
         return 1;
     }
