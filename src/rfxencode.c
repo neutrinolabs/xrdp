@@ -152,7 +152,7 @@ rfxcodec_encode_create(int width, int height, int format, int flags,
     }
     else
     {
-#if defined(RFX_USE_ACCEL_X86_NOT) // turned off for now
+#if defined(RFX_USE_ACCEL_X86)
         if (enc->mode == RLGR3)
         {
             enc->rfx_encode = rfx_encode_component_rlgr3_x86_sse2; /* rfxencode_tile.c */
@@ -161,7 +161,7 @@ rfxcodec_encode_create(int width, int height, int format, int flags,
         {
             enc->rfx_encode = rfx_encode_component_rlgr1_x86_sse2; /* rfxencode_tile.c */
         }
-#elif defined(RFX_USE_ACCEL_AMD64_NOT) // turned off for now
+#elif defined(RFX_USE_ACCEL_AMD64)
         if (enc->mode == RLGR3)
         {
             enc->rfx_encode = rfx_encode_component_rlgr3_amd64_sse2; /* rfxencode_tile.c */
