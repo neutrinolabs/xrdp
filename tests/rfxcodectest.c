@@ -66,7 +66,9 @@ speed_random(int count, const char *quants)
     int flags;
 
     printf("speed_random:\n");
+    //flags = RFX_FLAGS_RLGR1 | RFX_FLAGS_NOACCEL;
     flags = RFX_FLAGS_RLGR1;
+    //flags = RFX_FLAGS_RLGR3;
     //flags = RFX_FLAGS_RLGR1 | RFX_FLAGS_ALPHAV1;
     error = rfxcodec_encode_create(1920, 1024, RFX_FORMAT_BGRA, flags, &han);
     if (error != 0)
