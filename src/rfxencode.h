@@ -42,10 +42,14 @@ struct rfxencode
     uint8 y_r_buffer[4096];
     uint8 u_g_buffer[4096];
     uint8 v_b_buffer[4096];
-
-    sint16 dwt_buffer[4096];
-    sint16 dwt_buffer1[4096];
-
+    uint8 pad1[16];
+    sint16 dwt_buffer_a[4096];
+    sint16 dwt_buffer1_a[4096];
+    sint16 dwt_buffer2_a[4096];
+    uint8 pad2[16];
+    sint16* dwt_buffer;
+    sint16* dwt_buffer1;
+    sint16* dwt_buffer2;
     rfx_encode_proc rfx_encode;
 
     int got_sse2;
