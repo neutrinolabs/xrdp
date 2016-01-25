@@ -526,6 +526,54 @@ rfx_encode_component_rlgr3_x86_sse2(struct rfxencode *enc, const char *qtable,
 
 /******************************************************************************/
 int
+rfx_encode_component_rlgr1_x86_sse41(struct rfxencode *enc, const char *qtable,
+                                     uint8 *data,
+                                     uint8 *buffer, int buffer_size, int *size)
+{
+    LLOGLN(10, ("rfx_encode_component_rlgr1_x86_sse41:"));
+#if defined(RFX_USE_ACCEL_X86)
+    if (rfxcodec_encode_dwt_shift_x86_sse41(qtable, data, enc->dwt_buffer1,
+                                            enc->dwt_buffer) != 0)
+    {
+        return 1;
+    }
+    //*size = rfxcodec_encode_diff_rlgr1_x86_sse2(enc->dwt_buffer1,
+    //                                            buffer, buffer_size);
+    if (rfx_differential_encode(enc->dwt_buffer1 + 4032, 64) != 0)
+    {
+        return 1;
+    }
+    *size = rfx_rlgr1_encode(enc->dwt_buffer1, buffer, buffer_size);
+#endif
+    return 0;
+}
+
+/******************************************************************************/
+int
+rfx_encode_component_rlgr3_x86_sse41(struct rfxencode *enc, const char *qtable,
+                                     uint8 *data,
+                                     uint8 *buffer, int buffer_size, int *size)
+{
+    LLOGLN(10, ("rfx_encode_component_rlgr3_x86_sse41:"));
+#if defined(RFX_USE_ACCEL_X86)
+    if (rfxcodec_encode_dwt_shift_x86_sse41(qtable, data, enc->dwt_buffer1,
+                                            enc->dwt_buffer) != 0)
+    {
+        return 1;
+    }
+    //*size = rfxcodec_encode_diff_rlgr3_x86_sse(enc->dwt_buffer1,
+    //                                            buffer, buffer_size);
+    if (rfx_differential_encode(enc->dwt_buffer1 + 4032, 64) != 0)
+    {
+        return 1;
+    }
+    *size = rfx_rlgr3_encode(enc->dwt_buffer1, buffer, buffer_size);
+#endif
+    return 0;
+}
+
+/******************************************************************************/
+int
 rfx_encode_component_rlgr1_amd64_sse2(struct rfxencode *enc, const char *qtable,
                                       uint8 *data,
                                       uint8 *buffer, int buffer_size, int *size)

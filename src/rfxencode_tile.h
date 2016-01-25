@@ -70,6 +70,14 @@ rfx_encode_component_rlgr3_x86_sse2(struct rfxencode *enc, const char *qtable,
                                     uint8 *data,
                                     uint8 *buffer, int buffer_size, int *size);
 int
+rfx_encode_component_rlgr1_x86_sse41(struct rfxencode *enc, const char *qtable,
+                                     uint8 *data,
+                                     uint8 *buffer, int buffer_size, int *size);
+int
+rfx_encode_component_rlgr3_x86_sse41(struct rfxencode *enc, const char *qtable,
+                                     uint8 *data,
+                                     uint8 *buffer, int buffer_size, int *size);
+int
 rfx_encode_component_rlgr1_amd64_sse2(struct rfxencode *enc, const char *qtable,
                                       uint8 *data,
                                       uint8 *buffer, int buffer_size, int *size);

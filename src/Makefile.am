@@ -20,7 +20,8 @@ if WITH_SIMD_X86
 EXTRA_ENCODE_SRC += x86/cpuid_x86.asm \
   x86/rfxcodec_encode_diff_rlgr1_x86_sse2.asm \
   x86/rfxcodec_encode_diff_rlgr3_x86_sse2.asm \
-  x86/rfxcodec_encode_dwt_shift_x86_sse2.asm
+  x86/rfxcodec_encode_dwt_shift_x86_sse2.asm \
+  x86/rfxcodec_encode_dwt_shift_x86_sse41.asm
 EXTRA_DEFINES += -DSIMD_USE_ACCEL=1 -DRFX_USE_ACCEL_X86=1
 endif
 
