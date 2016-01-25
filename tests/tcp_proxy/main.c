@@ -454,7 +454,7 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
         g_writeln("bind failed");
     }
 
-    /* listen for an incomming connection */
+    /* listen for an incoming connection */
     if (error == 0)
     {
         error = g_tcp_listen(lis_sck);
@@ -465,7 +465,7 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
         }
     }
 
-    /* accept an incomming connection */
+    /* accept an incoming connection */
     if (error == 0)
     {
         while ((!g_terminated) && (error == 0))

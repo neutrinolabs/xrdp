@@ -19,7 +19,7 @@
  */
 
 #include "rdp.h"
-#include "common/log.h"
+#include "log.h"
 
 /*****************************************************************************/
 struct rdp_mcs *APP_CC

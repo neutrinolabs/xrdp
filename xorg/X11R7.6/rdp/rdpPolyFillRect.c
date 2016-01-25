@@ -188,7 +188,7 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
                      pGC->alu == GXnoop ||
                      pGC->alu == GXand ||
                      pGC->alu == GXcopy /*||
-                     pGC->alu == GXxor*/)) /* todo, why dosen't xor work? */
+                     pGC->alu == GXxor*/)) /* todo, why doesn't xor work? */
             {
                 draw_item_add_fill_region(pDirtyPriv, fill_reg, pGC->fgPixel,
                                           pGC->alu);
@@ -210,7 +210,7 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
                      pGC->alu == GXnoop ||
                      pGC->alu == GXand ||
                      pGC->alu == GXcopy /*||
-                     pGC->alu == GXxor*/)) /* todo, why dosen't xor work? */
+                     pGC->alu == GXxor*/)) /* todo, why doesn't xor work? */
             {
                 rdpup_set_fgcolor(pGC->fgPixel);
                 rdpup_set_opcode(pGC->alu);
@@ -253,7 +253,7 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
                          pGC->alu == GXnoop ||
                          pGC->alu == GXand ||
                          pGC->alu == GXcopy /*||
-                         pGC->alu == GXxor*/)) /* todo, why dosen't xor work? */
+                         pGC->alu == GXxor*/)) /* todo, why doesn't xor work? */
                 {
                     LLOGLN(10, ("rdpPolyFillRect: 3"));
                     draw_item_add_fill_region(pDirtyPriv, &clip_reg,
@@ -280,7 +280,7 @@ rdpPolyFillRect(DrawablePtr pDrawable, GCPtr pGC, int nrectFill,
                          pGC->alu == GXnoop ||
                          pGC->alu == GXand ||
                          pGC->alu == GXcopy /*||
-                         pGC->alu == GXxor*/)) /* todo, why dosen't xor work? */
+                         pGC->alu == GXxor*/)) /* todo, why doesn't xor work? */
                 {
                     rdpup_set_fgcolor(pGC->fgPixel);
                     rdpup_set_opcode(pGC->alu);

@@ -1983,7 +1983,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
             if (xrdp_mm_setup_mod2(self) == 0)
             {
                 xrdp_wm_set_login_mode(self->wm, 10);
-                rv = 0; /*sucess*/
+                rv = 0; /*success*/
             }
             else
             {

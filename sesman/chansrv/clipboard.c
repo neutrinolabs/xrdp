@@ -271,7 +271,7 @@ static int g_cliprdr_flags = CB_USE_LONG_FORMAT_NAMES |
                              CB_FILECLIP_NO_FILE_PATHS;
 
 /* from client to server */
-/* last recieved CLIPRDR_FORMAT_LIST(CLIPRDR_FORMAT_ANNOUNCE) */
+/* last received CLIPRDR_FORMAT_LIST(CLIPRDR_FORMAT_ANNOUNCE) */
 static int g_formatIds[16];
 static int g_num_formatIds = 0;
 
@@ -1547,7 +1547,7 @@ clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length,
     {
         log_error("aborting clipboard_data_in - clipboard has not "
             "been initialized");
-        /* we return 0 here to indicate no protocol problem occured */
+        /* we return 0 here to indicate no protocol problem occurred */
         return 0;
     }
 
@@ -1887,7 +1887,7 @@ clipboard_event_selection_notify(XEvent *xevent)
         XDeleteProperty(g_display, lxevent->requestor, lxevent->property);
         if (type == g_incr_atom)
         {
-            /* nothing more to do here, the data is comming in through
+            /* nothing more to do here, the data is coming in through
                PropertyNotify */
             log_debug("clipboard_event_selection_notify: type is INCR "
                         "data_size %d property name %s type %s", data_size,

@@ -590,7 +590,7 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
 /******************************************************************************/
 /* this is the first function called, it can be called many times
    returns the number or parameters processed
-   if it dosen't apply to the rdp part, return 0 */
+   if it doesn't apply to the rdp part, return 0 */
 int
 ddxProcessArgument(int argc, char **argv, int i)
 {

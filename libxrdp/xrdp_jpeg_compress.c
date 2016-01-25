@@ -220,7 +220,7 @@ struct mydata_comp
 };
 
 /*****************************************************************************/
-/* called at begining */
+/* called at beginning */
 static void DEFAULT_CC
 my_init_destination(j_compress_ptr cinfo)
 {

@@ -18,7 +18,7 @@ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 BASE=__BASE__
 DAEMON=${BASE}/sbin/xrdp
 SDAEMON=${BASE}/sbin/xrdp-sesman
-PIDDIR=/var/run/xrdp/
+PIDDIR=/var/run/
 SESMAN_START=yes
 #USERID=xrdp
 # the X11rdp backend only works as root at the moment - GH 20/03/2013

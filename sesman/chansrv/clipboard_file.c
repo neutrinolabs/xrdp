@@ -553,7 +553,7 @@ clipboard_process_file_request(struct stream *s, int clip_msg_status,
 }
 
 /*****************************************************************************/
-/* server requested info about the file and this is the responce
+/* server requested info about the file and this is the response
    it's either the file size or file data */
 int APP_CC
 clipboard_process_file_response(struct stream *s, int clip_msg_status,

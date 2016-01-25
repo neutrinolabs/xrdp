@@ -1435,7 +1435,7 @@ rdp_orders_process_orders(struct rdp_orders *self, struct stream *s,
 }
 
 /*****************************************************************************/
-/* returns pointer, it might return bmpdata if the data dosen't need to
+/* returns pointer, it might return bmpdata if the data doesn't need to
    be converted, else it mallocs it.  The calling function must free
    it if needed */
 char *APP_CC

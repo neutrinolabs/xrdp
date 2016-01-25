@@ -101,7 +101,7 @@ main(int argc, char **argv)
     wm_pid = g_atoi(argv[2]);
     g_writeln("xrdp-sessvc: waiting for X (pid %d) and WM (pid %d)",
               x_pid, wm_pid);
-    /* run xrdp-chansrv as a seperate process */
+    /* run xrdp-chansrv as a separate process */
     chansrv_pid = g_fork();
 
     if (chansrv_pid == -1)

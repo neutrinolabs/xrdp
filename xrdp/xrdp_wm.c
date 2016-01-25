@@ -1688,7 +1688,7 @@ xrdp_wm_process_channel_data(struct xrdp_wm *self,
 }
 
 /******************************************************************************/
-/* this is the callbacks comming from libxrdp.so */
+/* this is the callbacks coming from libxrdp.so */
 int DEFAULT_CC
 callback(long id, int msg, long param1, long param2, long param3, long param4)
 {
@@ -1760,7 +1760,7 @@ xrdp_wm_login_mode_changed(struct xrdp_wm *self)
 
     if (self->login_mode == 0)
     {
-        /* this is the inital state of the login window */
+        /* this is the initial state of the login window */
         xrdp_wm_set_login_mode(self, 1); /* put the wm in login mode */
         list_clear(self->log);
         xrdp_wm_delete_all_childs(self);

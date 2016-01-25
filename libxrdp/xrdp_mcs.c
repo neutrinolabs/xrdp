@@ -183,7 +183,7 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
         }
         else
         {
-            log_message(LOG_LEVEL_DEBUG,"Recieved an unhandled appid:%d",appid);
+            log_message(LOG_LEVEL_DEBUG,"Received an unhandled appid:%d",appid);
         }
 
         break;
