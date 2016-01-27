@@ -33,5 +33,4 @@ touch NEWS
 touch AUTHORS
 touch README
 touch ChangeLog
-ln -s ../config.c $PWD/sesman/tools/config.c
 autoreconf -fvi
