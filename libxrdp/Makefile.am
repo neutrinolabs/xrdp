@@ -28,11 +28,6 @@ EXTRA_LIBS += -ljpeg
 endif
 endif
 
-if GOT_PREFIX
-EXTRA_INCLUDES += -I$(prefix)/include
-EXTRA_FLAGS += -L$(prefix)/lib -Wl,-rpath -Wl,$(prefix)/lib
-endif
-
 AM_CFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \

@@ -11,11 +11,6 @@ else
 EXTRA_DEFINES = -DXRDP_NODEBUG
 endif
 
-if GOT_PREFIX
-EXTRA_INCLUDES += -I$(prefix)/include
-EXTRA_FLAGS += -L$(prefix)/lib -Wl,-rpath -Wl,$(prefix)/lib
-endif
-
 if XRDP_RFXCODEC
 EXTRA_DEFINES += -DXRDP_RFXCODEC
 EXTRA_INCLUDES += -I$(top_srcdir)/librfxcodec/include
