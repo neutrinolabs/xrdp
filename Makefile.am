@@ -1,3 +1,5 @@
+ACLOCAL_AMFLAGS = -I m4
+
 EXTRA_DIST = bootstrap COPYING design.txt faq-compile.txt faq-general.txt file-loc.txt install.txt prog_std.txt readme.txt
 
 if XRDP_NEUTRINORDP
