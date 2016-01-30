@@ -162,6 +162,14 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     return wts;
 }
 
+/*
+ * Prevent receiving SIGPIPE on disconnect using either MSG_NOSIGNAL (Linux)
+ * or SO_NOSIGPIPE (Mac OS X)
+ */
+#if !defined(MSG_NOSIGNAL)
+#define MSG_NOSIGNAL 0
+#endif
+
 /*****************************************************************************/
 static int
 mysend(int sck, const void* adata, int bytes)
@@ -169,6 +177,11 @@ mysend(int sck, const void* adata, int bytes)
     int sent;
     int error;
     const char* data;
+
+#if defined(SO_NOSIGPIPE)
+    const int on = 1;
+    setsockopt(sck, SOL_SOCKET, SO_NOSIGPIPE, &on, sizeof(on));
+#endif
 
     data = (const char*)adata;
     sent = 0;
