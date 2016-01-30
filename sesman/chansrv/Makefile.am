@@ -40,6 +40,8 @@ AM_CPPFLAGS = \
   -I$(top_srcdir)/common \
   $(EXTRA_INCLUDES)
 
+AM_CFLAGS = $(X_CFLAGS)
+
 sbin_PROGRAMS = \
   xrdp-chansrv
 
@@ -60,10 +62,10 @@ xrdp_chansrv_SOURCES = \
   chansrv_common.c
 
 xrdp_chansrv_LDFLAGS = \
+  $(X_LIBS) \
   $(EXTRA_FLAGS)
 
 xrdp_chansrv_LDADD = \
-  -L/usr/X11R6/lib \
   $(top_builddir)/common/libcommon.la \
-  -lX11 -lXfixes -lXrandr \
+  $(X_PRE_LIBS) -lXfixes -lXrandr -lX11 $(X_EXTRA_LIBS) \
   $(EXTRA_LIBS)

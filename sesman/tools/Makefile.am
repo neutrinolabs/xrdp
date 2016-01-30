@@ -9,6 +9,8 @@ AM_CPPFLAGS = \
   -I$(top_srcdir)/sesman/libscp \
   -I$(top_srcdir)/sesman
 
+AM_CFLAGS = $(X_CFLAGS)
+
 bin_PROGRAMS = \
   xrdp-sesrun \
   xrdp-sesadmin \
@@ -46,6 +48,8 @@ xrdp_sesadmin_LDADD = \
   $(top_builddir)/common/libcommon.la \
   $(top_builddir)/sesman/libscp/libscp.la
 
+xrdp_xcon_LDFLAGS = \
+  $(X_LIBS)
+
 xrdp_xcon_LDADD = \
-  -L/usr/X11R6/lib \
-  -lX11
+  $(X_PRE_LIBS) -lX11 $(X_EXTRA_LIBS)

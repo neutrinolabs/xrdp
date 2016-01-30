@@ -199,15 +199,25 @@ else
 fi
 fi
 
-# checking for Xlib, Xfixes
-AC_CHECK_HEADER([X11/Xlib.h], [],
-  [AC_MSG_ERROR([please install libx11-dev or libX11-devel])])
+AC_PATH_XTRA
+if test "x$no_x" == "xyes"; then
+  AC_MSG_ERROR([please install libx11-dev or libX11-devel])
+fi
+
+save_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS $X_CFLAGS"
+
+# checking for Xfixes
 AC_CHECK_HEADER([X11/extensions/Xfixes.h], [],
   [AC_MSG_ERROR([please install libx11-dev and libxfixes-dev or libXfixes-devel])],
   [#include <X11/Xlib.h>])
+
+# checking for Xrandr
 AC_CHECK_HEADER([X11/extensions/Xrandr.h], [],
   [AC_MSG_ERROR([please install libxrandr-dev or libXrandr-devel])],
   [#include <X11/Xlib.h>])
+
+CFLAGS="$save_CFLAGS"
 
 libdir="${libdir}/xrdp";
 if test "x${prefix}" = "xNONE" ; then
