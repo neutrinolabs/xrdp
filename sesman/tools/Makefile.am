@@ -1,12 +1,10 @@
 EXTRA_DIST = tcp.h
 
-AM_CFLAGS = \
+AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
-  -DXRDP_PID_PATH=\"${localstatedir}/run\"
-
-INCLUDES = \
+  -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -I$(top_srcdir)/common \
   -I$(top_srcdir)/sesman/libscp \
   -I$(top_srcdir)/sesman

@@ -17,15 +17,13 @@ EXTRA_INCLUDES += -I$(top_srcdir)/librfxcodec/include
 EXTRA_LIBS += $(top_srcdir)/librfxcodec/src/librfxencode.a
 endif
 
-AM_CFLAGS = \
+AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -DXRDP_LIB_PATH=\"${libdir}\" \
-  $(EXTRA_DEFINES)
-
-INCLUDES = \
+  $(EXTRA_DEFINES) \
   -I$(top_builddir) \
   -I$(top_srcdir)/common \
   -I$(top_srcdir)/libxrdp \

@@ -2,13 +2,11 @@
 EXTRA_DIST = sesman.ini startwm.sh sesman.h access.h auth.h config.h env.h \
 scp.h scp_v0.h scp_v1.h scp_v1_mng.h session.h sig.h
 
-AM_CFLAGS = \
+AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
-  -DXRDP_PID_PATH=\"${localstatedir}/run\"
-
-INCLUDES = \
+  -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -I$(top_srcdir)/common \
   -I$(top_srcdir)/sesman/libscp
 
