@@ -22,6 +22,7 @@
  * CLIPRDR_FILEDESCRIPTOR
  * http://msdn.microsoft.com/en-us/library/ff362447%28prot.20%29.aspx */
 
+#include <sys/time.h>
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/extensions/Xfixes.h>
