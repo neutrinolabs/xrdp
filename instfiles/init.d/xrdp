@@ -139,7 +139,7 @@ case "$1" in
 	;;
   force-stop)
 	$0 stop
-	# because it doesn't allways die the right way
+	# because it doesn't always die the right way
 	force_stop
 	;;
   restart|force-reload)

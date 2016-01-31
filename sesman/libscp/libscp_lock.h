@@ -52,8 +52,8 @@ scp_lock_fork_release(void);
  *
  * @brief starts a section that is critical for forking
  *
- * starts a section that is critical for forking, that is noone can fork()
- * while i'm in a critical section. But if someone wanted to fork we have
+ * starts a section that is critical for forking, that is no one can fork()
+ * while I'm in a critical section. But if someone wanted to fork we have
  * to wait until he finishes with lock_fork_release()
  *
  * @return

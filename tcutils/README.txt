@@ -1,4 +1,4 @@
-A QT based utility program for thinclients using xrdp and NeutrinoRDP
+A QT based utility program for thin clients using xrdp and NeutrinoRDP
 
 This program sends commands to NeutrinoRDP to do something
 useful on the client end (such as unmounting a USB drive,

@@ -57,7 +57,7 @@ scp_lock_fork_request(void)
 
     if (lock_fork_blockers_count == 0)
     {
-        /* if noone is blocking fork(), then we're allowed to fork */
+        /* if no one is blocking fork(), then we're allowed to fork */
         sem_post(&lock_fork_req);
     }
 
