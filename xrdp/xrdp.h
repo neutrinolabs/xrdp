@@ -381,6 +381,8 @@ int APP_CC
 xrdp_mm_check_chan(struct xrdp_mm *self);
 int APP_CC
 xrdp_mm_check_wait_objs(struct xrdp_mm* self);
+int APP_CC
+xrdp_mm_frame_ack(struct xrdp_mm *self, int frame_id);
 int DEFAULT_CC
 server_begin_update(struct xrdp_mod* mod);
 int DEFAULT_CC
