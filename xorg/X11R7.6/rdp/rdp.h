@@ -582,10 +582,10 @@ rdpup_check_alpha_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec* pDirtyPriv);
 int
 rdpup_check_dirty_screen(rdpPixmapRec* pDirtyPriv);
 int
-rdpup_add_char(int font, int charactor, short x, short y, int cx, int cy,
+rdpup_add_char(int font, int character, short x, short y, int cx, int cy,
                char* bmpdata, int bmpdata_bytes);
 int
-rdpup_add_char_alpha(int font, int charactor, short x, short y, int cx, int cy,
+rdpup_add_char_alpha(int font, int character, short x, short y, int cx, int cy,
                      char* bmpdata, int bmpdata_bytes);
 int
 rdpup_draw_text(int font, int flags, int mixmode,

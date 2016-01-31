@@ -444,7 +444,7 @@ server_set_pen(struct xrdp_mod* mod, int style, int width);
 int DEFAULT_CC
 server_draw_line(struct xrdp_mod* mod, int x1, int y1, int x2, int y2);
 int DEFAULT_CC
-server_add_char(struct xrdp_mod* mod, int font, int charactor,
+server_add_char(struct xrdp_mod* mod, int font, int character,
                 int offset, int baseline,
                 int width, int height, char* data);
 int DEFAULT_CC
@@ -509,6 +509,6 @@ server_monitored_desktop(struct xrdp_mod* mod,
                          struct rail_monitored_desktop_order* mdo,
                          int flags);
 int DEFAULT_CC
-server_add_char_alpha(struct xrdp_mod* mod, int font, int charactor,
+server_add_char_alpha(struct xrdp_mod* mod, int font, int character,
                       int offset, int baseline,
                       int width, int height, char* data);

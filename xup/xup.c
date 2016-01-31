@@ -797,7 +797,7 @@ process_server_add_char(struct mod *mod, struct stream *s)
 {
     int rv;
     int font;
-    int charactor;
+    int character;
     int x;
     int y;
     int cx;
@@ -806,14 +806,14 @@ process_server_add_char(struct mod *mod, struct stream *s)
     char *bmpdata;
 
     in_uint16_le(s, font);
-    in_uint16_le(s, charactor);
+    in_uint16_le(s, character);
     in_sint16_le(s, x);
     in_sint16_le(s, y);
     in_uint16_le(s, cx);
     in_uint16_le(s, cy);
     in_uint16_le(s, len_bmpdata);
     in_uint8p(s, bmpdata, len_bmpdata);
-    rv = mod->server_add_char(mod, font, charactor, x, y, cx, cy, bmpdata);
+    rv = mod->server_add_char(mod, font, character, x, y, cx, cy, bmpdata);
     return rv;
 }
 
@@ -825,7 +825,7 @@ process_server_add_char_alpha(struct mod *mod, struct stream *s)
 {
     int rv;
     int font;
-    int charactor;
+    int character;
     int x;
     int y;
     int cx;
@@ -834,14 +834,14 @@ process_server_add_char_alpha(struct mod *mod, struct stream *s)
     char *bmpdata;
 
     in_uint16_le(s, font);
-    in_uint16_le(s, charactor);
+    in_uint16_le(s, character);
     in_sint16_le(s, x);
     in_sint16_le(s, y);
     in_uint16_le(s, cx);
     in_uint16_le(s, cy);
     in_uint16_le(s, len_bmpdata);
     in_uint8p(s, bmpdata, len_bmpdata);
-    rv = mod->server_add_char_alpha(mod, font, charactor, x, y, cx, cy,
+    rv = mod->server_add_char_alpha(mod, font, character, x, y, cx, cy,
                                     bmpdata);
     return rv;
 }
