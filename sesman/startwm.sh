@@ -29,36 +29,34 @@ wm_start()
   xterm
 }
 
-#Execution sequence for interactive login shell
-#Following pseudo code explains the sequence of execution of these files.
-#execute /etc/profile
-#IF ~/.bash_profile exists THEN
-#    execute ~/.bash_profile
-#ELSE
-#    IF ~/.bash_login exist THEN
-#        execute ~/.bash_login
-#    ELSE
-#        IF ~/.profile exist THEN
-#            execute ~/.profile
-#        END IF
-#    END IF
-#END IF
+# Execution sequence for interactive login shell - pseudocode
+#
+# IF /etc/profile is readable THEN
+#     execute ~/.bash_profile
+# END IF
+# IF ~/.bash_profile is readable THEN
+#     execute ~/.bash_profile
+# ELSE
+#     IF ~/.bash_login is readable THEN
+#         execute ~/.bash_login
+#     ELSE
+#         IF ~/.profile is readable THEN
+#             execute ~/.profile
+#         END IF
+#     END IF
+# END IF
 pre_start()
 {
-  if [ -f /etc/profile ]
-  then
+  if [ -r /etc/profile ]; then
     . /etc/profile
   fi
-  if [ -f ~/.bash_profile ]
-  then
+  if [ -r ~/.bash_profile ]; then
     . ~/.bash_profile
   else
-    if [ -f ~/.bash_login ]
-    then
+    if [ -r ~/.bash_login ]; then
       . ~/.bash_login
     else
-      if [ -f ~/.profile ]
-      then
+      if [ -r ~/.profile ]; then
         . ~/.profile
       fi
     fi
@@ -66,15 +64,14 @@ pre_start()
   return 0
 }
 
-#When you logout of the interactive shell, following is the
-#sequence of execution:
-#IF ~/.bash_logout exists THEN
-#    execute ~/.bash_logout
-#END IF
+# When loging out from the interactive shell, the execution sequence is:
+#
+# IF ~/.bash_logout exists THEN
+#     execute ~/.bash_logout
+# END IF
 post_start()
 {
-  if [ -f ~/.bash_logout ]
-  then
+  if [ -r ~/.bash_logout ]; then
     . ~/.bash_logout
   fi
   return 0
