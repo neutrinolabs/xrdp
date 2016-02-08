@@ -130,7 +130,6 @@ env_set_user(char *username, char *passwd_file, int display,
             g_set_current_dir(pw_dir);
             g_sprintf(text, ":%d.0", display);
             g_setenv("DISPLAY", text, 1);
-            g_setenv("LANG", "en_US.UTF-8", 1);
             g_setenv("XRDP_SESSION", "1", 1);
             if ((env_names != 0) && (env_values != 0) &&
                 (env_names->count == env_values->count))
