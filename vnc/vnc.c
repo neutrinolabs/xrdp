@@ -1099,7 +1099,8 @@ lib_mod_connect(struct vnc *v)
 
     if (error != 0)
     {
-        log_message(LOG_LEVEL_DEBUG, "VNC Error after security negotiation");
+        log_message(LOG_LEVEL_DEBUG, "VNC error %d after security negotiation",
+                    error);
     }
 
     if (error == 0 && check_sec_result)
