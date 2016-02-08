@@ -2014,7 +2014,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
         xrdp_mm_connect_chansrv(self, "", chansrvport);
     }
 
-    log_message(LOG_LEVEL_DEBUG,"returnvalue from xrdp_mm_connect %d", rv);
+    log_message(LOG_LEVEL_DEBUG,"return value from xrdp_mm_connect %d", rv);
 
     return rv;
 }
