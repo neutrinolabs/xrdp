@@ -22,7 +22,7 @@
 /* you can define L_ENDIAN or B_ENDIAN and NEED_ALIGN or NO_NEED_ALIGN
    in the makefile to override */
 
-/* check endianess */
+/* check endianness */
 #if !(defined(L_ENDIAN) || defined(B_ENDIAN))
 #if !defined(__BYTE_ORDER) && defined(__linux__)
 #include <endian.h>

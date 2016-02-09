@@ -1775,7 +1775,7 @@ rail_configure_window(XConfigureEvent *config)
 
 /*****************************************************************************/
 static int
-rail_desktop_resize(lxevent)
+rail_desktop_resize(XEvent *lxevent)
 {
     LOG(0, ("rail_desktop_resize:"));
     return 0;

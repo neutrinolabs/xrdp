@@ -67,7 +67,7 @@ struct vnc
   int (*server_set_pen)(struct vnc* v, int style,
                         int width);
   int (*server_draw_line)(struct vnc* v, int x1, int y1, int x2, int y2);
-  int (*server_add_char)(struct vnc* v, int font, int charactor,
+  int (*server_add_char)(struct vnc* v, int font, int character,
                          int offset, int baseline,
                          int width, int height, char* data);
   int (*server_draw_text)(struct vnc* v, int font,

@@ -435,8 +435,11 @@ scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt, struct SCP_DISCONNEC
     }
 
     /* then we wait for client ack */
-#warning maybe this message could say if the session should be resized on
-#warning server side or client side
+
+    /*
+     * Maybe this message could say if the session should be resized on
+     * server side or client side.
+     */
     init_stream(c->in_s, c->in_s->size);
 
     if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))

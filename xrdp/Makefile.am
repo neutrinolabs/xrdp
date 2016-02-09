@@ -11,26 +11,19 @@ else
 EXTRA_DEFINES = -DXRDP_NODEBUG
 endif
 
-if GOT_PREFIX
-EXTRA_INCLUDES += -I$(prefix)/include
-EXTRA_FLAGS += -L$(prefix)/lib -Wl,-rpath -Wl,$(prefix)/lib
-endif
-
 if XRDP_RFXCODEC
 EXTRA_DEFINES += -DXRDP_RFXCODEC
 EXTRA_INCLUDES += -I$(top_srcdir)/librfxcodec/include
 EXTRA_LIBS += $(top_srcdir)/librfxcodec/src/librfxencode.a
 endif
 
-AM_CFLAGS = \
+AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -DXRDP_LIB_PATH=\"${libdir}\" \
-  $(EXTRA_DEFINES)
-
-INCLUDES = \
+  $(EXTRA_DEFINES) \
   -I$(top_builddir) \
   -I$(top_srcdir)/common \
   -I$(top_srcdir)/libxrdp \

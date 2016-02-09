@@ -2014,7 +2014,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
         xrdp_mm_connect_chansrv(self, "", chansrvport);
     }
 
-    log_message(LOG_LEVEL_DEBUG,"returnvalue from xrdp_mm_connect %d", rv);
+    log_message(LOG_LEVEL_DEBUG,"return value from xrdp_mm_connect %d", rv);
 
     return rv;
 }
@@ -2833,7 +2833,7 @@ server_draw_line(struct xrdp_mod *mod, int x1, int y1, int x2, int y2)
 
 /*****************************************************************************/
 int DEFAULT_CC
-server_add_char(struct xrdp_mod *mod, int font, int charactor,
+server_add_char(struct xrdp_mod *mod, int font, int character,
                 int offset, int baseline,
                 int width, int height, char *data)
 {
@@ -2847,7 +2847,7 @@ server_add_char(struct xrdp_mod *mod, int font, int charactor,
     fi.data = data;
     fi.bpp = 1;
     return libxrdp_orders_send_font(((struct xrdp_wm *)mod->wm)->session,
-                                    &fi, font, charactor);
+                                    &fi, font, character);
 }
 
 /*****************************************************************************/
@@ -3470,7 +3470,7 @@ server_monitored_desktop(struct xrdp_mod *mod,
 
 /*****************************************************************************/
 int DEFAULT_CC
-server_add_char_alpha(struct xrdp_mod* mod, int font, int charactor,
+server_add_char_alpha(struct xrdp_mod* mod, int font, int character,
                       int offset, int baseline,
                       int width, int height, char* data)
 {
@@ -3484,5 +3484,5 @@ server_add_char_alpha(struct xrdp_mod* mod, int font, int charactor,
     fi.data = data;
     fi.bpp = 8;
     return libxrdp_orders_send_font(((struct xrdp_wm*)mod->wm)->session,
-                                    &fi, font, charactor);
+                                    &fi, font, character);
 }

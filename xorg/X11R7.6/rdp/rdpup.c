@@ -2823,7 +2823,7 @@ rdpup_check_alpha_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec* pDirtyPriv)
 
 /******************************************************************************/
 int
-rdpup_add_char(int font, int charactor, short x, short y, int cx, int cy,
+rdpup_add_char(int font, int character, short x, short y, int cx, int cy,
                char* bmpdata, int bmpdata_bytes)
 {
     if (g_connected)
@@ -2834,7 +2834,7 @@ rdpup_add_char(int font, int charactor, short x, short y, int cx, int cy,
         out_uint16_le(g_out_s, 18 + bmpdata_bytes); /* size */
         g_count++;
         out_uint16_le(g_out_s, font);
-        out_uint16_le(g_out_s, charactor);
+        out_uint16_le(g_out_s, character);
         out_uint16_le(g_out_s, x);
         out_uint16_le(g_out_s, y);
         out_uint16_le(g_out_s, cx);
@@ -2847,7 +2847,7 @@ rdpup_add_char(int font, int charactor, short x, short y, int cx, int cy,
 
 /******************************************************************************/
 int
-rdpup_add_char_alpha(int font, int charactor, short x, short y, int cx, int cy,
+rdpup_add_char_alpha(int font, int character, short x, short y, int cx, int cy,
                      char* bmpdata, int bmpdata_bytes)
 {
     if (g_connected)
@@ -2858,7 +2858,7 @@ rdpup_add_char_alpha(int font, int charactor, short x, short y, int cx, int cy,
         out_uint16_le(g_out_s, 18 + bmpdata_bytes); /* size */
         g_count++;
         out_uint16_le(g_out_s, font);
-        out_uint16_le(g_out_s, charactor);
+        out_uint16_le(g_out_s, character);
         out_uint16_le(g_out_s, x);
         out_uint16_le(g_out_s, y);
         out_uint16_le(g_out_s, cx);

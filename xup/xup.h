@@ -71,7 +71,7 @@ struct mod
   int (*server_set_pen)(struct mod* v, int style,
                         int width);
   int (*server_draw_line)(struct mod* v, int x1, int y1, int x2, int y2);
-  int (*server_add_char)(struct mod* v, int font, int charactor,
+  int (*server_add_char)(struct mod* v, int font, int character,
                          int offset, int baseline,
                          int width, int height, char* data);
   int (*server_draw_text)(struct mod* v, int font,
@@ -121,7 +121,7 @@ struct mod
                                   int flags);
   int (*server_set_cursor_ex)(struct mod* v, int x, int y, char* data,
                               char* mask, int bpp);
-  int (*server_add_char_alpha)(struct mod* v, int font, int charactor,
+  int (*server_add_char_alpha)(struct mod* v, int font, int character,
                                int offset, int baseline,
                                int width, int height, char* data);
   int (*server_create_os_surface_bpp)(struct mod* v, int rdpindex,

@@ -4,6 +4,7 @@ AC_PREREQ(2.59)
 AC_INIT([xrdp], [0.9.0], [xrdp-devel@googlegroups.com])
 AC_CONFIG_HEADERS(config_ac.h:config_ac-h.in)
 AM_INIT_AUTOMAKE([1.6 foreign])
+AC_CONFIG_MACRO_DIRS([m4])
 AC_PROG_CC
 AC_C_CONST
 AC_PROG_LIBTOOL
@@ -97,8 +98,6 @@ AC_ARG_ENABLE(opus, AS_HELP_STRING([--enable-opus],
               [Build opus(audio codec) (default: no)]),
               [], [enable_opus=no])
 AM_CONDITIONAL(XRDP_OPUS, [test x$enable_opus = xyes])
-
-AM_CONDITIONAL(GOT_PREFIX, test "x${prefix}" != "xNONE"])
 
 # checking for openssl
 AC_CHECK_HEADER([openssl/rc4.h], [],
@@ -200,15 +199,25 @@ else
 fi
 fi
 
-# checking for Xlib, Xfixes
-AC_CHECK_HEADER([X11/Xlib.h], [],
-  [AC_MSG_ERROR([please install libx11-dev or libX11-devel])])
+AC_PATH_XTRA
+if test "x$no_x" == "xyes"; then
+  AC_MSG_ERROR([please install libx11-dev or libX11-devel])
+fi
+
+save_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS $X_CFLAGS"
+
+# checking for Xfixes
 AC_CHECK_HEADER([X11/extensions/Xfixes.h], [],
   [AC_MSG_ERROR([please install libx11-dev and libxfixes-dev or libXfixes-devel])],
   [#include <X11/Xlib.h>])
+
+# checking for Xrandr
 AC_CHECK_HEADER([X11/extensions/Xrandr.h], [],
   [AC_MSG_ERROR([please install libxrandr-dev or libXrandr-devel])],
   [#include <X11/Xlib.h>])
+
+CFLAGS="$save_CFLAGS"
 
 libdir="${libdir}/xrdp";
 if test "x${prefix}" = "xNONE" ; then

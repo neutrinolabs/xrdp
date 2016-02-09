@@ -31,5 +31,5 @@ is lost, the session remains.
 
 For X11, start the XServer after the user is
 authenticated.  First check for the next available X11 display,
-create a user session, start the XServer and set the DISPLAY enviromenet
+create a user session, start the XServer and set the DISPLAY environment
 variable.

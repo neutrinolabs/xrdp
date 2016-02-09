@@ -75,7 +75,7 @@ struct xrdp_mod
   int (*server_set_pen)(struct xrdp_mod* v, int style,
                         int width);
   int (*server_draw_line)(struct xrdp_mod* v, int x1, int y1, int x2, int y2);
-  int (*server_add_char)(struct xrdp_mod* v, int font, int charactor,
+  int (*server_add_char)(struct xrdp_mod* v, int font, int character,
                          int offset, int baseline,
                          int width, int height, char* data);
   int (*server_draw_text)(struct xrdp_mod* v, int font,
@@ -125,7 +125,7 @@ struct xrdp_mod
                                   int flags);
   int (*server_set_pointer_ex)(struct xrdp_mod* v, int x, int y, char* data,
                                char* mask, int bpp);
-  int (*server_add_char_alpha)(struct xrdp_mod* mod, int font, int charactor,
+  int (*server_add_char_alpha)(struct xrdp_mod* mod, int font, int character,
                                int offset, int baseline,
                                int width, int height, char* data);
 
