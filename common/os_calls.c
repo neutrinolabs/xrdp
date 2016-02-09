@@ -411,7 +411,7 @@ g_tcp_socket(void)
     unsigned int option_len;
 #endif
 
-#if defined(XRDP_ENABLE_IPV6) && !defined(NO_ARPA_INET_H_IP6)
+#if defined(XRDP_ENABLE_IPV6)
     rv = (int)socket(AF_INET6, SOCK_STREAM, 0);
 #else
     rv = (int)socket(AF_INET, SOCK_STREAM, 0);
@@ -420,14 +420,18 @@ g_tcp_socket(void)
     {
         return -1;
     }
-#if defined(XRDP_ENABLE_IPV6) && !defined(NO_ARPA_INET_H_IP6)
+#if defined(XRDP_ENABLE_IPV6)
     option_len = sizeof(option_value);
     if (getsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&option_value,
                    &option_len) == 0)
     {
         if (option_value != 0)
         {
+#if defined(XRDP_ENABLE_IPV6ONLY)
+            option_value = 1;
+#else
             option_value = 0;
+#endif
             option_len = sizeof(option_value);
             if (setsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&option_value,
                        option_len) < 0)
@@ -659,7 +663,7 @@ g_sck_close(int sck)
 
 /*****************************************************************************/
 /* returns error, zero is good */
-#if defined(XRDP_ENABLE_IPV6) && !defined(NO_ARPA_INET_H_IP6)
+#if defined(XRDP_ENABLE_IPV6)
 int APP_CC
 g_tcp_connect(int sck, const char *address, const char *port)
 {

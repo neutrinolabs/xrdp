@@ -54,6 +54,9 @@ AM_CONDITIONAL(SESMAN_NOPAM, [test x$enable_pam != xyes])
 AC_ARG_ENABLE(ipv6, AS_HELP_STRING([--enable-ipv6],
               [Build IPv6 support (default: no, experimental)]),
               [], [enable_ipv6=no])
+AC_ARG_ENABLE(ipv6only, AS_HELP_STRING([--enable-ipv6only],
+              [Build IPv6-only (default: no)]),
+              [], [enable_ipv6only=no])
 AC_ARG_ENABLE(kerberos, AS_HELP_STRING([--enable-kerberos],
               [Build kerberos support (default: no)]),
               [], [enable_kerberos=no])
@@ -126,15 +129,16 @@ then
   fi
 fi
 
+if test "x$enable_ipv6only" = "xyes"
+then
+  enable_ipv6=yes
+  AC_DEFINE([XRDP_ENABLE_IPV6ONLY],1,[Enable IPv6 only])
+fi
+
 if test "x$enable_ipv6" = "xyes"
 then
   AC_DEFINE([XRDP_ENABLE_IPV6],1,[Enable IPv6])
 fi
-
-AC_CHECK_MEMBER([struct in6_addr.s6_addr],
-                [],
-                [AC_DEFINE(NO_ARPA_INET_H_IP6, 1, [for IPv6])],
-                [#include <arpa/inet.h>])
 
 if test "x$enable_pam" != "xyes" || test "x$bsd" = "xtrue"
 then
