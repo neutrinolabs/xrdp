@@ -15,7 +15,7 @@ AM_CPPFLAGS = \
   $(EXTRA_DEFINES) \
   -I$(top_srcdir)/common
 
-lib_LTLIBRARIES = \
+module_LTLIBRARIES = \
   librdp.la
 
 librdp_la_SOURCES = \

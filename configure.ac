@@ -226,7 +226,8 @@ AC_CHECK_HEADER([X11/extensions/Xrandr.h], [],
 
 CFLAGS="$save_CFLAGS"
 
-libdir="${libdir}/xrdp";
+AC_SUBST([moduledir], '${libdir}/xrdp')
+
 if test "x${prefix}" = "xNONE" ; then
 sysconfdir="/etc";
 localstatedir="/var";

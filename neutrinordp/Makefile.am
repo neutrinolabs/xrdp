@@ -16,7 +16,7 @@ AM_CPPFLAGS = \
   -I$(top_srcdir)/common \
   $(FREERDP_CFLAGS)
 
-lib_LTLIBRARIES = \
+module_LTLIBRARIES = \
   libxrdpneutrinordp.la
 
 libxrdpneutrinordp_la_SOURCES = xrdp-neutrinordp.c xrdp-color.c
