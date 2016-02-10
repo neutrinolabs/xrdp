@@ -29,25 +29,37 @@
 static int APP_CC
 file_read_ini_line(struct stream *s, char *text, int text_bytes);
 
+/*****************************************************************************/
 /* look up for a section name within str (i.e. pattern [section_name])
  * if a section name is found, this function return 1 and copy the section
  * inplace of str. */
 static int APP_CC
-line_lookup_for_section_name(char * str) {
+line_lookup_for_section_name(char *str, int str_bytes)
+{
     int name_index_start;
     int index;
     char c;
+
     name_index_start = -1;
     index = 0;
-    while((c = str[index]) != 0) {
+    while ((c = str[index]) != 0)
+    {
         if (c == '[')
         {
-            name_index_start = index+1;
+            name_index_start = index + 1;
         }
         else if (c == ']' && name_index_start > 0)
         {
-            g_memcpy(str, &str[name_index_start], index - name_index_start);
-            str[index - name_index_start] = 0;
+            if (name_index_start + index >= str_bytes)
+            {
+                return 0;
+            }
+            for (index = index - name_index_start; index > 0; index--)
+            {
+                str[0] = str[name_index_start];
+                str++;
+            }
+            str[0] = 0;
             return 1;
         }
         ++index;
@@ -65,11 +77,8 @@ l_file_read_sections(int fd, int max_file_size, struct list *names)
 {
     struct stream *s;
     char text[FILE_MAX_LINE_BYTES];
-    char c;
     int len;
     int rv;
-    int line_length;
-    char * section_name;
 
     rv = 0;
     g_file_seek(fd, 0);
@@ -82,8 +91,10 @@ l_file_read_sections(int fd, int max_file_size, struct list *names)
     if (len > 0)
     {
         s->end = s->p + len;
-        while(file_read_ini_line(s, text, FILE_MAX_LINE_BYTES) == 0) {
-            if(line_lookup_for_section_name(text) != 0) {
+        while (file_read_ini_line(s, text, FILE_MAX_LINE_BYTES) == 0)
+        {
+            if (line_lookup_for_section_name(text, FILE_MAX_LINE_BYTES) != 0)
+            {
                 list_add_item(names, (tbus)g_strdup(text));
             }
         }
@@ -233,11 +244,7 @@ l_file_read_section(int fd, int max_file_size, const char *section,
     char *name;
     char *value;
     char *lvalue;
-    char c;
-    int in_it;
-    int in_it_index;
     int len;
-    int index;
     int file_size;
 
     data = (char *) g_malloc(FILE_MAX_LINE_BYTES * 3, 0);
@@ -247,8 +254,6 @@ l_file_read_section(int fd, int max_file_size, const char *section,
 
     file_size = 32 * 1024; /* 32 K file size limit */
     g_file_seek(fd, 0);
-    in_it_index = 0;
-    in_it = 0;
     g_memset(text, 0, FILE_MAX_LINE_BYTES);
     list_clear(names);
     list_clear(values);
@@ -259,14 +264,18 @@ l_file_read_section(int fd, int max_file_size, const char *section,
     if (len > 0)
     {
         s->end = s->p + len;
-        while(file_read_ini_line(s, text, FILE_MAX_LINE_BYTES) == 0) {
-            if(line_lookup_for_section_name(text) != 0) {
+        while (file_read_ini_line(s, text, FILE_MAX_LINE_BYTES) == 0)
+        {
+            if (line_lookup_for_section_name(text, FILE_MAX_LINE_BYTES) != 0)
+            {
                 if (g_strcasecmp(section, text) == 0)
                 {
-                    while (file_read_ini_line(s, text, FILE_MAX_LINE_BYTES) == 0)
+                    while (file_read_ini_line(s, text,
+                                              FILE_MAX_LINE_BYTES) == 0)
                     {
-                        if(line_lookup_for_section_name(text) != 0) {
-                          break;
+                        if (line_lookup_for_section_name(text, FILE_MAX_LINE_BYTES) != 0)
+                        {
+                            break;
                         }
 
                         if (g_strlen(text) > 0)
@@ -335,7 +344,7 @@ file_by_name_read_sections(const char *file_name, struct list *names)
         return 1;
     }
 
-    fd = g_file_open(file_name);
+    fd = g_file_open_ex(file_name, 1, 0, 0, 0);
 
     if (fd < 0)
     {
@@ -376,7 +385,7 @@ file_by_name_read_section(const char *file_name, const char *section,
         return 1;
     }
 
-    fd = g_file_open(file_name);
+    fd = g_file_open_ex(file_name, 1, 0, 0, 0);
 
     if (fd < 0)
     {
