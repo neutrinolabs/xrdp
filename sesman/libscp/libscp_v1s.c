@@ -139,7 +139,6 @@ enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION *c, struct SCP_SES
                     __LINE__, sz);
         return SCP_SERVER_STATE_INTERNAL_ERR;
     }
-    scp_session_set_bpp(session, sz);
     in_uint8(c->in_s, sz);
     scp_session_set_rsr(session, sz);
     in_uint8a(c->in_s, buf, 17);
