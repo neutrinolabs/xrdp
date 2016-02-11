@@ -131,6 +131,14 @@ enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION *c, struct SCP_SES
     in_uint16_be(c->in_s, cmd);
     scp_session_set_height(session, cmd);
     in_uint8(c->in_s, sz);
+    if (0 != scp_session_set_bpp(session, sz))
+    {
+        scp_session_destroy(session);
+        log_message(LOG_LEVEL_WARNING,
+                    "[v1s:%d] connection aborted: unsupported bpp: %d",
+                    __LINE__, sz);
+        return SCP_SERVER_STATE_INTERNAL_ERR;
+    }
     scp_session_set_bpp(session, sz);
     in_uint8(c->in_s, sz);
     scp_session_set_rsr(session, sz);

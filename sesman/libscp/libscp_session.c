@@ -137,6 +137,7 @@ scp_session_set_bpp(struct SCP_SESSION *s, tui8 bpp)
         case 15:
         case 16:
         case 24:
+        case 32:
             s->bpp = bpp;
         default:
             return 1;

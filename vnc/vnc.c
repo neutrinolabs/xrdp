@@ -993,12 +993,18 @@ lib_mod_connect(struct vnc *v)
     v->server_msg(v, "VNC started connecting", 0);
     check_sec_result = 1;
 
-    /* only support 8 and 16 bpp connections from rdp client */
-    if ((v->server_bpp != 8) && (v->server_bpp != 15) &&
-            (v->server_bpp != 16) && (v->server_bpp != 24))
+    /* check if bpp is supported for rdp connection */
+    switch (v->server_bpp)
     {
-        v->server_msg(v, "VNC error - only supporting 8, 15, 16 and 24 bpp rdp "
-                      "connections", 0);
+        case 8:
+        case 15:
+        case 16:
+        case 24:
+        case 32:
+            break;
+        default:
+            v->server_msg(v, "VNC error - only supporting 8, 15, 16, 24 and 32 "
+                          "bpp rdp connections", 0);
         return 1;
     }
 

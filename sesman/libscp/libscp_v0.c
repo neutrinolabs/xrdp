@@ -252,7 +252,14 @@ scp_v0s_accept(struct SCP_CONNECTION *c, struct SCP_SESSION **s, int skipVchk)
         scp_session_set_height(session, sz);
         /* bpp */
         in_uint16_be(c->in_s, sz);
-        scp_session_set_bpp(session, (tui8)sz);
+        if (0 != scp_session_set_bpp(session, (tui8)sz))
+        {
+            scp_session_destroy(session);
+            log_message(LOG_LEVEL_WARNING,
+                        "[v0:%d] connection aborted: unsupported bpp: %d",
+                        __LINE__, (tui8)sz);
+            return SCP_SERVER_STATE_INTERNAL_ERR;
+        }
 
         if (s_check_rem(c->in_s, 2))
         {
