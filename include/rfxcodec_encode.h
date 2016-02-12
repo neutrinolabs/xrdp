@@ -40,9 +40,11 @@ struct rfx_tile
     int quant_cr;
 };
 
+void *
+rfxcodec_encode_create(int width, int height, int format, int flags);
 int
-rfxcodec_encode_create(int width, int height, int format, int flags,
-                       void **handle);
+rfxcodec_encode_create_ex(int width, int height, int format, int flags,
+                          void **handle);
 int
 rfxcodec_encode_destroy(void *handle);
 /* quants, 5 ints per set, should be num_quants * 5 chars in quants)

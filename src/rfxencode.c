@@ -38,8 +38,8 @@
 
 /******************************************************************************/
 int
-rfxcodec_encode_create(int width, int height, int format, int flags,
-                       void **handle)
+rfxcodec_encode_create_ex(int width, int height, int format, int flags,
+                          void **handle)
 {
     struct rfxencode *enc;
     int ax;
@@ -259,6 +259,21 @@ rfxcodec_encode_create(int width, int height, int format, int flags,
     {
     }
     *handle = enc;
+    return 0;
+}
+
+/******************************************************************************/
+void *
+rfxcodec_encode_create(int width, int height, int format, int flags)
+{
+    int error;
+    void *handle;
+
+    error = rfxcodec_encode_create_ex(width, height, format, flags, &handle);
+    if (error == 0)
+    {
+        return handle; 
+    }
     return 0;
 }
 

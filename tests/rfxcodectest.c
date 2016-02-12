@@ -70,13 +70,13 @@ speed_random(int count, const char *quants)
     flags = RFX_FLAGS_RLGR1;
     //flags = RFX_FLAGS_RLGR3;
     //flags = RFX_FLAGS_RLGR1 | RFX_FLAGS_ALPHAV1;
-    error = rfxcodec_encode_create(1920, 1024, RFX_FORMAT_BGRA, flags, &han);
+    error = rfxcodec_encode_create_ex(1920, 1024, RFX_FORMAT_BGRA, flags, &han);
     if (error != 0)
     {
-        printf("speed_random: rfxcodec_encode_create failed\n");
+        printf("speed_random: rfxcodec_encode_create_ex failed\n");
         return 1;
     }
-    printf("speed_random: rfxcodec_encode_create ok\n");
+    printf("speed_random: rfxcodec_encode_create_ex ok\n");
     cdata = (char *) malloc(128 * 64 * 4);
     cdata_bytes = 128 * 64 * 4;
     buf = (char *) malloc(128 * 64 * 4);
@@ -254,10 +254,10 @@ encode_file(char *data, int width, int height, char *cdata, int *cdata_bytes,
     void *han;
     struct rfx_rect regions[1];
 
-    error = rfxcodec_encode_create(1920, 1024, RFX_FORMAT_BGRA, RFX_FLAGS_RLGR1, &han);
+    error = rfxcodec_encode_create_ex(1920, 1024, RFX_FORMAT_BGRA, RFX_FLAGS_RLGR1, &han);
     if (error != 0)
     {
-        printf("encode_file: rfxcodec_encode_create failed\n");
+        printf("encode_file: rfxcodec_encode_create_ex failed\n");
         return 1;
     }
 
