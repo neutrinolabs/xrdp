@@ -294,11 +294,11 @@ rfxcodec_encode_destroy(void * handle)
 
 /******************************************************************************/
 int
-rfxcodec_encode(void *handle, char *cdata, int *cdata_bytes,
-                char *buf, int width, int height, int stride_bytes,
-                const struct rfx_rect *regions, int num_regions,
-                const struct rfx_tile *tiles, int num_tiles,
-                const char *quants, int num_quants, int flags)
+rfxcodec_encode_ex(void *handle, char *cdata, int *cdata_bytes,
+                   char *buf, int width, int height, int stride_bytes,
+                   const struct rfx_rect *regions, int num_regions,
+                   const struct rfx_tile *tiles, int num_tiles,
+                   const char *quants, int num_quants, int flags)
 {
     struct rfxencode *enc;
     STREAM s;
@@ -327,3 +327,17 @@ rfxcodec_encode(void *handle, char *cdata, int *cdata_bytes,
     *cdata_bytes = (int) (s.p - s.data);
     return 0;
 }
+
+/******************************************************************************/
+int
+rfxcodec_encode(void *handle, char *cdata, int *cdata_bytes,
+                char *buf, int width, int height, int stride_bytes,
+                const struct rfx_rect *regions, int num_regions,
+                const struct rfx_tile *tiles, int num_tiles,
+                const char *quants, int num_quants)
+{
+    return rfxcodec_encode_ex(handle, cdata, cdata_bytes, buf, width, height,
+                              stride_bytes, regions, num_regions, tiles,
+                              num_tiles, quants, num_quants, 0);
+}
+
