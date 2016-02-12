@@ -32,28 +32,28 @@ startscript_DATA = \
 #
 # platform specific files
 #
-SUBDIRS=
+SUBDIRS =
 if LINUX
-SUBDIRS+= \
-        pam.d \
-        pulse
-startscript_DATA+= xrdp.sh
+SUBDIRS += \
+  pam.d \
+  pulse
+startscript_DATA += xrdp.sh
 if HAVE_SYSTEMD
 systemdsystemunit_DATA = \
-        xrdp-sesman.service \
-        xrdp.service
+  xrdp-sesman.service \
+  xrdp.service
 else
-SUBDIRS+= \
-  	default \
-	init.d
+SUBDIRS += \
+  default \
+  init.d
 endif # HAVE_SYSTEMD
 endif # LINUX
 
 if FREEBSD
-SUBDIRS+= \
-        pam.d \
-        rc.d \
-        pulse
+SUBDIRS += \
+  pam.d \
+  rc.d \
+  pulse
 endif
 
 #
