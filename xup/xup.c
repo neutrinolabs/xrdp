@@ -211,7 +211,7 @@ lib_mod_connect(struct mod *mod)
         error = -1;
         if (trans_connect(mod->trans, mod->ip, con_port, 3000) == 0)
         {
-            LLOGLN(0, ("lib_mod_connect: connected to Xserver"
+            LLOGLN(0, ("lib_mod_connect: connected to Xserver "
                    "(Xorg or X11rdp) sck %d", mod->trans->sck));
             error = 0;
         }

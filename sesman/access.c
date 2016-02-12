@@ -93,7 +93,7 @@ access_login_mng_allowed(char *user)
 
     if (0 == g_cfg->sec.ts_admins_enable)
     {
-        LOG_DBG("[MNG] Terminal Server Admin group is disabled,"
+        LOG_DBG("[MNG] Terminal Server Admin group is disabled, "
                 "allowing authentication", 1);
         return 1;
     }

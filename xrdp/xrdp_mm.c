@@ -1151,7 +1151,7 @@ xrdp_mm_connect_chansrv(struct xrdp_mm *self, char *ip, char *port)
 
     if (!(self->chan_trans_up))
     {
-        log_message(LOG_LEVEL_ERROR,"xrdp_mm_connect_chansrv: error in"
+        log_message(LOG_LEVEL_ERROR,"xrdp_mm_connect_chansrv: error in "
                     "trans_connect chan");
     }
 
@@ -1164,7 +1164,7 @@ xrdp_mm_connect_chansrv(struct xrdp_mm *self, char *ip, char *port)
         }
         else
         {
-            log_message(LOG_LEVEL_DEBUG,"xrdp_mm_connect_chansrv: chansrv"
+            log_message(LOG_LEVEL_DEBUG,"xrdp_mm_connect_chansrv: chansrv "
                         "connect successful");
         }
     }
