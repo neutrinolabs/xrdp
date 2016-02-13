@@ -1,7 +1,8 @@
 ACLOCAL_AMFLAGS = -I m4
 AM_DISTCHECK_CONFIGURE_FLAGS = --without-systemdsystemunitdir
 
-EXTRA_DIST = bootstrap COPYING design.txt faq-compile.txt faq-general.txt file-loc.txt install.txt prog_std.txt readme.txt
+EXTRA_DIST = bootstrap COPYING coding_style.md design.txt faq-compile.txt \
+  faq-general.txt file-loc.txt install.txt prog_std.txt readme.txt
 
 if XRDP_NEUTRINORDP
 NEUTRINORDPDIR = neutrinordp
