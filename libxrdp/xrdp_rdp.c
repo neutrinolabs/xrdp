@@ -98,8 +98,8 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
             }
             else
             {
-                log_message(LOG_LEVEL_ALWAYS,"Warning: Your configured crypt level is"
-                          "undefined 'high' will be used");
+                log_message(LOG_LEVEL_ALWAYS,"Warning: Your configured crypt level is "
+                          "undefined, 'high' will be used");
                 client_info->crypt_level = 3;
             }
         }

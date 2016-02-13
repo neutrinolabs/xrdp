@@ -37,7 +37,7 @@ AM_CPPFLAGS = \
   -I$(top_srcdir)/common \
   $(EXTRA_INCLUDES)
 
-lib_LTLIBRARIES = \
+module_LTLIBRARIES = \
   libxrdp.la
 
 libxrdp_la_SOURCES = \

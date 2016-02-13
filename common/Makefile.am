@@ -26,7 +26,7 @@ AM_CPPFLAGS = \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -DXRDP_LOG_PATH=\"${localstatedir}/log\"
 
-lib_LTLIBRARIES = \
+module_LTLIBRARIES = \
   libcommon.la
 
 libcommon_la_SOURCES = \

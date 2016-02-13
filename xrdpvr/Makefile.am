@@ -9,7 +9,7 @@ AM_CPPFLAGS = \
   $(EXTRA_DEFINES) \
   $(EXTRA_INCLUDES)
 
-lib_LTLIBRARIES = \
+module_LTLIBRARIES = \
   libxrdpvr.la
 
 libxrdpvr_la_SOURCES = \

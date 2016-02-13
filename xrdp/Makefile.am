@@ -22,7 +22,7 @@ AM_CPPFLAGS = \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
-  -DXRDP_LIB_PATH=\"${libdir}\" \
+  -DXRDP_MODULE_PATH=\"${moduledir}\" \
   $(EXTRA_DEFINES) \
   -I$(top_builddir) \
   -I$(top_srcdir)/common \

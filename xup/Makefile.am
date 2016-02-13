@@ -7,7 +7,7 @@ AM_CPPFLAGS = \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -I$(top_srcdir)/common
 
-lib_LTLIBRARIES = \
+module_LTLIBRARIES = \
   libxup.la
 
 libxup_la_SOURCES = xup.c
