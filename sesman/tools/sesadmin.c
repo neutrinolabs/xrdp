@@ -101,7 +101,14 @@ int main(int argc, char **argv)
 
     if (0 == g_strncmp(user, "", 1))
     {
-        g_strncpy(user, "root", 256);
+        cmndHelp();
+        return 0;
+    }
+
+    if (0 == g_strncmp(cmnd, "", 1))
+    {
+        cmndHelp();
+        return 0;
     }
 
     if (0 == g_strncmp(pass, "", 1))
@@ -171,7 +178,7 @@ void cmndHelp()
     fprintf(stderr, "sesadmin - a console sesman administration tool\n");
     fprintf(stderr, "syntax: sesadmin [] COMMAND [OPTIONS]\n\n");
     fprintf(stderr, "-u=<username>: username to connect to sesman [MANDATORY]\n");
-    fprintf(stderr, "-p=<password>: password to connect to sesman [MANDATORY]\n");
+    fprintf(stderr, "-p=<password>: password to connect to sesman (asked if not given)\n");
     fprintf(stderr, "-s=<hostname>: sesman host (default is localhost)\n");
     fprintf(stderr, "-i=<port>    : sesman port (default 3350)\n");
     fprintf(stderr, "-c=<command> : command to execute on the server [MANDATORY]\n");
