@@ -437,7 +437,7 @@ main(int argc, char **argv)
     }
 
     /* starting logging subsystem */
-    error = log_start(cfg_file, "XRDP");
+    error = log_start(cfg_file, "xrdp");
 
     if (error != LOG_STARTUP_OK)
     {
