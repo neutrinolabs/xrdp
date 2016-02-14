@@ -223,7 +223,7 @@ int main(int argc, char **argv)
 }
 
 /**
- * Start listening on specifed local socket; when we get a connection,
+ * Start listening on specified local socket; when we get a connection,
  * connect to specified remote server and transfer data between local
  * and remote server
  *****************************************************************************/

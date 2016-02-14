@@ -56,7 +56,7 @@ extern int g_tab_down; /* in rdpmain.c */
 #define XSCAN_KP_3        89
 #define XSCAN_KP_0        90
 #define XSCAN_KP_Decimal  91
-/* "/ ?" on br keybaord */
+/* "/ ?" on br keyboard */
 #define XSCAN_97          97
 #define XSCAN_Enter       104 /* on keypad */
 #define XSCAN_Control_R   105
@@ -278,7 +278,7 @@ KbdAddEvent_evdev(int down, int param1, int param2, int param3, int param4)
             break;
 
         case RDPSCAN_115:
-            rdpEnqueueKey(type, XSCAN_97); /* "/ ?" on br keybaord */
+            rdpEnqueueKey(type, XSCAN_97); /* "/ ?" on br keyboard */
             break;
 
         case RDPSCAN_126:

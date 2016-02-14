@@ -33,7 +33,7 @@
  *
  * @brief Creates vnc password file
  * @param filename VNC password file name
- * @param password The password to be encrypte
+ * @param password The password to be encrypted
  * @return 0 on success, 1 on error
  *
  */

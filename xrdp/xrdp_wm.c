@@ -870,7 +870,7 @@ xrdp_wm_bitblt(struct xrdp_wm *self,
 }
 
 /*****************************************************************************/
-/* return true is rect is totaly exposed going in reverse z order */
+/* return true if rect is totally exposed going in reverse z order */
 /* from wnd up */
 static int APP_CC
 xrdp_wm_is_rect_vis(struct xrdp_wm *self, struct xrdp_bitmap *wnd,

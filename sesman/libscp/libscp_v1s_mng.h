@@ -36,7 +36,7 @@
  * @param c connection descriptor
  * @param s pointer to session descriptor pointer
  *
- * this function places in *s the address of a newely allocated SCP_SESSION structure
+ * this function places in *s the address of a newly allocated SCP_SESSION structure
  * that should be free()d
  */
 enum SCP_SERVER_STATES_E

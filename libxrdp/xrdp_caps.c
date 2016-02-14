@@ -185,7 +185,7 @@ xrdp_caps_process_bmpcache(struct xrdp_rdp *self, struct stream *s,
     i = MAX(i, 0);
     self->client_info.cache2_entries = i;
     in_uint16_le(s, self->client_info.cache2_size);
-    /* caceh 3 */
+    /* cache 3 */
     in_uint16_le(s, i);
     i = MIN(i, XRDP_MAX_BITMAP_CACHE_IDX);
     i = MAX(i, 0);

@@ -168,8 +168,8 @@ int main(int argc, char **argv)
 
 void cmndHelp()
 {
-    fprintf(stderr, "sesadmin - a console sesman adminitration tool\n");
-    fprintf(stderr, "sysntax: sesadmin [] COMMAND [OPTIONS]\n\n");
+    fprintf(stderr, "sesadmin - a console sesman administration tool\n");
+    fprintf(stderr, "syntax: sesadmin [] COMMAND [OPTIONS]\n\n");
     fprintf(stderr, "-u=<username>: username to connect to sesman [MANDATORY]\n");
     fprintf(stderr, "-p=<password>: password to connect to sesman [MANDATORY]\n");
     fprintf(stderr, "-s=<hostname>: sesman host (default is localhost)\n");

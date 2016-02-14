@@ -111,7 +111,7 @@ xrdp_encoder_create(struct xrdp_mm *mm)
         return 0;
     }
 
-    LLOGLN(0, ("init_xrdp_encoder: initing encoder codec_id %d", self->codec_id));
+    LLOGLN(0, ("init_xrdp_encoder: initializing encoder codec_id %d", self->codec_id));
 
     /* setup required FIFOs */
     self->fifo_to_proc = fifo_create();

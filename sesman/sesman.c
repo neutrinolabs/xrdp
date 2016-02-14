@@ -160,7 +160,7 @@ main(int argc, char **argv)
                              (0 == g_strcasecmp(argv[1], "-ns"))))
     {
         /* starts sesman not daemonized */
-        g_printf("starting sesman in foregroud...\n");
+        g_printf("starting sesman in foreground...\n");
         daemon = 0;
     }
     else if ((2 == argc) && ((0 == g_strcasecmp(argv[1], "--help")) ||

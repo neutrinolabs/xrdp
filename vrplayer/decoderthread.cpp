@@ -23,7 +23,7 @@
 /*
  * TODO:
  *      o need to maintain aspect ratio while resizing
- *      o clicking in the middle of the slider bar shuld move the slider to the middle
+ *      o clicking in the middle of the slider bar should move the slider to the middle
  *      o need to be able to rewind the move when it is done playing
  *      o need to be able to load another move and play it w/o restarting player
  *      o pause button needs to work

@@ -242,11 +242,11 @@ dev_redir_data_in(struct stream *s, int chan_id, int chan_flags, int length,
         case PAKID_CORE_CLIENT_NAME:
             /* client is telling us its computer name; do we even care? */
 
-            /* let client know loggin was successful */
+            /* let client know login was successful */
             dev_redir_send_server_user_logged_on();
             usleep(1000 * 100);
 
-            /* let client know our capabilites */
+            /* let client know our capabilities */
             dev_redir_send_server_core_cap_req();
 
             /* send confirm clientID */
@@ -576,7 +576,7 @@ void dev_redir_send_drive_dir_request(IRP *irp, tui32 device_id,
 ******************************************************************************/
 
 /**
- * @brief process client's repsonse to our core_capability_req() msg
+ * @brief process client's response to our core_capability_req() msg
  *
  * @param   s   stream containing client's response
  *****************************************************************************/
@@ -1040,7 +1040,7 @@ dev_redir_get_dir_listing(void *fusep, tui32 device_id, char *path)
 
     log_debug("looking for device_id=%d path=%s", device_id, path);
 
-    /* when we get a respone to dev_redir_send_drive_create_request(), we    */
+    /* when we get a response to dev_redir_send_drive_create_request(), we   */
     /* call dev_redir_send_drive_dir_request(), which needs the following    */
     /* at the end of the path argument                                       */
     if (dev_redir_string_ends_with(irp->pathname, '\\'))
