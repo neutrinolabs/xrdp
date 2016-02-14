@@ -778,7 +778,7 @@ session_start_fork(int width, int height, int bpp, char *username,
         ltime = g_time1();
         localtime_r(&ltime, &stime);
         temp->item->connect_time.year = (tui16)(stime.tm_year + 1900);
-        temp->item->connect_time.month = (tui8)stime.tm_mon;
+        temp->item->connect_time.month = (tui8)(stime.tm_mon + 1);
         temp->item->connect_time.day = (tui8)stime.tm_mday;
         temp->item->connect_time.hour = (tui8)stime.tm_hour;
         temp->item->connect_time.minute = (tui8)stime.tm_min;
