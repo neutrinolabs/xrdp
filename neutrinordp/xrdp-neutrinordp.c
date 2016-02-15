@@ -1357,7 +1357,7 @@ lfreerdp_polygon_sc(rdpContext* context, POLYGON_SC_ORDER* polygon_sc)
 
 /******************************************************************************/
 static void DEFAULT_CC
-lfreerdp_syncronize(rdpContext* context)
+lfreerdp_synchronize(rdpContext* context)
 {
     struct mod *mod;
     mod = ((struct mod_context *)context)->modi;
@@ -1494,7 +1494,7 @@ lfreerdp_pre_connect(freerdp *instance)
     instance->update->EndPaint = lfreerdp_end_paint;
     instance->update->SetBounds = lfreerdp_set_bounds;
     instance->update->BitmapUpdate = lfreerdp_bitmap_update;
-    instance->update->Synchronize = lfreerdp_syncronize ;
+    instance->update->Synchronize = lfreerdp_synchronize;
     instance->update->primary->DstBlt = lfreerdp_dst_blt;
     instance->update->primary->PatBlt = lfreerdp_pat_blt;
     instance->update->primary->ScrBlt = lfreerdp_scr_blt;

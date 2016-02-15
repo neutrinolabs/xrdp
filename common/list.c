@@ -192,7 +192,7 @@ list_insert_item(struct list *self, int index, tbus item)
 
 /*****************************************************************************/
 /* append one list to another using strdup for each item in the list */
-/* begins copy at start_index, a zero based index on the soure list */
+/* begins copy at start_index, a zero based index on the source list */
 void APP_CC
 list_append_list_strdup(struct list *self, struct list *dest, int start_index)
 {

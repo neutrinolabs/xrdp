@@ -19,7 +19,7 @@
 /*
  * TODO
  *      o when creating dir/file, ensure it does not already exist
- *      o do not allow dirs to be created in ino==1 except for .clipbard and share mounts
+ *      o do not allow dirs to be created in ino==1 except for .clipboard and share mounts
  *      o fix the HACK where I have to use my own buf instead of g_buffer
  *        this is in func xfuse_check_wait_objs()
  *      o if fuse mount point is already mounted, I get segfault
@@ -306,7 +306,7 @@ static void xfuse_cb_lookup(fuse_req_t req, fuse_ino_t parent,
 static void xfuse_cb_getattr(fuse_req_t req, fuse_ino_t ino,
                              struct fuse_file_info *fi);
 
-/* this is not a callback, but its's used by xfuse_cb_readdir() */
+/* this is not a callback, but it's used by xfuse_cb_readdir() */
 static void xfuse_dirbuf_add(fuse_req_t req, struct dirbuf *b,
                              const char *name, fuse_ino_t ino);
 
@@ -1264,7 +1264,7 @@ static struct xrdp_inode * xfuse_create_file_in_xrdp_fs(tui32 device_id,
  * Check if specified file exists
  *
  * @param parent parent inode of file
- * @param name   flilename or dirname
+ * @param name   filename or dirname
  *
  * @return 1 if specified file exists, 0 otherwise
  *****************************************************************************/

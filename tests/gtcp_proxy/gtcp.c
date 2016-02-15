@@ -69,7 +69,7 @@ int tcp_socket_create(void)
 }
 
 /**
- * Place specifed socket in non blocking mode
+ * Place specified socket in non blocking mode
  *****************************************************************************/
 
 void tcp_set_non_blocking(int skt)

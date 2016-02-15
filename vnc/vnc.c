@@ -60,7 +60,7 @@ rfbEncryptBytes(char *bytes, char *passwd)
     int len;
     int passwd_bytes;
 
-    /* create password hash from passowrd */
+    /* create password hash from password */
     passwd_bytes = g_strlen(passwd);
     sha1 = ssl_sha1_info_create();
     ssl_sha1_transform(sha1, "xrdp_vnc", 8);
@@ -365,7 +365,7 @@ lib_mod_event(struct vnc *v, int msg, long param1, long param2,
     }
     else if (msg == 200) /* invalidate */
     {
-        /* FrambufferUpdateRequest */
+        /* FramebufferUpdateRequest */
         init_stream(s, 8192);
         out_uint8(s, 3);
         out_uint8(s, 0);
@@ -727,7 +727,7 @@ lib_framebuffer_update(struct vnc *v)
 
     if (error == 0)
     {
-        /* FrambufferUpdateRequest */
+        /* FramebufferUpdateRequest */
         init_stream(s, 8192);
         out_uint8(s, 3);
         out_uint8(s, 1);
@@ -1316,7 +1316,7 @@ lib_mod_connect(struct vnc *v)
 
     if (error == 0)
     {
-        /* FrambufferUpdateRequest */
+        /* FramebufferUpdateRequest */
         init_stream(s, 8192);
         out_uint8(s, 3);
         out_uint8(s, 0);

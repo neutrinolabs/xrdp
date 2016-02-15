@@ -329,7 +329,7 @@ enum FS_INFORMATION_CLASS
             (((_a) & W_FILE_ATTRIBUTE_DIRECTORY) ? S_IFDIR | 0100 : S_IFREG) |\
             (((_a) & W_FILE_ATTRIBUTE_READONLY)  ? 0444 : 0644)
 
-/* winodws time starts on Jan 1, 1601 */
+/* Windows time starts on Jan 1, 1601 */
 /* Linux   time starts on Jan 1, 1970 */
 #define EPOCH_DIFF 11644473600LL
 #define WINDOWS_TO_LINUX_TIME(_t) ((_t) / 10000000) - EPOCH_DIFF;

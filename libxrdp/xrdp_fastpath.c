@@ -97,7 +97,7 @@ xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
 }
 
 /*****************************************************************************/
-/* no fragmenation */
+/* no fragmentation */
 int APP_CC
 xrdp_fastpath_init(struct xrdp_fastpath *self, struct stream *s)
 {
@@ -133,7 +133,7 @@ xrdp_fastpath_session_callback(struct xrdp_fastpath *self, int msg,
 }
 
 /*****************************************************************************/
-/* no fragmenation */
+/* no fragmentation */
 int APP_CC
 xrdp_fastpath_send(struct xrdp_fastpath *self, struct stream *s)
 {

@@ -1086,11 +1086,11 @@ clipboard_process_format_announce(struct stream *s, int clip_msg_status,
 /* response to CB_FORMAT_LIST; used to indicate whether
    processing of the Format List PDU was successful */
 static int APP_CC
-clipboard_prcoess_format_ack(struct stream *s, int clip_msg_status,
+clipboard_process_format_ack(struct stream *s, int clip_msg_status,
                              int clip_msg_len)
 {
-    log_debug("clipboard_prcoess_format_ack: CLIPRDR_FORMAT_ACK");
-    log_debug("clipboard_prcoess_format_ack:");
+    log_debug("clipboard_process_format_ack: CLIPRDR_FORMAT_ACK");
+    log_debug("clipboard_process_format_ack:");
     return 0;
 }
 
@@ -1634,7 +1634,7 @@ clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length,
             /* response to CB_FORMAT_LIST; used to indicate whether */
             /* processing of the Format List PDU was successful     */
         case CB_FORMAT_LIST_RESPONSE: /* 3 CLIPRDR_FORMAT_ACK */
-            rv = clipboard_prcoess_format_ack(ls, clip_msg_status,
+            rv = clipboard_process_format_ack(ls, clip_msg_status,
                                               clip_msg_len);
             break;
             /* sent by recipient of CB_FORMAT_LIST; used to request data for one */

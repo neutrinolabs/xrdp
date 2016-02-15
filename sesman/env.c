@@ -45,7 +45,7 @@ env_check_password_file(char *filename, char *passwd)
     void *des;
     void *sha1;
 
-    /* create password hash from passowrd */
+    /* create password hash from password */
     passwd_bytes = g_strlen(passwd);
     sha1 = ssl_sha1_info_create();
     ssl_sha1_transform(sha1, "xrdp_vnc", 8);

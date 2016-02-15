@@ -116,7 +116,7 @@ struct config_security
   int ts_users;
   /**
    * @var ts_admins
-   * @brief Terminal Server Adminnistrators group
+   * @brief Terminal Server Administrators group
    */
   int ts_admins_enable;
   int ts_admins;

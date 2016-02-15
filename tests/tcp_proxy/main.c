@@ -523,7 +523,7 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
 
             if (i > 99)
             {
-                g_writeln("timout connecting");
+                g_writeln("timeout connecting");
                 error = 1;
             }
 

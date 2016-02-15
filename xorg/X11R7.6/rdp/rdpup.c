@@ -2122,7 +2122,7 @@ rdpup_send_area(struct image_data *id, int x, int y, int w, int h)
             safety = 0;
             while (RegionContainsRect(g_shm_reg, &box))
             {
-                /* instread of rdpup_end_update, call rdpup_send_pending */
+                /* instead of rdpup_end_update, call rdpup_send_pending */
                 rdpup_send_pending();
                 rdpup_begin_update();
                 safety++;

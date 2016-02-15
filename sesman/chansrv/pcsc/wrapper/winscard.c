@@ -98,7 +98,7 @@ static int g_funcs_loaded = 0;
 
 /*****************************************************************************/
 static int __fastcall
-load_funsc(void)
+load_funcs(void)
 {
     HMODULE lib;
 
@@ -108,7 +108,7 @@ load_funsc(void)
     }
     g_funcs_loaded = 1;
     lib = LoadLibrary("winscard-org.dll");
-    LLOGLN(0, ("load_funsc: lib %p", lib));
+    LLOGLN(0, ("load_funcs: lib %p", lib));
     LLOAD(aSCardEstablishContext, tSCardEstablishContext, "SCardEstablishContext");
     LLOAD(aSCardReleaseContext, tSCardReleaseContext, "SCardReleaseContext");
     LLOAD(aSCardIsValidContext, tSCardIsValidContext, "SCardIsValidContext");
@@ -180,7 +180,7 @@ DllEntryPoint(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
     {
         case DLL_PROCESS_ATTACH:
             LLOGLN(0, ("DllEntryPoint: DLL_PROCESS_ATTACH"));
-            load_funsc();
+            load_funcs();
             rv = TRUE;
             break;
         case DLL_THREAD_ATTACH:

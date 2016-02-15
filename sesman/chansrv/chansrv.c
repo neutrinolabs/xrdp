@@ -1487,7 +1487,7 @@ main(int argc, char **argv)
 
     /* starting logging subsystem */
     g_memset(&logconfig, 0, sizeof(struct log_config));
-    logconfig.program_name = "XRDP-Chansrv";
+    logconfig.program_name = "xrdp-chansrv";
     g_snprintf(log_file, 255, "%s/xrdp-chansrv.log", log_path);
     g_writeln("chansrv::main: using log file [%s]", log_file);
 
