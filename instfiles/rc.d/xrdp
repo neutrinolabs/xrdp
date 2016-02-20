@@ -61,10 +61,6 @@ xrdp_cmd() {
     if [ "${rc_arg}" = "stop" ] ; then
 	xrdp_daemons=$(reverse_list ${xrdp_daemons})
     fi
-    # Generate rsakeys.ini on start
-    if [ "${rc_arg}" = "start" -a ! -f %%PREFIX%%/etc/xrdp/rsakeys.ini ] ; then
-        %%PREFIX%%/bin/xrdp-keygen xrdp %%PREFIX%%/etc/xrdp/rsakeys.ini
-    fi
 
     # Apply to all the daemons.
     for name in ${xrdp_daemons}; do
