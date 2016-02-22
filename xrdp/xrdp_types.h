@@ -223,7 +223,7 @@ struct xrdp_brush_item
 /* moved to xrdp_constants.h
 #define XRDP_BITMAP_CACHE_ENTRIES 2048 */
 
-/* differnce caches */
+/* difference caches */
 struct xrdp_cache
 {
   struct xrdp_wm* wm; /* owner */

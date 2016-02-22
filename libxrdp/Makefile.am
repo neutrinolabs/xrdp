@@ -1,5 +1,3 @@
-EXTRA_DIST = libxrdp.h libxrdpinc.h xrdp_orders_rail.h
-
 EXTRA_DEFINES =
 EXTRA_INCLUDES =
 EXTRA_LIBS =
@@ -37,24 +35,27 @@ AM_CPPFLAGS = \
   -I$(top_srcdir)/common \
   $(EXTRA_INCLUDES)
 
-lib_LTLIBRARIES = \
+module_LTLIBRARIES = \
   libxrdp.la
 
 libxrdp_la_SOURCES = \
   libxrdp.c \
-  xrdp_channel.c \
-  xrdp_iso.c \
-  xrdp_mcs.c \
-  xrdp_orders.c \
-  xrdp_rdp.c \
-  xrdp_sec.c \
-  xrdp_bitmap_compress.c \
+  libxrdp.h \
+  libxrdpinc.h \
   xrdp_bitmap32_compress.c \
-  xrdp_jpeg_compress.c \
-  xrdp_orders_rail.c \
-  xrdp_mppc_enc.c \
+  xrdp_bitmap_compress.c \
+  xrdp_caps.c \
+  xrdp_channel.c \
   xrdp_fastpath.c \
-  xrdp_caps.c
+  xrdp_iso.c \
+  xrdp_jpeg_compress.c \
+  xrdp_mcs.c \
+  xrdp_mppc_enc.c \
+  xrdp_orders.c \
+  xrdp_orders_rail.c \
+  xrdp_orders_rail.h \
+  xrdp_rdp.c \
+  xrdp_sec.c
 
 libxrdp_la_LDFLAGS = \
   $(EXTRA_FLAGS)

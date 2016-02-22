@@ -1,5 +1,3 @@
-EXTRA_DIST = tcp.h
-
 AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
@@ -21,9 +19,10 @@ noinst_PROGRAMS = \
   xrdp-xcon
 
 xrdp_sesrun_SOURCES = \
+  config.c \
   sesrun.c \
   tcp.c \
-  config.c
+  tcp.h
 
 xrdp_sestest_SOURCES = \
   sestest.c

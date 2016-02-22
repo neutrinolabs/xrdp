@@ -414,7 +414,7 @@ drdynvc_process_data(struct stream *s, unsigned char cmd)
  * process incoming data on a dynamic virtual channel
  *
  * @pram  s             stream containing the incoming data
- * @pram  chand_id      LK_TODO
+ * @pram  chan_id       LK_TODO
  * @pram  chan_flags    LK_TODO
  * @pram  length        LK_TODO
  * @pram  total_length  LK_TODO

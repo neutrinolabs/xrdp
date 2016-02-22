@@ -160,7 +160,7 @@ main(int argc, char **argv)
                              (0 == g_strcasecmp(argv[1], "-ns"))))
     {
         /* starts sesman not daemonized */
-        g_printf("starting sesman in foregroud...\n");
+        g_printf("starting sesman in foreground...\n");
         daemon = 0;
     }
     else if ((2 == argc) && ((0 == g_strcasecmp(argv[1], "--help")) ||
@@ -268,7 +268,7 @@ main(int argc, char **argv)
     g_snprintf(cfg_file, 255, "%s/sesman.ini", XRDP_CFG_PATH);
 
     /* starting logging subsystem */
-    error = log_start(cfg_file, "XRDP-sesman");
+    error = log_start(cfg_file, "xrdp-sesman");
 
     if (error != LOG_STARTUP_OK)
     {

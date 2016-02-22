@@ -1,4 +1,3 @@
-EXTRA_DIST = rdp.h
 EXTRA_DEFINES =
  
 if XRDP_DEBUG
@@ -15,11 +14,12 @@ AM_CPPFLAGS = \
   $(EXTRA_DEFINES) \
   -I$(top_srcdir)/common
 
-lib_LTLIBRARIES = \
+module_LTLIBRARIES = \
   librdp.la
 
 librdp_la_SOURCES = \
   rdp.c \
+  rdp.h \
   rdp_bitmap.c \
   rdp_iso.c \
   rdp_lic.c \

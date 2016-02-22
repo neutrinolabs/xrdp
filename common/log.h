@@ -81,7 +81,7 @@ struct log_config
 /**
  *
  * @brief Starts the logging subsystem
- * @param l_cfg loggging system configuration
+ * @param l_cfg logging system configuration
  * @return
  *
  */

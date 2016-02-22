@@ -1,5 +1,3 @@
-EXTRA_DIST = xrdpvr.h
-
 EXTRA_DEFINES =
 EXTRA_INCLUDES =
 EXTRA_LIBS =
@@ -9,11 +7,12 @@ AM_CPPFLAGS = \
   $(EXTRA_DEFINES) \
   $(EXTRA_INCLUDES)
 
-lib_LTLIBRARIES = \
+module_LTLIBRARIES = \
   libxrdpvr.la
 
 libxrdpvr_la_SOURCES = \
-  xrdpvr.c
+  xrdpvr.c \
+  xrdpvr.h
 
 libxrdpvr_la_LDFLAGS = \
   $(EXTRA_FLAGS)

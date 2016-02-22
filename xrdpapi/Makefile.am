@@ -1,5 +1,3 @@
-EXTRA_DIST = xrdpapi.h
-
 EXTRA_DEFINES =
 EXTRA_INCLUDES =
 EXTRA_LIBS =
@@ -9,11 +7,12 @@ AM_CPPFLAGS = \
   $(EXTRA_DEFINES) \
   $(EXTRA_INCLUDES)
 
-lib_LTLIBRARIES = \
+module_LTLIBRARIES = \
   libxrdpapi.la
 
 libxrdpapi_la_SOURCES = \
-  xrdpapi.c
+  xrdpapi.c \
+  xrdpapi.h
 
 libxrdpapi_la_LDFLAGS = \
   $(EXTRA_FLAGS)

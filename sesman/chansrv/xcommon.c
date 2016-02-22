@@ -70,8 +70,8 @@ xcommon_fatal_handler(Display *dis)
 }
 
 /*****************************************************************************/
-/* returns time in miliseconds
-   this is like g_time2 in os_calls, but not miliseconds since machine was
+/* returns time in milliseconds
+   this is like g_time2 in os_calls, but not milliseconds since machine was
    up, something else
    this is a time value similar to what the xserver uses */
 int APP_CC

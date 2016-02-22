@@ -1,21 +1,3 @@
-EXTRA_DIST = \
-  chansrv.h \
-  chansrv_fuse.h \
-  clipboard.h \
-  clipboard_common.h \
-  clipboard_file.h \
-  devredir.h \
-  drdynvc.h \
-  rail.h \
-  sound.h \
-  xcommon.h \
-  mlog.h \
-  chansrv_common.h \
-  irp.h \
-  smartcard.h \
-  smartcard_pcsc.h \
-  fifo.h
-
 EXTRA_DEFINES =
 EXTRA_INCLUDES =
 EXTRA_LIBS =
@@ -47,19 +29,35 @@ sbin_PROGRAMS = \
 
 xrdp_chansrv_SOURCES = \
   chansrv.c \
-  sound.c \
-  clipboard.c \
-  clipboard_file.c \
-  devredir.c \
-  smartcard.c \
-  smartcard_pcsc.c \
-  rail.c \
-  xcommon.c \
-  drdynvc.c \
+  chansrv.h \
+  chansrv_common.c \
+  chansrv_common.h \
   chansrv_fuse.c \
-  irp.c \
+  chansrv_fuse.h \
+  clipboard.c \
+  clipboard.h \
+  clipboard_common.h \
+  clipboard_file.c \
+  clipboard_file.h \
+  devredir.c \
+  devredir.h \
+  drdynvc.c \
+  drdynvc.h \
   fifo.c \
-  chansrv_common.c
+  fifo.h \
+  irp.c \
+  irp.h \
+  mlog.h \
+  rail.c \
+  rail.h \
+  smartcard.c \
+  smartcard.h \
+  smartcard_pcsc.c \
+  smartcard_pcsc.h \
+  sound.c \
+  sound.h \
+  xcommon.c \
+  xcommon.h
 
 xrdp_chansrv_LDFLAGS = \
   $(X_LIBS) \

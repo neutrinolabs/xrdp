@@ -1,5 +1,3 @@
-EXTRA_DIST = vnc.h
-
 AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
@@ -7,10 +5,12 @@ AM_CPPFLAGS = \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -I$(top_srcdir)/common
 
-lib_LTLIBRARIES = \
+module_LTLIBRARIES = \
   libvnc.la
 
-libvnc_la_SOURCES = vnc.c
+libvnc_la_SOURCES = \
+  vnc.c \
+  vnc.h
 
 libvnc_la_LIBADD = \
   $(top_builddir)/common/libcommon.la

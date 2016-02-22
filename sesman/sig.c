@@ -93,13 +93,13 @@ sig_sesman_reload_cfg(int sig)
     /* stop logging subsystem */
     log_end();
 
-    /* replace old config with new readed one */
+    /* replace old config with newly read one */
     g_cfg = cfg;
 
     g_snprintf(cfg_file, 255, "%s/sesman.ini", XRDP_CFG_PATH);
 
     /* start again logging subsystem */
-    error = log_start(cfg_file, "XRDP-sesman");
+    error = log_start(cfg_file, "xrdp-sesman");
 
     if (error != LOG_STARTUP_OK)
     {

@@ -414,7 +414,7 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
     g_rdpScreen.CloseScreen = pScreen->CloseScreen;
     /* GC procedures */
     g_rdpScreen.CreateGC = pScreen->CreateGC;
-    /* Pixmap procudures */
+    /* Pixmap procedures */
     g_rdpScreen.CreatePixmap = pScreen->CreatePixmap;
     g_rdpScreen.DestroyPixmap = pScreen->DestroyPixmap;
 
@@ -654,7 +654,7 @@ void
 OsVendorInit(void)
 {
 #if XRDP_DISABLE_LINUX_ABSTRACT
-    /* turn off the Linux abstract unix doamin sockets TRANS_ABSTRACT */
+    /* turn off the Linux abstract unix domain sockets TRANS_ABSTRACT */
     /* TRANS_NOLISTEN = 1 << 3 */
     _XSERVTransSocketLocalFuncs.flags = 0;
 #endif

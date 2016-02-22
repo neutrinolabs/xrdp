@@ -38,7 +38,7 @@
  * @param skipVchk if set to !0 skips the version control (to be used after
  *                 scp_vXs_accept() )
  *
- * this function places in *s the address of a newely allocated SCP_SESSION structure
+ * this function places in *s the address of a newly allocated SCP_SESSION structure
  * that should be free()d
  */
 enum SCP_SERVER_STATES_E

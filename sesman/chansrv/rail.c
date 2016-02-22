@@ -383,7 +383,7 @@ rail_startup()
 
     if (g_xrr_event_base > 0)
     {
-        LOG(0, ("rail_init: found RandR entension"));
+        LOG(0, ("rail_init: found RandR extension"));
         st = XRRQueryVersion(g_display, &ver_maj, &ver_min);
         if (st)
         {
@@ -543,12 +543,12 @@ rail_close_window(int window_id)
 
 /*****************************************************************************/
 void DEFAULT_CC
-my_timoeut(void* data)
+my_timeout(void* data)
 {
-    LOG(10, ("my_timoeut: g_got_focus %d", g_got_focus));
+    LOG(10, ("my_timeout: g_got_focus %d", g_got_focus));
     if (g_focus_counter == (int)(long)data)
     {
-        LOG(10, ("my_timoeut: g_focus_counter %d", g_focus_counter));
+        LOG(10, ("my_timeout: g_focus_counter %d", g_focus_counter));
         rail_win_popdown();
     }
 }
@@ -617,7 +617,7 @@ rail_process_activate(struct stream *s, int size)
 
         LOG(10, ("  window attributes: override_redirect %d",
                  window_attributes.override_redirect));
-        add_timeout(200, my_timoeut, (void*)(long)g_focus_counter);
+        add_timeout(200, my_timeout, (void*)(long)g_focus_counter);
     }
     return 0;
 }
@@ -1976,7 +1976,7 @@ rail_xevent(void *xevent)
 
         case ReparentNotify:
             LOG(10, ("  got ReparentNotify window 0x%8.8x parent 0x%8.8x "
-                     "event 0x%8.8x x %d y %d overrider redirect %d",
+                     "event 0x%8.8x x %d y %d override redirect %d",
                      lxevent->xreparent.window, lxevent->xreparent.parent,
                      lxevent->xreparent.event, lxevent->xreparent.x,
                      lxevent->xreparent.y, lxevent->xreparent.override_redirect));

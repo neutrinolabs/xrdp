@@ -118,7 +118,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
 
     if (wts->display_num <= 0)
     {
-        LLOGLN(0, ("WTSVirtualChannelOpenEx: fatal errror; display is 0"));
+        LLOGLN(0, ("WTSVirtualChannelOpenEx: fatal error; display is 0"));
         free(wts);
         return NULL;
     }

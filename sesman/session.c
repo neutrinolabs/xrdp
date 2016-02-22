@@ -348,7 +348,7 @@ session_is_display_in_chain(int display)
 /******************************************************************************/
 /* called with the main thread */
 static int APP_CC
-session_get_aval_display_from_chain(void)
+session_get_avail_display_from_chain(void)
 {
     int display;
 
@@ -461,7 +461,7 @@ session_start_fork(int width, int height, int bpp, char *username,
         return 0;
     }
 
-    display = session_get_aval_display_from_chain();
+    display = session_get_avail_display_from_chain();
 
     if (display == 0)
     {
@@ -470,7 +470,7 @@ session_start_fork(int width, int height, int bpp, char *username,
         return 0;
     }
 
-    pid = g_fork(); /* parent is fork from tcp accpet,
+    pid = g_fork(); /* parent is fork from tcp accept,
                        child forks X and wm, then becomes scp */
 
     if (pid == -1)
@@ -778,7 +778,7 @@ session_start_fork(int width, int height, int bpp, char *username,
         ltime = g_time1();
         localtime_r(&ltime, &stime);
         temp->item->connect_time.year = (tui16)(stime.tm_year + 1900);
-        temp->item->connect_time.month = (tui8)stime.tm_mon;
+        temp->item->connect_time.month = (tui8)(stime.tm_mon + 1);
         temp->item->connect_time.day = (tui8)stime.tm_mday;
         temp->item->connect_time.hour = (tui8)stime.tm_hour;
         temp->item->connect_time.minute = (tui8)stime.tm_min;

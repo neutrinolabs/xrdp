@@ -761,7 +761,7 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
     out_uint8(s, 0);
     if (self->mcs_layer->iso_layer->rdpNegData)
     {
-         /* ReqeustedProtocol */
+         /* RequestedProtocol */
         out_uint32_le(s, self->mcs_layer->iso_layer->requestedProtocol);
     }
     out_uint16_le(s, SEC_TAG_SRV_CHANNELS);

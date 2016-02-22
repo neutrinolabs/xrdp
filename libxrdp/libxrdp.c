@@ -66,7 +66,7 @@ libxrdp_disconnect(struct xrdp_session *session)
 
 /******************************************************************************/
 int EXPORT_CC
-libxrdp_process_incomming(struct xrdp_session *session)
+libxrdp_process_incoming(struct xrdp_session *session)
 {
     int rv;
 
