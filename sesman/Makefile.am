@@ -1,6 +1,5 @@
 
-EXTRA_DIST = sesman.ini startwm.sh sesman.h access.h auth.h config.h env.h \
-scp.h scp_v0.h scp_v1.h scp_v1_mng.h session.h sig.h
+EXTRA_DIST = sesman.ini startwm.sh
 
 AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
@@ -37,16 +36,27 @@ sbin_PROGRAMS = \
   xrdp-sesman
 
 xrdp_sesman_SOURCES = \
-  scp.c \
-  scp_v0.c \
-  scp_v1.c \
-  scp_v1_mng.c \
-  sesman.c \
-  session.c \
-  sig.c \
   access.c \
+  access.h \
+  auth.h \
   config.c \
+  config.h \
   env.c \
+  env.h \
+  scp.c \
+  scp.h \
+  scp_v0.c \
+  scp_v0.h \
+  scp_v1.c \
+  scp_v1.h \
+  scp_v1_mng.c \
+  scp_v1_mng.h \
+  sesman.c \
+  sesman.h \
+  session.c \
+  session.h \
+  sig.c \
+  sig.h \
   $(AUTH_C)
 
 xrdp_sesman_LDADD = \

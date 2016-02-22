@@ -1,4 +1,3 @@
-EXTRA_DIST = rdp.h
 EXTRA_DEFINES =
  
 if XRDP_DEBUG
@@ -20,6 +19,7 @@ module_LTLIBRARIES = \
 
 librdp_la_SOURCES = \
   rdp.c \
+  rdp.h \
   rdp_bitmap.c \
   rdp_iso.c \
   rdp_lic.c \

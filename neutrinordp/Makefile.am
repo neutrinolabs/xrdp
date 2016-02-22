@@ -1,4 +1,3 @@
-EXTRA_DIST = xrdp-neutrinordp.h
 EXTRA_DEFINES =
  
 if XRDP_DEBUG
@@ -19,7 +18,10 @@ AM_CPPFLAGS = \
 module_LTLIBRARIES = \
   libxrdpneutrinordp.la
 
-libxrdpneutrinordp_la_SOURCES = xrdp-neutrinordp.c xrdp-color.c
+libxrdpneutrinordp_la_SOURCES = \
+  xrdp-color.c \
+  xrdp-neutrinordp.c \
+  xrdp-neutrinordp.h
 
 libxrdpneutrinordp_la_LIBADD = \
   $(top_builddir)/common/libcommon.la \
