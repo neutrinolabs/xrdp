@@ -1,5 +1,3 @@
-EXTRA_DIST = xup.h
-
 AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
@@ -10,7 +8,9 @@ AM_CPPFLAGS = \
 module_LTLIBRARIES = \
   libxup.la
 
-libxup_la_SOURCES = xup.c
+libxup_la_SOURCES = \
+  xup.c \
+  xup.h
 
 libxup_la_LIBADD = \
   $(top_builddir)/common/libcommon.la

@@ -1,5 +1,3 @@
-EXTRA_DIST = mc.h
-
 AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
@@ -10,7 +8,9 @@ AM_CPPFLAGS = \
 module_LTLIBRARIES = \
   libmc.la
 
-libmc_la_SOURCES = mc.c
+libmc_la_SOURCES = \
+  mc.c \
+  mc.h
 
 libmc_la_LIBADD = \
   $(top_builddir)/common/libcommon.la

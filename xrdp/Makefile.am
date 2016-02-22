@@ -1,5 +1,4 @@
-EXTRA_DIST = xrdp.ini ad24b.bmp ad256.bmp xrdp24b.bmp xrdp256.bmp xrdp_logo.bmp sans-10.fv1 cursor0.cur cursor1.cur xrdp.h xrdp_types.h \
-xrdp_encoder.h xrdp_keyboard.ini
+EXTRA_DIST = $(xrdpsysconf_DATA) $(xrdppkgdata_DATA)
 
 EXTRA_INCLUDES =
 EXTRA_LIBS =
@@ -35,9 +34,12 @@ sbin_PROGRAMS = \
 xrdp_SOURCES = \
   funcs.c \
   lang.c \
-  xrdp_bitmap.c \
   xrdp.c \
+  xrdp.h \
+  xrdp_bitmap.c \
   xrdp_cache.c \
+  xrdp_encoder.c \
+  xrdp_encoder.h \
   xrdp_font.c \
   xrdp_listen.c \
   xrdp_login_wnd.c \
@@ -45,8 +47,8 @@ xrdp_SOURCES = \
   xrdp_painter.c \
   xrdp_process.c \
   xrdp_region.c \
-  xrdp_wm.c \
-  xrdp_encoder.c
+  xrdp_types.h \
+  xrdp_wm.c
 
 xrdp_LDADD = \
   $(top_builddir)/common/libcommon.la \
