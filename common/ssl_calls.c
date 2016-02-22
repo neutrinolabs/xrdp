@@ -431,7 +431,7 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
 
     if (error == 0)
     {
-        BN_bn2bin(my_key->n, (tui8 *)lmod);
+        BN_bn2bin(my_key->n, (tui8 *)(lmod + diff));
         ssl_reverse_it(lmod, mod_len);
     }
 
