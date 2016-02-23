@@ -65,7 +65,9 @@ xrdp_sesman_LDADD = \
 sesmansysconfdir=$(sysconfdir)/xrdp
 
 dist_sesmansysconf_DATA = \
-  sesman.ini \
+  sesman.ini
+
+dist_sesmansysconf_SCRIPTS = \
   startwm.sh
 
 SUBDIRS = \
@@ -73,7 +75,3 @@ SUBDIRS = \
   tools \
   sessvc \
   chansrv
-
-# must be tab below
-install-data-hook:
-	chmod 755 $(DESTDIR)$(sysconfdir)/xrdp/startwm.sh

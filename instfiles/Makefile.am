@@ -36,7 +36,7 @@ if LINUX
 SUBDIRS += \
   pam.d \
   pulse
-dist_startscript_DATA += xrdp.sh
+dist_startscript_SCRIPTS = xrdp.sh
 if HAVE_SYSTEMD
 dist_systemdsystemunit_DATA = \
   xrdp-sesman.service \
@@ -61,9 +61,7 @@ endif
 if LINUX
 # must be tab below
 install-data-hook:
-	chmod 755 $(DESTDIR)$(sysconfdir)/xrdp/xrdp.sh
 	if [ -f $(DESTDIR)$(sysconfdir)/init.d/xrdp ]; then \
-		chmod 755 $(DESTDIR)$(sysconfdir)/init.d/xrdp; \
 		sed -i 's|__BASE__|$(prefix)|' $(DESTDIR)$(sysconfdir)/init.d/xrdp; \
 	fi
 endif
@@ -71,6 +69,5 @@ endif
 if FREEBSD
 # must be tab below
 install-data-hook:
-	chmod 755 $(DESTDIR)$(sysconfdir)/rc.d/xrdp
 	sed -i '' 's|%%PREFIX%%|$(prefix)|g' $(DESTDIR)$(sysconfdir)/rc.d/xrdp
 endif
