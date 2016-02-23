@@ -668,6 +668,7 @@ int APP_CC
 g_tcp_connect(int sck, const char *address, const char *port)
 {
     int res = 0;
+    char errorMsg[256];
     struct addrinfo p;
     struct addrinfo *h = (struct addrinfo *)NULL;
     struct addrinfo *rp = (struct addrinfo *)NULL;
@@ -692,6 +693,12 @@ g_tcp_connect(int sck, const char *address, const char *port)
     else
     {
         res = getaddrinfo(address, port, &p, &h);
+    }
+    if (res != 0)
+    {
+        snprintf(errorMsg, 255, "g_tcp_connect: getaddrinfo() failed: %s",
+                 gai_strerror(res));
+        log_message(LOG_LEVEL_ERROR, errorMsg);
     }
     if (res > -1)
     {
