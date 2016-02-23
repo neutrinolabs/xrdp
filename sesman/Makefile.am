@@ -1,6 +1,3 @@
-
-EXTRA_DIST = sesman.ini startwm.sh
-
 AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
@@ -67,7 +64,7 @@ xrdp_sesman_LDADD = \
 
 sesmansysconfdir=$(sysconfdir)/xrdp
 
-sesmansysconf_DATA = \
+dist_sesmansysconf_DATA = \
   sesman.ini \
   startwm.sh
 

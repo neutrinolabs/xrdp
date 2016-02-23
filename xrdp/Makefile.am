@@ -1,5 +1,3 @@
-EXTRA_DIST = $(xrdpsysconf_DATA) $(xrdppkgdata_DATA)
-
 EXTRA_INCLUDES =
 EXTRA_LIBS =
 EXTRA_FLAGS =
@@ -60,13 +58,13 @@ xrdp_LDFLAGS = \
 
 xrdpsysconfdir=$(sysconfdir)/xrdp
 
-xrdpsysconf_DATA = \
+dist_xrdpsysconf_DATA = \
   xrdp.ini \
   xrdp_keyboard.ini
 
 xrdppkgdatadir=$(datadir)/xrdp
 
-xrdppkgdata_DATA = \
+dist_xrdppkgdata_DATA = \
   ad24b.bmp \
   ad256.bmp \
   xrdp24b.bmp \

@@ -1,15 +1,14 @@
 EXTRA_DIST = \
    xrdp.sh \
    xrdp-sesman.service \
-   xrdp.service \
-   $(startscript_DATA)
+   xrdp.service
 
 #
 # files for all platforms
 #
 startscriptdir=$(sysconfdir)/xrdp
 
-startscript_DATA = \
+dist_startscript_DATA = \
   km-0407.ini \
   km-0409.ini \
   km-040c.ini \
@@ -37,9 +36,9 @@ if LINUX
 SUBDIRS += \
   pam.d \
   pulse
-startscript_DATA += xrdp.sh
+dist_startscript_DATA += xrdp.sh
 if HAVE_SYSTEMD
-systemdsystemunit_DATA = \
+dist_systemdsystemunit_DATA = \
   xrdp-sesman.service \
   xrdp.service
 else
