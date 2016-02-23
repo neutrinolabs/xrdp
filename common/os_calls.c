@@ -986,8 +986,8 @@ g_tcp_accept(int sck)
     ret = accept(sck, (struct sockaddr *)&s, &i);
     if(ret>0)
     {
-        snprintf(ipAddr,255,"A connection received from: %s port %d"
-        ,inet_ntoa(s.sin_addr),ntohs(s.sin_port));
+        snprintf(ipAddr, 255, "A connection received from: %s port %d",
+                 inet_ntoa(s.sin_addr), ntohs(s.sin_port));
         log_message(LOG_LEVEL_INFO,ipAddr);
     }
     return ret ;
