@@ -34,8 +34,8 @@
 /* this is the signature size in bytes */
 #define TSSK_KEY_LENGTH 64
 
-/* default to 512 bit key size, can set changed, set */
-static int g_key_size_bits = 512;
+/* default to 2048 bit key size, can set changed, set */
+static int g_key_size_bits = 2048;
 
 static tui8 g_exponent[4] =
 {
@@ -419,7 +419,6 @@ key_gen(const char *path_and_file_name)
     {
         error = ssl_gen_key_xrdp1(g_key_size_bits, e_data, e_len, n_data, n_len,
                                   d_data, d_len);
-
         if (error != 0)
         {
             g_writeln("error %d in key_gen, ssl_gen_key_xrdp1", error);
