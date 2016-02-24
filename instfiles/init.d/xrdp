@@ -23,7 +23,6 @@ SESMAN_START=yes
 #USERID=xrdp
 # the X11rdp backend only works as root at the moment - GH 20/03/2013
 USERID=root
-RSAKEYS=/etc/xrdp/rsakeys.ini
 NAME=xrdp
 DESC="Remote Desktop Protocol server"
 
@@ -67,18 +66,6 @@ if [ "$(id -u)" = "0" ]; then
         mkdir $PIDDIR
     fi
     chown $USERID:$USERID $PIDDIR
-
-    # Check for rsa key 
-    if [ ! -f $RSAKEYS ] ; then
-        log_action_begin_msg "Generating xrdp RSA keys..."
-        (umask 077 ; xrdp-keygen xrdp $RSAKEYS)
-        chown $USERID:$USERID $RSAKEYS
-        if [ ! -f $RSAKEYS ] ; then
-            log_action_end_msg 1 "could not create $RSAKEYS"
-            exit 1
-        fi
-        log_action_end_msg 0 "done"
-    fi
 fi
 
 

@@ -13,3 +13,12 @@ xrdp_keygen_SOURCES = keygen.c
 
 xrdp_keygen_LDADD = \
   $(top_builddir)/common/libcommon.la
+
+xrdpsysconfdir = $(sysconfdir)/xrdp
+
+install-data-hook:
+	umask 077 && \
+	  ./xrdp-keygen xrdp $(DESTDIR)$(xrdpsysconfdir)/rsakeys.ini
+
+uninstall-hook:
+	rm -f $(DESTDIR)$(xrdpsysconfdir)/rsakeys.ini
