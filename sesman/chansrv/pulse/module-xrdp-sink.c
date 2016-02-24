@@ -440,7 +440,11 @@ static void thread_func(void *userdata) {
             pa_rtpoll_set_timer_disabled(u->rtpoll);
         }
 
+#if defined(PA_CHECK_VERSION) && PA_CHECK_VERSION(6, 0, 0)
+        if ((ret = pa_rtpoll_run(u->rtpoll)) < 0) {
+#else
         if ((ret = pa_rtpoll_run(u->rtpoll, TRUE)) < 0) {
+#endif
             goto fail;
         }
 
