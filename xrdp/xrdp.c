@@ -299,6 +299,7 @@ xrdp_sanity_check(void)
 {
     int intval = 1;
     int host_be;
+    char key_file[256];
 
     /* check compiled endian with actual endian */
     host_be = !((int)(*(unsigned char *)(&intval)));
@@ -340,6 +341,13 @@ xrdp_sanity_check(void)
     if (sizeof(tui64) != 8)
     {
         g_writeln("unusable tui64 size, must be 8");
+        return 1;
+    }
+
+    g_snprintf(key_file, 255, "%s/rsakeys.ini", XRDP_CFG_PATH);
+    if (!g_file_exist(key_file))
+    {
+        g_writeln("File %s is missing, create it using xrdp-keygen", key_file);
         return 1;
     }
 
