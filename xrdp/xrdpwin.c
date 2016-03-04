@@ -540,8 +540,8 @@ main(int argc, char **argv)
 
     if (g_file_exist(pid_file)) /* xrdp.pid */
     {
-        g_writeln("It looks like xrdp is already running,");
-        g_writeln("if not delete the xrdp.pid file and try again");
+        g_writeln("It looks like xrdp is already running.");
+        g_writeln("If not, delete %s and try again.", pid_file);
         g_exit(0);
     }
 
