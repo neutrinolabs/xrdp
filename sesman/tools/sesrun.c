@@ -115,7 +115,7 @@ main(int argc, char **argv)
                         {
                             in_uint16_be(in_s, data);
                             in_uint16_be(in_s, display);
-                            g_printf("ok %d display %d\n", data, display);
+                            g_printf("ok %ld display %d\n", data, display);
                         }
                     }
                 }

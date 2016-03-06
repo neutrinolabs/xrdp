@@ -73,6 +73,7 @@ rdp_lic_generate_hwid(struct rdp_lic *self, char *hwid)
               LICENCE_HWID_SIZE - 4);
 }
 
+#if 0
 /*****************************************************************************/
 /* Present an existing licence to the server */
 static void APP_CC
@@ -112,6 +113,7 @@ rdp_lic_present(struct rdp_lic *self, char *client_random, char *rsa_data,
     rdp_sec_send(self->sec_layer, s, sec_flags);
     free_stream(s);
 }
+#endif
 
 /*****************************************************************************/
 /* Send a licence request packet */
@@ -161,13 +163,7 @@ rdp_lic_process_demand(struct rdp_lic *self, struct stream *s)
 {
     char null_data[SEC_MODULUS_SIZE];
     char *server_random;
-    char signature[LICENCE_SIGNATURE_SIZE];
-    char hwid[LICENCE_HWID_SIZE];
-    char *licence_data;
-    int licence_size;
-    void *crypt_key;
 
-    licence_data = 0;
     /* Retrieve the server random from the incoming packet */
     in_uint8p(s, server_random, SEC_RANDOM_SIZE);
     /* We currently use null client keys. This is a bit naughty but, hey,
@@ -176,10 +172,17 @@ rdp_lic_process_demand(struct rdp_lic *self, struct stream *s)
     rdp_lic_generate_keys(self, null_data, server_random, null_data);
 
 #if 0
+    int licence_size;
+    char *licence_data;
+
     licence_size = 0; /* todo load_licence(&licence_data); */
 
     if (licence_size > 0)
     {
+        void *crypt_key;
+        char hwid[LICENCE_HWID_SIZE];
+        char signature[LICENCE_SIGNATURE_SIZE];
+
         /* Generate a signature for the HWID buffer */
         rdp_lic_generate_hwid(self, hwid);
         rdp_sec_sign(signature, 16, self->licence_sign_key, 16,

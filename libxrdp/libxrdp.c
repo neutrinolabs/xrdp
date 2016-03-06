@@ -253,8 +253,8 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
         {
             /*This situation can happen and this is a workaround*/
             cont = 0;
-            g_writeln("Serious programming error we were locked in a deadly loop") ;
-            g_writeln("remaining :%d", s->end - s->next_packet);
+            g_writeln("Serious programming error: we were locked in a deadly loop");
+            g_writeln("Remaining: %td", s->end - s->next_packet);
             s->next_packet = 0;
         }
 
@@ -1298,7 +1298,6 @@ libxrdp_fastpath_send_surface(struct xrdp_session *session,
     struct stream ls;
     struct stream *s;
     struct xrdp_rdp *rdp;
-    int rv;
     int sec_bytes;
     int rdp_bytes;
     int max_bytes;

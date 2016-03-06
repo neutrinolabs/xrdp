@@ -419,7 +419,7 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
     }
     else
     {
-        LLOGLN(0, ("xrdp_load_keyboard_layout: error opening %d",
+        LLOGLN(0, ("xrdp_load_keyboard_layout: error opening %s",
                keyboard_cfg_file));
     }
 }

@@ -107,7 +107,7 @@ xrdp_shutdown(int sig)
 
     threadid = tc_get_threadid();
     g_writeln("shutting down");
-    g_writeln("signal %d threadid %p", sig, threadid);
+    g_writeln("signal %d threadid %lld", sig, (long long)threadid);
 
     if (!g_is_wait_obj_set(g_term_event))
     {
