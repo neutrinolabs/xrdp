@@ -2717,17 +2717,6 @@ g_signal_user_interrupt(void (*func)(int))
 /*****************************************************************************/
 /* does not work in win32 */
 void APP_CC
-g_signal_kill(void (*func)(int))
-{
-#if defined(_WIN32)
-#else
-    signal(SIGKILL, func);
-#endif
-}
-
-/*****************************************************************************/
-/* does not work in win32 */
-void APP_CC
 g_signal_terminate(void (*func)(int))
 {
 #if defined(_WIN32)
