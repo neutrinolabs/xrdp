@@ -2658,7 +2658,7 @@ server_msg(struct xrdp_mod *mod, char *msg, int code)
 
     if (code == 1)
     {
-        g_writeln(msg);
+        g_writeln("%s", msg);
         return 0;
     }
 

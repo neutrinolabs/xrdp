@@ -219,22 +219,6 @@ g_snprintf(char *dest, int len, const char *format, ...)
 
 /*****************************************************************************/
 void DEFAULT_CC
-g_writeln(const char *format, ...)
-{
-    va_list ap;
-
-    va_start(ap, format);
-    vfprintf(stdout, format, ap);
-    va_end(ap);
-#if defined(_WIN32)
-    g_printf("\r\n");
-#else
-    g_printf("\n");
-#endif
-}
-
-/*****************************************************************************/
-void DEFAULT_CC
 g_write(const char *format, ...)
 {
     va_list ap;

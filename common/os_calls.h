@@ -41,6 +41,16 @@
 #define g_tcp_select g_sck_select
 #define g_close_wait_obj g_delete_wait_obj
 
+#if defined(_WIN32)
+#define G_NEWLINE "\r\n"
+#else
+#define G_NEWLINE "\n"
+#endif
+
+#define g_writeln(fmt, ...) do { \
+  g_write(fmt G_NEWLINE, ##__VA_ARGS__); \
+} while (0)
+
 int APP_CC      g_rm_temp_dir(void);
 int APP_CC      g_mk_temp_dir(const char* app_name);
 void APP_CC     g_init(const char* app_name);
@@ -50,7 +60,6 @@ void APP_CC     g_free(void* ptr);
 void DEFAULT_CC g_printf(const char *format, ...);
 void DEFAULT_CC g_sprintf(char* dest, const char* format, ...);
 void DEFAULT_CC g_snprintf(char* dest, int len, const char* format, ...);
-void DEFAULT_CC g_writeln(const char* format, ...);
 void DEFAULT_CC g_write(const char* format, ...);
 void APP_CC     g_hexdump(char* p, int len);
 void APP_CC     g_memset(void* ptr, int val, int size);
