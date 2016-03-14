@@ -147,7 +147,6 @@ void APP_CC     g_signal_child_stop(void (*func)(int));
 void APP_CC     g_signal_segfault(void (*func)(int));
 void APP_CC     g_signal_hang_up(void (*func)(int));
 void APP_CC     g_signal_user_interrupt(void (*func)(int));
-void APP_CC     g_signal_kill(void (*func)(int));
 void APP_CC     g_signal_terminate(void (*func)(int));
 void APP_CC     g_signal_pipe(void (*func)(int));
 void APP_CC     g_signal_usr1(void (*func)(int));

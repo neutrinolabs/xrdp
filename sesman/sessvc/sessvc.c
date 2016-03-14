@@ -93,7 +93,6 @@ main(int argc, char **argv)
         return 1;
     }
 
-    g_signal_kill(term_signal_handler); /* SIGKILL */
     g_signal_terminate(term_signal_handler); /* SIGTERM */
     g_signal_user_interrupt(term_signal_handler); /* SIGINT */
     g_signal_pipe(nil_signal_handler); /* SIGPIPE */
