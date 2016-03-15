@@ -46,7 +46,6 @@ sesman_main_loop(void)
     int error;
     int robjs_count;
     int cont;
-    int pid;
     tbus sck_obj;
     tbus robjs[8];
 

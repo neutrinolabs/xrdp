@@ -326,15 +326,13 @@ rdp_orders_process_bmpcache(struct rdp_orders *self, struct stream *s,
     int bpp = 0;
     int Bpp = 0;
     int bufsize = 0;
-    int pad1 = 0;
-    int pad2 = 0;
     int row_size = 0;
     int final_size = 0;
     struct rdp_bitmap *bitmap = (struct rdp_bitmap *)NULL;
     struct stream *rec_s = (struct stream *)NULL;
 
     in_uint8(s, cache_id);
-    in_uint8(s, pad1);
+    in_uint8s(s, 1); /* pad */
     in_uint8(s, width);
     in_uint8(s, height);
     in_uint8(s, bpp);
@@ -348,7 +346,7 @@ rdp_orders_process_bmpcache(struct rdp_orders *self, struct stream *s,
     }
     else
     {
-        in_uint16_le(s, pad2);
+        in_uint8s(s, 2); /* pad */
         in_uint16_le(s, size);
         in_uint16_le(s, row_size);
         in_uint16_le(s, final_size);
@@ -1115,8 +1113,8 @@ static void APP_CC
 rdp_orders_process_desksave(struct rdp_orders *self, struct stream *s,
                             int present, int delta)
 {
-    int width = 0;
-    int height = 0;
+    //int width = 0;
+    //int height = 0;
 
     if (present & 0x01)
     {
