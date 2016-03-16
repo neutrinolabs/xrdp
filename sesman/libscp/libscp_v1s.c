@@ -647,7 +647,7 @@ scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt, struct SCP_DISCONNEC
         /* if we got here, the requested sid wasn't one from the list we sent */
         /* we should kill the connection                                      */
         log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error (no such session in list)", __LINE__);
-        return SCP_CLIENT_STATE_INTERNAL_ERR;
+        return SCP_SERVER_STATE_INTERNAL_ERR;
     }
     else if (cmd == 44)
     {
