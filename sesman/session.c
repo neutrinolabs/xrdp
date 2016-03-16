@@ -504,16 +504,17 @@ session_start_fork(int width, int height, int bpp, char *username,
              * Create a new session and process group since the 4.4BSD
              * setlogin() affects the entire process group
              */
-            if (setsid() < 0)
+            if (g_setsid() < 0)
             {
-              log_message(LOG_LEVEL_ERROR,
-                "setsid failed - pid %d", g_getpid());
+                log_message(LOG_LEVEL_ERROR,
+                            "setsid failed - pid %d", g_getpid());
             }
 
-            if (setlogin(username) < 0)
+            if (g_setlogin(username) < 0)
             {
-              log_message(LOG_LEVEL_ERROR,
-                "setlogin failed for user %s - pid %d", username, g_getpid());
+                log_message(LOG_LEVEL_ERROR,
+                            "setlogin failed for user %s - pid %d", username,
+                            g_getpid());
             }
         }
 

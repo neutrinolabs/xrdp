@@ -136,7 +136,8 @@ int DEFAULT_CC
 main(int argc, char **argv)
 {
     int fd;
-    enum logReturns error;
+    enum logReturns log_error;
+    int error;
     int daemon = 1;
     int pid;
     char pid_s[32];
@@ -267,11 +268,11 @@ main(int argc, char **argv)
     g_snprintf(cfg_file, 255, "%s/sesman.ini", XRDP_CFG_PATH);
 
     /* starting logging subsystem */
-    error = log_start(cfg_file, "xrdp-sesman");
+    log_error = log_start(cfg_file, "xrdp-sesman");
 
-    if (error != LOG_STARTUP_OK)
+    if (log_error != LOG_STARTUP_OK)
     {
-        switch (error)
+        switch (log_error)
         {
             case LOG_ERROR_MALLOC:
                 g_writeln("error on malloc. cannot start logging. quitting.");

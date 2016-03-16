@@ -2833,6 +2833,28 @@ g_setuid(int pid)
 }
 
 /*****************************************************************************/
+int APP_CC
+g_setsid(void)
+{
+#if defined(_WIN32)
+    return -1;
+#else
+    return setsid();
+#endif
+}
+
+/*****************************************************************************/
+int APP_CC
+g_setlogin(const char *name)
+{
+#ifdef BSD
+    return setlogin(name);
+#else
+    return -1;
+#endif
+}
+
+/*****************************************************************************/
 /* does not work in win32
    returns pid of process that exits or zero if signal occurred */
 int APP_CC

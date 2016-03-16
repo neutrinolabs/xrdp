@@ -156,6 +156,8 @@ int APP_CC      g_initgroups(const char* user, int gid);
 int APP_CC      g_getuid(void);
 int APP_CC      g_getgid(void);
 int APP_CC      g_setuid(int pid);
+int APP_CC      g_setsid(void);
+int APP_CC      g_setlogin(const char *name);
 int APP_CC      g_waitchild(void);
 int APP_CC      g_waitpid(int pid);
 void APP_CC     g_clearenv(void);
