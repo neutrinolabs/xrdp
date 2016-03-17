@@ -1,6 +1,6 @@
 # Process this file with autoconf to produce a configure script
 
-AC_PREREQ(2.59)
+AC_PREREQ(2.65)
 AC_INIT([xrdp], [0.9.0], [xrdp-devel@googlegroups.com])
 AC_CONFIG_HEADERS(config_ac.h:config_ac-h.in)
 AM_INIT_AUTOMAKE([1.7.2 foreign])
@@ -12,6 +12,9 @@ PKG_PROG_PKG_CONFIG
 
 # Use silent rules by default if supported by Automake
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
+
+AX_CFLAGS_WARN_ALL
+AX_GCC_FUNC_ATTRIBUTE([format])
 
 case $host_os in
 	*linux*)

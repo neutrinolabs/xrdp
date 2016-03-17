@@ -41,17 +41,26 @@
 #define g_tcp_select g_sck_select
 #define g_close_wait_obj g_delete_wait_obj
 
+#if defined(HAVE_FUNC_ATTRIBUTE_FORMAT)
+#define printflike(arg_format, arg_first_check) \
+ __attribute__((__format__(__printf__, arg_format, arg_first_check)))
+#else
+#define printflike(arg_format, arg_first_check)
+#endif
+
 int APP_CC      g_rm_temp_dir(void);
 int APP_CC      g_mk_temp_dir(const char* app_name);
 void APP_CC     g_init(const char* app_name);
 void APP_CC     g_deinit(void);
 void* APP_CC    g_malloc(int size, int zero);
 void APP_CC     g_free(void* ptr);
-void DEFAULT_CC g_printf(const char *format, ...);
-void DEFAULT_CC g_sprintf(char* dest, const char* format, ...);
-void DEFAULT_CC g_snprintf(char* dest, int len, const char* format, ...);
-void DEFAULT_CC g_writeln(const char* format, ...);
-void DEFAULT_CC g_write(const char* format, ...);
+void DEFAULT_CC g_printf(const char *format, ...) printflike(1, 2);
+void DEFAULT_CC g_sprintf(char* dest, const char* format, ...) \
+                  printflike(2, 3);
+void DEFAULT_CC g_snprintf(char* dest, int len, const char* format, ...) \
+                  printflike(3, 4);
+void DEFAULT_CC g_writeln(const char* format, ...) printflike(1, 2);
+void DEFAULT_CC g_write(const char* format, ...) printflike(1, 2);
 void APP_CC     g_hexdump(char* p, int len);
 void APP_CC     g_memset(void* ptr, int val, int size);
 void APP_CC     g_memcpy(void* d_ptr, const void* s_ptr, int size);

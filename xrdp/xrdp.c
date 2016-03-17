@@ -293,11 +293,72 @@ xrdp_process_params(int argc, char **argv,
 }
 
 /*****************************************************************************/
+/* Basic sanity checks before any forking */
+int
+xrdp_sanity_check(void)
+{
+    int intval = 1;
+    int host_be;
+    char key_file[256];
+
+    /* check compiled endian with actual endian */
+    host_be = !((int)(*(unsigned char *)(&intval)));
+
+#if defined(B_ENDIAN)
+    if (!host_be)
+    {
+        g_writeln("Not a big endian machine, edit arch.h");
+        return 1;
+    }
+#endif
+#if defined(L_ENDIAN)
+    if (host_be)
+    {
+        g_writeln("Not a little endian machine, edit arch.h");
+        return 1;
+    }
+#endif
+
+    /* check long, int and void* sizes */
+    if (sizeof(int) != 4)
+    {
+        g_writeln("unusable int size, must be 4");
+        return 1;
+    }
+
+    if (sizeof(long) != sizeof(void *))
+    {
+        g_writeln("long size must match void* size");
+        return 1;
+    }
+
+    if (sizeof(long) != 4 && sizeof(long) != 8)
+    {
+        g_writeln("unusable long size, must be 4 or 8");
+        return 1;
+    }
+
+    if (sizeof(tui64) != 8)
+    {
+        g_writeln("unusable tui64 size, must be 8");
+        return 1;
+    }
+
+    g_snprintf(key_file, 255, "%s/rsakeys.ini", XRDP_CFG_PATH);
+    if (!g_file_exist(key_file))
+    {
+        g_writeln("File %s is missing, create it using xrdp-keygen", key_file);
+        return 1;
+    }
+
+    return 0;
+}
+
+/*****************************************************************************/
 int DEFAULT_CC
 main(int argc, char **argv)
 {
     int test;
-    int host_be;
     char cfg_file[256];
     enum logReturns error;
     struct xrdp_startup_params *startup_params;
@@ -313,45 +374,6 @@ main(int argc, char **argv)
     for (test = 0; test < argc; test++)
     {
         DEBUG(("Argument %i - %s", test, argv[test]));
-    }
-
-    /* check compiled endian with actual endian */
-    test = 1;
-    host_be = !((int)(*(unsigned char *)(&test)));
-#if defined(B_ENDIAN)
-    if (!host_be)
-#endif
-#if defined(L_ENDIAN)
-        if (host_be)
-#endif
-        {
-            g_writeln("endian wrong, edit arch.h");
-            return 0;
-        }
-
-    /* check long, int and void* sizes */
-    if (sizeof(int) != 4)
-    {
-        g_writeln("unusable int size, must be 4");
-        return 0;
-    }
-
-    if (sizeof(long) != sizeof(void *))
-    {
-        g_writeln("long size must match void* size");
-        return 0;
-    }
-
-    if (sizeof(long) != 4 && sizeof(long) != 8)
-    {
-        g_writeln("unusable long size, must be 4 or 8");
-        return 0;
-    }
-
-    if (sizeof(tui64) != 8)
-    {
-        g_writeln("unusable tui64 size, must be 8");
-        return 0;
     }
 
     g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
@@ -399,6 +421,13 @@ main(int argc, char **argv)
         g_writeln("");
         g_deinit();
         g_exit(0);
+    }
+
+    if (xrdp_sanity_check() != 0)
+    {
+        g_writeln("Fatal error occurred, exiting");
+        g_deinit();
+        g_exit(1);
     }
 
     if (startup_params->kill)
@@ -463,8 +492,8 @@ main(int argc, char **argv)
 
     if (g_file_exist(pid_file)) /* xrdp.pid */
     {
-        g_writeln("It looks like xrdp is already running,");
-        g_writeln("if not delete the xrdp.pid file and try again");
+        g_writeln("It looks like xrdp is already running.");
+        g_writeln("If not, delete %s and try again.", pid_file);
         g_deinit();
         g_exit(0);
     }
