@@ -42,6 +42,8 @@ struct mod_context
 };
 typedef struct mod_context modContext;
 
+#define XRDP_NEU_INPUT_TIMEOUT 30000 /* 30 seconds */
+
 /*****************************************************************************/
 static void
 verifyColorMap(struct mod *mod)
@@ -192,6 +194,10 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
 
     LLOGLN(12, ("lxrdp_event: msg %d", msg));
 
+    if (msg < 200)
+    {
+        mod->last_input_mstime = g_time3();
+    }
     switch (msg)
     {
         case 15: /* key down */
@@ -456,6 +462,10 @@ lxrdp_get_wait_objs(struct mod *mod, tbus *read_objs, int *rcount,
     boolean ok;
 
     LLOGLN(12, ("lxrdp_get_wait_objs:"));
+    if ((*timeout == -1) || (*timeout > XRDP_NEU_INPUT_TIMEOUT))
+    {
+        *timeout = XRDP_NEU_INPUT_TIMEOUT;
+    }
     rfds = (void **)read_objs;
     wfds = (void **)write_objs;
     ok = freerdp_get_fds(mod->inst, rfds, rcount, wfds, wcount);
@@ -474,6 +484,15 @@ static int DEFAULT_CC
 lxrdp_check_wait_objs(struct mod *mod)
 {
     boolean ok;
+    int now;
+
+    now = g_time3();
+    if (now - mod->last_input_mstime > XRDP_NEU_INPUT_TIMEOUT)
+    {
+        LLOGLN(12, ("lxrdp_check_wait_objs: sending that key event"));
+        mod->inst->input->KeyboardEvent(mod->inst->input, 0, 0);
+        mod->last_input_mstime = g_time3();
+    }
 
     LLOGLN(12, ("lxrdp_check_wait_objs:"));
     ok = freerdp_check_fds(mod->inst);
