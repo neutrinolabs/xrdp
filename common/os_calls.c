@@ -282,7 +282,7 @@ g_hexdump(char *p, int len)
             g_printf("%c", (line[i] >= 0x20 && line[i] < 0x7f) ? line[i] : '.');
         }
 
-        g_writeln("");
+        g_writeln("%s", "");
         offset += thisline;
         line += thisline;
     }
@@ -2200,6 +2200,7 @@ g_strdup(const char *in)
 
     return p;
 }
+
 /*****************************************************************************/
 /* if in = 0, return 0 else return newly alloced copy of input string
  * if the input string is larger than maxlen the returned string will be
@@ -2231,6 +2232,7 @@ g_strndup(const char *in, const unsigned int maxlen)
 
     return p;
 }
+
 /*****************************************************************************/
 int APP_CC
 g_strcmp(const char *c1, const char *c2)
@@ -2253,10 +2255,12 @@ g_strncmp_d(const char *s1, const char *s2, const char delim, int n)
     char c1;
     char c2;
 
+    c1 = 0;
+    c2 = 0;
     while (n > 0)
     {
-        c1 = *s1++;
-        c2 = *s2++;
+        c1 = *(s1++);
+        c2 = *(s2++);
         if ((c1 == 0) || (c1 != c2) || (c1 == delim) || (c2 == delim))
         {
             return c1 - c2;
