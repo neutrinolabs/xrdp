@@ -412,9 +412,10 @@ session_start_fork(int width, int height, int bpp, char *username,
     int pampid = 0;
     int xpid = 0;
     int i = 0;
+    char **xserver; /* absolute/relative path to Xorg/X11rdp/Xvnc */
     char geometry[32];
     char depth[32];
-    char screen[32];
+    char screen[32]; /* display number */
     char text[256];
     char passwd_file[256];
     char *pfile;
@@ -652,8 +653,12 @@ session_start_fork(int width, int height, int bpp, char *username,
                     xserver_params = list_create();
                     xserver_params->auto_free = 1;
 
+		    /* get path of Xorg from config */
+		    xserver = g_strdup(list_get_item(g_cfg->xorg_params, 0));
+		    list_remove_item(g_cfg->xorg_params, 0);
+
                     /* these are the must have parameters */
-                    list_add_item(xserver_params, (tintptr) g_strdup("Xorg"));
+                    list_add_item(xserver_params, (tintptr) g_strdup(xserver));
                     list_add_item(xserver_params, (tintptr) g_strdup(screen));
 
                     /* additional parameters from sesman.ini file */
@@ -674,7 +679,7 @@ session_start_fork(int width, int height, int bpp, char *username,
                     g_setenv("XRDP_START_HEIGHT", geometry, 1);
 
                     /* fire up Xorg */
-                    g_execvp("Xorg", pp1);
+                    g_execvp(xserver, pp1);
                 }
                 else if (type == SESMAN_SESSION_TYPE_XVNC)
                 {
@@ -682,8 +687,12 @@ session_start_fork(int width, int height, int bpp, char *username,
                     xserver_params = list_create();
                     xserver_params->auto_free = 1;
 
+		    /* get path of Xvnc from config */
+		    xserver = g_strdup(list_get_item(g_cfg->vnc_params, 0));
+		    list_remove_item(g_cfg->vnc_params, 0);
+
                     /* these are the must have parameters */
-                    list_add_item(xserver_params, (tintptr)g_strdup("Xvnc"));
+                    list_add_item(xserver_params, (tintptr)g_strdup(xserver));
                     list_add_item(xserver_params, (tintptr)g_strdup(screen));
                     list_add_item(xserver_params, (tintptr)g_strdup("-geometry"));
                     list_add_item(xserver_params, (tintptr)g_strdup(geometry));
@@ -701,15 +710,19 @@ session_start_fork(int width, int height, int bpp, char *username,
                     list_add_item(xserver_params, 0);
                     pp1 = (char **)xserver_params->items;
                     log_message(LOG_LEVEL_INFO, "%s", dumpItemsToString(xserver_params, execvpparams, 2048));
-                    g_execvp("Xvnc", pp1);
+                    g_execvp(xserver, pp1);
                 }
                 else if (type == SESMAN_SESSION_TYPE_XRDP)
                 {
                     xserver_params = list_create();
                     xserver_params->auto_free = 1;
 
+		    /* get path of X11rdp from config */
+		    xserver = g_strdup(list_get_item(g_cfg->rdp_params, 0));
+		    list_remove_item(g_cfg->rdp_params, 0);
+
                     /* these are the must have parameters */
-                    list_add_item(xserver_params, (tintptr)g_strdup("X11rdp"));
+                    list_add_item(xserver_params, (tintptr)g_strdup(xserver));
                     list_add_item(xserver_params, (tintptr)g_strdup(screen));
                     list_add_item(xserver_params, (tintptr)g_strdup("-geometry"));
                     list_add_item(xserver_params, (tintptr)g_strdup(geometry));
@@ -725,7 +738,7 @@ session_start_fork(int width, int height, int bpp, char *username,
                     list_add_item(xserver_params, 0);
                     pp1 = (char **)xserver_params->items;
                     log_message(LOG_LEVEL_INFO, "%s", dumpItemsToString(xserver_params, execvpparams, 2048));
-                    g_execvp("X11rdp", pp1);
+                    g_execvp(xserver, pp1);
                 }
                 else
                 {
