@@ -19,6 +19,7 @@
  */
 
 #include "xrdp.h"
+#include "xrdp_osirium.h"
 
 static int g_session_id = 0;
 
@@ -201,6 +202,11 @@ xrdp_process_main_loop(struct xrdp_process *self)
     self->session->callback = callback;
     /* this function is just above */
     self->session->is_term = xrdp_is_term;
+
+    if (self->session->client_info->use_osirium_preamble)
+    {
+        read_preamble_packet(self);
+    }
 
     if (libxrdp_process_incoming(self->session) == 0)
     {

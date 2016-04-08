@@ -317,6 +317,9 @@ xrdp_iso_incoming(struct xrdp_iso *self)
         return 1;
     }
 
+    /* NOTE alternate place to look for osirium rdp preamble
+       can be inteligient then and handle if it is there or not. */
+
     if (xrdp_iso_recv_msg(self, s, &code, &len) != 0)
     {
         LLOGLN(0, ("xrdp_iso_incoming: xrdp_iso_recv_msg returned non zero"));
