@@ -241,7 +241,7 @@ main(int argc, char **argv)
     {
         g_printf("sesman is already running.\n");
         g_printf("if it's not running, try removing ");
-        g_printf(pid_file);
+        g_printf("%s", pid_file);
         g_printf("\n");
         g_deinit();
         g_exit(1);
