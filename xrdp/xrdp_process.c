@@ -183,6 +183,7 @@ xrdp_process_main_loop(struct xrdp_process *self)
     int wobjs_count;
     int cont;
     int timeout = 0;
+    int error;
     tbus robjs[32];
     tbus wobjs[32];
     tbus term_obj;
@@ -203,12 +204,24 @@ xrdp_process_main_loop(struct xrdp_process *self)
     /* this function is just above */
     self->session->is_term = xrdp_is_term;
 
+    error = 0;
     if (self->session->client_info->use_osirium_preamble)
     {
-        read_preamble_packet(self);
+        if (read_preamble_packet(self) != 0)
+        {
+            error = 1;
+        }
     }
 
-    if (libxrdp_process_incoming(self->session) == 0)
+    if (error == 0)
+    {
+        if (libxrdp_process_incoming(self->session) != 0)
+        {
+            error = 1;
+        }
+    }
+
+    if (error == 0)
     {
         init_stream(self->server_trans->in_s, 32 * 1024);
 
