@@ -142,6 +142,9 @@ struct xrdp_client_info
   int use_frame_acks;
   int max_unacknowledged_frame_count;
 
+  int use_osirium_preamble;
+  char *osirium_preamble_buffer;
+
 };
 
 #endif
