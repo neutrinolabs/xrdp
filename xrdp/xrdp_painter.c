@@ -915,7 +915,6 @@ xrdp_painter_composite(struct xrdp_painter* self,
     int k;
     int dx;
     int dy;
-    int palette_id;
     int cache_srcidx;
     int cache_mskidx;
 
@@ -939,7 +938,6 @@ xrdp_painter_composite(struct xrdp_painter* self,
         dstx += dx;
         dsty += dy;
 
-        palette_id = 0;
         cache_srcidx = src->item_index;
         cache_mskidx = -1;
         if (mskflags & 1)

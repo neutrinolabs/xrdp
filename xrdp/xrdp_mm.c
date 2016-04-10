@@ -817,6 +817,7 @@ xrdp_mm_process_rail_create_window(struct xrdp_mm* self, struct stream* s)
     return rv;
 }
 
+#if 0
 /*****************************************************************************/
 /* returns error
    process rail configure window order */
@@ -883,6 +884,7 @@ xrdp_mm_process_rail_configure_window(struct xrdp_mm* self, struct stream* s)
     g_free(rwso.visibility_rects);
     return rv;
 }
+#endif
 
 /*****************************************************************************/
 /* returns error
@@ -1056,7 +1058,6 @@ xrdp_mm_chan_data_in(struct trans *trans)
 {
     struct xrdp_mm *self;
     struct stream *s;
-    int id;
     int size;
     int error;
 
@@ -1073,7 +1074,7 @@ xrdp_mm_chan_data_in(struct trans *trans)
         return 1;
     }
 
-    in_uint32_le(s, id);
+    in_uint8s(s, 4); /* id */
     in_uint32_le(s, size);
     error = trans_force_read(trans, size - 8);
 
@@ -2929,7 +2930,6 @@ int read_allowed_channel_names(struct list *names, struct list *values)
     int fd;
     int ret = 0;
     char cfg_file[256];
-    int pos;
 
     g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
     fd = g_file_open(cfg_file);
@@ -2938,7 +2938,6 @@ int read_allowed_channel_names(struct list *names, struct list *values)
     {
         names->auto_free = 1;
         values->auto_free = 1;
-        pos = 0;
 
         /* all values in this section can be valid channel names */
         if (file_read_section(fd, "channels", names, values) == 0)
