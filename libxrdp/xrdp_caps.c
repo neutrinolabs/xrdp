@@ -550,6 +550,11 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
     in_uint16_le(s, num_caps);
     in_uint8s(s, 2); /* pad */
 
+    if ((cap_len < 0) || (cap_len > 1024 * 1024))
+    {
+        return 1;
+    }
+
     for (index = 0; index < num_caps; index++)
     {
         p = s->p;
