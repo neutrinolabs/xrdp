@@ -385,7 +385,7 @@ main(int argc, char **argv)
     {
         g_writeln("Unknown Parameter");
         g_writeln("xrdp -h for help");
-        g_writeln("");
+        g_writeln("%s", "");
         g_deinit();
         g_exit(0);
     }
@@ -395,30 +395,30 @@ main(int argc, char **argv)
 
     if (startup_params->help)
     {
-        g_writeln("");
+        g_writeln("%s", "");
         g_writeln("xrdp: A Remote Desktop Protocol server.");
         g_writeln("Copyright (C) Jay Sorg 2004-2014");
         g_writeln("See http://www.xrdp.org for more information.");
-        g_writeln("");
+        g_writeln("%s", "");
         g_writeln("Usage: xrdp [options]");
         g_writeln("   --help: show help");
         g_writeln("   --nodaemon: don't fork into background");
         g_writeln("   --kill: shut down xrdp");
         g_writeln("   --port: tcp listen port");
         g_writeln("   --fork: fork on new connection");
-        g_writeln("");
+        g_writeln("%s", "");
         g_deinit();
         g_exit(0);
     }
 
     if (startup_params->version)
     {
-        g_writeln("");
+        g_writeln("%s", "");
         g_writeln("xrdp: A Remote Desktop Protocol server.");
         g_writeln("Copyright (C) Jay Sorg 2004-2014");
         g_writeln("See http://www.xrdp.org for more information.");
         g_writeln("Version %s", PACKAGE_VERSION);
-        g_writeln("");
+        g_writeln("%s", "");
         g_deinit();
         g_exit(0);
     }
