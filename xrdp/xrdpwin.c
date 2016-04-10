@@ -344,16 +344,16 @@ main(int argc, char **argv)
                 g_strncasecmp(argv[1], "--help", 255) == 0 ||
                 g_strncasecmp(argv[1], "-h", 255) == 0)
         {
-            g_writeln("");
+            g_writeln("%s", "");
             g_writeln("xrdp: A Remote Desktop Protocol server.");
             g_writeln("Copyright (C) Jay Sorg 2004-2011");
             g_writeln("See http://xrdp.sourceforge.net for more information.");
-            g_writeln("");
+            g_writeln("%s", "");
             g_writeln("Usage: xrdp [options]");
             g_writeln("   -h: show help");
             g_writeln("   -install: install service");
             g_writeln("   -remove: remove service");
-            g_writeln("");
+            g_writeln("%s", "");
             g_exit(0);
         }
         else if (g_strncasecmp(argv[1], "-install", 255) == 0 ||
@@ -423,7 +423,7 @@ main(int argc, char **argv)
         {
             g_writeln("Unknown Parameter");
             g_writeln("xrdp -h for help");
-            g_writeln("");
+            g_writeln("%s", "");
             g_exit(0);
         }
     }
@@ -431,7 +431,7 @@ main(int argc, char **argv)
     {
         g_writeln("Unknown Parameter");
         g_writeln("xrdp -h for help");
-        g_writeln("");
+        g_writeln("%s", "");
         g_exit(0);
     }
 
@@ -499,34 +499,34 @@ main(int argc, char **argv)
                  g_strncasecmp(argv[1], "--help", 255) == 0 ||
                  g_strncasecmp(argv[1], "-h", 255) == 0)
         {
-            g_writeln("");
+            g_writeln("%s", "");
             g_writeln("xrdp: A Remote Desktop Protocol server.");
             g_writeln("Copyright (C) Jay Sorg 2004-2011");
             g_writeln("See http://xrdp.sourceforge.net for more information.");
-            g_writeln("");
+            g_writeln("%s", "");
             g_writeln("Usage: xrdp [options]");
             g_writeln("   -h: show help");
             g_writeln("   -nodaemon: don't fork into background");
             g_writeln("   -kill: shut down xrdp");
-            g_writeln("");
+            g_writeln("%s", "");
             g_exit(0);
         }
         else if ((g_strncasecmp(argv[1], "-v", 255) == 0) ||
                  (g_strncasecmp(argv[1], "--version", 255) == 0))
         {
-            g_writeln("");
+            g_writeln("%s", "");
             g_writeln("xrdp: A Remote Desktop Protocol server.");
             g_writeln("Copyright (C) Jay Sorg 2004-2011");
             g_writeln("See http://xrdp.sourceforge.net for more information.");
             g_writeln("Version %s", PACKAGE_VERSION);
-            g_writeln("");
+            g_writeln("%s", "");
             g_exit(0);
         }
         else
         {
             g_writeln("Unknown Parameter");
             g_writeln("xrdp -h for help");
-            g_writeln("");
+            g_writeln("%s", "");
             g_exit(0);
         }
     }
@@ -534,7 +534,7 @@ main(int argc, char **argv)
     {
         g_writeln("Unknown Parameter");
         g_writeln("xrdp -h for help");
-        g_writeln("");
+        g_writeln("%s", "");
         g_exit(0);
     }
 
