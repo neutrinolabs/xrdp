@@ -1854,8 +1854,8 @@ scard_send_Transmit(IRP *irp, char *context, int context_bytes,
     }
 
     log_debug("send_bytes %d recv_bytes %d send dwProtocol %d cbPciLength %d "
-              "extra_bytes %d recv dwProtocol %d cbPciLength %d", send_bytes,
-              recv_bytes, send_ior->dwProtocol, send_ior->cbPciLength,
+              "extra_bytes %d recv dwProtocol %d cbPciLength %d extra_bytes %d",
+              send_bytes, recv_bytes, send_ior->dwProtocol, send_ior->cbPciLength,
               send_ior->extra_bytes, recv_ior->dwProtocol, recv_ior->cbPciLength,
               recv_ior->extra_bytes);
 

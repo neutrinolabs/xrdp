@@ -1697,9 +1697,9 @@ clipboard_event_selection_owner_notify(XEvent *xevent)
     XFixesSelectionNotifyEvent *lxevent;
 
     lxevent = (XFixesSelectionNotifyEvent *)xevent;
-    log_debug("clipboard_event_selection_owner_notify: %p", lxevent->owner);
+    log_debug("clipboard_event_selection_owner_notify: 0x%lx", lxevent->owner);
     log_debug("clipboard_event_selection_owner_notify: "
-          "window %d subtype %d owner %d g_wnd %d",
+          "window %ld subtype %d owner %ld g_wnd %ld",
           lxevent->window, lxevent->subtype, lxevent->owner, g_wnd);
 
     if (lxevent->owner == g_wnd)
@@ -1735,7 +1735,7 @@ clipboard_get_window_property(Window wnd, Atom prop, Atom *type, int *fmt,
     Atom ltype;
 
     log_debug("clipboard_get_window_property:");
-    log_debug("  prop %d name %s", prop, get_atom_text(prop));
+    log_debug("  prop %ld name %s", prop, get_atom_text(prop));
     lxdata = 0;
     ltype = 0;
     XGetWindowProperty(g_display, wnd, prop, 0, 0, 0,
@@ -1873,7 +1873,7 @@ clipboard_event_selection_notify(XEvent *xevent)
 
     if (rv == 0)
     {
-        log_debug("clipboard_event_selection_notify: wnd %p prop %s",
+        log_debug("clipboard_event_selection_notify: wnd 0x%lx prop %s",
                     lxevent->requestor,
                     get_atom_text(lxevent->property));
         rv = clipboard_get_window_property(lxevent->requestor, lxevent->property,
@@ -1922,7 +1922,7 @@ clipboard_event_selection_notify(XEvent *xevent)
                         atom = atoms[index];
                         LOGM((LOG_LEVEL_DEBUG, "clipboard_event_selection_notify: %d %s %d",
                               atom, get_atom_text(atom), XA_STRING));
-                        log_debug("clipboard_event_selection_notify: 0x%x %s",
+                        log_debug("clipboard_event_selection_notify: 0x%lx %s",
                                     atom, get_atom_text(atom));
                         if (atom == g_utf8_atom)
                         {
@@ -1943,15 +1943,15 @@ clipboard_event_selection_notify(XEvent *xevent)
                         }
                         else
                         {
-                            log_error("clipboard_event_selection_notify: unknown atom 0x%x", atom);
+                            log_error("clipboard_event_selection_notify: unknown atom 0x%lx", atom);
                         }
                     }
                 }
                 else
                 {
                     log_error("clipboard_event_selection_notify: error, "
-                          "target is 'TARGETS' and type[%d] or fmt[%d] not right, "
-                          "should be type[%d], fmt[%d]", type, fmt, XA_ATOM, 32);
+                          "target is 'TARGETS' and type[%ld] or fmt[%d] not right, "
+                          "should be type[%ld], fmt[%d]", type, fmt, XA_ATOM, 32);
                 }
             }
             else if (lxevent->target == g_utf8_atom)
@@ -2138,9 +2138,9 @@ clipboard_event_selection_request(XEvent *xevent)
     char *xdata;
 
     lxev = (XSelectionRequestEvent *)xevent;
-    log_debug("clipboard_event_selection_request: %p", lxev->property);
-    log_debug("clipboard_event_selection_request: g_wnd %d, "
-          ".requestor %d .owner %d .selection %d '%s' .target %d .property %d",
+    log_debug("clipboard_event_selection_request: 0x%lx", lxev->property);
+    log_debug("clipboard_event_selection_request: g_wnd %ld, "
+          ".requestor %ld .owner %ld .selection %ld '%s' .target %ld .property %ld",
           g_wnd, lxev->requestor, lxev->owner, lxev->selection,
           get_atom_text(lxev->selection),
           lxev->target, lxev->property);
@@ -2326,8 +2326,8 @@ clipboard_event_property_notify(XEvent *xevent)
     char *cptr;
 
     log_debug("clipboard_event_property_notify:");
-    log_debug("clipboard_event_property_notify: PropertyNotify .window %d "
-                ".state %d .atom %d %s", xevent->xproperty.window,
+    log_debug("clipboard_event_property_notify: PropertyNotify .window %ld "
+                ".state %d .atom %ld %s", xevent->xproperty.window,
                 xevent->xproperty.state, xevent->xproperty.atom,
                 get_atom_text(xevent->xproperty.atom));
 
@@ -2412,7 +2412,7 @@ clipboard_event_property_notify(XEvent *xevent)
             }
             else
             {
-                log_error("clipboard_event_property_notify: error unknown type %d",
+                log_error("clipboard_event_property_notify: error unknown type %ld",
                            g_clip_s2c.type);
                 clipboard_send_data_response_failed();
             }

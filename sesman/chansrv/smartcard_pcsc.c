@@ -259,7 +259,7 @@ free_uds_client(struct pcsc_uds_client *uds_client)
                     }
                     list_delete(context->cards);
                 }
-                LLOGLN(10, ("  left over context 0x%8.8x", context->context));
+                LLOGLN(10, ("  left over context %p", context->context));
                 scard_send_cancel(0, context->context, context->context_bytes);
                 scard_send_release_context(0, context->context,
                                            context->context_bytes);
