@@ -399,13 +399,6 @@ g_signal_user_interrupt(void (*func)(int))
 
 /*****************************************************************************/
 static void APP_CC
-g_signal_kill(void (*func)(int))
-{
-    signal(SIGKILL, func);
-}
-
-/*****************************************************************************/
-static void APP_CC
 g_signal_terminate(void (*func)(int))
 {
     signal(SIGTERM, func);
@@ -685,7 +678,6 @@ main(int argc, char **argv)
 
     g_init("tcp_proxy");
     g_signal_user_interrupt(proxy_shutdown); /* SIGINT  */
-    g_signal_kill(proxy_shutdown);           /* SIGKILL */
     g_signal_usr1(clear_counters);           /* SIGUSR1 */
     g_signal_terminate(proxy_shutdown);      /* SIGTERM */
 
