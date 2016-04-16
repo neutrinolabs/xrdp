@@ -159,6 +159,7 @@ struct mod
   tintptr wm;
   tintptr painter;
   tintptr si;
+
   /* mod data */
   int sck;
   int width;
@@ -173,6 +174,7 @@ struct mod
   int vrev;
   char username[256];
   char password[256];
+  char domain[256];
   int bool_keyBoardSynced ; /* Numlock can be out of sync, we hold state here to resolve */
   int keyBoardLockInfo ; /* Holds initial numlock capslock state */
 
