@@ -423,6 +423,10 @@ lxrdp_set_param(struct mod *mod, char *name, char *value)
     {
         g_strncpy(mod->username, value, 255);
     }
+    else if (g_strcmp(name, "domain") == 0)
+    {
+        g_strncpy(mod->domain, value, 255);
+    }
     else if (g_strcmp(name, "password") == 0)
     {
         g_strncpy(mod->password, value, 255);
@@ -1466,6 +1470,7 @@ lfreerdp_pre_connect(freerdp *instance)
 
     instance->settings->username = g_strdup(mod->username);
     instance->settings->password = g_strdup(mod->password);
+    instance->settings->domain = g_strdup(mod->domain);
 
     if (mod->client_info.rail_support_level > 0)
     {
@@ -1549,7 +1554,7 @@ lrail_WindowCreate(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
     struct rail_window_state_order wso;
     UNICONV* uniconv;
 
-    LLOGLN(0, ("llrail_WindowCreate:"));
+    LLOGLN(10, ("lrail_WindowCreate:"));
     uniconv = freerdp_uniconv_new();
     mod = ((struct mod_context *)context)->modi;
     memset(&wso, 0, sizeof(wso));
@@ -1565,7 +1570,7 @@ lrail_WindowCreate(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
                 window_state->titleInfo.string, window_state->titleInfo.length);
     }
 
-    LLOGLN(0, ("lrail_WindowCreate: %s", wso.title_info));
+    LLOGLN(10, ("lrail_WindowCreate: %s", wso.title_info));
     wso.client_offset_x = window_state->clientOffsetX;
     wso.client_offset_y = window_state->clientOffsetY;
     wso.client_area_width = window_state->clientAreaWidth;
@@ -1625,7 +1630,7 @@ void DEFAULT_CC
 lrail_WindowUpdate(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
                    WINDOW_STATE_ORDER *window_state)
 {
-    LLOGLN(0, ("lrail_WindowUpdate:"));
+    LLOGLN(10, ("lrail_WindowUpdate:"));
     lrail_WindowCreate(context, orderInfo, window_state);
 }
 
@@ -1635,7 +1640,7 @@ lrail_WindowDelete(rdpContext *context, WINDOW_ORDER_INFO *orderInfo)
 {
     struct mod *mod;
 
-    LLOGLN(0, ("lrail_WindowDelete:"));
+    LLOGLN(10, ("lrail_WindowDelete:"));
     mod = ((struct mod_context *)context)->modi;
     mod->server_window_delete(mod, orderInfo->windowId);
 }
@@ -1648,7 +1653,7 @@ lrail_WindowIcon(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
     struct mod *mod;
     struct rail_icon_info rii;
 
-    LLOGLN(0, ("lrail_WindowIcon:"));
+    LLOGLN(10, ("lrail_WindowIcon:"));
     mod = ((struct mod_context *)context)->modi;
     memset(&rii, 0, sizeof(rii));
     rii.bpp = window_icon->iconInfo->bpp;
@@ -1673,7 +1678,7 @@ lrail_WindowCachedIcon(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
 {
     struct mod *mod;
 
-    LLOGLN(0, ("lrail_WindowCachedIcon:"));
+    LLOGLN(10, ("lrail_WindowCachedIcon:"));
     mod = ((struct mod_context *)context)->modi;
     mod->server_window_cached_icon(mod, orderInfo->windowId,
                                    window_cached_icon->cachedIcon.cacheEntry,
@@ -1690,7 +1695,7 @@ lrail_NotifyIconCreate(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
     struct rail_notify_state_order rnso;
     UNICONV* uniconv;
 
-    LLOGLN(0, ("lrail_NotifyIconCreate:"));
+    LLOGLN(10, ("lrail_NotifyIconCreate:"));
     uniconv = freerdp_uniconv_new();
     mod = ((struct mod_context *)context)->modi;
 
@@ -1742,7 +1747,7 @@ void DEFAULT_CC
 lrail_NotifyIconUpdate(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
                        NOTIFY_ICON_STATE_ORDER *notify_icon_state)
 {
-    LLOGLN(0, ("lrail_NotifyIconUpdate:"));
+    LLOGLN(10, ("lrail_NotifyIconUpdate:"));
     lrail_NotifyIconCreate(context, orderInfo, notify_icon_state);
 }
 
@@ -1752,7 +1757,7 @@ lrail_NotifyIconDelete(rdpContext *context, WINDOW_ORDER_INFO *orderInfo)
 {
     struct mod *mod;
 
-    LLOGLN(0, ("lrail_NotifyIconDelete:"));
+    LLOGLN(10, ("lrail_NotifyIconDelete:"));
     mod = ((struct mod_context *)context)->modi;
     mod->server_notify_delete(mod, orderInfo->windowId,
                               orderInfo->notifyIconId);
@@ -1767,7 +1772,7 @@ lrail_MonitoredDesktop(rdpContext *context, WINDOW_ORDER_INFO *orderInfo,
     struct mod *mod;
     struct rail_monitored_desktop_order rmdo;
 
-    LLOGLN(0, ("lrail_MonitoredDesktop:"));
+    LLOGLN(10, ("lrail_MonitoredDesktop:"));
     mod = ((struct mod_context *)context)->modi;
     memset(&rmdo, 0, sizeof(rmdo));
     rmdo.active_window_id = monitored_desktop->activeWindowId;
@@ -1797,7 +1802,7 @@ lrail_NonMonitoredDesktop(rdpContext *context, WINDOW_ORDER_INFO *orderInfo)
     struct mod *mod;
     struct rail_monitored_desktop_order rmdo;
 
-    LLOGLN(0, ("lrail_NonMonitoredDesktop:"));
+    LLOGLN(10, ("lrail_NonMonitoredDesktop:"));
     mod = ((struct mod_context *)context)->modi;
     memset(&rmdo, 0, sizeof(rmdo));
     mod->server_monitored_desktop(mod, &rmdo, orderInfo->fieldFlags);
@@ -1809,7 +1814,7 @@ lfreerdp_post_connect(freerdp *instance)
 {
     struct mod *mod;
 
-    LLOGLN(0, ("lfreerdp_post_connect:"));
+    LLOGLN(10, ("lfreerdp_post_connect:"));
     mod = ((struct mod_context *)(instance->context))->modi;
     g_memset(mod->password, 0, sizeof(mod->password));
 
