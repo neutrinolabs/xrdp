@@ -145,6 +145,9 @@ lxrdp_connect(struct mod *mod)
                         g_snprintf(buf, 128, "Authentication error check your password "
                                  "and username");
                         break;
+                    case INSUFFICIENTPRIVILEGESERROR:
+						g_snprintf(buf, 128, "Insufficent privileges on target server");
+						break;
                     default:
                         g_snprintf(buf, 128, "Unhandled Errorcode from connect : %d",
                                  connectErrorCode);
