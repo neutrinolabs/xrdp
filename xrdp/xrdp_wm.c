@@ -566,8 +566,7 @@ xrdp_wm_init(struct xrdp_wm *self)
         /* session details come from the preamble. */
         process_preamble_packet(self);
     }
-
-    if (self->session->client_info->rdp_autologin || self->hide_log_window)
+    else if (self->session->client_info->rdp_autologin || self->hide_log_window)
     {
         /*
          * NOTE: this should eventually be accessed from self->xrdp_config
