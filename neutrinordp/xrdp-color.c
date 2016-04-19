@@ -314,6 +314,14 @@ convert_color(int in_bpp, int out_bpp, int in_color, int *palette)
         return pixel;
     }
 
+    if ((in_bpp == 16) && (out_bpp == 32))
+    {
+        pixel = in_color;
+        SPLITCOLOR16(red, green, blue, pixel);
+        pixel = COLOR24BGR(red, green, blue);
+        return pixel;
+    }
+
     if ((in_bpp == 24) && (out_bpp == 24))
     {
         return in_color;
