@@ -22,6 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "rdp.h"
 #include "xrdp_rail.h"
 #include "rdpglyph.h"
+#include "rdprandr.h"
 
 #include <signal.h>
 #include <sys/ipc.h>
@@ -930,6 +931,7 @@ rdpup_process_msg(struct stream *s)
     int y;
     int cx;
     int cy;
+    int index;
     RegionRec reg;
     BoxRec box;
 
@@ -1119,16 +1121,45 @@ rdpup_process_msg(struct stream *s)
         {
             LLOGLN(0, ("  client can not do new(color) cursor"));
         }
+
         if (g_rdpScreen.client_info.monitorCount > 0)
         {
             LLOGLN(0, ("  client can do multimon"));
             LLOGLN(0, ("  client monitor data, monitorCount= %d", g_rdpScreen.client_info.monitorCount));
+            box.x1 = g_rdpScreen.client_info.minfo[0].left;
+            box.y1 = g_rdpScreen.client_info.minfo[0].top;
+            box.x2 = g_rdpScreen.client_info.minfo[0].right;
+            box.y2 = g_rdpScreen.client_info.minfo[0].bottom;
             g_do_multimon = 1;
+            /* adjust monitor info so it's not negitive */
+            for (index = 1; index < g_rdpScreen.client_info.monitorCount; index++)
+            {
+                box.x1 = min(box.x1, g_rdpScreen.client_info.minfo[index].left);
+                box.y1 = min(box.y1, g_rdpScreen.client_info.minfo[index].top);
+                box.x2 = max(box.x2, g_rdpScreen.client_info.minfo[index].right);
+                box.y2 = max(box.y2, g_rdpScreen.client_info.minfo[index].bottom);
+            }
+            for (index = 0; index < g_rdpScreen.client_info.monitorCount; index++)
+            {
+                g_rdpScreen.client_info.minfo[index].left -= box.x1;
+                g_rdpScreen.client_info.minfo[index].top -= box.y1;
+                g_rdpScreen.client_info.minfo[index].right -= box.x1;
+                g_rdpScreen.client_info.minfo[index].bottom -= box.y1;
+                LLOGLN(0, ("    left %d top %d right %d bottom %d",
+                       g_rdpScreen.client_info.minfo[index].left,
+                       g_rdpScreen.client_info.minfo[index].top,
+                       g_rdpScreen.client_info.minfo[index].right,
+                       g_rdpScreen.client_info.minfo[index].bottom));
+            }
+            rdpRRSetRdpOutputs();
+            RRTellChanged(g_pScreen);
         }
         else
         {
             LLOGLN(0, ("  client can not do multimon"));
             g_do_multimon = 0;
+            rdpRRSetRdpOutputs();
+            RRTellChanged(g_pScreen);
         }
 
         rdpLoadLayout(&(g_rdpScreen.client_info));
