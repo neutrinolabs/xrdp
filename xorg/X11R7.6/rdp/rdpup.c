@@ -713,7 +713,6 @@ sck_can_recv(int sck, int millis)
 static int
 process_screen_size_msg(int width, int height, int bpp)
 {
-    RRScreenSizePtr pSize;
     int mmwidth;
     int mmheight;
     int bytes;
@@ -784,9 +783,6 @@ process_screen_size_msg(int width, int height, int bpp)
 
     mmwidth = PixelToMM(width);
     mmheight = PixelToMM(height);
-
-    pSize = RRRegisterSize(g_pScreen, width, height, mmwidth, mmheight);
-    RRSetCurrentConfig(g_pScreen, RR_Rotate_0, 0, pSize);
 
     if ((g_rdpScreen.width != width) || (g_rdpScreen.height != height))
     {
