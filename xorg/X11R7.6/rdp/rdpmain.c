@@ -139,6 +139,8 @@ static miPointerScreenFuncRec g_rdpPointerCursorFuncs =
     rdpPointerNewEventScreen
 };
 
+int glGetBufferSubData(void);
+
 /******************************************************************************/
 /* returns error, zero is good */
 static int
@@ -188,6 +190,11 @@ set_bpp(int bpp)
         g_redBits = 8;
         g_greenBits = 8;
         g_blueBits = 8;
+    }
+    else if (g_bpp == 33)
+    {
+        /* will never happen */
+        glGetBufferSubData();
     }
     else
     {
