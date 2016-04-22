@@ -39,8 +39,6 @@
 
 //#define USE_SYNC_FLAG
 
-static char g_fuse_mount_name[256] = "xrdp_client";
-
 /* FUSE mount point */
 char g_fuse_root_path[256] = "";
 char g_fuse_clipboard_path[256] = ""; /* for clipboard use */
@@ -238,6 +236,8 @@ struct opendir_req
     fuse_ino_t             ino;
     struct fuse_file_info *fi;
 };
+
+static char g_fuse_mount_name[256] = "xrdp_client";
 
 FIFO g_fifo_opendir;
 

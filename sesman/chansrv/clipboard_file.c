@@ -102,6 +102,7 @@ static int g_file_request_sent_type = 0;
 #define CB_EPOCH_DIFF 11644473600LL
 
 /*****************************************************************************/
+#if 0
 static tui64 APP_CC
 timeval2wintime(struct timeval *tv)
 {
@@ -113,6 +114,7 @@ timeval2wintime(struct timeval *tv)
     result += tv->tv_usec * 10;
     return result;
 }
+#endif
 
 /*****************************************************************************/
 /* this will replace %20 or any hex with the space or correct char

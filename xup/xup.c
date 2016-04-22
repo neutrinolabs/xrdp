@@ -1151,10 +1151,6 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
     int shmem_offset;
     int width;
     int height;
-    int x;
-    int y;
-    int cx;
-    int cy;
     int index;
     int rv;
     tsi16 *ldrects;

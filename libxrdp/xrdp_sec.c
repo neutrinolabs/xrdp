@@ -1814,7 +1814,6 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
 {
     int num_channels;
     int index;
-    struct mcs_channel_item *channel_item;
     struct xrdp_client_info *client_info = (struct xrdp_client_info *)NULL;
 
     client_info = &(self->rdp_layer->client_info);
