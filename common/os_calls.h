@@ -21,6 +21,10 @@
 #if !defined(OS_CALLS_H)
 #define OS_CALLS_H
 
+#if defined(HAVE_CONFIG_H)
+#include "config_ac.h"
+#endif
+
 #ifndef NULL
 #define NULL 0
 #endif
