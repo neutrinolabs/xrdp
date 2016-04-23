@@ -648,7 +648,6 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
     int len_directory = 0;
     int len_ip = 0;
     int len_dll = 0;
-    int tzone = 0;
     char tmpdata[256];
 
     /* initialize (zero out) local variables */
@@ -837,7 +836,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         {
             return 1;
         }
-        in_uint32_le(s, tzone);                             /* len of timezone */
+        in_uint8s(s, 4);                                    /* len of timezone */
         in_uint8s(s, 62);                                   /* skip */
         in_uint8s(s, 22);                                   /* skip misc. */
         in_uint8s(s, 62);                                   /* skip */

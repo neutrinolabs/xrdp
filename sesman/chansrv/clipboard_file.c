@@ -531,7 +531,6 @@ clipboard_process_file_request(struct stream *s, int clip_msg_status,
     int lindex;
     int dwFlags;
     int nPositionLow;
-    int nPositionHigh;
     int cbRequested;
     //int clipDataId;
 
@@ -541,7 +540,7 @@ clipboard_process_file_request(struct stream *s, int clip_msg_status,
     in_uint32_le(s, lindex);
     in_uint32_le(s, dwFlags);
     in_uint32_le(s, nPositionLow);
-    in_uint32_le(s, nPositionHigh);
+    in_uint8s(s, 4); /* nPositionHigh */
     in_uint32_le(s, cbRequested);
     //in_uint32_le(s, clipDataId); /* options, used when locking */
     if (dwFlags & CB_FILECONTENTS_SIZE)
