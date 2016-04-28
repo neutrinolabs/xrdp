@@ -330,7 +330,7 @@ trans_check_wait_objs(struct trans *self)
                               sizeof(self->addr) - 1);
                     g_strncpy(in_trans->port, self->port,
                               sizeof(self->port) - 1);
-
+                    g_sck_set_non_blocking(in_sck);
                     if (self->trans_conn_in(self, in_trans) != 0)
                     {
                         trans_delete(in_trans);
