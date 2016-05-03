@@ -2777,7 +2777,7 @@ server_set_mixmode(struct xrdp_mod *mod, int mixmode)
 
 /*****************************************************************************/
 int DEFAULT_CC
-server_set_brush(struct xrdp_mod *mod, int x_orgin, int y_orgin,
+server_set_brush(struct xrdp_mod *mod, int x_origin, int y_origin,
                  int style, char *pattern)
 {
     struct xrdp_painter *p;
@@ -2789,8 +2789,8 @@ server_set_brush(struct xrdp_mod *mod, int x_orgin, int y_orgin,
         return 0;
     }
 
-    p->brush.x_orgin = x_orgin;
-    p->brush.y_orgin = y_orgin;
+    p->brush.x_origin = x_origin;
+    p->brush.y_origin = y_origin;
     p->brush.style = style;
     g_memcpy(p->brush.pattern, pattern, 8);
     return 0;

@@ -508,8 +508,8 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
 
 /*****************************************************************************/
 static int APP_CC
-xrdp_caps_process_multifragmetupdate(struct xrdp_rdp *self, struct stream *s,
-                                     int len)
+xrdp_caps_process_multifragmentupdate(struct xrdp_rdp *self, struct stream *s,
+                                      int len)
 {
     int MaxRequestSize;
 
@@ -647,7 +647,7 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
                 xrdp_caps_process_window(self, s, len);
                 break;
             case 0x001A: /* 26 CAPSETTYPE_MULTIFRAGMENTUPDATE */
-                xrdp_caps_process_multifragmetupdate(self, s, len);
+                xrdp_caps_process_multifragmentupdate(self, s, len);
                 break;
             case RDP_CAPSET_BMPCODECS: /* 0x1d(29) */
                 xrdp_caps_process_codecs(self, s, len);

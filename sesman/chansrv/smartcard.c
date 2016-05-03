@@ -1873,7 +1873,7 @@ scard_send_Transmit(IRP *irp, char *context, int context_bytes,
      * u32    4 bytes    dwProtocol
      * u32    4 bytes    cbPciLength
      * u32    4 bytes    map2
-     * u32    4 byts     cbSendLength
+     * u32    4 bytes    cbSendLength
      * u32    4 bytes    map3
      * u32    4 bytes    map4
      * u32    4 bytes    map5

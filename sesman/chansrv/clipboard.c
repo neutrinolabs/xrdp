@@ -1706,7 +1706,7 @@ clipboard_event_selection_owner_notify(XEvent *xevent)
     {
         log_debug("clipboard_event_selection_owner_notify: matches g_wnd");
         log_debug("clipboard_event_selection_owner_notify: skipping, "
-              "onwer == g_wnd");
+              "owner == g_wnd");
         g_got_selection = 1;
         return 0;
     }

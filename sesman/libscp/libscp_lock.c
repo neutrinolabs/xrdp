@@ -29,7 +29,7 @@ pthread_mutexattr_t lock_fork_attr;   /* mutex attributes */
 tbus lock_fork_req;                   /* semaphore on which the process that are going to fork suspend on */
 tbus lock_fork_wait;                  /* semaphore on which the suspended process wait on */
 int lock_fork_forkers_count;          /* threads that want to fork */
-int lock_fork_blockers_count;         /* threads thar are blocking fork */
+int lock_fork_blockers_count;         /* threads that are blocking fork */
 int lock_fork_waiting_count;          /* threads suspended until the fork finishes */
 
 void DEFAULT_CC

@@ -401,7 +401,7 @@ xrdp_rdp_process_data(struct xrdp_rdp *self, struct stream *s);
 int APP_CC
 xrdp_rdp_disconnect(struct xrdp_rdp *self);
 int APP_CC
-xrdp_rdp_send_deactive(struct xrdp_rdp *self);
+xrdp_rdp_send_deactivate(struct xrdp_rdp *self);
 
 /* xrdp_orders.c */
 struct xrdp_orders * APP_CC

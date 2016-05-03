@@ -971,7 +971,7 @@ libxrdp_reset(struct xrdp_session *session,
     }
 
     /* shut down the rdp client */
-    if (xrdp_rdp_send_deactive((struct xrdp_rdp *)session->rdp) != 0)
+    if (xrdp_rdp_send_deactivate((struct xrdp_rdp *)session->rdp) != 0)
     {
         return 1;
     }

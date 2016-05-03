@@ -558,9 +558,9 @@ rdpup_set_cursor(short x, short y, char* cur_data, char* cur_mask);
 int
 rdpup_set_cursor_ex(short x, short y, char *cur_data, char *cur_mask, int bpp);
 int
-rdpup_create_os_surface(int rdpindexd, int width, int height);
+rdpup_create_os_surface(int rdpindex, int width, int height);
 int
-rdpup_create_os_surface_bpp(int rdpindexd, int width, int height, int bpp);
+rdpup_create_os_surface_bpp(int rdpindex, int width, int height, int bpp);
 int
 rdpup_switch_os_surface(int rdpindex);
 int

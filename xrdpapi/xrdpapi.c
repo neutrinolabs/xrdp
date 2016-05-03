@@ -247,7 +247,7 @@ WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
         return -1;
     }
 
-    LLOGLN(10, ("WTSVirtualChannelWrite: mysend() reted %d", rv));
+    LLOGLN(10, ("WTSVirtualChannelWrite: mysend() returned %d", rv));
 
     if (rv >= 0)
     {

@@ -287,7 +287,7 @@ struct mod
   int (*server_set_bgcolor)(struct mod* v, int bgcolor);
   int (*server_set_opcode)(struct mod* v, int opcode);
   int (*server_set_mixmode)(struct mod* v, int mixmode);
-  int (*server_set_brush)(struct mod* v, int x_orgin, int y_orgin,
+  int (*server_set_brush)(struct mod* v, int x_origin, int y_origin,
                           int style, char* pattern);
   int (*server_set_pen)(struct mod* v, int style,
                         int width);

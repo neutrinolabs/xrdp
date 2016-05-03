@@ -55,7 +55,7 @@ rdp_tcp_recv(struct rdp_tcp *self, struct stream *s, int len)
 {
     int rcvd;
 
-    DEBUG(("    in rdp_tcp_recv gota get %d bytes on sck %d",
+    DEBUG(("    in rdp_tcp_recv will get %d bytes on sck %d",
            len, self->sck));
 
     if (self->sck_closed)
@@ -115,7 +115,7 @@ rdp_tcp_send(struct rdp_tcp *self, struct stream *s)
     }
 
     len = s->end - s->data;
-    DEBUG(("    in rdp_tcp_send gota send %d bytes on sck %d", len,
+    DEBUG(("    in rdp_tcp_send will send %d bytes on sck %d", len,
            self->sck));
     total = 0;
 

@@ -594,9 +594,9 @@ xrdp_wm_init(struct xrdp_wm *self)
             {
                 /* if no domain is passed, and no autorun in xrdp.ini,
                    use the first item in the xrdp.ini
-                   file thats not named
+                   file that's not named
                    'globals' or 'Logging' or 'channels' */
-                /* TODO: change this and have a 'autologin'
+                /* TODO: change this and have an 'autologin'
                    line in globals section */
                 file_read_sections(fd, names);
                 for (index = 0; index < names->count; index++)
@@ -810,8 +810,8 @@ xrdp_wm_xor_pat(struct xrdp_wm *self, int x, int y, int cx, int cy)
     self->painter->brush.pattern[5] = 0x55;
     self->painter->brush.pattern[6] = 0xaa;
     self->painter->brush.pattern[7] = 0x55;
-    self->painter->brush.x_orgin = 0;
-    self->painter->brush.x_orgin = 0;
+    self->painter->brush.x_origin = 0;
+    self->painter->brush.x_origin = 0;
     self->painter->brush.style = 3;
     self->painter->bg_color = self->black;
     self->painter->fg_color = self->white;
@@ -1763,7 +1763,7 @@ xrdp_wm_login_mode_changed(struct xrdp_wm *self)
         /* this is the initial state of the login window */
         xrdp_wm_set_login_mode(self, 1); /* put the wm in login mode */
         list_clear(self->log);
-        xrdp_wm_delete_all_childs(self);
+        xrdp_wm_delete_all_children(self);
         self->dragging = 0;
         xrdp_wm_init(self);
     }
@@ -1772,7 +1772,7 @@ xrdp_wm_login_mode_changed(struct xrdp_wm *self)
         if (xrdp_mm_connect(self->mm) == 0)
         {
             xrdp_wm_set_login_mode(self, 3); /* put the wm in connected mode */
-            xrdp_wm_delete_all_childs(self);
+            xrdp_wm_delete_all_children(self);
             self->dragging = 0;
         }
         else
@@ -1782,7 +1782,7 @@ xrdp_wm_login_mode_changed(struct xrdp_wm *self)
     }
     else if (self->login_mode == 10)
     {
-        xrdp_wm_delete_all_childs(self);
+        xrdp_wm_delete_all_children(self);
         self->dragging = 0;
         xrdp_wm_set_login_mode(self, 11);
     }

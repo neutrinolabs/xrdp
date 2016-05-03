@@ -136,7 +136,7 @@ xrdp_wm_pointer(struct xrdp_wm* self, char* data, char* mask, int x, int y,
 int
 callback(long id, int msg, long param1, long param2, long param3, long param4);
 int APP_CC
-xrdp_wm_delete_all_childs(struct xrdp_wm* self);
+xrdp_wm_delete_all_children(struct xrdp_wm* self);
 int APP_CC
 xrdp_wm_show_log(struct xrdp_wm *self);
 int APP_CC
@@ -439,7 +439,7 @@ server_set_opcode(struct xrdp_mod* mod, int opcode);
 int DEFAULT_CC
 server_set_mixmode(struct xrdp_mod* mod, int mixmode);
 int DEFAULT_CC
-server_set_brush(struct xrdp_mod* mod, int x_orgin, int y_orgin,
+server_set_brush(struct xrdp_mod* mod, int x_origin, int y_origin,
                  int style, char* pattern);
 int DEFAULT_CC
 server_set_pen(struct xrdp_mod* mod, int style, int width);
