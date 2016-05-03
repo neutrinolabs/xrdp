@@ -63,11 +63,13 @@ xcommon_error_handler(Display *dis, XErrorEvent *xer)
 /* The X server had an internal error.  This is the last function called.
    Do any cleanup that needs to be done on exit, like removing temporary files.
    Don't worry about memory leaks */
+#if 0
 static int DEFAULT_CC
 xcommon_fatal_handler(Display *dis)
 {
     return 0;
 }
+#endif
 
 /*****************************************************************************/
 /* returns time in milliseconds

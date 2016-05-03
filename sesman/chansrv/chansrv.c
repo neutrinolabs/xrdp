@@ -756,7 +756,6 @@ int DEFAULT_CC
 my_trans_data_in(struct trans *trans)
 {
     struct stream *s = (struct stream *)NULL;
-    int id = 0;
     int size = 0;
     int error = 0;
 
@@ -772,7 +771,7 @@ my_trans_data_in(struct trans *trans)
 
     LOGM((LOG_LEVEL_DEBUG, "my_trans_data_in:"));
     s = trans_get_in_s(trans);
-    in_uint32_le(s, id);
+    in_uint8s(s, 4); /* id */
     in_uint32_le(s, size);
     error = trans_force_read(trans, size - 8);
 

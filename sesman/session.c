@@ -412,7 +412,7 @@ session_start_fork(int width, int height, int bpp, char *username,
     int pampid = 0;
     int xpid = 0;
     int i = 0;
-    char **xserver; /* absolute/relative path to Xorg/X11rdp/Xvnc */
+    char *xserver; /* absolute/relative path to Xorg/X11rdp/Xvnc */
     char geometry[32];
     char depth[32];
     char screen[32]; /* display number */
@@ -653,9 +653,9 @@ session_start_fork(int width, int height, int bpp, char *username,
                     xserver_params = list_create();
                     xserver_params->auto_free = 1;
 
-		    /* get path of Xorg from config */
-		    xserver = g_strdup(list_get_item(g_cfg->xorg_params, 0));
-		    list_remove_item(g_cfg->xorg_params, 0);
+                    /* get path of Xorg from config */
+                    xserver = g_strdup((const char *)list_get_item(g_cfg->xorg_params, 0));
+                    list_remove_item(g_cfg->xorg_params, 0);
 
                     /* these are the must have parameters */
                     list_add_item(xserver_params, (tintptr) g_strdup(xserver));
@@ -687,9 +687,9 @@ session_start_fork(int width, int height, int bpp, char *username,
                     xserver_params = list_create();
                     xserver_params->auto_free = 1;
 
-		    /* get path of Xvnc from config */
-		    xserver = g_strdup(list_get_item(g_cfg->vnc_params, 0));
-		    list_remove_item(g_cfg->vnc_params, 0);
+                    /* get path of Xvnc from config */
+                    xserver = g_strdup((const char *)list_get_item(g_cfg->vnc_params, 0));
+                    list_remove_item(g_cfg->vnc_params, 0);
 
                     /* these are the must have parameters */
                     list_add_item(xserver_params, (tintptr)g_strdup(xserver));
@@ -717,9 +717,9 @@ session_start_fork(int width, int height, int bpp, char *username,
                     xserver_params = list_create();
                     xserver_params->auto_free = 1;
 
-		    /* get path of X11rdp from config */
-		    xserver = g_strdup(list_get_item(g_cfg->rdp_params, 0));
-		    list_remove_item(g_cfg->rdp_params, 0);
+                    /* get path of X11rdp from config */
+                    xserver = g_strdup((const char *)list_get_item(g_cfg->rdp_params, 0));
+                    list_remove_item(g_cfg->rdp_params, 0);
 
                     /* these are the must have parameters */
                     list_add_item(xserver_params, (tintptr)g_strdup(xserver));

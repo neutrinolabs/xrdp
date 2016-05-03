@@ -962,7 +962,6 @@ xrdp_rdp_process_data_sync(struct xrdp_rdp *self)
 static int APP_CC
 xrdp_rdp_process_screen_update(struct xrdp_rdp *self, struct stream *s)
 {
-    int op;
     int left;
     int top;
     int right;
@@ -970,7 +969,7 @@ xrdp_rdp_process_screen_update(struct xrdp_rdp *self, struct stream *s)
     int cx;
     int cy;
 
-    in_uint32_le(s, op);
+    in_uint8s(s, 4); /* op */
     in_uint16_le(s, left);
     in_uint16_le(s, top);
     in_uint16_le(s, right);
@@ -1129,16 +1128,13 @@ xrdp_rdp_process_frame_ack(struct xrdp_rdp *self, struct stream *s)
 int APP_CC
 xrdp_rdp_process_data(struct xrdp_rdp *self, struct stream *s)
 {
-    int len;
     int data_type;
-    int ctype;
-    int clen;
 
     in_uint8s(s, 6);
-    in_uint16_le(s, len);
+    in_uint8s(s, 2); /* len */
     in_uint8(s, data_type);
-    in_uint8(s, ctype);
-    in_uint16_le(s, clen);
+    in_uint8s(s, 1); /* ctype */
+    in_uint8s(s, 2); /* clen */
     DEBUG(("xrdp_rdp_process_data code %d", data_type));
 
     switch (data_type)

@@ -225,7 +225,6 @@ rdp_orders_process_raw_bmpcache(struct rdp_orders *self, struct stream *s,
                                 int flags)
 {
     int cache_idx = 0;
-    int bufsize = 0;
     int cache_id = 0;
     int width = 0;
     int height = 0;
@@ -244,7 +243,7 @@ rdp_orders_process_raw_bmpcache(struct rdp_orders *self, struct stream *s,
     in_uint8(s, height);
     in_uint8(s, bpp);
     Bpp = (bpp + 7) / 8;
-    in_uint16_le(s, bufsize);
+    in_uint8s(s, 2); /* bufsize */
     in_uint16_le(s, cache_idx);
     inverted = (char *)g_malloc(width * height * Bpp, 0);
 
@@ -326,8 +325,6 @@ rdp_orders_process_bmpcache(struct rdp_orders *self, struct stream *s,
     int bpp = 0;
     int Bpp = 0;
     int bufsize = 0;
-    int row_size = 0;
-    int final_size = 0;
     struct rdp_bitmap *bitmap = (struct rdp_bitmap *)NULL;
     struct stream *rec_s = (struct stream *)NULL;
 
@@ -348,8 +345,8 @@ rdp_orders_process_bmpcache(struct rdp_orders *self, struct stream *s,
     {
         in_uint8s(s, 2); /* pad */
         in_uint16_le(s, size);
-        in_uint16_le(s, row_size);
-        in_uint16_le(s, final_size);
+        in_uint8s(s, 2); /* row_size */
+        in_uint8s(s, 2); /* final_size */
     }
 
     in_uint8p(s, data, size);
