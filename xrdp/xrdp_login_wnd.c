@@ -797,7 +797,6 @@ load_xrdp_config(struct xrdp_config *config, int bpp)
     globals->ls_bg_color = HCOLOR(bpp, xrdp_wm_htoi("dedede"));
     globals->ls_width = 350;
     globals->ls_height = 350;
-    globals->ls_bg_color = 0xdedede;
     globals->ls_logo_x_pos = 63;
     globals->ls_logo_y_pos = 50;
     globals->ls_label_x_pos = 30;
