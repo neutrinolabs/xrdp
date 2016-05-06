@@ -99,7 +99,7 @@ xrdp_iso_negotiate_security(struct xrdp_iso *self)
         default:
             if (self->requestedProtocol & PROTOCOL_SSL)
             {
-                /* thats a patch since we don't support CredSSP for now */
+                /* that's a patch since we don't support CredSSP for now */
                 self->selectedProtocol = PROTOCOL_SSL;
             }
             else

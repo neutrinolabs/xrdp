@@ -205,7 +205,7 @@ int drawFont(int count, char *msg)
     }
     else
     {
-        printf("XListFonts() reted NULL\n");
+        printf("XListFonts() returned NULL\n");
     }
 
 #endif

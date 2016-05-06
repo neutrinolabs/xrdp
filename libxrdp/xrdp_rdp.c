@@ -1155,7 +1155,7 @@ xrdp_rdp_process_data(struct xrdp_rdp *self, struct stream *s)
             xrdp_rdp_process_screen_update(self, s);
             break;
         case 35: /* 35(0x23) */
-            /* 35 ?? this comes when minimuzing a full screen mstsc.exe 2600 */
+            /* 35 ?? this comes when minimizing a full screen mstsc.exe 2600 */
             /* I think this is saying the client no longer wants screen */
             /* updates and it will issue a 33 above to catch up */
             /* so minimized apps don't take bandwidth */
@@ -1193,18 +1193,18 @@ xrdp_rdp_disconnect(struct xrdp_rdp *self)
 
 /*****************************************************************************/
 int APP_CC
-xrdp_rdp_send_deactive(struct xrdp_rdp *self)
+xrdp_rdp_send_deactivate(struct xrdp_rdp *self)
 {
     struct stream *s;
 
-    DEBUG(("in xrdp_rdp_send_deactive"));
+    DEBUG(("in xrdp_rdp_send_deactivate"));
     make_stream(s);
     init_stream(s, 8192);
 
     if (xrdp_rdp_init(self, s) != 0)
     {
         free_stream(s);
-        DEBUG(("out xrdp_rdp_send_deactive error"));
+        DEBUG(("out xrdp_rdp_send_deactivate error"));
         return 1;
     }
 
@@ -1213,11 +1213,11 @@ xrdp_rdp_send_deactive(struct xrdp_rdp *self)
     if (xrdp_rdp_send(self, s, RDP_PDU_DEACTIVATE) != 0)
     {
         free_stream(s);
-        DEBUG(("out xrdp_rdp_send_deactive error"));
+        DEBUG(("out xrdp_rdp_send_deactivate error"));
         return 1;
     }
 
     free_stream(s);
-    DEBUG(("out xrdp_rdp_send_deactive"));
+    DEBUG(("out xrdp_rdp_send_deactivate"));
     return 0;
 }

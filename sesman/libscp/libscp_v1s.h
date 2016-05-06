@@ -48,7 +48,7 @@ scp_v1s_accept(struct SCP_CONNECTION* c, struct SCP_SESSION** s, int skipVchk);
  *
  * @brief denies connection to sesman
  * @param c connection descriptor
- * @param reason pointer to a string containinge the reason for denying connection
+ * @param reason pointer to a string containing the reason for denying connection
  *
  */
 /* 002 */

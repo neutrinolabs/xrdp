@@ -149,7 +149,7 @@ internal_log_start(struct log_config *l_cfg)
         return ret;
     }
 
-    /* if progname is NULL, we ureturn error */
+    /* if progname is NULL, we return error */
     if (0 == l_cfg->program_name)
     {
         g_writeln("program_name not properly assigned");

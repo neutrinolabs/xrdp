@@ -27,8 +27,8 @@
 
 struct xrdp_brush
 {
-    int x_orgin;
-    int y_orgin;
+    int x_origin;
+    int y_origin;
     int style;
     char pattern[8];
 };

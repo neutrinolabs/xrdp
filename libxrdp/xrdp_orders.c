@@ -1014,18 +1014,18 @@ xrdp_orders_pat_blt(struct xrdp_orders *self, int x, int y,
         brush = &blank_brush;
     }
 
-    if (brush->x_orgin != self->orders_state.pat_blt_brush.x_orgin)
+    if (brush->x_origin != self->orders_state.pat_blt_brush.x_origin)
     {
         present |= 0x0080;
-        out_uint8(self->out_s, brush->x_orgin);
-        self->orders_state.pat_blt_brush.x_orgin = brush->x_orgin;
+        out_uint8(self->out_s, brush->x_origin);
+        self->orders_state.pat_blt_brush.x_origin = brush->x_origin;
     }
 
-    if (brush->y_orgin != self->orders_state.pat_blt_brush.y_orgin)
+    if (brush->y_origin != self->orders_state.pat_blt_brush.y_origin)
     {
         present |= 0x0100;
-        out_uint8(self->out_s, brush->y_orgin);
-        self->orders_state.pat_blt_brush.y_orgin = brush->y_orgin;
+        out_uint8(self->out_s, brush->y_origin);
+        self->orders_state.pat_blt_brush.y_origin = brush->y_origin;
     }
 
     if (brush->style != self->orders_state.pat_blt_brush.style)

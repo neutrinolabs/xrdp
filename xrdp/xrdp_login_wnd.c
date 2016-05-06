@@ -96,7 +96,7 @@ xrdp_wm_popup_notify(struct xrdp_bitmap *wnd,
 
 /*****************************************************************************/
 int APP_CC
-xrdp_wm_delete_all_childs(struct xrdp_wm *self)
+xrdp_wm_delete_all_children(struct xrdp_wm *self)
 {
     int index;
     struct xrdp_bitmap *b;
@@ -228,7 +228,7 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap *wnd)
             wm->mm->login_names->auto_free = 1;
             wm->mm->login_values = list_create();
             wm->mm->login_values->auto_free = 1;
-            /* gota copy these cause dialog gets freed */
+            /* will copy these cause dialog gets freed */
             list_append_list_strdup(mod_data->names, wm->mm->login_names, 0);
             list_append_list_strdup(mod_data->values, wm->mm->login_values, 0);
             xrdp_wm_set_login_mode(wm, 2);
@@ -257,7 +257,7 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap *wnd)
 * 
 * Users can create shortcuts where this information is configured. These 
 * shortcuts simplifies login.
-* @param orginalDomainInfo indata to this function
+* @param originalDomainInfo indata to this function
 * @param comboMax the max number of combo choices
 * @param decode if true then we perform decoding of combo choice
 * @param resultBuffer must be pre allocated before calling this function.
@@ -266,7 +266,7 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap *wnd)
 * 0 if the user does not prefer any choice.
 */
 static int APP_CC
-xrdp_wm_parse_domain_information(char *orginalDomainInfo, int comboMax,
+xrdp_wm_parse_domain_information(char *originalDomainInfo, int comboMax,
                                  int decode, char *resultBuffer)
 {
     int ret;
@@ -280,7 +280,7 @@ xrdp_wm_parse_domain_information(char *orginalDomainInfo, int comboMax,
     ret = 0; /* default return value */
     /* resultBuffer assumed to be 256 chars */
     g_memset(resultBuffer, 0, 256);
-    if (orginalDomainInfo[0] == '_')
+    if (originalDomainInfo[0] == '_')
     {
         /* we try to locate a number indicating what combobox index the user
          * prefer the information is loaded from domain field, from the client
@@ -289,7 +289,7 @@ xrdp_wm_parse_domain_information(char *orginalDomainInfo, int comboMax,
          * Underscore is a valid name in the domain.
          * Invalid chars are ignored in microsoft client therefore we use '_' 
          * again. this sec '__' contains the split for index.*/
-        pos = g_pos(&orginalDomainInfo[1], "__");
+        pos = g_pos(&originalDomainInfo[1], "__");
         if (pos > 0)
         {
             /* an index is found we try to use it
@@ -298,7 +298,7 @@ xrdp_wm_parse_domain_information(char *orginalDomainInfo, int comboMax,
             {
                 g_memset(index, 0, 2);
                 /* we just accept values 0-9  (one figure) */
-                g_strncpy(index, &orginalDomainInfo[pos + 3], 1);
+                g_strncpy(index, &originalDomainInfo[pos + 3], 1);
                 comboxindex = g_htoi(index);
                 g_snprintf(debugstr, 255, "Value of index (as char): %s "
                            "(converted) : %d (max) : %d", index, comboxindex,
@@ -314,12 +314,12 @@ xrdp_wm_parse_domain_information(char *orginalDomainInfo, int comboMax,
                 }
             }
             /* pos limit the String to only contain the IP */
-            g_strncpy(resultBuffer, &orginalDomainInfo[1], pos); 
+            g_strncpy(resultBuffer, &originalDomainInfo[1], pos); 
         }
         else
         {
             /* log_message(LOG_LEVEL_DEBUG, "domain does not contain _"); */
-            g_strncpy(resultBuffer, &orginalDomainInfo[1], 255);
+            g_strncpy(resultBuffer, &originalDomainInfo[1], 255);
         }
     }
     return ret;
@@ -344,7 +344,7 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
 
     username_set = 0;
 
-    /* free labels and edits, cause we gota create them */
+    /* free labels and edits, cause we will create them */
     /* creation or combo changed */
     for (index = 100; index < 200; index++)
     {
@@ -791,13 +791,12 @@ load_xrdp_config(struct xrdp_config *config, int bpp)
 
     globals = &config->cfg_globals;
 
-    /* set default values incase we can't get them from xrdp.ini file */
+    /* set default values in case we can't get them from xrdp.ini file */
     globals->ini_version = 1;
     globals->ls_top_window_bg_color = HCOLOR(bpp, xrdp_wm_htoi("009cb5"));
     globals->ls_bg_color = HCOLOR(bpp, xrdp_wm_htoi("dedede"));
     globals->ls_width = 350;
     globals->ls_height = 350;
-    globals->ls_bg_color = 0xdedede;
     globals->ls_logo_x_pos = 63;
     globals->ls_logo_y_pos = 50;
     globals->ls_label_x_pos = 30;

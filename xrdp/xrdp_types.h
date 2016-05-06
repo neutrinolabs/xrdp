@@ -70,7 +70,7 @@ struct xrdp_mod
   int (*server_set_bgcolor)(struct xrdp_mod* v, int bgcolor);
   int (*server_set_opcode)(struct xrdp_mod* v, int opcode);
   int (*server_set_mixmode)(struct xrdp_mod* v, int mixmode);
-  int (*server_set_brush)(struct xrdp_mod* v, int x_orgin, int y_orgin,
+  int (*server_set_brush)(struct xrdp_mod* v, int x_origin, int y_origin,
                           int style, char* pattern);
   int (*server_set_pen)(struct xrdp_mod* v, int style,
                         int width);

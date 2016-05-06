@@ -1127,7 +1127,7 @@ rdpup_process_msg(struct stream *s)
             box.x2 = g_rdpScreen.client_info.minfo[0].right;
             box.y2 = g_rdpScreen.client_info.minfo[0].bottom;
             g_do_multimon = 1;
-            /* adjust monitor info so it's not negitive */
+            /* adjust monitor info so it's not negative */
             for (index = 1; index < g_rdpScreen.client_info.monitorCount; index++)
             {
                 box.x1 = min(box.x1, g_rdpScreen.client_info.minfo[index].left);
