@@ -668,6 +668,7 @@ int APP_CC
 g_tcp_connect(int sck, const char *address, const char *port)
 {
     int res = 0;
+    char errorMsg[256];
     struct addrinfo p;
     struct addrinfo *h = (struct addrinfo *)NULL;
     struct addrinfo *rp = (struct addrinfo *)NULL;
@@ -693,6 +694,12 @@ g_tcp_connect(int sck, const char *address, const char *port)
     {
         res = getaddrinfo(address, port, &p, &h);
     }
+    if (res != 0)
+    {
+        snprintf(errorMsg, 255, "g_tcp_connect: getaddrinfo() failed: %s",
+                 gai_strerror(res));
+        log_message(LOG_LEVEL_ERROR, errorMsg);
+    }
     if (res > -1)
     {
         if (h != NULL)
@@ -715,31 +722,31 @@ g_tcp_connect(int sck, const char *address, const char *port)
 int APP_CC
 g_tcp_connect(int sck, const char* address, const char* port)
 {
-  struct sockaddr_in s;
-  struct hostent* h;
+    struct sockaddr_in s;
+    struct hostent* h;
 
-  g_memset(&s, 0, sizeof(struct sockaddr_in));
-  s.sin_family = AF_INET;
-  s.sin_port = htons((tui16)atoi(port));
-  s.sin_addr.s_addr = inet_addr(address);
-  if (s.sin_addr.s_addr == INADDR_NONE)
-  {
-    h = gethostbyname(address);
-    if (h != 0)
+    g_memset(&s, 0, sizeof(struct sockaddr_in));
+    s.sin_family = AF_INET;
+    s.sin_port = htons((tui16)atoi(port));
+    s.sin_addr.s_addr = inet_addr(address);
+    if (s.sin_addr.s_addr == INADDR_NONE)
     {
-      if (h->h_name != 0)
-      {
-        if (h->h_addr_list != 0)
+        h = gethostbyname(address);
+        if (h != 0)
         {
-          if ((*(h->h_addr_list)) != 0)
-          {
-            s.sin_addr.s_addr = *((int*)(*(h->h_addr_list)));
-          }
+            if (h->h_name != 0)
+            {
+                if (h->h_addr_list != 0)
+                {
+                    if ((*(h->h_addr_list)) != 0)
+                    {
+                        s.sin_addr.s_addr = *((int*)(*(h->h_addr_list)));
+                    }
+                }
+            }
         }
-      }
     }
-  }
-  return connect(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
+    return connect(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
 }
 #endif
 
@@ -896,13 +903,13 @@ g_tcp_bind(int sck, const char *port)
 int APP_CC
 g_tcp_bind(int sck, const char* port)
 {
-  struct sockaddr_in s;
+    struct sockaddr_in s;
 
-  memset(&s, 0, sizeof(struct sockaddr_in));
-  s.sin_family = AF_INET;
-  s.sin_port = htons((tui16)atoi(port));
-  s.sin_addr.s_addr = INADDR_ANY;
-  return bind(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
+    memset(&s, 0, sizeof(struct sockaddr_in));
+    s.sin_family = AF_INET;
+    s.sin_port = htons((tui16)atoi(port));
+    s.sin_addr.s_addr = INADDR_ANY;
+    return bind(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
 }
 #endif
 
@@ -939,17 +946,17 @@ g_tcp_bind_address(int sck, const char *port, const char *address)
 int APP_CC
 g_tcp_bind_address(int sck, const char* port, const char* address)
 {
-  struct sockaddr_in s;
+    struct sockaddr_in s;
 
-  memset(&s, 0, sizeof(struct sockaddr_in));
-  s.sin_family = AF_INET;
-  s.sin_port = htons((tui16)atoi(port));
-  s.sin_addr.s_addr = INADDR_ANY;
-  if (inet_aton(address, &s.sin_addr) < 0)
-  {
-    return -1; /* bad address */
-  }
-  return bind(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
+    memset(&s, 0, sizeof(struct sockaddr_in));
+    s.sin_family = AF_INET;
+    s.sin_port = htons((tui16)atoi(port));
+    s.sin_addr.s_addr = INADDR_ANY;
+    if (inet_aton(address, &s.sin_addr) < 0)
+    {
+        return -1; /* bad address */
+    }
+    return bind(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
 }
 #endif
 
@@ -979,8 +986,8 @@ g_tcp_accept(int sck)
     ret = accept(sck, (struct sockaddr *)&s, &i);
     if(ret>0)
     {
-        snprintf(ipAddr,255,"A connection received from: %s port %d"
-        ,inet_ntoa(s.sin_addr),ntohs(s.sin_port));
+        snprintf(ipAddr, 255, "A connection received from: %s port %d",
+                 inet_ntoa(s.sin_addr), ntohs(s.sin_port));
         log_message(LOG_LEVEL_INFO,ipAddr);
     }
     return ret ;
