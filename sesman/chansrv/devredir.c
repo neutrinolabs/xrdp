@@ -890,21 +890,13 @@ dev_redir_proc_query_dir_response(IRP *irp,
     XRDP_INODE *xinode;
 
     tui32 Length;
-    tui32 NextEntryOffset;
     tui64 CreationTime;
     tui64 LastAccessTime;
     tui64 LastWriteTime;
-    tui64 ChangeTime;
     tui64 EndOfFile;
     tui32 FileAttributes;
     tui32 FileNameLength;
     tui32 status;
-
-#ifdef USE_SHORT_NAMES_IN_DIR_LISTING
-    tui32 EaSize;
-    tui8  ShortNameLength;
-    tui8  Reserved;
-#endif
 
     char  filename[256];
     int   i = 0;
@@ -935,21 +927,21 @@ dev_redir_proc_query_dir_response(IRP *irp,
     {
         log_debug("processing FILE_DIRECTORY_INFORMATION structs");
 
-        xstream_rd_u32_le(s_in, NextEntryOffset);
+        xstream_seek(s_in, 4);  /* NextEntryOffset */
         xstream_seek(s_in, 4);  /* FileIndex */
         xstream_rd_u64_le(s_in, CreationTime);
         xstream_rd_u64_le(s_in, LastAccessTime);
         xstream_rd_u64_le(s_in, LastWriteTime);
-        xstream_rd_u64_le(s_in, ChangeTime);
+        xstream_seek(s_in, 8);  /* ChangeTime */
         xstream_rd_u64_le(s_in, EndOfFile);
         xstream_seek(s_in, 8);  /* AllocationSize */
         xstream_rd_u32_le(s_in, FileAttributes);
         xstream_rd_u32_le(s_in, FileNameLength);
 
 #ifdef USE_SHORT_NAMES_IN_DIR_LISTING
-        xstream_rd_u32_le(s_in, EaSize);
-        xstream_rd_u8(s_in, ShortNameLength);
-        xstream_rd_u8(s_in, Reserved);
+        xstream_seek(s_in, 4); /* EaSize */
+        xstream_seek(s_in, 1); /* ShortNameLength */
+        xstream_seek(s_in, 1); /* Reserved */
         xstream_seek(s_in, 23);  /* ShortName in Unicode */
 #endif
         devredir_cvt_from_unicode_len(filename, s_in->p, FileNameLength);
@@ -959,11 +951,9 @@ dev_redir_proc_query_dir_response(IRP *irp,
 #else
         i += 64 + FileNameLength;
 #endif
-        //log_debug("NextEntryOffset:   0x%x", NextEntryOffset);
         //log_debug("CreationTime:      0x%llx", CreationTime);
         //log_debug("LastAccessTime:    0x%llx", LastAccessTime);
         //log_debug("LastWriteTime:     0x%llx", LastWriteTime);
-        //log_debug("ChangeTime:        0x%llx", ChangeTime);
         //log_debug("EndOfFile:         %lld", EndOfFile);
         //log_debug("FileAttributes:    0x%x", FileAttributes);
 #ifdef USE_SHORT_NAMES_IN_DIR_LISTING
