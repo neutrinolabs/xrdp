@@ -1236,7 +1236,7 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
     g_free(lcrects);
     g_free(ldrects);
 
-    return 0;
+    return rv;
 }
 
 /******************************************************************************/
