@@ -1474,7 +1474,6 @@ devredir_cvt_from_unicode_len(char *path, char *unicode, int len)
     char *dest;
     char *dest_saved;
     char *src;
-    int   rv;
     int   i;
     int   bytes_to_alloc;
     int   max_bytes;
@@ -1499,7 +1498,7 @@ devredir_cvt_from_unicode_len(char *path, char *unicode, int len)
     max_bytes = wcstombs(NULL, (wchar_t *) dest_saved, 0);
     if (max_bytes > 0)
     {
-        rv = wcstombs(path, (wchar_t *) dest_saved, max_bytes);
+        wcstombs(path, (wchar_t *) dest_saved, max_bytes);
         path[max_bytes] = 0;
     }
 
