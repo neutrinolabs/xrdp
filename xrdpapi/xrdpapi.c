@@ -480,17 +480,11 @@ get_display_num_from_display(char *display_text)
 {
     int index;
     int mode;
-    int host_index;
     int disp_index;
-    int scre_index;
-    char host[256];
     char disp[256];
-    char scre[256];
 
     index = 0;
-    host_index = 0;
     disp_index = 0;
-    scre_index = 0;
     mode = 0;
 
     while (display_text[index] != 0)
@@ -503,27 +497,15 @@ get_display_num_from_display(char *display_text)
         {
             mode = 2;
         }
-        else if (mode == 0)
-        {
-            host[host_index] = display_text[index];
-            host_index++;
-        }
         else if (mode == 1)
         {
             disp[disp_index] = display_text[index];
             disp_index++;
         }
-        else if (mode == 2)
-        {
-            scre[scre_index] = display_text[index];
-            scre_index++;
-        }
 
         index++;
     }
 
-    host[host_index] = 0;
     disp[disp_index] = 0;
-    scre[scre_index] = 0;
     return atoi(disp);
 }
