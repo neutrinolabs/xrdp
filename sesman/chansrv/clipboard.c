@@ -2382,6 +2382,11 @@ clipboard_event_property_notify(XEvent *xevent)
                                 AnyPropertyType, &actual_type_return, &actual_format_return,
                                 &nitems_returned, &bytes_left, &data);
 
+        if (rv != Success)
+        {
+            return 1;
+        }
+
         if (data != 0)
         {
             XFree(data);
@@ -2424,6 +2429,11 @@ clipboard_event_property_notify(XEvent *xevent)
             rv = XGetWindowProperty(g_display, g_wnd, g_clip_s2c.property, 0, bytes_left, 0,
                                     AnyPropertyType, &actual_type_return, &actual_format_return,
                                     &nitems_returned, &bytes_left, &data);
+
+            if (rv != Success)
+            {
+                return 1;
+            }
 
             format_in_bytes = FORMAT_TO_BYTES(actual_format_return);
             new_data_len = nitems_returned * format_in_bytes;
