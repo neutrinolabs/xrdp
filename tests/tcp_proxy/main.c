@@ -26,7 +26,7 @@
 #include <errno.h>
 #include <locale.h>
 #include <netdb.h>
-#include <sys/types.h> 
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -109,7 +109,7 @@ g_hexdump(char *p, int len)
             g_printf("%c", (line[i] >= 0x20 && line[i] < 0x7f) ? line[i] : '.');
         }
 
-        g_writeln("");
+        g_writeln("%s", "");
         offset += thisline;
         line += thisline;
     }
@@ -399,13 +399,6 @@ g_signal_user_interrupt(void (*func)(int))
 
 /*****************************************************************************/
 static void APP_CC
-g_signal_kill(void (*func)(int))
-{
-    signal(SIGKILL, func);
-}
-
-/*****************************************************************************/
-static void APP_CC
 g_signal_terminate(void (*func)(int))
 {
     signal(SIGTERM, func);
@@ -454,7 +447,7 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
         g_writeln("bind failed");
     }
 
-    /* listen for an incomming connection */
+    /* listen for an incoming connection */
     if (error == 0)
     {
         error = g_tcp_listen(lis_sck);
@@ -465,7 +458,7 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
         }
     }
 
-    /* accept an incomming connection */
+    /* accept an incoming connection */
     if (error == 0)
     {
         while ((!g_terminated) && (error == 0))
@@ -523,7 +516,7 @@ main_loop(char *local_port, char *remote_ip, char *remote_port, int hexdump)
 
             if (i > 99)
             {
-                g_writeln("timout connecting");
+                g_writeln("timeout connecting");
                 error = 1;
             }
 
@@ -685,7 +678,6 @@ main(int argc, char **argv)
 
     g_init("tcp_proxy");
     g_signal_user_interrupt(proxy_shutdown); /* SIGINT  */
-    g_signal_kill(proxy_shutdown);           /* SIGKILL */
     g_signal_usr1(clear_counters);           /* SIGUSR1 */
     g_signal_terminate(proxy_shutdown);      /* SIGTERM */
 

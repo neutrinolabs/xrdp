@@ -21,11 +21,36 @@
 #if !defined(OS_CALLS_H)
 #define OS_CALLS_H
 
+#if defined(HAVE_CONFIG_H)
+#include "config_ac.h"
+#endif
+
 #ifndef NULL
 #define NULL 0
 #endif
 
 #include "arch.h"
+
+#define g_tcp_can_recv g_sck_can_recv
+#define g_tcp_can_send g_sck_can_send
+#define g_tcp_recv g_sck_recv
+#define g_tcp_send g_sck_send
+#define g_tcp_close g_sck_close
+#define g_tcp_last_error_would_block g_sck_last_error_would_block
+#define g_tcp_set_non_blocking g_sck_set_non_blocking
+#define g_tcp_local_socket g_sck_local_socket
+#define g_tcp_local_connect g_sck_local_connect
+#define g_tcp_listen g_sck_listen
+#define g_tcp_local_bind g_sck_local_bind
+#define g_tcp_select g_sck_select
+#define g_close_wait_obj g_delete_wait_obj
+
+#if defined(HAVE_FUNC_ATTRIBUTE_FORMAT)
+#define printflike(arg_format, arg_first_check) \
+ __attribute__((__format__(__printf__, arg_format, arg_first_check)))
+#else
+#define printflike(arg_format, arg_first_check)
+#endif
 
 int APP_CC      g_rm_temp_dir(void);
 int APP_CC      g_mk_temp_dir(const char* app_name);
@@ -33,11 +58,13 @@ void APP_CC     g_init(const char* app_name);
 void APP_CC     g_deinit(void);
 void* APP_CC    g_malloc(int size, int zero);
 void APP_CC     g_free(void* ptr);
-void DEFAULT_CC g_printf(const char *format, ...);
-void DEFAULT_CC g_sprintf(char* dest, const char* format, ...);
-void DEFAULT_CC g_snprintf(char* dest, int len, const char* format, ...);
-void DEFAULT_CC g_writeln(const char* format, ...);
-void DEFAULT_CC g_write(const char* format, ...);
+void DEFAULT_CC g_printf(const char *format, ...) printflike(1, 2);
+void DEFAULT_CC g_sprintf(char* dest, const char* format, ...) \
+                  printflike(2, 3);
+void DEFAULT_CC g_snprintf(char* dest, int len, const char* format, ...) \
+                  printflike(3, 4);
+void DEFAULT_CC g_writeln(const char* format, ...) printflike(1, 2);
+void DEFAULT_CC g_write(const char* format, ...) printflike(1, 2);
 void APP_CC     g_hexdump(char* p, int len);
 void APP_CC     g_memset(void* ptr, int val, int size);
 void APP_CC     g_memcpy(void* d_ptr, const void* s_ptr, int size);
@@ -49,39 +76,36 @@ int APP_CC      g_sck_set_send_buffer_bytes(int sck, int bytes);
 int APP_CC      g_sck_get_send_buffer_bytes(int sck, int *bytes);
 int APP_CC      g_sck_set_recv_buffer_bytes(int sck, int bytes);
 int APP_CC      g_sck_get_recv_buffer_bytes(int sck, int *bytes);
-int APP_CC      g_tcp_local_socket(void);
+int APP_CC      g_sck_local_socket(void);
 int APP_CC      g_sck_get_peer_cred(int sck, int *pid, int *uid, int *gid);
-void APP_CC     g_tcp_close(int sck);
+void APP_CC     g_sck_close(int sck);
 int APP_CC      g_tcp_connect(int sck, const char* address, const char* port);
-int APP_CC      g_tcp_local_connect(int sck, const char* port);
-int APP_CC      g_tcp_force_send(int sck, char* data, int len);
-int APP_CC      g_tcp_force_recv(int sck, char* data, int len);
-int APP_CC      g_tcp_set_non_blocking(int sck);
+int APP_CC      g_sck_local_connect(int sck, const char* port);
+int APP_CC      g_sck_set_non_blocking(int sck);
 int APP_CC      g_tcp_bind(int sck, const char *port);
-int APP_CC      g_tcp_local_bind(int sck, const char* port);
+int APP_CC      g_sck_local_bind(int sck, const char* port);
 int APP_CC      g_tcp_bind_address(int sck, const char* port, const char* address);
-int APP_CC      g_tcp_listen(int sck);
+int APP_CC      g_sck_listen(int sck);
 int APP_CC      g_tcp_accept(int sck);
 int APP_CC      g_sck_accept(int sck, char *addr, int addr_bytes,
                              char *port, int port_bytes);
-int APP_CC      g_tcp_recv(int sck, void* ptr, int len, int flags);
-int APP_CC      g_tcp_send(int sck, const void* ptr, int len, int flags);
-int APP_CC      g_tcp_last_error_would_block(int sck);
-int APP_CC      g_tcp_socket_ok(int sck);
-int APP_CC      g_tcp_can_send(int sck, int millis);
-int APP_CC      g_tcp_can_recv(int sck, int millis);
-int APP_CC      g_tcp_select(int sck1, int sck2);
+int APP_CC      g_sck_recv(int sck, void* ptr, int len, int flags);
+int APP_CC      g_sck_send(int sck, const void* ptr, int len, int flags);
+int APP_CC      g_sck_last_error_would_block(int sck);
+int APP_CC      g_sck_socket_ok(int sck);
+int APP_CC      g_sck_can_send(int sck, int millis);
+int APP_CC      g_sck_can_recv(int sck, int millis);
+int APP_CC      g_sck_select(int sck1, int sck2);
 void APP_CC     g_write_ip_address(int rcv_sck, char* ip_address, int bytes);
 void APP_CC     g_sleep(int msecs);
-tbus APP_CC     g_create_wait_obj(char* name);
-tbus APP_CC     g_create_wait_obj_from_socket(tbus socket, int write);
-void APP_CC     g_delete_wait_obj_from_socket(tbus wait_obj);
-int APP_CC      g_set_wait_obj(tbus obj);
-int APP_CC      g_reset_wait_obj(tbus obj);
-int APP_CC      g_is_wait_obj_set(tbus obj);
-int APP_CC      g_delete_wait_obj(tbus obj);
-int APP_CC      g_close_wait_obj(tbus obj);
-int APP_CC      g_obj_wait(tbus* read_objs, int rcount, tbus* write_objs,
+tintptr APP_CC  g_create_wait_obj(char* name);
+tintptr APP_CC  g_create_wait_obj_from_socket(tintptr socket, int write);
+void APP_CC     g_delete_wait_obj_from_socket(tintptr wait_obj);
+int APP_CC      g_set_wait_obj(tintptr obj);
+int APP_CC      g_reset_wait_obj(tintptr obj);
+int APP_CC      g_is_wait_obj_set(tintptr obj);
+int APP_CC      g_delete_wait_obj(tintptr obj);
+int APP_CC      g_obj_wait(tintptr* read_objs, int rcount, tintptr* write_objs,
                            int wcount,int mstimeout);
 void APP_CC     g_random(char* data, int len);
 int APP_CC      g_abs(int i);
@@ -136,7 +160,6 @@ void APP_CC     g_signal_child_stop(void (*func)(int));
 void APP_CC     g_signal_segfault(void (*func)(int));
 void APP_CC     g_signal_hang_up(void (*func)(int));
 void APP_CC     g_signal_user_interrupt(void (*func)(int));
-void APP_CC     g_signal_kill(void (*func)(int));
 void APP_CC     g_signal_terminate(void (*func)(int));
 void APP_CC     g_signal_pipe(void (*func)(int));
 void APP_CC     g_signal_usr1(void (*func)(int));
@@ -146,6 +169,8 @@ int APP_CC      g_initgroups(const char* user, int gid);
 int APP_CC      g_getuid(void);
 int APP_CC      g_getgid(void);
 int APP_CC      g_setuid(int pid);
+int APP_CC      g_setsid(void);
+int APP_CC      g_setlogin(const char *name);
 int APP_CC      g_waitchild(void);
 int APP_CC      g_waitpid(int pid);
 void APP_CC     g_clearenv(void);
@@ -167,5 +192,6 @@ int APP_CC      g_text2bool(const char *s);
 void * APP_CC   g_shmat(int shmid);
 int APP_CC      g_shmdt(const void *shmaddr);
 int APP_CC      g_gethostname(char *name, int len);
+int APP_CC      g_mirror_memcpy(void *dst, const void *src, int len);
 
 #endif

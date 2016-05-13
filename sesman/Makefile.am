@@ -1,12 +1,8 @@
-EXTRA_DIST = sesman.ini startwm.sh sesman.h access.h auth.h config.h env.h lock.h scp.h scp_v0.h scp_v1.h scp_v1_mng.h session.h sig.h thread.h
-
-AM_CFLAGS = \
+AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
-  -DXRDP_PID_PATH=\"${localstatedir}/run\"
-
-INCLUDES = \
+  -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -I$(top_srcdir)/common \
   -I$(top_srcdir)/sesman/libscp
 
@@ -37,18 +33,27 @@ sbin_PROGRAMS = \
   xrdp-sesman
 
 xrdp_sesman_SOURCES = \
-  scp.c \
-  scp_v0.c \
-  scp_v1.c \
-  scp_v1_mng.c \
-  sesman.c \
-  session.c \
-  sig.c \
-  thread.c \
-  lock.c \
   access.c \
+  access.h \
+  auth.h \
   config.c \
+  config.h \
   env.c \
+  env.h \
+  scp.c \
+  scp.h \
+  scp_v0.c \
+  scp_v0.h \
+  scp_v1.c \
+  scp_v1.h \
+  scp_v1_mng.c \
+  scp_v1_mng.h \
+  sesman.c \
+  sesman.h \
+  session.c \
+  session.h \
+  sig.c \
+  sig.h \
   $(AUTH_C)
 
 xrdp_sesman_LDADD = \
@@ -59,8 +64,10 @@ xrdp_sesman_LDADD = \
 
 sesmansysconfdir=$(sysconfdir)/xrdp
 
-sesmansysconf_DATA = \
-  sesman.ini \
+dist_sesmansysconf_DATA = \
+  sesman.ini
+
+dist_sesmansysconf_SCRIPTS = \
   startwm.sh
 
 SUBDIRS = \
@@ -68,7 +75,3 @@ SUBDIRS = \
   tools \
   sessvc \
   chansrv
-
-# must be tab below
-install-data-hook:
-	chmod 755 $(DESTDIR)$(sysconfdir)/xrdp/startwm.sh

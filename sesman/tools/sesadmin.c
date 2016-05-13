@@ -2,6 +2,19 @@
  * sesadmin.c - an sesman administration tool
  * (c) 2008 Simone Fedele
  *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include "arch.h"
@@ -88,7 +101,14 @@ int main(int argc, char **argv)
 
     if (0 == g_strncmp(user, "", 1))
     {
-        g_strncpy(user, "root", 256);
+        cmndHelp();
+        return 0;
+    }
+
+    if (0 == g_strncmp(cmnd, "", 1))
+    {
+        cmndHelp();
+        return 0;
     }
 
     if (0 == g_strncmp(pass, "", 1))
@@ -155,10 +175,10 @@ int main(int argc, char **argv)
 
 void cmndHelp()
 {
-    fprintf(stderr, "sesadmin - a console sesman adminitration tool\n");
-    fprintf(stderr, "sysntax: sesadmin [] COMMAND [OPTIONS]\n\n");
+    fprintf(stderr, "sesadmin - a console sesman administration tool\n");
+    fprintf(stderr, "syntax: sesadmin [] COMMAND [OPTIONS]\n\n");
     fprintf(stderr, "-u=<username>: username to connect to sesman [MANDATORY]\n");
-    fprintf(stderr, "-p=<password>: password to connect to sesman [MANDATORY]\n");
+    fprintf(stderr, "-p=<password>: password to connect to sesman (asked if not given)\n");
     fprintf(stderr, "-s=<hostname>: sesman host (default is localhost)\n");
     fprintf(stderr, "-i=<port>    : sesman port (default 3350)\n");
     fprintf(stderr, "-c=<command> : command to execute on the server [MANDATORY]\n");

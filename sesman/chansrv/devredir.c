@@ -242,11 +242,11 @@ dev_redir_data_in(struct stream *s, int chan_id, int chan_flags, int length,
         case PAKID_CORE_CLIENT_NAME:
             /* client is telling us its computer name; do we even care? */
 
-            /* let client know loggin was successful */
+            /* let client know login was successful */
             dev_redir_send_server_user_logged_on();
             usleep(1000 * 100);
 
-            /* let client know our capabilites */
+            /* let client know our capabilities */
             dev_redir_send_server_core_cap_req();
 
             /* send confirm clientID */
@@ -576,7 +576,7 @@ void dev_redir_send_drive_dir_request(IRP *irp, tui32 device_id,
 ******************************************************************************/
 
 /**
- * @brief process client's repsonse to our core_capability_req() msg
+ * @brief process client's response to our core_capability_req() msg
  *
  * @param   s   stream containing client's response
  *****************************************************************************/
@@ -890,21 +890,13 @@ dev_redir_proc_query_dir_response(IRP *irp,
     XRDP_INODE *xinode;
 
     tui32 Length;
-    tui32 NextEntryOffset;
     tui64 CreationTime;
     tui64 LastAccessTime;
     tui64 LastWriteTime;
-    tui64 ChangeTime;
     tui64 EndOfFile;
     tui32 FileAttributes;
     tui32 FileNameLength;
     tui32 status;
-
-#ifdef USE_SHORT_NAMES_IN_DIR_LISTING
-    tui32 EaSize;
-    tui8  ShortNameLength;
-    tui8  Reserved;
-#endif
 
     char  filename[256];
     int   i = 0;
@@ -935,21 +927,21 @@ dev_redir_proc_query_dir_response(IRP *irp,
     {
         log_debug("processing FILE_DIRECTORY_INFORMATION structs");
 
-        xstream_rd_u32_le(s_in, NextEntryOffset);
+        xstream_seek(s_in, 4);  /* NextEntryOffset */
         xstream_seek(s_in, 4);  /* FileIndex */
         xstream_rd_u64_le(s_in, CreationTime);
         xstream_rd_u64_le(s_in, LastAccessTime);
         xstream_rd_u64_le(s_in, LastWriteTime);
-        xstream_rd_u64_le(s_in, ChangeTime);
+        xstream_seek(s_in, 8);  /* ChangeTime */
         xstream_rd_u64_le(s_in, EndOfFile);
         xstream_seek(s_in, 8);  /* AllocationSize */
         xstream_rd_u32_le(s_in, FileAttributes);
         xstream_rd_u32_le(s_in, FileNameLength);
 
 #ifdef USE_SHORT_NAMES_IN_DIR_LISTING
-        xstream_rd_u32_le(s_in, EaSize);
-        xstream_rd_u8(s_in, ShortNameLength);
-        xstream_rd_u8(s_in, Reserved);
+        xstream_seek(s_in, 4); /* EaSize */
+        xstream_seek(s_in, 1); /* ShortNameLength */
+        xstream_seek(s_in, 1); /* Reserved */
         xstream_seek(s_in, 23);  /* ShortName in Unicode */
 #endif
         devredir_cvt_from_unicode_len(filename, s_in->p, FileNameLength);
@@ -959,11 +951,9 @@ dev_redir_proc_query_dir_response(IRP *irp,
 #else
         i += 64 + FileNameLength;
 #endif
-        //log_debug("NextEntryOffset:   0x%x", NextEntryOffset);
         //log_debug("CreationTime:      0x%llx", CreationTime);
         //log_debug("LastAccessTime:    0x%llx", LastAccessTime);
         //log_debug("LastWriteTime:     0x%llx", LastWriteTime);
-        //log_debug("ChangeTime:        0x%llx", ChangeTime);
         //log_debug("EndOfFile:         %lld", EndOfFile);
         //log_debug("FileAttributes:    0x%x", FileAttributes);
 #ifdef USE_SHORT_NAMES_IN_DIR_LISTING
@@ -1040,7 +1030,7 @@ dev_redir_get_dir_listing(void *fusep, tui32 device_id, char *path)
 
     log_debug("looking for device_id=%d path=%s", device_id, path);
 
-    /* when we get a respone to dev_redir_send_drive_create_request(), we    */
+    /* when we get a response to dev_redir_send_drive_create_request(), we   */
     /* call dev_redir_send_drive_dir_request(), which needs the following    */
     /* at the end of the path argument                                       */
     if (dev_redir_string_ends_with(irp->pathname, '\\'))
@@ -1484,7 +1474,6 @@ devredir_cvt_from_unicode_len(char *path, char *unicode, int len)
     char *dest;
     char *dest_saved;
     char *src;
-    int   rv;
     int   i;
     int   bytes_to_alloc;
     int   max_bytes;
@@ -1509,7 +1498,7 @@ devredir_cvt_from_unicode_len(char *path, char *unicode, int len)
     max_bytes = wcstombs(NULL, (wchar_t *) dest_saved, 0);
     if (max_bytes > 0)
     {
-        rv = wcstombs(path, (wchar_t *) dest_saved, max_bytes);
+        wcstombs(path, (wchar_t *) dest_saved, max_bytes);
         path[max_bytes] = 0;
     }
 

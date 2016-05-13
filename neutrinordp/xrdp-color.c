@@ -213,6 +213,28 @@ convert_bitmap(int in_bpp, int out_bpp, char *bmpdata,
         return bmpdata;
     }
 
+    if ((in_bpp == 16) && (out_bpp == 32))
+    {
+        out = (char *)g_malloc(width * height * 4, 0);
+        src = bmpdata;
+        dst = out;
+
+        for (i = 0; i < height; i++)
+        {
+            for (j = 0; j < width; j++)
+            {
+                pixel = *((tui16 *)src);
+                SPLITCOLOR16(red, green, blue, pixel);
+                pixel = COLOR24RGB(red, green, blue);
+                *((tui32 *)dst) = pixel;
+                src += 2;
+                dst += 4;
+            }
+        }
+
+        return out;
+    }
+
     g_writeln("convert_bitmap: error unknown conversion from %d to %d",
               in_bpp, out_bpp);
     return 0;
@@ -285,6 +307,14 @@ convert_color(int in_bpp, int out_bpp, int in_color, int *palette)
     }
 
     if ((in_bpp == 16) && (out_bpp == 24))
+    {
+        pixel = in_color;
+        SPLITCOLOR16(red, green, blue, pixel);
+        pixel = COLOR24BGR(red, green, blue);
+        return pixel;
+    }
+
+    if ((in_bpp == 16) && (out_bpp == 32))
     {
         pixel = in_color;
         SPLITCOLOR16(red, green, blue, pixel);

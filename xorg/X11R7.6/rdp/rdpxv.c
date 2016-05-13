@@ -165,7 +165,7 @@ static int
 rdpXvSetPortAttribute(ClientPtr client, XvPortPtr pPort, Atom attribute,
                        INT32 value)
 {
-    LLOGLN(0, ("rdpXvxSetPortAttribute:"));
+    LLOGLN(0, ("rdpXvSetPortAttribute:"));
     return Success;
 }
 

@@ -21,15 +21,15 @@
 
   Updated Jay Sorg 2009
 
- cs czech 0x405
- de german 0x407
- en-us us english 0x409
- fr french 0x40c
- it italy 0x410
+ cs Czech 0x405
+ de German 0x407
+ en-us US English 0x409
+ fr French 0x40c
+ it Italian 0x410
  br Portuguese (Brazil) 0x416
- ru russian 0x419
- se swedish 0x41d
- en-uk uk english 0x809
+ ru Russian 0x419
+ se Swedish 0x41d
+ en-uk UK English 0x809
 */
 
 #include <stdio.h>

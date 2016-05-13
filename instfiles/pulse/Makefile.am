@@ -1,3 +1,2 @@
-EXTRA_DIST = default.pa
-pulsedir=$(sysconfdir)/xrdp/pulse
-pulse_DATA = default.pa
+pulsedir = $(sysconfdir)/xrdp/pulse
+dist_pulse_DATA = default.pa

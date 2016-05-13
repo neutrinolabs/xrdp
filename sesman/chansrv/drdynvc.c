@@ -342,24 +342,24 @@ drdynvc_process_data_first(struct stream *s, unsigned char cmd)
 
     uint32_t chan_id;
     int      bytes_in_stream;
-    int      data_len;
     int      Len;
 
     drdynvc_get_chan_id(s, cmd, &chan_id);
 
     Len = (cmd >> 2) & 0x03;
 
+    /* skip data_len */
     if (Len == 0)
     {
-        in_uint8(s, data_len);
+        in_uint8s(s, 1);
     }
     else if (Len == 1)
     {
-        in_uint16_le(s, data_len);
+        in_uint8s(s, 2);
     }
     else
     {
-        in_uint32_le(s, data_len);
+        in_uint8s(s, 4);
     }
 
     bytes_in_stream = stream_length_after_p(s);
@@ -414,7 +414,7 @@ drdynvc_process_data(struct stream *s, unsigned char cmd)
  * process incoming data on a dynamic virtual channel
  *
  * @pram  s             stream containing the incoming data
- * @pram  chand_id      LK_TODO
+ * @pram  chan_id       LK_TODO
  * @pram  chan_flags    LK_TODO
  * @pram  length        LK_TODO
  * @pram  total_length  LK_TODO

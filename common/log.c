@@ -59,6 +59,13 @@ internal_log_file_open(const char *fname)
                    S_IRUSR | S_IWUSR);
     }
 
+#ifdef FD_CLOEXEC
+    if (ret != -1)
+    {
+        fcntl(ret, F_SETFD, FD_CLOEXEC); 
+    }
+#endif
+
     return ret;
 }
 
@@ -142,7 +149,7 @@ internal_log_start(struct log_config *l_cfg)
         return ret;
     }
 
-    /* if progname is NULL, we ureturn error */
+    /* if progname is NULL, we return error */
     if (0 == l_cfg->program_name)
     {
         g_writeln("program_name not properly assigned");
@@ -186,7 +193,7 @@ internal_log_end(struct log_config *l_cfg)
     /* closing log file */
     log_message(LOG_LEVEL_ALWAYS, "shutting down log subsystem...");
 
-    if (0 > l_cfg->fd)
+    if (-1 != l_cfg->fd)
     {
         /* closing logfile... */
         g_file_close(l_cfg->fd);

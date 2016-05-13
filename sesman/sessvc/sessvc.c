@@ -93,7 +93,6 @@ main(int argc, char **argv)
         return 1;
     }
 
-    g_signal_kill(term_signal_handler); /* SIGKILL */
     g_signal_terminate(term_signal_handler); /* SIGTERM */
     g_signal_user_interrupt(term_signal_handler); /* SIGINT */
     g_signal_pipe(nil_signal_handler); /* SIGPIPE */
@@ -101,7 +100,7 @@ main(int argc, char **argv)
     wm_pid = g_atoi(argv[2]);
     g_writeln("xrdp-sessvc: waiting for X (pid %d) and WM (pid %d)",
               x_pid, wm_pid);
-    /* run xrdp-chansrv as a seperate process */
+    /* run xrdp-chansrv as a separate process */
     chansrv_pid = g_fork();
 
     if (chansrv_pid == -1)

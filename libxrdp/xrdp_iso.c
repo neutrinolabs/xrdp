@@ -99,7 +99,7 @@ xrdp_iso_negotiate_security(struct xrdp_iso *self)
         default:
             if (self->requestedProtocol & PROTOCOL_SSL)
             {
-                /* thats a patch since we don't support CredSSP for now */
+                /* that's a patch since we don't support CredSSP for now */
                 self->selectedProtocol = PROTOCOL_SSL;
             }
             else
@@ -355,11 +355,18 @@ xrdp_iso_incoming(struct xrdp_iso *self)
                 {
                     text[cookie_index] = cc_type;
                     cookie_index++;
+                    if (cookie_index > 255)
+                    {
+                        cookie_index = 255;
+                    }
                     if ((s->p[0] == 0x0D) && (s->p[1] == 0x0A))
                     {
                         in_uint8s(s, 2);
                         text[cookie_index] = 0;
                         cookie_index = 0;
+                        if (g_strlen(text) > 0)
+                        {
+                        }
                         break;
                     }
                     in_uint8(s, cc_type);

@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2015
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -110,7 +110,7 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     if (scount == 0)
     {
         /* no disconnected sessions - start a new one */
-        log_message(LOG_LEVEL_DEBUG, "No disconnected sessions for this user"
+        log_message(LOG_LEVEL_DEBUG, "No disconnected sessions for this user "
                     "- we create a new one");
 
         if (0 != s->client_ip)

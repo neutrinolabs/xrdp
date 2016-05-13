@@ -25,36 +25,56 @@
  */
 
 #include "list.h"
-
 #include "sesman.h"
-
-#include "sys/types.h"
 #include "grp.h"
+#include "ssl_calls.h"
 
 extern unsigned char g_fixedkey[8]; /* in sesman.c */
 extern struct config_sesman *g_cfg;  /* in sesman.c */
 
 /******************************************************************************/
 int DEFAULT_CC
-env_check_password_file(char *filename, char *password)
+env_check_password_file(char *filename, char *passwd)
 {
     char encryptedPasswd[16];
+    char key[24];
+    char passwd_hash[20];
+    char passwd_hash_text[40];
     int fd;
+    int passwd_bytes;
+    void *des;
+    void *sha1;
 
-    g_memset(encryptedPasswd, 0, 16);
-    g_strncpy(encryptedPasswd, password, 8);
-    rfbDesKey(g_fixedkey, 0);
-    rfbDes((unsigned char *)encryptedPasswd, (unsigned char *)encryptedPasswd);
-    fd = g_file_open(filename);
+    /* create password hash from password */
+    passwd_bytes = g_strlen(passwd);
+    sha1 = ssl_sha1_info_create();
+    ssl_sha1_transform(sha1, "xrdp_vnc", 8);
+    ssl_sha1_transform(sha1, passwd, passwd_bytes);
+    ssl_sha1_transform(sha1, passwd, passwd_bytes);
+    ssl_sha1_complete(sha1, passwd_hash);
+    ssl_sha1_info_delete(sha1);
+    g_snprintf(passwd_hash_text, 39, "%2.2x%2.2x%2.2x%2.2x",
+               (tui8)passwd_hash[0], (tui8)passwd_hash[1],
+               (tui8)passwd_hash[2], (tui8)passwd_hash[3]);
+    passwd_hash_text[39] = 0;
+    passwd = passwd_hash_text;
 
+    /* create file from password */
+    g_memset(encryptedPasswd, 0, sizeof(encryptedPasswd));
+    g_strncpy(encryptedPasswd, passwd, 8);
+    g_memset(key, 0, sizeof(key));
+    g_mirror_memcpy(key, g_fixedkey, 8);
+    des = ssl_des3_encrypt_info_create(key, 0); 
+    ssl_des3_encrypt(des, 8, encryptedPasswd, encryptedPasswd);
+    ssl_des3_info_delete(des);
+    fd = g_file_open_ex(filename, 0, 1, 1, 1);
     if (fd == -1)
     {
         log_message(LOG_LEVEL_WARNING,
-                    "can't read vnc password file - %s",
+                    "can't write vnc password hash file - %s",
                     filename);
         return 1;
     }
-
     g_file_write(fd, encryptedPasswd, 8);
     g_file_close(fd);
     return 0;
@@ -110,7 +130,6 @@ env_set_user(char *username, char *passwd_file, int display,
             g_set_current_dir(pw_dir);
             g_sprintf(text, ":%d.0", display);
             g_setenv("DISPLAY", text, 1);
-            g_setenv("LANG", "en_US.UTF-8", 1);
             g_setenv("XRDP_SESSION", "1", 1);
             if ((env_names != 0) && (env_values != 0) &&
                 (env_names->count == env_values->count))

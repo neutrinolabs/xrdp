@@ -286,7 +286,7 @@ xrdp_orders_last_bounds(struct xrdp_orders *self, struct xrdp_rect *rect)
 }
 
 /*****************************************************************************/
-/* check if all coords are withing 256 bytes */
+/* check if all coords are within 256 bytes */
 /* returns boolean */
 static int APP_CC
 xrdp_orders_send_delta(struct xrdp_orders *self, int *vals, int count)
@@ -1014,18 +1014,18 @@ xrdp_orders_pat_blt(struct xrdp_orders *self, int x, int y,
         brush = &blank_brush;
     }
 
-    if (brush->x_orgin != self->orders_state.pat_blt_brush.x_orgin)
+    if (brush->x_origin != self->orders_state.pat_blt_brush.x_origin)
     {
         present |= 0x0080;
-        out_uint8(self->out_s, brush->x_orgin);
-        self->orders_state.pat_blt_brush.x_orgin = brush->x_orgin;
+        out_uint8(self->out_s, brush->x_origin);
+        self->orders_state.pat_blt_brush.x_origin = brush->x_origin;
     }
 
-    if (brush->y_orgin != self->orders_state.pat_blt_brush.y_orgin)
+    if (brush->y_origin != self->orders_state.pat_blt_brush.y_origin)
     {
         present |= 0x0100;
-        out_uint8(self->out_s, brush->y_orgin);
-        self->orders_state.pat_blt_brush.y_orgin = brush->y_orgin;
+        out_uint8(self->out_s, brush->y_origin);
+        self->orders_state.pat_blt_brush.y_origin = brush->y_origin;
     }
 
     if (brush->style != self->orders_state.pat_blt_brush.style)
@@ -2641,6 +2641,7 @@ height(%d)", lines_sending, height);
     return 0;
 }
 
+#if defined(XRDP_JPEG)
 /*****************************************************************************/
 static int
 xrdp_orders_send_as_jpeg(struct xrdp_orders *self,
@@ -2663,6 +2664,7 @@ xrdp_orders_send_as_jpeg(struct xrdp_orders *self,
 
     return 1;
 }
+#endif
 
 #if defined(XRDP_NEUTRINORDP)
 /*****************************************************************************/
@@ -2693,6 +2695,7 @@ xrdp_orders_send_as_rfx(struct xrdp_orders *self,
 }
 #endif
 
+#if defined(XRDP_JPEG) || defined(XRDP_NEUTRINORDP)
 /*****************************************************************************/
 static int APP_CC
 xrdp_orders_out_v3(struct xrdp_orders *self, int cache_id, int cache_idx,
@@ -2719,7 +2722,7 @@ xrdp_orders_out_v3(struct xrdp_orders *self, int cache_id, int cache_idx,
     out_uint8(self->out_s, RDP_ORDER_BMPCACHE3); /* type */
     /* cache index */
     out_uint16_le(self->out_s, cache_idx);
-    /* persistant cache key 1/2 */
+    /* persistent cache key 1/2 */
     out_uint32_le(self->out_s, 0);
     out_uint32_le(self->out_s, 0);
     /* bitmap data */
@@ -2733,6 +2736,7 @@ xrdp_orders_out_v3(struct xrdp_orders *self, int cache_id, int cache_idx,
     out_uint8a(self->out_s, buf, bufsize);
     return 0;
 }
+#endif
 
 /*****************************************************************************/
 /*  secondary drawing order (bitmap v3) using remotefx compression */
@@ -2741,12 +2745,16 @@ xrdp_orders_send_bitmap3(struct xrdp_orders *self,
                          int width, int height, int bpp, char *data,
                          int cache_id, int cache_idx, int hints)
 {
-    int e;
-    int bufsize;
-    int quality;
-    struct stream *xr_s; /* xrdp stream */
-    struct stream *temp_s; /* xrdp stream */
     struct xrdp_client_info *ci;
+#if defined(XRDP_JPEG) || defined(XRDP_NEUTRINORDP)
+    int bufsize;
+    struct stream *xr_s; /* xrdp stream */
+#endif
+#if defined(XRDP_JPEG)
+    int e;
+    int quality;
+    struct stream *temp_s; /* xrdp stream */
+#endif
 #if defined(XRDP_NEUTRINORDP)
     STREAM *fr_s; /* FreeRDP stream */
     RFX_CONTEXT *context;

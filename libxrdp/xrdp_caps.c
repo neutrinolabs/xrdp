@@ -185,7 +185,7 @@ xrdp_caps_process_bmpcache(struct xrdp_rdp *self, struct stream *s,
     i = MAX(i, 0);
     self->client_info.cache2_entries = i;
     in_uint16_le(s, self->client_info.cache2_size);
-    /* caceh 3 */
+    /* cache 3 */
     in_uint16_le(s, i);
     i = MIN(i, XRDP_MAX_BITMAP_CACHE_IDX);
     i = MAX(i, 0);
@@ -508,8 +508,8 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
 
 /*****************************************************************************/
 static int APP_CC
-xrdp_caps_process_multifragmetupdate(struct xrdp_rdp *self, struct stream *s,
-                                     int len)
+xrdp_caps_process_multifragmentupdate(struct xrdp_rdp *self, struct stream *s,
+                                      int len)
 {
     int MaxRequestSize;
 
@@ -550,6 +550,11 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
     in_uint16_le(s, num_caps);
     in_uint8s(s, 2); /* pad */
 
+    if ((cap_len < 0) || (cap_len > 1024 * 1024))
+    {
+        return 1;
+    }
+
     for (index = 0; index < num_caps; index++)
     {
         p = s->p;
@@ -562,7 +567,8 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
         in_uint16_le(s, len);
         if ((len < 4) || !s_check_rem(s, len - 4))
         {
-            g_writeln("xrdp_caps_process_confirm_active: error len %d", len, s->end - s->p);
+            g_writeln("xrdp_caps_process_confirm_active: error: len %d, "
+                      "remaining %d", len, (int) (s->end - s->p));
             return 1;
         }
         len -= 4;
@@ -641,7 +647,7 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
                 xrdp_caps_process_window(self, s, len);
                 break;
             case 0x001A: /* 26 CAPSETTYPE_MULTIFRAGMENTUPDATE */
-                xrdp_caps_process_multifragmetupdate(self, s, len);
+                xrdp_caps_process_multifragmentupdate(self, s, len);
                 break;
             case RDP_CAPSET_BMPCODECS: /* 0x1d(29) */
                 xrdp_caps_process_codecs(self, s, len);

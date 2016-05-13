@@ -281,7 +281,7 @@ struct xrdp_mppc_enc
     char  *outputBuffer;     /* contains compressed data */
     char  *outputBufferPlus;
     int    historyOffset;    /* next free slot in historyBuffer */
-    int    buf_len;          /* length of historyBuffer, protocol dependant */
+    int    buf_len;          /* length of historyBuffer, protocol dependent */
     int    bytes_in_opb;     /* compressed bytes available in outputBuffer */
     int    flags;            /* PACKET_COMPRESSED, PACKET_AT_FRONT, PACKET_FLUSHED etc */
     int    flagsHold;
@@ -401,7 +401,7 @@ xrdp_rdp_process_data(struct xrdp_rdp *self, struct stream *s);
 int APP_CC
 xrdp_rdp_disconnect(struct xrdp_rdp *self);
 int APP_CC
-xrdp_rdp_send_deactive(struct xrdp_rdp *self);
+xrdp_rdp_send_deactivate(struct xrdp_rdp *self);
 
 /* xrdp_orders.c */
 struct xrdp_orders * APP_CC

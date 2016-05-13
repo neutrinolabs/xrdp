@@ -100,23 +100,10 @@ extern char **environ;
 #define INADDR_NONE ((unsigned long)-1)
 #endif
 
-static char g_temp_base[128] = "";
-static char g_temp_base_org[128] = "";
-
 /*****************************************************************************/
 int APP_CC
 g_rm_temp_dir(void)
 {
-    if (g_temp_base[0] != 0)
-    {
-        if (!g_remove_dir(g_temp_base))
-        {
-            printf("g_rm_temp_dir: removing temp directory [%s] failed\n", g_temp_base);
-        }
-
-        g_temp_base[0] = 0;
-    }
-
     return 0;
 }
 
@@ -124,58 +111,19 @@ g_rm_temp_dir(void)
 int APP_CC
 g_mk_temp_dir(const char *app_name)
 {
-    if (app_name != 0)
+    if (!g_directory_exist("/tmp/.xrdp"))
     {
-        if (app_name[0] != 0)
+        if (!g_create_dir("/tmp/.xrdp"))
         {
+            /* if failed, still check if it got created by someone else */
             if (!g_directory_exist("/tmp/.xrdp"))
             {
-                if (!g_create_dir("/tmp/.xrdp"))
-                {
-                    /* if failed, still check if it got created by someone else */
-                    if (!g_directory_exist("/tmp/.xrdp"))
-                    {
-                        printf("g_mk_temp_dir: g_create_dir failed\n");
-                        return 1;
-                    }
-                }
-
-                g_chmod_hex("/tmp/.xrdp", 0x1777);
-            }
-
-            snprintf(g_temp_base, sizeof(g_temp_base),
-                     "/tmp/.xrdp/%s-XXXXXX", app_name);
-            snprintf(g_temp_base_org, sizeof(g_temp_base_org),
-                     "/tmp/.xrdp/%s-XXXXXX", app_name);
-
-            if (mkdtemp(g_temp_base) == 0)
-            {
-                printf("g_mk_temp_dir: mkdtemp failed [%s]\n", g_temp_base);
+                printf("g_mk_temp_dir: g_create_dir failed\n");
                 return 1;
             }
         }
-        else
-        {
-            printf("g_mk_temp_dir: bad app name\n");
-            return 1;
-        }
+        g_chmod_hex("/tmp/.xrdp", 0x1777);
     }
-    else
-    {
-        if (g_temp_base_org[0] == 0)
-        {
-            printf("g_mk_temp_dir: g_temp_base_org not set\n");
-            return 1;
-        }
-
-        g_strncpy(g_temp_base, g_temp_base_org, 127);
-
-        if (mkdtemp(g_temp_base) == 0)
-        {
-            printf("g_mk_temp_dir: mkdtemp failed [%s]\n", g_temp_base);
-        }
-    }
-
     return 0;
 }
 
@@ -334,7 +282,7 @@ g_hexdump(char *p, int len)
             g_printf("%c", (line[i] >= 0x20 && line[i] < 0x7f) ? line[i] : '.');
         }
 
-        g_writeln("");
+        g_writeln("%s", "");
         offset += thisline;
         line += thisline;
     }
@@ -463,7 +411,7 @@ g_tcp_socket(void)
     unsigned int option_len;
 #endif
 
-#if defined(XRDP_ENABLE_IPV6) && !defined(NO_ARPA_INET_H_IP6)
+#if defined(XRDP_ENABLE_IPV6)
     rv = (int)socket(AF_INET6, SOCK_STREAM, 0);
 #else
     rv = (int)socket(AF_INET, SOCK_STREAM, 0);
@@ -472,14 +420,18 @@ g_tcp_socket(void)
     {
         return -1;
     }
-#if defined(XRDP_ENABLE_IPV6) && !defined(NO_ARPA_INET_H_IP6)
+#if defined(XRDP_ENABLE_IPV6)
     option_len = sizeof(option_value);
     if (getsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&option_value,
                    &option_len) == 0)
     {
         if (option_value != 0)
         {
+#if defined(XRDP_ENABLE_IPV6ONLY)
+            option_value = 1;
+#else
             option_value = 0;
+#endif
             option_len = sizeof(option_value);
             if (setsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&option_value,
                        option_len) < 0)
@@ -617,7 +569,7 @@ g_sck_get_recv_buffer_bytes(int sck, int *bytes)
 
 /*****************************************************************************/
 int APP_CC
-g_tcp_local_socket(void)
+g_sck_local_socket(void)
 {
 #if defined(_WIN32)
     return 0;
@@ -691,7 +643,7 @@ g_sck_get_peer_cred(int sck, int *pid, int *uid, int *gid)
 
 /*****************************************************************************/
 void APP_CC
-g_tcp_close(int sck)
+g_sck_close(int sck)
 {
     char ip[256];
 
@@ -711,11 +663,12 @@ g_tcp_close(int sck)
 
 /*****************************************************************************/
 /* returns error, zero is good */
-#if defined(XRDP_ENABLE_IPV6) && !defined(NO_ARPA_INET_H_IP6)
+#if defined(XRDP_ENABLE_IPV6)
 int APP_CC
 g_tcp_connect(int sck, const char *address, const char *port)
 {
     int res = 0;
+    char errorMsg[256];
     struct addrinfo p;
     struct addrinfo *h = (struct addrinfo *)NULL;
     struct addrinfo *rp = (struct addrinfo *)NULL;
@@ -741,6 +694,12 @@ g_tcp_connect(int sck, const char *address, const char *port)
     {
         res = getaddrinfo(address, port, &p, &h);
     }
+    if (res != 0)
+    {
+        snprintf(errorMsg, 255, "g_tcp_connect: getaddrinfo() failed: %s",
+                 gai_strerror(res));
+        log_message(LOG_LEVEL_ERROR, errorMsg);
+    }
     if (res > -1)
     {
         if (h != NULL)
@@ -763,38 +722,38 @@ g_tcp_connect(int sck, const char *address, const char *port)
 int APP_CC
 g_tcp_connect(int sck, const char* address, const char* port)
 {
-  struct sockaddr_in s;
-  struct hostent* h;
+    struct sockaddr_in s;
+    struct hostent* h;
 
-  g_memset(&s, 0, sizeof(struct sockaddr_in));
-  s.sin_family = AF_INET;
-  s.sin_port = htons((tui16)atoi(port));
-  s.sin_addr.s_addr = inet_addr(address);
-  if (s.sin_addr.s_addr == INADDR_NONE)
-  {
-    h = gethostbyname(address);
-    if (h != 0)
+    g_memset(&s, 0, sizeof(struct sockaddr_in));
+    s.sin_family = AF_INET;
+    s.sin_port = htons((tui16)atoi(port));
+    s.sin_addr.s_addr = inet_addr(address);
+    if (s.sin_addr.s_addr == INADDR_NONE)
     {
-      if (h->h_name != 0)
-      {
-        if (h->h_addr_list != 0)
+        h = gethostbyname(address);
+        if (h != 0)
         {
-          if ((*(h->h_addr_list)) != 0)
-          {
-            s.sin_addr.s_addr = *((int*)(*(h->h_addr_list)));
-          }
+            if (h->h_name != 0)
+            {
+                if (h->h_addr_list != 0)
+                {
+                    if ((*(h->h_addr_list)) != 0)
+                    {
+                        s.sin_addr.s_addr = *((int*)(*(h->h_addr_list)));
+                    }
+                }
+            }
         }
-      }
     }
-  }
-  return connect(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
+    return connect(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
 }
 #endif
 
 /*****************************************************************************/
 /* returns error, zero is good */
 int APP_CC
-g_tcp_local_connect(int sck, const char *port)
+g_sck_local_connect(int sck, const char *port)
 {
 #if defined(_WIN32)
     return -1;
@@ -812,7 +771,7 @@ g_tcp_local_connect(int sck, const char *port)
 
 /*****************************************************************************/
 int APP_CC
-g_tcp_set_non_blocking(int sck)
+g_sck_set_non_blocking(int sck)
 {
     unsigned long i;
 
@@ -824,7 +783,7 @@ g_tcp_set_non_blocking(int sck)
     i = i | O_NONBLOCK;
     if (fcntl(sck, F_SETFL, i) < 0)
     {
-        log_message(LOG_LEVEL_ERROR, "g_tcp_set_non_blocking: fcntl() failed\n");
+        log_message(LOG_LEVEL_ERROR, "g_sck_set_non_blocking: fcntl() failed\n");
     }
 #endif
     return 0;
@@ -944,19 +903,19 @@ g_tcp_bind(int sck, const char *port)
 int APP_CC
 g_tcp_bind(int sck, const char* port)
 {
-  struct sockaddr_in s;
+    struct sockaddr_in s;
 
-  memset(&s, 0, sizeof(struct sockaddr_in));
-  s.sin_family = AF_INET;
-  s.sin_port = htons((tui16)atoi(port));
-  s.sin_addr.s_addr = INADDR_ANY;
-  return bind(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
+    memset(&s, 0, sizeof(struct sockaddr_in));
+    s.sin_family = AF_INET;
+    s.sin_port = htons((tui16)atoi(port));
+    s.sin_addr.s_addr = INADDR_ANY;
+    return bind(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
 }
 #endif
 
 /*****************************************************************************/
 int APP_CC
-g_tcp_local_bind(int sck, const char *port)
+g_sck_local_bind(int sck, const char *port)
 {
 #if defined(_WIN32)
     return -1;
@@ -987,24 +946,24 @@ g_tcp_bind_address(int sck, const char *port, const char *address)
 int APP_CC
 g_tcp_bind_address(int sck, const char* port, const char* address)
 {
-  struct sockaddr_in s;
+    struct sockaddr_in s;
 
-  memset(&s, 0, sizeof(struct sockaddr_in));
-  s.sin_family = AF_INET;
-  s.sin_port = htons((tui16)atoi(port));
-  s.sin_addr.s_addr = INADDR_ANY;
-  if (inet_aton(address, &s.sin_addr) < 0)
-  {
-    return -1; /* bad address */
-  }
-  return bind(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
+    memset(&s, 0, sizeof(struct sockaddr_in));
+    s.sin_family = AF_INET;
+    s.sin_port = htons((tui16)atoi(port));
+    s.sin_addr.s_addr = INADDR_ANY;
+    if (inet_aton(address, &s.sin_addr) < 0)
+    {
+        return -1; /* bad address */
+    }
+    return bind(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
 }
 #endif
 
 /*****************************************************************************/
 /* returns error, zero is good */
 int APP_CC
-g_tcp_listen(int sck)
+g_sck_listen(int sck)
 {
     return listen(sck, 2);
 }
@@ -1027,8 +986,8 @@ g_tcp_accept(int sck)
     ret = accept(sck, (struct sockaddr *)&s, &i);
     if(ret>0)
     {
-        snprintf(ipAddr,255,"A connection received from: %s port %d"
-        ,inet_ntoa(s.sin_addr),ntohs(s.sin_port));
+        snprintf(ipAddr, 255, "A connection received from: %s port %d",
+                 inet_ntoa(s.sin_addr), ntohs(s.sin_port));
         log_message(LOG_LEVEL_INFO,ipAddr);
     }
     return ret ;
@@ -1120,7 +1079,7 @@ g_sleep(int msecs)
 
 /*****************************************************************************/
 int APP_CC
-g_tcp_last_error_would_block(int sck)
+g_sck_last_error_would_block(int sck)
 {
 #if defined(_WIN32)
     return WSAGetLastError() == WSAEWOULDBLOCK;
@@ -1131,7 +1090,7 @@ g_tcp_last_error_would_block(int sck)
 
 /*****************************************************************************/
 int APP_CC
-g_tcp_recv(int sck, void *ptr, int len, int flags)
+g_sck_recv(int sck, void *ptr, int len, int flags)
 {
 #if defined(_WIN32)
     return recv(sck, (char *)ptr, len, flags);
@@ -1142,7 +1101,7 @@ g_tcp_recv(int sck, void *ptr, int len, int flags)
 
 /*****************************************************************************/
 int APP_CC
-g_tcp_send(int sck, const void *ptr, int len, int flags)
+g_sck_send(int sck, const void *ptr, int len, int flags)
 {
 #if defined(_WIN32)
     return send(sck, (const char *)ptr, len, flags);
@@ -1154,7 +1113,7 @@ g_tcp_send(int sck, const void *ptr, int len, int flags)
 /*****************************************************************************/
 /* returns boolean */
 int APP_CC
-g_tcp_socket_ok(int sck)
+g_sck_socket_ok(int sck)
 {
 #if defined(_WIN32)
     int opt;
@@ -1181,7 +1140,7 @@ g_tcp_socket_ok(int sck)
 /* wait 'millis' milliseconds for the socket to be able to write */
 /* returns boolean */
 int APP_CC
-g_tcp_can_send(int sck, int millis)
+g_sck_can_send(int sck, int millis)
 {
     fd_set wfds;
     struct timeval time;
@@ -1198,7 +1157,7 @@ g_tcp_can_send(int sck, int millis)
 
         if (rv > 0)
         {
-            return g_tcp_socket_ok(sck);
+            return 1;
         }
     }
 
@@ -1209,12 +1168,13 @@ g_tcp_can_send(int sck, int millis)
 /* wait 'millis' milliseconds for the socket to be able to receive */
 /* returns boolean */
 int APP_CC
-g_tcp_can_recv(int sck, int millis)
+g_sck_can_recv(int sck, int millis)
 {
     fd_set rfds;
     struct timeval time;
     int rv;
 
+    g_memset(&time, 0, sizeof(time));
     time.tv_sec = millis / 1000;
     time.tv_usec = (millis * 1000) % 1000000;
     FD_ZERO(&rfds);
@@ -1226,7 +1186,7 @@ g_tcp_can_recv(int sck, int millis)
 
         if (rv > 0)
         {
-            return g_tcp_socket_ok(sck);
+            return 1;
         }
     }
 
@@ -1235,18 +1195,14 @@ g_tcp_can_recv(int sck, int millis)
 
 /*****************************************************************************/
 int APP_CC
-g_tcp_select(int sck1, int sck2)
+g_sck_select(int sck1, int sck2)
 {
     fd_set rfds;
     struct timeval time;
-    int max = 0;
-    int rv = 0;
+    int max;
+    int rv;
 
-    g_memset(&rfds, 0, sizeof(fd_set));
     g_memset(&time, 0, sizeof(struct timeval));
-
-    time.tv_sec = 0;
-    time.tv_usec = 0;
     FD_ZERO(&rfds);
 
     if (sck1 > 0)
@@ -1291,96 +1247,94 @@ g_tcp_select(int sck1, int sck2)
 }
 
 /*****************************************************************************/
+/* returns boolean */
+static int APP_CC
+g_fd_can_read(int fd)
+{
+    fd_set rfds;
+    struct timeval time;
+    int rv;
+
+    g_memset(&time, 0, sizeof(time));
+    FD_ZERO(&rfds);
+    FD_SET(((unsigned int)fd), &rfds);
+    rv = select(fd + 1, &rfds, 0, 0, &time);
+    if (rv == 1)
+    {
+        return 1;
+    }
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+/* O_NONBLOCK = 0x00000800 */
+static int APP_CC
+g_set_nonblock(int fd)
+{
+    int error;
+    int flags;
+
+    error = fcntl(fd, F_GETFL);
+    if (error < 0)
+    {
+        return 1;
+    }
+    flags = error;
+    if ((flags & O_NONBLOCK) != O_NONBLOCK)
+    {
+        flags |= O_NONBLOCK;
+        error = fcntl(fd, F_SETFL, flags);
+        if (error < 0)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/*****************************************************************************/
 /* returns 0 on error */
-tbus APP_CC
+tintptr APP_CC
 g_create_wait_obj(char *name)
 {
 #ifdef _WIN32
-    tbus obj;
+    tintptr obj;
 
-    obj = (tbus)CreateEvent(0, 1, 0, name);
+    obj = (tintptr)CreateEvent(0, 1, 0, name);
     return obj;
 #else
-    tbus obj;
-    struct sockaddr_un sa;
-    size_t len;
-    tbus sck;
-    int i;
-    int safety;
-    int unnamed;
+    int fds[2];
+    int error;
 
-    if (g_temp_base[0] == 0)
+    error = pipe(fds);
+    if (error != 0)
     {
         return 0;
     }
-
-    sck = socket(PF_UNIX, SOCK_DGRAM, 0);
-
-    if (sck < 0)
+    if (g_set_nonblock(fds[0]) != 0)
     {
+        close(fds[0]);
+        close(fds[1]);
         return 0;
     }
-
-    safety = 0;
-    g_memset(&sa, 0, sizeof(sa));
-    sa.sun_family = AF_UNIX;
-    unnamed = 1;
-
-    if (name != 0)
+    if (g_set_nonblock(fds[1]) != 0)
     {
-        if (name[0] != 0)
-        {
-            unnamed = 0;
-        }
+        close(fds[0]);
+        close(fds[1]);
+        return 0;
     }
-
-    if (unnamed)
-    {
-        do
-        {
-            if (safety > 100)
-            {
-                break;
-            }
-
-            safety++;
-            g_random((char *)&i, sizeof(i));
-            len = sizeof(sa.sun_path);
-            g_snprintf(sa.sun_path, len, "%s/auto_%8.8x", g_temp_base, i);
-            len = sizeof(sa);
-        }
-        while (bind(sck, (struct sockaddr *)&sa, len) < 0);
-    }
-    else
-    {
-        do
-        {
-            if (safety > 100)
-            {
-                break;
-            }
-
-            safety++;
-            g_random((char *)&i, sizeof(i));
-            len = sizeof(sa.sun_path);
-            g_snprintf(sa.sun_path, len, "%s/%s_%8.8x", g_temp_base, name, i);
-            len = sizeof(sa);
-        }
-        while (bind(sck, (struct sockaddr *)&sa, len) < 0);
-    }
-
-    obj = (tbus)sck;
-    return obj;
+    return (fds[1] << 16) | fds[0];
 #endif
 }
 
 /*****************************************************************************/
 /* returns 0 on error */
-tbus APP_CC
-g_create_wait_obj_from_socket(tbus socket, int write)
+tintptr APP_CC
+g_create_wait_obj_from_socket(tintptr socket, int write)
 {
 #ifdef _WIN32
-    /* Create and return corresponding event handle for WaitForMultipleObjets */
+    /* Create and return corresponding event handle for WaitForMultipleObjects */
     WSAEVENT event;
     long lnetevent = 0;
 
@@ -1405,7 +1359,7 @@ g_create_wait_obj_from_socket(tbus socket, int write)
 
 /*****************************************************************************/
 void APP_CC
-g_delete_wait_obj_from_socket(tbus wait_obj)
+g_delete_wait_obj_from_socket(tintptr wait_obj)
 {
 #ifdef _WIN32
 
@@ -1422,54 +1376,60 @@ g_delete_wait_obj_from_socket(tbus wait_obj)
 /*****************************************************************************/
 /* returns error */
 int APP_CC
-g_set_wait_obj(tbus obj)
+g_set_wait_obj(tintptr obj)
 {
 #ifdef _WIN32
-
     if (obj == 0)
     {
         return 0;
     }
-
     SetEvent((HANDLE)obj);
     return 0;
 #else
-    socklen_t sa_size;
-    int s;
-    struct sockaddr_un sa;
+    int error;
+    int fd;
+    int written;
+    int to_write;
+    char buf[4] = "sig";
 
     if (obj == 0)
     {
         return 0;
     }
-
-    if (g_tcp_can_recv((int)obj, 0))
+    fd = obj & 0xffff;
+    if (g_fd_can_read(fd))
     {
         /* already signalled */
         return 0;
     }
-
-    sa_size = sizeof(sa);
-
-    if (getsockname((int)obj, (struct sockaddr *)&sa, &sa_size) < 0)
+    fd = obj >> 16;
+    to_write = 4;
+    written = 0;
+    while (written < to_write)
     {
-        return 1;
+        error = write(fd, buf + written, to_write - written);
+        if (error == -1)
+        {
+            error = errno;
+            if ((error == EAGAIN) || (error == EWOULDBLOCK) ||
+                (error == EINPROGRESS) || (error == EINTR))
+            {
+                /* ok */
+            }
+            else
+            {
+                return 1;
+            }
+        }
+        else if (error > 0)
+        {
+            written += error;
+        }
+        else
+        {
+            return 1;
+        }
     }
-
-    s = socket(PF_UNIX, SOCK_DGRAM, 0);
-
-    if (s < 0)
-    {
-        return 1;
-    }
-
-    if (sendto(s, "sig", 4, 0, (struct sockaddr *)&sa, sa_size) < 0)
-    {
-        close(s);
-        return 1;
-    }
-
-    close(s);
     return 0;
 #endif
 }
@@ -1477,30 +1437,46 @@ g_set_wait_obj(tbus obj)
 /*****************************************************************************/
 /* returns error */
 int APP_CC
-g_reset_wait_obj(tbus obj)
+g_reset_wait_obj(tintptr obj)
 {
 #ifdef _WIN32
-
     if (obj == 0)
     {
         return 0;
     }
-
     ResetEvent((HANDLE)obj);
     return 0;
 #else
-    char buf[64];
+    char buf[4];
+    int error;
+    int fd;
 
     if (obj == 0)
     {
         return 0;
     }
-
-    while (g_tcp_can_recv((int)obj, 0))
+    fd = obj & 0xffff;
+    while (g_fd_can_read(fd))
     {
-        recvfrom((int)obj, &buf, 64, 0, 0, 0);
+        error = read(fd, buf, 4);
+        if (error == -1)
+        {
+            error = errno;
+            if ((error == EAGAIN) || (error == EWOULDBLOCK) ||
+                (error == EINPROGRESS) || (error == EINTR))
+            {
+                /* ok */
+            }
+            else
+            {
+                return 1;
+            }
+        }
+        else if (error == 0)
+        {
+            return 1;
+        }
     }
-
     return 0;
 #endif
 }
@@ -1508,86 +1484,55 @@ g_reset_wait_obj(tbus obj)
 /*****************************************************************************/
 /* returns boolean */
 int APP_CC
-g_is_wait_obj_set(tbus obj)
+g_is_wait_obj_set(tintptr obj)
 {
 #ifdef _WIN32
-
     if (obj == 0)
     {
         return 0;
     }
-
     if (WaitForSingleObject((HANDLE)obj, 0) == WAIT_OBJECT_0)
     {
         return 1;
     }
-
     return 0;
 #else
-
     if (obj == 0)
     {
         return 0;
     }
-
-    return g_tcp_can_recv((int)obj, 0);
+    return g_fd_can_read(obj & 0xffff);
 #endif
 }
 
 /*****************************************************************************/
 /* returns error */
 int APP_CC
-g_delete_wait_obj(tbus obj)
+g_delete_wait_obj(tintptr obj)
 {
 #ifdef _WIN32
-
     if (obj == 0)
     {
         return 0;
     }
-
     /* Close event handle */
     CloseHandle((HANDLE)obj);
     return 0;
 #else
-    socklen_t sa_size;
-    struct sockaddr_un sa;
-
     if (obj == 0)
     {
         return 0;
     }
-
-    sa_size = sizeof(sa);
-
-    if (getsockname((int)obj, (struct sockaddr *)&sa, &sa_size) < 0)
-    {
-        return 1;
-    }
-
-    close((int)obj);
-    unlink(sa.sun_path);
+    close(obj & 0xffff);
+    close(obj >> 16);
     return 0;
 #endif
 }
 
 /*****************************************************************************/
 /* returns error */
-/* close but do not delete the wait obj, used after fork */
 int APP_CC
-g_close_wait_obj(tbus obj)
-{
-#ifdef _WIN32
-#else
-    close((int)obj);
-#endif
-    return 0;
-}
-
-/*****************************************************************************/
-/* returns error */
-int APP_CC
-g_obj_wait(tbus *read_objs, int rcount, tbus *write_objs, int wcount,
+g_obj_wait(tintptr *read_objs, int rcount, tintptr *write_objs, int wcount,
            int mstimeout)
 {
 #ifdef _WIN32
@@ -1627,24 +1572,20 @@ g_obj_wait(tbus *read_objs, int rcount, tbus *write_objs, int wcount,
     fd_set rfds;
     fd_set wfds;
     struct timeval time;
-    struct timeval *ptime = (struct timeval *)NULL;
+    struct timeval *ptime;
     int i = 0;
     int res = 0;
     int max = 0;
     int sck = 0;
 
-    g_memset(&rfds, 0, sizeof(fd_set));
-    g_memset(&wfds, 0, sizeof(fd_set));
-    g_memset(&time, 0, sizeof(struct timeval));
-
     max = 0;
-
     if (mstimeout < 1)
     {
-        ptime = (struct timeval *)NULL;
+        ptime = 0;
     }
     else
     {
+        g_memset(&time, 0, sizeof(struct timeval));
         time.tv_sec = mstimeout / 1000;
         time.tv_usec = (mstimeout % 1000) * 1000;
         ptime = &time;
@@ -1658,7 +1599,7 @@ g_obj_wait(tbus *read_objs, int rcount, tbus *write_objs, int wcount,
     {
         for (i = 0; i < rcount; i++)
         {
-            sck = (int)(read_objs[i]);
+            sck = read_objs[i] & 0xffff;
 
             if (sck > 0)
             {
@@ -1869,7 +1810,7 @@ g_file_read(int fd, char *ptr, int len)
 }
 
 /*****************************************************************************/
-/* write to file, returns the number of bytes writen or -1 on error */
+/* write to file, returns the number of bytes written or -1 on error */
 int APP_CC
 g_file_write(int fd, char *ptr, int len)
 {
@@ -2045,7 +1986,7 @@ g_directory_exist(const char *dirname)
 {
 #if defined(_WIN32)
     return 0; // use GetFileAttributes and check return value
-    // is not -1 and FILE_ATTRIBUT_DIRECTORY bit is set
+    // is not -1 and FILE_ATTRIBUTE_DIRECTORY bit is set
 #else
     struct stat st;
 
@@ -2266,6 +2207,7 @@ g_strdup(const char *in)
 
     return p;
 }
+
 /*****************************************************************************/
 /* if in = 0, return 0 else return newly alloced copy of input string
  * if the input string is larger than maxlen the returned string will be
@@ -2297,6 +2239,7 @@ g_strndup(const char *in, const unsigned int maxlen)
 
     return p;
 }
+
 /*****************************************************************************/
 int APP_CC
 g_strcmp(const char *c1, const char *c2)
@@ -2319,10 +2262,12 @@ g_strncmp_d(const char *s1, const char *s2, const char delim, int n)
     char c1;
     char c2;
 
+    c1 = 0;
+    c2 = 0;
     while (n > 0)
     {
-        c1 = *s1++;
-        c2 = *s2++;
+        c1 = *(s1++);
+        c2 = *(s2++);
         if ((c1 == 0) || (c1 != c2) || (c1 == delim) || (c2 == delim))
         {
             return c1 - c2;
@@ -2783,17 +2728,6 @@ g_signal_user_interrupt(void (*func)(int))
 /*****************************************************************************/
 /* does not work in win32 */
 void APP_CC
-g_signal_kill(void (*func)(int))
-{
-#if defined(_WIN32)
-#else
-    signal(SIGKILL, func);
-#endif
-}
-
-/*****************************************************************************/
-/* does not work in win32 */
-void APP_CC
 g_signal_terminate(void (*func)(int))
 {
 #if defined(_WIN32)
@@ -2906,6 +2840,28 @@ g_setuid(int pid)
     return 0;
 #else
     return setuid(pid);
+#endif
+}
+
+/*****************************************************************************/
+int APP_CC
+g_setsid(void)
+{
+#if defined(_WIN32)
+    return -1;
+#else
+    return setsid();
+#endif
+}
+
+/*****************************************************************************/
+int APP_CC
+g_setlogin(const char *name)
+{
+#ifdef BSD
+    return setlogin(name);
+#else
+    return -1;
 #endif
 }
 
@@ -3396,3 +3352,60 @@ g_gethostname(char *name, int len)
 {
     return gethostname(name, len);
 }
+
+static unsigned char g_reverse_byte[0x100] =
+{
+    0x00, 0x80, 0x40, 0xc0, 0x20, 0xa0, 0x60, 0xe0,
+    0x10, 0x90, 0x50, 0xd0, 0x30, 0xb0, 0x70, 0xf0,
+    0x08, 0x88, 0x48, 0xc8, 0x28, 0xa8, 0x68, 0xe8,
+    0x18, 0x98, 0x58, 0xd8, 0x38, 0xb8, 0x78, 0xf8,
+    0x04, 0x84, 0x44, 0xc4, 0x24, 0xa4, 0x64, 0xe4,
+    0x14, 0x94, 0x54, 0xd4, 0x34, 0xb4, 0x74, 0xf4,
+    0x0c, 0x8c, 0x4c, 0xcc, 0x2c, 0xac, 0x6c, 0xec,
+    0x1c, 0x9c, 0x5c, 0xdc, 0x3c, 0xbc, 0x7c, 0xfc,
+    0x02, 0x82, 0x42, 0xc2, 0x22, 0xa2, 0x62, 0xe2,
+    0x12, 0x92, 0x52, 0xd2, 0x32, 0xb2, 0x72, 0xf2,
+    0x0a, 0x8a, 0x4a, 0xca, 0x2a, 0xaa, 0x6a, 0xea,
+    0x1a, 0x9a, 0x5a, 0xda, 0x3a, 0xba, 0x7a, 0xfa,
+    0x06, 0x86, 0x46, 0xc6, 0x26, 0xa6, 0x66, 0xe6,
+    0x16, 0x96, 0x56, 0xd6, 0x36, 0xb6, 0x76, 0xf6,
+    0x0e, 0x8e, 0x4e, 0xce, 0x2e, 0xae, 0x6e, 0xee,
+    0x1e, 0x9e, 0x5e, 0xde, 0x3e, 0xbe, 0x7e, 0xfe,
+    0x01, 0x81, 0x41, 0xc1, 0x21, 0xa1, 0x61, 0xe1,
+    0x11, 0x91, 0x51, 0xd1, 0x31, 0xb1, 0x71, 0xf1,
+    0x09, 0x89, 0x49, 0xc9, 0x29, 0xa9, 0x69, 0xe9,
+    0x19, 0x99, 0x59, 0xd9, 0x39, 0xb9, 0x79, 0xf9,
+    0x05, 0x85, 0x45, 0xc5, 0x25, 0xa5, 0x65, 0xe5,
+    0x15, 0x95, 0x55, 0xd5, 0x35, 0xb5, 0x75, 0xf5,
+    0x0d, 0x8d, 0x4d, 0xcd, 0x2d, 0xad, 0x6d, 0xed,
+    0x1d, 0x9d, 0x5d, 0xdd, 0x3d, 0xbd, 0x7d, 0xfd,
+    0x03, 0x83, 0x43, 0xc3, 0x23, 0xa3, 0x63, 0xe3,
+    0x13, 0x93, 0x53, 0xd3, 0x33, 0xb3, 0x73, 0xf3,
+    0x0b, 0x8b, 0x4b, 0xcb, 0x2b, 0xab, 0x6b, 0xeb,
+    0x1b, 0x9b, 0x5b, 0xdb, 0x3b, 0xbb, 0x7b, 0xfb,
+    0x07, 0x87, 0x47, 0xc7, 0x27, 0xa7, 0x67, 0xe7,
+    0x17, 0x97, 0x57, 0xd7, 0x37, 0xb7, 0x77, 0xf7,
+    0x0f, 0x8f, 0x4f, 0xcf, 0x2f, 0xaf, 0x6f, 0xef,
+    0x1f, 0x9f, 0x5f, 0xdf, 0x3f, 0xbf, 0x7f, 0xff
+};
+
+/*****************************************************************************/
+/* mirror each byte while copying */
+int APP_CC
+g_mirror_memcpy(void *dst, const void *src, int len)
+{
+    tui8 *dst8;
+    const tui8 *src8;
+
+    dst8 = (tui8 *) dst;
+    src8 = (const tui8 *) src;
+    while (len > 0)
+    {
+        *dst8 = g_reverse_byte[*src8];
+        dst8++;
+        src8++;
+        len--;
+    }
+    return 0;
+}
+

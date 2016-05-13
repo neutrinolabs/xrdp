@@ -66,12 +66,12 @@ struct mod
   int (*server_set_bgcolor)(struct mod* v, int bgcolor);
   int (*server_set_opcode)(struct mod* v, int opcode);
   int (*server_set_mixmode)(struct mod* v, int mixmode);
-  int (*server_set_brush)(struct mod* v, int x_orgin, int y_orgin,
+  int (*server_set_brush)(struct mod* v, int x_origin, int y_origin,
                           int style, char* pattern);
   int (*server_set_pen)(struct mod* v, int style,
                         int width);
   int (*server_draw_line)(struct mod* v, int x1, int y1, int x2, int y2);
-  int (*server_add_char)(struct mod* v, int font, int charactor,
+  int (*server_add_char)(struct mod* v, int font, int character,
                          int offset, int baseline,
                          int width, int height, char* data);
   int (*server_draw_text)(struct mod* v, int font,
@@ -121,7 +121,7 @@ struct mod
                                   int flags);
   int (*server_set_cursor_ex)(struct mod* v, int x, int y, char* data,
                               char* mask, int bpp);
-  int (*server_add_char_alpha)(struct mod* v, int font, int charactor,
+  int (*server_add_char_alpha)(struct mod* v, int font, int character,
                                int offset, int baseline,
                                int width, int height, char* data);
   int (*server_create_os_surface_bpp)(struct mod* v, int rdpindex,

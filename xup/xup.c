@@ -86,6 +86,7 @@ lib_data_in(struct trans *trans)
     struct stream *s;
     int len;
 
+    LLOGLN(10, ("lib_data_in:"));
     if (trans == 0)
     {
         return 1;
@@ -210,6 +211,8 @@ lib_mod_connect(struct mod *mod)
         error = -1;
         if (trans_connect(mod->trans, mod->ip, con_port, 3000) == 0)
         {
+            LLOGLN(0, ("lib_mod_connect: connected to Xserver "
+                   "(Xorg or X11rdp) sck %ld", mod->trans->sck));
             error = 0;
         }
 
@@ -794,7 +797,7 @@ process_server_add_char(struct mod *mod, struct stream *s)
 {
     int rv;
     int font;
-    int charactor;
+    int character;
     int x;
     int y;
     int cx;
@@ -803,14 +806,14 @@ process_server_add_char(struct mod *mod, struct stream *s)
     char *bmpdata;
 
     in_uint16_le(s, font);
-    in_uint16_le(s, charactor);
+    in_uint16_le(s, character);
     in_sint16_le(s, x);
     in_sint16_le(s, y);
     in_uint16_le(s, cx);
     in_uint16_le(s, cy);
     in_uint16_le(s, len_bmpdata);
     in_uint8p(s, bmpdata, len_bmpdata);
-    rv = mod->server_add_char(mod, font, charactor, x, y, cx, cy, bmpdata);
+    rv = mod->server_add_char(mod, font, character, x, y, cx, cy, bmpdata);
     return rv;
 }
 
@@ -822,7 +825,7 @@ process_server_add_char_alpha(struct mod *mod, struct stream *s)
 {
     int rv;
     int font;
-    int charactor;
+    int character;
     int x;
     int y;
     int cx;
@@ -831,14 +834,14 @@ process_server_add_char_alpha(struct mod *mod, struct stream *s)
     char *bmpdata;
 
     in_uint16_le(s, font);
-    in_uint16_le(s, charactor);
+    in_uint16_le(s, character);
     in_sint16_le(s, x);
     in_sint16_le(s, y);
     in_uint16_le(s, cx);
     in_uint16_le(s, cy);
     in_uint16_le(s, len_bmpdata);
     in_uint8p(s, bmpdata, len_bmpdata);
-    rv = mod->server_add_char_alpha(mod, font, charactor, x, y, cx, cy,
+    rv = mod->server_add_char_alpha(mod, font, character, x, y, cx, cy,
                                     bmpdata);
     return rv;
 }
@@ -1148,10 +1151,6 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
     int shmem_offset;
     int width;
     int height;
-    int x;
-    int y;
-    int cx;
-    int cy;
     int index;
     int rv;
     tsi16 *ldrects;
@@ -1237,7 +1236,7 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
     g_free(lcrects);
     g_free(ldrects);
 
-    return 0;
+    return rv;
 }
 
 /******************************************************************************/
@@ -1247,6 +1246,7 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
 {
     int rv;
 
+    LLOGLN(10, ("lib_mod_process_orders: type %d", type));
     rv = 0;
     switch (type)
     {
@@ -1384,12 +1384,14 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
     int type;
     char *phold;
 
+    LLOGLN(10, ("lib_mod_process_message:"));
     rv = 0;
     if (rv == 0)
     {
         in_uint16_le(s, type);
         in_uint16_le(s, num_orders);
         in_uint32_le(s, len);
+        LLOGLN(10, ("lib_mod_process_message: type %d", type));
 
         if (type == 1) /* original order list */
         {

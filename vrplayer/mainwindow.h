@@ -62,7 +62,7 @@ public:
     ~MainWindow();
 
 signals:
-    void onGeometryChanged(int x, int y, int widht, int height);
+    void onGeometryChanged(int x, int y, int width, int height);
 
 public slots:
     void onSliderValueChanged(int value);

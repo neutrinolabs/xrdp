@@ -22,7 +22,6 @@
 #include "arch.h"
 #include "parse.h"
 #include "os_calls.h"
-#include "d3des.h"
 #include "defines.h"
 
 #define CURRENT_MOD_VER 3
@@ -63,12 +62,12 @@ struct vnc
   int (*server_set_bgcolor)(struct vnc* v, int bgcolor);
   int (*server_set_opcode)(struct vnc* v, int opcode);
   int (*server_set_mixmode)(struct vnc* v, int mixmode);
-  int (*server_set_brush)(struct vnc* v, int x_orgin, int y_orgin,
+  int (*server_set_brush)(struct vnc* v, int x_origin, int y_origin,
                           int style, char* pattern);
   int (*server_set_pen)(struct vnc* v, int style,
                         int width);
   int (*server_draw_line)(struct vnc* v, int x1, int y1, int x2, int y2);
-  int (*server_add_char)(struct vnc* v, int font, int charactor,
+  int (*server_add_char)(struct vnc* v, int font, int character,
                          int offset, int baseline,
                          int width, int height, char* data);
   int (*server_draw_text)(struct vnc* v, int font,

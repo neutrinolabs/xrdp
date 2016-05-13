@@ -1,6 +1,3 @@
-EXTRA_DIST = xrdp.ini ad24b.bmp ad256.bmp xrdp24b.bmp xrdp256.bmp xrdp_logo.bmp sans-10.fv1 cursor0.cur cursor1.cur xrdp.h xrdp_types.h \
-xrdp_encoder.h xrdp_keyboard.ini
-
 EXTRA_INCLUDES =
 EXTRA_LIBS =
 EXTRA_FLAGS =
@@ -9,11 +6,6 @@ if XRDP_DEBUG
 EXTRA_DEFINES = -DXRDP_DEBUG
 else
 EXTRA_DEFINES = -DXRDP_NODEBUG
-endif
-
-if GOT_PREFIX
-EXTRA_INCLUDES += -I$(prefix)/include
-EXTRA_FLAGS += -L$(prefix)/lib -Wl,-rpath -Wl,$(prefix)/lib
 endif
 
 if XRDP_RFXCODEC
@@ -28,15 +20,13 @@ EXTRA_INCLUDES += -I$(top_srcdir)/libpainter/include
 EXTRA_LIBS += $(top_srcdir)/libpainter/src/libpainter.la
 #endif
 
-AM_CFLAGS = \
+AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
-  -DXRDP_LIB_PATH=\"${libdir}\" \
-  $(EXTRA_DEFINES)
-
-INCLUDES = \
+  -DXRDP_MODULE_PATH=\"${moduledir}\" \
+  $(EXTRA_DEFINES) \
   -I$(top_builddir) \
   -I$(top_srcdir)/common \
   -I$(top_srcdir)/libxrdp \
@@ -48,9 +38,12 @@ sbin_PROGRAMS = \
 xrdp_SOURCES = \
   funcs.c \
   lang.c \
-  xrdp_bitmap.c \
   xrdp.c \
+  xrdp.h \
+  xrdp_bitmap.c \
   xrdp_cache.c \
+  xrdp_encoder.c \
+  xrdp_encoder.h \
   xrdp_font.c \
   xrdp_listen.c \
   xrdp_login_wnd.c \
@@ -58,8 +51,8 @@ xrdp_SOURCES = \
   xrdp_painter.c \
   xrdp_process.c \
   xrdp_region.c \
-  xrdp_wm.c \
-  xrdp_encoder.c
+  xrdp_types.h \
+  xrdp_wm.c
 
 xrdp_LDADD = \
   $(top_builddir)/common/libcommon.la \
@@ -71,13 +64,13 @@ xrdp_LDFLAGS = \
 
 xrdpsysconfdir=$(sysconfdir)/xrdp
 
-xrdpsysconf_DATA = \
+dist_xrdpsysconf_DATA = \
   xrdp.ini \
   xrdp_keyboard.ini
 
 xrdppkgdatadir=$(datadir)/xrdp
 
-xrdppkgdata_DATA = \
+dist_xrdppkgdata_DATA = \
   ad24b.bmp \
   ad256.bmp \
   xrdp24b.bmp \

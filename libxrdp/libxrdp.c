@@ -66,7 +66,7 @@ libxrdp_disconnect(struct xrdp_session *session)
 
 /******************************************************************************/
 int EXPORT_CC
-libxrdp_process_incomming(struct xrdp_session *session)
+libxrdp_process_incoming(struct xrdp_session *session)
 {
     int rv;
 
@@ -105,7 +105,7 @@ libxrdp_get_pdu_bytes(const char *aheader)
 }
 
 /******************************************************************************/
-/* only used durring connection */
+/* only used during connection */
 struct stream * APP_CC
 libxrdp_force_read(struct trans* trans)
 {
@@ -253,8 +253,8 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
         {
             /*This situation can happen and this is a workaround*/
             cont = 0;
-            g_writeln("Serious programming error we were locked in a deadly loop") ;
-            g_writeln("remaining :%d", s->end - s->next_packet);
+            g_writeln("Serious programming error: we were locked in a deadly loop");
+            g_writeln("Remaining: %d", (int) (s->end - s->next_packet));
             s->next_packet = 0;
         }
 
@@ -971,7 +971,7 @@ libxrdp_reset(struct xrdp_session *session,
     }
 
     /* shut down the rdp client */
-    if (xrdp_rdp_send_deactive((struct xrdp_rdp *)session->rdp) != 0)
+    if (xrdp_rdp_send_deactivate((struct xrdp_rdp *)session->rdp) != 0)
     {
         return 1;
     }
@@ -1074,7 +1074,7 @@ libxrdp_query_channel(struct xrdp_session *session, int index,
 }
 
 /*****************************************************************************/
-/* returns a zero based index of the channel, -1 if error or it dosen't
+/* returns a zero based index of the channel, -1 if error or it doesn't
    exist */
 int EXPORT_CC
 libxrdp_get_channel_id(struct xrdp_session *session, char *name)
@@ -1298,7 +1298,6 @@ libxrdp_fastpath_send_surface(struct xrdp_session *session,
     struct stream ls;
     struct stream *s;
     struct xrdp_rdp *rdp;
-    int rv;
     int sec_bytes;
     int rdp_bytes;
     int max_bytes;

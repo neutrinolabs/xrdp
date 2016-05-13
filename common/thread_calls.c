@@ -20,6 +20,10 @@
 
 #if defined(_WIN32)
 #include <windows.h>
+#elif defined(__APPLE__)
+#include <pthread.h>
+#include <dispatch/dispatch.h>
+#include <dispatch/time.h>
 #else
 #include <pthread.h>
 #include <semaphore.h>
@@ -159,6 +163,9 @@ tc_sem_create(int init_count)
 
     sem = CreateSemaphore(0, init_count, init_count + 10, 0);
     return (tbus)sem;
+#elif defined(__APPLE__)
+    dispatch_semaphore_t sem = dispatch_semaphore_create(init_count);
+    return (tbus)sem;
 #else
     sem_t *sem = (sem_t *)NULL;
 
@@ -174,6 +181,8 @@ tc_sem_delete(tbus sem)
 {
 #if defined(_WIN32)
     CloseHandle((HANDLE)sem);
+#elif defined(__APPLE__)
+    dispatch_release((dispatch_semaphore_t)sem);
 #else
     sem_t *lsem;
 
@@ -190,6 +199,9 @@ tc_sem_dec(tbus sem)
 #if defined(_WIN32)
     WaitForSingleObject((HANDLE)sem, INFINITE);
     return 0;
+#elif defined(__APPLE__)
+    dispatch_semaphore_wait((dispatch_semaphore_t)sem, DISPATCH_TIME_FOREVER);
+    return 0;
 #else
     sem_wait((sem_t *)sem);
     return 0;
@@ -202,6 +214,9 @@ tc_sem_inc(tbus sem)
 {
 #if defined(_WIN32)
     ReleaseSemaphore((HANDLE)sem, 1, 0);
+    return 0;
+#elif defined(__APPLE__)
+    dispatch_semaphore_signal((dispatch_semaphore_t)sem);
     return 0;
 #else
     sem_post((sem_t *)sem);

@@ -1,4 +1,4 @@
-man_MANS = \
+dist_man_MANS = \
   xrdp-dis.1 \
   sesman.ini.5 \
   xrdp.ini.5 \
@@ -14,4 +14,4 @@ man_MANS = \
 noinst_man_MANS = \
   xrdp-xcon.8
 
-EXTRA_DIST = $(man_MANS) $(noinst_man_MANS)
+EXTRA_DIST = $(noinst_man_MANS)

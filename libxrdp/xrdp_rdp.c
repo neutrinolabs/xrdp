@@ -98,8 +98,8 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
             }
             else
             {
-                log_message(LOG_LEVEL_ALWAYS,"Warning: Your configured crypt level is"
-                          "undefined 'high' will be used");
+                log_message(LOG_LEVEL_ALWAYS,"Warning: Your configured crypt level is "
+                          "undefined, 'high' will be used");
                 client_info->crypt_level = 3;
             }
         }
@@ -962,7 +962,6 @@ xrdp_rdp_process_data_sync(struct xrdp_rdp *self)
 static int APP_CC
 xrdp_rdp_process_screen_update(struct xrdp_rdp *self, struct stream *s)
 {
-    int op;
     int left;
     int top;
     int right;
@@ -970,7 +969,7 @@ xrdp_rdp_process_screen_update(struct xrdp_rdp *self, struct stream *s)
     int cx;
     int cy;
 
-    in_uint32_le(s, op);
+    in_uint8s(s, 4); /* op */
     in_uint16_le(s, left);
     in_uint16_le(s, top);
     in_uint16_le(s, right);
@@ -1129,16 +1128,13 @@ xrdp_rdp_process_frame_ack(struct xrdp_rdp *self, struct stream *s)
 int APP_CC
 xrdp_rdp_process_data(struct xrdp_rdp *self, struct stream *s)
 {
-    int len;
     int data_type;
-    int ctype;
-    int clen;
 
     in_uint8s(s, 6);
-    in_uint16_le(s, len);
+    in_uint8s(s, 2); /* len */
     in_uint8(s, data_type);
-    in_uint8(s, ctype);
-    in_uint16_le(s, clen);
+    in_uint8s(s, 1); /* ctype */
+    in_uint8s(s, 2); /* clen */
     DEBUG(("xrdp_rdp_process_data code %d", data_type));
 
     switch (data_type)
@@ -1159,7 +1155,7 @@ xrdp_rdp_process_data(struct xrdp_rdp *self, struct stream *s)
             xrdp_rdp_process_screen_update(self, s);
             break;
         case 35: /* 35(0x23) */
-            /* 35 ?? this comes when minimuzing a full screen mstsc.exe 2600 */
+            /* 35 ?? this comes when minimizing a full screen mstsc.exe 2600 */
             /* I think this is saying the client no longer wants screen */
             /* updates and it will issue a 33 above to catch up */
             /* so minimized apps don't take bandwidth */
@@ -1197,18 +1193,18 @@ xrdp_rdp_disconnect(struct xrdp_rdp *self)
 
 /*****************************************************************************/
 int APP_CC
-xrdp_rdp_send_deactive(struct xrdp_rdp *self)
+xrdp_rdp_send_deactivate(struct xrdp_rdp *self)
 {
     struct stream *s;
 
-    DEBUG(("in xrdp_rdp_send_deactive"));
+    DEBUG(("in xrdp_rdp_send_deactivate"));
     make_stream(s);
     init_stream(s, 8192);
 
     if (xrdp_rdp_init(self, s) != 0)
     {
         free_stream(s);
-        DEBUG(("out xrdp_rdp_send_deactive error"));
+        DEBUG(("out xrdp_rdp_send_deactivate error"));
         return 1;
     }
 
@@ -1217,11 +1213,11 @@ xrdp_rdp_send_deactive(struct xrdp_rdp *self)
     if (xrdp_rdp_send(self, s, RDP_PDU_DEACTIVATE) != 0)
     {
         free_stream(s);
-        DEBUG(("out xrdp_rdp_send_deactive error"));
+        DEBUG(("out xrdp_rdp_send_deactivate error"));
         return 1;
     }
 
     free_stream(s);
-    DEBUG(("out xrdp_rdp_send_deactive"));
+    DEBUG(("out xrdp_rdp_send_deactivate"));
     return 0;
 }

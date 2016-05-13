@@ -202,7 +202,7 @@ xrdp_process_main_loop(struct xrdp_process *self)
     /* this function is just above */
     self->session->is_term = xrdp_is_term;
 
-    if (libxrdp_process_incomming(self->session) == 0)
+    if (libxrdp_process_incoming(self->session) == 0)
     {
         init_stream(self->server_trans->in_s, 32 * 1024);
 
@@ -253,7 +253,7 @@ xrdp_process_main_loop(struct xrdp_process *self)
     }
     else
     {
-        g_writeln("xrdp_process_main_loop: libxrdp_process_incomming failed");
+        g_writeln("xrdp_process_main_loop: libxrdp_process_incoming failed");
         /* this will try to send a disconnect,
            maybe should check that connection got far enough */
         libxrdp_disconnect(self->session);

@@ -26,6 +26,48 @@
 
 #define FILE_MAX_LINE_BYTES 2048
 
+static int APP_CC
+file_read_ini_line(struct stream *s, char *text, int text_bytes);
+
+/*****************************************************************************/
+/* look up for a section name within str (i.e. pattern [section_name])
+ * if a section name is found, this function return 1 and copy the section
+ * inplace of str. */
+static int APP_CC
+line_lookup_for_section_name(char *str, int str_bytes)
+{
+    int name_index_start;
+    int index;
+    char c;
+
+    name_index_start = -1;
+    index = 0;
+    while ((c = str[index]) != 0)
+    {
+        if (c == '[')
+        {
+            name_index_start = index + 1;
+        }
+        else if (c == ']' && name_index_start > 0)
+        {
+            if (name_index_start + index >= str_bytes)
+            {
+                return 0;
+            }
+            for (index = index - name_index_start; index > 0; index--)
+            {
+                str[0] = str[name_index_start];
+                str++;
+            }
+            str[0] = 0;
+            return 1;
+        }
+        ++index;
+    }
+    return 0;
+}
+
+
 /*****************************************************************************/
 /* returns error
    returns 0 if everything is ok
@@ -35,17 +77,11 @@ l_file_read_sections(int fd, int max_file_size, struct list *names)
 {
     struct stream *s;
     char text[FILE_MAX_LINE_BYTES];
-    char c;
-    int in_it;
-    int in_it_index;
     int len;
-    int index;
     int rv;
 
     rv = 0;
     g_file_seek(fd, 0);
-    in_it_index = 0;
-    in_it = 0;
     g_memset(text, 0, FILE_MAX_LINE_BYTES);
     list_clear(names);
     make_stream(s);
@@ -55,26 +91,11 @@ l_file_read_sections(int fd, int max_file_size, struct list *names)
     if (len > 0)
     {
         s->end = s->p + len;
-
-        for (index = 0; index < len; index++)
+        while (file_read_ini_line(s, text, FILE_MAX_LINE_BYTES) == 0)
         {
-            in_uint8(s, c);
-
-            if (c == '[')
-            {
-                in_it = 1;
-            }
-            else if (c == ']')
+            if (line_lookup_for_section_name(text, FILE_MAX_LINE_BYTES) != 0)
             {
                 list_add_item(names, (tbus)g_strdup(text));
-                in_it = 0;
-                in_it_index = 0;
-                g_memset(text, 0, FILE_MAX_LINE_BYTES);
-            }
-            else if (in_it)
-            {
-                text[in_it_index] = c;
-                in_it_index++;
             }
         }
     }
@@ -88,15 +109,17 @@ l_file_read_sections(int fd, int max_file_size, struct list *names)
 }
 
 /*****************************************************************************/
-/* returns error */
+/* Read a line in the stream 's', removing comments.
+ * returns error
+ * returns 0 if everything is ok
+ * returns 1 if problem reading file */
 static int APP_CC
-file_read_line(struct stream *s, char *text, int text_bytes)
+file_read_ini_line(struct stream *s, char *text, int text_bytes)
 {
     int i;
     int skip_to_end;
     int at_end;
     char c;
-    char *hold;
 
     skip_to_end = 0;
 
@@ -105,7 +128,6 @@ file_read_line(struct stream *s, char *text, int text_bytes)
         return 1;
     }
 
-    hold = s->p;
     i = 0;
     in_uint8(s, c);
 
@@ -163,14 +185,9 @@ file_read_line(struct stream *s, char *text, int text_bytes)
 
     text[i] = 0;
 
-    if (text[0] == '[')
-    {
-        s->p = hold;
-        return 1;
-    }
-
     return 0;
 }
+
 
 /*****************************************************************************/
 /* returns error */
@@ -227,11 +244,7 @@ l_file_read_section(int fd, int max_file_size, const char *section,
     char *name;
     char *value;
     char *lvalue;
-    char c;
-    int in_it;
-    int in_it_index;
     int len;
-    int index;
     int file_size;
 
     data = (char *) g_malloc(FILE_MAX_LINE_BYTES * 3, 0);
@@ -241,8 +254,6 @@ l_file_read_section(int fd, int max_file_size, const char *section,
 
     file_size = 32 * 1024; /* 32 K file size limit */
     g_file_seek(fd, 0);
-    in_it_index = 0;
-    in_it = 0;
     g_memset(text, 0, FILE_MAX_LINE_BYTES);
     list_clear(names);
     list_clear(values);
@@ -253,36 +264,20 @@ l_file_read_section(int fd, int max_file_size, const char *section,
     if (len > 0)
     {
         s->end = s->p + len;
-
-        for (index = 0; index < len; index++)
+        while (file_read_ini_line(s, text, FILE_MAX_LINE_BYTES) == 0)
         {
-            if (!s_check_rem(s, 1))
-            {
-                break;
-            }
-            in_uint8(s, c);
-            if ((c == '#') || (c == ';'))
-            {
-                if (file_read_line(s, text, FILE_MAX_LINE_BYTES) != 0)
-                {
-                    break;
-                }
-                in_it = 0;
-                in_it_index = 0;
-                g_memset(text, 0, FILE_MAX_LINE_BYTES);
-                continue;
-            }
-            if (c == '[')
-            {
-                in_it = 1;
-            }
-            else if (c == ']')
+            if (line_lookup_for_section_name(text, FILE_MAX_LINE_BYTES) != 0)
             {
                 if (g_strcasecmp(section, text) == 0)
                 {
-                    file_read_line(s, text, FILE_MAX_LINE_BYTES);
-                    while (file_read_line(s, text, FILE_MAX_LINE_BYTES) == 0)
+                    while (file_read_ini_line(s, text,
+                                              FILE_MAX_LINE_BYTES) == 0)
                     {
+                        if (line_lookup_for_section_name(text, FILE_MAX_LINE_BYTES) != 0)
+                        {
+                            break;
+                        }
+
                         if (g_strlen(text) > 0)
                         {
                             file_split_name_value(text, name, value);
@@ -307,27 +302,14 @@ l_file_read_section(int fd, int max_file_size, const char *section,
                             }
                         }
                     }
-
                     free_stream(s);
                     g_free(data);
                     return 0;
                 }
-
-                in_it = 0;
-                in_it_index = 0;
-                g_memset(text, 0, FILE_MAX_LINE_BYTES);
-            }
-            else if (in_it)
-            {
-                text[in_it_index] = c;
-                in_it_index++;
-                if (in_it_index >= FILE_MAX_LINE_BYTES)
-                {
-                    break;
-                }
             }
         }
     }
+
     free_stream(s);
     g_free(data);
     return 1;
@@ -346,7 +328,7 @@ file_read_sections(int fd, struct list *names)
 
 /*****************************************************************************/
 /* return error */
-/* this function should be prefered over file_read_sections because it can
+/* this function should be preferred over file_read_sections because it can
    read any file size */
 int APP_CC
 file_by_name_read_sections(const char *file_name, struct list *names)
@@ -362,7 +344,7 @@ file_by_name_read_sections(const char *file_name, struct list *names)
         return 1;
     }
 
-    fd = g_file_open(file_name);
+    fd = g_file_open_ex(file_name, 1, 0, 0, 0);
 
     if (fd < 0)
     {
@@ -386,7 +368,7 @@ file_read_section(int fd, const char *section,
 
 /*****************************************************************************/
 /* return error */
-/* this function should be prefered over file_read_section because it can
+/* this function should be preferred over file_read_section because it can
    read any file size */
 int APP_CC
 file_by_name_read_section(const char *file_name, const char *section,
@@ -403,7 +385,7 @@ file_by_name_read_section(const char *file_name, const char *section,
         return 1;
     }
 
-    fd = g_file_open(file_name);
+    fd = g_file_open_ex(file_name, 1, 0, 0, 0);
 
     if (fd < 0)
     {

@@ -194,7 +194,7 @@ xrdpvr_play_media(void *channel, int stream_id, char *filename)
     //if (avformat_find_stream_info(g_psi.p_format_ctx, NULL) < 0)
     if (av_find_stream_info(g_psi.p_format_ctx) < 0)
     {
-        printf("ERRRO reading stream info\n");
+        printf("ERROR reading stream info\n");
         return -1;
     }
 

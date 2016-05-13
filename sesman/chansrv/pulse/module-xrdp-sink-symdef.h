@@ -1,5 +1,5 @@
-#ifndef foomodulexrdpsinksymdeffoo
-#define foomodulexrdpsinksymdeffoo
+#ifndef MODULE_XRDP_SINK_SYMDEF_H
+#define MODULE_XRDP_SINK_SYMDEF_H
 
 #include <pulsecore/core.h>
 #include <pulsecore/module.h>

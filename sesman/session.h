@@ -112,15 +112,6 @@ session_reconnect(int display, char* username);
 
 /**
  *
- * @brief starts a session
- * @return error
- *
- */
-int APP_CC
-session_sync_start(void);
-
-/**
- *
  * @brief kills a session
  * @param pid the pid of the session to be killed
  * @return

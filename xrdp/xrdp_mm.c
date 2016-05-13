@@ -357,7 +357,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
 
     if (self->mod_handle == 0)
     {
-        g_snprintf(text, 255, "%s/%s", XRDP_LIB_PATH, lib);
+        g_snprintf(text, 255, "%s/%s", XRDP_MODULE_PATH, lib);
         /* Let the main thread load the lib,*/
         self->mod_handle = g_xrdp_sync(xrdp_mm_sync_load, (tintptr)text, 0);
 
@@ -578,6 +578,10 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
         else
         {
             xrdp_wm_show_log(self->wm);
+            if (self->wm->hide_log_window)
+            {
+                rv = 1;
+            }
         }
     }
 
@@ -813,6 +817,7 @@ xrdp_mm_process_rail_create_window(struct xrdp_mm* self, struct stream* s)
     return rv;
 }
 
+#if 0
 /*****************************************************************************/
 /* returns error
    process rail configure window order */
@@ -879,6 +884,7 @@ xrdp_mm_process_rail_configure_window(struct xrdp_mm* self, struct stream* s)
     g_free(rwso.visibility_rects);
     return rv;
 }
+#endif
 
 /*****************************************************************************/
 /* returns error
@@ -1052,7 +1058,6 @@ xrdp_mm_chan_data_in(struct trans *trans)
 {
     struct xrdp_mm *self;
     struct stream *s;
-    int id;
     int size;
     int error;
 
@@ -1069,7 +1074,7 @@ xrdp_mm_chan_data_in(struct trans *trans)
         return 1;
     }
 
-    in_uint32_le(s, id);
+    in_uint8s(s, 4); /* id */
     in_uint32_le(s, size);
     error = trans_force_read(trans, size - 8);
 
@@ -1147,7 +1152,7 @@ xrdp_mm_connect_chansrv(struct xrdp_mm *self, char *ip, char *port)
 
     if (!(self->chan_trans_up))
     {
-        log_message(LOG_LEVEL_ERROR,"xrdp_mm_connect_chansrv: error in"
+        log_message(LOG_LEVEL_ERROR,"xrdp_mm_connect_chansrv: error in "
                     "trans_connect chan");
     }
 
@@ -1160,7 +1165,7 @@ xrdp_mm_connect_chansrv(struct xrdp_mm *self, char *ip, char *port)
         }
         else
         {
-            log_message(LOG_LEVEL_DEBUG,"xrdp_mm_connect_chansrv: chansrv"
+            log_message(LOG_LEVEL_DEBUG,"xrdp_mm_connect_chansrv: chansrv "
                         "connect successful");
         }
     }
@@ -1231,6 +1236,10 @@ xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
         log_message(LOG_LEVEL_INFO,"xrdp_mm_process_login_response: "
                         "login failed");
         xrdp_wm_show_log(self->wm);
+        if (self->wm->hide_log_window)
+        {
+            rv = 1;
+        }
     }
 
     cleanup_sesman_connection(self);
@@ -1450,7 +1459,7 @@ access_control(char *username, char *password, char *srv)
             if (reply > 0)
             {
                 /* We wait in 5 sec for a reply from sesman*/
-                if (g_tcp_can_recv(socket, 5000))
+                if (g_sck_can_recv(socket, 5000))
                 {
                     reply = g_tcp_recv(socket, in_s->end, 500, 0);
 
@@ -1975,7 +1984,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
             if (xrdp_mm_setup_mod2(self) == 0)
             {
                 xrdp_wm_set_login_mode(self->wm, 10);
-                rv = 0; /*sucess*/
+                rv = 0; /*success*/
             }
             else
             {
@@ -2006,7 +2015,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
         xrdp_mm_connect_chansrv(self, "", chansrvport);
     }
 
-    log_message(LOG_LEVEL_DEBUG,"returnvalue from xrdp_mm_connect %d", rv);
+    log_message(LOG_LEVEL_DEBUG,"return value from xrdp_mm_connect %d", rv);
 
     return rv;
 }
@@ -2155,6 +2164,11 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
         if (trans_check_wait_objs(self->sesman_trans) != 0)
         {
             self->delete_sesman_trans = 1;
+            if (self->wm->hide_log_window)
+            {
+                /* if hide_log_window, this is fatal */
+                rv = 1;
+            }
         }
     }
 
@@ -2645,7 +2659,7 @@ server_msg(struct xrdp_mod *mod, char *msg, int code)
 
     if (code == 1)
     {
-        g_writeln(msg);
+        g_writeln("%s",msg);
         return 0;
     }
 
@@ -2763,7 +2777,7 @@ server_set_mixmode(struct xrdp_mod *mod, int mixmode)
 
 /*****************************************************************************/
 int DEFAULT_CC
-server_set_brush(struct xrdp_mod *mod, int x_orgin, int y_orgin,
+server_set_brush(struct xrdp_mod *mod, int x_origin, int y_origin,
                  int style, char *pattern)
 {
     struct xrdp_painter *p;
@@ -2775,8 +2789,8 @@ server_set_brush(struct xrdp_mod *mod, int x_orgin, int y_orgin,
         return 0;
     }
 
-    p->brush.x_orgin = x_orgin;
-    p->brush.y_orgin = y_orgin;
+    p->brush.x_origin = x_origin;
+    p->brush.y_origin = y_origin;
     p->brush.style = style;
     g_memcpy(p->brush.pattern, pattern, 8);
     return 0;
@@ -2820,7 +2834,7 @@ server_draw_line(struct xrdp_mod *mod, int x1, int y1, int x2, int y2)
 
 /*****************************************************************************/
 int DEFAULT_CC
-server_add_char(struct xrdp_mod *mod, int font, int charactor,
+server_add_char(struct xrdp_mod *mod, int font, int character,
                 int offset, int baseline,
                 int width, int height, char *data)
 {
@@ -2834,7 +2848,7 @@ server_add_char(struct xrdp_mod *mod, int font, int charactor,
     fi.data = data;
     fi.bpp = 1;
     return libxrdp_orders_send_font(((struct xrdp_wm *)mod->wm)->session,
-                                    &fi, font, charactor);
+                                    &fi, font, character);
 }
 
 /*****************************************************************************/
@@ -2916,7 +2930,6 @@ int read_allowed_channel_names(struct list *names, struct list *values)
     int fd;
     int ret = 0;
     char cfg_file[256];
-    int pos;
 
     g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
     fd = g_file_open(cfg_file);
@@ -2925,7 +2938,6 @@ int read_allowed_channel_names(struct list *names, struct list *values)
     {
         names->auto_free = 1;
         values->auto_free = 1;
-        pos = 0;
 
         /* all values in this section can be valid channel names */
         if (file_read_section(fd, "channels", names, values) == 0)
@@ -3457,7 +3469,7 @@ server_monitored_desktop(struct xrdp_mod *mod,
 
 /*****************************************************************************/
 int DEFAULT_CC
-server_add_char_alpha(struct xrdp_mod* mod, int font, int charactor,
+server_add_char_alpha(struct xrdp_mod* mod, int font, int character,
                       int offset, int baseline,
                       int width, int height, char* data)
 {
@@ -3471,5 +3483,5 @@ server_add_char_alpha(struct xrdp_mod* mod, int font, int charactor,
     fi.data = data;
     fi.bpp = 8;
     return libxrdp_orders_send_font(((struct xrdp_wm*)mod->wm)->session,
-                                    &fi, font, charactor);
+                                    &fi, font, character);
 }

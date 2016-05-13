@@ -38,7 +38,7 @@
  * @brief version neutral server accept function
  * @param c connection descriptor
  * @param s session descriptor pointer address.
- *          it will return a newely allocated descriptor.
+ *          it will return a newly allocated descriptor.
  *          It this memory needs to be g_free()d
  *
  */

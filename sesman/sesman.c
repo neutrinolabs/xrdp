@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2015
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,10 +31,7 @@ int g_pid;
 unsigned char g_fixedkey[8] = { 23, 82, 107, 6, 35, 78, 88, 7 };
 struct config_sesman *g_cfg; /* defined in config.h */
 
-tbus g_term_event = 0;
-tbus g_sync_event = 0;
-
-extern int g_thread_sck; /* in thread.c */
+tintptr g_term_event = 0;
 
 /******************************************************************************/
 /**
@@ -80,7 +77,6 @@ sesman_main_loop(void)
                 robjs_count = 0;
                 robjs[robjs_count++] = sck_obj;
                 robjs[robjs_count++] = g_term_event;
-                robjs[robjs_count++] = g_sync_event;
 
                 /* wait */
                 if (g_obj_wait(robjs, robjs_count, 0, 0, -1) != 0)
@@ -92,12 +88,6 @@ sesman_main_loop(void)
                 if (g_is_wait_obj_set(g_term_event)) /* term */
                 {
                     break;
-                }
-
-                if (g_is_wait_obj_set(g_sync_event)) /* sync */
-                {
-                    g_reset_wait_obj(g_sync_event);
-                    session_sync_start();
                 }
 
                 if (g_is_wait_obj_set(sck_obj)) /* incoming connection */
@@ -118,8 +108,8 @@ sesman_main_loop(void)
                     {
                         /* we've got a connection, so we pass it to scp code */
                         LOG_DBG("new connection");
-                        thread_scp_start(in_sck);
-                        /* todo, do we have to wait here ? */
+                        scp_process_start((void*)(tintptr)in_sck);
+                        g_sck_close(in_sck);
                     }
                 }
             }
@@ -138,9 +128,7 @@ sesman_main_loop(void)
                     "port '%s': %d (%s)", g_cfg->listen_port,
                     g_get_errno(), g_get_strerror());
     }
-
-    if (g_sck != -1)
-        g_tcp_close(g_sck);
+    g_tcp_close(g_sck);
 }
 
 /******************************************************************************/
@@ -148,7 +136,8 @@ int DEFAULT_CC
 main(int argc, char **argv)
 {
     int fd;
-    enum logReturns error;
+    enum logReturns log_error;
+    int error;
     int daemon = 1;
     int pid;
     char pid_s[32];
@@ -171,7 +160,7 @@ main(int argc, char **argv)
                              (0 == g_strcasecmp(argv[1], "-ns"))))
     {
         /* starts sesman not daemonized */
-        g_printf("starting sesman in foregroud...\n");
+        g_printf("starting sesman in foreground...\n");
         daemon = 0;
     }
     else if ((2 == argc) && ((0 == g_strcasecmp(argv[1], "--help")) ||
@@ -252,7 +241,7 @@ main(int argc, char **argv)
     {
         g_printf("sesman is already running.\n");
         g_printf("if it's not running, try removing ");
-        g_printf(pid_file);
+        g_printf("%s", pid_file);
         g_printf("\n");
         g_deinit();
         g_exit(1);
@@ -279,11 +268,11 @@ main(int argc, char **argv)
     g_snprintf(cfg_file, 255, "%s/sesman.ini", XRDP_CFG_PATH);
 
     /* starting logging subsystem */
-    error = log_start(cfg_file, "XRDP-sesman");
+    log_error = log_start(cfg_file, "xrdp-sesman");
 
-    if (error != LOG_STARTUP_OK)
+    if (log_error != LOG_STARTUP_OK)
     {
-        switch (error)
+        switch (log_error)
         {
             case LOG_ERROR_MALLOC:
                 g_writeln("error on malloc. cannot start logging. quitting.");
@@ -291,6 +280,9 @@ main(int argc, char **argv)
             case LOG_ERROR_FILE_OPEN:
                 g_writeln("error opening log file [%s]. quitting.",
                           getLogFile(text, 255));
+                break;
+            default:
+                g_writeln("error");
                 break;
         }
 
@@ -329,9 +321,6 @@ main(int argc, char **argv)
         }
     }
 
-    /* initializing locks */
-    lock_init();
-
     /* signal handling */
     g_pid = g_getpid();
     /* old style signal handling is now managed synchronously by a
@@ -342,7 +331,6 @@ main(int argc, char **argv)
 #if 1
     g_signal_hang_up(sig_sesman_reload_cfg); /* SIGHUP  */
     g_signal_user_interrupt(sig_sesman_shutdown); /* SIGINT  */
-    g_signal_kill(sig_sesman_shutdown); /* SIGKILL */
     g_signal_terminate(sig_sesman_shutdown); /* SIGTERM */
     g_signal_child_stop(sig_sesman_session_end); /* SIGCHLD */
 #endif
@@ -387,8 +375,6 @@ main(int argc, char **argv)
 
     g_snprintf(text, 255, "xrdp_sesman_%8.8x_main_term", g_pid);
     g_term_event = g_create_wait_obj(text);
-    g_snprintf(text, 255, "xrdp_sesman_%8.8x_main_sync", g_pid);
-    g_sync_event = g_create_wait_obj(text);
 
     sesman_main_loop();
 
@@ -399,7 +385,6 @@ main(int argc, char **argv)
     }
 
     g_delete_wait_obj(g_term_event);
-    g_delete_wait_obj(g_sync_event);
 
     if (!daemon)
     {

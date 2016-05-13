@@ -401,6 +401,7 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
     tui8 *lexp;
     int error;
     int len;
+    int diff;
 
     if ((exp_len != 4) || ((mod_len != 64) && (mod_len != 256)) ||
                           ((pri_len != 64) && (pri_len != 256)))
@@ -408,8 +409,9 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
         return 1;
     }
 
-    lmod = (char *)g_malloc(mod_len, 0);
-    lpri = (char *)g_malloc(pri_len, 0);
+    diff = 0;
+    lmod = (char *)g_malloc(mod_len, 1);
+    lpri = (char *)g_malloc(pri_len, 1);
     lexp = (tui8 *)exp;
     my_e = lexp[0];
     my_e |= lexp[1] << 8;
@@ -423,24 +425,26 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
     if (error == 0)
     {
         len = BN_num_bytes(my_key->n);
-        error = len != mod_len;
+        error = (len < 1) || (len > mod_len);
+        diff = mod_len - len;
     }
 
     if (error == 0)
     {
-        BN_bn2bin(my_key->n, (tui8 *)lmod);
+        BN_bn2bin(my_key->n, (tui8 *)(lmod + diff));
         ssl_reverse_it(lmod, mod_len);
     }
 
     if (error == 0)
     {
         len = BN_num_bytes(my_key->d);
-        error = len != pri_len;
+        error = (len < 1) || (len > pri_len);
+        diff = pri_len - len;
     }
 
     if (error == 0)
     {
-        BN_bn2bin(my_key->d, (tui8 *)lpri);
+        BN_bn2bin(my_key->d, (tui8 *)(lpri + diff));
         ssl_reverse_it(lpri, pri_len);
     }
 
@@ -471,6 +475,7 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
     char *lpri;
     int error;
     int len;
+    int diff;
 
     if ((exp_len != 4) || ((mod_len != 64) && (mod_len != 256)) ||
                           ((pri_len != 64) && (pri_len != 256)))
@@ -478,9 +483,10 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
         return 1;
     }
 
-    lexp = (char *)g_malloc(exp_len, 0);
-    lmod = (char *)g_malloc(mod_len, 0);
-    lpri = (char *)g_malloc(pri_len, 0);
+    diff = 0;
+    lexp = (char *)g_malloc(exp_len, 1);
+    lmod = (char *)g_malloc(mod_len, 1);
+    lpri = (char *)g_malloc(pri_len, 1);
     g_memcpy(lexp, exp, exp_len);
     ssl_reverse_it(lexp, exp_len);
     my_e = BN_new();
@@ -491,24 +497,26 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
     if (error == 0)
     {
         len = BN_num_bytes(my_key->n);
-        error = len != mod_len;
+        error = (len < 1) || (len > mod_len);
+        diff = mod_len - len;
     }
 
     if (error == 0)
     {
-        BN_bn2bin(my_key->n, (tui8 *)lmod);
+        BN_bn2bin(my_key->n, (tui8 *)(lmod + diff));
         ssl_reverse_it(lmod, mod_len);
     }
 
     if (error == 0)
     {
         len = BN_num_bytes(my_key->d);
-        error = len != pri_len;
+        error = (len < 1) || (len > pri_len);
+        diff = pri_len - len;
     }
 
     if (error == 0)
     {
-        BN_bn2bin(my_key->d, (tui8 *)lpri);
+        BN_bn2bin(my_key->d, (tui8 *)(lpri + diff));
         ssl_reverse_it(lpri, pri_len);
     }
 
@@ -841,6 +849,6 @@ ssl_tls_can_recv(struct ssl_tls *tls, int sck, int millis)
         return 1;
     }
     g_reset_wait_obj(tls->rwo);
-    return g_tcp_can_recv(sck, millis);
+    return g_sck_can_recv(sck, millis);
 }
 

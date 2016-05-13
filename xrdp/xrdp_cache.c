@@ -79,7 +79,7 @@ xrdp_cache_reset_crc(struct xrdp_cache *self)
     {
         for (jndex = 0; jndex < 64 * 1024; jndex++)
         {
-            /* it's ok to deinit a zero'ed out struct list16 */
+            /* it's ok to deinit a zeroed out struct list16 */
             list16_deinit(&(self->crc16[index][jndex]));
             list16_init(&(self->crc16[index][jndex]));
         }
@@ -684,7 +684,7 @@ xrdp_cache_add_pointer(struct xrdp_cache *self,
 }
 
 /*****************************************************************************/
-/* this does not take owership of pointer_item, it makes a copy */
+/* this does not take ownership of pointer_item, it makes a copy */
 int APP_CC
 xrdp_cache_add_pointer_static(struct xrdp_cache *self,
                               struct xrdp_pointer_item *pointer_item,
@@ -716,7 +716,7 @@ xrdp_cache_add_pointer_static(struct xrdp_cache *self,
 }
 
 /*****************************************************************************/
-/* this does not take owership of brush_item_data, it makes a copy */
+/* this does not take ownership of brush_item_data, it makes a copy */
 int APP_CC
 xrdp_cache_add_brush(struct xrdp_cache *self,
                      char *brush_item_data)

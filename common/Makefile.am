@@ -1,46 +1,42 @@
-EXTRA_DIST = \
-  arch.h \
-  d3des.h \
-  defines.h \
-  file.h \
-  file_loc.h \
-  list.h \
-  list16.h \
-  fifo.h \
-  log.h \
-  os_calls.h \
-  os_calls.h \
-  parse.h \
-  rail.h \
-  ssl_calls.h \
-  thread_calls.h \
-  trans.h \
-  xrdp_client_info.h \
-  xrdp_constants.h \
-  xrdp_rail.h \
-  crc16.h
-
-AM_CFLAGS = \
+AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -DXRDP_LOG_PATH=\"${localstatedir}/log\"
 
-lib_LTLIBRARIES = \
+module_LTLIBRARIES = \
   libcommon.la
 
 libcommon_la_SOURCES = \
-  d3des.c \
-  file.c \
-  list.c \
-  list16.c \
+  arch.h \
+  crc16.h \
+  defines.h \
   fifo.c \
+  fifo.h \
+  file.c \
+  file.h \
+  file_loc.h \
+  list.c \
+  list.h \
+  list16.c \
+  list16.h \
   log.c \
+  log.h \
   os_calls.c \
+  os_calls.h \
+  os_calls.h \
+  parse.h \
+  rail.h \
   ssl_calls.c \
+  ssl_calls.h \
   thread_calls.c \
-  trans.c
+  thread_calls.h \
+  trans.c \
+  trans.h \
+  xrdp_client_info.h \
+  xrdp_constants.h \
+  xrdp_rail.h
 
 libcommon_la_LIBADD = \
   -lcrypto \

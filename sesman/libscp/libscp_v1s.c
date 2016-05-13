@@ -131,7 +131,14 @@ enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION *c, struct SCP_SES
     in_uint16_be(c->in_s, cmd);
     scp_session_set_height(session, cmd);
     in_uint8(c->in_s, sz);
-    scp_session_set_bpp(session, sz);
+    if (0 != scp_session_set_bpp(session, sz))
+    {
+        scp_session_destroy(session);
+        log_message(LOG_LEVEL_WARNING,
+                    "[v1s:%d] connection aborted: unsupported bpp: %d",
+                    __LINE__, sz);
+        return SCP_SERVER_STATE_INTERNAL_ERR;
+    }
     in_uint8(c->in_s, sz);
     scp_session_set_rsr(session, sz);
     in_uint8a(c->in_s, buf, 17);
@@ -435,8 +442,11 @@ scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt, struct SCP_DISCONNEC
     }
 
     /* then we wait for client ack */
-#warning maybe this message could say if the session should be resized on
-#warning server side or client side
+
+    /*
+     * Maybe this message could say if the session should be resized on
+     * server side or client side.
+     */
     init_stream(c->in_s, c->in_s->size);
 
     if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))
@@ -637,7 +647,7 @@ scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt, struct SCP_DISCONNEC
         /* if we got here, the requested sid wasn't one from the list we sent */
         /* we should kill the connection                                      */
         log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error (no such session in list)", __LINE__);
-        return SCP_CLIENT_STATE_INTERNAL_ERR;
+        return SCP_SERVER_STATE_INTERNAL_ERR;
     }
     else if (cmd == 44)
     {

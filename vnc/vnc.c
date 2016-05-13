@@ -21,6 +21,7 @@
 #include "vnc.h"
 #include "log.h"
 #include "trans.h"
+#include "ssl_calls.h"
 
 #define LLOG_LEVEL 1
 #define LLOGLN(_level, _args) \
@@ -51,14 +52,38 @@ lib_send_copy(struct vnc *v, struct stream *s)
 void DEFAULT_CC
 rfbEncryptBytes(char *bytes, char *passwd)
 {
-    char key[12];
+    char key[24];
+    char passwd_hash[20];
+    char passwd_hash_text[40];
+    void *des;
+    void *sha1;
+    int len;
+    int passwd_bytes;
+
+    /* create password hash from password */
+    passwd_bytes = g_strlen(passwd);
+    sha1 = ssl_sha1_info_create();
+    ssl_sha1_transform(sha1, "xrdp_vnc", 8);
+    ssl_sha1_transform(sha1, passwd, passwd_bytes);
+    ssl_sha1_transform(sha1, passwd, passwd_bytes);
+    ssl_sha1_complete(sha1, passwd_hash);
+    ssl_sha1_info_delete(sha1);
+    g_snprintf(passwd_hash_text, 39, "%2.2x%2.2x%2.2x%2.2x",
+               (tui8)passwd_hash[0], (tui8)passwd_hash[1],
+               (tui8)passwd_hash[2], (tui8)passwd_hash[3]);
+    passwd_hash_text[39] = 0;
+    passwd = passwd_hash_text;
 
     /* key is simply password padded with nulls */
     g_memset(key, 0, sizeof(key));
-    g_strncpy(key, passwd, 8);
-    rfbDesKey((unsigned char *)key, EN0); /* 0, encrypt */
-    rfbDes((unsigned char *)bytes, (unsigned char *)bytes);
-    rfbDes((unsigned char *)(bytes + 8), (unsigned char *)(bytes + 8));
+    len = MIN(g_strlen(passwd), 8);
+    g_mirror_memcpy(key, passwd, len);
+    des = ssl_des3_encrypt_info_create(key, 0);
+    ssl_des3_encrypt(des, 8, bytes, bytes);
+    ssl_des3_info_delete(des);
+    des = ssl_des3_encrypt_info_create(key, 0);
+    ssl_des3_encrypt(des, 8, bytes + 8, bytes + 8);
+    ssl_des3_info_delete(des);
 }
 
 /******************************************************************************/
@@ -340,7 +365,7 @@ lib_mod_event(struct vnc *v, int msg, long param1, long param2,
     }
     else if (msg == 200) /* invalidate */
     {
-        /* FrambufferUpdateRequest */
+        /* FramebufferUpdateRequest */
         init_stream(s, 8192);
         out_uint8(s, 3);
         out_uint8(s, 0);
@@ -666,7 +691,7 @@ lib_framebuffer_update(struct vnc *v)
                         }
                     }
 
-                    /* keep these in 32x32, vnc cursor can be alot bigger */
+                    /* keep these in 32x32, vnc cursor can be a lot bigger */
                     if (x > 31)
                     {
                         x = 31;
@@ -702,7 +727,7 @@ lib_framebuffer_update(struct vnc *v)
 
     if (error == 0)
     {
-        /* FrambufferUpdateRequest */
+        /* FramebufferUpdateRequest */
         init_stream(s, 8192);
         out_uint8(s, 3);
         out_uint8(s, 1);
@@ -968,12 +993,18 @@ lib_mod_connect(struct vnc *v)
     v->server_msg(v, "VNC started connecting", 0);
     check_sec_result = 1;
 
-    /* only support 8 and 16 bpp connections from rdp client */
-    if ((v->server_bpp != 8) && (v->server_bpp != 15) &&
-            (v->server_bpp != 16) && (v->server_bpp != 24))
+    /* check if bpp is supported for rdp connection */
+    switch (v->server_bpp)
     {
-        v->server_msg(v, "VNC error - only supporting 8, 15, 16 and 24 bpp rdp "
-                      "connections", 0);
+        case 8:
+        case 15:
+        case 16:
+        case 24:
+        case 32:
+            break;
+        default:
+            v->server_msg(v, "VNC error - only supporting 8, 15, 16, 24 and 32 "
+                          "bpp rdp connections", 0);
         return 1;
     }
 
@@ -1016,7 +1047,7 @@ lib_mod_connect(struct vnc *v)
     if (error == 0)
     {
         v->server_msg(v, "VNC tcp connected", 0);
-        /* protocal version */
+        /* protocol version */
         init_stream(s, 8192);
         error = trans_force_read_s(v->trans, s, 12);
         if (error == 0)
@@ -1074,7 +1105,8 @@ lib_mod_connect(struct vnc *v)
 
     if (error != 0)
     {
-        log_message(LOG_LEVEL_DEBUG, "VNC Error after security negotiation");
+        log_message(LOG_LEVEL_DEBUG, "VNC error %d after security negotiation",
+                    error);
     }
 
     if (error == 0 && check_sec_result)
@@ -1284,7 +1316,7 @@ lib_mod_connect(struct vnc *v)
 
     if (error == 0)
     {
-        /* FrambufferUpdateRequest */
+        /* FramebufferUpdateRequest */
         init_stream(s, 8192);
         out_uint8(s, 3);
         out_uint8(s, 0);

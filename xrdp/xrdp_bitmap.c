@@ -171,7 +171,7 @@ xrdp_bitmap_create_with_data(int width, int height,
     if (((bpp >= 24) && (data_as_int & 3)) ||
         (((bpp == 15) || (bpp == 16)) && (data_as_int & 1)))
     {
-        /* got to copy data here, it's not alligned
+        /* got to copy data here, it's not aligned
            other calls in this file assume alignment */
         Bpp = 4;
         switch (bpp)
@@ -1260,8 +1260,8 @@ xrdp_bitmap_draw_focus_box(struct xrdp_bitmap *self,
     painter->brush.pattern[5] = 0x55;
     painter->brush.pattern[6] = 0xaa;
     painter->brush.pattern[7] = 0x55;
-    painter->brush.x_orgin = x;
-    painter->brush.x_orgin = x;
+    painter->brush.x_origin = x;
+    painter->brush.x_origin = x;
     painter->brush.style = 3;
     painter->fg_color = self->wm->black;
     painter->bg_color = self->parent->bg_color;

@@ -14,7 +14,7 @@ then
   exit 1
 fi
 
-which libtool
+which libtool || which libtoolize
 if ! test $? -eq 0
 then
   echo "error, install libtool"
@@ -28,10 +28,4 @@ then
   exit 1
 fi
 
-touch configure.ac
-touch NEWS
-touch AUTHORS
-touch README
-touch ChangeLog
-ln -s ../config.c $PWD/sesman/tools/config.c
 autoreconf -fvi

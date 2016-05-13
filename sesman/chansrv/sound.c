@@ -103,6 +103,7 @@ static struct xr_wave_format_ex g_pcm_44100 =
     g_pcm_44100_data /* data */
 };
 
+#if defined(XRDP_OPUS)
 static char g_opus_44100_data[] = { 0 };
 static struct xr_wave_format_ex g_opus_44100 =
 {
@@ -115,6 +116,7 @@ static struct xr_wave_format_ex g_opus_44100 =
     0,                /* data size */
     g_opus_44100_data /* data */
 };
+#endif
 
 
 #if defined(XRDP_OPUS)
@@ -1001,7 +1003,7 @@ sound_check_wait_objs(void)
 
 /******************************************************************************
  **                                                                          **
- **                       Microphone releated code                           **
+ **                       Microphone related code                            **
  **                                                                          **
  ******************************************************************************/
 

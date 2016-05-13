@@ -1,5 +1,5 @@
-#ifndef foomodulenullsourcesymdeffoo
-#define foomodulenullsourcesymdeffoo
+#ifndef MODULE_XRDP_SOURCE_SYMDEF_H
+#define MODULE_XRDP_SOURCE_SYMDEF_H
 
 #include <pulsecore/core.h>
 #include <pulsecore/module.h>

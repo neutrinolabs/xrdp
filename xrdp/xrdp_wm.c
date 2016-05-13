@@ -560,7 +560,7 @@ xrdp_wm_init(struct xrdp_wm *self)
     xrdp_wm_load_static_pointers(self);
     self->screen->bg_color = self->xrdp_config->cfg_globals.ls_top_window_bg_color;
 
-    if (self->session->client_info->rdp_autologin)
+    if (self->session->client_info->rdp_autologin || self->hide_log_window)
     {
         /*
          * NOTE: this should eventually be accessed from self->xrdp_config
@@ -576,7 +576,8 @@ xrdp_wm_init(struct xrdp_wm *self)
             values->auto_free = 1;
 
             /* look for module name to be loaded */
-            if (autorun_name[0] != 0) {
+            if (autorun_name[0] != 0)
+            {
                 /* if autorun is configured in xrdp.ini, we enforce that module to be loaded */
                 g_strncpy(section_name, autorun_name, 255);
             }
@@ -593,9 +594,9 @@ xrdp_wm_init(struct xrdp_wm *self)
             {
                 /* if no domain is passed, and no autorun in xrdp.ini,
                    use the first item in the xrdp.ini
-                   file thats not named
+                   file that's not named
                    'globals' or 'Logging' or 'channels' */
-                /* TODO: change this and have a 'autologin'
+                /* TODO: change this and have an 'autologin'
                    line in globals section */
                 file_read_sections(fd, names);
                 for (index = 0; index < names->count; index++)
@@ -809,8 +810,8 @@ xrdp_wm_xor_pat(struct xrdp_wm *self, int x, int y, int cx, int cy)
     self->painter->brush.pattern[5] = 0x55;
     self->painter->brush.pattern[6] = 0xaa;
     self->painter->brush.pattern[7] = 0x55;
-    self->painter->brush.x_orgin = 0;
-    self->painter->brush.x_orgin = 0;
+    self->painter->brush.x_origin = 0;
+    self->painter->brush.x_origin = 0;
     self->painter->brush.style = 3;
     self->painter->bg_color = self->black;
     self->painter->fg_color = self->white;
@@ -869,7 +870,7 @@ xrdp_wm_bitblt(struct xrdp_wm *self,
 }
 
 /*****************************************************************************/
-/* return true is rect is totaly exposed going in reverse z order */
+/* return true if rect is totally exposed going in reverse z order */
 /* from wnd up */
 static int APP_CC
 xrdp_wm_is_rect_vis(struct xrdp_wm *self, struct xrdp_bitmap *wnd,
@@ -1687,7 +1688,7 @@ xrdp_wm_process_channel_data(struct xrdp_wm *self,
 }
 
 /******************************************************************************/
-/* this is the callbacks comming from libxrdp.so */
+/* this is the callbacks coming from libxrdp.so */
 int DEFAULT_CC
 callback(long id, int msg, long param1, long param2, long param3, long param4)
 {
@@ -1759,10 +1760,10 @@ xrdp_wm_login_mode_changed(struct xrdp_wm *self)
 
     if (self->login_mode == 0)
     {
-        /* this is the inital state of the login window */
+        /* this is the initial state of the login window */
         xrdp_wm_set_login_mode(self, 1); /* put the wm in login mode */
         list_clear(self->log);
-        xrdp_wm_delete_all_childs(self);
+        xrdp_wm_delete_all_children(self);
         self->dragging = 0;
         xrdp_wm_init(self);
     }
@@ -1771,7 +1772,7 @@ xrdp_wm_login_mode_changed(struct xrdp_wm *self)
         if (xrdp_mm_connect(self->mm) == 0)
         {
             xrdp_wm_set_login_mode(self, 3); /* put the wm in connected mode */
-            xrdp_wm_delete_all_childs(self);
+            xrdp_wm_delete_all_children(self);
             self->dragging = 0;
         }
         else
@@ -1781,7 +1782,7 @@ xrdp_wm_login_mode_changed(struct xrdp_wm *self)
     }
     else if (self->login_mode == 10)
     {
-        xrdp_wm_delete_all_childs(self);
+        xrdp_wm_delete_all_children(self);
         self->dragging = 0;
         xrdp_wm_set_login_mode(self, 11);
     }
@@ -1866,7 +1867,7 @@ void add_string_to_logwindow(char *msg, struct list *log)
     do
     {
         new_part_message = g_strndup(current_pointer, LOG_WINDOW_CHAR_PER_LINE) ;
-        g_writeln(new_part_message);
+        g_writeln("%s",new_part_message);
         list_add_item(log, (long)new_part_message);
         processedlen = processedlen + g_strlen(new_part_message);
         current_pointer = current_pointer + g_strlen(new_part_message) ;
@@ -1883,6 +1884,10 @@ xrdp_wm_show_log(struct xrdp_wm *self)
     int h;
     int xoffset;
     int yoffset;
+    int i;
+    int primaryxoffset = 0;
+    int primaryyoffset = 0;
+
 
     if (self->hide_log_window)
     {
@@ -1911,6 +1916,20 @@ xrdp_wm_show_log(struct xrdp_wm *self)
             yoffset = 2;
         }
 
+        /* multimon scenario, draw log window on primary monitor */
+        if (self->client_info->monitorCount > 1)
+        {
+        	for (i = 0; i < self->client_info->monitorCount; ++i)
+        	{
+        		if (self->client_info->minfo[i].is_primary)
+        		{
+        			primaryxoffset = self->screen->width - self->client_info->minfo[i].right - 1;
+        			primaryyoffset = self->screen->height - self->client_info->minfo[i].bottom - 1;
+        			break;
+        		}
+        	}
+        }
+
         /* log window */
         self->log_wnd = xrdp_bitmap_create(w, h, self->screen->bpp,
                                            WND_TYPE_WND, self);
@@ -1918,8 +1937,8 @@ xrdp_wm_show_log(struct xrdp_wm *self)
         self->log_wnd->parent = self->screen;
         self->log_wnd->owner = self->screen;
         self->log_wnd->bg_color = self->grey;
-        self->log_wnd->left = xoffset;
-        self->log_wnd->top = yoffset;
+        self->log_wnd->left = primaryxoffset + xoffset;
+        self->log_wnd->top = primaryyoffset + yoffset;
         set_string(&(self->log_wnd->caption1), "Connection Log");
         /* ok button */
         but = xrdp_bitmap_create(DEFAULT_BUTTON_W, DEFAULT_BUTTON_H, self->screen->bpp, WND_TYPE_BUTTON, self);

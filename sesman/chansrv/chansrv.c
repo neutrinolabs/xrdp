@@ -756,7 +756,6 @@ int DEFAULT_CC
 my_trans_data_in(struct trans *trans)
 {
     struct stream *s = (struct stream *)NULL;
-    int id = 0;
     int size = 0;
     int error = 0;
 
@@ -772,7 +771,7 @@ my_trans_data_in(struct trans *trans)
 
     LOGM((LOG_LEVEL_DEBUG, "my_trans_data_in:"));
     s = trans_get_in_s(trans);
-    in_uint32_le(s, id);
+    in_uint8s(s, 4); /* id */
     in_uint32_le(s, size);
     error = trans_force_read(trans, size - 8);
 
@@ -1487,7 +1486,7 @@ main(int argc, char **argv)
 
     /* starting logging subsystem */
     g_memset(&logconfig, 0, sizeof(struct log_config));
-    logconfig.program_name = "XRDP-Chansrv";
+    logconfig.program_name = "xrdp-chansrv";
     g_snprintf(log_file, 255, "%s/xrdp-chansrv.log", log_path);
     g_writeln("chansrv::main: using log file [%s]", log_file);
 
@@ -1525,7 +1524,6 @@ main(int argc, char **argv)
 
     LOGM((LOG_LEVEL_ALWAYS, "main: app started pid %d(0x%8.8x)", pid, pid));
     /*  set up signal handler  */
-    g_signal_kill(term_signal_handler); /* SIGKILL */
     g_signal_terminate(term_signal_handler); /* SIGTERM */
     g_signal_user_interrupt(term_signal_handler); /* SIGINT */
     g_signal_pipe(nil_signal_handler); /* SIGPIPE */

@@ -26,7 +26,7 @@ keyboard and mouse stuff
    flags right so control down is used to determine between pause and
    num lock */
 /* this should be fixed in rdesktop */
-/* g_pause_spe flag for specal control sent by ms client before scan code
+/* g_pause_spe flag for special control sent by ms client before scan code
    69 is sent to tell that its pause, not num lock.  both pause and num
    lock use scan code 69 */
 
@@ -68,7 +68,7 @@ static OsTimerPtr g_kbtimer = 0;
 static OsTimerPtr g_timer = 0;
 static int g_x = 0;
 static int g_y = 0;
-static int g_timer_schedualed = 0;
+static int g_timer_scheduled = 0;
 static int g_delay_motion = 1; /* turn on or off */
 static int g_use_evdev = 0;
 
@@ -182,7 +182,7 @@ rdpChangeKeyboardControl(DeviceIntPtr pDev, KeybdCtrl *ctrl)
         if (ctrls->enabled_ctrls & XkbRepeatKeysMask)
         {
             LLOGLN(10, ("rdpChangeKeyboardControl: autoRepeat on"));
-            /* schedual to turn off the autorepeat after 100 ms so any app
+            /* schedule to turn off the autorepeat after 100 ms so any app
              * polling it will be happy it's on */
             g_kbtimer = TimerSet(g_kbtimer, 0, 100,
                                  rdpInDeferredUpdateCallback, 0);
@@ -238,7 +238,7 @@ rdpChangeKeyboardControl(DeviceIntPtr pDev, KeybdCtrl *ctrl)
 0x0000042C  Azeri Latin
 0x0000042F  FYRO Macedonian
 0x00000437  Georgian
-0x00000438  Faeroese
+0x00000438  Faroese
 0x00000439  Devanagari - INSCRIPT
 0x0000043A  Maltese 47-key
 0x0000043B  Norwegian with Sami
@@ -859,7 +859,7 @@ static CARD32
 rdpDeferredInputCallback(OsTimerPtr timer, CARD32 now, pointer arg)
 {
     LLOGLN(10, ("rdpDeferredInputCallback:"));
-    g_timer_schedualed = 0;
+    g_timer_scheduled = 0;
     if ((g_old_x != g_x) || (g_old_y != g_y))
     {
         rdpEnqueueMotion(g_x, g_y);
@@ -884,13 +884,13 @@ PtrAddEvent(int buttonMask, int x, int y)
         return;
     }
     send_now = (buttonMask ^ g_old_button_mask) || (g_delay_motion == 0);
-    LLOGLN(10, ("PtrAddEvent: send_now %d g_timer_schedualed %d",
-           send_now, g_timer_schedualed));
+    LLOGLN(10, ("PtrAddEvent: send_now %d g_timer_scheduled %d",
+           send_now, g_timer_scheduled));
     if (send_now)
     {
-        if (g_timer_schedualed)
+        if (g_timer_scheduled)
         {
-            g_timer_schedualed = 0;
+            g_timer_scheduled = 0;
             TimerCancel(g_timer);
         }
         if ((g_old_x != x) || (g_old_y != y))
@@ -923,9 +923,9 @@ PtrAddEvent(int buttonMask, int x, int y)
     {
         g_x = x;
         g_y = y;
-        if (!g_timer_schedualed)
+        if (!g_timer_scheduled)
         {
-            g_timer_schedualed = 1;
+            g_timer_scheduled = 1;
             g_timer = TimerSet(g_timer, 0, 60, rdpDeferredInputCallback, 0);
         }
     }

@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2015
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@
 
 #include "sesman.h"
 
-extern int g_thread_sck; /* in thread.c */
 extern struct config_sesman *g_cfg; /* in sesman.c */
 
 /******************************************************************************/
@@ -39,13 +38,8 @@ scp_process_start(void *sck)
     struct SCP_CONNECTION scon;
     struct SCP_SESSION *sdata;
 
-    /* making a local copy of the socket (it's on the stack) */
-    /* probably this is just paranoia                        */
-    scon.in_sck = g_thread_sck;
+    scon.in_sck = (int)(tintptr)sck;
     LOG_DBG("started scp thread on socket %d", scon.in_sck);
-
-    /* unlocking g_thread_sck */
-    lock_socket_release();
 
     make_stream(scon.in_s);
     make_stream(scon.out_s);
