@@ -1919,15 +1919,15 @@ xrdp_wm_show_log(struct xrdp_wm *self)
         /* multimon scenario, draw log window on primary monitor */
         if (self->client_info->monitorCount > 1)
         {
-        	for (i = 0; i < self->client_info->monitorCount; ++i)
-        	{
-        		if (self->client_info->minfo[i].is_primary)
-        		{
-        			primaryxoffset = self->screen->width - self->client_info->minfo[i].right - 1;
-        			primaryyoffset = self->screen->height - self->client_info->minfo[i].bottom - 1;
-        			break;
-        		}
-        	}
+            for (i = 0; i < self->client_info->monitorCount; ++i)
+            {
+                if (self->client_info->minfo[i].is_primary)
+                {
+                    primaryxoffset = self->screen->width - self->client_info->minfo[i].right - 1;
+                    primaryyoffset = self->screen->height - self->client_info->minfo[i].bottom - 1;
+                    break;
+                }
+            }
         }
 
         /* log window */

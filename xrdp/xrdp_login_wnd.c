@@ -668,7 +668,7 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
     self->login_window->bg_color = globals->ls_bg_color;
 
     self->login_window->left = primaryxoffset -
-    						   self->login_window->width / 2;
+            self->login_window->width / 2;
 
     self->login_window->top = primaryyoffset -
                               self->login_window->height / 2;
