@@ -648,15 +648,15 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
     /* multimon scenario, draw login window on primary monitor */
     if (self->client_info->monitorCount > 1)
     {
-    	for (i = 0; i < self->client_info->monitorCount; ++i)
-    	{
-    		if (self->client_info->minfo[i].is_primary)
-    		{
-    			primaryxoffset = self->screen->width - (self->client_info->minfo[i].right / 2) - 1;
-    			primaryyoffset = self->screen->height - (self->client_info->minfo[i].bottom / 2) - 1;
-    			break;
-    		}
-    	}
+        for (i = 0; i < self->client_info->monitorCount; ++i)
+        {
+            if (self->client_info->minfo[i].is_primary)
+            {
+                primaryxoffset = self->screen->width - (self->client_info->minfo[i].right / 2) - 1;
+                primaryyoffset = self->screen->height - (self->client_info->minfo[i].bottom / 2) - 1;
+                break;
+            }
+        }
     }
 
     /* draw login window */
