@@ -110,6 +110,7 @@ struct xrdp_client_info
   int multimon; /* 0 = deny , 1 = allow */
   int monitorCount; /* number of monitors detected (max = 16) */
   struct monitor_info minfo[16]; /* client monitor data */
+  struct monitor_info minfo_wm[16]; /* client monitor data, non-negative values */
 
   int keyboard_type;
   int keyboard_subtype;
