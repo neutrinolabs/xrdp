@@ -1970,8 +1970,8 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
         client_info->height = (y2 - y1) + 1;
     }
     /* make sure virtual desktop size is ok */
-    if ((client_info->width > 0x7FFE && client_info->width < 0xC8) ||
-        (client_info->height > 0x7FFE && client_info->height < 0xC8))
+    if ((client_info->width > 0x7FFE || client_info->width < 0xC8) ||
+        (client_info->height > 0x7FFE || client_info->height < 0xC8))
     {
         LLOGLN(0, ("[ERROR] xrdp_sec_process_mcs_data_monitors: error, virtual desktop width / height is too large"));
         return 1; /* error */
