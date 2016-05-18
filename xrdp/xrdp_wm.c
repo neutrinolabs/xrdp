@@ -1884,9 +1884,9 @@ xrdp_wm_show_log(struct xrdp_wm *self)
     int h;
     int xoffset;
     int yoffset;
-    int i;
-    int primaryxoffset = 0;
-    int primaryyoffset = 0;
+    int index;
+    int primary_x_offset;
+    int primary_y_offset;
 
 
     if (self->hide_log_window)
@@ -1916,15 +1916,18 @@ xrdp_wm_show_log(struct xrdp_wm *self)
             yoffset = 2;
         }
 
+        primary_x_offset = 0;
+        primary_y_offset = 0;
+
         /* multimon scenario, draw log window on primary monitor */
         if (self->client_info->monitorCount > 1)
         {
-            for (i = 0; i < self->client_info->monitorCount; ++i)
+            for (index = 0; index < self->client_info->monitorCount; index++)
             {
-                if (self->client_info->minfo[i].is_primary)
+                if (self->client_info->minfo_wm[index].is_primary)
                 {
-                    primaryxoffset = self->screen->width - self->client_info->minfo[i].right - 1;
-                    primaryyoffset = self->screen->height - self->client_info->minfo[i].bottom - 1;
+                    primary_x_offset = self->client_info->minfo_wm[index].left;
+                    primary_y_offset = self->client_info->minfo_wm[index].top;
                     break;
                 }
             }
@@ -1937,8 +1940,8 @@ xrdp_wm_show_log(struct xrdp_wm *self)
         self->log_wnd->parent = self->screen;
         self->log_wnd->owner = self->screen;
         self->log_wnd->bg_color = self->grey;
-        self->log_wnd->left = primaryxoffset + xoffset;
-        self->log_wnd->top = primaryyoffset + yoffset;
+        self->log_wnd->left = primary_x_offset + xoffset;
+        self->log_wnd->top = primary_y_offset + yoffset;
         set_string(&(self->log_wnd->caption1), "Connection Log");
         /* ok button */
         but = xrdp_bitmap_create(DEFAULT_BUTTON_W, DEFAULT_BUTTON_H, self->screen->bpp, WND_TYPE_BUTTON, self);

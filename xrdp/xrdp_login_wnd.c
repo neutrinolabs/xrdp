@@ -618,14 +618,18 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
     int log_width;
     int log_height;
     int regular;
-    int i = 0;
-    int primaryxoffset = 0;
-    int primaryyoffset = 0;
+    int primary_x_offset;
+    int primary_y_offset;
+    int index;
+    int x;
+    int y;
+    int cx;
+    int cy;
 
     globals = &self->xrdp_config->cfg_globals;
 
-    primaryxoffset = self->screen->width / 2;
-    primaryyoffset = self->screen->height / 2;
+    primary_x_offset = self->screen->width / 2;
+    primary_y_offset = self->screen->height / 2;
 
     log_width = globals->ls_width;
     log_height = globals->ls_height;
@@ -648,12 +652,17 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
     /* multimon scenario, draw login window on primary monitor */
     if (self->client_info->monitorCount > 1)
     {
-        for (i = 0; i < self->client_info->monitorCount; ++i)
+        for (index = 0; index < self->client_info->monitorCount; index++)
         {
-            if (self->client_info->minfo[i].is_primary)
+            if (self->client_info->minfo_wm[index].is_primary)
             {
-                primaryxoffset = self->screen->width - (self->client_info->minfo[i].right / 2) - 1;
-                primaryyoffset = self->screen->height - (self->client_info->minfo[i].bottom / 2) - 1;
+                x = self->client_info->minfo_wm[index].left;
+                y = self->client_info->minfo_wm[index].top;
+                cx = self->client_info->minfo_wm[index].right;
+                cy = self->client_info->minfo_wm[index].bottom;
+
+                primary_x_offset = x + ((cx  - x) / 2);
+                primary_y_offset = y + ((cy - y) / 2);
                 break;
             }
         }
@@ -667,11 +676,8 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
     self->login_window->owner = self->screen;
     self->login_window->bg_color = globals->ls_bg_color;
 
-    self->login_window->left = primaryxoffset -
-            self->login_window->width / 2;
-
-    self->login_window->top = primaryyoffset -
-                              self->login_window->height / 2;
+    self->login_window->left = primary_x_offset - self->login_window->width / 2;
+    self->login_window->top = primary_y_offset - self->login_window->height / 2;
 
 
     self->login_window->notify = xrdp_wm_login_notify;

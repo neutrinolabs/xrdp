@@ -1873,15 +1873,16 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
     int y1;
     int x2;
     int y2;
+    int got_primary;
     struct xrdp_client_info *client_info = (struct xrdp_client_info *)NULL;
 
     client_info = &(self->rdp_layer->client_info);
 
-    DEBUG(("processing monitors data, allow_multimon is %d", client_info->multimon));
+    LLOGLN(10, ("xrdp_sec_process_mcs_data_monitors: processing monitors data, allow_multimon is %d", client_info->multimon));
     /* this is an option set in xrdp.ini */
     if (client_info->multimon != 1) /* are multi-monitors allowed ? */
     {
-        DEBUG(("[INFO] xrdp_sec_process_mcs_data_monitors: multimon is not "
+        LLOGLN(0, ("[INFO] xrdp_sec_process_mcs_data_monitors: multimon is not "
                "allowed, skipping"));
         return 0;
     }
@@ -1889,7 +1890,7 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
     //verify flags - must be 0x0
     if (flags != 0)
     {
-        DEBUG(("[ERROR] xrdp_sec_process_mcs_data_monitors: flags MUST be "
+        LLOGLN(0, ("[ERROR] xrdp_sec_process_mcs_data_monitors: flags MUST be "
                "zero, detected: %d", flags));
         return 1;
     }
@@ -1897,12 +1898,12 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
     //verify monitorCount - max 16
     if (monitorCount > 16)
     {
-        DEBUG(("[ERROR] xrdp_sec_process_mcs_data_monitors: max allowed "
+        LLOGLN(0, ("[ERROR] xrdp_sec_process_mcs_data_monitors: max allowed "
                "monitors is 16, detected: %d", monitorCount));
         return 1;
     }
 
-    g_writeln("monitorCount= %d", monitorCount); // for debugging only
+    LLOGLN(10, ("xrdp_sec_process_mcs_data_monitors: monitorCount= %d", monitorCount));
 
     client_info->monitorCount = monitorCount;
 
@@ -1910,6 +1911,7 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
     y1 = 0;
     x2 = 0;
     y2 = 0;
+    got_primary = 0;
     /* Add client_monitor_data to client_info struct, will later pass to X11rdp */
     for (index = 0; index < monitorCount; index++)
     {
@@ -1933,14 +1935,49 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
             y2 = MAX(y2, client_info->minfo[index].bottom);
         }
 
-        g_writeln("got a monitor: left= %d, top= %d, right= %d, bottom= %d, is_primary?= %d", client_info->minfo[index].left,
-            client_info->minfo[index].top, client_info->minfo[index].right, client_info->minfo[index].bottom, client_info->minfo[index].is_primary);
+        if (client_info->minfo[index].is_primary)
+        {
+            got_primary = 1;
+        }
+
+        LLOGLN(10, ("xrdp_sec_process_mcs_data_monitors: got a monitor [%d]: left= %d, top= %d, right= %d, bottom= %d, is_primary?= %d",
+                index,
+                client_info->minfo[index].left,
+                client_info->minfo[index].top,
+                client_info->minfo[index].right,
+                client_info->minfo[index].bottom,
+                client_info->minfo[index].is_primary));
     }
 
+    if (!got_primary)
+    {
+        /* no primary monitor was set, choose the leftmost monitor as primary */
+        for (index = 0; index < monitorCount; index++)
+        {
+            if (client_info->minfo[index].left == x1 &&
+                    client_info->minfo[index].top == y1)
+            {
+                client_info->minfo[index].is_primary = 1;
+                break;
+            }
+        }
+    }
+
+    /* set wm geometry */
     if ((x2 > x1) && (y2 > y1))
     {
         client_info->width = (x2 - x1) + 1;
         client_info->height = (y2 - y1) + 1;
+    }
+
+    /* keep a copy of non negative monitor info values for xrdp_wm usage */
+    for (index = 0; index < monitorCount; index++)
+    {
+        client_info->minfo_wm[index].left =  client_info->minfo[index].left - x1;
+        client_info->minfo_wm[index].top =  client_info->minfo[index].top - y1;
+        client_info->minfo_wm[index].right =  client_info->minfo[index].right - x1;
+        client_info->minfo_wm[index].bottom =  client_info->minfo[index].bottom - y1;
+        client_info->minfo_wm[index].is_primary =  client_info->minfo[index].is_primary;
     }
 
     return 0;
