@@ -123,7 +123,7 @@ xrdp_bitmap_create(int width, int height, int bpp,
         self->data = (char *)g_malloc(width * height * Bpp, 0);
     }
 
-    if (self->data == 0) /* noorders */
+    if (self->type == WND_TYPE_SCREEN) /* noorders */
     {
         LLOGLN(0, ("xrdp_bitmap_create: noorders"));
         self->data = (char *)g_malloc(width * height * Bpp, 0);
