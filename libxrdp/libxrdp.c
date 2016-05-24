@@ -521,6 +521,9 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
         {
             while (i < total_lines)
             {
+
+                LLOGLN(10, ("lines_sending %d cx %d", lines_sending, cx));
+
                 lines_sending = 4096 / (line_size + e * Bpp);
 
                 if (i + lines_sending > total_lines)
