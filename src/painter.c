@@ -154,7 +154,8 @@ painter_fill_rect(void *handle, struct painter_bitmap *dst,
     {
         for (index = 0; index < cx; index++)
         {
-            painter_set_pixel(pt, dst, x, y, pt->fgcolor, dst->format);
+            painter_set_pixel(pt, dst, x + index, y + jndex, pt->fgcolor,
+                              dst->format);
         }
     }
     return PT_ERROR_NONE;
