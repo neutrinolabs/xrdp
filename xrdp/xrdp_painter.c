@@ -77,10 +77,8 @@ xrdp_painter_send_dirty(struct xrdp_painter *self)
     char *ldata;
     char *src;
     char *dst;
-    static int gg;
 
     LLOGLN(0, ("xrdp_painter_send_dirty:"));
-    //if (gg++ == 0) g_memset(self->wm->screen->data, 0xff, 1024 * 768 * 2);
     cx = self->x2 - self->x1;
     cy = self->y2 - self->y1;
     LLOGLN(0, ("xrdp_painter_send_dirty: x %d y %d cx %d cy %d",
@@ -524,6 +522,7 @@ xrdp_painter_fill_rect(struct xrdp_painter *self,
     int rop;
     struct painter_bitmap dst_pb;
     struct xrdp_bitmap *ldst;
+    struct painter_bitmap pat;
 
     LLOGLN(0, ("xrdp_painter_fill_rect:"));
 
@@ -555,8 +554,6 @@ xrdp_painter_fill_rect(struct xrdp_painter *self,
                        "dst->data %p self->fg_color %d",
                        ldst->width, ldst->height, ldst->data, self->fg_color));
 
-            painter_set_fgcolor(self->painter, self->fg_color);
-
             xrdp_bitmap_get_screen_clip(dst, self, &clip_rect, &dx, &dy);
             region = xrdp_region_create(self->wm);
             xrdp_wm_get_vis_region(self->wm, dst, x, y, cx, cy, region,
@@ -564,18 +561,76 @@ xrdp_painter_fill_rect(struct xrdp_painter *self,
             x += dx;
             y += dy;
             k = 0;
-            while (xrdp_region_get_rect(region, k, &rect) == 0)
+
+            if (self->mix_mode == 0)
             {
-                if (rect_intersect(&rect, &clip_rect, &draw_rect))
+                LLOGLN(0, ("xrdp_painter_fill_rect: rop 0x%4.4x", self->rop));
+                painter_set_rop(self->painter, self->rop);
+                painter_set_fgcolor(self->painter, self->fg_color);
+                while (xrdp_region_get_rect(region, k, &rect) == 0)
                 {
-                    LLOGLN(0, ("xrdp_painter_fill_rect: mix_mode %d "
-                           "rop 0x%2.2x x %d y %d cx %d cy %d",
-                           self->mix_mode, self->rop, x, y, cx, cy));
-                    painter_fill_rect(self->painter, &dst_pb, x, y, cx, cy);
-                    xrdp_painter_add_dirty_rect(self, x, y, cx, cy);
+                    if (rect_intersect(&rect, &clip_rect, &draw_rect))
+                    {
+                        x = draw_rect.left;
+                        y = draw_rect.top;
+                        cx = draw_rect.right - draw_rect.left;
+                        cy = draw_rect.bottom - draw_rect.top;
+                        LLOGLN(0, ("xrdp_painter_fill_rect: mix_mode %d "
+                               "rop 0x%2.2x x %d y %d cx %d cy %d",
+                               self->mix_mode, self->rop, x, y, cx, cy));
+                        painter_fill_rect(self->painter, &dst_pb, x, y, cx, cy);
+                        xrdp_painter_add_dirty_rect(self, x, y, cx, cy);
+                    }
+                    k++;
                 }
-                k++;
             }
+            else
+            {
+                LLOGLN(0, ("xrdp_painter_fill_rect: rop 0x%4.4x", self->rop));
+                rop = self->rop;
+                switch (self->rop)
+                {
+                    case 0x5a:
+                        rop = PT_ROP_DSx;
+                        break;
+                    case 0xf0:
+                        rop = PT_ROP_S;
+                        break;
+                    case 0xfb:
+                        rop = PT_ROP_D;
+                        break;
+                    case 0xc0:
+                        rop = PT_ROP_DSa;
+                        break;
+                }
+                painter_set_rop(self->painter, rop);
+                painter_set_pattern_mode(self->painter, PT_PATTERN_MODE_OPAQUE);
+                painter_set_fgcolor(self->painter, self->fg_color);
+                painter_set_bgcolor(self->painter, self->bg_color);
+                g_memset(&pat, 0, sizeof(pat));
+                pat.format = PT_FORMAT_c1;
+                pat.width = 8;
+                pat.stride_bytes = 1;
+                pat.height = 8;
+                pat.data = self->brush.pattern;
+                while (xrdp_region_get_rect(region, k, &rect) == 0)
+                {
+                    if (rect_intersect(&rect, &clip_rect, &draw_rect))
+                    {
+                        x = draw_rect.left;
+                        y = draw_rect.top;
+                        cx = draw_rect.right - draw_rect.left;
+                        cy = draw_rect.bottom - draw_rect.top;
+                        LLOGLN(0, ("xrdp_painter_fill_rect: mix_mode %d "
+                               "rop 0x%2.2x x %d y %d cx %d cy %d",
+                               self->mix_mode, self->rop, x, y, cx, cy));
+                        painter_fill_pattern(self->painter, &dst_pb, &pat, 0, 0, x, y, cx, cy);
+                        xrdp_painter_add_dirty_rect(self, x, y, cx, cy);
+                    }
+                    k++;
+                }
+            }
+
             xrdp_region_delete(region);
         }
         return 0;

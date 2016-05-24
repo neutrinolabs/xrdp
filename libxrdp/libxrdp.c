@@ -408,8 +408,6 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
     make_stream(s);
     init_stream(s, 8192);
 
-    LLOGLN(0, ("%d", session->client_info->use_bitmap_comp));
-
     if (session->client_info->use_bitmap_comp)
     {
         make_stream(temp_s);
