@@ -327,13 +327,6 @@ xrdp_painter_set_clip(struct xrdp_painter *self,
     self->clip.top = y;
     self->clip.right = x + cx;
     self->clip.bottom = y + cy;
-
-    if (self->painter != 0)
-    {
-        painter_set_clip(self->painter, x, y, cx, cy);
-        return 0;
-    }
-
     return 0;
 }
 
@@ -342,13 +335,6 @@ int APP_CC
 xrdp_painter_clr_clip(struct xrdp_painter *self)
 {
     self->use_clip = 0;
-
-    if (self->painter != 0)
-    {
-        painter_clear_clip(self->painter);
-        return 0;
-    }
-
     return 0;
 }
 
@@ -571,15 +557,11 @@ xrdp_painter_fill_rect(struct xrdp_painter *self,
                 {
                     if (rect_intersect(&rect, &clip_rect, &draw_rect))
                     {
-                        x = draw_rect.left;
-                        y = draw_rect.top;
-                        cx = draw_rect.right - draw_rect.left;
-                        cy = draw_rect.bottom - draw_rect.top;
-                        LLOGLN(0, ("xrdp_painter_fill_rect: mix_mode %d "
-                               "rop 0x%2.2x x %d y %d cx %d cy %d",
-                               self->mix_mode, self->rop, x, y, cx, cy));
+                        painter_set_clip(self->painter,
+                                         draw_rect.left, draw_rect.top,
+                                         draw_rect.right - draw_rect.left,
+                                         draw_rect.bottom - draw_rect.top);
                         painter_fill_rect(self->painter, &dst_pb, x, y, cx, cy);
-                        xrdp_painter_add_dirty_rect(self, x, y, cx, cy);
                     }
                     k++;
                 }
@@ -607,6 +589,7 @@ xrdp_painter_fill_rect(struct xrdp_painter *self,
                 painter_set_pattern_mode(self->painter, PT_PATTERN_MODE_OPAQUE);
                 painter_set_fgcolor(self->painter, self->fg_color);
                 painter_set_bgcolor(self->painter, self->bg_color);
+                painter_set_pattern_origin(self->painter, 0, 0);
                 g_memset(&pat, 0, sizeof(pat));
                 pat.format = PT_FORMAT_c1;
                 pat.width = 8;
@@ -617,20 +600,20 @@ xrdp_painter_fill_rect(struct xrdp_painter *self,
                 {
                     if (rect_intersect(&rect, &clip_rect, &draw_rect))
                     {
-                        x = draw_rect.left;
-                        y = draw_rect.top;
-                        cx = draw_rect.right - draw_rect.left;
-                        cy = draw_rect.bottom - draw_rect.top;
-                        LLOGLN(0, ("xrdp_painter_fill_rect: mix_mode %d "
-                               "rop 0x%2.2x x %d y %d cx %d cy %d",
-                               self->mix_mode, self->rop, x, y, cx, cy));
-                        painter_fill_pattern(self->painter, &dst_pb, &pat, 0, 0, x, y, cx, cy);
-                        xrdp_painter_add_dirty_rect(self, x, y, cx, cy);
+                        painter_set_clip(self->painter,
+                                         draw_rect.left, draw_rect.top,
+                                         draw_rect.right - draw_rect.left,
+                                         draw_rect.bottom - draw_rect.top);
+                        painter_fill_pattern(self->painter, &dst_pb, &pat,
+                                             self->brush.x_origin,
+                                             self->brush.y_origin,
+                                             x, y, cx, cy);
                     }
                     k++;
                 }
             }
-
+            painter_clear_clip(self->painter);
+            xrdp_painter_add_dirty_rect(self, x, y, cx, cy);
             xrdp_region_delete(region);
         }
         return 0;
@@ -981,6 +964,9 @@ xrdp_painter_copy(struct xrdp_painter *self,
     int h;
     int index;
     struct list *del_list;
+    struct painter_bitmap src_pb;
+    struct painter_bitmap dst_pb;
+    struct xrdp_bitmap *ldst;
 
     LLOGLN(0, ("xrdp_painter_copy:"));
 
@@ -991,6 +977,53 @@ xrdp_painter_copy(struct xrdp_painter *self,
 
     if (self->painter != 0)
     {
+        LLOGLN(0, ("xrdp_painter_copy: dst->type %d", dst->type));
+        if (dst->type != WND_TYPE_OFFSCREEN)
+        {
+            LLOGLN(0, ("xrdp_painter_copy: using painter"));
+            ldst = self->wm->screen;
+
+            g_memset(&dst_pb, 0, sizeof(dst_pb));
+            dst_pb.format = PT_FORMAT_r5g6b5;
+            dst_pb.width = ldst->width;
+            dst_pb.stride_bytes = ldst->line_size;
+            dst_pb.height = ldst->height;
+            dst_pb.data = ldst->data;
+
+            g_memset(&src_pb, 0, sizeof(src_pb));
+            src_pb.format = PT_FORMAT_r5g6b5;
+            src_pb.width = src->width;
+            src_pb.stride_bytes = src->line_size;
+            src_pb.height = src->height;
+            src_pb.data = src->data;
+
+            xrdp_bitmap_get_screen_clip(dst, self, &clip_rect, &dx, &dy);
+            region = xrdp_region_create(self->wm);
+            xrdp_wm_get_vis_region(self->wm, dst, x, y, cx, cy, region,
+                                   self->clip_children);
+            x += dx;
+            y += dy;
+            k = 0;
+
+            painter_set_rop(self->painter, self->rop);
+            while (xrdp_region_get_rect(region, k, &rect1) == 0)
+            {
+                if (rect_intersect(&rect1, &clip_rect, &draw_rect))
+                {
+                    painter_set_clip(self->painter,
+                                     draw_rect.left, draw_rect.top,
+                                     draw_rect.right - draw_rect.left,
+                                     draw_rect.bottom - draw_rect.top);
+                    painter_copy(self->painter, &dst_pb, x, y, cx, cy,
+                                 &src_pb, srcx, srcy);
+                }
+                k++;
+            }
+            painter_clear_clip(self->painter);
+            xrdp_painter_add_dirty_rect(self, x, y, cx, cy);
+            xrdp_region_delete(region);
+        }
+
         return 0;
     }
 
