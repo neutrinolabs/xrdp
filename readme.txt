@@ -37,3 +37,5 @@ make install
 see file-loc.txt to see what files are installed where
 
 Jay Sorg
+
+Join the chat at https://gitter.im/neutrinolabs/xrdp
