@@ -53,7 +53,7 @@ xrdp_painter_add_dirty_rect(struct xrdp_painter *self, int x, int y,
     }
     else
     {
-        self->x1 = MIN(x, self->x1); 
+        self->x1 = MIN(x, self->x1);
         self->y1 = MIN(y, self->y1);
         self->x2 = MAX(x2, self->x2);
         self->y2 = MAX(y2, self->y2);
@@ -87,7 +87,11 @@ xrdp_painter_send_dirty(struct xrdp_painter *self)
     {
         bpp = self->wm->screen->bpp;
         Bpp = (bpp + 7) / 8;
-        ldata = (char *) g_malloc(cx * cy * Bpp, 0);
+        if (Bpp == 3)
+        {
+            Bpp = 4;
+        }
+        ldata = (char *)g_malloc(cx * cy * Bpp, 0);
         if (ldata == 0)
         {
             return 1;
@@ -110,7 +114,7 @@ xrdp_painter_send_dirty(struct xrdp_painter *self)
     self->y1 = 0;
     self->x2 = 0;
     self->y2 = 0;
-    return 0; 
+    return 0;
 }
 
 /*****************************************************************************/
@@ -123,7 +127,7 @@ xrdp_painter_create(struct xrdp_wm *wm, struct xrdp_session *session)
     self = (struct xrdp_painter *)g_malloc(sizeof(struct xrdp_painter), 1);
     self->wm = wm;
     self->session = session;
-    self->rop = 0xcc; /* copy will use 0xcc*/
+    self->rop = 0xcc; /* copy will use 0xcc */
     self->clip_children = 1;
 
     if (painter_create(&(self->painter)) != PT_ERROR_NONE)
@@ -491,6 +495,34 @@ xrdp_painter_setup_brush(struct xrdp_painter *self,
 }
 
 /*****************************************************************************/
+static int APP_CC
+get_pt_format(struct xrdp_painter *self)
+{
+    switch (self->wm->screen->bpp)
+    {
+        case 8:
+            return PT_FORMAT_r3g3b2;
+        case 15:
+            return PT_FORMAT_a1r5g5b5;
+        case 16:
+            return PT_FORMAT_r5g6b5;
+    }
+    return PT_FORMAT_a8r8g8b8;
+}
+
+/*****************************************************************************/
+static int
+get_rgb_from_rdp_color(struct xrdp_painter *self, int rdp_color)
+{
+    if (self->wm->screen->bpp < 24)
+    {
+        return rdp_color;
+    }
+    /* well, this is really BGR2RGB */
+    return XR_RGB2BGR(rdp_color);
+}
+
+/*****************************************************************************/
 /* fill in an area of the screen with one color */
 int APP_CC
 xrdp_painter_fill_rect(struct xrdp_painter *self,
@@ -530,7 +562,7 @@ xrdp_painter_fill_rect(struct xrdp_painter *self,
             ldst = self->wm->screen;
 
             g_memset(&dst_pb, 0, sizeof(dst_pb));
-            dst_pb.format = PT_FORMAT_r5g6b5;
+            dst_pb.format = get_pt_format(self);
             dst_pb.width = ldst->width;
             dst_pb.stride_bytes = ldst->line_size;
             dst_pb.height = ldst->height;
@@ -550,9 +582,9 @@ xrdp_painter_fill_rect(struct xrdp_painter *self,
 
             if (self->mix_mode == 0)
             {
-                LLOGLN(0, ("xrdp_painter_fill_rect: rop 0x%4.4x", self->rop));
+                LLOGLN(0, ("xrdp_painter_fill_rect: rop 0x%4.4x fg_color 0x%8.8x", self->rop, self->fg_color));
                 painter_set_rop(self->painter, self->rop);
-                painter_set_fgcolor(self->painter, self->fg_color);
+                painter_set_fgcolor(self->painter, get_rgb_from_rdp_color(self, self->fg_color));
                 while (xrdp_region_get_rect(region, k, &rect) == 0)
                 {
                     if (rect_intersect(&rect, &clip_rect, &draw_rect))
@@ -587,8 +619,8 @@ xrdp_painter_fill_rect(struct xrdp_painter *self,
                 }
                 painter_set_rop(self->painter, rop);
                 painter_set_pattern_mode(self->painter, PT_PATTERN_MODE_OPAQUE);
-                painter_set_fgcolor(self->painter, self->fg_color);
-                painter_set_bgcolor(self->painter, self->bg_color);
+                painter_set_fgcolor(self->painter, get_rgb_from_rdp_color(self, self->fg_color));
+                painter_set_bgcolor(self->painter, get_rgb_from_rdp_color(self, self->bg_color));
                 painter_set_pattern_origin(self->painter, 0, 0);
                 g_memset(&pat, 0, sizeof(pat));
                 pat.format = PT_FORMAT_c1;
@@ -984,14 +1016,14 @@ xrdp_painter_copy(struct xrdp_painter *self,
             ldst = self->wm->screen;
 
             g_memset(&dst_pb, 0, sizeof(dst_pb));
-            dst_pb.format = PT_FORMAT_r5g6b5;
+            dst_pb.format = get_pt_format(self);
             dst_pb.width = ldst->width;
             dst_pb.stride_bytes = ldst->line_size;
             dst_pb.height = ldst->height;
             dst_pb.data = ldst->data;
 
             g_memset(&src_pb, 0, sizeof(src_pb));
-            src_pb.format = PT_FORMAT_r5g6b5;
+            src_pb.format = get_pt_format(self);
             src_pb.width = src->width;
             src_pb.stride_bytes = src->line_size;
             src_pb.height = src->height;
