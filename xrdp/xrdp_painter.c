@@ -786,14 +786,13 @@ xrdp_painter_draw_text(struct xrdp_painter *self,
     struct xrdp_font_char *font_item;
     twchar *wstr;
 
+    struct painter_bitmap pat;
+    struct painter_bitmap dst_pb;
+    struct xrdp_bitmap *ldst;
+
     LLOGLN(0, ("xrdp_painter_draw_text:"));
 
     if (self == 0)
-    {
-        return 0;
-    }
-
-    if (self->painter != 0)
     {
         return 0;
     }
@@ -817,6 +816,79 @@ xrdp_painter_draw_text(struct xrdp_painter *self,
 
     if (self->font == 0)
     {
+        return 0;
+    }
+
+    if (self->painter != 0)
+    {
+        if (dst->type != WND_TYPE_OFFSCREEN)
+        {
+            ldst = self->wm->screen;
+            /* convert to wide char */
+            wstr = (twchar *)g_malloc((len + 2) * sizeof(twchar), 0);
+            g_mbstowcs(wstr, text, len + 1);
+            font = self->font;
+            total_width = 0;
+            total_height = 0;
+            for (index = 0; index < len; index++)
+            {
+                font_item = font->font_items + wstr[index];
+                k = font_item->incby;
+                total_width += k;
+                total_height = MAX(total_height, font_item->height);
+            }
+            xrdp_bitmap_get_screen_clip(dst, self, &clip_rect, &dx, &dy);
+            region = xrdp_region_create(self->wm);
+            xrdp_wm_get_vis_region(self->wm, dst, x, y,
+                                   total_width, total_height,
+                                   region, self->clip_children);
+            x += dx;
+            y += dy;
+            g_memset(&dst_pb, 0, sizeof(dst_pb));
+            dst_pb.format = get_pt_format(self);
+            dst_pb.width = ldst->width;
+            dst_pb.stride_bytes = ldst->line_size;
+            dst_pb.height = ldst->height;
+            dst_pb.data = ldst->data;
+            painter_set_rop(self->painter, PT_ROP_S);
+            painter_set_pattern_origin(self->painter, 0, 0);
+            painter_set_pattern_mode(self->painter, PT_PATTERN_MODE_NORMAL);
+            painter_set_fgcolor(self->painter,
+                                get_rgb_from_rdp_color(self, self->fg_color));
+            k = 0;
+            while (xrdp_region_get_rect(region, k, &rect) == 0)
+            {
+                if (rect_intersect(&rect, &clip_rect, &draw_rect))
+                {
+                    painter_set_clip(self->painter,
+                                     draw_rect.left, draw_rect.top,
+                                     draw_rect.right - draw_rect.left,
+                                     draw_rect.bottom - draw_rect.top);
+                    for (index = 0; index < len; index++)
+                    {
+                        font_item = font->font_items + wstr[index];
+                        g_memset(&pat, 0, sizeof(pat));
+                        pat.format = PT_FORMAT_c1;
+                        pat.width = font_item->width;
+                        pat.stride_bytes = (font_item->width + 7) / 8;
+                        pat.height = font_item->height;
+                        pat.data = font_item->data;
+                        x1 = x + font_item->offset;
+                        y1 = y + (font_item->height + font_item->baseline);
+                        painter_fill_pattern(self->painter, &dst_pb, &pat,
+                                             0, 0, x1, y1,
+                                             font_item->width,
+                                             font_item->height);
+                        x += font_item->incby;
+                    }
+                }
+                k++;
+            }
+            painter_clear_clip(self->painter);
+            xrdp_painter_add_dirty_rect(self, x, y, total_width, total_height);
+            xrdp_region_delete(region);
+            g_free(wstr);
+        }
         return 0;
     }
 
