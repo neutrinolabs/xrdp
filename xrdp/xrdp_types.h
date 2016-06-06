@@ -436,6 +436,8 @@ struct xrdp_painter
   int x2;
   int y2;
 
+  int begin_end_level;
+
 };
 
 /* window or bitmap */
