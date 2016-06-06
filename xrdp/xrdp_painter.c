@@ -37,11 +37,38 @@
 /*****************************************************************************/
 static int APP_CC
 xrdp_painter_add_dirty_rect(struct xrdp_painter *self, int x, int y,
-                            int cx, int cy)
+                            int cx, int cy, struct xrdp_rect *clip_rect)
 {
     int x2;
     int y2;
 
+    if (clip_rect != 0)
+    {
+        x2 = x + cx;
+        y2 = y + cy;
+        if (x < clip_rect->left)
+        {
+            x = clip_rect->left;
+        }
+        if (y < clip_rect->top)
+        {
+            y = clip_rect->top;
+        }
+        if (x2 > clip_rect->right)
+        {
+            x2 = clip_rect->right;
+        }
+        if (y2 > clip_rect->bottom)
+        {
+            y2 = clip_rect->bottom;
+        }
+        cx = x2 - x;
+        cy = y2 - y;
+    }
+    if (cx < 1 || cy < 1)
+    {
+        return 0;
+    }
     x2 = x + cx;
     y2 = y + cy;
     if ((self->x2 - self->x1 < 1) || (self->y2 - self->y1 < 1))
@@ -406,7 +433,7 @@ xrdp_painter_text_width(struct xrdp_painter *self, char *text)
     struct xrdp_font_char *font_item;
     twchar *wstr;
 
-    LLOGLN(0, ("xrdp_painter_text_width:"));
+    LLOGLN(10, ("xrdp_painter_text_width:"));
     xrdp_painter_font_needed(self);
 
     if (self->font == 0)
@@ -444,7 +471,7 @@ xrdp_painter_text_height(struct xrdp_painter *self, char *text)
     struct xrdp_font_char *font_item;
     twchar *wstr;
 
-    LLOGLN(0, ("xrdp_painter_text_height:"));
+    LLOGLN(10, ("xrdp_painter_text_height:"));
     xrdp_painter_font_needed(self);
 
     if (self->font == 0)
@@ -620,6 +647,7 @@ xrdp_painter_fill_rect(struct xrdp_painter *self,
                                          draw_rect.right - draw_rect.left,
                                          draw_rect.bottom - draw_rect.top);
                         painter_fill_rect(self->painter, &dst_pb, x, y, cx, cy);
+                        xrdp_painter_add_dirty_rect(self, x, y, cx, cy, &draw_rect);
                     }
                     k++;
                 }
@@ -647,12 +675,12 @@ xrdp_painter_fill_rect(struct xrdp_painter *self,
                                          draw_rect.bottom - draw_rect.top);
                         painter_fill_pattern(self->painter, &dst_pb, &pat,
                                              x, y, x, y, cx, cy);
+                        xrdp_painter_add_dirty_rect(self, x, y, cx, cy, &draw_rect);
                     }
                     k++;
                 }
             }
             painter_clear_clip(self->painter);
-            xrdp_painter_add_dirty_rect(self, x, y, cx, cy);
             xrdp_region_delete(region);
         }
         return 0;
@@ -790,7 +818,7 @@ xrdp_painter_draw_text(struct xrdp_painter *self,
     struct painter_bitmap dst_pb;
     struct xrdp_bitmap *ldst;
 
-    LLOGLN(0, ("xrdp_painter_draw_text:"));
+    LLOGLN(10, ("xrdp_painter_draw_text:"));
 
     if (self == 0)
     {
@@ -879,13 +907,16 @@ xrdp_painter_draw_text(struct xrdp_painter *self,
                                              0, 0, x1, y1,
                                              font_item->width,
                                              font_item->height);
+                        xrdp_painter_add_dirty_rect(self, x, y,
+                                                    font_item->width,
+                                                    font_item->height,
+                                                    &draw_rect);
                         x += font_item->incby;
                     }
                 }
                 k++;
             }
             painter_clear_clip(self->painter);
-            xrdp_painter_add_dirty_rect(self, x, y, total_width, total_height);
             xrdp_region_delete(region);
             g_free(wstr);
         }
@@ -1115,7 +1146,7 @@ xrdp_painter_copy(struct xrdp_painter *self,
                 painter_set_rop(self->painter, self->rop);
                 painter_copy(self->painter, &dst_pb, x, y, cx, cy,
                              &src_pb, srcx, srcy);
-                xrdp_painter_add_dirty_rect(self, x, y, cx, cy);
+                xrdp_painter_add_dirty_rect(self, x, y, cx, cy, 0);
             }
             else
             {
@@ -1138,11 +1169,12 @@ xrdp_painter_copy(struct xrdp_painter *self,
                                          draw_rect.bottom - draw_rect.top);
                         painter_copy(self->painter, &dst_pb, x, y, cx, cy,
                                      &src_pb, srcx, srcy);
+                        xrdp_painter_add_dirty_rect(self, x, y, cx, cy,
+                                                    &draw_rect);
                     }
                     k++;
                 }
                 painter_clear_clip(self->painter);
-                xrdp_painter_add_dirty_rect(self, x, y, cx, cy);
                 xrdp_region_delete(region);
             }
         }
