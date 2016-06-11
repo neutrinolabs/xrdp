@@ -184,12 +184,22 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
         else if (g_strcasecmp(item, "certificate") == 0)
         {
             g_memset(client_info->certificate, 0, sizeof(char) * 1024);
-            if (value[0] != '/')
+            if (g_strlen(value) == 0)
             {
                 /* default certificate path */
                 g_snprintf(client_info->certificate, 1023, "%s/cert.pem", XRDP_CFG_PATH);
-                log_message(LOG_LEVEL_ALWAYS,"WARNING: Invalid x.509 certificate path defined, "
-                          "default path will be used: %s", client_info->certificate);
+                log_message(LOG_LEVEL_INFO,
+                            "Missing definition of X.509 certificate, use "
+                            "default instead: %s", client_info->certificate);
+
+            }
+            else if (value[0] != '/')
+            {
+                /* default certificate path */
+                g_snprintf(client_info->certificate, 1023, "%s/cert.pem", XRDP_CFG_PATH);
+                log_message(LOG_LEVEL_WARNING,
+                            "No absolute path to X.509 certificate, use "
+                            "default instead: %s", client_info->certificate);
             }
             else
             {
@@ -200,12 +210,21 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
         else if (g_strcasecmp(item, "key_file") == 0)
         {
             g_memset(client_info->key_file, 0, sizeof(char) * 1024);
-            if (value[0] != '/')
+            if (g_strlen(value) == 0)
             {
                 /* default key_file path */
                 g_snprintf(client_info->key_file, 1023, "%s/key.pem", XRDP_CFG_PATH);
-                log_message(LOG_LEVEL_WARNING,"Invalid X.509 certificate path defined, "
-                          "default path will be used: %s", client_info->key_file);
+                log_message(LOG_LEVEL_INFO,
+                            "Missing definition of X.509 key file, use "
+                            "default instead: %s", client_info->key_file);
+            }
+            else if (value[0] != '/')
+            {
+                /* default key_file path */
+                g_snprintf(client_info->key_file, 1023, "%s/key.pem", XRDP_CFG_PATH);
+                log_message(LOG_LEVEL_WARNING,
+                            "No absolute path to X.509 key file, use"
+                            "default instead: %s", client_info->key_file);
             }
             else
             {
