@@ -1148,8 +1148,8 @@ rail_data_in(struct stream *s, int chan_id, int chan_flags, int length,
     return  0;
 }
 
-static int g_crc_seed = 0xffffffff;
-static int g_crc_table[256] =
+static const unsigned int g_crc_seed = 0xffffffff;
+static const unsigned int g_crc_table[256] =
 {
     0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
     0xe963a535, 0x9e6495a3, 0x0edb8832, 0x79dcb8a4, 0xe0d5e91e, 0x97d2d988,

@@ -55,7 +55,7 @@ static tbus g_thread_done_event = 0;
 
 static int g_use_unix_socket = 0;
 
-static char g_xrdpapi_magic[12] =
+static const unsigned char g_xrdpapi_magic[12] =
 { 0x78, 0x32, 0x10, 0x67, 0x00, 0x92, 0x30, 0x56, 0xff, 0xd8, 0xa9, 0x1f };
 
 int g_display_num = 0;
