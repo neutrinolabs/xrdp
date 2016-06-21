@@ -43,7 +43,7 @@ scp_init()
 
     scp_lock_init();
 
-    log_message(LOG_LEVEL_WARNING, "[init:%d] libscp initialized", __LINE__);
+    log_message(LOG_LEVEL_DEBUG, "libscp initialized");
 
     return 0;
 }
