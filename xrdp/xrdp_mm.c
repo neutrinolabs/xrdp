@@ -176,8 +176,8 @@ xrdp_mm_send_login(struct xrdp_mm *self)
     char *name;
     char *value;
 
-    xrdp_wm_log_msg(self->wm, "sending login info to session manager, "
-                    "please wait...");
+    xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG,
+                    "sending login info to session manager, please wait...");
     username = 0;
     password = 0;
     self->code = 0;
@@ -210,7 +210,8 @@ xrdp_mm_send_login(struct xrdp_mm *self)
 
     if ((username == 0) || (password == 0))
     {
-        xrdp_wm_log_msg(self->wm, "Error finding username and password");
+        xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
+                        "Error finding username and password");
         return 1;
     }
 
@@ -277,7 +278,8 @@ xrdp_mm_send_login(struct xrdp_mm *self)
 
     if (rv != 0)
     {
-        xrdp_wm_log_msg(self->wm, "xrdp_mm_send_login: xrdp_mm_send_login failed");
+        xrdp_wm_log_msg(self->wm, LOG_LEVEL_WARNING,
+                        "xrdp_mm_send_login: xrdp_mm_send_login failed");
     }
 
     return rv;
@@ -339,18 +341,18 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
 
     if (xrdp_mm_get_value(self, "lib", lib, 255) != 0)
     {
-        g_snprintf(text, 255, "no library name specified in xrdp.ini, please add "
-                   "lib=libxrdp-vnc.so or similar");
-        xrdp_wm_log_msg(self->wm, text);
+        xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
+                        "no library name specified in xrdp.ini, please add "
+                        "lib=libxrdp-vnc.so or similar");
 
         return 1;
     }
 
     if (lib[0] == 0)
     {
-        g_snprintf(text, 255, "empty library name specified in xrdp.ini, please "
-                   "add lib=libxrdp-vnc.so or similar");
-        xrdp_wm_log_msg(self->wm, text);
+        xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
+                        "empty library name specified in xrdp.ini, please "
+                        "add lib=libxrdp-vnc.so or similar");
 
         return 1;
     }
@@ -372,10 +374,9 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
 
             if (func == 0)
             {
-                g_snprintf(text, 255, "error finding proc mod_init in %s, not a valid "
-                           "xrdp backend", lib);
-                xrdp_wm_log_msg(self->wm, text);
-                log_message(LOG_LEVEL_ERROR, "%s", text);
+                xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
+                                "error finding proc mod_init in %s, "
+                                "not a valid xrdp backend", lib);
             }
 
             self->mod_init = (struct xrdp_mod * ( *)(void))func;
@@ -388,10 +389,9 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
 
             if (func == 0)
             {
-                g_snprintf(text, 255, "error finding proc mod_exit in %s, not a valid "
-                           "xrdp backend", lib);
-                xrdp_wm_log_msg(self->wm, text);
-                log_message(LOG_LEVEL_ERROR, "%s", text);
+                xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
+                                "error finding proc mod_exit in %s, "
+                                "not a valid xrdp backend", lib);
             }
 
             self->mod_exit = (int ( *)(struct xrdp_mod *))func;
@@ -413,10 +413,10 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
         }
         else
         {
-            g_snprintf(text, 255, "error loading %s specified in xrdp.ini, please "
-                       "add a valid entry like lib=libxrdp-vnc.so or similar", lib);
-            xrdp_wm_log_msg(self->wm, text);
-            log_message(LOG_LEVEL_ERROR, "%s", text);
+            xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
+                            "error loading %s specified in xrdp.ini, please "
+                            "add a valid entry like lib=libxrdp-vnc.so or "
+                            "similar", lib);
             return 1;
         }
 
@@ -1192,7 +1192,6 @@ xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
     int ok;
     int display;
     int rv;
-    char text[256];
     char ip[256];
     char port[256];
 
@@ -1203,9 +1202,9 @@ xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
     if (ok)
     {
         self->display = display;
-        g_snprintf(text, 255, "xrdp_mm_process_login_response: login successful "
-                   "for display %d", display);
-        xrdp_wm_log_msg(self->wm, text);
+        xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
+                        "xrdp_mm_process_login_response: login successful "
+                        "for display %d", display);
 
         if (xrdp_mm_setup_mod1(self) == 0)
         {
@@ -1231,10 +1230,8 @@ xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
     }
     else
     {
-        xrdp_wm_log_msg(self->wm, "xrdp_mm_process_login_response: "
-                        "login failed");
-        log_message(LOG_LEVEL_INFO,"xrdp_mm_process_login_response: "
-                        "login failed");
+        xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
+                        "xrdp_mm_process_login_response: login failed");
         xrdp_wm_show_log(self->wm);
         if (self->wm->hide_log_window)
         {
@@ -1398,8 +1395,9 @@ xrdp_mm_sesman_data_in(struct trans *trans)
                 error = xrdp_mm_process_login_response(self, s);
                 break;
             default:
-                xrdp_wm_log_msg(self->wm, "An undefined reply code was received from sesman");
-                log_message(LOG_LEVEL_ERROR,"Fatal xrdp_mm_sesman_data_in: unknown cmd code %d", code);
+                xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
+                                "Undefined reply code %d received from sesman",
+                                code);
                 cleanup_sesman_connection(self);
                 break;
         }
@@ -1801,8 +1799,6 @@ xrdp_mm_connect(struct xrdp_mm *self)
     char *name;
     char *value;
     char ip[256];
-    char errstr[256];
-    char text[256];
     char port[8];
     char chansrvport[256];
 #ifdef ACCESS
@@ -1820,8 +1816,6 @@ xrdp_mm_connect(struct xrdp_mm *self)
     /* make sure we start in correct state */
     cleanup_states(self);
     g_memset(ip, 0, sizeof(ip));
-    g_memset(errstr, 0, sizeof(errstr));
-    g_memset(text, 0, sizeof(text));
     g_memset(port, 0, sizeof(port));
     g_memset(chansrvport, 0, sizeof(chansrvport));
     rv = 0; /* success */
@@ -1884,10 +1878,10 @@ xrdp_mm_connect(struct xrdp_mm *self)
     if (use_pam_auth)
     {
         int reply;
-        char replytxt[128];
         char pam_error[128];
         const char *additionalError;
-        xrdp_wm_log_msg(self->wm, "Please wait, we now perform access control...");
+        xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG,
+                        "Please wait, we now perform access control...");
 
         /* g_writeln("we use pam modules to check if we can approve this user"); */
         if (!g_strncmp(pam_auth_username, "same", 255))
@@ -1905,19 +1899,14 @@ xrdp_mm_connect(struct xrdp_mm *self)
         /* access_control return 0 on success */
         reply = access_control(pam_auth_username, pam_auth_password, pam_auth_sessionIP);
 
-        g_sprintf(replytxt, "Reply from access control: %s",
-                  getPAMError(reply, pam_error, 127));
+        xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
+                        "Reply from access control: %s",
+                        getPAMError(reply, pam_error, 127));
 
-        xrdp_wm_log_msg(self->wm, replytxt);
-        log_message(LOG_LEVEL_INFO, "%s", replytxt);
         additionalError = getPAMAdditionalErrorInfo(reply, self);
-        if (additionalError)
+        if (additionalError && additionalError[0])
         {
-            g_snprintf(replytxt, 127, "%s", additionalError);
-            if (replytxt[0])
-            {
-                xrdp_wm_log_msg(self->wm, replytxt);
-            }
+            xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO, "%s", additionalError);
         }
 
         if (reply != 0)
@@ -1936,8 +1925,8 @@ xrdp_mm_connect(struct xrdp_mm *self)
         self->sesman_trans = trans_create(TRANS_MODE_TCP, 8192, 8192);
         self->sesman_trans->is_term = g_is_term;
         xrdp_mm_get_sesman_port(port, sizeof(port));
-        g_snprintf(text, 255, "connecting to sesman ip %s port %s", ip, port);
-        xrdp_wm_log_msg(self->wm, text);
+        xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG,
+                        "connecting to sesman ip %s port %s", ip, port);
         /* xrdp_mm_sesman_data_in is the callback that is called when data arrives */
         self->sesman_trans->trans_data_in = xrdp_mm_sesman_data_in;
         self->sesman_trans->header_size = 8;
@@ -1961,16 +1950,15 @@ xrdp_mm_connect(struct xrdp_mm *self)
         if (ok)
         {
             /* fully connect */
-            xrdp_wm_log_msg(self->wm, "sesman connect ok");
+            xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO, "sesman connect ok");
             self->connected_state = 1;
             rv = xrdp_mm_send_login(self);
         }
         else
         {
-            g_snprintf(errstr, 255, "Failure to connect to sesman: %s port: %s",
-                       ip, port);
-            xrdp_wm_log_msg(self->wm, errstr);
-            log_message(LOG_LEVEL_ERROR, "%s", errstr);
+            xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
+                            "Error connecting to sesman: %s port: %s",
+                            ip, port);
             trans_delete(self->sesman_trans);
             self->sesman_trans = 0;
             self->sesman_trans_up = 0;
@@ -1989,9 +1977,8 @@ xrdp_mm_connect(struct xrdp_mm *self)
             else
             {
                 /* connect error */
-                g_snprintf(errstr, 255, "Failure to connect to: %s", ip);
-                log_message(LOG_LEVEL_ERROR, "%s", errstr);
-                xrdp_wm_log_msg(self->wm, errstr);
+                xrdp_wm_log_msg(self->wm, LOG_LEVEL_ERROR,
+                                "Error connecting to: %s", ip);
                 rv = 1; /* failure */
             }
         }
@@ -2664,7 +2651,7 @@ server_msg(struct xrdp_mod *mod, char *msg, int code)
     }
 
     wm = (struct xrdp_wm *)(mod->wm);
-    return xrdp_wm_log_msg(wm, msg);
+    return xrdp_wm_log_msg(wm, LOG_LEVEL_DEBUG, "%s", msg);
 }
 
 /*****************************************************************************/

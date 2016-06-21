@@ -18,6 +18,8 @@
  * simple window manager
  */
 
+#include <stdarg.h>
+#include <stdio.h>
 #include "xrdp.h"
 #include "log.h"
 
@@ -678,8 +680,9 @@ xrdp_wm_init(struct xrdp_wm *self)
             {
                 /* requested module name not found in xrdp.ini */
                 g_writeln("   xrdp_wm_init: file_read_section returned non-zero, requested section not found in xrdp.ini");
-                xrdp_wm_log_msg(self, "ERROR: The requested xrdp module not found in xrdp.ini,"
-                                      " falling back to login window");
+                xrdp_wm_log_msg(self, LOG_LEVEL_ERROR,
+                                "ERROR: The requested xrdp module not found in "
+                                "xrdp.ini, falling back to login window");
             }
 
             list_delete(names);
@@ -1965,8 +1968,17 @@ xrdp_wm_show_log(struct xrdp_wm *self)
 
 /*****************************************************************************/
 int APP_CC
-xrdp_wm_log_msg(struct xrdp_wm *self, char *msg)
+xrdp_wm_log_msg(struct xrdp_wm *self, enum logLevels loglevel,
+                const char *fmt, ...)
 {
+    va_list ap;
+    char msg[256];
+
+    va_start(ap, fmt);
+    vsnprintf(msg, sizeof(msg), fmt, ap);
+    va_end(ap);
+
+    log_message(loglevel, "xrdp_wm_log_msg: %s", msg);
     add_string_to_logwindow(msg, self->log);
     return 0;
 }

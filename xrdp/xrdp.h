@@ -37,6 +37,7 @@
 #include "file.h"
 #include "file_loc.h"
 #include "xrdp_client_info.h"
+#include "log.h"
 
 /* xrdp.c */
 long APP_CC
@@ -140,7 +141,8 @@ xrdp_wm_delete_all_children(struct xrdp_wm* self);
 int APP_CC
 xrdp_wm_show_log(struct xrdp_wm *self);
 int APP_CC
-xrdp_wm_log_msg(struct xrdp_wm* self, char* msg);
+xrdp_wm_log_msg(struct xrdp_wm *self, enum logLevels loglevel,
+                const char *fmt, ...) printflike(3, 4);
 int APP_CC
 xrdp_wm_get_wait_objs(struct xrdp_wm* self, tbus* robjs, int* rc,
                       tbus* wobjs, int* wc, int* timeout);
