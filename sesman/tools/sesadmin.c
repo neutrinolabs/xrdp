@@ -124,7 +124,7 @@ int main(int argc, char **argv)
         }
     }
 
-    scp_init(&logging);
+    scp_init();
 
     sock = g_tcp_socket();
     if (sock < 0)
