@@ -22,7 +22,6 @@
 #include "xrdp_rail.h"
 #include "log.h"
 #include <freerdp/settings.h>
-#include <X11/Xlib.h>
 
 #ifdef XRDP_DEBUG
 #define LOG_LEVEL 99
@@ -1368,7 +1367,9 @@ lfreerdp_polygon_sc(rdpContext *context, POLYGON_SC_ORDER *polygon_sc)
 {
     struct mod *mod;
     int i, npoints;
-    XPoint points[4];
+    struct {
+        short x, y;
+    } points[4];
     int fgcolor;
     int server_bpp, client_bpp;
 
