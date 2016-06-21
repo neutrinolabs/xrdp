@@ -21,10 +21,6 @@
 #if !defined(OS_CALLS_H)
 #define OS_CALLS_H
 
-#if defined(HAVE_CONFIG_H)
-#include "config_ac.h"
-#endif
-
 #ifndef NULL
 #define NULL 0
 #endif
@@ -44,13 +40,6 @@
 #define g_tcp_local_bind g_sck_local_bind
 #define g_tcp_select g_sck_select
 #define g_close_wait_obj g_delete_wait_obj
-
-#if defined(HAVE_FUNC_ATTRIBUTE_FORMAT)
-#define printflike(arg_format, arg_first_check) \
- __attribute__((__format__(__printf__, arg_format, arg_first_check)))
-#else
-#define printflike(arg_format, arg_first_check)
-#endif
 
 int APP_CC      g_rm_temp_dir(void);
 int APP_CC      g_mk_temp_dir(const char* app_name);

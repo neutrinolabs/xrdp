@@ -171,7 +171,7 @@ log_end(void);
  * @return
  */
 enum logReturns DEFAULT_CC
-log_message(const enum logLevels lvl, const char *msg, ...);
+log_message(const enum logLevels lvl, const char *msg, ...) printflike(2, 3);
 
 /**
  *
