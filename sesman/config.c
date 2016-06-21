@@ -347,7 +347,7 @@ config_read_sessions(int file, struct config_sessions *se, struct list *param_n,
     {
         buf = (char *)list_get_item(param_n, i);
 
-        if (0 == g_strcasecmp(buf, SESMAN_CFG_X11DISPLAYOFFSET))
+        if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_X11DISPLAYOFFSET))
         {
             se->x11_display_offset = g_atoi((char *)list_get_item(param_v, i));
         }
