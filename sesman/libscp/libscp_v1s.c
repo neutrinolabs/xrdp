@@ -150,12 +150,12 @@ enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION *c, struct SCP_SES
     if (sz == SCP_ADDRESS_TYPE_IPV4)
     {
         in_uint32_be(c->in_s, size);
-        scp_session_set_addr(session, SCP_ADDRESS_TYPE_IPV4_BIN, &size);
+        scp_session_set_addr(session, sz, &size);
     }
     else if (sz == SCP_ADDRESS_TYPE_IPV6)
     {
         in_uint8a(c->in_s, buf, 16);
-        scp_session_set_addr(session, SCP_ADDRESS_TYPE_IPV6_BIN, buf);
+        scp_session_set_addr(session, sz, buf);
     }
 
     buf[256] = '\0';
