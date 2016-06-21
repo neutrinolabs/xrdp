@@ -45,7 +45,7 @@ int main(int argc, char **argv)
 
     log.enable_syslog = 0;
     log.log_level = 99;
-    log.program_name = g_strdup("sestest");
+    log.program_name = "sestest";
     log.log_file = g_strdup("sestest.log");
     log_start_from_param(&log);
     scp_init();

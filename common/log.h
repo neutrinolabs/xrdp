@@ -65,7 +65,7 @@ enum logReturns
 
 struct log_config
 {
-    char *program_name;
+    const char *program_name;
     char *log_file;
     int fd;
     unsigned int log_level;
