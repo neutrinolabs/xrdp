@@ -959,7 +959,7 @@ session_get_bypid(int pid)
     struct session_chain *tmp;
     struct session_item *dummy;
 
-    dummy = g_malloc(sizeof(struct session_item), 1);
+    dummy = g_new0(struct session_item, 1);
 
     if (0 == dummy)
     {
@@ -1033,7 +1033,7 @@ session_get_byuser(char *user, int *cnt, unsigned char flags)
     }
 
     /* malloc() an array of disconnected sessions */
-    sess = g_malloc(count *sizeof(struct SCP_DISCONNECTED_SESSION), 1);
+    sess = g_new0(struct SCP_DISCONNECTED_SESSION, count);
 
     if (sess == 0)
     {

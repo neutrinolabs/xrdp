@@ -97,7 +97,7 @@ add_timeout(int msoffset, void (*callback)(void *data), void *data)
 
     LOG(10, ("add_timeout:"));
     now = g_time3();
-    tobj = g_malloc(sizeof(struct timeout_obj), 1);
+    tobj = g_new0(struct timeout_obj, 1);
     tobj->mstime = now + msoffset;
     tobj->callback = callback;
     tobj->data = data;

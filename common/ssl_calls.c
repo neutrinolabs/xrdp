@@ -187,7 +187,7 @@ ssl_des3_decrypt_info_create(const char *key, const char* ivec)
     const tui8 *lkey;
     const tui8 *livec;
 
-    des3_ctx = g_malloc(sizeof(EVP_CIPHER_CTX), 1);
+    des3_ctx = g_new0(EVP_CIPHER_CTX, 1);
     EVP_CIPHER_CTX_init(des3_ctx);
     lkey = (const tui8 *) key;
     livec = (const tui8 *) ivec;

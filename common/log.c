@@ -395,7 +395,7 @@ enum logReturns DEFAULT_CC
 internalInitAndAllocStruct(void)
 {
     enum logReturns ret = LOG_GENERAL_ERROR;
-    g_staticLogConfig = g_malloc(sizeof(struct log_config), 1);
+    g_staticLogConfig = g_new0(struct log_config, 1);
 
     if (g_staticLogConfig != NULL)
     {

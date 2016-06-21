@@ -247,7 +247,7 @@ main(int argc, char **argv)
     }
 
     /* reading config */
-    g_cfg = g_malloc(sizeof(struct config_sesman), 1);
+    g_cfg = g_new0(struct config_sesman, 1);
 
     if (0 == g_cfg)
     {

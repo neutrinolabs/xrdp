@@ -62,7 +62,7 @@ xrdp_wm_create(struct xrdp_process *owner,
     self->current_surface_index = 0xffff; /* screen */
 
     /* to store configuration from xrdp.ini */
-    self->xrdp_config = g_malloc(sizeof(struct xrdp_config), 1);
+    self->xrdp_config = g_new0(struct xrdp_config, 1);
 
     return self;
 }

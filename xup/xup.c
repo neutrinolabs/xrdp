@@ -697,7 +697,7 @@ process_server_window_new_update(struct mod *mod, struct stream *s)
 
     if (title_bytes > 0)
     {
-        rwso.title_info = g_malloc(title_bytes + 1, 0);
+        rwso.title_info = g_new(char, title_bytes + 1);
         in_uint8a(s, rwso.title_info, title_bytes);
         rwso.title_info[title_bytes] = 0;
     }

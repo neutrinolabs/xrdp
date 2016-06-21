@@ -900,7 +900,8 @@ scard_add_new_device(tui32 device_id)
         return -1;
     }
 
-    if ((sc = g_malloc(sizeof(SMARTCARD), 1)) == NULL)
+    sc = g_new0(SMARTCARD, 1);
+    if (sc == NULL)
     {
         log_error("system out of memory");
         return -1;

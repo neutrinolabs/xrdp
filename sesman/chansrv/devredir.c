@@ -962,7 +962,8 @@ dev_redir_proc_query_dir_response(IRP *irp,
         //log_debug("FileNameLength:    %d", FileNameLength);
         log_debug("FileName:          %s", filename);
 
-        if ((xinode = calloc(1, sizeof(struct xrdp_inode))) == NULL)
+        xinode = g_new0(struct xrdp_inode, 1);
+        if (xinode == NULL)
         {
             log_error("system out of memory");
             fuse_data = devredir_fuse_data_peek(irp);
@@ -1378,7 +1379,8 @@ devredir_fuse_data_enqueue(IRP *irp, void *vp)
     if (irp == NULL)
         return -1;
 
-    if ((fd = calloc(1, sizeof(FUSE_DATA))) == NULL)
+    fd = g_new0(FUSE_DATA, 1);
+    if (fd == NULL)
         return -1;
 
     fd->data_ptr = vp;
@@ -1481,7 +1483,7 @@ devredir_cvt_from_unicode_len(char *path, char *unicode, int len)
     bytes_to_alloc = (((len / 2) * sizeof(twchar)) + sizeof(twchar));
 
     src = unicode;
-    dest = g_malloc(bytes_to_alloc, 1);
+    dest = g_new0(char, bytes_to_alloc);
     dest_saved = dest;
 
     for (i = 0; i < len; i += 2)

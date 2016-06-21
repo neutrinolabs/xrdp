@@ -238,7 +238,7 @@ rail_get_window_data_safe(Window window)
     {
         return rv;
     }
-    rv = g_malloc(sizeof(struct rail_window_data), 1);
+    rv = g_new0(struct rail_window_data, 1);
     rail_set_window_data(window, rv);
     g_free(rv);
     return rail_get_window_data(window);

@@ -764,7 +764,7 @@ xrdp_mm_process_rail_create_window(struct xrdp_mm* self, struct stream* s)
     in_uint16_le(s, title_bytes);
     if (title_bytes > 0)
     {
-        rwso.title_info = g_malloc(title_bytes + 1, 0);
+        rwso.title_info = g_new(char, title_bytes + 1);
         in_uint8a(s, rwso.title_info, title_bytes);
         rwso.title_info[title_bytes] = 0;
     }
@@ -947,7 +947,7 @@ xrdp_mm_process_rail_update_window_text(struct xrdp_mm* self, struct stream* s)
 
     g_memset(&rwso, 0, sizeof(rwso));
     in_uint32_le(s, size); /* title size */
-    rwso.title_info = g_malloc(size + 1, 0);
+    rwso.title_info = g_new(char, size + 1);
     in_uint8a(s, rwso.title_info, size);
     rwso.title_info[size] = 0;
     g_writeln("  set window title %s size %d 0x%8.8x", rwso.title_info, size, flags);
