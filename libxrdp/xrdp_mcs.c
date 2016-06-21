@@ -1023,7 +1023,7 @@ xrdp_mcs_send(struct xrdp_mcs *self, struct stream *s, int chan)
 
     if (len > 8192 * 2)
     {
-        g_writeln("error in xrdp_mcs_send, size too big, its %d", len);
+        g_writeln("error in xrdp_mcs_send, size too big: %d bytes", len);
     }
 
     //if (len > max_len)

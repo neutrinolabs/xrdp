@@ -216,7 +216,7 @@ struct xrdp_brush_item
 {
   int stamp;
   /* expand this to a structure to handle more complicated brushes
-     for now its 8x8 1bpp brushes only */
+     for now it's 8x8 1bpp brushes only */
   char pattern[8];
 };
 

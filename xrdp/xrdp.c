@@ -443,8 +443,7 @@ main(int argc, char **argv)
 
         if (fd == -1)
         {
-            g_writeln("problem opening to xrdp.pid [%s]", pid_file);
-            g_writeln("maybe its not running");
+            g_writeln("cannot open %s, maybe xrdp is not running", pid_file);
         }
         else
         {

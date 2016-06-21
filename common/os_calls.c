@@ -399,7 +399,7 @@ g_tcp_set_keepalive(int sck)
 
 /*****************************************************************************/
 /* returns a newly created socket or -1 on error */
-/* in win32 a socket is an unsigned int, in linux, its an int */
+/* in win32 a socket is an unsigned int, in linux, it's an int */
 int APP_CC
 g_tcp_socket(void)
 {

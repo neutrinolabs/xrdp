@@ -485,12 +485,12 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
 
                 if (j > 32768)
                 {
-                    g_writeln("error, decompressed size too big, its %d", j);
+                    g_writeln("error, decompressed size too big: %d bytes", j);
                 }
 
                 if (bufsize > 8192)
                 {
-                    g_writeln("error, compressed size too big, its %d", bufsize);
+                    g_writeln("error, compressed size too big: %d bytes", bufsize);
                 }
 
                 s->p = s->end;
@@ -504,7 +504,7 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
 
             if (total_bufsize > 8192)
             {
-                g_writeln("error, total compressed size too big, its %d",
+                g_writeln("error, total compressed size too big: %d bytes",
                           total_bufsize);
             }
         }

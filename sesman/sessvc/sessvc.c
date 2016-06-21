@@ -49,7 +49,7 @@ nil_signal_handler(int sig)
 }
 
 /******************************************************************************/
-/* chansrv can exit at any time without cleaning up, its an xlib app */
+/* chansrv can exit at any time without cleaning up, it's an xlib app */
 int APP_CC
 chansrv_cleanup(int pid)
 {
