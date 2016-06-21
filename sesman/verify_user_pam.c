@@ -61,12 +61,12 @@ verify_pam_conv(int num_msg, const struct pam_message **msg,
         switch (msg[i]->msg_style)
         {
             case PAM_PROMPT_ECHO_ON: /* username */
-                user_pass = appdata_ptr;
+                user_pass = (struct t_user_pass *) appdata_ptr;
                 reply[i].resp = g_strdup(user_pass->user);
                 reply[i].resp_retcode = PAM_SUCCESS;
                 break;
             case PAM_PROMPT_ECHO_OFF: /* password */
-                user_pass = appdata_ptr;
+                user_pass = (struct t_user_pass *) appdata_ptr;
                 reply[i].resp = g_strdup(user_pass->pass);
                 reply[i].resp_retcode = PAM_SUCCESS;
                 break;
