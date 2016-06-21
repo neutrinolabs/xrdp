@@ -25,6 +25,7 @@
 #define NULL 0
 #endif
 
+#include <stdlib.h>
 #include "arch.h"
 
 #define g_tcp_can_recv g_sck_can_recv
@@ -182,5 +183,11 @@ void * APP_CC   g_shmat(int shmid);
 int APP_CC      g_shmdt(const void *shmaddr);
 int APP_CC      g_gethostname(char *name, int len);
 int APP_CC      g_mirror_memcpy(void *dst, const void *src, int len);
+
+/* glib-style wrappers */
+#define g_new(struct_type, n_structs) \
+    (struct_type *) malloc(sizeof(struct_type) * (n_structs))
+#define g_new0(struct_type, n_structs) \
+    (struct_type *) calloc((n_structs), sizeof(struct_type))
 
 #endif
