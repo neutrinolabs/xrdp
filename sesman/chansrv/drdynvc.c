@@ -18,7 +18,7 @@
 
 #include "drdynvc.h"
 
-int g_drdynvc_chan_id;
+extern int g_drdynvc_chan_id; /* in chansrv.c */
 int g_drdynvc_inited = 0;
 
 static int APP_CC drdynvc_send_capability_request(uint16_t version);
