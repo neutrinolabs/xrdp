@@ -41,7 +41,7 @@ ssl_sha1_info_delete(void* sha1_info);
 void APP_CC
 ssl_sha1_clear(void* sha1_info);
 void APP_CC
-ssl_sha1_transform(void* sha1_info, char* data, int len);
+ssl_sha1_transform(void* sha1_info, const char *data, int len);
 void APP_CC
 ssl_sha1_complete(void* sha1_info, char* data);
 void* APP_CC

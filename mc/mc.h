@@ -37,7 +37,7 @@ struct mod
                    long param3, long param4);
   int (*mod_signal)(struct mod* v);
   int (*mod_end)(struct mod* v);
-  int (*mod_set_param)(struct mod* v, char* name, char* value);
+  int (*mod_set_param)(struct mod* v, const char *name, char* value);
   int (*mod_session_change)(struct mod* v, int, int);
   int (*mod_get_wait_objs)(struct mod* v, tbus* read_objs, int* rcount,
                            tbus* write_objs, int* wcount, int* timeout);
@@ -80,7 +80,7 @@ struct mod
   int (*server_query_channel)(struct mod* v, int index,
                               char* channel_name,
                               int* channel_flags);
-  int (*server_get_channel_id)(struct mod* v, char* name);
+  int (*server_get_channel_id)(struct mod* v, const char *name);
   int (*server_send_to_channel)(struct mod* v, int channel_id,
                                 char* data, int data_len,
                                 int total_data_len, int flags);

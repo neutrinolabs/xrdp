@@ -428,7 +428,7 @@ lxrdp_end(struct mod *mod)
 /******************************************************************************/
 /* return error */
 static int DEFAULT_CC
-lxrdp_set_param(struct mod *mod, char *name, char *value)
+lxrdp_set_param(struct mod *mod, const char *name, char *value)
 {
     rdpSettings *settings;
 

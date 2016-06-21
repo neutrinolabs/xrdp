@@ -582,7 +582,7 @@ clipboard_send_format_ack(void)
 /*****************************************************************************/
 /* returns number of bytes written */
 int APP_CC
-clipboard_out_unicode(struct stream *s, char *text, int num_chars)
+clipboard_out_unicode(struct stream *s, const char *text, int num_chars)
 {
     int index;
     int lnum_chars;

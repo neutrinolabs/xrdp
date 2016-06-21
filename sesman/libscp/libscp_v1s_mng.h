@@ -61,7 +61,7 @@ scp_v1s_mng_allow_connection(struct SCP_CONNECTION* c, struct SCP_SESSION* s);
  */
 /* 003 */
 enum SCP_SERVER_STATES_E
-scp_v1s_mng_deny_connection(struct SCP_CONNECTION* c, char* reason);
+scp_v1s_mng_deny_connection(struct SCP_CONNECTION* c, const char *reason);
 
 /**
  *

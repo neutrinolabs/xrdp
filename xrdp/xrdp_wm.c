@@ -548,7 +548,7 @@ xrdp_wm_init(struct xrdp_wm *self)
     struct list *names;
     struct list *values;
     char *q;
-    char *r;
+    const char *r;
     char param[256];
     char section_name[256];
     char cfg_file[256];

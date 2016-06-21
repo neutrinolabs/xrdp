@@ -266,9 +266,9 @@ xrdp_painter_draw_bitmap(struct xrdp_painter* self,
                          struct xrdp_bitmap* to_draw,
                          int x, int y, int cx, int cy);
 int APP_CC
-xrdp_painter_text_width(struct xrdp_painter* self, char* text);
+xrdp_painter_text_width(struct xrdp_painter* self, const char *text);
 int APP_CC
-xrdp_painter_text_height(struct xrdp_painter* self, char* text);
+xrdp_painter_text_height(struct xrdp_painter* self, const char *text);
 int APP_CC
 xrdp_painter_draw_text(struct xrdp_painter* self,
                        struct xrdp_bitmap* bitmap,
@@ -466,7 +466,7 @@ int DEFAULT_CC
 server_query_channel(struct xrdp_mod* mod, int index, char* channel_name,
                      int* channel_flags);
 int DEFAULT_CC
-server_get_channel_id(struct xrdp_mod* mod, char* name);
+server_get_channel_id(struct xrdp_mod* mod, const char *name);
 int DEFAULT_CC
 server_send_to_channel(struct xrdp_mod* mod, int channel_id,
                        char* data, int data_len,

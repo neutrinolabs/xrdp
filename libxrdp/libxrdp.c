@@ -1077,7 +1077,7 @@ libxrdp_query_channel(struct xrdp_session *session, int index,
 /* returns a zero based index of the channel, -1 if error or it doesn't
    exist */
 int EXPORT_CC
-libxrdp_get_channel_id(struct xrdp_session *session, char *name)
+libxrdp_get_channel_id(struct xrdp_session *session, const char *name)
 {
     int index = 0;
     int count = 0;

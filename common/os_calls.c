@@ -1810,7 +1810,7 @@ g_file_read(int fd, char *ptr, int len)
 /*****************************************************************************/
 /* write to file, returns the number of bytes written or -1 on error */
 int APP_CC
-g_file_write(int fd, char *ptr, int len)
+g_file_write(int fd, const char *ptr, int len)
 {
 #if defined(_WIN32)
 
@@ -1947,7 +1947,7 @@ g_get_current_dir(char *dirname, int maxlen)
 /*****************************************************************************/
 /* returns error, zero on success and -1 on failure */
 int APP_CC
-g_set_current_dir(char *dirname)
+g_set_current_dir(const char *dirname)
 {
 #if defined(_WIN32)
 
@@ -2116,7 +2116,7 @@ g_strlen(const char *text)
 
 /*****************************************************************************/
 /* locates char in text */
-char* APP_CC
+const char *APP_CC
 g_strchr(const char* text, int c)
 {
     if (text == NULL)
@@ -2395,7 +2395,7 @@ g_htoi(char *str)
 int APP_CC
 g_pos(const char *str, const char *to_find)
 {
-    char *pp;
+    const char *pp;
 
     pp = strstr(str, to_find);
 
@@ -3263,7 +3263,7 @@ g_save_to_bmp(const char* filename, char* data, int stride_bytes,
     data -= stride_bytes;
     if ((depth == 24) && (bits_per_pixel == 32))
     {
-        line = malloc(file_stride_bytes);
+        line = (char *) malloc(file_stride_bytes);
         memset(line, 0, file_stride_bytes);
         for (index = 0; index < height; index++)
         {

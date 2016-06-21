@@ -1396,7 +1396,7 @@ lib_mod_end(struct vnc *v)
 
 /******************************************************************************/
 int DEFAULT_CC
-lib_mod_set_param(struct vnc *v, char *name, char *value)
+lib_mod_set_param(struct vnc *v, const char *name, char *value)
 {
     if (g_strcasecmp(name, "username") == 0)
     {

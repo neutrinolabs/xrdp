@@ -242,7 +242,7 @@ lib_mod_end(struct mod *mod)
 /******************************************************************************/
 /* return error */
 int DEFAULT_CC
-lib_mod_set_param(struct mod *mod, char *name, char *value)
+lib_mod_set_param(struct mod *mod, const char *name, char *value)
 {
     if (g_strncasecmp(name, "ip", 255) == 0)
     {

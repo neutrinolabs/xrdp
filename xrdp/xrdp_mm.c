@@ -291,7 +291,8 @@ xrdp_mm_send_login(struct xrdp_mm *self)
    then it copies the corresponding login_values item into 'dest'
    'dest' must be at least 'dest_len' + 1 bytes in size */
 static int APP_CC
-xrdp_mm_get_value(struct xrdp_mm *self, char *aname, char *dest, int dest_len)
+xrdp_mm_get_value(struct xrdp_mm *self, const char *aname, char *dest,
+                  int dest_len)
 {
     char *name;
     char *value;
@@ -1111,7 +1112,7 @@ xrdp_mm_chan_send_init(struct xrdp_mm *self)
 /*****************************************************************************/
 /* connect to chansrv */
 static int APP_CC
-xrdp_mm_connect_chansrv(struct xrdp_mm *self, char *ip, char *port)
+xrdp_mm_connect_chansrv(struct xrdp_mm *self, const char *ip, const char *port)
 {
     int index;
 
@@ -3145,7 +3146,7 @@ server_query_channel(struct xrdp_mod *mod, int index, char *channel_name,
 /*****************************************************************************/
 /* returns -1 on error */
 int DEFAULT_CC
-server_get_channel_id(struct xrdp_mod *mod, char *name)
+server_get_channel_id(struct xrdp_mod *mod, const char *name)
 {
     struct xrdp_wm *wm;
 

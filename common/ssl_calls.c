@@ -111,7 +111,7 @@ ssl_sha1_clear(void *sha1_info)
 
 /*****************************************************************************/
 void APP_CC
-ssl_sha1_transform(void *sha1_info, char *data, int len)
+ssl_sha1_transform(void *sha1_info, const char *data, int len)
 {
     SHA1_Update((SHA_CTX *)sha1_info, data, len);
 }
@@ -560,7 +560,7 @@ ssl_tls_create(struct trans *trans, const char *key, const char *cert)
 
 /*****************************************************************************/
 int APP_CC
-ssl_tls_print_error(char *func, SSL *connection, int value)
+ssl_tls_print_error(const char *func, SSL *connection, int value)
 {
     switch (SSL_get_error(connection, value))
     {
