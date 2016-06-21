@@ -636,7 +636,7 @@ void dev_redir_proc_client_core_cap_resp(struct stream *s)
 
 void devredir_proc_client_devlist_announce_req(struct stream *s)
 {
-    int   i;
+    unsigned int i;
     int   j;
     tui32 device_count;
     tui32 device_type;
@@ -899,7 +899,7 @@ dev_redir_proc_query_dir_response(IRP *irp,
     tui32 status;
 
     char  filename[256];
-    int   i = 0;
+    unsigned int i = 0;
 
     xstream_rd_u32_le(s_in, Length);
 
@@ -1256,7 +1256,7 @@ devredir_file_read(void *fusep, tui32 DeviceId, tui32 FileId,
 
 int APP_CC
 dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
-                     const char *buf, tui32 Length, tui64 Offset)
+                     const char *buf, int Length, tui64 Offset)
 {
     struct stream *s;
     IRP           *irp;

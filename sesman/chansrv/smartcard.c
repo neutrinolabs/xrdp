@@ -1256,7 +1256,7 @@ scard_send_GetStatusChange(IRP* irp, char *context, int context_bytes,
     struct stream *s;
     tui32          ioctl;
     int            bytes;
-    int            i;
+    unsigned int   i;
     int            num_chars;
     int            index;
     twchar         w_reader_name[100];

@@ -587,7 +587,7 @@ lib_framebuffer_update(struct vnc *v)
     int cy;
     int srcx;
     int srcy;
-    int encoding;
+    unsigned int encoding;
     int Bpp;
     int pixel;
     int r;

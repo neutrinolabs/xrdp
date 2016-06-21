@@ -2213,7 +2213,7 @@ g_strdup(const char *in)
 char *APP_CC
 g_strndup(const char *in, const unsigned int maxlen)
 {
-    int len;
+    unsigned int len;
     char *p;
 
     if (in == 0)

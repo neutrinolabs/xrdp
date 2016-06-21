@@ -184,7 +184,7 @@ rail_send_key_esc(int window_id)
 static struct rail_window_data* APP_CC
 rail_get_window_data(Window window)
 {
-    int bytes;
+    unsigned int bytes;
     Atom actual_type_return;
     int actual_format_return;
     unsigned long nitems_return;
@@ -557,7 +557,7 @@ my_timeout(void* data)
 static int APP_CC
 rail_process_activate(struct stream *s, int size)
 {
-    int window_id;
+    unsigned int window_id;
     int enabled;
     int index;
     XWindowAttributes window_attributes;

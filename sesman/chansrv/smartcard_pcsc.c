@@ -145,7 +145,7 @@ get_uds_client_by_id(int uds_client_id)
 /*****************************************************************************/
 struct pcsc_context *
 get_pcsc_context_by_app_context(struct pcsc_uds_client *uds_client,
-                                 int app_context)
+                                tui32 app_context)
 {
     struct pcsc_context *rv;
     int index;
@@ -173,7 +173,7 @@ get_pcsc_context_by_app_context(struct pcsc_uds_client *uds_client,
 /*****************************************************************************/
 struct pcsc_card *
 get_pcsc_card_by_app_card(struct pcsc_uds_client *uds_client,
-                          int app_card, struct pcsc_context **acontext)
+                          tui32 app_card, struct pcsc_context **acontext)
 {
     struct pcsc_card *lcard;
     struct pcsc_context *lcontext;

@@ -1628,7 +1628,8 @@ struct_from_dvc_chan_id(tui32 dvc_chan_id)
 
     for (i = 0; i < MAX_DVC_CHANNELS; i++)
     {
-        if (g_dvc_channels[i]->dvc_chan_id == dvc_chan_id)
+        if (g_dvc_channels[i]->dvc_chan_id >= 0 &&
+            (tui32) g_dvc_channels[i]->dvc_chan_id == dvc_chan_id)
         {
             return g_dvc_channels[i];
         }
@@ -1644,7 +1645,8 @@ remove_struct_with_chan_id(tui32 dvc_chan_id)
 
     for (i = 0; i < MAX_DVC_CHANNELS; i++)
     {
-        if (g_dvc_channels[i]->dvc_chan_id == dvc_chan_id)
+        if (g_dvc_channels[i]->dvc_chan_id >= 0 &&
+            (tui32) g_dvc_channels[i]->dvc_chan_id == dvc_chan_id)
         {
             g_dvc_channels[i] = NULL;
             return 0;

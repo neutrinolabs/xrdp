@@ -415,9 +415,9 @@ rdp_rdp_send_confirm_active(struct rdp_rdp *self, struct stream *s)
 static int APP_CC
 rdp_rdp_process_color_pointer_pdu(struct rdp_rdp *self, struct stream *s)
 {
-    int cache_idx;
-    int dlen;
-    int mlen;
+    unsigned int cache_idx;
+    unsigned int dlen;
+    unsigned int mlen;
     struct rdp_cursor *cursor;
 
     in_uint16_le(s, cache_idx);
