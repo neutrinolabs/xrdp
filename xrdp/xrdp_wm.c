@@ -45,7 +45,7 @@ xrdp_wm_create(struct xrdp_process *owner,
     pid = g_getpid();
     g_snprintf(event_name, 255, "xrdp_%8.8x_wm_login_mode_event_%8.8x",
                pid, owner->session_id);
-    log_message(LOG_LEVEL_DEBUG,event_name);
+    log_message(LOG_LEVEL_DEBUG, "%s", event_name);
     self->login_mode_event = g_create_wait_obj(event_name);
     self->painter = xrdp_painter_create(self, self->session);
     self->cache = xrdp_cache_create(self, self->session, self->client_info);

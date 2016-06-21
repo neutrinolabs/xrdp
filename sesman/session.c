@@ -963,7 +963,7 @@ session_get_bypid(int pid)
 
     if (0 == dummy)
     {
-        log_message(LOG_LEVEL_ERROR, "internal error", pid);
+        log_message(LOG_LEVEL_ERROR, "session_get_bypid: out of memory");
         return 0;
     }
 

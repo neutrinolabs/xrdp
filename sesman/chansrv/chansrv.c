@@ -734,8 +734,7 @@ process_message(void)
                 rv = process_message_channel_data_response(s);
                 break;
             default:
-                LOGM((LOG_LEVEL_ERROR, "process_message: error in process_message ",
-                      "unknown msg %d", id));
+                LOGM((LOG_LEVEL_ERROR, "process_message: unknown msg %d", id));
                 break;
         }
 

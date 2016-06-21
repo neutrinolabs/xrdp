@@ -233,7 +233,7 @@ lib_process_channel_data(struct vnc *v, int chanid, int flags, int size,
     }
     else
     {
-        log_message(LOG_LEVEL_DEBUG, "lib_process_channel_data: unknown chanid:",
+        log_message(LOG_LEVEL_DEBUG, "lib_process_channel_data: unknown chanid: "
                     "%d :(v->clip_chanid) %d", chanid, v->clip_chanid);
     }
 

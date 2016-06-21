@@ -273,7 +273,6 @@ xrdp_wm_parse_domain_information(char *originalDomainInfo, int comboMax,
     int pos;
     int comboxindex;
     char index[2];
-    char debugstr[256];
 
     /* If the first char in the domain name is '_' we use the domain
        name as IP*/
@@ -300,11 +299,9 @@ xrdp_wm_parse_domain_information(char *originalDomainInfo, int comboMax,
                 /* we just accept values 0-9  (one figure) */
                 g_strncpy(index, &originalDomainInfo[pos + 3], 1);
                 comboxindex = g_htoi(index);
-                g_snprintf(debugstr, 255, "Value of index (as char): %s "
-                           "(converted) : %d (max) : %d", index, comboxindex,
-                           comboMax - 1);
-                debugstr[255] = 0;
-                log_message(LOG_LEVEL_DEBUG, debugstr);
+                log_message(LOG_LEVEL_DEBUG,
+                            "index value as string: %s, as int: %d, max: %d",
+                            index, comboxindex, comboMax - 1);
                 /* limit to max number of items in combo box */
                 if ((comboxindex > 0) && (comboxindex < comboMax))
                 {

@@ -230,7 +230,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             break;
 
         case 17: /* Synchronize */
-            LLOGLN(11, ("Synchronized event handled : %d", param1));
+            LLOGLN(11, ("Synchronized event handled : %ld", param1));
             /* In some situations the Synchronize event come to early.
                Therefore we store this information and use it when we
                receive the first keyboard event
@@ -246,7 +246,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             break;
 
         case 100: /* mouse move */
-            LLOGLN(12, ("mouse move %d %d", param1, param2));
+            LLOGLN(12, ("mouse move %ld %ld", param1, param2));
             x = param1;
             y = param2;
             flags = PTR_FLAGS_MOVE;
@@ -254,7 +254,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             break;
 
         case 101: /* left button up */
-            LLOGLN(12, ("left button up %d %d", param1, param2));
+            LLOGLN(12, ("left button up %ld %ld", param1, param2));
             x = param1;
             y = param2;
             flags = PTR_FLAGS_BUTTON1;
@@ -262,7 +262,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             break;
 
         case 102: /* left button down */
-            LLOGLN(12, ("left button down %d %d", param1, param2));
+            LLOGLN(12, ("left button down %ld %ld", param1, param2));
             x = param1;
             y = param2;
             flags = PTR_FLAGS_BUTTON1 | PTR_FLAGS_DOWN;
@@ -270,7 +270,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             break;
 
         case 103: /* right button up */
-            LLOGLN(12, ("right button up %d %d", param1, param2));
+            LLOGLN(12, ("right button up %ld %ld", param1, param2));
             x = param1;
             y = param2;
             flags = PTR_FLAGS_BUTTON2;
@@ -278,7 +278,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             break;
 
         case 104: /* right button down */
-            LLOGLN(12, ("right button down %d %d", param1, param2));
+            LLOGLN(12, ("right button down %ld %ld", param1, param2));
             x = param1;
             y = param2;
             flags = PTR_FLAGS_BUTTON2 | PTR_FLAGS_DOWN;
@@ -286,7 +286,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             break;
 
         case 105: /* middle button up */
-            LLOGLN(12, ("middle button up %d %d", param1, param2));
+            LLOGLN(12, ("middle button up %ld %ld", param1, param2));
             x = param1;
             y = param2;
             flags = PTR_FLAGS_BUTTON3;
@@ -294,7 +294,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             break;
 
         case 106: /* middle button down */
-            LLOGLN(12, ("middle button down %d %d", param1, param2));
+            LLOGLN(12, ("middle button down %ld %ld", param1, param2));
             x = param1;
             y = param2;
             flags = PTR_FLAGS_BUTTON3 | PTR_FLAGS_DOWN;

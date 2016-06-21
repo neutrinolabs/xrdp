@@ -1920,7 +1920,8 @@ clipboard_event_selection_notify(XEvent *xevent)
                     for (index = 0; index < n_items; index++)
                     {
                         atom = atoms[index];
-                        LOGM((LOG_LEVEL_DEBUG, "clipboard_event_selection_notify: %d %s %d",
+                        LOGM((LOG_LEVEL_DEBUG,
+                              "clipboard_event_selection_notify: 0x%lx %s 0x%lx",
                               atom, get_atom_text(atom), XA_STRING));
                         log_debug("clipboard_event_selection_notify: 0x%lx %s",
                                     atom, get_atom_text(atom));

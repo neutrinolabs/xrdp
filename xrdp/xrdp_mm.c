@@ -375,7 +375,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
                 g_snprintf(text, 255, "error finding proc mod_init in %s, not a valid "
                            "xrdp backend", lib);
                 xrdp_wm_log_msg(self->wm, text);
-                log_message(LOG_LEVEL_ERROR,text);
+                log_message(LOG_LEVEL_ERROR, "%s", text);
             }
 
             self->mod_init = (struct xrdp_mod * ( *)(void))func;
@@ -391,7 +391,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
                 g_snprintf(text, 255, "error finding proc mod_exit in %s, not a valid "
                            "xrdp backend", lib);
                 xrdp_wm_log_msg(self->wm, text);
-                log_message(LOG_LEVEL_ERROR,text);
+                log_message(LOG_LEVEL_ERROR, "%s", text);
             }
 
             self->mod_exit = (int ( *)(struct xrdp_mod *))func;
@@ -416,7 +416,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
             g_snprintf(text, 255, "error loading %s specified in xrdp.ini, please "
                        "add a valid entry like lib=libxrdp-vnc.so or similar", lib);
             xrdp_wm_log_msg(self->wm, text);
-            log_message(LOG_LEVEL_ERROR,text);
+            log_message(LOG_LEVEL_ERROR, "%s", text);
             return 1;
         }
 
@@ -1489,7 +1489,7 @@ access_control(char *username, char *password, char *srv)
                         else
                         {
                             log_message(LOG_LEVEL_ERROR, "Corrupt reply size or "
-                                        "version from sesman: %d", size);
+                                        "version from sesman: %ld", size);
                         }
                     }
                     else
@@ -1909,7 +1909,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
                   getPAMError(reply, pam_error, 127));
 
         xrdp_wm_log_msg(self->wm, replytxt);
-        log_message(LOG_LEVEL_INFO, replytxt);
+        log_message(LOG_LEVEL_INFO, "%s", replytxt);
         additionalError = getPAMAdditionalErrorInfo(reply, self);
         if (additionalError)
         {
@@ -1970,7 +1970,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
             g_snprintf(errstr, 255, "Failure to connect to sesman: %s port: %s",
                        ip, port);
             xrdp_wm_log_msg(self->wm, errstr);
-            log_message(LOG_LEVEL_ERROR,errstr);
+            log_message(LOG_LEVEL_ERROR, "%s", errstr);
             trans_delete(self->sesman_trans);
             self->sesman_trans = 0;
             self->sesman_trans_up = 0;
@@ -1990,7 +1990,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
             {
                 /* connect error */
                 g_snprintf(errstr, 255, "Failure to connect to: %s", ip);
-                log_message(LOG_LEVEL_ERROR,errstr);
+                log_message(LOG_LEVEL_ERROR, "%s", errstr);
                 xrdp_wm_log_msg(self->wm, errstr);
                 rv = 1; /* failure */
             }
