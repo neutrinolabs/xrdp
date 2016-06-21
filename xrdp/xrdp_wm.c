@@ -679,10 +679,9 @@ xrdp_wm_init(struct xrdp_wm *self)
             else
             {
                 /* requested module name not found in xrdp.ini */
-                g_writeln("   xrdp_wm_init: file_read_section returned non-zero, requested section not found in xrdp.ini");
                 xrdp_wm_log_msg(self, LOG_LEVEL_ERROR,
-                                "ERROR: The requested xrdp module not found in "
-                                "xrdp.ini, falling back to login window");
+                                "Section \"%s\" not configured in xrdp.ini",
+                                section_name);
             }
 
             list_delete(names);

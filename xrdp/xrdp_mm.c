@@ -1203,8 +1203,7 @@ xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
     {
         self->display = display;
         xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
-                        "xrdp_mm_process_login_response: login successful "
-                        "for display %d", display);
+                        "login successful for display %d", display);
 
         if (xrdp_mm_setup_mod1(self) == 0)
         {
@@ -1231,7 +1230,7 @@ xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
     else
     {
         xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
-                        "xrdp_mm_process_login_response: login failed");
+                        "login failed for display %d", display);
         xrdp_wm_show_log(self->wm);
         if (self->wm->hide_log_window)
         {
