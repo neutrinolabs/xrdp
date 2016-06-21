@@ -1,206 +1,225 @@
-.\" 
+.\"
 .TH "sesman.ini" "5" "0.1.0" "xrdp team" ""
 .SH "NAME"
-\fBsesman.ini\fR \- Configuration file for \fBsesman\fR(8)
+\fBsesman.ini\fR \- Configuration file for \fBxrdp-sesman\fR(8)
 
 .SH "DESCRIPTION"
-This is the man page for \fBsesman.ini\fR, \fBsesman\fR(8) configuration file.
-It is composed by a number of sections, each one composed by a section name, enclosed by square brackets, folowed by a list of \fI<parameter>\fR=\fI<value>\fR lines.
+\fBsesman.ini\fR consists of several sections. Each section starts with
+the section name in square brackets, followed by a list of
+\fIparameter\fR=\fIvalue\fR lines. Following sections are recognized:
 
-\fBsesman.ini\fR supports the following sections:
+.TP
+\fB[Globals]\fR
+Global configuration
 
-.TP 
-\fB[Globals]\fR \- sesman global configuration section, 
+.TP
+\fB[Logging]\fR
+Logging subsystem
 
-.TP 
-\fB[Logging]\fR \- logging subsystem parameters
+.TP
+\fB[Sessions]\fR
+Session management
 
-.TP 
-\fB[Security]\fR \- Access control parameters
+.TP
+\fB[Security]\fR
+Access control
 
-.TP 
-\fB[Sessions]\fR \- Session management parameters
+.TP
+\fB[X11rdp]\fR, \fB[Xvnc]\fR, \fB[Xorg]\fR
+X11 server settings for supported servers
 
-.LP 
-All options and values (except for file names and paths) are case insensitive, and are described in detail below.
+.TP
+\fB[Chansrv]\fR
+Settings for xrdp-chansrv(8)
 
-.LP 
-For any of the following parameter, if it's specified more than one time the last entry encountered will be used. 
+.TP
+\fB[SessionVariables]\fR
+Environment variables for the session
 
-\fBNOTE\fR: if any of these options is specified outside its section, it will be \fIignored\fR.
+.LP
+All parameters and values (except for file names and paths) are case
+insensitive, and are described in detail below. If any parameter is
+specified more than once, the last entry will be used. Options specified
+outside their proper section will be \fIignored\fR.
 
 .SH "GLOBALS"
-The options to be specified in the \fB[globals]\fR section are the following:
+Following parameters can be used in the \fB[Globals]\fR section.
 
-.TP 
+.TP
 \fBListenAddress\fR=\fIip address\fR
-Specifies sesman listening address. Default is 0.0.0.0 (all interfaces)
+xrdp-sesman listening address. Default is 0.0.0.0 (all interfaces).
 
-.TP 
+.TP
 \fBListenPort\fR=\fIport number\fR
-Specifies sesman listening port. Default is 3350
+xrdp-sesman listening port. Default is 3350.
 
-.TP 
+.TP
 \fBEnableUserWindowManager\fR=\fI[0|1]\fR
-If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables user specific window manager, that is, anyone can define it's own script executed by sesman when starting a new session, specified by \fBUserWindowManager\fR
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR, this option enables user
+specific startup script. That is, xrdp-sesman will execute the script
+specified by \fBUserWindowManager\fR if it exists.
 
-.TP 
-\fBUserWindowManager\fR=\fIstartwm.sh\fR
-This option specifies the script run by sesman when starting a session and per\-user window manager is enabled.
-.br 
-The path is relative to user's HOME directory
+.TP
+\fBUserWindowManager\fR=\fIfilename\fR
+Name of the startup script relative to the user's home directory. If
+present and enabled by \fBEnableUserWindowManager\fR, that script is
+executed instead of \fBDefaultWindowManager\fR.
 
-.TP 
-\fBDefaultWindowManager\fR=\fI${SESMAN_BIN_DIR}/startwm.sh\fR
-This contains full path to the default window manager startup script used by sesman to start a session
+.TP
+\fBDefaultWindowManager\fR=\fIfilename\fR
+Full path to the default startup script used by xrdp-sesman to start a
+session if the user script is disabled or missing.
 
 .SH "LOGGING"
-The following parameters can be used in the \fB[logging]\fR section:
+Following parameters can be used in the \fB[Logging]\fR section.
 
-.TP 
-\fBLogFile\fR=\fI${SESMAN_LOG_DIR}/sesman.log\fR
-This options contains the path to logfile. It can be either absolute or relative, and the default is \fI${SESMAN_LOG_DIR}/sesman.log\fR
+.TP
+\fBLogFile\fR=\fIfilename\fR
+Log file path. It can be either absolute or relative. The default is
+\fI./sesman.log\fR
 
-.TP 
+.TP
 \fBLogLevel\fR=\fIlevel\fR
 This option can have one of the following values:
 
-\fBCORE\fR or \fB0\fR \- Log only core messages. these messages are _always_ logged, regardless the logging level selected.
+\fBCORE\fR or \fB0\fR \- Log only core messages. Those messages are
+logged \fIregardless\fR of the selected logging level.
 
-\fBERROR\fR or \fB1\fR \- Log only error messages
+\fBERROR\fR or \fB1\fR \- Log only error messages.
 
-\fBWARNING\fR, \fBWARN\fR or \fB2\fR \- Logs warnings and error messages
+\fBWARNING\fR, \fBWARN\fR or \fB2\fR \- Logs warnings and error messages.
 
-\fBINFO\fR or \fB3\fR \- Logs errors, warnings and informational messages
+\fBINFO\fR or \fB3\fR \- Log errors, warnings and informational messages.
 
-\fBDEBUG\fR or \fB4\fR \- Log everything. If \fBsesman\fR is compiled in debug mode, this options will output many more low\-level message, useful for developers
-
-.TP 
-\fBEnableSyslog\fR=\fI[0|1]\fR
-If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables logging to syslog. Otherwise syslog is disabled.
-
-.TP 
-\fBSyslogLevel\fR=\fIlevel\fR
-This option sets the logging level for syslog. It can have the same values of \fBLogLevel\fR. If \fBSyslogLevel\fR is greater than \fBLogLevel\fR, its value is lowered to that of \fBLogLevel\fR.
-
-.SH "SESSIONS"
-The following parameters can be used in the \fB[Sessions]\fR section:
-
-.TP 
-\fBX11DisplayOffset\fR=\fI<number>\fR
-Specifies the first X display number available for \fBsesman\fP(8).  This prevents sesman from interfering with real X11 servers.  The default is 10.
+\fBDEBUG\fR or \fB4\fR \- Log everything. If xrdp-sesman is compiled in
+debug mode, this options will output many more low\-level messages.
 
 .TP
-\fBMaxSessions\fR=\fI<number>\fR
-Sets the maximum number of simultaneous session on terminal server.
-.br 
-If unset or set to \fI0\fR, unlimited session are allowed.
+\fBEnableSyslog\fR=\fI[0|1]\fR
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR, this option enables logging to
+syslog.
 
-.TP 
+.TP
+\fBSyslogLevel\fR=\fIlevel\fR
+Logging level for syslog. It can have the same values as \fBLogLevel\fR.
+If \fBSyslogLevel\fR and \fBLogLevel\fR differ, the least verbose setting
+takes effect for syslog.
+
+.SH "SESSIONS"
+Following parameters can be used in the \fB[Sessions]\fR section.
+
+.TP
+\fBX11DisplayOffset\fR=\fInumber\fR
+The first X display number available for xrdp-sesman. This prevents
+xrdp-sesman from interfering with real X11 servers. The default is 10.
+
+.TP
+\fBMaxSessions\fR=\fInumber\fR
+Sets the maximum number of simultaneous sessions. If not set or set to
+\fI0\fR, unlimited session are allowed.
+
+.TP
 \fBKillDisconnected\fR=\fI[0|1]\fR
-If set to \fB1\fR, \fBtrue\fR or \fByes\fR, every session will be killed within 60 seconds when the user disconnects.
-.br 
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR, every session will be killed
+within 60 seconds after the user disconnects.
 
-.TP 
-\fBIdleTimeLimit\fR=\fI<number>\fR
-Sets the the time limit before an idle session is disconnected.
-.br 
-If set to \fI0\fR, automatic disconnection is disabled.
-.br 
-\fI\-this option is currently ignored!\-\fR
+.TP
+\fBIdleTimeLimit\fR=\fInumber\fR
+\fI\This option is currently ignored!\fR Time limit before an idle
+session is disconnected. If set to \fI0\fR, automatic disconnection is
+disabled.
 
-.TP 
-\fBDisconnectedTimeLimit\fR=\fI<number>\fR
-Sets the time(in seconds) limit before a disconnected session is killed.
-.br 
+.TP
+\fBDisconnectedTimeLimit\fR=\fInumber\fR
+Sets the time limit (in seconds) before a disconnected session is killed.
 If set to \fI0\fR, automatic killing is disabled.
-.br 
 
-.TP 
+.TP
 \fBPolicy\fR=\fI[Default|UBD|UBI|UBC|UBDI|UBDC]\fR
-Session allocation policy. By Default, a new session is created
-for the combination <User,BitPerPixel> when using Xrdp, and 
+Session allocation policy. By default, a new session is created
+for the combination <User,BitPerPixel> when using Xrdp, and
 for the combination <User,BitPerPixel,DisplaySize> when using Xvnc.
-This behaviour can be changed by setting session policy to:
+This behavior can be changed by setting session policy to:
 .br
 
-.br 
+.br
 \fBUBD\fR - session per <User,BitPerPixel,DisplaySize>
-.br 
+.br
 \fBUBI\fR - session per <User,BitPerPixel,IPAddr>
-.br 
+.br
 \fBUBC\fR - session per <User,BitPerPixel,Connection>
-.br 
+.br
 \fBUBDI\fR - session per <User,BitPerPixel,DisplaySize,IPAddr>
-.br 
+.br
 \fBUBDC\fR - session per <User,BitPerPixel,DisplaySize,Connection>
 .br
 
 .br
-Note that the criteria <User,BitPerPixel> can not be turned off
-and <DisplaySize> will always be checkt when for Xvnc connections.
+Note that the \fBUser\fR and \fBBitPerPixel\fR criteria cannot be turned
+off. For Xvnc connections, \fBDisplaySize\fR is always enabled as well.
 .br
 
 .SH "SECURITY"
-The following parameters can be used in the \fB[Sessions]\fR section:
+Following parameters can be used in the \fB[Security]\fR section.
 
-.TP 
+.TP
 \fBAllowRootLogin\fR=\fI[0|1]\fR
-If set to \fB1\fR, \fBtrue\fR or \fByes\fR enables root login on the terminal server
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR, enables root login on the
+terminal server.
 
-.TP 
-\fBMaxLoginRetry\fR=\fI[0|1]\fR
-The number of login attempts that are allowed on terminal server. If set to \fI0\fR, unlimited attempts are allowed. The default value for this field is \fI3\fR.
+.TP
+\fBMaxLoginRetry\fR=\fInumber\fR
+The number of login attempts that are allowed on terminal server. If set
+to \fI0\fR, unlimited attempts are allowed. The default value for this
+field is \fI3\fR.
 
-.TP 
-\fBTerminalServerUsers\fR=\fItsusers\fR
-Only the users belonging to the group \fItsusers\fR are allowed to login on terminal server.
-.br 
-If unset or set to an invalid or non\-existent group, login for all users is enabled.
+.TP
+\fBTerminalServerUsers\fR=\fIgroup\fR
+Only the users belonging to the specified group are allowed to login on
+terminal server. If unset or set to an invalid or non\-existent group,
+login for all users is enabled.
 
-.TP 
-\fBTerminalServerAdmins\fR=\fItsadmins\fR
-Sets the group which a user shall belong to have session management rights.
-.br 
-\fI\-this option is currently ignored!\-\fR
+.TP
+\fBTerminalServerAdmins\fR=\fIgroup\fR
+\fIThis option is currently ignored!\fR Only members of this group can
+have session management rights.
 
-.SH "EXAMPLES"
-This is an example \fBsesman.ini\fR:
+.TP
+\fBAlwaysGroupCheck\fR=\fI[0|1]\fR
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR, require group membership even
+if the group specified in \fBTerminalServerUsers\fR doesn't exist.
 
-.nf
-[Globals]
-ListenAddress=127.0.0.1
-ListenPort=3350
-EnableUserWindowManager=1
-UserWindowManager=startwm.sh
-DefaultWindowManager=startwm.sh
+.SH "X11 SERVER"
+Following parameters can be used in the \fB[X11rdp]\fR, \fB[Xvnc]\fR and
+\fB[Xorg]\fR sections.
 
-[Logging]
-LogFile=/usr/local/xrdp/sesman.log
-LogLevel=DEBUG
-EnableSyslog=0
-SyslogLevel=DEBUG
+.TP
+\fBparam0\fR=\fIfilename\fR
+Path to the X11 server executable
 
-[Sessions]
-MaxSessions=10
-KillDisconnected=0
-IdleTimeLimit=0
-DisconnectedTimeLimit=0
+.TP
+\fBparam\fR\fIN\fR=\fIstring\fR
+Nth command line argument
 
-[Security]
-AllowRootLogin=1
-MaxLoginRetry=3
-TerminalServerUsers=tsusers
-TerminalServerAdmins=tsadmins
-.fi
+.SH "CHANSRV"
+Following parameters can be used in the \fB[Chansrv]\fR section.
+
+.TP
+\fBFuseMountName\fR=\fIstring\fR
+Directory for drive redirection, relative to the user home directory.
+Created if it doesn't exist. Defaults to \fIxrdp_client\fR
+
+.SH "SESSIONS VARIABLES"
+All entries it the \fB[SessionVariables]\fR section are set as
+environment variables in the user's session.
 
 .SH "FILES"
-${SESMAN_CFG_DIR}/sesman.ini
+/etc/xrdp/sesman.ini
 
 .SH "SEE ALSO"
-.BR sesman (8),
-.BR sesrun (8),
+.BR xrdp-sesman (8),
+.BR xrdp-sesrun (8),
 .BR xrdp (8),
 .BR xrdp.ini (5)
 
-for more info on \fBxrdp\fR see http://xrdp.sf.net
+For more info on \fBxrdp\fR see http://xrdp.sf.net
