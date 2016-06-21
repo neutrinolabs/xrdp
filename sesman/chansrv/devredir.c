@@ -1321,7 +1321,7 @@ dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
  * @return FUSE_DATA on success, or NULL on failure
  *****************************************************************************/
 
-void * APP_CC
+FUSE_DATA *APP_CC
 devredir_fuse_data_peek(IRP *irp)
 {
     log_debug("returning %p", irp->fd_head);
@@ -1334,7 +1334,7 @@ devredir_fuse_data_peek(IRP *irp)
  * @return FUSE_DATA on success, NULL on failure
  *****************************************************************************/
 
-void * APP_CC
+FUSE_DATA *APP_CC
 devredir_fuse_data_dequeue(IRP *irp)
 {
     FUSE_DATA *head;
