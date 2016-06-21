@@ -597,6 +597,7 @@ main(int argc, char **argv)
     g_sync_mutex = tc_mutex_create();
     g_sync1_mutex = tc_mutex_create();
     pid = g_getpid();
+    log_message(LOG_LEVEL_INFO, "starting xrdp with pid %d", pid);
     g_snprintf(text, 255, "xrdp_%8.8x_main_term", pid);
     g_term_event = g_create_wait_obj(text);
 

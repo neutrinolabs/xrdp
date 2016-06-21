@@ -370,6 +370,8 @@ xrdp_listen_main_loop(struct xrdp_listen *self)
 
     if (error == 0)
     {
+        log_message(LOG_LEVEL_INFO, "listening to port %s on %s",
+                    port, address);
         if (tcp_nodelay)
         {
             if (g_tcp_set_no_delay(self->listen_trans->sck))
