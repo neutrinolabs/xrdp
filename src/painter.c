@@ -147,6 +147,10 @@ painter_fill_rect(void *handle, struct painter_bitmap *dst,
 {
     int index;
     int jndex;
+    int x1;
+    int y1;
+    int x2;
+    int y2;
     int *dst32;
     struct painter *pt;
 
@@ -155,12 +159,35 @@ painter_fill_rect(void *handle, struct painter_bitmap *dst,
     {
         if (dst->format == PT_FORMAT_a8r8g8b8)
         {
-            for (jndex = 0; jndex < cy; jndex++)
+            x1 = x;
+            y1 = y;
+            x2 = x + cx;
+            y2 = y + cy;
+            if (pt->clip_valid)
             {
-                dst32 = (int*)bitmap_get_ptr(dst, x, y + jndex);
-                for (index = 0; index < cx; index++)
+                if (x1 < pt->clip.x1)
                 {
-                    dst32[index] = pt->fgcolor;
+                    x1 = pt->clip.x1;
+                }
+                if (y1 < pt->clip.y1)
+                {
+                    y1 = pt->clip.y1;
+                }
+                if (x2 > pt->clip.x2)
+                {
+                    x2 = pt->clip.x2;
+                }
+                if (y2 > pt->clip.y2)
+                {
+                    y2 = pt->clip.y2;
+                }
+            }
+            for (jndex = y1; jndex < y2; jndex++)
+            {
+                dst32 = (int *) bitmap_get_ptr(dst, x1, jndex);
+                for (index = x1; index < x2; index++)
+                {
+                    *(dst32++) = pt->fgcolor;
                 }
             }
             return PT_ERROR_NONE;
