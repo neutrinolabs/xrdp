@@ -120,6 +120,8 @@ painter_get_pixel(struct painter *painter, struct painter_bitmap *bitmap,
 int
 painter_set_pixel(struct painter *painter, struct painter_bitmap *dst,
                   int x, int y, int pixel, int pixel_format);
+char *
+bitmap_get_ptr(struct painter_bitmap *bitmap, int x, int y);
 int
 bitmap_get_pixel(struct painter_bitmap *bitmap, int x, int y);
 int
