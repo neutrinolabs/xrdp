@@ -147,9 +147,25 @@ painter_fill_rect(void *handle, struct painter_bitmap *dst,
 {
     int index;
     int jndex;
+    int *dst32;
     struct painter *pt;
 
     pt = (struct painter *) handle;
+    if (pt->rop == PT_ROP_S)
+    {
+        if (dst->format == PT_FORMAT_a8r8g8b8)
+        {
+            for (jndex = 0; jndex < cy; jndex++)
+            {
+                dst32 = (int*)bitmap_get_ptr(dst, x, y + jndex);
+                for (index = 0; index < cx; index++)
+                {
+                    dst32[index] = pt->fgcolor;
+                }
+            }
+            return PT_ERROR_NONE;
+        }
+    }
     for (jndex = 0; jndex < cy; jndex++)
     {
         for (index = 0; index < cx; index++)
