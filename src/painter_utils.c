@@ -160,6 +160,10 @@ pixel_convert(int pixel, int src_format, int dst_format, int *palette)
     {
         return pixel;
     }
+    a = 0;
+    r = 0;
+    g = 0;
+    b = 0;
     switch (src_format)
     {
         case PT_FORMAT_r3g3b2:
