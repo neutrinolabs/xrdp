@@ -155,9 +155,9 @@ xrdp_bitmap_create_with_data(int width, int height,
                              struct xrdp_wm *wm)
 {
     struct xrdp_bitmap *self = (struct xrdp_bitmap *)NULL;
+    int Bpp;
 #if defined(NEED_ALIGN)
     tintptr data_as_int;
-    int Bpp;
 #endif
 
     self = (struct xrdp_bitmap *)g_malloc(sizeof(struct xrdp_bitmap), 1);
@@ -166,6 +166,20 @@ xrdp_bitmap_create_with_data(int width, int height,
     self->height = height;
     self->bpp = bpp;
     self->wm = wm;
+    Bpp = 4;
+    switch (bpp)
+    {
+        case 8:
+            Bpp = 1;
+            break;
+        case 15:
+            Bpp = 2;
+            break;
+        case 16:
+            Bpp = 2;
+            break;
+    }
+    self->line_size = width * Bpp;
 #if defined(NEED_ALIGN)
     data_as_int = (tintptr) data;
     if (((bpp >= 24) && (data_as_int & 3)) ||
@@ -173,19 +187,6 @@ xrdp_bitmap_create_with_data(int width, int height,
     {
         /* got to copy data here, it's not aligned
            other calls in this file assume alignment */
-        Bpp = 4;
-        switch (bpp)
-        {
-            case 8:
-                Bpp = 1;
-                break;
-            case 15:
-                Bpp = 2;
-                break;
-            case 16:
-                Bpp = 2;
-                break;
-        }
         self->data = (char *)g_malloc(width * height * Bpp, 0);
         g_memcpy(self->data, data, width * height * Bpp);
         return self;
