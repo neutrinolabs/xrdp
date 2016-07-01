@@ -1,7 +1,7 @@
 /**
  * painter main
  *
- * Copyright 2015 Jay Sorg <jay.sorg@gmail.com>
+ * Copyright 2015-2016 Jay Sorg <jay.sorg@gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -268,8 +268,8 @@ painter_copy(void *handle, struct painter_bitmap *dst,
     int pixel;
     int bpp;
     struct painter *pt;
-    void *src_ptr;
-    void *dst_ptr;
+    char *src_ptr;
+    char *dst_ptr;
 
     pt = (struct painter *) handle;
     if (pt->rop == PT_ROP_S)
@@ -279,7 +279,8 @@ painter_copy(void *handle, struct painter_bitmap *dst,
             bpp = src->format >> 24;
             if (painter_warp_coords(pt, &x, &y, &cx, &cy, &srcx, &srcy)) 
             {
-                if ((srcy < y) || ((srcy == y) && (srcx < x))) /* straight right or down */
+                /* straight right or down */
+                if ((srcy < y) || ((srcy == y) && (srcx < x)))
                 {
                     for (jndex = cy - 1; jndex >= 0; jndex--)
                     {
@@ -308,7 +309,8 @@ painter_copy(void *handle, struct painter_bitmap *dst,
         }
     }
 
-    if ((srcy < y) || ((srcy == y) && (srcx < x))) /* straight right or down */
+    /* straight right or down */
+    if ((srcy < y) || ((srcy == y) && (srcx < x)))
     {
         for (jndex = cy - 1; jndex >= 0; jndex--)
         {
