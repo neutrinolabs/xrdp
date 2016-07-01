@@ -147,50 +147,47 @@ painter_fill_rect(void *handle, struct painter_bitmap *dst,
 {
     int index;
     int jndex;
-    int x1;
-    int y1;
-    int x2;
-    int y2;
+    int bpp;
     int *dst32;
+    short *dst16;
     struct painter *pt;
 
     pt = (struct painter *) handle;
     if (pt->rop == PT_ROP_S)
     {
-        if (dst->format == PT_FORMAT_a8r8g8b8)
+        if (painter_warp_coords(pt, &x, &y, &cx, &cy, NULL, NULL))
         {
-            x1 = x;
-            y1 = y;
-            x2 = x + cx;
-            y2 = y + cy;
-            if (pt->clip_valid)
+            bpp = dst->format >> 24;
+            if (bpp == 32)
             {
-                if (x1 < pt->clip.x1)
+                for (jndex = 0; jndex < cy; jndex++)
                 {
-                    x1 = pt->clip.x1;
+                    dst32 = (int *) bitmap_get_ptr(dst, x, y + jndex);
+                    if (dst32 != NULL)
+                    {
+                        for (index = 0; index < cx; index++) 
+                        {
+                            *(dst32++) = pt->fgcolor;
+                        }
+                    }
                 }
-                if (y1 < pt->clip.y1)
-                {
-                    y1 = pt->clip.y1;
-                }
-                if (x2 > pt->clip.x2)
-                {
-                    x2 = pt->clip.x2;
-                }
-                if (y2 > pt->clip.y2)
-                {
-                    y2 = pt->clip.y2;
-                }
+                return PT_ERROR_NONE;
             }
-            for (jndex = y1; jndex < y2; jndex++)
+            else if (bpp == 16)
             {
-                dst32 = (int *) bitmap_get_ptr(dst, x1, jndex);
-                for (index = x1; index < x2; index++)
+                for (jndex = 0; jndex < cy; jndex++)
                 {
-                    *(dst32++) = pt->fgcolor;
+                    dst16 = (short *) bitmap_get_ptr(dst, x, y + jndex);
+                    if (dst16 != NULL)
+                    {
+                        for (index = 0; index < cx; index++) 
+                        {
+                            *(dst16++) = pt->fgcolor;
+                        }
+                    }
                 }
+                return PT_ERROR_NONE;
             }
-            return PT_ERROR_NONE;
         }
     }
     for (jndex = 0; jndex < cy; jndex++)
@@ -218,24 +215,41 @@ painter_fill_pattern(void *handle, struct painter_bitmap *dst,
     struct painter *pt;
 
     pt = (struct painter *) handle;
-    for (jndex = 0; jndex < cy; jndex++)
+    if (pt->pattern_mode == PT_PATTERN_MODE_OPAQUE)
     {
-        for (index = 0; index < cx; index++)
+        for (jndex = 0; jndex < cy; jndex++)
         {
-            lx = (patx + index + pt->origin_x) % pat->width;
-            ly = (paty + jndex + pt->origin_y) % pat->height;
-            pixel = bitmap_get_pixel(pat, lx, ly);
-            if (pixel != 0)
+            for (index = 0; index < cx; index++)
             {
-                painter_set_pixel(pt, dst, x + index, y + jndex,
-                                  pt->fgcolor, dst->format);
-            }
-            else
-            {
-                if (pt->pattern_mode == PT_PATTERN_MODE_OPAQUE)
+                lx = (patx + index + pt->origin_x) % pat->width;
+                ly = (paty + jndex + pt->origin_y) % pat->height;
+                pixel = bitmap_get_pixel(pat, lx, ly);
+                if (pixel != 0)
+                {
+                    painter_set_pixel(pt, dst, x + index, y + jndex,
+                                      pt->fgcolor, dst->format);
+                }
+                else
                 {
                     painter_set_pixel(pt, dst, x + index, y + jndex,
                                       pt->bgcolor, dst->format);
+                }
+            }
+        }
+    }
+    else
+    {
+        for (jndex = 0; jndex < cy; jndex++)
+        {
+            for (index = 0; index < cx; index++)
+            {
+                lx = (patx + index + pt->origin_x) % pat->width;
+                ly = (paty + jndex + pt->origin_y) % pat->height;
+                pixel = bitmap_get_pixel(pat, lx, ly);
+                if (pixel != 0)
+                {
+                    painter_set_pixel(pt, dst, x + index, y + jndex,
+                                      pt->fgcolor, dst->format);
                 }
             }
         }
@@ -252,9 +266,48 @@ painter_copy(void *handle, struct painter_bitmap *dst,
     int index;
     int jndex;
     int pixel;
+    int bpp;
     struct painter *pt;
+    void *src_ptr;
+    void *dst_ptr;
 
     pt = (struct painter *) handle;
+    if (pt->rop == PT_ROP_S)
+    {
+        if (src->format == dst->format)
+        {
+            bpp = src->format >> 24;
+            if (painter_warp_coords(pt, &x, &y, &cx, &cy, &srcx, &srcy)) 
+            {
+                if ((srcy < y) || ((srcy == y) && (srcx < x))) /* straight right or down */
+                {
+                    for (jndex = cy - 1; jndex >= 0; jndex--)
+                    {
+                        dst_ptr = bitmap_get_ptr(dst, x, y + jndex);
+                        src_ptr = bitmap_get_ptr(src, srcx, srcy + jndex);
+                        if ((src_ptr != NULL) && (dst_ptr != NULL))
+                        {
+                            memmove(dst_ptr, src_ptr, cx * (bpp / 8));
+                        }
+                    }
+                }
+                else
+                {
+                    for (jndex = 0; jndex < cy; jndex++)
+                    {
+                        dst_ptr = bitmap_get_ptr(dst, x, y + jndex);
+                        src_ptr = bitmap_get_ptr(src, srcx, srcy + jndex);
+                        if ((src_ptr != NULL) && (dst_ptr != NULL))
+                        {
+                            memcpy(dst_ptr, src_ptr, cx * (bpp / 8));
+                        }
+                    }
+                }
+            }
+            return PT_ERROR_NONE;
+        }
+    }
+
     if ((srcy < y) || ((srcy == y) && (srcx < x))) /* straight right or down */
     {
         for (jndex = cy - 1; jndex >= 0; jndex--)

@@ -47,6 +47,7 @@ struct painter_bitmap
 #define PT_ERROR_NONE        0
 #define PT_ERROR_OUT_OF_MEM  1
 #define PT_ERROR_PARAM       2
+#define PT_ERROR_NOT_IMP     3
 
 #define PT_PATTERN_MODE_NORMAL 0
 #define PT_PATTERN_MODE_OPAQUE 1

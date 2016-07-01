@@ -254,3 +254,69 @@ painter_set_pixel(struct painter *painter, struct painter_bitmap *bitmap,
     return 0;
 }
 
+/*****************************************************************************/
+/* return true is the is something to draw */
+int
+painter_warp_coords(struct painter *painter,
+                    int *x, int *y, int *cx, int *cy,
+                    int *srcx, int *srcy)
+{
+    int dx;
+    int dy;
+    int lx;
+    int ly;
+    int lcx;
+    int lcy;
+
+    lx = *x;
+    ly = *y;
+    lcx = *cx;
+    lcy = *cy;
+    dx = 0;
+    dy = 0;
+    if (painter->clip_valid)
+    {
+        if (painter->clip.x1 > lx)
+        {
+            dx = painter->clip.x1 - lx;
+        }
+        if (painter->clip.y1 > ly)
+        {
+            dy = painter->clip.y1 - ly;
+        }
+        if (lx + lcx > painter->clip.x2)
+        {
+            lcx = (lcx - ((lx + lcx) - painter->clip.x2));
+        }
+        if (*y + lcy > painter->clip.y2)
+        {
+            lcy = (lcy - ((ly + lcy) - painter->clip.y2));
+        }
+    }
+    lcx = lcx - dx;
+    lcy = lcy - dy;
+    if (lcx <= 0)
+    {
+        return 0;
+    }
+    if (lcy <= 0)
+    {
+        return 0;
+    }
+    lx = lx + dx;
+    ly = ly + dy;
+    if (srcx != 0)
+    {
+        *srcx = *srcx + dx;
+    }
+    if (srcy != 0)
+    {
+        *srcy = *srcy + dy;
+    }
+    *x = lx;
+    *y = ly;
+    *cx = lcx;
+    *cy = lcy;
+    return 1;
+}
+

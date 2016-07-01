@@ -120,6 +120,10 @@ painter_get_pixel(struct painter *painter, struct painter_bitmap *bitmap,
 int
 painter_set_pixel(struct painter *painter, struct painter_bitmap *dst,
                   int x, int y, int pixel, int pixel_format);
+int
+painter_warp_coords(struct painter *painter,
+                    int *x, int *y, int *cx, int *cy,
+                    int *srcx, int *srcy);
 char *
 bitmap_get_ptr(struct painter_bitmap *bitmap, int x, int y);
 int
