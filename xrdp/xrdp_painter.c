@@ -1457,16 +1457,71 @@ xrdp_painter_line(struct xrdp_painter *self,
     int dx;
     int dy;
     int rop;
+    int x;
+    int y;
+    int cx;
+    int cy;
+    struct painter_bitmap dst_pb;
+    struct xrdp_bitmap *ldst;
 
-    LLOGLN(0, ("xrdp_painter_line:"));
-
+    LLOGLN(10, ("xrdp_painter_line:"));
     if (self == 0)
     {
         return 0;
     }
-
     if (self->painter != 0)
     {
+        LLOGLN(10, ("xrdp_painter_line: dst->type %d", dst->type));
+        LLOGLN(10, ("xrdp_painter_line: self->rop 0x%2.2x", self->rop));
+
+        if (dst->type != WND_TYPE_OFFSCREEN)
+        {
+            LLOGLN(10, ("xrdp_painter_line: using painter"));
+            ldst = self->wm->screen;
+
+            g_memset(&dst_pb, 0, sizeof(dst_pb));
+            dst_pb.format = get_pt_format(self);
+            dst_pb.width = ldst->width;
+            dst_pb.stride_bytes = ldst->line_size;
+            dst_pb.height = ldst->height;
+            dst_pb.data = ldst->data;
+
+            xrdp_bitmap_get_screen_clip(dst, self, &clip_rect, &dx, &dy);
+            region = xrdp_region_create(self->wm);
+            x = MIN(x1, x2);
+            y = MIN(y1, y2);
+            cx = g_abs(x1 - x2) + 1;
+            cy = g_abs(y1 - y2) + 1;
+            xrdp_wm_get_vis_region(self->wm, dst, x, y, cx, cy,
+                                   region, self->clip_children);
+            x1 += dx;
+            y1 += dy;
+            x2 += dx;
+            y2 += dy;
+            k = 0;
+            rop = self->rop;
+
+            painter_set_rop(self->painter, rop);
+            painter_set_fgcolor(self->painter, self->pen.color);
+            while (xrdp_region_get_rect(region, k, &rect) == 0)
+            {
+                if (rect_intersect(&rect, &clip_rect, &draw_rect))
+                {
+                    painter_set_clip(self->painter,
+                                     draw_rect.left, draw_rect.top,
+                                     draw_rect.right - draw_rect.left,
+                                     draw_rect.bottom - draw_rect.top);
+                    painter_line(self->painter, &dst_pb, x1, y1, x2, x2,
+                                 self->pen.width, 0);
+                    xrdp_painter_add_dirty_rect(self, x, y, cx, cy,
+                                                &draw_rect);
+                }
+                k++;
+            }
+            painter_clear_clip(self->painter);
+            xrdp_region_delete(region);
+        }
+
         return 0;
     }
 
