@@ -106,6 +106,7 @@ struct painter
     int bgcolor;
     int pattern_mode;
     int clip_valid;
+    int pad0;
     struct painter_rect clip;
     int origin_x;
     int origin_y;

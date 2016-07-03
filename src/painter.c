@@ -277,7 +277,7 @@ painter_copy(void *handle, struct painter_bitmap *dst,
         if (src->format == dst->format)
         {
             bpp = src->format >> 24;
-            if (painter_warp_coords(pt, &x, &y, &cx, &cy, &srcx, &srcy)) 
+            if (painter_warp_coords(pt, &x, &y, &cx, &cy, &srcx, &srcy))
             {
                 /* straight right or down */
                 if ((srcy < y) || ((srcy == y) && (srcx < x)))
