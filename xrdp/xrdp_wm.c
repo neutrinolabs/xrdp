@@ -897,6 +897,7 @@ xrdp_wm_move_window(struct xrdp_wm *self, struct xrdp_bitmap *wnd,
 
     MAKERECT(rect1, wnd->left, wnd->top, wnd->width, wnd->height);
 
+    self->painter->clip_children = 0;
     if (xrdp_wm_is_rect_vis(self, wnd, &rect1))
     {
         rect2 = rect1;
@@ -928,6 +929,7 @@ xrdp_wm_move_window(struct xrdp_wm *self, struct xrdp_bitmap *wnd,
             return 0;
         }
     }
+    self->painter->clip_children = 1;
 
     wnd->left += dx;
     wnd->top += dy;

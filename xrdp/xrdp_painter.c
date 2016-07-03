@@ -1119,7 +1119,8 @@ xrdp_painter_copy(struct xrdp_painter *self,
 
     if (self->painter != 0)
     {
-        LLOGLN(10, ("xrdp_painter_copy: dst->type %d", dst->type));
+        LLOGLN(10, ("xrdp_painter_copy: src->type %d dst->type %d", src->type, dst->type));
+        LLOGLN(10, ("xrdp_painter_copy: self->rop 0x%2.2x", self->rop));
 
         if (dst->type != WND_TYPE_OFFSCREEN)
         {
@@ -1140,43 +1141,34 @@ xrdp_painter_copy(struct xrdp_painter *self,
             src_pb.height = src->height;
             src_pb.data = src->data;
 
-            if ((src->type == WND_TYPE_SCREEN) && (src == dst))
-            {
-                painter_clear_clip(self->painter);
-                painter_set_rop(self->painter, self->rop);
-                painter_copy(self->painter, &dst_pb, x, y, cx, cy,
-                             &src_pb, srcx, srcy);
-                xrdp_painter_add_dirty_rect(self, x, y, cx, cy, 0);
-            }
-            else
-            {
-                xrdp_bitmap_get_screen_clip(dst, self, &clip_rect, &dx, &dy); 
-                region = xrdp_region_create(self->wm);
-                xrdp_wm_get_vis_region(self->wm, dst, x, y, cx, cy, region,
-                                       self->clip_children);
-                x += dx;
-                y += dy;
-                k = 0;
+            xrdp_bitmap_get_screen_clip(dst, self, &clip_rect, &dx, &dy); 
+            region = xrdp_region_create(self->wm);
+            xrdp_wm_get_vis_region(self->wm, dst, x, y, cx, cy, region,
+                                   self->clip_children);
+            x += dx;
+            y += dy;
+            k = 0;
 
-                painter_set_rop(self->painter, self->rop);
-                while (xrdp_region_get_rect(region, k, &rect1) == 0)
+            painter_set_rop(self->painter, self->rop);
+            while (xrdp_region_get_rect(region, k, &rect1) == 0)
+            {
+                if (rect_intersect(&rect1, &clip_rect, &draw_rect))
                 {
-                    if (rect_intersect(&rect1, &clip_rect, &draw_rect))
-                    {
-                        painter_set_clip(self->painter,
-                                         draw_rect.left, draw_rect.top,
-                                         draw_rect.right - draw_rect.left,
-                                         draw_rect.bottom - draw_rect.top);
-                        painter_copy(self->painter, &dst_pb, x, y, cx, cy,
-                                     &src_pb, srcx, srcy);
-                        xrdp_painter_add_dirty_rect(self, x, y, cx, cy,
-                                                    &draw_rect);
-                    }
-                    k++;
+                    painter_set_clip(self->painter,
+                                     draw_rect.left, draw_rect.top,
+                                     draw_rect.right - draw_rect.left,
+                                     draw_rect.bottom - draw_rect.top);
+                    LLOGLN(10, ("  x %d y %d cx %d cy %d srcx %d srcy %d",
+                           x, y, cx, cy, srcx, srcy));
+                    painter_copy(self->painter, &dst_pb, x, y, cx, cy,
+                                 &src_pb, srcx, srcy);
+                    xrdp_painter_add_dirty_rect(self, x, y, cx, cy,
+                                                &draw_rect);
                 }
-                painter_clear_clip(self->painter);
-                xrdp_region_delete(region);
+                k++;
             }
+            painter_clear_clip(self->painter);
+            xrdp_region_delete(region);
         }
 
         return 0;
