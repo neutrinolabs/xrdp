@@ -68,9 +68,9 @@ struct log_config
     const char *program_name;
     char *log_file;
     int fd;
-    unsigned int log_level;
+    enum logLevels log_level;
     int enable_syslog;
-    unsigned int syslog_level;
+    enum logLevels syslog_level;
     pthread_mutex_t log_lock;
     pthread_mutexattr_t log_lock_attr;
 };

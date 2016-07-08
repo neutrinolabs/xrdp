@@ -1401,8 +1401,8 @@ get_log_path()
 }
 
 /*****************************************************************************/
-static unsigned int APP_CC
-get_log_level(const char* level_str, unsigned int default_level)
+static enum logLevels APP_CC
+get_log_level(const char* level_str, enum logLevels default_level)
 {
     static const char* levels[] = {
         "LOG_LEVEL_ALWAYS",
@@ -1421,7 +1421,7 @@ get_log_level(const char* level_str, unsigned int default_level)
     {
         if (g_strcasecmp(levels[i], level_str) == 0)
         {
-            return i;
+            return (enum logLevels) i;
         }
     }
     return default_level;
@@ -1466,7 +1466,7 @@ main(int argc, char **argv)
     char log_file[256];
     enum logReturns error;
     struct log_config logconfig;
-    unsigned int log_level;
+    enum logLevels log_level;
 
     g_init("xrdp-chansrv"); /* os_calls */
 
@@ -1498,7 +1498,7 @@ main(int argc, char **argv)
     logconfig.fd = -1;
     logconfig.log_level = log_level;
     logconfig.enable_syslog = 0;
-    logconfig.syslog_level = 0;
+    logconfig.syslog_level = LOG_LEVEL_ALWAYS;
     error = log_start_from_param(&logconfig);
 
     if (error != LOG_STARTUP_OK)
