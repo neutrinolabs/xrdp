@@ -182,61 +182,6 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
     return 0;
 }
 
-/******************************************************************************
-int DEFAULT_CC
-config_read_logging(int file, struct log_config* lc, struct list* param_n,
-                    struct list* param_v)
-{
-  int i;
-  char* buf;
-
-  list_clear(param_v);
-  list_clear(param_n);
-
-  // setting defaults
-  lc->program_name = g_strdup("sesman");
-  lc->log_file = 0;
-  lc->fd = 0;
-  lc->log_level = LOG_LEVEL_DEBUG;
-  lc->enable_syslog = 0;
-  lc->syslog_level = LOG_LEVEL_DEBUG;
-
-  file_read_section(file, SESMAN_CFG_LOGGING, param_n, param_v);
-  for (i = 0; i < param_n->count; i++)
-  {
-    buf = (char*)list_get_item(param_n, i);
-    if (0 == g_strcasecmp(buf, SESMAN_CFG_LOG_FILE))
-    {
-      lc->log_file = g_strdup((char*)list_get_item(param_v, i));
-    }
-    if (0 == g_strcasecmp(buf, SESMAN_CFG_LOG_LEVEL))
-    {
-      lc->log_level = log_text2level((char*)list_get_item(param_v, i));
-    }
-    if (0 == g_strcasecmp(buf, SESMAN_CFG_LOG_ENABLE_SYSLOG))
-    {
-      lc->enable_syslog = g_text2bool((char*)list_get_item(param_v, i));
-    }
-    if (0 == g_strcasecmp(buf, SESMAN_CFG_LOG_SYSLOG_LEVEL))
-    {
-      lc->syslog_level = log_text2level((char*)list_get_item(param_v, i));
-    }
-  }
-
-  if (0 == lc->log_file)
-  {
-    lc->log_file=g_strdup("./sesman.log");
-  }
-
-  g_printf("logging configuration:\r\n");
-  g_printf("\tLogFile:       %s\r\n",lc->log_file);
-  g_printf("\tLogLevel:      %i\r\n", lc->log_level);
-  g_printf("\tEnableSyslog:  %i\r\n", lc->enable_syslog);
-  g_printf("\tSyslogLevel:   %i\r\n", lc->syslog_level);
-
-  return 0;
-}
-*/
 /******************************************************************************/
 int DEFAULT_CC
 config_read_security(int file, struct config_security *sc,
