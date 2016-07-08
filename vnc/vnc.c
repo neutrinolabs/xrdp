@@ -1465,7 +1465,7 @@ lib_mod_check_wait_objs(struct vnc *v)
 }
 
 /******************************************************************************/
-struct vnc *EXPORT_CC
+tintptr EXPORT_CC
 mod_init(void)
 {
     struct vnc *v;
@@ -1474,7 +1474,7 @@ mod_init(void)
     /* set client functions */
     v->size = sizeof(struct vnc);
     v->version = CURRENT_MOD_VER;
-    v->handle = (long)v;
+    v->handle = (tintptr) v;
     v->mod_connect = lib_mod_connect;
     v->mod_start = lib_mod_start;
     v->mod_event = lib_mod_event;
@@ -1483,13 +1483,14 @@ mod_init(void)
     v->mod_set_param = lib_mod_set_param;
     v->mod_get_wait_objs = lib_mod_get_wait_objs;
     v->mod_check_wait_objs = lib_mod_check_wait_objs;
-    return v;
+    return (tintptr) v;
 }
 
 /******************************************************************************/
 int EXPORT_CC
-mod_exit(struct vnc *v)
+mod_exit(tintptr handle)
 {
+    struct vnc *v = (struct vnc *) handle;
     log_message(LOG_LEVEL_DEBUG, "VNC mod_exit");
 
     if (v == 0)

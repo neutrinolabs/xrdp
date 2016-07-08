@@ -1955,7 +1955,7 @@ lfreerdp_verify_certificate(freerdp *instance, char *subject, char *issuer,
 }
 
 /******************************************************************************/
-struct mod *EXPORT_CC
+tintptr EXPORT_CC
 mod_init(void)
 {
     struct mod *mod;
@@ -1968,7 +1968,7 @@ mod_init(void)
                mod->vmaj, mod->vmin, mod->vrev));
     mod->size = sizeof(struct mod);
     mod->version = CURRENT_MOD_VER;
-    mod->handle = (tbus)mod;
+    mod->handle = (tintptr) mod;
     mod->mod_connect = lxrdp_connect;
     mod->mod_start = lxrdp_start;
     mod->mod_event = lxrdp_event;
@@ -1995,13 +1995,15 @@ mod_init(void)
     lcon->modi = mod;
     LLOGLN(10, ("mod_init: mod %p", mod));
 
-    return mod;
+    return (tintptr) mod;
 }
 
 /******************************************************************************/
 int EXPORT_CC
-mod_exit(struct mod *mod)
+mod_exit(tintptr handle)
 {
+    struct mod *mod = (struct mod *) handle;
+
     LLOGLN(0, ("mod_exit:"));
 
     if (mod == 0)

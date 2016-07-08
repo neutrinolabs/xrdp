@@ -113,7 +113,6 @@ typedef __int64 tbus;
 #else
 typedef long tbus;
 #endif
-typedef tbus thandle;
 typedef tbus tintptr;
 /* wide char, socket */
 #if defined(_WIN32)
@@ -135,6 +134,16 @@ typedef signed long long tsi64;
  __attribute__((__format__(__printf__, arg_format, arg_first_check)))
 #else
 #define printflike(arg_format, arg_first_check)
+#endif
+
+/* module interface */
+#ifdef __cplusplus
+extern "C" {
+#endif
+   tintptr mod_init();
+   int mod_exit(tintptr);
+#ifdef __cplusplus
+}
 #endif
 
 #endif
