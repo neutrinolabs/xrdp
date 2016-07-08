@@ -1088,7 +1088,7 @@ process_server_paint_rect_shmem(struct mod *amod, struct stream *s)
     if (amod->screen_shmem_id_mapped == 0)
     {
         amod->screen_shmem_id = shmem_id;
-        amod->screen_shmem_pixels = g_shmat(amod->screen_shmem_id);
+        amod->screen_shmem_pixels = (char *) g_shmat(amod->screen_shmem_id);
         if (amod->screen_shmem_pixels == (void*)-1)
         {
             /* failed */
@@ -1199,7 +1199,7 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
         if (amod->screen_shmem_id_mapped == 0)
         {
             amod->screen_shmem_id = shmem_id;
-            amod->screen_shmem_pixels = g_shmat(amod->screen_shmem_id);
+            amod->screen_shmem_pixels = (char *) g_shmat(amod->screen_shmem_id);
             if (amod->screen_shmem_pixels == (void*)-1)
             {
                 /* failed */
