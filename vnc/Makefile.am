@@ -14,3 +14,7 @@ libvnc_la_SOURCES = \
 
 libvnc_la_LIBADD = \
   $(top_builddir)/common/libcommon.la
+
+libvnc_la_LDFLAGS = \
+  -avoid-version -module
+

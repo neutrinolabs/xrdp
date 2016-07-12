@@ -19,3 +19,6 @@ libxrdpapi_la_LDFLAGS = \
 
 libxrdpapi_la_LIBADD = \
   $(EXTRA_LIBS)
+
+libxrdpapi_la_LDFLAGS = \
+  -avoid-version -module

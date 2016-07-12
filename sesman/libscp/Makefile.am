@@ -40,3 +40,6 @@ libscp_la_SOURCES = \
 libscp_la_LIBADD = \
   $(top_builddir)/common/libcommon.la \
   -lpthread
+
+libscp_la_LDFLAGS = \
+  -avoid-version -module

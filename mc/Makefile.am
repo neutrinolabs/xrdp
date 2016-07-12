@@ -14,3 +14,6 @@ libmc_la_SOURCES = \
 
 libmc_la_LIBADD = \
   $(top_builddir)/common/libcommon.la
+
+libmc_la_LDFLAGS = \
+  -avoid-version -module

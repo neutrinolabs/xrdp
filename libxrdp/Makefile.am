@@ -58,7 +58,8 @@ libxrdp_la_SOURCES = \
   xrdp_sec.c
 
 libxrdp_la_LDFLAGS = \
-  $(EXTRA_FLAGS)
+  $(EXTRA_FLAGS) \
+  -avoid-version -module
 
 libxrdp_la_LIBADD = \
   $(top_builddir)/common/libcommon.la \

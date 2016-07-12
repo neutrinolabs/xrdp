@@ -31,3 +31,6 @@ librdp_la_SOURCES = \
 
 librdp_la_LIBADD = \
   $(top_builddir)/common/libcommon.la
+
+librdp_la_LDFLAGS = \
+  -avoid-version -module
