@@ -514,3 +514,6 @@ int DEFAULT_CC
 server_add_char_alpha(struct xrdp_mod* mod, int font, int character,
                       int offset, int baseline,
                       int width, int height, char* data);
+int DEFAULT_CC
+server_session_info(struct xrdp_mod *mod, const char *data, int data_bytes);
+
