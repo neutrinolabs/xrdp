@@ -1925,6 +1925,28 @@ lfreerdp_verify_certificate(freerdp *instance, char *subject, char *issuer,
 }
 
 /******************************************************************************/
+static int DEFAULT_CC
+lfreerdp_session_info(freerdp* instance, uint8* data, int data_bytes)
+{
+    struct mod *mod;
+    int error;
+
+    LLOGLN(10, ("lfreerdp_session_info:"));
+    error = 0;
+    mod = ((struct mod_context *)(instance->context))->modi;
+    if (mod != 0)
+    {
+        LLOGLN(10, ("lfreerdp_session_info: mod->server_session_info %p",
+               mod->server_session_info));
+        if (mod->server_session_info != 0)
+        {
+            error = mod->server_session_info(mod, (char *)data, data_bytes);
+        }
+    }
+    return error;
+}
+
+/******************************************************************************/
 struct mod *EXPORT_CC
 mod_init(void)
 {
@@ -1958,6 +1980,11 @@ mod_init(void)
     mod->inst->ReceiveChannelData = lfreerdp_receive_channel_data;
     mod->inst->Authenticate = lfreerdp_authenticate;
     mod->inst->VerifyCertificate = lfreerdp_verify_certificate;
+#if defined(VERSION_STRUCT_RDP_FREERDP)
+#if VERSION_STRUCT_RDP_FREERDP > 0
+    mod->inst->SessionInfo = lfreerdp_session_info;
+#endif
+#endif
 
     freerdp_context_new(mod->inst);
 
