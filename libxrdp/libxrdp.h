@@ -402,6 +402,9 @@ int APP_CC
 xrdp_rdp_disconnect(struct xrdp_rdp *self);
 int APP_CC
 xrdp_rdp_send_deactivate(struct xrdp_rdp *self);
+int APP_CC
+xrdp_rdp_send_session_info(struct xrdp_rdp *self, const char *data,
+                           int data_bytes);
 
 /* xrdp_orders.c */
 struct xrdp_orders * APP_CC
