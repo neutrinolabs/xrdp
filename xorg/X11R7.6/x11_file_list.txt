@@ -1,4 +1,4 @@
-Python-2.7.tar.bz2                              :  Python-2.7                               :
+Python-2.7.11.tar.xz                            :  Python-2.7.11                            :
 util-macros-1.11.0.tar.bz2                      :  util-macros-1.11.0                       :
 xf86driproto-2.1.0.tar.bz2                      :  xf86driproto-2.1.0                       :
 dri2proto-2.3.tar.bz2                           :  dri2proto-2.3                            :
