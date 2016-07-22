@@ -253,14 +253,17 @@ g_sprintf(char *dest, const char *format, ...)
 }
 
 /*****************************************************************************/
-void DEFAULT_CC
+int DEFAULT_CC
 g_snprintf(char *dest, int len, const char *format, ...)
 {
+    int err;
     va_list ap;
 
     va_start(ap, format);
-    vsnprintf(dest, len, format, ap);
+    err = vsnprintf(dest, len, format, ap);
     va_end(ap);
+
+    return err;
 }
 
 /*****************************************************************************/
@@ -3017,10 +3020,11 @@ g_sigterm(int pid)
 
 /*****************************************************************************/
 /* returns 0 if ok */
+/* the caller is responsible to free the buffs */
 /* does not work in win32 */
 int APP_CC
-g_getuser_info(const char *username, int *gid, int *uid, char *shell,
-               char *dir, char *gecos)
+g_getuser_info(const char *username, int *gid, int *uid, char **shell,
+               char **dir, char **gecos)
 {
 #if defined(_WIN32)
     return 1;
@@ -3043,17 +3047,17 @@ g_getuser_info(const char *username, int *gid, int *uid, char *shell,
 
         if (dir != 0)
         {
-            g_strcpy(dir, pwd_1->pw_dir);
+            *dir = g_strdup(pwd_1->pw_dir);
         }
 
         if (shell != 0)
         {
-            g_strcpy(shell, pwd_1->pw_shell);
+            *shell = g_strdup(pwd_1->pw_shell);
         }
 
         if (gecos != 0)
         {
-            g_strcpy(gecos, pwd_1->pw_gecos);
+            *gecos = g_strdup(pwd_1->pw_gecos);
         }
 
         return 0;

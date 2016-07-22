@@ -61,8 +61,9 @@ env_check_password_file(char *filename, char *password)
 }
 
 /******************************************************************************/
+/*  its the responsibility of the caller to free passwd_file                  */
 int DEFAULT_CC
-env_set_user(char *username, char *passwd_file, int display,
+env_set_user(char *username, char **passwd_file, int display,
              struct list *env_names, struct list* env_values)
 {
     int error;
@@ -70,15 +71,17 @@ env_set_user(char *username, char *passwd_file, int display,
     int pw_gid;
     int uid;
     int index;
+    int len;
     char *name;
     char *value;
-    char pw_shell[256];
-    char pw_dir[256];
-    char pw_gecos[256];
+    char *pw_shell;
+    char *pw_dir;
     char text[256];
 
-    error = g_getuser_info(username, &pw_gid, &pw_uid, pw_shell, pw_dir,
-                           pw_gecos);
+    pw_shell = 0;
+    pw_dir = 0;
+
+    error = g_getuser_info(username, &pw_gid, &pw_uid, &pw_shell, &pw_dir, 0);
 
     if (error == 0)
     {
@@ -128,28 +131,48 @@ env_set_user(char *username, char *passwd_file, int display,
                 if (0 == g_cfg->auth_file_path)
                 {
                     /* if no auth_file_path is set, then we go for
-                       $HOME/.vnc/sesman_username_passwd */
+                     $HOME/.vnc/sesman_username_passwd */
                     if (g_mkdir(".vnc") < 0)
                     {
                         log_message(LOG_LEVEL_ERROR,
-                            "env_set_user: error creating .vnc dir");
+                                    "env_set_user: error creating .vnc dir");
                     }
-                    g_sprintf(passwd_file, "%s/.vnc/sesman_%s_passwd", pw_dir, username);
+
+                    len = g_snprintf(NULL, 0, "%s/.vnc/sesman_%s_passwd", pw_dir, username);
+
+                    *passwd_file = (char *) g_malloc(len + 1, 1);
+                    if (*passwd_file != NULL)
+                    {
+                        g_sprintf(*passwd_file, "%s/.vnc/sesman_%s_passwd", pw_dir, username);
+                    }
                 }
                 else
                 {
                     /* we use auth_file_path as requested */
-                    g_sprintf(passwd_file, g_cfg->auth_file_path, username);
+                    len = g_snprintf(NULL, 0, g_cfg->auth_file_path, username);
+
+                    *passwd_file = (char *) g_malloc(len + 1, 1);
+                    if (*passwd_file != NULL)
+                    {
+                        g_sprintf(*passwd_file, g_cfg->auth_file_path, username);
+                    }
                 }
 
-                LOG_DBG("pass file: %s", passwd_file);
+                if (*passwd_file != NULL)
+                {
+                    LOG_DBG("pass file: %s", *passwd_file);
+                }
             }
+
+            g_free(pw_dir);
+            g_free(pw_shell);
         }
     }
     else
     {
         log_message(LOG_LEVEL_ERROR,
-                    "error getting user info for user %s", username);
+                    "error getting user info for user %s",
+                    username);
     }
 
     return error;
