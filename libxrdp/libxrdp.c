@@ -27,6 +27,8 @@
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { g_writeln _args ; } } while (0)
 
+#define MAX_BITMAP_BUF_SIZE (16 * 1024) // 16K
+
 /******************************************************************************/
 struct xrdp_session *EXPORT_CC
 libxrdp_init(tbus id, struct trans *trans)
@@ -395,7 +397,7 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
     struct stream *s = (struct stream *)NULL;
     struct stream *temp_s = (struct stream *)NULL;
 
-    DEBUG(("libxrdp_send_bitmap sending bitmap"));
+    LLOGLN(10, ("libxrdp_send_bitmap: sending bitmap"));
     Bpp = (bpp + 7) / 8;
     e = width % 4;
 
@@ -406,10 +408,11 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
 
     line_size = width * Bpp;
     make_stream(s);
-    init_stream(s, 8192);
+    init_stream(s, MAX_BITMAP_BUF_SIZE);
 
     if (session->client_info->use_bitmap_comp)
     {
+        LLOGLN(10, ("libxrdp_send_bitmap: compression"));
         make_stream(temp_s);
         init_stream(temp_s, 65536);
         i = 0;
@@ -442,7 +445,7 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
                 p = s->p;
                 lines_sending = xrdp_bitmap_compress(data, width, height,
                                                      s, bpp,
-                                                     4096 - total_bufsize,
+                                                     MAX_BITMAP_BUF_SIZE - total_bufsize,
                                                      i - 1, temp_s, e);
 
                 if (lines_sending == 0)
@@ -495,7 +498,7 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
 
                 s->p = s->end;
             }
-            while (total_bufsize < 4096 && i > 0);
+            while (total_bufsize < MAX_BITMAP_BUF_SIZE && i > 0);
 
             p_num_updates[0] = num_updates;
             p_num_updates[1] = num_updates >> 8;
@@ -513,6 +516,7 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
     }
     else
     {
+        LLOGLN(10, ("libxrdp_send_bitmap: no compression"));
         total_lines = height;
         i = 0;
         p = data;
@@ -522,13 +526,17 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
             while (i < total_lines)
             {
 
-                LLOGLN(10, ("lines_sending %d cx %d", lines_sending, cx));
-
-                lines_sending = 4096 / (line_size + e * Bpp);
+                lines_sending = MAX_BITMAP_BUF_SIZE / (line_size + e * Bpp);
 
                 if (i + lines_sending > total_lines)
                 {
                     lines_sending = total_lines - i;
+                }
+
+                if (lines_sending == 0)
+                {
+                    LLOGLN(0, ("libxrdp_send_bitmap: error, lines size bigger than buff size: %d", (line_size + e * Bpp)));
+                    break;
                 }
 
                 p = p + line_size * lines_sending;
