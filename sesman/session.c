@@ -284,8 +284,11 @@ session_start_sessvc(int xpid, int wmpid, long data, char *username, int display
     list_add_item(sessvc_params, (tintptr)g_strdup(wmpid_str));
     list_add_item(sessvc_params, 0); /* mandatory */
 
-    env_set_user(username, 0, display,
-                 g_cfg->session_variables1, g_cfg->session_variables2);
+    env_set_user(username,
+                 0,
+                 display,
+                 g_cfg->session_variables1,
+                 g_cfg->session_variables2);
 
     /* executing sessvc */
     g_execvp(exe_path, ((char **)sessvc_params->items));
@@ -412,19 +415,18 @@ session_start_fork(int width, int height, int bpp, char *username,
     int pampid = 0;
     int xpid = 0;
     int i = 0;
-    char *xserver; /* absolute/relative path to Xorg/X11rdp/Xvnc */
     char geometry[32];
     char depth[32];
     char screen[32]; /* display number */
     char text[256];
-    char passwd_file[256];
-    char *pfile;
+    char execvpparams[2048];
+    char *xserver; /* absolute/relative path to Xorg/X11rdp/Xvnc */
+    char *passwd_file;
     char **pp1 = (char **)NULL;
     struct session_chain *temp = (struct session_chain *)NULL;
     struct list *xserver_params = (struct list *)NULL;
-    time_t ltime;
     struct tm stime;
-    char execvpparams[2048];
+    time_t ltime;
 
     /* initialize (zero out) local variables: */
     g_memset(&ltime, 0, sizeof(time_t));
@@ -433,7 +435,8 @@ session_start_fork(int width, int height, int bpp, char *username,
     g_memset(depth, 0, sizeof(char) * 32);
     g_memset(screen, 0, sizeof(char) * 32);
     g_memset(text, 0, sizeof(char) * 256);
-    g_memset(passwd_file, 0, sizeof(char) * 256);
+
+    passwd_file = 0;
 
     /* check to limit concurrent sessions */
     if (g_session_count >= g_cfg->sess.max_sessions)
@@ -537,7 +540,9 @@ session_start_fork(int width, int height, int bpp, char *username,
             }
             else if (pampid == 0)
             {
-                env_set_user(username, 0, display,
+                env_set_user(username,
+                             0,
+                             display,
                              g_cfg->session_variables1,
                              g_cfg->session_variables2);
                 if (x_server_running(display))
@@ -632,14 +637,23 @@ session_start_fork(int width, int height, int bpp, char *username,
             }
             else if (xpid == 0) /* child */
             {
-                pfile = 0;
                 if (type == SESMAN_SESSION_TYPE_XVNC)
                 {
-                    pfile = passwd_file;
+                    env_set_user(username,
+                                 &passwd_file,
+                                 display,
+                                 g_cfg->session_variables1,
+                                 g_cfg->session_variables2);
                 }
-                env_set_user(username, pfile, display,
-                             g_cfg->session_variables1,
-                             g_cfg->session_variables2);
+                else
+                {
+                    env_set_user(username,
+                                 0,
+                                 display,
+                                 g_cfg->session_variables1,
+                                 g_cfg->session_variables2);
+                }
+
 
                 g_snprintf(text, 255, "%d", g_cfg->sess.max_idle_time);
                 g_setenv("XRDP_SESMAN_MAX_IDLE_TIME", text, 1);
@@ -700,6 +714,8 @@ session_start_fork(int width, int height, int bpp, char *username,
                     list_add_item(xserver_params, (tintptr)g_strdup(depth));
                     list_add_item(xserver_params, (tintptr)g_strdup("-rfbauth"));
                     list_add_item(xserver_params, (tintptr)g_strdup(passwd_file));
+
+                    g_free(passwd_file);
 
                     /* additional parameters from sesman.ini file */
                     //config_read_xserver_params(SESMAN_SESSION_TYPE_XVNC,
@@ -829,8 +845,11 @@ session_reconnect_fork(int display, char *username)
     }
     else if (pid == 0)
     {
-        env_set_user(username, 0, display,
-                     g_cfg->session_variables1, g_cfg->session_variables2);
+        env_set_user(username,
+                     0,
+                     display,
+                     g_cfg->session_variables1,
+                     g_cfg->session_variables2);
         g_snprintf(text, 255, "%s/%s", XRDP_CFG_PATH, "reconnectwm.sh");
 
         if (g_file_exist(text))

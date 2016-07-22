@@ -61,7 +61,7 @@ void APP_CC     g_free(void* ptr);
 void DEFAULT_CC g_printf(const char *format, ...) printflike(1, 2);
 void DEFAULT_CC g_sprintf(char* dest, const char* format, ...) \
                   printflike(2, 3);
-void DEFAULT_CC g_snprintf(char* dest, int len, const char* format, ...) \
+int DEFAULT_CC  g_snprintf(char* dest, int len, const char* format, ...) \
                   printflike(3, 4);
 void DEFAULT_CC g_writeln(const char* format, ...) printflike(1, 2);
 void DEFAULT_CC g_write(const char* format, ...) printflike(1, 2);
@@ -179,8 +179,8 @@ char* APP_CC    g_getenv(const char* name);
 int APP_CC      g_exit(int exit_code);
 int APP_CC      g_getpid(void);
 int APP_CC      g_sigterm(int pid);
-int APP_CC      g_getuser_info(const char* username, int* gid, int* uid, char* shell,
-                               char* dir, char* gecos);
+int APP_CC      g_getuser_info(const char* username, int* gid, int* uid, char** shell,
+                               char** dir, char** gecos);
 int APP_CC      g_getgroup_info(const char* groupname, int* gid);
 int APP_CC      g_check_user_in_group(const char* username, int gid, int* ok);
 int APP_CC      g_time1(void);
