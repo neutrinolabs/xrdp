@@ -85,6 +85,7 @@ xrdp_caps_process_general(struct xrdp_rdp *self, struct stream *s,
     /* op2 is a boolean to use compact bitmap headers in bitmap cache */
     /* set it to same as 'use rdp5' boolean */
     self->client_info.op2 = self->client_info.use_compact_packets;
+    self->client_info.op1 = extraFlags & NO_BITMAP_COMPRESSION_HDR; /* NO_BITMAP_COMPRESSION_HDR */
     /* FASTPATH_OUTPUT_SUPPORTED 0x0001 */
     client_does_fastpath_output = extraFlags & FASTPATH_OUTPUT_SUPPORTED;
     if ((self->client_info.use_fast_path & 1) && !client_does_fastpath_output)
