@@ -464,3 +464,470 @@ wFormatTag=353 nChannels=1 nSamplesPerSec=8000 nAvgBytesPerSec=750 nBlockAlign=4
 ?
 wFormatTag=66 nChannels=1 nSamplesPerSec=8000 nAvgBytesPerSec=666 nBlockAlign=20 wBitsPerSample=0 cbSize=10
 0000 03 00 ce 9a 32 f7 a2 ae de ac                   ....2.....
+
+
+
+//***************************************************************
+// Windows 7 SP1 x64 Server Formats
+WAVE_FORMAT_PCM:
+wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 44359 nBlockAlign: 2048 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 44251 nBlockAlign: 2048 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_ALAW:
+wFormatTag: 0x0006 nChannels: 2 nSamplesPerSec: 22050 nAvgBytesPerSec: 44100 nBlockAlign: 2 wBitsPerSample: 8 cbSize: 0
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 2 nSamplesPerSec: 22050 nAvgBytesPerSec: 22311 nBlockAlign: 1024 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 2 nSamplesPerSec: 22050 nAvgBytesPerSec: 22201 nBlockAlign: 1024 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 1 nSamplesPerSec: 44100 nAvgBytesPerSec: 22179 nBlockAlign: 1024 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 1 nSamplesPerSec: 44100 nAvgBytesPerSec: 22125 nBlockAlign: 1024 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 2 nSamplesPerSec: 11025 nAvgBytesPerSec: 11289 nBlockAlign: 512 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 2 nSamplesPerSec: 11025 nAvgBytesPerSec: 11177 nBlockAlign: 512 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 1 nSamplesPerSec: 22050 nAvgBytesPerSec: 11155 nBlockAlign: 512 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 1 nSamplesPerSec: 22050 nAvgBytesPerSec: 11100 nBlockAlign: 512 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_GSM610:
+wFormatTag: 0x0031 nChannels: 1 nSamplesPerSec: 44100 nAvgBytesPerSec: 8957 nBlockAlign: 65 wBitsPerSample: 0 cbSize: 2
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 2 nSamplesPerSec: 8000 nAvgBytesPerSec: 8192 nBlockAlign: 512 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 2 nSamplesPerSec: 8000 nAvgBytesPerSec: 8110 nBlockAlign: 512 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 1 nSamplesPerSec: 11025 nAvgBytesPerSec: 5644 nBlockAlign: 256 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 1 nSamplesPerSec: 11025 nAvgBytesPerSec: 5588 nBlockAlign: 256 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_GSM610:
+wFormatTag: 0x0031 nChannels: 1 nSamplesPerSec: 22050 nAvgBytesPerSec: 4478 nBlockAlign: 65 wBitsPerSample: 0 cbSize: 2
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 1 nSamplesPerSec: 8000 nAvgBytesPerSec: 4096 nBlockAlign: 256 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 1 nSamplesPerSec: 8000 nAvgBytesPerSec: 4055 nBlockAlign: 256 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_GSM610:
+wFormatTag: 0x0031 nChannels: 1 nSamplesPerSec: 11025 nAvgBytesPerSec: 2239 nBlockAlign: 65 wBitsPerSample: 0 cbSize: 2
+	
+WAVE_FORMAT_GSM610:
+wFormatTag: 0x0031 nChannels: 1 nSamplesPerSec: 8000 nAvgBytesPerSec: 1625 nBlockAlign: 65 wBitsPerSample: 0 cbSize: 2
+
+
+//***************************************************************
+// Windows 10 10586 x64 Server Formats
+WAVE_FORMAT_AAC_MS:
+wFormatTag: 0xA106 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 24000 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+	
+WAVE_FORMAT_AAC_MS:
+wFormatTag: 0xA106 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 20000 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+	
+WAVE_FORMAT_AAC_MS:
+wFormatTag: 0xA106 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 16000 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+	
+WAVE_FORMAT_AAC_MS:
+wFormatTag: 0xA106 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 12000 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+	
+WAVE_FORMAT_PCM:
+wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 44359 nBlockAlign: 2048 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 44251 nBlockAlign: 2048 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_ALAW:
+wFormatTag: 0x0006 nChannels: 2 nSamplesPerSec: 22050 nAvgBytesPerSec: 44100 nBlockAlign: 2 wBitsPerSample: 8 cbSize: 0
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 2 nSamplesPerSec: 22050 nAvgBytesPerSec: 22311 nBlockAlign: 1024 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 2 nSamplesPerSec: 22050 nAvgBytesPerSec: 22201 nBlockAlign: 1024 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 1 nSamplesPerSec: 44100 nAvgBytesPerSec: 22179 nBlockAlign: 1024 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 1 nSamplesPerSec: 44100 nAvgBytesPerSec: 22125 nBlockAlign: 1024 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 2 nSamplesPerSec: 11025 nAvgBytesPerSec: 11289 nBlockAlign: 512 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 2 nSamplesPerSec: 11025 nAvgBytesPerSec: 11177 nBlockAlign: 512 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 1 nSamplesPerSec: 22050 nAvgBytesPerSec: 11155 nBlockAlign: 512 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 1 nSamplesPerSec: 22050 nAvgBytesPerSec: 11100 nBlockAlign: 512 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_GSM610:
+wFormatTag: 0x0031 nChannels: 1 nSamplesPerSec: 44100 nAvgBytesPerSec: 8957 nBlockAlign: 65 wBitsPerSample: 0 cbSize: 2
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 2 nSamplesPerSec: 8000 nAvgBytesPerSec: 8192 nBlockAlign: 512 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 2 nSamplesPerSec: 8000 nAvgBytesPerSec: 8110 nBlockAlign: 512 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 1 nSamplesPerSec: 11025 nAvgBytesPerSec: 5644 nBlockAlign: 256 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 1 nSamplesPerSec: 11025 nAvgBytesPerSec: 5588 nBlockAlign: 256 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_GSM610:
+wFormatTag: 0x0031 nChannels: 1 nSamplesPerSec: 22050 nAvgBytesPerSec: 4478 nBlockAlign: 65 wBitsPerSample: 0 cbSize: 2
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 1 nSamplesPerSec: 8000 nAvgBytesPerSec: 4096 nBlockAlign: 256 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 1 nSamplesPerSec: 8000 nAvgBytesPerSec: 4055 nBlockAlign: 256 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_GSM610:
+wFormatTag: 0x0031 nChannels: 1 nSamplesPerSec: 11025 nAvgBytesPerSec: 2239 nBlockAlign: 65 wBitsPerSample: 0 cbSize: 2
+	
+WAVE_FORMAT_GSM610:
+wFormatTag: 0x0031 nChannels: 1 nSamplesPerSec: 8000 nAvgBytesPerSec: 1625 nBlockAlign: 65 wBitsPerSample: 0 cbSize: 2
+
+
+//***************************************************************
+// Windows Server 2016 TP4 x64 Server Formats
+WAVE_FORMAT_AAC_MS:
+wFormatTag: 0xA106 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 24000 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+	
+WAVE_FORMAT_AAC_MS:
+wFormatTag: 0xA106 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 20000 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+	
+WAVE_FORMAT_AAC_MS:
+wFormatTag: 0xA106 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 16000 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+	
+WAVE_FORMAT_AAC_MS:
+wFormatTag: 0xA106 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 12000 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+	
+WAVE_FORMAT_PCM:
+wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 176400 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 44359 nBlockAlign: 2048 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 2 nSamplesPerSec: 44100 nAvgBytesPerSec: 44251 nBlockAlign: 2048 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_ALAW:
+wFormatTag: 0x0006 nChannels: 2 nSamplesPerSec: 22050 nAvgBytesPerSec: 44100 nBlockAlign: 2 wBitsPerSample: 8 cbSize: 0
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 2 nSamplesPerSec: 22050 nAvgBytesPerSec: 22311 nBlockAlign: 1024 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 2 nSamplesPerSec: 22050 nAvgBytesPerSec: 22201 nBlockAlign: 1024 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 1 nSamplesPerSec: 44100 nAvgBytesPerSec: 22179 nBlockAlign: 1024 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 1 nSamplesPerSec: 44100 nAvgBytesPerSec: 22125 nBlockAlign: 1024 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 2 nSamplesPerSec: 11025 nAvgBytesPerSec: 11289 nBlockAlign: 512 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 2 nSamplesPerSec: 11025 nAvgBytesPerSec: 11177 nBlockAlign: 512 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 1 nSamplesPerSec: 22050 nAvgBytesPerSec: 11155 nBlockAlign: 512 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 1 nSamplesPerSec: 22050 nAvgBytesPerSec: 11100 nBlockAlign: 512 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_GSM610:
+wFormatTag: 0x0031 nChannels: 1 nSamplesPerSec: 44100 nAvgBytesPerSec: 8957 nBlockAlign: 65 wBitsPerSample: 0 cbSize: 2
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 2 nSamplesPerSec: 8000 nAvgBytesPerSec: 8192 nBlockAlign: 512 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 2 nSamplesPerSec: 8000 nAvgBytesPerSec: 8110 nBlockAlign: 512 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 1 nSamplesPerSec: 11025 nAvgBytesPerSec: 5644 nBlockAlign: 256 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 1 nSamplesPerSec: 11025 nAvgBytesPerSec: 5588 nBlockAlign: 256 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_GSM610:
+wFormatTag: 0x0031 nChannels: 1 nSamplesPerSec: 22050 nAvgBytesPerSec: 4478 nBlockAlign: 65 wBitsPerSample: 0 cbSize: 2
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 1 nSamplesPerSec: 8000 nAvgBytesPerSec: 4096 nBlockAlign: 256 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 1 nSamplesPerSec: 8000 nAvgBytesPerSec: 4055 nBlockAlign: 256 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_GSM610:
+wFormatTag: 0x0031 nChannels: 1 nSamplesPerSec: 11025 nAvgBytesPerSec: 2239 nBlockAlign: 65 wBitsPerSample: 0 cbSize: 2
+	
+WAVE_FORMAT_GSM610:
+wFormatTag: 0x0031 nChannels: 1 nSamplesPerSec: 8000 nAvgBytesPerSec: 1625 nBlockAlign: 65 wBitsPerSample: 0 cbSize: 2
+
+
+
+
+
+//***************************************************************
+// Windows XP SP3 x86 Server Formats
+WAVE_FORMAT_PCM:
+wFormatTag: 0x0001 nChannels: 2 nSamplesPerSec: 22050 nAvgBytesPerSec: 88200 nBlockAlign: 4 wBitsPerSample: 16 cbSize: 0
+	
+WAVE_FORMAT_ALAW:
+wFormatTag: 0x0006 nChannels: 2 nSamplesPerSec: 22050 nAvgBytesPerSec: 44100 nBlockAlign: 2 wBitsPerSample: 8 cbSize: 0
+	
+WAVE_FORMAT_MULAW:
+wFormatTag: 0x0007 nChannels: 2 nSamplesPerSec: 22050 nAvgBytesPerSec: 44100 nBlockAlign: 2 wBitsPerSample: 8 cbSize: 0
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 2 nSamplesPerSec: 22050 nAvgBytesPerSec: 22311 nBlockAlign: 1024 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 2 nSamplesPerSec: 22050 nAvgBytesPerSec: 22201 nBlockAlign: 1024 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_ALAW:
+wFormatTag: 0x0006 nChannels: 2 nSamplesPerSec: 11025 nAvgBytesPerSec: 22050 nBlockAlign: 2 wBitsPerSample: 8 cbSize: 0
+	
+WAVE_FORMAT_ALAW:
+wFormatTag: 0x0006 nChannels: 1 nSamplesPerSec: 22050 nAvgBytesPerSec: 22050 nBlockAlign: 1 wBitsPerSample: 8 cbSize: 0
+	
+WAVE_FORMAT_MULAW:
+wFormatTag: 0x0007 nChannels: 2 nSamplesPerSec: 11025 nAvgBytesPerSec: 22050 nBlockAlign: 2 wBitsPerSample: 8 cbSize: 0
+	
+WAVE_FORMAT_MULAW:
+wFormatTag: 0x0007 nChannels: 1 nSamplesPerSec: 22050 nAvgBytesPerSec: 22050 nBlockAlign: 1 wBitsPerSample: 8 cbSize: 0
+	
+WAVE_FORMAT_ALAW:
+wFormatTag: 0x0006 nChannels: 2 nSamplesPerSec: 8000 nAvgBytesPerSec: 16000 nBlockAlign: 2 wBitsPerSample: 8 cbSize: 0
+	
+WAVE_FORMAT_MULAW:
+wFormatTag: 0x0007 nChannels: 2 nSamplesPerSec: 8000 nAvgBytesPerSec: 16000 nBlockAlign: 2 wBitsPerSample: 8 cbSize: 0
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 2 nSamplesPerSec: 11025 nAvgBytesPerSec: 11289 nBlockAlign: 512 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 2 nSamplesPerSec: 11025 nAvgBytesPerSec: 11177 nBlockAlign: 512 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 1 nSamplesPerSec: 22050 nAvgBytesPerSec: 11155 nBlockAlign: 512 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 1 nSamplesPerSec: 22050 nAvgBytesPerSec: 11100 nBlockAlign: 512 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_ALAW:
+wFormatTag: 0x0006 nChannels: 1 nSamplesPerSec: 11025 nAvgBytesPerSec: 11025 nBlockAlign: 1 wBitsPerSample: 8 cbSize: 0
+	
+WAVE_FORMAT_MULAW:
+wFormatTag: 0x0007 nChannels: 1 nSamplesPerSec: 11025 nAvgBytesPerSec: 11025 nBlockAlign: 1 wBitsPerSample: 8 cbSize: 0
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 2 nSamplesPerSec: 8000 nAvgBytesPerSec: 8192 nBlockAlign: 512 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 2 nSamplesPerSec: 8000 nAvgBytesPerSec: 8110 nBlockAlign: 512 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_ALAW:
+wFormatTag: 0x0006 nChannels: 1 nSamplesPerSec: 8000 nAvgBytesPerSec: 8000 nBlockAlign: 1 wBitsPerSample: 8 cbSize: 0
+	
+WAVE_FORMAT_MULAW:
+wFormatTag: 0x0007 nChannels: 1 nSamplesPerSec: 8000 nAvgBytesPerSec: 8000 nBlockAlign: 1 wBitsPerSample: 8 cbSize: 0
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 2 nSamplesPerSec: 22050 nAvgBytesPerSec: 7000 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 2 nSamplesPerSec: 16000 nAvgBytesPerSec: 7000 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 2 nSamplesPerSec: 22050 nAvgBytesPerSec: 6000 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 2 nSamplesPerSec: 16000 nAvgBytesPerSec: 6000 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 1 nSamplesPerSec: 11025 nAvgBytesPerSec: 5644 nBlockAlign: 256 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 1 nSamplesPerSec: 11025 nAvgBytesPerSec: 5588 nBlockAlign: 256 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 2 nSamplesPerSec: 22050 nAvgBytesPerSec: 5000 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 2 nSamplesPerSec: 16000 nAvgBytesPerSec: 5000 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_GSM610:
+wFormatTag: 0x0031 nChannels: 1 nSamplesPerSec: 22050 nAvgBytesPerSec: 4478 nBlockAlign: 65 wBitsPerSample: 0 cbSize: 2
+	
+WAVE_FORMAT_ADPCM:
+wFormatTag: 0x0002 nChannels: 1 nSamplesPerSec: 8000 nAvgBytesPerSec: 4096 nBlockAlign: 256 wBitsPerSample: 4 cbSize: 32
+	
+WAVE_FORMAT_DVI_ADPCM:
+wFormatTag: 0x0011 nChannels: 1 nSamplesPerSec: 8000 nAvgBytesPerSec: 4055 nBlockAlign: 256 wBitsPerSample: 4 cbSize: 2
+	
+WAVE_FORMAT_WMAUDIO2:
+wFormatTag: 0x0161 nChannels: 2 nSamplesPerSec: 22050 nAvgBytesPerSec: 4005 nBlockAlign: 186 wBitsPerSample: 16 cbSize: 47
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 2 nSamplesPerSec: 16000 nAvgBytesPerSec: 4000 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 2 nSamplesPerSec: 12000 nAvgBytesPerSec: 4000 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 2 nSamplesPerSec: 11025 nAvgBytesPerSec: 4000 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 2 nSamplesPerSec: 8000 nAvgBytesPerSec: 4000 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 1 nSamplesPerSec: 22050 nAvgBytesPerSec: 4000 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 1 nSamplesPerSec: 16000 nAvgBytesPerSec: 4000 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 2 nSamplesPerSec: 12000 nAvgBytesPerSec: 3000 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 2 nSamplesPerSec: 11025 nAvgBytesPerSec: 3000 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 2 nSamplesPerSec: 8000 nAvgBytesPerSec: 3000 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 1 nSamplesPerSec: 22050 nAvgBytesPerSec: 3000 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 1 nSamplesPerSec: 16000 nAvgBytesPerSec: 3000 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_WMAUDIO2:
+wFormatTag: 0x0161 nChannels: 1 nSamplesPerSec: 22050 nAvgBytesPerSec: 2519 nBlockAlign: 117 wBitsPerSample: 16 cbSize: 47
+	
+WAVE_FORMAT_WMAUDIO2:
+wFormatTag: 0x0161 nChannels: 2 nSamplesPerSec: 22050 nAvgBytesPerSec: 2519 nBlockAlign: 117 wBitsPerSample: 16 cbSize: 47
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 2 nSamplesPerSec: 12000 nAvgBytesPerSec: 2500 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 2 nSamplesPerSec: 11025 nAvgBytesPerSec: 2500 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 2 nSamplesPerSec: 8000 nAvgBytesPerSec: 2500 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 1 nSamplesPerSec: 16000 nAvgBytesPerSec: 2500 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 1 nSamplesPerSec: 12000 nAvgBytesPerSec: 2500 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 1 nSamplesPerSec: 11025 nAvgBytesPerSec: 2500 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 2 nSamplesPerSec: 12000 nAvgBytesPerSec: 2250 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 2 nSamplesPerSec: 11025 nAvgBytesPerSec: 2250 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 2 nSamplesPerSec: 8000 nAvgBytesPerSec: 2250 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 1 nSamplesPerSec: 16000 nAvgBytesPerSec: 2250 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 1 nSamplesPerSec: 12000 nAvgBytesPerSec: 2250 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 1 nSamplesPerSec: 11025 nAvgBytesPerSec: 2250 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_GSM610:
+wFormatTag: 0x0031 nChannels: 1 nSamplesPerSec: 11025 nAvgBytesPerSec: 2239 nBlockAlign: 65 wBitsPerSample: 0 cbSize: 2
+	
+WAVE_FORMAT_WMAUDIO2:
+wFormatTag: 0x0161 nChannels: 1 nSamplesPerSec: 16000 nAvgBytesPerSec: 2000 nBlockAlign: 64 wBitsPerSample: 16 cbSize: 47
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 1 nSamplesPerSec: 16000 nAvgBytesPerSec: 2000 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 1 nSamplesPerSec: 12000 nAvgBytesPerSec: 2000 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 1 nSamplesPerSec: 11025 nAvgBytesPerSec: 2000 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 1 nSamplesPerSec: 8000 nAvgBytesPerSec: 2000 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_GSM610:
+wFormatTag: 0x0031 nChannels: 1 nSamplesPerSec: 8000 nAvgBytesPerSec: 1625 nBlockAlign: 65 wBitsPerSample: 0 cbSize: 2
+	
+WAVE_FORMAT_WMAUDIO2:
+wFormatTag: 0x0161 nChannels: 2 nSamplesPerSec: 8000 nAvgBytesPerSec: 1500 nBlockAlign: 96 wBitsPerSample: 16 cbSize: 47
+	
+WAVE_FORMAT_WMAUDIO2:
+wFormatTag: 0x0161 nChannels: 1 nSamplesPerSec: 11025 nAvgBytesPerSec: 1249 nBlockAlign: 58 wBitsPerSample: 16 cbSize: 47
+	
+WAVE_FORMAT_DSPGROUP_TRUESPEECH	:
+wFormatTag: 0x0022 nChannels: 1 nSamplesPerSec: 8000 nAvgBytesPerSec: 1067 nBlockAlign: 32 wBitsPerSample: 1 cbSize: 32
+	
+WAVE_FORMAT_WMAUDIO2:
+wFormatTag: 0x0161 nChannels: 1 nSamplesPerSec: 11025 nAvgBytesPerSec: 1012 nBlockAlign: 47 wBitsPerSample: 16 cbSize: 47
+	
+WAVE_FORMAT_WMAUDIO2:
+wFormatTag: 0x0161 nChannels: 1 nSamplesPerSec: 8000 nAvgBytesPerSec: 1000 nBlockAlign: 64 wBitsPerSample: 16 cbSize: 47
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 1 nSamplesPerSec: 12000 nAvgBytesPerSec: 1000 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 1 nSamplesPerSec: 11025 nAvgBytesPerSec: 1000 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MPEGLAYER3:
+wFormatTag: 0x0055 nChannels: 1 nSamplesPerSec: 8000 nAvgBytesPerSec: 1000 nBlockAlign: 1 wBitsPerSample: 0 cbSize: 12
+	
+WAVE_FORMAT_MSG723:
+wFormatTag: 0x0042 nChannels: 1 nSamplesPerSec: 8000 nAvgBytesPerSec: 800 nBlockAlign: 24 wBitsPerSample: 0 cbSize: 10
+	
+WAVE_FORMAT_WMAUDIO2:
+wFormatTag: 0x0161 nChannels: 1 nSamplesPerSec: 8000 nAvgBytesPerSec: 750 nBlockAlign: 48 wBitsPerSample: 16 cbSize: 47
+	
+WAVE_FORMAT_MSG723:
+wFormatTag: 0x0042 nChannels: 1 nSamplesPerSec: 8000 nAvgBytesPerSec: 666 nBlockAlign: 20 wBitsPerSample: 0 cbSize: 10
+

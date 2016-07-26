@@ -107,6 +107,10 @@ AC_ARG_ENABLE(opus, AS_HELP_STRING([--enable-opus],
               [Build opus(audio codec) (default: no)]),
               [], [enable_opus=no])
 AM_CONDITIONAL(XRDP_OPUS, [test x$enable_opus = xyes])
+AC_ARG_ENABLE(mp3lame, AS_HELP_STRING([--enable-mp3lame],
+              [Build lame mp3(audio codec) (default: no)]),
+              [], [enable_mp3lame=no])
+AM_CONDITIONAL(XRDP_MP3LAME, [test x$enable_mp3lame = xyes])
 
 # checking for openssl
 AC_CHECK_HEADER([openssl/rc4.h], [],
@@ -177,6 +181,13 @@ if test "x$enable_opus" = "xyes"
 then
   AC_CHECK_HEADER([opus/opus.h], [],
     [AC_MSG_ERROR([please install libopus-dev or opus-devel])])
+fi
+
+# checking for lame mp3
+if test "x$enable_mp3lame" = "xyes"
+then
+  AC_CHECK_HEADER([lame/lame.h], [],
+    [AC_MSG_ERROR([please install libmp3lame-dev or lamemp3-devel])])
 fi
 
 # checking for TurboJPEG

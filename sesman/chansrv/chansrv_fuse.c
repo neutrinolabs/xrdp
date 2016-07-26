@@ -780,6 +780,11 @@ int xfuse_add_clip_dir_item(char *filename, int flags, int size, int lindex)
                                                       2,    /* parent inode */
                                                       filename,
                                                       S_IFREG);
+    if (xinode == NULL)
+    {
+        log_debug("failed to create file in xrdp filesystem");
+        return -1;
+    }
     xinode->size = size;
     xinode->lindex = lindex;
     xinode->is_loc_resource = 1;
