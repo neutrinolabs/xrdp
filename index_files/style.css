@@ -1,0 +1,90 @@
+html {
+	padding: 0;
+	margin: 0;
+}
+body {
+	margin: 0;
+	background-color: white;
+	padding: 1.5em 5em;
+	font-family: 'Open Sans', verdana;
+	font-size: 14px;
+	color: black;
+}
+h1 {
+	font-weight: 300;
+	font-size: 270%;
+	color: black;
+	margin-bottom: 0;
+	padding-top: 0.5em;
+}
+h1 span {
+	color: #888;
+}
+h1 + p {
+	font-size: 130%;
+	margin-top: 0;
+	padding-top: 0;
+}
+h2 {
+	font-weight: 400;
+	font-size: 230%;
+	padding-top: 0.3em;
+	color: black;
+	margin-top: 2.6em;
+}
+hr + h2 {
+	margin-top: 2em;
+}
+.logo {
+	background-image: url('xrdp_logo_nodarkfill-256x75.png');
+	background-repeat: no-repeat;
+	padding-left: 256px;
+	padding-bottom: 6em;
+}
+.mytbl {
+	display: table;
+	border-collapse: collapse;
+}
+.myrow {
+	display: table-row;
+}
+.prop {
+	display: table-cell;
+	text-align: right;
+	padding: 0.2em 0.6em;
+	color: black;
+	white-space: nowrap;
+}
+hr {
+	padding: 0;
+	margin: 3em 0 3em 0;
+	border: 0;
+	height: 1px;
+	background-color: #ddd;
+	background-image: -webkit-linear-gradient(left, rgba(0,0,0,0), rgba(0,0,0,0.75), rgba(0,0,0,0));
+    background-image:    -moz-linear-gradient(left, rgba(0,0,0,0), rgba(0,0,0,0.75), rgba(0,0,0,0));
+    background-image:     -ms-linear-gradient(left, rgba(0,0,0,0), rgba(0,0,0,0.75), rgba(0,0,0,0));
+    background-image:      -o-linear-gradient(left, rgba(0,0,0,0), rgba(0,0,0,0.75), rgba(0,0,0,0));
+}
+.prop span {
+	background-color: #333;
+	color: white;
+	border-radius: 3px;
+	padding: 4px 0.7em;
+}
+.value {
+	display: table-cell;
+	padding: 0.2em 0.5em;
+	padding-bottom: 2em;
+}
+a {
+	text-decoration: none;
+	color: #446;
+	color: #FF9106;
+	padding: 2px 0.4em;
+}
+a:hover {
+	background-color: #333;
+	color: white;
+	border-radius: 3px;
+}
