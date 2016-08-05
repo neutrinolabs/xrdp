@@ -485,12 +485,12 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
 
                 if (j > 32768)
                 {
-                    g_writeln("error, decompressed size too big, its %d", j);
+                    g_writeln("error, decompressed size too big: %d bytes", j);
                 }
 
                 if (bufsize > 8192)
                 {
-                    g_writeln("error, compressed size too big, its %d", bufsize);
+                    g_writeln("error, compressed size too big: %d bytes", bufsize);
                 }
 
                 s->p = s->end;
@@ -504,7 +504,7 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
 
             if (total_bufsize > 8192)
             {
-                g_writeln("error, total compressed size too big, its %d",
+                g_writeln("error, total compressed size too big: %d bytes",
                           total_bufsize);
             }
         }
@@ -1077,7 +1077,7 @@ libxrdp_query_channel(struct xrdp_session *session, int index,
 /* returns a zero based index of the channel, -1 if error or it doesn't
    exist */
 int EXPORT_CC
-libxrdp_get_channel_id(struct xrdp_session *session, char *name)
+libxrdp_get_channel_id(struct xrdp_session *session, const char *name)
 {
     int index = 0;
     int count = 0;

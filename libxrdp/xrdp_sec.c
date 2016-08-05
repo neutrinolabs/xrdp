@@ -2101,7 +2101,7 @@ xrdp_sec_in_mcs_data(struct xrdp_sec *self)
 
     client_info = &(self->rdp_layer->client_info);
     s = &(self->client_mcs_data);
-    /* get hostname, its unicode */
+    /* get hostname, it's unicode */
     s->p = s->data;
     if (!s_check_rem(s, 47))
     {

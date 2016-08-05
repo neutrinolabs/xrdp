@@ -65,12 +65,12 @@ enum logReturns
 
 struct log_config
 {
-    char *program_name;
+    const char *program_name;
     char *log_file;
     int fd;
-    unsigned int log_level;
+    enum logLevels log_level;
     int enable_syslog;
-    unsigned int syslog_level;
+    enum logLevels syslog_level;
     pthread_mutex_t log_lock;
     pthread_mutexattr_t log_lock_attr;
 };
@@ -171,7 +171,7 @@ log_end(void);
  * @return
  */
 enum logReturns DEFAULT_CC
-log_message(const enum logLevels lvl, const char *msg, ...);
+log_message(const enum logLevels lvl, const char *msg, ...) printflike(2, 3);
 
 /**
  *

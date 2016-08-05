@@ -111,7 +111,7 @@ ssl_sha1_clear(void *sha1_info)
 
 /*****************************************************************************/
 void APP_CC
-ssl_sha1_transform(void *sha1_info, char *data, int len)
+ssl_sha1_transform(void *sha1_info, const char *data, int len)
 {
     SHA1_Update((SHA_CTX *)sha1_info, data, len);
 }
@@ -187,7 +187,7 @@ ssl_des3_decrypt_info_create(const char *key, const char* ivec)
     const tui8 *lkey;
     const tui8 *livec;
 
-    des3_ctx = g_malloc(sizeof(EVP_CIPHER_CTX), 1);
+    des3_ctx = g_new0(EVP_CIPHER_CTX, 1);
     EVP_CIPHER_CTX_init(des3_ctx);
     lkey = (const tui8 *) key;
     livec = (const tui8 *) ivec;
@@ -560,7 +560,7 @@ ssl_tls_create(struct trans *trans, const char *key, const char *cert)
 
 /*****************************************************************************/
 int APP_CC
-ssl_tls_print_error(char *func, SSL *connection, int value)
+ssl_tls_print_error(const char *func, SSL *connection, int value)
 {
     switch (SSL_get_error(connection, value))
     {

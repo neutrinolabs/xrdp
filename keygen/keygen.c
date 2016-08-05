@@ -282,7 +282,7 @@ sign_key(char *e_data, int e_len, char *n_data, int n_len,
 
 /*****************************************************************************/
 static int APP_CC
-write_out_line(int fd, char *name, char *data, int len)
+write_out_line(int fd, const char *name, char *data, int len)
 {
     int max;
     int error;

@@ -31,7 +31,7 @@
 
 extern struct config_sesman *g_cfg; /* in sesman.c */
 
-static void parseCommonStates(enum SCP_SERVER_STATES_E e, char *f);
+static void parseCommonStates(enum SCP_SERVER_STATES_E e, const char *f);
 
 /******************************************************************************/
 void DEFAULT_CC
@@ -209,7 +209,7 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     g_free(slist);
 }
 
-static void parseCommonStates(enum SCP_SERVER_STATES_E e, char *f)
+static void parseCommonStates(enum SCP_SERVER_STATES_E e, const char *f)
 {
     switch (e)
     {

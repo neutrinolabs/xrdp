@@ -89,7 +89,9 @@ session_get_bydata(char *name, int width, int height, int bpp, int type, char *c
     {
         case SCP_SESSION_TYPE_XVNC: /* 0 */
             type = SESMAN_SESSION_TYPE_XVNC; /* 2 */
-            policy |= SESMAN_CFG_SESS_POLICY_D;  /* Xvnc cannot resize */
+            /* Xvnc cannot resize */
+            policy = (enum SESMAN_CFG_SESS_POLICY)
+                     (policy | SESMAN_CFG_SESS_POLICY_D);
             break;
         case SCP_SESSION_TYPE_XRDP: /* 1 */
             type = SESMAN_SESSION_TYPE_XRDP; /* 1 */
@@ -978,11 +980,11 @@ session_get_bypid(int pid)
     struct session_chain *tmp;
     struct session_item *dummy;
 
-    dummy = g_malloc(sizeof(struct session_item), 1);
+    dummy = g_new0(struct session_item, 1);
 
     if (0 == dummy)
     {
-        log_message(LOG_LEVEL_ERROR, "internal error", pid);
+        log_message(LOG_LEVEL_ERROR, "session_get_bypid: out of memory");
         return 0;
     }
 
@@ -1052,7 +1054,7 @@ session_get_byuser(char *user, int *cnt, unsigned char flags)
     }
 
     /* malloc() an array of disconnected sessions */
-    sess = g_malloc(count *sizeof(struct SCP_DISCONNECTED_SESSION), 1);
+    sess = g_new0(struct SCP_DISCONNECTED_SESSION, count);
 
     if (sess == 0)
     {

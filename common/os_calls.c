@@ -402,7 +402,7 @@ g_tcp_set_keepalive(int sck)
 
 /*****************************************************************************/
 /* returns a newly created socket or -1 on error */
-/* in win32 a socket is an unsigned int, in linux, its an int */
+/* in win32 a socket is an unsigned int, in linux, it's an int */
 int APP_CC
 g_tcp_socket(void)
 {
@@ -671,7 +671,6 @@ int APP_CC
 g_tcp_connect(int sck, const char *address, const char *port)
 {
     int res = 0;
-    char errorMsg[256];
     struct addrinfo p;
     struct addrinfo *h = (struct addrinfo *)NULL;
     struct addrinfo *rp = (struct addrinfo *)NULL;
@@ -699,9 +698,8 @@ g_tcp_connect(int sck, const char *address, const char *port)
     }
     if (res != 0)
     {
-        snprintf(errorMsg, 255, "g_tcp_connect: getaddrinfo() failed: %s",
-                 gai_strerror(res));
-        log_message(LOG_LEVEL_ERROR, errorMsg);
+        log_message(LOG_LEVEL_ERROR, "g_tcp_connect: getaddrinfo() failed: %s",
+                    gai_strerror(res));
     }
     if (res > -1)
     {
@@ -991,7 +989,7 @@ g_tcp_accept(int sck)
     {
         snprintf(ipAddr, 255, "A connection received from: %s port %d",
                  inet_ntoa(s.sin_addr), ntohs(s.sin_port));
-        log_message(LOG_LEVEL_INFO,ipAddr);
+        log_message(LOG_LEVEL_INFO, "%s", ipAddr);
     }
     return ret ;
 }
@@ -1016,7 +1014,7 @@ g_sck_accept(int sck, char *addr, int addr_bytes, char *port, int port_bytes)
     {
         g_snprintf(ipAddr, 255, "A connection received from: %s port %d",
                    inet_ntoa(s.sin_addr), ntohs(s.sin_port));
-        log_message(LOG_LEVEL_INFO,ipAddr);
+        log_message(LOG_LEVEL_INFO, "%s", ipAddr);
         if (s.sin_family == AF_INET)
         {
             g_snprintf(addr, addr_bytes, "%s", inet_ntoa(s.sin_addr));
@@ -1815,7 +1813,7 @@ g_file_read(int fd, char *ptr, int len)
 /*****************************************************************************/
 /* write to file, returns the number of bytes written or -1 on error */
 int APP_CC
-g_file_write(int fd, char *ptr, int len)
+g_file_write(int fd, const char *ptr, int len)
 {
 #if defined(_WIN32)
 
@@ -1952,7 +1950,7 @@ g_get_current_dir(char *dirname, int maxlen)
 /*****************************************************************************/
 /* returns error, zero on success and -1 on failure */
 int APP_CC
-g_set_current_dir(char *dirname)
+g_set_current_dir(const char *dirname)
 {
 #if defined(_WIN32)
 
@@ -2121,7 +2119,7 @@ g_strlen(const char *text)
 
 /*****************************************************************************/
 /* locates char in text */
-char* APP_CC
+const char *APP_CC
 g_strchr(const char* text, int c)
 {
     if (text == NULL)
@@ -2218,7 +2216,7 @@ g_strdup(const char *in)
 char *APP_CC
 g_strndup(const char *in, const unsigned int maxlen)
 {
-    int len;
+    unsigned int len;
     char *p;
 
     if (in == 0)
@@ -2400,7 +2398,7 @@ g_htoi(char *str)
 int APP_CC
 g_pos(const char *str, const char *to_find)
 {
-    char *pp;
+    const char *pp;
 
     pp = strstr(str, to_find);
 
@@ -3269,7 +3267,7 @@ g_save_to_bmp(const char* filename, char* data, int stride_bytes,
     data -= stride_bytes;
     if ((depth == 24) && (bits_per_pixel == 32))
     {
-        line = malloc(file_stride_bytes);
+        line = (char *) malloc(file_stride_bytes);
         memset(line, 0, file_stride_bytes);
         for (index = 0; index < height; index++)
         {

@@ -262,7 +262,7 @@ xrdp_painter_rop(int rop, int src, int dst)
 
 /*****************************************************************************/
 int APP_CC
-xrdp_painter_text_width(struct xrdp_painter *self, char *text)
+xrdp_painter_text_width(struct xrdp_painter *self, const char *text)
 {
     int index;
     int rv;
@@ -299,7 +299,7 @@ xrdp_painter_text_width(struct xrdp_painter *self, char *text)
 
 /*****************************************************************************/
 int APP_CC
-xrdp_painter_text_height(struct xrdp_painter *self, char *text)
+xrdp_painter_text_height(struct xrdp_painter *self, const char *text)
 {
     int index;
     int rv;

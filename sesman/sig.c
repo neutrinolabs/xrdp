@@ -75,7 +75,7 @@ sig_sesman_reload_cfg(int sig)
         return;
     }
 
-    cfg = g_malloc(sizeof(struct config_sesman), 1);
+    cfg = g_new0(struct config_sesman, 1);
 
     if (0 == cfg)
     {

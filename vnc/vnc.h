@@ -37,7 +37,7 @@ struct vnc
                    long param3, long param4);
   int (*mod_signal)(struct vnc* v);
   int (*mod_end)(struct vnc* v);
-  int (*mod_set_param)(struct vnc* v, char* name, char* value);
+  int (*mod_set_param)(struct vnc* v, const char *name, char* value);
   int (*mod_session_change)(struct vnc* v, int, int);
   int (*mod_get_wait_objs)(struct vnc* v, tbus* read_objs, int* rcount,
                            tbus* write_objs, int* wcount, int* timeout);
@@ -54,7 +54,7 @@ struct vnc
                            char* data, int width, int height, int srcx, int srcy);
   int (*server_set_cursor)(struct vnc* v, int x, int y, char* data, char* mask);
   int (*server_palette)(struct vnc* v, int* palette);
-  int (*server_msg)(struct vnc* v, char* msg, int code);
+  int (*server_msg)(struct vnc* v, const char *msg, int code);
   int (*server_is_term)(struct vnc* v);
   int (*server_set_clip)(struct vnc* v, int x, int y, int cx, int cy);
   int (*server_reset_clip)(struct vnc* v);
@@ -80,7 +80,7 @@ struct vnc
   int (*server_query_channel)(struct vnc* v, int index,
                               char* channel_name,
                               int* channel_flags);
-  int (*server_get_channel_id)(struct vnc* v, char* name);
+  int (*server_get_channel_id)(struct vnc* v, const char *name);
   int (*server_send_to_channel)(struct vnc* v, int channel_id,
                                 char* data, int data_len,
                                 int total_data_len, int flags);

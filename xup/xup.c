@@ -697,7 +697,7 @@ process_server_window_new_update(struct mod *mod, struct stream *s)
 
     if (title_bytes > 0)
     {
-        rwso.title_info = g_malloc(title_bytes + 1, 0);
+        rwso.title_info = g_new(char, title_bytes + 1);
         in_uint8a(s, rwso.title_info, title_bytes);
         rwso.title_info[title_bytes] = 0;
     }
@@ -1088,7 +1088,7 @@ process_server_paint_rect_shmem(struct mod *amod, struct stream *s)
     if (amod->screen_shmem_id_mapped == 0)
     {
         amod->screen_shmem_id = shmem_id;
-        amod->screen_shmem_pixels = g_shmat(amod->screen_shmem_id);
+        amod->screen_shmem_pixels = (char *) g_shmat(amod->screen_shmem_id);
         if (amod->screen_shmem_pixels == (void*)-1)
         {
             /* failed */
@@ -1199,7 +1199,7 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
         if (amod->screen_shmem_id_mapped == 0)
         {
             amod->screen_shmem_id = shmem_id;
-            amod->screen_shmem_pixels = g_shmat(amod->screen_shmem_id);
+            amod->screen_shmem_pixels = (char *) g_shmat(amod->screen_shmem_id);
             if (amod->screen_shmem_pixels == (void*)-1)
             {
                 /* failed */
@@ -1479,7 +1479,7 @@ lib_mod_end(struct mod *mod)
 /******************************************************************************/
 /* return error */
 int DEFAULT_CC
-lib_mod_set_param(struct mod *mod, char *name, char *value)
+lib_mod_set_param(struct mod *mod, const char *name, char *value)
 {
     if (g_strcasecmp(name, "username") == 0)
     {
@@ -1552,7 +1552,7 @@ lib_mod_frame_ack(struct mod *amod, int flags, int frame_id)
 }
 
 /******************************************************************************/
-struct mod *EXPORT_CC
+tintptr EXPORT_CC
 mod_init(void)
 {
     struct mod *mod;
@@ -1560,7 +1560,7 @@ mod_init(void)
     mod = (struct mod *)g_malloc(sizeof(struct mod), 1);
     mod->size = sizeof(struct mod);
     mod->version = CURRENT_MOD_VER;
-    mod->handle = (tbus)mod;
+    mod->handle = (tintptr) mod;
     mod->mod_connect = lib_mod_connect;
     mod->mod_start = lib_mod_start;
     mod->mod_event = lib_mod_event;
@@ -1570,13 +1570,15 @@ mod_init(void)
     mod->mod_get_wait_objs = lib_mod_get_wait_objs;
     mod->mod_check_wait_objs = lib_mod_check_wait_objs;
     mod->mod_frame_ack = lib_mod_frame_ack;
-    return mod;
+    return (tintptr) mod;
 }
 
 /******************************************************************************/
 int EXPORT_CC
-mod_exit(struct mod *mod)
+mod_exit(tintptr handle)
 {
+    struct mod *mod = (struct mod *) handle;
+
     if (mod == 0)
     {
         return 0;

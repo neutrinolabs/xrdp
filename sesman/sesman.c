@@ -49,9 +49,6 @@ sesman_main_loop(void)
     tbus sck_obj;
     tbus robjs[8];
 
-    /*main program loop*/
-    log_message(LOG_LEVEL_INFO, "listening...");
-
     g_sck = g_tcp_socket();
     if (g_sck < 0)
     {
@@ -68,6 +65,8 @@ sesman_main_loop(void)
 
         if (error == 0)
         {
+            log_message(LOG_LEVEL_INFO, "listening to port %s on %s",
+                        g_cfg->listen_port, g_cfg->listen_address);
             sck_obj = g_create_wait_obj_from_socket(g_sck, 0);
             cont = 1;
 
@@ -248,7 +247,7 @@ main(int argc, char **argv)
     }
 
     /* reading config */
-    g_cfg = g_malloc(sizeof(struct config_sesman), 1);
+    g_cfg = g_new0(struct config_sesman, 1);
 
     if (0 == g_cfg)
     {
@@ -359,8 +358,8 @@ main(int argc, char **argv)
     }
 
     /* start program main loop */
-    log_message(LOG_LEVEL_ALWAYS,
-                "starting sesman with pid %d", g_pid);
+    log_message(LOG_LEVEL_INFO,
+                "starting xrdp-sesman with pid %d", g_pid);
 
     /* make sure the /tmp/.X11-unix directory exist */
     if (!g_directory_exist("/tmp/.X11-unix"))

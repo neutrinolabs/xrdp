@@ -167,7 +167,7 @@ xrdp_encoder_delete(struct xrdp_encoder *self)
     {
         while (!fifo_is_empty(fifo))
         {
-            enc = fifo_remove_item(fifo);
+            enc = (XRDP_ENC_DATA *) fifo_remove_item(fifo);
             if (enc == 0)
             {
                 continue;
@@ -185,7 +185,7 @@ xrdp_encoder_delete(struct xrdp_encoder *self)
     {
         while (!fifo_is_empty(fifo))
         {
-            enc_done = fifo_remove_item(fifo);
+            enc_done = (XRDP_ENC_DATA_DONE *) fifo_remove_item(fifo);
             if (enc_done == 0)
             {
                 continue;

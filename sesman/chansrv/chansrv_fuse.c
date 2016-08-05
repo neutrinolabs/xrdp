@@ -295,7 +295,7 @@ int devredir_file_read(void *fusep, tui32 device_id, tui32 FileId,
                         tui32 Length, tui64 Offset);
 
 int dev_redir_file_write(void *fusep, tui32 device_id, tui32 FileId,
-                         const char *buf, tui32 Length, tui64 Offset);
+                         const char *buf, int Length, tui64 Offset);
 
 int devredir_file_close(void *fusep, tui32 device_id, tui32 FileId);
 

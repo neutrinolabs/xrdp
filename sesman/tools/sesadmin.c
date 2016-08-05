@@ -59,7 +59,7 @@ int main(int argc, char **argv)
     serv[0] = '\0';
     port[0] = '\0';
 
-    logging.program_name = g_strdup("sesadmin");
+    logging.program_name = "sesadmin";
     logging.log_file = g_strdup("xrdp-sesadmin.log");
     logging.log_level = LOG_LEVEL_DEBUG;
     logging.enable_syslog = 0;
@@ -124,7 +124,7 @@ int main(int argc, char **argv)
         }
     }
 
-    scp_init(&logging);
+    scp_init();
 
     sock = g_tcp_socket();
     if (sock < 0)

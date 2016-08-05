@@ -33,7 +33,7 @@ scp_connection_create(int sck)
 {
     struct SCP_CONNECTION *conn;
 
-    conn = g_malloc(sizeof(struct SCP_CONNECTION), 0);
+    conn = g_new(struct SCP_CONNECTION, 1);
 
     if (0 == conn)
     {

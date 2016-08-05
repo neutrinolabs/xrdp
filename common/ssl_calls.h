@@ -41,7 +41,7 @@ ssl_sha1_info_delete(void* sha1_info);
 void APP_CC
 ssl_sha1_clear(void* sha1_info);
 void APP_CC
-ssl_sha1_transform(void* sha1_info, char* data, int len);
+ssl_sha1_transform(void* sha1_info, const char *data, int len);
 void APP_CC
 ssl_sha1_complete(void* sha1_info, char* data);
 void* APP_CC
@@ -84,8 +84,8 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char* exp, int exp_len,
 /* ssl_tls */
 struct ssl_tls
 {
-    void *ssl; /* SSL * */
-    void *ctx; /* SSL_CTX * */
+    struct ssl_st *ssl; /* SSL * */
+    struct ssl_ctx_st *ctx; /* SSL_CTX * */
     char *cert;
     char *key;
     struct trans *trans;

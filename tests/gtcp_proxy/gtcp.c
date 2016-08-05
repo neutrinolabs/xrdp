@@ -33,7 +33,7 @@ int tcp_socket_create(void)
     unsigned int option_len;
 #endif
 
-    /* in win32 a socket is an unsigned int, in linux, its an int */
+    /* in win32 a socket is an unsigned int, in linux, it's an int */
     if ((rv = (int) socket(PF_INET, SOCK_STREAM, 0)) < 0)
         return -1;
 
@@ -193,7 +193,7 @@ int tcp_socket(void)
     unsigned int option_len;
 #endif
 
-    /* in win32 a socket is an unsigned int, in linux, its an int */
+    /* in win32 a socket is an unsigned int, in linux, it's an int */
     if ((rv = (int) socket(PF_INET, SOCK_STREAM, 0)) < 0)
         return -1;
 
