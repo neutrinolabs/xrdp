@@ -38,7 +38,7 @@
  *
  */
 int DEFAULT_CC
-env_check_password_file(char* filename, char* password);
+env_check_password_file(const char *filename, const char *password);
 
 /**
  *

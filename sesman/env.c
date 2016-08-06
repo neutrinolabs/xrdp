@@ -24,6 +24,9 @@
  *
  */
 
+#include <string.h>
+#include <errno.h>
+
 #include "list.h"
 #include "sesman.h"
 #include "grp.h"
@@ -34,7 +37,7 @@ extern struct config_sesman *g_cfg;  /* in sesman.c */
 
 /******************************************************************************/
 int DEFAULT_CC
-env_check_password_file(char *filename, char *passwd)
+env_check_password_file(const char *filename, const char *passwd)
 {
     char encryptedPasswd[16];
     char key[24];
@@ -71,8 +74,8 @@ env_check_password_file(char *filename, char *passwd)
     if (fd == -1)
     {
         log_message(LOG_LEVEL_WARNING,
-                    "can't write vnc password hash file - %s",
-                    filename);
+                    "Cannot write VNC password hash to file %s: %s",
+                    filename, strerror(errno));
         return 1;
     }
     g_file_write(fd, encryptedPasswd, 8);
