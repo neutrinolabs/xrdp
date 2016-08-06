@@ -82,7 +82,7 @@ list_add_item(struct list *self, tbus item)
 
 /*****************************************************************************/
 tbus APP_CC
-list_get_item(struct list *self, int index)
+list_get_item(const struct list *self, int index)
 {
     if (index < 0 || index >= self->count)
     {

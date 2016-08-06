@@ -40,7 +40,7 @@ list_delete(struct list* self);
 void APP_CC
 list_add_item(struct list* self, tintptr item);
 tintptr APP_CC
-list_get_item(struct list* self, int index);
+list_get_item(const struct list *self, int index);
 void APP_CC
 list_clear(struct list* self);
 int APP_CC
