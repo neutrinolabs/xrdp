@@ -484,7 +484,7 @@ session_start_fork(int width, int height, int bpp, char *username,
     }
     else if (pid == 0)
     {
-        g_tcp_close(g_term_event);
+        g_delete_wait_obj(g_term_event);
         g_tcp_close(g_sck);
         g_sprintf(geometry, "%dx%d", width, height);
         g_sprintf(depth, "%d", bpp);
