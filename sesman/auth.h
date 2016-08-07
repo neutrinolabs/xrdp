@@ -32,7 +32,7 @@
  * @brief Validates user's password
  * @param user user's login name
  * @param pass user's password
- * @return 0 on success, 1 on failure
+ * @return non-zero handle on success, 0 on failure
  *
  */
 long DEFAULT_CC
