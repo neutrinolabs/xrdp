@@ -36,7 +36,7 @@ void *DEFAULT_CC
 scp_process_start(void *sck)
 {
     struct SCP_CONNECTION scon;
-    struct SCP_SESSION *sdata;
+    struct SCP_SESSION *sdata = NULL;
 
     scon.in_sck = (int)(tintptr)sck;
     LOG_DBG("started scp thread on socket %d", scon.in_sck);
@@ -94,5 +94,11 @@ scp_process_start(void *sck)
     g_tcp_close(scon.in_sck);
     free_stream(scon.in_s);
     free_stream(scon.out_s);
+
+    if (sdata)
+    {
+        scp_session_destroy(sdata);
+    }
+
     return 0;
 }
