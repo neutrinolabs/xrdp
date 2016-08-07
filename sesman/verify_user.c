@@ -26,8 +26,8 @@
 
 #include "sesman.h"
 
-#define _XOPEN_SOURCE
 #include <stdio.h>
+#include <string.h>
 #include <sys/types.h>
 #include <crypt.h>
 #include <shadow.h>

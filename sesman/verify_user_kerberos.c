@@ -221,7 +221,7 @@ kinit_prompter(krb5_context ctx, void *data, const char *name,
 static int
 k5_kinit(struct k_opts *opts, struct k5_data *k5, struct user_info *u_info)
 {
-    char *doing;
+    const char *doing;
     int notix = 1;
     krb5_keytab keytab = 0;
     krb5_creds my_creds;
@@ -425,7 +425,7 @@ auth_userpass(char *user, char *pass, int *errorcode)
 /******************************************************************************/
 /* returns error */
 int DEFAULT_CC
-auth_start_session(void)
+auth_start_session(long in_val, int in_display)
 {
     return 0;
 }
@@ -440,14 +440,14 @@ auth_stop_session(long in_val)
 
 /******************************************************************************/
 int DEFAULT_CC
-auth_end(void)
+auth_end(long in_val)
 {
     return 0;
 }
 
 /******************************************************************************/
 int DEFAULT_CC
-auth_set_env(void)
+auth_set_env(long in_val)
 {
     return 0;
 }
