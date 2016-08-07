@@ -68,8 +68,6 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
                         s->username);
             scp_v0s_replyauthentication(c, errorcode);
         }
-
-        auth_end(data);
     }
     else if (data)
     {
@@ -94,8 +92,6 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
             }
 
             session_reconnect(display, s->username);
-            auth_end(data);
-            /* don't set data to null here */
         }
         else
         {
@@ -148,7 +144,6 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
 
         if (display == 0)
         {
-            auth_end(data);
             scp_v0s_deny_connection(c);
         }
         else
@@ -160,4 +155,5 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     {
         scp_v0s_deny_connection(c);
     }
+    auth_end(data);
 }
