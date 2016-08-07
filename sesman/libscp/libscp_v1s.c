@@ -109,7 +109,6 @@ enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION *c, struct SCP_SES
 
     if (0 == session)
     {
-        log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error (malloc returned NULL)", __LINE__);
         return SCP_SERVER_STATE_INTERNAL_ERR;
     }
 
