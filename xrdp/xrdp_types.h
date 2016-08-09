@@ -411,7 +411,7 @@ struct xrdp_listen
 struct xrdp_region
 {
   struct xrdp_wm* wm; /* owner */
-  struct list* rects;
+  struct pixman_region16 *reg;
 };
 
 /* painter */

@@ -14,6 +14,12 @@ EXTRA_INCLUDES += -I$(top_srcdir)/librfxcodec/include
 EXTRA_LIBS += $(top_srcdir)/librfxcodec/src/librfxencode.a
 endif
 
+if XRDP_PIXMAN
+EXTRA_DEFINES += -DXRDP_PIXMAN
+EXTRA_INCLUDES += $(XRDP_PIXMAN_CFLAGS)
+EXTRA_LIBS += $(XRDP_PIXMAN_LIBS)
+endif
+
 AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \

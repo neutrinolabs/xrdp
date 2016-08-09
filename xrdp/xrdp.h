@@ -175,9 +175,6 @@ xrdp_region_delete(struct xrdp_region* self);
 int APP_CC
 xrdp_region_add_rect(struct xrdp_region* self, struct xrdp_rect* rect);
 int APP_CC
-xrdp_region_insert_rect(struct xrdp_region* self, int i, int left,
-                        int top, int right, int bottom);
-int APP_CC
 xrdp_region_subtract_rect(struct xrdp_region* self,
                           struct xrdp_rect* rect);
 int APP_CC
