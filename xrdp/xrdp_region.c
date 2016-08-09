@@ -94,6 +94,26 @@ xrdp_region_subtract_rect(struct xrdp_region *self, struct xrdp_rect *rect)
 /*****************************************************************************/
 /* returns error */
 int APP_CC
+xrdp_region_intersect_rect(struct xrdp_region* self, struct xrdp_rect* rect)
+{
+    struct pixman_region16 lreg;
+
+    pixman_region_init_rect(&lreg, rect->left, rect->top,
+                            rect->right - rect->left,
+                            rect->bottom - rect->top);
+    if (!pixman_region_intersect(self->reg, self->reg, &lreg))
+    {
+        pixman_region_fini(&lreg);
+        return 1;
+    }
+    pixman_region_fini(&lreg);
+    return 0;
+}
+
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
 xrdp_region_get_rect(struct xrdp_region *self, int index,
                      struct xrdp_rect *rect)
 {
