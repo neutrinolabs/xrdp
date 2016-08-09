@@ -660,7 +660,11 @@ clipboard_c2s_in_files(struct stream *s, char *file_list)
                        "supported [%s]", cfd->cFileName);
             continue;
         }
-        xfuse_add_clip_dir_item(cfd->cFileName, 0, cfd->fileSizeLow, lindex);
+        if (xfuse_add_clip_dir_item(cfd->cFileName, 0, cfd->fileSizeLow, lindex) == -1)
+        {
+            log_error("clipboard_c2s_in_files: failed to add clip dir item");
+            continue;
+        }
 
         if (file_count > 0)
         {

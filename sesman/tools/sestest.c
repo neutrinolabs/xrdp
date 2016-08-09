@@ -44,11 +44,11 @@ int main(int argc, char **argv)
     int sock;
 
     log.enable_syslog = 0;
-    log.log_level = 99;
-    log.program_name = g_strdup("sestest");
+    log.log_level = LOG_LEVEL_DEBUG;
+    log.program_name = "sestest";
     log.log_file = g_strdup("sestest.log");
     log_start_from_param(&log);
-    scp_init(&log);
+    scp_init();
 
     sock = g_tcp_socket();
     if (sock < 0)

@@ -35,6 +35,11 @@
 static OpusEncoder *g_opus_encoder = 0;
 #endif
 
+#if defined(XRDP_MP3LAME)
+#include <lame/lame.h>
+static lame_global_flags *g_lame_encoder = 0;
+#endif
+
 extern int g_rdpsnd_chan_id;    /* in chansrv.c */
 extern int g_display_num;       /* in chansrv.c */
 
@@ -72,12 +77,12 @@ struct xr_wave_format_ex
     int nBlockAlign;
     int wBitsPerSample;
     int cbSize;
-    char *data;
+    tui8 *data;
 };
 
 /* output formats */
 
-static char g_pcm_22050_data[] = { 0 };
+static tui8 g_pcm_22050_data[] = { 0 };
 static struct xr_wave_format_ex g_pcm_22050 =
 {
     1,               /* wFormatTag - WAVE_FORMAT_PCM */
@@ -90,7 +95,7 @@ static struct xr_wave_format_ex g_pcm_22050 =
     g_pcm_22050_data /* data */
 };
 
-static char g_pcm_44100_data[] = { 0 };
+static tui8 g_pcm_44100_data[] = { 0 };
 static struct xr_wave_format_ex g_pcm_44100 =
 {
     1,               /* wFormatTag - WAVE_FORMAT_PCM */
@@ -104,7 +109,7 @@ static struct xr_wave_format_ex g_pcm_44100 =
 };
 
 #if defined(XRDP_OPUS)
-static char g_opus_44100_data[] = { 0 };
+static tui8 g_opus_44100_data[] = { 0 };
 static struct xr_wave_format_ex g_opus_44100 =
 {
     0x0069,           /* wFormatTag - WAVE_FORMAT_OPUS */
@@ -118,26 +123,39 @@ static struct xr_wave_format_ex g_opus_44100 =
 };
 #endif
 
-
-#if defined(XRDP_OPUS)
-#define SND_NUM_OUTP_FORMATS 3
-static struct xr_wave_format_ex *g_wave_outp_formats[SND_NUM_OUTP_FORMATS] =
+#if defined(XRDP_MP3LAME)
+static tui8 g_mp3lame_44100_data[] = { 0x01, 0x00, 0x02, 0x00, 0x00, 0x00, 0xb6, 0x00, 0x01, 0x00, 0x71, 0x05 };
+static struct xr_wave_format_ex g_mp3lame_44100 =
 {
-    &g_pcm_44100,
-    &g_pcm_22050,
-    &g_opus_44100
-};
-#else
-#define SND_NUM_OUTP_FORMATS 2
-static struct xr_wave_format_ex *g_wave_outp_formats[SND_NUM_OUTP_FORMATS] =
-{
-    &g_pcm_44100,
-    &g_pcm_22050
+    0x0055,              /* wFormatTag - WAVE_FORMAT_MPEGLAYER3 */
+    2,                   /* num of channels */
+    44100,               /* samples per sec */
+    176400,              /* avg bytes per sec */
+    4,                   /* block align */
+    0,                   /* bits per sample */
+    12,                  /* data size */
+    g_mp3lame_44100_data /* data */
 };
 #endif
 
+static struct xr_wave_format_ex *g_wave_outp_formats[] =
+{
+    &g_pcm_44100,
+    &g_pcm_22050,
+#if defined(XRDP_OPUS)
+    &g_opus_44100,
+#endif
+#if defined(XRDP_MP3LAME)
+    &g_mp3lame_44100,
+#endif
+    0
+};
+
 static int g_client_does_opus = 0;
 static int g_client_opus_index = 0;
+
+static int g_client_does_mp3lame = 0;
+static int g_client_mp3lame_index = 0;
 
 /* index into list from client */
 static int g_current_client_format_index = 0;
@@ -147,7 +165,7 @@ static int g_current_server_format_index = 0;
 
 /* input formats */
 
-static char g_pcm_inp_22050_data[] = { 0 };
+static tui8 g_pcm_inp_22050_data[] = { 0 };
 static struct xr_wave_format_ex g_pcm_inp_22050 =
 {
     1,               /* wFormatTag - WAVE_FORMAT_PCM */
@@ -160,7 +178,7 @@ static struct xr_wave_format_ex g_pcm_inp_22050 =
     g_pcm_inp_22050_data /* data */
 };
 
-static char g_pcm_inp_44100_data[] = { 0 };
+static tui8 g_pcm_inp_44100_data[] = { 0 };
 static struct xr_wave_format_ex g_pcm_inp_44100 =
 {
     1,               /* wFormatTag - WAVE_FORMAT_PCM */
@@ -173,11 +191,11 @@ static struct xr_wave_format_ex g_pcm_inp_44100 =
     g_pcm_inp_44100_data /* data */
 };
 
-#define SND_NUM_INP_FORMATS 2
-static struct xr_wave_format_ex *g_wave_inp_formats[SND_NUM_INP_FORMATS] =
+static struct xr_wave_format_ex *g_wave_inp_formats[] =
 {
     &g_pcm_inp_44100,
-    &g_pcm_inp_22050
+    &g_pcm_inp_22050,
+    0
 };
 
 static int g_client_input_format_index = 0;
@@ -204,7 +222,12 @@ sound_send_server_output_formats(void)
     struct stream *s;
     int bytes;
     int index;
+    int num_formats;
     char *size_ptr;
+
+    num_formats = sizeof(g_wave_outp_formats) /
+                  sizeof(g_wave_outp_formats[0]) - 1;
+    LOG(10, ("sound_send_server_output_formats: num_formats %d", num_formats));
 
     make_stream(s);
     init_stream(s, 8182);
@@ -215,9 +238,9 @@ sound_send_server_output_formats(void)
     out_uint32_le(s, 0);                    /* dwVolume */
     out_uint32_le(s, 0);                    /* dwPitch */
     out_uint16_le(s, 0);                    /* wDGramPort */
-    out_uint16_le(s, SND_NUM_OUTP_FORMATS); /* wNumberOfFormats */
+    out_uint16_le(s, num_formats);          /* wNumberOfFormats */
     out_uint8(s, g_cBlockNo);               /* cLastBlockConfirmed */
-    out_uint16_le(s, 2);                    /* wVersion */
+    out_uint16_le(s, 5);                    /* wVersion */
     out_uint8(s, 0);                        /* bPad */
 
     /* sndFormats */
@@ -239,7 +262,7 @@ sound_send_server_output_formats(void)
         00 00
     */
 
-    for (index = 0; index < SND_NUM_OUTP_FORMATS; index++)
+    for (index = 0; index < num_formats; index++)
     {
         out_uint16_le(s, g_wave_outp_formats[index]->wFormatTag);
         out_uint16_le(s, g_wave_outp_formats[index]->nChannels);
@@ -341,8 +364,16 @@ sound_process_output_format(int aindex, int wFormatTag, int nChannels,
 
     if (wFormatTag == 0x0069)
     {
+        LOG(0, ("wFormatTag, opus"));
         g_client_does_opus = 1;
         g_client_opus_index = aindex;
+        g_bbuf_size = 11520;
+    }
+    else if (wFormatTag == 0x0055)
+    {
+        LOG(0, ("wFormatTag, mp3"));
+        g_client_does_mp3lame = 1;
+        g_client_mp3lame_index = aindex;
         g_bbuf_size = 11520;
     }
 
@@ -403,7 +434,7 @@ sound_process_output_formats(struct stream *s, int size)
 
 /*****************************************************************************/
 static int
-sound_wave_compress(char *data, int data_bytes, int *format_index)
+sound_wave_compress_opus(char *data, int data_bytes, int *format_index)
 {
     unsigned char *cdata;
     int cdata_bytes;
@@ -428,7 +459,7 @@ sound_wave_compress(char *data, int data_bytes, int *format_index)
                                              &error);
         if (g_opus_encoder == 0)
         {
-            LOG(0, ("sound_wave_compress: opus_encoder_create failed"));
+            LOG(0, ("sound_wave_compress_opus: opus_encoder_create failed"));
             return data_bytes;
         }
     }
@@ -465,12 +496,115 @@ sound_wave_compress(char *data, int data_bytes, int *format_index)
 
 /*****************************************************************************/
 static int
-sound_wave_compress(char *data, int data_bytes, int *format_index)
+sound_wave_compress_opus(char *data, int data_bytes, int *format_index)
 {
     return data_bytes;
 }
 
 #endif
+
+#if defined(XRDP_MP3LAME)
+
+/*****************************************************************************/
+static int
+sound_wave_compress_mp3lame(char *data, int data_bytes, int *format_index)
+{
+    int rv;
+    int cdata_bytes;
+    int odata_bytes;
+    unsigned char *cdata;
+
+    cdata = NULL;
+    rv = data_bytes;
+
+    if (g_client_does_mp3lame == 0)
+    {
+        return rv;
+    }
+
+    if (g_lame_encoder == 0)
+    {
+        /* init mp3 lame encoder */
+        LOG(0, ("sound_wave_compress_mp3lame: using mp3lame"));
+
+        g_lame_encoder = lame_init();
+        if (g_lame_encoder == 0)
+        {
+            LOG(0, ("sound_wave_compress_mp3lame: lame_init() failed"));
+            return rv;
+        }
+        lame_set_num_channels(g_lame_encoder, g_mp3lame_44100.nChannels);
+        lame_set_in_samplerate(g_lame_encoder, g_mp3lame_44100.nSamplesPerSec);
+        if (lame_init_params(g_lame_encoder) == -1)
+        {
+            LOG(0, ("sound_wave_compress_mp3lame: lame_init_params() failed"));
+            return rv;
+        }
+
+        LOG(0, ("sound_wave_compress_mp3lame: lame config:"));
+        LOG(0, ("                             brate            : %d", lame_get_brate(g_lame_encoder)));
+        LOG(0, ("                             compression ratio: %f", lame_get_compression_ratio(g_lame_encoder)));
+        LOG(0, ("                             encoder delay    : %d", lame_get_encoder_delay(g_lame_encoder)));
+        LOG(0, ("                             frame size       : %d", lame_get_framesize(g_lame_encoder)));
+        LOG(0, ("                             encoder padding  : %d", lame_get_encoder_padding(g_lame_encoder)));
+        LOG(0, ("                             mode             : %d", lame_get_mode(g_lame_encoder)));
+    }
+
+    odata_bytes = data_bytes;
+    cdata_bytes = data_bytes;
+    cdata = (unsigned char *) g_malloc(cdata_bytes, 0);
+    if (data_bytes < g_bbuf_size)
+    {
+        g_memset(data + data_bytes, 0, g_bbuf_size - data_bytes);
+        data_bytes = g_bbuf_size;
+    }
+    cdata_bytes = lame_encode_buffer_interleaved(g_lame_encoder,
+                                                 (short int *) data,
+                                                 data_bytes / 4,
+                                                 cdata,
+                                                 cdata_bytes);
+    if (cdata_bytes < 0)
+    {
+        LOG(0, ("sound_wave_compress: lame_encode_buffer_interleaved() "
+                "failed, error %d", cdata_bytes));
+        return rv;
+    }
+    if ((cdata_bytes > 0) && (cdata_bytes < odata_bytes))
+    {
+        *format_index = g_client_mp3lame_index;
+        g_memcpy(data, cdata, cdata_bytes);
+        rv = cdata_bytes;
+    }
+
+    g_free(cdata);
+    return rv;
+}
+
+#else
+
+/*****************************************************************************/
+static int
+sound_wave_compress_mp3lame(char *data, int data_bytes, int *format_index)
+{
+    return data_bytes;
+}
+
+#endif
+
+/*****************************************************************************/
+static int
+sound_wave_compress(char *data, int data_bytes, int *format_index)
+{
+    if (g_client_does_opus)
+    {
+        return sound_wave_compress_opus(data, data_bytes, format_index);
+    }
+    else if (g_client_does_mp3lame)
+    {
+        return sound_wave_compress_mp3lame(data, data_bytes, format_index);
+    }
+    return data_bytes;
+}
 
 /*****************************************************************************/
 /* send wave message to client */
@@ -820,6 +954,9 @@ sound_init(void)
     g_client_does_opus = 0;
     g_client_opus_index = 0;
 
+    g_client_does_mp3lame = 0;
+    g_client_mp3lame_index = 0;
+
     return 0;
 }
 
@@ -851,6 +988,15 @@ sound_deinit(void)
         trans_delete(g_audio_c_trans_in);
         g_audio_c_trans_in = 0;
     }
+
+#if defined(XRDP_MP3LAME)
+    if (g_lame_encoder)
+    {
+        lame_close(g_lame_encoder);
+        g_lame_encoder = 0;
+        g_client_does_mp3lame = 0;
+    }
+#endif
 
     fifo_deinit(&g_in_fifo);
 
@@ -1014,10 +1160,15 @@ sound_check_wait_objs(void)
 static int APP_CC
 sound_send_server_input_formats(void)
 {
-    struct stream* s;
-    int    bytes;
-    int    index;
-    char*  size_ptr;
+    struct stream *s;
+    int bytes;
+    int index;
+    int num_formats;
+    char *size_ptr;
+
+    num_formats = sizeof(g_wave_inp_formats) /
+                  sizeof(g_wave_inp_formats[0]) - 1;
+    LOG(10, ("sound_send_server_input_formats: num_formats %d", num_formats));
 
     make_stream(s);
     init_stream(s, 8182);
@@ -1026,8 +1177,8 @@ sound_send_server_input_formats(void)
     out_uint16_le(s, 0);                   /* size, set later */
     out_uint32_le(s, 0);                   /* unused */
     out_uint32_le(s, 0);                   /* unused */
-    out_uint16_le(s, SND_NUM_INP_FORMATS); /* wNumberOfFormats */
-    out_uint16_le(s, 2);                   /* wVersion */
+    out_uint16_le(s, num_formats);         /* wNumberOfFormats */
+    out_uint16_le(s, 5);                   /* wVersion */
 
     /*
         wFormatTag      2 byte offset 0
@@ -1040,7 +1191,7 @@ sound_send_server_input_formats(void)
         data            variable offset 18
     */
 
-    for (index = 0; index < SND_NUM_INP_FORMATS; index++)
+    for (index = 0; index < num_formats; index++)
     {
         out_uint16_le(s, g_wave_inp_formats[index]->wFormatTag);
         out_uint16_le(s, g_wave_inp_formats[index]->nChannels);

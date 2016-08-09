@@ -75,13 +75,13 @@ lib_mod_end(struct mod *mod)
 /******************************************************************************/
 /* return error */
 int DEFAULT_CC
-lib_mod_set_param(struct mod *mod, char *name, char *value)
+lib_mod_set_param(struct mod *mod, const char *name, char *value)
 {
     return 0;
 }
 
 /******************************************************************************/
-struct mod *EXPORT_CC
+tintptr EXPORT_CC
 mod_init(void)
 {
     struct mod *mod;
@@ -89,20 +89,22 @@ mod_init(void)
     mod = (struct mod *)g_malloc(sizeof(struct mod), 1);
     mod->size = sizeof(struct mod);
     mod->version = CURRENT_MOD_VER;
-    mod->handle = (long)mod;
+    mod->handle = (tintptr) mod;
     mod->mod_connect = lib_mod_connect;
     mod->mod_start = lib_mod_start;
     mod->mod_event = lib_mod_event;
     mod->mod_signal = lib_mod_signal;
     mod->mod_end = lib_mod_end;
     mod->mod_set_param = lib_mod_set_param;
-    return mod;
+    return (tintptr) mod;
 }
 
 /******************************************************************************/
 int EXPORT_CC
-mod_exit(struct mod *mod)
+mod_exit(tintptr handle)
 {
+    struct mod *mod = (struct mod *) handle;
+
     if (mod == 0)
     {
         return 0;

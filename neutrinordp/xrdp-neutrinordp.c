@@ -22,7 +22,6 @@
 #include "xrdp_rail.h"
 #include "log.h"
 #include <freerdp/settings.h>
-#include <X11/Xlib.h>
 
 #ifdef XRDP_DEBUG
 #define LOG_LEVEL 99
@@ -230,7 +229,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             break;
 
         case 17: /* Synchronize */
-            LLOGLN(11, ("Synchronized event handled : %d", param1));
+            LLOGLN(11, ("Synchronized event handled : %ld", param1));
             /* In some situations the Synchronize event come to early.
                Therefore we store this information and use it when we
                receive the first keyboard event
@@ -246,7 +245,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             break;
 
         case 100: /* mouse move */
-            LLOGLN(12, ("mouse move %d %d", param1, param2));
+            LLOGLN(12, ("mouse move %ld %ld", param1, param2));
             x = param1;
             y = param2;
             flags = PTR_FLAGS_MOVE;
@@ -254,7 +253,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             break;
 
         case 101: /* left button up */
-            LLOGLN(12, ("left button up %d %d", param1, param2));
+            LLOGLN(12, ("left button up %ld %ld", param1, param2));
             x = param1;
             y = param2;
             flags = PTR_FLAGS_BUTTON1;
@@ -262,7 +261,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             break;
 
         case 102: /* left button down */
-            LLOGLN(12, ("left button down %d %d", param1, param2));
+            LLOGLN(12, ("left button down %ld %ld", param1, param2));
             x = param1;
             y = param2;
             flags = PTR_FLAGS_BUTTON1 | PTR_FLAGS_DOWN;
@@ -270,7 +269,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             break;
 
         case 103: /* right button up */
-            LLOGLN(12, ("right button up %d %d", param1, param2));
+            LLOGLN(12, ("right button up %ld %ld", param1, param2));
             x = param1;
             y = param2;
             flags = PTR_FLAGS_BUTTON2;
@@ -278,7 +277,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             break;
 
         case 104: /* right button down */
-            LLOGLN(12, ("right button down %d %d", param1, param2));
+            LLOGLN(12, ("right button down %ld %ld", param1, param2));
             x = param1;
             y = param2;
             flags = PTR_FLAGS_BUTTON2 | PTR_FLAGS_DOWN;
@@ -286,7 +285,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             break;
 
         case 105: /* middle button up */
-            LLOGLN(12, ("middle button up %d %d", param1, param2));
+            LLOGLN(12, ("middle button up %ld %ld", param1, param2));
             x = param1;
             y = param2;
             flags = PTR_FLAGS_BUTTON3;
@@ -294,7 +293,7 @@ lxrdp_event(struct mod *mod, int msg, long param1, long param2,
             break;
 
         case 106: /* middle button down */
-            LLOGLN(12, ("middle button down %d %d", param1, param2));
+            LLOGLN(12, ("middle button down %ld %ld", param1, param2));
             x = param1;
             y = param2;
             flags = PTR_FLAGS_BUTTON3 | PTR_FLAGS_DOWN;
@@ -428,7 +427,7 @@ lxrdp_end(struct mod *mod)
 /******************************************************************************/
 /* return error */
 static int DEFAULT_CC
-lxrdp_set_param(struct mod *mod, char *name, char *value)
+lxrdp_set_param(struct mod *mod, const char *name, char *value)
 {
     rdpSettings *settings;
 
@@ -1368,7 +1367,9 @@ lfreerdp_polygon_sc(rdpContext *context, POLYGON_SC_ORDER *polygon_sc)
 {
     struct mod *mod;
     int i, npoints;
-    XPoint points[4];
+    struct {
+        short x, y;
+    } points[4];
     int fgcolor;
     int server_bpp, client_bpp;
 
@@ -1954,7 +1955,7 @@ lfreerdp_verify_certificate(freerdp *instance, char *subject, char *issuer,
 }
 
 /******************************************************************************/
-struct mod *EXPORT_CC
+tintptr EXPORT_CC
 mod_init(void)
 {
     struct mod *mod;
@@ -1967,7 +1968,7 @@ mod_init(void)
                mod->vmaj, mod->vmin, mod->vrev));
     mod->size = sizeof(struct mod);
     mod->version = CURRENT_MOD_VER;
-    mod->handle = (tbus)mod;
+    mod->handle = (tintptr) mod;
     mod->mod_connect = lxrdp_connect;
     mod->mod_start = lxrdp_start;
     mod->mod_event = lxrdp_event;
@@ -1994,13 +1995,15 @@ mod_init(void)
     lcon->modi = mod;
     LLOGLN(10, ("mod_init: mod %p", mod));
 
-    return mod;
+    return (tintptr) mod;
 }
 
 /******************************************************************************/
 int EXPORT_CC
-mod_exit(struct mod *mod)
+mod_exit(tintptr handle)
 {
+    struct mod *mod = (struct mod *) handle;
+
     LLOGLN(0, ("mod_exit:"));
 
     if (mod == 0)

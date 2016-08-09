@@ -212,12 +212,6 @@ internal_log_end(struct log_config *l_cfg)
         l_cfg->log_file = 0;
     }
 
-    if (0 != l_cfg->program_name)
-    {
-        g_free(l_cfg->program_name);
-        l_cfg->program_name = 0;
-    }
-
     ret = LOG_STARTUP_OK;
     return ret;
 }
@@ -336,7 +330,7 @@ internal_config_read_logging(int file, struct log_config *lc,
     list_clear(param_n);
 
     /* setting defaults */
-    lc->program_name = g_strdup(applicationName);
+    lc->program_name = applicationName;
     lc->log_file = 0;
     lc->fd = 0;
     lc->log_level = LOG_LEVEL_DEBUG;
@@ -401,7 +395,7 @@ enum logReturns DEFAULT_CC
 internalInitAndAllocStruct(void)
 {
     enum logReturns ret = LOG_GENERAL_ERROR;
-    g_staticLogConfig = g_malloc(sizeof(struct log_config), 1);
+    g_staticLogConfig = g_new0(struct log_config, 1);
 
     if (g_staticLogConfig != NULL)
     {
@@ -455,7 +449,7 @@ log_start_from_param(const struct log_config *iniParams)
         g_staticLogConfig->log_level = iniParams->log_level;
         g_staticLogConfig->log_lock = iniParams->log_lock;
         g_staticLogConfig->log_lock_attr = iniParams->log_lock_attr;
-        g_staticLogConfig->program_name = g_strdup(iniParams->program_name);
+        g_staticLogConfig->program_name = iniParams->program_name;
         g_staticLogConfig->syslog_level = iniParams->syslog_level;
         ret = internal_log_start(g_staticLogConfig);
 

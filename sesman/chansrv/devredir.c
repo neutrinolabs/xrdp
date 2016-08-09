@@ -636,7 +636,7 @@ void dev_redir_proc_client_core_cap_resp(struct stream *s)
 
 void devredir_proc_client_devlist_announce_req(struct stream *s)
 {
-    int   i;
+    unsigned int i;
     int   j;
     tui32 device_count;
     tui32 device_type;
@@ -899,7 +899,7 @@ dev_redir_proc_query_dir_response(IRP *irp,
     tui32 status;
 
     char  filename[256];
-    int   i = 0;
+    unsigned int i = 0;
 
     xstream_rd_u32_le(s_in, Length);
 
@@ -962,7 +962,8 @@ dev_redir_proc_query_dir_response(IRP *irp,
         //log_debug("FileNameLength:    %d", FileNameLength);
         log_debug("FileName:          %s", filename);
 
-        if ((xinode = calloc(1, sizeof(struct xrdp_inode))) == NULL)
+        xinode = g_new0(struct xrdp_inode, 1);
+        if (xinode == NULL)
         {
             log_error("system out of memory");
             fuse_data = devredir_fuse_data_peek(irp);
@@ -1255,7 +1256,7 @@ devredir_file_read(void *fusep, tui32 DeviceId, tui32 FileId,
 
 int APP_CC
 dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
-                     const char *buf, tui32 Length, tui64 Offset)
+                     const char *buf, int Length, tui64 Offset)
 {
     struct stream *s;
     IRP           *irp;
@@ -1320,7 +1321,7 @@ dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
  * @return FUSE_DATA on success, or NULL on failure
  *****************************************************************************/
 
-void * APP_CC
+FUSE_DATA *APP_CC
 devredir_fuse_data_peek(IRP *irp)
 {
     log_debug("returning %p", irp->fd_head);
@@ -1333,7 +1334,7 @@ devredir_fuse_data_peek(IRP *irp)
  * @return FUSE_DATA on success, NULL on failure
  *****************************************************************************/
 
-void * APP_CC
+FUSE_DATA *APP_CC
 devredir_fuse_data_dequeue(IRP *irp)
 {
     FUSE_DATA *head;
@@ -1378,7 +1379,8 @@ devredir_fuse_data_enqueue(IRP *irp, void *vp)
     if (irp == NULL)
         return -1;
 
-    if ((fd = calloc(1, sizeof(FUSE_DATA))) == NULL)
+    fd = g_new0(FUSE_DATA, 1);
+    if (fd == NULL)
         return -1;
 
     fd->data_ptr = vp;
@@ -1481,7 +1483,7 @@ devredir_cvt_from_unicode_len(char *path, char *unicode, int len)
     bytes_to_alloc = (((len / 2) * sizeof(twchar)) + sizeof(twchar));
 
     src = unicode;
-    dest = g_malloc(bytes_to_alloc, 1);
+    dest = g_new0(char, bytes_to_alloc);
     dest_saved = dest;
 
     for (i = 0; i < len; i += 2)

@@ -312,7 +312,7 @@ rdp_rdp_out_colcache_caps(struct rdp_rdp *self, struct stream *s)
     return 0;
 }
 
-static char caps_0x0d[] =
+static const unsigned char caps_0x0d[] =
 {
     0x01, 0x00, 0x00, 0x00, 0x09, 0x04, 0x00, 0x00,
     0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -327,11 +327,11 @@ static char caps_0x0d[] =
     0x00, 0x00, 0x00, 0x00
 };
 
-static char caps_0x0c[] = { 0x01, 0x00, 0x00, 0x00 };
+static const unsigned char caps_0x0c[] = { 0x01, 0x00, 0x00, 0x00 };
 
-static char caps_0x0e[] = { 0x01, 0x00, 0x00, 0x00 };
+static const unsigned char caps_0x0e[] = { 0x01, 0x00, 0x00, 0x00 };
 
-static char caps_0x10[] =
+static const unsigned char caps_0x10[] =
 {
     0xFE, 0x00, 0x04, 0x00, 0xFE, 0x00, 0x04, 0x00,
     0xFE, 0x00, 0x08, 0x00, 0xFE, 0x00, 0x08, 0x00,
@@ -345,7 +345,7 @@ static char caps_0x10[] =
 /* Output unknown capability sets */
 static int APP_CC
 rdp_rdp_out_unknown_caps(struct rdp_rdp *self, struct stream *s, int id,
-                         int length, char *caps)
+                         int length, const unsigned char *caps)
 {
     out_uint16_le(s, id);
     out_uint16_le(s, length);
@@ -415,9 +415,9 @@ rdp_rdp_send_confirm_active(struct rdp_rdp *self, struct stream *s)
 static int APP_CC
 rdp_rdp_process_color_pointer_pdu(struct rdp_rdp *self, struct stream *s)
 {
-    int cache_idx;
-    int dlen;
-    int mlen;
+    unsigned int cache_idx;
+    unsigned int dlen;
+    unsigned int mlen;
     struct rdp_cursor *cursor;
 
     in_uint16_le(s, cache_idx);

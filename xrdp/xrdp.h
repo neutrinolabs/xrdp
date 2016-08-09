@@ -37,6 +37,7 @@
 #include "file.h"
 #include "file_loc.h"
 #include "xrdp_client_info.h"
+#include "log.h"
 
 /* xrdp.c */
 long APP_CC
@@ -140,7 +141,8 @@ xrdp_wm_delete_all_children(struct xrdp_wm* self);
 int APP_CC
 xrdp_wm_show_log(struct xrdp_wm *self);
 int APP_CC
-xrdp_wm_log_msg(struct xrdp_wm* self, char* msg);
+xrdp_wm_log_msg(struct xrdp_wm *self, enum logLevels loglevel,
+                const char *fmt, ...) printflike(3, 4);
 int APP_CC
 xrdp_wm_get_wait_objs(struct xrdp_wm* self, tbus* robjs, int* rc,
                       tbus* wobjs, int* wc, int* timeout);
@@ -173,11 +175,9 @@ xrdp_region_delete(struct xrdp_region* self);
 int APP_CC
 xrdp_region_add_rect(struct xrdp_region* self, struct xrdp_rect* rect);
 int APP_CC
-xrdp_region_insert_rect(struct xrdp_region* self, int i, int left,
-                        int top, int right, int bottom);
+xrdp_region_subtract_rect(struct xrdp_region* self, struct xrdp_rect* rect);
 int APP_CC
-xrdp_region_subtract_rect(struct xrdp_region* self,
-                          struct xrdp_rect* rect);
+xrdp_region_intersect_rect(struct xrdp_region* self, struct xrdp_rect* rect);
 int APP_CC
 xrdp_region_get_rect(struct xrdp_region* self, int index,
                      struct xrdp_rect* rect);
@@ -264,9 +264,9 @@ xrdp_painter_draw_bitmap(struct xrdp_painter* self,
                          struct xrdp_bitmap* to_draw,
                          int x, int y, int cx, int cy);
 int APP_CC
-xrdp_painter_text_width(struct xrdp_painter* self, char* text);
+xrdp_painter_text_width(struct xrdp_painter* self, const char *text);
 int APP_CC
-xrdp_painter_text_height(struct xrdp_painter* self, char* text);
+xrdp_painter_text_height(struct xrdp_painter* self, const char *text);
 int APP_CC
 xrdp_painter_draw_text(struct xrdp_painter* self,
                        struct xrdp_bitmap* bitmap,
@@ -464,7 +464,7 @@ int DEFAULT_CC
 server_query_channel(struct xrdp_mod* mod, int index, char* channel_name,
                      int* channel_flags);
 int DEFAULT_CC
-server_get_channel_id(struct xrdp_mod* mod, char* name);
+server_get_channel_id(struct xrdp_mod* mod, const char *name);
 int DEFAULT_CC
 server_send_to_channel(struct xrdp_mod* mod, int channel_id,
                        char* data, int data_len,

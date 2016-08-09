@@ -224,7 +224,7 @@ scp_v1c_get_session_list(struct SCP_CONNECTION *c, int *scount,
             in_uint32_be(c->in_s, sescnt);
             sestmp = sescnt;
 
-            ds = g_malloc(sizeof(struct SCP_DISCONNECTED_SESSION) * sescnt, 0);
+            ds = g_new(struct SCP_DISCONNECTED_SESSION, sescnt);
 
             if (ds == 0)
             {
@@ -429,7 +429,7 @@ _scp_v1c_check_response(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
             g_free(s->errstr);
         }
 
-        s->errstr = g_malloc(dim + 1, 0);
+        s->errstr = g_new(char, dim + 1);
 
         if (s->errstr == 0)
         {
@@ -450,7 +450,7 @@ _scp_v1c_check_response(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
             g_free(s->errstr);
         }
 
-        s->errstr = g_malloc(dim + 1, 0);
+        s->errstr = g_new(char, dim + 1);
 
         if (s->errstr == 0)
         {
@@ -471,7 +471,7 @@ _scp_v1c_check_response(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
             g_free(s->errstr);
         }
 
-        s->errstr = g_malloc(dim + 1, 0);
+        s->errstr = g_new(char, dim + 1);
 
         if (s->errstr == 0)
         {

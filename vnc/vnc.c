@@ -233,7 +233,7 @@ lib_process_channel_data(struct vnc *v, int chanid, int flags, int size,
     }
     else
     {
-        log_message(LOG_LEVEL_DEBUG, "lib_process_channel_data: unknown chanid:",
+        log_message(LOG_LEVEL_DEBUG, "lib_process_channel_data: unknown chanid: "
                     "%d :(v->clip_chanid) %d", chanid, v->clip_chanid);
     }
 
@@ -587,7 +587,7 @@ lib_framebuffer_update(struct vnc *v)
     int cy;
     int srcx;
     int srcy;
-    int encoding;
+    unsigned int encoding;
     int Bpp;
     int pixel;
     int r;
@@ -1396,7 +1396,7 @@ lib_mod_end(struct vnc *v)
 
 /******************************************************************************/
 int DEFAULT_CC
-lib_mod_set_param(struct vnc *v, char *name, char *value)
+lib_mod_set_param(struct vnc *v, const char *name, char *value)
 {
     if (g_strcasecmp(name, "username") == 0)
     {
@@ -1465,7 +1465,7 @@ lib_mod_check_wait_objs(struct vnc *v)
 }
 
 /******************************************************************************/
-struct vnc *EXPORT_CC
+tintptr EXPORT_CC
 mod_init(void)
 {
     struct vnc *v;
@@ -1474,7 +1474,7 @@ mod_init(void)
     /* set client functions */
     v->size = sizeof(struct vnc);
     v->version = CURRENT_MOD_VER;
-    v->handle = (long)v;
+    v->handle = (tintptr) v;
     v->mod_connect = lib_mod_connect;
     v->mod_start = lib_mod_start;
     v->mod_event = lib_mod_event;
@@ -1483,13 +1483,14 @@ mod_init(void)
     v->mod_set_param = lib_mod_set_param;
     v->mod_get_wait_objs = lib_mod_get_wait_objs;
     v->mod_check_wait_objs = lib_mod_check_wait_objs;
-    return v;
+    return (tintptr) v;
 }
 
 /******************************************************************************/
 int EXPORT_CC
-mod_exit(struct vnc *v)
+mod_exit(tintptr handle)
 {
+    struct vnc *v = (struct vnc *) handle;
     log_message(LOG_LEVEL_DEBUG, "VNC mod_exit");
 
     if (v == 0)

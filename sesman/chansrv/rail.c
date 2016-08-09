@@ -184,7 +184,7 @@ rail_send_key_esc(int window_id)
 static struct rail_window_data* APP_CC
 rail_get_window_data(Window window)
 {
-    int bytes;
+    unsigned int bytes;
     Atom actual_type_return;
     int actual_format_return;
     unsigned long nitems_return;
@@ -238,7 +238,7 @@ rail_get_window_data_safe(Window window)
     {
         return rv;
     }
-    rv = g_malloc(sizeof(struct rail_window_data), 1);
+    rv = g_new0(struct rail_window_data, 1);
     rail_set_window_data(window, rv);
     g_free(rv);
     return rail_get_window_data(window);
@@ -557,7 +557,7 @@ my_timeout(void* data)
 static int APP_CC
 rail_process_activate(struct stream *s, int size)
 {
-    int window_id;
+    unsigned int window_id;
     int enabled;
     int index;
     XWindowAttributes window_attributes;
@@ -1148,8 +1148,8 @@ rail_data_in(struct stream *s, int chan_id, int chan_flags, int length,
     return  0;
 }
 
-static int g_crc_seed = 0xffffffff;
-static int g_crc_table[256] =
+static const unsigned int g_crc_seed = 0xffffffff;
+static const unsigned int g_crc_table[256] =
 {
     0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
     0xe963a535, 0x9e6495a3, 0x0edb8832, 0x79dcb8a4, 0xe0d5e91e, 0x97d2d988,

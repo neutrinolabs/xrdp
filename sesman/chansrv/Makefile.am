@@ -13,6 +13,11 @@ EXTRA_DEFINES += -DXRDP_OPUS
 EXTRA_LIBS += -lopus
 endif
 
+if XRDP_MP3LAME
+EXTRA_DEFINES += -DXRDP_MP3LAME
+EXTRA_LIBS += -lmp3lame
+endif
+
 AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \

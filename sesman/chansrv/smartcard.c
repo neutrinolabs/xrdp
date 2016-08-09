@@ -900,7 +900,8 @@ scard_add_new_device(tui32 device_id)
         return -1;
     }
 
-    if ((sc = g_malloc(sizeof(SMARTCARD), 1)) == NULL)
+    sc = g_new0(SMARTCARD, 1);
+    if (sc == NULL)
     {
         log_error("system out of memory");
         return -1;
@@ -1255,7 +1256,7 @@ scard_send_GetStatusChange(IRP* irp, char *context, int context_bytes,
     struct stream *s;
     tui32          ioctl;
     int            bytes;
-    int            i;
+    unsigned int   i;
     int            num_chars;
     int            index;
     twchar         w_reader_name[100];

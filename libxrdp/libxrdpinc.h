@@ -189,7 +189,7 @@ int DEFAULT_CC
 libxrdp_query_channel(struct xrdp_session *session, int index,
                       char *channel_name, int *channel_flags);
 int DEFAULT_CC
-libxrdp_get_channel_id(struct xrdp_session *session, char *name);
+libxrdp_get_channel_id(struct xrdp_session *session, const char *name);
 int DEFAULT_CC
 libxrdp_send_to_channel(struct xrdp_session *session, int channel_id,
                         char *data, int data_len,

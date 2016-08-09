@@ -14,6 +14,7 @@ PKG_PROG_PKG_CONFIG
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 AX_CFLAGS_WARN_ALL
+AX_APPEND_COMPILE_FLAGS([-Wwrite-strings])
 AX_GCC_FUNC_ATTRIBUTE([format])
 
 case $host_os in
@@ -107,6 +108,14 @@ AC_ARG_ENABLE(opus, AS_HELP_STRING([--enable-opus],
               [Build opus(audio codec) (default: no)]),
               [], [enable_opus=no])
 AM_CONDITIONAL(XRDP_OPUS, [test x$enable_opus = xyes])
+AC_ARG_ENABLE(mp3lame, AS_HELP_STRING([--enable-mp3lame],
+              [Build lame mp3(audio codec) (default: no)]),
+              [], [enable_mp3lame=no])
+AM_CONDITIONAL(XRDP_MP3LAME, [test x$enable_mp3lame = xyes])
+AC_ARG_ENABLE(pixman, AS_HELP_STRING([--enable-pixman],
+              [Use pixman library (default: no)]),
+              [], [enable_pimanno])
+AM_CONDITIONAL(XRDP_PIXMAN, [test x$enable_pixman = xyes])
 
 # checking for openssl
 AC_CHECK_HEADER([openssl/rc4.h], [],
@@ -178,6 +187,15 @@ then
   AC_CHECK_HEADER([opus/opus.h], [],
     [AC_MSG_ERROR([please install libopus-dev or opus-devel])])
 fi
+
+# checking for lame mp3
+if test "x$enable_mp3lame" = "xyes"
+then
+  AC_CHECK_HEADER([lame/lame.h], [],
+    [AC_MSG_ERROR([please install libmp3lame-dev or lamemp3-devel])])
+fi
+
+AS_IF( [test "x$enable_pixman" = "xyes"] , [PKG_CHECK_MODULES(XRDP_PIXMAN, pixman-1 >= 0.1.0)] )
 
 # checking for TurboJPEG
 if test "x$enable_tjpeg" = "xyes"

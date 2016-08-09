@@ -97,7 +97,7 @@ create_uds_client(struct trans *con)
     {
         return 0;
     }
-    uds_client = g_malloc(sizeof(struct pcsc_uds_client), 1);
+    uds_client = g_new0(struct pcsc_uds_client, 1);
     if (uds_client == 0)
     {
         return 0;
@@ -145,7 +145,7 @@ get_uds_client_by_id(int uds_client_id)
 /*****************************************************************************/
 struct pcsc_context *
 get_pcsc_context_by_app_context(struct pcsc_uds_client *uds_client,
-                                 int app_context)
+                                tui32 app_context)
 {
     struct pcsc_context *rv;
     int index;
@@ -173,7 +173,7 @@ get_pcsc_context_by_app_context(struct pcsc_uds_client *uds_client,
 /*****************************************************************************/
 struct pcsc_card *
 get_pcsc_card_by_app_card(struct pcsc_uds_client *uds_client,
-                          int app_card, struct pcsc_context **acontext)
+                          tui32 app_card, struct pcsc_context **acontext)
 {
     struct pcsc_card *lcard;
     struct pcsc_context *lcontext;
@@ -606,7 +606,7 @@ scard_process_list_readers(struct trans *con, struct stream *in_s)
         g_free(groups);
         return 1;
     }
-    pcscListReaders = g_malloc(sizeof(struct pcsc_list_readers), 1);
+    pcscListReaders = g_new0(struct pcsc_list_readers, 1);
     pcscListReaders->uds_client_id = uds_client->uds_client_id;
     pcscListReaders->cchReaders = cchReaders;
     scard_send_list_readers(pcscListReaders, lcontext->context,

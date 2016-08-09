@@ -27,7 +27,7 @@ keyboard and mouse stuff
    num lock */
 /* this should be fixed in rdesktop */
 /* g_pause_spe flag for special control sent by ms client before scan code
-   69 is sent to tell that its pause, not num lock.  both pause and num
+   69 is sent to tell that it's pause, not num lock.  both pause and num
    lock use scan code 69 */
 
 /* tab notes */

@@ -1,3 +1,11 @@
+
+EXTRA_FILES =
+
+if XRDP_PIXMAN
+else
+  EXTRA_FILES += pixman-region16.c pixman-region.h
+endif
+
 AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
@@ -36,7 +44,8 @@ libcommon_la_SOURCES = \
   trans.h \
   xrdp_client_info.h \
   xrdp_constants.h \
-  xrdp_rail.h
+  xrdp_rail.h \
+  $(EXTRA_FILES)
 
 libcommon_la_LIBADD = \
   -lcrypto \

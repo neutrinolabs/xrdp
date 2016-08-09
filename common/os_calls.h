@@ -21,14 +21,11 @@
 #if !defined(OS_CALLS_H)
 #define OS_CALLS_H
 
-#if defined(HAVE_CONFIG_H)
-#include "config_ac.h"
-#endif
-
 #ifndef NULL
 #define NULL 0
 #endif
 
+#include <stdlib.h>
 #include "arch.h"
 
 #define g_tcp_can_recv g_sck_can_recv
@@ -45,13 +42,6 @@
 #define g_tcp_select g_sck_select
 #define g_close_wait_obj g_delete_wait_obj
 
-#if defined(HAVE_FUNC_ATTRIBUTE_FORMAT)
-#define printflike(arg_format, arg_first_check) \
- __attribute__((__format__(__printf__, arg_format, arg_first_check)))
-#else
-#define printflike(arg_format, arg_first_check)
-#endif
-
 int APP_CC      g_rm_temp_dir(void);
 int APP_CC      g_mk_temp_dir(const char* app_name);
 void APP_CC     g_init(const char* app_name);
@@ -61,7 +51,7 @@ void APP_CC     g_free(void* ptr);
 void DEFAULT_CC g_printf(const char *format, ...) printflike(1, 2);
 void DEFAULT_CC g_sprintf(char* dest, const char* format, ...) \
                   printflike(2, 3);
-void DEFAULT_CC g_snprintf(char* dest, int len, const char* format, ...) \
+int DEFAULT_CC  g_snprintf(char* dest, int len, const char* format, ...) \
                   printflike(3, 4);
 void DEFAULT_CC g_writeln(const char* format, ...) printflike(1, 2);
 void DEFAULT_CC g_write(const char* format, ...) printflike(1, 2);
@@ -115,14 +105,14 @@ int APP_CC      g_file_open_ex(const char *file_name, int aread, int awrite,
                                int acreate, int atrunc);
 int APP_CC      g_file_close(int fd);
 int APP_CC      g_file_read(int fd, char* ptr, int len);
-int APP_CC      g_file_write(int fd, char* ptr, int len);
+int APP_CC      g_file_write(int fd, const char *ptr, int len);
 int APP_CC      g_file_seek(int fd, int offset);
 int APP_CC      g_file_lock(int fd, int start, int len);
 int APP_CC      g_chmod_hex(const char* filename, int flags);
 int APP_CC      g_chown(const char* name, int uid, int gid);
 int APP_CC      g_mkdir(const char* dirname);
 char* APP_CC    g_get_current_dir(char* dirname, int maxlen);
-int APP_CC      g_set_current_dir(char* dirname);
+int APP_CC      g_set_current_dir(const char *dirname);
 int APP_CC      g_file_exist(const char* filename);
 int APP_CC      g_directory_exist(const char* dirname);
 int APP_CC      g_create_dir(const char* dirname);
@@ -131,7 +121,7 @@ int APP_CC      g_remove_dir(const char* dirname);
 int APP_CC      g_file_delete(const char* filename);
 int APP_CC      g_file_get_size(const char* filename);
 int APP_CC      g_strlen(const char* text);
-char* APP_CC    g_strchr(const char* text, int c);
+const char *APP_CC g_strchr(const char *text, int c);
 char* APP_CC    g_strcpy(char* dest, const char* src);
 char* APP_CC    g_strncpy(char* dest, const char* src, int len);
 char* APP_CC    g_strcat(char* dest, const char* src);
@@ -179,8 +169,8 @@ char* APP_CC    g_getenv(const char* name);
 int APP_CC      g_exit(int exit_code);
 int APP_CC      g_getpid(void);
 int APP_CC      g_sigterm(int pid);
-int APP_CC      g_getuser_info(const char* username, int* gid, int* uid, char* shell,
-                               char* dir, char* gecos);
+int APP_CC      g_getuser_info(const char* username, int* gid, int* uid, char** shell,
+                               char** dir, char** gecos);
 int APP_CC      g_getgroup_info(const char* groupname, int* gid);
 int APP_CC      g_check_user_in_group(const char* username, int gid, int* ok);
 int APP_CC      g_time1(void);
@@ -193,5 +183,11 @@ void * APP_CC   g_shmat(int shmid);
 int APP_CC      g_shmdt(const void *shmaddr);
 int APP_CC      g_gethostname(char *name, int len);
 int APP_CC      g_mirror_memcpy(void *dst, const void *src, int len);
+
+/* glib-style wrappers */
+#define g_new(struct_type, n_structs) \
+    (struct_type *) malloc(sizeof(struct_type) * (n_structs))
+#define g_new0(struct_type, n_structs) \
+    (struct_type *) calloc((n_structs), sizeof(struct_type))
 
 #endif

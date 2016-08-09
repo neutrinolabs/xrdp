@@ -2,17 +2,17 @@ General FAQ
 
 Q.  What is RDP?
 
-A.  RDP stands for Remote Desktop Protocol.  Its the protocol used by Windows
+A.  RDP stands for Remote Desktop Protocol.  It's the protocol used by Windows
     terminal servers to talk to the terminal server clients.
 
 
 Q.  What is xrdp?
 
-A.  xrdp, usually spell lower case, is as open source implementation of the RDP
-    protocol.
+A.  xrdp, usually spelled in lower case, is as open source implementation of the
+    RDP protocol.
 
 
-Q.  I can't get it to compile in Ubuntu.  What can I do?
+Q.  I can't get xrdp to compile in Ubuntu.  What can I do?
 
 A.  See faq-compile.txt.
 
