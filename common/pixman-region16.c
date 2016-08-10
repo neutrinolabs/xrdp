@@ -27,13 +27,20 @@
    altered to compile without all of pixman */
 
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include "pixman-region.h"
 
+#if !defined(UINT32_MAX)
 #define UINT32_MAX  (4294967295U)
+#endif
+#if !defined(INT16_MIN)
 #define INT16_MIN   (-32767-1)
+#endif
+#if !defined(INT16_MAX)
 #define INT16_MAX   (32767)
+#endif
 
 #define PIXMAN_EXPORT
 #define FALSE 0
