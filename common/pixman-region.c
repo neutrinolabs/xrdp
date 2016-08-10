@@ -204,7 +204,7 @@ alloc_data (size_t n)
     if (!sz)
         return NULL;
 
-    return malloc (sz);
+    return (region_data_type_t *) malloc(sz);
 }
 
 #define FREE_DATA(reg) if ((reg)->data && (reg)->data->size) free ((reg)->data)
@@ -1703,7 +1703,7 @@ validate (region_type_t * badreg)
 
             if (ri == stack_regions)
             {
-                rit = malloc (data_size);
+                rit = (region_info_t *) malloc(data_size);
                 if (!rit)
                     goto bail;
                 memcpy (rit, ri, num_ri * sizeof (region_info_t));
