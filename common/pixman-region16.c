@@ -26,14 +26,26 @@
 /* taken from pixman 0.34
    altered to compile without all of pixman */
 
+#if defined(HAVE_CONFIG_H)
+#include "config_ac.h"
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#if defined(HAVE_STDINT_H)
+#include <stdint.h>
+#endif
 #include "pixman-region.h"
 
+#if !defined(UINT32_MAX)
 #define UINT32_MAX  (4294967295U)
+#endif
+#if !defined(INT16_MIN)
 #define INT16_MIN   (-32767-1)
+#endif
+#if !defined(INT16_MAX)
 #define INT16_MAX   (32767)
+#endif
 
 #define PIXMAN_EXPORT
 #define FALSE 0
@@ -41,8 +53,6 @@
 
 #define MIN(x1, x2) ((x1) < (x2) ? (x1) : (x2))
 #define MAX(x1, x2) ((x1) > (x2) ? (x1) : (x2))
-
-typedef int pixman_bool_t;
 
 typedef pixman_box16_t                  box_type_t;
 typedef pixman_region16_data_t          region_data_type_t;
