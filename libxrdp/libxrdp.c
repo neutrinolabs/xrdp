@@ -381,9 +381,10 @@ int EXPORT_CC
 libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
                     int bpp, char *data, int x, int y, int cx, int cy)
 {
-    int line_size = 0;
+    int line_bytes = 0;
     int i = 0;
     int j = 0;
+    int k;
     int total_lines = 0;
     int lines_sending = 0;
     int Bpp = 0;
@@ -391,22 +392,35 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
     int bufsize = 0;
     int total_bufsize = 0;
     int num_updates = 0;
+    int line_pad_bytes;
+    int server_line_bytes;
     char *p_num_updates = (char *)NULL;
     char *p = (char *)NULL;
     char *q = (char *)NULL;
     struct stream *s = (struct stream *)NULL;
     struct stream *temp_s = (struct stream *)NULL;
+    tui32 pixel;
 
     LLOGLN(10, ("libxrdp_send_bitmap: sending bitmap"));
     Bpp = (bpp + 7) / 8;
-    e = width % 4;
-
-    if (e != 0)
+    e = (4 - width) & 3;
+    switch (bpp)
     {
-        e = 4 - e;
+        case 15:
+        case 16:
+            server_line_bytes = width * 2;
+            break;
+        case 24:
+        case 32:
+            server_line_bytes = width * 4;
+            break;
+        default: /* 8 bpp */
+            server_line_bytes = width;
+            break;
     }
-
-    line_size = width * Bpp;
+    line_bytes = width * Bpp;
+    LLOGLN(10, ("libxrdp_send_bitmap: bpp %d Bpp %d line_bytes %d "
+           "server_line_bytes %d", bpp, Bpp, line_bytes, server_line_bytes));
     make_stream(s);
     init_stream(s, MAX_BITMAP_BUF_SIZE);
 
@@ -521,12 +535,14 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
         i = 0;
         p = data;
 
-        if (line_size > 0 && total_lines > 0)
+        line_pad_bytes = line_bytes + e * Bpp;
+
+        if (line_bytes > 0 && total_lines > 0)
         {
             while (i < total_lines)
             {
 
-                lines_sending = MAX_BITMAP_BUF_SIZE / (line_size + e * Bpp);
+                lines_sending = (MAX_BITMAP_BUF_SIZE - 100) / (line_pad_bytes);
 
                 if (i + lines_sending > total_lines)
                 {
@@ -535,11 +551,11 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
 
                 if (lines_sending == 0)
                 {
-                    LLOGLN(0, ("libxrdp_send_bitmap: error, lines size bigger than buff size: %d", (line_size + e * Bpp)));
+                    LLOGLN(0, ("libxrdp_send_bitmap: error, lines_sending == zero"));
                     break;
                 }
 
-                p = p + line_size * lines_sending;
+                p = p + server_line_bytes * lines_sending;
                 xrdp_rdp_init_data((struct xrdp_rdp *)session->rdp, s);
                 out_uint16_le(s, RDP_UPDATE_BITMAP);
                 out_uint16_le(s, 1); /* num updates */
@@ -551,14 +567,67 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
                 out_uint16_le(s, lines_sending);
                 out_uint16_le(s, bpp); /* bpp */
                 out_uint16_le(s, 0); /* compress */
-                out_uint16_le(s, (line_size + e * Bpp) * lines_sending); /* bufsize */
+                out_uint16_le(s, (line_bytes + e * Bpp) * lines_sending); /* bufsize */
                 q = p;
 
-                for (j = 0; j < lines_sending; j++)
+                switch (bpp)
                 {
-                    q = q - line_size;
-                    out_uint8a(s, q, line_size); /* B_ENDIAN doesn't work here, todo */
-                    out_uint8s(s, e * Bpp);
+                    case 15:
+                    case 16:
+                        for (j = 0; j < lines_sending; j++)
+                        {
+                            q = q - server_line_bytes;
+                            for (k = 0; k < width; k++)
+                            {
+                                pixel = *((tui16*)(q + k * 2));
+                                out_uint16_le(s, pixel);
+                            }
+                            for (k = 0; k < e; k++)
+                            {
+                                out_uint8s(s, 2);
+                            }
+                        }
+                        break; 
+                    case 24:
+                        for (j = 0; j < lines_sending; j++)
+                        {
+                            q = q - server_line_bytes;
+                            for (k = 0; k < width; k++)
+                            {
+                                pixel = *((tui32*)(q + k * 4));
+                                out_uint8(s, pixel);
+                                out_uint8(s, pixel >> 8);
+                                out_uint8(s, pixel >> 16);
+                            }
+                            for (k = 0; k < e; k++)
+                            {
+                                out_uint8s(s, 3);
+                            }
+                        }
+                        break;
+                    case 32:
+                        for (j = 0; j < lines_sending; j++)
+                        {
+                            q = q - server_line_bytes;
+                            for (k = 0; k < width; k++)
+                            {
+                                pixel = *((int*)(q + k * 4));
+                                out_uint32_le(s, pixel);
+                            }
+                            for (k = 0; k < e; k++)
+                            {
+                                out_uint8s(s, 4);
+                            }
+                        }
+                        break; 
+                    default: /* 8 bpp */
+                        for (j = 0; j < lines_sending; j++) 
+                        {
+                            q = q - line_bytes;
+                            out_uint8a(s, q, line_bytes);
+                            out_uint8s(s, e * Bpp);
+                        }
+                        break;
                 }
 
                 s_mark_end(s);
