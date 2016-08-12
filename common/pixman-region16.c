@@ -30,6 +30,7 @@
 #include "config_ac.h"
 #endif
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #if defined(HAVE_STDINT_H)
