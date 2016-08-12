@@ -27,7 +27,7 @@
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { g_writeln _args ; } } while (0)
 
-#define MAX_BITMAP_BUF_SIZE (16 * 1024) // 16K
+#define MAX_BITMAP_BUF_SIZE (16 * 1024) /* 16K */
 
 /******************************************************************************/
 struct xrdp_session *EXPORT_CC
@@ -419,6 +419,8 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
             break;
     }
     line_bytes = width * Bpp;
+    line_pad_bytes = line_bytes + e * Bpp;
+
     LLOGLN(10, ("libxrdp_send_bitmap: bpp %d Bpp %d line_bytes %d "
            "server_line_bytes %d", bpp, Bpp, line_bytes, server_line_bytes));
     make_stream(s);
@@ -438,6 +440,8 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
 
         while (i > 0)
         {
+             LLOGLN(10, ("libxrdp_send_bitmap: i %d", i));
+
             total_bufsize = 0;
             num_updates = 0;
             xrdp_rdp_init_data((struct xrdp_rdp *)session->rdp, s);
@@ -459,7 +463,7 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
                 p = s->p;
                 lines_sending = xrdp_bitmap_compress(data, width, height,
                                                      s, bpp,
-                                                     MAX_BITMAP_BUF_SIZE - total_bufsize,
+                                                     (MAX_BITMAP_BUF_SIZE - 100) - total_bufsize,
                                                      i - 1, temp_s, e);
 
                 if (lines_sending == 0)
@@ -500,29 +504,39 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
                     out_uint16_le(s, j); /* final size */
                 }
 
-                if (j > 32768)
+                LLOGLN(10, ("libxrdp_send_bitmap: decompressed pixels %d "
+                       "decompressed bytes %d compressed bytes %d",
+                       lines_sending * (width + e),
+                       line_pad_bytes * lines_sending, bufsize));
+
+                if (j > MAX_BITMAP_BUF_SIZE)
                 {
-                    g_writeln("error, decompressed size too big: %d bytes", j);
+                    LLOGLN(0, ("libxrdp_send_bitmap: error, decompressed "
+                           "size too big: %d bytes", j));
                 }
 
-                if (bufsize > 8192)
+                if (bufsize > MAX_BITMAP_BUF_SIZE)
                 {
-                    g_writeln("error, compressed size too big: %d bytes", bufsize);
+                    LLOGLN(0, ("libxrdp_send_bitmap: error, compressed size "
+                           "too big: %d bytes", bufsize));
                 }
 
                 s->p = s->end;
             }
             while (total_bufsize < MAX_BITMAP_BUF_SIZE && i > 0);
 
+            LLOGLN(10, ("libxrdp_send_bitmap: num_updates %d total_bufsize %d",
+                   num_updates, total_bufsize));
+
             p_num_updates[0] = num_updates;
             p_num_updates[1] = num_updates >> 8;
             xrdp_rdp_send_data((struct xrdp_rdp *)session->rdp, s,
                                RDP_DATA_PDU_UPDATE);
 
-            if (total_bufsize > 8192)
+            if (total_bufsize > MAX_BITMAP_BUF_SIZE)
             {
-                g_writeln("error, total compressed size too big: %d bytes",
-                          total_bufsize);
+                LLOGLN(0, ("libxrdp_send_bitmap: error, total compressed "
+                       "size too big: %d bytes", total_bufsize));
             }
         }
 
@@ -534,8 +548,6 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
         total_lines = height;
         i = 0;
         p = data;
-
-        line_pad_bytes = line_bytes + e * Bpp;
 
         if (line_bytes > 0 && total_lines > 0)
         {
@@ -567,7 +579,7 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
                 out_uint16_le(s, lines_sending);
                 out_uint16_le(s, bpp); /* bpp */
                 out_uint16_le(s, 0); /* compress */
-                out_uint16_le(s, (line_bytes + e * Bpp) * lines_sending); /* bufsize */
+                out_uint16_le(s, line_pad_bytes * lines_sending); /* bufsize */
                 q = p;
 
                 switch (bpp)
