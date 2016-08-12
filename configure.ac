@@ -114,7 +114,7 @@ AC_ARG_ENABLE(mp3lame, AS_HELP_STRING([--enable-mp3lame],
 AM_CONDITIONAL(XRDP_MP3LAME, [test x$enable_mp3lame = xyes])
 AC_ARG_ENABLE(pixman, AS_HELP_STRING([--enable-pixman],
               [Use pixman library (default: no)]),
-              [], [enable_pimanno])
+              [], [enable_pixman=no])
 AM_CONDITIONAL(XRDP_PIXMAN, [test x$enable_pixman = xyes])
 
 # checking for openssl

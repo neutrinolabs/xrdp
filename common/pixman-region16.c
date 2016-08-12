@@ -42,8 +42,6 @@
 #define MIN(x1, x2) ((x1) < (x2) ? (x1) : (x2))
 #define MAX(x1, x2) ((x1) > (x2) ? (x1) : (x2))
 
-typedef int pixman_bool_t;
-
 typedef pixman_box16_t                  box_type_t;
 typedef pixman_region16_data_t          region_data_type_t;
 typedef pixman_region16_t               region_type_t;
