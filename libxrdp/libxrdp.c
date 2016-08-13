@@ -461,10 +461,26 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
                 }
 
                 p = s->p;
-                lines_sending = xrdp_bitmap_compress(data, width, height,
-                                                     s, bpp,
-                                                     (MAX_BITMAP_BUF_SIZE - 100) - total_bufsize,
-                                                     i - 1, temp_s, e);
+
+                if (bpp > 24)
+                {
+                    LLOGLN(10, ("libxrdp_send_bitmap: 32 bpp"));
+                    lines_sending = xrdp_bitmap32_compress(data, width, height,
+                                                           s, 32,
+                                   (MAX_BITMAP_BUF_SIZE - 100) - total_bufsize,
+                                                           i - 1, temp_s, e, 0x10);
+                    LLOGLN(10, ("libxrdp_send_bitmap: i %d lines_sending %d",
+                           i, lines_sending));
+                }
+                else
+                {
+                    lines_sending = xrdp_bitmap_compress(data, width, height,
+                                                         s, bpp,
+                                 (MAX_BITMAP_BUF_SIZE - 100) - total_bufsize,
+                                                         i - 1, temp_s, e);
+                    LLOGLN(10, ("libxrdp_send_bitmap: i %d lines_sending %d",
+                           i, lines_sending));
+                }
 
                 if (lines_sending == 0)
                 {
@@ -491,6 +507,7 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
                     out_uint16_le(s, bufsize); /* compressed size */
                     j = (width + e) * Bpp;
                     j = j * lines_sending;
+                    total_bufsize += 18;
                 }
                 else
                 {
@@ -502,6 +519,7 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
                     out_uint16_le(s, j); /* line size */
                     j = j * lines_sending;
                     out_uint16_le(s, j); /* final size */
+                    total_bufsize += 26;
                 }
 
                 LLOGLN(10, ("libxrdp_send_bitmap: decompressed pixels %d "

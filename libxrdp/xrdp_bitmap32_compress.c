@@ -107,7 +107,7 @@ fsplit3(char *in_data, int start_line, int width, int e,
         }
         start_line--;
         cy++;
-        if (out_index > 64 * 64)
+        if (out_index + width + e > 64 * 64)
         {
             break;
         }
@@ -195,7 +195,7 @@ fsplit4(char *in_data, int start_line, int width, int e,
         }
         start_line--;
         cy++;
-        if (out_index > 64 * 64)
+        if (out_index + width + e > 64 * 64)
         {
             break;
         }
@@ -422,6 +422,7 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
     char *sr_data;
     char *sg_data;
     char *sb_data;
+    char *hold_p;
     int a_bytes;
     int r_bytes;
     int g_bytes;
@@ -449,6 +450,7 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
     r_data = a_data + max_bytes;
     g_data = r_data + max_bytes;
     b_data = g_data + max_bytes;
+    hold_p = s->p;
 
     if (header & FLAGS_NOALPHA)
     {
@@ -467,7 +469,7 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
             if (1 + total_bytes > byte_limit)
             {
                 /* failed */
-                LLOGLN(0, ("xrdp_bitmap32_compress: too big, rgb "
+                LLOGLN(10, ("xrdp_bitmap32_compress: too big, rgb "
                        "bytes %d %d %d total_bytes %d cx %d cy %d "
                        "byte_limit %d", r_bytes, g_bytes, b_bytes,
                        total_bytes, cx, cy, byte_limit));
@@ -481,7 +483,7 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
                        "bytes %d %d %d total_bytes %d cx %d cy %d "
                        "max_bytes %d", r_bytes, g_bytes, b_bytes,
                        total_bytes, cx, cy, max_bytes));
-                init_stream(s, 0);
+                s->p = hold_p;
                 foutraw3(s, cx * cy, FLAGS_NOALPHA, sr_data, sg_data, sb_data);
             }
         }
@@ -510,7 +512,7 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
             if (1 + total_bytes > byte_limit)
             {
                 /* failed */
-                LLOGLN(0, ("xrdp_bitmap32_compress: too big, argb "
+                LLOGLN(10, ("xrdp_bitmap32_compress: too big, argb "
                        "bytes %d %d %d %d total_bytes %d cx %d cy %d "
                        "byte_limit %d", a_bytes, r_bytes, g_bytes, b_bytes,
                        total_bytes, cx, cy, byte_limit));
@@ -523,7 +525,7 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
                        "bytes %d %d %d %d total_bytes %d cx %d cy %d "
                        "max_bytes %d", a_bytes, r_bytes, g_bytes, b_bytes,
                        total_bytes, cx, cy, max_bytes));
-                init_stream(s, 0);
+                s->p = hold_p;
                 foutraw4(s, cx * cy, 0, sa_data, sr_data, sg_data, sb_data);
             }
         }
