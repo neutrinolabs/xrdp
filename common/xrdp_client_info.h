@@ -143,6 +143,8 @@ struct xrdp_client_info
   int use_frame_acks;
   int max_unacknowledged_frame_count;
 
+  int no_orders_supported;
+
 };
 
 #endif
