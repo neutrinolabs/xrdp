@@ -160,6 +160,15 @@ xrdp_caps_process_order(struct xrdp_rdp *self, struct stream *s,
     DEBUG(("desktop cache size %d", i));
     in_uint8s(s, 4); /* Unknown */
     in_uint8s(s, 4); /* Unknown */
+
+    /* check if libpainter should be used for drawing, instead of orders */
+    if (!(order_caps[TS_NEG_DSTBLT_INDEX] && order_caps[TS_NEG_PATBLT_INDEX] &&
+          order_caps[TS_NEG_SCRBLT_INDEX] && order_caps[TS_NEG_MEMBLT_INDEX]))
+    {
+        g_writeln("xrdp_caps_process_order: not enough orders supported by client, using painter.");
+        self->client_info.no_orders_supported = 1;
+    }
+
     return 0;
 }
 

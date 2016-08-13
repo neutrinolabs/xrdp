@@ -157,8 +157,9 @@ xrdp_painter_create(struct xrdp_wm *wm, struct xrdp_session *session)
     self->rop = 0xcc; /* copy will use 0xcc */
     self->clip_children = 1;
 
-    //if (1 || painter_create(&(self->painter)) != PT_ERROR_NONE)
-    if (painter_create(&(self->painter)) != PT_ERROR_NONE)
+
+    if (self->session->client_info->no_orders_supported &&
+        painter_create(&(self->painter)) != PT_ERROR_NONE)
     {
         self->painter = 0;
         LLOGLN(0, ("xrdp_painter_create: painter_create failed"));

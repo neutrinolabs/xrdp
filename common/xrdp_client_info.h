@@ -148,6 +148,8 @@ struct xrdp_client_info
 
   int client_os_major;
   int client_os_minor;
+
+  int no_orders_supported;
 };
 
 #endif
