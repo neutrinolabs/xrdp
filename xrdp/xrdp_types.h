@@ -430,14 +430,8 @@ struct xrdp_painter
   struct xrdp_wm* wm; /* owner */
   struct xrdp_font* font;
   void *painter;
-
-  int x1;
-  int y1;
-  int x2;
-  int y2;
-
+  struct xrdp_region *dirty_region;
   int begin_end_level;
-
 };
 
 /* window or bitmap */
