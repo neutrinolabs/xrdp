@@ -692,6 +692,17 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
         s->p = p + len + 4;
     }
 
+    if (self->client_info.no_orders_supported &&
+        (self->client_info.offscreen_support_level != 0))
+    {
+        g_writeln("xrdp_caps_process_confirm_active: not enough orders "
+                  "supported by client, client wants off screen bitmap but "
+                  "offscreen bitmaps disabled");
+        self->client_info.offscreen_support_level = 0;
+        self->client_info.offscreen_cache_size = 0;
+        self->client_info.offscreen_cache_entries = 0;
+    }
+
     DEBUG(("out xrdp_caps_process_confirm_active"));
     return 0;
 }
