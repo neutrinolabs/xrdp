@@ -1136,7 +1136,7 @@ xrdp_painter_copy(struct xrdp_painter *self,
             src_pb.height = src->height;
             src_pb.data = src->data;
 
-            xrdp_bitmap_get_screen_clip(dst, self, &clip_rect, &dx, &dy); 
+            xrdp_bitmap_get_screen_clip(dst, self, &clip_rect, &dx, &dy);
             region = xrdp_region_create(self->wm);
             xrdp_wm_get_vis_region(self->wm, dst, x, y, cx, cy, region,
                                    self->clip_children);
@@ -1178,45 +1178,37 @@ xrdp_painter_copy(struct xrdp_painter *self,
 
     if (src->type == WND_TYPE_SCREEN)
     {
-        if (src == dst)
+        xrdp_bitmap_get_screen_clip(dst, self, &clip_rect, &dx, &dy);
+        region = xrdp_region_create(self->wm);
+
+        if (dst->type != WND_TYPE_OFFSCREEN)
         {
-            libxrdp_orders_screen_blt(self->session, x, y, cx, cy,
-                                      srcx, srcy, self->rop, 0);
+            xrdp_wm_get_vis_region(self->wm, dst, x, y, cx, cy,
+                                   region, self->clip_children);
         }
         else
         {
-            xrdp_bitmap_get_screen_clip(dst, self, &clip_rect, &dx, &dy); 
-            region = xrdp_region_create(self->wm);
-
-            if (dst->type != WND_TYPE_OFFSCREEN)
-            {
-                xrdp_wm_get_vis_region(self->wm, dst, x, y, cx, cy,
-                                       region, self->clip_children);
-            }
-            else
-            {
-                xrdp_region_add_rect(region, &clip_rect);
-            }
-
-            x += dx;
-            y += dy;
-            srcx += dx;
-            srcy += dy;
-            k = 0;
-
-            while (xrdp_region_get_rect(region, k, &rect1) == 0)
-            {
-                if (rect_intersect(&rect1, &clip_rect, &draw_rect))
-                {
-                    libxrdp_orders_screen_blt(self->session, x, y, cx, cy,
-                                              srcx, srcy, self->rop, &draw_rect);
-                }
-
-                k++;
-            }
-
-            xrdp_region_delete(region);
+            xrdp_region_add_rect(region, &clip_rect);
         }
+
+        x += dx;
+        y += dy;
+        srcx += dx;
+        srcy += dy;
+        k = 0;
+
+        while (xrdp_region_get_rect(region, k, &rect1) == 0)
+        {
+            if (rect_intersect(&rect1, &clip_rect, &draw_rect))
+            {
+                libxrdp_orders_screen_blt(self->session, x, y, cx, cy,
+                                          srcx, srcy, self->rop, &draw_rect);
+            }
+
+            k++;
+        }
+
+        xrdp_region_delete(region);
     }
     else if (src->type == WND_TYPE_OFFSCREEN)
     {
