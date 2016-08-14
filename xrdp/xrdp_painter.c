@@ -41,27 +41,16 @@ xrdp_painter_add_dirty_rect(struct xrdp_painter *self, int x, int y,
 {
     int x2;
     int y2;
+    struct xrdp_rect rect;
 
     if (clip_rect != 0)
     {
         x2 = x + cx;
         y2 = y + cy;
-        if (x < clip_rect->left)
-        {
-            x = clip_rect->left;
-        }
-        if (y < clip_rect->top)
-        {
-            y = clip_rect->top;
-        }
-        if (x2 > clip_rect->right)
-        {
-            x2 = clip_rect->right;
-        }
-        if (y2 > clip_rect->bottom)
-        {
-            y2 = clip_rect->bottom;
-        }
+        x = MAX(x, clip_rect->left);
+        y = MAX(y, clip_rect->top);
+        x2 = MIN(x2, clip_rect->right);
+        y2 = MIN(y2, clip_rect->bottom);
         cx = x2 - x;
         cy = y2 - y;
     }
@@ -69,26 +58,13 @@ xrdp_painter_add_dirty_rect(struct xrdp_painter *self, int x, int y,
     {
         return 0;
     }
-    x2 = x + cx;
-    y2 = y + cy;
-    if ((self->x2 - self->x1 < 1) || (self->y2 - self->y1 < 1))
-    {
-        self->x1 = x;
-        self->y1 = y;
-        self->x2 = x + cx;
-        self->y2 = y + cy;
-    }
-    else
-    {
-        self->x1 = MIN(x, self->x1);
-        self->y1 = MIN(y, self->y1);
-        self->x2 = MAX(x2, self->x2);
-        self->y2 = MAX(y2, self->y2);
-    }
-
-    LLOGLN(10, ("xrdp_painter_add_dirty_rect: x1 %d y1 %d x2 %d y2 %d",
-           self->x1, self->y1, self->x2, self->y2));
-
+    rect.left = x;
+    rect.top = y;
+    rect.right = x + cx;
+    rect.bottom = y + cy;
+    xrdp_region_add_rect(self->dirty_region, &rect);
+    LLOGLN(10, ("xrdp_painter_add_dirty_rect: x %d y %d cx %d cy %d",
+           x, y, cx, cy));
     return 0;
 }
 
@@ -101,31 +77,36 @@ xrdp_painter_send_dirty(struct xrdp_painter *self)
     int bpp;
     int Bpp;
     int index;
+    int jndex;
+    int error;
     char *ldata;
     char *src;
     char *dst;
+    struct xrdp_rect rect;
 
     LLOGLN(10, ("xrdp_painter_send_dirty:"));
-    cx = self->x2 - self->x1;
-    cy = self->y2 - self->y1;
-    LLOGLN(10, ("xrdp_painter_send_dirty: x %d y %d cx %d cy %d",
-               self->x1, self->y1, cx, cy));
-    if ((cx > 0) && (cy > 0))
+
+    bpp = self->wm->screen->bpp;
+    Bpp = (bpp + 7) / 8;
+    if (Bpp == 3)
     {
-        bpp = self->wm->screen->bpp;
-        Bpp = (bpp + 7) / 8;
-        if (Bpp == 3)
-        {
-            Bpp = 4;
-        }
+        Bpp = 4;
+    }
+
+    jndex = 0;
+    error = xrdp_region_get_rect(self->dirty_region, jndex, &rect);
+    while (error == 0)
+    {
+        cx = rect.right - rect.left;
+        cy = rect.bottom - rect.top;
         ldata = (char *)g_malloc(cx * cy * Bpp, 0);
         if (ldata == 0)
         {
             return 1;
         }
         src = self->wm->screen->data;
-        src += self->wm->screen->line_size * self->y1;
-        src += self->x1 * Bpp;
+        src += self->wm->screen->line_size * rect.top;
+        src += rect.left * Bpp;
         dst = ldata;
         for (index = 0; index < cy; index++)
         {
@@ -133,14 +114,19 @@ xrdp_painter_send_dirty(struct xrdp_painter *self)
             src += self->wm->screen->line_size;
             dst += cx * Bpp;
         }
+        LLOGLN(10, ("xrdp_painter_send_dirty: x %d y %d cx %d cy %d",
+               rect.left, rect.top, cx, cy));
         libxrdp_send_bitmap(self->session, cx, cy, bpp,
-                            ldata, self->x1, self->y1, cx, cy);
+                            ldata, rect.left, rect.top, cx, cy);
         g_free(ldata);
+
+        jndex++;
+        error = xrdp_region_get_rect(self->dirty_region, jndex, &rect);
     }
-    self->x1 = 0;
-    self->y1 = 0;
-    self->x2 = 0;
-    self->y2 = 0;
+
+    xrdp_region_delete(self->dirty_region);
+    self->dirty_region = xrdp_region_create(self->wm);
+
     return 0;
 }
 
@@ -158,11 +144,18 @@ xrdp_painter_create(struct xrdp_wm *wm, struct xrdp_session *session)
     self->clip_children = 1;
 
 
-    if (self->session->client_info->no_orders_supported &&
-        painter_create(&(self->painter)) != PT_ERROR_NONE)
+    if (self->session->client_info->no_orders_supported)
     {
-        self->painter = 0;
-        LLOGLN(0, ("xrdp_painter_create: painter_create failed"));
+        if (painter_create(&(self->painter)) != PT_ERROR_NONE)
+        {
+            self->painter = 0;
+            LLOGLN(0, ("xrdp_painter_create: painter_create failed"));
+        }
+        else
+        {
+            LLOGLN(10, ("xrdp_painter_create: painter_create success"));
+        }
+        self->dirty_region = xrdp_region_create(wm);
     }
 
     return self;
@@ -179,6 +172,7 @@ xrdp_painter_delete(struct xrdp_painter *self)
     }
 
     painter_delete(self->painter);
+    xrdp_region_delete(self->dirty_region);
 
     g_free(self);
 }
