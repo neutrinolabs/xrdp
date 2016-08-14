@@ -432,8 +432,10 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
     int max_bytes;
     int total_bytes;
     int header;
+    int out_raw;
 
     LLOGLN(10, ("xrdp_bitmap32_compress:"));
+    out_raw = 0;
     max_bytes = 4 * 1024;
     /* need max 8, 4K planes for work */
     if (max_bytes * 8 > temp_s->size)
@@ -465,6 +467,7 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
             r_bytes = fpack(r_data, cx, cy, s);
             g_bytes = fpack(g_data, cx, cy, s);
             b_bytes = fpack(b_data, cx, cy, s);
+            max_bytes = cx * cy * 3;
             total_bytes = r_bytes + g_bytes + b_bytes;
             if (1 + total_bytes > byte_limit)
             {
@@ -473,22 +476,25 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
                        "bytes %d %d %d total_bytes %d cx %d cy %d "
                        "byte_limit %d", r_bytes, g_bytes, b_bytes,
                        total_bytes, cx, cy, byte_limit));
-                return 0;
+                if (2 + max_bytes > byte_limit)
+                {
+                    /* nothing we can do */
+                    return 0;
+                }
+                out_raw = 1;
             }
-            max_bytes = cx * cy * 3;
             if (total_bytes > max_bytes)
             {
-                /* raw is better */
-                LLOGLN(10, ("xrdp_bitmap32_compress: too big, rgb "
-                       "bytes %d %d %d total_bytes %d cx %d cy %d "
-                       "max_bytes %d", r_bytes, g_bytes, b_bytes,
-                       total_bytes, cx, cy, max_bytes));
-                s->p = hold_p;
-                foutraw3(s, cx * cy, FLAGS_NOALPHA, sr_data, sg_data, sb_data);
+                out_raw = 1;
             }
         }
         else
         {
+            out_raw = 1;
+        }
+        if (out_raw)
+        {
+            s->p = hold_p;
             foutraw3(s, cx * cy, FLAGS_NOALPHA, sr_data, sg_data, sb_data);
         }
     }
@@ -516,21 +522,25 @@ xrdp_bitmap32_compress(char *in_data, int width, int height,
                        "bytes %d %d %d %d total_bytes %d cx %d cy %d "
                        "byte_limit %d", a_bytes, r_bytes, g_bytes, b_bytes,
                        total_bytes, cx, cy, byte_limit));
-                return 0;
+                if (2 + max_bytes > byte_limit)
+                {
+                    /* nothing we can do */
+                    return 0;
+                }
+                out_raw = 1;
             }
             if (total_bytes > max_bytes)
             {
-                /* raw is better */
-                LLOGLN(10, ("xrdp_bitmap32_compress: too big, argb "
-                       "bytes %d %d %d %d total_bytes %d cx %d cy %d "
-                       "max_bytes %d", a_bytes, r_bytes, g_bytes, b_bytes,
-                       total_bytes, cx, cy, max_bytes));
-                s->p = hold_p;
-                foutraw4(s, cx * cy, 0, sa_data, sr_data, sg_data, sb_data);
+                out_raw = 1;
             }
         }
         else
         {
+            out_raw = 1;
+        }
+        if (out_raw)
+        {
+            s->p = hold_p;
             foutraw4(s, cx * cy, 0, sa_data, sr_data, sg_data, sb_data);
         }
     }
