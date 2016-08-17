@@ -19,6 +19,10 @@
 #if !defined(__PAINTER_H)
 #define __PAINTER_H
 
+#define LIBPAINTER_VERSION_MAJOR 0
+#define LIBPAINTER_VERSION_MINOR 1
+#define LIBPAINTER_VERSION_MICRO 0
+
 #define PT_FORMAT_a8b8g8r8 \
 ((32 << 24) | (3 << 16) | (8 << 12) | (8 << 8) | (8 << 4) | 8)
 #define PT_FORMAT_a8r8g8b8 \
@@ -105,5 +109,7 @@ painter_copy(void *handle, struct painter_bitmap *dst,
 int
 painter_line(void *handle, struct painter_bitmap *dst,
              int x1, int y1, int x2, int y2, int width, int flags);
+int
+painter_get_version(int *major, int *minor, int *micro);
 
 #endif

@@ -426,3 +426,13 @@ painter_line(void *handle, struct painter_bitmap *dst,
     return PT_ERROR_NONE;
 }
 
+/*****************************************************************************/
+int
+painter_get_version(int *major, int *minor, int *micro)
+{
+    *major = LIBPAINTER_VERSION_MAJOR;
+    *minor = LIBPAINTER_VERSION_MINOR;
+    *micro = LIBPAINTER_VERSION_MICRO;
+    return 0;
+}
+

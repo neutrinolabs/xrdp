@@ -8,6 +8,9 @@ AC_PROG_CC
 AC_C_CONST
 AC_PROG_LIBTOOL
 
+# Use silent rules by default if supported by Automake
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
+
 AM_CONDITIONAL(GOT_PREFIX, test "x${prefix}" != "xNONE"])
 
 if test "x${prefix}" = "xNONE" ; then
