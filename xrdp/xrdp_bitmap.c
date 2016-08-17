@@ -471,7 +471,7 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
         /* read bmp header */
         if (g_file_seek(fd, 14) < 0)
         {
-            log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s\n",
+            log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s",
                 filename);
             free_stream(s);
             g_file_close(fd);
@@ -505,7 +505,7 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
         {
             if (g_file_seek(fd, 14 + header.size) < 0)
             {
-                log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s\n",
+                log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s",
                     filename);
             }
             xrdp_bitmap_resize(self, header.image_width, header.image_height);
@@ -562,7 +562,7 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
             /* read palette */
             if (g_file_seek(fd, 14 + header.size) < 0)
             {
-                log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s\n",
+                log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s",
                     filename);
             }
             init_stream(s, 8192);
@@ -623,7 +623,7 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
             /* read palette */
             if (g_file_seek(fd, 14 + header.size) < 0)
             {
-                log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s\n",
+                log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s",
                     filename);
             }
             init_stream(s, 8192);

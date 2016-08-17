@@ -189,8 +189,8 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
                 /* default certificate path */
                 g_snprintf(client_info->certificate, 1023, "%s/cert.pem", XRDP_CFG_PATH);
                 log_message(LOG_LEVEL_INFO,
-                            "Missing definition of X.509 certificate, use "
-                            "default instead: %s", client_info->certificate);
+                            "Using default X.509 certificate: %s",
+                            client_info->certificate);
 
             }
             else if (value[0] != '/')
@@ -198,7 +198,7 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
                 /* default certificate path */
                 g_snprintf(client_info->certificate, 1023, "%s/cert.pem", XRDP_CFG_PATH);
                 log_message(LOG_LEVEL_WARNING,
-                            "No absolute path to X.509 certificate, use "
+                            "X.509 certificate should use absolute path, using "
                             "default instead: %s", client_info->certificate);
             }
             else
@@ -214,16 +214,15 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
             {
                 /* default key_file path */
                 g_snprintf(client_info->key_file, 1023, "%s/key.pem", XRDP_CFG_PATH);
-                log_message(LOG_LEVEL_INFO,
-                            "Missing definition of X.509 key file, use "
-                            "default instead: %s", client_info->key_file);
+                log_message(LOG_LEVEL_INFO, "Using default X.509 key file: %s",
+                            client_info->key_file);
             }
             else if (value[0] != '/')
             {
                 /* default key_file path */
                 g_snprintf(client_info->key_file, 1023, "%s/key.pem", XRDP_CFG_PATH);
                 log_message(LOG_LEVEL_WARNING,
-                            "No absolute path to X.509 key file, use"
+                            "X.509 key file should use absolute path, using "
                             "default instead: %s", client_info->key_file);
             }
             else
