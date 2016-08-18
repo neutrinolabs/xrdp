@@ -116,6 +116,11 @@ AC_ARG_ENABLE(pixman, AS_HELP_STRING([--enable-pixman],
               [Use pixman library (default: no)]),
               [], [enable_pixman=no])
 AM_CONDITIONAL(XRDP_PIXMAN, [test x$enable_pixman = xyes])
+AM_CONDITIONAL(XRDP_PAINTER, [test x$enable_painter = xyes])
+AC_ARG_ENABLE(painter, AS_HELP_STRING([--enable-painter],
+              [Use painter library (default: yes)]),
+              [], [enable_painter=yes])
+AM_CONDITIONAL(XRDP_PAINTER, [test x$enable_painter = xyes])
 
 # checking for openssl
 AC_CHECK_HEADER([openssl/rc4.h], [],

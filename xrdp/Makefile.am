@@ -14,11 +14,11 @@ EXTRA_INCLUDES += -I$(top_srcdir)/librfxcodec/include
 EXTRA_LIBS += $(top_srcdir)/librfxcodec/src/librfxencode.a
 endif
 
-#if XRDP_LIBPAINTER
-EXTRA_DEFINES += -DXRDP_LIBPAINTER
-EXTRA_INCLUDES += -I$(top_srcdir)/libpainter/include
-EXTRA_LIBS += $(top_srcdir)/libpainter/src/libpainter.la
-#endif
+if XRDP_PAINTER
+EXTRA_DEFINES += -DXRDP_PAINTER
+EXTRA_INCLUDES +=
+EXTRA_LIBS += $(libdir)/libpainter.la
+endif
 
 if XRDP_PIXMAN
 EXTRA_DEFINES += -DXRDP_PIXMAN
