@@ -22,17 +22,16 @@ AM_CPPFLAGS += -I$(top_srcdir)/librfxcodec/include
 XRDP_EXTRA_LIBS += $(top_srcdir)/librfxcodec/src/.libs/librfxencode.a
 endif
 
+if XRDP_PAINTER
+AM_CPPFLAGS += -DXRDP_PAINTER
+XRDP_EXTRA_LIBS += $(libdir)/libpainter.la
+endif
+
 if XRDP_PIXMAN
 AM_CPPFLAGS += -DXRDP_PIXMAN
 AM_CPPFLAGS += $(PIXMAN_CFLAGS)
 XRDP_EXTRA_LIBS += $(PIXMAN_LIBS)
 endif
-
-#if XRDP_LIBPAINTER
-AM_CPPFLAGS += -DXRDP_LIBPAINTER
-AM_CPPFLAGS += -I$(top_srcdir)/libpainter/include
-XRDP_EXTRA_LIBS += $(top_srcdir)/libpainter/src/libpainter.la
-#endif
 
 sbin_PROGRAMS = \
   xrdp
