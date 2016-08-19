@@ -590,18 +590,21 @@ ssl_tls_print_error(const char *func, SSL *connection, int value)
 
 /*****************************************************************************/
 int APP_CC
-ssl_tls_accept(struct ssl_tls *self)
+ssl_tls_accept(struct ssl_tls *self,int disableSSLv3,char tls_ciphers[])
 {
     int connection_status;
     long options = 0;
 
     /**
-     * SSL_OP_NO_SSLv2:
-     *
-     * We only want SSLv3 and TLSv1, so disable SSLv2.
+     * SSL_OP_NO_SSLv2
      * SSLv3 is used by, eg. Microsoft RDC for Mac OS X.
+     * No SSLv3 if disableSSLv3=yes so only tls used
      */
-    options |= SSL_OP_NO_SSLv2;
+     if (disableSSLv3==1) {
+	options |= SSL_OP_NO_SSLv3;
+     } else {
+	options |= SSL_OP_NO_SSLv2;
+     }
 
 #if defined(SSL_OP_NO_COMPRESSION)
     /**
@@ -638,6 +641,14 @@ ssl_tls_accept(struct ssl_tls *self)
                      SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER |
                      SSL_MODE_ENABLE_PARTIAL_WRITE);
     SSL_CTX_set_options(self->ctx, options);
+
+    if (strlen(tls_ciphers)>1) {
+	if (SSL_CTX_set_cipher_list(self->ctx, tls_ciphers)==0) {
+	    g_writeln("ssl_tls_accept: invalid cipher options");
+            return 1;
+	}
+    }
+
     SSL_CTX_set_read_ahead(self->ctx, 1);
 
     if (self->ctx == NULL)
@@ -677,6 +688,7 @@ ssl_tls_accept(struct ssl_tls *self)
         connection_status = SSL_accept(self->ssl);
 
         if (connection_status <= 0)
+
         {
             if (ssl_tls_print_error("SSL_accept", self->ssl, connection_status))
             {

@@ -881,7 +881,7 @@ trans_get_out_s(struct trans *self, int size)
 /*****************************************************************************/
 /* returns error */
 int APP_CC
-trans_set_tls_mode(struct trans *self, const char *key, const char *cert)
+trans_set_tls_mode(struct trans *self, const char *key, const char *cert,int disableSSLv3,char tls_ciphers[64])
 {
     self->tls = ssl_tls_create(self, key, cert);
     if (self->tls == NULL)
@@ -890,7 +890,7 @@ trans_set_tls_mode(struct trans *self, const char *key, const char *cert)
         return 1;
     }
 
-    if (ssl_tls_accept(self->tls) != 0)
+    if (ssl_tls_accept(self->tls,disableSSLv3,tls_ciphers) != 0)
     {
         g_writeln("trans_set_tls_mode: ssl_tls_accept failed");
         return 1;
