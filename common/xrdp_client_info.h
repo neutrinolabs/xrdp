@@ -107,6 +107,8 @@ struct xrdp_client_info
   char client_port[256];
 
   int security_layer; /* 0 = rdp, 1 = tls , 2 = hybrid */
+  int disableSSLv3; /* 0 = no, 1 = yes */
+  char tls_ciphers[64];
   int multimon; /* 0 = deny , 1 = allow */
   int monitorCount; /* number of monitors detected (max = 16) */
   struct monitor_info minfo[16]; /* client monitor data */
