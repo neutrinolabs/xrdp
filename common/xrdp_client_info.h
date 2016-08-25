@@ -143,6 +143,8 @@ struct xrdp_client_info
   int use_frame_acks;
   int max_unacknowledged_frame_count;
 
+  int disableSSLv3; /* 0 = no, 1 = yes */
+  char tls_ciphers[64];
 };
 
 #endif

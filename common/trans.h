@@ -122,7 +122,8 @@ trans_get_in_s(struct trans* self);
 struct stream* APP_CC
 trans_get_out_s(struct trans* self, int size);
 int APP_CC
-trans_set_tls_mode(struct trans *self, const char *key, const char *cert);
+trans_set_tls_mode(struct trans *self, const char *key, const char *cert,
+                   int disableSSLv3, const char *tls_ciphers);
 int APP_CC
 trans_shutdown_tls_mode(struct trans *self);
 int APP_CC

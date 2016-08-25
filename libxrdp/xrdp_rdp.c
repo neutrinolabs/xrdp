@@ -160,6 +160,14 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
                 client_info->use_fast_path = 0;
             }
         }
+        else if (g_strcasecmp(item, "disableSSLv3") == 0)
+        {
+            client_info->disableSSLv3 = g_text2bool(value);
+        }
+        else if (g_strcasecmp(item, "tls_ciphers") == 0)
+        {
+            g_strcpy(client_info->tls_ciphers, value);
+        }
         else if (g_strcasecmp(item, "security_layer") == 0)
         {
             if (g_strcasecmp(value, "rdp") == 0)

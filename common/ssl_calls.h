@@ -96,7 +96,8 @@ struct ssl_tls
 struct ssl_tls *APP_CC
 ssl_tls_create(struct trans *trans, const char *key, const char *cert);
 int APP_CC
-ssl_tls_accept(struct ssl_tls *self);
+ssl_tls_accept(struct ssl_tls *self, int disableSSLv3,
+               const char *tls_ciphers);
 int APP_CC
 ssl_tls_disconnect(struct ssl_tls *self);
 void APP_CC
