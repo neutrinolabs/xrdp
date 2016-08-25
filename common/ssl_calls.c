@@ -601,13 +601,10 @@ ssl_tls_accept(struct ssl_tls *self, int disableSSLv3,
      * SSLv3 is used by, eg. Microsoft RDC for Mac OS X.
      * No SSLv3 if disableSSLv3=yes so only tls used
      */
+    options |= SSL_OP_NO_SSLv2;
     if (disableSSLv3)
     {
         options |= SSL_OP_NO_SSLv3;
-    }
-    else
-    {
-        options |= SSL_OP_NO_SSLv2;
     }
 
 #if defined(SSL_OP_NO_COMPRESSION)
