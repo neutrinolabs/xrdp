@@ -2334,20 +2334,19 @@ xrdp_orders_send_bitmap(struct xrdp_orders *self,
     if (bpp > 24)
     {
         lines_sending = xrdp_bitmap32_compress(data, width, height, s,
-                                               bpp, 16384,
+                                               bpp, MAX_ORDERS_SIZE,
                                                i - 1, temp_s, e, 0x10);
     }
     else
     {
-        lines_sending = xrdp_bitmap_compress(data, width, height, s, bpp, 16384,
+        lines_sending = xrdp_bitmap_compress(data, width, height, s,
+                                             bpp, MAX_ORDERS_SIZE,
                                              i - 1, temp_s, e);
     }
 
     if (lines_sending != height)
     {
-        g_writeln("error in xrdp_orders_send_bitmap, lines_sending(%d) != \
-height(%d)", lines_sending, height);
-        return 1;
+        height = lines_sending;
     }
 
     bufsize = (int)(s->p - p);
@@ -2599,20 +2598,19 @@ xrdp_orders_send_bitmap2(struct xrdp_orders *self,
     if (bpp > 24)
     {
         lines_sending = xrdp_bitmap32_compress(data, width, height, s,
-                                               bpp, 16384,
+                                               bpp, MAX_ORDERS_SIZE,
                                                i - 1, temp_s, e, 0x10);
     }
     else
     {
-        lines_sending = xrdp_bitmap_compress(data, width, height, s, bpp, 16384,
+        lines_sending = xrdp_bitmap_compress(data, width, height, s,
+                                             bpp, MAX_ORDERS_SIZE,
                                              i - 1, temp_s, e);
     }
 
     if (lines_sending != height)
     {
-        g_writeln("error in xrdp_orders_send_bitmap2, lines_sending(%d) != \
-height(%d)", lines_sending, height);
-        return 1;
+        height = lines_sending;
     }
 
     bufsize = (int)(s->p - p);
