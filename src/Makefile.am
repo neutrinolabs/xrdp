@@ -6,7 +6,7 @@ EXTRA_PAINTER_LIBS =
 EXTRA_PAINTER_FLAGS =
 
 AM_CFLAGS = \
-  -I../include \
+  -I$(top_srcdir)/include \
   $(EXTRA_PAINTER_FLAGS)
 
 lib_LTLIBRARIES = libpainter.la
@@ -15,7 +15,7 @@ libpainter_la_LDFLAGS =
 
 libpainter_ladir = $(moduledir)
 
-libpainter_la_SOURCES = painter.c painter_utils.c
+libpainter_la_SOURCES = painter.c painter_utils.c painter_utils.h
 
 libpainter_la_LIBADD =
 
