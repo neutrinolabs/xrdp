@@ -165,7 +165,7 @@ painter_fill_rect(void *handle, struct painter_bitmap *dst,
                     dst32 = (int *) bitmap_get_ptr(dst, x, y + jndex);
                     if (dst32 != NULL)
                     {
-                        for (index = 0; index < cx; index++) 
+                        for (index = 0; index < cx; index++)
                         {
                             *(dst32++) = pt->fgcolor;
                         }
@@ -180,7 +180,7 @@ painter_fill_rect(void *handle, struct painter_bitmap *dst,
                     dst16 = (short *) bitmap_get_ptr(dst, x, y + jndex);
                     if (dst16 != NULL)
                     {
-                        for (index = 0; index < cx; index++) 
+                        for (index = 0; index < cx; index++)
                         {
                             *(dst16++) = pt->fgcolor;
                         }
