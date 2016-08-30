@@ -338,6 +338,15 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
                             g_strncpy(client_info->variant, value, bytes - 1);
                         }
                     }
+                    else if (g_strcasecmp(item, "options") == 0)
+                    {
+                        if (section_found != -1 && section_found == index)
+                        {
+                            bytes = sizeof(client_info->options);
+                            g_memset(client_info->options, 0, bytes);
+                            g_strncpy(client_info->options, value, bytes - 1);
+                        }
+                    }
                     else
                     {
                         /*
