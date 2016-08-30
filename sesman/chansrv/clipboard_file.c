@@ -200,6 +200,7 @@ clipboard_get_file(char* file, int bytes)
     }
     g_memcpy(filename, file + pindex + 1, (bytes - 1) - pindex);
     /* this should replace %20 with space */
+    clipboard_check_file(pathname);
     clipboard_check_file(filename);
     g_snprintf(full_fn, 255, "%s/%s", pathname, filename);
     if (g_directory_exist(full_fn))
