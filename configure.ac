@@ -16,6 +16,7 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AX_CFLAGS_WARN_ALL
 AX_APPEND_COMPILE_FLAGS([-Wwrite-strings])
 AX_GCC_FUNC_ATTRIBUTE([format])
+AX_TYPE_SOCKLEN_T
 
 case $host_os in
 	*linux*)
