@@ -422,8 +422,8 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
         list_delete(values);
 
         LLOGLN(0, ("xrdp_load_keyboard_layout: model [%s] variant [%s] "
-               "layout [%s]", client_info->model, client_info->variant,
-               client_info->layout));
+               "layout [%s] options [%s]", client_info->model,
+               client_info->variant, client_info->layout, client_info->options));
         g_file_close(fd);
     }
     else
