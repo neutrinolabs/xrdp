@@ -325,6 +325,10 @@ rdpLoadLayout(struct xrdp_client_info *client_info)
     {
         set.layout = client_info->layout;
     }
+    if (strlen(client_info->options) > 0)
+    {
+        set.options = client_info->options;
+    }
 
  retry:
     /* free some stuff so we can call InitKeyboardDeviceStruct again */
