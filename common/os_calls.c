@@ -662,19 +662,85 @@ g_sck_get_peer_cred(int sck, int *pid, int *uid, int *gid)
 void APP_CC
 g_sck_close(int sck)
 {
-    char ip[256];
-
-    if (sck == 0)
-    {
-        return;
-    }
 #if defined(_WIN32)
     closesocket(sck);
 #else
-    g_write_ip_address(sck, ip, 255);
-    log_message(LOG_LEVEL_INFO, "An established connection closed to "
-                "endpoint: %s", ip);
-    close(sck);
+    char sockname[128];
+    union
+    {
+        struct sockaddr sock_addr;
+        struct sockaddr_in sock_addr_in;
+#if defined(XRDP_ENABLE_IPV6)
+        struct sockaddr_in6 sock_addr_in6;
+#endif
+    } sock_info;
+    socklen_t sock_len = sizeof(sock_info);
+
+    memset(&sock_info, 0, sizeof(sock_info));
+
+    if (getsockname(sck, &sock_info.sock_addr, &sock_len) == 0)
+    {
+        switch (sock_info.sock_addr.sa_family)
+        {
+            case AF_INET:
+            {
+                struct sockaddr_in *sock_addr_in = &sock_info.sock_addr_in;
+
+                g_snprintf(sockname, sizeof(sockname), "AF_INET %s:%d",
+                           inet_ntoa(sock_addr_in->sin_addr),
+                           ntohs(sock_addr_in->sin_port));
+                break;
+            }
+
+#if defined(XRDP_ENABLE_IPV6)
+
+            case AF_INET6:
+            {
+                char addr[48];
+                struct sockaddr_in6 *sock_addr_in6 = &sock_info.sock_addr_in6;
+
+                g_snprintf(sockname, sizeof(sockname), "AF_INET6 %s:%d",
+                           inet_ntop(sock_addr_in6->sin6_family,
+                                     &sock_addr_in6->sin6_addr, addr, sizeof(addr)),
+                           ntohs(sock_addr_in6->sin6_port));
+                break;
+            }
+
+#endif
+
+            case AF_UNIX:
+                g_snprintf(sockname, sizeof(sockname), "AF_UNIX");
+                break;
+
+            default:
+                g_snprintf(sockname, sizeof(sockname), "unknown family %d",
+                           sock_info.sock_addr.sa_family);
+                break;
+        }
+    }
+    else
+    {
+        log_message(LOG_LEVEL_WARNING, "getsockname() failed on socket %d: %s",
+                    sck, strerror(errno));
+
+        if (errno == EBADF || errno == ENOTSOCK)
+        {
+            return;
+        }
+
+        g_snprintf(sockname, sizeof(sockname), "unknown");
+    }
+
+    if (close(sck) == 0)
+    {
+        log_message(LOG_LEVEL_DEBUG, "Closed socket %d (%s)", sck, sockname);
+    }
+    else
+    {
+        log_message(LOG_LEVEL_WARNING, "Cannot close socket %d (%s): %s", sck,
+                    sockname, strerror(errno));
+    }
+
 #endif
 }
 
