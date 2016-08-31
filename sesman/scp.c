@@ -91,7 +91,6 @@ scp_process_start(void *sck)
             log_message(LOG_LEVEL_ALWAYS, "unknown return from scp_vXs_accept()");
     }
 
-    g_tcp_close(scon.in_sck);
     free_stream(scon.in_s);
     free_stream(scon.out_s);
     return 0;
