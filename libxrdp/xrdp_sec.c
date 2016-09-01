@@ -237,6 +237,9 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
     char rdp_layout[256] = { 0 };
 
     LLOGLN(0, ("xrdp_load_keyboard_layout:"));
+    LLOGLN(0, ("xrdp_load_keyboard_layout: keyboard_type [%d] keyboard_subtype [%d]",
+               client_info->keyboard_type, client_info->keyboard_subtype));
+
     /* infer model/variant */
     /* TODO specify different X11 keyboard models/variants */
     g_memset(client_info->model, 0, sizeof(client_info->model));
