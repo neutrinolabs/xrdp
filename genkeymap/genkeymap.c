@@ -20,16 +20,6 @@
  * Boston, MA  02110-1301, USA
 
   Updated Jay Sorg 2009
-
- cs Czech 0x405
- de German 0x407
- en-us US English 0x409
- fr French 0x40c
- it Italian 0x410
- br Portuguese (Brazil) 0x416
- ru Russian 0x419
- se Swedish 0x41d
- en-uk UK English 0x809
 */
 
 #include <stdio.h>
