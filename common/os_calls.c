@@ -763,6 +763,13 @@ g_tcp_connect(int sck, const char *address, const char *port)
             }
         }
     }
+
+    /* Mac OSX connect() returns -1 for already established connections */
+    if (res == -1 && errno == EISCONN)
+    {
+        res = 0;
+    }
+
     return res;
 }
 #else
@@ -771,6 +778,7 @@ g_tcp_connect(int sck, const char* address, const char* port)
 {
     struct sockaddr_in s;
     struct hostent* h;
+    int res;
 
     g_memset(&s, 0, sizeof(struct sockaddr_in));
     s.sin_family = AF_INET;
@@ -793,7 +801,15 @@ g_tcp_connect(int sck, const char* address, const char* port)
             }
         }
     }
-    return connect(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
+    res = connect(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
+
+    /* Mac OSX connect() returns -1 for already established connections */
+    if (res == -1 && errno == EISCONN)
+    {
+        res = 0;
+    }
+
+    return res;
 }
 #endif
 
