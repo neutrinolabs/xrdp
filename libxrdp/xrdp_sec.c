@@ -236,7 +236,6 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
     char keyboard_cfg_file[256] = { 0 };
     char rdp_layout[256] = { 0 };
 
-    LLOGLN(0, ("xrdp_load_keyboard_layout:"));
     LLOGLN(0, ("xrdp_load_keyboard_layout: keyboard_type [%d] keyboard_subtype [%d]",
                client_info->keyboard_type, client_info->keyboard_subtype));
 
