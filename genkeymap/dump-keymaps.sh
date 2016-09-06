@@ -11,6 +11,10 @@ fi
 setxkbmap -model pc104 -layout us
 ./xrdp-genkeymap ../instfiles/km-0409.ini
 
+# English - UK 'en-GB' 0x0809
+setxkbmap -model pc105 -layout gb
+./xrdp-genkeymap ../instfiles/km-0809.ini
+
 # German 'de' 0x0407
 setxkbmap -model pc104 -layout de
 ./xrdp-genkeymap ../instfiles/km-0407.ini
