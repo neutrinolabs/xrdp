@@ -20,6 +20,7 @@ dist_startscript_DATA = \
   km-0419.ini \
   km-041d.ini \
   km-0807.ini \
+  km-0809.ini \
   km-080c.ini \
   km-0813.ini \
   km-0816.ini \
