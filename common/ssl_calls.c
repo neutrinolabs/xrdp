@@ -891,3 +891,17 @@ ssl_tls_can_recv(struct ssl_tls *tls, int sck, int millis)
     return g_sck_can_recv(sck, millis);
 }
 
+
+/*****************************************************************************/
+const char*
+ssl_get_version(const struct ssl_st *ssl)
+{
+    return SSL_get_version(ssl);
+}
+
+/*****************************************************************************/
+const char*
+ssl_get_cipher_name(const struct ssl_st *ssl)
+{
+    return SSL_get_cipher_name(ssl);
+}

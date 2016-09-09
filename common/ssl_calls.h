@@ -109,4 +109,7 @@ ssl_tls_write(struct ssl_tls *tls, const char *data, int length);
 int APP_CC
 ssl_tls_can_recv(struct ssl_tls *tls, int sck, int millis);
 
+const char *ssl_get_version(const struct ssl_st *ssl);
+const char *ssl_get_cipher_name(const struct ssl_st *ssl);
+
 #endif

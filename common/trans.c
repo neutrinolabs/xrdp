@@ -902,6 +902,9 @@ trans_set_tls_mode(struct trans *self, const char *key, const char *cert,
     self->trans_send = trans_tls_send;
     self->trans_can_recv = trans_tls_can_recv;
 
+    self->ssl_protocol = ssl_get_version(self->tls->ssl);
+    self->cipher_name = ssl_get_cipher_name(self->tls->ssl);
+
     return 0;
 }
 

@@ -811,6 +811,9 @@ xrdp_rdp_send_data_update_sync(struct xrdp_rdp *self)
 int APP_CC
 xrdp_rdp_incoming(struct xrdp_rdp *self)
 {
+    struct xrdp_iso *iso;
+    iso = self->sec_layer->mcs_layer->iso_layer;
+
     DEBUG(("in xrdp_rdp_incoming"));
 
     if (xrdp_sec_incoming(self->sec_layer) != 0)
@@ -820,12 +823,22 @@ xrdp_rdp_incoming(struct xrdp_rdp *self)
     self->mcs_channel = self->sec_layer->mcs_layer->userid +
                         MCS_USERCHANNEL_BASE;
     DEBUG(("out xrdp_rdp_incoming mcs channel %d", self->mcs_channel));
-    g_strncpy(self->client_info.client_addr,
-              self->sec_layer->mcs_layer->iso_layer->trans->addr,
+    g_strncpy(self->client_info.client_addr, iso->trans->addr,
               sizeof(self->client_info.client_addr) - 1);
-    g_strncpy(self->client_info.client_port,
-              self->sec_layer->mcs_layer->iso_layer->trans->port,
+    g_strncpy(self->client_info.client_port, iso->trans->port,
               sizeof(self->client_info.client_port) - 1);
+
+    /* log TLS version and cipher when TLS is used */
+    /* TODO: client_addr, client_port is empty when IPv6 enabled */
+    if (iso->selectedProtocol > PROTOCOL_RDP)
+    {
+        log_message(LOG_LEVEL_INFO,
+                    "TLS connection established from %s: %s with cipher %s",
+                    self->client_info.client_addr,
+                    iso->trans->ssl_protocol,
+                    iso->trans->cipher_name);
+    }
+
     return 0;
 }
 
