@@ -9,5 +9,6 @@ endif
 SUBDIRS = \
   src \
   include \
+  pkgconfig \
   $(EXTRA_DIRS)
 

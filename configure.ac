@@ -22,11 +22,16 @@ if test "x${prefix}" = "xNONE" ; then
 sysconfdir="/etc";
 fi
 
+pkgconfigdir=${libdir}/pkgconfig
+AC_SUBST(pkgconfigdir)
+
 AC_CONFIG_FILES([Makefile
                  src/Makefile
                  include/Makefile
+                 pkgconfig/Makefile
                  tests/Makefile
 ])
 
-AC_OUTPUT
+AC_OUTPUT([pkgconfig/libpainter.pc
+])
 
