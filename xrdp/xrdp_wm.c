@@ -190,7 +190,7 @@ xrdp_wm_get_pixel(char *data, int x, int y, int width, int bpp)
 /*****************************************************************************/
 int APP_CC
 xrdp_wm_pointer(struct xrdp_wm *self, char *data, char *mask, int x, int y,
-                int bpp)
+                int bpp, int width, int height)
 {
     int bytes;
     struct xrdp_pointer_item pointer_item;
@@ -199,13 +199,15 @@ xrdp_wm_pointer(struct xrdp_wm *self, char *data, char *mask, int x, int y,
     {
         bpp = 24;
     }
-    bytes = ((bpp + 7) / 8) * 32 * 32;
+    bytes = ((bpp + 7) / 8) * width * height;
     g_memset(&pointer_item, 0, sizeof(struct xrdp_pointer_item));
     pointer_item.x = x;
     pointer_item.y = y;
     pointer_item.bpp = bpp;
+    pointer_item.width = width;
+    pointer_item.height = height;
     g_memcpy(pointer_item.data, data, bytes);
-    g_memcpy(pointer_item.mask, mask, 32 * 32 / 8);
+    g_memcpy(pointer_item.mask, mask, width * height / 8);
     self->screen->pointer = xrdp_cache_add_pointer(self->cache, &pointer_item);
     return 0;
 }
@@ -316,10 +318,11 @@ xrdp_wm_load_pointer(struct xrdp_wm *self, char *file_name, char *data,
 /*****************************************************************************/
 int APP_CC
 xrdp_wm_send_pointer(struct xrdp_wm *self, int cache_idx,
-                     char *data, char *mask, int x, int y, int bpp)
+                     char *data, char *mask, int x, int y, int bpp,
+                     int width, int height)
 {
-    return libxrdp_send_pointer(self->session, cache_idx, data, mask,
-                                x, y, bpp);
+    return libxrdp_send_pointer_ex(self->session, cache_idx, data, mask,
+                                   x, y, bpp, width, height);
 }
 
 /*****************************************************************************/
@@ -528,12 +531,16 @@ xrdp_wm_load_static_pointers(struct xrdp_wm *self)
     g_memset(&pointer_item, 0, sizeof(pointer_item));
     xrdp_wm_load_pointer(self, file_path, pointer_item.data,
                          pointer_item.mask, &pointer_item.x, &pointer_item.y);
+    pointer_item.width = 32;
+    pointer_item.height = 32;
     xrdp_cache_add_pointer_static(self->cache, &pointer_item, 1);
     DEBUG(("sending cursor"));
     g_snprintf(file_path, 255, "%s/cursor0.cur", XRDP_SHARE_PATH);
     g_memset(&pointer_item, 0, sizeof(pointer_item));
     xrdp_wm_load_pointer(self, file_path, pointer_item.data,
                          pointer_item.mask, &pointer_item.x, &pointer_item.y);
+    pointer_item.width = 32;
+    pointer_item.height = 32;
     xrdp_cache_add_pointer_static(self->cache, &pointer_item, 0);
     return 0;
 }

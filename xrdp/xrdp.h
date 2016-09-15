@@ -129,10 +129,11 @@ int APP_CC
 xrdp_wm_pu(struct xrdp_wm* self, struct xrdp_bitmap* control);
 int APP_CC
 xrdp_wm_send_pointer(struct xrdp_wm* self, int cache_idx,
-                     char* data, char* mask, int x, int y, int bpp);
+                     char* data, char* mask, int x, int y, int bpp,
+                     int width, int height);
 int APP_CC
 xrdp_wm_pointer(struct xrdp_wm* self, char* data, char* mask, int x, int y,
-                int bpp);
+                int bpp, int width, int height);
 int
 callback(long id, int msg, long param1, long param2, long param3, long param4);
 int APP_CC
@@ -516,4 +517,7 @@ server_add_char_alpha(struct xrdp_mod* mod, int font, int character,
                       int width, int height, char* data);
 int DEFAULT_CC
 server_session_info(struct xrdp_mod *mod, const char *data, int data_bytes);
+int DEFAULT_CC
+server_set_pointer_large(struct xrdp_mod* mod, int x, int y, char* data,
+                         char* mask, int bpp, int width, int height);
 

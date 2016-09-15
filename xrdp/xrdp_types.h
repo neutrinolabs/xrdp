@@ -148,7 +148,9 @@ struct xrdp_mod
                             int flags, int frame_id);
   int (*server_session_info)(struct xrdp_mod* v, const char *data,
                              int data_bytes);
-  tintptr server_dumby[100 - 44]; /* align, 100 minus the number of server
+  int (*server_set_pointer_large)(struct xrdp_mod* v, int x, int y, char* data,
+                                  char* mask, int bpp, int width, int height);
+  tintptr server_dumby[100 - 45]; /* align, 100 minus the number of server
                                      functions above */
   /* common */
   tintptr handle; /* pointer to self as int */
@@ -209,9 +211,11 @@ struct xrdp_pointer_item
   int stamp;
   int x; /* hotspot */
   int y;
-  char data[32 * 32 * 4];
-  char mask[32 * 32 / 8];
   int bpp;
+  int width;
+  int height;
+  char data[96 * 96 * 4];
+  char mask[96 * 96 / 8];
 };
 
 struct xrdp_brush_item
