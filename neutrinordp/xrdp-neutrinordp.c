@@ -1235,8 +1235,15 @@ lfreerdp_pointer_new(rdpContext *context,
 {
     struct mod *mod;
     int index;
+    int jndex;
+    int kndex;
+    int pixel;
     int bytes_per_pixel;
     int bits_per_pixel;
+    int cx;
+    int cy;
+    int width;
+    int height;
     tui8 *dst;
     tui8 *src;
 
@@ -1256,42 +1263,62 @@ lfreerdp_pointer_new(rdpContext *context,
         LLOGLN(0, ("lfreerdp_pointer_new: pointer index too big"));
         return ;
     }
-    if (pointer_new->xorBpp == 1 &&
-        pointer_new->colorPtrAttr.width == 32 &&
-        pointer_new->colorPtrAttr.height == 32)
+    width = pointer_new->colorPtrAttr.width;
+    height = pointer_new->colorPtrAttr.height;
+    g_memset(mod->pointer_cache[index].data, 0, sizeof(mod->pointer_cache[index].data));
+    g_memset(mod->pointer_cache[index].mask, 0, sizeof(mod->pointer_cache[index].mask));
+    if (pointer_new->xorBpp == 1)
     {
         LLOGLN(10, ("lfreerdp_pointer_new:"));
         mod->pointer_cache[index].hotx = pointer_new->colorPtrAttr.xPos;
         mod->pointer_cache[index].hoty = pointer_new->colorPtrAttr.yPos;
         mod->pointer_cache[index].bpp = 0;
+        mod->pointer_cache[index].width = width;
+        mod->pointer_cache[index].height = height;
         dst = (tui8 *)(mod->pointer_cache[index].data);
-        dst += 32 * 32 * 3 - 32 * 3;
+        dst += width * height * 3 - width * 3;
         src = pointer_new->colorPtrAttr.xorMaskData;
-        lfreerdp_convert_color_image(dst, 32, 32, 24, 32 * -3,
-                                     src, 32, 32, 1, 32 / 8);
+        lfreerdp_convert_color_image(dst, width, height, 24, width * -3,
+                                     src, width, height, 1, width / 8);
         dst = (tui8 *)(mod->pointer_cache[index].mask);
-        dst += ( 32 * 32 / 8) - (32 / 8);
+        dst += (width * height / 8) - (width / 8);
         src = pointer_new->colorPtrAttr.andMaskData;
-        lfreerdp_convert_color_image(dst, 32, 32, 1, 32 / -8,
-                                     src, 32, 32, 1, 32 / 8);
+        lfreerdp_convert_color_image(dst, width, height, 1, width / -8,
+                                     src, width, height, 1, width / 8);
     }
-    else if(pointer_new->xorBpp >= 8 &&
-            pointer_new->colorPtrAttr.width == 32 &&
-            pointer_new->colorPtrAttr.height == 32)
+    else if (pointer_new->xorBpp >= 8)
     {
         bytes_per_pixel = (pointer_new->xorBpp + 7) / 8;
         bits_per_pixel = pointer_new->xorBpp;
-        LLOGLN(10, ("lfreerdp_pointer_new: bpp %d Bpp %d", bits_per_pixel,
-               bytes_per_pixel));
+        LLOGLN(10, ("lfreerdp_pointer_new: bytes_per_pixel %d bits_per_pixel %d",
+               bytes_per_pixel, bits_per_pixel));
         mod->pointer_cache[index].hotx = pointer_new->colorPtrAttr.xPos;
         mod->pointer_cache[index].hoty = pointer_new->colorPtrAttr.yPos;
         mod->pointer_cache[index].bpp = bits_per_pixel;
-        memcpy(mod->pointer_cache[index].data,
-               pointer_new->colorPtrAttr.xorMaskData,
-               32 * 32 * bytes_per_pixel);
-        memcpy(mod->pointer_cache[index].mask,
-               pointer_new->colorPtrAttr.andMaskData,
-               32 * (32 / 8));
+        mod->pointer_cache[index].width = width;
+        mod->pointer_cache[index].height = height;
+        cx = width;
+        cy = height;
+        for (jndex = 0; jndex < cy; jndex++)
+        {
+            for (kndex = 0; kndex < cx; kndex++)
+            {
+                pixel = lfreerdp_get_pixel(pointer_new->colorPtrAttr.xorMaskData,
+                                           width, height, bits_per_pixel,
+                                           width * bytes_per_pixel,
+                                           kndex, jndex);
+                lfreerdp_set_pixel(pixel, mod->pointer_cache[index].data,
+                                   width, height, bits_per_pixel,
+                                   width * bytes_per_pixel,
+                                   kndex, jndex);
+                pixel = lfreerdp_get_pixel(pointer_new->colorPtrAttr.andMaskData,
+                                           width, height, 1, (width + 7) / 8,
+                                           kndex, jndex);
+                lfreerdp_set_pixel(pixel, mod->pointer_cache[index].mask,
+                                   width, height, 1, (width + 7) / 8,
+                                   kndex, jndex);
+            }
+        }
     }
     else
     {
@@ -1300,11 +1327,13 @@ lfreerdp_pointer_new(rdpContext *context,
                    pointer_new->colorPtrAttr.height,index));
     }
 
-    mod->server_set_pointer_ex(mod, mod->pointer_cache[index].hotx,
-                               mod->pointer_cache[index].hoty,
-                               mod->pointer_cache[index].data,
-                               mod->pointer_cache[index].mask,
-                               mod->pointer_cache[index].bpp);
+    mod->server_set_pointer_large(mod, mod->pointer_cache[index].hotx,
+                                  mod->pointer_cache[index].hoty,
+                                  mod->pointer_cache[index].data,
+                                  mod->pointer_cache[index].mask,
+                                  mod->pointer_cache[index].bpp,
+                                  mod->pointer_cache[index].width,
+                                  mod->pointer_cache[index].height);
 
     free(pointer_new->colorPtrAttr.xorMaskData);
     pointer_new->colorPtrAttr.xorMaskData = 0;
@@ -1324,11 +1353,13 @@ lfreerdp_pointer_cached(rdpContext *context,
     mod = ((struct mod_context *)context)->modi;
     index = pointer_cached->cacheIndex;
     LLOGLN(10, ("lfreerdp_pointer_cached:%d", index));
-    mod->server_set_pointer_ex(mod, mod->pointer_cache[index].hotx,
-                               mod->pointer_cache[index].hoty,
-                               mod->pointer_cache[index].data,
-                               mod->pointer_cache[index].mask,
-                               mod->pointer_cache[index].bpp);
+    mod->server_set_pointer_large(mod, mod->pointer_cache[index].hotx,
+                                  mod->pointer_cache[index].hoty,
+                                  mod->pointer_cache[index].data,
+                                  mod->pointer_cache[index].mask,
+                                  mod->pointer_cache[index].bpp,
+                                  mod->pointer_cache[index].width,
+                                  mod->pointer_cache[index].height);
 }
 
 /******************************************************************************/
@@ -1558,6 +1589,12 @@ lfreerdp_pre_connect(freerdp *instance)
     else
     {
         instance->settings->nla_security = 0;
+    }
+
+    if ((mod->client_info.pointer_flags & 4) == 0)
+    {
+        /* client goes not support large pointers */
+        instance->settings->large_pointer = 0;
     }
 
     return 1;
