@@ -789,6 +789,68 @@ libxrdp_set_pointer(struct xrdp_session *session, int cache_idx)
     return 0;
 }
 
+/*****************************************************************************/
+int DEFAULT_CC
+libxrdp_set_pointer_system(struct xrdp_session *session, int sys_type)
+{
+    struct stream *s;
+    int rv;
+    int cmd;
+    struct xrdp_rdp *rdp;
+
+    rdp = (struct xrdp_rdp *) (session->rdp);
+    rv = 0;
+    make_stream(s);
+    init_stream(s, 8192);
+    if (session->client_info->use_fast_path & 1) /* fastpath output supported */
+    {
+        LLOGLN(0, ("libxrdp_set_pointer_system: fastpath"));
+        if (xrdp_rdp_init_fastpath(rdp, s) != 0)
+        {
+            rv = 1;
+        }
+        if (rv == 0)
+        {
+            cmd = 0;
+            switch (sys_type)
+            {
+                case 0x00000000: /* SYSPTR_NULL */
+                    cmd = FASTPATH_UPDATETYPE_PTR_NULL; /* 5 */
+                    break;
+                case 0x00007F00: /* SYSPTR_DEFAULT */
+                    cmd = FASTPATH_UPDATETYPE_PTR_DEFAULT; /* 6 */
+                    break;
+                default:
+                    break;
+            }
+            if (cmd == 0)
+            {
+                rv = 1;
+            }
+        }
+        if (rv == 0)
+        {
+            s_mark_end(s);
+            if (xrdp_rdp_send_fastpath(rdp, s, cmd) != 0)
+            {
+                rv = 1;
+            }
+        }
+    }
+    else
+    {
+        LLOGLN(0, ("libxrdp_set_pointer_system: slowpath"));
+        xrdp_rdp_init_data(rdp, s);
+        out_uint16_le(s, RDP_POINTER_SYSTEM);
+        out_uint16_le(s, 0); /* pad */
+        out_uint32_le(s, sys_type); /* SYSPTR_NULL or SYSPTR_DEFAULT */
+        s_mark_end(s);
+        xrdp_rdp_send_data(rdp, s, RDP_DATA_PDU_POINTER);
+    }
+    free_stream(s);
+    return rv;
+}
+
 /******************************************************************************/
 int EXPORT_CC
 libxrdp_orders_init(struct xrdp_session *session)
