@@ -520,4 +520,6 @@ server_session_info(struct xrdp_mod *mod, const char *data, int data_bytes);
 int DEFAULT_CC
 server_set_pointer_large(struct xrdp_mod* mod, int x, int y, char* data,
                          char* mask, int bpp, int width, int height);
+int DEFAULT_CC
+server_set_pointer_system(struct xrdp_mod* mod, int sys_type);
 
