@@ -178,7 +178,8 @@ struct mod
                              int data_bytes);
   int (*server_set_pointer_large)(struct mod* v, int x, int y, char* data,
                                   char* mask, int bpp, int width, int height);
-  tintptr server_dumby[100 - 45]; /* align, 100 minus the number of server
+  int (*server_set_pointer_system)(struct mod* v, int sys_type);
+  tintptr server_dumby[100 - 46]; /* align, 100 minus the number of server
                                      functions above */
   /* common */
   tintptr handle; /* pointer to self as long */

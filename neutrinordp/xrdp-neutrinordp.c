@@ -1113,7 +1113,10 @@ static void DEFAULT_CC
 lfreerdp_pointer_system(rdpContext *context,
                         POINTER_SYSTEM_UPDATE *pointer_system)
 {
-    LLOGLN(0, ("lfreerdp_pointer_system: - no code here type value = %d",pointer_system->type));
+    struct mod *mod;
+
+    mod = ((struct mod_context *)context)->modi;
+    mod->server_set_pointer_system(mod, pointer_system->type);
 }
 
 /******************************************************************************/
