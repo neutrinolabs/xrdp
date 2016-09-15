@@ -564,8 +564,9 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
 
 /*****************************************************************************/
 int EXPORT_CC
-libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
-                     char *data, char *mask, int x, int y, int bpp)
+libxrdp_send_pointer_ex(struct xrdp_session *session, int cache_idx,
+                        char *data, char *mask, int x, int y, int bpp,
+                        int width, int height)
 {
     struct stream *s;
     char *p;
@@ -574,85 +575,96 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
     int i;
     int j;
     int data_bytes;
+    int mask_bytes;
 
-    DEBUG(("libxrdp_send_pointer sending cursor"));
+    LLOGLN(10, ("libxrdp_send_pointer_ex: width %d height %d bpp %d",
+           width, height, bpp));
+
     if (bpp == 0)
     {
         bpp = 24;
+    }
+    if (width == 0)
+    {
+        width = 32;
+    }
+    if (height == 0)
+    {
+        height = 32;
     }
     /* error check */
     if ((session->client_info->pointer_flags & 1) == 0)
     {
         if (bpp != 24)
         {
-            g_writeln("libxrdp_send_pointer: error client does not support "
+            g_writeln("libxrdp_send_pointer_ex: error client does not support "
                       "new cursors and bpp is %d", bpp);
             return 1;
         }
     }
-    if ((bpp == 15) && (bpp != 16) && (bpp != 24) && (bpp != 32))
+    if ((bpp != 15) && (bpp != 16) && (bpp != 24) && (bpp != 32))
     {
-        g_writeln("libxrdp_send_pointer: error");
+        g_writeln("libxrdp_send_pointer_ex: error");
         return 1;
     }
     make_stream(s);
     init_stream(s, 8192);
 
+    data_bytes = width * height * ((bpp + 7) / 8);
+    mask_bytes = width * height / 8;
+
     if (session->client_info->use_fast_path & 1) /* fastpath output supported */
     {
-        LLOGLN(10, ("libxrdp_send_pointer: fastpath"));
+        LLOGLN(10, ("libxrdp_send_pointer_ex: fastpath"));
         if (xrdp_rdp_init_fastpath((struct xrdp_rdp *)session->rdp, s) != 0)
         {
             free_stream(s);
             return 1;
         }
 
-        if ((session->client_info->pointer_flags & 1) == 0)
+        if ((session->client_info->pointer_flags & 1) != 0)
         {
-            data_bytes = 3072;
-        }
-        else
-        {
-            data_bytes = ((bpp + 7) / 8) * 32 * 32;
             out_uint16_le(s, bpp);
         }
     }
     else /* slowpath */
     {
-        LLOGLN(10, ("libxrdp_send_pointer: slowpath"));
+        LLOGLN(10, ("libxrdp_send_pointer_ex: slowpath"));
         xrdp_rdp_init_data((struct xrdp_rdp *)session->rdp, s);
         if ((session->client_info->pointer_flags & 1) == 0)
          {
              out_uint16_le(s, RDP_POINTER_COLOR);
              out_uint16_le(s, 0); /* pad */
-             data_bytes = 3072;
          }
          else
          {
              out_uint16_le(s, RDP_POINTER_POINTER);
              out_uint16_le(s, 0); /* pad */
              out_uint16_le(s, bpp);
-             data_bytes = ((bpp + 7) / 8) * 32 * 32;
          }
     }
 
+    LLOGLN(10, ("libxrdp_send_pointer_ex: width %d height %d bpp %d "
+           "mask_bytes %d data_bytes %d",
+           width, height, bpp, mask_bytes, data_bytes));
 
     out_uint16_le(s, cache_idx); /* cache_idx */
     out_uint16_le(s, x);
     out_uint16_le(s, y);
-    out_uint16_le(s, 32);
-    out_uint16_le(s, 32);
-    out_uint16_le(s, 128);
+    out_uint16_le(s, width);
+    out_uint16_le(s, height);
+    out_uint16_le(s, mask_bytes);
     out_uint16_le(s, data_bytes);
 
     switch (bpp)
     {
-        //case 15: /* coverity: this is logically dead code */
+        case 15:
+            /* fallthrough */
         case 16:
             p16 = (tui16 *) data;
-            for (i = 0; i < 32; i++)
+            for (i = 0; i < height; i++)
             {
-                for (j = 0; j < 32; j++)
+                for (j = 0; j < width; j++)
                 {
                     out_uint16_le(s, *p16);
                     p16++;
@@ -661,9 +673,9 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
             break;
         case 24:
             p = data;
-            for (i = 0; i < 32; i++)
+            for (i = 0; i < height; i++)
             {
-                for (j = 0; j < 32; j++)
+                for (j = 0; j < width; j++)
                 {
                     out_uint8(s, *p);
                     p++;
@@ -676,9 +688,9 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
             break;
         case 32:
             p32 = (tui32 *) data;
-            for (i = 0; i < 32; i++)
+            for (i = 0; i < height; i++)
             {
-                for (j = 0; j < 32; j++)
+                for (j = 0; j < width; j++)
                 {
                     out_uint32_le(s, *p32);
                     p32++;
@@ -687,7 +699,7 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
             break;
     }
 
-    out_uint8a(s, mask, 128); /* mask */
+    out_uint8a(s, mask, mask_bytes); /* mask */
     out_uint8(s, 0); /* pad */
     s_mark_end(s);
     if (session->client_info->use_fast_path & 1) /* fastpath output supported */
@@ -718,6 +730,15 @@ libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
     }
     free_stream(s);
     return 0;
+}
+
+/*****************************************************************************/
+int EXPORT_CC
+libxrdp_send_pointer(struct xrdp_session *session, int cache_idx,
+                     char *data, char *mask, int x, int y, int bpp)
+{
+    return libxrdp_send_pointer_ex(session, cache_idx, data, mask,
+                                   x, y, bpp, 0, 0);
 }
 
 /*****************************************************************************/

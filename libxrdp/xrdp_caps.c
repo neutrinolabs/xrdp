@@ -530,6 +530,25 @@ xrdp_caps_process_frame_ack(struct xrdp_rdp *self, struct stream *s, int len)
 }
 
 /*****************************************************************************/
+static int APP_CC
+xrdp_caps_process_largepointer(struct xrdp_rdp *self, struct stream *s,
+                               int len)
+{
+    int largePointerSupportFlags;
+
+    in_uint16_le(s, largePointerSupportFlags);
+    if (largePointerSupportFlags == 1) /* LARGE_POINTER_FLAG_96x96 */
+    {
+        self->client_info.pointer_flags |= 4;
+    }
+    else
+    {
+        self->client_info.pointer_flags &= ~4;
+    }
+    return 0;
+}
+
+/*****************************************************************************/
 int APP_CC
 xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
 {
@@ -566,7 +585,14 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
                       "remaining %d", len, (int) (s->end - s->p));
             return 1;
         }
-        len -= 4;
+        if (cap_len < len)
+        {
+            g_writeln("xrdp_caps_process_confirm_active: error: len %d, "
+                      "cap_len %d", len, cap_len);
+            return 1;
+        }
+        cap_len -= len;
+        len -= 4; 
         switch (type)
         {
             case RDP_CAPSET_GENERAL: /* 1 */
@@ -643,6 +669,9 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
                 break;
             case 0x001A: /* 26 CAPSETTYPE_MULTIFRAGMENTUPDATE */
                 xrdp_caps_process_multifragmetupdate(self, s, len);
+                break;
+            case 0x001B: /* 27 CAPSETTYPE_LARGE_POINTER */
+                xrdp_caps_process_largepointer(self, s, len);
                 break;
             case RDP_CAPSET_BMPCODECS: /* 0x1d(29) */
                 xrdp_caps_process_codecs(self, s, len);
@@ -903,6 +932,12 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
         out_uint16_le(s, 8);
         out_uint32_le(s, 3 * 1024 * 1024); /* 3MB */
     }
+
+    /* large pointers 96x96 */
+    caps_count++;
+    out_uint16_le(s, 0x001B); /* 27 CAPSETTYPE_LARGE_POINTER */
+    out_uint16_le(s, 6);
+    out_uint16_le(s, 1); /* LARGE_POINTER_FLAG_96x96 */
 
     /* frame acks */
     caps_count++;

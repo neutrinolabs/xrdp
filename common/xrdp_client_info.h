@@ -100,7 +100,7 @@ struct xrdp_client_info
   char orders[32];
   int order_flags_ex;
   int use_bulk_comp;
-  int pointer_flags; /* 0 color, 1 new, 2 no new */
+  int pointer_flags; /* 0 color, 1 new, 2 no new or large, 4 large */
   int use_fast_path;
   int require_credentials; /* when true, credentials *must* be passed on cmd line */
   char client_addr[256];
