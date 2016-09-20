@@ -332,13 +332,8 @@ int APP_CC
 g_tcp_set_no_delay(int sck)
 {
     int ret = 1; /* error */
-#if defined(_WIN32)
     int option_value;
-    int option_len;
-#else
-    int option_value;
-    unsigned int option_len;
-#endif
+    socklen_t option_len;
 
     option_len = sizeof(option_value);
 
@@ -376,13 +371,8 @@ int APP_CC
 g_tcp_set_keepalive(int sck)
 {
     int ret = 1; /* error */
-#if defined(_WIN32)
     int option_value;
-    int option_len;
-#else
-    int option_value;
-    unsigned int option_len;
-#endif
+    socklen_t option_len;
 
     option_len = sizeof(option_value);
 
@@ -422,11 +412,7 @@ g_tcp_socket(void)
 {
     int rv;
     int option_value;
-#if defined(_WIN32)
-    int option_len;
-#else
-    unsigned int option_len;
-#endif
+    socklen_t option_len;
 
 #if defined(XRDP_ENABLE_IPV6)
     rv = (int)socket(AF_INET6, SOCK_STREAM, 0);
@@ -500,11 +486,7 @@ int APP_CC
 g_sck_set_send_buffer_bytes(int sck, int bytes)
 {
     int option_value;
-#if defined(_WIN32)
-    int option_len;
-#else
-    unsigned int option_len;
-#endif
+    socklen_t option_len;
 
     option_value = bytes;
     option_len = sizeof(option_value);
@@ -522,11 +504,7 @@ int APP_CC
 g_sck_get_send_buffer_bytes(int sck, int *bytes)
 {
     int option_value;
-#if defined(_WIN32)
-    int option_len;
-#else
-    unsigned int option_len;
-#endif
+    socklen_t option_len;
 
     option_value = 0;
     option_len = sizeof(option_value);
@@ -545,11 +523,7 @@ int APP_CC
 g_sck_set_recv_buffer_bytes(int sck, int bytes)
 {
     int option_value;
-#if defined(_WIN32)
-    int option_len;
-#else
-    unsigned int option_len;
-#endif
+    socklen_t option_len;
 
     option_value = bytes;
     option_len = sizeof(option_value);
@@ -567,11 +541,7 @@ int APP_CC
 g_sck_get_recv_buffer_bytes(int sck, int *bytes)
 {
     int option_value;
-#if defined(_WIN32)
-    int option_len;
-#else
-    unsigned int option_len;
-#endif
+    socklen_t option_len;
 
     option_value = 0;
     option_len = sizeof(option_value);
@@ -601,11 +571,7 @@ int APP_CC
 g_sck_get_peer_cred(int sck, int *pid, int *uid, int *gid)
 {
 #if defined(SO_PEERCRED)
-#if defined(_WIN32)
-    int ucred_length;
-#else
-    unsigned int ucred_length;
-#endif
+    socklen_t ucred_length;
     struct myucred
     {
         pid_t pid;
@@ -662,19 +628,85 @@ g_sck_get_peer_cred(int sck, int *pid, int *uid, int *gid)
 void APP_CC
 g_sck_close(int sck)
 {
-    char ip[256];
-
-    if (sck == 0)
-    {
-        return;
-    }
 #if defined(_WIN32)
     closesocket(sck);
 #else
-    g_write_ip_address(sck, ip, 255);
-    log_message(LOG_LEVEL_INFO, "An established connection closed to "
-                "endpoint: %s", ip);
-    close(sck);
+    char sockname[128];
+    union
+    {
+        struct sockaddr sock_addr;
+        struct sockaddr_in sock_addr_in;
+#if defined(XRDP_ENABLE_IPV6)
+        struct sockaddr_in6 sock_addr_in6;
+#endif
+    } sock_info;
+    socklen_t sock_len = sizeof(sock_info);
+
+    memset(&sock_info, 0, sizeof(sock_info));
+
+    if (getsockname(sck, &sock_info.sock_addr, &sock_len) == 0)
+    {
+        switch (sock_info.sock_addr.sa_family)
+        {
+            case AF_INET:
+            {
+                struct sockaddr_in *sock_addr_in = &sock_info.sock_addr_in;
+
+                g_snprintf(sockname, sizeof(sockname), "AF_INET %s:%d",
+                           inet_ntoa(sock_addr_in->sin_addr),
+                           ntohs(sock_addr_in->sin_port));
+                break;
+            }
+
+#if defined(XRDP_ENABLE_IPV6)
+
+            case AF_INET6:
+            {
+                char addr[48];
+                struct sockaddr_in6 *sock_addr_in6 = &sock_info.sock_addr_in6;
+
+                g_snprintf(sockname, sizeof(sockname), "AF_INET6 %s:%d",
+                           inet_ntop(sock_addr_in6->sin6_family,
+                                     &sock_addr_in6->sin6_addr, addr, sizeof(addr)),
+                           ntohs(sock_addr_in6->sin6_port));
+                break;
+            }
+
+#endif
+
+            case AF_UNIX:
+                g_snprintf(sockname, sizeof(sockname), "AF_UNIX");
+                break;
+
+            default:
+                g_snprintf(sockname, sizeof(sockname), "unknown family %d",
+                           sock_info.sock_addr.sa_family);
+                break;
+        }
+    }
+    else
+    {
+        log_message(LOG_LEVEL_WARNING, "getsockname() failed on socket %d: %s",
+                    sck, strerror(errno));
+
+        if (errno == EBADF || errno == ENOTSOCK)
+        {
+            return;
+        }
+
+        g_snprintf(sockname, sizeof(sockname), "unknown");
+    }
+
+    if (close(sck) == 0)
+    {
+        log_message(LOG_LEVEL_DEBUG, "Closed socket %d (%s)", sck, sockname);
+    }
+    else
+    {
+        log_message(LOG_LEVEL_WARNING, "Cannot close socket %d (%s): %s", sck,
+                    sockname, strerror(errno));
+    }
+
 #endif
 }
 
@@ -731,6 +763,13 @@ g_tcp_connect(int sck, const char *address, const char *port)
             }
         }
     }
+
+    /* Mac OSX connect() returns -1 for already established connections */
+    if (res == -1 && errno == EISCONN)
+    {
+        res = 0;
+    }
+
     return res;
 }
 #else
@@ -739,6 +778,7 @@ g_tcp_connect(int sck, const char* address, const char* port)
 {
     struct sockaddr_in s;
     struct hostent* h;
+    int res;
 
     g_memset(&s, 0, sizeof(struct sockaddr_in));
     s.sin_family = AF_INET;
@@ -761,7 +801,15 @@ g_tcp_connect(int sck, const char* address, const char* port)
             }
         }
     }
-    return connect(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
+    res = connect(sck, (struct sockaddr*)&s, sizeof(struct sockaddr_in));
+
+    /* Mac OSX connect() returns -1 for already established connections */
+    if (res == -1 && errno == EISCONN)
+    {
+        res = 0;
+    }
+
+    return res;
 }
 #endif
 
@@ -990,11 +1038,7 @@ g_tcp_accept(int sck)
     int ret ;
     char ipAddr[256] ;
     struct sockaddr_in s;
-#if defined(_WIN32)
-    signed int i;
-#else
-    unsigned int i;
-#endif
+    socklen_t i;
 
     i = sizeof(struct sockaddr_in);
     memset(&s, 0, i);
@@ -1015,11 +1059,7 @@ g_sck_accept(int sck, char *addr, int addr_bytes, char *port, int port_bytes)
     int ret;
     char ipAddr[256];
     struct sockaddr_in s;
-#if defined(_WIN32)
-    signed int i;
-#else
-    unsigned int i;
-#endif
+    socklen_t i;
 
     i = sizeof(struct sockaddr_in);
     memset(&s, 0, i);
@@ -1049,11 +1089,7 @@ g_write_ip_address(int rcv_sck, char *ip_address, int bytes)
 {
     struct sockaddr_in s;
     struct in_addr in;
-#if defined(_WIN32)
-    int len;
-#else
-    unsigned int len;
-#endif
+    socklen_t len;
     int ip_port;
     int ok;
 
@@ -1130,13 +1166,8 @@ g_sck_send(int sck, const void *ptr, int len, int flags)
 int APP_CC
 g_sck_socket_ok(int sck)
 {
-#if defined(_WIN32)
     int opt;
-    int opt_len;
-#else
-    int opt;
-    unsigned int opt_len;
-#endif
+    socklen_t opt_len;
 
     opt_len = sizeof(opt);
 

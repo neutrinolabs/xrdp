@@ -121,7 +121,7 @@ g_tcp_socket(void)
 {
     int rv;
     int option_value;
-    unsigned int option_len;
+    socklen_t option_len;
 
     rv = (int)socket(AF_INET, SOCK_STREAM, 0);
     if (rv < 0)
@@ -336,9 +336,7 @@ static int APP_CC
 g_tcp_socket_ok(int sck)
 {
     int opt;
-    unsigned int opt_len;
-
-    opt_len = sizeof(opt);
+    socklen_t opt_len = sizeof(opt);
 
     if (getsockopt(sck, SOL_SOCKET, SO_ERROR, (char *)(&opt), &opt_len) == 0)
     {
