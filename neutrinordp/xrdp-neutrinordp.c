@@ -1115,6 +1115,7 @@ lfreerdp_pointer_system(rdpContext *context,
 {
     struct mod *mod;
 
+    LLOGLN(10, ("lfreerdp_pointer_system:"));
     mod = ((struct mod_context *)context)->modi;
     mod->server_set_pointer_system(mod, pointer_system->type);
 }
@@ -1144,6 +1145,22 @@ lfreerdp_get_pixel(void *bits, int width, int height, int bpp,
         shift = x % 8;
         pixel = (src8[start] & (0x80 >> shift)) != 0;
         return pixel ? 0xffffff : 0;
+    }
+    else if ((bpp == 15) || (bpp == 16))
+    {
+        src8 = (tui8 *)bits;
+        src8 += y * delta + x * 2;
+        pixel = ((short*)(src8))[0];
+        return pixel;
+    }
+    else if (bpp == 24)
+    {
+        src8 = (tui8 *)bits;
+        src8 += y * delta + x * 3;
+        pixel = src8[0];
+        pixel |= src8[1] << 8;
+        pixel |= src8[2] << 16;
+        return pixel;
     }
     else if (bpp == 32)
     {
@@ -1183,6 +1200,12 @@ lfreerdp_set_pixel(int pixel, void *bits, int width, int height, int bpp,
         {
             dst8[start] = dst8[start] & ~(0x80 >> shift);
         }
+    }
+    else if ((bpp == 15) || (bpp == 16))
+    {
+        dst8 = (tui8 *)bits;
+        dst8 += y * delta + x * 2;
+        ((short*)(dst8))[0] = pixel;
     }
     else if (bpp == 24)
     {
