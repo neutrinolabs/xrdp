@@ -540,10 +540,14 @@ xrdp_caps_process_largepointer(struct xrdp_rdp *self, struct stream *s,
     if (largePointerSupportFlags == 1) /* LARGE_POINTER_FLAG_96x96 */
     {
         self->client_info.pointer_flags |= 4;
+        g_writeln("xrdp_caps_process_pointer: client does support "
+                  "large cursors");
     }
     else
     {
         self->client_info.pointer_flags &= ~4;
+        g_writeln("xrdp_caps_process_pointer: client does not support "
+                  "large cursors");
     }
     return 0;
 }
