@@ -19,7 +19,7 @@ EXTRA_DEFINES += -DXRDP_PAINTER
 #EXTRA_INCLUDES +=
 #EXTRA_LIBS += $(libdir)/libpainter.la
 EXTRA_INCLUDES += -I$(top_srcdir)/libpainter/include
-EXTRA_LIBS += $(top_srcdir)/libpainter/src/libpainter.la
+EXTRA_LIBS += $(top_srcdir)/libpainter/src/.libs/libpainter.a
 endif
 
 if XRDP_PIXMAN
