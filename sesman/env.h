@@ -49,7 +49,7 @@ env_check_password_file(char* filename, char* password);
  *
  */
 int DEFAULT_CC
-env_set_user(char* username, char* passwd_file, int display);
+env_set_user(char* username, char** passwd_file, int display);
 
 #endif
 
