@@ -329,7 +329,7 @@ session_start_fork(int width, int height, int bpp, char* username,
   char depth[32];
   char screen[32];
   char text[256];
-  char passwd_file[256];
+  char *passwd_file;
   char ** pp1 = (char **)NULL;
   struct session_chain * temp = (struct session_chain *)NULL;
   struct list * xserver_params = (struct list *)NULL;
@@ -343,7 +343,8 @@ session_start_fork(int width, int height, int bpp, char* username,
   g_memset(depth,0,sizeof(char) * 32);
   g_memset(screen,0,sizeof(char) * 32);
   g_memset(text,0,sizeof(char) * 256);
-  g_memset(passwd_file,0,sizeof(char) * 256);
+
+  passwd_file = 0;
 
   /* check to limit concurrent sessions */
   if (g_session_count >= g_cfg->sess.max_sessions)
@@ -475,7 +476,7 @@ session_start_fork(int width, int height, int bpp, char* username,
       }
       else if (xpid == 0) /* child */
       {
-        env_set_user(username, passwd_file, display);
+        env_set_user(username, &passwd_file, display);
         env_check_password_file(passwd_file, password);
         if (type == SESMAN_SESSION_TYPE_XVNC)
         {
@@ -490,6 +491,7 @@ session_start_fork(int width, int height, int bpp, char* username,
           list_add_item(xserver_params, (long)g_strdup(depth));
           list_add_item(xserver_params, (long)g_strdup("-rfbauth"));
           list_add_item(xserver_params, (long)g_strdup(passwd_file));
+          g_free(passwd_file);
 
           /* additional parameters from sesman.ini file */
           //config_read_xserver_params(SESMAN_SESSION_TYPE_XVNC,
@@ -512,6 +514,7 @@ session_start_fork(int width, int height, int bpp, char* username,
           list_add_item(xserver_params, (long)g_strdup(geometry));
           list_add_item(xserver_params, (long)g_strdup("-depth"));
           list_add_item(xserver_params, (long)g_strdup(depth));
+          g_free(passwd_file);
 
           /* additional parameters from sesman.ini file */
           //config_read_xserver_params(SESMAN_SESSION_TYPE_XRDP,

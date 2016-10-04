@@ -59,19 +59,21 @@ env_check_password_file(char* filename, char* password)
 
 /******************************************************************************/
 int DEFAULT_CC
-env_set_user(char* username, char* passwd_file, int display)
+env_set_user(char* username, char** passwd_file, int display)
 {
   int error;
   int pw_uid;
   int pw_gid;
   int uid;
-  char pw_shell[256];
-  char pw_dir[256];
-  char pw_gecos[256];
+  int len;
+  char *pw_shell;
+  char *pw_dir;
   char text[256];
 
-  error = g_getuser_info(username, &pw_gid, &pw_uid, pw_shell, pw_dir,
-                         pw_gecos);
+  pw_shell = 0;
+  pw_dir = 0;
+  error = g_getuser_info(username, &pw_gid, &pw_uid, &pw_shell, &pw_dir, 0);
+
   if (error == 0)
   {
     g_rm_temp_dir();
@@ -105,16 +107,35 @@ env_set_user(char* username, char* passwd_file, int display)
           /* if no auth_file_path is set, then we go for
              $HOME/.vnc/sesman_username_passwd */
           g_mkdir(".vnc");
-          g_sprintf(passwd_file, "%s/.vnc/sesman_%s_passwd", pw_dir, username);
+
+          len = g_snprintf(NULL, 0, "%s/.vnc/sesman_%s_passwd", pw_dir, username);
+
+          *passwd_file = (char *) g_malloc(len + 1, 1);
+          if (*passwd_file != NULL)
+          {
+            g_sprintf(*passwd_file, "%s/.vnc/sesman_%s_passwd", pw_dir, username);
+          }
         }
         else
         {
           /* we use auth_file_path as requested */
-          g_sprintf(passwd_file, g_cfg->auth_file_path, username);
+          len = g_snprintf(NULL, 0, g_cfg->auth_file_path, username);
+
+          *passwd_file = (char *) g_malloc(len + 1, 1);
+          if (*passwd_file != NULL)
+          {
+            g_sprintf(*passwd_file, g_cfg->auth_file_path, username);
+          }
         }
-        LOG_DBG(&(g_cfg->log), "pass file: %s", passwd_file);
+
+        if (*passwd_file != NULL)
+        {
+          LOG_DBG(&(g_cfg->log), "pass file: %s", *passwd_file);
+        }
       }
     }
+    g_free(pw_dir);
+    g_free(pw_shell);
   }
   else
   {
