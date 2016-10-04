@@ -193,7 +193,6 @@ xrdp_process_data_in(struct trans *self)
                 break;
             }
             /* FALLTHROUGH */
-            g_writeln("here");
 
         case 3:
             /* the whole PDU is read in now process */
