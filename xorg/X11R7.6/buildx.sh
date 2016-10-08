@@ -198,7 +198,7 @@ count=0
 if [ $# -lt 1 ]; then
     echo ""
     echo "usage: buildx.sh <installation dir>"
-    echo "usage: buildx.sh <clean>"
+    echo "usage: buildx.sh clean"
     echo "usage: buildx.sh default"
     echo "usage: buildx.sh <installation dir> drop - set env and run bash in rdp dir"
     echo ""
