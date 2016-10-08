@@ -149,7 +149,7 @@ make_it()
 
     # make module
     if [ ! -e cookies/$mod_name.made ]; then
-        if ! make -C build_dir/$mod_name
+        if ! make -j $NPROC -C build_dir/$mod_name
         then
             echo ""
             echo "make failed for module $mod_name"
@@ -265,6 +265,10 @@ if [ ! -d cookies ]; then
         echo "error creating cookies directory"
         exit 1
     fi
+fi
+
+if ! NPROC=`nproc`; then
+    NPROC=1
 fi
 
 while IFS=: read mod_file mod_dir mod_args
