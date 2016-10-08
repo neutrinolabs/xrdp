@@ -168,14 +168,6 @@ make_it()
         exit 1
     fi
 
-    # special case after installing python make this sym link
-    # so Mesa builds using this python version
-    case "$mod_name" in
-    *Python-2*)
-        ln -s python build_dir/$mod_name/$PREFIX_DIR/bin/python2
-        ;;
-    esac
-
     touch cookies/$mod_name.installed
     return 0
 }
