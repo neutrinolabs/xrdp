@@ -218,36 +218,27 @@ else
     export PREFIX_DIR=$1
 fi
 
-if ! test -d $PREFIX_DIR; then
-    echo "dir does not exist, creating [$PREFIX_DIR]"
-    if ! mkdir $PREFIX_DIR
-    then
-        echo "mkdir failed [$PREFIX_DIR]"
-        exit 0
-    fi
-fi
-
-echo "using $PREFIX_DIR"
-
-export PKG_CONFIG_PATH=$PREFIX_DIR/lib/pkgconfig:$PREFIX_DIR/share/pkgconfig
-export PATH=$PREFIX_DIR/bin:$PATH
-export LDFLAGS=-Wl,-rpath=$PREFIX_DIR/lib
-export CFLAGS="-I$PREFIX_DIR/include -fPIC -O2"
-
 # prefix dir must exist...
 if [ ! -d $PREFIX_DIR ]; then
-    if ! mkdir -p $PREFIX_DIR
-    then
-        echo "$PREFIX_DIR does not exist; failed to create it - cannot continue"
+    echo "$PREFIX_DIR does not exist, creating it"
+    if ! mkdir -p $PREFIX_DIR; then
+        echo "$PREFIX_DIR cannot be created - cannot continue"
         exit 1
     fi
 fi
 
 # ...and be writable
 if [ ! -w $PREFIX_DIR ]; then
-    echo "directory $PREFIX_DIR is not writable - cannot continue"
+    echo "$PREFIX_DIR is not writable - cannot continue"
     exit 1
 fi
+
+echo "installation directory: $PREFIX_DIR"
+
+export PKG_CONFIG_PATH=$PREFIX_DIR/lib/pkgconfig:$PREFIX_DIR/share/pkgconfig
+export PATH=$PREFIX_DIR/bin:$PATH
+export LDFLAGS=-Wl,-rpath=$PREFIX_DIR/lib
+export CFLAGS="-I$PREFIX_DIR/include -fPIC -O2"
 
 # create a downloads dir
 if [ ! -d downloads ]; then
