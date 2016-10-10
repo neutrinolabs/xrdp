@@ -105,7 +105,7 @@ extract_it()
     cd $mod_name
     # check for patches
     if [ -e ../../$mod_name.patch ]; then
-        patch -p1 < ../../$mod_name.patch
+        patch -N -p1 < ../../$mod_name.patch
     fi
     # now configure
     echo "executing ./configure --prefix=$PREFIX_DIR $mod_args"
