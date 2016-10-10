@@ -9,23 +9,23 @@ EXTRA_DIST = \
 startscriptdir=$(sysconfdir)/xrdp
 
 dist_startscript_DATA = \
-  km-0407.ini \
-  km-0409.ini \
+  km-00000407.ini \
+  km-00000409.ini \
   km-040a.ini \
-  km-040c.ini \
-  km-0410.ini \
-  km-0411.ini \
-  km-0414.ini \
-  km-0415.ini \
-  km-0416.ini \
-  km-0419.ini \
-  km-041d.ini \
-  km-0807.ini \
-  km-0809.ini \
-  km-080c.ini \
-  km-0813.ini \
-  km-0816.ini \
-  km-100c.ini \
+  km-0000040c.ini \
+  km-00000410.ini \
+  km-00000411.ini \
+  km-00000414.ini \
+  km-00000415.ini \
+  km-00000416.ini \
+  km-00000419.ini \
+  km-0000041d.ini \
+  km-00000807.ini \
+  km-00000809.ini \
+  km-0000080c.ini \
+  km-00000813.ini \
+  km-00000816.ini \
+  km-0000100c.ini \
   km-e0010411.ini \
   km-e0200411.ini \
   km-e0210411.ini
