@@ -830,6 +830,7 @@ xrdp_rdp_incoming(struct xrdp_rdp *self)
 
     /* log TLS version and cipher when TLS is used */
     /* TODO: client_addr, client_port is empty when IPv6 enabled */
+
     if (iso->selectedProtocol > PROTOCOL_RDP)
     {
         log_message(LOG_LEVEL_INFO,
@@ -837,6 +838,13 @@ xrdp_rdp_incoming(struct xrdp_rdp *self)
                     self->client_info.client_addr,
                     iso->trans->ssl_protocol,
                     iso->trans->cipher_name);
+    }
+    else
+    {
+        log_message(LOG_LEVEL_INFO,
+                    "Non-TLS connection established from %s: "
+                    "encrypted with standard RDP security",
+                     self->client_info.client_addr);
     }
 
     return 0;
