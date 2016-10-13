@@ -11,7 +11,7 @@ endif
 if XRDP_RFXCODEC
 EXTRA_DEFINES += -DXRDP_RFXCODEC
 EXTRA_INCLUDES += -I$(top_srcdir)/librfxcodec/include
-EXTRA_LIBS += $(top_srcdir)/librfxcodec/src/librfxencode.a
+EXTRA_LIBS += $(top_srcdir)/librfxcodec/src/.libs/librfxencode.a
 endif
 
 if XRDP_PIXMAN
