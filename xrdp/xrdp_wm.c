@@ -21,6 +21,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include "xrdp.h"
+#include "unicode_map.h"
 #include "log.h"
 
 /*****************************************************************************/
@@ -1456,6 +1457,29 @@ xrdp_wm_key(struct xrdp_wm *self, int device_flags, int scan_code)
 }
 
 /*****************************************************************************/
+int APP_CC
+xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, int scan_code)
+{
+    int c = u_map[scan_code].scancode;
+    int s = u_map[scan_code].shift;
+
+    if (c == 0) {
+        xrdp_wm_key(self, device_flags, scan_code);
+    } else {
+        if (!(device_flags & KBD_FLAG_UP) && s)
+        {
+            xrdp_wm_key(self, WM_KEYDOWN, 42);		
+        }
+        xrdp_wm_key(self, device_flags, c);
+    }
+
+	xrdp_wm_key(self, KBD_FLAG_UP, 42);
+
+    return 0;
+}
+
+
+/*****************************************************************************/
 /* happens when client gets focus and sends key modifier info */
 int APP_CC
 xrdp_wm_key_sync(struct xrdp_wm *self, int device_flags, int key_flags)
@@ -1686,6 +1710,9 @@ callback(long id, int msg, long param1, long param2, long param3, long param4)
             break;
         case 4: /* RDP_INPUT_SCANCODE */
             rv = xrdp_wm_key(wm, param3, param1);
+            break;
+        case 5: /* RDP_INPUT_UNICODE */
+            rv = xrdp_wm_key_unicode(wm, param3, param1);
             break;
         case 0x8001: /* RDP_INPUT_MOUSE */
             rv = xrdp_wm_process_input_mouse(wm, param3, param1, param2);
