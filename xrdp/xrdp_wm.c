@@ -1240,6 +1240,11 @@ xrdp_wm_mouse_click(struct xrdp_wm *self, int x, int y, int but, int down)
         {
             if (self->mm->mod->mod_event != 0)
             {
+				if (down)
+				{
+					self->mm->mod->mod_event(self->mm->mod, WM_MOUSEMOVE, x, y, 0, 0);
+				}
+
                 if (but == 1 && down)
                 {
                     self->mm->mod->mod_event(self->mm->mod, WM_LBUTTONDOWN, x, y, 0, 0);
