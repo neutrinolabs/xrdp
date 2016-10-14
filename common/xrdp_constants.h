@@ -160,6 +160,7 @@
 #define RDP_INPUT_CODEPOINT            1
 #define RDP_INPUT_VIRTKEY              2
 #define RDP_INPUT_SCANCODE             4
+#define RDP_INPUT_UNICODE              5
 #define RDP_INPUT_MOUSE                0x8001
 #define RDP_INPUT_MOUSEX               0x8002
 
