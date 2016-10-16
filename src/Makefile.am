@@ -1,12 +1,5 @@
 EXTRA_DIST = $(AMD64_ASM) $(X86_ASM) nasm_lt.sh
 
-EXTRA_DEFINES =
-EXTRA_INCLUDES =
-EXTRA_LIBS =
-EXTRA_FLAGS =
-EXTRA_SRC =
-EXTRA_ENCODE_SRC =
-
 AMD64_ASM = \
   amd64/cpuid_amd64.asm \
   amd64/rfxcodec_encode_diff_rlgr1_amd64_sse2.asm \
@@ -21,22 +14,21 @@ X86_ASM = \
   x86/rfxcodec_encode_dwt_shift_x86_sse2.asm \
   x86/rfxcodec_encode_dwt_shift_x86_sse41.asm
 
+ASM_SOURCES =
+
+AM_CPPFLAGS = \
+  -I$(top_srcdir)/include \
+  -I../include
+
 if WITH_SIMD_AMD64
-EXTRA_ENCODE_SRC += $(AMD64_ASM)
-EXTRA_DEFINES += -DSIMD_USE_ACCEL=1 -DRFX_USE_ACCEL_AMD64=1
+ASM_SOURCES += $(AMD64_ASM)
+AM_CPPFLAGS += -DSIMD_USE_ACCEL=1 -DRFX_USE_ACCEL_AMD64=1
 endif
 
 if WITH_SIMD_X86
-EXTRA_ENCODE_SRC += $(X86_ASM)
-EXTRA_DEFINES += -DSIMD_USE_ACCEL=1 -DRFX_USE_ACCEL_X86=1
+ASM_SOURCES += $(X86_ASM)
+AM_CPPFLAGS += -DSIMD_USE_ACCEL=1 -DRFX_USE_ACCEL_X86=1
 endif
-
-AM_CFLAGS = \
-  -I$(top_srcdir)/include \
-  -I../include \
-  $(EXTRA_DEFINES)
-
-INCLUDES = $(EXTRA_INCLUDES)
 
 noinst_HEADERS = \
   rfx_bitstream.h \
@@ -56,17 +48,10 @@ noinst_HEADERS = \
 
 lib_LTLIBRARIES = librfxencode.la
 
-librfxencode_la_LDFLAGS = $(EXTRA_FLAGS)
-
-
-librfxencode_ladir = $(moduledir)
-
 librfxencode_la_SOURCES = $(noinst_HEADERS) rfxencode.c \
   rfxcompose.c rfxencode_tile.c rfxencode_dwt.c \
   rfxencode_quantization.c rfxencode_differential.c \
-  rfxencode_rlgr1.c rfxencode_rlgr3.c rfxencode_alpha.c $(EXTRA_ENCODE_SRC)
+  rfxencode_rlgr1.c rfxencode_rlgr3.c rfxencode_alpha.c $(ASM_SOURCES)
 
 .asm.lo:
 	$(LIBTOOL) --mode=compile --tag NASM $(srcdir)/nasm_lt.sh $(NASM) $(NAFLAGS) -I$(srcdir) -I. $< -o $@
-
-librfxencode_la_LIBADD =
