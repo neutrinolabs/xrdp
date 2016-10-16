@@ -581,6 +581,12 @@ xrdp_orders_send_notify_new_update(struct xrdp_orders *self,
         order_size += 3;
     }
 
+    if (order_size < 16)
+    {
+        /* no flags set */
+        return 0;
+    }
+
     if (xrdp_orders_check(self, order_size) != 0)
     {
         return 1;
@@ -673,6 +679,12 @@ xrdp_orders_send_monitored_desktop(struct xrdp_orders *self,
         order_size += 1;
         /* WindowIds (variable) */
         order_size += mdo->num_window_ids *  4;
+    }
+
+    if (order_size < 8)
+    {
+        /* no flags set */
+        return 0;
     }
 
     if (xrdp_orders_check(self, order_size) != 0)
