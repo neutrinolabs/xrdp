@@ -1,3 +1,6 @@
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = rfxcodec.pc
+
 EXTRA_DIST = bootstrap readme.txt
 
 SUBDIRS = \
