@@ -4,3 +4,7 @@ SUBDIRS = \
   src \
   tests
 
+include_HEADERS = \
+  include/rfxcodec_encode.h \
+  include/rfxcodec_decode.h \
+  include/rfxcodec_common.h
