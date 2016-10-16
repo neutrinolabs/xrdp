@@ -31,11 +31,6 @@ EXTRA_ENCODE_SRC += $(X86_ASM)
 EXTRA_DEFINES += -DSIMD_USE_ACCEL=1 -DRFX_USE_ACCEL_X86=1
 endif
 
-if GOT_PREFIX
-EXTRA_INCLUDES += -I$(prefix)/include
-EXTRA_FLAGS += -L$(prefix)/lib -Wl,-rpath -Wl,$(prefix)/lib
-endif
-
 AM_CFLAGS = \
   -I$(top_srcdir)/include \
   -I../include \

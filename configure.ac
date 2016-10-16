@@ -9,12 +9,6 @@ AC_PROG_CC
 AC_C_CONST
 AC_PROG_LIBTOOL
 
-AM_CONDITIONAL(GOT_PREFIX, test "x${prefix}" != "xNONE"])
-
-if test "x${prefix}" = "xNONE" ; then
-sysconfdir="/etc";
-fi
-
 # SIMD is optional
 AC_ARG_WITH([simd],
     AC_HELP_STRING([--without-simd],[Omit SIMD extensions.]))
