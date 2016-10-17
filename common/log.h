@@ -174,16 +174,6 @@ enum logReturns DEFAULT_CC
 log_message(const enum logLevels lvl, const char *msg, ...) printflike(2, 3);
 
 /**
- *
- * @brief Reads configuration
- * @param s translates the strings "1", "true" and "yes" in 1 (true) and
- * other strings in 0
- * @return 0 on success, 1 on failure
- *
- */
-int APP_CC text2bool(char *s);
-
-/**
  * This function returns the configured file name for the logfile
  * @param replybuf the buffer where the reply is stored
  * @param bufsize how big is the reply buffer.
