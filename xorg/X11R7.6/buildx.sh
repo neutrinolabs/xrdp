@@ -105,7 +105,7 @@ extract_it()
     cd $mod_name
     # check for patches
     if [ -e ../../$mod_name.patch ]; then
-        patch -p1 < ../../$mod_name.patch
+        patch -N -p1 < ../../$mod_name.patch
     fi
     # now configure
     echo "executing ./configure --prefix=$PREFIX_DIR $mod_args"
@@ -149,7 +149,7 @@ make_it()
 
     # make module
     if [ ! -e cookies/$mod_name.made ]; then
-        if ! make -C build_dir/$mod_name
+        if ! make -j $NPROC -C build_dir/$mod_name
         then
             echo ""
             echo "make failed for module $mod_name"
@@ -167,14 +167,6 @@ make_it()
         echo ""
         exit 1
     fi
-
-    # special case after installing python make this sym link
-    # so Mesa builds using this python version
-    case "$mod_name" in
-    *Python-2*)
-        ln -s python build_dir/$mod_name/$PREFIX_DIR/bin/python2
-        ;;
-    esac
 
     touch cookies/$mod_name.installed
     return 0
@@ -198,7 +190,7 @@ count=0
 if [ $# -lt 1 ]; then
     echo ""
     echo "usage: buildx.sh <installation dir>"
-    echo "usage: buildx.sh <clean>"
+    echo "usage: buildx.sh clean"
     echo "usage: buildx.sh default"
     echo "usage: buildx.sh <installation dir> drop - set env and run bash in rdp dir"
     echo ""
@@ -218,36 +210,27 @@ else
     export PREFIX_DIR=$1
 fi
 
-if ! test -d $PREFIX_DIR; then
-    echo "dir does not exist, creating [$PREFIX_DIR]"
-    if ! mkdir $PREFIX_DIR
-    then
-        echo "mkdir failed [$PREFIX_DIR]"
-        exit 0
-    fi
-fi
-
-echo "using $PREFIX_DIR"
-
-export PKG_CONFIG_PATH=$PREFIX_DIR/lib/pkgconfig:$PREFIX_DIR/share/pkgconfig
-export PATH=$PREFIX_DIR/bin:$PATH
-export LDFLAGS=-Wl,-rpath=$PREFIX_DIR/lib
-export CFLAGS="-I$PREFIX_DIR/include -fPIC -O2"
-
 # prefix dir must exist...
 if [ ! -d $PREFIX_DIR ]; then
-    if ! mkdir -p $PREFIX_DIR
-    then
-        echo "$PREFIX_DIR does not exist; failed to create it - cannot continue"
+    echo "$PREFIX_DIR does not exist, creating it"
+    if ! mkdir -p $PREFIX_DIR; then
+        echo "$PREFIX_DIR cannot be created - cannot continue"
         exit 1
     fi
 fi
 
 # ...and be writable
 if [ ! -w $PREFIX_DIR ]; then
-    echo "directory $PREFIX_DIR is not writable - cannot continue"
+    echo "$PREFIX_DIR is not writable - cannot continue"
     exit 1
 fi
+
+echo "installation directory: $PREFIX_DIR"
+
+export PKG_CONFIG_PATH=$PREFIX_DIR/lib/pkgconfig:$PREFIX_DIR/share/pkgconfig
+export PATH=$PREFIX_DIR/bin:$PATH
+export LDFLAGS=-Wl,-rpath=$PREFIX_DIR/lib
+export CFLAGS="-I$PREFIX_DIR/include -fPIC -O2"
 
 # create a downloads dir
 if [ ! -d downloads ]; then
@@ -274,6 +257,10 @@ if [ ! -d cookies ]; then
         echo "error creating cookies directory"
         exit 1
     fi
+fi
+
+if ! NPROC=`nproc`; then
+    NPROC=1
 fi
 
 while IFS=: read mod_file mod_dir mod_args

@@ -6,6 +6,7 @@ libpciaccess-0.12.0.tar.bz2                     :  libpciaccess-0.12.0          
 libpthread-stubs-0.3.tar.bz2                    :  libpthread-stubs-0.3                     :
 libdrm-2.4.26.tar.bz2                           :  libdrm-2.4.26                            :
 damageproto-1.2.1.tar.bz2                       :  damageproto-1.2.1                        :
+xproto-7.0.20.tar.bz2                           :  xproto-7.0.20                            :
 makedepend-1.0.3.tar.bz2                        :  makedepend-1.0.3                         :
 libxml2-sources-2.7.8.tar.gz                    :  libxml2-2.7.8                            :
 libpng-1.2.46.tar.gz                            :  libpng-1.2.46                            :
@@ -15,21 +16,24 @@ fontconfig-2.8.0.tar.gz                         :  fontconfig-2.8.0             
 cairo-1.8.8.tar.gz                              :  cairo-1.8.8                              :
 expat-2.0.1.tar.gz                              :  expat-2.0.1                              :
 xextproto-7.1.2.tar.bz2                         :  xextproto-7.1.2                          :
-xproto-7.0.20.tar.bz2                           :  xproto-7.0.20                            :
 xcb-proto-1.6.tar.bz2                           :  xcb-proto-1.6                            :
+libXau-1.0.6.tar.bz2                            :  libXau-1.0.6                             :
+libXdmcp-1.1.0.tar.bz2                          :  libXdmcp-1.1.0                           :
 libxcb-1.7.tar.bz2                              :  libxcb-1.7                               :
 xtrans-1.2.6.tar.bz2                            :  xtrans-1.2.6                             :
+kbproto-1.0.5.tar.bz2                           :  kbproto-1.0.5                            :
+inputproto-2.0.1.tar.bz2                        :  inputproto-2.0.1                         :
 libX11-1.4.0.tar.bz2                            :  libX11-1.4.0                             :
 libXext-1.2.0.tar.bz2                           :  libXext-1.2.0                            :
 libICE-1.0.7.tar.bz2                            :  libICE-1.0.7                             :
 libSM-1.2.0.tar.bz2                             :  libSM-1.2.0                              :
 libXt-1.0.9.tar.bz2                             :  libXt-1.0.9                              :
-libXdamage-1.1.3.tar.bz2                        :  libXdamage-1.1.3                         :
+fixesproto-4.1.2.tar.bz2                        :  fixesproto-4.1.2                         :
 libXfixes-4.0.5.tar.bz2                         :  libXfixes-4.0.5                          :
+libXdamage-1.1.3.tar.bz2                        :  libXdamage-1.1.3                         :
 MesaLib-7.10.3.tar.bz2                          :  Mesa-7.10.3                              : --with-expat=$PREFIX_DIR --disable-gallium
 randrproto-1.3.2.tar.bz2                        :  randrproto-1.3.2                         :
 renderproto-0.11.1.tar.bz2                      :  renderproto-0.11.1                       :
-fixesproto-4.1.2.tar.bz2                        :  fixesproto-4.1.2                         :
 xcmiscproto-1.2.1.tar.bz2                       :  xcmiscproto-1.2.1                        :
 xf86vidmodeproto-2.3.tar.bz2                    :  xf86vidmodeproto-2.3                     :
 xf86bigfontproto-1.2.0.tar.bz2                  :  xf86bigfontproto-1.2.0                   :
@@ -37,15 +41,11 @@ scrnsaverproto-1.2.1.tar.bz2                    :  scrnsaverproto-1.2.1         
 bigreqsproto-1.1.1.tar.bz2                      :  bigreqsproto-1.1.1                       :
 resourceproto-1.1.1.tar.bz2                     :  resourceproto-1.1.1                      :
 fontsproto-2.1.1.tar.bz2                        :  fontsproto-2.1.1                         :
-inputproto-2.0.1.tar.bz2                        :  inputproto-2.0.1                         :
 xf86dgaproto-2.1.tar.bz2                        :  xf86dgaproto-2.1                         :
 videoproto-2.3.1.tar.bz2                        :  videoproto-2.3.1                         :
 compositeproto-0.4.2.tar.bz2                    :  compositeproto-0.4.2                     :
 recordproto-1.14.1.tar.bz2                      :  recordproto-1.14.1                       :
 xineramaproto-1.2.tar.bz2                       :  xineramaproto-1.2                        :
-libXau-1.0.6.tar.bz2                            :  libXau-1.0.6                             :
-kbproto-1.0.5.tar.bz2                           :  kbproto-1.0.5                            :
-libXdmcp-1.1.0.tar.bz2                          :  libXdmcp-1.1.0                           :
 libxslt-1.1.26.tar.gz                           :  libxslt-1.1.26                           :
 libxkbfile-1.0.7.tar.bz2                        :  libxkbfile-1.0.7                         :
 libfontenc-1.1.0.tar.bz2                        :  libfontenc-1.1.0                         :
@@ -63,6 +63,7 @@ applewmproto-1.4.1.tar.bz2                      :  applewmproto-1.4.1           
 bdftopcf-1.0.3.tar.bz2                          :  bdftopcf-1.0.3                           :
 intltool-0.41.1.tar.gz                          :  intltool-0.41.1                          :
 xkeyboard-config-2.0.tar.bz2                    :  xkeyboard-config-2.0                     :
+font-util-1.2.0.tar.bz2                         :  font-util-1.2.0                          : --with-fontrootdir=$PREFIX_DIR/share/fonts/X11
 font-adobe-75dpi-1.0.3.tar.bz2                  :  font-adobe-75dpi-1.0.3                   : --with-fontrootdir=$PREFIX_DIR/share/fonts/X11
 font-adobe-100dpi-1.0.3.tar.bz2                 :  font-adobe-100dpi-1.0.3                  : --with-fontrootdir=$PREFIX_DIR/share/fonts/X11
 font-adobe-utopia-75dpi-1.0.4.tar.bz2           :  font-adobe-utopia-75dpi-1.0.4            : --with-fontrootdir=$PREFIX_DIR/share/fonts/X11
@@ -96,6 +97,5 @@ font-schumacher-misc-1.1.2.tar.bz2              :  font-schumacher-misc-1.1.2   
 font-screen-cyrillic-1.0.4.tar.bz2              :  font-screen-cyrillic-1.0.4               : --with-fontrootdir=$PREFIX_DIR/share/fonts/X11
 font-sony-misc-1.0.3.tar.bz2                    :  font-sony-misc-1.0.3                     : --with-fontrootdir=$PREFIX_DIR/share/fonts/X11
 font-sun-misc-1.0.3.tar.bz2                     :  font-sun-misc-1.0.3                      : --with-fontrootdir=$PREFIX_DIR/share/fonts/X11
-font-util-1.2.0.tar.bz2                         :  font-util-1.2.0                          : --with-fontrootdir=$PREFIX_DIR/share/fonts/X11
 font-winitzki-cyrillic-1.0.3.tar.bz2            :  font-winitzki-cyrillic-1.0.3             : --with-fontrootdir=$PREFIX_DIR/share/fonts/X11
 font-xfree86-type1-1.0.4.tar.bz2                :  font-xfree86-type1-1.0.4                 : --with-fontrootdir=$PREFIX_DIR/share/fonts/X11

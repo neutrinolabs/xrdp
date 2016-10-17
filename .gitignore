@@ -1,4 +1,5 @@
 *~
+*.a
 aclocal.m4
 AUTHORS
 autom4te.cache/
