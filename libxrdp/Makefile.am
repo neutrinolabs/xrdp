@@ -1,5 +1,4 @@
 EXTRA_LIBS =
-EXTRA_FLAGS =
 
 AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
@@ -7,6 +6,8 @@ AM_CPPFLAGS = \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -I$(top_srcdir)/common
+
+AM_LDFLAGS =
 
 if XRDP_DEBUG
 AM_CPPFLAGS += -DXRDP_DEBUG
@@ -21,7 +22,7 @@ endif
 
 if XRDP_TJPEG
 AM_CPPFLAGS += -DXRDP_JPEG -DXRDP_TJPEG @TurboJpegIncDir@
-EXTRA_FLAGS += @TurboJpegLibDir@
+AM_LDFLAGS += @TurboJpegLibDir@
 EXTRA_LIBS += -lturbojpeg
 else
 if XRDP_JPEG
@@ -51,9 +52,6 @@ libxrdp_la_SOURCES = \
   xrdp_orders_rail.h \
   xrdp_rdp.c \
   xrdp_sec.c
-
-libxrdp_la_LDFLAGS = \
-  $(EXTRA_FLAGS)
 
 libxrdp_la_LIBADD = \
   $(top_builddir)/common/libcommon.la \

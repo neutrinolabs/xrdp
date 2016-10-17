@@ -1,5 +1,4 @@
 EXTRA_LIBS =
-EXTRA_FLAGS =
 
 AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
@@ -55,9 +54,6 @@ xrdp_LDADD = \
   $(top_builddir)/common/libcommon.la \
   $(top_builddir)/libxrdp/libxrdp.la \
   $(EXTRA_LIBS)
-
-xrdp_LDFLAGS = \
-  $(EXTRA_FLAGS)
 
 xrdpsysconfdir=$(sysconfdir)/xrdp
 

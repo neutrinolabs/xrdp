@@ -1,5 +1,4 @@
 EXTRA_LIBS =
-EXTRA_FLAGS =
 
 AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
@@ -61,8 +60,7 @@ xrdp_chansrv_SOURCES = \
   xcommon.h
 
 xrdp_chansrv_LDFLAGS = \
-  $(X_LIBS) \
-  $(EXTRA_FLAGS)
+  $(X_LIBS)
 
 xrdp_chansrv_LDADD = \
   $(top_builddir)/common/libcommon.la \
