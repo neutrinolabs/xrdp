@@ -1,39 +1,34 @@
-EXTRA_DEFINES =
-EXTRA_INCLUDES =
 EXTRA_LIBS =
 EXTRA_FLAGS =
-
-if XRDP_DEBUG
-EXTRA_DEFINES += -DXRDP_DEBUG
-else
-EXTRA_DEFINES += -DXRDP_NODEBUG
-endif
-
-if XRDP_NEUTRINORDP
-EXTRA_DEFINES += -DXRDP_NEUTRINORDP
-EXTRA_LIBS += $(FREERDP_LIBS)
-endif
-
-if XRDP_TJPEG
-EXTRA_DEFINES += -DXRDP_JPEG -DXRDP_TJPEG
-EXTRA_INCLUDES += @TurboJpegIncDir@
-EXTRA_FLAGS += @TurboJpegLibDir@
-EXTRA_LIBS += -lturbojpeg
-else
-if XRDP_JPEG
-EXTRA_DEFINES += -DXRDP_JPEG
-EXTRA_LIBS += -ljpeg
-endif
-endif
 
 AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
-  $(EXTRA_DEFINES) \
-  -I$(top_srcdir)/common \
-  $(EXTRA_INCLUDES)
+  -I$(top_srcdir)/common
+
+if XRDP_DEBUG
+AM_CPPFLAGS += -DXRDP_DEBUG
+else
+AM_CPPFLAGS += -DXRDP_NODEBUG
+endif
+
+if XRDP_NEUTRINORDP
+AM_CPPFLAGS += -DXRDP_NEUTRINORDP
+EXTRA_LIBS += $(FREERDP_LIBS)
+endif
+
+if XRDP_TJPEG
+AM_CPPFLAGS += -DXRDP_JPEG -DXRDP_TJPEG @TurboJpegIncDir@
+EXTRA_FLAGS += @TurboJpegLibDir@
+EXTRA_LIBS += -lturbojpeg
+else
+if XRDP_JPEG
+AM_CPPFLAGS += -DXRDP_JPEG
+EXTRA_LIBS += -ljpeg
+endif
+endif
 
 module_LTLIBRARIES = \
   libxrdp.la

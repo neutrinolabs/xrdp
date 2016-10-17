@@ -1,24 +1,5 @@
-EXTRA_INCLUDES =
 EXTRA_LIBS =
 EXTRA_FLAGS =
-
-if XRDP_DEBUG
-EXTRA_DEFINES = -DXRDP_DEBUG
-else
-EXTRA_DEFINES = -DXRDP_NODEBUG
-endif
-
-if XRDP_RFXCODEC
-EXTRA_DEFINES += -DXRDP_RFXCODEC
-EXTRA_INCLUDES += -I$(top_srcdir)/librfxcodec/include
-EXTRA_LIBS += $(top_srcdir)/librfxcodec/src/.libs/librfxencode.a
-endif
-
-if XRDP_PIXMAN
-EXTRA_DEFINES += -DXRDP_PIXMAN
-EXTRA_INCLUDES += $(XRDP_PIXMAN_CFLAGS)
-EXTRA_LIBS += $(XRDP_PIXMAN_LIBS)
-endif
 
 AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
@@ -26,11 +7,27 @@ AM_CPPFLAGS = \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -DXRDP_MODULE_PATH=\"${moduledir}\" \
-  $(EXTRA_DEFINES) \
   -I$(top_builddir) \
   -I$(top_srcdir)/common \
-  -I$(top_srcdir)/libxrdp \
-  $(EXTRA_INCLUDES)
+  -I$(top_srcdir)/libxrdp
+
+if XRDP_DEBUG
+AM_CPPFLAGS += -DXRDP_DEBUG
+else
+AM_CPPFLAGS += -DXRDP_NODEBUG
+endif
+
+if XRDP_RFXCODEC
+AM_CPPFLAGS += -DXRDP_RFXCODEC
+AM_CPPFLAGS += -I$(top_srcdir)/librfxcodec/include
+EXTRA_LIBS += $(top_srcdir)/librfxcodec/src/.libs/librfxencode.a
+endif
+
+if XRDP_PIXMAN
+AM_CPPFLAGS += -DXRDP_PIXMAN
+AM_CPPFLAGS += $(XRDP_PIXMAN_CFLAGS)
+EXTRA_LIBS += $(XRDP_PIXMAN_LIBS)
+endif
 
 sbin_PROGRAMS = \
   xrdp

@@ -1,19 +1,16 @@
-EXTRA_DEFINES =
- 
-if XRDP_DEBUG
-EXTRA_DEFINES += -DXRDP_DEBUG
-else
-EXTRA_DEFINES += -DXRDP_NODEBUG
-endif
-
 AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
-  $(EXTRA_DEFINES) \
   -I$(top_srcdir)/common \
   $(FREERDP_CFLAGS)
+
+if XRDP_DEBUG
+AM_CPPFLAGS += -DXRDP_DEBUG
+else
+AM_CPPFLAGS += -DXRDP_NODEBUG
+endif
 
 module_LTLIBRARIES = \
   libxrdpneutrinordp.la
