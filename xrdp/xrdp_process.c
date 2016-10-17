@@ -139,13 +139,43 @@ xrdp_process_data_in(struct trans *self)
             }
             if (pro->session->up_and_running)
             {
+                pro->server_trans->header_size = 2;
                 pro->server_trans->extra_flags = 1;
-                pro->server_trans->header_size = 4;
                 init_stream(s, 0);
             }
             break;
 
         case 1:
+            /* we got 2 bytes */
+            if (s->p[0] == 3)
+            {
+                pro->server_trans->header_size = 4;
+                pro->server_trans->extra_flags = 2;
+            }
+            else
+            {
+                if (s->p[1] & 0x80)
+                {
+                    pro->server_trans->header_size = 3;
+                    pro->server_trans->extra_flags = 2;
+                }
+                else
+                {
+                    len = (tui8)(s->p[1]);
+                    pro->server_trans->header_size = len;
+                    pro->server_trans->extra_flags = 3;
+                }
+            }
+
+            len = (int) (s->end - s->data);
+            if (pro->server_trans->header_size > len)
+            {
+                /* not enough data read yet */
+                break;
+            }
+            /* FALLTHROUGH */
+
+        case 2:
             /* we have enough now to get the PDU bytes */
             len = libxrdp_get_pdu_bytes(s->p);
             if (len == -1)
@@ -155,10 +185,17 @@ xrdp_process_data_in(struct trans *self)
                 return 1;
             }
             pro->server_trans->header_size = len;
-            pro->server_trans->extra_flags = 2;
-            break;
+            pro->server_trans->extra_flags = 3;
 
-        case 2:
+            len = (int) (s->end - s->data);
+            if (pro->server_trans->header_size > len)
+            {
+                /* not enough data read yet */
+                break;
+            }
+            /* FALLTHROUGH */
+
+        case 3:
             /* the whole PDU is read in now process */
             s->p = s->data;
             if (xrdp_process_loop(pro, s) != 0)
@@ -168,7 +205,7 @@ xrdp_process_data_in(struct trans *self)
                 return 1;
             }
             init_stream(s, 0);
-            pro->server_trans->header_size = 4;
+            pro->server_trans->header_size = 2;
             pro->server_trans->extra_flags = 1;
             break;
     }
