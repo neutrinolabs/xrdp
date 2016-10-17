@@ -264,7 +264,7 @@ g_write(const char *format, ...)
 /*****************************************************************************/
 /* produce a hex dump */
 void APP_CC
-g_hexdump(char *p, int len)
+g_hexdump(const char *p, int len)
 {
     unsigned char *line;
     int i;
@@ -1342,7 +1342,7 @@ g_set_nonblock(int fd)
 /*****************************************************************************/
 /* returns 0 on error */
 tintptr APP_CC
-g_create_wait_obj(char *name)
+g_create_wait_obj(const char *name)
 {
 #ifdef _WIN32
     tintptr obj;

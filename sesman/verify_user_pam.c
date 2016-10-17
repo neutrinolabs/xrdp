@@ -102,7 +102,7 @@ get_service_name(char *service_name)
  Stores the detailed error code in the errorcode variable*/
 
 long DEFAULT_CC
-auth_userpass(char *user, char *pass, int *errorcode)
+auth_userpass(const char *user, const char *pass, int *errorcode)
 {
     int error;
     struct t_auth_info *auth_info;

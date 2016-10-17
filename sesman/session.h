@@ -91,7 +91,8 @@ struct session_chain
  *
  */
 struct session_item* DEFAULT_CC
-session_get_bydata(char* name, int width, int height, int bpp, int type, char *client_ip);
+session_get_bydata(const char *name, int width, int height, int bpp, int type,
+                   const char *client_ip);
 #ifndef session_find_item
   #define session_find_item(a, b, c, d, e, f) session_get_bydata(a, b, c, d, e, f);
 #endif
@@ -147,6 +148,6 @@ session_get_bypid(int pid);
  *
  */
 struct SCP_DISCONNECTED_SESSION*
-session_get_byuser(char* user, int* cnt, unsigned char flags);
+session_get_byuser(const char *user, int *cnt, unsigned char flags);
 
 #endif

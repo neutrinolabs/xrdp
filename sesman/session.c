@@ -77,7 +77,8 @@ dumpItemsToString(struct list *self, char *outstr, int len)
 
 /******************************************************************************/
 struct session_item *DEFAULT_CC
-session_get_bydata(char *name, int width, int height, int bpp, int type, char *client_ip)
+session_get_bydata(const char *name, int width, int height, int bpp, int type,
+                   const char *client_ip)
 {
     struct session_chain *tmp;
     enum SESMAN_CFG_SESS_POLICY policy = g_cfg->sess.policy;
@@ -1016,7 +1017,7 @@ session_get_bypid(int pid)
 
 /******************************************************************************/
 struct SCP_DISCONNECTED_SESSION *
-session_get_byuser(char *user, int *cnt, unsigned char flags)
+session_get_byuser(const char *user, int *cnt, unsigned char flags)
 {
     struct session_chain *tmp;
     struct SCP_DISCONNECTED_SESSION *sess;
