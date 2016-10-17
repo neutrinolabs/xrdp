@@ -453,7 +453,7 @@ clipboard_send_file_data(int streamId, int lindex,
     if (g_file_seek(fd, nPositionLow) < 0)
     {
         log_message(LOG_LEVEL_ERROR, "clipboard_send_file_data: seek error "
-            "in file: %s\n", full_fn);
+            "in file: %s", full_fn);
         g_file_close(fd);
         return 1;
     }
