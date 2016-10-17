@@ -1,5 +1,3 @@
-EXTRA_LIBS =
-
 AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
@@ -10,6 +8,8 @@ AM_CPPFLAGS = \
   -I$(top_srcdir)/common \
   -I$(top_srcdir)/libxrdp
 
+XRDP_EXTRA_LIBS =
+
 if XRDP_DEBUG
 AM_CPPFLAGS += -DXRDP_DEBUG
 else
@@ -19,13 +19,13 @@ endif
 if XRDP_RFXCODEC
 AM_CPPFLAGS += -DXRDP_RFXCODEC
 AM_CPPFLAGS += -I$(top_srcdir)/librfxcodec/include
-EXTRA_LIBS += $(top_srcdir)/librfxcodec/src/.libs/librfxencode.a
+XRDP_EXTRA_LIBS += $(top_srcdir)/librfxcodec/src/.libs/librfxencode.a
 endif
 
 if XRDP_PIXMAN
 AM_CPPFLAGS += -DXRDP_PIXMAN
 AM_CPPFLAGS += $(XRDP_PIXMAN_CFLAGS)
-EXTRA_LIBS += $(XRDP_PIXMAN_LIBS)
+XRDP_EXTRA_LIBS += $(XRDP_PIXMAN_LIBS)
 endif
 
 sbin_PROGRAMS = \
@@ -53,7 +53,7 @@ xrdp_SOURCES = \
 xrdp_LDADD = \
   $(top_builddir)/common/libcommon.la \
   $(top_builddir)/libxrdp/libxrdp.la \
-  $(EXTRA_LIBS)
+  $(XRDP_EXTRA_LIBS)
 
 xrdpsysconfdir=$(sysconfdir)/xrdp
 

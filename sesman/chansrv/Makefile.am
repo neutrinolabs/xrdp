@@ -1,5 +1,3 @@
-EXTRA_LIBS =
-
 AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
@@ -7,19 +5,21 @@ AM_CPPFLAGS = \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -I$(top_srcdir)/common
 
+CHANSRV_EXTRA_LIBS =
+
 if XRDP_FUSE
 AM_CPPFLAGS += -DXRDP_FUSE
-EXTRA_LIBS += -lfuse
+CHANSRV_EXTRA_LIBS += -lfuse
 endif
 
 if XRDP_OPUS
 AM_CPPFLAGS += -DXRDP_OPUS
-EXTRA_LIBS += -lopus
+CHANSRV_EXTRA_LIBS += -lopus
 endif
 
 if XRDP_MP3LAME
 AM_CPPFLAGS += -DXRDP_MP3LAME
-EXTRA_LIBS += -lmp3lame
+CHANSRV_EXTRA_LIBS += -lmp3lame
 endif
 
 AM_CFLAGS = $(X_CFLAGS)
@@ -65,4 +65,4 @@ xrdp_chansrv_LDFLAGS = \
 xrdp_chansrv_LDADD = \
   $(top_builddir)/common/libcommon.la \
   $(X_PRE_LIBS) -lXfixes -lXrandr -lX11 $(X_EXTRA_LIBS) \
-  $(EXTRA_LIBS)
+  $(CHANSRV_EXTRA_LIBS)

@@ -1,5 +1,3 @@
-EXTRA_LIBS =
-
 AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
@@ -9,6 +7,8 @@ AM_CPPFLAGS = \
 
 AM_LDFLAGS =
 
+LIBXRDP_EXTRA_LIBS =
+
 if XRDP_DEBUG
 AM_CPPFLAGS += -DXRDP_DEBUG
 else
@@ -17,17 +17,17 @@ endif
 
 if XRDP_NEUTRINORDP
 AM_CPPFLAGS += -DXRDP_NEUTRINORDP
-EXTRA_LIBS += $(FREERDP_LIBS)
+LIBXRDP_EXTRA_LIBS += $(FREERDP_LIBS)
 endif
 
 if XRDP_TJPEG
 AM_CPPFLAGS += -DXRDP_JPEG -DXRDP_TJPEG @TurboJpegIncDir@
 AM_LDFLAGS += @TurboJpegLibDir@
-EXTRA_LIBS += -lturbojpeg
+LIBXRDP_EXTRA_LIBS += -lturbojpeg
 else
 if XRDP_JPEG
 AM_CPPFLAGS += -DXRDP_JPEG
-EXTRA_LIBS += -ljpeg
+LIBXRDP_EXTRA_LIBS += -ljpeg
 endif
 endif
 
@@ -55,4 +55,4 @@ libxrdp_la_SOURCES = \
 
 libxrdp_la_LIBADD = \
   $(top_builddir)/common/libcommon.la \
-  $(EXTRA_LIBS)
+  $(LIBXRDP_EXTRA_LIBS)
