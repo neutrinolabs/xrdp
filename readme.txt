@@ -21,7 +21,7 @@ xup is a module used to connect to an rdp specific X11 server
 Xserver is the files needed to build an rdp specific X11 server
 COPYING is the license file
 design.txt is an attempt to explain the project design
-prog_std.txt is an attempt to explain the programming standard used
+coding_style.md describes the coding style for the project
 
 since version 0.5.0 we switch to autotools to build xrdp
 
