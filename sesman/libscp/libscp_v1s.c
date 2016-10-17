@@ -330,7 +330,6 @@ scp_v1s_request_password(struct SCP_CONNECTION *c, struct SCP_SESSION *s,
 
     if (0 != scp_session_set_username(s, buf))
     {
-        scp_session_destroy(s);
         log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error", __LINE__);
         return SCP_SERVER_STATE_INTERNAL_ERR;
     }
@@ -342,7 +341,6 @@ scp_v1s_request_password(struct SCP_CONNECTION *c, struct SCP_SESSION *s,
 
     if (0 != scp_session_set_password(s, buf))
     {
-        scp_session_destroy(s);
         log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error", __LINE__);
         return SCP_SERVER_STATE_INTERNAL_ERR;
     }
