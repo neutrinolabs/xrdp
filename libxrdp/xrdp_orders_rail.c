@@ -260,6 +260,7 @@ xrdp_orders_send_window_new_update(struct xrdp_orders *self, int window_id,
         /* titleInfo */
         num_chars = g_mbstowcs(0, window_state->title_info, 0);
         num_chars = MIN(num_chars, 2 * 1024);
+        num_chars = MAX(num_chars, 0);
         order_size += 2 * num_chars + 2;
     }
 
@@ -537,6 +538,7 @@ xrdp_orders_send_notify_new_update(struct xrdp_orders *self,
         /* ToolTip (variable) UNICODE_STRING */
         num_chars = g_mbstowcs(0, notify_state->tool_tip, 0);
         num_chars = MIN(num_chars, 2 * 1024);
+        num_chars = MAX(num_chars, 0);
         order_size += 2 * num_chars + 2;
     }
 
@@ -546,10 +548,12 @@ xrdp_orders_send_notify_new_update(struct xrdp_orders *self,
         /* UNICODE_STRING */
         num_chars = g_mbstowcs(0, notify_state->infotip.title, 0);
         num_chars = MIN(num_chars, 2 * 1024);
+        num_chars = MAX(num_chars, 0);
         order_size += 2 * num_chars + 2;
         /* UNICODE_STRING */
         num_chars = g_mbstowcs(0, notify_state->infotip.text, 0);
         num_chars = MIN(num_chars, 2 * 1024);
+        num_chars = MAX(num_chars, 0);
         order_size += 2 * num_chars + 2;
         /* Timeout (4 bytes) */
         /* InfoFlags (4 bytes) */
