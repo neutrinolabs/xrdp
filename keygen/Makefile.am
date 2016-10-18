@@ -17,8 +17,8 @@ xrdp_keygen_LDADD = \
 xrdpsysconfdir = $(sysconfdir)/xrdp
 
 install-data-hook:
-	umask 077 && \
-	  ./xrdp-keygen xrdp $(DESTDIR)$(xrdpsysconfdir)/rsakeys.ini
+	[ ! -f $(DESTDIR)$(xrdpsysconfdir)/rsakeys.ini ] && umask 077 && \
+	./xrdp-keygen xrdp $(DESTDIR)$(xrdpsysconfdir)/rsakeys.ini || :
 
 uninstall-hook:
 	rm -f $(DESTDIR)$(xrdpsysconfdir)/rsakeys.ini
