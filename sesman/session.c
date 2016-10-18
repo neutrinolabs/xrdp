@@ -3,6 +3,11 @@
  *
  * Copyright (C) Jay Sorg 2004-2013
  *
+ * BSD process grouping by:
+ * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland.
+ * Copyright (c) 2000-2001 Markus Friedl.
+ * Copyright (c) 2011-2015 Koichiro Iwao, Kyushu Institute of Technology.
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -136,27 +141,9 @@ session_get_bydata(char *name, int width, int height, int bpp, int type, char *c
             tmp->item->client_ip);
 #endif
 
-        if (type == SESMAN_SESSION_TYPE_XRDP)
-        {
-            /* only name and bpp need to match for X11rdp, it can resize */
-            if (g_strncmp(name, tmp->item->name, 255) == 0 &&
-                (!(policy & SESMAN_CFG_SESS_POLICY_D) ||
-                 (tmp->item->width == width && tmp->item->height == height)) &&
-                (!(policy & SESMAN_CFG_SESS_POLICY_I) ||
-                 (g_strncmp_d(client_ip, tmp->item->client_ip, ':', 255) == 0)) &&
-                (!(policy & SESMAN_CFG_SESS_POLICY_C) ||
-                 (g_strncmp(client_ip, tmp->item->client_ip, 255) == 0)) &&
-                tmp->item->bpp == bpp &&
-                tmp->item->type == type)
-            {
-                /*THREAD-FIX release chain lock */
-                lock_chain_release();
-                return tmp->item;
-            }
-        }
-
         if (g_strncmp(name, tmp->item->name, 255) == 0 &&
-            (tmp->item->width == width && tmp->item->height == height) &&
+            (!(policy & SESMAN_CFG_SESS_POLICY_D) ||
+             (tmp->item->width == width && tmp->item->height == height)) &&
             (!(policy & SESMAN_CFG_SESS_POLICY_I) ||
              (g_strncmp_d(client_ip, tmp->item->client_ip, ':', 255) == 0)) &&
             (!(policy & SESMAN_CFG_SESS_POLICY_C) ||
@@ -529,6 +516,42 @@ session_start_fork(int width, int height, int bpp, char *username,
         g_sprintf(geometry, "%dx%d", width, height);
         g_sprintf(depth, "%d", bpp);
         g_sprintf(screen, ":%d", display);
+#ifdef __FreeBSD__
+        /*
+         * FreeBSD bug
+         * ports/157282: effective login name is not set by xrdp-sesman
+         * http://www.freebsd.org/cgi/query-pr.cgi?pr=157282
+         *
+         * from:
+         *  $OpenBSD: session.c,v 1.252 2010/03/07 11:57:13 dtucker Exp $
+         *  with some ideas about BSD process grouping to xrdp
+         */
+        pid_t bsdsespid = g_fork();
+
+        if (bsdsespid == -1)
+        {
+        }
+        else if (bsdsespid == 0) /* BSD session leader */
+        {
+            /**
+             * Create a new session and process group since the 4.4BSD
+             * setlogin() affects the entire process group
+             */
+            if (setsid() < 0)
+            {
+              log_message(LOG_LEVEL_ERROR,
+                "setsid failed - pid %d", g_getpid());
+            }
+
+            if (setlogin(username) < 0)
+            {
+              log_message(LOG_LEVEL_ERROR,
+                "setlogin failed for user %s - pid %d", username, g_getpid());
+            }
+        }
+
+        g_waitpid(bsdsespid);
+#endif
         wmpid = g_fork();
         if (wmpid == -1)
         {
@@ -671,7 +694,7 @@ session_start_fork(int width, int height, int bpp, char *username,
                     xserver_params->auto_free = 1;
 
                     /* these are the must have parameters */
-                    list_add_item(xserver_params, (long) g_strdup("/usr/bin/Xorg"));
+                    list_add_item(xserver_params, (long) g_strdup("Xorg"));
                     list_add_item(xserver_params, (long) g_strdup(screen));
 
                     /* additional parameters from sesman.ini file */
@@ -692,7 +715,7 @@ session_start_fork(int width, int height, int bpp, char *username,
                     g_setenv("XRDP_START_HEIGHT", geometry, 1);
 
                     /* fire up Xorg */
-                    g_execvp("/usr/bin/Xorg", pp1);
+                    g_execvp("Xorg", pp1);
                 }
                 else if (type == SESMAN_SESSION_TYPE_XVNC)
                 {

@@ -59,6 +59,8 @@ extern int g_alt_down; /* in rdpmain.c */
 extern int g_ctrl_down; /* in rdpmain.c */
 
 static int g_old_button_mask = 0;
+static int g_old_x = 0;
+static int g_old_y = 0;
 /* this is toggled every time num lock key is released, not like the
    above *_down vars */
 static int g_scroll_lock_down = 0;
@@ -858,7 +860,12 @@ rdpDeferredInputCallback(OsTimerPtr timer, CARD32 now, pointer arg)
 {
     LLOGLN(10, ("rdpDeferredInputCallback:"));
     g_timer_schedualed = 0;
-    rdpEnqueueMotion(g_x, g_y);
+    if ((g_old_x != g_x) || (g_old_y != g_y))
+    {
+        rdpEnqueueMotion(g_x, g_y);
+        g_old_x = g_x;
+        g_old_y = g_x;
+    }
     return 0;
 }
 
@@ -886,7 +893,12 @@ PtrAddEvent(int buttonMask, int x, int y)
             g_timer_schedualed = 0;
             TimerCancel(g_timer);
         }
-        rdpEnqueueMotion(x, y);
+        if ((g_old_x != x) || (g_old_y != y))
+        {
+            rdpEnqueueMotion(x, y);
+            g_old_x = x;
+            g_old_y = y;
+        }
         for (i = 0; i < 5; i++)
         {
             if ((buttonMask ^ g_old_button_mask) & (1 << i))

@@ -10,7 +10,11 @@ EXTRA_DIST = \
   sound.h \
   xcommon.h \
   mlog.h \
-  chansrv_common.h
+  chansrv_common.h \
+  irp.h \
+  smartcard.h \
+  smartcard_pcsc.h \
+  fifo.h
 
 EXTRA_DEFINES =
 EXTRA_INCLUDES =

@@ -21,6 +21,20 @@
 #include "vnc.h"
 #include "log.h"
 
+#define LLOG_LEVEL 1
+#define LLOGLN(_level, _args) \
+  do \
+  { \
+    if (_level < LLOG_LEVEL) \
+    { \
+        g_write("xrdp:vnc [%10.10u]: ", g_time3()); \
+        g_writeln _args ; \
+    } \
+  } \
+  while (0)
+
+#define AS_LOG_MESSAGE log_message
+
 /******************************************************************************/
 /* taken from vncauth.c */
 void DEFAULT_CC
@@ -154,20 +168,30 @@ lib_process_channel_data(struct vnc *v, int chanid, int flags, int size,
         switch (type)
         {
             case 2: /* CLIPRDR_FORMAT_ANNOUNCE */
+                AS_LOG_MESSAGE(LOG_LEVEL_DEBUG, "CLIPRDR_FORMAT_ANNOUNCE - "
+                               "status %d length %d", status, length);
+                // Send the CLIPRDR_DATA_REQUEST message to the cliprdr channel.
+                //
                 make_stream(out_s);
                 init_stream(out_s, 8192);
-                out_uint16_le(out_s, 3);
-                out_uint16_le(out_s, 1);
-                out_uint32_le(out_s, 0);
-                out_uint8s(out_s, 4); /* pad */
+                out_uint16_le(out_s, 4); // msg-type:  CLIPRDR_DATA_REQUEST
+                out_uint16_le(out_s, 0); // msg-status-code:  CLIPRDR_REQUEST
+                out_uint32_le(out_s, 4); // sizeof supported-format-list.
+                out_uint32_le(out_s, 1); // supported-format-list:  CF_TEXT
+                out_uint8s(out_s, 0);    // pad (garbage pad?)
                 s_mark_end(out_s);
                 length = (int)(out_s->end - out_s->data);
-                v->server_send_to_channel(v, v->clip_chanid, out_s->data, length, length, 3);
+                v->server_send_to_channel(v, v->clip_chanid, out_s->data,
+                                          length, length, 3);
                 free_stream(out_s);
                 break;
             case 3: /* CLIPRDR_FORMAT_ACK */
+                AS_LOG_MESSAGE(LOG_LEVEL_DEBUG, "CLIPRDR_FORMAT_ACK - "
+                               "status %d length %d", status, length);
                 break;
             case 4: /* CLIPRDR_DATA_REQUEST */
+                AS_LOG_MESSAGE(LOG_LEVEL_DEBUG, "CLIPRDR_DATA_REQUEST - "
+                               "status %d length %d", status, length);
                 format = 0;
 
                 if (length >= 4)
@@ -217,6 +241,55 @@ lib_process_channel_data(struct vnc *v, int chanid, int flags, int size,
                                           length, 3);
                 free_stream(out_s);
                 break;
+
+            case 5: /* CLIPRDR_DATA_RESPONSE */
+                AS_LOG_MESSAGE(LOG_LEVEL_DEBUG, "CLIPRDR_DATA_RESPONSE - "
+                               "status %d length %d", status, length);
+
+                // - Read the response data from the cliprdr channel, stream 's'.
+                // - Send the response data to the vnc server, stream 'out_s'.
+                //
+                make_stream(out_s);
+
+                // Send the RFB message type (CLIENT_CUT_TEXT) to the vnc server.
+                init_stream(out_s, 8192);
+                out_uint8(out_s, 6);   // RFB msg type:  CLIENT_CUT_TEXT
+                out_uint8s(out_s, 3);  // padding
+                lib_send(v, out_s->data, 4);
+
+                // Send the length of the cut-text to  the vnc server.
+                init_stream(out_s, 8192);
+                out_uint32_be(out_s, length);
+                lib_send(v, out_s->data, 4);
+
+                // Send the cut-text (as read from 's') to the vnc server.
+                init_stream(out_s, 8192);
+                for (index = 0; index < length; index++)
+                {
+                    char cur_char = '\0';
+                    in_uint8(s, cur_char);      // text in from 's'
+                    out_uint8(out_s, cur_char); // text out to 'out_s'
+                }
+                lib_send(v, out_s->data, length);
+
+                free_stream(out_s);
+
+                // Now send a CLIPRDR_FORMAT_ACK to the cliprdr channel.
+                //   This seems to be necessary for bi-directional copy/paste.
+                //
+                make_stream(out_s);
+                init_stream(out_s, 8192);
+                out_uint16_le(out_s, 3); // msg-type:  CLIPRDR_FORMAT_ACK
+                out_uint16_le(out_s, 1); // msg-status-code:  CLIPRDR_RESPONSE
+                out_uint32_le(out_s, 0); // null (?)
+                out_uint8s(out_s, 4);    // pad
+                s_mark_end(out_s);
+                length = (int)(out_s->end - out_s->data);
+                v->server_send_to_channel(v, v->clip_chanid, out_s->data,
+                                          length, length, 3);
+                free_stream(out_s);
+                break;
+
             default:
             {
                 log_message(LOG_LEVEL_DEBUG, "VNC clip information unhandled");
@@ -250,7 +323,6 @@ lib_mod_event(struct vnc *v, int msg, long param1, long param2,
     int chanid;
     int flags;
     char *data;
-    char text[256];
 
     error = 0;
     make_stream(s);
@@ -853,7 +925,6 @@ lib_palette_update(struct vnc *v)
 int DEFAULT_CC
 lib_bell_trigger(struct vnc *v)
 {
-    struct stream *s;
     int error;
 
     error = v->server_bell_trigger(v);

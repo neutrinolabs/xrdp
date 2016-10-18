@@ -319,7 +319,6 @@ main(int argc, char **argv)
     test = 1;
     host_be = !((int)(*(unsigned char *)(&test)));
 #if defined(B_ENDIAN)
-
     if (!host_be)
 #endif
 #if defined(L_ENDIAN)
@@ -357,29 +356,6 @@ main(int argc, char **argv)
 
     g_snprintf(cfg_file, 255, "%s/xrdp.ini", XRDP_CFG_PATH);
 
-    /* starting logging subsystem */
-    error = log_start(cfg_file, "XRDP");
-
-    if (error != LOG_STARTUP_OK)
-    {
-        switch (error)
-        {
-            case LOG_ERROR_MALLOC:
-                g_writeln("error on malloc. cannot start logging. quitting.");
-                break;
-            case LOG_ERROR_FILE_OPEN:
-                g_writeln("error opening log file [%s]. quitting.",
-                          getLogFile(text, 255));
-                break;
-            default:
-                g_writeln("log_start error");
-                break;
-        }
-
-        g_deinit();
-        g_exit(1);
-    }
-
     startup_params = (struct xrdp_startup_params *)
                      g_malloc(sizeof(struct xrdp_startup_params), 1);
 
@@ -394,6 +370,36 @@ main(int argc, char **argv)
 
     g_snprintf(pid_file, 255, "%s/xrdp.pid", XRDP_PID_PATH);
     no_daemon = 0;
+
+    if (startup_params->help)
+    {
+        g_writeln("");
+        g_writeln("xrdp: A Remote Desktop Protocol server.");
+        g_writeln("Copyright (C) Jay Sorg 2004-2014");
+        g_writeln("See http://www.xrdp.org for more information.");
+        g_writeln("");
+        g_writeln("Usage: xrdp [options]");
+        g_writeln("   --help: show help");
+        g_writeln("   --nodaemon: don't fork into background");
+        g_writeln("   --kill: shut down xrdp");
+        g_writeln("   --port: tcp listen port");
+        g_writeln("   --fork: fork on new connection");
+        g_writeln("");
+        g_deinit();
+        g_exit(0);
+    }
+
+    if (startup_params->version)
+    {
+        g_writeln("");
+        g_writeln("xrdp: A Remote Desktop Protocol server.");
+        g_writeln("Copyright (C) Jay Sorg 2004-2014");
+        g_writeln("See http://www.xrdp.org for more information.");
+        g_writeln("Version %s", PACKAGE_VERSION);
+        g_writeln("");
+        g_deinit();
+        g_exit(0);
+    }
 
     if (startup_params->kill)
     {
@@ -430,40 +436,30 @@ main(int argc, char **argv)
         g_exit(0);
     }
 
-    if (startup_params->no_daemon)
+    /* starting logging subsystem */
+    error = log_start(cfg_file, "XRDP");
+
+    if (error != LOG_STARTUP_OK)
     {
-        no_daemon = 1;
+        switch (error)
+        {
+            case LOG_ERROR_MALLOC:
+                g_writeln("error on malloc. cannot start logging. quitting.");
+                break;
+            case LOG_ERROR_FILE_OPEN:
+                g_writeln("error opening log file [%s]. quitting.",
+                          getLogFile(text, 255));
+                break;
+            default:
+                g_writeln("log_start error");
+                break;
+        }
+
+        g_deinit();
+        g_exit(1);
     }
 
-    if (startup_params->help)
-    {
-        g_writeln("");
-        g_writeln("xrdp: A Remote Desktop Protocol server.");
-        g_writeln("Copyright (C) Jay Sorg 2004-2014");
-        g_writeln("See http://www.xrdp.org for more information.");
-        g_writeln("");
-        g_writeln("Usage: xrdp [options]");
-        g_writeln("   --help: show help");
-        g_writeln("   --nodaemon: don't fork into background");
-        g_writeln("   --kill: shut down xrdp");
-        g_writeln("   --port: tcp listen port");
-        g_writeln("   --fork: fork on new connection");
-        g_writeln("");
-        g_deinit();
-        g_exit(0);
-    }
 
-    if (startup_params->version)
-    {
-        g_writeln("");
-        g_writeln("xrdp: A Remote Desktop Protocol server.");
-        g_writeln("Copyright (C) Jay Sorg 2004-2014");
-        g_writeln("See http://www.xrdp.org for more information.");
-        g_writeln("Version %s", PACKAGE_VERSION);
-        g_writeln("");
-        g_deinit();
-        g_exit(0);
-    }
 
     if (g_file_exist(pid_file)) /* xrdp.pid */
     {
@@ -472,6 +468,12 @@ main(int argc, char **argv)
         g_deinit();
         g_exit(0);
     }
+
+    if (startup_params->no_daemon)
+    {
+        no_daemon = 1;
+    }
+
 
     if (!no_daemon)
     {
