@@ -180,7 +180,7 @@ data_file=x11_file_list.txt
 # was www.x.org/releases/X11R7.6/src/everything
 download_url=http://server1.xrdp.org/xrdp/X11R7.6
 
-num_modules=`cat $data_file | wc -l`
+num_modules=`wc -l < $data_file`
 count=0
 
 ##########################
