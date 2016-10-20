@@ -222,7 +222,7 @@ internal_log_end(struct log_config *l_cfg)
  * @return
  */
 enum logLevels DEFAULT_CC
-internal_log_text2level(char *buf)
+internal_log_text2level(const char *buf)
 {
     if (0 == g_strcasecmp(buf, "0") ||
             0 == g_strcasecmp(buf, "core"))

@@ -30,7 +30,7 @@ extern struct config_sesman *g_cfg; /* in sesman.c */
 
 /******************************************************************************/
 int DEFAULT_CC
-access_login_allowed(char *user)
+access_login_allowed(const char *user)
 {
     int gid;
     int ok;
@@ -79,7 +79,7 @@ access_login_allowed(char *user)
 
 /******************************************************************************/
 int DEFAULT_CC
-access_login_mng_allowed(char *user)
+access_login_mng_allowed(const char *user)
 {
     int gid;
     int ok;

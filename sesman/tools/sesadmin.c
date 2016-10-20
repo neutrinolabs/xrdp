@@ -129,18 +129,18 @@ int main(int argc, char **argv)
     sock = g_tcp_socket();
     if (sock < 0)
     {
-        LOG_DBG("Socket open error, g_tcp_socket() failed\n");
+        LOG_DBG("Socket open error, g_tcp_socket() failed");
         return 1;
     }
 
     s = scp_session_create();
     c = scp_connection_create(sock);
 
-    LOG_DBG("Connecting to %s:%s with user %s (%s)\n", serv, port, user, pass);
+    LOG_DBG("Connecting to %s:%s with user %s (%s)", serv, port, user, pass);
 
     if (0 != g_tcp_connect(sock, serv, port))
     {
-        LOG_DBG("g_tcp_connect() error\n");
+        LOG_DBG("g_tcp_connect() error");
         return 1;
     }
 
@@ -153,7 +153,7 @@ int main(int argc, char **argv)
 
     if (SCP_CLIENT_STATE_OK != e)
     {
-        LOG_DBG("libscp error connecting: %s %d\n", s->errstr, (int)e);
+        LOG_DBG("libscp error connecting: %s %d", s->errstr, (int)e);
     }
 
     if (0 == g_strncmp(cmnd, "list", 5))

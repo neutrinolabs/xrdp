@@ -37,7 +37,7 @@ scp_connection_create(int sck)
 
     if (0 == conn)
     {
-        log_message(LOG_LEVEL_WARNING, "[connection:%d] connection create: malloc error", __LINE__);
+        log_message(LOG_LEVEL_ERROR, "[connection:%d] connection create: malloc error", __LINE__);
         return 0;
     }
 

@@ -264,7 +264,7 @@ g_write(const char *format, ...)
 /*****************************************************************************/
 /* produce a hex dump */
 void APP_CC
-g_hexdump(char *p, int len)
+g_hexdump(const char *p, int len)
 {
     unsigned char *line;
     int i;
@@ -439,7 +439,7 @@ g_tcp_socket(void)
             if (setsockopt(rv, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&option_value,
                        option_len) < 0)
             {
-                log_message(LOG_LEVEL_ERROR, "g_tcp_socket: setsockopt() failed\n");
+                log_message(LOG_LEVEL_ERROR, "g_tcp_socket: setsockopt() failed");
             }
         }
     }
@@ -455,7 +455,7 @@ g_tcp_socket(void)
             if (setsockopt(rv, SOL_SOCKET, SO_REUSEADDR, (char *)&option_value,
                        option_len) < 0)
             {
-                log_message(LOG_LEVEL_ERROR, "g_tcp_socket: setsockopt() failed\n");
+                log_message(LOG_LEVEL_ERROR, "g_tcp_socket: setsockopt() failed");
             }
         }
     }
@@ -472,7 +472,7 @@ g_tcp_socket(void)
             if (setsockopt(rv, SOL_SOCKET, SO_SNDBUF, (char *)&option_value,
                        option_len) < 0)
             {
-                log_message(LOG_LEVEL_ERROR, "g_tcp_socket: setsockopt() failed\n");
+                log_message(LOG_LEVEL_ERROR, "g_tcp_socket: setsockopt() failed");
             }
         }
     }
@@ -846,7 +846,7 @@ g_sck_set_non_blocking(int sck)
     i = i | O_NONBLOCK;
     if (fcntl(sck, F_SETFL, i) < 0)
     {
-        log_message(LOG_LEVEL_ERROR, "g_sck_set_non_blocking: fcntl() failed\n");
+        log_message(LOG_LEVEL_ERROR, "g_sck_set_non_blocking: fcntl() failed");
     }
 #endif
     return 0;
@@ -1342,7 +1342,7 @@ g_set_nonblock(int fd)
 /*****************************************************************************/
 /* returns 0 on error */
 tintptr APP_CC
-g_create_wait_obj(char *name)
+g_create_wait_obj(const char *name)
 {
 #ifdef _WIN32
     tintptr obj;

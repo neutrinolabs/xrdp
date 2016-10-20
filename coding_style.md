@@ -15,6 +15,13 @@ Here is how we run the astyle command:
 This coding style is a work in progress and is still evolving.
 
 
+Language Standard
+-----------------
+
+Try to make all code compile with both C and C++ compiler. C++ is more
+strict, which makes the code safer.
+
+
 Indentation
 -----------
 
@@ -32,7 +39,7 @@ Indentation
 Line wrapping
 -------------
 
-* Keep lines shorter than 80 chars
+* Keep lines not longer than 80 chars
 * Align wrapped argument to the first argument
 
 ☞
@@ -46,9 +53,11 @@ Variable names
 
 * Use lowercase with underscores as needed
 * Don't use camelCase
+* Preprocessor constants should be uppercase
 
 ☞
 
+    #define BUF_SIZE 1024
     int fd;
     int bytes_in_stream;
 
@@ -193,3 +202,9 @@ Braces
         default:
             printf("bad cmd\n");
     }
+
+Comments
+--------
+
+Use /* */ for comments
+Don't use //

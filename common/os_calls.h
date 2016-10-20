@@ -55,7 +55,7 @@ int DEFAULT_CC  g_snprintf(char* dest, int len, const char* format, ...) \
                   printflike(3, 4);
 void DEFAULT_CC g_writeln(const char* format, ...) printflike(1, 2);
 void DEFAULT_CC g_write(const char* format, ...) printflike(1, 2);
-void APP_CC     g_hexdump(char* p, int len);
+void APP_CC     g_hexdump(const char *p, int len);
 void APP_CC     g_memset(void* ptr, int val, int size);
 void APP_CC     g_memcpy(void* d_ptr, const void* s_ptr, int size);
 int APP_CC      g_getchar(void);
@@ -88,7 +88,7 @@ int APP_CC      g_sck_can_recv(int sck, int millis);
 int APP_CC      g_sck_select(int sck1, int sck2);
 void APP_CC     g_write_ip_address(int rcv_sck, char* ip_address, int bytes);
 void APP_CC     g_sleep(int msecs);
-tintptr APP_CC  g_create_wait_obj(char* name);
+tintptr APP_CC  g_create_wait_obj(const char *name);
 tintptr APP_CC  g_create_wait_obj_from_socket(tintptr socket, int write);
 void APP_CC     g_delete_wait_obj_from_socket(tintptr wait_obj);
 int APP_CC      g_set_wait_obj(tintptr obj);

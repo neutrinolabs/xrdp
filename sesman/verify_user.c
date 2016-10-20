@@ -48,7 +48,7 @@ auth_account_disabled(struct spwd *stp);
 /******************************************************************************/
 /* returns boolean */
 long DEFAULT_CC
-auth_userpass(char *user, char *pass, int *errorcode)
+auth_userpass(const char *user, const char *pass, int *errorcode)
 {
     const char *encr;
     const char *epass;
@@ -125,7 +125,7 @@ auth_set_env(long in_val)
 
 /******************************************************************************/
 int DEFAULT_CC
-auth_check_pwd_chg(char *user)
+auth_check_pwd_chg(const char *user)
 {
     struct passwd *spw;
     struct spwd *stp;
@@ -182,7 +182,7 @@ auth_check_pwd_chg(char *user)
 }
 
 int DEFAULT_CC
-auth_change_pwd(char *user, char *newpwd)
+auth_change_pwd(const char *user, const char *newpwd)
 {
     struct passwd *spw;
     struct spwd *stp;

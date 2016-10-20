@@ -113,7 +113,7 @@ internal_log_lvl2str(const enum logLevels lvl, char *str);
  *
  */
 enum logLevels DEFAULT_CC
-internal_log_text2level(char *s);
+internal_log_text2level(const char *s);
 
 /**
  * A function that init our struct that holds all state and
@@ -172,16 +172,6 @@ log_end(void);
  */
 enum logReturns DEFAULT_CC
 log_message(const enum logLevels lvl, const char *msg, ...) printflike(2, 3);
-
-/**
- *
- * @brief Reads configuration
- * @param s translates the strings "1", "true" and "yes" in 1 (true) and
- * other strings in 0
- * @return 0 on success, 1 on failure
- *
- */
-int APP_CC text2bool(char *s);
 
 /**
  * This function returns the configured file name for the logfile

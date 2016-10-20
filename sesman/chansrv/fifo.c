@@ -235,21 +235,21 @@ fifo_remove(FIFO* fp)
 void*
 fifo_peek(FIFO* fp)
 {
-    log_debug_high("entered\n");
+    log_debug_high("entered");
 
     if (!fp)
     {
-        log_debug_high("FIFO is null\n");
+        log_debug_high("FIFO is null");
         return 0;
     }
 
     if (fp->rd_ptr == fp->wr_ptr)
     {
-        log_debug_high("FIFO is empty\n");
+        log_debug_high("FIFO is empty");
         return 0;
     }
 
-    log_debug_low("peeking data at index %d\n", fp->rd_ptr);
+    log_debug_low("peeking data at index %d", fp->rd_ptr);
 
     return (void *) fp->user_data[fp->rd_ptr];
 }

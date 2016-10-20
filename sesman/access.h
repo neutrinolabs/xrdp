@@ -35,7 +35,7 @@
  *
  */
 int DEFAULT_CC
-access_login_allowed(char* user);
+access_login_allowed(const char *user);
 
 /**
  *
@@ -45,6 +45,6 @@ access_login_allowed(char* user);
  *
  */
 int DEFAULT_CC
-access_login_mng_allowed(char* user);
+access_login_mng_allowed(const char *user);
 
 #endif
