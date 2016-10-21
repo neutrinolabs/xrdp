@@ -11,6 +11,7 @@ startscriptdir=$(sysconfdir)/xrdp
 dist_startscript_DATA = \
   km-0407.ini \
   km-0409.ini \
+  km-040a.ini \
   km-040c.ini \
   km-0410.ini \
   km-0411.ini \
