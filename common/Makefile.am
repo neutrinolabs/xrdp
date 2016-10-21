@@ -51,3 +51,6 @@ libcommon_la_LIBADD = \
   -lcrypto \
   -lssl \
   -lpthread
+
+libcommon_la_LDFLAGS = \
+  -avoid-version -module
