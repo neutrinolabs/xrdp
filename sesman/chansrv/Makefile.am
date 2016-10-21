@@ -1,31 +1,26 @@
-EXTRA_DEFINES =
-EXTRA_INCLUDES =
-EXTRA_LIBS =
-EXTRA_FLAGS =
-
-if XRDP_FUSE
-EXTRA_DEFINES += -DXRDP_FUSE
-EXTRA_LIBS += -lfuse
-endif
-
-if XRDP_OPUS
-EXTRA_DEFINES += -DXRDP_OPUS
-EXTRA_LIBS += -lopus
-endif
-
-if XRDP_MP3LAME
-EXTRA_DEFINES += -DXRDP_MP3LAME
-EXTRA_LIBS += -lmp3lame
-endif
-
 AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
-  $(EXTRA_DEFINES) \
-  -I$(top_srcdir)/common \
-  $(EXTRA_INCLUDES)
+  -I$(top_srcdir)/common
+
+CHANSRV_EXTRA_LIBS =
+
+if XRDP_FUSE
+AM_CPPFLAGS += -DXRDP_FUSE
+CHANSRV_EXTRA_LIBS += -lfuse
+endif
+
+if XRDP_OPUS
+AM_CPPFLAGS += -DXRDP_OPUS
+CHANSRV_EXTRA_LIBS += -lopus
+endif
+
+if XRDP_MP3LAME
+AM_CPPFLAGS += -DXRDP_MP3LAME
+CHANSRV_EXTRA_LIBS += -lmp3lame
+endif
 
 AM_CFLAGS = $(X_CFLAGS)
 
@@ -65,10 +60,9 @@ xrdp_chansrv_SOURCES = \
   xcommon.h
 
 xrdp_chansrv_LDFLAGS = \
-  $(X_LIBS) \
-  $(EXTRA_FLAGS)
+  $(X_LIBS)
 
 xrdp_chansrv_LDADD = \
   $(top_builddir)/common/libcommon.la \
   $(X_PRE_LIBS) -lXfixes -lXrandr -lX11 $(X_EXTRA_LIBS) \
-  $(EXTRA_LIBS)
+  $(CHANSRV_EXTRA_LIBS)
