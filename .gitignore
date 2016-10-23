@@ -25,6 +25,7 @@ Makefile.in
 missing
 NEWS
 *.o
+*.pc
 README
 stamp-h1
 rfxcodectest

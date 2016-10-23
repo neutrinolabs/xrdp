@@ -29,8 +29,4 @@ then
 fi
 
 touch configure.ac
-touch NEWS
-touch AUTHORS
-touch README
-touch ChangeLog
 autoreconf -fvi
