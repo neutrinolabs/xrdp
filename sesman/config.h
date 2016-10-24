@@ -356,4 +356,7 @@ int DEFAULT_CC
 config_read_session_variables(int file, struct config_sesman *cs,
                               struct list *param_n, struct list *param_v);
 
+void
+config_free(struct config_sesman *cs);
+
 #endif

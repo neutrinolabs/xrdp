@@ -77,7 +77,6 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
             default:
                 /* we check the other errors */
                 parseCommonStates(e, "scp_v1s_list_sessions()");
-                scp_session_destroy(s);
                 return;
                 //break;
         }
@@ -88,7 +87,6 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
         scp_v1s_deny_connection(c, "Login failed");
         log_message( LOG_LEVEL_INFO,
                      "Login failed for user %s. Connection terminated", s->username);
-        scp_session_destroy(s);
         return;
     }
 
@@ -98,7 +96,6 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
         scp_v1s_deny_connection(c, "Access to Terminal Server not allowed.");
         log_message(LOG_LEVEL_INFO,
                     "User %s not allowed on TS. Connection terminated", s->username);
-        scp_session_destroy(s);
         return;
     }
 
@@ -204,7 +201,6 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     }
 
     /* cleanup */
-    scp_session_destroy(s);
     auth_end(data);
     g_free(slist);
 }

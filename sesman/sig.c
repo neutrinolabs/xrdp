@@ -91,6 +91,9 @@ sig_sesman_reload_cfg(int sig)
     /* stop logging subsystem */
     log_end();
 
+    /* free old config data */
+    config_free(g_cfg);
+
     /* replace old config with newly read one */
     g_cfg = cfg;
 
