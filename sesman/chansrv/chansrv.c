@@ -1391,12 +1391,52 @@ static char* APP_CC
 get_log_path()
 {
     char* log_path = 0;
+    char* cp = 0;
 
     log_path = g_getenv("CHANSRV_LOG_PATH");
+
+    if (log_path == 0)
+    {
+        log_path = g_getenv("XDG_DATA_HOME");
+        if (log_path != 0)
+        {
+            cp = malloc(strlen(log_path) + strlen("/xrdp") + 1);
+
+            if (cp != 0)
+            {
+                memcpy(cp, log_path, strlen(log_path));
+                memcpy(cp + strlen(log_path), "/xrdp", strlen("/xrdp") + 1);
+                if (g_directory_exist(cp) || g_mkdir(cp))
+		{
+                    log_path = cp;
+		}
+                else
+		{
+                    free(cp);
+		}
+            }
+        }
+    }
+
     if (log_path == 0)
     {
         log_path = g_getenv("HOME");
+        if (log_path != 0)
+        {
+            cp = malloc(strlen(log_path) + strlen("/.local/share/xrdp") + 1);
+
+            if (cp != 0)
+            {
+                memcpy(cp, log_path, strlen(log_path));
+                memcpy(cp + strlen(log_path), "/.local/share/xrdp", strlen("/.local/share/xrdp") + 1);
+                if (g_directory_exist(cp) || g_mkdir(cp))
+                    log_path = cp;
+                else
+                    free(cp);
+            }
+        }
     }
+
     return log_path;
 }
 
