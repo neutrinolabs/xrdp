@@ -359,12 +359,11 @@ xrdp_wm_htoi (const char *ptr)
         }
         else
         {
-            break;
+            return value;
         }
 
         ch = *(++ptr);
     }
-    return value;
 }
 
 /*****************************************************************************/
