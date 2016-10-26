@@ -22,6 +22,194 @@
 #define ACCESS
 #include "log.h"
 
+#ifdef XRDP_LOGINFIRST
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <security/pam_appl.h>
+#include <security/pam_misc.h>
+#include <grp.h>
+#include <pwd.h>
+#include "list.h"
+
+/* Public var to store the group memberships */
+char group_names[100][255];
+int ngroup_names;
+
+/*****************************************************************************
+* Group Query
+* Returns a list with the group membership of the logged in user
+*
+*****************************************************************************/
+int group_query(char *user)
+{
+	int i, ng = 0;
+	gid_t *groups = NULL;
+	struct passwd *pw;
+	struct group *grp;
+
+	pw = getpwnam(user);
+
+	if (pw == NULL)
+	   return 0;
+
+	if (getgrouplist(user, pw->pw_gid, groups, &ng) < 0)
+	{
+	   groups = (gid_t *) malloc(ng * sizeof (gid_t));
+	   getgrouplist(user, pw->pw_gid, groups, &ng);
+	}
+
+	ngroup_names = ng;
+
+	for (i=0;i<100;i++)
+		strcpy(group_names[i]," ");
+
+
+	g_writeln("%d Groups found for this user:",ng);
+	for (i = 0; i < ngroup_names; i++)
+	{
+		grp = getgrgid(groups[i]);
+		if (grp != NULL)
+		{
+			strcpy(group_names[i],grp->gr_name);
+			g_writeln("Group entry: %d:%s", grp->gr_gid, grp->gr_name);
+		}
+	}
+
+	return ngroup_names;
+}
+
+/*****************************************************************************
+* PAM API converse function
+* The API needs this function to automatically login the user
+*
+*****************************************************************************/
+int
+converse(int n, const struct pam_message **msg,
+	struct pam_response **resp, void *data)
+{
+	struct pam_response *aresp;
+	char buf[PAM_MAX_RESP_SIZE];
+	int i;
+	char password[256];
+	char verification_code[7];
+
+	char *din = (char *)data;
+
+	memcpy(verification_code,&din[0],6);
+	memcpy(password,&din[6],256);
+
+	if (n <= 0 || n > PAM_MAX_NUM_MSG)
+		return (PAM_CONV_ERR);
+	if ((aresp = calloc(n, sizeof *aresp)) == NULL)
+		return (PAM_BUF_ERR);
+	for (i = 0; i < n; ++i) {
+		aresp[i].resp_retcode = 0;
+		aresp[i].resp = NULL;
+		switch (msg[i]->msg_style) {
+		case PAM_PROMPT_ECHO_OFF:
+
+			if (strncmp(msg[i]->msg,"Verification code",17) == 0)
+				aresp[i].resp = strdup(verification_code);
+		    else
+				aresp[i].resp = strdup(password);
+
+			if (aresp[i].resp == NULL)
+				goto fail;
+			break;
+		case PAM_PROMPT_ECHO_ON:
+			fputs(msg[i]->msg, stderr);
+			if (fgets(buf, sizeof buf, stdin) == NULL)
+				goto fail;
+			aresp[i].resp = strdup(buf);
+			if (aresp[i].resp == NULL)
+				goto fail;
+			break;
+		case PAM_ERROR_MSG:
+			fputs(msg[i]->msg, stderr);
+			if (strlen(msg[i]->msg) > 0 &&
+			    msg[i]->msg[strlen(msg[i]->msg) - 1] != '\n')
+				fputc('\n', stderr);
+			break;
+		case PAM_TEXT_INFO:
+			fputs(msg[i]->msg, stdout);
+			if (strlen(msg[i]->msg) > 0 &&
+			    msg[i]->msg[strlen(msg[i]->msg) - 1] != '\n')
+				fputc('\n', stdout);
+			break;
+		default:
+			goto fail;
+		}
+	}
+	*resp = aresp;
+	return (PAM_SUCCESS);
+ fail:
+        for (i = 0; i < n; ++i) {
+                if (aresp[i].resp != NULL) {
+                        memset(aresp[i].resp, 0, strlen(aresp[i].resp));
+                        free(aresp[i].resp);
+                }
+        }
+        memset(aresp, 0, n * sizeof *aresp);
+	*resp = NULL;
+	return (PAM_CONV_ERR);
+}
+
+
+static struct pam_conv conv = {
+	converse,
+    NULL
+};
+
+/*****************************************************************************
+* PAM API
+* Authenticates the user
+*
+*****************************************************************************/
+int authenticate_system(const char *user, const char *password, const char *verification_code)
+{
+	pam_handle_t *pamh=NULL;
+	int retval;
+	char transport_container[512];
+	char *transport_container_pntr;
+
+	strncpy(transport_container, verification_code,6);
+	strcat(transport_container,password);
+
+	transport_container_pntr = transport_container;
+
+	conv.appdata_ptr = transport_container_pntr;
+
+	//Pass user password to the pam api converse function
+	conv.appdata_ptr = transport_container_pntr;
+
+	retval = pam_start("pam_login_xrdp", user, &conv, &pamh);
+
+	if (retval == PAM_SUCCESS)
+		retval = pam_authenticate(pamh, 0);    /* is user really user? */
+
+	if (retval == PAM_SUCCESS)
+		retval = pam_acct_mgmt(pamh, 0);       /* permitted access? */
+
+	/* This is where we have been authorized or not. */
+	if (retval == PAM_SUCCESS)
+		g_writeln("Authenticated\n");
+	else
+		g_writeln("Not Authenticated\n");
+
+	if (pam_end(pamh,retval) != PAM_SUCCESS) {     /* close Linux-PAM */
+		pamh = NULL;
+		g_writeln("check_user: failed to release authenticator\n");
+		exit(1);
+	}
+
+	return ( retval == PAM_SUCCESS ? 0:1 );       /* indicate success */
+}
+#endif
+
+
+
 /*****************************************************************************/
 /* all login help screen events go here */
 static int DEFAULT_CC
@@ -193,13 +381,29 @@ static int APP_CC
 xrdp_wm_ok_clicked(struct xrdp_bitmap *wnd)
 {
     struct xrdp_bitmap *combo;
+
+#ifndef XRDP_LOGINFIRST
     struct xrdp_bitmap *label;
     struct xrdp_bitmap *edit;
+#else
+    struct list *usr;
+    struct list *pw;
+#endif
+
     struct xrdp_wm *wm;
     struct xrdp_mod_data *mod_data;
+
+#ifndef XRDP_LOGINFIRST
     int i;
+#endif
 
     wm = wnd->wm;
+
+#ifdef XRDP_LOGINFIRST
+    usr = wm->mm->login_names;
+    pw = wm->mm->login_values;
+#endif
+
     combo = xrdp_bitmap_get_child_by_id(wnd, 6);
 
     if (combo != 0)
@@ -209,6 +413,8 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap *wnd)
 
         if (mod_data != 0)
         {
+
+#ifndef XRDP_LOGINFIRST
             /* get the user typed values */
             i = 100;
             label = xrdp_bitmap_get_child_by_id(wnd, i);
@@ -221,6 +427,10 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap *wnd)
                 label = xrdp_bitmap_get_child_by_id(wnd, i);
                 edit = xrdp_bitmap_get_child_by_id(wnd, i + 1);
             }
+#else
+            set_mod_data_item(mod_data, "username", (char*)list_get_item(usr,0));
+            set_mod_data_item(mod_data, "password", (char*)list_get_item(pw,0));
+#endif
 
             list_delete(wm->mm->login_names);
             list_delete(wm->mm->login_values);
@@ -241,6 +451,71 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap *wnd)
 
     return 0;
 }
+
+#ifdef XRDP_LOGINFIRST
+/*****************************************************************************
+* Login Button click Handler
+* Authenticates the user
+*
+*****************************************************************************/
+static int APP_CC
+xrdp_wm_pwdiag_ok_clicked(struct xrdp_bitmap *wnd)
+{
+    struct xrdp_bitmap *username;
+    struct xrdp_bitmap *password;
+    struct xrdp_bitmap *verification_code;
+    struct xrdp_wm *wm;
+    struct list* usr;
+    struct list* pw;
+    char buf[256];
+
+    wm = wnd->wm;
+    usr = list_create();
+    pw = list_create();
+
+    /* get the user typed values */
+    username = xrdp_bitmap_get_child_by_id(wnd, 1);
+    password = xrdp_bitmap_get_child_by_id(wnd, 2);
+    verification_code = xrdp_bitmap_get_child_by_id(wnd, 4);
+
+    list_add_item(usr, (long)username->caption1);
+    list_add_item(pw, (long)password->caption1);
+    list_add_item(pw, (long)verification_code->caption1);
+
+	list_delete(wm->mm->login_names);
+	list_delete(wm->mm->login_values);
+	wm->mm->login_names = list_create();
+	wm->mm->login_names->auto_free = 1;
+	wm->mm->login_values = list_create();
+	wm->mm->login_values->auto_free = 1;
+
+    list_append_list_strdup(usr, wm->mm->login_names, 0);
+    list_append_list_strdup(pw, wm->mm->login_values, 0);
+
+    if ((authenticate_system((char*)list_get_item(usr,0), 
+                             (char*)list_get_item(pw,0), 
+                             (char *)list_get_item(pw,1)) != 0))
+    {
+    	g_writeln("PAM Login failed");
+        strcpy(buf,"XRDP Login - Wrong credidentials or no groups");
+        set_string(&wm->firstlogin_window->caption1, buf);
+        //Bitmap must be reset to see title change
+        xrdp_bitmap_invalidate(wm->screen, 0);
+    }
+    else
+    {
+		g_writeln("PAM Login successful");
+		//Now draw the session selector window
+		xrdp_login_wnd_create(wm);
+		xrdp_wm_set_focused(wm, wm->login_window);
+    }
+
+
+
+
+    return 0;
+}
+#endif
 
 /*****************************************************************************/
 /**
@@ -323,6 +598,8 @@ xrdp_wm_parse_domain_information(char *originalDomainInfo, int comboMax,
 }
 
 /******************************************************************************/
+
+#ifndef XRDP_LOGINFIRST
 static int APP_CC
 xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
 {
@@ -458,6 +735,7 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
 
     return 0;
 }
+#endif
 
 /*****************************************************************************/
 /* all login screen events go here */
@@ -470,7 +748,14 @@ xrdp_wm_login_notify(struct xrdp_bitmap *wnd,
     struct xrdp_rect rect;
     int i;
 
+#ifndef XRDP_LOGINFIRST
     if (wnd->modal_dialog != 0 && msg != 100)
+#else
+    if (wnd->modal_dialog != 0)
+    	g_writeln("md %s",wnd->modal_dialog->caption1);
+
+    if (((wnd->modal_dialog != 0) && (msg != 100)) || (msg == 2))
+#endif
     {
         return 0;
     }
@@ -487,12 +772,24 @@ xrdp_wm_login_notify(struct xrdp_bitmap *wnd,
         }
         else if (sender->id == 3) /* ok button */
         {
+
+#ifndef XRDP_LOGINFIRST
             xrdp_wm_ok_clicked(wnd);
+#else
+            if (g_strncmp(wnd->caption1,"XRDP Login",6) == 0)
+       		xrdp_wm_pwdiag_ok_clicked(wnd);
+ 	    else
+       		xrdp_wm_ok_clicked(wnd);
+#endif
         }
     }
+
+#ifndef XRDP_LOGINFIRST
     else if (msg == 2) /* mouse move */
     {
     }
+#endif
+
     else if (msg == 100) /* modal result is done */
     {
         i = list_index_of(wnd->wm->screen->child_list, (long)sender);
@@ -511,7 +808,12 @@ xrdp_wm_login_notify(struct xrdp_bitmap *wnd,
     }
     else if (msg == CB_ITEMCHANGE) /* combo box change */
     {
+
+// Need to check this!
+#ifndef XRDP_LOGINFIRST
         xrdp_wm_show_edits(wnd->wm, sender);
+#endif
+
         xrdp_bitmap_invalidate(wnd, 0); /* invalidate the whole dialog for now */
     }
 
@@ -568,6 +870,8 @@ xrdp_wm_login_fill_in_combo(struct xrdp_wm *self, struct xrdp_bitmap *b)
         else
         {
             g_strncpy(name, p, 255);
+
+#ifndef XRDP_LOGINFIRST
             mod_data = (struct xrdp_mod_data *)
                        g_malloc(sizeof(struct xrdp_mod_data), 1);
             mod_data->names = list_create();
@@ -591,6 +895,37 @@ xrdp_wm_login_fill_in_combo(struct xrdp_wm *self, struct xrdp_bitmap *b)
 
             list_add_item(b->string_list, (long)g_strdup(name));
             list_add_item(b->data_list, (long)mod_data);
+#else
+            for (j=0;j<ngroup_names;j++)
+            {
+            // If the config file entry (e.g. [xrdp1]) matches the group name,
+            // the entry is filled into the checkbox
+                 if (strcmp(group_names[j],name) == 0)
+                  {
+                    mod_data = (struct xrdp_mod_data *)g_malloc(sizeof(struct xrdp_mod_data), 1);
+                    mod_data->names = list_create();
+                    mod_data->names->auto_free = 1;
+                    mod_data->values = list_create();
+                    mod_data->values->auto_free = 1;
+
+                    for (j = 0; j < section_names->count; j++)
+                    {
+                        q = (char *)list_get_item(section_names, j);
+                        r = (char *)list_get_item(section_values, j);
+
+                        if (g_strncmp("name", q, 255) == 0)
+                        {
+                             g_strncpy(name, r, 255);
+                        }
+
+                        list_add_item(mod_data->names, (long)g_strdup(q));
+                        list_add_item(mod_data->values, (long)g_strdup(r));
+                    }
+                    list_add_item(b->string_list, (long)g_strdup(name));
+                    list_add_item(b->data_list, (long)mod_data);
+                   }
+		 }
+#endif
         }
     }
 
@@ -623,6 +958,12 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
     int cx;
     int cy;
 
+#ifdef XRDP_LOGINFIRST
+    struct xrdp_bitmap *b;
+
+    group_query((char*)list_get_item(self->mm->login_names,0));
+#endif
+
     globals = &self->xrdp_config->cfg_globals;
 
     primary_x_offset = self->screen->width / 2;
@@ -631,6 +972,12 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
     log_width = globals->ls_width;
     log_height = globals->ls_height;
     regular = 1;
+
+#ifdef XRDP_LOGINFIRST
+    // Delete first login window (user / passwd)
+    b = (struct xrdp_bitmap *)list_get_item(self->screen->child_list, 0);
+	xrdp_bitmap_delete(b);
+#endif
 
     if (self->screen->width < log_width)
     {
@@ -760,7 +1107,13 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
     but->left = globals->ls_btn_ok_x_pos;
     but->top = globals->ls_btn_ok_y_pos;
     but->id = 3;
+
+#ifndef XRDP_LOGINFIRST
     set_string(&but->caption1, "OK");
+#else
+    set_string(&but->caption1, "Start Session");
+#endif
+
     but->tab_stop = 1;
     self->login_window->default_button = but;
 
@@ -786,10 +1139,161 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
                 self->session->client_info->domain,
                 combo->data_list->count, 1,
                 resultIP /* just a dummy place holder, we ignore */ );
+
+#ifndef XRDP_LOGINFIRST
     xrdp_wm_show_edits(self, combo);
+#else
+    /* Redraw the screen */
+    xrdp_bitmap_invalidate(self->screen, 0);
+#endif
 
     return 0;
 }
+
+#ifdef XRDP_LOGINFIRST
+/*****************************************************************************
+* Login Window drawer
+ * Shows the login window to check username and password
+ * Authenticates the user via PAM
+*****************************************************************************/
+int xrdp_pwdiag_wnd_create(struct xrdp_wm *self)
+{
+	struct xrdp_bitmap      *but;
+    struct xrdp_cfg_globals *globals;
+    char buf[256];
+    int log_width=350;
+    int log_height=180;
+    struct xrdp_bitmap *b;
+    int insert_index=0;
+
+    globals = &self->xrdp_config->cfg_globals;
+
+    /* draw login window */
+    self->firstlogin_window = xrdp_bitmap_create(log_width, log_height, self->screen->bpp, WND_TYPE_WND, self);
+    list_add_item(self->screen->child_list, (long)self->firstlogin_window);
+    self->firstlogin_window->parent = self->screen;
+    self->firstlogin_window->owner = self->screen;
+    self->firstlogin_window->bg_color = globals->ls_bg_color;
+    self->firstlogin_window->left = self->screen->width / 2 
+                                    - self->firstlogin_window->width / 2;
+    self->firstlogin_window->top = self->screen->height / 2 
+                                   - self->firstlogin_window->height / 2;
+    /* Register Event Handler */
+    self->firstlogin_window->notify = xrdp_wm_login_notify;
+    g_sprintf(buf, "XRDP Login");
+    set_string(&self->firstlogin_window->caption1, buf);
+
+    /* Add Text Box for username entry */
+    b = xrdp_bitmap_create(DEFAULT_EDIT_W, DEFAULT_EDIT_H, 
+                           self->screen->bpp, WND_TYPE_EDIT, self);
+
+    list_insert_item(self->firstlogin_window->child_list, insert_index, (long)b);
+    insert_index++;
+    b->parent = self->firstlogin_window;
+    b->owner = self->firstlogin_window;
+    b->left = 100;
+    b->top = 40;
+    b->id = 1;
+    b->pointer = 1;
+    b->tab_stop = 1;
+    b->caption1 = (char *)g_malloc(256, 1);
+    g_strncpy(b->caption1, "", 255);
+    b->edit_pos = g_mbstowcs(0, b->caption1, 0);
+
+    /* And set focus to it */
+    if (self->firstlogin_window->focused_control == 0)
+        self->firstlogin_window->focused_control = b;
+     
+    /* Add Text Box for password entry */
+    b = xrdp_bitmap_create(DEFAULT_EDIT_W, DEFAULT_EDIT_H, 
+                           self->screen->bpp, WND_TYPE_EDIT, self);
+
+    list_insert_item(self->firstlogin_window->child_list, insert_index,	(long)b);
+    insert_index++;
+    b->password_char = '*';
+    b->parent = self->firstlogin_window;
+    b->owner = self->firstlogin_window;
+    b->left = 100;
+    b->top = 70;
+    b->id = 2;
+    b->pointer = 2;
+    b->tab_stop = 2;
+    b->caption1 = (char *)g_malloc(256, 1);
+    g_strncpy(b->caption1, "", 255);
+    b->edit_pos = g_mbstowcs(0, b->caption1, 0);
+
+    /* OK button */
+    but = xrdp_bitmap_create(globals->ls_btn_ok_width, globals->ls_btn_ok_height, 
+                             self->screen->bpp, WND_TYPE_BUTTON, self);
+    list_add_item(self->firstlogin_window->child_list, (long)but);
+    but->parent = self->firstlogin_window;
+    but->owner = self->firstlogin_window;
+    but->left = 100;
+    but->top = 130;
+    but->id = 3;
+    set_string(&but->caption1, "Login");
+    but->tab_stop = 4;
+    self->firstlogin_window->default_button = but;
+
+    /* Add Text Box for validation code entry */
+    b = xrdp_bitmap_create(DEFAULT_EDIT_W, DEFAULT_EDIT_H, 
+                           self->screen->bpp, WND_TYPE_EDIT, self);
+
+    list_insert_item(self->firstlogin_window->child_list, insert_index,	(long)b);
+    insert_index++;
+    b->parent = self->firstlogin_window;
+    b->owner = self->firstlogin_window;
+    b->left = 100;
+    b->top = 100;
+    b->id = 4;
+    b->pointer = 4;
+    b->tab_stop = 3;
+    b->caption1 = (char *)g_malloc(256, 1);
+    g_strncpy(b->caption1, "", 255);
+    b->edit_pos = g_mbstowcs(0, b->caption1, 0);
+
+    /* Label username */
+    b = xrdp_bitmap_create(DEFAULT_EDIT_W, DEFAULT_EDIT_H, 
+                           self->screen->bpp,WND_TYPE_LABEL, self);
+
+    list_insert_item(self->firstlogin_window->child_list, insert_index, (long)b);
+    insert_index++;
+    b->parent = self->firstlogin_window;
+    b->owner = self->firstlogin_window;
+    b->left = 10;
+    b->top = 40;
+    b->id = 200;
+    set_string(&b->caption1, "username");
+
+    /* Label password */
+    b = xrdp_bitmap_create(95, DEFAULT_EDIT_H, self->screen->bpp,
+                           WND_TYPE_LABEL, self);
+
+    list_insert_item(self->firstlogin_window->child_list, insert_index,(long)b);
+    insert_index++;
+    b->parent = self->firstlogin_window;
+    b->owner = self->firstlogin_window;
+    b->left = 10;
+    b->top = 70;
+    b->id = 201;
+    set_string(&b->caption1, "password");
+
+    /* Label password */
+    b = xrdp_bitmap_create(95, DEFAULT_EDIT_H, self->screen->bpp,
+                           WND_TYPE_LABEL, self);
+
+    list_insert_item(self->firstlogin_window->child_list, insert_index,(long)b);
+    insert_index++;
+    b->parent = self->firstlogin_window;
+    b->owner = self->firstlogin_window;
+    b->left = 10;
+    b->top = 100;
+    b->id = 202;
+    set_string(&b->caption1, "google auth");
+
+    return 0;
+}
+#endif
 
 /**
  * Load configuration from xrdp.ini file

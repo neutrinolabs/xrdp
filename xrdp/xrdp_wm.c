@@ -359,11 +359,12 @@ xrdp_wm_htoi (const char *ptr)
         }
         else
         {
-            return value;
+            break;
         }
 
         ch = *(++ptr);
     }
+    return value;
 }
 
 /*****************************************************************************/
@@ -695,11 +696,24 @@ xrdp_wm_init(struct xrdp_wm *self)
     }
     else
     {
+#ifndef XRDP_LOGINFIRST
         g_writeln("   xrdp_wm_init: no autologin / auto run detected, draw login window");
         xrdp_login_wnd_create(self);
+#else
+        g_writeln("   xrdp_wm_init: no autologin / auto run detected, draw first stage login window");
+        g_writeln("xrdp_login_wnd: 1st");
+        xrdp_pwdiag_wnd_create(self);
+#endif
+
         /* clear screen */
         xrdp_bitmap_invalidate(self->screen, 0);
+
+#ifndef XRDP_FIRSTLOGIN
         xrdp_wm_set_focused(self, self->login_window);
+#else
+        xrdp_wm_set_focused(self, self->firstlogin_window);
+#endif
+
         xrdp_wm_set_login_mode(self, 1);
     }
 

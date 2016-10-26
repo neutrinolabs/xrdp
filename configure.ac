@@ -109,6 +109,10 @@ AC_ARG_ENABLE(opus, AS_HELP_STRING([--enable-opus],
               [Build opus(audio codec) (default: no)]),
               [], [enable_opus=no])
 AM_CONDITIONAL(XRDP_OPUS, [test x$enable_opus = xyes])
+AC_ARG_ENABLE(loginfirst, AS_HELP_STRING([--enable-loginfirst],
+              [Build with login window first and session selection following (default: no)]),
+              [], [enable_loginfirst=no])
+AM_CONDITIONAL(XRDP_LOGINFIRST, [test x$enable_loginfirst = xyes])
 AC_ARG_ENABLE(mp3lame, AS_HELP_STRING([--enable-mp3lame],
               [Build lame mp3(audio codec) (default: no)]),
               [], [enable_mp3lame=no])
