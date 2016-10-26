@@ -1,3 +1,6 @@
+%ifidn __OUTPUT_FORMAT__,elf
+SECTION .note.GNU-stack noalloc noexec nowrite progbits
+%endif
 
 SECTION .text
 
