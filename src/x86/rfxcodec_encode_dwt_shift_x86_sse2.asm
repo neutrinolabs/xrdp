@@ -19,6 +19,10 @@
 ;
 ;x86 asm dwt
 
+%ifidn __OUTPUT_FORMAT__,elf
+section .note.GNU-stack noalloc noexec nowrite progbits
+%endif
+
 section .data
     align 16
     cw128    times 8 dw 128
