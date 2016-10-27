@@ -170,8 +170,7 @@ ssl_des3_encrypt_info_create(const char *key, const char* ivec)
     const tui8 *lkey;
     const tui8 *livec;
 
-    des3_ctx = (EVP_CIPHER_CTX *) g_malloc(sizeof(EVP_CIPHER_CTX), 1);
-    EVP_CIPHER_CTX_init(des3_ctx);
+    des3_ctx = EVP_CIPHER_CTX_new();
     lkey = (const tui8 *) key;
     livec = (const tui8 *) ivec;
     EVP_EncryptInit_ex(des3_ctx, EVP_des_ede3_cbc(), NULL, lkey, livec);
@@ -187,8 +186,7 @@ ssl_des3_decrypt_info_create(const char *key, const char* ivec)
     const tui8 *lkey;
     const tui8 *livec;
 
-    des3_ctx = g_new0(EVP_CIPHER_CTX, 1);
-    EVP_CIPHER_CTX_init(des3_ctx);
+    des3_ctx = EVP_CIPHER_CTX_new();
     lkey = (const tui8 *) key;
     livec = (const tui8 *) ivec;
     EVP_DecryptInit_ex(des3_ctx, EVP_des_ede3_cbc(), NULL, lkey, livec);
@@ -205,8 +203,7 @@ ssl_des3_info_delete(void *des3)
     des3_ctx = (EVP_CIPHER_CTX *) des3;
     if (des3_ctx != 0)
     {
-        EVP_CIPHER_CTX_cleanup(des3_ctx);
-        g_free(des3_ctx);
+        EVP_CIPHER_CTX_free(des3_ctx);
     }
 }
 
@@ -250,8 +247,7 @@ ssl_hmac_info_create(void)
 {
     HMAC_CTX *hmac_ctx;
 
-    hmac_ctx = (HMAC_CTX *) g_malloc(sizeof(HMAC_CTX), 1);
-    HMAC_CTX_init(hmac_ctx);
+    hmac_ctx = HMAC_CTX_new();
     return hmac_ctx;
 }
 
@@ -264,8 +260,7 @@ ssl_hmac_info_delete(void *hmac)
     hmac_ctx = (HMAC_CTX *) hmac;
     if (hmac_ctx != 0)
     {
-        HMAC_CTX_cleanup(hmac_ctx);
-        g_free(hmac_ctx);
+        HMAC_CTX_free(hmac_ctx);
     }
 }
 
@@ -332,10 +327,10 @@ ssl_mod_exp(char *out, int out_len, char *in, int in_len,
             char *mod, int mod_len, char *exp, int exp_len)
 {
     BN_CTX *ctx;
-    BIGNUM lmod;
-    BIGNUM lexp;
-    BIGNUM lin;
-    BIGNUM lout;
+    BIGNUM *lmod;
+    BIGNUM *lexp;
+    BIGNUM *lin;
+    BIGNUM *lout;
     int rv;
     char *l_out;
     char *l_in;
@@ -353,15 +348,15 @@ ssl_mod_exp(char *out, int out_len, char *in, int in_len,
     ssl_reverse_it(l_mod, mod_len);
     ssl_reverse_it(l_exp, exp_len);
     ctx = BN_CTX_new();
-    BN_init(&lmod);
-    BN_init(&lexp);
-    BN_init(&lin);
-    BN_init(&lout);
-    BN_bin2bn((tui8 *)l_mod, mod_len, &lmod);
-    BN_bin2bn((tui8 *)l_exp, exp_len, &lexp);
-    BN_bin2bn((tui8 *)l_in, in_len, &lin);
-    BN_mod_exp(&lout, &lin, &lexp, &lmod, ctx);
-    rv = BN_bn2bin(&lout, (tui8 *)l_out);
+    lmod = BN_new();
+    lexp = BN_new();
+    lin = BN_new();
+    lout = BN_new();
+    BN_bin2bn((tui8 *)l_mod, mod_len, lmod);
+    BN_bin2bn((tui8 *)l_exp, exp_len, lexp);
+    BN_bin2bn((tui8 *)l_in, in_len, lin);
+    BN_mod_exp(lout, lin, lexp, lmod, ctx);
+    rv = BN_bn2bin(lout, (tui8 *)l_out);
 
     if (rv <= out_len)
     {
@@ -373,10 +368,10 @@ ssl_mod_exp(char *out, int out_len, char *in, int in_len,
         rv = 0;
     }
 
-    BN_free(&lin);
-    BN_free(&lout);
-    BN_free(&lexp);
-    BN_free(&lmod);
+    BN_free(lin);
+    BN_free(lout);
+    BN_free(lexp);
+    BN_free(lmod);
     BN_CTX_free(ctx);
     g_free(l_out);
     g_free(l_in);
@@ -494,29 +489,33 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
     my_key = RSA_new();
     error = RSA_generate_key_ex(my_key, key_size_in_bits, my_e, 0) == 0;
 
+    const BIGNUM *n;
+    const BIGNUM *d;
+    RSA_get0_key(my_key, &n, NULL, &d);
+
     if (error == 0)
     {
-        len = BN_num_bytes(my_key->n);
+        len = BN_num_bytes(n);
         error = (len < 1) || (len > mod_len);
         diff = mod_len - len;
     }
 
     if (error == 0)
     {
-        BN_bn2bin(my_key->n, (tui8 *)(lmod + diff));
+        BN_bn2bin(n, (tui8 *)(lmod + diff));
         ssl_reverse_it(lmod, mod_len);
     }
 
     if (error == 0)
     {
-        len = BN_num_bytes(my_key->d);
+        len = BN_num_bytes(d);
         error = (len < 1) || (len > pri_len);
         diff = pri_len - len;
     }
 
     if (error == 0)
     {
-        BN_bn2bin(my_key->d, (tui8 *)(lpri + diff));
+        BN_bn2bin(d, (tui8 *)(lpri + diff));
         ssl_reverse_it(lpri, pri_len);
     }
 
