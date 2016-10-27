@@ -23,23 +23,19 @@
 # debian packages needed
 # flex bison libxml2-dev intltool xsltproc xutils-dev python-libxml2 g++ xutils
 
-download_file()
+download_all_files()
 {
-    local file url status
-    file=$1
+    # download files parallelly using keepalive
+    # a little bit faster than calling wget with single file more than 100 times
+    < x11_file_list.txt cut -f1 -d: | sed -e "s|^|${download_url}/|" | \
+        xargs -P2 -n $(expr $num_modules / 2 + 1) \
+        wget \
+          --directory-prefix=downloads \
+          --no-verbose \
+          --timestamping \
+          --continue
 
-    # if we already have the file, don't download it
-    if [ -r downloads/$file ]; then
-        return 0
-    fi
-
-    echo "downloading file $download_url/$file"
-
-    cd downloads
-
-    wget -cq $download_url/$file
     status=$?
-    cd ..
     return $status
 }
 
@@ -72,15 +68,6 @@ extract_it()
 
     if [ -e cookies/$mod_name.extracted ]; then
         return 0
-    fi
-
-    # download file
-    if ! download_file $mod_file
-    then
-        echo ""
-        echo "failed to download $mod_file - aborting build"
-        echo ""
-        exit 1
     fi
 
     cd build_dir
@@ -180,7 +167,7 @@ data_file=x11_file_list.txt
 # was www.x.org/releases/X11R7.6/src/everything
 download_url=http://server1.xrdp.org/xrdp/X11R7.6
 
-num_modules=`cat $data_file | wc -l`
+num_modules=`wc -l < $data_file`
 count=0
 
 ##########################
@@ -261,6 +248,14 @@ fi
 
 if ! NPROC=`nproc`; then
     NPROC=1
+fi
+
+if ! download_all_files; then
+    echo ""
+    echo "download failed - aborting build"
+    echo "rerun this script to resume download/build"
+    echo ""
+    exit 1
 fi
 
 while IFS=: read mod_file mod_dir mod_args
