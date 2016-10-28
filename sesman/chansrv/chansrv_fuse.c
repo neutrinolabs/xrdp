@@ -237,7 +237,7 @@ struct opendir_req
     struct fuse_file_info *fi;
 };
 
-static char g_fuse_mount_name[256] = "xrdp_client";
+static char g_fuse_mount_name[256] = ".xrdp_client";
 
 FIFO g_fifo_opendir;
 
@@ -439,7 +439,7 @@ xfuse_init(void)
 
     load_fuse_config();
 
-    /* define FUSE mount point to ~/xrdp_client, ~/thinclient_drives */
+    /* define FUSE mount point to ~/.xrdp_client, ~/.thinclient_drives */
     g_snprintf(g_fuse_root_path, 255, "%s/%s", g_getenv("HOME"), g_fuse_mount_name);
     g_snprintf(g_fuse_clipboard_path, 255, "%s/.clipboard", g_fuse_root_path);
 
