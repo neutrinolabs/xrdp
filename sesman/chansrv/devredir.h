@@ -101,6 +101,8 @@ int dev_redir_file_open(void *fusep, tui32 device_id, char *path,
 
 int devredir_file_close(void *fusep, tui32 device_id, tui32 file_id);
 
+int APP_CC devredir_rmdir_or_file(void *fusep, tui32 device_id, char *path, int mode);
+
 int devredir_file_read(void *fusep, tui32 device_id, tui32 FileId,
                         tui32 Length, tui64 Offset);
 

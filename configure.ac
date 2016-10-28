@@ -246,6 +246,14 @@ AC_CHECK_HEADER([X11/extensions/Xrandr.h], [],
   [AC_MSG_ERROR([please install libxrandr-dev or libXrandr-devel])],
   [#include <X11/Xlib.h>])
 
+# checking if we need libdl
+save_LIBS=$LIBS
+AC_SEARCH_LIBS([dlopen], [dl dld], [], [
+  AC_MSG_ERROR([unable to find the dlopen() function])
+])
+AM_CONDITIONAL(NEED_LIBDL, [test x"$LIBS" != x"$save_LIBS"])
+LIBS=$save_LIBS
+
 CFLAGS="$save_CFLAGS"
 
 AC_SUBST([moduledir], '${libdir}/xrdp')

@@ -617,7 +617,7 @@ session_start_fork(int width, int height, int bpp, char *username,
                 else
                 {
                     log_message(LOG_LEVEL_ERROR, "another Xserver might "
-                                "already be active on display %d - see log", display);
+                                "already be active on display %d - see log; possibly comment out the two param lines -logfile /dev/null in /etc/xrdp/sesman.ini to debug", display);
                 }
 
                 log_message(LOG_LEVEL_DEBUG, "aborting connection...");

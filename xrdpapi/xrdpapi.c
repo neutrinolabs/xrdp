@@ -36,6 +36,7 @@
 #include <sys/un.h>
 
 #include "xrdpapi.h"
+#include "os_calls.h"
 
 struct wts_obj
 {

@@ -47,7 +47,12 @@ libcommon_la_SOURCES = \
   xrdp_rail.h \
   $(PIXMAN_SOURCES)
 
+if NEED_LIBDL
+EXTRA_LIBDL = -ldl
+endif
+
 libcommon_la_LIBADD = \
+  $(EXTRA_LIBDL) \
   -lcrypto \
   -lssl \
   -lpthread

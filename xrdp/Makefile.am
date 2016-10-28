@@ -19,7 +19,7 @@ endif
 if XRDP_RFXCODEC
 AM_CPPFLAGS += -DXRDP_RFXCODEC
 AM_CPPFLAGS += -I$(top_srcdir)/librfxcodec/include
-XRDP_EXTRA_LIBS += $(top_srcdir)/librfxcodec/src/.libs/librfxencode.a
+XRDP_EXTRA_LIBS += $(top_srcdir)/librfxcodec/src/.libs/librfxencode.la
 endif
 
 if XRDP_PIXMAN
