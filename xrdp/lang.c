@@ -275,6 +275,12 @@ get_keymaps(int keylayout, struct xrdp_keymap *keymap)
             g_file_close(fd);
         }
     }
+    else if (keylayout != 0x409)
+    {
+        log_message(LOG_LEVEL_WARNING, "File does not exist: %s (keymap for 0x%4.4x; falling back to 0x0409)", filename, keylayout);
+        g_free(filename);
+        return get_keymaps(0x409, keymap);
+    }
     else
     {
         log_message(LOG_LEVEL_WARNING, "File does not exist: %s", filename);
