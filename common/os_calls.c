@@ -122,7 +122,7 @@ g_mk_temp_dir(const char *app_name)
                 return 1;
             }
         }
-        g_chmod_hex("/tmp/.xrdp", 0x1777);
+        g_chmod_hex("/tmp/.xrdp", 0x3777);
     }
     return 0;
 }
