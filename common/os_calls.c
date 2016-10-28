@@ -416,11 +416,27 @@ g_tcp_socket(void)
 
 #if defined(XRDP_ENABLE_IPV6)
     rv = (int)socket(AF_INET6, SOCK_STREAM, 0);
+    if (rv < 0)
+    {
+        log_message(LOG_LEVEL_ERROR, "g_tcp_socket: %s", g_get_strerror());
+
+        switch (errno)
+        {
+            case EAFNOSUPPORT: /* if IPv6 not supported, retry IPv4 */
+                log_message(LOG_LEVEL_INFO, "IPv6 not supported, falling back to IPv4");
+                rv = (int)socket(AF_INET, SOCK_STREAM, 0);
+                break;
+
+            default:
+                return -1;
+        }
+    }
 #else
     rv = (int)socket(AF_INET, SOCK_STREAM, 0);
 #endif
     if (rv < 0)
     {
+        log_message(LOG_LEVEL_ERROR, "g_tcp_socket: %s", g_get_strerror());
         return -1;
     }
 #if defined(XRDP_ENABLE_IPV6)
