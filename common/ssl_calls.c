@@ -40,6 +40,32 @@
 #define OLD_RSA_GEN1
 #endif
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+static inline HMAC_CTX *
+HMAC_CTX_new()
+{
+    HMAC_CTX *hmac_ctx = g_new(HMAC_CTX, 1);
+    HMAC_CTX_init(hmac_ctx);
+    return hmac_ctx;
+}
+
+static inline void
+HMAC_CTX_free(HMAC_CTX *hmac_ctx)
+{
+    HMAC_CTX_cleanup(hmac_ctx);
+    g_free(hmac_ctx);
+}
+
+static inline void
+RSA_get0_key(const RSA *key, const BIGNUM **n, const BIGNUM **e,
+             const BIGNUM **d)
+{
+     *n = key->n;
+     *d = key->d;
+}
+#endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
+
+
 /*****************************************************************************/
 int
 ssl_init(void)
@@ -247,12 +273,7 @@ ssl_hmac_info_create(void)
 {
     HMAC_CTX *hmac_ctx;
 
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
     hmac_ctx = HMAC_CTX_new();
-#else
-    hmac_ctx = (HMAC_CTX *) g_malloc(sizeof(HMAC_CTX), 1);
-    HMAC_CTX_init(hmac_ctx);
-#endif
     return hmac_ctx;
 }
 
@@ -265,12 +286,7 @@ ssl_hmac_info_delete(void *hmac)
     hmac_ctx = (HMAC_CTX *) hmac;
     if (hmac_ctx != 0)
     {
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
         HMAC_CTX_free(hmac_ctx);
-#else
-        HMAC_CTX_cleanup(hmac_ctx);
-        g_free(hmac_ctx);
-#endif
     }
 }
 
@@ -501,12 +517,7 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
 
     const BIGNUM *n;
     const BIGNUM *d;
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
     RSA_get0_key(my_key, &n, NULL, &d);
-#else
-    n = my_key->n;
-    d = my_key->d;
-#endif
 
     if (error == 0)
     {
