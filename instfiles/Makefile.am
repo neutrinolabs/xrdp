@@ -12,6 +12,7 @@ dist_startscript_DATA = \
   km-00000407.ini \
   km-00000409.ini \
   km-0000040a.ini \
+  km-0000040b.ini \
   km-0000040c.ini \
   km-00000410.ini \
   km-00000411.ini \
