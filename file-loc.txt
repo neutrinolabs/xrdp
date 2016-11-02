@@ -25,7 +25,7 @@ default build will install the following
   xrdp-chansrv
 
 /etc/xrdp
-  km-xxxx.ini
+  km-xxxxxxxx.ini
   sesman.ini
   rsakeys.ini
   startwm.sh

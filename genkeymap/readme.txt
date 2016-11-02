@@ -3,9 +3,9 @@ Creating a new keymap file.
 
 The names of the files are of the format;
 
-km-xxxx.ini
+km-xxxxxxxx.ini
 
-where the xxxx is replaced by the hex number of the layout of interest.
+where the xxxxxxxx is replaced by the hex number of the layout of interest.
 
 The files have 8 sections;
 
@@ -33,7 +33,7 @@ Key63=65450:42
 
 To create a new file run "xrdp-genkeymap <filename>"
 
-Example: ./xrdp-genkeymap /etc/xrdp/km-0409.ini
+Example: ./xrdp-genkeymap /etc/xrdp/km-00000409.ini
 
 Note: You need to have enough rights to be able to write to the
 /etc/xrdp directory.
