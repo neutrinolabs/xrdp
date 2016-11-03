@@ -1395,7 +1395,27 @@ get_log_path()
     log_path = g_getenv("CHANSRV_LOG_PATH");
     if (log_path == 0)
     {
+        log_path = g_getenv("XDG_CACHE_HOME");
+        if (!g_directory_exist(log_path))
+            log_path = 0;
+    }
+    if (log_path == 0)
+    {
         log_path = g_getenv("HOME");
+        if (log_path != 0)
+        {
+            char* cp = malloc(strlen(log_path) + strlen("/.cache") + 1);
+
+            if (cp != 0)
+            {
+                memcpy(cp, log_path, strlen(log_path));
+                memcpy(cp + strlen(log_path), "/.cache", strlen("/.cache") + 1);
+                if (g_directory_exist(cp))
+                    log_path = cp;
+                else
+                    free(cp);
+            }
+        }
     }
     return log_path;
 }
