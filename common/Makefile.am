@@ -6,6 +6,11 @@ endif
 
 EXTRA_DIST = pixman-region.c
 
+include_HEADERS = \
+  xrdp_client_info.h \
+  xrdp_constants.h \
+  xrdp_rail.h
+
 AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
@@ -42,9 +47,6 @@ libcommon_la_SOURCES = \
   thread_calls.h \
   trans.c \
   trans.h \
-  xrdp_client_info.h \
-  xrdp_constants.h \
-  xrdp_rail.h \
   $(PIXMAN_SOURCES)
 
 libcommon_la_LIBADD = \
