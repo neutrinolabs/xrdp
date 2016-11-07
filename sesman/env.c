@@ -71,8 +71,8 @@ env_check_password_file(const char *filename, const char *passwd)
     if (fd == -1)
     {
         log_message(LOG_LEVEL_WARNING,
-                    "can't write vnc password hash file - %s",
-                    filename);
+                    "Cannot write VNC password hash to file %s: %s",
+                    filename, g_get_strerror());
         return 1;
     }
     g_file_write(fd, encryptedPasswd, 8);
