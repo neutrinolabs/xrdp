@@ -233,7 +233,11 @@ get_keymaps(int keylayout, struct xrdp_keymap *keymap)
     /* check if there is a keymap file */
     g_snprintf(filename, 255, "%s/km-%08x.ini", XRDP_CFG_PATH, keylayout);
 
-    /* if the file does not exist, try again with 'en-us' as fallback */
+    /* if the file does not exist, try the local default, and finally 'en-us' as fallback */
+    if (!g_file_exist(filename))
+    {
+        g_snprintf(filename, 255, "%s/km-default.ini", XRDP_CFG_PATH);
+    }
     if (!g_file_exist(filename))
     {
         g_snprintf(filename, 255, "%s/km-00000409.ini", XRDP_CFG_PATH);
@@ -270,6 +274,12 @@ get_keymaps(int keylayout, struct xrdp_keymap *keymap)
             g_free(lkeymap);
             g_file_close(fd);
         }
+    }
+    else if (keylayout != 0x409)
+    {
+        log_message(LOG_LEVEL_WARNING, "File does not exist: %s (keymap for 0x%4.4x; falling back to 0x0409)", filename, keylayout);
+        g_free(filename);
+        return get_keymaps(0x409, keymap);
     }
     else
     {
