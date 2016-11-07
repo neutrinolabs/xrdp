@@ -101,7 +101,7 @@ auth_stop_session(long in_val)
  */
 
 static int DEFAULT_CC
-auth_crypt_pwd(char* pwd, char* pln, char* crp)
+auth_crypt_pwd(const char *pwd, const char *pln, char *crp)
 {
     return 0;
 }
