@@ -151,10 +151,14 @@ env_set_user(const char *username, char **passwd_file, int display,
                 {
                     /* if no auth_file_path is set, then we go for
                      $HOME/.vnc/sesman_username_passwd */
-                    if (g_mkdir(".vnc") < 0)
+                    if (!g_directory_exist(".vnc"))
                     {
-                        log_message(LOG_LEVEL_ERROR,
-                                    "env_set_user: error creating .vnc dir");
+                        if (g_mkdir(".vnc") < 0)
+                        {
+                            log_message(LOG_LEVEL_ERROR,
+                                        "Error creating .vnc directory: %s",
+                                        g_get_strerror());
+                        }
                     }
 
                     len = g_snprintf(NULL, 0, "%s/.vnc/sesman_%s_passwd", pw_dir, username);
