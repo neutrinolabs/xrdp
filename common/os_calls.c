@@ -687,7 +687,7 @@ g_sck_close(int sck)
     else
     {
         log_message(LOG_LEVEL_WARNING, "getsockname() failed on socket %d: %s",
-                    sck, strerror(errno));
+                    sck, g_get_strerror());
 
         if (errno == EBADF || errno == ENOTSOCK)
         {
@@ -704,7 +704,7 @@ g_sck_close(int sck)
     else
     {
         log_message(LOG_LEVEL_WARNING, "Cannot close socket %d (%s): %s", sck,
-                    sockname, strerror(errno));
+                    sockname, g_get_strerror());
     }
 
 #endif
