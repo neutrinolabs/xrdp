@@ -5,6 +5,8 @@ section .note.GNU-stack noalloc noexec nowrite progbits
 section .data
     const1 times 8 dw 1
 
+section .text
+
 %macro PROC 1
     align 16
     global %1
