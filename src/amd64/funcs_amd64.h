@@ -24,6 +24,10 @@ amd64 asm files
 #ifndef __FUNCS_AMD64_H
 #define __FUNCS_AMD64_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int
 cpuid_amd64(int eax_in, int ecx_in, int *eax, int *ebx, int *ecx, int *edx);
 
@@ -60,5 +64,8 @@ rfxcodec_decode_yuva2argb_amd64_sse2(short *ydata, short *udata,
                                      short *vdata, char *adata,
                                      unsigned int *rgbdata, int stride);
 
+#ifdef __cplusplus
+}
 #endif
 
+#endif

@@ -24,6 +24,10 @@ x86 asm files
 #ifndef __FUNCS_X86_H
 #define __FUNCS_X86_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int
 cpuid_x86(int eax_in, int ecx_in, int *eax, int *ebx, int *ecx, int *edx);
 
@@ -61,5 +65,8 @@ rfxcodec_decode_yuva2argb_x86_sse2(short *ydata, short *udata,
                                    short *vdata, char *adata,
                                    unsigned int *rgbdata, int stride);
 
+#ifdef __cplusplus
+}
 #endif
 
+#endif
