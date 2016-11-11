@@ -20,7 +20,7 @@ It is composed by a number of sections, each one composed by a section name, enc
 .TP
 \fI[Connection]\fP \-  contain the info on which services \fBxrdp\fR(8) can connect to.
 
-.LP 
+.LP
 All options and values (except for file names and paths) are case insensitive, and are described in detail below.
 
 .SH "GLOBALS"
@@ -189,29 +189,29 @@ If set to \fB1\fR, \fBtrue\fR or \fByes\fR using the RDP channel for XRDP Video 
 .SH "CONNECTIONS"
 A connection section is made of a section name, enclosed in square brackets, and the following entries:
 
-.TP 
+.TP
 \fBname\fR=\fI<session name>\fR
 The name displayed in \fBxrdp\fR(8) login window's combo box.
 
-.TP 
+.TP
 \fBlib\fR=\fI../vnc/libvnc.so\fR
 Sets the library to be used with this connection.
 
-.TP 
+.TP
 \fBusername\fR=\fI<username>\fR|\fIask\fR
 Specifies the username used for authenticating in the connection.
 If set to \fIask\fR, user name should be provided in the login window.
 
-.TP 
+.TP
 \fBpassword\fR=\fI<password>\fR|\fIask\fR
 Specifies the password used for authenticating in the connection.
 If set to \fIask\fR, password should be provided in the login window.
 
-.TP 
+.TP
 \fBip\fR=\fI127.0.0.1\fR
 Specifies the ip address of the host to connect to.
 
-.TP 
+.TP
 \fBport\fR=\fI<number>\fR|\fI\-1\fR
 Specifies the port number to connect to. If set to \fI\-1\fR, the default port for the specified library is used.
 
