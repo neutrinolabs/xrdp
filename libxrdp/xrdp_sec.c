@@ -2315,6 +2315,15 @@ xrdp_sec_incoming(struct xrdp_sec *self)
                     hex_str_to_bin(value, self->pri_exp, self->rsa_key_bytes);
                 }
             }
+
+            if (self->rsa_key_bytes <= 64)
+            {
+                g_writeln("warning, RSA key len 512 "
+                          "bits or less, consider creating a 2048 bit key");
+                log_message(LOG_LEVEL_WARNING, "warning, RSA key len 512 "
+                            "bits or less, consider creating a 2048 bit key");
+            }
+
             list_delete(items);
             list_delete(values);
         }
