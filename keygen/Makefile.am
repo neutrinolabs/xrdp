@@ -18,7 +18,7 @@ xrdpsysconfdir = $(sysconfdir)/xrdp
 
 install-data-hook:
 	umask 077 && \
-	  ./xrdp-keygen xrdp $(DESTDIR)$(xrdpsysconfdir)/rsakeys.ini
+	  if [ ! -f $(DESTDIR)$(xrdpsysconfdir)/rsakeys.ini ]; then ./xrdp-keygen xrdp $(DESTDIR)$(xrdpsysconfdir)/rsakeys.ini; fi
 
 uninstall-hook:
 	rm -f $(DESTDIR)$(xrdpsysconfdir)/rsakeys.ini
