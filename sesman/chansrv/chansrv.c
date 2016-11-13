@@ -1407,13 +1407,13 @@ get_log_path()
                 memcpy(cp, log_path, strlen(log_path));
                 memcpy(cp + strlen(log_path), "/xrdp", strlen("/xrdp") + 1);
                 if (g_directory_exist(cp) || g_mkdir(cp))
-		{
+                {
                     log_path = cp;
-		}
+                }
                 else
-		{
+                {
                     free(cp);
-		}
+                }
             }
         }
     }
