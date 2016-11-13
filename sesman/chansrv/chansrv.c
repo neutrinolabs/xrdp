@@ -1400,7 +1400,7 @@ get_log_path()
         log_path = g_getenv("XDG_DATA_HOME");
         if (log_path != 0)
         {
-            cp = malloc(strlen(log_path) + strlen("/xrdp") + 1);
+            cp = g_new(char, strlen(log_path) + strlen("/xrdp") + 1);
 
             if (cp != 0)
             {
@@ -1423,7 +1423,7 @@ get_log_path()
         log_path = g_getenv("HOME");
         if (log_path != 0)
         {
-            cp = malloc(strlen(log_path) + strlen("/.local/share/xrdp") + 1);
+            cp = g_new(char, strlen(log_path) + strlen("/.local/share/xrdp") + 1);
 
             if (cp != 0)
             {
