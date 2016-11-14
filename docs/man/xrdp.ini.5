@@ -37,19 +37,19 @@ By default a drop-down list with all available connections is shown.
 A connection can also be chosen by the connecting client by setting the \fBLOGIN DOMAIN\fP to a valid \fIsession name\fP.
 
 .TP
-\fBbitmap_cache\fR=\fI[0|1]\fR
+\fBbitmap_cache\fR=\fI[true|false]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables bitmap caching in \fBxrdp\fR(8).
 
 .TP
-\fBbitmap_compression\fR=\fI[0|1]\fR
+\fBbitmap_compression\fR=\fI[true|false]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables bitmap compression in \fBxrdp\fR(8).
 
 .TP
-\fBbulk_compression\fP=\fI[0|1]\fP
+\fBbulk_compression\fP=\fI[true|false]\fP
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables compression of bulk data in \fBxrdp\fR(8).
 
 .TP
-\fBchannel_code\fP=\fI[0|1]\fP
+\fBchannel_code\fP=\fI[true|false]\fP
 If set to \fB0\fR, \fBfalse\fR or \fBno\fR this option disables all channels \fBxrdp\fR(8).
 See section \fBCHANNELS\fP below for more fine grained options.
 
@@ -77,11 +77,11 @@ All data sent between the client and server is protected using Federal Informati
 .RE
 
 .TP
-\fBfork\fP=\fI[0|1]\fP
+\fBfork\fP=\fI[true|false]\fP
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR for each incoming connection \fBxrdp\fR(8) forks a sub-process instead of using threads.
 
 .TP
-\fBhidelogwindow\fP=\fI[0|1]\fP
+\fBhidelogwindow\fP=\fI[true|false]\fP
 If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP will not show a window for log messages.
 
 .TP
@@ -94,17 +94,17 @@ Specify TCP port to listen on for incoming connections.
 The default for RDP is \fB3389\fP.
 
 .TP
-\fBtcp_keepalive\fP=\fI[yes|no]\fP
+\fBtcp_keepalive\fP=\fI[true|false]\fP
 Regulate if the listening socket uses socket option \fBSO_KEEPALIVE\fP.
 If set to \fB1\fP, \fBtrue\fP or \fByes\fP and the network connection disappears without closing messages, the connection will be closed.
 
 .TP
-\fBtcp_nodelay\fP=\fI[yes|no]\fP
+\fBtcp_nodelay\fP=\fI[true|false]\fP
 Regulate if the listening socket uses socket option \fBTCP_NODELAY\fP.
 If set to \fB1\fP, \fBtrue\fP or \fByes\fP, no buffering will be performed in the TCP stack.
 
 .TP
-\fBdisableSSLv3\fP=\fI[yes|no]\fP
+\fBdisableSSLv3\fP=\fI[true|false]\fP
 If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP will not accept SSLv3 connections.
 
 .TP
@@ -158,7 +158,7 @@ This option can have one of the following values:
 \fBDEBUG\fR or \fB4\fR \- Log everything. If \fBsesman\fR is compiled in debug mode, this options will output many more low\-level message, useful for developers
 
 .TP
-\fBEnableSyslog\fR=\fI[0|1]\fR
+\fBEnableSyslog\fR=\fI[true|false]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables logging to syslog. Otherwise syslog is disabled.
 
 .TP
@@ -173,27 +173,27 @@ Not all channels are supported in all cases, so setting a value to \fItrue\fP is
 Channels can also be enabled or disabled on a per connection basis by prefixing each setting with \fBchannel.\fP in the channel section.
 
 .TP
-\fBrdpdr\fP=\fI[0|1]\fP
+\fBrdpdr\fP=\fI[true|false]\fP
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR using the RDP channel for device redirection is allowed.
 
 .TP
-\fBrdpsnd\fP=\fI[0|1]\fP
+\fBrdpsnd\fP=\fI[true|false]\fP
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR using the RDP channel for sound is allowed.
 
 .TP
-\fBdrdynvc\fP=\fI[0|1]\fP
+\fBdrdynvc\fP=\fI[true|false]\fP
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR using the RDP channel to initiate additional dynamic virtual channels is allowed.
 
 .TP
-\fBcliprdr\fP=\fI[0|1]\fP
+\fBcliprdr\fP=\fI[true|false]\fP
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR using the RDP channel for clipboard redirection is allowed.
 
 .TP
-\fBrail\fP=\fI[0|1]\fP
+\fBrail\fP=\fI[true|false]\fP
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR using the RDP channel for remote applications integrated locally (RAIL) is allowed.
 
 .TP
-\fBxrdpvr\fP=\fI[0|1]\fP
+\fBxrdpvr\fP=\fI[true|false]\fP
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR using the RDP channel for XRDP Video streaming is allowed.
 
 .SH "CONNECTIONS"

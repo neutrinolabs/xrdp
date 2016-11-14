@@ -55,7 +55,7 @@ xrdp-sesman listening address. If not specified, defaults to \fI0.0.0.0\fR
 xrdp-sesman listening port. If not specified, defaults to \fI3350\fR.
 
 .TP
-\fBEnableUserWindowManager\fR=\fI[0|1]\fR
+\fBEnableUserWindowManager\fR=\fI[true|false]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR, this option enables user
 specific startup script. That is, xrdp-sesman will execute the script
 specified by \fBUserWindowManager\fR if it exists.
@@ -96,7 +96,7 @@ logged \fIregardless\fR of the selected logging level.
 debug mode, this options will output many more low\-level messages.
 
 .TP
-\fBEnableSyslog\fR=\fI[0|1]\fR
+\fBEnableSyslog\fR=\fI[true|false]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR, this option enables logging to
 syslog.
 
@@ -121,7 +121,7 @@ Sets the maximum number of simultaneous sessions. If not set or set to
 \fI0\fR, unlimited session are allowed.
 
 .TP
-\fBKillDisconnected\fR=\fI[0|1]\fR
+\fBKillDisconnected\fR=\fI[true|false]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR, every session will be killed
 within 60 seconds after the user disconnects.
 
@@ -165,7 +165,7 @@ off. For Xvnc connections, \fBDisplaySize\fR is always enabled as well.
 Following parameters can be used in the \fB[Security]\fR section.
 
 .TP
-\fBAllowRootLogin\fR=\fI[0|1]\fR
+\fBAllowRootLogin\fR=\fI[true|false]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR, enables root login on the
 terminal server.
 
@@ -187,7 +187,7 @@ login for all users is enabled.
 have session management rights.
 
 .TP
-\fBAlwaysGroupCheck\fR=\fI[0|1]\fR
+\fBAlwaysGroupCheck\fR=\fI[true|false]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR, require group membership even
 if the group specified in \fBTerminalServerUsers\fR doesn't exist.
 
