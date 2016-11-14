@@ -1871,7 +1871,7 @@ void xfuse_devredir_cb_file_close(void *vp)
                fip->fi, (long long) fip->fi->fh);
 
         free((char *) (tintptr) (fip->fi->fh));
-        fip->fi->fh = NULL;
+        fip->fi->fh = 0;
     }
 #endif
 
