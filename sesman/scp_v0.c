@@ -99,6 +99,20 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
 
             if (1 == access_login_allowed(s->username))
             {
+                char rand[16];
+                char guid[64];
+                char *text;
+                int index;
+
+                text = guid;
+                g_random(rand, 16);
+                for (index = 0; index < 16; index++)
+                {
+                    g_snprintf(text, 4, "%2.2x", (unsigned char)(rand[index]));
+                    text += 2;
+                }
+                scp_session_set_guid(s, guid);
+
                 if (0 != s->client_ip)
                 {
                     log_message(LOG_LEVEL_INFO, "++ created session (access granted): "
@@ -116,7 +130,7 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
                     display = session_start(s->width, s->height, s->bpp, s->username,
                                             s->password, data, SESMAN_SESSION_TYPE_XVNC,
                                             s->domain, s->program, s->directory,
-                                            s->client_ip);
+                                            s->client_ip, s->guid);
                 }
                 else if (SCP_SESSION_TYPE_XRDP == s->type)
                 {
@@ -124,7 +138,7 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
                     display = session_start(s->width, s->height, s->bpp, s->username,
                                             s->password, data, SESMAN_SESSION_TYPE_XRDP,
                                             s->domain, s->program, s->directory,
-                                            s->client_ip);
+                                            s->client_ip, s->guid);
                 }
                 else if (SCP_SESSION_TYPE_XORG == s->type)
                 {
@@ -133,7 +147,7 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
                     display = session_start(s->width, s->height, s->bpp, s->username,
                                             s->password, data, SESMAN_SESSION_TYPE_XORG,
                                             s->domain, s->program, s->directory,
-                                            s->client_ip);
+                                            s->client_ip, s->guid);
                 }
             }
             else
@@ -148,7 +162,7 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
         }
         else
         {
-            scp_v0s_allow_connection(c, display);
+            scp_v0s_allow_connection(c, display, s->guid);
         }
     }
     else

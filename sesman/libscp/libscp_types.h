@@ -88,6 +88,7 @@ struct SCP_SESSION
   char* program;
   char* directory;
   char* client_ip;
+  char* guid;
 };
 
 struct SCP_DISCONNECTED_SESSION
