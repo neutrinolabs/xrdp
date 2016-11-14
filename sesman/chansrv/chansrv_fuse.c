@@ -267,7 +267,6 @@ static void xfuse_create_file(fuse_req_t req, fuse_ino_t parent,
 #endif
 
 static void xfuse_dump_fs(void);
-static void xfuse_dump_xrdp_inode(struct xrdp_inode *xino);
 static tui32 xfuse_get_device_id_for_inode(tui32 ino, char *full_path);
 static void fuse_reverse_pathname(char *full_path, char *reverse_path);
 
@@ -279,13 +278,15 @@ static struct xrdp_inode * xfuse_create_file_in_xrdp_fs(tui32 device_id,
                                                         int type);
 
 static int  xfuse_does_file_exist(int parent, char *name);
-static int  xfuse_delete_file(int parent, char *name);
 static int  xfuse_delete_file_with_xinode(XRDP_INODE *xinode);
 static int  xfuse_delete_dir_with_xinode(XRDP_INODE *xinode);
 static int  xfuse_recursive_delete_dir_with_xinode(XRDP_INODE *xinode);
 static void xfuse_update_xrdpfs_size(void);
+
+#ifdef USE_SYNC_FLAG
 static void xfuse_enum_dir(fuse_req_t req, fuse_ino_t ino, size_t size,
                            off_t off, struct fuse_file_info *fi);
+#endif
 
 /* forward declarations for FUSE callbacks */
 static void xfuse_cb_lookup(fuse_req_t req, fuse_ino_t parent,
@@ -295,9 +296,6 @@ static void xfuse_cb_getattr(fuse_req_t req, fuse_ino_t ino,
                              struct fuse_file_info *fi);
 
 /* this is not a callback, but it's used by xfuse_cb_readdir() */
-static void xfuse_dirbuf_add(fuse_req_t req, struct dirbuf *b,
-                             const char *name, fuse_ino_t ino);
-
 static int xfuse_dirbuf_add1(fuse_req_t req, struct dirbuf1 *b,
                              const char *name, fuse_ino_t ino);
 
@@ -341,8 +339,10 @@ static void xfuse_cb_create(fuse_req_t req, fuse_ino_t parent,
                             const char *name, mode_t mode,
                             struct fuse_file_info *fi);
 
+#if 0
 static void xfuse_cb_fsync(fuse_req_t req, fuse_ino_t ino, int datasync,
                            struct fuse_file_info *fi);
+#endif
 
 static void xfuse_cb_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
                              int to_set, struct fuse_file_info *fi);
@@ -1068,6 +1068,7 @@ static void xfuse_dump_fs()
  * @param xino xinode structure to dump
  *****************************************************************************/
 
+#if 0
 static void xfuse_dump_xrdp_inode(struct xrdp_inode *xino)
 {
     log_debug("--- dumping struct xinode ---");
@@ -1082,6 +1083,7 @@ static void xfuse_dump_xrdp_inode(struct xrdp_inode *xino)
     log_debug("device_id:     %d", xino->device_id);
     log_debug("%s", "");
 }
+#endif
 
 /**
  * Return the device_id associated with specified inode and copy the
@@ -1276,11 +1278,6 @@ static int xfuse_does_file_exist(int parent, char *name)
     }
 
     return 0;
-}
-
-static int xfuse_delete_file(int parent, char *name)
-{
-    return -1;
 }
 
 static int xfuse_delete_file_with_xinode(XRDP_INODE *xinode)
@@ -1960,6 +1957,7 @@ static void xfuse_cb_getattr(fuse_req_t req, fuse_ino_t ino,
  *
  *****************************************************************************/
 
+#if 0
 static void xfuse_dirbuf_add(fuse_req_t req, struct dirbuf *b,
                              const char *name, fuse_ino_t ino)
 {
@@ -1976,6 +1974,7 @@ static void xfuse_dirbuf_add(fuse_req_t req, struct dirbuf *b,
     fuse_add_direntry(req, b->p + oldsize, b->size - oldsize, name, &stbuf,
                       b->size);
 }
+#endif
 
 static int xfuse_dirbuf_add1(fuse_req_t req, struct dirbuf1 *b,
                              const char *name, fuse_ino_t ino)
@@ -2781,6 +2780,7 @@ static void xfuse_cb_create(fuse_req_t req, fuse_ino_t parent,
 /**
  *****************************************************************************/
 
+#if 0
 static void xfuse_cb_fsync(fuse_req_t req, fuse_ino_t ino, int datasync,
                            struct fuse_file_info *fi)
 {
@@ -2788,6 +2788,7 @@ static void xfuse_cb_fsync(fuse_req_t req, fuse_ino_t ino, int datasync,
     log_debug("function not required");
     fuse_reply_err(req, EINVAL);
 }
+#endif
 
 /**
  *****************************************************************************/
@@ -2955,9 +2956,9 @@ static int xfuse_proc_opendir_req(fuse_req_t req, fuse_ino_t ino,
     {
         goto do_remote_lookup;
     }
-#endif
 
 do_remote_lookup:
+#endif
 
     xfuse_mark_as_stale((int) ino);
 
