@@ -1513,7 +1513,7 @@ void xfuse_devredir_cb_enum_dir_done(void *vp, tui32 IoStatus)
     /* this will be used by xfuse_cb_readdir() */
     di = calloc(1, sizeof(struct dir_info));
     di->index = FIRST_INODE;
-    fip->fi->fh = (long) di;
+    fip->fi->fh = (tintptr) di;
 
     fuse_reply_open(fip->req, fip->fi);
 
@@ -1595,7 +1595,7 @@ void xfuse_devredir_cb_open_file(void *vp, tui32 IoStatus, tui32 DeviceId,
         fh->DeviceId = DeviceId;
         fh->FileId = FileId;
 
-        fip->fi->fh = (uint64_t) ((long) fh);
+        fip->fi->fh = (tintptr) fh;
         log_debug("+++ XFUSE_INFO=%p XFUSE_INFO->fi=%p XFUSE_INFO->fi->fh=0x%llx",
                   fip, fip->fi, (long long) fip->fi->fh);
     }
@@ -2517,7 +2517,7 @@ static void xfuse_cb_open(fuse_req_t req, fuse_ino_t ino,
         /* specified file is a local resource */
         XFUSE_HANDLE *fh = calloc(1, sizeof(XFUSE_HANDLE));
         fh->is_loc_resource = 1;
-        fi->fh = (uint64_t) ((long) fh);
+        fi->fh = (tintptr) fh;
         fuse_reply_open(req, fi);
         return;
     }
@@ -3011,7 +3011,7 @@ done:
 
     di = calloc(1, sizeof(struct dir_info));
     di->index = FIRST_INODE;
-    fi->fh = (long) di;
+    fi->fh = (tintptr) di;
     fuse_reply_open(req, fi);
     g_free(fifo_remove(&g_fifo_opendir));
     return -1;
