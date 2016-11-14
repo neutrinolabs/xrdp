@@ -104,6 +104,16 @@ Regulate if the listening socket uses socket option \fBTCP_NODELAY\fP.
 If set to \fB1\fP, \fBtrue\fP or \fByes\fP, no buffering will be performed in the TCP stack.
 
 .TP
+\fBdisableSSLv3\fP=\fI[yes|no]\fP
+If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP will not accept SSLv3 connections.
+
+.TP
+\fBtls_ciphers\fP=\fIcipher_suite\fP
+Specifies TLS cipher suite.  The format of this parameter is equivalent to which \fBopenssl\fP(1) ciphers subcommand accepts.
+
+(ex. $ openssl ciphers 'HIGH:!ADH:!SHA1')
+
+.TP
 \fBblack\fP=\fI000000\fP
 .TP
 \fBgrey\fP=\fIc0c0c0\fP
