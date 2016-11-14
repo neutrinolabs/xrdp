@@ -2570,7 +2570,6 @@ static void xfuse_cb_release(fuse_req_t req, fuse_ino_t ino, struct
 {
     XFUSE_INFO   *fip    = NULL;
     XFUSE_HANDLE *handle = (XFUSE_HANDLE *) (tintptr) (fi->fh);
-    tui32         FileId;
 
     log_debug("entered: ino=%ld fi=%p fi->fh=0x%llx", ino, fi,
               (long long) fi->fh);
@@ -2624,7 +2623,6 @@ static void xfuse_cb_release(fuse_req_t req, fuse_ino_t ino, struct
     log_debug(" +++ created XFUSE_INFO=%p XFUSE_INFO->fi=%p XFUSE_INFO->fi->fh=0x%llx",
               fip, fip->fi, (long long) fip->fi->fh);
 
-    FileId = handle->FileId;
     fip->fi->fh = 0;
     xinode->close_in_progress = 1;
 
