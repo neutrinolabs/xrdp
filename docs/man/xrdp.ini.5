@@ -74,6 +74,11 @@ All data sent between the client and server is protected using Federal Informati
 .RE
 
 .TP
+\fBdisableSSLv3\fP=\fI[true|false]\fP
+If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP will not accept SSLv3 connections.
+If not specified, defaults to \fBfalse\fP.
+
+.TP
 \fBfork\fP=\fI[true|false]\fP
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR for each incoming connection \fBxrdp\fR(8) forks a sub-process instead of using threads.
 
@@ -88,26 +93,19 @@ Limit the color depth by specifying the maximum number of bits per pixel.
 If not specified or set to \fB0\fP, unlimited.
 
 .TP
+\fBpamerrortxt\fP=\fIerror_text\fP
+Specify text passed to PAM when authentication failed. The maximum length is \fB256\fP.
+
+.TP
 \fBport\fP=\fIport\fP
 Specify TCP port to listen on for incoming connections.
 The default for RDP is \fB3389\fP.
 
 .TP
-\fBtcp_keepalive\fP=\fI[true|false]\fP
-Regulate if the listening socket uses socket option \fBSO_KEEPALIVE\fP.
-If set to \fB1\fP, \fBtrue\fP or \fByes\fP and the network connection disappears
-without closing messages, the connection will be closed.
-
-.TP
-\fBtcp_nodelay\fP=\fI[true|false]\fP
-Regulate if the listening socket uses socket option \fBTCP_NODELAY\fP.
-If set to \fB1\fP, \fBtrue\fP or \fByes\fP, no buffering will be performed in the TCP stack.
-
-.TP
-\fBtcp_send_buffer_bytes\fP=\fIbuffer_size\fP
-.TP
-\fBtcp_recv_buffer_bytes\fP=\fIbuffer_size\fP
-Specify send/recv buffer sizes in bytes.  The default value depends on operating system.
+\fBrequire_credentials\fP=\fI[true|false]\fP
+If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP requires clients to include username and
+password initial connection phase. In other words, xrdp doesn't allow clients to show login
+screen if set to true. If not specified, defaults to \fBfalse\fP.
 
 .TP
 \fBsecurity_layer\fP=\fI[tls|rdp|negotiate]\fP
@@ -129,9 +127,21 @@ Negotiate these security methods with clients.
 .RE
 
 .TP
-\fBdisableSSLv3\fP=\fI[true|false]\fP
-If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP will not accept SSLv3 connections.
-If not specified, defaults to \fBfalse\fP.
+\fBtcp_keepalive\fP=\fI[true|false]\fP
+Regulate if the listening socket uses socket option \fBSO_KEEPALIVE\fP.
+If set to \fB1\fP, \fBtrue\fP or \fByes\fP and the network connection disappears
+without closing messages, the connection will be closed.
+
+.TP
+\fBtcp_nodelay\fP=\fI[true|false]\fP
+Regulate if the listening socket uses socket option \fBTCP_NODELAY\fP.
+If set to \fB1\fP, \fBtrue\fP or \fByes\fP, no buffering will be performed in the TCP stack.
+
+.TP
+\fBtcp_send_buffer_bytes\fP=\fIbuffer_size\fP
+.TP
+\fBtcp_recv_buffer_bytes\fP=\fIbuffer_size\fP
+Specify send/recv buffer sizes in bytes.  The default value depends on operating system.
 
 .TP
 \fBtls_ciphers\fP=\fIcipher_suite\fP
@@ -143,16 +153,6 @@ Specifies TLS cipher suite.  The format of this parameter is equivalent to which
 .TP
 \fBuse_fastpath\fP=\fI[input|output|both|none]\fP
 If not specified, defaults to \fBnone\fP.
-
-.TP
-\fBrequire_credentials\fP=\fI[true|false]\fP
-If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP requires clients to include username and
-password initial connection phase. In other words, xrdp doesn't allow clients to show login
-screen if set to true. If not specified, defaults to \fBfalse\fP.
-
-.TP
-\fBpamerrortxt\fP=\fIerror_text\fP
-Specify text passed to PAM when authentication failed. The maximum length is \fB256\fP.
 
 .TP
 \fBblack\fP=\fI000000\fP
