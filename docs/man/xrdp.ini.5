@@ -46,37 +46,56 @@ If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables bitmap compressio
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables compression of bulk data in \fBxrdp\fR(8).
 
 .TP
+\fBcertificate\fP=\fI/path/to/certificate\fP
+.TP
+\fBkey_file\fP=\fI/path/to/private_key\fP
+Set location of TLS certificate and private key. They must be written in PEM format.
+If not specified, defaults to \fB${XRDP_CFG_DIR}/cert.pem\fP, \fB${XRDP_CFG_DIR}/key.pem\fP.
+
+This parameter is effective only if \fBsecurity_layer\fP is set to \fBtls\fP or \fBnegotiate\fP.
+
+.TP
 \fBchannel_code\fP=\fI[true|false]\fP
 If set to \fB0\fR, \fBfalse\fR or \fBno\fR this option disables all channels \fBxrdp\fR(8).
 See section \fBCHANNELS\fP below for more fine grained options.
 
 .TP
-\fBcrypt_level\fP=\fIlow|medium|high|fips\fP
+\fBcrypt_level\fP=\fI[low|medium|high|fips]\fP
 .\" <http://blogs.msdn.com/b/openspecification/archive/2011/12/08/encryption-negotiation-in-rdp-connection.aspx>
-RDP connection are controlled by two encryption settings: \fIEncryption Level\fP and \fIEncryption Method\fP.
-The only supported \fIEncryption Method\fP is \fB40BIT_ENCRYPTION\fP, \fB128BIT_ENCRYPTION\fP and \fB56BIT_ENCRYPTION\fP are currently not supported.
+Regulate encryption level of Standard RDP Security.
+This parameter is effective only if \fBsecurity_layer\fP is set to \fBrdp\fP or \fBnegotiate\fP.
+
+Encryption in Standard RDP Security is controlled by two settings: \fIEncryption Level\fP
+and \fIEncryption Method\fP.  The only supported \fIEncryption Method\fP are \fB40BIT_ENCRYPTION\fP
+and \fB128BIT_ENCRYPTION\fP. \fB56BIT_ENCRYPTION\fP is not supported.
 This option controls the \fIEncryption Level\fP:
 .RS 8
 .TP
 .B low
-All data sent from the client to the server is protected by encryption based on the maximum key strength supported by the client.
+All data sent from the client to the server is protected by encryption based on
+the maximum key strength supported by the client.
 .I This is the only level that the traffic sent by the server to client is not encrypted.
 .TP
 .B medium
-All data sent between the client and the server is protected by encryption based on the maximum key strength supported by the client.
+All data sent between the client and the server is protected by encryption based on
+the maximum key strength supported by the client (client compatible).
 .TP
 .B high
-All data sent between the client and server is protected by encryption based on the server's maximum key strength.
+All data sent between the client and the server is protected by encryption based on
+the server's maximum key strength (sever compatible).
 .TP
 .B fips
-All data sent between the client and server is protected using Federal Information Processing Standard 140-1 validated encryption methods.
-.I This level is required for Windows clients (mstsc.exe) if the client's group policy enforces FIPS-compliance mode.
+All data sent between the client and server is protected using Federal Information
+Processing Standard 140-1 validated encryption methods.
+.I This level is required for Windows clients (mstsc.exe) if the client's group policy
+.I enforces FIPS-compliance mode.
 .RE
 
 .TP
 \fBdisableSSLv3\fP=\fI[true|false]\fP
 If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP will not accept SSLv3 connections.
 If not specified, defaults to \fBfalse\fP.
+This parameter is effective only if \fBsecurity_layer\fP is set to \fBtls\fP or \fBnegotiate\fP.
 
 .TP
 \fBfork\fP=\fI[true|false]\fP
@@ -149,6 +168,8 @@ Specifies TLS cipher suite.  The format of this parameter is equivalent to which
 \fBopenssl\fP(1) ciphers subcommand accepts.
 
 (ex. $ openssl ciphers 'HIGH:!ADH:!SHA1')
+
+This parameter is effective only if \fBsecurity_layer\fP is set to \fBtls\fP or \fBnegotiate\fP.
 
 .TP
 \fBuse_fastpath\fP=\fI[input|output|both|none]\fP
