@@ -110,6 +110,25 @@ If set to \fB1\fP, \fBtrue\fP or \fByes\fP, no buffering will be performed in th
 Specify send/recv buffer sizes in bytes.  The default value depends on operating system.
 
 .TP
+\fBsecurity_layer\fP=\fI[tls|rdp|negotiate]\fP
+Regulate security methods. If not specified, defaults to \fBnegotiate\fP.
+.RS 8
+.TP
+.B tls
+Enhanced RDP Security is used. All security operations (encryption, decryption, data integrity
+verification, and server authentication) are implemented by TLS.
+
+.TP
+.B rdp
+Standard RDP Security, which is not safe from man-in-the-middle attack, is used. The encryption level
+of Standard RDP Security is controlled by \fBcrypt_level\fP.
+
+.TP
+.B negotiate
+Negotiate these security methods with clients.
+.RE
+
+.TP
 \fBdisableSSLv3\fP=\fI[true|false]\fP
 If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP will not accept SSLv3 connections.
 If not specified, defaults to \fBfalse\fP.
