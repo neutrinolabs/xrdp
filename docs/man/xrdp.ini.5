@@ -25,7 +25,7 @@ The options to be specified in the \fB[Globals]\fR section are the following:
 
 .TP
 \fBaddress\fP=\fIip address\fP
-Specifies xrdp listening address. Default is 0.0.0.0 (all interfaces)
+Specify xrdp listening address. If not specified, defaults to 0.0.0.0 (all interfaces).
 
 .TP
 \fBautorun\fP=\fIsession_name\fP
@@ -80,10 +80,12 @@ If set to \fB1\fR, \fBtrue\fR or \fByes\fR for each incoming connection \fBxrdp\
 .TP
 \fBhidelogwindow\fP=\fI[true|false]\fP
 If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP will not show a window for log messages.
+If not specified, defaults to \fBfalse\fP.
 
 .TP
 \fBmax_bpp\fP=\fI[8|15|16|24|32]\fP
 Limit the color depth by specifying the maximum number of bits per pixel.
+If not specified or set to \fB0\fP, unlimited.
 
 .TP
 \fBport\fP=\fIport\fP
@@ -93,7 +95,8 @@ The default for RDP is \fB3389\fP.
 .TP
 \fBtcp_keepalive\fP=\fI[true|false]\fP
 Regulate if the listening socket uses socket option \fBSO_KEEPALIVE\fP.
-If set to \fB1\fP, \fBtrue\fP or \fByes\fP and the network connection disappears without closing messages, the connection will be closed.
+If set to \fB1\fP, \fBtrue\fP or \fByes\fP and the network connection disappears
+without closing messages, the connection will be closed.
 
 .TP
 \fBtcp_nodelay\fP=\fI[true|false]\fP
@@ -109,10 +112,12 @@ Specify send/recv buffer sizes in bytes.  The default value depends on operating
 .TP
 \fBdisableSSLv3\fP=\fI[true|false]\fP
 If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP will not accept SSLv3 connections.
+If not specified, defaults to \fBfalse\fP.
 
 .TP
 \fBtls_ciphers\fP=\fIcipher_suite\fP
-Specifies TLS cipher suite.  The format of this parameter is equivalent to which \fBopenssl\fP(1) ciphers subcommand accepts.
+Specifies TLS cipher suite.  The format of this parameter is equivalent to which
+\fBopenssl\fP(1) ciphers subcommand accepts.
 
 (ex. $ openssl ciphers 'HIGH:!ADH:!SHA1')
 
@@ -122,7 +127,9 @@ If not specified, defaults to \fBnone\fP.
 
 .TP
 \fBrequire_credentials\fP=\fI[true|false]\fP
-If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP requires clients to include username and password initial connection phase.  In other words, xrdp doesn't allow clients to show login screen if set to true.
+If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP requires clients to include username and
+password initial connection phase. In other words, xrdp doesn't allow clients to show login
+screen if set to true. If not specified, defaults to \fBfalse\fP.
 
 .TP
 \fBpamerrortxt\fP=\fIerror_text\fP
