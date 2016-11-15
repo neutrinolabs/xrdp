@@ -104,6 +104,12 @@ Regulate if the listening socket uses socket option \fBTCP_NODELAY\fP.
 If set to \fB1\fP, \fBtrue\fP or \fByes\fP, no buffering will be performed in the TCP stack.
 
 .TP
+\fBtcp_send_buffer_bytes\fP=\fIbuffer_size\fP
+.TP
+\fBtcp_recv_buffer_bytes\fP=\fIbuffer_size\fP
+Specify send/recv buffer sizes in bytes.  The default value depends on operating system.
+
+.TP
 \fBdisableSSLv3\fP=\fI[true|false]\fP
 If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP will not accept SSLv3 connections.
 
