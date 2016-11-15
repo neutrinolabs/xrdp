@@ -117,6 +117,18 @@ Specifies TLS cipher suite.  The format of this parameter is equivalent to which
 (ex. $ openssl ciphers 'HIGH:!ADH:!SHA1')
 
 .TP
+\fBuse_fastpath\fP=\fI[input|output|both|none]\fP
+If not specified, defaults to \fBnone\fP.
+
+.TP
+\fBrequire_credentials\fP=\fI[true|false]\fP
+If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP requires clients to include username and password initial connection phase.  In other words, xrdp doesn't allow clients to show login screen if set to true.
+
+.TP
+\fBpamerrortxt\fP=\fIerror_text\fP
+Specify text passed to PAM when authentication failed. The maximum length is \fB256\fP.
+
+.TP
 \fBblack\fP=\fI000000\fP
 .TP
 \fBgrey\fP=\fIc0c0c0\fP
