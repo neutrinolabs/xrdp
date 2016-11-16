@@ -607,9 +607,10 @@ int xfuse_create_share(tui32 device_id, char *dirname)
     if (dirname == NULL || strlen(dirname) == 0)
         return -1;
 
-    if ((xinode = calloc(1, sizeof(struct xrdp_inode))) == NULL)
+    xinode = g_new0(struct xrdp_inode, 1);
+    if (xinode == NULL)
     {
-        log_debug("calloc() failed");
+        log_debug("g_new0() failed");
         return -1;
     }
 
@@ -642,7 +643,8 @@ int xfuse_create_share(tui32 device_id, char *dirname)
     xinode->nentries++;
 
 #if 0
-    if ((fip = calloc(1, sizeof(XFUSE_INFO))) == NULL)
+    fip = g_new0(XFUSE_INFO, 1);
+    if (fip == NULL)
     {
         log_error("system out of memory");
         return -1;
@@ -830,7 +832,7 @@ static int xfuse_init_lib(struct fuse_args *args)
     fuse_session_add_chan(g_se, g_ch);
     g_bufsize = fuse_chan_bufsize(g_ch);
 
-    g_buffer = calloc(g_bufsize, 1);
+    g_buffer = g_new0(char, g_bufsize);
     g_fd = fuse_chan_fd(g_ch);
 
     g_req_list = list_create();
@@ -850,7 +852,7 @@ static int xfuse_init_xrdp_fs()
 {
     struct xrdp_inode *xino;
 
-    g_xrdp_fs.inode_table = calloc(4096, sizeof(struct xrdp_inode *));
+    g_xrdp_fs.inode_table = g_new0(struct xrdp_inode *, 4096);
     if (g_xrdp_fs.inode_table == NULL)
     {
         log_error("system out of memory");
@@ -861,7 +863,8 @@ static int xfuse_init_xrdp_fs()
      * index 0 is our .. dir
      */
 
-    if ((xino = calloc(1, sizeof(struct xrdp_inode))) == NULL)
+    xino = g_new0(struct xrdp_inode, 1);
+    if (xino == NULL)
     {
         log_error("system out of memory");
         free(g_xrdp_fs.inode_table);
@@ -884,7 +887,8 @@ static int xfuse_init_xrdp_fs()
      * index 1 is our . dir
      */
 
-    if ((xino = calloc(1, sizeof(struct xrdp_inode))) == NULL)
+    xino = g_new0(struct xrdp_inode, 1);
+    if (xino == NULL)
     {
         log_error("system out of memory");
         free(g_xrdp_fs.inode_table[0]);
@@ -908,7 +912,8 @@ static int xfuse_init_xrdp_fs()
      * index 2 is for clipboard use
      */
 
-    if ((xino = calloc(1, sizeof(struct xrdp_inode))) == NULL)
+    xino = g_new0(struct xrdp_inode, 1);
+    if (xino == NULL)
     {
         log_error("system out of memory");
         free(g_xrdp_fs.inode_table[0]);
@@ -988,9 +993,10 @@ static void xfuse_create_file(fuse_req_t req, fuse_ino_t parent,
         fuse_reply_err(req, EBADF);
     }
 
-    if ((xinode = calloc(1, sizeof(struct xrdp_inode))) == NULL)
+    xinode = g_new0(struct xrdp_inode, 1);
+    if (xinode == NULL)
     {
-        log_error("calloc() failed");
+        log_error("g_new0() failed");
         fuse_reply_err(req, ENOMEM);
     }
 
@@ -1208,7 +1214,8 @@ static struct xrdp_inode * xfuse_create_file_in_xrdp_fs(tui32 device_id,
     if ((name == NULL) || (strlen(name) == 0))
         return NULL;
 
-    if ((xinode = calloc(1, sizeof(XRDP_INODE))) == NULL)
+    xinode = g_new0(XRDP_INODE, 1);
+    if (xinode == NULL)
     {
         log_error("system out of memory");
         return NULL;
@@ -1400,12 +1407,12 @@ static void xfuse_update_xrdpfs_size()
     }
 
     /* zero newly added memory */
-    memset(vp + g_xrdp_fs.max_entries * sizeof(struct xrdp_inode *),
+    memset((char *) vp + g_xrdp_fs.max_entries * sizeof(struct xrdp_inode *),
            0,
            100 * sizeof(struct xrdp_inode *));
 
     g_xrdp_fs.max_entries += 100;
-    g_xrdp_fs.inode_table = vp;
+    g_xrdp_fs.inode_table = (struct xrdp_inode **) vp;
 }
 
 /******************************************************************************
@@ -1511,7 +1518,7 @@ void xfuse_devredir_cb_enum_dir_done(void *vp, tui32 IoStatus)
     xfuse_delete_stale_entries(fip->inode);
 
     /* this will be used by xfuse_cb_readdir() */
-    di = calloc(1, sizeof(struct dir_info));
+    di = g_new0(struct dir_info, 1);
     di->index = FIRST_INODE;
     fip->fi->fh = (tintptr) di;
 
@@ -1528,7 +1535,7 @@ done:
     while (1)
     {
         /* process next request */
-        odreq = fifo_peek(&g_fifo_opendir);
+        odreq = (struct opendir_req *) fifo_peek(&g_fifo_opendir);
         if (!odreq)
             return;
 
@@ -1581,7 +1588,8 @@ void xfuse_devredir_cb_open_file(void *vp, tui32 IoStatus, tui32 DeviceId,
 
     if (fip->fi != NULL)
     {
-        if ((fh = calloc(1, sizeof(XFUSE_HANDLE))) == NULL)
+        fh = g_new0(XFUSE_HANDLE, 1);
+        if (fh == NULL)
         {
             log_error("system out of memory");
             if (fip->invoke_fuse)
@@ -2197,7 +2205,8 @@ static void xfuse_remove_dir_or_file(fuse_req_t req, fuse_ino_t parent,
 
     /* specified file resides on redirected share */
 
-    if ((fip = calloc(1, sizeof(XFUSE_INFO))) == NULL)
+    fip = g_new0(XFUSE_INFO, 1);
+    if (fip == NULL)
     {
         log_error("system out of memory");
         fuse_reply_err(req, ENOMEM);
@@ -2326,7 +2335,8 @@ static void xfuse_cb_rename(fuse_req_t req,
     strcat(old_full_path, "/");
     strcat(old_full_path, old_name);
 
-    if ((fip = calloc(1, sizeof(XFUSE_INFO))) == NULL)
+    fip = g_new0(XFUSE_INFO, 1);
+    if (fip == NULL)
     {
         log_error("system out of memory");
         fuse_reply_err(req, ENOMEM);
@@ -2430,7 +2440,8 @@ static void xfuse_create_dir_or_file(fuse_req_t req, fuse_ino_t parent,
 
     /* specified file resides on redirected share */
 
-    if ((fip = calloc(1, sizeof(XFUSE_INFO))) == NULL)
+    fip = g_new0(XFUSE_INFO, 1);
+    if (fip == NULL)
     {
        log_error("system out of memory");
        fuse_reply_err(req, ENOMEM);
@@ -2515,7 +2526,7 @@ static void xfuse_cb_open(fuse_req_t req, fuse_ino_t ino,
     if (xinode->is_loc_resource)
     {
         /* specified file is a local resource */
-        XFUSE_HANDLE *fh = calloc(1, sizeof(XFUSE_HANDLE));
+        XFUSE_HANDLE *fh = g_new0(XFUSE_HANDLE, 1);
         fh->is_loc_resource = 1;
         fi->fh = (tintptr) fh;
         fuse_reply_open(req, fi);
@@ -2524,7 +2535,8 @@ static void xfuse_cb_open(fuse_req_t req, fuse_ino_t ino,
 
     /* specified file resides on redirected share */
 
-    if ((fip = calloc(1, sizeof(XFUSE_INFO))) == NULL)
+    fip = g_new0(XFUSE_INFO, 1);
+    if (fip == NULL)
     {
        log_error("system out of memory");
        fuse_reply_err(req, ENOMEM);
@@ -2607,7 +2619,8 @@ static void xfuse_cb_release(fuse_req_t req, fuse_ino_t ino, struct
         return;
     }
 
-    if ((fip = calloc(1, sizeof(XFUSE_INFO))) == NULL)
+    fip = g_new0(XFUSE_INFO, 1);
+    if (fip == NULL)
     {
         log_error("system out of memory");
         fuse_reply_err(req, ENOMEM);
@@ -2671,8 +2684,7 @@ static void xfuse_cb_read(fuse_req_t req, fuse_ino_t ino, size_t size,
             return;
         }
 
-        rli = (struct req_list_item *)
-                g_malloc(sizeof(struct req_list_item), 1);
+        rli = g_new0(struct req_list_item, 1);
 
         rli->stream_id = 0;
         rli->req = req;
@@ -2695,7 +2707,8 @@ static void xfuse_cb_read(fuse_req_t req, fuse_ino_t ino, size_t size,
 
     /* target file is on a remote device */
 
-    if ((fusep = calloc(1, sizeof(XFUSE_INFO))) == NULL)
+    fusep = g_new0(XFUSE_INFO, 1);
+    if (fusep == NULL)
     {
         log_error("system out of memory");
         fuse_reply_err(req, ENOMEM);
@@ -2742,7 +2755,8 @@ static void xfuse_cb_write(fuse_req_t req, fuse_ino_t ino, const char *buf,
 
     /* target file is on a remote device */
 
-    if ((fusep = calloc(1, sizeof(XFUSE_INFO))) == NULL)
+    fusep = g_new0(XFUSE_INFO, 1);
+    if (fusep == NULL)
     {
         log_error("system out of memory");
         fuse_reply_err(req, ENOMEM);
@@ -2885,7 +2899,7 @@ static void xfuse_cb_opendir(fuse_req_t req, fuse_ino_t ino,
     struct opendir_req *odreq;
 
     /* save request */
-    odreq = malloc(sizeof(struct opendir_req));
+    odreq = g_new(struct opendir_req, 1);
     odreq->req = req;
     odreq->ino = ino;
     odreq->fi  = fi;
@@ -2965,7 +2979,8 @@ do_remote_lookup:
 
     log_debug("dev_id=%d ino=%ld full_path=%s", device_id, ino, full_path);
 
-    if ((fip = calloc(1, sizeof(XFUSE_INFO))) == NULL)
+    fip = g_new0(XFUSE_INFO, 1);
+    if (fip == NULL)
     {
         log_error("system out of memory");
         fuse_reply_err(req, ENOMEM);
@@ -3007,7 +3022,7 @@ do_remote_lookup:
 
 done:
 
-    di = calloc(1, sizeof(struct dir_info));
+    di = g_new0(struct dir_info, 1);
     di->index = FIRST_INODE;
     fi->fh = (tintptr) di;
     fuse_reply_open(req, fi);
