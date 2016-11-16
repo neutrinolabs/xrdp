@@ -100,9 +100,12 @@ void xfuse_devredir_cb_file_close(void *vp)                                  {}
 
 #include "arch.h"
 #include "os_calls.h"
+#include "clipboard_file.h"
 #include "chansrv_fuse.h"
+#include "devredir.h"
 #include "list.h"
 #include "fifo.h"
+#include "file.h"
 
 #ifndef EREMOTEIO
 #define EREMOTEIO EIO
@@ -284,20 +287,6 @@ static void xfuse_update_xrdpfs_size(void);
 static void xfuse_enum_dir(fuse_req_t req, fuse_ino_t ino, size_t size,
                            off_t off, struct fuse_file_info *fi);
 
-/* forward declarations for calls we make into devredir */
-int dev_redir_get_dir_listing(void *fusep, tui32 device_id, char *path);
-
-int dev_redir_file_open(void *fusep, tui32 device_id, char *path,
-                        int mode, int type, char *gen_buf);
-
-int devredir_file_read(void *fusep, tui32 device_id, tui32 FileId,
-                        tui32 Length, tui64 Offset);
-
-int dev_redir_file_write(void *fusep, tui32 device_id, tui32 FileId,
-                         const char *buf, int Length, tui64 Offset);
-
-int devredir_file_close(void *fusep, tui32 device_id, tui32 FileId);
-
 /* forward declarations for FUSE callbacks */
 static void xfuse_cb_lookup(fuse_req_t req, fuse_ino_t parent,
                             const char *name);
@@ -366,10 +355,6 @@ static int xfuse_proc_opendir_req(fuse_req_t req, fuse_ino_t ino,
 
 static void xfuse_cb_releasedir(fuse_req_t req, fuse_ino_t ino,
                                 struct fuse_file_info *fi);
-
-/* clipboard calls */
-int clipboard_request_file_data(int stream_id, int lindex, int offset,
-                                int request_bytes);
 
 /* misc calls */
 static void xfuse_mark_as_stale(int pinode);

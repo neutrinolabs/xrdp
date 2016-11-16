@@ -104,6 +104,13 @@ int devredir_file_close(void *fusep, tui32 device_id, tui32 file_id);
 int devredir_file_read(void *fusep, tui32 device_id, tui32 FileId,
                         tui32 Length, tui64 Offset);
 
+int APP_CC
+dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
+                     const char *buf, int Length, tui64 Offset);
+
+int APP_CC
+devredir_rmdir_or_file(void *fusep, tui32 device_id, char *path, int mode);
+
 int send_channel_data(int chan_id, char *data, int size);
 
 /*
