@@ -26,8 +26,8 @@
 
 #include "sesman.h"
 
-#define _XOPEN_SOURCE
 #include <stdio.h>
+#include <string.h>
 #include <sys/types.h>
 #include <crypt.h>
 #include <shadow.h>
@@ -40,7 +40,7 @@
 extern struct config_sesman *g_cfg; /* in sesman.c */
 
 static int DEFAULT_CC
-auth_crypt_pwd(char *pwd, char *pln, char *crp);
+auth_crypt_pwd(const char *pwd, const char *pln, char *crp);
 
 static int DEFAULT_CC
 auth_account_disabled(struct spwd *stp);
@@ -256,7 +256,7 @@ auth_change_pwd(const char *user, const char *newpwd)
  */
 
 static int DEFAULT_CC
-auth_crypt_pwd(char *pwd, char *pln, char *crp)
+auth_crypt_pwd(const char *pwd, const char *pln, char *crp)
 {
     char salt[13] = "$1$";
     int saltcnt = 0;
