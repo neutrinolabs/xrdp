@@ -71,8 +71,8 @@ env_check_password_file(const char *filename, const char *passwd)
     if (fd == -1)
     {
         log_message(LOG_LEVEL_WARNING,
-                    "can't write vnc password hash file - %s",
-                    filename);
+                    "Cannot write VNC password hash to file %s: %s",
+                    filename, g_get_strerror());
         return 1;
     }
     g_file_write(fd, encryptedPasswd, 8);
@@ -151,10 +151,14 @@ env_set_user(const char *username, char **passwd_file, int display,
                 {
                     /* if no auth_file_path is set, then we go for
                      $HOME/.vnc/sesman_username_passwd */
-                    if (g_mkdir(".vnc") < 0)
+                    if (!g_directory_exist(".vnc"))
                     {
-                        log_message(LOG_LEVEL_ERROR,
-                                    "env_set_user: error creating .vnc dir");
+                        if (g_mkdir(".vnc") < 0)
+                        {
+                            log_message(LOG_LEVEL_ERROR,
+                                        "Error creating .vnc directory: %s",
+                                        g_get_strerror());
+                        }
                     }
 
                     len = g_snprintf(NULL, 0, "%s/.vnc/sesman_%s_passwd", pw_dir, username);
