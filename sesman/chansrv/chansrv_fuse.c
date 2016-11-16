@@ -87,9 +87,8 @@ void xfuse_devredir_cb_file_close(void *vp)                                  {}
 ******************************************************************************/
 
 #define FUSE_USE_VERSION 26
-#define _FILE_OFFSET_BITS 64
 
-#include <fuse/fuse_lowlevel.h>
+#include <fuse_lowlevel.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
