@@ -430,7 +430,8 @@ void devredir_send_server_device_announce_resp(tui32 device_id)
  * @return 0 on success, -1 on failure
  *****************************************************************************/
 
-int dev_redir_send_drive_create_request(tui32 device_id, char *path,
+int dev_redir_send_drive_create_request(tui32 device_id,
+                                        const char *path,
                                         tui32 DesiredAccess,
                                         tui32 CreateOptions,
                                         tui32 CreateDisposition,
@@ -997,7 +998,7 @@ dev_redir_proc_query_dir_response(IRP *irp,
  *****************************************************************************/
 
 int APP_CC
-dev_redir_get_dir_listing(void *fusep, tui32 device_id, char *path)
+dev_redir_get_dir_listing(void *fusep, tui32 device_id, const char *path)
 {
     tui32  DesiredAccess;
     tui32  CreateOptions;
@@ -1044,8 +1045,8 @@ dev_redir_get_dir_listing(void *fusep, tui32 device_id, char *path)
 }
 
 int APP_CC
-dev_redir_file_open(void *fusep, tui32 device_id, char *path,
-                    int mode, int type, char *gen_buf)
+dev_redir_file_open(void *fusep, tui32 device_id, const char *path,
+                    int mode, int type, const char *gen_buf)
 {
     tui32  DesiredAccess;
     tui32  CreateOptions;
@@ -1162,7 +1163,7 @@ int devredir_file_close(void *fusep, tui32 device_id, tui32 FileId)
  *****************************************************************************/
 
 int APP_CC
-devredir_rmdir_or_file(void *fusep, tui32 device_id, char *path, int mode)
+devredir_rmdir_or_file(void *fusep, tui32 device_id, const char *path, int mode)
 {
     tui32  DesiredAccess;
     tui32  CreateOptions;
@@ -1446,7 +1447,7 @@ devredir_cvt_slash(char *path)
 }
 
 void APP_CC
-devredir_cvt_to_unicode(char *unicode, char *path)
+devredir_cvt_to_unicode(char *unicode, const char *path)
 {
     char *dest;
     char *src;

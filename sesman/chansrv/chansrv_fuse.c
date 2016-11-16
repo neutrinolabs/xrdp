@@ -2246,7 +2246,7 @@ static void xfuse_cb_rename(fuse_req_t req,
     char       *cptr;
     char        old_full_path[1024];
     char        new_full_path[1024];
-    char       *cp;
+    const char *cp;
 
     tui32 device_id;
 

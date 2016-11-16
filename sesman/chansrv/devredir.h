@@ -48,7 +48,8 @@ void devredir_send_server_device_announce_resp(tui32 device_id);
 void dev_redir_send_drive_dir_request(IRP *irp, tui32 device_id,
                                       tui32 InitialQuery, char *Path);
 
-int  dev_redir_send_drive_create_request(tui32 device_id, char *path,
+int  dev_redir_send_drive_create_request(tui32 device_id,
+                                         const char *path,
                                          tui32 DesiredAccess,
                                          tui32 CreateOptions,
                                          tui32 CreateDisposition,
@@ -81,7 +82,7 @@ void devredir_insert_DeviceIoRequest(struct stream *s,
                                      tui32 MinorFunction);
 
 void devredir_cvt_slash(char *path);
-void devredir_cvt_to_unicode(char *unicode, char *path);
+void devredir_cvt_to_unicode(char *unicode, const char *path);
 void devredir_cvt_from_unicode_len(char *path, char *unicode, int len);
 int  dev_redir_string_ends_with(char *string, char c);
 
@@ -94,10 +95,10 @@ void devredir_proc_cid_rename_file(IRP *irp, tui32 IoStatus);
 void devredir_proc_cid_rename_file_resp(IRP *irp, tui32 IoStatus);
 
 /* called from FUSE module */
-int dev_redir_get_dir_listing(void *fusep, tui32 device_id, char *path);
+int dev_redir_get_dir_listing(void *fusep, tui32 device_id, const char *path);
 
-int dev_redir_file_open(void *fusep, tui32 device_id, char *path,
-                        int mode, int type, char *gen_buf);
+int dev_redir_file_open(void *fusep, tui32 device_id, const char *path,
+                        int mode, int type, const char *gen_buf);
 
 int devredir_file_close(void *fusep, tui32 device_id, tui32 file_id);
 
@@ -109,7 +110,7 @@ dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
                      const char *buf, int Length, tui64 Offset);
 
 int APP_CC
-devredir_rmdir_or_file(void *fusep, tui32 device_id, char *path, int mode);
+devredir_rmdir_or_file(void *fusep, tui32 device_id, const char *path, int mode);
 
 int send_channel_data(int chan_id, char *data, int size);
 
