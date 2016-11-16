@@ -19,7 +19,7 @@ xrdpsysconfdir = $(sysconfdir)/xrdp
 install-data-hook:
 	umask 077 && \
 	  if [ ! -f $(DESTDIR)$(xrdpsysconfdir)/rsakeys.ini ]; then ./xrdp-keygen xrdp $(DESTDIR)$(xrdpsysconfdir)/rsakeys.ini; fi && \
-	  if [ ! -f $(DESTDIR)$(xrdpsysconfdir)/cert.pem ]; then openssl req -x509 -newkey rsa:2048 -nodes -keyout $(DESTDIR)$(xrdpsysconfdir)/key.pem -out $(DESTDIR)$(xrdpsysconfdir)/cert.pem -days 365 -subj /C=US/ST=CA/L=Sunnyvale/O=xrdp/CN=www.xrdp.org; fi
+	  if [ ! -f $(DESTDIR)$(xrdpsysconfdir)/cert.pem ]; then openssl req -x509 -newkey rsa:2048 -sha256 -nodes -keyout $(DESTDIR)$(xrdpsysconfdir)/key.pem -out $(DESTDIR)$(xrdpsysconfdir)/cert.pem -days 365 -subj /C=US/ST=CA/L=Sunnyvale/O=xrdp/CN=www.xrdp.org; fi
 
 uninstall-hook:
 	rm -f $(DESTDIR)$(xrdpsysconfdir)/rsakeys.ini
