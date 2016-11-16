@@ -107,7 +107,7 @@ typedef LONG WINAPI
 (*tSCardFreeMemory)(SCARDCONTEXT hContext, LPCVOID pvMem);
 typedef LONG WINAPI
 (*tSCardLocateCardsA)(SCARDCONTEXT hContext, LPCSTR mszCards,
-				      LPSCARD_READERSTATEA rgReaderStates, DWORD cReaders);
+                      LPSCARD_READERSTATEA rgReaderStates, DWORD cReaders);
 typedef LONG WINAPI
 (*tSCardLocateCardsW)(SCARDCONTEXT hContext, LPCWSTR mszCards,
                       LPSCARD_READERSTATEW rgReaderStates, DWORD cReaders);
@@ -160,7 +160,7 @@ typedef LONG WINAPI
 typedef LONG WINAPI
 (*tSCardControl)(SCARDHANDLE hCard, DWORD dwControlCode, LPCVOID lpInBuffer,
                  DWORD nInBufferSize, LPVOID lpOutBuffer,
-				 DWORD nOutBufferSize, LPDWORD lpBytesReturned);
+                 DWORD nOutBufferSize, LPDWORD lpBytesReturned);
 typedef LONG WINAPI
 (*tSCardGetAttrib)(SCARDHANDLE hCard, DWORD dwAttrId, LPBYTE pbAttr,
                    LPDWORD pcbAttrLen);

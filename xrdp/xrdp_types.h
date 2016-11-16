@@ -592,7 +592,7 @@ struct xrdp_cfg_globals
     int  ls_btn_cancel_y_pos;    /* y pos for Cancel button */
     int  ls_btn_cancel_width;    /* width of Cancel button */
     int  ls_btn_cancel_height;   /* height of Cancel button */
-    char ls_title[256];  	 /* loginscreen window title */
+    char ls_title[256];          /* loginscreen window title */
 };
 
 struct xrdp_cfg_logging
