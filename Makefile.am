@@ -24,6 +24,7 @@ SUBDIRS = \
   mc \
   $(NEUTRINORDPDIR) \
   libxrdp \
+  librfxcodec \
   xrdp \
   sesman \
   keygen \
@@ -31,4 +32,5 @@ SUBDIRS = \
   instfiles \
   genkeymap \
   xrdpapi \
+  xorgxrdp \
   $(XRDPVRDIR)
