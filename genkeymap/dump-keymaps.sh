@@ -19,7 +19,7 @@ setxkbmap -model pc105 -layout gb
 setxkbmap -model pc104 -layout de
 ./xrdp-genkeymap ../instfiles/km-00000407.ini
 
-# Italy 'it' 0x00000410
+# Italian 'it' 0x00000410
 setxkbmap -model pc104 -layout it
 ./xrdp-genkeymap ../instfiles/km-00000410.ini
 
