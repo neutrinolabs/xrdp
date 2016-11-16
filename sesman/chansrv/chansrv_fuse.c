@@ -258,7 +258,7 @@ static tintptr g_bufsize = 0;
 static int xfuse_init_xrdp_fs(void);
 static int xfuse_deinit_xrdp_fs(void);
 static int xfuse_init_lib(struct fuse_args *args);
-static int xfuse_is_inode_valid(int ino);
+static int xfuse_is_inode_valid(fuse_ino_t ino);
 
 // LK_TODO
 #if 0
@@ -267,17 +267,17 @@ static void xfuse_create_file(fuse_req_t req, fuse_ino_t parent,
 #endif
 
 static void xfuse_dump_fs(void);
-static tui32 xfuse_get_device_id_for_inode(tui32 ino, char *full_path);
+static tui32 xfuse_get_device_id_for_inode(fuse_ino_t ino, char *full_path);
 static void fuse_reverse_pathname(char *full_path, char *reverse_path);
 
-static struct xrdp_inode * xfuse_get_inode_from_pinode_name(tui32 pinode,
+static struct xrdp_inode * xfuse_get_inode_from_pinode_name(fuse_ino_t pinode,
                                                             const char *name);
 
 static struct xrdp_inode * xfuse_create_file_in_xrdp_fs(tui32 device_id,
                                                         int pinode, char *name,
                                                         int type);
 
-static int  xfuse_does_file_exist(int parent, char *name);
+static int  xfuse_does_file_exist(fuse_ino_t parent, char *name);
 static int  xfuse_delete_file_with_xinode(XRDP_INODE *xinode);
 static int  xfuse_delete_dir_with_xinode(XRDP_INODE *xinode);
 static int  xfuse_recursive_delete_dir_with_xinode(XRDP_INODE *xinode);
@@ -357,8 +357,8 @@ static void xfuse_cb_releasedir(fuse_req_t req, fuse_ino_t ino,
                                 struct fuse_file_info *fi);
 
 /* misc calls */
-static void xfuse_mark_as_stale(int pinode);
-static void xfuse_delete_stale_entries(int pinode);
+static void xfuse_mark_as_stale(fuse_ino_t pinode);
+static void xfuse_delete_stale_entries(fuse_ino_t pinode);
 
 /*****************************************************************************/
 int APP_CC
@@ -671,7 +671,7 @@ int xfuse_create_share(tui32 device_id, char *dirname)
 
 int xfuse_clear_clip_dir(void)
 {
-    int         i;
+    fuse_ino_t i;
     XRDP_INODE *xinode;
     XRDP_INODE *xip;
 
@@ -955,7 +955,7 @@ static int xfuse_deinit_xrdp_fs()
  * @return 1 if it does, 0 otherwise
  *****************************************************************************/
 
-static int xfuse_is_inode_valid(int ino)
+static int xfuse_is_inode_valid(fuse_ino_t ino)
 {
     /* is ino present in our table? */
     if ((ino < FIRST_INODE) || (ino >= g_xrdp_fs.next_node))
@@ -1039,7 +1039,7 @@ static void xfuse_create_file(fuse_req_t req, fuse_ino_t parent,
 
 static void xfuse_dump_fs()
 {
-    int i;
+    fuse_ino_t i;
     struct xrdp_inode *xinode;
 
     log_debug("found %d entries", g_xrdp_fs.num_entries - FIRST_INODE);
@@ -1095,10 +1095,10 @@ static void xfuse_dump_xrdp_inode(struct xrdp_inode *xino)
  * @return the device_id of specified inode
  *****************************************************************************/
 
-static tui32 xfuse_get_device_id_for_inode(tui32 ino, char *full_path)
+static tui32 xfuse_get_device_id_for_inode(fuse_ino_t ino, char *full_path)
 {
-    tui32   parent_inode = 0;
-    tui32   child_inode  = ino;
+    fuse_ino_t parent_inode = 0;
+    fuse_ino_t child_inode  = ino;
     char    reverse_path[4096];
 
     /* ino == 1 is a special case; we already know that it is not */
@@ -1106,7 +1106,7 @@ static tui32 xfuse_get_device_id_for_inode(tui32 ino, char *full_path)
     if (ino == 1)
     {
         /* just return the device_id for the file in full_path */
-        log_debug("looking for file with pinode=%d name=%s", ino, full_path);
+        log_debug("looking for file with pinode=%ld name=%s", ino, full_path);
         xfuse_dump_fs();
 
         XRDP_INODE *xinode = xfuse_get_inode_from_pinode_name(ino, full_path);
@@ -1165,10 +1165,10 @@ static void fuse_reverse_pathname(char *full_path, char *reverse_path)
  * Return the inode that matches the name and parent inode
  *****************************************************************************/
 
-static struct xrdp_inode * xfuse_get_inode_from_pinode_name(tui32 pinode,
+static struct xrdp_inode * xfuse_get_inode_from_pinode_name(fuse_ino_t pinode,
                                                             const char *name)
 {
-    int i;
+    fuse_ino_t i;
     struct xrdp_inode * xinode;
 
     for (i = FIRST_INODE; i < g_xrdp_fs.num_entries; i++)
@@ -1260,9 +1260,9 @@ static struct xrdp_inode * xfuse_create_file_in_xrdp_fs(tui32 device_id,
  * @return 1 if specified file exists, 0 otherwise
  *****************************************************************************/
 
-static int xfuse_does_file_exist(int parent, char *name)
+static int xfuse_does_file_exist(fuse_ino_t parent, char *name)
 {
-    int         i;
+    fuse_ino_t i;
     XRDP_INODE *xinode;
 
     for (i = FIRST_INODE; i < g_xrdp_fs.num_entries; i++)
@@ -1299,7 +1299,7 @@ static int xfuse_delete_file_with_xinode(XRDP_INODE *xinode)
 static int xfuse_delete_dir_with_xinode(XRDP_INODE *xinode)
 {
     XRDP_INODE *xip;
-    int         i;
+    fuse_ino_t i;
 
     /* make sure it is not a file */
     if ((xinode == NULL) || (xinode->mode & S_IFREG))
@@ -1335,7 +1335,7 @@ static int xfuse_delete_dir_with_xinode(XRDP_INODE *xinode)
 static int xfuse_recursive_delete_dir_with_xinode(XRDP_INODE *xinode)
 {
     XRDP_INODE *xip;
-    int         i;
+    fuse_ino_t i;
 
     /* make sure it is not a file */
     if ((xinode == NULL) || (xinode->mode & S_IFREG))
@@ -2015,7 +2015,7 @@ static void xfuse_cb_readdir(fuse_req_t req, fuse_ino_t ino, size_t size,
     XRDP_INODE      *ti;
     struct dir_info *di;
     struct dirbuf1   b;
-    int              i;
+    fuse_ino_t       i;
     int              first_time;
 
     log_debug("req=%p inode=%ld size=%zd offset=%lld", req, ino, size, (long long) off);
@@ -2510,7 +2510,7 @@ static void xfuse_cb_open(fuse_req_t req, fuse_ino_t ino,
         return;
     }
 
-    device_id = xfuse_get_device_id_for_inode((tui32) ino, full_path);
+    device_id = xfuse_get_device_id_for_inode(ino, full_path);
 
     if (xinode->is_loc_resource)
     {
@@ -2958,10 +2958,10 @@ static int xfuse_proc_opendir_req(fuse_req_t req, fuse_ino_t ino,
 do_remote_lookup:
 #endif
 
-    xfuse_mark_as_stale((int) ino);
+    xfuse_mark_as_stale(ino);
 
     log_debug("did not find entry; redirecting call to dev_redir");
-    device_id = xfuse_get_device_id_for_inode((tui32) ino, full_path);
+    device_id = xfuse_get_device_id_for_inode(ino, full_path);
 
     log_debug("dev_id=%d ino=%ld full_path=%s", device_id, ino, full_path);
 
@@ -3041,9 +3041,9 @@ static void xfuse_cb_releasedir(fuse_req_t req, fuse_ino_t ino,
  *****************************************************************************/
 
 static void
-xfuse_mark_as_stale(int pinode)
+xfuse_mark_as_stale(fuse_ino_t pinode)
 {
-    int          i;
+    fuse_ino_t i;
     XRDP_INODE  *xinode;
 
     if ((pinode < FIRST_INODE) || (pinode >=  g_xrdp_fs.num_entries))
@@ -3070,9 +3070,9 @@ xfuse_mark_as_stale(int pinode)
  *****************************************************************************/
 
 static void
-xfuse_delete_stale_entries(int pinode)
+xfuse_delete_stale_entries(fuse_ino_t pinode)
 {
-    int          i;
+    fuse_ino_t i;
     XRDP_INODE  *xinode;
 
     if ((pinode < FIRST_INODE) || (pinode >=  g_xrdp_fs.num_entries))
