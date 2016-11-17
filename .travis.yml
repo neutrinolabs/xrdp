@@ -19,8 +19,6 @@ addons:
       - libx11-dev
       - libxrandr-dev
       - libpixman-dev
-      # xorgxrdp
-      - xserver-xorg-dev
       - nasm
       # x11rdp
       #- flex
@@ -36,7 +34,6 @@ addons:
 script:
   # disable librfxcodec as no remotefx for v0.9.1 release
   #- (cd librfxcodec && ./bootstrap && ./configure && make)
-  - (cd xorgxrdp && ./bootstrap && ./configure && make)
   - (./bootstrap && ./configure --enable-ipv6 --enable-jpeg --enable-fuse --enable-mp3lame --enable-pixman && make)
   # disable x11rdp build as it takes long time and it is to be deprecated
   #- (cd xorg/X11R7.6 && ./buildx.sh default)
