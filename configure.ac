@@ -254,6 +254,10 @@ if test "x${prefix}" = "xNONE" ; then
 sysconfdir="/etc";
 localstatedir="/var";
 fi
+
+pkgconfigdir=${libdir}/pkgconfig
+AC_SUBST(pkgconfigdir)
+
 AC_CONFIG_FILES([Makefile
                  common/Makefile
                  vnc/Makefile
@@ -280,11 +284,13 @@ AC_CONFIG_FILES([Makefile
                  genkeymap/Makefile
                  xrdpapi/Makefile
                  xrdpvr/Makefile
+                 pkgconfig/Makefile
 ])
 #                 fontdump/Makefile
 #                 xrdp/cursors/Makefile
 #                 Xserver/hw/rdp/Makefile
-AC_OUTPUT
+AC_OUTPUT([pkgconfig/libpainter.pc
+])
 
 # example of how to check for a struct in a header
 #AC_CHECK_MEMBER([struct in6_addr.s6_addr],

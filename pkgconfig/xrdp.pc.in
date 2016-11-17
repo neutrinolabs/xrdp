@@ -1,0 +1,9 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: xrdp
+Description: xrdp - an open source RDP server
+Version: 0.9.2
+Cflags: -I${includedir}
