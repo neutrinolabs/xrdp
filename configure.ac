@@ -289,7 +289,7 @@ AC_CONFIG_FILES([Makefile
 #                 fontdump/Makefile
 #                 xrdp/cursors/Makefile
 #                 Xserver/hw/rdp/Makefile
-AC_OUTPUT([pkgconfig/libpainter.pc
+AC_OUTPUT([pkgconfig/xrdp.pc
 ])
 
 # example of how to check for a struct in a header
