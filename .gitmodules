@@ -1,6 +1,4 @@
 [submodule "librfxcodec"]
 	path = librfxcodec
 	url = git://github.com/neutrinolabs/librfxcodec
-[submodule "xorgxrdp"]
-	path = xorgxrdp
-	url = git://github.com/neutrinolabs/xorgxrdp
+
