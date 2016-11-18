@@ -4,6 +4,6 @@ libdir=@libdir@
 includedir=@includedir@
 
 Name: xrdp
-Description: An open source remote desktop protocol(RDP) server
-Version: 0.9.2
+Description: An open source Remote Desktop Protocol (RDP) server
+Version: @VERSION@
 Cflags: -I${includedir}
