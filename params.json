@@ -1,0 +1,6 @@
+{
+  "name": "xrdp",
+  "tagline": "an open-source Remote Desktop Protocol server",
+  "body": "## Overview\r\n\r\nxrdp provides a graphical login to remote machines using RDP (Microsoft Remote Desktop Protocol). xrdp accepts connections from variety of RDP clients: FreeRDP, rdesktop, NeutrinoRDP and Microsoft Remote Desktop Client (for Windows, macOS, iOS and Android).\r\n\r\nAs Windows-to-Windows Remote Desktop can, xrdp supports not only graphics remoting but also\r\n\r\n* two-way clipboard transfer (text, bitmap, file)\r\n* audio redirection\r\n* drive redirection (mount local client drives on remote machine)\r\n\r\nRDP transport is encrypted using TLS by default.\r\n\r\n![demo](https://github.com/neutrinolabs/xrdp/raw/gh-pages/xrdp_demo.gif)\r\n\r\n## Contact\r\n* Google Groups:\r\n    * [Users Group](https://groups.google.com/forum/#!forum/xrdp-users) (xrdp-users@googlegroups.com)\r\n    * [Development Group](https://groups.google.com/forum/#!forum/xrdp-devel) (xrdp-devel@googlegroups.com)\r\n* [Gitter Chat] (https://gitter.im/neutrinolabs/xrdp)\r\n\r\n## Credits\r\n* Author: Jay Sorg (@jsorg71)\r\n",
+  "note": "Don't delete this file! It's used internally to help with page regeneration."
+}

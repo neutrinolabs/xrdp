@@ -1,62 +1,72 @@
 <!DOCTYPE html>
-<!--[if lt IE 9]><html class="ie"><![endif]-->
-<!--[if gte IE 9]><!-->
-<html dir="ltr" itemscope="" itemtype="http://schema.org/Article" lang="en"><!--<![endif]--><head>
-<meta http-equiv="content-type" content="text/html; charset=UTF-8">
-<title>xrdp</title>
-<meta name="description" content="xrdp homepage">
-<meta charset="utf-8">
-<meta name="application-name" content="xrdp">
-<meta name="language" content="en">
-<meta http-equiv="content-language" content="en">
-<!-- fonts -->
-<link href="index_files/css.css" rel="stylesheet" type="text/css">
-<!-- resources -->
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="index_files/style.css">
-<!-- google analytics -->
-<meta name="google-site-verification" content="P989BNW4O28Vzpd8-NS4x5wFOoH5qkj0vVKTE93bt8k">
-<script src="index_files/ga.js" async="" type="text/javascript"></script><script type="text/javascript">
-</script>
-<!--[if lt IE 9]>
-<script src="//html5shim.googlecode.com/svn/trunk/html5.js"></script>
-<![endif]-->
-</head>
-<body itemscope="" itemtype="http://schema.org/WebPage">
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>xrdp by neutrinolabs</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">xrdp</h1>
+      <h2 class="project-tagline">an open-source Remote Desktop Protocol server</h2>
+      <a href="https://github.com/neutrinolabs/xrdp" class="btn">View on GitHub</a>
+      <a href="https://github.com/neutrinolabs/xrdp/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/neutrinolabs/xrdp/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
 
-<div class="content">
-<article id="article" class="muibee-grid">
+    <section class="main-content">
+      <h2>
+<a id="overview" class="anchor" href="#overview" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Overview</h2>
 
-    <div class="logo">
-    <h1>xrdp:</h1>
-    <p>An open source remote desktop protocol(rdp) server.</p>
-    </div>
+<p>xrdp provides a graphical login to remote machines using RDP (Microsoft Remote Desktop Protocol). xrdp accepts connections from variety of RDP clients: FreeRDP, rdesktop, NeutrinoRDP and Microsoft Remote Desktop Client (for Windows, macOS, iOS and Android).</p>
 
-    <div class="mytbl">
-        <div class="myrow">
-            <div class="prop"><span>Downloads</span></div>
-            <div class="value">
-                github: <a href="https://github.com/neutrinolabs/xrdp/releases">https://github.com/neutrinolabs/xrdp/releases</a>
-                <br>
-                &nbsp;
-                <br>
-                last stable 0.9.0: <code>git clone -b master https://github.com/neutrinolabs/xrdp.git</code>
-            </div>
-        </div>
+<p>As Windows-to-Windows Remote Desktop can, xrdp supports not only graphics remoting but also</p>
 
-        <div class="myrow bigger">
-            <div class="prop"><span>Contact us</span></div>
-            <div class="value">To subscribe to the mailing-list, send an email to
-                <br>
-                <a href="mailto:dev-subscribe@googlegroups.org">dev-subscribe@googlegroups.org</a></div>
-        </div>
+<ul>
+<li>two-way clipboard transfer (text, bitmap, file)</li>
+<li>audio redirection</li>
+<li>drive redirection (mount local client drives on remote machine)</li>
+</ul>
 
-        <meta itemprop="description" content="xrdp homepage">
-        <!--<meta itemprop="dateCreated"  content="Friday, September 2, 2010" />-->
-        <meta itemprop="dateModified" content="Fri, August 5, 2016">
-        <meta itemprop="author" content="xrdp Team">
-        <meta itemprop="inLanguage" content="en">
-        <meta itemprop="url" content="/en/">
-    </div></article>
+<p>RDP transport is encrypted using TLS by default.</p>
 
-</div></body></html>
+<p><img src="https://github.com/neutrinolabs/xrdp/raw/gh-pages/xrdp_demo.gif" alt="demo"></p>
+
+<h2>
+<a id="contact" class="anchor" href="#contact" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Contact</h2>
+
+<ul>
+<li>Google Groups:
+
+<ul>
+<li>
+<a href="https://groups.google.com/forum/#!forum/xrdp-users">Users Group</a> (<a href="mailto:xrdp-users@googlegroups.com">xrdp-users@googlegroups.com</a>)</li>
+<li>
+<a href="https://groups.google.com/forum/#!forum/xrdp-devel">Development Group</a> (<a href="mailto:xrdp-devel@googlegroups.com">xrdp-devel@googlegroups.com</a>)</li>
+</ul>
+</li>
+<li><a href="https://gitter.im/neutrinolabs/xrdp">Gitter Chat</a></li>
+</ul>
+
+<h2>
+<a id="credits" class="anchor" href="#credits" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Credits</h2>
+
+<ul>
+<li>Author: Jay Sorg (<a href="https://github.com/jsorg71" class="user-mention">@jsorg71</a>)</li>
+</ul>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/neutrinolabs/xrdp">xrdp</a> is maintained by <a href="https://github.com/neutrinolabs">neutrinolabs</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
