@@ -1,5 +1,5 @@
 .\"
-.TH "sesman.ini" "5" "0.1.0" "xrdp team" ""
+.TH "sesman.ini" "5" "0.9.0" "xrdp team" ""
 .SH "NAME"
 \fBsesman.ini\fR \- Configuration file for \fBxrdp-sesman\fR(8)
 
@@ -47,14 +47,15 @@ Following parameters can be used in the \fB[Globals]\fR section.
 
 .TP
 \fBListenAddress\fR=\fIip address\fR
-xrdp-sesman listening address. Default is 0.0.0.0 (all interfaces).
+xrdp-sesman listening address. If not specified, defaults to \fI0.0.0.0\fR
+(all interfaces).
 
 .TP
 \fBListenPort\fR=\fIport number\fR
-xrdp-sesman listening port. Default is 3350.
+xrdp-sesman listening port. If not specified, defaults to \fI3350\fR.
 
 .TP
-\fBEnableUserWindowManager\fR=\fI[0|1]\fR
+\fBEnableUserWindowManager\fR=\fI[true|false]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR, this option enables user
 specific startup script. That is, xrdp-sesman will execute the script
 specified by \fBUserWindowManager\fR if it exists.
@@ -75,8 +76,8 @@ Following parameters can be used in the \fB[Logging]\fR section.
 
 .TP
 \fBLogFile\fR=\fIfilename\fR
-Log file path. It can be either absolute or relative. The default is
-\fI./sesman.log\fR
+Log file path. It can be either absolute or relative. If not specified,
+defaults to \fI./sesman.log\fR
 
 .TP
 \fBLogLevel\fR=\fIlevel\fR
@@ -95,7 +96,7 @@ logged \fIregardless\fR of the selected logging level.
 debug mode, this options will output many more low\-level messages.
 
 .TP
-\fBEnableSyslog\fR=\fI[0|1]\fR
+\fBEnableSyslog\fR=\fI[true|false]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR, this option enables logging to
 syslog.
 
@@ -111,7 +112,8 @@ Following parameters can be used in the \fB[Sessions]\fR section.
 .TP
 \fBX11DisplayOffset\fR=\fInumber\fR
 The first X display number available for xrdp-sesman. This prevents
-xrdp-sesman from interfering with real X11 servers. The default is 10.
+xrdp-sesman from interfering with real X11 servers. If not specified,
+defaults to \fI10\fR.
 
 .TP
 \fBMaxSessions\fR=\fInumber\fR
@@ -119,7 +121,7 @@ Sets the maximum number of simultaneous sessions. If not set or set to
 \fI0\fR, unlimited session are allowed.
 
 .TP
-\fBKillDisconnected\fR=\fI[0|1]\fR
+\fBKillDisconnected\fR=\fI[true|false]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR, every session will be killed
 within 60 seconds after the user disconnects.
 
@@ -163,15 +165,15 @@ off. For Xvnc connections, \fBDisplaySize\fR is always enabled as well.
 Following parameters can be used in the \fB[Security]\fR section.
 
 .TP
-\fBAllowRootLogin\fR=\fI[0|1]\fR
+\fBAllowRootLogin\fR=\fI[true|false]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR, enables root login on the
 terminal server.
 
 .TP
 \fBMaxLoginRetry\fR=\fInumber\fR
 The number of login attempts that are allowed on terminal server. If set
-to \fI0\fR, unlimited attempts are allowed. The default value for this
-field is \fI3\fR.
+to \fI0\fR, unlimited attempts are allowed. If not specified, defaults to
+\fI3\fR.
 
 .TP
 \fBTerminalServerUsers\fR=\fIgroup\fR
@@ -185,7 +187,7 @@ login for all users is enabled.
 have session management rights.
 
 .TP
-\fBAlwaysGroupCheck\fR=\fI[0|1]\fR
+\fBAlwaysGroupCheck\fR=\fI[true|false]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR, require group membership even
 if the group specified in \fBTerminalServerUsers\fR doesn't exist.
 
@@ -207,10 +209,10 @@ Following parameters can be used in the \fB[Chansrv]\fR section.
 .TP
 \fBFuseMountName\fR=\fIstring\fR
 Directory for drive redirection, relative to the user home directory.
-Created if it doesn't exist. Defaults to \fIxrdp_client\fR
+Created if it doesn't exist. If not specified, defaults to \fIxrdp_client\fR.
 
 .SH "SESSIONS VARIABLES"
-All entries it the \fB[SessionVariables]\fR section are set as
+All entries in the \fB[SessionVariables]\fR section are set as
 environment variables in the user's session.
 
 .SH "FILES"
@@ -222,4 +224,4 @@ environment variables in the user's session.
 .BR xrdp (8),
 .BR xrdp.ini (5)
 
-For more info on \fBxrdp\fR see http://xrdp.sf.net
+For more info on \fBxrdp\fR see http://www.xrdp.org/
