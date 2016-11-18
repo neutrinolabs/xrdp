@@ -258,42 +258,36 @@ fi
 pkgconfigdir=${libdir}/pkgconfig
 AC_SUBST(pkgconfigdir)
 
-AC_CONFIG_FILES([Makefile
-                 common/Makefile
-                 vnc/Makefile
-                 rdp/Makefile
-                 libxrdp/Makefile
-                 xup/Makefile
-                 mc/Makefile
-                 neutrinordp/Makefile
-                 xrdp/Makefile
-                 sesman/Makefile
-                 sesman/libscp/Makefile
-                 sesman/tools/Makefile
-                 sesman/sessvc/Makefile
-                 sesman/chansrv/Makefile
-                 keygen/Makefile
-                 docs/Makefile
-                 docs/man/Makefile
-                 instfiles/Makefile
-                 instfiles/pam.d/Makefile
-                 instfiles/init.d/Makefile
-                 instfiles/rc.d/Makefile
-                 instfiles/default/Makefile
-                 instfiles/pulse/Makefile
-                 genkeymap/Makefile
-                 xrdpapi/Makefile
-                 xrdpvr/Makefile
-                 pkgconfig/Makefile
-])
-#                 fontdump/Makefile
-#                 xrdp/cursors/Makefile
-#                 Xserver/hw/rdp/Makefile
-AC_OUTPUT([pkgconfig/xrdp.pc
+AC_CONFIG_FILES([
+  common/Makefile
+  docs/Makefile
+  docs/man/Makefile
+  genkeymap/Makefile
+  instfiles/default/Makefile
+  instfiles/init.d/Makefile
+  instfiles/Makefile
+  instfiles/pam.d/Makefile
+  instfiles/pulse/Makefile
+  instfiles/rc.d/Makefile
+  keygen/Makefile
+  libxrdp/Makefile
+  Makefile
+  mc/Makefile
+  neutrinordp/Makefile
+  pkgconfig/Makefile
+  pkgconfig/xrdp.pc
+  pkgconfig/xrdp-uninstalled.pc
+  rdp/Makefile
+  sesman/chansrv/Makefile
+  sesman/libscp/Makefile
+  sesman/Makefile
+  sesman/sessvc/Makefile
+  sesman/tools/Makefile
+  vnc/Makefile
+  xrdpapi/Makefile
+  xrdp/Makefile
+  xrdpvr/Makefile
+  xup/Makefile
 ])
 
-# example of how to check for a struct in a header
-#AC_CHECK_MEMBER([struct in6_addr.s6_addr],
-#                [],
-#                [AC_DEFINE(NO_ARPA_INET_H_IP6, 1, [for IPv6])],
-#                [#include <arpa/inet.h>])
+AC_OUTPUT

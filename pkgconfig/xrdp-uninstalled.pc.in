@@ -1,7 +1,4 @@
-prefix=@prefix@
-exec_prefix=@exec_prefix@
-libdir=@libdir@
-includedir=@includedir@
+includedir=${pc_top_builddir}/${pcfiledir}/common
 
 Name: xrdp
 Description: An open source Remote Desktop Protocol (RDP) server
