@@ -1,12 +1,2 @@
-pkg_config_files = \
-	xrdp.pc \
-	$(NULL)
-
 pkgconfigdir = @pkgconfigdir@
-pkgconfig_DATA = $(pkg_config_files)
-
-DISTCLEANFILES = \
-	$(pkg_config_files) \
-	Makefile.in \
-	$(NULL)
-
+pkgconfig_DATA = xrdp.pc
