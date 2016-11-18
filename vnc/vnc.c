@@ -1083,7 +1083,24 @@ lib_mod_connect(struct vnc *v)
                 if (error == 0)
                 {
                     init_stream(s, 8192);
-                    rfbEncryptBytes(s->data, v->password);
+                    if (v->got_guid)
+                    {
+                        char guid_str[64];
+                        char *pguid_str;
+                        int index;
+                        pguid_str = guid_str;
+                        for (index = 0; index < 16; index++)
+                        {
+                            g_snprintf(pguid_str, 4, "%2.2x", v->guid[index]);
+                            pguid_str += 2;
+                        }
+                        guid_str[32] = 0;
+                        rfbEncryptBytes(s->data, guid_str);
+                    }
+                    else
+                    {
+                        rfbEncryptBytes(s->data, v->password);
+                    }
                     s->p += 16;
                     s_mark_end(s);
                     error = trans_force_write_s(v->trans, s);
@@ -1421,6 +1438,11 @@ lib_mod_set_param(struct vnc *v, const char *name, char *value)
     else if (g_strcasecmp(name, "delay_ms") == 0)
     {
         v->delay_ms = g_atoi(value);
+    }
+    else if (g_strcasecmp(name, "guid") == 0)
+    {
+        v->got_guid = 1;
+        g_memcpy(v->guid, value, 16);
     }
 
     return 0;
