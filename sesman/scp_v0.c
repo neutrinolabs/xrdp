@@ -99,18 +99,9 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
 
             if (1 == access_login_allowed(s->username))
             {
-                char rand[16];
-                char guid[64];
-                char *text;
-                int index;
+                tui8 guid[16];
 
-                text = guid;
-                g_random(rand, 16);
-                for (index = 0; index < 16; index++)
-                {
-                    g_snprintf(text, 4, "%2.2x", (unsigned char)(rand[index]));
-                    text += 2;
-                }
+                g_random((char*)guid, 16);
                 scp_session_set_guid(s, guid);
 
                 if (0 != s->client_ip)

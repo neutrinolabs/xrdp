@@ -364,11 +364,11 @@ scp_v0s_accept(struct SCP_CONNECTION *c, struct SCP_SESSION **s, int skipVchk)
 
 /******************************************************************************/
 enum SCP_SERVER_STATES_E
-scp_v0s_allow_connection(struct SCP_CONNECTION *c, SCP_DISPLAY d, char *guid)
+scp_v0s_allow_connection(struct SCP_CONNECTION *c, SCP_DISPLAY d, tui8 *guid)
 {
     int msg_size;
 
-    msg_size = guid == 0 ? 14 : 14 + 32;
+    msg_size = guid == 0 ? 14 : 14 + 16;
     out_uint32_be(c->out_s, 0);  /* version */
     out_uint32_be(c->out_s, msg_size); /* size */
     out_uint16_be(c->out_s, 3);  /* cmd */
@@ -376,7 +376,7 @@ scp_v0s_allow_connection(struct SCP_CONNECTION *c, SCP_DISPLAY d, char *guid)
     out_uint16_be(c->out_s, d);  /* data */
     if (msg_size > 14)
     {
-        out_uint8a(c->out_s, guid, 32); 
+        out_uint8a(c->out_s, guid, 16);
     }
     s_mark_end(c->out_s);
 
