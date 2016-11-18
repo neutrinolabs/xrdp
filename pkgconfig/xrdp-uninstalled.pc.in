@@ -1,4 +1,5 @@
-includedir=${pc_top_builddir}/${pcfiledir}/common
+abs_top_srcdir=@abs_top_srcdir@
+includedir=${abs_top_srcdir}/common
 
 Name: xrdp
 Description: An open source Remote Desktop Protocol (RDP) server
