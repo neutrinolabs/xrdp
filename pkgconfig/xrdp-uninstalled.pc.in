@@ -1,0 +1,7 @@
+abs_top_srcdir=@abs_top_srcdir@
+includedir=${abs_top_srcdir}/common
+
+Name: xrdp
+Description: An open source Remote Desktop Protocol (RDP) server
+Version: @VERSION@
+Cflags: -I${includedir}

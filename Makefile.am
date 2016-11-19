@@ -31,4 +31,5 @@ SUBDIRS = \
   instfiles \
   genkeymap \
   xrdpapi \
+  pkgconfig \
   $(XRDPVRDIR)
