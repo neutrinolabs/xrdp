@@ -53,11 +53,29 @@ void DEFAULT_CC
 rfbEncryptBytes(char *bytes, char *passwd)
 {
     char key[24];
+    void *des;
+    int len;
+
+    /* key is simply password padded with nulls */
+    g_memset(key, 0, sizeof(key));
+    len = MIN(g_strlen(passwd), 8);
+    g_mirror_memcpy(key, passwd, len);
+    des = ssl_des3_encrypt_info_create(key, 0);
+    ssl_des3_encrypt(des, 8, bytes, bytes);
+    ssl_des3_info_delete(des);
+    des = ssl_des3_encrypt_info_create(key, 0);
+    ssl_des3_encrypt(des, 8, bytes + 8, bytes + 8);
+    ssl_des3_info_delete(des);
+}
+
+/******************************************************************************/
+/* taken from vncauth.c */
+void DEFAULT_CC
+rfbHashEncryptBytes(char *bytes, char *passwd)
+{
     char passwd_hash[20];
     char passwd_hash_text[40];
-    void *des;
     void *sha1;
-    int len;
     int passwd_bytes;
 
     /* create password hash from password */
@@ -73,17 +91,7 @@ rfbEncryptBytes(char *bytes, char *passwd)
                (tui8)passwd_hash[2], (tui8)passwd_hash[3]);
     passwd_hash_text[39] = 0;
     passwd = passwd_hash_text;
-
-    /* key is simply password padded with nulls */
-    g_memset(key, 0, sizeof(key));
-    len = MIN(g_strlen(passwd), 8);
-    g_mirror_memcpy(key, passwd, len);
-    des = ssl_des3_encrypt_info_create(key, 0);
-    ssl_des3_encrypt(des, 8, bytes, bytes);
-    ssl_des3_info_delete(des);
-    des = ssl_des3_encrypt_info_create(key, 0);
-    ssl_des3_encrypt(des, 8, bytes + 8, bytes + 8);
-    ssl_des3_info_delete(des);
+    rfbEncryptBytes(bytes, passwd);
 }
 
 /******************************************************************************/
@@ -1095,7 +1103,7 @@ lib_mod_connect(struct vnc *v)
                             pguid_str += 2;
                         }
                         guid_str[32] = 0;
-                        rfbEncryptBytes(s->data, guid_str);
+                        rfbHashEncryptBytes(s->data, guid_str);
                     }
                     else
                     {
