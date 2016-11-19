@@ -1387,57 +1387,55 @@ read_ini(void)
 }
 
 /*****************************************************************************/
-static char* APP_CC
-get_log_path()
+static int APP_CC
+get_log_path(char *path, int bytes)
 {
-    char* log_path = 0;
-    char* cp = 0;
+    char* log_path;
+    int rv;
 
+    rv = 1;
     log_path = g_getenv("CHANSRV_LOG_PATH");
-
     if (log_path == 0)
     {
         log_path = g_getenv("XDG_DATA_HOME");
         if (log_path != 0)
         {
-            cp = g_new(char, strlen(log_path) + strlen("/xrdp") + 1);
-
-            if (cp != 0)
+            g_snprintf(path, bytes, "%s%s", log_path, "/xrdp");
+            if (g_directory_exist(path) || (g_mkdir(path) == 0))
             {
-                memcpy(cp, log_path, strlen(log_path));
-                memcpy(cp + strlen(log_path), "/xrdp", strlen("/xrdp") + 1);
-                if (g_directory_exist(cp) || g_mkdir(cp))
-                {
-                    log_path = cp;
-                }
-                else
-                {
-                    free(cp);
-                }
+                rv = 0;
             }
         }
     }
-
-    if (log_path == 0)
+    else
+    {
+        g_snprintf(path, bytes, "%s", log_path);
+        if (g_directory_exist(path) || (g_mkdir(path) == 0))
+        {
+            rv = 0;
+        }
+    }
+    if (rv != 0)
     {
         log_path = g_getenv("HOME");
         if (log_path != 0)
         {
-            cp = g_new(char, strlen(log_path) + strlen("/.local/share/xrdp") + 1);
-
-            if (cp != 0)
+            g_snprintf(path, bytes, "%s%s", log_path, "/.local");
+            if (g_directory_exist(path) || (g_mkdir(path) == 0))
             {
-                memcpy(cp, log_path, strlen(log_path));
-                memcpy(cp + strlen(log_path), "/.local/share/xrdp", strlen("/.local/share/xrdp") + 1);
-                if (g_directory_exist(cp) || g_mkdir(cp))
-                    log_path = cp;
-                else
-                    free(cp);
+                g_snprintf(path, bytes, "%s%s", log_path, "/.local/share");
+                if (g_directory_exist(path) || (g_mkdir(path) == 0))
+                {
+                    g_snprintf(path, bytes, "%s%s", log_path, "/.local/share/xrdp");
+                    if (g_directory_exist(path) || (g_mkdir(path) == 0))
+                    {
+                        rv = 0;
+                    }
+                }
             }
         }
     }
-
-    return log_path;
+    return rv;
 }
 
 /*****************************************************************************/
@@ -1501,7 +1499,7 @@ main(int argc, char **argv)
     tbus waiters[4];
     int pid = 0;
     char text[256];
-    char* log_path;
+    char log_path[256];
     char *display_text;
     char log_file[256];
     enum logReturns error;
@@ -1510,8 +1508,8 @@ main(int argc, char **argv)
 
     g_init("xrdp-chansrv"); /* os_calls */
 
-    log_path = get_log_path();
-    if (log_path == 0)
+    log_path[255] = 0;
+    if (get_log_path(log_path, 255) != 0)
     {
         g_writeln("error reading CHANSRV_LOG_PATH and HOME environment variable");
         g_deinit();
