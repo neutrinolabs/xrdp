@@ -1035,21 +1035,60 @@ g_sck_listen(int sck)
 int APP_CC
 g_tcp_accept(int sck)
 {
-    int ret ;
-    char ipAddr[256] ;
-    struct sockaddr_in s;
-    socklen_t i;
-
-    i = sizeof(struct sockaddr_in);
-    memset(&s, 0, i);
-    ret = accept(sck, (struct sockaddr *)&s, &i);
-    if(ret>0)
+    int ret;
+    char msg[256];
+    union
     {
-        snprintf(ipAddr, 255, "A connection received from: %s port %d",
-                 inet_ntoa(s.sin_addr), ntohs(s.sin_port));
-        log_message(LOG_LEVEL_INFO, "%s", ipAddr);
+        struct sockaddr sock_addr;
+        struct sockaddr_in sock_addr_in;
+#if defined(XRDP_ENABLE_IPV6)
+        struct sockaddr_in6 sock_addr_in6;
+#endif
+    } sock_info;
+
+    socklen_t sock_len = sizeof(sock_info);
+    memset(&sock_info, 0, sock_len);
+
+    ret = accept(sck, (struct sockaddr *)&sock_info, &sock_len);
+
+    if (ret > 0)
+    {
+        switch(sock_info.sock_addr.sa_family)
+        {
+            case AF_INET:
+            {
+                struct sockaddr_in *sock_addr_in = &sock_info.sock_addr_in;
+
+                snprintf(msg, sizeof(msg), "A connection received from %s port %d",
+                         inet_ntoa(sock_addr_in->sin_addr),
+                         ntohs(sock_addr_in->sin_port));
+                log_message(LOG_LEVEL_INFO, "%s", msg);
+
+                break;
+            }
+
+#if defined(XRDP_ENABLE_IPV6)
+
+            case AF_INET6:
+            {
+                struct sockaddr_in6 *sock_addr_in6 = &sock_info.sock_addr_in6;
+                char addr[256];
+
+                inet_ntop(sock_addr_in6->sin6_family,
+                          &sock_addr_in6->sin6_addr, addr, sizeof(addr));
+                snprintf(msg, sizeof(msg), "A connection received from %s port %d",
+                         addr, ntohs(sock_addr_in6->sin6_port));
+                log_message(LOG_LEVEL_INFO, "%s", msg);
+
+                break;
+
+            }
+
+#endif
+        }
     }
-    return ret ;
+
+    return ret;
 }
 
 /*****************************************************************************/
@@ -1057,29 +1096,65 @@ int APP_CC
 g_sck_accept(int sck, char *addr, int addr_bytes, char *port, int port_bytes)
 {
     int ret;
-    char ipAddr[256];
-    struct sockaddr_in s;
-    socklen_t i;
+    char msg[256];
+    union
+    {
+        struct sockaddr sock_addr;
+        struct sockaddr_in sock_addr_in;
+#if defined(XRDP_ENABLE_IPV6)
+        struct sockaddr_in6 sock_addr_in6;
+#endif
+    } sock_info;
 
-    i = sizeof(struct sockaddr_in);
-    memset(&s, 0, i);
-    ret = accept(sck, (struct sockaddr *)&s, &i);
+    socklen_t sock_len = sizeof(sock_info);
+    memset(&sock_info, 0, sock_len);
+
+    ret = accept(sck, (struct sockaddr *)&sock_info, &sock_len);
+
     if (ret > 0)
     {
-        g_snprintf(ipAddr, 255, "A connection received from: %s port %d",
-                   inet_ntoa(s.sin_addr), ntohs(s.sin_port));
-        log_message(LOG_LEVEL_INFO, "%s", ipAddr);
-        if (s.sin_family == AF_INET)
+        switch(sock_info.sock_addr.sa_family)
         {
-            g_snprintf(addr, addr_bytes, "%s", inet_ntoa(s.sin_addr));
-            g_snprintf(port, port_bytes, "%d", ntohs(s.sin_port));
+            case AF_INET:
+            {
+                struct sockaddr_in *sock_addr_in = &sock_info.sock_addr_in;
+
+                g_snprintf(addr, addr_bytes, "%s", inet_ntoa(sock_addr_in->sin_addr));
+                g_snprintf(port, port_bytes, "%d", ntohs(sock_addr_in->sin_port));
+
+                break;
+            }
+
+#if defined(XRDP_ENABLE_IPV6)
+
+            case AF_INET6:
+            {
+                struct sockaddr_in6 *sock_addr_in6 = &sock_info.sock_addr_in6;
+
+                inet_ntop(sock_addr_in6->sin6_family,
+                          &sock_addr_in6->sin6_addr, addr, addr_bytes);
+                g_snprintf(port, port_bytes, "%d", ntohs(sock_addr_in6->sin6_port));
+                break;
+            }
+
+#endif
+
+            case AF_UNIX:
+            default:
+            {
+                g_strncpy(addr, "", addr_bytes - 1);
+                g_strncpy(port, "", port_bytes - 1);
+                break;
+            }
         }
-        if (s.sin_family == AF_UNIX)
-        {
-            g_strncpy(addr, "", addr_bytes - 1);
-            g_strncpy(port, "", port_bytes - 1);
-        }
+
+
+        g_snprintf(msg, sizeof(msg), "A connection received from: %s port %s",
+                   addr, port);
+        log_message(LOG_LEVEL_INFO, "%s", msg);
+
     }
+
     return ret;
 }
 
