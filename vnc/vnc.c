@@ -49,8 +49,12 @@ lib_send_copy(struct vnc *v, struct stream *s)
 
 /******************************************************************************/
 /* taken from vncauth.c */
-void DEFAULT_CC
-rfbEncryptBytes(char *bytes, char *passwd)
+/* performing the des3 crypt on the password so it can not be seen
+   on the wire
+   'bytes' in, contains 16 bytes server random
+           out, random and 'passwd' conbined */
+static void APP_CC
+rfbEncryptBytes(char *bytes, const char *passwd)
 {
     char key[24];
     void *des;
@@ -69,9 +73,9 @@ rfbEncryptBytes(char *bytes, char *passwd)
 }
 
 /******************************************************************************/
-/* taken from vncauth.c */
-void DEFAULT_CC
-rfbHashEncryptBytes(char *bytes, char *passwd)
+/* sha1 hash 'passwd', create a string from the hash and call rfbEncryptBytes */
+static void APP_CC
+rfbHashEncryptBytes(char *bytes, const char *passwd)
 {
     char passwd_hash[20];
     char passwd_hash_text[40];
@@ -90,8 +94,7 @@ rfbHashEncryptBytes(char *bytes, char *passwd)
                (tui8)passwd_hash[0], (tui8)passwd_hash[1],
                (tui8)passwd_hash[2], (tui8)passwd_hash[3]);
     passwd_hash_text[39] = 0;
-    passwd = passwd_hash_text;
-    rfbEncryptBytes(bytes, passwd);
+    rfbEncryptBytes(bytes, passwd_hash_text);
 }
 
 /******************************************************************************/
