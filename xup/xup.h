@@ -39,7 +39,7 @@ struct mod
                    tbus param3, tbus param4);
   int (*mod_signal)(struct mod* v);
   int (*mod_end)(struct mod* v);
-  int (*mod_set_param)(struct mod* v, const char *name, char* value);
+  int (*mod_set_param)(struct mod *v, const char *name, const char *value);
   int (*mod_session_change)(struct mod* v, int, int);
   int (*mod_get_wait_objs)(struct mod* v, tbus* read_objs, int* rcount,
                            tbus* write_objs, int* wcount, int* timeout);

@@ -42,7 +42,7 @@ struct xrdp_mod
                    long param3, long param4);
   int (*mod_signal)(struct xrdp_mod* v);
   int (*mod_end)(struct xrdp_mod* v);
-  int (*mod_set_param)(struct xrdp_mod* v, const char *name, char* value);
+  int (*mod_set_param)(struct xrdp_mod *v, const char *name, const char *value);
   int (*mod_session_change)(struct xrdp_mod* v, int, int);
   int (*mod_get_wait_objs)(struct xrdp_mod* v, tbus* read_objs, int* rcount,
                            tbus* write_objs, int* wcount, int* timeout);
