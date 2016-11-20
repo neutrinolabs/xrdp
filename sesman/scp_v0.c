@@ -36,6 +36,7 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     tbus data;
     struct session_item *s_item;
     int errorcode = 0;
+    tui8 guid[16];
 
     data = auth_userpass(s->username, s->password, &errorcode);
 
@@ -99,9 +100,7 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
 
             if (1 == access_login_allowed(s->username))
             {
-                tui8 guid[16];
-
-                g_random((char*)guid, 16);
+                g_random((char *) guid, 16);
                 scp_session_set_guid(s, guid);
 
                 if (0 != s->client_ip)

@@ -1200,7 +1200,7 @@ xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
     char ip[256];
     char port[256];
     tui8 guid[16];
-    tui8* pguid;
+    tui8 *pguid;
 
     rv = 0;
     in_uint16_be(s, ok);
