@@ -255,8 +255,7 @@ sysconfdir="/etc";
 localstatedir="/var";
 fi
 
-pkgconfigdir=${libdir}/pkgconfig
-AC_SUBST(pkgconfigdir)
+PKG_INSTALLDIR
 
 AC_CONFIG_FILES([
   common/Makefile
