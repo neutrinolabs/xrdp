@@ -160,12 +160,12 @@ xrdp_codec_jpeg_compress(void *handle,
      * TJPF_ARGB no works, zero bytes */
 
     error = tjCompress(tj_han,     /* opaque handle */
-                       src_ptr,    /* source buf */
+                       (unsigned char *) src_ptr,    /* source buf */
                        cx,         /* width of area to compress */
                        stride,     /* pitch */
                        cy,         /* height of area to compress */
                        TJPF_XBGR,  /* pixel size */
-                       out_data,   /* dest buf */
+                       (unsigned char *) out_data,   /* dest buf */
                        &lio_len,   /* inner_buf length & compressed_size */
                        TJSAMP_420, /* jpeg sub sample */
                        quality,    /* jpeg quality */
