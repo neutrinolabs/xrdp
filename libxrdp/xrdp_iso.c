@@ -20,6 +20,7 @@
  */
 
 #include "libxrdp.h"
+#include "log.h"
 
 #define LOG_LEVEL 1
 #define LLOG(_level, _args) \
@@ -62,56 +63,113 @@ xrdp_iso_delete(struct xrdp_iso *self)
 static int APP_CC
 xrdp_iso_negotiate_security(struct xrdp_iso *self)
 {
-    int rv = 0;
     struct xrdp_client_info *client_info = &(self->mcs_layer->sec_layer->rdp_layer->client_info);
 
-    self->selectedProtocol = client_info->security_layer;
+    int has_cert_files = g_file_exist(client_info->certificate) &&
+                         g_file_exist(client_info->key_file);
+
+    self->failureCode = 0;
 
     switch (client_info->security_layer)
     {
         case PROTOCOL_RDP:
-            break;
-        case PROTOCOL_SSL:
-            if (self->requestedProtocol & PROTOCOL_SSL)
+            switch (self->requestedProtocol)
             {
+                case PROTOCOL_RDP:
+                case PROTOCOL_HYBRID | PROTOCOL_SSL:
+                    self->selectedProtocol = PROTOCOL_RDP;
+                    break;
+                case PROTOCOL_SSL:
+                    self->failureCode = SSL_NOT_ALLOWED_BY_SERVER;
+                    break;
+                default:
+                    self->failureCode = INCONSISTENT_FLAGS;
+                    break;
+            }
+            break;
 
-                if(!g_file_exist(client_info->certificate) ||
-                   !g_file_exist(client_info->key_file))
-                {
-                    /* certificate file doesn't exist */
-                    LLOGLN(0, ("xrdp_iso_negotiate_security: TLS certificate not found on server"));
-                    self->failureCode = SSL_CERT_NOT_ON_SERVER;
-                    rv = 1; /* error */
-                }
-                else
-                {
-                    self->selectedProtocol = PROTOCOL_SSL;
-                }
-            }
-            else
+        case PROTOCOL_SSL:
+            switch (self->requestedProtocol)
             {
-                self->failureCode = SSL_REQUIRED_BY_SERVER;
-                rv = 1; /* error */
+                case PROTOCOL_RDP:
+                    self->failureCode = SSL_REQUIRED_BY_SERVER;
+                    break;
+                case PROTOCOL_HYBRID | PROTOCOL_SSL:
+                case PROTOCOL_SSL:
+                    self->selectedProtocol = PROTOCOL_SSL;
+                    break;
+                default:
+                    self->failureCode = INCONSISTENT_FLAGS;
+                    break;
             }
             break;
+
         case PROTOCOL_HYBRID:
-        case PROTOCOL_HYBRID_EX:
+            switch (self->requestedProtocol)
+            {
+                case PROTOCOL_RDP:
+                    self->selectedProtocol = PROTOCOL_RDP;
+                    break;
+                case PROTOCOL_HYBRID | PROTOCOL_SSL:
+                    if (has_cert_files)
+                    {
+                        self->selectedProtocol = PROTOCOL_SSL;
+                    }
+                    else
+                    {
+                        self->selectedProtocol = PROTOCOL_RDP;
+                    }
+                    break;
+                case PROTOCOL_SSL:
+                    self->selectedProtocol = PROTOCOL_SSL;
+                    break;
+                default:
+                    self->failureCode = INCONSISTENT_FLAGS;
+                    break;
+            }
+            break;
+
         default:
-            if (self->requestedProtocol & PROTOCOL_SSL)
-            {
-                /* that's a patch since we don't support CredSSP for now */
-                self->selectedProtocol = PROTOCOL_SSL;
-            }
-            else
-            {
-                self->selectedProtocol = PROTOCOL_RDP;
-            }
+            /* should not happen */
+            self->failureCode = INCONSISTENT_FLAGS;
             break;
     }
 
-    LLOGLN(10, ("xrdp_iso_negotiate_security: server security layer %d , client security layer %d",
-            self->selectedProtocol, self->requestedProtocol));
-    return rv;
+    if (self->selectedProtocol == PROTOCOL_SSL && !has_cert_files)
+    {
+        self->failureCode = SSL_CERT_NOT_ON_SERVER;
+    }
+
+    switch (self->failureCode)
+    {
+        case 0:
+            log_message(LOG_LEVEL_INFO,
+                        "Security layer: requested %d, selected %d",
+                        self->requestedProtocol, self->selectedProtocol);
+            break;
+
+        case SSL_NOT_ALLOWED_BY_SERVER:
+            log_message(LOG_LEVEL_ERROR, "Server configured to use RDP "
+                        "security layer, rejecting TLS connection");
+            break;
+
+        case SSL_REQUIRED_BY_SERVER:
+            log_message(LOG_LEVEL_ERROR, "Server requires TLS, rejecting "
+                        "non-TLS connection");
+            break;
+
+        case SSL_CERT_NOT_ON_SERVER:
+            log_message(LOG_LEVEL_ERROR, "TLS certificate files "
+                        "missing, cannot accept TLS connection");
+
+
+        default:
+            log_message(LOG_LEVEL_ERROR, "Client requested unsupported "
+                        "security layer %d", self->requestedProtocol);
+            break;
+    }
+
+    return self->failureCode;
 }
 
 /*****************************************************************************/

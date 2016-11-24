@@ -178,15 +178,24 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
             {
                 client_info->security_layer = PROTOCOL_SSL;
             }
+            else if (g_strcasecmp(value, "negotiate") == 0)
+            {
+                client_info->security_layer = PROTOCOL_HYBRID;
+            }
             else if (g_strcasecmp(value, "hybrid") == 0)
             {
-                client_info->security_layer = PROTOCOL_SSL | PROTOCOL_HYBRID;
+                client_info->security_layer = PROTOCOL_HYBRID;
+            }
+            else if (g_strcasecmp(value, "") == 0)
+            {
+                client_info->security_layer = PROTOCOL_HYBRID;
             }
             else
             {
-                log_message(LOG_LEVEL_ALWAYS,"Warning: Your configured security layer is "
-                          "undefined, xrdp will negotiate client compatible");
-                client_info->security_layer = PROTOCOL_SSL | PROTOCOL_HYBRID | PROTOCOL_HYBRID_EX;
+                log_message(LOG_LEVEL_ERROR, "security_layer=%s is not "
+                            "recognized, using \"negotiate\" instead",
+                            value);
+                client_info->security_layer = PROTOCOL_HYBRID;
             }
         }
         else if (g_strcasecmp(item, "certificate") == 0)
