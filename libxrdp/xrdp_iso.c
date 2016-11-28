@@ -98,7 +98,9 @@ xrdp_iso_negotiate_security(struct xrdp_iso *self)
         case PROTOCOL_HYBRID:
         case PROTOCOL_HYBRID_EX:
         default:
-            if (self->requestedProtocol & PROTOCOL_SSL)
+            if ((self->requestedProtocol & PROTOCOL_SSL) &&
+                g_file_exist(client_info->certificate) &&
+                g_file_exist(client_info->key_file))
             {
                 /* that's a patch since we don't support CredSSP for now */
                 self->selectedProtocol = PROTOCOL_SSL;
