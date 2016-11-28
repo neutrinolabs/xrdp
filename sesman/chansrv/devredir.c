@@ -430,7 +430,8 @@ void devredir_send_server_device_announce_resp(tui32 device_id)
  * @return 0 on success, -1 on failure
  *****************************************************************************/
 
-int dev_redir_send_drive_create_request(tui32 device_id, char *path,
+int dev_redir_send_drive_create_request(tui32 device_id,
+                                        const char *path,
                                         tui32 DesiredAccess,
                                         tui32 CreateOptions,
                                         tui32 CreateDisposition,
@@ -997,7 +998,7 @@ dev_redir_proc_query_dir_response(IRP *irp,
  *****************************************************************************/
 
 int APP_CC
-dev_redir_get_dir_listing(void *fusep, tui32 device_id, char *path)
+dev_redir_get_dir_listing(void *fusep, tui32 device_id, const char *path)
 {
     tui32  DesiredAccess;
     tui32  CreateOptions;
@@ -1010,26 +1011,27 @@ dev_redir_get_dir_listing(void *fusep, tui32 device_id, char *path)
     if ((irp = devredir_irp_new()) == NULL)
         return -1;
 
-    /* cvt / to windows compatible \ */
-    devredir_cvt_slash(path);
+    strncpy(irp->pathname, path, 255);
+
+    /* convert / to windows compatible \ */
+    devredir_cvt_slash(irp->pathname);
 
     irp->CompletionId = g_completion_id++;
     irp->completion_type = CID_CREATE_DIR_REQ;
     irp->DeviceId = device_id;
 
-    strncpy(irp->pathname, path, 255);
     devredir_fuse_data_enqueue(irp, fusep);
 
     DesiredAccess = DA_FILE_READ_DATA | DA_SYNCHRONIZE;
     CreateOptions = CO_FILE_DIRECTORY_FILE | CO_FILE_SYNCHRONOUS_IO_NONALERT;
     CreateDisposition = CD_FILE_OPEN;
 
-    rval = dev_redir_send_drive_create_request(device_id, path,
+    rval = dev_redir_send_drive_create_request(device_id, irp->pathname,
                                                DesiredAccess, CreateOptions,
                                                CreateDisposition,
                                                irp->CompletionId);
 
-    log_debug("looking for device_id=%d path=%s", device_id, path);
+    log_debug("looking for device_id=%d path=%s", device_id, irp->pathname);
 
     /* when we get a response to dev_redir_send_drive_create_request(), we   */
     /* call dev_redir_send_drive_dir_request(), which needs the following    */
@@ -1043,8 +1045,8 @@ dev_redir_get_dir_listing(void *fusep, tui32 device_id, char *path)
 }
 
 int APP_CC
-dev_redir_file_open(void *fusep, tui32 device_id, char *path,
-                    int mode, int type, char *gen_buf)
+dev_redir_file_open(void *fusep, tui32 device_id, const char *path,
+                    int mode, int type, const char *gen_buf)
 {
     tui32  DesiredAccess;
     tui32  CreateOptions;
@@ -1161,7 +1163,7 @@ int devredir_file_close(void *fusep, tui32 device_id, tui32 FileId)
  *****************************************************************************/
 
 int APP_CC
-devredir_rmdir_or_file(void *fusep, tui32 device_id, char *path, int mode)
+devredir_rmdir_or_file(void *fusep, tui32 device_id, const char *path, int mode)
 {
     tui32  DesiredAccess;
     tui32  CreateOptions;
@@ -1445,7 +1447,7 @@ devredir_cvt_slash(char *path)
 }
 
 void APP_CC
-devredir_cvt_to_unicode(char *unicode, char *path)
+devredir_cvt_to_unicode(char *unicode, const char *path)
 {
     char *dest;
     char *src;
