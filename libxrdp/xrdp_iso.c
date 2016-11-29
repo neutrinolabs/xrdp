@@ -20,6 +20,7 @@
  */
 
 #include "libxrdp.h"
+#include "log.h"
 
 #define LOG_LEVEL 1
 #define LLOG(_level, _args) \
@@ -97,7 +98,9 @@ xrdp_iso_negotiate_security(struct xrdp_iso *self)
         case PROTOCOL_HYBRID:
         case PROTOCOL_HYBRID_EX:
         default:
-            if (self->requestedProtocol & PROTOCOL_SSL)
+            if ((self->requestedProtocol & PROTOCOL_SSL) &&
+                g_file_exist(client_info->certificate) &&
+                g_file_exist(client_info->key_file))
             {
                 /* that's a patch since we don't support CredSSP for now */
                 self->selectedProtocol = PROTOCOL_SSL;
@@ -109,8 +112,8 @@ xrdp_iso_negotiate_security(struct xrdp_iso *self)
             break;
     }
 
-    LLOGLN(10, ("xrdp_iso_negotiate_security: server security layer %d , client security layer %d",
-            self->selectedProtocol, self->requestedProtocol));
+    log_message(LOG_LEVEL_DEBUG, "Security layer: requested %d, selected %d",
+                self->requestedProtocol, self->selectedProtocol);
     return rv;
 }
 
