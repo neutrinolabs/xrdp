@@ -262,6 +262,8 @@ fi
 
 PKG_INSTALLDIR
 
+AC_CHECK_HEADERS([sys/prctl.h])
+
 AC_CONFIG_FILES([
   common/Makefile
   docs/Makefile

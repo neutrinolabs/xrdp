@@ -29,8 +29,21 @@
  *
  */
 
+#if defined(HAVE_CONFIG_H)
+#include "config_ac.h"
+#endif
+
+#ifdef HAVE_SYS_PRCTL_H
+#include <sys/prctl.h>
+#endif
+
 #include "sesman.h"
 #include "libscp_types.h"
+
+#ifndef PR_SET_NO_NEW_PRIVS
+#define PR_SET_NO_NEW_PRIVS 38
+#endif
+
 
 extern unsigned char g_fixedkey[8];
 extern struct config_sesman *g_cfg; /* in sesman.c */
@@ -665,6 +678,21 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
 
                 if (type == SESMAN_SESSION_TYPE_XORG)
                 {
+#ifdef HAVE_SYS_PRCTL_H
+                    /*
+                     * Make sure Xorg doesn't run setuid root. Root access is not
+                     * needed. Xorg can fail when run as root and the user has no
+                     * console permissions.
+                     * PR_SET_NO_NEW_PRIVS requires Linux kernel 3.5 and newer.
+                     */
+                    if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) < 0)
+                    {
+                        log_message(LOG_LEVEL_WARNING,
+                                    "Failed to disable setuid on X server: %s",
+                                    g_get_strerror());
+                    }
+#endif
+
                     xserver_params = list_create();
                     xserver_params->auto_free = 1;
 
