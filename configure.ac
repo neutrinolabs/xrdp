@@ -125,9 +125,8 @@ AC_CHECK_FUNC(dlopen, [],
 AC_SUBST(DLOPEN_LIBS)
 
 # checking for openssl
-AC_CHECK_HEADER([openssl/rc4.h], [],
-  [AC_MSG_ERROR([please install libssl-dev or openssl-devel])],
-  [#include <stdlib.h>])
+PKG_CHECK_MODULES([OPENSSL], [openssl >= 0], [],
+  [AC_MSG_ERROR([please install libssl-dev or openssl-devel])])
 
 # checking for pam variation
 # Linux-PAM is used in Linux systems
