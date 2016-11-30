@@ -52,4 +52,5 @@ libcommon_la_SOURCES = \
 libcommon_la_LIBADD = \
   -lcrypto \
   -lssl \
-  -lpthread
+  -lpthread \
+  $(DLOPEN_LIBS)
