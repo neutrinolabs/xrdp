@@ -18,6 +18,8 @@ AM_CPPFLAGS = \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -DXRDP_LOG_PATH=\"${localstatedir}/log\"
 
+AM_CFLAGS = $(OPENSSL_CFLAGS)
+
 module_LTLIBRARIES = \
   libcommon.la
 
@@ -50,6 +52,6 @@ libcommon_la_SOURCES = \
   $(PIXMAN_SOURCES)
 
 libcommon_la_LIBADD = \
-  -lcrypto \
-  -lssl \
-  -lpthread
+  -lpthread \
+  $(OPENSSL_LIBS) \
+  $(DLOPEN_LIBS)

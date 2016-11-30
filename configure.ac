@@ -118,10 +118,15 @@ AC_ARG_ENABLE(pixman, AS_HELP_STRING([--enable-pixman],
               [], [enable_pixman=no])
 AM_CONDITIONAL(XRDP_PIXMAN, [test x$enable_pixman = xyes])
 
+# Check if -ldl is needed to use dlopen()
+DLOPEN_LIBS=
+AC_CHECK_FUNC(dlopen, [],
+              [AC_CHECK_LIB(dl, dlopen, [DLOPEN_LIBS=-ldl])])
+AC_SUBST(DLOPEN_LIBS)
+
 # checking for openssl
-AC_CHECK_HEADER([openssl/rc4.h], [],
-  [AC_MSG_ERROR([please install libssl-dev or openssl-devel])],
-  [#include <stdlib.h>])
+PKG_CHECK_MODULES([OPENSSL], [openssl >= 0], [],
+  [AC_MSG_ERROR([please install libssl-dev or openssl-devel])])
 
 # checking for pam variation
 # Linux-PAM is used in Linux systems
