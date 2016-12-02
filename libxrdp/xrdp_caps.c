@@ -74,8 +74,12 @@ xrdp_caps_process_general(struct xrdp_rdp *self, struct stream *s,
         g_writeln("xrdp_caps_process_general: error");
         return 1;
     }
-    in_uint8s(s, 10);
-    in_uint16_le(s, extraFlags);
+
+    in_uint16_le(s, self->client_info.client_os_major); /* osMajorType (2 bytes) */
+    in_uint16_le(s, self->client_info.client_os_minor); /* osMinorType (2 bytes) */
+    in_uint8s(s, 6);
+    in_uint16_le(s, extraFlags); /* extraFlags (2 bytes) */
+
     /* use_compact_packets is pretty much 'use rdp5' */
     self->client_info.use_compact_packets = (extraFlags != 0);
     /* op2 is a boolean to use compact bitmap headers in bitmap cache */
