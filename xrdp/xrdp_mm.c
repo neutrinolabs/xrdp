@@ -2291,7 +2291,7 @@ xrdp_mm_frame_ack(struct xrdp_mm *self, int frame_id)
 {
     int ex;
 
-    LLOGLN(0, ("xrdp_mm_frame_ack:"));
+    LLOGLN(10, ("xrdp_mm_frame_ack:"));
     self->encoder->frame_id_client = frame_id;
     if (self->wm->client_info->use_frame_acks == 0)
     {
