@@ -17,6 +17,7 @@ XRDPVRDIR =
 endif
 
 SUBDIRS = \
+  libpainter \
   common \
   vnc \
   rdp \

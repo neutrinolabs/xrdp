@@ -25,7 +25,7 @@ endif
 if XRDP_PAINTER
 AM_CPPFLAGS += -DXRDP_PAINTER
 AM_CPPFLAGS += -I$(top_srcdir)/libpainter/include
-XRDP_EXTRA_LIBS += $(top_srcdir)/libpainter/src/.libs/libpainter.a
+XRDP_EXTRA_LIBS += $(top_builddir)/libpainter/src/.libs/libpainter.a
 endif
 
 if XRDP_PIXMAN
