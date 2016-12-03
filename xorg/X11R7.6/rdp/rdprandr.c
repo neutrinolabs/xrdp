@@ -321,11 +321,15 @@ rdpRRAddOutput(const char *aname, int x, int y, int width, int height)
     RROutputPtr output;
     xRRModeInfo modeInfo;
     char name[64];
+    const int vfreq = 50;
 
     sprintf (name, "%dx%d", width, height);
     memset (&modeInfo, 0, sizeof(modeInfo));
     modeInfo.width = width;
     modeInfo.height = height;
+    modeInfo.hTotal = width;
+    modeInfo.vTotal = height;
+    modeInfo.dotClock = vfreq * width * height;
     modeInfo.nameLength = strlen(name);
     mode = RRModeGet(&modeInfo, name);
     if (mode == 0)
