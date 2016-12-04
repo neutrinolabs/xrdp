@@ -201,7 +201,7 @@ then
     [AC_MSG_ERROR([please install libmp3lame-dev or lamemp3-devel])])
 fi
 
-AS_IF( [test "x$enable_pixman" = "xyes"] , [PKG_CHECK_MODULES(XRDP_PIXMAN, pixman-1 >= 0.1.0)] )
+AS_IF( [test "x$enable_pixman" = "xyes"] , [PKG_CHECK_MODULES(PIXMAN, pixman-1 >= 0.1.0)] )
 
 # checking for TurboJPEG
 if test "x$enable_tjpeg" = "xyes"
