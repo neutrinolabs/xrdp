@@ -565,7 +565,7 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self, tui8 *guid)
         self->mod->mod_set_param(self->mod, "keylayout", text);
         if (guid != 0)
         {
-            self->mod->mod_set_param(self->mod, "guid", (char*)guid);
+            self->mod->mod_set_param(self->mod, "guid", (char *) guid);
         }
 
         for (i = 0; i < self->login_names->count; i++)

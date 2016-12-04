@@ -697,20 +697,9 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                 }
                 else if (type == SESMAN_SESSION_TYPE_XVNC)
                 {
-                    if (s->guid != 0)
-                    {
-                        char guid_str[64];
-                        char *pguid_str;
-                        int index;
-                        pguid_str = guid_str;
-                        for (index = 0; index < 16; index++)
-                        {
-                            g_snprintf(pguid_str, 4, "%2.2x", s->guid[index]);
-                            pguid_str += 2;
-                        }
-                        guid_str[32] = 0;
-                        env_check_password_file(passwd_file, guid_str);
-                    }
+                    char guid_str[64];
+                    g_bytes_to_hexstr(s->guid, 16, guid_str, 64);
+                    env_check_password_file(passwd_file, guid_str);
                     xserver_params = list_create();
                     xserver_params->auto_free = 1;
 

@@ -1097,15 +1097,7 @@ lib_mod_connect(struct vnc *v)
                     if (v->got_guid)
                     {
                         char guid_str[64];
-                        char *pguid_str;
-                        int index;
-                        pguid_str = guid_str;
-                        for (index = 0; index < 16; index++)
-                        {
-                            g_snprintf(pguid_str, 4, "%2.2x", v->guid[index]);
-                            pguid_str += 2;
-                        }
-                        guid_str[32] = 0;
+                        g_bytes_to_hexstr(v->guid, 16, guid_str, 64);
                         rfbHashEncryptBytes(s->data, guid_str);
                     }
                     else

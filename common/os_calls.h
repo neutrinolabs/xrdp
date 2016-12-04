@@ -134,6 +134,8 @@ int APP_CC      g_strcasecmp(const char* c1, const char* c2);
 int APP_CC      g_strncasecmp(const char* c1, const char* c2, int len);
 int APP_CC      g_atoi(const char* str);
 int APP_CC      g_htoi(char* str);
+int APP_CC      g_bytes_to_hexstr(const void *bytes, int num_bytes, char *out_str,
+                                  int bytes_out_str);
 int APP_CC      g_pos(const char* str, const char* to_find);
 int APP_CC      g_mbstowcs(twchar* dest, const char* src, int n);
 int APP_CC      g_wcstombs(char* dest, const twchar* src, int n);
