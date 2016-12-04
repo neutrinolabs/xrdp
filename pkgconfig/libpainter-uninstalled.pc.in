@@ -1,0 +1,10 @@
+abs_top_srcdir=@abs_top_srcdir@
+abs_top_builddir=@abs_top_builddir@
+includedir=${abs_top_srcdir}/include
+libdir=${abs_top_builddir}/src
+
+Name: libpainter
+Description: Library for manipulating memory bitmaps.
+Version: @PACKAGE_VERSION@
+Libs: -L${libdir} -lpainter
+Cflags: -I${includedir}
