@@ -5,6 +5,6 @@ includedir=@includedir@
 
 Name: libpainter
 Description: Library for manipulating memory bitmaps.
-Version: 0.1.0
+Version: @PACKAGE_VERSION@
 Libs: -L${libdir} -lpainter
 Cflags: -I${includedir}
