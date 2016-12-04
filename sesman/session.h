@@ -104,9 +104,7 @@ session_get_bydata(const char *name, int width, int height, int bpp, int type,
  *
  */
 int DEFAULT_CC
-session_start(int width, int height, int bpp, char* username, char* password,
-              long data, tui8 type, char* domain, char* program,
-              char* directory, char* client_ip);
+session_start(long data, tui8 type, struct SCP_SESSION *s);
 
 int DEFAULT_CC
 session_reconnect(int display, char* username);

@@ -416,6 +416,21 @@ scp_session_set_addr(struct SCP_SESSION *s, int type, const void *addr)
 }
 
 /*******************************************************************/
+int
+scp_session_set_guid(struct SCP_SESSION *s, const tui8 *guid)
+{
+    if (0 == guid)
+    {
+        log_message(LOG_LEVEL_WARNING, "[session:%d] set_guid: null guid", __LINE__);
+        return 1;
+    }
+
+    g_memcpy(s->guid, guid, 16);
+
+    return 0;
+}
+
+/*******************************************************************/
 void
 scp_session_destroy(struct SCP_SESSION *s)
 {

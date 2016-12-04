@@ -483,7 +483,7 @@ xrdp_mm_setup_mod1(struct xrdp_mm *self)
 
 /*****************************************************************************/
 static int APP_CC
-xrdp_mm_setup_mod2(struct xrdp_mm *self)
+xrdp_mm_setup_mod2(struct xrdp_mm *self, tui8 *guid)
 {
     char text[256];
     char *name;
@@ -563,6 +563,10 @@ xrdp_mm_setup_mod2(struct xrdp_mm *self)
         self->mod->mod_set_param(self->mod, "hostname", name);
         g_snprintf(text, 255, "%d", self->wm->session->client_info->keylayout);
         self->mod->mod_set_param(self->mod, "keylayout", text);
+        if (guid != 0)
+        {
+            self->mod->mod_set_param(self->mod, "guid", (char*)guid);
+        }
 
         for (i = 0; i < self->login_names->count; i++)
         {
@@ -1195,11 +1199,18 @@ xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
     int rv;
     char ip[256];
     char port[256];
+    tui8 guid[16];
+    tui8* pguid;
 
     rv = 0;
     in_uint16_be(s, ok);
     in_uint16_be(s, display);
-
+    pguid = 0;
+    if (s_check_rem(s, 16))
+    {
+        in_uint8a(s, guid, 16);
+        pguid = guid;
+    }
     if (ok)
     {
         self->display = display;
@@ -1208,7 +1219,7 @@ xrdp_mm_process_login_response(struct xrdp_mm *self, struct stream *s)
 
         if (xrdp_mm_setup_mod1(self) == 0)
         {
-            if (xrdp_mm_setup_mod2(self) == 0)
+            if (xrdp_mm_setup_mod2(self, pguid) == 0)
             {
                 xrdp_mm_get_value(self, "ip", ip, 255);
                 xrdp_wm_set_login_mode(self->wm, 10);
@@ -1969,7 +1980,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
     {
         if (xrdp_mm_setup_mod1(self) == 0)
         {
-            if (xrdp_mm_setup_mod2(self) == 0)
+            if (xrdp_mm_setup_mod2(self, 0) == 0)
             {
                 xrdp_wm_set_login_mode(self->wm, 10);
                 rv = 0; /*success*/
