@@ -410,7 +410,8 @@ wait_for_xserver(int display)
 static int APP_CC
 session_start_fork(int width, int height, int bpp, char *username,
                    char *password, tbus data, tui8 type, char *domain,
-                   char *program, char *directory, char *client_ip)
+                   char *program, char *directory, char *client_ip,
+                   const tui8 *guid)
 {
     int display = 0;
     int pid = 0;
@@ -699,7 +700,20 @@ session_start_fork(int width, int height, int bpp, char *username,
                 }
                 else if (type == SESMAN_SESSION_TYPE_XVNC)
                 {
-                    env_check_password_file(passwd_file, password);
+                    if (guid != 0)
+                    {
+                        char guid_str[64];
+                        char *pguid_str;
+                        int index;
+                        pguid_str = guid_str;
+                        for (index = 0; index < 16; index++)
+                        {
+                            g_snprintf(pguid_str, 4, "%2.2x", guid[index]);
+                            pguid_str += 2;
+                        }
+                        guid_str[32] = 0;
+                        env_check_password_file(passwd_file, guid_str);
+                    }
                     xserver_params = list_create();
                     xserver_params->auto_free = 1;
 
@@ -869,11 +883,11 @@ session_reconnect_fork(int display, char *username)
 int DEFAULT_CC
 session_start(int width, int height, int bpp, char *username, char *password,
               long data, tui8 type, char *domain, char *program,
-              char *directory, char *client_ip)
+              char *directory, char *client_ip, const tui8 *guid)
 {
     return session_start_fork(width, height, bpp, username,
                               password, data, type, domain,
-                              program, directory, client_ip);
+                              program, directory, client_ip, guid);
 }
 
 /******************************************************************************/
