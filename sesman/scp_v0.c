@@ -77,7 +77,7 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
         if (s_item != 0)
         {
             display = s_item->display;
-
+            g_memcpy(s->guid, s_item->guid, 16);
             if (0 != s->client_ip)
             {
                 log_message( LOG_LEVEL_INFO, "++ reconnected session: username %s, "

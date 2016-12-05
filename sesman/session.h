@@ -76,6 +76,7 @@ struct session_item
   struct session_date disconnect_time;
   struct session_date idle_time;
   char client_ip[256];
+  tui8 guid[16];
 };
 
 struct session_chain

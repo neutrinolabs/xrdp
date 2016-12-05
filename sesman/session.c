@@ -804,6 +804,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
         temp->item->data = data;
         g_strncpy(temp->item->client_ip, s->client_ip, 255);   /* store client ip data */
         g_strncpy(temp->item->name, s->username, 255);
+        g_memcpy(temp->item->guid, s->guid, 16);
 
         ltime = g_time1();
         localtime_r(&ltime, &stime);
