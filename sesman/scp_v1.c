@@ -122,16 +122,12 @@ scp_v1_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
         if (SCP_SESSION_TYPE_XVNC == s->type)
         {
             log_message(LOG_LEVEL_INFO, "starting Xvnc session...");
-            display = session_start(s->width, s->height, s->bpp, s->username,
-                                    s->password, data, SESMAN_SESSION_TYPE_XVNC,
-                                    s->domain, s->program, s->directory, s->client_ip);
+            display = session_start(data, SESMAN_SESSION_TYPE_XVNC, s);
         }
         else
         {
             log_message(LOG_LEVEL_INFO, "starting X11rdp session...");
-            display = session_start(s->width, s->height, s->bpp, s->username,
-                                    s->password, data, SESMAN_SESSION_TYPE_XRDP,
-                                    s->domain, s->program, s->directory, s->client_ip);
+            display = session_start(data, SESMAN_SESSION_TYPE_XRDP, s);
         }
 
         e = scp_v1s_connect_new_session(c, display);

@@ -114,4 +114,6 @@ struct vnc
   struct stream *clip_data_s;
   int delay_ms;
   struct trans *trans;
+  int got_guid;
+  tui8 guid[16];
 };

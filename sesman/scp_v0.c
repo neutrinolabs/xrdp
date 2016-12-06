@@ -77,7 +77,7 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
         if (s_item != 0)
         {
             display = s_item->display;
-
+            g_memcpy(s->guid, s_item->guid, 16);
             if (0 != s->client_ip)
             {
                 log_message( LOG_LEVEL_INFO, "++ reconnected session: username %s, "
@@ -99,6 +99,11 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
 
             if (1 == access_login_allowed(s->username))
             {
+                tui8 guid[16];
+
+                g_random((char*)guid, 16);
+                scp_session_set_guid(s, guid);
+
                 if (0 != s->client_ip)
                 {
                     log_message(LOG_LEVEL_INFO, "++ created session (access granted): "
@@ -113,27 +118,18 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
                 if (SCP_SESSION_TYPE_XVNC == s->type)
                 {
                     log_message( LOG_LEVEL_INFO, "starting Xvnc session...");
-                    display = session_start(s->width, s->height, s->bpp, s->username,
-                                            s->password, data, SESMAN_SESSION_TYPE_XVNC,
-                                            s->domain, s->program, s->directory,
-                                            s->client_ip);
+                    display = session_start(data, SESMAN_SESSION_TYPE_XVNC, s);
                 }
                 else if (SCP_SESSION_TYPE_XRDP == s->type)
                 {
                     log_message(LOG_LEVEL_INFO, "starting X11rdp session...");
-                    display = session_start(s->width, s->height, s->bpp, s->username,
-                                            s->password, data, SESMAN_SESSION_TYPE_XRDP,
-                                            s->domain, s->program, s->directory,
-                                            s->client_ip);
+                    display = session_start(data, SESMAN_SESSION_TYPE_XRDP, s);
                 }
                 else if (SCP_SESSION_TYPE_XORG == s->type)
                 {
                     /* type is SCP_SESSION_TYPE_XORG */
                     log_message(LOG_LEVEL_INFO, "starting Xorg session...");
-                    display = session_start(s->width, s->height, s->bpp, s->username,
-                                            s->password, data, SESMAN_SESSION_TYPE_XORG,
-                                            s->domain, s->program, s->directory,
-                                            s->client_ip);
+                    display = session_start(data, SESMAN_SESSION_TYPE_XORG, s);
                 }
             }
             else
@@ -148,7 +144,7 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
         }
         else
         {
-            scp_v0s_allow_connection(c, display);
+            scp_v0s_allow_connection(c, display, s->guid);
         }
     }
     else
