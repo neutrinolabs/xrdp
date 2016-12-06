@@ -602,6 +602,7 @@ xrdp_wm_init(struct xrdp_wm *self)
                 /* TODO: change this and have an 'autologin'
                    line in globals section */
                 file_read_sections(fd, names);
+                section_name[0] = '\0';
                 for (index = 0; index < names->count; index++)
                 {
                     q = (char *)list_get_item(names, index);
