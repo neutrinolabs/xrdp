@@ -699,9 +699,8 @@ void devredir_proc_client_devlist_announce_req(struct stream *s)
 
                 /* for smart cards, device data len always 0 */
 
-                log_debug("device_type=SMARTCARD device_id=0x%x dosname=%s "
-                          "device_data_len=%d",
-                          g_device_id, preferred_dos_name, device_data_len);
+                log_debug("device_type=SMARTCARD device_id=0x%x dosname=%s",
+                          g_device_id, preferred_dos_name);
 
                 devredir_send_server_device_announce_resp(g_device_id);
                 scard_device_announce(g_device_id);
