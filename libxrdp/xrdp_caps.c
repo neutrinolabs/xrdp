@@ -539,12 +539,10 @@ xrdp_caps_process_surface_cmds(struct xrdp_rdp *self, struct stream *s, int len)
 {
     int cmdFlags;
     g_writeln("xrdp_caps_process_surface_cmds:");
-
-   in_uint32_le(s, cmdFlags);
-   in_uint8s(s, 4); /* reserved */
-
-   g_writeln("  cmdFlags 0x%08x", cmdFlags);
-   return 0;
+    in_uint32_le(s, cmdFlags);
+    in_uint8s(s, 4); /* reserved */
+    g_writeln("  cmdFlags 0x%08x", cmdFlags);
+    return 0;
 }
 
 /*****************************************************************************/
