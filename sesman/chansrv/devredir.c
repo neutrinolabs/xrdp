@@ -46,6 +46,7 @@
 #include "parse.h"
 #include "os_calls.h"
 #include "log.h"
+#include "chansrv.h"
 #include "chansrv_fuse.h"
 #include "devredir.h"
 #include "smartcard.h"

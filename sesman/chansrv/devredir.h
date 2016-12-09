@@ -112,8 +112,6 @@ dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
 int APP_CC
 devredir_rmdir_or_file(void *fusep, tui32 device_id, const char *path, int mode);
 
-int send_channel_data(int chan_id, char *data, int size);
-
 /*
  * RDPDR_HEADER definitions
  */
