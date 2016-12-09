@@ -52,8 +52,4 @@ enum SCP_CLIENT_STATES_E
 scp_v1c_mng_get_session_list(struct SCP_CONNECTION* c, int* scount,
                          struct SCP_DISCONNECTED_SESSION** s);
 
-/* 044 */
-enum SCP_CLIENT_STATES_E
-scp_v1c_select_session_cancel(struct SCP_CONNECTION* c);
-
 #endif

@@ -128,7 +128,5 @@ int APP_CC
 trans_shutdown_tls_mode(struct trans *self);
 int APP_CC
 trans_tcp_force_read_s(struct trans *self, struct stream *in_s, int size);
-int APP_CC
-trans_force_write_s(struct trans *self, struct stream *out_s);
 
 #endif

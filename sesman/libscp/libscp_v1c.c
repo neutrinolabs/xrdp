@@ -136,13 +136,6 @@ scp_v1c_resend_credentials(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     return _scp_v1c_check_response(c, s);
 }
 
-/* 021 */
-enum SCP_CLIENT_STATES_E
-scp_v1c_pwd_change(struct SCP_CONNECTION *c, char *newpass);
-/* 022 */
-enum SCP_CLIENT_STATES_E
-scp_v1c_pwd_change_cancel(struct SCP_CONNECTION *c);
-
 /* 041 */
 enum SCP_CLIENT_STATES_E
 scp_v1c_get_session_list(struct SCP_CONNECTION *c, int *scount,
