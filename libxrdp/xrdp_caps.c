@@ -831,12 +831,14 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     out_uint8(s, 0x01); /* fAllowDynamicFidelity */
     out_uint8(s, 0x01); /* fAllowSubsampling */
     out_uint8(s, 0x03); /* colorLossLevel */
+#if defined(XRDP_RFXCODEC) || defined(XRDP_NEUTRINORDP)
     /* remotefx */
     codec_caps_count++;
     out_uint8a(s, XR_CODEC_GUID_REMOTEFX, 16);
     out_uint8(s, 0); /* codec id, client sets */
     out_uint16_le(s, 256);
     out_uint8s(s, 256);
+#endif
     /* jpeg */
     codec_caps_count++;
     out_uint8a(s, XR_CODEC_GUID_JPEG, 16);
