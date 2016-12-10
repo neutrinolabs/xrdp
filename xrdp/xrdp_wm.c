@@ -1531,66 +1531,69 @@ xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, int unicode)
 {
     int index;
 
-    for (index = 8; index < 256; index++)
+    for (index = XR_MIN_KEY_CODE; index < XR_MAX_KEY_CODE; index++)
     {
         if (unicode == self->keymap.keys_noshift[index].chr)
         {
-            xrdp_wm_key(self, device_flags, index - 8);
+            xrdp_wm_key(self, device_flags, index - XR_MIN_KEY_CODE);
             return 0;
         }
     }
 
-    for (index = 8; index < 256; index++)
+    for (index = XR_MIN_KEY_CODE; index < XR_MAX_KEY_CODE; index++)
     {
         if (unicode == self->keymap.keys_shift[index].chr)
         {
             if (device_flags & KBD_FLAG_UP)
             {
-                xrdp_wm_key(self, device_flags, index - 8);
-                xrdp_wm_key(self, KBD_FLAG_UP, 42);
+                xrdp_wm_key(self, device_flags, index - XR_MIN_KEY_CODE);
+                xrdp_wm_key(self, KBD_FLAG_UP, XR_RDP_SCAN_LSHIFT);
             }
             else
             {
-                xrdp_wm_key(self, KBD_FLAG_DOWN, 42);
-                xrdp_wm_key(self, device_flags, index - 8);
+                xrdp_wm_key(self, KBD_FLAG_DOWN, XR_RDP_SCAN_LSHIFT);
+                xrdp_wm_key(self, device_flags, index - XR_MIN_KEY_CODE);
             }
             return 0;
         }
     }
 
-    for (index = 8; index < 256; index++)
+    for (index = XR_MIN_KEY_CODE; index < XR_MAX_KEY_CODE; index++)
     {
         if (unicode == self->keymap.keys_altgr[index].chr)
         {
             if (device_flags & KBD_FLAG_UP)
             {
-                xrdp_wm_key(self, device_flags, index - 8);
-                xrdp_wm_key(self, KBD_FLAG_UP | KBD_FLAG_EXT, 56);
+                xrdp_wm_key(self, device_flags, index - XR_MIN_KEY_CODE);
+                xrdp_wm_key(self, KBD_FLAG_UP | KBD_FLAG_EXT,
+                            XR_RDP_SCAN_ALT);
             }
             else
             {
-                xrdp_wm_key(self, KBD_FLAG_DOWN | KBD_FLAG_EXT, 56);
-                xrdp_wm_key(self, device_flags, index - 8);
+                xrdp_wm_key(self, KBD_FLAG_DOWN | KBD_FLAG_EXT,
+                            XR_RDP_SCAN_ALT);
+                xrdp_wm_key(self, device_flags, index - XR_MIN_KEY_CODE);
             }
             return 0;
         }
     }
 
-    for (index = 8; index < 256; index++)
+    for (index = XR_MIN_KEY_CODE; index < XR_MAX_KEY_CODE; index++)
     {
         if (unicode == self->keymap.keys_shiftaltgr[index].chr)
         {
             if (device_flags & KBD_FLAG_UP)
             {
-                xrdp_wm_key(self, device_flags, index - 8);
-                xrdp_wm_key(self, KBD_FLAG_UP | KBD_FLAG_EXT, 56);
-                xrdp_wm_key(self, KBD_FLAG_UP, 42);
+                xrdp_wm_key(self, device_flags, index - XR_MIN_KEY_CODE);
+                xrdp_wm_key(self, KBD_FLAG_UP | KBD_FLAG_EXT, XR_RDP_SCAN_ALT);
+                xrdp_wm_key(self, KBD_FLAG_UP, XR_RDP_SCAN_LSHIFT);
             }
             else
             {
-                xrdp_wm_key(self, KBD_FLAG_DOWN, 42);
-                xrdp_wm_key(self, KBD_FLAG_DOWN | KBD_FLAG_EXT, 56);
-                xrdp_wm_key(self, device_flags, index - 8);
+                xrdp_wm_key(self, KBD_FLAG_DOWN, XR_RDP_SCAN_LSHIFT);
+                xrdp_wm_key(self, KBD_FLAG_DOWN | KBD_FLAG_EXT,
+                            XR_RDP_SCAN_ALT);
+                xrdp_wm_key(self, device_flags, index - XR_MIN_KEY_CODE);
             }
             return 0;
         }

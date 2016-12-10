@@ -273,7 +273,7 @@ xrdp_fastpath_process_EVENT_UNICODE(struct xrdp_fastpath *self,
     {
         return 1;
     }
-    in_uint16_le(s, code); /* keyCode (1 byte) */
+    in_uint16_le(s, code); /* unicode (2 byte) */
     if (eventFlags & FASTPATH_INPUT_KBDFLAGS_RELEASE)
     {
         flags |= KBD_FLAG_UP;
