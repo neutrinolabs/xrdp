@@ -862,8 +862,8 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     codec_caps_count++;
     out_uint8a(s, XR_CODEC_GUID_JPEG, 16);
     out_uint8(s, 0); /* codec id, client sets */
-    out_uint16_le(s, 4); /* codecPropertiesLength */
-    out_uint32_le(s, 0); /* reserved */
+    out_uint16_le(s, 1); /* codecPropertiesLength */
+    out_uint8(s, 75); /* jpeg compression ratio */
     /* calculate and set size and count */
     codec_caps_size = (int)(s->p - codec_caps_size_ptr);
     codec_caps_size += 2; /* 2 bytes for RDP_CAPSET_BMPCODECS above */
