@@ -1288,7 +1288,7 @@ lib_mod_connect(struct vnc *v)
             out_uint8(pixel_format, 0); /* blue shift */
             out_uint8s(pixel_format, 3); /* pad */
         }
-        else if (v->mod_bpp == 24)
+        else if (v->mod_bpp == 24 || v->mod_bpp == 32)
         {
             out_uint8(pixel_format, 32); /* bits per pixel */
             out_uint8(pixel_format, 24); /* depth */
