@@ -160,6 +160,7 @@
 #define RDP_INPUT_CODEPOINT            1
 #define RDP_INPUT_VIRTKEY              2
 #define RDP_INPUT_SCANCODE             4
+#define RDP_INPUT_UNICODE              5
 #define RDP_INPUT_MOUSE                0x8001
 #define RDP_INPUT_MOUSEX               0x8002
 
@@ -625,5 +626,11 @@
 #define XRDP_MAX_BITMAP_CACHE_ID  3
 #define XRDP_MAX_BITMAP_CACHE_IDX 2000
 #define XRDP_BITMAP_CACHE_ENTRIES 2048
+
+#define XR_MIN_KEY_CODE 8
+#define XR_MAX_KEY_CODE 256
+
+#define XR_RDP_SCAN_LSHIFT 42
+#define XR_RDP_SCAN_ALT    56
 
 #endif

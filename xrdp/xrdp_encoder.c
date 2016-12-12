@@ -42,8 +42,10 @@
 /*****************************************************************************/
 static int
 process_enc_jpg(struct xrdp_encoder *self, XRDP_ENC_DATA *enc);
+#ifdef XRDP_RFXCODEC
 static int
 process_enc_rfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc);
+#endif
 static int
 process_enc_h264(struct xrdp_encoder *self, XRDP_ENC_DATA *enc);
 
@@ -82,6 +84,7 @@ xrdp_encoder_create(struct xrdp_mm *mm)
             (32 << 24) | (3 << 16) | (8 << 12) | (8 << 8) | (8 << 4) | 8;
         self->process_enc = process_enc_jpg;
     }
+#ifdef XRDP_RFXCODEC
     else if (client_info->rfx_codec_id != 0)
     {
         LLOGLN(0, ("xrdp_encoder_create: starting rfx codec session"));
@@ -89,13 +92,11 @@ xrdp_encoder_create(struct xrdp_mm *mm)
         self->in_codec_mode = 1;
         client_info->capture_code = 2;
         self->process_enc = process_enc_rfx;
-#ifdef XRDP_RFXCODEC
-        self->codec_handle =
-            rfxcodec_encode_create(mm->wm->screen->width,
-                                   mm->wm->screen->height,
-                                   RFX_FORMAT_YUV, 0);
-#endif
+        self->codec_handle = rfxcodec_encode_create(mm->wm->screen->width,
+                                                    mm->wm->screen->height,
+                                                    RFX_FORMAT_YUV, 0);
     }
+#endif
     else if (client_info->h264_codec_id != 0)
     {
         LLOGLN(0, ("xrdp_encoder_create: starting h264 codec session"));
@@ -291,7 +292,6 @@ process_enc_jpg(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
 }
 
 #ifdef XRDP_RFXCODEC
-
 /*****************************************************************************/
 /* called from encoder thread */
 static int
@@ -394,17 +394,6 @@ process_enc_rfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
 
     return 0;
 }
-
-#else
-
-/*****************************************************************************/
-/* called from encoder thread */
-static int
-process_enc_rfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
-{
-    return 0;
-}
-
 #endif
 
 /*****************************************************************************/
