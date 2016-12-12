@@ -10,6 +10,8 @@ AC_C_CONST
 AC_PROG_LIBTOOL
 PKG_PROG_PKG_CONFIG
 
+AC_CONFIG_SUBDIRS([librfxcodec])
+
 # Use silent rules by default if supported by Automake
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
