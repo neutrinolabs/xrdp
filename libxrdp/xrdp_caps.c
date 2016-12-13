@@ -457,7 +457,7 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
 
         if (g_memcmp(codec_guid, XR_CODEC_GUID_NSCODEC, 16) == 0)
         {
-            g_writeln("xrdp_caps_process_codecs: nscodec codec id %d prop len %d",
+            g_writeln("xrdp_caps_process_codecs: nscodec, codec id %d, properties len %d",
                       codec_id, codec_properties_length);
             self->client_info.ns_codec_id = codec_id;
             i1 = MIN(64, codec_properties_length);
@@ -466,7 +466,7 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
         }
         else if (g_memcmp(codec_guid, XR_CODEC_GUID_REMOTEFX, 16) == 0)
         {
-            g_writeln("xrdp_caps_process_codecs: RemoteFX, codec id %d prop len %d",
+            g_writeln("xrdp_caps_process_codecs: RemoteFX, codec id %d, properites len %d",
                       codec_id, codec_properties_length);
             self->client_info.rfx_codec_id = codec_id;
             i1 = MIN(64, codec_properties_length);
@@ -475,7 +475,7 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
         }
         else if (g_memcmp(codec_guid, XR_CODEC_GUID_JPEG, 16) == 0)
         {
-            g_writeln("xrdp_caps_process_codecs: jpeg codec id %d prop len %d",
+            g_writeln("xrdp_caps_process_codecs: jpeg, codec id %d, properties len %d",
                       codec_id, codec_properties_length);
             self->client_info.jpeg_codec_id = codec_id;
             i1 = MIN(64, codec_properties_length);
@@ -492,7 +492,7 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
         }
         else if (g_memcmp(codec_guid, XR_CODEC_GUID_H264, 16) == 0)
         {
-            g_writeln("xrdp_caps_process_codecs: h264 codec id %d prop len %d",
+            g_writeln("xrdp_caps_process_codecs: h264, codec id %d, properties len %d",
                       codec_id, codec_properties_length);
             self->client_info.h264_codec_id = codec_id;
             i1 = MIN(64, codec_properties_length);
@@ -941,7 +941,7 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     out_uint32_le(s, 2); /* 2 frames in flight */
 
     /* surface commands */
-    if (self->client_info.use_fast_path & 1) /* surface commands requires fastpath output */
+    if (self->client_info.use_fast_path & 1) /* surface commands require fastpath output */
     {
         caps_count++;
         out_uint16_le(s, RDP_CAPSET_SURFCMDS); /* CAPSETTYPE_SURFACE_COMMANDS */
