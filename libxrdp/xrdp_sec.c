@@ -2254,7 +2254,7 @@ xrdp_sec_incoming(struct xrdp_sec *self)
         if (trans_set_tls_mode(self->mcs_layer->iso_layer->trans,
                 self->rdp_layer->client_info.key_file,
                 self->rdp_layer->client_info.certificate,
-                self->rdp_layer->client_info.disableSSLv3,
+                self->rdp_layer->client_info.ssl_protocols,
                 self->rdp_layer->client_info.tls_ciphers) != 0)
         {
             g_writeln("xrdp_sec_incoming: trans_set_tls_mode failed");

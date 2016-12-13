@@ -534,7 +534,7 @@ ssl_tls_print_error(const char *func, SSL *connection, int value)
 
 /*****************************************************************************/
 int APP_CC
-ssl_tls_accept(struct ssl_tls *self, int disableSSLv3,
+ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
                const char *tls_ciphers)
 {
     int connection_status;
@@ -543,13 +543,14 @@ ssl_tls_accept(struct ssl_tls *self, int disableSSLv3,
     /**
      * SSL_OP_NO_SSLv2
      * SSLv3 is used by, eg. Microsoft RDC for Mac OS X.
-     * No SSLv3 if disableSSLv3=yes so only tls used
      */
     options |= SSL_OP_NO_SSLv2;
-    if (disableSSLv3)
-    {
-        options |= SSL_OP_NO_SSLv3;
-    }
+
+    /**
+     * Disable SSL protocols not listed in ssl_protocols.
+     */
+    options |= ssl_protocols;
+
 
 #if defined(SSL_OP_NO_COMPRESSION)
     /**
