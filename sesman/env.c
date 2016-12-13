@@ -28,6 +28,7 @@
 #include "sesman.h"
 #include "grp.h"
 #include "ssl_calls.h"
+#include "os_calls.h"
 
 extern unsigned char g_fixedkey[8]; /* in sesman.c */
 extern struct config_sesman *g_cfg;  /* in sesman.c */
@@ -199,4 +200,43 @@ env_set_user(const char *username, char **passwd_file, int display,
     }
 
     return error;
+}
+
+
+/******************************************************************************/
+int DEFAULT_CC
+env_add_xauth_user(int display, char *cookie, char *file)
+{
+    FILE *dp, *fd;
+    char xauth_str[256];
+
+    if ( file == NULL )
+    {
+        fd=fopen(".Xauthority", "a");
+        if (fd == NULL)
+            freopen(".Xauthority", "a", fd);
+        fclose(fd);
+
+        g_sprintf(xauth_str, "xauth -q add :%d . %s", display, cookie);
+    }
+    else
+    {
+        fd=fopen(file, "a");
+        if (fd == NULL)
+            freopen(file, "a", fd);
+        fclose(fd);
+
+        g_sprintf(xauth_str, "xauth -q -f %s  add :%d . %s", file, display, cookie);
+    }
+    log_message(LOG_LEVEL_DEBUG,
+                    "xauth command: %s", xauth_str);
+
+    if ( (dp = popen(xauth_str,"r")) == NULL ) {
+        log_message(LOG_LEVEL_INFO, "xauth failed, no X security");
+        return 1;
+    }
+
+    pclose(dp);
+
+    return 0;
 }
