@@ -441,6 +441,9 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
     struct list *xserver_params = (struct list *)NULL;
     struct tm stime;
     time_t ltime;
+    char cookie[33]; /* the cookie which will be used for xauth */
+    char cookie_tmpval; /* Used to fill the cookie with random values */
+    char authfile[255]; /* The filename for storing xauth informations */
 
     /* initialize (zero out) local variables: */
     g_memset(&ltime, 0, sizeof(time_t));
@@ -676,16 +679,23 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                 g_snprintf(text, 255, "%d", g_cfg->sess.kill_disconnected);
                 g_setenv("XRDP_SESMAN_KILL_DISCONNECTED", text, 1);
 
-                /* now the Xauthority stuff */
-                char cookie[33] = "";
-                char authfile[255] = ".Xauthority";
-
+                /* prepare the Xauthority stuff */
                 if (g_getenv("XAUTHORITY") !=NULL)
-                    g_sprintf(authfile, "%s", g_getenv("XAUTHORITY"));
+                {
+                    g_snprintf(authfile, 255, "%s", g_getenv("XAUTHORITY"));
+                }
+                else
+                {
+                    g_snprintf(authfile, 11, "%s", ".Xauthority");
+                }
+
                 /* Create the cookie */
-                srand((unsigned int) time(0));
-                for (i = 0; i < 32; i += 2)
-                    sprintf(&cookie[i], "%02X", rand() % 16);
+                for (i = 0; i < 32; i++)
+                {
+                    g_random((char *) &cookie_tmpval, 1);
+                    sprintf(&cookie[i], "%02X", cookie_tmpval & 0xff);
+                }
+                cookie[32]='\0';
 
                 /* Add the entry in XAUTORITY file */
                 env_add_xauth_user(display, cookie, NULL);
