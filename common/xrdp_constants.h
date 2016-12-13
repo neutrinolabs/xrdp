@@ -287,6 +287,9 @@
 #define RDP_CAPSET_MULTIFRAGMENT       0x001A
 #define RDP_CAPLEN_MULTIFRAGMENT       0x08
 
+#define RDP_CAPSET_FRAME_ACKNOWLEDGE   0x001E
+#define RDP_CAPLEN_FRAME_ACKNOWLEDGE   0x08
+
 #define RDP_SOURCE                     "MSTSC"
 
 /* Logon flags */
