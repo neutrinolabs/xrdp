@@ -1527,6 +1527,83 @@ xrdp_wm_key_sync(struct xrdp_wm *self, int device_flags, int key_flags)
 
 /*****************************************************************************/
 int APP_CC
+xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, int unicode)
+{
+    int index;
+
+    for (index = XR_MIN_KEY_CODE; index < XR_MAX_KEY_CODE; index++)
+    {
+        if (unicode == self->keymap.keys_noshift[index].chr)
+        {
+            xrdp_wm_key(self, device_flags, index - XR_MIN_KEY_CODE);
+            return 0;
+        }
+    }
+
+    for (index = XR_MIN_KEY_CODE; index < XR_MAX_KEY_CODE; index++)
+    {
+        if (unicode == self->keymap.keys_shift[index].chr)
+        {
+            if (device_flags & KBD_FLAG_UP)
+            {
+                xrdp_wm_key(self, device_flags, index - XR_MIN_KEY_CODE);
+                xrdp_wm_key(self, KBD_FLAG_UP, XR_RDP_SCAN_LSHIFT);
+            }
+            else
+            {
+                xrdp_wm_key(self, KBD_FLAG_DOWN, XR_RDP_SCAN_LSHIFT);
+                xrdp_wm_key(self, device_flags, index - XR_MIN_KEY_CODE);
+            }
+            return 0;
+        }
+    }
+
+    for (index = XR_MIN_KEY_CODE; index < XR_MAX_KEY_CODE; index++)
+    {
+        if (unicode == self->keymap.keys_altgr[index].chr)
+        {
+            if (device_flags & KBD_FLAG_UP)
+            {
+                xrdp_wm_key(self, device_flags, index - XR_MIN_KEY_CODE);
+                xrdp_wm_key(self, KBD_FLAG_UP | KBD_FLAG_EXT,
+                            XR_RDP_SCAN_ALT);
+            }
+            else
+            {
+                xrdp_wm_key(self, KBD_FLAG_DOWN | KBD_FLAG_EXT,
+                            XR_RDP_SCAN_ALT);
+                xrdp_wm_key(self, device_flags, index - XR_MIN_KEY_CODE);
+            }
+            return 0;
+        }
+    }
+
+    for (index = XR_MIN_KEY_CODE; index < XR_MAX_KEY_CODE; index++)
+    {
+        if (unicode == self->keymap.keys_shiftaltgr[index].chr)
+        {
+            if (device_flags & KBD_FLAG_UP)
+            {
+                xrdp_wm_key(self, device_flags, index - XR_MIN_KEY_CODE);
+                xrdp_wm_key(self, KBD_FLAG_UP | KBD_FLAG_EXT, XR_RDP_SCAN_ALT);
+                xrdp_wm_key(self, KBD_FLAG_UP, XR_RDP_SCAN_LSHIFT);
+            }
+            else
+            {
+                xrdp_wm_key(self, KBD_FLAG_DOWN, XR_RDP_SCAN_LSHIFT);
+                xrdp_wm_key(self, KBD_FLAG_DOWN | KBD_FLAG_EXT,
+                            XR_RDP_SCAN_ALT);
+                xrdp_wm_key(self, device_flags, index - XR_MIN_KEY_CODE);
+            }
+            return 0;
+        }
+    }
+
+    return 0;
+}
+
+/*****************************************************************************/
+int APP_CC
 xrdp_wm_pu(struct xrdp_wm *self, struct xrdp_bitmap *control)
 {
     int x;
@@ -1720,6 +1797,9 @@ callback(long id, int msg, long param1, long param2, long param3, long param4)
             break;
         case 4: /* RDP_INPUT_SCANCODE */
             rv = xrdp_wm_key(wm, param3, param1);
+            break;
+        case 5: /* RDP_INPUT_UNICODE */
+            rv = xrdp_wm_key_unicode(wm, param3, param1);
             break;
         case 0x8001: /* RDP_INPUT_MOUSE */
             rv = xrdp_wm_process_input_mouse(wm, param3, param1, param2);

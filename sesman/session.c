@@ -528,10 +528,10 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                             "setsid failed - pid %d", g_getpid());
             }
 
-            if (g_setlogin(username) < 0)
+            if (g_setlogin(s->username) < 0)
             {
                 log_message(LOG_LEVEL_ERROR,
-                            "setlogin failed for user %s - pid %d", username,
+                            "setlogin failed for user %s - pid %d", s->username,
                             g_getpid());
             }
         }

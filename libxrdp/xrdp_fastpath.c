@@ -265,12 +265,30 @@ static int APP_CC
 xrdp_fastpath_process_EVENT_UNICODE(struct xrdp_fastpath *self,
                                     int eventFlags, struct stream *s)
 {
-  if (!s_check_rem(s, 2))
-  {
-      return 1;
-  }
-  in_uint8s(s, 2);
-  return 0;
+    int flags;
+    int code;
+
+    flags = 0;
+    if (!s_check_rem(s, 2))
+    {
+        return 1;
+    }
+    in_uint16_le(s, code); /* unicode (2 byte) */
+    if (eventFlags & FASTPATH_INPUT_KBDFLAGS_RELEASE)
+    {
+        flags |= KBD_FLAG_UP;
+    }
+    else
+    {
+        flags |= KBD_FLAG_DOWN;
+    }
+    if (eventFlags & FASTPATH_INPUT_KBDFLAGS_EXTENDED)
+    {
+        flags |= KBD_FLAG_EXT;
+    }
+    xrdp_fastpath_session_callback(self, RDP_INPUT_UNICODE,
+                                   code, 0, flags, 0);
+    return 0;
 }
 
 /*****************************************************************************/
