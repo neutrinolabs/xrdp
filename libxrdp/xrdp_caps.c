@@ -466,7 +466,7 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
         }
         else if (g_memcmp(codec_guid, XR_CODEC_GUID_REMOTEFX, 16) == 0)
         {
-            g_writeln("xrdp_caps_process_codecs: RemoteFX, codec id %d, properites len %d",
+            g_writeln("xrdp_caps_process_codecs: RemoteFX, codec id %d, properties len %d",
                       codec_id, codec_properties_length);
             self->client_info.rfx_codec_id = codec_id;
             i1 = MIN(64, codec_properties_length);
