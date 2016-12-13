@@ -207,24 +207,27 @@ env_set_user(const char *username, char **passwd_file, int display,
 int DEFAULT_CC
 env_add_xauth_user(int display, char *cookie, char *file)
 {
-    FILE *dp, *fd;
+    FILE *dp;
     char xauth_str[256];
+    int fd;
 
     if ( file == NULL )
     {
-        fd=fopen(".Xauthority", "a");
-        if (fd == NULL)
-            freopen(".Xauthority", "a", fd);
-        fclose(fd);
+        if (!g_file_exist(".Xauthority")) 
+        {
+            fd = g_file_open(".Xauthority");
+            g_file_close(fd);
+        }
 
         g_sprintf(xauth_str, "xauth -q add :%d . %s", display, cookie);
     }
     else
     {
-        fd=fopen(file, "a");
-        if (fd == NULL)
-            freopen(file, "a", fd);
-        fclose(fd);
+        if (!g_file_exist(file))
+        {
+            fd = g_file_open(file);
+            g_file_close(fd);
+        }
 
         g_sprintf(xauth_str, "xauth -q -f %s  add :%d . %s", file, display, cookie);
     }
