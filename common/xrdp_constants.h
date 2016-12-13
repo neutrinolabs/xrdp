@@ -283,6 +283,9 @@
 #define RDP_CAPSET_VIRCHAN             20
 #define RDP_CAPLEN_VIRCHAN             0x08
 
+#define RDP_CAPSET_MULTIFRAGMENT       0x001A
+#define RDP_CAPLEN_MULTIFRAGMENT       0x08
+
 #define RDP_SOURCE                     "MSTSC"
 
 /* Logon flags */

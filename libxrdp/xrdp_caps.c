@@ -926,23 +926,21 @@ xrdp_caps_send_demand_active(struct xrdp_rdp *self)
     out_uint16_le(s, 5);
     out_uint8(s, 0); /* client sets */
 
-    if (self->client_info.use_fast_path & 1) /* fastpath output on */
+    if (self->client_info.use_fast_path & FASTPATH_OUTPUT_SUPPORTED) /* fastpath output on */
     {
+        /* multifragment update */
         caps_count++;
         out_uint16_le(s, 0x001A); /* 26 CAPSETTYPE_MULTIFRAGMENTUPDATE */
         out_uint16_le(s, 8);
         out_uint32_le(s, 3 * 1024 * 1024); /* 3MB */
-    }
 
-    /* frame acks */
-    caps_count++;
-    out_uint16_le(s, 0x001E); /* CAPSETTYPE_FRAME_ACKNOWLEDGE */
-    out_uint16_le(s, 8);
-    out_uint32_le(s, 2); /* 2 frames in flight */
+        /* frame acks */
+        caps_count++;
+        out_uint16_le(s, 0x001E); /* CAPSETTYPE_FRAME_ACKNOWLEDGE */
+        out_uint16_le(s, 8);
+        out_uint32_le(s, 2); /* 2 frames in flight */
 
-    /* surface commands */
-    if (self->client_info.use_fast_path & 1) /* surface commands require fastpath output */
-    {
+        /* surface commands */
         caps_count++;
         out_uint16_le(s, RDP_CAPSET_SURFCMDS); /* CAPSETTYPE_SURFACE_COMMANDS */
         out_uint16_le(s, RDP_CAPLEN_SURFCMDS); /* lengthCapability */
