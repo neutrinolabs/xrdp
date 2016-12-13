@@ -3,6 +3,8 @@
 #start the window manager
 wm_start()
 {
+  mcookie | sed -e 's/^/add '$DISPLAY' . /' | xauth -q
+  
   if [ -r /etc/default/locale ]; then
     . /etc/default/locale
     export LANG LANGUAGE
