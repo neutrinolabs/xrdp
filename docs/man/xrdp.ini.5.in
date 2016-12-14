@@ -168,8 +168,8 @@ Specify send/recv buffer sizes in bytes.  The default value depends on operating
 
 .TP
 \fBtls_ciphers\fP=\fIcipher_suite\fP
-Specifies TLS cipher suite.  The format of this parameter is equivalent to which
-\fBopenssl\fP(1) ciphers subcommand accepts.
+Specifies TLS cipher suite in 63 characters or less.  The format of this parameter is
+equivalent to which \fBopenssl\fP(1) ciphers subcommand accepts.
 
 (ex. $ openssl ciphers 'HIGH:!ADH:!SHA1')
 
