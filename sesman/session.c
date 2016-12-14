@@ -443,7 +443,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
     time_t ltime;
     char cookie[33]; /* the cookie which will be used for xauth */
     char cookie_tmpval; /* Used to fill the cookie with random values */
-    char authfile[255]; /* The filename for storing xauth informations */
+    char authfile[256]; /* The filename for storing xauth informations */
 
     /* initialize (zero out) local variables: */
     g_memset(&ltime, 0, sizeof(time_t));
@@ -686,7 +686,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                 }
                 else
                 {
-                    g_snprintf(authfile, 11, "%s", ".Xauthority");
+                    g_snprintf(authfile, 12, "%s", ".Xauthority");
                 }
 
                 /* Create the cookie */
