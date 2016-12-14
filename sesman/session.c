@@ -680,7 +680,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                 g_setenv("XRDP_SESMAN_KILL_DISCONNECTED", text, 1);
 
                 /* prepare the Xauthority stuff */
-                if (g_getenv("XAUTHORITY") !=NULL)
+                if (g_getenv("XAUTHORITY") != NULL)
                 {
                     g_snprintf(authfile, 255, "%s", g_getenv("XAUTHORITY"));
                 }
@@ -695,7 +695,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                     g_random((char *) &cookie_tmpval, 1);
                     sprintf(&cookie[i], "%02X", cookie_tmpval & 0xff);
                 }
-                cookie[32]='\0';
+                cookie[32] = '\0';
 
                 /* Add the entry in XAUTORITY file */
                 env_add_xauth_user(display, cookie, NULL);

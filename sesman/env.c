@@ -229,12 +229,12 @@ env_add_xauth_user(int display, char *cookie, char *file)
             g_file_close(fd);
         }
 
-        g_sprintf(xauth_str, "xauth -q -f %s  add :%d . %s", file, display, cookie);
+        g_sprintf(xauth_str, "xauth -q -f %s  add :%d . %s", 
+                file, display, cookie);
     }
-    log_message(LOG_LEVEL_DEBUG,
-                    "xauth command: %s", xauth_str);
+    log_message(LOG_LEVEL_DEBUG, "xauth command: %s", xauth_str);
 
-    if ( (dp = popen(xauth_str,"r")) == NULL ) {
+    if ((dp = popen(xauth_str, "r")) == NULL) {
         log_message(LOG_LEVEL_INFO, "xauth failed, no X security");
         return 1;
     }
