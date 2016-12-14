@@ -170,7 +170,7 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
             tmp = g_new(char, tmp_length);
             g_snprintf(tmp, tmp_length, "%s%s%s", " ", value, " ");
 
-	    /* disable all protocols first, enable later */
+            /* disable all protocols first, enable later */
             client_info->ssl_protocols =
                 SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2;
 
@@ -193,6 +193,14 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
             {
                 log_message(LOG_LEVEL_DEBUG, "SSLv3 enabled");
                 client_info->ssl_protocols &= ~SSL_OP_NO_SSLv3;
+            }
+
+            if (client_info->ssl_protocols ==
+                (SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2))
+            {
+                log_message(LOG_LEVEL_WARNING, "No SSL/TLS protocols enabled. "
+                            "At least one protocol should be enabled to accept "
+                            "TLS connections.");
             }
         }
         else if (g_strcasecmp(item, "tls_ciphers") == 0)
