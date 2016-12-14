@@ -29,9 +29,13 @@ Specify xrdp listening address. If not specified, defaults to 0.0.0.0 (all inter
 
 .TP
 \fBautorun\fP=\fIsession_name\fP
-Automatically run the connection specified by \fIsession_name\fP, which must match a section as described below.
-By default a drop-down list with all available connections is shown.
-A connection can also be chosen by the connecting client by setting the \fBLOGIN DOMAIN\fP to a valid \fIsession name\fP.
+Section name for automatic login. If set and the client supplies valid
+username and password, the user will be logged in automatically using the
+connection specified by \fIsession_name\fP.
+
+If \fIsession_name\fP is empty, the \fBLOGIN DOMAIN\fR from the client
+with be used to select the section. If no domain name is supplied, the
+first suitable section will be used for automatic login.
 
 .TP
 \fBbitmap_cache\fR=\fI[true|false]\fR
