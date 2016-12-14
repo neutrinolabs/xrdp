@@ -290,6 +290,18 @@
 #define RDP_CAPSET_FRAME_ACKNOWLEDGE   0x001E
 #define RDP_CAPLEN_FRAME_ACKNOWLEDGE   0x08
 
+#define RDP_CAPSET_SURFCMDS            0x1C
+#define RDP_CAPLEN_SURFCMDS            0x0C
+
+#define RDP_CAPSET_BMPCODECS           0x1D
+#define RDP_CAPLEN_BMPCODECS           0x1C
+
+#define RDP_CAPSET_COMPDESK            0x19
+#define RDP_CAPLEN_COMPDESK            0x06
+
+#define RDP_CAPSET_LPOINTER            0x1B
+#define RDP_CAPLEN_LPOINTER            0x06
+
 #define RDP_SOURCE                     "MSTSC"
 
 /* Logon flags */
@@ -572,15 +584,6 @@
 /* MFVideoFormat_H264  0x34363248-0000-0010-800000AA00389B71 */
 #define XR_CODEC_GUID_H264 \
   "\x48\x32\x36\x34\x00\x00\x10\x00\x80\x00\x00\xAA\x00\x38\x9B\x71"
-
-#define RDP_CAPSET_SURFCMDS       0x1C
-#define RDP_CAPLEN_SURFCMDS       0x0C
-#define RDP_CAPSET_BMPCODECS      0x1D
-#define RDP_CAPLEN_BMPCODECS      0x1C
-#define RDP_CAPSET_COMPDESK       0x19
-#define RDP_CAPLEN_COMPDESK       0x06
-#define RDP_CAPSET_LPOINTER       0x1B
-#define RDP_CAPLEN_LPOINTER       0x06
 
 /* fastpath input */
 #define FASTPATH_INPUT_SECURE_CHECKSUM 0x1
