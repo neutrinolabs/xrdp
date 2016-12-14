@@ -698,7 +698,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                 cookie[32] = '\0';
 
                 /* Add the entry in XAUTORITY file */
-                env_add_xauth_user(display, cookie, NULL);
+                env_add_xauth_user(display, cookie, authfile);
 
                 if (type == SESMAN_SESSION_TYPE_XORG)
                 {
