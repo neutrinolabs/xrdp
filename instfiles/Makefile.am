@@ -26,7 +26,8 @@ dist_startscript_DATA = \
   km-0000080c.ini \
   km-00000813.ini \
   km-00000816.ini \
-  km-0000100c.ini 
+  km-0000100c.ini \
+  km-00000412.ini
 
 #
 # platform specific files
