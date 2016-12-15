@@ -1,7 +1,8 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2017
+ * Copyright (C) Emmanuel Blindauer 2004-2017
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +21,6 @@
  *
  * @file xauth.c
  * @brief XAUTHORITY handling code
- * @author Emmaunel Blindauer
  *
  */
 
@@ -34,24 +34,16 @@ int DEFAULT_CC
 add_xauth_cookie(int display, const char *file)
 {
     FILE *dp;
-    char cookie[33];
-    char char_cookie[16];
+    char cookie_str[33];
+    char cookie_bin[16];
     char xauth_str[256];
     int ret;
 
-    g_random(char_cookie, 16);
-    g_bytes_to_hexstr(char_cookie, 16, cookie, 33);
-    cookie[32] = '\0';
+    g_random(cookie_bin, 16);
+    g_bytes_to_hexstr(cookie_bin, 16, cookie_str, 33);
 
-    if (file == NULL)
-    {
-        g_sprintf(xauth_str, "xauth -q add :%d . %s", display, cookie);
-    }
-    else
-    {
-        g_sprintf(xauth_str, "xauth -q -f %s add :%d . %s",
-                file, display, cookie);
-    }
+    g_sprintf(xauth_str, "xauth -q -f %s add :%d . %s",
+                file, display, cookie_str);
 
     dp = popen(xauth_str, "r");
     if (dp == NULL)

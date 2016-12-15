@@ -688,8 +688,11 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                     g_snprintf(authfile, 255, "%s", ".Xauthority");
                 }
 
-                /* Add the entry in XAUTHORITY file */
-                add_xauth_cookie(display, authfile);
+                /* Add the entry in XAUTHORITY file or exit if error */
+                if (add_xauth_cookie(display, authfile) != 0)
+                {
+                    g_exit(1);
+                }
 
                 if (type == SESMAN_SESSION_TYPE_XORG)
                 {
