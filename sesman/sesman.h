@@ -30,7 +30,6 @@
 #if defined(HAVE_CONFIG_H)
 #include "config_ac.h"
 #endif
-#include <stdio.h>
 #include "arch.h"
 #include "parse.h"
 #include "os_calls.h"

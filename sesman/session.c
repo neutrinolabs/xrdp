@@ -39,6 +39,7 @@
 
 #include "sesman.h"
 #include "libscp_types.h"
+#include "xauth.h"
 
 #ifndef PR_SET_NO_NEW_PRIVS
 #define PR_SET_NO_NEW_PRIVS 38
@@ -441,8 +442,6 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
     struct list *xserver_params = (struct list *)NULL;
     struct tm stime;
     time_t ltime;
-    char cookie[33]; /* the cookie which will be used for xauth */
-    char cookie_tmpval; /* Used to fill the cookie with random values */
     char authfile[256]; /* The filename for storing xauth informations */
 
     /* initialize (zero out) local variables: */
@@ -686,19 +685,11 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                 }
                 else
                 {
-                    g_snprintf(authfile, 12, "%s", ".Xauthority");
+                    g_snprintf(authfile, 255, "%s", ".Xauthority");
                 }
 
-                /* Create the cookie */
-                for (i = 0; i < 32; i++)
-                {
-                    g_random((char *) &cookie_tmpval, 1);
-                    sprintf(&cookie[i], "%02X", cookie_tmpval & 0xff);
-                }
-                cookie[32] = '\0';
-
-                /* Add the entry in XAUTORITY file */
-                env_add_xauth_user(display, cookie, authfile);
+                /* Add the entry in XAUTHORITY file */
+                add_xauth_cookie(display, authfile);
 
                 if (type == SESMAN_SESSION_TYPE_XORG)
                 {

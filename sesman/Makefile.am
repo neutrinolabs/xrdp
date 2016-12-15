@@ -54,6 +54,8 @@ xrdp_sesman_SOURCES = \
   session.h \
   sig.c \
   sig.h \
+  xauth.c \
+  xauth.h \
   $(AUTH_C)
 
 xrdp_sesman_LDADD = \

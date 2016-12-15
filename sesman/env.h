@@ -53,17 +53,4 @@ int DEFAULT_CC
 env_set_user(const char *username, char **passwd_file, int display,
              const struct list *env_names, const struct list *env_values);
 
-/**
- *
- * @brief create the XAUTORITY file for the user according to the display and the cookie
- *        xauth uses XAUTORITY if defined, ~/.Xauthority otherwise
- * @param display The session display
- * @param cookie The cookie
- * @param file If not NULL, write the autorization in the file instead of default location
- * @return 0 if adding the cookie is ok
- */
-
-int DEFAULT_CC
-env_add_xauth_user(int display, char *cookie, char * file);
-
 #endif
