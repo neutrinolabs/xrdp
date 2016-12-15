@@ -135,6 +135,10 @@ struct xrdp_client_info
   char variant[16];
   char options[256];
 
+  /* !!!!!!!!!!!!!!!!!!!!!!!!!! */
+  /* NO CHANGES ABOVE THIS LINE */
+  /* !!!!!!!!!!!!!!!!!!!!!!!!!! */
+
   /* codec */
   int h264_codec_id;
   int h264_prop_len;
