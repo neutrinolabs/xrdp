@@ -28,7 +28,6 @@
 #include "sesman.h"
 #include "grp.h"
 #include "ssl_calls.h"
-#include "os_calls.h"
 
 extern unsigned char g_fixedkey[8]; /* in sesman.c */
 extern struct config_sesman *g_cfg;  /* in sesman.c */
