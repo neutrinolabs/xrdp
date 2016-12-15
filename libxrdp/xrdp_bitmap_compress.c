@@ -22,6 +22,8 @@
 
 #include "libxrdp.h"
 
+#define BC_MAX_BYTES (16 * 1024)
+
 /*****************************************************************************/
 #define IN_PIXEL8(in_ptr, in_x, in_y, in_w, in_last_pixel, in_pixel); \
     do { \
@@ -695,7 +697,7 @@ xrdp_bitmap_compress(char *in_data, int width, int height,
         out_count = end;
         line = in_data + width * start_line;
 
-        while (start_line >= 0 && out_count < 32768)
+        while (start_line >= 0 && out_count <= BC_MAX_BYTES)
         {
             i = (s->p - s->data) + count;
 
@@ -987,7 +989,7 @@ xrdp_bitmap_compress(char *in_data, int width, int height,
         out_count = end * 2;
         line = in_data + width * start_line * 2;
 
-        while (start_line >= 0 && out_count < 32768)
+        while (start_line >= 0 && out_count <= BC_MAX_BYTES)
         {
             i = (s->p - s->data) + count * 2;
 
@@ -1279,7 +1281,7 @@ xrdp_bitmap_compress(char *in_data, int width, int height,
         out_count = end * 3;
         line = in_data + width * start_line * 4;
 
-        while (start_line >= 0 && out_count < 32768)
+        while (start_line >= 0 && out_count <= BC_MAX_BYTES)
         {
             i = (s->p - s->data) + count * 3;
 
