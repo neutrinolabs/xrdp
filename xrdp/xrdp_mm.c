@@ -229,14 +229,19 @@ xrdp_mm_send_login(struct xrdp_mm *self)
     out_uint16_be(s, self->wm->screen->width);
     out_uint16_be(s, self->wm->screen->height);
 
-    if (xserverbpp > 0)
+    /* select and send X server bpp */
+    if (xserverbpp == 0)
     {
-        out_uint16_be(s, xserverbpp);
+        if (self->code == 20)
+        {
+            xserverbpp = 24; /* xorgxrdp is always at 24 bpp */
+        }
+        else
+        {
+            xserverbpp = self->wm->screen->bpp; /* use client's bpp */
+        }
     }
-    else
-    {
-        out_uint16_be(s, self->wm->screen->bpp);
-    }
+    out_uint16_be(s, xserverbpp);
 
     /* send domain */
     if(self->wm->client_info->domain[0]!='_')
