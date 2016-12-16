@@ -19,7 +19,7 @@ addons:
       - libmp3lame-dev
       - libx11-dev
       - libxrandr-dev
-      - libpixman-dev
+      - libpixman-1-dev
       - nasm
       # x11rdp
       #- flex
