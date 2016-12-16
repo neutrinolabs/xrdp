@@ -365,11 +365,14 @@ jpeg_compress(char *in_data, int width, int height,
                 *(dst8++) = red;
             }
 
-            for (i = 0; i < e; i++)
+            if (width > 0)
             {
-                *(dst8++) = blue;
-                *(dst8++) = green;
-                *(dst8++) = red;
+                for (i = 0; i < e; i++)
+                {
+                    *(dst8++) = blue;
+                    *(dst8++) = green;
+                    *(dst8++) = red;
+                }
             }
         }
     }
