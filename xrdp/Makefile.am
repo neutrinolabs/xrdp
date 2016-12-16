@@ -28,6 +28,12 @@ AM_CPPFLAGS += $(PIXMAN_CFLAGS)
 XRDP_EXTRA_LIBS += $(PIXMAN_LIBS)
 endif
 
+if XRDP_PAINTER
+AM_CPPFLAGS += -DXRDP_PAINTER
+AM_CPPFLAGS += -I$(top_srcdir)/libpainter/include
+XRDP_EXTRA_LIBS += $(top_srcdir)/libpainter/src/.libs/libpainter.a
+endif
+
 sbin_PROGRAMS = \
   xrdp
 

@@ -159,6 +159,15 @@ xrdp_caps_process_order(struct xrdp_rdp *self, struct stream *s,
     DEBUG(("desktop cache size %d", i));
     in_uint8s(s, 4); /* Unknown */
     in_uint8s(s, 4); /* Unknown */
+
+    /* check if libpainter should be used for drawing, instead of orders */
+    if (!(order_caps[TS_NEG_DSTBLT_INDEX] && order_caps[TS_NEG_PATBLT_INDEX] &&
+          order_caps[TS_NEG_SCRBLT_INDEX] && order_caps[TS_NEG_MEMBLT_INDEX]))
+    {
+        g_writeln("xrdp_caps_process_order: not enough orders supported by client, using painter.");
+        self->client_info.no_orders_supported = 1;
+    }
+
     return 0;
 }
 
@@ -665,6 +674,17 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
         }
 
         s->p = p + len + 4;
+    }
+
+    if (self->client_info.no_orders_supported &&
+        (self->client_info.offscreen_support_level != 0))
+    {
+        g_writeln("xrdp_caps_process_confirm_active: not enough orders "
+                  "supported by client, client wants off screen bitmap but "
+                  "offscreen bitmaps disabled");
+        self->client_info.offscreen_support_level = 0;
+        self->client_info.offscreen_cache_size = 0;
+        self->client_info.offscreen_cache_entries = 0;
     }
 
     DEBUG(("out xrdp_caps_process_confirm_active"));
