@@ -495,6 +495,41 @@
 #define XR_ORDERFLAGS_EX_ALTSEC_FRAME_MARKER_SUPPORT 0x0004
 #define XR_ORDERFLAGS_EX_OFFSCREEN_COMPOSITE_SUPPORT 0x0100
 
+/* orders negotiation indexes */
+#define TS_NEG_DSTBLT_INDEX     0x00
+#define TS_NEG_PATBLT_INDEX     0x01
+#define TS_NEG_SCRBLT_INDEX     0x02
+#define TS_NEG_MEMBLT_INDEX     0x03
+#define TS_NEG_MEM3BLT_INDEX    0x04
+#define UnusedIndex1            0x05
+#define UnusedIndex2            0x06
+#define TS_NEG_DRAWNINEGRID_INDEX       0x07
+#define TS_NEG_LINETO_INDEX     0x08
+#define TS_NEG_MULTI_DRAWNINEGRID_INDEX 0x09
+#define UnusedIndex3            0x0A
+#define TS_NEG_SAVEBITMAP_INDEX 0x0B
+#define UnusedIndex4            0x0C
+#define UnusedIndex5            0x0D
+#define UnusedIndex6            0x0E
+#define TS_NEG_MULTIDSTBLT_INDEX        0x0F
+#define TS_NEG_MULTIPATBLT_INDEX        0x10
+#define TS_NEG_MULTISCRBLT_INDEX        0x11
+#define TS_NEG_MULTIOPAQUERECT_INDEX    0x12
+#define TS_NEG_FAST_INDEX_INDEX 0x13
+#define TS_NEG_POLYGON_SC_INDEX 0x14
+#define TS_NEG_POLYGON_CB_INDEX 0x15
+#define TS_NEG_POLYLINE_INDEX   0x16
+#define UnusedIndex7            0x17
+#define TS_NEG_FAST_GLYPH_INDEX 0x18
+#define TS_NEG_ELLIPSE_SC_INDEX 0x19
+#define TS_NEG_ELLIPSE_CB_INDEX 0x1A
+#define TS_NEG_INDEX_INDEX      0x1B
+#define UnusedIndex8            0x1C
+#define UnusedIndex9            0x1D
+#define UnusedIndex10           0x1E
+#define UnusedIndex11           0x1F
+
+
 /* drawable types */
 #define WND_TYPE_BITMAP  0
 #define WND_TYPE_WND     1
