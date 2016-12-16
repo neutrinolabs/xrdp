@@ -601,6 +601,14 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
 
                 switch (bpp)
                 {
+                    case 8:
+                        for (j = 0; j < lines_sending; j++)
+                        {
+                            q = q - line_bytes;
+                            out_uint8a(s, q, line_bytes);
+                            out_uint8s(s, e);
+                        }
+                        break;
                     case 15:
                     case 16:
                         for (j = 0; j < lines_sending; j++)
@@ -611,10 +619,7 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
                                 pixel = *((tui16*)(q + k * 2));
                                 out_uint16_le(s, pixel);
                             }
-                            for (k = 0; k < e; k++)
-                            {
-                                out_uint8s(s, 2);
-                            }
+                            out_uint8s(s, e * 2);
                         }
                         break;
                     case 24:
@@ -628,10 +633,7 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
                                 out_uint8(s, pixel >> 8);
                                 out_uint8(s, pixel >> 16);
                             }
-                            for (k = 0; k < e; k++)
-                            {
-                                out_uint8s(s, 3);
-                            }
+                            out_uint8s(s, e * 3);
                         }
                         break;
                     case 32:
@@ -643,18 +645,7 @@ libxrdp_send_bitmap(struct xrdp_session *session, int width, int height,
                                 pixel = *((int*)(q + k * 4));
                                 out_uint32_le(s, pixel);
                             }
-                            for (k = 0; k < e; k++)
-                            {
-                                out_uint8s(s, 4);
-                            }
-                        }
-                        break;
-                    default: /* 8 bpp */
-                        for (j = 0; j < lines_sending; j++)
-                        {
-                            q = q - line_bytes;
-                            out_uint8a(s, q, line_bytes);
-                            out_uint8s(s, e * Bpp);
+                            out_uint8s(s, e * 4);
                         }
                         break;
                 }
