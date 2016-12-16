@@ -60,11 +60,6 @@ xrdp_encoder_create(struct xrdp_mm *mm)
 
     client_info = mm->wm->client_info;
 
-    if (client_info->client_os_major != OSMAJORTYPE_UNIX)
-    {
-        /* temp workaround to avoid black screen in non-supported clients */
-        return 0;
-    }
     if (client_info->mcs_connection_type != 6) /* LAN */
     {
         return 0;

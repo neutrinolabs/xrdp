@@ -1332,13 +1332,13 @@ libxrdp_fastpath_send_surface(struct xrdp_session *session,
     s->rdp_hdr = s->sec_hdr + sec_bytes;
     s->end = data_pad + pad_bytes + data_bytes;
     s->p = s->data + (rdp_bytes + sec_bytes);
-    /* TS_SURFCMD_SET_SURF_BITS */
-    out_uint16_le(s, 0x0001); /* CMDTYPE_SET_SURFACE_BITS */
+    /* TS_SURFCMD_STREAM_SURF_BITS */
+    out_uint16_le(s, CMDTYPE_STREAM_SURFACE_BITS);
     out_uint16_le(s, destLeft);
     out_uint16_le(s, destTop);
     out_uint16_le(s, destRight);
     out_uint16_le(s, destBottom);
-    /* TS_ BITMAP_DATA_EX */
+    /* TS_BITMAP_DATA_EX */
     out_uint8(s, bpp);
     out_uint8(s, 0);
     out_uint8(s, 0);
