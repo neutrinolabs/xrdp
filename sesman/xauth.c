@@ -54,7 +54,7 @@ add_xauth_cookie(int display, const char *file)
     ret = pclose(dp);
     if (ret < 0)
     {
-        log_message(LOG_LEVEL_ERROR, "An error occured while running xauth");
+        log_message(LOG_LEVEL_ERROR, "An error occurred while running xauth");
         return 1;
     }
 
