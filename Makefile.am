@@ -16,6 +16,12 @@ else
 XRDPVRDIR =
 endif
 
+if XRDP_RFXCODEC
+RFXCODECDIR = librfxcodec
+else
+RFXCODECDIR =
+endif
+
 SUBDIRS = \
   common \
   vnc \
@@ -24,6 +30,7 @@ SUBDIRS = \
   mc \
   $(NEUTRINORDPDIR) \
   libxrdp \
+  $(RFXCODECDIR) \
   xrdp \
   sesman \
   keygen \
