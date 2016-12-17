@@ -196,12 +196,10 @@ Following parameters can be used in the \fB[X11rdp]\fR, \fB[Xvnc]\fR and
 \fB[Xorg]\fR sections.
 
 .TP
-\fBparam0\fR=\fIfilename\fR
-Path to the X11 server executable
-
-.TP
-\fBparam\fR\fIN\fR=\fIstring\fR
-Nth command line argument
+\fBparam\fR=\fIstring\fR
+Multiple \fIparam\fR lines are supported. This first line specifies the
+path to the X11 server executable. Following lines specify command line
+arguments passed to the X11 server.
 
 .SH "CHANSRV"
 Following parameters can be used in the \fB[Chansrv]\fR section.
