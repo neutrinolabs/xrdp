@@ -24,6 +24,10 @@ x86 asm files
 #ifndef __FUNCS_X86_H
 #define __FUNCS_X86_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int
 cpuid_x86(int eax_in, int ecx_in, int *eax, int *ebx, int *ecx, int *edx);
 
@@ -32,6 +36,12 @@ rfxcodec_encode_dwt_shift_x86_sse2(const char *qtable,
                                    unsigned char *data,
                                    short *dwt_buffer1,
                                    short *dwt_buffer);
+int
+rfxcodec_encode_dwt_shift_x86_sse41(const char *qtable,
+                                    unsigned char *data,
+                                    short *dwt_buffer1,
+                                    short *dwt_buffer);
+
 int
 rfxcodec_encode_diff_rlgr1_x86_sse2(short *co,
                                     void *dst, int dst_bytes);
@@ -55,5 +65,8 @@ rfxcodec_decode_yuva2argb_x86_sse2(short *ydata, short *udata,
                                    short *vdata, char *adata,
                                    unsigned int *rgbdata, int stride);
 
+#ifdef __cplusplus
+}
 #endif
 
+#endif

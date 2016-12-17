@@ -54,4 +54,4 @@ librfxencode_la_SOURCES = $(noinst_HEADERS) rfxencode.c \
   rfxencode_rlgr1.c rfxencode_rlgr3.c rfxencode_alpha.c $(ASM_SOURCES)
 
 .asm.lo:
-	$(LIBTOOL) --mode=compile --tag NASM $(srcdir)/nasm_lt.sh $(NASM) $(NAFLAGS) -I$(srcdir) -I. $< -o $@
+	$(LIBTOOL) --mode=compile $(srcdir)/nasm_lt.sh $(NASM) $(NAFLAGS) -I$(srcdir) -I. $< -o $@
