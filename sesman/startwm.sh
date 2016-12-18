@@ -3,6 +3,8 @@
 #start the window manager
 wm_start()
 {
+  dd if=/dev/urandom bs=16 count=1 2>/dev/null | od -x -An | tr -d ' ' | sed -e 's/^/add '$DISPLAY' . /' | xauth -q
+  
   if [ -r /etc/default/locale ]; then
     . /etc/default/locale
     export LANG LANGUAGE

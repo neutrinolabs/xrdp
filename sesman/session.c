@@ -702,6 +702,12 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                     /* these are the must have parameters */
                     list_add_item(xserver_params, (tintptr) g_strdup(xserver));
                     list_add_item(xserver_params, (tintptr) g_strdup(screen));
+                    
+                    char xauth_file[256];
+                    g_snprintf(xauth_file, 255, "%s/.Xauthority", g_getenv("HOME"));
+                    list_add_item(xserver_params, (tintptr) g_strdup("-auth"));
+                    list_add_item(xserver_params, (tintptr) g_strdup(xauth_file));
+
 
                     /* additional parameters from sesman.ini file */
                     list_append_list_strdup(g_cfg->xorg_params, xserver_params, 1);
