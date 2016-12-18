@@ -1,3 +1,6 @@
+EXTRA_DIST = \
+  Doxyfile
+
 AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \

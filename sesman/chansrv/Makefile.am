@@ -1,3 +1,9 @@
+EXTRA_DIST = \
+  clipboard-notes.txt \
+  pcsc \
+  pulse \
+  wave-format-server.txt
+
 AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \

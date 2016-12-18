@@ -1,3 +1,7 @@
+EXTRA_DIST = \
+  dump-keymaps.sh \
+  readme.txt
+
 AM_CFLAGS = $(X_CFLAGS)
 
 bin_PROGRAMS = \
