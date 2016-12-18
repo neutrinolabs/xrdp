@@ -294,8 +294,9 @@ depth of the client. Only Xvnc and X11rdp use that setting. Xorg runs at
 \fI24\fR bpp.
 
 .TP
-\fBcode\fR=\fI<number>\fR|\fI\-1\fR
-Specifies the session type, the default, \fI\0\fR, is Xvnc, \fI\10\fR, is X11rdp, and \fI\20\fR, uses Xorg driver mode.
+\fBcode\fR=\fI<number>\fR|\fI0\fR
+Specifies the session type. The default, \fI0\fR, is Xvnc, \fI10\fR is
+X11rdp, and \fI20\fR is Xorg with xorgxrdp modules.
 
 .SH "EXAMPLES"
 This is an example \fBxrdp.ini\fR:
