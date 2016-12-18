@@ -17,6 +17,7 @@ module_LTLIBRARIES = \
 
 libxrdpneutrinordp_la_SOURCES = \
   xrdp-color.c \
+  xrdp-color.h \
   xrdp-neutrinordp.c \
   xrdp-neutrinordp.h
 

@@ -1,4 +1,5 @@
 EXTRA_DIST = \
+   keymap-names.txt \
    xrdp.sh \
    xrdp-sesman.service \
    xrdp.service

@@ -3,4 +3,5 @@ module_LTLIBRARIES = \
 
 libxrdpvr_la_SOURCES = \
   xrdpvr.c \
-  xrdpvr.h
+  xrdpvr.h \
+  xrdpvr_internal.h
