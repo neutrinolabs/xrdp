@@ -39,6 +39,7 @@
 
 #include "sesman.h"
 #include "libscp_types.h"
+#include "xauth.h"
 
 #ifndef PR_SET_NO_NEW_PRIVS
 #define PR_SET_NO_NEW_PRIVS 38
@@ -441,6 +442,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
     struct list *xserver_params = (struct list *)NULL;
     struct tm stime;
     time_t ltime;
+    char authfile[256]; /* The filename for storing xauth informations */
 
     /* initialize (zero out) local variables: */
     g_memset(&ltime, 0, sizeof(time_t));
@@ -676,6 +678,22 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                 g_snprintf(text, 255, "%d", g_cfg->sess.kill_disconnected);
                 g_setenv("XRDP_SESMAN_KILL_DISCONNECTED", text, 1);
 
+                /* prepare the Xauthority stuff */
+                if (g_getenv("XAUTHORITY") != NULL)
+                {
+                    g_snprintf(authfile, 255, "%s", g_getenv("XAUTHORITY"));
+                }
+                else
+                {
+                    g_snprintf(authfile, 255, "%s", ".Xauthority");
+                }
+
+                /* Add the entry in XAUTHORITY file or exit if error */
+                if (add_xauth_cookie(display, authfile) != 0)
+                {
+                    g_exit(1);
+                }
+
                 if (type == SESMAN_SESSION_TYPE_XORG)
                 {
 #ifdef HAVE_SYS_PRCTL_H
@@ -702,6 +720,8 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                     /* these are the must have parameters */
                     list_add_item(xserver_params, (tintptr) g_strdup(xserver));
                     list_add_item(xserver_params, (tintptr) g_strdup(screen));
+                    list_add_item(xserver_params, (tintptr) g_strdup("-auth"));
+                    list_add_item(xserver_params, (tintptr) g_strdup(authfile));
 
                     /* additional parameters from sesman.ini file */
                     list_append_list_strdup(g_cfg->xorg_params, xserver_params, 1);
@@ -737,6 +757,8 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                     /* these are the must have parameters */
                     list_add_item(xserver_params, (tintptr)g_strdup(xserver));
                     list_add_item(xserver_params, (tintptr)g_strdup(screen));
+                    list_add_item(xserver_params, (tintptr)g_strdup("-auth"));
+                    list_add_item(xserver_params, (tintptr)g_strdup(authfile));
                     list_add_item(xserver_params, (tintptr)g_strdup("-geometry"));
                     list_add_item(xserver_params, (tintptr)g_strdup(geometry));
                     list_add_item(xserver_params, (tintptr)g_strdup("-depth"));
@@ -768,6 +790,8 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                     /* these are the must have parameters */
                     list_add_item(xserver_params, (tintptr)g_strdup(xserver));
                     list_add_item(xserver_params, (tintptr)g_strdup(screen));
+                    list_add_item(xserver_params, (tintptr)g_strdup("-auth"));
+                    list_add_item(xserver_params, (tintptr)g_strdup(authfile));
                     list_add_item(xserver_params, (tintptr)g_strdup("-geometry"));
                     list_add_item(xserver_params, (tintptr)g_strdup(geometry));
                     list_add_item(xserver_params, (tintptr)g_strdup("-depth"));
