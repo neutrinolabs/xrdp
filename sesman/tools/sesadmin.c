@@ -183,8 +183,8 @@ void cmndHelp()
     fprintf(stderr, "-i=<port>    : sesman port (default 3350)\n");
     fprintf(stderr, "-c=<command> : command to execute on the server [MANDATORY]\n");
     fprintf(stderr, "               it can be one of those:\n");
-    fprintf(stderr, "               LIST\n");
-    fprintf(stderr, "               KILL:<sid>\n");
+    fprintf(stderr, "               list\n");
+    fprintf(stderr, "               kill:<sid>\n");
 }
 
 void cmndList(struct SCP_CONNECTION *c)
