@@ -1,5 +1,5 @@
 /*
-Copyright 2014 Jay Sorg
+Copyright 2014-2015 Jay Sorg
 
 Permission to use, copy, modify, distribute, and sell this software and its
 documentation for any purpose is hereby granted without fee, provided that
@@ -24,12 +24,49 @@ x86 asm files
 #ifndef __FUNCS_X86_H
 #define __FUNCS_X86_H
 
-int
-cpuid_x86(int eax_in, int ecx_in, int *eax, int *ebx, int *ecx, int *edx);
-int
-dwt_shift_x86_sse2(unsigned char *yuvs, int width, int height, int *rgbs);
-int
-diff_rlgr3_x86(sint16 *co, int num_co, uint8 *dst, int dst_bytes);
-
+#ifdef __cplusplus
+extern "C" {
 #endif
 
+int
+cpuid_x86(int eax_in, int ecx_in, int *eax, int *ebx, int *ecx, int *edx);
+
+int
+rfxcodec_encode_dwt_shift_x86_sse2(const char *qtable,
+                                   unsigned char *data,
+                                   short *dwt_buffer1,
+                                   short *dwt_buffer);
+int
+rfxcodec_encode_dwt_shift_x86_sse41(const char *qtable,
+                                    unsigned char *data,
+                                    short *dwt_buffer1,
+                                    short *dwt_buffer);
+
+int
+rfxcodec_encode_diff_rlgr1_x86_sse2(short *co,
+                                    void *dst, int dst_bytes);
+int
+rfxcodec_encode_diff_rlgr3_x86_sse2(short *co,
+                                    void *dst, int dst_bytes);
+
+int
+rfxcodec_decode_rlgr1_diff_x86_sse2(void *data, int data_bytes,
+                                    short *out_data);
+int
+rfxcodec_decode_rlgr3_diff_x86_sse2(void *data, int data_bytes,
+                                    short *out_data);
+int
+rfxcodec_decode_shift_idwt_x86_sse2(const char *qtable, short *src, short *dst);
+int
+rfxcodec_decode_yuv2rgb_x86_sse2(short *ydata, short *udata, short *vdata,
+                                 unsigned int *rgbdata, int stride);
+int
+rfxcodec_decode_yuva2argb_x86_sse2(short *ydata, short *udata,
+                                   short *vdata, char *adata,
+                                   unsigned int *rgbdata, int stride);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

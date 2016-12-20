@@ -1,7 +1,7 @@
 /**
  * RFX codec encoder
  *
- * Copyright 2014 Jay Sorg <jay.sorg@gmail.com>
+ * Copyright 2014-2015 Jay Sorg <jay.sorg@gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,7 @@
 
 struct rfxencode;
 
-typedef int (*rfx_encode_proc)(struct rfxencode *enc,
-                               const int *quantization_values,
+typedef int (*rfx_encode_proc)(struct rfxencode *enc, const char *qtable,
                                uint8 *data, uint8 *buffer,
                                int buffer_size, int *size);
 
@@ -39,13 +38,18 @@ struct rfxencode
     int format;
     int pad0[7];
 
+    uint8 a_buffer[4096];
     uint8 y_r_buffer[4096];
-    uint8 cb_g_buffer[4096];
-    uint8 cr_b_buffer[4096];
-
-    sint16 dwt_buffer[4096];
-    sint16 dwt_buffer1[4096];
-
+    uint8 u_g_buffer[4096];
+    uint8 v_b_buffer[4096];
+    uint8 pad1[16];
+    sint16 dwt_buffer_a[4096];
+    sint16 dwt_buffer1_a[4096];
+    sint16 dwt_buffer2_a[4096];
+    uint8 pad2[16];
+    sint16* dwt_buffer;
+    sint16* dwt_buffer1;
+    sint16* dwt_buffer2;
     rfx_encode_proc rfx_encode;
 
     int got_sse2;
@@ -56,7 +60,6 @@ struct rfxencode
     int got_popcnt;
     int got_lzcnt;
     int got_neon;
-
 };
 
 #endif

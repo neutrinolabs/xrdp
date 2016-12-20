@@ -23,6 +23,6 @@
 #include "rfxcommon.h"
 
 int
-rfx_quantization_encode(sint16* buffer, const int* quantization_values);
+rfx_quantization_encode(sint16 *buffer, const char *quantization_values);
 
 #endif /* __RFX_QUANTIZATION_H */

@@ -1,3 +1,6 @@
+%ifidn __OUTPUT_FORMAT__,elf64
+SECTION .note.GNU-stack noalloc noexec nowrite progbits
+%endif
 
 SECTION .text
 
@@ -13,10 +16,14 @@ SECTION .text
 ;int
 ;cpuid_amd64(int eax_in, int ecx_in, int *eax, int *ebx, int *ecx, int *edx)
 
+%ifidn __OUTPUT_FORMAT__,elf64
 PROC cpuid_amd64
+%else
+PROC _cpuid_amd64
+%endif
     ; save registers
     push rbx
-    
+
     push rdx
     push rcx
     push r8
@@ -33,9 +40,9 @@ PROC cpuid_amd64
     mov [rdi], ebx
     pop rdi
     mov [rdi], eax
-    mov eax, 0
+    mov rax, 0
     ; restore registers
     pop rbx
-    ret;
+    ret
     align 16
 

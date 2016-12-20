@@ -1,7 +1,7 @@
 /**
  * RFX codec
  *
- * Copyright 2014 Jay Sorg <jay.sorg@gmail.com>
+ * Copyright 2014-2015 Jay Sorg <jay.sorg@gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@
 #define MIN(_val1, _val2) (_val1) < (_val2) ? (_val1) : (_val2)
 #define MAX(_val1, _val2) (_val1) > (_val2) ? (_val1) : (_val2)
 #define MINMAX(_v, _l, _h) ((_v) < (_l) ? (_l) : ((_v) > (_h) ? (_h) : (_v)))
+
+#define DWT_FACTOR 5
 
 typedef signed char sint8;
 typedef unsigned char uint8;

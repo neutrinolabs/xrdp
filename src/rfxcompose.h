@@ -1,7 +1,7 @@
 /**
  * RFX codec encoder
  *
- * Copyright 2014 Jay Sorg <jay.sorg@gmail.com>
+ * Copyright 2014-2015 Jay Sorg <jay.sorg@gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,9 +25,9 @@ int
 rfx_compose_message_header(struct rfxencode* enc, STREAM* s);
 int
 rfx_compose_message_data(struct rfxencode* enc, STREAM* s,
-                         struct rfx_rect *regions, int num_regions,
+                         const struct rfx_rect *regions, int num_regions,
                          char *buf, int width, int height, int stride_bytes,
-                         struct rfx_tile *tiles, int num_tiles,
-                         const int *quants, int num_quants);
+                         const struct rfx_tile *tiles, int num_tiles,
+                         const char *quants, int num_quants, int flags);
 
 #endif

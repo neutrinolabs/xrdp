@@ -124,7 +124,7 @@ do { \
 } while (0)
 
 int
-rfx_rlgr1_encode(const sint16* data, int data_size, uint8* buffer, int buffer_size)
+rfx_rlgr1_encode(const sint16* data, uint8* buffer, int buffer_size)
 {
     int k;
     int kp;
@@ -137,6 +137,7 @@ rfx_rlgr1_encode(const sint16* data, int data_size, uint8* buffer, int buffer_si
     int sign;
     int processed_size;
     int lmag;
+    int data_size;
 
     RFX_BITSTREAM bs;
 
@@ -150,6 +151,7 @@ rfx_rlgr1_encode(const sint16* data, int data_size, uint8* buffer, int buffer_si
     krp = 1 << LSGR;
 
     /* process all the input coefficients */
+    data_size = 4096;
     while (data_size > 0)
     {
         if (k)
