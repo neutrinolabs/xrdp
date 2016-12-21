@@ -125,6 +125,12 @@ AC_ARG_ENABLE(painter, AS_HELP_STRING([--enable-painter],
               [], [enable_painter=no])
 AM_CONDITIONAL(XRDP_PAINTER, [test x$enable_painter = xyes])
 
+# Don't fail without working nasm if rfxcodec is not enabled
+if test "x$enable_rfxcodec" != xyes; then
+  with_simd=no
+  export with_simd
+fi
+
 # Check if -ldl is needed to use dlopen()
 DLOPEN_LIBS=
 AC_CHECK_FUNC(dlopen, [],
