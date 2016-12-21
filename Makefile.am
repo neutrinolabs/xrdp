@@ -33,6 +33,12 @@ else
 XRDPVRDIR =
 endif
 
+if XRDP_PAINTER
+PAINTERDIR = libpainter
+else
+PAINTERDIR =
+endif
+
 if XRDP_RFXCODEC
 RFXCODECDIR = librfxcodec
 else
@@ -40,7 +46,6 @@ RFXCODECDIR =
 endif
 
 SUBDIRS = \
-  libpainter \
   common \
   vnc \
   rdp \
@@ -48,6 +53,7 @@ SUBDIRS = \
   mc \
   $(NEUTRINORDPDIR) \
   libxrdp \
+  $(PAINTERDIR) \
   $(RFXCODECDIR) \
   xrdp \
   sesman \
