@@ -34,6 +34,43 @@ make
 then as root
 make install
 
+
+Customize Desktop Environment for xRDP Session
+
+If you do not want to use the default desktop environment, you can customize it by creating a .Xclients file (X is capital!!!) in your home directory to launch the desktop environment you want and making it executable. In order to do this, open a terminal and run one of the following commands
+
+Gnome 3:
+echo "gnome-session" > ~/.Xclients
+chmod +x ~/.Xclients
+sudo systemctl restart xrdp.service
+
+Gnome Fallback:
+echo "gnome-fallback" > ~/.Xclients
+chmod +x ~/.Xclients
+sudo systemctl restart xrdp.service
+
+KDE:
+echo "startkde" > ~/.Xclients
+chmod +x ~/.Xclients
+sudo systemctl restart xrdp.service
+
+MATE:
+echo "mate-session" > ~/.Xclients
+chmod +x ~/.Xclients
+sudo systemctl restart xrdp.service
+
+Cinnamon:
+echo "cinnamon" > ~/.Xclients
+chmod +x ~/.Xclients
+sudo systemctl restart xrdp.service
+
+Xfce4:
+echo "startxfce4" > ~/.Xclients
+chmod +x ~/.Xclients
+sudo systemctl restart xrdp.service
+
+if you're not using systemd, try sudo service xrdp restart
+
 see file-loc.txt to see what files are installed where
 
 Jay Sorg
