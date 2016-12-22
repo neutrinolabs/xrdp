@@ -59,6 +59,7 @@
 #define SESMAN_CFG_SEC_USR_GROUP     "TerminalServerUsers"
 #define SESMAN_CFG_SEC_ADM_GROUP     "TerminalServerAdmins"
 #define SESMAN_CFG_SEC_ALWAYSGROUPCHECK "AlwaysGroupCheck"
+#define SESMAN_CFG_RESTRICT_CLIPBOARD "RestrictClipboard"
 
 #define SESMAN_CFG_SESSIONS          "Sessions"
 #define SESMAN_CFG_SESS_MAX          "MaxSessions"
@@ -125,6 +126,14 @@ struct config_security
    * @brief if the Groups are not found deny access
    */
   int ts_always_group_check;
+  /**
+   * @var restrict_clipboard
+   * @brief if the one-direction clipboard policy should be enforced. Only allow client -> serve, not vice versa.
+   */
+  int restrict_clipboard;
+
+
+
 };
 
 /**

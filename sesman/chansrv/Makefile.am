@@ -9,7 +9,9 @@ AM_CPPFLAGS = \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
-  -I$(top_srcdir)/common
+  -I$(top_srcdir)/common \
+  -I$(top_srcdir)/sesman \
+  -I$(top_srcdir)/sesman/libscp
 
 CHANSRV_EXTRA_LIBS =
 
@@ -63,7 +65,8 @@ xrdp_chansrv_SOURCES = \
   sound.c \
   sound.h \
   xcommon.c \
-  xcommon.h
+  xcommon.h \
+  config.c
 
 xrdp_chansrv_LDFLAGS = \
   $(X_LIBS)
