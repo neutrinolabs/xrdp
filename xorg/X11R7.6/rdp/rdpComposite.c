@@ -224,7 +224,7 @@ print_format(PictFormatShort format)
 
 /******************************************************************************/
 static int
-compsoite_print(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
+composite_print(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
                 INT16 xSrc, INT16 ySrc, INT16 xMask, INT16 yMask, INT16 xDst,
                 INT16 yDst, CARD16 width, CARD16 height)
 {
@@ -233,7 +233,7 @@ compsoite_print(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
     rdpPixmapRec* pSrcPriv;
     rdpPixmapRec* pDstPriv;
     
-    LLOGLN(0, ("compsoite_print: op %d xSrc %d ySrc %d xDst %d yDst %d "
+    LLOGLN(0, ("composite_print: op %d xSrc %d ySrc %d xDst %d yDst %d "
                "width %d height %d",
                op, xSrc, ySrc, xDst, yDst, width, height));
     
@@ -493,7 +493,7 @@ check_drawables(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
     {
         LLOGLN(10, ("check_drawables: can not remote [%s]", g_com_fail_strings[fail_reason]));
 #if 0
-        compsoite_print(op, pSrc, pMask, pDst, xSrc, ySrc, xMask, yMask,
+        composite_print(op, pSrc, pMask, pDst, xSrc, ySrc, xMask, yMask,
                         xDst, yDst, width, height);
 #endif
     }
@@ -501,7 +501,7 @@ check_drawables(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
     {
         LLOGLN(10, ("check_drawables: can remote  [%s]", g_com_fail_strings[fail_reason]));
 #if 0
-        compsoite_print(op, pSrc, pMask, pDst, xSrc, ySrc, xMask, yMask,
+        composite_print(op, pSrc, pMask, pDst, xSrc, ySrc, xMask, yMask,
                         xDst, yDst, width, height);
 #endif
     }
@@ -707,7 +707,7 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
         {
             if (pMask != 0)
             {
-                /* TODO: here we can try to send it as a gylph */
+                /* TODO: here we can try to send it as a glyph */
             }
         }
     }
@@ -745,7 +745,7 @@ rdpComposite(CARD8 op, PicturePtr pSrc, PicturePtr pMask, PicturePtr pDst,
             post_process = 1;
             if (g_do_dirty_os)
             {
-                LLOGLN(10, ("rdpComposite: gettig dirty"));
+                LLOGLN(10, ("rdpComposite: getting dirty"));
                 pDstPriv->is_dirty = 1;
                 dirty_type = g_doing_font ? RDI_IMGLL : RDI_IMGLY;
                 pDirtyPriv = pDstPriv;

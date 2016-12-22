@@ -312,7 +312,7 @@ rdp_rdp_out_colcache_caps(struct rdp_rdp *self, struct stream *s)
     return 0;
 }
 
-static char caps_0x0d[] =
+static const unsigned char caps_0x0d[] =
 {
     0x01, 0x00, 0x00, 0x00, 0x09, 0x04, 0x00, 0x00,
     0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -327,11 +327,11 @@ static char caps_0x0d[] =
     0x00, 0x00, 0x00, 0x00
 };
 
-static char caps_0x0c[] = { 0x01, 0x00, 0x00, 0x00 };
+static const unsigned char caps_0x0c[] = { 0x01, 0x00, 0x00, 0x00 };
 
-static char caps_0x0e[] = { 0x01, 0x00, 0x00, 0x00 };
+static const unsigned char caps_0x0e[] = { 0x01, 0x00, 0x00, 0x00 };
 
-static char caps_0x10[] =
+static const unsigned char caps_0x10[] =
 {
     0xFE, 0x00, 0x04, 0x00, 0xFE, 0x00, 0x04, 0x00,
     0xFE, 0x00, 0x08, 0x00, 0xFE, 0x00, 0x08, 0x00,
@@ -345,7 +345,7 @@ static char caps_0x10[] =
 /* Output unknown capability sets */
 static int APP_CC
 rdp_rdp_out_unknown_caps(struct rdp_rdp *self, struct stream *s, int id,
-                         int length, char *caps)
+                         int length, const unsigned char *caps)
 {
     out_uint16_le(s, id);
     out_uint16_le(s, length);
@@ -415,9 +415,9 @@ rdp_rdp_send_confirm_active(struct rdp_rdp *self, struct stream *s)
 static int APP_CC
 rdp_rdp_process_color_pointer_pdu(struct rdp_rdp *self, struct stream *s)
 {
-    int cache_idx;
-    int dlen;
-    int mlen;
+    unsigned int cache_idx;
+    unsigned int dlen;
+    unsigned int mlen;
     struct rdp_cursor *cursor;
 
     in_uint16_le(s, cache_idx);
@@ -506,8 +506,6 @@ static int APP_CC
 rdp_rdp_process_pointer_pdu(struct rdp_rdp *self, struct stream *s)
 {
     int message_type;
-    int x;
-    int y;
     int rv;
 
     rv = 0;
@@ -517,8 +515,8 @@ rdp_rdp_process_pointer_pdu(struct rdp_rdp *self, struct stream *s)
     switch (message_type)
     {
         case RDP_POINTER_MOVE:
-            in_uint16_le(s, x);
-            in_uint16_le(s, y);
+            in_uint8s(s, 2); /* x */
+            in_uint8s(s, 2); /* y */
             break;
         case RDP_POINTER_COLOR:
             rv = rdp_rdp_process_color_pointer_pdu(self, s);
@@ -934,15 +932,13 @@ int APP_CC
 rdp_rdp_process_data_pdu(struct rdp_rdp *self, struct stream *s)
 {
     int data_pdu_type;
-    int ctype;
-    int len;
     int rv;
 
     rv = 0;
     in_uint8s(s, 6); /* shareid, pad, streamid */
-    in_uint16_le(s, len);
+    in_uint8s(s, 2); /* len */
     in_uint8(s, data_pdu_type);
-    in_uint8(s, ctype);
+    in_uint8s(s, 1); /* ctype */
     in_uint8s(s, 2); /* clen */
 
     switch (data_pdu_type)
@@ -983,14 +979,12 @@ rdp_rdp_process_general_caps(struct rdp_rdp *self, struct stream *s)
 static void APP_CC
 rdp_rdp_process_bitmap_caps(struct rdp_rdp *self, struct stream *s)
 {
-    int width = 0;
-    int height = 0;
     int bpp = 0;
 
     in_uint16_le(s, bpp);
     in_uint8s(s, 6);
-    in_uint16_le(s, width);
-    in_uint16_le(s, height);
+    in_uint8s(s, 2); /* width */
+    in_uint8s(s, 2); /* height */
     self->mod->rdp_bpp = bpp;
     /* todo, call reset if needed and use width and height */
 }

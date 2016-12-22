@@ -22,6 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "rdp.h"
 #include "xrdp_rail.h"
 #include "rdpglyph.h"
+#include "rdprandr.h"
 
 #include <signal.h>
 #include <sys/ipc.h>
@@ -35,7 +36,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
 
 static int g_use_shmem = 1; /* turns on or off */
-static int g_shmemid = 0;
+static int g_shmemid = -1;
 static char *g_shmemptr = 0;
 static int g_shmem_lineBytes = 0;
 static RegionPtr g_shm_reg = 0;
@@ -712,7 +713,6 @@ sck_can_recv(int sck, int millis)
 static int
 process_screen_size_msg(int width, int height, int bpp)
 {
-    RRScreenSizePtr pSize;
     int mmwidth;
     int mmheight;
     int bytes;
@@ -750,28 +750,39 @@ process_screen_size_msg(int width, int height, int bpp)
         if (g_shmemptr != 0)
         {
             shmdt(g_shmemptr);
+            g_shmemptr = 0;
         }
         bytes = g_rdpScreen.rdp_width * g_rdpScreen.rdp_height *
                 g_rdpScreen.rdp_Bpp;
         g_shmemid = shmget(IPC_PRIVATE, bytes, IPC_CREAT | 0777);
-        g_shmemptr = shmat(g_shmemid, 0, 0);
-        shmctl(g_shmemid, IPC_RMID, NULL);
-        LLOGLN(0, ("process_screen_size_msg: g_shmemid %d g_shmemptr %p",
-               g_shmemid, g_shmemptr));
-        g_shmem_lineBytes = g_rdpScreen.rdp_Bpp * g_rdpScreen.rdp_width;
-
-        if (g_shm_reg != 0)
+        if (g_shmemid != -1)
         {
-            RegionDestroy(g_shm_reg);
+            g_shmemptr = shmat(g_shmemid, 0, 0);
+            if (g_shmemptr == (void *) -1)
+            {
+                LLOGLN(0, ("process_screen_size_msg: shmat failed for %d "
+                       "bytes g_shmemid %d", bytes, g_shmemid));
+                g_shmemptr = 0;
+                shmctl(g_shmemid, IPC_RMID, NULL);
+                g_shmemid = -1;
+            }
+            else
+            {
+                shmctl(g_shmemid, IPC_RMID, NULL);
+            }
+            LLOGLN(0, ("process_screen_size_msg: g_shmemid %d g_shmemptr %p",
+                   g_shmemid, g_shmemptr));
+            g_shmem_lineBytes = g_rdpScreen.rdp_Bpp * g_rdpScreen.rdp_width;
+            if (g_shm_reg != 0)
+            {
+                RegionDestroy(g_shm_reg);
+            }
+            g_shm_reg = RegionCreate(NullBox, 0);
         }
-        g_shm_reg = RegionCreate(NullBox, 0);
     }
 
     mmwidth = PixelToMM(width);
     mmheight = PixelToMM(height);
-
-    pSize = RRRegisterSize(g_pScreen, width, height, mmwidth, mmheight);
-    RRSetCurrentConfig(g_pScreen, RR_Rotate_0, 0, pSize);
 
     if ((g_rdpScreen.width != width) || (g_rdpScreen.height != height))
     {
@@ -916,6 +927,7 @@ rdpup_process_msg(struct stream *s)
     int y;
     int cx;
     int cy;
+    int index;
     RegionRec reg;
     BoxRec box;
 
@@ -1105,16 +1117,45 @@ rdpup_process_msg(struct stream *s)
         {
             LLOGLN(0, ("  client can not do new(color) cursor"));
         }
+
         if (g_rdpScreen.client_info.monitorCount > 0)
         {
             LLOGLN(0, ("  client can do multimon"));
             LLOGLN(0, ("  client monitor data, monitorCount= %d", g_rdpScreen.client_info.monitorCount));
+            box.x1 = g_rdpScreen.client_info.minfo[0].left;
+            box.y1 = g_rdpScreen.client_info.minfo[0].top;
+            box.x2 = g_rdpScreen.client_info.minfo[0].right;
+            box.y2 = g_rdpScreen.client_info.minfo[0].bottom;
             g_do_multimon = 1;
+            /* adjust monitor info so it's not negative */
+            for (index = 1; index < g_rdpScreen.client_info.monitorCount; index++)
+            {
+                box.x1 = min(box.x1, g_rdpScreen.client_info.minfo[index].left);
+                box.y1 = min(box.y1, g_rdpScreen.client_info.minfo[index].top);
+                box.x2 = max(box.x2, g_rdpScreen.client_info.minfo[index].right);
+                box.y2 = max(box.y2, g_rdpScreen.client_info.minfo[index].bottom);
+            }
+            for (index = 0; index < g_rdpScreen.client_info.monitorCount; index++)
+            {
+                g_rdpScreen.client_info.minfo[index].left -= box.x1;
+                g_rdpScreen.client_info.minfo[index].top -= box.y1;
+                g_rdpScreen.client_info.minfo[index].right -= box.x1;
+                g_rdpScreen.client_info.minfo[index].bottom -= box.y1;
+                LLOGLN(0, ("    left %d top %d right %d bottom %d",
+                       g_rdpScreen.client_info.minfo[index].left,
+                       g_rdpScreen.client_info.minfo[index].top,
+                       g_rdpScreen.client_info.minfo[index].right,
+                       g_rdpScreen.client_info.minfo[index].bottom));
+            }
+            rdpRRSetRdpOutputs();
+            RRTellChanged(g_pScreen);
         }
         else
         {
             LLOGLN(0, ("  client can not do multimon"));
             g_do_multimon = 0;
+            rdpRRSetRdpOutputs();
+            RRTellChanged(g_pScreen);
         }
 
         rdpLoadLayout(&(g_rdpScreen.client_info));
@@ -1305,7 +1346,7 @@ rdpup_init(void)
         g_disconnect_timeout_s = 60;
     }
 
-    rdpLog("kill disconencted [%d] timeout [%d] sec\n", g_do_kill_disconnected,
+    rdpLog("kill disconnected [%d] timeout [%d] sec\n", g_do_kill_disconnected,
            g_disconnect_timeout_s);
 
     return 1;
@@ -2108,7 +2149,7 @@ rdpup_send_area(struct image_data *id, int x, int y, int w, int h)
             safety = 0;
             while (RegionContainsRect(g_shm_reg, &box))
             {
-                /* instread of rdpup_end_update, call rdpup_send_pending */
+                /* instead of rdpup_end_update, call rdpup_send_pending */
                 rdpup_send_pending();
                 rdpup_begin_update();
                 safety++;
@@ -2809,7 +2850,7 @@ rdpup_check_alpha_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec* pDirtyPriv)
 
 /******************************************************************************/
 int
-rdpup_add_char(int font, int charactor, short x, short y, int cx, int cy,
+rdpup_add_char(int font, int character, short x, short y, int cx, int cy,
                char* bmpdata, int bmpdata_bytes)
 {
     if (g_connected)
@@ -2820,7 +2861,7 @@ rdpup_add_char(int font, int charactor, short x, short y, int cx, int cy,
         out_uint16_le(g_out_s, 18 + bmpdata_bytes); /* size */
         g_count++;
         out_uint16_le(g_out_s, font);
-        out_uint16_le(g_out_s, charactor);
+        out_uint16_le(g_out_s, character);
         out_uint16_le(g_out_s, x);
         out_uint16_le(g_out_s, y);
         out_uint16_le(g_out_s, cx);
@@ -2833,7 +2874,7 @@ rdpup_add_char(int font, int charactor, short x, short y, int cx, int cy,
 
 /******************************************************************************/
 int
-rdpup_add_char_alpha(int font, int charactor, short x, short y, int cx, int cy,
+rdpup_add_char_alpha(int font, int character, short x, short y, int cx, int cy,
                      char* bmpdata, int bmpdata_bytes)
 {
     if (g_connected)
@@ -2844,7 +2885,7 @@ rdpup_add_char_alpha(int font, int charactor, short x, short y, int cx, int cy,
         out_uint16_le(g_out_s, 18 + bmpdata_bytes); /* size */
         g_count++;
         out_uint16_le(g_out_s, font);
-        out_uint16_le(g_out_s, charactor);
+        out_uint16_le(g_out_s, character);
         out_uint16_le(g_out_s, x);
         out_uint16_le(g_out_s, y);
         out_uint16_le(g_out_s, cx);

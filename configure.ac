@@ -1,13 +1,45 @@
 # Process this file with autoconf to produce a configure script
 
-AC_PREREQ(2.59)
-AC_INIT([xrdp], [0.9.0], [xrdp-devel@lists.sourceforge.net])
+AC_PREREQ(2.65)
+AC_INIT([xrdp], [0.9.1], [xrdp-devel@googlegroups.com])
 AC_CONFIG_HEADERS(config_ac.h:config_ac-h.in)
-AM_INIT_AUTOMAKE([1.6 foreign])
+AM_INIT_AUTOMAKE([1.7.2 foreign])
+AC_CONFIG_MACRO_DIR([m4])
 AC_PROG_CC
 AC_C_CONST
 AC_PROG_LIBTOOL
 PKG_PROG_PKG_CONFIG
+
+AC_CONFIG_SUBDIRS([libpainter librfxcodec])
+
+# Use silent rules by default if supported by Automake
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
+
+AX_CFLAGS_WARN_ALL
+AX_APPEND_COMPILE_FLAGS([-Wwrite-strings])
+AX_GCC_FUNC_ATTRIBUTE([format])
+AX_TYPE_SOCKLEN_T
+
+case $host_os in
+	*linux*)
+		linux=yes
+		;;
+	*freebsd*)
+		freebsd=yes
+		;;
+	*netbsd*)
+		netbsd=yes
+		;;
+	*openbsd*)
+		openbsd=yes
+		;;
+esac
+
+AM_CONDITIONAL(LINUX, [test "x$linux" = xyes])
+AM_CONDITIONAL(FREEBSD, [test "x$freebsd" = xyes])
+AM_CONDITIONAL(OPENBSD, [test "x$openbsd" = xyes])
+AM_CONDITIONAL(NETBSD, [test "x$netbsd" = xyes])
+
 AC_ARG_WITH([systemdsystemunitdir],
         AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files]),
         [], [with_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)])
@@ -29,6 +61,12 @@ AC_ARG_ENABLE(nopam, AS_HELP_STRING([--enable-nopam],
                   fi
               ])
 AM_CONDITIONAL(SESMAN_NOPAM, [test x$enable_pam != xyes])
+AC_ARG_ENABLE(ipv6, AS_HELP_STRING([--enable-ipv6],
+              [Build IPv6 support (default: no, experimental)]),
+              [], [enable_ipv6=no])
+AC_ARG_ENABLE(ipv6only, AS_HELP_STRING([--enable-ipv6only],
+              [Build IPv6-only (default: no)]),
+              [], [enable_ipv6only=no])
 AC_ARG_ENABLE(kerberos, AS_HELP_STRING([--enable-kerberos],
               [Build kerberos support (default: no)]),
               [], [enable_kerberos=no])
@@ -69,13 +107,48 @@ AC_ARG_ENABLE(rfxcodec, AS_HELP_STRING([--enable-rfxcodec],
               [Build using librfxcodec (default: no)]),
               [], [enable_rfxcodec=no])
 AM_CONDITIONAL(XRDP_RFXCODEC, [test x$enable_rfxcodec = xyes])
+AC_ARG_ENABLE(opus, AS_HELP_STRING([--enable-opus],
+              [Build opus(audio codec) (default: no)]),
+              [], [enable_opus=no])
+AM_CONDITIONAL(XRDP_OPUS, [test x$enable_opus = xyes])
+AC_ARG_ENABLE(mp3lame, AS_HELP_STRING([--enable-mp3lame],
+              [Build lame mp3(audio codec) (default: no)]),
+              [], [enable_mp3lame=no])
+AM_CONDITIONAL(XRDP_MP3LAME, [test x$enable_mp3lame = xyes])
+AC_ARG_ENABLE(pixman, AS_HELP_STRING([--enable-pixman],
+              [Use pixman library (default: no)]),
+              [], [enable_pixman=no])
+AM_CONDITIONAL(XRDP_PIXMAN, [test x$enable_pixman = xyes])
+AM_CONDITIONAL(XRDP_PAINTER, [test x$enable_painter = xyes])
+AC_ARG_ENABLE(painter, AS_HELP_STRING([--enable-painter],
+              [Use painter library (default: no)]),
+              [], [enable_painter=no])
+AM_CONDITIONAL(XRDP_PAINTER, [test x$enable_painter = xyes])
 
-AM_CONDITIONAL(GOT_PREFIX, test "x${prefix}" != "xNONE"])
+# Don't fail without working nasm if rfxcodec is not enabled
+if test "x$enable_rfxcodec" != xyes; then
+  with_simd=no
+  export with_simd
+fi
+
+# Check if -ldl is needed to use dlopen()
+DLOPEN_LIBS=
+AC_CHECK_FUNC(dlopen, [],
+              [AC_CHECK_LIB(dl, dlopen, [DLOPEN_LIBS=-ldl])])
+AC_SUBST(DLOPEN_LIBS)
 
 # checking for openssl
-AC_CHECK_HEADER([openssl/rc4.h], [],
-  [AC_MSG_ERROR([please install libssl-dev or openssl-devel])],
-  [#include <stdlib.h>])
+PKG_CHECK_MODULES([OPENSSL], [openssl >= 0], [],
+  [AC_MSG_ERROR([please install libssl-dev or openssl-devel])])
+
+# checking for pam variation
+# Linux-PAM is used in Linux systems
+# OpenPAM is used by FreeBSD, NetBSD, DragonFly BSD and OS X
+# OpenBSD uses BSD Authentication rather than both PAMs
+AC_CHECK_HEADER([security/_pam_types.h],
+                [AC_DEFINE([HAVE__PAM_TYPES_H], 1, [Using Linux-PAM], [])])
+AC_CHECK_HEADER([security/pam_constants.h],
+                [AC_DEFINE([HAVE_PAM_CONSTANTS_H], 1, [Using OpenPAM], [])])
 
 # checking if pam should be autodetected.
 if test "x$enable_pam" = "xyes"
@@ -90,10 +163,16 @@ then
   fi
 fi
 
-AC_CHECK_MEMBER([struct in6_addr.s6_addr],
-                [],
-                [AC_DEFINE(NO_ARPA_INET_H_IP6, 1, [for IPv6])],
-                [#include <arpa/inet.h>])
+if test "x$enable_ipv6only" = "xyes"
+then
+  enable_ipv6=yes
+  AC_DEFINE([XRDP_ENABLE_IPV6ONLY],1,[Enable IPv6 only])
+fi
+
+if test "x$enable_ipv6" = "xyes"
+then
+  AC_DEFINE([XRDP_ENABLE_IPV6],1,[Enable IPv6])
+fi
 
 if test "x$enable_pam" != "xyes" || test "x$bsd" = "xtrue"
 then
@@ -117,10 +196,25 @@ fi
 # checking for fuse
 if test "x$enable_fuse" = "xyes"
 then
-  AC_CHECK_HEADER([fuse.h], [],
-    [AC_MSG_ERROR([please install libfuse-dev or fuse-devel])],
-    [#define _FILE_OFFSET_BITS 64])
+  PKG_CHECK_MODULES([FUSE], [fuse >= 2.6], [],
+    [AC_MSG_ERROR([please install libfuse-dev or fuse-devel])])
 fi
+
+# checking for opus
+if test "x$enable_opus" = "xyes"
+then
+  AC_CHECK_HEADER([opus/opus.h], [],
+    [AC_MSG_ERROR([please install libopus-dev or opus-devel])])
+fi
+
+# checking for lame mp3
+if test "x$enable_mp3lame" = "xyes"
+then
+  AC_CHECK_HEADER([lame/lame.h], [],
+    [AC_MSG_ERROR([please install libmp3lame-dev or lamemp3-devel])])
+fi
+
+AS_IF( [test "x$enable_pixman" = "xyes"] , [PKG_CHECK_MODULES(PIXMAN, pixman-1 >= 0.1.0)] )
 
 # checking for TurboJPEG
 if test "x$enable_tjpeg" = "xyes"
@@ -152,54 +246,67 @@ else
 fi
 fi
 
-# checking for Xlib, Xfixes
-AC_CHECK_HEADER([X11/Xlib.h], [],
-  [AC_MSG_ERROR([please install libx11-dev or libX11-devel])])
+AC_PATH_XTRA
+if test "x$no_x" == "xyes"; then
+  AC_MSG_ERROR([please install libx11-dev or libX11-devel])
+fi
+
+save_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS $X_CFLAGS"
+
+# checking for Xfixes
 AC_CHECK_HEADER([X11/extensions/Xfixes.h], [],
   [AC_MSG_ERROR([please install libx11-dev and libxfixes-dev or libXfixes-devel])],
   [#include <X11/Xlib.h>])
+
+# checking for Xrandr
 AC_CHECK_HEADER([X11/extensions/Xrandr.h], [],
   [AC_MSG_ERROR([please install libxrandr-dev or libXrandr-devel])],
   [#include <X11/Xlib.h>])
 
-libdir="${libdir}/xrdp";
+CFLAGS="$save_CFLAGS"
+
+AC_SUBST([moduledir], '${libdir}/xrdp')
+
 if test "x${prefix}" = "xNONE" ; then
 sysconfdir="/etc";
 localstatedir="/var";
 fi
-AC_CONFIG_FILES([Makefile
-                 common/Makefile
-                 vnc/Makefile
-                 rdp/Makefile
-                 libxrdp/Makefile
-                 xup/Makefile
-                 mc/Makefile
-                 neutrinordp/Makefile
-                 xrdp/Makefile
-                 sesman/Makefile
-                 sesman/libscp/Makefile
-                 sesman/tools/Makefile
-                 sesman/sessvc/Makefile
-                 sesman/chansrv/Makefile
-                 keygen/Makefile
-                 docs/Makefile
-                 docs/man/Makefile
-                 instfiles/Makefile
-                 instfiles/pam.d/Makefile
-                 instfiles/init.d/Makefile
-                 instfiles/default/Makefile
-                 instfiles/pulse/Makefile
-                 genkeymap/Makefile
-                 xrdpapi/Makefile
-                 xrdpvr/Makefile
-])
-#                 fontdump/Makefile
-#                 xrdp/cursors/Makefile
-#                 Xserver/hw/rdp/Makefile
-AC_OUTPUT
 
-# example of how to check for a struct in a header
-#AC_CHECK_MEMBER([struct in6_addr.s6_addr],
-#                [],
-#                [AC_DEFINE(NO_ARPA_INET_H_IP6, 1, [for IPv6])],
-#                [#include <arpa/inet.h>])
+PKG_INSTALLDIR
+
+AC_CHECK_HEADERS([sys/prctl.h])
+
+AC_CONFIG_FILES([
+  common/Makefile
+  docs/Makefile
+  docs/man/Makefile
+  genkeymap/Makefile
+  instfiles/default/Makefile
+  instfiles/init.d/Makefile
+  instfiles/Makefile
+  instfiles/pam.d/Makefile
+  instfiles/pulse/Makefile
+  instfiles/rc.d/Makefile
+  keygen/Makefile
+  libxrdp/Makefile
+  Makefile
+  mc/Makefile
+  neutrinordp/Makefile
+  pkgconfig/Makefile
+  pkgconfig/xrdp.pc
+  pkgconfig/xrdp-uninstalled.pc
+  rdp/Makefile
+  sesman/chansrv/Makefile
+  sesman/libscp/Makefile
+  sesman/Makefile
+  sesman/sessvc/Makefile
+  sesman/tools/Makefile
+  vnc/Makefile
+  xrdpapi/Makefile
+  xrdp/Makefile
+  xrdpvr/Makefile
+  xup/Makefile
+])
+
+AC_OUTPUT

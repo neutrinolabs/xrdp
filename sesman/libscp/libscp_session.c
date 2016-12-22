@@ -42,7 +42,7 @@ scp_session_create()
 
     if (0 == s)
     {
-        log_message(LOG_LEVEL_WARNING, "[session:%d] session create: malloc error", __LINE__);
+        log_message(LOG_LEVEL_ERROR, "[session:%d] session create: malloc error", __LINE__);
         return 0;
     }
 
@@ -137,11 +137,12 @@ scp_session_set_bpp(struct SCP_SESSION *s, tui8 bpp)
         case 15:
         case 16:
         case 24:
+        case 32:
             s->bpp = bpp;
+            break;
         default:
             return 1;
     }
-
     return 0;
 }
 
@@ -163,7 +164,7 @@ scp_session_set_rsr(struct SCP_SESSION *s, tui8 rsr)
 
 /*******************************************************************/
 int
-scp_session_set_locale(struct SCP_SESSION *s, char *str)
+scp_session_set_locale(struct SCP_SESSION *s, const char *str)
 {
     if (0 == str)
     {
@@ -179,7 +180,7 @@ scp_session_set_locale(struct SCP_SESSION *s, char *str)
 
 /*******************************************************************/
 int
-scp_session_set_username(struct SCP_SESSION *s, char *str)
+scp_session_set_username(struct SCP_SESSION *s, const char *str)
 {
     if (0 == str)
     {
@@ -205,7 +206,7 @@ scp_session_set_username(struct SCP_SESSION *s, char *str)
 
 /*******************************************************************/
 int
-scp_session_set_password(struct SCP_SESSION *s, char *str)
+scp_session_set_password(struct SCP_SESSION *s, const char *str)
 {
     if (0 == str)
     {
@@ -231,7 +232,7 @@ scp_session_set_password(struct SCP_SESSION *s, char *str)
 
 /*******************************************************************/
 int
-scp_session_set_domain(struct SCP_SESSION *s, char *str)
+scp_session_set_domain(struct SCP_SESSION *s, const char *str)
 {
     if (0 == str)
     {
@@ -257,7 +258,7 @@ scp_session_set_domain(struct SCP_SESSION *s, char *str)
 
 /*******************************************************************/
 int
-scp_session_set_program(struct SCP_SESSION *s, char *str)
+scp_session_set_program(struct SCP_SESSION *s, const char *str)
 {
     if (0 == str)
     {
@@ -283,7 +284,7 @@ scp_session_set_program(struct SCP_SESSION *s, char *str)
 
 /*******************************************************************/
 int
-scp_session_set_directory(struct SCP_SESSION *s, char *str)
+scp_session_set_directory(struct SCP_SESSION *s, const char *str)
 {
     if (0 == str)
     {
@@ -309,7 +310,7 @@ scp_session_set_directory(struct SCP_SESSION *s, char *str)
 
 /*******************************************************************/
 int
-scp_session_set_client_ip(struct SCP_SESSION *s, char *str)
+scp_session_set_client_ip(struct SCP_SESSION *s, const char *str)
 {
     if (0 == str)
     {
@@ -335,7 +336,7 @@ scp_session_set_client_ip(struct SCP_SESSION *s, char *str)
 
 /*******************************************************************/
 int
-scp_session_set_hostname(struct SCP_SESSION *s, char *str)
+scp_session_set_hostname(struct SCP_SESSION *s, const char *str)
 {
     if (0 == str)
     {
@@ -361,7 +362,7 @@ scp_session_set_hostname(struct SCP_SESSION *s, char *str)
 
 /*******************************************************************/
 int
-scp_session_set_errstr(struct SCP_SESSION *s, char *str)
+scp_session_set_errstr(struct SCP_SESSION *s, const char *str)
 {
     if (0 == str)
     {
@@ -395,55 +396,36 @@ scp_session_set_display(struct SCP_SESSION *s, SCP_DISPLAY display)
 
 /*******************************************************************/
 int
-scp_session_set_addr(struct SCP_SESSION *s, int type, void *addr)
+scp_session_set_addr(struct SCP_SESSION *s, int type, const void *addr)
 {
-    struct in_addr ip4;
-#ifdef IN6ADDR_ANY_INIT
-    struct in6_addr ip6;
-#endif
-    int ret;
-
     switch (type)
     {
         case SCP_ADDRESS_TYPE_IPV4:
-            /* convert from char to 32bit*/
-            ret = inet_pton(AF_INET, addr, &ip4);
-
-            if (ret == 0)
-            {
-                log_message(LOG_LEVEL_WARNING, "[session:%d] set_addr: invalid address", __LINE__);
-                inet_pton(AF_INET, "127.0.0.1", &ip4);
-                g_memcpy(&(s->ipv4addr), &(ip4.s_addr), 4);
-                return 1;
-            }
-
-            g_memcpy(&(s->ipv4addr), &(ip4.s_addr), 4);
-            break;
-        case SCP_ADDRESS_TYPE_IPV4_BIN:
             g_memcpy(&(s->ipv4addr), addr, 4);
             break;
 #ifdef IN6ADDR_ANY_INIT
         case SCP_ADDRESS_TYPE_IPV6:
-            /* convert from char to 128bit*/
-            ret = inet_pton(AF_INET6, addr, &ip6);
-
-            if (ret == 0)
-            {
-                log_message(LOG_LEVEL_WARNING, "[session:%d] set_addr: invalid address", __LINE__);
-                inet_pton(AF_INET, "::1", &ip6);
-                g_memcpy(s->ipv6addr, &(ip6.s6_addr), 16);
-                return 1;
-            }
-
-            g_memcpy(s->ipv6addr, &(ip6.s6_addr), 16);
-            break;
-        case SCP_ADDRESS_TYPE_IPV6_BIN:
             g_memcpy(s->ipv6addr, addr, 16);
             break;
 #endif
         default:
             return 1;
     }
+
+    return 0;
+}
+
+/*******************************************************************/
+int
+scp_session_set_guid(struct SCP_SESSION *s, const tui8 *guid)
+{
+    if (0 == guid)
+    {
+        log_message(LOG_LEVEL_WARNING, "[session:%d] set_guid: null guid", __LINE__);
+        return 1;
+    }
+
+    g_memcpy(s->guid, guid, 16);
 
     return 0;
 }

@@ -22,6 +22,7 @@
  * CLIPRDR_FILEDESCRIPTOR
  * http://msdn.microsoft.com/en-us/library/ff362447%28prot.20%29.aspx */
 
+#include <sys/time.h>
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/extensions/Xfixes.h>
@@ -101,6 +102,7 @@ static int g_file_request_sent_type = 0;
 #define CB_EPOCH_DIFF 11644473600LL
 
 /*****************************************************************************/
+#if 0
 static tui64 APP_CC
 timeval2wintime(struct timeval *tv)
 {
@@ -112,6 +114,7 @@ timeval2wintime(struct timeval *tv)
     result += tv->tv_usec * 10;
     return result;
 }
+#endif
 
 /*****************************************************************************/
 /* this will replace %20 or any hex with the space or correct char
@@ -197,6 +200,7 @@ clipboard_get_file(char* file, int bytes)
     }
     g_memcpy(filename, file + pindex + 1, (bytes - 1) - pindex);
     /* this should replace %20 with space */
+    clipboard_check_file(pathname);
     clipboard_check_file(filename);
     g_snprintf(full_fn, 255, "%s/%s", pathname, filename);
     if (g_directory_exist(full_fn))
@@ -449,7 +453,7 @@ clipboard_send_file_data(int streamId, int lindex,
     if (g_file_seek(fd, nPositionLow) < 0)
     {
         log_message(LOG_LEVEL_ERROR, "clipboard_send_file_data: seek error "
-            "in file: %s\n", full_fn);
+            "in file: %s", full_fn);
         g_file_close(fd);
         return 1;
     }
@@ -528,7 +532,6 @@ clipboard_process_file_request(struct stream *s, int clip_msg_status,
     int lindex;
     int dwFlags;
     int nPositionLow;
-    int nPositionHigh;
     int cbRequested;
     //int clipDataId;
 
@@ -538,7 +541,7 @@ clipboard_process_file_request(struct stream *s, int clip_msg_status,
     in_uint32_le(s, lindex);
     in_uint32_le(s, dwFlags);
     in_uint32_le(s, nPositionLow);
-    in_uint32_le(s, nPositionHigh);
+    in_uint8s(s, 4); /* nPositionHigh */
     in_uint32_le(s, cbRequested);
     //in_uint32_le(s, clipDataId); /* options, used when locking */
     if (dwFlags & CB_FILECONTENTS_SIZE)
@@ -553,7 +556,7 @@ clipboard_process_file_request(struct stream *s, int clip_msg_status,
 }
 
 /*****************************************************************************/
-/* server requested info about the file and this is the responce
+/* server requested info about the file and this is the response
    it's either the file size or file data */
 int APP_CC
 clipboard_process_file_response(struct stream *s, int clip_msg_status,
@@ -626,6 +629,7 @@ clipboard_c2s_in_files(struct stream *s, char *file_list)
     int cItems;
     int lindex;
     int str_len;
+    int file_count;
     struct clip_file_desc *cfd;
     char *ptr;
 
@@ -644,6 +648,7 @@ clipboard_c2s_in_files(struct stream *s, char *file_list)
     log_debug("clipboard_c2s_in_files: cItems %d", cItems);
     cfd = (struct clip_file_desc *)
           g_malloc(sizeof(struct clip_file_desc), 0);
+    file_count = 0;
     ptr = file_list;
     for (lindex = 0; lindex < cItems; lindex++)
     {
@@ -656,7 +661,18 @@ clipboard_c2s_in_files(struct stream *s, char *file_list)
                        "supported [%s]", cfd->cFileName);
             continue;
         }
-        xfuse_add_clip_dir_item(cfd->cFileName, 0, cfd->fileSizeLow, lindex);
+        if (xfuse_add_clip_dir_item(cfd->cFileName, 0, cfd->fileSizeLow, lindex) == -1)
+        {
+            log_error("clipboard_c2s_in_files: failed to add clip dir item");
+            continue;
+        }
+
+        if (file_count > 0)
+        {
+            *ptr = '\n';
+            ptr++;
+        }
+        file_count++;
 
         g_strcpy(ptr, "file://");
         ptr += 7;
@@ -671,9 +687,6 @@ clipboard_c2s_in_files(struct stream *s, char *file_list)
         str_len = g_strlen(cfd->cFileName);
         g_strcpy(ptr, cfd->cFileName);
         ptr += str_len;
-
-        *ptr = '\n';
-        ptr++;
     }
     *ptr = 0;
     g_free(cfd);

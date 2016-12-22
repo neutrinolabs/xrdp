@@ -110,6 +110,7 @@ struct xrdp_client_info
   int multimon; /* 0 = deny , 1 = allow */
   int monitorCount; /* number of monitors detected (max = 16) */
   struct monitor_info minfo[16]; /* client monitor data */
+  struct monitor_info minfo_wm[16]; /* client monitor data, non-negative values */
 
   int keyboard_type;
   int keyboard_subtype;
@@ -134,6 +135,21 @@ struct xrdp_client_info
   char variant[16];
   char options[256];
 
+  /* codec */
+  int h264_codec_id;
+  int h264_prop_len;
+  char h264_prop[64];
+
+  int use_frame_acks;
+  int max_unacknowledged_frame_count;
+
+  int disableSSLv3; /* 0 = no, 1 = yes */
+  char tls_ciphers[64];
+
+  int client_os_major;
+  int client_os_minor;
+
+  int no_orders_supported;
 };
 
 #endif

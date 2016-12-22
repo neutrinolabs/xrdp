@@ -65,12 +65,12 @@ enum logReturns
 
 struct log_config
 {
-    char *program_name;
+    const char *program_name;
     char *log_file;
     int fd;
-    unsigned int log_level;
+    enum logLevels log_level;
     int enable_syslog;
-    unsigned int syslog_level;
+    enum logLevels syslog_level;
     pthread_mutex_t log_lock;
     pthread_mutexattr_t log_lock_attr;
 };
@@ -81,7 +81,7 @@ struct log_config
 /**
  *
  * @brief Starts the logging subsystem
- * @param l_cfg loggging system configuration
+ * @param l_cfg logging system configuration
  * @return
  *
  */
@@ -113,7 +113,7 @@ internal_log_lvl2str(const enum logLevels lvl, char *str);
  *
  */
 enum logLevels DEFAULT_CC
-internal_log_text2level(char *s);
+internal_log_text2level(const char *s);
 
 /**
  * A function that init our struct that holds all state and
@@ -171,17 +171,7 @@ log_end(void);
  * @return
  */
 enum logReturns DEFAULT_CC
-log_message(const enum logLevels lvl, const char *msg, ...);
-
-/**
- *
- * @brief Reads configuration
- * @param s translates the strings "1", "true" and "yes" in 1 (true) and
- * other strings in 0
- * @return 0 on success, 1 on failure
- *
- */
-int APP_CC text2bool(char *s);
+log_message(const enum logLevels lvl, const char *msg, ...) printflike(2, 3);
 
 /**
  * This function returns the configured file name for the logfile

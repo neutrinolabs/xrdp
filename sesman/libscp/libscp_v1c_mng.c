@@ -199,7 +199,7 @@ scp_v1c_mng_get_session_list(struct SCP_CONNECTION *c, int *scount,
                 return SCP_CLIENT_STATE_LIST_OK;
             }
 
-            ds = g_malloc(sizeof(struct SCP_DISCONNECTED_SESSION) * sescnt, 0);
+            ds = g_new(struct SCP_DISCONNECTED_SESSION, sescnt);
 
             if (ds == 0)
             {

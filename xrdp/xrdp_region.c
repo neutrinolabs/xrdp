@@ -20,6 +20,12 @@
 
 #include "xrdp.h"
 
+#if defined(XRDP_PIXMAN)
+#include <pixman.h>
+#else
+#include "pixman-region.h"
+#endif
+
 /*****************************************************************************/
 struct xrdp_region *APP_CC
 xrdp_region_create(struct xrdp_wm *wm)
@@ -28,8 +34,9 @@ xrdp_region_create(struct xrdp_wm *wm)
 
     self = (struct xrdp_region *)g_malloc(sizeof(struct xrdp_region), 1);
     self->wm = wm;
-    self->rects = list_create();
-    self->rects->auto_free = 1;
+    self->reg = (struct pixman_region16 *)
+            g_malloc(sizeof(struct pixman_region16), 1);
+    pixman_region_init(self->reg);
     return self;
 }
 
@@ -41,276 +48,86 @@ xrdp_region_delete(struct xrdp_region *self)
     {
         return;
     }
-
-    list_delete(self->rects);
+    pixman_region_fini(self->reg);
+    g_free(self->reg);
     g_free(self);
 }
 
 /*****************************************************************************/
+/* returns error */
 int APP_CC
 xrdp_region_add_rect(struct xrdp_region *self, struct xrdp_rect *rect)
 {
-    struct xrdp_rect *r;
+    struct pixman_region16 lreg;
 
-    r = (struct xrdp_rect *)g_malloc(sizeof(struct xrdp_rect), 1);
-    *r = *rect;
-    list_add_item(self->rects, (long)r);
-    return 0;
-}
-
-/*****************************************************************************/
-int APP_CC
-xrdp_region_insert_rect(struct xrdp_region *self, int i, int left,
-                        int top, int right, int bottom)
-{
-    struct xrdp_rect *r;
-
-    r = (struct xrdp_rect *)g_malloc(sizeof(struct xrdp_rect), 1);
-    r->left = left;
-    r->top = top;
-    r->right = right;
-    r->bottom = bottom;
-    list_insert_item(self->rects, i, (long)r);
-    return 0;
-}
-
-/*****************************************************************************/
-int APP_CC
-xrdp_region_subtract_rect(struct xrdp_region *self,
-                          struct xrdp_rect *rect)
-{
-    struct xrdp_rect *r;
-    struct xrdp_rect rect1;
-    int i;
-
-    for (i = self->rects->count - 1; i >= 0; i--)
+    pixman_region_init_rect(&lreg, rect->left, rect->top,
+                            rect->right - rect->left,
+                            rect->bottom - rect->top);
+    if (!pixman_region_union(self->reg, self->reg, &lreg))
     {
-        r = (struct xrdp_rect *)list_get_item(self->rects, i);
-        rect1 = *r;
-        r = &rect1;
-
-        if (rect->left <= r->left &&
-                rect->top <= r->top &&
-                rect->right >= r->right &&
-                rect->bottom >= r->bottom)
-        {
-            /* rect is not visible */
-            list_remove_item(self->rects, i);
-        }
-        else if (rect->right < r->left ||
-                 rect->bottom < r->top ||
-                 rect->top > r->bottom ||
-                 rect->left > r->right)
-        {
-            /* rect are not related */
-        }
-        else if (rect->left <= r->left &&
-                 rect->right >= r->right &&
-                 rect->bottom < r->bottom &&
-                 rect->top <= r->top)
-        {
-            /* partially covered(whole top) */
-            list_remove_item(self->rects, i);
-            xrdp_region_insert_rect(self, i, r->left, rect->bottom,
-                                    r->right, r->bottom);
-        }
-        else if (rect->top <= r->top &&
-                 rect->bottom >= r->bottom &&
-                 rect->right < r->right &&
-                 rect->left <= r->left)
-        {
-            /* partially covered(left) */
-            list_remove_item(self->rects, i);
-            xrdp_region_insert_rect(self, i, rect->right, r->top,
-                                    r->right, r->bottom);
-        }
-        else if (rect->left <= r->left &&
-                 rect->right >= r->right &&
-                 rect->top > r->top &&
-                 rect->bottom >= r->bottom)
-        {
-            /* partially covered(bottom) */
-            list_remove_item(self->rects, i);
-            xrdp_region_insert_rect(self, i, r->left, r->top,
-                                    r->right, rect->top);
-        }
-        else if (rect->top <= r->top &&
-                 rect->bottom >= r->bottom &&
-                 rect->left > r->left &&
-                 rect->right >= r->right)
-        {
-            /* partially covered(right) */
-            list_remove_item(self->rects, i);
-            xrdp_region_insert_rect(self, i, r->left, r->top,
-                                    rect->left, r->bottom);
-        }
-        else if (rect->left <= r->left &&
-                 rect->top <= r->top &&
-                 rect->right < r->right &&
-                 rect->bottom < r->bottom)
-        {
-            /* partially covered(top left) */
-            list_remove_item(self->rects, i);
-            xrdp_region_insert_rect(self, i, rect->right, r->top,
-                                    r->right, rect->bottom);
-            xrdp_region_insert_rect(self, i, r->left, rect->bottom,
-                                    r->right, r->bottom);
-        }
-        else if (rect->left <= r->left &&
-                 rect->bottom >= r->bottom &&
-                 rect->right < r->right &&
-                 rect->top > r->top)
-        {
-            /* partially covered(bottom left) */
-            list_remove_item(self->rects, i);
-            xrdp_region_insert_rect(self, i, r->left, r->top,
-                                    r->right, rect->top);
-            xrdp_region_insert_rect(self, i, rect->right, rect->top,
-                                    r->right, r->bottom);
-        }
-        else if (rect->left > r->left &&
-                 rect->right >= r->right &&
-                 rect->top <= r->top &&
-                 rect->bottom < r->bottom)
-        {
-            /* partially covered(top right) */
-            list_remove_item(self->rects, i);
-            xrdp_region_insert_rect(self, i, r->left, r->top,
-                                    rect->left, r->bottom);
-            xrdp_region_insert_rect(self, i, rect->left, rect->bottom,
-                                    r->right, r->bottom);
-        }
-        else if (rect->left > r->left &&
-                 rect->right >= r->right &&
-                 rect->top > r->top &&
-                 rect->bottom >= r->bottom)
-        {
-            /* partially covered(bottom right) */
-            list_remove_item(self->rects, i);
-            xrdp_region_insert_rect(self, i, r->left, r->top,
-                                    r->right, rect->top);
-            xrdp_region_insert_rect(self, i, r->left, rect->top,
-                                    rect->left, r->bottom);
-        }
-        else if (rect->left > r->left &&
-                 rect->top <= r->top &&
-                 rect->right < r->right &&
-                 rect->bottom >= r->bottom)
-        {
-            /* 2 rects, one on each end */
-            list_remove_item(self->rects, i);
-            xrdp_region_insert_rect(self, i, r->left, r->top,
-                                    rect->left, r->bottom);
-            xrdp_region_insert_rect(self, i, rect->right, r->top,
-                                    r->right, r->bottom);
-        }
-        else if (rect->left <= r->left &&
-                 rect->top > r->top &&
-                 rect->right >= r->right &&
-                 rect->bottom < r->bottom)
-        {
-            /* 2 rects, one on each end */
-            list_remove_item(self->rects, i);
-            xrdp_region_insert_rect(self, i, r->left, r->top,
-                                    r->right, rect->top);
-            xrdp_region_insert_rect(self, i, r->left, rect->bottom,
-                                    r->right, r->bottom);
-        }
-        else if (rect->left > r->left &&
-                 rect->right < r->right &&
-                 rect->top <= r->top &&
-                 rect->bottom < r->bottom)
-        {
-            /* partially covered(top) */
-            list_remove_item(self->rects, i);
-            xrdp_region_insert_rect(self, i, r->left, r->top,
-                                    rect->left, r->bottom);
-            xrdp_region_insert_rect(self, i, rect->left, rect->bottom,
-                                    rect->right, r->bottom);
-            xrdp_region_insert_rect(self, i, rect->right, r->top,
-                                    r->right, r->bottom);
-        }
-        else if (rect->top > r->top &&
-                 rect->bottom < r->bottom &&
-                 rect->left <= r->left &&
-                 rect->right < r->right)
-        {
-            /* partially covered(left) */
-            list_remove_item(self->rects, i);
-            xrdp_region_insert_rect(self, i, r->left, r->top,
-                                    r->right, rect->top);
-            xrdp_region_insert_rect(self, i, rect->right, rect->top,
-                                    r->right, rect->bottom);
-            xrdp_region_insert_rect(self, i, r->left, rect->bottom,
-                                    r->right, r->bottom);
-        }
-        else if (rect->left > r->left &&
-                 rect->right < r->right &&
-                 rect->bottom >= r->bottom &&
-                 rect->top > r->top)
-        {
-            /* partially covered(bottom) */
-            list_remove_item(self->rects, i);
-            xrdp_region_insert_rect(self, i, r->left, r->top,
-                                    rect->left, r->bottom);
-            xrdp_region_insert_rect(self, i, rect->left, r->top,
-                                    rect->right, rect->top);
-            xrdp_region_insert_rect(self, i, rect->right, r->top,
-                                    r->right, r->bottom);
-        }
-        else if (rect->top > r->top &&
-                 rect->bottom < r->bottom &&
-                 rect->right >= r->right &&
-                 rect->left > r->left)
-        {
-            /* partially covered(right) */
-            list_remove_item(self->rects, i);
-            xrdp_region_insert_rect(self, i, r->left, r->top,
-                                    r->right, rect->top);
-            xrdp_region_insert_rect(self, i, r->left, rect->top,
-                                    rect->left, rect->bottom);
-            xrdp_region_insert_rect(self, i, r->left, rect->bottom,
-                                    r->right, r->bottom);
-        }
-        else if (rect->left > r->left &&
-                 rect->top > r->top &&
-                 rect->right < r->right &&
-                 rect->bottom < r->bottom)
-        {
-            /* totally contained, 4 rects */
-            list_remove_item(self->rects, i);
-            xrdp_region_insert_rect(self, i, r->left, r->top,
-                                    r->right, rect->top);
-            xrdp_region_insert_rect(self, i, r->left, rect->top,
-                                    rect->left, rect->bottom);
-            xrdp_region_insert_rect(self, i, r->left, rect->bottom,
-                                    r->right, r->bottom);
-            xrdp_region_insert_rect(self, i, rect->right, rect->top,
-                                    r->right, rect->bottom);
-        }
-        else
-        {
-            g_writeln("error in xrdp_region_subtract_rect");
-        }
+        pixman_region_fini(&lreg);
+        return 1;
     }
-
+    pixman_region_fini(&lreg);
     return 0;
 }
 
 /*****************************************************************************/
+/* returns error */
+int APP_CC
+xrdp_region_subtract_rect(struct xrdp_region *self, struct xrdp_rect *rect)
+{
+    struct pixman_region16 lreg;
+
+    pixman_region_init_rect(&lreg, rect->left, rect->top,
+                            rect->right - rect->left,
+                            rect->bottom - rect->top);
+    if (!pixman_region_subtract(self->reg, self->reg, &lreg))
+    {
+        pixman_region_fini(&lreg);
+        return 1;
+    }
+    pixman_region_fini(&lreg);
+    return 0;
+}
+
+/*****************************************************************************/
+/* returns error */
+int APP_CC
+xrdp_region_intersect_rect(struct xrdp_region* self, struct xrdp_rect* rect)
+{
+    struct pixman_region16 lreg;
+
+    pixman_region_init_rect(&lreg, rect->left, rect->top,
+                            rect->right - rect->left,
+                            rect->bottom - rect->top);
+    if (!pixman_region_intersect(self->reg, self->reg, &lreg))
+    {
+        pixman_region_fini(&lreg);
+        return 1;
+    }
+    pixman_region_fini(&lreg);
+    return 0;
+}
+
+
+/*****************************************************************************/
+/* returns error */
 int APP_CC
 xrdp_region_get_rect(struct xrdp_region *self, int index,
                      struct xrdp_rect *rect)
 {
-    struct xrdp_rect *r;
+    struct pixman_box16 *box;
+    int count;
 
-    r = (struct xrdp_rect *)list_get_item(self->rects, index);
-
-    if (r == 0)
+    box = pixman_region_rectangles(self->reg, &count);
+    if ((box != 0) && (index >= 0) && (index < count))
     {
-        return 1;
+        rect->left = box[index].x1;
+        rect->top = box[index].y1;
+        rect->right = box[index].x2;
+        rect->bottom = box[index].y2;
+        return 0;
     }
-
-    *rect = *r;
-    return 0;
+    return 1;
 }

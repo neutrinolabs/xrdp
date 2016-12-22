@@ -138,13 +138,43 @@ xrdp_process_data_in(struct trans *self)
             }
             if (pro->session->up_and_running)
             {
+                pro->server_trans->header_size = 2;
                 pro->server_trans->extra_flags = 1;
-                pro->server_trans->header_size = 4;
                 init_stream(s, 0);
             }
             break;
 
         case 1:
+            /* we got 2 bytes */
+            if (s->p[0] == 3)
+            {
+                pro->server_trans->header_size = 4;
+                pro->server_trans->extra_flags = 2;
+            }
+            else
+            {
+                if (s->p[1] & 0x80)
+                {
+                    pro->server_trans->header_size = 3;
+                    pro->server_trans->extra_flags = 2;
+                }
+                else
+                {
+                    len = (tui8)(s->p[1]);
+                    pro->server_trans->header_size = len;
+                    pro->server_trans->extra_flags = 3;
+                }
+            }
+
+            len = (int) (s->end - s->data);
+            if (pro->server_trans->header_size > len)
+            {
+                /* not enough data read yet */
+                break;
+            }
+            /* FALLTHROUGH */
+
+        case 2:
             /* we have enough now to get the PDU bytes */
             len = libxrdp_get_pdu_bytes(s->p);
             if (len == -1)
@@ -154,10 +184,17 @@ xrdp_process_data_in(struct trans *self)
                 return 1;
             }
             pro->server_trans->header_size = len;
-            pro->server_trans->extra_flags = 2;
-            break;
+            pro->server_trans->extra_flags = 3;
 
-        case 2:
+            len = (int) (s->end - s->data);
+            if (pro->server_trans->header_size > len)
+            {
+                /* not enough data read yet */
+                break;
+            }
+            /* FALLTHROUGH */
+
+        case 3:
             /* the whole PDU is read in now process */
             s->p = s->data;
             if (xrdp_process_loop(pro, s) != 0)
@@ -167,7 +204,7 @@ xrdp_process_data_in(struct trans *self)
                 return 1;
             }
             init_stream(s, 0);
-            pro->server_trans->header_size = 4;
+            pro->server_trans->header_size = 2;
             pro->server_trans->extra_flags = 1;
             break;
     }
@@ -195,12 +232,14 @@ xrdp_process_main_loop(struct xrdp_process *self)
     self->server_trans->callback_data = self;
     init_stream(self->server_trans->in_s, 8192 * 4);
     self->session = libxrdp_init((tbus)self, self->server_trans);
+    self->server_trans->si = &(self->session->si);
+    self->server_trans->my_source = XRDP_SOURCE_CLIENT;
     /* this callback function is in xrdp_wm.c */
     self->session->callback = callback;
     /* this function is just above */
     self->session->is_term = xrdp_is_term;
 
-    if (libxrdp_process_incomming(self->session) == 0)
+    if (libxrdp_process_incoming(self->session) == 0)
     {
         init_stream(self->server_trans->in_s, 32 * 1024);
 
@@ -217,8 +256,8 @@ xrdp_process_main_loop(struct xrdp_process *self)
             robjs[robjs_count++] = self->self_term_event;
             xrdp_wm_get_wait_objs(self->wm, robjs, &robjs_count,
                                   wobjs, &wobjs_count, &timeout);
-            trans_get_wait_objs(self->server_trans, robjs, &robjs_count);
-
+            trans_get_wait_objs_rw(self->server_trans, robjs, &robjs_count,
+                                   wobjs, &wobjs_count, &timeout);
             /* wait */
             if (g_obj_wait(robjs, robjs_count, wobjs, wobjs_count, timeout) != 0)
             {
@@ -251,7 +290,7 @@ xrdp_process_main_loop(struct xrdp_process *self)
     }
     else
     {
-        g_writeln("xrdp_process_main_loop: libxrdp_process_incomming failed");
+        g_writeln("xrdp_process_main_loop: libxrdp_process_incoming failed");
         /* this will try to send a disconnect,
            maybe should check that connection got far enough */
         libxrdp_disconnect(self->session);

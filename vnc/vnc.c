@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2015
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,115 +20,81 @@
 
 #include "vnc.h"
 #include "log.h"
+#include "trans.h"
+#include "ssl_calls.h"
+
+#define LLOG_LEVEL 1
+#define LLOGLN(_level, _args) \
+  do \
+  { \
+    if (_level < LLOG_LEVEL) \
+    { \
+        g_write("xrdp:vnc [%10.10u]: ", g_time3()); \
+        g_writeln _args ; \
+    } \
+  } \
+  while (0)
+
+#define AS_LOG_MESSAGE log_message
+
+static int APP_CC
+lib_mod_process_message(struct vnc *v, struct stream *s);
+
+/******************************************************************************/
+static int APP_CC
+lib_send_copy(struct vnc *v, struct stream *s)
+{
+    return trans_write_copy_s(v->trans, s);
+}
 
 /******************************************************************************/
 /* taken from vncauth.c */
-void DEFAULT_CC
-rfbEncryptBytes(char *bytes, char *passwd)
+/* performing the des3 crypt on the password so it can not be seen
+   on the wire
+   'bytes' in, contains 16 bytes server random
+           out, random and 'passwd' conbined */
+static void APP_CC
+rfbEncryptBytes(char *bytes, const char *passwd)
 {
-    char key[12];
+    char key[24];
+    void *des;
+    int len;
 
     /* key is simply password padded with nulls */
     g_memset(key, 0, sizeof(key));
-    g_strncpy(key, passwd, 8);
-    rfbDesKey((unsigned char *)key, EN0); /* 0, encrypt */
-    rfbDes((unsigned char *)bytes, (unsigned char *)bytes);
-    rfbDes((unsigned char *)(bytes + 8), (unsigned char *)(bytes + 8));
+    len = MIN(g_strlen(passwd), 8);
+    g_mirror_memcpy(key, passwd, len);
+    des = ssl_des3_encrypt_info_create(key, 0);
+    ssl_des3_encrypt(des, 8, bytes, bytes);
+    ssl_des3_info_delete(des);
+    des = ssl_des3_encrypt_info_create(key, 0);
+    ssl_des3_encrypt(des, 8, bytes + 8, bytes + 8);
+    ssl_des3_info_delete(des);
 }
 
 /******************************************************************************/
-/* returns error */
-int DEFAULT_CC
-lib_recv(struct vnc *v, char *data, int len)
+/* sha1 hash 'passwd', create a string from the hash and call rfbEncryptBytes */
+static void APP_CC
+rfbHashEncryptBytes(char *bytes, const char *passwd)
 {
-    int rcvd;
+    char passwd_hash[20];
+    char passwd_hash_text[40];
+    void *sha1;
+    int passwd_bytes;
 
-    if (v->sck_closed)
-    {
-        return 1;
-    }
-
-    while (len > 0)
-    {
-        rcvd = g_tcp_recv(v->sck, data, len, 0);
-
-        if (rcvd == -1)
-        {
-            if (g_tcp_last_error_would_block(v->sck))
-            {
-                if (v->server_is_term(v))
-                {
-                    return 1;
-                }
-
-                g_tcp_can_recv(v->sck, 10);
-            }
-            else
-            {
-                log_message(LOG_LEVEL_DEBUG, "VNC lib_recv return 1");
-                return 1;
-            }
-        }
-        else if (rcvd == 0)
-        {
-            v->sck_closed = 1;
-            return 1;
-        }
-        else
-        {
-            data += rcvd;
-            len -= rcvd;
-        }
-    }
-
-    return 0;
-}
-
-/*****************************************************************************/
-/* returns error */
-int DEFAULT_CC
-lib_send(struct vnc *v, char *data, int len)
-{
-    int sent;
-
-    if (v->sck_closed)
-    {
-        return 1;
-    }
-
-    while (len > 0)
-    {
-        sent = g_tcp_send(v->sck, data, len, 0);
-
-        if (sent == -1)
-        {
-            if (g_tcp_last_error_would_block(v->sck))
-            {
-                if (v->server_is_term(v))
-                {
-                    return 1;
-                }
-
-                g_tcp_can_send(v->sck, 10);
-            }
-            else
-            {
-                return 1;
-            }
-        }
-        else if (sent == 0)
-        {
-            v->sck_closed = 1;
-            return 1;
-        }
-        else
-        {
-            data += sent;
-            len -= sent;
-        }
-    }
-
-    return 0;
+    /* create password hash from password */
+    passwd_bytes = g_strlen(passwd);
+    sha1 = ssl_sha1_info_create();
+    ssl_sha1_transform(sha1, "xrdp_vnc", 8);
+    ssl_sha1_transform(sha1, passwd, passwd_bytes);
+    ssl_sha1_transform(sha1, passwd, passwd_bytes);
+    ssl_sha1_complete(sha1, passwd_hash);
+    ssl_sha1_info_delete(sha1);
+    g_snprintf(passwd_hash_text, 39, "%2.2x%2.2x%2.2x%2.2x",
+               (tui8)passwd_hash[0], (tui8)passwd_hash[1],
+               (tui8)passwd_hash[2], (tui8)passwd_hash[3]);
+    passwd_hash_text[39] = 0;
+    rfbEncryptBytes(bytes, passwd_hash_text);
 }
 
 /******************************************************************************/
@@ -139,6 +105,7 @@ lib_process_channel_data(struct vnc *v, int chanid, int flags, int size,
     int type;
     int status;
     int length;
+    int clip_bytes;
     int index;
     int format;
     struct stream *out_s;
@@ -154,20 +121,44 @@ lib_process_channel_data(struct vnc *v, int chanid, int flags, int size,
         switch (type)
         {
             case 2: /* CLIPRDR_FORMAT_ANNOUNCE */
+                AS_LOG_MESSAGE(LOG_LEVEL_DEBUG, "CLIPRDR_FORMAT_ANNOUNCE - "
+                               "status %d length %d", status, length);
                 make_stream(out_s);
                 init_stream(out_s, 8192);
-                out_uint16_le(out_s, 3);
-                out_uint16_le(out_s, 1);
-                out_uint32_le(out_s, 0);
-                out_uint8s(out_s, 4); /* pad */
+                out_uint16_le(out_s, 3); // msg-type:  CLIPRDR_FORMAT_ACK
+                out_uint16_le(out_s, 1); // msg-status-code:  CLIPRDR_RESPONSE
+                out_uint32_le(out_s, 0); // null (?)
+                out_uint8s(out_s, 4);    // pad
                 s_mark_end(out_s);
                 length = (int)(out_s->end - out_s->data);
-                v->server_send_to_channel(v, v->clip_chanid, out_s->data, length, length, 3);
+                v->server_send_to_channel(v, v->clip_chanid, out_s->data,
+                                          length, length, 3);
                 free_stream(out_s);
+#if 0
+                // Send the CLIPRDR_DATA_REQUEST message to the cliprdr channel.
+                //
+                make_stream(out_s);
+                init_stream(out_s, 8192);
+                out_uint16_le(out_s, 4); // msg-type:  CLIPRDR_DATA_REQUEST
+                out_uint16_le(out_s, 0); // msg-status-code:  CLIPRDR_REQUEST
+                out_uint32_le(out_s, 4); // sizeof supported-format-list.
+                out_uint32_le(out_s, 1); // supported-format-list:  CF_TEXT
+                out_uint8s(out_s, 0);    // pad (garbage pad?)
+                s_mark_end(out_s);
+                length = (int)(out_s->end - out_s->data);
+                v->server_send_to_channel(v, v->clip_chanid, out_s->data,
+                                          length, length, 3);
+                free_stream(out_s);
+#endif
                 break;
+
             case 3: /* CLIPRDR_FORMAT_ACK */
+                AS_LOG_MESSAGE(LOG_LEVEL_DEBUG, "CLIPRDR_FORMAT_ACK - "
+                               "status %d length %d", status, length);
                 break;
             case 4: /* CLIPRDR_DATA_REQUEST */
+                AS_LOG_MESSAGE(LOG_LEVEL_DEBUG, "CLIPRDR_DATA_REQUEST - "
+                               "status %d length %d", status, length);
                 format = 0;
 
                 if (length >= 4)
@@ -188,11 +179,11 @@ lib_process_channel_data(struct vnc *v, int chanid, int flags, int size,
 
                 if (format == 13) /* CF_UNICODETEXT */
                 {
-                    out_uint32_le(out_s, v->clip_data_size * 2 + 2);
+                    out_uint32_le(out_s, v->clip_data_s->size * 2 + 2);
 
-                    for (index = 0; index < v->clip_data_size; index++)
+                    for (index = 0; index < v->clip_data_s->size; index++)
                     {
-                        out_uint8(out_s, v->clip_data[index]);
+                        out_uint8(out_s, v->clip_data_s->data[index]);
                         out_uint8(out_s, 0);
                     }
 
@@ -200,11 +191,11 @@ lib_process_channel_data(struct vnc *v, int chanid, int flags, int size,
                 }
                 else if (format == 1) /* CF_TEXT */
                 {
-                    out_uint32_le(out_s, v->clip_data_size + 1);
+                    out_uint32_le(out_s, v->clip_data_s->size + 1);
 
-                    for (index = 0; index < v->clip_data_size; index++)
+                    for (index = 0; index < v->clip_data_s->size; index++)
                     {
-                        out_uint8(out_s, v->clip_data[index]);
+                        out_uint8(out_s, v->clip_data_s->data[index]);
                     }
 
                     out_uint8s(out_s, 1);
@@ -217,6 +208,33 @@ lib_process_channel_data(struct vnc *v, int chanid, int flags, int size,
                                           length, 3);
                 free_stream(out_s);
                 break;
+
+            case 5: /* CLIPRDR_DATA_RESPONSE */
+                AS_LOG_MESSAGE(LOG_LEVEL_DEBUG, "CLIPRDR_DATA_RESPONSE - "
+                               "status %d length %d", status, length);
+                clip_bytes = MIN(length, 256);
+                // - Read the response data from the cliprdr channel, stream 's'.
+                // - Send the response data to the vnc server, stream 'out_s'.
+                //
+                make_stream(out_s);
+                // Send the RFB message type (CLIENT_CUT_TEXT) to the vnc server.
+                init_stream(out_s, clip_bytes + 1 + 3 + 4 + 16);
+                out_uint8(out_s, 6);   // RFB msg type:  CLIENT_CUT_TEXT
+                out_uint8s(out_s, 3);  // padding
+                // Send the length of the cut-text to  the vnc server.
+                out_uint32_be(out_s, clip_bytes);
+                // Send the cut-text (as read from 's') to the vnc server.
+                for (index = 0; index < clip_bytes; index++)
+                {
+                    char cur_char = '\0';
+                    in_uint8(s, cur_char);      // text in from 's'
+                    out_uint8(out_s, cur_char); // text out to 'out_s'
+                }
+                s_mark_end(out_s);
+                lib_send_copy(v, out_s);
+                free_stream(out_s);
+                break;
+
             default:
             {
                 log_message(LOG_LEVEL_DEBUG, "VNC clip information unhandled");
@@ -226,7 +244,7 @@ lib_process_channel_data(struct vnc *v, int chanid, int flags, int size,
     }
     else
     {
-        log_message(LOG_LEVEL_DEBUG, "lib_process_channel_data: unknown chanid:",
+        log_message(LOG_LEVEL_DEBUG, "lib_process_channel_data: unknown chanid: "
                     "%d :(v->clip_chanid) %d", chanid, v->clip_chanid);
     }
 
@@ -250,7 +268,6 @@ lib_mod_event(struct vnc *v, int msg, long param1, long param2,
     int chanid;
     int flags;
     char *data;
-    char text[256];
 
     error = 0;
     make_stream(s);
@@ -292,7 +309,8 @@ lib_mod_event(struct vnc *v, int msg, long param1, long param2,
                     out_uint8(s, 0); /* down flag */
                     out_uint8s(s, 2);
                     out_uint32_be(s, 65507); /* left control */
-                    lib_send(v, s->data, 8);
+                    s_mark_end(s);
+                    lib_send_copy(v, s);
                 }
             }
 
@@ -301,7 +319,8 @@ lib_mod_event(struct vnc *v, int msg, long param1, long param2,
             out_uint8(s, msg == 15); /* down flag */
             out_uint8s(s, 2);
             out_uint32_be(s, key);
-            error = lib_send(v, s->data, 8);
+            s_mark_end(s);
+            error = lib_send_copy(v, s);
 
             if (key == 65507) /* left control */
             {
@@ -352,11 +371,12 @@ lib_mod_event(struct vnc *v, int msg, long param1, long param2,
         out_uint8(s, v->mod_mouse_state);
         out_uint16_be(s, param1);
         out_uint16_be(s, param2);
-        error = lib_send(v, s->data, 6);
+        s_mark_end(s);
+        error = lib_send_copy(v, s);
     }
     else if (msg == 200) /* invalidate */
     {
-        /* FrambufferUpdateRequest */
+        /* FramebufferUpdateRequest */
         init_stream(s, 8192);
         out_uint8(s, 3);
         out_uint8(s, 0);
@@ -368,7 +388,8 @@ lib_mod_event(struct vnc *v, int msg, long param1, long param2,
         out_uint16_be(s, cx);
         cy = param2 & 0xffff;
         out_uint16_be(s, cy);
-        error = lib_send(v, s->data, 10);
+        s_mark_end(s);
+        error = lib_send_copy(v, s);
     }
 
     free_stream(s);
@@ -562,7 +583,6 @@ make_color(int r, int g, int b, int bpp)
 int DEFAULT_CC
 lib_framebuffer_update(struct vnc *v)
 {
-    char *data;
     char *d1;
     char *d2;
     char cursor_data[32 * (32 * 3)];
@@ -578,19 +598,17 @@ lib_framebuffer_update(struct vnc *v)
     int cy;
     int srcx;
     int srcy;
-    int encoding;
+    unsigned int encoding;
     int Bpp;
     int pixel;
     int r;
     int g;
     int b;
-    int data_size;
-    int need_size;
     int error;
+    int need_size;
     struct stream *s;
+    struct stream *pixel_s;
 
-    data_size = 0;
-    data = 0;
     num_recs = 0;
     Bpp = (v->mod_bpp + 7) / 8;
 
@@ -599,9 +617,11 @@ lib_framebuffer_update(struct vnc *v)
         Bpp = 4;
     }
 
+    make_stream(pixel_s);
+
     make_stream(s);
     init_stream(s, 8192);
-    error = lib_recv(v, s->data, 3);
+    error = trans_force_read_s(v->trans, s, 3);
 
     if (error == 0)
     {
@@ -618,7 +638,7 @@ lib_framebuffer_update(struct vnc *v)
         }
 
         init_stream(s, 8192);
-        error = lib_recv(v, s->data, 12);
+        error = trans_force_read_s(v->trans, s, 12);
 
         if (error == 0)
         {
@@ -631,25 +651,18 @@ lib_framebuffer_update(struct vnc *v)
             if (encoding == 0) /* raw */
             {
                 need_size = cx * cy * Bpp;
-
-                if (need_size > data_size)
-                {
-                    g_free(data);
-                    data = (char *)g_malloc(need_size, 0);
-                    data_size = need_size;
-                }
-
-                error = lib_recv(v, data, need_size);
+                init_stream(pixel_s, need_size);
+                error = trans_force_read_s(v->trans, pixel_s, need_size);
 
                 if (error == 0)
                 {
-                    error = v->server_paint_rect(v, x, y, cx, cy, data, cx, cy, 0, 0);
+                    error = v->server_paint_rect(v, x, y, cx, cy, pixel_s->data, cx, cy, 0, 0);
                 }
             }
             else if (encoding == 1) /* copy rect */
             {
                 init_stream(s, 8192);
-                error = lib_recv(v, s->data, 4);
+                error = trans_force_read_s(v->trans, s, 4);
 
                 if (error == 0)
                 {
@@ -665,7 +678,7 @@ lib_framebuffer_update(struct vnc *v)
                 j = cx * cy * Bpp;
                 k = ((cx + 7) / 8) * cy;
                 init_stream(s, j + k);
-                error = lib_recv(v, s->data, j + k);
+                error = trans_force_read_s(v->trans, s, j + k);
 
                 if (error == 0)
                 {
@@ -689,7 +702,7 @@ lib_framebuffer_update(struct vnc *v)
                         }
                     }
 
-                    /* keep these in 32x32, vnc cursor can be alot bigger */
+                    /* keep these in 32x32, vnc cursor can be a lot bigger */
                     if (x > 31)
                     {
                         x = 31;
@@ -723,11 +736,9 @@ lib_framebuffer_update(struct vnc *v)
         error = v->server_end_update(v);
     }
 
-    g_free(data);
-
     if (error == 0)
     {
-        /* FrambufferUpdateRequest */
+        /* FramebufferUpdateRequest */
         init_stream(s, 8192);
         out_uint8(s, 3);
         out_uint8(s, 1);
@@ -735,14 +746,17 @@ lib_framebuffer_update(struct vnc *v)
         out_uint16_be(s, 0);
         out_uint16_be(s, v->mod_width);
         out_uint16_be(s, v->mod_height);
-        error = lib_send(v, s->data, 10);
+        s_mark_end(s);
+        error = lib_send_copy(v, s);
     }
 
     free_stream(s);
+    free_stream(pixel_s);
     return error;
 }
 
 /******************************************************************************/
+/* clip data from the vnc server */
 int DEFAULT_CC
 lib_clip_data(struct vnc *v)
 {
@@ -751,20 +765,19 @@ lib_clip_data(struct vnc *v)
     int size;
     int error;
 
-    g_free(v->clip_data);
-    v->clip_data = 0;
-    v->clip_data_size = 0;
+    free_stream(v->clip_data_s);
+    v->clip_data_s = 0;
     make_stream(s);
     init_stream(s, 8192);
-    error = lib_recv(v, s->data, 7);
+    error = trans_force_read_s(v->trans, s, 7);
 
     if (error == 0)
     {
         in_uint8s(s, 3);
         in_uint32_be(s, size);
-        v->clip_data = (char *)g_malloc(size, 0);
-        v->clip_data_size = size;
-        error = lib_recv(v, v->clip_data, size);
+        make_stream(v->clip_data_s);
+        init_stream(v->clip_data_s, size);
+        error = trans_force_read_s(v->trans, v->clip_data_s, size);
     }
 
     if (error == 0)
@@ -808,7 +821,7 @@ lib_palette_update(struct vnc *v)
 
     make_stream(s);
     init_stream(s, 8192);
-    error = lib_recv(v, s->data, 5);
+    error = trans_force_read_s(v->trans, s, 5);
 
     if (error == 0)
     {
@@ -816,7 +829,7 @@ lib_palette_update(struct vnc *v)
         in_uint16_be(s, first_color);
         in_uint16_be(s, num_colors);
         init_stream(s, 8192);
-        error = lib_recv(v, s->data, num_colors * 6);
+        error = trans_force_read_s(v->trans, s, num_colors * 6);
     }
 
     if (error == 0)
@@ -853,7 +866,6 @@ lib_palette_update(struct vnc *v)
 int DEFAULT_CC
 lib_bell_trigger(struct vnc *v)
 {
-    struct stream *s;
     int error;
 
     error = v->server_bell_trigger(v);
@@ -864,12 +876,21 @@ lib_bell_trigger(struct vnc *v)
 int DEFAULT_CC
 lib_mod_signal(struct vnc *v)
 {
+    g_writeln("lib_mod_signal: not used");
+    return 0;
+}
+
+/******************************************************************************/
+static int APP_CC
+lib_mod_process_message(struct vnc *v, struct stream *s)
+{
     char type;
     int error;
     char text[256];
 
-    error = lib_recv(v, &type, 1);
+    in_uint8(s, type);
 
+    error = 0;
     if (error == 0)
     {
         if (type == 0) /* framebuffer update */
@@ -930,6 +951,39 @@ lib_open_clip_channel(struct vnc *v)
 }
 
 /******************************************************************************/
+static int APP_CC
+lib_data_in(struct trans *trans)
+{
+    struct vnc *self;
+    struct stream *s;
+
+    LLOGLN(10, ("lib_data_in:"));
+
+    if (trans == 0)
+    {
+        return 1;
+    }
+
+    self = (struct vnc *)(trans->callback_data);
+    s = trans_get_in_s(trans);
+
+    if (s == 0)
+    {
+        return 1;
+    }
+
+    if (lib_mod_process_message(self, s) != 0)
+    {
+        g_writeln("lib_data_in: lib_mod_process_message failed");
+        return 1;
+    }
+
+    init_stream(s, 0);
+
+    return 0;
+}
+
+/******************************************************************************/
 /*
   return error
 */
@@ -945,16 +999,23 @@ lib_mod_connect(struct vnc *v)
     int error;
     int i;
     int check_sec_result;
+    struct source_info *si;
 
     v->server_msg(v, "VNC started connecting", 0);
     check_sec_result = 1;
 
-    /* only support 8 and 16 bpp connections from rdp client */
-    if ((v->server_bpp != 8) && (v->server_bpp != 15) &&
-            (v->server_bpp != 16) && (v->server_bpp != 24))
+    /* check if bpp is supported for rdp connection */
+    switch (v->server_bpp)
     {
-        v->server_msg(v, "VNC error - only supporting 8, 15, 16 and 24 bpp rdp "
-                      "connections", 0);
+        case 8:
+        case 15:
+        case 16:
+        case 24:
+        case 32:
+            break;
+        default:
+            v->server_msg(v, "VNC error - only supporting 8, 15, 16, 24 and 32 "
+                          "bpp rdp connections", 0);
         return 1;
     }
 
@@ -968,16 +1029,15 @@ lib_mod_connect(struct vnc *v)
     g_sprintf(con_port, "%s", v->port);
     make_stream(pixel_format);
 
-    v->sck = g_tcp_socket();
-    if (v->sck < 0)
+    v->trans = trans_create(TRANS_MODE_TCP, 8 * 8192, 8192);
+    if (v->trans == 0)
     {
-        v->server_msg(v, "VNC error: socket create error, g_tcp_socket() failed", 0);
+        v->server_msg(v, "VNC error: trans_create() failed", 0);
         free_stream(s);
         free_stream(pixel_format);
         return 1;
     }
 
-    v->sck_obj = g_create_wait_obj_from_socket(v->sck, 0);
     v->sck_closed = 0;
     if (v->delay_ms > 0)
     {
@@ -988,27 +1048,32 @@ lib_mod_connect(struct vnc *v)
     
     g_sprintf(text, "VNC connecting to %s %s", v->ip, con_port);
     v->server_msg(v, text, 0);
-    error = g_tcp_connect(v->sck, v->ip, con_port);
+
+    si = (struct source_info *) (v->si);
+    v->trans->si = si;
+    v->trans->my_source = XRDP_SOURCE_MOD;
+
+    error = trans_connect(v->trans, v->ip, con_port, 3000);
 
     if (error == 0)
     {
         v->server_msg(v, "VNC tcp connected", 0);
-        g_tcp_set_non_blocking(v->sck);
-        g_tcp_set_no_delay(v->sck);
-        /* protocal version */
+        /* protocol version */
         init_stream(s, 8192);
-        error = lib_recv(v, s->data, 12);
-
+        error = trans_force_read_s(v->trans, s, 12);
         if (error == 0)
         {
-            error = lib_send(v, "RFB 003.003\n", 12);
+            s->p = s->data;
+            out_uint8a(s, "RFB 003.003\n", 12);
+            s_mark_end(s);
+            error = trans_force_write_s(v->trans, s);
         }
 
         /* sec type */
         if (error == 0)
         {
             init_stream(s, 8192);
-            error = lib_recv(v,  s->data, 4);
+            error = trans_force_read_s(v->trans, s, 4);
         }
 
         if (error == 0)
@@ -1024,12 +1089,24 @@ lib_mod_connect(struct vnc *v)
             else if (i == 2) /* dec the password and the server random */
             {
                 init_stream(s, 8192);
-                error = lib_recv(v, s->data, 16);
+                error = trans_force_read_s(v->trans, s, 16);
 
                 if (error == 0)
                 {
-                    rfbEncryptBytes(s->data, v->password);
-                    error = lib_send(v, s->data, 16);
+                    init_stream(s, 8192);
+                    if (v->got_guid)
+                    {
+                        char guid_str[64];
+                        g_bytes_to_hexstr(v->guid, 16, guid_str, 64);
+                        rfbHashEncryptBytes(s->data, guid_str);
+                    }
+                    else
+                    {
+                        rfbEncryptBytes(s->data, v->password);
+                    }
+                    s->p += 16;
+                    s_mark_end(s);
+                    error = trans_force_write_s(v->trans, s);
                     check_sec_result = 1; // not needed
                 }
             }
@@ -1048,14 +1125,15 @@ lib_mod_connect(struct vnc *v)
 
     if (error != 0)
     {
-        log_message(LOG_LEVEL_DEBUG, "VNC Error after security negotiation");
+        log_message(LOG_LEVEL_DEBUG, "VNC error %d after security negotiation",
+                    error);
     }
 
     if (error == 0 && check_sec_result)
     {
         /* sec result */
         init_stream(s, 8192);
-        error = lib_recv(v, s->data, 4);
+        error = trans_force_read_s(v->trans, s, 4);
 
         if (error == 0)
         {
@@ -1078,7 +1156,9 @@ lib_mod_connect(struct vnc *v)
         v->server_msg(v, "VNC sending share flag", 0);
         init_stream(s, 8192);
         s->data[0] = 1;
-        error = lib_send(v, s->data, 1); /* share flag */
+        s->p++;
+        s_mark_end(s);
+        error = trans_force_write_s(v->trans, s); /* share flag */
     }
     else
     {
@@ -1088,7 +1168,8 @@ lib_mod_connect(struct vnc *v)
     if (error == 0)
     {
         v->server_msg(v, "VNC receiving server init", 0);
-        error = lib_recv(v, s->data, 4); /* server init */
+        init_stream(s, 8192);
+        error = trans_force_read_s(v->trans, s, 4); /* server init */
     }
     else
     {
@@ -1101,7 +1182,7 @@ lib_mod_connect(struct vnc *v)
         in_uint16_be(s, v->mod_height);
         init_stream(pixel_format, 8192);
         v->server_msg(v, "VNC receiving pixel format", 0);
-        error = lib_recv(v, pixel_format->data, 16);
+        error = trans_force_read_s(v->trans, pixel_format, 16);
     }
     else
     {
@@ -1113,7 +1194,7 @@ lib_mod_connect(struct vnc *v)
         v->mod_bpp = v->server_bpp;
         init_stream(s, 8192);
         v->server_msg(v, "VNC receiving name length", 0);
-        error = lib_recv(v, s->data, 4); /* name len */
+        error = trans_force_read_s(v->trans, s, 4); /* name len */
     }
     else
     {
@@ -1130,8 +1211,10 @@ lib_mod_connect(struct vnc *v)
         }
         else
         {
+            init_stream(s, 8192);
             v->server_msg(v, "VNC receiving name", 0);
-            error = lib_recv(v, v->mod_name, i);
+            error = trans_force_read_s(v->trans, s, i); /* name len */
+            g_memcpy(v->mod_name, s->data, i);
             v->mod_name[i] = 0;
         }
     }
@@ -1205,7 +1288,7 @@ lib_mod_connect(struct vnc *v)
             out_uint8(pixel_format, 0); /* blue shift */
             out_uint8s(pixel_format, 3); /* pad */
         }
-        else if (v->mod_bpp == 24)
+        else if (v->mod_bpp == 24 || v->mod_bpp == 32)
         {
             out_uint8(pixel_format, 32); /* bits per pixel */
             out_uint8(pixel_format, 24); /* depth */
@@ -1226,7 +1309,8 @@ lib_mod_connect(struct vnc *v)
 
         out_uint8a(s, pixel_format->data, 16);
         v->server_msg(v, "VNC sending pixel format", 0);
-        error = lib_send(v, s->data, 20);
+        s_mark_end(s);
+        error = trans_force_write_s(v->trans, s);
     }
 
     if (error == 0)
@@ -1241,7 +1325,8 @@ lib_mod_connect(struct vnc *v)
         out_uint32_be(s, 0xffffff11); /* cursor */
         out_uint32_be(s, 0xffffff21); /* desktop size */
         v->server_msg(v, "VNC sending encodings", 0);
-        error = lib_send(v, s->data, 4 + 4 * 4);
+        s_mark_end(s);
+        error = trans_force_write_s(v->trans, s);
     }
 
     if (error == 0)
@@ -1251,7 +1336,7 @@ lib_mod_connect(struct vnc *v)
 
     if (error == 0)
     {
-        /* FrambufferUpdateRequest */
+        /* FramebufferUpdateRequest */
         init_stream(s, 8192);
         out_uint8(s, 3);
         out_uint8(s, 0);
@@ -1260,7 +1345,8 @@ lib_mod_connect(struct vnc *v)
         out_uint16_be(s, v->mod_width);
         out_uint16_be(s, v->mod_height);
         v->server_msg(v, "VNC sending framebuffer update request", 0);
-        error = lib_send(v, s->data, 10);
+        s_mark_end(s);
+        error = trans_force_write_s(v->trans, s);
     }
 
     if (error == 0)
@@ -1297,6 +1383,22 @@ lib_mod_connect(struct vnc *v)
         v->server_msg(v, "VNC error - problem connecting", 0);
     }
 
+    if (error != 0)
+    {
+        trans_delete(v->trans);
+        v->trans = 0;
+        v->server_msg(v, "some problem", 0);
+        LIB_DEBUG(mod, "out lib_mod_connect error");
+        return 1;
+    }
+    else
+    {
+        v->server_msg(v, "connected ok", 0);
+        v->trans->trans_data_in = lib_data_in;
+        v->trans->header_size = 1;
+        v->trans->callback_data = v;
+    }
+
     return error;
 }
 
@@ -1308,15 +1410,13 @@ lib_mod_end(struct vnc *v)
     {
     }
 
-    g_free(v->clip_data);
-    v->clip_data = 0;
-    v->clip_data_size = 0;
+    free_stream(v->clip_data_s);
     return 0;
 }
 
 /******************************************************************************/
 int DEFAULT_CC
-lib_mod_set_param(struct vnc *v, char *name, char *value)
+lib_mod_set_param(struct vnc *v, const char *name, char *value)
 {
     if (g_strcasecmp(name, "username") == 0)
     {
@@ -1342,6 +1442,11 @@ lib_mod_set_param(struct vnc *v, char *name, char *value)
     {
         v->delay_ms = g_atoi(value);
     }
+    else if (g_strcasecmp(name, "guid") == 0)
+    {
+        v->got_guid = 1;
+        g_memcpy(v->guid, value, 16);
+    }
 
     return 0;
 }
@@ -1352,19 +1457,17 @@ int DEFAULT_CC
 lib_mod_get_wait_objs(struct vnc *v, tbus *read_objs, int *rcount,
                       tbus *write_objs, int *wcount, int *timeout)
 {
-    int i;
-
-    i = *rcount;
+    LLOGLN(10, ("lib_mod_get_wait_objs:"));
 
     if (v != 0)
     {
-        if (v->sck_obj != 0)
+        if (v->trans != 0)
         {
-            read_objs[i++] = v->sck_obj;
+            trans_get_wait_objs_rw(v->trans, read_objs, rcount,
+                                   write_objs, wcount, timeout);
         }
     }
 
-    *rcount = i;
     return 0;
 }
 
@@ -1376,23 +1479,18 @@ lib_mod_check_wait_objs(struct vnc *v)
     int rv;
 
     rv = 0;
-
     if (v != 0)
     {
-        if (v->sck_obj != 0)
+        if (v->trans != 0)
         {
-            if (g_is_wait_obj_set(v->sck_obj))
-            {
-                rv = lib_mod_signal(v);
-            }
+            rv = trans_check_wait_objs(v->trans);
         }
     }
-
     return rv;
 }
 
 /******************************************************************************/
-struct vnc *EXPORT_CC
+tintptr EXPORT_CC
 mod_init(void)
 {
     struct vnc *v;
@@ -1401,7 +1499,7 @@ mod_init(void)
     /* set client functions */
     v->size = sizeof(struct vnc);
     v->version = CURRENT_MOD_VER;
-    v->handle = (long)v;
+    v->handle = (tintptr) v;
     v->mod_connect = lib_mod_connect;
     v->mod_start = lib_mod_start;
     v->mod_event = lib_mod_event;
@@ -1410,22 +1508,21 @@ mod_init(void)
     v->mod_set_param = lib_mod_set_param;
     v->mod_get_wait_objs = lib_mod_get_wait_objs;
     v->mod_check_wait_objs = lib_mod_check_wait_objs;
-    return v;
+    return (tintptr) v;
 }
 
 /******************************************************************************/
 int EXPORT_CC
-mod_exit(struct vnc *v)
+mod_exit(tintptr handle)
 {
+    struct vnc *v = (struct vnc *) handle;
     log_message(LOG_LEVEL_DEBUG, "VNC mod_exit");
 
     if (v == 0)
     {
         return 0;
     }
-
-    g_delete_wait_obj_from_socket(v->sck_obj);
-    g_tcp_close(v->sck);
+    trans_delete(v->trans);
     g_free(v);
     return 0;
 }

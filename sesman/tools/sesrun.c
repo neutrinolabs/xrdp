@@ -27,8 +27,6 @@
 #include "sesman.h"
 #include "tcp.h"
 
-int g_sck;
-int g_pid;
 struct config_sesman g_cfg; /* config.h */
 
 /******************************************************************************/
@@ -55,8 +53,6 @@ main(int argc, char **argv)
         g_printf("sesrun: error reading config. quitting.\n");
         return 1;
     }
-
-    g_pid = g_getpid();
 
     if (argc == 1)
     {
@@ -115,7 +111,7 @@ main(int argc, char **argv)
                         {
                             in_uint16_be(in_s, data);
                             in_uint16_be(in_s, display);
-                            g_printf("ok %d display %d\n", data, display);
+                            g_printf("ok %d display %d\n", (int)data, display);
                         }
                     }
                 }

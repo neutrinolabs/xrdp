@@ -26,14 +26,9 @@ int tcp_socket_create(void)
 {
     int rv;
     int option_value;
+    socklen_t option_len;
 
-#if defined(_WIN32)
-    int option_len;
-#else
-    unsigned int option_len;
-#endif
-
-    /* in win32 a socket is an unsigned int, in linux, its an int */
+    /* in win32 a socket is an unsigned int, in linux, it's an int */
     if ((rv = (int) socket(PF_INET, SOCK_STREAM, 0)) < 0)
         return -1;
 
@@ -69,7 +64,7 @@ int tcp_socket_create(void)
 }
 
 /**
- * Place specifed socket in non blocking mode
+ * Place specified socket in non blocking mode
  *****************************************************************************/
 
 void tcp_set_non_blocking(int skt)
@@ -133,12 +128,7 @@ int tcp_accept(int skt)
     int ret ;
     char ipAddr[256] ;
     struct sockaddr_in s;
-
-#if defined(_WIN32)
-    int i;
-#else
-    unsigned int i;
-#endif
+    socklen_t i;
 
     i = sizeof(struct sockaddr_in);
     memset(&s, 0, i);
@@ -186,14 +176,9 @@ int tcp_socket(void)
 {
     int rv;
     int option_value;
+    socklen_t option_len;
 
-#if defined(_WIN32)
-    int option_len;
-#else
-    unsigned int option_len;
-#endif
-
-    /* in win32 a socket is an unsigned int, in linux, its an int */
+    /* in win32 a socket is an unsigned int, in linux, it's an int */
     if ((rv = (int) socket(PF_INET, SOCK_STREAM, 0)) < 0)
         return -1;
 
@@ -305,14 +290,7 @@ int tcp_can_send(int skt, int millis)
 int tcp_socket_ok(int skt)
 {
     int opt;
-
-#if defined(_WIN32)
-    int opt_len;
-#else
-    unsigned int opt_len;
-#endif
-
-    opt_len = sizeof(opt);
+    socklen_t opt_len = sizeof(opt);
 
     if (getsockopt(skt, SOL_SOCKET, SO_ERROR, (char *) (&opt), &opt_len) == 0)
     {

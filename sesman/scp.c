@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Jay Sorg 2004-2015
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@
 
 #include "sesman.h"
 
-extern int g_thread_sck; /* in thread.c */
 extern struct config_sesman *g_cfg; /* in sesman.c */
 
 /******************************************************************************/
@@ -37,15 +36,10 @@ void *DEFAULT_CC
 scp_process_start(void *sck)
 {
     struct SCP_CONNECTION scon;
-    struct SCP_SESSION *sdata;
+    struct SCP_SESSION *sdata = NULL;
 
-    /* making a local copy of the socket (it's on the stack) */
-    /* probably this is just paranoia                        */
-    scon.in_sck = g_thread_sck;
+    scon.in_sck = (int)(tintptr)sck;
     LOG_DBG("started scp thread on socket %d", scon.in_sck);
-
-    /* unlocking g_thread_sck */
-    lock_socket_release();
 
     make_stream(scon.in_s);
     make_stream(scon.out_s);
@@ -60,12 +54,12 @@ scp_process_start(void *sck)
             if (sdata->version == 0)
             {
                 /* starts processing an scp v0 connection */
-                LOG_DBG("accept ok, go on with scp v0\n", 0);
+                LOG_DBG("accept ok, go on with scp v0", 0);
                 scp_v0_process(&scon, sdata);
             }
             else
             {
-                LOG_DBG("accept ok, go on with scp v1\n", 0);
+                LOG_DBG("accept ok, go on with scp v1", 0);
                 /*LOG_DBG("user: %s\npass: %s",sdata->username, sdata->password);*/
                 scp_v1_process(&scon, sdata);
             }
@@ -95,10 +89,16 @@ scp_process_start(void *sck)
             break;
         default:
             log_message(LOG_LEVEL_ALWAYS, "unknown return from scp_vXs_accept()");
+            break;
     }
 
-    g_tcp_close(scon.in_sck);
     free_stream(scon.in_s);
     free_stream(scon.out_s);
+
+    if (sdata)
+    {
+        scp_session_destroy(sdata);
+    }
+
     return 0;
 }

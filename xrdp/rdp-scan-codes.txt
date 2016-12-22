@@ -3,7 +3,7 @@ complete rdp key code listing
 
 en-us
 
-4000s in the down flags columm is from repeating keys(holding a key down)
+4000s in the down flags column is from repeating keys(holding a key down)
 When holding a key down, the down flags repeat but the up flags only
 come once at the end.
 Rdesktop does not do this as of yet.  It always sends down and up

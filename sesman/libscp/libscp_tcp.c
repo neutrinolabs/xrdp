@@ -19,7 +19,7 @@
 /**
  *
  * @file tcp.c
- * @brief Tcp stream funcions
+ * @brief Tcp stream functions
  * @author Jay Sorg, Simone Fedele
  *
  */

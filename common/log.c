@@ -59,6 +59,13 @@ internal_log_file_open(const char *fname)
                    S_IRUSR | S_IWUSR);
     }
 
+#ifdef FD_CLOEXEC
+    if (ret != -1)
+    {
+        fcntl(ret, F_SETFD, FD_CLOEXEC); 
+    }
+#endif
+
     return ret;
 }
 
@@ -142,7 +149,7 @@ internal_log_start(struct log_config *l_cfg)
         return ret;
     }
 
-    /* if progname is NULL, we ureturn error */
+    /* if progname is NULL, we return error */
     if (0 == l_cfg->program_name)
     {
         g_writeln("program_name not properly assigned");
@@ -186,7 +193,7 @@ internal_log_end(struct log_config *l_cfg)
     /* closing log file */
     log_message(LOG_LEVEL_ALWAYS, "shutting down log subsystem...");
 
-    if (0 > l_cfg->fd)
+    if (-1 != l_cfg->fd)
     {
         /* closing logfile... */
         g_file_close(l_cfg->fd);
@@ -205,12 +212,6 @@ internal_log_end(struct log_config *l_cfg)
         l_cfg->log_file = 0;
     }
 
-    if (0 != l_cfg->program_name)
-    {
-        g_free(l_cfg->program_name);
-        l_cfg->program_name = 0;
-    }
-
     ret = LOG_STARTUP_OK;
     return ret;
 }
@@ -221,7 +222,7 @@ internal_log_end(struct log_config *l_cfg)
  * @return
  */
 enum logLevels DEFAULT_CC
-internal_log_text2level(char *buf)
+internal_log_text2level(const char *buf)
 {
     if (0 == g_strcasecmp(buf, "0") ||
             0 == g_strcasecmp(buf, "core"))
@@ -329,7 +330,7 @@ internal_config_read_logging(int file, struct log_config *lc,
     list_clear(param_n);
 
     /* setting defaults */
-    lc->program_name = g_strdup(applicationName);
+    lc->program_name = applicationName;
     lc->log_file = 0;
     lc->fd = 0;
     lc->log_level = LOG_LEVEL_DEBUG;
@@ -394,7 +395,7 @@ enum logReturns DEFAULT_CC
 internalInitAndAllocStruct(void)
 {
     enum logReturns ret = LOG_GENERAL_ERROR;
-    g_staticLogConfig = g_malloc(sizeof(struct log_config), 1);
+    g_staticLogConfig = g_new0(struct log_config, 1);
 
     if (g_staticLogConfig != NULL)
     {
@@ -448,7 +449,7 @@ log_start_from_param(const struct log_config *iniParams)
         g_staticLogConfig->log_level = iniParams->log_level;
         g_staticLogConfig->log_lock = iniParams->log_lock;
         g_staticLogConfig->log_lock_attr = iniParams->log_lock_attr;
-        g_staticLogConfig->program_name = g_strdup(iniParams->program_name);
+        g_staticLogConfig->program_name = iniParams->program_name;
         g_staticLogConfig->syslog_level = iniParams->syslog_level;
         ret = internal_log_start(g_staticLogConfig);
 

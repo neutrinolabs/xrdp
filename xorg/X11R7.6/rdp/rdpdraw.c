@@ -108,7 +108,7 @@ rdp_get_clip(RegionPtr pRegion, DrawablePtr pDrawable, GCPtr pGC)
                 break;
             case CT_REGION:
                 rv = 2;
-                RegionCopy(pRegion, pGC->clientClip);
+                RegionCopy(pRegion, pGC->pCompositeClip);
                 break;
             default:
                 rdpLog("unimp clip type %d\n", pGC->clientClipType);
@@ -608,7 +608,7 @@ dump_draw_list(rdpPixmapRec* priv)
 /******************************************************************************/
 /* returns boolean */
 static int
-region_interect_at_all(RegionPtr reg_small, RegionPtr reg_big)
+region_intersect_at_all(RegionPtr reg_small, RegionPtr reg_big)
 {
     int rv;
     RegionRec reg;
@@ -719,7 +719,7 @@ draw_item_pack(PixmapPtr pix, rdpPixmapRec *priv)
                 {
                     if ((di->type == RDI_TEXT) && (di_prev->type == RDI_IMGLY))
                     {
-                        if (region_interect_at_all(di->reg, di_prev->reg))
+                        if (region_intersect_at_all(di->reg, di_prev->reg))
                         {
                             di_prev->type = RDI_IMGLL;
                         }

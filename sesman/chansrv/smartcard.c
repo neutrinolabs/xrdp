@@ -900,7 +900,8 @@ scard_add_new_device(tui32 device_id)
         return -1;
     }
 
-    if ((sc = g_malloc(sizeof(SMARTCARD), 1)) == NULL)
+    sc = g_new0(SMARTCARD, 1);
+    if (sc == NULL)
     {
         log_error("system out of memory");
         return -1;
@@ -1255,7 +1256,7 @@ scard_send_GetStatusChange(IRP* irp, char *context, int context_bytes,
     struct stream *s;
     tui32          ioctl;
     int            bytes;
-    int            i;
+    unsigned int   i;
     int            num_chars;
     int            index;
     twchar         w_reader_name[100];
@@ -1854,8 +1855,8 @@ scard_send_Transmit(IRP *irp, char *context, int context_bytes,
     }
 
     log_debug("send_bytes %d recv_bytes %d send dwProtocol %d cbPciLength %d "
-              "extra_bytes %d recv dwProtocol %d cbPciLength %d", send_bytes,
-              recv_bytes, send_ior->dwProtocol, send_ior->cbPciLength,
+              "extra_bytes %d recv dwProtocol %d cbPciLength %d extra_bytes %d",
+              send_bytes, recv_bytes, send_ior->dwProtocol, send_ior->cbPciLength,
               send_ior->extra_bytes, recv_ior->dwProtocol, recv_ior->cbPciLength,
               recv_ior->extra_bytes);
 
@@ -1873,7 +1874,7 @@ scard_send_Transmit(IRP *irp, char *context, int context_bytes,
      * u32    4 bytes    dwProtocol
      * u32    4 bytes    cbPciLength
      * u32    4 bytes    map2
-     * u32    4 byts     cbSendLength
+     * u32    4 bytes    cbSendLength
      * u32    4 bytes    map3
      * u32    4 bytes    map4
      * u32    4 bytes    map5

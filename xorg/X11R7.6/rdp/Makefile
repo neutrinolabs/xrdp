@@ -1,6 +1,9 @@
+# X11RDPBASE is the top-level X11rdp install directory
+ifeq ($(X11RDPBASE),)
+$(error X11RDPBASE needs to be set)
+endif
 
-#X11RDPBASE is an environment variable that needs to be set
-
+BINBASE = $(X11RDPBASE)/bin
 INCBASE = $(X11RDPBASE)/include
 LIBBASE = $(X11RDPBASE)/lib
 
@@ -23,23 +26,24 @@ fbcmap_mi.o
 #fbcmap_mi.o
 #fbcmap.o
 
-LIBS = $(XSRCBASE)/dbe/.libs/libdbe.a \
-	$(XSRCBASE)/dix/.libs/libdix.a \
+LIBS = \
 	$(XSRCBASE)/dix/.libs/libmain.a \
+	librdp.a \
+	$(XSRCBASE)/dbe/.libs/libdbe.a \
+	$(XSRCBASE)/dix/.libs/libdix.a \
 	$(XSRCBASE)/fb/.libs/libfb.a \
 	$(XSRCBASE)/mi/.libs/libmi.a \
-	$(XSRCBASE)/os/.libs/libos.a \
 	$(XSRCBASE)/randr/.libs/librandr.a \
-	$(XSRCBASE)/record/.libs/librecord.a \
 	$(XSRCBASE)/render/.libs/librender.a \
+	$(XSRCBASE)/os/.libs/libos.a \
+	$(XSRCBASE)/record/.libs/librecord.a \
 	$(XSRCBASE)/xkb/.libs/libxkb.a \
 	$(XSRCBASE)/Xext/.libs/libXext.a \
 	$(XSRCBASE)/Xi/.libs/libXi.a \
 	$(XSRCBASE)/glx/.libs/libglx.a \
 	$(XSRCBASE)/xfixes/.libs/libxfixes.a \
 	$(XSRCBASE)/damageext/.libs/libdamageext.a \
-	$(XSRCBASE)/miext/damage/.libs/libdamage.a \
-	librdp.a
+	$(XSRCBASE)/miext/damage/.libs/libdamage.a
 
 LLIBS = -Wl,-rpath=$(LIBBASE) -lfreetype -lz -lm -lXfont -lXau \
 	-lXdmcp -lpixman-1 -lrt -ldl -lcrypto -lGL -lXdamage
@@ -98,7 +102,7 @@ all: X11rdp
 X11rdp: $(OBJS)
 	$(AR) rvu librdp.a $(OBJS)
 	ranlib librdp.a
-	$(CC) $(LDFLAGS) -o X11rdp $(LIBS) $(LIBS) $(LLIBS)
+	$(CC) $(LDFLAGS) -o X11rdp $(LIBS) $(LLIBS)
 
 clean:
 	rm -f $(OBJS) librdp.a
@@ -113,4 +117,4 @@ fbcmap_mi.o: ../build_dir/xorg-server-1.9.3/fb/fbcmap_mi.c
 	$(CC) $(CFLAGS) -c ../build_dir/xorg-server-1.9.3/fb/fbcmap_mi.c
 
 install: all
-	$(INSTALL) X11rdp $(X11RDPBASE)/bin/X11rdp
+	$(INSTALL) X11rdp $(BINBASE)/X11rdp

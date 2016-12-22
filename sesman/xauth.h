@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2013
+ * Copyright (C) Emmanuel Blindauer 2016
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,39 +18,24 @@
 
 /**
  *
- * @file thread.h
- * @brief thread stuff...
- * @author Simone Fedele
+ * @file xauth.c
+ * @brief XAUTHORITY handling code
  *
  */
 
-#ifndef THREAD_H
-#define THREAD_H
-
-/**
- *
- * @brief Starts the signal handling thread
- * @retval 0 on success
- * @retval 1 on error
- *
- */
-int DEFAULT_CC
-thread_sighandler_start(void);
+#ifndef XAUTH_H
+#define XAUTH_H
 
 /**
  *
- * @brief Starts the session update thread
- *
+ * @brief create the XAUTHORITY file for the user according to the display and the cookie
+ *        xauth uses XAUTHORITY if defined, ~/.Xauthority otherwise
+ * @param display The session display
+ * @param file If not NULL, write the authorization in the file instead of default location
+ * @return 0 if adding the cookie is ok
  */
-int DEFAULT_CC
-thread_session_update_start(void);
 
-/**
- *
- * @brief Starts a thread to handle an incoming connection
- *
- */
 int DEFAULT_CC
-thread_scp_start(int skt);
+add_xauth_cookie(int display, const char *file);
 
 #endif

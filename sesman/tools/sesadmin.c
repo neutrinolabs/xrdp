@@ -2,6 +2,19 @@
  * sesadmin.c - an sesman administration tool
  * (c) 2008 Simone Fedele
  *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include "arch.h"
@@ -46,7 +59,7 @@ int main(int argc, char **argv)
     serv[0] = '\0';
     port[0] = '\0';
 
-    logging.program_name = g_strdup("sesadmin");
+    logging.program_name = "sesadmin";
     logging.log_file = g_strdup("xrdp-sesadmin.log");
     logging.log_level = LOG_LEVEL_DEBUG;
     logging.enable_syslog = 0;
@@ -88,7 +101,14 @@ int main(int argc, char **argv)
 
     if (0 == g_strncmp(user, "", 1))
     {
-        g_strncpy(user, "root", 256);
+        cmndHelp();
+        return 0;
+    }
+
+    if (0 == g_strncmp(cmnd, "", 1))
+    {
+        cmndHelp();
+        return 0;
     }
 
     if (0 == g_strncmp(pass, "", 1))
@@ -104,23 +124,23 @@ int main(int argc, char **argv)
         }
     }
 
-    scp_init(&logging);
+    scp_init();
 
     sock = g_tcp_socket();
     if (sock < 0)
     {
-        LOG_DBG("Socket open error, g_tcp_socket() failed\n");
+        LOG_DBG("Socket open error, g_tcp_socket() failed");
         return 1;
     }
 
     s = scp_session_create();
     c = scp_connection_create(sock);
 
-    LOG_DBG("Connecting to %s:%s with user %s (%s)\n", serv, port, user, pass);
+    LOG_DBG("Connecting to %s:%s with user %s (%s)", serv, port, user, pass);
 
     if (0 != g_tcp_connect(sock, serv, port))
     {
-        LOG_DBG("g_tcp_connect() error\n");
+        LOG_DBG("g_tcp_connect() error");
         return 1;
     }
 
@@ -133,7 +153,7 @@ int main(int argc, char **argv)
 
     if (SCP_CLIENT_STATE_OK != e)
     {
-        LOG_DBG("libscp error connecting: %s %d\n", s->errstr, (int)e);
+        LOG_DBG("libscp error connecting: %s %d", s->errstr, (int)e);
     }
 
     if (0 == g_strncmp(cmnd, "list", 5))
@@ -155,16 +175,16 @@ int main(int argc, char **argv)
 
 void cmndHelp()
 {
-    fprintf(stderr, "sesadmin - a console sesman adminitration tool\n");
-    fprintf(stderr, "sysntax: sesadmin [] COMMAND [OPTIONS]\n\n");
+    fprintf(stderr, "sesadmin - a console sesman administration tool\n");
+    fprintf(stderr, "syntax: sesadmin [] COMMAND [OPTIONS]\n\n");
     fprintf(stderr, "-u=<username>: username to connect to sesman [MANDATORY]\n");
-    fprintf(stderr, "-p=<password>: password to connect to sesman [MANDATORY]\n");
+    fprintf(stderr, "-p=<password>: password to connect to sesman (asked if not given)\n");
     fprintf(stderr, "-s=<hostname>: sesman host (default is localhost)\n");
     fprintf(stderr, "-i=<port>    : sesman port (default 3350)\n");
     fprintf(stderr, "-c=<command> : command to execute on the server [MANDATORY]\n");
     fprintf(stderr, "               it can be one of those:\n");
-    fprintf(stderr, "               LIST\n");
-    fprintf(stderr, "               KILL:<sid>\n");
+    fprintf(stderr, "               list\n");
+    fprintf(stderr, "               kill:<sid>\n");
 }
 
 void cmndList(struct SCP_CONNECTION *c)

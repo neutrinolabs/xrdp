@@ -36,7 +36,7 @@
  * @param c connection descriptor
  * @param s pointer to session descriptor pointer
  *
- * this function places in *s the address of a newely allocated SCP_SESSION structure
+ * this function places in *s the address of a newly allocated SCP_SESSION structure
  * that should be free()d
  */
 enum SCP_SERVER_STATES_E
@@ -56,12 +56,12 @@ scp_v1s_mng_allow_connection(struct SCP_CONNECTION* c, struct SCP_SESSION* s);
  *
  * @brief denies connection to sesman
  * @param c connection descriptor
- * @param reason pointer to a string containinge the reason for denying connection
+ * @param reason pointer to a string containing the reason for denying connection
  *
  */
 /* 003 */
 enum SCP_SERVER_STATES_E
-scp_v1s_mng_deny_connection(struct SCP_CONNECTION* c, char* reason);
+scp_v1s_mng_deny_connection(struct SCP_CONNECTION* c, const char *reason);
 
 /**
  *

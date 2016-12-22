@@ -1,39 +1,43 @@
-EXTRA_DIST = xrdp.ini ad24b.bmp ad256.bmp xrdp24b.bmp xrdp256.bmp xrdp_logo.bmp sans-10.fv1 cursor0.cur cursor1.cur xrdp.h xrdp_types.h
+EXTRA_DIST = \
+  czech.txt \
+  rdp-scan-codes.txt \
+  xrdpwin.c
 
-EXTRA_INCLUDES =
-EXTRA_LIBS =
-EXTRA_FLAGS =
-
-if XRDP_DEBUG
-EXTRA_DEFINES = -DXRDP_DEBUG
-else
-EXTRA_DEFINES = -DXRDP_NODEBUG
-endif
-
-if GOT_PREFIX
-EXTRA_INCLUDES += -I$(prefix)/include
-EXTRA_FLAGS += -L$(prefix)/lib -Wl,-rpath -Wl,$(prefix)/lib
-endif
-
-if XRDP_RFXCODEC
-EXTRA_DEFINES += -DXRDP_RFXCODEC
-EXTRA_INCLUDES += -I$(top_srcdir)/librfxcodec/include
-EXTRA_LIBS += $(top_srcdir)/librfxcodec/src/librfxencode.a
-endif
-
-AM_CFLAGS = \
+AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
-  -DXRDP_LIB_PATH=\"${libdir}\" \
-  $(EXTRA_DEFINES)
-
-INCLUDES = \
+  -DXRDP_MODULE_PATH=\"${moduledir}\" \
   -I$(top_builddir) \
   -I$(top_srcdir)/common \
-  -I$(top_srcdir)/libxrdp \
-  $(EXTRA_INCLUDES)
+  -I$(top_srcdir)/libxrdp
+
+XRDP_EXTRA_LIBS =
+
+if XRDP_DEBUG
+AM_CPPFLAGS += -DXRDP_DEBUG
+else
+AM_CPPFLAGS += -DXRDP_NODEBUG
+endif
+
+if XRDP_RFXCODEC
+AM_CPPFLAGS += -DXRDP_RFXCODEC
+AM_CPPFLAGS += -I$(top_srcdir)/librfxcodec/include
+XRDP_EXTRA_LIBS += $(top_builddir)/librfxcodec/src/.libs/librfxencode.a
+endif
+
+if XRDP_PIXMAN
+AM_CPPFLAGS += -DXRDP_PIXMAN
+AM_CPPFLAGS += $(PIXMAN_CFLAGS)
+XRDP_EXTRA_LIBS += $(PIXMAN_LIBS)
+endif
+
+if XRDP_PAINTER
+AM_CPPFLAGS += -DXRDP_PAINTER
+AM_CPPFLAGS += -I$(top_srcdir)/libpainter/include
+XRDP_EXTRA_LIBS += $(top_builddir)/libpainter/src/.libs/libpainter.a
+endif
 
 sbin_PROGRAMS = \
   xrdp
@@ -41,9 +45,12 @@ sbin_PROGRAMS = \
 xrdp_SOURCES = \
   funcs.c \
   lang.c \
-  xrdp_bitmap.c \
   xrdp.c \
+  xrdp.h \
+  xrdp_bitmap.c \
   xrdp_cache.c \
+  xrdp_encoder.c \
+  xrdp_encoder.h \
   xrdp_font.c \
   xrdp_listen.c \
   xrdp_login_wnd.c \
@@ -51,26 +58,23 @@ xrdp_SOURCES = \
   xrdp_painter.c \
   xrdp_process.c \
   xrdp_region.c \
-  xrdp_wm.c \
-  xrdp_encoder.c
+  xrdp_types.h \
+  xrdp_wm.c
 
 xrdp_LDADD = \
   $(top_builddir)/common/libcommon.la \
   $(top_builddir)/libxrdp/libxrdp.la \
-  $(EXTRA_LIBS)
-
-xrdp_LDFLAGS = \
-  $(EXTRA_FLAGS)
+  $(XRDP_EXTRA_LIBS)
 
 xrdpsysconfdir=$(sysconfdir)/xrdp
 
-xrdpsysconf_DATA = \
+dist_xrdpsysconf_DATA = \
   xrdp.ini \
   xrdp_keyboard.ini
 
 xrdppkgdatadir=$(datadir)/xrdp
 
-xrdppkgdata_DATA = \
+dist_xrdppkgdata_DATA = \
   ad24b.bmp \
   ad256.bmp \
   xrdp24b.bmp \

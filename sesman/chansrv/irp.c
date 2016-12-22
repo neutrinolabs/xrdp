@@ -77,7 +77,8 @@ IRP * devredir_irp_new()
     log_debug("entered");
 
     /* create new IRP */
-    if ((irp = g_malloc(sizeof(IRP), 1)) == NULL)
+    irp = g_new0(IRP, 1);
+    if (irp == NULL)
     {
         log_error("system out of memory!");
         return NULL;

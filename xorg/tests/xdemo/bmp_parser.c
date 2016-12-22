@@ -70,7 +70,7 @@ int parse_bmp(char *filename, struct pic_info *pic_info)
 
     if ((fd = open(filename, O_RDONLY)) < 0)
     {
-        printf("error opeing %s\n", filename);
+        printf("error opening %s\n", filename);
         return -1;
     }
 

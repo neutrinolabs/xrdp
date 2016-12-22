@@ -32,11 +32,11 @@
  * @brief Validates user's password
  * @param user user's login name
  * @param pass user's password
- * @return 0 on success, 1 on failure
+ * @return non-zero handle on success, 0 on failure
  *
  */
 long DEFAULT_CC
-auth_userpass(char* user, char* pass, int *errorcode);
+auth_userpass(const char *user, const char *pass, int *errorcode);
 
 /**
  *
@@ -94,7 +94,7 @@ auth_set_env(long in_val);
  *
  */
 int DEFAULT_CC
-auth_check_pwd_chg(char* user);
+auth_check_pwd_chg(const char *user);
 
 /**
  *
@@ -104,6 +104,6 @@ auth_check_pwd_chg(char* user);
  *
  */
 int DEFAULT_CC
-auth_change_pwd(char* user, char* newpwd);
+auth_change_pwd(const char *user, const char *newpwd);
 
 #endif

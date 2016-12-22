@@ -41,9 +41,23 @@ typedef int (DEFAULT_CC *ttrans_data_in)(struct trans* self);
 typedef int (DEFAULT_CC *ttrans_conn_in)(struct trans* self,
                                          struct trans* new_self);
 typedef int (DEFAULT_CC *tis_term)(void);
-typedef int (APP_CC *trans_recv_proc) (struct trans *self, void *ptr, int len);
-typedef int (APP_CC *trans_send_proc) (struct trans *self, const void *data, int len);
+typedef int (APP_CC *trans_recv_proc) (struct trans *self, char *ptr, int len);
+typedef int (APP_CC *trans_send_proc) (struct trans *self, const char *data, int len);
 typedef int (APP_CC *trans_can_recv_proc) (struct trans *self, int sck, int millis);
+
+/* optional source info */
+
+#define XRDP_SOURCE_NONE    0
+#define XRDP_SOURCE_CLIENT  1
+#define XRDP_SOURCE_SESMAN  2
+#define XRDP_SOURCE_CHANSRV 3
+#define XRDP_SOURCE_MOD     4
+
+struct source_info
+{
+    int cur_source;
+    int source[7];
+};
 
 struct trans
 {
@@ -68,6 +82,8 @@ struct trans
     trans_recv_proc trans_recv;
     trans_send_proc trans_send;
     trans_can_recv_proc trans_can_recv;
+    struct source_info *si;
+    int my_source;
 };
 
 struct trans* APP_CC
@@ -79,7 +95,7 @@ trans_get_wait_objs(struct trans* self, tbus* objs, int* count);
 int APP_CC
 trans_get_wait_objs_rw(struct trans *self,
                        tbus *robjs, int *rcount,
-                       tbus *wobjs, int *wcount);
+                       tbus *wobjs, int *wcount, int *timeout);
 int APP_CC
 trans_check_wait_objs(struct trans* self);
 int APP_CC
@@ -93,6 +109,8 @@ trans_force_write(struct trans* self);
 int APP_CC
 trans_write_copy(struct trans* self);
 int APP_CC
+trans_write_copy_s(struct trans* self, struct stream* out_s);
+int APP_CC
 trans_connect(struct trans* self, const char* server, const char* port,
               int timeout);
 int APP_CC
@@ -104,7 +122,8 @@ trans_get_in_s(struct trans* self);
 struct stream* APP_CC
 trans_get_out_s(struct trans* self, int size);
 int APP_CC
-trans_set_tls_mode(struct trans *self, const char *key, const char *cert);
+trans_set_tls_mode(struct trans *self, const char *key, const char *cert,
+                   int disableSSLv3, const char *tls_ciphers);
 int APP_CC
 trans_shutdown_tls_mode(struct trans *self);
 int APP_CC

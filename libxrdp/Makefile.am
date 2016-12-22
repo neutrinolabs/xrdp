@@ -1,71 +1,65 @@
-EXTRA_DIST = libxrdp.h libxrdpinc.h
+EXTRA_DIST = \
+  xrdp_surface.c
 
-EXTRA_DEFINES =
-EXTRA_INCLUDES =
-EXTRA_LIBS =
-EXTRA_FLAGS =
-
-if XRDP_DEBUG
-EXTRA_DEFINES += -DXRDP_DEBUG
-else
-EXTRA_DEFINES += -DXRDP_NODEBUG
-endif
-
-if XRDP_NEUTRINORDP
-EXTRA_DEFINES += -DXRDP_NEUTRINORDP
-EXTRA_LIBS += $(FREERDP_LIBS)
-endif
-
-if XRDP_TJPEG
-EXTRA_DEFINES += -DXRDP_JPEG -DXRDP_TJPEG
-EXTRA_INCLUDES += @TurboJpegIncDir@
-EXTRA_FLAGS += @TurboJpegLibDir@
-EXTRA_LIBS += -lturbojpeg
-else
-if XRDP_JPEG
-EXTRA_DEFINES += -DXRDP_JPEG
-EXTRA_LIBS += -ljpeg
-endif
-endif
-
-if GOT_PREFIX
-EXTRA_INCLUDES += -I$(prefix)/include
-EXTRA_FLAGS += -L$(prefix)/lib -Wl,-rpath -Wl,$(prefix)/lib
-endif
-
-AM_CFLAGS = \
+AM_CPPFLAGS = \
   -DXRDP_CFG_PATH=\"${sysconfdir}/xrdp\" \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
-  $(EXTRA_DEFINES)
+  -I$(top_srcdir)/common
 
-INCLUDES = \
-  -I$(top_srcdir)/common \
-  $(EXTRA_INCLUDES)
+AM_LDFLAGS =
 
-lib_LTLIBRARIES = \
+LIBXRDP_EXTRA_LIBS =
+
+if XRDP_DEBUG
+AM_CPPFLAGS += -DXRDP_DEBUG
+else
+AM_CPPFLAGS += -DXRDP_NODEBUG
+endif
+
+if XRDP_NEUTRINORDP
+AM_CPPFLAGS += -DXRDP_NEUTRINORDP
+LIBXRDP_EXTRA_LIBS += $(FREERDP_LIBS)
+endif
+
+if XRDP_RFXCODEC
+AM_CPPFLAGS += -DXRDP_RFXCODEC
+endif
+
+if XRDP_TJPEG
+AM_CPPFLAGS += -DXRDP_JPEG -DXRDP_TJPEG @TurboJpegIncDir@
+AM_LDFLAGS += @TurboJpegLibDir@
+LIBXRDP_EXTRA_LIBS += -lturbojpeg
+else
+if XRDP_JPEG
+AM_CPPFLAGS += -DXRDP_JPEG
+LIBXRDP_EXTRA_LIBS += -ljpeg
+endif
+endif
+
+module_LTLIBRARIES = \
   libxrdp.la
 
 libxrdp_la_SOURCES = \
   libxrdp.c \
-  xrdp_channel.c \
-  xrdp_iso.c \
-  xrdp_mcs.c \
-  xrdp_orders.c \
-  xrdp_rdp.c \
-  xrdp_sec.c \
-  xrdp_bitmap_compress.c \
+  libxrdp.h \
+  libxrdpinc.h \
   xrdp_bitmap32_compress.c \
-  xrdp_jpeg_compress.c \
-  xrdp_orders_rail.c \
-  xrdp_mppc_enc.c \
+  xrdp_bitmap_compress.c \
+  xrdp_caps.c \
+  xrdp_channel.c \
   xrdp_fastpath.c \
-  xrdp_caps.c
-
-libxrdp_la_LDFLAGS = \
-  $(EXTRA_FLAGS)
+  xrdp_iso.c \
+  xrdp_jpeg_compress.c \
+  xrdp_mcs.c \
+  xrdp_mppc_enc.c \
+  xrdp_orders.c \
+  xrdp_orders_rail.c \
+  xrdp_orders_rail.h \
+  xrdp_rdp.c \
+  xrdp_sec.c
 
 libxrdp_la_LIBADD = \
   $(top_builddir)/common/libcommon.la \
-  $(EXTRA_LIBS)
+  $(LIBXRDP_EXTRA_LIBS)

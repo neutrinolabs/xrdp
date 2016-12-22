@@ -131,7 +131,14 @@ enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION *c, struct SCP_SES
     in_uint16_be(c->in_s, cmd);
     scp_session_set_height(session, cmd);
     in_uint8(c->in_s, sz);
-    scp_session_set_bpp(session, sz);
+    if (0 != scp_session_set_bpp(session, sz))
+    {
+        scp_session_destroy(session);
+        log_message(LOG_LEVEL_WARNING,
+                    "[v1s:%d] connection aborted: unsupported bpp: %d",
+                    __LINE__, sz);
+        return SCP_SERVER_STATE_INTERNAL_ERR;
+    }
     in_uint8(c->in_s, sz);
     scp_session_set_rsr(session, sz);
     in_uint8a(c->in_s, buf, 17);
@@ -143,12 +150,12 @@ enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION *c, struct SCP_SES
     if (sz == SCP_ADDRESS_TYPE_IPV4)
     {
         in_uint32_be(c->in_s, size);
-        scp_session_set_addr(session, SCP_ADDRESS_TYPE_IPV4_BIN, &size);
+        scp_session_set_addr(session, sz, &size);
     }
     else if (sz == SCP_ADDRESS_TYPE_IPV6)
     {
         in_uint8a(c->in_s, buf, 16);
-        scp_session_set_addr(session, SCP_ADDRESS_TYPE_IPV6_BIN, buf);
+        scp_session_set_addr(session, sz, buf);
     }
 
     buf[256] = '\0';
@@ -195,7 +202,7 @@ enum SCP_SERVER_STATES_E scp_v1s_accept(struct SCP_CONNECTION *c, struct SCP_SES
 }
 
 enum SCP_SERVER_STATES_E
-scp_v1s_deny_connection(struct SCP_CONNECTION *c, char *reason)
+scp_v1s_deny_connection(struct SCP_CONNECTION *c, const char *reason)
 {
     int rlen;
 
@@ -228,7 +235,8 @@ scp_v1s_deny_connection(struct SCP_CONNECTION *c, char *reason)
 }
 
 enum SCP_SERVER_STATES_E
-scp_v1s_request_password(struct SCP_CONNECTION *c, struct SCP_SESSION *s, char *reason)
+scp_v1s_request_password(struct SCP_CONNECTION *c, struct SCP_SESSION *s,
+                         const char *reason)
 {
     tui8 sz;
     tui32 version;
@@ -322,7 +330,6 @@ scp_v1s_request_password(struct SCP_CONNECTION *c, struct SCP_SESSION *s, char *
 
     if (0 != scp_session_set_username(s, buf))
     {
-        scp_session_destroy(s);
         log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error", __LINE__);
         return SCP_SERVER_STATE_INTERNAL_ERR;
     }
@@ -334,7 +341,6 @@ scp_v1s_request_password(struct SCP_CONNECTION *c, struct SCP_SESSION *s, char *
 
     if (0 != scp_session_set_password(s, buf))
     {
-        scp_session_destroy(s);
         log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error", __LINE__);
         return SCP_SERVER_STATE_INTERNAL_ERR;
     }
@@ -385,7 +391,7 @@ scp_v1s_connect_new_session(struct SCP_CONNECTION *c, SCP_DISPLAY d)
 
 /* 032 */
 enum SCP_SERVER_STATES_E
-scp_v1s_connection_error(struct SCP_CONNECTION *c, char *error)
+scp_v1s_connection_error(struct SCP_CONNECTION *c, const char *error)
 {
     tui16 len;
 
@@ -435,8 +441,11 @@ scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt, struct SCP_DISCONNEC
     }
 
     /* then we wait for client ack */
-#warning maybe this message could say if the session should be resized on
-#warning server side or client side
+
+    /*
+     * Maybe this message could say if the session should be resized on
+     * server side or client side.
+     */
     init_stream(c->in_s, c->in_s->size);
 
     if (0 != scp_tcp_force_recv(c->in_sck, c->in_s->data, 8))
@@ -637,7 +646,7 @@ scp_v1s_list_sessions(struct SCP_CONNECTION *c, int sescnt, struct SCP_DISCONNEC
         /* if we got here, the requested sid wasn't one from the list we sent */
         /* we should kill the connection                                      */
         log_message(LOG_LEVEL_WARNING, "[v1s:%d] connection aborted: internal error (no such session in list)", __LINE__);
-        return SCP_CLIENT_STATE_INTERNAL_ERR;
+        return SCP_SERVER_STATE_INTERNAL_ERR;
     }
     else if (cmd == 44)
     {

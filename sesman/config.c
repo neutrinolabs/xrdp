@@ -182,61 +182,6 @@ config_read_globals(int file, struct config_sesman *cf, struct list *param_n,
     return 0;
 }
 
-/******************************************************************************
-int DEFAULT_CC
-config_read_logging(int file, struct log_config* lc, struct list* param_n,
-                    struct list* param_v)
-{
-  int i;
-  char* buf;
-
-  list_clear(param_v);
-  list_clear(param_n);
-
-  // setting defaults
-  lc->program_name = g_strdup("sesman");
-  lc->log_file = 0;
-  lc->fd = 0;
-  lc->log_level = LOG_LEVEL_DEBUG;
-  lc->enable_syslog = 0;
-  lc->syslog_level = LOG_LEVEL_DEBUG;
-
-  file_read_section(file, SESMAN_CFG_LOGGING, param_n, param_v);
-  for (i = 0; i < param_n->count; i++)
-  {
-    buf = (char*)list_get_item(param_n, i);
-    if (0 == g_strcasecmp(buf, SESMAN_CFG_LOG_FILE))
-    {
-      lc->log_file = g_strdup((char*)list_get_item(param_v, i));
-    }
-    if (0 == g_strcasecmp(buf, SESMAN_CFG_LOG_LEVEL))
-    {
-      lc->log_level = log_text2level((char*)list_get_item(param_v, i));
-    }
-    if (0 == g_strcasecmp(buf, SESMAN_CFG_LOG_ENABLE_SYSLOG))
-    {
-      lc->enable_syslog = g_text2bool((char*)list_get_item(param_v, i));
-    }
-    if (0 == g_strcasecmp(buf, SESMAN_CFG_LOG_SYSLOG_LEVEL))
-    {
-      lc->syslog_level = log_text2level((char*)list_get_item(param_v, i));
-    }
-  }
-
-  if (0 == lc->log_file)
-  {
-    lc->log_file=g_strdup("./sesman.log");
-  }
-
-  g_printf("logging configuration:\r\n");
-  g_printf("\tLogFile:       %s\r\n",lc->log_file);
-  g_printf("\tLogLevel:      %i\r\n", lc->log_level);
-  g_printf("\tEnableSyslog:  %i\r\n", lc->enable_syslog);
-  g_printf("\tSyslogLevel:   %i\r\n", lc->syslog_level);
-
-  return 0;
-}
-*/
 /******************************************************************************/
 int DEFAULT_CC
 config_read_security(int file, struct config_security *sc,
@@ -347,7 +292,7 @@ config_read_sessions(int file, struct config_sessions *se, struct list *param_n,
     {
         buf = (char *)list_get_item(param_n, i);
 
-        if (0 == g_strcasecmp(buf, SESMAN_CFG_X11DISPLAYOFFSET))
+        if (0 == g_strcasecmp(buf, SESMAN_CFG_SESS_X11DISPLAYOFFSET))
         {
             se->x11_display_offset = g_atoi((char *)list_get_item(param_v, i));
         }
@@ -429,6 +374,7 @@ config_read_rdp_params(int file, struct config_sesman *cs, struct list *param_n,
     list_clear(param_n);
 
     cs->rdp_params = list_create();
+    cs->rdp_params->auto_free = 1;
 
     file_read_section(file, SESMAN_CFG_RDP_PARAMS, param_n, param_v);
 
@@ -437,7 +383,7 @@ config_read_rdp_params(int file, struct config_sesman *cs, struct list *param_n,
         list_add_item(cs->rdp_params, (long)g_strdup((char *)list_get_item(param_v, i)));
     }
 
-    /* printing security config */
+    /* printing X11rdp parameters */
     g_printf("X11rdp parameters:\r\n");
 
     for (i = 0; i < cs->rdp_params->count; i++)
@@ -459,6 +405,7 @@ config_read_xorg_params(int file, struct config_sesman *cs,
     list_clear(param_n);
 
     cs->xorg_params = list_create();
+    cs->xorg_params->auto_free = 1;
 
     file_read_section(file, SESMAN_CFG_XORG_PARAMS, param_n, param_v);
 
@@ -468,7 +415,7 @@ config_read_xorg_params(int file, struct config_sesman *cs,
                       (long) g_strdup((char *) list_get_item(param_v, i)));
     }
 
-    /* printing security config */
+    /* printing XOrg parameters */
     g_printf("XOrg parameters:\r\n");
 
     for (i = 0; i < cs->xorg_params->count; i++)
@@ -491,6 +438,7 @@ config_read_vnc_params(int file, struct config_sesman *cs, struct list *param_n,
     list_clear(param_n);
 
     cs->vnc_params = list_create();
+    cs->vnc_params->auto_free = 1;
 
     file_read_section(file, SESMAN_CFG_VNC_PARAMS, param_n, param_v);
 
@@ -499,7 +447,7 @@ config_read_vnc_params(int file, struct config_sesman *cs, struct list *param_n,
         list_add_item(cs->vnc_params, (long)g_strdup((char *)list_get_item(param_v, i)));
     }
 
-    /* printing security config */
+    /* printing Xvnc parameters */
     g_printf("Xvnc parameters:\r\n");
 
     for (i = 0; i < cs->vnc_params->count; i++)
@@ -521,7 +469,9 @@ config_read_session_variables(int file, struct config_sesman *cs,
     list_clear(param_n);
 
     cs->session_variables1 = list_create();
+    cs->session_variables1->auto_free = 1;
     cs->session_variables2 = list_create();
+    cs->session_variables2->auto_free = 1;
 
     file_read_section(file, SESMAN_CFG_SESSION_VARIABLES, param_n, param_v);
 
@@ -533,7 +483,7 @@ config_read_session_variables(int file, struct config_sesman *cs,
                       (tintptr) g_strdup((char *) list_get_item(param_v, i)));
     }
 
-    /* printing security config */
+    /* printing session variables */
     g_writeln("%s parameters:", SESMAN_CFG_SESSION_VARIABLES);
 
     for (i = 0; i < cs->session_variables1->count; i++)
@@ -544,4 +494,15 @@ config_read_session_variables(int file, struct config_sesman *cs,
     }
 
     return 0;
+}
+
+void
+config_free(struct config_sesman *cs)
+{
+    list_delete(cs->rdp_params);
+    list_delete(cs->vnc_params);
+    list_delete(cs->xorg_params);
+    list_delete(cs->session_variables1);
+    list_delete(cs->session_variables2);
+    g_free(cs);
 }

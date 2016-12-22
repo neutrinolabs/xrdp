@@ -20,10 +20,10 @@
 #ifndef __XRDP_COLOR_H
 #define __XRDP_COLOR_H
 
-char* APP_CC
-convert_bitmap(int in_bpp, int out_bpp, char* bmpdata,
-               int width, int height, int* palette);
+char *APP_CC
+convert_bitmap(int in_bpp, int out_bpp, char *bmpdata,
+               int width, int height, int *palette);
 int APP_CC
-convert_color(int in_bpp, int out_bpp, int in_color, int* palette);
+convert_color(int in_bpp, int out_bpp, int in_color, int *palette);
 
 #endif

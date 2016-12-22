@@ -1,4 +1,2 @@
-EXTRA_DIST = xrdp
-startscriptdir=$(sysconfdir)/init.d
-startscript_DATA = xrdp
-		   
+startscriptdir = $(sysconfdir)/init.d
+dist_startscript_SCRIPTS = xrdp

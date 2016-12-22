@@ -1,4 +1,4 @@
-.TH "xrdp.ini" "5" "0.7.0" "xrdp team" ""
+.TH "xrdp.ini" "5" "0.9.1" "xrdp team" ""
 .SH "NAME"
 \fBxrdp.ini\fR \- Configuration file for \fBxrdp\fR(8)
 
@@ -17,10 +17,7 @@ It is composed by a number of sections, each one composed by a section name, enc
 .TP
 \fB[Channels]\fP \- channel subsystem parameters
 
-.TP
-\fI[Connection]\fP \-  contain the info on which services \fBxrdp\fR(8) can connect to.
-
-.LP 
+.LP
 All options and values (except for file names and paths) are case insensitive, and are described in detail below.
 
 .SH "GLOBALS"
@@ -28,65 +25,99 @@ The options to be specified in the \fB[Globals]\fR section are the following:
 
 .TP
 \fBaddress\fP=\fIip address\fP
-Specifies xrdp listening address. Default is 0.0.0.0 (all interfaces)
+Specify xrdp listening address. If not specified, defaults to 0.0.0.0 (all interfaces).
 
 .TP
 \fBautorun\fP=\fIsession_name\fP
-Automatically run the connection specified by \fIsession_name\fP, which must match a section as described below.
-By default a drop-down list with all available connections is shown.
-A connection can also be chosen by the connecting client by setting the \fBLOGIN DOMAIN\fP to a valid \fIsession name\fP.
+Section name for automatic login. If set and the client supplies valid
+username and password, the user will be logged in automatically using the
+connection specified by \fIsession_name\fP.
+
+If \fIsession_name\fP is empty, the \fBLOGIN DOMAIN\fR from the client
+with be used to select the section. If no domain name is supplied, the
+first suitable section will be used for automatic login.
 
 .TP
-\fBbitmap_cache\fR=\fI[0|1]\fR
+\fBbitmap_cache\fR=\fI[true|false]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables bitmap caching in \fBxrdp\fR(8).
 
 .TP
-\fBbitmap_compression\fR=\fI[0|1]\fR
+\fBbitmap_compression\fR=\fI[true|false]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables bitmap compression in \fBxrdp\fR(8).
 
 .TP
-\fBbulk_compression\fP=\fI[0|1]\fP
+\fBbulk_compression\fP=\fI[true|false]\fP
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables compression of bulk data in \fBxrdp\fR(8).
 
 .TP
-\fBchannel_code\fP=\fI[0|1]\fP
+\fBcertificate\fP=\fI/path/to/certificate\fP
+.TP
+\fBkey_file\fP=\fI/path/to/private_key\fP
+Set location of TLS certificate and private key. They must be written in PEM format.
+If not specified, defaults to \fB${XRDP_CFG_DIR}/cert.pem\fP, \fB${XRDP_CFG_DIR}/key.pem\fP.
+
+This parameter is effective only if \fBsecurity_layer\fP is set to \fBtls\fP or \fBnegotiate\fP.
+
+.TP
+\fBchannel_code\fP=\fI[true|false]\fP
 If set to \fB0\fR, \fBfalse\fR or \fBno\fR this option disables all channels \fBxrdp\fR(8).
 See section \fBCHANNELS\fP below for more fine grained options.
 
 .TP
-\fBcrypt_level\fP=\fIlow|medium|high|fips\fP
+\fBcrypt_level\fP=\fI[low|medium|high|fips]\fP
 .\" <http://blogs.msdn.com/b/openspecification/archive/2011/12/08/encryption-negotiation-in-rdp-connection.aspx>
-RDP connection are controlled by two encryption settings: \fIEncryption Level\fP and \fIEncryption Method\fP.
-The only supported \fIEncryption Method\fP is \fB40BIT_ENCRYPTION\fP, \fB128BIT_ENCRYPTION\fP and \fB56BIT_ENCRYPTION\fP are currently not supported.
+Regulate encryption level of Standard RDP Security.
+This parameter is effective only if \fBsecurity_layer\fP is set to \fBrdp\fP or \fBnegotiate\fP.
+
+Encryption in Standard RDP Security is controlled by two settings: \fIEncryption Level\fP
+and \fIEncryption Method\fP.  The only supported \fIEncryption Method\fP are \fB40BIT_ENCRYPTION\fP
+and \fB128BIT_ENCRYPTION\fP. \fB56BIT_ENCRYPTION\fP is not supported.
 This option controls the \fIEncryption Level\fP:
 .RS 8
 .TP
 .B low
-All data sent from the client to the server is protected by encryption based on the maximum key strength supported by the client.
+All data sent from the client to the server is protected by encryption based on
+the maximum key strength supported by the client.
 .I This is the only level that the traffic sent by the server to client is not encrypted.
 .TP
 .B medium
-All data sent between the client and the server is protected by encryption based on the maximum key strength supported by the client.
+All data sent between the client and the server is protected by encryption based on
+the maximum key strength supported by the client (client compatible).
 .TP
 .B high
-All data sent between the client and server is protected by encryption based on the server's maximum key strength.
+All data sent between the client and the server is protected by encryption based on
+the server's maximum key strength (sever compatible).
 .TP
 .B fips
-All data sent between the client and server is protected using Federal Information Processing Standard 140-1 validated encryption methods.
-.I This level is required for Windows clients (mstsc.exe) if the client's group policy enforces FIPS-compliance mode.
+All data sent between the client and server is protected using Federal Information
+Processing Standard 140-1 validated encryption methods.
+.I This level is required for Windows clients (mstsc.exe) if the client's group policy
+.I enforces FIPS-compliance mode.
 .RE
 
 .TP
-\fBfork\fP=\fI[0|1]\fP
+\fBdisableSSLv3\fP=\fI[true|false]\fP
+If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP will not accept SSLv3 connections.
+If not specified, defaults to \fBfalse\fP.
+This parameter is effective only if \fBsecurity_layer\fP is set to \fBtls\fP or \fBnegotiate\fP.
+
+.TP
+\fBfork\fP=\fI[true|false]\fP
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR for each incoming connection \fBxrdp\fR(8) forks a sub-process instead of using threads.
 
 .TP
-\fBhidelogwindow\fP=\fI[0|1]\fP
+\fBhidelogwindow\fP=\fI[true|false]\fP
 If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP will not show a window for log messages.
+If not specified, defaults to \fBfalse\fP.
 
 .TP
-\fBmax_bpp\fP=\fI[8|15|16|24]\fP
+\fBmax_bpp\fP=\fI[8|15|16|24|32]\fP
 Limit the color depth by specifying the maximum number of bits per pixel.
+If not specified or set to \fB0\fP, unlimited.
+
+.TP
+\fBpamerrortxt\fP=\fIerror_text\fP
+Specify text passed to PAM when authentication failed. The maximum length is \fB256\fP.
 
 .TP
 \fBport\fP=\fIport\fP
@@ -94,14 +125,59 @@ Specify TCP port to listen on for incoming connections.
 The default for RDP is \fB3389\fP.
 
 .TP
-\fBtcp_keepalive\fP=\fI[yes|no]\fP
-Regulate if the listening socket uses socket option \fBSO_KEEPALIVE\fP.
-If set to \fB1\fP, \fBtrue\fP or \fByes\fP and the network connection disappears without closing messages, the connection will be closed.
+\fBrequire_credentials\fP=\fI[true|false]\fP
+If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP requires clients to include username and
+password initial connection phase. In other words, xrdp doesn't allow clients to show login
+screen if set to true. If not specified, defaults to \fBfalse\fP.
 
 .TP
-\fBtcp_nodelay\fP=\fI[yes|no]\fP
+\fBsecurity_layer\fP=\fI[tls|rdp|negotiate]\fP
+Regulate security methods. If not specified, defaults to \fBnegotiate\fP.
+.RS 8
+.TP
+.B tls
+Enhanced RDP Security is used. All security operations (encryption, decryption, data integrity
+verification, and server authentication) are implemented by TLS.
+
+.TP
+.B rdp
+Standard RDP Security, which is not safe from man-in-the-middle attack, is used. The encryption level
+of Standard RDP Security is controlled by \fBcrypt_level\fP.
+
+.TP
+.B negotiate
+Negotiate these security methods with clients.
+.RE
+
+.TP
+\fBtcp_keepalive\fP=\fI[true|false]\fP
+Regulate if the listening socket uses socket option \fBSO_KEEPALIVE\fP.
+If set to \fB1\fP, \fBtrue\fP or \fByes\fP and the network connection disappears
+without closing messages, the connection will be closed.
+
+.TP
+\fBtcp_nodelay\fP=\fI[true|false]\fP
 Regulate if the listening socket uses socket option \fBTCP_NODELAY\fP.
 If set to \fB1\fP, \fBtrue\fP or \fByes\fP, no buffering will be performed in the TCP stack.
+
+.TP
+\fBtcp_send_buffer_bytes\fP=\fIbuffer_size\fP
+.TP
+\fBtcp_recv_buffer_bytes\fP=\fIbuffer_size\fP
+Specify send/recv buffer sizes in bytes.  The default value depends on operating system.
+
+.TP
+\fBtls_ciphers\fP=\fIcipher_suite\fP
+Specifies TLS cipher suite.  The format of this parameter is equivalent to which
+\fBopenssl\fP(1) ciphers subcommand accepts.
+
+(ex. $ openssl ciphers 'HIGH:!ADH:!SHA1')
+
+This parameter is effective only if \fBsecurity_layer\fP is set to \fBtls\fP or \fBnegotiate\fP.
+
+.TP
+\fBuse_fastpath\fP=\fI[input|output|both|none]\fP
+If not specified, defaults to \fBnone\fP.
 
 .TP
 \fBblack\fP=\fI000000\fP
@@ -127,7 +203,7 @@ The lowest value that can be given to one of the light sources is 0 (hex 00).
 The highest value is 255 (hex FF).
 
 .SH "LOGGING"
-The following parameters can be used in the \fB[logging]\fR section:
+The following parameters can be used in the \fB[Logging]\fR section:
 
 .TP
 \fBLogFile\fR=\fI${SESMAN_LOG_DIR}/sesman.log\fR
@@ -148,7 +224,7 @@ This option can have one of the following values:
 \fBDEBUG\fR or \fB4\fR \- Log everything. If \fBsesman\fR is compiled in debug mode, this options will output many more low\-level message, useful for developers
 
 .TP
-\fBEnableSyslog\fR=\fI[0|1]\fR
+\fBEnableSyslog\fR=\fI[true|false]\fR
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables logging to syslog. Otherwise syslog is disabled.
 
 .TP
@@ -158,70 +234,81 @@ This option sets the logging level for syslog. It can have the same values of \f
 .SH "CHANNELS"
 The Remote Desktop Protocol supports several channels, which are used to transfer additional data like sound, clipboard data and others.
 Channel names not listed here will be blocked by \fBxrdp\fP.
-Not all channels are supported in all cases, so setting a value to \fItrue\fP is a pre-requisite, but does not force it's use.
+Not all channels are supported in all cases, so setting a value to \fItrue\fP is a prerequisite, but does not force its use.
 .br
 Channels can also be enabled or disabled on a per connection basis by prefixing each setting with \fBchannel.\fP in the channel section.
 
 .TP
-\fBrdpdr\fP=\fI[0|1]\fP
-If set to \fB1\fR, \fBtrue\fR or \fByes\fR using the RDP channel for device re-direction is allowed.
+\fBrdpdr\fP=\fI[true|false]\fP
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR using the RDP channel for device redirection is allowed.
 
 .TP
-\fBrdpsnd\fP=\fI[0|1]\fP
+\fBrdpsnd\fP=\fI[true|false]\fP
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR using the RDP channel for sound is allowed.
 
 .TP
-\fBdrdynvc\fP=\fI[0|1]\fP
+\fBdrdynvc\fP=\fI[true|false]\fP
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR using the RDP channel to initiate additional dynamic virtual channels is allowed.
 
 .TP
-\fBcliprdr\fP=\fI[0|1]\fP
-If set to \fB1\fR, \fBtrue\fR or \fByes\fR using the RDP channel for clipboard re-direction is allowed.
+\fBcliprdr\fP=\fI[true|false]\fP
+If set to \fB1\fR, \fBtrue\fR or \fByes\fR using the RDP channel for clipboard redirection is allowed.
 
 .TP
-\fBrail\fP=\fI[0|1]\fP
+\fBrail\fP=\fI[true|false]\fP
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR using the RDP channel for remote applications integrated locally (RAIL) is allowed.
 
 .TP
-\fBxrdpvr\fP=\fI[0|1]\fP
+\fBxrdpvr\fP=\fI[true|false]\fP
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR using the RDP channel for XRDP Video streaming is allowed.
 
 .SH "CONNECTIONS"
 A connection section is made of a section name, enclosed in square brackets, and the following entries:
 
-.TP 
+.TP
 \fBname\fR=\fI<session name>\fR
 The name displayed in \fBxrdp\fR(8) login window's combo box.
 
-.TP 
+.TP
 \fBlib\fR=\fI../vnc/libvnc.so\fR
 Sets the library to be used with this connection.
 
-.TP 
+.TP
 \fBusername\fR=\fI<username>\fR|\fIask\fR
 Specifies the username used for authenticating in the connection.
 If set to \fIask\fR, user name should be provided in the login window.
 
-.TP 
+.TP
 \fBpassword\fR=\fI<password>\fR|\fIask\fR
 Specifies the password used for authenticating in the connection.
 If set to \fIask\fR, password should be provided in the login window.
 
-.TP 
+.TP
 \fBip\fR=\fI127.0.0.1\fR
 Specifies the ip address of the host to connect to.
 
-.TP 
+.TP
 \fBport\fR=\fI<number>\fR|\fI\-1\fR
 Specifies the port number to connect to. If set to \fI\-1\fR, the default port for the specified library is used.
+
+.TP
+\fBxserverbpp\fR=\fI<number>\fR
+Specifies color depth of the backend X server. The default is the color
+depth of the client. Only Xvnc and X11rdp use that setting. Xorg runs at
+\fI24\fR bpp.
+
+.TP
+\fBcode\fR=\fI<number>\fR|\fI0\fR
+Specifies the session type. The default, \fI0\fR, is Xvnc, \fI10\fR is
+X11rdp, and \fI20\fR is Xorg with xorgxrdp modules.
 
 .SH "EXAMPLES"
 This is an example \fBxrdp.ini\fR:
 
 .nf
 [Globals]
-bitmap_cache=yes
-bitmap_compression=yes
+bitmap_cache=true
+bitmap_compression=true
 
 [vnc1]
 name=sesman
@@ -241,4 +328,4 @@ ${XRDP_CFG_DIR}/xrdp.ini
 .BR sesrun (8),
 .BR sesman.ini (5)
 
-for more info on \fBxrdp\fR see http://xrdp.sf.net
+for more info on \fBxrdp\fR see http://www.xrdp.org/

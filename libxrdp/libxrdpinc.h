@@ -27,8 +27,8 @@
 
 struct xrdp_brush
 {
-    int x_orgin;
-    int y_orgin;
+    int x_origin;
+    int y_origin;
     int style;
     char pattern[8];
 };
@@ -72,6 +72,8 @@ struct xrdp_session
     int up_and_running;
     int (*is_term)(void);
     int in_process_data; /* inc / dec libxrdp_process_data calls */
+
+    struct source_info si;
 };
 
 struct xrdp_session * DEFAULT_CC
@@ -81,7 +83,7 @@ libxrdp_exit(struct xrdp_session *session);
 int DEFAULT_CC
 libxrdp_disconnect(struct xrdp_session *session);
 int DEFAULT_CC
-libxrdp_process_incomming(struct xrdp_session *session);
+libxrdp_process_incoming(struct xrdp_session *session);
 int EXPORT_CC
 libxrdp_get_pdu_bytes(const char *aheader);
 struct stream * APP_CC
@@ -187,7 +189,7 @@ int DEFAULT_CC
 libxrdp_query_channel(struct xrdp_session *session, int index,
                       char *channel_name, int *channel_flags);
 int DEFAULT_CC
-libxrdp_get_channel_id(struct xrdp_session *session, char *name);
+libxrdp_get_channel_id(struct xrdp_session *session, const char *name);
 int DEFAULT_CC
 libxrdp_send_to_channel(struct xrdp_session *session, int channel_id,
                         char *data, int data_len,
@@ -242,5 +244,8 @@ libxrdp_fastpath_send_surface(struct xrdp_session *session,
                               int destLeft, int dst_Top,
                               int destRight, int destBottom, int bpp,
                               int codecID, int width, int height);
+int EXPORT_CC
+libxrdp_fastpath_send_frame_marker(struct xrdp_session *session,
+                                   int frame_action, int frame_id);
 
 #endif

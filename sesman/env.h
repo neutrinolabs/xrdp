@@ -33,12 +33,12 @@
  *
  * @brief Creates vnc password file
  * @param filename VNC password file name
- * @param password The password to be encrypte
+ * @param password The password to be encrypted
  * @return 0 on success, 1 on error
  *
  */
 int DEFAULT_CC
-env_check_password_file(char* filename, char* password);
+env_check_password_file(const char *filename, const char *password);
 
 /**
  *
@@ -50,7 +50,7 @@ env_check_password_file(char* filename, char* password);
  *
  */
 int DEFAULT_CC
-env_set_user(char* username, char* passwd_file, int display,
-             struct list *env_names, struct list* env_values);
+env_set_user(const char *username, char **passwd_file, int display,
+             const struct list *env_names, const struct list *env_values);
 
 #endif

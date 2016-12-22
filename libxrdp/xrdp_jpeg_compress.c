@@ -160,12 +160,12 @@ xrdp_codec_jpeg_compress(void *handle,
      * TJPF_ARGB no works, zero bytes */
 
     error = tjCompress(tj_han,     /* opaque handle */
-                       src_ptr,    /* source buf */
+                       (unsigned char *) src_ptr,    /* source buf */
                        cx,         /* width of area to compress */
                        stride,     /* pitch */
                        cy,         /* height of area to compress */
                        TJPF_XBGR,  /* pixel size */
-                       out_data,   /* dest buf */
+                       (unsigned char *) out_data,   /* dest buf */
                        &lio_len,   /* inner_buf length & compressed_size */
                        TJSAMP_420, /* jpeg sub sample */
                        quality,    /* jpeg quality */
@@ -213,14 +213,14 @@ xrdp_jpeg_deinit(void *handle)
 
 struct mydata_comp
 {
-    char *cb;
+    JOCTET *cb;
     int cb_bytes;
     int total_done;
     int overwrite;
 };
 
 /*****************************************************************************/
-/* called at begining */
+/* called at beginning */
 static void DEFAULT_CC
 my_init_destination(j_compress_ptr cinfo)
 {
@@ -265,8 +265,8 @@ my_term_destination(j_compress_ptr cinfo)
 
 /*****************************************************************************/
 static int APP_CC
-jp_do_compress(char *data, int width, int height, int bpp, int quality,
-               char *comp_data, int *comp_data_bytes)
+jp_do_compress(JOCTET *data, int width, int height, int bpp, int quality,
+               JOCTET *comp_data, int *comp_data_bytes)
 {
     struct jpeg_compress_struct cinfo;
     struct jpeg_error_mgr jerr;
@@ -336,9 +336,8 @@ jpeg_compress(char *in_data, int width, int height,
               struct stream *s, struct stream *temp_s, int bpp,
               int byte_limit, int e, int quality)
 {
-    char *data;
+    JOCTET *data;
     tui32 *src32;
-    tui16 *src16;
     tui8 *dst8;
     tui32 pixel;
     int red;
@@ -348,7 +347,7 @@ jpeg_compress(char *in_data, int width, int height,
     int i;
     int cdata_bytes;
 
-    data = temp_s->data;
+    data = (JOCTET *) temp_s->data;
     dst8 = data;
 
     if (bpp == 24)
@@ -366,11 +365,14 @@ jpeg_compress(char *in_data, int width, int height,
                 *(dst8++) = red;
             }
 
-            for (i = 0; i < e; i++)
+            if (width > 0)
             {
-                *(dst8++) = blue;
-                *(dst8++) = green;
-                *(dst8++) = red;
+                for (i = 0; i < e; i++)
+                {
+                    *(dst8++) = blue;
+                    *(dst8++) = green;
+                    *(dst8++) = red;
+                }
             }
         }
     }
@@ -380,7 +382,8 @@ jpeg_compress(char *in_data, int width, int height,
     }
 
     cdata_bytes = byte_limit;
-    jp_do_compress(data, width + e, height, 24, quality, s->p, &cdata_bytes);
+    jp_do_compress(data, width + e, height, 24, quality, (JOCTET *) s->p,
+                   &cdata_bytes);
     s->p += cdata_bytes;
     return cdata_bytes;
 }

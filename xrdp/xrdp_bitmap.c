@@ -38,7 +38,7 @@
   while (0)
 
 
-static const int g_crc_table[256] =
+static const unsigned int g_crc_table[256] =
 {
     0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
     0xe963a535, 0x9e6495a3, 0x0edb8832, 0x79dcb8a4, 0xe0d5e91e, 0x97d2d988,
@@ -123,6 +123,14 @@ xrdp_bitmap_create(int width, int height, int bpp,
         self->data = (char *)g_malloc(width * height * Bpp, 0);
     }
 
+#if defined(XRDP_PAINTER)
+    if (self->type == WND_TYPE_SCREEN) /* noorders */
+    {
+        LLOGLN(0, ("xrdp_bitmap_create: noorders"));
+        self->data = (char *) g_malloc(width * height * Bpp, 0);
+    }
+#endif
+
     if (self->type != WND_TYPE_BITMAP)
     {
         self->child_list = list_create();
@@ -149,9 +157,9 @@ xrdp_bitmap_create_with_data(int width, int height,
                              struct xrdp_wm *wm)
 {
     struct xrdp_bitmap *self = (struct xrdp_bitmap *)NULL;
+    int Bpp;
 #if defined(NEED_ALIGN)
     tintptr data_as_int;
-    int Bpp;
 #endif
 
     self = (struct xrdp_bitmap *)g_malloc(sizeof(struct xrdp_bitmap), 1);
@@ -160,26 +168,29 @@ xrdp_bitmap_create_with_data(int width, int height,
     self->height = height;
     self->bpp = bpp;
     self->wm = wm;
+
+    Bpp = 4;
+    switch (bpp)
+    {
+        case 8:
+            Bpp = 1;
+            break;
+        case 15:
+            Bpp = 2;
+            break;
+        case 16:
+            Bpp = 2;
+            break;
+    }
+    self->line_size = width * Bpp;
+
 #if defined(NEED_ALIGN)
     data_as_int = (tintptr) data;
     if (((bpp >= 24) && (data_as_int & 3)) ||
         (((bpp == 15) || (bpp == 16)) && (data_as_int & 1)))
     {
-        /* got to copy data here, it's not alligned
+        /* got to copy data here, it's not aligned
            other calls in this file assume alignment */
-        Bpp = 4;
-        switch (bpp)
-        {
-            case 8:
-                Bpp = 1;
-                break;
-            case 15:
-                Bpp = 2;
-                break;
-            case 16:
-                Bpp = 2;
-                break;
-        }
         self->data = (char *)g_malloc(width * height * Bpp, 0);
         g_memcpy(self->data, data, width * height * Bpp);
         return self;
@@ -471,7 +482,7 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
         /* read bmp header */
         if (g_file_seek(fd, 14) < 0)
         {
-            log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s\n",
+            log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s",
                 filename);
             free_stream(s);
             g_file_close(fd);
@@ -505,7 +516,7 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
         {
             if (g_file_seek(fd, 14 + header.size) < 0)
             {
-                log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s\n",
+                log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s",
                     filename);
             }
             xrdp_bitmap_resize(self, header.image_width, header.image_height);
@@ -562,7 +573,7 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
             /* read palette */
             if (g_file_seek(fd, 14 + header.size) < 0)
             {
-                log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s\n",
+                log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s",
                     filename);
             }
             init_stream(s, 8192);
@@ -623,7 +634,7 @@ xrdp_bitmap_load(struct xrdp_bitmap *self, const char *filename, int *palette)
             /* read palette */
             if (g_file_seek(fd, 14 + header.size) < 0)
             {
-                log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s\n",
+                log_message(LOG_LEVEL_ERROR, "xrdp_bitmap_load: seek error in file %s",
                     filename);
             }
             init_stream(s, 8192);
@@ -1254,8 +1265,8 @@ xrdp_bitmap_draw_focus_box(struct xrdp_bitmap *self,
     painter->brush.pattern[5] = 0x55;
     painter->brush.pattern[6] = 0xaa;
     painter->brush.pattern[7] = 0x55;
-    painter->brush.x_orgin = x;
-    painter->brush.x_orgin = x;
+    painter->brush.x_origin = x;
+    painter->brush.x_origin = x;
     painter->brush.style = 3;
     painter->fg_color = self->wm->black;
     painter->bg_color = self->parent->bg_color;

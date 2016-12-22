@@ -37,7 +37,6 @@
 #define SESMAN_CFG_PORT              "ListenPort"
 #define SESMAN_CFG_ENABLE_USERWM     "EnableUserWindowManager"
 #define SESMAN_CFG_USERWM            "UserWindowManager"
-#define SESMAN_CFG_X11DISPLAYOFFSET  "X11DisplayOffset"
 #define SESMAN_CFG_MAX_SESSION       "MaxSessions"
 #define SESMAN_CFG_AUTH_FILE_PATH    "AuthFilePath"
 
@@ -66,6 +65,7 @@
 #define SESMAN_CFG_SESS_KILL_DISC    "KillDisconnected"
 #define SESMAN_CFG_SESS_IDLE_LIMIT   "IdleTimeLimit"
 #define SESMAN_CFG_SESS_DISC_LIMIT   "DisconnectedTimeLimit"
+#define SESMAN_CFG_SESS_X11DISPLAYOFFSET "X11DisplayOffset"
 
 #define SESMAN_CFG_SESS_POLICY_S "Policy"
 #define SESMAN_CFG_SESS_POLICY_DFLT_S "Default"
@@ -116,7 +116,7 @@ struct config_security
   int ts_users;
   /**
    * @var ts_admins
-   * @brief Terminal Server Adminnistrators group
+   * @brief Terminal Server Administrators group
    */
   int ts_admins_enable;
   int ts_admins;
@@ -220,16 +220,14 @@ struct config_sesman
    */
   struct list* rdp_params;
   /**
-   * @var log
-   * @brief Log configuration struct
+   * @var xorg_params
+   * @brief Xorg additional parameter list
    */
-
   struct list* xorg_params;
   /**
    * @var log
    * @brief Log configuration struct
    */
-
   //struct log_config log;
   /**
    * @var sec
@@ -357,5 +355,8 @@ config_read_vnc_params(int file, struct config_sesman* cs, struct list* param_n,
 int DEFAULT_CC
 config_read_session_variables(int file, struct config_sesman *cs,
                               struct list *param_n, struct list *param_v);
+
+void
+config_free(struct config_sesman *cs);
 
 #endif

@@ -40,13 +40,17 @@ struct stream
     char *end;
     char *data;
     int size;
+    int pad0;
     /* offsets of various headers */
     char *iso_hdr;
     char *mcs_hdr;
     char *sec_hdr;
     char *rdp_hdr;
     char *channel_hdr;
+    /* other */
     char *next_packet;
+    struct stream *next;
+    int *source;
 };
 
 /******************************************************************************/

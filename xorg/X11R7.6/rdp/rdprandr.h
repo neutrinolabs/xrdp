@@ -57,4 +57,7 @@ Bool
 rdpRRSetPanning(ScreenPtr pScrn, RRCrtcPtr crtc, BoxPtr totalArea,
                 BoxPtr trackingArea, INT16* border);
 
+int
+rdpRRSetRdpOutputs(void);
+
 #endif

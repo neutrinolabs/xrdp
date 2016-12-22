@@ -51,10 +51,6 @@
 #define SCP_ADDRESS_TYPE_IPV4 0x00
 #define SCP_ADDRESS_TYPE_IPV6 0x01
 
-/* used in scp_session_set_addr() */
-#define SCP_ADDRESS_TYPE_IPV4_BIN 0x80
-#define SCP_ADDRESS_TYPE_IPV6_BIN 0x81
-
 #define SCP_COMMAND_SET_DEFAULT 0x0000
 #define SCP_COMMAND_SET_MANAGE  0x0001
 #define SCP_COMMAND_SET_RSR     0x0002
@@ -92,6 +88,7 @@ struct SCP_SESSION
   char* program;
   char* directory;
   char* client_ip;
+  tui8 guid[16];
 };
 
 struct SCP_DISCONNECTED_SESSION

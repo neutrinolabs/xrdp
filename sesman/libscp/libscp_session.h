@@ -59,37 +59,40 @@ int
 scp_session_set_rsr(struct SCP_SESSION* s, tui8 rsr);
 
 int
-scp_session_set_locale(struct SCP_SESSION* s, char* str);
+scp_session_set_locale(struct SCP_SESSION* s, const char *str);
 
 int
-scp_session_set_username(struct SCP_SESSION* s, char* str);
+scp_session_set_username(struct SCP_SESSION* s, const char *str);
 
 int
-scp_session_set_password(struct SCP_SESSION* s, char* str);
+scp_session_set_password(struct SCP_SESSION* s, const char *str);
 
 int
-scp_session_set_domain(struct SCP_SESSION* s, char* str);
+scp_session_set_domain(struct SCP_SESSION* s, const char *str);
 
 int
-scp_session_set_program(struct SCP_SESSION* s, char* str);
+scp_session_set_program(struct SCP_SESSION* s, const char *str);
 
 int
-scp_session_set_directory(struct SCP_SESSION* s, char* str);
+scp_session_set_directory(struct SCP_SESSION* s, const char *str);
 
 int
-scp_session_set_client_ip(struct SCP_SESSION* s, char* str);
+scp_session_set_client_ip(struct SCP_SESSION* s, const char *str);
 
 int
-scp_session_set_hostname(struct SCP_SESSION* s, char* str);
+scp_session_set_hostname(struct SCP_SESSION* s, const char *str);
 
 int
-scp_session_set_addr(struct SCP_SESSION* s, int type, void* addr);
+scp_session_set_addr(struct SCP_SESSION* s, int type, const void* addr);
 
 int
 scp_session_set_display(struct SCP_SESSION* s, SCP_DISPLAY display);
 
 int
-scp_session_set_errstr(struct SCP_SESSION* s, char* str);
+scp_session_set_errstr(struct SCP_SESSION* s, const char *str);
+
+int
+scp_session_set_guid(struct SCP_SESSION *s, const tui8 *guid);
 
 /**
  *

@@ -90,7 +90,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #  endif
 #endif
 
-#define X11RDPVER "0.7.0"
+#define X11RDPVER "0.9.1"
 
 #define PixelDPI 100
 #define PixelToMM(_size) (((_size) * 254 + (PixelDPI) * 5) / ((PixelDPI) * 10))
@@ -558,9 +558,9 @@ rdpup_set_cursor(short x, short y, char* cur_data, char* cur_mask);
 int
 rdpup_set_cursor_ex(short x, short y, char *cur_data, char *cur_mask, int bpp);
 int
-rdpup_create_os_surface(int rdpindexd, int width, int height);
+rdpup_create_os_surface(int rdpindex, int width, int height);
 int
-rdpup_create_os_surface_bpp(int rdpindexd, int width, int height, int bpp);
+rdpup_create_os_surface_bpp(int rdpindex, int width, int height, int bpp);
 int
 rdpup_switch_os_surface(int rdpindex);
 int
@@ -582,10 +582,10 @@ rdpup_check_alpha_dirty(PixmapPtr pDirtyPixmap, rdpPixmapRec* pDirtyPriv);
 int
 rdpup_check_dirty_screen(rdpPixmapRec* pDirtyPriv);
 int
-rdpup_add_char(int font, int charactor, short x, short y, int cx, int cy,
+rdpup_add_char(int font, int character, short x, short y, int cx, int cy,
                char* bmpdata, int bmpdata_bytes);
 int
-rdpup_add_char_alpha(int font, int charactor, short x, short y, int cx, int cy,
+rdpup_add_char_alpha(int font, int character, short x, short y, int cx, int cy,
                      char* bmpdata, int bmpdata_bytes);
 int
 rdpup_draw_text(int font, int flags, int mixmode,

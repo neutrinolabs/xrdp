@@ -183,7 +183,7 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
         }
         else
         {
-            log_message(LOG_LEVEL_DEBUG,"Recieved an unhandled appid:%d",appid);
+            log_message(LOG_LEVEL_DEBUG,"Received an unhandled appid:%d",appid);
         }
 
         break;
@@ -761,7 +761,7 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
     out_uint8(s, 0);
     if (self->mcs_layer->iso_layer->rdpNegData)
     {
-         /* ReqeustedProtocol */
+         /* RequestedProtocol */
         out_uint32_le(s, self->mcs_layer->iso_layer->requestedProtocol);
     }
     out_uint16_le(s, SEC_TAG_SRV_CHANNELS);
@@ -1023,7 +1023,7 @@ xrdp_mcs_send(struct xrdp_mcs *self, struct stream *s, int chan)
 
     if (len > 8192 * 2)
     {
-        g_writeln("error in xrdp_mcs_send, size too big, its %d", len);
+        g_writeln("error in xrdp_mcs_send, size too big: %d bytes", len);
     }
 
     //if (len > max_len)

@@ -51,8 +51,6 @@ sig_sesman_shutdown(int sig)
 
     g_set_wait_obj(g_term_event);
 
-    g_tcp_close(g_sck);
-
     session_sigkill_all();
 
     g_snprintf(pid_file, 255, "%s/xrdp-sesman.pid", XRDP_PID_PATH);
@@ -75,7 +73,7 @@ sig_sesman_reload_cfg(int sig)
         return;
     }
 
-    cfg = g_malloc(sizeof(struct config_sesman), 1);
+    cfg = g_new0(struct config_sesman, 1);
 
     if (0 == cfg)
     {
@@ -93,13 +91,16 @@ sig_sesman_reload_cfg(int sig)
     /* stop logging subsystem */
     log_end();
 
-    /* replace old config with new readed one */
+    /* free old config data */
+    config_free(g_cfg);
+
+    /* replace old config with newly read one */
     g_cfg = cfg;
 
     g_snprintf(cfg_file, 255, "%s/sesman.ini", XRDP_CFG_PATH);
 
     /* start again logging subsystem */
-    error = log_start(cfg_file, "XRDP-sesman");
+    error = log_start(cfg_file, "xrdp-sesman");
 
     if (error != LOG_STARTUP_OK)
     {
@@ -158,7 +159,6 @@ sig_handler_thread(void *arg)
     sigaddset(&waitmask, SIGHUP);
     sigaddset(&waitmask, SIGCHLD);
     sigaddset(&waitmask, SIGTERM);
-    sigaddset(&waitmask, SIGKILL);
     sigaddset(&waitmask, SIGINT);
 
     //  sigaddset(&waitmask, SIGFPE);
@@ -186,11 +186,6 @@ sig_handler_thread(void *arg)
             case SIGINT:
                 /* we die */
                 LOG_DBG("sesman received SIGINT", 0);
-                sig_sesman_shutdown(recv_signal);
-                break;
-            case SIGKILL:
-                /* we die */
-                LOG_DBG("sesman received SIGKILL", 0);
                 sig_sesman_shutdown(recv_signal);
                 break;
             case SIGTERM:

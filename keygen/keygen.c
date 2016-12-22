@@ -34,8 +34,8 @@
 /* this is the signature size in bytes */
 #define TSSK_KEY_LENGTH 64
 
-/* default to 512 bit key size, can set changed, set */
-static int g_key_size_bits = 512;
+/* default to 2048 bit key size, can set changed, set */
+static int g_key_size_bits = 2048;
 
 static tui8 g_exponent[4] =
 {
@@ -195,11 +195,11 @@ static tui8 g_testkey2048[376] = /* 2048 bit test key */
 static int APP_CC
 out_params(void)
 {
-    g_writeln("");
+    g_writeln("%s", "");
     g_writeln("xrdp rsa key gen utility examples");
     g_writeln("  xrdp-keygen xrdp ['path and file name' | auto] [512 or 2048]");
     g_writeln("  xrdp-keygen test");
-    g_writeln("");
+    g_writeln("%s", "");
     return 0;
 }
 
@@ -282,7 +282,7 @@ sign_key(char *e_data, int e_len, char *n_data, int n_len,
 
 /*****************************************************************************/
 static int APP_CC
-write_out_line(int fd, char *name, char *data, int len)
+write_out_line(int fd, const char *name, char *data, int len)
 {
     int max;
     int error;
@@ -351,7 +351,7 @@ save_all(char *e_data, int e_len, char *n_data, int n_len,
     }
 
     g_writeln("saving to %s", filename);
-    g_writeln("");
+    g_writeln("%s", "");
 
     if (g_file_exist(filename))
     {
@@ -411,15 +411,14 @@ key_gen(const char *path_and_file_name)
     d_len = n_len;
     sign_len = 64;
     error = 0;
-    g_writeln("");
+    g_writeln("%s", "");
     g_writeln("Generating %d bit rsa key...", g_key_size_bits);
-    g_writeln("");
+    g_writeln("%s", "");
 
     if (error == 0)
     {
         error = ssl_gen_key_xrdp1(g_key_size_bits, e_data, e_len, n_data, n_len,
                                   d_data, d_len);
-
         if (error != 0)
         {
             g_writeln("error %d in key_gen, ssl_gen_key_xrdp1", error);
@@ -429,7 +428,7 @@ key_gen(const char *path_and_file_name)
     if (error == 0)
     {
         g_writeln("ssl_gen_key_xrdp1 ok");
-        g_writeln("");
+        g_writeln("%s", "");
         error = sign_key(e_data, e_len, n_data, n_len, sign_data, sign_len);
 
         if (error != 0)
@@ -589,10 +588,10 @@ main(int argc, char **argv)
         }
         else if (g_strcasecmp(argv[1], "test") == 0)
         {
-            g_writeln("");
+            g_writeln("%s", "");
             g_writeln("testing 512 bit key");
             key_test512();
-            g_writeln("");
+            g_writeln("%s", "");
             g_writeln("testing 2048 bit key");
             key_test2048();
             return 0;

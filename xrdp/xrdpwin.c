@@ -34,7 +34,7 @@ static long g_sync_mutex = 0;
 static long g_sync1_mutex = 0;
 static tbus g_term_event = 0;
 static tbus g_sync_event = 0;
-/* syncronize stuff */
+/* synchronize stuff */
 static int g_sync_command = 0;
 static long g_sync_result = 0;
 static long g_sync_param1 = 0;
@@ -344,16 +344,16 @@ main(int argc, char **argv)
                 g_strncasecmp(argv[1], "--help", 255) == 0 ||
                 g_strncasecmp(argv[1], "-h", 255) == 0)
         {
-            g_writeln("");
+            g_writeln("%s", "");
             g_writeln("xrdp: A Remote Desktop Protocol server.");
             g_writeln("Copyright (C) Jay Sorg 2004-2011");
             g_writeln("See http://xrdp.sourceforge.net for more information.");
-            g_writeln("");
+            g_writeln("%s", "");
             g_writeln("Usage: xrdp [options]");
             g_writeln("   -h: show help");
             g_writeln("   -install: install service");
             g_writeln("   -remove: remove service");
-            g_writeln("");
+            g_writeln("%s", "");
             g_exit(0);
         }
         else if (g_strncasecmp(argv[1], "-install", 255) == 0 ||
@@ -369,7 +369,7 @@ main(int argc, char **argv)
                 g_exit(0);
             }
 
-            /* check if service is allready installed */
+            /* check if service is already installed */
             sc_ser = OpenService(sc_man, "xrdp", SERVICE_ALL_ACCESS);
 
             if (sc_ser == 0)
@@ -383,7 +383,7 @@ main(int argc, char **argv)
             }
             else
             {
-                g_writeln("error service is allready installed");
+                g_writeln("error service is already installed");
                 CloseServiceHandle(sc_ser);
                 CloseServiceHandle(sc_man);
                 g_exit(0);
@@ -405,7 +405,7 @@ main(int argc, char **argv)
                 g_exit(0);
             }
 
-            /* check if service is allready installed */
+            /* check if service is already installed */
             sc_ser = OpenService(sc_man, "xrdp", SERVICE_ALL_ACCESS);
 
             if (sc_ser == 0)
@@ -423,7 +423,7 @@ main(int argc, char **argv)
         {
             g_writeln("Unknown Parameter");
             g_writeln("xrdp -h for help");
-            g_writeln("");
+            g_writeln("%s", "");
             g_exit(0);
         }
     }
@@ -431,7 +431,7 @@ main(int argc, char **argv)
     {
         g_writeln("Unknown Parameter");
         g_writeln("xrdp -h for help");
-        g_writeln("");
+        g_writeln("%s", "");
         g_exit(0);
     }
 
@@ -466,8 +466,8 @@ main(int argc, char **argv)
 
             if (fd == -1)
             {
-                g_writeln("problem opening to xrdp.pid");
-                g_writeln("maybe its not running");
+                g_writeln("cannot open %s, maybe xrdp is not running",
+                          pid_file);
             }
             else
             {
@@ -499,34 +499,34 @@ main(int argc, char **argv)
                  g_strncasecmp(argv[1], "--help", 255) == 0 ||
                  g_strncasecmp(argv[1], "-h", 255) == 0)
         {
-            g_writeln("");
+            g_writeln("%s", "");
             g_writeln("xrdp: A Remote Desktop Protocol server.");
             g_writeln("Copyright (C) Jay Sorg 2004-2011");
             g_writeln("See http://xrdp.sourceforge.net for more information.");
-            g_writeln("");
+            g_writeln("%s", "");
             g_writeln("Usage: xrdp [options]");
             g_writeln("   -h: show help");
             g_writeln("   -nodaemon: don't fork into background");
             g_writeln("   -kill: shut down xrdp");
-            g_writeln("");
+            g_writeln("%s", "");
             g_exit(0);
         }
         else if ((g_strncasecmp(argv[1], "-v", 255) == 0) ||
                  (g_strncasecmp(argv[1], "--version", 255) == 0))
         {
-            g_writeln("");
+            g_writeln("%s", "");
             g_writeln("xrdp: A Remote Desktop Protocol server.");
             g_writeln("Copyright (C) Jay Sorg 2004-2011");
             g_writeln("See http://xrdp.sourceforge.net for more information.");
             g_writeln("Version %s", PACKAGE_VERSION);
-            g_writeln("");
+            g_writeln("%s", "");
             g_exit(0);
         }
         else
         {
             g_writeln("Unknown Parameter");
             g_writeln("xrdp -h for help");
-            g_writeln("");
+            g_writeln("%s", "");
             g_exit(0);
         }
     }
@@ -534,14 +534,14 @@ main(int argc, char **argv)
     {
         g_writeln("Unknown Parameter");
         g_writeln("xrdp -h for help");
-        g_writeln("");
+        g_writeln("%s", "");
         g_exit(0);
     }
 
     if (g_file_exist(pid_file)) /* xrdp.pid */
     {
-        g_writeln("It looks like xrdp is allready running,");
-        g_writeln("if not delete the xrdp.pid file and try again");
+        g_writeln("It looks like xrdp is already running.");
+        g_writeln("If not, delete %s and try again.", pid_file);
         g_exit(0);
     }
 
@@ -618,7 +618,6 @@ main(int argc, char **argv)
     g_threadid = tc_get_threadid();
     g_listen = xrdp_listen_create();
     g_signal_user_interrupt(xrdp_shutdown); /* SIGINT */
-    g_signal_kill(xrdp_shutdown); /* SIGKILL */
     g_signal_pipe(pipe_sig); /* SIGPIPE */
     g_signal_terminate(xrdp_shutdown); /* SIGTERM */
     g_sync_mutex = tc_mutex_create();

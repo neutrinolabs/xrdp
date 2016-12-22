@@ -236,7 +236,9 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
     char keyboard_cfg_file[256] = { 0 };
     char rdp_layout[256] = { 0 };
 
-    LLOGLN(0, ("xrdp_load_keyboard_layout:"));
+    LLOGLN(0, ("xrdp_load_keyboard_layout: keyboard_type [%d] keyboard_subtype [%d]",
+               client_info->keyboard_type, client_info->keyboard_subtype));
+
     /* infer model/variant */
     /* TODO specify different X11 keyboard models/variants */
     g_memset(client_info->model, 0, sizeof(client_info->model));
@@ -338,6 +340,15 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
                             g_strncpy(client_info->variant, value, bytes - 1);
                         }
                     }
+                    else if (g_strcasecmp(item, "options") == 0)
+                    {
+                        if (section_found != -1 && section_found == index)
+                        {
+                            bytes = sizeof(client_info->options);
+                            g_memset(client_info->options, 0, bytes);
+                            g_strncpy(client_info->options, value, bytes - 1);
+                        }
+                    }
                     else
                     {
                         /*
@@ -413,13 +424,13 @@ xrdp_load_keyboard_layout(struct xrdp_client_info *client_info)
         list_delete(values);
 
         LLOGLN(0, ("xrdp_load_keyboard_layout: model [%s] variant [%s] "
-               "layout [%s]", client_info->model, client_info->variant,
-               client_info->layout));
+               "layout [%s] options [%s]", client_info->model,
+               client_info->variant, client_info->layout, client_info->options));
         g_file_close(fd);
     }
     else
     {
-        LLOGLN(0, ("xrdp_load_keyboard_layout: error opening %d",
+        LLOGLN(0, ("xrdp_load_keyboard_layout: error opening %s",
                keyboard_cfg_file));
     }
 }
@@ -648,7 +659,6 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
     int len_directory = 0;
     int len_ip = 0;
     int len_dll = 0;
-    int tzone = 0;
     char tmpdata[256];
 
     /* initialize (zero out) local variables */
@@ -837,7 +847,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         {
             return 1;
         }
-        in_uint32_le(s, tzone);                             /* len of timezone */
+        in_uint8s(s, 4);                                    /* len of timezone */
         in_uint8s(s, 62);                                   /* skip */
         in_uint8s(s, 22);                                   /* skip misc. */
         in_uint8s(s, 62);                                   /* skip */
@@ -1814,7 +1824,6 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
 {
     int num_channels;
     int index;
-    struct mcs_channel_item *channel_item;
     struct xrdp_client_info *client_info = (struct xrdp_client_info *)NULL;
 
     client_info = &(self->rdp_layer->client_info);
@@ -1871,15 +1880,20 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
     int index;
     int monitorCount;
     int flags;
+    int x1;
+    int y1;
+    int x2;
+    int y2;
+    int got_primary;
     struct xrdp_client_info *client_info = (struct xrdp_client_info *)NULL;
 
     client_info = &(self->rdp_layer->client_info);
 
-    DEBUG(("processing monitors data, allow_multimon is %d", client_info->multimon));
+    LLOGLN(10, ("xrdp_sec_process_mcs_data_monitors: processing monitors data, allow_multimon is %d", client_info->multimon));
     /* this is an option set in xrdp.ini */
     if (client_info->multimon != 1) /* are multi-monitors allowed ? */
     {
-        DEBUG(("[INFO] xrdp_sec_process_mcs_data_monitors: multimon is not "
+        LLOGLN(0, ("[INFO] xrdp_sec_process_mcs_data_monitors: multimon is not "
                "allowed, skipping"));
         return 0;
     }
@@ -1887,7 +1901,7 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
     //verify flags - must be 0x0
     if (flags != 0)
     {
-        DEBUG(("[ERROR] xrdp_sec_process_mcs_data_monitors: flags MUST be "
+        LLOGLN(0, ("[ERROR] xrdp_sec_process_mcs_data_monitors: flags MUST be "
                "zero, detected: %d", flags));
         return 1;
     }
@@ -1895,15 +1909,20 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
     //verify monitorCount - max 16
     if (monitorCount > 16)
     {
-        DEBUG(("[ERROR] xrdp_sec_process_mcs_data_monitors: max allowed "
+        LLOGLN(0, ("[ERROR] xrdp_sec_process_mcs_data_monitors: max allowed "
                "monitors is 16, detected: %d", monitorCount));
         return 1;
     }
 
-    g_writeln("monitorCount= %d", monitorCount); // for debugging only
+    LLOGLN(10, ("xrdp_sec_process_mcs_data_monitors: monitorCount= %d", monitorCount));
 
     client_info->monitorCount = monitorCount;
 
+    x1 = 0;
+    y1 = 0;
+    x2 = 0;
+    y2 = 0;
+    got_primary = 0;
     /* Add client_monitor_data to client_info struct, will later pass to X11rdp */
     for (index = 0; index < monitorCount; index++)
     {
@@ -1912,10 +1931,73 @@ xrdp_sec_process_mcs_data_monitors(struct xrdp_sec *self, struct stream *s)
         in_uint32_le(s, client_info->minfo[index].right);
         in_uint32_le(s, client_info->minfo[index].bottom);
         in_uint32_le(s, client_info->minfo[index].is_primary);
+        if (index == 0)
+        {
+            x1 = client_info->minfo[index].left;
+            y1 = client_info->minfo[index].top;
+            x2 = client_info->minfo[index].right;
+            y2 = client_info->minfo[index].bottom;
+        }
+        else
+        {
+            x1 = MIN(x1, client_info->minfo[index].left);
+            y1 = MIN(y1, client_info->minfo[index].top);
+            x2 = MAX(x2, client_info->minfo[index].right);
+            y2 = MAX(y2, client_info->minfo[index].bottom);
+        }
 
-        g_writeln("got a monitor: left= %d, top= %d, right= %d, bottom= %d, is_primary?= %d", client_info->minfo[index].left,
-            client_info->minfo[index].top, client_info->minfo[index].right, client_info->minfo[index].bottom, client_info->minfo[index].is_primary);
+        if (client_info->minfo[index].is_primary)
+        {
+            got_primary = 1;
+        }
+
+        LLOGLN(10, ("xrdp_sec_process_mcs_data_monitors: got a monitor [%d]: left= %d, top= %d, right= %d, bottom= %d, is_primary?= %d",
+                index,
+                client_info->minfo[index].left,
+                client_info->minfo[index].top,
+                client_info->minfo[index].right,
+                client_info->minfo[index].bottom,
+                client_info->minfo[index].is_primary));
     }
+
+    if (!got_primary)
+    {
+        /* no primary monitor was set, choose the leftmost monitor as primary */
+        for (index = 0; index < monitorCount; index++)
+        {
+            if (client_info->minfo[index].left == x1 &&
+                    client_info->minfo[index].top == y1)
+            {
+                client_info->minfo[index].is_primary = 1;
+                break;
+            }
+        }
+    }
+
+    /* set wm geometry */
+    if ((x2 > x1) && (y2 > y1))
+    {
+        client_info->width = (x2 - x1) + 1;
+        client_info->height = (y2 - y1) + 1;
+    }
+    /* make sure virtual desktop size is ok */
+    if (client_info->width > 0x7FFE || client_info->width < 0xC8 ||
+        client_info->height > 0x7FFE || client_info->height < 0xC8)
+    {
+        LLOGLN(0, ("[ERROR] xrdp_sec_process_mcs_data_monitors: error, virtual desktop width / height is too large"));
+        return 1; /* error */
+    }
+
+    /* keep a copy of non negative monitor info values for xrdp_wm usage */
+    for (index = 0; index < monitorCount; index++)
+    {
+        client_info->minfo_wm[index].left =  client_info->minfo[index].left - x1;
+        client_info->minfo_wm[index].top =  client_info->minfo[index].top - y1;
+        client_info->minfo_wm[index].right =  client_info->minfo[index].right - x1;
+        client_info->minfo_wm[index].bottom =  client_info->minfo[index].bottom - y1;
+        client_info->minfo_wm[index].is_primary =  client_info->minfo[index].is_primary;
+    }
+
     return 0;
 }
 
@@ -2030,7 +2112,7 @@ xrdp_sec_in_mcs_data(struct xrdp_sec *self)
 
     client_info = &(self->rdp_layer->client_info);
     s = &(self->client_mcs_data);
-    /* get hostname, its unicode */
+    /* get hostname, it's unicode */
     s->p = s->data;
     if (!s_check_rem(s, 47))
     {
@@ -2165,7 +2247,9 @@ xrdp_sec_incoming(struct xrdp_sec *self)
 
         if (trans_set_tls_mode(self->mcs_layer->iso_layer->trans,
                 self->rdp_layer->client_info.key_file,
-                self->rdp_layer->client_info.certificate) != 0)
+                self->rdp_layer->client_info.certificate,
+                self->rdp_layer->client_info.disableSSLv3,
+                self->rdp_layer->client_info.tls_ciphers) != 0)
         {
             g_writeln("xrdp_sec_incoming: trans_set_tls_mode failed");
             return 1;
@@ -2231,6 +2315,15 @@ xrdp_sec_incoming(struct xrdp_sec *self)
                     hex_str_to_bin(value, self->pri_exp, self->rsa_key_bytes);
                 }
             }
+
+            if (self->rsa_key_bytes <= 64)
+            {
+                g_writeln("warning, RSA key len 512 "
+                          "bits or less, consider creating a 2048 bit key");
+                log_message(LOG_LEVEL_WARNING, "warning, RSA key len 512 "
+                            "bits or less, consider creating a 2048 bit key");
+            }
+
             list_delete(items);
             list_delete(values);
         }

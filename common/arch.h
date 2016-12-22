@@ -19,10 +19,14 @@
 #if !defined(ARCH_H)
 #define ARCH_H
 
+#if defined(HAVE_CONFIG_H)
+#include "config_ac.h"
+#endif
+
 /* you can define L_ENDIAN or B_ENDIAN and NEED_ALIGN or NO_NEED_ALIGN
    in the makefile to override */
 
-/* check endianess */
+/* check endianness */
 #if !(defined(L_ENDIAN) || defined(B_ENDIAN))
 #if !defined(__BYTE_ORDER) && defined(__linux__)
 #include <endian.h>
@@ -109,7 +113,6 @@ typedef __int64 tbus;
 #else
 typedef long tbus;
 #endif
-typedef tbus thandle;
 typedef tbus tintptr;
 /* wide char, socket */
 #if defined(_WIN32)
@@ -124,5 +127,23 @@ typedef unsigned long long tui64;
 typedef signed long long tsi64;
 #endif
 #endif /* DEFINED_Ts */
+
+/* format string verification */
+#if defined(HAVE_FUNC_ATTRIBUTE_FORMAT)
+#define printflike(arg_format, arg_first_check) \
+ __attribute__((__format__(__printf__, arg_format, arg_first_check)))
+#else
+#define printflike(arg_format, arg_first_check)
+#endif
+
+/* module interface */
+#ifdef __cplusplus
+extern "C" {
+#endif
+   tintptr mod_init();
+   int mod_exit(tintptr);
+#ifdef __cplusplus
+}
+#endif
 
 #endif

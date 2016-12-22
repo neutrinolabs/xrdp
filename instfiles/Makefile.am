@@ -1,38 +1,75 @@
-EXTRA_DIST = xrdp.sh km-0407.ini  km-0409.ini km-040c.ini km-0410.ini km-0419.ini km-041d.ini km-0816.ini \
-xrdp-sesman.service \
-xrdp.service
+EXTRA_DIST = \
+   keymap-names.txt \
+   xrdp.sh \
+   xrdp-sesman.service \
+   xrdp.service
 
-SUBDIRS = \
-  pam.d \
-  init.d \
-  default \
-  pulse
-
-if HAVE_SYSTEMD
-systemdsystemunit_DATA = \
-        xrdp-sesman.service \
-        xrdp.service
-endif
-
+#
+# files for all platforms
+#
 startscriptdir=$(sysconfdir)/xrdp
 
-startscript_DATA = \
-  xrdp.sh \
-  km-0407.ini \
-  km-0409.ini \
-  km-040c.ini \
-  km-0410.ini \
-  km-0411.ini \
-  km-0415.ini \
-  km-0419.ini \
-  km-041d.ini \
-  km-0816.ini \
-  km-e0010411.ini \
-  km-e0200411.ini \
-  km-e0210411.ini
+dist_startscript_DATA = \
+  km-00000407.ini \
+  km-00000409.ini \
+  km-0000040a.ini \
+  km-0000040b.ini \
+  km-0000040c.ini \
+  km-00000410.ini \
+  km-00000411.ini \
+  km-00000412.ini \
+  km-00000414.ini \
+  km-00000415.ini \
+  km-00000416.ini \
+  km-00000419.ini \
+  km-0000041d.ini \
+  km-00000807.ini \
+  km-00000809.ini \
+  km-0000080c.ini \
+  km-00000813.ini \
+  km-00000816.ini \
+  km-0000100c.ini 
 
+#
+# platform specific files
+#
+SUBDIRS =
+if LINUX
+SUBDIRS += \
+  pam.d \
+  pulse
+dist_startscript_SCRIPTS = xrdp.sh
+if HAVE_SYSTEMD
+dist_systemdsystemunit_DATA = \
+  xrdp-sesman.service \
+  xrdp.service
+else
+SUBDIRS += \
+  default \
+  init.d
+endif # HAVE_SYSTEMD
+endif # LINUX
+
+if FREEBSD
+SUBDIRS += \
+  pam.d \
+  rc.d \
+  pulse
+endif
+
+#
+# install-data-hook for each platform
+#
+if LINUX
 # must be tab below
 install-data-hook:
-	chmod 755 $(DESTDIR)$(sysconfdir)/xrdp/xrdp.sh
-	chmod 755 $(DESTDIR)$(sysconfdir)/init.d/xrdp
-	sed -i 's|__BASE__|$(prefix)|' $(DESTDIR)$(sysconfdir)/init.d/xrdp;
+	if [ -f $(DESTDIR)$(sysconfdir)/init.d/xrdp ]; then \
+		sed -i 's|__BASE__|$(prefix)|' $(DESTDIR)$(sysconfdir)/init.d/xrdp; \
+	fi
+endif
+
+if FREEBSD
+# must be tab below
+install-data-hook:
+	sed -i '' 's|%%PREFIX%%|$(prefix)|g' $(DESTDIR)$(sysconfdir)/rc.d/xrdp
+endif

@@ -176,6 +176,8 @@ x-special/gnome-copied-files
 #define LOG_ERROR   0
 #define LOG_INFO    1
 #define LOG_DEBUG   2
+
+#undef LOG_LEVEL
 #define LOG_LEVEL   LOG_ERROR
 
 #define log_error(_params...)                           \
@@ -271,7 +273,7 @@ static int g_cliprdr_flags = CB_USE_LONG_FORMAT_NAMES |
                              CB_FILECLIP_NO_FILE_PATHS;
 
 /* from client to server */
-/* last recieved CLIPRDR_FORMAT_LIST(CLIPRDR_FORMAT_ANNOUNCE) */
+/* last received CLIPRDR_FORMAT_LIST(CLIPRDR_FORMAT_ANNOUNCE) */
 static int g_formatIds[16];
 static int g_num_formatIds = 0;
 
@@ -580,7 +582,7 @@ clipboard_send_format_ack(void)
 /*****************************************************************************/
 /* returns number of bytes written */
 int APP_CC
-clipboard_out_unicode(struct stream *s, char *text, int num_chars)
+clipboard_out_unicode(struct stream *s, const char *text, int num_chars)
 {
     int index;
     int lnum_chars;
@@ -1084,11 +1086,11 @@ clipboard_process_format_announce(struct stream *s, int clip_msg_status,
 /* response to CB_FORMAT_LIST; used to indicate whether
    processing of the Format List PDU was successful */
 static int APP_CC
-clipboard_prcoess_format_ack(struct stream *s, int clip_msg_status,
+clipboard_process_format_ack(struct stream *s, int clip_msg_status,
                              int clip_msg_len)
 {
-    log_debug("clipboard_prcoess_format_ack: CLIPRDR_FORMAT_ACK");
-    log_debug("clipboard_prcoess_format_ack:");
+    log_debug("clipboard_process_format_ack: CLIPRDR_FORMAT_ACK");
+    log_debug("clipboard_process_format_ack:");
     return 0;
 }
 
@@ -1547,7 +1549,7 @@ clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length,
     {
         log_error("aborting clipboard_data_in - clipboard has not "
             "been initialized");
-        /* we return 0 here to indicate no protocol problem occured */
+        /* we return 0 here to indicate no protocol problem occurred */
         return 0;
     }
 
@@ -1632,7 +1634,7 @@ clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length,
             /* response to CB_FORMAT_LIST; used to indicate whether */
             /* processing of the Format List PDU was successful     */
         case CB_FORMAT_LIST_RESPONSE: /* 3 CLIPRDR_FORMAT_ACK */
-            rv = clipboard_prcoess_format_ack(ls, clip_msg_status,
+            rv = clipboard_process_format_ack(ls, clip_msg_status,
                                               clip_msg_len);
             break;
             /* sent by recipient of CB_FORMAT_LIST; used to request data for one */
@@ -1695,16 +1697,16 @@ clipboard_event_selection_owner_notify(XEvent *xevent)
     XFixesSelectionNotifyEvent *lxevent;
 
     lxevent = (XFixesSelectionNotifyEvent *)xevent;
-    log_debug("clipboard_event_selection_owner_notify: %p", lxevent->owner);
+    log_debug("clipboard_event_selection_owner_notify: 0x%lx", lxevent->owner);
     log_debug("clipboard_event_selection_owner_notify: "
-          "window %d subtype %d owner %d g_wnd %d",
+          "window %ld subtype %d owner %ld g_wnd %ld",
           lxevent->window, lxevent->subtype, lxevent->owner, g_wnd);
 
     if (lxevent->owner == g_wnd)
     {
         log_debug("clipboard_event_selection_owner_notify: matches g_wnd");
         log_debug("clipboard_event_selection_owner_notify: skipping, "
-              "onwer == g_wnd");
+              "owner == g_wnd");
         g_got_selection = 1;
         return 0;
     }
@@ -1733,7 +1735,7 @@ clipboard_get_window_property(Window wnd, Atom prop, Atom *type, int *fmt,
     Atom ltype;
 
     log_debug("clipboard_get_window_property:");
-    log_debug("  prop %d name %s", prop, get_atom_text(prop));
+    log_debug("  prop %ld name %s", prop, get_atom_text(prop));
     lxdata = 0;
     ltype = 0;
     XGetWindowProperty(g_display, wnd, prop, 0, 0, 0,
@@ -1871,7 +1873,7 @@ clipboard_event_selection_notify(XEvent *xevent)
 
     if (rv == 0)
     {
-        log_debug("clipboard_event_selection_notify: wnd %p prop %s",
+        log_debug("clipboard_event_selection_notify: wnd 0x%lx prop %s",
                     lxevent->requestor,
                     get_atom_text(lxevent->property));
         rv = clipboard_get_window_property(lxevent->requestor, lxevent->property,
@@ -1887,7 +1889,7 @@ clipboard_event_selection_notify(XEvent *xevent)
         XDeleteProperty(g_display, lxevent->requestor, lxevent->property);
         if (type == g_incr_atom)
         {
-            /* nothing more to do here, the data is comming in through
+            /* nothing more to do here, the data is coming in through
                PropertyNotify */
             log_debug("clipboard_event_selection_notify: type is INCR "
                         "data_size %d property name %s type %s", data_size,
@@ -1918,9 +1920,10 @@ clipboard_event_selection_notify(XEvent *xevent)
                     for (index = 0; index < n_items; index++)
                     {
                         atom = atoms[index];
-                        LOGM((LOG_LEVEL_DEBUG, "clipboard_event_selection_notify: %d %s %d",
+                        LOGM((LOG_LEVEL_DEBUG,
+                              "clipboard_event_selection_notify: 0x%lx %s 0x%lx",
                               atom, get_atom_text(atom), XA_STRING));
-                        log_debug("clipboard_event_selection_notify: 0x%x %s",
+                        log_debug("clipboard_event_selection_notify: 0x%lx %s",
                                     atom, get_atom_text(atom));
                         if (atom == g_utf8_atom)
                         {
@@ -1941,15 +1944,15 @@ clipboard_event_selection_notify(XEvent *xevent)
                         }
                         else
                         {
-                            log_error("clipboard_event_selection_notify: unknown atom 0x%x", atom);
+                            log_error("clipboard_event_selection_notify: unknown atom 0x%lx", atom);
                         }
                     }
                 }
                 else
                 {
                     log_error("clipboard_event_selection_notify: error, "
-                          "target is 'TARGETS' and type[%d] or fmt[%d] not right, "
-                          "should be type[%d], fmt[%d]", type, fmt, XA_ATOM, 32);
+                          "target is 'TARGETS' and type[%ld] or fmt[%d] not right, "
+                          "should be type[%ld], fmt[%d]", type, fmt, XA_ATOM, 32);
                 }
             }
             else if (lxevent->target == g_utf8_atom)
@@ -2136,9 +2139,9 @@ clipboard_event_selection_request(XEvent *xevent)
     char *xdata;
 
     lxev = (XSelectionRequestEvent *)xevent;
-    log_debug("clipboard_event_selection_request: %p", lxev->property);
-    log_debug("clipboard_event_selection_request: g_wnd %d, "
-          ".requestor %d .owner %d .selection %d '%s' .target %d .property %d",
+    log_debug("clipboard_event_selection_request: 0x%lx", lxev->property);
+    log_debug("clipboard_event_selection_request: g_wnd %ld, "
+          ".requestor %ld .owner %ld .selection %ld '%s' .target %ld .property %ld",
           g_wnd, lxev->requestor, lxev->owner, lxev->selection,
           get_atom_text(lxev->selection),
           lxev->target, lxev->property);
@@ -2324,8 +2327,8 @@ clipboard_event_property_notify(XEvent *xevent)
     char *cptr;
 
     log_debug("clipboard_event_property_notify:");
-    log_debug("clipboard_event_property_notify: PropertyNotify .window %d "
-                ".state %d .atom %d %s", xevent->xproperty.window,
+    log_debug("clipboard_event_property_notify: PropertyNotify .window %ld "
+                ".state %d .atom %ld %s", xevent->xproperty.window,
                 xevent->xproperty.state, xevent->xproperty.atom,
                 get_atom_text(xevent->xproperty.atom));
 
@@ -2380,6 +2383,11 @@ clipboard_event_property_notify(XEvent *xevent)
                                 AnyPropertyType, &actual_type_return, &actual_format_return,
                                 &nitems_returned, &bytes_left, &data);
 
+        if (rv != Success)
+        {
+            return 1;
+        }
+
         if (data != 0)
         {
             XFree(data);
@@ -2410,7 +2418,7 @@ clipboard_event_property_notify(XEvent *xevent)
             }
             else
             {
-                log_error("clipboard_event_property_notify: error unknown type %d",
+                log_error("clipboard_event_property_notify: error unknown type %ld",
                            g_clip_s2c.type);
                 clipboard_send_data_response_failed();
             }
@@ -2422,6 +2430,11 @@ clipboard_event_property_notify(XEvent *xevent)
             rv = XGetWindowProperty(g_display, g_wnd, g_clip_s2c.property, 0, bytes_left, 0,
                                     AnyPropertyType, &actual_type_return, &actual_format_return,
                                     &nitems_returned, &bytes_left, &data);
+
+            if (rv != Success)
+            {
+                return 1;
+            }
 
             format_in_bytes = FORMAT_TO_BYTES(actual_format_return);
             new_data_len = nitems_returned * format_in_bytes;

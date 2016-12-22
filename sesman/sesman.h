@@ -30,7 +30,6 @@
 #if defined(HAVE_CONFIG_H)
 #include "config_ac.h"
 #endif
-#include "d3des.h"
 #include "arch.h"
 #include "parse.h"
 #include "os_calls.h"
@@ -39,14 +38,10 @@
 #include "env.h"
 #include "auth.h"
 #include "config.h"
-//#include "tcp.h"
 #include "sig.h"
 #include "session.h"
 #include "access.h"
 #include "scp.h"
-#include "thread.h"
-#include "lock.h"
-#include "thread_calls.h"
 
 #include "libscp.h"
 

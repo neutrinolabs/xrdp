@@ -26,8 +26,8 @@
 
 #include "sesman.h"
 
-#define _XOPEN_SOURCE
 #include <stdio.h>
+#include <string.h>
 #include <sys/types.h>
 #include <crypt.h>
 #include <shadow.h>
@@ -40,7 +40,7 @@
 extern struct config_sesman *g_cfg; /* in sesman.c */
 
 static int DEFAULT_CC
-auth_crypt_pwd(char *pwd, char *pln, char *crp);
+auth_crypt_pwd(const char *pwd, const char *pln, char *crp);
 
 static int DEFAULT_CC
 auth_account_disabled(struct spwd *stp);
@@ -48,7 +48,7 @@ auth_account_disabled(struct spwd *stp);
 /******************************************************************************/
 /* returns boolean */
 long DEFAULT_CC
-auth_userpass(char *user, char *pass, int *errorcode)
+auth_userpass(const char *user, const char *pass, int *errorcode)
 {
     const char *encr;
     const char *epass;
@@ -125,7 +125,7 @@ auth_set_env(long in_val)
 
 /******************************************************************************/
 int DEFAULT_CC
-auth_check_pwd_chg(char *user)
+auth_check_pwd_chg(const char *user)
 {
     struct passwd *spw;
     struct spwd *stp;
@@ -182,7 +182,7 @@ auth_check_pwd_chg(char *user)
 }
 
 int DEFAULT_CC
-auth_change_pwd(char *user, char *newpwd)
+auth_change_pwd(const char *user, const char *newpwd)
 {
     struct passwd *spw;
     struct spwd *stp;
@@ -256,7 +256,7 @@ auth_change_pwd(char *user, char *newpwd)
  */
 
 static int DEFAULT_CC
-auth_crypt_pwd(char *pwd, char *pln, char *crp)
+auth_crypt_pwd(const char *pwd, const char *pln, char *crp)
 {
     char salt[13] = "$1$";
     int saltcnt = 0;
@@ -321,7 +321,10 @@ auth_account_disabled(struct spwd *stp)
         return 1;
     }
 
-    if (today >= (stp->sp_lstchg + stp->sp_max + stp->sp_inact))
+    if ((stp->sp_max >= 0) &&
+        (stp->sp_inact >= 0) &&
+        (stp->sp_lstchg > 0) &&
+        (today >= (stp->sp_lstchg + stp->sp_max + stp->sp_inact)))
     {
         return 1;
     }

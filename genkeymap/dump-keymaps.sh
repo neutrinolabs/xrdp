@@ -7,40 +7,41 @@ then
   exit 1
 fi
 
-# English - US 'en-us' 0x0409
+# English - US 'en-us' 0x00000409
 setxkbmap -model pc104 -layout us
-./xrdp-genkeymap ../instfiles/km-0409.ini
+./xrdp-genkeymap ../instfiles/km-00000409.ini
 
-# German 'de' 0x0407
+# English - UK 'en-GB' 0x00000809
+setxkbmap -model pc105 -layout gb
+./xrdp-genkeymap ../instfiles/km-00000809.ini
+
+# German 'de' 0x00000407
 setxkbmap -model pc104 -layout de
-./xrdp-genkeymap ../instfiles/km-0407.ini
+./xrdp-genkeymap ../instfiles/km-00000407.ini
 
-# Italy 'it' 0x0410
+# Italian 'it' 0x00000410
 setxkbmap -model pc104 -layout it
-./xrdp-genkeymap ../instfiles/km-0410.ini
+./xrdp-genkeymap ../instfiles/km-00000410.ini
 
-# Japanese 'jp' 0x0411
-setxkbmap -model jp106 -layout jp -variant OADG109A
-./xrdp-genkeymap ../instfiles/km-0411.ini
-./xrdp-genkeymap ../instfiles/km-e0010411.ini
-./xrdp-genkeymap ../instfiles/km-e0200411.ini
-./xrdp-genkeymap ../instfiles/km-e0210411.ini
+# Japanese 'jp' 0x00000411
+setxkbmap -model pc105 -layout jp -variant OADG109A
+./xrdp-genkeymap ../instfiles/km-00000411.ini
 
-# Polish 'pl' 0x0415
+# Polish 'pl' 0x00000415
 setxkbmap -model pc104 -layout pl
-./xrdp-genkeymap ../instfiles/km-0415.ini
+./xrdp-genkeymap ../instfiles/km-00000415.ini
 
-# Russia 'ru' 0x0419
+# Russia 'ru' 0x00000419
 setxkbmap -model pc104 -layout ru
-./xrdp-genkeymap ../instfiles/km-0419.ini
+./xrdp-genkeymap ../instfiles/km-00000419.ini
 
-# Sweden 'se' 0x041d
+# Sweden 'se' 0x0000041d
 setxkbmap -model pc104 -layout se
-./xrdp-genkeymap ../instfiles/km-041d.ini
+./xrdp-genkeymap ../instfiles/km-0000041d.ini
 
-# Portuguese -PT 'pt-pt' 0x0816
+# Portuguese -PT 'pt-pt' 0x00000816
 setxkbmap -model pc104 -layout pt
-./xrdp-genkeymap ../instfiles/km-0816.ini
+./xrdp-genkeymap ../instfiles/km-00000816.ini
 
 # set back to en-us
 setxkbmap -model pc104 -layout us

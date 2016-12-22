@@ -252,7 +252,14 @@ scp_v0s_accept(struct SCP_CONNECTION *c, struct SCP_SESSION **s, int skipVchk)
         scp_session_set_height(session, sz);
         /* bpp */
         in_uint16_be(c->in_s, sz);
-        scp_session_set_bpp(session, (tui8)sz);
+        if (0 != scp_session_set_bpp(session, (tui8)sz))
+        {
+            scp_session_destroy(session);
+            log_message(LOG_LEVEL_WARNING,
+                        "[v0:%d] connection aborted: unsupported bpp: %d",
+                        __LINE__, (tui8)sz);
+            return SCP_SERVER_STATE_INTERNAL_ERR;
+        }
 
         if (s_check_rem(c->in_s, 2))
         {
@@ -357,13 +364,20 @@ scp_v0s_accept(struct SCP_CONNECTION *c, struct SCP_SESSION **s, int skipVchk)
 
 /******************************************************************************/
 enum SCP_SERVER_STATES_E
-scp_v0s_allow_connection(struct SCP_CONNECTION *c, SCP_DISPLAY d)
+scp_v0s_allow_connection(struct SCP_CONNECTION *c, SCP_DISPLAY d, const tui8 *guid)
 {
+    int msg_size;
+
+    msg_size = guid == 0 ? 14 : 14 + 16;
     out_uint32_be(c->out_s, 0);  /* version */
-    out_uint32_be(c->out_s, 14); /* size */
+    out_uint32_be(c->out_s, msg_size); /* size */
     out_uint16_be(c->out_s, 3);  /* cmd */
     out_uint16_be(c->out_s, 1);  /* data */
     out_uint16_be(c->out_s, d);  /* data */
+    if (msg_size > 14)
+    {
+        out_uint8a(c->out_s, guid, 16);
+    }
     s_mark_end(c->out_s);
 
     if (0 != scp_tcp_force_send(c->in_sck, c->out_s->data, c->out_s->end - c->out_s->data))

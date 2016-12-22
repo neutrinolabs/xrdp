@@ -53,8 +53,10 @@ static int send_init(struct wts_obj *wts);
 static int can_send(int sck, int millis);
 static int can_recv(int sck, int millis);
 
-static char g_xrdpapi_magic[12] =
-{ 0x78, 0x32, 0x10, 0x67, 0x00, 0x92, 0x30, 0x56, 0xff, 0xd8, 0xa9, 0x1f };
+static const unsigned char g_xrdpapi_magic[12] =
+{
+    0x78, 0x32, 0x10, 0x67, 0x00, 0x92, 0x30, 0x56, 0xff, 0xd8, 0xa9, 0x1f
+};
 
 /*
  * Opens a handle to the server end of a specified virtual channel - this
@@ -118,7 +120,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
 
     if (wts->display_num <= 0)
     {
-        LLOGLN(0, ("WTSVirtualChannelOpenEx: fatal errror; display is 0"));
+        LLOGLN(0, ("WTSVirtualChannelOpenEx: fatal error; display is 0"));
         free(wts);
         return NULL;
     }
@@ -126,7 +128,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     /* we use unix domain socket to communicate with chansrv */
     if ((wts->fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
     {
-        g_free(wts);
+        free(wts);
         return NULL;
     }
 
@@ -162,6 +164,14 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     return wts;
 }
 
+/*
+ * Prevent receiving SIGPIPE on disconnect using either MSG_NOSIGNAL (Linux)
+ * or SO_NOSIGPIPE (Mac OS X)
+ */
+#if !defined(MSG_NOSIGNAL)
+#define MSG_NOSIGNAL 0
+#endif
+
 /*****************************************************************************/
 static int
 mysend(int sck, const void* adata, int bytes)
@@ -169,6 +179,11 @@ mysend(int sck, const void* adata, int bytes)
     int sent;
     int error;
     const char* data;
+
+#if defined(SO_NOSIGPIPE)
+    const int on = 1;
+    setsockopt(sck, SOL_SOCKET, SO_NOSIGPIPE, &on, sizeof(on));
+#endif
 
     data = (const char*)adata;
     sent = 0;
@@ -234,7 +249,7 @@ WTSVirtualChannelWrite(void *hChannelHandle, const char *Buffer,
         return -1;
     }
 
-    LLOGLN(10, ("WTSVirtualChannelWrite: mysend() reted %d", rv));
+    LLOGLN(10, ("WTSVirtualChannelWrite: mysend() returned %d", rv));
 
     if (rv >= 0)
     {
@@ -467,17 +482,11 @@ get_display_num_from_display(char *display_text)
 {
     int index;
     int mode;
-    int host_index;
     int disp_index;
-    int scre_index;
-    char host[256];
     char disp[256];
-    char scre[256];
 
     index = 0;
-    host_index = 0;
     disp_index = 0;
-    scre_index = 0;
     mode = 0;
 
     while (display_text[index] != 0)
@@ -490,27 +499,15 @@ get_display_num_from_display(char *display_text)
         {
             mode = 2;
         }
-        else if (mode == 0)
-        {
-            host[host_index] = display_text[index];
-            host_index++;
-        }
         else if (mode == 1)
         {
             disp[disp_index] = display_text[index];
             disp_index++;
         }
-        else if (mode == 2)
-        {
-            scre[scre_index] = display_text[index];
-            scre_index++;
-        }
 
         index++;
     }
 
-    host[host_index] = 0;
     disp[disp_index] = 0;
-    scre[scre_index] = 0;
     return atoi(disp);
 }

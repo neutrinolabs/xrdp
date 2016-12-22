@@ -42,14 +42,14 @@ struct xrdp_mod
                    long param3, long param4);
   int (*mod_signal)(struct xrdp_mod* v);
   int (*mod_end)(struct xrdp_mod* v);
-  int (*mod_set_param)(struct xrdp_mod* v, char* name, char* value);
+  int (*mod_set_param)(struct xrdp_mod* v, const char *name, char* value);
   int (*mod_session_change)(struct xrdp_mod* v, int, int);
   int (*mod_get_wait_objs)(struct xrdp_mod* v, tbus* read_objs, int* rcount,
                            tbus* write_objs, int* wcount, int* timeout);
   int (*mod_check_wait_objs)(struct xrdp_mod* v);
   int (*mod_frame_ack)(struct xrdp_mod* v, int flags, int frame_id);
-  long mod_dumby[100 - 10]; /* align, 100 minus the number of mod
-                              functions above */
+  tintptr mod_dumby[100 - 10]; /* align, 100 minus the number of mod
+                                  functions above */
   /* server functions */
   int (*server_begin_update)(struct xrdp_mod* v);
   int (*server_end_update)(struct xrdp_mod* v);
@@ -70,12 +70,12 @@ struct xrdp_mod
   int (*server_set_bgcolor)(struct xrdp_mod* v, int bgcolor);
   int (*server_set_opcode)(struct xrdp_mod* v, int opcode);
   int (*server_set_mixmode)(struct xrdp_mod* v, int mixmode);
-  int (*server_set_brush)(struct xrdp_mod* v, int x_orgin, int y_orgin,
+  int (*server_set_brush)(struct xrdp_mod* v, int x_origin, int y_origin,
                           int style, char* pattern);
   int (*server_set_pen)(struct xrdp_mod* v, int style,
                         int width);
   int (*server_draw_line)(struct xrdp_mod* v, int x1, int y1, int x2, int y2);
-  int (*server_add_char)(struct xrdp_mod* v, int font, int charactor,
+  int (*server_add_char)(struct xrdp_mod* v, int font, int character,
                          int offset, int baseline,
                          int width, int height, char* data);
   int (*server_draw_text)(struct xrdp_mod* v, int font,
@@ -88,7 +88,7 @@ struct xrdp_mod
   int (*server_query_channel)(struct xrdp_mod* v, int index,
                               char* channel_name,
                               int* channel_flags);
-  int (*server_get_channel_id)(struct xrdp_mod* v, char* name);
+  int (*server_get_channel_id)(struct xrdp_mod* v, const char *name);
   int (*server_send_to_channel)(struct xrdp_mod* v, int channel_id,
                                 char* data, int data_len,
                                 int total_data_len, int flags);
@@ -125,7 +125,7 @@ struct xrdp_mod
                                   int flags);
   int (*server_set_pointer_ex)(struct xrdp_mod* v, int x, int y, char* data,
                                char* mask, int bpp);
-  int (*server_add_char_alpha)(struct xrdp_mod* mod, int font, int charactor,
+  int (*server_add_char_alpha)(struct xrdp_mod* mod, int font, int character,
                                int offset, int baseline,
                                int width, int height, char* data);
 
@@ -146,13 +146,13 @@ struct xrdp_mod
                             int num_crects, short *crects,
                             char *data, int width, int height,
                             int flags, int frame_id);
-  long server_dumby[100 - 43]; /* align, 100 minus the number of server
-                                  functions above */
+  tintptr server_dumby[100 - 43]; /* align, 100 minus the number of server
+                                     functions above */
   /* common */
-  long handle; /* pointer to self as int */
-  long wm; /* struct xrdp_wm* */
-  long painter;
-  int sck;
+  tintptr handle; /* pointer to self as int */
+  tintptr wm; /* struct xrdp_wm* */
+  tintptr painter;
+  tintptr si;
 };
 
 /* header for bmp file */
@@ -216,14 +216,14 @@ struct xrdp_brush_item
 {
   int stamp;
   /* expand this to a structure to handle more complicated brushes
-     for now its 8x8 1bpp brushes only */
+     for now it's 8x8 1bpp brushes only */
   char pattern[8];
 };
 
 /* moved to xrdp_constants.h
 #define XRDP_BITMAP_CACHE_ENTRIES 2048 */
 
-/* differnce caches */
+/* difference caches */
 struct xrdp_cache
 {
   struct xrdp_wm* wm; /* owner */
@@ -292,19 +292,7 @@ struct xrdp_mm
   int chan_trans_up; /* true once connected to chansrv */
   int delete_chan_trans; /* boolean set when done with channel connection */
   int usechansrv; /* true if chansrvport is set in xrdp.ini or using sesman */
-
-  /* for codec mode operations */
-  int   in_codec_mode;
-  int   codec_id;
-  int   codec_quality;
-  tbus  xrdp_encoder_event_to_proc;
-  tbus  xrdp_encoder_event_processed;
-  tbus  xrdp_encoder_term;
-  FIFO *fifo_to_proc;
-  FIFO *fifo_processed;
-  tbus  mutex;
-  int (*process_enc)(struct xrdp_mm *self, struct xrdp_enc_data *enc);
-  void *codec_handle;
+  struct xrdp_encoder *encoder;
 };
 
 struct xrdp_key_info
@@ -423,7 +411,7 @@ struct xrdp_listen
 struct xrdp_region
 {
   struct xrdp_wm* wm; /* owner */
-  struct list* rects;
+  struct pixman_region16 *reg;
 };
 
 /* painter */
@@ -441,6 +429,9 @@ struct xrdp_painter
   struct xrdp_session* session;
   struct xrdp_wm* wm; /* owner */
   struct xrdp_font* font;
+  void *painter;
+  struct xrdp_region *dirty_region;
+  int begin_end_level;
 };
 
 /* window or bitmap */
@@ -604,7 +595,7 @@ struct xrdp_cfg_globals
     int  ls_btn_cancel_y_pos;    /* y pos for Cancel button */
     int  ls_btn_cancel_width;    /* width of Cancel button */
     int  ls_btn_cancel_height;   /* height of Cancel button */
-    char ls_title[256];  	 /* loginscreen window title */
+    char ls_title[256];          /* loginscreen window title */
 };
 
 struct xrdp_cfg_logging
@@ -623,40 +614,5 @@ struct xrdp_config
     struct xrdp_cfg_logging   cfg_logging;
     struct xrdp_cfg_channels  cfg_channels;
 };
-
-/* used when scheduling tasks in xrdp_encoder.c */
-struct xrdp_enc_data
-{
-    struct xrdp_mod *mod;
-    int              num_drects;
-    short           *drects;     /* 4 * num_drects */
-    int              num_crects;
-    short           *crects;     /* 4 * num_crects */
-    char            *data;
-    int              width;
-    int              height;
-    int              flags;
-    int              frame_id;
-};
-
-typedef struct xrdp_enc_data XRDP_ENC_DATA;
-
-/* used when scheduling tasks from xrdp_encoder.c */
-struct xrdp_enc_data_done
-{
-    int                   comp_bytes;
-    int                   pad_bytes;
-    char                 *comp_pad_data;
-    struct xrdp_enc_data *enc;
-    int                   last; /* true is this is last message for enc */
-    int                   x;
-    int                   y;
-    int                   cx;
-    int                   cy;
-};
-
-typedef struct xrdp_enc_data_done XRDP_ENC_DATA_DONE;
-
-
 
 #endif

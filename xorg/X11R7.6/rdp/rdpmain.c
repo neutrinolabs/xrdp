@@ -41,7 +41,7 @@ Sets up the  functions
 #endif
 
 #if XRDP_DISABLE_LINUX_ABSTRACT
-/* because including <X11/Xtrans/Xtransint.h> in problematic
+/* because including <X11/Xtrans/Xtransint.h> is problematic
  * we dup a small struct
  * we need to set flags to zero to turn off abstract sockets */
 struct _MyXtransport
@@ -139,6 +139,8 @@ static miPointerScreenFuncRec g_rdpPointerCursorFuncs =
     rdpPointerNewEventScreen
 };
 
+int glGetBufferSubData(void);
+
 /******************************************************************************/
 /* returns error, zero is good */
 static int
@@ -188,6 +190,11 @@ set_bpp(int bpp)
         g_redBits = 8;
         g_greenBits = 8;
         g_blueBits = 8;
+    }
+    else if (g_bpp == 33)
+    {
+        /* will never happen */
+        glGetBufferSubData();
     }
     else
     {
@@ -297,8 +304,8 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
     ErrorF("\n");
     ErrorF("X11rdp, an X server for xrdp\n");
     ErrorF("Version %s\n", X11RDPVER);
-    ErrorF("Copyright (C) 2005-2012 Jay Sorg\n");
-    ErrorF("See http://xrdp.sf.net for information on xrdp.\n");
+    ErrorF("Copyright (C) 2005-2015 Jay Sorg\n");
+    ErrorF("See http://www.xrdp.org for information on xrdp.\n");
 #if defined(XORG_VERSION_CURRENT) && defined (XVENDORNAME)
     ErrorF("Underlying X server release %d, %s\n",
            XORG_VERSION_CURRENT, XVENDORNAME);
@@ -414,7 +421,7 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
     g_rdpScreen.CloseScreen = pScreen->CloseScreen;
     /* GC procedures */
     g_rdpScreen.CreateGC = pScreen->CreateGC;
-    /* Pixmap procudures */
+    /* Pixmap procedures */
     g_rdpScreen.CreatePixmap = pScreen->CreatePixmap;
     g_rdpScreen.DestroyPixmap = pScreen->DestroyPixmap;
 
@@ -590,7 +597,7 @@ rdpScreenInit(int index, ScreenPtr pScreen, int argc, char **argv)
 /******************************************************************************/
 /* this is the first function called, it can be called many times
    returns the number or parameters processed
-   if it dosen't apply to the rdp part, return 0 */
+   if it doesn't apply to the rdp part, return 0 */
 int
 ddxProcessArgument(int argc, char **argv, int i)
 {
@@ -654,7 +661,7 @@ void
 OsVendorInit(void)
 {
 #if XRDP_DISABLE_LINUX_ABSTRACT
-    /* turn off the Linux abstract unix doamin sockets TRANS_ABSTRACT */
+    /* turn off the Linux abstract unix domain sockets TRANS_ABSTRACT */
     /* TRANS_NOLISTEN = 1 << 3 */
     _XSERVTransSocketLocalFuncs.flags = 0;
 #endif

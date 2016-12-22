@@ -37,6 +37,7 @@
 #include "file.h"
 #include "file_loc.h"
 #include "xrdp_client_info.h"
+#include "log.h"
 
 /* xrdp.c */
 long APP_CC
@@ -136,11 +137,12 @@ xrdp_wm_pointer(struct xrdp_wm* self, char* data, char* mask, int x, int y,
 int
 callback(long id, int msg, long param1, long param2, long param3, long param4);
 int APP_CC
-xrdp_wm_delete_all_childs(struct xrdp_wm* self);
+xrdp_wm_delete_all_children(struct xrdp_wm* self);
 int APP_CC
 xrdp_wm_show_log(struct xrdp_wm *self);
 int APP_CC
-xrdp_wm_log_msg(struct xrdp_wm* self, char* msg);
+xrdp_wm_log_msg(struct xrdp_wm *self, enum logLevels loglevel,
+                const char *fmt, ...) printflike(3, 4);
 int APP_CC
 xrdp_wm_get_wait_objs(struct xrdp_wm* self, tbus* robjs, int* rc,
                       tbus* wobjs, int* wc, int* timeout);
@@ -173,11 +175,9 @@ xrdp_region_delete(struct xrdp_region* self);
 int APP_CC
 xrdp_region_add_rect(struct xrdp_region* self, struct xrdp_rect* rect);
 int APP_CC
-xrdp_region_insert_rect(struct xrdp_region* self, int i, int left,
-                        int top, int right, int bottom);
+xrdp_region_subtract_rect(struct xrdp_region* self, struct xrdp_rect* rect);
 int APP_CC
-xrdp_region_subtract_rect(struct xrdp_region* self,
-                          struct xrdp_rect* rect);
+xrdp_region_intersect_rect(struct xrdp_region* self, struct xrdp_rect* rect);
 int APP_CC
 xrdp_region_get_rect(struct xrdp_region* self, int index,
                      struct xrdp_rect* rect);
@@ -264,9 +264,9 @@ xrdp_painter_draw_bitmap(struct xrdp_painter* self,
                          struct xrdp_bitmap* to_draw,
                          int x, int y, int cx, int cy);
 int APP_CC
-xrdp_painter_text_width(struct xrdp_painter* self, char* text);
+xrdp_painter_text_width(struct xrdp_painter* self, const char *text);
 int APP_CC
-xrdp_painter_text_height(struct xrdp_painter* self, char* text);
+xrdp_painter_text_height(struct xrdp_painter* self, const char *text);
 int APP_CC
 xrdp_painter_draw_text(struct xrdp_painter* self,
                        struct xrdp_bitmap* bitmap,
@@ -378,7 +378,11 @@ xrdp_mm_get_wait_objs(struct xrdp_mm* self,
                       tbus* read_objs, int* rcount,
                       tbus* write_objs, int* wcount, int* timeout);
 int APP_CC
+xrdp_mm_check_chan(struct xrdp_mm *self);
+int APP_CC
 xrdp_mm_check_wait_objs(struct xrdp_mm* self);
+int APP_CC
+xrdp_mm_frame_ack(struct xrdp_mm *self, int frame_id);
 int DEFAULT_CC
 server_begin_update(struct xrdp_mod* mod);
 int DEFAULT_CC
@@ -435,14 +439,14 @@ server_set_opcode(struct xrdp_mod* mod, int opcode);
 int DEFAULT_CC
 server_set_mixmode(struct xrdp_mod* mod, int mixmode);
 int DEFAULT_CC
-server_set_brush(struct xrdp_mod* mod, int x_orgin, int y_orgin,
+server_set_brush(struct xrdp_mod* mod, int x_origin, int y_origin,
                  int style, char* pattern);
 int DEFAULT_CC
 server_set_pen(struct xrdp_mod* mod, int style, int width);
 int DEFAULT_CC
 server_draw_line(struct xrdp_mod* mod, int x1, int y1, int x2, int y2);
 int DEFAULT_CC
-server_add_char(struct xrdp_mod* mod, int font, int charactor,
+server_add_char(struct xrdp_mod* mod, int font, int character,
                 int offset, int baseline,
                 int width, int height, char* data);
 int DEFAULT_CC
@@ -460,7 +464,7 @@ int DEFAULT_CC
 server_query_channel(struct xrdp_mod* mod, int index, char* channel_name,
                      int* channel_flags);
 int DEFAULT_CC
-server_get_channel_id(struct xrdp_mod* mod, char* name);
+server_get_channel_id(struct xrdp_mod* mod, const char *name);
 int DEFAULT_CC
 server_send_to_channel(struct xrdp_mod* mod, int channel_id,
                        char* data, int data_len,
@@ -507,6 +511,6 @@ server_monitored_desktop(struct xrdp_mod* mod,
                          struct rail_monitored_desktop_order* mdo,
                          int flags);
 int DEFAULT_CC
-server_add_char_alpha(struct xrdp_mod* mod, int font, int charactor,
+server_add_char_alpha(struct xrdp_mod* mod, int font, int character,
                       int offset, int baseline,
                       int width, int height, char* data);

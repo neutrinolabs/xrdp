@@ -38,6 +38,14 @@ extern WindowPtr g_invalidate_window; /* in rdpmain.c */
 
 static XID g_wid = 0;
 
+static int g_panning = 0;
+
+#define LOG_LEVEL 1
+#define LLOG(_level, _args) \
+    do { if (_level < LOG_LEVEL) { ErrorF _args ; } } while (0)
+#define LLOGLN(_level, _args) \
+    do { if (_level < LOG_LEVEL) { ErrorF _args ; ErrorF("\n"); } } while (0)
+
 /******************************************************************************/
 Bool
 rdpRRRegisterSize(ScreenPtr pScreen, int width, int height)
@@ -68,15 +76,8 @@ rdpRRSetConfig(ScreenPtr pScreen, Rotation rotateKind, int rate,
 Bool
 rdpRRGetInfo(ScreenPtr pScreen, Rotation *pRotations)
 {
-    int width;
-    int height;
-
     ErrorF("rdpRRGetInfo:\n");
     *pRotations = RR_Rotate_0;
-
-    width = g_rdpScreen.width;
-    height = g_rdpScreen.height;
-    rdpRRRegisterSize(pScreen, width, height);
     return TRUE;
 }
 
@@ -214,6 +215,19 @@ Bool
 rdpRRCrtcGetGamma(ScreenPtr pScreen, RRCrtcPtr crtc)
 {
     ErrorF("rdpRRCrtcGetGamma:\n");
+    crtc->gammaSize = 1;
+    if (crtc->gammaRed == NULL)
+    {
+        crtc->gammaRed = g_malloc(32, 1);
+    }
+    if (crtc->gammaBlue == NULL)
+    {
+        crtc->gammaBlue = g_malloc(32, 1);
+    }
+    if (crtc->gammaGreen == NULL)
+    {
+        crtc->gammaGreen = g_malloc(32, 1);
+    }
     return TRUE;
 }
 
@@ -257,6 +271,11 @@ rdpRRGetPanning(ScreenPtr pScrn, RRCrtcPtr crtc, BoxPtr totalArea,
 {
     ErrorF("rdpRRGetPanning:\n");
 
+    if (!g_panning)
+    {
+        return FALSE;
+    }
+
     if (totalArea != 0)
     {
         totalArea->x1 = 0;
@@ -292,3 +311,146 @@ rdpRRSetPanning(ScreenPtr pScrn, RRCrtcPtr crtc, BoxPtr totalArea,
     ErrorF("rdpRRSetPanning:\n");
     return TRUE;
 }
+
+/******************************************************************************/
+static RROutputPtr
+rdpRRAddOutput(const char *aname, int x, int y, int width, int height)
+{
+    RRModePtr mode;
+    RRCrtcPtr crtc;
+    RROutputPtr output;
+    xRRModeInfo modeInfo;
+    char name[64];
+    const int vfreq = 50;
+
+    sprintf (name, "%dx%d", width, height);
+    memset (&modeInfo, 0, sizeof(modeInfo));
+    modeInfo.width = width;
+    modeInfo.height = height;
+    modeInfo.hTotal = width;
+    modeInfo.vTotal = height;
+    modeInfo.dotClock = vfreq * width * height;
+    modeInfo.nameLength = strlen(name);
+    mode = RRModeGet(&modeInfo, name);
+    if (mode == 0)
+    {
+        LLOGLN(0, ("rdpRRAddOutput: RRModeGet failed"));
+        return 0;
+    }
+
+    crtc = RRCrtcCreate(g_pScreen, NULL);
+    if (crtc == 0)
+    {
+        LLOGLN(0, ("rdpRRAddOutput: RRCrtcCreate failed"));
+        RRModeDestroy(mode);
+        return 0;
+    }
+    output = RROutputCreate(g_pScreen, aname, strlen(aname), NULL);
+    if (output == 0)
+    {
+        LLOGLN(0, ("rdpRRAddOutput: RROutputCreate failed"));
+        RRCrtcDestroy(crtc);
+        RRModeDestroy(mode);
+        return 0;
+    }
+    if (!RROutputSetClones(output, NULL, 0))
+    {
+        LLOGLN(0, ("rdpRRAddOutput: RROutputSetClones failed"));
+    }
+    if (!RROutputSetModes(output, &mode, 1, 0))
+    {
+        LLOGLN(0, ("rdpRRAddOutput: RROutputSetModes failed"));
+    }
+    if (!RROutputSetCrtcs(output, &crtc, 1))
+    {
+        LLOGLN(0, ("rdpRRAddOutput: RROutputSetCrtcs failed"));
+    }
+    if (!RROutputSetConnection(output, RR_Connected))
+    {
+        LLOGLN(0, ("rdpRRAddOutput: RROutputSetConnection failed"));
+    }
+    RRCrtcNotify(crtc, mode, x, y, RR_Rotate_0, NULL, 1, &output);
+
+    return output;
+}
+
+/******************************************************************************/
+static void
+RRSetPrimaryOutput(rrScrPrivPtr pScrPriv, RROutputPtr output)
+{
+    if (pScrPriv->primaryOutput == output)
+    {
+        return;
+    }
+    /* clear the old primary */
+    if (pScrPriv->primaryOutput)
+    {
+        RROutputChanged(pScrPriv->primaryOutput, 0);
+        pScrPriv->primaryOutput = NULL;
+    }
+    /* set the new primary */
+    if (output)
+    {
+        pScrPriv->primaryOutput = output;
+        RROutputChanged(output, 0);
+    }
+    pScrPriv->layoutChanged = TRUE;
+}
+
+/******************************************************************************/
+int
+rdpRRSetRdpOutputs(void)
+{
+    rrScrPrivPtr pRRScrPriv;
+    int index;
+    int width;
+    int height;
+    char text[256];
+    RROutputPtr output;
+
+    pRRScrPriv = rrGetScrPriv(g_pScreen);
+
+    LLOGLN(0, ("rdpRRSetRdpOutputs: numCrtcs %d", pRRScrPriv->numCrtcs));
+    while (pRRScrPriv->numCrtcs > 0)
+    {
+        RRCrtcDestroy(pRRScrPriv->crtcs[0]);
+    }
+    LLOGLN(0, ("rdpRRSetRdpOutputs: numOutputs %d", pRRScrPriv->numOutputs));
+    while (pRRScrPriv->numOutputs > 0)
+    {
+        RROutputDestroy(pRRScrPriv->outputs[0]);
+    }
+
+    if (g_rdpScreen.client_info.monitorCount == 0)
+    {
+        rdpRRAddOutput("rdp0", 0, 0, g_rdpScreen.width, g_rdpScreen.height);
+    }
+    else
+    {
+        for (index = 0; index < g_rdpScreen.client_info.monitorCount; index++)
+        {
+            snprintf(text, 255, "rdp%d", index);
+            width = g_rdpScreen.client_info.minfo[index].right - g_rdpScreen.client_info.minfo[index].left + 1;
+            height = g_rdpScreen.client_info.minfo[index].bottom - g_rdpScreen.client_info.minfo[index].top + 1;
+            output = rdpRRAddOutput(text,
+                                    g_rdpScreen.client_info.minfo[index].left,
+                                    g_rdpScreen.client_info.minfo[index].top,
+                                    width, height);
+            if ((output != 0) && (g_rdpScreen.client_info.minfo[index].is_primary))
+            {
+                RRSetPrimaryOutput(pRRScrPriv, output);
+            }
+        }
+    }
+
+#if 0
+    for (index = 0; index < pRRScrPriv->numOutputs; index++)
+    {
+        RROutputSetCrtcs(pRRScrPriv->outputs[index], pRRScrPriv->crtcs,
+                         pRRScrPriv->numCrtcs);
+    }
+#endif
+
+    return 0;
+}
+

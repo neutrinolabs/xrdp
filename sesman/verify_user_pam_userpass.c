@@ -34,7 +34,7 @@
 /******************************************************************************/
 /* returns boolean */
 int DEFAULT_CC
-auth_userpass(char *user, char *pass, int *errorcode)
+auth_userpass(const char *user, const char *pass, int *errorcode)
 {
     pam_handle_t *pamh;
     pam_userpass_t userpass;
@@ -85,7 +85,7 @@ auth_userpass(char *user, char *pass, int *errorcode)
 /******************************************************************************/
 /* returns error */
 int DEFAULT_CC
-auth_start_session(void)
+auth_start_session(long in_val, int in_display)
 {
     return 0;
 }
@@ -100,14 +100,14 @@ auth_stop_session(long in_val)
 
 /******************************************************************************/
 int DEFAULT_CC
-auth_end(void)
+auth_end(long in_val)
 {
     return 0;
 }
 
 /******************************************************************************/
 int DEFAULT_CC
-auth_set_env(void)
+auth_set_env(long in_val)
 {
     return 0;
 }

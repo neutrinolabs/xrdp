@@ -1,7 +1,7 @@
 /**
  * xrdp: A Remote Desktop Protocol server.
  *
- * Copyright (C) Jay Sorg 2004-2014
+ * Copyright (C) Jay Sorg 2004-2015
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@
 
 #include "xup.h"
 #include "log.h"
+#include "trans.h"
 
 #define LOG_LEVEL 1
 #define LLOG(_level, _args) \
@@ -27,98 +28,14 @@
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { g_writeln _args ; } } while (0)
 
+static int APP_CC
+lib_mod_process_message(struct mod *mod, struct stream *s);
+
 /******************************************************************************/
-/* returns error */
-int DEFAULT_CC
-lib_recv(struct mod *mod, char *data, int len)
+static int APP_CC
+lib_send_copy(struct mod *mod, struct stream *s)
 {
-    int rcvd;
-
-    if (mod->sck_closed)
-    {
-        return 1;
-    }
-
-    while (len > 0)
-    {
-        rcvd = g_tcp_recv(mod->sck, data, len, 0);
-
-        if (rcvd == -1)
-        {
-            if (g_tcp_last_error_would_block(mod->sck))
-            {
-                if (mod->server_is_term(mod))
-                {
-                    return 1;
-                }
-
-                g_tcp_can_recv(mod->sck, 10);
-            }
-            else
-            {
-                return 1;
-            }
-        }
-        else if (rcvd == 0)
-        {
-            mod->sck_closed = 1;
-            return 1;
-        }
-        else
-        {
-            data += rcvd;
-            len -= rcvd;
-        }
-    }
-
-    return 0;
-}
-
-/*****************************************************************************/
-/* returns error */
-int DEFAULT_CC
-lib_send(struct mod *mod, char *data, int len)
-{
-    int sent;
-
-    if (mod->sck_closed)
-    {
-        return 1;
-    }
-
-    while (len > 0)
-    {
-        sent = g_tcp_send(mod->sck, data, len, 0);
-
-        if (sent == -1)
-        {
-            if (g_tcp_last_error_would_block(mod->sck))
-            {
-                if (mod->server_is_term(mod))
-                {
-                    return 1;
-                }
-
-                g_tcp_can_send(mod->sck, 10);
-            }
-            else
-            {
-                return 1;
-            }
-        }
-        else if (sent == 0)
-        {
-            mod->sck_closed = 1;
-            return 1;
-        }
-        else
-        {
-            data += sent;
-            len -= sent;
-        }
-    }
-
-    return 0;
+    return trans_write_copy_s(mod->trans, s);
 }
 
 /******************************************************************************/
@@ -144,7 +61,7 @@ lib_mod_log_peer(struct mod *mod)
     int gid;
 
     my_pid = g_getpid();
-    if (g_sck_get_peer_cred(mod->sck, &pid, &uid, &gid) == 0)
+    if (g_sck_get_peer_cred(mod->trans->sck, &pid, &uid, &gid) == 0)
     {
         log_message(LOG_LEVEL_INFO, "lib_mod_log_peer: xrdp_pid=%d connected "
                     "to X11rdp_pid=%d X11rdp_uid=%d X11rdp_gid=%d "
@@ -162,6 +79,62 @@ lib_mod_log_peer(struct mod *mod)
 }
 
 /******************************************************************************/
+static int APP_CC
+lib_data_in(struct trans *trans)
+{
+    struct mod *self;
+    struct stream *s;
+    int len;
+
+    LLOGLN(10, ("lib_data_in:"));
+    if (trans == 0)
+    {
+        return 1;
+    }
+
+    self = (struct mod *)(trans->callback_data);
+    s = trans_get_in_s(trans);
+
+    if (s == 0)
+    {
+        return 1;
+    }
+
+    switch (trans->extra_flags)
+    {
+        case 1:
+            s->p = s->data;
+            in_uint8s(s, 4); /* processed later in lib_mod_process_message */
+            in_uint32_le(s, len);
+            if (len < 0 || len > 128 * 1024)
+            {
+                g_writeln("lib_data_in: bad size");
+                return 1;
+            }
+            if (len > 0)
+            {
+                trans->header_size = len + 8;
+                trans->extra_flags = 2;
+                break;
+            }
+            /* fall through */
+        case 2:
+            s->p = s->data;
+            if (lib_mod_process_message(self, s) != 0)
+            {
+                g_writeln("lib_data_in: lib_mod_process_message failed");
+                return 1;
+            }
+            init_stream(s, 0);
+            trans->header_size = 8;
+            trans->extra_flags = 1;
+            break;
+    }
+
+    return 0;
+}
+
+/******************************************************************************/
 /* return error */
 int DEFAULT_CC
 lib_mod_connect(struct mod *mod)
@@ -169,10 +142,10 @@ lib_mod_connect(struct mod *mod)
     int error;
     int len;
     int i;
-    int index;
     int use_uds;
     struct stream *s;
     char con_port[256];
+    struct source_info *si;
 
     LIB_DEBUG(mod, "in lib_mod_connect");
 
@@ -207,64 +180,40 @@ lib_mod_connect(struct mod *mod)
     mod->sck_closed = 0;
     i = 0;
 
+    if (use_uds)
+    {
+        mod->trans = trans_create(TRANS_MODE_UNIX, 8 * 8192, 8192);
+        if (mod->trans == 0)
+        {
+            free_stream(s);
+            return 1;
+        }
+    }
+    else
+    {
+        mod->trans = trans_create(TRANS_MODE_TCP, 8 * 8192, 8192);
+        if (mod->trans == 0)
+        {
+            free_stream(s);
+            return 1;
+        }
+    }
+
+    si = (struct source_info *) (mod->si);
+    mod->trans->si = si;
+    mod->trans->my_source = XRDP_SOURCE_MOD;
+
     while (1)
     {
-        if (use_uds)
-        {
-            mod->sck = g_tcp_local_socket();
-            if (mod->sck < 0)
-            {
-                free_stream(s);
-                return 1;
-            }
-        }
-        else
-        {
-            mod->sck = g_tcp_socket();
-            if (mod->sck < 0)
-            {
-                free_stream(s);
-                return 1;
-            }
-
-            g_tcp_set_non_blocking(mod->sck);
-            g_tcp_set_no_delay(mod->sck);
-        }
 
         /* mod->server_msg(mod, "connecting...", 0); */
 
-        if (use_uds)
+        error = -1;
+        if (trans_connect(mod->trans, mod->ip, con_port, 3000) == 0)
         {
-            error = g_tcp_local_connect(mod->sck, con_port);
-        }
-        else
-        {
-            error = g_tcp_connect(mod->sck, mod->ip, con_port);
-        }
-
-        if (error == -1)
-        {
-            if (g_tcp_last_error_would_block(mod->sck))
-            {
-                error = 0;
-                index = 0;
-
-                while (!g_tcp_can_send(mod->sck, 100))
-                {
-                    index++;
-
-                    if ((index >= 30) || mod->server_is_term(mod))
-                    {
-                        mod->server_msg(mod, "connect timeout", 0);
-                        error = 1;
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                /* mod->server_msg(mod, "connect error", 0); */
-            }
+            LLOGLN(0, ("lib_mod_connect: connected to Xserver "
+                   "(Xorg or X11rdp) sck %ld", mod->trans->sck));
+            error = 0;
         }
 
         if (error == 0)
@@ -272,8 +221,6 @@ lib_mod_connect(struct mod *mod)
             break;
         }
 
-        g_tcp_close(mod->sck);
-        mod->sck = 0;
         i++;
 
         if (i >= 60)
@@ -308,7 +255,7 @@ lib_mod_connect(struct mod *mod)
         len = (int)(s->end - s->data);
         s_pop_layer(s, iso_hdr);
         out_uint32_le(s, len);
-        lib_send(mod, s->data, len);
+        lib_send_copy(mod, s);
     }
 
     if (error == 0)
@@ -326,7 +273,7 @@ lib_mod_connect(struct mod *mod)
         len = (int)(s->end - s->data);
         s_pop_layer(s, iso_hdr);
         out_uint32_le(s, len);
-        lib_send(mod, s->data, len);
+        lib_send_copy(mod, s);
     }
 
     if (error == 0)
@@ -348,13 +295,15 @@ lib_mod_connect(struct mod *mod)
         len = (int)(s->end - s->data);
         s_pop_layer(s, iso_hdr);
         out_uint32_le(s, len);
-        lib_send(mod, s->data, len);
+        lib_send_copy(mod, s);
     }
 
     free_stream(s);
 
     if (error != 0)
     {
+        trans_delete(mod->trans);
+        mod->trans = 0;
         mod->server_msg(mod, "some problem", 0);
         LIB_DEBUG(mod, "out lib_mod_connect error");
         return 1;
@@ -362,7 +311,11 @@ lib_mod_connect(struct mod *mod)
     else
     {
         mod->server_msg(mod, "connected ok", 0);
-        mod->sck_obj = g_create_wait_obj_from_socket(mod->sck, 0);
+        mod->trans->trans_data_in = lib_data_in;
+        mod->trans->header_size = 8;
+        mod->trans->callback_data = mod;
+        mod->trans->no_stream_init_on_data_in = 1;
+        mod->trans->extra_flags = 1;
     }
 
     LIB_DEBUG(mod, "out lib_mod_connect");
@@ -411,7 +364,7 @@ lib_mod_event(struct mod *mod, int msg, tbus param1, tbus param2,
                     len = (int)(s->end - s->data);
                     s_pop_layer(s, iso_hdr);
                     out_uint32_le(s, len);
-                    lib_send(mod, s->data, len);
+                    lib_send_copy(mod, s);
                 }
             }
 
@@ -434,7 +387,7 @@ lib_mod_event(struct mod *mod, int msg, tbus param1, tbus param2,
     len = (int)(s->end - s->data);
     s_pop_layer(s, iso_hdr);
     out_uint32_le(s, len);
-    rv = lib_send(mod, s->data, len);
+    rv = lib_send_copy(mod, s);
     free_stream(s);
     LIB_DEBUG(mod, "out lib_mod_event");
     return rv;
@@ -744,7 +697,7 @@ process_server_window_new_update(struct mod *mod, struct stream *s)
 
     if (title_bytes > 0)
     {
-        rwso.title_info = g_malloc(title_bytes + 1, 0);
+        rwso.title_info = g_new(char, title_bytes + 1);
         in_uint8a(s, rwso.title_info, title_bytes);
         rwso.title_info[title_bytes] = 0;
     }
@@ -844,7 +797,7 @@ process_server_add_char(struct mod *mod, struct stream *s)
 {
     int rv;
     int font;
-    int charactor;
+    int character;
     int x;
     int y;
     int cx;
@@ -853,14 +806,14 @@ process_server_add_char(struct mod *mod, struct stream *s)
     char *bmpdata;
 
     in_uint16_le(s, font);
-    in_uint16_le(s, charactor);
+    in_uint16_le(s, character);
     in_sint16_le(s, x);
     in_sint16_le(s, y);
     in_uint16_le(s, cx);
     in_uint16_le(s, cy);
     in_uint16_le(s, len_bmpdata);
     in_uint8p(s, bmpdata, len_bmpdata);
-    rv = mod->server_add_char(mod, font, charactor, x, y, cx, cy, bmpdata);
+    rv = mod->server_add_char(mod, font, character, x, y, cx, cy, bmpdata);
     return rv;
 }
 
@@ -872,7 +825,7 @@ process_server_add_char_alpha(struct mod *mod, struct stream *s)
 {
     int rv;
     int font;
-    int charactor;
+    int character;
     int x;
     int y;
     int cx;
@@ -881,14 +834,14 @@ process_server_add_char_alpha(struct mod *mod, struct stream *s)
     char *bmpdata;
 
     in_uint16_le(s, font);
-    in_uint16_le(s, charactor);
+    in_uint16_le(s, character);
     in_sint16_le(s, x);
     in_sint16_le(s, y);
     in_uint16_le(s, cx);
     in_uint16_le(s, cy);
     in_uint16_le(s, len_bmpdata);
     in_uint8p(s, bmpdata, len_bmpdata);
-    rv = mod->server_add_char_alpha(mod, font, charactor, x, y, cx, cy,
+    rv = mod->server_add_char_alpha(mod, font, character, x, y, cx, cy,
                                     bmpdata);
     return rv;
 }
@@ -1092,7 +1045,7 @@ send_paint_rect_ack(struct mod *mod, int flags, int x, int y, int cx, int cy,
     len = (int)(s->end - s->data);
     s_pop_layer(s, iso_hdr);
     out_uint32_le(s, len);
-    lib_send(mod, s->data, len);
+    lib_send_copy(mod, s);
     free_stream(s);
     return 0;
 }
@@ -1100,7 +1053,7 @@ send_paint_rect_ack(struct mod *mod, int flags, int x, int y, int cx, int cy,
 /******************************************************************************/
 /* return error */
 static int APP_CC
-process_server_paint_rect_shmem(struct mod *mod, struct stream *s)
+process_server_paint_rect_shmem(struct mod *amod, struct stream *s)
 {
     int rv;
     int x;
@@ -1132,32 +1085,33 @@ process_server_paint_rect_shmem(struct mod *mod, struct stream *s)
 
     bmpdata = 0;
     rv = 0;
-
-    if (flags == 0) /* screen */
+    if (amod->screen_shmem_id_mapped == 0)
     {
-        if (mod->screen_shmem_id == 0)
+        amod->screen_shmem_id = shmem_id;
+        amod->screen_shmem_pixels = (char *) g_shmat(amod->screen_shmem_id);
+        if (amod->screen_shmem_pixels == (void*)-1)
         {
-            mod->screen_shmem_id = shmem_id;
-            mod->screen_shmem_pixels = g_shmat(mod->screen_shmem_id);
-            if (mod->screen_shmem_pixels == (void*)-1)
-            {
-                /* failed */
-                mod->screen_shmem_id = 0;
-                mod->screen_shmem_pixels = 0;
-            }
+            /* failed */
+            amod->screen_shmem_id = 0;
+            amod->screen_shmem_pixels = 0;
+            amod->screen_shmem_id_mapped = 0;
         }
-        if (mod->screen_shmem_pixels != 0)
+        else
         {
-            bmpdata = mod->screen_shmem_pixels + shmem_offset;
+            amod->screen_shmem_id_mapped = 1;
         }
+    }
+    if (amod->screen_shmem_pixels != 0)
+    {
+        bmpdata = amod->screen_shmem_pixels + shmem_offset;
     }
     if (bmpdata != 0)
     {
-        rv = mod->server_paint_rect(mod, x, y, cx, cy,
-                                    bmpdata, width, height,
-                                    srcx, srcy);
+        rv = amod->server_paint_rect(amod, x, y, cx, cy,
+                                     bmpdata, width, height,
+                                     srcx, srcy);
     }
-    send_paint_rect_ack(mod, flags, x, y, cx, cy, frame_id);
+    send_paint_rect_ack(amod, flags, x, y, cx, cy, frame_id);
     return rv;
 }
 
@@ -1179,7 +1133,7 @@ send_paint_rect_ex_ack(struct mod *mod, int flags, int frame_id)
     len = (int)(s->end - s->data);
     s_pop_layer(s, iso_hdr);
     out_uint32_le(s, len);
-    lib_send(mod, s->data, len);
+    lib_send_copy(mod, s);
     free_stream(s);
     return 0;
 }
@@ -1197,10 +1151,6 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
     int shmem_offset;
     int width;
     int height;
-    int x;
-    int y;
-    int cx;
-    int cy;
     int index;
     int rv;
     tsi16 *ldrects;
@@ -1246,10 +1196,21 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
     bmpdata = 0;
     if (flags == 0) /* screen */
     {
-        if (amod->screen_shmem_id == 0)
+        if (amod->screen_shmem_id_mapped == 0)
         {
             amod->screen_shmem_id = shmem_id;
-            amod->screen_shmem_pixels = g_shmat(amod->screen_shmem_id);
+            amod->screen_shmem_pixels = (char *) g_shmat(amod->screen_shmem_id);
+            if (amod->screen_shmem_pixels == (void*)-1)
+            {
+                /* failed */
+                amod->screen_shmem_id = 0;
+                amod->screen_shmem_pixels = 0;
+                amod->screen_shmem_id_mapped = 0;
+            }
+            else
+            {
+                amod->screen_shmem_id_mapped = 1;
+            }
         }
         if (amod->screen_shmem_pixels != 0)
         {
@@ -1275,7 +1236,7 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
     g_free(lcrects);
     g_free(ldrects);
 
-    return 0;
+    return rv;
 }
 
 /******************************************************************************/
@@ -1285,6 +1246,7 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
 {
     int rv;
 
+    LLOGLN(10, ("lib_mod_process_orders: type %d", type));
     rv = 0;
     switch (type)
     {
@@ -1405,17 +1367,16 @@ lib_send_client_info(struct mod *mod)
     len = (int)(s->end - s->data);
     s_pop_layer(s, iso_hdr);
     out_uint32_le(s, len);
-    lib_send(mod, s->data, len);
+    lib_send_copy(mod, s);
     free_stream(s);
     return 0;
 }
 
 /******************************************************************************/
 /* return error */
-int DEFAULT_CC
-lib_mod_signal(struct mod *mod)
+static int APP_CC
+lib_mod_process_message(struct mod *mod, struct stream *s)
 {
-    struct stream *s;
     int num_orders;
     int index;
     int rv;
@@ -1423,85 +1384,65 @@ lib_mod_signal(struct mod *mod)
     int type;
     char *phold;
 
-    LIB_DEBUG(mod, "in lib_mod_signal");
-    make_stream(s);
-    init_stream(s, 8192);
-    rv = lib_recv(mod, s->data, 8);
-
+    LLOGLN(10, ("lib_mod_process_message:"));
+    rv = 0;
     if (rv == 0)
     {
         in_uint16_le(s, type);
         in_uint16_le(s, num_orders);
         in_uint32_le(s, len);
+        LLOGLN(10, ("lib_mod_process_message: type %d", type));
 
         if (type == 1) /* original order list */
         {
-            init_stream(s, len);
-            rv = lib_recv(mod, s->data, len);
-
-            if (rv == 0)
+            for (index = 0; index < num_orders; index++)
             {
-                for (index = 0; index < num_orders; index++)
-                {
-                    in_uint16_le(s, type);
-                    rv = lib_mod_process_orders(mod, type, s);
+                in_uint16_le(s, type);
+                rv = lib_mod_process_orders(mod, type, s);
 
-                    if (rv != 0)
-                    {
-                        break;
-                    }
+                if (rv != 0)
+                {
+                    break;
                 }
             }
         }
         else if (type == 2) /* caps */
         {
-            g_writeln("lib_mod_signal: type 2 len %d", len);
-            init_stream(s, len);
-            rv = lib_recv(mod, s->data, len);
-
-            if (rv == 0)
+            g_writeln("lib_mod_process_message: type 2 len %d", len);
+            for (index = 0; index < num_orders; index++)
             {
-                for (index = 0; index < num_orders; index++)
+                phold = s->p;
+                in_uint16_le(s, type);
+                in_uint16_le(s, len);
+
+                switch (type)
                 {
-                    phold = s->p;
-                    in_uint16_le(s, type);
-                    in_uint16_le(s, len);
-
-                    switch (type)
-                    {
-                        default:
-                            g_writeln("lib_mod_signal: unknown cap type %d len %d",
-                                      type, len);
-                            break;
-                    }
-
-                    s->p = phold + len;
+                    default:
+                        g_writeln("lib_mod_process_message: unknown cap type %d len %d",
+                                  type, len);
+                        break;
                 }
 
-                lib_send_client_info(mod);
+                s->p = phold + len;
             }
+
+            lib_send_client_info(mod);
         }
         else if (type == 3) /* order list with len after type */
         {
-            init_stream(s, len);
-            rv = lib_recv(mod, s->data, len);
-
-            if (rv == 0)
+            for (index = 0; index < num_orders; index++)
             {
-                for (index = 0; index < num_orders; index++)
+                phold = s->p;
+                in_uint16_le(s, type);
+                in_uint16_le(s, len);
+                rv = lib_mod_process_orders(mod, type, s);
+
+                if (rv != 0)
                 {
-                    phold = s->p;
-                    in_uint16_le(s, type);
-                    in_uint16_le(s, len);
-                    rv = lib_mod_process_orders(mod, type, s);
-
-                    if (rv != 0)
-                    {
-                        break;
-                    }
-
-                    s->p = phold + len;
+                    break;
                 }
+
+                s->p = phold + len;
             }
         }
         else
@@ -1510,9 +1451,16 @@ lib_mod_signal(struct mod *mod)
         }
     }
 
-    free_stream(s);
-    LIB_DEBUG(mod, "out lib_mod_signal");
     return rv;
+}
+
+/******************************************************************************/
+/* return error */
+int DEFAULT_CC
+lib_mod_signal(struct mod *mod)
+{
+    g_writeln("lib_mod_signal: not used");
+    return 0;
 }
 
 /******************************************************************************/
@@ -1531,7 +1479,7 @@ lib_mod_end(struct mod *mod)
 /******************************************************************************/
 /* return error */
 int DEFAULT_CC
-lib_mod_set_param(struct mod *mod, char *name, char *value)
+lib_mod_set_param(struct mod *mod, const char *name, char *value)
 {
     if (g_strcasecmp(name, "username") == 0)
     {
@@ -1563,19 +1511,14 @@ int DEFAULT_CC
 lib_mod_get_wait_objs(struct mod *mod, tbus *read_objs, int *rcount,
                       tbus *write_objs, int *wcount, int *timeout)
 {
-    int i;
-
-    i = *rcount;
-
     if (mod != 0)
     {
-        if (mod->sck_obj != 0)
+        if (mod->trans != 0)
         {
-            read_objs[i++] = mod->sck_obj;
+            trans_get_wait_objs_rw(mod->trans, read_objs, rcount,
+                                   write_objs, wcount, timeout);
         }
     }
-
-    *rcount = i;
     return 0;
 }
 
@@ -1587,15 +1530,11 @@ lib_mod_check_wait_objs(struct mod *mod)
     int rv;
 
     rv = 0;
-
     if (mod != 0)
     {
-        if (mod->sck_obj != 0)
+        if (mod->trans != 0)
         {
-            if (g_is_wait_obj_set(mod->sck_obj))
-            {
-                rv = lib_mod_signal(mod);
-            }
+            rv = trans_check_wait_objs(mod->trans);
         }
     }
 
@@ -1613,7 +1552,7 @@ lib_mod_frame_ack(struct mod *amod, int flags, int frame_id)
 }
 
 /******************************************************************************/
-struct mod *EXPORT_CC
+tintptr EXPORT_CC
 mod_init(void)
 {
     struct mod *mod;
@@ -1621,7 +1560,7 @@ mod_init(void)
     mod = (struct mod *)g_malloc(sizeof(struct mod), 1);
     mod->size = sizeof(struct mod);
     mod->version = CURRENT_MOD_VER;
-    mod->handle = (tbus)mod;
+    mod->handle = (tintptr) mod;
     mod->mod_connect = lib_mod_connect;
     mod->mod_start = lib_mod_start;
     mod->mod_event = lib_mod_event;
@@ -1631,20 +1570,20 @@ mod_init(void)
     mod->mod_get_wait_objs = lib_mod_get_wait_objs;
     mod->mod_check_wait_objs = lib_mod_check_wait_objs;
     mod->mod_frame_ack = lib_mod_frame_ack;
-    return mod;
+    return (tintptr) mod;
 }
 
 /******************************************************************************/
 int EXPORT_CC
-mod_exit(struct mod *mod)
+mod_exit(tintptr handle)
 {
+    struct mod *mod = (struct mod *) handle;
+
     if (mod == 0)
     {
         return 0;
     }
-
-    g_delete_wait_obj_from_socket(mod->sck_obj);
-    g_tcp_close(mod->sck);
+    trans_delete(mod->trans);
     g_free(mod);
     return 0;
 }

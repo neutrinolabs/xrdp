@@ -97,7 +97,7 @@ xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
 }
 
 /*****************************************************************************/
-/* no fragmenation */
+/* no fragmentation */
 int APP_CC
 xrdp_fastpath_init(struct xrdp_fastpath *self, struct stream *s)
 {
@@ -109,18 +109,6 @@ xrdp_fastpath_init(struct xrdp_fastpath *self, struct stream *s)
         bytes = 32 * 1024;
     }
     init_stream(s, bytes);
-    return 0;
-}
-
-/*****************************************************************************/
-/* no fragmenation */
-int APP_CC
-xrdp_fastpath_send(struct xrdp_fastpath *self, struct stream *s)
-{
-    if (trans_force_write_s(self->trans, s) != 0)
-    {
-        return 1;
-    }
     return 0;
 }
 
@@ -141,6 +129,19 @@ xrdp_fastpath_session_callback(struct xrdp_fastpath *self, int msg,
         self->session->callback(self->session->id, msg,
                                 param1, param2, param3, param4);
     }
+    return 0;
+}
+
+/*****************************************************************************/
+/* no fragmentation */
+int APP_CC
+xrdp_fastpath_send(struct xrdp_fastpath *self, struct stream *s)
+{
+    if (trans_write_copy_s(self->trans, s) != 0)
+    {
+        return 1;
+    }
+    xrdp_fastpath_session_callback(self, 0x5556, 0, 0, 0, 0);
     return 0;
 }
 
@@ -264,12 +265,30 @@ static int APP_CC
 xrdp_fastpath_process_EVENT_UNICODE(struct xrdp_fastpath *self,
                                     int eventFlags, struct stream *s)
 {
-  if (!s_check_rem(s, 2))
-  {
-      return 1;
-  }
-  in_uint8s(s, 2);
-  return 0;
+    int flags;
+    int code;
+
+    flags = 0;
+    if (!s_check_rem(s, 2))
+    {
+        return 1;
+    }
+    in_uint16_le(s, code); /* unicode (2 byte) */
+    if (eventFlags & FASTPATH_INPUT_KBDFLAGS_RELEASE)
+    {
+        flags |= KBD_FLAG_UP;
+    }
+    else
+    {
+        flags |= KBD_FLAG_DOWN;
+    }
+    if (eventFlags & FASTPATH_INPUT_KBDFLAGS_EXTENDED)
+    {
+        flags |= KBD_FLAG_EXT;
+    }
+    xrdp_fastpath_session_callback(self, RDP_INPUT_UNICODE,
+                                   code, 0, flags, 0);
+    return 0;
 }
 
 /*****************************************************************************/

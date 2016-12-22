@@ -77,7 +77,7 @@ PA_MODULE_USAGE(
         "sink_name=<name for the sink> "
         "sink_properties=<properties for the sink> "
         "format=<sample format> "
-        "rate=<sample rate>"
+        "rate=<sample rate> "
         "channels=<number of channels> "
         "channel_map=<channel map>");
 
@@ -309,7 +309,7 @@ static int data_send(struct userdata *u, pa_memchunk *chunk) {
         s.sun_family = AF_UNIX;
         bytes = sizeof(s.sun_path) - 1;
         snprintf(s.sun_path, bytes, CHANSRV_PORT_STR, u->display_num);
-        pa_log_debug("trying to conenct to %s", s.sun_path);
+        pa_log_debug("trying to connect to %s", s.sun_path);
         if (connect(fd, (struct sockaddr *)&s,
                     sizeof(struct sockaddr_un)) != 0) {
             u->failed_connect_time = pa_rtclock_now();
@@ -440,7 +440,11 @@ static void thread_func(void *userdata) {
             pa_rtpoll_set_timer_disabled(u->rtpoll);
         }
 
+#if defined(PA_CHECK_VERSION) && PA_CHECK_VERSION(6, 0, 0)
+        if ((ret = pa_rtpoll_run(u->rtpoll)) < 0) {
+#else
         if ((ret = pa_rtpoll_run(u->rtpoll, TRUE)) < 0) {
+#endif
             goto fail;
         }
 

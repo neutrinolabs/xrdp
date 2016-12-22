@@ -23,23 +23,19 @@
 # debian packages needed
 # flex bison libxml2-dev intltool xsltproc xutils-dev python-libxml2 g++ xutils
 
-download_file()
+download_all_files()
 {
-    local file url status
-    file=$1
+    # download files parallelly using keepalive
+    # a little bit faster than calling wget with single file more than 100 times
+    < x11_file_list.txt cut -f1 -d: | sed -e "s|^|${download_url}/|" | \
+        xargs -P2 -n $(expr $num_modules / 2 + 1) \
+        wget \
+          --directory-prefix=downloads \
+          --no-verbose \
+          --timestamping \
+          --continue
 
-    # if we already have the file, don't download it
-    if [ -r downloads/$file ]; then
-        return 0
-    fi
-
-    echo "downloading file $download_url/$file"
-
-    cd downloads
-
-    wget -cq $download_url/$file
     status=$?
-    cd ..
     return $status
 }
 
@@ -74,15 +70,6 @@ extract_it()
         return 0
     fi
 
-    # download file
-    if ! download_file $mod_file
-    then
-        echo ""
-        echo "failed to download $mod_file - aborting build"
-        echo ""
-        exit 1
-    fi
-
     cd build_dir
 
     # if pkg has not yet been extracted, do so now
@@ -105,7 +92,7 @@ extract_it()
     cd $mod_name
     # check for patches
     if [ -e ../../$mod_name.patch ]; then
-        patch -p1 < ../../$mod_name.patch
+        patch -N -p1 < ../../$mod_name.patch
     fi
     # now configure
     echo "executing ./configure --prefix=$PREFIX_DIR $mod_args"
@@ -149,7 +136,7 @@ make_it()
 
     # make module
     if [ ! -e cookies/$mod_name.made ]; then
-        if ! make -C build_dir/$mod_name
+        if ! make -j $NPROC -C build_dir/$mod_name
         then
             echo ""
             echo "make failed for module $mod_name"
@@ -168,14 +155,6 @@ make_it()
         exit 1
     fi
 
-    # special case after installing python make this sym link
-    # so Mesa builds using this python version
-    case "$mod_name" in
-    *Python-2*)
-        ln -s python build_dir/$mod_name/$PREFIX_DIR/bin/python2
-        ;;
-    esac
-
     touch cookies/$mod_name.installed
     return 0
 }
@@ -188,7 +167,7 @@ data_file=x11_file_list.txt
 # was www.x.org/releases/X11R7.6/src/everything
 download_url=http://server1.xrdp.org/xrdp/X11R7.6
 
-num_modules=`cat $data_file | wc -l`
+num_modules=`wc -l < $data_file`
 count=0
 
 ##########################
@@ -198,7 +177,7 @@ count=0
 if [ $# -lt 1 ]; then
     echo ""
     echo "usage: buildx.sh <installation dir>"
-    echo "usage: buildx.sh <clean>"
+    echo "usage: buildx.sh clean"
     echo "usage: buildx.sh default"
     echo "usage: buildx.sh <installation dir> drop - set env and run bash in rdp dir"
     echo ""
@@ -218,36 +197,27 @@ else
     export PREFIX_DIR=$1
 fi
 
-if ! test -d $PREFIX_DIR; then
-    echo "dir does not exist, creating [$PREFIX_DIR]"
-    if ! mkdir $PREFIX_DIR
-    then
-        echo "mkdir failed [$PREFIX_DIR]"
-        exit 0
-    fi
-fi
-
-echo "using $PREFIX_DIR"
-
-export PKG_CONFIG_PATH=$PREFIX_DIR/lib/pkgconfig:$PREFIX_DIR/share/pkgconfig
-export PATH=$PREFIX_DIR/bin:$PATH
-export LDFLAGS=-Wl,-rpath=$PREFIX_DIR/lib
-export CFLAGS="-I$PREFIX_DIR/include -fPIC -O2"
-
 # prefix dir must exist...
 if [ ! -d $PREFIX_DIR ]; then
-    if ! mkdir -p $PREFIX_DIR
-    then
-        echo "$PREFIX_DIR does not exist; failed to create it - cannot continue"
+    echo "$PREFIX_DIR does not exist, creating it"
+    if ! mkdir -p $PREFIX_DIR; then
+        echo "$PREFIX_DIR cannot be created - cannot continue"
         exit 1
     fi
 fi
 
 # ...and be writable
 if [ ! -w $PREFIX_DIR ]; then
-    echo "directory $PREFIX_DIR is not writable - cannot continue"
+    echo "$PREFIX_DIR is not writable - cannot continue"
     exit 1
 fi
+
+echo "installation directory: $PREFIX_DIR"
+
+export PKG_CONFIG_PATH=$PREFIX_DIR/lib/pkgconfig:$PREFIX_DIR/share/pkgconfig
+export PATH=$PREFIX_DIR/bin:$PATH
+export LDFLAGS=-Wl,-rpath=$PREFIX_DIR/lib
+export CFLAGS="-I$PREFIX_DIR/include -fPIC -O2"
 
 # create a downloads dir
 if [ ! -d downloads ]; then
@@ -276,6 +246,18 @@ if [ ! -d cookies ]; then
     fi
 fi
 
+if ! NPROC=`nproc`; then
+    NPROC=1
+fi
+
+if ! download_all_files; then
+    echo ""
+    echo "download failed - aborting build"
+    echo "rerun this script to resume download/build"
+    echo ""
+    exit 1
+fi
+
 while IFS=: read mod_file mod_dir mod_args
 do
     mod_args=`eval echo $mod_args`
@@ -296,8 +278,8 @@ fi
 
 # this will copy the build X server with the other X server binaries
 cd rdp
-strip X11rdp
 cp X11rdp $X11RDPBASE/bin
+strip $X11RDPBASE/bin/X11rdp
 
 if [ "$2" = "drop" ]; then
     echo ""

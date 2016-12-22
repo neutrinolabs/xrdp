@@ -1,4 +1,4 @@
-.TH "xrdp\-genkeymap" "8" "0.1.0" "xrdp team" ""
+.TH "xrdp\-genkeymap" "8" "0.9.1" "xrdp team" ""
 .de URL
 . \\$2 \(laURL: \\$1 \(ra\\$3
 ..
@@ -21,36 +21,36 @@ The key map information is stored in the file named \fIoutfile\fP.
 
 .SH "FILES"
 .TP
-.I /etc/xrdp/km-XXXX.ini
-Files containing the keyboard mapping for language \fIXXXX\fP, which is a 4 digit hexadecimal number identifying the country and language code.
+.I /etc/xrdp/km-XXXXXXXX.ini
+Files containing the keyboard mapping for language \fIXXXXXXXX\fP, which is a 8 digit hexadecimal number identifying the country and language code.
 .RS 8
 .TP
-.B 0405
-cs czech
+.B 00000405
+cs Czech
 .TP
-.B 0407
-de german
+.B 00000407
+de German
 .TP
-.B 0409
-en-us us english
+.B 00000409
+en-us US English
 .TP
-.B 040c
-fr french
+.B 0000040c
+fr French
 .TP
-.B 0410
-it italy
+.B 00000410
+it Italian
 .TP
-.B 0416
+.B 00000416
 br Portuguese (Brazil)
 .TP
-.B 0419
-ru russian
+.B 00000419
+ru Russian
 .TP
-.B 041d
-se swedish
+.B 0000041d
+se Swedish
 .TP
-.B 0809
-en-uk uk english
+.B 00000809
+en-uk UK English
 .RE
 
 .SH "AUTHORS"
@@ -64,4 +64,4 @@ Simone Fedele <ilsimo@users.sourceforge.net>
 .BR unicode (7),
 .URL "https://github.com/FreeRDP/FreeRDP/wiki/Keyboard" "Description of Keyboard Input mapping" .
 
-for more info on \fBxrdp\fR see http://xrdp.sf.net
+for more info on \fBxrdp\fR see http://www.xrdp.org/

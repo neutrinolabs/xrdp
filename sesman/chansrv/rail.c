@@ -184,7 +184,7 @@ rail_send_key_esc(int window_id)
 static struct rail_window_data* APP_CC
 rail_get_window_data(Window window)
 {
-    int bytes;
+    unsigned int bytes;
     Atom actual_type_return;
     int actual_format_return;
     unsigned long nitems_return;
@@ -238,7 +238,7 @@ rail_get_window_data_safe(Window window)
     {
         return rv;
     }
-    rv = g_malloc(sizeof(struct rail_window_data), 1);
+    rv = g_new0(struct rail_window_data, 1);
     rail_set_window_data(window, rv);
     g_free(rv);
     return rail_get_window_data(window);
@@ -383,7 +383,7 @@ rail_startup()
 
     if (g_xrr_event_base > 0)
     {
-        LOG(0, ("rail_init: found RandR entension"));
+        LOG(0, ("rail_init: found RandR extension"));
         st = XRRQueryVersion(g_display, &ver_maj, &ver_min);
         if (st)
         {
@@ -508,7 +508,7 @@ rail_win_popdown(void)
             window_attributes.map_state == IsViewable &&
             list_index_of(g_window_list, children[i]) >= 0)
         {
-            LOG(10, ("  dismiss pop up 0x%8.8x", children[i]));
+            LOG(10, ("  dismiss pop up 0x%8.8lx", children[i]));
             rail_send_key_esc(children[i]);
             rv = 1;
         }
@@ -543,12 +543,12 @@ rail_close_window(int window_id)
 
 /*****************************************************************************/
 void DEFAULT_CC
-my_timoeut(void* data)
+my_timeout(void* data)
 {
-    LOG(10, ("my_timoeut: g_got_focus %d", g_got_focus));
+    LOG(10, ("my_timeout: g_got_focus %d", g_got_focus));
     if (g_focus_counter == (int)(long)data)
     {
-        LOG(10, ("my_timoeut: g_focus_counter %d", g_focus_counter));
+        LOG(10, ("my_timeout: g_focus_counter %d", g_focus_counter));
         rail_win_popdown();
     }
 }
@@ -557,7 +557,7 @@ my_timoeut(void* data)
 static int APP_CC
 rail_process_activate(struct stream *s, int size)
 {
-    int window_id;
+    unsigned int window_id;
     int enabled;
     int index;
     XWindowAttributes window_attributes;
@@ -617,7 +617,7 @@ rail_process_activate(struct stream *s, int size)
 
         LOG(10, ("  window attributes: override_redirect %d",
                  window_attributes.override_redirect));
-        add_timeout(200, my_timoeut, (void*)(long)g_focus_counter);
+        add_timeout(200, my_timeout, (void*)(long)g_focus_counter);
     }
     return 0;
 }
@@ -756,7 +756,7 @@ rail_win_set_state(Window win, unsigned long state)
     int old_state;
     unsigned long data[2] = { state, None };
 
-    LOG(10, ("  rail_win_set_state: %d", state));
+    LOG(10, ("  rail_win_set_state: %ld", state));
     /* check whether WM_STATE exists */
     old_state = rail_win_get_state(win);
     if (old_state == -1)
@@ -1148,8 +1148,8 @@ rail_data_in(struct stream *s, int chan_id, int chan_flags, int length,
     return  0;
 }
 
-static int g_crc_seed = 0xffffffff;
-static int g_crc_table[256] =
+static const unsigned int g_crc_seed = 0xffffffff;
+static const unsigned int g_crc_table[256] =
 {
     0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
     0xe963a535, 0x9e6495a3, 0x0edb8832, 0x79dcb8a4, 0xe0d5e91e, 0x97d2d988,
@@ -1259,7 +1259,7 @@ rail_win_send_text(Window win)
     }
     if (data && len > 0)
     {
-        LOG(10, ("chansrv::rail_win_send_text: 0x%8.8x text %s length %d",
+        LOG(10, ("chansrv::rail_win_send_text: 0x%8.8lx text %s length %d",
                  win, data, len));
         make_stream(s);
         init_stream(s, len + 1024);
@@ -1289,7 +1289,7 @@ rail_destroy_window(Window window_id)
 {
     struct stream *s;
 
-    LOG(10, ("chansrv::rail_destroy_window 0x%8.8x", window_id));
+    LOG(10, ("chansrv::rail_destroy_window 0x%8.8lx", window_id));
     make_stream(s);
     init_stream(s, 1024);
 
@@ -1309,7 +1309,7 @@ rail_show_window(Window window_id, int show_state)
     int flags;
     struct stream* s;
 
-    LOG(10, ("chansrv::rail_show_window 0x%8.8x 0x%x", window_id, show_state));
+    LOG(10, ("chansrv::rail_show_window 0x%8.8lx 0x%x", window_id, show_state));
     make_stream(s);
     init_stream(s, 1024);
 
@@ -1351,7 +1351,7 @@ rail_create_window(Window window_id, Window owner_id)
     struct rail_window_data* rwd;
     struct stream* s;
 
-    LOG(10, ("chansrv::rail_create_window 0x%8.8x", window_id));
+    LOG(10, ("chansrv::rail_create_window 0x%8.8lx", window_id));
 
     rwd = rail_get_window_data_safe(window_id);
     if (rwd == 0)
@@ -1507,7 +1507,7 @@ rail_configure_request_window(XConfigureRequestEvent* config)
     if (mask & CWStackMode)
     {
         LOG(10, ("chansrv::rail_configure_request_window: CWStackMode "
-                 "detail 0x%8.8x above 0x%8.8x", config->detail, config->above));
+                 "detail 0x%8.8x above 0x%8.8lx", config->detail, config->above));
         if (config->detail == Above)
         {
             LOG(10, ("chansrv::rail_configure_request_window: bring to front "
@@ -1775,7 +1775,7 @@ rail_configure_window(XConfigureEvent *config)
 
 /*****************************************************************************/
 static int
-rail_desktop_resize(lxevent)
+rail_desktop_resize(XEvent *lxevent)
 {
     LOG(0, ("rail_desktop_resize:"));
     return 0;
@@ -1808,7 +1808,7 @@ rail_xevent(void *xevent)
     {
         case PropertyNotify:
             prop_name = XGetAtomName(g_display, lxevent->xproperty.atom);
-            LOG(10, ("  got PropertyNotify window_id 0x%8.8x %s state new %d",
+            LOG(10, ("  got PropertyNotify window_id 0x%8.8lx %s state new %d",
                      lxevent->xproperty.window, prop_name,
                      lxevent->xproperty.state == PropertyNewValue));
 
@@ -1831,7 +1831,7 @@ rail_xevent(void *xevent)
             break;
 
         case ConfigureRequest:
-            LOG(10, ("  got ConfigureRequest window_id 0x%8.8x", lxevent->xconfigurerequest.window));
+            LOG(10, ("  got ConfigureRequest window_id 0x%8.8lx", lxevent->xconfigurerequest.window));
             g_memset(&xwc, 0, sizeof(xwc));
             xwc.x = lxevent->xconfigurerequest.x;
             xwc.y = lxevent->xconfigurerequest.y;
@@ -1849,13 +1849,13 @@ rail_xevent(void *xevent)
             break;
 
         case CreateNotify:
-            LOG(10, (" got CreateNotify window 0x%8.8x parent 0x%8.8x",
+            LOG(10, (" got CreateNotify window 0x%8.8lx parent 0x%8.8lx",
                      lxevent->xcreatewindow.window, lxevent->xcreatewindow.parent));
             rail_select_input(lxevent->xcreatewindow.window);
             break;
 
         case DestroyNotify:
-            LOG(10, ("  got DestroyNotify window 0x%8.8x event 0x%8.8x",
+            LOG(10, ("  got DestroyNotify window 0x%8.8lx event 0x%8.8lx",
                      lxevent->xdestroywindow.window, lxevent->xdestroywindow.event));
             if (lxevent->xdestroywindow.window != lxevent->xdestroywindow.event)
             {
@@ -1871,12 +1871,12 @@ rail_xevent(void *xevent)
             break;
 
         case MapRequest:
-            LOG(10, ("  got MapRequest window 0x%8.8x", lxevent->xmaprequest.window));
+            LOG(10, ("  got MapRequest window 0x%8.8lx", lxevent->xmaprequest.window));
             XMapWindow(g_display, lxevent->xmaprequest.window);
             break;
 
         case MapNotify:
-            LOG(10, ("  got MapNotify window 0x%8.8x event 0x%8.8x",
+            LOG(10, ("  got MapNotify window 0x%8.8lx event 0x%8.8lx",
                      lxevent->xmap.window, lxevent->xmap.event));
             if (lxevent->xmap.window != lxevent->xmap.event)
             {
@@ -1902,7 +1902,7 @@ rail_xevent(void *xevent)
             break;
 
         case UnmapNotify:
-            LOG(10, ("  got UnmapNotify 0x%8.8x", lxevent->xunmap.event));
+            LOG(10, ("  got UnmapNotify 0x%8.8lx", lxevent->xunmap.event));
             if (lxevent->xunmap.window != lxevent->xunmap.event)
             {
                 break;
@@ -1910,7 +1910,7 @@ rail_xevent(void *xevent)
             if (is_window_valid_child_of_root(lxevent->xunmap.window))
             {
                 index = list_index_of(g_window_list, lxevent->xunmap.window);
-                LOG(10, ("  window 0x%8.8x is unmapped", lxevent->xunmap.window));
+                LOG(10, ("  window 0x%8.8lx is unmapped", lxevent->xunmap.window));
                 if (index >= 0)
                 {
                     XGetWindowAttributes(g_display, lxevent->xunmap.window, &wnd_attributes);
@@ -1929,7 +1929,7 @@ rail_xevent(void *xevent)
             break;
 
         case ConfigureNotify:
-            LOG(10, ("  got ConfigureNotify 0x%8.8x event 0x%8.8x", lxevent->xconfigure.window,
+            LOG(10, ("  got ConfigureNotify 0x%8.8lx event 0x%8.8lx", lxevent->xconfigure.window,
                      lxevent->xconfigure.event));
             rv = 0;
             if (lxevent->xconfigure.event != lxevent->xconfigure.window ||
@@ -1975,8 +1975,8 @@ rail_xevent(void *xevent)
             break;
 
         case ReparentNotify:
-            LOG(10, ("  got ReparentNotify window 0x%8.8x parent 0x%8.8x "
-                     "event 0x%8.8x x %d y %d overrider redirect %d",
+            LOG(10, ("  got ReparentNotify window 0x%8.8lx parent 0x%8.8lx "
+                     "event 0x%8.8lx x %d y %d override redirect %d",
                      lxevent->xreparent.window, lxevent->xreparent.parent,
                      lxevent->xreparent.event, lxevent->xreparent.x,
                      lxevent->xreparent.y, lxevent->xreparent.override_redirect));

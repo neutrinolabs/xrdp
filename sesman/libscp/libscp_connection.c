@@ -33,11 +33,11 @@ scp_connection_create(int sck)
 {
     struct SCP_CONNECTION *conn;
 
-    conn = g_malloc(sizeof(struct SCP_CONNECTION), 0);
+    conn = g_new(struct SCP_CONNECTION, 1);
 
     if (0 == conn)
     {
-        log_message(LOG_LEVEL_WARNING, "[connection:%d] connection create: malloc error", __LINE__);
+        log_message(LOG_LEVEL_ERROR, "[connection:%d] connection create: malloc error", __LINE__);
         return 0;
     }
 

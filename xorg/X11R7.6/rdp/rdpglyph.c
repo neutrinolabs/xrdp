@@ -503,7 +503,7 @@ rdp_text_chars_to_data(struct rdp_text* rtext)
  PictFormatPtr   format;
  } GlyphListRec, *GlyphListPtr;
  */
-/* see ghyphstr.h but the follow is not in there
+/* see glyphstr.h but the following is not in there
  typedef struct _XGlyphInfo {
  unsigned short  width;
  unsigned short  height;
@@ -557,7 +557,7 @@ rdpGlyphu(CARD8 op, PicturePtr pSrc, PicturePtr pDst,
             post_process = 1;
             if (g_do_dirty_os)
             {
-                LLOGLN(10, ("rdpGlyphu: gettig dirty"));
+                LLOGLN(10, ("rdpGlyphu: getting dirty"));
                 pDstPriv->is_dirty = 1;
                 dirty_type = RDI_IMGLL;
                 pDirtyPriv = pDstPriv;

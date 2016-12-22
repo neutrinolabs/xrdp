@@ -242,7 +242,7 @@ lib_mod_end(struct mod *mod)
 /******************************************************************************/
 /* return error */
 int DEFAULT_CC
-lib_mod_set_param(struct mod *mod, char *name, char *value)
+lib_mod_set_param(struct mod *mod, const char *name, char *value)
 {
     if (g_strncasecmp(name, "ip", 255) == 0)
     {
@@ -318,7 +318,7 @@ lib_mod_check_wait_objs(struct mod *mod)
 }
 
 /******************************************************************************/
-struct mod *EXPORT_CC
+tintptr EXPORT_CC
 mod_init(void)
 {
     struct mod *mod;
@@ -327,7 +327,7 @@ mod_init(void)
     mod = (struct mod *)g_malloc(sizeof(struct mod), 1);
     mod->size = sizeof(struct mod);
     mod->version = CURRENT_MOD_VER;
-    mod->handle = (long)mod;
+    mod->handle = (tintptr) mod;
     mod->mod_connect = lib_mod_connect;
     mod->mod_start = lib_mod_start;
     mod->mod_event = lib_mod_event;
@@ -338,13 +338,15 @@ mod_init(void)
     mod->mod_check_wait_objs = lib_mod_check_wait_objs;
     mod->rdp_layer = rdp_rdp_create(mod);
     DEBUG(("out mod_init"));
-    return mod;
+    return (tintptr) mod;
 }
 
 /******************************************************************************/
 int EXPORT_CC
-mod_exit(struct mod *mod)
+mod_exit(tintptr handle)
 {
+    struct mod *mod = (struct mod *) handle;
+
     DEBUG(("in mod_exit"));
     g_free(mod);
     DEBUG(("out mod_exit"));

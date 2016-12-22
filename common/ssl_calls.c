@@ -40,6 +40,32 @@
 #define OLD_RSA_GEN1
 #endif
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+static inline HMAC_CTX *
+HMAC_CTX_new()
+{
+    HMAC_CTX *hmac_ctx = g_new(HMAC_CTX, 1);
+    HMAC_CTX_init(hmac_ctx);
+    return hmac_ctx;
+}
+
+static inline void
+HMAC_CTX_free(HMAC_CTX *hmac_ctx)
+{
+    HMAC_CTX_cleanup(hmac_ctx);
+    g_free(hmac_ctx);
+}
+
+static inline void
+RSA_get0_key(const RSA *key, const BIGNUM **n, const BIGNUM **e,
+             const BIGNUM **d)
+{
+     *n = key->n;
+     *d = key->d;
+}
+#endif /* OPENSSL_VERSION_NUMBER >= 0x10100000L */
+
+
 /*****************************************************************************/
 int
 ssl_init(void)
@@ -111,7 +137,7 @@ ssl_sha1_clear(void *sha1_info)
 
 /*****************************************************************************/
 void APP_CC
-ssl_sha1_transform(void *sha1_info, char *data, int len)
+ssl_sha1_transform(void *sha1_info, const char *data, int len)
 {
     SHA1_Update((SHA_CTX *)sha1_info, data, len);
 }
@@ -170,8 +196,7 @@ ssl_des3_encrypt_info_create(const char *key, const char* ivec)
     const tui8 *lkey;
     const tui8 *livec;
 
-    des3_ctx = (EVP_CIPHER_CTX *) g_malloc(sizeof(EVP_CIPHER_CTX), 1);
-    EVP_CIPHER_CTX_init(des3_ctx);
+    des3_ctx = EVP_CIPHER_CTX_new();
     lkey = (const tui8 *) key;
     livec = (const tui8 *) ivec;
     EVP_EncryptInit_ex(des3_ctx, EVP_des_ede3_cbc(), NULL, lkey, livec);
@@ -187,8 +212,7 @@ ssl_des3_decrypt_info_create(const char *key, const char* ivec)
     const tui8 *lkey;
     const tui8 *livec;
 
-    des3_ctx = g_malloc(sizeof(EVP_CIPHER_CTX), 1);
-    EVP_CIPHER_CTX_init(des3_ctx);
+    des3_ctx = EVP_CIPHER_CTX_new();
     lkey = (const tui8 *) key;
     livec = (const tui8 *) ivec;
     EVP_DecryptInit_ex(des3_ctx, EVP_des_ede3_cbc(), NULL, lkey, livec);
@@ -205,8 +229,7 @@ ssl_des3_info_delete(void *des3)
     des3_ctx = (EVP_CIPHER_CTX *) des3;
     if (des3_ctx != 0)
     {
-        EVP_CIPHER_CTX_cleanup(des3_ctx);
-        g_free(des3_ctx);
+        EVP_CIPHER_CTX_free(des3_ctx);
     }
 }
 
@@ -250,8 +273,7 @@ ssl_hmac_info_create(void)
 {
     HMAC_CTX *hmac_ctx;
 
-    hmac_ctx = (HMAC_CTX *) g_malloc(sizeof(HMAC_CTX), 1);
-    HMAC_CTX_init(hmac_ctx);
+    hmac_ctx = HMAC_CTX_new();
     return hmac_ctx;
 }
 
@@ -264,8 +286,7 @@ ssl_hmac_info_delete(void *hmac)
     hmac_ctx = (HMAC_CTX *) hmac;
     if (hmac_ctx != 0)
     {
-        HMAC_CTX_cleanup(hmac_ctx);
-        g_free(hmac_ctx);
+        HMAC_CTX_free(hmac_ctx);
     }
 }
 
@@ -332,10 +353,10 @@ ssl_mod_exp(char *out, int out_len, char *in, int in_len,
             char *mod, int mod_len, char *exp, int exp_len)
 {
     BN_CTX *ctx;
-    BIGNUM lmod;
-    BIGNUM lexp;
-    BIGNUM lin;
-    BIGNUM lout;
+    BIGNUM *lmod;
+    BIGNUM *lexp;
+    BIGNUM *lin;
+    BIGNUM *lout;
     int rv;
     char *l_out;
     char *l_in;
@@ -353,15 +374,15 @@ ssl_mod_exp(char *out, int out_len, char *in, int in_len,
     ssl_reverse_it(l_mod, mod_len);
     ssl_reverse_it(l_exp, exp_len);
     ctx = BN_CTX_new();
-    BN_init(&lmod);
-    BN_init(&lexp);
-    BN_init(&lin);
-    BN_init(&lout);
-    BN_bin2bn((tui8 *)l_mod, mod_len, &lmod);
-    BN_bin2bn((tui8 *)l_exp, exp_len, &lexp);
-    BN_bin2bn((tui8 *)l_in, in_len, &lin);
-    BN_mod_exp(&lout, &lin, &lexp, &lmod, ctx);
-    rv = BN_bn2bin(&lout, (tui8 *)l_out);
+    lmod = BN_new();
+    lexp = BN_new();
+    lin = BN_new();
+    lout = BN_new();
+    BN_bin2bn((tui8 *)l_mod, mod_len, lmod);
+    BN_bin2bn((tui8 *)l_exp, exp_len, lexp);
+    BN_bin2bn((tui8 *)l_in, in_len, lin);
+    BN_mod_exp(lout, lin, lexp, lmod, ctx);
+    rv = BN_bn2bin(lout, (tui8 *)l_out);
 
     if (rv <= out_len)
     {
@@ -373,10 +394,10 @@ ssl_mod_exp(char *out, int out_len, char *in, int in_len,
         rv = 0;
     }
 
-    BN_free(&lin);
-    BN_free(&lout);
-    BN_free(&lexp);
-    BN_free(&lmod);
+    BN_free(lin);
+    BN_free(lout);
+    BN_free(lexp);
+    BN_free(lmod);
     BN_CTX_free(ctx);
     g_free(l_out);
     g_free(l_in);
@@ -401,6 +422,7 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
     tui8 *lexp;
     int error;
     int len;
+    int diff;
 
     if ((exp_len != 4) || ((mod_len != 64) && (mod_len != 256)) ||
                           ((pri_len != 64) && (pri_len != 256)))
@@ -408,8 +430,9 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
         return 1;
     }
 
-    lmod = (char *)g_malloc(mod_len, 0);
-    lpri = (char *)g_malloc(pri_len, 0);
+    diff = 0;
+    lmod = (char *)g_malloc(mod_len, 1);
+    lpri = (char *)g_malloc(pri_len, 1);
     lexp = (tui8 *)exp;
     my_e = lexp[0];
     my_e |= lexp[1] << 8;
@@ -423,24 +446,26 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
     if (error == 0)
     {
         len = BN_num_bytes(my_key->n);
-        error = len != mod_len;
+        error = (len < 1) || (len > mod_len);
+        diff = mod_len - len;
     }
 
     if (error == 0)
     {
-        BN_bn2bin(my_key->n, (tui8 *)lmod);
+        BN_bn2bin(my_key->n, (tui8 *)(lmod + diff));
         ssl_reverse_it(lmod, mod_len);
     }
 
     if (error == 0)
     {
         len = BN_num_bytes(my_key->d);
-        error = len != pri_len;
+        error = (len < 1) || (len > pri_len);
+        diff = pri_len - len;
     }
 
     if (error == 0)
     {
-        BN_bn2bin(my_key->d, (tui8 *)lpri);
+        BN_bn2bin(my_key->d, (tui8 *)(lpri + diff));
         ssl_reverse_it(lpri, pri_len);
     }
 
@@ -471,6 +496,7 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
     char *lpri;
     int error;
     int len;
+    int diff;
 
     if ((exp_len != 4) || ((mod_len != 64) && (mod_len != 256)) ||
                           ((pri_len != 64) && (pri_len != 256)))
@@ -478,9 +504,10 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
         return 1;
     }
 
-    lexp = (char *)g_malloc(exp_len, 0);
-    lmod = (char *)g_malloc(mod_len, 0);
-    lpri = (char *)g_malloc(pri_len, 0);
+    diff = 0;
+    lexp = (char *)g_malloc(exp_len, 1);
+    lmod = (char *)g_malloc(mod_len, 1);
+    lpri = (char *)g_malloc(pri_len, 1);
     g_memcpy(lexp, exp, exp_len);
     ssl_reverse_it(lexp, exp_len);
     my_e = BN_new();
@@ -488,27 +515,33 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
     my_key = RSA_new();
     error = RSA_generate_key_ex(my_key, key_size_in_bits, my_e, 0) == 0;
 
+    const BIGNUM *n;
+    const BIGNUM *d;
+    RSA_get0_key(my_key, &n, NULL, &d);
+
     if (error == 0)
     {
-        len = BN_num_bytes(my_key->n);
-        error = len != mod_len;
+        len = BN_num_bytes(n);
+        error = (len < 1) || (len > mod_len);
+        diff = mod_len - len;
     }
 
     if (error == 0)
     {
-        BN_bn2bin(my_key->n, (tui8 *)lmod);
+        BN_bn2bin(n, (tui8 *)(lmod + diff));
         ssl_reverse_it(lmod, mod_len);
     }
 
     if (error == 0)
     {
-        len = BN_num_bytes(my_key->d);
-        error = len != pri_len;
+        len = BN_num_bytes(d);
+        error = (len < 1) || (len > pri_len);
+        diff = pri_len - len;
     }
 
     if (error == 0)
     {
-        BN_bn2bin(my_key->d, (tui8 *)lpri);
+        BN_bn2bin(d, (tui8 *)(lpri + diff));
         ssl_reverse_it(lpri, pri_len);
     }
 
@@ -552,7 +585,7 @@ ssl_tls_create(struct trans *trans, const char *key, const char *cert)
 
 /*****************************************************************************/
 int APP_CC
-ssl_tls_print_error(char *func, SSL *connection, int value)
+ssl_tls_print_error(const char *func, SSL *connection, int value)
 {
     switch (SSL_get_error(connection, value))
     {
@@ -562,11 +595,7 @@ ssl_tls_print_error(char *func, SSL *connection, int value)
             return 1;
 
         case SSL_ERROR_WANT_READ:
-            g_writeln("ssl_tls_print_error: SSL_ERROR_WANT_READ");
-            return 0;
-
         case SSL_ERROR_WANT_WRITE:
-            g_writeln("ssl_tls_print_error: SSL_ERROR_WANT_WRITE");
             return 0;
 
         case SSL_ERROR_SYSCALL:
@@ -586,18 +615,22 @@ ssl_tls_print_error(char *func, SSL *connection, int value)
 
 /*****************************************************************************/
 int APP_CC
-ssl_tls_accept(struct ssl_tls *self)
+ssl_tls_accept(struct ssl_tls *self, int disableSSLv3,
+               const char *tls_ciphers)
 {
     int connection_status;
     long options = 0;
 
     /**
-     * SSL_OP_NO_SSLv2:
-     *
-     * We only want SSLv3 and TLSv1, so disable SSLv2.
+     * SSL_OP_NO_SSLv2
      * SSLv3 is used by, eg. Microsoft RDC for Mac OS X.
+     * No SSLv3 if disableSSLv3=yes so only tls used
      */
     options |= SSL_OP_NO_SSLv2;
+    if (disableSSLv3)
+    {
+        options |= SSL_OP_NO_SSLv3;
+    }
 
 #if defined(SSL_OP_NO_COMPRESSION)
     /**
@@ -634,6 +667,16 @@ ssl_tls_accept(struct ssl_tls *self)
                      SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER |
                      SSL_MODE_ENABLE_PARTIAL_WRITE);
     SSL_CTX_set_options(self->ctx, options);
+
+    if (g_strlen(tls_ciphers) > 1)
+    {
+        if (SSL_CTX_set_cipher_list(self->ctx, tls_ciphers) == 0)
+        {
+            g_writeln("ssl_tls_accept: invalid cipher options");
+            return 1;
+        }
+    }
+
     SSL_CTX_set_read_ahead(self->ctx, 1);
 
     if (self->ctx == NULL)
@@ -669,13 +712,24 @@ ssl_tls_accept(struct ssl_tls *self)
         return 1;
     }
 
-    connection_status = SSL_accept(self->ssl);
+    while(1) {
+        connection_status = SSL_accept(self->ssl);
 
-    if (connection_status <= 0)
-    {
-        if (ssl_tls_print_error("SSL_accept", self->ssl, connection_status))
+        if (connection_status <= 0)
         {
-            return 1;
+            if (ssl_tls_print_error("SSL_accept", self->ssl, connection_status))
+            {
+                return 1;
+            }
+            /**
+             * retry when SSL_get_error returns:
+             *     SSL_ERROR_WANT_READ
+             *     SSL_ERROR_WANT_WRITE
+             */
+        }
+        else
+        {
+            break;
         }
     }
 
@@ -709,6 +763,11 @@ ssl_tls_disconnect(struct ssl_tls *self)
             {
                 return 1;
             }
+            /**
+             * retry when SSL_get_error returns:
+             *     SSL_ERROR_WANT_READ
+             *     SSL_ERROR_WANT_WRITE
+             */
         }
     }
     return 0;
@@ -737,23 +796,37 @@ int APP_CC
 ssl_tls_read(struct ssl_tls *tls, char *data, int length)
 {
     int status;
+    int break_flag;
 
-    status = SSL_read(tls->ssl, data, length);
+    while(1) {
+        status = SSL_read(tls->ssl, data, length);
 
-    switch (SSL_get_error(tls->ssl, status))
-    {
-        case SSL_ERROR_NONE:
+        switch (SSL_get_error(tls->ssl, status))
+        {
+            case SSL_ERROR_NONE:
+                break_flag = 1;
+                break;
+
+            case SSL_ERROR_WANT_READ:
+            case SSL_ERROR_WANT_WRITE:
+                /**
+                 * retry when SSL_get_error returns:
+                 *     SSL_ERROR_WANT_READ
+                 *     SSL_ERROR_WANT_WRITE
+                 */
+                continue;
+
+            default:
+                ssl_tls_print_error("SSL_read", tls->ssl, status);
+                status = -1;
+                break_flag = 1;
+                break;
+        }
+
+        if (break_flag)
+        {
             break;
-
-        case SSL_ERROR_WANT_READ:
-        case SSL_ERROR_WANT_WRITE:
-            status = 0;
-            break;
-
-        default:
-            ssl_tls_print_error("SSL_read", tls->ssl, status);
-            status = -1;
-            break;
+        }
     }
 
     if (SSL_pending(tls->ssl) > 0)
@@ -769,23 +842,37 @@ int APP_CC
 ssl_tls_write(struct ssl_tls *tls, const char *data, int length)
 {
     int status;
+    int break_flag;
 
-    status = SSL_write(tls->ssl, data, length);
+    while(1) {
+        status = SSL_write(tls->ssl, data, length);
 
-    switch (SSL_get_error(tls->ssl, status))
-    {
-        case SSL_ERROR_NONE:
+        switch (SSL_get_error(tls->ssl, status))
+        {
+            case SSL_ERROR_NONE:
+                break_flag = 1;
+                break;
+
+            case SSL_ERROR_WANT_READ:
+            case SSL_ERROR_WANT_WRITE:
+                /**
+                 * retry when SSL_get_error returns:
+                 *     SSL_ERROR_WANT_READ
+                 *     SSL_ERROR_WANT_WRITE
+                 */
+                continue;
+
+            default:
+                ssl_tls_print_error("SSL_write", tls->ssl, status);
+                status = -1;
+                break_flag = 1;
+                break;
+        }
+
+        if (break_flag)
+        {
             break;
-
-        case SSL_ERROR_WANT_READ:
-        case SSL_ERROR_WANT_WRITE:
-            status = 0;
-            break;
-
-        default:
-            ssl_tls_print_error("SSL_write", tls->ssl, status);
-            status = -1;
-            break;
+        }
     }
 
     return status;
@@ -801,6 +888,6 @@ ssl_tls_can_recv(struct ssl_tls *tls, int sck, int millis)
         return 1;
     }
     g_reset_wait_obj(tls->rwo);
-    return g_tcp_can_recv(sck, millis);
+    return g_sck_can_recv(sck, millis);
 }
 

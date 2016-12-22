@@ -30,7 +30,7 @@
 
 extern struct config_sesman *g_cfg; /* in sesman.c */
 
-static void parseCommonStates(enum SCP_SERVER_STATES_E e, char *f);
+static void parseCommonStates(enum SCP_SERVER_STATES_E e, const char *f);
 
 /******************************************************************************/
 void DEFAULT_CC
@@ -50,7 +50,6 @@ scp_v1_mng_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
         scp_v1s_mng_deny_connection(c, "Login failed");
         log_message(LOG_LEVEL_INFO,
                     "[MNG] Login failed for user %s. Connection terminated", s->username);
-        scp_session_destroy(s);
         auth_end(data);
         return;
     }
@@ -61,7 +60,6 @@ scp_v1_mng_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
         scp_v1s_mng_deny_connection(c, "Access to Terminal Server not allowed.");
         log_message(LOG_LEVEL_INFO,
                     "[MNG] User %s not allowed on TS. Connection terminated", s->username);
-        scp_session_destroy(s);
         auth_end(data);
         return;
     }
@@ -105,11 +103,10 @@ scp_v1_mng_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     }
 
     /* cleanup */
-    scp_session_destroy(s);
     auth_end(data);
 }
 
-static void parseCommonStates(enum SCP_SERVER_STATES_E e, char *f)
+static void parseCommonStates(enum SCP_SERVER_STATES_E e, const char *f)
 {
     switch (e)
     {

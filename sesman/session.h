@@ -76,6 +76,7 @@ struct session_item
   struct session_date disconnect_time;
   struct session_date idle_time;
   char client_ip[256];
+  tui8 guid[16];
 };
 
 struct session_chain
@@ -91,7 +92,8 @@ struct session_chain
  *
  */
 struct session_item* DEFAULT_CC
-session_get_bydata(char* name, int width, int height, int bpp, int type, char *client_ip);
+session_get_bydata(const char *name, int width, int height, int bpp, int type,
+                   const char *client_ip);
 #ifndef session_find_item
   #define session_find_item(a, b, c, d, e, f) session_get_bydata(a, b, c, d, e, f);
 #endif
@@ -103,21 +105,10 @@ session_get_bydata(char* name, int width, int height, int bpp, int type, char *c
  *
  */
 int DEFAULT_CC
-session_start(int width, int height, int bpp, char* username, char* password,
-              long data, tui8 type, char* domain, char* program,
-              char* directory, char* client_ip);
+session_start(long data, tui8 type, struct SCP_SESSION *s);
 
 int DEFAULT_CC
 session_reconnect(int display, char* username);
-
-/**
- *
- * @brief starts a session
- * @return error
- *
- */
-int APP_CC
-session_sync_start(void);
 
 /**
  *
@@ -156,6 +147,6 @@ session_get_bypid(int pid);
  *
  */
 struct SCP_DISCONNECTED_SESSION*
-session_get_byuser(char* user, int* cnt, unsigned char flags);
+session_get_byuser(const char *user, int *cnt, unsigned char flags);
 
 #endif
