@@ -3,6 +3,7 @@ AM_DISTCHECK_CONFIGURE_FLAGS = --without-systemdsystemunitdir
 
 EXTRA_DIST = \
   COPYING \
+  NEWS.md \
   astyle_config.as \
   bootstrap \
   coding_style.md \
