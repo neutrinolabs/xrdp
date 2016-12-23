@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script
 
 AC_PREREQ(2.65)
-AC_INIT([xrdp], [0.9.0], [xrdp-devel@googlegroups.com])
+AC_INIT([xrdp], [0.9.1], [xrdp-devel@googlegroups.com])
 AC_CONFIG_HEADERS(config_ac.h:config_ac-h.in)
 AM_INIT_AUTOMAKE([1.7.2 foreign])
 AC_CONFIG_MACRO_DIR([m4])
@@ -119,6 +119,17 @@ AC_ARG_ENABLE(pixman, AS_HELP_STRING([--enable-pixman],
               [Use pixman library (default: no)]),
               [], [enable_pixman=no])
 AM_CONDITIONAL(XRDP_PIXMAN, [test x$enable_pixman = xyes])
+AM_CONDITIONAL(XRDP_PAINTER, [test x$enable_painter = xyes])
+AC_ARG_ENABLE(painter, AS_HELP_STRING([--enable-painter],
+              [Use painter library (default: no)]),
+              [], [enable_painter=no])
+AM_CONDITIONAL(XRDP_PAINTER, [test x$enable_painter = xyes])
+
+# Don't fail without working nasm if rfxcodec is not enabled
+if test "x$enable_rfxcodec" != xyes; then
+  with_simd=no
+  export with_simd
+fi
 
 # Check if -ldl is needed to use dlopen()
 DLOPEN_LIBS=
