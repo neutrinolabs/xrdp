@@ -62,7 +62,7 @@ SAVE_TARGETS
 dolphin 1.6.1 KDE 4.6.5 (kubuntu 11.04) copy one file
 text/uri-list
 text/x-moz-url
-text/plainchansrv
+text/plain
 UTF8_STRING
 STRING
 TEXT
@@ -111,7 +111,7 @@ TEXT
 COMPOUND_TEXT
 TARGETS
 MULTIPLE
-TIMESTAMPchansrv
+TIMESTAMP
 SAVE_TARGETS
 
 gimp 2.6.10 copy image area
@@ -138,7 +138,7 @@ UTF8_STRING
 
 dolphin 1.6.1 KDE 4.6.5 (kubuntu 11.04) copy two files
 text/uri-list
-/home/jay/temp/jetstream1.txtchansrv
+/home/jay/temp/jetstream1.txt
 /home/jay/temp/jpeg64x64.jpg
 0000 66 69 6c 65 3a 2f 2f 2f 68 6f 6d 65 2f 6a 61 79 file:///home/jay
 0010 2f 74 65 6d 70 2f 6a 65 74 73 74 72 65 61 6d 31 /temp/jetstream1
