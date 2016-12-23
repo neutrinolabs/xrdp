@@ -178,7 +178,7 @@ x-special/gnome-copied-files
 #define LOG_DEBUG   2
 
 #undef LOG_LEVEL
-#define LOG_LEVEL   500
+#define LOG_LEVEL   LOG_ERROR
 
 #define log_error(_params...)                           \
 {                                                       \
