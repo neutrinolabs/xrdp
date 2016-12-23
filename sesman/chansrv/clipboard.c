@@ -158,7 +158,7 @@ x-special/gnome-copied-files
 
 
 */
-
+#include <../config.h>
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/extensions/Xfixes.h>
@@ -225,11 +225,15 @@ static char g_bmp_image_header[] =
 
 extern int g_cliprdr_chan_id;   /* in chansrv.c */
 
+struct config_sesman g_cfg; /* config.h */
+
 extern Display *g_display;      /* in xcommon.c */
 extern int g_x_socket;          /* in xcommon.c */
 extern tbus g_x_wait_obj;       /* in xcommon.c */
 extern Screen *g_screen;        /* in xcommon.c */
 extern int g_screen_num;        /* in xcommon.c */
+
+int restricted = 0;
 
 int g_clip_up = 0;
 
@@ -281,6 +285,8 @@ static int g_file_format_id = -1;
 
 static char g_last_atom_name[256] = "";
 
+
+
 /*****************************************************************************/
 static char* APP_CC
 get_atom_text(Atom atom)
@@ -312,7 +318,7 @@ get_atom_text(Atom atom)
     return g_last_atom_name;
 }
 
-/*****************************************************************************/
+/**************************login_retry***************************************************/
 /* this is one way to get the current time from the x server */
 static Time APP_CC
 clipboard_get_server_time(void)
@@ -371,6 +377,16 @@ clipboard_init(void)
     {
         return 0;
     }
+
+	if (0 != config_read(&g_cfg)) {
+		g_printf("clipboard: error reading config. quitting.\n");
+		return 1;
+	}
+
+	log_debug("clipboard_init: clipboard restricted -> "+g_cfg.sec.restrict_clipboard)
+    //one-way clipboard
+    restricted = g_cfg.sec.restrict_clipboard;
+
 
     xfuse_init();
     xcommon_init();
@@ -2480,6 +2496,8 @@ clipboard_xevent(void *xevent)
 {
     XEvent *lxevent;
 
+    log_debug("clipboard_xevent: event detected");
+
     if (!g_clip_up)
     {
         return 1;
@@ -2490,7 +2508,13 @@ clipboard_xevent(void *xevent)
     switch (lxevent->type)
     {
         case SelectionNotify:
-            clipboard_event_selection_notify(lxevent);
+        	if (restricted == 0) {
+        		log_debug("clipboard_xevent: clipboard SelectionNotify event on xorg.")
+        		clipboard_event_selection_notify(lxevent);
+        	} else {
+        		log_debug("clipboard_xevent: clipboard restricted, ignoring xorg event.")
+        		return 1;
+        	}
             break;
         case SelectionRequest:
             clipboard_event_selection_request(lxevent);
