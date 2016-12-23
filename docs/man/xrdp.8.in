@@ -24,13 +24,13 @@ Kills running \fBxrdp\fR daemon.
 Output help information and exit.
 
 .SH "FILES"
-${XRDP_BIN_DIR}/xrdp
+@bindir@/xrdp
 .br
-${XRDP_CFG_DIR}/xrdp.ini
+@sysconfdir@/xrdp/xrdp.ini
 .br
-${XRDP_LOG_DIR}/xrdp.log
+@localstatedir@/log/xrdp.log
 .br
-${XRDP_PID_DIR}/xrdp.pid
+@localstatedir@/run/xrdp.pid
 
 .SH "AUTHORS"
 Jay Sorg <jsorg71@users.sourceforge.net>

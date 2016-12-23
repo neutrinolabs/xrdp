@@ -214,7 +214,7 @@ All entries in the \fB[SessionVariables]\fR section are set as
 environment variables in the user's session.
 
 .SH "FILES"
-/etc/xrdp/sesman.ini
+@sysconfdir@/xrdp/sesman.ini
 
 .SH "SEE ALSO"
 .BR xrdp-sesman (8),

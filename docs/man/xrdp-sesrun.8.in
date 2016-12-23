@@ -32,9 +32,9 @@ Screen height
 Session color depth
 
 .SH "FILES"
-${SESMAN_BIN_DIR}/sesman
+@bindir@/sesman
 .br
-${SESMAN_BIN_DIR}/sesrun
+@bindir@/sesrun
 
 .SH "AUTHORS"
 Jay Sorg <jsorg71@users.sourceforge.net>

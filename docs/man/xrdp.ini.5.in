@@ -54,7 +54,7 @@ If set to \fB1\fR, \fBtrue\fR or \fByes\fR this option enables compression of bu
 .TP
 \fBkey_file\fP=\fI/path/to/private_key\fP
 Set location of TLS certificate and private key. They must be written in PEM format.
-If not specified, defaults to \fB${XRDP_CFG_DIR}/cert.pem\fP, \fB${XRDP_CFG_DIR}/key.pem\fP.
+If not specified, defaults to \fB@sysconfdir@/xrdp/cert.pem\fP, \fB@sysconfdir@/xrdp/key.pem\fP.
 
 This parameter is effective only if \fBsecurity_layer\fP is set to \fBtls\fP or \fBnegotiate\fP.
 
@@ -206,8 +206,8 @@ The highest value is 255 (hex FF).
 The following parameters can be used in the \fB[Logging]\fR section:
 
 .TP
-\fBLogFile\fR=\fI${SESMAN_LOG_DIR}/sesman.log\fR
-This options contains the path to logfile. It can be either absolute or relative, and the default is \fI${SESMAN_LOG_DIR}/sesman.log\fR
+\fBLogFile\fR=\fI@localstatedir@/log/sesman.log\fR
+This options contains the path to logfile. It can be either absolute or relative.\fR
 
 .TP
 \fBLogLevel\fR=\fIlevel\fR
@@ -320,7 +320,7 @@ port=\-1
 .fi
 
 .SH "FILES"
-${XRDP_CFG_DIR}/xrdp.ini
+@sysconfdir@/xrdp/xrdp.ini
 
 .SH "SEE ALSO"
 .BR xrdp (8),

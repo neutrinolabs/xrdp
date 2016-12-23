@@ -21,7 +21,7 @@ The key map information is stored in the file named \fIoutfile\fP.
 
 .SH "FILES"
 .TP
-.I /etc/xrdp/km-XXXXXXXX.ini
+.I @sysconfdir@/xrdp/km-XXXXXXXX.ini
 Files containing the keyboard mapping for language \fIXXXXXXXX\fP, which is a 8 digit hexadecimal number identifying the country and language code.
 .RS 8
 .TP
