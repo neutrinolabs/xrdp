@@ -1,5 +1,5 @@
 .\"
-.TH "sesman.ini" "5" "0.9.1" "xrdp team" ""
+.TH "sesman.ini" "5" "@PACKAGE_VERSION@" "xrdp team" ""
 .SH "NAME"
 \fBsesman.ini\fR \- Configuration file for \fBxrdp-sesman\fR(8)
 

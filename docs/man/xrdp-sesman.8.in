@@ -1,4 +1,4 @@
-.TH "xrdp\-sesman" "8" "0.9.1" "xrdp team" ""
+.TH "xrdp\-sesman" "8" "@PACKAGE_VERSION@" "xrdp team" ""
 .SH "NAME"
 xrdp\-sesman \- \fBxrdp\fR(8) session manager
 
