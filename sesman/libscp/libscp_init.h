@@ -41,6 +41,6 @@
  *
  */
 int DEFAULT_CC
-scp_init();
+scp_init(void);
 
 #endif

@@ -40,9 +40,9 @@ int APP_CC dev_redir_data_in(struct stream* s, int chan_id, int chan_flags,
 int APP_CC dev_redir_get_wait_objs(tbus* objs, int* count, int* timeout);
 int APP_CC dev_redir_check_wait_objs(void);
 
-void dev_redir_send_server_core_cap_req();
-void dev_redir_send_server_clientID_confirm();
-void dev_redir_send_server_user_logged_on();
+void dev_redir_send_server_core_cap_req(void);
+void dev_redir_send_server_clientID_confirm(void);
+void dev_redir_send_server_user_logged_on(void);
 void devredir_send_server_device_announce_resp(tui32 device_id);
 
 void dev_redir_send_drive_dir_request(IRP *irp, tui32 device_id,

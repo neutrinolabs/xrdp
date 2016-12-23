@@ -45,8 +45,8 @@ struct xrdp_inode
 };
 typedef struct xrdp_inode XRDP_INODE; // LK_TODO use this instead of using struct xrdp_inode
 
-int xfuse_init();
-int xfuse_deinit();
+int xfuse_init(void);
+int xfuse_deinit(void);
 int xfuse_check_wait_objs(void);
 int xfuse_get_wait_objs(tbus *objs, int *count, int *timeout);
 int xfuse_create_share(tui32 share_id, char *dirname);

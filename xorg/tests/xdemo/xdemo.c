@@ -823,7 +823,7 @@ int drawBMP(char *filename, int scroll_type)
     return 0;
 }
 
-int process_bmp_event()
+int process_bmp_event(void)
 {
     XEvent ev;
     long   event_mask;

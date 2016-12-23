@@ -37,7 +37,7 @@ struct log_config logging;
 
 void cmndList(struct SCP_CONNECTION *c);
 void cmndKill(struct SCP_CONNECTION *c, struct SCP_SESSION *s);
-void cmndHelp();
+void cmndHelp(void);
 
 int inputSession(struct SCP_SESSION *s);
 unsigned int menuSelect(unsigned int choices);
@@ -173,7 +173,7 @@ int main(int argc, char **argv)
     return 0;
 }
 
-void cmndHelp()
+void cmndHelp(void)
 {
     fprintf(stderr, "sesadmin - a console sesman administration tool\n");
     fprintf(stderr, "syntax: sesadmin [] COMMAND [OPTIONS]\n\n");

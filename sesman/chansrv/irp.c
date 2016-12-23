@@ -69,7 +69,7 @@ IRP *g_irp_head = NULL;
  * @return new IRP or NULL on error
  *****************************************************************************/
 
-IRP * devredir_irp_new()
+IRP * devredir_irp_new(void)
 {
     IRP *irp;
     IRP *irp_last;
@@ -239,7 +239,7 @@ IRP * devredir_irp_find_by_fileid(tui32 FileId)
  * Return last IRP in linked list
  *****************************************************************************/
 
-IRP * devredir_irp_get_last()
+IRP * devredir_irp_get_last(void)
 {
     IRP *irp = g_irp_head;
 
@@ -255,7 +255,7 @@ IRP * devredir_irp_get_last()
     return irp;
 }
 
-void devredir_irp_dump()
+void devredir_irp_dump(void)
 {
     IRP *irp = g_irp_head;
 

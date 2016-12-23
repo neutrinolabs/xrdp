@@ -848,7 +848,7 @@ static int xfuse_init_lib(struct fuse_args *args)
  *
  *****************************************************************************/
 
-static int xfuse_init_xrdp_fs()
+static int xfuse_init_xrdp_fs(void)
 {
     struct xrdp_inode *xino;
 
@@ -949,7 +949,7 @@ static int xfuse_init_xrdp_fs()
  * @return 0 on success, -1 on failure
  *****************************************************************************/
 
-static int xfuse_deinit_xrdp_fs()
+static int xfuse_deinit_xrdp_fs(void)
 {
     return 0;
 }
@@ -1043,7 +1043,7 @@ static void xfuse_create_file(fuse_req_t req, fuse_ino_t parent,
 }
 #endif
 
-static void xfuse_dump_fs()
+static void xfuse_dump_fs(void)
 {
     fuse_ino_t i;
     struct xrdp_inode *xinode;
@@ -1387,7 +1387,7 @@ static int xfuse_recursive_delete_dir_with_xinode(XRDP_INODE *xinode)
     return 0;
 }
 
-static void xfuse_update_xrdpfs_size()
+static void xfuse_update_xrdpfs_size(void)
 {
     void *vp;
     int diff;

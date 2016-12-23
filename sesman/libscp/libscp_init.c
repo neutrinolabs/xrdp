@@ -30,7 +30,7 @@
 
 /* server API */
 int DEFAULT_CC
-scp_init()
+scp_init(void)
 {
     /*
       if (0 == log)
