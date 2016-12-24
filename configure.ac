@@ -292,9 +292,14 @@ CFLAGS="$save_CFLAGS"
 
 AC_SUBST([moduledir], '${libdir}/xrdp')
 
-if test "x${prefix}" = "xNONE" ; then
-sysconfdir="/etc";
-localstatedir="/var";
+AC_ARG_ENABLE([strict-locations],
+  [AS_HELP_STRING([--enable-strict-locations],
+                  [Use standard Autoconf install directories unless overridden
+                   (default: use /etc and /var)])])
+
+if test "x$enable_strict_locations" != "xyes"; then
+  sysconfdir="/etc";
+  localstatedir="/var";
 fi
 
 PKG_INSTALLDIR
