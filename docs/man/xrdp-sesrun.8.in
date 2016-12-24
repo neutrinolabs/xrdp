@@ -1,4 +1,4 @@
-.TH "xrdp\-sesrun" "8" "0.9.1" "xrdp team" ""
+.TH "xrdp\-sesrun" "8" "@PACKAGE_VERSION@" "xrdp team" ""
 .SH "NAME"
 xrdp\-sesrun \- \fBsesman\fR(8) session launcher
 
@@ -32,9 +32,9 @@ Screen height
 Session color depth
 
 .SH "FILES"
-${SESMAN_BIN_DIR}/sesman
+@bindir@/sesman
 .br
-${SESMAN_BIN_DIR}/sesrun
+@bindir@/sesrun
 
 .SH "AUTHORS"
 Jay Sorg <jsorg71@users.sourceforge.net>

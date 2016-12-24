@@ -1,4 +1,4 @@
-.TH "xrdp\-chansrv" "8" "0.9.1" "xrdp team" ""
+.TH "xrdp\-chansrv" "8" "@PACKAGE_VERSION@" "xrdp team" ""
 .SH "NAME"
 \fBxrdp\-chansrv\fR \- \fBxrdp\fR channel server
 

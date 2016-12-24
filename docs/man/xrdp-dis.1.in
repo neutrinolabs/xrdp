@@ -1,4 +1,4 @@
-.TH "xrdp-dis" "1" "0.9.1" "xrdp team"
+.TH "xrdp-dis" "1" "@PACKAGE_VERSION@" "xrdp team"
 .SH NAME
 xrdp\-dis \- xrdp disconnect utility
 

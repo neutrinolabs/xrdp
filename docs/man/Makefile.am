@@ -1,4 +1,4 @@
-dist_man_MANS = \
+man_MANS = \
   xrdp-dis.1 \
   sesman.ini.5 \
   xrdp.ini.5 \
@@ -11,7 +11,16 @@ dist_man_MANS = \
   xrdp-sesrun.8 \
   xrdp-sessvc.8
 
-noinst_man_MANS = \
-  xrdp-xcon.8
+EXTRA_DIST = $(man_MANS:=.in)
 
-EXTRA_DIST = $(noinst_man_MANS)
+SUBST_VARS = sed \
+   -e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g' \
+   -e 's|@bindir[@]|$(bindir)|g' \
+   -e 's|@localstatedir[@]|$(localstatedir)|g' \
+   -e 's|@sysconfdir[@]|$(sysconfdir)|g'
+
+SUFFIXES = .in
+.in:
+	$(SUBST_VARS) $< > $@
+
+CLEANFILES = $(man_MANS)
