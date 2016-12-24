@@ -32,9 +32,13 @@ addons:
       #- g++
       #- xutils
 
+env:
+  - CONF_FLAGS=""
+  - CONF_FLAGS="--enable-ipv6 --enable-jpeg --enable-fuse --enable-mp3lame
+                --enable-pixman --enable-rfxcodec --enable-painter"
+
 script:
-  # disable librfxcodec as no remotefx for v0.9.1 release
-  #- (cd librfxcodec && ./bootstrap && ./configure && make)
-  - (./bootstrap && ./configure --enable-ipv6 --enable-jpeg --enable-fuse --enable-mp3lame --enable-pixman && make && make distcheck)
-  # disable x11rdp build as it takes long time and it is to be deprecated
-  #- (cd xorg/X11R7.6 && ./buildx.sh default)
+  - ./bootstrap
+  - ./configure $CONF_FLAGS
+  - make CFLAGS="-O2 -Wall -Wwrite-strings -Werror"
+  - make distcheck
