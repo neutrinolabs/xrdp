@@ -145,7 +145,7 @@ AC_CHECK_FUNC(dlopen, [],
 AC_SUBST(DLOPEN_LIBS)
 
 # checking for openssl
-PKG_CHECK_MODULES([OPENSSL], [openssl >= 0], [],
+PKG_CHECK_MODULES([OPENSSL], [openssl >= 0.9.8], [],
   [AC_MSG_ERROR([please install libssl-dev or openssl-devel])])
 
 # look for openssl binary
