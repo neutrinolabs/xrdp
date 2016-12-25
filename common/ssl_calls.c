@@ -34,11 +34,6 @@
 #include "ssl_calls.h"
 #include "trans.h"
 
-#if defined(OPENSSL_VERSION_NUMBER) && (OPENSSL_VERSION_NUMBER >= 0x0090800f)
-#undef OLD_RSA_GEN1
-#else
-#define OLD_RSA_GEN1
-#endif
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 static inline HMAC_CTX *
@@ -406,81 +401,6 @@ ssl_mod_exp(char *out, int out_len, char *in, int in_len,
     return rv;
 }
 
-#if defined(OLD_RSA_GEN1)
-/*****************************************************************************/
-/* returns error
-   generates a new rsa key
-   exp is passed in and mod and pri are passed out */
-int APP_CC
-ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
-                  char *mod, int mod_len, char *pri, int pri_len)
-{
-    int my_e;
-    RSA *my_key;
-    char *lmod;
-    char *lpri;
-    tui8 *lexp;
-    int error;
-    int len;
-    int diff;
-
-    if ((exp_len != 4) || ((mod_len != 64) && (mod_len != 256)) ||
-                          ((pri_len != 64) && (pri_len != 256)))
-    {
-        return 1;
-    }
-
-    diff = 0;
-    lmod = (char *)g_malloc(mod_len, 1);
-    lpri = (char *)g_malloc(pri_len, 1);
-    lexp = (tui8 *)exp;
-    my_e = lexp[0];
-    my_e |= lexp[1] << 8;
-    my_e |= lexp[2] << 16;
-    my_e |= lexp[3] << 24;
-    /* srand is in stdlib.h */
-    srand(g_time1());
-    my_key = RSA_generate_key(key_size_in_bits, my_e, 0, 0);
-    error = my_key == 0;
-
-    if (error == 0)
-    {
-        len = BN_num_bytes(my_key->n);
-        error = (len < 1) || (len > mod_len);
-        diff = mod_len - len;
-    }
-
-    if (error == 0)
-    {
-        BN_bn2bin(my_key->n, (tui8 *)(lmod + diff));
-        ssl_reverse_it(lmod, mod_len);
-    }
-
-    if (error == 0)
-    {
-        len = BN_num_bytes(my_key->d);
-        error = (len < 1) || (len > pri_len);
-        diff = pri_len - len;
-    }
-
-    if (error == 0)
-    {
-        BN_bn2bin(my_key->d, (tui8 *)(lpri + diff));
-        ssl_reverse_it(lpri, pri_len);
-    }
-
-    if (error == 0)
-    {
-        g_memcpy(mod, lmod, mod_len);
-        g_memcpy(pri, lpri, pri_len);
-    }
-
-    RSA_free(my_key);
-    g_free(lmod);
-    g_free(lpri);
-    return error;
-}
-#else
 /*****************************************************************************/
 /* returns error
    generates a new rsa key
@@ -558,7 +478,6 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
     g_free(lpri);
     return error;
 }
-#endif
 
 /*****************************************************************************/
 struct ssl_tls *
