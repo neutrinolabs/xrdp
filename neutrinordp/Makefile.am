@@ -22,3 +22,5 @@ libxrdpneutrinordp_la_SOURCES = \
 libxrdpneutrinordp_la_LIBADD = \
   $(top_builddir)/common/libcommon.la \
   $(FREERDP_LIBS)
+
+libxrdpneutrinordp_la_LDFLAGS = -avoid-version -module
