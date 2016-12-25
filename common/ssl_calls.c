@@ -344,8 +344,8 @@ ssl_reverse_it(char *p, int len)
 
 /*****************************************************************************/
 int APP_CC
-ssl_mod_exp(char *out, int out_len, char *in, int in_len,
-            char *mod, int mod_len, char *exp, int exp_len)
+ssl_mod_exp(char *out, int out_len, const char *in, int in_len,
+            const char *mod, int mod_len, const char *exp, int exp_len)
 {
     BN_CTX *ctx;
     BIGNUM *lmod;
@@ -406,7 +406,7 @@ ssl_mod_exp(char *out, int out_len, char *in, int in_len,
    generates a new rsa key
    exp is passed in and mod and pri are passed out */
 int APP_CC
-ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
+ssl_gen_key_xrdp1(int key_size_in_bits, const char *exp, int exp_len,
                   char *mod, int mod_len, char *pri, int pri_len)
 {
     BIGNUM *my_e;
