@@ -1,4 +1,0 @@
-[submodule "libpainter"]
-	path = libpainter
-	url = https://github.com/neutrinolabs/libpainter.git
-	branch = devel
