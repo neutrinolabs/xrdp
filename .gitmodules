@@ -1,7 +1,3 @@
-[submodule "librfxcodec"]
-	path = librfxcodec
-	url = https://github.com/neutrinolabs/librfxcodec.git
-
 [submodule "libpainter"]
 	path = libpainter
 	url = https://github.com/neutrinolabs/libpainter.git
