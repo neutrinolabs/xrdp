@@ -206,7 +206,7 @@ out_params(void)
 /*****************************************************************************/
 /* this is the special key signing algorithm */
 static int APP_CC
-sign_key(char *e_data, int e_len, char *n_data, int n_len,
+sign_key(const char *e_data, int e_len, const char *n_data, int n_len,
          char *sign_data, int sign_len)
 {
     char *key;
@@ -282,7 +282,7 @@ sign_key(char *e_data, int e_len, char *n_data, int n_len,
 
 /*****************************************************************************/
 static int APP_CC
-write_out_line(int fd, const char *name, char *data, int len)
+write_out_line(int fd, const char *name, const char *data, int len)
 {
     int max;
     int error;
@@ -334,8 +334,8 @@ write_out_line(int fd, const char *name, char *data, int len)
 
 /*****************************************************************************/
 static int APP_CC
-save_all(char *e_data, int e_len, char *n_data, int n_len,
-         char *d_data, int d_len, char *sign_data, int sign_len,
+save_all(const char *e_data, int e_len, const char *n_data, int n_len,
+         const char *d_data, int d_len, const char *sign_data, int sign_len,
          const char *path_and_file_name)
 {
     int fd;
