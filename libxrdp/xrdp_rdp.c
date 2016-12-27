@@ -782,9 +782,9 @@ xrdp_rdp_send_data_update_sync(struct xrdp_rdp *self)
             return 1;
         }
         out_uint16_le(s, RDP_UPDATE_SYNCHRONIZE);
+        out_uint16_le(s, 0); /* pad */
     }
 
-    out_uint16_le(s, 0); /* pad */
     s_mark_end(s);
 
     if (self->client_info.use_fast_path & 1) /* fastpath output supported */
