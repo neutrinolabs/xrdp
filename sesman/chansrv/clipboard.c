@@ -233,7 +233,7 @@ extern tbus g_x_wait_obj;       /* in xcommon.c */
 extern Screen *g_screen;        /* in xcommon.c */
 extern int g_screen_num;        /* in xcommon.c */
 
-int restricted = 0;
+int g_outbound_clipboard_restricted = 0;
 
 int g_clip_up = 0;
 
@@ -378,14 +378,14 @@ clipboard_init(void)
         return 0;
     }
 
-	if (0 != config_read(&g_cfg)) {
-		g_printf("clipboard: error reading config. quitting.\n");
-		return 1;
-	}
+    if (0 != config_read(&g_cfg)) {
+        g_printf("clipboard: error reading config. quitting.\n");
+        return 1;
+    }
 
-	log_debug("clipboard_init: clipboard restricted -> "+g_cfg.sec.restrict_clipboard)
+    log_debug("clipboard_init: clipboard restricted -> " + g_cfg.sec.restrict_oubound_clipboard)
     //one-way clipboard
-    restricted = g_cfg.sec.restrict_clipboard;
+    g_outbound_clipboard_restricted = g_cfg.sec.restrict_oubound_clipboard;
 
 
     xfuse_init();
@@ -2508,13 +2508,13 @@ clipboard_xevent(void *xevent)
     switch (lxevent->type)
     {
         case SelectionNotify:
-        	if (restricted == 0) {
-        		log_debug("clipboard_xevent: clipboard SelectionNotify event on xorg.")
-        		clipboard_event_selection_notify(lxevent);
-        	} else {
-        		log_debug("clipboard_xevent: clipboard restricted, ignoring xorg event.")
-        		return 1;
-        	}
+            if (g_outbound_clipboard_restricted == 0) {
+                log_debug("clipboard_xevent: clipboard SelectionNotify event on xorg.")
+                clipboard_event_selection_notify(lxevent);
+            } else {
+                log_debug("clipboard_xevent: clipboard restricted, ignoring xorg event.")
+                return 1;
+            }
             break;
         case SelectionRequest:
             clipboard_event_selection_request(lxevent);
