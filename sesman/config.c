@@ -236,13 +236,13 @@ config_read_security(int file, struct config_security *sc,
             }
         }
         if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_ALWAYSGROUPCHECK))
-		{
-			sc->ts_always_group_check = g_text2bool((char *)list_get_item(param_v, i));
-		}
+        {
+            sc->ts_always_group_check = g_text2bool((char *)list_get_item(param_v, i));
+        }
         if (0 == g_strcasecmp(buf, SESMAN_CFG_RESTRICT_CLIPBOARD))
-		{
-			sc->restrict_oubound_clipboard = g_text2bool((char *)list_get_item(param_v, i));
-		}
+        {
+            sc->restrict_oubound_clipboard = g_text2bool((char *)list_get_item(param_v, i));
+        }
 
     }
 

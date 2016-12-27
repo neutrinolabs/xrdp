@@ -378,12 +378,13 @@ clipboard_init(void)
         return 0;
     }
 
-    if (0 != config_read(&g_cfg)) {
+    if (0 != config_read(&g_cfg))
+    {
         g_printf("clipboard: error reading config. quitting.\n");
         return 1;
     }
 
-    log_debug("clipboard_init: clipboard restricted -> " + g_cfg.sec.restrict_oubound_clipboard)
+    log_debug("clipboard_init: outbound clipboard restricted -> " + g_cfg.sec.restrict_oubound_clipboard)
     //one-way clipboard
     g_outbound_clipboard_restricted = g_cfg.sec.restrict_oubound_clipboard;
 
