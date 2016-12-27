@@ -285,8 +285,6 @@ static int g_file_format_id = -1;
 
 static char g_last_atom_name[256] = "";
 
-
-
 /*****************************************************************************/
 static char* APP_CC
 get_atom_text(Atom atom)
@@ -318,7 +316,7 @@ get_atom_text(Atom atom)
     return g_last_atom_name;
 }
 
-/**************************login_retry***************************************************/
+/*****************************************************************************/
 /* this is one way to get the current time from the x server */
 static Time APP_CC
 clipboard_get_server_time(void)
