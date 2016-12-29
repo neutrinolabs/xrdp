@@ -178,7 +178,14 @@ xrdp_wm_cancel_clicked(struct xrdp_bitmap *wnd)
     {
         if (wnd->wm != 0)
         {
-            if (wnd->wm->pro_layer != 0)
+            struct xrdp_bitmap *b1;
+            b1 = xrdp_bitmap_get_child_by_id(wnd, 201);
+            if (b1 != 0 )
+            {
+                /* go back to login window when canceling new password creation */
+                xrdp_wm_set_login_mode(wnd->wm, 0);
+            }
+            else if (wnd->wm->pro_layer != 0)
             {
                 g_set_wait_obj(wnd->wm->pro_layer->self_term_event);
             }
@@ -236,7 +243,29 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap *wnd)
     }
     else
     {
-        log_message(LOG_LEVEL_ERROR, "Combo is 0 - potential programming error");
+        struct xrdp_bitmap *b1;
+        struct xrdp_bitmap *b2;
+        struct xrdp_bitmap *b3;
+        b1 = xrdp_bitmap_get_child_by_id(wnd, 201);
+        b2 = xrdp_bitmap_get_child_by_id(wnd, 203);
+        b3 = xrdp_bitmap_get_child_by_id(wnd, 250);
+        if (b1 != 0 && b2 != 0 && b3 != 0)
+        {
+            if (g_strlen(b1->caption1) > 0 && g_strncmp (b1->caption1, b2->caption1, 255) == 0)
+            {
+                list_add_item (wm->mm->login_names,(tbus)g_strdup("newpass"));
+                list_add_item (wm->mm->login_values,(tbus)g_strdup(b2->caption1));
+                xrdp_wm_set_login_mode (wm, 22);
+            }
+            else
+            {
+                xrdp_wm_set_login_mode(wm, 20);
+            }
+        }
+        else
+        {
+            log_message(LOG_LEVEL_ERROR, "Window not recognized - potential programming error");
+        }
     }
 
     return 0;
@@ -517,6 +546,31 @@ xrdp_wm_login_notify(struct xrdp_bitmap *wnd,
 
     return 0;
 }
+/*****************************************************************************/
+/* change new password window events go here */
+static int DEFAULT_CC
+xrdp_wm_newpass_notify(struct xrdp_bitmap *wnd,
+                       struct xrdp_bitmap *sender,
+                       int msg, long param1, long param2)
+{
+    if (wnd->modal_dialog != 0 && msg != 100)
+    {
+        return 0;
+    }
+
+    if (msg == 1) /* click */
+    {
+        if (sender->id == 2) /* cancel button */
+        {
+            xrdp_wm_cancel_clicked(wnd);
+        }
+        else if (sender->id == 3) /* ok button */
+        {
+            xrdp_wm_ok_clicked(wnd);
+        }
+    }
+    return 0;
+}
 
 /******************************************************************************/
 static int APP_CC
@@ -787,6 +841,123 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
                 combo->data_list->count, 1,
                 resultIP /* just a dummy place holder, we ignore */ );
     xrdp_wm_show_edits(self, combo);
+
+    return 0;
+}
+
+/******************************************************************************/
+int APP_CC
+xrdp_newpass_wnd_create(struct xrdp_wm *self)
+{
+    struct xrdp_bitmap      *but;
+    struct xrdp_cfg_globals *globals;
+    int i;
+
+    globals = &self->xrdp_config->cfg_globals;
+
+    self->newpass_window = xrdp_bitmap_create(globals->ls_width, globals->ls_height, self->screen->bpp,
+                                            WND_TYPE_WND, self);
+    list_add_item(self->screen->child_list, (long)self->newpass_window);
+    self->newpass_window->parent = self->screen;
+    self->newpass_window->owner = self->screen;
+    self->newpass_window->bg_color = globals->ls_bg_color;
+
+    self->newpass_window->left = self->screen->width / 2 -
+                               self->newpass_window->width / 2;
+
+    self->newpass_window->top = self->screen->height / 2 -
+                              self->newpass_window->height / 2;
+
+    self->newpass_window->notify = xrdp_wm_newpass_notify;
+
+    set_string(&self->newpass_window->caption1, "Your password is expired");
+
+    /* Label "Please enter a new password" */
+    but = xrdp_bitmap_create(globals->ls_label_width + DEFAULT_EDIT_W, DEFAULT_EDIT_H, self->screen->bpp, WND_TYPE_LABEL, self);
+    list_add_item(self->newpass_window->child_list, (long)but);
+    but->parent = self->newpass_window;
+    but->owner = self->newpass_window;
+    but->left = globals->ls_label_x_pos;
+    but->top = globals->ls_input_y_pos;
+    set_string(&but->caption1, "Your password is expired!");
+
+
+    /* Label "Please enter a new password" */
+    but = xrdp_bitmap_create(globals->ls_label_width + DEFAULT_EDIT_W, DEFAULT_EDIT_H, self->screen->bpp, WND_TYPE_LABEL, self);
+    list_add_item(self->newpass_window->child_list, (long)but);
+    but->parent = self->newpass_window;
+    but->owner = self->newpass_window;
+    but->left = globals->ls_label_x_pos;
+    but->top = globals->ls_input_y_pos + (DEFAULT_COMBO_H +5);
+    set_string(&but->caption1, "Please set a new password:");
+
+
+    /* OK button */
+    but = xrdp_bitmap_create(globals->ls_btn_ok_width, globals->ls_btn_ok_height,
+                             self->screen->bpp, WND_TYPE_BUTTON, self);
+    list_add_item(self->newpass_window->child_list, (long)but);
+    but->parent = self->newpass_window;
+    but->owner = self->newpass_window;
+    but->left = globals->ls_btn_ok_x_pos;
+    but->top = globals->ls_btn_ok_y_pos;
+    but->id = 3;
+    set_string(&but->caption1, "OK");
+    but->tab_stop = 1;
+    self->newpass_window->default_button = but;
+
+    /* Cancel button */
+    but = xrdp_bitmap_create(globals->ls_btn_cancel_width,
+                             globals->ls_btn_cancel_height, self->screen->bpp,
+                             WND_TYPE_BUTTON, self);
+    list_add_item(self->newpass_window->child_list, (long)but);
+    but->parent = self->newpass_window;
+    but->owner = self->newpass_window;
+    but->left = globals->ls_btn_cancel_x_pos;
+    but->top = globals->ls_btn_cancel_y_pos;
+    but->id = 2;
+    set_string(&but->caption1, "Cancel");
+    but->tab_stop = 1;
+    self->newpass_window->esc_button = but;
+
+    /* labels and edits */
+    /* id starts between 200 and 249 */
+    char captions [][256] = {"new pass", "confirm"};
+    for (i = 0; i < 2; i++)
+    {
+        but = xrdp_bitmap_create(95, DEFAULT_EDIT_H, self->screen->bpp,
+                                 WND_TYPE_LABEL, self);
+        list_add_item(self->newpass_window->child_list, (long)but);
+        but->parent = self->newpass_window;
+        but->owner = self->newpass_window;
+        but->left = globals->ls_label_x_pos;
+        but->top = globals->ls_input_y_pos + (DEFAULT_COMBO_H +5) * (i + 2);
+        but->id = 200 + 2 * i;
+        set_string(&but->caption1, captions[i]);
+
+        but = xrdp_bitmap_create(DEFAULT_EDIT_W, DEFAULT_EDIT_H, self->screen->bpp,
+                                 WND_TYPE_EDIT, self);
+        list_add_item(self->newpass_window->child_list, (long)but);
+        but->parent = self->newpass_window;
+        but->owner = self->newpass_window;
+        but->left = globals->ls_input_x_pos;
+        but->top = globals->ls_input_y_pos + (DEFAULT_COMBO_H +5) * (i + 2);
+        but->id = 201 + 2 * i;
+        but->pointer = 1;
+        but->tab_stop = 1;
+        but->caption1 = (char *)g_malloc(256, 1);
+        but->password_char = '*';
+    }
+    /* error message label */
+    but = xrdp_bitmap_create (300, DEFAULT_EDIT_H, self->screen->bpp,
+                              WND_TYPE_LABEL, self);
+    list_add_item(self->newpass_window->child_list, (long)but);
+    but->parent = self->newpass_window;
+    but->owner = self->newpass_window;
+    but->left = globals->ls_label_x_pos;
+    but->top = globals->ls_input_y_pos + (DEFAULT_COMBO_H +5) * 2;
+    but->id = 250;
+    but->caption1 = (char *)g_malloc(256, 1);
+    set_string(&but->caption1, "");
 
     return 0;
 }

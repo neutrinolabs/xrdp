@@ -1838,6 +1838,34 @@ xrdp_wm_login_mode_changed(struct xrdp_wm *self)
         self->dragging = 0;
         xrdp_wm_set_login_mode(self, 11);
     }
+    else if (self->login_mode == 20)
+    {
+        /* keep log window open */
+        if (self->log_wnd == 0)
+        {
+            xrdp_wm_delete_all_children(self);
+        }
+        /* show update expired password window */
+        self->dragging = 0;
+        xrdp_newpass_wnd_create(self);
+        xrdp_bitmap_invalidate(self->screen, 0);
+        xrdp_wm_set_focused(self, self->newpass_window);
+        xrdp_wm_set_login_mode(self, 21);
+    }
+    else if (self->login_mode == 22)
+    {
+        /* do change expired password session */
+        xrdp_wm_delete_all_children(self);
+        self->dragging = 0;
+        if (xrdp_mm_change_expired_password(self->mm) == 0)
+        {
+            xrdp_wm_set_login_mode(self, 2); /* with password updated, connect again */
+        }
+        else
+        {
+            xrdp_wm_set_login_mode(self, 20); /* try to change password again */
+        }
+    }
 
     return 0;
 }
@@ -1882,11 +1910,19 @@ xrdp_wm_log_wnd_notify(struct xrdp_bitmap *wnd,
             xrdp_bitmap_invalidate(wm->screen, &rect);
 
             /* if module is gone, reset the session when ok is clicked */
+            /* unless we are to update password */
             if (wm->mm->mod_handle == 0)
             {
                 /* make sure autologin is off */
                 wm->session->client_info->rdp_autologin = 0;
-                xrdp_wm_set_login_mode(wm, 0); /* reset session */
+                if (wm->login_mode == 21)
+                {
+                    xrdp_wm_set_login_mode(wm, 20); /* try update password again */
+                }
+                else
+                {
+                    xrdp_wm_set_login_mode(wm, 0); /* reset session */
+                }
             }
         }
     }
@@ -1947,6 +1983,9 @@ xrdp_wm_show_log(struct xrdp_wm *self)
         xrdp_wm_set_login_mode(self, 0); /* reset session */
         return 0;
     }
+
+    /* delete all dialogs, they will be created when needed anyway */
+    xrdp_wm_delete_all_children(self);
 
     if (self->log_wnd == 0)
     {

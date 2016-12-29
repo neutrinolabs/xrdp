@@ -106,4 +106,6 @@ auth_check_pwd_chg(const char *user);
 int DEFAULT_CC
 auth_change_pwd(const char *user, const char *newpwd);
 
+int DEFAULT_CC
+auth_change_pwd_pam(char* user, char* pass, char* newpwd);
 #endif

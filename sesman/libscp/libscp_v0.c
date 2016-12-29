@@ -313,9 +313,8 @@ scp_v0s_accept(struct SCP_CONNECTION *c, struct SCP_SESSION **s, int skipVchk)
             }
         }
     }
-    else if (code == SCP_GW_AUTHENTICATION)
+    else if (code == SCP_GW_AUTHENTICATION || code == SCP_GW_CHAUTHTOK)
     {
-        /* g_writeln("Command is SCP_GW_AUTHENTICATION"); */
         session = scp_session_create();
 
         if (0 == session)
@@ -325,7 +324,7 @@ scp_v0s_accept(struct SCP_CONNECTION *c, struct SCP_SESSION **s, int skipVchk)
         }
 
         scp_session_set_version(session, version);
-        scp_session_set_type(session, SCP_GW_AUTHENTICATION);
+        scp_session_set_type(session, code);
         /* reading username */
         in_uint16_be(c->in_s, sz);
         buf[sz] = '\0';
@@ -350,6 +349,19 @@ scp_v0s_accept(struct SCP_CONNECTION *c, struct SCP_SESSION **s, int skipVchk)
             scp_session_destroy(session);
             /* until syslog merge log_message(s_log, LOG_LEVEL_WARNING, "[v0:%d] connection aborted: error setting password", __LINE__); */
             return SCP_SERVER_STATE_INTERNAL_ERR;
+        }
+        if (code == SCP_GW_CHAUTHTOK)
+        {
+            /* reading new password */
+            in_uint16_be(c->in_s, sz);
+            buf[sz] = '\0';
+            in_uint8a(c->in_s, buf, sz);
+
+            if (0 != scp_session_set_newpass(session, buf))
+            {
+                scp_session_destroy(session);
+                return SCP_SERVER_STATE_INTERNAL_ERR;
+            }
         }
     }
     else
@@ -413,12 +425,13 @@ scp_v0s_deny_connection(struct SCP_CONNECTION *c)
 
 /******************************************************************************/
 enum SCP_SERVER_STATES_E
-scp_v0s_replyauthentication(struct SCP_CONNECTION *c, unsigned short int value)
+scp_v0s_replyauthentication(struct SCP_CONNECTION *c, unsigned short int value, tui8 type)
 {
     out_uint32_be(c->out_s, 0);  /* version */
     out_uint32_be(c->out_s, 14); /* size */
     /* cmd SCP_GW_AUTHENTICATION means authentication reply */
-    out_uint16_be(c->out_s, SCP_GW_AUTHENTICATION);
+    /* cmd SCP_GW_CHAUTHTOK means chauthtok reply */
+    out_uint16_be(c->out_s, type);
     out_uint16_be(c->out_s, value);  /* reply code  */
     out_uint16_be(c->out_s, 0);  /* dummy data */
     s_mark_end(c->out_s);

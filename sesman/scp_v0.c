@@ -37,6 +37,13 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
     struct session_item *s_item;
     int errorcode = 0;
 
+    if (s->type == SCP_GW_CHAUTHTOK)
+    {
+        errorcode = auth_change_pwd_pam(s->username, s->password, s->newpass);
+        scp_v0s_replyauthentication(c, errorcode, SCP_GW_CHAUTHTOK);
+        return ;
+    }
+
     data = auth_userpass(s->username, s->password, &errorcode);
 
     if (s->type == SCP_GW_AUTHENTICATION)
@@ -48,14 +55,14 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
             if (1 == access_login_allowed(s->username))
             {
                 /* the user is member of the correct groups. */
-                scp_v0s_replyauthentication(c, errorcode);
+                scp_v0s_replyauthentication(c, errorcode, SCP_GW_AUTHENTICATION);
                 log_message(LOG_LEVEL_INFO, "Access permitted for user: %s",
                             s->username);
                 /* g_writeln("Connection allowed"); */
             }
             else
             {
-                scp_v0s_replyauthentication(c, 32 + 3); /* all first 32 are reserved for PAM errors */
+                scp_v0s_replyauthentication(c, 32 + 3, SCP_GW_AUTHENTICATION); /* all first 32 are reserved for PAM errors */
                 log_message(LOG_LEVEL_INFO, "Username okey but group problem for "
                             "user: %s", s->username);
                 /* g_writeln("user password ok, but group problem"); */
@@ -66,7 +73,7 @@ scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
             /* g_writeln("username or password error"); */
             log_message(LOG_LEVEL_INFO, "Username or password error for user: %s",
                         s->username);
-            scp_v0s_replyauthentication(c, errorcode);
+            scp_v0s_replyauthentication(c, errorcode, SCP_GW_AUTHENTICATION);
         }
     }
     else if (data)

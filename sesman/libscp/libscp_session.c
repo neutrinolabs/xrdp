@@ -71,6 +71,10 @@ scp_session_set_type(struct SCP_SESSION *s, tui8 type)
             s->type = SCP_GW_AUTHENTICATION;
             break;
 
+        case SCP_GW_CHAUTHTOK:
+            s->type = SCP_GW_CHAUTHTOK;
+            break;
+
         case SCP_SESSION_TYPE_MANAGE:
             s->type = SCP_SESSION_TYPE_MANAGE;
             s->mng = (struct SCP_MNG_DATA *)g_malloc(sizeof(struct SCP_MNG_DATA), 1);
@@ -224,6 +228,32 @@ scp_session_set_password(struct SCP_SESSION *s, const char *str)
     if (0 == s->password)
     {
         log_message(LOG_LEVEL_WARNING, "[session:%d] set_password: strdup error", __LINE__);
+        return 1;
+    }
+
+    return 0;
+}
+
+/*******************************************************************/
+int
+scp_session_set_newpass(struct SCP_SESSION *s, char *str)
+{
+    if (0 == str)
+    {
+        log_message(LOG_LEVEL_WARNING, "[session:%d] set_newpass: null newpass", __LINE__);
+        return 1;
+    }
+
+    if (0 != s->newpass)
+    {
+        g_free(s->newpass);
+    }
+
+    s->newpass = g_strdup(str);
+
+    if (0 == s->newpass)
+    {
+        log_message(LOG_LEVEL_WARNING, "[session:%d] set_newpass: strdup error", __LINE__);
         return 1;
     }
 

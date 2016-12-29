@@ -79,6 +79,6 @@ scp_v0s_deny_connection(struct SCP_CONNECTION* c);
  * @return
  */
 enum SCP_SERVER_STATES_E
-scp_v0s_replyauthentication(struct SCP_CONNECTION* c, unsigned short int value);
+scp_v0s_replyauthentication(struct SCP_CONNECTION* c, unsigned short int value, tui8 type);
 
 #endif
