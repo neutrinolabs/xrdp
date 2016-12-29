@@ -236,7 +236,7 @@ scp_session_set_password(struct SCP_SESSION *s, const char *str)
 
 /*******************************************************************/
 int
-scp_session_set_newpass(struct SCP_SESSION *s, char *str)
+scp_session_set_newpass(struct SCP_SESSION *s, const char *str)
 {
     if (0 == str)
     {
