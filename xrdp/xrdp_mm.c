@@ -1941,15 +1941,15 @@ xrdp_mm_connect(struct xrdp_mm *self)
               getPAMError(reply, pam_error, 127));
 
 
-    xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG, replytxt);
-    log_message(LOG_LEVEL_INFO, replytxt);
+    xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG, "%s", replytxt);
+    log_message(LOG_LEVEL_INFO, "%s", replytxt);
     additionalError = getPAMAdditionalErrorInfo(reply, self);
     if (additionalError)
     {
         g_snprintf(replytxt, 127, "%s", additionalError);
         if (replytxt[0])
         {
-            xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG, replytxt);
+            xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG, "%s", replytxt);
         }
     }
 
@@ -2067,7 +2067,6 @@ xrdp_mm_change_expired_password(struct xrdp_mm *self)
     int index;
     int count;
     int old_idx;
-    int new_idx;
     char *username;
     char *password;
     char *newpass;
@@ -2077,6 +2076,8 @@ xrdp_mm_change_expired_password(struct xrdp_mm *self)
 
     username = 0;
     password = 0;
+    newpass = 0;
+    old_idx = -1;
     count = self->login_names->count;
 
     for (index = 0; index < count; index++)
@@ -2096,7 +2097,6 @@ xrdp_mm_change_expired_password(struct xrdp_mm *self)
         else if (g_strcasecmp(name, "newpass") == 0)
         {
             newpass = value;
-            new_idx = index;
         }
         g_strncpy(sessionIP, "127.0.0.1", 255);
     }
