@@ -2258,21 +2258,6 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
                                                  enc_done->enc->flags,
                                                  enc_done->enc->frame_id);
                     }
-                    else
-                    {
-#if 1
-                        ex = self->wm->client_info->max_unacknowledged_frame_count;
-                        if (self->encoder->frame_id_client + ex > self->encoder->frame_id_server)
-                        {
-                            if (self->encoder->frame_id_server > self->encoder->frame_id_server_sent)
-                            {
-                                LLOGLN(10, ("xrdp_mm_check_wait_objs: 1 -- %d", self->encoder->frame_id_server));
-                                self->encoder->frame_id_server_sent = self->encoder->frame_id_server;
-                                self->mod->mod_frame_ack(self->mod, 0, self->encoder->frame_id_server);
-                            }
-                        }
-#endif
-                    }
                     g_free(enc_done->enc->drects);
                     g_free(enc_done->enc->crects);
                     g_free(enc_done->enc);
@@ -2303,7 +2288,7 @@ xrdp_mm_frame_ack(struct xrdp_mm *self, int frame_id)
         return 1;
     }
     ex = self->wm->client_info->max_unacknowledged_frame_count;
-    if (self->encoder->frame_id_client + ex > self->encoder->frame_id_server)
+    if (self->encoder->frame_id_client + ex >= self->encoder->frame_id_server)
     {
         if (self->encoder->frame_id_server > self->encoder->frame_id_server_sent)
         {
