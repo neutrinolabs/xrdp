@@ -28,4 +28,14 @@ then
   exit 1
 fi
 
+if ! test -f libpainter/configure.ac
+then
+  git submodule update --init libpainter
+fi
+
+if ! test -f librfxcodec/configure.ac
+then
+  git submodule update --init librfxcodec
+fi
+
 autoreconf -fvi
