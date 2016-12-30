@@ -49,20 +49,12 @@ LLIBS = -Wl,-rpath=$(LIBBASE) -lfreetype -lz -lm -lXfont -lXau \
 	-lXdmcp -lpixman-1 -lrt -ldl -lcrypto -lGL -lXdamage
 
 CFLAGS = -g -O2 -Wall -fno-strength-reduce \
-	-I../../include \
-	-I../../cfb \
-	-I../../mfb \
-	-I../../mi \
 	-I$(INCBASE) \
 	-I$(INCBASE)/X11 \
 	-I$(INCBASE)/X11/fonts \
 	-I$(INCBASE)/X11/extensions \
 	-I$(INCBASE)/xorg \
 	-I$(INCBASE)/pixman-1 \
-	-I../../os \
-	-I../../render \
-	-I../xfree86/common \
-	-I../xfree86/os-support \
 	-I../../../common \
 	-D_POSIX_C_SOURCE=199309L -D_SVID_SOURCE -D_REENTRANT \
 	-DGLX_USE_MESA -DXRECORD -D_GNU_SOURCE -DXAPPGROUP \
