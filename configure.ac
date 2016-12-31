@@ -256,7 +256,7 @@ CFLAGS="$CFLAGS $X_CFLAGS"
 
 # checking for Xfixes
 AC_CHECK_HEADER([X11/extensions/Xfixes.h], [],
-  [AC_MSG_ERROR([please install libx11-dev and libxfixes-dev or libXfixes-devel])],
+  [AC_MSG_ERROR([please install libxfixes-dev or libXfixes-devel])],
   [#include <X11/Xlib.h>])
 
 # checking for Xrandr
