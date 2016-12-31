@@ -286,7 +286,7 @@ fi
 
 # this will copy the build X server with the other X server binaries
 cd rdp
-cp X11rdp $X11RDPBASE/bin
+cp X11rdp $X11RDPBASE/bin/X11rdp
 strip $X11RDPBASE/bin/X11rdp
 
 if [ "$2" = "drop" ]; then
