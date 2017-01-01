@@ -8,7 +8,11 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_PROG_CC
 AC_C_CONST
 AC_PROG_LIBTOOL
+
 PKG_PROG_PKG_CONFIG
+if test "x$PKG_CONFIG" = "x"; then
+  AC_MSG_ERROR([please install pkg-config])
+fi
 
 AC_CONFIG_SUBDIRS([libpainter librfxcodec])
 
