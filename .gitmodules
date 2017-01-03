@@ -1,8 +1,10 @@
 [submodule "librfxcodec"]
 	path = librfxcodec
 	url = https://github.com/neutrinolabs/librfxcodec.git
+	ignore = untracked
 
 [submodule "libpainter"]
 	path = libpainter
 	url = https://github.com/neutrinolabs/libpainter.git
 	branch = devel
+	ignore = untracked
