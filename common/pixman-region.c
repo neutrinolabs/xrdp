@@ -79,7 +79,7 @@
 #define GOOD_RECT(rect) ((rect)->x1 < (rect)->x2 && (rect)->y1 < (rect)->y2)
 #define BAD_RECT(rect) ((rect)->x1 > (rect)->x2 || (rect)->y1 > (rect)->y2)
 
-#ifdef DEBUG
+#ifdef XRDP_DEBUG
 
 #define GOOD(reg)                                                       \
     do                                                                  \
