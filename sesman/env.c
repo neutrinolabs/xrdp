@@ -24,9 +24,10 @@
  *
  */
 
+#include <grp.h>
+
 #include "list.h"
 #include "sesman.h"
-#include "grp.h"
 #include "ssl_calls.h"
 
 extern unsigned char g_fixedkey[8]; /* in sesman.c */

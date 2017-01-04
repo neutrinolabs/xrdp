@@ -29,7 +29,7 @@
 #ifndef USE_NOPAM
 #if defined(HAVE__PAM_TYPES_H)
 #define LINUXPAM 1
-#include "security/_pam_types.h"
+#include <security/_pam_types.h>
 #elif defined(HAVE_PAM_CONSTANTS_H)
 #define OPENPAM 1
 #include <security/pam_constants.h>
