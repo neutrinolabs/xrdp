@@ -91,8 +91,7 @@ chauth_pam_conv(int num_msg, const struct pam_message **msg,
     struct pam_response *reply;
     struct t_user_pass *user_pass;
 
-    reply = (struct pam_response *)
-                g_malloc(sizeof(struct pam_response) * num_msg, 1);
+    reply = g_new0(struct pam_response, num_msg);
 
     for (i = 0; i < num_msg; i++)
     {
@@ -371,7 +370,7 @@ auth_change_pwd_pam(char *user, char *pass, char *newpwd)
     char service_name[256];
 
     get_service_name(service_name);
-    auth_info = (struct t_auth_info *) g_malloc(sizeof(struct t_auth_info), 1);
+    auth_info = g_new0(struct t_auth_info, 1);
     g_strncpy(auth_info->user_pass.user, user, 255);
     g_strncpy(auth_info->user_pass.pass, pass, 255);
     g_strncpy(auth_info->user_pass.newpwd, newpwd, 255);
