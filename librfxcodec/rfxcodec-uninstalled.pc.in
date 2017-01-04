@@ -1,0 +1,5 @@
+Name: rfxcodec
+Description: Fast jpeg2000 codec compatible with MS RDP servers and xrdp
+Version: @PACKAGE_VERSION@
+Cflags: -I${pc_top_builddir}/${pcfiledir}/include
+Libs: ${pc_top_builddir}/${pcfiledir}/src/librfxencode.la

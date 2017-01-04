@@ -1,0 +1,16 @@
+ACLOCAL_AMFLAGS = -I m4
+
+EXTRA_DIST = bootstrap readme.txt
+
+EXTRA_DIRS =
+
+if PT_TESTS
+EXTRA_DIRS += tests
+endif
+
+SUBDIRS = \
+  src \
+  include \
+  pkgconfig \
+  $(EXTRA_DIRS)
+
