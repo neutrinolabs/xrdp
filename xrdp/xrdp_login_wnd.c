@@ -872,7 +872,7 @@ xrdp_newpass_wnd_create(struct xrdp_wm *self)
 
     set_string(&self->newpass_window->caption1, "Your password is expired");
 
-    /* Label "Please enter a new password" */
+    /* Label "Your password is expired!" */
     but = xrdp_bitmap_create(globals->ls_label_width + DEFAULT_EDIT_W, DEFAULT_EDIT_H, self->screen->bpp, WND_TYPE_LABEL, self);
     list_add_item(self->newpass_window->child_list, (long)but);
     but->parent = self->newpass_window;
@@ -882,7 +882,7 @@ xrdp_newpass_wnd_create(struct xrdp_wm *self)
     set_string(&but->caption1, "Your password is expired!");
 
 
-    /* Label "Please enter a new password" */
+    /* Label "Please set a new password" */
     but = xrdp_bitmap_create(globals->ls_label_width + DEFAULT_EDIT_W, DEFAULT_EDIT_H, self->screen->bpp, WND_TYPE_LABEL, self);
     list_add_item(self->newpass_window->child_list, (long)but);
     but->parent = self->newpass_window;
