@@ -539,6 +539,12 @@ xrdp_caps_process_frame_ack(struct xrdp_rdp *self, struct stream *s, int len)
     g_writeln("xrdp_caps_process_frame_ack:");
     self->client_info.use_frame_acks = 1;
     in_uint32_le(s, self->client_info.max_unacknowledged_frame_count);
+    if (self->client_info.max_unacknowledged_frame_count < 0)
+    {
+        g_writeln("  invalid max_unacknowledged_frame_count value (%d), setting to 0",
+                  self->client_info.max_unacknowledged_frame_count);
+        self->client_info.max_unacknowledged_frame_count = 0;
+    }
     g_writeln("  max_unacknowledged_frame_count %d", self->client_info.max_unacknowledged_frame_count);
     return 0;
 }
