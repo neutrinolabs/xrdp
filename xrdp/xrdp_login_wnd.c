@@ -251,10 +251,10 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap *wnd)
         b3 = xrdp_bitmap_get_child_by_id(wnd, 250);
         if (b1 != 0 && b2 != 0 && b3 != 0)
         {
-            if (g_strlen(b1->caption1) > 0 && g_strncmp (b1->caption1, b2->caption1, 255) == 0)
+            if (g_strlen(b1->caption1) > 0 && g_strncmp(b1->caption1, b2->caption1, 255) == 0)
             {
-                list_add_item (wm->mm->login_names,(tbus)g_strdup("newpass"));
-                list_add_item (wm->mm->login_values,(tbus)g_strdup(b2->caption1));
+                list_add_item (wm->mm->login_names, (tbus) g_strdup("newpass"));
+                list_add_item (wm->mm->login_values, (tbus) g_strdup(b2->caption1));
                 xrdp_wm_set_login_mode (wm, 22);
             }
             else
