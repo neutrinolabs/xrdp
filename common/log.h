@@ -22,6 +22,7 @@
 #include <pthread.h>
 
 #include "arch.h"
+#include "defines.h"
 
 /* logging buffer size */
 #define LOG_BUFFER_SIZE      1024

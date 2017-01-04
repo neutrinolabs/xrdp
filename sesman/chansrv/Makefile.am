@@ -11,6 +11,12 @@ AM_CPPFLAGS = \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -I$(top_srcdir)/common
 
+if XRDP_DEBUG
+AM_CPPFLAGS += -DXRDP_DEBUG
+else
+AM_CPPFLAGS += -DXRDP_NODEBUG
+endif
+
 CHANSRV_EXTRA_LIBS =
 
 if XRDP_FUSE

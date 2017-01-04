@@ -167,7 +167,7 @@ sig_handler_thread(void *arg)
 
     do
     {
-        LOG_DBG(&(g_cfg->log), "calling sigwait()", 0);
+        LOG_DBG("calling sigwait()");
         sigwait(&waitmask, &recv_signal);
 
         switch (recv_signal)
@@ -175,22 +175,22 @@ sig_handler_thread(void *arg)
             case SIGHUP:
                 //reload cfg
                 //we must stop & restart logging, or copy logging cfg!!!!
-                LOG_DBG("sesman received SIGHUP", 0);
+                LOG_DBG("sesman received SIGHUP");
                 //return 0;
                 break;
             case SIGCHLD:
                 /* a session died */
-                LOG_DBG("sesman received SIGCHLD", 0);
+                LOG_DBG("sesman received SIGCHLD");
                 sig_sesman_session_end(SIGCHLD);
                 break;
             case SIGINT:
                 /* we die */
-                LOG_DBG("sesman received SIGINT", 0);
+                LOG_DBG("sesman received SIGINT");
                 sig_sesman_shutdown(recv_signal);
                 break;
             case SIGTERM:
                 /* we die */
-                LOG_DBG("sesman received SIGTERM", 0);
+                LOG_DBG("sesman received SIGTERM");
                 sig_sesman_shutdown(recv_signal);
                 break;
         }
