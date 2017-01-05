@@ -363,7 +363,7 @@ auth_set_env(long in_val)
 /* returns boolean */
 /* update to the new pass */
 int DEFAULT_CC
-auth_change_pwd_pam(char *user, char *pass, char *newpwd)
+auth_change_pwd_pam(const char *user, const char *pass, const char *newpwd)
 {
     int error;
     struct t_auth_info *auth_info;
