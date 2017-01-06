@@ -5,6 +5,10 @@ AM_CPPFLAGS = \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -I$(top_srcdir)/common
 
+if XRDP_DEBUG
+AM_CPPFLAGS += -DXRDP_DEBUG
+endif
+
 module_LTLIBRARIES = \
   libscp.la
 

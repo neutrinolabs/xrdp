@@ -1388,7 +1388,6 @@ lib_mod_connect(struct vnc *v)
         trans_delete(v->trans);
         v->trans = 0;
         v->server_msg(v, "some problem", 0);
-        LIB_DEBUG(mod, "out lib_mod_connect error");
         return 1;
     }
     else

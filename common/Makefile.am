@@ -18,6 +18,10 @@ AM_CPPFLAGS = \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -DXRDP_LOG_PATH=\"${localstatedir}/log\"
 
+if XRDP_DEBUG
+AM_CPPFLAGS += -DXRDP_DEBUG
+endif
+
 AM_CFLAGS = $(OPENSSL_CFLAGS)
 
 module_LTLIBRARIES = \

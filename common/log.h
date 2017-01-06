@@ -57,7 +57,7 @@ enum logReturns
 /* enable threading */
 /*#define LOG_ENABLE_THREAD*/
 
-#ifdef DEBUG
+#ifdef XRDP_DEBUG
 #define LOG_DBG(args...) log_message(LOG_LEVEL_DEBUG, args);
 #else
 #define LOG_DBG(args...)
