@@ -997,7 +997,7 @@ session_kill(int pid)
 
 /******************************************************************************/
 void DEFAULT_CC
-session_sigkill_all()
+session_sigkill_all(void)
 {
     struct session_chain *tmp;
 

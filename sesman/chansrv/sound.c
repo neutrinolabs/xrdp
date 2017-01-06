@@ -212,8 +212,8 @@ static int APP_CC sound_input_start_recording(void);
 static int APP_CC sound_input_stop_recording(void);
 static int APP_CC sound_process_input_data(struct stream *s, int bytes);
 static int DEFAULT_CC sound_sndsrvr_source_data_in(struct trans *trans);
-static int APP_CC sound_start_source_listener();
-static int APP_CC sound_start_sink_listener();
+static int APP_CC sound_start_source_listener(void);
+static int APP_CC sound_start_sink_listener(void);
 
 /*****************************************************************************/
 static int APP_CC
@@ -1513,7 +1513,7 @@ sound_sndsrvr_source_data_in(struct trans *trans)
  * Start a listener for microphone redirection connections
  *****************************************************************************/
 static int APP_CC
-sound_start_source_listener()
+sound_start_source_listener(void)
 {
     char port[1024];
 
@@ -1530,7 +1530,7 @@ sound_start_source_listener()
  * Start a listener for speaker redirection connections
  *****************************************************************************/
 static int APP_CC
-sound_start_sink_listener()
+sound_start_sink_listener(void)
 {
     char port[1024];
 

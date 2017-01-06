@@ -1637,7 +1637,7 @@ main(int argc, char **argv)
  * @return unused slot index on success, -1 on failure
  ******************************************************************************/
 int APP_CC
-find_empty_slot_in_dvc_channels()
+find_empty_slot_in_dvc_channels(void)
 {
     int i;
 

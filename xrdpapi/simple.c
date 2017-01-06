@@ -37,8 +37,8 @@
 #include <errno.h>
 
 /* forward declarations */
-int run_echo_test();
-int run_tsmf_test();
+int run_echo_test(void);
+int run_tsmf_test(void);
 
 int
 main(int argc, char **argv)
@@ -76,7 +76,7 @@ main(int argc, char **argv)
  * @return 0 on success, -1 on failure
  */
 int
-run_echo_test()
+run_echo_test(void)
 {
     char    out_buf[8192];
     char    in_buf[1700];
@@ -162,7 +162,7 @@ run_echo_test()
 }
 
 int
-run_tsmf_test()
+run_tsmf_test(void)
 {
     void *channel;
 

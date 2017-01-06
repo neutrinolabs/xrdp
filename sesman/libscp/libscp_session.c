@@ -34,7 +34,7 @@
 
 /*******************************************************************/
 struct SCP_SESSION *
-scp_session_create()
+scp_session_create(void)
 {
     struct SCP_SESSION *s;
 

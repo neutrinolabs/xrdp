@@ -356,7 +356,7 @@ rail_deinit(void)
 }
 
 int APP_CC
-rail_startup()
+rail_startup(void)
 {
     int dummy;
     int ver_maj;

@@ -140,7 +140,7 @@ typedef signed long long tsi64;
 #ifdef __cplusplus
 extern "C" {
 #endif
-   tintptr mod_init();
+   tintptr mod_init(void);
    int mod_exit(tintptr);
 #ifdef __cplusplus
 }

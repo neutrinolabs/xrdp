@@ -42,7 +42,7 @@
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 static inline HMAC_CTX *
-HMAC_CTX_new()
+HMAC_CTX_new(void)
 {
     HMAC_CTX *hmac_ctx = g_new(HMAC_CTX, 1);
     HMAC_CTX_init(hmac_ctx);
