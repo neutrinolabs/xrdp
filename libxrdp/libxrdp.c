@@ -1242,7 +1242,7 @@ libxrdp_send_to_channel(struct xrdp_session *session, int channel_id,
 
     if (xrdp_channel_send(chan, s, channel_id, total_data_len, flags) != 0)
     {
-        g_writeln("Debug - data NOT sent to channel");
+        g_writeln("libxrdp_send_to_channel: error, server channel data NOT sent to client channel");
         free_stream(s);
         return 1;
     }
