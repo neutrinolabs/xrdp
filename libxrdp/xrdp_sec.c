@@ -1829,12 +1829,12 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
     client_info = &(self->rdp_layer->client_info);
 
 
-    DEBUG(("processing channels, channel_code is %d", client_info->channel_code));
+    DEBUG(("processing channels, channels_allowed is %d", client_info->channels_allowed));
 
     /* this is an option set in xrdp.ini */
-    if (client_info->channel_code != 1) /* are channels on? */
+    if (client_info->channels_allowed != 1) /* are channels on? */
     {
-        g_writeln("Processing channel data from client - The channel is off");
+        g_writeln("xrdp_sec_process_mcs_data_channels: all channels are disabled by configuration");
         return 0;
     }
 
