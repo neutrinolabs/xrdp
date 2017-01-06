@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <turbojpeg.h>
+#include "log.h"
 
 /*****************************************************************************/
 int APP_CC
@@ -81,10 +82,13 @@ xrdp_jpeg_compress(void *handle, char *in_data, int width, int height,
                 *dst32 = pixel;
                 dst32++;
             }
-            for (i = 0; i < e; i++)
+            if (width > 0)
             {
-                *dst32 = pixel;
-                dst32++;
+                for (i = 0; i < e; i++)
+                {
+                    *dst32 = pixel;
+                    dst32++;
+                }
             }
         }
         src_buf = (unsigned char *) temp_buf;
@@ -93,6 +97,13 @@ xrdp_jpeg_compress(void *handle, char *in_data, int width, int height,
     error = tjCompress(tj_han, src_buf, width + e, (width + e) * 4, height,
                        TJPF_XBGR, dst_buf, &cdata_bytes,
                        TJSAMP_420, quality, 0);
+    if (error != 0)
+    {
+        log_message(LOG_LEVEL_ERROR,
+                    "xrdp_jpeg_compress: tjCompress error: %s",
+                    tjGetErrorStr());
+    }
+
     s->p += cdata_bytes;
     g_free(temp_buf);
     return height;
@@ -171,6 +182,13 @@ xrdp_codec_jpeg_compress(void *handle,
                        quality,    /* jpeg quality */
                        0           /* flags */
                        );
+    if (error != 0)
+    {
+        log_message(LOG_LEVEL_ERROR,
+                    "xrdp_codec_jpeg_compress: tjCompress error: %s",
+                    tjGetErrorStr());
+    }
+
     *io_len = lio_len;
     return height;
 }
