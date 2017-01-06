@@ -740,8 +740,11 @@ xrdp_mm_trans_process_channel_data(struct xrdp_mm *self, struct trans *trans)
 
     if (rv == 0)
     {
-        rv = libxrdp_send_to_channel(self->wm->session, chan_id, s->p, size, total_size,
-                                     chan_flags);
+        if (is_channel_allowed(self->wm, chan_id))
+        {
+            rv = libxrdp_send_to_channel(self->wm->session, chan_id, s->p, size, total_size,
+                                         chan_flags);
+        }
     }
 
     return rv;
