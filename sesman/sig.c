@@ -24,9 +24,9 @@
  *
  */
 
-#include "sesman.h"
+#include <signal.h>
 
-#include "signal.h"
+#include "sesman.h"
 
 extern int g_sck;
 extern int g_pid;
