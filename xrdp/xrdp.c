@@ -246,6 +246,7 @@ xrdp_process_params(int argc, char **argv,
         }
         else if ((g_strncasecmp(option, "-nodaemon", 255) == 0) ||
                  (g_strncasecmp(option, "--nodaemon", 255) == 0) ||
+                 (g_strncasecmp(option, "-n", 255) == 0) ||
                  (g_strncasecmp(option, "-nd", 255) == 0) ||
                  (g_strncasecmp(option, "--nd", 255) == 0) ||
                  (g_strncasecmp(option, "-ns", 255) == 0) ||
