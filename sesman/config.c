@@ -357,7 +357,7 @@ config_read_sessions(int file, struct config_sessions *se, struct list *param_n,
     g_printf("\tX11DisplayOffset:            %i\r\n", se->x11_display_offset);
     g_printf("\tKillDisconnected:            %i\r\n", se->kill_disconnected);
     g_printf("\tIdleTimeLimit:               %i\r\n", se->max_idle_time);
-    g_printf("\tDisconnectedTimeLimit:       %i\r\n", se->max_idle_time);
+    g_printf("\tDisconnectedTimeLimit:       %i\r\n", se->max_disc_time);
     g_printf("\tPolicy:       %i\r\n", se->policy);
 
     return 0;
