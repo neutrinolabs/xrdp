@@ -612,9 +612,6 @@ rail_process_activate(struct stream *s, int size)
         LOG(10, ("chansrv::rail_process_activate: calling XSetInputFocus 0x%8.8x", window_id));
         XSetInputFocus(g_display, window_id, RevertToParent, CurrentTime);
     } else {
-        XWindowAttributes window_attributes;
-        XGetWindowAttributes(g_display, window_id, &window_attributes);
-
         LOG(10, ("  window attributes: override_redirect %d",
                  window_attributes.override_redirect));
         add_timeout(200, my_timeout, (void*)(long)g_focus_counter);
