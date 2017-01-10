@@ -55,15 +55,6 @@ AM_CONDITIONAL(HAVE_SYSTEMD, [test -n "$with_systemdsystemunitdir" -a "x$with_sy
 AC_ARG_ENABLE(pam, AS_HELP_STRING([--disable-pam],
               [Build PAM support (default: yes)]),
               [], [enable_pam=yes])
-AC_ARG_ENABLE(nopam, AS_HELP_STRING([--enable-nopam],
-              [Build no PAM support (default: no, deprecated)]),
-              [
-                  if test "x$enable_nopam" = "xyes"
-                  then
-                      enable_pam=no
-                      AC_MSG_WARN([--enable-nopam option is deprecated. Please use --disable-pam instead.])
-                  fi
-              ])
 AM_CONDITIONAL(SESMAN_NOPAM, [test x$enable_pam != xyes])
 AC_ARG_ENABLE(ipv6, AS_HELP_STRING([--enable-ipv6],
               [Build IPv6 support (default: no, experimental)]),
