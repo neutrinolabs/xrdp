@@ -834,17 +834,19 @@ xrdp_rdp_incoming(struct xrdp_rdp *self)
     if (iso->selectedProtocol > PROTOCOL_RDP)
     {
         log_message(LOG_LEVEL_INFO,
-                    "TLS connection established from %s: %s with cipher %s",
+                    "TLS connection established from %s port %s: %s with cipher %s",
                     self->client_info.client_addr,
+                    self->client_info.client_port,
                     iso->trans->ssl_protocol,
                     iso->trans->cipher_name);
     }
     else
     {
         log_message(LOG_LEVEL_INFO,
-                    "Non-TLS connection established from %s: "
+                    "Non-TLS connection established from %s port %s: "
                     "encrypted with standard RDP security",
-                     self->client_info.client_addr);
+                    self->client_info.client_addr,
+                    self->client_info.client_port);
     }
 
     return 0;
