@@ -1829,12 +1829,12 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
     client_info = &(self->rdp_layer->client_info);
 
 
-    DEBUG(("processing channels, channel_code is %d", client_info->channel_code));
+    DEBUG(("processing channels, channels_allowed is %d", client_info->channels_allowed));
 
     /* this is an option set in xrdp.ini */
-    if (client_info->channel_code != 1) /* are channels on? */
+    if (client_info->channels_allowed != 1) /* are channels on? */
     {
-        g_writeln("Processing channel data from client - The channel is off");
+        g_writeln("xrdp_sec_process_mcs_data_channels: all channels are disabled by configuration");
         return 0;
     }
 
@@ -1862,6 +1862,12 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
             return 1;
         }
         in_uint8a(s, channel_item->name, 8);
+        if (g_strlen(channel_item->name) == 0)
+        {
+            log_message(LOG_LEVEL_WARNING, "xrdp_sec_process_mcs_data_channels: got an empty channel name, ignoring it");
+            g_free(channel_item);
+            continue;
+        }
         in_uint32_le(s, channel_item->flags);
         channel_item->chanid = MCS_GLOBAL_CHANNEL + (index + 1);
         list_add_item(self->mcs_layer->channel_list, (tintptr) channel_item);

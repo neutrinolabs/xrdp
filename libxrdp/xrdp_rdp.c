@@ -105,8 +105,8 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
         }
         else if (g_strcasecmp(item, "allow_channels") == 0)
         {
-            client_info->channel_code = g_text2bool(value);
-            if (client_info->channel_code == 0)
+            client_info->channels_allowed = g_text2bool(value);
+            if (client_info->channels_allowed == 0)
             {
                 log_message(LOG_LEVEL_DEBUG,"Info - All channels are disabled");
             }
