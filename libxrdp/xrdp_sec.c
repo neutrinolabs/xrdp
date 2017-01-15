@@ -1864,7 +1864,7 @@ xrdp_sec_process_mcs_data_channels(struct xrdp_sec *self, struct stream *s)
         in_uint8a(s, channel_item->name, 8);
         if (g_strlen(channel_item->name) == 0)
         {
-            g_writeln("xrdp_sec_process_mcs_data_channels: got an empty channel name, ignoring it");
+            log_message(LOG_LEVEL_WARNING, "xrdp_sec_process_mcs_data_channels: got an empty channel name, ignoring it");
             g_free(channel_item);
             continue;
         }
