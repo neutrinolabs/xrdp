@@ -74,6 +74,10 @@ AC_ARG_ENABLE(pamuserpass, AS_HELP_STRING([--enable-pamuserpass],
               [Build pam userpass support (default: no)]),
               [], [enable_pamuserpass=no])
 AM_CONDITIONAL(SESMAN_PAMUSERPASS, [test x$enable_pamuserpass = xyes])
+AC_ARG_ENABLE(pam-config, AS_HELP_STRING([--enable-pam-config=CONF],
+              [Select PAM config to install: debian, redhat, suse, unix
+               (default: autodetect)]))
+
 AC_ARG_ENABLE(xrdpdebug, AS_HELP_STRING([--enable-xrdpdebug],
               [Build debug (default: no)]),
               [], [enable_xrdpdebug=no])
@@ -156,7 +160,19 @@ then
         [AC_MSG_ERROR([please install libpam0g-dev or pam-devel])])
     fi
   fi
+  if test "x$enable_pam_config" = "x"; then
+    PAM_RULES="auto"
+  else
+    pam_config_file="$srcdir/instfiles/pam.d/xrdp-sesman.$enable_pam_config"
+    if test -f "$pam_config_file"; then
+      PAM_RULES="$enable_pam_config"
+    else
+      AC_MSG_ERROR([PAM file "$pam_config_file" is not available])
+    fi
+  fi
 fi
+
+AC_SUBST(PAM_RULES)
 
 if test "x$enable_ipv6only" = "xyes"
 then
