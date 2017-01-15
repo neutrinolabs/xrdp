@@ -1282,8 +1282,7 @@ xrdp_rdp_send_session_info(struct xrdp_rdp *self, const char *data,
 
     s_mark_end(s);
 
-    /* SAVE_SESSION_INFO 0x26 */
-    if (xrdp_rdp_send_data(self, s, 0x26) != 0)
+    if (xrdp_rdp_send_data(self, s, RDP_DATA_PDU_LOGON) != 0)
     {
         free_stream(s);
         return 1;
