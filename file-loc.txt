@@ -4,7 +4,6 @@ default build will install the following
 /usr/local/lib/xrdp
   libcommon.so
   libmc.so
-  librdp.so
   libscp.so
   libvnc.so
   libxrdp.so

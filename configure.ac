@@ -307,7 +307,6 @@ AC_CONFIG_FILES([
   pkgconfig/Makefile
   pkgconfig/xrdp.pc
   pkgconfig/xrdp-uninstalled.pc
-  rdp/Makefile
   sesman/chansrv/Makefile
   sesman/libscp/Makefile
   sesman/Makefile
