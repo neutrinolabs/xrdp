@@ -402,11 +402,11 @@ main(int argc, char **argv)
         g_writeln("See http://www.xrdp.org for more information.");
         g_writeln("%s", "");
         g_writeln("Usage: xrdp [options]");
-        g_writeln("   --help: show help");
-        g_writeln("   --nodaemon: don't fork into background");
-        g_writeln("   --kill: shut down xrdp");
-        g_writeln("   --port: tcp listen port");
-        g_writeln("   --fork: fork on new connection");
+        g_writeln("   -h, --help       show help");
+        g_writeln("   -n, --nodaemon   don't fork into background");
+        g_writeln("   -k, --kill       shut down xrdp");
+        g_writeln("   -p, --port       tcp listen port");
+        g_writeln("   -f, --fork       fork on new connection");
         g_writeln("%s", "");
         g_deinit();
         g_exit(0);
