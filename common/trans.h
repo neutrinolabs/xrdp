@@ -79,6 +79,8 @@ struct trans
     int no_stream_init_on_data_in;
     int extra_flags; /* user defined */
     struct ssl_tls *tls;
+    const char *ssl_protocol; /* e.g. TLSv1, TLSv1.1, TLSv1.2, unknown */
+    const char *cipher_name;  /* e.g. AES256-GCM-SHA384 */
     trans_recv_proc trans_recv;
     trans_send_proc trans_send;
     trans_can_recv_proc trans_can_recv;
