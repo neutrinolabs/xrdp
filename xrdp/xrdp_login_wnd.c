@@ -336,6 +336,7 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
     struct xrdp_bitmap *b;
     struct xrdp_cfg_globals *globals;
     char resultIP[256];
+    int test_access;
 
     globals = &self->xrdp_config->cfg_globals;
 
@@ -432,13 +433,11 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
                         username_set = 1;
                     }
                 }
-
+                test_access = g_strncmp(name, "password", 255) == 0;
 #ifdef ACCESS
-
-                if ((g_strncmp(name, "password", 255) == 0) || (g_strncmp(name, "pampassword", 255) == 0))
-#else
-                if (g_strncmp(name, "password", 255) == 0)
+                test_access = test_access || (g_strncmp(name, "pampassword", 255) == 0);
 #endif
+                if (test_access)
                 {
                     b->password_char = '*';
 
