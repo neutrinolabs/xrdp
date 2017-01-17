@@ -42,7 +42,7 @@
 #   modified version of the Autoconf Macro, you may extend this special
 #   exception to the GPL to apply to your modified version as well.
 
-#serial 5
+#serial 6
 
 AU_ALIAS([TYPE_SOCKLEN_T], [AX_TYPE_SOCKLEN_T])
 AC_DEFUN([AX_TYPE_SOCKLEN_T],
@@ -51,7 +51,7 @@ AC_DEFUN([AX_TYPE_SOCKLEN_T],
   AC_TRY_COMPILE(
   [#include <sys/types.h>
    #include <sys/socket.h>],
-  [socklen_t len = 42; return 0;],
+  [socklen_t len = (socklen_t) 42; return (!len);],
   ac_cv_ax_type_socklen_t=yes,
   ac_cv_ax_type_socklen_t=no)
 ])
