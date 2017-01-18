@@ -19,7 +19,6 @@
  */
 
 #include "xrdp.h"
-#define ACCESS
 #include "log.h"
 
 /*****************************************************************************/
@@ -433,12 +432,7 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
                     }
                 }
 
-#ifdef ACCESS
-
                 if ((g_strncmp(name, "password", 255) == 0) || (g_strncmp(name, "pampassword", 255) == 0))
-#else
-                if (g_strncmp(name, "password", 255) == 0)
-#endif
                 {
                     b->password_char = '*';
 
