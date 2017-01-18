@@ -21,11 +21,9 @@
 #if defined(HAVE_CONFIG_H)
 #include <config_ac.h>
 #endif
-#define ACCESS
 #include "xrdp.h"
 #include "log.h"
 
-#ifdef ACCESS
 #ifndef USE_NOPAM
 #if defined(HAVE__PAM_TYPES_H)
 #define LINUXPAM 1
@@ -35,7 +33,6 @@
 #include <security/pam_constants.h>
 #endif
 #endif /* USE_NOPAM */
-#endif /* ACCESS */
 
 #include "xrdp_encoder.h"
 
@@ -1456,7 +1453,6 @@ xrdp_mm_sesman_data_in(struct trans *trans)
     return error;
 }
 
-#ifdef ACCESS
 #ifndef USE_NOPAM
 /*********************************************************************/
 /* return 0 on success */
@@ -1574,7 +1570,6 @@ access_control(char *username, char *password, char *srv)
     return rec;
 }
 #endif
-#endif
 
 /*****************************************************************************/
 /* This routine clears all states to make sure that our next login will be
@@ -1599,7 +1594,6 @@ cleanup_states(struct xrdp_mm *self)
     }
 }
 
-#ifdef ACCESS
 #ifndef USE_NOPAM
 static const char * APP_CC
 getPAMError(const int pamError, char *text, int text_bytes)
@@ -1835,7 +1829,7 @@ getPAMAdditionalErrorInfo(const int pamError, struct xrdp_mm *self)
     }
 }
 #endif
-#endif
+
 /*****************************************************************************/
 int APP_CC
 xrdp_mm_connect(struct xrdp_mm *self)
@@ -1851,7 +1845,6 @@ xrdp_mm_connect(struct xrdp_mm *self)
     char ip[256];
     char port[8];
     char chansrvport[256];
-#ifdef ACCESS
 #ifndef USE_NOPAM
     int use_pam_auth = 0;
     char pam_auth_sessionIP[256];
@@ -1862,7 +1855,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
     char password[256];
     username[0] = 0;
     password[0] = 0;
-#endif
+
     /* make sure we start in correct state */
     cleanup_states(self);
     g_memset(ip, 0, sizeof(ip));
@@ -1890,7 +1883,6 @@ xrdp_mm_connect(struct xrdp_mm *self)
             }
         }
 
-#ifdef ACCESS
 #ifndef USE_NOPAM
         else if (g_strcasecmp(name, "pamusername") == 0)
         {
@@ -1914,8 +1906,6 @@ xrdp_mm_connect(struct xrdp_mm *self)
         {
             g_strncpy(username, value, 255);
         }
-
-#endif
         else if (g_strcasecmp(name, "chansrvport") == 0)
         {
             g_strncpy(chansrvport, value, 255);
@@ -1923,7 +1913,6 @@ xrdp_mm_connect(struct xrdp_mm *self)
         }
     }
 
-#ifdef ACCESS
 #ifndef USE_NOPAM
     if (use_pam_auth)
     {
@@ -1965,7 +1954,6 @@ xrdp_mm_connect(struct xrdp_mm *self)
             return rv;
         }
     }
-#endif
 #endif
 
     if (self->sesman_controlled)
