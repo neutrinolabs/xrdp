@@ -46,7 +46,12 @@ AM_CONDITIONAL(NETBSD, [test "x$netbsd" = xyes])
 
 AC_ARG_WITH([systemdsystemunitdir],
         AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files]),
-        [], [with_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)])
+        [], [
+if test "x$linux" = xyes; then
+  with_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
+fi
+])
+
 if test "x$with_systemdsystemunitdir" != xno; then
         AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])
 fi
