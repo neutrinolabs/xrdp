@@ -46,6 +46,8 @@ struct t_auth_info
     pam_handle_t *ph;
 };
 
+static int pam_chauth_old_new_pw = 0;
+
 /******************************************************************************/
 static int DEFAULT_CC
 verify_pam_conv(int num_msg, const struct pam_message **msg,
@@ -101,6 +103,8 @@ chauth_pam_conv(int num_msg, const struct pam_message **msg,
                 user_pass = (struct t_user_pass *) appdata_ptr;
                 reply[i].resp = g_strdup(user_pass->user);
                 reply[i].resp_retcode = PAM_SUCCESS;
+                g_writeln("username");
+                pam_chauth_old_new_pw = 1;
                 break;
             case PAM_PROMPT_ECHO_OFF: /* password */
                 user_pass = (struct t_user_pass *) appdata_ptr;
@@ -108,13 +112,16 @@ chauth_pam_conv(int num_msg, const struct pam_message **msg,
                    old pass:        "(current) UNIX password:"
                    new pass:        "New password:"
                    retype new pass: "Retype new password:" */
-                if (*(msg[i]->msg) == '(')
+                if (pam_chauth_old_new_pw)
                 {
                     reply[i].resp = g_strdup(user_pass->pass);
+                    g_writeln("oldpass");
+                    pam_chauth_old_new_pw = 0;
                 }
                 else
                 {
                     reply[i].resp = g_strdup(user_pass->newpwd);
+                    g_writeln("newpass");
                 }
                 reply[i].resp_retcode = PAM_SUCCESS;
                 break;
