@@ -25,15 +25,23 @@
 
 download_all_files()
 {
-    # download files parallelly using keepalive
-    # a little bit faster than calling wget with single file more than 100 times
-    < x11_file_list.txt cut -f1 -d: | sed -e "s|^|${download_url}/|" | \
+    # download files in parallel using keepalive - a little bit faster
+    # than calling wget for a single file more than 100 times
+    urls=
+    for f in `cut -f1 -d: x11_file_list.txt`; do
+        if ! test -s "downloads/$f"; then
+            urls="$urls ${download_url}/$f"
+        fi
+    done
+    if test -n "$urls"; then
+        echo $urls | \
         xargs -P2 -n $(expr $num_modules / 2 + 1) \
         wget \
           --directory-prefix=downloads \
           --no-verbose \
           --timestamping \
           --continue
+    fi
 
     status=$?
     return $status
@@ -278,7 +286,7 @@ fi
 
 # this will copy the build X server with the other X server binaries
 cd rdp
-cp X11rdp $X11RDPBASE/bin
+cp X11rdp $X11RDPBASE/bin/X11rdp
 strip $X11RDPBASE/bin/X11rdp
 
 if [ "$2" = "drop" ]; then

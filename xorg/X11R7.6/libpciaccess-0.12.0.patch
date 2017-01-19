@@ -1,0 +1,24 @@
+diff -ur a/src/common_interface.c b/src/common_interface.c
+--- a/src/common_interface.c
++++ b/src/common_interface.c
+@@ -51,6 +51,20 @@
+ # define HTOLE_32(x)   (x)
+ #endif /* linux */
+ 
++#elif defined(__GNUC__) || defined(__clang__)
++
++#if __BYTE_ORDER == __BIG_ENDIAN
++# define LETOH_16(x)   __builtin_bswap16(x)
++# define HTOLE_16(x)   __builtin_bswap16(x)
++# define LETOH_32(x)   __builtin_bswap32(x)
++# define HTOLE_32(x)   __builtin_bswap32(x)
++#else
++# define LETOH_16(x)   (x)
++# define HTOLE_16(x)   (x)
++# define LETOH_32(x)   (x)
++# define HTOLE_32(x)   (x)
++#endif /* gcc or clang */
++
+ #elif defined(__sun)
+ 
+ #include <sys/byteorder.h>
