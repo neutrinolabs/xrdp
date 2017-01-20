@@ -2,7 +2,7 @@
 Description=xrdp session manager
 After=syslog.target network.target
 StopWhenUnneeded=true
-BindTo=xrdp.service
+BindsTo=xrdp.service
 
 [Service]
 Type=forking
