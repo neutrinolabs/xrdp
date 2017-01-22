@@ -275,6 +275,7 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
 int EXPORT_CC
 libxrdp_send_palette(struct xrdp_session *session, int *palette)
 {
+    int rv;
     int i = 0;
     int color = 0;
     struct stream *s = (struct stream *)NULL;
@@ -337,10 +338,16 @@ libxrdp_send_palette(struct xrdp_session *session, int *palette)
     free_stream(s);
 
     /* send the orders palette too */
-    libxrdp_orders_init(session);
-    libxrdp_orders_send_palette(session, palette, 0);
-    libxrdp_orders_send(session);
-    return 0;
+    rv = libxrdp_orders_init(session);
+    if (rv == 0)
+    {
+        rv = libxrdp_orders_send_palette(session, palette, 0);
+    }
+    if (rv == 0)
+    {
+        rv = libxrdp_orders_send(session);
+    }
+    return rv;
 }
 
 /******************************************************************************/
