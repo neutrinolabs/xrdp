@@ -823,8 +823,14 @@ xrdp_mm_process_rail_create_window(struct xrdp_mm* self, struct stream* s)
     }
     in_uint32_le(s, flags);
     rv = libxrdp_orders_init(self->wm->session);
-    rv = libxrdp_window_new_update(self->wm->session, window_id, &rwso, flags);
-    rv = libxrdp_orders_send(self->wm->session);
+    if (rv == 0)
+    {
+        rv = libxrdp_window_new_update(self->wm->session, window_id, &rwso, flags);
+    }
+    if (rv == 0)
+    {
+        rv = libxrdp_orders_send(self->wm->session);
+    }
     g_free(rwso.title_info);
     g_free(rwso.window_rects);
     g_free(rwso.visibility_rects);
@@ -892,8 +898,14 @@ xrdp_mm_process_rail_configure_window(struct xrdp_mm* self, struct stream* s)
     }
     in_uint32_le(s, flags);
     rv = libxrdp_orders_init(self->wm->session);
-    rv = libxrdp_window_new_update(self->wm->session, window_id, &rwso, flags);
-    rv = libxrdp_orders_send(self->wm->session);
+    if (rv == 0)
+    {
+        rv = libxrdp_window_new_update(self->wm->session, window_id, &rwso, flags);
+    }
+    if (rv == 0)
+    {
+        rv = libxrdp_orders_send(self->wm->session);
+    }
     g_free(rwso.window_rects);
     g_free(rwso.visibility_rects);
     return rv;
@@ -912,8 +924,14 @@ xrdp_mm_process_rail_destroy_window(struct xrdp_mm* self, struct stream* s)
     in_uint32_le(s, window_id);
     g_writeln("xrdp_mm_process_rail_destroy_window 0x%8.8x", window_id);
     rv = libxrdp_orders_init(self->wm->session);
-    rv = libxrdp_window_delete(self->wm->session, window_id);
-    rv = libxrdp_orders_send(self->wm->session);
+    if (rv == 0)
+    {
+        rv = libxrdp_window_delete(self->wm->session, window_id);
+    }
+    if (rv == 0)
+    {
+        rv = libxrdp_orders_send(self->wm->session);
+    }
     return rv;
 }
 
@@ -935,8 +953,14 @@ xrdp_mm_process_rail_show_window(struct xrdp_mm* self, struct stream* s)
     g_writeln("xrdp_mm_process_rail_show_window 0x%8.8x %x", window_id,
               rwso.show_state);
     rv = libxrdp_orders_init(self->wm->session);
-    rv = libxrdp_window_new_update(self->wm->session, window_id, &rwso, flags);
-    rv = libxrdp_orders_send(self->wm->session);
+    if (rv == 0)
+    {
+        rv = libxrdp_window_new_update(self->wm->session, window_id, &rwso, flags);
+    }
+    if (rv == 0)
+    {
+        rv = libxrdp_orders_send(self->wm->session);
+    }
     return rv;
 }
 
@@ -965,8 +989,14 @@ xrdp_mm_process_rail_update_window_text(struct xrdp_mm* self, struct stream* s)
     rwso.title_info[size] = 0;
     g_writeln("  set window title %s size %d 0x%8.8x", rwso.title_info, size, flags);
     rv = libxrdp_orders_init(self->wm->session);
-    rv = libxrdp_window_new_update(self->wm->session, window_id, &rwso, flags);
-    rv = libxrdp_orders_send(self->wm->session);
+    if (rv == 0)
+    {
+        rv = libxrdp_window_new_update(self->wm->session, window_id, &rwso, flags);
+    }
+    if (rv == 0)
+    {
+        rv = libxrdp_orders_send(self->wm->session);
+    }
     g_writeln("  set window title %s %d", rwso.title_info, rv);
 
     g_free(rwso.title_info);
