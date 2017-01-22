@@ -155,7 +155,7 @@ clipboard_check_file(char *filename)
 
 /*****************************************************************************/
 static int APP_CC
-clipboard_get_file(char* file, int bytes)
+clipboard_get_file(const char *file, int bytes)
 {
     int sindex;
     int pindex;
@@ -233,7 +233,7 @@ clipboard_get_file(char* file, int bytes)
 
 /*****************************************************************************/
 static int APP_CC
-clipboard_get_files(char *files, int bytes)
+clipboard_get_files(const char *files, int bytes)
 {
     int index;
     int file_index;
@@ -275,7 +275,7 @@ clipboard_get_files(char *files, int bytes)
 /* server to client */
 /* response to client asking for clipboard contents that is file list */
 int APP_CC
-clipboard_send_data_response_for_file(char *data, int data_size)
+clipboard_send_data_response_for_file(const char *data, int data_size)
 {
     struct stream *s;
     int size;

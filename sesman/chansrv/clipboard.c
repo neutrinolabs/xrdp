@@ -778,7 +778,7 @@ clipboard_send_format_announce(int xrdp_clip_type)
 
 /*****************************************************************************/
 static int APP_CC
-clipboard_send_data_response_for_image(char* data, int data_size)
+clipboard_send_data_response_for_image(const char *data, int data_size)
 {
     struct stream *s;
     int size;
@@ -802,7 +802,7 @@ clipboard_send_data_response_for_image(char* data, int data_size)
 
 /*****************************************************************************/
 static int APP_CC
-clipboard_send_data_response_for_text(char* data, int data_size)
+clipboard_send_data_response_for_text(const char *data, int data_size)
 {
     struct stream *s;
     int size;
@@ -845,7 +845,7 @@ clipboard_send_data_response_for_text(char* data, int data_size)
 
 /*****************************************************************************/
 static int APP_CC
-clipboard_send_data_response(int xrdp_clip_type, char *data, int data_size)
+clipboard_send_data_response(int xrdp_clip_type, const char *data, int data_size)
 {
     log_debug("clipboard_send_data_response:");
     if (data != 0)

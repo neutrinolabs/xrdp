@@ -49,18 +49,18 @@ int xfuse_init(void);
 int xfuse_deinit(void);
 int xfuse_check_wait_objs(void);
 int xfuse_get_wait_objs(tbus *objs, int *count, int *timeout);
-int xfuse_create_share(tui32 share_id, char *dirname);
+int xfuse_create_share(tui32 share_id, const char *dirname);
 
 int xfuse_clear_clip_dir(void);
-int xfuse_file_contents_range(int stream_id, char *data, int data_bytes);
+int xfuse_file_contents_range(int stream_id, const char *data, int data_bytes);
 int xfuse_file_contents_size(int stream_id, int file_size);
-int xfuse_add_clip_dir_item(char *filename, int flags, int size, int lindex);
+int xfuse_add_clip_dir_item(const char *filename, int flags, int size, int lindex);
 
 /* functions that are invoked from devredir */
 int xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode);
 void xfuse_devredir_cb_enum_dir_done(void *vp, tui32 IoStatus);
 void xfuse_devredir_cb_open_file(void *vp, tui32 IoStatus, tui32 DeviceId, tui32 FileId);
-void xfuse_devredir_cb_read_file(void *vp, char *buf, size_t length);
+void xfuse_devredir_cb_read_file(void *vp, const char *buf, size_t length);
 void xfuse_devredir_cb_rmdir_or_file(void *vp, tui32 IoStatus);
 void xfuse_devredir_cb_rename_file(void *vp, tui32 IoStatus);
 void xfuse_devredir_cb_file_close(void *vp);

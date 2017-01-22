@@ -102,7 +102,7 @@ tui32 g_device_id;          /* unique device ID - announced by client */
 tui16 g_client_rdp_version; /* returned by client                     */
 struct stream *g_input_stream = NULL;
 
-void xfuse_devredir_cb_write_file(void *vp, char *buf, size_t length);
+void xfuse_devredir_cb_write_file(void *vp, const char *buf, size_t length);
 
 /*****************************************************************************/
 int APP_CC

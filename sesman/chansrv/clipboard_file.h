@@ -23,7 +23,7 @@
 #include "parse.h"
 
 int APP_CC
-clipboard_send_data_response_for_file(char *data, int data_size);
+clipboard_send_data_response_for_file(const char *data, int data_size);
 int APP_CC
 clipboard_process_file_request(struct stream *s, int clip_msg_status,
                                int clip_msg_len);
