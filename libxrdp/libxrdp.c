@@ -1487,6 +1487,17 @@ libxrdp_fastpath_send_frame_marker(struct xrdp_session *session,
     }
     free_stream(s);
     return 0;
+}
 
+/*****************************************************************************/
+int EXPORT_CC
+libxrdp_send_session_info(struct xrdp_session *session, const char *data,
+                          int data_bytes)
+{
+    struct xrdp_rdp *rdp;
+
+    LLOGLN(10, ("libxrdp_send_session_info:"));
+    rdp = (struct xrdp_rdp *) (session->rdp);
+    return xrdp_rdp_send_session_info(rdp, data, data_bytes);
 }
 

@@ -151,9 +151,30 @@ struct mod
                                     int flags);
     int (*server_set_pointer_ex)(struct mod *mod, int x, int y, char *data,
                                  char *mask, int bpp);
-
-    tintptr server_dumby[100 - 37]; /* align, 100 minus the number of server
-                                     functions above */
+    int (*server_add_char_alpha)(struct mod* mod, int font, int character,
+                                 int offset, int baseline,
+                                 int width, int height, char* data);
+    int (*server_create_os_surface_bpp)(struct mod* v, int rdpindex,
+                                        int width, int height, int bpp);
+    int (*server_paint_rect_bpp)(struct mod* v, int x, int y, int cx, int cy,
+                                 char* data, int width, int height,
+                                 int srcx, int srcy, int bpp);
+    int (*server_composite)(struct mod* v, int srcidx, int srcformat,
+                            int srcwidth, int srcrepeat, int* srctransform,
+                            int mskflags, int mskidx, int mskformat,
+                            int mskwidth, int mskrepeat, int op,
+                            int srcx, int srcy, int mskx, int msky,
+                            int dstx, int dsty, int width, int height,
+                            int dstformat);
+    int (*server_paint_rects)(struct mod* v,
+                              int num_drects, short *drects,
+                              int num_crects, short *crects,
+                              char *data, int width, int height,
+                              int flags, int frame_id);
+    int (*server_session_info)(struct mod* v, const char *data,
+                               int data_bytes);
+    tintptr server_dumby[100 - 44]; /* align, 100 minus the number of server
+                                       functions above */
     /* common */
     tintptr handle; /* pointer to self as long */
     tintptr wm;

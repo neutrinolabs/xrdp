@@ -1275,3 +1275,43 @@ xrdp_rdp_send_deactivate(struct xrdp_rdp *self)
     DEBUG(("out xrdp_rdp_send_deactivate"));
     return 0;
 }
+
+/*****************************************************************************/
+int APP_CC
+xrdp_rdp_send_session_info(struct xrdp_rdp *self, const char *data,
+                           int data_bytes)
+{
+    struct stream *s;
+
+    LLOGLN(0, ("xrdp_rdp_send_session_info: data_bytes %d", data_bytes));
+    make_stream(s);
+    init_stream(s, 8192);
+
+    if (xrdp_rdp_init_data(self, s) != 0)
+    {
+        free_stream(s);
+        return 1;
+    }
+
+    if (s_check_rem_out(s, data_bytes))
+    {
+        out_uint8a(s, data, data_bytes); 
+    }
+    else
+    {
+        free_stream(s);
+        return 1;
+    }
+
+    s_mark_end(s);
+
+    if (xrdp_rdp_send_data(self, s, RDP_DATA_PDU_LOGON) != 0)
+    {
+        free_stream(s);
+        return 1;
+    }
+
+    free_stream(s);
+    return 0;
+}
+
