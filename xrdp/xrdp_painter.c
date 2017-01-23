@@ -1524,7 +1524,7 @@ xrdp_painter_line(struct xrdp_painter *self,
                                      draw_rect.left, draw_rect.top,
                                      draw_rect.right - draw_rect.left,
                                      draw_rect.bottom - draw_rect.top);
-                    painter_line(self->painter, &dst_pb, x1, y1, x2, x2,
+                    painter_line(self->painter, &dst_pb, x1, y1, x2, y2,
                                  self->pen.width, 0);
                     xrdp_painter_add_dirty_rect(self, x, y, cx, cy,
                                                 &draw_rect);
