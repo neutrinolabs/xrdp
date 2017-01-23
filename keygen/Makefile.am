@@ -23,7 +23,7 @@ install-data-hook:
 	  ./xrdp-keygen xrdp $(DESTDIR)$(xrdpsysconfdir)/rsakeys.ini; \
 	fi && \
 	if [ ! -f $(DESTDIR)$(xrdpsysconfdir)/cert.pem ]; then \
-	  openssl req -x509 -newkey rsa:2048 -sha256 -nodes \
+	  $(OPENSSL) req -x509 -newkey rsa:2048 -sha256 -nodes \
 	    -keyout $(DESTDIR)$(xrdpsysconfdir)/key.pem -out \
 	    $(DESTDIR)$(xrdpsysconfdir)/cert.pem -days 365 \
 	    -subj /C=US/ST=CA/L=Sunnyvale/O=xrdp/CN=www.xrdp.org \

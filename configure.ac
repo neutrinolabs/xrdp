@@ -145,6 +145,10 @@ AC_SUBST(DLOPEN_LIBS)
 PKG_CHECK_MODULES([OPENSSL], [openssl >= 0], [],
   [AC_MSG_ERROR([please install libssl-dev or openssl-devel])])
 
+# look for openssl binary
+OPENSSL_BIN=`$PKG_CONFIG --variable=exec_prefix openssl`/bin
+AC_PATH_PROGS([OPENSSL], [openssl], [:], [$OPENSSL_BIN:$PATH])
+
 # checking for pam variation
 # Linux-PAM is used in Linux systems
 # OpenPAM is used by FreeBSD, NetBSD, DragonFly BSD and OS X
