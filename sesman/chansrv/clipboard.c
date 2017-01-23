@@ -966,7 +966,7 @@ clipboard_provide_selection(XSelectionRequestEvent *req, Atom type, int format,
     if (bytes < g_incr_max_req_size)
     {
         XChangeProperty(g_display, req->requestor, req->property,
-                        type, format, PropModeReplace, (tui8 *)data, bytes);
+                        type, format, PropModeReplace, (tui8 *)data, length);
         g_memset(&xev, 0, sizeof(xev));
         xev.xselection.type = SelectionNotify;
         xev.xselection.send_event = True;
