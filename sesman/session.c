@@ -503,7 +503,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
         g_sprintf(geometry, "%dx%d", s->width, s->height);
         g_sprintf(depth, "%d", s->bpp);
         g_sprintf(screen, ":%d", display);
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
         /*
          * FreeBSD bug
          * ports/157282: effective login name is not set by xrdp-sesman
