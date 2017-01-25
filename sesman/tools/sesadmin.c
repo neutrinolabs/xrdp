@@ -196,7 +196,13 @@ void cmndList(struct SCP_CONNECTION *c)
 
     e = scp_v1c_mng_get_session_list(c, &scnt, &dsl);
 
-    if ((SCP_CLIENT_STATE_LIST_OK == e) && (scnt > 0))
+    if (e != SCP_CLIENT_STATE_LIST_OK)
+    {
+        printf("Error getting session list.\n");
+        return;
+    }
+
+    if (scnt > 0)
     {
         for (idx = 0; idx < scnt; idx++)
         {
@@ -211,10 +217,7 @@ void cmndList(struct SCP_CONNECTION *c)
         printf("No sessions.\n");
     }
 
-    if (0 != dsl)
-    {
-        g_free(dsl);
-    }
+    g_free(dsl);
 }
 
 void cmndKill(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
