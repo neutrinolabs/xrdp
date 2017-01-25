@@ -206,10 +206,13 @@ void cmndList(struct SCP_CONNECTION *c)
     {
         for (idx = 0; idx < scnt; idx++)
         {
-            printf("%d\t%d\t%dx%dx%d\t%d-%d-%d\t%04d/%02d/%02d@%02d:%02d\n", \
-                   (dsl[idx]).SID, (dsl[idx]).type, (dsl[idx]).width, (dsl[idx]).height, (dsl[idx]).bpp, \
-                   (dsl[idx]).idle_days, (dsl[idx]).idle_hours, (dsl[idx]).idle_minutes, \
-                   (dsl[idx]).conn_year, (dsl[idx]).conn_month, (dsl[idx]).conn_day, (dsl[idx]).conn_hour, (dsl[idx]).conn_minute);
+            struct SCP_DISCONNECTED_SESSION *s = &dsl[idx];
+
+            printf("%d\t%d\t%dx%dx%d\t%d-%d-%d\t%04d/%02d/%02d@%02d:%02d\n",
+                   s->SID, s->type, s->width, s->height, s->bpp,
+                   s->idle_days, s->idle_hours, s->idle_minutes,
+                   s->conn_year, s->conn_month, s->conn_day, s->conn_hour,
+                   s->conn_minute);
         }
     }
     else
