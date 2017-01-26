@@ -23,6 +23,30 @@
 #include "config_ac.h"
 #endif
 
+#include <stdlib.h>
+
+#if defined(HAVE_STDINT_H)
+#include <stdint.h>
+#else
+typedef signed char int8_t;
+typedef unsigned char uint8_t;
+typedef signed short int16_t;
+typedef unsigned short uint16_t;
+typedef signed int int32_t;
+typedef unsigned int uint32_t;
+typedef signed long long int64_t;
+typedef unsigned long long uint64_t;
+#if defined(_WIN64)
+typedef signed __int64 intptr_t;
+typedef unsigned __int64 uintptr_t;
+#else
+typedef signed long intptr_t;
+typedef unsigned long uintptr_t;
+#endif
+#endif
+
+typedef int bool_t;
+
 /* you can define L_ENDIAN or B_ENDIAN and NEED_ALIGN or NO_NEED_ALIGN
    in the makefile to override */
 
@@ -94,37 +118,29 @@
 
 #ifndef DEFINED_Ts
 #define DEFINED_Ts
-typedef char ti8;
-typedef unsigned char tui8;
-typedef signed char tsi8;
-typedef short ti16;
-typedef unsigned short tui16;
-typedef signed short tsi16;
-typedef int ti32;
-typedef unsigned int tui32;
-typedef signed int tsi32;
-typedef int tbool;
-#if defined(_WIN64)
-/* Microsoft's VC++ compiler uses the more backwards-compatible LLP64 model.
-   Most other 64 bit compilers(Solaris, AIX, HP, Linux, Mac OS X) use
-   the LP64 model.
-   long is 32 bits in LLP64 model, 64 bits in LP64 model. */
-typedef __int64 tbus;
-#else
-typedef long tbus;
-#endif
-typedef tbus tintptr;
+typedef int8_t ti8;
+typedef uint8_t tui8;
+typedef int8_t tsi8;
+typedef int16_t ti16;
+typedef uint16_t tui16;
+typedef int16_t tsi16;
+typedef int32_t ti32;
+typedef uint32_t tui32;
+typedef int32_t tsi32;
+typedef int64_t ti64;
+typedef uint64_t tui64;
+typedef int64_t tsi64;
+typedef bool_t tbool;
+typedef intptr_t tbus;
+typedef intptr_t tintptr;
+
 /* wide char, socket */
 #if defined(_WIN32)
 typedef unsigned short twchar;
 typedef unsigned int tsock;
-typedef unsigned __int64 tui64;
-typedef signed __int64 tsi64;
 #else
 typedef int twchar;
 typedef int tsock;
-typedef unsigned long long tui64;
-typedef signed long long tsi64;
 #endif
 #endif /* DEFINED_Ts */
 

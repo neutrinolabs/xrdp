@@ -21,11 +21,6 @@
 #if !defined(OS_CALLS_H)
 #define OS_CALLS_H
 
-#ifndef NULL
-#define NULL 0
-#endif
-
-#include <stdlib.h>
 #include "arch.h"
 
 #define g_tcp_can_recv g_sck_can_recv
