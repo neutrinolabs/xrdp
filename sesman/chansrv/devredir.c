@@ -1265,8 +1265,8 @@ dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
     IRP           *new_irp;
     int            bytes;
 
-    log_debug("DeviceId=%d FileId=%d Length=%d Offset=%lld",
-              DeviceId, FileId, Length, Offset);
+    log_debug("DeviceId=%d FileId=%d Length=%d Offset=%d",
+              DeviceId, FileId, Length, (int)Offset);
 
     xstream_new(s, 1024 + Length);
 
