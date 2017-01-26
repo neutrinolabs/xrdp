@@ -187,6 +187,20 @@ void cmndHelp(void)
     fprintf(stderr, "               kill:<sid>\n");
 }
 
+static void
+print_session(const struct SCP_DISCONNECTED_SESSION *s)
+{
+    printf("Session ID: %d\n", s->SID);
+    printf("\tSession type: %d\n", s->type);
+    printf("\tScreen size: %dx%d, color depth %d\n",
+           s->width, s->height, s->bpp);
+    printf("\tIdle time: %d day(s) %d hour(s) %d minute(s)\n",
+           s->idle_days, s->idle_hours, s->idle_minutes);
+    printf("\tConnected: %04d/%02d/%02d %02d:%02d\n",
+           s->conn_year, s->conn_month, s->conn_day, s->conn_hour,
+           s->conn_minute);
+}
+
 void cmndList(struct SCP_CONNECTION *c)
 {
     struct SCP_DISCONNECTED_SESSION *dsl;
@@ -206,13 +220,7 @@ void cmndList(struct SCP_CONNECTION *c)
     {
         for (idx = 0; idx < scnt; idx++)
         {
-            struct SCP_DISCONNECTED_SESSION *s = &dsl[idx];
-
-            printf("%d\t%d\t%dx%dx%d\t%d-%d-%d\t%04d/%02d/%02d@%02d:%02d\n",
-                   s->SID, s->type, s->width, s->height, s->bpp,
-                   s->idle_days, s->idle_hours, s->idle_minutes,
-                   s->conn_year, s->conn_month, s->conn_day, s->conn_hour,
-                   s->conn_minute);
+            print_session(&dsl[idx]);
         }
     }
     else
