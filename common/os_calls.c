@@ -87,8 +87,8 @@ extern char **environ;
 #endif
 
 /* sys/ucred.h needs to be included to use struct xucred
- * in FreeBSD and OS X. No need for other BSDs  */
-#if defined(__FreeBSD__) || defined(__APPLE__)
+ * in FreeBSD and OS X. No need for other BSDs except GNU/kFreeBSD */
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__FreeBSD_kernel__)
 #include <sys/ucred.h>
 #endif
 

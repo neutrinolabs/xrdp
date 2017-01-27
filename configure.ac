@@ -28,6 +28,9 @@ case $host_os in
 	*linux*)
 		linux=yes
 		;;
+	*kfreebsd*)
+		linux=yes # only used in instfiles/ so that’s ok for us for now
+		;;
 	*freebsd*)
 		freebsd=yes
 		;;
