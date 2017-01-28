@@ -513,32 +513,23 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
          *  $OpenBSD: session.c,v 1.252 2010/03/07 11:57:13 dtucker Exp $
          *  with some ideas about BSD process grouping to xrdp
          */
-        pid_t bsdsespid = g_fork();
 
-        if (bsdsespid == -1)
+        /**
+         * Create a new session and process group since the 4.4BSD
+         * setlogin() affects the entire process group
+         */
+        if (g_setsid() < 0)
         {
-        }
-        else if (bsdsespid == 0) /* BSD session leader */
-        {
-            /**
-             * Create a new session and process group since the 4.4BSD
-             * setlogin() affects the entire process group
-             */
-            if (g_setsid() < 0)
-            {
-                log_message(LOG_LEVEL_ERROR,
-                            "setsid failed - pid %d", g_getpid());
-            }
-
-            if (g_setlogin(s->username) < 0)
-            {
-                log_message(LOG_LEVEL_ERROR,
-                            "setlogin failed for user %s - pid %d", s->username,
-                            g_getpid());
-            }
+            log_message(LOG_LEVEL_ERROR,
+                        "setsid failed - pid %d", g_getpid());
         }
 
-        g_waitpid(bsdsespid);
+        if (g_setlogin(s->username) < 0)
+        {
+            log_message(LOG_LEVEL_ERROR,
+                        "setlogin failed for user %s - pid %d", s->username,
+                        g_getpid());
+        }
 #endif
         wmpid = g_fork(); /* parent becomes X,
                              child forks wm, and waits, todo */
