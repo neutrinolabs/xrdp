@@ -126,12 +126,6 @@ If set to \fB1\fR, \fBtrue\fR or \fByes\fR, every session will be killed
 within 60 seconds after the user disconnects.
 
 .TP
-\fBIdleTimeLimit\fR=\fInumber\fR
-\fI\This option is currently ignored!\fR Time limit before an idle
-session is disconnected. If set to \fI0\fR, automatic disconnection is
-disabled.
-
-.TP
 \fBDisconnectedTimeLimit\fR=\fInumber\fR
 Sets the time limit (in seconds) before a disconnected session is killed.
 If set to \fI0\fR, automatic killing is disabled.
