@@ -103,7 +103,7 @@ need **autoconf**, **automake**, **libtool** and **pkgconfig**.
 If compiling from the packaged source, unpack the tarball and change to the
 resulting directory.
 
-If compiling from a checked out repository, please make sure you've got the submodules  
+If compiling from a checked out repository, please make sure you've got the submodules 
 cloned too (use `git clone --recursive https://github.com/neutrinolabs/xrdp`)
 
 Then run following commands to compile and install xrdp:
@@ -131,7 +131,6 @@ xrdp
 ├── mc ---------- media center module
 ├── neutrinordp - RDP client module for proxying RDP connections using NeutrinoRDP
 ├── pkgconfig --- pkg-config configuration
-├── rdp --------- RDP client module for connecting to another RDP server
 ├── sesman ------ session manager for xrdp
 ├── tcutils ----- QT based utility program for thin clients
 ├── tests ------- tests for the code
