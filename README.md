@@ -47,7 +47,14 @@ apt-get install xrdp
 
 ### RedHat / CentOS / Fedora
 ```bash
-yum install xrdp
+yum -y install xrdp
+dnf -y install xrdp
+
+After installing Xrdp in Centos, RHEL or Fedora  you need to adjust the firewall 
+
+# firewall-cmd --permanent --zone=public --add-port=3389/tcp
+# firewall-cmd --reload
+
 ```
 
 ## Environment
