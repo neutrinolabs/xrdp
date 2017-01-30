@@ -1,7 +1,8 @@
 [Unit]
 Description=xrdp daemon
+Documentation=man:xrdp(8) man:xrdp.ini(5)
 Requires=xrdp-sesman.service
-After=syslog.target network.target xrdp-sesman.service
+After=network.target xrdp-sesman.service
 
 [Service]
 Type=forking
