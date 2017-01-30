@@ -118,27 +118,27 @@ sudo make install
 
 ```
 xrdp
-├── common ------ common code
-├── docs -------- documentation
-├── fontdump ---- font dump for Windows
-├── genkeymap --- keymap generator
-├── instfiles --- installable data file
-├── keygen ------ xrdp RSA key pair generator
-├── libpainter -- painter library
-├── librfxcodec - RFX codec library
-├── libxrdp ----- core RDP protocol implementation
-├── m4 ---------- Autoconf macros
-├── mc ---------- media center module
-├── neutrinordp - RDP client module for proxying RDP connections using NeutrinoRDP
-├── pkgconfig --- pkg-config configuration
-├── sesman ------ session manager for xrdp
-├── tcutils ----- QT based utility program for thin clients
-├── tests ------- tests for the code
-├── vnc --------- VNC client module for xrdp
-├── vrplayer ---- QT player redirecting video/audio to clients over xrdpvr channel
-├── xorg -------- X11rdp, an Xorg backend for xrdp
-├── xrdp -------- main server code
-├── xrdpapi ----- virtual channel API
-├── xrdpvr ------ API for playing media over RDP
-└── xup --------- X11rdp and xorgxrdp client module
+├── common ······ common code
+├── docs ········ documentation
+├── fontdump ···· font dump for Windows
+├── genkeymap ··· keymap generator
+├── instfiles ··· installable data file
+├── keygen ······ xrdp RSA key pair generator
+├── libpainter ·· painter library
+├── librfxcodec · RFX codec library
+├── libxrdp ····· core RDP protocol implementation
+├── m4 ·········· Autoconf macros
+├── mc ·········· media center module
+├── neutrinordp · RDP client module for proxying RDP connections using NeutrinoRDP
+├── pkgconfig ··· pkg-config configuration
+├── sesman ······ session manager for xrdp
+├── tcutils ····· QT based utility program for thin clients
+├── tests ······· tests for the code
+├── vnc ········· VNC client module for xrdp
+├── vrplayer ···· QT player redirecting video/audio to clients over xrdpvr channel
+├── xorg ········ X11rdp, an Xorg backend for xrdp
+├── xrdp ········ main server code
+├── xrdpapi ····· virtual channel API
+├── xrdpvr ······ API for playing media over RDP
+└── xup ········· X11rdp and xorgxrdp client module
 ```
