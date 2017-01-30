@@ -46,15 +46,27 @@ apt-get install xrdp
 ```
 
 ### RedHat / CentOS / Fedora
+
+On RedHat and CentOS, make sure to enable EPEL packages first.
+
 ```bash
-yum -y install xrdp
-dnf -y install xrdp
+yum install epel-release
+```
 
-After installing Xrdp in Centos, RHEL or Fedora  you need to adjust the firewall 
+Install xrdp package.
 
-# firewall-cmd --permanent --zone=public --add-port=3389/tcp
-# firewall-cmd --reload
+```bash
+yum install xrdp
+```
 
+`yum` is being replaced with `dnf`, so you may need to use `dnf` instead
+of `yum` in the above commands.
+
+To allow outside access to the service, open port 3389 on the firewall.
+
+```
+firewall-cmd --permanent --zone=public --add-port=3389/tcp
+firewall-cmd --reload
 ```
 
 ## Environment
