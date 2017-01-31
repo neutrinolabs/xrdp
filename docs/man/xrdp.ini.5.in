@@ -145,7 +145,7 @@ Negotiate these security methods with clients.
 
 .TP
 \fBssl_protocols\fP=\fI[SSLv3] [TLSv1] [TLSv1.1] [TLSv1.2]\fP
-Enables the specified SSL/TLS protocols. Each value should be separated by space.
+Enables the specified SSL/TLS protocols. Each value should be separated by comma.
 SSLv2 is always disabled. At least one protocol should be given to accept TLS connections.
 This parameter is effective only if \fBsecurity_layer\fP is set to \fBtls\fP or \fBnegotiate\fP.
 

@@ -45,6 +45,7 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
     char *item = (char *)NULL;
     char *value = (char *)NULL;
     char cfg_file[256];
+    char *p = (char *)NULL;
     char *tmp = (char *)NULL;
     int tmp_length = 0;
 
@@ -165,31 +166,36 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
         }
         else if (g_strcasecmp(item, "ssl_protocols") == 0)
         {
-            /* put leading/trailing space to properly detect "TLSv1" without regex */
+            /* put leading/trailing comma to properly detect "TLSv1" without regex */
             tmp_length = g_strlen(value) + 3;
             tmp = g_new(char, tmp_length);
-            g_snprintf(tmp, tmp_length, "%s%s%s", " ", value, " ");
+            g_snprintf(tmp, tmp_length, "%s%s%s", ",", value, ",");
+            /* to accept space after comma */
+            while ((p = (char *) g_strchr(tmp, ' ')) != NULL)
+            {
+                *p = ',';
+            }
 
             /* disable all protocols first, enable later */
             client_info->ssl_protocols =
                 SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2;
 
-            if (g_pos(tmp, " TLSv1.2 ") >= 0)
+            if (g_pos(tmp, ",TLSv1.2,") >= 0)
             {
                 log_message(LOG_LEVEL_DEBUG, "TLSv1.2 enabled");
                 client_info->ssl_protocols &= ~SSL_OP_NO_TLSv1_2;
             }
-            if (g_pos(tmp, " TLSv1.1 ") >= 0)
+            if (g_pos(tmp, ",TLSv1.1,") >= 0)
             {
                 log_message(LOG_LEVEL_DEBUG, "TLSv1.1 enabled");
                 client_info->ssl_protocols &= ~SSL_OP_NO_TLSv1_1;
             }
-            if (g_pos(tmp, " TLSv1 ") >= 0)
+            if (g_pos(tmp, ",TLSv1,") >= 0)
             {
                 log_message(LOG_LEVEL_DEBUG, "TLSv1 enabled");
                 client_info->ssl_protocols &= ~SSL_OP_NO_TLSv1;
             }
-            if (g_pos(tmp, " SSLv3 ") >= 0)
+            if (g_pos(tmp, ",SSLv3,") >= 0)
             {
                 log_message(LOG_LEVEL_DEBUG, "SSLv3 enabled");
                 client_info->ssl_protocols &= ~SSL_OP_NO_SSLv3;
