@@ -2387,6 +2387,34 @@ g_htoi(char *str)
 }
 
 /*****************************************************************************/
+/* returns number of bytes copied into out_str */
+int APP_CC
+g_bytes_to_hexstr(const void *bytes, int num_bytes, char *out_str,
+                  int bytes_out_str)
+{
+    int rv;
+    int index;
+    char *lout_str;
+    const tui8 *lbytes;
+
+    rv = 0;
+    lbytes = (const tui8 *) bytes;
+    lout_str = out_str;
+    for (index = 0; index < num_bytes; index++)
+    {
+        if (bytes_out_str < 3)
+        {
+            break;
+        }
+        g_snprintf(lout_str, bytes_out_str, "%2.2x", lbytes[index]);
+        lout_str += 2;
+        bytes_out_str -= 2;
+        rv += 2;
+    }
+    return rv;
+}
+
+/*****************************************************************************/
 int APP_CC
 g_pos(const char *str, const char *to_find)
 {

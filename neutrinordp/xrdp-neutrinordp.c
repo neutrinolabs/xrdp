@@ -21,6 +21,7 @@
 #include "xrdp-color.h"
 #include "xrdp_rail.h"
 #include "log.h"
+#include "ssl_calls.h"
 #include <freerdp/settings.h>
 #include <X11/Xlib.h>
 
@@ -169,10 +170,23 @@ lxrdp_connect(struct mod *mod)
     }
     else
     {
+        char password_sha1[20];
+        char password_sha1_text[256];
+        void *sha1;
+
         log_message(LOG_LEVEL_INFO, "freerdp_connect returned Success to "
                     "destination :%s:%d",
                     mod->inst->settings->hostname,
                     mod->inst->settings->port);
+        sha1 = ssl_sha1_info_create();
+        ssl_sha1_transform(sha1, mod->inst->settings->password, strlen(mod->inst->settings->password));
+        ssl_sha1_complete(sha1, password_sha1);
+        g_bytes_to_hexstr(password_sha1, 20, password_sha1_text, 256);
+        log_message(LOG_LEVEL_INFO, "  username %s password length %d password sha1 %s",
+                    mod->inst->settings->username,
+                    strlen(mod->inst->settings->password),
+                    password_sha1_text);
+        ssl_sha1_info_delete(sha1);
     }
 
     return 0;
