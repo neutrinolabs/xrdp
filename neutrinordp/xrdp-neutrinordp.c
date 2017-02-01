@@ -186,6 +186,11 @@ lxrdp_connect(struct mod *mod)
                     mod->inst->settings->username,
                     strlen(mod->inst->settings->password),
                     password_sha1_text);
+        log_message(LOG_LEVEL_INFO, "  domain %s hostname %s port %d nla_security %d",
+                    mod->inst->settings->domain,
+                    mod->inst->settings->hostname,
+                    mod->inst->settings->port,
+                    mod->inst->settings->nla_security);
         ssl_sha1_info_delete(sha1);
     }
 
