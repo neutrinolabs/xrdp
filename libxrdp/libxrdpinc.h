@@ -64,8 +64,8 @@ struct xrdp_session
 {
     tintptr id;
     struct trans *trans;
-    int (*callback)(tintptr id, int msg, tintptr param1, tintptr param2,
-                    tintptr param3, tintptr param4);
+    int (*callback)(intptr_t id, int msg, intptr_t param1, intptr_t param2,
+                    intptr_t param3, intptr_t param4);
     void *rdp;
     void *orders;
     struct xrdp_client_info *client_info;
