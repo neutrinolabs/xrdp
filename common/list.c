@@ -221,6 +221,6 @@ list_dump_items(struct list *self)
 
     for (index = 0; index < self->count; index++)
     {
-        g_writeln("%d: 0x%lx", index, (long) list_get_item(self, index));
+        g_writeln("%d: %p", index, (void *) list_get_item(self, index));
     }
 }
