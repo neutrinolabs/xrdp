@@ -134,8 +134,9 @@ xrdp_wm_send_pointer(struct xrdp_wm* self, int cache_idx,
 int APP_CC
 xrdp_wm_pointer(struct xrdp_wm* self, char* data, char* mask, int x, int y,
                 int bpp);
-int
-callback(long id, int msg, long param1, long param2, long param3, long param4);
+int DEFAULT_CC
+callback(intptr_t id, int msg, intptr_t param1, intptr_t param2,
+         intptr_t param3, intptr_t param4);
 int APP_CC
 xrdp_wm_delete_all_children(struct xrdp_wm* self);
 int APP_CC

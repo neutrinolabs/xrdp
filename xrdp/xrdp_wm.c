@@ -1744,7 +1744,8 @@ xrdp_wm_process_channel_data(struct xrdp_wm *self,
 /******************************************************************************/
 /* this is the callbacks coming from libxrdp.so */
 int DEFAULT_CC
-callback(long id, int msg, long param1, long param2, long param3, long param4)
+callback(intptr_t id, int msg, intptr_t param1, intptr_t param2,
+         intptr_t param3, intptr_t param4)
 {
     int rv;
     struct xrdp_wm *wm;
