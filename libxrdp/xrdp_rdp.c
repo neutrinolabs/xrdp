@@ -42,11 +42,11 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
     int index = 0;
     struct list *items = (struct list *)NULL;
     struct list *values = (struct list *)NULL;
-    char *item = (char *)NULL;
-    char *value = (char *)NULL;
+    char *item = NULL;
+    char *value = NULL;
     char cfg_file[256];
-    char *p = (char *)NULL;
-    char *tmp = (char *)NULL;
+    char *p = NULL;
+    char *tmp = NULL;
     int tmp_length = 0;
 
     /* initialize (zero out) local variables: */
