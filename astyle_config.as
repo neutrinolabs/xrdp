@@ -8,15 +8,15 @@
 # for C++ files only
 --indent-classes
 
-# Indent 'switch' blocks so that the 'case X:' statements are indented in the switch block. 
+# Indent 'switch' blocks so that the 'case X:' statements are indented in the switch block.
 # The entire case block is indented.
 --indent-switches
 
 # Add extra indentation to namespace blocks. This option has no effect on Java files.
 --indent-namespaces
 
-# Converts tabs into spaces in the non-indentation part of the line. 
---convert-tabs 
+# Converts tabs into spaces in the non-indentation part of the line.
+--convert-tabs
 
 # requires --convert-tabs to work properly
 --indent-preprocessor
@@ -27,17 +27,14 @@
 
 --max-instatement-indent=40
 
-# Pad empty lines around header blocks (e.g. 'if', 'for', 'while'...).
---break-blocks
-
-# Insert space padding around operators. 
+# Insert space padding around operators.
 --pad-oper
 
-# Insert space padding after paren headers only (e.g. 'if', 'for', 'while'...). 
+# Insert space padding after paren headers only (e.g. 'if', 'for', 'while'...).
 --pad-header
 
 
-# Add brackets to unbracketed one line conditional statements (e.g. 'if', 'for', 'while'...). 
+# Add brackets to unbracketed one line conditional statements (e.g. 'if', 'for', 'while'...).
 --add-brackets
 
 --align-pointer=name
@@ -46,12 +43,12 @@
 --suffix=none
 
 # For each directory in the command line, process all subdirectories recursively.
---recursive 
+--recursive
 
 # Preserve the original file's date and time modified.
 --preserve-date
 
-# Formatted files display mode. Display only the files that have been formatted. 
+# Formatted files display mode. Display only the files that have been formatted.
 # Do not display files that are unchanged.
 --formatted
 
