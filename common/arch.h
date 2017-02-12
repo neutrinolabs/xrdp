@@ -84,7 +84,7 @@ typedef int bool_t;
 #define NEED_ALIGN
 #elif defined(__x86__) || defined(__x86_64__) || \
       defined(__AMD64__) || defined(_M_IX86) || defined (_M_AMD64) || \
-      defined(__i386__)
+      defined(__i386__) || defined(__aarch64__)
 #define NO_NEED_ALIGN
 #else
 #warning unknown arch
