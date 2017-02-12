@@ -2283,7 +2283,7 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
                     else
                     {
                         ex = self->wm->client_info->max_unacknowledged_frame_count;
-                        if (self->encoder->frame_id_client + ex >= self->encoder->frame_id_server)
+                        if (self->encoder->frame_id_client + ex > self->encoder->frame_id_server)
                         {
                             if (self->encoder->frame_id_server > self->encoder->frame_id_server_sent)
                             {
@@ -2325,7 +2325,7 @@ xrdp_mm_frame_ack(struct xrdp_mm *self, int frame_id)
     }
     ex = self->wm->client_info->max_unacknowledged_frame_count;
     /* make sure we won't have too many in-flight frames */
-    if (self->encoder->frame_id_client + ex >= self->encoder->frame_id_server)
+    if (self->encoder->frame_id_client + ex > self->encoder->frame_id_server)
     {
         if (self->encoder->frame_id_server > self->encoder->frame_id_server_sent)
         {
