@@ -320,21 +320,21 @@ process_enc_rfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
     mutex = self->mutex;
     event_processed = self->xrdp_encoder_event_processed;
 
-    if ((enc->num_crects > 512) || (enc->num_drects > 512))
+    if ((enc->num_crects > 4096) || (enc->num_drects > 4096))
     {
         return 0;
     }
 
     out_data_bytes = 16 * 1024 * 1024;
-    index = 256 + sizeof(struct rfx_tile) * 512 +
-                  sizeof(struct rfx_rect) * 512;
+    index = 256 + sizeof(struct rfx_tile) * 4096 +
+                  sizeof(struct rfx_rect) * 4096;
     out_data = (char *) g_malloc(out_data_bytes + index, 0);
     if (out_data == 0)
     {
         return 0;
     }
     tiles = (struct rfx_tile *) (out_data + out_data_bytes + 256);
-    rfxrects = (struct rfx_rect *) (tiles + 512);
+    rfxrects = (struct rfx_rect *) (tiles + 4096);
 
     count = enc->num_crects;
     for (index = 0; index < count; index++)
