@@ -200,6 +200,7 @@ config_read_security(int file, struct config_security *sc,
     sc->login_retry = 3;
     sc->ts_users_enable = 0;
     sc->ts_admins_enable = 0;
+    sc->restrict_clipboard = 0;
 
     file_read_section(file, SESMAN_CFG_SECURITY, param_n, param_v);
 
@@ -235,9 +236,14 @@ config_read_security(int file, struct config_security *sc,
             }
         }
         if (0 == g_strcasecmp(buf, SESMAN_CFG_SEC_ALWAYSGROUPCHECK))
-        {
-            sc->ts_always_group_check = g_text2bool((char *)list_get_item(param_v, i));
-        }
+		{
+			sc->ts_always_group_check = g_text2bool((char *)list_get_item(param_v, i));
+		}
+        if (0 == g_strcasecmp(buf, SESMAN_CFG_RESTRICT_CLIPBOARD))
+		{
+			sc->restrict_clipboard = g_text2bool((char *)list_get_item(param_v, i));
+		}
+
     }
 
     /* printing security config */
@@ -245,6 +251,7 @@ config_read_security(int file, struct config_security *sc,
     g_printf("\tAllowRootLogin:       %i\r\n", sc->allow_root);
     g_printf("\tMaxLoginRetry:        %i\r\n", sc->login_retry);
     g_printf("\tAlwaysGroupCheck:     %i\r\n", sc->ts_always_group_check);
+    g_printf("\tRestrictClipboard:    %i\r\n", sc->restrict_clipboard);
 
     if (sc->ts_users_enable)
     {
