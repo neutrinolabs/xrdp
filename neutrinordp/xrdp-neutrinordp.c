@@ -93,79 +93,29 @@ lxrdp_connect(struct mod *mod)
     LLOGLN(10, ("lxrdp_connect:"));
 
     ok = freerdp_connect(mod->inst);
-    LLOGLN(0, ("lxrdp_connect: freerdp_connect returned %d", ok));
+    log_message(LOG_LEVEL_INFO, "lxrdp_connect: freerdp_connect returned %d", ok);
 
     if (!ok)
     {
-        LLOGLN(0, ("Failure to connect"));
-#ifdef ERRORSTART
-
-        if (connectErrorCode != 0)
-        {
-            char buf[128];
-
-            if (connectErrorCode < ERRORSTART)
-            {
-                if (strerror_r(connectErrorCode, buf, 128) != 0)
-                {
-                    g_snprintf(buf, 128, "Errorcode from connect : %d", connectErrorCode);
-                }
-            }
-            else
-            {
-                switch (connectErrorCode)
-                {
-                    case PREECONNECTERROR:
-                        g_snprintf(buf, 128, "The error code from connect is "
-                                 "PREECONNECTERROR");
-                        break;
-                    case UNDEFINEDCONNECTERROR:
-                        g_snprintf(buf, 128, "The error code from connect is "
-                                 "UNDEFINEDCONNECTERROR");
-                        break;
-                    case POSTCONNECTERROR:
-                        g_snprintf(buf, 128, "The error code from connect is "
-                                 "POSTCONNECTERROR");
-                        break;
-                    case DNSERROR:
-                        g_snprintf(buf, 128, "The DNS system generated an error");
-                        break;
-                    case DNSNAMENOTFOUND:
-                        g_snprintf(buf, 128, "The DNS system could not find the "
-                                 "specified name");
-                        break;
-                    case CONNECTERROR:
-                        g_snprintf(buf, 128, "A general connect error was returned");
-                        break;
-                    case MCSCONNECTINITIALERROR:
-                        g_snprintf(buf, 128, "The error code from connect is "
-                                 "MCSCONNECTINITIALERROR");
-                        break;
-                    case TLSCONNECTERROR:
-                        g_snprintf(buf, 128, "Error in TLS handshake");
-                        break;
-                    case AUTHENTICATIONERROR:
-                        g_snprintf(buf, 128, "Authentication error check your password "
-                                 "and username");
-                        break;
-                    case INSUFFICIENTPRIVILEGESERROR:
-						g_snprintf(buf, 128, "Insufficent privileges on target server");
-						break;
-                    default:
-                        g_snprintf(buf, 128, "Unhandled Errorcode from connect : %d",
-                                 connectErrorCode);
-                        break;
-                }
-            }
-            log_message(LOG_LEVEL_INFO,buf);
-            mod->server_msg(mod, buf, 0);
-        }
-
-#endif
-        log_message(LOG_LEVEL_INFO, "freerdp_connect Failed to "
-                    "destination :%s:%d",
+        /* fetch internal error message */
+        tui32 err_code = freerdp_get_last_error(mod->inst->context);
+        char *err_name = g_strdup(freerdp_get_last_error_name(err_code));
+        char *err_string = g_strdup(freerdp_get_last_error_string(err_code));
+        log_message(LOG_LEVEL_ERROR,
+                    "NeutrinoRDP failed to connect to host: %s:%d\n"
+                    "Error Name: %s\n"
+                    "Error Description: %s",
                     mod->inst->settings->hostname,
-                    mod->inst->settings->port);
+                    mod->inst->settings->port,
+                    err_name,
+                    err_string);
+        mod->server_msg(mod, "NeutrinoRDP connection failed.", 0);
+        mod->server_msg(mod, "Hostname:", 0);
+        mod->server_msg(mod, mod->inst->settings->hostname, 0);
+        mod->server_msg(mod, "Error:", 0);
+        mod->server_msg(mod, err_string, 0);
+        g_free(err_name);
+        g_free(err_string);
         return 1;
     }
     else
@@ -1419,7 +1369,7 @@ static void DEFAULT_CC
 lfreerdp_polygon_sc(rdpContext* context, POLYGON_SC_ORDER* polygon_sc)
 {
     struct mod *mod;
-    int i, npoints;
+    int i;
     XPoint points[4];
     int fgcolor;
     int server_bpp, client_bpp;
@@ -1469,8 +1419,6 @@ lfreerdp_polygon_sc(rdpContext* context, POLYGON_SC_ORDER* polygon_sc)
 static void DEFAULT_CC
 lfreerdp_synchronize(rdpContext* context)
 {
-    struct mod *mod;
-    mod = ((struct mod_context *)context)->modi;
     LLOGLN(12, ("lfreerdp_synchronize received - not handled"));
 }
 
