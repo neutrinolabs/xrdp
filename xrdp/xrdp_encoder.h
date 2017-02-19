@@ -14,6 +14,7 @@ struct xrdp_encoder
     int in_codec_mode;
     int codec_id;
     int codec_quality;
+    int max_compressed_bytes;
     tbus xrdp_encoder_event_to_proc;
     tbus xrdp_encoder_event_processed;
     tbus xrdp_encoder_term;
