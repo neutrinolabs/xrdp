@@ -328,8 +328,7 @@ process_enc_rfx(struct xrdp_encoder *self, XRDP_ENC_DATA *enc)
     out_data = NULL;
     out_data_bytes = 0;
 
-    if ((enc->num_crects > 0) && (enc->num_crects <= UINT16_MAX) &&
-        (enc->num_drects > 0) && (enc->num_drects <= UINT16_MAX))
+    if ((enc->num_crects > 0) && (enc->num_drects > 0))
     {
         alloc_bytes = XRDP_SURCMD_PREFIX_BYTES;
         alloc_bytes += self->max_compressed_bytes;
