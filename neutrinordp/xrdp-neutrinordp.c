@@ -1521,11 +1521,12 @@ lfreerdp_pre_connect(freerdp *instance)
         instance->settings->remote_app = 1;
         instance->settings->rail_langbar_supported = 1;
         instance->settings->workarea = 1;
-        instance->settings->performance_flags = PERF_DISABLE_WALLPAPER | PERF_DISABLE_FULLWINDOWDRAG;
+        instance->settings->performance_flags = mod->client_info.rdp5_performanceflags;
         instance->settings->num_icon_caches = mod->client_info.wnd_num_icon_caches;
         instance->settings->num_icon_cache_entries = mod->client_info.wnd_num_icon_cache_entries;
-
-
+        instance->settings->kbd_layout = mod->client_info.keylayout;
+        instance->settings->kbd_type = mod->client_info.keyboard_type;
+        instance->settings->kbd_subtype = mod->client_info.keyboard_subtype;
     }
     else
     {
