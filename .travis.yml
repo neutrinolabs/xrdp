@@ -4,41 +4,104 @@ language: c
 branches:
   except: /^(gh-pages|v[0-9]\..*)/
 
-compiler:
-  - clang
-  - gcc
-  - g++
-
 addons:
   apt:
-    packages:
-      # xrdp
-      - libpam0g-dev
-      - libjpeg-dev
-      - libfuse-dev
-      - libmp3lame-dev
-      - libx11-dev
-      - libxrandr-dev
-      - libpixman-1-dev
+    packages: &common_deps
       - nasm
-      # x11rdp
-      #- flex
-      #- bison
-      #- libxml2-dev
-      #- intltool
-      #- xsltproc
-      #- xutils-dev
-      #- python-libxml2
-      #- g++
-      #- xutils
 
-env:
-  - CONF_FLAGS=""
-  - CONF_FLAGS="--enable-ipv6 --enable-jpeg --enable-fuse --enable-mp3lame
-                --enable-pixman --enable-rfxcodec --enable-painter"
+min_amd64_deps: &min_amd64_deps
+  - *common_deps
+  - libpam0g-dev
+  - libssl-dev
+  - libx11-dev
+  - libxrandr-dev
+
+min_amd64_conf: &min_amd64_conf
+  env:
+    - CONF_FLAGS="--disable-ipv6 --disable-jpeg --disable-fuse --disable-mp3lame
+                  --disable-rfxcodec --disable-painter --disable-pixman"
+  addons:
+    apt:
+      packages:
+        - *min_amd64_deps
+
+max_amd64_deps: &max_amd64_deps
+  - *min_amd64_deps
+  - libfuse-dev
+  - libjpeg-dev
+  - libmp3lame-dev
+  - libpixman-1-dev
+
+max_amd64_conf: &max_amd64_conf
+  env:
+    - CONF_FLAGS="--enable-ipv6 --enable-jpeg --enable-fuse --enable-mp3lame
+                  --enable-rfxcodec --enable-painter --enable-pixman"
+    - DISTCHECK=1
+  addons:
+    apt:
+      packages:
+        - *max_amd64_deps
+
+max_x86_deps: &max_x86_deps
+  - *common_deps
+  - g++-multilib
+  - gcc-multilib
+  - libglu1-mesa-dev:i386
+  - libjpeg-dev:i386
+  - libmp3lame-dev:i386
+  - libpam0g-dev:i386
+  - libssl-dev:i386
+  - libx11-dev:i386
+  - libxext-dev:i386
+  - libxfixes-dev:i386
+  - libxrandr-dev:i386
+  - libxrender-dev:i386
+  - openssl:i386
+
+# No --enable-pixman to allow testing the replacement code
+# No --enable-fuse due to failing libfuse-dev:i386 package install
+max_x86_conf: &max_x86_conf
+  env:
+    - CONF_FLAGS="--enable-ipv6 --enable-jpeg --disable-fuse --enable-mp3lame
+                  --enable-rfxcodec --enable-painter --disable-pixman
+                  --host=i686-linux"
+    - PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig
+    - CFLAGS=-m32
+    - LDFLAGS=-m32
+  addons:
+    apt:
+      packages:
+        - *max_x86_deps
+
+matrix:
+  include:
+
+  # Minimal amd64 build
+  - compiler: gcc
+    << : *min_amd64_conf
+  - compiler: g++
+    << : *min_amd64_conf
+  - compiler: clang
+    << : *min_amd64_conf
+
+  # Maximal amd64 build
+  - compiler: gcc
+    << : *max_amd64_conf
+  - compiler: g++
+    << : *max_amd64_conf
+  - compiler: clang
+    << : *max_amd64_conf
+
+  # Maximal x86 build
+  - compiler: gcc
+    << : *max_x86_conf
+  - compiler: g++
+    << : *max_x86_conf
+  - compiler: clang
+    << : *max_x86_conf
 
 script:
   - ./bootstrap
   - ./configure $CONF_FLAGS
-  - make CFLAGS="-O2 -Wall -Wwrite-strings -Werror"
-  - make distcheck
+  - make CFLAGS="$CFLAGS -O2 -Wall -Wwrite-strings -Werror"
+  - test -z "$DISTCHECK" || make distcheck
