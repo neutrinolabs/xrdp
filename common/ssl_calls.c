@@ -34,6 +34,7 @@
 #include "ssl_calls.h"
 #include "trans.h"
 
+#define SSL_WANT_READ_WRITE_TIMEOUT 100
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 static inline HMAC_CTX *
@@ -726,13 +727,16 @@ ssl_tls_read(struct ssl_tls *tls, char *data, int length)
                 break_flag = 1;
                 break;
 
+            /**
+             * retry when SSL_get_error returns:
+             *     SSL_ERROR_WANT_READ
+             *     SSL_ERROR_WANT_WRITE
+             */
             case SSL_ERROR_WANT_READ:
+                g_sck_can_recv(tls->trans->sck, SSL_WANT_READ_WRITE_TIMEOUT);
+                continue;
             case SSL_ERROR_WANT_WRITE:
-                /**
-                 * retry when SSL_get_error returns:
-                 *     SSL_ERROR_WANT_READ
-                 *     SSL_ERROR_WANT_WRITE
-                 */
+                g_sck_can_send(tls->trans->sck, SSL_WANT_READ_WRITE_TIMEOUT);
                 continue;
 
             default:
@@ -772,13 +776,16 @@ ssl_tls_write(struct ssl_tls *tls, const char *data, int length)
                 break_flag = 1;
                 break;
 
+            /**
+             * retry when SSL_get_error returns:
+             *     SSL_ERROR_WANT_READ
+             *     SSL_ERROR_WANT_WRITE
+             */
             case SSL_ERROR_WANT_READ:
+                g_sck_can_recv(tls->trans->sck, SSL_WANT_READ_WRITE_TIMEOUT);
+                continue;
             case SSL_ERROR_WANT_WRITE:
-                /**
-                 * retry when SSL_get_error returns:
-                 *     SSL_ERROR_WANT_READ
-                 *     SSL_ERROR_WANT_WRITE
-                 */
+                g_sck_can_send(tls->trans->sck, SSL_WANT_READ_WRITE_TIMEOUT);
                 continue;
 
             default:
