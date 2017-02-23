@@ -591,8 +591,8 @@ log_message(const enum logLevels lvl, const char *msg, ...)
     {
         /* log to syslog*/
         /* %s fix compiler warning 'not a string literal' */
-        syslog(internal_log_xrdp2syslog(lvl), "(%d)(%ld)%s", g_getpid(),
-               (long) tc_get_threadid(), buff + 20);
+        syslog(internal_log_xrdp2syslog(lvl), "(%d)(%lld)%s", g_getpid(),
+               (long long) tc_get_threadid(), buff + 20);
     }
 
     if (lvl <= g_staticLogConfig->log_level)
