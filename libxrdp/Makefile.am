@@ -8,6 +8,8 @@ AM_CPPFLAGS = \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
   -I$(top_srcdir)/common
 
+AM_CFLAGS = $(OPENSSL_CFLAGS)
+
 AM_LDFLAGS =
 
 LIBXRDP_EXTRA_LIBS =
