@@ -2274,6 +2274,7 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
                 if (enc_done->last)
                 {
                     LLOGLN(10, ("xrdp_mm_check_wait_objs: last set"));
+                    self->encoder->frame_id_server = enc_done->enc->frame_id;
                     if (use_frame_acks == 0)
                     {
                         self->mod->mod_frame_ack(self->mod,
@@ -2282,7 +2283,7 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
                     }
                     else
                     {
-                        ex = self->wm->client_info->max_unacknowledged_frame_count;
+                        ex = self->encoder->frames_in_flight;
                         if (self->encoder->frame_id_client + ex > self->encoder->frame_id_server)
                         {
                             if (self->encoder->frame_id_server > self->encoder->frame_id_server_sent)
@@ -2323,9 +2324,9 @@ xrdp_mm_frame_ack(struct xrdp_mm *self, int frame_id)
     {
         return 1;
     }
-    ex = self->wm->client_info->max_unacknowledged_frame_count;
+    ex = self->encoder->frames_in_flight;
     /* make sure we won't have too many in-flight frames */
-    if (self->encoder->frame_id_client + ex >= self->encoder->frame_id_server)
+    if (self->encoder->frame_id_client + ex > self->encoder->frame_id_server)
     {
         if (self->encoder->frame_id_server > self->encoder->frame_id_server_sent)
         {
@@ -2597,7 +2598,6 @@ server_paint_rects(struct xrdp_mod* mod, int num_drects, short *drects,
         enc_data->height = height;
         enc_data->flags = flags;
         enc_data->frame_id = frame_id;
-        mm->encoder->frame_id_server = frame_id;
         if (width == 0 || height == 0)
         {
             LLOGLN(10, ("server_paint_rects: error"));

@@ -136,6 +136,9 @@ xrdp_encoder_create(struct xrdp_mm *mm)
     g_snprintf(buf, 1024, "xrdp_%8.8x_encoder_term", pid);
     self->xrdp_encoder_term = g_create_wait_obj(buf);
     self->max_compressed_bytes = client_info->max_fastpath_frag_bytes & ~15;
+    self->frames_in_flight = client_info->max_unacknowledged_frame_count;
+    /* make sure frames_in_flight is at least 1 */
+    self->frames_in_flight = MAX(self->frames_in_flight, 1);
 
     /* create thread to process messages */
     tc_thread_create(proc_enc_msg, self);

@@ -26,6 +26,7 @@ struct xrdp_encoder
     int frame_id_client; /* last frame id received from client */
     int frame_id_server; /* last frame id received from Xorg */
     int frame_id_server_sent;
+    int frames_in_flight;
 };
 
 /* used when scheduling tasks in xrdp_encoder.c */
