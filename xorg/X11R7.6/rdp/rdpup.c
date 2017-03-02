@@ -1242,7 +1242,7 @@ rdpup_init(void)
             return 0;
         }
 
-        g_chmod_hex("/tmp/.xrdp", 0x1777);
+        g_chmod_hex("/tmp/.xrdp", 0x3777);
     }
 
     i = atoi(display);
