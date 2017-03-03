@@ -17,6 +17,10 @@
  * limitations under the License.
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "xrdp-neutrinordp.h"
 #include "xrdp-color.h"
 #include "xrdp_rail.h"

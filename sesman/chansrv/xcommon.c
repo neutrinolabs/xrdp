@@ -16,6 +16,10 @@
  * limitations under the License.
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include <X11/Xlib.h>
 #include "arch.h"
 #include "parse.h"

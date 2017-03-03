@@ -23,6 +23,10 @@
  *
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include <stdio.h>
 #include "log.h"
 #include "os_calls.h"

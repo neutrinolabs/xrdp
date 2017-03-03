@@ -159,6 +159,10 @@ x-special/gnome-copied-files
 
 */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/extensions/Xfixes.h>

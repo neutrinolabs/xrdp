@@ -18,6 +18,10 @@
  * libvnc
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "vnc.h"
 #include "log.h"
 #include "trans.h"

@@ -18,6 +18,10 @@
  * read a config file
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "arch.h"
 #include "os_calls.h"
 #include "list.h"

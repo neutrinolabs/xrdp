@@ -24,6 +24,10 @@ RDP 6.0 Bitmap Compression
 http://msdn.microsoft.com/en-us/library/cc241877.aspx
 */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "libxrdp.h"
 
 #define FLAGS_RLE     0x10

@@ -21,6 +21,10 @@
  * maybe it should be called xrdp_drawable
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "xrdp.h"
 #include "log.h"
 #include "crc16.h"

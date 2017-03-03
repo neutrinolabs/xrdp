@@ -24,6 +24,10 @@
  *
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "libscp_v0.h"
 
 #include "os_calls.h"
