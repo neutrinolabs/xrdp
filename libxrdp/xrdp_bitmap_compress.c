@@ -20,6 +20,10 @@
  * This does not do 32 bpp compression, nscodec, rfx, etc
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "libxrdp.h"
 
 #define BC_MAX_BYTES (16 * 1024)

@@ -25,6 +25,10 @@
 
 */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "os_calls.h"
 #include "ssl_calls.h"
 #include "arch.h"

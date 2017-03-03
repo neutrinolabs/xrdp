@@ -17,6 +17,10 @@
  * limitations under the License.
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #define LOG_LEVEL 1
 #define LLOG(_level, _args) \
     do { if (_level < LOG_LEVEL) { ErrorF _args ; } } while (0)

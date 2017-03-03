@@ -43,6 +43,10 @@
 char g_fuse_root_path[256] = "";
 char g_fuse_clipboard_path[256] = ""; /* for clipboard use */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #ifndef XRDP_FUSE
 
 /******************************************************************************

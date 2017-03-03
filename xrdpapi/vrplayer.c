@@ -26,6 +26,10 @@
  * run vrplayer:        vrplayer <media file>
  *****************************************************************************/
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #ifdef __WIN32__
 #include <mstsapi.h>
 #endif

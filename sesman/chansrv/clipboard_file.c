@@ -22,6 +22,10 @@
  * CLIPRDR_FILEDESCRIPTOR
  * http://msdn.microsoft.com/en-us/library/ff362447%28prot.20%29.aspx */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include <sys/time.h>
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>

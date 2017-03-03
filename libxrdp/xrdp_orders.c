@@ -18,6 +18,10 @@
  * orders
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "libxrdp.h"
 
 #if defined(XRDP_NEUTRINORDP)

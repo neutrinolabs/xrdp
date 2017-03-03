@@ -19,6 +19,10 @@
  /* FIFO implementation to store a pointer to a user struct */
 
 /* module based logging */
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #define MODULE_NAME "FIFO      "
 #define LOCAL_DEBUG
 

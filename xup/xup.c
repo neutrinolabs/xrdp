@@ -18,6 +18,10 @@
  * libxup main file
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "xup.h"
 #include "log.h"
 #include "trans.h"

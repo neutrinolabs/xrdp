@@ -26,6 +26,10 @@
    http://msdn.microsoft.com/en-us/library/cc242568(v=prot.20).aspx
 */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/extensions/Xrandr.h>

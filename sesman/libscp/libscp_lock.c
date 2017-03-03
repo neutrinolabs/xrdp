@@ -19,6 +19,10 @@
  * linux only
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "libscp_lock.h"
 #include "thread_calls.h"
 

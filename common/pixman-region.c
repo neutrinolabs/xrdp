@@ -63,6 +63,10 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #define PIXREGION_NIL(reg) ((reg)->data && !(reg)->data->numRects)
 /* not a region */
 #define PIXREGION_NAR(reg)      ((reg)->data == pixman_broken_data)

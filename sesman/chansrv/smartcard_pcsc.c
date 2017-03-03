@@ -23,6 +23,10 @@
  * pcsc lib and daemon write struct on unix domain socket for communication
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #define JAY_TODO_CONTEXT    0
 #define JAY_TODO_WIDE       1
 
