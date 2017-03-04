@@ -216,7 +216,7 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
         }
         else if (g_strcasecmp(item, "tls_ciphers") == 0)
         {
-            g_strcpy(client_info->tls_ciphers, value);
+            client_info->tls_ciphers = g_strdup(value);
         }
         else if (g_strcasecmp(item, "security_layer") == 0)
         {
@@ -405,6 +405,7 @@ xrdp_rdp_delete(struct xrdp_rdp *self)
 #if defined(XRDP_NEUTRINORDP)
     rfx_context_free((RFX_CONTEXT *)(self->rfx_enc));
 #endif
+    g_free(self->client_info.tls_ciphers);
     g_free(self);
 }
 
