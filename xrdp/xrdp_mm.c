@@ -2165,6 +2165,28 @@ xrdp_mm_check_chan(struct xrdp_mm *self)
 }
 
 /*****************************************************************************/
+static int APP_CC
+xrdp_mm_update_module_frame_ack(struct xrdp_mm *self)
+{
+    int fif;
+    struct xrdp_encoder *encoder;
+
+    encoder = self->encoder;
+    fif = encoder->frames_in_flight;
+    if (encoder->frame_id_client + fif > encoder->frame_id_server)
+    {
+        if (encoder->frame_id_server > encoder->frame_id_server_sent)
+        {
+            LLOGLN(10, ("xrdp_mm_update_module_ack: frame_id_server %d",
+                   encoder->frame_id_server));
+            encoder->frame_id_server_sent = encoder->frame_id_server;
+            self->mod->mod_frame_ack(self->mod, 0, encoder->frame_id_server);
+        }
+    }
+    return 0;
+}
+
+/*****************************************************************************/
 int APP_CC
 xrdp_mm_check_wait_objs(struct xrdp_mm *self)
 {
@@ -2175,7 +2197,6 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
     int cx;
     int cy;
     int use_frame_acks;
-    int ex;
 
     if (self == 0)
     {
@@ -2274,7 +2295,6 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
                 if (enc_done->last)
                 {
                     LLOGLN(10, ("xrdp_mm_check_wait_objs: last set"));
-                    self->encoder->frame_id_server = enc_done->enc->frame_id;
                     if (use_frame_acks == 0)
                     {
                         self->mod->mod_frame_ack(self->mod,
@@ -2283,16 +2303,8 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
                     }
                     else
                     {
-                        ex = self->encoder->frames_in_flight;
-                        if (self->encoder->frame_id_client + ex > self->encoder->frame_id_server)
-                        {
-                            if (self->encoder->frame_id_server > self->encoder->frame_id_server_sent)
-                            {
-                                LLOGLN(10, ("xrdp_mm_check_wait_objs: 1 -- %d", self->encoder->frame_id_server));
-                                self->encoder->frame_id_server_sent = self->encoder->frame_id_server;
-                                self->mod->mod_frame_ack(self->mod, 0, self->encoder->frame_id_server);
-                            }
-                        }
+                        self->encoder->frame_id_server = enc_done->enc->frame_id;
+                        xrdp_mm_update_module_frame_ack(self);
                     }
                     g_free(enc_done->enc->drects);
                     g_free(enc_done->enc->crects);
@@ -2315,26 +2327,24 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
 int APP_CC
 xrdp_mm_frame_ack(struct xrdp_mm *self, int frame_id)
 {
-    int ex;
+    struct xrdp_encoder *encoder;
 
-    LLOGLN(10, ("xrdp_mm_frame_ack: incoming %d, client %d, server %d", frame_id,
-        self->encoder->frame_id_client, self->encoder->frame_id_server));
-    self->encoder->frame_id_client = frame_id;
+    LLOGLN(10, ("xrdp_mm_frame_ack:"));
     if (self->wm->client_info->use_frame_acks == 0)
     {
         return 1;
     }
-    ex = self->encoder->frames_in_flight;
-    /* make sure we won't have too many in-flight frames */
-    if (self->encoder->frame_id_client + ex > self->encoder->frame_id_server)
+    encoder = self->encoder;
+    LLOGLN(10, ("xrdp_mm_frame_ack: incoming %d, client %d, server %d",
+           frame_id, encoder->frame_id_client, encoder->frame_id_server));
+    if (frame_id < 0)
     {
-        if (self->encoder->frame_id_server > self->encoder->frame_id_server_sent)
-        {
-            LLOGLN(10, ("xrdp_mm_frame_ack: frame_id_server %d", self->encoder->frame_id_server));
-            self->encoder->frame_id_server_sent = self->encoder->frame_id_server;
-            self->mod->mod_frame_ack(self->mod, 0, self->encoder->frame_id_server);
-        }
+        /* if frame_id == -1 ack all sent frames */
+        encoder->frame_id_client = encoder->frame_id_server;
     }
+    /* frame acks can come out of order so ignore older one */
+    encoder->frame_id_client = MAX(frame_id, encoder->frame_id_client);
+    xrdp_mm_update_module_frame_ack(self);
     return 0;
 }
 
