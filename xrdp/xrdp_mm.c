@@ -2199,7 +2199,7 @@ xrdp_mm_process_enc_done(struct xrdp_mm *self)
     while (1)
     {
         tc_mutex_lock(self->encoder->mutex);
-        enc_done = (XRDP_ENC_DATA_DONE*)
+        enc_done = (XRDP_ENC_DATA_DONE *)
                    fifo_remove_item(self->encoder->fifo_processed);
         tc_mutex_unlock(self->encoder->mutex);
         if (enc_done == NULL)
@@ -2265,7 +2265,7 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
 
     rv = 0;
 
-    if ((self->sesman_trans != 0) && self->sesman_trans_up)
+    if ((self->sesman_trans != NULL) && self->sesman_trans_up)
     {
         if (trans_check_wait_objs(self->sesman_trans) != 0)
         {
@@ -2278,7 +2278,7 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
         }
     }
 
-    if ((self->chan_trans != 0) && self->chan_trans_up)
+    if ((self->chan_trans != NULL) && self->chan_trans_up)
     {
         if (trans_check_wait_objs(self->chan_trans) != 0)
         {
@@ -2286,9 +2286,9 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
         }
     }
 
-    if (self->mod != 0)
+    if (self->mod != NULL)
     {
-        if (self->mod->mod_check_wait_objs != 0)
+        if (self->mod->mod_check_wait_objs != NULL)
         {
             rv = self->mod->mod_check_wait_objs(self->mod);
         }
@@ -2297,7 +2297,7 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
     if (self->delete_sesman_trans)
     {
         trans_delete(self->sesman_trans);
-        self->sesman_trans = 0;
+        self->sesman_trans = NULL;
         self->sesman_trans_up = 0;
         self->delete_sesman_trans = 0;
     }
@@ -2305,12 +2305,12 @@ xrdp_mm_check_wait_objs(struct xrdp_mm *self)
     if (self->delete_chan_trans)
     {
         trans_delete(self->chan_trans);
-        self->chan_trans = 0;
+        self->chan_trans = NULL;
         self->chan_trans_up = 0;
         self->delete_chan_trans = 0;
     }
 
-    if (self->encoder != 0)
+    if (self->encoder != NULL)
     {
         if (g_is_wait_obj_set(self->encoder->xrdp_encoder_event_processed))
         {
@@ -2336,13 +2336,19 @@ xrdp_mm_frame_ack(struct xrdp_mm *self, int frame_id)
     encoder = self->encoder;
     LLOGLN(10, ("xrdp_mm_frame_ack: incoming %d, client %d, server %d",
            frame_id, encoder->frame_id_client, encoder->frame_id_server));
-    if (frame_id < 0)
+    if ((frame_id < 0) || (frame_id > encoder->frame_id_server))
     {
-        /* if frame_id == -1 ack all sent frames */
+        /* if frame_id is negative or bigger then what server last sent
+           just ack all sent frames */
+        /* some clients can send big number just to clear all
+           pending frames */
         encoder->frame_id_client = encoder->frame_id_server;
     }
-    /* frame acks can come out of order so ignore older one */
-    encoder->frame_id_client = MAX(frame_id, encoder->frame_id_client);
+    else
+    {
+        /* frame acks can come out of order so ignore older one */
+        encoder->frame_id_client = MAX(frame_id, encoder->frame_id_client);
+    }
     xrdp_mm_update_module_frame_ack(self);
     return 0;
 }
