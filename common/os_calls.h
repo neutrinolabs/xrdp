@@ -109,6 +109,7 @@ int      g_mkdir(const char* dirname);
 char*    g_get_current_dir(char* dirname, int maxlen);
 int      g_set_current_dir(const char *dirname);
 int      g_file_exist(const char* filename);
+int      g_file_readable(const char *filename);
 int      g_directory_exist(const char* dirname);
 int      g_create_dir(const char* dirname);
 int      g_create_path(const char* path);
