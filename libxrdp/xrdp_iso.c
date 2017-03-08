@@ -78,12 +78,12 @@ xrdp_iso_negotiate_security(struct xrdp_iso *self)
         case PROTOCOL_SSL:
             if (self->requestedProtocol & PROTOCOL_SSL)
             {
-
-                if(!g_file_exist(client_info->certificate) ||
-                   !g_file_exist(client_info->key_file))
+                if (!g_file_readable(client_info->certificate) ||
+                    !g_file_readable(client_info->key_file))
                 {
-                    /* certificate file doesn't exist */
-                    LLOGLN(0, ("xrdp_iso_negotiate_security: TLS certificate not found on server"));
+                    /* certificate or privkey is not readable */
+                    log_message(LOG_LEVEL_DEBUG, "No readable certificates or "
+                                "private keys, cannot accept TLS connections");
                     self->failureCode = SSL_CERT_NOT_ON_SERVER;
                     rv = 1; /* error */
                 }
@@ -102,8 +102,8 @@ xrdp_iso_negotiate_security(struct xrdp_iso *self)
         case PROTOCOL_HYBRID_EX:
         default:
             if ((self->requestedProtocol & PROTOCOL_SSL) &&
-                g_file_exist(client_info->certificate) &&
-                g_file_exist(client_info->key_file))
+                g_file_readable(client_info->certificate) &&
+                g_file_readable(client_info->key_file))
             {
                 /* that's a patch since we don't support CredSSP for now */
                 self->selectedProtocol = PROTOCOL_SSL;
