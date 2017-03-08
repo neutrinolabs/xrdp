@@ -102,14 +102,14 @@ lxrdp_connect(struct mod *mod)
         char *err_name = g_strdup(freerdp_get_last_error_name(err_code));
         char *err_string = g_strdup(freerdp_get_last_error_string(err_code));
         log_message(LOG_LEVEL_ERROR,
-                    "NeutrinoRDP failed to connect to host: %s:%d\n"
+                    "Osirium: failed to connect to host: %s:%d\n"
                     "Error Name: %s\n"
                     "Error Description: %s",
                     mod->inst->settings->hostname,
                     mod->inst->settings->port,
                     err_name,
                     err_string);
-        mod->server_msg(mod, "NeutrinoRDP connection failed.", 0);
+        mod->server_msg(mod, "Osirium: connection failed.", 0);
         mod->server_msg(mod, "Hostname:", 0);
         mod->server_msg(mod, mod->inst->settings->hostname, 0);
         mod->server_msg(mod, "Error:", 0);
