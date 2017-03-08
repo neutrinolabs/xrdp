@@ -212,6 +212,7 @@ xrdp_rdp_read_config(struct xrdp_client_info *client_info)
                             "At least one protocol should be enabled to accept "
                             "TLS connections.");
             }
+            g_free(tmp);
         }
         else if (g_strcasecmp(item, "tls_ciphers") == 0)
         {
