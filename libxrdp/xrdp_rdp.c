@@ -882,9 +882,7 @@ xrdp_rdp_incoming(struct xrdp_rdp *self)
     g_strncpy(self->client_info.client_port, iso->trans->port,
               sizeof(self->client_info.client_port) - 1);
 
-    /* log TLS version and cipher when TLS is used */
-    /* TODO: client_addr, client_port is empty when IPv6 enabled */
-
+    /* log TLS version and cipher of TLS connections */
     if (iso->selectedProtocol > PROTOCOL_RDP)
     {
         log_message(LOG_LEVEL_INFO,
@@ -894,6 +892,7 @@ xrdp_rdp_incoming(struct xrdp_rdp *self)
                     iso->trans->ssl_protocol,
                     iso->trans->cipher_name);
     }
+    /* log non-TLS connections */
     else
     {
         log_message(LOG_LEVEL_INFO,
