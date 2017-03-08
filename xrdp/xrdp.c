@@ -635,6 +635,7 @@ main(int argc, char **argv)
     }
 
     g_free(startup_params);
+    log_end();
     g_deinit();
     return 0;
 }
