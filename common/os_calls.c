@@ -2234,6 +2234,18 @@ g_file_exist(const char *filename)
 }
 
 /*****************************************************************************/
+/* returns boolean, non zero if the file is readable */
+int
+g_file_readable(const char *filename)
+{
+#if defined(_WIN32)
+    return 0; /* TODO: what should be done here? */
+#else
+    return access(filename, R_OK) == 0;
+#endif
+}
+
+/*****************************************************************************/
 /* returns boolean, non zero if the directory exists */
 int
 g_directory_exist(const char *dirname)
