@@ -38,10 +38,10 @@ typedef struct fifo
     int        auto_free;
 } FIFO;
 
-FIFO * APP_CC fifo_create(void);
-void   APP_CC fifo_delete(FIFO *self);
-int    APP_CC fifo_add_item(FIFO *self, void *item);
-void * APP_CC fifo_remove_item(FIFO *self);
-int    APP_CC fifo_is_empty(FIFO *self);
+FIFO * fifo_create(void);
+void   fifo_delete(FIFO *self);
+int    fifo_add_item(FIFO *self, void *item);
+void * fifo_remove_item(FIFO *self);
+int    fifo_is_empty(FIFO *self);
 
 #endif

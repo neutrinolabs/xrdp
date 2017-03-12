@@ -31,14 +31,14 @@ FUSE_DATA *devredir_fuse_data_peek(IRP *irp);
 FUSE_DATA *devredir_fuse_data_dequeue(IRP *irp);
 int   devredir_fuse_data_enqueue(IRP *irp, void *vp);
 
-int APP_CC dev_redir_init(void);
-int APP_CC dev_redir_deinit(void);
+int dev_redir_init(void);
+int dev_redir_deinit(void);
 
-int APP_CC dev_redir_data_in(struct stream* s, int chan_id, int chan_flags,
+int dev_redir_data_in(struct stream* s, int chan_id, int chan_flags,
                              int length, int total_length);
 
-int APP_CC dev_redir_get_wait_objs(tbus* objs, int* count, int* timeout);
-int APP_CC dev_redir_check_wait_objs(void);
+int dev_redir_get_wait_objs(tbus* objs, int* count, int* timeout);
+int dev_redir_check_wait_objs(void);
 
 void dev_redir_send_server_core_cap_req(void);
 void dev_redir_send_server_clientID_confirm(void);
@@ -105,11 +105,11 @@ int devredir_file_close(void *fusep, tui32 device_id, tui32 file_id);
 int devredir_file_read(void *fusep, tui32 device_id, tui32 FileId,
                         tui32 Length, tui64 Offset);
 
-int APP_CC
+int
 dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
                      const char *buf, int Length, tui64 Offset);
 
-int APP_CC
+int
 devredir_rmdir_or_file(void *fusep, tui32 device_id, const char *path, int mode);
 
 /*

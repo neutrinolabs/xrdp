@@ -24,7 +24,7 @@
 #include "libxrdp.h"
 
 /*****************************************************************************/
-struct xrdp_fastpath *APP_CC
+struct xrdp_fastpath *
 xrdp_fastpath_create(struct xrdp_sec *owner, struct trans *trans)
 {
     struct xrdp_fastpath *self;
@@ -39,7 +39,7 @@ xrdp_fastpath_create(struct xrdp_sec *owner, struct trans *trans)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 xrdp_fastpath_delete(struct xrdp_fastpath *self)
 {
     if (self == 0)
@@ -51,14 +51,14 @@ xrdp_fastpath_delete(struct xrdp_fastpath *self)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 xrdp_fastpath_reset(struct xrdp_fastpath *self)
 {
     return 0;
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
 {
     int fp_hdr;
@@ -102,7 +102,7 @@ xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s)
 
 /*****************************************************************************/
 /* no fragmentation */
-int APP_CC
+int
 xrdp_fastpath_init(struct xrdp_fastpath *self, struct stream *s)
 {
     int bytes;
@@ -117,7 +117,7 @@ xrdp_fastpath_init(struct xrdp_fastpath *self, struct stream *s)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_fastpath_session_callback(struct xrdp_fastpath *self, int msg,
                                long param1, long param2,
                                long param3, long param4)
@@ -138,7 +138,7 @@ xrdp_fastpath_session_callback(struct xrdp_fastpath *self, int msg,
 
 /*****************************************************************************/
 /* no fragmentation */
-int APP_CC
+int
 xrdp_fastpath_send(struct xrdp_fastpath *self, struct stream *s)
 {
     if (trans_write_copy_s(self->trans, s) != 0)
@@ -151,7 +151,7 @@ xrdp_fastpath_send(struct xrdp_fastpath *self, struct stream *s)
 
 /*****************************************************************************/
 /* FASTPATH_INPUT_EVENT_SCANCODE */
-static int APP_CC
+static int
 xrdp_fastpath_process_EVENT_SCANCODE(struct xrdp_fastpath *self,
                                      int eventFlags, struct stream *s)
 {
@@ -185,7 +185,7 @@ xrdp_fastpath_process_EVENT_SCANCODE(struct xrdp_fastpath *self,
 
 /*****************************************************************************/
 /* FASTPATH_INPUT_EVENT_MOUSE */
-static int APP_CC
+static int
 xrdp_fastpath_process_EVENT_MOUSE(struct xrdp_fastpath *self,
                                   int eventFlags, struct stream *s)
 {
@@ -215,7 +215,7 @@ xrdp_fastpath_process_EVENT_MOUSE(struct xrdp_fastpath *self,
 
 /*****************************************************************************/
 /* FASTPATH_INPUT_EVENT_MOUSEX */
-static int APP_CC
+static int
 xrdp_fastpath_process_EVENT_MOUSEX(struct xrdp_fastpath *self,
                                    int eventFlags, struct stream *s)
 {
@@ -245,7 +245,7 @@ xrdp_fastpath_process_EVENT_MOUSEX(struct xrdp_fastpath *self,
 
 /*****************************************************************************/
 /* FASTPATH_INPUT_EVENT_SYNC */
-static int APP_CC
+static int
 xrdp_fastpath_process_EVENT_SYNC(struct xrdp_fastpath *self,
                                  int eventFlags, struct stream *s)
 {
@@ -265,7 +265,7 @@ xrdp_fastpath_process_EVENT_SYNC(struct xrdp_fastpath *self,
 
 /*****************************************************************************/
 /* FASTPATH_INPUT_EVENT_UNICODE */
-static int APP_CC
+static int
 xrdp_fastpath_process_EVENT_UNICODE(struct xrdp_fastpath *self,
                                     int eventFlags, struct stream *s)
 {
@@ -297,7 +297,7 @@ xrdp_fastpath_process_EVENT_UNICODE(struct xrdp_fastpath *self,
 
 /*****************************************************************************/
 /* FASTPATH_INPUT_EVENT */
-int APP_CC
+int
 xrdp_fastpath_process_input_event(struct xrdp_fastpath *self,
                                   struct stream *s)
 {

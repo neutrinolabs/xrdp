@@ -26,7 +26,7 @@
 
 /*****************************************************************************/
 /* return error */
-int DEFAULT_CC
+int
 lib_mod_start(struct mod *mod, int w, int h, int bpp)
 {
     LIB_DEBUG(mod, "in lib_mod_start");
@@ -39,7 +39,7 @@ lib_mod_start(struct mod *mod, int w, int h, int bpp)
 
 /******************************************************************************/
 /* return error */
-int DEFAULT_CC
+int
 lib_mod_connect(struct mod *mod)
 {
     LIB_DEBUG(mod, "in lib_mod_connect");
@@ -49,7 +49,7 @@ lib_mod_connect(struct mod *mod)
 
 /******************************************************************************/
 /* return error */
-int DEFAULT_CC
+int
 lib_mod_event(struct mod *mod, int msg, long param1, long param2,
               long param3, long param4)
 {
@@ -60,7 +60,7 @@ lib_mod_event(struct mod *mod, int msg, long param1, long param2,
 
 /******************************************************************************/
 /* return error */
-int DEFAULT_CC
+int
 lib_mod_signal(struct mod *mod)
 {
     LIB_DEBUG(mod, "in lib_mod_signal");
@@ -70,7 +70,7 @@ lib_mod_signal(struct mod *mod)
 
 /******************************************************************************/
 /* return error */
-int DEFAULT_CC
+int
 lib_mod_end(struct mod *mod)
 {
     return 0;
@@ -78,7 +78,7 @@ lib_mod_end(struct mod *mod)
 
 /******************************************************************************/
 /* return error */
-int DEFAULT_CC
+int
 lib_mod_set_param(struct mod *mod, const char *name, const char *value)
 {
     return 0;

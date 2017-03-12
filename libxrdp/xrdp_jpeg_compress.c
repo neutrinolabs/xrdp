@@ -35,7 +35,7 @@
 #include "log.h"
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_jpeg_compress(void *handle, char *in_data, int width, int height,
                    struct stream *s, int bpp, int byte_limit,
                    int start_line, struct stream *temp_s,
@@ -118,7 +118,7 @@ xrdp_jpeg_compress(void *handle, char *in_data, int width, int height,
  * frame buffer (inp_data)
  *****************************************************************************/
 
-int APP_CC
+int
 xrdp_codec_jpeg_compress(void *handle,
                          int   format,   /* input data format */
                          char *inp_data, /* input data */
@@ -198,7 +198,7 @@ xrdp_codec_jpeg_compress(void *handle,
 }
 
 /*****************************************************************************/
-void *APP_CC
+void *
 xrdp_jpeg_init(void)
 {
     tjhandle tj_han;
@@ -208,7 +208,7 @@ xrdp_jpeg_init(void)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_jpeg_deinit(void *handle)
 {
     tjhandle tj_han;
@@ -243,7 +243,7 @@ struct mydata_comp
 
 /*****************************************************************************/
 /* called at beginning */
-static void DEFAULT_CC
+static void
 my_init_destination(j_compress_ptr cinfo)
 {
     struct mydata_comp *md;
@@ -257,7 +257,7 @@ my_init_destination(j_compress_ptr cinfo)
 
 /*****************************************************************************/
 /* called when buffer is full and we need more space */
-static int DEFAULT_CC
+static int
 my_empty_output_buffer(j_compress_ptr cinfo)
 {
     struct mydata_comp *md;
@@ -274,7 +274,7 @@ my_empty_output_buffer(j_compress_ptr cinfo)
 
 /*****************************************************************************/
 /* called at end */
-static void DEFAULT_CC
+static void
 my_term_destination(j_compress_ptr cinfo)
 {
     struct mydata_comp *md;
@@ -286,7 +286,7 @@ my_term_destination(j_compress_ptr cinfo)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 jp_do_compress(JOCTET *data, int width, int height, int bpp, int quality,
                JOCTET *comp_data, int *comp_data_bytes)
 {
@@ -353,7 +353,7 @@ jp_do_compress(JOCTET *data, int width, int height, int bpp, int quality,
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 jpeg_compress(char *in_data, int width, int height,
               struct stream *s, struct stream *temp_s, int bpp,
               int byte_limit, int e, int quality)
@@ -411,7 +411,7 @@ jpeg_compress(char *in_data, int width, int height,
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_jpeg_compress(void *handle, char *in_data, int width, int height,
                    struct stream *s, int bpp, int byte_limit,
                    int start_line, struct stream *temp_s,
@@ -423,7 +423,7 @@ xrdp_jpeg_compress(void *handle, char *in_data, int width, int height,
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_codec_jpeg_compress(void *handle, int format, char *inp_data, int width,
                          int height, int stride, int x, int y, int cx, int cy,
                          int quality, char *out_data, int *io_len)
@@ -432,14 +432,14 @@ xrdp_codec_jpeg_compress(void *handle, int format, char *inp_data, int width,
 }
 
 /*****************************************************************************/
-void *APP_CC
+void *
 xrdp_jpeg_init(void)
 {
     return 0;
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_jpeg_deinit(void *handle)
 {
     return 0;
@@ -448,7 +448,7 @@ xrdp_jpeg_deinit(void *handle)
 #else
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_jpeg_compress(void *handle, char *in_data, int width, int height,
                    struct stream *s, int bpp, int byte_limit,
                    int start_line, struct stream *temp_s,
@@ -458,7 +458,7 @@ xrdp_jpeg_compress(void *handle, char *in_data, int width, int height,
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_codec_jpeg_compress(void *handle, int format, char *inp_data, int width,
                          int height, int stride, int x, int y, int cx, int cy,
                          int quality, char *out_data, int *io_len)
@@ -467,14 +467,14 @@ xrdp_codec_jpeg_compress(void *handle, int format, char *inp_data, int width,
 }
 
 /*****************************************************************************/
-void *APP_CC
+void *
 xrdp_jpeg_init(void)
 {
     return 0;
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_jpeg_deinit(void *handle)
 {
     return 0;

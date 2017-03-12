@@ -648,7 +648,7 @@
     } while (0)
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_bitmap_compress(char *in_data, int width, int height,
                      struct stream *s, int bpp, int byte_limit,
                      int start_line, struct stream *temp_s,

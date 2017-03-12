@@ -62,9 +62,9 @@ struct xrdp_enc_data_done
 
 typedef struct xrdp_enc_data_done XRDP_ENC_DATA_DONE;
 
-struct xrdp_encoder *APP_CC
+struct xrdp_encoder *
 xrdp_encoder_create(struct xrdp_mm *mm);
-void APP_CC
+void
 xrdp_encoder_delete(struct xrdp_encoder *self);
 THREAD_RV THREAD_CC
 proc_enc_msg(void *arg);

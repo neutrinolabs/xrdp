@@ -27,7 +27,7 @@
 #include "list16.h"
 
 /*****************************************************************************/
-struct list16 *APP_CC
+struct list16 *
 list16_create(void)
 {
     struct list16 *self;
@@ -38,7 +38,7 @@ list16_create(void)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 list16_delete(struct list16 *self)
 {
     if (self == 0)
@@ -51,7 +51,7 @@ list16_delete(struct list16 *self)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 list16_init(struct list16* self)
 {
     g_memset(self, 0, sizeof(struct list16));
@@ -60,7 +60,7 @@ list16_init(struct list16* self)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 list16_deinit(struct list16* self)
 {
     if (self->items != self->mitems)
@@ -70,7 +70,7 @@ list16_deinit(struct list16* self)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 list16_add_item(struct list16 *self, tui16 item)
 {
     tui16 *p;
@@ -94,7 +94,7 @@ list16_add_item(struct list16 *self, tui16 item)
 }
 
 /*****************************************************************************/
-tui16 APP_CC
+tui16
 list16_get_item(struct list16 *self, int index)
 {
     if (index < 0 || index >= self->count)
@@ -106,7 +106,7 @@ list16_get_item(struct list16 *self, int index)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 list16_clear(struct list16 *self)
 {
     if (self->items != self->mitems)
@@ -119,7 +119,7 @@ list16_clear(struct list16 *self)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 list16_index_of(struct list16 *self, tui16 item)
 {
     int i;
@@ -136,7 +136,7 @@ list16_index_of(struct list16 *self, tui16 item)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 list16_remove_item(struct list16 *self, int index)
 {
     int i;
@@ -153,7 +153,7 @@ list16_remove_item(struct list16 *self, int index)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 list16_insert_item(struct list16 *self, int index, tui16 item)
 {
     tui16 *p;

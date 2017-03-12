@@ -85,7 +85,7 @@ struct log_config
  * @return
  *
  */
-enum logReturns DEFAULT_CC
+enum logReturns
 internal_log_start(struct log_config *l_cfg);
 
 /**
@@ -94,7 +94,7 @@ internal_log_start(struct log_config *l_cfg);
  * @param l_cfg pointer to the logging subsystem to stop
  *
  */
-enum logReturns DEFAULT_CC
+enum logReturns
 internal_log_end(struct log_config *l_cfg);
 
 /**
@@ -102,7 +102,7 @@ internal_log_end(struct log_config *l_cfg);
  * @param lvl, the loglevel
  * @param str pointer where the string will be stored.
  */
-void DEFAULT_CC
+void
 internal_log_lvl2str(const enum logLevels lvl, char *str);
 
 /**
@@ -112,7 +112,7 @@ internal_log_lvl2str(const enum logLevels lvl, char *str);
  * @return The corresponding level or LOG_LEVEL_DEBUG if error
  *
  */
-enum logLevels DEFAULT_CC
+enum logLevels
 internal_log_text2level(const char *s);
 
 /**
@@ -120,7 +120,7 @@ internal_log_text2level(const char *s);
  * also init its content.
  * @return  LOG_STARTUP_OK or LOG_ERROR_MALLOC
  */
-enum logReturns DEFAULT_CC
+enum logReturns
 internalInitAndAllocStruct(void);
 
 /**
@@ -132,7 +132,7 @@ internalInitAndAllocStruct(void);
  * @param applicationName, the application name used in the log events.
  * @return
  */
-enum logReturns DEFAULT_CC
+enum logReturns
 internal_config_read_logging(int file, struct log_config *lc,
                              struct list *param_n,
                              struct list *param_v,
@@ -146,7 +146,7 @@ internal_config_read_logging(int file, struct log_config *lc,
  * @param applicationName, the name that is used in the log for the running application
  * @return LOG_STARTUP_OK on success
  */
-enum logReturns DEFAULT_CC
+enum logReturns
 log_start(const char *iniFile, const char *applicationName);
 
 /**
@@ -154,13 +154,13 @@ log_start(const char *iniFile, const char *applicationName);
  * @param iniParams
  * @return
  */
-enum logReturns DEFAULT_CC
+enum logReturns
 log_start_from_param(const struct log_config *iniParams);
 /**
  * Function that terminates all logging
  * @return
  */
-enum logReturns DEFAULT_CC
+enum logReturns
 log_end(void);
 
 /**
@@ -170,7 +170,7 @@ log_end(void);
  * @param ...
  * @return
  */
-enum logReturns DEFAULT_CC
+enum logReturns
 log_message(const enum logLevels lvl, const char *msg, ...) printflike(2, 3);
 
 /**

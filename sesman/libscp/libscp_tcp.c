@@ -33,7 +33,7 @@
 extern struct log_config *s_log;
 
 /*****************************************************************************/
-int DEFAULT_CC
+int
 scp_tcp_force_recv(int sck, char *data, int len)
 {
     int rcvd;
@@ -76,7 +76,7 @@ scp_tcp_force_recv(int sck, char *data, int len)
 }
 
 /*****************************************************************************/
-int DEFAULT_CC
+int
 scp_tcp_force_send(int sck, char *data, int len)
 {
     int sent;
@@ -119,7 +119,7 @@ scp_tcp_force_send(int sck, char *data, int len)
 }
 
 /*****************************************************************************/
-int DEFAULT_CC
+int
 scp_tcp_bind(int sck, char *addr, char *port)
 {
     return g_tcp_bind_address(sck, port, addr);

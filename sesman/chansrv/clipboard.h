@@ -23,9 +23,9 @@
 #include "arch.h"
 #include "parse.h"
 
-int APP_CC clipboard_init(void);
-int APP_CC clipboard_deinit(void);
-int APP_CC clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length, int total_length);
-int APP_CC clipboard_xevent(void *xevent);
+int clipboard_init(void);
+int clipboard_deinit(void);
+int clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length, int total_length);
+int clipboard_xevent(void *xevent);
 
 #endif

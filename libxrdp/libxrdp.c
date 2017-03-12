@@ -112,7 +112,7 @@ libxrdp_get_pdu_bytes(const char *aheader)
 
 /******************************************************************************/
 /* only used during connection */
-struct stream * APP_CC
+struct stream *
 libxrdp_force_read(struct trans* trans)
 {
     int bytes;
@@ -967,7 +967,7 @@ libxrdp_orders_mem_blt(struct xrdp_session *session, int cache_id,
 }
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 libxrdp_orders_composite_blt(struct xrdp_session* session, int srcidx,
                              int srcformat, int srcwidth, int srcrepeat,
                              int* srctransform, int mskflags,
@@ -1356,7 +1356,7 @@ libxrdp_notify_new_update(struct xrdp_session *session,
 }
 
 /*****************************************************************************/
-int DEFAULT_CC
+int
 libxrdp_notify_delete(struct xrdp_session *session,
                       int window_id, int notify_id)
 {
@@ -1367,7 +1367,7 @@ libxrdp_notify_delete(struct xrdp_session *session,
 }
 
 /*****************************************************************************/
-int DEFAULT_CC
+int
 libxrdp_monitored_desktop(struct xrdp_session *session,
                           struct rail_monitored_desktop_order *mdo,
                           int flags)

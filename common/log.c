@@ -52,7 +52,7 @@ static struct log_config *g_staticLogConfig = NULL;
  * @return see open(2) return values
  *
  */
-int DEFAULT_CC
+int
 internal_log_file_open(const char *fname)
 {
     int ret = -1;
@@ -80,7 +80,7 @@ internal_log_file_open(const char *fname)
  * @return syslog equivalent logging level
  *
  */
-int DEFAULT_CC
+int
 internal_log_xrdp2syslog(const enum logLevels lvl)
 {
     switch (lvl)
@@ -108,7 +108,7 @@ internal_log_xrdp2syslog(const enum logLevels lvl)
  * @return The log string in str pointer.
  *
  */
-void DEFAULT_CC
+void
 internal_log_lvl2str(const enum logLevels lvl, char *str)
 {
     switch (lvl)
@@ -135,7 +135,7 @@ internal_log_lvl2str(const enum logLevels lvl, char *str)
 }
 
 /******************************************************************************/
-enum logReturns DEFAULT_CC
+enum logReturns
 internal_log_start(struct log_config *l_cfg)
 {
     enum logReturns ret = LOG_GENERAL_ERROR;
@@ -183,7 +183,7 @@ internal_log_start(struct log_config *l_cfg)
 }
 
 /******************************************************************************/
-enum logReturns DEFAULT_CC
+enum logReturns
 internal_log_end(struct log_config *l_cfg)
 {
     enum logReturns ret = LOG_GENERAL_ERROR;
@@ -225,7 +225,7 @@ internal_log_end(struct log_config *l_cfg)
  * @param buf
  * @return
  */
-enum logLevels DEFAULT_CC
+enum logLevels
 internal_log_text2level(const char *buf)
 {
     if (0 == g_strcasecmp(buf, "0") ||
@@ -259,7 +259,7 @@ internal_log_text2level(const char *buf)
     return LOG_LEVEL_DEBUG;
 }
 
-enum logReturns DEFAULT_CC
+enum logReturns
 internalReadConfiguration(const char *inFilename, const char *applicationName)
 {
     int fd;
@@ -320,7 +320,7 @@ internalReadConfiguration(const char *inFilename, const char *applicationName)
 }
 
 /******************************************************************************/
-enum logReturns DEFAULT_CC
+enum logReturns
 internal_config_read_logging(int file, struct log_config *lc,
                              struct list *param_n,
                              struct list *param_v,
@@ -395,7 +395,7 @@ internal_config_read_logging(int file, struct log_config *lc,
     return LOG_STARTUP_OK;
 }
 
-enum logReturns DEFAULT_CC
+enum logReturns
 internalInitAndAllocStruct(void)
 {
     enum logReturns ret = LOG_GENERAL_ERROR;
@@ -420,7 +420,7 @@ internalInitAndAllocStruct(void)
  * Here below the public functions
  */
 
-enum logReturns DEFAULT_CC
+enum logReturns
 log_start_from_param(const struct log_config *iniParams)
 {
     enum logReturns ret = LOG_GENERAL_ERROR;
@@ -479,7 +479,7 @@ log_start_from_param(const struct log_config *iniParams)
  * @param applicationName, the name that is used in the log for the running application
  * @return 0 on success
  */
-enum logReturns DEFAULT_CC
+enum logReturns
 log_start(const char *iniFile, const char *applicationName)
 {
     enum logReturns ret = LOG_GENERAL_ERROR;
@@ -520,7 +520,7 @@ log_start(const char *iniFile, const char *applicationName)
  * Function that terminates all logging
  * @return
  */
-enum logReturns DEFAULT_CC
+enum logReturns
 log_end(void)
 {
     enum logReturns ret = LOG_GENERAL_ERROR;
@@ -535,7 +535,7 @@ log_end(void)
     return ret;
 }
 
-enum logReturns DEFAULT_CC
+enum logReturns
 log_message(const enum logLevels lvl, const char *msg, ...)
 {
     char buff[LOG_BUFFER_SIZE + 31]; /* 19 (datetime) 4 (space+cr+lf+\0) */
@@ -631,7 +631,7 @@ log_message(const enum logLevels lvl, const char *msg, ...)
  * Return the configured log file name
  * @return
  */
-char *DEFAULT_CC
+char *
 getLogFile(char *replybuf, int bufsize)
 {
     if (g_staticLogConfig)

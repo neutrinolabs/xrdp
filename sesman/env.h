@@ -37,7 +37,7 @@
  * @return 0 on success, 1 on error
  *
  */
-int DEFAULT_CC
+int
 env_check_password_file(const char *filename, const char *password);
 
 /**
@@ -49,7 +49,7 @@ env_check_password_file(const char *filename, const char *password);
  * @return 0 on success, g_getuser_info() error codes on error
  *
  */
-int DEFAULT_CC
+int
 env_set_user(const char *username, char **passwd_file, int display,
              const struct list *env_names, const struct list *env_values);
 

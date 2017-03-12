@@ -31,7 +31,7 @@
  * @return pointer to new FIFO or NULL if system out of memory
  *****************************************************************************/
 
-FIFO * APP_CC
+FIFO *
 fifo_create(void)
 {
     return (FIFO *) g_malloc(sizeof(FIFO), 1);
@@ -41,7 +41,7 @@ fifo_create(void)
  * Delete specified FIFO
  *****************************************************************************/
 
-void APP_CC
+void
 fifo_delete(FIFO *self)
 {
     USER_DATA *udp;
@@ -91,7 +91,7 @@ fifo_delete(FIFO *self)
  * @return 0 on success, -1 on error
  *****************************************************************************/
 
-int APP_CC
+int
 fifo_add_item(FIFO *self, void *item)
 {
     USER_DATA *udp;
@@ -128,7 +128,7 @@ fifo_add_item(FIFO *self, void *item)
  * @return top item from FIFO or NULL if FIFO is empty
  *****************************************************************************/
 
-void * APP_CC
+void *
 fifo_remove_item(FIFO *self)
 {
     void      *item;
@@ -163,7 +163,7 @@ fifo_remove_item(FIFO *self)
  * @return true if FIFO is empty, false otherwise
  *****************************************************************************/
 
-int APP_CC
+int
 fifo_is_empty(FIFO *self)
 {
     if (!self)

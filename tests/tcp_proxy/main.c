@@ -37,20 +37,20 @@ int  g_rem_io_count = 0;  // bytes read from remote port
 static int g_terminated = 0;
 static char g_buf[1024 * 32];
 
-#define DEFAULT_CC
-#define APP_CC
+#define
+#define
 
 typedef unsigned short tui16;
 
 /*****************************************************************************/
-static void APP_CC
+static void
 g_memset(void *ptr, int val, int size)
 {
     memset(ptr, val, size);
 }
 
 /*****************************************************************************/
-static void DEFAULT_CC
+static void
 g_printf(const char *format, ...)
 {
     va_list ap;
@@ -61,7 +61,7 @@ g_printf(const char *format, ...)
 }
 
 /*****************************************************************************/
-static void DEFAULT_CC
+static void
 g_writeln(const char *format, ...)
 {
     va_list ap;
@@ -73,7 +73,7 @@ g_writeln(const char *format, ...)
 }
 
 /*****************************************************************************/
-static void APP_CC
+static void
 g_hexdump(char *p, int len)
 {
     unsigned char *line;
@@ -116,7 +116,7 @@ g_hexdump(char *p, int len)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 g_tcp_socket(void)
 {
     int rv;
@@ -159,7 +159,7 @@ g_tcp_socket(void)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 g_tcp_set_non_blocking(int sck)
 {
     unsigned long i;
@@ -171,7 +171,7 @@ g_tcp_set_non_blocking(int sck)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 g_tcp_bind(int sck, const char* port)
 {
   struct sockaddr_in s;
@@ -184,14 +184,14 @@ g_tcp_bind(int sck, const char* port)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 g_tcp_listen(int sck)
 {
     return listen(sck, 2);
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 g_tcp_select(int sck1, int sck2)
 {
     fd_set rfds;
@@ -248,14 +248,14 @@ g_tcp_select(int sck1, int sck2)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 g_tcp_recv(int sck, void *ptr, int len, int flags)
 {
     return recv(sck, ptr, len, flags);
 }
 
 /*****************************************************************************/
-static void APP_CC
+static void
 g_tcp_close(int sck)
 {
     if (sck == 0)
@@ -266,28 +266,28 @@ g_tcp_close(int sck)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 g_tcp_send(int sck, const void *ptr, int len, int flags)
 {
     return send(sck, ptr, len, flags);
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 g_sleep(int msecs)
 {
     usleep(msecs * 1000);
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 g_tcp_last_error_would_block(int sck)
 {
     return (errno == EWOULDBLOCK) || (errno == EAGAIN) || (errno == EINPROGRESS);
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 g_tcp_accept(int sck)
 {
     int ret ;
@@ -301,7 +301,7 @@ g_tcp_accept(int sck)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 g_tcp_connect(int sck, const char* address, const char* port)
 {
     struct sockaddr_in s;
@@ -332,7 +332,7 @@ g_tcp_connect(int sck, const char* address, const char* port)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 g_tcp_socket_ok(int sck)
 {
     int opt;
@@ -350,20 +350,20 @@ g_tcp_socket_ok(int sck)
 }
 
 /*****************************************************************************/
-static void APP_CC
+static void
 g_init(const char *app_name)
 {
     setlocale(LC_CTYPE, "");
 }
 
 /*****************************************************************************/
-static void APP_CC
+static void
 g_deinit(void)
 {
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 g_tcp_can_send(int sck, int millis)
 {
     fd_set wfds;
@@ -389,28 +389,28 @@ g_tcp_can_send(int sck, int millis)
 }
 
 /*****************************************************************************/
-static void APP_CC
+static void
 g_signal_user_interrupt(void (*func)(int))
 {
     signal(SIGINT, func);
 }
 
 /*****************************************************************************/
-static void APP_CC
+static void
 g_signal_terminate(void (*func)(int))
 {
     signal(SIGTERM, func);
 }
 
 /*****************************************************************************/
-static void APP_CC
+static void
 g_signal_usr1(void (*func)(int))
 {
     signal(SIGUSR1, func);
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 g_strcasecmp(const char *c1, const char *c2)
 {
     return strcasecmp(c1, c2);

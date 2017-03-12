@@ -127,8 +127,8 @@ struct clip_file_desc /* CLIPRDR_FILEDESCRIPTOR */
     char cFileName[256];
 };
 
-int APP_CC clipboard_out_unicode(struct stream *s, const char *text,
+int clipboard_out_unicode(struct stream *s, const char *text,
                                  int num_chars);
-int APP_CC clipboard_in_unicode(struct stream *s, char *text, int *num_chars);
+int clipboard_in_unicode(struct stream *s, char *text, int *num_chars);
 
 #endif

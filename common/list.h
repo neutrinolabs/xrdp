@@ -33,25 +33,25 @@ struct list
     int auto_free;
 };
 
-struct list* APP_CC
+struct list*
 list_create(void);
-void APP_CC
+void
 list_delete(struct list* self);
-void APP_CC
+void
 list_add_item(struct list* self, tintptr item);
-tintptr APP_CC
+tintptr
 list_get_item(const struct list *self, int index);
-void APP_CC
+void
 list_clear(struct list* self);
-int APP_CC
+int
 list_index_of(struct list* self, tintptr item);
-void APP_CC
+void
 list_remove_item(struct list* self, int index);
-void APP_CC
+void
 list_insert_item(struct list* self, int index, tintptr item);
-void APP_CC
+void
 list_append_list_strdup(struct list* self, struct list* dest, int start_index);
-void APP_CC
+void
 list_dump_items(struct list* self);
 
 #endif

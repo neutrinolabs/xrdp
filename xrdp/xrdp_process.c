@@ -28,7 +28,7 @@ static int g_session_id = 0;
 
 /*****************************************************************************/
 /* always called from xrdp_listen thread */
-struct xrdp_process *APP_CC
+struct xrdp_process *
 xrdp_process_create(struct xrdp_listen *owner, tbus done_event)
 {
     struct xrdp_process *self;
@@ -48,7 +48,7 @@ xrdp_process_create(struct xrdp_listen *owner, tbus done_event)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 xrdp_process_delete(struct xrdp_process *self)
 {
     if (self == 0)
@@ -64,7 +64,7 @@ xrdp_process_delete(struct xrdp_process *self)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_process_loop(struct xrdp_process *self, struct stream *s)
 {
     int rv;
@@ -91,14 +91,14 @@ xrdp_process_loop(struct xrdp_process *self, struct stream *s)
 /*****************************************************************************/
 /* returns boolean */
 /* this is so libxrdp.so can known when to quit looping */
-static int DEFAULT_CC
+static int
 xrdp_is_term(void)
 {
     return g_is_term();
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_process_mod_end(struct xrdp_process *self)
 {
     if (self->wm != 0)
@@ -119,7 +119,7 @@ xrdp_process_mod_end(struct xrdp_process *self)
 }
 
 /*****************************************************************************/
-static int DEFAULT_CC
+static int
 xrdp_process_data_in(struct trans *self)
 {
     struct xrdp_process *pro;
@@ -216,7 +216,7 @@ xrdp_process_data_in(struct trans *self)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_process_main_loop(struct xrdp_process *self)
 {
     int robjs_count;

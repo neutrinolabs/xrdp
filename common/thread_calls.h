@@ -23,27 +23,27 @@
 
 #include "arch.h"
 
-int APP_CC
+int
 tc_thread_create(THREAD_RV (THREAD_CC * start_routine)(void*), void* arg);
-tbus APP_CC
+tbus
 tc_get_threadid(void);
-int APP_CC
+int
 tc_threadid_equal(tbus tid1, tbus tid2);
-tbus APP_CC
+tbus
 tc_mutex_create(void);
-void APP_CC
+void
 tc_mutex_delete(tbus mutex);
-int APP_CC
+int
 tc_mutex_lock(tbus mutex);
-int APP_CC
+int
 tc_mutex_unlock(tbus mutex);
-tbus APP_CC
+tbus
 tc_sem_create(int init_count);
-void APP_CC
+void
 tc_sem_delete(tbus sem);
-int APP_CC
+int
 tc_sem_dec(tbus sem);
-int APP_CC
+int
 tc_sem_inc(tbus sem);
 
 #endif

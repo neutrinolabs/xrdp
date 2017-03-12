@@ -56,7 +56,7 @@ static int
 process_enc_h264(struct xrdp_encoder *self, XRDP_ENC_DATA *enc);
 
 /*****************************************************************************/
-struct xrdp_encoder *APP_CC
+struct xrdp_encoder *
 xrdp_encoder_create(struct xrdp_mm *mm)
 {
     struct xrdp_encoder *self;
@@ -147,7 +147,7 @@ xrdp_encoder_create(struct xrdp_mm *mm)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 xrdp_encoder_delete(struct xrdp_encoder *self)
 {
     XRDP_ENC_DATA *enc;

@@ -26,7 +26,7 @@
 #include "libxrdp.h"
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_caps_send_monitorlayout(struct xrdp_rdp *self)
 {
     struct stream *s;
@@ -66,7 +66,7 @@ xrdp_caps_send_monitorlayout(struct xrdp_rdp *self)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_caps_process_general(struct xrdp_rdp *self, struct stream *s,
                           int len)
 {
@@ -101,7 +101,7 @@ xrdp_caps_process_general(struct xrdp_rdp *self, struct stream *s,
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_caps_process_order(struct xrdp_rdp *self, struct stream *s,
                         int len)
 {
@@ -178,7 +178,7 @@ xrdp_caps_process_order(struct xrdp_rdp *self, struct stream *s,
 
 /*****************************************************************************/
 /* get the bitmap cache size */
-static int APP_CC
+static int
 xrdp_caps_process_bmpcache(struct xrdp_rdp *self, struct stream *s,
                            int len)
 {
@@ -220,7 +220,7 @@ xrdp_caps_process_bmpcache(struct xrdp_rdp *self, struct stream *s,
 
 /*****************************************************************************/
 /* get the bitmap cache size */
-static int APP_CC
+static int
 xrdp_caps_process_bmpcache2(struct xrdp_rdp *self, struct stream *s,
                             int len)
 {
@@ -263,7 +263,7 @@ xrdp_caps_process_bmpcache2(struct xrdp_rdp *self, struct stream *s,
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_caps_process_cache_v3_codec_id(struct xrdp_rdp *self, struct stream *s,
                                     int len)
 {
@@ -283,7 +283,7 @@ xrdp_caps_process_cache_v3_codec_id(struct xrdp_rdp *self, struct stream *s,
 
 /*****************************************************************************/
 /* get the number of client cursor cache */
-static int APP_CC
+static int
 xrdp_caps_process_pointer(struct xrdp_rdp *self, struct stream *s,
                           int len)
 {
@@ -325,7 +325,7 @@ xrdp_caps_process_pointer(struct xrdp_rdp *self, struct stream *s,
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_caps_process_input(struct xrdp_rdp *self, struct stream *s,
                         int len)
 {
@@ -344,7 +344,7 @@ xrdp_caps_process_input(struct xrdp_rdp *self, struct stream *s,
 
 /*****************************************************************************/
 /* get the type of client brush cache */
-int APP_CC
+int
 xrdp_caps_process_brushcache(struct xrdp_rdp *self, struct stream *s,
                              int len)
 {
@@ -361,7 +361,7 @@ xrdp_caps_process_brushcache(struct xrdp_rdp *self, struct stream *s,
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_caps_process_offscreen_bmpcache(struct xrdp_rdp *self, struct stream *s,
                                      int len)
 {
@@ -387,7 +387,7 @@ xrdp_caps_process_offscreen_bmpcache(struct xrdp_rdp *self, struct stream *s,
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_caps_process_rail(struct xrdp_rdp *self, struct stream *s, int len)
 {
     int i32;
@@ -405,7 +405,7 @@ xrdp_caps_process_rail(struct xrdp_rdp *self, struct stream *s, int len)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_caps_process_window(struct xrdp_rdp *self, struct stream *s, int len)
 {
     int i32;
@@ -430,7 +430,7 @@ xrdp_caps_process_window(struct xrdp_rdp *self, struct stream *s, int len)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
 {
     int codec_id;
@@ -525,7 +525,7 @@ xrdp_caps_process_codecs(struct xrdp_rdp *self, struct stream *s, int len)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_caps_process_multifragmentupdate(struct xrdp_rdp *self, struct stream *s,
                                       int len)
 {
@@ -537,7 +537,7 @@ xrdp_caps_process_multifragmentupdate(struct xrdp_rdp *self, struct stream *s,
 }
 
  /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_caps_process_frame_ack(struct xrdp_rdp *self, struct stream *s, int len)
 {
     g_writeln("xrdp_caps_process_frame_ack:");
@@ -554,7 +554,7 @@ xrdp_caps_process_frame_ack(struct xrdp_rdp *self, struct stream *s, int len)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_caps_process_surface_cmds(struct xrdp_rdp *self, struct stream *s, int len)
 {
     int cmdFlags;
@@ -566,7 +566,7 @@ xrdp_caps_process_surface_cmds(struct xrdp_rdp *self, struct stream *s, int len)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
 {
     int cap_len;
@@ -717,7 +717,7 @@ xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s)
     return 0;
 }
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_caps_send_demand_active(struct xrdp_rdp *self)
 {
     struct stream *s;

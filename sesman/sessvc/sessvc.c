@@ -34,7 +34,7 @@
 static int g_term = 0;
 
 /*****************************************************************************/
-void DEFAULT_CC
+void
 term_signal_handler(int sig)
 {
     g_writeln("xrdp-sessvc: term_signal_handler: got signal %d", sig);
@@ -42,7 +42,7 @@ term_signal_handler(int sig)
 }
 
 /*****************************************************************************/
-void DEFAULT_CC
+void
 nil_signal_handler(int sig)
 {
     g_writeln("xrdp-sessvc: nil_signal_handler: got signal %d", sig);
@@ -50,7 +50,7 @@ nil_signal_handler(int sig)
 
 /******************************************************************************/
 /* chansrv can exit at any time without cleaning up, it's an xlib app */
-int APP_CC
+int
 chansrv_cleanup(int pid)
 {
     char text[256];
@@ -73,7 +73,7 @@ chansrv_cleanup(int pid)
 }
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 main(int argc, char **argv)
 {
     int ret = 0;

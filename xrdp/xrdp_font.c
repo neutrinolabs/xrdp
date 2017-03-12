@@ -66,7 +66,7 @@ static char w_char[] =
 #endif
 
 /*****************************************************************************/
-struct xrdp_font *APP_CC
+struct xrdp_font *
 xrdp_font_create(struct xrdp_wm *wm)
 {
     struct xrdp_font *self;
@@ -175,7 +175,7 @@ xrdp_font_create(struct xrdp_wm *wm)
 
 /*****************************************************************************/
 /* free the font and all the items */
-void APP_CC
+void
 xrdp_font_delete(struct xrdp_font *self)
 {
     int i;
@@ -195,7 +195,7 @@ xrdp_font_delete(struct xrdp_font *self)
 
 /*****************************************************************************/
 /* compare the two font items returns 1 if they match */
-int APP_CC
+int
 xrdp_font_item_compare(struct xrdp_font_char *font1,
                        struct xrdp_font_char *font2)
 {

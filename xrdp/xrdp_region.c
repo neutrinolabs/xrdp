@@ -31,7 +31,7 @@
 #endif
 
 /*****************************************************************************/
-struct xrdp_region *APP_CC
+struct xrdp_region *
 xrdp_region_create(struct xrdp_wm *wm)
 {
     struct xrdp_region *self;
@@ -45,7 +45,7 @@ xrdp_region_create(struct xrdp_wm *wm)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 xrdp_region_delete(struct xrdp_region *self)
 {
     if (self == 0)
@@ -59,7 +59,7 @@ xrdp_region_delete(struct xrdp_region *self)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 xrdp_region_add_rect(struct xrdp_region *self, struct xrdp_rect *rect)
 {
     struct pixman_region16 lreg;
@@ -78,7 +78,7 @@ xrdp_region_add_rect(struct xrdp_region *self, struct xrdp_rect *rect)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 xrdp_region_subtract_rect(struct xrdp_region *self, struct xrdp_rect *rect)
 {
     struct pixman_region16 lreg;
@@ -97,7 +97,7 @@ xrdp_region_subtract_rect(struct xrdp_region *self, struct xrdp_rect *rect)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 xrdp_region_intersect_rect(struct xrdp_region* self, struct xrdp_rect* rect)
 {
     struct pixman_region16 lreg;
@@ -117,7 +117,7 @@ xrdp_region_intersect_rect(struct xrdp_region* self, struct xrdp_rect* rect)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 xrdp_region_get_rect(struct xrdp_region *self, int index,
                      struct xrdp_rect *rect)
 {

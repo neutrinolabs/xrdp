@@ -61,7 +61,7 @@ extern tbus g_term_event; /* in sesman.c */
  * @param len the allocated len for outstr
  * @return
  */
-char *APP_CC
+char *
 dumpItemsToString(struct list *self, char *outstr, int len)
 {
     int index;
@@ -90,7 +90,7 @@ dumpItemsToString(struct list *self, char *outstr, int len)
 
 
 /******************************************************************************/
-struct session_item *DEFAULT_CC
+struct session_item *
 session_get_bydata(const char *name, int width, int height, int bpp, int type,
                    const char *client_ip)
 {
@@ -163,7 +163,7 @@ session_get_bydata(const char *name, int width, int height, int bpp, int type,
  * @return 0 if there isn't a display running, nonzero otherwise
  *
  */
-static int DEFAULT_CC
+static int
 x_server_running_check_ports(int display)
 {
     char text[256];
@@ -250,7 +250,7 @@ x_server_running_check_ports(int display)
  * @return 0 if there isn't a display running, nonzero otherwise
  *
  */
-static int DEFAULT_CC
+static int
 x_server_running(int display)
 {
     char text[256];
@@ -269,7 +269,7 @@ x_server_running(int display)
 }
 
 /******************************************************************************/
-static void DEFAULT_CC
+static void
 session_start_sessvc(int xpid, int wmpid, long data, char *username, int display)
 {
     struct list *sessvc_params = (struct list *)NULL;
@@ -342,7 +342,7 @@ session_start_sessvc(int xpid, int wmpid, long data, char *username, int display
 /******************************************************************************/
 /* called with the main thread
    returns boolean */
-static int APP_CC
+static int
 session_is_display_in_chain(int display)
 {
     struct session_chain *chain;
@@ -367,7 +367,7 @@ session_is_display_in_chain(int display)
 
 /******************************************************************************/
 /* called with the main thread */
-static int APP_CC
+static int
 session_get_avail_display_from_chain(void)
 {
     int display;
@@ -392,7 +392,7 @@ session_get_avail_display_from_chain(void)
 }
 
 /******************************************************************************/
-static int APP_CC
+static int
 wait_for_xserver(int display)
 {
     int i;
@@ -421,7 +421,7 @@ wait_for_xserver(int display)
 
 /******************************************************************************/
 /* called with the main thread */
-static int APP_CC
+static int
 session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
 {
     int display = 0;
@@ -876,7 +876,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
 
 /******************************************************************************/
 /* called with the main thread */
-static int APP_CC
+static int
 session_reconnect_fork(int display, char *username)
 {
     int pid;
@@ -910,7 +910,7 @@ session_reconnect_fork(int display, char *username)
 /******************************************************************************/
 /* called by a worker thread, ask the main thread to call session_sync_start
    and wait till done */
-int DEFAULT_CC
+int
 session_start(long data, tui8 type, struct SCP_SESSION *s)
 {
     return session_start_fork(data, type, s);
@@ -919,14 +919,14 @@ session_start(long data, tui8 type, struct SCP_SESSION *s)
 /******************************************************************************/
 /* called by a worker thread, ask the main thread to call session_sync_start
    and wait till done */
-int DEFAULT_CC
+int
 session_reconnect(int display, char *username)
 {
     return session_reconnect_fork(display, username);
 }
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 session_kill(int pid)
 {
     struct session_chain *tmp;
@@ -987,7 +987,7 @@ session_kill(int pid)
 }
 
 /******************************************************************************/
-void DEFAULT_CC
+void
 session_sigkill_all(void)
 {
     struct session_chain *tmp;
@@ -1012,7 +1012,7 @@ session_sigkill_all(void)
 }
 
 /******************************************************************************/
-struct session_item *DEFAULT_CC
+struct session_item *
 session_get_bypid(int pid)
 {
     struct session_chain *tmp;
