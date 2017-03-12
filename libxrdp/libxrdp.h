@@ -287,166 +287,166 @@ struct xrdp_mppc_enc
 };
 
 
-int APP_CC
+int
 compress_rdp(struct xrdp_mppc_enc *enc, tui8 *srcData, int len);
-struct xrdp_mppc_enc * APP_CC
+struct xrdp_mppc_enc *
 mppc_enc_new(int protocol_type);
-void APP_CC
+void
 mppc_enc_free(struct xrdp_mppc_enc *enc);
 
 /* xrdp_tcp.c */
-struct xrdp_tcp * APP_CC
+struct xrdp_tcp *
 xrdp_tcp_create(struct xrdp_iso *owner, struct trans *trans);
-void APP_CC
+void
 xrdp_tcp_delete(struct xrdp_tcp *self);
-int APP_CC
+int
 xrdp_tcp_init(struct xrdp_tcp *self, struct stream *s);
-int APP_CC
+int
 xrdp_tcp_recv(struct xrdp_tcp *self, struct stream *s, int len);
-int APP_CC
+int
 xrdp_tcp_send(struct xrdp_tcp *self, struct stream *s);
 
 /* xrdp_iso.c */
-struct xrdp_iso * APP_CC
+struct xrdp_iso *
 xrdp_iso_create(struct xrdp_mcs *owner, struct trans *trans);
-void APP_CC
+void
 xrdp_iso_delete(struct xrdp_iso *self);
-int APP_CC
+int
 xrdp_iso_init(struct xrdp_iso *self, struct stream *s);
-int APP_CC
+int
 xrdp_iso_recv(struct xrdp_iso *self, struct stream *s);
-int APP_CC
+int
 xrdp_iso_send(struct xrdp_iso *self, struct stream *s);
-int APP_CC
+int
 xrdp_iso_incoming(struct xrdp_iso *self);
-int APP_CC
+int
 xrdp_iso_detect_tpkt(struct xrdp_iso *self, struct stream *s);
 
 /* xrdp_mcs.c */
-struct xrdp_mcs * APP_CC
+struct xrdp_mcs *
 xrdp_mcs_create(struct xrdp_sec *owner, struct trans *trans,
                 struct stream *client_mcs_data,
                 struct stream *server_mcs_data);
-void APP_CC
+void
 xrdp_mcs_delete(struct xrdp_mcs *self);
-int APP_CC
+int
 xrdp_mcs_init(struct xrdp_mcs *self, struct stream *s);
-int APP_CC
+int
 xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan);
-int APP_CC
+int
 xrdp_mcs_send(struct xrdp_mcs *self, struct stream *s, int chan);
-int APP_CC
+int
 xrdp_mcs_incoming(struct xrdp_mcs *self);
-int APP_CC
+int
 xrdp_mcs_disconnect(struct xrdp_mcs *self);
 
 /* xrdp_sec.c */
-struct xrdp_sec *APP_CC
+struct xrdp_sec *
 xrdp_sec_create(struct xrdp_rdp *owner, struct trans *trans);
-void APP_CC
+void
 xrdp_sec_delete(struct xrdp_sec *self);
-int APP_CC
+int
 xrdp_sec_init(struct xrdp_sec *self, struct stream *s);
-int APP_CC
+int
 xrdp_sec_get_fastpath_bytes(struct xrdp_sec *self);
-int APP_CC
+int
 xrdp_sec_init_fastpath(struct xrdp_sec *self, struct stream *s);
-int APP_CC
+int
 xrdp_sec_send_fastpath(struct xrdp_sec *self, struct stream *s);
-int APP_CC
+int
 xrdp_sec_recv_fastpath(struct xrdp_sec *self, struct stream *s);
-int APP_CC
+int
 xrdp_sec_recv(struct xrdp_sec *self, struct stream *s, int *chan);
-int APP_CC
+int
 xrdp_sec_send(struct xrdp_sec *self, struct stream *s, int chan);
-int APP_CC
+int
 xrdp_sec_process_mcs_data(struct xrdp_sec *self);
-int APP_CC
+int
 xrdp_sec_incoming(struct xrdp_sec *self);
-int APP_CC
+int
 xrdp_sec_disconnect(struct xrdp_sec *self);
 
 /* xrdp_rdp.c */
-struct xrdp_rdp * APP_CC
+struct xrdp_rdp *
 xrdp_rdp_create(struct xrdp_session *session, struct trans *trans);
-void APP_CC
+void
 xrdp_rdp_delete(struct xrdp_rdp *self);
-int APP_CC
+int
 xrdp_rdp_init(struct xrdp_rdp *self, struct stream *s);
-int APP_CC
+int
 xrdp_rdp_init_data(struct xrdp_rdp *self, struct stream *s);
-int APP_CC
+int
 xrdp_rdp_get_fastpath_bytes(struct xrdp_rdp *self);
-int APP_CC
+int
 xrdp_rdp_init_fastpath(struct xrdp_rdp *self, struct stream *s);
-int APP_CC
+int
 xrdp_rdp_recv(struct xrdp_rdp *self, struct stream *s, int *code);
-int APP_CC
+int
 xrdp_rdp_send(struct xrdp_rdp *self, struct stream *s, int pdu_type);
-int APP_CC
+int
 xrdp_rdp_send_data(struct xrdp_rdp *self, struct stream *s,
                    int data_pdu_type);
-int APP_CC
+int
 xrdp_rdp_send_fastpath(struct xrdp_rdp *self, struct stream *s,
                        int data_pdu_type);
-int APP_CC
+int
 xrdp_rdp_send_data_update_sync(struct xrdp_rdp *self);
-int APP_CC
+int
 xrdp_rdp_incoming(struct xrdp_rdp *self);
-int APP_CC
+int
 xrdp_rdp_process_data(struct xrdp_rdp *self, struct stream *s);
-int APP_CC
+int
 xrdp_rdp_disconnect(struct xrdp_rdp *self);
-int APP_CC
+int
 xrdp_rdp_send_deactivate(struct xrdp_rdp *self);
-int APP_CC
+int
 xrdp_rdp_send_session_info(struct xrdp_rdp *self, const char *data,
                            int data_bytes);
 
 /* xrdp_orders.c */
-struct xrdp_orders * APP_CC
+struct xrdp_orders *
 xrdp_orders_create(struct xrdp_session *session,
                    struct xrdp_rdp *rdp_layer);
-void APP_CC
+void
 xrdp_orders_delete(struct xrdp_orders *self);
-int APP_CC
+int
 xrdp_orders_reset(struct xrdp_orders *self);
-int APP_CC
+int
 xrdp_orders_init(struct xrdp_orders *self);
-int APP_CC
+int
 xrdp_orders_send(struct xrdp_orders *self);
-int APP_CC
+int
 xrdp_orders_force_send(struct xrdp_orders *self);
-int APP_CC
+int
 xrdp_orders_check(struct xrdp_orders *self, int max_size);
-int APP_CC
+int
 xrdp_orders_rect(struct xrdp_orders *self, int x, int y, int cx, int cy,
                  int color, struct xrdp_rect *rect);
-int APP_CC
+int
 xrdp_orders_screen_blt(struct xrdp_orders *self, int x, int y,
                        int cx, int cy, int srcx, int srcy,
                        int rop, struct xrdp_rect *rect);
-int APP_CC
+int
 xrdp_orders_pat_blt(struct xrdp_orders *self, int x, int y,
                     int cx, int cy, int rop, int bg_color,
                     int fg_color, struct xrdp_brush *brush,
                     struct xrdp_rect *rect);
-int APP_CC
+int
 xrdp_orders_dest_blt(struct xrdp_orders *self, int x, int y,
                      int cx, int cy, int rop,
                      struct xrdp_rect *rect);
-int APP_CC
+int
 xrdp_orders_line(struct xrdp_orders *self, int mix_mode,
                  int startx, int starty,
                  int endx, int endy, int rop, int bg_color,
                  struct xrdp_pen *pen,
                  struct xrdp_rect *rect);
-int APP_CC
+int
 xrdp_orders_mem_blt(struct xrdp_orders *self, int cache_id,
                     int color_table, int x, int y, int cx, int cy,
                     int rop, int srcx, int srcy,
                     int cache_idx, struct xrdp_rect *rect);
-int APP_CC
+int
 xrdp_orders_composite_blt(struct xrdp_orders *self, int srcidx,
                           int srcformat, int srcwidth,
                           int srcrepeat, int *srctransform, int mskflags,
@@ -455,7 +455,7 @@ xrdp_orders_composite_blt(struct xrdp_orders *self, int srcidx,
                           int mskx, int msky, int dstx, int dsty,
                           int width, int height, int dstformat,
                           struct xrdp_rect *rect);
-int APP_CC
+int
 xrdp_orders_text(struct xrdp_orders *self,
                  int font, int flags, int mixmode,
                  int fg_color, int bg_color,
@@ -465,61 +465,61 @@ xrdp_orders_text(struct xrdp_orders *self,
                  int box_right, int box_bottom,
                  int x, int y, char *data, int data_len,
                  struct xrdp_rect *rect);
-int APP_CC
+int
 xrdp_orders_send_palette(struct xrdp_orders *self, int *palette,
                          int cache_id);
-int APP_CC
+int
 xrdp_orders_send_raw_bitmap(struct xrdp_orders *self,
                             int width, int height, int bpp, char *data,
                             int cache_id, int cache_idx);
-int APP_CC
+int
 xrdp_orders_send_bitmap(struct xrdp_orders *self,
                         int width, int height, int bpp, char *data,
                         int cache_id, int cache_idx);
-int APP_CC
+int
 xrdp_orders_send_font(struct xrdp_orders *self,
                       struct xrdp_font_char *font_char,
                       int font_index, int char_index);
-int APP_CC
+int
 xrdp_orders_send_raw_bitmap2(struct xrdp_orders *self,
                              int width, int height, int bpp, char *data,
                              int cache_id, int cache_idx);
-int APP_CC
+int
 xrdp_orders_send_bitmap2(struct xrdp_orders *self,
                          int width, int height, int bpp, char *data,
                          int cache_id, int cache_idx, int hints);
-int APP_CC
+int
 xrdp_orders_send_bitmap3(struct xrdp_orders *self,
                          int width, int height, int bpp, char *data,
                          int cache_id, int cache_idx, int hints);
-int APP_CC
+int
 xrdp_orders_send_brush(struct xrdp_orders *self, int width, int height,
                        int bpp, int type, int size, char *data, int cache_id);
-int APP_CC
+int
 xrdp_orders_send_create_os_surface(struct xrdp_orders *self, int id,
                                    int width, int height,
                                    struct list *del_list);
-int APP_CC
+int
 xrdp_orders_send_switch_os_surface(struct xrdp_orders *self, int id);
 
 /* xrdp_bitmap_compress.c */
-int APP_CC
+int
 xrdp_bitmap_compress(char *in_data, int width, int height,
                      struct stream *s, int bpp, int byte_limit,
                      int start_line, struct stream *temp_s,
                      int e);
-int APP_CC
+int
 xrdp_bitmap32_compress(char *in_data, int width, int height,
                        struct stream *s, int bpp, int byte_limit,
                        int start_line, struct stream *temp_s,
                        int e, int flags);
-int APP_CC
+int
 xrdp_jpeg_compress(void *handle, char *in_data, int width, int height,
                    struct stream *s, int bpp, int byte_limit,
                    int start_line, struct stream *temp_s,
                    int e, int quality);
 
-int APP_CC
+int
 xrdp_codec_jpeg_compress(void *handle,
                          int   format,   /* input data format */
                          char *inp_data, /* input data */
@@ -536,42 +536,42 @@ xrdp_codec_jpeg_compress(void *handle,
                                          /* len of compressed data */
                          );
 
-void *APP_CC
+void *
 xrdp_jpeg_init(void);
-int APP_CC
+int
 xrdp_jpeg_deinit(void *handle);
 
 /* xrdp_channel.c */
-struct xrdp_channel* APP_CC
+struct xrdp_channel*
 xrdp_channel_create(struct xrdp_sec *owner, struct xrdp_mcs *mcs_layer);
-void APP_CC
+void
 xrdp_channel_delete(struct xrdp_channel *self);
-int APP_CC
+int
 xrdp_channel_init(struct xrdp_channel *self, struct stream *s);
-int APP_CC
+int
 xrdp_channel_send(struct xrdp_channel *self, struct stream *s, int channel_id,
                   int total_data_len, int flags);
-int APP_CC
+int
 xrdp_channel_process(struct xrdp_channel *self, struct stream *s,
                      int chanid);
 
 /* xrdp_fastpath.c */
-struct xrdp_fastpath *APP_CC
+struct xrdp_fastpath *
 xrdp_fastpath_create(struct xrdp_sec *owner, struct trans *trans);
-void APP_CC
+void
 xrdp_fastpath_delete(struct xrdp_fastpath *self);
-int APP_CC
+int
 xrdp_fastpath_recv(struct xrdp_fastpath *self, struct stream *s);
-int APP_CC
+int
 xrdp_fastpath_process_input_event(struct xrdp_fastpath *self, struct stream *s);
-int APP_CC
+int
 xrdp_fastpath_init(struct xrdp_fastpath *self, struct stream *s);
-int APP_CC
+int
 xrdp_fastpath_send(struct xrdp_fastpath *self, struct stream *s);
 
 /* xrdp_caps.c */
-int APP_CC
+int
 xrdp_caps_send_demand_active(struct xrdp_rdp *self);
-int APP_CC
+int
 xrdp_caps_process_confirm_active(struct xrdp_rdp *self, struct stream *s);
 #endif

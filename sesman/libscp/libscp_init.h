@@ -40,7 +40,7 @@
  *          It this memory needs to be g_free()d
  *
  */
-int DEFAULT_CC
+int
 scp_init(void);
 
 #endif

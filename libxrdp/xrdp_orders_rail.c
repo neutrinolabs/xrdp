@@ -30,7 +30,7 @@
 /*****************************************************************************/
 /* RAIL */
 /* returns error */
-int APP_CC
+int
 xrdp_orders_send_window_delete(struct xrdp_orders *self, int window_id)
 {
     int order_size;
@@ -61,7 +61,7 @@ xrdp_orders_send_window_delete(struct xrdp_orders *self, int window_id)
 /* returns error */
 /* flags can contain WINDOW_ORDER_STATE_NEW and/or
    WINDOW_ORDER_FIELD_ICON_BIG */
-int APP_CC
+int
 xrdp_orders_send_window_cached_icon(struct xrdp_orders *self,
                                     int window_id, int cache_entry,
                                     int cache_id, int flags)
@@ -97,7 +97,7 @@ xrdp_orders_send_window_cached_icon(struct xrdp_orders *self,
 /*****************************************************************************/
 /* RAIL */
 /* returns error */
-static int APP_CC
+static int
 xrdp_orders_send_ts_icon(struct stream *s, int cache_entry, int cache_id,
                          struct rail_icon_info *icon_info)
 {
@@ -140,7 +140,7 @@ xrdp_orders_send_ts_icon(struct stream *s, int cache_entry, int cache_id,
 /* returns error */
 /* flags can contain WINDOW_ORDER_STATE_NEW and/or
    WINDOW_ORDER_FIELD_ICON_BIG */
-int APP_CC
+int
 xrdp_orders_send_window_icon(struct xrdp_orders *self,
                              int window_id, int cache_entry, int cache_id,
                              struct rail_icon_info *icon_info,
@@ -189,7 +189,7 @@ xrdp_orders_send_window_icon(struct xrdp_orders *self,
 
 /*****************************************************************************/
 /* returns error */
-static int APP_CC
+static int
 xrdp_orders_send_as_unicode(struct stream *s, const char *text)
 {
     int str_chars;
@@ -222,7 +222,7 @@ xrdp_orders_send_as_unicode(struct stream *s, const char *text)
 /* RAIL */
 /* returns error */
 /* flags can contain WINDOW_ORDER_STATE_NEW */
-int APP_CC
+int
 xrdp_orders_send_window_new_update(struct xrdp_orders *self, int window_id,
                                    struct rail_window_state_order *window_state,
                                    int flags)
@@ -478,7 +478,7 @@ xrdp_orders_send_window_new_update(struct xrdp_orders *self, int window_id,
 /*****************************************************************************/
 /* RAIL */
 /* returns error */
-int APP_CC
+int
 xrdp_orders_send_notify_delete(struct xrdp_orders *self, int window_id,
                                int notify_id)
 {
@@ -511,7 +511,7 @@ xrdp_orders_send_notify_delete(struct xrdp_orders *self, int window_id,
 /* RAIL */
 /* returns error */
 /* flags can contain WINDOW_ORDER_STATE_NEW */
-int APP_CC
+int
 xrdp_orders_send_notify_new_update(struct xrdp_orders *self,
                                    int window_id, int notify_id,
                                    struct rail_notify_state_order *notify_state,
@@ -652,7 +652,7 @@ xrdp_orders_send_notify_new_update(struct xrdp_orders *self,
 /* RAIL */
 /* returns error */
 /* used for both Non-Monitored Desktop and Actively Monitored Desktop */
-int APP_CC
+int
 xrdp_orders_send_monitored_desktop(struct xrdp_orders *self,
                                    struct rail_monitored_desktop_order *mdo,
                                    int flags)

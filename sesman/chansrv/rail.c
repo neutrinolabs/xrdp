@@ -160,14 +160,14 @@ struct rail_window_data
 #define RAIL_STYLE_DIALOG (0x80000000)
 #define RAIL_EXT_STYLE_DIALOG (0x00040000)
 
-static int APP_CC rail_win_get_state(Window win);
-static int APP_CC rail_create_window(Window window_id, Window owner_id);
-static int APP_CC rail_win_set_state(Window win, unsigned long state);
-static int APP_CC rail_show_window(Window window_id, int show_state);
-static int APP_CC rail_win_send_text(Window win);
+static int rail_win_get_state(Window win);
+static int rail_create_window(Window window_id, Window owner_id);
+static int rail_win_set_state(Window win, unsigned long state);
+static int rail_show_window(Window window_id, int show_state);
+static int rail_win_send_text(Window win);
 
 /*****************************************************************************/
-static int APP_CC
+static int
 rail_send_key_esc(int window_id)
 {
     XEvent event;
@@ -185,7 +185,7 @@ rail_send_key_esc(int window_id)
 }
 
 /*****************************************************************************/
-static struct rail_window_data* APP_CC
+static struct rail_window_data*
 rail_get_window_data(Window window)
 {
     unsigned int bytes;
@@ -219,7 +219,7 @@ rail_get_window_data(Window window)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 rail_set_window_data(Window window, struct rail_window_data* rwd)
 {
     int bytes;
@@ -232,7 +232,7 @@ rail_set_window_data(Window window, struct rail_window_data* rwd)
 
 /*****************************************************************************/
 /* get the rail window data, if not exist, try to create it and return */
-static struct rail_window_data* APP_CC
+static struct rail_window_data*
 rail_get_window_data_safe(Window window)
 {
     struct rail_window_data* rv;
@@ -249,7 +249,7 @@ rail_get_window_data_safe(Window window)
 }
 
 /******************************************************************************/
-static int APP_CC
+static int
 is_window_valid_child_of_root(unsigned int window_id)
 {
     int found;
@@ -276,7 +276,7 @@ is_window_valid_child_of_root(unsigned int window_id)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 rail_send_init(void)
 {
     struct stream *s;
@@ -301,7 +301,7 @@ rail_send_init(void)
 }
 
 /******************************************************************************/
-static int DEFAULT_CC
+static int
 anotherWMRunning(Display *display, XErrorEvent *xe)
 {
     g_rail_running = 0;
@@ -309,7 +309,7 @@ anotherWMRunning(Display *display, XErrorEvent *xe)
 }
 
 /******************************************************************************/
-static int APP_CC
+static int
 rail_is_another_wm_running(void)
 {
     XErrorHandler old;
@@ -334,7 +334,7 @@ rail_is_another_wm_running(void)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 rail_init(void)
 {
     LOG(10, ("chansrv::rail_init:"));
@@ -344,7 +344,7 @@ rail_init(void)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 rail_deinit(void)
 {
     if (g_rail_up)
@@ -359,7 +359,7 @@ rail_deinit(void)
     return 0;
 }
 
-int APP_CC
+int
 rail_startup(void)
 {
     int dummy;
@@ -406,7 +406,7 @@ rail_startup(void)
 }
 
 /*****************************************************************************/
-static char *APP_CC
+static char *
 read_uni(struct stream *s, int num_chars)
 {
     twchar *rchrs;
@@ -442,7 +442,7 @@ read_uni(struct stream *s, int num_chars)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 rail_process_exec(struct stream *s, int size)
 {
     int flags;
@@ -487,7 +487,7 @@ rail_process_exec(struct stream *s, int size)
 }
 
 /******************************************************************************/
-static int APP_CC
+static int
 rail_win_popdown(void)
 {
     int rv = 0;
@@ -523,7 +523,7 @@ rail_win_popdown(void)
 }
 
 /******************************************************************************/
-static int APP_CC
+static int
 rail_close_window(int window_id)
 {
     XEvent ce;
@@ -546,7 +546,7 @@ rail_close_window(int window_id)
 }
 
 /*****************************************************************************/
-void DEFAULT_CC
+void
 my_timeout(void* data)
 {
     LOG(10, ("my_timeout: g_got_focus %d", g_got_focus));
@@ -558,7 +558,7 @@ my_timeout(void* data)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 rail_process_activate(struct stream *s, int size)
 {
     unsigned int window_id;
@@ -636,7 +636,7 @@ rail_select_input(Window window_id)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 rail_restore_windows(void)
 {
     unsigned int i;
@@ -667,7 +667,7 @@ rail_restore_windows(void)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 rail_process_system_param(struct stream *s, int size)
 {
     int system_param;
@@ -689,7 +689,7 @@ rail_process_system_param(struct stream *s, int size)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 rail_get_property(Display* display, Window target, Atom type, Atom property,
                                  unsigned char** data, unsigned long* count)
 {
@@ -729,7 +729,7 @@ rail_get_property(Display* display, Window target, Atom type, Atom property,
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 rail_win_get_state(Window win)
 {
     unsigned long nitems = 0;
@@ -751,7 +751,7 @@ rail_win_get_state(Window win)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 rail_win_set_state(Window win, unsigned long state)
 {
     int old_state;
@@ -777,7 +777,7 @@ rail_win_set_state(Window win, unsigned long state)
 
 /*****************************************************************************/
 /* *data pointer that needs g_free */
-static int APP_CC
+static int
 rail_win_get_text(Window win, char **data)
 {
     int ret = 0;
@@ -816,7 +816,7 @@ rail_win_get_text(Window win, char **data)
 }
 
 /******************************************************************************/
-static int APP_CC
+static int
 rail_minmax_window(int window_id, int max)
 {
     LOG(10, ("chansrv::rail_minmax_window 0x%8.8x:", window_id));
@@ -835,7 +835,7 @@ rail_minmax_window(int window_id, int max)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 rail_restore_window(int window_id)
 {
     XWindowAttributes window_attributes;
@@ -855,7 +855,7 @@ rail_restore_window(int window_id)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 rail_process_system_command(struct stream *s, int size)
 {
     int window_id;
@@ -913,7 +913,7 @@ rail_process_system_command(struct stream *s, int size)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 rail_process_handshake(struct stream *s, int size)
 {
     int build_number;
@@ -925,7 +925,7 @@ rail_process_handshake(struct stream *s, int size)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 rail_process_notify_event(struct stream *s, int size)
 {
     int window_id;
@@ -942,7 +942,7 @@ rail_process_notify_event(struct stream *s, int size)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 rail_process_window_move(struct stream *s, int size)
 {
     int window_id;
@@ -978,7 +978,7 @@ rail_process_window_move(struct stream *s, int size)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 rail_process_local_move_size(struct stream *s, int size)
 {
     int window_id;
@@ -1004,7 +1004,7 @@ rail_process_local_move_size(struct stream *s, int size)
 
 /*****************************************************************************/
 /* server to client only */
-static int APP_CC
+static int
 rail_process_min_max_info(struct stream *s, int size)
 {
     LOG(10, ("chansrv::rail_process_min_max_info:"));
@@ -1012,7 +1012,7 @@ rail_process_min_max_info(struct stream *s, int size)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 rail_process_client_status(struct stream *s, int size)
 {
     int flags;
@@ -1024,7 +1024,7 @@ rail_process_client_status(struct stream *s, int size)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 rail_process_sys_menu(struct stream *s, int size)
 {
     int window_id;
@@ -1043,7 +1043,7 @@ rail_process_sys_menu(struct stream *s, int size)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 rail_process_lang_bar_info(struct stream *s, int size)
 {
     int language_bar_status;
@@ -1055,7 +1055,7 @@ rail_process_lang_bar_info(struct stream *s, int size)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 rail_process_appid_req(struct stream *s, int size)
 {
     LOG(10, ("chansrv::rail_process_appid_req:"));
@@ -1063,7 +1063,7 @@ rail_process_appid_req(struct stream *s, int size)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 rail_process_appid_resp(struct stream *s, int size)
 {
     LOG(10, ("chansrv::rail_process_appid_resp:"));
@@ -1072,7 +1072,7 @@ rail_process_appid_resp(struct stream *s, int size)
 
 /*****************************************************************************/
 /* server to client only */
-static int APP_CC
+static int
 rail_process_exec_result(struct stream *s, int size)
 {
     LOG(10, ("chansrv::rail_process_exec_result:"));
@@ -1081,7 +1081,7 @@ rail_process_exec_result(struct stream *s, int size)
 
 /*****************************************************************************/
 /* data in from client ( client -> xrdp -> chansrv ) */
-int APP_CC
+int
 rail_data_in(struct stream *s, int chan_id, int chan_flags, int length,
              int total_length)
 {
@@ -1222,7 +1222,7 @@ get_string_crc(const char* text)
 
 /*****************************************************************************/
 /* returns 0, event handled, 1 unhandled */
-static int APP_CC
+static int
 rail_win_send_text(Window win)
 {
     char* data = 0;
@@ -1285,7 +1285,7 @@ rail_win_send_text(Window win)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 rail_destroy_window(Window window_id)
 {
     struct stream *s;
@@ -1304,7 +1304,7 @@ rail_destroy_window(Window window_id)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 rail_show_window(Window window_id, int show_state)
 {
     int flags;
@@ -1326,7 +1326,7 @@ rail_show_window(Window window_id, int show_state)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 rail_create_window(Window window_id, Window owner_id)
 {
     int x;
@@ -1487,7 +1487,7 @@ rail_create_window(Window window_id, Window owner_id)
 
 /*****************************************************************************/
 /* returns 0, event handled, 1 unhandled */
-int APP_CC
+int
 rail_configure_request_window(XConfigureRequestEvent* config)
 {
     int num_window_rects = 1;
@@ -1692,7 +1692,7 @@ rail_configure_request_window(XConfigureRequestEvent* config)
 
 /*****************************************************************************/
 /* returns 0, event handled, 1 unhandled */
-int APP_CC
+int
 rail_configure_window(XConfigureEvent *config)
 {
     int num_window_rects = 1;
@@ -1784,7 +1784,7 @@ rail_desktop_resize(XEvent *lxevent)
 
 /*****************************************************************************/
 /* returns 0, event handled, 1 unhandled */
-int APP_CC
+int
 rail_xevent(void *xevent)
 {
     XEvent *lxevent;

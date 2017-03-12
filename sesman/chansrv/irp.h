@@ -55,12 +55,12 @@ struct irp
     void      *user_data;
 };
 
-IRP * APP_CC devredir_irp_new(void);
-IRP * APP_CC devredir_irp_clone(IRP *irp);
-int   APP_CC devredir_irp_delete(IRP *irp);
-IRP * APP_CC devredir_irp_find(tui32 completion_id);
-IRP * APP_CC devredir_irp_find_by_fileid(tui32 FileId);
-IRP * APP_CC devredir_irp_get_last(void);
-void  APP_CC devredir_irp_dump(void);
+IRP * devredir_irp_new(void);
+IRP * devredir_irp_clone(IRP *irp);
+int   devredir_irp_delete(IRP *irp);
+IRP * devredir_irp_find(tui32 completion_id);
+IRP * devredir_irp_find_by_fileid(tui32 FileId);
+IRP * devredir_irp_get_last(void);
+void  devredir_irp_dump(void);
 
 #endif /* end ifndef __IRP_H */

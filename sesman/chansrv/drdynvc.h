@@ -56,12 +56,12 @@
 #define CMD_DVC_CLOSE_CHANNEL   0x40
 #define CMD_DVC_CAPABILITY      0x50
 
-int APP_CC drdynvc_init(void);
-int APP_CC drdynvc_send_open_channel_request(int chan_pri, unsigned int chan_id,
+int drdynvc_init(void);
+int drdynvc_send_open_channel_request(int chan_pri, unsigned int chan_id,
                                              char *chan_name);
-int APP_CC drdynvc_send_close_channel_request(unsigned int chan_id);
-int APP_CC drdynvc_write_data(uint32_t chan_id, char *data, int data_size);
-int APP_CC drdynvc_data_in(struct stream* s, int chan_id, int chan_flags,
+int drdynvc_send_close_channel_request(unsigned int chan_id);
+int drdynvc_write_data(uint32_t chan_id, char *data, int data_size);
+int drdynvc_data_in(struct stream* s, int chan_id, int chan_flags,
                            int length, int total_length);
 
 #endif

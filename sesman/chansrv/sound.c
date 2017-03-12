@@ -206,21 +206,21 @@ static int g_client_input_format_index = 0;
 static int g_server_input_format_index = 0;
 
 /* microphone related */
-static int APP_CC sound_send_server_input_formats(void);
-static int APP_CC sound_process_input_format(int aindex, int wFormatTag,
+static int sound_send_server_input_formats(void);
+static int sound_process_input_format(int aindex, int wFormatTag,
                            int nChannels, int nSamplesPerSec,
                            int nAvgBytesPerSec, int nBlockAlign,
                            int wBitsPerSample, int cbSize, char *data);
-static int APP_CC sound_process_input_formats(struct stream *s, int size);
-static int APP_CC sound_input_start_recording(void);
-static int APP_CC sound_input_stop_recording(void);
-static int APP_CC sound_process_input_data(struct stream *s, int bytes);
-static int DEFAULT_CC sound_sndsrvr_source_data_in(struct trans *trans);
-static int APP_CC sound_start_source_listener(void);
-static int APP_CC sound_start_sink_listener(void);
+static int sound_process_input_formats(struct stream *s, int size);
+static int sound_input_start_recording(void);
+static int sound_input_stop_recording(void);
+static int sound_process_input_data(struct stream *s, int bytes);
+static int sound_sndsrvr_source_data_in(struct trans *trans);
+static int sound_start_source_listener(void);
+static int sound_start_sink_listener(void);
 
 /*****************************************************************************/
-static int APP_CC
+static int
 sound_send_server_output_formats(void)
 {
     struct stream *s;
@@ -322,7 +322,7 @@ sound_send_training(void)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 sound_process_output_format(int aindex, int wFormatTag, int nChannels,
                             int nSamplesPerSec, int nAvgBytesPerSec,
                             int nBlockAlign, int wBitsPerSample,
@@ -391,7 +391,7 @@ sound_process_output_format(int aindex, int wFormatTag, int nChannels,
     0020 10 b1 02 00 04 00 10 00 00 00
 */
 
-static int APP_CC
+static int
 sound_process_output_formats(struct stream *s, int size)
 {
     int num_formats;
@@ -780,7 +780,7 @@ sound_send_close(void)
 
 /*****************************************************************************/
 /* from client */
-static int APP_CC
+static int
 sound_process_training(struct stream *s, int size)
 {
     int time_diff;
@@ -792,7 +792,7 @@ sound_process_training(struct stream *s, int size)
 
 /*****************************************************************************/
 /* from client */
-static int APP_CC
+static int
 sound_process_wave_confirm(struct stream *s, int size)
 {
     int wTimeStamp;
@@ -816,7 +816,7 @@ sound_process_wave_confirm(struct stream *s, int size)
 /*****************************************************************************/
 /* process message in from the audio source, eg pulse, alsa
    on it's way to the client. returns error */
-static int APP_CC
+static int
 process_pcm_message(int id, int size, struct stream *s)
 {
     switch (id)
@@ -838,7 +838,7 @@ process_pcm_message(int id, int size, struct stream *s)
 
 /* data in from sound_server_sink */
 
-static int DEFAULT_CC
+static int
 sound_sndsrvr_sink_data_in(struct trans *trans)
 {
     struct stream *s;
@@ -879,7 +879,7 @@ sound_sndsrvr_sink_data_in(struct trans *trans)
 
 /* incoming connection on unix domain socket - sound_server_sink -> xrdp */
 
-static int DEFAULT_CC
+static int
 sound_sndsrvr_sink_conn_in(struct trans *trans, struct trans *new_trans)
 {
     LOG(0, ("sound_sndsrvr_sink_conn_in:"));
@@ -909,7 +909,7 @@ sound_sndsrvr_sink_conn_in(struct trans *trans, struct trans *new_trans)
 
 /* incoming connection on unix domain socket - sound_server_source -> xrdp */
 
-static int DEFAULT_CC
+static int
 sound_sndsrvr_source_conn_in(struct trans *trans, struct trans *new_trans)
 {
     LOG(0, ("sound_sndsrvr_source_conn_in: client connected"));
@@ -936,7 +936,7 @@ sound_sndsrvr_source_conn_in(struct trans *trans, struct trans *new_trans)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 sound_init(void)
 {
     LOG(0, ("sound_init:"));
@@ -965,7 +965,7 @@ sound_init(void)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 sound_deinit(void)
 {
     LOG(10, ("sound_deinit:"));
@@ -1011,7 +1011,7 @@ sound_deinit(void)
 
 /* data in from client ( client -> xrdp -> chansrv ) */
 
-int APP_CC
+int
 sound_data_in(struct stream *s, int chan_id, int chan_flags, int length,
               int total_length)
 {
@@ -1067,7 +1067,7 @@ sound_data_in(struct stream *s, int chan_id, int chan_flags, int length,
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 sound_get_wait_objs(tbus *objs, int *count, int *timeout)
 {
     int lcount;
@@ -1103,7 +1103,7 @@ sound_get_wait_objs(tbus *objs, int *count, int *timeout)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 sound_check_wait_objs(void)
 {
     if (g_audio_l_trans_out != 0)
@@ -1161,7 +1161,7 @@ sound_check_wait_objs(void)
  *
  *****************************************************************************/
 
-static int APP_CC
+static int
 sound_send_server_input_formats(void)
 {
     struct stream *s;
@@ -1225,7 +1225,7 @@ sound_send_server_input_formats(void)
  *
  *****************************************************************************/
 
-static int APP_CC
+static int
 sound_process_input_format(int aindex, int wFormatTag, int nChannels,
                            int nSamplesPerSec, int nAvgBytesPerSec,
                            int nBlockAlign, int wBitsPerSample,
@@ -1273,7 +1273,7 @@ sound_process_input_format(int aindex, int wFormatTag, int nChannels,
  *
  *****************************************************************************/
 
-static int APP_CC
+static int
 sound_process_input_formats(struct stream *s, int size)
 {
     int num_formats;
@@ -1318,7 +1318,7 @@ sound_process_input_formats(struct stream *s, int size)
  *
  *****************************************************************************/
 
-static int APP_CC
+static int
 sound_input_start_recording(void)
 {
     struct stream* s;
@@ -1357,7 +1357,7 @@ sound_input_start_recording(void)
  *
  *****************************************************************************/
 
-static int APP_CC
+static int
 sound_input_stop_recording(void)
 {
     struct stream* s;
@@ -1387,7 +1387,7 @@ sound_input_stop_recording(void)
  * Process data: xrdp <- client
  *****************************************************************************/
 
-static int APP_CC
+static int
 sound_process_input_data(struct stream *s, int bytes)
 {
     struct stream *ls;
@@ -1415,7 +1415,7 @@ sound_process_input_data(struct stream *s, int bytes)
  * Got a command from sound_server_source
  *****************************************************************************/
 
-static int DEFAULT_CC
+static int
 sound_sndsrvr_source_data_in(struct trans *trans)
 {
     struct stream *ts = NULL;
@@ -1516,7 +1516,7 @@ sound_sndsrvr_source_data_in(struct trans *trans)
 /**
  * Start a listener for microphone redirection connections
  *****************************************************************************/
-static int APP_CC
+static int
 sound_start_source_listener(void)
 {
     char port[1024];
@@ -1533,7 +1533,7 @@ sound_start_source_listener(void)
 /**
  * Start a listener for speaker redirection connections
  *****************************************************************************/
-static int APP_CC
+static int
 sound_start_sink_listener(void)
 {
     char port[1024];

@@ -431,7 +431,7 @@ do \
  * @return  struct xrdp_mppc_enc* or nil on failure
  */
 
-struct xrdp_mppc_enc * APP_CC
+struct xrdp_mppc_enc *
 mppc_enc_new(int protocol_type)
 {
     struct xrdp_mppc_enc *enc;
@@ -498,7 +498,7 @@ mppc_enc_new(int protocol_type)
  * @param   enc  struct to be deinited
  */
 
-void APP_CC
+void
 mppc_enc_free(struct xrdp_mppc_enc *enc)
 {
     if (enc == 0)
@@ -521,7 +521,7 @@ mppc_enc_free(struct xrdp_mppc_enc *enc)
  * @return  TRUE on success, FALSE on failure
  */
 
-static int APP_CC
+static int
 compress_rdp_4(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
 {
     /* RDP 4.0 encoding not yet implemented */
@@ -538,7 +538,7 @@ compress_rdp_4(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
  * @return  TRUE on success, FALSE on failure
  */
 
-static int APP_CC
+static int
 compress_rdp_5(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
 {
     char *outputBuffer;     /* points to enc->outputBuffer */
@@ -1007,7 +1007,7 @@ compress_rdp_5(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
  * @return  TRUE on success, FALSE on failure
  */
 
-int APP_CC
+int
 compress_rdp(struct xrdp_mppc_enc *enc, tui8 *srcData, int len)
 {
     if ((enc == 0) || (srcData == 0) || (len <= 0) || (len > enc->buf_len))

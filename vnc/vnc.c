@@ -41,11 +41,11 @@
 
 #define AS_LOG_MESSAGE log_message
 
-static int APP_CC
+static int
 lib_mod_process_message(struct vnc *v, struct stream *s);
 
 /******************************************************************************/
-static int APP_CC
+static int
 lib_send_copy(struct vnc *v, struct stream *s)
 {
     return trans_write_copy_s(v->trans, s);
@@ -57,7 +57,7 @@ lib_send_copy(struct vnc *v, struct stream *s)
    on the wire
    'bytes' in, contains 16 bytes server random
            out, random and 'passwd' conbined */
-static void APP_CC
+static void
 rfbEncryptBytes(char *bytes, const char *passwd)
 {
     char key[24];
@@ -78,7 +78,7 @@ rfbEncryptBytes(char *bytes, const char *passwd)
 
 /******************************************************************************/
 /* sha1 hash 'passwd', create a string from the hash and call rfbEncryptBytes */
-static void APP_CC
+static void
 rfbHashEncryptBytes(char *bytes, const char *passwd)
 {
     char passwd_hash[20];
@@ -102,7 +102,7 @@ rfbHashEncryptBytes(char *bytes, const char *passwd)
 }
 
 /******************************************************************************/
-static int DEFAULT_CC
+static int
 lib_process_channel_data(struct vnc *v, int chanid, int flags, int size,
                          struct stream *s, int total_size)
 {
@@ -256,7 +256,7 @@ lib_process_channel_data(struct vnc *v, int chanid, int flags, int size,
 }
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 lib_mod_event(struct vnc *v, int msg, long param1, long param2,
               long param3, long param4)
 {
@@ -401,7 +401,7 @@ lib_mod_event(struct vnc *v, int msg, long param1, long param2,
 }
 
 //******************************************************************************
-int DEFAULT_CC
+int
 get_pixel_safe(char *data, int x, int y, int width, int height, int bpp)
 {
     int start = 0;
@@ -470,7 +470,7 @@ get_pixel_safe(char *data, int x, int y, int width, int height, int bpp)
 }
 
 /******************************************************************************/
-void DEFAULT_CC
+void
 set_pixel_safe(char *data, int x, int y, int width, int height, int bpp,
                int pixel)
 {
@@ -529,7 +529,7 @@ set_pixel_safe(char *data, int x, int y, int width, int height, int bpp,
 }
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 split_color(int pixel, int *r, int *g, int *b, int bpp, int *palette)
 {
     if (bpp == 8)
@@ -568,7 +568,7 @@ split_color(int pixel, int *r, int *g, int *b, int bpp, int *palette)
 }
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 make_color(int r, int g, int b, int bpp)
 {
     if (bpp == 24)
@@ -584,7 +584,7 @@ make_color(int r, int g, int b, int bpp)
 }
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 lib_framebuffer_update(struct vnc *v)
 {
     char *d1;
@@ -761,7 +761,7 @@ lib_framebuffer_update(struct vnc *v)
 
 /******************************************************************************/
 /* clip data from the vnc server */
-int DEFAULT_CC
+int
 lib_clip_data(struct vnc *v)
 {
     struct stream *s;
@@ -811,7 +811,7 @@ lib_clip_data(struct vnc *v)
 }
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 lib_palette_update(struct vnc *v)
 {
     struct stream *s;
@@ -867,7 +867,7 @@ lib_palette_update(struct vnc *v)
 }
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 lib_bell_trigger(struct vnc *v)
 {
     int error;
@@ -877,7 +877,7 @@ lib_bell_trigger(struct vnc *v)
 }
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 lib_mod_signal(struct vnc *v)
 {
     g_writeln("lib_mod_signal: not used");
@@ -885,7 +885,7 @@ lib_mod_signal(struct vnc *v)
 }
 
 /******************************************************************************/
-static int APP_CC
+static int
 lib_mod_process_message(struct vnc *v, struct stream *s)
 {
     char type;
@@ -925,7 +925,7 @@ lib_mod_process_message(struct vnc *v, struct stream *s)
 }
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 lib_mod_start(struct vnc *v, int w, int h, int bpp)
 {
     v->server_begin_update(v);
@@ -939,7 +939,7 @@ lib_mod_start(struct vnc *v, int w, int h, int bpp)
 }
 
 /******************************************************************************/
-static int APP_CC
+static int
 lib_open_clip_channel(struct vnc *v)
 {
     char init_data[12] = { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -955,7 +955,7 @@ lib_open_clip_channel(struct vnc *v)
 }
 
 /******************************************************************************/
-static int APP_CC
+static int
 lib_data_in(struct trans *trans)
 {
     struct vnc *self;
@@ -991,7 +991,7 @@ lib_data_in(struct trans *trans)
 /*
   return error
 */
-int DEFAULT_CC
+int
 lib_mod_connect(struct vnc *v)
 {
     char cursor_data[32 * (32 * 3)];
@@ -1406,7 +1406,7 @@ lib_mod_connect(struct vnc *v)
 }
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 lib_mod_end(struct vnc *v)
 {
     if (v->vnc_desktop != 0)
@@ -1418,7 +1418,7 @@ lib_mod_end(struct vnc *v)
 }
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 lib_mod_set_param(struct vnc *v, const char *name, const char *value)
 {
     if (g_strcasecmp(name, "username") == 0)
@@ -1456,7 +1456,7 @@ lib_mod_set_param(struct vnc *v, const char *name, const char *value)
 
 /******************************************************************************/
 /* return error */
-int DEFAULT_CC
+int
 lib_mod_get_wait_objs(struct vnc *v, tbus *read_objs, int *rcount,
                       tbus *write_objs, int *wcount, int *timeout)
 {
@@ -1476,7 +1476,7 @@ lib_mod_get_wait_objs(struct vnc *v, tbus *read_objs, int *rcount,
 
 /******************************************************************************/
 /* return error */
-int DEFAULT_CC
+int
 lib_mod_check_wait_objs(struct vnc *v)
 {
     int rv;

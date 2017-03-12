@@ -36,7 +36,7 @@
  * @return 0 on success, 1 on error
  *
  */
-int DEFAULT_CC
+int
 tcp_force_recv(int sck, char* data, int len);
 
 /**
@@ -48,7 +48,7 @@ tcp_force_recv(int sck, char* data, int len);
  * @return 0 on success, 1 on error
  *
  */
-int DEFAULT_CC
+int
 tcp_force_send(int sck, char* data, int len);
 
 /**
@@ -60,7 +60,7 @@ tcp_force_send(int sck, char* data, int len);
  * @return 0 on success, -1 on error
  *
  */
-int DEFAULT_CC
+int
 tcp_bind(int sck, char* addr, char* port);
 
 #endif

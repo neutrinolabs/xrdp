@@ -35,7 +35,7 @@
  * @return non-zero handle on success, 0 on failure
  *
  */
-long DEFAULT_CC
+long
 auth_userpass(const char *user, const char *pass, int *errorcode);
 
 /**
@@ -46,7 +46,7 @@ auth_userpass(const char *user, const char *pass, int *errorcode);
  * @return 0 on success, 1 on failure
  *
  */
-int DEFAULT_CC
+int
 auth_start_session(long in_val, int in_display);
 
 /**
@@ -56,7 +56,7 @@ auth_start_session(long in_val, int in_display);
  * @return 0 on success, 1 on failure
  *
  */
-int DEFAULT_CC
+int
 auth_stop_session(long in_val);
 
 /**
@@ -66,7 +66,7 @@ auth_stop_session(long in_val);
  * @return 0 on success, 1 on failure
  *
  */
-int DEFAULT_CC
+int
 auth_end(long in_val);
 
 /**
@@ -76,7 +76,7 @@ auth_end(long in_val);
  * @return 0 on success, 1 on failure
  *
  */
-int DEFAULT_CC
+int
 auth_set_env(long in_val);
 
 
@@ -93,7 +93,7 @@ auth_set_env(long in_val);
  * @return 0 on success, 1 on failure
  *
  */
-int DEFAULT_CC
+int
 auth_check_pwd_chg(const char *user);
 
 /**
@@ -103,7 +103,7 @@ auth_check_pwd_chg(const char *user);
  * @return 0 on success, 1 on failure
  *
  */
-int DEFAULT_CC
+int
 auth_change_pwd(const char *user, const char *newpwd);
 
 #endif
