@@ -1730,6 +1730,8 @@ getPAMError(const int pamError, char *text, int text_bytes)
         default:
             g_snprintf(text, text_bytes, "Not defined PAM error:%d", pamError);
             return text;
+#else
+        return "Compile time configuration error.";
 #endif
     }
 }
@@ -1825,6 +1827,8 @@ getPAMAdditionalErrorInfo(const int pamError, struct xrdp_mm *self)
             }
         default:
             return "No expected error";
+#else
+        return "Compile time configuration error.";
 #endif
     }
 }

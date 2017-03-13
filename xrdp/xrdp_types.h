@@ -324,6 +324,9 @@ struct xrdp_wm
   struct xrdp_painter* painter;
   struct xrdp_cache* cache;
   int palette[256];
+#ifdef XRDP_LOGINFIRST
+  struct xrdp_bitmap* firstlogin_window;
+#endif
   struct xrdp_bitmap* login_window;
   /* generic colors */
   int black;

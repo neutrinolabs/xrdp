@@ -25,6 +25,11 @@ AM_CPPFLAGS += -I$(top_srcdir)/librfxcodec/include
 XRDP_EXTRA_LIBS += $(top_builddir)/librfxcodec/src/.libs/librfxencode.a
 endif
 
+if XRDP_LOGINFIRST
+AM_CPPFLAGS += -DXRDP_LOGINFIRST
+XRDP_EXTRA_LIBS += -lpam -lpam_misc
+endif
+
 if XRDP_PIXMAN
 AM_CPPFLAGS += -DXRDP_PIXMAN
 AM_CPPFLAGS += $(PIXMAN_CFLAGS)

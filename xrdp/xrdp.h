@@ -351,6 +351,10 @@ get_keymaps(int keylayout, struct xrdp_keymap* keymap);
 /* xrdp_login_wnd.c */
 int APP_CC
 xrdp_login_wnd_create(struct xrdp_wm* self);
+#ifdef XRDP_LOGINFIRST
+int APP_CC
+xrdp_pwdiag_wnd_create(struct xrdp_wm* self);
+#endif
 int APP_CC
 load_xrdp_config(struct xrdp_config *config, int bpp);
 
