@@ -106,4 +106,13 @@ auth_check_pwd_chg(const char *user);
 int DEFAULT_CC
 auth_change_pwd(const char *user, const char *newpwd);
 
+/**
+ *
+ * @brief FIXME
+ * @param in_val
+ * @return 0 on success, 1 on failure
+ *
+ */
+int DEFAULT_CC
+auth_change_pwd_pam(const char* user, const char* pass, const char* newpwd);
 #endif

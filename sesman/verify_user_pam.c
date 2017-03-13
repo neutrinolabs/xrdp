@@ -38,6 +38,7 @@ struct t_user_pass
 {
     char user[256];
     char pass[256];
+    char newpwd[256];
 };
 
 struct t_auth_info
@@ -48,6 +49,8 @@ struct t_auth_info
     struct pam_conv pamc;
     pam_handle_t *ph;
 };
+
+static int pam_chauth_old_new_pw = 0;
 
 /******************************************************************************/
 static int DEFAULT_CC
@@ -73,6 +76,60 @@ verify_pam_conv(int num_msg, const struct pam_message **msg,
                 user_pass = (struct t_user_pass *) appdata_ptr;
                 reply[i].resp = g_strdup(user_pass->pass);
                 reply[i].resp_retcode = PAM_SUCCESS;
+                break;
+            default:
+                g_printf("unknown in verify_pam_conv\r\n");
+                g_free(reply);
+                return PAM_CONV_ERR;
+        }
+    }
+
+    *resp = reply;
+    return PAM_SUCCESS;
+}
+
+/******************************************************************************/
+static int DEFAULT_CC
+chauth_pam_conv(int num_msg, const struct pam_message **msg,
+                struct pam_response **resp, void *appdata_ptr)
+{
+    int i;
+    struct pam_response *reply;
+    struct t_user_pass *user_pass;
+
+    reply = g_new0(struct pam_response, num_msg);
+
+    for (i = 0; i < num_msg; i++)
+    {
+        switch (msg[i]->msg_style)
+        {
+            case PAM_PROMPT_ECHO_ON: /* username */
+                user_pass = (struct t_user_pass *) appdata_ptr;
+                reply[i].resp = g_strdup(user_pass->user);
+                reply[i].resp_retcode = PAM_SUCCESS;
+                g_writeln("username");
+                pam_chauth_old_new_pw = 1;
+                break;
+            case PAM_PROMPT_ECHO_OFF: /* password */
+                user_pass = (struct t_user_pass *) appdata_ptr;
+                /* only prompt for old password starts with '('
+                   old pass:        "(current) UNIX password:"
+                   new pass:        "New password:"
+                   retype new pass: "Retype new password:" */
+                if (pam_chauth_old_new_pw)
+                {
+                    reply[i].resp = g_strdup(user_pass->pass);
+                    g_writeln("oldpass");
+                    pam_chauth_old_new_pw = 0;
+                }
+                else
+                {
+                    reply[i].resp = g_strdup(user_pass->newpwd);
+                    g_writeln("newpass");
+                }
+                reply[i].resp_retcode = PAM_SUCCESS;
+                break;
+            case PAM_TEXT_INFO: /* useless messages */
                 break;
             default:
                 g_printf("unknown in verify_pam_conv\r\n");
@@ -312,4 +369,49 @@ auth_set_env(long in_val)
     }
 
     return 0;
+}
+/******************************************************************************/
+/* returns boolean */
+/* update to the new pass */
+int DEFAULT_CC
+auth_change_pwd_pam(const char *user, const char *pass, const char *newpwd)
+{
+    int error;
+    struct t_auth_info *auth_info;
+    char service_name[256];
+
+    get_service_name(service_name);
+    auth_info = g_new0(struct t_auth_info, 1);
+    g_strncpy(auth_info->user_pass.user, user, 255);
+    g_strncpy(auth_info->user_pass.pass, pass, 255);
+    g_strncpy(auth_info->user_pass.newpwd, newpwd, 255);
+    auth_info->pamc.conv = &chauth_pam_conv;
+    auth_info->pamc.appdata_ptr = &(auth_info->user_pass);
+    error = pam_start(service_name, 0, &(auth_info->pamc), &(auth_info->ph));
+
+    if (error != PAM_SUCCESS)
+    {
+        g_printf("pam_start failed: %s\r\n", pam_strerror(auth_info->ph, error));
+        pam_end(auth_info->ph, error);
+        g_free(auth_info);
+        return error;
+    }
+
+    error = pam_set_item(auth_info->ph, PAM_TTY, service_name);
+    if (error != PAM_SUCCESS)
+    {
+        g_printf("pam_set_item failed: %s\r\n",
+                 pam_strerror(auth_info->ph, error));
+    }
+
+    error = pam_chauthtok(auth_info->ph, PAM_CHANGE_EXPIRED_AUTHTOK);
+    if (error != PAM_SUCCESS)
+    {
+        g_printf("pam_chauthtok failed: %s\r\n",
+                 pam_strerror(auth_info->ph, error));
+        pam_end(auth_info->ph, error);
+        g_free(auth_info);
+        return error;
+    }
+    return error;
 }

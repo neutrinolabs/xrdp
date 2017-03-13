@@ -325,6 +325,7 @@ struct xrdp_wm
   struct xrdp_cache* cache;
   int palette[256];
   struct xrdp_bitmap* login_window;
+  struct xrdp_bitmap* newpass_window;
   /* generic colors */
   int black;
   int grey;

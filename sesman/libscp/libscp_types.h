@@ -47,6 +47,7 @@
  * XRDP sends this command to let sesman verify if the user is allowed
  * to use the gateway */
 #define SCP_GW_AUTHENTICATION    0x04
+#define SCP_GW_CHAUTHTOK         0x05
 
 #define SCP_ADDRESS_TYPE_IPV4 0x00
 #define SCP_ADDRESS_TYPE_IPV6 0x01
@@ -77,6 +78,7 @@ struct SCP_SESSION
   char  locale[18];
   char* username;
   char* password;
+  char* newpass;
   char* hostname;
   tui8  addr_type;
   tui32 ipv4addr;

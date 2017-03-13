@@ -1457,7 +1457,7 @@ xrdp_mm_sesman_data_in(struct trans *trans)
 /*********************************************************************/
 /* return 0 on success */
 static int APP_CC
-access_control(char *username, char *password, char *srv)
+access_control(char *username, char *password, char *newpass, char *srv, int type)
 {
     int reply;
     int rec = 32+1; /* 32 is reserved for PAM failures this means connect failure */
@@ -1483,7 +1483,8 @@ access_control(char *username, char *password, char *srv)
             make_stream(out_s);
             init_stream(out_s, 500);
             s_push_layer(out_s, channel_hdr, 8);
-            out_uint16_be(out_s, 4); /*0x04 means SCP_GW_AUTHENTICATION*/
+            out_uint16_be(out_s, type); /*0x04 means SCP_GW_AUTHENTICATION*/
+                                        /*0x05 means SCP_GW_CHAUTHTOK*/
             index = g_strlen(username);
             out_uint16_be(out_s, index);
             out_uint8a(out_s, username, index);
@@ -1491,6 +1492,14 @@ access_control(char *username, char *password, char *srv)
             index = g_strlen(password);
             out_uint16_be(out_s, index);
             out_uint8a(out_s, password, index);
+
+            if (type == 5)
+            {
+                index = g_strlen(newpass);
+                out_uint16_be(out_s, index);
+                out_uint8a(out_s, newpass, index);
+            }
+
             s_mark_end(out_s);
             s_pop_layer(out_s, channel_hdr);
             out_uint32_be(out_s, 0); /* version */
@@ -1520,14 +1529,18 @@ access_control(char *username, char *password, char *srv)
                             in_uint16_be(in_s, pAM_errorcode); /* this variable holds the PAM error code if the variable is >32 it is a "invented" code */
                             in_uint16_be(in_s, dummy);
 
-                            if (code != 4) /*0x04 means SCP_GW_AUTHENTICATION*/
+                            if (code == 4) /*0x04 means SCP_GW_AUTHENTICATION*/
                             {
-                                log_message(LOG_LEVEL_ERROR, "Returned cmd code from "
-                                            "sesman is corrupt");
+                                rec = pAM_errorcode; /* here we read the reply from the access control */
+                            }
+                            else if (code == 5) /*0x05 means SCP_GW_CHAUTHTOK*/
+                            {
+                                rec = pAM_errorcode; /* here we read the reply from the access control */
                             }
                             else
                             {
-                                rec = pAM_errorcode; /* here we read the reply from the access control */
+                                log_message(LOG_LEVEL_ERROR, "Returned cmd code from "
+                                            "sesman is corrupt");
                             }
                         }
                         else
@@ -1846,7 +1859,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
     char port[8];
     char chansrvport[256];
 #ifndef USE_NOPAM
-    int use_pam_auth = 0;
+    int use_pam_auth_explicit = 0;
     char pam_auth_sessionIP[256];
     char pam_auth_password[256];
     char pam_auth_username[256];
@@ -1886,7 +1899,7 @@ xrdp_mm_connect(struct xrdp_mm *self)
 #ifndef USE_NOPAM
         else if (g_strcasecmp(name, "pamusername") == 0)
         {
-            use_pam_auth = 1;
+            use_pam_auth_explicit = 1;
             g_strncpy(pam_auth_username, value, 255);
         }
         else if (g_strcasecmp(name, "pamsessionmng") == 0)
@@ -1914,45 +1927,67 @@ xrdp_mm_connect(struct xrdp_mm *self)
     }
 
 #ifndef USE_NOPAM
-    if (use_pam_auth)
-    {
-        int reply;
-        char pam_error[128];
-        const char *additionalError;
-        xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG,
+    int reply;
+    char replytxt[128];
+    char pam_error[128];
+    const char *additionalError;
+    xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG,
                         "Please wait, we now perform access control...");
 
-        /* g_writeln("we use pam modules to check if we can approve this user"); */
-        if (!g_strncmp(pam_auth_username, "same", 255))
+    /* g_writeln("we use pam modules to check if we can approve this user"); */
+
+    /* use pam either way, copy from normal user name when not explicitly inputed */
+    if (use_pam_auth_explicit == 0)
+    {
+        log_message(LOG_LEVEL_DEBUG, "pam parameters not defined, copy from user input");
+        g_strncpy(pam_auth_username, username, 255);
+        g_strncpy(pam_auth_password, password, 255);
+        g_strncpy(pam_auth_sessionIP, "127.0.0.1", 255);
+    }
+
+    if (!g_strncmp(pam_auth_username, "same", 255))
+    {
+        log_message(LOG_LEVEL_DEBUG, "pamusername copied from username - same: %s", username);
+        g_strncpy(pam_auth_username, username, 255);
+    }
+
+    if (!g_strncmp(pam_auth_password, "same", 255))
+    {
+        log_message(LOG_LEVEL_DEBUG, "pam_auth_password copied from username - same: %s", password);
+        g_strncpy(pam_auth_password, password, 255);
+    }
+
+    /* access_control return 0 on success */
+    reply = access_control(pam_auth_username, pam_auth_password, NULL, pam_auth_sessionIP, 4);
+
+    g_sprintf(replytxt, "Reply from access control: %s",
+              getPAMError(reply, pam_error, 127));
+
+
+    xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG, "%s", replytxt);
+    log_message(LOG_LEVEL_INFO, "%s", replytxt);
+    additionalError = getPAMAdditionalErrorInfo(reply, self);
+    if (additionalError)
+    {
+        g_snprintf(replytxt, 127, "%s", additionalError);
+        if (replytxt[0])
         {
-            log_message(LOG_LEVEL_DEBUG, "pamusername copied from username - same: %s", username);
-            g_strncpy(pam_auth_username, username, 255);
+            xrdp_wm_log_msg(self->wm, LOG_LEVEL_DEBUG, "%s", replytxt);
         }
+    }
 
-        if (!g_strncmp(pam_auth_password, "same", 255))
+    if (reply != 0)
+    {
+        /* show PAM errors */
+        xrdp_wm_show_log(self->wm);
+
+        if (reply == PAM_NEW_AUTHTOK_REQD)
         {
-            log_message(LOG_LEVEL_DEBUG, "pam_auth_password copied from username - same: %s", password);
-            g_strncpy(pam_auth_password, password, 255);
+            /* show new password window */
+            xrdp_wm_set_login_mode(self->wm, 20);
         }
-
-        /* access_control return 0 on success */
-        reply = access_control(pam_auth_username, pam_auth_password, pam_auth_sessionIP);
-
-        xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO,
-                        "Reply from access control: %s",
-                        getPAMError(reply, pam_error, 127));
-
-        additionalError = getPAMAdditionalErrorInfo(reply, self);
-        if (additionalError && additionalError[0])
-        {
-            xrdp_wm_log_msg(self->wm, LOG_LEVEL_INFO, "%s", additionalError);
-        }
-
-        if (reply != 0)
-        {
-            rv = 1;
-            return rv;
-        }
+        rv = 1;
+        return rv;
     }
 #endif
 
@@ -2042,6 +2077,59 @@ xrdp_mm_connect(struct xrdp_mm *self)
 
     log_message(LOG_LEVEL_DEBUG,"return value from xrdp_mm_connect %d", rv);
 
+    return rv;
+}
+
+/*****************************************************************************/
+/* return 0 on success */
+int APP_CC
+xrdp_mm_change_expired_password(struct xrdp_mm *self)
+{
+    int rv = -1;
+    int index;
+    int count;
+    int old_idx;
+    char *username;
+    char *password;
+    char *newpass;
+    char sessionIP[256];
+    char *name;
+    char *value;
+
+    username = 0;
+    password = 0;
+    newpass = 0;
+    old_idx = -1;
+    count = self->login_names->count;
+
+    for (index = 0; index < count; index++)
+    {
+        name = (char *)list_get_item(self->login_names, index);
+        value = (char *)list_get_item(self->login_values, index);
+
+        if (g_strcasecmp(name, "username") == 0)
+        {
+            username = value;
+        }
+        else if (g_strcasecmp(name, "password") == 0)
+        {
+            password = value;
+            old_idx = index;
+        }
+        else if (g_strcasecmp(name, "newpass") == 0)
+        {
+            newpass = value;
+        }
+        g_strncpy(sessionIP, "127.0.0.1", 255);
+    }
+    rv = access_control(username, password, newpass, sessionIP, 5);
+    if (rv == 0)
+    {
+        list_remove_item (self->login_names, old_idx);
+        list_remove_item (self->login_values, old_idx);
+        list_add_item (self->login_names, (tbus)g_strdup("password"));
+        list_add_item (self->login_values, (tbus)g_strdup(newpass));
+    }
     return rv;
 }
 
