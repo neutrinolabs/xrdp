@@ -24,6 +24,10 @@ RDP 6.0 Bitmap Compression
 http://msdn.microsoft.com/en-us/library/cc241877.aspx
 */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "libxrdp.h"
 
 #define FLAGS_RLE     0x10
@@ -37,7 +41,7 @@ http://msdn.microsoft.com/en-us/library/cc241877.aspx
 
 /*****************************************************************************/
 /* split RGB */
-static int APP_CC
+static int
 fsplit3(char *in_data, int start_line, int width, int e,
         char *r_data, char *g_data, char *b_data)
 {
@@ -117,7 +121,7 @@ fsplit3(char *in_data, int start_line, int width, int e,
 
 /*****************************************************************************/
 /* split ARGB */
-static int APP_CC
+static int
 fsplit4(char *in_data, int start_line, int width, int e,
         char *a_data, char *r_data, char *g_data, char *b_data)
 {
@@ -214,7 +218,7 @@ do { \
 } while (0)
 
 /*****************************************************************************/
-static int APP_CC
+static int
 fdelta(char *in_plane, char *out_plane, int cx, int cy)
 {
     char delta;
@@ -246,7 +250,7 @@ fdelta(char *in_plane, char *out_plane, int cx, int cy)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 fout(int collen, int replen, char *colptr, struct stream *s)
 {
     int code;
@@ -311,7 +315,7 @@ fout(int collen, int replen, char *colptr, struct stream *s)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 fpack(char *plane, int cx, int cy, struct stream *s)
 {
     char *ptr8;
@@ -378,7 +382,7 @@ fpack(char *plane, int cx, int cy, struct stream *s)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 foutraw3(struct stream *s, int bytes, int header,
          char *r_data, char *g_data, char *b_data)
 {
@@ -392,7 +396,7 @@ foutraw3(struct stream *s, int bytes, int header,
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 foutraw4(struct stream *s, int bytes, int header,
          char *a_data, char *r_data, char *g_data, char *b_data)
 {
@@ -408,7 +412,7 @@ foutraw4(struct stream *s, int bytes, int header,
 
 /*****************************************************************************/
 /* returns the number of lines compressed */
-int APP_CC
+int
 xrdp_bitmap32_compress(char *in_data, int width, int height,
                        struct stream *s, int bpp, int byte_limit,
                        int start_line, struct stream *temp_s,

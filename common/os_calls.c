@@ -87,8 +87,8 @@ extern char **environ;
 #endif
 
 /* sys/ucred.h needs to be included to use struct xucred
- * in FreeBSD and OS X. No need for other BSDs  */
-#if defined(__FreeBSD__) || defined(__APPLE__)
+ * in FreeBSD and OS X. No need for other BSDs except GNU/kFreeBSD */
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__FreeBSD_kernel__)
 #include <sys/ucred.h>
 #endif
 
@@ -101,14 +101,14 @@ extern char **environ;
 #endif
 
 /*****************************************************************************/
-int APP_CC
+int
 g_rm_temp_dir(void)
 {
     return 0;
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_mk_temp_dir(const char *app_name)
 {
     if (!g_directory_exist("/tmp/.xrdp"))
@@ -128,7 +128,7 @@ g_mk_temp_dir(const char *app_name)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 g_init(const char *app_name)
 {
 #if defined(_WIN32)
@@ -155,7 +155,7 @@ g_init(const char *app_name)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 g_deinit(void)
 {
 #if defined(_WIN32)
@@ -167,7 +167,7 @@ g_deinit(void)
 /*****************************************************************************/
 /* allocate memory, returns a pointer to it, size bytes are allocated,
    if zero is non zero, each byte will be set to zero */
-void *APP_CC
+void *
 g_malloc(int size, int zero)
 {
     char *rv;
@@ -187,7 +187,7 @@ g_malloc(int size, int zero)
 
 /*****************************************************************************/
 /* free the memory pointed to by ptr, ptr can be zero */
-void APP_CC
+void
 g_free(void *ptr)
 {
     if (ptr != 0)
@@ -199,7 +199,7 @@ g_free(void *ptr)
 /*****************************************************************************/
 /* output text to stdout, try to use g_write / g_writeln instead to avoid
    linux / windows EOL problems */
-void DEFAULT_CC
+void
 g_printf(const char *format, ...)
 {
     va_list ap;
@@ -210,7 +210,7 @@ g_printf(const char *format, ...)
 }
 
 /*****************************************************************************/
-void DEFAULT_CC
+void
 g_sprintf(char *dest, const char *format, ...)
 {
     va_list ap;
@@ -221,7 +221,7 @@ g_sprintf(char *dest, const char *format, ...)
 }
 
 /*****************************************************************************/
-int DEFAULT_CC
+int
 g_snprintf(char *dest, int len, const char *format, ...)
 {
     int err;
@@ -235,7 +235,7 @@ g_snprintf(char *dest, int len, const char *format, ...)
 }
 
 /*****************************************************************************/
-void DEFAULT_CC
+void
 g_writeln(const char *format, ...)
 {
     va_list ap;
@@ -251,7 +251,7 @@ g_writeln(const char *format, ...)
 }
 
 /*****************************************************************************/
-void DEFAULT_CC
+void
 g_write(const char *format, ...)
 {
     va_list ap;
@@ -263,7 +263,7 @@ g_write(const char *format, ...)
 
 /*****************************************************************************/
 /* produce a hex dump */
-void APP_CC
+void
 g_hexdump(const char *p, int len)
 {
     unsigned char *line;
@@ -306,21 +306,21 @@ g_hexdump(const char *p, int len)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 g_memset(void *ptr, int val, int size)
 {
     memset(ptr, val, size);
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 g_memcpy(void *d_ptr, const void *s_ptr, int size)
 {
     memcpy(d_ptr, s_ptr, size);
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_getchar(void)
 {
     return getchar();
@@ -328,7 +328,7 @@ g_getchar(void)
 
 /*****************************************************************************/
 /*Returns 0 on success*/
-int APP_CC
+int
 g_tcp_set_no_delay(int sck)
 {
     int ret = 1; /* error */
@@ -367,7 +367,7 @@ g_tcp_set_no_delay(int sck)
 
 /*****************************************************************************/
 /*Returns 0 on success*/
-int APP_CC
+int
 g_tcp_set_keepalive(int sck)
 {
     int ret = 1; /* error */
@@ -407,7 +407,7 @@ g_tcp_set_keepalive(int sck)
 /*****************************************************************************/
 /* returns a newly created socket or -1 on error */
 /* in win32 a socket is an unsigned int, in linux, it's an int */
-int APP_CC
+int
 g_tcp_socket(void)
 {
     int rv;
@@ -498,7 +498,7 @@ g_tcp_socket(void)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 g_sck_set_send_buffer_bytes(int sck, int bytes)
 {
     int option_value;
@@ -516,7 +516,7 @@ g_sck_set_send_buffer_bytes(int sck, int bytes)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 g_sck_get_send_buffer_bytes(int sck, int *bytes)
 {
     int option_value;
@@ -535,7 +535,7 @@ g_sck_get_send_buffer_bytes(int sck, int *bytes)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 g_sck_set_recv_buffer_bytes(int sck, int bytes)
 {
     int option_value;
@@ -553,7 +553,7 @@ g_sck_set_recv_buffer_bytes(int sck, int bytes)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 g_sck_get_recv_buffer_bytes(int sck, int *bytes)
 {
     int option_value;
@@ -571,7 +571,7 @@ g_sck_get_recv_buffer_bytes(int sck, int *bytes)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_sck_local_socket(void)
 {
 #if defined(_WIN32)
@@ -583,7 +583,7 @@ g_sck_local_socket(void)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 g_sck_get_peer_cred(int sck, int *pid, int *uid, int *gid)
 {
 #if defined(SO_PEERCRED)
@@ -641,7 +641,7 @@ g_sck_get_peer_cred(int sck, int *pid, int *uid, int *gid)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 g_sck_close(int sck)
 {
 #if defined(_WIN32)
@@ -729,7 +729,7 @@ g_sck_close(int sck)
 /*****************************************************************************/
 /* returns error, zero is good */
 #if defined(XRDP_ENABLE_IPV6)
-int APP_CC
+int
 g_tcp_connect(int sck, const char *address, const char *port)
 {
     int res = 0;
@@ -789,7 +789,7 @@ g_tcp_connect(int sck, const char *address, const char *port)
     return res;
 }
 #else
-int APP_CC
+int
 g_tcp_connect(int sck, const char* address, const char* port)
 {
     struct sockaddr_in s;
@@ -831,7 +831,7 @@ g_tcp_connect(int sck, const char* address, const char* port)
 
 /*****************************************************************************/
 /* returns error, zero is good */
-int APP_CC
+int
 g_sck_local_connect(int sck, const char *port)
 {
 #if defined(_WIN32)
@@ -849,7 +849,7 @@ g_sck_local_connect(int sck, const char *port)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_sck_set_non_blocking(int sck)
 {
     unsigned long i;
@@ -871,7 +871,7 @@ g_sck_set_non_blocking(int sck)
 #if defined(XRDP_ENABLE_IPV6)
 /*****************************************************************************/
 /* return boolean */
-static int APP_CC
+static int
 address_match(const char *address, struct addrinfo *j)
 {
     struct sockaddr_in *ipv4_in;
@@ -939,7 +939,7 @@ address_match(const char *address, struct addrinfo *j)
 #if defined(XRDP_ENABLE_IPV6)
 /*****************************************************************************/
 /* returns error, zero is good */
-static int APP_CC
+static int
 g_tcp_bind_flags(int sck, const char *port, const char *address, int flags)
 {
     int res;
@@ -970,7 +970,7 @@ g_tcp_bind_flags(int sck, const char *port, const char *address, int flags)
 
 /*****************************************************************************/
 /* returns error, zero is good */
-int APP_CC
+int
 g_tcp_bind(int sck, const char *port)
 {
     int flags;
@@ -979,7 +979,7 @@ g_tcp_bind(int sck, const char *port)
     return g_tcp_bind_flags(sck, port, 0, flags);
 }
 #else
-int APP_CC
+int
 g_tcp_bind(int sck, const char* port)
 {
     struct sockaddr_in s;
@@ -993,7 +993,7 @@ g_tcp_bind(int sck, const char* port)
 #endif
 
 /*****************************************************************************/
-int APP_CC
+int
 g_sck_local_bind(int sck, const char *port)
 {
 #if defined(_WIN32)
@@ -1013,7 +1013,7 @@ g_sck_local_bind(int sck, const char *port)
 #if defined(XRDP_ENABLE_IPV6)
 /*****************************************************************************/
 /* returns error, zero is good */
-int APP_CC
+int
 g_tcp_bind_address(int sck, const char *port, const char *address)
 {
     int flags;
@@ -1022,7 +1022,7 @@ g_tcp_bind_address(int sck, const char *port, const char *address)
     return g_tcp_bind_flags(sck, port, address, flags);
 }
 #else
-int APP_CC
+int
 g_tcp_bind_address(int sck, const char* port, const char* address)
 {
     struct sockaddr_in s;
@@ -1041,14 +1041,14 @@ g_tcp_bind_address(int sck, const char* port, const char* address)
 
 /*****************************************************************************/
 /* returns error, zero is good */
-int APP_CC
+int
 g_sck_listen(int sck)
 {
     return listen(sck, 2);
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_tcp_accept(int sck)
 {
     int ret;
@@ -1108,7 +1108,7 @@ g_tcp_accept(int sck)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_sck_accept(int sck, char *addr, int addr_bytes, char *port, int port_bytes)
 {
     int ret;
@@ -1175,7 +1175,7 @@ g_sck_accept(int sck, char *addr, int addr_bytes, char *port, int port_bytes)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 g_write_ip_address(int rcv_sck, char *ip_address, int bytes)
 {
     struct sockaddr_in s;
@@ -1209,7 +1209,7 @@ g_write_ip_address(int rcv_sck, char *ip_address, int bytes)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 g_sleep(int msecs)
 {
 #if defined(_WIN32)
@@ -1220,7 +1220,7 @@ g_sleep(int msecs)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_sck_last_error_would_block(int sck)
 {
 #if defined(_WIN32)
@@ -1231,7 +1231,7 @@ g_sck_last_error_would_block(int sck)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_sck_recv(int sck, void *ptr, int len, int flags)
 {
 #if defined(_WIN32)
@@ -1242,7 +1242,7 @@ g_sck_recv(int sck, void *ptr, int len, int flags)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_sck_send(int sck, const void *ptr, int len, int flags)
 {
 #if defined(_WIN32)
@@ -1254,7 +1254,7 @@ g_sck_send(int sck, const void *ptr, int len, int flags)
 
 /*****************************************************************************/
 /* returns boolean */
-int APP_CC
+int
 g_sck_socket_ok(int sck)
 {
     int opt;
@@ -1276,7 +1276,7 @@ g_sck_socket_ok(int sck)
 /*****************************************************************************/
 /* wait 'millis' milliseconds for the socket to be able to write */
 /* returns boolean */
-int APP_CC
+int
 g_sck_can_send(int sck, int millis)
 {
     fd_set wfds;
@@ -1304,7 +1304,7 @@ g_sck_can_send(int sck, int millis)
 /*****************************************************************************/
 /* wait 'millis' milliseconds for the socket to be able to receive */
 /* returns boolean */
-int APP_CC
+int
 g_sck_can_recv(int sck, int millis)
 {
     fd_set rfds;
@@ -1331,7 +1331,7 @@ g_sck_can_recv(int sck, int millis)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_sck_select(int sck1, int sck2)
 {
     fd_set rfds;
@@ -1385,7 +1385,7 @@ g_sck_select(int sck1, int sck2)
 
 /*****************************************************************************/
 /* returns boolean */
-static int APP_CC
+static int
 g_fd_can_read(int fd)
 {
     fd_set rfds;
@@ -1406,7 +1406,7 @@ g_fd_can_read(int fd)
 /*****************************************************************************/
 /* returns error */
 /* O_NONBLOCK = 0x00000800 */
-static int APP_CC
+static int
 g_set_nonblock(int fd)
 {
     int error;
@@ -1432,7 +1432,7 @@ g_set_nonblock(int fd)
 
 /*****************************************************************************/
 /* returns 0 on error */
-tintptr APP_CC
+tintptr
 g_create_wait_obj(const char *name)
 {
 #ifdef _WIN32
@@ -1467,7 +1467,7 @@ g_create_wait_obj(const char *name)
 
 /*****************************************************************************/
 /* returns 0 on error */
-tintptr APP_CC
+tintptr
 g_create_wait_obj_from_socket(tintptr socket, int write)
 {
 #ifdef _WIN32
@@ -1495,7 +1495,7 @@ g_create_wait_obj_from_socket(tintptr socket, int write)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 g_delete_wait_obj_from_socket(tintptr wait_obj)
 {
 #ifdef _WIN32
@@ -1512,7 +1512,7 @@ g_delete_wait_obj_from_socket(tintptr wait_obj)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 g_set_wait_obj(tintptr obj)
 {
 #ifdef _WIN32
@@ -1573,7 +1573,7 @@ g_set_wait_obj(tintptr obj)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 g_reset_wait_obj(tintptr obj)
 {
 #ifdef _WIN32
@@ -1620,7 +1620,7 @@ g_reset_wait_obj(tintptr obj)
 
 /*****************************************************************************/
 /* returns boolean */
-int APP_CC
+int
 g_is_wait_obj_set(tintptr obj)
 {
 #ifdef _WIN32
@@ -1644,7 +1644,7 @@ g_is_wait_obj_set(tintptr obj)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 g_delete_wait_obj(tintptr obj)
 {
 #ifdef _WIN32
@@ -1668,7 +1668,7 @@ g_delete_wait_obj(tintptr obj)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 g_obj_wait(tintptr *read_objs, int rcount, tintptr *write_objs, int wcount,
            int mstimeout)
 {
@@ -1799,7 +1799,7 @@ g_obj_wait(tintptr *read_objs, int rcount, tintptr *write_objs, int wcount,
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 g_random(char *data, int len)
 {
 #if defined(_WIN32)
@@ -1837,14 +1837,14 @@ g_random(char *data, int len)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_abs(int i)
 {
     return abs(i);
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_memcmp(const void *s1, const void *s2, int len)
 {
     return memcmp(s1, s2, len);
@@ -1852,7 +1852,7 @@ g_memcmp(const void *s1, const void *s2, int len)
 
 /*****************************************************************************/
 /* returns -1 on error, else return handle or file descriptor */
-int APP_CC
+int
 g_file_open(const char *file_name)
 {
 #if defined(_WIN32)
@@ -1876,7 +1876,7 @@ g_file_open(const char *file_name)
 
 /*****************************************************************************/
 /* returns -1 on error, else return handle or file descriptor */
-int APP_CC
+int
 g_file_open_ex(const char *file_name, int aread, int awrite,
                int acreate, int atrunc)
 {
@@ -1914,7 +1914,7 @@ g_file_open_ex(const char *file_name, int aread, int awrite,
 
 /*****************************************************************************/
 /* returns error, always 0 */
-int APP_CC
+int
 g_file_close(int fd)
 {
 #if defined(_WIN32)
@@ -1927,7 +1927,7 @@ g_file_close(int fd)
 
 /*****************************************************************************/
 /* read from file, returns the number of bytes read or -1 on error */
-int APP_CC
+int
 g_file_read(int fd, char *ptr, int len)
 {
 #if defined(_WIN32)
@@ -1948,7 +1948,7 @@ g_file_read(int fd, char *ptr, int len)
 
 /*****************************************************************************/
 /* write to file, returns the number of bytes written or -1 on error */
-int APP_CC
+int
 g_file_write(int fd, const char *ptr, int len)
 {
 #if defined(_WIN32)
@@ -1969,7 +1969,7 @@ g_file_write(int fd, const char *ptr, int len)
 
 /*****************************************************************************/
 /* move file pointer, returns offset on success, -1 on failure */
-int APP_CC
+int
 g_file_seek(int fd, int offset)
 {
 #if defined(_WIN32)
@@ -1994,7 +1994,7 @@ g_file_seek(int fd, int offset)
 /*****************************************************************************/
 /* do a write lock on a file */
 /* return boolean */
-int APP_CC
+int
 g_file_lock(int fd, int start, int len)
 {
 #if defined(_WIN32)
@@ -2018,7 +2018,7 @@ g_file_lock(int fd, int start, int len)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 g_chmod_hex(const char *filename, int flags)
 {
 #if defined(_WIN32)
@@ -2045,7 +2045,7 @@ g_chmod_hex(const char *filename, int flags)
 
 /*****************************************************************************/
 /* returns error, zero is ok */
-int APP_CC
+int
 g_chown(const char *name, int uid, int gid)
 {
     return chown(name, uid, gid);
@@ -2053,7 +2053,7 @@ g_chown(const char *name, int uid, int gid)
 
 /*****************************************************************************/
 /* returns error, always zero */
-int APP_CC
+int
 g_mkdir(const char *dirname)
 {
 #if defined(_WIN32)
@@ -2067,7 +2067,7 @@ g_mkdir(const char *dirname)
 /* gets the current working directory and puts up to maxlen chars in
    dirname
    always returns 0 */
-char *APP_CC
+char *
 g_get_current_dir(char *dirname, int maxlen)
 {
 #if defined(_WIN32)
@@ -2085,7 +2085,7 @@ g_get_current_dir(char *dirname, int maxlen)
 
 /*****************************************************************************/
 /* returns error, zero on success and -1 on failure */
-int APP_CC
+int
 g_set_current_dir(const char *dirname)
 {
 #if defined(_WIN32)
@@ -2106,7 +2106,7 @@ g_set_current_dir(const char *dirname)
 
 /*****************************************************************************/
 /* returns boolean, non zero if the file exists */
-int APP_CC
+int
 g_file_exist(const char *filename)
 {
 #if defined(_WIN32)
@@ -2118,7 +2118,7 @@ g_file_exist(const char *filename)
 
 /*****************************************************************************/
 /* returns boolean, non zero if the directory exists */
-int APP_CC
+int
 g_directory_exist(const char *dirname)
 {
 #if defined(_WIN32)
@@ -2141,7 +2141,7 @@ g_directory_exist(const char *dirname)
 
 /*****************************************************************************/
 /* returns boolean */
-int APP_CC
+int
 g_create_dir(const char *dirname)
 {
 #if defined(_WIN32)
@@ -2155,7 +2155,7 @@ g_create_dir(const char *dirname)
 /* will try to create directories up to last / in name
    example /tmp/a/b/c/readme.txt will try to create /tmp/a/b/c
    returns boolean */
-int APP_CC
+int
 g_create_path(const char *path)
 {
     char *pp;
@@ -2196,7 +2196,7 @@ g_create_path(const char *path)
 
 /*****************************************************************************/
 /* returns boolean */
-int APP_CC
+int
 g_remove_dir(const char *dirname)
 {
 #if defined(_WIN32)
@@ -2208,7 +2208,7 @@ g_remove_dir(const char *dirname)
 
 /*****************************************************************************/
 /* returns non zero if the file was deleted */
-int APP_CC
+int
 g_file_delete(const char *filename)
 {
 #if defined(_WIN32)
@@ -2220,7 +2220,7 @@ g_file_delete(const char *filename)
 
 /*****************************************************************************/
 /* returns file size, -1 on error */
-int APP_CC
+int
 g_file_get_size(const char *filename)
 {
 #if defined(_WIN32)
@@ -2242,7 +2242,7 @@ g_file_get_size(const char *filename)
 
 /*****************************************************************************/
 /* returns length of text */
-int APP_CC
+int
 g_strlen(const char *text)
 {
     if (text == NULL)
@@ -2255,7 +2255,7 @@ g_strlen(const char *text)
 
 /*****************************************************************************/
 /* locates char in text */
-const char *APP_CC
+const char *
 g_strchr(const char* text, int c)
 {
     if (text == NULL)
@@ -2268,7 +2268,7 @@ g_strchr(const char* text, int c)
 
 /*****************************************************************************/
 /* returns dest */
-char *APP_CC
+char *
 g_strcpy(char *dest, const char *src)
 {
     if (src == 0 && dest != 0)
@@ -2287,7 +2287,7 @@ g_strcpy(char *dest, const char *src)
 
 /*****************************************************************************/
 /* returns dest */
-char *APP_CC
+char *
 g_strncpy(char *dest, const char *src, int len)
 {
     char *rv;
@@ -2310,7 +2310,7 @@ g_strncpy(char *dest, const char *src, int len)
 
 /*****************************************************************************/
 /* returns dest */
-char *APP_CC
+char *
 g_strcat(char *dest, const char *src)
 {
     if (dest == 0 || src == 0)
@@ -2323,7 +2323,7 @@ g_strcat(char *dest, const char *src)
 
 /*****************************************************************************/
 /* if in = 0, return 0 else return newly alloced copy of in */
-char *APP_CC
+char *
 g_strdup(const char *in)
 {
     int len;
@@ -2349,7 +2349,7 @@ g_strdup(const char *in)
 /* if in = 0, return 0 else return newly alloced copy of input string
  * if the input string is larger than maxlen the returned string will be
  * truncated. All strings returned will include null termination*/
-char *APP_CC
+char *
 g_strndup(const char *in, const unsigned int maxlen)
 {
     unsigned int len;
@@ -2378,14 +2378,14 @@ g_strndup(const char *in, const unsigned int maxlen)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_strcmp(const char *c1, const char *c2)
 {
     return strcmp(c1, c2);
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_strncmp(const char *c1, const char *c2, int len)
 {
     return strncmp(c1, c2, len);
@@ -2393,7 +2393,7 @@ g_strncmp(const char *c1, const char *c2, int len)
 
 /*****************************************************************************/
 /* compare up to delim */
-int APP_CC
+int
 g_strncmp_d(const char *s1, const char *s2, const char delim, int n)
 {
     char c1;
@@ -2415,7 +2415,7 @@ g_strncmp_d(const char *s1, const char *s2, const char delim, int n)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_strcasecmp(const char *c1, const char *c2)
 {
 #if defined(_WIN32)
@@ -2426,7 +2426,7 @@ g_strcasecmp(const char *c1, const char *c2)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_strncasecmp(const char *c1, const char *c2, int len)
 {
 #if defined(_WIN32)
@@ -2437,7 +2437,7 @@ g_strncasecmp(const char *c1, const char *c2, int len)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_atoi(const char *str)
 {
     if (str == 0)
@@ -2449,7 +2449,7 @@ g_atoi(const char *str)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_htoi(char *str)
 {
     int len;
@@ -2532,7 +2532,7 @@ g_htoi(char *str)
 
 /*****************************************************************************/
 /* returns number of bytes copied into out_str */
-int APP_CC
+int
 g_bytes_to_hexstr(const void *bytes, int num_bytes, char *out_str,
                   int bytes_out_str)
 {
@@ -2559,7 +2559,7 @@ g_bytes_to_hexstr(const void *bytes, int num_bytes, char *out_str,
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_pos(const char *str, const char *to_find)
 {
     const char *pp;
@@ -2575,7 +2575,7 @@ g_pos(const char *str, const char *to_find)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_mbstowcs(twchar *dest, const char *src, int n)
 {
     wchar_t *ldest;
@@ -2587,7 +2587,7 @@ g_mbstowcs(twchar *dest, const char *src, int n)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_wcstombs(char *dest, const twchar *src, int n)
 {
     const wchar_t *lsrc;
@@ -2603,7 +2603,7 @@ g_wcstombs(char *dest, const twchar *src, int n)
 /* trim spaces and tabs, anything <= space */
 /* trim_flags 1 trim left, 2 trim right, 3 trim both, 4 trim through */
 /* this will always shorten the string or not change it */
-int APP_CC
+int
 g_strtrim(char *str, int trim_flags)
 {
     int index;
@@ -2734,7 +2734,7 @@ g_strtrim(char *str, int trim_flags)
 }
 
 /*****************************************************************************/
-long APP_CC
+long
 g_load_library(char *in)
 {
 #if defined(_WIN32)
@@ -2745,7 +2745,7 @@ g_load_library(char *in)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_free_library(long lib)
 {
     if (lib == 0)
@@ -2762,7 +2762,7 @@ g_free_library(long lib)
 
 /*****************************************************************************/
 /* returns NULL if not found */
-void *APP_CC
+void *
 g_get_proc_address(long lib, const char *name)
 {
     if (lib == 0)
@@ -2779,7 +2779,7 @@ g_get_proc_address(long lib, const char *name)
 
 /*****************************************************************************/
 /* does not work in win32 */
-int APP_CC
+int
 g_system(char *aexec)
 {
 #if defined(_WIN32)
@@ -2791,7 +2791,7 @@ g_system(char *aexec)
 
 /*****************************************************************************/
 /* does not work in win32 */
-char *APP_CC
+char *
 g_get_strerror(void)
 {
 #if defined(_WIN32)
@@ -2802,7 +2802,7 @@ g_get_strerror(void)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_get_errno(void)
 {
 #if defined(_WIN32)
@@ -2814,7 +2814,7 @@ g_get_errno(void)
 
 /*****************************************************************************/
 /* does not work in win32 */
-int APP_CC
+int
 g_execvp(const char *p1, char *args[])
 {
 #if defined(_WIN32)
@@ -2831,7 +2831,7 @@ g_execvp(const char *p1, char *args[])
 
 /*****************************************************************************/
 /* does not work in win32 */
-int APP_CC
+int
 g_execlp3(const char *a1, const char *a2, const char *a3)
 {
 #if defined(_WIN32)
@@ -2848,7 +2848,7 @@ g_execlp3(const char *a1, const char *a2, const char *a3)
 
 /*****************************************************************************/
 /* does not work in win32 */
-void APP_CC
+void
 g_signal_child_stop(void (*func)(int))
 {
 #if defined(_WIN32)
@@ -2859,7 +2859,7 @@ g_signal_child_stop(void (*func)(int))
 
 /*****************************************************************************/
 
-void APP_CC
+void
 g_signal_segfault(void (*func)(int))
 {
 #if defined(_WIN32)
@@ -2870,7 +2870,7 @@ g_signal_segfault(void (*func)(int))
 
 /*****************************************************************************/
 /* does not work in win32 */
-void APP_CC
+void
 g_signal_hang_up(void (*func)(int))
 {
 #if defined(_WIN32)
@@ -2881,7 +2881,7 @@ g_signal_hang_up(void (*func)(int))
 
 /*****************************************************************************/
 /* does not work in win32 */
-void APP_CC
+void
 g_signal_user_interrupt(void (*func)(int))
 {
 #if defined(_WIN32)
@@ -2892,7 +2892,7 @@ g_signal_user_interrupt(void (*func)(int))
 
 /*****************************************************************************/
 /* does not work in win32 */
-void APP_CC
+void
 g_signal_terminate(void (*func)(int))
 {
 #if defined(_WIN32)
@@ -2903,7 +2903,7 @@ g_signal_terminate(void (*func)(int))
 
 /*****************************************************************************/
 /* does not work in win32 */
-void APP_CC
+void
 g_signal_pipe(void (*func)(int))
 {
 #if defined(_WIN32)
@@ -2914,7 +2914,7 @@ g_signal_pipe(void (*func)(int))
 
 /*****************************************************************************/
 /* does not work in win32 */
-void APP_CC
+void
 g_signal_usr1(void (*func)(int))
 {
 #if defined(_WIN32)
@@ -2925,7 +2925,7 @@ g_signal_usr1(void (*func)(int))
 
 /*****************************************************************************/
 /* does not work in win32 */
-int APP_CC
+int
 g_fork(void)
 {
 #if defined(_WIN32)
@@ -2946,7 +2946,7 @@ g_fork(void)
 
 /*****************************************************************************/
 /* does not work in win32 */
-int APP_CC
+int
 g_setgid(int pid)
 {
 #if defined(_WIN32)
@@ -2959,7 +2959,7 @@ g_setgid(int pid)
 /*****************************************************************************/
 /* returns error, zero is success, non zero is error */
 /* does not work in win32 */
-int APP_CC
+int
 g_initgroups(const char *user, int gid)
 {
 #if defined(_WIN32)
@@ -2972,7 +2972,7 @@ g_initgroups(const char *user, int gid)
 /*****************************************************************************/
 /* does not work in win32 */
 /* returns user id */
-int APP_CC
+int
 g_getuid(void)
 {
 #if defined(_WIN32)
@@ -2985,7 +2985,7 @@ g_getuid(void)
 /*****************************************************************************/
 /* does not work in win32 */
 /* returns user id */
-int APP_CC
+int
 g_getgid(void)
 {
 #if defined(_WIN32)
@@ -2998,7 +2998,7 @@ g_getgid(void)
 /*****************************************************************************/
 /* does not work in win32 */
 /* On success, zero is returned. On error, -1 is returned */
-int APP_CC
+int
 g_setuid(int pid)
 {
 #if defined(_WIN32)
@@ -3009,7 +3009,7 @@ g_setuid(int pid)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_setsid(void)
 {
 #if defined(_WIN32)
@@ -3020,7 +3020,7 @@ g_setsid(void)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_setlogin(const char *name)
 {
 #ifdef BSD
@@ -3033,7 +3033,7 @@ g_setlogin(const char *name)
 /*****************************************************************************/
 /* does not work in win32
    returns pid of process that exits or zero if signal occurred */
-int APP_CC
+int
 g_waitchild(void)
 {
 #if defined(_WIN32)
@@ -3059,7 +3059,7 @@ g_waitchild(void)
 /*****************************************************************************/
 /* does not work in win32
    returns pid of process that exits or zero if signal occurred */
-int APP_CC
+int
 g_waitpid(int pid)
 {
 #if defined(_WIN32)
@@ -3090,7 +3090,7 @@ g_waitpid(int pid)
 
 /*****************************************************************************/
 /* does not work in win32 */
-void APP_CC
+void
 g_clearenv(void)
 {
 #if defined(_WIN32)
@@ -3105,7 +3105,7 @@ g_clearenv(void)
 
 /*****************************************************************************/
 /* does not work in win32 */
-int APP_CC
+int
 g_setenv(const char *name, const char *value, int rewrite)
 {
 #if defined(_WIN32)
@@ -3117,7 +3117,7 @@ g_setenv(const char *name, const char *value, int rewrite)
 
 /*****************************************************************************/
 /* does not work in win32 */
-char *APP_CC
+char *
 g_getenv(const char *name)
 {
 #if defined(_WIN32)
@@ -3128,7 +3128,7 @@ g_getenv(const char *name)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_exit(int exit_code)
 {
     _exit(exit_code);
@@ -3136,7 +3136,7 @@ g_exit(int exit_code)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_getpid(void)
 {
 #if defined(_WIN32)
@@ -3148,7 +3148,7 @@ g_getpid(void)
 
 /*****************************************************************************/
 /* does not work in win32 */
-int APP_CC
+int
 g_sigterm(int pid)
 {
 #if defined(_WIN32)
@@ -3162,7 +3162,7 @@ g_sigterm(int pid)
 /* returns 0 if ok */
 /* the caller is responsible to free the buffs */
 /* does not work in win32 */
-int APP_CC
+int
 g_getuser_info(const char *username, int *gid, int *uid, char **shell,
                char **dir, char **gecos)
 {
@@ -3210,7 +3210,7 @@ g_getuser_info(const char *username, int *gid, int *uid, char **shell,
 /*****************************************************************************/
 /* returns 0 if ok */
 /* does not work in win32 */
-int APP_CC
+int
 g_getgroup_info(const char *groupname, int *gid)
 {
 #if defined(_WIN32)
@@ -3238,7 +3238,7 @@ g_getgroup_info(const char *groupname, int *gid)
 /* returns error */
 /* if zero is returned, then ok is set */
 /* does not work in win32 */
-int APP_CC
+int
 g_check_user_in_group(const char *username, int gid, int *ok)
 {
 #if defined(_WIN32)
@@ -3277,7 +3277,7 @@ g_check_user_in_group(const char *username, int gid, int *ok)
    measured in seconds.
    for windows, returns the number of seconds since the machine was
    started. */
-int APP_CC
+int
 g_time1(void)
 {
 #if defined(_WIN32)
@@ -3290,7 +3290,7 @@ g_time1(void)
 /*****************************************************************************/
 /* returns the number of milliseconds since the machine was
    started. */
-int APP_CC
+int
 g_time2(void)
 {
 #if defined(_WIN32)
@@ -3307,7 +3307,7 @@ g_time2(void)
 /*****************************************************************************/
 /* returns time in milliseconds, uses gettimeofday
    does not work in win32 */
-int APP_CC
+int
 g_time3(void)
 {
 #if defined(_WIN32)
@@ -3351,7 +3351,7 @@ struct dib_hdr
     };
 
 /******************************************************************************/
-int APP_CC
+int
 g_save_to_bmp(const char* filename, char* data, int stride_bytes,
               int width, int height, int depth, int bits_per_pixel)
 {
@@ -3474,7 +3474,7 @@ g_save_to_bmp(const char* filename, char* data, int stride_bytes,
 
 /*****************************************************************************/
 /* returns boolean */
-int APP_CC
+int
 g_text2bool(const char *s)
 {
     if ( (g_atoi(s) != 0) ||
@@ -3489,7 +3489,7 @@ g_text2bool(const char *s)
 
 /*****************************************************************************/
 /* returns pointer or nil on error */
-void * APP_CC
+void *
 g_shmat(int shmid)
 {
 #if defined(_WIN32)
@@ -3501,7 +3501,7 @@ g_shmat(int shmid)
 
 /*****************************************************************************/
 /* returns -1 on error 0 on success */
-int APP_CC
+int
 g_shmdt(const void *shmaddr)
 {
 #if defined(_WIN32)
@@ -3513,7 +3513,7 @@ g_shmdt(const void *shmaddr)
 
 /*****************************************************************************/
 /* returns -1 on error 0 on success */
-int APP_CC
+int
 g_gethostname(char *name, int len)
 {
     return gethostname(name, len);
@@ -3557,7 +3557,7 @@ static unsigned char g_reverse_byte[0x100] =
 
 /*****************************************************************************/
 /* mirror each byte while copying */
-int APP_CC
+int
 g_mirror_memcpy(void *dst, const void *src, int len)
 {
     tui8 *dst8;

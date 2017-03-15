@@ -24,12 +24,16 @@
  *
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "sesman.h"
 
 extern struct config_sesman *g_cfg; /* in sesman.c */
 
 /******************************************************************************/
-void DEFAULT_CC
+void
 scp_v0_process(struct SCP_CONNECTION *c, struct SCP_SESSION *s)
 {
     int display = 0;

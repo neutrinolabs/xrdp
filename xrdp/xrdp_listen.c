@@ -18,6 +18,10 @@
  * listen for incoming connection
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "xrdp.h"
 #include "log.h"
 
@@ -46,7 +50,7 @@ xrdp_listen_create_pro_done(struct xrdp_listen *self)
 }
 
 /*****************************************************************************/
-struct xrdp_listen *APP_CC
+struct xrdp_listen *
 xrdp_listen_create(void)
 {
     struct xrdp_listen *self;
@@ -76,7 +80,7 @@ xrdp_listen_create(void)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 xrdp_listen_delete(struct xrdp_listen *self)
 {
     if (self->listen_trans != 0)
@@ -97,7 +101,7 @@ xrdp_listen_delete(struct xrdp_listen *self)
 
 /*****************************************************************************/
 /* returns error */
-static int APP_CC
+static int
 xrdp_listen_add_pro(struct xrdp_listen *self, struct xrdp_process *process)
 {
     list_add_item(self->process_list, (tbus)process);
@@ -105,7 +109,7 @@ xrdp_listen_add_pro(struct xrdp_listen *self, struct xrdp_process *process)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_listen_delete_done_pro(struct xrdp_listen *self)
 {
     int i;
@@ -257,7 +261,7 @@ xrdp_listen_get_port_address(char *port, int port_bytes,
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_listen_fork(struct xrdp_listen *self, struct trans *server_trans)
 {
     int pid;
@@ -295,7 +299,7 @@ xrdp_listen_fork(struct xrdp_listen *self, struct trans *server_trans)
 
 /*****************************************************************************/
 /* a new connection is coming in */
-int DEFAULT_CC
+int
 xrdp_listen_conn_in(struct trans *self, struct trans *new_self)
 {
     struct xrdp_process *process;
@@ -328,7 +332,7 @@ xrdp_listen_conn_in(struct trans *self, struct trans *new_self)
 
 /*****************************************************************************/
 /* wait for incoming connections */
-int APP_CC
+int
 xrdp_listen_main_loop(struct xrdp_listen *self)
 {
     int error;

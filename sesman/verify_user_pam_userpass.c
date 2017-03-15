@@ -24,6 +24,10 @@
  *
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "arch.h"
 #include "os_calls.h"
 
@@ -33,7 +37,7 @@
 
 /******************************************************************************/
 /* returns boolean */
-int DEFAULT_CC
+int
 auth_userpass(const char *user, const char *pass, int *errorcode)
 {
     pam_handle_t *pamh;
@@ -84,7 +88,7 @@ auth_userpass(const char *user, const char *pass, int *errorcode)
 
 /******************************************************************************/
 /* returns error */
-int DEFAULT_CC
+int
 auth_start_session(long in_val, int in_display)
 {
     return 0;
@@ -92,21 +96,21 @@ auth_start_session(long in_val, int in_display)
 
 /******************************************************************************/
 /* returns error */
-int DEFAULT_CC
+int
 auth_stop_session(long in_val)
 {
     return 0;
 }
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 auth_end(long in_val)
 {
     return 0;
 }
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 auth_set_env(long in_val)
 {
     return 0;

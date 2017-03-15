@@ -1337,7 +1337,6 @@ rdpup_init(void)
         if (i != 0)
         {
             g_do_kill_disconnected = 1;
-            g_disconnect_timeout_s = 0;
         }
     }
 

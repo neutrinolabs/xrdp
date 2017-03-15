@@ -14,7 +14,7 @@ to build tcutils:
 qmake
 make
 
-To run tcutils: 
+To run tcutils:
 ---------------
 include xrdpapi/.libs in your LD_LIBRARY_PATH
 

@@ -159,6 +159,10 @@ x-special/gnome-copied-files
 
 */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/extensions/Xfixes.h>
@@ -282,7 +286,7 @@ static int g_file_format_id = -1;
 static char g_last_atom_name[256] = "";
 
 /*****************************************************************************/
-static char* APP_CC
+static char*
 get_atom_text(Atom atom)
 {
     char* name;
@@ -314,7 +318,7 @@ get_atom_text(Atom atom)
 
 /*****************************************************************************/
 /* this is one way to get the current time from the x server */
-static Time APP_CC
+static Time
 clipboard_get_server_time(void)
 {
     XEvent xevent;
@@ -336,7 +340,7 @@ clipboard_get_server_time(void)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 clipboard_find_format_id(int format_id)
 {
     int index;
@@ -353,7 +357,7 @@ clipboard_find_format_id(int format_id)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 clipboard_init(void)
 {
     struct stream *s;
@@ -506,7 +510,7 @@ clipboard_init(void)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 clipboard_deinit(void)
 {
     LOG(0, ("clipboard_deinit:"));
@@ -530,7 +534,7 @@ clipboard_deinit(void)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 clipboard_send_data_request(int format_id)
 {
     struct stream *s;
@@ -557,7 +561,7 @@ clipboard_send_data_request(int format_id)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 clipboard_send_format_ack(void)
 {
     struct stream *s;
@@ -581,7 +585,7 @@ clipboard_send_format_ack(void)
 
 /*****************************************************************************/
 /* returns number of bytes written */
-int APP_CC
+int
 clipboard_out_unicode(struct stream *s, const char *text, int num_chars)
 {
     int index;
@@ -616,7 +620,7 @@ clipboard_out_unicode(struct stream *s, const char *text, int num_chars)
 
 /*****************************************************************************/
 /* returns number of bytes read */
-int APP_CC
+int
 clipboard_in_unicode(struct stream *s, char *text, int *num_chars)
 {
     int index;
@@ -656,7 +660,7 @@ static char windows_native_format[] =
 };
 
 /*****************************************************************************/
-static int APP_CC
+static int
 clipboard_send_format_announce(int xrdp_clip_type)
 {
     struct stream *s;
@@ -777,8 +781,8 @@ clipboard_send_format_announce(int xrdp_clip_type)
 }
 
 /*****************************************************************************/
-static int APP_CC
-clipboard_send_data_response_for_image(char* data, int data_size)
+static int
+clipboard_send_data_response_for_image(const char *data, int data_size)
 {
     struct stream *s;
     int size;
@@ -801,8 +805,8 @@ clipboard_send_data_response_for_image(char* data, int data_size)
 }
 
 /*****************************************************************************/
-static int APP_CC
-clipboard_send_data_response_for_text(char* data, int data_size)
+static int
+clipboard_send_data_response_for_text(const char *data, int data_size)
 {
     struct stream *s;
     int size;
@@ -844,8 +848,8 @@ clipboard_send_data_response_for_text(char* data, int data_size)
 }
 
 /*****************************************************************************/
-static int APP_CC
-clipboard_send_data_response(int xrdp_clip_type, char *data, int data_size)
+static int
+clipboard_send_data_response(int xrdp_clip_type, const char *data, int data_size)
 {
     log_debug("clipboard_send_data_response:");
     if (data != 0)
@@ -876,7 +880,7 @@ clipboard_send_data_response(int xrdp_clip_type, char *data, int data_size)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 clipboard_set_selection_owner(void)
 {
     Window owner;
@@ -897,7 +901,7 @@ clipboard_set_selection_owner(void)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 clipboard_provide_selection_c2s(XSelectionRequestEvent *req, Atom type)
 {
     XEvent xev;
@@ -953,7 +957,7 @@ clipboard_provide_selection_c2s(XSelectionRequestEvent *req, Atom type)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 clipboard_provide_selection(XSelectionRequestEvent *req, Atom type, int format,
                             char *data, int length)
 {
@@ -966,7 +970,7 @@ clipboard_provide_selection(XSelectionRequestEvent *req, Atom type, int format,
     if (bytes < g_incr_max_req_size)
     {
         XChangeProperty(g_display, req->requestor, req->property,
-                        type, format, PropModeReplace, (tui8 *)data, bytes);
+                        type, format, PropModeReplace, (tui8 *)data, length);
         g_memset(&xev, 0, sizeof(xev));
         xev.xselection.type = SelectionNotify;
         xev.xselection.send_event = True;
@@ -983,7 +987,7 @@ clipboard_provide_selection(XSelectionRequestEvent *req, Atom type, int format,
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 clipboard_refuse_selection(XSelectionRequestEvent *req)
 {
     XEvent xev;
@@ -1005,7 +1009,7 @@ clipboard_refuse_selection(XSelectionRequestEvent *req)
 /* sent by client or server when its local system clipboard is
    updated with new clipboard data; contains Clipboard Format ID
    and name pairs of new Clipboard Formats on the clipboard. */
-static int APP_CC
+static int
 clipboard_process_format_announce(struct stream *s, int clip_msg_status,
                                   int clip_msg_len)
 {
@@ -1085,7 +1089,7 @@ clipboard_process_format_announce(struct stream *s, int clip_msg_status,
 /*****************************************************************************/
 /* response to CB_FORMAT_LIST; used to indicate whether
    processing of the Format List PDU was successful */
-static int APP_CC
+static int
 clipboard_process_format_ack(struct stream *s, int clip_msg_status,
                              int clip_msg_len)
 {
@@ -1119,7 +1123,7 @@ clipboard_send_data_response_failed(void)
 /* sent from server to client
  * sent by recipient of CB_FORMAT_LIST; used to request data for one
  * of the formats that was listed in CB_FORMAT_LIST */
-static int APP_CC
+static int
 clipboard_process_data_request(struct stream *s, int clip_msg_status,
                                int clip_msg_len)
 {
@@ -1195,7 +1199,7 @@ clipboard_process_data_request(struct stream *s, int clip_msg_status,
    processing of the CB_FORMAT_DATA_REQUEST was successful; if processing
    was successful, CB_FORMAT_DATA_RESPONSE includes contents of requested
    clipboard data. */
-static int APP_CC
+static int
 clipboard_process_data_response_for_image(struct stream *s,
                                           int clip_msg_status,
                                           int clip_msg_len)
@@ -1239,7 +1243,7 @@ clipboard_process_data_response_for_image(struct stream *s,
    successful, CB_FORMAT_DATA_RESPONSE includes contents of requested
    clipboard data. */
 /*****************************************************************************/
-static int APP_CC
+static int
 clipboard_process_data_response(struct stream *s, int clip_msg_status,
                                 int clip_msg_len)
 {
@@ -1331,7 +1335,7 @@ clipboard_process_data_response(struct stream *s, int clip_msg_status,
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 clipboard_process_clip_caps(struct stream *s, int clip_msg_status,
                             int clip_msg_len)
 {
@@ -1379,7 +1383,7 @@ clipboard_process_clip_caps(struct stream *s, int clip_msg_status,
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 ss_part(char *data, int data_bytes)
 {
     int index;
@@ -1436,7 +1440,7 @@ ss_part(char *data, int data_bytes)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 ss_end(void)
 {
     char *data;
@@ -1471,7 +1475,7 @@ ss_end(void)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 ss_start(char *data, int data_bytes, int total_bytes)
 {
     XEvent xev;
@@ -1534,7 +1538,7 @@ ss_start(char *data, int data_bytes, int total_bytes)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length,
                   int total_length)
 {
@@ -1691,7 +1695,7 @@ clipboard_data_in(struct stream *s, int chan_id, int chan_flags, int length,
     Time timestamp;
     Time selection_timestamp;
    } XFixesSelectionNotifyEvent; */
-static int APP_CC
+static int
 clipboard_event_selection_owner_notify(XEvent *xevent)
 {
     XFixesSelectionNotifyEvent *lxevent;
@@ -1723,7 +1727,7 @@ clipboard_event_selection_owner_notify(XEvent *xevent)
 /*****************************************************************************/
 /* returns error
    get a window property from wnd */
-static int APP_CC
+static int
 clipboard_get_window_property(Window wnd, Atom prop, Atom *type, int *fmt,
                               int *n_items, char **xdata, int *xdata_size)
 {
@@ -1831,7 +1835,7 @@ clipboard_get_window_property(Window wnd, Atom prop, Atom *type, int *fmt,
      Atom property;        // atom or None
      Time time;
    } XSelectionEvent; */
-static int APP_CC
+static int
 clipboard_event_selection_notify(XEvent *xevent)
 {
     XSelectionEvent *lxevent;
@@ -2126,7 +2130,7 @@ clipboard_event_selection_notify(XEvent *xevent)
  * doesn't mean a 32bit value, but actually a long. So 32 means 4 bytes on
  * a 32bit machine and 8 bytes on a 64 machine
  */
-static int APP_CC
+static int
 clipboard_event_selection_request(XEvent *xevent)
 {
     XSelectionRequestEvent *lxev;
@@ -2293,7 +2297,7 @@ clipboard_event_selection_request(XEvent *xevent)
      Atom selection;
      Time time;
 } XSelectionClearEvent; */
-static int APP_CC
+static int
 clipboard_event_selection_clear(XEvent *xevent)
 {
     log_debug("clipboard_event_selection_clear:");
@@ -2312,7 +2316,7 @@ clipboard_event_selection_clear(XEvent *xevent)
      Time time;
      int state;               // PropertyNewValue or PropertyDelete
 } XPropertyEvent; */
-static int APP_CC
+static int
 clipboard_event_property_notify(XEvent *xevent)
 {
     Atom actual_type_return;
@@ -2475,7 +2479,7 @@ clipboard_event_property_notify(XEvent *xevent)
 
 /*****************************************************************************/
 /* returns 0, event handled, 1 unhandled */
-int APP_CC
+int
 clipboard_xevent(void *xevent)
 {
     XEvent *lxevent;

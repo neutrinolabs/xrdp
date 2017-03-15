@@ -18,12 +18,16 @@
  * simple list
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "arch.h"
 #include "os_calls.h"
 #include "list.h"
 
 /*****************************************************************************/
-struct list *APP_CC
+struct list *
 list_create(void)
 {
     struct list *self;
@@ -36,7 +40,7 @@ list_create(void)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 list_delete(struct list *self)
 {
     int i;
@@ -60,7 +64,7 @@ list_delete(struct list *self)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 list_add_item(struct list *self, tbus item)
 {
     tbus *p;
@@ -81,7 +85,7 @@ list_add_item(struct list *self, tbus item)
 }
 
 /*****************************************************************************/
-tbus APP_CC
+tbus
 list_get_item(const struct list *self, int index)
 {
     if (index < 0 || index >= self->count)
@@ -93,7 +97,7 @@ list_get_item(const struct list *self, int index)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 list_clear(struct list *self)
 {
     int i;
@@ -115,7 +119,7 @@ list_clear(struct list *self)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 list_index_of(struct list *self, tbus item)
 {
     int i;
@@ -132,7 +136,7 @@ list_index_of(struct list *self, tbus item)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 list_remove_item(struct list *self, int index)
 {
     int i;
@@ -155,7 +159,7 @@ list_remove_item(struct list *self, int index)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 list_insert_item(struct list *self, int index, tbus item)
 {
     tbus *p;
@@ -193,7 +197,7 @@ list_insert_item(struct list *self, int index, tbus item)
 /*****************************************************************************/
 /* append one list to another using strdup for each item in the list */
 /* begins copy at start_index, a zero based index on the source list */
-void APP_CC
+void
 list_append_list_strdup(struct list *self, struct list *dest, int start_index)
 {
     int index;
@@ -209,7 +213,7 @@ list_append_list_strdup(struct list *self, struct list *dest, int start_index)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 list_dump_items(struct list *self)
 {
     int index;
@@ -221,6 +225,6 @@ list_dump_items(struct list *self)
 
     for (index = 0; index < self->count; index++)
     {
-        g_writeln("%d: 0x%lx", index, list_get_item(self, index));
+        g_writeln("%d: %p", index, (void *) list_get_item(self, index));
     }
 }

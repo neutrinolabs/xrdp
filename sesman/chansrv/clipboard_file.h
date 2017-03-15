@@ -22,20 +22,20 @@
 #include "arch.h"
 #include "parse.h"
 
-int APP_CC
-clipboard_send_data_response_for_file(char *data, int data_size);
-int APP_CC
+int
+clipboard_send_data_response_for_file(const char *data, int data_size);
+int
 clipboard_process_file_request(struct stream *s, int clip_msg_status,
                                int clip_msg_len);
-int APP_CC
+int
 clipboard_process_file_response(struct stream *s, int clip_msg_status,
                                 int clip_msg_len);
-int APP_CC
+int
 clipboard_c2s_in_files(struct stream *s, char *file_list);
 
-int APP_CC
+int
 clipboard_request_file_size(int stream_id, int lindex);
-int APP_CC
+int
 clipboard_request_file_data(int stream_id, int lindex, int offset,
                             int request_bytes);
 

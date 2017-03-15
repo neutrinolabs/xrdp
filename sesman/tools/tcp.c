@@ -24,6 +24,10 @@
  *
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "sesman.h"
 
 #include <netinet/in.h>
@@ -33,7 +37,7 @@
 #include <string.h>
 
 /*****************************************************************************/
-int DEFAULT_CC
+int
 tcp_force_recv(int sck, char *data, int len)
 {
     int rcvd;
@@ -83,7 +87,7 @@ tcp_force_recv(int sck, char *data, int len)
 }
 
 /*****************************************************************************/
-int DEFAULT_CC
+int
 tcp_force_send(int sck, char *data, int len)
 {
     int sent;
@@ -133,7 +137,7 @@ tcp_force_send(int sck, char *data, int len)
 }
 
 /*****************************************************************************/
-int DEFAULT_CC
+int
 tcp_bind(int sck, char *addr, char *port)
 {
     struct sockaddr_in s;

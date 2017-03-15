@@ -65,7 +65,7 @@ struct xrdp_client_info
   int rdp_compression;
   int rdp_autologin;
   int crypt_level; /* 1, 2, 3 = low, medium, high */
-  int channel_code; /* 0 = no channels 1 = channels */
+  int channels_allowed; /* 0 = no channels 1 = channels */
   int sound_code; /* 1 = leave sound at server */
   int is_mce;
   int rdp5_performanceflags;
@@ -135,6 +135,10 @@ struct xrdp_client_info
   char variant[16];
   char options[256];
 
+  /* !!!!!!!!!!!!!!!!!!!!!!!!!! */
+  /* NO CHANGES ABOVE THIS LINE */
+  /* !!!!!!!!!!!!!!!!!!!!!!!!!! */
+
   /* codec */
   int h264_codec_id;
   int h264_prop_len;
@@ -143,7 +147,7 @@ struct xrdp_client_info
   int use_frame_acks;
   int max_unacknowledged_frame_count;
 
-  int disableSSLv3; /* 0 = no, 1 = yes */
+  long ssl_protocols;
   char tls_ciphers[64];
 
   int client_os_major;

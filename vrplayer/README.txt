@@ -1,5 +1,5 @@
-A QT based media player that runs on a RDP server and 
-redirects audio/video to the client where it is decoded 
+A QT based media player that runs on a RDP server and
+redirects audio/video to the client where it is decoded
 and rendered locally
 
 Required packages to build vrplayer:
@@ -7,7 +7,7 @@ Required packages to build vrplayer:
 libqt4-gui
 qt4-dev-tools
 libavutil-dev
-libavformat-dev 
+libavformat-dev
 
 to build vrplayer
 -----------------
@@ -17,7 +17,7 @@ cd ..
 qmake
 make
 
-To run vrplayer 
+To run vrplayer
 ---------------
 include xrdpapi/.libs and xrdpvr/.libs in your LD_LIBRARY_PATH
 

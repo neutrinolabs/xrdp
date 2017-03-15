@@ -35,7 +35,7 @@
  * @return 0 if adding the cookie is ok
  */
 
-int DEFAULT_CC
+int
 add_xauth_cookie(int display, const char *file);
 
 #endif

@@ -18,6 +18,10 @@
  * read a config file
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "arch.h"
 #include "os_calls.h"
 #include "list.h"
@@ -26,14 +30,14 @@
 
 #define FILE_MAX_LINE_BYTES 2048
 
-static int APP_CC
+static int
 file_read_ini_line(struct stream *s, char *text, int text_bytes);
 
 /*****************************************************************************/
 /* look up for a section name within str (i.e. pattern [section_name])
  * if a section name is found, this function return 1 and copy the section
  * inplace of str. */
-static int APP_CC
+static int
 line_lookup_for_section_name(char *str, int str_bytes)
 {
     int name_index_start;
@@ -72,7 +76,7 @@ line_lookup_for_section_name(char *str, int str_bytes)
 /* returns error
    returns 0 if everything is ok
    returns 1 if problem reading file */
-static int APP_CC
+static int
 l_file_read_sections(int fd, int max_file_size, struct list *names)
 {
     struct stream *s;
@@ -113,7 +117,7 @@ l_file_read_sections(int fd, int max_file_size, struct list *names)
  * returns error
  * returns 0 if everything is ok
  * returns 1 if problem reading file */
-static int APP_CC
+static int
 file_read_ini_line(struct stream *s, char *text, int text_bytes)
 {
     int i;
@@ -191,7 +195,7 @@ file_read_ini_line(struct stream *s, char *text, int text_bytes)
 
 /*****************************************************************************/
 /* returns error */
-static int APP_CC
+static int
 file_split_name_value(char *text, char *name, char *value)
 {
     int len;
@@ -234,7 +238,7 @@ file_split_name_value(char *text, char *name, char *value)
 
 /*****************************************************************************/
 /* return error */
-static int APP_CC
+static int
 l_file_read_section(int fd, int max_file_size, const char *section,
                     struct list *names, struct list *values)
 {
@@ -320,7 +324,7 @@ l_file_read_section(int fd, int max_file_size, const char *section,
    returns 0 if everything is ok
    returns 1 if problem reading file */
 /* 32 K file size limit */
-int APP_CC
+int
 file_read_sections(int fd, struct list *names)
 {
     return l_file_read_sections(fd, 32 * 1024, names);
@@ -330,7 +334,7 @@ file_read_sections(int fd, struct list *names)
 /* return error */
 /* this function should be preferred over file_read_sections because it can
    read any file size */
-int APP_CC
+int
 file_by_name_read_sections(const char *file_name, struct list *names)
 {
     int fd;
@@ -359,7 +363,7 @@ file_by_name_read_sections(const char *file_name, struct list *names)
 /*****************************************************************************/
 /* return error */
 /* 32 K file size limit */
-int APP_CC
+int
 file_read_section(int fd, const char *section,
                   struct list *names, struct list *values)
 {
@@ -370,7 +374,7 @@ file_read_section(int fd, const char *section,
 /* return error */
 /* this function should be preferred over file_read_section because it can
    read any file size */
-int APP_CC
+int
 file_by_name_read_section(const char *file_name, const char *section,
                           struct list *names, struct list *values)
 {

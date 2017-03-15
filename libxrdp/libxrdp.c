@@ -18,6 +18,10 @@
  * this is the interface to libxrdp
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "libxrdp.h"
 #include "xrdp_orders_rail.h"
 
@@ -108,7 +112,7 @@ libxrdp_get_pdu_bytes(const char *aheader)
 
 /******************************************************************************/
 /* only used during connection */
-struct stream * APP_CC
+struct stream *
 libxrdp_force_read(struct trans* trans)
 {
     int bytes;
@@ -275,6 +279,7 @@ libxrdp_process_data(struct xrdp_session *session, struct stream *s)
 int EXPORT_CC
 libxrdp_send_palette(struct xrdp_session *session, int *palette)
 {
+    int rv;
     int i = 0;
     int color = 0;
     struct stream *s = (struct stream *)NULL;
@@ -337,10 +342,16 @@ libxrdp_send_palette(struct xrdp_session *session, int *palette)
     free_stream(s);
 
     /* send the orders palette too */
-    libxrdp_orders_init(session);
-    libxrdp_orders_send_palette(session, palette, 0);
-    libxrdp_orders_send(session);
-    return 0;
+    rv = libxrdp_orders_init(session);
+    if (rv == 0)
+    {
+        rv = libxrdp_orders_send_palette(session, palette, 0);
+    }
+    if (rv == 0)
+    {
+        rv = libxrdp_orders_send(session);
+    }
+    return rv;
 }
 
 /******************************************************************************/
@@ -956,7 +967,7 @@ libxrdp_orders_mem_blt(struct xrdp_session *session, int cache_id,
 }
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 libxrdp_orders_composite_blt(struct xrdp_session* session, int srcidx,
                              int srcformat, int srcwidth, int srcrepeat,
                              int* srctransform, int mskflags,
@@ -1242,7 +1253,7 @@ libxrdp_send_to_channel(struct xrdp_session *session, int channel_id,
 
     if (xrdp_channel_send(chan, s, channel_id, total_data_len, flags) != 0)
     {
-        g_writeln("Debug - data NOT sent to channel");
+        g_writeln("libxrdp_send_to_channel: error, server channel data NOT sent to client channel");
         free_stream(s);
         return 1;
     }
@@ -1345,7 +1356,7 @@ libxrdp_notify_new_update(struct xrdp_session *session,
 }
 
 /*****************************************************************************/
-int DEFAULT_CC
+int
 libxrdp_notify_delete(struct xrdp_session *session,
                       int window_id, int notify_id)
 {
@@ -1356,7 +1367,7 @@ libxrdp_notify_delete(struct xrdp_session *session,
 }
 
 /*****************************************************************************/
-int DEFAULT_CC
+int
 libxrdp_monitored_desktop(struct xrdp_session *session,
                           struct rail_monitored_desktop_order *mdo,
                           int flags)
@@ -1487,6 +1498,17 @@ libxrdp_fastpath_send_frame_marker(struct xrdp_session *session,
     }
     free_stream(s);
     return 0;
+}
 
+/*****************************************************************************/
+int EXPORT_CC
+libxrdp_send_session_info(struct xrdp_session *session, const char *data,
+                          int data_bytes)
+{
+    struct xrdp_rdp *rdp;
+
+    LLOGLN(10, ("libxrdp_send_session_info:"));
+    rdp = (struct xrdp_rdp *) (session->rdp);
+    return xrdp_rdp_send_session_info(rdp, data, data_bytes);
 }
 

@@ -1,8 +1,9 @@
 [Unit]
 Description=xrdp session manager
-After=syslog.target network.target
+Documentation=man:xrdp-sesman(8) man:sesman.ini(5)
+After=network.target
 StopWhenUnneeded=true
-BindTo=xrdp.service
+BindsTo=xrdp.service
 
 [Service]
 Type=forking

@@ -1,0 +1,10 @@
+--- a/configure
++++ b/configure
+@@ -21551,6 +21551,7 @@
+ if test "x$with_sha1" = xlibcrypto; then
+ 	if test "x$HAVE_LIBCRYPTO" = xyes; then
+ 		SHA1_LIBS=-lcrypto
++		SHA1_CFLAGS="$OPENSSL_CFLAGS"
+ 	else
+ 		SHA1_LIBS="$OPENSSL_LIBS"
+ 		SHA1_CFLAGS="$OPENSSL_CFLAGS"

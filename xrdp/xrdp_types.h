@@ -146,7 +146,9 @@ struct xrdp_mod
                             int num_crects, short *crects,
                             char *data, int width, int height,
                             int flags, int frame_id);
-  tintptr server_dumby[100 - 43]; /* align, 100 minus the number of server
+  int (*server_session_info)(struct xrdp_mod* v, const char *data,
+                             int data_bytes);
+  tintptr server_dumby[100 - 44]; /* align, 100 minus the number of server
                                      functions above */
   /* common */
   tintptr handle; /* pointer to self as int */

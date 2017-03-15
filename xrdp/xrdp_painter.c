@@ -18,6 +18,10 @@
  * painter, gc
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "xrdp.h"
 
 #if defined(XRDP_PAINTER)
@@ -39,7 +43,7 @@
 #if defined(XRDP_PAINTER)
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_painter_add_dirty_rect(struct xrdp_painter *self, int x, int y,
                             int cx, int cy, struct xrdp_rect *clip_rect)
 {
@@ -137,7 +141,7 @@ xrdp_painter_send_dirty(struct xrdp_painter *self)
 #endif
 
 /*****************************************************************************/
-struct xrdp_painter *APP_CC
+struct xrdp_painter *
 xrdp_painter_create(struct xrdp_wm *wm, struct xrdp_session *session)
 {
     struct xrdp_painter *self;
@@ -170,7 +174,7 @@ xrdp_painter_create(struct xrdp_wm *wm, struct xrdp_session *session)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 xrdp_painter_delete(struct xrdp_painter *self)
 {
     LLOGLN(10, ("xrdp_painter_delete:"));
@@ -188,7 +192,7 @@ xrdp_painter_delete(struct xrdp_painter *self)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 wm_painter_set_target(struct xrdp_painter *self)
 {
     int surface_index;
@@ -242,7 +246,7 @@ wm_painter_set_target(struct xrdp_painter *self)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_painter_begin_update(struct xrdp_painter *self)
 {
     LLOGLN(10, ("xrdp_painter_begin_update:"));
@@ -264,7 +268,7 @@ xrdp_painter_begin_update(struct xrdp_painter *self)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_painter_end_update(struct xrdp_painter *self)
 {
     LLOGLN(10, ("xrdp_painter_end_update:"));
@@ -291,7 +295,7 @@ xrdp_painter_end_update(struct xrdp_painter *self)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_painter_font_needed(struct xrdp_painter *self)
 {
     if (self->font == 0)
@@ -305,7 +309,7 @@ xrdp_painter_font_needed(struct xrdp_painter *self)
 #if 0
 /*****************************************************************************/
 /* returns boolean, true if there is something to draw */
-static int APP_CC
+static int
 xrdp_painter_clip_adj(struct xrdp_painter *self, int *x, int *y,
                       int *cx, int *cy)
 {
@@ -365,7 +369,7 @@ xrdp_painter_clip_adj(struct xrdp_painter *self, int *x, int *y,
 #endif
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_painter_set_clip(struct xrdp_painter *self,
                       int x, int y, int cx, int cy)
 {
@@ -378,7 +382,7 @@ xrdp_painter_set_clip(struct xrdp_painter *self,
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_painter_clr_clip(struct xrdp_painter *self)
 {
     self->use_clip = 0;
@@ -387,7 +391,7 @@ xrdp_painter_clr_clip(struct xrdp_painter *self)
 
 #if 0
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_painter_rop(int rop, int src, int dst)
 {
     switch (rop & 0x0f)
@@ -431,7 +435,7 @@ xrdp_painter_rop(int rop, int src, int dst)
 #endif
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_painter_text_width(struct xrdp_painter *self, const char *text)
 {
     int index;
@@ -469,7 +473,7 @@ xrdp_painter_text_width(struct xrdp_painter *self, const char *text)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_painter_text_height(struct xrdp_painter *self, const char *text)
 {
     int index;
@@ -507,7 +511,7 @@ xrdp_painter_text_height(struct xrdp_painter *self, const char *text)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_painter_setup_brush(struct xrdp_painter *self,
                          struct xrdp_brush *out_brush,
                          struct xrdp_brush *in_brush)
@@ -540,7 +544,7 @@ xrdp_painter_setup_brush(struct xrdp_painter *self,
 #if defined(XRDP_PAINTER)
 
 /*****************************************************************************/
-static int APP_CC
+static int
 get_pt_format(struct xrdp_painter *self)
 {
     switch (self->wm->screen->bpp)
@@ -571,7 +575,7 @@ get_rgb_from_rdp_color(struct xrdp_painter *self, int rdp_color)
 
 /*****************************************************************************/
 /* fill in an area of the screen with one color */
-int APP_CC
+int
 xrdp_painter_fill_rect(struct xrdp_painter *self,
                        struct xrdp_bitmap *dst,
                        int x, int y, int cx, int cy)
@@ -801,7 +805,7 @@ xrdp_painter_fill_rect(struct xrdp_painter *self,
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_painter_draw_text(struct xrdp_painter *self,
                        struct xrdp_bitmap *dst,
                        int x, int y, const char *text)
@@ -1003,7 +1007,7 @@ xrdp_painter_draw_text(struct xrdp_painter *self,
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_painter_draw_text2(struct xrdp_painter *self,
                         struct xrdp_bitmap *dst,
                         int font, int flags, int mixmode,
@@ -1094,7 +1098,7 @@ xrdp_painter_draw_text2(struct xrdp_painter *self,
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_painter_copy(struct xrdp_painter *self,
                   struct xrdp_bitmap *src,
                   struct xrdp_bitmap *dst,
@@ -1370,7 +1374,7 @@ xrdp_painter_copy(struct xrdp_painter *self,
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_painter_composite(struct xrdp_painter* self,
                        struct xrdp_bitmap* src,
                        int srcformat,
@@ -1455,7 +1459,7 @@ xrdp_painter_composite(struct xrdp_painter* self,
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_painter_line(struct xrdp_painter *self,
                   struct xrdp_bitmap *dst,
                   int x1, int y1, int x2, int y2)
@@ -1524,7 +1528,7 @@ xrdp_painter_line(struct xrdp_painter *self,
                                      draw_rect.left, draw_rect.top,
                                      draw_rect.right - draw_rect.left,
                                      draw_rect.bottom - draw_rect.top);
-                    painter_line(self->painter, &dst_pb, x1, y1, x2, x2,
+                    painter_line(self->painter, &dst_pb, x1, y1, x2, y2,
                                  self->pen.width, 0);
                     xrdp_painter_add_dirty_rect(self, x, y, cx, cy,
                                                 &draw_rect);

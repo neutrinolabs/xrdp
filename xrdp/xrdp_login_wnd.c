@@ -18,13 +18,16 @@
  * main login window and login help window
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "xrdp.h"
-#define ACCESS
 #include "log.h"
 
 /*****************************************************************************/
 /* all login help screen events go here */
-static int DEFAULT_CC
+static int
 xrdp_wm_login_help_notify(struct xrdp_bitmap *wnd,
                           struct xrdp_bitmap *sender,
                           int msg, long param1, long param2)
@@ -85,7 +88,7 @@ logging on.");
 
 #if 0
 /*****************************************************************************/
-static int DEFAULT_CC
+static int
 xrdp_wm_popup_notify(struct xrdp_bitmap *wnd,
                      struct xrdp_bitmap *sender,
                      int msg, int param1, int param2)
@@ -95,7 +98,7 @@ xrdp_wm_popup_notify(struct xrdp_bitmap *wnd,
 #endif
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_wm_delete_all_children(struct xrdp_wm *self)
 {
     int index;
@@ -114,7 +117,7 @@ xrdp_wm_delete_all_children(struct xrdp_wm *self)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 set_mod_data_item(struct xrdp_mod_data *mod, char *name, char *value)
 {
     int index;
@@ -132,7 +135,7 @@ set_mod_data_item(struct xrdp_mod_data *mod, char *name, char *value)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_wm_help_clicked(struct xrdp_bitmap *wnd)
 {
     struct xrdp_bitmap *help;
@@ -171,7 +174,7 @@ xrdp_wm_help_clicked(struct xrdp_bitmap *wnd)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_wm_cancel_clicked(struct xrdp_bitmap *wnd)
 {
     if (wnd != 0)
@@ -189,7 +192,7 @@ xrdp_wm_cancel_clicked(struct xrdp_bitmap *wnd)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_wm_ok_clicked(struct xrdp_bitmap *wnd)
 {
     struct xrdp_bitmap *combo;
@@ -265,7 +268,7 @@ xrdp_wm_ok_clicked(struct xrdp_bitmap *wnd)
 * @return the index number of the combobox that the user prefer.
 * 0 if the user does not prefer any choice.
 */
-static int APP_CC
+static int
 xrdp_wm_parse_domain_information(char *originalDomainInfo, int comboMax,
                                  int decode, char *resultBuffer)
 {
@@ -323,7 +326,7 @@ xrdp_wm_parse_domain_information(char *originalDomainInfo, int comboMax,
 }
 
 /******************************************************************************/
-static int APP_CC
+static int
 xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
 {
     int count;
@@ -433,12 +436,7 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
                     }
                 }
 
-#ifdef ACCESS
-
                 if ((g_strncmp(name, "password", 255) == 0) || (g_strncmp(name, "pampassword", 255) == 0))
-#else
-                if (g_strncmp(name, "password", 255) == 0)
-#endif
                 {
                     b->password_char = '*';
 
@@ -461,7 +459,7 @@ xrdp_wm_show_edits(struct xrdp_wm *self, struct xrdp_bitmap *combo)
 
 /*****************************************************************************/
 /* all login screen events go here */
-static int DEFAULT_CC
+static int
 xrdp_wm_login_notify(struct xrdp_bitmap *wnd,
                      struct xrdp_bitmap *sender,
                      int msg, long param1, long param2)
@@ -519,7 +517,7 @@ xrdp_wm_login_notify(struct xrdp_bitmap *wnd,
 }
 
 /******************************************************************************/
-static int APP_CC
+static int
 xrdp_wm_login_fill_in_combo(struct xrdp_wm *self, struct xrdp_bitmap *b)
 {
     struct list *sections;
@@ -602,7 +600,7 @@ xrdp_wm_login_fill_in_combo(struct xrdp_wm *self, struct xrdp_bitmap *b)
 }
 
 /******************************************************************************/
-int APP_CC
+int
 xrdp_login_wnd_create(struct xrdp_wm *self)
 {
     struct xrdp_bitmap      *but;
@@ -796,7 +794,7 @@ xrdp_login_wnd_create(struct xrdp_wm *self)
  *
  * @return 0 on success, -1 on failure
  *****************************************************************************/
-int APP_CC
+int
 load_xrdp_config(struct xrdp_config *config, int bpp)
 {
     struct xrdp_cfg_globals  *globals;

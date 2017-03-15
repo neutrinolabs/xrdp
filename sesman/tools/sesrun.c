@@ -24,13 +24,17 @@
  *
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "sesman.h"
 #include "tcp.h"
 
 struct config_sesman g_cfg; /* config.h */
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 main(int argc, char **argv)
 {
     int sck;

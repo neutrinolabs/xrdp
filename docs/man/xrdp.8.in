@@ -15,13 +15,22 @@ It can also be used as a VNC\->RDP bridge.
 .SH "OPTIONS"
 .TP
 \fB\-n\fR, \fB\-\-nodaemon\fR
-Starts \fBxrdp\fR in foreground instead of starting it as a daemon.
+Start \fBxrdp\fR in foreground instead of starting it as a daemon.
 .TP
 \fB\-k\fR, \fB\-\-kill\fR
-Kills running \fBxrdp\fR daemon.
+Kill running \fBxrdp\fR daemon.
 .TP
 \fB\-h\fR, \fB\-\-help\fR
 Output help information and exit.
+.TP
+\fB\-p\fR, \fB\-\-port\fR
+Specify TCP port to listen to. This overrides \fIport\fR setting in
+\fIxrdp.ini\fR file.
+.TP
+\fB\-f\fR, \fB\-\-fork\fR
+Fork a new process on a new connection. If not enabled, use a new thread
+for every connection. This overrides \fIfork\fR setting in
+\fIxrdp.ini\fR file.
 
 .SH "FILES"
 @bindir@/xrdp

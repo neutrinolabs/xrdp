@@ -24,6 +24,10 @@
  *
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "sesman.h"
 
 #define _XOPEN_SOURCE
@@ -43,7 +47,7 @@ extern struct config_sesman* g_cfg; /* in sesman.c */
 
 /******************************************************************************/
 /* returns boolean */
-long DEFAULT_CC
+long
 auth_userpass(const char *user, const char *pass, int *errorcode)
 {
     int ret = auth_userokay(user, NULL, "auth-xrdp", pass);
@@ -52,40 +56,40 @@ auth_userpass(const char *user, const char *pass, int *errorcode)
 
 /******************************************************************************/
 /* returns error */
-int DEFAULT_CC
+int
 auth_start_session(long in_val, int in_display)
 {
     return 0;
 }
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 auth_end(long in_val)
 {
     return 0;
 }
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 auth_set_env(long in_val)
 {
     return 0;
 }
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 auth_check_pwd_chg(const char *user)
 {
     return 0;
 }
 
-int DEFAULT_CC
+int
 auth_change_pwd(const char *user, const char *newpwd)
 {
     return 0;
 }
 
-int DEFAULT_CC
+int
 auth_stop_session(long in_val)
 {
     return 0;
@@ -100,7 +104,7 @@ auth_stop_session(long in_val)
  *
  */
 
-static int DEFAULT_CC
+static int
 auth_crypt_pwd(const char *pwd, const char *pln, char *crp)
 {
     return 0;
@@ -111,7 +115,7 @@ auth_crypt_pwd(const char *pwd, const char *pln, char *crp)
  * @return 1 if the account is disabled, 0 otherwise
  *
  */
-static int DEFAULT_CC
+static int
 auth_account_disabled(struct spwd* stp)
 {
     return 0;

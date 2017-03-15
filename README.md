@@ -46,8 +46,27 @@ apt-get install xrdp
 ```
 
 ### RedHat / CentOS / Fedora
+
+On RedHat and CentOS, make sure to enable EPEL packages first.
+
+```bash
+yum install epel-release
+```
+
+Install xrdp package.
+
 ```bash
 yum install xrdp
+```
+
+`yum` is being replaced with `dnf`, so you may need to use `dnf` instead
+of `yum` in the above commands.
+
+To allow outside access to the service, open port 3389 on the firewall.
+
+```
+firewall-cmd --permanent --zone=public --add-port=3389/tcp
+firewall-cmd --reload
 ```
 
 ## Environment
@@ -84,7 +103,7 @@ need **autoconf**, **automake**, **libtool** and **pkgconfig**.
 If compiling from the packaged source, unpack the tarball and change to the
 resulting directory.
 
-If compiling from a checked out repository, please make sure you've got the submodules  
+If compiling from a checked out repository, please make sure you've got the submodules
 cloned too (use `git clone --recursive https://github.com/neutrinolabs/xrdp`)
 
 Then run following commands to compile and install xrdp:
@@ -99,28 +118,27 @@ sudo make install
 
 ```
 xrdp
-├── common ------ common code
-├── docs -------- documentation
-├── fontdump ---- font dump for Windows
-├── genkeymap --- keymap generator
-├── instfiles --- installable data file
-├── keygen ------ xrdp RSA key pair generator
-├── libpainter -- painter library
-├── librfxcodec - RFX codec library
-├── libxrdp ----- core RDP protocol implementation
-├── m4 ---------- Autoconf macros
-├── mc ---------- media center module
-├── neutrinordp - RDP client module for proxying RDP connections using NeutrinoRDP
-├── pkgconfig --- pkg-config configuration
-├── rdp --------- RDP client module for connecting to another RDP server
-├── sesman ------ session manager for xrdp
-├── tcutils ----- QT based utility program for thin clients
-├── tests ------- tests for the code
-├── vnc --------- VNC client module for xrdp
-├── vrplayer ---- QT player redirecting video/audio to clients over xrdpvr channel
-├── xorg -------- X11rdp, an Xorg backend for xrdp
-├── xrdp -------- main server code
-├── xrdpapi ----- virtual channel API
-├── xrdpvr ------ API for playing media over RDP
-└── xup --------- X11rdp and xorgxrdp client module
+├── common ······ common code
+├── docs ········ documentation
+├── fontdump ···· font dump for Windows
+├── genkeymap ··· keymap generator
+├── instfiles ··· installable data file
+├── keygen ······ xrdp RSA key pair generator
+├── libpainter ·· painter library
+├── librfxcodec · RFX codec library
+├── libxrdp ····· core RDP protocol implementation
+├── m4 ·········· Autoconf macros
+├── mc ·········· media center module
+├── neutrinordp · RDP client module for proxying RDP connections using NeutrinoRDP
+├── pkgconfig ··· pkg-config configuration
+├── sesman ······ session manager for xrdp
+├── tcutils ····· QT based utility program for thin clients
+├── tests ······· tests for the code
+├── vnc ········· VNC client module for xrdp
+├── vrplayer ···· QT player redirecting video/audio to clients over xrdpvr channel
+├── xorg ········ X11rdp, an Xorg backend for xrdp
+├── xrdp ········ main server code
+├── xrdpapi ····· virtual channel API
+├── xrdpvr ······ API for playing media over RDP
+└── xup ········· X11rdp and xorgxrdp client module
 ```

@@ -14,6 +14,7 @@ struct xrdp_encoder
     int in_codec_mode;
     int codec_id;
     int codec_quality;
+    int max_compressed_bytes;
     tbus xrdp_encoder_event_to_proc;
     tbus xrdp_encoder_event_processed;
     tbus xrdp_encoder_term;
@@ -25,6 +26,7 @@ struct xrdp_encoder
     int frame_id_client; /* last frame id received from client */
     int frame_id_server; /* last frame id received from Xorg */
     int frame_id_server_sent;
+    int frames_in_flight;
 };
 
 /* used when scheduling tasks in xrdp_encoder.c */
@@ -60,9 +62,9 @@ struct xrdp_enc_data_done
 
 typedef struct xrdp_enc_data_done XRDP_ENC_DATA_DONE;
 
-struct xrdp_encoder *APP_CC
+struct xrdp_encoder *
 xrdp_encoder_create(struct xrdp_mm *mm);
-void APP_CC
+void
 xrdp_encoder_delete(struct xrdp_encoder *self);
 THREAD_RV THREAD_CC
 proc_enc_msg(void *arg);

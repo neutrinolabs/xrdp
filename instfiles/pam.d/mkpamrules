@@ -1,0 +1,41 @@
+#!/bin/sh
+
+# Find suitable PAM config file
+
+rules="$1"
+srcdir="$2"
+outfile="$3"
+
+service="xrdp-sesman"
+pamdir="/etc/pam.d"
+
+guess_rules ()
+{
+  if test -s "$pamdir/password-auth"; then
+    rules="redhat"
+    return
+  fi
+
+  if test -s "$pamdir/common-account"; then
+    if grep "^@include" "$pamdir/passwd" >/dev/null 2>&1; then
+      rules="debian"
+    else
+      rules="suse"
+    fi
+    return
+  fi
+
+  rules="unix"
+  return
+}
+
+if test "$rules" = "auto"; then
+  guess_rules
+fi
+
+if test -s "$srcdir/$service.$rules"; then
+  ln -nsf "$srcdir/$service.$rules" "$outfile"
+else
+  echo "Cannot find $srcdir/$service.$rules"
+  exit 1
+fi

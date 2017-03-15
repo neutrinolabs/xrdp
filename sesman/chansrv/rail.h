@@ -23,15 +23,15 @@
 #include "arch.h"
 #include "parse.h"
 
-int APP_CC
+int
 rail_init(void);
-int APP_CC
+int
 rail_deinit(void);
-int APP_CC
+int
 rail_data_in(struct stream* s, int chan_id, int chan_flags,
              int length, int total_length);
-int APP_CC
+int
 rail_xevent(void* xevent);
-int APP_CC rail_request_title(int window_id);
+int rail_request_title(int window_id);
 
 #endif

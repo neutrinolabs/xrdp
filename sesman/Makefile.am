@@ -19,7 +19,7 @@ AUTH_LIB = -lcrypt
 else
 if SESMAN_BSD
 AUTH_C = verify_user_bsd.c
-AUTH_LIB = 
+AUTH_LIB =
 else
 if SESMAN_PAMUSERPASS
 AUTH_C = verify_user_pam_userpass.c

@@ -43,6 +43,10 @@
 char g_fuse_root_path[256] = "";
 char g_fuse_clipboard_path[256] = ""; /* for clipboard use */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #ifndef XRDP_FUSE
 
 /******************************************************************************
@@ -65,13 +69,13 @@ int xfuse_deinit(void)          { return 0; }
 int xfuse_check_wait_objs(void) { return 0; }
 int xfuse_get_wait_objs(tbus *objs, int *count, int *timeout) { return 0; }
 int xfuse_clear_clip_dir(void)  { return 0; }
-int xfuse_file_contents_range(int stream_id, char *data, int data_bytes)     { return 0; }
+int xfuse_file_contents_range(int stream_id, const char *data, int data_bytes)     { return 0; }
 int xfuse_file_contents_size(int stream_id, int file_size)                   { return 0; }
-int xfuse_add_clip_dir_item(char *filename, int flags, int size, int lindex) { return 0; }
-int xfuse_create_share(tui32 device_id, char *dirname)                       { return 0; }
+int xfuse_add_clip_dir_item(const char *filename, int flags, int size, int lindex) { return 0; }
+int xfuse_create_share(tui32 device_id, const char *dirname)                       { return 0; }
 void xfuse_devredir_cb_open_file(void *vp, tui32 IoStatus, tui32 DeviceId, tui32 FileId)     {}
-void xfuse_devredir_cb_write_file(void *vp, char *buf, size_t length)        {}
-void xfuse_devredir_cb_read_file(void *vp, char *buf, size_t length)         {}
+void xfuse_devredir_cb_write_file(void *vp, const char *buf, size_t length)        {}
+void xfuse_devredir_cb_read_file(void *vp, const char *buf, size_t length)         {}
 int  xfuse_devredir_cb_enum_dir(void *vp, struct xrdp_inode *xinode)         { return 0; }
 void xfuse_devredir_cb_enum_dir_done(void *vp, tui32 IoStatus)               {}
 void xfuse_devredir_cb_rmdir_or_file(void *vp, tui32 IoStatus)               {}
@@ -273,9 +277,9 @@ static void fuse_reverse_pathname(char *full_path, char *reverse_path);
 static struct xrdp_inode * xfuse_get_inode_from_pinode_name(fuse_ino_t pinode,
                                                             const char *name);
 
-static struct xrdp_inode * xfuse_create_file_in_xrdp_fs(tui32 device_id,
-                                                        int pinode, char *name,
-                                                        int type);
+static struct xrdp_inode *
+xfuse_create_file_in_xrdp_fs(tui32 device_id, int pinode, const char *name,
+                             int type);
 
 static int  xfuse_does_file_exist(fuse_ino_t parent, char *name);
 static int  xfuse_delete_file_with_xinode(XRDP_INODE *xinode);
@@ -361,7 +365,7 @@ static void xfuse_mark_as_stale(fuse_ino_t pinode);
 static void xfuse_delete_stale_entries(fuse_ino_t pinode);
 
 /*****************************************************************************/
-int APP_CC
+int
 load_fuse_config(void)
 {
     int index;
@@ -403,7 +407,7 @@ load_fuse_config(void)
  * @return 0 on success, -1 on failure
  *****************************************************************************/
 
-int APP_CC
+int
 xfuse_init(void)
 {
     struct fuse_args args = FUSE_ARGS_INIT(0, NULL);
@@ -485,7 +489,7 @@ xfuse_init(void)
  * @return 0 on success, -1 on failure
  *****************************************************************************/
 
-int APP_CC
+int
 xfuse_deinit(void)
 {
     xfuse_deinit_xrdp_fs();
@@ -596,7 +600,7 @@ int xfuse_get_wait_objs(tbus *objs, int *count, int *timeout)
  * @return 0 on success, -1 on failure
  *****************************************************************************/
 
-int xfuse_create_share(tui32 device_id, char *dirname)
+int xfuse_create_share(tui32 device_id, const char *dirname)
 {
 #if 0
     XFUSE_INFO  *fip;
@@ -709,7 +713,8 @@ int xfuse_clear_clip_dir(void)
  * @return 0 on success, -1 on failure
  *****************************************************************************/
 
-int xfuse_file_contents_range(int stream_id, char *data, int data_bytes)
+int
+xfuse_file_contents_range(int stream_id, const char *data, int data_bytes)
 {
     log_debug("entered: stream_id=%d data_bytes=%d", stream_id, data_bytes);
 
@@ -756,7 +761,8 @@ int xfuse_file_contents_range(int stream_id, char *data, int data_bytes)
  * @return 0 on success, -1 on failure
  *****************************************************************************/
 
-int xfuse_add_clip_dir_item(char *filename, int flags, int size, int lindex)
+int
+xfuse_add_clip_dir_item(const char *filename, int flags, int size, int lindex)
 {
     log_debug("entered: filename=%s flags=%d size=%d lindex=%d",
               filename, flags, size, lindex);
@@ -1204,9 +1210,9 @@ static struct xrdp_inode * xfuse_get_inode_from_pinode_name(fuse_ino_t pinode,
  * @return XRDP_INODE on success, NULL on failure
  *****************************************************************************/
 
-static struct xrdp_inode * xfuse_create_file_in_xrdp_fs(tui32 device_id,
-                                                        int pinode, char *name,
-                                                        int type)
+static struct xrdp_inode *
+xfuse_create_file_in_xrdp_fs(tui32 device_id, int pinode, const char *name,
+                             int type)
 {
     XRDP_INODE *xinode;
     XRDP_INODE *xinodep;
@@ -1681,7 +1687,7 @@ done:
     free(fip);
 }
 
-void xfuse_devredir_cb_read_file(void *vp, char *buf, size_t length)
+void xfuse_devredir_cb_read_file(void *vp, const char *buf, size_t length)
 {
     XFUSE_INFO   *fip;
 
@@ -1696,7 +1702,7 @@ void xfuse_devredir_cb_read_file(void *vp, char *buf, size_t length)
     free(fip);
 }
 
-void xfuse_devredir_cb_write_file(void *vp, char *buf, size_t length)
+void xfuse_devredir_cb_write_file(void *vp, const char *buf, size_t length)
 {
     XRDP_INODE   *xinode;
     XFUSE_INFO   *fip;

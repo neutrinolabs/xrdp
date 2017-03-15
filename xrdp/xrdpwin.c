@@ -18,6 +18,10 @@
  * main program
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #if defined(_WIN32)
 #include <windows.h>
 #endif
@@ -42,7 +46,7 @@ static long g_sync_param2 = 0;
 static long (*g_sync_func)(long param1, long param2);
 
 /*****************************************************************************/
-long APP_CC
+long
 g_xrdp_sync(long (*sync_func)(long param1, long param2), long sync_param1,
             long sync_param2)
 {
@@ -82,7 +86,7 @@ g_xrdp_sync(long (*sync_func)(long param1, long param2), long sync_param1,
 }
 
 /*****************************************************************************/
-void DEFAULT_CC
+void
 xrdp_shutdown(int sig)
 {
     tbus threadid;
@@ -98,14 +102,14 @@ xrdp_shutdown(int sig)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 g_is_term(void)
 {
     return g_is_wait_obj_set(g_term_event);
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 g_set_term(int in_val)
 {
     if (in_val)
@@ -119,21 +123,21 @@ g_set_term(int in_val)
 }
 
 /*****************************************************************************/
-tbus APP_CC
+tbus
 g_get_term_event(void)
 {
     return g_term_event;
 }
 
 /*****************************************************************************/
-tbus APP_CC
+tbus
 g_get_sync_event(void)
 {
     return g_sync_event;
 }
 
 /*****************************************************************************/
-void DEFAULT_CC
+void
 pipe_sig(int sig_num)
 {
     /* do nothing */
@@ -141,7 +145,7 @@ pipe_sig(int sig_num)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 g_process_waiting_function(void)
 {
     tc_mutex_lock(g_sync_mutex);
@@ -200,7 +204,7 @@ MyHandler(DWORD fdwControl)
 }
 
 /*****************************************************************************/
-static void DEFAULT_CC
+static void
 log_event(HANDLE han, char *msg)
 {
     ReportEvent(han, EVENTLOG_INFORMATION_TYPE, 0, 0, 0, 1, 0, &msg, 0);
@@ -274,7 +278,7 @@ MyServiceMain(DWORD dwArgc, LPTSTR *lpszArgv)
 
 #endif
 /*****************************************************************************/
-int DEFAULT_CC
+int
 main(int argc, char **argv)
 {
     int test;

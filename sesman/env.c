@@ -24,6 +24,10 @@
  *
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include <grp.h>
 
 #include "list.h"
@@ -34,7 +38,7 @@ extern unsigned char g_fixedkey[8]; /* in sesman.c */
 extern struct config_sesman *g_cfg;  /* in sesman.c */
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 env_check_password_file(const char *filename, const char *passwd)
 {
     char encryptedPasswd[16];
@@ -83,7 +87,7 @@ env_check_password_file(const char *filename, const char *passwd)
 
 /******************************************************************************/
 /*  its the responsibility of the caller to free passwd_file                  */
-int DEFAULT_CC
+int
 env_set_user(const char *username, char **passwd_file, int display,
              const struct list *env_names, const struct list *env_values)
 {

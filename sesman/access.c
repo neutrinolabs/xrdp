@@ -24,12 +24,16 @@
  *
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "sesman.h"
 
 extern struct config_sesman *g_cfg; /* in sesman.c */
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 access_login_allowed(const char *user)
 {
     int gid;
@@ -78,7 +82,7 @@ access_login_allowed(const char *user)
 }
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 access_login_mng_allowed(const char *user)
 {
     int gid;

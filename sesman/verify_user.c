@@ -24,6 +24,10 @@
  *
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "sesman.h"
 
 #include <stdio.h>
@@ -39,15 +43,15 @@
 
 extern struct config_sesman *g_cfg; /* in sesman.c */
 
-static int DEFAULT_CC
+static int
 auth_crypt_pwd(const char *pwd, const char *pln, char *crp);
 
-static int DEFAULT_CC
+static int
 auth_account_disabled(struct spwd *stp);
 
 /******************************************************************************/
 /* returns boolean */
-long DEFAULT_CC
+long
 auth_userpass(const char *user, const char *pass, int *errorcode)
 {
     const char *encr;
@@ -95,7 +99,7 @@ auth_userpass(const char *user, const char *pass, int *errorcode)
 
 /******************************************************************************/
 /* returns error */
-int DEFAULT_CC
+int
 auth_start_session(long in_val, int in_display)
 {
     return 0;
@@ -103,28 +107,28 @@ auth_start_session(long in_val, int in_display)
 
 /******************************************************************************/
 /* returns error */
-int DEFAULT_CC
+int
 auth_stop_session(long in_val)
 {
     return 0;
 }
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 auth_end(long in_val)
 {
     return 0;
 }
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 auth_set_env(long in_val)
 {
     return 0;
 }
 
 /******************************************************************************/
-int DEFAULT_CC
+int
 auth_check_pwd_chg(const char *user)
 {
     struct passwd *spw;
@@ -181,7 +185,7 @@ auth_check_pwd_chg(const char *user)
     return AUTH_PWD_CHG_OK;
 }
 
-int DEFAULT_CC
+int
 auth_change_pwd(const char *user, const char *newpwd)
 {
     struct passwd *spw;
@@ -255,7 +259,7 @@ auth_change_pwd(const char *user, const char *newpwd)
  *
  */
 
-static int DEFAULT_CC
+static int
 auth_crypt_pwd(const char *pwd, const char *pln, char *crp)
 {
     char salt[13] = "$1$";
@@ -295,7 +299,7 @@ auth_crypt_pwd(const char *pwd, const char *pln, char *crp)
  * @return 1 if the account is disabled, 0 otherwise
  *
  */
-static int DEFAULT_CC
+static int
 auth_account_disabled(struct spwd *stp)
 {
     int today;

@@ -34,6 +34,10 @@
  *      o mark local funcs with static
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -102,10 +106,10 @@ tui32 g_device_id;          /* unique device ID - announced by client */
 tui16 g_client_rdp_version; /* returned by client                     */
 struct stream *g_input_stream = NULL;
 
-void xfuse_devredir_cb_write_file(void *vp, char *buf, size_t length);
+void xfuse_devredir_cb_write_file(void *vp, const char *buf, size_t length);
 
 /*****************************************************************************/
-int APP_CC
+int
 dev_redir_init(void)
 {
     struct  stream *s;
@@ -152,7 +156,7 @@ dev_redir_init(void)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 dev_redir_deinit(void)
 {
     scard_deinit();
@@ -165,7 +169,7 @@ dev_redir_deinit(void)
  * @return 0 on success, -1 on failure
  *****************************************************************************/
 
-int APP_CC
+int
 dev_redir_data_in(struct stream *s, int chan_id, int chan_flags, int length,
                   int total_length)
 {
@@ -283,7 +287,7 @@ done:
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 dev_redir_get_wait_objs(tbus *objs, int *count, int *timeout)
 {
     if (g_is_smartcard_redir_supported)
@@ -294,7 +298,7 @@ dev_redir_get_wait_objs(tbus *objs, int *count, int *timeout)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 dev_redir_check_wait_objs(void)
 {
     if (g_is_smartcard_redir_supported)
@@ -716,7 +720,7 @@ void devredir_proc_client_devlist_announce_req(struct stream *s)
     }
 }
 
-void APP_CC
+void
 dev_redir_proc_device_iocompletion(struct stream *s)
 {
     FUSE_DATA *fuse_data = NULL;
@@ -880,7 +884,7 @@ done:
     log_debug("exiting");
 }
 
-void APP_CC
+void
 dev_redir_proc_query_dir_response(IRP *irp,
                                   struct stream *s_in,
                                   tui32 DeviceId,
@@ -997,7 +1001,7 @@ dev_redir_proc_query_dir_response(IRP *irp,
  * @return 0 on success, -1 on failure
  *****************************************************************************/
 
-int APP_CC
+int
 dev_redir_get_dir_listing(void *fusep, tui32 device_id, const char *path)
 {
     tui32  DesiredAccess;
@@ -1044,7 +1048,7 @@ dev_redir_get_dir_listing(void *fusep, tui32 device_id, const char *path)
     return rval;
 }
 
-int APP_CC
+int
 dev_redir_file_open(void *fusep, tui32 device_id, const char *path,
                     int mode, int type, const char *gen_buf)
 {
@@ -1162,7 +1166,7 @@ int devredir_file_close(void *fusep, tui32 device_id, tui32 FileId)
  * Remove (delete) a directory or file
  *****************************************************************************/
 
-int APP_CC
+int
 devredir_rmdir_or_file(void *fusep, tui32 device_id, const char *path, int mode)
 {
     tui32  DesiredAccess;
@@ -1205,7 +1209,7 @@ devredir_rmdir_or_file(void *fusep, tui32 device_id, const char *path, int mode)
  * @return 0 on success, -1 on failure
  *****************************************************************************/
 
-int APP_CC
+int
 devredir_file_read(void *fusep, tui32 DeviceId, tui32 FileId,
                    tui32 Length, tui64 Offset)
 {
@@ -1256,7 +1260,7 @@ devredir_file_read(void *fusep, tui32 DeviceId, tui32 FileId,
     return 0;
 }
 
-int APP_CC
+int
 dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
                      const char *buf, int Length, tui64 Offset)
 {
@@ -1266,7 +1270,7 @@ dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
     int            bytes;
 
     log_debug("DeviceId=%d FileId=%d Length=%d Offset=%lld",
-              DeviceId, FileId, Length, Offset);
+              DeviceId, FileId, Length, (long long)Offset);
 
     xstream_new(s, 1024 + Length);
 
@@ -1323,7 +1327,7 @@ dev_redir_file_write(void *fusep, tui32 DeviceId, tui32 FileId,
  * @return FUSE_DATA on success, or NULL on failure
  *****************************************************************************/
 
-FUSE_DATA *APP_CC
+FUSE_DATA *
 devredir_fuse_data_peek(IRP *irp)
 {
     log_debug("returning %p", irp->fd_head);
@@ -1336,7 +1340,7 @@ devredir_fuse_data_peek(IRP *irp)
  * @return FUSE_DATA on success, NULL on failure
  *****************************************************************************/
 
-FUSE_DATA *APP_CC
+FUSE_DATA *
 devredir_fuse_data_dequeue(IRP *irp)
 {
     FUSE_DATA *head;
@@ -1372,7 +1376,7 @@ devredir_fuse_data_dequeue(IRP *irp)
  * @return 0 on success, -1 on failure
  *****************************************************************************/
 
-int APP_CC
+int
 devredir_fuse_data_enqueue(IRP *irp, void *vp)
 {
     FUSE_DATA *fd;
@@ -1411,7 +1415,7 @@ devredir_fuse_data_enqueue(IRP *irp, void *vp)
 **                           miscellaneous stuff                             **
 ******************************************************************************/
 
-void APP_CC
+void
 devredir_insert_DeviceIoRequest(struct stream *s,
                                 tui32 DeviceId,
                                 tui32 FileId,
@@ -1433,7 +1437,7 @@ devredir_insert_DeviceIoRequest(struct stream *s,
  * Convert / to windows compatible \
  *****************************************************************************/
 
-void APP_CC
+void
 devredir_cvt_slash(char *path)
 {
     char *cptr = path;
@@ -1446,7 +1450,7 @@ devredir_cvt_slash(char *path)
     }
 }
 
-void APP_CC
+void
 devredir_cvt_to_unicode(char *unicode, const char *path)
 {
     char *dest;
@@ -1472,7 +1476,7 @@ devredir_cvt_to_unicode(char *unicode, const char *path)
     *dest++ = 0;
 }
 
-void APP_CC
+void
 devredir_cvt_from_unicode_len(char *path, char *unicode, int len)
 {
     char *dest;
@@ -1509,7 +1513,7 @@ devredir_cvt_from_unicode_len(char *path, char *unicode, int len)
     g_free(dest_saved);
 }
 
-int APP_CC
+int
 dev_redir_string_ends_with(char *string, char c)
 {
     int len;
@@ -1518,7 +1522,7 @@ dev_redir_string_ends_with(char *string, char c)
     return (string[len - 1] == c) ? 1 : 0;
 }
 
-void APP_CC
+void
 devredir_insert_RDPDR_header(struct stream *s, tui16 Component,
                              tui16 PacketId)
 {
@@ -1526,7 +1530,7 @@ devredir_insert_RDPDR_header(struct stream *s, tui16 Component,
     xstream_wr_u16_le(s, PacketId);
 }
 
-void APP_CC
+void
 devredir_proc_cid_rmdir_or_file(IRP *irp, tui32 IoStatus)
 {
     struct stream *s;
@@ -1563,7 +1567,7 @@ devredir_proc_cid_rmdir_or_file(IRP *irp, tui32 IoStatus)
     return;
 }
 
-void APP_CC
+void
 devredir_proc_cid_rmdir_or_file_resp(IRP *irp, tui32 IoStatus)
 {
     FUSE_DATA *fuse_data;
@@ -1590,7 +1594,7 @@ devredir_proc_cid_rmdir_or_file_resp(IRP *irp, tui32 IoStatus)
                                        IRP_MJ_CLOSE, 0, 32);
 }
 
-void APP_CC
+void
 devredir_proc_cid_rename_file(IRP *irp, tui32 IoStatus)
 {
     struct stream *s;
@@ -1643,7 +1647,7 @@ devredir_proc_cid_rename_file(IRP *irp, tui32 IoStatus)
     return;
 }
 
-void APP_CC
+void
 devredir_proc_cid_rename_file_resp(IRP *irp, tui32 IoStatus)
 {
     FUSE_DATA *fuse_data;

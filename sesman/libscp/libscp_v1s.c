@@ -24,6 +24,10 @@
  *
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #ifndef LIBSCP_V1S_C
 #define LIBSCP_V1S_C
 

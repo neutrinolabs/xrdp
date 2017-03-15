@@ -37,13 +37,13 @@
 struct trans; /* forward declaration */
 struct xrdp_tls;
 
-typedef int (DEFAULT_CC *ttrans_data_in)(struct trans* self);
-typedef int (DEFAULT_CC *ttrans_conn_in)(struct trans* self,
+typedef int (*ttrans_data_in)(struct trans* self);
+typedef int (*ttrans_conn_in)(struct trans* self,
                                          struct trans* new_self);
-typedef int (DEFAULT_CC *tis_term)(void);
-typedef int (APP_CC *trans_recv_proc) (struct trans *self, char *ptr, int len);
-typedef int (APP_CC *trans_send_proc) (struct trans *self, const char *data, int len);
-typedef int (APP_CC *trans_can_recv_proc) (struct trans *self, int sck, int millis);
+typedef int (*tis_term)(void);
+typedef int (*trans_recv_proc) (struct trans *self, char *ptr, int len);
+typedef int (*trans_send_proc) (struct trans *self, const char *data, int len);
+typedef int (*trans_can_recv_proc) (struct trans *self, int sck, int millis);
 
 /* optional source info */
 
@@ -79,6 +79,8 @@ struct trans
     int no_stream_init_on_data_in;
     int extra_flags; /* user defined */
     struct ssl_tls *tls;
+    const char *ssl_protocol; /* e.g. TLSv1, TLSv1.1, TLSv1.2, unknown */
+    const char *cipher_name;  /* e.g. AES256-GCM-SHA384 */
     trans_recv_proc trans_recv;
     trans_send_proc trans_send;
     trans_can_recv_proc trans_can_recv;
@@ -86,47 +88,47 @@ struct trans
     int my_source;
 };
 
-struct trans* APP_CC
+struct trans*
 trans_create(int mode, int in_size, int out_size);
-void APP_CC
+void
 trans_delete(struct trans* self);
-int APP_CC
+int
 trans_get_wait_objs(struct trans* self, tbus* objs, int* count);
-int APP_CC
+int
 trans_get_wait_objs_rw(struct trans *self,
                        tbus *robjs, int *rcount,
                        tbus *wobjs, int *wcount, int *timeout);
-int APP_CC
+int
 trans_check_wait_objs(struct trans* self);
-int APP_CC
+int
 trans_force_read_s(struct trans* self, struct stream* in_s, int size);
-int APP_CC
+int
 trans_force_write_s(struct trans* self, struct stream* out_s);
-int APP_CC
+int
 trans_force_read(struct trans* self, int size);
-int APP_CC
+int
 trans_force_write(struct trans* self);
-int APP_CC
+int
 trans_write_copy(struct trans* self);
-int APP_CC
+int
 trans_write_copy_s(struct trans* self, struct stream* out_s);
-int APP_CC
+int
 trans_connect(struct trans* self, const char* server, const char* port,
               int timeout);
-int APP_CC
+int
 trans_listen_address(struct trans* self, char* port, const char* address);
-int APP_CC
+int
 trans_listen(struct trans* self, char* port);
-struct stream* APP_CC
+struct stream*
 trans_get_in_s(struct trans* self);
-struct stream* APP_CC
+struct stream*
 trans_get_out_s(struct trans* self, int size);
-int APP_CC
+int
 trans_set_tls_mode(struct trans *self, const char *key, const char *cert,
-                   int disableSSLv3, const char *tls_ciphers);
-int APP_CC
+                   long ssl_protocols, const char *tls_ciphers);
+int
 trans_shutdown_tls_mode(struct trans *self);
-int APP_CC
+int
 trans_tcp_force_read_s(struct trans *self, struct stream *in_s, int size);
 
 #endif

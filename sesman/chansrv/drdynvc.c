@@ -16,26 +16,30 @@
  * limitations under the License.
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "drdynvc.h"
 
 extern int g_drdynvc_chan_id; /* in chansrv.c */
 int g_drdynvc_inited = 0;
 
-static int APP_CC drdynvc_send_capability_request(uint16_t version);
-static int APP_CC drdynvc_process_capability_response(struct stream* s, unsigned char cmd);
-static int APP_CC drdynvc_process_open_channel_response(struct stream *s, unsigned char cmd);
-static int APP_CC drdynvc_process_close_channel_response(struct stream *s, unsigned char cmd);
-static int APP_CC drdynvc_process_data_first(struct stream* s, unsigned char cmd);
-static int APP_CC drdynvc_process_data(struct stream* s, unsigned char cmd);
-static int APP_CC drdynvc_insert_uint_124(struct stream *s, uint32_t val);
-static int APP_CC drdynvc_get_chan_id(struct stream *s, char cmd, uint32_t *chan_id_p);
+static int drdynvc_send_capability_request(uint16_t version);
+static int drdynvc_process_capability_response(struct stream* s, unsigned char cmd);
+static int drdynvc_process_open_channel_response(struct stream *s, unsigned char cmd);
+static int drdynvc_process_close_channel_response(struct stream *s, unsigned char cmd);
+static int drdynvc_process_data_first(struct stream* s, unsigned char cmd);
+static int drdynvc_process_data(struct stream* s, unsigned char cmd);
+static int drdynvc_insert_uint_124(struct stream *s, uint32_t val);
+static int drdynvc_get_chan_id(struct stream *s, char cmd, uint32_t *chan_id_p);
 
 /**
  * bring up dynamic virtual channel
  *
  * @return 0 on success, -1 on response
  ******************************************************************************/
-int APP_CC
+int
 drdynvc_init(void)
 {
     /* bring up X11 */
@@ -53,7 +57,7 @@ drdynvc_init(void)
  *
  * @return 0 on success, -1 on response
  ******************************************************************************/
-static int APP_CC
+static int
 drdynvc_send_capability_request(uint16_t version)
 {
     struct stream *s;
@@ -88,7 +92,7 @@ drdynvc_send_capability_request(uint16_t version)
  *
  * @return 0 on success, -1 on failure
  ******************************************************************************/
-static int APP_CC
+static int
 drdynvc_process_capability_response(struct stream *s, unsigned char cmd)
 {
     int cap_version;
@@ -121,7 +125,7 @@ drdynvc_process_capability_response(struct stream *s, unsigned char cmd)
  *
  * @return 0 on success, -1 on failure
  ******************************************************************************/
-int APP_CC
+int
 drdynvc_send_open_channel_request(int chan_pri, unsigned int chan_id,
                                   char *chan_name)
 {
@@ -161,7 +165,7 @@ drdynvc_send_open_channel_request(int chan_pri, unsigned int chan_id,
     return 0;
 }
 
-static int APP_CC
+static int
 drdynvc_process_open_channel_response(struct stream *s, unsigned char cmd)
 {
     struct xrdp_api_data *adp;
@@ -195,7 +199,7 @@ drdynvc_process_open_channel_response(struct stream *s, unsigned char cmd)
     return 0;
 }
 
-int APP_CC
+int
 drdynvc_send_close_channel_request(unsigned int chan_id)
 {
     struct stream *s;
@@ -222,7 +226,7 @@ drdynvc_send_close_channel_request(unsigned int chan_id)
     return 0;
 }
 
-static int APP_CC
+static int
 drdynvc_process_close_channel_response(struct stream *s, unsigned char cmd)
 {
     uint32_t chan_id;
@@ -243,7 +247,7 @@ drdynvc_process_close_channel_response(struct stream *s, unsigned char cmd)
  *
  * @return 0 on success, -1 on failure
  ******************************************************************************/
-int APP_CC drdynvc_write_data(uint32_t chan_id, char *data, int data_size)
+int drdynvc_write_data(uint32_t chan_id, char *data, int data_size)
 {
     struct stream *s;
     char          *saved_ptr;
@@ -334,7 +338,7 @@ int APP_CC drdynvc_write_data(uint32_t chan_id, char *data, int data_size)
     return 0;
 }
 
-static int APP_CC
+static int
 drdynvc_process_data_first(struct stream *s, unsigned char cmd)
 {
     struct xrdp_api_data *adp;
@@ -381,7 +385,7 @@ drdynvc_process_data_first(struct stream *s, unsigned char cmd)
     return 0;
 }
 
-static int APP_CC
+static int
 drdynvc_process_data(struct stream *s, unsigned char cmd)
 {
     struct xrdp_api_data *adp;
@@ -421,7 +425,7 @@ drdynvc_process_data(struct stream *s, unsigned char cmd)
  *
  * @return 0 on success, -1 on failure
  ******************************************************************************/
-int APP_CC
+int
 drdynvc_data_in(struct stream *s, int chan_id, int chan_flags, int length,
                 int total_length)
 {
@@ -469,7 +473,7 @@ drdynvc_data_in(struct stream *s, int chan_id, int chan_flags, int length,
  * @return 1 for short insertion
  * @return 2 for uint32_t insertions
  ******************************************************************************/
-static int APP_CC
+static int
 drdynvc_insert_uint_124(struct stream *s, uint32_t val)
 {
     int ret_val;
@@ -500,7 +504,7 @@ drdynvc_insert_uint_124(struct stream *s, uint32_t val)
  * @param   cmd      first byte in stream
  * @param   chan_id  return channel id  here
  ******************************************************************************/
-static int APP_CC
+static int
 drdynvc_get_chan_id(struct stream *s, char cmd, uint32_t *chan_id_p)
 {
     int cbChId;

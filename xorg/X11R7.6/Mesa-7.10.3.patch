@@ -1,0 +1,11 @@
+--- a/src/mesa/x86-64/xform4.S
++++ b/src/mesa/x86-64/xform4.S
+@@ -118,7 +118,7 @@
+ .byte  0x00, 0x00, 0x00, 0x00
+ .byte  0x00, 0x00, 0x00, 0x00
+ .byte  0x00, 0x00, 0x00, 0x00
+-.float 0f+1.0
++.float 1.0
+ 
+ .text
+ .align 16

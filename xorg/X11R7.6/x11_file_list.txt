@@ -58,8 +58,8 @@ mkfontdir-1.0.6.tar.bz2                         :  mkfontdir-1.0.6              
 mkfontscale-1.0.8.tar.bz2                       :  mkfontscale-1.0.8                        :
 xkbcomp-1.2.0.tar.bz2                           :  xkbcomp-1.2.0                            :
 xdriinfo-1.0.4.tar.bz2                          :  xdriinfo-1.0.4                           :
-xorg-server-1.9.3.tar.bz2                       :  xorg-server-1.9.3                        : --with-sha1=libcrypto --disable-dmx --without-dtrace
 applewmproto-1.4.1.tar.bz2                      :  applewmproto-1.4.1                       :
+xorg-server-1.9.3.tar.bz2                       :  xorg-server-1.9.3                        : --with-fontrootdir=$PREFIX_DIR/share/fonts/X11 --with-sha1=libcrypto --disable-dmx --without-dtrace
 bdftopcf-1.0.3.tar.bz2                          :  bdftopcf-1.0.3                           :
 intltool-0.41.1.tar.gz                          :  intltool-0.41.1                          :
 xkeyboard-config-2.0.tar.bz2                    :  xkeyboard-config-2.0                     :

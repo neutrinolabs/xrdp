@@ -18,11 +18,15 @@
  * mcs layer
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "libxrdp.h"
 #include "log.h"
 
 /*****************************************************************************/
-struct xrdp_mcs *APP_CC
+struct xrdp_mcs *
 xrdp_mcs_create(struct xrdp_sec *owner, struct trans *trans,
                 struct stream *client_mcs_data,
                 struct stream *server_mcs_data)
@@ -43,7 +47,7 @@ xrdp_mcs_create(struct xrdp_sec *owner, struct trans *trans,
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 xrdp_mcs_delete(struct xrdp_mcs *self)
 {
     struct mcs_channel_item *channel_item;
@@ -77,7 +81,7 @@ xrdp_mcs_delete(struct xrdp_mcs *self)
 /*****************************************************************************/
 /* This function sends channel join confirm */
 /* returns error = 1 ok = 0 */
-static int APP_CC
+static int
 xrdp_mcs_send_cjcf(struct xrdp_mcs *self, int userid, int chanid)
 {
     struct stream *s;
@@ -114,7 +118,7 @@ xrdp_mcs_send_cjcf(struct xrdp_mcs *self, int userid, int chanid)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
 {
     int appid;
@@ -220,7 +224,7 @@ xrdp_mcs_recv(struct xrdp_mcs *self, struct stream *s, int *chan)
 
 /*****************************************************************************/
 /* returns error */
-static int APP_CC
+static int
 xrdp_mcs_ber_parse_header(struct xrdp_mcs *self, struct stream *s,
                           int tag_val, int *len)
 {
@@ -290,7 +294,7 @@ xrdp_mcs_ber_parse_header(struct xrdp_mcs *self, struct stream *s,
 
 /*****************************************************************************/
 /* returns error */
-static int APP_CC
+static int
 xrdp_mcs_parse_domain_params(struct xrdp_mcs *self, struct stream *s)
 {
     int len;
@@ -319,7 +323,7 @@ xrdp_mcs_parse_domain_params(struct xrdp_mcs *self, struct stream *s)
 
 /*****************************************************************************/
 /* returns error */
-static int APP_CC
+static int
 xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
 {
     int len;
@@ -426,7 +430,7 @@ xrdp_mcs_recv_connect_initial(struct xrdp_mcs *self)
 
 /*****************************************************************************/
 /* returns error */
-static int APP_CC
+static int
 xrdp_mcs_recv_edrq(struct xrdp_mcs *self)
 {
     int opcode;
@@ -485,7 +489,7 @@ xrdp_mcs_recv_edrq(struct xrdp_mcs *self)
 
 /*****************************************************************************/
 /* returns error */
-static int APP_CC
+static int
 xrdp_mcs_recv_aurq(struct xrdp_mcs *self)
 {
     int opcode;
@@ -536,7 +540,7 @@ xrdp_mcs_recv_aurq(struct xrdp_mcs *self)
 
 /*****************************************************************************/
 /* returns error */
-static int APP_CC
+static int
 xrdp_mcs_send_aucf(struct xrdp_mcs *self)
 {
     struct stream *s;
@@ -571,7 +575,7 @@ xrdp_mcs_send_aucf(struct xrdp_mcs *self)
 
 /*****************************************************************************/
 /* returns error */
-static int APP_CC
+static int
 xrdp_mcs_recv_cjrq(struct xrdp_mcs *self)
 {
     int opcode;
@@ -626,7 +630,7 @@ xrdp_mcs_recv_cjrq(struct xrdp_mcs *self)
 
 /*****************************************************************************/
 /* returns error */
-static int APP_CC
+static int
 xrdp_mcs_ber_out_header(struct xrdp_mcs *self, struct stream *s,
                         int tag_val, int len)
 {
@@ -654,7 +658,7 @@ xrdp_mcs_ber_out_header(struct xrdp_mcs *self, struct stream *s,
 
 /*****************************************************************************/
 /* returns error */
-static int APP_CC
+static int
 xrdp_mcs_ber_out_int8(struct xrdp_mcs *self, struct stream *s, int value)
 {
     xrdp_mcs_ber_out_header(self, s, BER_TAG_INTEGER, 1);
@@ -665,7 +669,7 @@ xrdp_mcs_ber_out_int8(struct xrdp_mcs *self, struct stream *s, int value)
 #if 0 /* not used */
 /*****************************************************************************/
 /* returns error */
-static int APP_CC
+static int
 xrdp_mcs_ber_out_int16(struct xrdp_mcs *self, struct stream *s, int value)
 {
     xrdp_mcs_ber_out_header(self, s, BER_TAG_INTEGER, 2);
@@ -677,7 +681,7 @@ xrdp_mcs_ber_out_int16(struct xrdp_mcs *self, struct stream *s, int value)
 
 /*****************************************************************************/
 /* returns error */
-static int APP_CC
+static int
 xrdp_mcs_ber_out_int24(struct xrdp_mcs *self, struct stream *s, int value)
 {
     xrdp_mcs_ber_out_header(self, s, BER_TAG_INTEGER, 3);
@@ -689,7 +693,7 @@ xrdp_mcs_ber_out_int24(struct xrdp_mcs *self, struct stream *s, int value)
 
 /*****************************************************************************/
 /* returns error */
-static int APP_CC
+static int
 xrdp_mcs_out_domain_params(struct xrdp_mcs *self, struct stream *s,
                            int max_channels,
                            int max_users, int max_tokens,
@@ -708,7 +712,7 @@ xrdp_mcs_out_domain_params(struct xrdp_mcs *self, struct stream *s,
 }
 /*****************************************************************************/
 /* prepare server gcc data to send in mcs response msg */
-int APP_CC
+int
 xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
 {
     struct stream *s;
@@ -865,7 +869,7 @@ xrdp_mcs_out_gcc_data(struct xrdp_sec *self)
 }
 /*****************************************************************************/
 /* returns error */
-static int APP_CC
+static int
 xrdp_mcs_send_connect_response(struct xrdp_mcs *self)
 {
     int data_len;
@@ -903,7 +907,7 @@ xrdp_mcs_send_connect_response(struct xrdp_mcs *self)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 xrdp_mcs_incoming(struct xrdp_mcs *self)
 {
     int index;
@@ -966,7 +970,7 @@ xrdp_mcs_incoming(struct xrdp_mcs *self)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 xrdp_mcs_init(struct xrdp_mcs *self, struct stream *s)
 {
     xrdp_iso_init(self->iso_layer, s);
@@ -978,7 +982,7 @@ xrdp_mcs_init(struct xrdp_mcs *self, struct stream *s)
 /* returns error */
 /* Inform the callback that an mcs packet has been sent.  This is needed so
    the module can send any high priority mcs packets like audio. */
-static int APP_CC
+static int
 xrdp_mcs_call_callback(struct xrdp_mcs *self)
 {
     int rv;
@@ -1010,7 +1014,7 @@ xrdp_mcs_call_callback(struct xrdp_mcs *self)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 xrdp_mcs_send(struct xrdp_mcs *self, struct stream *s, int chan)
 {
     int len;
@@ -1079,7 +1083,7 @@ xrdp_mcs_send(struct xrdp_mcs *self, struct stream *s, int chan)
  * Internal help function to close the socket
  * @param self
  */
-void APP_CC
+void
 close_rdp_socket(struct xrdp_mcs *self)
 {
     if (self->iso_layer != 0)
@@ -1098,7 +1102,7 @@ close_rdp_socket(struct xrdp_mcs *self)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 xrdp_mcs_disconnect(struct xrdp_mcs *self)
 {
     struct stream *s;

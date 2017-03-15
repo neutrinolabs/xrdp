@@ -54,15 +54,15 @@ struct xrdp_api_data
     int           is_connected;
 };
 
-int DEFAULT_CC
+int
 g_is_term(void);
 
-int APP_CC send_channel_data(int chan_id, char *data, int size);
-int APP_CC send_rail_drawing_orders(char* data, int size);
-int APP_CC main_cleanup(void);
-int APP_CC add_timeout(int msoffset, void (*callback)(void* data), void* data);
-int APP_CC find_empty_slot_in_dvc_channels(void);
-struct xrdp_api_data * APP_CC struct_from_dvc_chan_id(tui32 dvc_chan_id);
+int send_channel_data(int chan_id, char *data, int size);
+int send_rail_drawing_orders(char* data, int size);
+int main_cleanup(void);
+int add_timeout(int msoffset, void (*callback)(void* data), void* data);
+int find_empty_slot_in_dvc_channels(void);
+struct xrdp_api_data * struct_from_dvc_chan_id(tui32 dvc_chan_id);
 int remove_struct_with_chan_id(tui32 dvc_chan_id);
 
 #define LOG_LEVEL 5

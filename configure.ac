@@ -28,6 +28,9 @@ case $host_os in
 	*linux*)
 		linux=yes
 		;;
+	*kfreebsd*)
+		linux=yes # only used in instfiles/ so that’s ok for us for now
+		;;
 	*freebsd*)
 		freebsd=yes
 		;;
@@ -46,7 +49,12 @@ AM_CONDITIONAL(NETBSD, [test "x$netbsd" = xyes])
 
 AC_ARG_WITH([systemdsystemunitdir],
         AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files]),
-        [], [with_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)])
+        [], [
+if test "x$linux" = xyes; then
+  with_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
+fi
+])
+
 if test "x$with_systemdsystemunitdir" != xno; then
         AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])
 fi
@@ -74,6 +82,10 @@ AC_ARG_ENABLE(pamuserpass, AS_HELP_STRING([--enable-pamuserpass],
               [Build pam userpass support (default: no)]),
               [], [enable_pamuserpass=no])
 AM_CONDITIONAL(SESMAN_PAMUSERPASS, [test x$enable_pamuserpass = xyes])
+AC_ARG_ENABLE(pam-config, AS_HELP_STRING([--enable-pam-config=CONF],
+              [Select PAM config to install: debian, redhat, suse, unix
+               (default: autodetect)]))
+
 AC_ARG_ENABLE(xrdpdebug, AS_HELP_STRING([--enable-xrdpdebug],
               [Build debug (default: no)]),
               [], [enable_xrdpdebug=no])
@@ -98,10 +110,6 @@ AC_ARG_ENABLE(xrdpvr, AS_HELP_STRING([--enable-xrdpvr],
               [Build xrdpvr module (default: no)]),
               [], [enable_xrdpvr=no])
 AM_CONDITIONAL(XRDP_XRDPVR, [test x$enable_xrdpvr = xyes])
-AC_ARG_ENABLE(rfxcodec, AS_HELP_STRING([--enable-rfxcodec],
-              [Build using librfxcodec (default: no)]),
-              [], [enable_rfxcodec=no])
-AM_CONDITIONAL(XRDP_RFXCODEC, [test x$enable_rfxcodec = xyes])
 AC_ARG_ENABLE(opus, AS_HELP_STRING([--enable-opus],
               [Build opus(audio codec) (default: no)]),
               [], [enable_opus=no])
@@ -114,11 +122,16 @@ AC_ARG_ENABLE(pixman, AS_HELP_STRING([--enable-pixman],
               [Use pixman library (default: no)]),
               [], [enable_pixman=no])
 AM_CONDITIONAL(XRDP_PIXMAN, [test x$enable_pixman = xyes])
+
+AC_ARG_ENABLE(painter, AS_HELP_STRING([--disable-painter],
+              [Use included painter library (default: yes)]),
+              [], [enable_painter=yes])
 AM_CONDITIONAL(XRDP_PAINTER, [test x$enable_painter = xyes])
-AC_ARG_ENABLE(painter, AS_HELP_STRING([--enable-painter],
-              [Use painter library (default: no)]),
-              [], [enable_painter=no])
-AM_CONDITIONAL(XRDP_PAINTER, [test x$enable_painter = xyes])
+
+AC_ARG_ENABLE(rfxcodec, AS_HELP_STRING([--disable-rfxcodec],
+              [Use included librfxcodec library (default: yes)]),
+              [], [enable_rfxcodec=yes])
+AM_CONDITIONAL(XRDP_RFXCODEC, [test x$enable_rfxcodec = xyes])
 
 # Don't fail without working nasm if rfxcodec is not enabled
 if test "x$enable_rfxcodec" != xyes; then
@@ -133,8 +146,12 @@ AC_CHECK_FUNC(dlopen, [],
 AC_SUBST(DLOPEN_LIBS)
 
 # checking for openssl
-PKG_CHECK_MODULES([OPENSSL], [openssl >= 0], [],
+PKG_CHECK_MODULES([OPENSSL], [openssl >= 0.9.8], [],
   [AC_MSG_ERROR([please install libssl-dev or openssl-devel])])
+
+# look for openssl binary
+OPENSSL_BIN=`$PKG_CONFIG --variable=exec_prefix openssl`/bin
+AC_PATH_PROGS([OPENSSL], [openssl], [:], [$OPENSSL_BIN:$PATH])
 
 # checking for pam variation
 # Linux-PAM is used in Linux systems
@@ -156,7 +173,19 @@ then
         [AC_MSG_ERROR([please install libpam0g-dev or pam-devel])])
     fi
   fi
+  if test "x$enable_pam_config" = "x"; then
+    PAM_RULES="auto"
+  else
+    pam_config_file="$srcdir/instfiles/pam.d/xrdp-sesman.$enable_pam_config"
+    if test -f "$pam_config_file"; then
+      PAM_RULES="$enable_pam_config"
+    else
+      AC_MSG_ERROR([PAM file "$pam_config_file" is not available])
+    fi
+  fi
 fi
+
+AC_SUBST(PAM_RULES)
 
 if test "x$enable_ipv6only" = "xyes"
 then
@@ -263,9 +292,14 @@ CFLAGS="$save_CFLAGS"
 
 AC_SUBST([moduledir], '${libdir}/xrdp')
 
-if test "x${prefix}" = "xNONE" ; then
-sysconfdir="/etc";
-localstatedir="/var";
+AC_ARG_ENABLE([strict-locations],
+  [AS_HELP_STRING([--enable-strict-locations],
+                  [Use standard Autoconf install directories unless overridden
+                   (default: use /etc and /var)])])
+
+if test "x$enable_strict_locations" != "xyes"; then
+  sysconfdir="/etc";
+  localstatedir="/var";
 fi
 
 PKG_INSTALLDIR
@@ -291,7 +325,6 @@ AC_CONFIG_FILES([
   pkgconfig/Makefile
   pkgconfig/xrdp.pc
   pkgconfig/xrdp-uninstalled.pc
-  rdp/Makefile
   sesman/chansrv/Makefile
   sesman/libscp/Makefile
   sesman/Makefile

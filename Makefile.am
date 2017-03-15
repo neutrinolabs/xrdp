@@ -1,5 +1,7 @@
 ACLOCAL_AMFLAGS = -I m4
-AM_DISTCHECK_CONFIGURE_FLAGS = --without-systemdsystemunitdir
+AM_DISTCHECK_CONFIGURE_FLAGS = \
+  --without-systemdsystemunitdir \
+  --enable-strict-locations
 
 EXTRA_DIST = \
   COPYING \
@@ -50,7 +52,6 @@ endif
 SUBDIRS = \
   common \
   vnc \
-  rdp \
   xup \
   mc \
   $(NEUTRINORDPDIR) \

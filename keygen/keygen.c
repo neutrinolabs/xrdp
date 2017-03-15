@@ -25,6 +25,10 @@
 
 */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "os_calls.h"
 #include "ssl_calls.h"
 #include "arch.h"
@@ -192,7 +196,7 @@ static tui8 g_testkey2048[376] = /* 2048 bit test key */
 };
 
 /*****************************************************************************/
-static int APP_CC
+static int
 out_params(void)
 {
     g_writeln("%s", "");
@@ -205,8 +209,8 @@ out_params(void)
 
 /*****************************************************************************/
 /* this is the special key signing algorithm */
-static int APP_CC
-sign_key(char *e_data, int e_len, char *n_data, int n_len,
+static int
+sign_key(const char *e_data, int e_len, const char *n_data, int n_len,
          char *sign_data, int sign_len)
 {
     char *key;
@@ -281,8 +285,8 @@ sign_key(char *e_data, int e_len, char *n_data, int n_len,
 }
 
 /*****************************************************************************/
-static int APP_CC
-write_out_line(int fd, const char *name, char *data, int len)
+static int
+write_out_line(int fd, const char *name, const char *data, int len)
 {
     int max;
     int error;
@@ -333,9 +337,9 @@ write_out_line(int fd, const char *name, char *data, int len)
 }
 
 /*****************************************************************************/
-static int APP_CC
-save_all(char *e_data, int e_len, char *n_data, int n_len,
-         char *d_data, int d_len, char *sign_data, int sign_len,
+static int
+save_all(const char *e_data, int e_len, const char *n_data, int n_len,
+         const char *d_data, int d_len, const char *sign_data, int sign_len,
          const char *path_and_file_name)
 {
     int fd;
@@ -389,7 +393,7 @@ save_all(char *e_data, int e_len, char *n_data, int n_len,
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 key_gen(const char *path_and_file_name)
 {
     char *e_data;
@@ -455,14 +459,14 @@ key_gen(const char *path_and_file_name)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 key_gen_auto(void)
 {
     return key_gen("/etc/xrdp/rsakeys.ini");
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 key_test512(void)
 {
     char *md5_final;
@@ -505,7 +509,7 @@ key_test512(void)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 key_test2048(void)
 {
     char *md5_final;
@@ -548,7 +552,7 @@ key_test2048(void)
 }
 
 /*****************************************************************************/
-int DEFAULT_CC
+int
 main(int argc, char **argv)
 {
     if (argc > 1)

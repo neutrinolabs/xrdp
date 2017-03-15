@@ -17,11 +17,15 @@
  * limitations under the License.
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "libxrdp.h"
 #include "freerdp/codec/rfx.h"
 
 /*****************************************************************************/
-struct xrdp_surface *APP_CC
+struct xrdp_surface *
 xrdp_surface_create(struct xrdp_session *session, struct xrdp_fastpath *fastpath)
 {
     struct xrdp_surface *self;
@@ -35,7 +39,7 @@ xrdp_surface_create(struct xrdp_session *session, struct xrdp_fastpath *fastpath
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 xrdp_surface_delete(struct xrdp_surface *self)
 {
     STREAM *s;
@@ -56,14 +60,14 @@ xrdp_surface_delete(struct xrdp_surface *self)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 xrdp_surface_reset(struct xrdp_surface *self)
 {
     return 0;
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_surface_init(struct xrdp_surface *self)
 {
     int width;
@@ -85,7 +89,7 @@ xrdp_surface_init(struct xrdp_surface *self)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_surface_send_surface_bits(struct xrdp_surface *self, int bpp, char *data,
                                int x, int y, int cx, int cy)
 {
@@ -149,7 +153,7 @@ xrdp_surface_send_surface_bits(struct xrdp_surface *self, int bpp, char *data,
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_surface_send_frame_marker(struct xrdp_surface *self,
                                uint16 frameAction, uint32 frameId)
 {

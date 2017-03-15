@@ -91,7 +91,7 @@ struct session_chain
  * @return session data or 0
  *
  */
-struct session_item* DEFAULT_CC
+struct session_item*
 session_get_bydata(const char *name, int width, int height, int bpp, int type,
                    const char *client_ip);
 #ifndef session_find_item
@@ -104,10 +104,10 @@ session_get_bydata(const char *name, int width, int height, int bpp, int type,
  * @return 0 on error, display number if success
  *
  */
-int DEFAULT_CC
+int
 session_start(long data, tui8 type, struct SCP_SESSION *s);
 
-int DEFAULT_CC
+int
 session_reconnect(int display, char* username);
 
 /**
@@ -117,7 +117,7 @@ session_reconnect(int display, char* username);
  * @return
  *
  */
-int DEFAULT_CC
+int
 session_kill(int pid);
 
 /**
@@ -126,7 +126,7 @@ session_kill(int pid);
  * @return
  *
  */
-void DEFAULT_CC
+void
 session_sigkill_all(void);
 
 /**
@@ -136,7 +136,7 @@ session_sigkill_all(void);
  * @return a pointer to the session descriptor on success, NULL otherwise
  *
  */
-struct session_item* DEFAULT_CC
+struct session_item*
 session_get_bypid(int pid);
 
 /**

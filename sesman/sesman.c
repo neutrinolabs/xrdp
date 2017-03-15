@@ -24,6 +24,10 @@
  *
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "sesman.h"
 
 int g_sck;
@@ -39,7 +43,7 @@ tintptr g_term_event = 0;
  * @brief Starts sesman main loop
  *
  */
-static void DEFAULT_CC
+static void
 sesman_main_loop(void)
 {
     int in_sck;
@@ -131,7 +135,20 @@ sesman_main_loop(void)
 }
 
 /******************************************************************************/
-int DEFAULT_CC
+void
+print_usage(int retcode)
+{
+    g_printf("xrdp-sesman - xrdp session manager\n\n");
+    g_printf("Usage: xrdp-sesman [options]\n");
+    g_printf("   -n, --nodaemon   run as foreground process\n");
+    g_printf("   -k, --kill       kill running xrdp-sesman\n");
+    g_printf("   -h, --help       show this help\n");
+    g_deinit();
+    g_exit(retcode);
+}
+
+/******************************************************************************/
+int
 main(int argc, char **argv)
 {
     int fd;
@@ -166,16 +183,7 @@ main(int argc, char **argv)
                              (0 == g_strcasecmp(argv[1], "-help")) ||
                              (0 == g_strcasecmp(argv[1], "-h"))))
     {
-        /* help screen */
-        g_printf("sesman - xrdp session manager\n\n");
-        g_printf("usage: sesman [command]\n\n");
-        g_printf("command can be one of the following:\n");
-        g_printf("-n, -ns, --nodaemon  starts sesman in foreground\n");
-        g_printf("-k, --kill           kills running sesman\n");
-        g_printf("-h, --help           shows this help\n");
-        g_printf("if no command is specified, sesman is started in background");
-        g_deinit();
-        g_exit(0);
+        print_usage(0);
     }
     else if ((2 == argc) && ((0 == g_strcasecmp(argv[1], "--kill")) ||
                              (0 == g_strcasecmp(argv[1], "-kill")) ||
@@ -229,16 +237,13 @@ main(int argc, char **argv)
     else
     {
         /* there's something strange on the command line */
-        g_printf("sesman - xrdp session manager\n\n");
-        g_printf("error: invalid command line\n");
-        g_printf("usage: sesman [ --nodaemon | --kill | --help ]\n");
-        g_deinit();
-        g_exit(1);
+        g_printf("Error: invalid command line arguments\n\n");
+        print_usage(1);
     }
 
     if (g_file_exist(pid_file))
     {
-        g_printf("sesman is already running.\n");
+        g_printf("xrdp-sesman is already running.\n");
         g_printf("if it's not running, try removing ");
         g_printf("%s", pid_file);
         g_printf("\n");

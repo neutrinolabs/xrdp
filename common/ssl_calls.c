@@ -19,6 +19,10 @@
  * ssl calls
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include <stdlib.h> /* needed for openssl headers */
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -34,11 +38,7 @@
 #include "ssl_calls.h"
 #include "trans.h"
 
-#if defined(OPENSSL_VERSION_NUMBER) && (OPENSSL_VERSION_NUMBER >= 0x0090800f)
-#undef OLD_RSA_GEN1
-#else
-#define OLD_RSA_GEN1
-#endif
+#define SSL_WANT_READ_WRITE_TIMEOUT 100
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 static inline HMAC_CTX *
@@ -85,28 +85,28 @@ ssl_finish(void)
 /* rc4 stuff */
 
 /*****************************************************************************/
-void *APP_CC
+void *
 ssl_rc4_info_create(void)
 {
     return g_malloc(sizeof(RC4_KEY), 1);
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 ssl_rc4_info_delete(void *rc4_info)
 {
     g_free(rc4_info);
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 ssl_rc4_set_key(void *rc4_info, char *key, int len)
 {
     RC4_set_key((RC4_KEY *)rc4_info, len, (tui8 *)key);
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 ssl_rc4_crypt(void *rc4_info, char *data, int len)
 {
     RC4((RC4_KEY *)rc4_info, len, (tui8 *)data, (tui8 *)data);
@@ -115,35 +115,35 @@ ssl_rc4_crypt(void *rc4_info, char *data, int len)
 /* sha1 stuff */
 
 /*****************************************************************************/
-void *APP_CC
+void *
 ssl_sha1_info_create(void)
 {
     return g_malloc(sizeof(SHA_CTX), 1);
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 ssl_sha1_info_delete(void *sha1_info)
 {
     g_free(sha1_info);
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 ssl_sha1_clear(void *sha1_info)
 {
     SHA1_Init((SHA_CTX *)sha1_info);
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 ssl_sha1_transform(void *sha1_info, const char *data, int len)
 {
     SHA1_Update((SHA_CTX *)sha1_info, data, len);
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 ssl_sha1_complete(void *sha1_info, char *data)
 {
     SHA1_Final((tui8 *)data, (SHA_CTX *)sha1_info);
@@ -152,35 +152,35 @@ ssl_sha1_complete(void *sha1_info, char *data)
 /* md5 stuff */
 
 /*****************************************************************************/
-void *APP_CC
+void *
 ssl_md5_info_create(void)
 {
     return g_malloc(sizeof(MD5_CTX), 1);
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 ssl_md5_info_delete(void *md5_info)
 {
     g_free(md5_info);
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 ssl_md5_clear(void *md5_info)
 {
     MD5_Init((MD5_CTX *)md5_info);
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 ssl_md5_transform(void *md5_info, char *data, int len)
 {
     MD5_Update((MD5_CTX *)md5_info, data, len);
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 ssl_md5_complete(void *md5_info, char *data)
 {
     MD5_Final((tui8 *)data, (MD5_CTX *)md5_info);
@@ -189,7 +189,7 @@ ssl_md5_complete(void *md5_info, char *data)
 /* FIPS stuff */
 
 /*****************************************************************************/
-void *APP_CC
+void *
 ssl_des3_encrypt_info_create(const char *key, const char* ivec)
 {
     EVP_CIPHER_CTX *des3_ctx;
@@ -205,7 +205,7 @@ ssl_des3_encrypt_info_create(const char *key, const char* ivec)
 }
 
 /*****************************************************************************/
-void *APP_CC
+void *
 ssl_des3_decrypt_info_create(const char *key, const char* ivec)
 {
     EVP_CIPHER_CTX *des3_ctx;
@@ -221,7 +221,7 @@ ssl_des3_decrypt_info_create(const char *key, const char* ivec)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 ssl_des3_info_delete(void *des3)
 {
     EVP_CIPHER_CTX *des3_ctx;
@@ -234,7 +234,7 @@ ssl_des3_info_delete(void *des3)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 ssl_des3_encrypt(void *des3, int length, const char *in_data, char *out_data)
 {
     EVP_CIPHER_CTX *des3_ctx;
@@ -251,7 +251,7 @@ ssl_des3_encrypt(void *des3, int length, const char *in_data, char *out_data)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 ssl_des3_decrypt(void *des3, int length, const char *in_data, char *out_data)
 {
     EVP_CIPHER_CTX *des3_ctx;
@@ -268,7 +268,7 @@ ssl_des3_decrypt(void *des3, int length, const char *in_data, char *out_data)
 }
 
 /*****************************************************************************/
-void * APP_CC
+void *
 ssl_hmac_info_create(void)
 {
     HMAC_CTX *hmac_ctx;
@@ -278,7 +278,7 @@ ssl_hmac_info_create(void)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 ssl_hmac_info_delete(void *hmac)
 {
     HMAC_CTX *hmac_ctx;
@@ -291,7 +291,7 @@ ssl_hmac_info_delete(void *hmac)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 ssl_hmac_sha1_init(void *hmac, const char *data, int len)
 {
     HMAC_CTX *hmac_ctx;
@@ -301,7 +301,7 @@ ssl_hmac_sha1_init(void *hmac, const char *data, int len)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 ssl_hmac_transform(void *hmac, const char *data, int len)
 {
     HMAC_CTX *hmac_ctx;
@@ -313,7 +313,7 @@ ssl_hmac_transform(void *hmac, const char *data, int len)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 ssl_hmac_complete(void *hmac, char *data, int len)
 {
     HMAC_CTX *hmac_ctx;
@@ -327,7 +327,7 @@ ssl_hmac_complete(void *hmac, char *data, int len)
 }
 
 /*****************************************************************************/
-static void APP_CC
+static void
 ssl_reverse_it(char *p, int len)
 {
     int i;
@@ -348,9 +348,9 @@ ssl_reverse_it(char *p, int len)
 }
 
 /*****************************************************************************/
-int APP_CC
-ssl_mod_exp(char *out, int out_len, char *in, int in_len,
-            char *mod, int mod_len, char *exp, int exp_len)
+int
+ssl_mod_exp(char *out, int out_len, const char *in, int in_len,
+            const char *mod, int mod_len, const char *exp, int exp_len)
 {
     BN_CTX *ctx;
     BIGNUM *lmod;
@@ -406,87 +406,12 @@ ssl_mod_exp(char *out, int out_len, char *in, int in_len,
     return rv;
 }
 
-#if defined(OLD_RSA_GEN1)
 /*****************************************************************************/
 /* returns error
    generates a new rsa key
    exp is passed in and mod and pri are passed out */
-int APP_CC
-ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
-                  char *mod, int mod_len, char *pri, int pri_len)
-{
-    int my_e;
-    RSA *my_key;
-    char *lmod;
-    char *lpri;
-    tui8 *lexp;
-    int error;
-    int len;
-    int diff;
-
-    if ((exp_len != 4) || ((mod_len != 64) && (mod_len != 256)) ||
-                          ((pri_len != 64) && (pri_len != 256)))
-    {
-        return 1;
-    }
-
-    diff = 0;
-    lmod = (char *)g_malloc(mod_len, 1);
-    lpri = (char *)g_malloc(pri_len, 1);
-    lexp = (tui8 *)exp;
-    my_e = lexp[0];
-    my_e |= lexp[1] << 8;
-    my_e |= lexp[2] << 16;
-    my_e |= lexp[3] << 24;
-    /* srand is in stdlib.h */
-    srand(g_time1());
-    my_key = RSA_generate_key(key_size_in_bits, my_e, 0, 0);
-    error = my_key == 0;
-
-    if (error == 0)
-    {
-        len = BN_num_bytes(my_key->n);
-        error = (len < 1) || (len > mod_len);
-        diff = mod_len - len;
-    }
-
-    if (error == 0)
-    {
-        BN_bn2bin(my_key->n, (tui8 *)(lmod + diff));
-        ssl_reverse_it(lmod, mod_len);
-    }
-
-    if (error == 0)
-    {
-        len = BN_num_bytes(my_key->d);
-        error = (len < 1) || (len > pri_len);
-        diff = pri_len - len;
-    }
-
-    if (error == 0)
-    {
-        BN_bn2bin(my_key->d, (tui8 *)(lpri + diff));
-        ssl_reverse_it(lpri, pri_len);
-    }
-
-    if (error == 0)
-    {
-        g_memcpy(mod, lmod, mod_len);
-        g_memcpy(pri, lpri, pri_len);
-    }
-
-    RSA_free(my_key);
-    g_free(lmod);
-    g_free(lpri);
-    return error;
-}
-#else
-/*****************************************************************************/
-/* returns error
-   generates a new rsa key
-   exp is passed in and mod and pri are passed out */
-int APP_CC
-ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
+int
+ssl_gen_key_xrdp1(int key_size_in_bits, const char *exp, int exp_len,
                   char *mod, int mod_len, char *pri, int pri_len)
 {
     BIGNUM *my_e;
@@ -558,11 +483,9 @@ ssl_gen_key_xrdp1(int key_size_in_bits, char *exp, int exp_len,
     g_free(lpri);
     return error;
 }
-#endif
 
 /*****************************************************************************/
 struct ssl_tls *
-APP_CC
 ssl_tls_create(struct trans *trans, const char *key, const char *cert)
 {
     struct ssl_tls *self;
@@ -584,7 +507,7 @@ ssl_tls_create(struct trans *trans, const char *key, const char *cert)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 ssl_tls_print_error(const char *func, SSL *connection, int value)
 {
     switch (SSL_get_error(connection, value))
@@ -614,8 +537,8 @@ ssl_tls_print_error(const char *func, SSL *connection, int value)
 }
 
 /*****************************************************************************/
-int APP_CC
-ssl_tls_accept(struct ssl_tls *self, int disableSSLv3,
+int
+ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
                const char *tls_ciphers)
 {
     int connection_status;
@@ -624,13 +547,14 @@ ssl_tls_accept(struct ssl_tls *self, int disableSSLv3,
     /**
      * SSL_OP_NO_SSLv2
      * SSLv3 is used by, eg. Microsoft RDC for Mac OS X.
-     * No SSLv3 if disableSSLv3=yes so only tls used
      */
     options |= SSL_OP_NO_SSLv2;
-    if (disableSSLv3)
-    {
-        options |= SSL_OP_NO_SSLv3;
-    }
+
+    /**
+     * Disable SSL protocols not listed in ssl_protocols.
+     */
+    options |= ssl_protocols;
+
 
 #if defined(SSL_OP_NO_COMPRESSION)
     /**
@@ -740,7 +664,7 @@ ssl_tls_accept(struct ssl_tls *self, int disableSSLv3,
 
 /*****************************************************************************/
 /* returns error, */
-int APP_CC
+int
 ssl_tls_disconnect(struct ssl_tls *self)
 {
     int status;
@@ -774,7 +698,7 @@ ssl_tls_disconnect(struct ssl_tls *self)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 ssl_tls_delete(struct ssl_tls *self)
 {
     if (self != NULL)
@@ -792,7 +716,7 @@ ssl_tls_delete(struct ssl_tls *self)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 ssl_tls_read(struct ssl_tls *tls, char *data, int length)
 {
     int status;
@@ -807,13 +731,16 @@ ssl_tls_read(struct ssl_tls *tls, char *data, int length)
                 break_flag = 1;
                 break;
 
+            /**
+             * retry when SSL_get_error returns:
+             *     SSL_ERROR_WANT_READ
+             *     SSL_ERROR_WANT_WRITE
+             */
             case SSL_ERROR_WANT_READ:
+                g_sck_can_recv(tls->trans->sck, SSL_WANT_READ_WRITE_TIMEOUT);
+                continue;
             case SSL_ERROR_WANT_WRITE:
-                /**
-                 * retry when SSL_get_error returns:
-                 *     SSL_ERROR_WANT_READ
-                 *     SSL_ERROR_WANT_WRITE
-                 */
+                g_sck_can_send(tls->trans->sck, SSL_WANT_READ_WRITE_TIMEOUT);
                 continue;
 
             default:
@@ -838,7 +765,7 @@ ssl_tls_read(struct ssl_tls *tls, char *data, int length)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 ssl_tls_write(struct ssl_tls *tls, const char *data, int length)
 {
     int status;
@@ -853,13 +780,16 @@ ssl_tls_write(struct ssl_tls *tls, const char *data, int length)
                 break_flag = 1;
                 break;
 
+            /**
+             * retry when SSL_get_error returns:
+             *     SSL_ERROR_WANT_READ
+             *     SSL_ERROR_WANT_WRITE
+             */
             case SSL_ERROR_WANT_READ:
+                g_sck_can_recv(tls->trans->sck, SSL_WANT_READ_WRITE_TIMEOUT);
+                continue;
             case SSL_ERROR_WANT_WRITE:
-                /**
-                 * retry when SSL_get_error returns:
-                 *     SSL_ERROR_WANT_READ
-                 *     SSL_ERROR_WANT_WRITE
-                 */
+                g_sck_can_send(tls->trans->sck, SSL_WANT_READ_WRITE_TIMEOUT);
                 continue;
 
             default:
@@ -880,7 +810,7 @@ ssl_tls_write(struct ssl_tls *tls, const char *data, int length)
 
 /*****************************************************************************/
 /* returns boolean */
-int APP_CC
+int
 ssl_tls_can_recv(struct ssl_tls *tls, int sck, int millis)
 {
     if (SSL_pending(tls->ssl) > 0)
@@ -891,3 +821,17 @@ ssl_tls_can_recv(struct ssl_tls *tls, int sck, int millis)
     return g_sck_can_recv(sck, millis);
 }
 
+
+/*****************************************************************************/
+const char *
+ssl_get_version(const struct ssl_st *ssl)
+{
+    return SSL_get_version(ssl);
+}
+
+/*****************************************************************************/
+const char *
+ssl_get_cipher_name(const struct ssl_st *ssl)
+{
+    return SSL_get_cipher_name(ssl);
+}

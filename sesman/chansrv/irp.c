@@ -21,6 +21,10 @@
  * manage I/O for redirected file system and devices
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "parse.h"
 #include "os_calls.h"
 #include "irp.h"

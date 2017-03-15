@@ -26,59 +26,59 @@ int
 ssl_init(void);
 int
 ssl_finish(void);
-void* APP_CC
+void*
 ssl_rc4_info_create(void);
-void APP_CC
+void
 ssl_rc4_info_delete(void* rc4_info);
-void APP_CC
+void
 ssl_rc4_set_key(void* rc4_info, char* key, int len);
-void APP_CC
+void
 ssl_rc4_crypt(void* rc4_info, char* data, int len);
-void* APP_CC
+void*
 ssl_sha1_info_create(void);
-void APP_CC
+void
 ssl_sha1_info_delete(void* sha1_info);
-void APP_CC
+void
 ssl_sha1_clear(void* sha1_info);
-void APP_CC
+void
 ssl_sha1_transform(void* sha1_info, const char *data, int len);
-void APP_CC
+void
 ssl_sha1_complete(void* sha1_info, char* data);
-void* APP_CC
+void*
 ssl_md5_info_create(void);
-void APP_CC
+void
 ssl_md5_info_delete(void* md5_info);
-void APP_CC
+void
 ssl_md5_clear(void* md5_info);
-void APP_CC
+void
 ssl_md5_transform(void* md5_info, char* data, int len);
-void APP_CC
+void
 ssl_md5_complete(void* md5_info, char* data);
-void *APP_CC
+void *
 ssl_des3_encrypt_info_create(const char *key, const char* ivec);
-void *APP_CC
+void *
 ssl_des3_decrypt_info_create(const char *key, const char* ivec);
-void APP_CC
+void
 ssl_des3_info_delete(void *des3);
-int APP_CC
+int
 ssl_des3_encrypt(void *des3, int length, const char *in_data, char *out_data);
-int APP_CC
+int
 ssl_des3_decrypt(void *des3, int length, const char *in_data, char *out_data);
-void * APP_CC
+void *
 ssl_hmac_info_create(void);
-void APP_CC
+void
 ssl_hmac_info_delete(void *hmac);
-void APP_CC
+void
 ssl_hmac_sha1_init(void *hmac, const char *data, int len);
-void APP_CC
+void
 ssl_hmac_transform(void *hmac, const char *data, int len);
-void APP_CC
+void
 ssl_hmac_complete(void *hmac, char *data, int len);
-int APP_CC
-ssl_mod_exp(char* out, int out_len, char* in, int in_len,
-            char* mod, int mod_len, char* exp, int exp_len);
-int APP_CC
-ssl_gen_key_xrdp1(int key_size_in_bits, char* exp, int exp_len,
+int
+ssl_mod_exp(char *out, int out_len, const char *in, int in_len,
+            const char *mod, int mod_len, const char *exp, int exp_len);
+int
+ssl_gen_key_xrdp1(int key_size_in_bits, const char* exp, int exp_len,
                   char* mod, int mod_len, char* pri, int pri_len);
 
 /* ssl_tls */
@@ -93,20 +93,23 @@ struct ssl_tls
 };
 
 /* xrdp_tls.c */
-struct ssl_tls *APP_CC
+struct ssl_tls *
 ssl_tls_create(struct trans *trans, const char *key, const char *cert);
-int APP_CC
-ssl_tls_accept(struct ssl_tls *self, int disableSSLv3,
+int
+ssl_tls_accept(struct ssl_tls *self, long ssl_protocols,
                const char *tls_ciphers);
-int APP_CC
+int
 ssl_tls_disconnect(struct ssl_tls *self);
-void APP_CC
+void
 ssl_tls_delete(struct ssl_tls *self);
-int APP_CC
+int
 ssl_tls_read(struct ssl_tls *tls, char *data, int length);
-int APP_CC
+int
 ssl_tls_write(struct ssl_tls *tls, const char *data, int length);
-int APP_CC
+int
 ssl_tls_can_recv(struct ssl_tls *tls, int sck, int millis);
+
+const char *ssl_get_version(const struct ssl_st *ssl);
+const char *ssl_get_cipher_name(const struct ssl_st *ssl);
 
 #endif

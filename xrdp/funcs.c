@@ -18,11 +18,15 @@
  * simple functions
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "xrdp.h"
 
 /*****************************************************************************/
 /* returns boolean */
-int APP_CC
+int
 rect_contains_pt(struct xrdp_rect *in, int x, int y)
 {
     if (x < in->left)
@@ -49,7 +53,7 @@ rect_contains_pt(struct xrdp_rect *in, int x, int y)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 rect_intersect(struct xrdp_rect *in1, struct xrdp_rect *in2,
                struct xrdp_rect *out)
 {
@@ -95,7 +99,7 @@ rect_intersect(struct xrdp_rect *in1, struct xrdp_rect *in2,
 
 /*****************************************************************************/
 /* returns boolean */
-int APP_CC
+int
 rect_contained_by(struct xrdp_rect *in1, int left, int top,
                   int right, int bottom)
 {
@@ -113,7 +117,7 @@ rect_contained_by(struct xrdp_rect *in1, int left, int top,
 /*****************************************************************************/
 /* adjust the bounds to fit in the bitmap */
 /* return false if there is nothing to draw else return true */
-int APP_CC
+int
 check_bounds(struct xrdp_bitmap *b, int *x, int *y, int *cx, int *cy)
 {
     if (*x >= b->width)
@@ -164,7 +168,7 @@ check_bounds(struct xrdp_bitmap *b, int *x, int *y, int *cx, int *cy)
 /*****************************************************************************/
 /* add a ch at index position in text, index starts at 0 */
 /* if index = -1 add it to the end */
-int APP_CC
+int
 add_char_at(char *text, int text_size, twchar ch, int index)
 {
     int len;
@@ -199,7 +203,7 @@ add_char_at(char *text, int text_size, twchar ch, int index)
 /*****************************************************************************/
 /* remove a ch at index position in text, index starts at 0 */
 /* if index = -1 remove it from the end */
-int APP_CC
+int
 remove_char_at(char *text, int text_size, int index)
 {
     int len;
@@ -236,7 +240,7 @@ remove_char_at(char *text, int text_size, int index)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 set_string(char **in_str, const char *in)
 {
     if (in_str == 0)
@@ -250,7 +254,7 @@ set_string(char **in_str, const char *in)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 wchar_repeat(twchar *dest, int dest_size_in_wchars, twchar ch, int repeat)
 {
     int index;

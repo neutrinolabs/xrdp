@@ -18,6 +18,10 @@
  * channel layer
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "libxrdp.h"
 
 /* todo, move these to constants.h */
@@ -29,7 +33,7 @@
 
 /*****************************************************************************/
 /* returns pointer or nil on error */
-static struct mcs_channel_item *APP_CC
+static struct mcs_channel_item *
 xrdp_channel_get_item(struct xrdp_channel *self, int channel_id)
 {
     struct mcs_channel_item *channel;
@@ -46,7 +50,7 @@ xrdp_channel_get_item(struct xrdp_channel *self, int channel_id)
 }
 
 /*****************************************************************************/
-struct xrdp_channel *APP_CC
+struct xrdp_channel *
 xrdp_channel_create(struct xrdp_sec *owner, struct xrdp_mcs *mcs_layer)
 {
     struct xrdp_channel *self;
@@ -59,7 +63,7 @@ xrdp_channel_create(struct xrdp_sec *owner, struct xrdp_mcs *mcs_layer)
 
 /*****************************************************************************/
 /* returns error */
-void APP_CC
+void
 xrdp_channel_delete(struct xrdp_channel *self)
 {
     if (self == 0)
@@ -73,7 +77,7 @@ xrdp_channel_delete(struct xrdp_channel *self)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 xrdp_channel_init(struct xrdp_channel *self, struct stream *s)
 {
     if (xrdp_sec_init(self->sec_layer, s) != 0)
@@ -88,7 +92,7 @@ xrdp_channel_init(struct xrdp_channel *self, struct stream *s)
 /*****************************************************************************/
 /* returns error */
 /* This sends data out to the secure layer. */
-int APP_CC
+int
 xrdp_channel_send(struct xrdp_channel *self, struct stream *s, int channel_id,
                   int total_data_len, int flags)
 {
@@ -136,7 +140,7 @@ xrdp_channel_send(struct xrdp_channel *self, struct stream *s, int channel_id,
 /* returns error */
 /* this will inform the callback, whatever it is that some channel data is
    ready.  the default for this is a call to xrdp_wm.c. */
-static int APP_CC
+static int
 xrdp_channel_call_callback(struct xrdp_channel *self, struct stream *s,
                            int channel_id,
                            int total_data_len, int flags)
@@ -177,7 +181,7 @@ xrdp_channel_call_callback(struct xrdp_channel *self, struct stream *s,
    channel packet.
    'chanid' passed in here is the mcs channel id so it MCS_GLOBAL_CHANNEL
    plus something. */
-int APP_CC
+int
 xrdp_channel_process(struct xrdp_channel *self, struct stream *s,
                      int chanid)
 {

@@ -26,13 +26,13 @@
 #define FORMAT_TO_BYTES(_format) \
     (_format) == 32 ? sizeof(long) : (_format) / 8
 
-int APP_CC
+int
 xcommon_get_local_time(void);
-int APP_CC
+int
 xcommon_init(void);
-int APP_CC
+int
 xcommon_get_wait_objs(tbus* objs, int* count, int* timeout);
-int APP_CC
+int
 xcommon_check_wait_objs(void);
 
 #endif

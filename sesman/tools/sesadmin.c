@@ -17,6 +17,10 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "arch.h"
 #include "tcp.h"
 #include "libscp.h"
@@ -187,6 +191,20 @@ void cmndHelp(void)
     fprintf(stderr, "               kill:<sid>\n");
 }
 
+static void
+print_session(const struct SCP_DISCONNECTED_SESSION *s)
+{
+    printf("Session ID: %d\n", s->SID);
+    printf("\tSession type: %d\n", s->type);
+    printf("\tScreen size: %dx%d, color depth %d\n",
+           s->width, s->height, s->bpp);
+    printf("\tIdle time: %d day(s) %d hour(s) %d minute(s)\n",
+           s->idle_days, s->idle_hours, s->idle_minutes);
+    printf("\tConnected: %04d/%02d/%02d %02d:%02d\n",
+           s->conn_year, s->conn_month, s->conn_day, s->conn_hour,
+           s->conn_minute);
+}
+
 void cmndList(struct SCP_CONNECTION *c)
 {
     struct SCP_DISCONNECTED_SESSION *dsl;
@@ -196,14 +214,17 @@ void cmndList(struct SCP_CONNECTION *c)
 
     e = scp_v1c_mng_get_session_list(c, &scnt, &dsl);
 
-    if ((SCP_CLIENT_STATE_LIST_OK == e) && (scnt > 0))
+    if (e != SCP_CLIENT_STATE_LIST_OK)
+    {
+        printf("Error getting session list.\n");
+        return;
+    }
+
+    if (scnt > 0)
     {
         for (idx = 0; idx < scnt; idx++)
         {
-            printf("%d\t%d\t%dx%dx%d\t%d-%d-%d\t%04d/%02d/%02d@%02d:%02d\n", \
-                   (dsl[idx]).SID, (dsl[idx]).type, (dsl[idx]).width, (dsl[idx]).height, (dsl[idx]).bpp, \
-                   (dsl[idx]).idle_days, (dsl[idx]).idle_hours, (dsl[idx]).idle_minutes, \
-                   (dsl[idx]).conn_year, (dsl[idx]).conn_month, (dsl[idx]).conn_day, (dsl[idx]).conn_hour, (dsl[idx]).conn_minute);
+            print_session(&dsl[idx]);
         }
     }
     else
@@ -211,10 +232,7 @@ void cmndList(struct SCP_CONNECTION *c)
         printf("No sessions.\n");
     }
 
-    if (0 != dsl)
-    {
-        g_free(dsl);
-    }
+    g_free(dsl);
 }
 
 void cmndKill(struct SCP_CONNECTION *c, struct SCP_SESSION *s)

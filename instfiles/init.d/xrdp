@@ -73,7 +73,7 @@ case "$1" in
   start)
         check_root
         exitval=0
-        log_daemon_msg "Starting $DESC " 
+        log_daemon_msg "Starting $DESC "
         if pidofproc -p $PIDDIR/$NAME.pid $DAEMON > /dev/null; then
             log_progress_msg "$NAME apparently already running"
             log_end_msg 0
@@ -104,7 +104,7 @@ case "$1" in
 	    exit 0
 	}
         exitval=0
-        log_daemon_msg "Stopping RDP Session manager " 
+        log_daemon_msg "Stopping RDP Session manager "
         log_progress_msg "sesman"
         if pidofproc -p  $PIDDIR/xrdp-sesman.pid $SDAEMON  > /dev/null; then
             start-stop-daemon --stop --quiet --oknodo --pidfile $PIDDIR/xrdp-sesman.pid \

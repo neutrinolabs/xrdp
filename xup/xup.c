@@ -18,6 +18,10 @@
  * libxup main file
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "xup.h"
 #include "log.h"
 #include "trans.h"
@@ -28,11 +32,11 @@
 #define LLOGLN(_level, _args) \
     do { if (_level < LOG_LEVEL) { g_writeln _args ; } } while (0)
 
-static int APP_CC
+static int
 lib_mod_process_message(struct mod *mod, struct stream *s);
 
 /******************************************************************************/
-static int APP_CC
+static int
 lib_send_copy(struct mod *mod, struct stream *s)
 {
     return trans_write_copy_s(mod->trans, s);
@@ -40,7 +44,7 @@ lib_send_copy(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-int DEFAULT_CC
+int
 lib_mod_start(struct mod *mod, int w, int h, int bpp)
 {
     LIB_DEBUG(mod, "in lib_mod_start");
@@ -52,7 +56,7 @@ lib_mod_start(struct mod *mod, int w, int h, int bpp)
 }
 
 /******************************************************************************/
-static int APP_CC
+static int
 lib_mod_log_peer(struct mod *mod)
 {
     int my_pid;
@@ -79,7 +83,7 @@ lib_mod_log_peer(struct mod *mod)
 }
 
 /******************************************************************************/
-static int APP_CC
+static int
 lib_data_in(struct trans *trans)
 {
     struct mod *self;
@@ -136,7 +140,7 @@ lib_data_in(struct trans *trans)
 
 /******************************************************************************/
 /* return error */
-int DEFAULT_CC
+int
 lib_mod_connect(struct mod *mod)
 {
     int error;
@@ -212,7 +216,8 @@ lib_mod_connect(struct mod *mod)
         if (trans_connect(mod->trans, mod->ip, con_port, 3000) == 0)
         {
             LLOGLN(0, ("lib_mod_connect: connected to Xserver "
-                   "(Xorg or X11rdp) sck %ld", mod->trans->sck));
+                   "(Xorg or X11rdp) sck %lld",
+                   (long long) (mod->trans->sck)));
             error = 0;
         }
 
@@ -324,7 +329,7 @@ lib_mod_connect(struct mod *mod)
 
 /******************************************************************************/
 /* return error */
-int DEFAULT_CC
+int
 lib_mod_event(struct mod *mod, int msg, tbus param1, tbus param2,
               tbus param3, tbus param4)
 {
@@ -395,7 +400,7 @@ lib_mod_event(struct mod *mod, int msg, tbus param1, tbus param2,
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_fill_rect(struct mod *mod, struct stream *s)
 {
     int rv;
@@ -414,7 +419,7 @@ process_server_fill_rect(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_screen_blt(struct mod *mod, struct stream *s)
 {
     int rv;
@@ -437,7 +442,7 @@ process_server_screen_blt(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_paint_rect(struct mod *mod, struct stream *s)
 {
     int rv;
@@ -470,7 +475,7 @@ process_server_paint_rect(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_set_clip(struct mod *mod, struct stream *s)
 {
     int rv;
@@ -489,7 +494,7 @@ process_server_set_clip(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_reset_clip(struct mod *mod, struct stream *s)
 {
     int rv;
@@ -500,7 +505,7 @@ process_server_reset_clip(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_set_fgcolor(struct mod *mod, struct stream *s)
 {
     int rv;
@@ -513,7 +518,7 @@ process_server_set_fgcolor(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_set_bgcolor(struct mod *mod, struct stream *s)
 {
     int rv;
@@ -526,7 +531,7 @@ process_server_set_bgcolor(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_set_opcode(struct mod *mod, struct stream *s)
 {
     int rv;
@@ -539,7 +544,7 @@ process_server_set_opcode(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_set_pen(struct mod *mod, struct stream *s)
 {
     int rv;
@@ -554,7 +559,7 @@ process_server_set_pen(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_draw_line(struct mod *mod, struct stream *s)
 {
     int rv;
@@ -573,7 +578,7 @@ process_server_draw_line(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_set_cursor(struct mod *mod, struct stream *s)
 {
     int rv;
@@ -592,7 +597,7 @@ process_server_set_cursor(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_create_os_surface(struct mod *mod, struct stream *s)
 {
     int rv;
@@ -609,7 +614,7 @@ process_server_create_os_surface(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_switch_os_surface(struct mod *mod, struct stream *s)
 {
     int rv;
@@ -622,7 +627,7 @@ process_server_switch_os_surface(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_delete_os_surface(struct mod *mod, struct stream *s)
 {
     int rv;
@@ -635,7 +640,7 @@ process_server_delete_os_surface(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_paint_rect_os(struct mod *mod, struct stream *s)
 {
     int rv;
@@ -661,7 +666,7 @@ process_server_paint_rect_os(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_set_hints(struct mod *mod, struct stream *s)
 {
     int rv;
@@ -676,7 +681,7 @@ process_server_set_hints(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_window_new_update(struct mod *mod, struct stream *s)
 {
     int flags;
@@ -759,7 +764,7 @@ process_server_window_new_update(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_window_delete(struct mod *mod, struct stream *s)
 {
     int window_id;
@@ -773,7 +778,7 @@ process_server_window_delete(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_window_show(struct mod* mod, struct stream* s)
 {
     int window_id;
@@ -792,7 +797,7 @@ process_server_window_show(struct mod* mod, struct stream* s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_add_char(struct mod *mod, struct stream *s)
 {
     int rv;
@@ -820,7 +825,7 @@ process_server_add_char(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_add_char_alpha(struct mod *mod, struct stream *s)
 {
     int rv;
@@ -848,7 +853,7 @@ process_server_add_char_alpha(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_draw_text(struct mod *mod, struct stream *s)
 {
     int rv;
@@ -891,7 +896,7 @@ process_server_draw_text(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_create_os_surface_bpp(struct mod *mod, struct stream *s)
 {
     int rv;
@@ -911,7 +916,7 @@ process_server_create_os_surface_bpp(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_paint_rect_bpp(struct mod *mod, struct stream *s)
 {
     int rv;
@@ -946,7 +951,7 @@ process_server_paint_rect_bpp(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_composite(struct mod *mod, struct stream *s)
 {
     int rv;
@@ -1001,7 +1006,7 @@ process_server_composite(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_set_pointer_ex(struct mod *mod, struct stream *s)
 {
     int rv;
@@ -1024,7 +1029,7 @@ process_server_set_pointer_ex(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 send_paint_rect_ack(struct mod *mod, int flags, int x, int y, int cx, int cy,
                     int frame_id)
 {
@@ -1052,7 +1057,7 @@ send_paint_rect_ack(struct mod *mod, int flags, int x, int y, int cx, int cy,
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_paint_rect_shmem(struct mod *amod, struct stream *s)
 {
     int rv;
@@ -1117,7 +1122,7 @@ process_server_paint_rect_shmem(struct mod *amod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 send_paint_rect_ex_ack(struct mod *mod, int flags, int frame_id)
 {
     int len;
@@ -1140,7 +1145,7 @@ send_paint_rect_ex_ack(struct mod *mod, int flags, int frame_id)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
 {
     int num_drects;
@@ -1241,7 +1246,7 @@ process_server_paint_rect_shmem_ex(struct mod *amod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
 {
     int rv;
@@ -1350,7 +1355,7 @@ lib_mod_process_orders(struct mod *mod, int type, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 lib_send_client_info(struct mod *mod)
 {
     struct stream *s;
@@ -1374,7 +1379,7 @@ lib_send_client_info(struct mod *mod)
 
 /******************************************************************************/
 /* return error */
-static int APP_CC
+static int
 lib_mod_process_message(struct mod *mod, struct stream *s)
 {
     int num_orders;
@@ -1456,7 +1461,7 @@ lib_mod_process_message(struct mod *mod, struct stream *s)
 
 /******************************************************************************/
 /* return error */
-int DEFAULT_CC
+int
 lib_mod_signal(struct mod *mod)
 {
     g_writeln("lib_mod_signal: not used");
@@ -1465,7 +1470,7 @@ lib_mod_signal(struct mod *mod)
 
 /******************************************************************************/
 /* return error */
-int DEFAULT_CC
+int
 lib_mod_end(struct mod *mod)
 {
     if (mod->screen_shmem_pixels != 0)
@@ -1478,7 +1483,7 @@ lib_mod_end(struct mod *mod)
 
 /******************************************************************************/
 /* return error */
-int DEFAULT_CC
+int
 lib_mod_set_param(struct mod *mod, const char *name, const char *value)
 {
     if (g_strcasecmp(name, "username") == 0)
@@ -1507,7 +1512,7 @@ lib_mod_set_param(struct mod *mod, const char *name, const char *value)
 
 /******************************************************************************/
 /* return error */
-int DEFAULT_CC
+int
 lib_mod_get_wait_objs(struct mod *mod, tbus *read_objs, int *rcount,
                       tbus *write_objs, int *wcount, int *timeout)
 {
@@ -1524,7 +1529,7 @@ lib_mod_get_wait_objs(struct mod *mod, tbus *read_objs, int *rcount,
 
 /******************************************************************************/
 /* return error */
-int DEFAULT_CC
+int
 lib_mod_check_wait_objs(struct mod *mod)
 {
     int rv;
@@ -1543,7 +1548,7 @@ lib_mod_check_wait_objs(struct mod *mod)
 
 /******************************************************************************/
 /* return error */
-int DEFAULT_CC
+int
 lib_mod_frame_ack(struct mod *amod, int flags, int frame_id)
 {
     LLOGLN(10, ("lib_mod_frame_ack: flags 0x%8.8x frame_id %d", flags, frame_id));

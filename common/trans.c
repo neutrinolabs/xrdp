@@ -18,6 +18,10 @@
  * generic transport
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "os_calls.h"
 #include "trans.h"
 #include "arch.h"
@@ -27,7 +31,7 @@
 #define MAX_SBYTES 0
 
 /*****************************************************************************/
-int APP_CC
+int
 trans_tls_recv(struct trans *self, char *ptr, int len)
 {
     if (self->tls == NULL)
@@ -38,7 +42,7 @@ trans_tls_recv(struct trans *self, char *ptr, int len)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 trans_tls_send(struct trans *self, const char *data, int len)
 {
     if (self->tls == NULL)
@@ -49,7 +53,7 @@ trans_tls_send(struct trans *self, const char *data, int len)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 trans_tls_can_recv(struct trans *self, int sck, int millis)
 {
     if (self->tls == NULL)
@@ -60,21 +64,21 @@ trans_tls_can_recv(struct trans *self, int sck, int millis)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 trans_tcp_recv(struct trans *self, char *ptr, int len)
 {
     return g_tcp_recv(self->sck, ptr, len, 0);
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 trans_tcp_send(struct trans *self, const char *data, int len)
 {
     return g_tcp_send(self->sck, data, len, 0);
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 trans_tcp_can_recv(struct trans *self, int sck, int millis)
 {
     return g_sck_can_recv(sck, millis);
@@ -82,7 +86,6 @@ trans_tcp_can_recv(struct trans *self, int sck, int millis)
 
 /*****************************************************************************/
 struct trans *
-APP_CC
 trans_create(int mode, int in_size, int out_size)
 {
     struct trans *self = (struct trans *) NULL;
@@ -107,7 +110,7 @@ trans_create(int mode, int in_size, int out_size)
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 trans_delete(struct trans *self)
 {
     if (self == 0)
@@ -140,7 +143,7 @@ trans_delete(struct trans *self)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 trans_get_wait_objs(struct trans *self, tbus *objs, int *count)
 {
     if (self == 0)
@@ -169,7 +172,7 @@ trans_get_wait_objs(struct trans *self, tbus *objs, int *count)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 trans_get_wait_objs_rw(struct trans *self, tbus *robjs, int *rcount,
                        tbus *wobjs, int *wcount, int *timeout)
 {
@@ -204,7 +207,7 @@ trans_get_wait_objs_rw(struct trans *self, tbus *robjs, int *rcount,
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 trans_send_waiting(struct trans *self, int block)
 {
     struct stream *temp_s;
@@ -272,7 +275,7 @@ trans_send_waiting(struct trans *self, int block)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 trans_check_wait_objs(struct trans *self)
 {
     tbus in_sck = (tbus) 0;
@@ -426,7 +429,7 @@ trans_check_wait_objs(struct trans *self)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 trans_force_read_s(struct trans *self, struct stream *in_s, int size)
 {
     int rcvd;
@@ -484,14 +487,14 @@ trans_force_read_s(struct trans *self, struct stream *in_s, int size)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 trans_force_read(struct trans *self, int size)
 {
     return trans_force_read_s(self, self->in_s, size);
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 trans_force_write_s(struct trans *self, struct stream *out_s)
 {
     int size;
@@ -552,14 +555,14 @@ trans_force_write_s(struct trans *self, struct stream *out_s)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 trans_force_write(struct trans *self)
 {
     return trans_force_write_s(self, self->out_s);
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 trans_write_copy_s(struct trans *self, struct stream *out_s)
 {
     int size;
@@ -642,14 +645,14 @@ trans_write_copy_s(struct trans *self, struct stream *out_s)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 trans_write_copy(struct trans* self)
 {
     return trans_write_copy_s(self, self->out_s);
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 trans_connect(struct trans *self, const char *server, const char *port,
               int timeout)
 {
@@ -777,7 +780,7 @@ trans_connect(struct trans *self, const char *server, const char *port,
 /**
  * @return 0 on success, 1 on failure
  */
-int APP_CC
+int
 trans_listen_address(struct trans *self, char *port, const char *address)
 {
     if (self->sck != 0)
@@ -833,7 +836,7 @@ trans_listen_address(struct trans *self, char *port, const char *address)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 trans_listen(struct trans *self, char *port)
 {
     return trans_listen_address(self, port, "0.0.0.0");
@@ -841,7 +844,6 @@ trans_listen(struct trans *self, char *port)
 
 /*****************************************************************************/
 struct stream *
-APP_CC
 trans_get_in_s(struct trans *self)
 {
     struct stream *rv = (struct stream *) NULL;
@@ -860,7 +862,6 @@ trans_get_in_s(struct trans *self)
 
 /*****************************************************************************/
 struct stream *
-APP_CC
 trans_get_out_s(struct trans *self, int size)
 {
     struct stream *rv = (struct stream *) NULL;
@@ -880,9 +881,9 @@ trans_get_out_s(struct trans *self, int size)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 trans_set_tls_mode(struct trans *self, const char *key, const char *cert,
-                   int disableSSLv3, const char *tls_ciphers)
+                   long ssl_protocols, const char *tls_ciphers)
 {
     self->tls = ssl_tls_create(self, key, cert);
     if (self->tls == NULL)
@@ -891,7 +892,7 @@ trans_set_tls_mode(struct trans *self, const char *key, const char *cert,
         return 1;
     }
 
-    if (ssl_tls_accept(self->tls, disableSSLv3, tls_ciphers) != 0)
+    if (ssl_tls_accept(self->tls, ssl_protocols, tls_ciphers) != 0)
     {
         g_writeln("trans_set_tls_mode: ssl_tls_accept failed");
         return 1;
@@ -902,12 +903,15 @@ trans_set_tls_mode(struct trans *self, const char *key, const char *cert,
     self->trans_send = trans_tls_send;
     self->trans_can_recv = trans_tls_can_recv;
 
+    self->ssl_protocol = ssl_get_version(self->tls->ssl);
+    self->cipher_name = ssl_get_cipher_name(self->tls->ssl);
+
     return 0;
 }
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 trans_shutdown_tls_mode(struct trans *self)
 {
     if (self->tls != NULL)

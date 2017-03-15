@@ -24,6 +24,10 @@
  *
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include <signal.h>
 
 #include "sesman.h"
@@ -34,7 +38,7 @@ extern struct config_sesman *g_cfg; /* in sesman.c */
 extern tbus g_term_event;
 
 /******************************************************************************/
-void DEFAULT_CC
+void
 sig_sesman_shutdown(int sig)
 {
     char pid_file[256];
@@ -58,7 +62,7 @@ sig_sesman_shutdown(int sig)
 }
 
 /******************************************************************************/
-void DEFAULT_CC
+void
 sig_sesman_reload_cfg(int sig)
 {
     int error;
@@ -121,7 +125,7 @@ sig_sesman_reload_cfg(int sig)
 }
 
 /******************************************************************************/
-void DEFAULT_CC
+void
 sig_sesman_session_end(int sig)
 {
     int pid;
@@ -140,7 +144,7 @@ sig_sesman_session_end(int sig)
 }
 
 /******************************************************************************/
-void *DEFAULT_CC
+void *
 sig_handler_thread(void *arg)
 {
     int recv_signal;

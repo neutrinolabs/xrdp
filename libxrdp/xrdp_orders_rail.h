@@ -19,30 +19,30 @@
 #if !defined(_XRDP_ORDERS_RAIL_H)
 #define _XRDP_ORDERS_RAIL_H
 
-int APP_CC
+int
 xrdp_orders_send_window_delete(struct xrdp_orders *self, int window_id);
-int APP_CC
+int
 xrdp_orders_send_window_cached_icon(struct xrdp_orders *self,
                                     int window_id, int cache_entry,
                                     int cache_id, int flags);
-int APP_CC
+int
 xrdp_orders_send_window_icon(struct xrdp_orders *self,
                              int window_id, int cache_entry, int cache_id,
                              struct rail_icon_info *icon_info,
                              int flags);
-int APP_CC
+int
 xrdp_orders_send_window_new_update(struct xrdp_orders *self, int window_id,
                                    struct rail_window_state_order *window_state,
                                    int flags);
-int APP_CC
+int
 xrdp_orders_send_notify_delete(struct xrdp_orders *self, int window_id,
                                int notify_id);
-int APP_CC
+int
 xrdp_orders_send_notify_new_update(struct xrdp_orders *self,
                                    int window_id, int notify_id,
                                    struct rail_notify_state_order *notify_state,
                                    int flags);
-int APP_CC
+int
 xrdp_orders_send_monitored_desktop(struct xrdp_orders *self,
                                    struct rail_monitored_desktop_order *mdo,
                                    int flags);

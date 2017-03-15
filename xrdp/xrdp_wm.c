@@ -18,13 +18,17 @@
  * simple window manager
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include <stdarg.h>
 #include <stdio.h>
 #include "xrdp.h"
 #include "log.h"
 
 /*****************************************************************************/
-struct xrdp_wm *APP_CC
+struct xrdp_wm *
 xrdp_wm_create(struct xrdp_process *owner,
                struct xrdp_client_info *client_info)
 {
@@ -68,7 +72,7 @@ xrdp_wm_create(struct xrdp_process *owner,
 }
 
 /*****************************************************************************/
-void APP_CC
+void
 xrdp_wm_delete(struct xrdp_wm *self)
 {
     if (self == 0)
@@ -94,21 +98,21 @@ xrdp_wm_delete(struct xrdp_wm *self)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_wm_send_palette(struct xrdp_wm *self)
 {
     return libxrdp_send_palette(self->session, self->palette);
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_wm_send_bell(struct xrdp_wm *self)
 {
     return libxrdp_send_bell(self->session);
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_wm_send_bitmap(struct xrdp_wm *self, struct xrdp_bitmap *bitmap,
                     int x, int y, int cx, int cy)
 {
@@ -117,7 +121,7 @@ xrdp_wm_send_bitmap(struct xrdp_wm *self, struct xrdp_bitmap *bitmap,
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_wm_set_focused(struct xrdp_wm *self, struct xrdp_bitmap *wnd)
 {
     struct xrdp_bitmap *focus_out_control;
@@ -156,7 +160,7 @@ xrdp_wm_set_focused(struct xrdp_wm *self, struct xrdp_bitmap *wnd)
 }
 
 /******************************************************************************/
-static int APP_CC
+static int
 xrdp_wm_get_pixel(char *data, int x, int y, int width, int bpp)
 {
     int start;
@@ -189,7 +193,7 @@ xrdp_wm_get_pixel(char *data, int x, int y, int width, int bpp)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_wm_pointer(struct xrdp_wm *self, char *data, char *mask, int x, int y,
                 int bpp)
 {
@@ -213,7 +217,7 @@ xrdp_wm_pointer(struct xrdp_wm *self, char *data, char *mask, int x, int y,
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 xrdp_wm_load_pointer(struct xrdp_wm *self, char *file_name, char *data,
                      char *mask, int *x, int *y)
 {
@@ -315,7 +319,7 @@ xrdp_wm_load_pointer(struct xrdp_wm *self, char *file_name, char *data,
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_wm_send_pointer(struct xrdp_wm *self, int cache_idx,
                      char *data, char *mask, int x, int y, int bpp)
 {
@@ -324,7 +328,7 @@ xrdp_wm_send_pointer(struct xrdp_wm *self, int cache_idx,
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_wm_set_pointer(struct xrdp_wm *self, int cache_idx)
 {
     return libxrdp_set_pointer(self->session, cache_idx);
@@ -332,7 +336,7 @@ xrdp_wm_set_pointer(struct xrdp_wm *self, int cache_idx)
 
 /*****************************************************************************/
 /* convert hex string to int */
-unsigned int APP_CC
+unsigned int
 xrdp_wm_htoi (const char *ptr)
 {
     unsigned int value = 0;
@@ -367,7 +371,7 @@ xrdp_wm_htoi (const char *ptr)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_wm_load_static_colors_plus(struct xrdp_wm *self, char *autorun_name)
 {
     int bindex;
@@ -518,7 +522,7 @@ xrdp_wm_load_static_colors_plus(struct xrdp_wm *self, char *autorun_name)
 
 /*****************************************************************************/
 /* returns error */
-int APP_CC
+int
 xrdp_wm_load_static_pointers(struct xrdp_wm *self)
 {
     struct xrdp_pointer_item pointer_item;
@@ -540,7 +544,7 @@ xrdp_wm_load_static_pointers(struct xrdp_wm *self)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_wm_init(struct xrdp_wm *self)
 {
     int fd;
@@ -712,7 +716,7 @@ xrdp_wm_init(struct xrdp_wm *self)
 /*****************************************************************************/
 /* returns the number for rects visible for an area relative to a drawable */
 /* putting the rects in region */
-int APP_CC
+int
 xrdp_wm_get_vis_region(struct xrdp_wm *self, struct xrdp_bitmap *bitmap,
                        int x, int y, int cx, int cy,
                        struct xrdp_region *region, int clip_children)
@@ -760,7 +764,7 @@ xrdp_wm_get_vis_region(struct xrdp_wm *self, struct xrdp_bitmap *bitmap,
 
 /*****************************************************************************/
 /* return the window at x, y on the screen */
-static struct xrdp_bitmap *APP_CC
+static struct xrdp_bitmap *
 xrdp_wm_at_pos(struct xrdp_bitmap *wnd, int x, int y,
                struct xrdp_bitmap **wnd1)
 {
@@ -798,7 +802,7 @@ xrdp_wm_at_pos(struct xrdp_bitmap *wnd, int x, int y,
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_wm_xor_pat(struct xrdp_wm *self, int x, int y, int cx, int cy)
 {
     self->painter->clip_children = 0;
@@ -838,7 +842,7 @@ xrdp_wm_xor_pat(struct xrdp_wm *self, int x, int y, int cx, int cy)
 /*****************************************************************************/
 /* return true if rect is totally exposed going in reverse z order */
 /* from wnd up */
-static int APP_CC
+static int
 xrdp_wm_is_rect_vis(struct xrdp_wm *self, struct xrdp_bitmap *wnd,
                     struct xrdp_rect *rect)
 {
@@ -887,7 +891,7 @@ xrdp_wm_is_rect_vis(struct xrdp_wm *self, struct xrdp_bitmap *wnd,
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_wm_move_window(struct xrdp_wm *self, struct xrdp_bitmap *wnd,
                     int dx, int dy)
 {
@@ -942,7 +946,7 @@ xrdp_wm_move_window(struct xrdp_wm *self, struct xrdp_bitmap *wnd,
 
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_wm_undraw_dragging_box(struct xrdp_wm *self, int do_begin_end)
 {
     int boxx;
@@ -978,7 +982,7 @@ xrdp_wm_undraw_dragging_box(struct xrdp_wm *self, int do_begin_end)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_wm_draw_dragging_box(struct xrdp_wm *self, int do_begin_end)
 {
     int boxx;
@@ -1014,7 +1018,7 @@ xrdp_wm_draw_dragging_box(struct xrdp_wm *self, int do_begin_end)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_wm_mouse_move(struct xrdp_wm *self, int x, int y)
 {
     struct xrdp_bitmap *b;
@@ -1119,7 +1123,7 @@ xrdp_wm_mouse_move(struct xrdp_wm *self, int x, int y)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_wm_clear_popup(struct xrdp_wm *self)
 {
     int i;
@@ -1143,7 +1147,7 @@ xrdp_wm_clear_popup(struct xrdp_wm *self)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_wm_mouse_click(struct xrdp_wm *self, int x, int y, int but, int down)
 {
     struct xrdp_bitmap *control;
@@ -1399,7 +1403,7 @@ xrdp_wm_mouse_click(struct xrdp_wm *self, int x, int y, int but, int down)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_wm_key(struct xrdp_wm *self, int device_flags, int scan_code)
 {
     int msg;
@@ -1465,7 +1469,7 @@ xrdp_wm_key(struct xrdp_wm *self, int device_flags, int scan_code)
 
 /*****************************************************************************/
 /* happens when client gets focus and sends key modifier info */
-int APP_CC
+int
 xrdp_wm_key_sync(struct xrdp_wm *self, int device_flags, int key_flags)
 {
     self->num_lock = 0;
@@ -1500,7 +1504,7 @@ xrdp_wm_key_sync(struct xrdp_wm *self, int device_flags, int key_flags)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, int unicode)
 {
     int index;
@@ -1577,7 +1581,7 @@ xrdp_wm_key_unicode(struct xrdp_wm *self, int device_flags, int unicode)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_wm_pu(struct xrdp_wm *self, struct xrdp_bitmap *control)
 {
     int x;
@@ -1610,7 +1614,7 @@ xrdp_wm_pu(struct xrdp_wm *self, struct xrdp_bitmap *control)
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
                             int x, int y)
 {
@@ -1673,7 +1677,7 @@ xrdp_wm_process_input_mouse(struct xrdp_wm *self, int device_flags,
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 xrdp_wm_process_input_mousex(struct xrdp_wm* self, int device_flags,
                              int x, int y)
 {
@@ -1707,7 +1711,7 @@ xrdp_wm_process_input_mousex(struct xrdp_wm* self, int device_flags,
    param2 = size
    param3 = pointer to data
    param4 = total size */
-static int APP_CC
+static int
 xrdp_wm_process_channel_data(struct xrdp_wm *self,
                              tbus param1, tbus param2,
                              tbus param3, tbus param4)
@@ -1743,8 +1747,9 @@ xrdp_wm_process_channel_data(struct xrdp_wm *self,
 
 /******************************************************************************/
 /* this is the callbacks coming from libxrdp.so */
-int DEFAULT_CC
-callback(long id, int msg, long param1, long param2, long param3, long param4)
+int
+callback(intptr_t id, int msg, intptr_t param1, intptr_t param2,
+         intptr_t param3, intptr_t param4)
 {
     int rv;
     struct xrdp_wm *wm;
@@ -1805,7 +1810,7 @@ callback(long id, int msg, long param1, long param2, long param3, long param4)
 /******************************************************************************/
 /* returns error */
 /* this gets called when there is nothing on any socket */
-static int APP_CC
+static int
 xrdp_wm_login_mode_changed(struct xrdp_wm *self)
 {
     if (self == 0)
@@ -1849,7 +1854,7 @@ xrdp_wm_login_mode_changed(struct xrdp_wm *self)
 
 /*****************************************************************************/
 /* this is the log windows notify function */
-static int DEFAULT_CC
+static int
 xrdp_wm_log_wnd_notify(struct xrdp_bitmap *wnd,
                        struct xrdp_bitmap *sender,
                        int msg, long param1, long param2)
@@ -1932,7 +1937,7 @@ add_string_to_logwindow(const char *msg, struct list *log)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_wm_show_log(struct xrdp_wm *self)
 {
     struct xrdp_bitmap *but;
@@ -2021,7 +2026,7 @@ xrdp_wm_show_log(struct xrdp_wm *self)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_wm_log_msg(struct xrdp_wm *self, enum logLevels loglevel,
                 const char *fmt, ...)
 {
@@ -2038,7 +2043,7 @@ xrdp_wm_log_msg(struct xrdp_wm *self, enum logLevels loglevel,
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_wm_get_wait_objs(struct xrdp_wm *self, tbus *robjs, int *rc,
                       tbus *wobjs, int *wc, int *timeout)
 {
@@ -2056,7 +2061,7 @@ xrdp_wm_get_wait_objs(struct xrdp_wm *self, tbus *robjs, int *rc,
 }
 
 /******************************************************************************/
-int APP_CC
+int
 xrdp_wm_check_wait_objs(struct xrdp_wm *self)
 {
     int rv;
@@ -2083,7 +2088,7 @@ xrdp_wm_check_wait_objs(struct xrdp_wm *self)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 xrdp_wm_set_login_mode(struct xrdp_wm *self, int login_mode)
 {
     self->login_mode = login_mode;

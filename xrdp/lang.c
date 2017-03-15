@@ -19,6 +19,10 @@
  * maximum unicode 19996(0x4e00)
  */
 
+#if defined(HAVE_CONFIG_H)
+#include <config_ac.h>
+#endif
+
 #include "xrdp.h"
 #include "log.h"
 
@@ -60,7 +64,7 @@ static struct codepair g_map[] =
 };
 
 /*****************************************************************************/
-struct xrdp_key_info *APP_CC
+struct xrdp_key_info *
 get_key_info_from_scan_code(int device_flags, int scan_code, int *keys,
                             int caps_lock, int num_lock, int scroll_lock,
                             struct xrdp_keymap *keymap)
@@ -127,7 +131,7 @@ get_key_info_from_scan_code(int device_flags, int scan_code, int *keys,
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 get_keysym_from_scan_code(int device_flags, int scan_code, int *keys,
                           int caps_lock, int num_lock, int scroll_lock,
                           struct xrdp_keymap *keymap)
@@ -147,7 +151,7 @@ get_keysym_from_scan_code(int device_flags, int scan_code, int *keys,
 }
 
 /*****************************************************************************/
-twchar APP_CC
+twchar
 get_char_from_scan_code(int device_flags, int scan_code, int *keys,
                         int caps_lock, int num_lock, int scroll_lock,
                         struct xrdp_keymap *keymap)
@@ -167,7 +171,7 @@ get_char_from_scan_code(int device_flags, int scan_code, int *keys,
 }
 
 /*****************************************************************************/
-static int APP_CC
+static int
 km_read_section(int fd, const char *section_name, struct xrdp_key_info *keymap)
 {
     struct list *names;
@@ -222,7 +226,7 @@ km_read_section(int fd, const char *section_name, struct xrdp_key_info *keymap)
 }
 
 /*****************************************************************************/
-int APP_CC
+int
 get_keymaps(int keylayout, struct xrdp_keymap *keymap)
 {
     int fd;

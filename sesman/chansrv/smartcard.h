@@ -106,66 +106,66 @@ typedef struct reader_state
 } READER_STATE;
 
 void scard_device_announce(tui32 device_id);
-int  APP_CC scard_get_wait_objs(tbus *objs, int *count, int *timeout);
-int  APP_CC scard_check_wait_objs(void);
-int  APP_CC scard_init(void);
-int  APP_CC scard_deinit(void);
-int  APP_CC scard_send_establish_context(void *user_data, int scope);
-int  APP_CC scard_send_release_context(void *user_data,
+int  scard_get_wait_objs(tbus *objs, int *count, int *timeout);
+int  scard_check_wait_objs(void);
+int  scard_init(void);
+int  scard_deinit(void);
+int  scard_send_establish_context(void *user_data, int scope);
+int  scard_send_release_context(void *user_data,
                                        char *context, int context_bytes);
-int  APP_CC scard_send_is_valid_context(void *user_data,
+int  scard_send_is_valid_context(void *user_data,
                                         char *context, int context_bytes);
-int  APP_CC scard_send_list_readers(void *user_data,
+int  scard_send_list_readers(void *user_data,
                                     char *context, int context_bytes,
                                     char *groups, int cchReaders, int wide);
 
-int  APP_CC scard_send_get_status_change(void *user_data,
+int  scard_send_get_status_change(void *user_data,
                                          char *context, int context_bytes,
                                          int wide, tui32 timeout,
                                          tui32 num_readers, READER_STATE* rsa);
 
-int  APP_CC scard_send_connect(void *user_data,
+int  scard_send_connect(void *user_data,
                                char *context, int context_bytes, int wide,
                                READER_STATE* rs);
 
-int  APP_CC scard_send_reconnect(void *user_data,
+int  scard_send_reconnect(void *user_data,
                                  char *context, int context_bytes,
                                  char *card, int card_bytes,
                                  READER_STATE* rs);
 
-int  APP_CC scard_send_begin_transaction(void *user_data,
+int  scard_send_begin_transaction(void *user_data,
                                          char *context, int context_bytes,
                                          char *card, int card_bytes);
-int  APP_CC scard_send_end_transaction(void *user_data,
+int  scard_send_end_transaction(void *user_data,
                                        char *context, int context_bytes,
                                        char *card, int card_bytes,
                                        tui32 dwDisposition);
-int  APP_CC scard_send_status(void *user_data, int wide,
+int  scard_send_status(void *user_data, int wide,
                               char *context, int context_bytes,
                               char *card, int card_bytes,
                               int cchReaderLen, int cbAtrLen);
-int  APP_CC scard_send_disconnect(void *user_data,
+int  scard_send_disconnect(void *user_data,
                                   char *context, int context_bytes,
                                   char *card, int card_bytes,
                                   int dwDisposition);
 
-int  APP_CC scard_send_transmit(void *user_data,
+int  scard_send_transmit(void *user_data,
                                 char *context, int context_bytes,
                                 char *card, int card_bytes,
                                 char *send_data, int send_bytes, int recv_bytes,
                                 struct xrdp_scard_io_request *send_ior,
                                 struct xrdp_scard_io_request *recv_ior);
 
-int  APP_CC scard_send_control(void *user_data,
+int  scard_send_control(void *user_data,
                                char *context, int context_bytes,
                                char *card, int card_bytes,
                                char *send_data, int send_bytes,
                                int recv_bytes, int control_code);
 
-int  APP_CC scard_send_cancel(void *user_data,
+int  scard_send_cancel(void *user_data,
                               char *context, int context_bytes);
 
-int  APP_CC scard_send_get_attrib(void *user_data, char *card, int card_bytes,
+int  scard_send_get_attrib(void *user_data, char *card, int card_bytes,
                                   READER_STATE* rs);
 
 /*

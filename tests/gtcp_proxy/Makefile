@@ -3,7 +3,7 @@
 # = evaluates the expression each time it is used
 
 CFLAGS := $(shell pkg-config --cflags gtk+-2.0)
-CFLAGS += -O2 -Wall 
+CFLAGS += -O2 -Wall
 #LDFLAGS = -Wl
 LIBS := $(shell pkg-config --libs gtk+-2.0)
 LIBS += -ldl -lgthread-2.0

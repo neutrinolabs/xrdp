@@ -96,12 +96,6 @@ Processing Standard 140-1 validated encryption methods.
 .RE
 
 .TP
-\fBdisableSSLv3\fP=\fI[true|false]\fP
-If set to \fB1\fP, \fBtrue\fP or \fByes\fP, \fBxrdp\fP will not accept SSLv3 connections.
-If not specified, defaults to \fBfalse\fP.
-This parameter is effective only if \fBsecurity_layer\fP is set to \fBtls\fP or \fBnegotiate\fP.
-
-.TP
 \fBfork\fP=\fI[true|false]\fP
 If set to \fB1\fR, \fBtrue\fR or \fByes\fR for each incoming connection \fBxrdp\fR(8) forks a sub-process instead of using threads.
 
@@ -150,6 +144,12 @@ Negotiate these security methods with clients.
 .RE
 
 .TP
+\fBssl_protocols\fP=\fI[SSLv3] [TLSv1] [TLSv1.1] [TLSv1.2]\fP
+Enables the specified SSL/TLS protocols. Each value should be separated by comma.
+SSLv2 is always disabled. At least one protocol should be given to accept TLS connections.
+This parameter is effective only if \fBsecurity_layer\fP is set to \fBtls\fP or \fBnegotiate\fP.
+
+.TP
 \fBtcp_keepalive\fP=\fI[true|false]\fP
 Regulate if the listening socket uses socket option \fBSO_KEEPALIVE\fP.
 If set to \fB1\fP, \fBtrue\fP or \fByes\fP and the network connection disappears
@@ -168,8 +168,8 @@ Specify send/recv buffer sizes in bytes.  The default value depends on operating
 
 .TP
 \fBtls_ciphers\fP=\fIcipher_suite\fP
-Specifies TLS cipher suite.  The format of this parameter is equivalent to which
-\fBopenssl\fP(1) ciphers subcommand accepts.
+Specifies TLS cipher suite in 63 characters or less.  The format of this parameter is
+equivalent to which \fBopenssl\fP(1) ciphers subcommand accepts.
 
 (ex. $ openssl ciphers 'HIGH:!ADH:!SHA1')
 

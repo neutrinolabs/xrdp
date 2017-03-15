@@ -171,12 +171,12 @@ static void sink_update_requested_latency_cb(pa_sink *s) {
 
     u->block_usec = BLOCK_USEC;
     //u->block_usec = pa_sink_get_requested_latency_within_thread(s);
-    pa_log("1 block_usec %d", u->block_usec);
+    pa_log("1 block_usec %llu", (unsigned long long) u->block_usec);
 
     u->got_max_latency = 0;
     if (u->block_usec == (pa_usec_t) -1) {
         u->block_usec = s->thread_info.max_latency;
-        pa_log_debug("2 block_usec %d", u->block_usec);
+        pa_log_debug("2 block_usec %llu", (unsigned long long) u->block_usec);
         u->got_max_latency = 1;
     }
 
@@ -390,7 +390,7 @@ static void process_render(struct userdata *u, pa_usec_t now) {
     if (u->got_max_latency) {
         return;
     }
-    pa_log_debug("process_render: u->block_usec %d", u->block_usec);
+    pa_log_debug("process_render: u->block_usec %llu", (unsigned long long) u->block_usec);
     while (u->timestamp < now + u->block_usec) {
         request_bytes = u->sink->thread_info.max_request;
         request_bytes = MIN(request_bytes, 16 * 1024);
@@ -528,7 +528,7 @@ int pa__init(pa_module*m) {
     pa_sink_set_rtpoll(u->sink, u->rtpoll);
 
     u->block_usec = BLOCK_USEC;
-    pa_log_debug("3 block_usec %d", u->block_usec);
+    pa_log_debug("3 block_usec %llu", (unsigned long long) u->block_usec);
     nbytes = pa_usec_to_bytes(u->block_usec, &u->sink->sample_spec);
     pa_sink_set_max_rewind(u->sink, nbytes);
     pa_sink_set_max_request(u->sink, nbytes);
