@@ -348,6 +348,8 @@ int
 g_directory_exist(const char* dirname);
 int
 g_chmod_hex(const char* filename, int flags);
+const char *
+g_socket_dir(void);
 void
 hexdump(unsigned char *p, unsigned int len);
 void

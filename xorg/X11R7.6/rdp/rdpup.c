@@ -1233,16 +1233,19 @@ rdpup_init(void)
     char text[256];
     char *ptext;
     int i;
+    const char *socket_dir;
 
-    if (!g_directory_exist("/tmp/.xrdp"))
+    socket_dir = g_socket_dir();
+
+    if (!g_directory_exist(socket_dir))
     {
-        if (!g_create_dir("/tmp/.xrdp"))
+        if (!g_create_dir(socket_dir))
         {
-            LLOGLN(0, ("rdpup_init: g_create_dir failed"));
+            LLOGLN(0, ("rdpup_init: g_create_dir(%s) failed", socket_dir));
             return 0;
         }
 
-        g_chmod_hex("/tmp/.xrdp", 0x1777);
+        g_chmod_hex(socket_dir, 0x1777);
     }
 
     i = atoi(display);
@@ -1266,7 +1269,7 @@ rdpup_init(void)
 
     if (g_use_uds)
     {
-        g_sprintf(g_uds_data, "/tmp/.xrdp/xrdp_display_%s", display);
+        g_sprintf(g_uds_data, "%s/xrdp_display_%s", socket_dir, display);
 
         if (g_listen_sck == 0)
         {
@@ -1304,7 +1307,7 @@ rdpup_init(void)
 
     if (g_dis_listen_sck != 0)
     {
-        g_sprintf(text, "/tmp/.xrdp/xrdp_disconnect_display_%s", display);
+        g_sprintf(text, "%s/xrdp_disconnect_display_%s", socket_dir, display);
 
         if (g_tcp_local_bind(g_dis_listen_sck, text) == 0)
         {
