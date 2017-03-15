@@ -517,6 +517,22 @@ g_chmod_hex(const char *filename, int flags)
     return chmod(filename, fl);
 }
 
+/*****************************************************************************/
+/* returns directory where UNIX sockets are located */
+const char *
+g_socket_dir(void)
+{
+    const char *socket_dir;
+
+    socket_dir = getenv("XRDP_SOCKET_PATH");
+    if (socket_dir == NULL || socket_dir[0] == '\0')
+    {
+        socket_dir = "/tmp/.xrdp";
+    }
+
+    return socket_dir;
+}
+
 /* produce a hex dump */
 void
 hexdump(unsigned char *p, unsigned int len)

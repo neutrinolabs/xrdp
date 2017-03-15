@@ -769,7 +769,8 @@ ddxGiveUp(void)
     {
         sprintf(unixSocketName, "/tmp/.X11-unix/X%s", display);
         unlink(unixSocketName);
-        sprintf(unixSocketName, "/tmp/.xrdp/xrdp_disconnect_display_%s", display);
+        sprintf(unixSocketName, "%s/xrdp_disconnect_display_%s",
+                g_socket_dir(), display);
         unlink(unixSocketName);
 
         if (g_uds_data[0] != 0)
@@ -823,7 +824,7 @@ ddxUseMsg(void)
     ErrorF("X11rdp specific options\n");
     ErrorF("-geometry WxH          set framebuffer width & height\n");
     ErrorF("-depth D               set framebuffer depth\n");
-    ErrorF("-uds                   create and listen on /tmp/.xrdp/xrdp_display_x\n");
+    ErrorF("-uds                   create and listen on xrdp_display_x\n");
     ErrorF("\n");
     exit(1);
 }
