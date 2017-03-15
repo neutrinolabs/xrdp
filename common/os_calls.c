@@ -111,18 +111,19 @@ g_rm_temp_dir(void)
 int
 g_mk_temp_dir(const char *app_name)
 {
-    if (!g_directory_exist("/tmp/.xrdp"))
+    if (!g_directory_exist(XRDP_SOCKET_PATH))
     {
-        if (!g_create_dir("/tmp/.xrdp"))
+        if (!g_create_dir(XRDP_SOCKET_PATH))
         {
             /* if failed, still check if it got created by someone else */
-            if (!g_directory_exist("/tmp/.xrdp"))
+            if (!g_directory_exist(XRDP_SOCKET_PATH))
             {
-                printf("g_mk_temp_dir: g_create_dir failed\n");
+                printf("g_mk_temp_dir: g_create_dir(%s) failed\n",
+                       XRDP_SOCKET_PATH);
                 return 1;
             }
         }
-        g_chmod_hex("/tmp/.xrdp", 0x1777);
+        g_chmod_hex(XRDP_SOCKET_PATH, 0x1777);
     }
     return 0;
 }

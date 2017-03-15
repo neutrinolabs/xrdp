@@ -39,6 +39,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
+#include "file_loc.h"
 #include "xrdpapi.h"
 
 struct wts_obj
@@ -148,7 +149,7 @@ WTSVirtualChannelOpenEx(unsigned int SessionId, const char *pVirtualName,
     memset(&s, 0, sizeof(struct sockaddr_un));
     s.sun_family = AF_UNIX;
     bytes = sizeof(s.sun_path);
-    snprintf(s.sun_path, bytes - 1, "/tmp/.xrdp/xrdpapi_%d", wts->display_num);
+    snprintf(s.sun_path, bytes - 1, CHANSRV_API_STR, wts->display_num);
     s.sun_path[bytes - 1] = 0;
     bytes = sizeof(struct sockaddr_un);
 

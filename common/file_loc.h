@@ -21,48 +21,11 @@
 #if !defined(FILE_LOC_H)
 #define FILE_LOC_H
 
-#if !defined(XRDP_CFG_PATH)
-#define XRDP_CFG_PATH "/etc/xrdp"
-#endif
-
-#if !defined(XRDP_PID_PATH)
-#define XRDP_PID_PATH "/var/run"
-#endif
-
-#if !defined(XRDP_SBIN_PATH)
-#define XRDP_SBIN_PATH "/usr/local/sbin"
-#endif
-
-#if !defined(XRDP_SHARE_PATH)
-#define XRDP_SHARE_PATH "/usr/local/share/xrdp"
-#endif
-
-#if !defined(XRDP_MODULE_PATH)
-#define XRDP_MODULE_PATH "/usr/local/lib/xrdp"
-#endif
-
-#if !defined(XRDP_LOG_PATH)
-#define XRDP_LOG_PATH "/var/log"
-#endif
-
-#if !defined(XRDP_CHANSRV_STR)
-#define XRDP_CHANSRV_STR "/tmp/.xrdp/xrdp_chansrv_socket_%d"
-#endif
-
-#if !defined(CHANSRV_PORT_OUT_STR)
-#define CHANSRV_PORT_OUT_STR "/tmp/.xrdp/xrdp_chansrv_audio_out_socket_%d"
-#endif
-
-#if !defined(CHANSRV_PORT_IN_STR)
-#define CHANSRV_PORT_IN_STR "/tmp/.xrdp/xrdp_chansrv_audio_in_socket_%d"
-#endif
-
-#if !defined(CHANSRV_API_STR)
-#define CHANSRV_API_STR "/tmp/.xrdp/xrdpapi_%d"
-#endif
-
-#if !defined(XRDP_X11RDP_STR)
-#define XRDP_X11RDP_STR "/tmp/.xrdp/xrdp_display_%d"
-#endif
+#define XRDP_CHANSRV_STR      XRDP_SOCKET_PATH "/xrdp_chansrv_socket_%d"
+#define CHANSRV_PORT_OUT_STR  XRDP_SOCKET_PATH "/xrdp_chansrv_audio_out_socket_%d"
+#define CHANSRV_PORT_IN_STR   XRDP_SOCKET_PATH "/xrdp_chansrv_audio_in_socket_%d"
+#define CHANSRV_API_STR       XRDP_SOCKET_PATH "/xrdpapi_%d"
+#define XRDP_X11RDP_STR       XRDP_SOCKET_PATH "/xrdp_display_%d"
+#define XRDP_DISCONNECT_STR   XRDP_SOCKET_PATH "/xrdp_disconnect_display_%d"
 
 #endif

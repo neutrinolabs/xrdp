@@ -3,6 +3,10 @@ EXTRA_DIST = \
   vrplayer.c \
   vrplayer.mk
 
+AM_CPPFLAGS = \
+  -DXRDP_SOCKET_PATH=\"${socketdir}\" \
+  -I$(top_srcdir)/common
+
 module_LTLIBRARIES = \
   libxrdpapi.la
 

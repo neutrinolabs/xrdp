@@ -16,7 +16,7 @@ to get the default host and display number.
 
 .SH FILES
 .TP
-.I /tmp/.xrdp/xrdp_disconnect_display_*
+.I @socketdir@/xrdp_disconnect_display_*
 UNIX socket used to communicate with the \fBxrdp\fP(8) session manager.
 
 .SH KNOWN ISSUES

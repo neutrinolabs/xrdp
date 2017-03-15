@@ -30,10 +30,10 @@ Dynamic Virtual Channel
 
 .SH FILES
 .TP
-.I /tmp/.xrdp/xrdp_chansrv_socket_*
+.I @socketdir@/xrdp_chansrv_socket_*
 UNIX socket used by external programs to implement channels.
 .TP
-.I /tmp/.xrdp/xrdp_api_*
+.I @socketdir@/xrdp_api_*
 UNIX socket used by \fBxrdp\-chansrv\fP to communicate with \fBxrdp\-sesman\fP.
 .TP
 .I $XDG_DATA_HOME/xrdp/xrdp-chansrv.log

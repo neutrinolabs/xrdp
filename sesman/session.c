@@ -668,6 +668,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_SESSION *s)
                 g_setenv("XRDP_SESMAN_MAX_DISC_TIME", text, 1);
                 g_snprintf(text, 255, "%d", g_cfg->sess.kill_disconnected);
                 g_setenv("XRDP_SESMAN_KILL_DISCONNECTED", text, 1);
+                g_setenv("XRDP_SOCKET_PATH", XRDP_SOCKET_PATH, 1);
 
                 /* prepare the Xauthority stuff */
                 if (g_getenv("XAUTHORITY") != NULL)
