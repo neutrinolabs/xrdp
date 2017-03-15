@@ -676,4 +676,10 @@
 #define XR_RDP_SCAN_LSHIFT 42
 #define XR_RDP_SCAN_ALT    56
 
+#define INFO_TEXT_MAX_BYTES             255
+#define INFO_TEXT_MAX_UNICODE_BYTES     512
+
+#define CS_CLIENT_NAME_BYTES            16
+#define CS_CLIENT_NAME_UNICODE_BYTES    32
+
 #endif

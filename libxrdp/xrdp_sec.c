@@ -782,12 +782,12 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         return 1;
     }
 
-    if (unicode_in(s, len_domain, 512, self->rdp_layer->client_info.domain, 255) != 0)
+    if (unicode_in(s, len_domain, INFO_TEXT_MAX_UNICODE_BYTES, self->rdp_layer->client_info.domain, INFO_TEXT_MAX_BYTES) != 0)
     {
         return 1;
     }
     DEBUG(("domain %s", self->rdp_layer->client_info.domain));
-    if (unicode_in(s, len_user, 512, self->rdp_layer->client_info.username, 255) != 0)
+    if (unicode_in(s, len_user, INFO_TEXT_MAX_UNICODE_BYTES, self->rdp_layer->client_info.username, INFO_TEXT_MAX_BYTES) != 0)
     {
         return 1;
     }
@@ -795,7 +795,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
 
     if (flags & RDP_LOGON_AUTO)
     {
-        if (unicode_in(s, len_password, 512, self->rdp_layer->client_info.password, 255) != 0)
+        if (unicode_in(s, len_password, INFO_TEXT_MAX_UNICODE_BYTES, self->rdp_layer->client_info.password, INFO_TEXT_MAX_BYTES) != 0)
         {
             return 1;
         }
@@ -815,12 +815,12 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         }
     }
 
-    if (unicode_in(s, len_program, 512, self->rdp_layer->client_info.program, 255) != 0)
+    if (unicode_in(s, len_program, INFO_TEXT_MAX_UNICODE_BYTES, self->rdp_layer->client_info.program, INFO_TEXT_MAX_BYTES) != 0)
     {
         return 1;
     }
     DEBUG(("program %s", self->rdp_layer->client_info.program));
-    if (unicode_in(s, len_directory, 512, self->rdp_layer->client_info.directory, 255) != 0)
+    if (unicode_in(s, len_directory, INFO_TEXT_MAX_UNICODE_BYTES, self->rdp_layer->client_info.directory, INFO_TEXT_MAX_BYTES) != 0)
     {
         return 1;
     }
@@ -834,7 +834,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
         }
         in_uint8s(s, 2);                                    /* unknown */
         in_uint16_le(s, len_ip);
-        if (unicode_in(s, len_ip - 2, 512, tmpdata, 255) != 0)
+        if (unicode_in(s, len_ip - 2, INFO_TEXT_MAX_UNICODE_BYTES, tmpdata, INFO_TEXT_MAX_BYTES) != 0)
         {
             return 1;
         }
@@ -843,7 +843,7 @@ xrdp_sec_process_logon_info(struct xrdp_sec *self, struct stream *s)
             return 1;
         }
         in_uint16_le(s, len_dll);
-        if (unicode_in(s, len_dll - 2, 512, tmpdata, 255) != 0)
+        if (unicode_in(s, len_dll - 2, INFO_TEXT_MAX_UNICODE_BYTES, tmpdata, INFO_TEXT_MAX_BYTES) != 0)
         {
             return 1;
         }
@@ -1589,7 +1589,7 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec* self, struct stream* s)
     int highColorDepth;
     int supportedColorDepths;
     int earlyCapabilityFlags;
-    char clientName[16] = { '\0' };
+    char clientName[CS_CLIENT_NAME_BYTES] = { '\0' };
 
 
     in_uint8s(s, 4); /* version */
@@ -1609,7 +1609,8 @@ xrdp_sec_process_mcs_data_CS_CORE(struct xrdp_sec* self, struct stream* s)
     in_uint8s(s, 2); /* SASSequence */
     in_uint8s(s, 4); /* keyboardLayout */
     in_uint8s(s, 4); /* clientBuild */
-    unicode_in(s, 30, 32, clientName, 15); /* clientName */
+    unicode_in(s, CS_CLIENT_NAME_UNICODE_BYTES - sizeof(twchar), CS_CLIENT_NAME_UNICODE_BYTES,
+               clientName, CS_CLIENT_NAME_BYTES - sizeof(char)); /* clientName, represented as 512 bytes non-null terminated unicode string */
     log_message(LOG_LEVEL_INFO, "client computer name: %s", clientName);
     in_uint8s(s, 4); /* keyboardType */
     in_uint8s(s, 4); /* keyboardSubType */
