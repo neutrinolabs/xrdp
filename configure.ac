@@ -47,6 +47,12 @@ AM_CONDITIONAL(FREEBSD, [test "x$freebsd" = xyes])
 AM_CONDITIONAL(OPENBSD, [test "x$openbsd" = xyes])
 AM_CONDITIONAL(NETBSD, [test "x$netbsd" = xyes])
 
+AC_ARG_WITH([socketdir],
+  [AS_HELP_STRING([--with-socketdir=DIR],
+                  [Use directory for UNIX sockets (default: /tmp/.xrdp)])],
+                  [], [with_socketdir="/tmp/.xrdp"])
+AC_SUBST([socketdir], [$with_socketdir])
+
 AC_ARG_WITH([systemdsystemunitdir],
         AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files]),
         [], [

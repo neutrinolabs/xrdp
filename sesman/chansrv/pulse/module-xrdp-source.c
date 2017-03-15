@@ -55,6 +55,7 @@ typedef bool pa_bool_t;
 #endif
 
 #include "module-xrdp-source-symdef.h"
+#include "../common/file_loc.h"
 
 PA_MODULE_AUTHOR("Laxmikant Rashinkar");
 PA_MODULE_DESCRIPTION("xrdp source");
@@ -72,7 +73,6 @@ PA_MODULE_USAGE(
 #define DEFAULT_SOURCE_NAME "xrdp-source"
 #define DEFAULT_LATENCY_TIME 10
 #define MAX_LATENCY_USEC 1000
-#define CHANSRV_PORT_STR "/tmp/.xrdp/xrdp_chansrv_audio_in_socket_%d"
 
 struct userdata {
     pa_core *core;

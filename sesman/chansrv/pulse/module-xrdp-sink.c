@@ -68,6 +68,7 @@ typedef bool pa_bool_t;
 #endif
 
 #include "module-xrdp-sink-symdef.h"
+#include "../common/file_loc.h"
 
 PA_MODULE_AUTHOR("Jay Sorg");
 PA_MODULE_DESCRIPTION("xrdp sink");
@@ -84,7 +85,6 @@ PA_MODULE_USAGE(
 #define DEFAULT_SINK_NAME "xrdp-sink"
 #define BLOCK_USEC 30000
 //#define BLOCK_USEC (PA_USEC_PER_SEC * 2)
-#define CHANSRV_PORT_STR "/tmp/.xrdp/xrdp_chansrv_audio_out_socket_%d"
 
 struct userdata {
     pa_core *core;

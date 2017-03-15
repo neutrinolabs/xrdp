@@ -3,6 +3,7 @@ AM_CPPFLAGS = \
   -DXRDP_SBIN_PATH=\"${sbindir}\" \
   -DXRDP_SHARE_PATH=\"${datadir}/xrdp\" \
   -DXRDP_PID_PATH=\"${localstatedir}/run\" \
+  -DXRDP_SOCKET_PATH=\"${socketdir}\" \
   -I$(top_srcdir)/common \
   -I$(top_srcdir)/sesman/libscp \
   -I$(top_srcdir)/sesman
