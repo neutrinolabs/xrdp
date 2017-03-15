@@ -49,30 +49,6 @@ nil_signal_handler(int sig)
 }
 
 /******************************************************************************/
-/* chansrv can exit at any time without cleaning up, it's an xlib app */
-int
-chansrv_cleanup(int pid)
-{
-    char text[256];
-
-    g_snprintf(text, 255, "/tmp/.xrdp/xrdp_chansrv_%8.8x_main_term", pid);
-
-    if (g_file_exist(text))
-    {
-        g_file_delete(text);
-    }
-
-    g_snprintf(text, 255, "/tmp/.xrdp/xrdp_chansrv_%8.8x_thread_done", pid);
-
-    if (g_file_exist(text))
-    {
-        g_file_delete(text);
-    }
-
-    return 0;
-}
-
-/******************************************************************************/
 int
 main(int argc, char **argv)
 {
@@ -148,7 +124,6 @@ main(int argc, char **argv)
         g_sleep(1);
     }
 
-    chansrv_cleanup(chansrv_pid);
     /* kill X server */
     g_writeln("xrdp-sessvc: stopping X server");
     g_sigterm(x_pid);
