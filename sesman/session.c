@@ -780,7 +780,11 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
             {
                 wait_for_xserver(display);
                 cspid = session_start_chansrv(s->username, display);
+                log_message(LOG_LEVEL_ALWAYS, "waiting for window manager "
+                            "pid(%d) to exit", wmpid);
                 g_waitpid(wmpid);
+                log_message(LOG_LEVEL_ALWAYS, "window manager pid(%d) did "
+                            "exit, cleaning up session", wmpid);
                 auth_stop_session(data);
                 auth_end(data);
                 g_sigterm(xpid);
