@@ -462,6 +462,7 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
     {
         g_delete_wait_obj(g_term_event);
         g_tcp_close(g_sck);
+        g_tcp_close(c->in_sck);
         g_sprintf(geometry, "%dx%d", s->width, s->height);
         g_sprintf(depth, "%d", s->bpp);
         g_sprintf(screen, ":%d", display);
@@ -775,7 +776,6 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
             else
             {
                 wait_for_xserver(display);
-                g_sck_close(c->in_sck);
                 log_end();
                 cspid = session_start_chansrv(s->username, display);
                 g_waitpid(wmpid);
