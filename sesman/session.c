@@ -374,7 +374,10 @@ session_start_chansrv(char *username, int display)
 
         /* executing chansrv */
         g_execvp(exe_path, (char **) (chansrv_params->items));
-        /* failed */
+        /* should not get here */
+        log_message(LOG_LEVEL_ALWAYS, "error starting chansrv "
+                    "- user %s - pid %d", username, g_getpid());
+        list_delete(chansrv_params);
         g_exit(1);
     }
     return cspid;
@@ -776,7 +779,6 @@ session_start_fork(tbus data, tui8 type, struct SCP_CONNECTION *c,
             else
             {
                 wait_for_xserver(display);
-                log_end();
                 cspid = session_start_chansrv(s->username, display);
                 g_waitpid(wmpid);
                 auth_stop_session(data);
